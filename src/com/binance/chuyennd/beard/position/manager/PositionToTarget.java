@@ -94,7 +94,7 @@ public class PositionToTarget {
         for (PositionRisk pos : symbolHadPositionRunning.values()) {
             startThreadMonitorPositionBySymbol(pos.getSymbol());
         }
-        startThreadGetPosition2Manager();
+//        startThreadGetPosition2Manager();
         startThreadReport();
     }
 
@@ -352,7 +352,7 @@ public class PositionToTarget {
         new Thread(() -> {
             Thread.currentThread().setName("ThreadGetPosition2Manager");
             LOG.info("Start thread ThreadGetPosition2Manager!");
-            Set<String> allSymbol = new HashSet<String>();
+            Set<String> allSymbol = new HashSet<>();
             while (true) {
                 try {
                     if (allSymbol.isEmpty()) {
@@ -419,7 +419,9 @@ public class PositionToTarget {
                 LOG.info("Add order success:{} {} entry: {} quantity:{} {}", orderSide, symbol, pos.getEntryPrice().doubleValue(), pos.getPositionAmt().doubleValue(), new Date());
 
             }
-
+        } else {
+            LOG.info("Add order fail because price over to {} {}/{} symbol {} with volume {} {} ", 
+                    orderSide, ClientSingleton.getInstance().getCurrentPrice(symbol), priceEntryTarget, symbol, position.getPositionAmt(), new Date());
         }
     }
 

@@ -42,6 +42,8 @@ public class DetectBigChangeForTrading {
 
     public static void main(String[] args) throws IOException {
         checkBigChange2Trading();
+//        checkBigChangeAndTradeARound();
+
     }
 
     private static void checkBigChange2Trading() {
@@ -49,24 +51,12 @@ public class DetectBigChangeForTrading {
         ClientSingleton.getInstance();
         new Thread(() -> {
             Thread.currentThread().setName("DetectBigChangeForTrading");
-            LOG.info("Start thread DetectBigChangeForTrading!");
             RATE_BIG_CHANGE = Configs.getDouble("RateBigChange");
+            LOG.info("Start thread DetectBigChangeForTrading with rate: {}!", RATE_BIG_CHANGE);
             while (true) {
                 try {
                     if (isTimeRun()) {
-                        LOG.info("Start detect symbol is beard big! {}", new Date());
-                        String allFuturePrices = HttpRequest.getContentFromUrl("https://fapi.binance.com/fapi/v1/ticker/24hr");
-                        List<Object> futurePrices = Utils.gson.fromJson(allFuturePrices, List.class);
-                        for (Object futurePrice : futurePrices) {
-                            TickerStatistics ticker = Utils.gson.fromJson(futurePrice.toString(), TickerStatistics.class);
-                            if (ticker.getLastPrice().equals(ticker.getHighPrice())) {
-                                LOG.info("Symbol price api erorr: {}", ticker.getSymbol());
-                            } else {
-                                // get all 1d 
-                                // get price max, min, current, rate change
-                                getData(ticker.getSymbol());
-                            }
-                        }
+                        checkBigChangeAndTradeARound();
                         Thread.sleep(Utils.TIME_MINUTE);
                     }
                 } catch (Exception e) {
@@ -92,7 +82,7 @@ public class DetectBigChangeForTrading {
             Double priceClose = Double.valueOf(klineCloseObjectFinal.priceClose);
             Double priceOpen = Double.valueOf(klineCloseObjectFinal.priceOpen);
 
-            if (priceClose > priceOpen) {
+            if (priceClose < priceOpen) {
                 rateChange = priceOpen - priceClose;
             } else {
                 rateChange = priceClose - priceOpen;
@@ -101,13 +91,14 @@ public class DetectBigChangeForTrading {
             double priceEntryTarget;
             if (rateChangeTicker > RATE_BIG_CHANGE) {
                 Utils.sendSms2Telegram(symbol + " big change: " + Utils.formatPercent(rateChangeTicker) + " " + new Date(klineCloseObjectFinal.startTime.longValue()));
-                LOG.info("Big beard above {}: beard/rate: {}/{}% Open: {} Close: {} TimeOpen: {} ", symbol, Utils.normalPrice2Api(rateChangeTicker),
+                LOG.info("Big change {}: rate: {}/{}% Open: {} Close: {} TimeOpen: {} ", symbol, Utils.normalPrice2Api(rateChangeTicker),
                         Utils.formatPercent(rateChangeTicker), priceOpen, priceClose, new Date(klineCloseObjectFinal.startTime.longValue()));
                 priceEntryTarget = priceClose;
-                if (priceClose < priceOpen) {
+                OrderSide orderSide = OrderSide.BUY;
+                if (priceClose > priceOpen) {
                     priceEntryTarget = priceOpen;
                 }
-                PositionToTarget.getInstance().addOrderByTarget(symbol, OrderSide.SELL, priceEntryTarget);
+                PositionToTarget.getInstance().addOrderByTarget(symbol, orderSide, priceEntryTarget);
             }
         } catch (Exception e) {
         }
@@ -116,6 +107,22 @@ public class DetectBigChangeForTrading {
 
     private static boolean isTimeRun() {
         return Utils.getCurrentMinute() % 15 == 0;
+    }
+
+    private static void checkBigChangeAndTradeARound() {
+        LOG.info("Start detect symbol is beard big! {}", new Date());
+        String allFuturePrices = HttpRequest.getContentFromUrl("https://fapi.binance.com/fapi/v1/ticker/24hr");
+        List<Object> futurePrices = Utils.gson.fromJson(allFuturePrices, List.class);
+        for (Object futurePrice : futurePrices) {
+            TickerStatistics ticker = Utils.gson.fromJson(futurePrice.toString(), TickerStatistics.class);
+            if (ticker.getLastPrice().equals(ticker.getHighPrice())) {
+                LOG.info("Symbol price api erorr: {}", ticker.getSymbol());
+            } else {
+                // get all 1d 
+                // get price max, min, current, rate change
+                getData(ticker.getSymbol());
+            }
+        }
     }
 
 }
