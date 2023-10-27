@@ -1,0 +1,127 @@
+2023-10-12 11:49:46 [INFO] - Start thread ThreadMonitorPositionBySymbol: PENDLEUSDT !
+2023-10-12 11:49:46 [INFO] - Start thread ThreadMonitorPositionBySymbol: HIGHUSDT !
+2023-10-12 11:49:46 [INFO] - Start thread ThreadMonitorPositionBySymbol: XEMUSDT !
+2023-10-12 11:49:46 [INFO] - Start thread ThreadMonitorPositionBySymbol: TUSDT !
+2023-10-12 11:49:46 [INFO] - Start thread ThreadMonitorPositionBySymbol: XVSUSDT !
+2023-10-12 11:49:46 [INFO] - Start thread ThreadMonitorPositionBySymbol: BICOUSDT !
+2023-10-12 11:49:46 [INFO] - Start thread ThreadMonitorPositionBySymbol: UNFIUSDT !
+2023-10-12 11:49:46 [INFO] - Start thread ThreadMonitorPositionBySymbol: CTSIUSDT !
+2023-10-12 11:49:46 [INFO] - Start thread ThreadMonitorPositionBySymbol: STORJUSDT !
+2023-10-12 11:49:46 [INFO] - Start thread ThreadMonitorPositionBySymbol: RADUSDT !
+2023-10-12 11:49:46 [INFO] - Start thread ThreadMonitorPositionBySymbol: HIFIUSDT !
+2023-10-12 11:49:46 [INFO] - Start thread ThreadMonitorPositionBySymbol: GLMRUSDT !
+2023-10-12 11:49:46 [INFO] - Start thread ThreadMonitorPositionBySymbol: DUSKUSDT !
+2023-10-12 11:49:46 [INFO] - Start thread ThreadMonitorPositionBySymbol: COMBOUSDT !
+2023-10-12 11:49:46 [INFO] - Start thread ThreadMonitorPositionBySymbol: XTZUSDT !
+2023-10-12 11:49:46 [INFO] - Start thread ThreadMonitorPositionBySymbol: LITUSDT !
+2023-10-12 11:49:46 [INFO] - Start thread ThreadReportByTelegram!
+2023-10-12 11:49:46 [INFO] - Start thread ThreadMonitorPositionBySymbol: GMTUSDT !
+2023-10-12 11:49:46 [INFO] - Start thread ThreadMonitorPositionBySymbol: NMRUSDT !
+2023-10-12 11:49:46 [INFO] - Start thread ThreadMonitorPositionBySymbol: EDUUSDT !
+2023-10-12 11:49:46 [INFO] - Start thread ThreadMonitorPositionBySymbol: RNDRUSDT !
+2023-10-12 11:49:46 [INFO] - Start thread ThreadMonitorPositionBySymbol: AMBUSDT !
+2023-10-12 11:49:46 [ERROR] - ERROR during ThreadMonitorPositionBySymbol: LITUSDT {}
+java.lang.NullPointerException: null
+	at com.binance.chuyennd.testing.PositionManager.getPositionBySymbol(PositionManager.java:264)
+	at com.binance.chuyennd.testing.PositionManager.lambda$startThreadMonitorPositionBySymbol$0(PositionManager.java:169)
+	at java.base/java.lang.Thread.run(Thread.java:834)
+2023-10-12 11:49:46 [ERROR] - ERROR during ThreadMonitorPositionBySymbol: GLMRUSDT {}
+java.lang.NullPointerException: null
+	at com.binance.chuyennd.testing.PositionManager.getPositionBySymbol(PositionManager.java:264)
+	at com.binance.chuyennd.testing.PositionManager.lambda$startThreadMonitorPositionBySymbol$0(PositionManager.java:169)
+	at java.base/java.lang.Thread.run(Thread.java:834)
+2023-10-12 11:49:46 [ERROR] - ERROR during ThreadMonitorPositionBySymbol: CTSIUSDT {}
+java.lang.NullPointerException: null
+	at com.binance.chuyennd.testing.PositionManager.getPositionBySymbol(PositionManager.java:264)
+	at com.binance.chuyennd.testing.PositionManager.lambda$startThreadMonitorPositionBySymbol$0(PositionManager.java:169)
+	at java.base/java.lang.Thread.run(Thread.java:834)
+2023-10-12 11:49:46 [ERROR] - ERROR during ThreadMonitorPositionBySymbol: RNDRUSDT {}
+java.lang.NullPointerException: null
+	at com.binance.chuyennd.testing.PositionManager.getPositionBySymbol(PositionManager.java:264)
+	at com.binance.chuyennd.testing.PositionManager.lambda$startThreadMonitorPositionBySymbol$0(PositionManager.java:169)
+	at java.base/java.lang.Thread.run(Thread.java:834)
+2023-10-12 11:49:46 [ERROR] - ERROR during ThreadMonitorPositionBySymbol: EDUUSDT {}
+java.lang.NullPointerException: null
+	at com.binance.chuyennd.testing.PositionManager.getPositionBySymbol(PositionManager.java:264)
+	at com.binance.chuyennd.testing.PositionManager.lambda$startThreadMonitorPositionBySymbol$0(PositionManager.java:169)
+	at java.base/java.lang.Thread.run(Thread.java:834)
+2023-10-12 11:49:46 [ERROR] - ERROR during ThreadMonitorPositionBySymbol: XVSUSDT {}
+java.lang.NullPointerException: null
+	at com.binance.chuyennd.testing.PositionManager.getPositionBySymbol(PositionManager.java:264)
+	at com.binance.chuyennd.testing.PositionManager.lambda$startThreadMonitorPositionBySymbol$0(PositionManager.java:169)
+	at java.base/java.lang.Thread.run(Thread.java:834)
+2023-10-12 11:49:46 [ERROR] - ERROR during ThreadMonitorPositionBySymbol: AMBUSDT {}
+java.lang.NullPointerException: null
+	at com.binance.chuyennd.testing.PositionManager.getPositionBySymbol(PositionManager.java:264)
+	at com.binance.chuyennd.testing.PositionManager.lambda$startThreadMonitorPositionBySymbol$0(PositionManager.java:169)
+	at java.base/java.lang.Thread.run(Thread.java:834)
+2023-10-12 11:49:46 [ERROR] - ERROR during ThreadMonitorPositionBySymbol: XEMUSDT {}
+java.lang.NullPointerException: null
+	at com.binance.chuyennd.testing.PositionManager.getPositionBySymbol(PositionManager.java:264)
+	at com.binance.chuyennd.testing.PositionManager.lambda$startThreadMonitorPositionBySymbol$0(PositionManager.java:169)
+	at java.base/java.lang.Thread.run(Thread.java:834)
+2023-10-12 11:49:46 [ERROR] - ERROR during ThreadMonitorPositionBySymbol: BICOUSDT {}
+java.lang.NullPointerException: null
+	at com.binance.chuyennd.testing.PositionManager.getPositionBySymbol(PositionManager.java:264)
+	at com.binance.chuyennd.testing.PositionManager.lambda$startThreadMonitorPositionBySymbol$0(PositionManager.java:169)
+	at java.base/java.lang.Thread.run(Thread.java:834)
+2023-10-12 11:49:46 [ERROR] - ERROR during ThreadMonitorPositionBySymbol: NMRUSDT {}
+java.lang.NullPointerException: null
+	at com.binance.chuyennd.testing.PositionManager.getPositionBySymbol(PositionManager.java:264)
+	at com.binance.chuyennd.testing.PositionManager.lambda$startThreadMonitorPositionBySymbol$0(PositionManager.java:169)
+	at java.base/java.lang.Thread.run(Thread.java:834)
+2023-10-12 11:49:46 [ERROR] - ERROR during ThreadMonitorPositionBySymbol: HIFIUSDT {}
+java.lang.NullPointerException: null
+	at com.binance.chuyennd.testing.PositionManager.getPositionBySymbol(PositionManager.java:264)
+	at com.binance.chuyennd.testing.PositionManager.lambda$startThreadMonitorPositionBySymbol$0(PositionManager.java:169)
+	at java.base/java.lang.Thread.run(Thread.java:834)
+2023-10-12 11:49:46 [ERROR] - ERROR during ThreadMonitorPositionBySymbol: RADUSDT {}
+java.lang.NullPointerException: null
+	at com.binance.chuyennd.testing.PositionManager.getPositionBySymbol(PositionManager.java:264)
+	at com.binance.chuyennd.testing.PositionManager.lambda$startThreadMonitorPositionBySymbol$0(PositionManager.java:169)
+	at java.base/java.lang.Thread.run(Thread.java:834)
+2023-10-12 11:49:46 [ERROR] - ERROR during ThreadMonitorPositionBySymbol: TUSDT {}
+java.lang.NullPointerException: null
+	at com.binance.chuyennd.testing.PositionManager.getPositionBySymbol(PositionManager.java:264)
+	at com.binance.chuyennd.testing.PositionManager.lambda$startThreadMonitorPositionBySymbol$0(PositionManager.java:169)
+	at java.base/java.lang.Thread.run(Thread.java:834)
+2023-10-12 11:49:46 [ERROR] - ERROR during ThreadMonitorPositionBySymbol: UNFIUSDT {}
+java.lang.NullPointerException: null
+	at com.binance.chuyennd.testing.PositionManager.getPositionBySymbol(PositionManager.java:264)
+	at com.binance.chuyennd.testing.PositionManager.lambda$startThreadMonitorPositionBySymbol$0(PositionManager.java:169)
+	at java.base/java.lang.Thread.run(Thread.java:834)
+2023-10-12 11:49:46 [ERROR] - ERROR during ThreadMonitorPositionBySymbol: HIGHUSDT {}
+java.lang.NullPointerException: null
+	at com.binance.chuyennd.testing.PositionManager.getPositionBySymbol(PositionManager.java:264)
+	at com.binance.chuyennd.testing.PositionManager.lambda$startThreadMonitorPositionBySymbol$0(PositionManager.java:169)
+	at java.base/java.lang.Thread.run(Thread.java:834)
+2023-10-12 11:49:46 [ERROR] - ERROR during ThreadMonitorPositionBySymbol: PENDLEUSDT {}
+java.lang.NullPointerException: null
+	at com.binance.chuyennd.testing.PositionManager.getPositionBySymbol(PositionManager.java:264)
+	at com.binance.chuyennd.testing.PositionManager.lambda$startThreadMonitorPositionBySymbol$0(PositionManager.java:169)
+	at java.base/java.lang.Thread.run(Thread.java:834)
+2023-10-12 11:49:46 [ERROR] - ERROR during ThreadMonitorPositionBySymbol: COMBOUSDT {}
+java.lang.NullPointerException: null
+	at com.binance.chuyennd.testing.PositionManager.getPositionBySymbol(PositionManager.java:264)
+	at com.binance.chuyennd.testing.PositionManager.lambda$startThreadMonitorPositionBySymbol$0(PositionManager.java:169)
+	at java.base/java.lang.Thread.run(Thread.java:834)
+2023-10-12 11:49:46 [ERROR] - ERROR during ThreadMonitorPositionBySymbol: STORJUSDT {}
+java.lang.NullPointerException: null
+	at com.binance.chuyennd.testing.PositionManager.getPositionBySymbol(PositionManager.java:264)
+	at com.binance.chuyennd.testing.PositionManager.lambda$startThreadMonitorPositionBySymbol$0(PositionManager.java:169)
+	at java.base/java.lang.Thread.run(Thread.java:834)
+2023-10-12 11:49:46 [ERROR] - ERROR during ThreadMonitorPositionBySymbol: XTZUSDT {}
+java.lang.NullPointerException: null
+	at com.binance.chuyennd.testing.PositionManager.getPositionBySymbol(PositionManager.java:264)
+	at com.binance.chuyennd.testing.PositionManager.lambda$startThreadMonitorPositionBySymbol$0(PositionManager.java:169)
+	at java.base/java.lang.Thread.run(Thread.java:834)
+2023-10-12 11:49:46 [ERROR] - ERROR during ThreadMonitorPositionBySymbol: DUSKUSDT {}
+java.lang.NullPointerException: null
+	at com.binance.chuyennd.testing.PositionManager.getPositionBySymbol(PositionManager.java:264)
+	at com.binance.chuyennd.testing.PositionManager.lambda$startThreadMonitorPositionBySymbol$0(PositionManager.java:169)
+	at java.base/java.lang.Thread.run(Thread.java:834)
+2023-10-12 11:49:46 [ERROR] - ERROR during ThreadMonitorPositionBySymbol: GMTUSDT {}
+java.lang.NullPointerException: null
+	at com.binance.chuyennd.testing.PositionManager.getPositionBySymbol(PositionManager.java:264)
+	at com.binance.chuyennd.testing.PositionManager.lambda$startThreadMonitorPositionBySymbol$0(PositionManager.java:169)
+	at java.base/java.lang.Thread.run(Thread.java:834)

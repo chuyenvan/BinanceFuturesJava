@@ -1,11 +1,12 @@
 package com.binance.client.model.trade;
 
 import com.binance.client.constant.BinanceApiConstants;
+import java.io.Serializable;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 
 import java.math.BigDecimal;
 
-public class PositionRisk {
+public class PositionRisk implements Serializable{
 
     private BigDecimal entryPrice;
 
