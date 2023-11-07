@@ -18,17 +18,17 @@ package com.binance.chuyennd.beard.position.manager;
 import com.binance.chuyennd.funcs.ClientSingleton;
 import com.binance.chuyennd.funcs.OrderHelper;
 import com.binance.chuyennd.object.TickerStatistics;
+import com.binance.chuyennd.redis.RedisConst;
+import com.binance.chuyennd.redis.RedisHelper;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.HttpRequest;
 import com.binance.chuyennd.utils.Storage;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.model.enums.OrderSide;
-import com.binance.client.model.trade.Order;
 import com.binance.client.model.trade.PositionRisk;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -43,66 +43,58 @@ import org.slf4j.LoggerFactory;
  *
  * @author pc
  */
-public class PositionToTarget {
-
-    public static final Logger LOG = LoggerFactory.getLogger(PositionToTarget.class);
-    public ConcurrentHashMap<String, PositionRisk> symbolHadPositionRunning = new ConcurrentHashMap<>();
+public class PositionToTargetMonitor {
+    
+    public static final Logger LOG = LoggerFactory.getLogger(PositionToTargetMonitor.class);
     public ConcurrentHashMap<String, Double> symbol2BestProfit = new ConcurrentHashMap<>();
     public ConcurrentHashMap<String, List<PositionRisk>> allOrderFnished = new ConcurrentHashMap<>();
-    private static volatile PositionToTarget INSTANCE = null;
-
-    public final String FILE_POSITION_RUNNING = "storage/position_target_manager/positionRunning.data";
+    private static volatile PositionToTargetMonitor INSTANCE = null;
+    
     public final String FILE_POSITION_FINISHED = "storage/position_target_manager/positionFinished.data";
     public static double RATE_MIN_TAKE_PROFIT;
-    public static double RATE_LOSS_TO_DCA;
+    public static double RATE_LOSS_TO_STOP_LOSS;
     public static double RATE_PROFIT_DEC_2CLOSE;
-    public static Integer LEVERAGE_TRADING;
-    public static Integer BUDGET_PER_ORDER = 10;
+    
     public int counter = 0;
-
-    public static PositionToTarget getInstance() {
+    
+    public static PositionToTargetMonitor getInstance() {
         if (INSTANCE == null) {
-            INSTANCE = new PositionToTarget();
+            INSTANCE = new PositionToTargetMonitor();
             INSTANCE.initClient();
         }
         return INSTANCE;
     }
-
+    
     private void initClient() {
-//        ClientSingleton.getInstance();
-//        try {
-//            Thread.sleep(30000);
-//        } catch (InterruptedException ex) {
-//            java.util.logging.Logger.getLogger(PositionToTarget.class.getName()).log(Level.SEVERE, null, ex);
-//        }
-        RATE_MIN_TAKE_PROFIT = Configs.getDouble("TakeProfitRateMinPositionTarget");
-        RATE_LOSS_TO_DCA = Configs.getDouble("RateLoss2DCA");//  had * 100
-        RATE_PROFIT_DEC_2CLOSE = Configs.getDouble("ProfitDec2Close");//  had * 100
-        RATE_PROFIT_DEC_2CLOSE = Configs.getDouble("LeverageTrading");//  default 10
-
-        if (new File(FILE_POSITION_RUNNING).exists()) {
-            symbolHadPositionRunning = (ConcurrentHashMap<String, PositionRisk>) Storage.readObjectFromFile(FILE_POSITION_RUNNING);
-        } else {
-            symbolHadPositionRunning = new ConcurrentHashMap<>();
+        ClientSingleton.getInstance();
+        try {
+            Thread.sleep(5000);
+        } catch (InterruptedException ex) {
+            java.util.logging.Logger.getLogger(PositionToTargetMonitor.class.getName()).log(Level.SEVERE, null, ex);
         }
+        RATE_MIN_TAKE_PROFIT = Configs.getDouble("TakeProfitRateMinPositionTarget");
+        RATE_LOSS_TO_STOP_LOSS = Configs.getDouble("RateStopLoss");//  had * 100
+        RATE_PROFIT_DEC_2CLOSE = Configs.getDouble("ProfitDec2Close");//  had * 100
+
         if (new File(FILE_POSITION_FINISHED).exists()) {
             allOrderFnished = (ConcurrentHashMap<String, List<PositionRisk>>) Storage.readObjectFromFile(FILE_POSITION_FINISHED);
         } else {
             allOrderFnished = new ConcurrentHashMap<>();
         }
         // start thread monitor symbol running
-        for (PositionRisk pos : symbolHadPositionRunning.values()) {
-            startThreadMonitorPositionBySymbol(pos.getSymbol());
+        for (String symbol : RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER)) {
+            startThreadMonitorPositionBySymbol(symbol);
         }
-//        startThreadGetPosition2Manager();
+        startThreadGetPosition2Manager();
+        startThreadListenQueuePosition2Manager();
         startThreadReport();
     }
-
+    
     public static void main(String[] args) {
-//        new PositionToTarget().testFuntion();
-        new PositionToTarget().initClient();
+        new PositionToTargetMonitor().initClient();
+//        System.out.println(new PositionToTargetMonitor().getAllSymbol());
     }
-
+    
     private void startThreadMonitorPositionBySymbol(String symbol) {
         new Thread(() -> {
             Thread.currentThread().setName("ThreadMonitorPositionBySymbol-" + symbol);
@@ -111,48 +103,42 @@ public class PositionToTarget {
             while (true) {
                 try {
                     PositionRisk position = getPositionBySymbol(symbol);
-                    // if order new -> waiting for position active
-                    // if order running -> create SL and TP if have position
-                    // else check no position -> check price update order info and remove list active
-//                    LOG.info("Checking position for {} {}", symbol, position.getPositionAmt());
                     if (position.getPositionAmt().doubleValue() != 0) {
-                        checkProfitToCloseOrDCA(symbol);
+                        lastPosition = position;
+                        boolean closePos = checkProfitToCloseOrStopLoss(symbol);
+                        if (closePos) {
+                            return;
+                        }
                     } else {
                         if (waitForPositionDone(symbol)) {
-                            Double lastPrice = ClientSingleton.getInstance().getCurrentPrice(symbol);
-                            if (lastPrice != null) {
-//                                    orderInfo.status = OrderStatusProcess.TAKE_PROFIT_DONE;
-                                // sleep 30 to next trading for symbol
-                                symbolHadPositionRunning.remove(symbol);
-                                LOG.info("Remove symbol: {} out list running!", symbol);
-                                String today = Utils.getToDayFileName();
-                                List<PositionRisk> orderSucessByDate = allOrderFnished.get(today);
-                                if (orderSucessByDate == null) {
-                                    orderSucessByDate = new ArrayList<>();
-                                    allOrderFnished.put(today, orderSucessByDate);
-                                }
-                                orderSucessByDate.add(lastPosition);
-                                Storage.writeObject2File(FILE_POSITION_FINISHED, allOrderFnished);
-                                Storage.writeObject2File(FILE_POSITION_RUNNING, symbolHadPositionRunning);
-                                return;
+                            RedisHelper.getInstance().delJsonData(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER, symbol);
+                            LOG.info("{} Remove symbol had Close by over margin: {} out list running!", Thread.currentThread().getName(), symbol);
+                            String today = Utils.getToDayFileName();
+                            List<PositionRisk> orderSucessByDate = allOrderFnished.get(today);
+                            if (orderSucessByDate == null) {
+                                orderSucessByDate = new ArrayList<>();
+                                allOrderFnished.put(today, orderSucessByDate);
                             }
+                            orderSucessByDate.add(lastPosition);
+                            Storage.writeObject2File(FILE_POSITION_FINISHED, allOrderFnished);
+                            return;
                         }
                     }
-
+                    
                 } catch (Exception e) {
                     LOG.error("ERROR during ThreadMonitorPositionBySymbol: {} {}", symbol, e);
                     e.printStackTrace();
                 }
                 try {
                     Thread.sleep(30 * Utils.TIME_SECOND);
-                } catch (InterruptedException ex) {
-                    java.util.logging.Logger.getLogger(PositionToTarget.class.getName()).log(Level.SEVERE, null, ex);
+                } catch (Exception ex) {
+                    ex.printStackTrace();
                 }
             }
         }
         ).start();
     }
-
+    
     private void startThreadReport() {
         new Thread(() -> {
             Thread.currentThread().setName("ThreadReportByTelegram");
@@ -171,7 +157,7 @@ public class PositionToTarget {
                         Utils.sendSms2Telegram("Total profit position target: " + date + " -> " + Utils.normalPrice2Api(totalMoneySuccess));
                         LOG.info("Total profit position target: {} -> {}", date, totalMoneySuccess);
                     }
-                    Thread.sleep(30 * Utils.TIME_MINUTE);
+                    Thread.sleep(120 * Utils.TIME_MINUTE);
                 } catch (Exception e) {
                     LOG.error("ERROR during ThreadReportByTelegram: {}", e);
                     e.printStackTrace();
@@ -179,7 +165,7 @@ public class PositionToTarget {
             }
         }).start();
     }
-
+    
     private PositionRisk getPositionBySymbol(String symbol) {
         List<PositionRisk> positionInfos = ClientSingleton.getInstance().syncRequestClient.getPositionRisk(symbol);
         PositionRisk position = null;
@@ -188,29 +174,7 @@ public class PositionToTarget {
         }
         return position;
     }
-
-    private void testFuntion() {
-//        checkProfitToClose("OGNUSDT");
-//        System.out.println(getAllSymbol());
-//        System.out.println(getPositionBySymbol("TRUUSDT"));
-        System.out.println(rateLoss(getPositionBySymbol("INJUSDT")));
-//        dcaForPosition(getPositionBySymbol("BNTUSDT"));
-//        symbolHadOrderRunning = (ConcurrentHashMap<String, OrderInfo>) Storage.readObjectFromFile(FILE_POSITION_RUNNING);
-//        OrderInfo orderInfo = symbolHadOrderRunning.get("LOOMUSDT");
-//        OrderHelper.stopLoss(orderInfo);
-//checkProfitToCloseOrDCA("BNTUSDT");
-//        orderInfo.priceTP = 0.1209;
-//        OrderInfo orderInfo = new OrderInfo();
-//        orderInfo.status = OrderStatusProcess.NEW;
-//        orderInfo.symbol = "ARKUSDT";
-//        startThreadMonitorPositionBySymbol(orderInfo);
-//        OrderHelper.takeProfit(orderInfo);
-//        OrderHelper.stopLoss(orderInfo);
-//        for (OrderInfo orderInfo : symbolHadOrderRunning.values()) {
-//            System.out.println(Utils.gson.toJson(orderInfo));
-//        }
-    }
-
+    
     private boolean waitForPositionDone(String symbol) {
         try {
             int counterPos = 0;
@@ -219,7 +183,7 @@ public class PositionToTarget {
                 if (position.getPositionAmt().doubleValue() == 0) {
                     counterPos++;
                 }
-                Thread.sleep(Utils.TIME_MINUTE);
+                Thread.sleep(30 * Utils.TIME_SECOND);
             }
             if (counterPos == 3) {
                 return true;
@@ -229,7 +193,7 @@ public class PositionToTarget {
         }
         return false;
     }
-
+    
     private boolean waitForPositionOpen(String symbol) {
         try {
             for (int i = 0; i < 3; i++) {
@@ -239,25 +203,39 @@ public class PositionToTarget {
                 }
                 Thread.sleep(Utils.TIME_MINUTE);
             }
-
+            
         } catch (Exception e) {
             e.printStackTrace();
         }
         return false;
     }
-
-    private void checkProfitToCloseOrDCA(String symbol) {
+    
+    private boolean checkProfitToCloseOrStopLoss(String symbol) {
         try {
             Double bestProfit = symbol2BestProfit.get(symbol);
             if (bestProfit == null) {
                 bestProfit = 0d;
             }
             PositionRisk pos = getPositionBySymbol(symbol);
-            if (rateLoss(pos) > RATE_LOSS_TO_DCA) {
-                dcaForPosition(pos);
+            if (rateLoss(pos) >= RATE_LOSS_TO_STOP_LOSS) {
+                LOG.info("Close by market to stoploss: {}", pos);
+                Utils.sendSms2Telegram("Close position of: " + symbol + " amt: " + pos.getPositionAmt()
+                        + " stoploss: " + pos.getUnrealizedProfit());
+                OrderHelper.stopLossPosition(pos);
+                RedisHelper.getInstance().delJsonData(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER, symbol);
+                LOG.info("Remove symbol: {} out list stoploss {}!", symbol, rateLoss(pos));
+                String today = Utils.getToDayFileName();
+                List<PositionRisk> orderSucessByDate = allOrderFnished.get(today);
+                if (orderSucessByDate == null) {
+                    orderSucessByDate = new ArrayList<>();
+                    allOrderFnished.put(today, orderSucessByDate);
+                }
+                orderSucessByDate.add(pos);
+                Storage.writeObject2File(FILE_POSITION_FINISHED, allOrderFnished);
+                return true;
             }
             Double currentRateProfit = rateProfit(pos);
-            LOG.info("Checking position of: {} current profit: {} bestProfit: {} ", symbol, currentRateProfit, bestProfit);
+            LOG.info("{}: Checking position of: {} current profit: {} bestProfit: {} ", Thread.currentThread().getName(), symbol, currentRateProfit, bestProfit);
             if (currentRateProfit >= RATE_MIN_TAKE_PROFIT) {
                 if (currentRateProfit > bestProfit) {
                     String log = "Update best profit: " + symbol + " " + bestProfit + " -> " + currentRateProfit;
@@ -266,12 +244,21 @@ public class PositionToTarget {
                     bestProfit = currentRateProfit;
                     symbol2BestProfit.put(symbol, bestProfit);
                 } else {
-                    if (100 * (bestProfit - currentRateProfit) / bestProfit >= RATE_PROFIT_DEC_2CLOSE) {
+                    double rateProfit2Close = RATE_PROFIT_DEC_2CLOSE;
+                    if (bestProfit < 50) {
+                        rateProfit2Close = 40;
+                    } else {
+                        if (bestProfit < 30) {
+                            rateProfit2Close = 50;
+                        }
+                    }
+                    double currentLossProfit = 100 * (bestProfit - currentRateProfit) / bestProfit;
+                    if (currentLossProfit >= rateProfit2Close) {
                         LOG.info("Close by market: {}", pos);
                         Utils.sendSms2Telegram("Close position of: " + symbol + " amt: " + pos.getPositionAmt()
-                                + " profit: " + pos.getUnrealizedProfit() + " Rate: " + bestProfit + "->" + currentRateProfit);
+                                + " profit: " + pos.getUnrealizedProfit() + " Rate: " + bestProfit + "->" + currentRateProfit + " rateloss:" + currentLossProfit);
                         OrderHelper.takeProfitPosition(pos);
-                        symbolHadPositionRunning.remove(symbol);
+                        RedisHelper.getInstance().delJsonData(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER, symbol);
                         LOG.info("Remove symbol: {} out list running profit change from {} {}!", symbol, bestProfit, currentRateProfit);
                         String today = Utils.getToDayFileName();
                         List<PositionRisk> orderSucessByDate = allOrderFnished.get(today);
@@ -281,15 +268,16 @@ public class PositionToTarget {
                         }
                         orderSucessByDate.add(pos);
                         Storage.writeObject2File(FILE_POSITION_FINISHED, allOrderFnished);
-                        Storage.writeObject2File(FILE_POSITION_RUNNING, symbolHadPositionRunning);
+                        return true;
                     }
                 }
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
+        return false;
     }
-
+    
     private int rateLoss(PositionRisk pos) {
         try {
             if (pos.getUnrealizedProfit().doubleValue() > 0) {
@@ -301,9 +289,9 @@ public class PositionToTarget {
         } catch (Exception e) {
         }
         return 0;
-
+        
     }
-
+    
     private void dcaForPosition(PositionRisk pos) {
         try {
             LOG.info("DCA for {} {}", pos.getSymbol(), pos.getPositionAmt());
@@ -311,12 +299,12 @@ public class PositionToTarget {
             if (pos.getPositionAmt().doubleValue() < 0) {
                 side = OrderSide.SELL;
             }
-            OrderHelper.dcaForPosition(pos.getSymbol(), side, Math.abs(pos.getPositionAmt().doubleValue()), LEVERAGE_TRADING);
+            OrderHelper.dcaForPosition(pos.getSymbol(), side, Math.abs(pos.getPositionAmt().doubleValue()));
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
-
+    
     private boolean isPriceOverForTrading(String symbol, OrderSide side, Double priceEntryTarget) {
         try {
             Double currentPrice = ClientSingleton.getInstance().getCurrentPrice(symbol);
@@ -334,20 +322,20 @@ public class PositionToTarget {
         }
         return true;
     }
-
+    
     private Double rateProfit(PositionRisk pos) {
         double rate = 0;
-        if (pos.getUnrealizedProfit().doubleValue() > 0) {
-            rate = pos.getUnrealizedProfit().doubleValue() / marginOfPosition(pos);
-            rate = Double.parseDouble(Utils.formatPercent(rate));
-        }
+//        if (pos.getUnrealizedProfit().doubleValue() > 0) {
+        rate = pos.getUnrealizedProfit().doubleValue() / marginOfPosition(pos);
+        rate = Double.parseDouble(Utils.formatPercent(rate));
+//        }
         return rate;
     }
-
+    
     private double marginOfPosition(PositionRisk pos) {
         return Math.abs((pos.getPositionAmt().doubleValue() * pos.getEntryPrice().doubleValue() / pos.getLeverage().doubleValue()));
     }
-
+    
     private void startThreadGetPosition2Manager() {
         new Thread(() -> {
             Thread.currentThread().setName("ThreadGetPosition2Manager");
@@ -355,27 +343,24 @@ public class PositionToTarget {
             Set<String> allSymbol = new HashSet<>();
             while (true) {
                 try {
+                    LOG.info("Number of threads active: {}", Thread.activeCount());
                     if (allSymbol.isEmpty()) {
                         allSymbol.addAll(getAllSymbol());
                     }
                     for (String symbol : allSymbol) {
                         try {
-                            if (symbolHadPositionRunning.containsKey(symbol)) {
+                            if (RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER, symbol) != null) {
                                 continue;
                             }
                             PositionRisk pos = getPositionBySymbol(symbol);
                             if (pos.getPositionAmt().doubleValue() != 0) {
-                                symbolHadPositionRunning.put(symbol, pos);
-                                Double bestProfit = 0d;
-                                symbol2BestProfit.put(symbol, bestProfit);
-                                startThreadMonitorPositionBySymbol(symbol);
+                                RedisHelper.getInstance().get().rpush(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER_QUEUE, symbol);
                             }
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
                     }
-                    Storage.writeObject2File(FILE_POSITION_RUNNING, symbolHadPositionRunning);
-                    Thread.sleep(10 * Utils.TIME_MINUTE);
+                    Thread.sleep(5 * Utils.TIME_MINUTE);
                 } catch (Exception e) {
                     LOG.error("ERROR during : {}", e);
                     e.printStackTrace();
@@ -383,7 +368,36 @@ public class PositionToTarget {
             }
         }).start();
     }
-
+    
+    private void startThreadListenQueuePosition2Manager() {
+        new Thread(() -> {
+            Thread.currentThread().setName("ThreadListenQueuePosition2Manager");
+            LOG.info("Start thread ThreadListenQueuePosition2Manager!");
+            while (true) {
+                List<String> data = null;
+                try {
+                    data = RedisHelper.getInstance().get().blpop(0, RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER_QUEUE);
+                    LOG.info("Queue listen symbol to manager position received : {} ", data.toString());
+                    String symbol = data.get(1);
+                    try {
+                        PositionRisk pos = getPositionBySymbol(symbol);
+                        if (pos.getPositionAmt().doubleValue() != 0) {
+                            RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER, symbol, Utils.gson.toJson(pos));
+                            Double bestProfit = 0d;
+                            symbol2BestProfit.put(symbol, bestProfit);
+                            startThreadMonitorPositionBySymbol(symbol);
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                } catch (Exception e) {
+                    LOG.error("ERROR during ThreadListenQueuePosition2Manager {}", e);
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+    }
+    
     private Collection<? extends String> getAllSymbol() {
         Set<String> results = new HashSet<>();
         String allFuturePrices = HttpRequest.getContentFromUrl("https://fapi.binance.com/fapi/v1/ticker/24hr");
@@ -396,33 +410,5 @@ public class PositionToTarget {
         }
         return results;
     }
-
-    public void addOrderByTarget(String symbol, OrderSide orderSide, Double priceEntryTarget) {
-        if (symbolHadPositionRunning.containsKey(symbol)) {
-            LOG.info("Add order fail because symbol had order active: {} {}", symbol, new Date());
-            return;
-        }
-        PositionRisk position = getPositionBySymbol(symbol);
-        if (position != null && position.getPositionAmt().doubleValue() != 0) {
-            LOG.info("Add order fail because had other position of symbol {} with volume {} {} ", symbol, position.getPositionAmt(), new Date());
-            return;
-        }
-        if (!isPriceOverForTrading(symbol, orderSide, priceEntryTarget)) {
-            Double quantity = Double.valueOf(Utils.normalQuantity2Api(BUDGET_PER_ORDER * LEVERAGE_TRADING / priceEntryTarget));
-            Order result = OrderHelper.newOrderMarket(symbol, orderSide, quantity, LEVERAGE_TRADING);
-            if (result != null) {
-                PositionRisk pos = getPositionBySymbol(symbol);
-                symbolHadPositionRunning.put(symbol, pos);
-                Double bestProfit = 0d;
-                symbol2BestProfit.put(symbol, bestProfit);
-                startThreadMonitorPositionBySymbol(symbol);
-                LOG.info("Add order success:{} {} entry: {} quantity:{} {}", orderSide, symbol, pos.getEntryPrice().doubleValue(), pos.getPositionAmt().doubleValue(), new Date());
-
-            }
-        } else {
-            LOG.info("Add order fail because price over to {} {}/{} symbol {} with volume {} {} ", 
-                    orderSide, ClientSingleton.getInstance().getCurrentPrice(symbol), priceEntryTarget, symbol, position.getPositionAmt(), new Date());
-        }
-    }
-
+    
 }

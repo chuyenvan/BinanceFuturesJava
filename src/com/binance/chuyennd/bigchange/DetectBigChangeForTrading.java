@@ -15,7 +15,7 @@
  */
 package com.binance.chuyennd.bigchange;
 
-import com.binance.chuyennd.beard.position.manager.PositionToTarget;
+import com.binance.chuyennd.beard.position.manager.CreatePositionNew;
 import com.binance.chuyennd.funcs.ClientSingleton;
 import com.binance.chuyennd.object.KlineObject;
 import com.binance.chuyennd.object.TickerStatistics;
@@ -37,7 +37,7 @@ import org.slf4j.LoggerFactory;
 public class DetectBigChangeForTrading {
 
     public static final Logger LOG = LoggerFactory.getLogger(DetectBigChangeForTrading.class);
-    public static final String URL_KLINE_M15 = "https://fapi.binance.com/fapi/v1/klines?symbol=xxxxxx&interval=15m";
+    public static final String URL_TICKER_15M = "https://fapi.binance.com/fapi/v1/klines?symbol=xxxxxx&interval=15m";
     public static double RATE_BIG_CHANGE;
 
     public static void main(String[] args) throws IOException {
@@ -73,7 +73,7 @@ public class DetectBigChangeForTrading {
     }
 
     private static boolean getData(String symbol) {
-        String urlM1 = URL_KLINE_M15.replace("xxxxxx", symbol);
+        String urlM1 = URL_TICKER_15M.replace("xxxxxx", symbol);
         String respon = HttpRequest.getContentFromUrl(urlM1);
         try {
             List<List<Object>> allKlines = Utils.gson.fromJson(respon, List.class);
@@ -95,18 +95,19 @@ public class DetectBigChangeForTrading {
                         Utils.formatPercent(rateChangeTicker), priceOpen, priceClose, new Date(klineCloseObjectFinal.startTime.longValue()));
                 priceEntryTarget = priceClose;
                 OrderSide orderSide = OrderSide.BUY;
-                if (priceClose > priceOpen) {
-                    priceEntryTarget = priceOpen;
+                if (priceClose > priceOpen) {                    
+                    orderSide = OrderSide.SELL;
                 }
-                PositionToTarget.getInstance().addOrderByTarget(symbol, orderSide, priceEntryTarget);
+                CreatePositionNew.getInstance().addOrderByTarget(symbol, orderSide, priceEntryTarget);
             }
         } catch (Exception e) {
+            e.printStackTrace();
         }
         return false;
     }
 
     private static boolean isTimeRun() {
-        return Utils.getCurrentMinute() % 15 == 0;
+        return Utils.getCurrentMinute() % 15 == 1;
     }
 
     private static void checkBigChangeAndTradeARound() {

@@ -94,6 +94,15 @@ public class OrderHelper {
         }
         return null;
     }
+    public static Order newOrderMarket(String symbol, OrderSide side, Double quantity) {       
+        try {
+            return ClientSingleton.getInstance().syncRequestClient.postOrder(symbol, side, null, OrderType.MARKET, null,
+                    quantity.toString(), null, null, null, null, null, null, null, null, null, NewOrderRespType.RESULT);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
 
     public static Order takeProfit(OrderInfo orderInfo) {
         OrderSide side = OrderSide.BUY;
@@ -109,6 +118,18 @@ public class OrderHelper {
     }
 
     public static Order takeProfitPosition(PositionRisk orderInfo) {
+        OrderSide side = OrderSide.BUY;
+        if (orderInfo.getPositionAmt().doubleValue() > 0) {
+            side = OrderSide.SELL;
+        }
+        try {
+            return takeProfit(orderInfo.getSymbol(), side, orderInfo.getPositionAmt().doubleValue());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+    public static Order stopLossPosition(PositionRisk orderInfo) {
         OrderSide side = OrderSide.BUY;
         if (orderInfo.getPositionAmt().doubleValue() > 0) {
             side = OrderSide.SELL;
@@ -162,9 +183,9 @@ public class OrderHelper {
         System.out.println(OrderHelper.stopLoss("CYBERUSDT", OrderSide.SELL, 5.0, 3.0));
     }
 
-    public static void dcaForPosition(String symbol, OrderSide side, double quantity, Integer leverage) {
+    public static void dcaForPosition(String symbol, OrderSide side, double quantity) {
         LOG.info("DCA to {} side:{} quantity: {}", symbol, side, quantity);
         Utils.sendSms2Telegram("DCA for " + symbol + " side: " + side + " quantity: " + quantity);
-        newOrderMarket(symbol, side, quantity, leverage);
+        newOrderMarket(symbol, side, quantity);
     }
 }

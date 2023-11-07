@@ -4,6 +4,7 @@
  */
 package com.binance.chuyennd.funcs;
 
+import com.binance.chuyennd.utils.HttpRequest;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.RequestOptions;
 import com.binance.client.SubscriptionClient;
@@ -14,6 +15,7 @@ import com.binance.client.model.enums.NewOrderRespType;
 import com.binance.client.model.enums.OrderSide;
 import com.binance.client.model.enums.OrderType;
 import com.binance.client.model.enums.TimeInForce;
+import com.binance.client.model.trade.Order;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,11 +31,12 @@ public class PostOrder {
 
     public static void main(String[] args) {
 
+//        System.out.println(HttpRequest.getContentFromUrl("http://172.25.80.128:8002/CYBERUSDT"));
 //        System.out.println(ClientSingleton.getInstance().syncRequestClient.changeMarginType("BTCUSDT", MarginType.ISOLATED));
-                RequestOptions options = new RequestOptions();
-                SyncRequestClient syncRequestClient = SyncRequestClient.create(PrivateConfig.API_KEY, PrivateConfig.SECRET_KEY,
-                        options);
-                System.out.println(syncRequestClient.getOpenOrders("ETHUSDT"));
+        RequestOptions options = new RequestOptions();
+        SyncRequestClient syncRequestClient = SyncRequestClient.create(PrivateConfig.API_KEY, PrivateConfig.SECRET_KEY,
+                options);
+        System.out.println(syncRequestClient.getOrder("GASUSDT", 274183700L, "274183700"));
         //        System.out.println(syncRequestClient.getOpenOrders("FRONTUSDT"));
         //        System.out.println(syncRequestClient.getPositionRisk("STORJUSDT"));
         ////        System.out.println(syncRequestClient.getPositionRisk("BTCUSDT"));
@@ -49,7 +52,7 @@ public class PostOrder {
         //                "1", "1", null, null, null, null));
         // place dual position side order.
         // Switch between dual or both position side, call: com.binance.client.examples.trade.ChangePositionSide
-        //        newOrder("TOMOUSDT", OrderSide.BUY, 141.555062898212421, 1.37409231);
+//                System.out.println(newOrder("GASUSDT", OrderSide.BUY, 1d, 8d, 10));
         //        newOrder("TRBUSDT", OrderSide.BUY, 04.415025445688392, 48.18981633);
         //        takeProfit("BTCUSDT", OrderSide.SELL, "0.001", "27000");
         //        stopLoss("BTCUSDT", OrderSide.SELL, "0.001", "27000");
@@ -68,11 +71,11 @@ public class PostOrder {
 
     }
 
-    private static void newOrder(String symbol, OrderSide orderSide, Double quantity, Double price, Integer leverage) {
+    private static Order newOrder(String symbol, OrderSide orderSide, Double quantity, Double price, Integer leverage) {
         System.out.println(Utils.normalQuantity2Api(quantity) + " " + Utils.normalPrice2Api(price));
         ClientSingleton.getInstance().syncRequestClient.changeInitialLeverage(symbol, leverage);
-        System.out.println(ClientSingleton.getInstance().syncRequestClient.postOrder(symbol, orderSide, null, OrderType.LIMIT, TimeInForce.GTC,
-                Utils.normalQuantity2Api(quantity), Utils.normalPrice2Api(price), null, null, null, null, null, null, null, null, NewOrderRespType.RESULT));
+        return ClientSingleton.getInstance().syncRequestClient.postOrder(symbol, orderSide, null, OrderType.LIMIT, TimeInForce.GTC,
+                Utils.normalQuantity2Api(quantity), Utils.normalPrice2Api(price), null, null, null, null, null, null, null, null, NewOrderRespType.RESULT);
 
     }
 
