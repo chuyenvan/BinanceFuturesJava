@@ -15,15 +15,19 @@
  */
 package com.binance.chuyennd.sideway;
 
-import com.binance.chuyennd.beard.position.manager.CreatePositionNew;
+import com.binance.chuyennd.position.manager.BTCInfoManager;
+import com.binance.chuyennd.position.manager.PositionHelper;
 import com.binance.chuyennd.funcs.ClientSingleton;
+import com.binance.chuyennd.funcs.TickerHelper;
 import com.binance.chuyennd.object.KlineObject;
+import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.TickerStatistics;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.HttpRequest;
 import com.binance.chuyennd.utils.Utils;
+import com.binance.client.constant.Contanst;
 import com.binance.client.model.enums.OrderSide;
 import java.util.HashSet;
 import java.util.List;
@@ -38,15 +42,14 @@ import org.slf4j.LoggerFactory;
  *
  * @author pc
  */
-public class DetectSideWay2Trading {
+public class DetectSW2TD {
 
-    public static final Logger LOG = LoggerFactory.getLogger(DetectSideWay2Trading.class);
+    public static final Logger LOG = LoggerFactory.getLogger(DetectSW2TD.class);
     public Integer LEVERAGE_TRADING = Configs.getInt("LeverageTrading");
     public Integer BUDGET_PER_ORDER = Configs.getInt("BudgetPerOrder");
     public Integer NUMBER_DAY_SIDEWAY = Configs.getInt("NumberDaySideWay");
     public Double RATE_RANGE_TRADING = Configs.getDouble("RateRangeTrading");
     public Double RATE_2TRADING = Configs.getDouble("Rate2Trading");
-    public final String URL_TICKER_1D = "https://fapi.binance.com/fapi/v1/klines?symbol=xxxxxx&interval=1d";
     public final ConcurrentHashMap<String, SymbolSideWayObject> symbolSideWay2Trading = new ConcurrentHashMap();
 
     private void detectSW2Trading() {
@@ -55,7 +58,7 @@ public class DetectSideWay2Trading {
             List<Object> futurePrices = Utils.gson.fromJson(allFuturePrices, List.class);
             for (Object futurePrice : futurePrices) {
                 TickerStatistics ticker = Utils.gson.fromJson(futurePrice.toString(), TickerStatistics.class);
-                if (StringUtils.endsWithIgnoreCase(ticker.getSymbol(), "usdt")) {
+                if (StringUtils.endsWithIgnoreCase(ticker.getSymbol(), "usdt") && !StringUtils.startsWithIgnoreCase(ticker.getSymbol(), "btc")) {
                     try {
                         // only get symbol over 2 months
                         SymbolSideWayObject objectSideway = getRangeSideWay(ticker.getSymbol());
@@ -86,9 +89,19 @@ public class DetectSideWay2Trading {
                     for (Map.Entry<String, SymbolSideWayObject> entry : symbolSideWay2Trading.entrySet()) {
                         String symbol = entry.getKey();
                         SymbolSideWayObject sidewayObject = entry.getValue();
-                        // check symbol had position running
+                        // check price break out sideway
+                        KlineObjectNumber klineToday = TickerHelper.getLastTicker(symbol, Contanst.INTERVAL_1D);
+                        if (klineToday.priceMax > sidewayObject.priceMax
+                                || klineToday.priceMin < sidewayObject.priceMin) {
+                            String log = symbol + " is break out sideway -> not trading";
+//                            Utils.sendSms2Telegram(log);
+                            LOG.info(log);
+                            symbol2Remove.add(symbol);
+                            continue;
+                        }
+                        // check symbol had position running                        
                         if (RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER, symbol) != null) {
-                            String log = "Symbol {} had order active: " + symbol;
+                            String log = "Symbol " + symbol + " had order active: ";
                             LOG.info(log);
                             continue;
                         }
@@ -99,16 +112,40 @@ public class DetectSideWay2Trading {
                             symbol2Remove.add(symbol);
                             continue;
                         }
+                        OrderSide orderSide = null;
+                        Double priceEntry = null;
                         if (currentPrice > sidewayObject.priceSignalShort) {
-                            String log = "Short " + symbol + " entry: " + currentPrice + " detail: " + Utils.gson.toJson(sidewayObject);
+//                            String log = "Short " + symbol + " entry: " + currentPrice + " detail: " + Utils.gson.toJson(sidewayObject);
 //                            Utils.sendSms2Telegram(log);
-                            LOG.info(log);
+//                            CreatePositionNew.getInstance().addOrderByTarget(symbol, OrderSide.SELL, sidewayObject.priceMax);
+//                            LOG.info(log);
+                            orderSide = OrderSide.SELL;
+                            priceEntry = sidewayObject.priceMax;
                         }
                         if (currentPrice < sidewayObject.priceSignalLong) {
-                            String log = "Long " + symbol + " entry: " + currentPrice + " detail: " + Utils.gson.toJson(sidewayObject);
-                            Utils.sendSms2Telegram(log);
-                            CreatePositionNew.getInstance().addOrderByTarget(symbol, OrderSide.BUY, sidewayObject.priceMin);
-                            LOG.info(log);
+//                            if (TickerHelper.getCurrentTrendWithInterval(Contanst.SYMBOL_PAIR_BTC, Contanst.INTERVAL_15M).equals(OrderSide.BUY)) {
+//                                String log = "Long " + symbol + " entry: " + currentPrice + " detail: " + Utils.gson.toJson(sidewayObject);
+//                                Utils.sendSms2Telegram(log);
+//                                CreatePositionNew.getInstance().addOrderByTarget(symbol, OrderSide.BUY, sidewayObject.priceMin);
+//                                LOG.info(log);
+//                            } else {
+//                                LOG.info("Not trading because not match trend with BTC! {}", symbol);
+//                            }
+                            orderSide = OrderSide.BUY;
+                            priceEntry = sidewayObject.priceMin;
+                        }
+                        if (orderSide != null) {
+                            OrderSide currentTrendBtc = TickerHelper.getCurrentTrendWithInterval(Contanst.SYMBOL_PAIR_BTC, Contanst.INTERVAL_15M);
+                            OrderSide longTrendBtc = BTCInfoManager.getLongTrendBtc();
+                            if (currentTrendBtc.equals(orderSide)
+                                    && orderSide.equals(longTrendBtc)) {
+                                String log = orderSide + " " + symbol + " entry: " + currentPrice + " detail: " + Utils.gson.toJson(sidewayObject);
+                                Utils.sendSms2Telegram(log);
+                                PositionHelper.getInstance().addOrderByTarget(symbol, orderSide, priceEntry);
+                                LOG.info(log);
+                            } else {
+                                LOG.info("Not trading because not match trend with BTC! {} {} {} {}", orderSide, symbol, currentTrendBtc, longTrendBtc);
+                            }
                         }
                     }
                     for (String symbol : symbol2Remove) {
@@ -141,25 +178,33 @@ public class DetectSideWay2Trading {
     }
 
     private SymbolSideWayObject getRangeSideWay(String symbol) {
-        String urlM1 = URL_TICKER_1D.replace("xxxxxx", symbol);
-        String respon = HttpRequest.getContentFromUrl(urlM1);
+        List<KlineObjectNumber> allKlines = TickerHelper.getTicker(symbol, Contanst.INTERVAL_1D);
         try {
-            List<List<Object>> allKlines = Utils.gson.fromJson(respon, List.class);
             if (allKlines.size() > 31) {
                 Double maxPrice = 0d;
                 Double minPrice = 0d;
-                KlineObject klineToday = KlineObject.convertString2Kline(allKlines.get(allKlines.size() - 1));
-                KlineObject klineYesterday = KlineObject.convertString2Kline(allKlines.get(allKlines.size() - 2));
+                KlineObjectNumber klineToday = allKlines.get(allKlines.size() - 1);
+                KlineObjectNumber klineYesterday = allKlines.get(allKlines.size() - 2);
                 for (int i = 0; i < NUMBER_DAY_SIDEWAY; i++) {
-                    KlineObject kline = KlineObject.convertString2Kline(allKlines.get(allKlines.size() - i - 1));
-                    if (maxPrice < Double.valueOf(kline.priceMax)) {
-                        maxPrice = Double.valueOf(kline.priceMax);
+                    KlineObjectNumber kline = allKlines.get(allKlines.size() - i - 1);
+                    if (maxPrice < kline.priceMax) {
+                        maxPrice = kline.priceMax;
                     }
-                    if (minPrice > Double.valueOf(kline.priceMin) || minPrice == 0) {
-                        minPrice = Double.valueOf(kline.priceMin);
+                    if (minPrice > kline.priceMin || minPrice == 0) {
+                        minPrice = kline.priceMin;
                     }
                 }
                 Double result = (maxPrice - minPrice) / maxPrice;
+                // check today is trend not trading
+                if (klineToday.priceMax >= maxPrice
+                        || klineToday.priceMin <= minPrice) {
+//                        || Double.valueOf(klineYesterday.priceMax) <= maxPrice
+//                        || Double.valueOf(klineYesterday.priceMin) <= minPrice) {
+                    String log = symbol + " is trend -> not trading";
+//                    Utils.sendSms2Telegram(log);
+                    LOG.info(log);
+                    return null;
+                }
 //                LOG.info("{} {}: {} -> {} ", symbol, result, minPrice, maxPrice);
                 SymbolSideWayObject resultObject = new SymbolSideWayObject();
                 resultObject.symbol = symbol;
@@ -198,15 +243,15 @@ public class DetectSideWay2Trading {
         symbolSideWay2Trading.put(objectSideway.symbol, objectSideway);
     }
 
-    private OrderSide getPreferSide(KlineObject klineToday, KlineObject klineYesterday, Double maxPrice, Double minPrice) {
+    private OrderSide getPreferSide(KlineObjectNumber klineToday, KlineObjectNumber klineYesterday, Double maxPrice, Double minPrice) {
         OrderSide result = OrderSide.BUY;
-        Double maxNearPrice = Double.valueOf(klineToday.priceMax);
-        if (Double.valueOf(klineYesterday.priceMax) > maxNearPrice) {
-            maxNearPrice = Double.valueOf(klineYesterday.priceMax);
+        Double maxNearPrice = klineToday.priceMax;
+        if (klineYesterday.priceMax > maxNearPrice) {
+            maxNearPrice = klineYesterday.priceMax;
         }
-        Double minNearPrice = Double.valueOf(klineToday.priceMax);
-        if (Double.valueOf(klineYesterday.priceMax) < minNearPrice) {
-            minNearPrice = Double.valueOf(klineYesterday.priceMax);
+        Double minNearPrice = klineToday.priceMax;
+        if (klineYesterday.priceMax < minNearPrice) {
+            minNearPrice = klineYesterday.priceMax;
         }
         // prefer Long after check prefer Short
         if ((maxPrice - maxNearPrice) / maxPrice < 0.005) {
@@ -221,6 +266,6 @@ public class DetectSideWay2Trading {
 
     public static void main(String[] args) {
 
-        new DetectSideWay2Trading().startThreadDetectSideWayAndTrading();
+        new DetectSW2TD().startThreadDetectSideWayAndTrading();
     }
 }

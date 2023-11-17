@@ -77,6 +77,7 @@ public class OrderHelper {
     }
 
     public static Order newOrderMarket(String symbol, OrderSide side, Double quantity, Integer leverage) {
+        LOG.info("Order {} {} {} {}", symbol, side, quantity, leverage);
         try {
             ClientSingleton.getInstance().syncRequestClient.changeMarginType(symbol, MarginType.ISOLATED);
         } catch (Exception e) {
@@ -94,7 +95,8 @@ public class OrderHelper {
         }
         return null;
     }
-    public static Order newOrderMarket(String symbol, OrderSide side, Double quantity) {       
+
+    public static Order newOrderMarket(String symbol, OrderSide side, Double quantity) {
         try {
             return ClientSingleton.getInstance().syncRequestClient.postOrder(symbol, side, null, OrderType.MARKET, null,
                     quantity.toString(), null, null, null, null, null, null, null, null, null, NewOrderRespType.RESULT);
@@ -129,6 +131,7 @@ public class OrderHelper {
         }
         return null;
     }
+
     public static Order stopLossPosition(PositionRisk orderInfo) {
         OrderSide side = OrderSide.BUY;
         if (orderInfo.getPositionAmt().doubleValue() > 0) {

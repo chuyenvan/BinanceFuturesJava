@@ -5,6 +5,7 @@
  */
 package com.binance.chuyennd.utils;
 
+import com.binance.chuyennd.object.KlineObjectNumber;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.*;
 import org.apache.commons.lang3.StringUtils;
@@ -929,5 +930,9 @@ public class Utils {
 //        System.out.println(Utils.normalPrice2Api(0.20008395d));
 //        System.out.println(Utils.normalPrice2Api(0.011877d));
 //        System.out.println(Utils.normalPrice2Api(48.18981633d));
+    }
+
+    public static String toJson(Object ob) {
+        return gson.toJson(ob);
     }
 }

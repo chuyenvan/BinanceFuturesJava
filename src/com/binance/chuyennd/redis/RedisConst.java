@@ -46,5 +46,6 @@ public class RedisConst {
 
     }
     public static final String REDIS_KEY_EDUCA_TD_POS_MANAGER = "redis.key.educa.td.pos.manager";
+    public static final String REDIS_KEY_EDUCA_TD_SYMBOL_TREND = "redis.key.educa.td.symbol.trend";
     public static final String REDIS_KEY_EDUCA_TD_POS_MANAGER_QUEUE = "redis.key.educa.td.pos.manager.queue";
 }

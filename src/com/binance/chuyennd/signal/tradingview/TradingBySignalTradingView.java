@@ -15,9 +15,14 @@
  */
 package com.binance.chuyennd.signal.tradingview;
 
+import com.binance.chuyennd.position.manager.PositionHelper;
 import com.binance.chuyennd.object.TickerStatistics;
+import com.binance.chuyennd.redis.RedisConst;
+import com.binance.chuyennd.redis.RedisHelper;
+import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.HttpRequest;
 import com.binance.chuyennd.utils.Utils;
+import com.binance.client.model.enums.OrderSide;
 import com.google.gson.internal.LinkedTreeMap;
 import java.io.IOException;
 import java.util.Collection;
@@ -38,12 +43,15 @@ import org.slf4j.LoggerFactory;
 public class TradingBySignalTradingView {
 
     public static final Logger LOG = LoggerFactory.getLogger(TradingBySignalTradingView.class);
-    private ConcurrentSkipListSet<String> allSymbol = new ConcurrentSkipListSet<>();
+    private final ConcurrentSkipListSet<String> allSymbol = new ConcurrentSkipListSet<>();
     public static final String URL_SIGNAL_TRADINGVIEW = "http://172.25.80.128:8002/";
+    public final String URL_TICKER_15M = "https://fapi.binance.com/fapi/v1/klines?symbol=xxxxxx&interval=15m";
+    public static Integer LIMIT_ORDER_RUN_FOR_TEST = Configs.getInt("LimitOrderRunTest");
+    public static Integer counter = 0;
 
     public static void main(String[] args) throws IOException {
-//        new TradingBySignalTradingView().checkStrongSignal2Trading();
-        new TradingBySignalTradingView().getStrongSignal2Trading();
+        new TradingBySignalTradingView().checkStrongSignal2Trading();
+//        new TradingBySignalTradingView().getStrongSignal2Trading();
 //        System.out.println(new TradingBySignalTradingView().getReconmendation("BTCUSDT"));
     }
 
@@ -53,16 +61,18 @@ public class TradingBySignalTradingView {
             LOG.info("Start thread StrongSignal2Trading!");
             while (true) {
                 try {
-                    if (isTimeRun()) {
-                        getStrongSignal2Trading();
-                        Thread.sleep(Utils.TIME_MINUTE);
+                    if (counter >= LIMIT_ORDER_RUN_FOR_TEST) {
+                        LOG.info("Over limit to test!");
+                        Thread.sleep(Utils.TIME_HOUR);
+                        continue;
                     }
+                    getStrongSignal2Trading();
                 } catch (Exception e) {
                     LOG.error("ERROR during ThreadBigBeardTrading: {}", e);
                     e.printStackTrace();
                 }
                 try {
-                    Thread.sleep(15 * Utils.TIME_SECOND);
+                    Thread.sleep(Utils.TIME_MINUTE);
                 } catch (InterruptedException ex) {
                     java.util.logging.Logger.getLogger(TradingBySignalTradingView.class.getName()).log(Level.SEVERE, null, ex);
                 }
@@ -70,21 +80,20 @@ public class TradingBySignalTradingView {
         }).start();
     }
 
-    private boolean getStrongSignalASymbol(String symbol) {
+    private OrderSide getStrongSignalASymbol(String symbol) {
         try {
             String signalRecommendation = getReconmendation(symbol);
-
             if (StringUtils.isNotEmpty(signalRecommendation)) {
-                Utils.sendSms2Telegram(symbol + " -> " + signalRecommendation);
+                OrderSide sideSignal = OrderSide.BUY;
+                if (StringUtils.equalsIgnoreCase(signalRecommendation, "sell")) {
+                    sideSignal = OrderSide.SELL;
+                }
+                return sideSignal;
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return false;
-    }
-
-    private static boolean isTimeRun() {
-        return Utils.getCurrentMinute() % 5 == 3;
+        return null;
     }
 
     private void getStrongSignal2Trading() {
@@ -93,7 +102,21 @@ public class TradingBySignalTradingView {
             allSymbol.addAll(getAllSymbol());
         }
         for (String symbol : allSymbol) {
-            getStrongSignalASymbol(symbol);
+            try {
+
+                // check symbol had position running                        
+                if (RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER, symbol) != null) {
+                    String log = "Symbol " + symbol + " had order active: ";
+                    LOG.info(log);
+                    continue;
+                }
+                OrderSide sideSignal = getStrongSignalASymbol(symbol);
+                if (sideSignal != null) {
+                    addOrderTrading(symbol, sideSignal);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -126,6 +149,20 @@ public class TradingBySignalTradingView {
             e.printStackTrace();
         }
         return result;
+    }
+
+    private void addOrderTrading(String symbol, OrderSide sideSignal) {
+        if (sideSignal.equals(OrderSide.BUY)) {
+            String log = "Long " + symbol + " by signal tradingview";
+            Utils.sendSms2Telegram(log);
+            if (counter >= LIMIT_ORDER_RUN_FOR_TEST) {
+                LOG.info("Over limit to test!");
+                return;
+            }
+            PositionHelper.getInstance().addOrderBySignal(symbol, OrderSide.BUY);
+            counter++;
+            LOG.info(log);
+        }
     }
 
 }

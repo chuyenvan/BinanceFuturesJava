@@ -36,7 +36,8 @@ public class PostOrder {
         RequestOptions options = new RequestOptions();
         SyncRequestClient syncRequestClient = SyncRequestClient.create(PrivateConfig.API_KEY, PrivateConfig.SECRET_KEY,
                 options);
-        System.out.println(syncRequestClient.getOrder("GASUSDT", 274183700L, "274183700"));
+        System.out.println(ClientSingleton.getInstance());
+//        System.out.println(syncRequestClient.getOrder("DODOXUSDT", 378685537L, "378685537"));
         //        System.out.println(syncRequestClient.getOpenOrders("FRONTUSDT"));
         //        System.out.println(syncRequestClient.getPositionRisk("STORJUSDT"));
         ////        System.out.println(syncRequestClient.getPositionRisk("BTCUSDT"));

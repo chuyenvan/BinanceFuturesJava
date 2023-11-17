@@ -32,7 +32,7 @@ public class ListenPriceBySymbol {
     public static final Logger LOG = LoggerFactory.getLogger(ListenPriceBySymbol.class);
 
     public static void main(String[] args) {
-        new ListenPriceBySymbol().startReceivePriceRealTimeBySymbol(null);
+        new ListenPriceBySymbol().startReceivePriceRealTimeBySymbol("BTCUSDT");
     }
 
     public void startReceivePriceRealTimeBySymbol(ObjectResearch orderInfo) {
@@ -41,6 +41,15 @@ public class ListenPriceBySymbol {
         client.subscribeSymbolTickerEvent(orderInfo.symbol.toLowerCase(), ((event) -> {
 //            LOG.info("Update price: {}", Utils.gson.toJson(event));
             processUpdatePrice2OrderInfo(event, orderInfo);
+        }), null);
+    }
+
+    
+    public void startReceivePriceRealTimeBySymbol(String symbol) {
+        LOG.info("Start listen price: {}", symbol);
+        SubscriptionClient client = SubscriptionClient.create();
+        client.subscribeSymbolTickerEvent(symbol.toLowerCase(), ((event) -> {
+            LOG.info("Update price: {}", Utils.gson.toJson(event));
         }), null);
     }
 

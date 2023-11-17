@@ -15,7 +15,7 @@
  */
 package com.binance.chuyennd.bigchange;
 
-import com.binance.chuyennd.beard.position.manager.CreatePositionNew;
+import com.binance.chuyennd.position.manager.PositionHelper;
 import com.binance.chuyennd.funcs.ClientSingleton;
 import com.binance.chuyennd.object.KlineObject;
 import com.binance.chuyennd.object.TickerStatistics;
@@ -98,7 +98,7 @@ public class DetectBigChangeForTrading {
                 if (priceClose > priceOpen) {                    
                     orderSide = OrderSide.SELL;
                 }
-                CreatePositionNew.getInstance().addOrderByTarget(symbol, orderSide, priceEntryTarget);
+                PositionHelper.getInstance().addOrderByTarget(symbol, orderSide, priceEntryTarget);
             }
         } catch (Exception e) {
             e.printStackTrace();

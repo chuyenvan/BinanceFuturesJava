@@ -203,7 +203,11 @@ public class HttpRequest {
     }
 
     public static String getContentFromUrl(String url) {
-        return getContentFromUrl(url, new HashMap<String, String>());
+        try {
+            return getContentFromUrl(url, new HashMap<String, String>());
+        } catch (Exception e) {
+        }
+        return "";
     }
 
     public static int getUrlResponCode(String url) {
