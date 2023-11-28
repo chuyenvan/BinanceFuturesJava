@@ -18,8 +18,13 @@ package com.binance.chuyennd.funcs;
 import com.binance.client.RequestOptions;
 import com.binance.client.SyncRequestClient;
 import com.binance.client.examples.constants.PrivateConfig;
+import com.binance.client.model.market.ExchangeInfoEntry;
+import com.binance.client.model.market.ExchangeInformation;
 import com.binance.client.model.market.SymbolPrice;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,5 +58,16 @@ public class ClientSingleton {
             return datas.get(0).getPrice().doubleValue();
         }
         return null;
+    }
+
+    public Set<String> getAllSymbol() {
+        Set<String> symbols = new HashSet<String>();
+        ExchangeInformation exchangeInfo = syncRequestClient.getExchangeInformation();
+        for (ExchangeInfoEntry symbol : exchangeInfo.getSymbols()) {
+            if (StringUtils.endsWithIgnoreCase(symbol.getSymbol(), "usdt")) {
+                symbols.add(symbol.getSymbol());
+            }
+        }
+        return symbols;
     }
 }

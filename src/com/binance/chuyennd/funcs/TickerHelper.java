@@ -21,7 +21,7 @@ import com.binance.chuyennd.utils.HttpRequest;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.model.enums.OrderSide;
 import java.util.List;
-import com.binance.client.constant.Contanst;
+import com.binance.client.constant.Constants;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -39,7 +39,7 @@ public class TickerHelper {
     public static final Logger LOG = LoggerFactory.getLogger(TickerHelper.class);
 
     public static KlineObjectNumber getTickerByTime(String symbol, String interval, long time) {
-        String urlM1 = Contanst.URL_TICKER.replace("xxxxxx", symbol) + interval;
+        String urlM1 = Constants.URL_TICKER.replace("xxxxxx", symbol) + interval;
         String respon = HttpRequest.getContentFromUrl(urlM1);
         try {
             List<List<Object>> allKlines = Utils.gson.fromJson(respon, List.class);
@@ -56,7 +56,7 @@ public class TickerHelper {
     }
 
     public static KlineObjectNumber getLastTicker(String symbol, String interval) {
-        String urlM1 = Contanst.URL_TICKER.replace("xxxxxx", symbol) + interval;
+        String urlM1 = Constants.URL_TICKER.replace("xxxxxx", symbol) + interval;
         String respon = HttpRequest.getContentFromUrl(urlM1);
         try {
             List<List<Object>> allKlines = Utils.gson.fromJson(respon, List.class);
@@ -68,7 +68,7 @@ public class TickerHelper {
     }
 
     public static List<KlineObjectNumber> getTicker(String symbol, String interval) {
-        String urlM1 = Contanst.URL_TICKER.replace("xxxxxx", symbol) + interval;
+        String urlM1 = Constants.URL_TICKER.replace("xxxxxx", symbol) + interval;
         String respon = HttpRequest.getContentFromUrl(urlM1);
         List<KlineObjectNumber> results = new ArrayList();
         try {
@@ -99,7 +99,7 @@ public class TickerHelper {
 
     public static OrderSide getCurrentTrendLongTime(String symbol, Integer numberDay) {
         try {
-            List<KlineObjectNumber> tickers = getTicker(symbol, Contanst.INTERVAL_1D);
+            List<KlineObjectNumber> tickers = getTicker(symbol, Constants.INTERVAL_1D);
             Double maxPrice = null;
             Double minPrice = null;
             Double currentPirce = tickers.get(tickers.size() - 1).priceClose;
@@ -140,5 +140,64 @@ public class TickerHelper {
 //        System.out.println(Utils.toJson(getLastTicker("DYDXUSDT", Contanst.INTERVAL_15M)));
 //        System.out.println(Utils.toJson(getLastTicker("WLDUSDT", Contanst.INTERVAL_15M)));
 //        System.out.println(Utils.toJson(getLastTicker(Contanst.SYMBOL_PAIR_BTC, Contanst.INTERVAL_15M)));
+    }
+
+    public static Double getMaxPrice(List<KlineObjectNumber> kline1Ds, int limitDay2Get) {
+        Double maxPrice = null;
+        int counter = 0;
+        for (int i = 0; i < kline1Ds.size(); i++) {
+            KlineObjectNumber kline1D = kline1Ds.get(kline1Ds.size() - 1 - i);
+            counter++;
+            if (counter >= limitDay2Get) {
+                break;
+            }
+            if (maxPrice == null || maxPrice < kline1D.priceMax) {
+                maxPrice = kline1D.priceMax;
+            }
+        }
+        return maxPrice;
+    }
+
+    public static Double getMinPrice(List<KlineObjectNumber> kline1Ds, int limitDay2Get) {
+        Double minPrice = null;
+        int counter = 0;
+        for (int i = 0; i < kline1Ds.size(); i++) {
+            KlineObjectNumber kline1D = kline1Ds.get(kline1Ds.size() - 1 - i);
+            counter++;
+            if (counter >= limitDay2Get) {
+                break;
+            }
+            if (minPrice == null || minPrice > kline1D.priceMin) {
+                minPrice = kline1D.priceMin;
+            }
+        }
+        return minPrice;
+    }
+
+    public static int getTotalCurrentPriceInKline(List<KlineObjectNumber> klines, Double price, Integer totalKlineCalculator) {
+        int counter = 0;
+        int index = 0;
+        for (int i = 0; i < klines.size(); i++) {
+            index++;
+            if (index >= totalKlineCalculator) {
+                break;
+            }
+            KlineObjectNumber kline = klines.get(klines.size() - 1 - i);
+            if (price < kline.priceMax && price > kline.priceMin) {
+                counter++;
+            }
+        }
+        return counter;
+    }
+
+    public static List<KlineObjectNumber> getTotalKlineBigchange(List<KlineObjectNumber> kline15ms, Double rateBigchange) {
+        List<KlineObjectNumber> results = new ArrayList<>();
+        for (KlineObjectNumber kline15m : kline15ms) {
+            double rate = Utils.rateOf2Double(kline15m.priceMax, kline15m.priceMin);
+            if (rate >= rateBigchange) {
+                results.add(kline15m);
+            }
+        }
+        return results;
     }
 }

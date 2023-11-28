@@ -21,7 +21,7 @@ import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
 import com.binance.chuyennd.utils.Utils;
-import com.binance.client.constant.Contanst;
+import com.binance.client.constant.Constants;
 import com.binance.client.model.enums.OrderSide;
 import java.util.List;
 import org.apache.commons.lang.StringUtils;
@@ -43,7 +43,7 @@ public class BTCInfoManager {
 
     public static OrderSide getLongTrendBtc() {
         try {
-            String trend = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TD_SYMBOL_TREND, Contanst.SYMBOL_PAIR_BTC);
+            String trend = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TD_SYMBOL_TREND, Constants.SYMBOL_PAIR_BTC);
             if (StringUtils.equals(trend, OrderSide.BUY.toString())) {
                 return OrderSide.BUY;
             }
@@ -72,7 +72,7 @@ public class BTCInfoManager {
         if (trendSide != null) {
             trendSideStr = trendSide.toString();
         }
-        RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_TD_SYMBOL_TREND, Contanst.SYMBOL_PAIR_BTC, trendSideStr);
+        RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_TD_SYMBOL_TREND, Constants.SYMBOL_PAIR_BTC, trendSideStr);
     }
 
     public void startThreadUpdateTrend() {
@@ -80,7 +80,7 @@ public class BTCInfoManager {
             Thread.currentThread().setName("ThreadUpdateTrend");
             LOG.info("Start ThreadUpdateTrend BTC!");
             try {
-                List<KlineObjectNumber> tickers = TickerHelper.getTicker(Contanst.SYMBOL_PAIR_BTC, Contanst.INTERVAL_1D);
+                List<KlineObjectNumber> tickers = TickerHelper.getTicker(Constants.SYMBOL_PAIR_BTC, Constants.INTERVAL_1D);
                 Double currentPirce = tickers.get(tickers.size() - 1).priceClose;
                 if (tickers.size() > NUMBER_DAY_CHECK_TREND) {
                     for (int i = 0; i < NUMBER_DAY_CHECK_TREND; i++) {
@@ -101,7 +101,7 @@ public class BTCInfoManager {
 
             while (true) {
                 try {
-                    Double currentPrice = ClientSingleton.getInstance().getCurrentPrice(Contanst.SYMBOL_PAIR_BTC);
+                    Double currentPrice = ClientSingleton.getInstance().getCurrentPrice(Constants.SYMBOL_PAIR_BTC);
                     if (currentPrice > MAX_PRICE) {
                         MAX_PRICE = currentPrice;
                     }

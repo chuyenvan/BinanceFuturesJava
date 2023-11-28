@@ -21,9 +21,10 @@ import com.binance.chuyennd.funcs.TickerHelper;
 import com.binance.chuyennd.object.KlineObject;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.TickerStatistics;
+import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.HttpRequest;
 import com.binance.chuyennd.utils.Utils;
-import com.binance.client.constant.Contanst;
+import com.binance.client.constant.Constants;
 import com.binance.client.model.enums.OrderSide;
 import com.binance.client.model.trade.PositionRisk;
 import java.util.Date;
@@ -46,6 +47,7 @@ public class BTCBigChangeResearch {
     public static final Logger LOG = LoggerFactory.getLogger(Test.class);
     public static final String URL_TICKER_1D = "https://fapi.binance.com/fapi/v1/klines?symbol=xxxxxx&interval=1d";
     public static final String URL_TICKER_15M = "https://fapi.binance.com/fapi/v1/klines?symbol=xxxxxx&interval=15m";
+    public static final Double RATE_BIG_CHANGE_TEST = Configs.getDouble("RateBigChangeTest");
 
     public static PositionRisk getPositionBySymbol(String symbol) {
         List<PositionRisk> positionInfos = ClientSingleton.getInstance().syncRequestClient.getPositionRisk(symbol);
@@ -56,29 +58,7 @@ public class BTCBigChangeResearch {
         return position;
     }
 
-    private static void extractRateChangeInMonth() {
-
-        String allFuturePrices = HttpRequest.getContentFromUrl("https://fapi.binance.com/fapi/v1/ticker/24hr");
-        List<Object> futurePrices = Utils.gson.fromJson(allFuturePrices, List.class);
-        TreeMap<Double, String> rateChangeInMonth = new TreeMap<>();
-        for (Object futurePrice : futurePrices) {
-            TickerStatistics ticker = Utils.gson.fromJson(futurePrice.toString(), TickerStatistics.class);
-            if (StringUtils.endsWithIgnoreCase(ticker.getSymbol(), "usdt")) {
-                try {
-                    // only get symbol over 2 months
-                    double rateChange = getStartTimeAtExchange(ticker.getSymbol());
-                    rateChangeInMonth.put(rateChange, ticker.getSymbol());
-                } catch (Exception e) {
-
-                }
-            }
-        }
-        for (Map.Entry<Double, String> entry : rateChangeInMonth.entrySet()) {
-            Object rate = entry.getKey();
-            Object symbol = entry.getValue();
-            LOG.info("{} -> {}", symbol, rate);
-        }
-    }
+   
 
     private static void extractKline_23h9_11_2023(long time) {
 
@@ -113,25 +93,7 @@ public class BTCBigChangeResearch {
         }
     }
 
-    private static double getStartTimeAtExchange(String symbol) {
-
-        String urlM1 = URL_TICKER_1D.replace("xxxxxx", symbol);
-        String respon = HttpRequest.getContentFromUrl(urlM1);
-        try {
-            List<List<Object>> allKlines = Utils.gson.fromJson(respon, List.class);
-            if (allKlines.size() > 31) {
-                KlineObject klineFinal = KlineObject.convertString2Kline(allKlines.get(allKlines.size() - 1));
-                KlineObject klineLastMonth = KlineObject.convertString2Kline(allKlines.get(allKlines.size() - 30));
-                double change = Double.parseDouble(klineFinal.priceMax) - Double.parseDouble(klineLastMonth.priceMax);
-                return change / Double.parseDouble(klineLastMonth.priceMax);
-            }
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return 0;
-
-    }
+  
 
     private static KlineObject getTickerByTime(String symbol, long time) {
 
@@ -336,10 +298,10 @@ public class BTCBigChangeResearch {
             while (true) {
                 try {
                     if (System.currentTimeMillis() % Utils.TIME_MINUTE <= Utils.TIME_SECOND) {
-                        LOG.info("Detect bigchan in month kline!");
-                        KlineObjectNumber ticker = TickerHelper.getLastTicker(Contanst.SYMBOL_PAIR_BTC, Contanst.INTERVAL_1M);
+                        LOG.info("Detect bigchane in month kline!");
+                        KlineObjectNumber ticker = TickerHelper.getLastTicker(Constants.SYMBOL_PAIR_BTC, Constants.INTERVAL_1M);
                         Double rate = (ticker.priceMax - ticker.priceMin) / ticker.priceMin;
-                        if (rate > 0.012) {
+                        if (rate > RATE_BIG_CHANGE_TEST) {
                             LOG.info("{} {} {}", "BTCUSDT", rate, Utils.toJson(ticker));
                             printDataAllSymbolNextMinute(ticker, symbols);
                         }
@@ -353,50 +315,25 @@ public class BTCBigChangeResearch {
         }).start();
     }
 
-    public static void main(String[] args) throws InterruptedException {
-//        System.out.println(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER));
-//        System.out.println(getPositionBySymbol("DYDXUSDT"));
-//        long time = Utils.getStartTime(0) - Utils.TIME_HOUR;
-//        System.out.println(Utils.gson.toJson(getTickerByTime("BTCUSDT", time)));
-//        extractKline_23h9_11_2023(time);
-//        extractKlineBigChangeWithBTC();
-//        extractKlineBigChangeOfBTC(Contanst.INTERVAL_1M, 0.025);
-        startThreadDetectBigChangeBTCInMinute();
-//        for (int i = 0; i < 10; i++) {
-//            System.out.println(System.currentTimeMillis() % Utils.TIME_MINUTE);
-//            Thread.sleep(Utils.TIME_SECOND);
-//        }
-//        Double rate = 0.05;
-//        extractKlineTrendBTCWithRate(rate);
-//        extractRateChangeInMonth();
-//        System.out.println(Utils.gson.toJson(ClientSingleton.getInstance().syncRequestClient.getBalance()));
-//        int numberDay = 15;
-//        Double rateChange = 0.1;
-//        detectSideWayWithDayAndRange(numberDay, rateChange);
-//        long timeout = 10000;
-//        while (true) {
-//            System.out.println(new Date() + " " + getDataWithTimeOut(timeout));
-//        }
-
-    }
+   
 
     private static void printDataAllSymbolNextMinute(KlineObjectNumber ticker, Set<String> symbols) {
         try {
             int numberMinuteCheckRateChange = 10;
             Thread.sleep(numberMinuteCheckRateChange * Utils.TIME_MINUTE);
             TreeMap<Double, String> rate2Symbol = new TreeMap<>();
-            Map<String, Double> symbol2Rate = new HashMap<String, Double>();
+            Map<String, Double> symbol2Rate = new HashMap<>();
             OrderSide side = OrderSide.BUY;
             if (ticker.priceClose < ticker.priceOpen) {
                 side = OrderSide.SELL;
             }
             for (String symbol : symbols) {
                 try {
-                    List<KlineObjectNumber> tickers = TickerHelper.getTicker(symbol, Contanst.INTERVAL_1M);
+                    List<KlineObjectNumber> tickers = TickerHelper.getTicker(symbol, Constants.INTERVAL_1M);
                     Double maxPrice = null;
                     Double minPrice = null;
                     KlineObjectNumber klineCheckPoint = tickers.get(tickers.size() - 1 - numberMinuteCheckRateChange);
-                    for (int i = 0; i < numberMinuteCheckRateChange; i++) {
+                    for (int i = 0; i < numberMinuteCheckRateChange + 1; i++) {
                         KlineObjectNumber kline = tickers.get(tickers.size() - 1 - i);
                         if (maxPrice == null || kline.priceMax > maxPrice) {
                             maxPrice = kline.priceMax;
@@ -428,5 +365,31 @@ public class BTCBigChangeResearch {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+     public static void main(String[] args) throws InterruptedException {
+//        System.out.println(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER));
+//        System.out.println(getPositionBySymbol("DYDXUSDT"));
+//        long time = Utils.getStartTime(0) - Utils.TIME_HOUR;
+//        System.out.println(Utils.gson.toJson(getTickerByTime("BTCUSDT", time)));
+//        extractKline_23h9_11_2023(time);
+//        extractKlineBigChangeWithBTC();
+//        extractKlineBigChangeOfBTC(Contanst.INTERVAL_1M, 0.025);
+        startThreadDetectBigChangeBTCInMinute();
+//        for (int i = 0; i < 10; i++) {
+//            System.out.println(System.currentTimeMillis() % Utils.TIME_MINUTE);
+//            Thread.sleep(Utils.TIME_SECOND);
+//        }
+//        Double rate = 0.05;
+//        extractKlineTrendBTCWithRate(rate);
+//        extractRateChangeInMonth();
+//        System.out.println(Utils.gson.toJson(ClientSingleton.getInstance().syncRequestClient.getBalance()));
+//        int numberDay = 15;
+//        Double rateChange = 0.1;
+//        detectSideWayWithDayAndRange(numberDay, rateChange);
+//        long timeout = 10000;
+//        while (true) {
+//            System.out.println(new Date() + " " + getDataWithTimeOut(timeout));
+//        }
+
     }
 }

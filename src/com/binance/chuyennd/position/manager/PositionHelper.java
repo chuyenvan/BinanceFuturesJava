@@ -48,10 +48,10 @@ public class PositionHelper {
     public static final Logger LOG = LoggerFactory.getLogger(OrderHelper.class);
     private static volatile PositionHelper INSTANCE = null;
 
-    public static Integer LEVERAGE_TRADING = Configs.getInt("LeverageTrading");
     public static String URL_GET_RECOMMAND = "http://172.25.80.128:8002/";
+    public static Integer LEVERAGE_TRADING = Configs.getInt("LeverageTrading");
     public static Integer BUDGET_PER_ORDER = Configs.getInt("BudgetPerOrder");
-    public static Double RATE_CHECK_SIGNAL_TARGET = Configs.getDouble("RateCheckSignalTarget");    
+    public static Double RATE_CHECK_SIGNAL_TARGET = Configs.getDouble("RateCheckSignalTarget");
     public static Double LIMIT_ORDER_TRADING = Configs.getDouble("LitmitOrderTrading");
 
     public static final String URL_TICKER_1D = "https://fapi.binance.com/fapi/v1/klines?symbol=xxxxxx&interval=1w";
@@ -73,7 +73,7 @@ public class PositionHelper {
 
     public static void main(String[] args) {
 //        PositionHelper.getInstance();
-//        System.out.println(Utils.toJson(dcaForPosition(getPositionBySymbol("BALUSDT"))));
+        System.out.println(Utils.toJson(new PositionHelper().dcaForPosition(getPositionBySymbol("ETHUSDT"), 0.6)));
 // 5753457816
 //        ClientSingleton.getInstance().syncRequestClient.cancelOrder("BALUSDT", 5753457816L, "5753457816");
 //        System.out.println(Utils.toJson(ClientSingleton.getInstance().syncRequestClient.getOrder("BALUSDT", 5753457816L, "5753457816")));
@@ -195,7 +195,6 @@ public class PositionHelper {
             LOG.info(log);
             Utils.sendSms2Telegram(log);
         }
-
     }
 
     private long getStartTimeAtExchange(String symbol) {
@@ -219,7 +218,7 @@ public class PositionHelper {
             String log = "Add order fail because over limit order trading: " + symbol
                     + " limit: " + LIMIT_ORDER_TRADING + " orderCurrent: " + RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER).size();
             LOG.info(log);
-            Utils.sendSms2Telegram(log);
+//            Utils.sendSms2Telegram(log);
             return false;
         }
         if (!symbolAvalible2Trading.contains(symbol)) {
@@ -256,10 +255,10 @@ public class PositionHelper {
         try {
             Double quantity = Math.abs(pos.getPositionAmt().doubleValue());
             OrderSide orderSide = OrderSide.BUY;
-            Double price = pos.getEntryPrice().doubleValue() - pos.getEntryPrice().doubleValue() * rate2DCA;
+            Double price = pos.getEntryPrice().doubleValue() - pos.getEntryPrice().doubleValue() * rate2DCA / pos.getLeverage().doubleValue();
             if (pos.getPositionAmt().doubleValue() < 0) {
                 orderSide = OrderSide.SELL;
-                price = pos.getEntryPrice().doubleValue() + pos.getEntryPrice().doubleValue() * rate2DCA;
+                price = pos.getEntryPrice().doubleValue() + pos.getEntryPrice().doubleValue() * rate2DCA / pos.getLeverage().doubleValue();
             }
             LOG.info("DCA to {} side:{} price: {} quantity: {}", pos.getSymbol(), orderSide, price, quantity);
             Utils.sendSms2Telegram("DCA for " + pos.getSymbol() + " side: " + orderSide + " price" + Utils.normalPrice2Api(price) + " quantity: " + quantity);
@@ -272,7 +271,7 @@ public class PositionHelper {
         return null;
     }
 
-    public Order readOrderInfo(String symbol, Long orderId) {
+    public Order readOrderInfo(String symbol, Long orderId) {        
         return ClientSingleton.getInstance().syncRequestClient.getOrder(symbol, orderId, orderId.toString());
     }
 }

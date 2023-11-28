@@ -5,6 +5,9 @@
  */
 package com.binance.chuyennd.redis;
 
+import com.binance.chuyennd.position.manager.PositionHelper;
+import com.binance.chuyennd.utils.Utils;
+import com.binance.client.model.trade.Order;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;
@@ -46,6 +49,24 @@ public class RedisConst {
 
     }
     public static final String REDIS_KEY_EDUCA_TD_POS_MANAGER = "redis.key.educa.td.pos.manager";
+    public static final String REDIS_KEY_EDUCA_TD_POS_TIME_MANAGER = "redis.key.educa.td.pos.time.manager";
+    public static final String REDIS_KEY_EDUCA_TD_POS_PROFIT_MANAGER = "redis.key.educa.td.pos.profit.manager";
+    public static final String REDIS_KEY_EDUCA_TD_ORDER_DCA_MANAGER = "redis.key.educa.td.order.dca.manager";
     public static final String REDIS_KEY_EDUCA_TD_SYMBOL_TREND = "redis.key.educa.td.symbol.trend";
     public static final String REDIS_KEY_EDUCA_TD_POS_MANAGER_QUEUE = "redis.key.educa.td.pos.manager.queue";
+    
+    // btc bigchange trading
+    public static final String REDIS_KEY_EDUCA_BTCBIGCHANGETD_POS_MANAGER= "redis.key.educa.btcbigchangetd.pos.manager";
+    public static final String REDIS_KEY_EDUCA_BTCBIGCHANGETD_ORDER_TP_MANAGER = "redis.key.educa.btcbigchangetd.order.tp.manager";
+    public static final String REDIS_KEY_EDUCA_BTCBIGCHANGETD_ORDER_SL_MANAGER = "redis.key.educa.btcbigchangetd.order.sl.manager";
+    public static final String REDIS_KEY_EDUCA_BTCBIGCHANGETD_SYMBOLS4TRADE = "redis.key.educa.btcbigchangetd.symbol4trade";
+
+    public static void main(String[] args) {
+        String symbol = "ETHUSDT";
+        Order order = new PositionHelper().readOrderInfo(symbol, 8389765629333329753L);
+        RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_DCA_MANAGER, symbol, Utils.toJson(order));
+        String json = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_DCA_MANAGER, symbol);
+        Order orderInfo = Utils.gson.fromJson(json, Order.class);
+        System.out.println(orderInfo.getPrice().doubleValue());
+    }
 }

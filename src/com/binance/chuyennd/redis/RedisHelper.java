@@ -96,7 +96,7 @@ public class RedisHelper {
             e.printStackTrace();
         }
         return result;
-    }
+    }    
 
     public Set<String> readAllId(String key) {
         Set<String> result = new HashSet();

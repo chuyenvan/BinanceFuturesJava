@@ -18,6 +18,7 @@ package com.binance.chuyennd.websocket;
 import com.binance.chuyennd.research.ObjectResearch;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.SubscriptionClient;
+import com.binance.client.model.enums.CandlestickInterval;
 import com.binance.client.model.enums.OrderSide;
 import com.binance.client.model.event.SymbolTickerEvent;
 import org.slf4j.Logger;
@@ -32,7 +33,12 @@ public class ListenPriceBySymbol {
     public static final Logger LOG = LoggerFactory.getLogger(ListenPriceBySymbol.class);
 
     public static void main(String[] args) {
-        new ListenPriceBySymbol().startReceivePriceRealTimeBySymbol("BTCUSDT");
+//        new ListenPriceBySymbol().startReceivePriceRealTimeBySymbol("BTCUSDT");
+//indexKlineCandlestick
+        SubscriptionClient client = SubscriptionClient.create();
+        client.subscribeCandlestickEvent("BTCUSDT", CandlestickInterval.ONE_MINUTE, ((event) -> {
+            LOG.info("Update ticker: {}", Utils.gson.toJson(event));
+        }), null);
     }
 
     public void startReceivePriceRealTimeBySymbol(ObjectResearch orderInfo) {
@@ -44,7 +50,6 @@ public class ListenPriceBySymbol {
         }), null);
     }
 
-    
     public void startReceivePriceRealTimeBySymbol(String symbol) {
         LOG.info("Start listen price: {}", symbol);
         SubscriptionClient client = SubscriptionClient.create();

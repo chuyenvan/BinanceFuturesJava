@@ -30,7 +30,7 @@ public class KlineObjectNumber {
     public Double priceClose;
     public String totalUsdt;
     public Double endTime;
-    public String volume;
+    public Double volume;
     public Double al;
     public String orther1;
     public String orther2;
@@ -43,9 +43,9 @@ public class KlineObjectNumber {
         result.priceMax = Double.valueOf(kline.get(2).toString());
         result.priceMin = Double.valueOf(kline.get(3).toString());
         result.priceClose = Double.valueOf(kline.get(4).toString());
-        result.totalUsdt = (String) kline.get(5);
+        result.volume = Double.valueOf(kline.get(5).toString());
         result.endTime = (Double) kline.get(6);
-        result.volume = (String) kline.get(7);
+        result.totalUsdt = (String) kline.get(7);
         result.al = (Double) kline.get(8);
         result.orther1 = (String) kline.get(9);
         result.orther2 = (String) kline.get(10);

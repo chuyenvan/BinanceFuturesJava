@@ -25,7 +25,9 @@ import com.binance.chuyennd.utils.HttpRequest;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.SubscriptionClient;
 import com.binance.client.SubscriptionErrorHandler;
+import com.binance.client.constant.Constants;
 import com.binance.client.exception.BinanceApiException;
+import com.binance.client.model.enums.OrderStatus;
 import com.binance.client.model.trade.AccountBalance;
 import com.binance.client.model.trade.Order;
 import com.binance.client.model.trade.PositionRisk;
@@ -50,16 +52,13 @@ import org.slf4j.LoggerFactory;
 public class PositionToTargetMonitor {
 
     public static final Logger LOG = LoggerFactory.getLogger(PositionToTargetMonitor.class);
-    public ConcurrentHashMap<String, Double> symbol2BestProfit = new ConcurrentHashMap<>();
-    public ConcurrentHashMap<String, Long> symbol2TimePosition = new ConcurrentHashMap<>();
 
     public final String FILE_POSITION_FINISHED = "storage/position_target_manager/positionFinished.data";
     public final Map<String, Double> day2Balance = new HashMap<>();
-    public final ConcurrentHashMap<String, PositionRisk> allPosition2Monitor = new ConcurrentHashMap<>();
-    public final ConcurrentHashMap<String, Order> symbol2OrderDCA = new ConcurrentHashMap<>();
+    public final ConcurrentHashMap<String, PositionRisk> positionDones = new ConcurrentHashMap<>();
     public static double RATE_MIN_TAKE_PROFIT = Configs.getDouble("TakeProfitRateMinPositionTarget");
     public static double RATE_LOSS_TO_STOP_LOSS = Configs.getDouble("RateStopLoss");//  had * 100
-    public static double RATE_LOSS_TO_DCA = Configs.getDouble("RateLoss2DCA");//  had * 100
+    public static double RATE_LOSS_TO_DCA = Configs.getDouble("RateLoss2DCA");
     public static double RATE_PROFIT_DEC_2CLOSE = Configs.getDouble("ProfitDec2Close");//  had * 100       
     public static double LIMIT_TIME_POSITION_2CLOSE = Configs.getDouble("LimitTimePosition2Close"); //minute
 
@@ -76,11 +75,13 @@ public class PositionToTargetMonitor {
 
         // start thread monitor symbol running
         for (String symbol : RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER)) {
+            RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER, symbol, Utils.toJson(getPositionBySymbol(symbol)));
             startThreadListenPriceAndUpdatePosition(symbol);
         }
         startThreadMonitorAllPosition();
         startThreadMOnitorOrderDCA();
         startThreadGetPosition2Manager();
+        startThreadCheckPositionDone();
         startThreadListenQueuePosition2Manager();
         startThreadReport();
         startThreadUpdatePosition();
@@ -98,18 +99,15 @@ public class PositionToTargetMonitor {
             while (true) {
                 try {
                     for (String symbol : RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER)) {
-                        PositionRisk position = allPosition2Monitor.get(symbol);
+                        PositionRisk position = Utils.gson.fromJson(RedisHelper.getInstance().readJsonData(
+                                RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER, symbol), PositionRisk.class);
                         if (position == null) {
                             continue;
                         }
                         if (position.getPositionAmt().doubleValue() != 0) {
                             checkProfitToCloseOrStopLoss(position);
                         } else {
-                            if (waitForPositionDone(symbol)) {
-                                RedisHelper.getInstance().delJsonData(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER, symbol);
-                                LOG.info("{} Remove symbol had Close by over margin: {} out list running!", Thread.currentThread().getName(), symbol);
-                                allPosition2Monitor.remove(symbol);
-                            }
+                            positionDones.put(symbol, position);
                         }
                     }
 
@@ -162,13 +160,12 @@ public class PositionToTargetMonitor {
             LOG.info("Start thread ThreadUpdatePosition!");
             while (true) {
                 try {
-                    LOG.info("Update pos schedule: {} symbols", allPosition2Monitor.size());
-                    for (Map.Entry<String, PositionRisk> entry : allPosition2Monitor.entrySet()) {
-                        String symbol = entry.getKey();
+                    Set<String> allSymbolHadPos = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER);
+                    LOG.info("Update pos schedule: {} symbols", allSymbolHadPos.size());
+                    for (String symbol : allSymbolHadPos) {
                         try {
-                            PositionRisk pos = getPositionBySymbol(symbol);
-                            allPosition2Monitor.put(symbol, pos);
-                            symbol2TimePosition.put(symbol, System.currentTimeMillis());
+                            RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER,
+                                    symbol, Utils.toJson(getPositionBySymbol(symbol)));
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
@@ -212,20 +209,25 @@ public class PositionToTargetMonitor {
 
     private boolean checkProfitToCloseOrStopLoss(PositionRisk pos) {
         try {
-            Double bestProfit = symbol2BestProfit.get(pos.getSymbol());
-            if (bestProfit == null) {
+            Double bestProfit;
+            if (RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TD_POS_PROFIT_MANAGER, pos.getSymbol()) == null) {
                 bestProfit = 0d;
+            } else {
+                bestProfit = Double.valueOf(RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TD_POS_PROFIT_MANAGER, pos.getSymbol()));
             }
             // check and dca
             int rateLoss = rateLoss(pos);
-            if (rateLoss >= RATE_LOSS_TO_DCA && symbol2OrderDCA.get(pos.getSymbol()) == null) {
-                Order orderDCA = PositionHelper.getInstance().dcaForPosition(pos, RATE_LOSS_TO_STOP_LOSS);
+            Order orderRedis = Utils.gson.fromJson(RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_DCA_MANAGER, pos.getSymbol()), Order.class);
+            if (rateLoss >= RATE_LOSS_TO_DCA && orderRedis == null) {
+                Order orderDCA = PositionHelper.getInstance().dcaForPosition(pos, RATE_LOSS_TO_STOP_LOSS / 100);
                 if (orderDCA != null) {
-                    symbol2OrderDCA.put(pos.getSymbol(), orderDCA);
+                    RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_DCA_MANAGER, pos.getSymbol(), Utils.toJson(orderDCA));
                 }
             }
             // stop-loss
-            if (rateLoss >= RATE_LOSS_TO_STOP_LOSS && symbol2OrderDCA.get(pos.getSymbol()) != null) {
+            if (rateLoss >= RATE_LOSS_TO_STOP_LOSS
+                    && orderRedis != null
+                    && !StringUtils.equalsIgnoreCase(orderRedis.getStatus(), OrderStatus.NEW.toString())) {
                 LOG.info("Close by market to stoploss: {}", pos);
                 Utils.sendSms2Telegram("Close position of: " + pos.getSymbol() + " amt: " + pos.getPositionAmt()
                         + " stoploss: " + pos.getUnrealizedProfit());
@@ -245,22 +247,23 @@ public class PositionToTargetMonitor {
                     LOG.info(log);
                     Utils.sendSms2Telegram(log);
                     bestProfit = currentRateProfit;
-                    symbol2BestProfit.put(pos.getSymbol(), bestProfit);
+                    RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_TD_POS_PROFIT_MANAGER, pos.getSymbol(), bestProfit.toString());
                 } else {
-                    double rateProfit2Close = RATE_PROFIT_DEC_2CLOSE;
-                    if (bestProfit < 50) {
-                        rateProfit2Close = 40;
-                    } else {
-                        if (bestProfit < 30) {
-                            rateProfit2Close = 50;
-                        }
-                    }
+//                    double rateProfit2Close = RATE_PROFIT_DEC_2CLOSE;
+//                    if (bestProfit < 50) {
+//                        rateProfit2Close = 40;
+//                    } else {
+//                        if (bestProfit < 30) {
+//                            rateProfit2Close = 50;
+//                        }
+//                    }
                     double currentLossProfit = 100 * (bestProfit - currentRateProfit) / bestProfit;
+                    currentLossProfit = currentLossProfit / pos.getLeverage().doubleValue();
                     boolean isTimeOverLimit = checkTimeProfitAndTime(currentRateProfit, pos.getSymbol());
-                    if (currentLossProfit >= rateProfit2Close || isTimeOverLimit) {
+                    if (currentLossProfit >= RATE_PROFIT_DEC_2CLOSE || isTimeOverLimit) {
                         LOG.info("Close by market: {}", pos);
                         Utils.sendSms2Telegram("Close position of: " + pos.getSymbol() + " amt: " + pos.getPositionAmt()
-                                + " profit: " + pos.getUnrealizedProfit() + " Rate: " + bestProfit + "->" + currentRateProfit + " rateloss:" + currentLossProfit + " timeout: {}" + isTimeOverLimit);
+                                + " profit: " + pos.getUnrealizedProfit() + " Rate: " + bestProfit + "->" + currentRateProfit + " rateloss:" + currentLossProfit + " timeout: " + isTimeOverLimit + " leverage: " + pos.getLeverage().intValue());
                         pos = getPositionBySymbol(pos.getSymbol());
                         if (pos.getUnrealizedProfit().doubleValue() != 0) {
                             OrderHelper.takeProfitPosition(pos);
@@ -340,7 +343,7 @@ public class PositionToTargetMonitor {
             Thread.currentThread().setName("ThreadListenQueuePosition2Manager");
             LOG.info("Start thread ThreadListenQueuePosition2Manager!");
             while (true) {
-                List<String> data = null;
+                List<String> data;
                 try {
                     data = RedisHelper.getInstance().get().blpop(0, RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER_QUEUE);
                     LOG.info("Queue listen symbol to manager position received : {} ", data.toString());
@@ -348,11 +351,10 @@ public class PositionToTargetMonitor {
                     try {
                         PositionRisk pos = getPositionBySymbol(symbol);
                         if (pos.getPositionAmt().doubleValue() != 0) {
-                            RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER, symbol, Utils.gson.toJson(pos));
                             Double bestProfit = 0d;
-                            symbol2BestProfit.put(symbol, bestProfit);
-                            allPosition2Monitor.put(symbol, pos);
-                            symbol2TimePosition.put(symbol, System.currentTimeMillis());
+                            RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_TD_POS_PROFIT_MANAGER, pos.getSymbol(), bestProfit.toString());
+                            RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER, symbol, Utils.toJson(pos));
+                            RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_TD_POS_TIME_MANAGER, symbol, String.valueOf(System.currentTimeMillis()));
                             startThreadListenPriceAndUpdatePosition(symbol);
                         }
                     } catch (Exception e) {
@@ -382,23 +384,22 @@ public class PositionToTargetMonitor {
     private void startThreadListenPriceAndUpdatePosition(String symbol) {
         LOG.info("Start listen price: {}", symbol);
         SubscriptionClient client = SubscriptionClient.create();
+
         SubscriptionErrorHandler errorHandler = (BinanceApiException exception) -> {
-            LOG.info("Error listen -> create new listener: {}", symbol);
-            startThreadListenPriceAndUpdatePosition(symbol);
-            exception.printStackTrace();
+
+//            LOG.info("Error listen -> create new listener: {}", symbol);
+//            startThreadListenPriceAndUpdatePosition(symbol);
+//            exception.printStackTrace();
         };
         client.subscribeSymbolTickerEvent(symbol.toLowerCase(), ((event) -> {
 //            LOG.info("Update price: {}", Utils.gson.toJson(event));
-            PositionRisk pos = allPosition2Monitor.get(symbol);
-            if (pos == null) {
-                LOG.info("Re add pos to monitor for {} because not in list monitor pos", symbol);
-                pos = getPositionBySymbol(symbol);
-                allPosition2Monitor.put(symbol, pos);
-                symbol2TimePosition.put(symbol, System.currentTimeMillis());
-            }
+            PositionRisk pos = Utils.gson.fromJson(RedisHelper.getInstance().readJsonData(
+                    RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER, symbol), PositionRisk.class);
             pos.setMarkPrice(event.getLastPrice());
             pos.setUnrealizedProfit(calUnrealizedProfit(pos));
         }), errorHandler);
+
+//        }), null);
     }
 
     private BigDecimal calUnrealizedProfit(PositionRisk pos) {
@@ -409,10 +410,10 @@ public class PositionToTargetMonitor {
 
     private boolean checkTimeProfitAndTime(double currentRateProfit, String symbol) {
         if (currentRateProfit < 2 * RATE_MIN_TAKE_PROFIT) {
-            Long timePos = symbol2TimePosition.get(symbol);
-            if (timePos == null) {
-                symbol2TimePosition.put(symbol, System.currentTimeMillis());
+            if (RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TD_POS_TIME_MANAGER, symbol) == null) {
+                RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_TD_POS_TIME_MANAGER, symbol, String.valueOf(System.currentTimeMillis()));
             }
+            Long timePos = Long.valueOf(RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TD_POS_TIME_MANAGER, symbol));
             if ((System.currentTimeMillis() - timePos) > LIMIT_TIME_POSITION_2CLOSE * Utils.TIME_MINUTE) {
                 return true;
             }
@@ -427,28 +428,58 @@ public class PositionToTargetMonitor {
             while (true) {
                 try {
                     // check position close => cancel order dca if order status new
-                    Set<String> symbol2Remove = new HashSet<>();
-                    for (Map.Entry<String, Order> entry : symbol2OrderDCA.entrySet()) {
-                        String symbol = entry.getKey();
-                        Order orderDCA = entry.getValue();
-                        if (allPosition2Monitor.get(symbol) == null) {
+                    LOG.info("Checking order DCA to process!");
+                    for (String symbol : RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_DCA_MANAGER)) {
+                        Order orderDCA = Utils.gson.fromJson(RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_DCA_MANAGER, symbol), Order.class);
+                        if (RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER, symbol) == null) {
                             Order orderDcaInfo = PositionHelper.getInstance().readOrderInfo(symbol, orderDCA.getOrderId());
-                            if (orderDcaInfo != null && StringUtils.equals(orderDcaInfo.getStatus(), "NEW")) {
+                            if (orderDcaInfo != null && orderDcaInfo.getStatus().equals(OrderStatus.NEW.toString())) {
                                 String log = "Cancel order DCA: " + Utils.toJson(orderDcaInfo);
                                 LOG.info(log);
                                 Utils.sendSms2Telegram(log);
                                 PositionHelper.getInstance().cancelOrder(symbol, orderDCA.getOrderId());
                             }
-                            symbol2Remove.add(symbol);
+                            RedisHelper.getInstance().hdel(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_DCA_MANAGER, symbol);
+                            LOG.info("Remove order DCA of list monitor when position sucess: {}", symbol);
+                        } else {
+                            Order orderDcaInfo = PositionHelper.getInstance().readOrderInfo(symbol, orderDCA.getOrderId());
+                            if (orderDcaInfo != null && orderDcaInfo.getStatus().equals(OrderStatus.FILLED.toString())) {
+                                RedisHelper.getInstance().hdel(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_DCA_MANAGER, symbol);
+                                LOG.info("Remove order DCA of list monitor when status filled: {}", symbol);
+                            }
                         }
-                    }
-                    for (String symbol : symbol2Remove) {
-                        symbol2OrderDCA.remove(symbol);
-                        LOG.info("Remove order DCA of list monitor: {}", symbol);
                     }
                     Thread.sleep(5 * Utils.TIME_MINUTE);
                 } catch (Exception e) {
                     LOG.error("ERROR during ThreadMOnitorOrderDCA: {}", e);
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+    }
+
+    private void startThreadCheckPositionDone() {
+        new Thread(() -> {
+            Thread.currentThread().setName("ThreadCheckPositionDone");
+            LOG.info("Start thread ThreadCheckPositionDone!");
+            while (true) {
+                try {
+                    Set<String> listDone = new HashSet<>();
+                    LOG.info("Check positon done: {}", positionDones.keySet());
+                    for (Map.Entry<String, PositionRisk> entry : positionDones.entrySet()) {
+                        String symbol = entry.getKey();
+                        if (waitForPositionDone(symbol)) {
+                            RedisHelper.getInstance().delJsonData(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER, symbol);
+                            LOG.info("{} Remove symbol had Close by over margin: {} out list running!", Thread.currentThread().getName(), symbol);
+                            listDone.add(symbol);
+                        }
+                    }
+                    for (String symbol : listDone) {
+                        positionDones.remove(symbol);
+                    }
+                    Thread.sleep(Utils.TIME_MINUTE);
+                } catch (Exception e) {
+                    LOG.error("ERROR during ThreadCheckPositionDone: {}", e);
                     e.printStackTrace();
                 }
             }

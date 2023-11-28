@@ -13,18 +13,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.binance.client.constant;
+package com.binance.chuyennd.object;
 
 /**
  *
  * @author pc
  */
-public class Contanst {
+public class TopBottomObject {
 
-    public static final String SYMBOL_PAIR_BTC = "BTCUSDT";
-    public static final String INTERVAL_1M = "1m";
-    public static final String INTERVAL_15M = "15m";
-    public static final String INTERVAL_1D = "1d";
-    public static final String INTERVAL_1H = "1h";
-    public static final String URL_TICKER = "https://fapi.binance.com/fapi/v1/klines?symbol=xxxxxx&interval=";
+    public TopBottomState status;
+    public KlineObjectNumber kline;
+
+    public TopBottomObject(TopBottomState status, KlineObjectNumber kline) {
+        this.status = status;
+        this.kline = kline;
+    }
+
+    public TopBottomState getStatus() {
+        return status;
+    }
+
+    public void setStatus(TopBottomState status) {
+        this.status = status;
+    }
+
+    public KlineObjectNumber getKline() {
+        return kline;
+    }
+
+    public void setKline(KlineObjectNumber kline) {
+        this.kline = kline;
+    }
+
 }

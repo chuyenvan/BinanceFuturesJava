@@ -923,6 +923,10 @@ public class Utils {
         return result;
     }
 
+    public static double rateOf2Double(Double start, Double end) {
+        return (start - end) / end;
+    }
+
     public static void main(String[] args) {
 //        System.out.println(Utils.normalPrice2Api(99.95804261161376d));
 //        System.out.println(Utils.normalPrice2Api(991.95804261161376d));
