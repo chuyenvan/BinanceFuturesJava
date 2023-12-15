@@ -61,11 +61,11 @@ public class TDWithRateChange {
                 if (System.currentTimeMillis() - klineObject.startTime > Utils.TIME_DAY * 30) {
                     continue;
                 }
-                if (maxPrice < klineObject.priceMax) {
-                    maxPrice = klineObject.priceMax;
+                if (maxPrice < klineObject.maxPrice) {
+                    maxPrice = klineObject.maxPrice;
                 }
-                if (minPrice == 0d || minPrice > klineObject.priceMin) {
-                    minPrice = klineObject.priceMin;
+                if (minPrice == 0d || minPrice > klineObject.minPrice) {
+                    minPrice = klineObject.minPrice;
                 }
                 volumeAvg += Double.valueOf(klineObject.volume);
             }

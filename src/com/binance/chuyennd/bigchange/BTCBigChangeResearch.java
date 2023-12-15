@@ -181,7 +181,7 @@ public class BTCBigChangeResearch {
         List<List<Object>> tickers = getTicker15MbySymbol("BTCUSDT");
         for (List<Object> ticker : tickers) {
             KlineObjectNumber kline = KlineObjectNumber.convertString2Kline(ticker);
-            if ((kline.priceMax - kline.priceMin) / kline.priceMin > 0.025) {
+            if ((kline.maxPrice - kline.minPrice) / kline.minPrice > 0.025) {
                 LOG.info("bigchange: {} -> {}", new Date(kline.startTime.longValue()), Utils.toJson(kline));
                 rateChangeTickers.put(kline.startTime, new TreeMap<>());
                 Double rateChange = (kline.priceOpen - kline.priceClose) / kline.priceOpen;
@@ -220,7 +220,7 @@ public class BTCBigChangeResearch {
                 KlineObjectNumber kline = symbol2Kline.get(time).get(symbol);
                 if (kline != null) {
                     LOG.info(" {} {} -> {} max: {} min: {} open: {} close: {}", new Date(time.longValue()),
-                            symbol, rate, kline.priceMax, kline.priceMin, kline.priceOpen, kline.priceClose);
+                            symbol, rate, kline.maxPrice, kline.minPrice, kline.priceOpen, kline.priceClose);
                 } else {
                     LOG.info("{} {} -> {}", new Date(time.longValue()), symbol, rate
                     );
@@ -233,7 +233,7 @@ public class BTCBigChangeResearch {
     private static void extractKlineBigChangeOfBTC(String intervel, Double rate) {
         List<KlineObjectNumber> tickers = TickerHelper.getTicker("BTCUSDT", intervel);
         for (KlineObjectNumber kline : tickers) {
-            if ((kline.priceMax - kline.priceMin) / kline.priceMin > rate) {
+            if ((kline.maxPrice - kline.minPrice) / kline.minPrice > rate) {
                 LOG.info("bigchange: {} -> {}", new Date(kline.startTime.longValue()), Utils.toJson(kline));
             }
         }
@@ -300,7 +300,7 @@ public class BTCBigChangeResearch {
                     if (System.currentTimeMillis() % Utils.TIME_MINUTE <= Utils.TIME_SECOND) {
                         LOG.info("Detect bigchane in month kline!");
                         KlineObjectNumber ticker = TickerHelper.getLastTicker(Constants.SYMBOL_PAIR_BTC, Constants.INTERVAL_1M);
-                        Double rate = (ticker.priceMax - ticker.priceMin) / ticker.priceMin;
+                        Double rate = (ticker.maxPrice - ticker.minPrice) / ticker.minPrice;
                         if (rate > RATE_BIG_CHANGE_TEST) {
                             LOG.info("{} {} {}", "BTCUSDT", rate, Utils.toJson(ticker));
                             printDataAllSymbolNextMinute(ticker, symbols);
@@ -335,11 +335,11 @@ public class BTCBigChangeResearch {
                     KlineObjectNumber klineCheckPoint = tickers.get(tickers.size() - 1 - numberMinuteCheckRateChange);
                     for (int i = 0; i < numberMinuteCheckRateChange + 1; i++) {
                         KlineObjectNumber kline = tickers.get(tickers.size() - 1 - i);
-                        if (maxPrice == null || kline.priceMax > maxPrice) {
-                            maxPrice = kline.priceMax;
+                        if (maxPrice == null || kline.maxPrice > maxPrice) {
+                            maxPrice = kline.maxPrice;
                         }
-                        if (minPrice == null || kline.priceMin < minPrice) {
-                            minPrice = kline.priceMin;
+                        if (minPrice == null || kline.minPrice < minPrice) {
+                            minPrice = kline.minPrice;
                         }
                     }
                     Double rateDown = (klineCheckPoint.priceOpen - minPrice) / klineCheckPoint.priceOpen;

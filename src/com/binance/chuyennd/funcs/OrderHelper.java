@@ -207,7 +207,7 @@ public class OrderHelper {
     }
 
     public static void main(String[] args) {
-//        OrderHelper.newOrder("CYBERUSDT", OrderSide.BUY, 5.0, 4.55, 10);
+//        OrderHelper.newOrderMarket("UNIUSDT", OrderSide.SELL, 5.0, 4);
 //        OrderHelper.takeProfit("CYBERUSDT", OrderSide.SELL, 5.0, 6.0);
 
 //        System.out.println(OrderHelper.stopLoss("CYBERUSDT", OrderSide.SELL, 5.0, 3.0));

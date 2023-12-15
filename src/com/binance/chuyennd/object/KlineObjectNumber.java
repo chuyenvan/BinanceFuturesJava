@@ -15,18 +15,19 @@
  */
 package com.binance.chuyennd.object;
 
+import java.io.Serializable;
 import java.util.List;
 
 /**
  *
  * @author pc
  */
-public class KlineObjectNumber {
+public class KlineObjectNumber implements Serializable{
 
     public Double startTime;
     public Double priceOpen;
-    public Double priceMax;
-    public Double priceMin;
+    public Double maxPrice;
+    public Double minPrice;
     public Double priceClose;
     public String totalUsdt;
     public Double endTime;
@@ -40,8 +41,8 @@ public class KlineObjectNumber {
         KlineObjectNumber result = new KlineObjectNumber();
         result.startTime = (Double) kline.get(0);
         result.priceOpen = Double.valueOf(kline.get(1).toString());
-        result.priceMax = Double.valueOf(kline.get(2).toString());
-        result.priceMin = Double.valueOf(kline.get(3).toString());
+        result.maxPrice = Double.valueOf(kline.get(2).toString());
+        result.minPrice = Double.valueOf(kline.get(3).toString());
         result.priceClose = Double.valueOf(kline.get(4).toString());
         result.volume = Double.valueOf(kline.get(5).toString());
         result.endTime = (Double) kline.get(6);

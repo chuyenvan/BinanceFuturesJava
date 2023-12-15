@@ -5,7 +5,7 @@
  */
 package com.binance.chuyennd.utils;
 
-import com.binance.chuyennd.object.KlineObjectNumber;
+import com.binance.client.model.trade.PositionRisk;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.*;
 import org.apache.commons.lang3.StringUtils;
@@ -39,6 +39,7 @@ public class Utils {
 
     public static final SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
     public static final SimpleDateFormat sdfFile = new SimpleDateFormat("yyyyMMdd");
+    public static final SimpleDateFormat sdfFileHour = new SimpleDateFormat("yyyyMMdd HH:mm");
     public static final SimpleDateFormat sdfFacebook = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
     public static final SimpleDateFormat sdfGoogle = new SimpleDateFormat("yyyy-M-dd HH:mm:ss");
     public static final SimpleDateFormat SDF_NORMAL = new SimpleDateFormat("E MMM dd HH:mm:ss z yyyy");
@@ -51,6 +52,10 @@ public class Utils {
             e.printStackTrace();
         }
         return "{}";
+    }
+
+    public static double marginOfPosition(PositionRisk pos) {
+        return Math.abs((pos.getPositionAmt().doubleValue() * pos.getEntryPrice().doubleValue() / pos.getLeverage().doubleValue()));
     }
 
     public static String getMainClassAndArgs() {
@@ -461,6 +466,13 @@ public class Utils {
 
     public static String normalizeDateYYYYMMDD(Date input) {
         return sdfFile.format(input);
+    }
+
+    public static String normalizeDateYYYYMMDD(Long input) {
+        return sdfFile.format(new Date(input));
+    }
+    public static String normalizeDateYYYYMMDDHHmm(Long input) {
+        return sdfFileHour.format(new Date(input));
     }
 
     public static List<String> getLastWeekFileName() {

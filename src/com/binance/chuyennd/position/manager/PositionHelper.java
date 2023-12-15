@@ -17,6 +17,7 @@ package com.binance.chuyennd.position.manager;
 
 import com.binance.chuyennd.funcs.ClientSingleton;
 import com.binance.chuyennd.funcs.OrderHelper;
+import com.binance.chuyennd.funcs.TickerHelper;
 import com.binance.chuyennd.object.KlineObject;
 import com.binance.chuyennd.object.TickerStatistics;
 import com.binance.chuyennd.redis.RedisConst;
@@ -24,6 +25,7 @@ import com.binance.chuyennd.redis.RedisHelper;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.HttpRequest;
 import com.binance.chuyennd.utils.Utils;
+import com.binance.client.constant.Constants;
 import com.binance.client.model.enums.NewOrderRespType;
 import com.binance.client.model.enums.OrderSide;
 import com.binance.client.model.enums.OrderType;
@@ -48,11 +50,10 @@ public class PositionHelper {
     public static final Logger LOG = LoggerFactory.getLogger(OrderHelper.class);
     private static volatile PositionHelper INSTANCE = null;
 
-    public static String URL_GET_RECOMMAND = "http://172.25.80.128:8002/";
-    public static Integer LEVERAGE_TRADING = Configs.getInt("LeverageTrading");
-    public static Integer BUDGET_PER_ORDER = Configs.getInt("BudgetPerOrder");
-    public static Double RATE_CHECK_SIGNAL_TARGET = Configs.getDouble("RateCheckSignalTarget");
-    public static Double LIMIT_ORDER_TRADING = Configs.getDouble("LitmitOrderTrading");
+    public Integer LEVERAGE_TRADING = Configs.getInt("LeverageTrading");
+    public Integer BUDGET_PER_ORDER = Configs.getInt("BudgetPerOrder");
+    public Double RATE_CHECK_SIGNAL_TARGET = Configs.getDouble("RateCheckSignalTarget");
+    public Double LIMIT_ORDER_TRADING = Configs.getDouble("LitmitOrderTrading");
 
     public static final String URL_TICKER_1D = "https://fapi.binance.com/fapi/v1/klines?symbol=xxxxxx&interval=1w";
 
@@ -73,7 +74,7 @@ public class PositionHelper {
 
     public static void main(String[] args) {
 //        PositionHelper.getInstance();
-        System.out.println(Utils.toJson(new PositionHelper().dcaForPosition(getPositionBySymbol("ETHUSDT"), 0.6)));
+        System.out.println(Utils.toJson(new PositionHelper().dcaForPositionNew(getPositionBySymbol("BIGTIMEUSDT"))));
 // 5753457816
 //        ClientSingleton.getInstance().syncRequestClient.cancelOrder("BALUSDT", 5753457816L, "5753457816");
 //        System.out.println(Utils.toJson(ClientSingleton.getInstance().syncRequestClient.getOrder("BALUSDT", 5753457816L, "5753457816")));
@@ -88,24 +89,24 @@ public class PositionHelper {
     }
 
     private void getAllSymbolAvailible() {
-
-        String allFuturePrices = HttpRequest.getContentFromUrl("https://fapi.binance.com/fapi/v1/ticker/24hr");
-        List<Object> futurePrices = Utils.gson.fromJson(allFuturePrices, List.class);
-        for (Object futurePrice : futurePrices) {
-            TickerStatistics ticker = Utils.gson.fromJson(futurePrice.toString(), TickerStatistics.class);
-            if (StringUtils.endsWithIgnoreCase(ticker.getSymbol(), "usdt")) {
-                try {
-                    // only get symbol over 2 months
-                    long timeStart = getStartTimeAtExchange(ticker.getSymbol());
-//                    LOG.info("{} -> {} -> {}", ticker.getSymbol(), new Date(timeStart), (System.currentTimeMillis() - timeStart) / Utils.TIME_DAY);
-                    if ((System.currentTimeMillis() - timeStart) / Utils.TIME_DAY > 90) {
-                        symbolAvalible2Trading.add(ticker.getSymbol());
-                    }
-                } catch (Exception e) {
-
-                }
-            }
-        }
+//
+//        String allFuturePrices = HttpRequest.getContentFromUrl("https://fapi.binance.com/fapi/v1/ticker/24hr");
+//        List<Object> futurePrices = Utils.gson.fromJson(allFuturePrices, List.class);
+//        for (Object futurePrice : futurePrices) {
+//            TickerStatistics ticker = Utils.gson.fromJson(futurePrice.toString(), TickerStatistics.class);
+//            if (StringUtils.endsWithIgnoreCase(ticker.getSymbol(), "usdt")) {
+//                try {
+//                    // only get symbol over 2 months
+//                    long timeStart = getStartTimeAtExchange(ticker.getSymbol());
+////                    LOG.info("{} -> {} -> {}", ticker.getSymbol(), new Date(timeStart), (System.currentTimeMillis() - timeStart) / Utils.TIME_DAY);
+//                    if ((System.currentTimeMillis() - timeStart) / Utils.TIME_DAY > 30) {
+//                        symbolAvalible2Trading.add(ticker.getSymbol());
+//                    }
+//                } catch (Exception e) {
+//
+//                }
+//            }
+//        }
 
     }
 
@@ -155,12 +156,19 @@ public class PositionHelper {
         }
         if (!isPriceOverForTrading(symbol, orderSide, priceEntryTarget)) {
             Double quantity = Double.valueOf(Utils.normalQuantity2Api(BUDGET_PER_ORDER * LEVERAGE_TRADING / priceEntryTarget));
+            quantity = ClientSingleton.getInstance().normalizeQuantity(symbol, quantity);
+            for (int i = 1; i < 10; i++) {
+                if (quantity == 0) {
+                    quantity = Double.valueOf(Utils.normalQuantity2Api((BUDGET_PER_ORDER + i) * LEVERAGE_TRADING / priceEntryTarget));
+                    quantity = ClientSingleton.getInstance().normalizeQuantity(symbol, quantity);
+                }
+            }
             Order result = OrderHelper.newOrderMarket(symbol, orderSide, quantity, LEVERAGE_TRADING);
             if (result != null) {
                 PositionRisk pos = getPositionBySymbol(symbol);
                 RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER, symbol, Utils.gson.toJson(pos));
                 RedisHelper.getInstance().get().rpush(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER_QUEUE, symbol);
-                String telegramAler = symbol + " -> " + orderSide + " entry: " + pos.getEntryPrice().doubleValue() + " recomend: " + HttpRequest.getContentFromUrl(URL_GET_RECOMMAND + symbol);
+                String telegramAler = symbol + " -> " + orderSide + " entry: " + pos.getEntryPrice().doubleValue();
                 Utils.sendSms2Telegram(telegramAler);
                 LOG.info("Add order success:{} {} entry: {} quantity:{} {} {}", orderSide, symbol, pos.getEntryPrice().doubleValue(), pos.getPositionAmt().doubleValue(), new Date(), telegramAler);
             } else {
@@ -175,6 +183,42 @@ public class PositionHelper {
         }
     }
 
+    public boolean addOrderByTarget(String symbol, OrderSide orderSide) {
+        // change target       
+        try {
+            if (ClientSingleton.getInstance().getBalanceAvalible() <= BUDGET_PER_ORDER) {
+                return false;
+            }
+            boolean passCheckBasic = basicCheckToTrade(symbol);
+            if (!passCheckBasic) {
+                return true;
+            }
+            Double priceEntryTarget = ClientSingleton.getInstance().getCurrentPrice(symbol);
+            Double quantity = Double.valueOf(Utils.normalQuantity2Api(BUDGET_PER_ORDER * LEVERAGE_TRADING / priceEntryTarget));
+            quantity = ClientSingleton.getInstance().normalizeQuantity(symbol, quantity);
+            for (int i = 1; i < 10; i++) {
+                if (quantity == 0) {
+                    quantity = Double.valueOf(Utils.normalQuantity2Api((BUDGET_PER_ORDER + i) * LEVERAGE_TRADING / priceEntryTarget));
+                    quantity = ClientSingleton.getInstance().normalizeQuantity(symbol, quantity);
+                }
+            }
+            Order result = OrderHelper.newOrder(symbol, orderSide, quantity, priceEntryTarget, LEVERAGE_TRADING);
+            if (result != null) {
+                String telegramAler = symbol + " -> " + orderSide + " entry: " + priceEntryTarget;
+                Utils.sendSms2Telegram(telegramAler);
+                LOG.info("Add order success:{} {} entry: {} quantity:{} {} {}", orderSide, symbol, priceEntryTarget, quantity, new Date(), telegramAler);
+            } else {
+                String log = "Add order fail because can not create order symbol: " + symbol;
+                LOG.info(log);
+                Utils.sendSms2Telegram(log);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return true;
+        }
+        return true;
+    }
+
     public void addOrderBySignal(String symbol, OrderSide orderSide) {
 
         boolean passCheckBasic = basicCheckToTrade(symbol);
@@ -187,7 +231,7 @@ public class PositionHelper {
             PositionRisk pos = getPositionBySymbol(symbol);
             RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER, symbol, Utils.gson.toJson(pos));
             RedisHelper.getInstance().get().rpush(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER_QUEUE, symbol);
-            String telegramAler = symbol + " -> " + orderSide + " entry: " + pos.getEntryPrice().doubleValue() + " recomend: " + HttpRequest.getContentFromUrl(URL_GET_RECOMMAND + symbol);
+            String telegramAler = symbol + " -> " + orderSide + " entry: " + pos.getEntryPrice().doubleValue();
             Utils.sendSms2Telegram(telegramAler);
             LOG.info("Add order success:{} {} entry: {} quantity:{} {} {}", orderSide, symbol, pos.getEntryPrice().doubleValue(), pos.getPositionAmt().doubleValue(), new Date(), telegramAler);
         } else {
@@ -221,12 +265,12 @@ public class PositionHelper {
 //            Utils.sendSms2Telegram(log);
             return false;
         }
-        if (!symbolAvalible2Trading.contains(symbol)) {
-            String log = "Add order fail because symbol had new at exchange: " + symbol;
-            LOG.info(log);
-            Utils.sendSms2Telegram(log);
-            return false;
-        }
+//        if (!symbolAvalible2Trading.contains(symbol)) {
+//            String log = "Add order fail because symbol had new at exchange: " + symbol;
+//            LOG.info(log);
+//            Utils.sendSms2Telegram(log);
+//            return false;
+//        }
         if (RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER, symbol) != null) {
             String log = "Add order fail because symbol had order active: " + symbol;
             LOG.info(log);
@@ -251,27 +295,51 @@ public class PositionHelper {
         }
     }
 
-    public Order dcaForPosition(PositionRisk pos, Double rate2DCA) {
+    public Order dcaForPositionNew(PositionRisk pos) {
         try {
             Double quantity = Math.abs(pos.getPositionAmt().doubleValue());
             OrderSide orderSide = OrderSide.BUY;
-            Double price = pos.getEntryPrice().doubleValue() - pos.getEntryPrice().doubleValue() * rate2DCA / pos.getLeverage().doubleValue();
+            Double price = ClientSingleton.getInstance().getCurrentPrice(pos.getSymbol());
             if (pos.getPositionAmt().doubleValue() < 0) {
                 orderSide = OrderSide.SELL;
-                price = pos.getEntryPrice().doubleValue() + pos.getEntryPrice().doubleValue() * rate2DCA / pos.getLeverage().doubleValue();
             }
-            LOG.info("DCA to {} side:{} price: {} quantity: {}", pos.getSymbol(), orderSide, price, quantity);
-            Utils.sendSms2Telegram("DCA for " + pos.getSymbol() + " side: " + orderSide + " price" + Utils.normalPrice2Api(price) + " quantity: " + quantity);
-            return ClientSingleton.getInstance().syncRequestClient.postOrder(pos.getSymbol(), orderSide, null, OrderType.LIMIT, TimeInForce.GTC,
-                    quantity.toString(), Utils.normalPrice2Api(price), null, null, null, null, null, null, null, null, NewOrderRespType.RESULT);
+            if (TickerHelper.getCurrentSide(pos.getSymbol(), Constants.INTERVAL_1D).equals(orderSide)) {
+                LOG.info("DCA to {} side:{} price: {} quantity: {}", pos.getSymbol(), orderSide, price, quantity);
+                Utils.sendSms2Telegram("DCA for " + pos.getSymbol() + " side: " + orderSide + " price" + Utils.normalPrice2Api(price) + " quantity: " + quantity);
+                return ClientSingleton.getInstance().syncRequestClient.postOrder(pos.getSymbol(), orderSide, null, OrderType.LIMIT, TimeInForce.GTC,
+                        quantity.toString(), Utils.normalPrice2Api(price), null, null, null, null, null, null, null, null, NewOrderRespType.RESULT);
+            }
         } catch (Exception e) {
             LOG.info("Error during DCA for: {}", Utils.toJson(pos));
             e.printStackTrace();
         }
         return null;
     }
+//    public Order dcaForPosition(PositionRisk pos, Double rate2DCA) {
+//        try {
+//            Double quantity = Math.abs(pos.getPositionAmt().doubleValue());
+//            OrderSide orderSide = OrderSide.BUY;
+//            Double price = pos.getEntryPrice().doubleValue() - pos.getEntryPrice().doubleValue() * rate2DCA / pos.getLeverage().doubleValue();
+//            if (pos.getPositionAmt().doubleValue() < 0) {
+//                orderSide = OrderSide.SELL;
+//                price = pos.getEntryPrice().doubleValue() + pos.getEntryPrice().doubleValue() * rate2DCA / pos.getLeverage().doubleValue();
+//            }
+//            LOG.info("DCA to {} side:{} price: {} quantity: {}", pos.getSymbol(), orderSide, price, quantity);
+//            Utils.sendSms2Telegram("DCA for " + pos.getSymbol() + " side: " + orderSide + " price" + Utils.normalPrice2Api(price) + " quantity: " + quantity);
+//            return ClientSingleton.getInstance().syncRequestClient.postOrder(pos.getSymbol(), orderSide, null, OrderType.LIMIT, TimeInForce.GTC,
+//                    quantity.toString(), Utils.normalPrice2Api(price), null, null, null, null, null, null, null, null, NewOrderRespType.RESULT);
+//        } catch (Exception e) {
+//            LOG.info("Error during DCA for: {}", Utils.toJson(pos));
+//            e.printStackTrace();
+//        }
+//        return null;
+//    }
 
-    public Order readOrderInfo(String symbol, Long orderId) {        
-        return ClientSingleton.getInstance().syncRequestClient.getOrder(symbol, orderId, orderId.toString());
+    public Order readOrderInfo(String symbol, Long orderId) {
+        try {
+            return ClientSingleton.getInstance().syncRequestClient.getOrder(symbol, orderId, orderId.toString());
+        } catch (Exception e) {
+        }
+        return null;
     }
 }
