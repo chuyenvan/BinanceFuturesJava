@@ -22,20 +22,16 @@ import java.util.List;
  *
  * @author pc
  */
-public class KlineObjectNumber implements Serializable{
+public class KlineObjectNumber implements Serializable {
 
     public Double startTime;
     public Double priceOpen;
     public Double maxPrice;
     public Double minPrice;
     public Double priceClose;
-    public String totalUsdt;
+    public Double totalUsdt;
     public Double endTime;
-    public Double volume;
-    public Double al;
-    public String orther1;
-    public String orther2;
-    public String orther3;
+//    public Double al;
 
     public static KlineObjectNumber convertString2Kline(List<Object> kline) {
         KlineObjectNumber result = new KlineObjectNumber();
@@ -44,13 +40,10 @@ public class KlineObjectNumber implements Serializable{
         result.maxPrice = Double.valueOf(kline.get(2).toString());
         result.minPrice = Double.valueOf(kline.get(3).toString());
         result.priceClose = Double.valueOf(kline.get(4).toString());
-        result.volume = Double.valueOf(kline.get(5).toString());
+//        result.volume = Double.valueOf(kline.get(5).toString());
         result.endTime = (Double) kline.get(6);
-        result.totalUsdt = (String) kline.get(7);
-        result.al = (Double) kline.get(8);
-        result.orther1 = (String) kline.get(9);
-        result.orther2 = (String) kline.get(10);
-        result.orther3 = (String) kline.get(11);
+        result.totalUsdt = Double.valueOf(kline.get(7).toString());
+//        result.al = (Double) kline.get(8);
         return result;
     }
 

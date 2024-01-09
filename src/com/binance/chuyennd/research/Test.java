@@ -15,6 +15,7 @@
  */
 package com.binance.chuyennd.research;
 
+import com.binance.chuyennd.funcs.ClientSingleton;
 import com.binance.chuyennd.funcs.TickerHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.TickerStatistics;
@@ -34,6 +35,8 @@ import com.binance.client.model.enums.CandlestickInterval;
 import com.binance.client.model.enums.OrderSide;
 import com.binance.client.model.event.CandlestickEvent;
 import com.binance.client.model.event.SymbolTickerEvent;
+import com.binance.client.model.market.ExchangeInfoEntry;
+import com.binance.client.model.market.ExchangeInformation;
 import com.binance.client.model.trade.Order;
 import java.text.ParseException;
 import java.util.ArrayList;
@@ -58,13 +61,27 @@ public class Test {
     private static Object rateChangeInMonth;
 
     public static void main(String[] args) throws ParseException, InterruptedException {
+
+//        ExchangeInformation data = ClientSingleton.getInstance().syncRequestClient.getExchangeInformation();
+//        for (ExchangeInfoEntry symbolData : data.getSymbols()) {
+//            LOG.info("{} -> {}", symbolData.getSymbol(), symbolData.getQuotePrecision());
+//        }
+        Integer date = Integer.valueOf(Utils.normalizeDateYYYYMMDD(1704436975000L));
+        Integer today = Integer.parseInt(Utils.getToDayFileName());
+        boolean eq = false;
+        if (date == Integer.parseInt(Utils.getToDayFileName())) {
+            eq = true;
+        }
+        LOG.info("{} {} {}", today, date, eq);
+//        new Test().threadListenVolume();
 //        System.out.println(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER));
 //        System.out.println(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_BTCBIGCHANGETD_SYMBOLS4TRADE));
 //        System.out.println(PositionHelper.getPositionBySymbol("LTCUSDT"));
 //        String timeStr = "20231016";
 //        System.out.println(Utils.sdfFile.parse(timeStr).getTime());
 //        extractRateChangeInMonth(Utils.sdfFile.parse(timeStr).getTime());
-        System.out.println(RedisHelper.getInstance().readAllId("k12:product:user:profile:info.1"));
+
+//        System.out.println(RedisHelper.getInstance().readAllId("k12:product:user:profile:info.1"));
 //        SubscriptionClient client = SubscriptionClient.create();
 //        client.subscribeCandlestickEvent("btcusdt", CandlestickInterval.ONE_MINUTE, ((event) -> {
 //            Long startTime = System.currentTimeMillis();
@@ -80,10 +97,20 @@ public class Test {
 //        for (int i = 0; i < 100; i++) {
 //            System.out.println(TickerHelper.getPriceChange(tickers, i + 1));
 //        }
-
 //        showStatusOrderDCA();
 //        detectTopBottomObjectInTicker("BTCUSDT");
 //        extractVolume();
+    }
+
+    private void threadListenVolume() {
+        SubscriptionClient client = SubscriptionClient.create();
+        SubscriptionErrorHandler errorHandler = (BinanceApiException exception) -> {
+        };
+        client.subscribeAllTickerEvent(((event) -> {
+            for (SymbolTickerEvent e : event) {
+                LOG.info("{} -> {}", e.getSymbol(), e);
+            }
+        }), errorHandler);
     }
 
     private static void extractRateChangeInMonth(long time) {
@@ -184,7 +211,8 @@ public class Test {
         List<KlineObjectNumber> tickers = TickerHelper.getTicker("CYBERUSDT", Constants.INTERVAL_1D);
         KlineObjectNumber lastTicker = tickers.get(0);
         for (KlineObjectNumber ticker : tickers) {
-            LOG.info("Date {} Volume: {} , rate: {}", new Date(ticker.startTime.longValue()), ticker.volume, Utils.rateOf2Double(ticker.volume, lastTicker.volume));
+            LOG.info("Date {} Volume: {} , rate: {}", new Date(ticker.startTime.longValue()),
+                    ticker.totalUsdt, Utils.rateOf2Double(ticker.totalUsdt, lastTicker.totalUsdt));
             lastTicker = ticker;
 
         }

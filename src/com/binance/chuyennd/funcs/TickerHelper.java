@@ -30,6 +30,7 @@ import com.binance.client.constant.Constants;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -39,6 +40,7 @@ import kotlin.collections.ArrayDeque;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import sun.jvm.hotspot.utilities.Interval;
 
 /**
  *
@@ -47,11 +49,12 @@ import org.slf4j.LoggerFactory;
 public class TickerHelper {
 
     public static final String FILE_DATA_TICKER = "storage/data/ticker/symbols-INTERVAL.data";
+    public static final String FILE_DATA_TICKER_TIME = "storage/data/ticker/symbols-INTERVAL-TIME.data";
     public static final Logger LOG = LoggerFactory.getLogger(TickerHelper.class);
 
-    public static TreeMap<Double, String> getMaxRateWithTime(long timeCheckPoint, OrderSide side, String interval, int numberKline) {
+    public static TreeMap<Double, String> getMaxRateWithTime(long timeCheckPoint, OrderSide side, String interval,
+            int numberKline, long startTime, Map<String, List<KlineObjectNumber>> allSymbolTickers) {
         TreeMap<Double, String> rate2Symbol = new TreeMap<>();
-        Map<String, List<KlineObjectNumber>> allSymbolTickers = getAllKline(interval);
         for (Map.Entry<String, List<KlineObjectNumber>> entry : allSymbolTickers.entrySet()) {
             String symbol = entry.getKey();
             List<KlineObjectNumber> tickers = entry.getValue();
@@ -59,29 +62,42 @@ public class TickerHelper {
                 Double maxPrice = null;
                 Double minPrice = null;
                 Double priceOpen = null;
+                KlineObjectNumber klineCheckPoint = null;
+                KlineObjectNumber klineCheckPoint24hr = null;
+                long timeCheckPoint24hrAgo = timeCheckPoint - 4 * Utils.TIME_HOUR;
                 for (int i = 0; i < tickers.size(); i++) {
                     KlineObjectNumber ticker = tickers.get(i);
+                    if (ticker.startTime.longValue() == timeCheckPoint24hrAgo) {
+                        klineCheckPoint24hr = ticker;
+                    }
                     if (ticker.startTime.longValue() == timeCheckPoint) {
-                        KlineObjectNumber klineCheckPoint = ticker;
+                        klineCheckPoint = ticker;
                         priceOpen = klineCheckPoint.priceClose;
                         for (int j = i + 1; j < i + 1 + numberKline; j++) {
-                            ticker = tickers.get(j);
-                            if (maxPrice == null || ticker.maxPrice > maxPrice) {
-                                maxPrice = ticker.maxPrice;
-                            }
-                            if (minPrice == null || ticker.minPrice < minPrice) {
-                                minPrice = ticker.minPrice;
+                            if (j < tickers.size()) {
+                                ticker = tickers.get(j);
+                                if (maxPrice == null || ticker.maxPrice > maxPrice) {
+                                    maxPrice = ticker.maxPrice;
+                                }
+                                if (minPrice == null || ticker.minPrice < minPrice) {
+                                    minPrice = ticker.minPrice;
+                                }
                             }
                         }
                     }
                 }
+                if (klineCheckPoint24hr == null) {
+                    klineCheckPoint24hr = klineCheckPoint;
+                }
                 if (priceOpen != null) {
                     Double rateDown = (priceOpen - minPrice) / priceOpen;
                     Double rateUp = (maxPrice - priceOpen) / priceOpen;
+                    double rateKlineCheckPoint = 100 * Utils.rateOf2Double(klineCheckPoint24hr.priceOpen, klineCheckPoint.priceClose);
                     if (side.equals(OrderSide.BUY)) {
-                        rate2Symbol.put(rateUp, symbol + "-" + priceOpen + "-" + maxPrice);
+                        rate2Symbol.put(rateUp, symbol + "#" + priceOpen + "#" + maxPrice + "#" + minPrice + "#" + rateKlineCheckPoint);
                     } else {
-                        rate2Symbol.put(rateDown, symbol + "-" + priceOpen + "-" + minPrice);
+                        rateKlineCheckPoint = 100 * Utils.rateOf2Double(klineCheckPoint.priceClose, klineCheckPoint24hr.priceOpen);
+                        rate2Symbol.put(rateDown, symbol + "#" + priceOpen + "#" + minPrice + "#" + maxPrice + "#" + rateKlineCheckPoint);
                     }
                 }
 
@@ -154,6 +170,30 @@ public class TickerHelper {
         return results;
     }
 
+    public static List<KlineObjectNumber> getTickerWithStartTime(String symbol, String interval, long startTime) {
+        String url = Constants.URL_TICKER_STARTTIME.replace("xxxxxx", symbol) + interval;
+        List<KlineObjectNumber> results = new ArrayList();
+        Long time = startTime;
+        while (true) {
+            try {
+                String urlData = url.replace("tttttt", time.toString());
+                String respon = HttpRequest.getContentFromUrl(urlData);
+                List<List<Object>> allKlines = Utils.gson.fromJson(respon, List.class);
+                for (List<Object> allKline : allKlines) {
+                    results.add(KlineObjectNumber.convertString2Kline(allKline));
+                }
+                if (results.get(results.size() - 1).endTime.longValue() > System.currentTimeMillis()) {
+                    break;
+                } else {
+                    time = results.get(results.size() - 1).endTime.longValue() + 1;
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        return results;
+    }
+
     public static OrderSide getCurrentTrendWithInterval(String symbol, String interval) {
         try {
             KlineObjectNumber ticker = getLastTicker(symbol, interval);
@@ -208,6 +248,13 @@ public class TickerHelper {
     public static void main(String[] args) {
 //        System.out.println(TickerHelper.getCurrentSide("BIGTIMEUSDT", Constants.INTERVAL_1D));
 
+        Map<String, List<KlineObjectNumber>> symbol2Tickers = TickerHelper.getAllKlineStartTime(Constants.INTERVAL_15M, Utils.getStartTimeDayAgo(100));
+        for (Map.Entry<String, List<KlineObjectNumber>> entry : symbol2Tickers.entrySet()) {
+            Object symbol = entry.getKey();
+            List<KlineObjectNumber> tickers = entry.getValue();
+            LOG.info("{} {}", symbol, tickers.size());
+        }
+//        testGetTicker();
 //        getCurrentTrendLongTime(Contanst.SYMBOL_PAIR_BTC, 60);
 //        System.out.println(getCurrentTrendWithInterval("DYDXUSDT", Contanst.INTERVAL_15M));
 //        System.out.println(Utils.toJson(getLastTicker("DYDXUSDT", Contanst.INTERVAL_15M)));
@@ -311,10 +358,10 @@ public class TickerHelper {
         return objects;
     }
 
-    public static Map<String, List<KlineObjectNumber>> getAllKline(String interval) {
+    public static Map<String, List<KlineObjectNumber>> getAllKlineWithUpdateTime(String interval, long time2Update) {
         String fileName = FILE_DATA_TICKER.replace("INTERVAL", interval);
         File fileStorage = new File(fileName);
-        if (fileStorage.exists() && fileStorage.lastModified() > System.currentTimeMillis() - Utils.TIME_DAY) {
+        if (fileStorage.exists() && fileStorage.lastModified() > System.currentTimeMillis() - time2Update) {
             return (Map<String, List<KlineObjectNumber>>) Storage.readObjectFromFile(fileName);
         } else {
             Map<String, List<KlineObjectNumber>> symbol2Kline1Ds = new HashMap<>();
@@ -325,6 +372,47 @@ public class TickerHelper {
             Storage.writeObject2File(fileName, symbol2Kline1Ds);
             return symbol2Kline1Ds;
         }
+    }
+
+    public static Map<String, List<KlineObjectNumber>> getAllKlineStartTime(String interval, Long startTime) {
+        String fileName = FILE_DATA_TICKER_TIME.replace("INTERVAL", interval);
+        fileName = fileName.replace("TIME", startTime.toString());
+        Map<String, List<KlineObjectNumber>> symbol2Klines = null;
+        File fileStorage = new File(fileName);
+        if (fileStorage.exists()) {
+            try {
+                symbol2Klines = (Map<String, List<KlineObjectNumber>>) Storage.readObjectFromFile(fileName);
+                List<KlineObjectNumber> btcTickers = symbol2Klines.get(Constants.SYMBOL_PAIR_BTC);
+                if (btcTickers.get(btcTickers.size() - 1).endTime.longValue() + 4 * Utils.TIME_HOUR < System.currentTimeMillis()) {
+                    long startTimeNew = btcTickers.get(btcTickers.size() - 1).startTime.longValue();
+                    int counter = 0;
+                    for (Map.Entry<String, List<KlineObjectNumber>> entry : symbol2Klines.entrySet()) {
+                        String symbol = entry.getKey();
+                        List<KlineObjectNumber> tickers = entry.getValue();
+                        counter++;
+                        LOG.info("Update kline: {}/{}", counter, symbol2Klines.size());
+                        tickers.remove(tickers.size() - 1);
+                        tickers.addAll(TickerHelper.getTickerWithStartTime(symbol, interval, startTimeNew));
+                    }
+                    Storage.writeObject2File(fileName, symbol2Klines);
+                }
+                return symbol2Klines;
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        symbol2Klines = new HashMap<>();
+        Collection<? extends String> symbols = TickerHelper.getAllSymbol();
+        int counter = 0;
+        for (String symbol : symbols) {
+            counter++;
+            LOG.info("Get kline: {}/{}", counter, symbols.size());
+            symbol2Klines.put(symbol, TickerHelper.getTickerWithStartTime(symbol, interval, startTime));
+        }
+        Storage.writeObject2File(fileName, symbol2Klines);
+        return symbol2Klines;
+
     }
 
     public static long nomalizeTimeWithExchange(long time) {
@@ -442,5 +530,14 @@ public class TickerHelper {
             e.printStackTrace();
         }
         return objects;
+    }
+
+    private static void testGetTicker() {
+
+        long startTime = System.currentTimeMillis() - 15 * Utils.TIME_DAY;
+        List<KlineObjectNumber> tickers = TickerHelper.getTickerWithStartTime(Constants.SYMBOL_PAIR_BTC, Constants.INTERVAL_15M, startTime);
+        for (KlineObjectNumber ticker : tickers) {
+            System.out.println(new Date(ticker.startTime.longValue()));
+        }
     }
 }

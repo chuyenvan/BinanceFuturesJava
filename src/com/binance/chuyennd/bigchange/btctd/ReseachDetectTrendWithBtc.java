@@ -47,13 +47,13 @@ public class ReseachDetectTrendWithBtc {
 
     public static void main(String[] args) throws IOException, ParseException {
 //        new ReseachDetectTrendWithBtc().detectorTrendSymbol("WLDUSDT");
-        for (String symbol : TickerHelper.getAllSymbol()) {
-            new ReseachDetectTrendWithBtc().chartSymbol(symbol);
-        }
+//        for (String symbol : TickerHelper.getAllSymbol()) {
+//            new ReseachDetectTrendWithBtc().chartSymbol(symbol);
+//        }
 //        System.out.println(ClientSingleton.getInstance().getCurrentPrice(Constants.SYMBOL_PAIR_BTC));
-//        String timeStr = "20231016";
+        String timeStr = "20231016";
 //        System.out.println(Utils.sdfFile.parse(timeStr).getTime());
-//        new ReseachDetectTrendWithBtc().extractRateAllCoinWithStartTime(Utils.sdfFile.parse(timeStr).getTime());
+        new ReseachDetectTrendWithBtc().extractRateAllCoinWithStartTime(Utils.sdfFile.parse(timeStr).getTime());
 //        new ReseachDetectTrendWithBtc().extractAltBehaviorByBtcTrend();
 
     }
@@ -64,7 +64,7 @@ public class ReseachDetectTrendWithBtc {
     }
 
     public void extractAltBehaviorByBtcTrend() throws IOException {
-        Map<String, List<KlineObjectNumber>> symbol2Kline1Ds = TickerHelper.getAllKline(Constants.INTERVAL_1D);
+        Map<String, List<KlineObjectNumber>> symbol2Kline1Ds = TickerHelper.getAllKlineWithUpdateTime(Constants.INTERVAL_1D, Utils.TIME_DAY);
         Double rateOfSideWay = 0.08;
         List<TrendObjectDetail> btcTrends = detectorTrend(symbol2Kline1Ds, Constants.SYMBOL_PAIR_BTC, rateOfSideWay);
 //        updateTimeOfTrend(btcTrends);
@@ -284,7 +284,7 @@ public class ReseachDetectTrendWithBtc {
 
     private void extractRateAllCoinWithStartTime(long time) throws IOException {
         time = TickerHelper.nomalizeTimeWithExchange(time);
-        Map<String, List<KlineObjectNumber>> symbol2Kline1Ds = TickerHelper.getAllKline(Constants.INTERVAL_1D);
+        Map<String, List<KlineObjectNumber>> symbol2Kline1Ds = TickerHelper.getAllKlineWithUpdateTime(Constants.INTERVAL_1D, Utils.TIME_DAY);
         TreeMap<Double, KlineObjectNumber> rate2ObjectKline = new TreeMap<>();
         for (Map.Entry<String, List<KlineObjectNumber>> entry : symbol2Kline1Ds.entrySet()) {
             String symbol = entry.getKey();
@@ -312,14 +312,16 @@ public class ReseachDetectTrendWithBtc {
                 }
             }
             Double rateMax = Utils.rateOf2Double(maxPrice, openPrice);
+            Double rateCurrent = Utils.rateOf2Double(maxPrice, openPrice);
             KlineObjectNumber object = new KlineObjectNumber();
-            object.orther1 = symbol;
+//            object.orther1 = symbol;
             object.priceClose = closePrice;
             object.maxPrice = maxPrice;
             object.minPrice = minPrice;
             object.priceOpen = openPrice;
             object.startTime = timeMax.doubleValue();
-            rate2ObjectKline.put(rateMax, object);
+//            rate2ObjectKline.put(rateMax, object);
+            rate2ObjectKline.put(rateCurrent, object);
         }
         StringBuilder builder = new StringBuilder();
         List<String> lines = new ArrayList<>();
@@ -329,11 +331,11 @@ public class ReseachDetectTrendWithBtc {
 //            LOG.info("{} open:{} Close{} max:{} rateMax:{} rateCurrent:{}",
 //                    object.orther1, object.priceOpen, object.priceClose, object.priceMax, rate, Utils.rateOf2Double(object.priceClose, object.priceOpen));
             builder.setLength(0);
-            builder.append(object.orther1).append(",");
+//            builder.append(object.orther1).append(",");
             builder.append(object.priceOpen).append(",");
             builder.append(object.priceClose).append(",");
             builder.append(object.maxPrice).append(",");
-            builder.append(rate).append(",");
+            builder.append(Utils.rateOf2Double(object.maxPrice, object.priceOpen)).append(",");
             builder.append(Utils.rateOf2Double(object.priceClose, object.priceOpen)).append(",");
             builder.append(Utils.normalizeDateYYYYMMDD(object.startTime.longValue())).append(",");
             lines.add(builder.toString());

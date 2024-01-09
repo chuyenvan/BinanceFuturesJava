@@ -114,7 +114,7 @@ public class DetectBeardForTrading {
                 if (priceClose < priceOpen) {
                     priceEntryTarget = priceOpen;
                 }
-                PositionManagerTradingBeard.getInstance().addOrderByTarget(symbol, OrderSide.SELL, priceEntryTarget);
+//                PositionManagerTradingBeard.getInstance().addOrderByTarget(symbol, OrderSide.SELL, priceEntryTarget);
             } else {
                 if (rateChangeBelow > RATE_BIG_BEARD) {
                     Utils.sendSms2Telegram(symbol + " big below beard change: " + Utils.formatPercent(beardBelow) + " " + new Date(klineCloseObjectFinal.startTime.longValue()));
@@ -124,7 +124,7 @@ public class DetectBeardForTrading {
                     if (priceClose > priceOpen) {
                         priceEntryTarget = priceOpen;
                     }
-                    PositionManagerTradingBeard.getInstance().addOrderByTarget(symbol, OrderSide.BUY, priceEntryTarget);
+//                    PositionManagerTradingBeard.getInstance().addOrderByTarget(symbol, OrderSide.BUY, priceEntryTarget);
                 }
             }
         } catch (Exception e) {

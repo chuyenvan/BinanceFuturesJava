@@ -88,6 +88,7 @@ public class TickerStatistics {
      * Total volume during the past 24 hours.
      */
     private String volume;
+    private String quoteVolume;
 
     /**
      * Open time.
@@ -249,6 +250,17 @@ public class TickerStatistics {
     public void setSymbol(String symbol) {
         this.symbol = symbol;
     }
+
+    public String getQuoteVolume() {
+        return quoteVolume;
+    }
+
+    public void setQuoteVolume(String quoteVolume) {
+        this.quoteVolume = quoteVolume;
+    }
+
+    
+    
 
     @Override
     public String toString() {

@@ -67,13 +67,15 @@ public class TDWithRateChange {
                 if (minPrice == 0d || minPrice > klineObject.minPrice) {
                     minPrice = klineObject.minPrice;
                 }
-                volumeAvg += Double.valueOf(klineObject.volume);
+                volumeAvg += Double.valueOf(klineObject.totalUsdt);
             }
             volumeAvg = volumeAvg / allKlines.size();
             double rateMax = (maxPrice - currentPrice) / currentPrice;
             double rateMin = (currentPrice - minPrice) / currentPrice;
             double rateChange = (maxPrice - minPrice) / currentPrice;
-            LOG.info("{}: min: {} max: {} current: {} rateMax: {} rateMin: {} rateChange: {} volumeAvg:{} : volumeCurrent: {}", symbol, minPrice, maxPrice, currentPrice, Utils.formatPercent(rateMax), Utils.formatPercent(rateMin), Utils.formatPercent(rateChange), volumeAvg, klineObjectFinal.volume);
+            LOG.info("{}: min: {} max: {} current: {} rateMax: {} rateMin: {} rateChange: {} volumeAvg:{} : volumeCurrent: {}", 
+                    symbol, minPrice, maxPrice, currentPrice, Utils.formatPercent(rateMax), 
+                    Utils.formatPercent(rateMin), Utils.formatPercent(rateChange), volumeAvg, klineObjectFinal.totalUsdt);
 
         } catch (Exception e) {
             e.printStackTrace();

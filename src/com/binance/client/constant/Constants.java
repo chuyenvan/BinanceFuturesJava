@@ -15,6 +15,9 @@
  */
 package com.binance.client.constant;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+
 /**
  *
  * @author pc
@@ -26,5 +29,7 @@ public class Constants {
     public static final String INTERVAL_15M = "15m";
     public static final String INTERVAL_1D = "1d";
     public static final String INTERVAL_1H = "1h";
+    public static final ArrayList<String> specialSymbol = new ArrayList<String>(    Arrays.asList("BTCUSDT", "ETHUSDT", "BNBUSDT"));
     public static final String URL_TICKER = "https://fapi.binance.com/fapi/v1/klines?symbol=xxxxxx&interval=";    
+    public static final String URL_TICKER_STARTTIME = "https://fapi.binance.com/fapi/v1/klines?symbol=xxxxxx&startTime=tttttt&interval=";    
 }

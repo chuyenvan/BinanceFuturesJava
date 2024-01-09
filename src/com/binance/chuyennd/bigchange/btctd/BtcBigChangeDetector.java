@@ -18,12 +18,19 @@ package com.binance.chuyennd.bigchange.btctd;
 import com.binance.chuyennd.funcs.TickerHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.utils.Utils;
+import com.binance.chuyennd.volume.DayVolumeManager;
+import com.binance.chuyennd.volume.Volume24hrManager;
 import com.binance.client.constant.Constants;
 import com.binance.client.model.enums.OrderSide;
+import java.io.File;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,7 +51,10 @@ public class BtcBigChangeDetector {
 
     public static void main(String[] args) {
 //        new BtcBigChangeDetector().startThreadDetectBigChangeBTCIntervalOneMinute();
-        new BtcBigChangeDetector().detectBtcBreadWithTrend(0.008, 0.01);
+//        System.out.println(Utils.getStartTimeDayAgo(100));
+        Long startTime = 1695574800000L;
+//            Long startTime = Utils.getStartTimeDayAgo(20);
+        new BtcBigChangeDetector().detectBtcBreadWithTrend(0.005, 0.002, startTime);
 
     }
 
@@ -195,9 +205,14 @@ public class BtcBigChangeDetector {
 //        }).start();
 //
 //    }
-    private void detectBtcBreadWithTrend(Double rateBread, Double rate2Trade) {
+    private void detectBtcBreadWithTrend(Double rateBread, Double rate2Trade, long startTime) {
         try {
-            List<KlineObjectNumber> allKlines = TickerHelper.getTicker(Constants.SYMBOL_PAIR_BTC, Constants.INTERVAL_15M);
+            Map<String, List<KlineObjectNumber>> allSymbolTickers = TickerHelper.getAllKlineStartTime(Constants.INTERVAL_15M, startTime);
+            List<KlineObjectNumber> allKlines = allSymbolTickers.get(Constants.SYMBOL_PAIR_BTC);
+//            long time = Utils.getStartTimeDayAgo(200);
+//            List<KlineObjectNumber> allKlines = TickerHelper.getTickerWithStartTime(Constants.SYMBOL_PAIR_BTC, Constants.INTERVAL_15M, time);
+            LOG.info("Last time ticker btc: {}", new Date(allKlines.get(allKlines.size() - 1).startTime.longValue()));
+//            List<KlineObjectNumber> allKlines = TickerHelper.getTicker(Constants.SYMBOL_PAIR_BTC, Constants.INTERVAL_15M);
             for (KlineObjectNumber kline : allKlines) {
                 Double beardAbove = 0d;
                 Double beardBelow = 0d;
@@ -205,13 +220,12 @@ public class BtcBigChangeDetector {
 
                 if (kline.priceClose > kline.priceOpen) {
                     beardAbove = kline.maxPrice - kline.priceClose;
-                    rateChange = Utils.rateOf2Double(kline.priceClose, kline.priceOpen);
                     beardBelow = kline.priceOpen - kline.minPrice;
                 } else {
                     beardAbove = kline.maxPrice - kline.priceOpen;
                     beardBelow = kline.priceClose - kline.minPrice;
-                    rateChange = Utils.rateOf2Double(kline.priceOpen, kline.priceClose);
                 }
+                rateChange = Math.abs(Utils.rateOf2Double(kline.priceOpen, kline.priceClose));
                 double rateChangeAbove = beardAbove / kline.priceClose;
                 double rateChangeBelow = beardBelow / kline.priceClose;
                 OrderSide side = null;
@@ -224,18 +238,88 @@ public class BtcBigChangeDetector {
 //                        LOG.info("bread: {} {}", rateChangeBelow, new Date(kline.startTime.longValue()));
                     }
                 }
+                List<String> lines = new ArrayList<>();
+                StringBuilder builder = new StringBuilder();
                 if (side != null && rateChange >= rate2Trade) {
-                LOG.info("{} {} bread above:{} bread below:{} rateChange:{}",new Date(kline.startTime.longValue()), side, rateChangeAbove, rateChangeBelow, rateChange);
-                    TreeMap<Double, String> rate2Symbols = TickerHelper.getMaxRateWithTime(kline.startTime.longValue(), side, Constants.INTERVAL_15M, 10);
-                    for (Map.Entry<Double, String> entry : rate2Symbols.entrySet()) {
-                        Object key = entry.getKey();
-                        Object val = entry.getValue();
-                        LOG.info("{} - {}", val, key);
+                    LOG.info("{} {} bread above:{} bread below:{} rateChange:{}", new Date(kline.startTime.longValue()),
+                            side, rateChangeAbove, rateChangeBelow, rateChange);
+                    builder.setLength(0);
+                    builder.append("Bread ").append(side).append(",");
+                    builder.append(rateChangeAbove).append(" - ").append(rateChangeBelow).append(",");
+                    builder.append(rateChange).append(",");
+                    lines.add(builder.toString());
+                    TreeMap<Double, String> rate2Symbols = TickerHelper.getMaxRateWithTime(kline.startTime.longValue(),
+                            side, Constants.INTERVAL_15M, 100, startTime, allSymbolTickers);
+                    Integer date = Integer.valueOf(Utils.normalizeDateYYYYMMDD(kline.startTime.longValue()));
+                    Map<String, Double> symbol2Volume;
+                    if (Utils.normalizeDateYYYYMMDD(kline.startTime.longValue()).equals(Utils.getToDayFileName())) {
+                        symbol2Volume = new HashMap<>();
+                        symbol2Volume.putAll(Volume24hrManager.getInstance().symbol2Volume);
+                    } else {
+                        symbol2Volume = DayVolumeManager.getInstance().date2SymbolVolume.get(date);
                     }
+                    int numberSymbolCanTrade = 0;
+                    int numberSymbolNotCanTrade = 0;
+                    for (Map.Entry<Double, String> entry : rate2Symbols.entrySet()) {
+                        Double rate = entry.getKey();
+                        String symbol = entry.getValue();
+                        Double rateloss = extractRateLoss(symbol);
+                        if (Constants.specialSymbol.contains(symbol.split("#")[0])) {
+                            continue;
+                        }
+                        try {
+                            builder.setLength(0);
+                            builder.append(symbol).append(",");
+                            builder.append(rate).append(",");
+                            Double volume = null;
+                            if (symbol2Volume != null) {
+                                volume = symbol2Volume.get(symbol.split("#")[0]);
+                            }
+                            builder.append(String.valueOf(volume)).append(",");
+                            // feature to trade
+                            Double volumeMinimum = 80000000d;
+                            Double rateChange2Trade = 2.0;
+                            if (volume != null && rate < 0.009
+                                    && volume > volumeMinimum
+                                    && extractRate(symbol) > rateChange2Trade) {
+                                LOG.info("-----------------------------------------------------------: {} -> {} {} {}", symbol, rate, rateloss, volume);
+                                numberSymbolNotCanTrade++;
+                                builder.append("No");
+                            } else {
+                                if (volume != null && volume > volumeMinimum && extractRate(symbol) > rateChange2Trade) {
+                                    builder.append("Yes");
+                                    numberSymbolCanTrade++;
+                                } else {
+                                    builder.append("No");
+                                }
+                            }
+                            lines.add(builder.toString());
+//                            LOG.info("{} {} {}", symbol, rate, volume);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    String fileName = "target/" + "Bread-" + Utils.normalizeDateYYYYMMDDHHmm(kline.startTime.longValue()) + ".csv";
+                    fileName = fileName.replace(":", " ");
+                    LOG.info("Write data to file: {} number can trade: {}/{}", fileName, numberSymbolCanTrade, numberSymbolNotCanTrade);
+                    FileUtils.writeLines(new File(fileName), lines);
+                    lines.clear();
                 }
             }
         } catch (Exception e) {
+            e.printStackTrace();
         }
+    }
+
+    private double extractRate(String symbol) {
+//       BTCUSDT-42015.7-42215.5-0.006995004248411939
+        String[] parts = StringUtils.split(symbol, "#");
+        return Double.parseDouble(parts[parts.length - 1]);
+    }
+
+    private Double extractRateLoss(String symbol) {
+        String[] parts = StringUtils.split(symbol, "#");
+        return Utils.rateOf2Double(Double.parseDouble(parts[parts.length - 2]), Double.parseDouble(parts[parts.length - 4]));
     }
 
 }

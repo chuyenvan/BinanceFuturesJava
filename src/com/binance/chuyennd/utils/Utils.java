@@ -471,6 +471,7 @@ public class Utils {
     public static String normalizeDateYYYYMMDD(Long input) {
         return sdfFile.format(new Date(input));
     }
+
     public static String normalizeDateYYYYMMDDHHmm(Long input) {
         return sdfFileHour.format(new Date(input));
     }
@@ -872,6 +873,9 @@ public class Utils {
     }
 
     public static String formatMoney(Double revenue) {
+        if (revenue == null) {
+            return null;
+        }
         DecimalFormat formatter = new DecimalFormat("###,###,###.#####");
         return formatter.format(revenue);
     }

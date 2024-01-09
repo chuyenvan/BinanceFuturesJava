@@ -401,7 +401,7 @@ public class PositionToTargetMonitor {
                 try {
                     // check position close => cancel order dca if order status new
                     Set<String> symbolsDca = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_DCA_MANAGER);
-                    LOG.info("Checking {} orders DCA to process!", symbolsDca.size());
+                    LOG.info("Checking {} orders DCA process!", symbolsDca.size());
                     for (String symbol : symbolsDca) {
                         Order orderDCA = Utils.gson.fromJson(RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_DCA_MANAGER, symbol), Order.class);
                         if (RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER, symbol) == null) {
@@ -478,7 +478,7 @@ public class PositionToTargetMonitor {
                     RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER, event.getSymbol());
             if (StringUtils.isNotEmpty(json)) {
                 PositionRisk pos = Utils.gson.fromJson(json, PositionRisk.class);
-                pos.setMarkPrice(event.getLastPrice());
+                pos.setMarkPrice(event.getLastPrice());                
                 pos.setUnrealizedProfit(calUnrealizedProfit(pos));
             }
         }

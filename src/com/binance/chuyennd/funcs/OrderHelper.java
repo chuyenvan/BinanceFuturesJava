@@ -38,7 +38,6 @@ public class OrderHelper {
 
     public static Order newOrder(String symbol, OrderSide orderSide, Double quantity, Double price, Integer leverage) {
         try {
-            System.out.println(Utils.normalQuantity2Api(quantity) + " " + Utils.normalPrice2Api(price));
             ClientSingleton.getInstance().syncRequestClient.changeInitialLeverage(symbol, leverage);
             return ClientSingleton.getInstance().syncRequestClient.postOrder(symbol, orderSide, null, OrderType.LIMIT, TimeInForce.GTC,
                     Utils.normalQuantity2Api(quantity), Utils.normalPrice2Api(price), null, null, null, null, null, null, null, null, NewOrderRespType.RESULT);
@@ -208,9 +207,10 @@ public class OrderHelper {
 
     public static void main(String[] args) {
 //        OrderHelper.newOrderMarket("UNIUSDT", OrderSide.SELL, 5.0, 4);
-//        OrderHelper.takeProfit("CYBERUSDT", OrderSide.SELL, 5.0, 6.0);
+//    OrderHelper.newOrder("CYBERUSDT", OrderSide.SELL, 1.0, 10.0, 10);
+//        OrderHelper.takeProfit("CYBERUSDT", OrderSide.BUY, 1.0, 6.0);
+//        System.out.println(OrderHelper.stopLoss("CYBERUSDT", OrderSide.BUY, 1.0, 14.0));
 
-//        System.out.println(OrderHelper.stopLoss("CYBERUSDT", OrderSide.SELL, 5.0, 3.0));
     }
 
     public static void dcaForPosition(String symbol, OrderSide side, double quantity) {
