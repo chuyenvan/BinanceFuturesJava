@@ -22,7 +22,7 @@ import com.binance.chuyennd.object.*;
  * @author pc
  */
 public class SideWayObject {
-
+    public String symbol;
     public Double maxPrice;
     public Double minPrice;
     public Double rate;

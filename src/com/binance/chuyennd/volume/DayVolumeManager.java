@@ -15,7 +15,7 @@
  */
 package com.binance.chuyennd.volume;
 
-import com.binance.chuyennd.funcs.TickerHelper;
+import com.binance.chuyennd.funcs.TickerFuturesHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.utils.Storage;
 import com.binance.chuyennd.utils.Utils;
@@ -76,7 +76,7 @@ public class DayVolumeManager {
 
     private void updateVolume() {
         try {
-            Map<String, List<KlineObjectNumber>> symbol2Tickers = TickerHelper.getAllKlineWithUpdateTime(Constants.INTERVAL_1D, Utils.TIME_HOUR);
+            Map<String, List<KlineObjectNumber>> symbol2Tickers = TickerFuturesHelper.getAllKlineWithUpdateTime(Constants.INTERVAL_1D, Utils.TIME_HOUR);
             for (Map.Entry<String, List<KlineObjectNumber>> entry : symbol2Tickers.entrySet()) {
                 String symbol = entry.getKey();
                 List<KlineObjectNumber> tickers = entry.getValue();

@@ -16,7 +16,7 @@
 package com.binance.chuyennd.position.manager;
 
 import com.binance.chuyennd.funcs.ClientSingleton;
-import com.binance.chuyennd.funcs.TickerHelper;
+import com.binance.chuyennd.funcs.TickerFuturesHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.TrendObject;
 import com.binance.chuyennd.object.TrendObjectDetail;
@@ -81,7 +81,7 @@ public class BTCInfoManager {
     private void updateTrendWithPriceNew() {
         try {
             // if BTC by day > 5% -> trend ưith day else trend with chart day
-            KlineObjectNumber ticker = TickerHelper.getLastTicker(Constants.SYMBOL_PAIR_BTC, Constants.INTERVAL_1D);
+            KlineObjectNumber ticker = TickerFuturesHelper.getLastTicker(Constants.SYMBOL_PAIR_BTC, Constants.INTERVAL_1D);
             String trendSideStr = "BUY";
             if (Math.abs(Utils.rateOf2Double(ticker.minPrice, ticker.maxPrice)) > 0.05) {
                 if (ticker.priceClose < ticker.priceOpen) {
@@ -90,8 +90,8 @@ public class BTCInfoManager {
                 LOG.info("Open: {} Close: {} current:{} trend: {}", ticker.priceOpen,
                         ticker.priceClose, ClientSingleton.getInstance().getCurrentPrice(Constants.SYMBOL_PAIR_BTC), trendSideStr);
             } else {
-                List<TrendObject> trends = TickerHelper.extractTopBottomObjectInTicker(TickerHelper.getTicker(Constants.SYMBOL_PAIR_BTC, Constants.INTERVAL_1D), 0.01);
-                List<TrendObjectDetail> trendDetails = TickerHelper.detectTrendByKline(trends, 0.02);
+                List<TrendObject> trends = TickerFuturesHelper.extractTopBottomObjectInTicker(TickerFuturesHelper.getTicker(Constants.SYMBOL_PAIR_BTC, Constants.INTERVAL_1D), 0.01);
+                List<TrendObjectDetail> trendDetails = TickerFuturesHelper.detectTrendByKline(trends, 0.02);
 
                 for (int i = 0; i < trendDetails.size(); i++) {
                     TrendObjectDetail trend = trendDetails.get(trendDetails.size() - i - 1);

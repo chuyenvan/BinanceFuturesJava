@@ -16,7 +16,7 @@
 package com.binance.chuyennd.grid;
 
 import com.binance.chuyennd.funcs.ClientSingleton;
-import com.binance.chuyennd.funcs.TickerHelper;
+import com.binance.chuyennd.funcs.TickerFuturesHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
@@ -62,23 +62,23 @@ public class GridDetector {
         for (String symbol : symbols) {
             try {
                 // range change in 3 month by ticker 1d
-                List<KlineObjectNumber> kline1Ds = TickerHelper.getTicker(symbol, Constants.INTERVAL_1D);
+                List<KlineObjectNumber> kline1Ds = TickerFuturesHelper.getTicker(symbol, Constants.INTERVAL_1D);
                 if (kline1Ds.size() < ageMin) {
                     continue;
                 }
                 int limitDay2Get = 60;
                 Double currentPrice = ClientSingleton.getInstance().getCurrentPrice(symbol);
-                Double maxPrice = TickerHelper.getMaxPrice(kline1Ds, limitDay2Get);
-                Double minPrice = TickerHelper.getMinPrice(kline1Ds, limitDay2Get);
+                Double maxPrice = TickerFuturesHelper.getMaxPrice(kline1Ds, limitDay2Get);
+                Double minPrice = TickerFuturesHelper.getMinPrice(kline1Ds, limitDay2Get);
                 Double rangeOfSym = Utils.rateOf2Double(maxPrice, minPrice);
                 if (rangeOfSym > rangeLimit) {
                     continue;
                 }
-                int totalCurrentPriceInKlineDay = TickerHelper.getTotalCurrentPriceInKline(kline1Ds, currentPrice, limitDay2Get);
+                int totalCurrentPriceInKlineDay = TickerFuturesHelper.getTotalCurrentPriceInKline(kline1Ds, currentPrice, limitDay2Get);
                 // ticker 15M rate
-                List<KlineObjectNumber> kline15ms = TickerHelper.getTicker(symbol, Constants.INTERVAL_15M);
-                List<KlineObjectNumber> klineBigchanges = TickerHelper.getTotalKlineBigchange(kline15ms, rateBigChangeMin);
-                int totalCurrentPriceInKlineMax = TickerHelper.getTotalCurrentPriceInKline(klineBigchanges, currentPrice, limitDay2Get);
+                List<KlineObjectNumber> kline15ms = TickerFuturesHelper.getTicker(symbol, Constants.INTERVAL_15M);
+                List<KlineObjectNumber> klineBigchanges = TickerFuturesHelper.getTotalKlineBigchange(kline15ms, rateBigChangeMin);
+                int totalCurrentPriceInKlineMax = TickerFuturesHelper.getTotalCurrentPriceInKline(klineBigchanges, currentPrice, limitDay2Get);
                 GridObject gridInfo = new GridObject(symbol, currentPrice, rangeOfSym,
                         maxPrice, minPrice, kline1Ds.size(), klineBigchanges.size(),
                         totalCurrentPriceInKlineMax, totalCurrentPriceInKlineDay);

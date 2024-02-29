@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package com.binance.chuyennd;
+package com.b.c;
 
 import com.binance.chuyennd.funcs.GetTicker24h;
 import com.binance.chuyennd.object.OrderInfo;

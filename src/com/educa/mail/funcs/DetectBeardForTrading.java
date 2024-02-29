@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.binance.chuyennd.beard;
+package com.educa.mail.funcs;
 
 import com.binance.chuyennd.funcs.ClientSingleton;
 import com.binance.chuyennd.object.KlineObject;
@@ -21,7 +21,6 @@ import com.binance.chuyennd.object.TickerStatistics;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.HttpRequest;
 import com.binance.chuyennd.utils.Utils;
-import com.binance.client.model.enums.OrderSide;
 import java.io.IOException;
 import java.util.Date;
 import java.util.List;
@@ -41,9 +40,6 @@ public class DetectBeardForTrading {
 
     public static void main(String[] args) throws IOException {
         checkBigBeard();
-
-//        isTimeRun();
-//        getData("OGNUSDT");
     }
 
     private static void checkBigBeard() {
@@ -108,7 +104,7 @@ public class DetectBeardForTrading {
             double priceEntryTarget;
             if (rateChangeAbove > RATE_BIG_BEARD) {
                 Utils.sendSms2Telegram(symbol + " big above beard change: " + Utils.formatPercent(beardAbove) + " " + new Date(klineCloseObjectFinal.startTime.longValue()));
-                LOG.info("Big beard above {}: beard/rate: {}/{}% Open: {} Max: {} Close: {} TimeOpen: {} ", symbol, Utils.normalPrice2Api(beardAbove),
+                LOG.info("Big beard above {}: beard/rate: {}/{}% Open: {} Max: {} Close: {} TimeOpen: {} ", symbol, beardAbove,
                         Utils.formatPercent(rateChangeAbove), priceOpen, priceMax, priceClose, new Date(klineCloseObjectFinal.startTime.longValue()));
                 priceEntryTarget = priceClose;
                 if (priceClose < priceOpen) {
@@ -118,7 +114,7 @@ public class DetectBeardForTrading {
             } else {
                 if (rateChangeBelow > RATE_BIG_BEARD) {
                     Utils.sendSms2Telegram(symbol + " big below beard change: " + Utils.formatPercent(beardBelow) + " " + new Date(klineCloseObjectFinal.startTime.longValue()));
-                    LOG.info("Big beard below {}: beard/rate: {}/{}% Open: {} Max: {} Close: {} TimeOpen: {} ", symbol, Utils.normalPrice2Api(beardBelow),
+                    LOG.info("Big beard below {}: beard/rate: {}/{}% Open: {} Max: {} Close: {} TimeOpen: {} ", symbol, beardBelow,
                             Utils.formatPercent(rateChangeBelow), priceOpen, priceMax, priceClose, new Date(klineCloseObjectFinal.startTime.longValue()));
                     priceEntryTarget = priceClose;
                     if (priceClose > priceOpen) {

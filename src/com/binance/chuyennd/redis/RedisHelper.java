@@ -170,4 +170,8 @@ public class RedisHelper {
         JedisCluster jedis = RedisDriver.getInstance().get();
         jedis.hdel(key, username);
     }
+    public static void main(String[] args) {
+        RedisHelper.getInstance().writeJsonData("chuyennd", "123", "1");
+        System.out.println(RedisHelper.getInstance().readJsonData("chuyennd", "123"));
+    }
 }

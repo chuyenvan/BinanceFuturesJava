@@ -15,7 +15,7 @@
  */
 package com.binance.chuyennd.bigchange.btctd;
 
-import com.binance.chuyennd.funcs.TickerHelper;
+import com.binance.chuyennd.funcs.TickerFuturesHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.TrendDataTrackingObject;
 import com.binance.chuyennd.object.TrendObjectDetail;
@@ -59,12 +59,12 @@ public class ReseachDetectTrendWithBtc {
     }
 
     public List<TrendObjectDetail> detectorTrend(Map<String, List<KlineObjectNumber>> symbol2Kline1Ds, String symbol, Double rateOfSideWay) {
-        List<TrendObject> btcTrends = TickerHelper.extractTopBottomObjectInTicker(symbol2Kline1Ds.get(symbol), 0.002);
-        return TickerHelper.detectTrendByKline(btcTrends, rateOfSideWay);
+        List<TrendObject> btcTrends = TickerFuturesHelper.extractTopBottomObjectInTicker(symbol2Kline1Ds.get(symbol), 0.002);
+        return TickerFuturesHelper.detectTrendByKline(btcTrends, rateOfSideWay);
     }
 
     public void extractAltBehaviorByBtcTrend() throws IOException {
-        Map<String, List<KlineObjectNumber>> symbol2Kline1Ds = TickerHelper.getAllKlineWithUpdateTime(Constants.INTERVAL_1D, Utils.TIME_DAY);
+        Map<String, List<KlineObjectNumber>> symbol2Kline1Ds = TickerFuturesHelper.getAllKlineWithUpdateTime(Constants.INTERVAL_1D, Utils.TIME_DAY);
         Double rateOfSideWay = 0.08;
         List<TrendObjectDetail> btcTrends = detectorTrend(symbol2Kline1Ds, Constants.SYMBOL_PAIR_BTC, rateOfSideWay);
 //        updateTimeOfTrend(btcTrends);
@@ -272,7 +272,7 @@ public class ReseachDetectTrendWithBtc {
     }
 
     private void detectorTrendSymbol(String symbol) {
-        List<TrendObject> trends = TickerHelper.extractTopBottomObjectInTicker(TickerHelper.getTicker(symbol, Constants.INTERVAL_1D), 0.01);
+        List<TrendObject> trends = TickerFuturesHelper.extractTopBottomObjectInTicker(TickerFuturesHelper.getTicker(symbol, Constants.INTERVAL_1D), 0.01);
         printTrendObject(trends);
     }
 
@@ -283,8 +283,8 @@ public class ReseachDetectTrendWithBtc {
     }
 
     private void extractRateAllCoinWithStartTime(long time) throws IOException {
-        time = TickerHelper.nomalizeTimeWithExchange(time);
-        Map<String, List<KlineObjectNumber>> symbol2Kline1Ds = TickerHelper.getAllKlineWithUpdateTime(Constants.INTERVAL_1D, Utils.TIME_DAY);
+        time = TickerFuturesHelper.nomalizeTimeWithExchange(time);
+        Map<String, List<KlineObjectNumber>> symbol2Kline1Ds = TickerFuturesHelper.getAllKlineWithUpdateTime(Constants.INTERVAL_1D, Utils.TIME_DAY);
         TreeMap<Double, KlineObjectNumber> rate2ObjectKline = new TreeMap<>();
         for (Map.Entry<String, List<KlineObjectNumber>> entry : symbol2Kline1Ds.entrySet()) {
             String symbol = entry.getKey();
@@ -344,8 +344,8 @@ public class ReseachDetectTrendWithBtc {
     }
 
     private void chartSymbol(String symbol) {
-        List<TrendObject> trends = TickerHelper.extractTopBottomObjectInTicker(TickerHelper.getTicker(symbol, Constants.INTERVAL_15M), 0.003);
-        List<TrendObjectDetail> trendDetails = TickerHelper.detectTrendByKline(trends, 0.007);
+        List<TrendObject> trends = TickerFuturesHelper.extractTopBottomObjectInTicker(TickerFuturesHelper.getTicker(symbol, Constants.INTERVAL_15M), 0.003);
+        List<TrendObjectDetail> trendDetails = TickerFuturesHelper.detectTrendByKline(trends, 0.007);
         if (!trendDetails.isEmpty() && trendDetails.get(trendDetails.size() - 1).status.equals(TrendState.SIDEWAY)) {
             printTrendDetailObjectEnd(trendDetails, symbol);
         }

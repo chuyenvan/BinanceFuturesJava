@@ -19,10 +19,12 @@ import com.binance.chuyennd.utils.Utils;
 import com.binance.client.RequestOptions;
 import com.binance.client.SyncRequestClient;
 import com.binance.client.examples.constants.PrivateConfig;
+import com.binance.client.model.enums.OrderSide;
 import com.binance.client.model.market.ExchangeInfoEntry;
 import com.binance.client.model.market.ExchangeInformation;
 import com.binance.client.model.market.SymbolPrice;
 import com.binance.client.model.trade.AccountBalance;
+import java.text.DecimalFormat;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -41,6 +43,7 @@ public class ClientSingleton {
     public static final Logger LOG = LoggerFactory.getLogger(ClientSingleton.class);
     public SyncRequestClient syncRequestClient;
     public Map<String, Double> symbol2UnitQuantity = new HashMap<>();
+    public Map<String, Double> symbol2UnitPrice = new HashMap<>();
     private static volatile ClientSingleton INSTANCE = null;
 
     public static ClientSingleton getInstance() {
@@ -60,6 +63,10 @@ public class ClientSingleton {
             if (quantityUnit != null) {
                 symbol2UnitQuantity.put(symbol.getSymbol(), quantityUnit);
             }
+            Double tickSize = getTickSize(symbol);
+            if (tickSize != null) {
+                symbol2UnitPrice.put(symbol.getSymbol(), tickSize);
+            }
         }
     }
 
@@ -68,6 +75,17 @@ public class ClientSingleton {
             for (Map<String, String> filter : filters) {
                 if (filter.get("minQty") != null) {
                     return Double.valueOf(filter.get("minQty"));
+                }
+            }
+        }
+        return null;
+    }
+
+    private Double getTickSize(ExchangeInfoEntry symbol) {
+        for (List<Map<String, String>> filters : symbol.getFilters()) {
+            for (Map<String, String> filter : filters) {
+                if (filter.get("tickSize") != null) {
+                    return Double.valueOf(filter.get("tickSize"));
                 }
             }
         }
@@ -96,14 +114,62 @@ public class ClientSingleton {
     public Double normalizeQuantity(String symbol, Double quantity) {
         Double unitQuantity = symbol2UnitQuantity.get(symbol);
         if (unitQuantity != null) {
-            return Double.valueOf(Utils.normalPrice2Api(quantity - quantity % unitQuantity));
+            quantity = quantity - (quantity % unitQuantity);
+            if (quantity.toString().contains("0000") || quantity.toString().contains("9999")) {
+                quantity = Double.valueOf(formatDouble(quantity));
+            }
+            return quantity;
+        } else {
+            return Double.valueOf(formatDouble(quantity));
         }
-        return null;
+    }
+
+    public Double normalizePrice(String symbol, Double price) {
+        Double unitPrice = symbol2UnitPrice.get(symbol);
+        if (unitPrice != null) {
+            price = price - (price % unitPrice);
+            if (price.toString().contains("0000") || price.toString().contains("9999")) {
+                price = Double.valueOf(formatDouble(price));
+            }
+            return price;
+        } else {
+            return Double.valueOf(formatDouble(price));
+        }
+    }
+
+    public Double getMinQuantity(String symbol) {
+        return symbol2UnitQuantity.get(symbol);
+    }
+
+    public static String formatDouble(Double revenue) {
+        String format = "###.";
+        Double check = revenue;
+        int counter = 0;
+        for (int i = 0; i < 10; i++) {
+            if (check > 10000) {
+                break;
+            }
+            check *= 10;
+            format += "#";
+            counter++;
+        }
+        if (counter == 0) {
+            format = format.substring(0, format.length() - 1);
+        }
+        DecimalFormat formatter = new DecimalFormat(format);
+        return formatter.format(revenue);
     }
 
     public static void main(String[] args) {
-//        System.out.println(ClientSingleton.getInstance().normalizeQuantity("COMBOUSDT", 0.7347999999));
-        System.out.println(ClientSingleton.getInstance().getBalanceAvalible());
+//        System.out.println(Utils.calPriceTarget("WOOUSDT", 0.37745, OrderSide.BUY, 0.005));
+        Double entry = 0.6715;
+        Double target = Utils.calPriceTarget("STORJUSDT", entry, OrderSide.BUY, 0.005);
+        Double rate = Utils.rateOf2Double(target, entry);
+        System.out.println(target + " -> " + rate);
+        
+
+//        System.out.println(ClientSingleton.getInstance().getCurrentPrice("CVCUSDT"));
+//        System.out.println(ClientSingleton.getInstance().getBalanceAvalible());
     }
 
     public double getBalance() {

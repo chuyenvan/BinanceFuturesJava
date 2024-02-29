@@ -5,6 +5,9 @@
  */
 package com.binance.chuyennd.utils;
 
+import com.alibaba.fastjson.JSONObject;
+import com.binance.chuyennd.funcs.ClientSingleton;
+import com.binance.client.model.enums.OrderSide;
 import com.binance.client.model.trade.PositionRisk;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.*;
@@ -22,6 +25,11 @@ import java.text.*;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import okhttp3.FormBody;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 /**
  * @author chuyennd
@@ -113,11 +121,27 @@ public class Utils {
         return true;
     }
 
+    public static boolean sendSms2Skype(String text) {
+        String urlString = "https://dev-crm-202x.edupia.vn/api/skype/send-advance";
+        //Add chatId (given chatId is fake)
+        String chatId = "8:chuyenvan";
+        JSONObject body = new JSONObject();
+        body.put("topic", chatId);
+        body.put("content", text);
+        try {
+            String respon = HttpRequest.httpPostWithJson(urlString, body.toJSONString());
+            System.out.println(respon);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return true;
+    }
+
     public static HashMap<String, Object> createHashMapFromJsonString(String json) {
         JsonObject object = new JsonParser().parse(json).getAsJsonObject();
         Set<Map.Entry<String, JsonElement>> set = object.entrySet();
         Iterator<Map.Entry<String, JsonElement>> iterator = set.iterator();
-        HashMap<String, Object> map = new HashMap<String, Object>();
+        HashMap<String, Object> map = new HashMap<>();
 
         while (iterator.hasNext()) {
 
@@ -667,6 +691,13 @@ public class Utils {
         return cal.get(Calendar.MINUTE);
     }
 
+    public static int getCurrentSecond() {
+        Calendar cal = Calendar.getInstance();
+        cal.setTimeZone(TimeZone.getTimeZone("GMT+7"));
+        cal.setTime(new Date());
+        return cal.get(Calendar.SECOND);
+    }
+
     public static int getYesterdayDay() {
         Calendar cal = Calendar.getInstance();
         cal.setTimeZone(TimeZone.getTimeZone("GMT+7"));
@@ -876,45 +907,9 @@ public class Utils {
         if (revenue == null) {
             return null;
         }
-        DecimalFormat formatter = new DecimalFormat("###,###,###.#####");
-        return formatter.format(revenue);
-    }
-
-    public static String normalPrice2Api(Double revenue) {
-        String format = "###.";
-        Double check = revenue;
-        int counter = 0;
-        for (int i = 0; i < 10; i++) {
-            if (check > 100) {
-                break;
-            }
-            check *= 10;
-            format += "#";
-            counter++;
-        }
-        if (counter == 0) {
-            format = format.substring(0, format.length() - 1);
-        }
-        DecimalFormat formatter = new DecimalFormat(format);
-        return formatter.format(revenue);
-    }
-
-    public static String normalQuantity2Api(Double revenue) {
-        String format = "###.";
-        Double check = revenue;
-        int counter = 0;
-        for (int i = 0; i < 10; i++) {
-            if (check > 10) {
-                break;
-            }
-            check *= 10;
-            format += "#";
-            counter++;
-        }
-        if (counter == 0) {
-            format = format.substring(0, format.length() - 1);
-        }
-        DecimalFormat formatter = new DecimalFormat(format);
+//        DecimalFormat formatter = new DecimalFormat("###,###,###.#####");
+//        DecimalFormat formatter = new DecimalFormat("###,###,###.##########");
+        DecimalFormat formatter = new DecimalFormat("###.##########");
         return formatter.format(revenue);
     }
 
@@ -939,11 +934,52 @@ public class Utils {
         return result;
     }
 
-    public static double rateOf2Double(Double start, Double end) {
-        return (start - end) / end;
+    public static Double rateOf2Double(Double start, Double end) {
+        try {
+            return (start - end) / end;
+        } catch (Exception e) {
+        }
+        return 0.0;
+    }
+
+    public static Double calPriceTarget(String symbol, Double priceEntry, OrderSide orderSide, Double rateTarget) {
+        Double result = priceEntry;
+        int counter = 0;
+        while (result.equals(priceEntry)
+                || Math.abs(rateOf2Double(priceEntry, result)) < rateTarget) {
+            Double priceChange2Target = (rateTarget + 0.0001 * counter) * priceEntry;
+            if (orderSide.equals(OrderSide.BUY)) {
+                result = priceEntry + priceChange2Target;
+            } else {
+                result = priceEntry - priceChange2Target;
+            }
+            result = ClientSingleton.getInstance().normalizePrice(symbol, result);
+            counter++;
+        }
+        return result;
+    }
+
+    public static Double calQuantity(Double BUDGET_PER_ORDER, Integer LEVERAGE_ORDER_BEARD, Double priceEntry, String symbol) {
+        Double quantity = BUDGET_PER_ORDER * LEVERAGE_ORDER_BEARD / priceEntry;
+        quantity = ClientSingleton.getInstance().normalizeQuantity(symbol, quantity);
+        for (int i = 1; i < 10; i++) {
+            if (quantity == 0) {
+                quantity = (BUDGET_PER_ORDER + i) * LEVERAGE_ORDER_BEARD / priceEntry;
+                quantity = ClientSingleton.getInstance().normalizeQuantity(symbol, quantity);
+            } else {
+                return quantity;
+            }
+        }
+        if (quantity == 0) {
+            quantity = ClientSingleton.getInstance().getMinQuantity(symbol);
+        }
+        return quantity;
     }
 
     public static void main(String[] args) {
+        System.out.println(Utils.sendSms2Skype("test skype"));
+//        Double test = 5.172E-4;
+//        System.out.println(Utils.formatMoney(test));
 //        System.out.println(Utils.normalPrice2Api(99.95804261161376d));
 //        System.out.println(Utils.normalPrice2Api(991.95804261161376d));
 //        System.out.println(Utils.normalPrice2Api(0.14611331d));
@@ -954,5 +990,9 @@ public class Utils {
 
     public static String toJson(Object ob) {
         return gson.toJson(ob);
+    }
+
+    public static long getHour(long time) {
+        return (time / TIME_HOUR) * TIME_HOUR;
     }
 }

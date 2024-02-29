@@ -24,6 +24,7 @@ import com.binance.client.model.enums.OrderType;
 import com.binance.client.model.enums.TimeInForce;
 import com.binance.client.model.trade.Order;
 import com.binance.client.model.trade.PositionRisk;
+import java.util.List;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,11 +38,25 @@ public class OrderHelper {
     public static final Logger LOG = LoggerFactory.getLogger(OrderHelper.class);
 
     public static Order newOrder(String symbol, OrderSide orderSide, Double quantity, Double price, Integer leverage) {
+        if (FuturesRules.getInstance().getSymsLocked().contains(symbol)) {
+            LOG.info("Sym {} is locking by trading rule!", symbol);
+            return null;
+        }
+        try {
+            ClientSingleton.getInstance().syncRequestClient.changeMarginType(symbol, MarginType.CROSSED);
+        } catch (Exception e) {
+        }
         try {
             ClientSingleton.getInstance().syncRequestClient.changeInitialLeverage(symbol, leverage);
-            return ClientSingleton.getInstance().syncRequestClient.postOrder(symbol, orderSide, null, OrderType.LIMIT, TimeInForce.GTC,
-                    Utils.normalQuantity2Api(quantity), Utils.normalPrice2Api(price), null, null, null, null, null, null, null, null, NewOrderRespType.RESULT);
         } catch (Exception e) {
+        }
+        String priceNormal = Utils.formatMoney(ClientSingleton.getInstance().normalizePrice(symbol, price));
+        try {
+            FuturesRules.getInstance().addLock(symbol, System.currentTimeMillis());
+            return ClientSingleton.getInstance().syncRequestClient.postOrder(symbol, orderSide, null, OrderType.LIMIT, TimeInForce.GTC,
+                    quantity.toString(), priceNormal, null, null, null, null, null, null, null, null, NewOrderRespType.RESULT);
+        } catch (Exception e) {
+            LOG.info("new order error: {} {} {} {}", symbol, orderSide, quantity, priceNormal);
             e.printStackTrace();
         }
         return null;
@@ -59,7 +74,7 @@ public class OrderHelper {
             orderInfo.leverage = orderInfo.leverage / 2;
         }
         return ClientSingleton.getInstance().syncRequestClient.postOrder(orderInfo.symbol, orderInfo.orderSide, null, OrderType.LIMIT, TimeInForce.GTC,
-                Utils.normalQuantity2Api(orderInfo.quantity), Utils.normalPrice2Api(orderInfo.priceEntry), null, null, null, null, null, null, null, null, NewOrderRespType.RESULT);
+                orderInfo.quantity.toString(), orderInfo.priceEntry.toString(), null, null, null, null, null, null, null, null, NewOrderRespType.RESULT);
 
     }
 
@@ -72,16 +87,32 @@ public class OrderHelper {
             orderInfo.leverage = orderInfo.leverage / 2;
         }
         return ClientSingleton.getInstance().syncRequestClient.postOrder(orderInfo.symbol, orderInfo.orderSide, null, OrderType.MARKET, null,
-                Utils.normalQuantity2Api(orderInfo.quantity), null, null, null, null, null, null, null, null, null, NewOrderRespType.RESULT);
+                orderInfo.quantity.toString(), null, null, null, null, null, null, null, null, null, NewOrderRespType.RESULT);
 
     }
 
+//    public static Order newOrderMarket(String symbol, OrderSide side, Double quantity, Integer leverage) {
+//        LOG.info("Order {} {} {} {}", symbol, side, quantity, leverage);
+//        try {
+//            ClientSingleton.getInstance().syncRequestClient.changeMarginType(symbol, MarginType.CROSSED);
+//        } catch (Exception e) {
+//        }
+//        try {
+//            ClientSingleton.getInstance().syncRequestClient.changeInitialLeverage(symbol, leverage);
+//        } catch (Exception e) {
+//            LOG.info("Leverage {} of: {} not support", leverage, symbol);
+//        }
+//        try {
+//            return ClientSingleton.getInstance().syncRequestClient.postOrder(symbol, side, null, OrderType.MARKET, null,
+//                    quantity.toString(), null, null, null, null, null, null, null, null, null, NewOrderRespType.RESULT);
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+//        return null;
+//    }
+
     public static Order newOrderMarket(String symbol, OrderSide side, Double quantity, Integer leverage) {
-        LOG.info("Order {} {} {} {}", symbol, side, quantity, leverage);
-        try {
-            ClientSingleton.getInstance().syncRequestClient.changeMarginType(symbol, MarginType.CROSSED);
-        } catch (Exception e) {
-        }
+        LOG.info("Order market {} {} {}", symbol, side, quantity);
         try {
             ClientSingleton.getInstance().syncRequestClient.changeInitialLeverage(symbol, leverage);
         } catch (Exception e) {
@@ -91,16 +122,10 @@ public class OrderHelper {
             return ClientSingleton.getInstance().syncRequestClient.postOrder(symbol, side, null, OrderType.MARKET, null,
                     quantity.toString(), null, null, null, null, null, null, null, null, null, NewOrderRespType.RESULT);
         } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
-    public static Order newOrderMarket(String symbol, OrderSide side, Double quantity) {
-        try {
-            return ClientSingleton.getInstance().syncRequestClient.postOrder(symbol, side, null, OrderType.MARKET, null,
-                    quantity.toString(), null, null, null, null, null, null, null, null, null, NewOrderRespType.RESULT);
-        } catch (Exception e) {
+            if (e.getMessage().equalsIgnoreCase("futures")) {
+                FuturesRules.getInstance().addLock(symbol, System.currentTimeMillis() + 2 * Utils.TIME_HOUR);
+                LOG.info("Lock 2h for {} ", symbol);
+            }
             e.printStackTrace();
         }
         return null;
@@ -134,6 +159,15 @@ public class OrderHelper {
         return null;
     }
 
+    public static PositionRisk getPositionBySymbol(String symbol) {
+        List<PositionRisk> positionInfos = ClientSingleton.getInstance().syncRequestClient.getPositionRisk(symbol);
+        PositionRisk position = null;
+        if (positionInfos != null && !positionInfos.isEmpty()) {
+            position = positionInfos.get(0);
+        }
+        return position;
+    }
+
     public static Order takeProfitPosition(PositionRisk orderInfo) {
         OrderSide side = OrderSide.BUY;
         if (orderInfo.getPositionAmt().doubleValue() > 0) {
@@ -161,11 +195,16 @@ public class OrderHelper {
     }
 
     public static Order takeProfit(String symbol, OrderSide side, Double quantity, Double stopPrice) {
+
+        String priceNormal = Utils.formatMoney(stopPrice);
         try {
-            return ClientSingleton.getInstance().syncRequestClient.postOrder(symbol, side, null, OrderType.TAKE_PROFIT, TimeInForce.GTC,
-                    Utils.normalQuantity2Api(quantity), Utils.normalPrice2Api(stopPrice), null, null, Utils.normalPrice2Api(stopPrice), null, null, null, null, null, NewOrderRespType.RESULT);
+            FuturesRules.getInstance().addLock(symbol, System.currentTimeMillis());
+            return ClientSingleton.getInstance().syncRequestClient.postOrder(symbol, side, null,
+                    OrderType.TAKE_PROFIT, TimeInForce.GTC, quantity.toString(), priceNormal, null, null,
+                    priceNormal, null, null, null, null, null, NewOrderRespType.RESULT);
 
         } catch (Exception e) {
+            LOG.info("tp error: {} {} {} {}", symbol.toLowerCase().replace("usdt", ""), side.toString().charAt(0), quantity, priceNormal);
             e.printStackTrace();
         }
         return null;
@@ -202,21 +241,26 @@ public class OrderHelper {
 
     public static Order stopLoss(String symbol, OrderSide side, Double quantity, Double stopPrice) {
         return ClientSingleton.getInstance().syncRequestClient.postOrder(symbol, side, null, OrderType.STOP_MARKET, TimeInForce.GTC,
-                Utils.normalQuantity2Api(quantity), null, null, null, Utils.normalPrice2Api(stopPrice), null, null, null, null, null, NewOrderRespType.RESULT);
+                quantity.toString(), null, null, null, stopPrice.toString(),
+                null, null, null, null, null, NewOrderRespType.RESULT);
     }
 
     public static void main(String[] args) {
 //        OrderHelper.newOrderMarket("UNIUSDT", OrderSide.SELL, 5.0, 4);
-//    OrderHelper.newOrder("CYBERUSDT", OrderSide.SELL, 1.0, 10.0, 10);
-//        OrderHelper.takeProfit("CYBERUSDT", OrderSide.BUY, 1.0, 6.0);
-//        System.out.println(OrderHelper.stopLoss("CYBERUSDT", OrderSide.BUY, 1.0, 14.0));
+//        System.out.println(Utils.normalQuantity2Api(955.0));
 
+//        OrderHelper.newOrder("RVNUSDT", OrderSide.SELL, 955.0, 0.020, 7);
+        OrderHelper.newOrder("MKRUSDT", OrderSide.BUY, 0.027, 2008.4, 7);
+//        OrderHelper.takeProfit("MKRUSDT", OrderSide.BUY, 2008.4, 0.027);
+//        System.out.println(OrderHelper.stopLoss("CYBERUSDT", OrderSide.BUY, 1.0, 14.0));
+//        OrderHelper.takeProfit("Bigchange", OrderSide.BUY, 1.0, 6.0);
+//        System.out.println(OrderHelper.calQuantity(5, 5, 133.5, "TRBUSDT"));
     }
 
-    public static void dcaForPosition(String symbol, OrderSide side, double quantity) {
+    public static void dcaForPosition(String symbol, OrderSide side, double quantity, int leverage) {
         LOG.info("DCA to {} side:{} quantity: {}", symbol, side, quantity);
         Utils.sendSms2Telegram("DCA for " + symbol + " side: " + side + " quantity: " + quantity);
-        newOrderMarket(symbol, side, quantity);
+        newOrderMarket(symbol, side, quantity, leverage);
     }
 
     public static Order readOrderInfo(String symbol, Long orderId) {

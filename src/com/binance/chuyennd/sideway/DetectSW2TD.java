@@ -18,7 +18,7 @@ package com.binance.chuyennd.sideway;
 import com.binance.chuyennd.position.manager.BTCInfoManager;
 import com.binance.chuyennd.position.manager.PositionHelper;
 import com.binance.chuyennd.funcs.ClientSingleton;
-import com.binance.chuyennd.funcs.TickerHelper;
+import com.binance.chuyennd.funcs.TickerFuturesHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
@@ -53,7 +53,7 @@ public class DetectSW2TD {
 
     private void detectSW2Trading() {
         try {
-            Collection<? extends String> symbols = TickerHelper.getAllSymbol();
+            Collection<? extends String> symbols = TickerFuturesHelper.getAllSymbol();
             for (String symbol : symbols) {
                 if (StringUtils.endsWithIgnoreCase(symbol, "usdt") && !StringUtils.startsWithIgnoreCase(symbol, "btc")) {
                     try {
@@ -83,12 +83,12 @@ public class DetectSW2TD {
                 try {
                     Set<String> symbol2Remove = new HashSet<>();
                     LOG.info("Start check price 2 trading for {} symbols", symbolSideWay2Trading.size());
-                    if (RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER).size() < PositionHelper.getInstance().LIMIT_ORDER_TRADING) {
+                    if (RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER).size() < 10) {
                         for (Map.Entry<String, SymbolSideWayObject> entry : symbolSideWay2Trading.entrySet()) {
                             String symbol = entry.getKey();
                             SymbolSideWayObject sidewayObject = entry.getValue();
                             // check price break out sideway
-                            KlineObjectNumber klineToday = TickerHelper.getLastTicker(symbol, Constants.INTERVAL_1D);
+                            KlineObjectNumber klineToday = TickerFuturesHelper.getLastTicker(symbol, Constants.INTERVAL_1D);
                             if (klineToday.maxPrice > sidewayObject.priceMax
                                     || klineToday.minPrice < sidewayObject.priceMin) {
                                 String log = symbol + " is break out sideway -> not trading";
@@ -131,7 +131,7 @@ public class DetectSW2TD {
                                 if (isAvalibleTrading) {
                                     String log = orderSide + " " + symbol + " entry: " + currentPrice + " detail: " + Utils.gson.toJson(sidewayObject);
 //                                Utils.sendSms2Telegram(log);
-                                    PositionHelper.getInstance().addOrderByTarget(symbol, orderSide, priceEntry);
+//                                    PositionHelper.getInstance().addOrderByTarget(symbol, orderSide, priceEntry);
                                     LOG.info(log);
                                 } else {
                                     LOG.info("Not trading because not match trend with BTC! {} {} {}", orderSide, symbol, longTrendBtc);
@@ -169,7 +169,7 @@ public class DetectSW2TD {
     }
 
     private SymbolSideWayObject getRangeSideWay(String symbol) {
-        List<KlineObjectNumber> allKlines = TickerHelper.getTicker(symbol, Constants.INTERVAL_1D);
+        List<KlineObjectNumber> allKlines = TickerFuturesHelper.getTicker(symbol, Constants.INTERVAL_1D);
         try {
             if (allKlines.size() > NUMBER_DAY_SIDEWAY) {
                 Double maxPrice = 0d;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 pc.
+ * Copyright 2023 pc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,12 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.binance.chuyennd.mongo;
+package com.binance.chuyennd.trading;
 
 /**
  *
  * @author pc
  */
-public class ZaloMongoHelper {
-    
+public enum OrderTargetStatus {
+    REQUEST,
+    NEW,
+    POSITION_RUNNING,
+    NEW_HAD_SL3TP_WAIT,
+    NEW_HAD_SL3TP,
+    TAKE_PROFIT_DONE,
+    STOP_LOSS_DONE,
+    CANCELED,
+    FINISHED;
 }

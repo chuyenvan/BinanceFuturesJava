@@ -2,9 +2,9 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
-package com.binance.chuyennd;
+package com.b.c;
 
-import com.binance.chuyennd.funcs.TickerHelper;
+import com.binance.chuyennd.funcs.TickerFuturesHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.TickerStatistics;
 import com.binance.chuyennd.utils.HttpRequest;
@@ -50,7 +50,7 @@ public class TDWithRateChange {
     private static boolean getData(String symbol) {
 
         try {
-            List<KlineObjectNumber> allKlines = TickerHelper.getTicker(symbol, Constants.INTERVAL_1D);
+            List<KlineObjectNumber> allKlines = TickerFuturesHelper.getTicker(symbol, Constants.INTERVAL_1D);
             KlineObjectNumber klineObjectFinal = allKlines.get(allKlines.size() - 1);
             Double volumeAvg = 0d;
             Double maxPrice = 0d;

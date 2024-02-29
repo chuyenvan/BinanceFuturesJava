@@ -139,7 +139,7 @@ public class OrderManager {
     private Order createOrder(OrderInfo info) {
         ClientSingleton.getInstance().syncRequestClient.changeInitialLeverage(info.symbol, RATE_LEVEGARE);
         return ClientSingleton.getInstance().syncRequestClient.postOrder(info.symbol, info.orderSide, null, OrderType.MARKET, null,
-                Utils.normalQuantity2Api(info.quantity), null, null, null, null, null, null, null, null, null, NewOrderRespType.RESULT);
+                info.quantity.toString(), null, null, null, null, null, null, null, null, null, NewOrderRespType.RESULT);
     }
 
     private void closePosition(OrderInfo info) {
@@ -148,7 +148,7 @@ public class OrderManager {
             orderSideClose = OrderSide.SELL;
         }
         Order respon = ClientSingleton.getInstance().syncRequestClient.postOrder(info.symbol, orderSideClose, null, OrderType.MARKET, null,
-                Utils.normalQuantity2Api(info.quantity), null, null, null, null, null, null, null, null, null, NewOrderRespType.RESULT);
+                info.quantity.toString(), null, null, null, null, null, null, null, null, null, NewOrderRespType.RESULT);
         LOG.info("Close order respon: {}", Utils.gson.toJson(respon));
     }
 

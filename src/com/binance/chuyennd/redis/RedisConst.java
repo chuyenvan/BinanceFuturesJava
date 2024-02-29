@@ -48,12 +48,24 @@ public class RedisConst {
         }
 
     }
+    // grid
+    public static final String REDIS_KEY_EDUCA_TD_GRID_MANAGER_QUEUE = "redis.key.educa.td.grid.manager.queue";
+    
+    public static final String REDIS_KEY_EDUCA_SYMBOL_TIME_LOCK = "redis.key.educa.symbol.time.lock";
+    
     public static final String REDIS_KEY_EDUCA_TD_POS_MANAGER = "redis.key.educa.td.pos.manager";
+    public static final String REDIS_KEY_EDUCA_TD_POS_MANAGER_VOLUME = "redis.key.educa.td.pos.manager.volume";
     public static final String REDIS_KEY_EDUCA_TD_POS_TIME_MANAGER = "redis.key.educa.td.pos.time.manager";
     public static final String REDIS_KEY_EDUCA_TD_POS_PROFIT_MANAGER = "redis.key.educa.td.pos.profit.manager";
     public static final String REDIS_KEY_EDUCA_TD_ORDER_DCA_MANAGER = "redis.key.educa.td.order.dca.manager";
     public static final String REDIS_KEY_EDUCA_TD_SYMBOL_TREND = "redis.key.educa.td.symbol.trend";
     public static final String REDIS_KEY_EDUCA_TD_POS_MANAGER_QUEUE = "redis.key.educa.td.pos.manager.queue";
+    
+    public static final String REDIS_KEY_EDUCA_TD_ORDER_MANAGER = "redis.key.educa.td.order.manager";
+    public static final String REDIS_KEY_EDUCA_TD_ORDER_MANAGER_QUEUE = "redis.key.educa.td.order.manager.queue";
+    
+    public static final String REDIS_KEY_EDUCA_TD_SIGNAL_ORDER_MANAGER = "redis.key.educa.td.signal.order.manager";
+    public static final String REDIS_KEY_EDUCA_TD_SIGNAL_ORDER_MANAGER_QUEUE = "redis.key.educa.td.signal.order.manager.queue";
     
     // btc bigchange trading
     public static final String REDIS_KEY_EDUCA_BTCBIGCHANGETD_POS_MANAGER= "redis.key.educa.btcbigchangetd.pos.manager";

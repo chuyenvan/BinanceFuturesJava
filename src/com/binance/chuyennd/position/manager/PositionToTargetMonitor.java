@@ -207,7 +207,7 @@ public class PositionToTargetMonitor {
                 }
             }
 
-            Double currentRateProfit = rateProfit(pos);
+            Double currentRateProfit = PositionHelper.getInstance().rateProfit(pos);
             OrderSide side = OrderSide.BUY;
             if (pos.getPositionAmt().doubleValue() < 0) {
                 side = OrderSide.SELL;
@@ -272,13 +272,7 @@ public class PositionToTargetMonitor {
 
     }
 
-    private Double rateProfit(PositionRisk pos) {
-        double rate;
-        rate = pos.getUnrealizedProfit().doubleValue() / Utils.marginOfPosition(pos);
-        rate = Double.parseDouble(Utils.formatPercent(rate));
-        return rate;
-    }
-
+    
     private void startThreadGetPosition2Manager() {
         new Thread(() -> {
             Thread.currentThread().setName("ThreadGetPosition2Manager");

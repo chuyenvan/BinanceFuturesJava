@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.binance.chuyennd.beard;
+package com.educa.mail.funcs;
 
 import com.binance.chuyennd.funcs.ClientSingleton;
 import com.binance.chuyennd.funcs.OrderHelper;
@@ -96,7 +96,7 @@ public class PositionManagerTradingBeard {
         orderInfo.status = OrderStatusProcess.NEW;
         orderInfo.symbol = symbol;
         orderInfo.orderSide = side;
-        orderInfo.quantity = Double.valueOf(Utils.normalQuantity2Api(BUDGET_PER_ORDER * LEVERAGE_ORDER_BEARD / priceEntryTarget));
+        orderInfo.quantity = ClientSingleton.getInstance().normalizeQuantity(symbol, BUDGET_PER_ORDER * LEVERAGE_ORDER_BEARD / priceEntryTarget);
         orderInfo.leverage = LEVERAGE_ORDER_BEARD;
         orderInfo.timeCreated = System.currentTimeMillis();
         // check position exits
@@ -225,7 +225,7 @@ public class PositionManagerTradingBeard {
                                 totalMoneySuccess += order.getUnrealizedProfit().doubleValue();
                             }
                         }
-                        Utils.sendSms2Telegram("Total profit: " + date + " -> " + Utils.normalPrice2Api(totalMoneySuccess));
+                        Utils.sendSms2Telegram("Total profit: " + date + " -> " + totalMoneySuccess);
                         LOG.info("Total profit: {} -> {}", date, totalMoneySuccess);
                     }
 
@@ -249,7 +249,7 @@ public class PositionManagerTradingBeard {
 
     private void testFuntion() {
 //        checkProfitToClose("OGNUSDT");
-        System.out.println( getPositionBySymbol("LINKUSDT"));
+        System.out.println(getPositionBySymbol("LINKUSDT"));
 //        symbolHadOrderRunning = (ConcurrentHashMap<String, OrderInfo>) Storage.readObjectFromFile(FILE_POSITION_RUNNING);
 //        OrderInfo orderInfo = symbolHadOrderRunning.get("LOOMUSDT");
 //        OrderHelper.stopLoss(orderInfo);

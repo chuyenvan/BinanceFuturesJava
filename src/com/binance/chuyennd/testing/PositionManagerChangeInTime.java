@@ -95,76 +95,76 @@ public class PositionManagerChangeInTime {
 //        PositionManager.getInstance().startThreadMonitorPositionBySymbol(PositionManager.getInstance().symbolHadOrderRunning.get("ZRXUSDT"));
     }
 
-    public void addOrderByTarget(String symbol, Double priceSL, Double priceEntry, Double priceTP, OrderSide side, Double pricePercentChange) {
-        int maxOrderTrading = 10;
-        if (symbolHadOrderRunning.size() > maxOrderTrading) {
-            LOG.info("Add order fail because had {} order running: {} entry:{} {}", maxOrderTrading, symbol, priceEntry, new Date());
-            return;
-        }
-        if (symbolHadOrderRunning.containsKey(symbol)) {
-            LOG.info("Add order fail because symbol had order active: {} entry:{} {}", symbol, priceEntry, new Date());
-            return;
-        }
-        PositionRisk position = getPositionBySymbol(symbol);
-        if (position != null && position.getPositionAmt().doubleValue() != 0) {
-            LOG.info("Add order fail because had other position of symbol {} with volume {} {} ", symbol, position.getPositionAmt(), new Date());
-            return;
-        }
-        OrderInfo orderInfo = new OrderInfo();
-        orderInfo.status = OrderStatusProcess.NEW;
-        orderInfo.percentChangeDay = pricePercentChange;
-        orderInfo.symbol = symbol;
-        orderInfo.priceEntry = Double.valueOf(Utils.normalPrice2Api(priceEntry));
-        orderInfo.priceTP = Double.valueOf(Utils.normalPrice2Api(priceTP));
-        orderInfo.priceSL = Double.valueOf(Utils.normalPrice2Api(priceSL));
-        orderInfo.orderSide = side;
-        orderInfo.quantity = Double.valueOf(Utils.normalQuantity2Api(BUDGET_PER_ORDER * LEVERAGE_ORDER / priceEntry));
-        orderInfo.leverage = LEVERAGE_ORDER;
-        orderInfo.timeCreated = System.currentTimeMillis();
-        if (isTrendWithSide(orderInfo)) {
-            Order result = OrderHelper.newOrder(orderInfo);
-            if (result != null) {
-                LOG.info("Add order success:{} {} entry: {} stoploss: {} takeprofit:{} quantity:{} {}", side, symbol, orderInfo.priceEntry, orderInfo.priceSL, orderInfo.priceTP, orderInfo.quantity, new Date());
-                symbolHadOrderRunning.put(symbol, orderInfo);
-                startThreadMonitorPositionBySymbol(orderInfo);
-                counter++;
-            } else {
-                LOG.info("Add order fail because create order fail: {} {} {}", symbol, priceEntry, new Date());
-            }
-        }
-    }
+//    public void addOrderByTarget(String symbol, Double priceSL, Double priceEntry, Double priceTP, OrderSide side, Double pricePercentChange) {
+//        int maxOrderTrading = 10;
+//        if (symbolHadOrderRunning.size() > maxOrderTrading) {
+//            LOG.info("Add order fail because had {} order running: {} entry:{} {}", maxOrderTrading, symbol, priceEntry, new Date());
+//            return;
+//        }
+//        if (symbolHadOrderRunning.containsKey(symbol)) {
+//            LOG.info("Add order fail because symbol had order active: {} entry:{} {}", symbol, priceEntry, new Date());
+//            return;
+//        }
+//        PositionRisk position = getPositionBySymbol(symbol);
+//        if (position != null && position.getPositionAmt().doubleValue() != 0) {
+//            LOG.info("Add order fail because had other position of symbol {} with volume {} {} ", symbol, position.getPositionAmt(), new Date());
+//            return;
+//        }
+//        OrderInfo orderInfo = new OrderInfo();
+//        orderInfo.status = OrderStatusProcess.NEW;
+//        orderInfo.percentChangeDay = pricePercentChange;
+//        orderInfo.symbol = symbol;
+//        orderInfo.priceEntry = Double.valueOf(Utils.normalPrice2Api(priceEntry));
+//        orderInfo.priceTP = Double.valueOf(Utils.normalPrice2Api(priceTP));
+//        orderInfo.priceSL = Double.valueOf(Utils.normalPrice2Api(priceSL));
+//        orderInfo.orderSide = side;
+//        orderInfo.quantity = Double.valueOf(Utils.normalQuantity2Api(BUDGET_PER_ORDER * LEVERAGE_ORDER / priceEntry));
+//        orderInfo.leverage = LEVERAGE_ORDER;
+//        orderInfo.timeCreated = System.currentTimeMillis();
+//        if (isTrendWithSide(orderInfo)) {
+//            Order result = OrderHelper.newOrder(orderInfo);
+//            if (result != null) {
+//                LOG.info("Add order success:{} {} entry: {} stoploss: {} takeprofit:{} quantity:{} {}", side, symbol, orderInfo.priceEntry, orderInfo.priceSL, orderInfo.priceTP, orderInfo.quantity, new Date());
+//                symbolHadOrderRunning.put(symbol, orderInfo);
+//                startThreadMonitorPositionBySymbol(orderInfo);
+//                counter++;
+//            } else {
+//                LOG.info("Add order fail because create order fail: {} {} {}", symbol, priceEntry, new Date());
+//            }
+//        }
+//    }
 
-    public void addOrderByConfig(String symbol, Double priceSL, Double priceEntry, Double priceTP, OrderSide side) {
-
-        if (symbolHadOrderRunning.contains(symbol)) {
-            LOG.info("Add order fail because symbol had order active: {} entry:{} {}", symbol, priceEntry, new Date());
-            return;
-        }
-        PositionRisk position = getPositionBySymbol(symbol);
-        if (position != null && Double.parseDouble(position.getIsolatedMargin()) != 0) {
-            LOG.info("Add order fail because had other position of symbol {} with margine {} {} ", symbol, position.getIsolatedMargin(), new Date());
-            return;
-        }
-        OrderInfo orderInfo = new OrderInfo();
-        orderInfo.status = OrderStatusProcess.NEW;
-        orderInfo.symbol = symbol;
-        orderInfo.priceEntry = Double.valueOf(Utils.normalPrice2Api(priceEntry));
-        orderInfo.priceTP = Double.valueOf(Utils.normalPrice2Api(priceTP));
-        orderInfo.priceSL = Double.valueOf(Utils.normalPrice2Api(priceSL));
-        orderInfo.orderSide = side;
-        orderInfo.quantity = Double.valueOf(Utils.normalQuantity2Api(BUDGET_PER_ORDER * LEVERAGE_ORDER / priceEntry));
-        orderInfo.leverage = LEVERAGE_ORDER;
-        Order result = OrderHelper.newOrder(orderInfo);
-        if (result != null) {
-            LOG.info("Add order success: {} entry: {} stoploss: {} takeprofit:{} quantity:{} {}", symbol, priceEntry, priceTP, priceSL, orderInfo.quantity, new Date());
-            symbolHadOrderRunning.put(symbol, orderInfo);
-            startThreadMonitorPositionBySymbol(orderInfo);
-            counter++;
-        } else {
-            LOG.info("Add order fail because create order fail: {} {} {}", symbol, priceEntry, new Date());
-        }
-    }
-
+//    public void addOrderByConfig(String symbol, Double priceSL, Double priceEntry, Double priceTP, OrderSide side) {
+//
+//        if (symbolHadOrderRunning.contains(symbol)) {
+//            LOG.info("Add order fail because symbol had order active: {} entry:{} {}", symbol, priceEntry, new Date());
+//            return;
+//        }
+//        PositionRisk position = getPositionBySymbol(symbol);
+//        if (position != null && Double.parseDouble(position.getIsolatedMargin()) != 0) {
+//            LOG.info("Add order fail because had other position of symbol {} with margine {} {} ", symbol, position.getIsolatedMargin(), new Date());
+//            return;
+//        }
+//        OrderInfo orderInfo = new OrderInfo();
+//        orderInfo.status = OrderStatusProcess.NEW;
+//        orderInfo.symbol = symbol;
+//        orderInfo.priceEntry = Double.valueOf(Utils.normalPrice2Api(priceEntry));
+//        orderInfo.priceTP = Double.valueOf(Utils.normalPrice2Api(priceTP));
+//        orderInfo.priceSL = Double.valueOf(Utils.normalPrice2Api(priceSL));
+//        orderInfo.orderSide = side;
+//        orderInfo.quantity = Double.valueOf(Utils.normalQuantity2Api(BUDGET_PER_ORDER * LEVERAGE_ORDER / priceEntry));
+//        orderInfo.leverage = LEVERAGE_ORDER;
+//        Order result = OrderHelper.newOrder(orderInfo);
+//        if (result != null) {
+//            LOG.info("Add order success: {} entry: {} stoploss: {} takeprofit:{} quantity:{} {}", symbol, priceEntry, priceTP, priceSL, orderInfo.quantity, new Date());
+//            symbolHadOrderRunning.put(symbol, orderInfo);
+//            startThreadMonitorPositionBySymbol(orderInfo);
+//            counter++;
+//        } else {
+//            LOG.info("Add order fail because create order fail: {} {} {}", symbol, priceEntry, new Date());
+//        }
+//    }
+//
     private void startThreadMonitorPositionBySymbol(OrderInfo orderInfo) {
         new Thread(() -> {
             Thread.currentThread().setName("ThreadMonitorPositionBySymbol-" + orderInfo.symbol);

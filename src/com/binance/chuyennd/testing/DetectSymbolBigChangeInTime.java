@@ -81,8 +81,8 @@ public class DetectSymbolBigChangeInTime {
                                     if (percentChange < 0) {
                                         orderSide = OrderSide.SELL;
                                     }
-                                    PositionManagerChangeInTime.getInstance().addOrderByTarget(ticker.getSymbol(),
-                                            stopLoss, price, takeProfit, orderSide, Double.valueOf(ticker.getPriceChangePercent()));
+//                                    PositionManagerChangeInTime.getInstance().addOrderByTarget(ticker.getSymbol(),
+//                                            stopLoss, price, takeProfit, orderSide, Double.valueOf(ticker.getPriceChangePercent()));
                                 } else {
 //                                    LOG.info("Check symbol: {} lastPrice: {} currentPrice:{} percent: {}%", ticker.getSymbol(),
 //                                            beforePrice, price, Utils.formatPercent(percentChange));

@@ -15,7 +15,7 @@
  */
 package com.binance.chuyennd.bigchange;
 
-import com.binance.chuyennd.funcs.TickerHelper;
+import com.binance.chuyennd.funcs.TickerFuturesHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
@@ -37,7 +37,7 @@ public class AltBigChange20 {
     }
 
     private static void analyticAltBigChange20() {
-        Map<String, List<KlineObjectNumber>> symbol2Kline1Ds = TickerHelper.getAllKlineWithUpdateTime(Constants.INTERVAL_1D, Utils.TIME_DAY);
+        Map<String, List<KlineObjectNumber>> symbol2Kline1Ds = TickerFuturesHelper.getAllKlineWithUpdateTime(Constants.INTERVAL_1D, Utils.TIME_DAY);
         for (Map.Entry<String, List<KlineObjectNumber>> entry : symbol2Kline1Ds.entrySet()) {
             String symbol = entry.getKey();
             List<KlineObjectNumber> klines = entry.getValue();

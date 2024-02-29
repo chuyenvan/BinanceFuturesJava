@@ -91,14 +91,14 @@ public class DetectBigChangeForTrading {
             double priceEntryTarget;
             if (rateChangeTicker > RATE_BIG_CHANGE) {
                 Utils.sendSms2Telegram(symbol + " big change: " + Utils.formatPercent(rateChangeTicker) + " " + new Date(klineCloseObjectFinal.startTime.longValue()));
-                LOG.info("Big change {}: rate: {}/{}% Open: {} Close: {} TimeOpen: {} ", symbol, Utils.normalPrice2Api(rateChangeTicker),
+                LOG.info("Big change {}: rate: {}/{}% Open: {} Close: {} TimeOpen: {} ", symbol, rateChangeTicker,
                         Utils.formatPercent(rateChangeTicker), priceOpen, priceClose, new Date(klineCloseObjectFinal.startTime.longValue()));
                 priceEntryTarget = priceClose;
                 OrderSide orderSide = OrderSide.BUY;
-                if (priceClose > priceOpen) {                    
+                if (priceClose > priceOpen) {
                     orderSide = OrderSide.SELL;
                 }
-                PositionHelper.getInstance().addOrderByTarget(symbol, orderSide, priceEntryTarget);
+//                PositionHelper.getInstance().addOrderByTarget(symbol, orderSide, priceEntryTarget);
             }
         } catch (Exception e) {
             e.printStackTrace();

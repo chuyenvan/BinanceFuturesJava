@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.binance.chuyennd.volume;
+package com.binance.chuyennd.statistic24hr;
 
 import com.binance.chuyennd.object.TickerStatistics;
 import com.binance.chuyennd.utils.HttpRequest;
@@ -23,8 +23,6 @@ import com.binance.client.SubscriptionErrorHandler;
 import com.binance.client.exception.BinanceApiException;
 import com.binance.client.model.event.SymbolTickerEvent;
 import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -39,6 +37,7 @@ public class Volume24hrManager {
     public static final Logger LOG = LoggerFactory.getLogger(Volume24hrManager.class);
     public final ConcurrentHashMap<String, Double> symbol2Volume = new ConcurrentHashMap<>();
     public final ConcurrentHashMap<String, Double> symbol2OpenPrice = new ConcurrentHashMap<>();
+    public final ConcurrentHashMap<String, Double> symbol2LastPrice = new ConcurrentHashMap<>();
     private static volatile Volume24hrManager INSTANCE = null;
 
     public static Volume24hrManager getInstance() {
@@ -58,6 +57,7 @@ public class Volume24hrManager {
             for (SymbolTickerEvent e : event) {
                 symbol2Volume.put(e.getSymbol(), e.getTotalTradedQuoteAssetVolume().doubleValue());
                 symbol2OpenPrice.put(e.getSymbol(), e.getOpen().doubleValue());
+                symbol2LastPrice.put(e.getSymbol(), e.getLastPrice().doubleValue());
 //                LOG.info("{}", Utils.toJson(e));
             }
         }), errorHandler);
@@ -97,6 +97,7 @@ public class Volume24hrManager {
                 if (StringUtils.endsWithIgnoreCase(ticker.getSymbol(), "usdt")) {
                     symbol2Volume.put(ticker.getSymbol(), Double.valueOf(ticker.getQuoteVolume()));
                     symbol2OpenPrice.put(ticker.getSymbol(), Double.valueOf(ticker.getOpenPrice()));
+                    symbol2LastPrice.put(ticker.getSymbol(), Double.valueOf(ticker.getLastPrice()));
                 }
             }
         } catch (Exception e) {

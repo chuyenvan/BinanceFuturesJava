@@ -44,6 +44,16 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.zip.GZIPInputStream;
+import java.security.cert.X509Certificate;
+import org.apache.commons.io.IOUtils;
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.ssl.SSLContextBuilder;
 
 public class HttpRequest {
 
@@ -202,9 +212,16 @@ public class HttpRequest {
         }
     }
 
+    public static String getContentFromUrl(String url, int timeout) {
+        try {
+            return getContentFromUrl(url, new HashMap<>(), timeout);
+        } catch (Exception e) {
+        }
+        return "";
+    }
     public static String getContentFromUrl(String url) {
         try {
-            return getContentFromUrl(url, new HashMap<String, String>());
+            return getContentFromUrl(url, new HashMap<>());
         } catch (Exception e) {
         }
         return "";
@@ -254,7 +271,71 @@ public class HttpRequest {
         return content;
     }
 
-    public static String getContentFromUrl(String url, Map<String, String> extendedHeader) {
+    public static String getContentFromUrl(String url, Map<String, String> extendedHeader, int timeout) {
+        String content = "";
+        boolean useGZip = false;
+        for (int i = 0; i < NUM_RETRY_CONNECTION; i++) {
+            try {
+                HttpURLConnection hc = connect(new URL(url), extendedHeader);
+                int content_length = hc.getContentLength();
+                if ((content_length > max_content_length) || (content_length == -1)) {
+                    content_length = max_content_length;
+                }
+                hc.setConnectTimeout(timeout);
+                StringBuilder sb = new StringBuilder();
+                int c = 0;
+                InputStream is = null;
+
+                if (useGZip) {
+                    is = new GZIPInputStream(hc.getInputStream());
+                    content_length = 1 * 1024 * 1024;
+                } else if (hc.getResponseCode() < 400) {
+                    is = hc.getInputStream();
+                } else {
+                    /* error from server */
+                    is = hc.getErrorStream();
+                }
+                BufferedReader br = new BufferedReader(new InputStreamReader(is, "UTF-8"));
+                char ch[] = new char[content_length];
+
+                while (c < content_length) {
+                    int t = br.read(ch, 0, content_length);
+
+                    if (t > 0) {
+                        sb.append(ch, 0, t);
+                    } else {
+                        break;
+                    }
+
+                    c = c + t;
+                }
+
+                br.close();
+                content = sb.toString();
+                if (hc.getURL() != null) {
+                    url = hc.getURL().toString();
+                }
+                //System.out.println(hc.getHeaderField("Content-Encoding"));
+                try {
+                    if (!content.contains("<body>") && hc.getHeaderField("Content-Encoding").equals("gzip")) {
+                        useGZip = true;
+                        continue;
+                    }
+                } catch (Exception ex) {
+                }
+                break;
+            } catch (Exception ex) {
+//				ex.printStackTrace();
+                if (i == NUM_RETRY_CONNECTION - 1) {
+                    return null;
+                }
+
+            }
+        }
+        return content;
+    }
+
+     public static String getContentFromUrl(String url, Map<String, String> extendedHeader) {
         String content = "";
         boolean useGZip = false;
         for (int i = 0; i < NUM_RETRY_CONNECTION; i++) {
@@ -333,13 +414,48 @@ public class HttpRequest {
         }
     }
 
+    public static String httpPostWithJson(String url, String jsonBody) {
+        try {
+            SSLContextBuilder builder = new SSLContextBuilder();
+            builder.loadTrustMaterial(null, (X509Certificate[] chain, String authType) -> true);
+
+            SSLConnectionSocketFactory sslSF = new SSLConnectionSocketFactory(builder.build(),
+                    SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER);
+
+            CloseableHttpClient httpClient = HttpClients.custom().setSSLSocketFactory(sslSF).build();
+
+            HttpPost httppost = new HttpPost(url);
+
+            // Request parameters and other properties.
+            httppost.setEntity(new StringEntity(jsonBody));
+            httppost.setHeader("Content-Type", "application/json");
+
+            //Execute and get the response.
+            HttpResponse response = httpClient.execute(httppost);
+            HttpEntity entity = response.getEntity();
+
+            if (entity != null) {
+                try ( InputStream inputStream = entity.getContent()) {
+                    // do something useful
+                    StringWriter writer = new StringWriter();
+                    IOUtils.copy(inputStream, writer, "UTF-8");
+                    return writer.toString();
+                }
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+        return "";
+    }
+
     public static void main(String[] args) throws MalformedURLException {
 //        System.out.println(Crawler.getContentFromUrl("https://ipfind.co?ip=8.8.8.8"));
 //        Crawler.getFileFromUrl("http://stream.dict.laban.vn/uk/54187d75298ba173b0f1500859ef5e46/160e9dd569c/A/April.mp3", "test/April.mp3");
-        String url = "https:\\/\\/cdn.edupia.vn\\/resource\\/video\\/word\\/sing_ng.mp4";
-        System.out.println(StringUtils.replace(url, "[^a-zA-Z1-90_\\- \\.//:]*", ""));
+//        String url = "https:\\/\\/cdn.edupia.vn\\/resource\\/video\\/word\\/sing_ng.mp4";
+//        System.out.println(StringUtils.replace(url, "[^a-zA-Z1-90_\\- \\.//:]*", ""));
 //        System.out.println(Crawler.getUrlResponCode(URLEncoder.encode(url)));
 //        System.out.println(Crawler.getUrlResponCode("https://181f620f0.vws.vegacdn.vn/video/2018/07/12/Unit-12-vid2-mute-all-fn.mp4"));
+
     }
 
 }
