@@ -35,7 +35,8 @@ public class Constants {
     public static final String TRADING_TYPE_BREAD = "TRADING_TYPE_BREAD";
     public static final String TRADING_TYPE_VOLUME_MINI = "TRADING_TYPE_VOLUME_MINI";
     public static final String TRADING_TYPE_SIGNAL= "TRADING_TYPE_SIGNALTW";
-    public static final ArrayList<String> specialSymbol = new ArrayList<>(Arrays.asList("BTCUSDT",
+    public static final ArrayList<String> specialSymbol = new ArrayList<>(Arrays.asList(
+            "BTCUSDT",
             "ETHUSDT",
             "BNBUSDT",
             "COCOSUSDT",

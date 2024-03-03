@@ -15,7 +15,7 @@
  */
 package com.educa.mail.funcs;
 
-import com.binance.chuyennd.funcs.ClientSingleton;
+import com.binance.chuyennd.client.ClientSingleton;
 import com.binance.chuyennd.object.KlineObject;
 import com.binance.chuyennd.object.TickerStatistics;
 import com.binance.chuyennd.utils.Configs;

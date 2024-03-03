@@ -6,7 +6,7 @@
 package com.binance.chuyennd.utils;
 
 import com.alibaba.fastjson.JSONObject;
-import com.binance.chuyennd.funcs.ClientSingleton;
+import com.binance.chuyennd.client.ClientSingleton;
 import com.binance.client.model.enums.OrderSide;
 import com.binance.client.model.trade.PositionRisk;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -25,11 +25,6 @@ import java.text.*;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import okhttp3.FormBody;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.RequestBody;
-import okhttp3.Response;
 
 /**
  * @author chuyennd
@@ -691,6 +686,13 @@ public class Utils {
         return cal.get(Calendar.MINUTE);
     }
 
+    public static int getCurrentMinute(long time) {
+        Calendar cal = Calendar.getInstance();
+        cal.setTimeZone(TimeZone.getTimeZone("GMT+7"));
+        cal.setTime(new Date(time));
+        return cal.get(Calendar.MINUTE);
+    }
+
     public static int getCurrentSecond() {
         Calendar cal = Calendar.getInstance();
         cal.setTimeZone(TimeZone.getTimeZone("GMT+7"));
@@ -974,6 +976,76 @@ public class Utils {
             quantity = ClientSingleton.getInstance().getMinQuantity(symbol);
         }
         return quantity;
+    }
+
+    public static <T> T subList(List lines, int limit) {
+        List<List<Object>> results = new ArrayList();
+        int start = 0;
+//        LOG.info("size: {} start:{} end:{}", lines.size(), lines.get(0), lines.get(lines.size() - 1));
+        while (true) {
+            if (start > lines.size()) {
+                break;
+            }
+            int end = start + limit;
+            if (end > lines.size() - 1) {
+                end = lines.size();
+            }
+            List<Object> data = lines.subList(start, end);
+            if (!data.isEmpty()) {
+                results.add(data);
+//                LOG.info("size: {} start:{} end:{}", data.size(), data.get(0), data.get(data.size() - 1));
+            } else {
+                break;
+            }
+            start = end;
+        }
+        return (T) results;
+    }
+
+    public static <T> T subList(Set lines, int limit) {
+        List<List<Object>> results = new ArrayList();
+        int start = 0;
+        List datas = new ArrayList<>(lines);
+        while (true) {
+            if (start > datas.size()) {
+                break;
+            }
+            int end = start + limit;
+            if (end > datas.size() - 1) {
+                end = datas.size();
+            }
+            List<Object> data = datas.subList(start, end);
+            if (!data.isEmpty()) {
+                results.add(data);
+            } else {
+                break;
+            }
+            start = end;
+        }
+        return (T) results;
+    }
+
+    public static Set subSet(Set lines, int limit) {
+        Set<Set<Object>> results = new HashSet<>();
+        int start = 0;
+        List datas = new ArrayList<>(lines);
+        while (true) {
+            if (start > datas.size()) {
+                break;
+            }
+            int end = start + limit;
+            if (end > datas.size() - 1) {
+                end = datas.size();
+            }
+            List<Object> data = datas.subList(start, end);
+            if (!data.isEmpty()) {
+                results.add(new HashSet<>(data));
+            } else {
+                break;
+            }
+            start = end;
+        }
+        return results;
     }
 
     public static void main(String[] args) {

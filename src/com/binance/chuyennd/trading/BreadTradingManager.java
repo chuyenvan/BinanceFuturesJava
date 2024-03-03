@@ -17,9 +17,10 @@ package com.binance.chuyennd.trading;
 
 import com.educa.mail.funcs.BreadFunctions;
 import com.binance.chuyennd.bigchange.btctd.BreadDetectObject;
-import com.binance.chuyennd.funcs.ClientSingleton;
-import com.binance.chuyennd.funcs.OrderHelper;
-import com.binance.chuyennd.funcs.TickerFuturesHelper;
+import com.binance.chuyennd.client.BinanceFuturesClientSingleton;
+import com.binance.chuyennd.client.ClientSingleton;
+import com.binance.chuyennd.client.OrderHelper;
+import com.binance.chuyennd.client.TickerFuturesHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.position.manager.PositionHelper;
 import com.binance.chuyennd.redis.RedisConst;
@@ -318,7 +319,7 @@ public class BreadTradingManager {
                 String sym = entry.getKey();
                 OrderTargetInfo order = entry.getValue();
                 if (!allSymbolTrading.contains(sym)) {
-                    PositionRisk pos = PositionHelper.getPositionBySymbol(sym);
+                    PositionRisk pos = BinanceFuturesClientSingleton.getInstance().getPositionInfo(sym);
                     if (pos != null && pos.getPositionAmt().doubleValue() != 0) {
                         continue;
                     }

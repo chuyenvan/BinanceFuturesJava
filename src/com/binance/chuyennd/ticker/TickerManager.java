@@ -4,7 +4,7 @@
  */
 package com.binance.chuyennd.ticker;
 
-import com.binance.chuyennd.funcs.TickerFuturesHelper;
+import com.binance.chuyennd.client.TickerFuturesHelper;
 import com.binance.chuyennd.mongo.TickerMongoHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.utils.Configs;

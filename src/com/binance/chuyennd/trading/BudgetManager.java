@@ -4,7 +4,7 @@
  */
 package com.binance.chuyennd.trading;
 
-import com.binance.chuyennd.funcs.*;
+import com.binance.chuyennd.client.ClientSingleton;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
 import org.slf4j.Logger;
@@ -42,6 +42,9 @@ public class BudgetManager {
                 BUDGET_PER_ORDER = budget / 100;
                 if (BUDGET_PER_ORDER < 7.5) {
                     BUDGET_PER_ORDER = 7.5;
+                }
+                if (BUDGET_PER_ORDER >1000) {
+                    BUDGET_PER_ORDER = 1000.0;
                 }
                 LOG.info("Ba and Bu to t: {} -> {}", balance, BUDGET_PER_ORDER);
             }

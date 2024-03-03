@@ -15,7 +15,7 @@
  */
 package com.binance.chuyennd.object;
 
-import com.binance.chuyennd.funcs.OrderStatusProcess;
+import com.binance.chuyennd.client.OrderStatusProcess;
 import com.binance.client.model.enums.OrderSide;
 import java.io.Serializable;
 

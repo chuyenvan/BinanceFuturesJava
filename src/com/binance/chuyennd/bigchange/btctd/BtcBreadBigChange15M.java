@@ -16,8 +16,8 @@
 package com.binance.chuyennd.bigchange.btctd;
 
 import com.educa.mail.funcs.BreadFunctions;
-import com.binance.chuyennd.funcs.ClientSingleton;
-import com.binance.chuyennd.funcs.TickerFuturesHelper;
+import com.binance.chuyennd.client.ClientSingleton;
+import com.binance.chuyennd.client.TickerFuturesHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.statistic24hr.Volume24hrManager;
 import com.binance.chuyennd.trading.OrderTargetInfo;

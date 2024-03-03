@@ -23,9 +23,9 @@
  */
 package com.b.c;
 
-import com.binance.chuyennd.funcs.GetTicker24h;
+import com.binance.chuyennd.client.GetTicker24h;
 import com.binance.chuyennd.object.OrderInfo;
-import com.binance.chuyennd.funcs.OrderManager;
+import com.binance.chuyennd.client.OrderManager;
 import com.binance.chuyennd.object.PremiumIndex;
 import com.binance.chuyennd.object.TickerStatistics;
 import com.binance.chuyennd.utils.Configs;

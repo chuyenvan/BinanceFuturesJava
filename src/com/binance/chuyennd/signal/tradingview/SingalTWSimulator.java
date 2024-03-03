@@ -15,8 +15,8 @@
  */
 package com.binance.chuyennd.signal.tradingview;
 
-import com.binance.chuyennd.funcs.ClientSingleton;
-import com.binance.chuyennd.funcs.TickerFuturesHelper;
+import com.binance.chuyennd.client.ClientSingleton;
+import com.binance.chuyennd.client.TickerFuturesHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.TickerStatistics;
 import com.binance.chuyennd.redis.RedisConst;

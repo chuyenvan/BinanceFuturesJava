@@ -15,9 +15,10 @@
  */
 package com.binance.chuyennd.bigchange;
 
+import com.binance.chuyennd.client.BinanceFuturesClientSingleton;
 import com.binance.chuyennd.research.Test;
-import com.binance.chuyennd.funcs.ClientSingleton;
-import com.binance.chuyennd.funcs.TickerFuturesHelper;
+import com.binance.chuyennd.client.ClientSingleton;
+import com.binance.chuyennd.client.TickerFuturesHelper;
 import com.binance.chuyennd.object.KlineObject;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.TickerStatistics;
@@ -48,15 +49,6 @@ public class BTCBigChangeResearch {
     public static final String URL_TICKER_1D = "https://fapi.binance.com/fapi/v1/klines?symbol=xxxxxx&interval=1d";
     public static final String URL_TICKER_15M = "https://fapi.binance.com/fapi/v1/klines?symbol=xxxxxx&interval=15m";
     public static final Double RATE_BIG_CHANGE_TEST = Configs.getDouble("RateBigChangeTest");
-
-    public static PositionRisk getPositionBySymbol(String symbol) {
-        List<PositionRisk> positionInfos = ClientSingleton.getInstance().syncRequestClient.getPositionRisk(symbol);
-        PositionRisk position = null;
-        if (positionInfos != null && !positionInfos.isEmpty()) {
-            position = positionInfos.get(0);
-        }
-        return position;
-    }
 
    
 

@@ -15,10 +15,8 @@
  */
 package com.binance.chuyennd.research;
 
-import com.alibaba.fastjson.JSONObject;
-import com.binance.chuyennd.funcs.ClientSingleton;
-import com.binance.chuyennd.funcs.TickerFuturesHelper;
-import com.binance.chuyennd.mongo.TickerMongoHelper;
+import com.binance.chuyennd.client.ClientSingleton;
+import com.binance.chuyennd.client.TickerFuturesHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.TrendObject;
 import com.binance.chuyennd.object.TrendState;
@@ -38,10 +36,10 @@ import com.binance.client.model.event.SymbolTickerEvent;
 import com.binance.client.model.trade.Order;
 import com.binance.chuyennd.trading.OrderTargetInfo;
 import com.binance.chuyennd.trading.OrderTargetInfoTest;
-import com.binance.chuyennd.trading.VolumeMiniManager;
-import com.mongodb.client.MongoCursor;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -51,9 +49,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
+import static jdk.internal.org.jline.utils.Colors.s;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
-import org.bson.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -72,11 +70,21 @@ public class Test {
 //                OrderTargetInfo.class);
 //        System.out.println(Utils.toJson(order));
 //        System.out.println(RedisHelper.getInstance().get().llen(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER));
-        Double total = 3000.0;
-        for (int i = 0; i < 60; i++) {
-            total *=1.035;
-        }
-        System.out.println(total.longValue());
+        long currentTime = System.currentTimeMillis();
+        System.out.println(Utils.getCurrentMinute()%10);
+        System.out.println(new Date(calTimeLock(currentTime)));
+//        Double total = 4800.0;
+//        long today = System.currentTimeMillis();
+//        for (int i = 0; i < 7; i++) {
+//            for (int j = 0; j < 7; j++) {
+//                today += Utils.TIME_DAY;
+//                Double inc = total * 0.08;
+//                total += inc;
+//                Double budget = 0.42 * total / 100;
+//                LOG.info("{} {} {} -> {}", Utils.normalizeDateYYYYMMDD(today), total.longValue(), inc.longValue(), budget.longValue());
+//            }
+//        }
+//        System.out.println(total.longValue());
 //        Utils.sendSms2Skype("Check Signal API");
 //        List<Order> orders = ClientSingleton.getInstance().syncRequestClient.getOpenOrders("SKLUSDT");
 //        for (Order order : orders) {
@@ -426,6 +434,10 @@ public class Test {
             LOG.info("Number dca: {} rate:{}% quantity:{} priceAvg:{} priceCurrent:{} total: {}$",
                     i, rate * 100, quantity, priceStart, priceCurrent, total);
         }
+    }
+
+    private static long calTimeLock(long currentTime) {
+        return currentTime + (10 - Utils.getCurrentMinute(currentTime) % 10)* Utils.TIME_MINUTE;
     }
 
     private void threadListenVolume() {

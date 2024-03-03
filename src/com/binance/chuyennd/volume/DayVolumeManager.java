@@ -15,7 +15,7 @@
  */
 package com.binance.chuyennd.volume;
 
-import com.binance.chuyennd.funcs.TickerFuturesHelper;
+import com.binance.chuyennd.client.TickerFuturesHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.utils.Storage;
 import com.binance.chuyennd.utils.Utils;

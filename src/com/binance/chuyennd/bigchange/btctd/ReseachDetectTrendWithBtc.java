@@ -15,7 +15,7 @@
  */
 package com.binance.chuyennd.bigchange.btctd;
 
-import com.binance.chuyennd.funcs.TickerFuturesHelper;
+import com.binance.chuyennd.client.TickerFuturesHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.TrendDataTrackingObject;
 import com.binance.chuyennd.object.TrendObjectDetail;

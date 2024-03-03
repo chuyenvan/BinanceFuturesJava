@@ -4,7 +4,7 @@
  */
 package com.binance.chuyennd.research;
 
-import com.binance.chuyennd.funcs.OrderStatusProcess;
+import com.binance.chuyennd.client.OrderStatusProcess;
 import com.binance.client.model.enums.OrderSide;
 import java.io.Serializable;
 

@@ -15,9 +15,9 @@
  */
 package com.binance.chuyennd.position.manager;
 
-import com.binance.chuyennd.funcs.ClientSingleton;
-import com.binance.chuyennd.funcs.OrderHelper;
-import com.binance.chuyennd.funcs.TickerFuturesHelper;
+import com.binance.chuyennd.client.ClientSingleton;
+import com.binance.chuyennd.client.OrderHelper;
+import com.binance.chuyennd.client.TickerFuturesHelper;
 import com.binance.chuyennd.object.KlineObject;
 import com.binance.chuyennd.utils.HttpRequest;
 import com.binance.chuyennd.utils.Utils;
@@ -74,7 +74,7 @@ public class PositionHelper {
 
     public static void main(String[] args) {
 //        PositionHelper.getInstance();
-        System.out.println(Utils.toJson(new PositionHelper().dcaForPositionNew(getPositionBySymbol("BIGTIMEUSDT"))));
+//        System.out.println(Utils.toJson(new PositionHelper().dcaForPositionNew(getPositionBySymbol("BIGTIMEUSDT"))));
 // 5753457816
 //        ClientSingleton.getInstance().syncRequestClient.cancelOrder("BALUSDT", 5753457816L, "5753457816");
 //        System.out.println(Utils.toJson(ClientSingleton.getInstance().syncRequestClient.getOrder("BALUSDT", 5753457816L, "5753457816")));
@@ -136,14 +136,6 @@ public class PositionHelper {
         return true;
     }
 
-    public static PositionRisk getPositionBySymbol(String symbol) {
-        List<PositionRisk> positionInfos = ClientSingleton.getInstance().syncRequestClient.getPositionRisk(symbol);
-        PositionRisk position = null;
-        if (positionInfos != null && !positionInfos.isEmpty()) {
-            position = positionInfos.get(0);
-        }
-        return position;
-    }
 
 //    public void addOrderByTarget(String symbol, OrderSide orderSide, Double priceEntryTarget) {
 //        // change target

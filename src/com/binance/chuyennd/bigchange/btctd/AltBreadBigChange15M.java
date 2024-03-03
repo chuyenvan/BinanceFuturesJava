@@ -1,8 +1,8 @@
 package com.binance.chuyennd.bigchange.btctd;
 
 import com.educa.mail.funcs.BreadFunctions;
-import com.binance.chuyennd.funcs.PriceManager;
-import com.binance.chuyennd.funcs.TickerFuturesHelper;
+import com.binance.chuyennd.client.PriceManager;
+import com.binance.chuyennd.client.TickerFuturesHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.trading.OrderTargetInfo;
 import com.binance.chuyennd.trading.OrderTargetStatus;

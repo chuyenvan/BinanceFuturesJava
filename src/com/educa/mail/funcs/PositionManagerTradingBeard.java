@@ -15,9 +15,10 @@
  */
 package com.educa.mail.funcs;
 
-import com.binance.chuyennd.funcs.ClientSingleton;
-import com.binance.chuyennd.funcs.OrderHelper;
-import com.binance.chuyennd.funcs.OrderStatusProcess;
+import com.binance.chuyennd.client.BinanceFuturesClientSingleton;
+import com.binance.chuyennd.client.ClientSingleton;
+import com.binance.chuyennd.client.OrderHelper;
+import com.binance.chuyennd.client.OrderStatusProcess;
 import com.binance.chuyennd.object.OrderInfo;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Storage;
@@ -100,7 +101,7 @@ public class PositionManagerTradingBeard {
         orderInfo.leverage = LEVERAGE_ORDER_BEARD;
         orderInfo.timeCreated = System.currentTimeMillis();
         // check position exits
-        PositionRisk position = getPositionBySymbol(symbol);
+        PositionRisk position = BinanceFuturesClientSingleton.getInstance().getPositionInfo(symbol);
         if (position != null && position.getPositionAmt().doubleValue() != 0) {
             LOG.info("Add order fail because had other position of symbol {} with volume {} {} ", symbol, position.getPositionAmt(), new Date());
             if (!symbolHadOrderRunning.containsKey(symbol)) {
@@ -136,7 +137,7 @@ public class PositionManagerTradingBeard {
             PositionRisk lastPosition = null;
             while (true) {
                 try {
-                    PositionRisk position = getPositionBySymbol(orderInfo.symbol);
+                    PositionRisk position = BinanceFuturesClientSingleton.getInstance().getPositionInfo(orderInfo.symbol);
                     // if order new -> waiting for position active
                     // if order running -> create SL and TP if have position
                     // else check no position -> check price update order info and remove list active
@@ -238,18 +239,10 @@ public class PositionManagerTradingBeard {
         }).start();
     }
 
-    private PositionRisk getPositionBySymbol(String symbol) {
-        List<PositionRisk> positionInfos = ClientSingleton.getInstance().syncRequestClient.getPositionRisk(symbol);
-        PositionRisk position = null;
-        if (positionInfos != null && !positionInfos.isEmpty()) {
-            position = positionInfos.get(0);
-        }
-        return position;
-    }
 
     private void testFuntion() {
 //        checkProfitToClose("OGNUSDT");
-        System.out.println(getPositionBySymbol("LINKUSDT"));
+        System.out.println(BinanceFuturesClientSingleton.getInstance().getPositionInfo("LINKUSDT"));
 //        symbolHadOrderRunning = (ConcurrentHashMap<String, OrderInfo>) Storage.readObjectFromFile(FILE_POSITION_RUNNING);
 //        OrderInfo orderInfo = symbolHadOrderRunning.get("LOOMUSDT");
 //        OrderHelper.stopLoss(orderInfo);
@@ -270,7 +263,7 @@ public class PositionManagerTradingBeard {
         try {
             int counter = 0;
             for (int i = 0; i < 3; i++) {
-                PositionRisk position = getPositionBySymbol(symbol);
+                PositionRisk position = BinanceFuturesClientSingleton.getInstance().getPositionInfo(symbol);
                 if (position.getPositionAmt().doubleValue() == 0) {
                     counter++;
                 }
@@ -287,7 +280,7 @@ public class PositionManagerTradingBeard {
 
     private void checkProfitToCloseOrDCA(String symbol) {
         try {
-            PositionRisk pos = getPositionBySymbol(symbol);
+            PositionRisk pos = BinanceFuturesClientSingleton.getInstance().getPositionInfo(symbol);
             if (rateLoss(pos) > 50 && pos.getUnrealizedProfit().doubleValue() < 0) {
                 dcaForPosition(pos);
             }

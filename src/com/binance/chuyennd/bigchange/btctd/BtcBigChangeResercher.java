@@ -16,7 +16,7 @@
 package com.binance.chuyennd.bigchange.btctd;
 
 import com.educa.mail.funcs.BreadFunctions;
-import com.binance.chuyennd.funcs.TickerFuturesHelper;
+import com.binance.chuyennd.client.TickerFuturesHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.chuyennd.volume.DayVolumeManager;

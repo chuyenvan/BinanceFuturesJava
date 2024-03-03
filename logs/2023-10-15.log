@@ -1,4 +1,0 @@
-2023-10-15 10:46:16 [INFO] - Close by market: PositionRisk[entryPrice=3.16,marginType=isolated,isAutoAddMargin=false,isolatedMargin=13.51072800,leverage=5,liquidationPrice=3.7538297,markPrice=3.148,maxNotionalValue=1600000.0,positionAmt=-21,symbol=ICPUSDT,unrealizedProfit=0.252,positionSide=BOTH]
-2023-10-15 10:46:57 [INFO] - Close by market: PositionRisk[entryPrice=3.16,marginType=isolated,isAutoAddMargin=false,isolatedMargin=13.51072800,leverage=5,liquidationPrice=3.7538297,markPrice=3.148,maxNotionalValue=1600000.0,positionAmt=-21,symbol=ICPUSDT,unrealizedProfit=0.252,positionSide=BOTH]
-2023-10-15 10:48:36 [INFO] - Close by market: PositionRisk[entryPrice=0.1191,marginType=isolated,isAutoAddMargin=false,isolatedMargin=20.55221112,leverage=5,liquidationPrice=0.14012915,markPrice=0.11843565,maxNotionalValue=250000.0,positionAmt=-839,symbol=OGNUSDT,unrealizedProfit=0.55738965,positionSide=BOTH]
-2023-10-15 10:48:37 [INFO] - Remove symbol: OGNUSDT out list running!

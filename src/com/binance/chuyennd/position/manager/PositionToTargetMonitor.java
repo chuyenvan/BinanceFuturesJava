@@ -15,8 +15,8 @@
  */
 package com.binance.chuyennd.position.manager;
 
-import com.binance.chuyennd.funcs.ClientSingleton;
-import com.binance.chuyennd.funcs.OrderHelper;
+import com.binance.chuyennd.client.ClientSingleton;
+import com.binance.chuyennd.client.OrderHelper;
 import com.binance.chuyennd.object.TickerStatistics;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;

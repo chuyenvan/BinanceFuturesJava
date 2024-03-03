@@ -4,7 +4,7 @@
  */
 package com.b.c;
 
-import com.binance.chuyennd.funcs.TickerFuturesHelper;
+import com.binance.chuyennd.client.TickerFuturesHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.TickerStatistics;
 import com.binance.chuyennd.utils.HttpRequest;

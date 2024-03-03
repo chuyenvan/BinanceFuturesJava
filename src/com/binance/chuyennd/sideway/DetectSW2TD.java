@@ -17,8 +17,8 @@ package com.binance.chuyennd.sideway;
 
 import com.binance.chuyennd.position.manager.BTCInfoManager;
 import com.binance.chuyennd.position.manager.PositionHelper;
-import com.binance.chuyennd.funcs.ClientSingleton;
-import com.binance.chuyennd.funcs.TickerFuturesHelper;
+import com.binance.chuyennd.client.ClientSingleton;
+import com.binance.chuyennd.client.TickerFuturesHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;

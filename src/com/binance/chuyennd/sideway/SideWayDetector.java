@@ -15,7 +15,7 @@
  */
 package com.binance.chuyennd.sideway;
 
-import com.binance.chuyennd.funcs.TickerFuturesHelper;
+import com.binance.chuyennd.client.TickerFuturesHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.sw.SideWayObject;
 import com.binance.chuyennd.utils.Utils;

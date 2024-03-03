@@ -15,9 +15,9 @@
  */
 package com.binance.chuyennd.trading;
 
-import com.binance.chuyennd.funcs.ClientSingleton;
-import com.binance.chuyennd.funcs.FuturesRules;
-import com.binance.chuyennd.funcs.TickerFuturesHelper;
+import com.binance.chuyennd.client.ClientSingleton;
+import com.binance.chuyennd.client.FuturesRules;
+import com.binance.chuyennd.client.TickerFuturesHelper;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
 import com.binance.chuyennd.utils.Configs;
@@ -26,7 +26,10 @@ import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
 import com.binance.client.model.enums.OrderSide;
 import com.google.gson.internal.LinkedTreeMap;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -48,28 +51,29 @@ public class SignalTradingViewManager {
     public static final Integer MAX_POS_TRADING = Configs.getInt("MAX_POS_TRADING");
     public static final Integer MAX_VOLUME_TRADING = Configs.getInt("MAX_VOLUME_TRADING");
     public static final String URL_SIGNAL_TRADINGVIEW = "http://103.157.218.242:8002/";
-
+    public static final String URL_SIGNAL_TRADINGVIEW_BAK = "https://tool.edupia.vn/tool/offline/signal?s=";
 
     public ConcurrentHashMap<String, OrderTargetInfo> symbol2Orders = new ConcurrentHashMap<>();
 
     public static void main(String[] args) throws InterruptedException {
 //        new RedisSTWManager().start();
-        SignalTradingViewManager test = new SignalTradingViewManager();
-        Set<String> hashSet = new HashSet<String>();
-
-        for (String symbol : TickerFuturesHelper.getAllSymbol()) {
-            if (true) {
-
-            }
-            String signal = test.getReconmendation(symbol);
-            if (signal == null) {
-                hashSet.add(symbol);
-            } else {
-                LOG.info("{} -> {}", symbol, signal);
-            }
-
-        }
-        System.out.println(hashSet);
+        new SignalTradingViewManager().getStrongSignal2TradingBackup();
+//        SignalTradingViewManager test = new SignalTradingViewManager();
+//        Set<String> hashSet = new HashSet<String>();
+//
+//        for (String symbol : TickerFuturesHelper.getAllSymbol()) {
+//            if (true) {
+//
+//            }
+//            String signal = test.getReconmendation(symbol);
+//            if (signal == null) {
+//                hashSet.add(symbol);
+//            } else {
+//                LOG.info("{} -> {}", symbol, signal);
+//            }
+//
+//        }
+//        System.out.println(hashSet);
 //        System.out.println(THelper.getAllSymbol());
 
     }
@@ -77,6 +81,7 @@ public class SignalTradingViewManager {
     public void start() throws InterruptedException {
         initData();
         checkSignalStrong2Trading();
+        checkSignalStrong2TradingBackup();
     }
 
     private void initData() throws InterruptedException {
@@ -116,7 +121,6 @@ public class SignalTradingViewManager {
         }).start();
     }
 
-
     private Set<String> getAllSymbolVolumeOverVolumeNotTrade() {
         Set<String> syms = new HashSet<>();
         Map<String, Double> sym2Volume = TickerFuturesHelper.getAllVolume24hr();
@@ -151,10 +155,48 @@ public class SignalTradingViewManager {
             }
         }
         long timeDetect = (System.currentTimeMillis() - startTime) / Utils.TIME_SECOND;
-        if (timeDetect > 20) {
+        if (timeDetect > 30) {
+            restartDocker();
             Utils.sendSms2Skype("Check Signal API: time detect too large -> " + timeDetect + " second");
         }
         LOG.info("Finish detect symbol strong signal! {}s", timeDetect);
+    }
+
+    private void getStrongSignal2TradingBackup() {
+
+        LOG.info("Start detect symbol strong signal backup: {}", new Date());
+        Set<String> symbolsVolumeOverVolumeNotTrade = getAllSymbolVolumeOverVolumeNotTrade();
+        Set<String> symbolsTrading = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER);
+        Set<String> symbol2Trade = new HashSet<>();
+//        symbol2Trade.addAll(allSymbol);
+        symbol2Trade.addAll(TickerFuturesHelper.getAllSymbol());
+
+        symbol2Trade.removeAll(Constants.specialSymbol);
+        symbol2Trade.removeAll(symbolsVolumeOverVolumeNotTrade);
+        symbol2Trade.removeAll(symbolsTrading);
+        Set<Set<String>> symbol2Trades = Utils.subSet(symbol2Trade, 1);
+        for (Set<String> symbols2T : symbol2Trades) {
+            try {
+                Map<String, String> symbol2Side = getReconmendationBackup(symbols2T);
+                if (symbol2Side == null) {
+                    continue;
+                }
+                for (Map.Entry<String, String> entry : symbol2Side.entrySet()) {
+                    String symbol = entry.getKey();
+                    String side = entry.getValue();
+                    OrderSide sideSignal = OrderSide.BUY;
+                    if (StringUtils.equalsIgnoreCase(side, "sell")) {
+                        sideSignal = OrderSide.SELL;
+                    }
+                    if (sideSignal.equals(OrderSide.BUY)) {
+                        addOrderTrading(symbol, sideSignal);
+                    }
+                }
+            } catch (Exception e) {
+                LOG.info("Error during get signal for {}", symbols2T.toString());
+                e.printStackTrace();
+            }
+        }
     }
 
     private void strongSignal2TradeBySymbol(String symbol) {
@@ -222,5 +264,72 @@ public class SignalTradingViewManager {
         }
         return result;
     }
- 
+
+    private Map<String, String> getReconmendationBackup(Set<String> symbols) {
+        Map<String, String> sym2Side = new HashMap<>();
+        try {
+            StringBuilder builder = new StringBuilder();
+            for (String symbol : symbols) {
+                builder.append(symbol).append(",");
+            }
+            builder.setLength(builder.length() - 1);
+            String urlSignal = URL_SIGNAL_TRADINGVIEW_BAK + builder.toString();
+
+            String respon = HttpRequest.getContentFromUrl(urlSignal);
+            Map<String, String> responMap = Utils.gson.fromJson(respon, Map.class);
+            List<LinkedTreeMap> responObjects = Utils.gson.fromJson(responMap.get("data"), List.class);
+            if (responObjects != null && !responObjects.isEmpty()) {
+                for (LinkedTreeMap responObject : responObjects) {
+                    String sideSignal = responObject.get("recommendation").toString();
+                    if (StringUtils.contains(sideSignal, "STRONG")) {
+                        sym2Side.put(responObject.get("pair").toString(), sideSignal.split("_")[1]);
+                    }
+                }
+            } else {
+                return null;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return sym2Side;
+    }
+
+    private void checkSignalStrong2TradingBackup() {
+        new Thread(() -> {
+            Thread.currentThread().setName("SignalStrong2TradingBackup");
+            LOG.info("Start SignalStrong2TradingBackup !");
+            while (true) {
+                try {
+                    Thread.sleep(5 * Utils.TIME_SECOND);
+                    int numberPosRunning = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER).size();
+                    if (numberPosRunning > MAX_POS_TRADING) {
+                        LOG.info("Not trading because max pos: {} {}", numberPosRunning, MAX_POS_TRADING);
+                        continue;
+                    }
+                    getStrongSignal2TradingBackup();
+                } catch (Exception e) {
+                    LOG.error("ERROR during SignalStrong2TradingBackup: {}", e);
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+    }
+
+    private void restartDocker() {
+        try {
+            String s;
+            Process p = Runtime.getRuntime().exec("docker restart d76683cff6dd");
+            BufferedReader br = new BufferedReader(
+                    new InputStreamReader(p.getInputStream()));
+            while ((s = br.readLine()) != null) {
+                System.out.println("line: " + s);
+            }
+            Utils.sendSms2Skype(s + " had restart!");
+            p.waitFor();
+            p.destroy();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
 }
