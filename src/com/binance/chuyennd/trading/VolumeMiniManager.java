@@ -23,11 +23,14 @@ import com.binance.chuyennd.client.TickerFuturesHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
+import com.binance.chuyennd.statistic24hr.Volume24hrManager;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
 import com.binance.client.model.enums.OrderSide;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -47,7 +50,8 @@ public class VolumeMiniManager {
     public Double RATE_BREAD_MIN_2TRADE = Configs.getDouble("RATE_BREAD_MIN_2TRADE");
     public Double VOLUME_MINI = Configs.getDouble("VOLUME_MINI");
     public Double RATE_CHANGE_MIN_2TRADING = Configs.getDouble("RATE_CHANGE_MIN_2TRADING");
-    public Double RATE_TARGET_VOLUME_MINI = Configs.getDouble("RATE_TARGET_VOLUME_MINI");    
+    public Double RATE_TARGET_VOLUME_MINI = Configs.getDouble("RATE_TARGET_VOLUME_MINI");
+    public Double MAX_VOLUME_TRADING_SIGNAL = Configs.getDouble("MAX_VOLUME_TRADING");
 
     public static void main(String[] args) throws InterruptedException {
 
@@ -60,22 +64,35 @@ public class VolumeMiniManager {
 
     public void start() throws InterruptedException {
         initData();
-        startThreadAltDetectBigChangeAndVolumeMini();       
+        startThreadAltDetectBigChangeAndVolumeMini();
     }
 
-      
+    private Set<String> getAllSymbolVolumeOverVolume2Trade() {
+        Set<String> syms = new HashSet<>();
+        Map<String, Double> sym2Volume = Volume24hrManager.getInstance().symbol2Volume;
+        for (Map.Entry<String, Double> entry : sym2Volume.entrySet()) {
+            String sym = entry.getKey();
+            Double volume = entry.getValue();
+            if ((volume / 1000000) <= MAX_VOLUME_TRADING_SIGNAL) {
+                syms.add(sym);
+            }
+        }
+        return syms;
+    }
 
     public void startThreadAltDetectBigChangeAndVolumeMini() {
         new Thread(() -> {
             Thread.currentThread().setName("ThreadAltDetectBigChangeVolumeMini");
             LOG.info("Start thread ThreadAltDetectBigChangeVolumeMini rate:{} volume max:{} target: {}",
                     RATE_CHANGE_MIN_2TRADING, VOLUME_MINI, RATE_TARGET_VOLUME_MINI);
-            while (true) {                
+            while (true) {
 
                 if (isTimeTrade() && BudgetManager.getInstance().getBudget() > 0) {
                     try {
                         LOG.info("Start detect symbol is volume mini! {}", new Date());
-                        for (String symbol : allSymbol) {
+//                        Set<String> symbols2Detect = getAllSymbolVolumeOverVolume2Trade();
+//                        symbols2Detect.removeAll(Constants.specialSymbol);
+                        for (String symbol : SymbolTradingManager.getInstance().getAllSymbol2TradingVolumini()) {
                             executorService.execute(() -> detectBySymbol(symbol));
                         }
                     } catch (Exception e) {
@@ -93,8 +110,6 @@ public class VolumeMiniManager {
         }).start();
     }
 
-   
-
     public boolean isTimeTrade() {
         return Utils.getCurrentMinute() % 15 == 14 && Utils.getCurrentSecond() == 57;
     }
@@ -103,7 +118,7 @@ public class VolumeMiniManager {
         allSymbol = TickerFuturesHelper.getAllSymbol();
         allSymbol.removeAll(Constants.specialSymbol);
         ClientSingleton.getInstance();
-        PriceManager.getInstance();        
+        PriceManager.getInstance();
     }
 
     private void detectBySymbol(String symbol) {
@@ -114,8 +129,7 @@ public class VolumeMiniManager {
             }
             BreadDetectObject breadData = BreadFunctions.calBreadDataAlt(ticker, RATE_BREAD_MIN_2TRADE);
             if (breadData.orderSide != null
-                    && breadData.orderSide.equals(OrderSide.BUY)
-                    && PriceManager.getInstance().isAvalible2Trade(symbol, ticker.minPrice, breadData.orderSide)
+                    && breadData.orderSide.equals(OrderSide.BUY) //&& PriceManager.getInstance().isAvalible2Trade(symbol, ticker.minPrice, breadData.orderSide)
                     && breadData.totalRate >= RATE_CHANGE_MIN_2TRADING
                     && ticker.totalUsdt <= VOLUME_MINI * 1000000) {
                 LOG.info("Big:{} {} {} rate:{} volume: {}", symbol, new Date(ticker.startTime.longValue()),
@@ -137,6 +151,6 @@ public class VolumeMiniManager {
             LOG.info("Error detect bvm:{}", symbol);
             e.printStackTrace();
         }
-    } 
+    }
 
 }

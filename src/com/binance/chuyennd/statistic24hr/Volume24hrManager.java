@@ -23,6 +23,7 @@ import com.binance.client.SubscriptionErrorHandler;
 import com.binance.client.exception.BinanceApiException;
 import com.binance.client.model.event.SymbolTickerEvent;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -38,6 +39,7 @@ public class Volume24hrManager {
     public final ConcurrentHashMap<String, Double> symbol2Volume = new ConcurrentHashMap<>();
     public final ConcurrentHashMap<String, Double> symbol2OpenPrice = new ConcurrentHashMap<>();
     public final ConcurrentHashMap<String, Double> symbol2LastPrice = new ConcurrentHashMap<>();
+    public final ConcurrentHashMap<String, Double> symbol2RateChange = new ConcurrentHashMap<>();
     private static volatile Volume24hrManager INSTANCE = null;
 
     public static Volume24hrManager getInstance() {
@@ -58,13 +60,19 @@ public class Volume24hrManager {
                 symbol2Volume.put(e.getSymbol(), e.getTotalTradedQuoteAssetVolume().doubleValue());
                 symbol2OpenPrice.put(e.getSymbol(), e.getOpen().doubleValue());
                 symbol2LastPrice.put(e.getSymbol(), e.getLastPrice().doubleValue());
+                symbol2RateChange.put(e.getSymbol(), Utils.rateOf2Double(e.getLastPrice().doubleValue(), e.getOpen().doubleValue()));
 //                LOG.info("{}", Utils.toJson(e));
             }
         }), errorHandler);
     }
 
     public static void main(String[] args) throws InterruptedException {
-        Volume24hrManager.getInstance();
+        for (Map.Entry<String, Double> entry : Volume24hrManager.getInstance().symbol2Volume.entrySet()) {
+            String sym = entry.getKey();
+            Double val = entry.getValue();
+            LOG.info("{} -> {}", sym, val.longValue() / 1000000);
+        }
+
 //        TreeMap<Double, String> volume2Symbol = new TreeMap<>();
 //
 //        for (Map.Entry<String, Double> entry : Volume24hrManager.getInstance().symbol2Volume.entrySet()) {
@@ -77,7 +85,6 @@ public class Volume24hrManager {
 //            String sym = entry.getValue();
 //            LOG.info("{} -> {}", sym, rate);
 //        }
-
 //        String allFuturePrices = HttpRequest.getContentFromUrl("https://fapi.binance.com/fapi/v1/ticker/24hr");
 //        List<Object> futurePrices = Utils.gson.fromJson(allFuturePrices, List.class);
 //        for (Object futurePrice : futurePrices) {
@@ -98,6 +105,8 @@ public class Volume24hrManager {
                     symbol2Volume.put(ticker.getSymbol(), Double.valueOf(ticker.getQuoteVolume()));
                     symbol2OpenPrice.put(ticker.getSymbol(), Double.valueOf(ticker.getOpenPrice()));
                     symbol2LastPrice.put(ticker.getSymbol(), Double.valueOf(ticker.getLastPrice()));
+                    symbol2RateChange.put(ticker.getSymbol(), Utils.rateOf2Double(
+                            Double.valueOf(ticker.getLastPrice()), Double.valueOf(ticker.getOpenPrice())));
                 }
             }
         } catch (Exception e) {

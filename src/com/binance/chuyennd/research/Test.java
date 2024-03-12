@@ -15,8 +15,11 @@
  */
 package com.binance.chuyennd.research;
 
+import com.binance.chuyennd.client.BinanceFuturesClientSingleton;
 import com.binance.chuyennd.client.ClientSingleton;
+import com.binance.chuyennd.client.OrderHelper;
 import com.binance.chuyennd.client.TickerFuturesHelper;
+import com.binance.chuyennd.mongo.TickerMongoHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.TrendObject;
 import com.binance.chuyennd.object.TrendState;
@@ -36,10 +39,10 @@ import com.binance.client.model.event.SymbolTickerEvent;
 import com.binance.client.model.trade.Order;
 import com.binance.chuyennd.trading.OrderTargetInfo;
 import com.binance.chuyennd.trading.OrderTargetInfoTest;
-import java.io.BufferedReader;
+import com.binance.chuyennd.utils.Configs;
+import com.mongodb.client.MongoCursor;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -47,11 +50,15 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
-import static jdk.internal.org.jline.utils.Colors.s;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.logging.Level;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
+import org.bson.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,170 +69,94 @@ import org.slf4j.LoggerFactory;
 public class Test {
 
     public static final Logger LOG = LoggerFactory.getLogger(Test.class);
-    private static Object rateChangeInMonth;
+    public static Double balanceStart = 4100.0;
+    public static Double rateProfit = 0.05;
+    public static long timeStartRun = 1709683200000L;
+
+    public static Double RATE_TARGET_VOLUME_MINI = Configs.getDouble("RATE_TARGET_VOLUME_MINI");
+    public static Double RATE_TARGET_SIGNAL = Configs.getDouble("RATE_TARGET_SIGNAL");
+    public static Double MAX_CAPITAL_RATE = Configs.getDouble("MAX_CAPITAL_RATE");
+    public static final String FILE_STORAGE_ORDER_DONE = "storage/trading/order-volume-success.data";
+
+    public ExecutorService executorServiceOrderNew = Executors.newFixedThreadPool(Configs.getInt("NUMBER_THREAD_ORDER_MANAGER"));
+    private final ConcurrentHashMap<String, Long> symbol2Processing = new ConcurrentHashMap<>();
 
     public static void main(String[] args) throws ParseException, InterruptedException, IOException {
-//        String symbol = "TWTUSDT";
-//        OrderTargetInfo order = Utils.gson.fromJson(RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER, symbol),
-//                OrderTargetInfo.class);
-//        System.out.println(Utils.toJson(order));
-//        System.out.println(RedisHelper.getInstance().get().llen(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER));
-        long currentTime = System.currentTimeMillis();
-        System.out.println(Utils.getCurrentMinute()%10);
-        System.out.println(new Date(calTimeLock(currentTime)));
-//        Double total = 4800.0;
-//        long today = System.currentTimeMillis();
-//        for (int i = 0; i < 7; i++) {
-//            for (int j = 0; j < 7; j++) {
-//                today += Utils.TIME_DAY;
-//                Double inc = total * 0.08;
-//                total += inc;
-//                Double budget = 0.42 * total / 100;
-//                LOG.info("{} {} {} -> {}", Utils.normalizeDateYYYYMMDD(today), total.longValue(), inc.longValue(), budget.longValue());
-//            }
+//        testRateProfit();
+
+//        printAllOrderOverBudget(8.0);
+//        System.out.println(SymbolTradingManager.getInstance().getAllSymbol2TradingSignal());
+//        System.out.println(Utils.sdfFile.parse("20240305").getTime());
+//       Order orderInfo = OrderHelper.readOrderInfo("RSRUSDT", 633327755582725248L);
+        System.out.println(BinanceFuturesClientSingleton.getInstance().readOrder("RSRUSDT", "android_gpgfpyhkgVGKcdrRrmSD"));
+//        List<Order> orderOpen = BinanceFuturesClientSingleton.getInstance().getOpenOrders("RSRUSDT");
+//        for (Order order : orderOpen) {
+//            System.out.println(Utils.toJson(order));
+////            if (order.getOrderId() == 633327755571642112L) {
+////                BinanceFuturesClientSingleton.getInstance().cancelOrder("RSRUSDT", order.getClientOrderId());
+////            }
 //        }
-//        System.out.println(total.longValue());
-//        Utils.sendSms2Skype("Check Signal API");
-//        List<Order> orders = ClientSingleton.getInstance().syncRequestClient.getOpenOrders("SKLUSDT");
-//        for (Order order : orders) {
-//            LOG.info("{} {} {}", order.getSide(), order.getPrice(), Utils.sdfFileHour.format(new Date(order.getUpdateTime())));
-//        }
-//        System.out.println(new Date(TickerMongoHelper.getInstance().getFirstHourTickerBySymbol("ZECUSDT")));
-//        System.out.println(new Date(TickerMongoHelper.getInstance().getLastHourTickerBySymbol("ZECUSDT")));
-//        MongoCursor<Document> docs = TickerMongoHelper.getInstance().getAllTickerBySymbol("ZECUSDT");
-//        while (TickerMongoHelper.getInstance().getAllTickerBySymbol("ZECUSDT").hasNext()) {
-//            Document doc = TickerMongoHelper.getInstance().getAllTickerBySymbol("ZECUSDT").next();
-//            
-//        }
-//        System.out.println(new Date(Utils.getHour(System.currentTimeMillis())));
-//        System.out.println(Utils.getHour(System.currentTimeMillis()));
-//        for (String sym : TickerHelper.getAllSymbol()) {            
-//            Long date = TickerHelper.getDateReleseASymbol(sym);
-//            LOG.info("{} -> {} {} days", sym, Utils.normalizeDateYYYYMMDDHHmm(date), (System.currentTimeMillis() - date)/Utils.TIME_DAY);
-////        }
-//        System.out.println((System.currentTimeMillis() - 1567965420000L) * 200 / Utils.TIME_HOUR);
-//        System.out.println(calReportRunning());
-//new VolumeMiniManager().checkUpdateBalanceAvalible();
-//        System.out.println(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER).size());
-//        System.out.println(RedisHelper.getInstance().get().del(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER));
-//        System.out.println(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER).size());
-//System.out.println(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER).size());
-//        Map<String, Double> sym2Volume = TickerHelper.getAllVolume24hr();
-//        for (Map.Entry<String, Double> entry : sym2Volume.entrySet()) {
-//            String sym = entry.getKey();
-//            Double volume = entry.getValue();
-//            volume = volume / 1000000;
-//            if ((volume) >= 50) {
-//                LOG.info("{} {}M", sym, volume.longValue());
-//            }
-//        }
-//        System.out.println(RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TD_SYMBOL_TREND, Constants.SYMBOL_PAIR_BTC));
-//        List<AccountBalance> balanceInfos = ClientSingleton.getInstance().syncRequestClient.getBalance();
-//        for (AccountBalance balanceInfo : balanceInfos) {
-//            if (StringUtils.equalsIgnoreCase(balanceInfo.getAsset(), "usdt")) {
-//                double balance = balanceInfo.getAvailableBalance().doubleValue();
-//                Double budget = 0.4 * balance;
-//                Long budgetLong = budget.longValue();
-//                Double bugetDouble = budgetLong.doubleValue() / 100;
-//                if (bugetDouble * 5 < 7) {
-//                    bugetDouble = 1.3;
-//                }
-//                LOG.info("{}-> {}", balance, bugetDouble);
-//            }
-//        }
-//        printAllOrderDone();
-//        printAllOrderRunning();
-//        printAllOrderDoneTest();
-//        ExchangeInformation data = ClientSingleton.getInstance().syncRequestClient.getExchangeInformation();
-//        for (ExchangeInfoEntry symbolData : data.getSymbols()) {
-//            LOG.info("{} -> {}", symbolData.getSymbol(), Utils.toJson(symbolData));
-//        }
-//        KlineObjectNumber ticker = TickerHelper.getTickerByTime("BTCUSDT", Constants.INTERVAL_15M, Utils.sdfFileHour.parse("20240206 12:34").getTime());
-//        System.out.println(Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()) + " -> " + Utils.toJson(ticker));
-//        BreadDetectObject breadData = BreadFunctions.calBreadDataAlt(ticker, 0.008);
-//        System.out.println(Utils.toJson(breadData));
-//        System.out.println(RedisHelper.getInstance().get().del(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER));
-//        Double  balanceAvalible = ClientSingleton.getInstance().getBalanceAvalible();
-//        Integer BUDGET_PER_ORDER = 2 * balanceAvalible.intValue() / 100;
-//        System.out.println(BUDGET_PER_ORDER);
-//        System.out.println(RedisHelper.getInstance().get().hdel(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER, "ASTRUSDT"));
-//        System.out.println(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER));
-//        for (String symbol : ClientSingleton.getInstance().getAllSymbol()) {
-//            try {
-//
-//                Double entry = ClientSingleton.getInstance().getCurrentPrice(symbol);
-//                LOG.info("{} {} {} {}", symbol, entry, Utils.calPriceTarget(entry, OrderSide.SELL, 0.01), Utils.rateOf2Double(entry, Utils.calPriceTarget(entry, OrderSide.SELL, 0.01)));
-//                LOG.info("{} {} {} {}", symbol, entry, Utils.calPriceTarget(entry, OrderSide.BUY, 0.01), Utils.rateOf2Double(entry, Utils.calPriceTarget(entry, OrderSide.BUY, 0.01)));
-//            } catch (Exception e) {
-//            }
-//        }
-//        Double price = 0.7273;
-//        System.out.println(Utils.normalPrice2Api(price));
-//        System.out.println(Utils.calPriceTarget(price, OrderSide.BUY, 0.005));
-//        System.out.println(OrderHelper.readOrderInfo("ARKUSDT", 1054878866L));
-//        String symbol = "1INCHUSDT";
-//        List<KlineObjectNumber> tickers = TickerHelper.getTicker(symbol, Constants.INTERVAL_15M);
-//        for (KlineObjectNumber ticker : tickers) {
-//            LOG.info(" {} {}", Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()), TickerHelper.getSideOfTicer(ticker));
-//        }
-////
-//        testTraceBreadOfSymbol(tickers, symbol);
-//        for (KlineObjectNumber ticker : tickers) {
-//            BreadDetectObject breadData = BreadFunctions.calBreadDataAlt(ticker, 0.009);
-//            if (breadData.orderSide != null && breadData.rateChange >= 0.008) {
-//                LOG.info("Bigchange: {} {} bread above:{} bread below:{} rateChange:{}", new Date(ticker.startTime.longValue()), breadData.orderSide,
-//                        breadData.breadAbove, breadData.breadBelow, breadData.totalRate);
-//                Double priceEntry = ticker.priceClose;
-//                Double priceTarget = getPriceTarget(priceEntry, breadData.orderSide, 0.004);
-//                Double quantity = Double.valueOf(Utils.normalQuantity2Api(5 * 5 / priceEntry));
-//                OrderTargetInfo orderTrade = new OrderTargetInfo(OrderTargetStatus.REQUEST, ticker.priceClose,
-//                        priceTarget, quantity, 5, symbol, ticker.startTime.longValue(), ticker.startTime.longValue(),
-//                        breadData.orderSide);
-//                LOG.info("{}", Utils.toJson(orderTrade));
-//            }
-//        }
-//        testUserDataStream();
-//        Double priceEntry = 0.03108;
-//        Double priceTarget = Utils.calPriceTarget(priceEntry, OrderSide.BUY, 0.004);
-//        System.out.println(priceTarget);
-//        System.out.println(Utils.rateOf2Double(priceTarget, priceEntry));
-//        priceTarget = Utils.calPriceTarget(priceEntry, OrderSide.SELL, 0.004);
-//        System.out.println(priceTarget);
-//        System.out.println(Utils.rateOf2Double(priceTarget, priceEntry));
-//        Double quantity = Double.valueOf(Utils.normalQuantity2Api(5 * 4 / priceEntry));
-//        System.out.println(quantity);
-        //        while (true) {
-        //            Thread.sleep(Utils.TIME_SECOND);
-        //            if (isTimeRun()) {
-        //                System.out.println("RUN:  " + new Date());
-        //            }
-        //        }
+//        new BinanceOrderTradingManager().recheckOrderTP("RSRUSDT");
+//        traceSuccessBySymbol();
+//        new BinanceOrderTradingManager().();
+//        testDCA();
+//writeAllSymbol2Redis();
+//        checkPriceMax();
+//        checkTimeLock();
+//        System.out.println(getTargetBalance() + " -> " + getTarget());
+//        System.out.println(BudgetManager.getInstance().getBudget());
+//        System.out.println(Utils.toJson(
+//                BinanceFuturesClientSingleton.getInstance().getAccountUMInfo()));
+//        System.out.println(RedisHelper.getInstance().get().llen(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER_QUEUE));
+//        System.out.println(new Date(1709571600000L + Utils.TIME_DAY + 7 * Utils.TIME_HOUR).getTime());
+//        System.out.println(total * 4100);
+//        System.out.println(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_ALL_SYMBOLS));
+//System.out.println(new BinanceOrderTradingManager().callRateDump2Die());
+//        System.out.println(new BudgetManager().getInvesting());
+//        Utils.sendSms2Telegram("<b style=\"color:blue\">foo</b>");
+//        Utils.sendSms2Telegram("<b>This is a paragraph.</b>");
+        //        Utils.sendSms2Skype("Check Signal API");
+        //        System.out.println(calReportRunning());
+        //        printAllOrderDone();
+        //        printAllOrderRunning();
+        //        printAllOrderDoneTest();
+        //        System.out.println(RedisHelper.getInstance().get().hdel(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER, "ASTRUSDT"));
+        //        System.out.println(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER));
+        //        testTraceBreadOfSymbol(tickers, symbol);
+        //        testUserDataStream();
         //        new Test().threadListenVolume();
-        //        System.out.println(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER));
-        //        System.out.println(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_BTCBIGCHANGETD_SYMBOLS4TRADE));
-        //        System.out.println(PositionHelper.getPositionBySymbol("LTCUSDT"));
-        //        String timeStr = "20231016";
-        //        System.out.println(Utils.sdfFile.parse(timeStr).getTime());
-        //        extractRateChangeInMonth(Utils.sdfFile.parse(timeStr).getTime());
-        //        System.out.println(RedisHelper.getInstance().readAllId("k12:product:user:profile:info.1"));
-        //        SubscriptionClient client = SubscriptionClient.create();
-        //        client.subscribeCandlestickEvent("btcusdt", CandlestickInterval.ONE_MINUTE, ((event) -> {
-        //            Long startTime = System.currentTimeMillis();
-        //            process(event);
-        //            Long endTime = System.currentTimeMillis();
-        //            LOG.info("{} {}", startTime - event.getEventTime(), endTime - startTime);
-        //           
-        //        }), null);
-        //        testListenPrice();
-        //        System.out.println(ClientSingleton.getInstance().getBalanceAvalible());
-        //        System.out.println(Utils.marginOfPosition(PositionHelper.getPositionBySymbol("BIGTIMEUSDT")));
-        //        List<KlineObjectNumber> tickers = TickerHelper.getTicker(Constants.SYMBOL_PAIR_BTC, Constants.INTERVAL_1M);
-        //        for (int i = 0; i < 100; i++) {
-        //            System.out.println(TickerHelper.getPriceChange(tickers, i + 1));
-        //        }
         //        showStatusOrderDCA();
         //        detectTopBottomObjectInTicker("BTCUSDT");
         //        extractVolume();
+    }
+
+    private void testLock() {
+        new Thread(() -> {
+            Thread.currentThread().setName("ThreadListenQueueOrder2Manager");
+            LOG.info("Start thread ThreadListenQueueOrder2Manager!");
+            while (true) {
+                List<String> data;
+                try {
+                    data = RedisHelper.getInstance().get().blpop(0, RedisConst.REDIS_KEY_EDUCA_TEST);
+                    String symbol = data.get(1);
+                    try {
+
+                        if (!symbol2Processing.containsKey(symbol)) {
+                            symbol2Processing.put(symbol, System.currentTimeMillis());
+                            executorServiceOrderNew.execute(() -> processOrderNewMarket(symbol));
+
+                        } else {
+                            LOG.info("{} is lock because processing! {}", symbol, symbol2Processing.size());
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                } catch (Exception e) {
+                    LOG.error("ERROR during ThreadListenQueuePosition2Manager {}", e);
+                    e.printStackTrace();
+                }
+            }
+        }).start();
     }
 
     public static int fibonacci(int n) {
@@ -236,7 +167,7 @@ public class Test {
         if (n < 0) {
             return -1;
         } else if (n == 0 || n == 1) {
-            return n;
+            return 1;
         } else {
             for (int i = 2; i < n; i++) {
                 f0 = f1;
@@ -356,11 +287,17 @@ public class Test {
         LOG.info("{}", Utils.toJson(symbol2Counter));
     }
 
-    private static void printAllOrderRunning() {
-        for (String symbol : RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER)) {
+    private static void printAllOrderOverBudget(Double budget) {
+        Set<String> symbols = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER);
+        LOG.info("Have {} orders running.", symbols.size());
+        for (String symbol : symbols) {
             OrderTargetInfo order = Utils.gson.fromJson(RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER, symbol),
                     OrderTargetInfo.class);
-            LOG.info("{} {} {}", order.side, order.symbol, order.tradingType);
+            Double budgetOfOrder = order.quantity * order.priceEntry / order.leverage;
+//            if (budgetOfOrder > budget
+//                    || order.symbol.equalsIgnoreCase(/"mkrusdt")) {
+            LOG.info("{} -> {}", order.symbol, budgetOfOrder.longValue());
+//            }
         }
 
     }
@@ -419,25 +356,145 @@ public class Test {
         return builder;
     }
 
-    private static void testDCA() {
-        Double priceStart = 1d;
-        Double rate = 0.15;
-        Double total;
-        Double quantity = 10d;
+    private static long calTimeLock(long currentTime) {
+        return currentTime + (10 - Utils.getCurrentMinute(currentTime) % 10) * Utils.TIME_MINUTE;
+    }
 
-        for (int i = 1; i < 10; i++) {
-            rate = 0.15 * fibonacci(i);
-            double priceCurrent = priceStart * (1 - rate);
-            priceStart = (priceStart + priceCurrent) / 2;
-            quantity += quantity;
-            total = quantity * priceStart;
-            LOG.info("Number dca: {} rate:{}% quantity:{} priceAvg:{} priceCurrent:{} total: {}$",
-                    i, rate * 100, quantity, priceStart, priceCurrent, total);
+    private static void checkTimeLock() {
+        for (Map.Entry<String, String> entry : RedisHelper.getInstance().get().hgetAll(RedisConst.REDIS_KEY_EDUCA_SYMBOL_TIME_LOCK).entrySet()) {
+            String symbol = entry.getKey();
+            String timelock = entry.getValue();
+            long timeLockLong = Long.parseLong(timelock);
+            LOG.info("{} {} {}", symbol, new Date(timeLockLong), new Date(calTimeLock(timeLockLong)));
         }
     }
 
-    private static long calTimeLock(long currentTime) {
-        return currentTime + (10 - Utils.getCurrentMinute(currentTime) % 10)* Utils.TIME_MINUTE;
+    private static void testRateProfit() throws ParseException {
+        Double total = balanceStart;
+        long timeStart = timeStartRun;
+        for (int j = 1; j < 1100; j++) {
+            String prefix = "";
+            if (j % 15 == 0) {
+                prefix = "-------------------";
+            }
+            timeStart += Utils.TIME_DAY;
+            Double inc = total * rateProfit;
+            total += inc;
+            Double budget = 0.15 * total / 10;
+            budget = budget.longValue() / 10.0;
+            LOG.info("{} {} {} {} -> {}", prefix,
+                    Utils.normalizeDateYYYYMMDDHHmm(timeStart), total.longValue(), inc.longValue(), budget);
+            if (total > 500000) {
+                break;
+            }
+        }
+
+    }
+
+    private static Double getTargetBalance() throws ParseException {
+        Double total = 1400.0;
+        long timeStart = Utils.sdfFile.parse("20240306").getTime();
+        Long numberDay = (System.currentTimeMillis() - timeStart) / Utils.TIME_DAY;
+        for (int i = 0; i < numberDay + 1; i++) {
+            Double inc = total * 0.02;
+            total += inc;
+        }
+        return total;
+    }
+
+    private static Double getTarget() throws ParseException {
+        Double total = 1400.0;
+        long timeStart = Utils.sdfFile.parse("20240306").getTime();
+        Long numberDay = (System.currentTimeMillis() - timeStart) / Utils.TIME_DAY;
+        for (int i = 0; i < numberDay; i++) {
+            Double inc = total * 0.02;
+            total += inc;
+        }
+        return total / 10;
+    }
+
+    private static void checkPriceMax() {
+        Set<String> symbols = TickerMongoHelper.getInstance().getAllSymbol();
+        try {
+            FileUtils.writeLines(new File("target/allsymbols.txt"), symbols);
+        } catch (IOException ex) {
+            java.util.logging.Logger.getLogger(Test.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        for (String symbol : symbols) {
+            MongoCursor<Document> docs = TickerMongoHelper.getInstance().getAllTickerBySymbol(symbol);
+            List<Document> docsSorted = new ArrayList<>();
+            Double priceMax = 0.0;
+            Double priceMin = 0.0;
+            while (docs.hasNext()) {
+                Document doc = docs.next();
+                docsSorted.add(doc);
+            }
+            for (int i = 0; i < docsSorted.size(); i++) {
+                Document doc = docsSorted.get(docsSorted.size() - i - 1);
+                try {
+                    LOG.info("{} -> {}", symbol, new Date(doc.getLong("hour")));
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
+            }
+            break;
+        }
+        System.out.println(symbols.size());
+
+    }
+
+    private static void writeAllSymbol2Redis() throws IOException {
+        List<String> lines = FileUtils.readLines(new File("target/allsymbols.txt"));
+        for (String sym : lines) {
+            RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_ALL_SYMBOLS, sym, sym);
+        }
+    }
+
+    private static void traceSuccessBySymbol() {
+        List<String> lines = new ArrayList<>();
+        List<OrderTargetInfo> allOrderDone = getAllOrderDone();
+        Map<String, Integer> sym2Success = new HashMap<>();
+        for (OrderTargetInfo order : allOrderDone) {
+            Integer successCounter = sym2Success.get(order.symbol);
+            if (successCounter == null) {
+                successCounter = 0;
+            }
+            successCounter++;
+            sym2Success.put(order.symbol, successCounter);
+        }
+        for (Map.Entry<String, Integer> entry : sym2Success.entrySet()) {
+            String symbol = entry.getKey();
+            Integer counter = entry.getValue();
+            lines.add(symbol + "," + counter);
+        }
+        try {
+            FileUtils.writeLines(new File("target/symbol2success.csv"), lines);
+        } catch (IOException ex) {
+            java.util.logging.Logger.getLogger(Test.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+    }
+
+    public static List<OrderTargetInfo> getAllOrderDone() {
+        List<OrderTargetInfo> hashMap = new ArrayList<>();
+        try {
+            List<String> lines = FileUtils.readLines(new File(FILE_STORAGE_ORDER_DONE));
+            for (String line : lines) {
+                try {
+                    OrderTargetInfo order = Utils.gson.fromJson(line, OrderTargetInfo.class);
+                    if (order != null) {
+                        hashMap.add(order);
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return hashMap;
+
     }
 
     private void threadListenVolume() {
@@ -632,6 +689,15 @@ public class Test {
         } catch (Exception e) {
         }
 
+    }
+
+    private void processOrderNewMarket(String symbol) {
+        try {
+            LOG.info("Processing {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()));
+            Thread.sleep(10 * Utils.TIME_SECOND);
+        } catch (Exception e) {
+        }
+        symbol2Processing.remove(symbol);
     }
 
 }

@@ -96,7 +96,7 @@ public class Utils {
     }
 
     public static boolean sendSms2Telegram(String text) {
-        String urlString = "https://api.telegram.org/bot%s/sendMessage?chat_id=%s&text=%s";
+        String urlString = "https://api.telegram.org/bot%s/sendMessage?chat_id=%s&text=%s&parse_mode=HTML";
 
         //Add Telegram token (given Token is fake)
         String apiToken = "6158571844:AAHgemRZAWCFARpkyiZkpc9iTT4hEKMtUvw";

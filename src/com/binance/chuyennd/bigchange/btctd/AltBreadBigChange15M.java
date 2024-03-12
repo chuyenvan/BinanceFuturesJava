@@ -195,23 +195,23 @@ public class AltBreadBigChange15M {
             //                    0.05,
             //                    0.06
             ));
-            ArrayList<Double> rateTargets = new ArrayList<>(Arrays.asList(   
-                    0.02
+            ArrayList<Double> rateTargets = new ArrayList<>(Arrays.asList(
+                    0.01
             ));
             ArrayList<Double> volumes = new ArrayList<>(Arrays.asList(
                     //                    0.2,
                     //                    0.3,
                     //                    0.4,
-//                    0.7,
-//                    0.8,
-//                    0.9,
-                    0.5
-            //                    1.0,
-            //                    2.0,
-            //                    3.0,
-            //                    4.0,
-            //                    5.0,
-            //                    10.0
+                    0.5,
+                    0.7,
+                    0.8,
+                    0.9,
+                    1.0,
+                    2.0,
+                                3.0,
+                                4.0,
+                                5.0,
+                                10.0
             //                    0.008,
             //                    0.009,
             //                    0.01,

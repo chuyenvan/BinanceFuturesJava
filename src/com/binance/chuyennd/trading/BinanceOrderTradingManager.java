@@ -23,11 +23,13 @@ import com.binance.chuyennd.client.PriceManager;
 import com.binance.chuyennd.client.TickerFuturesHelper;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
+import com.binance.chuyennd.statistic24hr.Volume24hrManager;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
 import com.binance.client.model.enums.OrderSide;
 import com.binance.client.model.enums.OrderStatus;
+import com.binance.client.model.trade.Asset;
 import com.binance.client.model.trade.Order;
 import com.binance.client.model.trade.PositionRisk;
 import java.io.File;
@@ -36,6 +38,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
@@ -58,13 +61,19 @@ public class BinanceOrderTradingManager {
     public ExecutorService executorServiceOrderManager = Executors.newFixedThreadPool(Configs.getInt("NUMBER_THREAD_ORDER_MANAGER"));
     public Double RATE_TARGET_VOLUME_MINI = Configs.getDouble("RATE_TARGET_VOLUME_MINI");
     public Double RATE_TARGET_SIGNAL = Configs.getDouble("RATE_TARGET_SIGNAL");
+    public Double MAX_CAPITAL_RATE = Configs.getDouble("MAX_CAPITAL_RATE");
     private final ConcurrentHashMap<String, OrderTargetInfo> symbol2Processing = new ConcurrentHashMap<>();
     private final String FILE_STORAGE_ORDER_DONE = "storage/trading/order-volume-success.data";
+
+    public Double balanceStart = 4100.0;
+    public Double rateProfit = 0.05;
+    public long timeStartRun = 1709683200000L;
 
     public static void main(String[] args) throws InterruptedException {
         new SignalTradingViewManager().start();
         new VolumeMiniManager().start();
         new BinanceOrderTradingManager().start();
+//        new DCAManager().startThreadDca();
 
 //        new VolumeMiniManager().detectBySymbol("BTCUSDT");
 //        LOG.info("Done check!");
@@ -103,13 +112,13 @@ public class BinanceOrderTradingManager {
         return Utils.getCurrentMinute() % 15 == 1 && Utils.getCurrentSecond() < 30;
     }
 
-    private void buildReport() {
+    public void buildReport() {
         StringBuilder reportRunning = calReportRunning();
-        Map<Long, OrderTargetInfo> allOrderDone = getAllOrderDone();
+        List<OrderTargetInfo> allOrderDone = getAllOrderDone();
         int totalBuy = 0;
         int totalSell = 0;
         int totalVolumeMini = 0;
-        for (OrderTargetInfo order : allOrderDone.values()) {
+        for (OrderTargetInfo order : allOrderDone) {
             if (order.tradingType.equals(Constants.TRADING_TYPE_VOLUME_MINI)) {
                 totalVolumeMini++;
             } else {
@@ -120,12 +129,16 @@ public class BinanceOrderTradingManager {
                 }
             }
         }
-        reportRunning.append(" Success: ").append(totalBuy * RATE_TARGET_SIGNAL * 100
+        Double successTotal = totalBuy * RATE_TARGET_SIGNAL * 100
                 + totalSell * RATE_TARGET_SIGNAL * 100
-                + totalVolumeMini * RATE_TARGET_VOLUME_MINI * 100).append("%");
-        reportRunning.append(" Buy: ").append(totalBuy * RATE_TARGET_SIGNAL * 100).append("%");
-        reportRunning.append(" Sell: ").append(totalSell * RATE_TARGET_SIGNAL * 100).append("%");
-        reportRunning.append(" VolumeMini: ").append(totalVolumeMini * RATE_TARGET_VOLUME_MINI * 100).append("%");
+                + totalVolumeMini * RATE_TARGET_VOLUME_MINI * 100;
+        reportRunning.append(" Success: ").append(successTotal.longValue()).append("%");
+        Double totalBuyDouble = totalBuy * RATE_TARGET_SIGNAL * 100;
+        reportRunning.append(" Buy: ").append(totalBuyDouble.longValue()).append("%");
+        Double totalSellDouble = totalSell * RATE_TARGET_SIGNAL * 100;
+        reportRunning.append(" Sell: ").append(totalSellDouble.longValue()).append("%");
+        Double totalVolumeMiniDouble = totalVolumeMini * RATE_TARGET_VOLUME_MINI * 100;
+        reportRunning.append("\nVolumeMini: ").append(totalVolumeMiniDouble.longValue()).append("%");
         reportRunning.append(" Running: ").append(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER).size()).append(" orders");
         Utils.sendSms2Telegram(reportRunning.toString());
     }
@@ -184,15 +197,27 @@ public class BinanceOrderTradingManager {
                         .append(volume24hr.longValue() / 1000000).append("M ")
                         .append(orderInfo.priceEntry).append("->").append(sym2LastPrice.get(orderInfo.symbol))
                         .append(" ").append(ratePercent.doubleValue() / 100).append("%")
+                        .append(" - ").append(getUnPNL(orderInfo, sym2LastPrice.get(orderInfo.symbol)))
                         .append("\n");
             }
         }
+        Asset umInfo = BinanceFuturesClientSingleton.getInstance().getAccountUMInfo();
+        Double balanceTarget = getTargetBalance();
+        Double profit = getTargetProfit();
 
-        builder.append("Total: ").append(totalLoss.doubleValue() / 100).append("%");
+        builder.append("Balance: ").append(umInfo.getMarginBalance().longValue()).append("$ -> ")
+                .append(umInfo.getWalletBalance().longValue()).append("$")
+                .append(" -> target: ").append(balanceTarget.longValue() * 80 / 100).append(" -> ")
+                .append(balanceTarget).append("<b>").append("\nInvest: ")
+                .append(BudgetManager.getInstance().getInvesting().longValue()).append("%")
+                .append(" rateDump2die: ").append(callRateDump2Die()).append("%").append("</b>")
+                .append(" profit: ").append(profit.longValue()).append("\n");
+        builder.append("Total: ").append(totalLoss.doubleValue() / 100).append("% -> ")
+                .append(umInfo.getCrossUnPnl().longValue()).append("$");
         builder.append(" Buy: ").append(totalBuy.doubleValue() / 100).append("%");
         builder.append(" Sell: ").append(totalSell.doubleValue() / 100).append("%");
         builder.append(" ").append(symbolsSell.toString());
-        builder.append(" VolumeMini: ").append(totalVolumeMini.doubleValue() / 100).append("%");
+        builder.append("VolumeMini: ").append(totalVolumeMini.doubleValue() / 100).append("%");
         builder.append(" ").append(volumeMinis.toString());
         return builder;
     }
@@ -213,16 +238,18 @@ public class BinanceOrderTradingManager {
                             LOG.info("Sym {} is locking by trading rule!", order.symbol);
                             continue;
                         }
-                        if (!symbol2Processing.contains(order.symbol)) {
-                            Utils.sendSms2Telegram(order.side + " " + order.symbol + " entry: " + order.priceEntry + " -> " + order.priceTP
-                                    + " target: " + Utils.formatPercent(Utils.rateOf2Double(order.priceTP, order.priceEntry))
-                                    + " quantity: " + order.quantity
-                                    + " time:" + Utils.normalizeDateYYYYMMDDHHmm(order.timeStart));
+                        if (BudgetManager.getInstance().getInvesting() > MAX_CAPITAL_RATE) {
+                            LOG.info("Stop trading {} because investing over: {}", order.symbol,
+                                    BudgetManager.getInstance().getInvesting());
+                            continue;
+                        }
+                        if (!symbol2Processing.containsKey(order.symbol)) {
                             if (order.status.equals(OrderTargetStatus.REQUEST)) {
+                                symbol2Processing.put(order.symbol, order);
                                 executorServiceOrderNew.execute(() -> processOrderNewMarket(order));
                             }
                         } else {
-                            LOG.info("{} is processing! {}", order.symbol, symbol2Processing.size());
+                            LOG.info("{} is lock because processing! {}", order.symbol, symbol2Processing.size());
                         }
                     } catch (Exception e) {
                         e.printStackTrace();
@@ -236,17 +263,29 @@ public class BinanceOrderTradingManager {
     }
 
     private void processOrderNewMarket(OrderTargetInfo order) {
-        symbol2Processing.put(order.symbol, order);
-        LOG.info("Create order market {} {}", order.side.toString().charAt(0), order.symbol);
         if (BudgetManager.getInstance().getBudget() <= 0) {
             LOG.info("Reject symbol {} because budget not avalible!", order.symbol);
+            symbol2Processing.remove(order.symbol);
             return;
         }
         try {
             String json = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER, order.symbol);
             if (!StringUtils.isEmpty(json)) {
-                LOG.info("Reject because symbol {} have running!", order.symbol);
-                return;
+                // check order open
+                List<Order> openOrders = BinanceFuturesClientSingleton.getInstance().getOpenOrders(order.symbol);
+                if (!openOrders.isEmpty()) {
+                    LOG.info("Reject because symbol {} have running!", order.symbol);
+                    symbol2Processing.remove(order.symbol);
+                    return;
+                } else {
+                    // delete redis
+                    RedisHelper.getInstance().delJsonData(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER, order.symbol);
+                    RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_ALL_SYMBOLS_TRADING, order.symbol, String.valueOf(System.currentTimeMillis()));
+                    //write file
+                    List<String> lines = new ArrayList<>();
+                    lines.add(Utils.toJson(order));
+                    FileUtils.writeLines(new File(FILE_STORAGE_ORDER_DONE), lines, true);
+                }
             }
             // check pos
 //            PositionRisk pos = OrderHelper.getPositionBySymbol(order.symbol);
@@ -262,24 +301,31 @@ public class BinanceOrderTradingManager {
                     order.priceEntry = pos.getEntryPrice().doubleValue();
                     order.quantity = Math.abs(pos.getPositionAmt().doubleValue());
                     // todo -> get order tp = getopenorders => neu ko co tp moi tao tp
-                    createTp(order);
-                    return;
+                    order.status = OrderTargetStatus.POSITION_RUNNING;
+                    RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER, order.symbol, Utils.toJson(order));
+//                    createTp(order);
                 }
-                return;
-            }
 
-            Order orderInfo = OrderHelper.newOrderMarket(order.symbol, order.side, order.quantity, BudgetManager.getInstance().getLeverage());
-            if (orderInfo != null) {
-                order.orderEntry = orderInfo;
-                order.priceEntry = orderInfo.getAvgPrice().doubleValue();
-                order.status = OrderTargetStatus.NEW_HAD_SL3TP_WAIT;
-                RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER,
-                        order.symbol, Utils.toJson(order));
-                // create take profit and stoploss
-                createTp(order);
             } else {
-                LOG.info("Create order symbol {} false! {}", order.symbol, Utils.toJson(order));
-                return;
+                Double volume = Volume24hrManager.getInstance().symbol2Volume.get(order.symbol) / 1000000;
+                LOG.info("Create order market {} {} {}", order.side, order.symbol, volume.longValue() + "M");
+                Order orderInfo = OrderHelper.newOrderMarket(order.symbol, order.side, order.quantity, BudgetManager.getInstance().getLeverage());
+                Utils.sendSms2Telegram(order.side + " " + order.symbol + " entry: " + order.priceEntry + " -> " + order.priceTP
+                        + " target: " + Utils.formatPercent(Utils.rateOf2Double(order.priceTP, order.priceEntry))
+                        + " quantity: " + order.quantity
+                        + " volume: " + volume.longValue() + "M"
+                        + " time:" + Utils.normalizeDateYYYYMMDDHHmm(order.timeStart));
+                if (orderInfo != null) {
+                    order.orderEntry = orderInfo;
+                    order.priceEntry = orderInfo.getAvgPrice().doubleValue();
+                    order.status = OrderTargetStatus.NEW_HAD_SL3TP_WAIT;
+                    RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER,
+                            order.symbol, Utils.toJson(order));
+                    // create take profit and stoploss
+                    createTp(order);
+                } else {
+                    LOG.info("Create order symbol {} false! {}", order.symbol, Utils.toJson(order));
+                }
             }
 
         } catch (Exception e) {
@@ -291,14 +337,19 @@ public class BinanceOrderTradingManager {
     }
 
     private void processOrderRunning(OrderTargetInfo order) {
-        symbol2Processing.put(order.symbol, order);
         try {
             if (order.status.equals(OrderTargetStatus.NEW_HAD_SL3TP)) {
-                Order orderInfo = OrderHelper.readOrderInfo(order.symbol, order.orderTakeProfit.getOrderId());
-                if (orderInfo != null && !StringUtils.equalsIgnoreCase(orderInfo.getStatus(), OrderStatus.NEW.toString())) {
-                    order.status = OrderTargetStatus.TAKE_PROFIT_DONE;
-                    RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER,
-                            order.symbol, Utils.toJson(order));
+                try {
+//                    Order orderInfo = OrderHelper.readOrderInfo(order.symbol, order.orderTakeProfit.getOrderId());
+                    Order orderInfo = BinanceFuturesClientSingleton.getInstance().readOrder(order.symbol, order.orderTakeProfit.getClientOrderId());
+                    if (orderInfo != null && !StringUtils.equalsIgnoreCase(orderInfo.getStatus(), OrderStatus.NEW.toString())) {
+                        order.status = OrderTargetStatus.TAKE_PROFIT_DONE;
+                        RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER,
+                                order.symbol, Utils.toJson(order));
+                    }
+                } catch (Exception e) {
+                    updateTPInCorrect(order);
+                    e.printStackTrace();
                 }
             }
             if (order.status.equals(OrderTargetStatus.POSITION_RUNNING)) {
@@ -312,7 +363,10 @@ public class BinanceOrderTradingManager {
                         }
                         order.priceEntry = pos.getEntryPrice().doubleValue();
                         order.quantity = Math.abs(pos.getPositionAmt().doubleValue());
-                        createTp(order);
+                        // check sau 10s create moi tao tp tranh tao trung tp voi order new
+                        if (System.currentTimeMillis() - order.timeStart > 10 * Utils.TIME_SECOND) {
+                            createTp(order);
+                        }
                     } else {
                         order.status = OrderTargetStatus.TAKE_PROFIT_DONE;
                         RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER,
@@ -340,6 +394,7 @@ public class BinanceOrderTradingManager {
                 }
                 // delete redis
                 RedisHelper.getInstance().delJsonData(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER, order.symbol);
+                RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_ALL_SYMBOLS_TRADING, order.symbol, String.valueOf(System.currentTimeMillis()));
                 //write file
                 List<String> lines = new ArrayList<>();
                 lines.add(Utils.toJson(order));
@@ -358,6 +413,26 @@ public class BinanceOrderTradingManager {
         PriceManager.getInstance();
     }
 
+    private Double getTargetBalance() {
+        Double total = balanceStart;
+        Long numberDay = (System.currentTimeMillis() - timeStartRun) / Utils.TIME_DAY;
+        for (int i = 0; i < numberDay + 1; i++) {
+            Double inc = balanceStart * rateProfit;
+            total += inc;
+        }
+        return total;
+    }
+
+    private Double getTargetProfit() {
+        Double total = balanceStart;
+        Long numberDay = (System.currentTimeMillis() - timeStartRun) / Utils.TIME_DAY;
+        for (int i = 0; i < numberDay + 1; i++) {
+            Double inc = total * rateProfit;
+            total += inc;
+        }
+        return total * rateProfit;
+    }
+
     private void startThreadManagerOrder() {
         new Thread(() -> {
             Thread.currentThread().setName("ThreadManagerOrder");
@@ -365,10 +440,14 @@ public class BinanceOrderTradingManager {
             while (true) {
                 try {
                     for (String symbol : RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER)) {
-                        OrderTargetInfo order = Utils.gson.fromJson(RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER, symbol),
+                        OrderTargetInfo order = Utils.gson.fromJson(RedisHelper.getInstance().readJsonData(
+                                RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER, symbol),
                                 OrderTargetInfo.class);
-                        if (!symbol2Processing.contains(order.symbol)) {
+                        if (!symbol2Processing.containsKey(order.symbol)) {
+                            symbol2Processing.put(order.symbol, order);
                             executorServiceOrderManager.execute(() -> processOrderRunning(order));
+                        } else {
+                            LOG.info("{} is lock because processing order running! {}", order.symbol, symbol2Processing.size());
                         }
                     }
                 } catch (Exception e) {
@@ -376,7 +455,7 @@ public class BinanceOrderTradingManager {
                     e.printStackTrace();
                 }
                 try {
-                    Thread.sleep(Utils.TIME_MINUTE);
+                    Thread.sleep(60 * Utils.TIME_SECOND);
                 } catch (InterruptedException ex) {
                     java.util.logging.Logger.getLogger(BinanceOrderTradingManager.class.getName()).log(Level.SEVERE, null, ex);
                 }
@@ -396,7 +475,7 @@ public class BinanceOrderTradingManager {
         processOrderRunning(order);
     }
 
-    private void createTp(OrderTargetInfo order) {
+    public void createTp(OrderTargetInfo order) {
         try {
             // check all open order 
             List<Order> openOrders = BinanceFuturesClientSingleton.getInstance().getOpenOrders(order.symbol);
@@ -404,7 +483,8 @@ public class BinanceOrderTradingManager {
                 LOG.info("{} have tp order -> not create tp");
                 order.orderTakeProfit = openOrders.get(0);
                 order.status = OrderTargetStatus.NEW_HAD_SL3TP;
-                RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER, order.symbol, Utils.toJson(order));
+                RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER,
+                        order.symbol, Utils.toJson(order));
                 return;
             }
 
@@ -443,6 +523,7 @@ public class BinanceOrderTradingManager {
                 order.status = OrderTargetStatus.POSITION_RUNNING;
                 RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER, order.symbol, Utils.toJson(order));
             }
+            executorServiceOrderManager.execute(() -> recheckOrderTP(order.symbol));
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -462,15 +543,15 @@ public class BinanceOrderTradingManager {
 //        }
     }
 
-    private Map<Long, OrderTargetInfo> getAllOrderDone() {
-        Map<Long, OrderTargetInfo> hashMap = new HashMap();
+    public List<OrderTargetInfo> getAllOrderDone() {
+        List<OrderTargetInfo> hashMap = new ArrayList<>();
         try {
             List<String> lines = FileUtils.readLines(new File(FILE_STORAGE_ORDER_DONE));
             for (String line : lines) {
                 try {
                     OrderTargetInfo order = Utils.gson.fromJson(line, OrderTargetInfo.class);
                     if (order != null) {
-                        hashMap.put(order.timeStart, order);
+                        hashMap.add(order);
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -481,6 +562,57 @@ public class BinanceOrderTradingManager {
         }
         return hashMap;
 
+    }
+
+    private Double getUnPNL(OrderTargetInfo orderInfo, Double lastPrice) {
+        Double pnl = (orderInfo.priceEntry - lastPrice) * orderInfo.quantity * 100;
+        Long result = pnl.longValue();
+        return result.doubleValue() / 100;
+    }
+
+    public void recheckOrderTP(String symbol) {
+        try {
+            Thread.sleep(10 * Utils.TIME_SECOND);
+            String json = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER, symbol);
+            if (StringUtils.isNotEmpty(json)) {
+                OrderTargetInfo orderInfo = Utils.gson.fromJson(json, OrderTargetInfo.class);
+                List<Order> orderOpen = BinanceFuturesClientSingleton.getInstance().getOpenOrders(symbol);
+                for (Order order : orderOpen) {
+                    if (!Objects.equals(order.getOrderId(), orderInfo.orderTakeProfit.getOrderId())) {
+                        Utils.sendSms2Telegram("Cancel order tp duplicate: " + order.getOrderId() + " of " + symbol);
+                        LOG.info("Cancel order: " + order.getOrderId() + " of " + symbol);
+                        BinanceFuturesClientSingleton.getInstance().cancelOrder(symbol, order.getClientOrderId());
+                    }
+                }
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public Long callRateDump2Die() {
+        Double rate = 100 / BudgetManager.getInstance().getInvesting();
+        rate = rate * 100 / BudgetManager.getInstance().getLeverage();
+        return rate.longValue();
+    }
+
+    private void updateTPInCorrect(OrderTargetInfo order) {
+        try {
+            List<Order> openOrders = BinanceFuturesClientSingleton.getInstance().getOpenOrders(order.symbol);
+            if (!openOrders.isEmpty()) {
+                LOG.info("Update order tp for {} {} -> {}", order.symbol,
+                        order.orderTakeProfit.getClientOrderId(), openOrders.get(0).getClientOrderId());
+                order.orderTakeProfit = openOrders.get(0);
+                order.status = OrderTargetStatus.NEW_HAD_SL3TP;
+                RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER,
+                        order.symbol, Utils.toJson(order));
+                return;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        LOG.info("Update tp order for {} {}", order.symbol, order.orderTakeProfit.getClientOrderId());
     }
 
 }

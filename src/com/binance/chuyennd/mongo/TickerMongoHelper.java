@@ -26,7 +26,9 @@ import static com.mongodb.client.model.Filters.eq;
 import static com.mongodb.client.model.Filters.ne;
 import static com.mongodb.client.model.Filters.and;
 import com.mongodb.client.model.UpdateOptions;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
@@ -97,8 +99,9 @@ public class TickerMongoHelper {
     }
 
     public MongoCursor<Document> getAllTickerBySymbol(String sym) {
+        Bson filterSort = eq("hour", -1);
         Bson filter = eq("sym", sym);
-        return ticker_log.find(filter).iterator();
+        return ticker_log.find(filter).sort(filterSort).iterator();
     }
 
     public Long getLastHourTickerBySymbol(String symbol) {
@@ -111,6 +114,7 @@ public class TickerMongoHelper {
         }
         return 0l;
     }
+
     public Long getFirstHourTickerBySymbol(String symbol) {
         Bson filter = eq("sym", symbol);
         Bson filterSort = eq("hour", 1);
@@ -125,6 +129,16 @@ public class TickerMongoHelper {
     public void deleteTicker(String symbol, Long lastHourUpdate) {
         Bson query = and(eq("sym", symbol), eq("hour", lastHourUpdate));
         ticker_log.deleteMany(query);
+    }
+
+    public Set<String> getAllSymbol() {
+        Set<String> result = new HashSet<>();
+        MongoCursor<String> cursor = ticker_log.distinct("sym", null, String.class).iterator();
+        while (cursor.hasNext()) {
+            String record = cursor.next();
+            result.add(record);
+        }
+        return result;
     }
 
 }

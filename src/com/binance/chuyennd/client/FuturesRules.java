@@ -77,7 +77,7 @@ public class FuturesRules {
         RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_SYMBOL_TIME_LOCK, sym, time.toString());
     }
 
-    private static long calTimeLock(long currentTime) {
+    public long calTimeLock(long currentTime) {
         return currentTime + (10 - Utils.getCurrentMinute(currentTime) % 10) * Utils.TIME_MINUTE;
     }
 

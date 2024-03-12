@@ -169,6 +169,7 @@ public class ClientSingleton {
 //        
 //        System.out.println(ClientSingleton.getInstance().getCurrentPrice("CVCUSDT"));
 //        System.out.println(ClientSingleton.getInstance().getBalanceAvalible());
+        System.out.println(ClientSingleton.getInstance().getRateBalanceAvalible());
     }
 
     public double getBalance() {
@@ -188,6 +189,15 @@ public class ClientSingleton {
             if (StringUtils.equalsIgnoreCase(balanceInfo.getAsset(), "usdt")) {
                 double balance = balanceInfo.getAvailableBalance().doubleValue();
                 return balance;
+            }
+        }
+        return 0d;
+    }
+    public double getRateBalanceAvalible() {
+        List<AccountBalance> balanceInfos = ClientSingleton.getInstance().syncRequestClient.getBalance();
+        for (AccountBalance balanceInfo : balanceInfos) {
+            if (StringUtils.equalsIgnoreCase(balanceInfo.getAsset(), "usdt")) {                
+                return balanceInfo.getAvailableBalance().doubleValue()/balanceInfo.getBalance().doubleValue();
             }
         }
         return 0d;

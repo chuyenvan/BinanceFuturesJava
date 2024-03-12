@@ -50,8 +50,11 @@ public class RedisConst {
     }
     // grid
     public static final String REDIS_KEY_EDUCA_TD_GRID_MANAGER_QUEUE = "redis.key.educa.td.grid.manager.queue";
+    public static final String REDIS_KEY_EDUCA_TEST = "redis.key.educa.test.queue";
     
     public static final String REDIS_KEY_EDUCA_SYMBOL_TIME_LOCK = "redis.key.educa.symbol.time.lock";
+    public static final String REDIS_KEY_EDUCA_ALL_SYMBOLS= "redis.key.educa.all.symbols";
+    public static final String REDIS_KEY_EDUCA_ALL_SYMBOLS_TRADING= "redis.key.educa.all.symbols.trading";
     
     public static final String REDIS_KEY_EDUCA_TD_POS_MANAGER = "redis.key.educa.td.pos.manager";
     public static final String REDIS_KEY_EDUCA_TD_POS_MANAGER_VOLUME = "redis.key.educa.td.pos.manager.volume";

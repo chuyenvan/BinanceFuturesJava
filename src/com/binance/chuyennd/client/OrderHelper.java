@@ -190,7 +190,7 @@ public class OrderHelper {
 
         String priceNormal = Utils.formatMoney(stopPrice);
         try {
-            FuturesRules.getInstance().addLock(symbol, System.currentTimeMillis());
+//            FuturesRules.getInstance().addLock(symbol, System.currentTimeMillis());
             return ClientSingleton.getInstance().syncRequestClient.postOrder(symbol, side, null,
                     OrderType.TAKE_PROFIT, TimeInForce.GTC, quantity.toString(), priceNormal, null, null,
                     priceNormal, null, null, null, null, null, NewOrderRespType.RESULT);
