@@ -24,7 +24,6 @@ import com.binance.client.model.enums.OrderType;
 import com.binance.client.model.enums.TimeInForce;
 import com.binance.client.model.trade.Order;
 import com.binance.client.model.trade.PositionRisk;
-import java.util.List;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,7 +51,6 @@ public class OrderHelper {
         }
         String priceNormal = Utils.formatMoney(ClientSingleton.getInstance().normalizePrice(symbol, price));
         try {
-            FuturesRules.getInstance().addLock(symbol, System.currentTimeMillis());
             return ClientSingleton.getInstance().syncRequestClient.postOrder(symbol, orderSide, null, OrderType.LIMIT, TimeInForce.GTC,
                     quantity.toString(), priceNormal, null, null, null, null, null, null, null, null, NewOrderRespType.RESULT);
         } catch (Exception e) {
@@ -110,8 +108,11 @@ public class OrderHelper {
 //        }
 //        return null;
 //    }
-
     public static Order newOrderMarket(String symbol, OrderSide side, Double quantity, Integer leverage) {
+        if (FuturesRules.getInstance().getSymsLocked().contains(symbol)) {
+            LOG.info("Sym {} is locking by trading rule!", symbol);
+            return null;
+        }
         LOG.info("Order market {} {} {}", symbol, side, quantity);
         try {
             ClientSingleton.getInstance().syncRequestClient.changeInitialLeverage(symbol, leverage);
@@ -122,10 +123,6 @@ public class OrderHelper {
             return ClientSingleton.getInstance().syncRequestClient.postOrder(symbol, side, null, OrderType.MARKET, null,
                     quantity.toString(), null, null, null, null, null, null, null, null, null, NewOrderRespType.RESULT);
         } catch (Exception e) {
-            if (e.getMessage().equalsIgnoreCase("futures")) {
-                FuturesRules.getInstance().addLock(symbol, System.currentTimeMillis() + 2 * Utils.TIME_HOUR);
-                LOG.info("Lock 2h for {} ", symbol);
-            }
             e.printStackTrace();
         }
         return null;
@@ -159,7 +156,6 @@ public class OrderHelper {
         return null;
     }
 
-
     public static Order takeProfitPosition(PositionRisk orderInfo) {
         OrderSide side = OrderSide.BUY;
         if (orderInfo.getPositionAmt().doubleValue() > 0) {
@@ -187,7 +183,10 @@ public class OrderHelper {
     }
 
     public static Order takeProfit(String symbol, OrderSide side, Double quantity, Double stopPrice) {
-
+        if (FuturesRules.getInstance().getSymsLocked().contains(symbol)) {
+            LOG.info("Sym {} is locking by trading rule!", symbol);
+            return null;
+        }
         String priceNormal = Utils.formatMoney(stopPrice);
         try {
 //            FuturesRules.getInstance().addLock(symbol, System.currentTimeMillis());
@@ -196,7 +195,7 @@ public class OrderHelper {
                     priceNormal, null, null, null, null, null, NewOrderRespType.RESULT);
 
         } catch (Exception e) {
-            LOG.info("tp error: {} {} {} {}", symbol.toLowerCase().replace("usdt", ""), side.toString().charAt(0), quantity, priceNormal);
+            LOG.info("tp error: {} {} {} {}", symbol, side.toString(), quantity, priceNormal);
             e.printStackTrace();
         }
         return null;

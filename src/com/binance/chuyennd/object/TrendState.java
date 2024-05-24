@@ -21,7 +21,9 @@ package com.binance.chuyennd.object;
  */
 public enum TrendState {
     UP,
+    STRONG_UP,
     DOWN,
+    STRONG_DOWN,
     SIDEWAY,
     TREND_UP,
     TREND_DOWN

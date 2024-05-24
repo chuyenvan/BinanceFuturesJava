@@ -5,9 +5,7 @@
  */
 package com.binance.chuyennd.redis;
 
-import com.binance.chuyennd.position.manager.PositionHelper;
-import com.binance.chuyennd.utils.Utils;
-import com.binance.client.model.trade.Order;
+import com.binance.chuyennd.utils.Configs;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;
@@ -26,6 +24,7 @@ public class RedisConst {
     public static String REDIS_HOST;
     public static String REDIS_PORT;
     public static String REDIS_TIMEOUT;
+    
 
     static {
         try {
@@ -54,18 +53,20 @@ public class RedisConst {
     
     public static final String REDIS_KEY_EDUCA_SYMBOL_TIME_LOCK = "redis.key.educa.symbol.time.lock";
     public static final String REDIS_KEY_EDUCA_ALL_SYMBOLS= "redis.key.educa.all.symbols";
-    public static final String REDIS_KEY_EDUCA_ALL_SYMBOLS_TRADING= "redis.key.educa.all.symbols.trading";
+    public static final String REDIS_KEY_EDUCA_MOVING_AVERAGE_DETAILS= "redis.key.educa.moving.average.details";
+    public static final String REDIS_KEY_EDUCA_ALL_SYMBOLS_CHECKING= "redis.key.educa.all.symbols.trading";
+    public static final String REDIS_KEY_EDUCA_ALL_SYMBOLS_TRADINGVIEW_FAIL= "redis.key.educa.all.symbols.tradingview.fail";
     
-    public static final String REDIS_KEY_EDUCA_TD_POS_MANAGER = "redis.key.educa.td.pos.manager";
-    public static final String REDIS_KEY_EDUCA_TD_POS_MANAGER_VOLUME = "redis.key.educa.td.pos.manager.volume";
-    public static final String REDIS_KEY_EDUCA_TD_POS_TIME_MANAGER = "redis.key.educa.td.pos.time.manager";
-    public static final String REDIS_KEY_EDUCA_TD_POS_PROFIT_MANAGER = "redis.key.educa.td.pos.profit.manager";
-    public static final String REDIS_KEY_EDUCA_TD_ORDER_DCA_MANAGER = "redis.key.educa.td.order.dca.manager";
-    public static final String REDIS_KEY_EDUCA_TD_SYMBOL_TREND = "redis.key.educa.td.symbol.trend";
-    public static final String REDIS_KEY_EDUCA_TD_POS_MANAGER_QUEUE = "redis.key.educa.td.pos.manager.queue";
+    public static final String REDIS_KEY_SET_ALL_SYMBOL_POS_RUNNING = "redis.key.set.td.pos.running";
     
-    public static final String REDIS_KEY_EDUCA_TD_ORDER_MANAGER = "redis.key.educa.td.order.manager";
+//    public static final String REDIS_KEY_EDUCA_TD_ORDER_MANAGER = "redis.key.educa.td.order.manager";
+//    public static final String REDIS_KEY_EDUCA_TD_ORDER_MANAGER_NEW = "redis.key.educa.td.order.manager.new";
+//    public static String REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER = "redis.key.educa.test.td.order.manager.new";
+    public static String REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER = Configs.getString("REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER");
+
     public static final String REDIS_KEY_EDUCA_TD_ORDER_MANAGER_QUEUE = "redis.key.educa.td.order.manager.queue";
+    
+    public static final String REDIS_KEY_BINANCE_ORDER_DCA_QUEUES = "redis.key.binance.order.dca.queues";
     
     public static final String REDIS_KEY_EDUCA_TD_SIGNAL_ORDER_MANAGER = "redis.key.educa.td.signal.order.manager";
     public static final String REDIS_KEY_EDUCA_TD_SIGNAL_ORDER_MANAGER_QUEUE = "redis.key.educa.td.signal.order.manager.queue";
@@ -76,12 +77,5 @@ public class RedisConst {
     public static final String REDIS_KEY_EDUCA_BTCBIGCHANGETD_ORDER_SL_MANAGER = "redis.key.educa.btcbigchangetd.order.sl.manager";
     public static final String REDIS_KEY_EDUCA_BTCBIGCHANGETD_SYMBOLS4TRADE = "redis.key.educa.btcbigchangetd.symbol4trade";
 
-    public static void main(String[] args) {
-        String symbol = "ETHUSDT";
-        Order order = new PositionHelper().readOrderInfo(symbol, 8389765629333329753L);
-        RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_DCA_MANAGER, symbol, Utils.toJson(order));
-        String json = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_DCA_MANAGER, symbol);
-        Order orderInfo = Utils.gson.fromJson(json, Order.class);
-        System.out.println(orderInfo.getPrice().doubleValue());
-    }
+
 }

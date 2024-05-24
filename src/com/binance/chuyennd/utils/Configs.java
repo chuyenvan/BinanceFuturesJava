@@ -7,6 +7,7 @@ package com.binance.chuyennd.utils;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.io.FileUtils;
+
 import java.io.File;
 import java.util.HashMap;
 import java.util.List;
@@ -42,6 +43,10 @@ public class Configs {
 
     public static int getInt(String configName) {
         return Integer.parseInt((String) properties.get(configName));
+    }
+
+    public static Boolean getBoolean(String configName) {
+        return Boolean.parseBoolean((String) properties.get(configName));
     }
 
     public static long getLong(String configName) {

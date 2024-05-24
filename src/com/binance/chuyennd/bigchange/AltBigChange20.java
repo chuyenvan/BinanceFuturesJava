@@ -19,6 +19,8 @@ import com.binance.chuyennd.client.TickerFuturesHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
+import java.text.ParseException;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
@@ -32,8 +34,9 @@ public class AltBigChange20 {
 
     public static final Logger LOG = LoggerFactory.getLogger(AltBigChange20.class);
 
-    public static void main(String[] args) {
-        analyticAltBigChange20();
+    public static void main(String[] args) throws ParseException {
+//        analyticAltBigChange20();
+        analyticDCAPoint();
     }
 
     private static void analyticAltBigChange20() {
@@ -70,10 +73,61 @@ public class AltBigChange20 {
                         rate3 = Utils.rateOf2Double(kline.priceClose, price3);
                     }
                     if (Math.abs(rate) >= 0.2) {
-                        LOG.info("{} ->  {} {} priceOpen:{} priceClose:{} {}({}) {}({}) {}({})", symbol, Utils.normalizeDateYYYYMMDD(kline.startTime.longValue()), rate, kline.priceOpen, kline.priceClose,
+                        LOG.info("{} ->  {} {} priceOpen:{} priceClose:{} {}({}) {}({}) {}({})",
+                                symbol, Utils.normalizeDateYYYYMMDD(kline.startTime.longValue()), rate, kline.priceOpen, kline.priceClose,
                                 price1, rate1, price2, rate2, price3, rate3);
                     }
                 }
+            }
+        }
+    }
+
+    private static void analyticDCAPoint() throws ParseException {
+        Map<String, List<KlineObjectNumber>> symbol2Kline1Ds = TickerFuturesHelper.getAllKlineWithUpdateTime(Constants.INTERVAL_1D, Utils.TIME_DAY);
+        Date timeStart = Utils.sdfFile.parse("20240305");
+        for (Map.Entry<String, List<KlineObjectNumber>> entry : symbol2Kline1Ds.entrySet()) {
+            String symbol = entry.getKey();
+            List<KlineObjectNumber> klines = entry.getValue();
+            Double maxPrice = null;
+            Long dateMax = null;
+            Long dateMin = null;
+            Double minPrice = null;
+            int counter = 0;
+            for (int i = 0; i < klines.size(); i++) {
+                KlineObjectNumber kline = klines.get(i);
+                if (kline.startTime.doubleValue() < timeStart.getTime()) {
+                    continue;
+                }
+                if (maxPrice == null || maxPrice < kline.maxPrice) {
+                    maxPrice = kline.maxPrice;
+                    dateMax = kline.startTime.longValue();
+                    counter = 0;
+                    minPrice = null;
+                    continue;
+                }
+                counter++;
+                if (minPrice == null || minPrice > kline.minPrice) {
+                    minPrice = kline.minPrice;
+                    dateMin = kline.startTime.longValue();
+                }
+                if (counter >= 10 && minPrice != null) {
+                    double rate = Utils.rateOf2Double(minPrice, maxPrice);
+                    LOG.info("{} max: {} {} min: {} {} rate: {} {} days",
+                            symbol, maxPrice, Utils.normalizeDateYYYYMMDD(dateMax), minPrice, Utils.normalizeDateYYYYMMDD(dateMin),
+                            rate, (dateMin - dateMax) / Utils.TIME_DAY);
+                    maxPrice = null;
+                    minPrice = null;
+                    counter = 0;
+                }
+            }
+            if (minPrice != null) {
+                double rate = Utils.rateOf2Double(minPrice, maxPrice);
+                LOG.info("{} max: {} {} min: {} {} rate: {} {} days",
+                        symbol, maxPrice, Utils.normalizeDateYYYYMMDD(dateMax), minPrice, Utils.normalizeDateYYYYMMDD(dateMin),
+                        rate, (dateMin - dateMax) / Utils.TIME_DAY);
+                maxPrice = null;
+                minPrice = null;
+                counter = 0;
             }
         }
     }

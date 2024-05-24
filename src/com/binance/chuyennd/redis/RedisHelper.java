@@ -52,7 +52,31 @@ public class RedisHelper {
         }
     }
 
-    public void set(String key, String value, int expireTime){
+    public void addList(String key, String member) {
+        try {
+            if (StringUtils.isNotEmpty(key) && StringUtils.isNotEmpty(key) && StringUtils.isNotEmpty(member)) {
+                JedisCluster jedis = RedisDriver.getInstance().get();
+                jedis.sadd(key, member);
+            }
+        } catch (Exception e) {
+            LOG.error("Error during add list: {}:{}", key, key);
+            e.printStackTrace();
+        }
+    }
+
+    public void removeList(String key, String member) {
+        try {
+            if (StringUtils.isNotEmpty(key) && StringUtils.isNotEmpty(key) && StringUtils.isNotEmpty(member)) {
+                JedisCluster jedis = RedisDriver.getInstance().get();
+                jedis.srem(key, member);
+            }
+        } catch (Exception e) {
+            LOG.error("Error during remove list: {}:{}", key, key);
+            e.printStackTrace();
+        }
+    }
+
+    public void set(String key, String value, int expireTime) {
         try {
             JedisCluster jedis = RedisDriver.getInstance().get();
             jedis.set(key, value);
@@ -64,7 +88,6 @@ public class RedisHelper {
 
     public void delJsonData(String key, String id) {
         try {
-
             JedisCluster jedis = RedisDriver.getInstance().get();
             jedis.hdel(key, id);
 
@@ -96,7 +119,7 @@ public class RedisHelper {
             e.printStackTrace();
         }
         return result;
-    }    
+    }
 
     public Set<String> readAllId(String key) {
         Set<String> result = new HashSet();
@@ -170,8 +193,20 @@ public class RedisHelper {
         JedisCluster jedis = RedisDriver.getInstance().get();
         jedis.hdel(key, username);
     }
+
     public static void main(String[] args) {
-        RedisHelper.getInstance().writeJsonData("chuyennd", "123", "1");
-        System.out.println(RedisHelper.getInstance().readJsonData("chuyennd", "123"));
+//        RedisHelper.getInstance().writeJsonData("chuyennd", "123", "1");
+//        System.out.println(RedisHelper.getInstance().readJsonData("chuyennd", "123"));
+        for (int i = 0; i < 10; i++) {
+            String member = String.valueOf(i);
+            RedisHelper.getInstance().addList(RedisConst.REDIS_KEY_SET_ALL_SYMBOL_POS_RUNNING, member);
+            RedisHelper.getInstance().addList(RedisConst.REDIS_KEY_SET_ALL_SYMBOL_POS_RUNNING, member);
+        }
+        System.out.println(RedisHelper.getInstance().smembers(RedisConst.REDIS_KEY_SET_ALL_SYMBOL_POS_RUNNING));
+        for (int i = 0; i < 10; i++) {
+            String member = String.valueOf(i);
+            RedisHelper.getInstance().removeList(RedisConst.REDIS_KEY_SET_ALL_SYMBOL_POS_RUNNING, member);
+            System.out.println(RedisHelper.getInstance().smembers(RedisConst.REDIS_KEY_SET_ALL_SYMBOL_POS_RUNNING));
+        }
     }
 }

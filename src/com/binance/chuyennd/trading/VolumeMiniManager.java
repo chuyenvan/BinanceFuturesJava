@@ -15,31 +15,33 @@
  */
 package com.binance.chuyennd.trading;
 
-import com.educa.mail.funcs.BreadFunctions;
 import com.binance.chuyennd.bigchange.btctd.BreadDetectObject;
 import com.binance.chuyennd.client.ClientSingleton;
-import com.binance.chuyennd.client.PriceManager;
 import com.binance.chuyennd.client.TickerFuturesHelper;
+import com.binance.chuyennd.indicators.SimpleMovingAverage;
+import com.binance.chuyennd.indicators.SimpleMovingAverageManager;
+import com.binance.chuyennd.movingaverage.MAStatus;
+import com.binance.chuyennd.object.IndicatorEntry;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
-import com.binance.chuyennd.statistic24hr.Volume24hrManager;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
 import com.binance.client.model.enums.OrderSide;
+import com.educa.chuyennd.funcs.BreadProductFunctions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.text.ParseException;
 import java.util.Date;
-import java.util.HashSet;
-import java.util.Map;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.logging.Level;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
- *
  * @author pc
  */
 public class VolumeMiniManager {
@@ -47,44 +49,41 @@ public class VolumeMiniManager {
     public static final Logger LOG = LoggerFactory.getLogger(VolumeMiniManager.class);
     public ExecutorService executorService = Executors.newFixedThreadPool(Configs.getInt("NUMBER_THREAD_ORDER_MANAGER"));
     public Set<? extends String> allSymbol;
+    public final Double RATE_MA_MAX = Configs.getDouble("RATE_MA_MAX");
     public Double RATE_BREAD_MIN_2TRADE = Configs.getDouble("RATE_BREAD_MIN_2TRADE");
-    public Double VOLUME_MINI = Configs.getDouble("VOLUME_MINI");
-    public Double RATE_CHANGE_MIN_2TRADING = Configs.getDouble("RATE_CHANGE_MIN_2TRADING");
-    public Double RATE_TARGET_VOLUME_MINI = Configs.getDouble("RATE_TARGET_VOLUME_MINI");
-    public Double MAX_VOLUME_TRADING_SIGNAL = Configs.getDouble("MAX_VOLUME_TRADING");
+    public Double RATE_TARGET = Configs.getDouble("RATE_TARGET");
 
-    public static void main(String[] args) throws InterruptedException {
 
-//        new VolumeMiniManager().detectBySymbol("BTCUSDT");
+    public static void main(String[] args) throws InterruptedException, ParseException {
+//        prinAllTop();
+        Long time = Utils.sdfFileHour.parse("20240508 13:00").getTime();
+//        new VolumeMiniManager().detectBySymbolTest("RLCUSDT", time);
+        new VolumeMiniManager().detectBySymbol("QNTUSDT");
+        System.out.println("Finish Detect!");
 //        LOG.info("Done check!");
 //        new VolumeMiniManager().fixbug();
 //        new VolumeMiniManager().testFunction();
 //        new VolumeMiniManager().buildReport();
     }
 
-    public void start() throws InterruptedException {
-        initData();
-        startThreadAltDetectBigChangeAndVolumeMini();
-    }
-
-    private Set<String> getAllSymbolVolumeOverVolume2Trade() {
-        Set<String> syms = new HashSet<>();
-        Map<String, Double> sym2Volume = Volume24hrManager.getInstance().symbol2Volume;
-        for (Map.Entry<String, Double> entry : sym2Volume.entrySet()) {
-            String sym = entry.getKey();
-            Double volume = entry.getValue();
-            if ((volume / 1000000) <= MAX_VOLUME_TRADING_SIGNAL) {
-                syms.add(sym);
+    private static void prinAllTop() {
+        for (String symbol : RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_ALL_SYMBOLS)) {
+            MAStatus maStatus = SimpleMovingAverageManager.getInstance().getMaStatus(System.currentTimeMillis(), symbol);
+            if (maStatus != null && maStatus.equals(MAStatus.TOP)){
+                LOG.info("TOP: {} {}",symbol, SimpleMovingAverageManager.getInstance().getMaValue(symbol, System.currentTimeMillis()));
             }
         }
-        return syms;
+    }
+
+    public void start() throws InterruptedException, ParseException {
+        initData();
+        startThreadAltDetectBigChangeAndVolumeMini();
     }
 
     public void startThreadAltDetectBigChangeAndVolumeMini() {
         new Thread(() -> {
             Thread.currentThread().setName("ThreadAltDetectBigChangeVolumeMini");
-            LOG.info("Start thread ThreadAltDetectBigChangeVolumeMini rate:{} volume max:{} target: {}",
-                    RATE_CHANGE_MIN_2TRADING, VOLUME_MINI, RATE_TARGET_VOLUME_MINI);
+            LOG.info("Start thread ThreadAltDetectBigChangeVolumeMini  target: {}", RATE_TARGET);
             while (true) {
 
                 if (isTimeTrade() && BudgetManager.getInstance().getBudget() > 0) {
@@ -92,7 +91,7 @@ public class VolumeMiniManager {
                         LOG.info("Start detect symbol is volume mini! {}", new Date());
 //                        Set<String> symbols2Detect = getAllSymbolVolumeOverVolume2Trade();
 //                        symbols2Detect.removeAll(Constants.specialSymbol);
-                        for (String symbol : SymbolTradingManager.getInstance().getAllSymbol2TradingVolumini()) {
+                        for (String symbol : SymbolTradingManager.getInstance().getAllSymbol2TradingVolumeMini()) {
                             executorService.execute(() -> detectBySymbol(symbol));
                         }
                     } catch (Exception e) {
@@ -114,34 +113,93 @@ public class VolumeMiniManager {
         return Utils.getCurrentMinute() % 15 == 14 && Utils.getCurrentSecond() == 57;
     }
 
-    private void initData() throws InterruptedException {
+    private void initData() throws InterruptedException, ParseException {
+
         allSymbol = TickerFuturesHelper.getAllSymbol();
         allSymbol.removeAll(Constants.specialSymbol);
+        SimpleMovingAverageManager.getInstance();
         ClientSingleton.getInstance();
-        PriceManager.getInstance();
     }
-
-    private void detectBySymbol(String symbol) {
+    private void detectBySymbolTest(String symbol, Long time) {
         try {
-            KlineObjectNumber ticker = TickerFuturesHelper.getLastTicker(symbol, Constants.INTERVAL_15M);
-            if (ticker == null) {
+            KlineObjectNumber ticker = TickerFuturesHelper.getTickersByTime(symbol, Constants.INTERVAL_15M, time);
+            BreadDetectObject breadData = BreadProductFunctions.calBreadDataAlt(ticker, RATE_BREAD_MIN_2TRADE);
+
+            MAStatus maStatus = SimpleMovingAverageManager.getInstance().getMaStatus(Utils.getDate(ticker.startTime.longValue()), symbol);
+            Double maValue = SimpleMovingAverageManager.getInstance().getMaValue(symbol, Utils.getDate(ticker.startTime.longValue()));
+            Double rateMa = Utils.rateOf2Double(ticker.priceClose, maValue);
+            Double rateChange = BreadProductFunctions.getRateChangeWithVolume(ticker.totalUsdt / 1000000);
+
+            if (rateChange == null) {
+                LOG.info("Error rateChange with ticker: {} {}", symbol, Utils.toJson(ticker));
                 return;
             }
-            BreadDetectObject breadData = BreadFunctions.calBreadDataAlt(ticker, RATE_BREAD_MIN_2TRADE);
             if (breadData.orderSide != null
-                    && breadData.orderSide.equals(OrderSide.BUY) //&& PriceManager.getInstance().isAvalible2Trade(symbol, ticker.minPrice, breadData.orderSide)
-                    && breadData.totalRate >= RATE_CHANGE_MIN_2TRADING
-                    && ticker.totalUsdt <= VOLUME_MINI * 1000000) {
+                    && breadData.orderSide.equals(OrderSide.BUY)
+                    && maStatus != null && maStatus.equals(MAStatus.TOP)
+//                    && btcMaStatus != null && !btcMaStatus.equals(MAStatus.UNDER)
+                    && rateMa <= RATE_MA_MAX
+                    && breadData.totalRate >= rateChange) {
+                // end new
+
                 LOG.info("Big:{} {} {} rate:{} volume: {}", symbol, new Date(ticker.startTime.longValue()),
                         breadData.orderSide, breadData.totalRate, ticker.totalUsdt);
 
                 Double priceEntry = ticker.priceClose;
-                Double priceTarget = Utils.calPriceTarget(symbol, priceEntry, breadData.orderSide, RATE_TARGET_VOLUME_MINI);
+                Double priceTarget = Utils.calPriceTarget(symbol, priceEntry, breadData.orderSide, RATE_TARGET);
                 Double quantity = Utils.calQuantity(BudgetManager.getInstance().getBudget(), BudgetManager.getInstance().getLeverage(), priceEntry, symbol);
                 if (quantity != null && quantity != 0) {
                     OrderTargetInfo orderTrade = new OrderTargetInfo(OrderTargetStatus.REQUEST, ticker.priceClose,
                             priceTarget, quantity, BudgetManager.getInstance().getLeverage(), symbol, ticker.startTime.longValue(),
                             ticker.startTime.longValue(), breadData.orderSide, Constants.TRADING_TYPE_VOLUME_MINI);
+                    RedisHelper.getInstance().get().rpush(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER_QUEUE, Utils.toJson(orderTrade));
+                } else {
+                    LOG.info("{} {} quantity false", symbol, quantity);
+                }
+            }
+        } catch (Exception e) {
+            LOG.info("Error detect bvm:{}", symbol);
+            e.printStackTrace();
+        }
+    }
+    private void detectBySymbol(String symbol) {
+        try {
+            List<KlineObjectNumber> tickers = TickerFuturesHelper.getTicker(symbol, Constants.INTERVAL_15M);
+            IndicatorEntry[] smaEntries = SimpleMovingAverage.calculate(tickers, 20);
+            KlineObjectNumber lastTicker = tickers.get(tickers.size() - 1);
+            Double rateSma20 = Utils.rateOf2Double(lastTicker.priceClose, smaEntries[smaEntries.length - 1].getValue()) ;
+
+//            KlineObjectNumber ticker = TickerFuturesHelper.getLastTicker(symbol, Constants.INTERVAL_15M);
+            BreadDetectObject breadData = BreadProductFunctions.calBreadDataAlt(lastTicker, RATE_BREAD_MIN_2TRADE);
+
+            MAStatus maStatus = SimpleMovingAverageManager.getInstance().getMaStatus(Utils.getDate(lastTicker.startTime.longValue()), symbol);
+            Double maValue = SimpleMovingAverageManager.getInstance().getMaValue(symbol, Utils.getDate(lastTicker.startTime.longValue()));
+            Double rateMa = Utils.rateOf2Double(lastTicker.priceClose, maValue);
+            Double rateChange = BreadProductFunctions.getRateChangeWithVolume(lastTicker.totalUsdt / 1000000);
+
+            if (rateChange == null) {
+                LOG.info("Error rateChange with ticker: {} {}", symbol, Utils.toJson(lastTicker));
+                return;
+            }
+            if (breadData.orderSide != null
+                    && maStatus != null && maStatus.equals(MAStatus.TOP)
+//                    && btcMaStatus != null && !btcMaStatus.equals(MAStatus.UNDER)
+                    && rateSma20 < 0
+                    && rateMa <= RATE_MA_MAX
+                    && breadData.orderSide.equals(OrderSide.BUY)
+                    && breadData.totalRate >= rateChange) {
+                // end new
+
+                LOG.info("Big:{} {} {} rate:{} volume: {}", symbol, new Date(lastTicker.startTime.longValue()),
+                        breadData.orderSide, breadData.totalRate, lastTicker.totalUsdt);
+
+                Double priceEntry = lastTicker.priceClose;
+                Double priceTarget = Utils.calPriceTarget(symbol, priceEntry, breadData.orderSide, RATE_TARGET);
+                Double quantity = Utils.calQuantity(BudgetManager.getInstance().getBudget(), BudgetManager.getInstance().getLeverage(), priceEntry, symbol);
+                if (quantity != null && quantity != 0) {
+                    OrderTargetInfo orderTrade = new OrderTargetInfo(OrderTargetStatus.REQUEST, lastTicker.priceClose,
+                            priceTarget, quantity, BudgetManager.getInstance().getLeverage(), symbol, lastTicker.startTime.longValue(),
+                            lastTicker.startTime.longValue(), breadData.orderSide, Constants.TRADING_TYPE_VOLUME_MINI);
                     RedisHelper.getInstance().get().rpush(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER_QUEUE, Utils.toJson(orderTrade));
                 } else {
                     LOG.info("{} {} quantity false", symbol, quantity);

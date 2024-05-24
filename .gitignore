@@ -3,5 +3,3 @@ settings.xml
 /logs/
 /storage/
 *.log
-
-storage/data/ticker/symbols-1d.data

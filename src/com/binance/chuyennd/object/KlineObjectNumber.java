@@ -31,6 +31,12 @@ public class KlineObjectNumber implements Serializable {
     public Double priceClose;
     public Double totalUsdt;
     public Double endTime;
+    public Double rsi;
+    public Double ma20;
+    // macd
+    public Double signal;
+    public Double macd;
+    public Double histogram;
 //    public Double al;
 
     public static KlineObjectNumber convertString2Kline(List<Object> kline) {
@@ -47,4 +53,7 @@ public class KlineObjectNumber implements Serializable {
         return result;
     }
 
+    public double getDefaultPrice() {
+        return priceClose;
+    }
 }

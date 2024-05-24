@@ -15,12 +15,9 @@
  */
 package com.binance.chuyennd.websocket;
 
-import com.binance.chuyennd.research.ObjectResearch;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.SubscriptionClient;
 import com.binance.client.model.enums.CandlestickInterval;
-import com.binance.client.model.enums.OrderSide;
-import com.binance.client.model.event.SymbolTickerEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,15 +38,6 @@ public class ListenPriceBySymbol {
         }), null);
     }
 
-    public void startReceivePriceRealTimeBySymbol(ObjectResearch orderInfo) {
-        LOG.info("Start listen price: {}", Utils.gson.toJson(orderInfo));
-        SubscriptionClient client = SubscriptionClient.create();
-        client.subscribeSymbolTickerEvent(orderInfo.symbol.toLowerCase(), ((event) -> {
-//            LOG.info("Update price: {}", Utils.gson.toJson(event));
-            processUpdatePrice2OrderInfo(event, orderInfo);
-        }), null);
-    }
-
     public void startReceivePriceRealTimeBySymbol(String symbol) {
         LOG.info("Start listen price: {}", symbol);
         SubscriptionClient client = SubscriptionClient.create();
@@ -58,7 +46,4 @@ public class ListenPriceBySymbol {
         }), null);
     }
 
-    private void processUpdatePrice2OrderInfo(SymbolTickerEvent event, ObjectResearch orderInfo) {
-        orderInfo.updateLastPrice(event.getLastPrice().doubleValue());
-    }
 }

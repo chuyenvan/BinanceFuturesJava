@@ -17,18 +17,15 @@ package com.binance.chuyennd.client;
 
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.examples.constants.PrivateConfig;
-import com.binance.client.model.trade.AccountInformation;
-import com.binance.client.model.trade.Asset;
-import com.binance.client.model.trade.Order;
-import com.binance.client.model.trade.PositionRisk;
+import com.binance.client.model.trade.*;
 import com.binance.connector.futures.client.impl.UMFuturesClientImpl;
 import com.google.gson.internal.LinkedTreeMap;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.text.ParseException;
+import java.util.*;
 
 /**
  *
@@ -37,6 +34,7 @@ import org.slf4j.LoggerFactory;
 public class BinanceFuturesClientSingleton {
 
     public static final Logger LOG = LoggerFactory.getLogger(BinanceFuturesClientSingleton.class);
+
     public UMFuturesClientImpl umFuturesClient;
     private static volatile BinanceFuturesClientSingleton INSTANCE = null;
 
@@ -50,6 +48,94 @@ public class BinanceFuturesClientSingleton {
 
     private void initClient() {
         umFuturesClient = new UMFuturesClientImpl(PrivateConfig.API_KEY, PrivateConfig.SECRET_KEY, PrivateConfig.UM_BASE_URL);
+    }
+
+    private void positionMode() {
+        LinkedHashMap<String, Object> parameters = new LinkedHashMap<>();
+
+        try {
+            String respon = umFuturesClient.account().getCurrentPositionMode(parameters);
+            if (StringUtils.isNotEmpty(respon)) {
+                System.out.println(respon);
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    private void getCommissionRate() {
+        LinkedHashMap<String, Object> parameters = new LinkedHashMap<>();
+        parameters.put("symbol", "BTCUSDT");
+        try {
+            String respon = umFuturesClient.account().getCommissionRate(parameters);
+            if (StringUtils.isNotEmpty(respon)) {
+                System.out.println(respon);
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    private static void tracePnlAll() throws ParseException {
+
+        Map<String, Double> symbol2Pnl = new HashMap<>();
+        int page = 0;
+        while (true) {
+            page++;
+            List<Income> incomes = BinanceFuturesClientSingleton.getInstance().getAllPositionHistory(
+                    Utils.sdfFileHour.parse("20240306 04:00").getTime(), System.currentTimeMillis(), page);
+            if (!incomes.isEmpty()) {
+                LOG.info("{} {} {}", page, incomes.get(0).getSymbol(), Utils.normalizeDateYYYYMMDDHHmm(incomes.get(0).getTime()));
+                for (Income income : incomes) {
+                    Double total = symbol2Pnl.get(income.getSymbol());
+                    if (total == null) {
+                        total = 0d;
+                    }
+                    total += income.getIncome().doubleValue();
+                    symbol2Pnl.put(income.getSymbol(), total);
+                }
+            } else {
+                break;
+            }
+        }
+        for (Map.Entry<String, Double> entry : symbol2Pnl.entrySet()) {
+            Double pnl = entry.getValue();
+            String symbol = entry.getKey();
+            LOG.info("{} {}", symbol, pnl);
+        }
+    }
+
+    private static void tracePnlAsymbol() throws ParseException {
+        String symbol = "ARPAUSDT";
+        List<Income> incomes = BinanceFuturesClientSingleton.getInstance().getPositionHistoryBySymbol(symbol,
+                Utils.sdfFileHour.parse("20240323 00:00").getTime(), System.currentTimeMillis());
+        Double total = 0d;
+        Double REALIZED_PNL = 0d;
+        Double FUNDING_FEE = 0d;
+        Double COMMISSION = 0d;
+        for (Income income : incomes) {
+            total += income.getIncome().doubleValue();
+            if (StringUtils.equals(income.getIncomeType(), "REALIZED_PNL")) {
+                REALIZED_PNL += income.getIncome().doubleValue();
+            }
+            if (StringUtils.equals(income.getIncomeType(), "COMMISSION")) {
+                COMMISSION += income.getIncome().doubleValue();
+            }
+            if (StringUtils.equals(income.getIncomeType(), "FUNDING_FEE")) {
+                FUNDING_FEE += income.getIncome().doubleValue();
+            }
+            LOG.info("{} {} {} {} {} ", income.getSymbol(), income.getAsset(), Utils.normalizeDateYYYYMMDDHHmm(income.getTime()),
+                    income.getIncomeType(), income.getIncome().doubleValue());
+        }
+        Double rateF = FUNDING_FEE * 100 / REALIZED_PNL;
+        Double rateC = COMMISSION * 100 / REALIZED_PNL;
+        LOG.info("{} -> Pnl:{} total:{} Fundding:{} {}% Commission:{} {}%", symbol,
+                Utils.formatMoneyNew(total), Utils.formatMoneyNew(REALIZED_PNL), Utils.formatMoneyNew(FUNDING_FEE),
+                Utils.formatMoneyNew(rateF), Utils.formatMoneyNew(COMMISSION), Utils.formatMoneyNew(rateC));
     }
 
     public PositionRisk getPositionInfo(String symbol) {
@@ -92,7 +178,7 @@ public class BinanceFuturesClientSingleton {
         return positions;
     }
 
-    public List<Order> getAllOrderInfos() {
+    public List<Order> getAllOpenOrderInfos() {
         LinkedHashMap<String, Object> parameters = new LinkedHashMap<>();
         List<Order> positions = new ArrayList<>();
         try {
@@ -114,15 +200,24 @@ public class BinanceFuturesClientSingleton {
         return positions;
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws ParseException {
 //        String symbol = "AMBUSDT";
 //        System.out.println(Utils.toJson(BinanceFuturesClientSingleton.getInstance().getOpenOrders(symbol)));
-//        symbol = "OMUSDT";
 //        System.out.println(Utils.toJson(BinanceFuturesClientSingleton.getInstance().getOpenOrders(symbol)));
 //        System.out.println(BinanceFuturesClientSingleton.getInstance().getAllPositionInfos().size());
-        System.out.println(Utils.toJson(BinanceFuturesClientSingleton.getInstance().getAllOrderInfos().size()));
+//        System.out.println(Utils.toJson(BinanceFuturesClientSingleton.getInstance().getAllOpenOrderInfos().size()));
+//        Set<String> allSymbol = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_ALL_SYMBOLS);
+//        System.out.println(allSymbol.size());
+//        for (String symbol : allSymbol) {
+        Set<String> symbolLocks = BinanceFuturesClientSingleton.getInstance().getAllSymbolLock();
+//        System.out.println(symbolLocks);
+//        tracePnlAsymbol();
+        System.out.println(Utils.toJson(BinanceFuturesClientSingleton.getInstance().getPositionInfo("ORBSUSDT")));
+//        BinanceFuturesClientSingleton.getInstance().positionMode();
+//        tracePnlAll();
+//        BinanceFuturesClientSingleton.getInstance().getCommissionRate();
+//        }
 //        System.out.println(Utils.toJson(umInfo));
-
     }
 
     public List<Order> getOpenOrders(String symbol) {
@@ -131,6 +226,29 @@ public class BinanceFuturesClientSingleton {
         parameters.put("symbol", symbol);
         try {
             String respon = umFuturesClient.account().currentAllOpenOrders(parameters);
+            if (StringUtils.isNotEmpty(respon)) {
+                List<LinkedTreeMap> list = Utils.gson.fromJson(respon, List.class);
+                if (list != null && !list.isEmpty()) {
+                    for (LinkedTreeMap linkedTreeMap : list) {
+                        results.add(Utils.gson.fromJson(linkedTreeMap.toString(), Order.class));
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return results;
+    }
+
+    public List<Order> getOrders(String symbol) {
+        List<Order> results = new ArrayList<>();
+        LinkedHashMap<String, Object> parameters = new LinkedHashMap<>();
+        parameters.put("startTime", String.valueOf(Utils.getStartTimeDayAgo(30)));
+        parameters.put("endTime", String.valueOf(System.currentTimeMillis()));
+        parameters.put("symbol", symbol);
+
+        try {
+            String respon = umFuturesClient.account().allOrders(parameters);
             if (StringUtils.isNotEmpty(respon)) {
                 List<LinkedTreeMap> list = Utils.gson.fromJson(respon, List.class);
                 if (list != null && !list.isEmpty()) {
@@ -203,5 +321,78 @@ public class BinanceFuturesClientSingleton {
             e.printStackTrace();
         }
         return null;
+    }
+
+    private List<Income> getPositionHistoryBySymbol(String symbol, Long startTime, Long endTime) {
+        List<Income> results = new ArrayList<>();
+        LinkedHashMap<String, Object> parameters = new LinkedHashMap<>();
+        parameters.put("symbol", symbol);
+        parameters.put("startTime", startTime);
+        parameters.put("endTime", endTime);
+        parameters.put("incomeType", "REALIZED_PNL");
+        try {
+            String respon = BinanceFuturesClientSingleton.getInstance().umFuturesClient.account().getIncomeHistory(parameters);
+            if (StringUtils.isNotEmpty(respon)) {
+                List<LinkedTreeMap> list = Utils.gson.fromJson(respon, List.class);
+                if (list != null && !list.isEmpty()) {
+                    for (LinkedTreeMap linkedTreeMap : list) {
+                        String jsonInconme = linkedTreeMap.toString();
+                        jsonInconme = StringUtils.replace(jsonInconme, "tradeId=}", "tradeId=1}");
+                        Income inconme = Utils.gson.fromJson(jsonInconme, Income.class);
+                        results.add(inconme);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return results;
+    }
+
+    private List<Income> getAllPositionHistory(long startTime, long endTime, int page) {
+        List<Income> results = new ArrayList<>();
+        LinkedHashMap<String, Object> parameters = new LinkedHashMap<>();
+        parameters.put("startTime", startTime);
+        parameters.put("page", page);
+        parameters.put("endTime", endTime);
+        parameters.put("incomeType", "REALIZED_PNL");
+        try {
+            String respon = BinanceFuturesClientSingleton.getInstance().umFuturesClient.account().getIncomeHistory(parameters);
+            if (StringUtils.isNotEmpty(respon)) {
+                List<LinkedTreeMap> list = Utils.gson.fromJson(respon, List.class);
+                if (list != null && !list.isEmpty()) {
+                    for (LinkedTreeMap linkedTreeMap : list) {
+                        String jsonInconme = linkedTreeMap.toString();
+                        jsonInconme = StringUtils.replace(jsonInconme, "tradeId=}", "tradeId=1}");
+                        Income inconme = Utils.gson.fromJson(jsonInconme, Income.class);
+                        results.add(inconme);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return results;
+    }
+
+    public Set<String> getAllSymbolLock() {
+        Set<String> results = new HashSet<>();
+        LinkedHashMap<String, Object> parameters = new LinkedHashMap<>();
+        try {
+            String respon = umFuturesClient.account().getTradingRulesIndicators(parameters);
+            if (StringUtils.isNotEmpty(respon)) {
+                System.out.println(respon);
+                Map<String, LinkedTreeMap> infos = Utils.gson.fromJson(respon, Map.class);
+                LinkedTreeMap indicators = infos.get("indicators");
+                Map<String, LinkedTreeMap> symbol2Info = Utils.gson.fromJson(Utils.toJson(indicators), Map.class);
+                if (symbol2Info != null && !symbol2Info.isEmpty()) {
+                    LOG.info("List locked : {}", Utils.toJson(symbol2Info.keySet()));
+                    return symbol2Info.keySet();
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return results;
     }
 }

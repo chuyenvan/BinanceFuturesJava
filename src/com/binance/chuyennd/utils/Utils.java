@@ -7,6 +7,8 @@ package com.binance.chuyennd.utils;
 
 import com.alibaba.fastjson.JSONObject;
 import com.binance.chuyennd.client.ClientSingleton;
+import com.binance.chuyennd.object.KlineObjectNumber;
+import com.binance.chuyennd.object.MACDEntry;
 import com.binance.client.model.enums.OrderSide;
 import com.binance.client.model.trade.PositionRisk;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -26,6 +28,8 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.bson.Document;
+
 /**
  * @author chuyennd
  */
@@ -44,7 +48,7 @@ public class Utils {
     public static final SimpleDateFormat sdfFile = new SimpleDateFormat("yyyyMMdd");
     public static final SimpleDateFormat sdfFileHour = new SimpleDateFormat("yyyyMMdd HH:mm");
     public static final SimpleDateFormat sdfFacebook = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
-    public static final SimpleDateFormat sdfGoogle = new SimpleDateFormat("yyyy-M-dd HH:mm:ss");
+    public static final SimpleDateFormat sdfGoogle = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
     public static final SimpleDateFormat SDF_NORMAL = new SimpleDateFormat("E MMM dd HH:mm:ss z yyyy");
     public static final DecimalFormat df = new DecimalFormat("#.##");
 
@@ -59,6 +63,24 @@ public class Utils {
 
     public static double marginOfPosition(PositionRisk pos) {
         return Math.abs((pos.getPositionAmt().doubleValue() * pos.getEntryPrice().doubleValue() / pos.getLeverage().doubleValue()));
+    }
+
+    public static Double callPnl(PositionRisk pos) {
+        Double pnl = pos.getPositionAmt().doubleValue();
+        pnl = pnl * (pos.getMarkPrice().doubleValue() - pos.getEntryPrice().doubleValue());
+        return pnl;
+    }
+
+    public static Double callPnlDone(PositionRisk pos) {
+        Double pnl = pos.getPositionAmt().doubleValue();
+        pnl = pnl * (pos.getMarkPrice().doubleValue() - pos.getEntryPrice().doubleValue() * 1.02);
+        return Math.abs(pnl);
+    }
+
+    public static Double callPnl(PositionRisk pos, Double lastPrice) {
+        Double pnl = pos.getPositionAmt().doubleValue();
+        pnl = pnl * (lastPrice - pos.getEntryPrice().doubleValue());
+        return pnl;
     }
 
     public static String getMainClassAndArgs() {
@@ -114,6 +136,26 @@ public class Utils {
             e.printStackTrace();
         }
         return true;
+    }
+
+    public static String readSms2Telegram() {
+//        String urlString = "https://api.telegram.org/bot%s/sendMessage?chat_id=%s&text=%s&parse_mode=HTML";
+        String urlString = "https://api.telegram.org/bot%s/getUpdates?offset=-1&chat_id=%s";
+
+        //Add Telegram token (given Token is fake)
+        String apiToken = "6158571844:AAHgemRZAWCFARpkyiZkpc9iTT4hEKMtUvw";
+
+        //Add chatId (given chatId is fake)
+        String chatId = "6548680563";
+
+        urlString = String.format(urlString, apiToken, chatId);
+
+        try {
+            return HttpRequest.getContentFromUrl(urlString);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return "";
     }
 
     public static boolean sendSms2Skype(String text) {
@@ -435,7 +477,7 @@ public class Utils {
 
         byte[] result = null;
         try (
-                 ByteArrayOutputStream baos = new ByteArrayOutputStream();  ObjectOutputStream oos = new ObjectOutputStream(baos)) {
+                ByteArrayOutputStream baos = new ByteArrayOutputStream(); ObjectOutputStream oos = new ObjectOutputStream(baos)) {
             oos.writeObject(obj);
             result = baos.toByteArray();
         }
@@ -448,7 +490,7 @@ public class Utils {
             return null;
         }
         try (
-                 ByteArrayInputStream bais = new ByteArrayInputStream(input);  ObjectInputStream ois = new ObjectInputStream(bais);) {
+                ByteArrayInputStream bais = new ByteArrayInputStream(input); ObjectInputStream ois = new ObjectInputStream(bais);) {
             return (T) ois.readObject();
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
@@ -915,6 +957,16 @@ public class Utils {
         return formatter.format(revenue);
     }
 
+    public static String formatMoneyNew(Double revenue) {
+        if (revenue == null) {
+            return null;
+        }
+//        DecimalFormat formatter = new DecimalFormat("###,###,###.#####");
+//        DecimalFormat formatter = new DecimalFormat("###,###,###.##########");
+        DecimalFormat formatter = new DecimalFormat("###.##");
+        return formatter.format(revenue);
+    }
+
     public static String formatPercent(Double number) {
         return df.format(number * 100);
     }
@@ -944,29 +996,53 @@ public class Utils {
         return 0.0;
     }
 
-    public static Double calPriceTarget(String symbol, Double priceEntry, OrderSide orderSide, Double rateTarget) {
-        Double result = priceEntry;
-        int counter = 0;
-        while (result.equals(priceEntry)
-                || Math.abs(rateOf2Double(priceEntry, result)) < rateTarget) {
-            Double priceChange2Target = (rateTarget + 0.0001 * counter) * priceEntry;
-            if (orderSide.equals(OrderSide.BUY)) {
-                result = priceEntry + priceChange2Target;
+    public static Double rateOf2DoubleIncre(Double start, Double end) {
+        try {
+            if (Math.abs(start) > Math.abs(end)) {
+                return (end -start) / start;
             } else {
-                result = priceEntry - priceChange2Target;
+                return (start - end) / end;
             }
-            result = ClientSingleton.getInstance().normalizePrice(symbol, result);
-            counter++;
+
+        } catch (Exception e) {
         }
+        return 0.0;
+    }
+
+//    public static Double calPriceTarget(String symbol, Double priceEntry, OrderSide orderSide, Double rateTarget) {
+//        Double result = priceEntry;
+//        int counter = 0;
+//        while (result.equals(priceEntry) || Math.abs(rateOf2Double(priceEntry, result)) < rateTarget) {
+//            Double priceChange2Target = (rateTarget + 0.0001 * counter) * priceEntry;
+//            if (orderSide.equals(OrderSide.BUY)) {
+//                result = priceEntry + priceChange2Target;
+//            } else {
+//                result = priceEntry - priceChange2Target;
+//            }
+//            result = ClientSingleton.getInstance().normalizePrice(symbol, result);
+//            counter++;
+//        }
+//        return result;
+//    }
+
+    public static Double calPriceTarget(String symbol, Double priceEntry, OrderSide orderSide, Double rateTarget) {
+        Double result;
+        Double priceChange2Target = rateTarget * priceEntry;
+        if (orderSide.equals(OrderSide.BUY)) {
+            result = priceEntry + priceChange2Target;
+        } else {
+            result = priceEntry - priceChange2Target;
+        }
+        result = ClientSingleton.getInstance().normalizePrice(symbol, result);
         return result;
     }
 
-    public static Double calQuantity(Double BUDGET_PER_ORDER, Integer LEVERAGE_ORDER_BEARD, Double priceEntry, String symbol) {
-        Double quantity = BUDGET_PER_ORDER * LEVERAGE_ORDER_BEARD / priceEntry;
+    public static Double calQuantity(Double budget, Integer leverage, Double priceEntry, String symbol) {
+        Double quantity = budget * leverage / priceEntry;
         quantity = ClientSingleton.getInstance().normalizeQuantity(symbol, quantity);
         for (int i = 1; i < 10; i++) {
             if (quantity == 0) {
-                quantity = (BUDGET_PER_ORDER + i) * LEVERAGE_ORDER_BEARD / priceEntry;
+                quantity = (budget + i) * leverage / priceEntry;
                 quantity = ClientSingleton.getInstance().normalizeQuantity(symbol, quantity);
             } else {
                 return quantity;
@@ -1049,7 +1125,8 @@ public class Utils {
     }
 
     public static void main(String[] args) {
-        System.out.println(Utils.sendSms2Skype("test skype"));
+//        System.out.println(Utils.sendSms2Skype("test skype"));
+        System.out.println(Utils.readSms2Telegram());
 //        Double test = 5.172E-4;
 //        System.out.println(Utils.formatMoney(test));
 //        System.out.println(Utils.normalPrice2Api(99.95804261161376d));
@@ -1066,5 +1143,75 @@ public class Utils {
 
     public static long getHour(long time) {
         return (time / TIME_HOUR) * TIME_HOUR;
+    }
+    public static long getMinute(long time) {
+        return (time / TIME_MINUTE) * TIME_MINUTE;
+    }
+    public static long normalInterval15m(long time) {
+        return (time / (15 * TIME_MINUTE)) * 15 * TIME_MINUTE;
+    }
+
+    public static long get4Hour(long time) {
+        return (time / 4 / TIME_HOUR) * 4 * TIME_HOUR;
+    }
+
+    public static long getDate(long time) {
+        return (time / TIME_DAY) * TIME_DAY;
+    }
+
+    public static Document convertTicker2Doc(KlineObjectNumber ticker, Map<Double, Double> time2Rsi,
+                                             Map<Double, Double> time2Ma, Map<Double, MACDEntry> time2Macd) {
+        Document doc = new Document();
+        MACDEntry macd = time2Macd.get(ticker.startTime);
+        doc.append("startTime", ticker.startTime);
+        doc.append("endTime", ticker.endTime);
+        doc.append("maxPrice", ticker.maxPrice);
+        doc.append("minPrice", ticker.minPrice);
+        doc.append("priceOpen", ticker.priceOpen);
+        doc.append("priceClose", ticker.priceClose);
+        doc.append("totalUsdt", ticker.totalUsdt);
+        doc.append("rsi", time2Rsi.get(ticker.startTime));
+        doc.append("ma20", time2Ma.get(ticker.startTime));
+        if (macd != null) {
+            doc.append("signal", macd.getSignal());
+            doc.append("macd", macd.getMacd());
+            doc.append("histogram", macd.getHistogram());
+        }
+        return doc;
+    }
+
+    public static Document convertTicker2Doc(KlineObjectNumber ticker) {
+        Document doc = new Document();
+
+        doc.append("startTime", ticker.startTime);
+        doc.append("endTime", ticker.endTime);
+        doc.append("maxPrice", ticker.maxPrice);
+        doc.append("minPrice", ticker.minPrice);
+        doc.append("priceOpen", ticker.priceOpen);
+        doc.append("priceClose", ticker.priceClose);
+        doc.append("totalUsdt", ticker.totalUsdt);
+        return doc;
+    }
+
+    public static KlineObjectNumber convertDoc2Ticker(Document doc) {
+        KlineObjectNumber ticker = new KlineObjectNumber();
+        ticker.startTime = doc.getDouble("startTime");
+        ticker.endTime = doc.getDouble("endTime");
+        ticker.maxPrice = doc.getDouble("maxPrice");
+        ticker.minPrice = doc.getDouble("minPrice");
+        ticker.priceOpen = doc.getDouble("priceOpen");
+        ticker.priceClose = doc.getDouble("priceClose");
+        ticker.totalUsdt = doc.getDouble("totalUsdt");
+        return ticker;
+    }
+
+
+    public static String formatDouble(Double volume, Integer number) {
+        String format = "###.";
+        for (int i = 0; i < number; i++) {
+            format += "#";
+        }
+        DecimalFormat formatter = new DecimalFormat(format);
+        return formatter.format(volume);
     }
 }

@@ -30,7 +30,8 @@ public class BreadDetectObject {
     public OrderSide orderSide;    
     public String symbol;    
 
-    public BreadDetectObject(Double rateChange, Double breadAbove, Double breadBelow, Double totalRate, OrderSide orderSides, Double volume) {
+    public BreadDetectObject(Double rateChange, Double breadAbove, Double breadBelow,
+                             Double totalRate, OrderSide orderSides, Double volume) {
         this.rateChange = rateChange;
         this.breadAbove = breadAbove;
         this.breadBelow = breadBelow;

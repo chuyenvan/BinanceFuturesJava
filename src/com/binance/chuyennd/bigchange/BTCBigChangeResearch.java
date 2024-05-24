@@ -15,7 +15,6 @@
  */
 package com.binance.chuyennd.bigchange;
 
-import com.binance.chuyennd.client.BinanceFuturesClientSingleton;
 import com.binance.chuyennd.research.Test;
 import com.binance.chuyennd.client.ClientSingleton;
 import com.binance.chuyennd.client.TickerFuturesHelper;
@@ -27,7 +26,6 @@ import com.binance.chuyennd.utils.HttpRequest;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
 import com.binance.client.model.enums.OrderSide;
-import com.binance.client.model.trade.PositionRisk;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;

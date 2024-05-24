@@ -22,7 +22,6 @@ import com.binance.chuyennd.object.TickerStatistics;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
 import com.binance.chuyennd.utils.Configs;
-import com.binance.chuyennd.utils.HttpRequest;
 import com.binance.chuyennd.utils.Storage;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.SubscriptionClient;
@@ -31,9 +30,8 @@ import com.binance.client.constant.Constants;
 import com.binance.client.exception.BinanceApiException;
 import com.binance.client.model.enums.OrderSide;
 import com.binance.client.model.event.SymbolTickerEvent;
-import com.binance.chuyennd.trading.OrderTargetInfoTest;
+import com.binance.chuyennd.research.OrderTargetInfoTest;
 import com.binance.chuyennd.trading.OrderTargetStatus;
-import com.google.gson.internal.LinkedTreeMap;
 import java.io.File;
 import java.io.IOException;
 import java.util.Date;
@@ -60,7 +58,6 @@ public class SingalTWSimulator {
     public static final Logger LOG = LoggerFactory.getLogger(SingalTWSimulator.class);
 
     private final ConcurrentSkipListSet<String> allSymbol = new ConcurrentSkipListSet<>();
-    public static final String URL_SIGNAL_TRADINGVIEW = "http://103.157.218.242:8002/";
     public static final String FILE_STORAGE_ORDER_DONE = "storage/OrderTestDone.data";
     public static final Double RATE_TARGET = Configs.getDouble("RATE_TARGET");
     public ConcurrentHashMap<Long, OrderTargetInfoTest> allOrderDone;
@@ -68,12 +65,7 @@ public class SingalTWSimulator {
     public ExecutorService executorService = Executors.newFixedThreadPool(Configs.getInt("NUMBER_THREAD_ORDER_MANAGER"));
 
     public static void main(String[] args) throws IOException {
-
         new SingalTWSimulator().start();
-//        new SingalTWSimulator().getStrongSignal2TradingBigVolumeBuy();
-//        new SingalTWSimulator().getStrongSignal2TradingBigVolumeSell();
-//        new TradingBySignalTradingView().buildReport();
-//        System.out.println(new TradingBySignalTradingView().getReconmendation("BTCUSDT"));
     }
 
     public void startThreadManagerPosition() {
@@ -86,7 +78,7 @@ public class SingalTWSimulator {
                 if (isTimeDetectBigChange()) {
                     try {
                         LOG.info("Start detect symbol is beard big! {}", new Date());
-                        for (String symbol : RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER)) {
+                        for (String symbol : RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER)) {
                             executorService.execute(() -> updatePositionBySymbol(symbol));
                         }
                     } catch (Exception e) {
@@ -107,7 +99,7 @@ public class SingalTWSimulator {
 
     private void updatePositionBySymbol(String symbol) {
         try {
-            OrderTargetInfoTest orderInfo = Utils.gson.fromJson(RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER, symbol),
+            OrderTargetInfoTest orderInfo = Utils.gson.fromJson(RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER, symbol),
                     OrderTargetInfoTest.class);
             KlineObjectNumber ticker = TickerFuturesHelper.getLastTicker(symbol, Constants.INTERVAL_15M);
             if (orderInfo.timeStart < ticker.startTime.longValue()) {
@@ -116,10 +108,10 @@ public class SingalTWSimulator {
                 orderInfo.updateStatus();
                 if (orderInfo.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)) {
                     allOrderDone.put(System.currentTimeMillis(), orderInfo);
-                    RedisHelper.getInstance().get().hdel(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER, symbol);
+                    RedisHelper.getInstance().get().hdel(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER, symbol);
                     Storage.writeObject2File(FILE_STORAGE_ORDER_DONE, allOrderDone);
                 } else {
-                    RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER, symbol, Utils.toJson(orderInfo));
+                    RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER, symbol, Utils.toJson(orderInfo));
                 }
             }
         } catch (Exception e) {
@@ -143,8 +135,7 @@ public class SingalTWSimulator {
             while (true) {
                 try {
                     getStrongSignal2TradingMiniVolume();
-//                    getStrongSignal2TradingBigVolumeBuy();
-//                    getStrongSignal2TradingBigVolumeSell();
+
                 } catch (Exception e) {
                     LOG.error("ERROR during ThreadBigBeardTrading: {}", e);
                     e.printStackTrace();
@@ -159,19 +150,7 @@ public class SingalTWSimulator {
     }
 
     private OrderSide getStrongSignalASymbol(String symbol) {
-        try {
-            String signalRecommendation = getReconmendation(symbol);
-            if (StringUtils.isNotEmpty(signalRecommendation)) {
-                OrderSide sideSignal = OrderSide.BUY;
-                if (StringUtils.equalsIgnoreCase(signalRecommendation, "sell")) {
-                    sideSignal = OrderSide.SELL;
-                }
-                return sideSignal;
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return null;
+        return OrderSide.BUY;
     }
 
     private void threadListenPrice() {
@@ -187,17 +166,16 @@ public class SingalTWSimulator {
         StringBuilder builder = new StringBuilder();
         builder.setLength(0);
         for (SymbolTickerEvent event : events) {
-            String json = RedisHelper.getInstance().readJsonData(
-                    RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER, event.getSymbol());
+            String json = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER, event.getSymbol());
             if (StringUtils.isNotEmpty(json)) {
                 OrderTargetInfoTest orderInfo = Utils.gson.fromJson(json, OrderTargetInfoTest.class);
                 orderInfo.updatePriceByLastPrice(event.getLastPrice().doubleValue());
                 orderInfo.updateStatus();
                 if (orderInfo.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)) {
                     allOrderDone.put(System.currentTimeMillis(), orderInfo);
-                    RedisHelper.getInstance().get().hdel(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER, event.getSymbol());
+                    RedisHelper.getInstance().get().hdel(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER, event.getSymbol());
                 } else {
-                    RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER, event.getSymbol(), Utils.toJson(orderInfo));
+                    RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER, event.getSymbol(), Utils.toJson(orderInfo));
                 }
             }
         }
@@ -209,7 +187,7 @@ public class SingalTWSimulator {
         for (String symbol : allSymbol) {
             try {
                 // check symbol had position running
-                Set<String> symbolsTrading = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER);
+                Set<String> symbolsTrading = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER);
                 if (symbolsTrading.contains(symbol)
                         || symbolsVolumeOver50M.contains(symbol)) {
                     continue;
@@ -229,7 +207,7 @@ public class SingalTWSimulator {
         for (String symbol : symbolsVolumeBigChangeAndTrendBuy) {
             try {
                 // check symbol had position running
-                Set<String> symbolsTrading = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER);
+                Set<String> symbolsTrading = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER);
                 if (symbolsTrading.contains(symbol)) {
                     continue;
                 }
@@ -241,45 +219,7 @@ public class SingalTWSimulator {
         }
     }
 
-    private void getStrongSignal2TradingBigVolumeSell() {
-        LOG.info("Start detect symbol is Strong signal! {}", new Date());
-        Set<String> symbolsVolumeBigChangeAndTrendBuy = getAllSymbolVolumeOver100MDecre2Sell();
-        symbolsVolumeBigChangeAndTrendBuy.removeAll(Constants.specialSymbol);
-        for (String symbol : symbolsVolumeBigChangeAndTrendBuy) {
-            try {
-                // check symbol had position running
-                Set<String> symbolsTrading = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER);
-                if (symbolsTrading.contains(symbol)) {
-                    continue;
-                }
-                strongSignalSell2TradeBySymbol(symbol);
-
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    private String getReconmendation(String symbol) {
-        String result = "";
-        try {
-            String urlSignal = URL_SIGNAL_TRADINGVIEW + symbol;
-            String respon = HttpRequest.getContentFromUrl(urlSignal);
-            List<LinkedTreeMap> responObjects = Utils.gson.fromJson(respon, List.class);
-            if (responObjects != null && !responObjects.isEmpty()) {
-                String sideSignal = responObjects.get(0).get("recommendation").toString();
-                if (StringUtils.contains(sideSignal, "STRONG")) {
-                    result = sideSignal.split("_")[1];
-                    LOG.info("StrongSignal: {}", respon);
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return result;
-    }
-
-    private void addOrderTrading(String symbol, OrderSide sideSignal) {
+      private void addOrderTrading(String symbol, OrderSide sideSignal) {
         Double entry = ClientSingleton.getInstance().getCurrentPrice(symbol);
         Double priceTp = Utils.calPriceTarget(symbol, entry, sideSignal, RATE_TARGET);
 
@@ -287,10 +227,10 @@ public class SingalTWSimulator {
                 + priceTp + " stoploss: " + 0.0 + " time:" + Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis());
 //        Utils.sendSms2Telegram(log);
         OrderTargetInfoTest order = new OrderTargetInfoTest(OrderTargetStatus.REQUEST, entry, priceTp, 0.0, 10, symbol,
-                System.currentTimeMillis(), System.currentTimeMillis(), sideSignal, "SINGAL_TRADINGVIEW", false);
+                System.currentTimeMillis(), System.currentTimeMillis(), sideSignal);
         order.minPrice = entry;
         order.maxPrice = entry;
-        RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER, symbol, Utils.toJson(order));
+        RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER, symbol, Utils.toJson(order));
         LOG.info(log);
 
     }
@@ -321,8 +261,8 @@ public class SingalTWSimulator {
         Long totalBuy = 0l;
         Long totalSell = 0l;
         TreeMap<Double, OrderTargetInfoTest> rate2Order = new TreeMap<>();
-        for (String symbol : RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER)) {
-            OrderTargetInfoTest orderInfo = Utils.gson.fromJson(RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER, symbol),
+        for (String symbol : RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER)) {
+            OrderTargetInfoTest orderInfo = Utils.gson.fromJson(RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER, symbol),
                     OrderTargetInfoTest.class);
             Double rateLoss = orderInfo.calRateLoss() * 10000;
             rate2Order.put(rateLoss, orderInfo);
@@ -417,7 +357,7 @@ public class SingalTWSimulator {
         }
         reportRunning.append(" Buy: ").append(totalBuy * RATE_TARGET * 100).append("%");
         reportRunning.append(" Sell: ").append(totalSell * RATE_TARGET * 100).append("%");
-        reportRunning.append(" Running: ").append(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER).size()).append(" orders");
+        reportRunning.append(" Running: ").append(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER).size()).append(" orders");
         Utils.sendSms2Telegram(reportRunning.toString());
     }
 
@@ -435,9 +375,9 @@ public class SingalTWSimulator {
         Map<String, Double> sym2Volume = TickerFuturesHelper.getAllVolume24hr();
         TreeMap<Double, OrderTargetInfoTest> rate2Order = new TreeMap<>();
         Integer counter50M = 0;
-        Set<String> symbols = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER);
+        Set<String> symbols = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER);
         for (String symbol : symbols) {
-            OrderTargetInfoTest orderInfo = Utils.gson.fromJson(RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TD_POS_MANAGER, symbol),
+            OrderTargetInfoTest orderInfo = Utils.gson.fromJson(RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER, symbol),
                     OrderTargetInfoTest.class);
             Double rateLoss = orderInfo.calRateLoss() * 10000;
             rate2Order.put(rateLoss, orderInfo);

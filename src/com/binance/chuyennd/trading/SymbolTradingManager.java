@@ -6,12 +6,10 @@ package com.binance.chuyennd.trading;
 
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
-import com.binance.chuyennd.statistic24hr.Volume24hrManager;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,7 +22,6 @@ public class SymbolTradingManager {
 
     public static final Logger LOG = LoggerFactory.getLogger(SymbolTradingManager.class);
     private static volatile SymbolTradingManager INSTANCE = null;
-    public static final Integer MAX_VOLUME_TRADING = Configs.getInt("MAX_VOLUME_TRADING");
 
     public static SymbolTradingManager getInstance() {
         if (INSTANCE == null) {
@@ -37,19 +34,22 @@ public class SymbolTradingManager {
     private void updateSymbolTrading() {
         try {
             Set<String> symbolsVolumeOverVolumeNotTrade = getAllSymbolVolumeOverVolumeNotTrade();
-            Set<String> symbolsTrading = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER);
+            Set<String> symbolsTrading = RedisHelper.getInstance().smembers(RedisConst.REDIS_KEY_SET_ALL_SYMBOL_POS_RUNNING);
             Set<String> symbol2Trade = new HashSet<>();
-            symbol2Trade.addAll(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_ALL_SYMBOLS));
+            Set<String> allSymbol = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_ALL_SYMBOLS);
+            symbol2Trade.addAll(allSymbol);
             symbol2Trade.removeAll(Constants.specialSymbol);
             symbol2Trade.removeAll(symbolsVolumeOverVolumeNotTrade);
             symbol2Trade.removeAll(symbolsTrading);
             String currentTime = String.valueOf(System.currentTimeMillis());
             //delet list old
-            RedisHelper.getInstance().get().del(RedisConst.REDIS_KEY_EDUCA_ALL_SYMBOLS_TRADING);
+            RedisHelper.getInstance().get().del(RedisConst.REDIS_KEY_EDUCA_ALL_SYMBOLS_CHECKING);
             //write new
-            LOG.info("Update {} symbols to trading list.", symbol2Trade.size());
+            LOG.info("Update {} symbols to trading list. all:{} not:{} running:{}", symbol2Trade.size(), allSymbol.size(),
+                    symbolsVolumeOverVolumeNotTrade.size(), symbolsTrading.size()
+            );
             for (String symbol : symbol2Trade) {
-                RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_ALL_SYMBOLS_TRADING, symbol, currentTime);
+                RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_ALL_SYMBOLS_CHECKING, symbol, currentTime);
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -58,19 +58,25 @@ public class SymbolTradingManager {
 
     private Set<String> getAllSymbolVolumeOverVolumeNotTrade() {
         Set<String> syms = new HashSet<>();
-        Map<String, Double> sym2Volume = Volume24hrManager.getInstance().symbol2Volume;
-        for (Map.Entry<String, Double> entry : sym2Volume.entrySet()) {
-            String sym = entry.getKey();
-            Double volume = entry.getValue();
-            if ((volume / 1000000) >= MAX_VOLUME_TRADING) {
-                Double rateChange = Volume24hrManager.getInstance().symbol2RateChange.get(sym);
-                if (rateChange != null && rateChange < 0.05) {
-                    syms.add(sym);
-//                    LOG.info("{} not trade rateChange: {} volume: {}", sym, rateChange, volume);
-                }
+//        Map<String, Double> sym2Volume = Volume24hrManager.getInstance().symbol2Volume;
+//        for (Map.Entry<String, Double> entry : sym2Volume.entrySet()) {
+//            String sym = entry.getKey();
+//            Double volume = entry.getValue();
+//            if ((volume / 1000000) >= MAX_VOLUME_TRADING) {
+//                Double rateChangeWithOpen = Volume24hrManager.getInstance().symbol2RateChangeWithOpen.get(sym);
+////                LOG.info("{} Open: {} last: {} high:{} rate: {}", sym,
+////                        Volume24hrManager.getInstance().symbol2OpenPrice.get(sym),
+////                        Volume24hrManager.getInstance().symbol2LastPrice.get(sym),
+////                        Volume24hrManager.getInstance().symbol2MaxPrice.get(sym),
+////                        rateChangeWithOpen);
+//                // > max volume -> down > 5% or 24h tăng < 5%
+//                if (rateChangeWithOpen != null && rateChangeWithOpen < 0.05) {
+//                    syms.add(sym);
+////                    LOG.info("{} not trade rateChange: {} volume: {}", sym, rateChange, volume);
+//                }
 //                syms.add(sym);
-            }
-        }
+//            }
+//        }
         return syms;
     }
 
@@ -91,10 +97,14 @@ public class SymbolTradingManager {
     }
 
     public Set<String> getAllSymbol2TradingSignal() {
-        return RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_ALL_SYMBOLS_TRADING);
+        return RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_ALL_SYMBOLS_CHECKING);
     }
 
-    public Set<String> getAllSymbol2TradingVolumini() {
+    public Set<String> getAllSymbol2TradingVolumeMini() {
         return RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_ALL_SYMBOLS);
+    }
+
+    public static void main(String[] args) {
+        SymbolTradingManager.getInstance().updateSymbolTrading();
     }
 }

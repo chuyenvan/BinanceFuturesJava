@@ -20,38 +20,39 @@ public class FuturesRules {
 
     public static final Logger LOG = LoggerFactory.getLogger(FuturesRules.class);
     private static volatile FuturesRules INSTANCE = null;
-//    public static final Long TIME_RULE = 10 * Utils.TIME_MINUTE;
 
     public static FuturesRules getInstance() {
         if (INSTANCE == null) {
             INSTANCE = new FuturesRules();
-            INSTANCE.startThreadRemoveLock();
+            INSTANCE.startThreadUpdateLocked();
         }
         return INSTANCE;
     }
 
     public static void main(String[] args) throws InterruptedException {
 
-        LOG.info("Lock list: {}", FuturesRules.getInstance().getSymsLocked());
-        Thread.sleep(5000);
-        LOG.info("Lock list: {}", FuturesRules.getInstance().getSymsLocked());
-        Thread.sleep(5000);
-        LOG.info("Lock list: {}", FuturesRules.getInstance().getSymsLocked());
-        Thread.sleep(5000);
-        LOG.info("Lock list: {}", FuturesRules.getInstance().getSymsLocked());
+//        LOG.info("Lock list: {}", FuturesRules.getInstance().getSymsLocked());
+//        Thread.sleep(5000);
+//        LOG.info("Lock list: {}", FuturesRules.getInstance().getSymsLocked());
+//        Thread.sleep(5000);
+//        LOG.info("Lock list: {}", FuturesRules.getInstance().getSymsLocked());
+//        Thread.sleep(5000);
+//        LOG.info("Lock list: {}", FuturesRules.getInstance().getSymsLocked());
+        FuturesRules.getInstance().updateListLocked();
+        System.out.println(FuturesRules.getInstance().getSymsLocked());
     }
 
     public FuturesRules() {
     }
 
-    private void startThreadRemoveLock() {
+    private void startThreadUpdateLocked() {
         new Thread(() -> {
-            Thread.currentThread().setName("ThreadRemoveTL");
-            LOG.info("Start thread ThreadRemoveTL!");
+            Thread.currentThread().setName("ThreadUpdateLocked");
+            LOG.info("Start thread ThreadUpdateLocked!");
             while (true) {
                 try {
-                    Thread.sleep(10 * Utils.TIME_SECOND);
-                    checkAndUnlockTradingRule();
+                    Thread.sleep(Utils.TIME_MINUTE);
+                    updateListLocked();
                 } catch (Exception e) {
                     LOG.error("ERROR during ThreadRemoveTL: {}", e);
                     e.printStackTrace();
@@ -60,28 +61,22 @@ public class FuturesRules {
         }).start();
     }
 
-    private void checkAndUnlockTradingRule() {
-
-        for (Map.Entry<String, String> entry : RedisHelper.getInstance().get().hgetAll(RedisConst.REDIS_KEY_EDUCA_SYMBOL_TIME_LOCK).entrySet()) {
-            String symbol = entry.getKey();
-            String timelock = entry.getValue();
-            long timeLockLong = Long.parseLong(timelock);
-            if (calTimeLock(timeLockLong) < System.currentTimeMillis()) {
-                RedisHelper.getInstance().delJsonData(RedisConst.REDIS_KEY_EDUCA_SYMBOL_TIME_LOCK, symbol);
-            }
-        }
-
-    }
-
-    public void addLock(String sym, Long time) {
-        RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_SYMBOL_TIME_LOCK, sym, time.toString());
-    }
-
-    public long calTimeLock(long currentTime) {
-        return currentTime + (10 - Utils.getCurrentMinute(currentTime) % 10) * Utils.TIME_MINUTE;
-    }
-
     public Set<String> getSymsLocked() {
         return RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_SYMBOL_TIME_LOCK);
+    }
+
+    private void updateListLocked() {
+        try {
+            Set<String> listLocked = BinanceFuturesClientSingleton.getInstance().getAllSymbolLock();
+            RedisHelper.getInstance().get().del(RedisConst.REDIS_KEY_EDUCA_SYMBOL_TIME_LOCK);
+            if (!listLocked.isEmpty()) {
+                LOG.info("Update list lock to redis: {}", Utils.toJson(listLocked));
+                for (String symbol : listLocked) {
+                    RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_SYMBOL_TIME_LOCK, symbol, symbol);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }

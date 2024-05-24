@@ -39,7 +39,9 @@ public class Volume24hrManager {
     public final ConcurrentHashMap<String, Double> symbol2Volume = new ConcurrentHashMap<>();
     public final ConcurrentHashMap<String, Double> symbol2OpenPrice = new ConcurrentHashMap<>();
     public final ConcurrentHashMap<String, Double> symbol2LastPrice = new ConcurrentHashMap<>();
-    public final ConcurrentHashMap<String, Double> symbol2RateChange = new ConcurrentHashMap<>();
+    public final ConcurrentHashMap<String, Double> symbol2MaxPrice = new ConcurrentHashMap<>();
+    public final ConcurrentHashMap<String, Double> symbol2RateChangeWithMax = new ConcurrentHashMap<>();
+    public final ConcurrentHashMap<String, Double> symbol2RateChangeWithOpen = new ConcurrentHashMap<>();
     private static volatile Volume24hrManager INSTANCE = null;
 
     public static Volume24hrManager getInstance() {
@@ -60,7 +62,9 @@ public class Volume24hrManager {
                 symbol2Volume.put(e.getSymbol(), e.getTotalTradedQuoteAssetVolume().doubleValue());
                 symbol2OpenPrice.put(e.getSymbol(), e.getOpen().doubleValue());
                 symbol2LastPrice.put(e.getSymbol(), e.getLastPrice().doubleValue());
-                symbol2RateChange.put(e.getSymbol(), Utils.rateOf2Double(e.getLastPrice().doubleValue(), e.getOpen().doubleValue()));
+                symbol2MaxPrice.put(e.getSymbol(), e.getHigh().doubleValue());
+                symbol2RateChangeWithMax.put(e.getSymbol(), Utils.rateOf2Double(e.getHigh().doubleValue(), e.getLastPrice().doubleValue()));
+                symbol2RateChangeWithOpen.put(e.getSymbol(), Utils.rateOf2Double(e.getLastPrice().doubleValue(), e.getOpen().doubleValue()));
 //                LOG.info("{}", Utils.toJson(e));
             }
         }), errorHandler);
@@ -105,8 +109,12 @@ public class Volume24hrManager {
                     symbol2Volume.put(ticker.getSymbol(), Double.valueOf(ticker.getQuoteVolume()));
                     symbol2OpenPrice.put(ticker.getSymbol(), Double.valueOf(ticker.getOpenPrice()));
                     symbol2LastPrice.put(ticker.getSymbol(), Double.valueOf(ticker.getLastPrice()));
-                    symbol2RateChange.put(ticker.getSymbol(), Utils.rateOf2Double(
-                            Double.valueOf(ticker.getLastPrice()), Double.valueOf(ticker.getOpenPrice())));
+                    symbol2MaxPrice.put(ticker.getSymbol(), Double.valueOf(ticker.getHighPrice()));
+                    symbol2RateChangeWithMax.put(ticker.getSymbol(), Utils.rateOf2Double(Double.valueOf(ticker.getHighPrice()),
+                            Double.valueOf(ticker.getLastPrice())));
+                    symbol2RateChangeWithOpen.put(ticker.getSymbol(), Utils.rateOf2Double(Double.valueOf(ticker.getLastPrice()), 
+                            Double.valueOf(ticker.getOpenPrice())));
+
                 }
             }
         } catch (Exception e) {

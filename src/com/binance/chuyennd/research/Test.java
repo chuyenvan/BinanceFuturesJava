@@ -15,18 +15,22 @@
  */
 package com.binance.chuyennd.research;
 
-import com.binance.chuyennd.client.BinanceFuturesClientSingleton;
+import com.binance.chuyennd.bigchange.btctd.BTCMacdTrendManager;
+import com.binance.chuyennd.bigchange.btctd.BTCTicker15MManager;
+import com.binance.chuyennd.bigchange.btctd.BreadDetectObject;
 import com.binance.chuyennd.client.ClientSingleton;
-import com.binance.chuyennd.client.OrderHelper;
 import com.binance.chuyennd.client.TickerFuturesHelper;
+import com.binance.chuyennd.indicators.*;
 import com.binance.chuyennd.mongo.TickerMongoHelper;
-import com.binance.chuyennd.object.KlineObjectNumber;
-import com.binance.chuyennd.object.TrendObject;
-import com.binance.chuyennd.object.TrendState;
-import com.binance.chuyennd.position.manager.PositionHelper;
+import com.binance.chuyennd.movingaverage.MAStatus;
+import com.binance.chuyennd.object.*;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
-import com.binance.chuyennd.signal.tradingview.SingalTWSimulator;
+import com.binance.chuyennd.trading.BinanceOrderTradingManager;
+import com.binance.chuyennd.trading.BudgetManager;
+import com.binance.chuyennd.trading.OrderTargetInfo;
+import com.binance.chuyennd.trading.OrderTargetStatus;
+import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Storage;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.SubscriptionClient;
@@ -34,149 +38,700 @@ import com.binance.client.SubscriptionErrorHandler;
 import com.binance.client.constant.Constants;
 import com.binance.client.exception.BinanceApiException;
 import com.binance.client.model.enums.OrderSide;
+import com.binance.client.model.enums.OrderStatus;
 import com.binance.client.model.event.CandlestickEvent;
 import com.binance.client.model.event.SymbolTickerEvent;
-import com.binance.client.model.trade.Order;
-import com.binance.chuyennd.trading.OrderTargetInfo;
-import com.binance.chuyennd.trading.OrderTargetInfoTest;
-import com.binance.chuyennd.utils.Configs;
+import com.educa.chuyennd.funcs.BreadFunctions;
 import com.mongodb.client.MongoCursor;
-import java.io.File;
-import java.io.IOException;
-import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.logging.Level;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.bson.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
+import java.io.IOException;
+import java.text.ParseException;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.logging.Level;
+
 /**
- *
  * @author pc
  */
 public class Test {
 
     public static final Logger LOG = LoggerFactory.getLogger(Test.class);
-    public static Double balanceStart = 4100.0;
-    public static Double rateProfit = 0.05;
-    public static long timeStartRun = 1709683200000L;
 
-    public static Double RATE_TARGET_VOLUME_MINI = Configs.getDouble("RATE_TARGET_VOLUME_MINI");
-    public static Double RATE_TARGET_SIGNAL = Configs.getDouble("RATE_TARGET_SIGNAL");
-    public static Double MAX_CAPITAL_RATE = Configs.getDouble("MAX_CAPITAL_RATE");
-    public static final String FILE_STORAGE_ORDER_DONE = "storage/trading/order-volume-success.data";
-
+    public static final String FILE_STORAGE_ORDER_DONE = "target/OrderTestDone.data";
+    public static final String TIME_RUN = Configs.getString("TIME_RUN");
     public ExecutorService executorServiceOrderNew = Executors.newFixedThreadPool(Configs.getInt("NUMBER_THREAD_ORDER_MANAGER"));
     private final ConcurrentHashMap<String, Long> symbol2Processing = new ConcurrentHashMap<>();
 
     public static void main(String[] args) throws ParseException, InterruptedException, IOException {
-//        testRateProfit();
+//        System.out.println(RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_MOVING_AVERAGE_DETAILS, "REZUSDT"));
+//        printOrderTestDone();
+        traceOrderTestDone();
+//        detectBtcBottom("AIUSDT");
+//        detectBtcBottomNew();
+//        detectBtcTop();
+//        testRsi();
+//        testMACD();
+//        testMACDTrend15M();
+//        testMACDTrendNew1Hour();
+//        testMACDTrendNew4Hour();
+//            printTickerData();
+//        traceOrderRunning();
+//        testSMA();
+//        changeLeverage();
+//        printTickerInMongo();
 
-//        printAllOrderOverBudget(8.0);
-//        System.out.println(SymbolTradingManager.getInstance().getAllSymbol2TradingSignal());
-//        System.out.println(Utils.sdfFile.parse("20240305").getTime());
-//       Order orderInfo = OrderHelper.readOrderInfo("RSRUSDT", 633327755582725248L);
-        System.out.println(BinanceFuturesClientSingleton.getInstance().readOrder("RSRUSDT", "android_gpgfpyhkgVGKcdrRrmSD"));
-//        List<Order> orderOpen = BinanceFuturesClientSingleton.getInstance().getOpenOrders("RSRUSDT");
-//        for (Order order : orderOpen) {
-//            System.out.println(Utils.toJson(order));
-////            if (order.getOrderId() == 633327755571642112L) {
-////                BinanceFuturesClientSingleton.getInstance().cancelOrder("RSRUSDT", order.getClientOrderId());
-////            }
-//        }
-//        new BinanceOrderTradingManager().recheckOrderTP("RSRUSDT");
-//        traceSuccessBySymbol();
-//        new BinanceOrderTradingManager().();
-//        testDCA();
-//writeAllSymbol2Redis();
+//        testGetDataMongo();
+//        traceInfoSymbol("TRXUSDT");
+
+
 //        checkPriceMax();
 //        checkTimeLock();
-//        System.out.println(getTargetBalance() + " -> " + getTarget());
-//        System.out.println(BudgetManager.getInstance().getBudget());
-//        System.out.println(Utils.toJson(
-//                BinanceFuturesClientSingleton.getInstance().getAccountUMInfo()));
-//        System.out.println(RedisHelper.getInstance().get().llen(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER_QUEUE));
-//        System.out.println(new Date(1709571600000L + Utils.TIME_DAY + 7 * Utils.TIME_HOUR).getTime());
-//        System.out.println(total * 4100);
-//        System.out.println(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_ALL_SYMBOLS));
-//System.out.println(new BinanceOrderTradingManager().callRateDump2Die());
-//        System.out.println(new BudgetManager().getInvesting());
-//        Utils.sendSms2Telegram("<b style=\"color:blue\">foo</b>");
-//        Utils.sendSms2Telegram("<b>This is a paragraph.</b>");
-        //        Utils.sendSms2Skype("Check Signal API");
-        //        System.out.println(calReportRunning());
-        //        printAllOrderDone();
-        //        printAllOrderRunning();
-        //        printAllOrderDoneTest();
-        //        System.out.println(RedisHelper.getInstance().get().hdel(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER, "ASTRUSDT"));
-        //        System.out.println(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER));
-        //        testTraceBreadOfSymbol(tickers, symbol);
-        //        testUserDataStream();
-        //        new Test().threadListenVolume();
-        //        showStatusOrderDCA();
-        //        detectTopBottomObjectInTicker("BTCUSDT");
-        //        extractVolume();
+        System.exit(1);
+
     }
 
-    private void testLock() {
-        new Thread(() -> {
-            Thread.currentThread().setName("ThreadListenQueueOrder2Manager");
-            LOG.info("Start thread ThreadListenQueueOrder2Manager!");
-            while (true) {
-                List<String> data;
-                try {
-                    data = RedisHelper.getInstance().get().blpop(0, RedisConst.REDIS_KEY_EDUCA_TEST);
-                    String symbol = data.get(1);
-                    try {
+    private static void printTickerData() {
+        String symbol = "RENUSDT";
+        List<KlineObjectNumber> tickers = (List<KlineObjectNumber>) Storage.readObjectFromFile("storage/ticker/symbols-15m/" + symbol);
+        for (int i = 1; i < 10000; i++) {
+            KlineObjectNumber lastTicker = tickers.get(tickers.size() - i - 1);
+            KlineObjectNumber ticker = tickers.get(tickers.size() - i);
+            LOG.info("{} {} -> {} : {}", Utils.normalizeDateYYYYMMDDHHmm(lastTicker.startTime.longValue()),
+                    lastTicker.histogram, ticker.histogram,
+                    Utils.rateOf2DoubleIncre(ticker.histogram, lastTicker.histogram));
+        }
+    }
 
-                        if (!symbol2Processing.containsKey(symbol)) {
-                            symbol2Processing.put(symbol, System.currentTimeMillis());
-                            executorServiceOrderNew.execute(() -> processOrderNewMarket(symbol));
 
-                        } else {
-                            LOG.info("{} is lock because processing! {}", symbol, symbol2Processing.size());
-                        }
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                } catch (Exception e) {
-                    LOG.error("ERROR during ThreadListenQueuePosition2Manager {}", e);
-                    e.printStackTrace();
-                }
+    private static void testMACDTrend15M() throws ParseException {
+        Long startTime = Utils.sdfFile.parse(TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
+        DataManager.getInstance();
+        String symbol = "ADAUSDT";
+        List<KlineObjectNumber> tickers = (List<KlineObjectNumber>) Storage.readObjectFromFile("../ticker/storage/ticker/symbols-15m/" + symbol);
+
+        LOG.info(Utils.normalizeDateYYYYMMDDHHmm(tickers.get(tickers.size() - 1).startTime.longValue()));
+        int counterSuccess = 0;
+        Integer counterFalse = 0;
+        for (int i = 0; i < tickers.size(); i++) {
+            if (tickers.get(i).startTime.longValue() == Utils.sdfFileHour.parse("20240515 20:00").getTime()) {
+                System.out.println("Debug");
             }
-        }).start();
-    }
+            KlineObjectNumber kline = tickers.get(i);
+            if (kline.startTime.longValue() < startTime) {
+                continue;
+            }
+//            LOG.info("{}", Utils.normalizeDateYYYYMMDDHHmm(tickers.get(i).startTime.longValue()));
+            DataManager.getInstance().updateData(kline, symbol);
+            MAStatus maStatus = SimpleMovingAverageManager.getInstance().getMaStatus(kline.startTime.longValue(), symbol);
+            Double maValue = SimpleMovingAverageManager.getInstance().getMaValue(symbol, Utils.getDate(kline.startTime.longValue()));
+            Double rateMa = Utils.rateOf2Double(kline.priceClose, maValue);
+            if (maValue == null) {
+                continue;
+            }
 
-    public static int fibonacci(int n) {
-        int f0 = 0;
-        int f1 = 1;
-        int fn = 1;
+            KlineObjectNumber lastTicker1H = DataManager.getInstance().getTicker(symbol, Constants.INTERVAL_1H,
+                    Utils.getHour(kline.startTime.longValue()) - Utils.TIME_HOUR);
+            KlineObjectNumber ticker1H = DataManager.getInstance().getTicker(symbol, Constants.INTERVAL_1H,
+                    Utils.getHour(kline.startTime.longValue()));
+            KlineObjectNumber lastTicker4H = DataManager.getInstance().getTicker(symbol, Constants.INTERVAL_4H,
+                    Utils.get4Hour(kline.startTime.longValue()) - 4 * Utils.TIME_HOUR);
+            KlineObjectNumber ticker4H = DataManager.getInstance().getTicker(symbol, Constants.INTERVAL_4H,
+                    Utils.get4Hour(kline.startTime.longValue()));
+            KlineObjectNumber lastTicker1d = DataManager.getInstance().getTicker(symbol, Constants.INTERVAL_1D,
+                    Utils.getDate(kline.startTime.longValue()) - Utils.TIME_DAY);
+            KlineObjectNumber ticker1d = DataManager.getInstance().getTicker(symbol, Constants.INTERVAL_1D,
+                    Utils.getDate(kline.startTime.longValue()));
+            if (MACDTradingController.isSignalCutMacdFirst(tickers, i)
+                    && maStatus != null && !maStatus.equals(MAStatus.UNDER)
+                    && ticker1H != null && ticker1H.histogram > lastTicker1H.histogram
+                    && ticker4H != null && ticker4H.histogram > lastTicker4H.histogram
+                    && lastTicker1d.histogram != null && ticker1d.histogram > lastTicker1d.histogram
+            ) {
 
-        if (n < 0) {
-            return -1;
-        } else if (n == 0 || n == 1) {
-            return 1;
-        } else {
-            for (int i = 2; i < n; i++) {
-                f0 = f1;
-                f1 = fn;
-                fn = f0 + f1;
+                KlineObjectNumber tickerClose = tickers.get(tickers.size() - 1);
+
+//                if (indexStop != null) {
+//                    tickerClose = tickers.get(indexStop);
+//                }
+                boolean tradeStatus = MACDTradingController.isTradingStatus(tickers, i, 0.01, 10);
+                if (tradeStatus) {
+                    counterSuccess++;
+                } else {
+                    counterFalse++;
+                }
+                LOG.info("Result: {} {} ->  {} {} {} {} {}", tradeStatus,
+                        Utils.normalizeDateYYYYMMDDHHmm(tickers.get(i).startTime.longValue()),
+                        tickers.get(i).priceClose, Utils.toJson(ticker1d), Utils.toJson(ticker4H), Utils.toJson(ticker1H), Utils.toJson(kline)
+                );
             }
         }
-        return fn;
+        LOG.info("{}/{} {}", counterFalse, counterSuccess, counterFalse.doubleValue() / counterSuccess);
     }
+
+    private static void testMACDTrendNew() throws ParseException {
+        String symbol = "BLZUSDT";
+        List<KlineObjectNumber> tickers = (List<KlineObjectNumber>) Storage.readObjectFromFile("storage/ticker/symbols-15m/" + symbol);
+        LOG.info(Utils.normalizeDateYYYYMMDDHHmm(tickers.get(tickers.size() - 1).startTime.longValue()));
+        int counterSuccess = 0;
+        Integer counterFalse = 0;
+        for (int i = 0; i < tickers.size(); i++) {
+//            if (tickers.get(i).startTime.longValue() == Utils.sdfFileHour.parse("20240509 04:15").getTime()){
+//                System.out.println("Debug");
+//            }
+            KlineObjectNumber kline = tickers.get(i);
+            MAStatus maStatus = SimpleMovingAverageManager.getInstance().getMaStatus(kline.startTime.longValue(), symbol);
+            Double maValue = SimpleMovingAverageManager.getInstance().getMaValue(symbol, Utils.getDate(kline.startTime.longValue()));
+            Double rateMa = Utils.rateOf2Double(kline.priceClose, maValue);
+            if (maValue == null) {
+                continue;
+            }
+            if (MACDTradingController.isMacdTrendBuyNew(tickers, i)
+                    && maStatus != null && maStatus.equals(MAStatus.TOP)
+                    && kline.priceClose > maValue
+            ) {
+                Integer indexStop = null;
+                for (int j = i + 1; j < tickers.size(); j++) {
+                    if (tickers.get(j).histogram > 0) {
+                        indexStop = j;
+                        break;
+                    }
+                }
+                KlineObjectNumber tickerClose = tickers.get(tickers.size() - 1);
+                if (indexStop != null) {
+                    tickerClose = tickers.get(indexStop);
+                }
+                boolean tradeStatus = MACDTradingController.isTradingStatus(tickers, i, 0.01, 12);
+                if (tradeStatus) {
+                    counterSuccess++;
+                } else {
+                    counterFalse++;
+                    LOG.info("Result: {} {} -> {} {} {}", Utils.normalizeDateYYYYMMDDHHmm(tickers.get(i).startTime.longValue()),
+                            tickers.get(i).priceClose, Utils.normalizeDateYYYYMMDDHHmm(tickerClose.startTime.longValue()),
+                            tickerClose.priceClose, MACDTradingController.isTradingStatus(tickers, i, 0.01, 12));
+                }
+            }
+        }
+        LOG.info("{}/{} {}", counterFalse, counterSuccess, counterFalse.doubleValue() / counterSuccess);
+    }
+
+    private static void testMACDTrendNew1Hour() throws ParseException {
+        int counterSuccess = 0;
+        Integer counterFalse = 0;
+        for (File file : new File("storage/ticker/symbols-1h/").listFiles()) {
+            LOG.info("{} {}", file.getName(), file.getPath());
+            String symbol = file.getName();
+            List<KlineObjectNumber> tickers = (List<KlineObjectNumber>) Storage.readObjectFromFile(file.getPath());
+
+            LOG.info(Utils.normalizeDateYYYYMMDDHHmm(tickers.get(tickers.size() - 1).startTime.longValue()));
+            for (int i = 0; i < tickers.size(); i++) {
+//            LOG.info("{}", Utils.normalizeDateYYYYMMDDHHmm(tickers.get(i).startTime.longValue()));
+//            if (tickers.get(i).startTime.longValue() == Utils.sdfFileHour.parse("20240514 22:00").getTime()){
+//                System.out.println("Debug");
+//            }
+                KlineObjectNumber kline = tickers.get(i);
+                MAStatus maStatus = SimpleMovingAverageManager.getInstance().getMaStatus(kline.startTime.longValue(), symbol);
+                Double maValue = SimpleMovingAverageManager.getInstance().getMaValue(symbol, Utils.getDate(kline.startTime.longValue()));
+                Double rateMa = Utils.rateOf2Double(kline.priceClose, maValue);
+                if (maValue == null) {
+                    continue;
+                }
+                if (MACDTradingController.isMacdTrendBuyNew1h(tickers, i)
+                        && maStatus != null && maStatus.equals(MAStatus.TOP)
+//                    && rateMa > 0.05 && rateMa < 0.3
+//                    && kline.priceClose > maValue
+                        && MACDTradingController.rateChangeWithMax(tickers, i - 5, i) > 0.02
+                ) {
+                    Integer indexStop = null;
+                    for (int j = i + 1; j < tickers.size(); j++) {
+                        if (tickers.get(j).histogram > 0) {
+                            indexStop = j;
+                            break;
+                        }
+                    }
+                    KlineObjectNumber tickerClose = tickers.get(tickers.size() - 1);
+                    if (indexStop != null) {
+                        tickerClose = tickers.get(indexStop);
+                    }
+                    boolean tradeStatus = MACDTradingController.isTradingStatus(tickers, i, 0.01, 18);
+                    if (tradeStatus) {
+                        counterSuccess++;
+                    } else {
+                        counterFalse++;
+                    }
+                    LOG.info("Result: {} {} -> {} {} {} {} {}", Utils.normalizeDateYYYYMMDDHHmm(tickers.get(i).startTime.longValue()),
+                            tickers.get(i).priceClose, Utils.normalizeDateYYYYMMDDHHmm(tickerClose.startTime.longValue()),
+                            tickerClose.priceClose, tradeStatus
+                            , MACDTradingController.rateChangeWithMax(tickers, i - 5, i),
+                            Utils.rateOf2Double(tickers.get(i).priceClose, tickers.get(i).priceOpen));
+                }
+            }
+        }
+        LOG.info("{}/{} {}", counterFalse, counterSuccess, counterFalse.doubleValue() / counterSuccess);
+    }
+
+    private static void testMACDTrendNew4Hour() throws ParseException {
+        int counterSuccess = 0;
+        Integer counterFalse = 0;
+        for (File file : new File("storage/ticker/symbols-4h/").listFiles()) {
+//            LOG.info("{} {}", file.getName(), file.getPath());
+            String symbol = file.getName();
+            List<KlineObjectNumber> tickers = (List<KlineObjectNumber>) Storage.readObjectFromFile(file.getPath());
+
+            LOG.info(Utils.normalizeDateYYYYMMDDHHmm(tickers.get(tickers.size() - 1).startTime.longValue()));
+            for (int i = 0; i < tickers.size(); i++) {
+//            LOG.info("{}", Utils.normalizeDateYYYYMMDDHHmm(tickers.get(i).startTime.longValue()));
+//            if (tickers.get(i).startTime.longValue() == Utils.sdfFileHour.parse("20240514 22:00").getTime()){
+//                System.out.println("Debug");
+//            }
+                KlineObjectNumber kline = tickers.get(i);
+                MAStatus maStatus = SimpleMovingAverageManager.getInstance().getMaStatus(kline.startTime.longValue(), symbol);
+                Double maValue = SimpleMovingAverageManager.getInstance().getMaValue(symbol, Utils.getDate(kline.startTime.longValue()));
+                Double rateMa = Utils.rateOf2Double(kline.priceClose, maValue);
+                if (maValue == null) {
+                    continue;
+                }
+                if (MACDTradingController.isMacdTrendBuyNew1h(tickers, i)
+                        && maStatus != null && maStatus.equals(MAStatus.TOP)
+//                    && rateMa > 0.05 && rateMa < 0.3
+//                    && kline.priceClose > maValue
+                        && MACDTradingController.rateChangeWithMax(tickers, i - 5, i) > 0.02
+                ) {
+                    Integer indexStop = null;
+                    for (int j = i + 1; j < tickers.size(); j++) {
+                        if (tickers.get(j).histogram > 0) {
+                            indexStop = j;
+                            break;
+                        }
+                    }
+                    KlineObjectNumber tickerClose = tickers.get(tickers.size() - 1);
+                    if (indexStop != null) {
+                        tickerClose = tickers.get(indexStop);
+                    }
+                    boolean tradeStatus = MACDTradingController.isTradingStatus(tickers, i, 0.005, 18);
+                    if (tradeStatus) {
+                        counterSuccess++;
+                    } else {
+                        counterFalse++;
+                    }
+                    LOG.info("Result:{} {} {} -> {} {} {} {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(tickers.get(i).startTime.longValue()),
+                            tickers.get(i).priceClose, Utils.normalizeDateYYYYMMDDHHmm(tickerClose.startTime.longValue()),
+                            tickerClose.priceClose, tradeStatus
+                            , MACDTradingController.rateChangeWithMax(tickers, i - 5, i),
+                            Utils.rateOf2Double(tickers.get(i).priceClose, tickers.get(i).priceOpen));
+                }
+            }
+        }
+        LOG.info("{}/{} {}", counterFalse, counterSuccess, counterFalse.doubleValue() / counterSuccess);
+    }
+
+    private static void detectBtcTop() {
+        List<KlineObjectNumber> tickers = TickerMongoHelper.getInstance().getTicker15mBySymbol(Constants.SYMBOL_PAIR_BTC);
+        Map<Long, KlineObjectNumber> time2Ticker = new HashMap<>();
+        Long lastBottom = 0l;
+        Integer period = 30;
+        for (int i = period; i < tickers.size(); i++) {
+            if (tickers.get(i - period).rsi == null) {
+                continue;
+            }
+            Double rsiAvg = calAvgRsi(tickers, i - period, period);
+            KlineObjectNumber before2Ticker = tickers.get(i - 6);
+            KlineObjectNumber before1Ticker = tickers.get(i - 5);
+            KlineObjectNumber beforeTicker = tickers.get(i - 4);
+            KlineObjectNumber ticker = tickers.get(i - 3);
+            KlineObjectNumber afterTicker = tickers.get(i - 2);
+            KlineObjectNumber after1Ticker = tickers.get(i - 1);
+            KlineObjectNumber after2Ticker = tickers.get(i);
+            Double rateMa = Utils.rateOf2Double(afterTicker.ma20, afterTicker.priceClose);
+            if (afterTicker.rsi < ticker.rsi
+                    && after1Ticker.rsi < afterTicker.rsi
+                    && after2Ticker.rsi < afterTicker.rsi
+                    && ticker.rsi > beforeTicker.rsi
+//                    && before1Ticker.rsi < ticker.rsi
+//                    && beforeTicker.rsi > before2Ticker.rsi
+                    && ticker.rsi - rsiAvg > 10
+                    && ticker.rsi >= 60
+            ) {
+                LOG.info("BTC bottom: {} {} {} {} {} hours", Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()), rsiAvg,
+                        ticker.rsi, rsiAvg - ticker.rsi, (ticker.startTime.longValue() - lastBottom) / Utils.TIME_HOUR);
+                lastBottom = ticker.startTime.longValue();
+            }
+        }
+    }
+
+    private static void detectBtcBottom(String symbol) {
+        List<KlineObjectNumber> tickers = TickerMongoHelper.getInstance().getTicker15mBySymbol(symbol);
+        Map<Long, KlineObjectNumber> time2Ticker = new HashMap<>();
+        Long lastBottom = 0l;
+        for (int i = 0; i < tickers.size(); i++) {
+            if (TickerFuturesHelper.isButton(tickers, i, 30)) {
+                KlineObjectNumber ticker = tickers.get(i - 2);
+                LOG.info("{} bottom: {} {} {} {} hours", symbol, Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()),
+                        tickers.get(i).priceClose,
+                        ticker.rsi, (ticker.startTime.longValue() - lastBottom) / Utils.TIME_HOUR);
+                lastBottom = ticker.startTime.longValue();
+            }
+        }
+    }
+
+    private static void detectBtcBottomNew() {
+        List<KlineObjectNumber> tickers = TickerMongoHelper.getInstance().getTicker15mBySymbol(Constants.SYMBOL_PAIR_BTC);
+        Long lastBottom = 0l;
+        Integer period = 30;
+        for (int i = period; i < tickers.size(); i++) {
+            if (tickers.get(i - period).rsi == null) {
+                continue;
+            }
+            Double rsiAvg = calAvgRsi(tickers, i - period, period);
+            KlineObjectNumber before2Ticker = tickers.get(i - 5);
+            KlineObjectNumber before1Ticker = tickers.get(i - 4);
+            KlineObjectNumber beforeTicker = tickers.get(i - 3);
+            KlineObjectNumber ticker = tickers.get(i - 2);
+            KlineObjectNumber afterTicker = tickers.get(i - 1);
+            KlineObjectNumber after1Ticker = tickers.get(i);
+
+            if (afterTicker.rsi > ticker.rsi
+                    && after1Ticker.rsi > afterTicker.rsi
+                    && ticker.rsi < beforeTicker.rsi
+                    && beforeTicker.rsi < before1Ticker.rsi
+                    && beforeTicker.rsi < before2Ticker.rsi
+                    && rsiAvg - ticker.rsi > 10
+                    && ticker.rsi <= 40
+            ) {
+                LOG.info("BTC bottom: {} {} {} {} {} hours", Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()), rsiAvg,
+                        ticker.rsi, rsiAvg - ticker.rsi, (ticker.startTime.longValue() - lastBottom) / Utils.TIME_HOUR);
+                lastBottom = ticker.startTime.longValue();
+            }
+        }
+
+    }
+
+    private static Double calAvgRsi(List<KlineObjectNumber> tickers, int i, int duration) {
+        Double total = 0d;
+        for (int j = i; j < i + duration; j++) {
+            KlineObjectNumber ticker = tickers.get(j);
+            total += ticker.rsi;
+        }
+        return total / duration;
+    }
+
+
+    private static void testSMA() {
+        List<KlineObjectNumber> tickers = TickerFuturesHelper.getTicker("BTCUSDT", Constants.INTERVAL_1D);
+        IndicatorEntry[] smaEntries = SimpleMovingAverage.calculate(tickers, 20);
+        Arrays.stream(smaEntries).forEach(s -> System.out.println(s));
+    }
+
+    private static void testRsi() {
+        List<KlineObjectNumber> tickers = TickerFuturesHelper.getTicker("USTCUSDT", Constants.INTERVAL_15M);
+
+        RsiEntry[] rsi = calculateRSI(tickers, 14);
+
+        for (int index = 0; index < rsi.length; index++) {
+            LOG.info("{} ->Close:{} rsi: {}", Utils.normalizeDateYYYYMMDDHHmm(tickers.get(index + 14).startTime.longValue()),
+                    tickers.get(index + 14).priceClose, rsi[index].getRsi());
+        }
+    }
+
+    private static void testMACD() throws ParseException {
+        List<KlineObjectNumber> tickers = TickerFuturesHelper.getTicker("CELRUSDT", Constants.INTERVAL_15M);
+
+        MACDEntry[] entries = MACD.calculate(tickers, 12, 26, 9);
+//        Arrays.stream(entries).forEach(s -> System.out.println(s == null ? "null" : s));
+        for (int i = 0; i < entries.length; i++) {
+            if (i < 1) {
+                continue;
+            }
+
+            MACDEntry lastEntrie = entries[i - 1];
+            MACDEntry entrie = entries[i];
+            if (lastEntrie.getHistogram() < 0
+                    && entrie.getHistogram() > 0
+                    && lastEntrie.getSignal() < 0
+            ) {
+                System.out.println(entrie == null ? "null" : entrie);
+            }
+        }
+    }
+
+    public static RsiEntry[] calculateRSI(List<KlineObjectNumber> candles, int periods) {
+        RsiEntry[] rsiEntries;
+
+        rsiEntries = new RsiEntry[candles.size() - periods];
+        int idx = 0;
+
+        double[] change = new double[candles.size()];
+        double[] gain = new double[candles.size()];
+        double[] loss = new double[candles.size()];
+        double avgGain;
+        double avgLoss;
+
+        for (int i = 1; i < candles.size(); i++) {
+            change[i] = candles.get(i).priceClose - candles.get(i - 1).priceClose;
+
+            if (change[i] > 0)
+                gain[i] = change[i];
+            else if (change[i] < 0)
+                loss[i] = change[i] * -1;
+
+            if (i >= periods) {
+                if (i == periods) {
+                    avgGain = avg(gain, 1, periods);
+                    avgLoss = avg(loss, 1, periods);
+                } else {
+                    avgGain = (rsiEntries[idx - 1].getAvgGain() * (periods - 1) + gain[i]) / periods;
+                    avgLoss = (rsiEntries[idx - 1].getAvgLoss() * (periods - 1) + loss[i]) / periods;
+                }
+                double rs = avgGain / avgLoss;
+                double rsi = 100 - (100 / (1 + rs));
+
+                rsiEntries[idx] = new RsiEntry(candles.get(i));
+                rsiEntries[idx].setChange(change[i]);
+                rsiEntries[idx].setGain(gain[i]);
+                rsiEntries[idx].setLoss(loss[i]);
+                rsiEntries[idx].setAvgGain(avgGain);
+                rsiEntries[idx].setAvgLoss(avgLoss);
+                rsiEntries[idx].setRs(rs);
+                rsiEntries[idx].setRsi(rsi);
+
+                idx++;
+            }
+
+        }
+
+        return rsiEntries;
+    }
+
+    public static double avg(double[] values, int startIndex, int endIndex) {
+        double sum = 0;
+        for (int i = startIndex; i <= endIndex; i++) {
+            sum += values[i];
+        }
+        return sum / (endIndex - startIndex + 1);
+    }
+
+    private static void changeLeverage() {
+        Set<String> allSymbols = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_ALL_SYMBOLS);
+        for (String symbol : allSymbols) {
+            try {
+                ClientSingleton.getInstance().syncRequestClient.changeInitialLeverage(symbol, 10);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private static void printOrderTestDone() throws IOException {
+
+        ConcurrentHashMap<String, OrderTargetInfoTest> allOrderDone =
+                (ConcurrentHashMap<String, OrderTargetInfoTest>) Storage.readObjectFromFile(FILE_STORAGE_ORDER_DONE);
+        List<String> lines = new ArrayList<>();
+        List<KlineObjectNumber> tickers = TickerMongoHelper.getInstance().getTicker15mBySymbol(Constants.SYMBOL_PAIR_BTC);
+        Map<Long, KlineObjectNumber> time2Ticker = new HashMap<>();
+        Map<Long, Integer> time2Index = new HashMap<>();
+        for (int i = 0; i < tickers.size(); i++) {
+            KlineObjectNumber ticker = tickers.get(i);
+            time2Ticker.put(ticker.startTime.longValue(), ticker);
+            time2Index.put(ticker.startTime.longValue(), i);
+        }
+        Map<String, Double> symbol2Profit = new HashMap<>();
+        for (OrderTargetInfoTest order : allOrderDone.values()) {
+            long date = Utils.getDate(order.timeStart);
+//            Double maValue = time2Ma20.get(date).get(orderTargetInfoTest.symbol);
+            Double maValue = SimpleMovingAverageManager.getInstance().getMaValue(order.symbol, date);
+            KlineObjectNumber ticker = time2Ticker.get(order.timeStart);
+            Integer index = time2Index.get(order.timeStart);
+            Double btcRsi = 0d;
+            Double btcRsiAvg = 0d;
+            if (ticker != null) {
+                btcRsi = ticker.rsi;
+            }
+            if (index != null) {
+                btcRsiAvg = calAvgRsi(tickers, index - 30, 30);
+            }
+            Double profitOfSymbol = symbol2Profit.get(order.symbol);
+            if (profitOfSymbol == null) {
+                profitOfSymbol = 0d;
+            }
+            profitOfSymbol += Utils.rateOf2Double(order.priceTP, order.priceEntry);
+            symbol2Profit.put(order.symbol, profitOfSymbol);
+
+            StringBuilder builder = new StringBuilder();
+            builder.append(order.symbol).append(",");
+            builder.append(order.priceEntry).append(",");
+            builder.append(order.priceTP).append(",");
+            builder.append(Utils.rateOf2Double(order.priceTP, order.priceEntry)).append(",");
+            builder.append(order.maxPrice).append(",");
+            builder.append(Utils.rateOf2Double(order.priceEntry, maValue)).append(",");
+            builder.append(maValue).append(",");
+            builder.append(Utils.rateOf2Double(order.maxPrice, order.priceEntry)).append(",");
+            builder.append(order.status.toString()).append(",");
+            builder.append(Utils.normalizeDateYYYYMMDDHHmm(order.timeStart)).append(",");
+            builder.append(Utils.normalizeDateYYYYMMDDHHmm(order.timeUpdate)).append(",");
+            builder.append(order.rateChange).append(",");
+            builder.append(order.volume).append(",");
+            builder.append(order.rsi14).append(",");
+            builder.append(btcRsiAvg).append(",");
+            builder.append(btcRsi).append(",");
+            builder.append(order.ma20).append(",");
+            builder.append(order.quantity).append(",");
+            builder.append(calTp(order)).append(",");
+            builder.append((order.timeUpdate - order.timeStart) / Utils.TIME_HOUR).append(",");
+            builder.append(BTCTicker15MManager.getInstance().getRateWithMaxByDuration(order.timeStart, 8 * Utils.TIME_HOUR));
+
+            lines.add(builder.toString());
+        }
+        TreeMap<Double, String> profit2Symbol = new TreeMap<>();
+        for (Map.Entry<String, Double> entry : symbol2Profit.entrySet()) {
+            String key = entry.getKey();
+            Double values = entry.getValue();
+            profit2Symbol.put(values, key);
+        }
+        for (Map.Entry<Double, String> entry : profit2Symbol.entrySet()) {
+            String key = entry.getValue();
+            Double values = entry.getKey();
+            LOG.info("{} {}", values, key);
+        }
+
+        FileUtils.writeLines(new File("target/printDone.csv"), lines);
+    }
+
+    private static void traceOrderTestDone() throws IOException {
+
+        ConcurrentHashMap<String, OrderTargetInfoTest> allOrderDone =
+                (ConcurrentHashMap<String, OrderTargetInfoTest>) Storage.readObjectFromFile(FILE_STORAGE_ORDER_DONE);
+        Double profitCheck = 0d;
+        Double profitTotal = 0d;
+
+        List<KlineObjectNumber> tickers = TickerMongoHelper.getInstance().getTicker15mBySymbol(Constants.SYMBOL_PAIR_BTC);
+        Map<Long, KlineObjectNumber> time2Ticker = new HashMap<>();
+        Map<Long, Integer> time2Index = new HashMap<>();
+        for (int i = 0; i < tickers.size(); i++) {
+            KlineObjectNumber ticker = tickers.get(i);
+            time2Ticker.put(ticker.startTime.longValue(), ticker);
+            time2Index.put(ticker.startTime.longValue(), i);
+        }
+        for (OrderTargetInfoTest order : allOrderDone.values()) {
+            Double rateMa = Utils.rateOf2Double(order.priceEntry, order.ma20);
+            KlineObjectNumber ticker = time2Ticker.get(order.timeStart);
+            Integer index = time2Index.get(order.timeStart);
+            TrendState btcTrend1H = BTCMacdTrendManager.getInstance().getTrend(Constants.INTERVAL_1H, order.timeStart);
+            Double btcRsi = 0d;
+            if (ticker != null) {
+                btcRsi = ticker.rsi;
+            }
+            Double btcRsiAvg = 0d;
+            if (index != null) {
+                btcRsiAvg = calAvgRsi(tickers, index - 30, 30);
+            }
+//            if (rateMa < 0.0) { // 75%
+//            if (btcTrend1H != null && btcTrend1H.equals(TrendState.STRONG_UP)) {
+//            if (true) {
+            if (!order.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)) {
+                if (BTCTicker15MManager.getInstance().getRateWithMaxByDuration(order.timeStart, 24 * Utils.TIME_HOUR) < 0.005) {
+                    profitCheck += Utils.rateOf2Double(order.priceTP, order.priceEntry);
+                }
+                profitTotal += Utils.rateOf2Double(order.priceTP, order.priceEntry);
+            }
+        }
+        Double rate = profitCheck * 100 / profitTotal;
+        LOG.info("{}/{} {}%", profitCheck, profitTotal, rate);
+
+    }
+
+    public static Double calTp(OrderTargetInfoTest orderInfo) {
+        Double tp = orderInfo.quantity * (orderInfo.priceTP - orderInfo.priceEntry);
+        return tp;
+    }
+
+    private static void testGetDataMongo() throws ParseException {
+        Long startTime = Utils.sdfFile.parse("202405012").getTime() + 7 * Utils.TIME_HOUR;
+        Long startTimeCheck = Utils.sdfFileHour.parse("20240511 19:15").getTime();
+        TreeMap<Long, Map<String, KlineObjectNumber>> time2Tickers = TickerMongoHelper.getInstance().getDataFromDb(startTime);
+        for (Map.Entry<Long, Map<String, KlineObjectNumber>> entry : time2Tickers.entrySet()) {
+            Long time = entry.getKey();
+            Map<String, KlineObjectNumber> symbol2Ticker = entry.getValue();
+            if (time.equals(startTimeCheck)) {
+                LOG.info("{} {}", Utils.normalizeDateYYYYMMDDHHmm(time), Utils.normalizeDateYYYYMMDDHHmm(startTimeCheck));
+                for (Map.Entry<String, KlineObjectNumber> entry1 : symbol2Ticker.entrySet()) {
+                    String symbol = entry1.getKey();
+                    KlineObjectNumber ticker = entry1.getValue();
+                    LOG.info("{} {} {} {}", Utils.normalizeDateYYYYMMDDHHmm(time), symbol, Utils.rateOf2Double(ticker.maxPrice, ticker.minPrice),
+                            Utils.toJson(ticker));
+                }
+            }
+//            LOG.info("{} ", Utils.normalizeDateYYYYMMDDHHmm(time));
+
+        }
+    }
+
+    private static void traceInfoSymbol(String symbol) throws ParseException {
+        List<KlineObjectNumber> tickers = (List<KlineObjectNumber>) Storage.readObjectFromFile("storage/ticker/symbols-15m/" + symbol);
+        for (int i = 0; i < tickers.size(); i++) {
+            if (tickers.get(i).startTime.longValue() >= Utils.sdfFileHour.parse("20240512 19:15").getTime()) {
+                LOG.info("{} {}", Utils.normalizeDateYYYYMMDDHHmm(tickers.get(i).startTime.longValue()),
+                        tickers.get(i).histogram);
+            }
+        }
+
+    }
+
+    private static void testBudget() {
+        Double totalMargin = 0d;
+        for (int i = 0; i < 200; i++) {
+            Double budget = BudgetManagerTest.getInstance().getBudget();
+            totalMargin += budget;
+            Double rate = budget * 10000 / 10000;
+            Long rateL = rate.longValue();
+            LOG.info("STT: {} budget:{} rate: {}% total: {}", i + 1, Utils.formatMoneyNew(budget), rateL.doubleValue() / 100, totalMargin);
+        }
+    }
+
+    private static void traceOrderRunning() {
+        BudgetManagerTest test = new BudgetManagerTest();
+        List<OrderTargetInfoTest> orderInfos = test.getListOrderRunning();
+        for (OrderTargetInfoTest order : orderInfos) {
+            LOG.info("{} {} entry:{} tp:{} status:{}", order.symbol, Utils.normalizeDateYYYYMMDDHHmm(order.timeStart), order.priceEntry
+                    , order.priceTP, order.status);
+        }
+    }
+
+    private static void printTickerInMongo() throws ParseException {
+        Long time = Utils.sdfFile.parse("20240509").getTime() + 7 * Utils.TIME_HOUR;
+        System.out.println(time);
+        String symbol = "BATUSDT";
+        MongoCursor<Document> docs = TickerMongoHelper.getInstance().getTicker15m(time, symbol);
+        List<KlineObjectNumber> tickersOnline = TickerFuturesHelper.getTickerWithStartTime(symbol, Constants.INTERVAL_15M, time);
+        Map<Long, KlineObjectNumber> time2TickerOnline = new HashMap<>();
+        for (KlineObjectNumber tickerOnline : tickersOnline) {
+            time2TickerOnline.put(tickerOnline.startTime.longValue(), tickerOnline);
+        }
+
+        while (docs.hasNext()) {
+            Document doc = docs.next();
+            List<KlineObjectNumber> tickers = TickerMongoHelper.getInstance().extractDetails(doc);
+            for (KlineObjectNumber ticker : tickers) {
+                KlineObjectNumber tickerOnline = time2TickerOnline.get(ticker.startTime.longValue());
+                boolean khop = true;
+                if (tickersOnline == null || tickerOnline.minPrice != ticker.minPrice
+                        || tickerOnline.maxPrice != ticker.maxPrice
+                        || tickerOnline.priceClose != ticker.priceClose
+                        || tickerOnline.priceOpen != ticker.priceOpen) {
+                }
+                LOG.info("{} {}  Open:{} max: {} min: {} Close: {} vol:{} khop: {} ma:{} rsi:{}", ticker.startTime,
+                        Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()), ticker.priceOpen, ticker.maxPrice,
+                        ticker.minPrice, ticker.priceClose, ticker.totalUsdt, khop, ticker.ma20, ticker.rsi);
+            }
+        }
+    }
+
 
     public static boolean isTimeRun() {
         return Utils.getCurrentMinute() % 15 == 9 && Utils.getCurrentSecond() == 50;
@@ -201,159 +756,12 @@ public class Test {
 
     }
 
-    private static void printAllOrderDoneTest() {
-        Map<String, Double> sym2Volume = TickerFuturesHelper.getAllVolume24hr();
-        ConcurrentHashMap<Long, OrderTargetInfoTest> allOrderDone = (ConcurrentHashMap<Long, OrderTargetInfoTest>) Storage.readObjectFromFile(SingalTWSimulator.FILE_STORAGE_ORDER_DONE);
-        Integer counter50M = 0;
-        for (Map.Entry<Long, OrderTargetInfoTest> entry : allOrderDone.entrySet()) {
-            Long time = entry.getKey();
-            OrderTargetInfoTest order = entry.getValue();
-            Double volume = sym2Volume.get(order.symbol) / 1000000;
-            if (volume < 50) {
-                counter50M++;
-            }
-            try {
-//                KlineObjectNumber tickerOrder = TickerHelper.getTickerByTime(order.symbol, Constants.INTERVAL_15M, order.timeStart);
-//                Double tickerChange = Utils.rateOf2Double(tickerOrder.maxPrice, tickerOrder.minPrice) * 1000;
-//                LOG.info("{}", Utils.toJson(tickerOrder));
-
-//                KlineObjectNumber ticker24hr = TickerHelper.getTickerLast24h(order.symbol, order.timeStart);
-//                Double tickerChange = Utils.rateOf2Double(ticker24hr.priceClose, ticker24hr.priceOpen) * 10000;
-//                double rate = tickerChange.longValue();
-//                KlineObjectNumber tickerDone = TickerHelper.getTickerByTime(order.symbol, Constants.INTERVAL_15M, time);
-//                boolean check = false;
-//                if (tickerOrder.maxPrice >= order.priceEntry
-//                        && tickerOrder.minPrice < order.priceEntry
-//                        && tickerDone.maxPrice >= order.priceTP
-//                        && tickerDone.minPrice < order.priceTP) {
-//                    check = true;
-//                }
-//                if (volume.longValue() > 200) {
-                LOG.info("{} {} {} {} {} {} {} {} {} => {} {} {}", Utils.normalizeDateYYYYMMDDHHmm(order.timeStart), Utils.normalizeDateYYYYMMDDHHmm(time),
-                        order.side, order.symbol, order.priceEntry, order.priceTP, order.minPrice, order.maxPrice,
-                        order.lastPrice, true, volume.longValue() + "M", "  tickerchange: " + 1 / 100 + "%");
-//                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-        Double rate50M = counter50M.doubleValue() / allOrderDone.size();
-        LOG.info("{} {} {}", counter50M, allOrderDone.size(), rate50M);
-    }
-
-    private static void printAllOrderDone() throws IOException {
-        Map<String, Double> sym2Volume = TickerFuturesHelper.getAllVolume24hr();
-        List<String> lines = FileUtils.readLines(new File("storage/trading/order-volume-success.data"));
-        Integer counter50M = 0;
-        Map<String, Integer> symbol2Counter = new HashMap<String, Integer>();
-        for (String line : lines) {
-            OrderTargetInfo order = Utils.gson.fromJson(line, OrderTargetInfo.class);
-            Double volume = sym2Volume.get(order.symbol) / 1000000;
-            Integer counter = symbol2Counter.get(order.symbol);
-            if (counter == null) {
-                counter = 0;
-            }
-            counter++;
-            symbol2Counter.put(order.symbol, counter);
-            if (volume < 50) {
-                counter50M++;
-            }
-            try {
-//                KlineObjectNumber tickerOrder = TickerHelper.getTickerByTime(order.symbol, Constants.INTERVAL_15M, order.timeStart);
-//                Double tickerChange = Utils.rateOf2Double(tickerOrder.maxPrice, tickerOrder.minPrice) * 1000;
-//                LOG.info("{}", Utils.toJson(tickerOrder));
-
-//                KlineObjectNumber ticker24hr = TickerHelper.getTickerLast24h(order.symbol, order.timeStart);
-//                Double tickerChange = Utils.rateOf2Double(ticker24hr.priceClose, ticker24hr.priceOpen) * 10000;
-//                double rate = tickerChange.longValue();
-//                KlineObjectNumber tickerDone = TickerHelper.getTickerByTime(order.symbol, Constants.INTERVAL_15M, time);
-//                boolean check = false;
-//                if (tickerOrder.maxPrice >= order.priceEntry
-//                        && tickerOrder.minPrice < order.priceEntry
-//                        && tickerDone.maxPrice >= order.priceTP
-//                        && tickerDone.minPrice < order.priceTP) {
-//                    check = true;
-//                }
-//                if (volume.longValue() > 200) {
-                LOG.info("{} {} {} {} {} {} => {} {}", Utils.normalizeDateYYYYMMDDHHmm(order.timeStart), Utils.normalizeDateYYYYMMDDHHmm(order.timeUpdate),
-                        order.side, order.symbol, order.priceEntry, order.priceTP, volume.longValue() + "M", order.tradingType);
-//                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-        Double rate50M = counter50M.doubleValue() / lines.size();
-        LOG.info("{} {} {}", counter50M, lines.size(), rate50M);
-        LOG.info("{}", Utils.toJson(symbol2Counter));
-    }
-
-    private static void printAllOrderOverBudget(Double budget) {
-        Set<String> symbols = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER);
-        LOG.info("Have {} orders running.", symbols.size());
-        for (String symbol : symbols) {
-            OrderTargetInfo order = Utils.gson.fromJson(RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER, symbol),
-                    OrderTargetInfo.class);
-            Double budgetOfOrder = order.quantity * order.priceEntry / order.leverage;
-//            if (budgetOfOrder > budget
-//                    || order.symbol.equalsIgnoreCase(/"mkrusdt")) {
-            LOG.info("{} -> {}", order.symbol, budgetOfOrder.longValue());
-//            }
-        }
-
-    }
-
     public static Double calRateLoss(OrderTargetInfo orderInfo, Double lastPrice) {
         double rate = Utils.rateOf2Double(lastPrice, orderInfo.priceEntry);
         if (orderInfo.side.equals(OrderSide.SELL)) {
             rate = -rate;
         }
         return rate * 7 / 10;
-    }
-
-    public static StringBuilder calReportRunning() {
-        StringBuilder builder = new StringBuilder();
-        Map<String, Double> sym2Volume = TickerFuturesHelper.getAllVolume24hr();
-        Map<String, Double> sym2LastPrice = TickerFuturesHelper.getAllLastPrice();
-        Long totalLoss = 0l;
-        Long totalBuy = 0l;
-        Long totalSell = 0l;
-        TreeMap<Double, OrderTargetInfo> rate2Order = new TreeMap<>();
-        for (String symbol : RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER)) {
-            OrderTargetInfo orderInfo = Utils.gson.fromJson(RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER, symbol),
-                    OrderTargetInfo.class);
-            Double rateLoss = calRateLoss(orderInfo, sym2LastPrice.get(orderInfo.symbol)) * 10000;
-            rate2Order.put(rateLoss, orderInfo);
-        }
-        int counterLog = 0;
-        for (Map.Entry<Double, OrderTargetInfo> entry : rate2Order.entrySet()) {
-            Double rateLoss = entry.getKey();
-            OrderTargetInfo orderInfo = entry.getValue();
-            Long ratePercent = rateLoss.longValue();
-            totalLoss += ratePercent;
-            if (orderInfo.side.equals(OrderSide.BUY)) {
-                totalBuy += ratePercent;
-            } else {
-                totalSell += ratePercent;
-            }
-
-            if (Math.abs(rateLoss) > 60 && counterLog < 15) {
-                counterLog++;
-
-                Double volume24hr = sym2Volume.get(orderInfo.symbol);
-                builder.append(Utils.normalizeDateYYYYMMDDHHmm(orderInfo.timeStart)).append(" ")
-                        .append(orderInfo.side).append(" ")
-                        .append(orderInfo.symbol).append(" ")
-                        .append(volume24hr.longValue() / 1000000).append("M ")
-                        .append(orderInfo.priceEntry).append("->").append(sym2LastPrice.get(orderInfo.symbol))
-                        .append(" ").append(ratePercent.doubleValue() / 100).append("$")
-                        .append("\n");
-            }
-        }
-
-        builder.append("Total: ").append(totalLoss.doubleValue() / 100).append("%");
-        builder.append(" Buy: ").append(totalBuy.doubleValue() / 100).append("%");
-        builder.append(" Sell: ").append(totalSell.doubleValue() / 100).append("%");
-        return builder;
     }
 
     private static long calTimeLock(long currentTime) {
@@ -370,79 +778,27 @@ public class Test {
     }
 
     private static void testRateProfit() throws ParseException {
-        Double total = balanceStart;
-        long timeStart = timeStartRun;
+        Double lastTotal = BinanceOrderTradingManager.balanceStart;
         for (int j = 1; j < 1100; j++) {
             String prefix = "";
             if (j % 15 == 0) {
                 prefix = "-------------------";
             }
-            timeStart += Utils.TIME_DAY;
-            Double inc = total * rateProfit;
-            total += inc;
-            Double budget = 0.15 * total / 10;
+            Long timeStart = System.currentTimeMillis() + j * Utils.TIME_DAY;
+            Double total = BinanceOrderTradingManager.getTargetBalance(timeStart);
+            Double budget = BudgetManager.getInstance().RATE_BUDGET_PER_ORDER * lastTotal / 10;
             budget = budget.longValue() / 10.0;
-            LOG.info("{} {} {} {} -> {}", prefix,
+            Double inc = total - lastTotal;
+            lastTotal = total;
+            LOG.info("{} {} {} {} {} -> {}", prefix, j,
                     Utils.normalizeDateYYYYMMDDHHmm(timeStart), total.longValue(), inc.longValue(), budget);
-            if (total > 500000) {
+            if (total > 40000) {
                 break;
             }
         }
 
     }
 
-    private static Double getTargetBalance() throws ParseException {
-        Double total = 1400.0;
-        long timeStart = Utils.sdfFile.parse("20240306").getTime();
-        Long numberDay = (System.currentTimeMillis() - timeStart) / Utils.TIME_DAY;
-        for (int i = 0; i < numberDay + 1; i++) {
-            Double inc = total * 0.02;
-            total += inc;
-        }
-        return total;
-    }
-
-    private static Double getTarget() throws ParseException {
-        Double total = 1400.0;
-        long timeStart = Utils.sdfFile.parse("20240306").getTime();
-        Long numberDay = (System.currentTimeMillis() - timeStart) / Utils.TIME_DAY;
-        for (int i = 0; i < numberDay; i++) {
-            Double inc = total * 0.02;
-            total += inc;
-        }
-        return total / 10;
-    }
-
-    private static void checkPriceMax() {
-        Set<String> symbols = TickerMongoHelper.getInstance().getAllSymbol();
-        try {
-            FileUtils.writeLines(new File("target/allsymbols.txt"), symbols);
-        } catch (IOException ex) {
-            java.util.logging.Logger.getLogger(Test.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        for (String symbol : symbols) {
-            MongoCursor<Document> docs = TickerMongoHelper.getInstance().getAllTickerBySymbol(symbol);
-            List<Document> docsSorted = new ArrayList<>();
-            Double priceMax = 0.0;
-            Double priceMin = 0.0;
-            while (docs.hasNext()) {
-                Document doc = docs.next();
-                docsSorted.add(doc);
-            }
-            for (int i = 0; i < docsSorted.size(); i++) {
-                Document doc = docsSorted.get(docsSorted.size() - i - 1);
-                try {
-                    LOG.info("{} -> {}", symbol, new Date(doc.getLong("hour")));
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-
-            }
-            break;
-        }
-        System.out.println(symbols.size());
-
-    }
 
     private static void writeAllSymbol2Redis() throws IOException {
         List<String> lines = FileUtils.readLines(new File("target/allsymbols.txt"));
@@ -559,8 +915,23 @@ public class Test {
 
     }
 
+    public static Set<Double> extractBtcBigChange(List<KlineObjectNumber> btcKlines) {
+        Set<Double> results = new HashSet<>();
+
+        for (KlineObjectNumber kline : btcKlines) {
+            BreadDetectObject breadData = BreadFunctions.calBreadDataBtc(kline, 0.007);
+            if (breadData.orderSide != null
+                    && breadData.rateChange > 0.013) {
+                results.add(kline.startTime);
+                LOG.info("{} {} bread above:{} bread below:{} rateChange:{} totalRate: {}", new Date(kline.startTime.longValue()),
+                        breadData.orderSide, breadData.breadAbove, breadData.breadBelow, breadData.rateChange, breadData.totalRate);
+            }
+        }
+        return results;
+    }
+
     private static void detectTopBottomObjectInTicker(String symbol) {
-        double rateCheck = 0.0008;
+        double rateCheck = 0.008;
         List<KlineObjectNumber> tickers = TickerFuturesHelper.getTicker(symbol, Constants.INTERVAL_15M);
         List<TrendObject> objects = new ArrayList<>();
         KlineObjectNumber lastTickerCheck = tickers.get(0);
@@ -610,15 +981,6 @@ public class Test {
                     ticker.totalUsdt, Utils.rateOf2Double(ticker.totalUsdt, lastTicker.totalUsdt));
             lastTicker = ticker;
 
-        }
-    }
-
-    private static void showStatusOrderDCA() {
-        for (String symbol : RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_DCA_MANAGER)) {
-            Order orderDCA = Utils.gson.fromJson(RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_DCA_MANAGER, symbol), Order.class
-            );
-            Order orderDcaInfo = PositionHelper.getInstance().readOrderInfo(symbol, orderDCA.getOrderId());
-            LOG.info("{} {} {}", symbol, orderDcaInfo.getOrderId(), orderDcaInfo.getStatus());
         }
     }
 

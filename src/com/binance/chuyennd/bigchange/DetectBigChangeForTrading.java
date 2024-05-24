@@ -15,7 +15,6 @@
  */
 package com.binance.chuyennd.bigchange;
 
-import com.binance.chuyennd.position.manager.PositionHelper;
 import com.binance.chuyennd.client.ClientSingleton;
 import com.binance.chuyennd.object.KlineObject;
 import com.binance.chuyennd.object.TickerStatistics;
