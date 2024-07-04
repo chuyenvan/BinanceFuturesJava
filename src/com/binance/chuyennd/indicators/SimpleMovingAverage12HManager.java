@@ -20,16 +20,16 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class SimpleMovingAverageManager {
-    public static final Logger LOG = LoggerFactory.getLogger(SimpleMovingAverageManager.class);
+public class SimpleMovingAverage12HManager {
+    public static final Logger LOG = LoggerFactory.getLogger(SimpleMovingAverage12HManager.class);
     private ConcurrentHashMap<String, TreeMap<Long, IndicatorEntry>> symbol2MaDetails;
-    private static volatile SimpleMovingAverageManager INSTANCE = null;
-    private static String FILE_DATA_STORAGE_MADETAIL = "storage/simple-moving-average-detail.data";
+    private static volatile SimpleMovingAverage12HManager INSTANCE = null;
+    private static String FILE_DATA_STORAGE_MADETAIL = "storage/simple-moving-average-12g-detail.data";
 
 
-    public static SimpleMovingAverageManager getInstance() {
+    public static SimpleMovingAverage12HManager getInstance() {
         if (INSTANCE == null) {
-            INSTANCE = new SimpleMovingAverageManager();
+            INSTANCE = new SimpleMovingAverage12HManager();
             INSTANCE.initData();
             LOG.info("Init data MA success: {}", INSTANCE.symbol2MaDetails.size());
             INSTANCE.startScheduleUpdateMA();
@@ -76,31 +76,31 @@ public class SimpleMovingAverageManager {
 
     private void updateASymbol(String symbol) {
         try {
-            TreeMap<Long, IndicatorEntry> date2MaDetails = symbol2MaDetails.get(symbol);
+            TreeMap<Long, IndicatorEntry> time2MaDetails = symbol2MaDetails.get(symbol);
             Long timeUpdate;
-            if (date2MaDetails == null || date2MaDetails.isEmpty()) {
-                date2MaDetails = new TreeMap<>();
+            if (time2MaDetails == null || time2MaDetails.isEmpty()) {
+                time2MaDetails = new TreeMap<>();
                 timeUpdate = 0l;
             } else {
-                timeUpdate = date2MaDetails.lastKey();
+                timeUpdate = time2MaDetails.lastKey();
             }
-            updateForASymbol(symbol, date2MaDetails, timeUpdate);
+            updateForASymbol(symbol, time2MaDetails, timeUpdate);
         } catch (Exception e) {
             LOG.info("Error update ma detail for symbol: {}", symbol);
             e.printStackTrace();
         }
     }
 
-    private void updateForASymbol(String symbol, TreeMap<Long, IndicatorEntry> date2MaDetails, Long timeUpdate) {
+    private void updateForASymbol(String symbol, TreeMap<Long, IndicatorEntry> time2MaDetails, Long timeUpdate) {
         timeUpdate = timeUpdate - 100 * Utils.TIME_DAY;
         if (timeUpdate < 0) {
             timeUpdate = 0l;
         }
-        LOG.info("Update ma-detail for {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(timeUpdate));
-        List<KlineObjectNumber> tickers = TickerFuturesHelper.getTickerWithStartTimeFull(symbol, Constants.INTERVAL_1D, timeUpdate);
+        LOG.info("Update ma-12h-detail for {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(timeUpdate));
+        List<KlineObjectNumber> tickers = TickerFuturesHelper.getTickerWithStartTimeFull(symbol, Constants.INTERVAL_12H, timeUpdate);
         IndicatorEntry[] smaEntries = SimpleMovingAverage.calculate(tickers, 20);
-        Arrays.stream(smaEntries).forEach(s -> date2MaDetails.put(s.startTime.longValue(), s));
-        symbol2MaDetails.put(symbol, date2MaDetails);
+        Arrays.stream(smaEntries).forEach(s -> time2MaDetails.put(s.startTime.longValue(), s));
+        symbol2MaDetails.put(symbol, time2MaDetails);
     }
 
     private void initData() {
@@ -120,36 +120,36 @@ public class SimpleMovingAverageManager {
     }
 
     public static void main(String[] args) throws InterruptedException, ParseException {
-        new SimpleMovingAverageManager().initForAllSymbol();
-        System.out.println(SimpleMovingAverageManager.getInstance().getMaStatus(System.currentTimeMillis(), "BTCUSDT"));
-        System.out.println(SimpleMovingAverageManager.getInstance().getMaValue("BTCUSDT", System.currentTimeMillis() - Utils.TIME_DAY));
+        new SimpleMovingAverage12HManager().initForAllSymbol();
+        System.out.println(SimpleMovingAverage12HManager.getInstance().getMaStatus(System.currentTimeMillis(), "BTCUSDT"));
+        System.out.println(SimpleMovingAverage12HManager.getInstance().getMaValue("BTCUSDT", System.currentTimeMillis() - Utils.TIME_DAY));
 
     }
 
-    public Double getMaValue(String symbol, long date) {
+    public Double getMaValue(String symbol, long time) {
         try {
-            date = Utils.getDate(date);
+            time = Utils.get12Hour(time);
             if (!symbol2MaDetails.containsKey(symbol)){
                 return null;
             }
-            IndicatorEntry doc = symbol2MaDetails.get(symbol).get(date);
+            IndicatorEntry doc = symbol2MaDetails.get(symbol).get(time);
             if (doc != null) {
                 return doc.getValue();
             }
         } catch (Exception e) {
-            LOG.info("Error get ma value of: {} {}", date, symbol);
+            LOG.info("Error get ma 12h value of: {} {}", time, symbol);
             e.printStackTrace();
         }
         return null;
     }
 
-    public MAStatus getMaStatus(long date, String symbol) {
-        date = Utils.getDate(date);
-        long lastDate = date - Utils.TIME_DAY;
+    public MAStatus getMaStatus(long time, String symbol) {
+        time = Utils.get12Hour(time);
+        long lastTime = time - 12 * Utils.TIME_HOUR;
         TreeMap<Long, IndicatorEntry> date2MaDetail = symbol2MaDetails.get(symbol);
         if (date2MaDetail != null) {
-            IndicatorEntry docCurrent = date2MaDetail.get(date);
-            IndicatorEntry lastDoc = date2MaDetail.get(lastDate);
+            IndicatorEntry docCurrent = date2MaDetail.get(time);
+            IndicatorEntry lastDoc = date2MaDetail.get(lastTime);
             MAStatus dateStatus = null;
             MAStatus lastDateStatus = null;
             if (lastDoc != null && docCurrent != null) {

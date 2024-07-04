@@ -189,7 +189,7 @@ public class AltBreadBigChange15MStopLoss {
         List<String> lines = new ArrayList<>();
 
         for (String symbol : allSymbolTickers.keySet()) {
-            if (Constants.specialSymbol.contains(symbol)) {
+            if (Constants.diedSymbol.contains(symbol)) {
                 continue;
             }
             try {

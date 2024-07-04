@@ -13,23 +13,20 @@ import com.binance.chuyennd.object.IndicatorEntry;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.MACDEntry;
 import com.binance.chuyennd.object.RsiEntry;
+import com.binance.chuyennd.research.DataManager;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Storage;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
-
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
 import org.bson.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.text.ParseException;
+import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * @author pc
@@ -39,25 +36,66 @@ public class TickerManager {
     public static final Logger LOG = LoggerFactory.getLogger(TickerManager.class);
 
     public ExecutorService executorService = Executors.newFixedThreadPool(Configs.getInt("NUMBER_THREAD_ORDER_MANAGER"));
+    public int counter = 0;
+    public int total = 0;
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws ParseException {
 //        new TickerManager().startThreadUpdateTicker();
 //        new TickerManager().startThreadUpdateTicker15m();
 //        new TickerManager().startUpdateTicker15m();
-        new TickerManager().startResetTicker15m();
-        new TickerManager().updateAllTicker1h();
-        new TickerManager().updateAllTicker4h();
-        new TickerManager().updateAllTicker1d();
+//        System.out.println(Utils.sdfFile.parse("20230101").getTime());
+//        new TickerManager().startResetTicker15mSimple();
+        new TickerManager().startResetTicker1hSimple();
 
+//        new TickerManager().updateDataBySymbolSimple(Constants.SYMBOL_PAIR_BTC, Constants.INTERVAL_1H);
+//        new TickerManager().updateDataBySymbolSimple(Constants.SYMBOL_PAIR_BTC, Constants.INTERVAL_4H);
+//        new TickerManager().updateDataBySymbolSimple(Constants.SYMBOL_PAIR_BTC, Constants.INTERVAL_1D);
+//        printTicker(Constants.SYMBOL_PAIR_BTC);
+//        printTicker("AMBUSDT");
+//        new TickerManager().startResetTicker15m();
+//        new TickerManager().updateAllTicker1h();
+//        new TickerManager().updateAllTicker4h();
+//        new TickerManager().updateAllTicker1d();
 //        new TickerManager().updateDataBySymbol("LEVERUSDT");
 //        new TickerManager().writeTicker15MMongo2File();
-//        new TickerManager().writeTicker1hMMongo2File();
+//        new TickerManager().writeTicker1dMMongo2File();
 
 //        new TickerManager().updateTicker1hForASymbol("BLZUSDT");
 //        new TickerManager().updateAllTicker1h("BLZUSDT");
 //        new TickerManager().writeTicker1HourMongo2FileASymbol("BLZUSDT");
 //        new TickerManager().updateTickerASymbol("PIXELUSDT");
+//        System.exit(1);
     }
+
+    private void startResetTicker1hSimple() {
+        try {
+            try {
+                Set<String> symbols = TickerFuturesHelper.getAllSymbol();
+                symbols.removeAll(Constants.diedSymbol);
+                symbols.add(Constants.SYMBOL_PAIR_BTC);
+                symbols.add("ETHUSDT");
+                counter = 0;
+                total = symbols.size();
+                for (String symbol : symbols) {
+                    executorService.execute(() -> updateDataBySymbolSimple(symbol, Constants.INTERVAL_1H));
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        } catch (Exception e) {
+            LOG.error("ERROR during UpdateTicker15m: {}", e);
+            e.printStackTrace();
+        }
+    }
+
+    private static void printTicker(String symbol) {
+        String fileName = DataManager.FOLDER_TICKER_15M + symbol;
+        List<KlineObjectNumber> tickers = (List<KlineObjectNumber>) Storage.readObjectFromFile(fileName);
+        for (KlineObjectNumber ticker : tickers) {
+            LOG.info("{}", Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()));
+        }
+    }
+
 
     private void updateAllTicker1h() {
         for (String symbol : TickerMongoHelper.getInstance().getAllSymbol15m()) {
@@ -220,7 +258,7 @@ public class TickerManager {
 
     private static void updateTicker1dForASymbol(String symbol) {
         LOG.info("Start update ticker 1d for {} ", symbol);
-        TickerMongoHelper.getInstance().deleteTicker4h(symbol);
+        TickerMongoHelper.getInstance().deleteTicker1d(symbol);
         List<KlineObjectNumber> allTickers = TickerFuturesHelper.getTickerWithStartTimeFull(symbol, Constants.INTERVAL_1D, 0);
         RsiEntry[] rsi = RelativeStrengthIndex.calculateRSI(allTickers, 14);
 
@@ -285,28 +323,28 @@ public class TickerManager {
     public void writeTicker15MMongo2File() {
         for (String symbol : TickerMongoHelper.getInstance().getAllSymbol15m()) {
             LOG.info("Start executor read ticker of {} ", symbol);
-            executorService.execute(() -> writeTicker15MMongo2FileASymbol(symbol));
+            writeTicker15MMongo2FileASymbol(symbol);
         }
     }
 
     public void writeTicker1hMMongo2File() {
         for (String symbol : TickerMongoHelper.getInstance().getAllSymbol15m()) {
             LOG.info("Start executor read ticker of {} ", symbol);
-            executorService.execute(() -> writeTicker1HourMongo2FileASymbol(symbol));
+            writeTicker1HourMongo2FileASymbol(symbol);
         }
     }
 
     public void writeTicker4hMMongo2File() {
         for (String symbol : TickerMongoHelper.getInstance().getAllSymbol15m()) {
             LOG.info("Start executor read ticker of {} ", symbol);
-            executorService.execute(() -> writeTicker4HourMongo2FileASymbol(symbol));
+            writeTicker4HourMongo2FileASymbol(symbol);
         }
     }
 
     public void writeTicker1dMMongo2File() {
         for (String symbol : TickerMongoHelper.getInstance().getAllSymbol15m()) {
             LOG.info("Start executor read ticker of {} ", symbol);
-            executorService.execute(() -> writeTicker1dMongo2FileASymbol(symbol));
+            writeTicker1dMongo2FileASymbol(symbol);
         }
     }
 
@@ -343,7 +381,7 @@ public class TickerManager {
         try {
             try {
                 Set<String> symbols = TickerFuturesHelper.getAllSymbol();
-                symbols.removeAll(Constants.specialSymbol);
+                symbols.removeAll(Constants.diedSymbol);
                 symbols.add(Constants.SYMBOL_PAIR_BTC);
                 symbols.add("ETHUSDT");
                 for (String symbol : symbols) {
@@ -364,7 +402,7 @@ public class TickerManager {
         try {
             try {
                 Set<String> symbols = TickerFuturesHelper.getAllSymbol();
-                symbols.removeAll(Constants.specialSymbol);
+                symbols.removeAll(Constants.diedSymbol);
                 symbols.add(Constants.SYMBOL_PAIR_BTC);
                 symbols.add("ETHUSDT");
                 for (String symbol : symbols) {
@@ -375,6 +413,27 @@ public class TickerManager {
             }
             executorService.execute(() -> writeTicker15MMongo2File());
 
+        } catch (Exception e) {
+            LOG.error("ERROR during UpdateTicker15m: {}", e);
+            e.printStackTrace();
+        }
+    }
+
+    private void startResetTicker15mSimple() {
+        try {
+            try {
+                Set<String> symbols = TickerFuturesHelper.getAllSymbol();
+                symbols.removeAll(Constants.diedSymbol);
+                symbols.add(Constants.SYMBOL_PAIR_BTC);
+                symbols.add("ETHUSDT");
+                counter = 0;
+                total = symbols.size();
+                for (String symbol : symbols) {
+                    executorService.execute(() -> updateDataBySymbolSimple(symbol, Constants.INTERVAL_15M));
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         } catch (Exception e) {
             LOG.error("ERROR during UpdateTicker15m: {}", e);
             e.printStackTrace();
@@ -461,7 +520,7 @@ public class TickerManager {
         Map<Long, List<KlineObjectNumber>> time2Tickers = new HashMap<>();
         RsiEntry[] rsi = RelativeStrengthIndex.calculateRSI(allTickers, 14);
         MACDEntry[] entries = MACD.calculate(allTickers, 12, 26, 9);
-
+        IndicatorEntry[] smaEntries = SimpleMovingAverage.calculate(allTickers, 20);
         Map<Double, Double> time2Rsi = new HashMap<>();
         Map<Double, Double> time2Ma = new HashMap<>();
         Map<Double, MACDEntry> time2Macd = new HashMap<>();
@@ -471,7 +530,6 @@ public class TickerManager {
         for (MACDEntry entry : entries) {
             time2Macd.put(entry.startTime, entry);
         }
-        IndicatorEntry[] smaEntries = SimpleMovingAverage.calculate(allTickers, 20);
         for (IndicatorEntry sma : smaEntries) {
             time2Ma.put(sma.startTime, sma.getValue());
         }
@@ -516,6 +574,47 @@ public class TickerManager {
             TickerMongoHelper.getInstance().insertTicker15m(doc);
         }
         LOG.info("Finished update ticker 15m for {}", symbol);
+    }
+
+    private void updateDataBySymbolSimple(String symbol, String interval) {
+        try {
+            counter++;
+            LOG.info("Process: {}/{}", counter, total);
+            LOG.info("Start get ticker symbol: {} {}", symbol, interval);
+            Long startTime = 1672506000000L;
+            String fileName = null;
+            switch (interval) {
+                case Constants.INTERVAL_1D:
+                    fileName = DataManager.FOLDER_TICKER_1D;
+                    break;
+                case Constants.INTERVAL_4H:
+                    fileName = DataManager.FOLDER_TICKER_4HOUR;
+                    break;
+                case Constants.INTERVAL_1H:
+                    fileName = DataManager.FOLDER_TICKER_HOUR;
+                    break;
+                case Constants.INTERVAL_15M:
+                    fileName = DataManager.FOLDER_TICKER_15M;
+                    break;
+            }
+            fileName = fileName + symbol;
+            List<KlineObjectNumber> tickers;
+            if (new File(fileName).exists()) {
+                tickers = (List<KlineObjectNumber>) Storage.readObjectFromFile(fileName);
+                startTime = tickers.get(tickers.size() - 1).startTime.longValue();
+                tickers.remove(tickers.size() - 1);
+            } else {
+                tickers = new ArrayList<>();
+            }
+            tickers.addAll(TickerFuturesHelper.getTickerWithStartTimeFull(symbol, interval, startTime));
+            tickers = TickerFuturesHelper.updateIndicator(tickers);
+            LOG.info("Write ticker of {} {} {} to file: {}", symbol, interval, tickers.size(), fileName);
+            Storage.writeObject2File(fileName, tickers);
+            LOG.info("Finish get ticker symbol: {} {}", symbol, interval);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
 }

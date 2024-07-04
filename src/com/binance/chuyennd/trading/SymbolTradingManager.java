@@ -6,7 +6,6 @@ package com.binance.chuyennd.trading;
 
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
-import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
 import java.util.HashSet;
@@ -38,7 +37,7 @@ public class SymbolTradingManager {
             Set<String> symbol2Trade = new HashSet<>();
             Set<String> allSymbol = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_ALL_SYMBOLS);
             symbol2Trade.addAll(allSymbol);
-            symbol2Trade.removeAll(Constants.specialSymbol);
+            symbol2Trade.removeAll(Constants.diedSymbol);
             symbol2Trade.removeAll(symbolsVolumeOverVolumeNotTrade);
             symbol2Trade.removeAll(symbolsTrading);
             String currentTime = String.valueOf(System.currentTimeMillis());

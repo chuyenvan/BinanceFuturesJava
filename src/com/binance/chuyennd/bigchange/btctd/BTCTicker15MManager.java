@@ -88,4 +88,8 @@ public class BTCTicker15MManager {
         }
         return null;
     }
+
+    public KlineObjectNumber getTickerByTime(Long time) {
+        return time2Ticker.get(time);
+    }
 }

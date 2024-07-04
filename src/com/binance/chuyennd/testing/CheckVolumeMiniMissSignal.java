@@ -2,7 +2,7 @@ package com.binance.chuyennd.testing;
 
 import com.binance.chuyennd.bigchange.btctd.BreadDetectObject;
 import com.binance.chuyennd.client.TickerFuturesHelper;
-import com.binance.chuyennd.indicators.SimpleMovingAverageManager;
+import com.binance.chuyennd.indicators.SimpleMovingAverage1DManager;
 import com.binance.chuyennd.movingaverage.MAStatus;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.utils.Configs;
@@ -38,7 +38,7 @@ public class CheckVolumeMiniMissSignal {
         TreeMap<Long, String> time2BigInfo = new TreeMap<>();
         int counter = 0;
         for (String symbol : allSymbolTickers.keySet()) {
-            if (Constants.specialSymbol.contains(symbol)) {
+            if (Constants.diedSymbol.contains(symbol)) {
                 continue;
             }
             try {
@@ -47,8 +47,8 @@ public class CheckVolumeMiniMissSignal {
                     KlineObjectNumber kline = tickers.get(i);
                     BreadDetectObject breadData = BreadProductFunctions.calBreadDataAlt(kline, RATE_BREAD_MIN_2TRADE);
                     Double rateChange = BreadProductFunctions.getRateChangeWithVolume(kline.totalUsdt / 1E6);
-                    MAStatus maStatus = SimpleMovingAverageManager.getInstance().getMaStatus(kline.startTime.longValue(), symbol);
-                    Double maValue = SimpleMovingAverageManager.getInstance().getMaValue(symbol, Utils.getDate(kline.startTime.longValue()));
+                    MAStatus maStatus = SimpleMovingAverage1DManager.getInstance().getMaStatus(kline.startTime.longValue(), symbol);
+                    Double maValue = SimpleMovingAverage1DManager.getInstance().getMaValue(symbol, Utils.getDate(kline.startTime.longValue()));
                     Double rateMa = Utils.rateOf2Double(kline.priceClose, maValue);
 
                     if (breadData.orderSide != null

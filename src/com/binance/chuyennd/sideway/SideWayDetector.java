@@ -49,7 +49,7 @@ public class SideWayDetector {
         long today = Utils.getStartTimeDayAgo(0);
         Map<String, List<KlineObjectNumber>> allSymbolTickers = TickerFuturesHelper.getAllKlineStartTime(Constants.INTERVAL_15M, startTime);
         for (String symbol : allSymbolTickers.keySet()) {
-            if (Constants.specialSymbol.contains(symbol)) {
+            if (Constants.diedSymbol.contains(symbol)) {
                 continue;
             }
 //        String symbol = "WLDUSDT";
@@ -82,7 +82,7 @@ public class SideWayDetector {
         long today = Utils.getStartTimeDayAgo(0);
         Map<String, List<KlineObjectNumber>> allSymbolTickers = TickerFuturesHelper.getAllKlineStartTime(Constants.INTERVAL_15M, startTime);
         for (String symbol : allSymbolTickers.keySet()) {
-            if (Constants.specialSymbol.contains(symbol)) {
+            if (Constants.diedSymbol.contains(symbol)) {
                 continue;
             }
 //        String symbol = "WLDUSDT";

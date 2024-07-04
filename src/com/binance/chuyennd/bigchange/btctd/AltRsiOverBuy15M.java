@@ -1,19 +1,17 @@
 package com.binance.chuyennd.bigchange.btctd;
 
-import com.binance.chuyennd.client.TickerFuturesHelper;
-import com.binance.chuyennd.indicators.SimpleMovingAverageManager;
+import com.binance.chuyennd.indicators.RelativeStrengthIndex;
+import com.binance.chuyennd.indicators.SimpleMovingAverage1DManager;
 import com.binance.chuyennd.movingaverage.MAStatus;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.research.DataManager;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
-import com.binance.chuyennd.trading.OrderTargetInfo;
 import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Storage;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
 import com.binance.client.model.enums.OrderSide;
-import com.educa.chuyennd.funcs.BreadFunctions;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -41,23 +39,20 @@ public class AltRsiOverBuy15M {
 
     private void multiRsiAndRateMa() throws ParseException {
 
-        long start_time = Configs.getLong("start_time");
         // test for multi param
         try {
-            Map<String, List<KlineObjectNumber>> symbol2Tickers = DataManager.readDataTicker(start_time);
 
             List<String> lines = new ArrayList<>();
-
             ArrayList<Double> maMaxes = new ArrayList<>(Arrays.asList());
             for (int i = 0; i < 1; i++) {
                 maMaxes.add(0.1 + i * 0.01);
             }
 
             for (Double maMax : maMaxes) {
-                lines.addAll(detectBigChangeWithParamNew(symbol2Tickers, maMax));
+                lines.addAll(detectBigChangeWithParamNew(maMax));
             }
 
-            FileUtils.writeLines(new File("failTradeWithVolume.csv"), lines);
+            FileUtils.writeLines(new File(AltRsiOverBuy15M.class.getSimpleName() + ".csv"), lines);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -101,7 +96,7 @@ public class AltRsiOverBuy15M {
 
 
     private String buildLineTest(OrderTargetInfoTest order, boolean orderState, Double rateLoss) {
-        MAStatus maStatus = SimpleMovingAverageManager.getInstance().getMaStatus(order.timeStart, order.symbol);
+        MAStatus maStatus = SimpleMovingAverage1DManager.getInstance().getMaStatus(order.timeStart, order.symbol);
         return order.symbol + "," + Utils.normalizeDateYYYYMMDDHHmm(order.timeStart) + "," + order.side + ","
                 + order.priceEntry + "," + order.priceTP + "," + symbol2LastPrice.get(order.symbol)
                 + "," + order.volume + "," + order.avgVolume24h + "," + order.rateChange
@@ -111,30 +106,30 @@ public class AltRsiOverBuy15M {
     }
 
 
-
-
-    List<String> detectBigChangeWithParamNew(Map<String, List<KlineObjectNumber>> allSymbolTickers, Double maMax) {
+    List<String> detectBigChangeWithParamNew(Double maMax) {
         counterTotal = 0;
         counterSuccess = 0;
         counterStoploss = 0;
         totalLoss = 0.0;
 
         List<String> lines = new ArrayList<>();
-        for (String symbol : allSymbolTickers.keySet()) {
-            if (Constants.specialSymbol.contains(symbol)) {
+        for (File file : new File(DataManager.FOLDER_TICKER_15M).listFiles()) {
+//            LOG.info("{} {}", file.getName(), file.getPath());
+            String symbol = file.getName();
+            if (Constants.diedSymbol.contains(symbol) || !StringUtils.containsIgnoreCase(symbol, "usdt")) {
                 continue;
             }
+            List<KlineObjectNumber> tickers = (List<KlineObjectNumber>) Storage.readObjectFromFile(file.getPath());
             LOG.info("Statistic for {}!", symbol);
             try {
                 List<OrderTargetInfoTest> orders = new ArrayList<>();
-                List<KlineObjectNumber> tickers = allSymbolTickers.get(symbol);
                 symbol2LastPrice.put(symbol, tickers.get(tickers.size() - 1).priceClose);
                 for (int i = 14; i < tickers.size(); i++) {
                     KlineObjectNumber kline = tickers.get(i);
-                    MAStatus maStatus = SimpleMovingAverageManager.getInstance().getMaStatus(kline.startTime.longValue(), symbol);
-                    Double maValue = SimpleMovingAverageManager.getInstance().getMaValue(symbol, Utils.getDate(kline.startTime.longValue()));
+                    MAStatus maStatus = SimpleMovingAverage1DManager.getInstance().getMaStatus(kline.startTime.longValue(), symbol);
+                    Double maValue = SimpleMovingAverage1DManager.getInstance().getMaValue(symbol, Utils.getDate(kline.startTime.longValue()));
                     Double rateMa = Utils.rateOf2Double(kline.priceClose, maValue);
-                    if (TickerFuturesHelper.isButton(tickers, i, 30)
+                    if (RelativeStrengthIndex.isRsiSignalBuy(tickers, i)
                             && rateMa < maMax
                             && maStatus != null && maStatus.equals(MAStatus.TOP)) {
                         try {
@@ -198,7 +193,7 @@ public class AltRsiOverBuy15M {
 
     public static void main(String[] args) throws ParseException {
         new AltRsiOverBuy15M().multiRsiAndRateMa();
-
+        System.exit(1);
     }
 
 }

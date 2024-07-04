@@ -343,6 +343,10 @@ public class TickerMongoHelper {
         ticker_log_4h.deleteMany(query);
     }
 
+    public void deleteTicker1d(String symbol) {
+        Bson query = eq("sym", symbol);
+        ticker_log_1d.deleteMany(query);
+    }
 
     public Set<String> getAllSymbol15m() {
         Set<String> result = new HashSet<>();

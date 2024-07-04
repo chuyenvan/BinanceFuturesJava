@@ -1,15 +1,12 @@
 package com.binance.chuyennd.bigchange.btctd;
 
-import com.binance.chuyennd.client.PriceManager;
 import com.binance.chuyennd.client.TickerFuturesHelper;
-import com.binance.chuyennd.indicators.SimpleMovingAverageManager;
-import com.binance.chuyennd.mongo.TickerMongoHelper;
+import com.binance.chuyennd.indicators.SimpleMovingAverage1DManager;
 import com.binance.chuyennd.movingaverage.MAStatus;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.TrendState;
 import com.binance.chuyennd.research.DataManager;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
-import com.binance.chuyennd.trading.OrderTargetInfo;
 import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Storage;
@@ -19,15 +16,12 @@ import com.binance.client.model.enums.OrderSide;
 import com.educa.chuyennd.funcs.BreadFunctions;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
-import org.bson.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.IOException;
 import java.text.ParseException;
 import java.util.*;
-import java.util.logging.Level;
 
 /**
  * @author pc
@@ -56,21 +50,21 @@ public class AltBreadBigChange15MAndMacd {
         // test for multi param
         try {
             List<String> lines = new ArrayList<>();
-            ArrayList<Double> rateSuccesses = new ArrayList<>(Arrays.asList(
-//                    92.0,
-//                    93.0,
-                    94.0));
+//            ArrayList<Double> rateSuccesses = new ArrayList<>(Arrays.asList(
+////                    92.0,
+////                    93.0,
+//                    94.0));
             ArrayList<Integer> NUMBER_HOURS_TO_STOP = new ArrayList<>();
-            for (int i = 16; i < 17; i++) {
+            for (int i = 3; i < 5; i++) {
                 NUMBER_HOURS_TO_STOP.add(i);
             }
             int numberCheckMacdReverse = 10;
             for (Integer numberHourStopLoss : NUMBER_HOURS_TO_STOP) {
-                for (Double rateSuccess : rateSuccesses) {
-                    BreadFunctions.updateVolumeRateChange(numberHourStopLoss, rateSuccess);
+//                for (Double rateSuccess : rateSuccesses) {
+//                    BreadFunctions.updateVolumeRateChange(numberHourStopLoss, rateSuccess);
                     lines.addAll(detectBigChangeWithVolumeFixRate(RATE_TARGET,
-                            numberHourStopLoss * 4, numberCheckMacdReverse));
-                }
+                            numberHourStopLoss * 4 * 12, numberCheckMacdReverse));
+//                }
             }
 //            printByDate(lines);
             FileUtils.writeLines(new File(AltBreadBigChange15MAndMacd.class.getSimpleName() + ".csv"), lines);
@@ -121,7 +115,7 @@ public class AltBreadBigChange15MAndMacd {
 
 
     private String buildLineTest(OrderTargetInfoTest order, boolean orderState, Double rateLoss) {
-        MAStatus maStatus = SimpleMovingAverageManager.getInstance().getMaStatus(order.timeStart, order.symbol);
+        MAStatus maStatus = SimpleMovingAverage1DManager.getInstance().getMaStatus(order.timeStart, order.symbol);
 //        TrendState btcTrend1d = BTCMacdTrendManager.getInstance().getTrend(Constants.INTERVAL_1D, order.timeStart);
 //        TrendState btcTrend4h = BTCMacdTrendManager.getInstance().getTrend(Constants.INTERVAL_4H, order.timeStart);
 //        TrendState btcTrend1h = BTCMacdTrendManager.getInstance().getTrend(Constants.INTERVAL_1H, order.timeStart);
@@ -149,7 +143,7 @@ public class AltBreadBigChange15MAndMacd {
             if (!StringUtils.endsWithIgnoreCase(symbol, "usdt")) {
                 continue;
             }
-            if (Constants.specialSymbol.contains(symbol)) {
+            if (Constants.diedSymbol.contains(symbol)) {
                 continue;
             }
 //            LOG.info("Statistic of symbol: {}", symbol);
@@ -160,10 +154,10 @@ public class AltBreadBigChange15MAndMacd {
                 symbol2LastPrice.put(symbol, tickers.get(tickers.size() - 1).priceClose);
                 for (int i = 0; i < tickers.size(); i++) {
                     KlineObjectNumber kline = tickers.get(i);
-                    if (StringUtils.equals(symbol, "HIGHUSDT")
-                            && kline.startTime.longValue() == Utils.sdfFileHour.parse("20240513 15:00").getTime()) {
-                        System.out.println("Debug");
-                    }
+//                    if (StringUtils.equals(symbol, "HIGHUSDT")
+//                            && kline.startTime.longValue() == Utils.sdfFileHour.parse("20240513 15:00").getTime()) {
+//                        System.out.println("Debug");
+//                    }
                     BreadDetectObject breadData = BreadFunctions.calBreadDataAltWithBtcTrend(tickers, i, RATE_BREAD_MIN_2TRADE);
                     Double rateChange = BreadFunctions.getRateChangeWithVolume(kline.totalUsdt / 1E6);
                     if (rateChange == null) {
@@ -172,8 +166,8 @@ public class AltBreadBigChange15MAndMacd {
                     } else {
 //                        LOG.info("RateAndVolume {} -> {}", kline.totalUsdt, rateChange);
                     }
-                    MAStatus maStatus = SimpleMovingAverageManager.getInstance().getMaStatus(kline.startTime.longValue(), symbol);
-                    Double maValue = SimpleMovingAverageManager.getInstance().getMaValue(symbol, Utils.getDate(kline.startTime.longValue()));
+                    MAStatus maStatus = SimpleMovingAverage1DManager.getInstance().getMaStatus(kline.startTime.longValue(), symbol);
+                    Double maValue = SimpleMovingAverage1DManager.getInstance().getMaValue(symbol, Utils.getDate(kline.startTime.longValue()));
                     Double rateMa = Utils.rateOf2Double(kline.priceClose, maValue);
                     Double rsi = TickerFuturesHelper.calRSI(tickers, i, 14);
                     TrendState btcTrendHour = BTCMacdTrendManager.getInstance().getTrend(Constants.INTERVAL_1H, kline.startTime.longValue());

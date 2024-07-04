@@ -164,7 +164,7 @@ public class BudgetManager {
             for (PositionRisk position : positions) {
                 String symbol = position.getSymbol();
                 if (!allSymbols.contains(symbol) && StringUtils.endsWithIgnoreCase(symbol, "usdt")
-                        && !Constants.specialSymbol.contains(symbol)) {
+                        && !Constants.diedSymbol.contains(symbol)) {
                     LOG.info("Add {} new to all symbol!", symbol);
                     RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_ALL_SYMBOLS, symbol, symbol);
                 }

@@ -1,7 +1,6 @@
 package com.binance.chuyennd.indicators;
 
 import com.binance.chuyennd.object.KlineObjectNumber;
-import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.utils.Point;
 import com.binance.chuyennd.utils.PolylineSlope;
 import com.binance.chuyennd.utils.Utils;
@@ -30,8 +29,7 @@ public class MACDTradingController {
 //        KlineObjectNumber last2Ticker = tickers.get(i - 2);
         KlineObjectNumber lastTicker = tickers.get(i - 1);
         KlineObjectNumber currentTicker = tickers.get(i);
-        if (currentTicker.histogram > 0
-                || currentTicker.histogram < lastTicker.histogram
+        if (currentTicker.histogram > 0 || currentTicker.histogram < lastTicker.histogram
 //                || lastTicker.histogram < last2Ticker.histogram
         ) {
             return false;
@@ -52,13 +50,14 @@ public class MACDTradingController {
         return false;
     }
 
-    public static boolean isSignalCutMacdFirst(List<KlineObjectNumber> tickers, int i) {
+    public static boolean isMacdCutUpSignalFirst(List<KlineObjectNumber> tickers, int i) {
         // trước ít nhất 5 đỉnh âm giảm dần và 5 đỉnh dương giảm dần
 //        int period =1;
         // find cut down
-        if (i < 20) {
+        if (i < 240) {
             return false;
         }
+        Double histogramMin = getMinHistogrm(tickers, i);
         KlineObjectNumber lastTicker = tickers.get(i - 1);
         KlineObjectNumber currentTicker = tickers.get(i);
         // get macd Min
@@ -72,12 +71,9 @@ public class MACDTradingController {
             }
         }
 //        Double maxPrice = null;
-        if (lastTicker.signal != null
-                && currentTicker.histogram > -0.08 * histogramMax
-                && lastTicker.signal > lastTicker.macd
+        if (lastTicker.signal != null && currentTicker.histogram > -0.08 * histogramMax && lastTicker.signal > lastTicker.macd
 //                && currentTicker.signal < 0
-                && currentTicker.macd < 0
-        ) {
+                && currentTicker.macd < 0 && currentTicker.histogram <= 0.95 * histogramMin) {
 //            int counterMacdAm = 0;
 //            // tìm điểm macd cắt xuống và đếm số ticker đã cắt > period và signal luôn nhỏ hơn trước đó
 //            for (int j = 1; j < 20; j++) {
@@ -104,12 +100,73 @@ public class MACDTradingController {
         return false;
     }
 
+    public static boolean isMacdCutUpSignal(List<KlineObjectNumber> tickers, int i) {
+//        int period =1;
+        if (i < 1) {
+            return false;
+        }
+        // find cut up
+        KlineObjectNumber lastTicker = tickers.get(i - 1);
+        KlineObjectNumber currentTicker = tickers.get(i);
+        if (lastTicker.histogram != null
+                && lastTicker.histogram < 0
+                && currentTicker.histogram > 0
+                && lastTicker.signal < 0) {
+            return true;
+        }
+
+        return false;
+    }
+
+    public static boolean isMacdTrendUpAndTickerDown(List<KlineObjectNumber> tickers, int i, Double period) {
+        try {
+            // 4 histogram cuối tăng, đang âm
+            // trước ít nhất 5 đỉnh âm giảm dần và 5 đỉnh dương giảm dần
+            int numberCheck = 20;
+            // find cut down
+            if (i < 20) {
+                return false;
+            }
+            if (tickers.get(i - 11).histogram == null) {
+                return false;
+            }
+
+            // 1. n histogram cuối tăng, đang âm
+            KlineObjectNumber lastTicker = tickers.get(i - 1);
+            KlineObjectNumber currentTicker = tickers.get(i);
+            if (currentTicker.histogram > 0 || currentTicker.histogram < lastTicker.histogram) {
+                return false;
+            }
+            // 2. tìm đỉnh âm
+            Double histogramMinimum = null;
+
+            for (int j = 1; j < numberCheck; j++) {
+                if (tickers.get(i - j).histogram != null &&
+                        (histogramMinimum == null || histogramMinimum > tickers.get(i - j).histogram)) {
+                    histogramMinimum = tickers.get(i - j).histogram;
+                }
+            }
+
+            // 3. nếu nến hiện tại âm và bằng 1/period đỉnh thì trade
+            Double rateHistogram = Utils.rateOf2Double(histogramMinimum, currentTicker.histogram);
+            Double rateChange = Utils.rateOf2Double(currentTicker.priceClose, currentTicker.priceOpen);
+            if (rateChange < -0.004 && rateHistogram > period) {
+                LOG.info("Trend: histogram min: {}, current histogram: {} rate: {}", histogramMinimum, currentTicker.histogram,
+                        Utils.rateOf2Double(histogramMinimum, currentTicker.histogram));
+                return true;
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
     public static boolean isTradingStatus(List<KlineObjectNumber> tickers, int i, Double target, int numberHour) {
         int startCheck = i;
         Double priceTP = tickers.get(i).priceClose * (1 + target);
         for (int j = startCheck + 1; j < tickers.size(); j++) {
-            if ((tickers.get(j).startTime.longValue() - tickers.get(i).startTime.longValue())
-                    > numberHour * Utils.TIME_HOUR) {
+            if ((tickers.get(j).startTime.longValue() - tickers.get(i).startTime.longValue()) > numberHour * Utils.TIME_HOUR) {
                 break;
             }
             if (j < tickers.size()) {
@@ -144,8 +201,7 @@ public class MACDTradingController {
         // 2. n đỉnh âm giảm dần
         int soluongHistogramLienkeGiamLientiep = 0;
         for (int j = 1; j < periodAm + 1; j++) {
-            if (tickers.get(i - j).histogram < tickers.get(i - j - 1).histogram
-                    && tickers.get(i - j).histogram < 0) {
+            if (tickers.get(i - j).histogram < tickers.get(i - j - 1).histogram && tickers.get(i - j).histogram < 0) {
                 soluongHistogramLienkeGiamLientiep++;
             } else {
                 break;
@@ -229,8 +285,7 @@ public class MACDTradingController {
 
         // 1. n histogram cuối tăng, đang âm
 //        KlineObjectNumber last2Ticker = tickers.get(i - 2);
-        if (currentTicker.histogram > 0
-                || currentTicker.histogram < lastTicker.histogram
+        if (currentTicker.histogram > 0 || currentTicker.histogram < lastTicker.histogram
 //                || lastTicker.histogram < last2Ticker.histogram
         ) {
             return false;
@@ -249,6 +304,33 @@ public class MACDTradingController {
         }
 
         return false;
+    }
+
+    public static boolean isMacdTrendBuyNew1hNew(List<KlineObjectNumber> tickers, int i) {
+        // lấy histogram Min trong 10 ngày
+        // vào khi histogram sâu 90% so với min
+
+        // find cut down
+        if (i < 240) {
+            return false;
+        }
+        Double histogramMin = getMinHistogrm(tickers, i);
+        if (tickers.get(i).histogram < 0 && (Math.abs(Utils.rateOf2Double(tickers.get(i).histogram, histogramMin)) < 0.03 || tickers.get(i).histogram < histogramMin)) {
+            return true;
+        }
+        return false;
+
+    }
+
+    private static Double getMinHistogrm(List<KlineObjectNumber> tickers, Integer i) {
+        Double minHistogram = 0d;
+        for (int j = i - 240; j < i; j++) {
+            KlineObjectNumber ticker = tickers.get(j);
+            if (ticker.histogram < minHistogram) {
+                minHistogram = ticker.histogram;
+            }
+        }
+        return minHistogram;
     }
 
     public static boolean isMacdTamGiacCan(List<KlineObjectNumber> tickers, int indexCheckPoint) {

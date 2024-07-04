@@ -100,7 +100,7 @@ public class BtcBigChangeResercher {
                         for (Map.Entry<Double, String> entry : rate2Symbols.entrySet()) {
                             Double rate = entry.getKey();
                             String symbol = entry.getValue();
-                            if (Constants.specialSymbol.contains(symbol.split("#")[0])) {
+                            if (Constants.diedSymbol.contains(symbol.split("#")[0])) {
                                 continue;
                             }
                             try {
@@ -195,7 +195,7 @@ public class BtcBigChangeResercher {
                         for (Map.Entry<Double, String> entry : rate2Symbols.entrySet()) {
                             Double rate = entry.getKey();
                             String symbol = entry.getValue();
-                            if (Constants.specialSymbol.contains(symbol.split("#")[0])) {
+                            if (Constants.diedSymbol.contains(symbol.split("#")[0])) {
                                 continue;
                             }
                             try {

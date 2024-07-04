@@ -15,7 +15,7 @@
  */
 package com.binance.chuyennd.bigchange;
 
-import com.binance.chuyennd.research.Test;
+import com.binance.chuyennd.bigchange.btctd.Test;
 import com.binance.chuyennd.client.ClientSingleton;
 import com.binance.chuyennd.client.TickerFuturesHelper;
 import com.binance.chuyennd.object.KlineObject;

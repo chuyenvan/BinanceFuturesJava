@@ -4,8 +4,9 @@
  */
 package com.binance.chuyennd.research;
 
+import com.binance.chuyennd.bigchange.market.MarketBigChangeDetector;
 import com.binance.chuyennd.indicators.MACDTradingController;
-import com.binance.chuyennd.indicators.SimpleMovingAverageManager;
+import com.binance.chuyennd.indicators.SimpleMovingAverage1DManager;
 import com.binance.chuyennd.mongo.TickerMongoHelper;
 import com.binance.chuyennd.movingaverage.MAStatus;
 import com.binance.chuyennd.object.KlineObjectNumber;
@@ -15,7 +16,6 @@ import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Storage;
 import com.binance.chuyennd.utils.Utils;
-import com.binance.client.constant.Constants;
 import com.binance.client.model.enums.OrderSide;
 import com.educa.chuyennd.funcs.BreadFunctions;
 import org.apache.commons.io.FileUtils;
@@ -28,8 +28,6 @@ import java.io.IOException;
 import java.text.ParseException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
  * @author pc
@@ -41,7 +39,7 @@ public class SimulatorTradingMACD {
     public final Double RATE_TARGET = Configs.getDouble("RATE_TARGET");
     public final Double RATE_MA_MAX = Configs.getDouble("RATE_MA_MAX");
     public final Integer LEVERAGE_ORDER = Configs.getInt("LEVERAGE_ORDER");
-    public final Integer NUMBER_HOURS_STOP_TRADE = Configs.getInt("NUMBER_HOURS_STOP_TRADE");
+    public final Integer NUMBER_HOURS_STOP_MIN = Configs.getInt("NUMBER_HOURS_STOP_MIN");
     public final Double RATE_SUCCESS_STATISTIC = Configs.getDouble("RATE_SUCCESS_STATISTIC");
     public ConcurrentHashMap<String, OrderTargetInfoTest> allOrderDone;
     public final String TIME_RUN = Configs.getString("TIME_RUN");
@@ -83,7 +81,7 @@ public class SimulatorTradingMACD {
                         }
                     }
                     List<KlineObjectNumber> finalTickers = tickers;
-                    startThreadTestTradingSimulatorBySymbol(symbol, finalTickers);
+                    startTradingSimulatorASymbol(symbol, finalTickers);
                 }
                 BudgetManagerTest.getInstance().updateBalance(time, allOrderDone);
                 BudgetManagerTest.getInstance().updateInvesting();
@@ -120,9 +118,9 @@ public class SimulatorTradingMACD {
         if (new File(FILE_STORAGE_ORDER_DONE).exists()) {
             FileUtils.delete(new File(FILE_STORAGE_ORDER_DONE));
         }
-        SimpleMovingAverageManager.getInstance();
+        SimpleMovingAverage1DManager.getInstance();
         if (RATE_SUCCESS_STATISTIC != 0) {
-            BreadFunctions.updateVolumeRateChange(NUMBER_HOURS_STOP_TRADE, RATE_SUCCESS_STATISTIC);
+            BreadFunctions.updateVolumeRateChange(NUMBER_HOURS_STOP_MIN, RATE_SUCCESS_STATISTIC);
         }
         try {
             Thread.sleep(15 * Utils.TIME_SECOND);
@@ -233,7 +231,7 @@ public class SimulatorTradingMACD {
 //        Utils.sendSms2Telegram(reportRunning.toString());
     }
 
-    private void startThreadTestTradingSimulatorBySymbol(String symbol, List<KlineObjectNumber> tickers) {
+    private void startTradingSimulatorASymbol(String symbol, List<KlineObjectNumber> tickers) {
         // check running
         KlineObjectNumber ticker = tickers.get(tickers.size() - 1);
         String json = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER, symbol);
@@ -247,7 +245,8 @@ public class SimulatorTradingMACD {
                     RedisHelper.getInstance().get().hdel(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER, symbol);
                     checkAndCreateOrderNew(tickers, symbol);
                 } else {
-                    if (ticker.startTime > orderInfo.timeStart + NUMBER_HOURS_STOP_TRADE * Utils.TIME_HOUR) {
+                    if (ticker.startTime > orderInfo.timeStart + NUMBER_HOURS_STOP_MIN * Utils.TIME_HOUR
+                            || ticker.histogram < orderInfo.tickerOpen.histogram) {
 //                    if (MACDTradingController.isMacdStopTrendBuy(tickers, tickers.size() - 1, orderInfo.timeStart)) {
                         stopLossOrder(symbol, ticker);
                     } else {
@@ -263,27 +262,19 @@ public class SimulatorTradingMACD {
 
     private void checkAndCreateOrderNew(List<KlineObjectNumber> tickers, String symbol) {
         KlineObjectNumber ticker = tickers.get(tickers.size() - 1);
-        MAStatus maStatus = SimpleMovingAverageManager.getInstance().getMaStatus(Utils.getDate(ticker.startTime.longValue()), symbol);
-        KlineObjectNumber lastTicker1H = DataManager.getInstance().getTicker(symbol, Constants.INTERVAL_1H,
-                Utils.getHour(ticker.startTime.longValue()) - Utils.TIME_HOUR);
-        KlineObjectNumber ticker1H = DataManager.getInstance().getTicker(symbol, Constants.INTERVAL_1H,
-                Utils.getHour(ticker.startTime.longValue()));
-        KlineObjectNumber lastTicker4H = DataManager.getInstance().getTicker(symbol, Constants.INTERVAL_4H,
-                Utils.get4Hour(ticker.startTime.longValue()) - 4 * Utils.TIME_HOUR);
-        KlineObjectNumber ticker4H = DataManager.getInstance().getTicker(symbol, Constants.INTERVAL_4H,
-                Utils.get4Hour(ticker.startTime.longValue()));
-        KlineObjectNumber lastTicker1d = DataManager.getInstance().getTicker(symbol, Constants.INTERVAL_1D,
-                Utils.getDate(ticker.startTime.longValue()) - Utils.TIME_DAY);
-        KlineObjectNumber ticker1d = DataManager.getInstance().getTicker(symbol, Constants.INTERVAL_1D,
-                Utils.getDate(ticker.startTime.longValue()));
-
-        if (MACDTradingController.isSignalCutMacdFirst(tickers, tickers.size() - 1)
-                && maStatus != null && !maStatus.equals(MAStatus.UNDER)
-                && lastTicker1H != null && ticker1H != null && ticker1H.histogram > lastTicker1H.histogram
-                && lastTicker4H != null && ticker4H != null && ticker4H.histogram > lastTicker4H.histogram
-                && lastTicker1d != null && lastTicker1d != null && lastTicker1d.histogram != null
-                && ticker1d.histogram > lastTicker1d.histogram
-
+//        SimpleMovingAverage1DManager.getInstance().updateWithTicker(symbol, ticker);
+//        MAStatus maStatus = SimpleMovingAverage1DManager.getInstance().getMaStatus(ticker.startTime.longValue(), symbol);
+//        Double maValue = SimpleMovingAverage1DManager.getInstance().getMaValue(symbol, Utils.getDate(ticker.startTime.longValue()));
+//        Double rateMa = Utils.rateOf2Double(ticker.priceClose, maValue);
+//        Double rateMaWithCurrentInterval = Utils.rateOf2Double(ticker.priceClose, ticker.ma20);
+//        if (maValue == null) {
+//            return;
+//        }
+        if (
+                MACDTradingController.isMacdTrendUpAndTickerDown(tickers, tickers.size() - 1, 2.0)
+//                && rateMaWithCurrentInterval < 0
+//                && rateMa < 0.2
+//                && maStatus != null && maStatus.equals(MAStatus.TOP)
         ) {
             LOG.info("Macd cut signal:{} {} {} volume: {}", symbol, new Date(ticker.startTime.longValue()), ticker.rsi, ticker.totalUsdt);
             if (BudgetManagerTest.getInstance().isAvailableTrade()) {

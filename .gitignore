@@ -3,3 +3,5 @@ settings.xml
 /logs/
 /storage/
 *.log
+*.csv
+*.data

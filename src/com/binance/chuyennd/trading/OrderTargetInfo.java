@@ -15,6 +15,7 @@
  */
 package com.binance.chuyennd.trading;
 
+import com.binance.chuyennd.bigchange.market.MarketLevelChange;
 import com.binance.client.model.enums.OrderSide;
 import com.binance.client.model.trade.Order;
 import java.io.Serializable;
@@ -25,9 +26,6 @@ import java.io.Serializable;
  */
 public class OrderTargetInfo implements Serializable {
 
-    public Order orderEntry;
-    public Order orderStoploss;
-    public Order orderTakeProfit;
     public OrderTargetStatus status;
     public OrderSide side;
     public Double priceEntry;
@@ -37,6 +35,7 @@ public class OrderTargetInfo implements Serializable {
     public Integer leverage;
     public String tradingType;
     public String symbol;
+    public MarketLevelChange marketLevel;
     public long timeStart;
     public long timeUpdate;
     

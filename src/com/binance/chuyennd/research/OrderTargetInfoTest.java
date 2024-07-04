@@ -15,11 +15,12 @@
  */
 package com.binance.chuyennd.research;
 
+import com.binance.chuyennd.bigchange.market.MarketLevelChange;
+import com.binance.chuyennd.movingaverage.MAStatus;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.model.enums.OrderSide;
-import com.binance.client.model.trade.Order;
 
 import java.io.Serializable;
 
@@ -48,7 +49,9 @@ public class OrderTargetInfoTest implements Serializable {
     public Double volume;
     public Double avgVolume24h;
     public Double rsi14;
-    public Double ma20;
+    public Double ma201d;
+    public MAStatus maStatus1d;
+    public MarketLevelChange marketLevelChange;
     public Integer dcaLevel;
     public KlineObjectNumber tickerOpen;
     public KlineObjectNumber tickerClose;
@@ -69,18 +72,34 @@ public class OrderTargetInfoTest implements Serializable {
 
     }
 
+    public OrderTargetInfoTest(OrderTargetStatus status, Double priceEntry,
+                               Double priceTP, Double quantity, Integer leverage, String symbol,
+                               long timeStart, long timeUpdate, OrderSide side, String tradingType) {
+        this.status = status;
+        this.priceEntry = priceEntry;
+        this.priceTP = priceTP;
+        this.quantity = quantity;
+        this.leverage = leverage;
+        this.symbol = symbol;
+        this.timeStart = timeStart;
+        this.timeUpdate = timeUpdate;
+        this.side = side;
+
+    }
+
+    public OrderTargetInfoTest() {
+
+    }
+
     public void updatePriceByKline(KlineObjectNumber ticker) {
         this.lastPrice = ticker.priceClose;
         if (this.maxPrice < ticker.maxPrice) {
             this.maxPrice = ticker.maxPrice;
-            this.timeUpdate = ticker.endTime.longValue();
         }
         if (this.minPrice > ticker.minPrice) {
             this.minPrice = ticker.minPrice;
         }
-//        this.maxPrice = ticker.maxPrice;
-//        this.minPrice = ticker.minPrice;
-//        this.timeUpdate = ticker.endTime.longValue();
+        this.timeUpdate = ticker.endTime.longValue();
     }
 
     public void updatePriceByLastPrice(Double lastPrice) {

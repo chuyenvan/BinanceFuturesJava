@@ -19,7 +19,6 @@ import com.binance.chuyennd.utils.Configs;
 import org.apache.commons.lang.StringUtils;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 
 /**
  * @author pc
@@ -32,11 +31,15 @@ public class Constants {
     public static final String INTERVAL_1D = "1d";
     public static final String INTERVAL_1H = "1h";
     public static final String INTERVAL_4H = "4h";
+    public static final String INTERVAL_6H = "6h";
+    public static final String INTERVAL_8H = "8h";
+    public static final String INTERVAL_12H = "12h";
     public static final String INTERVAL_1W = "1w";
     public static final String INTERVAL_1MONTH = "1M";
     public static final String TRADING_TYPE_BREAD = "TRADING_TYPE_BREAD";
     public static final String TRADING_TYPE_VOLUME_MINI = "TRADING_TYPE_VOLUME_MINI";
     public static final String TRADING_TYPE_SIGNAL = "TRADING_TYPE_SIGNALTW";
+    public static final ArrayList<String> diedSymbol = new ArrayList<>();
     public static final ArrayList<String> specialSymbol = new ArrayList<>();
 //    public static final ArrayList<String> specialSymbol = new ArrayList<>(Arrays.asList(
 //            "STPTUSDT",
@@ -72,13 +75,17 @@ public class Constants {
     public static final String URL_TICKER_SPOT_STARTTIME = "https://api.binance.com/api/v1/klines?symbol=xxxxxx&startTime=tttttt&interval=";
 
     static {
-        String symbols = Configs.getString("SPECIAL_SYMBOLS");
+        String symbols = Configs.getString("DIED_SYMBOLS");
+        for (String symbol : StringUtils.split(symbols, ",")) {
+            diedSymbol.add(symbol);
+        }
+        symbols = Configs.getString("SPECIAL_SYMBOLS");
         for (String symbol : StringUtils.split(symbols, ",")) {
             specialSymbol.add(symbol);
         }
     }
 
     public static void main(String[] args) {
-        System.out.println(Constants.specialSymbol);
+        System.out.println(Constants.diedSymbol);
     }
 }

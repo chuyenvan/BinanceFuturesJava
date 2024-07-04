@@ -197,16 +197,19 @@ public class RedisHelper {
     public static void main(String[] args) {
 //        RedisHelper.getInstance().writeJsonData("chuyennd", "123", "1");
 //        System.out.println(RedisHelper.getInstance().readJsonData("chuyennd", "123"));
-        for (int i = 0; i < 10; i++) {
-            String member = String.valueOf(i);
-            RedisHelper.getInstance().addList(RedisConst.REDIS_KEY_SET_ALL_SYMBOL_POS_RUNNING, member);
-            RedisHelper.getInstance().addList(RedisConst.REDIS_KEY_SET_ALL_SYMBOL_POS_RUNNING, member);
-        }
-        System.out.println(RedisHelper.getInstance().smembers(RedisConst.REDIS_KEY_SET_ALL_SYMBOL_POS_RUNNING));
-        for (int i = 0; i < 10; i++) {
-            String member = String.valueOf(i);
-            RedisHelper.getInstance().removeList(RedisConst.REDIS_KEY_SET_ALL_SYMBOL_POS_RUNNING, member);
-            System.out.println(RedisHelper.getInstance().smembers(RedisConst.REDIS_KEY_SET_ALL_SYMBOL_POS_RUNNING));
-        }
+        RedisHelper.getInstance().get().del(RedisConst.REDIS_KEY_SET_ALL_SYMBOL_POS_RUNNING);
+        System.out.println(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_SET_ALL_SYMBOL_POS_RUNNING));
+//        for (int i = 0; i < 10; i++) {
+//            String member = String.valueOf(i);
+//            RedisHelper.getInstance().addList(RedisConst.REDIS_KEY_SET_ALL_SYMBOL_POS_RUNNING, member);
+//            RedisHelper.getInstance().addList(RedisConst.REDIS_KEY_SET_ALL_SYMBOL_POS_RUNNING, member);
+//        }
+//
+//        System.out.println(RedisHelper.getInstance().smembers(RedisConst.REDIS_KEY_SET_ALL_SYMBOL_POS_RUNNING));
+//        for (int i = 0; i < 10; i++) {
+//            String member = String.valueOf(i);
+//            RedisHelper.getInstance().removeList(RedisConst.REDIS_KEY_SET_ALL_SYMBOL_POS_RUNNING, member);
+//            System.out.println(RedisHelper.getInstance().smembers(RedisConst.REDIS_KEY_SET_ALL_SYMBOL_POS_RUNNING));
+//        }
     }
 }

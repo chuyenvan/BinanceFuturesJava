@@ -21,6 +21,8 @@ import com.binance.chuyennd.object.TrendDataTrackingObject;
 import com.binance.chuyennd.object.TrendObjectDetail;
 import com.binance.chuyennd.object.TrendObject;
 import com.binance.chuyennd.object.TrendState;
+import com.binance.chuyennd.research.DataManager;
+import com.binance.chuyennd.utils.Storage;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
 
@@ -47,9 +49,11 @@ public class ReseachDetectTrendWithBtc {
 
     public static void main(String[] args) throws IOException, ParseException {
 //        new ReseachDetectTrendWithBtc().detectorTrendSymbol("BTCUSDT");
-        new ReseachDetectTrendWithBtc().detectorTrendSymbol("BTCUSDT");
+//        new ReseachDetectTrendWithBtc().detectorTrendSymbol("BTCUSDT");
+        new ReseachDetectTrendWithBtc().detectorResistances("USTCUSDT");
+
 //        for (String symbol : TickerHelper.getAllSymbol()) {
-//            new ReseachDetectTrendWithBtc().chartSymbol(symbol);
+//            new ReseachDetectTrendWithBtc().chartSymbol("BTCUSDT");
 //        }
 //        System.out.println(ClientSingleton.getInstance().getCurrentPrice(Constants.SYMBOL_PAIR_BTC));
 //        String timeStr = "20240305";
@@ -59,14 +63,93 @@ public class ReseachDetectTrendWithBtc {
 
     }
 
+    private void detectorResistances(String symbol) {
+        List<KlineObjectNumber> tickers = TickerFuturesHelper.getTicker(symbol, Constants.INTERVAL_15M);
+        List<TrendObject> trends = TickerFuturesHelper.extractTopBottomObjectInTicker(tickers);
+        List<TrendObjectDetail> trendObjects = new ArrayList<>();
+        TrendObjectDetail lastTrendObject = null;
+        TrendObject lastTrend = trends.get(0);
+        for (TrendObject trend : trends) {
+            Double rate;
+            if (trend.status.equals(TrendState.TOP)) {
+                rate = Utils.rateOf2Double(trend.kline.maxPrice, lastTrend.kline.minPrice);
+            } else {
+                rate = Utils.rateOf2Double(trend.kline.minPrice, lastTrend.kline.maxPrice);
+            }
+            if (lastTrendObject == null) {
+                if (Math.abs(rate) > 0.02) {
+                    if (trend.status.equals(TrendState.TOP)) {
+                        lastTrendObject = new TrendObjectDetail(TrendState.TREND_UP, new ArrayList<>());
+                        lastTrendObject.topBottonObjects.add(trend);
+                    } else {
+                        lastTrendObject = new TrendObjectDetail(TrendState.TREND_DOWN, new ArrayList<>());
+                        lastTrendObject.topBottonObjects.add(trend);
+                    }
+                } else {
+                    lastTrendObject = new TrendObjectDetail(TrendState.SIDEWAY, new ArrayList<>());
+                    lastTrendObject.topBottonObjects.add(trend);
+                }
+            } else {
+                lastTrendObject.topBottonObjects.add(trend);
+                if (Math.abs(rate) > 0.02) {
+                    if (trend.status.equals(TrendState.TOP)) {
+                        trendObjects.add(lastTrendObject);
+                        lastTrendObject = new TrendObjectDetail(TrendState.TREND_UP, new ArrayList<>());
+                        lastTrendObject.topBottonObjects.add(trend);
+                    } else {
+                        trendObjects.add(lastTrendObject);
+                        lastTrendObject = new TrendObjectDetail(TrendState.TREND_DOWN, new ArrayList<>());
+                        lastTrendObject.topBottonObjects.add(trend);
+                    }
+                }
+            }
+        }
+        if (lastTrendObject != null) {
+            trendObjects.add(lastTrendObject);
+        }
+        for (TrendObjectDetail trendInfo : trendObjects) {
+            String trendString = trendInfo.status.toString();
+            if (trendString.length() < TrendState.TREND_DOWN.toString().length()) {
+                int numberSpace = TrendState.TREND_DOWN.toString().length() - trendString.length();
+                for (int i = 0; i < numberSpace; i++) {
+                    trendString += " ";
+                }
+            }
+            Double startPrice = 0d;
+            Double endPrice = 0d;
+            long startTime = trendInfo.topBottonObjects.get(0).kline.startTime.longValue();
+            long endTime = trendInfo.topBottonObjects.get(trendInfo.topBottonObjects.size() - 1).kline.startTime.longValue();
+            if (trendInfo.status.equals(TrendState.TREND_DOWN)) {
+                startPrice = trendInfo.topBottonObjects.get(0).kline.maxPrice;
+                endPrice = trendInfo.topBottonObjects.get(trendInfo.topBottonObjects.size() - 1).kline.minPrice;
+            }
+            if (trendInfo.status.equals(TrendState.TREND_UP)) {
+                startPrice = trendInfo.topBottonObjects.get(0).kline.minPrice;
+                endPrice = trendInfo.topBottonObjects.get(trendInfo.topBottonObjects.size() - 1).kline.maxPrice;
+            }
+            if (trendInfo.status.equals(TrendState.SIDEWAY)) {
+                startPrice = trendInfo.topBottonObjects.get(0).kline.minPrice;
+                endPrice = trendInfo.topBottonObjects.get(trendInfo.topBottonObjects.size() - 1).kline.maxPrice;
+            }
+            Double rate = Utils.rateOf2Double(startPrice, endPrice);
+            LOG.info("{} {} {} rate:{} start:{} end:{}", trendString,
+                    Utils.normalizeDateYYYYMMDDHHmm(startTime),
+                    Utils.normalizeDateYYYYMMDDHHmm(endTime),
+                    rate, startPrice, endPrice
+            );
+        }
+
+    }
+
     public List<TrendObjectDetail> detectorTrend(List<KlineObjectNumber> tickers, String symbol, Double rateOfSideWay) {
-        List<TrendObject> btcTrends = TickerFuturesHelper.extractTopBottomObjectInTicker(tickers, 0.0005);
+        List<TrendObject> btcTrends = TickerFuturesHelper.extractTopBottomObjectInTicker(tickers);
         return TickerFuturesHelper.detectTrendByKline(btcTrends, rateOfSideWay);
     }
 
     public void extractAltBehaviorByBtcTrend() throws IOException {
-        List<KlineObjectNumber> tickers = TickerFuturesHelper.getTicker(Constants.SYMBOL_PAIR_BTC, Constants.INTERVAL_15M);
-        Double rateOfSideWay = 0.08;
+        List<KlineObjectNumber> tickers = (List<KlineObjectNumber>) Storage.readObjectFromFile(DataManager.FOLDER_TICKER_15M
+                + "AMBUSDT");
+        Double rateOfSideWay = 0.02;
         List<TrendObjectDetail> btcTrends = detectorTrend(tickers, Constants.SYMBOL_PAIR_BTC, rateOfSideWay);
 //        updateTimeOfTrend(btcTrends);
 //        Map<TrendObjectDetail, List<TrendDataTrackingObject>> altBehaviors = getAllAltBehavior(btcTrends, symbol2Kline1Ds);
@@ -98,12 +181,10 @@ public class ReseachDetectTrendWithBtc {
                 endPrice = trendInfo.topBottonObjects.get(trendInfo.topBottonObjects.size() - 1).kline.maxPrice;
             }
             Double rate = Utils.rateOf2Double(startPrice, endPrice);
-            LOG.info("{} {} {} {} rate:{} min:{} max:{} starttime:{} endTime: {} nextTrend:{}", symbol, trendString,
-                    Utils.sdfFile.format(new Date(trendInfo.topBottonObjects.get(0).kline.startTime.longValue())),
-                    Utils.sdfFile.format(new Date(trendInfo.topBottonObjects.get(trendInfo.topBottonObjects.size() - 1).kline.startTime.longValue())),
-                    rate, startPrice, endPrice,
+            LOG.info("{} {} {} {} rate:{} start:{} end:{} nextTrend:{}", symbol, trendString,
                     Utils.normalizeDateYYYYMMDDHHmm(trendInfo.startTimeTrend),
                     Utils.normalizeDateYYYYMMDDHHmm(trendInfo.endTimeTrend),
+                    rate, startPrice, endPrice,
                     Utils.normalizeDateYYYYMMDDHHmm(trendInfo.timeNextTrend)
             );
         }
@@ -274,14 +355,28 @@ public class ReseachDetectTrendWithBtc {
 
     private void detectorTrendSymbol(String symbol) {
         List<TrendObject> trends = TickerFuturesHelper.extractTopBottomObjectInTicker(TickerFuturesHelper.getTicker(symbol,
-                Constants.INTERVAL_15M), 0.005);
+                Constants.INTERVAL_1H));
         printTrendObject(trends);
     }
 
     private void printTrendObject(List<TrendObject> trends) {
+        TrendObject lastTrend = trends.get(0);
+        Double rateTotal = 0d;
         for (TrendObject trend : trends) {
-            LOG.info(" {} rate:{} min:{} max:{} starttime:{}", trend.status, Utils.rateOf2Double(trend.kline.maxPrice, trend.kline.minPrice),
+            Double rate;
+            if (trend.status.equals(TrendState.TOP)) {
+                rate = Utils.rateOf2Double(trend.kline.maxPrice, lastTrend.kline.minPrice);
+            } else {
+                rate = Utils.rateOf2Double(trend.kline.minPrice, lastTrend.kline.maxPrice);
+            }
+            rateTotal += rate;
+            String prefix = "";
+            if (Math.abs(rate) > 0.02) {
+                prefix = "------------";
+            }
+            LOG.info(" {} {} {} rate:{} min:{} max:{} starttime:{}", rateTotal, prefix, trend.status, rate,
                     trend.kline.minPrice, trend.kline.maxPrice, Utils.normalizeDateYYYYMMDDHHmm(trend.kline.startTime.longValue()));
+            lastTrend = trend;
         }
     }
 
@@ -387,7 +482,7 @@ public class ReseachDetectTrendWithBtc {
     }
 
     private void chartSymbol(String symbol) {
-        List<TrendObject> trends = TickerFuturesHelper.extractTopBottomObjectInTicker(TickerFuturesHelper.getTicker(symbol, Constants.INTERVAL_15M), 0.003);
+        List<TrendObject> trends = TickerFuturesHelper.extractTopBottomObjectInTicker(TickerFuturesHelper.getTicker(symbol, Constants.INTERVAL_15M));
         List<TrendObjectDetail> trendDetails = TickerFuturesHelper.detectTrendByKline(trends, 0.003);
         if (!trendDetails.isEmpty()
                 && trendDetails.get(trendDetails.size() - 1).status.equals(TrendState.SIDEWAY)) {

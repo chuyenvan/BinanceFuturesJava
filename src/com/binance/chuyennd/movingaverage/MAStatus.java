@@ -16,13 +16,13 @@
 package com.binance.chuyennd.movingaverage;
 
 /**
- *
  * @author pc
  */
 public enum MAStatus {
 
 
     ON,// giao thoa
+    MAYBE_ON,// giao thoa
     CUT_DOW,// cat xuong
     CUT_UP,// cat len
     UNDER,// tren

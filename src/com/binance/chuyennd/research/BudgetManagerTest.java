@@ -6,6 +6,7 @@ package com.binance.chuyennd.research;
 
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
+import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
 
@@ -28,6 +29,7 @@ public class BudgetManagerTest {
     private static volatile BudgetManagerTest INSTANCE = null;
     public BalanceIndex balanceIndex = new BalanceIndex();
     public Double MAX_CAPITAL_RATE = Configs.getDouble("MAX_CAPITAL_RATE");
+    public Double RATE_FEE = Configs.getDouble("RATE_FEE");
     public Double RATE_BUDGET_PER_ORDER = Configs.getDouble("RATE_BUDGET_PER_ORDER");
     public Integer number_order_budget = 100;
     public Integer LEVERAGE_ORDER = Configs.getInt("LEVERAGE_ORDER");
@@ -89,14 +91,19 @@ public class BudgetManagerTest {
         Double balance = balanceStart;
         Double profit = 0d;
         Double profitOfDate = 0d;
-
+        Double fee = 0d;
+        int totalSL = 0;
         if (allOrderDone != null) {
             for (Map.Entry<String, OrderTargetInfoTest> entry : allOrderDone.entrySet()) {
                 String key = entry.getKey();
                 OrderTargetInfoTest orderInfo = entry.getValue();
+                if (orderInfo.status.equals(OrderTargetStatus.STOP_LOSS_DONE)) {
+                    totalSL++;
+                }
                 if (Utils.getDate(Long.parseLong(key.split("-")[0])) == (timeUpdate - Utils.TIME_DAY)) {
                     profitOfDate += calTp(orderInfo);
                 }
+                fee += calFee(orderInfo);
                 profit += calTp(orderInfo);
             }
         }
@@ -104,7 +111,7 @@ public class BudgetManagerTest {
 
         Set<String> symbolRunning = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER);
 
-        totalFee = profit * 0.1;
+        totalFee = fee;
         balance = balance + profit - totalFee;
         balanceCurrent = balance;
         List<OrderTargetInfoTest> orderInfos = getListOrderRunning();
@@ -117,12 +124,12 @@ public class BudgetManagerTest {
         balanceIndex.updateIndex(balance, balanceMin, positionMargin, unrealizedProfitMin, timeUpdate);
         if (timeUpdate % Utils.TIME_DAY == 0) {
             Double rateLoss = unProfit * 100 / balanceCurrent;
-            Double rateProfitDate = profitOfDate * 100 / balanceCurrent;
-            LOG.info("Update {} => balance:{}  margin:{} {}% " +
-                            "profit:{} pDate:{} {}% unProfit:{} {}% fee:{} done: {} run:{}",
-                    Utils.normalizeDateYYYYMMDDHHmm(timeUpdate), balance.longValue(), positionMargin.longValue(),
-                    investing.longValue(), profit.longValue(), profitOfDate.longValue(), rateProfitDate.longValue(),
-                    unrealizedProfit.longValue(), rateLoss.longValue(), totalFee.longValue(),
+            Double rateProfitDate = profitOfDate * 100 / (balanceCurrent - profitOfDate);
+            LOG.info("Update {} => balance:{} pDate:{} {}% margin:{} {}% " +
+                            "profit:{} unProfit:{} {}% fee:{} done: {}/{} run:{}",
+                    Utils.normalizeDateYYYYMMDDHHmm(timeUpdate), balance.longValue(), profitOfDate.longValue(),
+                    rateProfitDate.longValue(), positionMargin.longValue(), investing.longValue(), profit.longValue(),
+                    unrealizedProfit.longValue(), rateLoss.longValue(), totalFee.longValue(), totalSL,
                     allOrderDone.size(), symbolRunning.size());
             if (timeUpdate.equals(Utils.getToDay() + 7 * Utils.TIME_HOUR)) {
                 LOG.info("Update report: {}", Utils.normalizeDateYYYYMMDDHHmm(timeUpdate));
@@ -150,6 +157,10 @@ public class BudgetManagerTest {
             LOG.info("Chay tai khoan {} -----------------------------------!", Utils.normalizeDateYYYYMMDDHHmm(timeUpdate));
         }
         updateBudget();
+    }
+
+    private Double calFee(OrderTargetInfoTest orderInfo) {
+        return orderInfo.quantity * orderInfo.priceEntry * RATE_FEE;
     }
 
 

@@ -27,6 +27,9 @@ public enum OrderTargetStatus {
     NEW_HAD_SL3TP,
     TAKE_PROFIT_DONE,
     STOP_LOSS_DONE,
+    STOP_LOSS_OVERTIME,
+    STOP_LOSS_MA20,
+    STOP_LOSS_4_NEW,
     CANCELED,
     FINISHED;
 }

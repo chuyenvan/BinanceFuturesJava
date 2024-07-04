@@ -1,11 +1,9 @@
 package com.binance.chuyennd.bigchange.btctd;
 
-import com.binance.chuyennd.client.TickerFuturesHelper;
 import com.binance.chuyennd.indicators.MACDTradingController;
-import com.binance.chuyennd.indicators.SimpleMovingAverageManager;
+import com.binance.chuyennd.indicators.SimpleMovingAverage1DManager;
 import com.binance.chuyennd.movingaverage.MAStatus;
 import com.binance.chuyennd.object.KlineObjectNumber;
-import com.binance.chuyennd.object.TrendState;
 import com.binance.chuyennd.research.DataManager;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
 import com.binance.chuyennd.trading.OrderTargetStatus;
@@ -22,8 +20,6 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.text.ParseException;
 import java.util.*;
-
-import static com.binance.chuyennd.research.DataManager.*;
 
 /**
  * @author pc
@@ -92,7 +88,7 @@ public class AltMACDTrendBuy15M {
 
 
     private String buildLineTest(OrderTargetInfoTest order, Double rateLoss) {
-        MAStatus maStatus = SimpleMovingAverageManager.getInstance().getMaStatus(order.timeStart, order.symbol);
+        MAStatus maStatus = SimpleMovingAverage1DManager.getInstance().getMaStatus(order.timeStart, order.symbol);
         return order.symbol + "," + Utils.normalizeDateYYYYMMDDHHmm(order.timeStart) + "," + Utils.normalizeDateYYYYMMDDHHmm(order.timeUpdate)
                 + "," + order.priceEntry + "," + order.priceTP + "," + order.lastPrice
                 + "," + order.volume + "," + order.rsi14
@@ -118,7 +114,7 @@ public class AltMACDTrendBuy15M {
             if (!StringUtils.endsWithIgnoreCase(symbol, "usdt")) {
                 continue;
             }
-            if (Constants.specialSymbol.contains(symbol)) {
+            if (Constants.diedSymbol.contains(symbol)) {
                 continue;
             }
 
@@ -128,31 +124,31 @@ public class AltMACDTrendBuy15M {
                 for (int i = 0; i < tickers.size(); i++) {
                     KlineObjectNumber kline = tickers.get(i);
                     try {
-                        DataManager.getInstance().updateData(kline, symbol);
-                        KlineObjectNumber lastTicker1H = DataManager.getInstance().getTicker(symbol, Constants.INTERVAL_1H,
-                                Utils.getHour(kline.startTime.longValue()) - Utils.TIME_HOUR);
-                        KlineObjectNumber ticker1H = DataManager.getInstance().getTicker(symbol, Constants.INTERVAL_1H,
-                                Utils.getHour(kline.startTime.longValue()));
-                        KlineObjectNumber lastTicker4H = DataManager.getInstance().getTicker(symbol, Constants.INTERVAL_4H,
-                                Utils.get4Hour(kline.startTime.longValue()) - 4 * Utils.TIME_HOUR);
-                        KlineObjectNumber ticker4H = DataManager.getInstance().getTicker(symbol, Constants.INTERVAL_4H,
-                                Utils.get4Hour(kline.startTime.longValue()));
-                        KlineObjectNumber lastTicker1d = DataManager.getInstance().getTicker(symbol, Constants.INTERVAL_1D,
-                                Utils.getDate(kline.startTime.longValue()) - Utils.TIME_DAY);
-                        KlineObjectNumber ticker1d = DataManager.getInstance().getTicker(symbol, Constants.INTERVAL_1D,
-                                Utils.getDate(kline.startTime.longValue()));
-                        MAStatus maStatus = SimpleMovingAverageManager.getInstance().getMaStatus(kline.startTime.longValue(), symbol);
-                        Double maValue = SimpleMovingAverageManager.getInstance().getMaValue(symbol, Utils.getDate(kline.startTime.longValue()));
+//                        DataManager.getInstance().updateData(kline, symbol);
+//                        KlineObjectNumber lastTicker1H = DataManager.getInstance().getTicker(symbol, Constants.INTERVAL_1H,
+//                                Utils.getHour(kline.startTime.longValue()) - Utils.TIME_HOUR);
+//                        KlineObjectNumber ticker1H = DataManager.getInstance().getTicker(symbol, Constants.INTERVAL_1H,
+//                                Utils.getHour(kline.startTime.longValue()));
+//                        KlineObjectNumber lastTicker4H = DataManager.getInstance().getTicker(symbol, Constants.INTERVAL_4H,
+//                                Utils.get4Hour(kline.startTime.longValue()) - 4 * Utils.TIME_HOUR);
+//                        KlineObjectNumber ticker4H = DataManager.getInstance().getTicker(symbol, Constants.INTERVAL_4H,
+//                                Utils.get4Hour(kline.startTime.longValue()));
+//                        KlineObjectNumber lastTicker1d = DataManager.getInstance().getTicker(symbol, Constants.INTERVAL_1D,
+//                                Utils.getDate(kline.startTime.longValue()) - Utils.TIME_DAY);
+//                        KlineObjectNumber ticker1d = DataManager.getInstance().getTicker(symbol, Constants.INTERVAL_1D,
+//                                Utils.getDate(kline.startTime.longValue()));
+                        MAStatus maStatus = SimpleMovingAverage1DManager.getInstance().getMaStatus(kline.startTime.longValue(), symbol);
+                        Double maValue = SimpleMovingAverage1DManager.getInstance().getMaValue(symbol, Utils.getDate(kline.startTime.longValue()));
                         if (maValue == null) {
                             continue;
                         }
 
-                        if (MACDTradingController.isSignalCutMacdFirst(tickers, i)
+                        if (MACDTradingController.isMacdCutUpSignalFirst(tickers, i)
                                 && maStatus != null && !maStatus.equals(MAStatus.UNDER)
-                                && lastTicker1H != null && ticker1H != null && ticker1H.histogram > lastTicker1H.histogram
-                                && lastTicker4H != null && ticker4H != null && ticker4H.histogram > lastTicker4H.histogram
-                                && lastTicker1d != null && lastTicker1d != null && lastTicker1d.histogram != null
-                                && ticker1d.histogram > lastTicker1d.histogram
+//                                && lastTicker1H != null && ticker1H != null && ticker1H.histogram > lastTicker1H.histogram
+//                                && lastTicker4H != null && ticker4H != null && ticker4H.histogram > lastTicker4H.histogram
+//                                && lastTicker1d != null && lastTicker1d != null && lastTicker1d.histogram != null
+//                                && ticker1d.histogram > lastTicker1d.histogram
 
                         ) {
                             Double priceEntry = kline.priceClose;

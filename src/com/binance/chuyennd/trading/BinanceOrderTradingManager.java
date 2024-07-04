@@ -15,6 +15,7 @@
  */
 package com.binance.chuyennd.trading;
 
+import com.binance.chuyennd.bigchange.market.MarketLevelChange;
 import com.binance.chuyennd.client.BinanceFuturesClientSingleton;
 import com.binance.chuyennd.client.ClientSingleton;
 import com.binance.chuyennd.client.FuturesRules;
@@ -26,7 +27,6 @@ import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.model.enums.OrderSide;
 import com.binance.client.model.enums.OrderType;
-import com.binance.client.model.trade.Asset;
 import com.binance.client.model.trade.Order;
 import com.binance.client.model.trade.PositionRisk;
 import org.apache.commons.lang.StringUtils;
@@ -49,128 +49,22 @@ public class BinanceOrderTradingManager {
     public ExecutorService executorServiceOrderNew = Executors.newFixedThreadPool(Configs.getInt("NUMBER_THREAD_ORDER_MANAGER"));
     public ExecutorService executorServiceOrderManager = Executors.newFixedThreadPool(Configs.getInt("NUMBER_THREAD_ORDER_MANAGER"));
     public Double RATE_TARGET = Configs.getDouble("RATE_TARGET");
-
-    public final Double NUMBER_HOURS_STOP_TRADE = Configs.getDouble("NUMBER_HOURS_STOP_TRADE");
+    public Double RATE_LOSS_AVG_STOP_ALL = Configs.getDouble("RATE_LOSS_AVG_STOP_ALL");
+    public final Double NUMBER_HOURS_STOP_MAX = Configs.getDouble("NUMBER_HOURS_STOP_MAX");
     private final ConcurrentHashMap<String, OrderTargetInfo> symbol2Processing = new ConcurrentHashMap<>();
 
-    public static Double balanceStart = Configs.getDouble("CAPITAL_START");//9200.0;
-    public static Double rateProfit = Configs.getDouble("PROFIT_RATE");//0.013;
-    public static long timeStartRun = Configs.getLong("TIME_START");//1710892800000L;
 
     public static void main(String[] args) throws InterruptedException, ParseException {
-        new VolumeMiniManager().start();
+//        new VolumeMiniManager().start();
+        new MarketLevelChangeTrader().start();
         new BinanceOrderTradingManager().start();
+        Reporter.startThreadReportPosition();
     }
 
     private void start() throws InterruptedException {
         initData();
         startThreadListenQueueOrder2ManagerNew();
         startThreadManagerOrderNew();
-        reportPosition();
-    }
-
-    private void reportPosition() {
-        new Thread(() -> {
-            Thread.currentThread().setName("Reporter");
-            LOG.info("Start thread report !");
-            while (true) {
-                try {
-                    Thread.sleep(30 * Utils.TIME_SECOND);
-                    if (isTimeReport()) {
-                        buildReport();
-                    }
-                } catch (Exception e) {
-                    LOG.error("ERROR during : {}", e);
-                    e.printStackTrace();
-                }
-            }
-        }).start();
-
-    }
-
-    public boolean isTimeReport() {
-        return Utils.getCurrentMinute() % 15 == 1 && Utils.getCurrentSecond() < 30;
-    }
-
-    public void buildReport() {
-        StringBuilder reportRunning = calReportRunning();
-        Utils.sendSms2Telegram(reportRunning.toString());
-    }
-
-    public StringBuilder calReportRunning() {
-        StringBuilder builder = new StringBuilder();
-        Set<String> symbolsSell = new HashSet<>();
-
-        Long totalLoss = 0l;
-        Long totalBuy = 0l;
-        Long totalSell = 0l;
-        Long totalUnder3 = 0l;
-        Long totalOver10 = 0l;
-
-        TreeMap<Double, PositionRisk> rate2Order = new TreeMap<>();
-        List<PositionRisk> positions = BinanceFuturesClientSingleton.getInstance().getAllPositionInfos();
-        for (PositionRisk position : positions) {
-            if (position.getPositionAmt() != null && position.getPositionAmt().doubleValue() != 0) {
-                Double rateLoss = Utils.rateOf2Double(position.getMarkPrice().doubleValue(), position.getEntryPrice().doubleValue()) * 100;
-                rate2Order.put(rateLoss, position);
-                if (rateLoss < -10) {
-                    totalOver10++;
-                }
-                if (rateLoss >= -3) {
-                    totalUnder3++;
-                }
-            }
-        }
-        int counterLog = 0;
-        for (Map.Entry<Double, PositionRisk> entry : rate2Order.entrySet()) {
-            Double rateLoss = entry.getKey();
-            PositionRisk pos = entry.getValue();
-            Long ratePercent = rateLoss.longValue();
-            totalLoss += ratePercent;
-            if (pos.getPositionAmt().doubleValue() > 0) {
-                totalBuy += ratePercent;
-            } else {
-                symbolsSell.add(pos.getSymbol());
-                totalSell += ratePercent;
-            }
-            if (counterLog < 15) {
-                counterLog++;
-                Double volume24hr = Volume24hrManager.getInstance().symbol2Volume.get(pos.getSymbol());
-                OrderSide side = OrderSide.BUY;
-                if (pos.getPositionAmt().doubleValue() < 0) {
-                    side = OrderSide.SELL;
-                }
-                Double pnl = Utils.callPnl(pos) * 100;
-                Long pnlLong = pnl.longValue();
-                Double entryPrice = ClientSingleton.getInstance().normalizePrice(pos.getSymbol(), pos.getEntryPrice().doubleValue());
-                Double lastPrice = ClientSingleton.getInstance().normalizePrice(pos.getSymbol(), pos.getMarkPrice().doubleValue());
-                builder.append(side).append(" ")
-                        .append(pos.getSymbol()).append(" ")
-                        .append(volume24hr.longValue() / 1000000).append("M ")
-                        .append(entryPrice).append("->").append(lastPrice)
-                        .append(" ").append(ratePercent).append("%")
-                        .append(" ").append(pnlLong.doubleValue() / 100).append("$")
-                        .append("\n");
-            }
-        }
-        Asset umInfo = BinanceFuturesClientSingleton.getInstance().getAccountUMInfo();
-        Double balanceTarget = getTargetBalance(System.currentTimeMillis() + Utils.TIME_DAY);
-        Double profit = balanceTarget - umInfo.getWalletBalance().doubleValue();
-
-        builder.append("Balance: ").append(umInfo.getMarginBalance().longValue()).append("$ -> ")
-                .append(umInfo.getWalletBalance().longValue())
-                .append("/").append(balanceTarget.longValue()).append("$")
-                .append(" profit: ").append(profit.longValue()).append("");
-        builder.append("\nTotal: ").append(totalLoss.doubleValue()).append("% -> ")
-                .append(umInfo.getCrossUnPnl().longValue()).append("$");
-        builder.append(" Buy: ").append(totalBuy.doubleValue()).append("%");
-        builder.append(" Sell: ").append(totalSell.doubleValue()).append("%");
-        builder.append(" ").append(symbolsSell.toString());
-        builder.append(" \nRunning: ").append(RedisHelper.getInstance().smembers(
-                RedisConst.REDIS_KEY_SET_ALL_SYMBOL_POS_RUNNING).size()).append(" orders");
-        builder.append(" Under3: ").append(totalUnder3);
-        builder.append(" Over10: ").append(totalOver10);
-        return builder;
     }
 
     private void startThreadListenQueueOrder2ManagerNew() {
@@ -189,12 +83,21 @@ public class BinanceOrderTradingManager {
                             LOG.info("Sym {} is locking by trading rule!", order.symbol);
                             continue;
                         }
-//                        if (BudgetManager.getInstance().getNumberOrderBudgetAvailable() <= 0) {
-                        if (BudgetManager.getInstance().getInvesting2Check() >= BudgetManager.getInstance().MAX_CAPITAL_RATE) {
-                            LOG.info("Stop trading {} {} because investing over: {}", order.symbol,
-                                    Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()),
-                                    BudgetManager.getInstance().getInvesting());
-                            continue;
+                        // nếu level BIG => trade not check budget
+                        if (!order.marketLevel.equals(MarketLevelChange.BIG_DOWN)
+                                && !order.marketLevel.equals(MarketLevelChange.MEDIUM_DOWN)
+                                && !order.marketLevel.equals(MarketLevelChange.BIG_UP)
+                                && !order.marketLevel.equals(MarketLevelChange.MEDIUM_UP)
+                        ) {
+                            if (BudgetManager.getInstance().getInvesting2Check() >= BudgetManager.getInstance().MAX_CAPITAL_RATE) {
+                                Boolean isClosed = checkAndCloseOrderLatestOverTimeMin();
+                                if (!isClosed) {
+                                    LOG.info("Stop trading {} {} because investing over: {}", order.symbol,
+                                            Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()),
+                                            BudgetManager.getInstance().getInvesting());
+                                    continue;
+                                }
+                            }
                         }
                         if (!symbol2Processing.containsKey(order.symbol)) {
                             if (order.status.equals(OrderTargetStatus.REQUEST)) {
@@ -239,11 +142,13 @@ public class BinanceOrderTradingManager {
                 }
                 LOG.info("Create order market {} {} {}", order.side, order.symbol, volume.longValue() + "M");
                 Order orderInfo = OrderHelper.newOrderMarket(order.symbol, order.side, order.quantity, BudgetManager.getInstance().getLeverage());
+                RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_SYMBOL_POS_MARKET_LEVEL, order.symbol, order.marketLevel.toString());
                 Utils.sendSms2Telegram(order.side + " " + order.symbol + " entry: " + order.priceEntry + " -> " + order.priceTP
                         + " target: " + Utils.formatPercent(Utils.rateOf2Double(order.priceTP, order.priceEntry))
                         + " quantity: " + order.quantity
                         + " volume: " + volume.longValue() + "M"
-                        + " time:" + Utils.normalizeDateYYYYMMDDHHmm(order.timeStart));
+                        + " time:" + Utils.normalizeDateYYYYMMDDHHmm(order.timeStart)
+                        + " market level: " + getMarketLevel(order.symbol));
                 if (orderInfo != null) {
                     // create take profit and stoploss
                     RedisHelper.getInstance().delJsonData(RedisConst.REDIS_KEY_EDUCA_ALL_SYMBOLS_CHECKING, order.symbol);
@@ -268,14 +173,33 @@ public class BinanceOrderTradingManager {
         ClientSingleton.getInstance();
     }
 
-    public static Double getTargetBalance(Long currentTime) {
-        Double total = balanceStart;
-        Long numberDay = (currentTime - timeStartRun) / Utils.TIME_DAY;
-        for (int i = 0; i < numberDay; i++) {
-            Double inc = total * rateProfit;
-            total += inc;
+    public Boolean checkAndCloseOrderLatestOverTimeMin() {
+        try {
+            PositionRisk positionLatest = null;
+            List<PositionRisk> positions = BinanceFuturesClientSingleton.getInstance().getAllPositionInfos();
+            for (PositionRisk position : positions) {
+                try {
+                    if (position.getPositionAmt().doubleValue() > 0) {
+                        if (positionLatest == null || positionLatest.getUpdateTime() > position.getUpdateTime()) {
+                            positionLatest = position;
+                        }
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+            if (positionLatest != null) {
+                if (positionLatest.getUpdateTime() < System.currentTimeMillis() - Utils.TIME_HOUR * NUMBER_HOURS_STOP_MAX) {
+                    stopLossOrder(positionLatest);
+                    LOG.info("Close order to trade new: {} time:{} minutes", positionLatest.getSymbol(),
+                            (System.currentTimeMillis() - positionLatest.getUpdateTime()) / Utils.TIME_MINUTE);
+                    return true;
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-        return total;
+        return false;
     }
 
     private void startThreadManagerOrderNew() {
@@ -285,7 +209,7 @@ public class BinanceOrderTradingManager {
             while (true) {
                 executorServiceOrderManager.execute(() -> processManagerPosition());
                 try {
-                    Thread.sleep(3 * Utils.TIME_MINUTE);
+                    Thread.sleep(2 * Utils.TIME_MINUTE);
                 } catch (InterruptedException ex) {
                     java.util.logging.Logger.getLogger(BinanceOrderTradingManager.class.getName()).log(Level.SEVERE, null, ex);
                 }
@@ -303,10 +227,13 @@ public class BinanceOrderTradingManager {
             // get all position
             LOG.info("Get all position.");
             List<PositionRisk> positions = BinanceFuturesClientSingleton.getInstance().getAllPositionInfos();
+            // check stop all when market maybe bigdump
+            checkAndStopLossAll(positions);
 
             Map<String, PositionRisk> symbol2Pos = new HashMap<>();
             // udpate list running
             Set<String> symbolsRunning = RedisHelper.getInstance().smembers(RedisConst.REDIS_KEY_SET_ALL_SYMBOL_POS_RUNNING);
+
             for (PositionRisk position : positions) {
                 if (position.getPositionAmt().doubleValue() > 0) {
                     symbol2Pos.put(position.getSymbol(), position);
@@ -315,11 +242,19 @@ public class BinanceOrderTradingManager {
                         RedisHelper.getInstance().addList(RedisConst.REDIS_KEY_SET_ALL_SYMBOL_POS_RUNNING, position.getSymbol());
                     }
                     // check and Close position
-                    if (position.getUpdateTime() < System.currentTimeMillis() - Utils.TIME_HOUR * NUMBER_HOURS_STOP_TRADE) {
+                    Long timeMax2Close = Utils.TIME_HOUR * NUMBER_HOURS_STOP_MAX.longValue();
+                    String marketLevel = getMarketLevel(position.getSymbol());
+                    if (marketLevel != null
+                            && StringUtils.equals(marketLevel, MarketLevelChange.BIG_DOWN.toString())
+                    ) {
+                        timeMax2Close = timeMax2Close / 4;
+                    }
+                    if (position.getUpdateTime() < System.currentTimeMillis() - timeMax2Close) {
                         stopLossOrder(position);
                     }
                 }
             }
+
 
             Map<String, Order> symbol2OrderTp = new HashMap<>();
             for (Order order : ordersOpen) {
@@ -370,8 +305,45 @@ public class BinanceOrderTradingManager {
         LOG.info("Final check all position: {}s", timeProcess.doubleValue() / 10);
     }
 
+    public void checkAndStopLossAll(List<PositionRisk> positions) {
+        double totalLoss = 0d;
+        int counter = 0;
+        Boolean isHaveLevelBigDown = false;
+        for (PositionRisk position : positions) {
+            if (position.getPositionAmt() != null && position.getPositionAmt().doubleValue() != 0) {
+                Double rateLoss = Utils.rateOf2Double(position.getMarkPrice().doubleValue(), position.getEntryPrice().doubleValue()) * 100;
+                totalLoss += rateLoss;
+                counter++;
+                String marketLevel = getMarketLevel(position.getSymbol());
+                if (marketLevel != null && StringUtils.equals(marketLevel, MarketLevelChange.BIG_DOWN.toString())) {
+                    isHaveLevelBigDown = true;
+                }
+            }
+        }
+        if (counter < 5) {
+            return;
+        }
+        Double rateLossMax = RATE_LOSS_AVG_STOP_ALL;
+        if (!isHaveLevelBigDown) {
+            rateLossMax = rateLossMax / 2;
+        }
+        double rateLossAvg = totalLoss / counter;
+        if (-rateLossAvg > rateLossMax) {
+            LOG.info("Stop all because rate loss avg over!: {}/{}", rateLossAvg, rateLossMax);
+            // stop all
+            stopLossAllOrder(positions);
+            Utils.sendSms2Telegram("Stop all because rate loss avg over: " + rateLossAvg + "/" + rateLossMax + " orders: " + positions.size());
+        }
+    }
+
     private void stopLossOrder(PositionRisk position) {
         OrderHelper.takeProfitPosition(position);
+    }
+
+    private void stopLossAllOrder(List<PositionRisk> positions) {
+        for (PositionRisk position : positions) {
+            stopLossOrder(position);
+        }
     }
 
     public void createTp(PositionRisk pos) {
@@ -379,6 +351,28 @@ public class BinanceOrderTradingManager {
             // check all open order 
 //            Double target = BudgetManager.getInstance().callRateTargetWithPosition(pos,RATE_TARGET_SIGNAL);
             Double target = RATE_TARGET;
+            String marketLevel = getMarketLevel(pos.getSymbol());
+            if (StringUtils.equals(marketLevel, MarketLevelChange.BIG_DOWN.toString())) {
+                target = 8 * target;
+            }
+            if (StringUtils.equals(marketLevel, MarketLevelChange.MEDIUM_DOWN.toString())) {
+                target = 4 * target;
+            }
+            if (StringUtils.equals(marketLevel, MarketLevelChange.BIG_UP.toString())) {
+                target = 2 * target;
+            }
+
+            if (StringUtils.equals(marketLevel, MarketLevelChange.VOLUME_BIG_CHANGE.toString())) {
+                target = 0.007;
+            }
+
+            if (StringUtils.equals(marketLevel, MarketLevelChange.MINI_DOWN_EXTEND.toString())) {
+                target = 0.007;
+            }
+            if (StringUtils.equals(marketLevel, MarketLevelChange.BTC_SMALL_CHANGE_REVERSE.toString())) {
+                target = 0.007;
+            }
+
             Double priceTp = Utils.calPriceTarget(pos.getSymbol(), pos.getEntryPrice().doubleValue(), OrderSide.BUY, target);
             List<Order> openOrders = BinanceFuturesClientSingleton.getInstance().getOpenOrders(pos.getSymbol());
             if (!openOrders.isEmpty()) {
@@ -404,14 +398,25 @@ public class BinanceOrderTradingManager {
 
             }
             String log = "Create tp -> SELL "
-                    + pos.getSymbol() + " " + pos.getPositionAmt().doubleValue() + " " + pos.getEntryPrice().doubleValue() + " -> " + priceTp + " rate: "
-                    + Utils.formatPercent(Math.abs(Utils.rateOf2Double(priceTp, pos.getEntryPrice().doubleValue())));
+                    + pos.getSymbol() + " " + pos.getPositionAmt().doubleValue() + " " + pos.getEntryPrice().doubleValue()
+                    + " -> " + priceTp + " rate: " + Utils.formatPercent(Math.abs(Utils.rateOf2Double(priceTp, pos.getEntryPrice().doubleValue())))
+                    + " market level:" + getMarketLevel(pos.getSymbol());
             LOG.info(log);
             Utils.sendSms2Telegram(log);
             OrderHelper.takeProfit(pos.getSymbol(), OrderSide.SELL, pos.getPositionAmt().doubleValue(), priceTp);
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    private String getMarketLevel(String symbol) {
+        try {
+            String marketLevel = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_SYMBOL_POS_MARKET_LEVEL, symbol);
+            return marketLevel;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
     public void recheckOrderTPNew(String symbol) {

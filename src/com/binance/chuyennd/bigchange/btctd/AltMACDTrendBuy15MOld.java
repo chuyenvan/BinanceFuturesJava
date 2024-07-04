@@ -1,11 +1,9 @@
 package com.binance.chuyennd.bigchange.btctd;
 
-import com.binance.chuyennd.client.TickerFuturesHelper;
 import com.binance.chuyennd.indicators.MACDTradingController;
-import com.binance.chuyennd.indicators.SimpleMovingAverageManager;
+import com.binance.chuyennd.indicators.SimpleMovingAverage1DManager;
 import com.binance.chuyennd.movingaverage.MAStatus;
 import com.binance.chuyennd.object.KlineObjectNumber;
-import com.binance.chuyennd.object.TrendState;
 import com.binance.chuyennd.research.DataManager;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
 import com.binance.chuyennd.trading.OrderTargetStatus;
@@ -92,7 +90,7 @@ public class AltMACDTrendBuy15MOld {
 
 
     private String buildLineTest(OrderTargetInfoTest order, Double rateLoss) {
-        MAStatus maStatus = SimpleMovingAverageManager.getInstance().getMaStatus(order.timeStart, order.symbol);
+        MAStatus maStatus = SimpleMovingAverage1DManager.getInstance().getMaStatus(order.timeStart, order.symbol);
         return order.symbol + "," + Utils.normalizeDateYYYYMMDDHHmm(order.timeStart) + "," + Utils.normalizeDateYYYYMMDDHHmm(order.timeUpdate)
                 + "," + order.priceEntry + "," + order.priceTP + "," + order.lastPrice
                 + "," + order.volume + "," + order.rsi14
@@ -116,7 +114,7 @@ public class AltMACDTrendBuy15MOld {
             if (!StringUtils.endsWithIgnoreCase(symbol, "usdt")) {
                 continue;
             }
-            if (Constants.specialSymbol.contains(symbol)) {
+            if (Constants.diedSymbol.contains(symbol)) {
                 continue;
             }
 //            if (StringUtils.equals("BLZUSDT", symbol)) {
@@ -159,15 +157,15 @@ public class AltMACDTrendBuy15MOld {
                         KlineObjectNumber ticker4H = time2Ticker4h.get(Utils.get4Hour(kline.startTime.longValue()) - 4 * Utils.TIME_HOUR);
 //                        KlineObjectNumber lastTicker1d = time2Ticker1d.get(Utils.getDate(kline.startTime.longValue()) - 2 * Utils.TIME_DAY);
 //                        KlineObjectNumber ticker1d = time2Ticker1d.get(Utils.getDate(kline.startTime.longValue()) - Utils.TIME_DAY);
-                        MAStatus maStatus = SimpleMovingAverageManager.getInstance().getMaStatus(kline.startTime.longValue(), symbol);
-                        Double maValue = SimpleMovingAverageManager.getInstance().getMaValue(symbol, Utils.getDate(kline.startTime.longValue()));
+                        MAStatus maStatus = SimpleMovingAverage1DManager.getInstance().getMaStatus(kline.startTime.longValue(), symbol);
+                        Double maValue = SimpleMovingAverage1DManager.getInstance().getMaValue(symbol, Utils.getDate(kline.startTime.longValue()));
                         Double lastBtcHistogram1h = BTCMacdTrendManager.getInstance().getHistogram(Constants.INTERVAL_1H, Utils.getHour(kline.startTime.longValue()) - 2 * Utils.TIME_HOUR);
                         Double btcHistogram1h = BTCMacdTrendManager.getInstance().getHistogram(Constants.INTERVAL_1H, Utils.getHour(kline.startTime.longValue()) - Utils.TIME_HOUR);
                         if (maValue == null) {
                             continue;
                         }
                         Double rateMa = Utils.rateOf2Double(kline.priceClose, maValue);
-                        if (MACDTradingController.isSignalCutMacdFirst(tickers, i)
+                        if (MACDTradingController.isMacdCutUpSignalFirst(tickers, i)
                                 && maStatus != null && !maStatus.equals(MAStatus.UNDER)
                                 && last1Ticker1H != null && lastTicker1H != null && ticker1H != null
                                 && lastTicker1H.histogram > last1Ticker1H.histogram

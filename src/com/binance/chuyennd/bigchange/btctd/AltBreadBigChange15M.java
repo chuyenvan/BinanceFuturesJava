@@ -2,13 +2,12 @@ package com.binance.chuyennd.bigchange.btctd;
 
 import com.binance.chuyennd.client.PriceManager;
 import com.binance.chuyennd.client.TickerFuturesHelper;
-import com.binance.chuyennd.indicators.SimpleMovingAverageManager;
+import com.binance.chuyennd.indicators.SimpleMovingAverage1DManager;
 import com.binance.chuyennd.mongo.TickerMongoHelper;
 import com.binance.chuyennd.movingaverage.MAStatus;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.research.DataManager;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
-import com.binance.chuyennd.trading.OrderTargetInfo;
 import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Storage;
@@ -190,30 +189,30 @@ public class AltBreadBigChange15M {
         // test for multi param
         try {
             List<String> lines = new ArrayList<>();
-            ArrayList<Double> rateSuccesses = new ArrayList<>(Arrays.asList(
-//                    89.0,
-//                    90.0,
-//                    90.5,
-//                    91.0,
-//                    91.5,
-//                    92.0,
-//                    93.0,
-//                    94.0,
-//                    95.0,
-                    91.5));
+//            ArrayList<Double> rateSuccesses = new ArrayList<>(Arrays.asList(
+////                    89.0,
+////                    90.0,
+////                    90.5,
+////                    91.0,
+////                    91.5,
+////                    92.0,
+////                    93.0,
+////                    94.0,
+////                    95.0,
+//                    91.5));
             ArrayList<Integer> NUMBER_HOURS_TO_STOP = new ArrayList<>();
-            for (int i = 1; i < 17; i++) {
-                NUMBER_HOURS_TO_STOP.add(i);
+            for (int i = 4; i < 5; i++) {
+                NUMBER_HOURS_TO_STOP.add(i * 12);
             }
 
             for (Integer numberHourStopLoss : NUMBER_HOURS_TO_STOP) {
 //                for (Double rateSuccess : rateSuccesses) {
 //                    BreadFunctions.updateVolumeRateChange(numberHourStopLoss, rateSuccess);
-                    lines.addAll(detectBigChangeWithVolumeFixRate(RATE_TARGET, numberHourStopLoss * 4));
+                lines.addAll(detectBigChangeWithVolumeFixRate(RATE_TARGET, numberHourStopLoss * 4));
 //                }
             }
 //            printByDate(lines);
-            FileUtils.writeLines(new File(AltBreadBigChange15M.class.getSimpleName() + ".csv"), lines);
+            FileUtils.writeLines(new File(AltBreadBigChange15M.class.getSimpleName() + "-rate-ma-" + RATE_MA_MAX.toString() + ".csv"), lines);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -542,7 +541,7 @@ public class AltBreadBigChange15M {
         for (Map.Entry<String, List<KlineObjectNumber>> entry : allSymbolTickers.entrySet()) {
             lines.clear();
             String symbol = entry.getKey();
-            if (Constants.specialSymbol.contains(symbol)) {
+            if (Constants.diedSymbol.contains(symbol)) {
                 continue;
             }
 
@@ -625,14 +624,14 @@ public class AltBreadBigChange15M {
             for (Map.Entry<String, List<KlineObjectNumber>> entry : allSymbolTickers.entrySet()) {
                 String symbol = entry.getKey();
                 lastTimeBreadTrader = 0l;
-                if (Constants.specialSymbol.contains(symbol)) {
+                if (Constants.diedSymbol.contains(symbol)) {
                     continue;
                 }
 //                if (!StringUtils.equals(symbol, "RIFUSDT")) {
 //                    continue;
 //                }
                 try {
-                    List<OrderTargetInfo> orders = new ArrayList<>();
+                    List<OrderTargetInfoTest> orders = new ArrayList<>();
                     List<KlineObjectNumber> tickers = entry.getValue();
                     symbol2LastPrice.put(symbol, tickers.get(tickers.size() - 1).priceClose);
                     for (int i = 0; i < tickers.size(); i++) {
@@ -648,10 +647,12 @@ public class AltBreadBigChange15M {
                             lastTimeBreadTrader = kline.startTime.longValue();
                             lastBreadTrader = breadData;
                             try {
+                                KlineObjectNumber ticker24h = TickerFuturesHelper.extractKline24hr(tickers, kline.startTime.longValue());
                                 Double priceEntry = kline.priceClose;
                                 Double priceTarget = getPriceTarget(priceEntry, breadData.orderSide, RATE_CHANGE_WITHBREAD_2TRADING_TARGET);
-//                                    Double priceTarget = getPriceTarget(priceEntry, breadData.orderSide, breadData.rateChange * 0.5);
-                                OrderTargetInfo orderTrade = new OrderTargetInfo(OrderTargetStatus.REQUEST, priceEntry, priceTarget, 1.0, 10, symbol, kline.startTime.longValue(), kline.startTime.longValue(), breadData.orderSide, Constants.TRADING_TYPE_BREAD);
+                                OrderTargetInfoTest orderTrade = new OrderTargetInfoTest(OrderTargetStatus.REQUEST, priceEntry, priceTarget, 1.0,
+                                        10, symbol, kline.startTime.longValue(), kline.startTime.longValue(), breadData.orderSide);
+                                orderTrade.avgVolume24h = ticker24h.totalUsdt;
                                 for (int j = i + 1; j < i + NUMBER_HOURS_STOP_TRADE; j++) {
                                     if (j < tickers.size()) {
                                         KlineObjectNumber ticker = tickers.get(j);
@@ -707,12 +708,12 @@ public class AltBreadBigChange15M {
         }
     }
 
-    private List<String> printResultTrade(List<OrderTargetInfo> orders) {
+    private List<String> printResultTrade(List<OrderTargetInfoTest> orders) {
         List<String> lines = new ArrayList<>();
         int counterSuccess = 0;
 
 //        String symbol = orders.get(0).symbol;
-        for (OrderTargetInfo order : orders) {
+        for (OrderTargetInfoTest order : orders) {
             counterTotal++;
             if (order.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)) {
                 this.counterSuccess++;
@@ -751,18 +752,22 @@ public class AltBreadBigChange15M {
         return lines;
     }
 
-    private String buildLine(OrderTargetInfo order, boolean orderState) {
+    private String buildLine(OrderTargetInfoTest order, boolean orderState) {
         return order.symbol + "," + Utils.normalizeDateYYYYMMDDHHmm(order.timeStart) + "," + order.side
-                + "," + order.priceEntry + "," + order.priceTP + "," + symbol2LastPrice.get(order.symbol) + "," + orderState;
+                + "," + order.priceEntry + "," + order.priceTP + "," + symbol2LastPrice.get(order.symbol) + "," + orderState
+                + "," + order.avgVolume24h;
     }
 
     private String buildLineTest(OrderTargetInfoTest order, boolean orderState, Double rateLoss) {
-        MAStatus maStatus = SimpleMovingAverageManager.getInstance().getMaStatus(order.timeStart, order.symbol);
+        MAStatus maStatus = SimpleMovingAverage1DManager.getInstance().getMaStatus(order.timeStart, order.symbol);
         return order.symbol + "," + Utils.normalizeDateYYYYMMDDHHmm(order.timeStart) + "," + order.side + ","
-                + order.priceEntry + "," + order.priceTP + "," + symbol2LastPrice.get(order.symbol) + ","
+                + order.priceEntry + "," + order.priceTP + "," + order.lastPrice + ","
                 + order.volume + "," + order.avgVolume24h + "," + order.rateChange + "," + orderState + ","
                 + rateLoss + "," + order.maxPrice + "," + Utils.rateOf2Double(order.maxPrice, order.priceEntry)
-                + "," + (order.timeUpdate - order.timeStart) / Utils.TIME_MINUTE + "," + maStatus + "," + order.rsi14;
+                + "," + (order.timeUpdate - order.timeStart) / Utils.TIME_MINUTE + "," + maStatus + "," + order.rsi14
+                + "," + order.ma201d + "," + order.maStatus1d
+                + "," + order.tickerOpen.rsi + "," + order.tickerOpen.ma20 + "," + order.tickerOpen.histogram
+                + "," + order.tickerOpen.signal + "," + order.tickerOpen.macd;
     }
 
     private Set<Double> extractBtcBigChange(List<KlineObjectNumber> btcKlines) {
@@ -795,7 +800,7 @@ public class AltBreadBigChange15M {
         for (Map.Entry<String, List<KlineObjectNumber>> entry : allSymbolTickers.entrySet()) {
             String symbol = entry.getKey();
             lastTimeBreadTrader = 0l;
-            if (Constants.specialSymbol.contains(symbol)) {
+            if (Constants.diedSymbol.contains(symbol)) {
                 continue;
             }
 //                if (!StringUtils.equals(symbol, "RIFUSDT")) {
@@ -807,22 +812,11 @@ public class AltBreadBigChange15M {
                 symbol2LastPrice.put(symbol, tickers.get(tickers.size() - 1).priceClose);
                 for (int i = 0; i < tickers.size(); i++) {
                     KlineObjectNumber kline = tickers.get(i);
-                    int lastIndex = i - 1;
-                    if (lastIndex < 0) {
-                        lastIndex = 0;
-                    }
-                    boolean btcBigchange = false;
-                    if (btcBigChangeTimes.contains(kline.startTime)) {
-                        btcBigchange = true;
-                    }
-//                                    if (kline.totalUsdt > volume * 1000000) {
-//                                        continue;
-//                                    }
-//                            if (kline.startTime > Utils.getStartTimeDayAgo(0)) {
-//                                System.out.println("Debug:" + new Date(kline.startTime.longValue()));
-//                            }
+
                     BreadDetectObject breadData = BreadFunctions.calBreadDataAltWithBtcTrend(tickers, i, RATE_BREAD_MIN_2TRADE);
-                    if (breadData.orderSide != null && breadData.orderSide.equals(OrderSide.BUY) && PriceManager.getInstance().isAvalible2Trade(symbol, kline.minPrice, breadData.orderSide) && breadData.totalRate >= rateChange
+                    if (breadData.orderSide != null && breadData.orderSide.equals(OrderSide.BUY)
+                            && PriceManager.getInstance().isAvalible2Trade(symbol, kline.minPrice, breadData.orderSide)
+                            && breadData.totalRate >= rateChange
 //                            && breadData.rateChange >= rateChange
                             && kline.totalUsdt <= volume * 1000000) {
 
@@ -912,7 +906,7 @@ public class AltBreadBigChange15M {
         counterStoploss = 0;
         List<String> lines = new ArrayList<>();
         for (String symbol : allSymbolTickers.keySet()) {
-            if (Constants.specialSymbol.contains(symbol)) {
+            if (Constants.diedSymbol.contains(symbol)) {
                 continue;
             }
             try {
@@ -921,9 +915,9 @@ public class AltBreadBigChange15M {
                 symbol2LastPrice.put(symbol, tickers.get(tickers.size() - 1).priceClose);
                 for (int i = 0; i < tickers.size(); i++) {
                     KlineObjectNumber kline = tickers.get(i);
-                    MAStatus maStatus = SimpleMovingAverageManager.getInstance().getMaStatus(kline.startTime.longValue(), symbol);
                     BreadDetectObject breadData = BreadFunctions.calBreadDataAltWithBtcTrend(tickers, i, RATE_BREAD_MIN_2TRADE);
-                    Double maValue = SimpleMovingAverageManager.getInstance().getMaValue(symbol, Utils.getDate(kline.startTime.longValue()));
+                    MAStatus maStatus = SimpleMovingAverage1DManager.getInstance().getMaStatus(kline.startTime.longValue(), symbol);
+                    Double maValue = SimpleMovingAverage1DManager.getInstance().getMaValue(symbol, Utils.getDate(kline.startTime.longValue()));
                     if (maValue == null) {
                         continue;
                     }
@@ -1014,21 +1008,15 @@ public class AltBreadBigChange15M {
     }
 
     List<String> detectBigChangeWithVolumeFixRate(Double rateTarget, Integer NUMBER_TICKER_TO_TRADE) {
-//        LOG.info("Number ticker check: {} {} minutes", NUMBER_TICKER_TO_TRADE, NUMBER_TICKER_TO_TRADE * 15);
         counterTotal = 0;
         counterSuccess = 0;
         counterStoploss = 0;
         totalLoss = 0d;
         List<String> lines = new ArrayList<>();
-
         File[] symbolFiles = new File(DataManager.FOLDER_TICKER_15M).listFiles();
-
         for (File symbolFile : symbolFiles) {
             String symbol = symbolFile.getName();
-            if (!StringUtils.endsWithIgnoreCase(symbol, "usdt")) {
-                continue;
-            }
-            if (Constants.specialSymbol.contains(symbol)) {
+            if (!StringUtils.endsWithIgnoreCase(symbol, "usdt") || Constants.diedSymbol.contains(symbol)) {
                 continue;
             }
 //            LOG.info("Statistic of symbol: {}", symbol);
@@ -1041,18 +1029,28 @@ public class AltBreadBigChange15M {
                     KlineObjectNumber kline = tickers.get(i);
                     BreadDetectObject breadData = BreadFunctions.calBreadDataAltWithBtcTrend(tickers, i, RATE_BREAD_MIN_2TRADE);
                     Double rateChange = BreadFunctions.getRateChangeWithVolume(kline.totalUsdt / 1E6);
+
                     if (rateChange == null) {
 //                        LOG.info("Error rateChange with ticker: {} {}", symbol, Utils.toJson(kline));
                         continue;
                     } else {
 //                        LOG.info("RateAndVolume {} -> {}", kline.totalUsdt, rateChange);
                     }
-                    MAStatus maStatus = SimpleMovingAverageManager.getInstance().getMaStatus(kline.startTime.longValue(), symbol);
+// ma-1d =====================> data tương lai
+                    SimpleMovingAverage1DManager.getInstance().updateWithTicker(symbol, kline);
+                    MAStatus maStatus = SimpleMovingAverage1DManager.getInstance().getMaStatus(kline.startTime.longValue(), symbol);
+                    Double maValue = SimpleMovingAverage1DManager.getInstance().getMaValue(symbol, Utils.getDate(kline.startTime.longValue()));
 
-                    Double maValue = SimpleMovingAverageManager.getInstance().getMaValue(symbol, Utils.getDate(kline.startTime.longValue()));
+
+// ma-12h
+//                    MAStatus maStatus = SimpleMovingAverage12HManager.getInstance().getMaStatus(kline.startTime.longValue(), symbol);
+//                    Double maValue = SimpleMovingAverage12HManager.getInstance().getMaValue(symbol, Utils.getDate(kline.startTime.longValue()));
+                    if (maValue == null) {
+                        continue;
+                    }
                     Double rateMa = Utils.rateOf2Double(kline.priceClose, maValue);
                     Double rsi = TickerFuturesHelper.calRSI(tickers, i, 14);
-                    if (BreadFunctions.isAvailableTrade(breadData, kline, maStatus,  rateChange, rateMa, RATE_MA_MAX)) {
+                    if (BreadFunctions.isAvailableTrade(breadData, kline, maStatus, maValue, rateChange, rateMa, RATE_MA_MAX)) {
                         lastBreadTrader = breadData;
                         try {
                             Double priceEntry = kline.priceClose;
@@ -1067,22 +1065,27 @@ public class AltBreadBigChange15M {
                             orderTrade.rateBreadAbove = breadData.breadAbove;
                             orderTrade.rateBreadBelow = breadData.breadBelow;
                             orderTrade.rateChange = breadData.totalRate;
-                            orderTrade.avgVolume24h = TickerFuturesHelper.getAvgLastVolume7D(tickers, i);
+                            KlineObjectNumber ticker24h = TickerFuturesHelper.extractKline24hr(tickers, kline.startTime.longValue());
+//                            orderTrade.avgVolume24h = TickerFuturesHelper.getAvgLastVolume7D(tickers, i);
+                            orderTrade.avgVolume24h = ticker24h.totalUsdt / 1E6;
                             orderTrade.volume = kline.totalUsdt;
                             orderTrade.rsi14 = rsi;
+                            orderTrade.ma201d = maValue;
+                            orderTrade.maStatus1d = maStatus;
+                            orderTrade.tickerOpen = kline;
+//                            orderTrade.traderScore = TraderScoring.calScore(tickers, i);
                             int startCheck = i;
                             for (int j = startCheck + 1; j < startCheck + NUMBER_TICKER_TO_TRADE; j++) {
                                 if (j < tickers.size()) {
-                                    i = j;
+//                                    i = j;
                                     KlineObjectNumber ticker = tickers.get(j);
                                     orderTrade.lastPrice = ticker.priceClose;
+                                    orderTrade.timeUpdate = ticker.endTime.longValue();
                                     if (orderTrade.maxPrice == null || ticker.maxPrice > orderTrade.maxPrice) {
                                         orderTrade.maxPrice = ticker.maxPrice;
-                                        orderTrade.timeUpdate = ticker.endTime.longValue();
                                     }
                                     if (ticker.maxPrice > orderTrade.priceTP && ticker.minPrice < orderTrade.priceTP) {
                                         orderTrade.status = OrderTargetStatus.TAKE_PROFIT_DONE;
-                                        orderTrade.timeUpdate = ticker.endTime.longValue();
                                         break;
                                     }
                                 }
@@ -1135,7 +1138,7 @@ public class AltBreadBigChange15M {
         for (Map.Entry<String, List<KlineObjectNumber>> entry : allSymbolTickers.entrySet()) {
             String symbol = entry.getKey();
             lastTimeBreadTrader = 0l;
-            if (Constants.specialSymbol.contains(symbol)) {
+            if (Constants.diedSymbol.contains(symbol)) {
                 continue;
             }
             try {

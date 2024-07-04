@@ -47,6 +47,7 @@ public class Utils {
     public static final SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
     public static final SimpleDateFormat sdfFile = new SimpleDateFormat("yyyyMMdd");
     public static final SimpleDateFormat sdfFileHour = new SimpleDateFormat("yyyyMMdd HH:mm");
+    public static final SimpleDateFormat sdfHour = new SimpleDateFormat("HH:mm");
     public static final SimpleDateFormat sdfFacebook = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
     public static final SimpleDateFormat sdfGoogle = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
     public static final SimpleDateFormat SDF_NORMAL = new SimpleDateFormat("E MMM dd HH:mm:ss z yyyy");
@@ -536,6 +537,9 @@ public class Utils {
     public static String normalizeDateYYYYMMDDHHmm(Long input) {
         return sdfFileHour.format(new Date(input));
     }
+    public static String normalizeHHmm(Long input) {
+        return sdfHour.format(new Date(input));
+    }
 
     public static List<String> getLastWeekFileName() {
         List<String> result = new ArrayList();
@@ -966,6 +970,19 @@ public class Utils {
         DecimalFormat formatter = new DecimalFormat("###.##");
         return formatter.format(revenue);
     }
+    public static String formatMoneyByPeriod(Double revenue, int period) {
+        if (revenue == null) {
+            return null;
+        }
+//        DecimalFormat formatter = new DecimalFormat("###,###,###.#####");
+//        DecimalFormat formatter = new DecimalFormat("###,###,###.##########");
+        String pattern = "###.";
+        for (int i = 0; i < period; i++) {
+            pattern += "#";
+        }
+        DecimalFormat formatter = new DecimalFormat(pattern);
+        return formatter.format(revenue);
+    }
 
     public static String formatPercent(Double number) {
         return df.format(number * 100);
@@ -1126,7 +1143,10 @@ public class Utils {
 
     public static void main(String[] args) {
 //        System.out.println(Utils.sendSms2Skype("test skype"));
-        System.out.println(Utils.readSms2Telegram());
+//        System.out.println(Utils.normalizeHHmm(System.currentTimeMillis()));
+//        Utils.sendSms2Telegram("test");
+        testDescendingKeySet();
+//        System.out.println(Utils.readSms2Telegram());
 //        Double test = 5.172E-4;
 //        System.out.println(Utils.formatMoney(test));
 //        System.out.println(Utils.normalPrice2Api(99.95804261161376d));
@@ -1135,6 +1155,29 @@ public class Utils {
 //        System.out.println(Utils.normalPrice2Api(0.20008395d));
 //        System.out.println(Utils.normalPrice2Api(0.011877d));
 //        System.out.println(Utils.normalPrice2Api(48.18981633d));
+    }
+
+    private static void testDescendingKeySet() {
+        TreeMap<Integer, String> test = new TreeMap<>();
+        for (Integer i = 0; i < 100; i++) {
+            test.put(i, i.toString());
+        }
+        int counter = 0;
+        for (Integer key: test.keySet()){
+            counter++;
+            if (counter >= 5){
+                break;
+            }
+            LOG.info(key.toString());
+        }
+        counter = 0;
+        for (Integer key: test.descendingKeySet()){
+            counter++;
+            if (counter >= 5){
+                break;
+            }
+            LOG.info(key.toString());
+        }
     }
 
     public static String toJson(Object ob) {
@@ -1147,12 +1190,16 @@ public class Utils {
     public static long getMinute(long time) {
         return (time / TIME_MINUTE) * TIME_MINUTE;
     }
-    public static long normalInterval15m(long time) {
+    public static long getTimeInterval15m(long time) {
         return (time / (15 * TIME_MINUTE)) * 15 * TIME_MINUTE;
     }
 
     public static long get4Hour(long time) {
         return (time / 4 / TIME_HOUR) * 4 * TIME_HOUR;
+    }
+
+    public static long get12Hour(long time) {
+        return (time / 12 / TIME_HOUR) * 12 * TIME_HOUR;
     }
 
     public static long getDate(long time) {

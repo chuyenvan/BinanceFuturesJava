@@ -51,15 +51,7 @@ public class BreadFunctions {
         volume2RateChange.put(13.1, 0.023);
         volume2RateChange.put(92.0, 0.024);
         volume2RateChange.put(1000.0, 0.48);
-        // rateTarget:0.01  64%
-//        volume2RateChange.put(0.6, 0.015);
-//        volume2RateChange.put(0.8, 0.016);
-//        volume2RateChange.put(0.9, 0.017);
-//        volume2RateChange.put(1.0, 0.018);
-//        volume2RateChange.put(1.1, 0.019);
-//        volume2RateChange.put(1.3, 0.02);
-//        volume2RateChange.put(1.4, 0.021);
-//        volume2RateChange.put(1.6, 0.022);
+
     }
 
     public static BreadDetectObject calBreadDataBtc(KlineObjectNumber kline, Double rateBread) {
@@ -108,12 +100,16 @@ public class BreadFunctions {
         double rateChangeAbove = beardAbove / kline.priceClose;
         double rateChangeBelow = beardBelow / kline.priceClose;
         OrderSide side = null;
-        if (klineSide.equals(OrderSide.SELL) && rateChangeBelow > rateBread) { // web 3
-//        if (klineSide.equals(OrderSide.SELL) && rateChangeBelow > rateChangeAbove) { // web 2
-            side = OrderSide.BUY;
+        if (klineSide.equals(OrderSide.SELL) && rateChangeBelow > rateBread) {
+            if (rateChangeBelow > rateChangeAbove) {
+                side = OrderSide.BUY;
+            }
+        } else {
+            if (klineSide.equals(OrderSide.BUY) && rateChangeAbove > rateBread) {
+                side = OrderSide.SELL;
+            }
         }
         return new BreadDetectObject(rateChange, rateChangeAbove, rateChangeBelow, totalRate, side, kline.totalUsdt);
-
     }
 
     public static BreadDetectObject calBreadDataAltWithBtcTrend(List<KlineObjectNumber> klines, int index, Double rateBread) {
@@ -147,38 +143,6 @@ public class BreadFunctions {
         return new BreadDetectObject(rateChange, rateChangeAbove, rateChangeBelow, totalRate, side, kline.totalUsdt);
 
     }
-
-//    public static BreadDetectObject calBreadDataAltWeek(List<KlineObjectNumber> klines, int index, Double rateBread) {
-//        Double beardAbove;
-//        Double beardBelow;
-//        OrderSide klineSide;
-//        KlineObjectNumber kline = klines.get(index);
-//        if (kline.priceClose > kline.priceOpen) {
-//            klineSide = OrderSide.BUY;
-//            beardAbove = kline.maxPrice - kline.priceClose;
-//            beardBelow = kline.priceOpen - kline.minPrice;
-//        } else {
-//            klineSide = OrderSide.SELL;
-//            beardAbove = kline.maxPrice - kline.priceOpen;
-//            beardBelow = kline.priceClose - kline.minPrice;
-//        }
-//        Double rateChange = Math.abs(Utils.rateOf2Double(kline.priceOpen, kline.priceClose));
-//        double totalRate = Math.abs(Utils.rateOf2Double(kline.maxPrice, kline.minPrice));
-//        double rateChangeAbove = beardAbove / kline.priceClose;
-//        double rateChangeBelow = beardBelow / kline.priceClose;
-//        OrderSide side = null;
-//        if (rateChangeBelow > rateChangeAbove) {
-//            if (rateChangeBelow > rateBread) {
-//                side = OrderSide.BUY;
-//            }
-//        } else {
-//            if (rateChangeAbove > rateBread) {
-//                side = OrderSide.SELL;
-//            }
-//        }
-//        return new BreadDetectObject(rateChange, rateChangeAbove, rateChangeBelow, totalRate, side, kline.totalUsdt);
-//
-//    }
 
     public static BreadDetectObject calBreadData(CandlestickEvent event, Double rateBread) {
         Double beardAbove;
@@ -277,13 +241,14 @@ public class BreadFunctions {
         LOG.info("Finish update volume and rate change with rate success: {}", rateSuccessTarget);
     }
 
-    public static boolean isAvailableTrade(BreadDetectObject breadData, KlineObjectNumber kline,
-                                           MAStatus maStatus, Double rateChange, Double rateMa, Double RATE_MA_MAX) {
+    public static boolean isAvailableTrade(BreadDetectObject breadData, KlineObjectNumber kline, MAStatus maStatus,
+                                           Double maValue, Double rateChange, Double rateMa, Double RATE_MA_MAX) {
         if (breadData.orderSide != null
-                && breadData.orderSide.equals(OrderSide.BUY)
                 && maStatus != null && maStatus.equals(MAStatus.TOP)
+                && breadData.orderSide.equals(OrderSide.BUY)
+                && kline.minPrice > maValue
                 && rateMa < RATE_MA_MAX
-                && kline.priceClose < kline.ma20
+                && kline.ma20 != null && kline.priceClose < kline.ma20
                 && breadData.totalRate >= rateChange) {
             return true;
         }

@@ -15,6 +15,9 @@
  */
 package com.binance.chuyennd.client;
 
+import com.binance.chuyennd.indicators.MACD;
+import com.binance.chuyennd.indicators.RelativeStrengthIndex;
+import com.binance.chuyennd.indicators.SimpleMovingAverage;
 import com.binance.chuyennd.object.*;
 import com.binance.chuyennd.object.sw.SideWayObject;
 import com.binance.chuyennd.utils.HttpRequest;
@@ -357,7 +360,12 @@ public class TickerFuturesHelper {
 //            List<KlineObjectNumber> tickers = entry.getValue();
 //            LOG.info("{} {}", symbol, tickers.size());
 //        }
-        testGetTicker24hr();
+//        testGetTicker24hr();
+        List<KlineObjectNumber> tickers = getTicker(Constants.SYMBOL_PAIR_BTC, Constants.INTERVAL_15M);
+        tickers = updateIndicator(tickers);
+        for (KlineObjectNumber ticker : tickers) {
+            LOG.info("{} {} {}", Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()), ticker.ma20, ticker.histogram);
+        }
 //        getCurrentTrendLongTime(Contanst.SYMBOL_PAIR_BTC, 60);
 //        System.out.println(getCurrentTrendWithInterval("DYDXUSDT", Contanst.INTERVAL_15M));
 //        System.out.println(Utils.toJson(getLastTicker("DYDXUSDT", Contanst.INTERVAL_15M)));
@@ -381,32 +389,63 @@ public class TickerFuturesHelper {
         return maxPrice;
     }
 
+    public static Double getMaxPrice(List<KlineObjectNumber> kline1Ds, int startIndex, int numberTicker) {
+        Double maxPrice = null;
+        for (int i = startIndex; i < startIndex + numberTicker; i++) {
+            if (i >= kline1Ds.size()) {
+                break;
+            }
+            KlineObjectNumber kline1D = kline1Ds.get(i);
+            if (maxPrice == null || maxPrice < kline1D.maxPrice) {
+                maxPrice = kline1D.maxPrice;
+            }
+        }
+        return maxPrice;
+    }
+
     public static KlineObjectNumber extractKline(List<KlineObjectNumber> kline1Ds, int numberTicker, int startIndex) {
         Double maxPrice = null;
         int counter = 0;
         Double minPrice = null;
         Double lastPrice = null;
+        Double openPrice = null;
+        Double timeStart = null;
+
+        Double timeEnd = null;
+        Double totalUsdt = 0d;
         if (startIndex < 0) {
             startIndex = 0;
         }
         for (int i = startIndex; i < kline1Ds.size(); i++) {
-            KlineObjectNumber kline1D = kline1Ds.get(i);
+            KlineObjectNumber ticker = kline1Ds.get(i);
             counter++;
             if (counter > numberTicker) {
                 break;
             }
-            lastPrice = kline1D.priceClose;
-            if (minPrice == null || minPrice > kline1D.minPrice) {
-                minPrice = kline1D.minPrice;
+            if (openPrice == null) {
+                openPrice = ticker.priceOpen;
             }
-            if (maxPrice == null || maxPrice < kline1D.maxPrice) {
-                maxPrice = kline1D.maxPrice;
+            lastPrice = ticker.priceClose;
+            if (minPrice == null || minPrice > ticker.minPrice) {
+                minPrice = ticker.minPrice;
             }
+            if (maxPrice == null || maxPrice < ticker.maxPrice) {
+                maxPrice = ticker.maxPrice;
+            }
+            if (timeStart == null) {
+                timeStart = ticker.startTime;
+            }
+            timeEnd = ticker.endTime;
+            totalUsdt += ticker.totalUsdt;
         }
         KlineObjectNumber result = new KlineObjectNumber();
         result.maxPrice = maxPrice;
         result.minPrice = minPrice;
         result.priceClose = lastPrice;
+        result.priceOpen = openPrice;
+        result.startTime = timeStart;
+        result.endTime = timeEnd;
+        result.totalUsdt = totalUsdt;
         return result;
     }
 
@@ -444,6 +483,43 @@ public class TickerFuturesHelper {
         return result;
     }
 
+    public static KlineObjectNumber extractKlineWithNumberEnd(List<KlineObjectNumber> tickers, int numberKline) {
+        Double maxPrice = null;
+        Double minPrice = null;
+        Double lastPrice = null;
+        Double openPrice = null;
+        Double timeStart = null;
+        Double timeEnd = null;
+        Double totalUsdt = 0d;
+        for (int i = tickers.size() - numberKline; i < tickers.size(); i++) {
+            KlineObjectNumber ticker = tickers.get(i);
+            if (openPrice == null) {
+                openPrice = ticker.priceOpen;
+            }
+            lastPrice = ticker.priceClose;
+            if (minPrice == null || minPrice > ticker.minPrice) {
+                minPrice = ticker.minPrice;
+            }
+            if (maxPrice == null || maxPrice < ticker.maxPrice) {
+                maxPrice = ticker.maxPrice;
+            }
+            if (timeStart == null) {
+                timeStart = ticker.startTime;
+            }
+            timeEnd = ticker.endTime;
+            totalUsdt += ticker.totalUsdt;
+        }
+        KlineObjectNumber result = new KlineObjectNumber();
+        result.maxPrice = maxPrice;
+        result.minPrice = minPrice;
+        result.startTime = timeStart;
+        result.endTime = timeEnd;
+        result.priceClose = lastPrice;
+        result.priceOpen = openPrice;
+        result.totalUsdt = totalUsdt;
+        return result;
+    }
+
     public static KlineObjectNumber extractKline24hr(List<KlineObjectNumber> tickers, Long startTime) {
         Double maxPrice = null;
         Double minPrice = null;
@@ -451,10 +527,12 @@ public class TickerFuturesHelper {
         Double openPrice = null;
         Double timeStart = null;
         Double timeEnd = null;
+        Double totalUsdt = 0d;
         Long timeCheck = startTime - Utils.TIME_DAY;
         for (int i = 0; i < tickers.size(); i++) {
             KlineObjectNumber ticker = tickers.get(i);
             if (ticker.startTime >= timeCheck && ticker.endTime < startTime) {
+                totalUsdt += ticker.totalUsdt;
                 if (openPrice == null) {
                     openPrice = ticker.priceOpen;
                 }
@@ -478,6 +556,7 @@ public class TickerFuturesHelper {
         result.endTime = timeEnd;
         result.priceClose = lastPrice;
         result.priceOpen = openPrice;
+        result.totalUsdt = totalUsdt;
         return result;
     }
 
@@ -527,69 +606,102 @@ public class TickerFuturesHelper {
         }
         return results;
     }
-
-    public static List<TrendObject> extractTopBottomObjectInTicker(List<KlineObjectNumber> tickers, Double rateCheck) {
-        // tìm đáy hoặc đỉnh đầu tiên
-        // đáy hoặc đỉnh có 1 đỉnh và 2 bên thấp hơn
+    public static List<TrendObject> extractTopBottomObjectInTicker(List<KlineObjectNumber> tickers) {
         List<TrendObject> objects = new ArrayList<>();
         int period = 5;
+        // tìm đáy hoặc đỉnh đầu tiên
         KlineObjectNumber lastTickerCheck = tickers.get(0);
-        TrendState state = TrendState.UP;
+        TrendState state = TrendState.TOP;
         if (tickers.get(0).priceOpen > tickers.get(0).priceClose) {
-            state = TrendState.DOWN;
+            state = TrendState.BOTTOM;
         }
-        for (int i = 0; i < tickers.size(); i++) {
-            if (i + period > tickers.size()) {
+        int start;
+        for ( start = 0; start < tickers.size(); start++) {
+            if (start + period > tickers.size()) {
                 break;
             }
-            if (state.equals(TrendState.UP)) {
+            // tìm đỉnh gần nhất
+            if (state.equals(TrendState.TOP)) {
+                boolean top = true;
+                for (int j = start; j < period + start; j++) {
+                    if (tickers.get(j).maxPrice > lastTickerCheck.maxPrice) {
+                        lastTickerCheck = tickers.get(j);
+                        start = j;
+                        top = false;
+                        break;
+                    }
+                }
+                if (top) {
+                    objects.add(new TrendObject(state, lastTickerCheck));
+                    lastTickerCheck = tickers.get(start + 1);
+                    state = TrendState.BOTTOM;
+                }
+            } else {// tìm đáy gần nhất
+                boolean bottom = true;
+                for (int j = start; j < period + start; j++) {
+                    if (tickers.get(j).minPrice < lastTickerCheck.minPrice) {
+                        lastTickerCheck = tickers.get(j);
+                        start = j;
+                        bottom = false;
+                        break;
+                    }
+                }
+                if (bottom) {
+                    objects.add(new TrendObject(state, lastTickerCheck));
+                    lastTickerCheck = tickers.get(start + 1);
+                    state = TrendState.TOP;
+                }
+            }
+            if (!objects.isEmpty()){
+                break;
+            }
+        }
+        // tìm các đỉnh, đáy tiếp theo
+        for (int i = start; i < tickers.size(); i++) {
+            // tìm đỉnh gần nhất
+            if (state.equals(TrendState.TOP)) {
                 boolean top = true;
                 for (int j = i; j < period + i; j++) {
+                    if (j >= tickers.size()){
+                        top = false;
+                        break;
+                    }
                     if (tickers.get(j).maxPrice > lastTickerCheck.maxPrice) {
                         lastTickerCheck = tickers.get(j);
                         i = j;
                         top = false;
                         break;
-                    }else{
-                        if (tickers.get(j).maxPrice < lastTickerCheck.minPrice){
-                            objects.add(new TrendObject(state, lastTickerCheck));
-                            lastTickerCheck = tickers.get(i + 1);
-                            state = TrendState.DOWN;
-                        }
                     }
                 }
                 if (top) {
                     objects.add(new TrendObject(state, lastTickerCheck));
                     lastTickerCheck = tickers.get(i + 1);
-                    state = TrendState.DOWN;
+                    state = TrendState.BOTTOM;
                 }
-            } else {
+            } else {// tìm đáy gần nhất
                 boolean top = true;
                 for (int j = i; j < period + i; j++) {
+                    if (j >= tickers.size()){
+                        top = false;
+                        break;
+                    }
                     if (tickers.get(j).minPrice < lastTickerCheck.minPrice) {
                         lastTickerCheck = tickers.get(j);
                         i = j;
                         top = false;
                         break;
-                    }else{
-                        if (tickers.get(j).maxPrice < lastTickerCheck.minPrice){
-                            objects.add(new TrendObject(state, lastTickerCheck));
-                            lastTickerCheck = tickers.get(i + 1);
-                            state = TrendState.UP;
-                        }
                     }
                 }
                 if (top) {
                     objects.add(new TrendObject(state, lastTickerCheck));
                     lastTickerCheck = tickers.get(i + 1);
-                    state = TrendState.UP;
+                    state = TrendState.TOP;
                 }
             }
         }
         objects.add(new TrendObject(state, lastTickerCheck));
         return objects;
     }
-
     public static Map<String, List<KlineObjectNumber>> getAllKlineWithUpdateTime(String interval, long time2Update) {
         String fileName = FILE_DATA_TICKER.replace("INTERVAL", interval);
         File fileStorage = new File(fileName);
@@ -718,7 +830,7 @@ public class TickerFuturesHelper {
                     int counter = 0;
                     Set<String> allSymbols = ClientSingleton.getInstance().getAllSymbol();
                     for (String symbol : allSymbols) {
-                        if (Constants.specialSymbol.contains(symbol)) {
+                        if (Constants.diedSymbol.contains(symbol)) {
                             continue;
                         }
                         List<KlineObjectNumber> tickers = symbol2Klines.get(symbol);
@@ -1005,6 +1117,10 @@ public class TickerFuturesHelper {
         return result;
     }
 
+    public static Double getRateChangeOfTicker(KlineObjectNumber ticker) {
+        return Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen);
+    }
+
     public static Map<String, Long> getDateReleaseAllSymbol() {
         Map<String, Long> result = new HashMap<>();
         for (String sym : getAllSymbol()) {
@@ -1117,4 +1233,33 @@ public class TickerFuturesHelper {
     }
 
 
+    public static List<KlineObjectNumber> updateIndicator(List<KlineObjectNumber> allTickers) {
+        RsiEntry[] rsi = RelativeStrengthIndex.calculateRSI(allTickers, 14);
+        MACDEntry[] entries = MACD.calculate(allTickers, 12, 26, 9);
+        IndicatorEntry[] smaEntries = SimpleMovingAverage.calculate(allTickers, 20);
+        Map<Double, Double> time2Rsi = new HashMap<>();
+        Map<Double, Double> time2Ma = new HashMap<>();
+        Map<Double, MACDEntry> time2Macd = new HashMap<>();
+        for (RsiEntry rs : rsi) {
+            time2Rsi.put(rs.startTime, rs.getRsi());
+        }
+        for (MACDEntry entry : entries) {
+            time2Macd.put(entry.startTime, entry);
+        }
+        for (IndicatorEntry sma : smaEntries) {
+            time2Ma.put(sma.startTime, sma.getValue());
+        }
+        for (KlineObjectNumber ticker : allTickers) {
+            Double time = ticker.startTime;
+            ticker.rsi = time2Rsi.get(time);
+            ticker.ma20 = time2Ma.get(time);
+            MACDEntry macd = time2Macd.get(time);
+            if (macd != null) {
+                ticker.macd = macd.getMacd();
+                ticker.signal = macd.getSignal();
+                ticker.histogram = macd.getHistogram();
+            }
+        }
+        return allTickers;
+    }
 }

@@ -20,7 +20,6 @@ import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
 import com.binance.chuyennd.statistic24hr.Volume24hrManager;
 import com.binance.chuyennd.trading.BudgetManager;
-import com.binance.chuyennd.trading.OrderTargetInfo;
 import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.trading.SymbolTradingManager;
 import com.binance.chuyennd.utils.Configs;
@@ -29,6 +28,7 @@ import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
 import com.binance.client.model.enums.OrderSide;
 import com.google.gson.internal.LinkedTreeMap;
+
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.Date;
@@ -37,28 +37,30 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
+
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- *
  * @author pc
  */
 public class SignalTradingViewManager {
 
     public static final Logger LOG = LoggerFactory.getLogger(SignalTradingViewManager.class);
-//    public Set<? extends String> allSymbol;
-    public Double RATE_TARGET_SIGNAL = Configs.getDouble("RATE_TARGET_SIGNAL");
-    public static final Integer MAX_POS_TRADING = Configs.getInt("MAX_POS_TRADING");
-    public static final String URL_SIGNAL_TRADINGVIEW = "http://103.157.218.242:8002/";
+    //    public Set<? extends String> allSymbol;
+    public Double RATE_TARGET = Configs.getDouble("RATE_TARGET");
+
+    //    public static final String URL_SIGNAL_TRADINGVIEW = "http://103.157.218.242:8002/";
+    public static final String URL_SIGNAL_TRADINGVIEW = "http://172.25.80.128:8002/";
+    //    public static final String URL_SIGNAL_EDUCA = "http://172.25.80.128:8002/";
     public static final String URL_SIGNAL_TRADINGVIEW_BAK = "https://tool.edupia.vn/tool/offline/signal?s=";
 
-    public ConcurrentHashMap<String, OrderTargetInfo> symbol2Orders = new ConcurrentHashMap<>();
+    public ConcurrentHashMap<String, OrderTargetInfoTestSignal> symbol2Orders = new ConcurrentHashMap<>();
 
     public static void main(String[] args) throws InterruptedException {
 //        new RedisSTWManager().start();
-        System.out.println(new SignalTradingViewManager().getReconmendation("RVNUSDT"));
+        System.out.println(new SignalTradingViewManager().getRecommendation("RVNUSDT"));
 
 //        SignalTradingViewManager test = new SignalTradingViewManager();
 //        Set<String> hashSet = new HashSet<String>();
@@ -80,19 +82,12 @@ public class SignalTradingViewManager {
     }
 
     public void start() throws InterruptedException {
-        initData();
+
         checkSignalStrong2Trading();
         checkSignalStrong2TradingBackup();
     }
 
-    private void initData() throws InterruptedException {
-//        allSymbol = TickerFuturesHelper.getAllSymbol();
-//        allSymbol = ClientSingleton.getInstance().getAllSymbol();
-//        allSymbol.removeAll(Constants.specialSymbol);
-//        LOG.info("Have {} s avalible!", allSymbol.size());
-        ClientSingleton.getInstance();
 
-    }
 
     public boolean isTimeCheckBalance() {
         return Utils.getCurrentHour() == 0 && Utils.getCurrentMinute() == 0;
@@ -105,10 +100,7 @@ public class SignalTradingViewManager {
             while (true) {
                 try {
                     int numberPosRunning = RedisHelper.getInstance().smembers(RedisConst.REDIS_KEY_SET_ALL_SYMBOL_POS_RUNNING).size();
-                    if (numberPosRunning > MAX_POS_TRADING) {
-                        LOG.info("Not trading because max pos: {} {}", numberPosRunning, MAX_POS_TRADING);
-                        continue;
-                    }
+
                     getStrongSignal2Trading();
                 } catch (Exception e) {
                     LOG.error("ERROR during SignalStrong2Trading: {}", e);
@@ -148,7 +140,7 @@ public class SignalTradingViewManager {
         Set<String> symbol2Trade = SymbolTradingManager.getInstance().getAllSymbol2TradingSignal();
         for (String symbol : symbol2Trade) {
             try {
-                String side = getReconmendationBackup(symbol);
+                String side = getRecommendationBackup(symbol);
                 if (StringUtils.isNotEmpty(side)) {
                     OrderSide sideSignal = OrderSide.BUY;
                     if (StringUtils.equalsIgnoreCase(side, "sell")) {
@@ -175,21 +167,21 @@ public class SignalTradingViewManager {
 
     private void addOrderTrading(String symbol, OrderSide sideSignal) {
         Double priceEntry = ClientSingleton.getInstance().getCurrentPrice(symbol);
-        Double priceTarget = Utils.calPriceTarget(symbol, priceEntry, sideSignal, RATE_TARGET_SIGNAL);
+        Double priceTarget = Utils.calPriceTarget(symbol, priceEntry, sideSignal, RATE_TARGET);
 //        String log = sideSignal + " " + symbol + " by signal tradingview entry: " + priceEntry + " target: " + priceTarget
 //                + " time:" + Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis());
 //        Utils.sendSms2Telegram(log);
         Double quantity = Utils.calQuantity(BudgetManager.getInstance().getBudget(),
                 BudgetManager.getInstance().getLeverage(), priceEntry, symbol);
         if (quantity != null && quantity != 0) {
-            OrderTargetInfo orderTrade = new OrderTargetInfo(OrderTargetStatus.REQUEST, priceEntry,
+            OrderTargetInfoTestSignal orderTrade = new OrderTargetInfoTestSignal(OrderTargetStatus.REQUEST, priceEntry,
                     priceTarget, quantity, BudgetManager.getInstance().getLeverage(), symbol,
                     System.currentTimeMillis(), System.currentTimeMillis(),
-                    sideSignal, Constants.TRADING_TYPE_SIGNAL);
+                    sideSignal);
             RedisHelper.getInstance().get().rpush(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER_QUEUE, Utils.toJson(orderTrade));
-            Double volume = Volume24hrManager.getInstance().symbol2Volume.get(symbol) / 1000000;
-            LOG.info("{} {} entry:{} target:{} quantity:{} volume:{}M", sideSignal,
-                    symbol, priceEntry, priceTarget, quantity, volume.longValue());
+
+            LOG.info("{} {} entry:{} target:{} quantity:{} ", sideSignal,
+                    symbol, priceEntry, priceTarget, quantity);
         } else {
             LOG.info("{} {} q false", symbol, quantity);
         }
@@ -198,8 +190,7 @@ public class SignalTradingViewManager {
 
     private OrderSide getStrongSignalASymbol(String symbol) {
         try {
-//            String signalRecommendation = getReconmendation(symbol);
-            String signalRecommendation = getReconmendation(symbol);
+            String signalRecommendation = getRecommendation(symbol);
             if (StringUtils.isNotEmpty(signalRecommendation)) {
                 OrderSide sideSignal = OrderSide.BUY;
                 if (StringUtils.equalsIgnoreCase(signalRecommendation, "sell")) {
@@ -213,12 +204,10 @@ public class SignalTradingViewManager {
         return null;
     }
 
-    private String getReconmendation(String symbol) {
+    private String getRecommendation(String symbol) {
         String result = "";
         try {
-            String urlSignal = URL_SIGNAL_TRADINGVIEW + symbol;
-            int timeout = 3000;
-            String respon = HttpRequest.getContentFromUrl(urlSignal, timeout);
+            String respon = getRecommendationRaw(symbol);
             List<LinkedTreeMap> responObjects = Utils.gson.fromJson(respon, List.class);
             if (responObjects != null && !responObjects.isEmpty()) {
                 String sideSignal = responObjects.get(0).get("recommendation").toString();
@@ -243,7 +232,13 @@ public class SignalTradingViewManager {
         return result;
     }
 
-    private String getReconmendationBackup(String symbol) {
+    private String getRecommendationRaw(String symbol) {
+        String urlSignal = URL_SIGNAL_TRADINGVIEW + symbol;
+        int timeout = 3000;
+        return HttpRequest.getContentFromUrl(urlSignal, timeout);
+    }
+
+    private String getRecommendationBackup(String symbol) {
         try {
             String urlSignal = URL_SIGNAL_TRADINGVIEW_BAK + symbol;
             String respon = HttpRequest.getContentFromUrl(urlSignal);
@@ -274,10 +269,6 @@ public class SignalTradingViewManager {
             while (true) {
                 try {
                     int numberPosRunning = RedisHelper.getInstance().smembers(RedisConst.REDIS_KEY_SET_ALL_SYMBOL_POS_RUNNING).size();
-                    if (numberPosRunning > MAX_POS_TRADING) {
-                        LOG.info("Not trading because max pos: {} {}", numberPosRunning, MAX_POS_TRADING);
-                        continue;
-                    }
                     getStrongSignal2TradingBackup();
                 } catch (Exception e) {
                     LOG.error("ERROR during SignalStrong2TradingBackup: {}", e);

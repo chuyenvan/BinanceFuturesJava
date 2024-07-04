@@ -180,14 +180,14 @@ public class BinanceFuturesClientSingleton {
 
     public List<Order> getAllOpenOrderInfos() {
         LinkedHashMap<String, Object> parameters = new LinkedHashMap<>();
-        List<Order> positions = new ArrayList<>();
+        List<Order> openOrders = new ArrayList<>();
         try {
             String respon = umFuturesClient.account().currentAllOpenOrders(parameters);
             if (StringUtils.isNotEmpty(respon)) {
                 List<LinkedTreeMap> list = Utils.gson.fromJson(respon, List.class);
                 for (LinkedTreeMap linkedTreeMap : list) {
                     try {
-                        positions.add(Utils.gson.fromJson(Utils.toJson(linkedTreeMap), Order.class));
+                        openOrders.add(Utils.gson.fromJson(Utils.toJson(linkedTreeMap), Order.class));
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
@@ -197,7 +197,7 @@ public class BinanceFuturesClientSingleton {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return positions;
+        return openOrders;
     }
 
     public static void main(String[] args) throws ParseException {

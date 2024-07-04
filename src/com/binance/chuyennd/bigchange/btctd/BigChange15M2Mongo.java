@@ -553,7 +553,7 @@ public class BigChange15M2Mongo {
         for (Map.Entry<String, List<KlineObjectNumber>> entry : allSymbolTickers.entrySet()) {
             lines.clear();
             String symbol = entry.getKey();
-            if (Constants.specialSymbol.contains(symbol)) {
+            if (Constants.diedSymbol.contains(symbol)) {
                 continue;
             }
 
@@ -636,7 +636,7 @@ public class BigChange15M2Mongo {
             for (Map.Entry<String, List<KlineObjectNumber>> entry : allSymbolTickers.entrySet()) {
                 String symbol = entry.getKey();
                 lastTimeBreadTrader = 0l;
-                if (Constants.specialSymbol.contains(symbol)) {
+                if (Constants.diedSymbol.contains(symbol)) {
                     continue;
                 }
 //                if (!StringUtils.equals(symbol, "RIFUSDT")) {
@@ -813,7 +813,7 @@ public class BigChange15M2Mongo {
         for (Map.Entry<String, List<KlineObjectNumber>> entry : allSymbolTickers.entrySet()) {
             String symbol = entry.getKey();
             lastTimeBreadTrader = 0l;
-            if (Constants.specialSymbol.contains(symbol)) {
+            if (Constants.diedSymbol.contains(symbol)) {
                 continue;
             }
 //                if (!StringUtils.equals(symbol, "RIFUSDT")) {
@@ -930,7 +930,7 @@ public class BigChange15M2Mongo {
         counterStoploss = 0;
         List<String> lines = new ArrayList<>();
         for (String symbol : allSymbolTickers.keySet()) {
-            if (Constants.specialSymbol.contains(symbol)) {
+            if (Constants.diedSymbol.contains(symbol)) {
                 continue;
             }
             try {
@@ -1030,7 +1030,7 @@ public class BigChange15M2Mongo {
         List<String> lines = new ArrayList<>();
 
         for (String symbol : allSymbolTickers.keySet()) {
-            if (Constants.specialSymbol.contains(symbol)) {
+            if (Constants.diedSymbol.contains(symbol)) {
                 continue;
             }
             try {
@@ -1142,7 +1142,7 @@ public class BigChange15M2Mongo {
         for (Map.Entry<String, List<KlineObjectNumber>> entry : allSymbolTickers.entrySet()) {
             String symbol = entry.getKey();
             lastTimeBreadTrader = 0l;
-            if (Constants.specialSymbol.contains(symbol)) {
+            if (Constants.diedSymbol.contains(symbol)) {
                 continue;
             }
             try {

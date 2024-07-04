@@ -68,7 +68,7 @@ public class BtcBreadBigChange15M {
         // init data
         Volume24hrManager.getInstance();
         allSymbol = TickerFuturesHelper.getAllSymbol();
-        allSymbol.removeAll(Constants.specialSymbol);
+        allSymbol.removeAll(Constants.diedSymbol);
 
         // thread listen and detect bread big change 
         SubscriptionClient client = SubscriptionClient.create();

@@ -6,10 +6,8 @@ package com.binance.chuyennd.bigchange.btctd;
 
 import com.binance.chuyennd.client.TickerFuturesHelper;
 import com.binance.chuyennd.indicators.MACD;
-import com.binance.chuyennd.indicators.SimpleMovingAverageManager;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.MACDEntry;
-import com.binance.chuyennd.object.RsiEntry;
 import com.binance.chuyennd.object.TrendState;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Storage;
@@ -116,7 +114,7 @@ public class BTCMacdTrendManager {
                 lastTime = time - Utils.TIME_HOUR;
                 break;
             case Constants.INTERVAL_15M:
-                time = Utils.normalInterval15m(time);
+                time = Utils.getTimeInterval15m(time);
                 lastTime = time - 15 * Utils.TIME_MINUTE;
                 break;
         }
@@ -164,7 +162,7 @@ public class BTCMacdTrendManager {
                     BTCMacdTrendManager.getInstance().getTrend(Constants.INTERVAL_1H, time1h));
         }
         for (int i = 0; i < 30; i++) {
-            Long time15m = Utils.normalInterval15m(System.currentTimeMillis()) - i * 15 * Utils.TIME_MINUTE;
+            Long time15m = Utils.getTimeInterval15m(System.currentTimeMillis()) - i * 15 * Utils.TIME_MINUTE;
             LOG.info("15m: {} -> {} {}", Utils.normalizeDateYYYYMMDDHHmm(time15m),
                     BTCMacdTrendManager.getInstance().getHistogram(Constants.INTERVAL_15M, time15m),
                     BTCMacdTrendManager.getInstance().getTrend(Constants.INTERVAL_15M, time15m));

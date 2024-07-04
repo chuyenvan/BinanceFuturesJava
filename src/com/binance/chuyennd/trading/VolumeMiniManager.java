@@ -19,7 +19,7 @@ import com.binance.chuyennd.bigchange.btctd.BreadDetectObject;
 import com.binance.chuyennd.client.ClientSingleton;
 import com.binance.chuyennd.client.TickerFuturesHelper;
 import com.binance.chuyennd.indicators.SimpleMovingAverage;
-import com.binance.chuyennd.indicators.SimpleMovingAverageManager;
+import com.binance.chuyennd.indicators.SimpleMovingAverage1DManager;
 import com.binance.chuyennd.movingaverage.MAStatus;
 import com.binance.chuyennd.object.IndicatorEntry;
 import com.binance.chuyennd.object.KlineObjectNumber;
@@ -68,9 +68,9 @@ public class VolumeMiniManager {
 
     private static void prinAllTop() {
         for (String symbol : RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_ALL_SYMBOLS)) {
-            MAStatus maStatus = SimpleMovingAverageManager.getInstance().getMaStatus(System.currentTimeMillis(), symbol);
+            MAStatus maStatus = SimpleMovingAverage1DManager.getInstance().getMaStatus(System.currentTimeMillis(), symbol);
             if (maStatus != null && maStatus.equals(MAStatus.TOP)){
-                LOG.info("TOP: {} {}",symbol, SimpleMovingAverageManager.getInstance().getMaValue(symbol, System.currentTimeMillis()));
+                LOG.info("TOP: {} {}",symbol, SimpleMovingAverage1DManager.getInstance().getMaValue(symbol, System.currentTimeMillis()));
             }
         }
     }
@@ -116,8 +116,8 @@ public class VolumeMiniManager {
     private void initData() throws InterruptedException, ParseException {
 
         allSymbol = TickerFuturesHelper.getAllSymbol();
-        allSymbol.removeAll(Constants.specialSymbol);
-        SimpleMovingAverageManager.getInstance();
+        allSymbol.removeAll(Constants.diedSymbol);
+        SimpleMovingAverage1DManager.getInstance();
         ClientSingleton.getInstance();
     }
     private void detectBySymbolTest(String symbol, Long time) {
@@ -125,8 +125,8 @@ public class VolumeMiniManager {
             KlineObjectNumber ticker = TickerFuturesHelper.getTickersByTime(symbol, Constants.INTERVAL_15M, time);
             BreadDetectObject breadData = BreadProductFunctions.calBreadDataAlt(ticker, RATE_BREAD_MIN_2TRADE);
 
-            MAStatus maStatus = SimpleMovingAverageManager.getInstance().getMaStatus(Utils.getDate(ticker.startTime.longValue()), symbol);
-            Double maValue = SimpleMovingAverageManager.getInstance().getMaValue(symbol, Utils.getDate(ticker.startTime.longValue()));
+            MAStatus maStatus = SimpleMovingAverage1DManager.getInstance().getMaStatus(Utils.getDate(ticker.startTime.longValue()), symbol);
+            Double maValue = SimpleMovingAverage1DManager.getInstance().getMaValue(symbol, Utils.getDate(ticker.startTime.longValue()));
             Double rateMa = Utils.rateOf2Double(ticker.priceClose, maValue);
             Double rateChange = BreadProductFunctions.getRateChangeWithVolume(ticker.totalUsdt / 1000000);
 
@@ -172,8 +172,8 @@ public class VolumeMiniManager {
 //            KlineObjectNumber ticker = TickerFuturesHelper.getLastTicker(symbol, Constants.INTERVAL_15M);
             BreadDetectObject breadData = BreadProductFunctions.calBreadDataAlt(lastTicker, RATE_BREAD_MIN_2TRADE);
 
-            MAStatus maStatus = SimpleMovingAverageManager.getInstance().getMaStatus(Utils.getDate(lastTicker.startTime.longValue()), symbol);
-            Double maValue = SimpleMovingAverageManager.getInstance().getMaValue(symbol, Utils.getDate(lastTicker.startTime.longValue()));
+            MAStatus maStatus = SimpleMovingAverage1DManager.getInstance().getMaStatus(Utils.getDate(lastTicker.startTime.longValue()), symbol);
+            Double maValue = SimpleMovingAverage1DManager.getInstance().getMaValue(symbol, Utils.getDate(lastTicker.startTime.longValue()));
             Double rateMa = Utils.rateOf2Double(lastTicker.priceClose, maValue);
             Double rateChange = BreadProductFunctions.getRateChangeWithVolume(lastTicker.totalUsdt / 1000000);
 

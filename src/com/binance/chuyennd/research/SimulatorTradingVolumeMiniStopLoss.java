@@ -5,7 +5,8 @@
 package com.binance.chuyennd.research;
 
 import com.binance.chuyennd.bigchange.btctd.BreadDetectObject;
-import com.binance.chuyennd.indicators.SimpleMovingAverageManager;
+import com.binance.chuyennd.indicators.SimpleMovingAverage1DManager;
+import com.binance.chuyennd.indicators.SimpleMovingAverage1HourManager;
 import com.binance.chuyennd.mongo.TickerMongoHelper;
 import com.binance.chuyennd.movingaverage.MAStatus;
 import com.binance.chuyennd.object.KlineObjectNumber;
@@ -45,8 +46,6 @@ public class SimulatorTradingVolumeMiniStopLoss {
     public ConcurrentHashMap<String, OrderTargetInfoTest> allOrderDone;
     public ExecutorService executorService = Executors.newFixedThreadPool(Configs.getInt("NUMBER_THREAD_ORDER_MANAGER"));
     public Double RATE_BREAD_MIN_2TRADE = Configs.getDouble("RATE_BREAD_MIN_2TRADE");
-
-    public final String SYMBOL_RUN = Configs.getString("SYMBOL_RUN");
     public final String TIME_RUN = Configs.getString("TIME_RUN");
 
 
@@ -59,31 +58,19 @@ public class SimulatorTradingVolumeMiniStopLoss {
 
     private void simulatorAllSymbol() throws ParseException {
         Long startTime = Utils.sdfFile.parse(TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
-        boolean modeRunAll = StringUtils.equalsIgnoreCase(SYMBOL_RUN, "ALL");
-        LOG.info("Mode running all symbol: {} -> {}", modeRunAll, SYMBOL_RUN);
+
         //get data
         while (true) {
             TreeMap<Long, Map<String, KlineObjectNumber>> time2Tickers;
             try {
-                if (!modeRunAll) {
-                    time2Tickers = TickerMongoHelper.getInstance().getDataFromDb(startTime, SYMBOL_RUN);
-                } else {
-                    time2Tickers = TickerMongoHelper.getInstance().getDataFromDb(startTime);
-                }
-
+                time2Tickers = TickerMongoHelper.getInstance().getDataFromDb(startTime);
                 for (Map.Entry<Long, Map<String, KlineObjectNumber>> entry : time2Tickers.entrySet()) {
                     Long time = entry.getKey();
                     Map<String, KlineObjectNumber> symbol2Ticker = entry.getValue();
                     for (Map.Entry<String, KlineObjectNumber> entry1 : symbol2Ticker.entrySet()) {
                         String symbol = entry1.getKey();
                         KlineObjectNumber ticker = entry1.getValue();
-                        if (modeRunAll) {
-                            executorService.execute(() -> startThreadTestTradingSimulatorBySymbol(symbol, ticker));
-                        } else {
-                            if (StringUtils.equals(symbol, SYMBOL_RUN)) {
-                                executorService.execute(() -> startThreadTestTradingSimulatorBySymbol(symbol, ticker));
-                            }
-                        }
+                        executorService.execute(() -> startThreadTestTradingSimulatorBySymbol(symbol, ticker));
                     }
                     executorService.execute(() -> BudgetManagerTest.getInstance().updateBalance(time, allOrderDone));
                     executorService.execute(() -> BudgetManagerTest.getInstance().updateInvesting());
@@ -123,7 +110,7 @@ public class SimulatorTradingVolumeMiniStopLoss {
         if (new File(FILE_STORAGE_ORDER_DONE).exists()) {
             FileUtils.delete(new File(FILE_STORAGE_ORDER_DONE));
         }
-        SimpleMovingAverageManager.getInstance();
+        SimpleMovingAverage1DManager.getInstance();
         if (RATE_SUCCESS_STATISTIC != 0) {
             BreadFunctions.updateVolumeRateChange(NUMBER_HOURS_STOP_TRADE
                     , RATE_SUCCESS_STATISTIC);
@@ -260,13 +247,13 @@ public class SimulatorTradingVolumeMiniStopLoss {
             OrderTargetInfoTest orderInfo = Utils.gson.fromJson(json, OrderTargetInfoTest.class);
             if (orderInfo.timeStart < ticker.startTime.longValue()) {
                 orderInfo.updatePriceByKline(ticker);
-                Double rateLoss = Math.abs(Utils.rateOf2Double(orderInfo.lastPrice, orderInfo.priceEntry));
-                if (rateLoss * 100 > DCAManagerTest.getMinRateDCA()) {
-                    orderInfo.timeUpdate = ticker.startTime.longValue();
-                    if (BudgetManagerTest.getInstance().isAvailableDca()) {
-                        DCAManagerTest.checkAndDcaOrder(orderInfo, RATE_TARGET);
-                    }
-                }
+//                Double rateLoss = Math.abs(Utils.rateOf2Double(orderInfo.lastPrice, orderInfo.priceEntry));
+//                if (rateLoss * 100 > DCAManagerTest.getMinRateDCA()) {
+//                    orderInfo.timeUpdate = ticker.startTime.longValue();
+//                    if (BudgetManagerTest.getInstance().isAvailableDca()) {
+//                        DCAManagerTest.checkAndDcaOrder(orderInfo, RATE_TARGET);
+//                    }
+//                }
 
                 orderInfo.updateStatus();
                 if (orderInfo.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)) {
@@ -289,8 +276,10 @@ public class SimulatorTradingVolumeMiniStopLoss {
 
     private void checkAndCreateOrderNew(KlineObjectNumber ticker, String symbol) {
         BreadDetectObject breadData = BreadFunctions.calBreadDataAlt(ticker, RATE_BREAD_MIN_2TRADE);
-        MAStatus maStatus = SimpleMovingAverageManager.getInstance().getMaStatus(Utils.getDate(ticker.startTime.longValue()), symbol);
-        Double maValue = SimpleMovingAverageManager.getInstance().getMaValue(symbol, Utils.getDate(ticker.startTime.longValue()));
+        SimpleMovingAverage1DManager.getInstance().updateWithTicker(symbol, ticker);
+        MAStatus maStatus = SimpleMovingAverage1DManager.getInstance().getMaStatus(ticker.startTime.longValue(), symbol);
+        Double maValue = SimpleMovingAverage1DManager.getInstance().getMaValue(symbol,
+                Utils.getDate(ticker.startTime.longValue() - Utils.TIME_DAY));
         Double rateMa = Utils.rateOf2Double(ticker.priceClose, maValue);
 
         Double rateChange = BreadFunctions.getRateChangeWithVolume(ticker.totalUsdt / 1000000);
@@ -298,21 +287,8 @@ public class SimulatorTradingVolumeMiniStopLoss {
 //            LOG.info("Error rateChange with ticker: {} {}", symbol, Utils.toJson(ticker));
             return;
         }
-//        try {
-//            if (StringUtils.equals(symbol, "CELOUSDT") && ticker.startTime.equals(Utils.sdfFileHour.parse("20230401 23:30").getTime())) {
-//                System.out.println("debug");
-//            }
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
 
-//        if (breadData.orderSide != null
-//                && breadData.orderSide.equals(OrderSide.BUY)
-//                && maStatus != null && maStatus.equals(MAStatus.TOP)
-//                && rateMa <= RATE_MA_MAX
-//                && ticker.priceClose < ticker.ma20
-//                && breadData.totalRate >= rateChange) {
-        if (BreadFunctions.isAvailableTrade(breadData, ticker, maStatus, rateChange, rateMa, RATE_MA_MAX)) {
+        if (BreadFunctions.isAvailableTrade(breadData, ticker, maStatus,  maValue, rateChange, rateMa, RATE_MA_MAX)) {
             LOG.info("Big:{} {} {} rate:{} volume: {}", symbol, new Date(ticker.startTime.longValue()), breadData.orderSide, breadData.totalRate, ticker.totalUsdt);
             if (BudgetManagerTest.getInstance().isAvailableTrade()) {
                 createOrderNew(symbol, ticker, breadData);
@@ -349,7 +325,7 @@ public class SimulatorTradingVolumeMiniStopLoss {
         order.lastPrice = entry;
         order.maxPrice = entry;
         order.rsi14 = ticker.rsi;
-        order.ma20 = ticker.ma20;
+        order.ma201d = ticker.ma20;
         order.rateChange = breadData.totalRate;
         order.volume = breadData.volume;
         order.tickerOpen = ticker;
