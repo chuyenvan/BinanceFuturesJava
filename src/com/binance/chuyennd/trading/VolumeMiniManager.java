@@ -15,7 +15,7 @@
  */
 package com.binance.chuyennd.trading;
 
-import com.binance.chuyennd.bigchange.btctd.BreadDetectObject;
+import com.binance.chuyennd.bigchange.statistic.BreadDetectObject;
 import com.binance.chuyennd.client.ClientSingleton;
 import com.binance.chuyennd.client.TickerFuturesHelper;
 import com.binance.chuyennd.indicators.SimpleMovingAverage;
@@ -152,7 +152,7 @@ public class VolumeMiniManager {
                     OrderTargetInfo orderTrade = new OrderTargetInfo(OrderTargetStatus.REQUEST, ticker.priceClose,
                             priceTarget, quantity, BudgetManager.getInstance().getLeverage(), symbol, ticker.startTime.longValue(),
                             ticker.startTime.longValue(), breadData.orderSide, Constants.TRADING_TYPE_VOLUME_MINI);
-                    RedisHelper.getInstance().get().rpush(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER_QUEUE, Utils.toJson(orderTrade));
+//                    RedisHelper.getInstance().get().rpush(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER_QUEUE, Utils.toJson(orderTrade));
                 } else {
                     LOG.info("{} {} quantity false", symbol, quantity);
                 }
@@ -200,7 +200,7 @@ public class VolumeMiniManager {
                     OrderTargetInfo orderTrade = new OrderTargetInfo(OrderTargetStatus.REQUEST, lastTicker.priceClose,
                             priceTarget, quantity, BudgetManager.getInstance().getLeverage(), symbol, lastTicker.startTime.longValue(),
                             lastTicker.startTime.longValue(), breadData.orderSide, Constants.TRADING_TYPE_VOLUME_MINI);
-                    RedisHelper.getInstance().get().rpush(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER_QUEUE, Utils.toJson(orderTrade));
+//                    RedisHelper.getInstance().get().rpush(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER_QUEUE, Utils.toJson(orderTrade));
                 } else {
                     LOG.info("{} {} quantity false", symbol, quantity);
                 }

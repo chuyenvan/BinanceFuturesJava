@@ -23,7 +23,48 @@ public class MarketBigChangeDetector {
     public static void main(String[] args) throws ParseException {
         System.exit(1);
     }
-     public static List<String> getTopSymbol2Trade(Map<String, KlineObjectNumber> value, int period, MarketLevelChange level) {
+
+    public static List<String> getTopSymbol2TradeWithRateChange(Map<String, KlineObjectNumber> value, int period, MarketLevelChange level) {
+        TreeMap<Double, String> rateChange2Symbols = new TreeMap<>();
+        for (Map.Entry<String, KlineObjectNumber> entry1 : value.entrySet()) {
+            String symbol = entry1.getKey();
+            if (Constants.diedSymbol.contains(symbol)) {
+                continue;
+            }
+            KlineObjectNumber ticker = entry1.getValue();
+            if (Utils.isTickerAvailable(ticker)) {
+                Double rateChange = Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen);
+                rateChange2Symbols.put(rateChange, symbol);
+            }
+        }
+        Double maxVolume = null;
+        if (level.equals(MarketLevelChange.MINI_DOWN)) {
+            maxVolume = 10 * 1E6;
+        }
+        return getTopSymbol(value, rateChange2Symbols, period, maxVolume);
+    }
+
+    public static List<String> getTopSymbol2TradeWithRateMax(Map<String, KlineObjectNumber> value, int period, MarketLevelChange level) {
+        TreeMap<Double, String> rateChange2Symbols = new TreeMap<>();
+        for (Map.Entry<String, KlineObjectNumber> entry1 : value.entrySet()) {
+            String symbol = entry1.getKey();
+            if (Constants.diedSymbol.contains(symbol)) {
+                continue;
+            }
+            KlineObjectNumber ticker = entry1.getValue();
+            if (Utils.isTickerAvailable(ticker)) {
+                Double rateChange = Utils.rateOf2Double(ticker.priceClose, ticker.maxPrice);
+                rateChange2Symbols.put(rateChange, symbol);
+            }
+        }
+        Double maxVolume = null;
+        if (level.equals(MarketLevelChange.MINI_DOWN)) {
+            maxVolume = 10 * 1E6;
+        }
+        return getTopSymbol(value, rateChange2Symbols, period, maxVolume);
+    }
+
+    public static List<String> getTopSymbolReverse2Trade(Map<String, KlineObjectNumber> value, int period, MarketLevelChange level) {
         TreeMap<Double, String> rateChange2Symbols = new TreeMap<>();
         for (Map.Entry<String, KlineObjectNumber> entry1 : value.entrySet()) {
             String symbol = entry1.getKey();
@@ -32,12 +73,12 @@ public class MarketBigChangeDetector {
             }
             KlineObjectNumber ticker = entry1.getValue();
             Double rateChange = Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen);
-            rateChange2Symbols.put(rateChange, symbol);
+            if (rateChange < 0.005) {
+                rateChange2Symbols.put(-rateChange, symbol);
+            }
         }
         Double maxVolume = null;
-        if (level.equals(MarketLevelChange.MINI_DOWN)
-                || level.equals(MarketLevelChange.MINI_DOWN_EXTEND)
-        ) {
+        if (level.equals(MarketLevelChange.MINI_DOWN)) {
             maxVolume = 10 * 1E6;
         }
         return getTopSymbol(value, rateChange2Symbols, period, maxVolume);
@@ -59,8 +100,8 @@ public class MarketBigChangeDetector {
             if (lastTicker != null && ticker != null) {
                 // bigup -> trade with up
 //                if (Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen) > 0.0) {
-                    Double rateChangeVolume = Utils.rateOf2Double(lastTicker.totalUsdt, ticker.totalUsdt);
-                    rateChange2Symbols.put(rateChangeVolume, symbol);
+                Double rateChangeVolume = Utils.rateOf2Double(lastTicker.totalUsdt, ticker.totalUsdt);
+                rateChange2Symbols.put(rateChangeVolume, symbol);
 //                }
             }
         }
@@ -155,7 +196,7 @@ public class MarketBigChangeDetector {
         LOG.info("Check level market: {} rateChangeAvg: {} {}", Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()), rateLossAvg, volumeAvg);
         try {
             Utils.sendSms2Telegram("Check market : " + Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis() - 15 * Utils.TIME_MINUTE)
-                    + " rate:" + Utils.formatDouble(rateLossAvg, 4) + " volumeAvg: " + volumeAvg);
+                    + " rate:" + Utils.formatDouble(rateLossAvg * 100, 4) + "% volumeAvg: " + volumeAvg);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -170,6 +211,9 @@ public class MarketBigChangeDetector {
                 continue;
             }
             KlineObjectNumber ticker = entry1.getValue();
+            if (!Utils.isTickerAvailable(ticker)) {
+                continue;
+            }
             Double rateChange = null;
             if (ticker.priceClose > ticker.priceOpen) {
                 rateChange = Utils.rateOf2Double(ticker.maxPrice, ticker.minPrice);
@@ -240,10 +284,11 @@ public class MarketBigChangeDetector {
     }
 
 
-    public static Integer getStatusTradingAlt15M(List<KlineObjectNumber> altTickers, Integer index) {
+    public static List<Integer> getStatusTradingAlt15M(List<KlineObjectNumber> altTickers, Integer index) {
+        List<Integer> results = new ArrayList<>();
         try {
             if (index == null || index < 2) {
-                return 0;
+                return results;
             }
             ArrayList<KlineObjectNumber> tickers = new ArrayList<>();
             KlineObjectNumber finalTicker = altTickers.get(index);
@@ -255,24 +300,56 @@ public class MarketBigChangeDetector {
             for (int i = start; i <= index; i++) {
                 tickers.add(altTickers.get(i));
             }
+            Double min24h = lastTicker.minPrice;
+            Double min4h = lastTicker.minPrice;
+            Boolean isHaveTickerOver = false;
+            for (int i = 0; i < 192; i++) {
+                if (index >= i) {
+                    KlineObjectNumber ticker = altTickers.get(index - i);
+                    if (Utils.rateOf2Double(ticker.maxPrice, ticker.minPrice) > 0.05) {
+                        isHaveTickerOver = true;
+                        break;
+                    }
+                    if (i < 96
+                            && min24h > ticker.minPrice) {
+                        min24h = ticker.minPrice;
+                    }
+                    if (i < 16
+                            && min4h > ticker.minPrice) {
+                        min4h = ticker.minPrice;
+                    }
+                }
+            }
             List<TrendObject> trends = TickerFuturesHelper.extractTopBottomObjectInTicker(tickers);
             if (trends.size() > 1) {
                 TrendObject finalTrendTop = trends.get(trends.size() - 1);
                 if (finalTrendTop.status.equals(TrendState.TOP)
-                        && Utils.rateOf2Double(finalTicker.priceClose, finalTicker.priceOpen) < -0.005
+                        && Utils.rateOf2Double(finalTicker.priceClose, finalTicker.priceOpen) < -0.003
                         && finalTicker.totalUsdt > lastTicker.totalUsdt * 2
                         && finalTicker.totalUsdt < lastTicker.totalUsdt * 10
                 ) {
-                    if (Utils.rateOf2Double(finalTrendTop.kline.maxPrice, finalTicker.priceClose) > 0.030) {
-                        return 1;
+                    Double rateChangeWithTop = Utils.rateOf2Double(finalTrendTop.kline.maxPrice, finalTicker.priceClose);
+                    if (rateChangeWithTop > 0.030) {
+                        results.add(1);
                     }
-
+                    Double rateChangeTotal = Utils.rateOf2Double(finalTicker.maxPrice, finalTicker.minPrice);
+                    if (rateChangeWithTop > 0.04
+                            && !isHaveTickerOver
+                            && rateChangeTotal < 0.04
+                            && finalTicker.minPrice > min24h) {
+                        results.add(2);
+                    }
+                    if (rateChangeWithTop > 0.030
+                            && !isHaveTickerOver
+                            && finalTicker.minPrice > min4h) {
+                        results.add(3);
+                    }
                 }
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return 0;
+        return results;
     }
 
     private static MarketLevelChange getMarketStatus(Double rateLossAvg, Double volumeAvg) {
@@ -282,6 +359,7 @@ public class MarketBigChangeDetector {
         if (rateLossAvg < -0.055) {
             if (volumeAvg >= 20 && volumeAvg < 35) {
                 return MarketLevelChange.MAYBE_BIG_DOWN_AFTER;
+//                return null;
             }
             return MarketLevelChange.MEDIUM_DOWN;
         }
@@ -291,12 +369,10 @@ public class MarketBigChangeDetector {
         if (rateLossAvg < -0.03) {
             return MarketLevelChange.TINY_DOWN;
         }
-        if (rateLossAvg < -0.02) {
+        if (rateLossAvg < -0.020) {
             return MarketLevelChange.MINI_DOWN;
         }
-        if (rateLossAvg < -0.018) {
-            return MarketLevelChange.MINI_DOWN_EXTEND;
-        }
+
         if (rateLossAvg > 0.04) {
             return MarketLevelChange.BIG_UP;
         }
@@ -304,10 +380,59 @@ public class MarketBigChangeDetector {
             return MarketLevelChange.MEDIUM_UP;
         }
         if (rateLossAvg > 0.021) {
-            return MarketLevelChange.VOLUME_BIG_CHANGE;
+            return MarketLevelChange.SMALL_UP;
         }
+
+
+//        if (rateLossAvg < -0.019 && volumeAvg > 9) {
+//            return MarketLevelChange.MINI_DOWN_EXTEND;
+//        }
+
 
         return null;
     }
 
+    public static boolean isSignalSELL(List<KlineObjectNumber> altTickers, Integer index) {
+        try {
+            if (index == null || index < 2) {
+                return false;
+            }
+            KlineObjectNumber finalTicker = altTickers.get(index);
+            KlineObjectNumber lastTicker = altTickers.get(index - 1);
+            Double max24h = lastTicker.maxPrice;
+            Double maxVolume24h = lastTicker.totalUsdt;
+
+            Boolean isHaveTickerBigUp = false;
+            for (int i = 0; i < 96; i++) {
+                if (index >= i) {
+                    KlineObjectNumber ticker = altTickers.get(index - i);
+                    if (Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen) > 0.05) {
+                        isHaveTickerBigUp = true;
+                    }
+                    if (maxVolume24h < ticker.totalUsdt) {
+                        maxVolume24h = ticker.totalUsdt;
+                    }
+                    if (max24h < ticker.maxPrice) {
+                        max24h = ticker.maxPrice;
+                    }
+                }
+            }
+            Double rateFinal = Utils.rateOf2Double(finalTicker.priceClose, finalTicker.priceOpen);
+
+            if (rateFinal < -0.015
+                    && rateFinal > -0.05
+                    && (finalTicker.maxPrice >= max24h || lastTicker.maxPrice >= max24h)
+//                    && finalTicker.minPrice < lastTicker.priceOpen
+                    && (finalTicker.totalUsdt >= maxVolume24h || lastTicker.totalUsdt >= maxVolume24h)
+                    && isHaveTickerBigUp
+            ) {
+                return true;
+            }
+
+        } catch (
+                Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
 }

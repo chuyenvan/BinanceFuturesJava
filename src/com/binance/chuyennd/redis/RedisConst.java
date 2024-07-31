@@ -58,6 +58,7 @@ public class RedisConst {
 
     public static final String REDIS_KEY_SET_ALL_SYMBOL_POS_RUNNING = "redis.key.set.td.pos.running";
     public static final String REDIS_KEY_SYMBOL_POS_MARKET_LEVEL = "redis.key.symbol.pos.market.level";
+    public static final String REDIS_KEY_TIME_2_MARKET_LEVEL = "redis.key.time.2.market.level";
 
 
     public static String REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER = Configs.getString("REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER");

@@ -4,6 +4,7 @@
  */
 package com.binance.chuyennd.trading;
 
+import com.binance.chuyennd.bigchange.market.MarketLevelChange;
 import com.binance.chuyennd.client.BinanceFuturesClientSingleton;
 import com.binance.chuyennd.client.ClientSingleton;
 import com.binance.chuyennd.redis.RedisConst;
@@ -103,10 +104,36 @@ public class BudgetManager {
 
     }
 
+    public Double getMarginOfAltReverseExtendOrSell() {
+        Double marginAltReverseExtend = 0d;
+        try {
+            List<PositionRisk> positions = BinanceFuturesClientSingleton.getInstance().getAllPositionInfos();
+            for (PositionRisk position : positions) {
+                try {
+                    if (position.getPositionAmt().doubleValue() > 0) {
+                        String marketLevel = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_SYMBOL_POS_MARKET_LEVEL,
+                                position.getSymbol());
+                        if (StringUtils.equals(marketLevel, MarketLevelChange.ALT_BIG_CHANGE_REVERSE_EXTEND.toString())
+                                || StringUtils.equals(marketLevel, MarketLevelChange.ALT_SIGNAL_SELL.toString())) {
+                            double margin = position.getPositionAmt().doubleValue() * position.getEntryPrice().doubleValue();
+                            marginAltReverseExtend += margin;
+                        }
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return marginAltReverseExtend;
+    }
+
     public Double getInvesting2Check() {
         try {
             Asset umInfo = BinanceFuturesClientSingleton.getInstance().getAccountUMInfo();
-            return umInfo.getPositionInitialMargin().doubleValue() * 100
+            return (umInfo.getPositionInitialMargin().doubleValue() - getMarginOfAltReverseExtendOrSell()) * 100
                     / (umInfo.getWalletBalance().doubleValue());
         } catch (Exception e) {
             e.printStackTrace();
@@ -147,7 +174,7 @@ public class BudgetManager {
             LOG.info("Start thread updateAllSymbol !");
             while (true) {
                 try {
-                    Thread.sleep(Utils.TIME_HOUR);
+                    Thread.sleep(Utils.TIME_DAY);
                     updateListSymbolAll();
                 } catch (Exception e) {
                     LOG.error("ERROR during updateAllSymbol: {}", e);

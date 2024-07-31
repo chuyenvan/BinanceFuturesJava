@@ -4,11 +4,12 @@
  */
 package com.binance.chuyennd.research;
 
+import com.binance.chuyennd.bigchange.market.MarketLevelChange;
 import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
+import com.binance.client.model.enums.OrderSide;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,6 +36,7 @@ public class BudgetManagerSimple {
     public Double unProfit = 0d;
     public Double totalFee = 0d;
     public Double balanceStart = Configs.getDouble("CAPITAL_START");
+    public ConcurrentHashMap<Long, Double> date2Balance = new ConcurrentHashMap<>();
     public Double balanceCurrent = balanceStart;
 
     public boolean stop = false;
@@ -52,11 +54,17 @@ public class BudgetManagerSimple {
         investing = 0d;
         try {
             Double positionMargin = 0d;
+            Double altReverseMargin = 0d;
             if (orderRunning != null) {
                 positionMargin = calPositionMargin(orderRunning.values());
+                altReverseMargin = calPositionMarginByLevelChange(orderRunning.values(), MarketLevelChange.ALT_BIG_CHANGE_REVERSE_EXTEND);
+                altReverseMargin += calPositionMarginByLevelChange(orderRunning.values(), MarketLevelChange.ALT_SIGNAL_SELL);
             }
-            Double budget = RATE_BUDGET_PER_ORDER * (balanceCurrent - positionMargin);
+            Double budget = RATE_BUDGET_PER_ORDER * (balanceCurrent - positionMargin + altReverseMargin);
             BUDGET_PER_ORDER = budget / number_order_budget;
+            if (BUDGET_PER_ORDER > 300) {
+                BUDGET_PER_ORDER = 300d;
+            }
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -64,13 +72,7 @@ public class BudgetManagerSimple {
     }
 
     public Double getBudget() {
-        Double budget = BUDGET_PER_ORDER;
-//        if (budget >=5000){
-//            budget = 5000d;
-//        }
-        BUDGET_PER_ORDER = BUDGET_PER_ORDER * (number_order_budget - 1) / number_order_budget;
-
-        return budget;
+        return BUDGET_PER_ORDER;
     }
 
     public Boolean isAvailableTrade() {
@@ -119,12 +121,19 @@ public class BudgetManagerSimple {
         Double balanceMin = balance + unrealizedProfitMin;
         balanceIndex.updateIndex(balance, balanceMin, positionMargin, unrealizedProfitMin, timeUpdate);
         if (timeUpdate % Utils.TIME_DAY == 0) {
+            date2Balance.put(timeUpdate, balance);
+            Double balance30dAgo = date2Balance.get(timeUpdate - 30 * Utils.TIME_DAY);
+            Double rate30d = 0d;
+            if (balance30dAgo != null) {
+                rate30d = (balance - balance30dAgo) * 100 / balanceStart;
+            }
             Double rateLoss = unProfit * 100 / balanceCurrent;
-            Double rateProfitDate = profitOfDate * 100 / (balanceCurrent - profitOfDate);
-            LOG.info("Update {} => balance:{} pDate:{} {}% margin:{} {}% " +
+//            Double rateProfitDate = profitOfDate * 100 / (balanceCurrent - profitOfDate);
+            Double rateProfitDate = profitOfDate * 100 / balanceStart;
+            LOG.info("Update {} => balance:{} pDate:{} {}% {}% margin:{} {}% " +
                             "profit:{} unProfit:{} {}% fee:{} done: {}/{} run:{}",
                     Utils.normalizeDateYYYYMMDDHHmm(timeUpdate), balance.longValue(), profitOfDate.longValue(),
-                    rateProfitDate.longValue(), positionMargin.longValue(), investing.longValue(), profit.longValue(),
+                    rateProfitDate.longValue(), rate30d.longValue(), positionMargin.longValue(), investing.longValue(), profit.longValue(),
                     unrealizedProfit.longValue(), rateLoss.longValue(), totalFee.longValue(), totalSL,
                     allOrderDone.size(), symbolRunning.size());
             if (timeUpdate.equals(Utils.getToDay() + 7 * Utils.TIME_HOUR)) {
@@ -190,14 +199,34 @@ public class BudgetManagerSimple {
         return totalMargin;
     }
 
+    public Double calPositionMarginByLevelChange(Collection<OrderTargetInfoTest> values, MarketLevelChange level) {
+        Double totalMargin = 0d;
+        if (values != null) {
+            for (OrderTargetInfoTest orderInfo : values) {
+                if (level != null
+                        && orderInfo.marketLevelChange != null
+                        && orderInfo.marketLevelChange.equals(level)) {
+                    Double margin = orderInfo.calMargin();
+                    totalMargin += margin;
+                }
+            }
+        }
+        return totalMargin;
+    }
+
     private Double calTp(OrderTargetInfoTest orderInfo) {
         Double tp = orderInfo.quantity * (orderInfo.priceTP - orderInfo.priceEntry);
+        if (orderInfo.side.equals(OrderSide.SELL)) {
+            tp = orderInfo.quantity * (orderInfo.priceEntry - orderInfo.priceTP);
+        }
         return tp;
     }
 
     public void updateInvesting(Collection<OrderTargetInfoTest> orderRunning) {
         Double margin = calPositionMargin(orderRunning);
-        investing = margin * 100 / balanceCurrent;
+        Double altReverseMargin = calPositionMarginByLevelChange(orderRunning, MarketLevelChange.ALT_BIG_CHANGE_REVERSE_EXTEND);
+         altReverseMargin += calPositionMarginByLevelChange(orderRunning, MarketLevelChange.ALT_SIGNAL_SELL);
+        investing = (margin - altReverseMargin) * 100 / balanceCurrent;
     }
 
     public void printBalanceIndex() {

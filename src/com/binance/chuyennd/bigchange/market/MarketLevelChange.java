@@ -23,20 +23,22 @@ public enum MarketLevelChange {
     // UP
     BIG_UP,
     MEDIUM_UP,
+    SMALL_UP,
 
 
     // DOWN
-    VOLUME_BIG_CHANGE,
-
-    MINI_DOWN_EXTEND,
-    BTC_SMALL_CHANGE_REVERSE,
-    BTC_BOTTOM_REVERSE,
     ALT_BIG_CHANGE_REVERSE,
+    ALT_BIG_CHANGE_REVERSE_EXTEND,
+
     MINI_DOWN,
     TINY_DOWN,
     SMALL_DOWN,
     MEDIUM_DOWN,
     MAYBE_BIG_DOWN_AFTER,
-    BIG_DOWN;
+    BIG_DOWN,
 
+
+    ALT_SIGNAL_SELL,
+    // market state have order market running
+    MULTI_LEVEL_MARKET_RUNNING;
 }

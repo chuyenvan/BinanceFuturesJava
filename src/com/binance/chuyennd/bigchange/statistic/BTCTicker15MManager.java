@@ -1,4 +1,4 @@
-package com.binance.chuyennd.bigchange.btctd;
+package com.binance.chuyennd.bigchange.statistic;
 
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.utils.Storage;

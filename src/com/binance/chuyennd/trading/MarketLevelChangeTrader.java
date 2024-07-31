@@ -26,6 +26,8 @@ import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
 import com.binance.client.model.enums.OrderSide;
+import com.binance.client.model.trade.Order;
+import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -78,6 +80,7 @@ public class MarketLevelChangeTrader {
                     try {
                         LOG.info("Start check level change of market for trade! {}", new Date());
                         executorService.execute(() -> checkMarketLevelChange2Trade());
+                        executorService.execute(() -> DcaHelper.startCheckAndProcessDca(symbol2Tickers));
                     } catch (Exception e) {
                         LOG.error("ERROR during ThreadDetectMarketLevel2Trader: {}", e);
                         e.printStackTrace();
@@ -113,51 +116,62 @@ public class MarketLevelChangeTrader {
                     LOG.info("Market level change: {} level: {} symbols:{}", Utils.normalizeDateYYYYMMDDHHmm(time),
                             levelChange, symbol2LastTicker.size());
                     if (levelChange != null) {
-                        List<String> symbol2Trade;
-                        if (levelChange.equals(MarketLevelChange.VOLUME_BIG_CHANGE)) {
-                            symbol2Trade = MarketBigChangeDetector.getTopSymbol2TradeWithVolumeBigUp(
-                                    lastSymbol2LastTicker, symbol2LastTicker, 20);
-                        } else {
-                            symbol2Trade = MarketBigChangeDetector.getTopSymbol2Trade(symbol2LastTicker, 20, levelChange);
-                        }
-                        LOG.info("{} {} -> {}", Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()), levelChange, symbol2Trade);
-                        for (String symbol : symbol2Trade) {
-                            try {
-                                KlineObjectNumber ticker = symbol2LastTicker.get(symbol);
-                                createOrderNewRequest(symbol, ticker, levelChange);
-                            } catch (Exception e) {
-                                e.printStackTrace();
+                        RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_TIME_2_MARKET_LEVEL,
+                                time.toString(), levelChange.name());
+                        levelChange = changeLevelByHistory(time, levelChange);
+                        if (levelChange != null) {
+                            // check and dca all order running when big down
+                            if (levelChange.equals(MarketLevelChange.BIG_DOWN)
+                                    || levelChange.equals(MarketLevelChange.MAYBE_BIG_DOWN_AFTER)
+                                    || levelChange.equals(MarketLevelChange.MEDIUM_DOWN)) {
+                                BinanceOrderTradingManager.checkAndDca();
+                            }
+                            // create new order
+                            List<String> symbol2Trade = MarketBigChangeDetector.getTopSymbol2TradeWithRateChange(symbol2LastTicker, 20, levelChange);
+                            LOG.info("{} {} -> {}", Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()), levelChange, symbol2Trade);
+                            for (String symbol : symbol2Trade) {
+                                try {
+                                    KlineObjectNumber ticker = symbol2LastTicker.get(symbol);
+                                    createOrderBuyRequest(symbol, ticker, levelChange);
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
                             }
                         }
                     } else {
-                        if (BinanceFuturesClientSingleton.getInstance().getAllOpenOrderInfos().isEmpty()) {
-                            List<KlineObjectNumber> btcTickers = symbol2Tickers.get(Constants.SYMBOL_PAIR_BTC);
-                            if (MarketBigChangeDetector.getStatusTradingBtc(btcTickers,
-                                    btcTickers.get(btcTickers.size() - 1).startTime.longValue()) == 1) {
-                                levelChange = MarketLevelChange.BTC_SMALL_CHANGE_REVERSE;
-                                List<String> symbol2Trade = MarketBigChangeDetector.getTopSymbol2TradeWithVolumeBigUp(
-                                        lastSymbol2LastTicker, symbol2LastTicker, 10);
-                                LOG.info("Btc reverse: {} {} -> {}", Utils.normalizeDateYYYYMMDDHHmm(time), levelChange, symbol2Trade);
-                                for (String symbol : symbol2Trade) {
-                                    try {
-                                        KlineObjectNumber ticker = symbol2LastTicker.get(symbol);
-                                        createOrderNewRequest(symbol, ticker, levelChange);
-                                    } catch (Exception e) {
-                                        e.printStackTrace();
-                                    }
-                                }
-                            }
-                        }
-                        if (BinanceFuturesClientSingleton.getInstance().getAllOpenOrderInfos().isEmpty()) {
-                            TreeMap<Double, String> rateChange2Symbol = new TreeMap<>();
+                        // check not position running
+                        MarketLevelChange orderMarketRunning = getOrderMarketLevelRunning();
+                        TreeMap<Double, String> rateChange2Symbol = new TreeMap<>();
+                        TreeMap<Double, String> rateChange2SymbolExtend = new TreeMap<>();
+                        TreeMap<Double, String> rateChange2SymbolUnder5 = new TreeMap<>();
+                        List<String> symbolSellCouples = new ArrayList<>();
+                        if (orderMarketRunning == null || orderMarketRunning.equals(MarketLevelChange.ALT_BIG_CHANGE_REVERSE_EXTEND)) {
                             for (Map.Entry<String, List<KlineObjectNumber>> entry1 : symbol2Tickers.entrySet()) {
                                 String symbol = entry1.getKey();
                                 List<KlineObjectNumber> tickers = entry1.getValue();
-                                if (MarketBigChangeDetector.getStatusTradingAlt15M(tickers, tickers.size() - 1) == 1
-                                ) {
-                                    KlineObjectNumber ticker = tickers.get(tickers.size() - 1);
+                                KlineObjectNumber ticker = tickers.get(tickers.size() - 1);
+                                // check sell
+                                if (MarketBigChangeDetector.isSignalSELL(tickers, tickers.size() - 1)) {
+                                    symbolSellCouples.add(symbol);
+                                }
+                                // check buy
+                                List<Integer> altReverseStatus = MarketBigChangeDetector.getStatusTradingAlt15M(tickers, tickers.size() - 1);
+                                if (altReverseStatus.contains(1)) {
                                     rateChange2Symbol.put(Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen), symbol);
                                 }
+                                if (altReverseStatus.contains(2)) {
+                                    rateChange2SymbolExtend.put(Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen), symbol);
+                                }
+                                if (altReverseStatus.contains(3)) {
+                                    rateChange2SymbolUnder5.put(Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen), symbol);
+                                }
+                            }
+                            try {
+                                Utils.sendSms2Telegram("Check alt reverse : " + Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis() - 15
+                                        * Utils.TIME_MINUTE) + " number alt:" + rateChange2Symbol.values() + " "
+                                        + rateChange2SymbolExtend.values() + " " + rateChange2SymbolUnder5.values());
+                            } catch (Exception e) {
+                                e.printStackTrace();
                             }
                             if (rateChange2Symbol.size() >= 5) {
                                 levelChange = MarketLevelChange.ALT_BIG_CHANGE_REVERSE;
@@ -166,13 +180,48 @@ public class MarketLevelChangeTrader {
                                     String symbol = entry2.getValue();
                                     LOG.info("Alt reverse: {} {} -> {}", Utils.normalizeDateYYYYMMDDHHmm(time), levelChange, symbol);
                                     KlineObjectNumber ticker = symbol2LastTicker.get(symbol);
-                                    createOrderNewRequest(symbol, ticker, levelChange);
+                                    createOrderBuyRequest(symbol, ticker, levelChange);
                                     counter++;
-                                    if (counter >= 4) {
+                                    if (counter >= 6) {
                                         break;
                                     }
                                 }
+                            } else {
+                                if (orderMarketRunning == null) {
+                                    if (!rateChange2SymbolExtend.isEmpty()) {
+                                        levelChange = MarketLevelChange.ALT_BIG_CHANGE_REVERSE_EXTEND;
+                                        int counter = 0;
+                                        for (Map.Entry<Double, String> entry2 : rateChange2SymbolExtend.entrySet()) {
+                                            String symbol = entry2.getValue();
+                                            LOG.info("Alt Reverse extend: {} {} -> {} {}", Utils.normalizeDateYYYYMMDDHHmm(time), levelChange,
+                                                    symbol, rateChange2SymbolExtend.size());
+                                            KlineObjectNumber ticker = symbol2LastTicker.get(symbol);
+                                            createOrderBuyRequest(symbol, ticker, levelChange);
+                                            counter++;
+                                            if (counter >= 5) {
+                                                break;
+                                            }
+                                        }
+                                    } else {
+                                        levelChange = MarketLevelChange.ALT_BIG_CHANGE_REVERSE_EXTEND;
+                                        for (Map.Entry<Double, String> entry2 : rateChange2SymbolUnder5.entrySet()) {
+                                            if (BinanceFuturesClientSingleton.getInstance().getAllOpenOrderInfos().size() < 3) {
+                                                String symbol = entry2.getValue();
+                                                LOG.info("Alt reverse2: {} {} -> {} {}", Utils.normalizeDateYYYYMMDDHHmm(time), levelChange,
+                                                        symbol, rateChange2Symbol.size());
+                                                KlineObjectNumber ticker = symbol2LastTicker.get(symbol);
+                                                createOrderBuyRequest(symbol, ticker, levelChange);
+                                            }
+                                        }
+                                    }
+                                }
                             }
+                        }
+                        levelChange = MarketLevelChange.ALT_SIGNAL_SELL;
+                        for (String symbol : symbolSellCouples) {
+                            LOG.info("Alt Sell: {} {} -> {} {}", Utils.normalizeDateYYYYMMDDHHmm(time), levelChange,
+                                    symbol, rateChange2Symbol.size());
+                            createOrderSELLRequest(symbol, symbol2LastTicker.get(symbol), levelChange);
                         }
                     }
                 } catch (Exception e) {
@@ -186,12 +235,25 @@ public class MarketLevelChangeTrader {
                 e.printStackTrace();
             }
         }
-        LOG.info("Finish check level change of market 2 trade: {}", new
-
-                Date());
+        LOG.info("Finish check level change of market 2 trade: {}", new Date());
     }
 
-    private void createOrderNewRequest(String symbol, KlineObjectNumber ticker, MarketLevelChange levelChange) {
+    private MarketLevelChange getOrderMarketLevelRunning() {
+        List<Order> orders = BinanceFuturesClientSingleton.getInstance().getAllOpenOrderInfos();
+        if (orders.isEmpty()) {
+            return null;
+        }
+        MarketLevelChange level = MarketLevelChange.ALT_BIG_CHANGE_REVERSE_EXTEND;
+        for (Order order : orders) {
+            String marketLevel = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_SYMBOL_POS_MARKET_LEVEL, order.getSymbol());
+            if (!StringUtils.equals(marketLevel, MarketLevelChange.ALT_BIG_CHANGE_REVERSE_EXTEND.toString())) {
+                level = MarketLevelChange.MULTI_LEVEL_MARKET_RUNNING;
+            }
+        }
+        return level;
+    }
+
+    private void createOrderBuyRequest(String symbol, KlineObjectNumber ticker, MarketLevelChange levelChange) {
         LOG.info("Market level:{} {} {}", levelChange, symbol, Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()));
         Double rateTarget = RATE_TARGET;
         Double budget = BudgetManager.getInstance().getBudget();
@@ -210,6 +272,10 @@ public class MarketLevelChangeTrader {
         if (levelChange.equals(MarketLevelChange.MEDIUM_UP)) {
             budget = budget * 1.5;
         }
+        if (levelChange.equals(MarketLevelChange.ALT_BIG_CHANGE_REVERSE)
+                || levelChange.equals(MarketLevelChange.ALT_BIG_CHANGE_REVERSE_EXTEND)) {
+            budget = budget * 4;
+        }
         Double priceEntry = ticker.priceClose;
         Double priceTarget = Utils.calPriceTarget(symbol, priceEntry, OrderSide.BUY, rateTarget);
         Double quantity = Utils.calQuantity(budget, BudgetManager.getInstance().getLeverage(), priceEntry, symbol);
@@ -224,6 +290,25 @@ public class MarketLevelChangeTrader {
         }
     }
 
+    private void createOrderSELLRequest(String symbol, KlineObjectNumber ticker, MarketLevelChange levelChange) {
+        LOG.info("Market level:{} {} {}", levelChange, symbol, Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()));
+        Double rateTarget = RATE_TARGET;
+        Double budget = BudgetManager.getInstance().getBudget();
+        Double priceEntry = ticker.priceClose;
+        Double priceTarget = Utils.calPriceTarget(symbol, priceEntry, OrderSide.SELL, rateTarget);
+        Double quantity = Utils.calQuantity(budget, BudgetManager.getInstance().getLeverage(), priceEntry, symbol);
+        if (quantity != null && quantity != 0) {
+            OrderTargetInfo orderTrade = new OrderTargetInfo(OrderTargetStatus.REQUEST, ticker.priceClose,
+                    priceTarget, quantity, BudgetManager.getInstance().getLeverage(), symbol, ticker.startTime.longValue(),
+                    ticker.startTime.longValue(), OrderSide.SELL, Constants.TRADING_TYPE_VOLUME_MINI);
+            orderTrade.marketLevel = levelChange;
+            RedisHelper.getInstance().get().rpush(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER_QUEUE, Utils.toJson(orderTrade));
+        } else {
+            LOG.info("{} {} quantity false", symbol, quantity);
+        }
+    }
+
+
     public boolean isTimeGetData() {
         return Utils.getCurrentMinute() % 15 == 14 && Utils.getCurrentSecond() == 55;
     }
@@ -232,7 +317,7 @@ public class MarketLevelChangeTrader {
         return Utils.getCurrentMinute() % 15 == 14 && Utils.getCurrentSecond() == 59;
     }
 
-    private void initData() throws InterruptedException, ParseException {
+    private void initData() {
         allSymbol = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_ALL_SYMBOLS);
         symbol2Tickers.clear();
     }
@@ -248,5 +333,33 @@ public class MarketLevelChangeTrader {
             e.printStackTrace();
         }
     }
+
+    private MarketLevelChange changeLevelByHistory(Long time, MarketLevelChange levelChange) {
+        Long time2Get;
+        String lastLevel;
+        int counter = 0;
+        while (true) {
+            try {
+                counter++;
+                time2Get = time - counter * 15 * Utils.TIME_MINUTE;
+                lastLevel = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_TIME_2_MARKET_LEVEL, time2Get.toString());
+                if (StringUtils.isNotEmpty(lastLevel)) {
+                    break;
+                }
+                if (counter > 16) {
+                    break;
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        if (StringUtils.isNotEmpty(lastLevel)) {
+            if (levelChange.equals(MarketLevelChange.MAYBE_BIG_DOWN_AFTER)) {
+                return null;
+            }
+        }
+        return levelChange;
+    }
+
 
 }

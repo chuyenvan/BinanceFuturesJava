@@ -13,8 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.binance.chuyennd.bigchange.btctd;
+package com.binance.chuyennd.bigchange.test;
 
+import com.binance.chuyennd.bigchange.statistic.BreadDetectObject;
 import com.binance.chuyennd.client.ClientSingleton;
 import com.binance.chuyennd.client.TickerFuturesHelper;
 import com.binance.chuyennd.indicators.*;
@@ -24,12 +25,11 @@ import com.binance.chuyennd.object.*;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
 import com.binance.chuyennd.research.BudgetManagerTest;
-import com.binance.chuyennd.research.DataManager;
+import com.binance.chuyennd.bigchange.statistic.data.DataManager;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
 import com.binance.chuyennd.signal.tradingview.OrderTargetInfoTestSignal;
 import com.binance.chuyennd.signal.tradingview.SignalTWSimulator;
 import com.binance.chuyennd.trading.OrderTargetInfo;
-import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Storage;
 import com.binance.chuyennd.utils.Utils;
@@ -86,8 +86,8 @@ public class Test {
 //        new SignalTWSimulator().buildReportTest();
 //        System.out.println(getSignalBTCHour());
 //        System.out.println(Utils.sdfFile.parse("20230509").getTime() + 7 * Utils.TIME_HOUR);
-        printOrderTestDone();
 
+//        new BinanceOrderTradingManager().processManagerPosition();
 
 //        traceRateChangeByDate("20240412");
 //        new BinanceOrderTradingManager().checkAndCloseOrderLatestOverTimeMin();
@@ -95,7 +95,6 @@ public class Test {
 //        RedisHelper.getInstance().get().del("redis.key.educa.test.signal.order.manager.web1");
 //        System.out.println(RedisHelper.getInstance().readAllId("redis.key.educa.test.signal.order.manager.web1"));
 
-//        traceOrderTestDone();
 //        detectBtcBottom("AIUSDT");
 //        detectBtcBottomNew();
 //        detectBtcTop();
@@ -721,105 +720,6 @@ public class Test {
         }
     }
 
-    private static void printOrderTestDone() throws IOException {
-//        Long duration = 12 * Utils.TIME_HOUR;
-//        Long numberTicker = duration / (15 * Utils.TIME_MINUTE);
-//        String fileData = "storage/time2KlineStatistic_" + numberTicker + ".data";
-//        Map<Long, Map<String, KlineObjectNumber>> time2SymbolAndRateChange;
-//        LOG.info("Read data");
-//        if (new File(fileData).exists()) {
-//            time2SymbolAndRateChange = (Map<Long, Map<String, KlineObjectNumber>>) Storage.readObjectFromFile(fileData);
-//        } else {
-//            time2SymbolAndRateChange = MarketBigChangeDetector.readDataKlineStatistic(numberTicker.intValue());
-//            Storage.writeObject2File(fileData, time2SymbolAndRateChange);
-//        }
-
-        ConcurrentHashMap<String, OrderTargetInfoTest> allOrderDone =
-                (ConcurrentHashMap<String, OrderTargetInfoTest>) Storage.readObjectFromFile(FILE_STORAGE_ORDER_DONE);
-        List<String> lines = new ArrayList<>();
-        List<KlineObjectNumber> tickers = (List<KlineObjectNumber>) Storage.readObjectFromFile(DataManager.FOLDER_TICKER_15M + Constants.SYMBOL_PAIR_BTC);
-        Map<Long, KlineObjectNumber> time2Ticker = new HashMap<>();
-        Map<Long, Integer> time2Index = new HashMap<>();
-        for (int i = 0; i < tickers.size(); i++) {
-            KlineObjectNumber ticker = tickers.get(i);
-            time2Ticker.put(ticker.startTime.longValue(), ticker);
-            time2Index.put(ticker.startTime.longValue(), i);
-        }
-        Map<String, Double> symbol2Profit = new HashMap<>();
-        for (OrderTargetInfoTest order : allOrderDone.values()) {
-            long date = Utils.getDate(order.timeStart);
-            KlineObjectNumber ticker = time2Ticker.get(order.timeStart);
-//            if (StringUtils.equals(order.symbol, "GALAUSDT")) {
-//                System.out.println("Debug");
-//            }
-            Double profitOfSymbol = symbol2Profit.get(order.symbol);
-            if (profitOfSymbol == null) {
-                profitOfSymbol = 0d;
-            }
-            profitOfSymbol += Utils.rateOf2Double(order.priceTP, order.priceEntry);
-            symbol2Profit.put(order.symbol, profitOfSymbol);
-            StringBuilder builder = new StringBuilder();
-            builder.append(order.symbol).append(",");
-            builder.append(order.priceEntry).append(",");
-            builder.append(order.priceTP).append(",");
-            builder.append(Utils.rateOf2Double(order.priceTP, order.priceEntry)).append(",");
-//            builder.append(order.minPrice).append(",");
-//            builder.append(Utils.rateOf2Double(order.minPrice, order.priceEntry)).append(",");
-//            builder.append(SimpleMovingAverage1DManager.getInstance().getRateChangeWithDuration(order.symbol,
-//                    order.timeStart, 5)).append(",");
-//            builder.append(SimpleMovingAverage1DManager.getInstance().getRateChangeWithDuration(order.symbol,
-//                    order.timeStart, 15)).append(",");
-//            builder.append(SimpleMovingAverage1DManager.getInstance().getRateChangeWithDuration(order.symbol,
-//                    order.timeStart, 30)).append(",");
-//            builder.append(Utils.rateOf2Double(order.priceEntry, maValue)).append(",");
-//            builder.append(maValue).append(",");
-//            builder.append(maStatus).append(",");
-            builder.append(order.maxPrice).append(",");
-            builder.append(Utils.rateOf2Double(order.maxPrice, order.priceEntry)).append(",");
-//            Map<String, KlineObjectNumber> data48h = time2SymbolAndRateChange.get(order.timeStart);
-//            KlineObjectNumber ticker48h = null;
-//            if (data48h != null) {
-//                ticker48h = data48h.get(order.symbol);
-//            }
-//            if (ticker48h != null) {
-//                builder.append(ticker48h.maxPrice).append(",");
-//                builder.append(Utils.rateOf2Double(ticker48h.maxPrice, order.priceEntry)).append(",");
-//            } else {
-//                builder.append("null").append(",");
-//                builder.append("null").append(",");
-//            }
-            builder.append(order.status.toString()).append(",");
-            builder.append(Utils.normalizeDateYYYYMMDDHHmm(order.timeStart)).append(",");
-            builder.append(Utils.normalizeDateYYYYMMDDHHmm(order.timeUpdate)).append(",");
-            builder.append(order.marketLevelChange).append(",");
-            builder.append(Utils.rateOf2Double(order.tickerOpen.minPrice, order.tickerOpen.maxPrice)).append(",");
-            builder.append(order.tickerOpen.totalUsdt).append(",");
-//            builder.append(order.rsi14).append(",");
-//            builder.append(btcRsiAvg).append(",");
-//            builder.append(btcRsi).append(",");
-            builder.append(order.ma201d).append(",");
-            builder.append(order.quantity).append(",");
-            builder.append(order.leverage).append(",");
-            builder.append(calTp(order)).append(",");
-            builder.append((order.timeUpdate - order.timeStart) / Utils.TIME_HOUR).append(",");
-//            builder.append(BTCTicker15MManager.getInstance().getRateWithMaxByDuration(order.timeStart, 8 * Utils.TIME_HOUR));
-
-            lines.add(builder.toString());
-        }
-        TreeMap<Double, String> profit2Symbol = new TreeMap<>();
-        for (Map.Entry<String, Double> entry : symbol2Profit.entrySet()) {
-            String key = entry.getKey();
-            Double values = entry.getValue();
-            profit2Symbol.put(values, key);
-        }
-        for (Map.Entry<Double, String> entry : profit2Symbol.entrySet()) {
-            String key = entry.getValue();
-            Double values = entry.getKey();
-            LOG.info("{} {}", values, key);
-        }
-
-        FileUtils.writeLines(new File("target/printDone.csv"), lines);
-    }
 
     private static void printOrderTATestDone() throws IOException {
 
@@ -894,53 +794,7 @@ public class Test {
         return null;
     }
 
-    private static void traceOrderTestDone() throws IOException {
 
-        ConcurrentHashMap<String, OrderTargetInfoTest> allOrderDone =
-                (ConcurrentHashMap<String, OrderTargetInfoTest>) Storage.readObjectFromFile(FILE_STORAGE_ORDER_DONE);
-        Double profitCheck = 0d;
-        Double profitTotal = 0d;
-
-        List<KlineObjectNumber> tickers = TickerMongoHelper.getInstance().getTicker15mBySymbol(Constants.SYMBOL_PAIR_BTC);
-        Map<Long, KlineObjectNumber> time2Ticker = new HashMap<>();
-        Map<Long, Integer> time2Index = new HashMap<>();
-        for (int i = 0; i < tickers.size(); i++) {
-            KlineObjectNumber ticker = tickers.get(i);
-            time2Ticker.put(ticker.startTime.longValue(), ticker);
-            time2Index.put(ticker.startTime.longValue(), i);
-        }
-        for (OrderTargetInfoTest order : allOrderDone.values()) {
-            Double rateMa = Utils.rateOf2Double(order.priceEntry, order.ma201d);
-            KlineObjectNumber ticker = time2Ticker.get(order.timeStart);
-            Integer index = time2Index.get(order.timeStart);
-            TrendState btcTrend1H = BTCMacdTrendManager.getInstance().getTrend(Constants.INTERVAL_1H, order.timeStart);
-            Double btcRsi = 0d;
-            if (ticker != null) {
-                btcRsi = ticker.rsi;
-            }
-            Double btcRsiAvg = 0d;
-            if (index != null) {
-                btcRsiAvg = calAvgRsi(tickers, index - 30, 30);
-            }
-//            if (rateMa < 0.0) { // 75%
-//            if (btcTrend1H != null && btcTrend1H.equals(TrendState.STRONG_UP)) {
-//            if (true) {
-            if (!order.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)) {
-                if (BTCTicker15MManager.getInstance().getRateWithMaxByDuration(order.timeStart, 24 * Utils.TIME_HOUR) < 0.005) {
-                    profitCheck += Utils.rateOf2Double(order.priceTP, order.priceEntry);
-                }
-                profitTotal += Utils.rateOf2Double(order.priceTP, order.priceEntry);
-            }
-        }
-        Double rate = profitCheck * 100 / profitTotal;
-        LOG.info("{}/{} {}%", profitCheck, profitTotal, rate);
-
-    }
-
-    public static Double calTp(OrderTargetInfoTest orderInfo) {
-        Double tp = orderInfo.quantity * (orderInfo.priceTP - orderInfo.priceEntry);
-        return tp;
-    }
 
     public static Double calTp(OrderTargetInfoTestSignal orderInfo) {
         Double tp = orderInfo.quantity * (orderInfo.priceTP - orderInfo.priceEntry);

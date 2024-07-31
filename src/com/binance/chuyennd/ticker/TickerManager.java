@@ -13,7 +13,7 @@ import com.binance.chuyennd.object.IndicatorEntry;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.MACDEntry;
 import com.binance.chuyennd.object.RsiEntry;
-import com.binance.chuyennd.research.DataManager;
+import com.binance.chuyennd.bigchange.statistic.data.DataManager;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Storage;
 import com.binance.chuyennd.utils.Utils;
@@ -44,8 +44,8 @@ public class TickerManager {
 //        new TickerManager().startThreadUpdateTicker15m();
 //        new TickerManager().startUpdateTicker15m();
 //        System.out.println(Utils.sdfFile.parse("20230101").getTime());
-//        new TickerManager().startResetTicker15mSimple();
-        new TickerManager().startResetTicker1hSimple();
+        new TickerManager().startResetTicker15mSimple();
+//        new TickerManager().startResetTicker1hSimple();
 
 //        new TickerManager().updateDataBySymbolSimple(Constants.SYMBOL_PAIR_BTC, Constants.INTERVAL_1H);
 //        new TickerManager().updateDataBySymbolSimple(Constants.SYMBOL_PAIR_BTC, Constants.INTERVAL_4H);

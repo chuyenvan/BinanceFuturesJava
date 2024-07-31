@@ -78,7 +78,7 @@ public class BinanceOrderTradingManager {
                     String orderJson = data.get(1);
                     try {
                         OrderTargetInfo order = Utils.gson.fromJson(orderJson, OrderTargetInfo.class);
-                        LOG.info("Queue listen order to manager order received : {} ", order.symbol);
+                        LOG.info("Queue listen order to manager order received : {} {} ", order.side, order.symbol);
                         if (FuturesRules.getInstance().getSymsLocked().contains(order.symbol)) {
                             LOG.info("Sym {} is locking by trading rule!", order.symbol);
                             continue;
@@ -88,8 +88,11 @@ public class BinanceOrderTradingManager {
                                 && !order.marketLevel.equals(MarketLevelChange.MEDIUM_DOWN)
                                 && !order.marketLevel.equals(MarketLevelChange.BIG_UP)
                                 && !order.marketLevel.equals(MarketLevelChange.MEDIUM_UP)
+                                && !order.marketLevel.equals(MarketLevelChange.ALT_BIG_CHANGE_REVERSE)
+                                && !order.marketLevel.equals(MarketLevelChange.ALT_SIGNAL_SELL)
                         ) {
-                            if (BudgetManager.getInstance().getInvesting2Check() >= BudgetManager.getInstance().MAX_CAPITAL_RATE) {
+                            if (BudgetManager.getInstance().getInvesting2Check()
+                                    >= BudgetManager.getInstance().MAX_CAPITAL_RATE) {
                                 Boolean isClosed = checkAndCloseOrderLatestOverTimeMin();
                                 if (!isClosed) {
                                     LOG.info("Stop trading {} {} because investing over: {}", order.symbol,
@@ -259,6 +262,9 @@ public class BinanceOrderTradingManager {
             Map<String, Order> symbol2OrderTp = new HashMap<>();
             for (Order order : ordersOpen) {
                 // pass order not tp
+                if (!StringUtils.equals(order.getSide(), OrderSide.SELL.toString())) {
+                    continue;
+                }
                 if (!StringUtils.equals(order.getType(), OrderType.TAKE_PROFIT.toString())
                         && !StringUtils.equals(order.getType(), OrderType.TAKE_PROFIT_MARKET.toString())) {
                     continue;
@@ -310,7 +316,7 @@ public class BinanceOrderTradingManager {
         int counter = 0;
         Boolean isHaveLevelBigDown = false;
         for (PositionRisk position : positions) {
-            if (position.getPositionAmt() != null && position.getPositionAmt().doubleValue() != 0) {
+            if (position.getPositionAmt() != null && position.getPositionAmt().doubleValue() > 0) {
                 Double rateLoss = Utils.rateOf2Double(position.getMarkPrice().doubleValue(), position.getEntryPrice().doubleValue()) * 100;
                 totalLoss += rateLoss;
                 counter++;
@@ -325,7 +331,7 @@ public class BinanceOrderTradingManager {
         }
         Double rateLossMax = RATE_LOSS_AVG_STOP_ALL;
         if (!isHaveLevelBigDown) {
-            rateLossMax = rateLossMax / 2;
+            rateLossMax = rateLossMax * 2 / 3;
         }
         double rateLossAvg = totalLoss / counter;
         if (-rateLossAvg > rateLossMax) {
@@ -336,13 +342,57 @@ public class BinanceOrderTradingManager {
         }
     }
 
+    public static void checkAndDca() {
+        try {
+            LOG.info("Get all position 2 check DCA.");
+            List<PositionRisk> positions = BinanceFuturesClientSingleton.getInstance().getAllPositionInfos();
+            List<PositionRisk> positions2DCA = new ArrayList<>();
+            for (PositionRisk position : positions) {
+                // only dca for BUY order
+                if (position.getPositionAmt() != null && position.getPositionAmt().doubleValue() > 0) {
+                    positions2DCA.add(position);
+
+                }
+            }
+            Utils.sendSms2Telegram("Check dca when big down for " + positions2DCA.size() + " orders!");
+            if (positions2DCA.size() <= 5) {
+                for (PositionRisk position : positions2DCA) {
+                    dcaForPosition(position);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void dcaForPosition(PositionRisk pos) {
+        try {
+            LOG.info("DCA for {} {}", pos.getSymbol(), pos.getPositionAmt());
+            try {
+                Utils.sendSms2Telegram("Dca for " + pos.getSymbol() + " q: " + pos.getPositionAmt().doubleValue());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            OrderSide side = OrderSide.BUY;
+            if (pos.getPositionAmt().doubleValue() < 0) {
+                side = OrderSide.SELL;
+            }
+            OrderHelper.dcaForPosition(pos.getSymbol(), side, Math.abs(pos.getPositionAmt().doubleValue()),
+                    BudgetManager.getInstance().getLeverage());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
     private void stopLossOrder(PositionRisk position) {
         OrderHelper.takeProfitPosition(position);
     }
 
     private void stopLossAllOrder(List<PositionRisk> positions) {
         for (PositionRisk position : positions) {
-            stopLossOrder(position);
+            if (position.getPositionAmt() != null && position.getPositionAmt().doubleValue() != 0) {
+                stopLossOrder(position);
+            }
         }
     }
 
@@ -362,18 +412,19 @@ public class BinanceOrderTradingManager {
                 target = 2 * target;
             }
 
-            if (StringUtils.equals(marketLevel, MarketLevelChange.VOLUME_BIG_CHANGE.toString())) {
+            if (StringUtils.equals(marketLevel, MarketLevelChange.SMALL_UP.toString())) {
+                target = 0.007;
+            }
+            if (StringUtils.equals(marketLevel, MarketLevelChange.ALT_BIG_CHANGE_REVERSE.toString())
+                    || StringUtils.equals(marketLevel, MarketLevelChange.ALT_BIG_CHANGE_REVERSE_EXTEND.toString())) {
                 target = 0.007;
             }
 
-            if (StringUtils.equals(marketLevel, MarketLevelChange.MINI_DOWN_EXTEND.toString())) {
-                target = 0.007;
-            }
-            if (StringUtils.equals(marketLevel, MarketLevelChange.BTC_SMALL_CHANGE_REVERSE.toString())) {
-                target = 0.007;
-            }
 
             Double priceTp = Utils.calPriceTarget(pos.getSymbol(), pos.getEntryPrice().doubleValue(), OrderSide.BUY, target);
+            if (pos.getPositionAmt().doubleValue() < 0) {
+                priceTp = Utils.calPriceTarget(pos.getSymbol(), pos.getEntryPrice().doubleValue(), OrderSide.SELL, target);
+            }
             List<Order> openOrders = BinanceFuturesClientSingleton.getInstance().getOpenOrders(pos.getSymbol());
             if (!openOrders.isEmpty()) {
                 for (Order openOrder : openOrders) {
@@ -390,20 +441,35 @@ public class BinanceOrderTradingManager {
             }
             // chua co tp -> tao tp
             Double currentPrice = ClientSingleton.getInstance().getCurrentPrice(pos.getSymbol());
-            for (int i = 1; i < 50; i++) {
-                priceTp = Utils.calPriceTarget(pos.getSymbol(), pos.getEntryPrice().doubleValue(), OrderSide.BUY, target * i);
-                if (priceTp > currentPrice) {
-                    break;
-                }
 
+            String log;
+            if (pos.getPositionAmt().doubleValue() > 0) {
+                for (int i = 1; i < 50; i++) {
+                    priceTp = Utils.calPriceTarget(pos.getSymbol(), pos.getEntryPrice().doubleValue(), OrderSide.BUY, target * i);
+                    if (priceTp > currentPrice) {
+                        break;
+                    }
+                }
+                log = "Create tp -> SELL "
+                        + pos.getSymbol() + " " + pos.getPositionAmt().doubleValue() + " " + pos.getEntryPrice().doubleValue()
+                        + " -> " + priceTp + " rate: " + Utils.formatPercent(Math.abs(Utils.rateOf2Double(priceTp, pos.getEntryPrice().doubleValue())))
+                        + " market level:" + getMarketLevel(pos.getSymbol());
+                OrderHelper.takeProfit(pos.getSymbol(), OrderSide.SELL, pos.getPositionAmt().doubleValue(), priceTp);
+            } else {
+                for (int i = 1; i < 50; i++) {
+                    priceTp = Utils.calPriceTarget(pos.getSymbol(), pos.getEntryPrice().doubleValue(), OrderSide.SELL, target * i);
+                    if (priceTp < currentPrice) {
+                        break;
+                    }
+                }
+                log = "Create tp -> BUY "
+                        + pos.getSymbol() + " " + pos.getPositionAmt().doubleValue() + " " + pos.getEntryPrice().doubleValue()
+                        + " -> " + priceTp + " rate: " + Utils.formatPercent(Math.abs(Utils.rateOf2Double(priceTp, pos.getEntryPrice().doubleValue())))
+                        + " market level:" + getMarketLevel(pos.getSymbol());
+                OrderHelper.takeProfit(pos.getSymbol(), OrderSide.BUY, pos.getPositionAmt().doubleValue(), priceTp);
             }
-            String log = "Create tp -> SELL "
-                    + pos.getSymbol() + " " + pos.getPositionAmt().doubleValue() + " " + pos.getEntryPrice().doubleValue()
-                    + " -> " + priceTp + " rate: " + Utils.formatPercent(Math.abs(Utils.rateOf2Double(priceTp, pos.getEntryPrice().doubleValue())))
-                    + " market level:" + getMarketLevel(pos.getSymbol());
             LOG.info(log);
             Utils.sendSms2Telegram(log);
-            OrderHelper.takeProfit(pos.getSymbol(), OrderSide.SELL, pos.getPositionAmt().doubleValue(), priceTp);
         } catch (Exception e) {
             e.printStackTrace();
         }

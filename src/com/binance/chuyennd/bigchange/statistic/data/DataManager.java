@@ -1,4 +1,4 @@
-package com.binance.chuyennd.research;
+package com.binance.chuyennd.bigchange.statistic.data;
 
 import com.binance.chuyennd.indicators.MACD;
 import com.binance.chuyennd.indicators.RelativeStrengthIndex;
@@ -91,7 +91,7 @@ public class DataManager {
         for (Map.Entry<Long, TreeMap<Long, Map<String, KlineObjectNumber>>> entry : date2timeAndSymbolKline.entrySet()) {
             Long date = entry.getKey();
             TreeMap<Long, Map<String, KlineObjectNumber>> values = entry.getValue();
-            String fileName = "storage/ticker/tickerFile/" + date;
+            String fileName = "../storage/ticker/tickerFile/" + date;
             Storage.writeObject2File(fileName, values);
         }
 

@@ -7,8 +7,10 @@ package com.binance.chuyennd.utils;
 
 import com.alibaba.fastjson.JSONObject;
 import com.binance.chuyennd.client.ClientSingleton;
+import com.binance.chuyennd.client.TickerFuturesHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.MACDEntry;
+import com.binance.client.constant.Constants;
 import com.binance.client.model.enums.OrderSide;
 import com.binance.client.model.trade.PositionRisk;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -537,6 +539,7 @@ public class Utils {
     public static String normalizeDateYYYYMMDDHHmm(Long input) {
         return sdfFileHour.format(new Date(input));
     }
+
     public static String normalizeHHmm(Long input) {
         return sdfHour.format(new Date(input));
     }
@@ -970,6 +973,7 @@ public class Utils {
         DecimalFormat formatter = new DecimalFormat("###.##");
         return formatter.format(revenue);
     }
+
     public static String formatMoneyByPeriod(Double revenue, int period) {
         if (revenue == null) {
             return null;
@@ -1016,7 +1020,7 @@ public class Utils {
     public static Double rateOf2DoubleIncre(Double start, Double end) {
         try {
             if (Math.abs(start) > Math.abs(end)) {
-                return (end -start) / start;
+                return (end - start) / start;
             } else {
                 return (start - end) / end;
             }
@@ -1145,7 +1149,8 @@ public class Utils {
 //        System.out.println(Utils.sendSms2Skype("test skype"));
 //        System.out.println(Utils.normalizeHHmm(System.currentTimeMillis()));
 //        Utils.sendSms2Telegram("test");
-        testDescendingKeySet();
+        checkTickerFalse();
+//        testDescendingKeySet();
 //        System.out.println(Utils.readSms2Telegram());
 //        Double test = 5.172E-4;
 //        System.out.println(Utils.formatMoney(test));
@@ -1157,23 +1162,39 @@ public class Utils {
 //        System.out.println(Utils.normalPrice2Api(48.18981633d));
     }
 
+    private static void checkTickerFalse() {
+        List<KlineObjectNumber> tickers = TickerFuturesHelper.getTicker("AGIXUSDT", Constants.INTERVAL_4H);
+        for (KlineObjectNumber ticker : tickers) {
+            LOG.info("{} {}", Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()), Utils.isTickerAvailable(ticker));
+        }
+    }
+
+    public static boolean isTickerAvailable(KlineObjectNumber ticker) {
+        if (ticker != null) {
+            if (!ticker.minPrice.equals(ticker.maxPrice)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static void testDescendingKeySet() {
         TreeMap<Integer, String> test = new TreeMap<>();
         for (Integer i = 0; i < 100; i++) {
             test.put(i, i.toString());
         }
         int counter = 0;
-        for (Integer key: test.keySet()){
+        for (Integer key : test.keySet()) {
             counter++;
-            if (counter >= 5){
+            if (counter >= 5) {
                 break;
             }
             LOG.info(key.toString());
         }
         counter = 0;
-        for (Integer key: test.descendingKeySet()){
+        for (Integer key : test.descendingKeySet()) {
             counter++;
-            if (counter >= 5){
+            if (counter >= 5) {
                 break;
             }
             LOG.info(key.toString());
@@ -1187,9 +1208,11 @@ public class Utils {
     public static long getHour(long time) {
         return (time / TIME_HOUR) * TIME_HOUR;
     }
+
     public static long getMinute(long time) {
         return (time / TIME_MINUTE) * TIME_MINUTE;
     }
+
     public static long getTimeInterval15m(long time) {
         return (time / (15 * TIME_MINUTE)) * 15 * TIME_MINUTE;
     }

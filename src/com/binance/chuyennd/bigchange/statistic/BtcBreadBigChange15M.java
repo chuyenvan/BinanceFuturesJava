@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.binance.chuyennd.bigchange.btctd;
+package com.binance.chuyennd.bigchange.statistic;
 
 import com.educa.chuyennd.funcs.BreadFunctions;
 import com.binance.chuyennd.client.ClientSingleton;

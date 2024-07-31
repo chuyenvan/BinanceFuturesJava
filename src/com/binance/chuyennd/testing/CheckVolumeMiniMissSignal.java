@@ -1,6 +1,6 @@
 package com.binance.chuyennd.testing;
 
-import com.binance.chuyennd.bigchange.btctd.BreadDetectObject;
+import com.binance.chuyennd.bigchange.statistic.BreadDetectObject;
 import com.binance.chuyennd.client.TickerFuturesHelper;
 import com.binance.chuyennd.indicators.SimpleMovingAverage1DManager;
 import com.binance.chuyennd.movingaverage.MAStatus;

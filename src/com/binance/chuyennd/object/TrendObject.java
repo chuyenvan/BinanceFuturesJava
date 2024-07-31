@@ -16,7 +16,6 @@
 package com.binance.chuyennd.object;
 
 /**
- *
  * @author pc
  */
 public class TrendObject {
@@ -46,4 +45,15 @@ public class TrendObject {
         this.kline = kline;
     }
 
+    public double getMaxPrice() {
+        return kline.maxPrice;
+    }
+
+    public double getMinPrice() {
+        return kline.minPrice;
+    }
+
+    public double getDefaultPrice() {
+        return kline.priceOpen;
+    }
 }

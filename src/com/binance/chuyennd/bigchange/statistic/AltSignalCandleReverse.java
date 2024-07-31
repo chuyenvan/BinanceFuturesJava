@@ -1,8 +1,8 @@
-package com.binance.chuyennd.bigchange.btctd;
+package com.binance.chuyennd.bigchange.statistic;
 
 import com.binance.chuyennd.bigchange.market.MarketBigChangeDetectorTest;
 import com.binance.chuyennd.object.KlineObjectNumber;
-import com.binance.chuyennd.research.DataManager;
+import com.binance.chuyennd.bigchange.statistic.data.DataManager;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
 import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.utils.Configs;
@@ -53,6 +53,7 @@ public class AltSignalCandleReverse {
             e.printStackTrace();
         }
     }
+
     private void multiStatisticAltTopMa20() throws ParseException {
 
 //        long start_time = Configs.getLong("start_time");
@@ -106,9 +107,10 @@ public class AltSignalCandleReverse {
 
     private String buildLineTest(OrderTargetInfoTest order, Double rateLoss) {
         return order.symbol + "," + Utils.normalizeDateYYYYMMDDHHmm(order.timeStart) + "," + Utils.normalizeDateYYYYMMDDHHmm(order.timeUpdate)
-                + "," + order.priceEntry + "," + order.priceTP + "," + order.lastPrice + "," +
+                + "," + order.priceEntry + "," + order.priceTP + "," + order.side + "," + order.lastPrice + "," +
                 order.volume + "," + order.rsi14 + "," + order.status + "," + rateLoss + "," +
-                order.maxPrice + "," + Utils.rateOf2Double(order.maxPrice, order.priceEntry) + ","
+                order.maxPrice + "," + Utils.rateOf2Double(order.maxPrice, order.priceEntry) + "," +
+                order.minPrice + "," + Utils.rateOf2Double(order.minPrice, order.priceEntry) + ","
                 + (order.timeUpdate - order.timeStart) / Utils.TIME_MINUTE;
     }
 
@@ -137,19 +139,22 @@ public class AltSignalCandleReverse {
             try {
                 for (int i = 0; i < tickers.size(); i++) {
                     KlineObjectNumber kline = tickers.get(i);
-//                    if (StringUtils.equals(symbol, "REZUSDT") && kline.startTime.longValue()
-//                            == Utils.sdfFileHour.parse("20240505 01:00").getTime()) {
-//                        System.out.println("Debug");
-//                    }
+                    if (StringUtils.equals(symbol, "TAOUSDT")
+                            && kline.startTime.longValue() == Utils.sdfFileHour.parse("20240705 19:15").getTime()) {
+                        System.out.println("Debug");
+                    }
 
-                    if (MarketBigChangeDetectorTest.getStatusTradingAlt15M(tickers, i) == 1
+//                    if (MarketBigChangeDetectorTest.getStatusTradingAlt15M(tickers, i) == 1
+                    OrderSide orderSide = MarketBigChangeDetectorTest.isAltVolumeReverse(tickers, i);
+                    if (orderSide != null
                     ) {
+//                        LOG.info("{} {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(kline.startTime.longValue()), orderSide);
                         try {
                             Double priceEntry = kline.priceClose;
-                            Double priceTarget = getPriceTarget(priceEntry, OrderSide.BUY, target);
+                            Double priceTarget = getPriceTarget(priceEntry, orderSide, target);
                             OrderTargetInfoTest orderTrade = new OrderTargetInfoTest(OrderTargetStatus.REQUEST, priceEntry,
                                     priceTarget, 1.0, 10, symbol, kline.startTime.longValue(),
-                                    kline.startTime.longValue(), OrderSide.BUY);
+                                    kline.startTime.longValue(), orderSide);
 
                             orderTrade.maxPrice = kline.priceClose;
                             orderTrade.minPrice = kline.minPrice;
@@ -175,6 +180,9 @@ public class AltSignalCandleReverse {
                                 if (orderTrade.maxPrice < ticker.maxPrice) {
                                     orderTrade.maxPrice = ticker.maxPrice;
                                 }
+                                if (orderTrade.minPrice > ticker.minPrice) {
+                                    orderTrade.minPrice = ticker.minPrice;
+                                }
 
                             }
                             if (!orderTrade.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)
@@ -193,14 +201,15 @@ public class AltSignalCandleReverse {
                 e.printStackTrace();
             }
         }
-        for (int minEntry = 5; minEntry < 16; minEntry++) {
-            for (int numberOrder2Trade = 4; numberOrder2Trade < 10; numberOrder2Trade++) {
+        for (int minEntry = 5; minEntry < 6; minEntry++) {
+            for (int numberOrder2Trade = 4; numberOrder2Trade < 5; numberOrder2Trade++) {
                 // remove order by rule
                 counterTotal = 0;
                 counterSuccess = 0;
                 counterStoploss = 0;
                 totalLoss = 0.0;
-                List<OrderTargetInfoTest> orders = cleanOrder(orderTrades, numberOrder2Trade, minEntry);
+//                List<OrderTargetInfoTest> orders = cleanOrder(orderTrades, numberOrder2Trade, minEntry);
+                List<OrderTargetInfoTest> orders = orderTrades;
 
                 if (!orderTrades.isEmpty()) {
                     lines.addAll(printResultTradeTest(orders));
@@ -509,9 +518,9 @@ public class AltSignalCandleReverse {
                 for (OrderTargetInfoTest order : orderOfTime) {
 //                    if (order.tickerClose != null) {
 //                        Double rateChangeVolume = Utils.rateOf2Double(order.tickerOpen.ma20, order.tickerClose.ma20);
-                        Double rateChangeVolume = Utils.rateOf2Double(order.tickerClose.rsi, order.tickerOpen.rsi);
+                    Double rateChangeVolume = Utils.rateOf2Double(order.tickerClose.rsi, order.tickerOpen.rsi);
 //                    Double rateChangeVolume = Utils.rateOf2Double(order.tickerOpen.priceClose, order.tickerOpen.priceOpen);
-                    rateChange2Symbol.put(- rateChangeVolume, order);
+                    rateChange2Symbol.put(-rateChangeVolume, order);
 //                    }
                 }
                 int counter = 0;
@@ -547,8 +556,82 @@ public class AltSignalCandleReverse {
         }
     }
 
+    public static void updateRateChangeAvg2Ma20(List<KlineObjectNumber> altTickers, Integer index) {
+        try {
+            if (index < 100) {
+                return;
+            }
+            Double priceChange = 0d;
+            for (int i = 0; i < 100; i++) {
+                KlineObjectNumber kline = altTickers.get(index - i);
+                priceChange += Utils.rateOf2Double(kline.priceClose, kline.priceOpen);
+            }
+            altTickers.get(index).ma20 = priceChange;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    private static void testSignalChuyennd() {
+        List<KlineObjectNumber> tickers = (List<KlineObjectNumber>) Storage.readObjectFromFile(DataManager.FOLDER_TICKER_15M + "TAOUSDT");
+        try {
+            for (int i = 0; i < tickers.size(); i++) {
+                updateRateChangeAvg2Ma20(tickers, i);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+//        prinDataRateChangeAvg(tickers);
+        for (int i = 0; i < tickers.size(); i++) {
+            OrderSide side = null;
+            KlineObjectNumber ticker;
+            for (int j = 0; j < 100; j++) {
+                if (i - j < 0) {
+                    break;
+                }
+                ticker = tickers.get(i - j);
+                if (ticker.ma20 * 100 <= -5) {
+                    for (int k = 0; k < 10; k++) {
+                        KlineObjectNumber lastTicker = tickers.get(i - j - k);
+                        if (lastTicker.ma20 < ticker.ma20 && tickers.get(i).ma20 * 100 < 5) {
+                            side = OrderSide.BUY;
+                            break;
+                        }
+                    }
+                    if (side != null) {
+                        break;
+                    }
+                }
+                if (ticker.ma20 * 100 >= 5) {
+                    for (int k = 0; k < 10; k++) {
+                        KlineObjectNumber lastTicker = tickers.get(i - j - k);
+                        if (lastTicker.ma20 > ticker.ma20 && tickers.get(i).ma20 * 100 > -5) {
+                            side = OrderSide.SELL;
+                            break;
+                        }
+                    }
+                    if (side != null) {
+                        break;
+                    }
+                }
+            }
+            ticker = tickers.get(i);
+            LOG.info("{} {} {}", Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()), ticker.ma20 * 100, side);
+        }
+    }
+
+
+    private static void printDataRateChangeAvg(List<KlineObjectNumber> tickers) {
+        for (int i = 0; i < tickers.size(); i++) {
+            KlineObjectNumber ticker = tickers.get(i);
+            LOG.info("{} {}", Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()), ticker.ma20 * 100);
+        }
+    }
+
     public static void main(String[] args) throws ParseException {
         new AltSignalCandleReverse().multiStatisticAltReverse15m();
+//        testSignalChuyennd();
 //        new AltSignalCandleReverse().multiStatisticAltReverse1h();
 //        new AltSignalCandleReverse().multiStatisticAltTopMa20();
         System.exit(1);

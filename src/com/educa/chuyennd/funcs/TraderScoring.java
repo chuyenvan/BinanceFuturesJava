@@ -1,6 +1,6 @@
 package com.educa.chuyennd.funcs;
 
-import com.binance.chuyennd.bigchange.btctd.BreadDetectObject;
+import com.binance.chuyennd.bigchange.statistic.BreadDetectObject;
 import com.binance.chuyennd.client.TickerFuturesHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.research.OrderTargetInfoTest;

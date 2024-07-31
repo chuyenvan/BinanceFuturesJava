@@ -178,7 +178,7 @@ public class SignalTradingViewManager {
                     priceTarget, quantity, BudgetManager.getInstance().getLeverage(), symbol,
                     System.currentTimeMillis(), System.currentTimeMillis(),
                     sideSignal);
-            RedisHelper.getInstance().get().rpush(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER_QUEUE, Utils.toJson(orderTrade));
+//            RedisHelper.getInstance().get().rpush(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER_QUEUE, Utils.toJson(orderTrade));
 
             LOG.info("{} {} entry:{} target:{} quantity:{} ", sideSignal,
                     symbol, priceEntry, priceTarget, quantity);

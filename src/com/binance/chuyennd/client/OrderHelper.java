@@ -254,7 +254,4 @@ public class OrderHelper {
         newOrderMarket(symbol, side, quantity, leverage);
     }
 
-    public static Order readOrderInfo(String symbol, Long orderId) {
-        return ClientSingleton.getInstance().syncRequestClient.getOrder(symbol, orderId, orderId.toString());
-    }
 }

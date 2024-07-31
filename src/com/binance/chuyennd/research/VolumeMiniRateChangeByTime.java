@@ -1,6 +1,7 @@
 package com.binance.chuyennd.research;
 
-import com.binance.chuyennd.bigchange.btctd.BreadDetectObject;
+import com.binance.chuyennd.bigchange.statistic.BreadDetectObject;
+import com.binance.chuyennd.bigchange.statistic.data.DataManager;
 import com.binance.chuyennd.indicators.SimpleMovingAverage1DManager;
 import com.binance.chuyennd.movingaverage.MAStatus;
 import com.binance.chuyennd.object.KlineObjectNumber;
@@ -9,7 +10,6 @@ import com.binance.chuyennd.utils.Storage;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
 import com.educa.chuyennd.funcs.BreadFunctions;
-import com.educa.chuyennd.funcs.TraderScoring;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -62,11 +62,11 @@ public class VolumeMiniRateChangeByTime {
                                 Utils.getDate(kline.startTime.longValue() - Utils.TIME_DAY));
                         Double rateMa = Utils.rateOf2Double(kline.priceClose, maValue);
 
-                        if (BreadFunctions.isAvailableTrade(breadData, kline, maStatus, maValue, rateChange, rateMa, RATE_MA_MAX)) {
-                            StringBuilder builder = TraderScoring.buildLineData(tickers, maValue, i, symbol, breadData, rateMa);
-                            lines.add(builder.toString());
-
-                        }
+//                        if (BreadFunctions.isAvailableTrade(breadData, kline, maStatus, maValue, rateChange, rateMa, RATE_MA_MAX)) {
+//                            StringBuilder builder = TraderScoring.buildLineData(tickers, maValue, i, symbol, breadData, rateMa);
+//                            lines.add(builder.toString());
+//
+//                        }
                     }
                 }
             } catch (Exception e) {

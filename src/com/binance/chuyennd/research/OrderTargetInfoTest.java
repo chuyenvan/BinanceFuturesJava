@@ -52,6 +52,7 @@ public class OrderTargetInfoTest implements Serializable {
     public Double ma201d;
     public MAStatus maStatus1d;
     public MarketLevelChange marketLevelChange;
+    public String lastMarketLevelChange;
     public Integer dcaLevel;
     public KlineObjectNumber tickerOpen;
     public KlineObjectNumber tickerClose;
@@ -127,7 +128,11 @@ public class OrderTargetInfoTest implements Serializable {
     }
 
     public Double calProfit() {
-        return quantity * (lastPrice - priceEntry);
+        double profit = quantity * (lastPrice - priceEntry);
+        if (side.equals(OrderSide.SELL)) {
+            profit = quantity * (priceEntry - lastPrice);
+        }
+        return profit;
     }
 
     public Double calMargin() {
@@ -135,7 +140,11 @@ public class OrderTargetInfoTest implements Serializable {
     }
 
     public Double calProfitMin() {
-        return quantity * (minPrice - priceEntry);
+        double profitMin = quantity * (minPrice - priceEntry);
+        if (side.equals(OrderSide.SELL)) {
+            profitMin = quantity * (priceEntry - maxPrice);
+        }
+        return profitMin;
     }
 
 }

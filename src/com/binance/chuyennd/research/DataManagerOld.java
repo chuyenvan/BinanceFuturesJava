@@ -1,5 +1,6 @@
 package com.binance.chuyennd.research;
 
+import com.binance.chuyennd.bigchange.statistic.data.DataManager;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Storage;

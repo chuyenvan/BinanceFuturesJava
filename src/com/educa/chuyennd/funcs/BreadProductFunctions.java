@@ -15,15 +15,13 @@
  */
 package com.educa.chuyennd.funcs;
 
-import com.binance.chuyennd.bigchange.btctd.BreadDetectObject;
+import com.binance.chuyennd.bigchange.statistic.BreadDetectObject;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.model.enums.OrderSide;
-import com.binance.client.model.event.CandlestickEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
 import java.util.TreeMap;
 
 /**

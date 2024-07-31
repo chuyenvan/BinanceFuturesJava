@@ -4,9 +4,8 @@
  */
 package com.binance.chuyennd.research;
 
-import com.binance.chuyennd.bigchange.btctd.BreadDetectObject;
+import com.binance.chuyennd.bigchange.statistic.BreadDetectObject;
 import com.binance.chuyennd.indicators.SimpleMovingAverage1DManager;
-import com.binance.chuyennd.indicators.SimpleMovingAverage1HourManager;
 import com.binance.chuyennd.mongo.TickerMongoHelper;
 import com.binance.chuyennd.movingaverage.MAStatus;
 import com.binance.chuyennd.object.KlineObjectNumber;
@@ -288,14 +287,14 @@ public class SimulatorTradingVolumeMiniStopLoss {
             return;
         }
 
-        if (BreadFunctions.isAvailableTrade(breadData, ticker, maStatus,  maValue, rateChange, rateMa, RATE_MA_MAX)) {
-            LOG.info("Big:{} {} {} rate:{} volume: {}", symbol, new Date(ticker.startTime.longValue()), breadData.orderSide, breadData.totalRate, ticker.totalUsdt);
-            if (BudgetManagerTest.getInstance().isAvailableTrade()) {
-                createOrderNew(symbol, ticker, breadData);
-            } else {
-                LOG.info("Stop trade because capital over: {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()));
-            }
-        }
+//        if (BreadFunctions.isAvailableTrade(breadData, ticker, maStatus,  maValue, rateChange, rateMa, RATE_MA_MAX)) {
+//            LOG.info("Big:{} {} {} rate:{} volume: {}", symbol, new Date(ticker.startTime.longValue()), breadData.orderSide, breadData.totalRate, ticker.totalUsdt);
+//            if (BudgetManagerTest.getInstance().isAvailableTrade()) {
+//                createOrderNew(symbol, ticker, breadData);
+//            } else {
+//                LOG.info("Stop trade because capital over: {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()));
+//            }
+//        }
     }
 
     private void stopLossOrder(String symbol, KlineObjectNumber ticker) {

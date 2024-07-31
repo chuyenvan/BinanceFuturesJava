@@ -15,9 +15,8 @@
  */
 package com.educa.chuyennd.funcs;
 
-import com.binance.chuyennd.bigchange.btctd.BreadDetectObject;
+import com.binance.chuyennd.bigchange.statistic.BreadDetectObject;
 import com.binance.chuyennd.mongo.TickerMongoHelper;
-import com.binance.chuyennd.movingaverage.MAStatus;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.model.enums.OrderSide;
@@ -144,6 +143,36 @@ public class BreadFunctions {
 
     }
 
+    public static BreadDetectObject calBreadDataAltWithBtcTrend(KlineObjectNumber kline) {
+        Double beardAbove;
+        Double beardBelow;
+        OrderSide klineSide;
+        if (kline.priceClose > kline.priceOpen) {
+            klineSide = OrderSide.BUY;
+            beardAbove = kline.maxPrice - kline.priceClose;
+            beardBelow = kline.priceOpen - kline.minPrice;
+        } else {
+            klineSide = OrderSide.SELL;
+            beardAbove = kline.maxPrice - kline.priceOpen;
+            beardBelow = kline.priceClose - kline.minPrice;
+        }
+        Double rateChange = Math.abs(Utils.rateOf2Double(kline.priceOpen, kline.priceClose));
+        double totalRate = Math.abs(Utils.rateOf2Double(kline.maxPrice, kline.minPrice));
+        double rateChangeAbove = beardAbove / kline.priceClose;
+        double rateChangeBelow = beardBelow / kline.priceClose;
+        OrderSide side = null;
+        if (klineSide.equals(OrderSide.SELL) ) {
+            if (rateChangeBelow > rateChangeAbove) {
+                side = OrderSide.BUY;
+            }
+        } else {
+            if (klineSide.equals(OrderSide.BUY)) {
+                side = OrderSide.SELL;
+            }
+        }
+        return new BreadDetectObject(rateChange, rateChangeAbove, rateChangeBelow, totalRate, side, kline.totalUsdt);
+
+    }
     public static BreadDetectObject calBreadData(CandlestickEvent event, Double rateBread) {
         Double beardAbove;
         Double beardBelow;
@@ -241,13 +270,9 @@ public class BreadFunctions {
         LOG.info("Finish update volume and rate change with rate success: {}", rateSuccessTarget);
     }
 
-    public static boolean isAvailableTrade(BreadDetectObject breadData, KlineObjectNumber kline, MAStatus maStatus,
-                                           Double maValue, Double rateChange, Double rateMa, Double RATE_MA_MAX) {
+    public static boolean isAvailableTrade(BreadDetectObject breadData, KlineObjectNumber kline, Double rateChange) {
         if (breadData.orderSide != null
-                && maStatus != null && maStatus.equals(MAStatus.TOP)
                 && breadData.orderSide.equals(OrderSide.BUY)
-                && kline.minPrice > maValue
-                && rateMa < RATE_MA_MAX
                 && kline.ma20 != null && kline.priceClose < kline.ma20
                 && breadData.totalRate >= rateChange) {
             return true;

@@ -18,14 +18,16 @@ package com.binance.chuyennd.object;
 import java.util.List;
 
 /**
- *
  * @author pc
  */
 public class TrendObjectDetail {
 
     public TrendState status;
+//    public List<TrendObject> topBottonObjects;
     public List<TrendObject> topBottonObjects;
-    public long startTimeTrend =0;
+    public Double maxPrice;
+    public Double minPrice;
+    public long startTimeTrend = 0;
     public long endTimeTrend = 0;
     public long timeNextTrend = 0;
 
@@ -34,4 +36,13 @@ public class TrendObjectDetail {
         this.topBottonObjects = klines;
     }
 
+    public void updatePriceRange(TrendObject trend) {
+        if (maxPrice == null || maxPrice < trend.kline.maxPrice) {
+            maxPrice = trend.kline.maxPrice;
+        }
+        if (minPrice == null || minPrice > trend.kline.minPrice) {
+            minPrice = trend.kline.minPrice;
+        }
+
+    }
 }
