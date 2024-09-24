@@ -1,5 +1,6 @@
 package com.binance.chuyennd.bigchange.statistic.data;
 
+import com.binance.chuyennd.client.TickerFuturesHelper;
 import com.binance.chuyennd.indicators.MACD;
 import com.binance.chuyennd.indicators.RelativeStrengthIndex;
 import com.binance.chuyennd.indicators.SimpleMovingAverage;
@@ -7,6 +8,7 @@ import com.binance.chuyennd.object.IndicatorEntry;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.MACDEntry;
 import com.binance.chuyennd.object.RsiEntry;
+import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Storage;
 import com.binance.chuyennd.utils.Utils;
@@ -22,15 +24,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class DataManager {
     public static final Logger LOG = LoggerFactory.getLogger(DataManager.class);
-    public static String FOLDER_TICKER_15M = Configs.getString("FOLDER_TICKER_15M");//"../ticker/storage/ticker/symbols-15m/";
-    public static String FOLDER_TICKER_15M_FILE = Configs.getString("FOLDER_TICKER_15M_FILE");//"../ticker/storage/ticker/symbols-15m/";
-    public static String FOLDER_TICKER_HOUR = Configs.getString("FOLDER_TICKER_1H");//"../ticker/storage/ticker/symbols-1h/";
-    public static String FOLDER_TICKER_4HOUR = Configs.getString("FOLDER_TICKER_4H");//"../ticker/storage/ticker/symbols-4h/";
-    public static String FOLDER_TICKER_1D = Configs.getString("FOLDER_TICKER_1D");//"../ticker/storage/ticker/symbols-1D/";
-    public static String FILE_DATA_LOADED = Configs.getString("FILE_DATA_LOADED");//"storage/macd_data_time";
-    public static String FILE_DATA_BTC_RATING = Configs.getString("FILE_DATA_BTC_RATING_15M");//"storage/macd_data_time";
+
     private static volatile DataManager INSTANCE = null;
-    public static final String TIME_RUN = Configs.getString("TIME_RUN");
     public ConcurrentHashMap<String, Map<String, Map<Long, KlineObjectNumber>>> interval2Symbol2TimeAndTicker;
     public ConcurrentHashMap<String, Map<String, List<KlineObjectNumber>>> interval2Symbol2Tickers;
 
@@ -38,7 +33,7 @@ public class DataManager {
         if (INSTANCE == null) {
             INSTANCE = new DataManager();
             try {
-                Long startTime = Utils.sdfFile.parse(TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
+                Long startTime = Utils.sdfFile.parse(Configs.TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
                 INSTANCE.initData(startTime);
             } catch (Exception e) {
                 e.printStackTrace();
@@ -47,12 +42,12 @@ public class DataManager {
         return INSTANCE;
     }
 
-    public static TreeMap<Long, Map<String, KlineObjectNumber>> readDataFromFile(Long startTime) {
+    public static TreeMap<Long, Map<String, KlineObjectNumber>> readData15mFromFile(Long startTime) {
         try {
-            if (!new File(FOLDER_TICKER_15M_FILE).exists()) {
+            if (!new File(Configs.FOLDER_TICKER_15M_FILE).exists()) {
                 DataManager.createDataKlineByTime();
             }
-            String fileName = FOLDER_TICKER_15M_FILE + startTime;
+            String fileName = Configs.FOLDER_TICKER_15M_FILE + startTime;
             if (new File(fileName).exists()) {
                 return (TreeMap<Long, Map<String, KlineObjectNumber>>) Storage.readObjectFromFile(fileName);
             }
@@ -62,30 +57,47 @@ public class DataManager {
         return null;
     }
 
+    public static TreeMap<Long, Map<String, KlineObjectSimple>> readDataFromFile1M(Long startTime) {
+        try {
+            String fileName = Configs.FOLDER_TICKER_1M_FILE + startTime;
+            if (new File(fileName).exists()) {
+                return (TreeMap<Long, Map<String, KlineObjectSimple>>) Storage.readObjectFromFile(fileName);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
     public static void createDataKlineByTime() {
-        LOG.info("Create data by time from ticker file!");
-        File[] symbolFiles = new File(FOLDER_TICKER_15M).listFiles();
+        LOG.info("Create data by time from ticker 15m file!");
+        File[] symbolFiles = new File(Configs.FOLDER_TICKER_15M).listFiles();
         Map<Long, TreeMap<Long, Map<String, KlineObjectNumber>>> date2timeAndSymbolKline = new HashMap<>();
         for (File symbolFile : symbolFiles) {
             String symbol = symbolFile.getName();
             if (!StringUtils.endsWithIgnoreCase(symbol, "usdt")) {
                 continue;
             }
-            List<KlineObjectNumber> tickers = (List<KlineObjectNumber>) Storage.readObjectFromFile(symbolFile.getPath());
-            for (KlineObjectNumber ticker : tickers) {
-                Long time = ticker.startTime.longValue();
-                Long date = Utils.getDate(time);
-                TreeMap<Long, Map<String, KlineObjectNumber>> time2SymbolKline = date2timeAndSymbolKline.get(date);
-                if (time2SymbolKline == null) {
-                    time2SymbolKline = new TreeMap<>();
+            try {
+                List<KlineObjectNumber> tickers = (List<KlineObjectNumber>) Storage.readObjectFromFile(symbolFile.getPath());
+                for (KlineObjectNumber ticker : tickers) {
+                    Long time = ticker.startTime.longValue();
+                    Long date = Utils.getDate(time);
+                    TreeMap<Long, Map<String, KlineObjectNumber>> time2SymbolKline = date2timeAndSymbolKline.get(date);
+                    if (time2SymbolKline == null) {
+                        time2SymbolKline = new TreeMap<>();
+                    }
+                    Map<String, KlineObjectNumber> symbol2Kline = time2SymbolKline.get(time);
+                    if (symbol2Kline == null) {
+                        symbol2Kline = new TreeMap<>();
+                    }
+                    symbol2Kline.put(symbol, ticker);
+                    time2SymbolKline.put(time, symbol2Kline);
+                    date2timeAndSymbolKline.put(date, time2SymbolKline);
                 }
-                Map<String, KlineObjectNumber> symbol2Kline = time2SymbolKline.get(time);
-                if (symbol2Kline == null) {
-                    symbol2Kline = new TreeMap<>();
-                }
-                symbol2Kline.put(symbol, ticker);
-                time2SymbolKline.put(time, symbol2Kline);
-                date2timeAndSymbolKline.put(date, time2SymbolKline);
+            } catch (Exception e) {
+                LOG.info("Error get data file:{}", symbolFile.getPath());
+                e.printStackTrace();
             }
         }
         for (Map.Entry<Long, TreeMap<Long, Map<String, KlineObjectNumber>>> entry : date2timeAndSymbolKline.entrySet()) {
@@ -98,8 +110,49 @@ public class DataManager {
         LOG.info("Finish create data by time from ticker file!");
     }
 
+    public static void createDataKline1MByTime() {
+        LOG.info("Create data by time from ticker 1m file!");
+        File[] symbolFiles = new File(Configs.FOLDER_TICKER_1M).listFiles();
+        Map<Long, TreeMap<Long, Map<String, KlineObjectNumber>>> date2timeAndSymbolKline = new HashMap<>();
+        for (File symbolFile : symbolFiles) {
+            String symbol = symbolFile.getName();
+            if (!StringUtils.endsWithIgnoreCase(symbol, "usdt")) {
+                continue;
+            }
+            try {
+                List<KlineObjectNumber> tickers = (List<KlineObjectNumber>) Storage.readObjectFromFile(symbolFile.getPath());
+                for (KlineObjectNumber ticker : tickers) {
+                    Long time = ticker.startTime.longValue();
+                    Long date = Utils.getDate(time);
+                    TreeMap<Long, Map<String, KlineObjectNumber>> time2SymbolKline = date2timeAndSymbolKline.get(date);
+                    if (time2SymbolKline == null) {
+                        time2SymbolKline = new TreeMap<>();
+                    }
+                    Map<String, KlineObjectNumber> symbol2Kline = time2SymbolKline.get(time);
+                    if (symbol2Kline == null) {
+                        symbol2Kline = new TreeMap<>();
+                    }
+                    symbol2Kline.put(symbol, ticker);
+                    time2SymbolKline.put(time, symbol2Kline);
+                    date2timeAndSymbolKline.put(date, time2SymbolKline);
+                }
+            } catch (Exception e) {
+                LOG.info("Error get data file:{}", symbolFile.getPath());
+                e.printStackTrace();
+            }
+        }
+        for (Map.Entry<Long, TreeMap<Long, Map<String, KlineObjectNumber>>> entry : date2timeAndSymbolKline.entrySet()) {
+            Long date = entry.getKey();
+            TreeMap<Long, Map<String, KlineObjectNumber>> values = entry.getValue();
+            String fileName = Configs.FOLDER_TICKER_1M_FILE + date;
+            Storage.writeObject2File(fileName, values);
+        }
+
+        LOG.info("Finish create data by time from ticker file!");
+    }
+
     private void initData(Long startTime) {
-        String fileData = FILE_DATA_LOADED + startTime;
+        String fileData = Configs.FILE_DATA_LOADED + startTime;
         if (new File(fileData).exists()) {
             interval2Symbol2Tickers = (ConcurrentHashMap<String, Map<String, List<KlineObjectNumber>>>) Storage.readObjectFromFile(fileData);
         } else {
@@ -134,13 +187,13 @@ public class DataManager {
         String folderData = null;
         switch (interval) {
             case Constants.INTERVAL_1H:
-                folderData = FOLDER_TICKER_HOUR;
+                folderData = Configs.FOLDER_TICKER_HOUR;
                 break;
             case Constants.INTERVAL_4H:
-                folderData = FOLDER_TICKER_4HOUR;
+                folderData = Configs.FOLDER_TICKER_4HOUR;
                 break;
             case Constants.INTERVAL_1D:
-                folderData = FOLDER_TICKER_1D;
+                folderData = Configs.FOLDER_TICKER_1D;
                 break;
         }
         if (folderData != null) {
@@ -159,7 +212,7 @@ public class DataManager {
 
     public static Map<String, List<KlineObjectNumber>> readDataTicker(long startTime) {
         Map<String, List<KlineObjectNumber>> symbol2Tickers = null;
-        String fileName = FOLDER_TICKER_15M + startTime + ".data";
+        String fileName = Configs.FOLDER_TICKER_15M + startTime + ".data";
         File fileDataAll = new File(fileName);
         if (fileDataAll.exists() && fileDataAll.lastModified() > Utils.getStartTimeDayAgo(1)) {
             symbol2Tickers = (Map<String, List<KlineObjectNumber>>) Storage.readObjectFromFile(fileName);
@@ -173,7 +226,7 @@ public class DataManager {
 
     public static Map<String, List<KlineObjectNumber>> readFromFileSymbol(long startTime) {
         Map<String, List<KlineObjectNumber>> symbol2Tickers = new HashMap<>();
-        File[] symbolFiles = new File(FOLDER_TICKER_15M).listFiles();
+        File[] symbolFiles = new File(Configs.FOLDER_TICKER_15M).listFiles();
         long startAt = System.currentTimeMillis();
         for (File symbolFile : symbolFiles) {
             String symbol = symbolFile.getName();
@@ -287,4 +340,6 @@ public class DataManager {
         }
         ticker.totalUsdt += ticker15m.totalUsdt;
     }
+
+
 }

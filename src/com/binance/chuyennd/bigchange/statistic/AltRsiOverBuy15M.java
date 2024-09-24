@@ -4,7 +4,6 @@ import com.binance.chuyennd.indicators.RelativeStrengthIndex;
 import com.binance.chuyennd.indicators.SimpleMovingAverage1DManager;
 import com.binance.chuyennd.movingaverage.MAStatus;
 import com.binance.chuyennd.object.KlineObjectNumber;
-import com.binance.chuyennd.bigchange.statistic.data.DataManager;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
 import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.utils.Configs;
@@ -102,7 +101,7 @@ public class AltRsiOverBuy15M {
                 + "," + order.volume + "," + order.avgVolume24h + "," + order.rateChange
                 + "," + orderState + "," + rateLoss + "," + order.maxPrice + ","
                 + Utils.rateOf2Double(order.maxPrice, order.priceEntry) + "," + (order.timeUpdate - order.timeStart) / Utils.TIME_MINUTE
-                + "," + maStatus + "," + order.rsi14;
+                + "," + maStatus + "," + order.rateBtc15m;
     }
 
 
@@ -113,7 +112,7 @@ public class AltRsiOverBuy15M {
         totalLoss = 0.0;
 
         List<String> lines = new ArrayList<>();
-        for (File file : new File(DataManager.FOLDER_TICKER_15M).listFiles()) {
+        for (File file : new File(Configs.FOLDER_TICKER_15M).listFiles()) {
 //            LOG.info("{} {}", file.getName(), file.getPath());
             String symbol = file.getName();
             if (Constants.diedSymbol.contains(symbol) || !StringUtils.containsIgnoreCase(symbol, "usdt")) {

@@ -4,7 +4,6 @@ import com.binance.chuyennd.indicators.MACDTradingController;
 import com.binance.chuyennd.indicators.SimpleMovingAverage1DManager;
 import com.binance.chuyennd.movingaverage.MAStatus;
 import com.binance.chuyennd.object.KlineObjectNumber;
-import com.binance.chuyennd.bigchange.statistic.data.DataManager;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
 import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.utils.Configs;
@@ -19,9 +18,10 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.text.ParseException;
-import java.util.*;
-
-import static com.binance.chuyennd.bigchange.statistic.data.DataManager.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * @author pc
@@ -93,7 +93,7 @@ public class AltMACDTrendBuy15MOld {
         MAStatus maStatus = SimpleMovingAverage1DManager.getInstance().getMaStatus(order.timeStart, order.symbol);
         return order.symbol + "," + Utils.normalizeDateYYYYMMDDHHmm(order.timeStart) + "," + Utils.normalizeDateYYYYMMDDHHmm(order.timeUpdate)
                 + "," + order.priceEntry + "," + order.priceTP + "," + order.lastPrice
-                + "," + order.volume + "," + order.rsi14
+                + "," + order.volume + "," + order.rateBtc15m
                 + "," + order.status + "," + rateLoss + "," + order.maxPrice + ","
                 + Utils.rateOf2Double(order.maxPrice, order.priceEntry) + "," + (order.timeUpdate - order.timeStart) / Utils.TIME_MINUTE
                 + "," + maStatus;
@@ -107,7 +107,7 @@ public class AltMACDTrendBuy15MOld {
         totalLoss = 0.0;
 
         List<String> lines = new ArrayList<>();
-        File[] symbolFiles = new File(DataManager.FOLDER_TICKER_15M).listFiles();
+        File[] symbolFiles = new File(Configs.FOLDER_TICKER_15M).listFiles();
 
         for (File symbolFile : symbolFiles) {
             String symbol = symbolFile.getName();
@@ -122,9 +122,9 @@ public class AltMACDTrendBuy15MOld {
 //            }
 //            LOG.info("Statistic of symbol: {}", symbol);
             List<KlineObjectNumber> tickers = (List<KlineObjectNumber>) Storage.readObjectFromFile(symbolFile.getPath());
-            List<KlineObjectNumber> ticker1Hs = (List<KlineObjectNumber>) Storage.readObjectFromFile(FOLDER_TICKER_HOUR + symbol);
-            List<KlineObjectNumber> ticker4Hs = (List<KlineObjectNumber>) Storage.readObjectFromFile(FOLDER_TICKER_4HOUR + symbol);
-            List<KlineObjectNumber> ticker1Ds = (List<KlineObjectNumber>) Storage.readObjectFromFile(FOLDER_TICKER_1D + symbol);
+            List<KlineObjectNumber> ticker1Hs = (List<KlineObjectNumber>) Storage.readObjectFromFile(Configs.FOLDER_TICKER_HOUR + symbol);
+            List<KlineObjectNumber> ticker4Hs = (List<KlineObjectNumber>) Storage.readObjectFromFile(Configs.FOLDER_TICKER_4HOUR + symbol);
+            List<KlineObjectNumber> ticker1Ds = (List<KlineObjectNumber>) Storage.readObjectFromFile(Configs.FOLDER_TICKER_1D + symbol);
 //            LOG.info("{} {} {} {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(ticker1Ds.get(ticker1Ds.size() - 1).startTime.longValue())
 //                    , Utils.normalizeDateYYYYMMDDHHmm(ticker4Hs.get(ticker4Hs.size() - 1).startTime.longValue())
 //                    , Utils.normalizeDateYYYYMMDDHHmm(ticker1Hs.get(ticker1Hs.size() - 1).startTime.longValue())
@@ -185,7 +185,7 @@ public class AltMACDTrendBuy15MOld {
                             orderTrade.maxPrice = kline.priceClose;
                             orderTrade.minPrice = kline.minPrice;
                             orderTrade.volume = kline.totalUsdt;
-                            orderTrade.rsi14 = kline.rsi;
+                            orderTrade.rateBtc15m = kline.rsi;
                             orderTrade.lastPrice = kline.priceClose;
 
                             int startCheck = i;

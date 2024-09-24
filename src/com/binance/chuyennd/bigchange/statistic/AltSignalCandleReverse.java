@@ -2,7 +2,6 @@ package com.binance.chuyennd.bigchange.statistic;
 
 import com.binance.chuyennd.bigchange.market.MarketBigChangeDetectorTest;
 import com.binance.chuyennd.object.KlineObjectNumber;
-import com.binance.chuyennd.bigchange.statistic.data.DataManager;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
 import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.utils.Configs;
@@ -108,7 +107,7 @@ public class AltSignalCandleReverse {
     private String buildLineTest(OrderTargetInfoTest order, Double rateLoss) {
         return order.symbol + "," + Utils.normalizeDateYYYYMMDDHHmm(order.timeStart) + "," + Utils.normalizeDateYYYYMMDDHHmm(order.timeUpdate)
                 + "," + order.priceEntry + "," + order.priceTP + "," + order.side + "," + order.lastPrice + "," +
-                order.volume + "," + order.rsi14 + "," + order.status + "," + rateLoss + "," +
+                order.volume + "," + order.rateBtc15m + "," + order.status + "," + rateLoss + "," +
                 order.maxPrice + "," + Utils.rateOf2Double(order.maxPrice, order.priceEntry) + "," +
                 order.minPrice + "," + Utils.rateOf2Double(order.minPrice, order.priceEntry) + ","
                 + (order.timeUpdate - order.timeStart) / Utils.TIME_MINUTE;
@@ -118,7 +117,7 @@ public class AltSignalCandleReverse {
     List<String> detectAltReverseAfterTopDown(Double target) {
 
         List<String> lines = new ArrayList<>();
-        File[] symbolFiles = new File(DataManager.FOLDER_TICKER_15M).listFiles();
+        File[] symbolFiles = new File(Configs.FOLDER_TICKER_15M).listFiles();
 //        int counterSym = 0;
 //        int totalSym = symbolFiles.length;
         List<OrderTargetInfoTest> orderTrades = new ArrayList<>();
@@ -159,7 +158,7 @@ public class AltSignalCandleReverse {
                             orderTrade.maxPrice = kline.priceClose;
                             orderTrade.minPrice = kline.minPrice;
                             orderTrade.volume = kline.totalUsdt;
-                            orderTrade.rsi14 = kline.rsi;
+                            orderTrade.rateBtc15m = kline.rsi;
                             orderTrade.lastPrice = kline.priceClose;
                             orderTrade.tickerOpen = kline;
                             if (i > 1) {
@@ -238,7 +237,7 @@ public class AltSignalCandleReverse {
     List<String> detectAltReverseAfterTopDown1h(Double target) {
 
         List<String> lines = new ArrayList<>();
-        File[] symbolFiles = new File(DataManager.FOLDER_TICKER_HOUR).listFiles();
+        File[] symbolFiles = new File(Configs.FOLDER_TICKER_HOUR).listFiles();
 //        int counterSym = 0;
 //        int totalSym = symbolFiles.length;
         List<OrderTargetInfoTest> orderTrades = new ArrayList<>();
@@ -276,7 +275,7 @@ public class AltSignalCandleReverse {
                             orderTrade.maxPrice = kline.priceClose;
                             orderTrade.minPrice = kline.minPrice;
                             orderTrade.volume = kline.totalUsdt;
-                            orderTrade.rsi14 = kline.rsi;
+                            orderTrade.rateBtc15m = kline.rsi;
                             orderTrade.lastPrice = kline.priceClose;
                             orderTrade.tickerOpen = kline;
                             if (i > 1) {
@@ -351,7 +350,7 @@ public class AltSignalCandleReverse {
     List<String> detectAltTopMa20(Double target) {
 
         List<String> lines = new ArrayList<>();
-        File[] symbolFiles = new File(DataManager.FOLDER_TICKER_15M).listFiles();
+        File[] symbolFiles = new File(Configs.FOLDER_TICKER_15M).listFiles();
 //        int counterSym = 0;
 //        int totalSym = symbolFiles.length;
         List<OrderTargetInfoTest> orderTrades = new ArrayList<>();
@@ -392,7 +391,7 @@ public class AltSignalCandleReverse {
                             orderTrade.maxPrice = kline.priceClose;
                             orderTrade.minPrice = kline.minPrice;
                             orderTrade.volume = kline.totalUsdt;
-                            orderTrade.rsi14 = kline.rsi;
+                            orderTrade.rateBtc15m = kline.rsi;
                             orderTrade.lastPrice = kline.priceClose;
                             orderTrade.tickerOpen = kline;
                             if (i > 1) {
@@ -574,7 +573,7 @@ public class AltSignalCandleReverse {
     }
 
     private static void testSignalChuyennd() {
-        List<KlineObjectNumber> tickers = (List<KlineObjectNumber>) Storage.readObjectFromFile(DataManager.FOLDER_TICKER_15M + "TAOUSDT");
+        List<KlineObjectNumber> tickers = (List<KlineObjectNumber>) Storage.readObjectFromFile(Configs.FOLDER_TICKER_15M + "TAOUSDT");
         try {
             for (int i = 0; i < tickers.size(); i++) {
                 updateRateChangeAvg2Ma20(tickers, i);

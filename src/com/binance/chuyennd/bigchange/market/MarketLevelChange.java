@@ -21,24 +21,31 @@ package com.binance.chuyennd.bigchange.market;
 public enum MarketLevelChange {
 
     // UP
-    BIG_UP,
-    MEDIUM_UP,
-    SMALL_UP,
+    BIG_UP("BIG_UP"),
+    MEDIUM_UP("MEDIUM_UP"),
+    SMALL_UP("SMALL_UP"),
+    BIG_UP_15M("BIG_UP_15M"),
+    MEDIUM_UP_15M("MEDIUM_UP_15M"),
+    SMALL_UP_15M("SMALL_UP_15M"),
+    SMALL_UP_EXTEND("SMALL_UP_EXTEND"),
+    BTC_REVERSE("BTC_REVERSE"),
 
+    BIG_DOWN("BIG_DOWN"),
+    MEDIUM_DOWN("MEDIUM_DOWN"),
+    SMALL_DOWN("SMALL_DOWN"),
+    BIG_DOWN_15M("BIG_DOWN_15M"),
+    MEDIUM_DOWN_15M("MEDIUM_DOWN_15M"),
+    SMALL_DOWN_15M("SMALL_DOWN_15M"),
+    SMALL_DOWN_EXTEND("SMALL_DOWN_EXTEND");
 
-    // DOWN
-    ALT_BIG_CHANGE_REVERSE,
-    ALT_BIG_CHANGE_REVERSE_EXTEND,
+    private final String code;
 
-    MINI_DOWN,
-    TINY_DOWN,
-    SMALL_DOWN,
-    MEDIUM_DOWN,
-    MAYBE_BIG_DOWN_AFTER,
-    BIG_DOWN,
+    MarketLevelChange(String level) {
+        this.code = level;
+    }
 
-
-    ALT_SIGNAL_SELL,
-    // market state have order market running
-    MULTI_LEVEL_MARKET_RUNNING;
+    @Override
+    public String toString() {
+        return code;
+    }
 }

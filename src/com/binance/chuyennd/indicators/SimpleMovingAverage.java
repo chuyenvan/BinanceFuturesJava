@@ -4,6 +4,7 @@ package com.binance.chuyennd.indicators;
 import com.binance.chuyennd.config.Labels;
 import com.binance.chuyennd.object.IndicatorEntry;
 import com.binance.chuyennd.object.KlineObjectNumber;
+import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.utils.CandleUtils;
 import com.binance.chuyennd.utils.DoubleArrayUtils;
 import com.binance.chuyennd.utils.Utils;
@@ -49,6 +50,22 @@ public class SimpleMovingAverage {
             smaEntries[i] = new IndicatorEntry(candles.get(i));
             if (i >= periods) {
                 smaEntries[i].setValue(CandleUtils.avgPrice(candles, i - periods + 1, i));
+            }
+        }
+
+        return smaEntries;
+    }
+    public static IndicatorEntry[] calculateSimple(List<KlineObjectSimple> candles, int periods) {
+        if (candles.size() < periods) {
+            return null;
+        }
+
+        int len = candles.size();
+        IndicatorEntry[] smaEntries = new IndicatorEntry[len];
+        for (int i = 0; i < len; i++) {
+            smaEntries[i] = new IndicatorEntry(candles.get(i));
+            if (i >= periods) {
+                smaEntries[i].setValue(CandleUtils.avgPriceSimple(candles, i - periods + 1, i));
             }
         }
 

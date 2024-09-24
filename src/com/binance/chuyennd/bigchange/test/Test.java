@@ -15,20 +15,26 @@
  */
 package com.binance.chuyennd.bigchange.test;
 
+import com.binance.chuyennd.bak.BudgetManagerTest;
+import com.binance.chuyennd.bigchange.market.MarketDataObject;
 import com.binance.chuyennd.bigchange.statistic.BreadDetectObject;
+import com.binance.chuyennd.bigchange.statistic.data.DataManager;
+import com.binance.chuyennd.client.BinanceFuturesClientSingleton;
 import com.binance.chuyennd.client.ClientSingleton;
 import com.binance.chuyennd.client.TickerFuturesHelper;
 import com.binance.chuyennd.indicators.*;
 import com.binance.chuyennd.mongo.TickerMongoHelper;
 import com.binance.chuyennd.movingaverage.MAStatus;
 import com.binance.chuyennd.object.*;
+import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
-import com.binance.chuyennd.research.BudgetManagerTest;
-import com.binance.chuyennd.bigchange.statistic.data.DataManager;
+import com.binance.chuyennd.research.BudgetManagerSimple;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
+import com.binance.chuyennd.research.SimulatorMarketLevelTicker1MStopLoss;
 import com.binance.chuyennd.signal.tradingview.OrderTargetInfoTestSignal;
 import com.binance.chuyennd.signal.tradingview.SignalTWSimulator;
+import com.binance.chuyennd.trading.BinanceOrderTradingManager;
 import com.binance.chuyennd.trading.OrderTargetInfo;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Storage;
@@ -37,9 +43,11 @@ import com.binance.client.SubscriptionClient;
 import com.binance.client.SubscriptionErrorHandler;
 import com.binance.client.constant.Constants;
 import com.binance.client.exception.BinanceApiException;
+import com.binance.client.model.enums.CandlestickInterval;
 import com.binance.client.model.enums.OrderSide;
 import com.binance.client.model.event.CandlestickEvent;
 import com.binance.client.model.event.SymbolTickerEvent;
+import com.binance.client.model.trade.PositionRisk;
 import com.binance.tech.indicators.complex.TechnicalRatings;
 import com.binance.tech.model.TechCandle;
 import com.educa.chuyennd.funcs.BreadFunctions;
@@ -71,14 +79,38 @@ public class Test {
     public static final Logger LOG = LoggerFactory.getLogger(Test.class);
 
     public static final String FILE_STORAGE_ORDER_DONE = "target/OrderTestDone.data";
-    public static final Double RATE_TARGET = Configs.getDouble("RATE_TARGET");
     public static final String FILE_STORAGE_ORDER_DONE_TA = "target/OrderTestTADone.data";
     public static final String TIME_RUN = Configs.getString("TIME_RUN");
     public ExecutorService executorServiceOrderNew = Executors.newFixedThreadPool(Configs.getInt("NUMBER_THREAD_ORDER_MANAGER"));
     private final ConcurrentHashMap<String, Long> symbol2Processing = new ConcurrentHashMap<>();
 
     public static void main(String[] args) throws Exception {
-//        List<PositionRisk> positions = BinanceFuturesClientSingleton.getInstance().getAllPositionInfos();
+//        testProduction();
+//        testExtract24hWithTicker1M();
+
+        SimulatorMarketLevelTicker1MStopLoss test = new SimulatorMarketLevelTicker1MStopLoss();
+        test.initData();
+        test.debugAOrder();
+
+//        System.out.println( Utils.toJson(BinanceFuturesClientSingleton.getInstance().umFuturesClient.account()));
+//
+//        String fileMarketChangeLevelData = "target/entry/volumeBigSignalBuy.data";
+//        TreeMap<Long, List<String>> time2Entry = null;
+//        if (new File(fileMarketChangeLevelData).exists()) {
+//            time2Entry = (TreeMap<Long, List<String>>) Storage.readObjectFromFile(fileMarketChangeLevelData);
+//        }
+//        for (Long time : time2Entry.keySet()) {
+//            LOG.info("{} {}", Utils.normalizeDateYYYYMMDDHHmm(time), time2Entry.get(time));
+//        }
+
+//        Double unProfit = 0.066;
+//        Double rateLoss = BudgetManagerSimple.getInstance().callRateLossDynamic(unProfit);
+//        System.out.println(rateLoss);
+
+//        new Test().testListenPrice();
+//        testTime();
+//        testData1MProduct();
+//        new BinanceOrderTradingManager().processManagerPosition();
         // check stop all when market maybe bigdump
 //        new BinanceOrderTradingManager().checkAndStopLossAll(positions);
 //        System.out.println(RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_MOVING_AVERAGE_DETAILS, "REZUSDT"));
@@ -130,6 +162,125 @@ public class Test {
 
     }
 
+
+    private static void testExtract24hWithTicker1M() {
+        List<KlineObjectSimple> tickers = TickerFuturesHelper.getTickerSimpleWithStartTime("BTCUSDT",
+                Constants.INTERVAL_1M, Utils.getStartTimeDayAgo(1));
+        KlineObjectSimple tickerMinPrice = TickerFuturesHelper.extractTickerPriceMin24h(tickers, null);
+        KlineObjectSimple tickerMaxVolume = TickerFuturesHelper.extractTickerVolumeMax24h(tickers, null);
+        LOG.info("{} minPrice:{} {} maxVolume:{} {}", Utils.normalizeDateYYYYMMDDHHmm(tickers.get(tickers.size() - 1).startTime.longValue()),
+                tickerMinPrice.minPrice, Utils.normalizeDateYYYYMMDDHHmm(tickerMinPrice.startTime.longValue()),
+                tickerMaxVolume.totalUsdt / 1E6, Utils.normalizeDateYYYYMMDDHHmm(tickerMaxVolume.startTime.longValue())
+        );
+    }
+
+
+    private static void testProduction() {
+//        Set<String> symbols = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS);
+//        System.out.println(symbols.contains("RAREUSDT"));
+        String symbol = "TRXUSDT";
+        String orderJson = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO, symbol);
+        OrderTargetInfo order = Utils.gson.fromJson(orderJson, OrderTargetInfo.class);
+//        order.priceTP = null;
+//        order.priceSL = null;
+//        RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO, symbol, Utils.toJson(order));
+        System.out.println(Utils.toJson(order));
+//        for (String symbol : Constants.diedSymbol) {
+//            if (symbols.contains(symbol)) {
+//                RedisHelper.getInstance().delJsonData(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS, symbol);
+//            }
+//        }
+//        LOG.info("{} -> {}", symbols.size(), RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS).size());
+
+
+//        System.out.println(BinanceFuturesClientSingleton.getInstance().getFundingRate("REEFUSDT"));
+//                List<PositionRisk> positions = BinanceFuturesClientSingleton.getInstance().getAllPositionInfos();
+//        testRateBtc24HrByTime("20240801 03:00");
+//        System.out.println(new BinanceOrderTradingManager().getPositionBuyRunning());
+
+//        System.out.println(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS_RUNNING));
+        //        String symbol = "REEFUSDT";
+//
+//        PositionRisk pos = BinanceFuturesClientSingleton.getInstance().getPositionInfo(symbol);
+//        String orderJson = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO, symbol);
+//        OrderTargetInfo order = Utils.gson.fromJson(orderJson, OrderTargetInfo.class);
+//        System.out.println(Utils.formatMoney(order.priceSL));
+
+//        new BinanceOrderTradingManager().createSL(pos, order.priceSL);
+    }
+
+    private static void testTime() {
+        while (true) {
+            try {
+                long time = System.currentTimeMillis();
+                long second = (time / Utils.TIME_SECOND) % 60;
+                long miniSecond = (time % Utils.TIME_SECOND);
+                boolean isTimeCheck = second == 0 && miniSecond < 100;
+                boolean isGet = second == 58 && miniSecond < 100;
+                LOG.info("{} {} {} {}", second, miniSecond, isGet, isTimeCheck);
+                Thread.sleep(Utils.TIME_SECOND / 10);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private static void testData1MProduct() {
+        File folder = new File(Configs.FOLDER_TICKER_1M_PRODUCTION);
+        File[] dateFolder = folder.listFiles();
+        for (File folderDate : dateFolder) {
+            for (File file : folderDate.listFiles()) {
+                Map<String, KlineObjectNumber> symbol2Tickers = (Map<String, KlineObjectNumber>) Storage.readObjectFromFile(file.getPath());
+                int counterGap = 0;
+                for (Map.Entry<String, KlineObjectNumber> entry : symbol2Tickers.entrySet()) {
+                    String symbol = entry.getKey();
+                    KlineObjectNumber ticker = entry.getValue();
+                    try {
+                        List<KlineObjectNumber> tickerOnlines = TickerFuturesHelper.getTickerWithStartTime(symbol, Constants.INTERVAL_1M, ticker.startTime.longValue());
+                        KlineObjectNumber tickerOnline = tickerOnlines.get(0);
+                        if (!tickerOnline.priceClose.equals(ticker.priceClose)) {
+//                            LOG.info("{} {} {} {} {}", symbol, tickerOnline.priceClose, ticker.priceClose,
+//                                    Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()), Utils.toJson(ticker));
+                            counterGap++;
+                        }
+//                        if (symbol.equals("CKBUSDT")){
+//                        List<KlineObjectNumber> tickerOnlines = TickerFuturesHelper.getTickerWithStartTime(symbol, Constants.INTERVAL_1M, ticker.startTime.longValue());
+//                        KlineObjectNumber tickerOnline = tickerOnlines.get(0);
+//                            LOG.info("{} {} {} {} {}", symbol, tickerOnline.priceClose, ticker.priceClose,
+//                                    Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()), Utils.toJson(ticker));
+//                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+                LOG.info("{} {}/{}", Utils.normalizeDateYYYYMMDDHHmm(Long.parseLong(file.getName())), counterGap, symbol2Tickers.size());
+            }
+        }
+    }
+
+    private static void testRateBtc24HrByTime(String s) {
+        try {
+            long time = Utils.sdfFileHour.parse(s).getTime();
+            List<KlineObjectNumber> tickers = TickerFuturesHelper.getTicker(Constants.SYMBOL_PAIR_BTC, Constants.INTERVAL_15M);
+            List<KlineObjectNumber> btcTickers = new ArrayList<>();
+            for (KlineObjectNumber ticker : tickers) {
+                if (ticker.startTime.longValue() <= time) {
+                    btcTickers.add(ticker);
+                }
+            }
+            KlineObjectNumber btcStatistic24h = null;
+            KlineObjectNumber lastBtcTicker = null;
+            if (btcTickers != null) {
+                btcStatistic24h = TickerFuturesHelper.extractKlineByNumberTicker(btcTickers, btcTickers.size() - 1, 96, 8);
+                lastBtcTicker = btcTickers.get(btcTickers.size() - 1);
+            }
+            Double rateBtc24h = Utils.rateOf2Double(btcStatistic24h.minPrice, lastBtcTicker.minPrice);
+            LOG.info("{} {} {}", btcStatistic24h.minPrice, lastBtcTicker.minPrice, rateBtc24h);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
     public static com.binance.tech.model.TechCandle[] toCandleArray(List<KlineObjectNumber> lstCandles) {
         com.binance.tech.model.TechCandle[] candle = new com.binance.tech.model.TechCandle[lstCandles.size()];
         for (int i = 0; i < lstCandles.size(); i++) {
@@ -156,16 +307,16 @@ public class Test {
         String fileName = null;
         switch (interval) {
             case Constants.INTERVAL_1D:
-                fileName = DataManager.FOLDER_TICKER_1D;
+                fileName = Configs.FOLDER_TICKER_1D;
                 break;
             case Constants.INTERVAL_4H:
-                fileName = DataManager.FOLDER_TICKER_4HOUR;
+                fileName = Configs.FOLDER_TICKER_4HOUR;
                 break;
             case Constants.INTERVAL_1H:
-                fileName = DataManager.FOLDER_TICKER_HOUR;
+                fileName = Configs.FOLDER_TICKER_HOUR;
                 break;
             case Constants.INTERVAL_15M:
-                fileName = DataManager.FOLDER_TICKER_15M;
+                fileName = Configs.FOLDER_TICKER_15M;
                 break;
         }
         fileName = fileName + Constants.SYMBOL_PAIR_BTC;
@@ -177,8 +328,8 @@ public class Test {
         for (KlineObjectNumber ticker : btcTickers) {
             try {
                 tickers.add(ticker);
-                counter ++;
-                LOG.info("{}/{}", counter , total);
+                counter++;
+                LOG.info("{}/{}", counter, total);
                 if (tickers.size() < 200) {
                     continue;
                 }
@@ -198,7 +349,7 @@ public class Test {
     private static void traceRateChangeByDate(String date) {
         try {
             Long time = Utils.sdfFile.parse(date).getTime() + 7 * Utils.TIME_HOUR;
-            File[] symbolFiles = new File(DataManager.FOLDER_TICKER_1D).listFiles();
+            File[] symbolFiles = new File(Configs.FOLDER_TICKER_1D).listFiles();
             TreeMap<Double, String> rate2Symbol = new TreeMap<>();
             for (File symbolFile : symbolFiles) {
                 String symbol = symbolFile.getName();
@@ -312,7 +463,7 @@ public class Test {
 
         int counterSuccess = 0;
         Integer counterFalse = 0;
-        for (File file : new File(DataManager.FOLDER_TICKER_15M).listFiles()) {
+        for (File file : new File(Configs.FOLDER_TICKER_15M).listFiles()) {
 //            LOG.info("{} {}", file.getName(), file.getPath());
             String symbol = file.getName();
             if (Constants.diedSymbol.contains(symbol) || !StringUtils.containsIgnoreCase(symbol, "usdt")) {
@@ -407,7 +558,7 @@ public class Test {
     private static void testMACDTrendNew1Hour() throws ParseException {
         int counterSuccess = 0;
         Integer counterFalse = 0;
-        for (File file : new File(DataManager.FOLDER_TICKER_HOUR).listFiles()) {
+        for (File file : new File(Configs.FOLDER_TICKER_HOUR).listFiles()) {
             LOG.info("{} {}", file.getName(), file.getPath());
             String symbol = file.getName();
             if (!StringUtils.endsWithIgnoreCase(symbol, "usdt") || Constants.diedSymbol.contains(symbol)) {
@@ -452,7 +603,7 @@ public class Test {
                     if (indexStop != null) {
                         tickerClose = tickers.get(indexStop);
                     }
-                    boolean tradeStatus = MACDTradingController.isTradingStatus(tickers, i, RATE_TARGET, 16);
+                    boolean tradeStatus = MACDTradingController.isTradingStatus(tickers, i, Configs.RATE_TARGET, 16);
                     if (tradeStatus) {
                         counterSuccess++;
                     } else {
@@ -710,7 +861,7 @@ public class Test {
     }
 
     private static void changeLeverage() {
-        Set<String> allSymbols = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_ALL_SYMBOLS);
+        Set<String> allSymbols = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS);
         for (String symbol : allSymbols) {
             try {
                 ClientSingleton.getInstance().syncRequestClient.changeInitialLeverage(symbol, 10);
@@ -793,7 +944,6 @@ public class Test {
         }
         return null;
     }
-
 
 
     public static Double calTp(OrderTargetInfoTestSignal orderInfo) {
@@ -919,7 +1069,7 @@ public class Test {
     }
 
     private static void checkTimeLock() {
-        for (Map.Entry<String, String> entry : RedisHelper.getInstance().get().hgetAll(RedisConst.REDIS_KEY_EDUCA_SYMBOL_TIME_LOCK).entrySet()) {
+        for (Map.Entry<String, String> entry : RedisHelper.getInstance().get().hgetAll(RedisConst.REDIS_KEY_BINANCE_SYMBOL_TIME_LOCK).entrySet()) {
             String symbol = entry.getKey();
             String timelock = entry.getValue();
             long timeLockLong = Long.parseLong(timelock);
@@ -931,7 +1081,7 @@ public class Test {
     private static void writeAllSymbol2Redis() throws IOException {
         List<String> lines = FileUtils.readLines(new File("target/allsymbols.txt"));
         for (String sym : lines) {
-            RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_ALL_SYMBOLS, sym, sym);
+            RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS, sym, sym);
         }
     }
 
@@ -985,11 +1135,16 @@ public class Test {
         SubscriptionClient client = SubscriptionClient.create();
         SubscriptionErrorHandler errorHandler = (BinanceApiException exception) -> {
         };
-        client.subscribeAllTickerEvent(((event) -> {
-            for (SymbolTickerEvent e : event) {
-                LOG.info("{} -> {}", e.getSymbol(), e);
-            }
+//        client.subscribeAllTickerEvent(((event) -> {
+        //
+//            for (SymbolTickerEvent e : event) {
+//                LOG.info("{} -> {}", e.getSymbol(), e);
+//            }
+//        }), errorHandler);
+        client.subscribeCandlestickEvent("btcusdt", CandlestickInterval.ONE_MINUTE, ((e) -> {
+            LOG.info("{} -> {}", e.getSymbol(), e);
         }), errorHandler);
+
     }
 
     private static void extractRateChangeInMonth(long time) {

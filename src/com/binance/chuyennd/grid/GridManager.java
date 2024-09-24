@@ -28,7 +28,7 @@ public class GridManager {
              while (true) {
                 List<String> data;
                 try {
-                    data = RedisHelper.getInstance().get().blpop(0, RedisConst.REDIS_KEY_EDUCA_TD_GRID_MANAGER_QUEUE);
+                    data = RedisHelper.getInstance().get().blpop(0, RedisConst.REDIS_KEY_BINANCE_TD_GRID_MANAGER_QUEUE);
                     LOG.info("Queue listen grid to manager received : {} ", data.toString());
                     String json = data.get(1);
                     try {

@@ -18,6 +18,7 @@ package com.binance.chuyennd.bigchange.statistic;
 import com.binance.chuyennd.client.TickerFuturesHelper;
 import com.binance.chuyennd.object.*;
 import com.binance.chuyennd.bigchange.statistic.data.DataManager;
+import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Storage;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
@@ -66,7 +67,7 @@ public class ReseachDetectTrendWithBtc {
         try {
             long timeCheck = Utils.sdfFileHour.parse(time).getTime();
 //            List<KlineObjectNumber> tickers = TickerFuturesHelper.getTicker(symbol, Constants.INTERVAL_15M);
-            List<KlineObjectNumber> tickers = (List<KlineObjectNumber>) Storage.readObjectFromFile(DataManager.FOLDER_TICKER_15M + symbol);
+            List<KlineObjectNumber> tickers = (List<KlineObjectNumber>) Storage.readObjectFromFile(Configs.FOLDER_TICKER_15M + symbol);
             List<KlineObjectNumber> ticker2Test = new ArrayList<>();
             for (int i = 0; i < tickers.size(); i++) {
                 if (tickers.get(i).startTime.longValue() <= timeCheck) {
@@ -141,7 +142,7 @@ public class ReseachDetectTrendWithBtc {
 
     private void testResistanceAndSupport(String symbol) {
 //        List<KlineObjectNumber> tickers = TickerFuturesHelper.getTicker(symbol, Constants.INTERVAL_15M);
-        List<KlineObjectNumber> tickers = (List<KlineObjectNumber>) Storage.readObjectFromFile(DataManager.FOLDER_TICKER_15M + symbol);
+        List<KlineObjectNumber> tickers = (List<KlineObjectNumber>) Storage.readObjectFromFile(Configs.FOLDER_TICKER_15M + symbol);
         ResistanceAndSupport lastRs = null;
         for (int i = 100; i < tickers.size(); i++) {
             List<KlineObjectNumber> ticker2Test = new ArrayList<>();
@@ -177,7 +178,7 @@ public class ReseachDetectTrendWithBtc {
     }
 
     public void extractAltBehaviorByBtcTrend() throws IOException {
-        List<KlineObjectNumber> tickers = (List<KlineObjectNumber>) Storage.readObjectFromFile(DataManager.FOLDER_TICKER_15M
+        List<KlineObjectNumber> tickers = (List<KlineObjectNumber>) Storage.readObjectFromFile(Configs.FOLDER_TICKER_15M
                 + "AMBUSDT");
         Double rateOfSideWay = 0.02;
         List<TrendObjectDetail> btcTrends = detectorTrend(tickers, Constants.SYMBOL_PAIR_BTC, rateOfSideWay);
@@ -384,7 +385,7 @@ public class ReseachDetectTrendWithBtc {
     }
 
     private void detectorTrendSymbol(String symbol) {
-        List<KlineObjectNumber> tickers = (List<KlineObjectNumber>) Storage.readObjectFromFile(DataManager.FOLDER_TICKER_15M + symbol);
+        List<KlineObjectNumber> tickers = (List<KlineObjectNumber>) Storage.readObjectFromFile(Configs.FOLDER_TICKER_15M + symbol);
         List<TrendObject> trends = TickerFuturesHelper.extractTopBottomObjectInTicker(tickers);
         printTrendObject(trends);
     }

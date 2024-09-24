@@ -2,10 +2,10 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
-package com.binance.chuyennd.research;
+package com.binance.chuyennd.bak;
 
-import com.binance.chuyennd.bigchange.market.MarketBigChangeDetector;
-import com.binance.chuyennd.bigchange.market.MarketLevelChange;
+import com.binance.chuyennd.research.OrderTargetInfoTest;
+import com.binance.chuyennd.trading.MarketBigChangeDetector;
 import com.binance.chuyennd.mongo.TickerMongoHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.redis.RedisConst;
@@ -70,12 +70,12 @@ public class SimulatorTradingByBtcSignalCandleReverse {
                     }
 
 //                    if (timeBtcTrend.contains(time)) {
-                        List<String> symbol2Trade = MarketBigChangeDetector.getTopSymbol2TradeBtcSignal(entry.getValue(), 20);
-                        LOG.info("{} -> {}", Utils.normalizeDateYYYYMMDDHHmm(time), symbol2Trade);
-                        // check create order new
-                        for (String symbol : symbol2Trade) {
-                            checkAndCreateOrderNew(symbol2Ticker.get(symbol), symbol);
-                        }
+//                        List<String> symbol2Trade = MarketBigChangeDetector.getTopSymbol2TradeBtcSignal(entry.getValue(), 20);
+//                        LOG.info("{} -> {}", Utils.normalizeDateYYYYMMDDHHmm(time), symbol2Trade);
+//                        // check create order new
+//                        for (String symbol : symbol2Trade) {
+//                            checkAndCreateOrderNew(symbol2Ticker.get(symbol), symbol);
+//                        }
 //                    }
                     BudgetManagerTest.getInstance().updateBalance(time, allOrderDone);
                     BudgetManagerTest.getInstance().updateInvesting();
@@ -102,14 +102,14 @@ public class SimulatorTradingByBtcSignalCandleReverse {
 
     private void checkAndStopAll(Map<String, KlineObjectNumber> symbol2Ticker) {
         try {
-            Set<String> symbols = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER);
+            Set<String> symbols = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER);
             Double rateLossTotal = 0d;
             Double rateLossCurrent = 0d;
             if (symbols.size() < 10) {
                 return;
             }
             for (String symbol : symbols) {
-                String json = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER, symbol);
+                String json = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER, symbol);
                 if (StringUtils.isNotEmpty(json)) {
                     OrderTargetInfoTest orderInfo = Utils.gson.fromJson(json, OrderTargetInfoTest.class);
                     if (orderInfo != null) {
@@ -128,7 +128,7 @@ public class SimulatorTradingByBtcSignalCandleReverse {
                         symbol2Ticker.get(Constants.SYMBOL_PAIR_BTC).startTime.longValue()));
                 Double rateChange = RATE_LOSS_AVG_STOP_ALL / 100 + rateLossCurrent / symbols.size();
                 for (String symbol : symbols) {
-                    String json = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER, symbol);
+                    String json = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER, symbol);
                     if (StringUtils.isNotEmpty(json)) {
                         OrderTargetInfoTest orderInfo = Utils.gson.fromJson(json, OrderTargetInfoTest.class);
                         KlineObjectNumber ticker = symbol2Ticker.get(symbol);
@@ -155,7 +155,7 @@ public class SimulatorTradingByBtcSignalCandleReverse {
 
     private void initData() throws IOException, ParseException {
         // clear Data Old
-        RedisHelper.getInstance().get().del(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER);
+        RedisHelper.getInstance().get().del(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER);
         allOrderDone = new ConcurrentHashMap<>();
         if (new File(FILE_STORAGE_ORDER_DONE).exists()) {
             FileUtils.delete(new File(FILE_STORAGE_ORDER_DONE));
@@ -170,13 +170,13 @@ public class SimulatorTradingByBtcSignalCandleReverse {
         Double totalSell = 0d;
         Integer dcaTotal = 0;
         TreeMap<Double, OrderTargetInfoTest> pnl2OrderInfo = new TreeMap<>();
-        for (String symbol : RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER)) {
-            String json = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER, symbol);
+        for (String symbol : RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER)) {
+            String json = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER, symbol);
             if (json != null) {
                 OrderTargetInfoTest orderInfo = Utils.gson.fromJson(json, OrderTargetInfoTest.class);
                 Double pnl = orderInfo.calProfit();
                 pnl2OrderInfo.put(pnl, orderInfo);
-                if (orderInfo.dcaLevel != null && orderInfo.dcaLevel > 0) {
+                if (orderInfo.dynamicTP_SL != null && orderInfo.dynamicTP_SL > 0) {
                     dcaTotal++;
                 }
             }
@@ -199,7 +199,7 @@ public class SimulatorTradingByBtcSignalCandleReverse {
                         append(Utils.normalizeDateYYYYMMDDHHmm(currentTime)).append(" margin:")
                         .append(orderInfo.calMargin().longValue()).append(" ")
                         .append(orderInfo.side).append(" ").append(orderInfo.symbol)
-                        .append(" ").append(" dcaLevel:").append(orderInfo.dcaLevel).append(" ")
+                        .append(" ").append(" dcaLevel:").append(orderInfo.dynamicTP_SL).append(" ")
                         .append(orderInfo.priceEntry).append("->").append(orderInfo.lastPrice).append(" ").
                         append(ratePercent.longValue()).append("%").append(" ").append(pnl.longValue()).append("$").append("\n");
             }
@@ -243,9 +243,9 @@ public class SimulatorTradingByBtcSignalCandleReverse {
             } else {
                 totalSell++;
             }
-            if (order.dcaLevel != null && order.dcaLevel > 0) {
+            if (order.dynamicTP_SL != null && order.dynamicTP_SL > 0) {
                 totalDca++;
-                if (order.dcaLevel >= 2) {
+                if (order.dynamicTP_SL >= 2) {
                     totalDcaLevel2++;
                 }
             }
@@ -265,7 +265,7 @@ public class SimulatorTradingByBtcSignalCandleReverse {
         reportRunning.append(" Sell: ").append(totalSell * RATE_TARGET * 100).append("%");
         reportRunning.append(" SL: ").append(totalSL).append(" ");
         reportRunning.append(" dcaDone: ").append(totalDca).append(" ");
-        reportRunning.append(" Running: ").append(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER).size()).append(" orders");
+        reportRunning.append(" Running: ").append(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER).size()).append(" orders");
         LOG.info(reportRunning.toString());
 //        LOG.info(Utils.toJson(symbol2Counter));
 //        Utils.sendSms2Telegram(reportRunning.toString());
@@ -273,7 +273,7 @@ public class SimulatorTradingByBtcSignalCandleReverse {
 
     private void startUpdateOldOrderTrading(String symbol, KlineObjectNumber ticker) {
 
-        String json = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER, symbol);
+        String json = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER, symbol);
         // update order old
         if (StringUtils.isNotEmpty(json)) {
             OrderTargetInfoTest orderInfo = Utils.gson.fromJson(json, OrderTargetInfoTest.class);
@@ -282,12 +282,12 @@ public class SimulatorTradingByBtcSignalCandleReverse {
                 orderInfo.updateStatus();
                 if (orderInfo.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)) {
                     allOrderDone.put(ticker.startTime.longValue() + "-" + symbol, orderInfo);
-                    RedisHelper.getInstance().get().hdel(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER, symbol);
+                    RedisHelper.getInstance().get().hdel(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER, symbol);
                 } else {
                     if (orderInfo.timeStart < ticker.startTime - Utils.TIME_HOUR * NUMBER_HOURS_STOP_MIN) {
                         stopLossOrder(symbol, ticker);
                     } else {
-                        RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER, symbol, Utils.toJson(orderInfo));
+                        RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER, symbol, Utils.toJson(orderInfo));
                     }
                 }
             }
@@ -295,7 +295,7 @@ public class SimulatorTradingByBtcSignalCandleReverse {
     }
 
     private void checkAndCreateOrderNew(KlineObjectNumber ticker, String symbol) {
-        String json = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER, symbol);
+        String json = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER, symbol);
         // update order old
         if (!StringUtils.isNotEmpty(json)) {
             if (BudgetManagerTest.getInstance().isAvailableTrade()) {
@@ -308,7 +308,7 @@ public class SimulatorTradingByBtcSignalCandleReverse {
     }
 
     private void stopLossOrder(String symbol, KlineObjectNumber ticker) {
-        String json = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER, symbol);
+        String json = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER, symbol);
         if (StringUtils.isNotEmpty(json)) {
             OrderTargetInfoTest orderInfo = Utils.gson.fromJson(json, OrderTargetInfoTest.class);
             orderInfo.priceTP = ticker.priceClose;
@@ -318,7 +318,7 @@ public class SimulatorTradingByBtcSignalCandleReverse {
             orderInfo.timeUpdate = ticker.startTime.longValue();
             orderInfo.tickerClose = ticker;
             allOrderDone.put(ticker.startTime.longValue() + "-" + orderInfo.symbol, orderInfo);
-            RedisHelper.getInstance().get().hdel(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER, orderInfo.symbol);
+            RedisHelper.getInstance().get().hdel(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER, orderInfo.symbol);
         }
     }
 
@@ -338,7 +338,7 @@ public class SimulatorTradingByBtcSignalCandleReverse {
         order.lastPrice = entry;
         order.maxPrice = entry;
         order.tickerOpen = ticker;
-        RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER, symbol, Utils.toJson(order));
+        RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER, symbol, Utils.toJson(order));
         BudgetManagerTest.getInstance().updateInvesting();
         LOG.info(log);
     }

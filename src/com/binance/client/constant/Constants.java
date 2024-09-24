@@ -41,7 +41,7 @@ public class Constants {
     public static final String TRADING_TYPE_SIGNAL = "TRADING_TYPE_SIGNALTW";
     public static final ArrayList<String> diedSymbol = new ArrayList<>();
     public static final ArrayList<String> specialSymbol = new ArrayList<>();
-//    public static final ArrayList<String> specialSymbol = new ArrayList<>(Arrays.asList(
+    //    public static final ArrayList<String> specialSymbol = new ArrayList<>(Arrays.asList(
 //            "STPTUSDT",
 //            "SNTUSDT",
 //            "MBLUSDT",
@@ -81,11 +81,15 @@ public class Constants {
         }
         symbols = Configs.getString("SPECIAL_SYMBOLS");
         for (String symbol : StringUtils.split(symbols, ",")) {
+            if (!StringUtils.contains(symbol, "USDT")) {
+                symbol = symbol + "USDT";
+            }
             specialSymbol.add(symbol);
         }
     }
 
     public static void main(String[] args) {
-        System.out.println(Constants.diedSymbol);
+
+        System.out.println(Constants.specialSymbol);
     }
 }

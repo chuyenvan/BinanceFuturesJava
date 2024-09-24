@@ -5,7 +5,6 @@ import com.binance.chuyennd.indicators.SimpleMovingAverage1DManager;
 import com.binance.chuyennd.movingaverage.MAStatus;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.TrendState;
-import com.binance.chuyennd.bigchange.statistic.data.DataManager;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
 import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.utils.Configs;
@@ -124,7 +123,7 @@ public class AltBreadBigChange15MAndMacd {
                 + order.priceEntry + "," + order.priceTP + "," + symbol2LastPrice.get(order.symbol) + ","
                 + order.volume + "," + order.avgVolume24h + "," + order.rateChange + "," + orderState + ","
                 + rateLoss + "," + order.maxPrice + "," + Utils.rateOf2Double(order.maxPrice, order.priceEntry)
-                + "," + (order.timeUpdate - order.timeStart) / Utils.TIME_MINUTE + "," + maStatus + "," + order.rsi14;
+                + "," + (order.timeUpdate - order.timeStart) / Utils.TIME_MINUTE + "," + maStatus + "," + order.rateBtc15m;
 //                + "," + btcTrend1d + "," + btcTrend4h + "," + btcTrend1h + "," + btcTrend15m;
     }
 
@@ -136,7 +135,7 @@ public class AltBreadBigChange15MAndMacd {
         totalLoss = 0d;
         List<String> lines = new ArrayList<>();
 
-        File[] symbolFiles = new File(DataManager.FOLDER_TICKER_15M).listFiles();
+        File[] symbolFiles = new File(Configs.FOLDER_TICKER_15M).listFiles();
 
         for (File symbolFile : symbolFiles) {
             String symbol = symbolFile.getName();
@@ -224,7 +223,7 @@ public class AltBreadBigChange15MAndMacd {
                                 orderTrade.rateChange = breadData.totalRate;
                                 orderTrade.avgVolume24h = TickerFuturesHelper.getAvgLastVolume7D(tickers, i);
                                 orderTrade.volume = kline.totalUsdt;
-                                orderTrade.rsi14 = rsi;
+                                orderTrade.rateBtc15m = rsi;
                                 int startCheck = i;
                                 for (int j = startCheck + 1; j < startCheck + NUMBER_TICKER_TO_TRADE; j++) {
                                     if (j < tickers.size()) {

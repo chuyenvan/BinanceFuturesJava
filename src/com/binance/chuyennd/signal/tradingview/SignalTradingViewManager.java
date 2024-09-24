@@ -21,11 +21,9 @@ import com.binance.chuyennd.redis.RedisHelper;
 import com.binance.chuyennd.statistic24hr.Volume24hrManager;
 import com.binance.chuyennd.trading.BudgetManager;
 import com.binance.chuyennd.trading.OrderTargetStatus;
-import com.binance.chuyennd.trading.SymbolTradingManager;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.HttpRequest;
 import com.binance.chuyennd.utils.Utils;
-import com.binance.client.constant.Constants;
 import com.binance.client.model.enums.OrderSide;
 import com.google.gson.internal.LinkedTreeMap;
 
@@ -88,7 +86,6 @@ public class SignalTradingViewManager {
     }
 
 
-
     public boolean isTimeCheckBalance() {
         return Utils.getCurrentHour() == 0 && Utils.getCurrentMinute() == 0;
     }
@@ -99,8 +96,6 @@ public class SignalTradingViewManager {
             LOG.info("Start thread SignalStrong2Trading!");
             while (true) {
                 try {
-                    int numberPosRunning = RedisHelper.getInstance().smembers(RedisConst.REDIS_KEY_SET_ALL_SYMBOL_POS_RUNNING).size();
-
                     getStrongSignal2Trading();
                 } catch (Exception e) {
                     LOG.error("ERROR during SignalStrong2Trading: {}", e);
@@ -214,16 +209,16 @@ public class SignalTradingViewManager {
                 if (StringUtils.contains(sideSignal, "STRONG")) {
                     result = sideSignal.split("_")[1];
                 }
-                RedisHelper.getInstance().delJsonData(RedisConst.REDIS_KEY_EDUCA_ALL_SYMBOLS_TRADINGVIEW_FAIL, symbol);
+                RedisHelper.getInstance().delJsonData(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS_TRADINGVIEW_FAIL, symbol);
             } else {
                 Double rate24hr = Volume24hrManager.getInstance().symbol2RateChangeWithOpen.get(symbol);
                 // not tradingview ta -> buy when rate change 24hr > 1%
                 if (rate24hr > 0.01) {
-                    RedisHelper.getInstance().delJsonData(RedisConst.REDIS_KEY_EDUCA_ALL_SYMBOLS_TRADINGVIEW_FAIL, symbol);
+                    RedisHelper.getInstance().delJsonData(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS_TRADINGVIEW_FAIL, symbol);
                     result = "BUY";
                     return result;
                 } else {
-                    RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_ALL_SYMBOLS_TRADINGVIEW_FAIL, symbol, String.valueOf(System.currentTimeMillis()));
+                    RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS_TRADINGVIEW_FAIL, symbol, String.valueOf(System.currentTimeMillis()));
                 }
             }
         } catch (Exception e) {
@@ -268,7 +263,6 @@ public class SignalTradingViewManager {
             LOG.info("Start SignalStrong2TradingBackup !");
             while (true) {
                 try {
-                    int numberPosRunning = RedisHelper.getInstance().smembers(RedisConst.REDIS_KEY_SET_ALL_SYMBOL_POS_RUNNING).size();
                     getStrongSignal2TradingBackup();
                 } catch (Exception e) {
                     LOG.error("ERROR during SignalStrong2TradingBackup: {}", e);

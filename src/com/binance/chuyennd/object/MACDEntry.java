@@ -1,6 +1,7 @@
 package com.binance.chuyennd.object;
 
 
+import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.utils.Utils;
 
 public class MACDEntry extends KlineObjectNumber {
@@ -32,6 +33,20 @@ public class MACDEntry extends KlineObjectNumber {
         priceClose = kline.priceClose;
         totalUsdt = kline.totalUsdt;
         endTime = kline.endTime;
+
+        this.emaFast = emaFast;
+        this.emaSlow = emaSlow;
+        this.macd = macd;
+        this.signal = signal;
+        this.histogram = histogram;
+    }
+    public MACDEntry(KlineObjectSimple kline, double emaFast, double emaSlow, double macd, double signal, double histogram) {
+        startTime = kline.startTime;
+        priceOpen = kline.priceOpen;
+        maxPrice = kline.maxPrice;
+        minPrice = kline.minPrice;
+        priceClose = kline.priceClose;
+        totalUsdt = kline.totalUsdt;
 
         this.emaFast = emaFast;
         this.emaSlow = emaSlow;

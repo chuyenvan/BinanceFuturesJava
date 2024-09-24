@@ -220,19 +220,12 @@ public class OrderHelper {
         return stopLoss(orderInfo.symbol, side, orderInfo.quantity, orderInfo.priceSL);
     }
 
-    public static Order stopLoss(Order orderInfo, Double rateSL) {
-        OrderSide side = OrderSide.BUY;
-        Double priceSL = orderInfo.getAvgPrice().doubleValue() * (1 + rateSL);
-        if (StringUtils.equals(orderInfo.getSide(), OrderSide.BUY.toString())) {
-            side = OrderSide.SELL;
-            priceSL = orderInfo.getAvgPrice().doubleValue() * (1 - rateSL);
-        }
-        return stopLoss(orderInfo.getSymbol(), side, orderInfo.getOrigQty().doubleValue(), priceSL);
-    }
+
 
     public static Order stopLoss(String symbol, OrderSide side, Double quantity, Double stopPrice) {
+
         return ClientSingleton.getInstance().syncRequestClient.postOrder(symbol, side, null, OrderType.STOP_MARKET, TimeInForce.GTC,
-                quantity.toString(), null, null, null, stopPrice.toString(),
+                quantity.toString(), null, null, null, Utils.formatMoney(stopPrice),
                 null, null, null, null, null, NewOrderRespType.RESULT);
     }
 

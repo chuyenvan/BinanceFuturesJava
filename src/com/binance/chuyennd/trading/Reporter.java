@@ -17,10 +17,10 @@ import java.util.*;
 
 public class Reporter {
     public static final Logger LOG = LoggerFactory.getLogger(Reporter.class);
-    public static final Double NUMBER_HOURS_STOP_MAX = Configs.getDouble("NUMBER_HOURS_STOP_MAX");
-    public static Double balanceStart = Configs.getDouble("CAPITAL_START");//9200.0;
-    public static Double rateProfit = Configs.getDouble("PROFIT_RATE");//0.013;
-    public static long timeStartRun = Configs.getLong("TIME_START");//1710892800000L;
+    public static Double balanceStart = Configs.getDouble("CAPITAL_START");
+    public static Double rateProfit = Configs.getDouble("PROFIT_RATE");
+    public static long timeStartRun = Configs.getLong("TIME_START");
+
     public static void startThreadReportPosition() {
         new Thread(() -> {
             Thread.currentThread().setName("Reporter");
@@ -102,7 +102,6 @@ public class Reporter {
                         .append(entryPrice).append("->").append(lastPrice)
                         .append(" ").append(ratePercent).append("%")
                         .append(" ").append(pnlLong.doubleValue() / 100).append("$")
-                        .append(buildTimeCloseNoti(pos))
                         .append("\n");
             }
         }
@@ -119,8 +118,8 @@ public class Reporter {
         builder.append(" Buy: ").append(totalBuy.doubleValue()).append("%");
         builder.append(" Sell: ").append(totalSell.doubleValue()).append("%");
         builder.append(" ").append(symbolsSell.toString());
-        builder.append(" \nRunning: ").append(RedisHelper.getInstance().smembers(
-                RedisConst.REDIS_KEY_SET_ALL_SYMBOL_POS_RUNNING).size()).append(" orders");
+        builder.append(" \nRunning: ").append(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS_RUNNING).size())
+                .append(" orders");
         builder.append(" Under3: ").append(totalUnder3);
         builder.append(" Over5: ").append(totalOver5);
         return builder;
@@ -134,18 +133,6 @@ public class Reporter {
             total += inc;
         }
         return total;
-    }
-
-    public static String buildTimeCloseNoti(PositionRisk position) {
-        try {
-            Long time2Close = position.getUpdateTime() + Utils.TIME_HOUR * NUMBER_HOURS_STOP_MAX.longValue();
-            StringBuilder builder = new StringBuilder();
-            builder.append(" close: ").append(Utils.normalizeDateYYYYMMDDHHmm(time2Close));
-            return builder.toString();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return " ";
     }
 
 }

@@ -56,7 +56,7 @@ public class SimpleMovingAverage12HManager {
 
     private void updateForAllSymbol() {
         LOG.info("Update sma-details for all symbol!");
-        Set<String> allSymbols = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_ALL_SYMBOLS);
+        Set<String> allSymbols = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS);
         for (String symbol : allSymbols) {
             updateASymbol(symbol);
         }
@@ -66,7 +66,7 @@ public class SimpleMovingAverage12HManager {
     private void initForAllSymbol() {
         LOG.info("Update sma-details for all symbol!");
         symbol2MaDetails = new ConcurrentHashMap<>();
-        Set<String> allSymbols = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_ALL_SYMBOLS);
+        Set<String> allSymbols = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS);
         for (String symbol : allSymbols) {
             updateASymbol(symbol);
         }

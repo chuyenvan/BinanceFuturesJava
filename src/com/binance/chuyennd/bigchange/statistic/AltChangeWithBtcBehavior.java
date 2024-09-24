@@ -5,7 +5,6 @@ import com.binance.chuyennd.client.TickerFuturesHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.ResistanceAndSupport;
 import com.binance.chuyennd.object.TrendObject;
-import com.binance.chuyennd.bigchange.statistic.data.DataManager;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
 import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.utils.Configs;
@@ -83,7 +82,7 @@ public class AltChangeWithBtcBehavior {
     private String buildLineTest(OrderTargetInfoTest order, Double rateLoss) {
         return order.symbol + "," + Utils.normalizeDateYYYYMMDDHHmm(order.timeStart) + "," +
                 Utils.normalizeDateYYYYMMDDHHmm(order.timeUpdate) + "," + order.priceEntry + "," +
-                order.priceTP + "," + order.lastPrice + "," + order.volume + "," + order.rsi14 + "," +
+                order.priceTP + "," + order.lastPrice + "," + order.volume + "," + order.rateBtc15m + "," +
                 order.status + "," + rateLoss + "," + order.maxPrice + "," +
                 Utils.rateOf2Double(order.maxPrice, order.priceEntry) + "," +
                 Utils.rateOf2Double(order.tickerOpen.priceClose, order.tickerOpen.priceOpen) + "," +
@@ -95,7 +94,7 @@ public class AltChangeWithBtcBehavior {
     List<String> detectAltSellEntry(Double target) {
 
         List<String> lines = new ArrayList<>();
-        File[] symbolFiles = new File(DataManager.FOLDER_TICKER_15M).listFiles();
+        File[] symbolFiles = new File(Configs.FOLDER_TICKER_15M).listFiles();
         int counterSym = 0;
         int totalSym = symbolFiles.length;
         List<OrderTargetInfoTest> orderTrades = new ArrayList<>();
@@ -132,7 +131,7 @@ public class AltChangeWithBtcBehavior {
                             orderTrade.maxPrice = kline.priceClose;
                             orderTrade.minPrice = kline.minPrice;
                             orderTrade.volume = kline.totalUsdt;
-                            orderTrade.rsi14 = kline.rsi;
+                            orderTrade.rateBtc15m = kline.rsi;
                             orderTrade.lastPrice = kline.priceClose;
                             orderTrade.tickerOpen = kline;
                             if (i > 1) {
@@ -210,12 +209,12 @@ public class AltChangeWithBtcBehavior {
     List<String> detectAltBuyEntry() {
 
         List<String> lines = new ArrayList<>();
-        File[] symbolFiles = new File(DataManager.FOLDER_TICKER_15M).listFiles();
+        File[] symbolFiles = new File(Configs.FOLDER_TICKER_15M).listFiles();
         int counterSym = 0;
         int totalSym = symbolFiles.length;
         List<OrderTargetInfoTest> orderTrades = new ArrayList<>();
         Map<Long, MarketLevelChange> time2Level = (Map<Long, MarketLevelChange>) Storage.readObjectFromFile("target/time2marketLevel.data");
-        List<KlineObjectNumber> btcTickers = (List<KlineObjectNumber>) Storage.readObjectFromFile(DataManager.FOLDER_TICKER_15M + Constants.SYMBOL_PAIR_BTC);
+        List<KlineObjectNumber> btcTickers = (List<KlineObjectNumber>) Storage.readObjectFromFile(Configs.FOLDER_TICKER_15M + Constants.SYMBOL_PAIR_BTC);
         Map<Double, KlineObjectNumber> time2BtcDown = new HashMap<>();
         for (int i = 1; i < btcTickers.size(); i++) {
 
@@ -269,7 +268,7 @@ public class AltChangeWithBtcBehavior {
                                 orderTrade.maxPrice = kline.priceClose;
                                 orderTrade.minPrice = kline.minPrice;
                                 orderTrade.volume = kline.totalUsdt;
-                                orderTrade.rsi14 = kline.rsi;
+                                orderTrade.rateBtc15m = kline.rsi;
                                 orderTrade.lastPrice = kline.priceClose;
                                 orderTrade.tickerOpen = kline;
                                 orderTrade.tickerClose = time2BtcDown.get(kline.startTime);

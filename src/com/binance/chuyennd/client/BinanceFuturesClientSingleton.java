@@ -395,4 +395,14 @@ public class BinanceFuturesClientSingleton {
         }
         return results;
     }
+
+    public String getFundingRate() {
+        LinkedHashMap<String, Object> parameters = new LinkedHashMap<>();
+        return umFuturesClient.market().fundingRate(parameters);
+    }
+    public String getFundingRate(String symbol) {
+        LinkedHashMap<String, Object> parameters = new LinkedHashMap<>();
+        parameters.put("symbol", symbol);
+        return umFuturesClient.market().fundingRate(parameters);
+    }
 }

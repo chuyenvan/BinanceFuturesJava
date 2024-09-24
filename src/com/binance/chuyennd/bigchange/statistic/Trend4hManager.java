@@ -4,6 +4,7 @@ import com.binance.chuyennd.client.TickerFuturesHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.TrendObject;
 import com.binance.chuyennd.bigchange.statistic.data.DataManager;
+import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Storage;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
@@ -114,7 +115,7 @@ public class Trend4hManager {
 
     private static void testTrend4h() {
         String symbol = "BAKEUSDT";
-        List<KlineObjectNumber> tickers = (List<KlineObjectNumber>) Storage.readObjectFromFile(DataManager.FOLDER_TICKER_15M + symbol);
+        List<KlineObjectNumber> tickers = (List<KlineObjectNumber>) Storage.readObjectFromFile(Configs.FOLDER_TICKER_15M + symbol);
         long timeInitTrend4h = Utils.get4Hour(tickers.get(0).startTime.longValue()) + 4 * Utils.TIME_HOUR;
         long timeStart = Utils.get4Hour(timeInitTrend4h) + 4 * Utils.TIME_HOUR;
         for (KlineObjectNumber ticker : tickers) {

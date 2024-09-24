@@ -1,4 +1,4 @@
-package com.binance.chuyennd.trading;
+package com.binance.chuyennd.signal.tradingview;
 
 import com.binance.chuyennd.client.TickerFuturesHelper;
 import com.binance.chuyennd.indicators.MACD;
@@ -10,17 +10,12 @@ import com.binance.chuyennd.object.MACDEntry;
 import com.binance.chuyennd.object.RsiEntry;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
-import com.binance.chuyennd.utils.Configs;
-import com.binance.chuyennd.utils.Storage;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
-import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.text.ParseException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -59,7 +54,7 @@ public class MACDDataTradingManager {
 
     private Map<String, Map<Long, KlineObjectNumber>> getMacdData(String interval) {
         Map<String, Map<Long, KlineObjectNumber>> results = new HashMap<>();
-        for (String symbol : RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_ALL_SYMBOLS)) {
+        for (String symbol : RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS)) {
             try {
                 Map<Long, KlineObjectNumber> time2Ticker = new HashMap<>();
                 List<KlineObjectNumber> allTickers = TickerFuturesHelper.getTicker(symbol, interval);

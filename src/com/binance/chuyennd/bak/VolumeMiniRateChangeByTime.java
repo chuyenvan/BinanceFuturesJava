@@ -1,4 +1,4 @@
-package com.binance.chuyennd.research;
+package com.binance.chuyennd.bak;
 
 import com.binance.chuyennd.bigchange.statistic.BreadDetectObject;
 import com.binance.chuyennd.bigchange.statistic.data.DataManager;
@@ -37,8 +37,8 @@ public class VolumeMiniRateChangeByTime {
     private static void printAllChange(long startTime) throws IOException {
         List<String> lines = new ArrayList<>();
         int counter = 0;
-        int total = new File(DataManager.FOLDER_TICKER_15M).listFiles().length;
-        for (File file : new File(DataManager.FOLDER_TICKER_15M).listFiles()) {
+        int total = new File(Configs.FOLDER_TICKER_15M).listFiles().length;
+        for (File file : new File(Configs.FOLDER_TICKER_15M).listFiles()) {
             try {
                 String symbol = file.getName();
                 counter++;

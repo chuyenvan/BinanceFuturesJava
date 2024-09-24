@@ -1,18 +1,14 @@
 package com.binance.chuyennd.bigchange.test;
 
-import com.binance.chuyennd.bigchange.statistic.BTCMacdTrendManager;
-import com.binance.chuyennd.bigchange.statistic.BTCTicker15MManager;
-import com.binance.chuyennd.mongo.TickerMongoHelper;
+import com.binance.chuyennd.bigchange.market.MarketLevelChange;
 import com.binance.chuyennd.object.KlineObjectNumber;
-import com.binance.chuyennd.object.TrendState;
-import com.binance.chuyennd.bigchange.statistic.data.DataManager;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
 import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.utils.Storage;
 import com.binance.chuyennd.utils.Utils;
-import com.binance.client.constant.Constants;
 import com.binance.client.model.enums.OrderSide;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,86 +19,214 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class TraceOrderDone {
     public static final Logger LOG = LoggerFactory.getLogger(TraceOrderDone.class);
-    public static final String FILE_STORAGE_ORDER_DONE = "target/OrderTestDone.data";
+    public static String FILE_STORAGE_ORDER_DONE = "target/OrderTestDone.data-6-6";
+//    public static String FILE_STORAGE_ORDER_DONE = "target/OrderTestEntryDone.data-6-6";
+//    public static String FILE_STORAGE_ORDER_DONE = "target/OrderSpecialDone.data";
+//    public static String FILE_STORAGE_ORDER_DONE = "target/AltBigChangeReverse.data";
+
 
     public static void main(String[] args) throws IOException {
+        boolean modeStatistic = false;
+        String fileName = "target/printDone.csv";
+        String fileOut = "target/market_level_full.csv";
+        // for statistic all
+        if (modeStatistic) {
+            fileName = "target/printDoneStatistic.csv";
+            fileOut = "target/market_level_statistic.csv";
+            FILE_STORAGE_ORDER_DONE = "target/OrderStatisticDone.data";
+        }
 
-        printOrderTestDone();
-//        traceOrderTestDone();
+        printOrderTestDone(fileName);
+//        traceOrderTestDone(fileOut);
 
     }
 
-    private static void traceOrderTestDone() throws IOException {
+    private static void traceOrderTestDone(String fileOut) throws IOException {
 
         ConcurrentHashMap<String, OrderTargetInfoTest> allOrderDone =
                 (ConcurrentHashMap<String, OrderTargetInfoTest>) Storage.readObjectFromFile(FILE_STORAGE_ORDER_DONE);
-        Double profitCheck = 0d;
-        Double profitTotal = 0d;
-
-        List<KlineObjectNumber> tickers = TickerMongoHelper.getInstance().getTicker15mBySymbol(Constants.SYMBOL_PAIR_BTC);
-        Map<Long, KlineObjectNumber> time2Ticker = new HashMap<>();
-        Map<Long, Integer> time2Index = new HashMap<>();
-        for (int i = 0; i < tickers.size(); i++) {
-            KlineObjectNumber ticker = tickers.get(i);
-            time2Ticker.put(ticker.startTime.longValue(), ticker);
-            time2Index.put(ticker.startTime.longValue(), i);
+        Map<Long, Double> date2Profit = new HashMap<>();
+        TreeMap<Long, List<OrderTargetInfoTest>> rateChange2Orders = new TreeMap<>();
+        int shardNumber = 20;
+        List<String> lines = FileUtils.readLines(new File("target/market_level_1m.csv"));
+        lines.remove(0);
+        TreeMap<Long, String[]> time2MarketInfo = new TreeMap<>();
+        for (String line : lines) {
+            try {
+                String[] parts = StringUtils.split(line, ",");
+                long time = Utils.sdfFileHour.parse(parts[0]).getTime();
+                time2MarketInfo.put(time, parts);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
+        TreeMap<Long, List<OrderTargetInfoTest>> time2Orders = new TreeMap<>();
+
         for (OrderTargetInfoTest order : allOrderDone.values()) {
-            Double rateMa = Utils.rateOf2Double(order.priceEntry, order.ma201d);
-            KlineObjectNumber ticker = time2Ticker.get(order.timeStart);
-            Integer index = time2Index.get(order.timeStart);
-            TrendState btcTrend1H = BTCMacdTrendManager.getInstance().getTrend(Constants.INTERVAL_1H, order.timeStart);
-            Double btcRsi = 0d;
-            if (ticker != null) {
-                btcRsi = ticker.rsi;
+            List<OrderTargetInfoTest> orders = time2Orders.get(order.timeStart);
+
+            if (orders == null) {
+                orders = new ArrayList<>();
+                time2Orders.put(order.timeStart, orders);
             }
-            Double btcRsiAvg = 0d;
-            if (index != null) {
-                btcRsiAvg = calAvgRsi(tickers, index - 30, 30);
-            }
-//            if (rateMa < 0.0) { // 75%
-//            if (btcTrend1H != null && btcTrend1H.equals(TrendState.STRONG_UP)) {
-//            if (true) {
-            if (!order.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)) {
-                if (BTCTicker15MManager.getInstance().getRateWithMaxByDuration(order.timeStart, 24 * Utils.TIME_HOUR) < 0.005) {
-                    profitCheck += Utils.rateOf2Double(order.priceTP, order.priceEntry);
+            orders.add(order);
+        }
+        lines.clear();
+
+        for (Long time : time2MarketInfo.keySet()) {
+            List<OrderTargetInfoTest> orders = time2Orders.get(time);
+            String[] marketInfos = time2MarketInfo.get(time);
+            int counterSuccess = 0;
+            Double profit = 0d;
+            int totalOrder = 0;
+            if (orders != null) {
+//                if (orders.size() != 20){
+//                    LOG.info("Order not enough 20: {} {}", Utils.normalizeDateYYYYMMDDHHmm(time), orders.size());
+//                }
+                for (OrderTargetInfoTest order : orders) {
+                    if (order.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)) {
+                        counterSuccess++;
+                    }
+                    profit += Utils.rateOf2Double(order.priceTP, order.priceEntry);
+                    Long date = Utils.getDate(order.timeUpdate);
+                    Double profitOfDate = date2Profit.get(date);
+                    if (profitOfDate == null) {
+                        profitOfDate = 0d;
+                    }
+                    profitOfDate += order.calProfit();
+                    date2Profit.put(date, profitOfDate);
                 }
-                profitTotal += Utils.rateOf2Double(order.priceTP, order.priceEntry);
+                totalOrder = orders.size();
+                // statistic with ratechange
+                Double rateChange;
+
+                if (orders.get(0).marketLevelChange.equals(MarketLevelChange.BIG_DOWN)
+                        || orders.get(0).marketLevelChange.equals(MarketLevelChange.MEDIUM_DOWN)
+//                        || orders.get(0).marketLevelChange.equals(MarketLevelChange.SMALL_DOWN)
+//                        || orders.get(0).marketLevelChange.equals(MarketLevelChange.SMALL_DOWN_EXTEND)
+                ) {
+                    // ratedown = 1, rateup = 2, ratebtc = 4
+                    rateChange = Double.parseDouble(marketInfos[1]) * shardNumber;
+//                    rateChange = orders.get(0).marketData.rateDownAvg * 100 * shardNumber;
+//                } else {
+//                    rateChange = Double.parseDouble(marketInfos[2]) * shardNumber;
+                    Long rateChangeL = rateChange.longValue();
+                    List<OrderTargetInfoTest> ordersOfRate = rateChange2Orders.get(rateChangeL);
+                    if (ordersOfRate == null) {
+                        ordersOfRate = new ArrayList<>();
+                        rateChange2Orders.put(rateChangeL, ordersOfRate);
+                    }
+                    ordersOfRate.addAll(orders);
+                }
+            }
+
+            try {
+
+                String line = "";
+                for (int i = 0; i < 6; i++) {
+                    line += marketInfos[i] + ",";
+                }
+                line += "'" + counterSuccess + "/" + totalOrder;
+                line += "," + Utils.formatDouble(profit * 100 / totalOrder, 2);
+                if (totalOrder != 0 && counterSuccess < 14) {
+                    line += ",TRUE";
+                } else {
+                    line += ",FALSE";
+                }
+                for (int i = 6; i < marketInfos.length; i++) {
+                    line += "," + marketInfos[i];
+                }
+                lines.add(line);
+
+//                LOG.info("{} {} {}/{} {} {} {}", Utils.normalizeDateYYYYMMDDHHmm(time), orders.get(0).marketLevelChange, counterSuccess, orders.size()
+//                        , marketInfos[1], marketInfos[2], marketInfos[4]);
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         }
-        Double rate = profitCheck * 100 / profitTotal;
-        LOG.info("{}/{} {}%", profitCheck, profitTotal, rate);
 
-    }
 
-    private static Double calAvgRsi(List<KlineObjectNumber> tickers, int i, int duration) {
-        Double total = 0d;
-        for (int j = i; j < i + duration; j++) {
-            KlineObjectNumber ticker = tickers.get(j);
-            total += ticker.rsi;
+        // print profit min
+        TreeMap<Double, Long> profit2Date = new TreeMap<>();
+        for (Map.Entry<Long, Double> entry : date2Profit.entrySet()) {
+            Long date = entry.getKey();
+            Double profit = entry.getValue();
+            profit2Date.put(profit, date);
         }
-        return total / duration;
+        int counter = 0;
+        for (Double profit : profit2Date.keySet()) {
+            LOG.info("{} {}", Utils.normalizeDateYYYYMMDDHHmm(profit2Date.get(profit)), profit);
+            counter++;
+            if (counter > 10) {
+                break;
+            }
+        }
+        counter = 0;
+        for (Double profit : profit2Date.descendingMap().keySet()) {
+            LOG.info("{} {}", Utils.normalizeDateYYYYMMDDHHmm(profit2Date.descendingMap().get(profit)), profit);
+            counter++;
+            if (counter > 10) {
+                break;
+            }
+        }
+        List<String> lineOfRateSuccess = new ArrayList<>();
+        lineOfRateSuccess.add("rate,tp,sl,total, loss, profit, rateLoss");
+        for (Long rate : rateChange2Orders.keySet()) {
+            List<OrderTargetInfoTest> orders = rateChange2Orders.get(rate);
+
+            int counterSuccess = 0;
+            Double rateLoss = 0d;
+            Double rateSuccess = 0d;
+
+            for (OrderTargetInfoTest order : orders) {
+                if (order.priceTP > order.priceEntry) {
+                    counterSuccess++;
+                    rateSuccess += Utils.rateOf2Double(order.priceTP, order.priceEntry);
+                } else {
+                    rateLoss += Utils.rateOf2Double(order.priceTP, order.priceEntry);
+                }
+            }
+            Double rateAvg = (rateLoss + rateSuccess) / orders.size();
+            LOG.info("rateChange: {} {}/{} {}/{} {}%", rate.doubleValue() / shardNumber,
+                    counterSuccess, orders.size(), Utils.formatDouble(rateLoss, 2),
+                    Utils.formatDouble(rateSuccess, 2), Utils.formatPercent(rateAvg));
+            StringBuilder builder = new StringBuilder();
+            builder.append(rate.doubleValue() / shardNumber).append(",");
+            builder.append(counterSuccess).append(",");
+            builder.append(orders.size() - counterSuccess).append(",");
+            builder.append(orders.size()).append(",");
+            builder.append(Utils.formatDouble(rateLoss, 2)).append(",");
+            builder.append(Utils.formatDouble(rateSuccess, 2)).append(",");
+            builder.append(Utils.formatPercent(rateAvg)).append(",");
+            lineOfRateSuccess.add(builder.toString());
+
+        }
+        FileUtils.writeLines(new File(fileOut), lines);
+        FileUtils.writeLines(new File("target/rate2result.csv"), lineOfRateSuccess);
     }
 
-    public static void printOrderTestDone() throws IOException {
+    public static void printOrderTestDone(String fileName) throws IOException {
         ConcurrentHashMap<String, OrderTargetInfoTest> allOrderDone =
                 (ConcurrentHashMap<String, OrderTargetInfoTest>) Storage.readObjectFromFile(FILE_STORAGE_ORDER_DONE);
         TreeMap<Long, OrderTargetInfoTest> time2Order = new TreeMap<>();
         int counter = 0;
         for (OrderTargetInfoTest order : allOrderDone.values()) {
             counter++;
-            time2Order.put(order.timeStart + counter, order);
+//            order.updateTPSL();
+            time2Order.put(-order.timeStart + counter, order);
+
         }
 
         List<String> lines = new ArrayList<>();
-        List<KlineObjectNumber> tickers = (List<KlineObjectNumber>) Storage.readObjectFromFile(DataManager.FOLDER_TICKER_15M + Constants.SYMBOL_PAIR_BTC);
+        lines.add("sym,side,entry,tp,sl,min,rate,max,rate,profit,status,start,time, end,level,ratetotal,volume,quantity,pnl,time");
+//        List<KlineObjectNumber> tickers = (List<KlineObjectNumber>) Storage.readObjectFromFile(DataManager.FOLDER_TICKER_15M + Constants.SYMBOL_PAIR_BTC);
         Map<Long, KlineObjectNumber> time2Ticker = new HashMap<>();
         Map<Long, Integer> time2Index = new HashMap<>();
-        for (int i = 0; i < tickers.size(); i++) {
-            KlineObjectNumber ticker = tickers.get(i);
-            time2Ticker.put(ticker.startTime.longValue(), ticker);
-            time2Index.put(ticker.startTime.longValue(), i);
-        }
+//        for (int i = 0; i < tickers.size(); i++) {
+//            KlineObjectNumber ticker = tickers.get(i);
+//            time2Ticker.put(ticker.startTime.longValue(), ticker);
+//            time2Index.put(ticker.startTime.longValue(), i);
+//        }
         Map<String, Double> symbol2Profit = new HashMap<>();
         for (OrderTargetInfoTest order : time2Order.values()) {
             long date = Utils.getDate(order.timeStart);
@@ -115,58 +239,48 @@ public class TraceOrderDone {
                 profitOfSymbol = 0d;
             }
             profitOfSymbol += Utils.rateOf2Double(order.priceTP, order.priceEntry);
-            symbol2Profit.put(order.symbol, profitOfSymbol);
-            StringBuilder builder = new StringBuilder();
-            builder.append(order.symbol).append(",");
-            builder.append(order.priceEntry).append(",");
-            builder.append(order.priceTP).append(",");
             Double profit = Utils.rateOf2Double(order.priceTP, order.priceEntry);
             if (order.side.equals(OrderSide.SELL)) {
                 profit = -Utils.rateOf2Double(order.priceTP, order.priceEntry);
             }
-            builder.append(profit).append(",");
-//            builder.append(order.minPrice).append(",");
-//            builder.append(Utils.rateOf2Double(order.minPrice, order.priceEntry)).append(",");
-//            builder.append(SimpleMovingAverage1DManager.getInstance().getRateChangeWithDuration(order.symbol,
-//                    order.timeStart, 5)).append(",");
-//            builder.append(SimpleMovingAverage1DManager.getInstance().getRateChangeWithDuration(order.symbol,
-//                    order.timeStart, 15)).append(",");
-//            builder.append(SimpleMovingAverage1DManager.getInstance().getRateChangeWithDuration(order.symbol,
-//                    order.timeStart, 30)).append(",");
-//            builder.append(Utils.rateOf2Double(order.priceEntry, maValue)).append(",");
-//            builder.append(maValue).append(",");
-//            builder.append(maStatus).append(",");
+            symbol2Profit.put(order.symbol, profitOfSymbol);
+            StringBuilder builder = new StringBuilder();
+            builder.append(order.symbol.replace("USDT", "")).append(",");
+            builder.append(order.side).append(",");
+            builder.append(order.priceEntry).append(",");
+            builder.append(order.priceTP).append(",");
+            builder.append(order.priceSL).append(",");
+
+            builder.append(order.minPrice).append(",");
+            builder.append(Utils.rateOf2Double(order.minPrice, order.priceEntry)).append(",");
             builder.append(order.maxPrice).append(",");
             builder.append(Utils.rateOf2Double(order.maxPrice, order.priceEntry)).append(",");
-//            Map<String, KlineObjectNumber> data48h = time2SymbolAndRateChange.get(order.timeStart);
-//            KlineObjectNumber ticker48h = null;
-//            if (data48h != null) {
-//                ticker48h = data48h.get(order.symbol);
-//            }
-//            if (ticker48h != null) {
-//                builder.append(ticker48h.maxPrice).append(",");
-//                builder.append(Utils.rateOf2Double(ticker48h.maxPrice, order.priceEntry)).append(",");
-//            } else {
-//                builder.append("null").append(",");
-//                builder.append("null").append(",");
-//            }
+            builder.append(profit).append(",");
             builder.append(order.status.toString()).append(",");
-            builder.append(Utils.normalizeDateYYYYMMDDHHmm(order.timeStart)).append(",");
+            builder.append(Utils.normalizeDateYYYYMMDDHHmm(order.timeStart)).append(",'");
+            builder.append(Utils.sdfGoogle.format(new Date(order.timeStart))).append(",");
             builder.append(Utils.normalizeDateYYYYMMDDHHmm(order.timeUpdate)).append(",");
             builder.append(order.marketLevelChange).append(",");
-            builder.append(order.dcaLevel).append(",");
-            builder.append(Utils.rateOf2Double(order.tickerOpen.minPrice, order.tickerOpen.maxPrice)).append(",");
+//            builder.append(order.rateChange).append(",");
+//            builder.append(order.rateChange15MAvg).append(",");
+//            builder.append(order.rateBtc15m).append(",");
+//            builder.append(order.marketData.rateDownAvg).append(",");
+//            builder.append(order.marketData.rateUpAvg).append(",");
+//            builder.append(order.dcaLevel).append(",");
+            builder.append(Utils.rateOf2Double(order.tickerOpen.priceClose, order.tickerOpen.priceOpen)).append(",");
             builder.append(order.tickerOpen.totalUsdt).append(",");
-//            builder.append(order.rsi14).append(",");
-//            builder.append(btcRsiAvg).append(",");
-//            builder.append(btcRsi).append(",");
-            builder.append(order.ma201d).append(",");
             builder.append(order.quantity).append(",");
-            builder.append(order.leverage).append(",");
             builder.append(calTp(order)).append(",");
-            builder.append((order.timeUpdate - order.timeStart) / Utils.TIME_HOUR).append(",");
-//            builder.append(BTCTicker15MManager.getInstance().getRateWithMaxByDuration(order.timeStart, 8 * Utils.TIME_HOUR));
-
+            builder.append((order.timeUpdate - order.timeStart) / Utils.TIME_MINUTE).append(",");
+            if (order.marketData != null) {
+                builder.append(order.marketData.rateDownAvg).append(",");
+                builder.append(order.marketData.rateUpAvg).append(",");
+                builder.append(order.marketData.rateDown15MAvg).append(",");
+                builder.append(order.marketData.rateUp15MAvg).append(",");
+                builder.append(order.marketData.rateBtc).append(",");
+                builder.append(order.marketData.rateBtcDown15M).append(",");
+                builder.append(order.marketData.rateBtcUp15M).append(",");
+            }
             lines.add(builder.toString());
         }
         TreeMap<Double, String> profit2Symbol = new TreeMap<>();
@@ -178,10 +292,60 @@ public class TraceOrderDone {
         for (Map.Entry<Double, String> entry : profit2Symbol.entrySet()) {
             String key = entry.getValue();
             Double values = entry.getKey();
-            LOG.info("{} {}", values, key);
+//            LOG.info("{} {}", values, key);
         }
 
-        FileUtils.writeLines(new File("target/printDone.csv"), lines);
+        FileUtils.writeLines(new File(fileName), lines);
+    }
+
+    public static void printOrderTestDone(String fileIn, String fileOut) throws IOException {
+        ConcurrentHashMap<String, OrderTargetInfoTest> allOrderDone =
+                (ConcurrentHashMap<String, OrderTargetInfoTest>) Storage.readObjectFromFile(fileIn);
+        TreeMap<Long, OrderTargetInfoTest> time2Order = new TreeMap<>();
+        int counter = 0;
+        for (OrderTargetInfoTest order : allOrderDone.values()) {
+            counter++;
+            time2Order.put(-order.timeStart + counter, order);
+        }
+        List<String> lines = new ArrayList<>();
+        lines.add("sym,side,entry,tp,sl,min,rate,max,rate,profit,status,start,end,rateBtc15M,rateTicker,rateBtc,volume,quantity,pnl,time");
+        Map<String, Double> symbol2Profit = new HashMap<>();
+        for (OrderTargetInfoTest order : time2Order.values()) {
+            Double profitOfSymbol = symbol2Profit.get(order.symbol);
+            if (profitOfSymbol == null) {
+                profitOfSymbol = 0d;
+            }
+            profitOfSymbol += Utils.rateOf2Double(order.priceTP, order.priceEntry);
+            Double profit = Utils.rateOf2Double(order.priceTP, order.priceEntry);
+            if (order.side.equals(OrderSide.SELL)) {
+                profit = -Utils.rateOf2Double(order.priceTP, order.priceEntry);
+            }
+            symbol2Profit.put(order.symbol, profitOfSymbol);
+            StringBuilder builder = new StringBuilder();
+            builder.append(order.symbol.replace("USDT", "")).append(",");
+            builder.append(order.side).append(",");
+            builder.append(order.priceEntry).append(",");
+            builder.append(order.priceTP).append(",");
+            builder.append(order.priceSL).append(",");
+            builder.append(order.minPrice).append(",");
+            builder.append(Utils.rateOf2Double(order.minPrice, order.priceEntry)).append(",");
+            builder.append(order.maxPrice).append(",");
+            builder.append(Utils.rateOf2Double(order.maxPrice, order.priceEntry)).append(",");
+            builder.append(profit).append(",");
+            builder.append(order.status.toString()).append(",");
+            builder.append(Utils.normalizeDateYYYYMMDDHHmm(order.timeStart)).append(",'");
+            builder.append(Utils.sdfGoogle.format(new Date(order.timeStart))).append(",");
+            builder.append(Utils.normalizeDateYYYYMMDDHHmm(order.timeUpdate)).append(",");
+            builder.append(order.rateChange).append(",");
+            builder.append(Utils.rateOf2Double(order.tickerOpen.priceClose, order.tickerOpen.priceOpen)).append(",");
+//            builder.append(Utils.rateOf2Double(order.tickerClose.priceClose, order.tickerClose.priceOpen)).append(",");
+            builder.append(order.tickerOpen.totalUsdt).append(",");
+            builder.append(order.quantity).append(",");
+            builder.append(calTp(order)).append(",");
+            builder.append((order.timeUpdate - order.timeStart) / Utils.TIME_MINUTE).append(",");
+            lines.add(builder.toString());
+        }
+        FileUtils.writeLines(new File(fileOut), lines);
     }
 
     public static Double calTp(OrderTargetInfoTest orderInfo) {

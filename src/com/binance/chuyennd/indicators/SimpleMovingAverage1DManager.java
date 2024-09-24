@@ -66,7 +66,7 @@ public class SimpleMovingAverage1DManager {
 
     private void updateForAllSymbol() {
         LOG.info("Update sma-details for all symbol!");
-        Set<String> allSymbols = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_ALL_SYMBOLS);
+        Set<String> allSymbols = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS);
         for (String symbol : allSymbols) {
             updateASymbol(symbol);
         }
@@ -77,7 +77,7 @@ public class SimpleMovingAverage1DManager {
     private void initForAllSymbol() {
         LOG.info("Update sma-details for all symbol!");
         symbol2MaDetails = new ConcurrentHashMap<>();
-        Set<String> allSymbols = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_ALL_SYMBOLS);
+        Set<String> allSymbols = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS);
         for (String symbol : allSymbols) {
             updateASymbol(symbol);
         }
@@ -142,7 +142,7 @@ public class SimpleMovingAverage1DManager {
             symbol2MaDetails = new ConcurrentHashMap<>();
             Long startTime = Utils.sdfFile.parse(TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
             LOG.info("Init data ma-1d for test with time: {} {}", TIME_RUN, Utils.normalizeDateYYYYMMDDHHmm(startTime));
-            File[] symbolFiles = new File(DataManager.FOLDER_TICKER_1D).listFiles();
+            File[] symbolFiles = new File(Configs.FOLDER_TICKER_1D).listFiles();
 
             for (File symbolFile : symbolFiles) {
                 String symbol = symbolFile.getName();

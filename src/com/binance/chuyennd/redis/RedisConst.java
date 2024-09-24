@@ -20,7 +20,7 @@ public class RedisConst {
 
     // redis config
     public static final String REDIS_CONFIG_FILE = "redis.config";
-    public static String REDIS_ADDR;
+    public static String REDIS_ADDRESS;
     public static String REDIS_HOST;
     public static String REDIS_PORT;
     public static String REDIS_TIMEOUT;
@@ -36,7 +36,7 @@ public class RedisConst {
                     map.put(line.split("=")[0].trim(), line.split("=")[1].trim());
                 }
             }
-            REDIS_ADDR = map.get("Redis.Address");
+            REDIS_ADDRESS = map.get("Redis.Address");
             REDIS_HOST = map.get("Redis.Host");
             REDIS_PORT = map.get("Redis.Port");
             REDIS_TIMEOUT = map.get("Redis.Timeout");
@@ -48,21 +48,19 @@ public class RedisConst {
 
     }
 
-    public static final String REDIS_KEY_EDUCA_TD_GRID_MANAGER_QUEUE = "redis.key.educa.td.grid.manager.queue";
+    public static final String REDIS_KEY_BINANCE_TD_GRID_MANAGER_QUEUE = "redis.key.educa.td.grid.manager.queue";
 
-    public static final String REDIS_KEY_EDUCA_SYMBOL_TIME_LOCK = "redis.key.educa.symbol.time.lock";
-    public static final String REDIS_KEY_EDUCA_ALL_SYMBOLS = "redis.key.educa.all.symbols";
+    public static final String REDIS_KEY_BINANCE_SYMBOL_TIME_LOCK = "redis.key.educa.symbol.time.lock";
+    public static final String REDIS_KEY_BINANCE_ALL_SYMBOLS = "redis.key.educa.all.symbols";
+    public static final String REDIS_KEY_BINANCE_ALL_SYMBOLS_RUNNING = "redis.key.educa.all.symbols.running";
 
-    public static final String REDIS_KEY_EDUCA_ALL_SYMBOLS_CHECKING = "redis.key.educa.all.symbols.trading";
-    public static final String REDIS_KEY_EDUCA_ALL_SYMBOLS_TRADINGVIEW_FAIL = "redis.key.educa.all.symbols.tradingview.fail";
+    public static final String REDIS_KEY_BINANCE_ALL_SYMBOLS_CHECKING = "redis.key.educa.all.symbols.trading";
+    public static final String REDIS_KEY_BINANCE_ALL_SYMBOLS_TRADINGVIEW_FAIL = "redis.key.educa.all.symbols.tradingview.fail";
 
-    public static final String REDIS_KEY_SET_ALL_SYMBOL_POS_RUNNING = "redis.key.set.td.pos.running";
-    public static final String REDIS_KEY_SYMBOL_POS_MARKET_LEVEL = "redis.key.symbol.pos.market.level";
-    public static final String REDIS_KEY_TIME_2_MARKET_LEVEL = "redis.key.time.2.market.level";
+    public static final String REDIS_KEY_SYMBOL_2_ORDER_INFO = "redis.key.symbol.order.info";
 
+    public static String REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER = Configs.getString("REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER");
 
-    public static String REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER = Configs.getString("REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER");
-
-    public static final String REDIS_KEY_EDUCA_TD_ORDER_MANAGER_QUEUE = "redis.key.educa.td.order.manager.queue";
+    public static final String REDIS_KEY_BINANCE_TD_ORDER_MANAGER_QUEUE = "redis.key.educa.td.order.manager.queue";
 
 }

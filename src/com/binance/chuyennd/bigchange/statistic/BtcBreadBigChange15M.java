@@ -52,9 +52,9 @@ public class BtcBreadBigChange15M {
     public Double BUDGET_PER_ORDER = Configs.getDouble("BUDGET_PER_ORDER");
     public AtomicBoolean isTrading = new AtomicBoolean(false);
     public BreadDetectObject lastBreadTrader = null;
-    public Long EVENT_TIME = Utils.TIME_MINUTE * 15;
+    public Long EVENT_TIME = Utils.TIME_MINUTE * 1;
     public Long lastTimeBreadTrader = 0l;
-    private static final ExecutorService executor = Executors.newFixedThreadPool(Configs.getInt("nThreadTrading"));
+//    private static final ExecutorService executor = Executors.newFixedThreadPool(Configs.getInt("nThreadTrading"));
     public Collection<? extends String> allSymbol;
 
     public static void main(String[] args) {
@@ -72,9 +72,9 @@ public class BtcBreadBigChange15M {
 
         // thread listen and detect bread big change 
         SubscriptionClient client = SubscriptionClient.create();
-        client.subscribeCandlestickEvent("btcusdt", CandlestickInterval.FIFTEEN_MINUTES, ((event) -> {
+        client.subscribeCandlestickEvent("btcusdt", CandlestickInterval.ONE_MINUTE, ((event) -> {
             if (event.getStartTime() > lastTimeBreadTrader + NUMBER_TICKER_TO_TRADE * EVENT_TIME) {
-                process(event);
+//                process(event);
             } else {
                 LOG.info("Not process because is Trading for bigchange: {}", Utils.toJson(lastBreadTrader));
             }

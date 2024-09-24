@@ -2,15 +2,15 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
-package com.binance.chuyennd.research;
+package com.binance.chuyennd.bak;
 
-import com.binance.chuyennd.bigchange.statistic.BreadDetectObject;
+import com.binance.chuyennd.indicators.MACDTradingController;
 import com.binance.chuyennd.indicators.SimpleMovingAverage1DManager;
 import com.binance.chuyennd.mongo.TickerMongoHelper;
-import com.binance.chuyennd.movingaverage.MAStatus;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
+import com.binance.chuyennd.research.OrderTargetInfoTest;
 import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Storage;
@@ -27,29 +27,25 @@ import java.io.IOException;
 import java.text.ParseException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
  * @author pc
  */
-public class SimulatorTradingVolumeMiniStopLoss {
+public class SimulatorTradingMACD {
 
-    public static final Logger LOG = LoggerFactory.getLogger(SimulatorTradingVolumeMiniStopLoss.class);
+    public static final Logger LOG = LoggerFactory.getLogger(SimulatorTradingMACD.class);
     public final String FILE_STORAGE_ORDER_DONE = "storage/OrderTestDone.data";
     public final Double RATE_TARGET = Configs.getDouble("RATE_TARGET");
     public final Double RATE_MA_MAX = Configs.getDouble("RATE_MA_MAX");
     public final Integer LEVERAGE_ORDER = Configs.getInt("LEVERAGE_ORDER");
-    public final Integer NUMBER_HOURS_STOP_TRADE = Configs.getInt("NUMBER_HOURS_STOP_TRADE");
+    public final Integer NUMBER_HOURS_STOP_MIN = Configs.getInt("NUMBER_HOURS_STOP_MIN");
     public final Double RATE_SUCCESS_STATISTIC = Configs.getDouble("RATE_SUCCESS_STATISTIC");
     public ConcurrentHashMap<String, OrderTargetInfoTest> allOrderDone;
-    public ExecutorService executorService = Executors.newFixedThreadPool(Configs.getInt("NUMBER_THREAD_ORDER_MANAGER"));
-    public Double RATE_BREAD_MIN_2TRADE = Configs.getDouble("RATE_BREAD_MIN_2TRADE");
     public final String TIME_RUN = Configs.getString("TIME_RUN");
 
 
     public static void main(String[] args) throws ParseException, IOException {
-        SimulatorTradingVolumeMiniStopLoss test = new SimulatorTradingVolumeMiniStopLoss();
+        SimulatorTradingMACD test = new SimulatorTradingMACD();
         test.initData();
         test.simulatorAllSymbol();
     }
@@ -58,38 +54,50 @@ public class SimulatorTradingVolumeMiniStopLoss {
     private void simulatorAllSymbol() throws ParseException {
         Long startTime = Utils.sdfFile.parse(TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
 
+        Map<String, List<KlineObjectNumber>> symbol2LastTickers = new HashMap<>();
         //get data
         while (true) {
             TreeMap<Long, Map<String, KlineObjectNumber>> time2Tickers;
-            try {
-                time2Tickers = TickerMongoHelper.getInstance().getDataFromDb(startTime);
-                for (Map.Entry<Long, Map<String, KlineObjectNumber>> entry : time2Tickers.entrySet()) {
-                    Long time = entry.getKey();
-                    Map<String, KlineObjectNumber> symbol2Ticker = entry.getValue();
-                    for (Map.Entry<String, KlineObjectNumber> entry1 : symbol2Ticker.entrySet()) {
-                        String symbol = entry1.getKey();
-                        KlineObjectNumber ticker = entry1.getValue();
-                        executorService.execute(() -> startThreadTestTradingSimulatorBySymbol(symbol, ticker));
+            time2Tickers = TickerMongoHelper.getInstance().getDataFromDb(startTime);
+            for (Map.Entry<Long, Map<String, KlineObjectNumber>> entry : time2Tickers.entrySet()) {
+                Long time = entry.getKey();
+                Map<String, KlineObjectNumber> symbol2Ticker = entry.getValue();
+                for (Map.Entry<String, KlineObjectNumber> entry1 : symbol2Ticker.entrySet()) {
+                    String symbol = entry1.getKey();
+                    KlineObjectNumber ticker = entry1.getValue();
+                    List<KlineObjectNumber> tickers = symbol2LastTickers.get(symbol);
+                    if (tickers == null) {
+                        tickers = new ArrayList<>();
+                        symbol2LastTickers.put(symbol, tickers);
                     }
-                    executorService.execute(() -> BudgetManagerTest.getInstance().updateBalance(time, allOrderDone));
-                    executorService.execute(() -> BudgetManagerTest.getInstance().updateInvesting());
+                    tickers.add(ticker);
+                    if (tickers.size() < 20) {
+                        continue;
+                    }
+                    if (tickers.size() > 500) {
+                        for (int i = 0; i < 50; i++) {
+                            tickers.remove(0);
+                        }
+                    }
+                    List<KlineObjectNumber> finalTickers = tickers;
+                    startTradingSimulatorASymbol(symbol, finalTickers);
+                }
+                BudgetManagerTest.getInstance().updateBalance(time, allOrderDone);
+                BudgetManagerTest.getInstance().updateInvesting();
 
-                }
-                Long finalStartTime1 = startTime;
-                executorService.execute(() -> buildReport(finalStartTime1));
-                startTime += Utils.TIME_DAY;
-                if (startTime > System.currentTimeMillis()) {
-                    break;
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
+            }
+            Long finalStartTime1 = startTime;
+            buildReport(finalStartTime1);
+            startTime += Utils.TIME_DAY;
+            if (startTime > System.currentTimeMillis()) {
+                break;
             }
         }
-        executorService.execute(() -> Storage.writeObject2File(FILE_STORAGE_ORDER_DONE, allOrderDone));
+        Storage.writeObject2File(FILE_STORAGE_ORDER_DONE, allOrderDone);
         Long finalStartTime = startTime;
-        executorService.execute(() -> buildReport(finalStartTime));
-        executorService.execute(() -> BudgetManagerTest.getInstance().printBalanceIndex());
-        executorService.execute(() -> exitWhenDone());
+        buildReport(finalStartTime);
+        BudgetManagerTest.getInstance().printBalanceIndex();
+        exitWhenDone();
 
     }
 
@@ -104,15 +112,14 @@ public class SimulatorTradingVolumeMiniStopLoss {
 
     private void initData() throws IOException, ParseException {
         // clear Data Old
-        RedisHelper.getInstance().get().del(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER);
+        RedisHelper.getInstance().get().del(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER);
         allOrderDone = new ConcurrentHashMap<>();
         if (new File(FILE_STORAGE_ORDER_DONE).exists()) {
             FileUtils.delete(new File(FILE_STORAGE_ORDER_DONE));
         }
         SimpleMovingAverage1DManager.getInstance();
         if (RATE_SUCCESS_STATISTIC != 0) {
-            BreadFunctions.updateVolumeRateChange(NUMBER_HOURS_STOP_TRADE
-                    , RATE_SUCCESS_STATISTIC);
+            BreadFunctions.updateVolumeRateChange(NUMBER_HOURS_STOP_MIN, RATE_SUCCESS_STATISTIC);
         }
         try {
             Thread.sleep(15 * Utils.TIME_SECOND);
@@ -128,13 +135,13 @@ public class SimulatorTradingVolumeMiniStopLoss {
         Double totalSell = 0d;
         Integer dcaTotal = 0;
         TreeMap<Double, OrderTargetInfoTest> pnl2OrderInfo = new TreeMap<>();
-        for (String symbol : RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER)) {
-            String json = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER, symbol);
+        for (String symbol : RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER)) {
+            String json = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER, symbol);
             if (json != null) {
                 OrderTargetInfoTest orderInfo = Utils.gson.fromJson(json, OrderTargetInfoTest.class);
                 Double pnl = orderInfo.calProfit();
                 pnl2OrderInfo.put(pnl, orderInfo);
-                if (orderInfo.dcaLevel != null && orderInfo.dcaLevel > 0) {
+                if (orderInfo.dynamicTP_SL != null && orderInfo.dynamicTP_SL > 0) {
                     dcaTotal++;
                 }
             }
@@ -153,13 +160,7 @@ public class SimulatorTradingVolumeMiniStopLoss {
 
             if (counterLog < 105) {
                 counterLog++;
-                builder.append(Utils.normalizeDateYYYYMMDDHHmm(orderInfo.timeStart)).append(" ").
-                        append(Utils.normalizeDateYYYYMMDDHHmm(currentTime)).append(" margin:")
-                        .append(orderInfo.calMargin().longValue()).append(" ")
-                        .append(orderInfo.side).append(" ").append(orderInfo.symbol)
-                        .append(" ").append(" dcaLevel:").append(orderInfo.dcaLevel).append(" ")
-                        .append(orderInfo.priceEntry).append("->").append(orderInfo.lastPrice).append(" ").
-                        append(ratePercent.longValue()).append("%").append(" ").append(pnl.longValue()).append("$").append("\n");
+                builder.append(Utils.normalizeDateYYYYMMDDHHmm(orderInfo.timeStart)).append(" ").append(Utils.normalizeDateYYYYMMDDHHmm(currentTime)).append(" margin:").append(orderInfo.calMargin().longValue()).append(" ").append(orderInfo.side).append(" ").append(orderInfo.symbol).append(" ").append(" dcaLevel:").append(orderInfo.dynamicTP_SL).append(" ").append(orderInfo.priceEntry).append("->").append(orderInfo.lastPrice).append(" ").append(ratePercent.longValue()).append("%").append(" ").append(pnl.longValue()).append("$").append("\n");
             }
         }
 
@@ -201,9 +202,9 @@ public class SimulatorTradingVolumeMiniStopLoss {
             } else {
                 totalSell++;
             }
-            if (order.dcaLevel != null && order.dcaLevel > 0) {
+            if (order.dynamicTP_SL != null && order.dynamicTP_SL > 0) {
                 totalDca++;
-                if (order.dcaLevel >= 2) {
+                if (order.dynamicTP_SL >= 2) {
                     totalDcaLevel2++;
                 }
             }
@@ -223,112 +224,92 @@ public class SimulatorTradingVolumeMiniStopLoss {
         reportRunning.append(" Sell: ").append(totalSell * RATE_TARGET * 100).append("%");
         reportRunning.append(" SL: ").append(totalSL).append(" ");
         reportRunning.append(" dcaDone: ").append(totalDca).append(" ");
-        reportRunning.append(" Running: ").append(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER).size()).append(" orders");
+        reportRunning.append(" Running: ").append(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER).size()).append(" orders");
         LOG.info(reportRunning.toString());
         LOG.info(Utils.toJson(symbol2Counter));
 //        Utils.sendSms2Telegram(reportRunning.toString());
     }
 
-    private void startThreadTestTradingSimulatorBySymbol(String symbol, KlineObjectNumber ticker) {
+    private void startTradingSimulatorASymbol(String symbol, List<KlineObjectNumber> tickers) {
         // check running
-//        try {
-//            if (StringUtils.equals(symbol, "CELOUSDT") && ticker.startTime.longValue() == Utils.sdfFileHour.parse("20230401 23:30").getTime()) {
-//                System.out.println("debug");
-//            }
-//            if (StringUtils.equals(symbol, "CELOUSDT") && ticker.startTime.longValue() == Utils.sdfFileHour.parse("20230402 06:15").getTime()) {
-//                System.out.println("debug");
-//            }
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
-        String json = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER, symbol);
+        KlineObjectNumber ticker = tickers.get(tickers.size() - 1);
+        String json = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER, symbol);
         if (StringUtils.isNotEmpty(json)) {
             OrderTargetInfoTest orderInfo = Utils.gson.fromJson(json, OrderTargetInfoTest.class);
             if (orderInfo.timeStart < ticker.startTime.longValue()) {
                 orderInfo.updatePriceByKline(ticker);
-//                Double rateLoss = Math.abs(Utils.rateOf2Double(orderInfo.lastPrice, orderInfo.priceEntry));
-//                if (rateLoss * 100 > DCAManagerTest.getMinRateDCA()) {
-//                    orderInfo.timeUpdate = ticker.startTime.longValue();
-//                    if (BudgetManagerTest.getInstance().isAvailableDca()) {
-//                        DCAManagerTest.checkAndDcaOrder(orderInfo, RATE_TARGET);
-//                    }
-//                }
-
                 orderInfo.updateStatus();
                 if (orderInfo.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)) {
                     allOrderDone.put(ticker.startTime.longValue() + "-" + symbol, orderInfo);
-                    RedisHelper.getInstance().get().hdel(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER, symbol);
-                    checkAndCreateOrderNew(ticker, symbol);
+                    RedisHelper.getInstance().get().hdel(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER, symbol);
+                    checkAndCreateOrderNew(tickers, symbol);
                 } else {
-                    if (orderInfo.timeStart < ticker.startTime - Utils.TIME_HOUR * NUMBER_HOURS_STOP_TRADE) {
+                    if (ticker.startTime > orderInfo.timeStart + NUMBER_HOURS_STOP_MIN * Utils.TIME_HOUR
+                            || ticker.histogram < orderInfo.tickerOpen.histogram) {
+//                    if (MACDTradingController.isMacdStopTrendBuy(tickers, tickers.size() - 1, orderInfo.timeStart)) {
                         stopLossOrder(symbol, ticker);
                     } else {
-                        RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER, symbol, Utils.toJson(orderInfo));
+                        RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER, symbol, Utils.toJson(orderInfo));
                     }
                 }
             }
         } else {
-            checkAndCreateOrderNew(ticker, symbol);
+            checkAndCreateOrderNew(tickers, symbol);
         }
 
     }
 
-    private void checkAndCreateOrderNew(KlineObjectNumber ticker, String symbol) {
-        BreadDetectObject breadData = BreadFunctions.calBreadDataAlt(ticker, RATE_BREAD_MIN_2TRADE);
-        SimpleMovingAverage1DManager.getInstance().updateWithTicker(symbol, ticker);
-        MAStatus maStatus = SimpleMovingAverage1DManager.getInstance().getMaStatus(ticker.startTime.longValue(), symbol);
-        Double maValue = SimpleMovingAverage1DManager.getInstance().getMaValue(symbol,
-                Utils.getDate(ticker.startTime.longValue() - Utils.TIME_DAY));
-        Double rateMa = Utils.rateOf2Double(ticker.priceClose, maValue);
-
-        Double rateChange = BreadFunctions.getRateChangeWithVolume(ticker.totalUsdt / 1000000);
-        if (rateChange == null) {
-//            LOG.info("Error rateChange with ticker: {} {}", symbol, Utils.toJson(ticker));
-            return;
-        }
-
-//        if (BreadFunctions.isAvailableTrade(breadData, ticker, maStatus,  maValue, rateChange, rateMa, RATE_MA_MAX)) {
-//            LOG.info("Big:{} {} {} rate:{} volume: {}", symbol, new Date(ticker.startTime.longValue()), breadData.orderSide, breadData.totalRate, ticker.totalUsdt);
-//            if (BudgetManagerTest.getInstance().isAvailableTrade()) {
-//                createOrderNew(symbol, ticker, breadData);
-//            } else {
-//                LOG.info("Stop trade because capital over: {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()));
-//            }
+    private void checkAndCreateOrderNew(List<KlineObjectNumber> tickers, String symbol) {
+        KlineObjectNumber ticker = tickers.get(tickers.size() - 1);
+//        SimpleMovingAverage1DManager.getInstance().updateWithTicker(symbol, ticker);
+//        MAStatus maStatus = SimpleMovingAverage1DManager.getInstance().getMaStatus(ticker.startTime.longValue(), symbol);
+//        Double maValue = SimpleMovingAverage1DManager.getInstance().getMaValue(symbol, Utils.getDate(ticker.startTime.longValue()));
+//        Double rateMa = Utils.rateOf2Double(ticker.priceClose, maValue);
+//        Double rateMaWithCurrentInterval = Utils.rateOf2Double(ticker.priceClose, ticker.ma20);
+//        if (maValue == null) {
+//            return;
 //        }
+        if (
+                MACDTradingController.isMacdTrendUpAndTickerDown(tickers, tickers.size() - 1, 2.0)
+//                && rateMaWithCurrentInterval < 0
+//                && rateMa < 0.2
+//                && maStatus != null && maStatus.equals(MAStatus.TOP)
+        ) {
+            LOG.info("Macd cut signal:{} {} {} volume: {}", symbol, new Date(ticker.startTime.longValue()), ticker.rsi, ticker.totalUsdt);
+            if (BudgetManagerTest.getInstance().isAvailableTrade()) {
+                createOrderNew(symbol, ticker);
+            } else {
+                LOG.info("Stop trade because capital over: {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()));
+            }
+        }
     }
 
     private void stopLossOrder(String symbol, KlineObjectNumber ticker) {
-        String json = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER, symbol);
+        String json = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER, symbol);
         if (StringUtils.isNotEmpty(json)) {
             OrderTargetInfoTest orderInfo = Utils.gson.fromJson(json, OrderTargetInfoTest.class);
-            LOG.info("Cancel order over 30d: {} {} {}!", Utils.toJson(symbol),
-                    Utils.normalizeDateYYYYMMDDHHmm(orderInfo.timeStart), Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()));
+            LOG.info("Cancel order over macd: {} {} {}!", Utils.toJson(symbol), Utils.normalizeDateYYYYMMDDHHmm(orderInfo.timeStart), Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()));
             orderInfo.priceTP = ticker.priceClose;
             orderInfo.status = OrderTargetStatus.STOP_LOSS_DONE;
             orderInfo.timeUpdate = ticker.startTime.longValue();
             orderInfo.tickerClose = ticker;
             allOrderDone.put(ticker.startTime.longValue() + "-" + orderInfo.symbol, orderInfo);
-            RedisHelper.getInstance().get().hdel(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER, orderInfo.symbol);
+            RedisHelper.getInstance().get().hdel(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER, orderInfo.symbol);
         }
     }
 
-    private void createOrderNew(String symbol, KlineObjectNumber ticker, BreadDetectObject breadData) {
+    private void createOrderNew(String symbol, KlineObjectNumber ticker) {
         Double entry = ticker.priceClose * 1.002;
         Double priceTp = Utils.calPriceTarget(symbol, entry, OrderSide.BUY, RATE_TARGET);
 
         String log = OrderSide.BUY + " " + symbol + " entry: " + entry + " target: " + priceTp + " time:" + Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue());
         Double quantity = Utils.calQuantity(BudgetManagerTest.getInstance().getBudget(), BudgetManagerTest.getInstance().getLeverage(), entry, symbol);
-        OrderTargetInfoTest order = new OrderTargetInfoTest(OrderTargetStatus.REQUEST, entry, priceTp, quantity,
-                LEVERAGE_ORDER, symbol, ticker.startTime.longValue(), ticker.endTime.longValue(), OrderSide.BUY);
+        OrderTargetInfoTest order = new OrderTargetInfoTest(OrderTargetStatus.REQUEST, entry, priceTp, quantity, LEVERAGE_ORDER, symbol, ticker.startTime.longValue(), ticker.endTime.longValue(), OrderSide.BUY);
         order.minPrice = entry;
         order.lastPrice = entry;
         order.maxPrice = entry;
-        order.rsi14 = ticker.rsi;
-        order.ma201d = ticker.ma20;
-        order.rateChange = breadData.totalRate;
-        order.volume = breadData.volume;
         order.tickerOpen = ticker;
-        RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER, symbol, Utils.toJson(order));
+        RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER, symbol, Utils.toJson(order));
         BudgetManagerTest.getInstance().updateInvesting();
         LOG.info(log);
     }

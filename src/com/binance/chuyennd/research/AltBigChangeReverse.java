@@ -1,0 +1,207 @@
+/*
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
+ */
+package com.binance.chuyennd.research;
+
+import com.binance.chuyennd.bigchange.market.MarketBigChangeDetectorTest;
+import com.binance.chuyennd.bigchange.market.MarketDataObject;
+import com.binance.chuyennd.bigchange.market.MarketLevelChange;
+import com.binance.chuyennd.bigchange.statistic.data.DataManager;
+import com.binance.chuyennd.bigchange.test.TraceOrderDone;
+import com.binance.chuyennd.client.TickerFuturesHelper;
+import com.binance.chuyennd.object.sw.KlineObjectSimple;
+import com.binance.chuyennd.trading.OrderTargetStatus;
+import com.binance.chuyennd.utils.Configs;
+import com.binance.chuyennd.utils.Storage;
+import com.binance.chuyennd.utils.Utils;
+import com.binance.client.constant.Constants;
+import com.binance.client.model.enums.OrderSide;
+import org.apache.commons.io.FileUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.io.IOException;
+import java.text.ParseException;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * @author pc
+ */
+public class AltBigChangeReverse {
+
+    public static final Logger LOG = LoggerFactory.getLogger(AltBigChangeReverse.class);
+    public final String FILE_STORAGE_ORDER_DONE = "storage/" + AltBigChangeReverse.class.getSimpleName() + ".data";
+    public ConcurrentHashMap<String, OrderTargetInfoTest> allOrderDone;
+    public ConcurrentHashMap<String, OrderTargetInfoTest> orderRunning = new ConcurrentHashMap();
+
+    public static void main(String[] args) throws ParseException, IOException {
+        AltBigChangeReverse test = new AltBigChangeReverse();
+        test.initData();
+        test.statisticAll();
+    }
+
+
+    private void statisticAll() throws ParseException {
+        Long startTime = Utils.sdfFile.parse(Configs.TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
+        TreeMap<Long, List<String>> time2Entry = new TreeMap<>();
+//        String fileMarketTime = "target/time_trade_market_"
+//                + Utils.sdfFile.format(new Date()) + ".data";
+//        LOG.info("read file market time: {}", fileMarketTime);
+//        Map<Long, MarketDataObject> timesTradeMarket = (Map<Long, MarketDataObject>) Storage.readObjectFromFile(fileMarketTime);
+//        LOG.info("Time market data: {} records", timesTradeMarket.size());
+        //get data
+        while (true) {
+            TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers;
+            Map<String, List<KlineObjectSimple>> symbol2LastTickers = new HashMap<>();
+            try {
+                time2Tickers = DataManager.readDataFromFile1M(startTime);
+                LOG.info("Read file: {} {}", Utils.normalizeDateYYYYMMDD(startTime), time2Entry.size());
+                if (time2Tickers != null) {
+                    for (Map.Entry<Long, Map<String, KlineObjectSimple>> entry : time2Tickers.entrySet()) {
+                        Long time = entry.getKey();
+
+
+                        Map<String, KlineObjectSimple> symbol2Ticker = entry.getValue();
+                        // update order Old
+                        for (Map.Entry<String, KlineObjectSimple> entry1 : symbol2Ticker.entrySet()) {
+                            String symbol = entry1.getKey();
+                            if (Constants.diedSymbol.contains(symbol)) {
+                                continue;
+                            }
+
+                            KlineObjectSimple ticker = entry1.getValue();
+                            startUpdateOldOrderTrading(symbol, ticker);
+                            List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
+                            if (tickers == null) {
+                                tickers = new ArrayList<>();
+                                symbol2LastTickers.put(symbol, tickers);
+                            }
+                            tickers.add(ticker);
+                            if (tickers.size() > 100) {
+                                for (int i = 0; i < 50; i++) {
+                                    tickers.remove(0);
+                                }
+                            }
+                            Double volumeTotal = 0d;
+                            Double volumeMax = 0d;
+                            for (int i = 0; i < tickers.size() - 1; i++) {
+                                KlineObjectSimple tickerCheck = tickers.get(i);
+                                volumeTotal += tickerCheck.totalUsdt;
+                                if (volumeMax < tickerCheck.totalUsdt) {
+                                    volumeMax = tickerCheck.totalUsdt;
+                                }
+                            }
+                            double volumeAvg = volumeTotal / (tickers.size() - 1);
+
+                            Double rateChange = Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen);
+                            Double totalRate = Utils.rateOf2Double(ticker.maxPrice, ticker.minPrice);
+                            if (!orderRunning.containsKey(symbol)
+                            ) {
+                                if (volumeAvg * 40 < ticker.totalUsdt
+                                        && volumeMax < 20 * volumeAvg
+                                        && rateChange > 0.006
+                                        && rateChange < 0.02
+                                        && totalRate < 0.03
+                                ) {
+                                    List<String> symbolsEntry = time2Entry.get(ticker.startTime.longValue());
+                                    if (symbolsEntry == null) {
+                                        symbolsEntry = new ArrayList<>();
+                                        time2Entry.put(ticker.startTime.longValue(), symbolsEntry);
+                                    }
+                                    symbolsEntry.add(symbol);
+                                    createOrderBUYTarget(symbol, ticker, ticker.totalUsdt / volumeAvg);
+                                }
+//                                Double rateChangeMax = MarketBigChangeDetectorTest.isSignalBuyWithVolume1M(tickers);
+//                                if (rateChangeMax != null && rateChangeMax < -0.12) {
+//                                    List<String> symbolsEntry = time2Entry.get(ticker.startTime.longValue());
+//                                    if (symbolsEntry == null) {
+//                                        symbolsEntry = new ArrayList<>();
+//                                        time2Entry.put(ticker.startTime.longValue(), symbolsEntry);
+//                                    }
+//                                    symbolsEntry.add(symbol);
+//                                    createOrderBUYTarget(symbol, ticker, rateChangeMax);
+//                                }
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            startTime += Utils.TIME_DAY;
+            if (startTime > System.currentTimeMillis()) {
+                break;
+            }
+        }
+        Storage.writeObject2File("target/entry/volumeBigSignal1MBuy.data", time2Entry);
+        Storage.writeObject2File(FILE_STORAGE_ORDER_DONE, allOrderDone);
+        try {
+            TraceOrderDone.printOrderTestDone(FILE_STORAGE_ORDER_DONE, "storage/" + AltBigChangeReverse.class.getSimpleName() + ".csv");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        exitWhenDone();
+    }
+
+
+    private void exitWhenDone() {
+        try {
+            Thread.sleep(10 * Utils.TIME_SECOND);
+            System.exit(1);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void startUpdateOldOrderTrading(String symbol, KlineObjectSimple ticker) {
+
+        OrderTargetInfoTest orderInfo = orderRunning.get(symbol);
+        if (orderInfo != null) {
+            if (orderInfo.timeStart < ticker.startTime.longValue()) {
+                orderInfo.updatePriceByKlineSimple(ticker);
+                orderInfo.updateStatusNew(ticker);
+                if (orderInfo.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)
+                        || orderInfo.status.equals(OrderTargetStatus.STOP_LOSS_DONE)
+                        || orderInfo.status.equals(OrderTargetStatus.STOP_MARKET_DONE)) {
+                    allOrderDone.put(orderInfo.timeStart + "-" + symbol, orderInfo);
+                    BudgetManagerSimple.getInstance().updatePnl(orderInfo);
+                    orderRunning.remove(symbol);
+                } else {
+                    orderInfo.updateTPSL();
+                }
+            }
+        }
+    }
+
+
+    private void createOrderBUYTarget(String symbol, KlineObjectSimple ticker, Double volumeChange) {
+        Double entry = ticker.priceClose;
+        Double budget = BudgetManagerSimple.getInstance().getBudget();
+        Integer leverage = BudgetManagerSimple.getInstance().getLeverage();
+        String log = OrderSide.BUY + " " + symbol + " entry: " + entry + " budget: " + budget
+                + " time:" + Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue());
+        Double quantity = Utils.calQuantity(budget, leverage, entry, symbol);
+//        Double priceTp = Utils.calPriceTarget(symbol, entry, OrderSide.BUY, 3 * Configs.RATE_TARGET);
+//        Double priceSL = Utils.calPriceTarget(symbol, entry, OrderSide.SELL, 3 * Configs.RATE_TARGET);
+        Double priceTp = null;
+        OrderTargetInfoTest order = new OrderTargetInfoTest(OrderTargetStatus.REQUEST, entry, priceTp, quantity,
+                leverage, symbol, ticker.startTime.longValue(), ticker.startTime.longValue(), OrderSide.BUY);
+//        order.priceSL = priceSL;
+        order.minPrice = entry;
+        order.lastPrice = entry;
+        order.maxPrice = entry;
+        order.tickerOpen = Utils.convertKlineSimple(ticker);
+        order.rateChange = volumeChange;
+        orderRunning.put(symbol, order);
+
+        LOG.info(log);
+    }
+
+    private void initData() throws IOException, ParseException {
+        // clear Data Old
+        allOrderDone = new ConcurrentHashMap<>();
+    }
+}

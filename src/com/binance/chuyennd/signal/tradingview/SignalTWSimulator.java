@@ -75,7 +75,7 @@ public class SignalTWSimulator {
                 if (isTimeScheduleUpdateOrder()) {
                     try {
                         LOG.info("Start update order by schedule! {}", new Date());
-                        for (String symbol : RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER)) {
+                        for (String symbol : RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER)) {
                             executorService.execute(() -> updatePositionBySchedule(symbol));
                         }
                     } catch (Exception e) {
@@ -96,7 +96,7 @@ public class SignalTWSimulator {
 
     private void updatePositionBySchedule(String symbol) {
         try {
-            OrderTargetInfoTestSignal orderInfo = Utils.gson.fromJson(RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER, symbol),
+            OrderTargetInfoTestSignal orderInfo = Utils.gson.fromJson(RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER, symbol),
                     OrderTargetInfoTestSignal.class);
             KlineObjectNumber ticker = TickerFuturesHelper.getLastTicker(symbol, Constants.INTERVAL_15M);
             if (orderInfo.timeStart < ticker.startTime.longValue()) {
@@ -105,13 +105,13 @@ public class SignalTWSimulator {
                 orderInfo.updateStatus();
                 if (orderInfo.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE) ||
                         orderInfo.status.equals(OrderTargetStatus.STOP_LOSS_DONE)) {
-                    RedisHelper.getInstance().get().hdel(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER, symbol);
+                    RedisHelper.getInstance().get().hdel(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER, symbol);
                     orderInfo.tickerClose = ticker;
                     orderInfo.timeUpdate = System.currentTimeMillis();
                     allOrderDone.put(System.currentTimeMillis(), orderInfo);
                     Storage.writeObject2File(FILE_STORAGE_ORDER_DONE, allOrderDone);
                 } else {
-                    RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER, symbol, Utils.toJson(orderInfo));
+                    RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER, symbol, Utils.toJson(orderInfo));
                 }
             }
         } catch (Exception e) {
@@ -162,16 +162,16 @@ public class SignalTWSimulator {
         StringBuilder builder = new StringBuilder();
         builder.setLength(0);
         for (SymbolTickerEvent event : events) {
-            String json = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER, event.getSymbol());
+            String json = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER, event.getSymbol());
             if (StringUtils.isNotEmpty(json)) {
                 OrderTargetInfoTestSignal orderInfo = Utils.gson.fromJson(json, OrderTargetInfoTestSignal.class);
                 orderInfo.updatePriceByLastPrice(event.getLastPrice().doubleValue());
                 orderInfo.updateStatus();
                 if (orderInfo.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)) {
                     allOrderDone.put(System.currentTimeMillis(), orderInfo);
-                    RedisHelper.getInstance().get().hdel(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER, event.getSymbol());
+                    RedisHelper.getInstance().get().hdel(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER, event.getSymbol());
                 } else {
-                    RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER, event.getSymbol(), Utils.toJson(orderInfo));
+                    RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER, event.getSymbol(), Utils.toJson(orderInfo));
                 }
             }
         }
@@ -181,8 +181,8 @@ public class SignalTWSimulator {
         LOG.info("Start detect symbol is Strong signal! {}", new Date());
 
         // check symbol had position running
-        Set<String> symbolsTrading = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER);
-        for (String symbol : RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_ALL_SYMBOLS)) {
+        Set<String> symbolsTrading = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER);
+        for (String symbol : RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS)) {
             try {
                 if (symbolsTrading.contains(symbol)) {
                     continue;
@@ -210,7 +210,7 @@ public class SignalTWSimulator {
         order.maxPrice = entry;
         order.tickerOpen = ticker;
         order.signals.addAll(getAllSignal(symbol));
-        RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER, symbol, Utils.toJson(order));
+        RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER, symbol, Utils.toJson(order));
         LOG.info(log);
 
     }
@@ -256,8 +256,8 @@ public class SignalTWSimulator {
         Long totalBuy = 0l;
         Long totalSell = 0l;
         TreeMap<Double, OrderTargetInfoTestSignal> rate2Order = new TreeMap<>();
-        for (String symbol : RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER)) {
-            OrderTargetInfoTestSignal orderInfo = Utils.gson.fromJson(RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER, symbol),
+        for (String symbol : RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER)) {
+            OrderTargetInfoTestSignal orderInfo = Utils.gson.fromJson(RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER, symbol),
                     OrderTargetInfoTestSignal.class);
             Double rateLoss = orderInfo.calRateLoss() * 10000;
             rate2Order.put(rateLoss, orderInfo);
@@ -426,7 +426,7 @@ public class SignalTWSimulator {
         total *= 100;
         reportRunning.append(" Success: ").append(total.longValue()).append("%");
         reportRunning.append(" loss/tp: ").append(totalSL).append("/").append(totalTP);
-        reportRunning.append(" Running: ").append(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER).size()).append(" orders");
+        reportRunning.append(" Running: ").append(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER).size()).append(" orders");
         Utils.sendSms2Telegram(reportRunning.toString());
 //        Storage.writeObject2File(FILE_STORAGE_ORDER_DONE, allOrderDone);
     }
@@ -452,7 +452,7 @@ public class SignalTWSimulator {
         total *= 100;
         reportRunning.append(" Success: ").append(total.longValue()).append("%");
         reportRunning.append(" loss/tp: ").append(totalSL).append("/").append(totalTP);
-        reportRunning.append(" Running: ").append(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER).size()).append(" orders");
+        reportRunning.append(" Running: ").append(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER).size()).append(" orders");
         Utils.sendSms2Telegram(reportRunning.toString());
 //        Storage.writeObject2File(FILE_STORAGE_ORDER_DONE, allOrderDone);
     }
@@ -475,9 +475,9 @@ public class SignalTWSimulator {
         Map<String, Double> sym2Volume = TickerFuturesHelper.getAllVolume24hr();
         TreeMap<Double, OrderTargetInfoTestSignal> rate2Order = new TreeMap<>();
         Integer counter50M = 0;
-        Set<String> symbols = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER);
+        Set<String> symbols = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER);
         for (String symbol : symbols) {
-            OrderTargetInfoTestSignal orderInfo = Utils.gson.fromJson(RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER, symbol),
+            OrderTargetInfoTestSignal orderInfo = Utils.gson.fromJson(RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER, symbol),
                     OrderTargetInfoTestSignal.class);
             Double rateLoss = orderInfo.calRateLoss() * 10000;
             rate2Order.put(rateLoss, orderInfo);

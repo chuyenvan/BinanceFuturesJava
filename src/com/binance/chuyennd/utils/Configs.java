@@ -18,6 +18,7 @@ import java.util.Map;
  */
 public class Configs {
 
+
     public static String configFile = "config.properties";
     public static volatile Map properties = new HashMap();
 
@@ -36,6 +37,32 @@ public class Configs {
             System.exit(0);
         }
     }
+
+    public static String TIME_RUN = Configs.getString("TIME_RUN");
+    ;
+    public static final Integer NUMBER_THREAD_ORDER_MANAGER = Configs.getInt("NUMBER_THREAD_ORDER_MANAGER");
+    public static boolean MOD_RUN_CAPITAL_CONSTANT = Configs.getBoolean("MOD_RUN_CAPITAL_CONSTANT");
+    public static Integer NUMBER_ENTRY_EACH_SIGNAL = Configs.getInt("NUMBER_ENTRY_EACH_SIGNAL");
+    public static Integer NUMBER_TICKER_CAL_RATE_CHANGE = Configs.getInt("NUMBER_TICKER_CAL_RATE_CHANGE");
+    public static final Double RATE_TARGET = Configs.getDouble("RATE_TARGET");
+    public static final Double RATE_STOP_LOSS = Configs.getDouble("RATE_STOP_LOSS");
+    public static final Double MAX_CAPITAL_RATE = Configs.getDouble("MAX_CAPITAL_RATE");
+    public static final Double RATE_FEE = Configs.getDouble("RATE_FEE");
+    public static final Double RATE_TRADING_DYNAMIC = Configs.getDouble("RATE_TRADING_DYNAMIC");
+    public static final Double RATE_BUDGET_LIMIT_A_SIGNAL = Configs.getDouble("RATE_BUDGET_LIMIT_A_SIGNAL");
+    public static final Integer LEVERAGE_ORDER = Configs.getInt("LEVERAGE_ORDER");
+
+    public static String FOLDER_TICKER_15M = Configs.getString("FOLDER_TICKER_15M");//"../ticker/storage/ticker/symbols-15m/";
+    public static String FOLDER_TICKER_1M = Configs.getString("FOLDER_TICKER_1M");//"../ticker/storage/ticker/symbols-15m/";
+    public static String FOLDER_TICKER_1M_PRODUCTION = Configs.getString("FOLDER_TICKER_1M_PRODUCTION");//"../ticker/storage/ticker/symbols-15m/";
+    public static String FOLDER_TICKER_15M_FILE = Configs.getString("FOLDER_TICKER_15M_FILE");
+    public static String FOLDER_TICKER_1M_FILE = Configs.getString("FOLDER_TICKER_1M_FILE");
+    public static String FOLDER_TICKER_HOUR = Configs.getString("FOLDER_TICKER_1H");//"../ticker/storage/ticker/symbols-1h/";
+    public static String FOLDER_TICKER_4HOUR = Configs.getString("FOLDER_TICKER_4H");//"../ticker/storage/ticker/symbols-4h/";
+    public static String FOLDER_TICKER_1D = Configs.getString("FOLDER_TICKER_1D");//"../ticker/storage/ticker/symbols-1D/";
+    public static String FILE_DATA_LOADED = Configs.getString("FILE_DATA_LOADED");//"storage/macd_data_time";
+    public static Integer TIME_AFTER_ORDER_2_SL = Configs.getInt("TIME_AFTER_ORDER_2_SL");
+    public static Integer TIME_AFTER_ORDER_2_TP = Configs.getInt("TIME_AFTER_ORDER_2_TP");
 
     public static String getString(String configName) {
         return (String) properties.get(configName);

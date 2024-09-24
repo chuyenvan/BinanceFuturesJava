@@ -2,7 +2,7 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
-package com.binance.chuyennd.trading;
+package com.binance.chuyennd.signal.tradingview;
 
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
@@ -33,22 +33,22 @@ public class SymbolTradingManager {
     private void updateSymbolTrading() {
         try {
             Set<String> symbolsVolumeOverVolumeNotTrade = getAllSymbolVolumeOverVolumeNotTrade();
-            Set<String> symbolsTrading = RedisHelper.getInstance().smembers(RedisConst.REDIS_KEY_SET_ALL_SYMBOL_POS_RUNNING);
+            Set<String> symbolsTrading = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS_RUNNING);
             Set<String> symbol2Trade = new HashSet<>();
-            Set<String> allSymbol = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_ALL_SYMBOLS);
+            Set<String> allSymbol = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS);
             symbol2Trade.addAll(allSymbol);
             symbol2Trade.removeAll(Constants.diedSymbol);
             symbol2Trade.removeAll(symbolsVolumeOverVolumeNotTrade);
             symbol2Trade.removeAll(symbolsTrading);
             String currentTime = String.valueOf(System.currentTimeMillis());
             //delet list old
-            RedisHelper.getInstance().get().del(RedisConst.REDIS_KEY_EDUCA_ALL_SYMBOLS_CHECKING);
+            RedisHelper.getInstance().get().del(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS_CHECKING);
             //write new
             LOG.info("Update {} symbols to trading list. all:{} not:{} running:{}", symbol2Trade.size(), allSymbol.size(),
                     symbolsVolumeOverVolumeNotTrade.size(), symbolsTrading.size()
             );
             for (String symbol : symbol2Trade) {
-                RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_ALL_SYMBOLS_CHECKING, symbol, currentTime);
+                RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS_CHECKING, symbol, currentTime);
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -96,11 +96,11 @@ public class SymbolTradingManager {
     }
 
     public Set<String> getAllSymbol2TradingSignal() {
-        return RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_ALL_SYMBOLS_CHECKING);
+        return RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS_CHECKING);
     }
 
     public Set<String> getAllSymbol2TradingVolumeMini() {
-        return RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_ALL_SYMBOLS);
+        return RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS);
     }
 
     public static void main(String[] args) {

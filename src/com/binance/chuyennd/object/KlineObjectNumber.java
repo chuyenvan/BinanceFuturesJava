@@ -15,6 +15,8 @@
  */
 package com.binance.chuyennd.object;
 
+import com.binance.chuyennd.object.sw.KlineObjectSimple;
+
 import java.io.Serializable;
 import java.util.List;
 
@@ -52,6 +54,7 @@ public class KlineObjectNumber implements Serializable {
 //        result.al = (Double) kline.get(8);
         return result;
     }
+
 
     public double getDefaultPrice() {
         return priceClose;

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.binance.chuyennd.trading;
+package com.binance.chuyennd.volume;
 
 import com.binance.chuyennd.bigchange.statistic.BreadDetectObject;
 import com.binance.chuyennd.client.ClientSingleton;
@@ -25,6 +25,10 @@ import com.binance.chuyennd.object.IndicatorEntry;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
+import com.binance.chuyennd.trading.BudgetManager;
+import com.binance.chuyennd.trading.OrderTargetInfo;
+import com.binance.chuyennd.trading.OrderTargetStatus;
+import com.binance.chuyennd.signal.tradingview.SymbolTradingManager;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
@@ -67,7 +71,7 @@ public class VolumeMiniManager {
     }
 
     private static void prinAllTop() {
-        for (String symbol : RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_ALL_SYMBOLS)) {
+        for (String symbol : RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS)) {
             MAStatus maStatus = SimpleMovingAverage1DManager.getInstance().getMaStatus(System.currentTimeMillis(), symbol);
             if (maStatus != null && maStatus.equals(MAStatus.TOP)){
                 LOG.info("TOP: {} {}",symbol, SimpleMovingAverage1DManager.getInstance().getMaValue(symbol, System.currentTimeMillis()));

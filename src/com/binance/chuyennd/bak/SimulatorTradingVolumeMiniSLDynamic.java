@@ -2,7 +2,7 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
-package com.binance.chuyennd.research;
+package com.binance.chuyennd.bak;
 
 import com.binance.chuyennd.bigchange.statistic.BreadDetectObject;
 import com.binance.chuyennd.indicators.SimpleMovingAverage1DManager;
@@ -11,6 +11,7 @@ import com.binance.chuyennd.movingaverage.MAStatus;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
+import com.binance.chuyennd.research.OrderTargetInfoTest;
 import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Storage;
@@ -109,7 +110,7 @@ public class SimulatorTradingVolumeMiniSLDynamic {
 
     private void initData() throws IOException, ParseException {
         // clear Data Old
-        RedisHelper.getInstance().get().del(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER);
+        RedisHelper.getInstance().get().del(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER);
         allOrderDone = new ConcurrentHashMap<>();
         if (new File(FILE_STORAGE_ORDER_DONE).exists()) {
             FileUtils.delete(new File(FILE_STORAGE_ORDER_DONE));
@@ -133,13 +134,13 @@ public class SimulatorTradingVolumeMiniSLDynamic {
         Double totalSell = 0d;
         Integer dcaTotal = 0;
         TreeMap<Double, OrderTargetInfoTest> pnl2OrderInfo = new TreeMap<>();
-        for (String symbol : RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER)) {
-            String json = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER, symbol);
+        for (String symbol : RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER)) {
+            String json = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER, symbol);
             if (json != null) {
                 OrderTargetInfoTest orderInfo = Utils.gson.fromJson(json, OrderTargetInfoTest.class);
                 Double pnl = orderInfo.calProfit();
                 pnl2OrderInfo.put(pnl, orderInfo);
-                if (orderInfo.dcaLevel != null && orderInfo.dcaLevel > 0) {
+                if (orderInfo.dynamicTP_SL != null && orderInfo.dynamicTP_SL > 0) {
                     dcaTotal++;
                 }
             }
@@ -162,7 +163,7 @@ public class SimulatorTradingVolumeMiniSLDynamic {
                         append(Utils.normalizeDateYYYYMMDDHHmm(currentTime)).append(" margin:")
                         .append(orderInfo.calMargin().longValue()).append(" ")
                         .append(orderInfo.side).append(" ").append(orderInfo.symbol)
-                        .append(" ").append(" dcaLevel:").append(orderInfo.dcaLevel).append(" ")
+                        .append(" ").append(" dcaLevel:").append(orderInfo.dynamicTP_SL).append(" ")
                         .append(orderInfo.priceEntry).append("->").append(orderInfo.lastPrice).append(" ").
                         append(ratePercent.longValue()).append("%").append(" ").append(pnl.longValue()).append("$").append("\n");
             }
@@ -206,9 +207,9 @@ public class SimulatorTradingVolumeMiniSLDynamic {
             } else {
                 totalSell++;
             }
-            if (order.dcaLevel != null && order.dcaLevel > 0) {
+            if (order.dynamicTP_SL != null && order.dynamicTP_SL > 0) {
                 totalDca++;
-                if (order.dcaLevel >= 2) {
+                if (order.dynamicTP_SL >= 2) {
                     totalDcaLevel2++;
                 }
             }
@@ -228,7 +229,7 @@ public class SimulatorTradingVolumeMiniSLDynamic {
         reportRunning.append(" Sell: ").append(totalSell * RATE_TARGET * 100).append("%");
         reportRunning.append(" SL: ").append(totalSL).append(" ");
         reportRunning.append(" dcaDone: ").append(totalDca).append(" ");
-        reportRunning.append(" Running: ").append(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER).size()).append(" orders");
+        reportRunning.append(" Running: ").append(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER).size()).append(" orders");
         LOG.info(reportRunning.toString());
 //        LOG.info(Utils.toJson(symbol2Counter));
 //        Utils.sendSms2Telegram(reportRunning.toString());
@@ -244,7 +245,7 @@ public class SimulatorTradingVolumeMiniSLDynamic {
 //                System.out.println("Debug");
 //            }
             SimpleMovingAverage1DManager.getInstance().updateWithTicker(symbol, ticker);
-            String json = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER, symbol);
+            String json = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER, symbol);
             // check running
             if (StringUtils.isNotEmpty(json)) {
                 OrderTargetInfoTest orderInfo = Utils.gson.fromJson(json, OrderTargetInfoTest.class);
@@ -253,7 +254,7 @@ public class SimulatorTradingVolumeMiniSLDynamic {
                     orderInfo.updateStatus();
                     if (orderInfo.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)) {
                         allOrderDone.put(ticker.startTime.longValue() + "-" + symbol, orderInfo);
-                        RedisHelper.getInstance().get().hdel(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER, symbol);
+                        RedisHelper.getInstance().get().hdel(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER, symbol);
                         checkAndCreateOrderNew(symbol);
                     } else {
                         if (orderInfo.timeStart < ticker.startTime - Utils.TIME_HOUR * NUMBER_HOURS_STOP_MAX) {
@@ -266,7 +267,7 @@ public class SimulatorTradingVolumeMiniSLDynamic {
 //                            if (maValue != null && ticker.priceClose < maValue) {
 //                                stopLossOrder(symbol, OrderTargetStatus.STOP_LOSS_MA20);
 //                            } else {
-                            RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER, symbol, Utils.toJson(orderInfo));
+                            RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER, symbol, Utils.toJson(orderInfo));
 //                            }
                         }
                     }
@@ -321,9 +322,9 @@ public class SimulatorTradingVolumeMiniSLDynamic {
         try {
             Long timeMin = null;
             OrderTargetInfoTest orderLatest = null;
-            for (String symbol : RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER)) {
+            for (String symbol : RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER)) {
                 try {
-                    String json = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER, symbol);
+                    String json = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER, symbol);
                     OrderTargetInfoTest orderInfo = Utils.gson.fromJson(json, OrderTargetInfoTest.class);
                     if (orderInfo != null) {
                         if (timeMin == null || timeMin > orderInfo.timeStart) {
@@ -351,7 +352,7 @@ public class SimulatorTradingVolumeMiniSLDynamic {
 
     private void stopLossOrder(String symbol, OrderTargetStatus statusSL) {
         KlineObjectNumber ticker = symbol2Ticker.get(symbol);
-        String json = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER, symbol);
+        String json = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER, symbol);
         if (StringUtils.isNotEmpty(json)) {
             OrderTargetInfoTest orderInfo = Utils.gson.fromJson(json, OrderTargetInfoTest.class);
 //            LOG.info("Cancel order over 30d: {} {} {}!", Utils.toJson(symbol),
@@ -362,7 +363,7 @@ public class SimulatorTradingVolumeMiniSLDynamic {
             orderInfo.timeUpdate = ticker.startTime.longValue();
             orderInfo.tickerClose = ticker;
             allOrderDone.put(ticker.startTime.longValue() + "-" + orderInfo.symbol, orderInfo);
-            RedisHelper.getInstance().get().hdel(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER, orderInfo.symbol);
+            RedisHelper.getInstance().get().hdel(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER, orderInfo.symbol);
         }
     }
 
@@ -379,12 +380,12 @@ public class SimulatorTradingVolumeMiniSLDynamic {
         order.minPrice = entry;
         order.lastPrice = entry;
         order.maxPrice = entry;
-        order.rsi14 = ticker.rsi;
-        order.ma201d = ticker.ma20;
+        order.rateBtc15m = ticker.rsi;
+        order.rateChange15MAvg = ticker.ma20;
         order.rateChange = breadData.totalRate;
         order.volume = breadData.volume;
         order.tickerOpen = ticker;
-        RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER, symbol, Utils.toJson(order));
+        RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER, symbol, Utils.toJson(order));
         BudgetManagerTest.getInstance().updateInvesting();
         LOG.info(log);
     }

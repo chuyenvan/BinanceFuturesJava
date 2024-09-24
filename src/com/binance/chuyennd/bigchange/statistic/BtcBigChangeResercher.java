@@ -15,6 +15,8 @@
  */
 package com.binance.chuyennd.bigchange.statistic;
 
+import com.binance.client.SubscriptionClient;
+import com.binance.client.model.enums.CandlestickInterval;
 import com.educa.chuyennd.funcs.BreadFunctions;
 import com.binance.chuyennd.client.TickerFuturesHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
@@ -23,6 +25,7 @@ import com.binance.chuyennd.volume.DayVolumeManager;
 import com.binance.chuyennd.statistic24hr.Volume24hrManager;
 import com.binance.client.constant.Constants;
 import com.binance.client.model.enums.OrderSide;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Date;
@@ -30,13 +33,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- *
  * @author pc
  */
 public class BtcBigChangeResercher {
@@ -51,13 +54,20 @@ public class BtcBigChangeResercher {
     public Double RATE_CHANGE_WITHBREAD_2TRADING = 0.003;
 
     public static void main(String[] args) {
-//        new BtcBigChangeDetector().startThreadDetectBigChangeBTCIntervalOneMinute();
+        detectBigChangeBTCIntervalOneMinute();
 //        System.out.println(Utils.getStartTimeDayAgo(100));
-        Long startTime = 1695574800000L;
+//        Long startTime = 1695574800000L;
 //            Long startTime = Utils.getStartTimeDayAgo(20);
 //        new BtcBigChangeResercher().detectBtcBreadWithTrend(startTime);
-        new BtcBigChangeResercher().detectBtcBreadWithTrendTestCloseWithTicker(startTime);
+//        new BtcBigChangeResercher().detectBtcBreadWithTrendTestCloseWithTicker(startTime);
 
+    }
+
+    private static void detectBigChangeBTCIntervalOneMinute() {
+        SubscriptionClient client = SubscriptionClient.create();
+        client.subscribeAllMiniTickerEvent(((event) -> {
+            LOG.info("{} {} ", Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()), Utils.toJson(event));
+        }), null);
     }
 
     private void detectBtcBreadWithTrend(long startTime) {
@@ -234,7 +244,7 @@ public class BtcBigChangeResercher {
     }
 
     public static TreeMap<Double, String> getRateWithNumberTicker(long timeCheckPoint, OrderSide side, String interval,
-            int numberTicker, long startTime, Map<String, List<KlineObjectNumber>> allSymbolTickers) {
+                                                                  int numberTicker, long startTime, Map<String, List<KlineObjectNumber>> allSymbolTickers) {
         TreeMap<Double, String> rate2Symbol = new TreeMap<>();
         for (Map.Entry<String, List<KlineObjectNumber>> entry : allSymbolTickers.entrySet()) {
             String symbol = entry.getKey();

@@ -5,7 +5,6 @@ import com.binance.chuyennd.client.TickerFuturesHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.ResistanceAndSupport;
 import com.binance.chuyennd.object.TrendObject;
-import com.binance.chuyennd.bigchange.statistic.data.DataManager;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
 import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.utils.Configs;
@@ -90,7 +89,7 @@ public class AltSignalSELLStatistic {
     private String buildLineTest(OrderTargetInfoTest order, Double rateLoss) {
         return order.symbol + "," + Utils.normalizeDateYYYYMMDDHHmm(order.timeStart) + "," + Utils.normalizeDateYYYYMMDDHHmm(order.timeUpdate)
                 + "," + order.priceEntry + "," + order.priceTP + "," + order.lastPrice + "," +
-                order.volume + "," + order.rsi14 + "," + order.status + "," + order.rateChange
+                order.volume + "," + order.rateBtc15m + "," + order.status + "," + order.rateChange
                 + "," + order.rateBreadAbove + "," + rateLoss + "," +
                 order.maxPrice + "," + Utils.rateOf2Double(order.minPrice, order.priceEntry) + ","
                 + (order.timeUpdate - order.timeStart) / Utils.TIME_MINUTE;
@@ -100,7 +99,7 @@ public class AltSignalSELLStatistic {
     List<String> detectAltSellEntry(Double target) {
 
         List<String> lines = new ArrayList<>();
-        File[] symbolFiles = new File(DataManager.FOLDER_TICKER_15M).listFiles();
+        File[] symbolFiles = new File(Configs.FOLDER_TICKER_15M).listFiles();
 //        int counterSym = 0;
 //        int totalSym = symbolFiles.length;
         List<OrderTargetInfoTest> orderTrades = new ArrayList<>();
@@ -139,7 +138,7 @@ public class AltSignalSELLStatistic {
                             orderTrade.maxPrice = kline.priceClose;
                             orderTrade.minPrice = kline.minPrice;
                             orderTrade.volume = kline.totalUsdt;
-                            orderTrade.rsi14 = kline.rsi;
+                            orderTrade.rateBtc15m = kline.rsi;
                             orderTrade.lastPrice = kline.priceClose;
                             orderTrade.tickerOpen = kline;
                             if (i > 1) {
@@ -215,7 +214,7 @@ public class AltSignalSELLStatistic {
     List<String> detectAltBuyEntry(Double target) {
 
         List<String> lines = new ArrayList<>();
-        File[] symbolFiles = new File(DataManager.FOLDER_TICKER_15M).listFiles();
+        File[] symbolFiles = new File(Configs.FOLDER_TICKER_15M).listFiles();
 //        int counterSym = 0;
 //        int totalSym = symbolFiles.length;
         List<OrderTargetInfoTest> orderTrades = new ArrayList<>();
@@ -284,7 +283,7 @@ public class AltSignalSELLStatistic {
                                 orderTrade.maxPrice = kline.priceClose;
                                 orderTrade.minPrice = kline.minPrice;
                                 orderTrade.volume = kline.totalUsdt;
-                                orderTrade.rsi14 = kline.rsi;
+                                orderTrade.rateBtc15m = kline.rsi;
                                 orderTrade.rateChange = rateChange;
                                 orderTrade.rateBreadAbove = Utils.rateOf2Double(kline.priceOpen, ticker2Hours.minPrice);
 

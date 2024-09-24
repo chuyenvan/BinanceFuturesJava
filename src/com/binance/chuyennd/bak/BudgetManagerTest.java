@@ -2,10 +2,12 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
-package com.binance.chuyennd.research;
+package com.binance.chuyennd.bak;
 
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
+import com.binance.chuyennd.research.BalanceIndex;
+import com.binance.chuyennd.research.OrderTargetInfoTest;
 import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
@@ -109,7 +111,7 @@ public class BudgetManagerTest {
         }
 
 
-        Set<String> symbolRunning = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER);
+        Set<String> symbolRunning = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER);
 
         totalFee = fee;
         balance = balance + profit - totalFee;
@@ -120,8 +122,7 @@ public class BudgetManagerTest {
         Double unrealizedProfitMin = calUnrealizedProfitMin(orderInfos);
         Double positionMargin = calPositionMargin(orderInfos);
         Double balanceReal = balance + unrealizedProfit;
-        Double balanceMin = balance + unrealizedProfitMin;
-        balanceIndex.updateIndex(balance, balanceMin, positionMargin, unrealizedProfitMin, timeUpdate);
+//        balanceIndex.updateIndex(balance, balanceMin, positionMargin, unrealizedProfitMin, timeUpdate);
         if (timeUpdate % Utils.TIME_DAY == 0) {
             Double rateLoss = unProfit * 100 / balanceCurrent;
             Double rateProfitDate = profitOfDate * 100 / (balanceCurrent - profitOfDate);
@@ -139,11 +140,10 @@ public class BudgetManagerTest {
                 builder.append(" balance: ").append(balance.longValue());
                 builder.append(" balanceReal: ").append(balanceReal.longValue());
                 builder.append(" done: ").append(allOrderDone.size());
-                builder.append(" " + balanceIndex.balanceMin + " " + balanceIndex.rateBalanceMin + " " +
-                        Utils.normalizeDateYYYYMMDDHHmm(balanceIndex.timeBalanceMin) + " " + balanceIndex.marginMax +
-                        " " + balanceIndex.rateMarginMax + " " + Utils.normalizeDateYYYYMMDDHHmm(balanceIndex.timeMarginMax) + " " +
-                        balanceIndex.unProfitMax + " " + balanceIndex.rateUnProfitMax + " " +
-                        Utils.normalizeDateYYYYMMDDHHmm(balanceIndex.timeRateUnProfitMax));
+//                builder.append(" " + balanceIndex.balanceMin + " " + balanceIndex.rateBalanceMin + " " +
+//                        Utils.normalizeDateYYYYMMDDHHmm(balanceIndex.timeBalanceMin) + " " + balanceIndex.marginMax +
+//                        " " + balanceIndex.rateMarginMax + " " + Utils.normalizeDateYYYYMMDDHHmm(balanceIndex.timeMarginMax) + " " +
+//                        balanceIndex.unProfitMax);
                 lines.add(builder.toString());
                 try {
                     FileUtils.writeLines(new File("storage/report.txt"), lines, true);
@@ -166,9 +166,9 @@ public class BudgetManagerTest {
 
     public List<OrderTargetInfoTest> getListOrderRunning() {
         List<OrderTargetInfoTest> results = new ArrayList<>();
-        Set<String> symbolsRunning = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER);
+        Set<String> symbolsRunning = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER);
         for (String symbol : symbolsRunning) {
-            String json = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER, symbol);
+            String json = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER, symbol);
             if (StringUtils.isNotEmpty(json)) {
                 OrderTargetInfoTest orderInfo = Utils.gson.fromJson(json, OrderTargetInfoTest.class);
                 if (orderInfo != null) {
@@ -217,11 +217,11 @@ public class BudgetManagerTest {
     }
 
     public void printBalanceIndex() {
-        LOG.info("BalanceMin: {} {} {} MarginMax: {} {} {} unProfitMax: {} {} {}",
-                balanceIndex.balanceMin, balanceIndex.rateBalanceMin, Utils.normalizeDateYYYYMMDDHHmm(balanceIndex.timeBalanceMin),
-                balanceIndex.marginMax, balanceIndex.rateMarginMax, Utils.normalizeDateYYYYMMDDHHmm(balanceIndex.timeMarginMax),
-                balanceIndex.unProfitMax, balanceIndex.rateUnProfitMax, Utils.normalizeDateYYYYMMDDHHmm(balanceIndex.timeRateUnProfitMax)
-        );
+//        LOG.info("BalanceMin: {} {} {} MarginMax: {} {} {} unProfitMax: {}",
+//                balanceIndex.balanceMin, balanceIndex.rateBalanceMin, Utils.normalizeDateYYYYMMDDHHmm(balanceIndex.timeBalanceMin),
+//                balanceIndex.marginMax, balanceIndex.rateMarginMax, Utils.normalizeDateYYYYMMDDHHmm(balanceIndex.timeMarginMax),
+//                balanceIndex.unProfitMax
+//        );
     }
 
     public void resetCapitalAndRateBudget(Double capital, Double rateBudget) {

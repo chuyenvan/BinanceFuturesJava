@@ -19,6 +19,7 @@ import com.binance.chuyennd.indicators.MACD;
 import com.binance.chuyennd.indicators.RelativeStrengthIndex;
 import com.binance.chuyennd.indicators.SimpleMovingAverage;
 import com.binance.chuyennd.object.*;
+import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.object.sw.SideWayObject;
 import com.binance.chuyennd.utils.HttpRequest;
 import com.binance.chuyennd.utils.Storage;
@@ -250,6 +251,24 @@ public class TickerFuturesHelper {
             List<List<Object>> allKlines = Utils.gson.fromJson(respon, List.class);
             for (List<Object> allKline : allKlines) {
                 results.add(KlineObjectNumber.convertString2Kline(allKline));
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return results;
+    }
+
+    public static List<KlineObjectSimple> getTickerSimpleWithStartTime(String symbol, String interval, Long startTime) {
+        String url = Constants.URL_TICKER_FUTURES_STARTTIME.replace("xxxxxx", symbol) + interval;
+        List<KlineObjectSimple> results = new ArrayList();
+        try {
+            String urlData = url.replace("tttttt", startTime.toString());
+            String respon = HttpRequest.getContentFromUrl(urlData);
+            List<List<Object>> allKlines = Utils.gson.fromJson(respon, List.class);
+            for (List<Object> allKline : allKlines) {
+                results.add(KlineObjectSimple.convertString2Kline(allKline));
             }
 
         } catch (Exception e) {
@@ -640,6 +659,84 @@ public class TickerFuturesHelper {
         result.totalUsdt = totalUsdt;
         return result;
     }
+    public static KlineObjectSimple extractKlineSimpleByNumberTicker(List<KlineObjectSimple> tickers, int index, int numberTicker) {
+        if (index < numberTicker) {
+            return null;
+        }
+        Double maxPrice = null;
+        Double minPrice = null;
+        Double lastPrice = null;
+        Double openPrice = null;
+        Double timeStart = null;
+        Double totalUsdt = 0d;
+
+        for (int i = index - numberTicker; i < index; i++) {
+            KlineObjectSimple ticker = tickers.get(i);
+            totalUsdt += ticker.totalUsdt;
+            if (openPrice == null) {
+                openPrice = ticker.priceOpen;
+            }
+            if (timeStart == null) {
+                timeStart = ticker.startTime;
+            }
+            lastPrice = ticker.priceClose;
+            if (minPrice == null || minPrice > ticker.minPrice) {
+                minPrice = ticker.minPrice;
+            }
+            if (maxPrice == null || maxPrice < ticker.maxPrice) {
+                maxPrice = ticker.maxPrice;
+            }
+        }
+        KlineObjectSimple result = new KlineObjectSimple();
+        result.maxPrice = maxPrice;
+        result.minPrice = minPrice;
+        result.startTime = timeStart;
+        result.priceClose = lastPrice;
+        result.priceOpen = openPrice;
+        result.totalUsdt = totalUsdt;
+        return result;
+    }
+
+    public static KlineObjectNumber extractKlineByNumberTicker(List<KlineObjectNumber> tickers, int index, int numberTicker, int numberAgo) {
+        if (index < numberTicker) {
+            return null;
+        }
+        Double maxPrice = null;
+        Double minPrice = null;
+        Double lastPrice = null;
+        Double openPrice = null;
+        Double timeStart = null;
+        Double timeEnd = null;
+        Double totalUsdt = 0d;
+
+        for (int i = index - numberTicker; i < index - numberAgo; i++) {
+            KlineObjectNumber ticker = tickers.get(i);
+            totalUsdt += ticker.totalUsdt;
+            if (openPrice == null) {
+                openPrice = ticker.priceOpen;
+            }
+            if (timeStart == null) {
+                timeStart = ticker.startTime;
+            }
+            timeEnd = ticker.endTime;
+            lastPrice = ticker.priceClose;
+            if (minPrice == null || minPrice > ticker.minPrice) {
+                minPrice = ticker.minPrice;
+            }
+            if (maxPrice == null || maxPrice < ticker.maxPrice) {
+                maxPrice = ticker.maxPrice;
+            }
+        }
+        KlineObjectNumber result = new KlineObjectNumber();
+        result.maxPrice = maxPrice;
+        result.minPrice = minPrice;
+        result.startTime = timeStart;
+        result.endTime = timeEnd;
+        result.priceClose = lastPrice;
+        result.priceOpen = openPrice;
+        result.totalUsdt = totalUsdt;
+        return result;
+    }
 
     public static Double getMinPrice(List<KlineObjectNumber> kline1Ds, int numberTicker) {
         Double minPrice = null;
@@ -677,11 +774,11 @@ public class TickerFuturesHelper {
         return counter;
     }
 
-    public static List<KlineObjectNumber> getTotalKlineBigchange(List<KlineObjectNumber> kline15ms, Double rateBigchange) {
+    public static List<KlineObjectNumber> getTotalKlineBigChange(List<KlineObjectNumber> kline15ms, Double rateBigChange) {
         List<KlineObjectNumber> results = new ArrayList<>();
         for (KlineObjectNumber kline15m : kline15ms) {
             double rate = Utils.rateOf2Double(kline15m.maxPrice, kline15m.minPrice);
-            if (rate >= rateBigchange) {
+            if (rate >= rateBigChange) {
                 results.add(kline15m);
             }
         }
@@ -1344,5 +1441,51 @@ public class TickerFuturesHelper {
             }
         }
         return allTickers;
+    }
+
+    public static KlineObjectSimple extractTickerPriceMin24h(List<KlineObjectSimple> tickers, KlineObjectSimple tickerPriceMin24h) {
+        if (tickers.size() < 500) {
+            return null;
+        }
+        KlineObjectSimple lastTicker = tickers.get(tickers.size() - 1);
+        if (tickerPriceMin24h == null || tickerPriceMin24h.startTime < lastTicker.startTime - Utils.TIME_DAY) {
+            tickerPriceMin24h = lastTicker;
+            for (int i = 1; i < tickers.size(); i++) {
+                if (tickerPriceMin24h == null || tickerPriceMin24h.minPrice > tickers.get(i).minPrice) {
+                    tickerPriceMin24h = tickers.get(i);
+                }
+                if (i >= 1440) {
+                    break;
+                }
+            }
+        } else {
+            if (tickerPriceMin24h.minPrice > lastTicker.minPrice) {
+                tickerPriceMin24h = lastTicker;
+            }
+        }
+        return tickerPriceMin24h;
+    }
+
+    public static KlineObjectSimple extractTickerVolumeMax24h(List<KlineObjectSimple> tickers, KlineObjectSimple tickerVolumeMax24h) {
+        if (tickers.size() < 500) {
+            return null;
+        }
+        KlineObjectSimple lastTicker = tickers.get(tickers.size() - 1);
+        if (tickerVolumeMax24h == null || tickerVolumeMax24h.startTime < lastTicker.startTime - Utils.TIME_DAY) {
+            tickerVolumeMax24h = lastTicker;
+            for (int i = 1; i < tickers.size(); i++) {
+                if (tickerVolumeMax24h == null || tickerVolumeMax24h.totalUsdt < tickers.get(i).totalUsdt) {
+                    tickerVolumeMax24h = tickers.get(i);
+                }
+                if (i >= 1440) {
+                    break;
+                }
+            }
+        } else {
+            if (tickerVolumeMax24h.totalUsdt < lastTicker.totalUsdt) {
+                tickerVolumeMax24h = lastTicker;
+            }
+        }
+        return tickerVolumeMax24h;
     }
 }

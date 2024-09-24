@@ -10,6 +10,7 @@ import com.binance.chuyennd.client.ClientSingleton;
 import com.binance.chuyennd.client.TickerFuturesHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.MACDEntry;
+import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.client.constant.Constants;
 import com.binance.client.model.enums.OrderSide;
 import com.binance.client.model.trade.PositionRisk;
@@ -48,7 +49,9 @@ public class Utils {
 
     public static final SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
     public static final SimpleDateFormat sdfFile = new SimpleDateFormat("yyyyMMdd");
+    public static final SimpleDateFormat sdfMonth = new SimpleDateFormat("yyyyMM");
     public static final SimpleDateFormat sdfFileHour = new SimpleDateFormat("yyyyMMdd HH:mm");
+    public static final SimpleDateFormat sdfFile_Hour = new SimpleDateFormat("yyyyMMdd_HH:mm");
     public static final SimpleDateFormat sdfHour = new SimpleDateFormat("HH:mm");
     public static final SimpleDateFormat sdfFacebook = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
     public static final SimpleDateFormat sdfGoogle = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -1145,15 +1148,26 @@ public class Utils {
         return results;
     }
 
+    public static KlineObjectNumber convertKlineSimple(KlineObjectSimple ticker) {
+        KlineObjectNumber result = new KlineObjectNumber();
+        result.priceOpen = ticker.priceOpen;
+        result.priceClose = ticker.priceClose;
+        result.minPrice = ticker.minPrice;
+        result.maxPrice = ticker.maxPrice;
+        result.startTime = ticker.startTime;
+        result.totalUsdt = ticker.totalUsdt;
+        return result;
+    }
+
     public static void main(String[] args) {
 //        System.out.println(Utils.sendSms2Skype("test skype"));
 //        System.out.println(Utils.normalizeHHmm(System.currentTimeMillis()));
-//        Utils.sendSms2Telegram("test");
-        checkTickerFalse();
+        Utils.sendSms2Telegram("test");
+//        checkTickerFalse();
 //        testDescendingKeySet();
 //        System.out.println(Utils.readSms2Telegram());
-//        Double test = 5.172E-4;
-//        System.out.println(Utils.formatMoney(test));
+//        Double test = 5.1723243E-2;
+//        System.out.println(Utils.formatMoneyByPeriod(test, 2));
 //        System.out.println(Utils.normalPrice2Api(99.95804261161376d));
 //        System.out.println(Utils.normalPrice2Api(991.95804261161376d));
 //        System.out.println(Utils.normalPrice2Api(0.14611331d));
@@ -1170,6 +1184,15 @@ public class Utils {
     }
 
     public static boolean isTickerAvailable(KlineObjectNumber ticker) {
+        if (ticker != null) {
+            if (!ticker.minPrice.equals(ticker.maxPrice)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static boolean isTickerAvailable(KlineObjectSimple ticker) {
         if (ticker != null) {
             if (!ticker.minPrice.equals(ticker.maxPrice)) {
                 return true;
@@ -1228,6 +1251,9 @@ public class Utils {
     public static long getDate(long time) {
         return (time / TIME_DAY) * TIME_DAY;
     }
+    public static String getMonth(long time) {
+        return Utils.sdfMonth.format(new Date(time));
+    }
 
     public static Document convertTicker2Doc(KlineObjectNumber ticker, Map<Double, Double> time2Rsi,
                                              Map<Double, Double> time2Ma, Map<Double, MACDEntry> time2Macd) {
@@ -1283,5 +1309,17 @@ public class Utils {
         }
         DecimalFormat formatter = new DecimalFormat(format);
         return formatter.format(volume);
+    }
+
+    public static KlineObjectSimple updateTickerByTicker(KlineObjectSimple entrieUpdate, KlineObjectSimple candle) {
+        entrieUpdate.priceClose = candle.priceClose;
+        if (entrieUpdate.maxPrice < candle.maxPrice) {
+            entrieUpdate.maxPrice = candle.maxPrice;
+        }
+        if (entrieUpdate.minPrice > candle.minPrice) {
+            entrieUpdate.minPrice = candle.minPrice;
+        }
+        entrieUpdate.totalUsdt += candle.totalUsdt;
+        return entrieUpdate;
     }
 }

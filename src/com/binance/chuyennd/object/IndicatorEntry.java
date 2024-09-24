@@ -1,6 +1,7 @@
 package com.binance.chuyennd.object;
 
 
+import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.utils.Utils;
 
 public class IndicatorEntry extends KlineObjectNumber {
@@ -18,6 +19,14 @@ public class IndicatorEntry extends KlineObjectNumber {
         priceClose = kline.priceClose;
         totalUsdt = kline.totalUsdt;
         endTime = kline.endTime;
+    }
+    public IndicatorEntry(KlineObjectSimple kline) {
+        startTime = kline.startTime;
+        priceOpen = kline.priceOpen;
+        maxPrice = kline.maxPrice;
+        minPrice = kline.minPrice;
+        priceClose = kline.priceClose;
+        totalUsdt = kline.totalUsdt;
     }
 
     public double getValue() {

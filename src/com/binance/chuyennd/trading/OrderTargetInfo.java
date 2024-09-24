@@ -18,10 +18,10 @@ package com.binance.chuyennd.trading;
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
 import com.binance.client.model.enums.OrderSide;
 import com.binance.client.model.trade.Order;
+
 import java.io.Serializable;
 
 /**
- *
  * @author pc
  */
 public class OrderTargetInfo implements Serializable {
@@ -38,10 +38,10 @@ public class OrderTargetInfo implements Serializable {
     public MarketLevelChange marketLevel;
     public long timeStart;
     public long timeUpdate;
-    
 
-    public OrderTargetInfo(OrderTargetStatus status, Double priceEntry,
-            Double priceTP, Double quantity, Integer leverage, String symbol, long timeStart, long timeUpdate, OrderSide side, String tradingType) {
+
+    public OrderTargetInfo(OrderTargetStatus status, Double priceEntry, Double priceTP, Double quantity,
+                           Integer leverage, String symbol, long timeStart, long timeUpdate, OrderSide side, String tradingType) {
         this.status = status;
         this.priceEntry = priceEntry;
         this.priceTP = priceTP;

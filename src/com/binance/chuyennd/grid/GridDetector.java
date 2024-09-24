@@ -23,7 +23,6 @@ import com.binance.client.constant.Constants;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -77,7 +76,7 @@ public class GridDetector {
                 int totalCurrentPriceInKlineDay = TickerFuturesHelper.getTotalCurrentPriceInKline(kline1Ds, currentPrice, limitDay2Get);
                 // ticker 15M rate
                 List<KlineObjectNumber> kline15ms = TickerFuturesHelper.getTicker(symbol, Constants.INTERVAL_15M);
-                List<KlineObjectNumber> klineBigchanges = TickerFuturesHelper.getTotalKlineBigchange(kline15ms, rateBigChangeMin);
+                List<KlineObjectNumber> klineBigchanges = TickerFuturesHelper.getTotalKlineBigChange(kline15ms, rateBigChangeMin);
                 int totalCurrentPriceInKlineMax = TickerFuturesHelper.getTotalCurrentPriceInKline(klineBigchanges, currentPrice, limitDay2Get);
                 GridObject gridInfo = new GridObject(symbol, currentPrice, rangeOfSym,
                         maxPrice, minPrice, kline1Ds.size(), klineBigchanges.size(),

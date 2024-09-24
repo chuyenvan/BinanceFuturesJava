@@ -4,6 +4,7 @@ package com.binance.chuyennd.utils;
 import com.binance.chuyennd.indicators.TechCandle;
 import com.binance.chuyennd.object.IndicatorEntry;
 import com.binance.chuyennd.object.KlineObjectNumber;
+import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,6 +30,16 @@ public class CandleUtils {
     }
 
     public static double avgPrice(List<KlineObjectNumber> candles, int startIndex, int endIndex) {
+        double sum = 0;
+//        LOG.info("Cal avg: {} to {}", Utils.normalizeDateYYYYMMDDHHmm(candles.get(startIndex).startTime.longValue()),
+//                Utils.normalizeDateYYYYMMDDHHmm(candles.get(endIndex).startTime.longValue()));
+        for (int i = startIndex; i <= endIndex; i++) {
+            sum += candles.get(i).getDefaultPrice();
+        }
+        return sum / (endIndex - startIndex + 1);
+    }
+
+    public static double avgPriceSimple(List<KlineObjectSimple> candles, int startIndex, int endIndex) {
         double sum = 0;
 //        LOG.info("Cal avg: {} to {}", Utils.normalizeDateYYYYMMDDHHmm(candles.get(startIndex).startTime.longValue()),
 //                Utils.normalizeDateYYYYMMDDHHmm(candles.get(endIndex).startTime.longValue()));

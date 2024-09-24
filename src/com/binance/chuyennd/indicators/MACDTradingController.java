@@ -1,6 +1,8 @@
 package com.binance.chuyennd.indicators;
 
 import com.binance.chuyennd.object.KlineObjectNumber;
+import com.binance.chuyennd.object.MACDEntry;
+import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.utils.Point;
 import com.binance.chuyennd.utils.PolylineSlope;
 import com.binance.chuyennd.utils.Utils;
@@ -13,41 +15,36 @@ import java.util.List;
 public class MACDTradingController {
     public static final Logger LOG = LoggerFactory.getLogger(MACDTradingController.class);
 
-    public static boolean isMacdTrendBuy(List<KlineObjectNumber> tickers, int i) {
-        // 4 histogram cuối tăng, đang âm
-        // trước ít nhất 5 đỉnh âm giảm dần và 5 đỉnh dương giảm dần
-        int periodAm = 5;
-        // find cut down
-        if (i < 11) {
-            return false;
+    public static MACDEntry detectTrendBuy(List<KlineObjectSimple> tickers, int i, String symbol) {
+        if (tickers.size() < 35) {
+            return null;
         }
-        if (tickers.get(i - 11).histogram == null) {
-            return false;
-        }
-
-        // 1. n histogram cuối tăng, đang âm
-//        KlineObjectNumber last2Ticker = tickers.get(i - 2);
-        KlineObjectNumber lastTicker = tickers.get(i - 1);
-        KlineObjectNumber currentTicker = tickers.get(i);
-        if (currentTicker.histogram > 0 || currentTicker.histogram < lastTicker.histogram
-//                || lastTicker.histogram < last2Ticker.histogram
-        ) {
-            return false;
-        }
-        // 2. n đỉnh giảm dần
-        int soluongHistogramLienkeGiamLientiep = 0;
-        for (int j = 1; j < periodAm + 1; j++) {
-            if (tickers.get(i - j).histogram < tickers.get(i - j - 1).histogram) {
-                soluongHistogramLienkeGiamLientiep++;
-            } else {
-                break;
+        MACDEntry[] entries = MACD.calculateSimple(tickers, 12, 26, 9);
+        MACDEntry lastMacdEntry = entries[entries.length - 2];
+        MACDEntry finalMacdEntry = entries[entries.length - 1];
+        Double maxPrice = null;
+        Boolean isTickerBigDown = false;
+        for (int j = 1; j < 35; j++) {
+            KlineObjectSimple ticker = tickers.get(tickers.size() - i);
+            if (Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen) < -0.005) {
+                isTickerBigDown = true;
+            }
+            if (maxPrice == null || maxPrice < ticker.maxPrice) {
+                maxPrice = ticker.maxPrice;
             }
         }
-        if (soluongHistogramLienkeGiamLientiep >= periodAm) {
-            return true;
+        Double rateMax = Utils.rateOf2Double(maxPrice, finalMacdEntry.priceClose);
+        if (lastMacdEntry.getHistogram() < 0 && finalMacdEntry.getHistogram() > 0
+                && lastMacdEntry.getSignal() < 0 && lastMacdEntry.getMacd() < 0
+                && finalMacdEntry.getSignal() < 0 && finalMacdEntry.getMacd() < 0
+                && rateMax > 0.03
+                && isTickerBigDown) {
+            LOG.info("MacdReverse: {} -> {} rate:{} {} {} ", symbol, Utils.normalizeDateYYYYMMDDHHmm(finalMacdEntry.startTime.longValue()),
+                    rateMax, finalMacdEntry.priceClose, maxPrice);
+            finalMacdEntry.maxPrice = maxPrice;
+            return finalMacdEntry;
         }
-
-        return false;
+        return null;
     }
 
     public static boolean isMacdCutUpSignalFirst(List<KlineObjectNumber> tickers, int i) {
