@@ -86,7 +86,7 @@ public class BuildSignalForSimulator {
                         }
                         MarketDataObject marketData = calMarketData(symbol2Ticker, symbol2MaxPrice, symbol2MinPrice);
                         MarketLevelChange levelChange = MarketBigChangeDetectorTest.getMarketStatusSimple(marketData.rateDownAvg,
-                                marketData.rateUpAvg, marketData.rateBtc);
+                                marketData.rateUpAvg, marketData.rateBtc, marketData.rateDown15MAvg, marketData.rateUp15MAvg, marketData.rateBtcDown15M);
                         if (levelChange != null) {
                             marketData.level = levelChange;
                             timesTradeMarket.put(time, marketData);
@@ -111,7 +111,6 @@ public class BuildSignalForSimulator {
         TreeMap<Double, String> rateDown2Symbols = new TreeMap<>();
         TreeMap<Double, String> rateTotal2Symbols = new TreeMap<>();
         TreeMap<Double, String> rateUp2Symbols = new TreeMap<>();
-        TreeMap<Double, String> rateLast2Symbol = new TreeMap<>();
         TreeMap<Double, String> rate2Max = new TreeMap<>();
         TreeMap<Double, String> rate2Min = new TreeMap<>();
         for (Map.Entry<String, KlineObjectSimple> entry1 : symbol2Ticker.entrySet()) {
@@ -135,20 +134,18 @@ public class BuildSignalForSimulator {
                 }
             }
         }
-        // TODO test với rate with max 20d ago
+
         KlineObjectSimple btcTicker = symbol2Ticker.get(Constants.SYMBOL_PAIR_BTC);
         Double btcRateChange = Utils.rateOf2Double(btcTicker.priceClose, btcTicker.priceOpen);
         Double rateChangeDownAvg = MarketBigChangeDetectorTest.calRateLossAvg(rateDown2Symbols, 50);
-        Double rateChangeLastDownAvg = MarketBigChangeDetectorTest.calRateLossAvg(rateLast2Symbol, 50);
         Double rateChangeUpAvg = -MarketBigChangeDetectorTest.calRateLossAvg(rateUp2Symbols, 50);
         List<String> symbolsTopDown = MarketBigChangeDetectorTest.getTopSymbolSimple(rateDown2Symbols,
                 Configs.NUMBER_ENTRY_EACH_SIGNAL, null);
-        MarketDataObject result = new MarketDataObject(rateChangeDownAvg, rateChangeUpAvg, rateChangeLastDownAvg, btcRateChange, btcTicker.totalUsdt,
+        MarketDataObject result = new MarketDataObject(rateChangeDownAvg, rateChangeUpAvg,  btcRateChange, btcTicker.totalUsdt,
                 null, symbolsTopDown);
         result.rateDown2Symbols = rateDown2Symbols;
         result.rateUp2Symbols = rateTotal2Symbols;
         result.rate2Max = rate2Max;
-        result.rate2Min = rate2Min;
         return result;
     }
 

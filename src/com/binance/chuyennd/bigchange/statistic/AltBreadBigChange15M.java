@@ -46,7 +46,7 @@ public class AltBreadBigChange15M {
 //                    }
 //                }
 //            }
-            // TODO bỏ market time và max 2 signal/time
+
             lines.addAll(detectSELLWithBreadBellow(25));
             FileUtils.writeLines(new File(AltBreadBigChange15M.class.getSimpleName() + ".csv"), lines);
 
@@ -129,21 +129,10 @@ public class AltBreadBigChange15M {
         File[] symbolFiles = new File(Configs.FOLDER_TICKER_15M).listFiles();
         TreeMap<Long, List<String>> time2Entry = new TreeMap<>();
         List<OrderTargetInfoTest> orderTrades = new ArrayList<>();
-
-        TreeMap<Long, TreeMap<Double, String>> time2rateMaxAndSymbol = new TreeMap<>();
-        List<KlineObjectNumber> btcTickers = (List<KlineObjectNumber>) Storage.readObjectFromFile(Configs.FOLDER_TICKER_15M + Constants.SYMBOL_PAIR_BTC);
-        TreeSet<Long> timeBtcReverse = extractBtcReverse(btcTickers);
-        for (Long time : timeBtcReverse) {
-            LOG.info("{}", Utils.sdfGoogle.format(time));
-        }
-//        if (timeBtcReverse.size() > 0){
-//            System.exit(1);
-//        }
         for (File symbolFile : symbolFiles) {
             String symbol = symbolFile.getName();
             if (!StringUtils.endsWithIgnoreCase(symbol, "usdt")
                     || Constants.diedSymbol.contains(symbol)
-                    || Constants.specialSymbol.contains(symbol)
             ) {
                 continue;
             }
@@ -152,11 +141,9 @@ public class AltBreadBigChange15M {
                 List<KlineObjectNumber> tickers = (List<KlineObjectNumber>) Storage.readObjectFromFile(symbolFile.getPath());
                 for (int i = 1; i < tickers.size(); i++) {
                     KlineObjectNumber kline = tickers.get(i);
-
 //                    if (StringUtils.equals(symbol,"BAKEUSDT") && Utils.sdfFileHour.parse("20240705 11:15").getTime() == kline.startTime.longValue()){
 //                        System.out.println("Debug");
 //                    }
-
                     if (MarketBigChangeDetectorTest.isSignalSell(tickers, i)) {
                         Long time = kline.startTime.longValue() + 14 * Utils.TIME_MINUTE;
                         List<String> symbolsEntry = time2Entry.get(time);

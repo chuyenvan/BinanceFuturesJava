@@ -4,17 +4,12 @@
  */
 package com.binance.chuyennd.research;
 
-import com.binance.chuyennd.bigchange.market.MarketBigChangeDetectorTest;
-import com.binance.chuyennd.bigchange.market.MarketDataObject;
-import com.binance.chuyennd.bigchange.market.MarketLevelChange;
 import com.binance.chuyennd.bigchange.statistic.data.DataManager;
-import com.binance.chuyennd.client.TickerFuturesHelper;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Storage;
 import com.binance.chuyennd.utils.Utils;
-import com.binance.client.constant.Constants;
 import com.binance.client.model.enums.OrderSide;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
@@ -34,7 +29,7 @@ public class SimulatorWithEntryByTicker1M {
     public static final Logger LOG = LoggerFactory.getLogger(SimulatorWithEntryByTicker1M.class);
     public final String FILE_STORAGE_ORDER_DONE = "storage/OrderTestEntryDone.data";
 
-    public ConcurrentHashMap<String, OrderTargetInfoTest> allOrderDone;
+    public TreeMap<Long, OrderTargetInfoTest> allOrderDone;
     public ConcurrentHashMap<String, OrderTargetInfoTest> orderRunning = new ConcurrentHashMap();
 
 
@@ -115,10 +110,10 @@ public class SimulatorWithEntryByTicker1M {
         // add all order running to done
         for (OrderTargetInfoTest orderInfo : orderRunning.values()) {
             orderInfo.priceTP = orderInfo.lastPrice;
-            allOrderDone.put(orderInfo.timeStart + "-" + orderInfo.symbol, orderInfo);
+            allOrderDone.put(orderInfo.timeStart + allOrderDone.size(), orderInfo);
         }
         Storage.writeObject2File(FILE_STORAGE_ORDER_DONE + "-"
-                + Configs.TIME_AFTER_ORDER_2_TP + "-" + Configs.TIME_AFTER_ORDER_2_SL, allOrderDone);
+                + Configs.TIME_AFTER_ORDER_2_SL, allOrderDone);
         BudgetManagerSimple.getInstance().printBalanceIndex();
 
 
@@ -127,7 +122,7 @@ public class SimulatorWithEntryByTicker1M {
 
     public void initData() throws IOException, ParseException {
         // clear Data Old
-        allOrderDone = new ConcurrentHashMap<>();
+        allOrderDone = new TreeMap<>();
         if (new File(FILE_STORAGE_ORDER_DONE).exists()) {
             FileUtils.delete(new File(FILE_STORAGE_ORDER_DONE));
         }
@@ -194,7 +189,7 @@ public class SimulatorWithEntryByTicker1M {
                 if (orderInfo.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)
                         || orderInfo.status.equals(OrderTargetStatus.STOP_LOSS_DONE)
                         || orderInfo.status.equals(OrderTargetStatus.STOP_MARKET_DONE)) {
-                    allOrderDone.put(orderInfo.timeStart + "-" + symbol, orderInfo);
+                    allOrderDone.put(orderInfo.timeStart + allOrderDone.size(), orderInfo);
                     BudgetManagerSimple.getInstance().updatePnl(orderInfo);
                     orderRunning.remove(symbol);
                 } else {
@@ -208,7 +203,7 @@ public class SimulatorWithEntryByTicker1M {
     public void createOrderBUYTarget(String symbol, KlineObjectSimple ticker) {
         Double entry = ticker.priceClose;
         Double budget = BudgetManagerSimple.getInstance().getBudget();
-        Integer leverage = BudgetManagerSimple.getInstance().getLeverage();
+        Integer leverage = BudgetManagerSimple.getInstance().getLeverage(symbol);
         String log = OrderSide.BUY + " " + symbol + " entry: " + entry +
                 " budget: " + budget
                 + " time:" + Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue());

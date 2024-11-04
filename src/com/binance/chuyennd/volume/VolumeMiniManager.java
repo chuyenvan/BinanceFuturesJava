@@ -151,10 +151,10 @@ public class VolumeMiniManager {
 
                 Double priceEntry = ticker.priceClose;
                 Double priceTarget = Utils.calPriceTarget(symbol, priceEntry, breadData.orderSide, RATE_TARGET);
-                Double quantity = Utils.calQuantity(BudgetManager.getInstance().getBudget(), BudgetManager.getInstance().getLeverage(), priceEntry, symbol);
+                Double quantity = Utils.calQuantity(BudgetManager.getInstance().getBudget(), BudgetManager.getInstance().getLeverage(symbol), priceEntry, symbol);
                 if (quantity != null && quantity != 0) {
                     OrderTargetInfo orderTrade = new OrderTargetInfo(OrderTargetStatus.REQUEST, ticker.priceClose,
-                            priceTarget, quantity, BudgetManager.getInstance().getLeverage(), symbol, ticker.startTime.longValue(),
+                            priceTarget, quantity, BudgetManager.getInstance().getLeverage(symbol), symbol, ticker.startTime.longValue(),
                             ticker.startTime.longValue(), breadData.orderSide, Constants.TRADING_TYPE_VOLUME_MINI);
 //                    RedisHelper.getInstance().get().rpush(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER_QUEUE, Utils.toJson(orderTrade));
                 } else {
@@ -199,10 +199,10 @@ public class VolumeMiniManager {
 
                 Double priceEntry = lastTicker.priceClose;
                 Double priceTarget = Utils.calPriceTarget(symbol, priceEntry, breadData.orderSide, RATE_TARGET);
-                Double quantity = Utils.calQuantity(BudgetManager.getInstance().getBudget(), BudgetManager.getInstance().getLeverage(), priceEntry, symbol);
+                Double quantity = Utils.calQuantity(BudgetManager.getInstance().getBudget(), BudgetManager.getInstance().getLeverage(symbol), priceEntry, symbol);
                 if (quantity != null && quantity != 0) {
                     OrderTargetInfo orderTrade = new OrderTargetInfo(OrderTargetStatus.REQUEST, lastTicker.priceClose,
-                            priceTarget, quantity, BudgetManager.getInstance().getLeverage(), symbol, lastTicker.startTime.longValue(),
+                            priceTarget, quantity, BudgetManager.getInstance().getLeverage(symbol), symbol, lastTicker.startTime.longValue(),
                             lastTicker.startTime.longValue(), breadData.orderSide, Constants.TRADING_TYPE_VOLUME_MINI);
 //                    RedisHelper.getInstance().get().rpush(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER_QUEUE, Utils.toJson(orderTrade));
                 } else {

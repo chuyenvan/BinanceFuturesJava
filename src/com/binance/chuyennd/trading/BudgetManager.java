@@ -5,21 +5,19 @@
 package com.binance.chuyennd.trading;
 
 import com.binance.chuyennd.client.BinanceFuturesClientSingleton;
+import com.binance.chuyennd.client.TickerFuturesHelper;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
 import com.binance.client.model.trade.Asset;
-import com.binance.client.model.trade.PositionRisk;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
+import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.logging.Level;
 
 /**
  * @author pc
@@ -29,23 +27,19 @@ public class BudgetManager {
     public static final Logger LOG = LoggerFactory.getLogger(BudgetManager.class);
     private static volatile BudgetManager INSTANCE = null;
     public static Double balanceBasic = Configs.getDouble("CAPITAL_START");
-    public AtomicInteger numberOrderBudgetAvailable = new AtomicInteger(0);
-    public Double MAX_CAPITAL_RATE = Configs.getDouble("MAX_CAPITAL_RATE");
 
-    public Double RATE_TRADING_DYNAMIC = Configs.getDouble("RATE_TRADING_DYNAMIC");
+
     public Integer LEVERAGE_ORDER = Configs.getInt("LEVERAGE_ORDER");
     public Double BUDGET_PER_ORDER;
-    public Double rateLossAvg = 0d;
-    public Integer totalOrder15MRunning = 0;
-    public Integer totalOrderRunning = 0;
-//    public Double investing = null;
+    public Set<String> symbolLocked = new HashSet<>();
+    public Set<String> symbolLoss = new HashSet<>();
+
 
     public static BudgetManager getInstance() {
         if (INSTANCE == null) {
             INSTANCE = new BudgetManager();
             INSTANCE.updateBudget();
             INSTANCE.updateAllSymbol();
-            INSTANCE.scheduleUpdateInvesting();
             INSTANCE.startThreadUpdateDataByHour();
         }
         return INSTANCE;
@@ -56,8 +50,8 @@ public class BudgetManager {
             Asset umInfo = BinanceFuturesClientSingleton.getInstance().getAccountUMInfo();
             Double balanceCurrent = umInfo.getWalletBalance().doubleValue();
             Double ratePerOrder = (Configs.RATE_BUDGET_LIMIT_A_SIGNAL / Configs.NUMBER_ENTRY_EACH_SIGNAL);
-            if (balanceCurrent / 2 > balanceBasic) {
-                BUDGET_PER_ORDER = ratePerOrder * (balanceCurrent / 2) / 100;
+            if (balanceCurrent / 5 > balanceBasic) {
+                BUDGET_PER_ORDER = ratePerOrder * (balanceCurrent / 5) / 100;
             } else {
                 BUDGET_PER_ORDER = ratePerOrder * balanceBasic / 100;
             }
@@ -87,17 +81,6 @@ public class BudgetManager {
         return BUDGET_PER_ORDER;
     }
 
-    public Integer getNumberOrderBudgetAvailable() {
-        if (numberOrderBudgetAvailable.get() == 0) {
-            updateCounterOrderBudgetAvailable();
-        }
-        if (numberOrderBudgetAvailable.get() > 0) {
-            return numberOrderBudgetAvailable.getAndDecrement();
-        } else {
-            return 0;
-        }
-    }
-
     public String getInvesting() {
         Asset umInfo = BinanceFuturesClientSingleton.getInstance().getAccountUMInfo();
         return Utils.formatPercent(umInfo.getPositionInitialMargin().doubleValue()
@@ -105,44 +88,20 @@ public class BudgetManager {
 
     }
 
-
-    public Double getInvesting2Check() {
-        try {
-            Asset umInfo = BinanceFuturesClientSingleton.getInstance().getAccountUMInfo();
-            return umInfo.getPositionInitialMargin().doubleValue() * 100
-                    / (umInfo.getWalletBalance().doubleValue());
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return MAX_CAPITAL_RATE;
+    public Double getPositionInitialMargin() {
+        Asset umInfo = BinanceFuturesClientSingleton.getInstance().getAccountUMInfo();
+        return umInfo.getPositionInitialMargin().doubleValue();
     }
 
-    public Integer getLeverage() {
+
+
+    public Integer getLeverage(String symbol) {
+        if (Constants.specialSymbol.contains(symbol)){
+            return Configs.LEVERAGE_ORDER * 2;
+        }
         return LEVERAGE_ORDER;
     }
 
-    private void scheduleUpdateInvesting() {
-        new Thread(() -> {
-            Thread.currentThread().setName("updateInvesting");
-            LOG.info("Start updateInvesting !");
-            while (true) {
-                try {
-                    updateCounterOrderBudgetAvailable();
-                    Thread.sleep(10 * Utils.TIME_MINUTE);
-                } catch (InterruptedException ex) {
-                    java.util.logging.Logger.getLogger(BudgetManager.class.getName()).log(Level.SEVERE, null, ex);
-                }
-            }
-        }).start();
-    }
-
-    private void updateCounterOrderBudgetAvailable() {
-        Asset umInfo = BinanceFuturesClientSingleton.getInstance().getAccountUMInfo();
-        Double balanceAvailable = MAX_CAPITAL_RATE * umInfo.getWalletBalance().doubleValue() / 100;
-        balanceAvailable -= umInfo.getPositionInitialMargin().doubleValue();
-        Double numberOrder = balanceAvailable / BUDGET_PER_ORDER;
-        numberOrderBudgetAvailable.set(numberOrder.intValue());
-    }
 
     private void updateAllSymbol() {
         new Thread(() -> {
@@ -150,8 +109,8 @@ public class BudgetManager {
             LOG.info("Start thread updateAllSymbol !");
             while (true) {
                 try {
-                    Thread.sleep(Utils.TIME_DAY);
                     updateListSymbolAll();
+                    Thread.sleep(Utils.TIME_HOUR);
                 } catch (Exception e) {
                     LOG.error("ERROR during updateAllSymbol: {}", e);
                     e.printStackTrace();
@@ -162,10 +121,9 @@ public class BudgetManager {
 
     private void updateListSymbolAll() {
         try {
-            List<PositionRisk> positions = BinanceFuturesClientSingleton.getInstance().getAllPositionInfos();
+            Set<String> symbols = TickerFuturesHelper.getAllSymbol();
             Set<String> allSymbols = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS);
-            for (PositionRisk position : positions) {
-                String symbol = position.getSymbol();
+            for (String symbol : symbols) {
                 if (!allSymbols.contains(symbol) && StringUtils.endsWithIgnoreCase(symbol, "usdt")
                         && !Constants.diedSymbol.contains(symbol)) {
                     LOG.info("Add {} new to all symbol!", symbol);
@@ -177,45 +135,48 @@ public class BudgetManager {
         }
     }
 
-    public Double callRateLossDynamicBuy(Double unProfit) {
+    public Double callRateLossDynamicBuy(Double unProfit, String symbol) {
         Double rateLoss = unProfit * 100;
-        Long tradingStopRate;
-        if (rateLoss >= 5) {
-            tradingStopRate = rateLoss.longValue() / 4;
-            if (tradingStopRate < Configs.RATE_TRADING_DYNAMIC) {
-                tradingStopRate = Configs.RATE_TRADING_DYNAMIC.longValue();
-            }
-            if (tradingStopRate > 5) {
-                tradingStopRate = 5l;
-            }
-        } else {
-            if (rateLoss > 4) {
-                tradingStopRate = 2l;
-            } else {
-                tradingStopRate = 1l;
+        Long tradingStopRate = rateLoss.longValue() / 2;
+        Integer rateProfit2Shard=  10;
+        if (Constants.specialSymbol.contains(symbol)){
+            rateProfit2Shard = 6;
+        }
+        if (rateLoss > rateProfit2Shard) {
+            tradingStopRate = rateLoss.longValue() / 3;
+            if (rateLoss > 2 * rateProfit2Shard) {
+                tradingStopRate = rateLoss.longValue() / 4;
+            }else{
+                if (rateLoss > 3 * rateProfit2Shard) {
+                    tradingStopRate = rateLoss.longValue() / 5;
+                }
             }
         }
-        rateLoss = rateLoss.longValue() - tradingStopRate.doubleValue();
-        return rateLoss;
+        if (rateLoss < 0) {
+            rateLoss = rateLoss.longValue() - Configs.RATE_STOP_LOSS * 100;
+        } else {
+            rateLoss = rateLoss.longValue() - tradingStopRate.doubleValue();
+        }
+
+        return rateLoss / 100;
     }
 
-    public Double callTPDynamicBuy(Double unProfit) {
-        Double rateLoss = unProfit * 100;
-        Long tradingTPRate = rateLoss.longValue() / 2;
-        if (tradingTPRate < 2 * RATE_TRADING_DYNAMIC) {
-            tradingTPRate = 2 * RATE_TRADING_DYNAMIC.longValue();
+    public Double calRateStop(Double rateLoss, String symbol) {
+        Double rateStopLoss = Configs.RATE_STOP_LOSS;
+        if (Constants.specialSymbol.contains(symbol)){
+            rateStopLoss = rateStopLoss * 2;
         }
-        rateLoss = rateLoss.longValue() + tradingTPRate.doubleValue();
-//        rateLoss = rateLoss.longValue() + 2 * RATE_TRADING_DYNAMIC;
-        return rateLoss;
+        Double rateStop;
+        if (rateLoss < 0.01) {
+            rateStop = -rateLoss + rateStopLoss;
+        } else {
+            rateStop = -rateLoss / 2;
+        }
+        return rateStop;
     }
 
     public static void main(String[] args) throws InterruptedException {
-        BinanceFuturesClientSingleton.getInstance();
-        Thread.sleep(1000);
-        for (int i = 0; i < 100; i++) {
-            System.out.println(BudgetManager.getInstance().getNumberOrderBudgetAvailable());
-        }
     }
+
 
 }

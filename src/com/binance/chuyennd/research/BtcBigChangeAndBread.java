@@ -42,19 +42,26 @@ public class BtcBigChangeAndBread {
         BtcBigChangeAndBread test = new BtcBigChangeAndBread();
         test.initData();
         List<KlineObjectSimple> tickers = getTickerFullBtc1M();
-        Set<Long> timeReverse = new HashSet<>();
+
+//        long startTime = Utils.sdfFileHour.parse("20241015 20:00").getTime();
+//        List<KlineObjectSimple> tickers = TickerFuturesHelper.getTickerSimpleWithStartTime("BTCUSDT",
+//                Constants.INTERVAL_1M, startTime);
+//        LOG.info("{} {}", Utils.normalizeDateYYYYMMDDHHmm(tickers.get(0).startTime.longValue()),
+//                Utils.normalizeDateYYYYMMDDHHmm(tickers.get(tickers.size() - 1).startTime.longValue()));
+
+        Set<Long> timeTrendReverse = new HashSet<>();
         for (int i = 0; i < tickers.size(); i++) {
             KlineObjectSimple ticker = tickers.get(i);
-//            if (isBtcReverse(tickers, i)) {
-            if (isTimeSell(tickers, i)) {
-                timeReverse.add(ticker.startTime.longValue());
+            if (isBtcTrendReverse(tickers, i)) {
+                timeTrendReverse.add(ticker.startTime.longValue());
             }
         }
         LOG.info("Last btcTicker: {}", Utils.normalizeDateYYYYMMDDHHmm(tickers.get(tickers.size() - 1).startTime.longValue()));
-        Storage.writeObject2File("target/time_btc_reverse.data", timeReverse);
-        System.out.println(Utils.normalizeDateYYYYMMDDHHmm(tickers.get(tickers.size() - 1).startTime.longValue()));
-        test.statisticAll();
+        Storage.writeObject2File("target/time_btc_trend_reverse.data", timeTrendReverse);
+        LOG.info("Total have {} times reverse", timeTrendReverse.size());
+//        test.statisticAll();
     }
+
     public static boolean isTimeSell(List<KlineObjectSimple> btcTickers, int index) {
         int period = 15;
         if (index < period + 3) {
@@ -86,6 +93,7 @@ public class BtcBigChangeAndBread {
         }
         return false;
     }
+
     private static List<KlineObjectSimple> getTickerFullBtc1M() {
 
         String fileName = Configs.FOLDER_TICKER_1M + Constants.SYMBOL_PAIR_BTC;
@@ -93,17 +101,6 @@ public class BtcBigChangeAndBread {
         if (new File(fileName).exists()) {
             try {
                 tickers = (List<KlineObjectSimple>) Storage.readObjectFromFile(fileName);
-                Long startTime = tickers.get(tickers.size() - 1).startTime.longValue();
-                tickers.remove(tickers.size() - 1);
-                while (true) {
-                    LOG.info("Get data: {}", Utils.normalizeDateYYYYMMDDHHmm(startTime));
-                    tickers.addAll(TickerFuturesHelper.getTickerSimpleWithStartTime(Constants.SYMBOL_PAIR_BTC,
-                            Constants.INTERVAL_1M, startTime));
-                    startTime = startTime + 500 * Utils.TIME_MINUTE;
-                    if (startTime > System.currentTimeMillis()) {
-                        break;
-                    }
-                }
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -121,11 +118,11 @@ public class BtcBigChangeAndBread {
                         break;
                     }
                 }
+                Storage.writeObject2File(fileName, tickers);
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }
-        Storage.writeObject2File(fileName, tickers);
         return tickers;
     }
 
@@ -228,7 +225,7 @@ public class BtcBigChangeAndBread {
     }
 
     public static boolean isBtcReverse(List<KlineObjectSimple> btcTickers, int index) {
-        int period = 15;
+        int period = 27;
         if (index < period + 3) {
             return false;
         }
@@ -238,7 +235,8 @@ public class BtcBigChangeAndBread {
         Double volumeTotal = 0d;
         Double volumeMax = null;
         Double minPrice = null;
-        for (int i = 3; i < period + 3; i++) {
+        Double maxPrice = null;
+        for (int i = 0; i < period + 3; i++) {
             KlineObjectSimple ticker = btcTickers.get(index - i);
             if (volumeMax == null || volumeMax < ticker.totalUsdt) {
                 volumeMax = ticker.totalUsdt;
@@ -246,16 +244,83 @@ public class BtcBigChangeAndBread {
             if (minPrice == null || minPrice > ticker.minPrice) {
                 minPrice = ticker.minPrice;
             }
+            if (maxPrice == null || maxPrice < ticker.maxPrice) {
+                maxPrice = ticker.maxPrice;
+            }
             volumeTotal += ticker.totalUsdt;
         }
         double volumeAvg = volumeTotal / period;
+        try {
+            if (lastTicker.startTime.longValue() == Utils.sdfFileHour.parse("20241011 01:09").getTime()) {
+                LOG.info("TimeCheck: {} {} {}", maxPrice, lastTicker.priceClose, Utils.rateOf2Double(lastTicker.priceClose, maxPrice));
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         if (
-                lastTicker.totalUsdt > 10 * volumeAvg
+                Utils.rateOf2Double(lastTicker.priceClose, maxPrice) < -0.012
+//                lastTicker.totalUsdt > 10 * volumeAvg
 //                        && lastTicker.priceClose < minPrice
-                        && Utils.rateOf2Double(lastTicker.priceClose, lastTicker.priceOpen) < -0.003
+                        && Utils.rateOf2Double(lastTicker.priceClose, lastTicker.priceOpen) < -0.002
         ) {
             LOG.info("IsBtcReverse: {} {} {}", Utils.normalizeDateYYYYMMDDHHmm(lastTicker.startTime.longValue()),
                     lastTicker.priceClose, lastTicker.totalUsdt / volumeAvg);
+            return true;
+        }
+        return false;
+    }
+
+    public static boolean isBtcTrendReverse(List<KlineObjectSimple> btcTickers, int index) {
+        int period = 300;
+        KlineObjectSimple lastTicker = btcTickers.get(index);
+        Double priceReverse = null;
+        Integer indexMin = null;
+        for (int i = 0; i < period; i++) {
+            if (index >= i + 29) {
+                KlineObjectSimple ticker = btcTickers.get(index - i);
+                try {
+                    if (ticker.startTime.longValue() == Utils.sdfFileHour.parse("20241015 21:44").getTime()) {
+                        System.out.println("Debug");
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                long minute = Utils.getCurrentMinute(ticker.startTime.longValue()) % 15;
+                if (minute != 14) {
+                    continue;
+                }
+                KlineObjectSimple ticker15m = btcTickers.get(index - i - 14);
+                KlineObjectSimple ticker30m = btcTickers.get(index - i - 29);
+                double rate = Math.min(Utils.rateOf2Double(ticker.priceClose, ticker30m.priceOpen),
+                        Utils.rateOf2Double(ticker.priceClose, ticker15m.priceOpen));
+                if (rate < -0.01) {
+                    priceReverse = Math.max(ticker15m.priceOpen, ticker30m.priceOpen);
+                    indexMin = i;
+                    break;
+                }
+            }
+        }
+        try {
+            if (lastTicker.startTime.longValue() == Utils.sdfFileHour.parse("20241011 01:09").getTime()) {
+                System.out.println("Debug");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        if (priceReverse != null
+                && lastTicker.priceClose > priceReverse
+        ) {
+            // by pass if last ticker not ticker first up over bottom 1%
+            for (int i = 1; i < indexMin; i++) {
+                KlineObjectSimple ticker = btcTickers.get(index - i);
+                if (ticker.priceClose >= priceReverse) {
+                    return false;
+                }
+            }
+            LOG.info("IsBtcTrendReverse: {} {} {} {} {}", Utils.normalizeDateYYYYMMDDHHmm(lastTicker.startTime.longValue()),
+                    lastTicker.priceClose, priceReverse, Utils.rateOf2Double(lastTicker.priceClose, priceReverse),
+                    Utils.sdfGoogle.format(new Date(lastTicker.startTime.longValue())));
             return true;
         }
         return false;
@@ -301,11 +366,10 @@ public class BtcBigChangeAndBread {
                 }
             }
         }
-        // TODO test với rate with max 20d ago
+
         KlineObjectSimple btcTicker = symbol2Ticker.get(Constants.SYMBOL_PAIR_BTC);
         Double btcRateChange = Utils.rateOf2Double(btcTicker.priceClose, btcTicker.priceOpen);
         Double rateChangeDownAvg = MarketBigChangeDetectorTest.calRateLossAvg(rateDown2Symbols, 50);
-        Double rateChangeLastDownAvg = MarketBigChangeDetectorTest.calRateLossAvg(rateLast2Symbol, 50);
         Double rateChangeUpAvg = -MarketBigChangeDetectorTest.calRateLossAvg(rateUp2Symbols, 50);
         List<String> symbolsTopDown = MarketBigChangeDetectorTest.getTopSymbolSimple(rateDown2Symbols,
                 Configs.NUMBER_ENTRY_EACH_SIGNAL, orderRunning.keySet());
@@ -315,7 +379,7 @@ public class BtcBigChangeAndBread {
 //                    symbol2Ticker.size(), rateDown2Symbols.size(), symbolsTopDown.size(),
 //                    Utils.toJson(symbolsTopDown), Utils.toJson(orderRunning.keySet()));
 //        }
-        return new MarketDataObject(rateChangeDownAvg, rateChangeUpAvg, rateChangeLastDownAvg, btcRateChange, btcTicker.totalUsdt,
+        return new MarketDataObject(rateChangeDownAvg, rateChangeUpAvg, btcRateChange, btcTicker.totalUsdt,
                 null, symbolsTopDown);
     }
 
@@ -365,7 +429,7 @@ public class BtcBigChangeAndBread {
     private void createOrderBUYTarget(String symbol, KlineObjectSimple ticker, MarketLevelChange levelChange) {
         Double entry = ticker.priceClose;
         Double budget = BudgetManagerSimple.getInstance().getBudget();
-        Integer leverage = BudgetManagerSimple.getInstance().getLeverage();
+        Integer leverage = BudgetManagerSimple.getInstance().getLeverage(symbol);
         String log = OrderSide.BUY + " " + symbol + " entry: " + entry + " budget: " + budget
                 + " time:" + Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue());
         Double quantity = Utils.calQuantity(budget, leverage, entry, symbol);

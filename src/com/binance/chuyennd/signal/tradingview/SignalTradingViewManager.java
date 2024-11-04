@@ -167,10 +167,10 @@ public class SignalTradingViewManager {
 //                + " time:" + Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis());
 //        Utils.sendSms2Telegram(log);
         Double quantity = Utils.calQuantity(BudgetManager.getInstance().getBudget(),
-                BudgetManager.getInstance().getLeverage(), priceEntry, symbol);
+                BudgetManager.getInstance().getLeverage(symbol), priceEntry, symbol);
         if (quantity != null && quantity != 0) {
             OrderTargetInfoTestSignal orderTrade = new OrderTargetInfoTestSignal(OrderTargetStatus.REQUEST, priceEntry,
-                    priceTarget, quantity, BudgetManager.getInstance().getLeverage(), symbol,
+                    priceTarget, quantity, BudgetManager.getInstance().getLeverage(symbol), symbol,
                     System.currentTimeMillis(), System.currentTimeMillis(),
                     sideSignal);
 //            RedisHelper.getInstance().get().rpush(RedisConst.REDIS_KEY_EDUCA_TD_ORDER_MANAGER_QUEUE, Utils.toJson(orderTrade));

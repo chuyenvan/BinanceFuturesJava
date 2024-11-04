@@ -19,6 +19,7 @@ import java.util.Map;
 public class Configs {
 
 
+
     public static String configFile = "config.properties";
     public static volatile Map properties = new HashMap();
 
@@ -48,7 +49,7 @@ public class Configs {
     public static final Double RATE_STOP_LOSS = Configs.getDouble("RATE_STOP_LOSS");
     public static final Double MAX_CAPITAL_RATE = Configs.getDouble("MAX_CAPITAL_RATE");
     public static final Double RATE_FEE = Configs.getDouble("RATE_FEE");
-    public static final Double RATE_TRADING_DYNAMIC = Configs.getDouble("RATE_TRADING_DYNAMIC");
+    public static Double RATE_TICKER_MAX_SCAN_ORDER = Configs.getDouble("RATE_TICKER_MAX_SCAN_ORDER");
     public static final Double RATE_BUDGET_LIMIT_A_SIGNAL = Configs.getDouble("RATE_BUDGET_LIMIT_A_SIGNAL");
     public static final Integer LEVERAGE_ORDER = Configs.getInt("LEVERAGE_ORDER");
 
@@ -62,7 +63,6 @@ public class Configs {
     public static String FOLDER_TICKER_1D = Configs.getString("FOLDER_TICKER_1D");//"../ticker/storage/ticker/symbols-1D/";
     public static String FILE_DATA_LOADED = Configs.getString("FILE_DATA_LOADED");//"storage/macd_data_time";
     public static Integer TIME_AFTER_ORDER_2_SL = Configs.getInt("TIME_AFTER_ORDER_2_SL");
-    public static Integer TIME_AFTER_ORDER_2_TP = Configs.getInt("TIME_AFTER_ORDER_2_TP");
 
     public static String getString(String configName) {
         return (String) properties.get(configName);

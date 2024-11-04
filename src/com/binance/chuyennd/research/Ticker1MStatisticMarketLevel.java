@@ -69,7 +69,7 @@ public class Ticker1MStatisticMarketLevel {
                         }
                         MarketDataObject marketData = calMarketData(symbol2Ticker);
                         MarketLevelChange levelChange = MarketBigChangeDetectorTest.getMarketStatusSimple(marketData.rateDownAvg,
-                                marketData.rateUpAvg, marketData.rateBtc);
+                                marketData.rateUpAvg, marketData.rateBtc, marketData.rateDown15MAvg, marketData.rateUp15MAvg, marketData.rateBtcDown15M);
                         List<String> symbol2Trade;
                         symbol2Trade = marketData.symbolsTopDown;
                         if (levelChange != null) {
@@ -146,7 +146,7 @@ public class Ticker1MStatisticMarketLevel {
                     symbol2Ticker.size(), rateDown2Symbols.size(), symbol2Trade.size(),
                     Utils.toJson(symbol2Trade));
         }
-        return new MarketDataObject(rateChangeDownAvg, rateChangeUpAvg, null, btcRateChange, btcTicker.totalUsdt, null, symbol2Trade);
+        return new MarketDataObject(rateChangeDownAvg, rateChangeUpAvg, btcRateChange, btcTicker.totalUsdt, null, symbol2Trade);
     }
 
     private void exitWhenDone() {
@@ -196,7 +196,7 @@ public class Ticker1MStatisticMarketLevel {
     private void createOrderBUYTarget(String symbol, KlineObjectSimple ticker, Double rateTarget, MarketLevelChange levelChange) {
         Double entry = ticker.priceClose;
         Double budget = BudgetManagerSimple.getInstance().getBudget();
-        Integer leverage = BudgetManagerSimple.getInstance().getLeverage();
+        Integer leverage = BudgetManagerSimple.getInstance().getLeverage(symbol);
         Double targetTp = rateTarget;
 
         if (levelChange.equals(MarketLevelChange.MEDIUM_DOWN)) {

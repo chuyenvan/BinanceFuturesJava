@@ -88,7 +88,7 @@ public class DephMergedPoints
 		}
 		else if (mode == MergeMode.MIN)
 		{
-			// TODO
+
 		}
 
 		return this;

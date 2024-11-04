@@ -51,6 +51,7 @@ public class Utils {
     public static final SimpleDateFormat sdfFile = new SimpleDateFormat("yyyyMMdd");
     public static final SimpleDateFormat sdfMonth = new SimpleDateFormat("yyyyMM");
     public static final SimpleDateFormat sdfFileHour = new SimpleDateFormat("yyyyMMdd HH:mm");
+    public static final SimpleDateFormat sdfFileFull = new SimpleDateFormat("yyyyMMdd HH:mm:ss");
     public static final SimpleDateFormat sdfFile_Hour = new SimpleDateFormat("yyyyMMdd_HH:mm");
     public static final SimpleDateFormat sdfHour = new SimpleDateFormat("HH:mm");
     public static final SimpleDateFormat sdfFacebook = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
@@ -543,6 +544,10 @@ public class Utils {
         return sdfFileHour.format(new Date(input));
     }
 
+    public static String normalizeDateYYYYMMDDHHmmss(Long input) {
+        return sdfFileFull.format(new Date(input));
+    }
+
     public static String normalizeHHmm(Long input) {
         return sdfHour.format(new Date(input));
     }
@@ -779,6 +784,24 @@ public class Utils {
         cal.setTimeZone(TimeZone.getTimeZone("GMT+7"));
         cal.setTime(new Date(time));
         return cal.get(Calendar.DAY_OF_WEEK);
+    }
+
+    public static Boolean isEndWeek(long time) {
+        Calendar cal = Calendar.getInstance();
+        cal.setTimeZone(TimeZone.getTimeZone("GMT+7"));
+        cal.setTime(new Date(time));
+        int dayOfWeek = cal.get(Calendar.DAY_OF_WEEK);
+        int hourOfDay = cal.get(Calendar.HOUR_OF_DAY);
+        if (dayOfWeek == 7) {
+            return hourOfDay >= 7;
+        }
+        if (dayOfWeek == 1) {
+            return true;
+        }
+        if (dayOfWeek == 2) {
+            return hourOfDay < 7;
+        }
+        return false;
     }
 
     public static boolean isTodayStartOfMonth() {
@@ -1159,6 +1182,17 @@ public class Utils {
         return result;
     }
 
+    public static KlineObjectNumber cloneKlineObjectNumber(KlineObjectNumber ticker) {
+        KlineObjectNumber result = new KlineObjectNumber();
+        result.priceOpen = ticker.priceOpen;
+        result.priceClose = ticker.priceClose;
+        result.minPrice = ticker.minPrice;
+        result.maxPrice = ticker.maxPrice;
+        result.startTime = ticker.startTime;
+        result.totalUsdt = ticker.totalUsdt;
+        return result;
+    }
+
     public static void main(String[] args) {
 //        System.out.println(Utils.sendSms2Skype("test skype"));
 //        System.out.println(Utils.normalizeHHmm(System.currentTimeMillis()));
@@ -1251,6 +1285,7 @@ public class Utils {
     public static long getDate(long time) {
         return (time / TIME_DAY) * TIME_DAY;
     }
+
     public static String getMonth(long time) {
         return Utils.sdfMonth.format(new Date(time));
     }
@@ -1321,5 +1356,72 @@ public class Utils {
         }
         entrieUpdate.totalUsdt += candle.totalUsdt;
         return entrieUpdate;
+    }
+
+    public static Double findMinSubarraySum(Double[] numbers) {
+        if (numbers.length == 0) {
+            throw new IllegalArgumentException("Dãy số phải có ít nhất 1 phần tử.");
+        }
+
+        // Khởi tạo giá trị tổng nhỏ nhất và tổng nhỏ nhất hiện tại bằng phần tử đầu tiên
+        double minSum = numbers[0];
+        double currentSum = numbers[0];
+
+        // Duyệt qua mảng từ phần tử thứ hai
+        for (int i = 1; i < numbers.length; i++) {
+            // Tìm tổng nhỏ nhất hiện tại, nếu số hiện tại nhỏ hơn tổng hiện tại, ta chọn số hiện tại
+            currentSum = Math.min(numbers[i], currentSum + numbers[i]);
+            // Cập nhật tổng nhỏ nhất
+            double minSumNew = Math.min(minSum, currentSum);
+            if (minSumNew < minSum) {
+                minSum = Math.min(minSum, currentSum);
+            }
+        }
+
+        return minSum;
+    }
+
+    public static Double findMinSubarraySumIndex(Double[] numbers) {
+        if (numbers.length == 0) {
+            throw new IllegalArgumentException("Dãy số phải có ít nhất 1 phần tử.");
+        }
+
+        // Khởi tạo giá trị tổng nhỏ nhất và tổng nhỏ nhất hiện tại bằng phần tử đầu tiên
+        double minSum = numbers[0];
+        double currentSum = numbers[0];
+        Integer index = 0;
+        // Duyệt qua mảng từ phần tử thứ hai
+        for (int i = 1; i < numbers.length; i++) {
+            // Tìm tổng nhỏ nhất hiện tại, nếu số hiện tại nhỏ hơn tổng hiện tại, ta chọn số hiện tại
+            currentSum = Math.min(numbers[i], currentSum + numbers[i]);
+            // Cập nhật tổng nhỏ nhất
+            double minSumNew = Math.min(minSum, currentSum);
+            if (minSumNew < minSum) {
+                index = i;
+                minSum = Math.min(minSum, currentSum);
+            }
+        }
+
+        return numbers[index];
+    }
+
+    public static Double findMaxSubarraySum(Double[] numbers) {
+        if (numbers.length == 0) {
+            throw new IllegalArgumentException("Dãy số phải có ít nhất 1 phần tử.");
+        }
+
+        // Khởi tạo giá trị tổng nhỏ nhất và tổng nhỏ nhất hiện tại bằng phần tử đầu tiên
+        double minSum = numbers[0];
+        double currentSum = numbers[0];
+
+        // Duyệt qua mảng từ phần tử thứ hai
+        for (int i = 1; i < numbers.length; i++) {
+            // Tìm tổng nhỏ nhất hiện tại, nếu số hiện tại nhỏ hơn tổng hiện tại, ta chọn số hiện tại
+            currentSum = Math.max(numbers[i], currentSum + numbers[i]);
+            // Cập nhật tổng nhỏ nhất
+            minSum = Math.max(minSum, currentSum);
+        }
+
+        return minSum;
     }
 }

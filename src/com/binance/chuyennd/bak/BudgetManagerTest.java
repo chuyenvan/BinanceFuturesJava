@@ -103,10 +103,10 @@ public class BudgetManagerTest {
                     totalSL++;
                 }
                 if (Utils.getDate(Long.parseLong(key.split("-")[0])) == (timeUpdate - Utils.TIME_DAY)) {
-                    profitOfDate += calTp(orderInfo);
+                    profitOfDate += orderInfo.calTp();
                 }
                 fee += calFee(orderInfo);
-                profit += calTp(orderInfo);
+                profit += orderInfo.calTp();
             }
         }
 
@@ -204,11 +204,6 @@ public class BudgetManagerTest {
             totalMargin += margin;
         }
         return totalMargin;
-    }
-
-    private Double calTp(OrderTargetInfoTest orderInfo) {
-        Double tp = orderInfo.quantity * (orderInfo.priceTP - orderInfo.priceEntry);
-        return tp;
     }
 
     public void updateInvesting() {

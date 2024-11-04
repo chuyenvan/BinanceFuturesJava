@@ -415,7 +415,7 @@ public class SignalTWSimulator {
         int totalSL = 0;
 
         for (OrderTargetInfoTestSignal order : allOrderDone.values()) {
-            Double pnlRate = calTp(order);
+            Double pnlRate = order.calProfit();
             total += pnlRate;
             if (order.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)) {
                 totalTP++;
@@ -441,7 +441,7 @@ public class SignalTWSimulator {
         int totalSL = 0;
 
         for (OrderTargetInfoTestSignal order : orderDones.values()) {
-            Double pnlRate = calTp(order);
+            Double pnlRate = order.calProfit();
             total += pnlRate;
             if (order.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)) {
                 totalTP++;
@@ -467,9 +467,6 @@ public class SignalTWSimulator {
 
     }
 
-    public static Double calTp(OrderTargetInfoTestSignal orderInfo) {
-        return Utils.rateOf2Double(orderInfo.priceTP, orderInfo.priceEntry);
-    }
 
     public static void printAllOrderRunning() {
         Map<String, Double> sym2Volume = TickerFuturesHelper.getAllVolume24hr();

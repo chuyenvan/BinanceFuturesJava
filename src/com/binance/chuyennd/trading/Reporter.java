@@ -4,7 +4,6 @@ import com.binance.chuyennd.client.BinanceFuturesClientSingleton;
 import com.binance.chuyennd.client.ClientSingleton;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
-import com.binance.chuyennd.statistic24hr.Volume24hrManager;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.model.enums.OrderSide;
@@ -87,7 +86,6 @@ public class Reporter {
             }
             if (counterLog < 15) {
                 counterLog++;
-                Double volume24hr = Volume24hrManager.getInstance().symbol2Volume.get(pos.getSymbol());
                 OrderSide side = OrderSide.BUY;
                 if (pos.getPositionAmt().doubleValue() < 0) {
                     side = OrderSide.SELL;
@@ -96,9 +94,16 @@ public class Reporter {
                 Long pnlLong = pnl.longValue();
                 Double entryPrice = ClientSingleton.getInstance().normalizePrice(pos.getSymbol(), pos.getEntryPrice().doubleValue());
                 Double lastPrice = ClientSingleton.getInstance().normalizePrice(pos.getSymbol(), pos.getMarkPrice().doubleValue());
+                String orderJson = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO, pos.getSymbol());
+                OrderTargetInfo order = Utils.gson.fromJson(orderJson, OrderTargetInfo.class);
+                String marketOrder = "";
+                if (order != null) {
+                    marketOrder = order.marketLevel.toString();
+                }
                 builder.append(side).append(" ")
-                        .append(pos.getSymbol()).append(" ")
-                        .append(volume24hr.longValue() / 1000000).append("M ")
+                        .append(pos.getSymbol().replace("USDT", "")).append(" ")
+                        .append(marketOrder)
+                        .append(" ")
                         .append(entryPrice).append("->").append(lastPrice)
                         .append(" ").append(ratePercent).append("%")
                         .append(" ").append(pnlLong.doubleValue() / 100).append("$")

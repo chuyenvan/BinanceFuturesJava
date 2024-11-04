@@ -57,6 +57,7 @@ public class KlineObjectNumber implements Serializable {
 
 
     public double getDefaultPrice() {
-        return priceClose;
+//        return priceClose;
+        return totalUsdt;
     }
 }

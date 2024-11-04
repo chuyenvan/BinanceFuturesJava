@@ -23,8 +23,6 @@ import java.text.ParseException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static com.binance.chuyennd.bigchange.test.TraceOrderDone.calTp;
-
 /**
  * @author pc
  */
@@ -171,14 +169,14 @@ public class TraceDetailAllDataWithTime {
             builder.append(Utils.rateOf2Double(order.minPrice, order.priceEntry)).append(",");
             builder.append(order.maxPrice).append(",");
             builder.append(Utils.rateOf2Double(order.maxPrice, order.priceEntry)).append(",");
-            builder.append(profit).append(",");
+            builder.append(Utils.formatDouble(profit * 100, 3)).append(",");
             builder.append(order.status.toString()).append(",");
             builder.append(Utils.normalizeDateYYYYMMDDHHmm(order.timeStart)).append(",");
             builder.append(Utils.normalizeDateYYYYMMDDHHmm(order.timeUpdate)).append(",");
             builder.append(Utils.rateOf2Double(order.tickerOpen.priceClose, order.tickerOpen.priceOpen)).append(",");
             builder.append(order.tickerOpen.totalUsdt).append(",");
             builder.append(order.quantity).append(",");
-            builder.append(calTp(order)).append(",");
+            builder.append(order.calTp()).append(",");
             builder.append((order.timeUpdate - order.timeStart) / Utils.TIME_MINUTE).append(",");
 //            builder.append(symbol2Ticker15m.get(order.symbol).totalUsdt / order.tickerOpen.totalUsdt).append(",");
             builder.append(buildDataStatistic(symbol2Ticker24h.get(order.symbol), order.tickerOpen));
@@ -239,7 +237,7 @@ public class TraceDetailAllDataWithTime {
     public void createOrderBUYTarget(String symbol, KlineObjectSimple ticker, KlineObjectSimple lastTicker) {
         Double entry = ticker.priceClose;
         Double budget = BudgetManagerSimple.getInstance().getBudget();
-        Integer leverage = BudgetManagerSimple.getInstance().getLeverage();
+        Integer leverage = BudgetManagerSimple.getInstance().getLeverage(symbol);
         String log = OrderSide.BUY + " " + symbol + " entry: " + entry +
                 " budget: " + budget
                 + " time:" + Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue());
@@ -259,7 +257,7 @@ public class TraceDetailAllDataWithTime {
     private void createOrderSELL(String symbol, KlineObjectSimple ticker) {
         Double entry = ticker.priceClose;
         Double budget = BudgetManagerSimple.getInstance().getBudget();
-        Integer leverage = BudgetManagerSimple.getInstance().getLeverage();
+        Integer leverage = BudgetManagerSimple.getInstance().getLeverage(symbol);
         String log = OrderSide.SELL + " " + symbol + " entry: " + entry + " budget: " + budget
                 + " time:" + Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue());
         Double quantity = Utils.calQuantity(budget, leverage, entry, symbol);

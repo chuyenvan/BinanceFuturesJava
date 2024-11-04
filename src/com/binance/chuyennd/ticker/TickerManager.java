@@ -93,9 +93,10 @@ public class TickerManager {
         new Thread(() -> {
             Thread.currentThread().setName("ThreadUpdateBudgetByHour");
             LOG.info("Start thread ThreadUpdateBudgetByHour!");
+            startUpdateTicker1mSimple();
             while (true) {
                 try {
-                    if (Utils.getCurrentHour() == 8 || Utils.getCurrentHour() == 20) {
+                    if (Utils.getCurrentHour() == 7 || Utils.getCurrentHour() == 17) {
                         List<KlineObjectSimple> tickers = TickerManager.getTickerFullBtc1M();
                         LOG.info("End ticker btc 1m: {}", Utils.normalizeDateYYYYMMDDHHmm(tickers.get(tickers.size() - 1).startTime.longValue()));
                         startUpdateTicker1mSimple();
@@ -495,7 +496,7 @@ public class TickerManager {
                 symbols.add(Constants.SYMBOL_PAIR_BTC);
                 symbols.add("ETHUSDT");
                 Long time = Utils.getStartTimeDayAgo(0) + 7 * Utils.TIME_HOUR;
-                Long timeEnd2Get = Utils.sdfFile.parse("20210101").getTime();
+                Long timeEnd2Get = Utils.sdfFile.parse(Configs.TIME_RUN).getTime();
                 while (true) {
                     if (time < timeEnd2Get) {
                         break;
@@ -694,7 +695,7 @@ public class TickerManager {
         LOG.info("Finished update ticker 15m for {}", symbol);
     }
 
-    private void updateDataBySymbolSimple(String symbol, String interval, Long startTime) {
+    public void updateDataBySymbolSimple(String symbol, String interval, Long startTime) {
         try {
             counter++;
             LOG.info("Process: {}/{}", counter, total);

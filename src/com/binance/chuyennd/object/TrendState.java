@@ -27,6 +27,7 @@ public enum TrendState {
     DOWN,
     STRONG_DOWN,
     SIDEWAY,
+    UNKNOWN,
     TREND_UP,
     TREND_DOWN
 }

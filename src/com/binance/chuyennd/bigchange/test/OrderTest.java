@@ -26,7 +26,7 @@ public class OrderTest {
                     && Utils.rateOf2Double(lastTicker.priceClose, lastTicker.priceOpen) < 0) {
                 target = Utils.rateOf2Double(lastTicker.priceOpen, ticker.priceClose);
             }
-            new SimulatorMarketLevelTicker1MStopLoss().createOrderBUYTarget(symbol, ticker, MarketLevelChange.BIG_DOWN, null);
+            new SimulatorMarketLevelTicker1MStopLoss().createOrderBUYTarget(symbol, ticker, MarketLevelChange.BIG_DOWN, null, null);
         } catch (Exception e) {
             e.printStackTrace();
         }

@@ -108,17 +108,8 @@ public class OrderHelper {
 //        }
 //        return null;
 //    }
-    public static Order newOrderMarket(String symbol, OrderSide side, Double quantity, Integer leverage) {
-        if (FuturesRules.getInstance().getSymsLocked().contains(symbol)) {
-            LOG.info("Sym {} is locking by trading rule!", symbol);
-            return null;
-        }
+    public static Order newOrderMarket(String symbol, OrderSide side, Double quantity) {
         LOG.info("Order market {} {} {}", symbol, side, quantity);
-        try {
-            ClientSingleton.getInstance().syncRequestClient.changeInitialLeverage(symbol, leverage);
-        } catch (Exception e) {
-            LOG.info("Leverage {} of: {} not support", leverage, symbol);
-        }
         try {
             return ClientSingleton.getInstance().syncRequestClient.postOrder(symbol, side, null, OrderType.MARKET, null,
                     quantity.toString(), null, null, null, null, null, null, null, null, null, NewOrderRespType.RESULT);
@@ -241,10 +232,10 @@ public class OrderHelper {
 //        System.out.println(OrderHelper.calQuantity(5, 5, 133.5, "TRBUSDT"));
     }
 
-    public static void dcaForPosition(String symbol, OrderSide side, double quantity, int leverage) {
+    public static void dcaForPosition(String symbol, OrderSide side, double quantity) {
         LOG.info("DCA to {} side:{} quantity: {}", symbol, side, quantity);
         Utils.sendSms2Telegram("DCA for " + symbol + " side: " + side + " quantity: " + quantity);
-        newOrderMarket(symbol, side, quantity, leverage);
+        newOrderMarket(symbol, side, quantity);
     }
 
 }

@@ -2,6 +2,7 @@ package com.binance.chuyennd.bigchange.statistic;
 
 import com.binance.chuyennd.bigchange.market.MarketBigChangeDetectorTest;
 import com.binance.chuyennd.object.KlineObjectNumber;
+import com.binance.chuyennd.research.BTCTrendManagerTest;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
 import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.utils.Configs;
@@ -25,8 +26,6 @@ public class AltSignalCandleReverse {
 
     public static final Logger LOG = LoggerFactory.getLogger(AltSignalCandleReverse.class);
     private static final int NUMBER_HOURS_STOP_MIN = Configs.getInt("NUMBER_HOURS_STOP_MIN");
-    private static final int RATE_TARGETS = Configs.getInt("RATE_TARGETS");
-    private static final Double RATE_TARGET = Configs.getDouble("RATE_TARGET");
     public Integer counterTotal = 0;
     public Integer counterSuccess = 0;
     public Integer counterStoploss = 0;
@@ -39,35 +38,8 @@ public class AltSignalCandleReverse {
         // test for multi param
         try {
             List<String> lines = new ArrayList<>();
-            ArrayList<Double> rateTargets = new ArrayList<>(Arrays.asList());
-            for (int i = 0; i < RATE_TARGETS; i++) {
-                rateTargets.add(RATE_TARGET + i * 0.01);
-            }
-            for (Double target : rateTargets) {
-                lines.addAll(detectAltReverseAfterTopDown(target));
-            }
+            lines.addAll(detectAltReverseAfterTopDown());
             FileUtils.writeLines(new File(AltSignalCandleReverse.class.getSimpleName() + ".csv"), lines);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void multiStatisticAltTopMa20() throws ParseException {
-
-//        long start_time = Configs.getLong("start_time");
-        // test for multi param
-        try {
-            List<String> lines = new ArrayList<>();
-            ArrayList<Double> rateTargets = new ArrayList<>(Arrays.asList());
-            for (int i = 0; i < RATE_TARGETS; i++) {
-                rateTargets.add(RATE_TARGET + i * 0.01);
-            }
-            for (Double target : rateTargets) {
-                lines.addAll(detectAltTopMa20(target));
-            }
-            FileUtils.writeLines(new File(AltSignalCandleReverse.class.getSimpleName() + ".csv"), lines);
-
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -87,18 +59,17 @@ public class AltSignalCandleReverse {
         List<String> lines = new ArrayList<>();
         for (OrderTargetInfoTest order : orders) {
             counterTotal++;
+            double rateLoss = Utils.rateOf2Double(order.priceTP, order.priceEntry);
             if (order.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)) {
                 counterSuccess++;
-                lines.add(buildLineTest(order, null));
             } else {
                 counterStoploss++;
-                double rateLoss = Utils.rateOf2Double(order.lastPrice, order.priceEntry);
-                if (order.side.equals(OrderSide.BUY)) {
+                if (order.side.equals(OrderSide.SELL)) {
                     rateLoss = -rateLoss;
                 }
                 totalLoss += rateLoss;
-                lines.add(buildLineTest(order, rateLoss));
             }
+            lines.add(buildLineTest(order, rateLoss));
         }
         return lines;
     }
@@ -107,14 +78,15 @@ public class AltSignalCandleReverse {
     private String buildLineTest(OrderTargetInfoTest order, Double rateLoss) {
         return order.symbol + "," + Utils.normalizeDateYYYYMMDDHHmm(order.timeStart) + "," + Utils.normalizeDateYYYYMMDDHHmm(order.timeUpdate)
                 + "," + order.priceEntry + "," + order.priceTP + "," + order.side + "," + order.lastPrice + "," +
-                order.volume + "," + order.rateBtc15m + "," + order.status + "," + rateLoss + "," +
+                order.volume + "," +  order.status + "," + rateLoss + "," +
                 order.maxPrice + "," + Utils.rateOf2Double(order.maxPrice, order.priceEntry) + "," +
-                order.minPrice + "," + Utils.rateOf2Double(order.minPrice, order.priceEntry) + ","
+                order.minPrice + "," + Utils.rateOf2Double(order.minPrice, order.priceEntry) +
+                "," + order.rateChange + "," + order.rateBtc15m + ","
                 + (order.timeUpdate - order.timeStart) / Utils.TIME_MINUTE;
     }
 
 
-    List<String> detectAltReverseAfterTopDown(Double target) {
+    List<String> detectAltReverseAfterTopDown() {
 
         List<String> lines = new ArrayList<>();
         File[] symbolFiles = new File(Configs.FOLDER_TICKER_15M).listFiles();
@@ -131,35 +103,31 @@ public class AltSignalCandleReverse {
             if (Constants.diedSymbol.contains(symbol)) {
                 continue;
             }
-            if (Constants.specialSymbol.contains(symbol)) {
-                continue;
-            }
             List<KlineObjectNumber> tickers = (List<KlineObjectNumber>) Storage.readObjectFromFile(symbolFile.getPath());
             try {
                 for (int i = 0; i < tickers.size(); i++) {
                     KlineObjectNumber kline = tickers.get(i);
-                    if (StringUtils.equals(symbol, "TAOUSDT")
-                            && kline.startTime.longValue() == Utils.sdfFileHour.parse("20240705 19:15").getTime()) {
-                        System.out.println("Debug");
-                    }
+//                    if (StringUtils.equals(symbol, "TAOUSDT")
+//                            && kline.startTime.longValue() == Utils.sdfFileHour.parse("20240705 19:15").getTime()) {
+//                        System.out.println("Debug");
+//                    }
 
-//                    if (MarketBigChangeDetectorTest.getStatusTradingAlt15M(tickers, i) == 1
-                    OrderSide orderSide = MarketBigChangeDetectorTest.isAltVolumeReverse(tickers, i);
-                    if (orderSide != null
-                    ) {
-//                        LOG.info("{} {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(kline.startTime.longValue()), orderSide);
+                    Double volumeChange = MarketBigChangeDetectorTest.isAltVolumeReverse(tickers, i);
+                    if (volumeChange != null) {
                         try {
                             Double priceEntry = kline.priceClose;
-                            Double priceTarget = getPriceTarget(priceEntry, orderSide, target);
+                            Double priceTarget = getPriceTarget(priceEntry, OrderSide.BUY, 0.01);
                             OrderTargetInfoTest orderTrade = new OrderTargetInfoTest(OrderTargetStatus.REQUEST, priceEntry,
                                     priceTarget, 1.0, 10, symbol, kline.startTime.longValue(),
-                                    kline.startTime.longValue(), orderSide);
+                                    kline.startTime.longValue(), OrderSide.BUY);
 
                             orderTrade.maxPrice = kline.priceClose;
                             orderTrade.minPrice = kline.minPrice;
                             orderTrade.volume = kline.totalUsdt;
                             orderTrade.rateBtc15m = kline.rsi;
                             orderTrade.lastPrice = kline.priceClose;
+                            orderTrade.rateChange = Utils.rateOf2Double(kline.priceClose, kline.priceOpen);
+                            orderTrade.rateBtc15m = volumeChange;
                             orderTrade.tickerOpen = kline;
                             if (i > 1) {
                                 orderTrade.tickerClose = tickers.get(i - 1);
@@ -167,7 +135,8 @@ public class AltSignalCandleReverse {
                             int startCheck = i;
                             for (int j = startCheck + 1; j < tickers.size(); j++) {
                                 KlineObjectNumber ticker = tickers.get(j);
-                                if (orderTrade.timeStart < ticker.startTime - Utils.TIME_HOUR * NUMBER_HOURS_STOP_MIN) {
+                                if (orderTrade.timeStart < ticker.startTime - Utils.TIME_HOUR * NUMBER_HOURS_STOP_MIN * 4) {
+                                    orderTrade.priceTP = orderTrade.lastPrice;
                                     break;
                                 }
                                 orderTrade.lastPrice = ticker.priceClose;
@@ -186,6 +155,7 @@ public class AltSignalCandleReverse {
                             }
                             if (!orderTrade.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)
                                     && !orderTrade.status.equals(OrderTargetStatus.STOP_LOSS_DONE)) {
+                                orderTrade.priceTP = orderTrade.lastPrice;
                                 orderTrade.status = OrderTargetStatus.POSITION_RUNNING;
                             }
                             orderTrades.add(orderTrade);
@@ -224,8 +194,8 @@ public class AltSignalCandleReverse {
                     rateSuccessLoss = counterStoploss * 1000 / counterSuccess;
                 }
                 if (counterSuccess > 0) {
-                    Double pnl = counterSuccess * target;
-                    LOG.info("Result target:{} minEntry:{} numberOrder:{} {}-{}-{}%-{}/{} {}% pl: {}/{} {}%", target, minEntry, numberOrder2Trade, counterSuccess, counterStoploss,
+                    Double pnl = counterSuccess * 0.01;
+                    LOG.info("Result target:{} minEntry:{} numberOrder:{} {}-{}-{}%-{}/{} {}% pl: {}/{} {}%", 0.01, minEntry, numberOrder2Trade, counterSuccess, counterStoploss,
                             rateSuccessLoss.doubleValue() / 10, counterSuccess + counterStoploss, counterTotal,
                             rateSuccess.doubleValue() / 10, totalLoss.longValue(), pnl.longValue(), Utils.formatPercent(totalLoss / pnl));
                 }
@@ -535,25 +505,6 @@ public class AltSignalCandleReverse {
         return orderResult;
     }
 
-    private void multiStatisticAltReverse1h() {
-
-//        long start_time = Configs.getLong("start_time");
-        // test for multi param
-        try {
-            List<String> lines = new ArrayList<>();
-            ArrayList<Double> rateTargets = new ArrayList<>(Arrays.asList());
-            for (int i = 0; i < RATE_TARGETS; i++) {
-                rateTargets.add(RATE_TARGET + i * 0.01);
-            }
-            for (Double target : rateTargets) {
-                lines.addAll(detectAltReverseAfterTopDown1h(target));
-            }
-            FileUtils.writeLines(new File(AltSignalCandleReverse.class.getSimpleName() + ".csv"), lines);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
 
     public static void updateRateChangeAvg2Ma20(List<KlineObjectNumber> altTickers, Integer index) {
         try {

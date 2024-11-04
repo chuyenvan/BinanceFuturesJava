@@ -35,7 +35,7 @@ public class StatisticMarketLevelTicker1M {
     public final String FILE_STORAGE_ORDER_DONE = "storage/" + StatisticMarketLevelTicker1M.class.getSimpleName() + ".data";
 
 
-    public ConcurrentHashMap<String, OrderTargetInfoTest> allOrderDone;
+    public TreeMap<Long, OrderTargetInfoTest> allOrderDone;
 
     public final String TIME_RUN = Configs.getString("TIME_RUN");
         public ConcurrentHashMap<String, OrderTargetInfoTest> orderRunning = new ConcurrentHashMap();
@@ -126,7 +126,7 @@ public class StatisticMarketLevelTicker1M {
                         }
                         if (marketData != null) {
                             MarketLevelChange levelChange = MarketBigChangeDetectorTest.getMarketStatusSimple(marketData.rateDownAvg,
-                                    marketData.rateUpAvg, marketData.rateBtc);
+                                    marketData.rateUpAvg, marketData.rateBtc, marketData.rateDown15MAvg, marketData.rateUp15MAvg, marketData.rateBtcDown15M);
                             if (levelChange != null) {
                                 timeTradeMarket.put(time, marketData);
                                 time2MarketLevelChange.put(time, levelChange);
@@ -203,10 +203,10 @@ public class StatisticMarketLevelTicker1M {
         // add all order running to done
         for (OrderTargetInfoTest orderInfo : orderRunning.values()) {
             orderInfo.priceTP = orderInfo.lastPrice;
-            allOrderDone.put(orderInfo.timeStart + "-" + orderInfo.symbol, orderInfo);
+            allOrderDone.put(orderInfo.timeStart + allOrderDone.size(), orderInfo);
         }
         Storage.writeObject2File(FILE_STORAGE_ORDER_DONE + "-"
-                + Configs.TIME_AFTER_ORDER_2_TP + "-" + Configs.TIME_AFTER_ORDER_2_SL, allOrderDone);
+                + Configs.TIME_AFTER_ORDER_2_SL, allOrderDone);
         Long finalStartTime = startTime;
         buildReport(finalStartTime);
         BudgetManagerSimple.getInstance().printBalanceIndex();
@@ -219,7 +219,6 @@ public class StatisticMarketLevelTicker1M {
     private MarketDataObject calMarketData(Map<String, KlineObjectSimple> symbol2Ticker, Map<String, KlineObjectSimple> symbol2LastTicker) {
         TreeMap<Double, String> rateDown2Symbols = new TreeMap<>();
         TreeMap<Double, String> rateUp2Symbols = new TreeMap<>();
-        TreeMap<Double, String> rateLast2Symbol = new TreeMap<>();
         for (Map.Entry<String, KlineObjectSimple> entry1 : symbol2Ticker.entrySet()) {
             String symbol = entry1.getKey();
             if (Constants.diedSymbol.contains(symbol)) {
@@ -233,17 +232,13 @@ public class StatisticMarketLevelTicker1M {
                 Double rateChange = Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen);
                 rateDown2Symbols.put(rateChange, symbol);
                 rateUp2Symbols.put(-rateChange, symbol);
-                KlineObjectSimple lastTicker = symbol2LastTicker.get(symbol);
-                if (lastTicker != null) {
-                    rateLast2Symbol.put(Utils.rateOf2Double(ticker.priceClose, lastTicker.priceOpen), symbol);
-                }
+
             }
         }
-        // TODO test với rate with max 20d ago
+
         KlineObjectSimple btcTicker = symbol2Ticker.get(Constants.SYMBOL_PAIR_BTC);
         Double btcRateChange = Utils.rateOf2Double(btcTicker.priceClose, btcTicker.priceOpen);
         Double rateChangeDownAvg = MarketBigChangeDetectorTest.calRateLossAvg(rateDown2Symbols, 50);
-        Double rateChangeLastDownAvg = MarketBigChangeDetectorTest.calRateLossAvg(rateLast2Symbol, 50);
         Double rateChangeUpAvg = -MarketBigChangeDetectorTest.calRateLossAvg(rateUp2Symbols, 50);
         List<String> symbolsTopDown = MarketBigChangeDetectorTest.getTopSymbolSimple(rateDown2Symbols,
                 Configs.NUMBER_ENTRY_EACH_SIGNAL, orderRunning.keySet());
@@ -253,7 +248,7 @@ public class StatisticMarketLevelTicker1M {
                     symbol2Ticker.size(), rateDown2Symbols.size(), symbolsTopDown.size(),
                     Utils.toJson(symbolsTopDown), Utils.toJson(orderRunning.keySet()));
         }
-        return new MarketDataObject(rateChangeDownAvg, rateChangeUpAvg, rateChangeLastDownAvg, btcRateChange, btcTicker.totalUsdt,
+        return new MarketDataObject(rateChangeDownAvg, rateChangeUpAvg, btcRateChange, btcTicker.totalUsdt,
                 null, symbolsTopDown);
     }
 
@@ -295,7 +290,7 @@ public class StatisticMarketLevelTicker1M {
 
     public void initData() throws IOException, ParseException {
         // clear Data Old
-        allOrderDone = new ConcurrentHashMap<>();
+        allOrderDone = new TreeMap<>();
         if (new File(FILE_STORAGE_ORDER_DONE).exists()) {
             FileUtils.delete(new File(FILE_STORAGE_ORDER_DONE));
         }
@@ -364,7 +359,7 @@ public class StatisticMarketLevelTicker1M {
     public void buildReport(Long currentTime) {
         StringBuilder reportRunning = calReportRunning(currentTime);
         if (allOrderDone == null) {
-            allOrderDone = new ConcurrentHashMap<>();
+            allOrderDone = new TreeMap<>();
         }
         reportRunning.append(" Success: ").append(allOrderDone.size() * Configs.RATE_TARGET * 100).append("%");
         int totalBuy = 0;
@@ -426,7 +421,7 @@ public class StatisticMarketLevelTicker1M {
                 if (orderInfo.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)
                         || orderInfo.status.equals(OrderTargetStatus.STOP_LOSS_DONE)
                         || orderInfo.status.equals(OrderTargetStatus.STOP_MARKET_DONE)) {
-                    allOrderDone.put(orderInfo.timeStart + "-" + symbol, orderInfo);
+                    allOrderDone.put(orderInfo.timeStart + allOrderDone.size(), orderInfo);
                     BudgetManagerSimple.getInstance().updatePnl(orderInfo);
                     orderRunning.remove(symbol);
                 } else {
@@ -440,7 +435,7 @@ public class StatisticMarketLevelTicker1M {
     public void createOrderBUYTarget(String symbol, KlineObjectSimple ticker, MarketLevelChange levelChange) {
         Double entry = ticker.priceClose;
         Double budget = BudgetManagerSimple.getInstance().getBudget();
-        Integer leverage = BudgetManagerSimple.getInstance().getLeverage();
+        Integer leverage = BudgetManagerSimple.getInstance().getLeverage(symbol);
         if (levelChange.equals(MarketLevelChange.BIG_DOWN)
                 || levelChange.equals(MarketLevelChange.BIG_UP)) {
             budget = budget * 2;
@@ -468,7 +463,7 @@ public class StatisticMarketLevelTicker1M {
         Double targetSL = Configs.RATE_STOP_LOSS * rateTarget;
         Double budget = BudgetManagerSimple.getInstance().getBudget();
         budget = budget * 2;
-        Integer leverage = BudgetManagerSimple.getInstance().getLeverage();
+        Integer leverage = BudgetManagerSimple.getInstance().getLeverage(symbol);
         Double priceTp = Utils.calPriceTarget(symbol, entry, OrderSide.SELL, rateTarget);
         Double priceSL = Utils.calPriceTarget(symbol, entry, OrderSide.BUY, targetSL);
         String log = OrderSide.SELL + " " + symbol + " entry: " + entry + " target: " + priceTp + " budget: " + budget

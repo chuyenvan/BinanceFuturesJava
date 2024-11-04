@@ -126,13 +126,7 @@ public class SellDetector {
                 if (time2Tickers != null) {
                     for (Map.Entry<Long, Map<String, KlineObjectSimple>> entry : time2Tickers.entrySet()) {
                         Long time = entry.getKey();
-                        Map<String, Double> symbol2Volume24h = Volume24hrManager.getInstance().getVolume24h(time);
-                        if (symbol2Volume24h == null){
-                            continue;
-                        }
-//                        if (time == Utils.sdfFileHour.parse("20240904 21:00").getTime()) {
-//                            System.out.println("Debug");
-//                        }
+
                         Map<String, KlineObjectSimple> symbol2Ticker = entry.getValue();
                         TreeMap<Double, String> symbol2MaxPrice = new TreeMap<>();
 
@@ -179,11 +173,7 @@ public class SellDetector {
                                 }
                             }
 
-                            if (symbol2Volume24h != null &&
-                                    symbol2Volume24h.get(symbol) != null
-                                    && symbol2Volume24h.get(symbol) < 100 * 1E6) {
-                                symbol2MaxPrice.put(Utils.rateOf2Double(ticker.priceClose, priceMin), symbol);
-                            }
+
                         }
                         if (timeSignalSell.containsKey(time)) {
                             MarketLevelChange levelChange = MarketLevelChange.BTC_REVERSE;
@@ -312,7 +302,7 @@ public class SellDetector {
         Double entry = ticker.priceClose;
         Double budget = BudgetManagerSimple.getInstance().getBudget();
 
-        Integer leverage = BudgetManagerSimple.getInstance().getLeverage();
+        Integer leverage = BudgetManagerSimple.getInstance().getLeverage(symbol);
         Double priceTp = Utils.calPriceTarget(symbol, entry, OrderSide.SELL, 1 * Configs.RATE_TARGET);
         Double priceSL = Utils.calPriceTarget(symbol, entry, OrderSide.BUY, 1 * Configs.RATE_TARGET);
 //        Double priceTp = null;

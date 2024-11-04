@@ -251,7 +251,7 @@ public class SimulatorTradingVolumeMiniSLDynamic {
                 OrderTargetInfoTest orderInfo = Utils.gson.fromJson(json, OrderTargetInfoTest.class);
                 if (orderInfo.timeStart < ticker.startTime.longValue()) {
                     orderInfo.updatePriceByKline(ticker);
-                    orderInfo.updateStatus();
+//                    orderInfo.updateStatusNew(ticker);
                     if (orderInfo.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)) {
                         allOrderDone.put(ticker.startTime.longValue() + "-" + symbol, orderInfo);
                         RedisHelper.getInstance().get().hdel(RedisConst.REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER, symbol);

@@ -41,6 +41,7 @@ public class ClientSingleton {
     public static final Logger LOG = LoggerFactory.getLogger(ClientSingleton.class);
     public SyncRequestClient syncRequestClient;
     public Map<String, Double> symbol2UnitQuantity = new HashMap<>();
+    public Map<String, Double> symbol2Notional = new HashMap<>();
     public Map<String, Double> symbol2UnitPrice = new HashMap<>();
     private static volatile ClientSingleton INSTANCE = null;
 
@@ -65,6 +66,10 @@ public class ClientSingleton {
             if (tickSize != null) {
                 symbol2UnitPrice.put(symbol.getSymbol(), tickSize);
             }
+            Double notional = getNotional(symbol);
+            if (notional != null){
+                symbol2Notional.put(symbol.getSymbol(), notional);
+            }
         }
     }
 
@@ -78,6 +83,17 @@ public class ClientSingleton {
         }
         return null;
     }
+    private Double getNotional(ExchangeInfoEntry symbol) {
+        for (List<Map<String, String>> filters : symbol.getFilters()) {
+            for (Map<String, String> filter : filters) {
+                if (filter.get("notional") != null) {
+                    return Double.valueOf(filter.get("notional"));
+                }
+            }
+        }
+        return null;
+    }
+
 
     private Double getTickSize(ExchangeInfoEntry symbol) {
         for (List<Map<String, String>> filters : symbol.getFilters()) {
@@ -137,6 +153,9 @@ public class ClientSingleton {
 
     public Double getMinQuantity(String symbol) {
         return symbol2UnitQuantity.get(symbol);
+    }
+    public Double getNotional(String symbol) {
+        return symbol2Notional.get(symbol);
     }
 
     public static String formatDouble(Double revenue) {
