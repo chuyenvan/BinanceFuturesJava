@@ -89,7 +89,7 @@ public class AltSignalSELLStatistic {
     private String buildLineTest(OrderTargetInfoTest order, Double rateLoss) {
         return order.symbol + "," + Utils.normalizeDateYYYYMMDDHHmm(order.timeStart) + "," + Utils.normalizeDateYYYYMMDDHHmm(order.timeUpdate)
                 + "," + order.priceEntry + "," + order.priceTP + "," + order.lastPrice + "," +
-                order.volume + "," + order.rateBtc15m + "," + order.status + "," + order.rateChange
+                order.volume + "," + order.unProfitTotal + "," + order.status + "," + order.rateChange
                 + "," + order.rateBreadAbove + "," + rateLoss + "," +
                 order.maxPrice + "," + Utils.rateOf2Double(order.minPrice, order.priceEntry) + ","
                 + (order.timeUpdate - order.timeStart) / Utils.TIME_MINUTE;
@@ -138,7 +138,7 @@ public class AltSignalSELLStatistic {
                             orderTrade.maxPrice = kline.priceClose;
                             orderTrade.minPrice = kline.minPrice;
                             orderTrade.volume = kline.totalUsdt;
-                            orderTrade.rateBtc15m = kline.rsi;
+                            orderTrade.unProfitTotal = kline.rsi;
                             orderTrade.lastPrice = kline.priceClose;
                             orderTrade.tickerOpen = kline;
                             if (i > 1) {
@@ -283,7 +283,7 @@ public class AltSignalSELLStatistic {
                                 orderTrade.maxPrice = kline.priceClose;
                                 orderTrade.minPrice = kline.minPrice;
                                 orderTrade.volume = kline.totalUsdt;
-                                orderTrade.rateBtc15m = kline.rsi;
+                                orderTrade.unProfitTotal = kline.rsi;
                                 orderTrade.rateChange = rateChange;
                                 orderTrade.rateBreadAbove = Utils.rateOf2Double(kline.priceOpen, ticker2Hours.minPrice);
 

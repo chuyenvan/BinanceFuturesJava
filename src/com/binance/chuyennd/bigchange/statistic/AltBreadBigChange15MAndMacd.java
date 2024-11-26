@@ -123,7 +123,7 @@ public class AltBreadBigChange15MAndMacd {
                 + order.priceEntry + "," + order.priceTP + "," + symbol2LastPrice.get(order.symbol) + ","
                 + order.volume + "," + order.avgVolume24h + "," + order.rateChange + "," + orderState + ","
                 + rateLoss + "," + order.maxPrice + "," + Utils.rateOf2Double(order.maxPrice, order.priceEntry)
-                + "," + (order.timeUpdate - order.timeStart) / Utils.TIME_MINUTE + "," + maStatus + "," + order.rateBtc15m;
+                + "," + (order.timeUpdate - order.timeStart) / Utils.TIME_MINUTE + "," + maStatus + "," + order.unProfitTotal;
 //                + "," + btcTrend1d + "," + btcTrend4h + "," + btcTrend1h + "," + btcTrend15m;
     }
 
@@ -223,7 +223,7 @@ public class AltBreadBigChange15MAndMacd {
                                 orderTrade.rateChange = breadData.totalRate;
                                 orderTrade.avgVolume24h = TickerFuturesHelper.getAvgLastVolume7D(tickers, i);
                                 orderTrade.volume = kline.totalUsdt;
-                                orderTrade.rateBtc15m = rsi;
+                                orderTrade.unProfitTotal = rsi;
                                 int startCheck = i;
                                 for (int j = startCheck + 1; j < startCheck + NUMBER_TICKER_TO_TRADE; j++) {
                                     if (j < tickers.size()) {

@@ -2,7 +2,6 @@ package com.binance.chuyennd.bigchange.statistic;
 
 import com.binance.chuyennd.bigchange.market.MarketBigChangeDetectorTest;
 import com.binance.chuyennd.object.KlineObjectNumber;
-import com.binance.chuyennd.research.BTCTrendManagerTest;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
 import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.utils.Configs;
@@ -81,7 +80,7 @@ public class AltSignalCandleReverse {
                 order.volume + "," +  order.status + "," + rateLoss + "," +
                 order.maxPrice + "," + Utils.rateOf2Double(order.maxPrice, order.priceEntry) + "," +
                 order.minPrice + "," + Utils.rateOf2Double(order.minPrice, order.priceEntry) +
-                "," + order.rateChange + "," + order.rateBtc15m + ","
+                "," + order.rateChange + "," + order.unProfitTotal + ","
                 + (order.timeUpdate - order.timeStart) / Utils.TIME_MINUTE;
     }
 
@@ -124,10 +123,10 @@ public class AltSignalCandleReverse {
                             orderTrade.maxPrice = kline.priceClose;
                             orderTrade.minPrice = kline.minPrice;
                             orderTrade.volume = kline.totalUsdt;
-                            orderTrade.rateBtc15m = kline.rsi;
+                            orderTrade.unProfitTotal = kline.rsi;
                             orderTrade.lastPrice = kline.priceClose;
                             orderTrade.rateChange = Utils.rateOf2Double(kline.priceClose, kline.priceOpen);
-                            orderTrade.rateBtc15m = volumeChange;
+                            orderTrade.unProfitTotal = volumeChange;
                             orderTrade.tickerOpen = kline;
                             if (i > 1) {
                                 orderTrade.tickerClose = tickers.get(i - 1);
@@ -245,7 +244,7 @@ public class AltSignalCandleReverse {
                             orderTrade.maxPrice = kline.priceClose;
                             orderTrade.minPrice = kline.minPrice;
                             orderTrade.volume = kline.totalUsdt;
-                            orderTrade.rateBtc15m = kline.rsi;
+                            orderTrade.unProfitTotal = kline.rsi;
                             orderTrade.lastPrice = kline.priceClose;
                             orderTrade.tickerOpen = kline;
                             if (i > 1) {
@@ -361,7 +360,7 @@ public class AltSignalCandleReverse {
                             orderTrade.maxPrice = kline.priceClose;
                             orderTrade.minPrice = kline.minPrice;
                             orderTrade.volume = kline.totalUsdt;
-                            orderTrade.rateBtc15m = kline.rsi;
+                            orderTrade.unProfitTotal = kline.rsi;
                             orderTrade.lastPrice = kline.priceClose;
                             orderTrade.tickerOpen = kline;
                             if (i > 1) {

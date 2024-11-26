@@ -52,10 +52,12 @@ public class OrderTargetInfoTest implements Serializable {
     public Double rateBreadAbove;
     public Double rateBreadBelow;
     public Double rateChange;
-    public Double volume;
     public Double avgVolume24h;
-    public Double rateBtc15m;
-    public Double rateChange15MAvg;
+    public Double volume;
+    public Integer ordersRunning;
+    public Double unProfitTotal;
+    public Double slTotal;
+    public Double marginRunning;
     public MarketDataObject marketData;
     public MarketLevelChange marketLevelChange;
     public Integer dynamicTP_SL;
@@ -191,17 +193,28 @@ public class OrderTargetInfoTest implements Serializable {
         return profitMin;
     }
 
-    public void updateStatusNew(KlineObjectSimple ticker) {
+    public void updateStatusNew() {
         Double rateLoss = calRateLoss();
+        Double rateMin2MoveSl = Configs.RATE_PROFIT_STOP_MARKET;
+        if (Constants.specialSymbol.contains(symbol)) {
+            rateMin2MoveSl = 0.01;
+        }
         // for buy
         if (side.equals(OrderSide.BUY)) {
+            Double rateStop = BudgetManagerSimple.getInstance().calRateStop(rateLoss, symbol);
+            Double priceSLNew = Utils.calPriceTarget(symbol, priceEntry, OrderSide.SELL, rateStop);
             if (timeUpdate - timeStart >= Configs.TIME_AFTER_ORDER_2_SL * Utils.TIME_MINUTE
-                    || rateLoss > 0.03 // TODO testing
+                    || rateLoss > rateMin2MoveSl
             ) {
                 if (priceSL == null) {
+                    if (priceSLNew <= priceEntry && rateLoss > 0){
+                        Double rateStopLoss = Configs.RATE_STOP_LOSS;
+                        if (!Constants.specialSymbol.contains(symbol)) {
+                            rateStopLoss = Configs.RATE_STOP_LOSS * 2;
+                        }
+                        priceSLNew = Utils.calPriceTarget(symbol, priceEntry, OrderSide.SELL, rateStopLoss);
+                    }
                     minPrice = lastPrice;
-                    Double rateStop = BudgetManagerSimple.getInstance().calRateStop(rateLoss, symbol);
-                    Double priceSLNew = Utils.calPriceTarget(symbol, priceEntry, OrderSide.SELL, rateStop);
                     LOG.info("Create price SL:{} {} {} {} {} {} -> {} {}%", symbol, marketLevelChange, Utils.normalizeDateYYYYMMDDHHmm(timeStart),
                             Utils.normalizeDateYYYYMMDDHHmm(timeUpdate), lastPrice, priceSL, priceSLNew,
                             Utils.formatPercent(Utils.rateOf2Double(priceSLNew, priceEntry)));
@@ -226,24 +239,19 @@ public class OrderTargetInfoTest implements Serializable {
             // move SL
             if (priceSL != null) {
                 Double rateSL = BudgetManagerSimple.getInstance().calRateLossDynamic(rateLoss, symbol);
-                Double rateMin2MoveSl = 0.01;
+                Double rateMin2MoveSl = Configs.RATE_PROFIT_STOP_MARKET;
+                if (Constants.specialSymbol.contains(symbol)) {
+                    rateMin2MoveSl = 0.01;
+                }
                 if (rateLoss >= rateMin2MoveSl && rateLoss < 0.03) {
                     rateSL = rateLoss / 2;
                 }
-
                 OrderSide side2Sl = OrderSide.SELL;
-                if (side.equals(OrderSide.SELL)) {
-                    side2Sl = OrderSide.BUY;
-                }
-
                 Double priceSLNew = Utils.calPriceTarget(symbol, priceEntry, side2Sl, -rateSL);
                 double priceSLChange = priceSLNew - priceSL;
-                if (side.equals(OrderSide.SELL)) {
-                    priceSLChange = -priceSLChange;
-                }
-                if (priceSLChange > 0 &&
-                        (rateLoss >= rateMin2MoveSl
-                                || rateLoss < -Configs.RATE_STOP_LOSS)
+                if (priceSLChange > 0
+                        && rateLoss >= rateMin2MoveSl
+                        && priceSLNew > priceEntry
                 ) {
                     String prefix = "Move SL market";
                     if (rateLoss < 0) {

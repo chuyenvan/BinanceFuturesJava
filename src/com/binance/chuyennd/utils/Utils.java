@@ -58,6 +58,7 @@ public class Utils {
     public static final SimpleDateFormat sdfGoogle = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
     public static final SimpleDateFormat SDF_NORMAL = new SimpleDateFormat("E MMM dd HH:mm:ss z yyyy");
     public static final DecimalFormat df = new DecimalFormat("#.##");
+    public static final DecimalFormat dfNew = new DecimalFormat("#");
 
     public static String converObject2Json(Object data) {
         try {
@@ -136,10 +137,8 @@ public class Utils {
         urlString = String.format(urlString, apiToken, chatId, URLEncoder.encode(text));
 
         try {
-            URL url = new URL(urlString);
-            URLConnection conn = url.openConnection();
-            InputStream is = new BufferedInputStream(conn.getInputStream());
-        } catch (IOException e) {
+            LOG.info("Telegram respon: {}", HttpRequest.getContentFromUrl(urlString));
+        } catch (Exception e) {
             e.printStackTrace();
         }
         return true;
@@ -1018,6 +1017,10 @@ public class Utils {
         return df.format(number * 100);
     }
 
+    public static String formatPercentNew(Double number) {
+        return dfNew.format(number * 100);
+    }
+
     public static List<Object> sortObjectByKey(List<Object> objects, String key) {
         List<Object> result = new ArrayList();
         TreeMap<Double, Object> tmap = new TreeMap<>();
@@ -1423,5 +1426,13 @@ public class Utils {
         }
 
         return minSum;
+    }
+
+    public static String formatLog(Object obj, int length) {
+        String marginMax = String.valueOf(obj);
+        while (marginMax.length() < length) {
+            marginMax = " " + marginMax;
+        }
+        return marginMax;
     }
 }

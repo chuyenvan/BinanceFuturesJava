@@ -121,9 +121,9 @@ public class SimulatorMarketLevelTickerEachLevel {
                         }
 
                         if (time % Utils.TIME_DAY == 0) {
-                            BudgetManagerSimple.getInstance().updateBalance(time, allOrderDone, symbol2OrderRunning, true);
+                            BudgetManagerSimple.getInstance().updateBalance(time, allOrderDone, symbol2OrderRunning, symbol2OrdersEntry, true);
                         } else {
-                            BudgetManagerSimple.getInstance().updateBalance(time, allOrderDone, symbol2OrderRunning, false);
+                            BudgetManagerSimple.getInstance().updateBalance(time, allOrderDone, symbol2OrderRunning, symbol2OrdersEntry, false);
                         }
                     }
                 }
@@ -133,7 +133,7 @@ public class SimulatorMarketLevelTickerEachLevel {
             Long finalStartTime1 = startTime;
             startTime += Utils.TIME_DAY;
             if (startTime > System.currentTimeMillis()) {
-                BudgetManagerSimple.getInstance().updateBalance(finalStartTime1, allOrderDone, symbol2OrderRunning, false);
+                BudgetManagerSimple.getInstance().updateBalance(finalStartTime1, allOrderDone, symbol2OrderRunning, symbol2OrdersEntry, false);
                 break;
             }
         }
@@ -354,7 +354,7 @@ public class SimulatorMarketLevelTickerEachLevel {
         if (orderMulti != null) {
             if (orderMulti.timeStart < ticker.startTime.longValue()) {
                 orderMulti.updatePriceByKlineSimple(ticker);
-                orderMulti.updateStatusNew(ticker);
+                orderMulti.updateStatusNew();
                 if (orderMulti.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)
                         || orderMulti.status.equals(OrderTargetStatus.STOP_LOSS_DONE)
                         || orderMulti.status.equals(OrderTargetStatus.STOP_MARKET_DONE)) {

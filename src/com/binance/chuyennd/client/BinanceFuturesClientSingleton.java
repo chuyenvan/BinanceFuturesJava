@@ -110,9 +110,9 @@ public class BinanceFuturesClientSingleton {
     }
 
     private static void tracePnlAsymbol() throws ParseException {
-        String symbol = "ARPAUSDT";
+        String symbol = "SANDUSDT";
         List<Income> incomes = BinanceFuturesClientSingleton.getInstance().getPositionHistoryBySymbol(symbol,
-                Utils.sdfFileHour.parse("20240323 00:00").getTime(), System.currentTimeMillis());
+                Utils.sdfFileHour.parse("20241126 07:00").getTime(), System.currentTimeMillis());
         Double total = 0d;
         Double REALIZED_PNL = 0d;
         Double FUNDING_FEE = 0d;
@@ -209,10 +209,10 @@ public class BinanceFuturesClientSingleton {
 //        Set<String> allSymbol = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_EDUCA_ALL_SYMBOLS);
 //        System.out.println(allSymbol.size());
 //        for (String symbol : allSymbol) {
-        Set<String> symbolLocks = BinanceFuturesClientSingleton.getInstance().getAllSymbolLock();
+//        Set<String> symbolLocks = BinanceFuturesClientSingleton.getInstance().getAllSymbolLock();
 //        System.out.println(symbolLocks);
-//        tracePnlAsymbol();
-        System.out.println(Utils.toJson(BinanceFuturesClientSingleton.getInstance().getPositionInfo("ORBSUSDT")));
+        tracePnlAsymbol();
+//        System.out.println(Utils.toJson(BinanceFuturesClientSingleton.getInstance().getPositionInfo("ORBSUSDT")));
 //        BinanceFuturesClientSingleton.getInstance().positionMode();
 //        tracePnlAll();
 //        BinanceFuturesClientSingleton.getInstance().getCommissionRate();
@@ -329,7 +329,7 @@ public class BinanceFuturesClientSingleton {
         parameters.put("symbol", symbol);
         parameters.put("startTime", startTime);
         parameters.put("endTime", endTime);
-        parameters.put("incomeType", "REALIZED_PNL");
+//        parameters.put("incomeType", "REALIZED_PNL");
         try {
             String respon = BinanceFuturesClientSingleton.getInstance().umFuturesClient.account().getIncomeHistory(parameters);
             if (StringUtils.isNotEmpty(respon)) {

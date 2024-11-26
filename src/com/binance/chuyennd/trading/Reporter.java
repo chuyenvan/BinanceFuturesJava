@@ -20,35 +20,20 @@ public class Reporter {
     public static Double rateProfit = Configs.getDouble("PROFIT_RATE");
     public static long timeStartRun = Configs.getLong("TIME_START");
 
-    public static void startThreadReportPosition() {
-        new Thread(() -> {
-            Thread.currentThread().setName("Reporter");
-            LOG.info("Start thread report !");
-            while (true) {
-                try {
-                    Thread.sleep(30 * Utils.TIME_SECOND);
-                    if (isTimeReport()) {
-                        buildReport();
-                    }
-                } catch (Exception e) {
-                    LOG.error("ERROR during : {}", e);
-                    e.printStackTrace();
-                }
-            }
-        }).start();
-
-    }
-
     public static boolean isTimeReport() {
         return Utils.getCurrentMinute() % 15 == 1 && Utils.getCurrentSecond() < 30;
     }
 
-    public static void buildReport() {
-        StringBuilder reportRunning = calReportRunning();
-        Utils.sendSms2Telegram(reportRunning.toString());
+    public static void buildReport(List<PositionRisk> positions) {
+        try {
+            StringBuilder reportRunning = calReportRunning(positions);
+            Utils.sendSms2Telegram(reportRunning.toString());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
-    public static StringBuilder calReportRunning() {
+    public static StringBuilder calReportRunning(List<PositionRisk> positions) {
         StringBuilder builder = new StringBuilder();
         Set<String> symbolsSell = new HashSet<>();
 
@@ -59,7 +44,6 @@ public class Reporter {
         Long totalOver5 = 0l;
 
         TreeMap<Double, PositionRisk> rate2Order = new TreeMap<>();
-        List<PositionRisk> positions = BinanceFuturesClientSingleton.getInstance().getAllPositionInfos();
         for (PositionRisk position : positions) {
             if (position.getPositionAmt() != null && position.getPositionAmt().doubleValue() != 0) {
                 Double rateLoss = Utils.rateOf2Double(position.getMarkPrice().doubleValue(), position.getEntryPrice().doubleValue()) * 100;
@@ -98,7 +82,11 @@ public class Reporter {
                 OrderTargetInfo order = Utils.gson.fromJson(orderJson, OrderTargetInfo.class);
                 String marketOrder = "";
                 if (order != null) {
-                    marketOrder = order.marketLevel.toString();
+                    marketOrder = "";
+                    if (order.marketLevel != null) {
+                        marketOrder = order.marketLevel.toString();
+                    }
+
                 }
                 builder.append(side).append(" ")
                         .append(pos.getSymbol().replace("USDT", "")).append(" ")

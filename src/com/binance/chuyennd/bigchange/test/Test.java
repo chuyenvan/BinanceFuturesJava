@@ -29,10 +29,7 @@ import com.binance.chuyennd.object.*;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
-import com.binance.chuyennd.research.BTCTrendManagerTest;
-import com.binance.chuyennd.research.BudgetManagerSimple;
-import com.binance.chuyennd.research.OrderTargetInfoTest;
-import com.binance.chuyennd.research.SimulatorMarketLevelTicker1MStopLoss;
+import com.binance.chuyennd.research.*;
 import com.binance.chuyennd.signal.tradingview.OrderTargetInfoTestSignal;
 import com.binance.chuyennd.signal.tradingview.SignalTWSimulator;
 import com.binance.chuyennd.ticker.TickerManager;
@@ -86,24 +83,24 @@ public class Test {
     private final ConcurrentHashMap<String, Long> symbol2Processing = new ConcurrentHashMap<>();
 
     public static void main(String[] args) throws Exception {
+//        System.out.println(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS));
+        difProductionWithTest();
+//        System.out.println(Utils.rateOf2Double(94089.4, 94644.7));
 //        testProduction();
+//        System.out.println(ClientSingleton.getInstance().getMinQuantity("BANUSDT"));
+
 //        reBuildEntries();
 //        new TraceData2Test().traceLog("Update-16-nul");
 //        System.out.println(3 * BudgetManagerSimple.getInstance().getBudget());
 //        System.out.println(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS));
 //        deleteAllSLAtRedis();
 //        testExtract24hWithTicker1M();
-
-//        Long startTime = Utils.sdfFile.parse("20190101").getTime() + 7 * Utils.TIME_HOUR;
-//        System.out.println(startTime);
-//        System.out.println(Utils.formatPercent(Utils.rateOf2Double(0.0009664,0.0009648)));
-//        String line = "2024-10-06 15:15:43,624  INFO [main] SimulatorMarketLevelTicker1MStopLoss: Update-16-0.04 ProfitMin: -892.2568499999998 ALICEUSDT-20210418 10:27 MinNotMay: -892.2568499999998 ALICEUSDT-20210418 10:27 MinNot2021: -653.8388240000002 DOGEUSDT-20210520 17:55 Min2024: -600.9675789999999 ONDOUSDT-20240413 01:32";
-//        System.out.println(line.split("Update-16-0.04")[1]);
+//
 //        SimulatorMarketLevelTicker1MStopLoss test = new SimulatorMarketLevelTicker1MStopLoss();
 //        test.initData();
-//        String symbol = "1000RATSUSDT";
-//        String time = "20241015 18:12";
-//        test.runAOrder(symbol, time);
+//        String symbol = "XEMUSDT";
+//        String time = "20240705 09:30";
+//        test.runAOrder(symbol, time, OrderSide.BUY);
 
 //        difBtcTrendReverse();
 //        System.out.println(OrderSide.BUY.toString().substring(0,1));
@@ -130,72 +127,67 @@ public class Test {
 //        System.out.println(year);
 //        testTimeDetectProduction();
 //        System.out.println( Utils.toJson(BinanceFuturesClientSingleton.getInstance().umFuturesClient.account()));
-//
-//        String fileMarketChangeLevelData = "target/entry/volumeBigSignalBuy.data";
-//        TreeMap<Long, List<String>> time2Entry = null;
-//        if (new File(fileMarketChangeLevelData).exists()) {
-//            time2Entry = (TreeMap<Long, List<String>>) Storage.readObjectFromFile(fileMarketChangeLevelData);
-//        }
-//        for (Long time : time2Entry.keySet()) {
-//            LOG.info("{} {}", Utils.normalizeDateYYYYMMDDHHmm(time), time2Entry.get(time));
-//        }
 
-//        Double unProfit = 0.066;
-//        Double rateLoss = BudgetManagerSimple.getInstance().callRateLossDynamic(unProfit);
-//        System.out.println(rateLoss);
 
-//        new Test().testListenPrice();
-//        testTime();
-//        testData1MProduct();
-        // check stop all when market maybe bigdump
-//        new BinanceOrderTradingManager().checkAndStopLossAll(positions);
-//        System.out.println(RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_EDUCA_MOVING_AVERAGE_DETAILS, "REZUSDT"));
-//        new SignalTWSimulator().printAllOrderRunning();
-//        new SignalTWSimulator().buildReportTest();
-//        System.out.println(getSignalBTCHour());
-//        System.out.println(Utils.sdfFile.parse("20230509").getTime() + 7 * Utils.TIME_HOUR);
-
+//        String symbol = "HMSTRUSDT";
+//        String orderJson = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO, symbol);
+//        OrderTargetInfo orderInfo = Utils.gson.fromJson(orderJson, OrderTargetInfo.class);
+//        orderInfo.priceSL=0.0036;
+//        RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO, symbol, Utils.toJson(orderInfo));
 //        new BinanceOrderTradingManager().processManagerPosition();
 
-//        traceRateChangeByDate("20240412");
-//        new BinanceOrderTradingManager().checkAndCloseOrderLatestOverTimeMin();
-//        printOrderTATestDone();
-//        RedisHelper.getInstance().get().del("redis.key.educa.test.signal.order.manager.web1");
-//        System.out.println(RedisHelper.getInstance().readAllId("redis.key.educa.test.signal.order.manager.web1"));
 
-//        detectBtcBottom("AIUSDT");
-//        detectBtcBottomNew();
-//        detectBtcTop();
-//        testRsi();
-//        testMACD();
-//        testMACDTrend15M();
-//        testRSITrend15M();
+    }
 
-//        testMACDTrendNew1Hour();
-//        testMACDTrendNew4Hour();
-//            printTickerData();
-//        traceOrderRunning();
-//        testSMA();
-//        changeLeverage();
-//        printTickerInMongo();
+    private static void difProductionWithTest() {
+        try {
+            String fileName = "target/1732553220000";
+            TreeMap<Double, String> rate2MaxProduct = (TreeMap<Double, String>) Storage.readObjectFromFile(fileName);
+            System.out.println(MarketBigChangeDetector.calRateChangeAvg(rate2MaxProduct, 50));
+            System.out.println(MarketBigChangeDetectorTest.calRateLossAvg(rate2MaxProduct, 50));
+            TreeMap<Double, String> rate2MaxTest = (TreeMap<Double, String>) Storage.readObjectFromFile(fileName + "_test");
+            System.out.println(MarketBigChangeDetector.calRateChangeAvg(rate2MaxTest, 50));
+            System.out.println(MarketBigChangeDetectorTest.calRateLossAvg(rate2MaxTest, 50));
+            LOG.info("{} {}", rate2MaxProduct.size(), rate2MaxTest.size());
+            Map<String, Double> symbol2RatePro = new HashMap<>();
 
-//        testGetDataMongo();
-//        traceInfoSymbol("TRXUSDT");
+            for (Map.Entry<Double, String> entry : rate2MaxProduct.entrySet()) {
+                Double key = entry.getKey();
+                String values = entry.getValue();
+                symbol2RatePro.put(values, key);
+            }
+            List<String> lines = new ArrayList<>();
+            for (Map.Entry<Double, String> entry : rate2MaxTest.entrySet()) {
+                Double key = entry.getKey();
+                String symbol = entry.getValue();
+                StringBuilder sb = new StringBuilder();
+                sb.append(symbol).append(",");
+                sb.append(key).append(",");
+                sb.append(symbol2RatePro.get(symbol)).append(",");
+                lines.add(sb.toString());
+            }
 
-
-//        checkPriceMax();
-//        checkTimeLock();
-//        String interval = Constants.INTERVAL_1H;
-//        Map<Long, TechnicalRatings.RatingStatus> ratingBtc = testTechRating(interval);
-//        Storage.writeObject2File(DataManager.FILE_DATA_BTC_RATING + interval, ratingBtc);
-//        interval = Constants.INTERVAL_4H;
-//         ratingBtc = testTechRating(interval);
-//        Storage.writeObject2File(DataManager.FILE_DATA_BTC_RATING + interval, ratingBtc);
-//        interval = Constants.INTERVAL_1D;
-//         ratingBtc = testTechRating(interval);
-//        Storage.writeObject2File(DataManager.FILE_DATA_BTC_RATING + interval, ratingBtc);
-//        System.exit(1);
-
+            FileUtils.writeLines(new File(fileName + ".csv"), lines);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+//        try {
+//            String fileName = "target/1730968620000";
+//            TreeMap<Double, String> rate2MaxProduct = (TreeMap<Double, String>) Storage.readObjectFromFile(fileName);
+//            List<String> lines = new ArrayList<>();
+//            for (Map.Entry<Double, String> entry : rate2MaxProduct.entrySet()) {
+//                Double key = entry.getKey();
+//                String symbol = entry.getValue();
+//                StringBuilder sb = new StringBuilder();
+//                sb.append(symbol).append(",");
+//                sb.append(key).append(",");
+//                lines.add(sb.toString());
+//            }
+//
+//            FileUtils.writeLines(new File(fileName + ".csv"), lines);
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
     }
 
 
@@ -266,6 +258,8 @@ public class Test {
 
     private static void testProduction() {
 
+//        createAOrderTest();
+        System.out.println(Utils.getYear(System.currentTimeMillis()));
 //        new BinanceOrderTradingManager().processManagerPosition();
 //        List<PositionRisk> positions = BinanceFuturesClientSingleton.getInstance().getAllPositionInfos();
 //
@@ -302,7 +296,7 @@ public class Test {
 //        testRateBtc24HrByTime("20240801 03:00");
 //        System.out.println(new BinanceOrderTradingManager().getPositionBuyRunning());
 
-        System.out.println(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS_RUNNING));
+//        System.out.println(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS));
         //        String symbol = "REEFUSDT";
 //
 //        PositionRisk pos = BinanceFuturesClientSingleton.getInstance().getPositionInfo(symbol);
@@ -311,6 +305,22 @@ public class Test {
 //        System.out.println(Utils.formatMoney(order.priceSL));
 
 //        new BinanceOrderTradingManager().createSL(pos, order.priceSL);
+    }
+
+    private static void createAOrderTest() {
+        String symbol = "PNUTUSDT";
+        MarketLevelChange levelChange = MarketLevelChange.TINY_DOWN;
+        Double budget = 2d;
+        List<KlineObjectNumber> tickers = TickerFuturesHelper.getTicker(symbol, Constants.INTERVAL_1M);
+        KlineObjectNumber ticker = tickers.get(tickers.size() - 1);
+        Double quantity = Utils.calQuantity(budget, BudgetManager.getInstance().getLeverage(symbol), ticker.priceClose, symbol);
+        OrderTargetInfo orderTrade = new OrderTargetInfo(OrderTargetStatus.REQUEST, ticker.priceClose,
+                null, quantity, BudgetManager.getInstance().getLeverage(symbol), symbol, ticker.startTime.longValue(),
+                ticker.startTime.longValue(), OrderSide.BUY, Constants.TRADING_TYPE_VOLUME_MINI);
+        orderTrade.marketLevel = levelChange;
+        LOG.info("Push redis order: {} {} {} {} {}", Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()),
+                symbol, levelChange, quantity, ticker.priceClose);
+        RedisHelper.getInstance().get().rpush(RedisConst.REDIS_KEY_BINANCE_TD_ORDER_MANAGER_QUEUE, Utils.toJson(orderTrade));
     }
 
     private static void testTime() {
@@ -968,7 +978,11 @@ public class Test {
         Set<String> allSymbols = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS);
         for (String symbol : allSymbols) {
             try {
-                ClientSingleton.getInstance().syncRequestClient.changeInitialLeverage(symbol, 4);
+                if (Constants.specialSymbol.contains(symbol)) {
+                    ClientSingleton.getInstance().syncRequestClient.changeInitialLeverage(symbol, 10);
+                } else {
+                    ClientSingleton.getInstance().syncRequestClient.changeInitialLeverage(symbol, 5);
+                }
             } catch (Exception e) {
                 e.printStackTrace();
             }

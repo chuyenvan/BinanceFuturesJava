@@ -90,7 +90,7 @@ public class AltMACDTrendBuy15M {
         MAStatus maStatus = SimpleMovingAverage1DManager.getInstance().getMaStatus(order.timeStart, order.symbol);
         return order.symbol + "," + Utils.normalizeDateYYYYMMDDHHmm(order.timeStart) + "," + Utils.normalizeDateYYYYMMDDHHmm(order.timeUpdate)
                 + "," + order.priceEntry + "," + order.priceTP + "," + order.lastPrice
-                + "," + order.volume + "," + order.rateBtc15m
+                + "," + order.volume + "," + order.unProfitTotal
                 + "," + order.status + "," + rateLoss + "," + order.maxPrice + ","
                 + Utils.rateOf2Double(order.maxPrice, order.priceEntry) + "," + (order.timeUpdate - order.timeStart) / Utils.TIME_MINUTE
                 + "," + maStatus;
@@ -158,7 +158,7 @@ public class AltMACDTrendBuy15M {
                             orderTrade.maxPrice = kline.priceClose;
                             orderTrade.minPrice = kline.minPrice;
                             orderTrade.volume = kline.totalUsdt;
-                            orderTrade.rateBtc15m = kline.rsi;
+                            orderTrade.unProfitTotal = kline.rsi;
                             orderTrade.lastPrice = kline.priceClose;
 
                             int startCheck = i;

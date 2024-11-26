@@ -282,10 +282,11 @@ public class MarketBigChangeDetectorTest {
         Double rateChangeDown15MAvg = MarketBigChangeDetectorTest.calRateLossAvg(rateMax2Symbols, 50);
         Double rateChangeUp15MAvg = -MarketBigChangeDetectorTest.calRateLossAvg(rateMin2Symbols, 50);
 
-        List<String> symbolsTopDown = MarketBigChangeDetectorTest.getTopSymbolSimple(rateDown2Symbols,
-                Configs.NUMBER_ENTRY_EACH_SIGNAL, null);
+//        List<String> symbolsTopDown = MarketBigChangeDetectorTest.getTopSymbolSimple(rateDown2Symbols,
+//                Configs.NUMBER_ENTRY_EACH_SIGNAL, null);
         MarketDataObject result = new MarketDataObject(rateChangeDownAvg, rateChangeUpAvg, btcRateChange, btcTicker.totalUsdt,
-                null, symbolsTopDown);
+                null, null);
+        result.rateDown2Symbols = rateDown2Symbols;
         result.rate2Max = rateMax2Symbols;
         result.rateDown15MAvg = rateChangeDown15MAvg;
         result.rateUp15MAvg = rateChangeUp15MAvg;
@@ -629,18 +630,18 @@ public class MarketBigChangeDetectorTest {
         if (rateDown15MAvg < -0.029) {
             return MarketLevelChange.SMALL_DOWN_15M;
         }
-        if (rateUp15MAvg > 0.06) {
-            return MarketLevelChange.MEDIUM_UP_15M;
-        }
-        if (rateUp15MAvg > 0.034
-                && rateDown15MAvg < -0.013
-                && rateDown15MAvg > -0.026
-        ) {
-            return MarketLevelChange.SMALL_UP_15M;
-        }
-        if (rateDown15MAvg < -0.025 && rateBtcDown15M < -0.014) {
-            return MarketLevelChange.TINY_DOWN_15M;
-        }
+//        if (rateUp15MAvg > 0.06) {
+//            return MarketLevelChange.MEDIUM_UP_15M;
+//        }
+//        if (rateUp15MAvg > 0.034
+//                && rateDown15MAvg < -0.013
+//                && rateDown15MAvg > -0.026
+//        ) {
+//            return MarketLevelChange.SMALL_UP_15M;
+//        }
+//        if (rateDown15MAvg < -0.025 && rateBtcDown15M < -0.014) {
+//            return MarketLevelChange.TINY_DOWN_15M;
+//        }
         return null;
     }
 
@@ -730,6 +731,47 @@ public class MarketBigChangeDetectorTest {
             }
             LOG.info("IsBtcTrendReverse: {} {} {} {} {}", Utils.normalizeDateYYYYMMDDHHmm(lastTicker.startTime.longValue()),
                     lastTicker.priceClose, priceReverse, Utils.rateOf2Double(lastTicker.priceClose, priceReverse),
+                    Utils.sdfGoogle.format(new Date(lastTicker.startTime.longValue())));
+            return true;
+        }
+        return false;
+    }
+    public static boolean isBtcTrendUp(List<KlineObjectSimple> btcTickers) {
+        int index = btcTickers.size() - 1;
+        Double rateTrend = 0.006;
+        KlineObjectSimple lastTicker = btcTickers.get(index);
+        Double priceTrendUp = null;
+        Integer indexMin = null;
+        for (int i = 0; i < index; i++) {
+            if (index >= i + 29) {
+                KlineObjectSimple ticker = btcTickers.get(index - i);
+                long minute = Utils.getCurrentMinute(ticker.startTime.longValue()) % 15;
+                if (minute != 14) {
+                    continue;
+                }
+                KlineObjectSimple ticker15m = btcTickers.get(index - i - 14);
+                KlineObjectSimple ticker30m = btcTickers.get(index - i - 29);
+                double rate = Math.min(Utils.rateOf2Double(ticker.priceClose, ticker30m.priceOpen),
+                        Utils.rateOf2Double(ticker.priceClose, ticker15m.priceOpen));
+                if (rate > rateTrend) {
+                    priceTrendUp = ticker15m.priceOpen;
+                    indexMin = i;
+                    break;
+                }
+            }
+        }
+        if (priceTrendUp != null
+                && lastTicker.priceClose > priceTrendUp
+        ) {
+            // by pass if last ticker not ticker first up over bottom 1%
+            for (int i = 1; i < indexMin; i++) {
+                KlineObjectSimple ticker = btcTickers.get(index - i);
+                if (ticker.priceClose >= priceTrendUp) {
+                    return false;
+                }
+            }
+            LOG.info("IsBtcTrendUp: {} {} {} {} {}", Utils.normalizeDateYYYYMMDDHHmm(lastTicker.startTime.longValue()),
+                    lastTicker.priceClose, priceTrendUp, Utils.rateOf2Double(lastTicker.priceClose, priceTrendUp),
                     Utils.sdfGoogle.format(new Date(lastTicker.startTime.longValue())));
             return true;
         }

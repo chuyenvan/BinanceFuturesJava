@@ -29,7 +29,9 @@ public enum MarketLevelChange {
     MEDIUM_UP_15M("MEDIUM_UP_15M"),
     SMALL_UP_15M("SMALL_UP_15M"),
     BTC_REVERSE("BTC_REVERSE"),
+    DCA_ORDER("DCA_ORDER"),
     BTC_TREND_REVERSE("BTC_TREND_REVERSE"),
+    BTC_TREND_UP("BTC_TREND_UP"),
 
     BIG_DOWN("BIG_DOWN"),
     MEDIUM_DOWN("MEDIUM_DOWN"),
@@ -37,7 +39,8 @@ public enum MarketLevelChange {
     TINY_DOWN("TINY_DOWN"),
     MEDIUM_DOWN_15M("MEDIUM_DOWN_15M"),
     SMALL_DOWN_15M("SMALL_DOWN_15M"),
-    TINY_DOWN_15M("TINY_DOWN_15M");
+    TINY_DOWN_15M("TINY_DOWN_15M"),
+    ORDER_PROFIT("ORDER_PROFIT");
 
     private final String code;
 

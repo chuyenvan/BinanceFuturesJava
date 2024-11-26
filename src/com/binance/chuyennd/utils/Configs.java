@@ -47,6 +47,7 @@ public class Configs {
     public static Integer NUMBER_TICKER_CAL_RATE_CHANGE = Configs.getInt("NUMBER_TICKER_CAL_RATE_CHANGE");
     public static final Double RATE_TARGET = Configs.getDouble("RATE_TARGET");
     public static final Double RATE_STOP_LOSS = Configs.getDouble("RATE_STOP_LOSS");
+    public static final Double RATE_PROFIT_STOP_MARKET = Configs.getDouble("RATE_PROFIT_STOP_MARKET");
     public static final Double MAX_CAPITAL_RATE = Configs.getDouble("MAX_CAPITAL_RATE");
     public static final Double RATE_FEE = Configs.getDouble("RATE_FEE");
     public static Double RATE_TICKER_MAX_SCAN_ORDER = Configs.getDouble("RATE_TICKER_MAX_SCAN_ORDER");

@@ -58,6 +58,7 @@ public class RedisConst {
     public static final String REDIS_KEY_BINANCE_ALL_SYMBOLS_TRADINGVIEW_FAIL = "redis.key.educa.all.symbols.tradingview.fail";
 
     public static final String REDIS_KEY_SYMBOL_2_ORDER_INFO = "redis.key.symbol.order.info";
+    public static final String REDIS_KEY_MARKET_LEVEL_FINAL = "redis.key.market.level.final";
 
     public static String REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER = Configs.getString("REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER");
 

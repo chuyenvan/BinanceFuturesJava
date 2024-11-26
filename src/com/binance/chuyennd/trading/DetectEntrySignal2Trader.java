@@ -50,11 +50,11 @@ public class DetectEntrySignal2Trader {
 
     public static void main(String[] args) throws InterruptedException, ParseException {
 //        new DetectEntrySignal2Trader().getTickerBySymbol("QNTUSDT");
-        String symbol = "BTCUSDT";
+        String symbol = "ALTUSDT";
 //        new DetectEntrySignal2Trader().testCreateOrder("BNBUSDT");
         List<KlineObjectNumber> tickers = TickerFuturesHelper.getTicker(symbol, Constants.INTERVAL_1M);
         new DetectEntrySignal2Trader().createOrderBuyRequest(symbol, tickers.get(tickers.size() - 1),
-                MarketLevelChange.BTC_TREND_REVERSE);
+                MarketLevelChange.DCA_ORDER);
 //        System.out.println(getOrderMarketLevelRunning());
     }
 
@@ -74,21 +74,22 @@ public class DetectEntrySignal2Trader {
                 counter++;
                 if (counter % 36000 == 0) {
                     allSymbol = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS);
+                    allSymbol.removeAll(Constants.diedSymbol);
                 }
                 if (isTimeGetData()) {
                     try {
                         symbol2Tickers.clear();
                         executorService.execute(() -> orderManager.processManagerPosition());
                         LOG.info("Start get data of market! {}", new Date());
-                        Long startTime = Utils.getMinute(System.currentTimeMillis() - 300 * Utils.TIME_MINUTE);
-//                                (Configs.NUMBER_TICKER_CAL_RATE_CHANGE + 5) * Utils.TIME_MINUTE);
+                        Long startTime = Utils.getMinute(System.currentTimeMillis() -
+                                (Configs.NUMBER_TICKER_CAL_RATE_CHANGE + 5) * Utils.TIME_MINUTE);
                         for (String symbol : allSymbol) {
                             if (StringUtils.equals(symbol, Constants.SYMBOL_PAIR_BTC)) {
                                 continue;
                             }
                             executorService.execute(() -> getTickerBySymbol(symbol, startTime));
                         }
-                        executorService.execute(() -> getTickerBySymbol(Constants.SYMBOL_PAIR_BTC, startTime));
+                        executorService.execute(() -> getTickerBySymbol(Constants.SYMBOL_PAIR_BTC, startTime - 290 * Utils.TIME_MINUTE));
                     } catch (Exception e) {
                         LOG.error("ERROR during ThreadDetectMarketLevel2Trader: {}", e);
                         e.printStackTrace();
@@ -96,10 +97,8 @@ public class DetectEntrySignal2Trader {
                 }
                 if (isTimeTrader()) {
                     try {
-                        LOG.info("Start check level change of market for trade! {}", new Date());
+                        LOG.info("Start check data ticker for trade! {}", new Date());
                         executorService.execute(() -> checkMarketLevelChange2Trade());
-
-
                     } catch (Exception e) {
                         LOG.error("ERROR during ThreadDetectMarketLevel2Trader: {}", e);
                         e.printStackTrace();
@@ -117,6 +116,7 @@ public class DetectEntrySignal2Trader {
     private void checkMarketLevelChange2Trade() {
         while (true) {
             if (symbol2Tickers.containsKey(Constants.SYMBOL_PAIR_BTC)) {
+                LOG.info("Start check level change of market for trade! {}", new Date());
                 try {
                     Map<String, KlineObjectNumber> symbol2FinalTicker = new HashMap<>();
                     TreeMap<Double, String> rateDown15M2Symbols = new TreeMap<>();
@@ -161,9 +161,6 @@ public class DetectEntrySignal2Trader {
                             if (StringUtils.equals(symbol, Constants.SYMBOL_PAIR_BTC)) {
                                 btcMax15M = priceMax;
                             }
-                            if (Constants.specialSymbol.contains(symbol)) {
-                                continue;
-                            }
                             rateDown15M2Symbols.put(Utils.rateOf2Double(tickers.get(tickers.size() - 1).priceClose, priceMax), symbol);
                             rateUp15M2Symbols.put(-Utils.rateOf2Double(tickers.get(tickers.size() - 1).priceClose, minPrice), symbol);
 
@@ -186,11 +183,9 @@ public class DetectEntrySignal2Trader {
                             , levelChange);
                     LOG.info("Market level change: {} level: {} symbols:{}", Utils.normalizeDateYYYYMMDDHHmm(btcTicker.startTime.longValue()),
                             levelChange, symbol2FinalTicker.size());
-                    Set<String> symbolLocked = new HashSet<>();
-                    symbolLocked.addAll(BudgetManager.getInstance().symbolLocked);
                     if (levelChange != null) {
                         List<String> symbol2BUY = MarketBigChangeDetector.getTopSymbol(rateDown15M2Symbols,
-                                Configs.NUMBER_ENTRY_EACH_SIGNAL, symbol2FinalTicker, symbolLocked);
+                                Configs.NUMBER_ENTRY_EACH_SIGNAL, symbol2FinalTicker, null);
                         if (levelChange.equals(MarketLevelChange.SMALL_DOWN)
                                 || levelChange.equals(MarketLevelChange.SMALL_UP)
                                 || levelChange.equals(MarketLevelChange.TINY_DOWN)
@@ -215,9 +210,8 @@ public class DetectEntrySignal2Trader {
                         // big change 15m
                         levelChange = MarketBigChangeDetector.getMarketStatus15M(rateDown15MAvg, rateUp15MAvg, rateBtcDown15M);
                         if (levelChange != null) {
-                            symbolLocked.addAll(BudgetManager.getInstance().symbolLoss);
                             List<String> symbol2BUY = MarketBigChangeDetector.getTopSymbol(rateDown15M2Symbols,
-                                    Configs.NUMBER_ENTRY_EACH_SIGNAL / 2, symbol2FinalTicker, symbolLocked);
+                                    Configs.NUMBER_ENTRY_EACH_SIGNAL / 2, symbol2FinalTicker, null);
                             LOG.info("{} {} -> {}", Utils.normalizeDateYYYYMMDDHHmm(btcTicker.startTime.longValue()), levelChange, symbol2BUY);
                             for (String symbol : symbol2BUY) {
                                 try {
@@ -236,8 +230,13 @@ public class DetectEntrySignal2Trader {
                                 && rateBtcDown15M <= -0.007
                         ) {
                             List<String> symbol2BUY = MarketBigChangeDetector.getTopSymbol(rateDown15M2Symbols,
-                                    Configs.NUMBER_ENTRY_EACH_SIGNAL, symbol2FinalTicker, symbolLocked);
-                            symbol2BUY.add(Constants.SYMBOL_PAIR_BTC);
+                                    Configs.NUMBER_ENTRY_EACH_SIGNAL, symbol2FinalTicker, null);
+                            for (String symbol : Constants.specialSymbol) {
+                                KlineObjectNumber ticker = symbol2FinalTicker.get(symbol);
+                                if (ticker != null && Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen) < -0.02) {
+                                    symbol2BUY.add(symbol);
+                                }
+                            }
                             levelChange = MarketLevelChange.BTC_REVERSE;
                             // check create order new
                             for (String symbol : symbol2BUY) {
@@ -247,6 +246,8 @@ public class DetectEntrySignal2Trader {
                         }
                         // btc trend reverse
                         if (MarketBigChangeDetector.isBtcTrendReverse(btcTickers)) {
+                            RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_MARKET_LEVEL_FINAL,
+                                    MarketLevelChange.BTC_TREND_REVERSE.toString(), String.valueOf(btcTicker.startTime.longValue()));
                             levelChange = MarketLevelChange.BTC_TREND_REVERSE;
                             List<String> symbol2BUY = new ArrayList<>();
                             symbol2BUY.add(Constants.SYMBOL_PAIR_BTC);
@@ -256,16 +257,45 @@ public class DetectEntrySignal2Trader {
                                 KlineObjectNumber ticker = symbol2FinalTicker.get(symbol);
                                 createOrderBuyRequest(symbol, ticker, levelChange);
                             }
+                        } else {
+                            // fixbug detect reverse production error
+                            btcTickers.remove(btcTickers.size() - 1);
+                            if (MarketBigChangeDetector.isBtcTrendReverse(btcTickers)) {
+                                // check last time not btc trend reverse -> btc trend reverse
+                                String finalTimeTrendReverse = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_MARKET_LEVEL_FINAL,
+                                        MarketLevelChange.BTC_TREND_REVERSE.toString());
+                                if (finalTimeTrendReverse == null || Long.parseLong(finalTimeTrendReverse) != btcTickers.get(btcTickers.size() - 1).startTime.longValue()) {
+                                    LOG.info("Fixbug btc trend reverse error {} {}",
+                                            Utils.normalizeDateYYYYMMDDHHmm(btcTickers.get(btcTickers.size() - 1).startTime.longValue()),
+                                            Utils.normalizeDateYYYYMMDDHHmm(btcTicker.startTime.longValue()));
+                                    RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_MARKET_LEVEL_FINAL,
+                                            MarketLevelChange.BTC_TREND_REVERSE.toString(), String.valueOf(btcTicker.startTime.longValue()));
+                                    levelChange = MarketLevelChange.BTC_TREND_REVERSE;
+                                    List<String> symbol2BUY = new ArrayList<>();
+                                    symbol2BUY.add(Constants.SYMBOL_PAIR_BTC);
+                                    symbol2BUY.add(Constants.SYMBOL_PAIR_BNB);
+                                    symbol2BUY.add(Constants.SYMBOL_PAIR_XRP);
+                                    for (String symbol : symbol2BUY) {
+                                        KlineObjectNumber ticker = symbol2FinalTicker.get(symbol);
+                                        createOrderBuyRequest(symbol, ticker, levelChange);
+                                    }
+                                }
+                            }
                         }
                     }
-
                     Long time = btcTicker.startTime.longValue();
                     Storage.writeObject2File("storage/data/rateMax15M/" + Utils.normalizeDateYYYYMMDD(time)
                             + "/" + time, rateDown15M2Symbols);
+                    Storage.writeObject2File("storage/data/rateDown1M/" + Utils.normalizeDateYYYYMMDD(time)
+                            + "/" + time, rateDown2Symbols);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
                 // exit while true
+                Set<String> hashSet = new HashSet<>();
+                hashSet.addAll(allSymbol);
+                hashSet.removeAll(symbol2Tickers.keySet());
+                LOG.info("Symbol not ticker: {} {} {}", hashSet, allSymbol.size(), symbol2Tickers.size());
                 break;
             }
             try {
@@ -279,37 +309,20 @@ public class DetectEntrySignal2Trader {
 
     private List<String> addSpecialSymbol(List<String> symbol2BUY, MarketLevelChange levelChange,
                                           Map<String, KlineObjectNumber> symbol2Ticker) {
-        if (levelChange != null && levelChange.equals(MarketLevelChange.BIG_DOWN)) {
-            KlineObjectNumber tickerBtc = symbol2Ticker.get(Constants.SYMBOL_PAIR_BTC);
-            if (tickerBtc != null && Utils.rateOf2Double(tickerBtc.priceClose, tickerBtc.priceOpen) < -0.03) {
-                symbol2BUY.add(Constants.SYMBOL_PAIR_BTC);
-            }
-            KlineObjectNumber tickerSol = symbol2Ticker.get(Constants.SYMBOL_PAIR_SOL);
-            if (tickerSol != null && Utils.rateOf2Double(tickerSol.priceClose, tickerSol.priceOpen) < -0.02) {
-                symbol2BUY.add(Constants.SYMBOL_PAIR_SOL);
-            }
-            KlineObjectNumber tickerBNB = symbol2Ticker.get(Constants.SYMBOL_PAIR_BNB);
-            if (tickerBNB != null && Utils.rateOf2Double(tickerBNB.priceClose, tickerBNB.priceOpen) < -0.015) {
-                symbol2BUY.add(Constants.SYMBOL_PAIR_BNB);
-            }
-            KlineObjectNumber tickerXRP = symbol2Ticker.get(Constants.SYMBOL_PAIR_XRP);
-            if (tickerXRP != null && Utils.rateOf2Double(tickerXRP.priceClose, tickerXRP.priceOpen) < -0.03) {
-                symbol2BUY.add(Constants.SYMBOL_PAIR_XRP);
-            }
-        }
-        if (levelChange != null && levelChange.equals(MarketLevelChange.MEDIUM_DOWN)) {
-            KlineObjectNumber tickerBNB = symbol2Ticker.get(Constants.SYMBOL_PAIR_BNB);
-            if (tickerBNB != null && Utils.rateOf2Double(tickerBNB.priceClose, tickerBNB.priceOpen) < -0.024) {
-                symbol2BUY.add(Constants.SYMBOL_PAIR_BNB);
-            }
-            KlineObjectNumber tickerXRP = symbol2Ticker.get(Constants.SYMBOL_PAIR_XRP);
-            if (tickerXRP != null && Utils.rateOf2Double(tickerXRP.priceClose, tickerXRP.priceOpen) < -0.03) {
-                symbol2BUY.add(Constants.SYMBOL_PAIR_XRP);
+        if (levelChange != null && (levelChange.equals(MarketLevelChange.BIG_DOWN)
+                || levelChange.equals(MarketLevelChange.MEDIUM_DOWN))
+        ) {
+            for (String symbol : Constants.specialSymbol) {
+                KlineObjectNumber ticker = symbol2Ticker.get(symbol);
+                if (ticker != null && Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen) < -0.015) {
+                    symbol2BUY.add(symbol);
+                }
             }
         }
         if (levelChange != null
                 && (levelChange.equals(MarketLevelChange.BIG_UP)
                 || levelChange.equals(MarketLevelChange.MEDIUM_UP)
+                || levelChange.equals(MarketLevelChange.SMALL_UP)
         )) {
             symbol2BUY.add(Constants.SYMBOL_PAIR_BTC);
             symbol2BUY.add(Constants.SYMBOL_PAIR_BNB);
@@ -327,15 +340,19 @@ public class DetectEntrySignal2Trader {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        if (levelChange.equals(MarketLevelChange.BIG_UP)) {
-            budget = budget * 2;
+        if (levelChange.equals(MarketLevelChange.BIG_UP)
+                || levelChange.equals(MarketLevelChange.BIG_DOWN)) {
+            if (!Constants.specialSymbol.contains(symbol)) {
+                budget = budget * 2;
+            }
         }
-        if (marginRunning <= 20 * BudgetManagerSimple.getInstance().getBudget()
-                && (levelChange.equals(MarketLevelChange.BIG_DOWN)
-                || levelChange.equals(MarketLevelChange.MEDIUM_DOWN)
+        if (marginRunning <= 30 * BudgetManagerSimple.getInstance().getBudget()
+                && (levelChange.equals(MarketLevelChange.MEDIUM_DOWN)
                 || levelChange.equals(MarketLevelChange.MEDIUM_UP))
         ) {
-            budget = budget * 2;
+            if (!Constants.specialSymbol.contains(symbol)) {
+                budget = budget * 2;
+            }
         }
         if (levelChange.equals(MarketLevelChange.SMALL_DOWN)
                 || levelChange.equals(MarketLevelChange.SMALL_UP)
@@ -343,37 +360,61 @@ public class DetectEntrySignal2Trader {
                 || levelChange.equals(MarketLevelChange.TINY_DOWN)
         ) {
             budget = budget;
+            if (Constants.specialSymbol.contains(symbol)) {
+                budget = budget / 2;
+            }
         }
         if (levelChange.equals(MarketLevelChange.SMALL_DOWN_15M)
-                || levelChange.equals(MarketLevelChange.MEDIUM_UP_15M)
                 || levelChange.equals(MarketLevelChange.TINY_UP)
                 || levelChange.equals(MarketLevelChange.TINY_DOWN_15M)
-                || levelChange.equals(MarketLevelChange.BTC_REVERSE)
         ) {
             budget = budget / 2;
         }
+
         if (levelChange.equals(MarketLevelChange.SMALL_UP_15M)
+                || levelChange.equals(MarketLevelChange.MEDIUM_UP_15M)
+                || levelChange.equals(MarketLevelChange.BTC_REVERSE)
                 || levelChange.equals(MarketLevelChange.BTC_TREND_REVERSE)
         ) {
             budget = budget / 6;
         }
-        if (marginRunning > 15 * BudgetManagerSimple.getInstance().getBudget()
-                && (levelChange.equals(MarketLevelChange.MEDIUM_UP_15M)
-                || levelChange.equals(MarketLevelChange.SMALL_DOWN_15M)
-                || levelChange.equals(MarketLevelChange.SMALL_UP_15M)
-                || levelChange.equals(MarketLevelChange.TINY_DOWN_15M))
-        ) {
+
+
+        if (levelChange.equals(MarketLevelChange.BTC_TREND_REVERSE)) {
+            if (calMarginRunning(symbol) < BudgetManagerSimple.getInstance().getBudget() / 2) {
+                budget = budget * 2;
+            }
+        }
+
+
+        if (marginRunning < 10 * BudgetManagerSimple.getInstance().getBudget()) {
+            if (levelChange.equals(MarketLevelChange.TINY_DOWN)
+                    || levelChange.equals(MarketLevelChange.TINY_UP)
+                    || levelChange.equals(MarketLevelChange.SMALL_DOWN)
+                    || levelChange.equals(MarketLevelChange.SMALL_UP)
+            ) {
+                budget = budget * 2;
+            }
+        }
+
+        if (marginRunning > 40 * BudgetManagerSimple.getInstance().getBudget()) {
+            if (levelChange.equals(MarketLevelChange.BIG_UP)
+                    || levelChange.equals(MarketLevelChange.BIG_DOWN)
+                    || levelChange.equals(MarketLevelChange.MEDIUM_DOWN)
+                    || levelChange.equals(MarketLevelChange.MEDIUM_UP)
+            ) {
+                budget = budget / 2;
+            }
+        }
+
+        if (marginRunning > 50 * BudgetManagerSimple.getInstance().getBudget()) {
             budget = budget / 2;
         }
-        if (marginRunning > 35 * BudgetManagerSimple.getInstance().getBudget()) {
-            budget = budget / 2;
-        }
-        if (marginRunning > 45 * BudgetManagerSimple.getInstance().getBudget()) {
-            budget = budget / 3;
-        }
-        if (marginRunning > 55 * BudgetManagerSimple.getInstance().getBudget()) {
+        if (marginRunning > 60 * BudgetManagerSimple.getInstance().getBudget()) {
             budget = budget / 4;
         }
+
+
         Double priceEntry = ticker.priceClose;
         Double quantity = Utils.calQuantity(budget, BudgetManager.getInstance().getLeverage(symbol), priceEntry, symbol);
         if (StringUtils.equals(symbol, Constants.SYMBOL_PAIR_BTC)) {
@@ -386,12 +427,19 @@ public class DetectEntrySignal2Trader {
                     null, quantity, BudgetManager.getInstance().getLeverage(symbol), symbol, ticker.startTime.longValue(),
                     ticker.startTime.longValue(), OrderSide.BUY, Constants.TRADING_TYPE_VOLUME_MINI);
             orderTrade.marketLevel = levelChange;
-            LOG.info("Push redis order: {} {} {} {} {}", Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()),
-                    symbol, levelChange, budget.longValue(), ticker.priceClose);
+            LOG.info("Push redis order: {} {} {} {} {} {}", Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()),
+                    symbol, levelChange, budget.longValue(), quantity, ticker.priceClose);
             RedisHelper.getInstance().get().rpush(RedisConst.REDIS_KEY_BINANCE_TD_ORDER_MANAGER_QUEUE, Utils.toJson(orderTrade));
         } else {
             LOG.info("{} {} quantity false", symbol, quantity);
         }
+    }
+
+    private Double calMarginRunning(String symbol) {
+        if (BudgetManager.getInstance().symbol2Margin.get(symbol) != null) {
+            return BudgetManager.getInstance().symbol2Margin.get(symbol);
+        }
+        return 0d;
     }
 
     private void createOrderSELLRequest(String symbol, KlineObjectNumber ticker, MarketLevelChange levelChange) {
@@ -432,6 +480,7 @@ public class DetectEntrySignal2Trader {
 
     private void initData() {
         allSymbol = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS);
+        allSymbol.removeAll(Constants.diedSymbol);
         symbol2Tickers.clear();
     }
 

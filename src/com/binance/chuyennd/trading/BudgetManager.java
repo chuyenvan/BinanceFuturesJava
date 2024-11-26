@@ -16,7 +16,9 @@ import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -31,8 +33,7 @@ public class BudgetManager {
 
     public Integer LEVERAGE_ORDER = Configs.getInt("LEVERAGE_ORDER");
     public Double BUDGET_PER_ORDER;
-    public Set<String> symbolLocked = new HashSet<>();
-    public Set<String> symbolLoss = new HashSet<>();
+    public Map<String, Double> symbol2Margin = new HashMap<>();
 
 
     public static BudgetManager getInstance() {
@@ -94,9 +95,8 @@ public class BudgetManager {
     }
 
 
-
     public Integer getLeverage(String symbol) {
-        if (Constants.specialSymbol.contains(symbol)){
+        if (Constants.specialSymbol.contains(symbol)) {
             return Configs.LEVERAGE_ORDER * 2;
         }
         return LEVERAGE_ORDER;
@@ -136,38 +136,46 @@ public class BudgetManager {
     }
 
     public Double callRateLossDynamicBuy(Double unProfit, String symbol) {
-        Double rateLoss = unProfit * 100;
+        Double rateStopLoss = Configs.RATE_STOP_LOSS;
+        if (!Constants.specialSymbol.contains(symbol)) {
+            rateStopLoss = Configs.RATE_STOP_LOSS * 2;
+        }
+        Double rateLoss = unProfit * 1000;
         Long tradingStopRate = rateLoss.longValue() / 2;
-        Integer rateProfit2Shard=  10;
-        if (Constants.specialSymbol.contains(symbol)){
-            rateProfit2Shard = 6;
+        Integer rateProfit2Shard = 100;
+        if (Constants.specialSymbol.contains(symbol)) {
+            rateProfit2Shard = 60;
         }
         if (rateLoss > rateProfit2Shard) {
             tradingStopRate = rateLoss.longValue() / 3;
             if (rateLoss > 2 * rateProfit2Shard) {
                 tradingStopRate = rateLoss.longValue() / 4;
-            }else{
+            } else {
                 if (rateLoss > 3 * rateProfit2Shard) {
                     tradingStopRate = rateLoss.longValue() / 5;
                 }
             }
         }
-        if (rateLoss < 0) {
-            rateLoss = rateLoss.longValue() - Configs.RATE_STOP_LOSS * 100;
+        if (rateLoss < 6) {
+            rateLoss = rateLoss.longValue() - rateStopLoss * 1000;
         } else {
             rateLoss = rateLoss.longValue() - tradingStopRate.doubleValue();
         }
 
-        return rateLoss / 100;
+        return rateLoss / 1000;
     }
 
     public Double calRateStop(Double rateLoss, String symbol) {
         Double rateStopLoss = Configs.RATE_STOP_LOSS;
-        if (Constants.specialSymbol.contains(symbol)){
-            rateStopLoss = rateStopLoss * 2;
+        if (!Constants.specialSymbol.contains(symbol)) {
+            rateStopLoss = Configs.RATE_STOP_LOSS * 2;
         }
         Double rateStop;
-        if (rateLoss < 0.01) {
+        Double rateMin2MoveSl = Configs.RATE_PROFIT_STOP_MARKET;
+        if (Constants.specialSymbol.contains(symbol)) {
+            rateMin2MoveSl = 0.01;
+        }
+        if (rateLoss < rateMin2MoveSl) {
             rateStop = -rateLoss + rateStopLoss;
         } else {
             rateStop = -rateLoss / 2;

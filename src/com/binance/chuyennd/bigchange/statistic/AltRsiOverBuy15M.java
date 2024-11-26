@@ -101,7 +101,7 @@ public class AltRsiOverBuy15M {
                 + "," + order.volume + "," + order.avgVolume24h + "," + order.rateChange
                 + "," + orderState + "," + rateLoss + "," + order.maxPrice + ","
                 + Utils.rateOf2Double(order.maxPrice, order.priceEntry) + "," + (order.timeUpdate - order.timeStart) / Utils.TIME_MINUTE
-                + "," + maStatus + "," + order.rateBtc15m;
+                + "," + maStatus + "," + order.unProfitTotal;
     }
 
 

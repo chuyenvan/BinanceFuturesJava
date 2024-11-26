@@ -9,7 +9,6 @@ import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
-import com.binance.client.model.enums.OrderSide;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -84,7 +83,7 @@ public class BudgetManagerSimple {
 
 
     public Integer getLeverage(String symbol) {
-        if (Constants.specialSymbol.contains(symbol)){
+        if (Constants.specialSymbol.contains(symbol)) {
             return Configs.LEVERAGE_ORDER * 2;
         }
         return Configs.LEVERAGE_ORDER;
@@ -95,24 +94,24 @@ public class BudgetManagerSimple {
             if (orderInfo.status.equals(OrderTargetStatus.STOP_LOSS_DONE)) {
                 totalSL++;
             }
-            if (orderInfo.status.equals(OrderTargetStatus.STOP_MARKET_DONE)) {
-                if (orderInfo.side.equals(OrderSide.BUY)) {
-                    if (orderInfo.priceTP < orderInfo.priceEntry) {
-                        totalSL++;
-                    }
-                } else {
-                    if (orderInfo.priceTP > orderInfo.priceEntry) {
-                        totalSL++;
-                    }
-                }
-            }
+//            if (orderInfo.status.equals(OrderTargetStatus.STOP_MARKET_DONE)) {
+//                if (orderInfo.side.equals(OrderSide.BUY)) {
+//                    if (orderInfo.priceTP < orderInfo.priceEntry) {
+//                        totalSL++;
+//                    }
+//                } else {
+//                    if (orderInfo.priceTP > orderInfo.priceEntry) {
+//                        totalSL++;
+//                    }
+//                }
+//            }
             fee += calFee(orderInfo);
             profit += orderInfo.calTp();
         }
     }
 
     public void updateBalance(Long timeUpdate, TreeMap<Long, OrderTargetInfoTest> allOrderDone,
-                              ConcurrentHashMap<String, OrderTargetInfoTest> orderRunning, boolean isPrintBalance) {
+                              ConcurrentHashMap<String, OrderTargetInfoTest> orderRunning, ConcurrentHashMap<String, List<OrderTargetInfoTest>> symbol2OrdersEntry, boolean isPrintBalance) {
         Double balance = balanceBasic;
         Set<String> symbolRunning = orderRunning.keySet();
         totalFee = fee;
@@ -123,31 +122,56 @@ public class BudgetManagerSimple {
         Double positionMargin = calPositionMargin(orderRunning.values());
         Double balanceReal = balance + unProfit;
         Double unrealizedProfitMin = calUnrealizedProfitMin(orderRunning.values());
-        balanceIndex.updateIndex(balanceBasic, positionMargin, timeUpdate, profitLossMax, unrealizedProfitMin);
+        balanceIndex.updateIndex(balanceBasic, positionMargin, timeUpdate, profitLossMax, unrealizedProfitMin, symbol2OrdersEntry,
+                orderRunning);
         if (isPrintBalance) {
             time2Balance.put(timeUpdate, balance);
-            Double rateLoss = unProfit * 100 / balanceCurrent;
-//            Double rateProfitDate = profitOfDate * 100 / (balanceCurrent - profitOfDate);
             Double balanceYesterday = time2Balance.get(timeUpdate - Utils.TIME_DAY);
             Double profitOfDate = 0d;
             if (balanceYesterday != null) {
                 profitOfDate = balance - balanceYesterday;
             }
 
-            Double rateProfitDate = profitOfDate * 100 / balanceBasic;
-            if (!Configs.MOD_RUN_CAPITAL_CONSTANT) {
-                rateProfitDate = profitOfDate * 100 / balanceCurrent;
+            Double marginMaxDate = balanceIndex.date2MarginMax.get(Utils.getDate(timeUpdate - Utils.TIME_MINUTE));
+            if (marginMaxDate == null) {
+                marginMaxDate = 0d;
             }
-            LOG.info("Update-{}-{} {} => balance:{} pDate:{} {}%  margin:{} max:{}% " +
-                            "profit:{} unProfit:{} {}% unProfitMin:{} {}% {}% fee:{} done: {}/{} run:{}/{}", Configs.TIME_AFTER_ORDER_2_SL,
-                    levelRun,
-                    Utils.normalizeDateYYYYMMDDHHmm(timeUpdate), balance.longValue(), profitOfDate.longValue(),
-                    rateProfitDate.longValue(), positionMargin.longValue(),
-                    Utils.formatPercent(balanceIndex.rateMarginMax), profit.longValue(),
-                    unProfit.longValue(), rateLoss.longValue(), balanceIndex.unProfitMin.longValue(),
-                    Utils.formatPercent(balanceIndex.unProfitMin / balanceBasic),
-                    Utils.formatPercent(balanceIndex.profitLossMax / balanceBasic), totalFee.longValue(), totalSL,
-                    allOrderDone.size(), symbolRunning.size(), maxOrderRunning);
+            Double marginMaxMonth = balanceIndex.month2MarginMax.get(Utils.getMonth(timeUpdate - Utils.TIME_DAY));
+            if (marginMaxMonth == null) {
+                marginMaxMonth = 0d;
+            }
+            Double unProfitDate = balanceIndex.date2ProfitMin.get(Utils.getDate(timeUpdate - Utils.TIME_MINUTE));
+            if (unProfitDate == null) {
+                unProfitDate = 0d;
+            }
+            Double unProfitMonth = balanceIndex.month2ProfitMin.get(Utils.getMonth(timeUpdate - Utils.TIME_DAY));
+            if (unProfitMonth == null) {
+                unProfitMonth = 0d;
+            }
+            Double slMonth = balanceIndex.month2SLMax.get(Utils.getMonth(timeUpdate - Utils.TIME_DAY));
+            if (slMonth == null) {
+                slMonth = 0d;
+            }
+
+            Double rateMarginMaxDouble = balanceIndex.rateMarginMax * 100;
+
+            LOG.info("Update {} => b:{} pDate:{}\tm:{}\tmax:{}%\t{}\t{}\t" +
+                            "p:{}\tunP:{}\tunPMin:{}\t{}\t{}\t{}%\t{}\t{}%\tdone:{}/{} run:{}/{}",
+                    Utils.normalizeDateYYYYMMDDHHmm(timeUpdate), Utils.formatLog(balance.longValue(), 5),
+                    Utils.formatLog(profitOfDate.longValue(), 4),
+                    Utils.formatLog(positionMargin.longValue(), 4),
+                    Utils.formatLog(rateMarginMaxDouble.longValue(), 3),
+                    Utils.formatLog(marginMaxDate.longValue(), 5),
+                    Utils.formatLog(marginMaxMonth.longValue(), 5),
+                    Utils.formatLog(profit.longValue(), 5),
+                    Utils.formatLog(unProfit.longValue(), 5),
+                    Utils.formatLog(balanceIndex.unProfitMin.longValue(), 5),
+                    Utils.formatLog(unProfitDate.longValue(), 5),
+                    Utils.formatLog(unProfitMonth.longValue(), 5),
+                    Utils.formatPercentNew(balanceIndex.unProfitMin / balanceBasic),
+                    slMonth.longValue(),
+                    Utils.formatPercentNew(balanceIndex.profitLossMax / balanceBasic),
+                    totalSL, allOrderDone.size(), symbolRunning.size(), maxOrderRunning);
             if (timeUpdate.equals(Utils.getToDay() + 7 * Utils.TIME_HOUR)) {
 //                LOG.info("Report: {}", Utils.normalizeDateYYYYMMDDHHmm(timeUpdate));
                 List<String> lines =
@@ -158,75 +182,8 @@ public class BudgetManagerSimple {
                 builder.append(" balance: ").append(balance.longValue());
                 builder.append(" balanceReal: ").append(balanceReal.longValue());
                 builder.append(" done: ").append(allOrderDone.size());
-                builder.append(balanceIndex.marginMax + " " + balanceIndex.rateMarginMax + " " + Utils.normalizeDateYYYYMMDDHHmm(balanceIndex.timeMarginMax) + " " +
-                        balanceIndex.profitLossMax);
-                lines.add(builder.toString());
-                try {
-                    FileUtils.writeLines(new File("storage/report.txt"), lines, true);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-        if ((balance + unrealizedProfitMin) < 0) {
-            LOG.info("Chay tai khoan {} -----------------------------------!", Utils.normalizeDateYYYYMMDDHHmm(timeUpdate));
-        }
-        updateBudget();
-    }
-
-    public void updateBalanceMulti(Long timeUpdate, ConcurrentHashMap<String, OrderTargetInfoTest> allOrderDone,
-                                   ConcurrentHashMap<String, List<OrderTargetInfoTest>> symbol2OrdersRunning, boolean isPrintBalance) {
-
-        Double balance = balanceBasic;
-        List<OrderTargetInfoTest> orderRunning = new ArrayList<>();
-        for (List<OrderTargetInfoTest> orders : symbol2OrdersRunning.values()) {
-            if (orders != null && !orders.isEmpty()) {
-                orderRunning.addAll(orders);
-            }
-        }
-        Set<String> symbolRunning = symbol2OrdersRunning.keySet();
-        totalFee = fee;
-        balance = balance + profit - totalFee;
-        balanceCurrent = balance;
-        unProfit = calUnrealizedProfit(orderRunning);
-        profitLossMax = calProfitLossMax(orderRunning);
-        Double positionMargin = calPositionMargin(orderRunning);
-        Double balanceReal = balance + unProfit;
-        Double unrealizedProfitMin = calUnrealizedProfitMin(orderRunning);
-        balanceIndex.updateIndex(balance, positionMargin, timeUpdate, profitLossMax, unrealizedProfitMin);
-        if (isPrintBalance) {
-            time2Balance.put(timeUpdate, balance);
-            Double rateLoss = unProfit * 100 / balanceCurrent;
-//            Double rateProfitDate = profitOfDate * 100 / (balanceCurrent - profitOfDate);
-            Double balanceYesterday = time2Balance.get(timeUpdate - Utils.TIME_DAY);
-            Double profitOfDate = 0d;
-            if (balanceYesterday != null) {
-                profitOfDate = balance - balanceYesterday;
-            }
-
-            Double rateProfitDate = profitOfDate * 100 / balanceBasic;
-            if (!Configs.MOD_RUN_CAPITAL_CONSTANT) {
-                rateProfitDate = profitOfDate * 100 / balanceCurrent;
-            }
-            LOG.info("Update-{}-{} {} => balance:{} pDate:{} {}%  margin:{} {}% " +
-                            "profit:{} unProfit:{} {}% unProfitMin:{} {}% fee:{} done: {}/{} run:{}", Configs.TIME_AFTER_ORDER_2_SL,
-                    Configs.RATE_TICKER_MAX_SCAN_ORDER,
-                    Utils.normalizeDateYYYYMMDDHHmm(timeUpdate), balance.longValue(), profitOfDate.longValue(),
-                    rateProfitDate.longValue(), positionMargin.longValue(), investing.longValue(), profit.longValue(),
-                    unProfit.longValue(), rateLoss.longValue(), balanceIndex.unProfitMin.longValue(),
-                    Utils.formatPercent(balanceIndex.unProfitMin / balanceBasic), totalFee.longValue(), totalSL,
-                    allOrderDone.size(), orderRunning.size());
-            if (timeUpdate.equals(Utils.getToDay() + 7 * Utils.TIME_HOUR)) {
-//                LOG.info("Report: {}", Utils.normalizeDateYYYYMMDDHHmm(timeUpdate));
-                List<String> lines =
-                        new ArrayList<>();
-                StringBuilder builder = new StringBuilder();
-                builder.append("capital: ").append(Configs.MAX_CAPITAL_RATE).append(" rateBudget: ")
-                        .append(Configs.RATE_BUDGET_LIMIT_A_SIGNAL);
-                builder.append(" balance: ").append(balance.longValue());
-                builder.append(" balanceReal: ").append(balanceReal.longValue());
-                builder.append(" done: ").append(allOrderDone.size());
-                builder.append(balanceIndex.marginMax + " " + balanceIndex.rateMarginMax + " " + Utils.normalizeDateYYYYMMDDHHmm(balanceIndex.timeMarginMax) + " " +
+                builder.append(balanceIndex.marginMax + " " + balanceIndex.rateMarginMax + " "
+                        + Utils.normalizeDateYYYYMMDDHHmm(balanceIndex.timeMarginMax) + " " +
                         balanceIndex.profitLossMax);
                 lines.add(builder.toString());
                 try {
@@ -303,29 +260,33 @@ public class BudgetManagerSimple {
     }
 
     public Double calRateLossDynamic(Double unProfit, String symbol) {
-        Double rateLoss = unProfit * 100;
+        Double rateLoss = unProfit * 1000;
+        Double rateStopLoss = Configs.RATE_STOP_LOSS;
+        if (!Constants.specialSymbol.contains(symbol)) {
+            rateStopLoss = Configs.RATE_STOP_LOSS * 2;
+        }
         Long tradingStopRate = rateLoss.longValue() / 2;
-        Integer rateProfit2Shard=  10;
-        if (Constants.specialSymbol.contains(symbol)){
-            rateProfit2Shard = 6;
+        Integer rateProfit2Shard = 100;
+        if (Constants.specialSymbol.contains(symbol)) {
+            rateProfit2Shard = 60;
         }
         if (rateLoss > rateProfit2Shard) {
             tradingStopRate = rateLoss.longValue() / 3;
             if (rateLoss > 2 * rateProfit2Shard) {
                 tradingStopRate = rateLoss.longValue() / 4;
-            }else{
+            } else {
                 if (rateLoss > 3 * rateProfit2Shard) {
                     tradingStopRate = rateLoss.longValue() / 5;
                 }
             }
         }
-        if (rateLoss < 0) {
-            rateLoss = rateLoss.longValue() - Configs.RATE_STOP_LOSS * 100;
+        if (rateLoss < 6) {
+            rateLoss = rateLoss.longValue() - rateStopLoss * 1000;
         } else {
             rateLoss = rateLoss.longValue() - tradingStopRate.doubleValue();
         }
 
-        return rateLoss / 100;
+        return rateLoss / 1000;
     }
 
 
@@ -333,15 +294,16 @@ public class BudgetManagerSimple {
 //        for (int i = 2; i < 11; i++) {
 //            int numberOrder = i * 2;
 //            Configs.NUMBER_ENTRY_EACH_SIGNAL = numberOrder;
-//            BudgetManagerSimple.getInstance().updateBudget(null);
+//            BudgetManagerSimple.getInstance().updateBudget();
 //            LOG.info("{} -> {}", Configs.NUMBER_ENTRY_EACH_SIGNAL, BudgetManagerSimple.getInstance().getBudget());
 //        }
+        String symbol = "CATIUSDT";
 //        Double rate = Utils.rateOf2Double(1.454, 1.441);
-//        System.out.println(BudgetManagerSimple.getInstance().calRateStop(rate));
-//        for (int i = 0; i < 100; i++) {
-//            Double rate = -0.2 + i * 0.01;
-//            LOG.info("{}  -> {}", rate, BudgetManagerSimple.getInstance().calRateLossDynamic(rate));
-//        }
+//        System.out.println(BudgetManagerSimple.getInstance().calRateStop(rate,symbol));
+        for (int i = 0; i < 100; i++) {
+            Double rate = -0.2 + i * 0.01;
+            LOG.info("{}  -> {}", rate, BudgetManagerSimple.getInstance().calRateLossDynamic(rate, symbol));
+        }
     }
 
 
@@ -364,11 +326,15 @@ public class BudgetManagerSimple {
 
     public Double calRateStop(Double rateLoss, String symbol) {
         Double rateStopLoss = Configs.RATE_STOP_LOSS;
-        if (Constants.specialSymbol.contains(symbol)){
-            rateStopLoss = rateStopLoss * 2;
+        if (!Constants.specialSymbol.contains(symbol)) {
+            rateStopLoss = Configs.RATE_STOP_LOSS * 2;
         }
         Double rateStop;
-        if (rateLoss < 0.01) {
+        Double rateMin2MoveSl = Configs.RATE_PROFIT_STOP_MARKET;
+        if (Constants.specialSymbol.contains(symbol)) {
+            rateMin2MoveSl = 0.01;
+        }
+        if (rateLoss < rateMin2MoveSl) {
             rateStop = -rateLoss + rateStopLoss;
         } else {
             rateStop = -rateLoss / 2;

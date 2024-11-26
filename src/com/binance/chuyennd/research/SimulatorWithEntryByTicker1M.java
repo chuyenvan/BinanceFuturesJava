@@ -89,9 +89,9 @@ public class SimulatorWithEntryByTicker1M {
                             symbol2LastTicker.putAll(entry.getValue());
 
                             if (time % Utils.TIME_DAY == 0) {
-                                BudgetManagerSimple.getInstance().updateBalance(time, allOrderDone, orderRunning, true);
+                                BudgetManagerSimple.getInstance().updateBalance(time, allOrderDone, orderRunning, null, true);
                             } else {
-                                BudgetManagerSimple.getInstance().updateBalance(time, allOrderDone, orderRunning, false);
+                                BudgetManagerSimple.getInstance().updateBalance(time, allOrderDone, orderRunning, null, false);
                             }
                             BudgetManagerSimple.getInstance().updateInvesting(orderRunning.values());
                         }
@@ -103,7 +103,7 @@ public class SimulatorWithEntryByTicker1M {
             Long finalStartTime1 = startTime;
             startTime += Utils.TIME_DAY;
             if (startTime > System.currentTimeMillis()) {
-                BudgetManagerSimple.getInstance().updateBalance(finalStartTime1, allOrderDone, orderRunning, false);
+                BudgetManagerSimple.getInstance().updateBalance(finalStartTime1, allOrderDone, orderRunning, null, false);
                 break;
             }
         }
@@ -184,7 +184,7 @@ public class SimulatorWithEntryByTicker1M {
         if (orderInfo != null) {
             if (orderInfo.timeStart < ticker.startTime.longValue()) {
                 orderInfo.updatePriceByKlineSimple(ticker);
-                orderInfo.updateStatusNew(ticker);
+                orderInfo.updateStatusNew();
 //                orderInfo.updateStatusFixTPSL();
                 if (orderInfo.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)
                         || orderInfo.status.equals(OrderTargetStatus.STOP_LOSS_DONE)

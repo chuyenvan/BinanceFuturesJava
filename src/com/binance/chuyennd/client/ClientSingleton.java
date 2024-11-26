@@ -127,6 +127,10 @@ public class ClientSingleton {
 
     public Double normalizeQuantity(String symbol, Double quantity) {
         Double unitQuantity = symbol2UnitQuantity.get(symbol);
+        if (unitQuantity == null){
+            LOG.info("Init Unit Quantity because {} is null!", symbol);
+            initClient();
+        }
         if (unitQuantity != null) {
             quantity = quantity - (quantity % unitQuantity);
             if (quantity.toString().contains("0000") || quantity.toString().contains("9999")) {

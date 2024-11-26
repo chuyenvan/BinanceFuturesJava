@@ -409,7 +409,7 @@ public class BtcBigChangeAndBread {
             if (orderInfo.timeStart < ticker.startTime.longValue()) {
                 orderInfo.updatePriceByKlineSimple(ticker);
 //                orderInfo.updateStatusFixTPSL();
-                orderInfo.updateStatusNew(ticker);
+                orderInfo.updateStatusNew();
                 if (orderInfo.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)
                         || orderInfo.status.equals(OrderTargetStatus.STOP_LOSS_DONE)
                         || orderInfo.status.equals(OrderTargetStatus.STOP_MARKET_DONE)

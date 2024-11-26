@@ -218,7 +218,7 @@ public class TraceDetailAllDataWithTime {
         if (orderInfo != null && ticker != null) {
             if (orderInfo.timeStart < ticker.startTime.longValue()) {
                 orderInfo.updatePriceByKlineSimple(ticker);
-                orderInfo.updateStatusNew(ticker);
+                orderInfo.updateStatusNew();
 //                orderInfo.updateStatusFixTPSL();
                 if (orderInfo.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)
                         || orderInfo.status.equals(OrderTargetStatus.STOP_LOSS_DONE)

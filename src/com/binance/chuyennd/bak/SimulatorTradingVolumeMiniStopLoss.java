@@ -324,8 +324,8 @@ public class SimulatorTradingVolumeMiniStopLoss {
         order.minPrice = entry;
         order.lastPrice = entry;
         order.maxPrice = entry;
-        order.rateBtc15m = ticker.rsi;
-        order.rateChange15MAvg = ticker.ma20;
+        order.unProfitTotal = ticker.rsi;
+        order.marginRunning = ticker.ma20;
         order.rateChange = breadData.totalRate;
         order.volume = breadData.volume;
         order.tickerOpen = ticker;

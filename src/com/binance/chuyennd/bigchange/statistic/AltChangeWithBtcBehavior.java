@@ -82,7 +82,7 @@ public class AltChangeWithBtcBehavior {
     private String buildLineTest(OrderTargetInfoTest order, Double rateLoss) {
         return order.symbol + "," + Utils.normalizeDateYYYYMMDDHHmm(order.timeStart) + "," +
                 Utils.normalizeDateYYYYMMDDHHmm(order.timeUpdate) + "," + order.priceEntry + "," +
-                order.priceTP + "," + order.lastPrice + "," + order.volume + "," + order.rateBtc15m + "," +
+                order.priceTP + "," + order.lastPrice + "," + order.volume + "," + order.unProfitTotal + "," +
                 order.status + "," + rateLoss + "," + order.maxPrice + "," +
                 Utils.rateOf2Double(order.maxPrice, order.priceEntry) + "," +
                 Utils.rateOf2Double(order.tickerOpen.priceClose, order.tickerOpen.priceOpen) + "," +
@@ -131,7 +131,7 @@ public class AltChangeWithBtcBehavior {
                             orderTrade.maxPrice = kline.priceClose;
                             orderTrade.minPrice = kline.minPrice;
                             orderTrade.volume = kline.totalUsdt;
-                            orderTrade.rateBtc15m = kline.rsi;
+                            orderTrade.unProfitTotal = kline.rsi;
                             orderTrade.lastPrice = kline.priceClose;
                             orderTrade.tickerOpen = kline;
                             if (i > 1) {
@@ -268,7 +268,7 @@ public class AltChangeWithBtcBehavior {
                                 orderTrade.maxPrice = kline.priceClose;
                                 orderTrade.minPrice = kline.minPrice;
                                 orderTrade.volume = kline.totalUsdt;
-                                orderTrade.rateBtc15m = kline.rsi;
+                                orderTrade.unProfitTotal = kline.rsi;
                                 orderTrade.lastPrice = kline.priceClose;
                                 orderTrade.tickerOpen = kline;
                                 orderTrade.tickerClose = time2BtcDown.get(kline.startTime);
