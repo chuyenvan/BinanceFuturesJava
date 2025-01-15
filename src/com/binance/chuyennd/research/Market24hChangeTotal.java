@@ -107,7 +107,7 @@ public class Market24hChangeTotal {
         if (orderInfo != null) {
             if (orderInfo.timeStart < ticker.startTime.longValue()) {
                 orderInfo.updatePriceByKlineSimple(ticker);
-                orderInfo.updateStatusNew();
+                orderInfo.updateStatusNew(null);
                 if (orderInfo.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)
                         || orderInfo.status.equals(OrderTargetStatus.STOP_LOSS_DONE)
                         || orderInfo.status.equals(OrderTargetStatus.STOP_MARKET_DONE)) {
@@ -115,7 +115,7 @@ public class Market24hChangeTotal {
                     BudgetManagerSimple.getInstance().updatePnl(orderInfo);
                     orderRunning.remove(symbol);
                 } else {
-                    orderInfo.updateTPSL();
+                    orderInfo.updateTPSL(null);
                 }
             }
         }

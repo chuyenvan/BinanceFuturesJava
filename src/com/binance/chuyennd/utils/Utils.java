@@ -1103,6 +1103,22 @@ public class Utils {
         }
         return quantity;
     }
+    public static Double calQuantityTest(Double budget, Integer leverage, Double priceEntry, String symbol) {
+        Double quantity = budget * leverage / priceEntry;
+        quantity = ClientSingleton.getInstance().normalizeQuantityTest(symbol, quantity);
+        for (int i = 1; i < 10; i++) {
+            if (quantity == 0) {
+                quantity = (budget + i) * leverage / priceEntry;
+                quantity = ClientSingleton.getInstance().normalizeQuantityTest(symbol, quantity);
+            } else {
+                return quantity;
+            }
+        }
+        if (quantity == 0) {
+            quantity = ClientSingleton.getInstance().getMinQuantity(symbol);
+        }
+        return quantity;
+    }
 
     public static <T> T subList(List lines, int limit) {
         List<List<Object>> results = new ArrayList();

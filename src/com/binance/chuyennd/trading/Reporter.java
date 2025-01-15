@@ -16,13 +16,6 @@ import java.util.*;
 
 public class Reporter {
     public static final Logger LOG = LoggerFactory.getLogger(Reporter.class);
-    public static Double balanceStart = Configs.getDouble("CAPITAL_START");
-    public static Double rateProfit = Configs.getDouble("PROFIT_RATE");
-    public static long timeStartRun = Configs.getLong("TIME_START");
-
-    public static boolean isTimeReport() {
-        return Utils.getCurrentMinute() % 15 == 1 && Utils.getCurrentSecond() < 30;
-    }
 
     public static void buildReport(List<PositionRisk> positions) {
         try {
@@ -99,13 +92,11 @@ public class Reporter {
             }
         }
         Asset umInfo = BinanceFuturesClientSingleton.getInstance().getAccountUMInfo();
-        Double balanceTarget = getTargetBalance(System.currentTimeMillis() + Utils.TIME_DAY);
-        Double profit = balanceTarget - umInfo.getWalletBalance().doubleValue();
 
+        Double marginRunning = umInfo.getPositionInitialMargin().doubleValue() - umInfo.getUnrealizedProfit().doubleValue();
         builder.append("Balance: ").append(umInfo.getMarginBalance().longValue()).append("$ -> ")
-                .append(umInfo.getWalletBalance().longValue())
-                .append("/").append(balanceTarget.longValue()).append("$")
-                .append(" profit: ").append(profit.longValue()).append("");
+                .append(umInfo.getWalletBalance().longValue()).append("$")
+                .append(" marginRun: ").append(marginRunning.longValue()).append("");
         builder.append("\nTotal: ").append(totalLoss.doubleValue()).append("% -> ")
                 .append(umInfo.getCrossUnPnl().longValue()).append("$");
         builder.append(" Buy: ").append(totalBuy.doubleValue()).append("%");
@@ -118,14 +109,5 @@ public class Reporter {
         return builder;
     }
 
-    public static Double getTargetBalance(Long currentTime) {
-        Double total = balanceStart;
-        Long numberDay = (currentTime - timeStartRun) / Utils.TIME_DAY;
-        for (int i = 0; i < numberDay; i++) {
-            Double inc = total * rateProfit;
-            total += inc;
-        }
-        return total;
-    }
 
 }

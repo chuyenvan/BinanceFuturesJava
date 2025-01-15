@@ -184,7 +184,7 @@ public class SimulatorWithEntryByTicker1M {
         if (orderInfo != null) {
             if (orderInfo.timeStart < ticker.startTime.longValue()) {
                 orderInfo.updatePriceByKlineSimple(ticker);
-                orderInfo.updateStatusNew();
+                orderInfo.updateStatusNew(null);
 //                orderInfo.updateStatusFixTPSL();
                 if (orderInfo.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)
                         || orderInfo.status.equals(OrderTargetStatus.STOP_LOSS_DONE)
@@ -193,7 +193,7 @@ public class SimulatorWithEntryByTicker1M {
                     BudgetManagerSimple.getInstance().updatePnl(orderInfo);
                     orderRunning.remove(symbol);
                 } else {
-                    orderInfo.updateTPSL();
+                    orderInfo.updateTPSL(null);
                 }
             }
         }

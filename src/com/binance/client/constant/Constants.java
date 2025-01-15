@@ -31,7 +31,8 @@ public class Constants {
     public static final String SYMBOL_PAIR_SOL = "SOLUSDT";
     public static final String SYMBOL_PAIR_XRP = "XRPUSDT";
     public static final String SYMBOL_PAIR_ADA = "ADAUSDT";
-    public static final String SYMBOL_PAIR_BCH = "BCHUSDT";
+    public static final String SYMBOL_PAIR_AVAX = "AVAXUSDT";
+    public static final String SYMBOL_PAIR_LINK = "LINKUSDT";
     public static final String SYMBOL_PAIR_DOGE = "DOGEUSDT";
     public static final String SYMBOL_PAIR_AAVE = "AAVEUSDT";
     public static final String INTERVAL_1M = "1m";
@@ -47,8 +48,11 @@ public class Constants {
 
     public static final ArrayList<String> diedSymbol = new ArrayList<>();
     public static final ArrayList<String> specialSymbol = new ArrayList<>();
+    public static final ArrayList<String> stableSymbol = new ArrayList<>();
+    public static final ArrayList<String> altReverseSymbol = new ArrayList<>();
     public static final String URL_TICKER_FUTURES = "https://fapi.binance.com/fapi/v1/klines?symbol=xxxxxx&interval=";
     public static final String URL_TICKER_FUTURES_STARTTIME = "https://fapi.binance.com/fapi/v1/klines?symbol=xxxxxx&startTime=tttttt&interval=";
+    public static final String URL_FUNDING_FEE_FUTURES_START_TIME = "https://fapi.binance.com/fapi/v1/fundingRate?startTime=tttttt&symbol=xxxxxx";
     public static final String URL_TICKER_SPOT = "https://api.binance.com/api/v1/klines?symbol=xxxxxx&interval=";
     public static final String URL_TICKER_SPOT_STARTTIME = "https://api.binance.com/api/v1/klines?symbol=xxxxxx&startTime=tttttt&interval=";
 
@@ -63,6 +67,13 @@ public class Constants {
                 symbol = symbol + "USDT";
             }
             specialSymbol.add(symbol);
+        }
+        symbols = Configs.getString("STABLE_SYMBOLS");
+        for (String symbol : StringUtils.split(symbols, ",")) {
+            if (!StringUtils.contains(symbol, "USDT")) {
+                symbol = symbol + "USDT";
+            }
+            stableSymbol.add(symbol);
         }
     }
 

@@ -148,7 +148,7 @@ public class AltBigChangeReverse {
         for (OrderTargetInfoTest orderInfo : orders) {
             if (orderInfo.timeStart < ticker.startTime.longValue()) {
                 orderInfo.updatePriceByKlineSimple(ticker);
-                orderInfo.updateStatusNew();
+                orderInfo.updateStatusNew(null);
                 if (orderInfo.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)
                         || orderInfo.status.equals(OrderTargetStatus.STOP_LOSS_DONE)
                         || orderInfo.status.equals(OrderTargetStatus.STOP_MARKET_DONE)) {
@@ -156,7 +156,7 @@ public class AltBigChangeReverse {
                     BudgetManagerSimple.getInstance().updatePnl(orderInfo);
                     orderDone.add(orderInfo);
                 } else {
-                    orderInfo.updateTPSL();
+                    orderInfo.updateTPSL(null);
                 }
             }
         }

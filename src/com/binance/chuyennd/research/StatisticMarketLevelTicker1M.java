@@ -126,7 +126,8 @@ public class StatisticMarketLevelTicker1M {
                         }
                         if (marketData != null) {
                             MarketLevelChange levelChange = MarketBigChangeDetectorTest.getMarketStatusSimple(marketData.rateDownAvg,
-                                    marketData.rateUpAvg, marketData.rateBtc, marketData.rateDown15MAvg, marketData.rateUp15MAvg, marketData.rateBtcDown15M);
+                                    marketData.rateUpAvg, marketData.rateBtc, marketData.rateDown15MAvg, marketData.rateUp15MAvg,
+                                    marketData.rateBtcDown15M);
                             if (levelChange != null) {
                                 timeTradeMarket.put(time, marketData);
                                 time2MarketLevelChange.put(time, levelChange);
@@ -417,7 +418,7 @@ public class StatisticMarketLevelTicker1M {
         if (orderInfo != null) {
             if (orderInfo.timeStart < ticker.startTime.longValue()) {
                 orderInfo.updatePriceByKlineSimple(ticker);
-                orderInfo.updateStatusNew();
+                orderInfo.updateStatusNew(null);
                 if (orderInfo.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)
                         || orderInfo.status.equals(OrderTargetStatus.STOP_LOSS_DONE)
                         || orderInfo.status.equals(OrderTargetStatus.STOP_MARKET_DONE)) {
@@ -425,7 +426,7 @@ public class StatisticMarketLevelTicker1M {
                     BudgetManagerSimple.getInstance().updatePnl(orderInfo);
                     orderRunning.remove(symbol);
                 } else {
-                    orderInfo.updateTPSL();
+                    orderInfo.updateTPSL(null);
                 }
             }
         }
@@ -460,7 +461,7 @@ public class StatisticMarketLevelTicker1M {
     private void createOrderSELL(String symbol, KlineObjectSimple ticker, MarketLevelChange levelChange) {
         Double entry = ticker.priceClose;
         Double rateTarget = Configs.RATE_TARGET;
-        Double targetSL = Configs.RATE_STOP_LOSS * rateTarget;
+        Double targetSL = Configs.RATE_STOP_LOSS_ALT * rateTarget;
         Double budget = BudgetManagerSimple.getInstance().getBudget();
         budget = budget * 2;
         Integer leverage = BudgetManagerSimple.getInstance().getLeverage(symbol);

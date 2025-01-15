@@ -53,7 +53,7 @@ public class ClientSingleton {
         return INSTANCE;
     }
 
-    private void initClient() {
+    public void initClient() {
         RequestOptions options = new RequestOptions();
         syncRequestClient = SyncRequestClient.create(PrivateConfig.API_KEY, PrivateConfig.SECRET_KEY,
                 options);
@@ -131,6 +131,18 @@ public class ClientSingleton {
             LOG.info("Init Unit Quantity because {} is null!", symbol);
             initClient();
         }
+        if (unitQuantity != null) {
+            quantity = quantity - (quantity % unitQuantity);
+            if (quantity.toString().contains("0000") || quantity.toString().contains("9999")) {
+                quantity = Double.valueOf(formatDouble(quantity));
+            }
+            return quantity;
+        } else {
+            return Double.valueOf(formatDouble(quantity));
+        }
+    }
+    public Double normalizeQuantityTest(String symbol, Double quantity) {
+        Double unitQuantity = symbol2UnitQuantity.get(symbol);
         if (unitQuantity != null) {
             quantity = quantity - (quantity % unitQuantity);
             if (quantity.toString().contains("0000") || quantity.toString().contains("9999")) {

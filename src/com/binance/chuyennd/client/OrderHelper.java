@@ -112,7 +112,7 @@ public class OrderHelper {
         LOG.info("Order market {} {} {}", symbol, side, quantity);
         try {
             return ClientSingleton.getInstance().syncRequestClient.postOrder(symbol, side, null, OrderType.MARKET, null,
-                    quantity.toString(), null, null, null, null, null, null, null, null, null, NewOrderRespType.RESULT);
+                    Utils.formatMoney(quantity), null, null, null, null, null, null, null, null, null, NewOrderRespType.RESULT);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -216,16 +216,18 @@ public class OrderHelper {
     public static Order stopLoss(String symbol, OrderSide side, Double quantity, Double stopPrice) {
 
         return ClientSingleton.getInstance().syncRequestClient.postOrder(symbol, side, null, OrderType.STOP_MARKET, TimeInForce.GTC,
-                quantity.toString(), null, null, null, Utils.formatMoney(stopPrice),
+                Utils.formatMoney(quantity), null, null, null, Utils.formatMoney(stopPrice),
                 null, null, null, null, null, NewOrderRespType.RESULT);
     }
 
     public static void main(String[] args) {
-//        OrderHelper.newOrderMarket("UNIUSDT", OrderSide.SELL, 5.0, 4);
+        OrderHelper.newOrderMarket("XEMUSDT", OrderSide.BUY, 50.0);
 //        System.out.println(Utils.normalQuantity2Api(955.0));
 
 //        OrderHelper.newOrder("RVNUSDT", OrderSide.SELL, 955.0, 0.020, 7);
-        OrderHelper.newOrder("MKRUSDT", OrderSide.BUY, 0.027, 2008.4, 7);
+//        Double quantity = 10044065d;
+//        System.out.println(Utils.formatMoney(quantity));
+//        OrderHelper.newOrder("MKRUSDT", OrderSide.BUY, 0.027, 2008.4, 7);
 //        OrderHelper.takeProfit("MKRUSDT", OrderSide.BUY, 2008.4, 0.027);
 //        System.out.println(OrderHelper.stopLoss("CYBERUSDT", OrderSide.BUY, 1.0, 14.0));
 //        OrderHelper.takeProfit("Bigchange", OrderSide.BUY, 1.0, 6.0);

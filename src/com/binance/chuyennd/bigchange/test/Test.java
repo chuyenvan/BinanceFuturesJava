@@ -19,7 +19,6 @@ import com.binance.chuyennd.bak.BudgetManagerTest;
 import com.binance.chuyennd.bigchange.market.MarketBigChangeDetectorTest;
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
 import com.binance.chuyennd.bigchange.statistic.BreadDetectObject;
-import com.binance.chuyennd.client.BinanceFuturesClientSingleton;
 import com.binance.chuyennd.client.ClientSingleton;
 import com.binance.chuyennd.client.TickerFuturesHelper;
 import com.binance.chuyennd.indicators.*;
@@ -32,7 +31,6 @@ import com.binance.chuyennd.redis.RedisHelper;
 import com.binance.chuyennd.research.*;
 import com.binance.chuyennd.signal.tradingview.OrderTargetInfoTestSignal;
 import com.binance.chuyennd.signal.tradingview.SignalTWSimulator;
-import com.binance.chuyennd.ticker.TickerManager;
 import com.binance.chuyennd.trading.*;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Storage;
@@ -45,7 +43,6 @@ import com.binance.client.model.enums.CandlestickInterval;
 import com.binance.client.model.enums.OrderSide;
 import com.binance.client.model.event.CandlestickEvent;
 import com.binance.client.model.event.SymbolTickerEvent;
-import com.binance.client.model.trade.PositionRisk;
 import com.binance.tech.indicators.complex.TechnicalRatings;
 import com.binance.tech.model.TechCandle;
 import com.educa.chuyennd.funcs.BreadFunctions;
@@ -57,7 +54,6 @@ import org.bson.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.sound.midi.SysexMessage;
 import java.io.File;
 import java.io.IOException;
 import java.text.ParseException;
@@ -83,12 +79,26 @@ public class Test {
     private final ConcurrentHashMap<String, Long> symbol2Processing = new ConcurrentHashMap<>();
 
     public static void main(String[] args) throws Exception {
+//        testFundingRate();
+        testStatisticPrice();
+//        Long startTime = Utils.getMinute(System.currentTimeMillis() -
+//                (Configs.NUMBER_TICKER_CAL_RATE_CHANGE + 5) * Utils.TIME_MINUTE);
+//        List<KlineObjectNumber> tickers = TickerFuturesHelper.getTickerWithStartTime(Constants.SYMBOL_PAIR_BTC, Constants.INTERVAL_1M, startTime - 390 * Utils.TIME_MINUTE);
+//        LOG.info("{} {}", Utils.sdfGoogle.format(System.currentTimeMillis()),
+//                Utils.sdfGoogle.format(tickers.get(tickers.size() - 1).endTime.longValue()));
+//        if (!tickers.isEmpty()) {
+//            if (tickers.get(tickers.size() - 1).endTime.longValue() > System.currentTimeMillis()) {
+//                tickers.remove(tickers.size() - 1);
+//            }
+//        }
+//        LOG.info("{} {}", Utils.sdfGoogle.format(System.currentTimeMillis()),
+//                Utils.sdfGoogle.format(tickers.get(tickers.size() - 1).endTime.longValue()));
 //        System.out.println(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS));
-        difProductionWithTest();
-//        System.out.println(Utils.rateOf2Double(94089.4, 94644.7));
+//        difProductionWithTest();
+//        System.out.println(Utils.rateOf2Double( 1.142,1.136632));
 //        testProduction();
 //        System.out.println(ClientSingleton.getInstance().getMinQuantity("BANUSDT"));
-
+//        changeLeverage();
 //        reBuildEntries();
 //        new TraceData2Test().traceLog("Update-16-nul");
 //        System.out.println(3 * BudgetManagerSimple.getInstance().getBudget());
@@ -98,16 +108,32 @@ public class Test {
 //
 //        SimulatorMarketLevelTicker1MStopLoss test = new SimulatorMarketLevelTicker1MStopLoss();
 //        test.initData();
-//        String symbol = "XEMUSDT";
-//        String time = "20240705 09:30";
+//        String symbol = "MOVEUSDT";
+//        String time = "20241210 10:23";
 //        test.runAOrder(symbol, time, OrderSide.BUY);
+//        new TickerManager().startUpdateFundingFee();
+//        new TickerManager().updateFundingFeeBySymbol("MOVEUSDT",1609434000000L);
+//        TreeMap<Long, Double> time2FundingRate = (TreeMap<Long, Double>) Storage.readObjectFromFile(Configs.FOLDER_FUNDING_FEE + "ACXUSDT");
+//        for (Map.Entry<Long, Double> entry : time2FundingRate.entrySet()) {
+//            LOG.info("{} {} {}%", entry.getKey(), Utils.normalizeDateYYYYMMDDHHmm(entry.getKey()), Utils.formatPercent(entry.getValue()));
+//
+//        }
 
+//        LOG.info("{} {}", Utils.normalizeDateYYYYMMDDHHmm(time2FundingRate.lastKey()), time2FundingRate.lastEntry().getValue());
+//        System.out.println(Utils.sdfFileHour.parse("20210101 00:00").getTime());
+//        Long timeStart = Utils.sdfFileHour.parse("20210101 00:00").getTime();
+//        String symbol = "JOEUSDT";
+//        new TickerManager().updateFundingFeeBySymbol(symbol, timeStart);;
 //        difBtcTrendReverse();
 //        System.out.println(OrderSide.BUY.toString().substring(0,1));
 //        List<KlineObjectNumber> tickers = TickerFuturesHelper.getTickerWithStartTime(Constants.SYMBOL_PAIR_BTC, Constants.INTERVAL_1M
 //        , Utils.sdfFileHour.parse("20241030 20:00").getTime());
+
 //        List<KlineObjectSimple> tickerSimples = TickerFuturesHelper.getTickerSimpleWithStartTime(Constants.SYMBOL_PAIR_BTC,
-//                Constants.INTERVAL_1M, Utils.sdfFileHour.parse("20241030 20:00").getTime());
+//                Constants.INTERVAL_1M, Utils.sdfFileHour.parse("20241214 12:00").getTime());
+//        System.out.println(MarketBigChangeDetectorTest.isBtcTrendReverse(tickerSimples, 0.015));
+//        Double quantity = Utils.calQuantity(20.0, BudgetManager.getInstance().getLeverage(Constants.SYMBOL_PAIR_ETH), 3399.0, Constants.SYMBOL_PAIR_ETH);
+//        System.out.println(quantity);
 //        List<KlineObjectNumber> tickerCheckers = new ArrayList<>();
 //        List<KlineObjectSimple> tickerSimpleCheckers = new ArrayList<>();
 //        for (KlineObjectNumber ticker : tickers) {
@@ -138,6 +164,77 @@ public class Test {
 
 
     }
+
+    private static void testStatisticPrice() {
+        List<KlineObjectNumber> tickers = TickerFuturesHelper.getTicker(Constants.SYMBOL_PAIR_BTC, Constants.INTERVAL_1M);
+        int period = 20;
+        Double priceMin = null;
+        Double priceMax = null;
+
+        for (KlineObjectNumber ticker : tickers) {
+            if (priceMin == null || priceMin > ticker.minPrice) {
+                priceMin = ticker.minPrice;
+            }
+            if (priceMax == null || priceMax < ticker.maxPrice) {
+                priceMax = ticker.maxPrice;
+            }
+        }
+        TreeMap<Double, Integer> price2Counter = new TreeMap<>();
+        for (int i = 0; i < period + 1; i++) {
+            price2Counter.put(priceMin + i * (priceMax - priceMin) / 20, 0);
+        }
+        for (KlineObjectNumber ticker : tickers) {
+            for (Map.Entry<Double, Integer> entry : price2Counter.entrySet()) {
+                Double price = entry.getKey();
+                Integer counter = entry.getValue();
+                if (ticker.minPrice <= price && price <= ticker.maxPrice) {
+                    counter++;
+                    price2Counter.put(price, counter);
+                }
+            }
+        }
+        for (Map.Entry<Double, Integer> entry : price2Counter.entrySet()) {
+            Double price = entry.getKey();
+            Integer counter = entry.getValue();
+            LOG.info("{} {}", price, counter);
+        }
+    }
+
+    private static void testFundingRate() {
+//        try {
+//            Long time = Utils.sdfFileHour.parse("20210101 07:00").getTime();
+//            Set<String> allSymbols = TickerFuturesHelper.getAllSymbol();
+//            while (true) {
+//                TreeMap<Double, String> funding2Symbol = FundingFeeManager.getInstance().getTopFundingFee(time, allSymbols);
+//                if (!funding2Symbol.isEmpty() && funding2Symbol.firstKey() < -0.005) {
+//                    LOG.info("{} {} {}", Utils.normalizeDateYYYYMMDDHHmm(time), funding2Symbol.firstKey(), funding2Symbol.firstEntry().getValue());
+//                }
+////                LOG.info("{} {} {}", funding2Symbol.lastKey(), funding2Symbol.lastEntry().getValue());
+//                time +=  Utils.TIME_MINUTE;
+//                if (time > System.currentTimeMillis()) {
+//                    break;
+//                }
+//            }
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+        try {
+            Long time = Utils.sdfFileHour.parse("20250106 10:19").getTime();
+            TreeMap<Double, String> funding2Symbol = FundingFeeManager.getInstance().getTopFundingFee(
+                    Utils.get4Hour(time), TickerFuturesHelper.getAllSymbol());
+            LOG.info("{}", funding2Symbol);
+            for (Double funding : funding2Symbol.keySet()) {
+                if (funding < -0.004) {
+                    String symbol = funding2Symbol.lastEntry().getValue();
+
+                }
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
 
     private static void difProductionWithTest() {
         try {
@@ -978,11 +1075,9 @@ public class Test {
         Set<String> allSymbols = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS);
         for (String symbol : allSymbols) {
             try {
-                if (Constants.specialSymbol.contains(symbol)) {
-                    ClientSingleton.getInstance().syncRequestClient.changeInitialLeverage(symbol, 10);
-                } else {
-                    ClientSingleton.getInstance().syncRequestClient.changeInitialLeverage(symbol, 5);
-                }
+                int leverage = BudgetManagerSimple.getInstance().getLeverage(symbol);
+                LOG.info("Set leverage {} {}", symbol, leverage);
+                ClientSingleton.getInstance().syncRequestClient.changeInitialLeverage(symbol, leverage);
             } catch (Exception e) {
                 e.printStackTrace();
             }

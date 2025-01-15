@@ -69,7 +69,8 @@ public class Ticker1MStatisticMarketLevel {
                         }
                         MarketDataObject marketData = calMarketData(symbol2Ticker);
                         MarketLevelChange levelChange = MarketBigChangeDetectorTest.getMarketStatusSimple(marketData.rateDownAvg,
-                                marketData.rateUpAvg, marketData.rateBtc, marketData.rateDown15MAvg, marketData.rateUp15MAvg, marketData.rateBtcDown15M);
+                                marketData.rateUpAvg, marketData.rateBtc, marketData.rateDown15MAvg, marketData.rateUp15MAvg,
+                                marketData.rateBtcDown15M);
                         List<String> symbol2Trade;
                         symbol2Trade = marketData.symbolsTopDown;
                         if (levelChange != null) {
@@ -183,7 +184,7 @@ public class Ticker1MStatisticMarketLevel {
                             allOrderDone.put(orderInfo.timeStart + "-" + symbol, orderInfo);
                             orderSuccess.add(orderInfo);
                         } else {
-                            orderInfo.updateTPSL();
+                            orderInfo.updateTPSL(null);
                         }
                     }
                 }
@@ -212,7 +213,7 @@ public class Ticker1MStatisticMarketLevel {
 
 
         Double priceTp = Utils.calPriceTarget(symbol, entry, OrderSide.BUY, targetTp);
-        Double priceSL = Utils.calPriceTarget(symbol, entry, OrderSide.SELL, Configs.RATE_STOP_LOSS);
+        Double priceSL = Utils.calPriceTarget(symbol, entry, OrderSide.SELL, Configs.RATE_STOP_LOSS_ALT);
 //        String log = OrderSide.BUY + " " + symbol + " entry: " + entry + " target: " + priceTp
 //                + " SL: " + priceSL + " budget: " + budget
 //                + " time:" + Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue());

@@ -1,10 +1,10 @@
-package com.binance.chuyennd.trading;
+package com.binance.chuyennd.bigchange.test;
 
 import com.binance.chuyennd.client.TickerFuturesHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.TrendState;
+import com.binance.chuyennd.trading.DetectEntrySignal2Trader;
 import com.binance.chuyennd.trend.BtcTrendObject;
-import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Storage;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;

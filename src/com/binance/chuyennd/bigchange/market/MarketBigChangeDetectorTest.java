@@ -24,7 +24,7 @@ public class MarketBigChangeDetectorTest {
 //        traceCommandSellBigChange();
 //        testDataStatistic();
 //        testBtcReverse();
-        testAltReverse();
+//        testAltReverse();
 //        writeLevel15MChange2File();
 //        writeLevel1MChange2File();
 //        traceCommandMarketTrend();
@@ -41,7 +41,36 @@ public class MarketBigChangeDetectorTest {
 //        testBtcBottomTrading();
 //        printTrendVolumeBtc();
 //        printBtcBigChangeReverse();
-        System.exit(1);
+//        System.exit(1);
+        List<Double> doubleList = new ArrayList<>();
+        doubleList.add(-0.0143);
+        doubleList.add(-0.0141);
+        doubleList.add(-0.0144);
+        doubleList.add(-0.015);
+        doubleList.add(-0.0166);
+        doubleList.add(-0.0161);
+        doubleList.add(-0.017);
+        doubleList.add(-0.0181);
+        doubleList.add(-0.0183);
+        doubleList.add(-0.02);
+        System.out.println(isDoubleReverse(doubleList, 5, -0.019));
+        System.out.println(isDoubleReverse(doubleList, 9, -0.019));
+        System.out.println(isDoubleReverse(doubleList, 10, -0.019));
+        System.out.println(isDoubleReverse(doubleList, 5, -0.02));
+        System.out.println(isDoubleReverse(doubleList, 5, -0.021));
+        LOG.info("{}", doubleList);
+//        Long startTime = Utils.sdfFileHour.parse("20241229 21:00").getTime();
+//        List<KlineObjectSimple> btcTickers = TickerFuturesHelper.getTickerSimpleWithStartTime("BTCUSDT",
+//                Constants.INTERVAL_1M, startTime - 400 * Utils.TIME_MINUTE);
+//        while (true) {
+//            if (btcTickers.get(btcTickers.size() - 1).startTime.longValue() > startTime) {
+//                btcTickers.remove(btcTickers.size() - 1);
+//            } else {
+//                break;
+//            }
+//        }
+//        System.out.println(isBtcSideWay(btcTickers, 0.005));
+
     }
 
     private static void testAltReverse() {
@@ -410,7 +439,8 @@ public class MarketBigChangeDetectorTest {
             }
             KlineObjectSimple ticker = symbol2Ticker.get(symbol);
             if (ticker != null
-                    && Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen) < Configs.RATE_TICKER_MAX_SCAN_ORDER) {
+                    && Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen) < Configs.RATE_TICKER_MAX_SCAN_ORDER
+            ) {
                 symbols.add(symbol);
                 if (symbols.size() >= period) {
                     break;
@@ -622,27 +652,52 @@ public class MarketBigChangeDetectorTest {
         return 0;
     }
 
-    public static MarketLevelChange getMarketStatus15M(Double rateDown15MAvg, Double rateUp15MAvg, Double rateBtcDown15M) {
+    public static MarketLevelChange getMarketStatus15M(Double rateDown15MAvg, Double rateUp15MAvg, List<Double> lastRateDown15Ms, List<Double> lastRateDowns) {
 
         if (rateDown15MAvg < -0.05) {
             return MarketLevelChange.MEDIUM_DOWN_15M;
         }
-        if (rateDown15MAvg < -0.029) {
+        if (rateDown15MAvg < -0.0285) {
             return MarketLevelChange.SMALL_DOWN_15M;
         }
-//        if (rateUp15MAvg > 0.06) {
-//            return MarketLevelChange.MEDIUM_UP_15M;
-//        }
-//        if (rateUp15MAvg > 0.034
-//                && rateDown15MAvg < -0.013
-//                && rateDown15MAvg > -0.026
-//        ) {
-//            return MarketLevelChange.SMALL_UP_15M;
-//        }
-//        if (rateDown15MAvg < -0.025 && rateBtcDown15M < -0.014) {
-//            return MarketLevelChange.TINY_DOWN_15M;
-//        }
+        if (lastRateDown15Ms != null
+                && !lastRateDown15Ms.isEmpty()
+                && rateDown15MAvg < -0.0265
+                && rateDown15MAvg > lastRateDown15Ms.get(lastRateDown15Ms.size() - 1)) {
+            return MarketLevelChange.SMALL_DOWN_15M;
+        }
+        if (isDoubleReverse(lastRateDown15Ms, 10, rateDown15MAvg) && rateDown15MAvg < -0.02) {
+            return MarketLevelChange.TINY_DOWN_15M;
+        }
+        if (isDoubleReverse(lastRateDown15Ms, 20, rateDown15MAvg) && rateDown15MAvg < -0.015) {
+            return MarketLevelChange.TINY_DOWN_15M;
+        }
+        if (isDoubleReverse(lastRateDown15Ms, 25, rateDown15MAvg) && rateDown15MAvg < -0.01) {
+            return MarketLevelChange.TINY_DOWN_15M;
+        }
         return null;
+    }
+
+    private static boolean isDoubleReverse(List<Double> lastRateDown15Ms, int period, Double rateDown15MAvg) {
+        if (lastRateDown15Ms != null && lastRateDown15Ms.size() > period) {
+            int size = lastRateDown15Ms.size();
+            List<Long> lastRateLong = new ArrayList<>();
+            for (int i = 0; i < size; i++) {
+                Double rate = lastRateDown15Ms.get(i);
+                rate = rate * 1000;
+                lastRateLong.add(rate.longValue());
+            }
+
+            for (int i = 0; i < period; i++) {
+                if (lastRateLong.get(size - i - 1) > lastRateLong.get(size - i - 2)) {
+                    return false;
+                }
+            }
+            if (lastRateDown15Ms.get(size - 1) < rateDown15MAvg) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public static MarketLevelChange getMarketStatusSimple(Double rateDownAvg, Double rateUpAvg,
@@ -653,7 +708,6 @@ public class MarketBigChangeDetectorTest {
             return MarketLevelChange.BIG_UP;
         }
         if (rateDownAvg < -0.04
-                && rateUpAvg < -0.01
                 && btcRateChange < -0.01) {
             return MarketLevelChange.BIG_DOWN;
         }
@@ -664,9 +718,10 @@ public class MarketBigChangeDetectorTest {
         ) {
             return MarketLevelChange.MEDIUM_UP;
         }
-        if (rateDownAvg < -0.032 ||
+        if (rateDownAvg < -0.030 ||
                 (rateDownAvg < -0.015
-                        && rateDown15MAvg < -0.09)
+                        && rateDown15MAvg < -0.08
+                )
         ) {
             return MarketLevelChange.MEDIUM_DOWN;
         }
@@ -686,21 +741,66 @@ public class MarketBigChangeDetectorTest {
                 || (rateUpAvg > 0.007 && rateUp15MAvg > 0.015 && rateBtcDown15M < -0.007)) {
             return MarketLevelChange.TINY_UP;
         }
-        if (rateDownAvg < -0.008
+        if (rateDownAvg < -0.006
                 && rateDown15MAvg < -0.025
         ) {
             return MarketLevelChange.TINY_DOWN;
         }
-
         return null;
     }
 
-    public static boolean isBtcTrendReverse(List<KlineObjectSimple> btcTickers) {
+    public static Double isBtcTrendReverse(List<KlineObjectSimple> btcTickers, Double rateTrend) {
         int index = btcTickers.size() - 1;
-        Double rateTrend = 0.006;
         KlineObjectSimple lastTicker = btcTickers.get(index);
         Double priceReverse = null;
         Integer indexMin = null;
+        while (priceReverse == null) {
+//            LOG.info("Check btc reverse with rate: {}", rateTrend);
+            for (int i = 0; i < index; i++) {
+                if (index >= i + 29) {
+                    KlineObjectSimple ticker = btcTickers.get(index - i);
+                    long minute = Utils.getCurrentMinute(ticker.startTime.longValue()) % 15;
+                    if (minute != 14) {
+                        continue;
+                    }
+                    KlineObjectSimple ticker15m = btcTickers.get(index - i - 14);
+                    KlineObjectSimple ticker30m = btcTickers.get(index - i - 29);
+                    double rate = Math.min(Utils.rateOf2Double(ticker.priceClose, ticker30m.priceOpen),
+                            Utils.rateOf2Double(ticker.priceClose, ticker15m.priceOpen));
+                    if (rate < -rateTrend) {
+                        priceReverse = ticker15m.priceOpen;
+                        indexMin = i;
+                        break;
+                    }
+                }
+            }
+            rateTrend = rateTrend - 0.0005;
+            if (rateTrend < 0.0046) {
+                break;
+            }
+        }
+
+        if (priceReverse != null
+                && lastTicker.priceClose > priceReverse
+        ) {
+            // by pass if last ticker not ticker first up over bottom 1%
+            for (int i = 1; i < indexMin; i++) {
+                KlineObjectSimple ticker = btcTickers.get(index - i);
+                if (ticker.priceClose >= priceReverse) {
+                    return null;
+                }
+            }
+            LOG.info("IsBtcTrendReverse: {} {} {} {} {}", Utils.normalizeDateYYYYMMDDHHmm(lastTicker.startTime.longValue()),
+                    lastTicker.priceClose, priceReverse, Utils.rateOf2Double(lastTicker.priceClose, priceReverse),
+                    Utils.sdfGoogle.format(new Date(lastTicker.startTime.longValue())));
+            return rateTrend;
+        }
+        return null;
+    }
+
+    public static boolean isBtcSideWay(List<KlineObjectSimple> btcTickers, Double rateTrend) {
+        int index = btcTickers.size() - 1;
+        Double priceReverse = null;
         for (int i = 0; i < index; i++) {
             if (index >= i + 29) {
                 KlineObjectSimple ticker = btcTickers.get(index - i);
@@ -714,112 +814,15 @@ public class MarketBigChangeDetectorTest {
                         Utils.rateOf2Double(ticker.priceClose, ticker15m.priceOpen));
                 if (rate < -rateTrend) {
                     priceReverse = ticker15m.priceOpen;
-                    indexMin = i;
                     break;
                 }
             }
         }
-        if (priceReverse != null
-                && lastTicker.priceClose > priceReverse
-        ) {
-            // by pass if last ticker not ticker first up over bottom 1%
-            for (int i = 1; i < indexMin; i++) {
-                KlineObjectSimple ticker = btcTickers.get(index - i);
-                if (ticker.priceClose >= priceReverse) {
-                    return false;
-                }
-            }
-            LOG.info("IsBtcTrendReverse: {} {} {} {} {}", Utils.normalizeDateYYYYMMDDHHmm(lastTicker.startTime.longValue()),
-                    lastTicker.priceClose, priceReverse, Utils.rateOf2Double(lastTicker.priceClose, priceReverse),
-                    Utils.sdfGoogle.format(new Date(lastTicker.startTime.longValue())));
+        if (priceReverse == null) {
             return true;
         }
         return false;
     }
-    public static boolean isBtcTrendUp(List<KlineObjectSimple> btcTickers) {
-        int index = btcTickers.size() - 1;
-        Double rateTrend = 0.006;
-        KlineObjectSimple lastTicker = btcTickers.get(index);
-        Double priceTrendUp = null;
-        Integer indexMin = null;
-        for (int i = 0; i < index; i++) {
-            if (index >= i + 29) {
-                KlineObjectSimple ticker = btcTickers.get(index - i);
-                long minute = Utils.getCurrentMinute(ticker.startTime.longValue()) % 15;
-                if (minute != 14) {
-                    continue;
-                }
-                KlineObjectSimple ticker15m = btcTickers.get(index - i - 14);
-                KlineObjectSimple ticker30m = btcTickers.get(index - i - 29);
-                double rate = Math.min(Utils.rateOf2Double(ticker.priceClose, ticker30m.priceOpen),
-                        Utils.rateOf2Double(ticker.priceClose, ticker15m.priceOpen));
-                if (rate > rateTrend) {
-                    priceTrendUp = ticker15m.priceOpen;
-                    indexMin = i;
-                    break;
-                }
-            }
-        }
-        if (priceTrendUp != null
-                && lastTicker.priceClose > priceTrendUp
-        ) {
-            // by pass if last ticker not ticker first up over bottom 1%
-            for (int i = 1; i < indexMin; i++) {
-                KlineObjectSimple ticker = btcTickers.get(index - i);
-                if (ticker.priceClose >= priceTrendUp) {
-                    return false;
-                }
-            }
-            LOG.info("IsBtcTrendUp: {} {} {} {} {}", Utils.normalizeDateYYYYMMDDHHmm(lastTicker.startTime.longValue()),
-                    lastTicker.priceClose, priceTrendUp, Utils.rateOf2Double(lastTicker.priceClose, priceTrendUp),
-                    Utils.sdfGoogle.format(new Date(lastTicker.startTime.longValue())));
-            return true;
-        }
-        return false;
-    }
-
-    public static boolean isAltTrendReverse(List<KlineObjectSimple> tickers) {
-        int index = tickers.size() - 1;
-        Double rateTrend = 0.03;
-        KlineObjectSimple lastTicker = tickers.get(index);
-        Double priceReverse = null;
-        Integer indexMin = null;
-        for (int i = 0; i < index; i++) {
-            if (index >= i + 29) {
-                KlineObjectSimple ticker = tickers.get(index - i);
-                long minute = Utils.getCurrentMinute(ticker.startTime.longValue()) % 15;
-                if (minute != 14) {
-                    continue;
-                }
-                KlineObjectSimple ticker15m = tickers.get(index - i - 14);
-                KlineObjectSimple ticker30m = tickers.get(index - i - 29);
-                double rate = Math.min(Utils.rateOf2Double(ticker.priceClose, ticker30m.priceOpen),
-                        Utils.rateOf2Double(ticker.priceClose, ticker15m.priceOpen));
-                if (rate < -rateTrend) {
-                    priceReverse = ticker15m.priceOpen;
-                    indexMin = i;
-                    break;
-                }
-            }
-        }
-        if (priceReverse != null
-                && lastTicker.priceClose > priceReverse
-        ) {
-            // by pass if last ticker not ticker first up over bottom 1%
-            for (int i = 1; i < indexMin; i++) {
-                KlineObjectSimple ticker = tickers.get(index - i);
-                if (ticker.priceClose >= priceReverse) {
-                    return false;
-                }
-            }
-            LOG.info("IsBtcTrendReverse: {} {} {} {} {}", Utils.normalizeDateYYYYMMDDHHmm(lastTicker.startTime.longValue()),
-                    lastTicker.priceClose, priceReverse, Utils.rateOf2Double(lastTicker.priceClose, priceReverse),
-                    Utils.sdfGoogle.format(new Date(lastTicker.startTime.longValue())));
-            return true;
-        }
-        return false;
-    }
-
 
     public static boolean isBtcReverseVolume(List<KlineObjectSimple> btcTickers) {
         int period = 15;
@@ -842,6 +845,26 @@ public class MarketBigChangeDetectorTest {
                 && rateBtc > -0.02
                 && rateBtc < 0.002
         ) {
+            return true;
+        }
+        return false;
+    }
+
+    public static boolean isBtcReverseBig15M(List<KlineObjectSimple> btcTickers) {
+        int period = 15;
+        int index = btcTickers.size() - 1;
+        if (index < period * 3) {
+            return false;
+        }
+        KlineObjectSimple finalTicker = btcTickers.get(index);
+        long minute = Utils.getCurrentMinute(finalTicker.startTime.longValue()) % 15;
+        if (minute != 14) {
+            return false;
+        }
+        KlineObjectSimple ticker15m = btcTickers.get(index - 14);
+        KlineObjectSimple ticker30m = btcTickers.get(index - 29);
+        if (Utils.rateOf2Double(finalTicker.priceClose, ticker15m.priceOpen) < -0.004
+                || Utils.rateOf2Double(finalTicker.priceClose, ticker30m.priceOpen) < -0.007) {
             return true;
         }
         return false;
@@ -871,38 +894,6 @@ public class MarketBigChangeDetectorTest {
             return true;
         }
         return false;
-    }
-
-    public static Double isAltReverseExtend(List<KlineObjectSimple> tickers) {
-        int period = 100;
-        int index = tickers.size() - 1;
-        if (index < period) {
-            return null;
-        }
-        KlineObjectSimple finalTicker = tickers.get(index);
-        KlineObjectSimple tickerCheck = tickers.get(index - 1);
-        KlineObjectSimple lastTicker = tickers.get(index - 2);
-
-        Double volumeTotal = 0d;
-        Double maxPrice = null;
-        for (int i = 2; i < period; i++) {
-            KlineObjectSimple ticker = tickers.get(index - i);
-            volumeTotal += ticker.totalUsdt;
-            if (maxPrice == null || maxPrice < ticker.maxPrice) {
-                maxPrice = ticker.maxPrice;
-            }
-        }
-        double volumeAvg = volumeTotal / period;
-        Double rateTicker = Utils.rateOf2Double(tickerCheck.priceClose, tickerCheck.priceOpen);
-        if (tickerCheck.totalUsdt > 8 * volumeAvg
-                && rateTicker < -0.003
-                && finalTicker.totalUsdt < tickerCheck.totalUsdt / 3
-                && lastTicker.totalUsdt < 2 * volumeAvg
-                && rateTicker > -0.02
-        ) {
-            return Utils.rateOf2Double(finalTicker.priceClose, maxPrice);
-        }
-        return null;
     }
 }
 

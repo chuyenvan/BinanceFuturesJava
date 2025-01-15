@@ -33,6 +33,7 @@ public class BudgetManagerSimple {
     public Double unProfit = 0d;
     public Double profitLossMax = 0d;
     public Double totalFee = 0d;
+    public Double totalFundingFee = 0d;
     public Double balanceBasic = Configs.getDouble("CAPITAL_START");
     public Double balanceCurrent = balanceBasic;
 
@@ -86,6 +87,9 @@ public class BudgetManagerSimple {
         if (Constants.specialSymbol.contains(symbol)) {
             return Configs.LEVERAGE_ORDER * 2;
         }
+        if (Constants.stableSymbol.contains(symbol)) {
+            return Configs.LEVERAGE_ORDER * 2;
+        }
         return Configs.LEVERAGE_ORDER;
     }
 
@@ -106,6 +110,7 @@ public class BudgetManagerSimple {
 //                }
 //            }
             fee += calFee(orderInfo);
+            totalFundingFee += orderInfo.calFundingFee();
             profit += orderInfo.calTp();
         }
     }
@@ -120,9 +125,10 @@ public class BudgetManagerSimple {
         unProfit = calUnrealizedProfit(orderRunning.values());
         profitLossMax = calProfitLossMax(orderRunning.values());
         Double positionMargin = calPositionMargin(orderRunning.values());
+        Double positionMarginReal = calPositionMarginReal(orderRunning.values());
         Double balanceReal = balance + unProfit;
         Double unrealizedProfitMin = calUnrealizedProfitMin(orderRunning.values());
-        balanceIndex.updateIndex(balanceBasic, positionMargin, timeUpdate, profitLossMax, unrealizedProfitMin, symbol2OrdersEntry,
+        balanceIndex.updateIndex(balanceBasic, positionMargin, positionMarginReal, timeUpdate, profitLossMax, unrealizedProfitMin, symbol2OrdersEntry,
                 orderRunning);
         if (isPrintBalance) {
             time2Balance.put(timeUpdate, balance);
@@ -140,6 +146,14 @@ public class BudgetManagerSimple {
             if (marginMaxMonth == null) {
                 marginMaxMonth = 0d;
             }
+            Double marginRealMaxDate = balanceIndex.date2MarginRealMax.get(Utils.getDate(timeUpdate - Utils.TIME_MINUTE));
+            if (marginRealMaxDate == null) {
+                marginRealMaxDate = 0d;
+            }
+            Double marginRealMaxMonth = balanceIndex.month2MarginRealMax.get(Utils.getMonth(timeUpdate - Utils.TIME_DAY));
+            if (marginRealMaxMonth == null) {
+                marginRealMaxMonth = 0d;
+            }
             Double unProfitDate = balanceIndex.date2ProfitMin.get(Utils.getDate(timeUpdate - Utils.TIME_MINUTE));
             if (unProfitDate == null) {
                 unProfitDate = 0d;
@@ -155,23 +169,23 @@ public class BudgetManagerSimple {
 
             Double rateMarginMaxDouble = balanceIndex.rateMarginMax * 100;
 
-            LOG.info("Update {} => b:{} pDate:{}\tm:{}\tmax:{}%\t{}\t{}\t" +
-                            "p:{}\tunP:{}\tunPMin:{}\t{}\t{}\t{}%\t{}\t{}%\tdone:{}/{} run:{}/{}",
+            LOG.info("Update {} => b:{} pD:{}\tm:{}\tmax:{}%\t{}\t{}\t{}\t{}\t" +
+                            "unP:{}\tunPMin:{}\t{}\t{}\t{}%\t{}\tdone:{}/{} run:{}/{} f:{}",
                     Utils.normalizeDateYYYYMMDDHHmm(timeUpdate), Utils.formatLog(balance.longValue(), 5),
                     Utils.formatLog(profitOfDate.longValue(), 4),
                     Utils.formatLog(positionMargin.longValue(), 4),
                     Utils.formatLog(rateMarginMaxDouble.longValue(), 3),
                     Utils.formatLog(marginMaxDate.longValue(), 5),
                     Utils.formatLog(marginMaxMonth.longValue(), 5),
-                    Utils.formatLog(profit.longValue(), 5),
+                    Utils.formatLog(marginRealMaxDate.longValue(), 5),
+                    Utils.formatLog(marginRealMaxMonth.longValue(), 5),
                     Utils.formatLog(unProfit.longValue(), 5),
                     Utils.formatLog(balanceIndex.unProfitMin.longValue(), 5),
                     Utils.formatLog(unProfitDate.longValue(), 5),
                     Utils.formatLog(unProfitMonth.longValue(), 5),
                     Utils.formatPercentNew(balanceIndex.unProfitMin / balanceBasic),
                     slMonth.longValue(),
-                    Utils.formatPercentNew(balanceIndex.profitLossMax / balanceBasic),
-                    totalSL, allOrderDone.size(), symbolRunning.size(), maxOrderRunning);
+                    totalSL, allOrderDone.size(), symbolRunning.size(), maxOrderRunning, totalFundingFee.longValue());
             if (timeUpdate.equals(Utils.getToDay() + 7 * Utils.TIME_HOUR)) {
 //                LOG.info("Report: {}", Utils.normalizeDateYYYYMMDDHHmm(timeUpdate));
                 List<String> lines =
@@ -242,10 +256,21 @@ public class BudgetManagerSimple {
         return totalMargin;
     }
 
+    public Double calPositionMarginReal(Collection<OrderTargetInfoTest> values) {
+        Double totalMargin = 0d;
+        if (values != null) {
+            for (OrderTargetInfoTest orderInfo : values) {
+                Double margin = orderInfo.calMargin();
+                totalMargin += margin - orderInfo.calProfit();
+            }
+        }
+        return totalMargin;
+    }
+
 
     public void updateInvesting(Collection<OrderTargetInfoTest> orderRunning) {
-        Double margin = calPositionMargin(orderRunning);
-        investing = margin * 100 / balanceCurrent;
+//        Double margin = calPositionMargin(orderRunning);
+//        investing = margin * 100 / balanceCurrent;
     }
 
     public void printBalanceIndex() {
@@ -259,28 +284,23 @@ public class BudgetManagerSimple {
         );
     }
 
-    public Double calRateLossDynamic(Double unProfit, String symbol) {
+    public Double calRateLossDynamic(Double unProfit, String symbol, Double rateSLMin) {
         Double rateLoss = unProfit * 1000;
-        Double rateStopLoss = Configs.RATE_STOP_LOSS;
-        if (!Constants.specialSymbol.contains(symbol)) {
-            rateStopLoss = Configs.RATE_STOP_LOSS * 2;
+        Double rateStopLoss = Configs.RATE_STOP_LOSS_ALT;
+        if (Constants.specialSymbol.contains(symbol)
+                || Constants.stableSymbol.contains(symbol)) {
+            rateStopLoss = Configs.RATE_STOP_LOSS_SPECIAL;
         }
-        Long tradingStopRate = rateLoss.longValue() / 2;
-        Integer rateProfit2Shard = 100;
-        if (Constants.specialSymbol.contains(symbol)) {
-            rateProfit2Shard = 60;
-        }
-        if (rateLoss > rateProfit2Shard) {
-            tradingStopRate = rateLoss.longValue() / 3;
-            if (rateLoss > 2 * rateProfit2Shard) {
-                tradingStopRate = rateLoss.longValue() / 4;
-            } else {
-                if (rateLoss > 3 * rateProfit2Shard) {
-                    tradingStopRate = rateLoss.longValue() / 5;
-                }
+        Long tradingStopRate;
+        if (rateLoss < 60) {
+            tradingStopRate = rateLoss.longValue() / 2;
+            if (tradingStopRate > 5) {
+                tradingStopRate -= 2;
             }
+        } else {
+            tradingStopRate = 30l;
         }
-        if (rateLoss < 6) {
+        if (rateLoss < rateSLMin * 1000) {
             rateLoss = rateLoss.longValue() - rateStopLoss * 1000;
         } else {
             rateLoss = rateLoss.longValue() - tradingStopRate.doubleValue();
@@ -300,9 +320,9 @@ public class BudgetManagerSimple {
         String symbol = "CATIUSDT";
 //        Double rate = Utils.rateOf2Double(1.454, 1.441);
 //        System.out.println(BudgetManagerSimple.getInstance().calRateStop(rate,symbol));
-        for (int i = 0; i < 100; i++) {
-            Double rate = -0.2 + i * 0.01;
-            LOG.info("{}  -> {}", rate, BudgetManagerSimple.getInstance().calRateLossDynamic(rate, symbol));
+        for (int i = 0; i < 30; i++) {
+            Double rate = -0.032 + i * 0.005;
+            LOG.info("{}  -> {}", rate, BudgetManagerSimple.getInstance().calRateLossDynamic(rate, symbol, 0.004));
         }
     }
 
@@ -315,6 +335,7 @@ public class BudgetManagerSimple {
         unProfit = 0d;
         profitLossMax = 0d;
         totalFee = 0d;
+        totalFundingFee = 0d;
         balanceIndex = new BalanceIndex();
     }
 
@@ -322,23 +343,5 @@ public class BudgetManagerSimple {
         if (maxOrderRunning < counterOrderRunning) {
             maxOrderRunning = counterOrderRunning;
         }
-    }
-
-    public Double calRateStop(Double rateLoss, String symbol) {
-        Double rateStopLoss = Configs.RATE_STOP_LOSS;
-        if (!Constants.specialSymbol.contains(symbol)) {
-            rateStopLoss = Configs.RATE_STOP_LOSS * 2;
-        }
-        Double rateStop;
-        Double rateMin2MoveSl = Configs.RATE_PROFIT_STOP_MARKET;
-        if (Constants.specialSymbol.contains(symbol)) {
-            rateMin2MoveSl = 0.01;
-        }
-        if (rateLoss < rateMin2MoveSl) {
-            rateStop = -rateLoss + rateStopLoss;
-        } else {
-            rateStop = -rateLoss / 2;
-        }
-        return rateStop;
     }
 }

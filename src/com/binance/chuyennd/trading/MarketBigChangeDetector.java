@@ -3,6 +3,7 @@ package com.binance.chuyennd.trading;
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
 import com.binance.chuyennd.client.TickerFuturesHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
+import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
 import com.binance.chuyennd.utils.Configs;
@@ -20,10 +21,10 @@ public class MarketBigChangeDetector {
 
     public static void main(String[] args) throws ParseException {
         try {
-            Long startTime = Utils.sdfFileHour.parse("20241126 07:08").getTime();
+            Long startTime = Utils.sdfFileHour.parse("20250107 07:35").getTime();
 
             List<KlineObjectNumber> btcTickers = TickerFuturesHelper.getTickerWithStartTime(Constants.SYMBOL_PAIR_BTC, Constants.INTERVAL_1M,
-                    startTime - 300 * Utils.TIME_MINUTE);
+                    startTime - 400 * Utils.TIME_MINUTE);
             while (true) {
                 if (btcTickers.get(btcTickers.size() - 1).startTime.longValue() > startTime) {
                     btcTickers.remove(btcTickers.size() - 1);
@@ -33,6 +34,7 @@ public class MarketBigChangeDetector {
             }
             LOG.info("{} {}", Utils.normalizeDateYYYYMMDDHHmm(btcTickers.get(0).startTime.longValue()),
                     Utils.normalizeDateYYYYMMDDHHmm(btcTickers.get(btcTickers.size() - 1).startTime.longValue()));
+
             System.out.println(MarketBigChangeDetector.isBtcTrendReverse(btcTickers));
 
             btcTickers.remove(btcTickers.size() - 1);
@@ -40,7 +42,7 @@ public class MarketBigChangeDetector {
                 // check last time not btc trend reverse -> btc trend reverse
                 String finalTimeTrendReverse = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_MARKET_LEVEL_FINAL,
                         MarketLevelChange.BTC_TREND_REVERSE.toString());
-                if (finalTimeTrendReverse == null || Long.parseLong(finalTimeTrendReverse) != btcTickers.get(btcTickers.size() - 1).startTime.longValue()) {
+                if (finalTimeTrendReverse == null || Long.parseLong(finalTimeTrendReverse) < btcTickers.get(btcTickers.size() - 1).startTime.longValue()) {
                     RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_MARKET_LEVEL_FINAL,
                             MarketLevelChange.BTC_TREND_REVERSE.toString(), String.valueOf(btcTickers.get(btcTickers.size() - 1).startTime.longValue()));
                     LOG.info("Fixbug btc trend reverse error {} ",
@@ -55,26 +57,32 @@ public class MarketBigChangeDetector {
 
     public static boolean isBtcTrendReverse(List<KlineObjectNumber> btcTickers) {
         int index = btcTickers.size() - 1;
-        Double rateTrend = 0.006;
+        Double rateTrend = 0.01;
         KlineObjectNumber lastTicker = btcTickers.get(index);
         Double priceReverse = null;
         Integer indexMin = null;
-        for (int i = 0; i < index; i++) {
-            if (index >= i + 29) {
-                KlineObjectNumber ticker = btcTickers.get(index - i);
-                long minute = Utils.getCurrentMinute(ticker.startTime.longValue()) % 15;
-                if (minute != 14) {
-                    continue;
+        while (priceReverse == null) {
+            for (int i = 0; i < index; i++) {
+                if (index >= i + 29) {
+                    KlineObjectNumber ticker = btcTickers.get(index - i);
+                    long minute = Utils.getCurrentMinute(ticker.startTime.longValue()) % 15;
+                    if (minute != 14) {
+                        continue;
+                    }
+                    KlineObjectNumber ticker15m = btcTickers.get(index - i - 14);
+                    KlineObjectNumber ticker30m = btcTickers.get(index - i - 29);
+                    double rate = Math.min(Utils.rateOf2Double(ticker.priceClose, ticker30m.priceOpen),
+                            Utils.rateOf2Double(ticker.priceClose, ticker15m.priceOpen));
+                    if (rate < -rateTrend) {
+                        priceReverse = ticker15m.priceOpen;
+                        indexMin = i;
+                        break;
+                    }
                 }
-                KlineObjectNumber ticker15m = btcTickers.get(index - i - 14);
-                KlineObjectNumber ticker30m = btcTickers.get(index - i - 29);
-                double rate = Math.min(Utils.rateOf2Double(ticker.priceClose, ticker30m.priceOpen),
-                        Utils.rateOf2Double(ticker.priceClose, ticker15m.priceOpen));
-                if (rate < -rateTrend) {
-                    priceReverse = ticker15m.priceOpen;
-                    indexMin = i;
-                    break;
-                }
+            }
+            rateTrend = rateTrend - 0.0005;
+            if (rateTrend < 0.0046) {
+                break;
             }
         }
         if (priceReverse != null
@@ -113,8 +121,8 @@ public class MarketBigChangeDetector {
         Double rateBtc2Ticker = Utils.rateOf2Double(finalTicker.priceClose, lastTicker.priceOpen);
         LOG.info("Check btc reverse: {} {} {}% {} {}% {} {}", Utils.normalizeDateYYYYMMDDHHmm(finalTicker.startTime.longValue()),
                 finalTicker.priceClose, Utils.formatDouble(rateBtc * 100, 3), finalTicker.totalUsdt / volumeAvg,
-                Utils.formatDouble(rateBtc2Ticker * 100, 3), lastTicker.totalUsdt / volumeAvg,
-                Utils.formatDouble(rateDown15MAvg * 100, 3));
+                Utils.formatDouble(rateBtc2Ticker * 100, 3),
+                Utils.formatDouble(rateDown15MAvg * 100, 3), lastTicker.totalUsdt / volumeAvg);
         if ((finalTicker.totalUsdt > 10 * volumeAvg || lastTicker.totalUsdt > 10 * volumeAvg)
                 && (rateBtc < -0.0029 || rateBtc2Ticker < -0.0029)
                 && rateBtc > -0.02
@@ -123,6 +131,25 @@ public class MarketBigChangeDetector {
             return true;
         }
 
+        return false;
+    }
+    public static boolean isBtcReverse15M(List<KlineObjectNumber> btcTickers) {
+        int period = 15;
+        int index = btcTickers.size() - 1;
+        if (index < period * 3) {
+            return false;
+        }
+        KlineObjectNumber finalTicker = btcTickers.get(index);
+        long minute = Utils.getCurrentMinute(finalTicker.startTime.longValue()) % 15;
+        if (minute != 14) {
+            return false;
+        }
+        KlineObjectNumber ticker15m = btcTickers.get(index - 14);
+        KlineObjectNumber ticker30m = btcTickers.get(index - 29);
+        if (Utils.rateOf2Double(finalTicker.priceClose, ticker15m.priceOpen) < -0.004
+                || Utils.rateOf2Double(finalTicker.priceClose, ticker30m.priceOpen) < -0.007) {
+            return true;
+        }
         return false;
     }
 
@@ -167,15 +194,52 @@ public class MarketBigChangeDetector {
         return total / counter;
     }
 
-    public static MarketLevelChange getMarketStatus15M(Double rateDown15MAvg, Double rateUp15MAvg, Double rateBtcDown15M) {
+    public static MarketLevelChange getMarketStatus15M(Double rateDown15MAvg, List<Double> lastRateDown15Ms) {
 
-        if (rateDown15MAvg < -0.055) {
-            return MarketLevelChange.MEDIUM_DOWN;
+        if (rateDown15MAvg < -0.05) {
+            return MarketLevelChange.MEDIUM_DOWN_15M;
         }
-        if (rateDown15MAvg < -0.029) {
+        if (rateDown15MAvg < -0.0285) {
             return MarketLevelChange.SMALL_DOWN_15M;
         }
+        if (lastRateDown15Ms != null
+                && !lastRateDown15Ms.isEmpty()
+                && rateDown15MAvg < -0.0265
+                && rateDown15MAvg > lastRateDown15Ms.get(lastRateDown15Ms.size() - 1)) {
+            return MarketLevelChange.SMALL_DOWN_15M;
+        }
+        if (isDoubleReverse(lastRateDown15Ms, 10, rateDown15MAvg) && rateDown15MAvg < -0.02) {
+            return MarketLevelChange.TINY_DOWN_15M;
+        }
+        if (isDoubleReverse(lastRateDown15Ms, 20, rateDown15MAvg) && rateDown15MAvg < -0.015) {
+            return MarketLevelChange.TINY_DOWN_15M;
+        }
+        if (isDoubleReverse(lastRateDown15Ms, 25, rateDown15MAvg) && rateDown15MAvg < -0.01) {
+            return MarketLevelChange.TINY_DOWN_15M;
+        }
         return null;
+    }
+
+    private static boolean isDoubleReverse(List<Double> lastRateDown15Ms, int period, Double rateDown15MAvg) {
+        if (lastRateDown15Ms != null && lastRateDown15Ms.size() > period) {
+            int size = lastRateDown15Ms.size();
+            List<Long> lastRateLong = new ArrayList<>();
+            for (int i = 0; i < size; i++) {
+                Double rate = lastRateDown15Ms.get(i);
+                rate = rate * 1000;
+                lastRateLong.add(rate.longValue());
+            }
+
+            for (int i = 0; i < period; i++) {
+                if (lastRateLong.get(size - i - 1) > lastRateLong.get(size - i - 2)) {
+                    return false;
+                }
+            }
+            if (lastRateDown15Ms.get(size - 1) < rateDown15MAvg) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public static MarketLevelChange getMarketStatus1M(Double rateDownAvg, Double rateUpAvg,
@@ -186,7 +250,6 @@ public class MarketBigChangeDetector {
             return MarketLevelChange.BIG_UP;
         }
         if (rateDownAvg < -0.04
-                && rateUpAvg < -0.01
                 && btcRateChange < -0.01) {
             return MarketLevelChange.BIG_DOWN;
         }
@@ -197,9 +260,10 @@ public class MarketBigChangeDetector {
         ) {
             return MarketLevelChange.MEDIUM_UP;
         }
-        if (rateDownAvg < -0.032 ||
+        if (rateDownAvg < -0.030 ||
                 (rateDownAvg < -0.015
-                        && rateDown15MAvg < -0.09)
+                        && rateDown15MAvg < -0.08
+                )
         ) {
             return MarketLevelChange.MEDIUM_DOWN;
         }
@@ -219,7 +283,7 @@ public class MarketBigChangeDetector {
                 || (rateUpAvg > 0.007 && rateUp15MAvg > 0.015 && rateBtcDown15M < -0.007)) {
             return MarketLevelChange.TINY_UP;
         }
-        if (rateDownAvg < -0.008
+        if (rateDownAvg < -0.006
                 && rateDown15MAvg < -0.025
         ) {
             return MarketLevelChange.TINY_DOWN;

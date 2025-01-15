@@ -105,12 +105,15 @@ public class TraceData2Test {
             case "get_top_down":
                 getTopDown(args[1], args[2]);
                 break;
+            case "test_time":
+                testTradeTime(args[1], args[2]);
+                break;
             case "get_top_up":
                 getTopUp(args[1], args[2]);
                 break;
             case "trace_loss":
                 traceLog(args[1]);
-                showFileAll("OrderTestDone.data-16-0.04");
+                showFileAll("OrderTestDone.data-" + args[2]);
                 break;
             case "trade":
                 tradeAOrder(args[1], args[2], args[3], args[4]);
@@ -131,6 +134,51 @@ public class TraceData2Test {
             case "showSymbol":
                 showFileAllBySymbol(args[1], args[2]);
                 break;
+        }
+    }
+
+    private static void testTradeTime(String timeInput1, String timeInput2) {
+        try {
+            String timeInput = timeInput1.trim() + " " + timeInput2.trim();
+            Long time = Utils.sdfFileHour.parse(timeInput).getTime();
+            Long startTime = Utils.getDate(time - 15 * Utils.TIME_MINUTE);
+
+            // data ticker
+            TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers = DataManager.readDataFromFile1M(startTime);
+            TreeMap<Long, Map<String, KlineObjectSimple>> dataNextDate = DataManager.readDataFromFile1M(startTime + Utils.TIME_DAY);
+            TreeMap<Long, Map<String, KlineObjectSimple>> dataNext1Date = DataManager.readDataFromFile1M(startTime + 2 * Utils.TIME_DAY);
+            if (dataNextDate != null) {
+                time2Tickers.putAll(dataNextDate);
+            }
+            if (dataNext1Date != null) {
+                time2Tickers.putAll(dataNext1Date);
+            }
+            Map<String, Double> symbol2MaxPrice = new HashMap<>();
+            Map<String, Double> symbol2MinPrice = new HashMap<>();
+            for (int i = 1; i < 16; i++) {
+                Map<String, KlineObjectSimple> symbol2Ticker = time2Tickers.get(time - i * Utils.TIME_MINUTE);
+                for (String symbol : symbol2Ticker.keySet()) {
+                    KlineObjectSimple kline = symbol2Ticker.get(symbol);
+                    Double priceMax = symbol2MaxPrice.get(symbol);
+                    Double minPrice = symbol2MinPrice.get(symbol);
+                    if (priceMax == null || priceMax < kline.maxPrice) {
+                        priceMax = kline.maxPrice;
+                    }
+                    if (minPrice == null || minPrice > kline.minPrice) {
+                        minPrice = kline.minPrice;
+                    }
+                    symbol2MaxPrice.put(symbol, priceMax);
+                    symbol2MinPrice.put(symbol, minPrice);
+                }
+            }
+            MarketDataObject marketData = MarketBigChangeDetectorTest.calMarketData(time2Tickers.get(time), symbol2MaxPrice,
+                    symbol2MinPrice);
+            List<String> symbols = MarketBigChangeDetectorTest.getTopSymbolSimple(marketData.rate2Max, 4, null);
+            SimulatorMarketLevelTicker1MStopLoss test = new SimulatorMarketLevelTicker1MStopLoss();
+            test.initData();
+            test.runMultiOrder(symbols, timeInput);
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -160,7 +208,7 @@ public class TraceData2Test {
 
         for (MarketLevelChange level : list) {
             String fileName = "../simulator/storage/level/OrderTestDone-" + level + "-"
-                    + Configs.TIME_AFTER_ORDER_2_SL + "-" + Configs.RATE_TICKER_MAX_SCAN_ORDER;
+                    + Configs.TIME_AFTER_ORDER_2_SL;
             if (new File(fileName).exists()) {
                 String levelString = level.toString();
                 for (int i = 0; i < maxSize - level.toString().length(); i++) {
@@ -173,42 +221,34 @@ public class TraceData2Test {
 
     public static String statisticResult(TreeMap<Long, OrderTargetInfoTest> time2Order) {
         Map<MarketLevelChange, List<OrderTargetInfoTest>> level2Orders = new HashMap<>();
-        List<Double> pnls = new ArrayList<>();
-        List<Double> pnlNotMays = new ArrayList<>();
-        List<Double> pnlNot2021 = new ArrayList<>();
-        List<Double> pnl2024 = new ArrayList<>();
-        Map<Double, String> pnl2Info = new HashMap<>();
+        Map<Integer, List<Double>> year2Pnl = new HashMap<>();
         TreeMap<Long, Double> date2Profit = new TreeMap();
         for (OrderTargetInfoTest orderInfo : time2Order.values()) {
             Long time = orderInfo.timeUpdate;
+            List<OrderTargetInfoTest> orders = level2Orders.get(orderInfo.marketLevelChange);
+            if (orders == null) {
+                orders = new ArrayList<>();
+            }
+            orders.add(orderInfo);
             Double profitOfDate = date2Profit.get(Utils.getDate(time));
             if (profitOfDate == null) {
                 profitOfDate = 0d;
             }
             profitOfDate += orderInfo.calTp();
             date2Profit.put(Utils.getDate(time), profitOfDate);
-            List<OrderTargetInfoTest> orders = level2Orders.get(orderInfo.marketLevelChange);
-            if (orders == null) {
-                orders = new ArrayList<>();
-            }
-            orders.add(orderInfo);
             level2Orders.put(orderInfo.marketLevelChange, orders);
             Double tp = orderInfo.calTp();
-            pnl2Info.put(tp, orderInfo.symbol + "-" + Utils.normalizeDateYYYYMMDDHHmm(orderInfo.timeStart));
-            pnls.add(tp);
-            if (!StringUtils.equals(Utils.sdfFile.format(new Date(orderInfo.timeStart)), "20210519")) {
-                pnlNotMays.add(tp);
+            List<Double> pnlOfYear = year2Pnl.get(Utils.getYear(time));
+            if (pnlOfYear == null) {
+                pnlOfYear = new ArrayList<>();
             }
-            if (!StringUtils.startsWith(Utils.sdfFile.format(new Date(orderInfo.timeStart)), "2021")) {
-                pnlNot2021.add(tp);
-            }
-            if (StringUtils.startsWith(Utils.sdfFile.format(new Date(orderInfo.timeStart)), "2024")) {
-                pnl2024.add(tp);
-            }
+            pnlOfYear.add(tp);
+            year2Pnl.put(Utils.getYear(time), pnlOfYear);
         }
         TreeMap<Double, Long> profit2Date = new TreeMap();
         TreeMap<Integer, Double> year2Profit = new TreeMap();
         TreeMap<Integer, Double> year2MarginMax = new TreeMap();
+        TreeMap<Integer, Double> year2MarginRealMax = new TreeMap();
         TreeMap<Integer, Double> year2UnProfitMin = new TreeMap();
         TreeMap<Integer, Double> year2SLMin = new TreeMap();
         BalanceIndex balanceIndex = (BalanceIndex) Storage.readObjectFromFile("../simulator/storage/BalanceIndex.data");
@@ -219,6 +259,14 @@ public class TraceData2Test {
                 yearMarginMax = marginMax;
             }
             year2MarginMax.put(Utils.getYear(date), yearMarginMax);
+        }
+        for (Long date : balanceIndex.date2MarginRealMax.keySet()) {
+            Double marginRealMax = balanceIndex.date2MarginRealMax.get(date);
+            Double yearMarginRealMax = year2MarginRealMax.get(Utils.getYear(date));
+            if (yearMarginRealMax == null || yearMarginRealMax < marginRealMax) {
+                yearMarginRealMax = marginRealMax;
+            }
+            year2MarginRealMax.put(Utils.getYear(date), yearMarginRealMax);
         }
         for (Long date : balanceIndex.date2ProfitMin.keySet()) {
             Double profitMin = balanceIndex.date2ProfitMin.get(date);
@@ -281,8 +329,10 @@ public class TraceData2Test {
             Integer year = entry.getKey();
             builder.append(year).append("\t");
             builder.append("Margin: ").append(year2MarginMax.get(year).longValue()).append("\t");
+            builder.append("MarginReal: ").append(year2MarginRealMax.get(year).longValue()).append("\t");
             builder.append("UnProfitMin: ").append(year2UnProfitMin.get(year).longValue()).append("\t");
             builder.append("SLMin: ").append(year2SLMin.get(year).longValue()).append("\t");
+            builder.append("ProfitMin: ").append(Utils.formatLog(Utils.findMinSubarraySum(year2Pnl.get(year).toArray(new Double[0])).longValue(), 5)).append("\t");
             builder.append(entry.getValue().longValue()).append("\t");
             builder.append(Utils.formatDouble(entry.getValue() / BudgetManagerSimple.getInstance().balanceBasic, 2));
         }
@@ -295,14 +345,7 @@ public class TraceData2Test {
                 break;
             }
         }
-        return builder + "\nProfitMinAll: " + Utils.findMinSubarraySum(pnls.toArray(new Double[0])).longValue()
-                + " " + pnl2Info.get(Utils.findMinSubarraySumIndex(pnls.toArray(new Double[0])))
-                + "\nMinNotMay: " + Utils.findMinSubarraySum(pnlNotMays.toArray(new Double[0])).longValue()
-                + " " + pnl2Info.get(Utils.findMinSubarraySumIndex(pnlNotMays.toArray(new Double[0])))
-                + "\nMinNot2021: " + Utils.findMinSubarraySum(pnlNot2021.toArray(new Double[0])).longValue()
-                + " " + pnl2Info.get(Utils.findMinSubarraySumIndex(pnlNot2021.toArray(new Double[0])))
-                + "\nMin2024: " + Utils.findMinSubarraySum(pnl2024.toArray(new Double[0])).longValue()
-                + " " + pnl2Info.get(Utils.findMinSubarraySumIndex(pnl2024.toArray(new Double[0])));
+        return builder.toString();
 
     }
 
@@ -384,10 +427,12 @@ public class TraceData2Test {
             }
             rateSuccess2Log.put(-totalRate * 100 / orderLevels.size(), sb.toString());
         }
-        LOG.info(statisticLog);
+        StringBuilder sb = new StringBuilder();
+        sb.append(statisticLog).append("\n");
         for (String line : rateSuccess2Log.values()) {
-            LOG.info(line);
+            sb.append(line).append("\n");
         }
+        LOG.info(sb.toString());
     }
 
 
@@ -586,17 +631,17 @@ public class TraceData2Test {
                 TreeMap<Double, Long> profit30d2Date = new TreeMap();
                 int counter = 0;
                 Set<String> hashSet = new HashSet<>();
-                for (Map.Entry<Double, String> entry : profit2Date.entrySet()) {
-                    if (hashSet.contains(entry.getValue())) {
-                        continue;
-                    }
-                    LOG.info("{} {}", entry.getValue(), entry.getKey());
-                    hashSet.add(entry.getValue());
-                    counter++;
-                    if (counter > 10) {
-                        break;
-                    }
-                }
+//                for (Map.Entry<Double, String> entry : profit2Date.entrySet()) {
+//                    if (hashSet.contains(entry.getValue())) {
+//                        continue;
+//                    }
+//                    LOG.info("{} {}", entry.getValue(), entry.getKey());
+//                    hashSet.add(entry.getValue());
+//                    counter++;
+//                    if (counter > 10) {
+//                        break;
+//                    }
+//                }
                 Long dateFirst = date2Profit.firstKey();
                 for (int i = 30; i < date2Profit.size(); i++) {
                     Double profit30d = 0d;
@@ -607,28 +652,28 @@ public class TraceData2Test {
                     profit30d2Date.put(profit30d, dateFirst + i * Utils.TIME_DAY);
                 }
                 counter = 0;
-                Double profit2021 = date2Balance.get(Utils.sdfFile.parse("20220101").getTime())
-                        - date2Balance.get(Utils.sdfFile.parse("20210101").getTime());
-                Double profit2022 = date2Balance.get(Utils.sdfFile.parse("20230101").getTime())
-                        - date2Balance.get(Utils.sdfFile.parse("20220101").getTime());
-                Double profit2023 = date2Balance.get(Utils.sdfFile.parse("20240101").getTime()) -
-                        date2Balance.get(Utils.sdfFile.parse("20230101").getTime());
-                Double profit2024 = date2Balance.lastEntry().getValue() - date2Balance.get(Utils.sdfFile.parse("20240101").getTime());
-                LOG.info("Year 2021: {}\t{}\t{}", date2Balance.get(Utils.sdfFile.parse("20220101").getTime()),
-                        profit2021, Utils.formatDouble(profit2021 / BudgetManagerSimple.getInstance().balanceBasic, 2));
-                LOG.info("Year 2022: {}\t{}\t{}", date2Balance.get(Utils.sdfFile.parse("20230101").getTime()),
-                        profit2022, Utils.formatDouble(profit2022 / BudgetManagerSimple.getInstance().balanceBasic, 2));
-                LOG.info("Year 2023: {}\t{}\t{}", date2Balance.get(Utils.sdfFile.parse("20240101").getTime()),
-                        profit2023, Utils.formatDouble(profit2023 / BudgetManagerSimple.getInstance().balanceBasic, 2));
-                LOG.info("Year 2024: {}\t{}\t{}", date2Balance.lastEntry().getValue(),
-                        profit2024, Utils.formatDouble(profit2024 / BudgetManagerSimple.getInstance().balanceBasic, 2));
-                for (Map.Entry<Double, Long> entry : profit30d2Date.entrySet()) {
-                    LOG.info("{} {}", Utils.normalizeDateYYYYMMDD(entry.getValue()), entry.getKey());
-                    counter++;
-                    if (counter > 10) {
-                        break;
-                    }
-                }
+//                Double profit2021 = date2Balance.get(Utils.sdfFile.parse("20220101").getTime())
+//                        - date2Balance.get(Utils.sdfFile.parse("20210101").getTime());
+//                Double profit2022 = date2Balance.get(Utils.sdfFile.parse("20230101").getTime())
+//                        - date2Balance.get(Utils.sdfFile.parse("20220101").getTime());
+//                Double profit2023 = date2Balance.get(Utils.sdfFile.parse("20240101").getTime()) -
+//                        date2Balance.get(Utils.sdfFile.parse("20230101").getTime());
+//                Double profit2024 = date2Balance.lastEntry().getValue() - date2Balance.get(Utils.sdfFile.parse("20240101").getTime());
+//                LOG.info("Year 2021: {}\t{}\t{}", date2Balance.get(Utils.sdfFile.parse("20220101").getTime()),
+//                        profit2021, Utils.formatDouble(profit2021 / BudgetManagerSimple.getInstance().balanceBasic, 2));
+//                LOG.info("Year 2022: {}\t{}\t{}", date2Balance.get(Utils.sdfFile.parse("20230101").getTime()),
+//                        profit2022, Utils.formatDouble(profit2022 / BudgetManagerSimple.getInstance().balanceBasic, 2));
+//                LOG.info("Year 2023: {}\t{}\t{}", date2Balance.get(Utils.sdfFile.parse("20240101").getTime()),
+//                        profit2023, Utils.formatDouble(profit2023 / BudgetManagerSimple.getInstance().balanceBasic, 2));
+//                LOG.info("Year 2024: {}\t{}\t{}", date2Balance.lastEntry().getValue(),
+//                        profit2024, Utils.formatDouble(profit2024 / BudgetManagerSimple.getInstance().balanceBasic, 2));
+//                for (Map.Entry<Double, Long> entry : profit30d2Date.entrySet()) {
+//                    LOG.info("{} {}", Utils.normalizeDateYYYYMMDD(entry.getValue()), entry.getKey());
+//                    counter++;
+//                    if (counter > 10) {
+//                        break;
+//                    }
+//                }
                 profitReport = profitReport.replaceAll("\t", "\n");
                 LOG.info(profitReport);
             } catch (Exception e) {

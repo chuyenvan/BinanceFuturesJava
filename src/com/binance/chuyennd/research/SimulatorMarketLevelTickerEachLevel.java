@@ -56,7 +56,7 @@ public class SimulatorMarketLevelTickerEachLevel {
             BudgetManagerSimple.getInstance().levelRun = level;
             test.FILE_STORAGE_ORDER_DONE = "storage/level/OrderTestDone-" + level;
             String fileData = test.FILE_STORAGE_ORDER_DONE + "-"
-                    + Configs.TIME_AFTER_ORDER_2_SL + "-" + Configs.RATE_TICKER_MAX_SCAN_ORDER;
+                    + Configs.TIME_AFTER_ORDER_2_SL ;
             if (new File(fileData).exists()) {
                 continue;
             }
@@ -154,7 +154,7 @@ public class SimulatorMarketLevelTickerEachLevel {
         }
         LOG.info("Update-{}-{} {}", Configs.TIME_AFTER_ORDER_2_SL, BudgetManagerSimple.getInstance().levelRun, reportMinProfit);
         Storage.writeObject2File(FILE_STORAGE_ORDER_DONE + "-"
-                + Configs.TIME_AFTER_ORDER_2_SL + "-" + Configs.RATE_TICKER_MAX_SCAN_ORDER, allOrderDone);
+                + Configs.TIME_AFTER_ORDER_2_SL , allOrderDone);
         Storage.writeObject2File("storage/orderRunning.data", symbol2OrderRunning);
         BudgetManagerSimple.getInstance().printBalanceIndex();
     }
@@ -354,7 +354,7 @@ public class SimulatorMarketLevelTickerEachLevel {
         if (orderMulti != null) {
             if (orderMulti.timeStart < ticker.startTime.longValue()) {
                 orderMulti.updatePriceByKlineSimple(ticker);
-                orderMulti.updateStatusNew();
+                orderMulti.updateStatusNew(null);
                 if (orderMulti.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)
                         || orderMulti.status.equals(OrderTargetStatus.STOP_LOSS_DONE)
                         || orderMulti.status.equals(OrderTargetStatus.STOP_MARKET_DONE)) {
@@ -373,7 +373,7 @@ public class SimulatorMarketLevelTickerEachLevel {
                     symbol2OrdersEntry.remove(symbol);
                     symbol2OrderRunning.remove(symbol);
                 } else {
-                    orderMulti.updateTPSL();
+                    orderMulti.updateTPSL(null);
                 }
             }
         }

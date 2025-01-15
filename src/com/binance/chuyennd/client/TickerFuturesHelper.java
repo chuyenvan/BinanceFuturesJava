@@ -278,6 +278,25 @@ public class TickerFuturesHelper {
         return results;
     }
 
+    public static TreeMap<Double, Double> getFundingFeeWithStartTime(String symbol, Long startTime) {
+        String url = Constants.URL_FUNDING_FEE_FUTURES_START_TIME.replace("xxxxxx", symbol);
+        TreeMap<Double, Double> results = new TreeMap<>();
+        try {
+            String urlData = url.replace("tttttt", startTime.toString());
+            String respon = HttpRequest.getContentFromUrl(urlData);
+            List<Map<Object, Object>> allKlines = Utils.gson.fromJson(respon, List.class);
+            for (Map<Object, Object> objs : allKlines) {
+                results.put(Double.parseDouble(objs.get("fundingTime").toString()), Double.parseDouble(objs.get("fundingRate").toString()));
+            }
+
+        } catch (Exception e) {
+            LOG.info("Error get funding fee: {} {}", symbol, startTime);
+            e.printStackTrace();
+        }
+
+        return results;
+    }
+
     public static OrderSide getCurrentTrendWithInterval(String symbol, String interval) {
         try {
             KlineObjectNumber ticker = getLastTicker(symbol, interval);
@@ -324,6 +343,19 @@ public class TickerFuturesHelper {
             TickerStatistics ticker = Utils.gson.fromJson(futurePrice.toString(), TickerStatistics.class);
             if (StringUtils.endsWithIgnoreCase(ticker.getSymbol(), "usdt")) {
                 results.add(ticker.getSymbol());
+            }
+        }
+        return results;
+    }
+
+    public static TreeMap<Double, String> getSymbolVolumeLower() {
+        TreeMap<Double, String> results = new TreeMap<Double, String>();
+        String allFuturePrices = HttpRequest.getContentFromUrl("https://fapi.binance.com/fapi/v1/ticker/24hr");
+        List<Object> futurePrices = Utils.gson.fromJson(allFuturePrices, List.class);
+        for (Object futurePrice : futurePrices) {
+            TickerStatistics ticker = Utils.gson.fromJson(futurePrice.toString(), TickerStatistics.class);
+            if (StringUtils.endsWithIgnoreCase(ticker.getSymbol(), "usdt")) {
+                results.put(Double.parseDouble(ticker.getQuoteVolume()), ticker.getSymbol());
             }
         }
         return results;
@@ -379,11 +411,11 @@ public class TickerFuturesHelper {
 //            LOG.info("{} {}", symbol, tickers.size());
 //        }
 //        testGetTicker24hr();
-        List<KlineObjectNumber> tickers = getTicker(Constants.SYMBOL_PAIR_BTC, Constants.INTERVAL_15M);
-        tickers = updateIndicator(tickers);
-        for (KlineObjectNumber ticker : tickers) {
-            LOG.info("{} {} {}", Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()), ticker.ma20, ticker.histogram);
+        TreeMap<Double, String> volume2Symbol = getSymbolVolumeLower();
+        for (Double volume: volume2Symbol.keySet()){
+            LOG.info("{} {} ", volume2Symbol.get(volume), volume/1E6);
         }
+//        LOG.info("{}", TickerFuturesHelper.getFundingFeeWithStartTime("OCEANUSDT", 1731916800000L));
 //        getCurrentTrendLongTime(Contanst.SYMBOL_PAIR_BTC, 60);
 //        System.out.println(getCurrentTrendWithInterval("DYDXUSDT", Contanst.INTERVAL_15M));
 //        System.out.println(Utils.toJson(getLastTicker("DYDXUSDT", Contanst.INTERVAL_15M)));
@@ -659,6 +691,7 @@ public class TickerFuturesHelper {
         result.totalUsdt = totalUsdt;
         return result;
     }
+
     public static KlineObjectSimple extractKlineSimpleByNumberTicker(List<KlineObjectSimple> tickers, int index, int numberTicker) {
         if (index < numberTicker) {
             return null;

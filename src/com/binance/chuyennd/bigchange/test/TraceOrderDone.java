@@ -20,7 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class TraceOrderDone {
     public static final Logger LOG = LoggerFactory.getLogger(TraceOrderDone.class);
 
-    public static String FILE_STORAGE_ORDER_DONE = "target/OrderTestDone.data-16-0.04";
+    public static String FILE_STORAGE_ORDER_DONE = "target/OrderTestDone.data-5";
 //    public static String FILE_STORAGE_ORDER_DONE = "target/OrderTestDone-ALT_REVERSE_EXTEND-16-0.04";
 //    public static String FILE_STORAGE_ORDER_DONE = "target/OrderTestDone.data-20-0.04";
 //    public static String FILE_STORAGE_ORDER_DONE = "target/OrderSpecialDone.data";
@@ -39,8 +39,7 @@ public class TraceOrderDone {
         }
 
         printOrderTestDone(fileName);
-//        printOrderRunning("target/202112");
-
+//        printOrderRunning("target/202307");
 
 
     }
@@ -68,7 +67,6 @@ public class TraceOrderDone {
 
         for (OrderTargetInfoTest order : allOrderDone.values()) {
             List<OrderTargetInfoTest> orders = time2Orders.get(order.timeStart);
-
             if (orders == null) {
                 orders = new ArrayList<>();
                 time2Orders.put(order.timeUpdate, orders);
@@ -214,7 +212,8 @@ public class TraceOrderDone {
                 (TreeMap<Long, OrderTargetInfoTest>) Storage.readObjectFromFile(FILE_STORAGE_ORDER_DONE);
 
         List<String> lines = new ArrayList<>();
-        lines.add("sym,entry,tp,min,rate,max,rate,profit,status,start,time, end,level,rate ticker,volume,quantity,orders,unP, SLTotal, marginTotal, margin,pnl,time");
+        lines.add("sym,entry,tp,min,rate,max,rate,profit,status,start,time, end,level,rate60m,rate ticker,volume,quantity,orders,unP, SLTotal," +
+                " marginTotal, margin,pnl,time,funding,dow,up,dow15m,up15m,btcrate,btcdown15m,btcup15m");
 //        List<KlineObjectNumber> tickers = (List<KlineObjectNumber>) Storage.readObjectFromFile(DataManager.FOLDER_TICKER_15M + Constants.SYMBOL_PAIR_BTC);
         Map<Long, KlineObjectNumber> time2Ticker = new HashMap<>();
         Map<Long, Integer> time2Index = new HashMap<>();
@@ -231,6 +230,10 @@ public class TraceOrderDone {
         Map<Double, String> pnl2Info = new HashMap<>();
 
         for (OrderTargetInfoTest order : time2Order.values()) {
+            if (!order.time2FundingFee.isEmpty()){
+                LOG.info("{} {} {} {} {}", order.symbol, Utils.normalizeDateYYYYMMDDHHmm(order.timeStart), Utils.normalizeDateYYYYMMDDHHmm(order.timeUpdate),
+                        order.calFundingFee(), Utils.toJson(order.time2FundingFee));
+            }
             pnls.add(order.calTp());
             pnl2Info.put(order.calTp(), order.symbol + "-" + Utils.normalizeDateYYYYMMDDHHmm(order.timeStart));
             if (!org.apache.commons.lang.StringUtils.equals(Utils.sdfFile.format(new Date(order.timeStart)), "20210519")) {
@@ -259,7 +262,7 @@ public class TraceOrderDone {
             symbol2Profit.put(order.symbol, profitOfSymbol);
             StringBuilder builder = new StringBuilder();
             builder.append(order.symbol.replace("USDT", "")).append(",");
-                builder.append(order.priceEntry).append(",");
+            builder.append(order.priceEntry).append(",");
             builder.append(order.priceTP).append(",");
             builder.append(order.minPrice).append(",");
             builder.append(Utils.rateOf2Double(order.minPrice, order.priceEntry)).append(",");
@@ -270,7 +273,8 @@ public class TraceOrderDone {
             builder.append(Utils.normalizeDateYYYYMMDDHHmm(order.timeStart)).append(",'");
             builder.append(Utils.sdfGoogle.format(new Date(order.timeStart))).append(",");
             builder.append(Utils.normalizeDateYYYYMMDDHHmm(order.timeUpdate)).append(",");
-           builder.append(order.marketLevelChange).append(",");
+            builder.append(order.marketLevelChange).append(",");
+            builder.append(order.rateChange).append(",");
             builder.append(Utils.rateOf2Double(order.tickerOpen.priceClose, order.tickerOpen.priceOpen)).append(",");
             builder.append(order.tickerOpen.totalUsdt).append(",");
             builder.append(order.quantity).append(",");
@@ -281,6 +285,7 @@ public class TraceOrderDone {
             builder.append(order.calMargin()).append(",");
             builder.append(order.calTp()).append(",");
             builder.append((order.timeUpdate - order.timeStart) / Utils.TIME_MINUTE).append(",");
+            builder.append((order.calFundingFee())).append(",");
             if (order.marketData != null) {
                 builder.append(order.marketData.rateDownAvg).append(",");
                 builder.append(order.marketData.rateUpAvg).append(",");
@@ -311,12 +316,13 @@ public class TraceOrderDone {
                 Utils.findMinSubarraySum(pnl2024.toArray(new Double[0])), pnl2Info.get(Utils.findMinSubarraySumIndex(pnl2024.toArray(new Double[0]))));
         FileUtils.writeLines(new File(fileName), lines);
     }
+
     public static void printOrderRunning(String fileInput) throws IOException {
         ConcurrentHashMap<String, List<OrderTargetInfoTest>> allOrderDone =
                 (ConcurrentHashMap<String, List<OrderTargetInfoTest>>) Storage.readObjectFromFile(fileInput);
         TreeMap<Long, OrderTargetInfoTest> time2Order = new TreeMap<>();
         List<String> lines = new ArrayList<>();
-        lines.add("sym,entry,tp,min,rate,max,rate,profit,status,start,time, end,level,rate ticker,volume,quantity,orders,unP, SLTotal, marginTotal,margin,pnl,time");
+        lines.add("sym,entry,tp,min,rate,max,rate,profit,status,start,time, end,level,rate ticker,volume,quantity,orders,unP, SLTotal, marginTotal,margin,pnl,time,leverage");
         int counter = 0;
         for (List<OrderTargetInfoTest> orders : allOrderDone.values()) {
             for (OrderTargetInfoTest order : orders) {
@@ -349,6 +355,7 @@ public class TraceOrderDone {
                 builder.append(order.calMargin()).append(",");
                 builder.append(order.calTp()).append(",");
                 builder.append((order.timeUpdate - order.timeStart) / Utils.TIME_MINUTE).append(",");
+                builder.append(order.leverage).append(",");
                 if (order.marketData != null) {
                     builder.append(order.marketData.rateDownAvg).append(",");
                     builder.append(order.marketData.rateUpAvg).append(",");

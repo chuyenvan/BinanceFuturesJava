@@ -110,12 +110,13 @@ public class BinanceFuturesClientSingleton {
     }
 
     private static void tracePnlAsymbol() throws ParseException {
-        String symbol = "SANDUSDT";
+        String symbol = "BTCUSDT";
         List<Income> incomes = BinanceFuturesClientSingleton.getInstance().getPositionHistoryBySymbol(symbol,
-                Utils.sdfFileHour.parse("20241126 07:00").getTime(), System.currentTimeMillis());
+                Utils.sdfFileHour.parse("20241226 08:00").getTime(), System.currentTimeMillis());
         Double total = 0d;
         Double REALIZED_PNL = 0d;
         Double FUNDING_FEE = 0d;
+
         Double COMMISSION = 0d;
         for (Income income : incomes) {
             total += income.getIncome().doubleValue();

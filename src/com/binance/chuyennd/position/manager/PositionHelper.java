@@ -32,11 +32,11 @@ import com.binance.client.model.trade.PositionRisk;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- *
  * @author pc
  */
 public class PositionHelper {
@@ -45,9 +45,16 @@ public class PositionHelper {
 
     public static Double callMargin(PositionRisk pos) {
         try {
-        return pos.getEntryPrice().doubleValue() * pos.getPositionAmt().doubleValue();
+            return pos.getEntryPrice().doubleValue() * pos.getPositionAmt().doubleValue() / pos.getLeverage().doubleValue();
         } catch (Exception e) {
-
+            e.printStackTrace();
+        }
+        return null;
+    }
+    public static Double calRateLoss(PositionRisk pos) {
+        try {
+            return Utils.rateOf2Double(pos.getMarkPrice().doubleValue(), pos.getEntryPrice().doubleValue());
+        } catch (Exception e) {
             e.printStackTrace();
         }
         return null;

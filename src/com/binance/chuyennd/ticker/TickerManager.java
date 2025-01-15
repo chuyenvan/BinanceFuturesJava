@@ -93,13 +93,17 @@ public class TickerManager {
         new Thread(() -> {
             Thread.currentThread().setName("ThreadUpdateBudgetByHour");
             LOG.info("Start thread ThreadUpdateBudgetByHour!");
-            startUpdateTicker1mSimple();
+//            startUpdateTicker1mSimple();
             while (true) {
                 try {
-                    if (Utils.getCurrentHour() == 7 || Utils.getCurrentHour() == 17) {
-                        List<KlineObjectSimple> tickers = TickerManager.getTickerFullBtc1M();
-                        LOG.info("End ticker btc 1m: {}", Utils.normalizeDateYYYYMMDDHHmm(tickers.get(tickers.size() - 1).startTime.longValue()));
+                    if (Utils.getCurrentHour() == 7
+                            || Utils.getCurrentHour() == 10
+                            || Utils.getCurrentHour() == 18
+                            || Utils.getCurrentHour() == 23) {
+//                        List<KlineObjectSimple> tickers = TickerManager.getTickerFullBtc1M();
+//                        LOG.info("End ticker btc 1m: {}", Utils.normalizeDateYYYYMMDDHHmm(tickers.get(tickers.size() - 1).startTime.longValue()));
                         startUpdateTicker1mSimple();
+                        startUpdateFundingFee();
                     }
                     if (Utils.getCurrentHour() == 16) {
                         startResetTicker15mSimple();
@@ -534,6 +538,72 @@ public class TickerManager {
         }
     }
 
+    public void startUpdateFundingFee() {
+        try {
+            try {
+                Set<String> symbols = TickerFuturesHelper.getAllSymbol();
+                symbols.removeAll(Constants.diedSymbol);
+                Long timeStart = Utils.sdfFile.parse(Configs.TIME_RUN).getTime();
+
+                for (String symbol : symbols) {
+                    updateFundingFeeBySymbol(symbol, timeStart);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        } catch (Exception e) {
+            LOG.error("ERROR during UpdateTicker15m: {}", e);
+            e.printStackTrace();
+        }
+    }
+
+    public void updateFundingFeeBySymbol(String symbol, Long timeStart) {
+        String fileData = Configs.FOLDER_FUNDING_FEE + symbol;
+        File file = new File(fileData);
+        Long time = timeStart;
+        TreeMap<Long, Double> time2FundingRate = new TreeMap<>();
+        if (file.exists()) {
+            try {
+                time2FundingRate = (TreeMap<Long, Double>) Storage.readObjectFromFile(fileData);
+                if (time2FundingRate != null && time2FundingRate.size() > 0) {
+                    time = time2FundingRate.lastKey() + 4 * Utils.TIME_HOUR;
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        try {
+//            LOG.info("Start get funding fee for: {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time));
+            while (true) {
+                if (time > 8 * Utils.TIME_HOUR + System.currentTimeMillis()) {
+                    break;
+                }
+                try {
+                    TreeMap<Double, Double> time2Rate = TickerFuturesHelper.getFundingFeeWithStartTime(symbol, time);
+                    if (time2Rate == null
+                            || time2Rate.isEmpty()) {
+                        break;
+                    } else {
+                        for (Double timeR : time2Rate.keySet()) {
+                            time2FundingRate.put(timeR.longValue()/Utils.TIME_SECOND * Utils.TIME_SECOND, time2Rate.get(timeR));
+                        }
+                        time = time2FundingRate.lastKey() + 4 * Utils.TIME_HOUR;
+                    }
+                } catch (Exception e) {
+                    LOG.info("Error get funding rate for : {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time));
+                    e.printStackTrace();
+                    break;
+                }
+                Thread.sleep(300);
+            }
+//            LOG.info("Write funding fee for: {} {} {}", symbol, time2FundingRate.size(), Utils.normalizeDateYYYYMMDDHHmm(time));
+            Storage.writeObject2File(fileData, time2FundingRate);
+        } catch (Exception e) {
+            LOG.info("Error get funding rate for : {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time));
+            e.printStackTrace();
+        }
+    }
+
     private TreeMap<Long, Map<String, KlineObjectSimple>> getAllTicker1MBuyDate(Long time, Set<String> symbols) {
         TreeMap<Long, Map<String, KlineObjectSimple>> time2SymbolAndKline = new TreeMap<>();
         Long startTime = time;
@@ -698,8 +768,8 @@ public class TickerManager {
     public void updateDataBySymbolSimple(String symbol, String interval, Long startTime) {
         try {
             counter++;
-            LOG.info("Process: {}/{}", counter, total);
-            LOG.info("Start get ticker symbol: {} {} {}", symbol, interval, Utils.normalizeDateYYYYMMDDHHmm(startTime));
+//            LOG.info("Process: {}/{}", counter, total);
+//            LOG.info("Start get ticker symbol: {} {} {}", symbol, interval, Utils.normalizeDateYYYYMMDDHHmm(startTime));
             String fileName = null;
             switch (interval) {
                 case Constants.INTERVAL_1D:
@@ -729,9 +799,9 @@ public class TickerManager {
             }
             tickers.addAll(TickerFuturesHelper.getTickerWithStartTimeFull(symbol, interval, startTime));
             tickers = TickerFuturesHelper.updateIndicator(tickers);
-            LOG.info("Write ticker of {} {} {} to file: {}", symbol, interval, tickers.size(), fileName);
+//            LOG.info("Write ticker of {} {} {} to file: {}", symbol, interval, tickers.size(), fileName);
             Storage.writeObject2File(fileName, tickers);
-            LOG.info("Finish get ticker symbol: {} {}", symbol, interval);
+//            LOG.info("Finish get ticker symbol: {} {}", symbol, interval);
 
         } catch (Exception e) {
             e.printStackTrace();

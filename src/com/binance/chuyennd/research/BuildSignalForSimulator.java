@@ -86,7 +86,8 @@ public class BuildSignalForSimulator {
                         }
                         MarketDataObject marketData = calMarketData(symbol2Ticker, symbol2MaxPrice, symbol2MinPrice);
                         MarketLevelChange levelChange = MarketBigChangeDetectorTest.getMarketStatusSimple(marketData.rateDownAvg,
-                                marketData.rateUpAvg, marketData.rateBtc, marketData.rateDown15MAvg, marketData.rateUp15MAvg, marketData.rateBtcDown15M);
+                                marketData.rateUpAvg, marketData.rateBtc, marketData.rateDown15MAvg, marketData.rateUp15MAvg,
+                                marketData.rateBtcDown15M);
                         if (levelChange != null) {
                             marketData.level = levelChange;
                             timesTradeMarket.put(time, marketData);
