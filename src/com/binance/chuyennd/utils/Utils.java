@@ -11,6 +11,8 @@ import com.binance.chuyennd.client.TickerFuturesHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.MACDEntry;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
+import com.binance.chuyennd.research.OrderTargetInfoTest;
+import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.client.constant.Constants;
 import com.binance.client.model.enums.OrderSide;
 import com.binance.client.model.trade.PositionRisk;
@@ -28,6 +30,7 @@ import java.net.URLEncoder;
 import java.security.MessageDigest;
 import java.text.*;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -1103,6 +1106,7 @@ public class Utils {
         }
         return quantity;
     }
+
     public static Double calQuantityTest(Double budget, Integer leverage, Double priceEntry, String symbol) {
         Double quantity = budget * leverage / priceEntry;
         quantity = ClientSingleton.getInstance().normalizeQuantityTest(symbol, quantity);
@@ -1201,6 +1205,18 @@ public class Utils {
         return result;
     }
 
+    public static KlineObjectSimple convertKlineSimple(KlineObjectNumber ticker) {
+        KlineObjectSimple result = new KlineObjectSimple();
+        result.priceOpen = ticker.priceOpen;
+        result.priceClose = ticker.priceClose;
+        result.minPrice = ticker.minPrice;
+        result.maxPrice = ticker.maxPrice;
+        result.startTime = ticker.startTime;
+        result.totalUsdt = ticker.totalUsdt;
+        return result;
+    }
+
+
     public static KlineObjectNumber cloneKlineObjectNumber(KlineObjectNumber ticker) {
         KlineObjectNumber result = new KlineObjectNumber();
         result.priceOpen = ticker.priceOpen;
@@ -1215,7 +1231,20 @@ public class Utils {
     public static void main(String[] args) {
 //        System.out.println(Utils.sendSms2Skype("test skype"));
 //        System.out.println(Utils.normalizeHHmm(System.currentTimeMillis()));
-        Utils.sendSms2Telegram("test");
+//        Utils.sendSms2Telegram("test");
+        for (int i = 0; i < 5; i++) {
+            long time = System.currentTimeMillis() - i * Utils.TIME_WEEK;
+            LOG.info("{} -> {}", Utils.normalizeDateYYYYMMDDHHmm(time),
+                    Utils.normalizeDateYYYYMMDDHHmm(Utils.getTimeStartWeek(time)));
+        }
+        try {
+            Long time = Utils.sdfFileHour.parse("20250224 05:38").getTime();
+            LOG.info("{} -> {}", Utils.normalizeDateYYYYMMDDHHmm(time),
+                    Utils.normalizeDateYYYYMMDDHHmm(Utils.getTimeStartWeek(time)));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
 //        checkTickerFalse();
 //        testDescendingKeySet();
 //        System.out.println(Utils.readSms2Telegram());
@@ -1292,6 +1321,9 @@ public class Utils {
     public static long getTimeInterval15m(long time) {
         return (time / (15 * TIME_MINUTE)) * 15 * TIME_MINUTE;
     }
+    public static long getTimeInterval5m(long time) {
+        return (time / (5 * TIME_MINUTE)) * 5 * TIME_MINUTE;
+    }
 
     public static long get4Hour(long time) {
         return (time / 4 / TIME_HOUR) * 4 * TIME_HOUR;
@@ -1303,6 +1335,18 @@ public class Utils {
 
     public static long getDate(long time) {
         return (time / TIME_DAY) * TIME_DAY;
+    }
+
+    public static Long getTimeStartWeek(long time) {
+        Calendar c = GregorianCalendar.getInstance();
+// Set the calendar to monday of the current week
+        c.setTimeInMillis(time);
+        c.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY);
+        if (c.get(Calendar.DAY_OF_WEEK) == 2
+                && c.get(Calendar.HOUR_OF_DAY) < 7) {
+            return getDate(c.getTime().getTime()) - 6 * Utils.TIME_DAY;
+        }
+        return getDate(c.getTime().getTime());
     }
 
     public static String getMonth(long time) {
@@ -1450,5 +1494,85 @@ public class Utils {
             marginMax = " " + marginMax;
         }
         return marginMax;
+    }
+    public static String formatLogString(Object obj, int length) {
+        String marginMax = String.valueOf(obj);
+        while (marginMax.length() < length) {
+            marginMax = marginMax + " ";
+        }
+        return marginMax;
+    }
+
+    public static String statisticRateSuccess(ConcurrentHashMap<String, OrderTargetInfoTest> allOrderDone) {
+        Double pnl = 0d;
+        try {
+            for (OrderTargetInfoTest order : allOrderDone.values()) {
+                pnl += order.calRateTp();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        if (allOrderDone.size() > 0) {
+            Double rate = pnl / allOrderDone.size();
+            return allOrderDone.size() + " -> " + Utils.formatPercent(rate) + "%";
+        }
+        return "";
+
+    }
+
+    public static String statisticRateSuccessTree(TreeMap<Long, OrderTargetInfoTest> allOrderDone) {
+        Double pnl = 0d;
+        Integer counterFalse = 0;
+        try {
+            for (OrderTargetInfoTest order : allOrderDone.values()) {
+                if (order.dynamicTP_SL == null) {
+                    pnl += order.calRateTp();
+                    if (order.status.equals(OrderTargetStatus.STOP_LOSS_DONE)) {
+                        counterFalse++;
+                    }
+                } else {
+                    pnl += 3 * order.calRateTp();
+                    if (order.status.equals(OrderTargetStatus.STOP_LOSS_DONE)) {
+                        counterFalse += 3;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        if (allOrderDone.size() > 0) {
+            Double rate = pnl / allOrderDone.size();
+            return counterFalse + "/" + allOrderDone.size() + " -> " + Utils.formatPercent(rate) + "%";
+        }
+        return "";
+
+    }
+
+    public static Double maxPrice(KlineObjectNumber ticker, Double maxPrice) {
+        if (maxPrice == null || maxPrice < ticker.maxPrice) {
+            maxPrice = ticker.maxPrice;
+        }
+        return maxPrice;
+    }
+
+    public static Double maxPrice(KlineObjectSimple ticker, Double maxPrice) {
+        if (maxPrice == null || maxPrice < ticker.maxPrice) {
+            maxPrice = ticker.maxPrice;
+        }
+        return maxPrice;
+    }
+
+    public static Double minPrice(KlineObjectNumber ticker, Double minPrice) {
+        if (minPrice == null || minPrice > ticker.minPrice) {
+            minPrice = ticker.minPrice;
+        }
+        return minPrice;
+    }
+
+    public static Double minPrice(KlineObjectSimple ticker, Double minPrice) {
+        if (minPrice == null || minPrice > ticker.minPrice) {
+            minPrice = ticker.minPrice;
+        }
+        return minPrice;
     }
 }

@@ -15,24 +15,11 @@
  */
 package com.binance.chuyennd.position.manager;
 
-import com.binance.chuyennd.client.ClientSingleton;
 import com.binance.chuyennd.client.OrderHelper;
-import com.binance.chuyennd.client.TickerFuturesHelper;
-import com.binance.chuyennd.object.KlineObject;
-import com.binance.chuyennd.utils.HttpRequest;
+import com.binance.chuyennd.trading.grid.GridOrderHelper;
 import com.binance.chuyennd.utils.Utils;
-import com.binance.client.constant.Constants;
-import com.binance.client.model.enums.NewOrderRespType;
 import com.binance.client.model.enums.OrderSide;
-import com.binance.client.model.enums.OrderType;
-import com.binance.client.model.enums.TimeInForce;
-import com.binance.client.model.trade.Order;
 import com.binance.client.model.trade.PositionRisk;
-
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,11 +40,25 @@ public class PositionHelper {
     }
     public static Double calRateLoss(PositionRisk pos) {
         try {
-            return Utils.rateOf2Double(pos.getMarkPrice().doubleValue(), pos.getEntryPrice().doubleValue());
+            Double rate = Utils.rateOf2Double(pos.getMarkPrice().doubleValue(), pos.getEntryPrice().doubleValue());
+            if (pos.getPositionAmt().doubleValue() < 0){
+                rate = -rate;
+            }
+            return rate;
         } catch (Exception e) {
             e.printStackTrace();
         }
         return null;
+    }
+    public static void closePositionGrid(PositionRisk position) {
+        if (position != null) {
+            OrderSide side = OrderSide.SELL;
+            Double quantity = Math.abs(position.getPositionAmt().doubleValue());
+            if (position.getPositionAmt().doubleValue() < 0) {
+                side = OrderSide.BUY;
+            }
+            GridOrderHelper.newOrderMarket(position.getSymbol(), side, quantity);
+        }
     }
 
 }

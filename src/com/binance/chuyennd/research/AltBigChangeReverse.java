@@ -148,7 +148,7 @@ public class AltBigChangeReverse {
         for (OrderTargetInfoTest orderInfo : orders) {
             if (orderInfo.timeStart < ticker.startTime.longValue()) {
                 orderInfo.updatePriceByKlineSimple(ticker);
-                orderInfo.updateStatusNew(null);
+                orderInfo.updateStatusNew();
                 if (orderInfo.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)
                         || orderInfo.status.equals(OrderTargetStatus.STOP_LOSS_DONE)
                         || orderInfo.status.equals(OrderTargetStatus.STOP_MARKET_DONE)) {
@@ -156,7 +156,7 @@ public class AltBigChangeReverse {
                     BudgetManagerSimple.getInstance().updatePnl(orderInfo);
                     orderDone.add(orderInfo);
                 } else {
-                    orderInfo.updateTPSL(null);
+                    orderInfo.updateTPSL();
                 }
             }
         }
@@ -169,7 +169,7 @@ public class AltBigChangeReverse {
     private void createOrderBUYTarget(String symbol, KlineObjectSimple ticker) {
         Double entry = ticker.priceClose;
         Double budget = BudgetManagerSimple.getInstance().getBudget();
-        Integer leverage = BudgetManagerSimple.getInstance().getLeverage(symbol);
+        Integer leverage = BudgetManagerSimple.getInstance().getLeverage();
         String log = OrderSide.BUY + " " + symbol + " entry: " + entry + " budget: " + budget
                 + " time:" + Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue());
         Double quantity = Utils.calQuantity(budget, leverage, entry, symbol);

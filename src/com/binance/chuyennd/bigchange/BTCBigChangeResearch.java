@@ -46,7 +46,7 @@ public class BTCBigChangeResearch {
     public static final Logger LOG = LoggerFactory.getLogger(Test.class);
     public static final String URL_TICKER_1D = "https://fapi.binance.com/fapi/v1/klines?symbol=xxxxxx&interval=1d";
     public static final String URL_TICKER_15M = "https://fapi.binance.com/fapi/v1/klines?symbol=xxxxxx&interval=15m";
-    public static final Double RATE_BIG_CHANGE_TEST = Configs.getDouble("RateBigChangeTest");
+
 
    
 
@@ -291,7 +291,7 @@ public class BTCBigChangeResearch {
                         LOG.info("Detect bigchane in month kline!");
                         KlineObjectNumber ticker = TickerFuturesHelper.getLastTicker(Constants.SYMBOL_PAIR_BTC, Constants.INTERVAL_1M);
                         Double rate = (ticker.maxPrice - ticker.minPrice) / ticker.minPrice;
-                        if (rate > RATE_BIG_CHANGE_TEST) {
+                        if (rate > 0.03) {
                             LOG.info("{} {} {}", "BTCUSDT", rate, Utils.toJson(ticker));
                             printDataAllSymbolNextMinute(ticker, symbols);
                         }
@@ -364,13 +364,13 @@ public class BTCBigChangeResearch {
 //        extractKline_23h9_11_2023(time);
 //        extractKlineBigChangeWithBTC();
 //        extractKlineBigChangeOfBTC(Contanst.INTERVAL_1M, 0.025);
-        startThreadDetectBigChangeBTCInMinute();
+//        startThreadDetectBigChangeBTCInMinute();
 //        for (int i = 0; i < 10; i++) {
 //            System.out.println(System.currentTimeMillis() % Utils.TIME_MINUTE);
 //            Thread.sleep(Utils.TIME_SECOND);
 //        }
-//        Double rate = 0.05;
-//        extractKlineTrendBTCWithRate(rate);
+        Double rate = 0.05;
+        extractKlineTrendBTCWithRate(rate);
 //        extractRateChangeInMonth();
 //        System.out.println(Utils.gson.toJson(ClientSingleton.getInstance().syncRequestClient.getBalance()));
 //        int numberDay = 15;

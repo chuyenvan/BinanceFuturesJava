@@ -3,7 +3,7 @@ package com.binance.chuyennd.bigchange.test;
 import com.binance.chuyennd.client.TickerFuturesHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.TrendState;
-import com.binance.chuyennd.trading.DetectEntrySignal2Trader;
+import com.binance.chuyennd.trading.bak.DetectEntrySignal2GridTrade;
 import com.binance.chuyennd.trend.BtcTrendObject;
 import com.binance.chuyennd.utils.Storage;
 import com.binance.chuyennd.utils.Utils;
@@ -91,7 +91,7 @@ public class BTCTrendManager {
                 try {
                     Thread.sleep(Utils.TIME_SECOND);
                 } catch (InterruptedException ex) {
-                    java.util.logging.Logger.getLogger(DetectEntrySignal2Trader.class.getName()).log(Level.SEVERE, null, ex);
+                    java.util.logging.Logger.getLogger(DetectEntrySignal2GridTrade.class.getName()).log(Level.SEVERE, null, ex);
                 }
             }
         }).start();

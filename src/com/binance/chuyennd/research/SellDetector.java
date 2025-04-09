@@ -5,7 +5,6 @@
 package com.binance.chuyennd.research;
 
 import com.binance.chuyennd.bigchange.market.MarketBigChangeDetectorTest;
-import com.binance.chuyennd.bigchange.market.MarketLevelChange;
 import com.binance.chuyennd.bigchange.statistic.data.DataManager;
 import com.binance.chuyennd.bigchange.test.TraceOrderDone;
 import com.binance.chuyennd.client.TickerFuturesHelper;
@@ -33,10 +32,11 @@ public class SellDetector {
 
     public static final Logger LOG = LoggerFactory.getLogger(SellDetector.class);
     public final String FILE_STORAGE_ORDER_DONE = "storage/OrderSELLDone.data";
-    public static final String FILE_SIGNAL_SELL = "target/time_btc_sell.data";
 
     public ConcurrentHashMap<String, OrderTargetInfoTest> allOrderDone;
+    public TreeMap<Long, List<String>> time2SymbolSell;
     public ConcurrentHashMap<String, OrderTargetInfoTest> orderRunning = new ConcurrentHashMap();
+
 
     public static void main(String[] args) throws ParseException, IOException {
 //        long startTime = Utils.sdfFile.parse("20210201").getTime();
@@ -63,18 +63,18 @@ public class SellDetector {
 //        }
         SellDetector test = new SellDetector();
         test.initData();
-        List<KlineObjectSimple> tickers = getTickerFullBtc1M();
-        Map<Long, Double> timeReverse = new HashMap<>();
-        for (int i = 0; i < tickers.size(); i++) {
-            KlineObjectSimple ticker = tickers.get(i);
-            if (isTimeSell(tickers, i)) {
-                timeReverse.put(ticker.startTime.longValue(), Utils.rateOf2Double(ticker.maxPrice, ticker.minPrice));
-            }
-        }
-        LOG.info("Last btcTicker: {}", Utils.normalizeDateYYYYMMDDHHmm(tickers.get(tickers.size() - 1).startTime.longValue()));
-        Storage.writeObject2File(FILE_SIGNAL_SELL, timeReverse);
-        System.out.println(Utils.normalizeDateYYYYMMDDHHmm(tickers.get(tickers.size() - 1).startTime.longValue()));
-        test.statisticAll();
+//        List<KlineObjectSimple> tickers = getTickerFullBtc1M();
+//        Map<Long, Double> timeReverse = new HashMap<>();
+//        for (int i = 0; i < tickers.size(); i++) {
+//            KlineObjectSimple ticker = tickers.get(i);
+//            if (isTimeSell(tickers, i)) {
+//                timeReverse.put(ticker.startTime.longValue(), Utils.rateOf2Double(ticker.maxPrice, ticker.minPrice));
+//            }
+//        }
+//        LOG.info("Last btcTicker: {}", Utils.normalizeDateYYYYMMDDHHmm(tickers.get(tickers.size() - 1).startTime.longValue()));
+//
+//        System.out.println(Utils.normalizeDateYYYYMMDDHHmm(tickers.get(tickers.size() - 1).startTime.longValue()));
+//        test.statisticAll();
     }
 
     private static List<KlineObjectSimple> getTickerFullBtc1M() {
@@ -129,9 +129,8 @@ public class SellDetector {
             TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers;
             try {
                 LOG.info("Read file ticker: {} orderRunning:{} orders done:{} orders {}", Utils.normalizeDateYYYYMMDDHHmm(startTime),
-                        orderRunning.size(), allOrderDone.size(), statisticRateSuccess());
+                        orderRunning.size(), allOrderDone.size(), Utils.statisticRateSuccess(allOrderDone));
                 time2Tickers = DataManager.readDataFromFile1M(startTime);
-                Map<Long, Double> timeSignalSell = (Map<Long, Double>) Storage.readObjectFromFile(FILE_SIGNAL_SELL);
                 if (time2Tickers != null) {
                     for (Map.Entry<Long, Map<String, KlineObjectSimple>> entry : time2Tickers.entrySet()) {
                         Long time = entry.getKey();
@@ -145,9 +144,9 @@ public class SellDetector {
                             if (Constants.diedSymbol.contains(symbol)) {
                                 continue;
                             }
-                            if (Constants.specialSymbol.contains(symbol)) {
-                                continue;
-                            }
+//                            if (Constants.specialSymbol.contains(symbol)) {
+//                                continue;
+//                            }
                             KlineObjectSimple ticker = entry1.getValue();
                             startUpdateOldOrderTrading(symbol, ticker);
                             if (!Utils.isTickerAvailable(ticker)) {
@@ -160,49 +159,20 @@ public class SellDetector {
                                 symbol2LastTickers.put(symbol, tickers);
                             }
                             tickers.add(ticker);
-                            if (tickers.size() > 2000) {
-                                for (int i = 0; i < 500; i++) {
+                            if (tickers.size() > 365) {
+                                for (int i = 0; i < 5; i++) {
                                     tickers.remove(0);
                                 }
                             }
-                            Double priceMin = null;
-                            Double priceMax = null;
-                            Double volumeTotal = 0d;
-                            int counter = 0;
-                            for (int i = 0; i < 20; i++) {
-                                int index = tickers.size() - i - 1;
-                                if (index >= 0) {
-                                    KlineObjectSimple kline = tickers.get(index);
-                                    if (priceMin == null || priceMin > kline.minPrice) {
-                                        priceMin = kline.minPrice;
-                                    }
-                                    if (priceMax == null || priceMax < kline.maxPrice) {
-                                        priceMax = kline.maxPrice;
-                                    }
-                                    volumeTotal += kline.totalUsdt;
-                                    counter++;
+                        }
+                        if (MarketBigChangeDetectorTest.isBtcTrendDown(symbol2LastTickers.get(Constants.SYMBOL_PAIR_BTC))) {
+                            for (String symbol : Constants.stableSymbol) {
+                                KlineObjectSimple ticker = entry.getValue().get(symbol);
+                                if (Utils.isTickerAvailable(ticker)) {
+                                    createOrderSELL(symbol, ticker);
                                 }
                             }
-
-                            symbol2Min.put(-Utils.rateOf2Double(ticker.priceClose, priceMin), symbol);
-//                            symbol2Min.put(Utils.rateOf2Double(ticker.priceClose, priceMax), symbol);
-//                            symbol2Min.put(-ticker.totalUsdt * counter/volumeTotal, symbol);
-
-
                         }
-                        if (timeSignalSell.containsKey(time)) {
-                            MarketLevelChange levelChange = MarketLevelChange.BTC_REVERSE;
-                            List<String> symbol2Trade = MarketBigChangeDetectorTest.getTopSymbolSimple(symbol2Min,
-                                    Configs.NUMBER_ENTRY_EACH_SIGNAL / 2, orderRunning.keySet());
-                            LOG.info("{} {} -> {} {}", Utils.normalizeDateYYYYMMDDHHmm(time), levelChange, symbol2Trade, symbol2Min.size());
-                            for (String symbol : symbol2Trade) {
-                                KlineObjectSimple ticker = symbol2Ticker.get(symbol);
-                                KlineObjectSimple btcTicker = symbol2Ticker.get(Constants.SYMBOL_PAIR_BTC);
-                                createOrderSELL(symbol, ticker, levelChange, btcTicker, timeSignalSell.get(time));
-                            }
-                        }
-
-
                     }
                 }
             } catch (Exception e) {
@@ -253,23 +223,6 @@ public class SellDetector {
     }
 
 
-    private String statisticRateSuccess() {
-        Double pnl = 0d;
-        try {
-            for (OrderTargetInfoTest order : allOrderDone.values()) {
-                pnl += order.calRateTp();
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        if (allOrderDone.size() > 0) {
-            Double rate = pnl / allOrderDone.size();
-            return allOrderDone.size() + " -> " + Utils.formatPercent(rate) + "%";
-        }
-        return "";
-    }
-
-
     private void exitWhenDone() {
         try {
             Thread.sleep(10 * Utils.TIME_SECOND);
@@ -285,8 +238,11 @@ public class SellDetector {
         if (new File(FILE_STORAGE_ORDER_DONE).exists()) {
             FileUtils.delete(new File(FILE_STORAGE_ORDER_DONE));
         }
+        time2SymbolSell = TickerFuturesHelper.exportSellByKline4h();
+        for (Long time : time2SymbolSell.keySet()) {
+            LOG.info("{} {} ", Utils.sdfGoogle.format(new Date(time)), time2SymbolSell.get(time));
+        }
     }
-
 
     private void startUpdateOldOrderTrading(String symbol, KlineObjectSimple ticker) {
 
@@ -295,7 +251,7 @@ public class SellDetector {
             if (orderInfo.timeStart < ticker.startTime.longValue()) {
                 orderInfo.updatePriceByKlineSimple(ticker);
 //                orderInfo.updateStatusFixTPSL();
-                orderInfo.updateStatusNew(null);
+                orderInfo.updateStatusNew();
                 if (orderInfo.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)
                         || orderInfo.status.equals(OrderTargetStatus.STOP_LOSS_DONE)
                         || orderInfo.status.equals(OrderTargetStatus.STOP_MARKET_DONE)
@@ -303,7 +259,7 @@ public class SellDetector {
                     allOrderDone.put(orderInfo.timeStart + "-" + symbol, orderInfo);
                     orderRunning.remove(symbol);
                 } else {
-                    orderInfo.updateTPSL(null);
+                    orderInfo.updateTPSL();
                 }
             }
         }
@@ -312,12 +268,11 @@ public class SellDetector {
     }
 
 
-    private void createOrderSELL(String symbol, KlineObjectSimple ticker, MarketLevelChange levelChange,
-                                 KlineObjectSimple btcTicker, Double rateBtc15M) {
+    private void createOrderSELL(String symbol, KlineObjectSimple ticker) {
         Double entry = ticker.priceClose;
         Double budget = BudgetManagerSimple.getInstance().getBudget();
 
-        Integer leverage = BudgetManagerSimple.getInstance().getLeverage(symbol);
+        Integer leverage = BudgetManagerSimple.getInstance().getLeverage();
 
         String log = OrderSide.SELL + " " + symbol + " entry: " + entry + " budget: " + budget
                 + " time:" + Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue());
@@ -327,10 +282,7 @@ public class SellDetector {
         order.minPrice = entry;
         order.lastPrice = entry;
         order.maxPrice = entry;
-        order.marketLevelChange = levelChange;
-        order.rateChange = rateBtc15M;
         order.tickerOpen = Utils.convertKlineSimple(ticker);
-        order.tickerClose = Utils.convertKlineSimple(btcTicker);
         orderRunning.put(symbol, order);
         BudgetManagerSimple.getInstance().updateInvesting(orderRunning.values());
         LOG.info(log);

@@ -1,5 +1,7 @@
 package com.binance.chuyennd.utils;
 
+import java.util.Collection;
+
 public class DoubleArrayUtils
 {
 
@@ -85,6 +87,15 @@ public class DoubleArrayUtils
 			sum += values[i];
 		}
 		return sum / (endIndex - startIndex + 1);
+	}
+	public static double avg(Collection<Double> values)
+	{
+		double sum = 0;
+		for (Double value:values)
+		{
+			sum += value;
+		}
+		return sum / (values.size());
 	}
 
 	public static double[] slice(double[] values, int startIndex, int endIndex)

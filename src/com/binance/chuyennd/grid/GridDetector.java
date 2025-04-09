@@ -1,118 +1,142 @@
-/*
- * Copyright 2023 pc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package com.binance.chuyennd.grid;
 
-import com.binance.chuyennd.client.ClientSingleton;
-import com.binance.chuyennd.client.TickerFuturesHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
+import com.binance.chuyennd.object.sw.KlineObjectSimple;
+import com.binance.chuyennd.utils.Configs;
+import com.binance.chuyennd.utils.GridConfigs;
+import com.binance.chuyennd.utils.Storage;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
-import org.apache.commons.io.FileUtils;
+import com.binance.client.model.enums.OrderSide;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- *
- * @author pc
- */
-public class GridDetector {
+import java.util.List;
 
+public class GridDetector {
     public static final Logger LOG = LoggerFactory.getLogger(GridDetector.class);
 
-    public static void main(String[] args) throws IOException {
-        Double rangeLimit = 1.1;
-        Integer ageMin = 100;
-        Double rateBigChangeMin = 0.005;
+    public static GridObjectTestResearch findGridSpecialSymbol(String symbol, KlineObjectSimple ticker, Long
+            startTime, List<KlineObjectNumber> ticker15Ms, Double differenceMa20AndMa60, Double difference4hMa20AndMa60, Double rate4h) {
+        Double maxPrice = null;
+        Double minPrice = null;
 
-        gridDetector(rangeLimit, ageMin, rateBigChangeMin);
-    }
-
-    private static void gridDetector(Double rangeLimit, Integer ageMin, Double rateBigChangeMin) throws IOException {
-        // get all symbols
-        List<String> lines = new ArrayList<>();
-        Set<String> symbols = ClientSingleton.getInstance().getAllSymbol();
-
-// test        
-//        Set<String> symbols = new HashSet<String>();
-//        symbols.add("WLDUSDT");
-
-// end test
-        TreeMap<Integer, GridObject> rate2GridInfo = new TreeMap<>();
-        for (String symbol : symbols) {
-            try {
-                // range change in 3 month by ticker 1d
-                List<KlineObjectNumber> kline1Ds = TickerFuturesHelper.getTicker(symbol, Constants.INTERVAL_1D);
-                if (kline1Ds.size() < ageMin) {
-                    continue;
-                }
-                int limitDay2Get = 60;
-                Double currentPrice = ClientSingleton.getInstance().getCurrentPrice(symbol);
-                Double maxPrice = TickerFuturesHelper.getMaxPrice(kline1Ds, limitDay2Get);
-                Double minPrice = TickerFuturesHelper.getMinPrice(kline1Ds, limitDay2Get);
-                Double rangeOfSym = Utils.rateOf2Double(maxPrice, minPrice);
-                if (rangeOfSym > rangeLimit) {
-                    continue;
-                }
-                int totalCurrentPriceInKlineDay = TickerFuturesHelper.getTotalCurrentPriceInKline(kline1Ds, currentPrice, limitDay2Get);
-                // ticker 15M rate
-                List<KlineObjectNumber> kline15ms = TickerFuturesHelper.getTicker(symbol, Constants.INTERVAL_15M);
-                List<KlineObjectNumber> klineBigchanges = TickerFuturesHelper.getTotalKlineBigChange(kline15ms, rateBigChangeMin);
-                int totalCurrentPriceInKlineMax = TickerFuturesHelper.getTotalCurrentPriceInKline(klineBigchanges, currentPrice, limitDay2Get);
-                GridObject gridInfo = new GridObject(symbol, currentPrice, rangeOfSym,
-                        maxPrice, minPrice, kline1Ds.size(), klineBigchanges.size(),
-                        totalCurrentPriceInKlineMax, totalCurrentPriceInKlineDay);
-                rate2GridInfo.put(gridInfo.totalKlineBigChange, gridInfo);
-            } catch (Exception e) {
-                LOG.info("Erorr during get info of: {}", symbol);
-//                e.printStackTrace();
+        for (KlineObjectNumber kline : ticker15Ms) {
+            if (kline.startTime.longValue() < Utils.getDate(startTime)
+                    && kline.startTime.longValue() > startTime - 60 * Utils.TIME_DAY) {
+//                LOG.info("GetMaxMin: {} {} {}", symbol, Utils.normalizeDateYYYYMMDD(kline.startTime.longValue()), Utils.normalizeDateYYYYMMDD(startTime));
+                maxPrice = Utils.maxPrice(kline, maxPrice);
+                minPrice = Utils.minPrice(kline, minPrice);
             }
         }
-        StringBuilder builder = new StringBuilder();
-        builder.append("symbol").append(",");
-        builder.append("range2month").append(",");
-        builder.append("currentPrice").append(",");
-        builder.append("maxPrice").append(",");
-        builder.append("minPrice").append(",");
-        builder.append("ageSym").append(",");
-        builder.append("totalKlineBigchange").append(",");
-        builder.append("currentPriceInBigchange").append(",");
-        builder.append("totalCurrentPriceInKlineDay").append(",");
-        lines.add(builder.toString());
-        for (Map.Entry<Integer, GridObject> entry : rate2GridInfo.entrySet()) {
-            GridObject gridInfo = entry.getValue();
-            builder.setLength(0);
-            builder.append(gridInfo.symbol).append(",");
-            builder.append(gridInfo.range2Month).append(",");
-            builder.append(gridInfo.currentPrice).append(",");
-            builder.append(gridInfo.maxPrice).append(",");
-            builder.append(gridInfo.minPrice).append(",");
-            builder.append(gridInfo.ageSymbolByDay).append(",");
-            builder.append(gridInfo.totalKlineBigChange).append(",");
-            builder.append(gridInfo.totalCurrentPriceInKlineBigChange).append(",");
-            builder.append(gridInfo.totalCurrentPriceInKlineDay).append(",");
-            lines.add(builder.toString());
+        if (maxPrice == null || minPrice == null) {
+            return null;
         }
-        FileUtils.writeLines(new File("target/gridDetect.csv"), lines);
+
+        OrderSide side = OrderSide.BUY;
+
+        if (differenceMa20AndMa60 != null && difference4hMa20AndMa60 != null) {
+            if (symbol.equals(Constants.SYMBOL_PAIR_SOL)
+                    || symbol.equals(Constants.SYMBOL_PAIR_XRP)
+            ) {
+                Double differenceMaBnb20AndMa60 = SimpleMovingAverageDayManager.getInstance().getDifferenceMa10AndMa60(symbol
+                        , ticker.startTime.longValue());
+                if (differenceMaBnb20AndMa60 != null) {
+                    if (differenceMa20AndMa60 < 0 && difference4hMa20AndMa60 < 0 && differenceMaBnb20AndMa60 < 0) {
+                        side = OrderSide.SELL;
+                    }
+                }
+            } else {
+                if (symbol.equals(Constants.SYMBOL_PAIR_BTC)) {
+                    if (differenceMa20AndMa60 < 0) {
+                        side = OrderSide.SELL;
+                    }
+                } else {
+                    if (differenceMa20AndMa60 < 0 && difference4hMa20AndMa60 < 0) {
+                        side = OrderSide.SELL;
+                    }
+                }
+            }
+        }
+//        if (side.equals(OrderSide.SELL)) {
+//            if (rate4h != null) {
+//                if (rate4h <= -GridConfigs.RATE_DOWN_4H_REVERSE) {
+//                    side = OrderSide.BUY;
+//                }
+//            }
+//        }
+        if (side.equals(OrderSide.SELL)) {
+            if (rate4h != null) {
+                if (rate4h < GridConfigs.RATE_DOWN_4H_REVERSE) {
+                    return null;
+                }
+            }
+        } else {
+            if (rate4h != null) {
+                if (rate4h > -GridConfigs.RATE_DOWN_4H_REVERSE) {
+                    return null;
+                }
+            }
+        }
+        if (side.equals(OrderSide.BUY)) {
+            if (maxPrice < ticker.priceClose * 1.25) {
+                maxPrice = ticker.priceClose * 1.25;
+            }
+            minPrice = ticker.priceClose * 0.8;
+        } else {
+            maxPrice = ticker.priceClose * 1.25;
+            if (minPrice > ticker.priceClose * 0.85) {
+                minPrice = ticker.priceClose * 0.85;
+            }
+        }
+        GridObjectTestResearch simulator = new GridObjectTestResearch(symbol, side, maxPrice, minPrice, ticker);
+        return simulator;
+    }
+
+    public static GridObjectALTResearch findGridAltSymbol(String symbol, List<KlineObjectNumber> ticker4Hours) {
+        KlineObjectNumber ticker = ticker4Hours.get(ticker4Hours.size() - 1);
+//        try {
+//            if (ticker.startTime.longValue() == Utils.sdfFileHour.parse("20250215 03:00").getTime()) {
+//                System.out.println("Debug");
+//            }
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+        Double differenceMa4Hour20AndMa60 = SimpleMovingAverage4hManager.getInstance().getDifferenceMa10AndMa60(symbol
+                , ticker.startTime.longValue());
+        Double differenceMaDay20AndMa60 = SimpleMovingAverageDayManager.getInstance().getDifferenceMa10AndMa60(symbol, ticker.startTime.longValue());
+        Double differenceBTCMaDay20AndMa60 = SimpleMovingAverageDayManager.getInstance().getDifferenceMa10AndMa60(Constants.SYMBOL_PAIR_BTC, ticker.startTime.longValue());
+        if (differenceMaDay20AndMa60 != null
+                && differenceMaDay20AndMa60 < 0
+                && differenceBTCMaDay20AndMa60 != null
+                && differenceBTCMaDay20AndMa60 < 0) {
+            Double maxPrice = null;
+            Double minPrice = null;
+
+            for (int i = 0; i < 10; i++) {
+                KlineObjectNumber tickerCheck = ticker4Hours.get(ticker4Hours.size() - i - 1);
+                maxPrice = Utils.maxPrice(tickerCheck, maxPrice);
+                minPrice = Utils.minPrice(tickerCheck, minPrice);
+            }
+            if (Utils.rateOf2Double(maxPrice, minPrice) < 0.1
+                    && Utils.rateOf2Double(ticker.priceClose, minPrice) < 0.03) {
+                OrderSide side = OrderSide.SELL;
+                if (side.equals(OrderSide.BUY)) {
+                    if (maxPrice < ticker.priceClose * 1.25) {
+                        maxPrice = ticker.priceClose * 1.25;
+                    }
+                    minPrice = ticker.priceClose * 0.8;
+                } else {
+                    maxPrice = ticker.priceClose * 1.2;
+                    if (minPrice > ticker.priceClose * 0.5) {
+                        minPrice = ticker.priceClose * 0.5;
+                    }
+                }
+                GridObjectALTResearch simulator = new GridObjectALTResearch(symbol, side, maxPrice, minPrice, Utils.convertKlineSimple(ticker));
+                return simulator;
+            }
+        }
+        return null;
     }
 
 }

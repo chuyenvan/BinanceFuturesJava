@@ -184,7 +184,7 @@ public class SimulatorWithEntryByTicker1M {
         if (orderInfo != null) {
             if (orderInfo.timeStart < ticker.startTime.longValue()) {
                 orderInfo.updatePriceByKlineSimple(ticker);
-                orderInfo.updateStatusNew(null);
+                orderInfo.updateStatusNew();
 //                orderInfo.updateStatusFixTPSL();
                 if (orderInfo.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)
                         || orderInfo.status.equals(OrderTargetStatus.STOP_LOSS_DONE)
@@ -193,7 +193,7 @@ public class SimulatorWithEntryByTicker1M {
                     BudgetManagerSimple.getInstance().updatePnl(orderInfo);
                     orderRunning.remove(symbol);
                 } else {
-                    orderInfo.updateTPSL(null);
+                    orderInfo.updateTPSL();
                 }
             }
         }
@@ -203,7 +203,7 @@ public class SimulatorWithEntryByTicker1M {
     public void createOrderBUYTarget(String symbol, KlineObjectSimple ticker) {
         Double entry = ticker.priceClose;
         Double budget = BudgetManagerSimple.getInstance().getBudget();
-        Integer leverage = BudgetManagerSimple.getInstance().getLeverage(symbol);
+        Integer leverage = BudgetManagerSimple.getInstance().getLeverage();
         String log = OrderSide.BUY + " " + symbol + " entry: " + entry +
                 " budget: " + budget
                 + " time:" + Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue());

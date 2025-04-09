@@ -1,5 +1,8 @@
 package com.binance.chuyennd.bigchange.market;
 
+import com.binance.chuyennd.utils.Utils;
+import com.binance.client.constant.Constants;
+
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
@@ -19,6 +22,7 @@ public class MarketDataObject implements Serializable {
     public TreeMap<Double, String> rateDown2Symbols;
     public TreeMap<Double, String> rateUp2Symbols;
     public TreeMap<Double, String> rate2Max;
+    public TreeMap<Double, String> rate2Min;
     public Map<String, Double> symbol2PriceMax15M;
 
 
@@ -32,4 +36,5 @@ public class MarketDataObject implements Serializable {
         this.symbolsTopDown = symbolsTopDown;
 
     }
+
 }

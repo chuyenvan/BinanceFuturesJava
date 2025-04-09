@@ -15,15 +15,15 @@
  */
 package com.binance.chuyennd.client;
 
+import com.binance.chuyennd.bigchange.market.MarketBigChangeDetectorTest;
+import com.binance.chuyennd.grid.Price4hManager;
 import com.binance.chuyennd.indicators.MACD;
 import com.binance.chuyennd.indicators.RelativeStrengthIndex;
 import com.binance.chuyennd.indicators.SimpleMovingAverage;
 import com.binance.chuyennd.object.*;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.object.sw.SideWayObject;
-import com.binance.chuyennd.utils.HttpRequest;
-import com.binance.chuyennd.utils.Storage;
-import com.binance.chuyennd.utils.Utils;
+import com.binance.chuyennd.utils.*;
 import com.binance.client.model.enums.OrderSide;
 
 import java.util.List;
@@ -387,6 +387,25 @@ public class TickerFuturesHelper {
         return symbol2Volume24hr;
     }
 
+    public static Double getRate24hAvg() {
+        String allFuturePrices = HttpRequest.getContentFromUrl("https://fapi.binance.com/fapi/v1/ticker/24hr");
+        Set<String> symbolsTest = new HashSet<>();
+        symbolsTest.addAll(TickerFuturesHelper.getAllSymbol());
+        symbolsTest.removeAll(Constants.diedSymbol);
+        List<Object> futurePrices = Utils.gson.fromJson(allFuturePrices, List.class);
+        Collection<Double> rates = new ArrayList<>();
+        for (Object futurePrice : futurePrices) {
+            TickerStatistics ticker = Utils.gson.fromJson(futurePrice.toString(), TickerStatistics.class);
+            if (symbolsTest.contains(ticker.getSymbol())) {
+                Double rate = Utils.rateOf2Double(Double.parseDouble(ticker.getLastPrice()), Double.parseDouble(ticker.getOpenPrice()));
+//                LOG.info("{} {} {}", ticker.getSymbol(), rate, Utils.normalizeDateYYYYMMDDHHmm(Utils.getDate(ticker.getOpenTime())));
+                rates.add(rate);
+            }
+        }
+//        LOG.info("Total: {}", rates.size());
+        return DoubleArrayUtils.avg(rates);
+    }
+
     public static Map<String, TickerStatistics> getAllTicker24hr() {
         Map<String, TickerStatistics> symbol2Ticker24hr = new HashMap<>();
         String allFuturePrices = HttpRequest.getContentFromUrl("https://fapi.binance.com/fapi/v1/ticker/24hr");
@@ -412,8 +431,8 @@ public class TickerFuturesHelper {
 //        }
 //        testGetTicker24hr();
         TreeMap<Double, String> volume2Symbol = getSymbolVolumeLower();
-        for (Double volume: volume2Symbol.keySet()){
-            LOG.info("{} {} ", volume2Symbol.get(volume), volume/1E6);
+        for (Double volume : volume2Symbol.keySet()) {
+            LOG.info("{} {} ", volume2Symbol.get(volume), volume / 1E6);
         }
 //        LOG.info("{}", TickerFuturesHelper.getFundingFeeWithStartTime("OCEANUSDT", 1731916800000L));
 //        getCurrentTrendLongTime(Contanst.SYMBOL_PAIR_BTC, 60);
@@ -819,6 +838,106 @@ public class TickerFuturesHelper {
     }
 
     public static List<TrendObject> extractTopBottomObjectInTicker(List<KlineObjectNumber> tickers) {
+        List<TrendObject> objects = new ArrayList<>();
+        int period = 5;
+        // tìm đáy hoặc đỉnh đầu tiên
+        KlineObjectNumber lastTickerCheck = tickers.get(0);
+        TrendState state = TrendState.TOP;
+        if (tickers.get(0).priceOpen > tickers.get(0).priceClose) {
+            state = TrendState.BOTTOM;
+        }
+        int start;
+        for (start = 0; start < tickers.size(); start++) {
+            if (start + period > tickers.size()) {
+                break;
+            }
+            // tìm đỉnh gần nhất
+            if (state.equals(TrendState.TOP)) {
+                boolean top = true;
+                for (int j = start; j < period + start; j++) {
+                    if (tickers.get(j).maxPrice > lastTickerCheck.maxPrice) {
+                        lastTickerCheck = tickers.get(j);
+                        start = j;
+                        top = false;
+                        break;
+                    }
+                }
+                if (top) {
+                    objects.add(new TrendObject(state, lastTickerCheck));
+                    lastTickerCheck = tickers.get(start + 1);
+                    state = TrendState.BOTTOM;
+                }
+            } else {// tìm đáy gần nhất
+                boolean bottom = true;
+                for (int j = start; j < period + start; j++) {
+                    if (tickers.get(j).minPrice < lastTickerCheck.minPrice) {
+                        lastTickerCheck = tickers.get(j);
+                        start = j;
+                        bottom = false;
+                        break;
+                    }
+                }
+                if (bottom) {
+                    objects.add(new TrendObject(state, lastTickerCheck));
+                    lastTickerCheck = tickers.get(start + 1);
+                    state = TrendState.TOP;
+                }
+            }
+            if (!objects.isEmpty()) {
+                break;
+            }
+        }
+        // tìm các đỉnh, đáy tiếp theo
+        for (int i = start; i < tickers.size(); i++) {
+            // tìm đỉnh gần nhất
+            if (state.equals(TrendState.TOP)) {
+                boolean top = true;
+                for (int j = i; j < period + i; j++) {
+                    if (j >= tickers.size()) {
+                        top = false;
+                        break;
+                    }
+                    if (tickers.get(j).maxPrice > lastTickerCheck.maxPrice) {
+                        lastTickerCheck = tickers.get(j);
+                        i = j;
+                        top = false;
+                        break;
+                    }
+                }
+                if (top) {
+                    objects.add(new TrendObject(state, lastTickerCheck));
+                    lastTickerCheck = tickers.get(i + 1);
+                    state = TrendState.BOTTOM;
+                }
+            } else {// tìm đáy gần nhất
+                boolean top = true;
+                for (int j = i; j < period + i; j++) {
+                    if (j >= tickers.size()) {
+                        top = false;
+                        break;
+                    }
+                    if (tickers.get(j).minPrice < lastTickerCheck.minPrice) {
+                        lastTickerCheck = tickers.get(j);
+                        i = j;
+                        top = false;
+                        break;
+                    }
+                }
+                if (top) {
+                    objects.add(new TrendObject(state, lastTickerCheck));
+                    lastTickerCheck = tickers.get(i + 1);
+                    state = TrendState.TOP;
+                }
+            }
+        }
+        objects.add(new TrendObject(state, lastTickerCheck));
+        return objects;
+    }
+
+    public static List<TrendObject> extractTopBottomObjectInTicker1W(List<KlineObjectNumber> tickers) {
+        while (tickers.size() > 300) {
+            tickers.remove(0);
+        }
         List<TrendObject> objects = new ArrayList<>();
         int period = 5;
         // tìm đáy hoặc đỉnh đầu tiên
@@ -1520,5 +1639,54 @@ public class TickerFuturesHelper {
             }
         }
         return tickerVolumeMax24h;
+    }
+
+    public static TreeMap<Long, List<String>> exportSellByKline4h() {
+        TreeMap<Long, List<String>> time2SignalSell = new TreeMap<>();
+        try {
+            File[] files = new File(Configs.FOLDER_TICKER_4HOUR).listFiles();
+            for (File file : files) {
+                List<KlineObjectNumber> tickers = (List<KlineObjectNumber>) Storage.readObjectFromFile(Configs.FOLDER_TICKER_4HOUR + file.getName());
+                List<KlineObjectNumber> tickerChecks = new ArrayList<>();
+                for (int i = 0; i < tickers.size(); i++) {
+                    KlineObjectNumber ticker = tickers.get(i);
+                    tickerChecks.add(ticker);
+
+                    Double minPrice = ticker.minPrice;
+                    for (int j = 1; j < 12; j++) {
+                        if (i - j >= 0) {
+                            minPrice = Math.min(minPrice, tickers.get(i - j ).minPrice);
+//                            LOG.info("Time byKline: {} {}", Utils.normalizeDateYYYYMMDDHHmm(tickers.get(i-j).startTime.longValue())
+//                            , Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()));
+                        }
+                    }
+//                    if (!minPrice.equals(Price4hManager.getInstance().getPriceMinIn2D(file.getName(), ticker.startTime.longValue()))){
+//                        LOG.info("Lech:{} {} {} {}",file.getName(), Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()),
+//                                minPrice, Price4hManager.getInstance().getPriceMinIn2D(file.getName(), ticker.startTime.longValue()));
+//                    }
+                    if (Utils.rateOf2Double(ticker.priceClose, minPrice) > 0.9) {
+                        if (!MarketBigChangeDetectorTest.isSignalSell(tickerChecks)){
+                            LOG.info("check false: {} {} {}", file.getName(),Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()),
+                                    MarketBigChangeDetectorTest.isSignalSell(tickerChecks));
+                        }
+                        List<String> symbolSell = time2SignalSell.get(ticker.startTime.longValue() + 4 * Utils.TIME_HOUR);
+                        if (symbolSell == null) {
+                            symbolSell = new ArrayList<>();
+                        }
+                        symbolSell.add(file.getName());
+                        time2SignalSell.put(ticker.startTime.longValue() + 4 * Utils.TIME_HOUR, symbolSell);
+                    }else{
+                        if (MarketBigChangeDetectorTest.isSignalSell(tickerChecks)){
+                            LOG.info("check true: {} {} {}", file.getName(),Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()),
+                                    MarketBigChangeDetectorTest.isSignalSell(tickerChecks));
+                        }
+                    }
+
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return time2SignalSell;
     }
 }

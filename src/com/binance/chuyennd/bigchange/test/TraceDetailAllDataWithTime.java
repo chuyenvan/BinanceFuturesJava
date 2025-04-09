@@ -218,7 +218,7 @@ public class TraceDetailAllDataWithTime {
         if (orderInfo != null && ticker != null) {
             if (orderInfo.timeStart < ticker.startTime.longValue()) {
                 orderInfo.updatePriceByKlineSimple(ticker);
-                orderInfo.updateStatusNew(null);
+                orderInfo.updateStatusNew();
 //                orderInfo.updateStatusFixTPSL();
                 if (orderInfo.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)
                         || orderInfo.status.equals(OrderTargetStatus.STOP_LOSS_DONE)
@@ -227,7 +227,7 @@ public class TraceDetailAllDataWithTime {
                     BudgetManagerSimple.getInstance().updatePnl(orderInfo);
                     orderRunning.remove(symbol);
                 } else {
-                    orderInfo.updateTPSL(null);
+                    orderInfo.updateTPSL();
                 }
             }
         }
@@ -237,7 +237,7 @@ public class TraceDetailAllDataWithTime {
     public void createOrderBUYTarget(String symbol, KlineObjectSimple ticker, KlineObjectSimple lastTicker) {
         Double entry = ticker.priceClose;
         Double budget = BudgetManagerSimple.getInstance().getBudget();
-        Integer leverage = BudgetManagerSimple.getInstance().getLeverage(symbol);
+        Integer leverage = BudgetManagerSimple.getInstance().getLeverage();
         String log = OrderSide.BUY + " " + symbol + " entry: " + entry +
                 " budget: " + budget
                 + " time:" + Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue());
@@ -257,7 +257,7 @@ public class TraceDetailAllDataWithTime {
     private void createOrderSELL(String symbol, KlineObjectSimple ticker) {
         Double entry = ticker.priceClose;
         Double budget = BudgetManagerSimple.getInstance().getBudget();
-        Integer leverage = BudgetManagerSimple.getInstance().getLeverage(symbol);
+        Integer leverage = BudgetManagerSimple.getInstance().getLeverage();
         String log = OrderSide.SELL + " " + symbol + " entry: " + entry + " budget: " + budget
                 + " time:" + Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue());
         Double quantity = Utils.calQuantity(budget, leverage, entry, symbol);

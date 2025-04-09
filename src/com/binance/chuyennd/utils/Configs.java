@@ -51,9 +51,10 @@ public class Configs {
     public static final Double RATE_PROFIT_STOP_MARKET = Configs.getDouble("RATE_PROFIT_STOP_MARKET");
     public static final Double MAX_CAPITAL_RATE = Configs.getDouble("MAX_CAPITAL_RATE");
     public static final Double RATE_FEE = Configs.getDouble("RATE_FEE");
+    public static final  Boolean MODE_RUN_SERVER = Configs.getBoolean("MODE_RUN_SERVER");
     public static Double RATE_TICKER_MAX_SCAN_ORDER = Configs.getDouble("RATE_TICKER_MAX_SCAN_ORDER");
     public static final Double RATE_BUDGET_LIMIT_A_SIGNAL = Configs.getDouble("RATE_BUDGET_LIMIT_A_SIGNAL");
-    public static final Integer LEVERAGE_ORDER = Configs.getInt("LEVERAGE_ORDER");
+    public static Integer LEVERAGE_ORDER = Configs.getInt("LEVERAGE_ORDER");
 
     public static String FOLDER_TICKER_15M = Configs.getString("FOLDER_TICKER_15M");//"../ticker/storage/ticker/symbols-15m/";
     public static String FOLDER_TICKER_1M = Configs.getString("FOLDER_TICKER_1M");//"../ticker/storage/ticker/symbols-15m/";
@@ -66,6 +67,20 @@ public class Configs {
     public static String FOLDER_TICKER_1D = Configs.getString("FOLDER_TICKER_1D");//"../ticker/storage/ticker/symbols-1D/";
     public static String FILE_DATA_LOADED = Configs.getString("FILE_DATA_LOADED");//"storage/macd_data_time";
     public static Integer TIME_AFTER_ORDER_2_SL = Configs.getInt("TIME_AFTER_ORDER_2_SL");
+    public static Integer BTC_TREND_REVERSE_DURATION = Configs.getInt("BTC_TREND_REVERSE_DURATION");
+    public static Double BTC_TREND_REVERSE_RATE_MAX = Configs.getDouble("BTC_TREND_REVERSE_RATE_MAX");
+    public static Double BTC_TREND_REVERSE_RATE_MIN = Configs.getDouble("BTC_TREND_REVERSE_RATE_MIN");
+    public static Double BTC_TREND_REVERSE_RATE_MIN_TRADE = Configs.getDouble("BTC_TREND_REVERSE_RATE_MIN_TRADE");
+
+    public static String FILE_ENTRY_MARKET_LEVEL = "../storage/market_data/time2market.data";
+    public static String FILE_ENTRY_SELL_SIGNAL_1 = "../storage/market_data/time2SellSignal1.data";
+    public static String FILE_ENTRY_SELL_SIGNAL_2 = "../storage/market_data/time2SellSignal2.data";
+    public static String FILE_ENTRY_RATE_MAX_2D = "../storage/market_data/time2rateMax2d.data";
+    public static String FILE_ENTRY_RATE_MIN_2D = "../storage/market_data/time2rateMin2d.data";
+    public static String FILE_ENTRY_BTC_REVERSE = "../storage/btc/btcReverse-" + BTC_TREND_REVERSE_RATE_MIN + "-" + BTC_TREND_REVERSE_RATE_MAX + "-"
+            + BTC_TREND_REVERSE_DURATION;
+
+    public static final String URL_PREMIUM_INDEX = "https://fapi.binance.com/fapi/v1/premiumIndex";
 
     public static String getString(String configName) {
         return (String) properties.get(configName);

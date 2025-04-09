@@ -2,9 +2,10 @@ package com.binance.chuyennd.trading;
 
 import com.binance.chuyennd.client.BinanceFuturesClientSingleton;
 import com.binance.chuyennd.client.ClientSingleton;
+import com.binance.chuyennd.position.manager.PositionHelper;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
-import com.binance.chuyennd.utils.Configs;
+import com.binance.chuyennd.trading.grid.GridFuturesClientSingleton;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.model.enums.OrderSide;
 import com.binance.client.model.trade.Asset;
@@ -16,6 +17,10 @@ import java.util.*;
 
 public class Reporter {
     public static final Logger LOG = LoggerFactory.getLogger(Reporter.class);
+
+    public static void main(String[] args) {
+        Reporter.buildReport(BinanceFuturesClientSingleton.getInstance().getAllPositionInfos());
+    }
 
     public static void buildReport(List<PositionRisk> positions) {
         try {
@@ -50,6 +55,7 @@ public class Reporter {
             }
         }
         int counterLog = 0;
+        Double crossSLTotal = 0d;
         for (Map.Entry<Double, PositionRisk> entry : rate2Order.entrySet()) {
             Double rateLoss = entry.getKey();
             PositionRisk pos = entry.getValue();
@@ -63,29 +69,25 @@ public class Reporter {
             }
             if (counterLog < 15) {
                 counterLog++;
-                OrderSide side = OrderSide.BUY;
-                if (pos.getPositionAmt().doubleValue() < 0) {
-                    side = OrderSide.SELL;
-                }
                 Double pnl = Utils.callPnl(pos) * 100;
                 Long pnlLong = pnl.longValue();
                 Double entryPrice = ClientSingleton.getInstance().normalizePrice(pos.getSymbol(), pos.getEntryPrice().doubleValue());
                 Double lastPrice = ClientSingleton.getInstance().normalizePrice(pos.getSymbol(), pos.getMarkPrice().doubleValue());
                 String orderJson = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO, pos.getSymbol());
                 OrderTargetInfo order = Utils.gson.fromJson(orderJson, OrderTargetInfo.class);
-                String marketOrder = "";
+                Double priceSl = 0d;
                 if (order != null) {
-                    marketOrder = "";
-                    if (order.marketLevel != null) {
-                        marketOrder = order.marketLevel.toString();
+                    priceSl = order.priceSL;
+                    if (priceSl == null) {
+                        priceSl = pos.getMarkPrice().doubleValue();
                     }
-
+                    crossSLTotal += pos.getPositionAmt().doubleValue() * (priceSl - pos.getEntryPrice().doubleValue());
+                    BudgetManager.getInstance().slMax = Math.abs(crossSLTotal);
                 }
-                builder.append(side).append(" ")
-                        .append(pos.getSymbol().replace("USDT", "")).append(" ")
-                        .append(marketOrder)
+                builder.append(pos.getSymbol().replace("USDT", "")).append(" ")
+                        .append(PositionHelper.callMargin(pos).longValue())
                         .append(" ")
-                        .append(entryPrice).append("->").append(lastPrice)
+                        .append(entryPrice).append("->").append(lastPrice).append("->").append(priceSl)
                         .append(" ").append(ratePercent).append("%")
                         .append(" ").append(pnlLong.doubleValue() / 100).append("$")
                         .append("\n");
@@ -93,15 +95,17 @@ public class Reporter {
         }
         Asset umInfo = BinanceFuturesClientSingleton.getInstance().getAccountUMInfo();
 
+        BudgetManager.getInstance().balance = umInfo.getWalletBalance().doubleValue();
         Double marginRunning = umInfo.getPositionInitialMargin().doubleValue() - umInfo.getUnrealizedProfit().doubleValue();
         builder.append("Balance: ").append(umInfo.getMarginBalance().longValue()).append("$ -> ")
                 .append(umInfo.getWalletBalance().longValue()).append("$")
-                .append(" marginRun: ").append(marginRunning.longValue()).append("");
+                .append(" marginRun: ").append(BudgetManager.getInstance().calMarginRunning(positions).longValue()).append("/")
+                .append(marginRunning.longValue()).append("");
         builder.append("\nTotal: ").append(totalLoss.doubleValue()).append("% -> ")
-                .append(umInfo.getCrossUnPnl().longValue()).append("$");
+                .append(umInfo.getCrossUnPnl().longValue()).append("/").append(crossSLTotal.longValue());
         builder.append(" Buy: ").append(totalBuy.doubleValue()).append("%");
         builder.append(" Sell: ").append(totalSell.doubleValue()).append("%");
-        builder.append(" ").append(symbolsSell.toString());
+        builder.append(" ").append(symbolsSell);
         builder.append(" \nRunning: ").append(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS_RUNNING).size())
                 .append(" orders");
         builder.append(" Under3: ").append(totalUnder3);

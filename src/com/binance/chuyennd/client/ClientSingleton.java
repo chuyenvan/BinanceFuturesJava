@@ -22,25 +22,28 @@ import com.binance.client.model.market.ExchangeInfoEntry;
 import com.binance.client.model.market.ExchangeInformation;
 import com.binance.client.model.market.SymbolPrice;
 import com.binance.client.model.trade.AccountBalance;
+
+import java.io.Serializable;
 import java.text.DecimalFormat;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- *
  * @author pc
  */
-public class ClientSingleton {
+public class ClientSingleton implements Serializable {
 
     public static final Logger LOG = LoggerFactory.getLogger(ClientSingleton.class);
     public SyncRequestClient syncRequestClient;
     public Map<String, Double> symbol2UnitQuantity = new HashMap<>();
+    public Map<String, Double> symbol2UnitTrade = new HashMap<>();
     public Map<String, Double> symbol2Notional = new HashMap<>();
     public Map<String, Double> symbol2UnitPrice = new HashMap<>();
     private static volatile ClientSingleton INSTANCE = null;
@@ -67,9 +70,22 @@ public class ClientSingleton {
                 symbol2UnitPrice.put(symbol.getSymbol(), tickSize);
             }
             Double notional = getNotional(symbol);
-            if (notional != null){
+            if (notional != null) {
                 symbol2Notional.put(symbol.getSymbol(), notional);
             }
+//            try {
+//                if (StringUtils.endsWithIgnoreCase(symbol.getSymbol(), "usdt")) {
+//                    Double min2TradeBase = quantityUnit
+//                            * ClientSingleton.getInstance().getCurrentPrice(symbol.getSymbol());
+//                    Double min2Trade = min2TradeBase;
+//                    while (min2Trade < notional) {
+//                        min2Trade = min2Trade + min2TradeBase;
+//                    }
+//                    symbol2UnitTrade.put(symbol.getSymbol(), min2Trade);
+//                }
+//            } catch (Exception e) {
+//            }
+
         }
     }
 
@@ -83,7 +99,8 @@ public class ClientSingleton {
         }
         return null;
     }
-    private Double getNotional(ExchangeInfoEntry symbol) {
+
+    public Double getNotional(ExchangeInfoEntry symbol) {
         for (List<Map<String, String>> filters : symbol.getFilters()) {
             for (Map<String, String> filter : filters) {
                 if (filter.get("notional") != null) {
@@ -127,7 +144,7 @@ public class ClientSingleton {
 
     public Double normalizeQuantity(String symbol, Double quantity) {
         Double unitQuantity = symbol2UnitQuantity.get(symbol);
-        if (unitQuantity == null){
+        if (unitQuantity == null) {
             LOG.info("Init Unit Quantity because {} is null!", symbol);
             initClient();
         }
@@ -141,6 +158,7 @@ public class ClientSingleton {
             return Double.valueOf(formatDouble(quantity));
         }
     }
+
     public Double normalizeQuantityTest(String symbol, Double quantity) {
         Double unitQuantity = symbol2UnitQuantity.get(symbol);
         if (unitQuantity != null) {
@@ -154,7 +172,8 @@ public class ClientSingleton {
         }
     }
 
-    public Double normalizePrice(String symbol, Double price) {
+    public Double
+    normalizePrice(String symbol, Double price) {
         Double unitPrice = symbol2UnitPrice.get(symbol);
         if (unitPrice != null) {
             price = price - (price % unitPrice);
@@ -170,6 +189,7 @@ public class ClientSingleton {
     public Double getMinQuantity(String symbol) {
         return symbol2UnitQuantity.get(symbol);
     }
+
     public Double getNotional(String symbol) {
         return symbol2Notional.get(symbol);
     }
@@ -226,11 +246,12 @@ public class ClientSingleton {
         }
         return 0d;
     }
+
     public double getRateBalanceAvalible() {
         List<AccountBalance> balanceInfos = ClientSingleton.getInstance().syncRequestClient.getBalance();
         for (AccountBalance balanceInfo : balanceInfos) {
-            if (StringUtils.equalsIgnoreCase(balanceInfo.getAsset(), "usdt")) {                
-                return balanceInfo.getAvailableBalance().doubleValue()/balanceInfo.getBalance().doubleValue();
+            if (StringUtils.equalsIgnoreCase(balanceInfo.getAsset(), "usdt")) {
+                return balanceInfo.getAvailableBalance().doubleValue() / balanceInfo.getBalance().doubleValue();
             }
         }
         return 0d;

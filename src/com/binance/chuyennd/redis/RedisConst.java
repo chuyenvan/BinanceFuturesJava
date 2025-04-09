@@ -48,8 +48,6 @@ public class RedisConst {
 
     }
 
-    public static final String REDIS_KEY_BINANCE_TD_GRID_MANAGER_QUEUE = "redis.key.educa.td.grid.manager.queue";
-
     public static final String REDIS_KEY_BINANCE_SYMBOL_TIME_LOCK = "redis.key.educa.symbol.time.lock";
     public static final String REDIS_KEY_BINANCE_ALL_SYMBOLS = "redis.key.educa.all.symbols";
     public static final String REDIS_KEY_BINANCE_ALL_SYMBOLS_RUNNING = "redis.key.educa.all.symbols.running";
@@ -63,5 +61,7 @@ public class RedisConst {
     public static String REDIS_KEY_BINANCE_TEST_TD_POS_MANAGER = Configs.getString("REDIS_KEY_EDUCA_TEST_TD_POS_MANAGER");
 
     public static final String REDIS_KEY_BINANCE_TD_ORDER_MANAGER_QUEUE = "redis.key.educa.td.order.manager.queue";
+    public static final String REDIS_KEY_BINANCE_TD_GRID_MANAGER_QUEUE = "redis.key.binance.td.grid.manager.queue";
+    public static final String REDIS_KEY_SYMBOL_2_GRID_INFO = "redis.key.symbol.grid.info";
 
 }

@@ -16,8 +16,8 @@
 package com.binance.chuyennd.bigchange.statistic;
 
 import com.binance.chuyennd.client.TickerFuturesHelper;
+import com.binance.chuyennd.indicators.SimpleMovingAverage;
 import com.binance.chuyennd.object.*;
-import com.binance.chuyennd.bigchange.statistic.data.DataManager;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Storage;
 import com.binance.chuyennd.utils.Utils;
@@ -45,10 +45,11 @@ public class ReseachDetectTrendWithBtc {
     public static final Logger LOG = LoggerFactory.getLogger(ReseachDetectTrendWithBtc.class);
 
     public static void main(String[] args) throws IOException, ParseException {
-        String symbol = "TIAUSDT";
-//        new ReseachDetectTrendWithBtc().detectorTrendSymbol(symbol);
+        String symbol = "BTCUSDT";
+//        new ReseachDetectTrendWithBtc().testResistanceAndSupportByTimeGrid(symbol);
+        new ReseachDetectTrendWithBtc().detectorTrendSymbol(symbol);
 //        new ReseachDetectTrendWithBtc().testResistanceAndSupport(symbol);
-        new ReseachDetectTrendWithBtc().testResistanceAndSupportByTime(symbol, "20240229 00:30");
+//        new ReseachDetectTrendWithBtc().testResistanceAndSupportByTime(symbol, "20211122 07:30");
 //        new ReseachDetectTrendWithBtc().testResistanceAndSupportSide(symbol);
 
 //        for (String symbol : TickerHelper.getAllSymbol()) {
@@ -66,8 +67,8 @@ public class ReseachDetectTrendWithBtc {
     private void testResistanceAndSupportByTime(String symbol, String time) {
         try {
             long timeCheck = Utils.sdfFileHour.parse(time).getTime();
-//            List<KlineObjectNumber> tickers = TickerFuturesHelper.getTicker(symbol, Constants.INTERVAL_15M);
-            List<KlineObjectNumber> tickers = (List<KlineObjectNumber>) Storage.readObjectFromFile(Configs.FOLDER_TICKER_15M + symbol);
+//            List<KlineObjectNumber> tickers = TickerFuturesHelper.getTicker(symbol, Constants.INTERVAL_1W);
+            List<KlineObjectNumber> tickers = (List<KlineObjectNumber>) Storage.readObjectFromFile(Configs.FOLDER_TICKER_1D + symbol);
             List<KlineObjectNumber> ticker2Test = new ArrayList<>();
             for (int i = 0; i < tickers.size(); i++) {
                 if (tickers.get(i).startTime.longValue() <= timeCheck) {
@@ -78,7 +79,7 @@ public class ReseachDetectTrendWithBtc {
             List<TrendObject> trends = TickerFuturesHelper.extractTopBottomObjectInTicker(ticker2Test);
             printTrendObject(trends);
             ResistanceAndSupport rsDetector = new ResistanceAndSupport(trends, ticker2Test.get(ticker2Test.size() - 1));
-            rsDetector.detectTrend(0.03);
+            rsDetector.detectTrend(0.05);
             LOG.info(rsDetector.printTrend() + " " +
                     Utils.normalizeDateYYYYMMDDHHmm(ticker2Test.get(ticker2Test.size() - 1).startTime.longValue())
                     + " suggest: " + rsDetector.sideSuggest);
@@ -88,9 +89,68 @@ public class ReseachDetectTrendWithBtc {
         }
     }
 
+    private void testResistanceAndSupportByTimeGrid(String symbol) {
+        try {
+            String time = "20201204 07:01";
+            long timeCheck = Utils.sdfFileHour.parse(time).getTime();
+//            List<KlineObjectNumber> tickers = TickerFuturesHelper.getTickerWithStartTimeFull(symbol, "3d",
+//                    timeCheck - 400 * Utils.TIME_DAY);
+            List<KlineObjectNumber> tickers = TickerFuturesHelper.getTicker(symbol, Constants.INTERVAL_1W);
+            IndicatorEntry[] smaEntries = SimpleMovingAverage.calculate(tickers, 20);
+            Map<Long, Double> time2Sma = new HashMap<>();
+
+            for (int i = 0; i < smaEntries.length; i++) {
+                IndicatorEntry sma = smaEntries[i];
+                time2Sma.put(sma.startTime.longValue() - 7 * Utils.TIME_DAY, sma.getValue());
+                LOG.info("{} {} ", Utils.normalizeDateYYYYMMDDHHmm(sma.startTime.longValue()), sma.getValue());
+            }
+//            List<KlineObjectNumber> tickers = TickerFuturesHelper.getTicker(symbol, Constants.INTERVAL_1MONTH);
+//            List<KlineObjectNumber> tickers = (List<KlineObjectNumber>) Storage.readObjectFromFile(Configs.FOLDER_TICKER_1D + symbol);
+            LOG.info(Utils.normalizeDateYYYYMMDD(tickers.get(0).startTime.longValue()));
+            TrendState lastTrend = null;
+            Long startTime = timeCheck;
+            for (KlineObjectNumber ticker : tickers) {
+                if (startTime > ticker.startTime.longValue()) {
+                    continue;
+                }
+                timeCheck = ticker.startTime.longValue();
+                List<KlineObjectNumber> ticker2Test = new ArrayList<>();
+                for (int i = 0; i < tickers.size(); i++) {
+                    if (tickers.get(i).startTime.longValue() < timeCheck) {
+                        ticker2Test.add(tickers.get(i));
+                    }
+                }
+                if (timeCheck > System.currentTimeMillis()) {
+                    break;
+                }
+//                LOG.info("Last ticker time: {}", Utils.normalizeDateYYYYMMDDHHmm(ticker2Test.get(ticker2Test.size() - 1).startTime.longValue()));
+                List<TrendObject> trends = TickerFuturesHelper.extractTopBottomObjectInTicker1W(ticker2Test);
+//            printTrendObject(trends);
+                ResistanceAndSupport rsDetector = new ResistanceAndSupport(trends, ticker2Test.get(ticker2Test.size() - 1));
+                rsDetector.detectTrendGrid(lastTrend, time2Sma);
+                if (lastTrend == null) {
+                    lastTrend = rsDetector.trendDetail.status;
+                } else {
+                    if (lastTrend != rsDetector.trendDetail.status) {
+                        LOG.info("-------------------------------------------------------{} -> {} {}",
+                                Utils.normalizeDateYYYYMMDD(startTime),
+                                Utils.normalizeDateYYYYMMDD(rsDetector.currentTicker.startTime.longValue()), lastTrend);
+                        lastTrend = rsDetector.trendDetail.status;
+                        startTime = rsDetector.currentTicker.startTime.longValue();
+                    }
+                }
+                LOG.info(rsDetector.printTrend());
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+
     private void testResistanceAndSupportSide(String symbol) {
         try {
-            List<KlineObjectNumber> tickers = TickerFuturesHelper.getTicker(symbol, Constants.INTERVAL_15M);
+            List<KlineObjectNumber> tickers = TickerFuturesHelper.getTicker(symbol, Constants.INTERVAL_1D);
             List<KlineObjectNumber> ticker2Test = new ArrayList<>();
             for (int i = 0; i < 100; i++) {
                 ticker2Test.add(tickers.get(i));
@@ -99,7 +159,7 @@ public class ReseachDetectTrendWithBtc {
                 ticker2Test.add(tickers.get(i));
                 List<TrendObject> trends = TickerFuturesHelper.extractTopBottomObjectInTicker(ticker2Test);
                 ResistanceAndSupport rsDetector = new ResistanceAndSupport(trends, ticker2Test.get(ticker2Test.size() - 1));
-                rsDetector.detectTrend(0.03);
+                rsDetector.detectTrend(0.1);
                 List<TrendObject> resistances = rsDetector.resistances;
                 List<TrendObject> supports = rsDetector.supports;
                 TrendObject r1 = resistances.get(0);
@@ -186,6 +246,7 @@ public class ReseachDetectTrendWithBtc {
 //        Map<TrendObjectDetail, List<TrendDataTrackingObject>> altBehaviors = getAllAltBehavior(btcTrends, symbol2Kline1Ds);
 //        printAltBehavior(altBehaviors);
         printTrendDetailObject(btcTrends, Constants.SYMBOL_PAIR_BTC);
+        // TODO Detect trend sell khi dat dinh => dang co dinh cuoi nho hon dinh truoc do va dinh truoc do la max trong 1 nam => sell grid
     }
 
     public void printTrendDetailObject(List<TrendObjectDetail> trendInfos, String symbol) {
@@ -385,9 +446,24 @@ public class ReseachDetectTrendWithBtc {
     }
 
     private void detectorTrendSymbol(String symbol) {
-        List<KlineObjectNumber> tickers = (List<KlineObjectNumber>) Storage.readObjectFromFile(Configs.FOLDER_TICKER_15M + symbol);
-        List<TrendObject> trends = TickerFuturesHelper.extractTopBottomObjectInTicker(tickers);
-        printTrendObject(trends);
+        try {
+            Long timeCheck = Utils.sdfFileHour.parse("20250220 19:00").getTime();
+            List<KlineObjectNumber> tickers = (List<KlineObjectNumber>) Storage.readObjectFromFile(Configs.FOLDER_TICKER_4HOUR + symbol);
+            KlineObjectNumber endTicker = tickers.get(tickers.size() - 1);
+            while(true){
+                if (endTicker.startTime.longValue() > timeCheck){
+                    tickers.remove(tickers.size() - 1);
+                    endTicker = tickers.get(tickers.size() - 1);
+                }else{
+                    break;
+                }
+            }
+//            LOG.info("End time: {}", Utils.normalizeDateYYYYMMDDHHmm(endTicker.startTime.longValue()));
+            List<TrendObject> trends = TickerFuturesHelper.extractTopBottomObjectInTicker(tickers);
+            printTrendObject(trends);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private void printTrendObject(List<TrendObject> trends) {
@@ -513,7 +589,7 @@ public class ReseachDetectTrendWithBtc {
     }
 
     private void chartSymbol(String symbol) {
-        List<TrendObject> trends = TickerFuturesHelper.extractTopBottomObjectInTicker(TickerFuturesHelper.getTicker(symbol, Constants.INTERVAL_15M));
+        List<TrendObject> trends = TickerFuturesHelper.extractTopBottomObjectInTicker(TickerFuturesHelper.getTicker(symbol, Constants.INTERVAL_1D));
         List<TrendObjectDetail> trendDetails = TickerFuturesHelper.detectTrendByKline(trends, 0.003);
         if (!trendDetails.isEmpty()
                 && trendDetails.get(trendDetails.size() - 1).status.equals(TrendState.SIDEWAY)) {

@@ -6,12 +6,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 public class ResistanceAndSupport {
     public static final Logger LOG = LoggerFactory.getLogger(ResistanceAndSupport.class);
-    public static Double zone = 0.002;
-    public static Double rangePrice2Order = 0.01;
+    public static Double zone = 0.005;
     public List<TrendObject> resistances;
     public KlineObjectNumber currentTicker;
     public KlineObjectNumber lastTicker;
@@ -84,23 +85,7 @@ public class ResistanceAndSupport {
                     && s1.getMinPrice() > s2.getMinPrice()) {
                 trendDetail.status = TrendState.TREND_UP;
             }
-//            if (currentTicker.maxPrice >= rMax1.getMaxPrice()
-//                    // đỉnh sau lớn hơn đỉnh trươc và giá lớn hơn đỉnh trước
-//                    || (rMax1.kline.startTime > rMax2.kline.startTime && currentTicker.priceClose >= rMax2.getMaxPrice())
-//                    // đáy sau cao hơn đáy trước và giá lớn hơn đáy sau
-////                    || (s1.getMinPrice() > s2.getMinPrice() && currentTicker.priceClose >= s2.getMinPrice())
-//            ) {
-//                trendDetail.status = TrendState.TREND_UP;
-//            } else {
-//                if (currentTicker.minPrice <= sMin1.getMinPrice()
-//                        // đỉnh sau thấp hơn đỉnh trước và giá thấp hơn đỉnh sau
-//                        || (rMax1.kline.startTime < rMax2.kline.startTime && currentTicker.priceClose <= rMax2.getMaxPrice())
-//                        // đáy sau thấp hơn đáy trước và giá thấp hơn đáy trước
-//                        || (sMin1.kline.startTime > sMin2.kline.startTime && currentTicker.priceClose <= sMin1.getMinPrice())
-//                ) {
-//                    trendDetail.status = TrendState.TREND_DOWN;
-//                }
-//            }
+
             switch (trendDetail.status) {
                 case TREND_UP:
                     for (int i = 2; i < trends.size(); i++) {
@@ -188,6 +173,87 @@ public class ResistanceAndSupport {
         }
     }
 
+    public void detectTrendGrid(TrendState lastTrend, Map<Long, Double> time2Sma) {
+
+        LinkedList<TrendObject> top3Resistances = getTop3Resistance();
+
+        if (trends.size() > 0) {
+
+            Double ma20 = time2Sma.get(currentTicker.startTime.longValue());
+            if (ma20 == null) {
+                LOG.info("Error cal ma20! {}", Utils.normalizeDateYYYYMMDD(currentTicker.startTime.longValue()));
+                return;
+            }
+            if (lastTrend == null) {
+                if (ma20 >= currentTicker.priceClose) {
+                    trendDetail = new TrendObjectDetail(TrendState.TREND_UP, new ArrayList<>());
+                } else {
+                    trendDetail = new TrendObjectDetail(TrendState.TREND_DOWN, new ArrayList<>());
+                }
+            } else {
+                if (lastTrend.equals(TrendState.TREND_UP)) {
+                    if (currentTicker.minPrice < ma20 && currentTicker.minPrice < top3Resistances.get(1).getMaxPrice()) {
+                        trendDetail = new TrendObjectDetail(TrendState.TREND_DOWN, new ArrayList<>());
+                    } else {
+                        trendDetail = new TrendObjectDetail(TrendState.TREND_UP, new ArrayList<>());
+                    }
+                } else {
+                    int counter = 0;
+                    for (int i = 0; i < 3; i++) {
+                        if (currentTicker.maxPrice > resistances.get(i).getMaxPrice()) {
+                            counter++;
+                        }
+                    }
+                    if (counter >= 2 && currentTicker.minPrice > ma20) {
+                        trendDetail = new TrendObjectDetail(TrendState.TREND_UP, new ArrayList<>());
+                    }else{
+                        trendDetail = new TrendObjectDetail(TrendState.TREND_DOWN, new ArrayList<>());
+                    }
+                }
+            }
+        }
+    }
+
+    private LinkedList<TrendObject> getTop3Resistance() {
+        LinkedList<TrendObject> results = new LinkedList<>();
+        List<TrendObject> datas = new ArrayList<>();
+        datas.addAll(resistances);
+        for (int i = 0; i < 3; i++) {
+            TrendObject max = datas.get(0);
+            int index = 0;
+            for (int j = 0; j < datas.size(); j++) {
+                TrendObject data = datas.get(j);
+                if (max.getMaxPrice() < data.getMaxPrice()) {
+                    max = data;
+                    index = j;
+                }
+            }
+            results.add(max);
+            datas.remove(index);
+        }
+        return results;
+    }
+
+    private LinkedList<TrendObject> get3MinResistances() {
+        LinkedList<TrendObject> results = new LinkedList<>();
+        List<TrendObject> datas = new ArrayList<>();
+        datas.addAll(resistances);
+        for (int i = 0; i < 3; i++) {
+            TrendObject min = datas.get(0);
+            int index = 0;
+            for (int j = 0; j < datas.size(); j++) {
+                TrendObject data = datas.get(j);
+                if (min.getMaxPrice() > data.getMaxPrice()) {
+                    min = data;
+                    index = j;
+                }
+            }
+            results.add(min);
+            datas.remove(index);
+        }
+        return results;
+    }
+
     public TrendObject getMaxByNumber(List<TrendObject> objects, int maxNumber, int period) {
         TrendObject max1 = null;
         TrendObject max2 = null;
@@ -240,13 +306,16 @@ public class ResistanceAndSupport {
 
     public String printTrend() {
         StringBuilder sb = new StringBuilder();
-        sb.append(trendDetail.status).append(" min: ").append(trendDetail.minPrice).append(" max: ").append(trendDetail.maxPrice).append("\n");
-        for (int i = 0; i < trendDetail.topBottonObjects.size(); i++) {
-            TrendObject trend = trendDetail.topBottonObjects.get(i);
-            sb.append(trend.status).append(" ");
-            sb.append(Utils.normalizeDateYYYYMMDDHHmm(trend.kline.startTime.longValue())).append(" ");
-            sb.append(trend.kline.minPrice).append(" -> ").append(trend.kline.maxPrice).append("\n");
-        }
+        sb.append(" min: ").append(trendDetail.minPrice)
+                .append(" max: ").append(trendDetail.maxPrice)
+                .append(" ").append(Utils.normalizeDateYYYYMMDDHHmm(currentTicker.startTime.longValue()))
+                .append(" ").append(trendDetail.status);
+//        for (int i = 0; i < trendDetail.topBottonObjects.size(); i++) {
+//            TrendObject trend = trendDetail.topBottonObjects.get(i);
+//            sb.append(trend.status).append(" ");
+//            sb.append(Utils.normalizeDateYYYYMMDDHHmm(trend.kline.startTime.longValue())).append(" ");
+//            sb.append(trend.kline.minPrice).append(" -> ").append(trend.kline.maxPrice).append("\n");
+//        }
         return sb.toString();
     }
 

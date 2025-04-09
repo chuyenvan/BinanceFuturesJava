@@ -2,6 +2,7 @@ package com.binance.chuyennd.research;
 
 import com.binance.chuyennd.utils.Storage;
 import com.binance.chuyennd.utils.Utils;
+import com.binance.client.model.enums.OrderSide;
 
 import java.io.Serializable;
 import java.util.HashMap;
@@ -31,7 +32,7 @@ public class BalanceIndex implements Serializable {
 
     public void updateIndex(Double balance, Double positionMargin, Double positionMarginReal,
                             Long timeUpdate, Double profitLossMin, Double unrealizedProfitMin,
-                            ConcurrentHashMap<String, List<OrderTargetInfoTest>> allOrderRunning, ConcurrentHashMap<String,
+                            ConcurrentHashMap<String, List<OrderTargetInfoTest>> allOrderEntry, ConcurrentHashMap<String,
             OrderTargetInfoTest> orderRunning) {
 
         if (rateMarginMax == null || rateMarginMax < positionMargin / balance) {
@@ -57,32 +58,34 @@ public class BalanceIndex implements Serializable {
         Double monthMarginMax = month2MarginMax.get(Utils.getMonth(timeUpdate));
         if (monthMarginMax == null || monthMarginMax < positionMargin) {
             monthMarginMax = positionMargin;
-            for (String symbol : allOrderRunning.keySet()) {
+            for (String symbol : allOrderEntry.keySet()) {
                 OrderTargetInfoTest orderAll = orderRunning.get(symbol);
                 if (orderAll != null) {
-                    for (OrderTargetInfoTest order : allOrderRunning.get(symbol)) {
+                    for (OrderTargetInfoTest order : allOrderEntry.get(symbol)) {
                         order.minPrice = orderAll.minPrice;
+                        order.maxPrice = orderAll.maxPrice;
                         order.priceSL = orderAll.priceSL;
                     }
                 }
             }
-            Storage.writeObject2File("storage/data/marginMax/" + Utils.getMonth(timeUpdate), allOrderRunning);
+            Storage.writeObject2File("storage/data/marginMax/" + Utils.getMonth(timeUpdate), allOrderEntry);
         }
         month2MarginMax.put(Utils.getMonth(timeUpdate), monthMarginMax);
 
         Double monthMarginRealMax = month2MarginRealMax.get(Utils.getMonth(timeUpdate));
         if (monthMarginRealMax == null || monthMarginRealMax < positionMarginReal) {
             monthMarginRealMax = positionMarginReal;
-            for (String symbol : allOrderRunning.keySet()) {
+            for (String symbol : allOrderEntry.keySet()) {
                 OrderTargetInfoTest orderAll = orderRunning.get(symbol);
                 if (orderAll != null) {
-                    for (OrderTargetInfoTest order : allOrderRunning.get(symbol)) {
+                    for (OrderTargetInfoTest order : allOrderEntry.get(symbol)) {
                         order.minPrice = orderAll.minPrice;
+                        order.maxPrice = orderAll.maxPrice;
                         order.priceSL = orderAll.priceSL;
                     }
                 }
             }
-            Storage.writeObject2File("storage/data/marginRealMax/" + Utils.getMonth(timeUpdate), allOrderRunning);
+            Storage.writeObject2File("storage/data/marginRealMax/" + Utils.getMonth(timeUpdate), allOrderEntry);
         }
         month2MarginRealMax.put(Utils.getMonth(timeUpdate), monthMarginRealMax);
 
@@ -93,7 +96,7 @@ public class BalanceIndex implements Serializable {
         Double slMax = month2SLMax.get(Utils.getMonth(timeUpdate));
         if (slMax == null || slMax > profitLossMin) {
             slMax = profitLossMin;
-            Storage.writeObject2File("storage/data/slMin/" + Utils.getMonth(timeUpdate), allOrderRunning);
+            Storage.writeObject2File("storage/data/slMin/" + Utils.getMonth(timeUpdate), allOrderEntry);
         }
         month2SLMax.put(Utils.getMonth(timeUpdate), slMax);
 
@@ -110,7 +113,21 @@ public class BalanceIndex implements Serializable {
         Double profitMinOfYear = month2ProfitMin.get(Utils.getMonth(timeUpdate));
         if (profitMinOfYear == null || profitMinOfYear > unrealizedProfitMin) {
             profitMinOfYear = unrealizedProfitMin;
-            Storage.writeObject2File("storage/data/unProfitMin/" + Utils.getMonth(timeUpdate), allOrderRunning);
+            for (String symbol : allOrderEntry.keySet()) {
+                OrderTargetInfoTest orderAll = orderRunning.get(symbol);
+                if (orderAll != null) {
+                    for (OrderTargetInfoTest order : allOrderEntry.get(symbol)) {
+                        order.minPrice = orderAll.minPrice;
+                        order.maxPrice = orderAll.maxPrice;
+                        if (order.side.equals(OrderSide.BUY)) {
+                            order.priceTP = orderAll.minPrice;
+                        } else {
+                            order.priceTP = orderAll.maxPrice;
+                        }
+                    }
+                }
+            }
+            Storage.writeObject2File("storage/data/unProfitMin/" + Utils.getMonth(timeUpdate), allOrderEntry);
         }
         month2ProfitMin.put(Utils.getMonth(timeUpdate), profitMinOfYear);
 

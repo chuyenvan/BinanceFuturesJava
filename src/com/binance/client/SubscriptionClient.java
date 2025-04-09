@@ -86,6 +86,9 @@ public interface SubscriptionClient {
     void subscribeCandlestickEvent(String symbol, CandlestickInterval interval,
             SubscriptionListener<CandlestickEvent> callback, SubscriptionErrorHandler errorHandler);
 
+
+    void subscribeAllCandlestickEvent(List<String> symbol, CandlestickInterval interval,
+                                   SubscriptionListener<CandlestickEvent> callback, SubscriptionErrorHandler errorHandler);
     /**
      * Subscribe individual symbol mini ticker event. If the symbol mini ticker is updated,
      * server will send the data to client and onReceive in callback will be called.

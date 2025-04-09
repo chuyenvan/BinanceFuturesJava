@@ -186,7 +186,7 @@ public class BtcBigChangeAndBread {
                         }
                         if (!timesTradeMarket.contains(time)) {
                             if (timeBtcReverse.contains(time)) {
-                                MarketLevelChange levelChange = MarketLevelChange.BTC_REVERSE;
+                                MarketLevelChange levelChange = MarketLevelChange.BTC_TREND_REVERSE;
                                 List<String> symbol2Trade = MarketBigChangeDetectorTest.getTopSymbolSimple(symbol2MaxPrice,
                                         Configs.NUMBER_ENTRY_EACH_SIGNAL / 2, orderRunning.keySet());
                                 LOG.info("{} {} -> {} {}", Utils.normalizeDateYYYYMMDDHHmm(time), levelChange, symbol2Trade, symbol2MaxPrice.size());
@@ -409,7 +409,7 @@ public class BtcBigChangeAndBread {
             if (orderInfo.timeStart < ticker.startTime.longValue()) {
                 orderInfo.updatePriceByKlineSimple(ticker);
 //                orderInfo.updateStatusFixTPSL();
-                orderInfo.updateStatusNew(null);
+                orderInfo.updateStatusNew();
                 if (orderInfo.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)
                         || orderInfo.status.equals(OrderTargetStatus.STOP_LOSS_DONE)
                         || orderInfo.status.equals(OrderTargetStatus.STOP_MARKET_DONE)
@@ -417,7 +417,7 @@ public class BtcBigChangeAndBread {
                     allOrderDone.put(orderInfo.timeStart + "-" + symbol, orderInfo);
                     orderRunning.remove(symbol);
                 } else {
-                    orderInfo.updateTPSL(null);
+                    orderInfo.updateTPSL();
                 }
             }
         }
@@ -429,7 +429,7 @@ public class BtcBigChangeAndBread {
     private void createOrderBUYTarget(String symbol, KlineObjectSimple ticker, MarketLevelChange levelChange) {
         Double entry = ticker.priceClose;
         Double budget = BudgetManagerSimple.getInstance().getBudget();
-        Integer leverage = BudgetManagerSimple.getInstance().getLeverage(symbol);
+        Integer leverage = BudgetManagerSimple.getInstance().getLeverage();
         String log = OrderSide.BUY + " " + symbol + " entry: " + entry + " budget: " + budget
                 + " time:" + Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue());
         Double quantity = Utils.calQuantity(budget, leverage, entry, symbol);

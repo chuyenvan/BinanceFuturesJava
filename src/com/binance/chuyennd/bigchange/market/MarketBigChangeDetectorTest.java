@@ -1,17 +1,22 @@
 package com.binance.chuyennd.bigchange.market;
 
 import com.binance.chuyennd.client.TickerFuturesHelper;
+import com.binance.chuyennd.grid.SimpleMovingAverage4hManager;
+import com.binance.chuyennd.grid.SimpleMovingAverageDayManager;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.TrendObject;
 import com.binance.chuyennd.object.TrendState;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.utils.Configs;
+import com.binance.chuyennd.utils.Storage;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
 import com.binance.client.model.enums.OrderSide;
+import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.text.ParseException;
 import java.util.*;
 
@@ -21,6 +26,34 @@ public class MarketBigChangeDetectorTest {
 
 
     public static void main(String[] args) throws ParseException {
+        List<KlineObjectSimple> tickerSimples = TickerFuturesHelper.getTickerSimpleWithStartTime(Constants.SYMBOL_PAIR_BTC,
+                Constants.INTERVAL_1M, Utils.sdfFileHour.parse("20250321 20:30").getTime() - 499 * Utils.TIME_MINUTE);
+        while (tickerSimples.size() > 360) {
+            tickerSimples.remove(0);
+        }
+        LOG.info("time check: {}", Utils.normalizeDateYYYYMMDDHHmm(tickerSimples.get(tickerSimples.size() - 1).startTime.longValue()));
+        System.out.println(MarketBigChangeDetectorTest.isBtcTrendReverse(tickerSimples, Configs.BTC_TREND_REVERSE_RATE_MAX,
+                Configs.BTC_TREND_REVERSE_RATE_MIN));
+
+
+//        List<KlineObjectNumber> btcTickers = (List<KlineObjectNumber>) Storage.readObjectFromFile(Configs.FOLDER_TICKER_4HOUR + Constants.SYMBOL_PAIR_BTC);
+//        LOG.info("End ticker: {} {}", Utils.normalizeDateYYYYMMDDHHmm(btcTickers.get(btcTickers.size() - 1).startTime.longValue()),
+//                btcTickers.get(btcTickers.size() - 1).priceClose);
+//        int counter = 0;
+//        int duration = 70;
+//        for (int i = duration; i < btcTickers.size(); i++) {
+//            KlineObjectNumber btcTicker = btcTickers.get(i);
+//            List<KlineObjectNumber> tickerChecks = new ArrayList<>();
+//            for (int j = 0; j < duration; j++) {
+//                tickerChecks.add(btcTickers.get(i - j));
+//            }
+//            if (isBtcTrendReverse4h(tickerChecks, 0.04) != null) {
+//                counter++;
+//                LOG.info("{} {} {}", Utils.normalizeDateYYYYMMDDHHmm(btcTicker.startTime.longValue()), btcTicker.priceClose, counter);
+//            }
+//        }
+
+//        LOG.info("{}", isBtcReverseBig15M(btcTickers));
 //        traceCommandSellBigChange();
 //        testDataStatistic();
 //        testBtcReverse();
@@ -42,23 +75,23 @@ public class MarketBigChangeDetectorTest {
 //        printTrendVolumeBtc();
 //        printBtcBigChangeReverse();
 //        System.exit(1);
-        List<Double> doubleList = new ArrayList<>();
-        doubleList.add(-0.0143);
-        doubleList.add(-0.0141);
-        doubleList.add(-0.0144);
-        doubleList.add(-0.015);
-        doubleList.add(-0.0166);
-        doubleList.add(-0.0161);
-        doubleList.add(-0.017);
-        doubleList.add(-0.0181);
-        doubleList.add(-0.0183);
-        doubleList.add(-0.02);
-        System.out.println(isDoubleReverse(doubleList, 5, -0.019));
-        System.out.println(isDoubleReverse(doubleList, 9, -0.019));
-        System.out.println(isDoubleReverse(doubleList, 10, -0.019));
-        System.out.println(isDoubleReverse(doubleList, 5, -0.02));
-        System.out.println(isDoubleReverse(doubleList, 5, -0.021));
-        LOG.info("{}", doubleList);
+//        List<Double> doubleList = new ArrayList<>();
+//        doubleList.add(-0.0143);
+//        doubleList.add(-0.0141);
+//        doubleList.add(-0.0144);
+//        doubleList.add(-0.015);
+//        doubleList.add(-0.0166);
+//        doubleList.add(-0.0161);
+//        doubleList.add(-0.017);
+//        doubleList.add(-0.0181);
+//        doubleList.add(-0.0183);
+//        doubleList.add(-0.02);
+//        System.out.println(isDoubleReverse(doubleList, 5, -0.019));
+//        System.out.println(isDoubleReverse(doubleList, 9, -0.019));
+//        System.out.println(isDoubleReverse(doubleList, 10, -0.019));
+//        System.out.println(isDoubleReverse(doubleList, 5, -0.02));
+//        System.out.println(isDoubleReverse(doubleList, 5, -0.021));
+//        LOG.info("{}", doubleList);
 //        Long startTime = Utils.sdfFileHour.parse("20241229 21:00").getTime();
 //        List<KlineObjectSimple> btcTickers = TickerFuturesHelper.getTickerSimpleWithStartTime("BTCUSDT",
 //                Constants.INTERVAL_1M, startTime - 400 * Utils.TIME_MINUTE);
@@ -271,7 +304,6 @@ public class MarketBigChangeDetectorTest {
             if (Constants.diedSymbol.contains(symbol)) {
                 continue;
             }
-
             KlineObjectNumber ticker = entry1.getValue();
             Double rateChange;
             rateChange = Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen);
@@ -286,6 +318,8 @@ public class MarketBigChangeDetectorTest {
         TreeMap<Double, String> rateMin2Symbols = new TreeMap<>();
         TreeMap<Double, String> rateMax2Symbols = new TreeMap<>();
         TreeMap<Double, String> rateUp2Symbols = new TreeMap<>();
+        KlineObjectSimple btcTicker = symbol2Ticker.get(Constants.SYMBOL_PAIR_BTC);
+        Double rateChangeBtc = Utils.rateOf2Double(btcTicker.priceClose, btcTicker.priceOpen);
         for (Map.Entry<String, KlineObjectSimple> entry1 : symbol2Ticker.entrySet()) {
             String symbol = entry1.getKey();
             if (Constants.diedSymbol.contains(symbol)) {
@@ -293,6 +327,10 @@ public class MarketBigChangeDetectorTest {
             }
             KlineObjectSimple ticker = entry1.getValue();
             Double rateChange = Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen);
+            // pass symbol big dump(delist/waring/monitor...)
+            if (rateChangeBtc > -0.002 && rateChange < -0.15) {
+                continue;
+            }
             rateDown2Symbols.put(rateChange, symbol);
             rateUp2Symbols.put(-rateChange, symbol);
             Double maxPrice = symbol2PriceMax.get(symbol);
@@ -304,7 +342,6 @@ public class MarketBigChangeDetectorTest {
                 rateMin2Symbols.put(-Utils.rateOf2Double(ticker.priceClose, minPrice), symbol);
             }
         }
-        KlineObjectSimple btcTicker = symbol2Ticker.get(Constants.SYMBOL_PAIR_BTC);
         Double btcRateChange = Utils.rateOf2Double(btcTicker.priceClose, btcTicker.priceOpen);
         Double rateChangeDownAvg = MarketBigChangeDetectorTest.calRateLossAvg(rateDown2Symbols, 50);
         Double rateChangeUpAvg = -MarketBigChangeDetectorTest.calRateLossAvg(rateUp2Symbols, 50);
@@ -317,6 +354,7 @@ public class MarketBigChangeDetectorTest {
                 null, null);
         result.rateDown2Symbols = rateDown2Symbols;
         result.rate2Max = rateMax2Symbols;
+        result.rate2Min = rateMin2Symbols;
         result.rateDown15MAvg = rateChangeDown15MAvg;
         result.rateUp15MAvg = rateChangeUp15MAvg;
         result.rateBtcUp15M = Utils.rateOf2Double(btcTicker.priceClose, symbol2MinPrice.get(Constants.SYMBOL_PAIR_BTC));
@@ -429,18 +467,28 @@ public class MarketBigChangeDetectorTest {
         return symbols;
     }
 
-    public static List<String> getTopSymbolSimpleNew(TreeMap<Double, String> rateLoss2Symbols, int period,
+    public static List<String> getTopSymbolSimpleNew(TreeMap<Double, String> rateLoss2Symbols, MarketLevelChange levelChange, int period,
                                                      Map<String, KlineObjectSimple> symbol2Ticker, Set<String> symbolLock) {
+
         List<String> symbols = new ArrayList<>();
         for (Map.Entry<Double, String> entry : rateLoss2Symbols.entrySet()) {
             String symbol = entry.getValue();
+            Double rateScam = Configs.RATE_TICKER_MAX_SCAN_ORDER;
             if (symbolLock != null && symbolLock.contains(symbol)) {
                 continue;
             }
             KlineObjectSimple ticker = symbol2Ticker.get(symbol);
             if (ticker != null
-                    && Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen) < Configs.RATE_TICKER_MAX_SCAN_ORDER
+                    && Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen) < rateScam
             ) {
+//                if (levelChange != null
+//                        && !levelChange.equals(MarketLevelChange.BIG_DOWN)
+//                        && !StringUtils.containsIgnoreCase(levelChange.toString(), "sell")
+//                        && !levelChange.equals(MarketLevelChange.MEDIUM_DOWN)
+//                        && entry.getKey() < -0.15) {
+//                    LOG.info("Scam symbol: {} {} {}", Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()), levelChange, symbol);
+//                    continue;
+//                }
                 symbols.add(symbol);
                 if (symbols.size() >= period) {
                     break;
@@ -588,27 +636,19 @@ public class MarketBigChangeDetectorTest {
     }
 
 
-    public static Boolean isSignalSell(List<KlineObjectNumber> altTickers, Integer index) {
+    public static Boolean isSignalSell(List<KlineObjectNumber> tickers) {
         try {
-            if (index < 1) {
-                return false;
-            }
-            KlineObjectNumber finalTicker = altTickers.get(index);
-            if (finalTicker.rsi != null
-                    && finalTicker.rsi <= 62
-                    && Utils.rateOf2Double(finalTicker.priceClose, finalTicker.priceOpen) < 0
-            ) {
-                for (int i = 1; i < 5; i++) {
-                    if (index >= i) {
-                        KlineObjectNumber ticker = altTickers.get(index - i);
-                        if (ticker.rsi != null && ticker.rsi >= 70) {
-                            return true;
-                        }
-                    }
+            int index = tickers.size() - 1;
+            KlineObjectNumber ticker = tickers.get(tickers.size() - 1);
+            Double minPrice = ticker.minPrice;
+            for (int j = 0; j < 12; j++) {
+                if (index - j - 1 > 0) {
+                    minPrice = Math.min(minPrice, tickers.get(index - j - 1).minPrice);
                 }
             }
-
-
+            if (Utils.rateOf2Double(ticker.priceClose, minPrice) > 0.9) {
+                return true;
+            }
         } catch (
                 Exception e) {
             e.printStackTrace();
@@ -652,33 +692,65 @@ public class MarketBigChangeDetectorTest {
         return 0;
     }
 
-    public static MarketLevelChange getMarketStatus15M(Double rateDown15MAvg, Double rateUp15MAvg, List<Double> lastRateDown15Ms, List<Double> lastRateDowns) {
+    public static List<Object> isUnderSideWay2Trade(List<KlineObjectSimple> tickers) {
+        List<Object> results = new ArrayList<>();
 
-        if (rateDown15MAvg < -0.05) {
-            return MarketLevelChange.MEDIUM_DOWN_15M;
+        Double duration = 0.005;
+        KlineObjectSimple tickerClose = tickers.get(tickers.size() - 1);
+        Double priceClose = tickerClose.priceClose;
+
+        TreeMap<Double, Integer> price2Counter = new TreeMap<>();
+        for (int i = 0; i < 9; i++) {
+            price2Counter.put(priceClose + (i - 2) * duration * priceClose, 0);
         }
-        if (rateDown15MAvg < -0.0285) {
-            return MarketLevelChange.SMALL_DOWN_15M;
+        for (KlineObjectSimple ticker : tickers) {
+            for (Map.Entry<Double, Integer> entry : price2Counter.entrySet()) {
+                Double price = entry.getKey();
+                Integer counter = entry.getValue();
+                if (ticker.minPrice <= price && price <= ticker.maxPrice) {
+                    counter++;
+                    price2Counter.put(price, counter);
+                }
+            }
         }
-        if (lastRateDown15Ms != null
-                && !lastRateDown15Ms.isEmpty()
-                && rateDown15MAvg < -0.0265
-                && rateDown15MAvg > lastRateDown15Ms.get(lastRateDown15Ms.size() - 1)) {
-            return MarketLevelChange.SMALL_DOWN_15M;
+        Integer priceCloseCounter = price2Counter.get(priceClose);
+        int counterBelow = 0;
+        int counterAbove = 0;
+        for (Map.Entry<Double, Integer> entry : price2Counter.entrySet()) {
+            Double price = entry.getKey();
+            Integer counter = entry.getValue();
+            if (price < priceClose) {
+                counterBelow += counter;
+            } else {
+                if (price > priceClose) {
+                    counterAbove += counter;
+                }
+            }
+//            LOG.info("{} {}", price, counter);
         }
-        if (isDoubleReverse(lastRateDown15Ms, 10, rateDown15MAvg) && rateDown15MAvg < -0.02) {
-            return MarketLevelChange.TINY_DOWN_15M;
+        if (priceCloseCounter >= 70
+                && counterAbove > priceCloseCounter
+                && counterBelow > priceCloseCounter
+        ) {
+//            LOG.info("Under sideWay: {} {} {} {} {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(tickers.get(tickers.size() - 1).startTime.longValue())
+//                    , priceClose, priceCloseCounter, counterAbove, counterBelow);
+            results.add(priceClose);
+            results.add(priceCloseCounter);
+            results.add(counterAbove);
+            results.add(counterBelow);
+            results.add(duration);
+            return results;
         }
-        if (isDoubleReverse(lastRateDown15Ms, 20, rateDown15MAvg) && rateDown15MAvg < -0.015) {
-            return MarketLevelChange.TINY_DOWN_15M;
-        }
-        if (isDoubleReverse(lastRateDown15Ms, 25, rateDown15MAvg) && rateDown15MAvg < -0.01) {
-            return MarketLevelChange.TINY_DOWN_15M;
-        }
+
+//        if (Utils.rateOf2Double(tickerClose.priceClose, tickerClose.priceOpen) < -0.005){
+//            results.add(tickerClose.priceClose);
+//            results.add(Utils.rateOf2Double(tickerClose.priceClose, tickerClose.priceOpen));
+//            return results;
+//        }
         return null;
     }
 
-    private static boolean isDoubleReverse(List<Double> lastRateDown15Ms, int period, Double rateDown15MAvg) {
+    private static boolean isDoubleReverse(List<Double> lastRateDown15Ms, int period) {
         if (lastRateDown15Ms != null && lastRateDown15Ms.size() > period) {
             int size = lastRateDown15Ms.size();
             List<Long> lastRateLong = new ArrayList<>();
@@ -688,14 +760,14 @@ public class MarketBigChangeDetectorTest {
                 lastRateLong.add(rate.longValue());
             }
 
-            for (int i = 0; i < period; i++) {
-                if (lastRateLong.get(size - i - 1) > lastRateLong.get(size - i - 2)) {
-                    return false;
+            for (int i = 1; i < period; i++) {
+                if (size - i - 1 >= 0) {
+                    if (lastRateLong.get(size - i) < lastRateLong.get(size - i - 1)) {
+                        return false;
+                    }
                 }
             }
-            if (lastRateDown15Ms.get(size - 1) < rateDown15MAvg) {
-                return true;
-            }
+            return true;
         }
         return false;
     }
@@ -728,7 +800,7 @@ public class MarketBigChangeDetectorTest {
 
         // small 1 order
         if (rateUpAvg > 0.009
-                && rateUp15MAvg > 0.07) {
+                && rateUp15MAvg > 0.12) {
             return MarketLevelChange.SMALL_UP;
         }
         if (rateDownAvg < -0.011
@@ -737,23 +809,32 @@ public class MarketBigChangeDetectorTest {
         }
 
         // tiny 1 order and budget/2
-        if ((rateUpAvg > 0.009 && rateUp15MAvg > 0.015)
-                || (rateUpAvg > 0.007 && rateUp15MAvg > 0.015 && rateBtcDown15M < -0.007)) {
+        if (rateUpAvg > 0.009 && rateDownAvg > 0 && rateUp15MAvg > 0.016) {
             return MarketLevelChange.TINY_UP;
         }
-        if (rateDownAvg < -0.006
-                && rateDown15MAvg < -0.025
+        if (rateDownAvg < -0.0065 && rateUpAvg < 0
+                && rateDown15MAvg < -0.028
         ) {
             return MarketLevelChange.TINY_DOWN;
         }
+
+        if (rateDown15MAvg < -0.05) {
+            return MarketLevelChange.MEDIUM_DOWN_15M;
+        }
+        if (rateDown15MAvg < -0.033) {
+            return MarketLevelChange.SMALL_DOWN_15M;
+        }
+
         return null;
     }
 
-    public static Double isBtcTrendReverse(List<KlineObjectSimple> btcTickers, Double rateTrend) {
+
+    public static Double isBtcTrendReverse(List<KlineObjectSimple> btcTickers, Double rateTrend, Double rateTrendMin) {
         int index = btcTickers.size() - 1;
         KlineObjectSimple lastTicker = btcTickers.get(index);
         Double priceReverse = null;
         Integer indexMin = null;
+
         while (priceReverse == null) {
 //            LOG.info("Check btc reverse with rate: {}", rateTrend);
             for (int i = 0; i < index; i++) {
@@ -765,21 +846,25 @@ public class MarketBigChangeDetectorTest {
                     }
                     KlineObjectSimple ticker15m = btcTickers.get(index - i - 14);
                     KlineObjectSimple ticker30m = btcTickers.get(index - i - 29);
-                    double rate = Math.min(Utils.rateOf2Double(ticker.priceClose, ticker30m.priceOpen),
-                            Utils.rateOf2Double(ticker.priceClose, ticker15m.priceOpen));
+                    double rate = Math.min(Utils.rateOf2Double(ticker.priceClose, ticker30m.maxPrice),
+                            Utils.rateOf2Double(ticker.priceClose, ticker15m.maxPrice));
                     if (rate < -rateTrend) {
                         priceReverse = ticker15m.priceOpen;
+//                        priceReverse = Math.max(ticker15m.priceOpen, ticker15m.priceClose);
                         indexMin = i;
                         break;
                     }
                 }
             }
-            rateTrend = rateTrend - 0.0005;
-            if (rateTrend < 0.0046) {
+            if (rateTrend > 0.01) {
+                rateTrend = rateTrend - 0.002;
+            } else {
+                rateTrend = rateTrend - 0.0005;
+            }
+            if (rateTrend < rateTrendMin - 0.00005) {
                 break;
             }
         }
-
         if (priceReverse != null
                 && lastTicker.priceClose > priceReverse
         ) {
@@ -795,6 +880,55 @@ public class MarketBigChangeDetectorTest {
                     Utils.sdfGoogle.format(new Date(lastTicker.startTime.longValue())));
             return rateTrend;
         }
+
+        return null;
+    }
+
+
+    public static Double isBtcTrendReverse4h(List<KlineObjectNumber> btcTickers, Double rateTrend) {
+        int index = btcTickers.size() - 1;
+        KlineObjectNumber lastTicker = btcTickers.get(index);
+        Double priceReverse = null;
+        Integer indexMin = null;
+
+        while (priceReverse == null) {
+//            LOG.info("Check btc reverse with rate: {}", rateTrend);
+            for (int i = 0; i < index; i++) {
+                if (index >= i + 2) {
+                    KlineObjectNumber ticker = btcTickers.get(index - i);
+                    KlineObjectNumber ticker4HoursAgo = btcTickers.get(index - i - 1);
+                    KlineObjectNumber ticker8HoursAgo = btcTickers.get(index - i - 2);
+                    double rate = Math.min(Utils.rateOf2Double(ticker.priceClose, ticker8HoursAgo.priceOpen),
+                            Utils.rateOf2Double(ticker.priceClose, ticker4HoursAgo.priceOpen));
+                    if (rate < -rateTrend) {
+                        priceReverse = ticker4HoursAgo.priceOpen;
+//                        priceReverse = Math.max(ticker15m.priceOpen, ticker15m.priceClose);
+                        indexMin = i;
+                        break;
+                    }
+                }
+            }
+            rateTrend = rateTrend - 0.005;
+            if (rateTrend < 0.0345) {
+                break;
+            }
+        }
+        if (priceReverse != null
+                && lastTicker.priceClose > priceReverse
+        ) {
+            // by pass if last ticker not ticker first up over bottom 1%
+            for (int i = 1; i < indexMin; i++) {
+                KlineObjectNumber ticker = btcTickers.get(index - i);
+                if (ticker.priceClose >= priceReverse) {
+                    return null;
+                }
+            }
+//            LOG.info("IsBtc4hReverse: {} {} {} {} {}", Utils.normalizeDateYYYYMMDDHHmm(lastTicker.startTime.longValue()),
+//                    lastTicker.priceClose, priceReverse, Utils.rateOf2Double(lastTicker.priceClose, priceReverse),
+//                    Utils.sdfGoogle.format(new Date(lastTicker.startTime.longValue())));
+            return rateTrend;
+        }
+
         return null;
     }
 
@@ -850,6 +984,44 @@ public class MarketBigChangeDetectorTest {
         return false;
     }
 
+    public static Boolean isBtcTrendDown(List<KlineObjectSimple> btcTickers) {
+        int period = 3;
+        int index = btcTickers.size() - 1;
+        if (index < period + 3) {
+            return false;
+        }
+        if (Utils.rateOf2Double(btcTickers.get(index - 3).priceClose, btcTickers.get(index - 3).priceOpen) > 0.0001) {
+            for (int i = 0; i < period; i++) {
+                KlineObjectSimple ticker = btcTickers.get(index - i);
+                if (Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen) > -0.0008) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+
+    public static boolean isBtcTrendUp(List<KlineObjectNumber> btcTickers) {
+        int period = 3;
+        int index = btcTickers.size() - 1;
+        if (index < period + 3) {
+            return false;
+        }
+        LOG.info("Check time: {} {}", btcTickers.get(index).priceClose,
+                Utils.sdfGoogle.format(new Date(btcTickers.get(index).startTime.longValue())));
+        if (Utils.rateOf2Double(btcTickers.get(index - 3).priceClose, btcTickers.get(index - 3).priceOpen) < -0.0001) {
+            for (int i = 0; i < period; i++) {
+                KlineObjectNumber ticker = btcTickers.get(index - i);
+                if (Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen) < 0.00045) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+
     public static boolean isBtcReverseBig15M(List<KlineObjectSimple> btcTickers) {
         int period = 15;
         int index = btcTickers.size() - 1;
@@ -894,6 +1066,51 @@ public class MarketBigChangeDetectorTest {
             return true;
         }
         return false;
+    }
+
+    public static TreeMap<Long, Set<String>> extractSymbolFundingChange() {
+        TreeMap<Long, Set<String>> time2Symbols = new TreeMap<>();
+        try {
+            File folder = new File(Configs.FOLDER_FUNDING_FEE);
+            for (File file : folder.listFiles()) {
+                String symbol = file.getName();
+                TreeMap<Long, Double> time2RateFunding = (TreeMap<Long, Double>) Storage.readObjectFromFile(file.getAbsolutePath());
+                List<Double> fundings = new ArrayList<>();
+                for (Long time : time2RateFunding.keySet()) {
+                    Double funding = time2RateFunding.get(time);
+                    fundings.add(funding);
+//                    if (time == Utils.sdfFileHour.parse("20250127 07:00").getTime() && StringUtils.equals(symbol, "ACHUSDT")){
+//                        System.out.println("Debug");
+//                        for (int i = 1; i < 5; i++) {
+//                            LOG.info("{} {} {}",fundings.get(fundings.size() - 1 - i),fundings.get(fundings.size() - 2 - i),
+//                                    fundings.get(fundings.size() - 1 - i).equals(fundings.get(fundings.size() - 2 - i)));
+//                        }
+//                    }
+                    if (fundings.size() > 5) {
+                        boolean isLastFundingNotChange = true;
+                        if (fundings.get(fundings.size() - 1) < 0) {
+                            for (int i = 1; i < 4; i++) {
+                                if (fundings.get(fundings.size() - 1 - i) < 0) {
+                                    isLastFundingNotChange = false;
+                                    break;
+                                }
+                            }
+                            if (isLastFundingNotChange) {
+                                Set<String> symbols = time2Symbols.get(time);
+                                if (symbols == null) {
+                                    symbols = new HashSet<>();
+                                }
+                                symbols.add(symbol);
+                                time2Symbols.put(time, symbols);
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return time2Symbols;
     }
 }
 

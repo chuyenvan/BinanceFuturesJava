@@ -51,26 +51,6 @@ public class StatisticMarketLevelTicker1M {
         StatisticMarketLevelTicker1M test = new StatisticMarketLevelTicker1M();
         test.initData();
         test.simulatorAllSymbol();
-
-//        test.debugAOrder();
-
-        // for test number order/signal
-//        for (Integer j = 0; j < 5; j++) {
-//            for (Integer i = 0; i < 5; i++) {
-////            Configs.NUMBER_ENTRY_EACH_SIGNAL = numberOrder;
-//                Configs.TIME_AFTER_ORDER_2_TP = j * 5 + 1;
-//                Configs.TIME_AFTER_ORDER_2_SL = i * 5 + 1;
-//                BudgetManagerSimple.getInstance().updateBudget(null);
-//                BudgetManagerSimple.getInstance().resetHistory();
-////            LOG.info("Set number order and update budget: {} orders -> budget: {}", Configs.NUMBER_ENTRY_EACH_SIGNAL,
-////                    BudgetManagerSimple.getInstance().getBudget());
-//                test.initData();
-//                test.simulatorAllSymbol();
-//                Thread.sleep(Utils.TIME_MINUTE);
-//            }
-//        }
-
-
     }
 
     public void debugAOrder() {
@@ -418,7 +398,7 @@ public class StatisticMarketLevelTicker1M {
         if (orderInfo != null) {
             if (orderInfo.timeStart < ticker.startTime.longValue()) {
                 orderInfo.updatePriceByKlineSimple(ticker);
-                orderInfo.updateStatusNew(null);
+                orderInfo.updateStatusNew();
                 if (orderInfo.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)
                         || orderInfo.status.equals(OrderTargetStatus.STOP_LOSS_DONE)
                         || orderInfo.status.equals(OrderTargetStatus.STOP_MARKET_DONE)) {
@@ -426,7 +406,7 @@ public class StatisticMarketLevelTicker1M {
                     BudgetManagerSimple.getInstance().updatePnl(orderInfo);
                     orderRunning.remove(symbol);
                 } else {
-                    orderInfo.updateTPSL(null);
+                    orderInfo.updateTPSL();
                 }
             }
         }
@@ -436,7 +416,7 @@ public class StatisticMarketLevelTicker1M {
     public void createOrderBUYTarget(String symbol, KlineObjectSimple ticker, MarketLevelChange levelChange) {
         Double entry = ticker.priceClose;
         Double budget = BudgetManagerSimple.getInstance().getBudget();
-        Integer leverage = BudgetManagerSimple.getInstance().getLeverage(symbol);
+        Integer leverage = BudgetManagerSimple.getInstance().getLeverage();
         if (levelChange.equals(MarketLevelChange.BIG_DOWN)
                 || levelChange.equals(MarketLevelChange.BIG_UP)) {
             budget = budget * 2;
@@ -464,7 +444,7 @@ public class StatisticMarketLevelTicker1M {
         Double targetSL = Configs.RATE_STOP_LOSS_ALT * rateTarget;
         Double budget = BudgetManagerSimple.getInstance().getBudget();
         budget = budget * 2;
-        Integer leverage = BudgetManagerSimple.getInstance().getLeverage(symbol);
+        Integer leverage = BudgetManagerSimple.getInstance().getLeverage();
         Double priceTp = Utils.calPriceTarget(symbol, entry, OrderSide.SELL, rateTarget);
         Double priceSL = Utils.calPriceTarget(symbol, entry, OrderSide.BUY, targetSL);
         String log = OrderSide.SELL + " " + symbol + " entry: " + entry + " target: " + priceTp + " budget: " + budget

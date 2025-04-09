@@ -144,7 +144,7 @@ public class AltBreadBigChange15M {
 //                    if (StringUtils.equals(symbol,"BAKEUSDT") && Utils.sdfFileHour.parse("20240705 11:15").getTime() == kline.startTime.longValue()){
 //                        System.out.println("Debug");
 //                    }
-                    if (MarketBigChangeDetectorTest.isSignalSell(tickers, i)) {
+                    if (MarketBigChangeDetectorTest.isSignalSell(tickers)) {
                         Long time = kline.startTime.longValue() + 14 * Utils.TIME_MINUTE;
                         List<String> symbolsEntry = time2Entry.get(time);
                         if (symbolsEntry == null) {

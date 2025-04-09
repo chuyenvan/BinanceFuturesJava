@@ -24,7 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class BudgetManagerSimple {
 
     public static final Logger LOG = LoggerFactory.getLogger(BudgetManagerSimple.class);
-    private static volatile BudgetManagerSimple INSTANCE = null;
+
     public BalanceIndex balanceIndex = new BalanceIndex();
     public Integer number_order_budget = 100;
     public Double BUDGET_PER_ORDER;
@@ -43,6 +43,8 @@ public class BudgetManagerSimple {
     public int totalSL = 0;
     public MarketLevelChange levelRun;
 
+    private static volatile BudgetManagerSimple INSTANCE = null;
+    public Double marginRunning = null;
 
     public static BudgetManagerSimple getInstance() {
         if (INSTANCE == null) {
@@ -75,7 +77,14 @@ public class BudgetManagerSimple {
     }
 
     public Double getBudget() {
-        return BUDGET_PER_ORDER;
+        return BUDGET_PER_ORDER / 2;
+    }
+    public Double getBudgetSell() {
+        return BUDGET_PER_ORDER / 8;
+    }
+    public Double getBudgetGrid() {
+        return balanceBasic / (Constants.specialSymbol.size() * 10);
+//        return 1000d;
     }
 
     public Boolean isAvailableTrade() {
@@ -83,13 +92,7 @@ public class BudgetManagerSimple {
     }
 
 
-    public Integer getLeverage(String symbol) {
-        if (Constants.specialSymbol.contains(symbol)) {
-            return Configs.LEVERAGE_ORDER * 2;
-        }
-        if (Constants.stableSymbol.contains(symbol)) {
-            return Configs.LEVERAGE_ORDER * 2;
-        }
+    public Integer getLeverage() {
         return Configs.LEVERAGE_ORDER;
     }
 
@@ -116,7 +119,8 @@ public class BudgetManagerSimple {
     }
 
     public void updateBalance(Long timeUpdate, TreeMap<Long, OrderTargetInfoTest> allOrderDone,
-                              ConcurrentHashMap<String, OrderTargetInfoTest> orderRunning, ConcurrentHashMap<String, List<OrderTargetInfoTest>> symbol2OrdersEntry, boolean isPrintBalance) {
+                              ConcurrentHashMap<String, OrderTargetInfoTest> orderRunning,
+                              ConcurrentHashMap<String, List<OrderTargetInfoTest>> symbol2OrdersEntry, boolean isPrintBalance) {
         Double balance = balanceBasic;
         Set<String> symbolRunning = orderRunning.keySet();
         totalFee = fee;
@@ -222,6 +226,8 @@ public class BudgetManagerSimple {
         for (OrderTargetInfoTest orderInfo : orderInfos) {
             Double profit = orderInfo.calProfitMin();
             result += profit;
+//            LOG.info("{} {} {} {} {} {}",orderInfo.symbol, orderInfo.side, orderInfo.priceEntry, orderInfo.minPrice
+//            , orderInfo.maxPrice, profit);
         }
         return result;
     }
@@ -269,6 +275,7 @@ public class BudgetManagerSimple {
 
 
     public void updateInvesting(Collection<OrderTargetInfoTest> orderRunning) {
+        LOG.info("Update for symbol: {}", orderRunning.stream().count());
 //        Double margin = calPositionMargin(orderRunning);
 //        investing = margin * 100 / balanceCurrent;
     }
@@ -284,13 +291,13 @@ public class BudgetManagerSimple {
         );
     }
 
-    public Double calRateLossDynamic(Double unProfit, String symbol, Double rateSLMin) {
+    public Double calRateLossDynamicBuy(Double unProfit, Double rateSLMin) {
         Double rateLoss = unProfit * 1000;
         Double rateStopLoss = Configs.RATE_STOP_LOSS_ALT;
-        if (Constants.specialSymbol.contains(symbol)
-                || Constants.stableSymbol.contains(symbol)) {
-            rateStopLoss = Configs.RATE_STOP_LOSS_SPECIAL;
-        }
+//        if (Constants.specialSymbol.contains(symbol)
+//                || Constants.stableSymbol.contains(symbol)) {
+//            rateStopLoss = Configs.RATE_STOP_LOSS_SPECIAL;
+//        }
         Long tradingStopRate;
         if (rateLoss < 60) {
             tradingStopRate = rateLoss.longValue() / 2;
@@ -310,6 +317,7 @@ public class BudgetManagerSimple {
     }
 
 
+
     public static void main(String[] args) {
 //        for (int i = 2; i < 11; i++) {
 //            int numberOrder = i * 2;
@@ -317,13 +325,14 @@ public class BudgetManagerSimple {
 //            BudgetManagerSimple.getInstance().updateBudget();
 //            LOG.info("{} -> {}", Configs.NUMBER_ENTRY_EACH_SIGNAL, BudgetManagerSimple.getInstance().getBudget());
 //        }
-        String symbol = "CATIUSDT";
+//        String symbol = "CATIUSDT";
+        System.out.println(BudgetManagerSimple.getInstance().getBudget());
 //        Double rate = Utils.rateOf2Double(1.454, 1.441);
 //        System.out.println(BudgetManagerSimple.getInstance().calRateStop(rate,symbol));
-        for (int i = 0; i < 30; i++) {
-            Double rate = -0.032 + i * 0.005;
-            LOG.info("{}  -> {}", rate, BudgetManagerSimple.getInstance().calRateLossDynamic(rate, symbol, 0.004));
-        }
+//        for (int i = 0; i < 30; i++) {
+//            Double rate = -0.032 + i * 0.005;
+//            LOG.info("{}  -> {}", rate, BudgetManagerSimple.getInstance().calRateLossDynamic(rate, symbol, 0.004));
+//        }
     }
 
 
@@ -343,5 +352,37 @@ public class BudgetManagerSimple {
         if (maxOrderRunning < counterOrderRunning) {
             maxOrderRunning = counterOrderRunning;
         }
+    }
+
+    public Double calRateMin2MoveSL(Double priceEntry, Double maxPrice15M, MarketLevelChange marketLevelChange) {
+
+        Double rateMin2MoveSl = Configs.RATE_PROFIT_STOP_MARKET;
+        if (priceEntry == null || maxPrice15M == null || marketLevelChange == null){
+            return rateMin2MoveSl;
+        }
+        try {
+            if (marginRunning != null && marginRunning < 40 * BUDGET_PER_ORDER) {
+                double rateMaxTarget = 0.01;
+                if (marketLevelChange.equals(MarketLevelChange.BIG_DOWN)
+                        || marketLevelChange.equals(MarketLevelChange.BIG_UP)
+                        || marketLevelChange.equals(MarketLevelChange.MEDIUM_DOWN)
+                        || marketLevelChange.equals(MarketLevelChange.MEDIUM_UP)
+                        || marketLevelChange.equals(MarketLevelChange.SMALL_DOWN)
+                        || marketLevelChange.equals(MarketLevelChange.SMALL_UP)
+                ) {
+                    rateMaxTarget = 0.08;
+                }
+                Double rateChangeNew = Utils.rateOf2Double(maxPrice15M, priceEntry) / 2;
+                if (rateChangeNew > rateMin2MoveSl) {
+                    rateMin2MoveSl = rateChangeNew;
+                    if (rateChangeNew > rateMaxTarget) {
+                        rateMin2MoveSl = rateMaxTarget;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return rateMin2MoveSl;
     }
 }

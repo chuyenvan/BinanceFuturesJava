@@ -6,6 +6,7 @@ import com.binance.chuyennd.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashSet;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
@@ -44,10 +45,47 @@ public class FundingFeeManager {
         }
         return null;
     }
-    public TreeMap<Double, String> getTopFundingFee(Long time, Set<String> allSymbols) {
+
+    public Set<String> getFundingBuy(long time) {
+        Set<String> symbols = new HashSet();
+        long timeGet = Utils.get4Hour(time);
+        for (String symbol : symbol2FundingFee.keySet()) {
+            Double funding = FundingFeeManager.getInstance().getFundingFee(symbol, timeGet);
+            if (funding != null && funding < 0) {
+                symbols.add(symbol);
+            }
+        }
+        return symbols;
+    }
+    public Set<String> getFundingSell(long time) {
+        Set<String> symbols = new HashSet();
+        long timeGet = Utils.get4Hour(time);
+        for (String symbol : symbol2FundingFee.keySet()) {
+            Double funding = FundingFeeManager.getInstance().getFundingFee(symbol, timeGet);
+            if (funding != null && funding > 0.001) {
+                symbols.add(symbol);
+            }
+        }
+        return symbols;
+    }
+
+    public TreeMap<Double, String> getTopDownFundingFee(Long time, Set<String> allSymbols) {
         TreeMap<Double, String> funding2Symbol = new TreeMap<>();
         if (time % (4 * Utils.TIME_HOUR) == 0) {
             for (String symbol : allSymbols) {
+                Double funding = FundingFeeManager.getInstance().getFundingFee(symbol, time);
+                if (funding != null) {
+                    funding2Symbol.put(funding, symbol);
+                }
+            }
+        }
+        return funding2Symbol;
+    }
+
+    public TreeMap<Double, String> getTopDownFundingFee(Long time) {
+        TreeMap<Double, String> funding2Symbol = new TreeMap<>();
+        if (time % (4 * Utils.TIME_HOUR) == 0) {
+            for (String symbol : symbol2FundingFee.keySet()) {
                 Double funding = FundingFeeManager.getInstance().getFundingFee(symbol, time);
                 if (funding != null) {
                     funding2Symbol.put(funding, symbol);

@@ -44,12 +44,12 @@ import org.slf4j.LoggerFactory;
 public class BtcBreadBigChange15M {
 
     public static final Logger LOG = LoggerFactory.getLogger(BtcBreadBigChange15M.class);
-    public Double TOTAL_RATE_CHANGE_WITHBREAD_2TRADING = Configs.getDouble("TOTAL_RATE_CHANGE_WITHBREAD_2TRADING");
-    public Double RATE_CHANGE_WITHBREAD_2TRADING = Configs.getDouble("RATE_CHANGE_WITHBREAD_2TRADING");
-    public Double BTC_BREAD_BIGCHANE_15M = Configs.getDouble("BTC_BREAD_BIGCHANE_15M");
-    public Integer LEVERAGE_ORDER_BEARD = Configs.getInt("LEVERAGE_ORDER_BEARD");
-    public Integer NUMBER_TICKER_TO_TRADE = Configs.getInt("NUMBER_TICKER_TO_TRADE");
-    public Double BUDGET_PER_ORDER = Configs.getDouble("BUDGET_PER_ORDER");
+//    public Double TOTAL_RATE_CHANGE_WITHBREAD_2TRADING = Configs.getDouble("TOTAL_RATE_CHANGE_WITHBREAD_2TRADING");
+//    public Double RATE_CHANGE_WITHBREAD_2TRADING = Configs.getDouble("RATE_CHANGE_WITHBREAD_2TRADING");
+//    public Double BTC_BREAD_BIGCHANE_15M = Configs.getDouble("BTC_BREAD_BIGCHANE_15M");
+//    public Integer LEVERAGE_ORDER_BEARD = Configs.getInt("LEVERAGE_ORDER_BEARD");
+//    public Integer NUMBER_TICKER_TO_TRADE = Configs.getInt("NUMBER_TICKER_TO_TRADE");
+//    public Double BUDGET_PER_ORDER = Configs.getDouble("BUDGET_PER_ORDER");
     public AtomicBoolean isTrading = new AtomicBoolean(false);
     public BreadDetectObject lastBreadTrader = null;
     public Long EVENT_TIME = Utils.TIME_MINUTE * 1;
@@ -65,15 +65,15 @@ public class BtcBreadBigChange15M {
     }
 
     public void startThreadDetectBreadBigChange2Trade() {
-        // init data
-        Volume24hrManager.getInstance();
-        allSymbol = TickerFuturesHelper.getAllSymbol();
-        allSymbol.removeAll(Constants.diedSymbol);
+//        // init data
+//        Volume24hrManager.getInstance();
+//        allSymbol = TickerFuturesHelper.getAllSymbol();
+//        allSymbol.removeAll(Constants.diedSymbol);
 
         // thread listen and detect bread big change 
         SubscriptionClient client = SubscriptionClient.create();
-        client.subscribeCandlestickEvent("btcusdt", CandlestickInterval.ONE_MINUTE, ((event) -> {
-            if (event.getStartTime() > lastTimeBreadTrader + NUMBER_TICKER_TO_TRADE * EVENT_TIME) {
+        client.subscribeCandlestickEvent("ethusdt", CandlestickInterval.ONE_MINUTE, ((event) -> {
+            if (event.getStartTime() > lastTimeBreadTrader + 2 * EVENT_TIME) {
 //                process(event);
             } else {
                 LOG.info("Not process because is Trading for bigchange: {}", Utils.toJson(lastBreadTrader));
@@ -81,65 +81,65 @@ public class BtcBreadBigChange15M {
         }), null);
     }
 
-    private void process(CandlestickEvent event) {
-        try {
-            BreadDetectObject breadData = BreadFunctions.calBreadData(event, BTC_BREAD_BIGCHANE_15M);
-            if (breadData.orderSide != null && breadData.totalRate >= TOTAL_RATE_CHANGE_WITHBREAD_2TRADING
-                    && breadData.rateChange > RATE_CHANGE_WITHBREAD_2TRADING && !isTrading.get()) {
-                lastTimeBreadTrader = event.getStartTime();
-                lastBreadTrader = breadData;
-                LOG.info("Bigchange: {} {} bread above:{} bread below:{} totalRate:{}", new Date(event.getStartTime()), breadData.orderSide,
-                        breadData.breadAbove, breadData.breadBelow, breadData.totalRate);
-                isTrading.set(true);
-                startThreadTradingAlt(breadData.orderSide);
-            } else {
-                LOG.info("{} {} bread above:{} bread below:{} totalRate:{}", new Date(event.getStartTime()),
-                        breadData.orderSide, breadData.breadAbove, breadData.breadBelow, breadData.totalRate);
-            }
+//    private void process(CandlestickEvent event) {
+//        try {
+//            BreadDetectObject breadData = BreadFunctions.calBreadData(event, BTC_BREAD_BIGCHANE_15M);
+//            if (breadData.orderSide != null && breadData.totalRate >= TOTAL_RATE_CHANGE_WITHBREAD_2TRADING
+//                    && breadData.rateChange > RATE_CHANGE_WITHBREAD_2TRADING && !isTrading.get()) {
+//                lastTimeBreadTrader = event.getStartTime();
+//                lastBreadTrader = breadData;
+//                LOG.info("Bigchange: {} {} bread above:{} bread below:{} totalRate:{}", new Date(event.getStartTime()), breadData.orderSide,
+//                        breadData.breadAbove, breadData.breadBelow, breadData.totalRate);
+//                isTrading.set(true);
+//                startThreadTradingAlt(breadData.orderSide);
+//            } else {
+//                LOG.info("{} {} bread above:{} bread below:{} totalRate:{}", new Date(event.getStartTime()),
+//                        breadData.orderSide, breadData.breadAbove, breadData.breadBelow, breadData.totalRate);
+//            }
+//
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+//
+//    }
 
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-    }
-
-    public void startThreadTradingAlt(OrderSide orderSide) {
-        new Thread(() -> {
-            Thread.currentThread().setName("ThreadTradingAltBreadBtcBigChan");
-            LOG.info("Start ThreadTradingAltBreadBtcBigChan !");
-            try {
-                for (String symbol : allSymbol) {
-                    if (ClientSingleton.getInstance().getBalanceAvalible() <= BUDGET_PER_ORDER) {
-                        LOG.info("Break because balance not enough!");
-                        break;
-                    }
-                    Double lastPrice = Volume24hrManager.getInstance().symbol2LastPrice.get(symbol);
-                    if (lastPrice == null) {
-                        lastPrice = ClientSingleton.getInstance().getCurrentPrice(symbol);
-                    }
-                    newOrderWithSide(symbol, orderSide, lastPrice);
-                }
-                isTrading.set(false);
-            } catch (Exception e) {
-                LOG.error("ERROR during ThreadTradingAltBreadBtcBigChan: {}", e);
-                e.printStackTrace();
-            }
-
-        }).start();
-    }
-
-    private void test(Map<String, List<KlineObjectNumber>> allSymbolTickers) {
-        List<KlineObjectNumber> allKlines = allSymbolTickers.get(Constants.SYMBOL_PAIR_BTC);
-        for (KlineObjectNumber allKline : allKlines) {
-            BreadDetectObject breadData = BreadFunctions.calBreadDataBtc(allKline, TOTAL_RATE_CHANGE_WITHBREAD_2TRADING);
-            if (breadData.orderSide != null && breadData.totalRate >= TOTAL_RATE_CHANGE_WITHBREAD_2TRADING && !isTrading.get()) {
-                LOG.info("Bigchange: {} {} bread above:{} bread below:{} rateChange:{}", new Date(allKline.startTime.longValue()), breadData.orderSide,
-                        breadData.breadAbove, breadData.breadBelow, breadData.totalRate);
-                isTrading.set(true);
-                startThreadTradingAltTest(breadData.orderSide, allSymbolTickers, allKline.startTime.longValue());
-            }
-        }
-    }
+//    public void startThreadTradingAlt(OrderSide orderSide) {
+//        new Thread(() -> {
+//            Thread.currentThread().setName("ThreadTradingAltBreadBtcBigChan");
+//            LOG.info("Start ThreadTradingAltBreadBtcBigChan !");
+//            try {
+//                for (String symbol : allSymbol) {
+//                    if (ClientSingleton.getInstance().getBalanceAvalible() <= BUDGET_PER_ORDER) {
+//                        LOG.info("Break because balance not enough!");
+//                        break;
+//                    }
+//                    Double lastPrice = Volume24hrManager.getInstance().symbol2LastPrice.get(symbol);
+//                    if (lastPrice == null) {
+//                        lastPrice = ClientSingleton.getInstance().getCurrentPrice(symbol);
+//                    }
+//                    newOrderWithSide(symbol, orderSide, lastPrice);
+//                }
+//                isTrading.set(false);
+//            } catch (Exception e) {
+//                LOG.error("ERROR during ThreadTradingAltBreadBtcBigChan: {}", e);
+//                e.printStackTrace();
+//            }
+//
+//        }).start();
+//    }
+//
+//    private void test(Map<String, List<KlineObjectNumber>> allSymbolTickers) {
+//        List<KlineObjectNumber> allKlines = allSymbolTickers.get(Constants.SYMBOL_PAIR_BTC);
+//        for (KlineObjectNumber allKline : allKlines) {
+//            BreadDetectObject breadData = BreadFunctions.calBreadDataBtc(allKline, TOTAL_RATE_CHANGE_WITHBREAD_2TRADING);
+//            if (breadData.orderSide != null && breadData.totalRate >= TOTAL_RATE_CHANGE_WITHBREAD_2TRADING && !isTrading.get()) {
+//                LOG.info("Bigchange: {} {} bread above:{} bread below:{} rateChange:{}", new Date(allKline.startTime.longValue()), breadData.orderSide,
+//                        breadData.breadAbove, breadData.breadBelow, breadData.totalRate);
+//                isTrading.set(true);
+//                startThreadTradingAltTest(breadData.orderSide, allSymbolTickers, allKline.startTime.longValue());
+//            }
+//        }
+//    }
 
     private void newOrderWithSide(String symbol, OrderSide orderSide, Double lastPrice) {
 //        OrderTargetInfo orderInfo = new OrderTargetInfo();

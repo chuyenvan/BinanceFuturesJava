@@ -121,6 +121,43 @@ class WebsocketRequestImpl {
         return request;
     }
 
+    WebsocketRequest<CandlestickEvent> subscribeAllCandlestickEvent(List<String> symbols, CandlestickInterval interval,
+                                                                 SubscriptionListener<CandlestickEvent> subscriptionListener,
+                                                                 SubscriptionErrorHandler errorHandler) {
+        InputChecker.checker()
+                .shouldNotNull(symbols, "symbol")
+                .shouldNotNull(subscriptionListener, "listener");
+        WebsocketRequest<CandlestickEvent> request = new WebsocketRequest<>(subscriptionListener, errorHandler);
+        request.name = "***Candlestick for " + symbols + "***";
+        request.connectionHandler = (connection) -> connection.send(Channels.allCandlestickChannel(symbols, interval));
+
+        request.jsonParser = (jsonWrapper) -> {
+            CandlestickEvent result = new CandlestickEvent();
+            result.setEventType(jsonWrapper.getString("e"));
+            result.setEventTime(jsonWrapper.getLong("E"));
+            result.setSymbol(jsonWrapper.getString("s"));
+            JsonWrapper jsondata = jsonWrapper.getJsonObject("k");
+            result.setStartTime(jsondata.getLong("t"));
+            result.setCloseTime(jsondata.getLong("T"));
+            result.setSymbol(jsondata.getString("s"));
+            result.setInterval(jsondata.getString("i"));
+            result.setFirstTradeId(jsondata.getLong("f"));
+            result.setLastTradeId(jsondata.getLong("L"));
+            result.setOpen(jsondata.getBigDecimal("o"));
+            result.setClose(jsondata.getBigDecimal("c"));
+            result.setHigh(jsondata.getBigDecimal("h"));
+            result.setLow(jsondata.getBigDecimal("l"));
+            result.setVolume(jsondata.getBigDecimal("v"));
+            result.setNumTrades(jsondata.getLong("n"));
+            result.setIsClosed(jsondata.getBoolean("x"));
+            result.setQuoteAssetVolume(jsondata.getBigDecimal("q"));
+            result.setTakerBuyBaseAssetVolume(jsondata.getBigDecimal("V"));
+            result.setTakerBuyQuoteAssetVolume(jsondata.getBigDecimal("Q"));
+            result.setIgnore(jsondata.getLong("B"));
+            return result;
+        };
+        return request;
+    }
     WebsocketRequest<SymbolMiniTickerEvent> subscribeSymbolMiniTickerEvent(String symbol,
             SubscriptionListener<SymbolMiniTickerEvent> subscriptionListener,
             SubscriptionErrorHandler errorHandler) {

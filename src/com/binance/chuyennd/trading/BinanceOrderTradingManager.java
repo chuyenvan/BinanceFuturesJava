@@ -51,7 +51,7 @@ public class BinanceOrderTradingManager {
 
     public static void main(String[] args) throws InterruptedException, ParseException {
         LOG.info("Start trader with target: {}%", Utils.formatPercent(Configs.RATE_TARGET));
-        new DetectEntrySignal2Trader().start();
+        new DetectEntrySignal2TradeNormal().start();
         new BinanceOrderTradingManager().start();
     }
 
@@ -97,6 +97,10 @@ public class BinanceOrderTradingManager {
 
     private void processOrderNewMarketNew(OrderTargetInfo order) {
         try {
+            if (BudgetManager.getInstance().marginRunning > BudgetManager.getInstance().balanceBasic * 0.7) {
+                LOG.info("Not trade because over margin: {} {}", BudgetManager.getInstance().marginRunning, BudgetManager.getInstance().balanceBasic);
+                return;
+            }
             LOG.info("Create order market {} {}", order.side, order.symbol);
             Order orderInfo = OrderHelper.newOrderMarket(order.symbol, order.side, order.quantity);
             BudgetManager.getInstance().symbol2Level.put(order.symbol, order.marketLevel);
@@ -105,7 +109,6 @@ public class BinanceOrderTradingManager {
                     + " quantity: " + order.quantity
                     + " time:" + Utils.normalizeDateYYYYMMDDHHmm(order.timeStart)
                     + " market level: " + order.marketLevel;
-            BudgetManager.getInstance().updatePositionInitialMargin();
             LOG.info(log);
             if (orderInfo == null) {
                 LOG.info("Create order symbol {} false! {}", order.symbol, Utils.toJson(order));
@@ -124,35 +127,46 @@ public class BinanceOrderTradingManager {
 
     public void processManagerPosition() {
         long startTime = System.currentTimeMillis();
-        BudgetManager.getInstance().updatePositionInitialMargin();
         LOG.info("Start check all position: {}", new Date());
         try {
             // get all open order
-            LOG.info("Get all Open order.");
+//            LOG.info("Get all Open order.");
             List<Order> ordersOpen = BinanceFuturesClientSingleton.getInstance().getAllOpenOrderInfos();
             // get all position
-            LOG.info("Get all position.");
+//            LOG.info("Get all position.");
             List<PositionRisk> positions = BinanceFuturesClientSingleton.getInstance().getAllPositionInfos();
             Map<String, PositionRisk> symbol2Pos = new HashMap<>();
             BudgetManager.getInstance().symbol2Margin.clear();
             BudgetManager.getInstance().marginBig.clear();
             BudgetManager.getInstance().symbol2Pos.clear();
+            BudgetManager.getInstance().symbolSell.clear();
+            BudgetManager.getInstance().symbolBuy.clear();
+            Double marginTotal = 0d;
             for (PositionRisk position : positions) {
+                if (position.getPositionAmt().doubleValue() == 0) {
+                    continue;
+                }
+                symbol2Pos.put(position.getSymbol(), position);
+                if (PositionHelper.calRateLoss(position) < Configs.RATE_PROFIT_STOP_MARKET) {
+                    marginTotal += PositionHelper.callMargin(position);
+                }
+                BudgetManager.getInstance().symbol2Margin.put(position.getSymbol(), PositionHelper.callMargin(position));
+                if (PositionHelper.callMargin(position) >= 1.5 * BudgetManager.getInstance().getBudget()) {
+                    BudgetManager.getInstance().marginBig.add(position.getSymbol());
+                }
                 if (position.getPositionAmt().doubleValue() > 0) {
-                    BudgetManager.getInstance().symbol2Margin.put(position.getSymbol(), PositionHelper.callMargin(position));
-                    if (PositionHelper.callMargin(position) > 10 * BudgetManager.getInstance().getBudget()) {
-                        BudgetManager.getInstance().marginBig.add(position.getSymbol());
-                    }
-                    symbol2Pos.put(position.getSymbol(), position);
+                    BudgetManager.getInstance().symbolBuy.add(position.getSymbol());
+                } else {
+                    BudgetManager.getInstance().symbolSell.add(position.getSymbol());
                 }
             }
+            BudgetManager.getInstance().marginRunning = marginTotal;
             BudgetManager.getInstance().symbol2Pos.putAll(symbol2Pos);
             BudgetManager.getInstance().removeSymbolNotPos(symbol2Pos.keySet());
             updateSymbolRunning(symbol2Pos.keySet());
             Map<String, Order> symbol2OrderSL = new HashMap<>();
             for (Order order : ordersOpen) {
-                if (StringUtils.equals(order.getType(), OrderType.STOP_MARKET.toString())
-                        && StringUtils.equals(order.getSide(), OrderSide.SELL.toString())) {
+                if (StringUtils.equals(order.getType(), OrderType.STOP_MARKET.toString())) {
                     PositionRisk pos = symbol2Pos.get(order.getSymbol());
                     if (pos != null
                             && Math.abs(pos.getPositionAmt().doubleValue()) == order.getOrigQty().doubleValue()) {
@@ -162,7 +176,6 @@ public class BinanceOrderTradingManager {
                             LOG.info("Cancel order sl not position: {}", order.getSymbol());
                             BinanceFuturesClientSingleton.getInstance().cancelOrder(
                                     order.getSymbol(), order.getClientOrderId());
-
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
@@ -175,45 +188,46 @@ public class BinanceOrderTradingManager {
 //            BudgetManager.getInstance().symbol2Level.clear();
             for (Map.Entry<String, PositionRisk> entry : symbol2Pos.entrySet()) {
                 String symbol = entry.getKey();
-                PositionRisk pos = entry.getValue();
-                OrderTargetInfo orderInfo = getOrderInfo(pos.getSymbol());
-                Double rateLoss = Utils.rateOf2Double(pos.getMarkPrice().doubleValue(), pos.getEntryPrice().doubleValue());
+                PositionRisk position = entry.getValue();
+                OrderTargetInfo orderInfo = getOrderInfo(position.getSymbol());
+                Double rateLoss = PositionHelper.calRateLoss(position);
                 if (orderInfo != null) {
-                    BudgetManager.getInstance().symbol2Level.put(symbol, orderInfo.marketLevel);
-                    Double rateMin2MoveSl = Configs.RATE_PROFIT_STOP_MARKET;
-                    if (Constants.specialSymbol.contains(symbol) || Constants.stableSymbol.contains(symbol)) {
-                        rateMin2MoveSl = 0.01;
+                    if (position.getUpdateTime() < startTime + 30 * Utils.TIME_MINUTE) {
+                        BudgetManager.getInstance().symbol2Level.put(symbol, orderInfo.marketLevel);
+                    } else {
+                        BudgetManager.getInstance().symbol2Level.remove(symbol);
                     }
-                    if ((System.currentTimeMillis() - pos.getUpdateTime()) >= Configs.TIME_AFTER_ORDER_2_SL * Utils.TIME_MINUTE
-                            || rateLoss > rateMin2MoveSl
-                    ) {
+                    Double rateMin2MoveSl = BudgetManager.getInstance().calRateMin2MoveSL(orderInfo.marketLevel,
+                            position.getEntryPrice().doubleValue(), orderInfo.priceTP);
+                    if (orderInfo.side.equals(OrderSide.SELL)) {
+                        rateMin2MoveSl = 2 * rateMin2MoveSl;
+                    }
+                    if (rateLoss > rateMin2MoveSl) {
                         if (orderInfo.priceSL == null) {
-                            Double rateStop = BudgetManager.getInstance().callRateLossDynamicBuy(rateLoss, symbol,rateMin2MoveSl);
-                            Double priceSLNew = Utils.calPriceTarget(symbol, pos.getEntryPrice().doubleValue(), OrderSide.SELL, -rateStop);
-                            if (priceSLNew <= pos.getEntryPrice().doubleValue() && rateLoss > 0) {
-                                Double rateStopLoss = Configs.RATE_STOP_LOSS_ALT;
-                                if (Constants.specialSymbol.contains(symbol) || Constants.stableSymbol.contains(symbol)) {
-                                    rateStopLoss = Configs.RATE_STOP_LOSS_SPECIAL;
-                                }
-                                priceSLNew = Utils.calPriceTarget(symbol, pos.getEntryPrice().doubleValue(), OrderSide.SELL, rateStopLoss);
+                            OrderSide sideSL = OrderSide.SELL;
+                            Double rateStop = BudgetManager.getInstance().callRateLossDynamicBuy(rateLoss, rateMin2MoveSl);
+                            if (orderInfo.side.equals(OrderSide.SELL)) {
+                                sideSL = OrderSide.BUY;
+                                rateStop = BudgetManager.getInstance().callRateLossDynamicBuy(rateLoss, rateMin2MoveSl);
                             }
+                            Double priceSLNew = Utils.calPriceTarget(symbol, position.getEntryPrice().doubleValue(), sideSL, -rateStop);
                             LOG.info("Renew price SL:{} {} {} {} {} {}%", symbol, orderInfo.marketLevel,
-                                    Utils.normalizeDateYYYYMMDDHHmm(pos.getUpdateTime()),
+                                    Utils.normalizeDateYYYYMMDDHHmm(position.getUpdateTime()),
                                     Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()),
                                     priceSLNew, Utils.formatPercent(-rateStop));
                             orderInfo.priceSL = priceSLNew;
                             RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO, symbol, Utils.toJson(orderInfo));
-                            createSL(pos, orderInfo.priceSL);
+                            createSL(position, orderInfo.priceSL);
                         }
                     }
                 } else {
                     OrderSide side = OrderSide.BUY;
-                    if (pos.getPositionAmt().doubleValue() < 0) {
+                    if (position.getPositionAmt().doubleValue() < 0) {
                         side = OrderSide.SELL;
                     }
-                    OrderTargetInfo orderTrade = new OrderTargetInfo(OrderTargetStatus.REQUEST, pos.getEntryPrice().doubleValue(),
-                            null, pos.getPositionAmt().doubleValue(), BudgetManager.getInstance().getLeverage(symbol), symbol, pos.getUpdateTime(),
-                            pos.getUpdateTime(), side, Constants.TRADING_TYPE_VOLUME_MINI);
+                    OrderTargetInfo orderTrade = new OrderTargetInfo(OrderTargetStatus.REQUEST, position.getEntryPrice().doubleValue(),
+                            null, position.getPositionAmt().doubleValue(), BudgetManager.getInstance().getLeverage(), symbol, position.getUpdateTime(),
+                            position.getUpdateTime(), side, Constants.TRADING_TYPE_VOLUME_MINI);
                     orderTrade.marketLevel = MarketLevelChange.ORDER_PROFIT;
                     RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO, symbol, Utils.toJson(orderTrade));
                     LOG.info("New order 2 redis because order null: {}", Utils.toJson(orderTrade));
@@ -228,7 +242,7 @@ public class BinanceOrderTradingManager {
             e.printStackTrace();
         }
         Long timeProcess = (System.currentTimeMillis() - startTime) * 10 / Utils.TIME_SECOND;
-        LOG.info("Final check all position: {}s locked:{}", timeProcess.doubleValue() / 10, BudgetManager.getInstance().marginBig);
+        LOG.info("Final check all position: {}s", timeProcess.doubleValue() / 10);
     }
 
     private void processDynamicTP_SL(List<PositionRisk> positions, Map<String, Order> symbol2OrderSL) {
@@ -236,14 +250,12 @@ public class BinanceOrderTradingManager {
         int counterOrderRunning = 0;
         for (PositionRisk position : positions) {
             try {
-                if (position.getPositionAmt().doubleValue() <= 0) {
+                if (position.getPositionAmt().doubleValue() == 0) {
                     continue;
                 }
                 counterOrderRunning++;
-                Double rateLoss = Utils.rateOf2Double(position.getMarkPrice().doubleValue(), position.getEntryPrice().doubleValue());
+                Double rateLoss = PositionHelper.calRateLoss(position);
                 Double priceEntry = position.getEntryPrice().doubleValue();
-
-                OrderSide side2Sl = OrderSide.SELL;
                 String symbol = position.getSymbol();
                 OrderTargetInfo orderInfo = getOrderInfo(symbol);
                 if (orderInfo == null) {
@@ -252,23 +264,30 @@ public class BinanceOrderTradingManager {
                 if (orderInfo.priceEntry != priceEntry) {
                     orderInfo.priceEntry = priceEntry;
                 }
+                OrderSide side2Sl;
+                Double rateMin2MoveSl = BudgetManager.getInstance().calRateMin2MoveSL(orderInfo.marketLevel,
+                        position.getEntryPrice().doubleValue(), orderInfo.priceTP);
+                // BUY
+                if (position.getPositionAmt().doubleValue() > 0) {
+                    side2Sl = OrderSide.SELL;
+                    if (!Constants.specialSymbol.contains(symbol)) {
+                        rateMin2MoveSl = 3 * rateMin2MoveSl;
+                    }
+                } else { // SELL
+                    side2Sl = OrderSide.BUY;
+                    rateMin2MoveSl = 2 * rateMin2MoveSl;
+                }
 
-                if (orderInfo.priceSL != null) {
+                if (orderInfo.priceSL != null && rateLoss > rateMin2MoveSl) {
                     // move SL
-                    Double rateMin2MoveSl = Configs.RATE_PROFIT_STOP_MARKET;
-                    if (Constants.specialSymbol.contains(symbol) || Constants.stableSymbol.contains(symbol)) {
-                        rateMin2MoveSl = 0.01;
-                    }
-                    Double rateSL = BudgetManager.getInstance().callRateLossDynamicBuy(rateLoss, position.getSymbol(), rateMin2MoveSl);
                     Double priceSL = orderInfo.priceSL;
-                    if (position.getPositionAmt().doubleValue() < 0) {
-                        side2Sl = OrderSide.BUY;
-                    }
-
+                    Double rateSL = BudgetManager.getInstance().callRateLossDynamicBuy(rateLoss, rateMin2MoveSl);
                     Double priceSLNew = Utils.calPriceTarget(symbol, priceEntry, side2Sl, -rateSL);
                     double priceSLChange = priceSLNew - priceSL;
                     if (position.getPositionAmt().doubleValue() < 0) {
-                        priceSLChange = -priceSLChange;
+                        rateSL = BudgetManager.getInstance().callRateLossDynamicBuy(rateLoss, rateMin2MoveSl);
+                        priceSLNew = Utils.calPriceTarget(symbol, priceEntry, side2Sl, -rateSL);
+                        priceSLChange = priceSL - priceSLNew;
                     }
                     // sl init -> not order sl running
                     if (symbol2OrderSL.get(symbol) == null) {
@@ -279,7 +298,6 @@ public class BinanceOrderTradingManager {
                         // move sl
                         if ((rateLoss >= rateMin2MoveSl
                                 && priceSLChange > 0)
-                                && priceSLNew > priceEntry
                                 && symbol2OrderSL.get(symbol) != null) {
                             LOG.info("Update SL {} {} {} {}->{} {}%", Utils.normalizeDateYYYYMMDDHHmm(orderInfo.timeStart),
                                     Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()), symbol, priceSL,
@@ -295,7 +313,6 @@ public class BinanceOrderTradingManager {
                             createSL(position, orderInfo.priceSL);
                         }
                     }
-
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -305,18 +322,6 @@ public class BinanceOrderTradingManager {
 
         LOG.info("Process dynamic tp/sl for {} positions: {}s", counterOrderRunning, timeProcess / Utils.TIME_SECOND);
     }
-
-//    private void sendDcaOrder(PositionRisk position) {
-//        try {
-//            String symbol = position.getSymbol();
-//            List<KlineObjectNumber> tickers = TickerFuturesHelper.getTicker(symbol, Constants.INTERVAL_1M);
-//
-//            new DetectEntrySignal2Trader().createOrderBuyRequest(symbol, tickers.get(tickers.size() - 1),
-//                    MarketLevelChange.DCA_ORDER);
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
-//    }
 
     private void updateSymbolRunning(Set<String> symbols) {
         try {
@@ -408,12 +413,15 @@ public class BinanceOrderTradingManager {
             // chua co sl -> tao sl
             String log;
             if (pos.getPositionAmt().doubleValue() > 0) {
-                log = "Create sl -> SELL "
-                        + pos.getSymbol() + " " + pos.getPositionAmt().doubleValue() + " " + pos.getEntryPrice().doubleValue()
-                        + " -> " + priceSL + " rate: " + Utils.formatPercent(Math.abs(Utils.rateOf2Double(priceSL,
-                        pos.getEntryPrice().doubleValue())));
-                LOG.info(log);
-                OrderHelper.stopLoss(pos.getSymbol(), OrderSide.SELL, pos.getPositionAmt().doubleValue(), priceSL);
+                pos = BinanceFuturesClientSingleton.getInstance().getPositionInfo(pos.getSymbol());
+                if (pos != null) {
+                    log = "Create sl -> SELL "
+                            + pos.getSymbol() + " " + pos.getPositionAmt().doubleValue() + " " + pos.getEntryPrice().doubleValue()
+                            + " -> " + priceSL + " rate: " + Utils.formatPercent(Math.abs(Utils.rateOf2Double(priceSL,
+                            pos.getEntryPrice().doubleValue())));
+                    LOG.info(log);
+                    OrderHelper.stopLoss(pos.getSymbol(), OrderSide.SELL, pos.getPositionAmt().doubleValue(), priceSL);
+                }
             } else {
                 log = "Create sl -> BUY "
                         + pos.getSymbol() + " " + pos.getPositionAmt().doubleValue() + " " + pos.getEntryPrice().doubleValue()

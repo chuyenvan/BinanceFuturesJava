@@ -19,6 +19,8 @@ import com.binance.chuyennd.utils.Configs;
 import org.apache.commons.lang.StringUtils;
 
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * @author pc
@@ -38,6 +40,7 @@ public class Constants {
     public static final String INTERVAL_1M = "1m";
     public static final String INTERVAL_15M = "15m";
     public static final String INTERVAL_1D = "1d";
+    public static final String INTERVAL_3D = "3d";
     public static final String INTERVAL_1H = "1h";
     public static final String INTERVAL_4H = "4h";
     public static final String INTERVAL_12H = "12h";
@@ -46,10 +49,12 @@ public class Constants {
     public static final String TRADING_TYPE_BREAD = "TRADING_TYPE_BREAD";
     public static final String TRADING_TYPE_VOLUME_MINI = "TRADING_TYPE_VOLUME_MINI";
 
-    public static final ArrayList<String> diedSymbol = new ArrayList<>();
-    public static final ArrayList<String> specialSymbol = new ArrayList<>();
-    public static final ArrayList<String> stableSymbol = new ArrayList<>();
-    public static final ArrayList<String> altReverseSymbol = new ArrayList<>();
+
+    public static final Set<String> diedSymbol = new HashSet<>();
+    public static final Set<String> allSymbolStable = new HashSet<>();
+    public static final Set<String> specialSymbol = new HashSet<>();
+    public static final Set<String> stableSymbol = new HashSet<>();
+    public static final Set<String> btcReverseSymbol = new HashSet<>();
     public static final String URL_TICKER_FUTURES = "https://fapi.binance.com/fapi/v1/klines?symbol=xxxxxx&interval=";
     public static final String URL_TICKER_FUTURES_STARTTIME = "https://fapi.binance.com/fapi/v1/klines?symbol=xxxxxx&startTime=tttttt&interval=";
     public static final String URL_FUNDING_FEE_FUTURES_START_TIME = "https://fapi.binance.com/fapi/v1/fundingRate?startTime=tttttt&symbol=xxxxxx";
@@ -75,6 +80,16 @@ public class Constants {
             }
             stableSymbol.add(symbol);
         }
+        symbols = Configs.getString("BTC_REVERSE_SYMBOLS");
+        for (String symbol : StringUtils.split(symbols, ",")) {
+            if (!StringUtils.contains(symbol, "USDT")) {
+                symbol = symbol + "USDT";
+            }
+            btcReverseSymbol.add(symbol);
+        }
+        allSymbolStable.addAll(specialSymbol);
+        allSymbolStable.addAll(stableSymbol);
+        allSymbolStable.addAll(btcReverseSymbol);
     }
 
     public static void main(String[] args) {

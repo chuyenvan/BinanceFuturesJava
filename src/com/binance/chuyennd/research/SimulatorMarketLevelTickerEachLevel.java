@@ -354,7 +354,7 @@ public class SimulatorMarketLevelTickerEachLevel {
         if (orderMulti != null) {
             if (orderMulti.timeStart < ticker.startTime.longValue()) {
                 orderMulti.updatePriceByKlineSimple(ticker);
-                orderMulti.updateStatusNew(null);
+                orderMulti.updateStatusNew();
                 if (orderMulti.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)
                         || orderMulti.status.equals(OrderTargetStatus.STOP_LOSS_DONE)
                         || orderMulti.status.equals(OrderTargetStatus.STOP_MARKET_DONE)) {
@@ -373,7 +373,7 @@ public class SimulatorMarketLevelTickerEachLevel {
                     symbol2OrdersEntry.remove(symbol);
                     symbol2OrderRunning.remove(symbol);
                 } else {
-                    orderMulti.updateTPSL(null);
+                    orderMulti.updateTPSL();
                 }
             }
         }
@@ -414,7 +414,7 @@ public class SimulatorMarketLevelTickerEachLevel {
         }
         Double entry = ticker.priceClose;
         Double budget = BudgetManagerSimple.getInstance().getBudget();
-        Integer leverage = BudgetManagerSimple.getInstance().getLeverage(symbol);
+        Integer leverage = BudgetManagerSimple.getInstance().getLeverage();
         Double marginRunning = calMarginRunning();
         if (levelChange.equals(MarketLevelChange.BIG_UP)) {
             budget = budget * 2;
@@ -434,31 +434,17 @@ public class SimulatorMarketLevelTickerEachLevel {
             budget = budget;
         }
         if (levelChange.equals(MarketLevelChange.SMALL_DOWN_15M)
-                || levelChange.equals(MarketLevelChange.MEDIUM_UP_15M)
                 || levelChange.equals(MarketLevelChange.TINY_UP)
-                || levelChange.equals(MarketLevelChange.TINY_DOWN_15M)
         ) {
             budget = budget / 2;
         }
-        if (levelChange.equals(MarketLevelChange.BTC_REVERSE)
-                || levelChange.equals(MarketLevelChange.BTC_TREND_REVERSE)
+        if (levelChange.equals(MarketLevelChange.BTC_TREND_REVERSE)
 //                || levelChange.equals(MarketLevelChange.SMALL_UP_15M)
         ) {
             budget = budget / 3;
         }
-        if (levelChange.equals(MarketLevelChange.SMALL_UP_15M)
-        ) {
-            budget = budget / 6;
-        }
-        if (marginRunning > 15 * BudgetManagerSimple.getInstance().getBudget()
-                && (levelChange.equals(MarketLevelChange.MEDIUM_UP_15M)
-                || levelChange.equals(MarketLevelChange.SMALL_DOWN_15M)
-                || levelChange.equals(MarketLevelChange.SMALL_UP_15M)
-                || levelChange.equals(MarketLevelChange.TINY_DOWN_15M))
-                || levelChange.equals(MarketLevelChange.BTC_TREND_REVERSE)
-        ) {
-            budget = budget / 2;
-        }
+
+
         if (marginRunning > 35 * BudgetManagerSimple.getInstance().getBudget()) {
             budget = budget / 2;
         }

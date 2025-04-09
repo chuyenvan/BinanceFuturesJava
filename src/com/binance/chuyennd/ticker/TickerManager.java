@@ -46,9 +46,9 @@ public class TickerManager {
 
     }
 
-    public static List<KlineObjectSimple> getTickerFullBtc1M() {
+    public static List<KlineObjectSimple> getTickerFull1M(String symbol) {
 
-        String fileName = Configs.FOLDER_TICKER_1M + Constants.SYMBOL_PAIR_BTC;
+        String fileName = Configs.FOLDER_TICKER_1M + symbol;
         List<KlineObjectSimple> tickers = null;
         if (new File(fileName).exists()) {
             try {
@@ -57,7 +57,7 @@ public class TickerManager {
                 tickers.remove(tickers.size() - 1);
                 while (true) {
 //                    LOG.info("Get data: {}", Utils.normalizeDateYYYYMMDDHHmm(startTime));
-                    tickers.addAll(TickerFuturesHelper.getTickerSimpleWithStartTime(Constants.SYMBOL_PAIR_BTC,
+                    tickers.addAll(TickerFuturesHelper.getTickerSimpleWithStartTime(symbol,
                             Constants.INTERVAL_1M, startTime));
                     startTime = startTime + 500 * Utils.TIME_MINUTE;
                     if (startTime > System.currentTimeMillis()) {
@@ -65,6 +65,7 @@ public class TickerManager {
                     }
                 }
             } catch (Exception e) {
+                tickers = null;
                 e.printStackTrace();
             }
         }
@@ -74,7 +75,7 @@ public class TickerManager {
                 Long startTime = Utils.sdfFile.parse(Configs.TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
                 while (true) {
                     LOG.info("Get data: {}", Utils.normalizeDateYYYYMMDDHHmm(startTime));
-                    tickers.addAll(TickerFuturesHelper.getTickerSimpleWithStartTime(Constants.SYMBOL_PAIR_BTC,
+                    tickers.addAll(TickerFuturesHelper.getTickerSimpleWithStartTime(symbol,
                             Constants.INTERVAL_1M, startTime));
                     startTime = startTime + 500 * Utils.TIME_MINUTE;
                     if (startTime > System.currentTimeMillis()) {
@@ -91,8 +92,8 @@ public class TickerManager {
 
     private void startThreadUpdateTicker1MSimple() {
         new Thread(() -> {
-            Thread.currentThread().setName("ThreadUpdateBudgetByHour");
-            LOG.info("Start thread ThreadUpdateBudgetByHour!");
+            Thread.currentThread().setName("ThreadUpdateTicker");
+            LOG.info("Start thread ThreadUpdateTicker!");
 //            startUpdateTicker1mSimple();
             while (true) {
                 try {
@@ -100,17 +101,19 @@ public class TickerManager {
                             || Utils.getCurrentHour() == 10
                             || Utils.getCurrentHour() == 18
                             || Utils.getCurrentHour() == 23) {
-//                        List<KlineObjectSimple> tickers = TickerManager.getTickerFullBtc1M();
-//                        LOG.info("End ticker btc 1m: {}", Utils.normalizeDateYYYYMMDDHHmm(tickers.get(tickers.size() - 1).startTime.longValue()));
+                        startResetTicker1hSimple();
                         startUpdateTicker1mSimple();
+                        startResetTicker1DAnd4HSimple();
+                    }
+                    if (Utils.getCurrentHour() == 0) {
                         startUpdateFundingFee();
                     }
-                    if (Utils.getCurrentHour() == 16) {
+                    if (Utils.getCurrentHour() == 10) {
                         startResetTicker15mSimple();
                     }
                     Thread.sleep(Utils.TIME_HOUR);
                 } catch (Exception e) {
-                    LOG.error("ERROR during ThreadUpdateBudgetByHour: {}", e);
+                    LOG.error("ERROR during ThreadUpdateTicker: {}", e);
                     e.printStackTrace();
                 }
             }
@@ -120,10 +123,11 @@ public class TickerManager {
     private void startResetTicker1hSimple() {
         try {
             try {
-                Set<String> symbols = TickerFuturesHelper.getAllSymbol();
-                symbols.removeAll(Constants.diedSymbol);
+                Set<String> symbols = new HashSet<>();
+//                symbols.addAll(Constants.specialSymbol);
+//                symbols.addAll(Constants.stableSymbol);
+//                symbols.addAll(Constants.btcReverseSymbol);
                 symbols.add(Constants.SYMBOL_PAIR_BTC);
-                symbols.add("ETHUSDT");
                 counter = 0;
                 total = symbols.size();
                 Long startTime = 1672506000000L;
@@ -481,7 +485,37 @@ public class TickerManager {
                 total = symbols.size();
                 Long startTime = 1672506000000L;
                 for (String symbol : symbols) {
-                    executorService.execute(() -> updateDataBySymbolSimple(symbol, Constants.INTERVAL_15M, startTime));
+                    if (Constants.specialSymbol.contains(symbol) || Constants.stableSymbol.contains(symbol)) {
+                        startTime = Utils.sdfFile.parse(Configs.TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
+                    }
+                    Long finalStartTime = startTime;
+                    executorService.execute(() -> updateDataBySymbolSimple(symbol, Constants.INTERVAL_15M, finalStartTime));
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        } catch (Exception e) {
+            LOG.error("ERROR during UpdateTicker15m: {}", e);
+            e.printStackTrace();
+        }
+    }
+
+    public void startResetTicker1DAnd4HSimple() {
+        try {
+            try {
+                Set<String> symbols = new HashSet<>();
+                symbols.addAll(TickerFuturesHelper.getAllSymbol());
+//                symbols.addAll(Constants.btcReverseSymbol);
+//                symbols.addAll(Constants.specialSymbol);
+//                symbols.addAll(Constants.stableSymbol);
+                counter = 0;
+                total = symbols.size();
+                Long startTime;
+                startTime = Utils.sdfFile.parse("20190101").getTime() + 7 * Utils.TIME_HOUR;
+                for (String symbol : symbols) {
+                    Long finalStartTime = startTime;
+                    executorService.execute(() -> updateDataBySymbolSimple(symbol, Constants.INTERVAL_1D, finalStartTime));
+                    executorService.execute(() -> updateDataBySymbolSimple(symbol, Constants.INTERVAL_4H, finalStartTime));
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -544,12 +578,10 @@ public class TickerManager {
                 Set<String> symbols = TickerFuturesHelper.getAllSymbol();
                 symbols.removeAll(Constants.diedSymbol);
                 Long timeStart = Utils.sdfFile.parse(Configs.TIME_RUN).getTime();
-
                 for (String symbol : symbols) {
                     updateFundingFeeBySymbol(symbol, timeStart);
                 }
             } catch (Exception e) {
-                e.printStackTrace();
             }
         } catch (Exception e) {
             LOG.error("ERROR during UpdateTicker15m: {}", e);
@@ -585,7 +617,7 @@ public class TickerManager {
                         break;
                     } else {
                         for (Double timeR : time2Rate.keySet()) {
-                            time2FundingRate.put(timeR.longValue()/Utils.TIME_SECOND * Utils.TIME_SECOND, time2Rate.get(timeR));
+                            time2FundingRate.put(timeR.longValue() / Utils.TIME_SECOND * Utils.TIME_SECOND, time2Rate.get(timeR));
                         }
                         time = time2FundingRate.lastKey() + 4 * Utils.TIME_HOUR;
                     }
@@ -798,10 +830,10 @@ public class TickerManager {
                 tickers = new ArrayList<>();
             }
             tickers.addAll(TickerFuturesHelper.getTickerWithStartTimeFull(symbol, interval, startTime));
-            tickers = TickerFuturesHelper.updateIndicator(tickers);
-//            LOG.info("Write ticker of {} {} {} to file: {}", symbol, interval, tickers.size(), fileName);
+//            tickers = TickerFuturesHelper.updateIndicator(tickers);
+            LOG.info("Write ticker of {} {} {} to file: {}", symbol, interval, tickers.size(), fileName);
             Storage.writeObject2File(fileName, tickers);
-//            LOG.info("Finish get ticker symbol: {} {}", symbol, interval);
+            LOG.info("Finish get ticker symbol: {} {}", symbol, interval);
 
         } catch (Exception e) {
             e.printStackTrace();
