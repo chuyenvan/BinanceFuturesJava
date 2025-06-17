@@ -15,26 +15,16 @@
  */
 package com.binance.chuyennd.object;
 
-import com.binance.client.model.enums.OrderSide;
-import java.io.Serializable;
-
 /**
  *
  * @author pc
  */
-public class OrderInfo implements Serializable {
-
-    public String symbol;
-    public Double quantity;
-    public Double priceEntry;
-    public Double priceSL;
-    public Double priceTP;    
-    public OrderSide orderSide;
-    public Long orderId;
-    public long timeCreated;
-    public OrderStatusProcess status;
-    public Double lastRateChange;
-    public Double priceBest;
-    public Integer leverage;
-    public Double percentChangeDay;
+public enum OrderStatusProcess {
+    REQUEST,
+    NEW,
+    POSITION_RUNNING,
+    NEW_HAD_SL3TP,
+    TAKE_PROFIT_DONE,
+    STOP_LOSS_DONE,
+    FINISHED;
 }

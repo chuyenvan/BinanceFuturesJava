@@ -1,7 +1,7 @@
 package com.binance.chuyennd.bigchange.statistic;
 
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
-import com.binance.chuyennd.client.TickerFuturesHelper;
+import com.binance.chuyennd.helper.TickerFuturesHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.ResistanceAndSupport;
 import com.binance.chuyennd.object.TrendObject;
@@ -82,7 +82,7 @@ public class AltChangeWithBtcBehavior {
     private String buildLineTest(OrderTargetInfoTest order, Double rateLoss) {
         return order.symbol + "," + Utils.normalizeDateYYYYMMDDHHmm(order.timeStart) + "," +
                 Utils.normalizeDateYYYYMMDDHHmm(order.timeUpdate) + "," + order.priceEntry + "," +
-                order.priceTP + "," + order.lastPrice + "," + order.volume + "," + order.unProfitTotal + "," +
+                order.priceTP + "," + order.lastPrice + "," + order.volume + ","  +
                 order.status + "," + rateLoss + "," + order.maxPrice + "," +
                 Utils.rateOf2Double(order.maxPrice, order.priceEntry) + "," +
                 Utils.rateOf2Double(order.tickerOpen.priceClose, order.tickerOpen.priceOpen) + "," +
@@ -131,7 +131,6 @@ public class AltChangeWithBtcBehavior {
                             orderTrade.maxPrice = kline.priceClose;
                             orderTrade.minPrice = kline.minPrice;
                             orderTrade.volume = kline.totalUsdt;
-                            orderTrade.unProfitTotal = kline.rsi;
                             orderTrade.lastPrice = kline.priceClose;
                             orderTrade.tickerOpen = kline;
                             if (i > 1) {
@@ -268,7 +267,6 @@ public class AltChangeWithBtcBehavior {
                                 orderTrade.maxPrice = kline.priceClose;
                                 orderTrade.minPrice = kline.minPrice;
                                 orderTrade.volume = kline.totalUsdt;
-                                orderTrade.unProfitTotal = kline.rsi;
                                 orderTrade.lastPrice = kline.priceClose;
                                 orderTrade.tickerOpen = kline;
                                 orderTrade.tickerClose = time2BtcDown.get(kline.startTime);

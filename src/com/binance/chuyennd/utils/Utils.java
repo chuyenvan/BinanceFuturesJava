@@ -7,7 +7,7 @@ package com.binance.chuyennd.utils;
 
 import com.alibaba.fastjson.JSONObject;
 import com.binance.chuyennd.client.ClientSingleton;
-import com.binance.chuyennd.client.TickerFuturesHelper;
+import com.binance.chuyennd.helper.TickerFuturesHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.MACDEntry;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
@@ -24,8 +24,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.math.BigInteger;
-import java.net.URL;
-import java.net.URLConnection;
 import java.net.URLEncoder;
 import java.security.MessageDigest;
 import java.text.*;
@@ -50,31 +48,16 @@ public class Utils {
     public static Gson gson = new GsonBuilder().serializeNulls().create();
     public static ObjectMapper mapper = new ObjectMapper();
 
-    public static final SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
     public static final SimpleDateFormat sdfFile = new SimpleDateFormat("yyyyMMdd");
     public static final SimpleDateFormat sdfMonth = new SimpleDateFormat("yyyyMM");
     public static final SimpleDateFormat sdfFileHour = new SimpleDateFormat("yyyyMMdd HH:mm");
     public static final SimpleDateFormat sdfFileFull = new SimpleDateFormat("yyyyMMdd HH:mm:ss");
-    public static final SimpleDateFormat sdfFile_Hour = new SimpleDateFormat("yyyyMMdd_HH:mm");
-    public static final SimpleDateFormat sdfHour = new SimpleDateFormat("HH:mm");
-    public static final SimpleDateFormat sdfFacebook = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
     public static final SimpleDateFormat sdfGoogle = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-    public static final SimpleDateFormat SDF_NORMAL = new SimpleDateFormat("E MMM dd HH:mm:ss z yyyy");
+
     public static final DecimalFormat df = new DecimalFormat("#.##");
     public static final DecimalFormat dfNew = new DecimalFormat("#");
 
-    public static String converObject2Json(Object data) {
-        try {
-            return mapper.writeValueAsString(data);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return "{}";
-    }
 
-    public static double marginOfPosition(PositionRisk pos) {
-        return Math.abs((pos.getPositionAmt().doubleValue() * pos.getEntryPrice().doubleValue() / pos.getLeverage().doubleValue()));
-    }
 
     public static Double callPnl(PositionRisk pos) {
         Double pnl = pos.getPositionAmt().doubleValue();
@@ -82,51 +65,14 @@ public class Utils {
         return pnl;
     }
 
-    public static Double callPnlDone(PositionRisk pos) {
-        Double pnl = pos.getPositionAmt().doubleValue();
-        pnl = pnl * (pos.getMarkPrice().doubleValue() - pos.getEntryPrice().doubleValue() * 1.02);
-        return Math.abs(pnl);
+    public static int getCurrentHour() {
+        Calendar cal = Calendar.getInstance();
+        cal.setTimeZone(TimeZone.getTimeZone("GMT+7"));
+        cal.setTime(new Date());
+        return cal.get(Calendar.HOUR_OF_DAY);
     }
 
-    public static Double callPnl(PositionRisk pos, Double lastPrice) {
-        Double pnl = pos.getPositionAmt().doubleValue();
-        pnl = pnl * (lastPrice - pos.getEntryPrice().doubleValue());
-        return pnl;
-    }
 
-    public static String getMainClassAndArgs() {
-        return System.getProperty("sun.java.command"); // like "org.x.y.Main arg1 arg2"
-    }
-
-    public static String convertVietnamese2English(String str) {
-        String nfdNormalizedString = Normalizer.normalize(str, Normalizer.Form.NFD);
-        Pattern pattern = Pattern.compile("\\p{InCombiningDiacriticalMarks}+");
-        return pattern.matcher(nfdNormalizedString).replaceAll("");
-    }
-
-    public static String extractNumberFromString(String str) {
-        return str.replaceAll("\\D+", "");
-    }
-
-    public static Collection<? extends String> extractUrlMp4FromJson(String json) {
-        List<String> containedUrls = new ArrayList<String>();
-//        String urlRegex = "((https?|ftp|gopher|telnet|file):((//)|(\\\\))+[\\w\\d:#@%/;$()~_?\\+-=\\\\\\.&]*)";
-        String urlRegex = "((https?|ftp|gopher|telnet|file):((//)|(\\\\))+[\\w\\d:#@%/;$()~_?\\+-=\\\\\\.& ']*)";
-
-        Pattern pattern = Pattern.compile(urlRegex, Pattern.CASE_INSENSITIVE);
-        Matcher urlMatcher = pattern.matcher(json);
-
-        while (urlMatcher.find()) {
-            String url = json.substring(urlMatcher.start(0),
-                    urlMatcher.end(0));
-            if (StringUtils.endsWith(url, "mp4")) {
-                containedUrls.add(url);
-//                System.out.println(url);
-            }
-        }
-
-        return containedUrls;
-    }
 
     public static boolean sendSms2Telegram(String text) {
         String urlString = "https://api.telegram.org/bot%s/sendMessage?chat_id=%s&text=%s&parse_mode=HTML";
@@ -147,277 +93,12 @@ public class Utils {
         return true;
     }
 
-    public static String readSms2Telegram() {
-//        String urlString = "https://api.telegram.org/bot%s/sendMessage?chat_id=%s&text=%s&parse_mode=HTML";
-        String urlString = "https://api.telegram.org/bot%s/getUpdates?offset=-1&chat_id=%s";
-
-        //Add Telegram token (given Token is fake)
-        String apiToken = "6158571844:AAHgemRZAWCFARpkyiZkpc9iTT4hEKMtUvw";
-
-        //Add chatId (given chatId is fake)
-        String chatId = "6548680563";
-
-        urlString = String.format(urlString, apiToken, chatId);
-
-        try {
-            return HttpRequest.getContentFromUrl(urlString);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return "";
-    }
-
-    public static boolean sendSms2Skype(String text) {
-        String urlString = "https://dev-crm-202x.edupia.vn/api/skype/send-advance";
-        //Add chatId (given chatId is fake)
-        String chatId = "8:chuyenvan";
-        JSONObject body = new JSONObject();
-        body.put("topic", chatId);
-        body.put("content", text);
-        try {
-            String respon = HttpRequest.httpPostWithJson(urlString, body.toJSONString());
-            System.out.println(respon);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return true;
-    }
-
-    public static HashMap<String, Object> createHashMapFromJsonString(String json) {
-        JsonObject object = new JsonParser().parse(json).getAsJsonObject();
-        Set<Map.Entry<String, JsonElement>> set = object.entrySet();
-        Iterator<Map.Entry<String, JsonElement>> iterator = set.iterator();
-        HashMap<String, Object> map = new HashMap<>();
-
-        while (iterator.hasNext()) {
-
-            Map.Entry<String, JsonElement> entry = iterator.next();
-            String key = entry.getKey();
-            JsonElement value = entry.getValue();
-
-            if (null != value) {
-                if (!value.isJsonPrimitive()) {
-                    if (value.isJsonObject()) {
-
-                        map.put(key, createHashMapFromJsonString(value.toString()));
-                    } else if (value.isJsonArray() && value.toString().contains(":")) {
-
-                        List<HashMap<String, Object>> list = new ArrayList<>();
-                        JsonArray array = value.getAsJsonArray();
-                        if (null != array) {
-                            for (JsonElement element : array) {
-                                list.add(createHashMapFromJsonString(element.toString()));
-                            }
-                            map.put(key, list);
-                        }
-                    } else if (value.isJsonArray() && !value.toString().contains(":")) {
-                        map.put(key, value.getAsJsonArray());
-                    }
-                } else {
-                    map.put(key, value.getAsString());
-                }
-            }
-        }
-        return map;
-    }
-
-    public static Long calTimeLearn(List<Long> times) {
-        long result = 0;
-        try {
-            long timeStartLearn = 300000;
-            long timeAvg = 3600000;
-            Integer sessionIndex = 0;
-            long startTimeSession = 0;
-            long endTimeSession = 0;
-            Map<Integer, Long> userLessionTime = new HashMap();
-
-            // truong hop 1 bt duy nhat
-            if (times.size() == 1) {
-                return timeStartLearn;
-            }
-            // truong hop 2 bt tro len
-            int counter = 0;
-            for (Long time : times) {
-                counter++;
-                if (startTimeSession == 0) {
-                    startTimeSession = time - timeStartLearn;
-                    endTimeSession = time;
-                    continue;
-                }
-                if (time - endTimeSession > timeAvg) {
-                    sessionIndex++;
-                    userLessionTime.put(sessionIndex, endTimeSession - startTimeSession);
-                    startTimeSession = time - timeStartLearn;
-                    endTimeSession = time;
-                } else {
-                    endTimeSession = time;
-                }
-                // check time cuoi => add list
-                if (counter == times.size()) {
-                    sessionIndex++;
-                    userLessionTime.put(sessionIndex, endTimeSession - startTimeSession);
-                }
-            }
-            for (Long time : userLessionTime.values()) {
-                result += time;
-            }
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return result;
-    }
-
-    public static String convertToMD5(String input) throws Exception {
-        String md5 = null;
-        if (null == input) {
-            return null;
-        }
-        try {
-            // Create MessageDigest object for MD5
-            MessageDigest digest = MessageDigest.getInstance("MD5");
-            // Update input string in message digest
-            digest.update(input.getBytes(), 0, input.length());
-            // Converts message digest value in base 16 (hex)
-            md5 = new BigInteger(1, digest.digest()).toString(16);
-            while (StringUtils.length(md5) < 32) {
-                md5 = "0" + md5;
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return md5;
-    }
-
-    public static String getWeekOfTime(long time) {
-        Calendar cal = Calendar.getInstance();
-        cal.setTimeInMillis(time);
-        time = getStartTimeOfCurrentWeek(time);
-        return getMonthByTime(time) + "-" + String.valueOf(cal.get(Calendar.WEEK_OF_YEAR));
-    }
-
-    public static int getWeekOfYear(long time) {
-        Calendar cal = Calendar.getInstance();
-        cal.setTimeInMillis(time);
-        return cal.get(Calendar.WEEK_OF_YEAR);
-    }
-
-    public static int getMonthOfYear(long time) {
-        Calendar cal = Calendar.getInstance();
-        cal.setTimeInMillis(time);
-        return cal.get(Calendar.MONTH);
-    }
-
     public static int getYear(long time) {
         Calendar cal = Calendar.getInstance();
         cal.setTimeInMillis(time);
         return cal.get(Calendar.YEAR);
     }
 
-    public static String getWeekOfYearStr(long time) {
-        Calendar cal = Calendar.getInstance();
-        cal.setTimeInMillis(time);
-        return cal.get(Calendar.YEAR) + "-" + cal.get(Calendar.WEEK_OF_YEAR);
-    }
-
-    public static String getMonthByTime(long time) {
-        return sdfFile.format(new Date(time)).substring(0, 6);
-    }
-
-    public static String getDayByTime(long time) {
-        return sdfFile.format(new Date(time));
-    }
-
-    public static String getYYYYMM(long time) {
-        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyyMM");
-        return simpleDateFormat.format(new Date(time));
-    }
-
-    public static String getLastMonth() {
-        Calendar calendar = Calendar.getInstance();
-        calendar.add(Calendar.MONTH, -1);
-        int max = calendar.getActualMaximum(Calendar.DAY_OF_MONTH);
-        calendar.set(Calendar.DAY_OF_MONTH, max);
-        return sdfFile.format(calendar.getTime()).substring(0, 6);
-    }
-
-    public static Date getDateLastMonth() {
-        Calendar calendar = Calendar.getInstance();
-        calendar.add(Calendar.MONTH, -1);
-        int max = calendar.getActualMaximum(Calendar.DAY_OF_MONTH);
-        calendar.set(Calendar.DAY_OF_MONTH, max);
-        return calendar.getTime();
-    }
-
-    public static Date getLastMonthDate() {
-        Calendar calendar = Calendar.getInstance();
-        calendar.add(Calendar.MONTH, -1);
-        int max = calendar.getActualMaximum(Calendar.DAY_OF_MONTH);
-        calendar.set(Calendar.DAY_OF_MONTH, max);
-        return calendar.getTime();
-    }
-
-    public static long getStartTimeLastMonth() {
-        Calendar calendar = Calendar.getInstance();
-        calendar.add(Calendar.MONTH, -1);
-        int min = calendar.getActualMinimum(Calendar.DAY_OF_MONTH);
-        calendar.set(Calendar.DAY_OF_MONTH, min);
-        calendar.set(Calendar.MINUTE, 0);
-        calendar.set(Calendar.SECOND, 0);
-        calendar.set(Calendar.MILLISECOND, 0);
-        calendar.set(Calendar.HOUR_OF_DAY, 0);
-        return calendar.getTimeInMillis();
-    }
-
-    public static long getStartTimeNextMonth() {
-        Calendar calendar = Calendar.getInstance();
-        calendar.add(Calendar.MONTH, 1);
-        int min = calendar.getActualMinimum(Calendar.DAY_OF_MONTH);
-        calendar.set(Calendar.DAY_OF_MONTH, min);
-        calendar.set(Calendar.MINUTE, 0);
-        calendar.set(Calendar.SECOND, 0);
-        calendar.set(Calendar.MILLISECOND, 0);
-        calendar.set(Calendar.HOUR_OF_DAY, 0);
-        return calendar.getTimeInMillis();
-    }
-
-    public static long getStartTimeMonth(long time) {
-        Calendar calendar = Calendar.getInstance();
-        calendar.setTimeInMillis(time);
-
-        int min = calendar.getActualMinimum(Calendar.DAY_OF_MONTH);
-        calendar.set(Calendar.DAY_OF_MONTH, min);
-        calendar.set(Calendar.MINUTE, 0);
-        calendar.set(Calendar.SECOND, 0);
-        calendar.set(Calendar.MILLISECOND, 0);
-        calendar.set(Calendar.HOUR_OF_DAY, 0);
-        return calendar.getTimeInMillis();
-    }
-
-    public static long getEndTimeMonth(long time) {
-        Calendar calendar = Calendar.getInstance();
-        calendar.setTimeInMillis(time);
-        int min = calendar.getActualMinimum(Calendar.DAY_OF_MONTH);
-        calendar.add(Calendar.MONTH, +1);
-        calendar.set(Calendar.DAY_OF_MONTH, min);
-        calendar.set(Calendar.MINUTE, 0);
-        calendar.set(Calendar.SECOND, 0);
-        calendar.set(Calendar.MILLISECOND, 0);
-        calendar.set(Calendar.HOUR_OF_DAY, 0);
-        return calendar.getTimeInMillis() - 1;
-    }
-
-    public static long getStartTimeMonthAgo(int i) {
-        Calendar calendar = Calendar.getInstance();
-        calendar.add(Calendar.MONTH, -i);
-        int min = calendar.getActualMinimum(Calendar.DAY_OF_MONTH);
-        calendar.set(Calendar.DAY_OF_MONTH, min);
-        calendar.set(Calendar.MINUTE, 0);
-        calendar.set(Calendar.SECOND, 0);
-        calendar.set(Calendar.MILLISECOND, 0);
-        calendar.set(Calendar.HOUR_OF_DAY, 0);
-        return calendar.getTimeInMillis();
-    }
 
     public static long getStartTimeDayAgo(int i) {
         Calendar calendar = Calendar.getInstance();
@@ -429,83 +110,6 @@ public class Utils {
         return calendar.getTimeInMillis();
     }
 
-    public static long getStartTimeDayNext(int i) {
-        Calendar calendar = Calendar.getInstance();
-        calendar.add(Calendar.DATE, i);
-        calendar.set(Calendar.MINUTE, 0);
-        calendar.set(Calendar.SECOND, 0);
-        calendar.set(Calendar.MILLISECOND, 0);
-        calendar.set(Calendar.HOUR_OF_DAY, 0);
-        return calendar.getTimeInMillis();
-    }
-
-    public static String getCurrentMonth() {
-        Calendar calendar = Calendar.getInstance();
-        calendar.add(Calendar.MONTH, 0);
-        int max = calendar.getActualMaximum(Calendar.DAY_OF_MONTH);
-        calendar.set(Calendar.DAY_OF_MONTH, max);
-        return sdfFile.format(calendar.getTime()).substring(0, 6);
-    }
-
-    public static int getCurrentMonthInt() {
-        Calendar cal = Calendar.getInstance();
-        cal.setTimeZone(TimeZone.getTimeZone("GMT+7"));
-        cal.setTime(new Date());
-        return cal.get(Calendar.MONTH) + 1;
-    }
-
-    public static Date getCurrentMonthDate() {
-        Calendar calendar = Calendar.getInstance();
-        calendar.add(Calendar.MONTH, 0);
-        int max = calendar.getActualMaximum(Calendar.DAY_OF_MONTH);
-        calendar.set(Calendar.DAY_OF_MONTH, max);
-        return calendar.getTime();
-    }
-
-    public static int getMonthOfTime(long time) {
-        Calendar cal = Calendar.getInstance();
-        Date date = new Date(time);
-        cal.setTimeZone(TimeZone.getTimeZone("GMT+7"));
-        cal.setTime(date);
-        return cal.get(Calendar.MONTH) + 1;
-    }
-
-    public static int getDayOfTime(long time) {
-        Calendar cal = Calendar.getInstance();
-        Date date = new Date(time);
-        cal.setTimeZone(TimeZone.getTimeZone("GMT+7"));
-        cal.setTime(date);
-        return cal.get(Calendar.DATE);
-    }
-
-    public static String getMonthStringOfTime(Long time) {
-        return sdfFile.format(new Date(time)).substring(0, 6);
-    }
-
-    public static <T> byte[] serializeObj(T obj) throws IOException {
-
-        byte[] result = null;
-        try (
-                ByteArrayOutputStream baos = new ByteArrayOutputStream(); ObjectOutputStream oos = new ObjectOutputStream(baos)) {
-            oos.writeObject(obj);
-            result = baos.toByteArray();
-        }
-
-        return result;
-    }
-
-    public static <T> T deserializeObj(byte[] input) throws IOException {
-        if (input == null) {
-            return null;
-        }
-        try (
-                ByteArrayInputStream bais = new ByteArrayInputStream(input); ObjectInputStream ois = new ObjectInputStream(bais);) {
-            return (T) ois.readObject();
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
 
     public static long getToDay() {
         Calendar calendar = Calendar.getInstance();
@@ -517,22 +121,7 @@ public class Utils {
         return calendar.getTimeInMillis();
     }
 
-    public static String twoWeekAgo() {
-        final int NUMBER_OF_DAYS_AGO = -14;
-        DateFormat format = new SimpleDateFormat("yyyy-mm-dd");
-        format.setLenient(true);
-        Calendar cal = Calendar.getInstance();
-        cal.setTime(new Date());
-        cal.add(Calendar.DATE, NUMBER_OF_DAYS_AGO);
-        String stopDate = DateFormat.getDateInstance().format(cal.getTime());
-        System.out.println(stopDate);
 
-        return stopDate;
-    }
-
-    public static String getToDayFileName() {
-        return sdfFile.format(new Date());
-    }
 
     public static String normalizeDateYYYYMMDD(Date input) {
         return sdfFile.format(input);
@@ -550,43 +139,7 @@ public class Utils {
         return sdfFileFull.format(new Date(input));
     }
 
-    public static String normalizeHHmm(Long input) {
-        return sdfHour.format(new Date(input));
-    }
 
-    public static List<String> getLastWeekFileName() {
-        List<String> result = new ArrayList();
-        long startTimeLastWeek = getStartTimeOfLastWeek();
-        for (int i = 0; i < 7; i++) {
-            Calendar calendar = Calendar.getInstance();
-            calendar.setTimeInMillis(startTimeLastWeek + i * TIME_DAY);
-            calendar.set(Calendar.MINUTE, 0);
-            calendar.set(Calendar.SECOND, 0);
-            calendar.set(Calendar.MILLISECOND, 0);
-            calendar.set(Calendar.HOUR_OF_DAY, 0);
-            result.add(sdfFile.format(calendar.getTime()));
-        }
-        return result;
-    }
-
-    public static List<String> getAllFileNameFromTime(long time) {
-        List<String> result = new ArrayList();
-        long timeCal = System.currentTimeMillis();
-        result.add(sdfFile.format(timeCal));
-        while (true) {
-            timeCal = timeCal - TIME_DAY;
-            if (timeCal < time) {
-                break;
-            }
-            result.add(sdfFile.format(timeCal));
-        }
-        return result;
-    }
-
-    public static long getStartTimeOfCurrentWeek() {
-        long time = System.currentTimeMillis();
-        return getStartTimeOfCurrentWeek(time);
-    }
 
     public static long getStartTimeOfCurrentWeek(long time) {
         Calendar c = Calendar.getInstance();
@@ -603,101 +156,6 @@ public class Utils {
         return c.getTimeInMillis();
     }
 
-    public static long getStartTimeOfCurrentMonth() {
-        long time = System.currentTimeMillis();
-        return getStartTimeOfCurrentWeek(time);
-    }
-
-    public static long getStartTimeOfCurrentMonth(long time) {
-        Calendar c = Calendar.getInstance();
-        c.setTimeInMillis(time);
-        c.set(Calendar.DATE, 1);
-        c.set(Calendar.HOUR_OF_DAY, 0);
-        c.clear(Calendar.MINUTE);
-        c.clear(Calendar.SECOND);
-        c.clear(Calendar.MILLISECOND);
-        return c.getTimeInMillis();
-    }
-
-    public static long getStartTimeOfDay(long time) {
-        Calendar c = Calendar.getInstance();
-        c.setTimeInMillis(time);
-        c.set(Calendar.HOUR_OF_DAY, 0);
-        c.clear(Calendar.MINUTE);
-        c.clear(Calendar.SECOND);
-        c.clear(Calendar.MILLISECOND);
-        return c.getTimeInMillis();
-    }
-
-    public static long getEndTimeOfDay(long time) {
-        Calendar c = Calendar.getInstance();
-        c.setTimeInMillis(time);
-        c.set(Calendar.HOUR_OF_DAY, 23);
-        c.set(Calendar.MINUTE, 59);
-        c.set(Calendar.SECOND, 59);
-//        c.clear(Calendar.MINUTE);
-//        c.clear(Calendar.SECOND);
-        c.clear(Calendar.MILLISECOND);
-        return c.getTimeInMillis();
-    }
-
-    public static long getStartTimeOfYesterday() {
-        Calendar c = Calendar.getInstance();
-        c.setTimeInMillis(System.currentTimeMillis());
-        c.set(Calendar.HOUR_OF_DAY, 0);
-        c.clear(Calendar.MINUTE);
-        c.clear(Calendar.SECOND);
-        c.clear(Calendar.MILLISECOND);
-        return c.getTimeInMillis() - TIME_DAY;
-    }
-
-    public static long removeSecond(long time) {
-        Calendar c = Calendar.getInstance();
-        c.setTimeInMillis(time);
-        c.set(Calendar.SECOND, 0);
-        c.set(Calendar.MILLISECOND, 0);
-        return c.getTimeInMillis();
-    }
-
-    public static long removeMinute(long time) {
-        Calendar c = Calendar.getInstance();
-        c.setTimeInMillis(time);
-        c.set(Calendar.MINUTE, 0);
-        c.set(Calendar.SECOND, 0);
-        c.set(Calendar.MILLISECOND, 0);
-        return c.getTimeInMillis();
-    }
-
-    public static long removeHour(long time) {
-        Calendar c = Calendar.getInstance();
-        c.setTimeInMillis(time);
-        c.set(Calendar.HOUR, 0);
-        c.set(Calendar.MINUTE, 0);
-        c.set(Calendar.SECOND, 0);
-        c.set(Calendar.MILLISECOND, 0);
-        return c.getTimeInMillis();
-    }
-
-    public static long getEndTimeOfYesterday() {
-        Calendar c = Calendar.getInstance();
-        c.setTimeInMillis(System.currentTimeMillis());
-        c.set(Calendar.HOUR_OF_DAY, 23);
-        c.set(Calendar.MINUTE, 59);
-        c.set(Calendar.SECOND, 59);
-        c.clear(Calendar.MILLISECOND);
-        return c.getTimeInMillis() - TIME_DAY;
-    }
-
-    public static long getStartTime22hYesterday() {
-        Calendar c = Calendar.getInstance();
-        c.setTimeInMillis(System.currentTimeMillis());
-        c.set(Calendar.HOUR_OF_DAY, 0);
-        c.clear(Calendar.MINUTE);
-        c.clear(Calendar.SECOND);
-        c.clear(Calendar.MILLISECOND);
-        return c.getTimeInMillis() - 2 * TIME_HOUR;
-    }
-
     public static boolean isSunday(long time) {
         Calendar cal = Calendar.getInstance();
         cal.setTimeInMillis(time);
@@ -705,37 +163,6 @@ public class Utils {
             return true;
         }
         return false;
-    }
-
-    public static long getStartTime(int numberOfDaysAgo) {
-        return getToDay() - numberOfDaysAgo * TIME_DAY;
-    }
-
-    public static long getStartTimeOfLastWeek() {
-        return getStartTimeOfCurrentWeek() - TIME_WEEK;
-    }
-
-    public static long getEndTimeOfLastWeek() {
-        return getStartTimeOfCurrentWeek() - 1;
-    }
-
-    public static String genLastWeekNumber(String startTime) {
-        if (StringUtils.isEmpty(startTime)) {
-            return "";
-        }
-        Long timeStart = Long.parseLong(startTime);
-        Long weekNumber = (getStartTimeOfCurrentWeek() - timeStart) / TIME_WEEK;
-        if (weekNumber > 0) {
-            return "tuần " + String.valueOf(weekNumber);
-        } else {
-            return "";
-        }
-    }
-
-    public static boolean isTodayStartOfWeek() {
-        Calendar cal = Calendar.getInstance();
-        cal.setTime(new Date());
-        return cal.get(Calendar.DAY_OF_WEEK) == Calendar.MONDAY;
     }
 
     public static int getCurrentMinute() {
@@ -759,220 +186,6 @@ public class Utils {
         return cal.get(Calendar.SECOND);
     }
 
-    public static int getYesterdayDay() {
-        Calendar cal = Calendar.getInstance();
-        cal.setTimeZone(TimeZone.getTimeZone("GMT+7"));
-        cal.setTime(new Date());
-        cal.add(Calendar.DATE, -1);
-        return cal.get(Calendar.DATE);
-    }
-
-    public static int getCurrentDay() {
-        Calendar cal = Calendar.getInstance();
-        cal.setTimeZone(TimeZone.getTimeZone("GMT+7"));
-        cal.setTime(new Date());
-        return cal.get(Calendar.DATE);
-    }
-
-    public static int getCurrentDayOfWeek() {
-        Calendar cal = Calendar.getInstance();
-        cal.setTimeZone(TimeZone.getTimeZone("GMT+7"));
-        cal.setTime(new Date());
-        return cal.get(Calendar.DAY_OF_WEEK);
-    }
-
-    public static int getDayOfWeek(long time) {
-        Calendar cal = Calendar.getInstance();
-        cal.setTimeZone(TimeZone.getTimeZone("GMT+7"));
-        cal.setTime(new Date(time));
-        return cal.get(Calendar.DAY_OF_WEEK);
-    }
-
-    public static Boolean isEndWeek(long time) {
-        Calendar cal = Calendar.getInstance();
-        cal.setTimeZone(TimeZone.getTimeZone("GMT+7"));
-        cal.setTime(new Date(time));
-        int dayOfWeek = cal.get(Calendar.DAY_OF_WEEK);
-        int hourOfDay = cal.get(Calendar.HOUR_OF_DAY);
-        if (dayOfWeek == 7) {
-            return hourOfDay >= 7;
-        }
-        if (dayOfWeek == 1) {
-            return true;
-        }
-        if (dayOfWeek == 2) {
-            return hourOfDay < 7;
-        }
-        return false;
-    }
-
-    public static boolean isTodayStartOfMonth() {
-        Calendar cal = Calendar.getInstance();
-        cal.setTime(new Date());
-        return cal.get(Calendar.DAY_OF_MONTH) == 0;
-    }
-
-    public static String genDurationLastWeek() {
-        String lastWeekStartDay = sdf.format(new Date(getStartTimeOfLastWeek()));
-        String lastWeekEndDay = sdf.format(new Date(getStartTimeOfCurrentWeek() - TIME_DAY - 1));
-        return "ngày " + lastWeekStartDay + " đến ngày " + lastWeekEndDay;
-    }
-
-    public static int getCurrentHour(long time) {
-        Calendar cal = Calendar.getInstance();
-        cal.setTimeZone(TimeZone.getTimeZone("GMT+7"));
-        cal.setTime(new Date(time));
-        return cal.get(Calendar.HOUR_OF_DAY);
-    }
-
-    public static int getCurrentHour() {
-        Calendar cal = Calendar.getInstance();
-        cal.setTimeZone(TimeZone.getTimeZone("GMT+7"));
-        cal.setTime(new Date());
-        return cal.get(Calendar.HOUR_OF_DAY);
-    }
-
-    public static boolean isStartWeek() {
-        Calendar now = Calendar.getInstance();
-        return (now.get(Calendar.DAY_OF_WEEK) == 2 && getCurrentHour(System.currentTimeMillis()) == 1);
-    }
-
-    public static boolean is8hMondayOfWeekly() {
-        Calendar now = Calendar.getInstance();
-        return (now.get(Calendar.DAY_OF_WEEK) == 2 && getCurrentHour(System.currentTimeMillis()) == 8 && getCurrentMinute() == 1);
-    }
-
-    public static boolean is9h30MondayOfWeekly() {
-        Calendar now = Calendar.getInstance();
-        return (now.get(Calendar.DAY_OF_WEEK) == 2 && getCurrentHour(System.currentTimeMillis()) == 9 && getCurrentMinute() == 30);
-    }
-
-    public static boolean is7hOMondayOfWeekly() {
-        Calendar now = Calendar.getInstance();
-        return (now.get(Calendar.DAY_OF_WEEK) == 2 && getCurrentHour(System.currentTimeMillis()) == 7 && getCurrentMinute() == 1);
-    }
-
-    public static boolean is8OclockTuesdayOfWeekly() {
-        Calendar now = Calendar.getInstance();
-        return (now.get(Calendar.DAY_OF_WEEK) == 3 && getCurrentHour(System.currentTimeMillis()) == 8);
-    }
-
-    public static boolean isEndWeek() {
-        Calendar now = Calendar.getInstance();
-        return (now.get(Calendar.DAY_OF_WEEK) == 7 && getCurrentHour(System.currentTimeMillis()) == 4);
-    }
-
-    public static boolean isTimeChooseCompetitor() {
-        Calendar now = Calendar.getInstance();
-        return (now.get(Calendar.DAY_OF_WEEK) == Calendar.MONDAY && getCurrentHour(System.currentTimeMillis()) == 1);
-    }
-
-    public static boolean isTimeBuildCompetitor() {
-        Calendar now = Calendar.getInstance();
-        return (now.get(Calendar.DAY_OF_WEEK) == Calendar.MONDAY && getCurrentHour(System.currentTimeMillis()) == 4);
-    }
-
-    public static boolean isEvenNumberWeek() {
-        Calendar now = Calendar.getInstance();
-        if ((now.get(Calendar.DAY_OF_WEEK) == Calendar.MONDAY && getCurrentHour(System.currentTimeMillis()) == 1)) {
-            return true;
-        }
-        if ((now.get(Calendar.DAY_OF_WEEK) == Calendar.WEDNESDAY && getCurrentHour(System.currentTimeMillis()) == 1)) {
-            return true;
-        }
-        if ((now.get(Calendar.DAY_OF_WEEK) == Calendar.FRIDAY && getCurrentHour(System.currentTimeMillis()) == 1)) {
-            return true;
-        }
-        if ((now.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY && getCurrentHour(System.currentTimeMillis()) == 1)) {
-            return true;
-        }
-        return false;
-    }
-
-    public static boolean isStartDay() {
-        return (getCurrentHour(System.currentTimeMillis()) == 1);
-    }
-
-    public static boolean isEndDay() {
-        return (getCurrentHour(System.currentTimeMillis()) == 23);
-    }
-
-    public static boolean isTenPM() {
-        return (getCurrentHour(System.currentTimeMillis()) == 22);
-    }
-
-    public static boolean isThreeAM() {
-        return (getCurrentHour(System.currentTimeMillis()) == 3);
-    }
-
-    public static boolean isSevenAM() {
-        return (getCurrentHour(System.currentTimeMillis()) == 7);
-    }
-
-    public static boolean isTimeSendSkypeQuickReport() {
-        if ((getCurrentHour(System.currentTimeMillis()) == 8 && (getCurrentMinute() >= 30 && getCurrentMinute() <= 59))) {
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    public static boolean isNineAM() {
-        return (getCurrentHour(System.currentTimeMillis()) == 9);
-    }
-
-    public static boolean isElevenAM() {
-        return (getCurrentHour(System.currentTimeMillis()) == 11);
-    }
-
-    public static boolean isStartMonth() {
-        Calendar now = Calendar.getInstance();
-        return (now.get(Calendar.DAY_OF_MONTH) == 1 && getCurrentHour(System.currentTimeMillis()) == 1);
-    }
-
-    public static boolean isStartMonthKid() {
-        Calendar now = Calendar.getInstance();
-        return (now.get(Calendar.DAY_OF_MONTH) == 1 && getCurrentHour(System.currentTimeMillis()) == 2);
-    }
-
-    public static boolean isTimeSendPdfReportMonthly() {
-        Calendar now = Calendar.getInstance();
-        return (now.get(Calendar.DAY_OF_MONTH) == 4 && getCurrentHour(System.currentTimeMillis()) == 6);
-//        return (now.get(Calendar.DAY_OF_MONTH) == 5 && getCurrentHour(System.currentTimeMillis()) == 11);
-    }
-
-    public static boolean isTimeSendPdfReportWeekly() {
-        Calendar now = Calendar.getInstance();
-        return (now.get(Calendar.DAY_OF_WEEK) == 2 && getCurrentHour(System.currentTimeMillis()) == 6);
-    }
-
-    public static Map<String, String> convertJsonElement2Map(JsonElement jelement) {
-        Map<String, String> result = new HashMap();
-        JsonObject jobject = jelement.getAsJsonObject();
-        for (Map.Entry<String, JsonElement> entry : jobject.entrySet()) {
-            String key = entry.getKey();
-            JsonElement jsonEle = entry.getValue();
-            if (!jsonEle.isJsonNull()) {
-                if (jsonEle.isJsonObject()) {
-                    result.put(key, Utils.gson.toJson(jsonEle));
-                } else {
-                    result.put(key, jsonEle.getAsString());
-                }
-            } else {
-                result.put(key, "");
-            }
-        }
-        return result;
-    }
-
-    public static boolean isAscii(char ch) {
-        return ch < 128;
-    }
-
-    public static long getEndTimeOfCurrentWeek(long time) {
-        long startTimeOfCurrentWeek = getStartTimeOfCurrentWeek(time + TIME_WEEK);
-        return startTimeOfCurrentWeek - 1;
-    }
 
     public static void sleep(Long millis) {
         try {
@@ -986,8 +199,6 @@ public class Utils {
         if (revenue == null) {
             return null;
         }
-//        DecimalFormat formatter = new DecimalFormat("###,###,###.#####");
-//        DecimalFormat formatter = new DecimalFormat("###,###,###.##########");
         DecimalFormat formatter = new DecimalFormat("###.##########");
         return formatter.format(revenue);
     }
@@ -996,25 +207,10 @@ public class Utils {
         if (revenue == null) {
             return null;
         }
-//        DecimalFormat formatter = new DecimalFormat("###,###,###.#####");
-//        DecimalFormat formatter = new DecimalFormat("###,###,###.##########");
         DecimalFormat formatter = new DecimalFormat("###.##");
         return formatter.format(revenue);
     }
 
-    public static String formatMoneyByPeriod(Double revenue, int period) {
-        if (revenue == null) {
-            return null;
-        }
-//        DecimalFormat formatter = new DecimalFormat("###,###,###.#####");
-//        DecimalFormat formatter = new DecimalFormat("###,###,###.##########");
-        String pattern = "###.";
-        for (int i = 0; i < period; i++) {
-            pattern += "#";
-        }
-        DecimalFormat formatter = new DecimalFormat(pattern);
-        return formatter.format(revenue);
-    }
 
     public static String formatPercent(Double number) {
         return df.format(number * 100);
@@ -1024,22 +220,6 @@ public class Utils {
         return dfNew.format(number * 100);
     }
 
-    public static List<Object> sortObjectByKey(List<Object> objects, String key) {
-        List<Object> result = new ArrayList();
-        TreeMap<Double, Object> tmap = new TreeMap<>();
-        for (Object lesson : objects) {
-            JsonElement jelement = (JsonElement) lesson;
-            JsonObject jobject = jelement.getAsJsonObject();
-            String num = jobject.get(key).getAsString();
-            Double number = Double.valueOf(num);
-            tmap.put(number, lesson);
-        }
-        for (Map.Entry<Double, Object> entry1 : tmap.entrySet()) {
-            Object value = entry1.getValue();
-            result.add(value);
-        }
-        return result;
-    }
 
     public static Double rateOf2Double(Double start, Double end) {
         try {
@@ -1049,34 +229,7 @@ public class Utils {
         return 0.0;
     }
 
-    public static Double rateOf2DoubleIncre(Double start, Double end) {
-        try {
-            if (Math.abs(start) > Math.abs(end)) {
-                return (end - start) / start;
-            } else {
-                return (start - end) / end;
-            }
 
-        } catch (Exception e) {
-        }
-        return 0.0;
-    }
-
-//    public static Double calPriceTarget(String symbol, Double priceEntry, OrderSide orderSide, Double rateTarget) {
-//        Double result = priceEntry;
-//        int counter = 0;
-//        while (result.equals(priceEntry) || Math.abs(rateOf2Double(priceEntry, result)) < rateTarget) {
-//            Double priceChange2Target = (rateTarget + 0.0001 * counter) * priceEntry;
-//            if (orderSide.equals(OrderSide.BUY)) {
-//                result = priceEntry + priceChange2Target;
-//            } else {
-//                result = priceEntry - priceChange2Target;
-//            }
-//            result = ClientSingleton.getInstance().normalizePrice(symbol, result);
-//            counter++;
-//        }
-//        return result;
-//    }
 
     public static Double calPriceTarget(String symbol, Double priceEntry, OrderSide orderSide, Double rateTarget) {
         Double result;
@@ -1231,19 +384,19 @@ public class Utils {
     public static void main(String[] args) {
 //        System.out.println(Utils.sendSms2Skype("test skype"));
 //        System.out.println(Utils.normalizeHHmm(System.currentTimeMillis()));
-//        Utils.sendSms2Telegram("test");
-        for (int i = 0; i < 5; i++) {
-            long time = System.currentTimeMillis() - i * Utils.TIME_WEEK;
-            LOG.info("{} -> {}", Utils.normalizeDateYYYYMMDDHHmm(time),
-                    Utils.normalizeDateYYYYMMDDHHmm(Utils.getTimeStartWeek(time)));
-        }
-        try {
-            Long time = Utils.sdfFileHour.parse("20250224 05:38").getTime();
-            LOG.info("{} -> {}", Utils.normalizeDateYYYYMMDDHHmm(time),
-                    Utils.normalizeDateYYYYMMDDHHmm(Utils.getTimeStartWeek(time)));
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        Utils.sendSms2Telegram("test");
+//        for (int i = 0; i < 5; i++) {
+//            long time = System.currentTimeMillis() - i * Utils.TIME_WEEK;
+//            LOG.info("{} -> {}", Utils.normalizeDateYYYYMMDDHHmm(time),
+//                    Utils.normalizeDateYYYYMMDDHHmm(Utils.getTimeStartWeek(time)));
+//        }
+//        try {
+//            Long time = Utils.sdfFileHour.parse("20250224 05:38").getTime();
+//            LOG.info("{} -> {}", Utils.normalizeDateYYYYMMDDHHmm(time),
+//                    Utils.normalizeDateYYYYMMDDHHmm(Utils.getTimeStartWeek(time)));
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
 
 //        checkTickerFalse();
 //        testDescendingKeySet();
@@ -1258,12 +411,7 @@ public class Utils {
 //        System.out.println(Utils.normalPrice2Api(48.18981633d));
     }
 
-    private static void checkTickerFalse() {
-        List<KlineObjectNumber> tickers = TickerFuturesHelper.getTicker("AGIXUSDT", Constants.INTERVAL_4H);
-        for (KlineObjectNumber ticker : tickers) {
-            LOG.info("{} {}", Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()), Utils.isTickerAvailable(ticker));
-        }
-    }
+
 
     public static boolean isTickerAvailable(KlineObjectNumber ticker) {
         if (ticker != null) {
@@ -1276,35 +424,14 @@ public class Utils {
 
     public static boolean isTickerAvailable(KlineObjectSimple ticker) {
         if (ticker != null) {
-            if (!ticker.minPrice.equals(ticker.maxPrice)) {
+            if (!ticker.minPrice.equals(ticker.maxPrice) || ticker.totalUsdt != 0) {
                 return true;
             }
         }
         return false;
     }
 
-    private static void testDescendingKeySet() {
-        TreeMap<Integer, String> test = new TreeMap<>();
-        for (Integer i = 0; i < 100; i++) {
-            test.put(i, i.toString());
-        }
-        int counter = 0;
-        for (Integer key : test.keySet()) {
-            counter++;
-            if (counter >= 5) {
-                break;
-            }
-            LOG.info(key.toString());
-        }
-        counter = 0;
-        for (Integer key : test.descendingKeySet()) {
-            counter++;
-            if (counter >= 5) {
-                break;
-            }
-            LOG.info(key.toString());
-        }
-    }
+
 
     public static String toJson(Object ob) {
         return gson.toJson(ob);
@@ -1321,17 +448,12 @@ public class Utils {
     public static long getTimeInterval15m(long time) {
         return (time / (15 * TIME_MINUTE)) * 15 * TIME_MINUTE;
     }
-    public static long getTimeInterval5m(long time) {
-        return (time / (5 * TIME_MINUTE)) * 5 * TIME_MINUTE;
-    }
+
 
     public static long get4Hour(long time) {
         return (time / 4 / TIME_HOUR) * 4 * TIME_HOUR;
     }
 
-    public static long get12Hour(long time) {
-        return (time / 12 / TIME_HOUR) * 12 * TIME_HOUR;
-    }
 
     public static long getDate(long time) {
         return (time / TIME_DAY) * TIME_DAY;
@@ -1387,17 +509,7 @@ public class Utils {
         return doc;
     }
 
-    public static KlineObjectNumber convertDoc2Ticker(Document doc) {
-        KlineObjectNumber ticker = new KlineObjectNumber();
-        ticker.startTime = doc.getDouble("startTime");
-        ticker.endTime = doc.getDouble("endTime");
-        ticker.maxPrice = doc.getDouble("maxPrice");
-        ticker.minPrice = doc.getDouble("minPrice");
-        ticker.priceOpen = doc.getDouble("priceOpen");
-        ticker.priceClose = doc.getDouble("priceClose");
-        ticker.totalUsdt = doc.getDouble("totalUsdt");
-        return ticker;
-    }
+
 
 
     public static String formatDouble(Double volume, Integer number) {
@@ -1444,49 +556,7 @@ public class Utils {
         return minSum;
     }
 
-    public static Double findMinSubarraySumIndex(Double[] numbers) {
-        if (numbers.length == 0) {
-            throw new IllegalArgumentException("Dãy số phải có ít nhất 1 phần tử.");
-        }
 
-        // Khởi tạo giá trị tổng nhỏ nhất và tổng nhỏ nhất hiện tại bằng phần tử đầu tiên
-        double minSum = numbers[0];
-        double currentSum = numbers[0];
-        Integer index = 0;
-        // Duyệt qua mảng từ phần tử thứ hai
-        for (int i = 1; i < numbers.length; i++) {
-            // Tìm tổng nhỏ nhất hiện tại, nếu số hiện tại nhỏ hơn tổng hiện tại, ta chọn số hiện tại
-            currentSum = Math.min(numbers[i], currentSum + numbers[i]);
-            // Cập nhật tổng nhỏ nhất
-            double minSumNew = Math.min(minSum, currentSum);
-            if (minSumNew < minSum) {
-                index = i;
-                minSum = Math.min(minSum, currentSum);
-            }
-        }
-
-        return numbers[index];
-    }
-
-    public static Double findMaxSubarraySum(Double[] numbers) {
-        if (numbers.length == 0) {
-            throw new IllegalArgumentException("Dãy số phải có ít nhất 1 phần tử.");
-        }
-
-        // Khởi tạo giá trị tổng nhỏ nhất và tổng nhỏ nhất hiện tại bằng phần tử đầu tiên
-        double minSum = numbers[0];
-        double currentSum = numbers[0];
-
-        // Duyệt qua mảng từ phần tử thứ hai
-        for (int i = 1; i < numbers.length; i++) {
-            // Tìm tổng nhỏ nhất hiện tại, nếu số hiện tại nhỏ hơn tổng hiện tại, ta chọn số hiện tại
-            currentSum = Math.max(numbers[i], currentSum + numbers[i]);
-            // Cập nhật tổng nhỏ nhất
-            minSum = Math.max(minSum, currentSum);
-        }
-
-        return minSum;
-    }
 
     public static String formatLog(Object obj, int length) {
         String marginMax = String.valueOf(obj);
@@ -1495,6 +565,7 @@ public class Utils {
         }
         return marginMax;
     }
+
     public static String formatLogString(Object obj, int length) {
         String marginMax = String.valueOf(obj);
         while (marginMax.length() < length) {
@@ -1503,50 +574,7 @@ public class Utils {
         return marginMax;
     }
 
-    public static String statisticRateSuccess(ConcurrentHashMap<String, OrderTargetInfoTest> allOrderDone) {
-        Double pnl = 0d;
-        try {
-            for (OrderTargetInfoTest order : allOrderDone.values()) {
-                pnl += order.calRateTp();
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        if (allOrderDone.size() > 0) {
-            Double rate = pnl / allOrderDone.size();
-            return allOrderDone.size() + " -> " + Utils.formatPercent(rate) + "%";
-        }
-        return "";
 
-    }
-
-    public static String statisticRateSuccessTree(TreeMap<Long, OrderTargetInfoTest> allOrderDone) {
-        Double pnl = 0d;
-        Integer counterFalse = 0;
-        try {
-            for (OrderTargetInfoTest order : allOrderDone.values()) {
-                if (order.dynamicTP_SL == null) {
-                    pnl += order.calRateTp();
-                    if (order.status.equals(OrderTargetStatus.STOP_LOSS_DONE)) {
-                        counterFalse++;
-                    }
-                } else {
-                    pnl += 3 * order.calRateTp();
-                    if (order.status.equals(OrderTargetStatus.STOP_LOSS_DONE)) {
-                        counterFalse += 3;
-                    }
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        if (allOrderDone.size() > 0) {
-            Double rate = pnl / allOrderDone.size();
-            return counterFalse + "/" + allOrderDone.size() + " -> " + Utils.formatPercent(rate) + "%";
-        }
-        return "";
-
-    }
 
     public static Double maxPrice(KlineObjectNumber ticker, Double maxPrice) {
         if (maxPrice == null || maxPrice < ticker.maxPrice) {
@@ -1567,6 +595,45 @@ public class Utils {
             minPrice = ticker.minPrice;
         }
         return minPrice;
+    }
+
+    public static void reset() {
+        try {
+            LOG.info("Restart: {} ...", Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()));
+
+            // Lấy đường dẫn tới Java binary
+            String javaBin = System.getProperty("java.home") + "/bin/java";
+
+            // Lấy classpath của chương trình hiện tại
+            String classPath = System.getProperty("java.class.path");
+
+            // Lấy tên class chính (main class)
+            String mainClass = System.getProperty("sun.java.command");
+
+            // Tạo ProcessBuilder
+            ProcessBuilder processBuilder = new ProcessBuilder(
+                    javaBin,
+                    "-cp",
+                    classPath,
+                    mainClass
+            );
+
+            // Sao chép các biến môi trường từ chương trình hiện tại
+            Map<String, String> currentEnvironment = System.getenv();
+            Map<String, String> processEnvironment = processBuilder.environment();
+            processEnvironment.putAll(currentEnvironment);
+
+            // Kế thừa IO (input/output) để output của chương trình mới xuất hiện trong console hiện tại
+            processBuilder.inheritIO();
+
+            // Khởi động lại chương trình
+            processBuilder.start();
+
+            // Thoát chương trình hiện tại
+            System.exit(0);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     public static Double minPrice(KlineObjectSimple ticker, Double minPrice) {

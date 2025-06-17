@@ -18,12 +18,13 @@ package com.binance.chuyennd.trading;
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
 import com.binance.chuyennd.client.BinanceFuturesClientSingleton;
 import com.binance.chuyennd.client.ClientSingleton;
-import com.binance.chuyennd.client.OrderHelper;
-import com.binance.chuyennd.position.manager.PositionHelper;
+import com.binance.chuyennd.helper.OrderHelper;
+import com.binance.chuyennd.helper.PositionHelper;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
+import com.binance.chuyennd.websocket.ListenAllTicker;
 import com.binance.client.constant.Constants;
 import com.binance.client.model.enums.OrderSide;
 import com.binance.client.model.enums.OrderType;
@@ -33,11 +34,13 @@ import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.math.BigDecimal;
 import java.text.ParseException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.logging.Level;
 
 /**
  * @author pc
@@ -46,11 +49,10 @@ public class BinanceOrderTradingManager {
 
     public static final Logger LOG = LoggerFactory.getLogger(BinanceOrderTradingManager.class);
     public ExecutorService executorServiceOrderNew = Executors.newFixedThreadPool(Configs.NUMBER_THREAD_ORDER_MANAGER);
-    private final ConcurrentHashMap<String, OrderTargetInfo> symbol2Processing = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Long> symbol2Processing = new ConcurrentHashMap<>();
 
 
     public static void main(String[] args) throws InterruptedException, ParseException {
-        LOG.info("Start trader with target: {}%", Utils.formatPercent(Configs.RATE_TARGET));
         new DetectEntrySignal2TradeNormal().start();
         new BinanceOrderTradingManager().start();
     }
@@ -58,7 +60,56 @@ public class BinanceOrderTradingManager {
     private void start() throws InterruptedException {
         initData();
         startThreadListenQueueOrder2ManagerNew();
-//        startThreadManagerOrderNew();
+        startThreadManagerOrder();
+        startThreadAutoRestartProgram();
+    }
+
+
+    private void startThreadManagerOrder() {
+        new Thread(() -> {
+            Thread.currentThread().setName("ThreadManagerOrder");
+            LOG.info("Start thread ThreadManagerOrder {}", Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()));
+            try {
+                // update first
+                updatePositionInfo();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            while (true) {
+                try {
+                    processManagerPosition();
+                } catch (Exception e) {
+                    LOG.error("ERROR during ThreadManagerOrder: {}", e);
+                    e.printStackTrace();
+                }
+                try {
+                    Thread.sleep(Utils.TIME_SECOND);
+                } catch (InterruptedException ex) {
+                    java.util.logging.Logger.getLogger(DetectEntrySignal2TradeNormal.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
+        }).start();
+    }
+
+    private void startThreadAutoRestartProgram() {
+        new Thread(() -> {
+            Thread.currentThread().setName("ThreadAutoRestartProgram");
+            LOG.info("Start thread ThreadAutoRestartProgram");
+            while (true) {
+                try {
+                    Thread.sleep(Utils.TIME_HOUR * 4);
+                } catch (InterruptedException ex) {
+                    java.util.logging.Logger.getLogger(DetectEntrySignal2TradeNormal.class.getName()).log(Level.SEVERE, null, ex);
+                }
+                try {
+                    Utils.reset();
+                } catch (Exception e) {
+                    LOG.error("ERROR during Restart: {}", e);
+                    e.printStackTrace();
+                }
+            }
+
+        }).start();
     }
 
     private void startThreadListenQueueOrder2ManagerNew() {
@@ -73,13 +124,12 @@ public class BinanceOrderTradingManager {
                     try {
                         OrderTargetInfo order = Utils.gson.fromJson(orderJson, OrderTargetInfo.class);
                         LOG.info("Queue listen order to manager order received : {} {} ", order.side, order.symbol);
-
-                        if (!symbol2Processing.containsKey(order.symbol)) {
+                        if (!symbol2Processing.containsKey(order.symbol)
+                                || symbol2Processing.get(order.symbol) < System.currentTimeMillis() - 5 * Utils.TIME_MINUTE) {
                             if (order.status.equals(OrderTargetStatus.REQUEST)) {
-                                symbol2Processing.put(order.symbol, order);
+                                symbol2Processing.put(order.symbol, System.currentTimeMillis());
                                 executorServiceOrderNew.execute(() -> processOrderNewMarketNew(order));
                             }
-
                         } else {
                             LOG.info("{} is lock because processing! {}", order.symbol, symbol2Processing.size());
                         }
@@ -97,21 +147,24 @@ public class BinanceOrderTradingManager {
 
     private void processOrderNewMarketNew(OrderTargetInfo order) {
         try {
-            if (BudgetManager.getInstance().marginRunning > BudgetManager.getInstance().balanceBasic * 0.7) {
-                LOG.info("Not trade because over margin: {} {}", BudgetManager.getInstance().marginRunning, BudgetManager.getInstance().balanceBasic);
-                return;
-            }
             LOG.info("Create order market {} {}", order.side, order.symbol);
             Order orderInfo = OrderHelper.newOrderMarket(order.symbol, order.side, order.quantity);
             BudgetManager.getInstance().symbol2Level.put(order.symbol, order.marketLevel);
+            BudgetManager.getInstance().symbol2Pos.put(order.symbol, PositionHelper.createPosNew(order.symbol, orderInfo.getPrice()
+                    , orderInfo.getExecutedQty()));
             RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO, order.symbol, Utils.toJson(order));
             String log = order.side + " " + order.symbol + " entry: " + order.priceEntry
                     + " quantity: " + order.quantity
                     + " time:" + Utils.normalizeDateYYYYMMDDHHmm(order.timeStart)
                     + " market level: " + order.marketLevel;
             LOG.info(log);
+            updatePositionInfo();
             if (orderInfo == null) {
+                if (order.timeStart > System.currentTimeMillis() - 5 * Utils.TIME_MINUTE) {
+                    RedisHelper.getInstance().get().rpush(RedisConst.REDIS_KEY_BINANCE_TD_ORDER_MANAGER_QUEUE, Utils.toJson(order));
+                }
                 LOG.info("Create order symbol {} false! {}", order.symbol, Utils.toJson(order));
+                Thread.sleep(200);
             }
         } catch (Exception e) {
             LOG.info("Error during process order: {}", Utils.toJson(order));
@@ -122,138 +175,165 @@ public class BinanceOrderTradingManager {
     }
 
     private void initData() {
+        FundingFeeManagerProduction.getInstance();
         ClientSingleton.getInstance();
     }
 
     public void processManagerPosition() {
-        long startTime = System.currentTimeMillis();
-        LOG.info("Start check all position: {}", new Date());
         try {
-            // get all open order
-//            LOG.info("Get all Open order.");
-            List<Order> ordersOpen = BinanceFuturesClientSingleton.getInstance().getAllOpenOrderInfos();
-            // get all position
-//            LOG.info("Get all position.");
-            List<PositionRisk> positions = BinanceFuturesClientSingleton.getInstance().getAllPositionInfos();
-            Map<String, PositionRisk> symbol2Pos = new HashMap<>();
-            BudgetManager.getInstance().symbol2Margin.clear();
-            BudgetManager.getInstance().marginBig.clear();
-            BudgetManager.getInstance().symbol2Pos.clear();
-            BudgetManager.getInstance().symbolSell.clear();
-            BudgetManager.getInstance().symbolBuy.clear();
-            Double marginTotal = 0d;
-            for (PositionRisk position : positions) {
-                if (position.getPositionAmt().doubleValue() == 0) {
-                    continue;
-                }
-                symbol2Pos.put(position.getSymbol(), position);
-                if (PositionHelper.calRateLoss(position) < Configs.RATE_PROFIT_STOP_MARKET) {
-                    marginTotal += PositionHelper.callMargin(position);
-                }
-                BudgetManager.getInstance().symbol2Margin.put(position.getSymbol(), PositionHelper.callMargin(position));
-                if (PositionHelper.callMargin(position) >= 1.5 * BudgetManager.getInstance().getBudget()) {
-                    BudgetManager.getInstance().marginBig.add(position.getSymbol());
-                }
-                if (position.getPositionAmt().doubleValue() > 0) {
-                    BudgetManager.getInstance().symbolBuy.add(position.getSymbol());
-                } else {
-                    BudgetManager.getInstance().symbolSell.add(position.getSymbol());
-                }
+            int currentSecond = Utils.getCurrentSecond();
+            if (currentSecond == 10) {
+                executorServiceOrderNew.execute(() -> updatePositionInfo());
             }
-            BudgetManager.getInstance().marginRunning = marginTotal;
-            BudgetManager.getInstance().symbol2Pos.putAll(symbol2Pos);
-            BudgetManager.getInstance().removeSymbolNotPos(symbol2Pos.keySet());
-            updateSymbolRunning(symbol2Pos.keySet());
-            Map<String, Order> symbol2OrderSL = new HashMap<>();
-            for (Order order : ordersOpen) {
-                if (StringUtils.equals(order.getType(), OrderType.STOP_MARKET.toString())) {
-                    PositionRisk pos = symbol2Pos.get(order.getSymbol());
-                    if (pos != null
-                            && Math.abs(pos.getPositionAmt().doubleValue()) == order.getOrigQty().doubleValue()) {
-                        symbol2OrderSL.put(order.getSymbol(), order);
-                    } else {
-                        try {
-                            LOG.info("Cancel order sl not position: {}", order.getSymbol());
-                            BinanceFuturesClientSingleton.getInstance().cancelOrder(
-                                    order.getSymbol(), order.getClientOrderId());
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                    }
-                }
-            }
-            // tp/sl dynamic
-            processDynamicTP_SL(positions, symbol2OrderSL);
-            // process position not tp or sl fail
-//            BudgetManager.getInstance().symbol2Level.clear();
-            for (Map.Entry<String, PositionRisk> entry : symbol2Pos.entrySet()) {
-                String symbol = entry.getKey();
-                PositionRisk position = entry.getValue();
-                OrderTargetInfo orderInfo = getOrderInfo(position.getSymbol());
-                Double rateLoss = PositionHelper.calRateLoss(position);
-                if (orderInfo != null) {
-                    if (position.getUpdateTime() < startTime + 30 * Utils.TIME_MINUTE) {
-                        BudgetManager.getInstance().symbol2Level.put(symbol, orderInfo.marketLevel);
-                    } else {
-                        BudgetManager.getInstance().symbol2Level.remove(symbol);
-                    }
-                    Double rateMin2MoveSl = BudgetManager.getInstance().calRateMin2MoveSL(orderInfo.marketLevel,
-                            position.getEntryPrice().doubleValue(), orderInfo.priceTP);
-                    if (orderInfo.side.equals(OrderSide.SELL)) {
-                        rateMin2MoveSl = 2 * rateMin2MoveSl;
-                    }
-                    if (rateLoss > rateMin2MoveSl) {
-                        if (orderInfo.priceSL == null) {
-                            OrderSide sideSL = OrderSide.SELL;
-                            Double rateStop = BudgetManager.getInstance().callRateLossDynamicBuy(rateLoss, rateMin2MoveSl);
-                            if (orderInfo.side.equals(OrderSide.SELL)) {
-                                sideSL = OrderSide.BUY;
-                                rateStop = BudgetManager.getInstance().callRateLossDynamicBuy(rateLoss, rateMin2MoveSl);
-                            }
-                            Double priceSLNew = Utils.calPriceTarget(symbol, position.getEntryPrice().doubleValue(), sideSL, -rateStop);
-                            LOG.info("Renew price SL:{} {} {} {} {} {}%", symbol, orderInfo.marketLevel,
-                                    Utils.normalizeDateYYYYMMDDHHmm(position.getUpdateTime()),
-                                    Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()),
-                                    priceSLNew, Utils.formatPercent(-rateStop));
-                            orderInfo.priceSL = priceSLNew;
-                            RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO, symbol, Utils.toJson(orderInfo));
-                            createSL(position, orderInfo.priceSL);
-                        }
-                    }
-                } else {
-                    OrderSide side = OrderSide.BUY;
-                    if (position.getPositionAmt().doubleValue() < 0) {
-                        side = OrderSide.SELL;
-                    }
-                    OrderTargetInfo orderTrade = new OrderTargetInfo(OrderTargetStatus.REQUEST, position.getEntryPrice().doubleValue(),
-                            null, position.getPositionAmt().doubleValue(), BudgetManager.getInstance().getLeverage(), symbol, position.getUpdateTime(),
-                            position.getUpdateTime(), side, Constants.TRADING_TYPE_VOLUME_MINI);
-                    orderTrade.marketLevel = MarketLevelChange.ORDER_PROFIT;
-                    RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO, symbol, Utils.toJson(orderTrade));
-                    LOG.info("New order 2 redis because order null: {}", Utils.toJson(orderTrade));
-                }
+            // sl dynamic
+            if (currentSecond % 2 == 0) {
+                executorServiceOrderNew.execute(() -> updatePositionMarkPrice());
+                executorServiceOrderNew.execute(() -> processDynamicTP_SL());
+                executorServiceOrderNew.execute(() -> initSLFirst());
+
             }
             // reporter
-            if (Utils.getCurrentMinute() % 15 == 0 && Utils.getCurrentSecond() < 10) {
-                executorServiceOrderNew.execute(() -> new Reporter().buildReport(positions));
+            if (Utils.getCurrentMinute() % 15 == 0 && Utils.getCurrentSecond() == 30) {
+                executorServiceOrderNew.execute(() -> checkSLErrorAtRedis());
+                executorServiceOrderNew.execute(() -> new Reporter().buildReport());
             }
         } catch (Exception e) {
             LOG.error("ERROR during ThreadManagerOrderNew: {}", e);
             e.printStackTrace();
         }
-        Long timeProcess = (System.currentTimeMillis() - startTime) * 10 / Utils.TIME_SECOND;
-        LOG.info("Final check all position: {}s", timeProcess.doubleValue() / 10);
     }
 
-    private void processDynamicTP_SL(List<PositionRisk> positions, Map<String, Order> symbol2OrderSL) {
+    private void updatePositionMarkPrice() {
+        try {
+            Set<PositionRisk> positions = new HashSet<>();
+            positions.addAll(BudgetManager.getInstance().symbol2Pos.values());
+            for (PositionRisk pos : positions) {
+                Double lastPrice = ListenAllTicker.getInstance().symbol2Price.get(pos.getSymbol());
+                if (lastPrice != null) {
+                    pos.setMarkPrice(new BigDecimal(lastPrice));
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void initSLFirst() {
         long startTime = System.currentTimeMillis();
-        int counterOrderRunning = 0;
+        Set<PositionRisk> positions = new HashSet<>();
+        positions.addAll(BudgetManager.getInstance().symbol2Pos.values());
+        for (PositionRisk position : positions) {
+            if (position == null) {
+                continue;
+            }
+            String symbol = position.getSymbol();
+//            if (StringUtils.equals(position.getSymbol(), "MOODENGUSDT")) {
+//                System.out.println("debug");
+//            }
+            OrderTargetInfo orderInfo = getOrderInfo(position.getSymbol());
+            Double rateLoss = PositionHelper.calRateLoss(position);
+            OrderSide positionSide = OrderSide.BUY;
+            if (position.getPositionAmt().compareTo(new BigDecimal("0")) < 0) {
+                positionSide = OrderSide.SELL;
+            }
+            if (orderInfo != null && orderInfo.side.equals(positionSide)) {
+                if (position.getUpdateTime() < startTime + 30 * Utils.TIME_MINUTE) {
+                    BudgetManager.getInstance().symbol2Level.put(symbol, orderInfo.marketLevel);
+                } else {
+                    BudgetManager.getInstance().symbol2Level.remove(symbol);
+                }
+                Double rateMin2MoveSl = BudgetManager.getInstance().calRateMin2MoveSL(position.getSymbol(), orderInfo.marketLevel,
+                        position.getEntryPrice().doubleValue(), orderInfo.priceTP, orderInfo.side);
+                if (rateLoss > rateMin2MoveSl) {
+                    if (orderInfo.priceSL == null) {
+                        OrderSide sideSL = OrderSide.SELL;
+                        Double rateStop = BudgetManager.getInstance().callRateLossDynamicBuy(rateLoss, rateMin2MoveSl);
+                        if (orderInfo.side.equals(OrderSide.SELL)) {
+                            sideSL = OrderSide.BUY;
+                        }
+                        Double priceSLNew = Utils.calPriceTarget(symbol, position.getEntryPrice().doubleValue(), sideSL, -rateStop);
+                        if (priceSLNew != 0) {
+                            LOG.info("Renew price SL:{} {} {} {} {} {}%", symbol, orderInfo.marketLevel,
+                                    Utils.normalizeDateYYYYMMDDHHmm(position.getUpdateTime()),
+                                    Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()),
+                                    priceSLNew, Utils.formatPercent(-rateStop));
+                            if (createSL(position, priceSLNew)) {
+                                orderInfo.priceSL = priceSLNew;
+                                RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO, symbol, Utils.toJson(orderInfo));
+                            }
+                        }
+                    }
+                }
+            } else {
+                OrderSide side = OrderSide.BUY;
+                if (position.getPositionAmt().compareTo(new BigDecimal("0")) < 0) {
+                    side = OrderSide.SELL;
+                }
+                OrderTargetInfo orderTrade = new OrderTargetInfo(OrderTargetStatus.REQUEST, position.getEntryPrice().doubleValue(),
+                        null, position.getPositionAmt().doubleValue(), BudgetManager.getInstance().getLeverage(), symbol, position.getUpdateTime(),
+                        position.getUpdateTime(), side, Constants.TRADING_TYPE_VOLUME_MINI);
+                orderTrade.marketLevel = MarketLevelChange.ORDER_PROFIT;
+                RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO, symbol, Utils.toJson(orderTrade));
+                LOG.info("New order 2 redis because order null: {}", Utils.toJson(orderTrade));
+            }
+        }
+    }
+
+    public void updatePositionInfo() {
+        String lockName = "UpdateAllPos";
+        if (SymbolOrderLockingManager.getInstance().isLock(lockName, 5)) {
+            LOG.info("Symbol {} is locking for loop!", lockName);
+            return;
+        }
+        SymbolOrderLockingManager.getInstance().addLock(lockName);
+        long startTime = System.currentTimeMillis();
+        List<PositionRisk> positions = BinanceFuturesClientSingleton.getInstance().getAllPositionInfos();
+        Map<String, PositionRisk> symbol2Pos = new HashMap<>();
+        BudgetManager.getInstance().symbol2Margin.clear();
+        BudgetManager.getInstance().marginBig.clear();
+        BudgetManager.getInstance().symbol2Pos.clear();
+        BudgetManager.getInstance().symbolSell.clear();
+        BudgetManager.getInstance().symbolBuy.clear();
+        Double marginTotal = 0d;
+        for (PositionRisk position : positions) {
+
+            if (position.getPositionAmt().compareTo(new BigDecimal("0")) == 0) {
+                continue;
+            }
+            symbol2Pos.put(position.getSymbol(), position);
+            if (PositionHelper.calRateLoss(position) < Configs.RATE_PROFIT_STOP_MARKET) {
+                marginTotal += PositionHelper.callMargin(position);
+            }
+            BudgetManager.getInstance().symbol2Margin.put(position.getSymbol(), PositionHelper.callMargin(position));
+            if (PositionHelper.callMargin(position) >= 1.5 * BudgetManager.getInstance().getBudget()) {
+                BudgetManager.getInstance().marginBig.add(position.getSymbol());
+            }
+            if (position.getPositionAmt().compareTo(new BigDecimal("0")) > 0) {
+                BudgetManager.getInstance().symbolBuy.add(position.getSymbol());
+            } else {
+                BudgetManager.getInstance().symbolSell.add(position.getSymbol());
+            }
+        }
+        BudgetManager.getInstance().marginRunning = marginTotal;
+        BudgetManager.getInstance().symbol2Pos.putAll(symbol2Pos);
+        BudgetManager.getInstance().removeSymbolNotPos(symbol2Pos.keySet());
+        updateSymbolRunning(symbol2Pos.keySet());
+        Long timeProcess = (System.currentTimeMillis() - startTime);
+        LOG.info("Update all position:{} {} ms", BudgetManager.getInstance().symbol2Pos.size(), timeProcess.doubleValue());
+    }
+
+    public void processDynamicTP_SL() {
+        Set<PositionRisk> positions = new HashSet<>();
+        positions.addAll(BudgetManager.getInstance().symbol2Pos.values());
         for (PositionRisk position : positions) {
             try {
-                if (position.getPositionAmt().doubleValue() == 0) {
+                if (position == null) {
                     continue;
                 }
-                counterOrderRunning++;
+
+                if (position.getPositionAmt().compareTo(new BigDecimal("0")) == 0) {
+                    continue;
+                }
                 Double rateLoss = PositionHelper.calRateLoss(position);
                 Double priceEntry = position.getEntryPrice().doubleValue();
                 String symbol = position.getSymbol();
@@ -265,62 +345,49 @@ public class BinanceOrderTradingManager {
                     orderInfo.priceEntry = priceEntry;
                 }
                 OrderSide side2Sl;
-                Double rateMin2MoveSl = BudgetManager.getInstance().calRateMin2MoveSL(orderInfo.marketLevel,
-                        position.getEntryPrice().doubleValue(), orderInfo.priceTP);
+                Double rateMin2MoveSl = BudgetManager.getInstance().calRateMin2MoveSL(position.getSymbol(), orderInfo.marketLevel,
+                        position.getEntryPrice().doubleValue(), orderInfo.priceTP, orderInfo.side);
                 // BUY
-                if (position.getPositionAmt().doubleValue() > 0) {
+                if (position.getPositionAmt().compareTo(new BigDecimal("0")) > 0) {
                     side2Sl = OrderSide.SELL;
-                    if (!Constants.specialSymbol.contains(symbol)) {
-                        rateMin2MoveSl = 3 * rateMin2MoveSl;
-                    }
                 } else { // SELL
                     side2Sl = OrderSide.BUY;
-                    rateMin2MoveSl = 2 * rateMin2MoveSl;
                 }
-
+                if (!Constants.specialSymbol.contains(symbol)) {
+                    if (position.getPositionAmt().compareTo(new BigDecimal("0")) > 0) {
+                        rateMin2MoveSl = 4 * rateMin2MoveSl;
+                    } else {
+                        rateMin2MoveSl = 5 * rateMin2MoveSl;
+                    }
+                }
                 if (orderInfo.priceSL != null && rateLoss > rateMin2MoveSl) {
                     // move SL
                     Double priceSL = orderInfo.priceSL;
                     Double rateSL = BudgetManager.getInstance().callRateLossDynamicBuy(rateLoss, rateMin2MoveSl);
                     Double priceSLNew = Utils.calPriceTarget(symbol, priceEntry, side2Sl, -rateSL);
                     double priceSLChange = priceSLNew - priceSL;
-                    if (position.getPositionAmt().doubleValue() < 0) {
-                        rateSL = BudgetManager.getInstance().callRateLossDynamicBuy(rateLoss, rateMin2MoveSl);
+                    if (position.getPositionAmt().compareTo(new BigDecimal("0")) < 0) {
                         priceSLNew = Utils.calPriceTarget(symbol, priceEntry, side2Sl, -rateSL);
                         priceSLChange = priceSL - priceSLNew;
                     }
-                    // sl init -> not order sl running
-                    if (symbol2OrderSL.get(symbol) == null) {
-                        createSL(position, priceSLNew);
-                        orderInfo.priceSL = priceSLNew;
-                        RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO, symbol, Utils.toJson(orderInfo));
-                    } else {
-                        // move sl
-                        if ((rateLoss >= rateMin2MoveSl
-                                && priceSLChange > 0)
-                                && symbol2OrderSL.get(symbol) != null) {
-                            LOG.info("Update SL {} {} {} {}->{} {}%", Utils.normalizeDateYYYYMMDDHHmm(orderInfo.timeStart),
-                                    Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()), symbol, priceSL,
-                                    priceSLNew, Utils.formatPercent(rateSL));
+
+                    // move sl
+                    if (rateLoss >= rateMin2MoveSl
+                            && priceSLChange > 0) {
+                        LOG.info("Update SL {} {} {} {}->{} {}%", Utils.normalizeDateYYYYMMDDHHmm(orderInfo.timeStart),
+                                Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()), symbol, priceSL,
+                                priceSLNew, Utils.formatPercent(rateSL));
+                        if (createSL(position, priceSLNew)) {
                             orderInfo.priceSL = priceSLNew;
                             RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO, symbol, Utils.toJson(orderInfo));
-                            Order orderSLOld = symbol2OrderSL.get(symbol);
-                            if (orderSLOld != null) {
-                                LOG.info("Cancel order sl to renew: {}", symbol);
-                                BinanceFuturesClientSingleton.getInstance().cancelOrder(
-                                        orderSLOld.getSymbol(), orderSLOld.getClientOrderId());
-                            }
-                            createSL(position, orderInfo.priceSL);
                         }
                     }
                 }
+
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }
-        long timeProcess = System.currentTimeMillis() - startTime;
-
-        LOG.info("Process dynamic tp/sl for {} positions: {}s", counterOrderRunning, timeProcess / Utils.TIME_SECOND);
     }
 
     private void updateSymbolRunning(Set<String> symbols) {
@@ -339,103 +406,127 @@ public class BinanceOrderTradingManager {
         }
     }
 
-    public void createTp(PositionRisk pos, Double priceTp) {
+    public void checkSLErrorAtRedis() {
         try {
-            if (priceTp == null) {
-                return;
+            List<Order> orders = BinanceFuturesClientSingleton.getInstance().getAllOpenOrderInfos();
+            Set<String> symbolHasSLOrder = new HashSet<>();
+            for (Order order : orders) {
+                symbolHasSLOrder.add(order.getSymbol());
             }
-            List<Order> openOrders = BinanceFuturesClientSingleton.getInstance().getOpenOrders(pos.getSymbol());
-            if (!openOrders.isEmpty()) {
-                for (Order openOrder : openOrders) {
-                    if (openOrder.getType().equals(OrderType.TAKE_PROFIT.toString())
-                            || openOrder.getType().equals(OrderType.TAKE_PROFIT_MARKET.toString())) {
-                        LOG.info("{} have tp order -> not create tp", pos.getSymbol());
-                        return;
-                    }
-                    if (openOrder.getType().equals(OrderType.LIMIT.toString()) && openOrder.getPrice().doubleValue() == priceTp) {
-                        LOG.info("Cancel order tp type limit: " + openOrder.getOrderId() + " of " + openOrder.getSymbol());
-                        BinanceFuturesClientSingleton.getInstance().cancelOrder(openOrder.getSymbol(), openOrder.getClientOrderId());
-                    }
+            for (String symbol : RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO)) {
+                OrderTargetInfo orderInfo = getOrderInfo(symbol);
+                if (orderInfo == null) {
+                    continue;
+                }
+                if (!BudgetManager.getInstance().symbol2Pos.containsKey(symbol)) {
+                    continue;
+                }
+                if (orderInfo.priceSL != null && !symbolHasSLOrder.contains(symbol)) {
+                    LOG.info("Remove SL at redis of {} {} {}", symbol,
+                            orderInfo.priceSL, Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()));
+                    orderInfo.priceTP = null;
+                    orderInfo.priceSL = null;
+                    RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO, symbol, Utils.toJson(orderInfo));
                 }
             }
-            // chua co tp -> tao tp
-            Double currentPrice = ClientSingleton.getInstance().getCurrentPrice(pos.getSymbol());
 
-            String log;
-            if (pos.getPositionAmt().doubleValue() > 0) {
-                for (int i = 1; i < 50; i++) {
-                    if (priceTp > currentPrice) {
-                        break;
-                    }
-                    priceTp = Utils.calPriceTarget(pos.getSymbol(), pos.getEntryPrice().doubleValue(), OrderSide.BUY, Configs.RATE_TARGET * i);
-                }
-                log = "Create tp -> SELL "
-                        + pos.getSymbol() + " " + pos.getPositionAmt().doubleValue() + " " + pos.getEntryPrice().doubleValue()
-                        + " -> " + priceTp + " rate: " + Utils.formatPercent(Math.abs(Utils.rateOf2Double(priceTp, pos.getEntryPrice().doubleValue())));
-                OrderHelper.takeProfit(pos.getSymbol(), OrderSide.SELL, pos.getPositionAmt().doubleValue(), priceTp);
-            } else {
-                for (int i = 1; i < 50; i++) {
-                    if (priceTp < currentPrice) {
-                        break;
-                    }
-                    priceTp = Utils.calPriceTarget(pos.getSymbol(), pos.getEntryPrice().doubleValue(), OrderSide.SELL, Configs.RATE_TARGET * i);
-                }
-                log = "Create tp -> BUY "
-                        + pos.getSymbol() + " " + pos.getPositionAmt().doubleValue() + " " + pos.getEntryPrice().doubleValue()
-                        + " -> " + priceTp + " rate: " + Utils.formatPercent(Math.abs(Utils.rateOf2Double(priceTp, pos.getEntryPrice().doubleValue())));
-                OrderHelper.takeProfit(pos.getSymbol(), OrderSide.BUY, -pos.getPositionAmt().doubleValue(), priceTp);
-            }
-            LOG.info(log);
-//            executorServiceOrderManager.execute(() -> Utils.sendSms2Telegram(log));
         } catch (Exception e) {
             e.printStackTrace();
         }
+
     }
 
-    public void createSL(PositionRisk pos, Double priceSL) {
+    public boolean createSL(PositionRisk pos, Double priceSL) {
         try {
             if (priceSL == null) {
-                return;
+                return false;
             }
-            List<Order> openOrders = BinanceFuturesClientSingleton.getInstance().getOpenOrders(pos.getSymbol());
-            if (!openOrders.isEmpty()) {
-                for (Order openOrder : openOrders) {
-                    if (openOrder.getType().equals(OrderType.STOP_MARKET.toString())) {
-                        LOG.info("{} have sl order -> not create sl", pos.getSymbol());
-                        return;
-                    }
-                    if (openOrder.getType().equals(OrderType.LIMIT.toString()) && openOrder.getPrice().doubleValue() == priceSL) {
-                        LOG.info("Cancel order sl type limit: " + openOrder.getOrderId() + " of " + openOrder.getSymbol());
-                        BinanceFuturesClientSingleton.getInstance().cancelOrder(openOrder.getSymbol(), openOrder.getClientOrderId());
-                    }
+            String symbol = pos.getSymbol();
+            if (symbol2Processing.containsKey(symbol)) {
+                if (symbol2Processing.get(symbol) > System.currentTimeMillis() - 5 * Utils.TIME_MINUTE) {
+                    LOG.info("{} is locking in list: {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(symbol2Processing.get(symbol)));
+                    return false;
                 }
             }
-            // chua co sl -> tao sl
-            String log;
-            if (pos.getPositionAmt().doubleValue() > 0) {
-                pos = BinanceFuturesClientSingleton.getInstance().getPositionInfo(pos.getSymbol());
-                if (pos != null) {
-                    log = "Create sl -> SELL "
-                            + pos.getSymbol() + " " + pos.getPositionAmt().doubleValue() + " " + pos.getEntryPrice().doubleValue()
-                            + " -> " + priceSL + " rate: " + Utils.formatPercent(Math.abs(Utils.rateOf2Double(priceSL,
-                            pos.getEntryPrice().doubleValue())));
-                    LOG.info(log);
-                    OrderHelper.stopLoss(pos.getSymbol(), OrderSide.SELL, pos.getPositionAmt().doubleValue(), priceSL);
+            symbol2Processing.put(symbol, System.currentTimeMillis());
+            Order orderSLResult = null;
+            try {
+                List<Order> openOrders = BinanceFuturesClientSingleton.getInstance().getOpenOrders(pos.getSymbol());
+                if (!openOrders.isEmpty()) {
+                    for (Order openOrder : openOrders) {
+                        if (openOrder.getType().equals(OrderType.STOP_MARKET.toString())) {
+                            if (openOrder.getPrice().doubleValue() != priceSL) {
+                                LOG.info("Cancel order sl to renew: {}", openOrder.getSymbol());
+                                BinanceFuturesClientSingleton.getInstance().cancelOrder(
+                                        openOrder.getSymbol(), openOrder.getClientOrderId());
+                            } else {
+                                LOG.info("{} have sl order -> not create sl", pos.getSymbol());
+                                return false;
+                            }
+                        }
+                        if (openOrder.getType().equals(OrderType.LIMIT.toString()) && openOrder.getPrice().doubleValue() == priceSL) {
+                            LOG.info("Cancel order sl type limit: " + openOrder.getOrderId() + " of " + openOrder.getSymbol());
+                            BinanceFuturesClientSingleton.getInstance().cancelOrder(openOrder.getSymbol(), openOrder.getClientOrderId());
+                        }
+                    }
                 }
-            } else {
-                log = "Create sl -> BUY "
-                        + pos.getSymbol() + " " + pos.getPositionAmt().doubleValue() + " " + pos.getEntryPrice().doubleValue()
-                        + " -> " + priceSL + " rate: " + Utils.formatPercent(Math.abs(Utils.rateOf2Double(priceSL,
-                        pos.getEntryPrice().doubleValue())));
-                LOG.info(log);
-                OrderHelper.stopLoss(pos.getSymbol(), OrderSide.BUY, -pos.getPositionAmt().doubleValue(), priceSL);
+                // chua co sl -> tao sl
+                String log;
+                if (pos.getPositionAmt().compareTo(new BigDecimal("0")) > 0) {
+                    if (pos.getEntryPrice().equals(new BigDecimal("0.0"))) {
+                        LOG.info("Error process SL for: {} {}", pos.getSymbol(), pos.getEntryPrice());
+                    } else {
+                        pos = BinanceFuturesClientSingleton.getInstance().getPositionInfo(pos.getSymbol());
+                        if (pos.getEntryPrice().equals(new BigDecimal("0.0"))) {
+                            LOG.info("Position has finished: {} {} {}", pos.getSymbol(), pos.getEntryPrice(),
+                                    Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()));
+                        } else {
+                            if (pos != null) {
+                                log = "Create sl -> SELL "
+                                        + pos.getSymbol() + " " + pos.getPositionAmt().doubleValue() + " " + pos.getEntryPrice().doubleValue()
+                                        + " -> " + priceSL + " rate: " + Utils.formatPercent(Math.abs(Utils.rateOf2Double(priceSL,
+                                        pos.getEntryPrice().doubleValue())));
+                                LOG.info(log);
+                                orderSLResult = OrderHelper.stopLoss(pos.getSymbol(), OrderSide.SELL, pos.getPositionAmt().doubleValue(), priceSL);
+                            }
+                        }
+                    }
+                } else {
+                    if (pos.getPositionAmt().compareTo(new BigDecimal("0")) < 0) {
+                        if (pos.getEntryPrice().equals(new BigDecimal("0.0"))) {
+                            LOG.info("Error process SL for: {} {}", pos.getSymbol(), pos.getEntryPrice());
+                        } else {
+                            pos = BinanceFuturesClientSingleton.getInstance().getPositionInfo(pos.getSymbol());
+                            if (pos.getEntryPrice().equals(new BigDecimal("0.0"))) {
+                                LOG.info("Position has finished: {} {} {}", pos.getSymbol(), pos.getEntryPrice(),
+                                        Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()));
+                            } else {
+                                if (pos != null) {
+                                    log = "Create sl -> BUY "
+                                            + pos.getSymbol() + " " + pos.getPositionAmt().doubleValue() + " " + pos.getEntryPrice().doubleValue()
+                                            + " -> " + priceSL + " rate: " + Utils.formatPercent(Math.abs(Utils.rateOf2Double(priceSL,
+                                            pos.getEntryPrice().doubleValue())));
+                                    LOG.info(log);
+                                    orderSLResult = OrderHelper.stopLoss(pos.getSymbol(), OrderSide.BUY, -pos.getPositionAmt().doubleValue(), priceSL);
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            symbol2Processing.remove(symbol);
+            if (orderSLResult != null) {
+                return true;
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
+        return false;
     }
 
-    private OrderTargetInfo getOrderInfo(String symbol) {
+    public OrderTargetInfo getOrderInfo(String symbol) {
         try {
             String orderJson = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO, symbol);
             OrderTargetInfo order = Utils.gson.fromJson(orderJson, OrderTargetInfo.class);

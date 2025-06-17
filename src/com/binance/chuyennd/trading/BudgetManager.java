@@ -7,19 +7,23 @@ package com.binance.chuyennd.trading;
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
 import com.binance.chuyennd.client.BinanceFuturesClientSingleton;
 import com.binance.chuyennd.client.ClientSingleton;
-import com.binance.chuyennd.client.TickerFuturesHelper;
-import com.binance.chuyennd.position.manager.PositionHelper;
+import com.binance.chuyennd.helper.TickerFuturesHelper;
+import com.binance.chuyennd.helper.PositionHelper;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
+import com.binance.chuyennd.websocket.ListenAllTicker;
 import com.binance.client.constant.Constants;
+import com.binance.client.model.enums.OrderSide;
 import com.binance.client.model.trade.Asset;
 import com.binance.client.model.trade.PositionRisk;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
+import java.math.BigDecimal;
 import java.util.*;
 
 /**
@@ -65,7 +69,9 @@ public class BudgetManager {
 //            } else {
             BUDGET_PER_ORDER = ratePerOrder * balanceBasic / 100;
 //            }
-            LOG.info("Ba and Bu to t: {} -> {} balance init:{} marginRunning:{}", balanceCurrent, BUDGET_PER_ORDER, balanceBasic, marginRunning);
+            long time = new File("lib/binance-java-sdk-1.2.4.jar").lastModified();
+            LOG.info("Ba and Bu {}: {} -> {} balance init:{} marginRunning:{} ", Utils.normalizeDateYYYYMMDDHHmm(time),
+                    balanceCurrent, BUDGET_PER_ORDER, balanceBasic, marginRunning);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -92,14 +98,14 @@ public class BudgetManager {
     }
 
     public Double getBudgetSell() {
-        return BUDGET_PER_ORDER / 8;
+        return BUDGET_PER_ORDER / 20;
     }
 
 
-    public Double calMarginRunning(List<PositionRisk> positions) {
+    public Double calMarginRunning(Collection<PositionRisk> positions) {
         Double margin = 0d;
         for (PositionRisk pos : positions) {
-            if (pos.getPositionAmt().doubleValue() > 0) {
+            if (pos.getPositionAmt().compareTo(new BigDecimal("0")) != 0) {
                 margin += PositionHelper.callMargin(pos);
             }
         }
@@ -132,42 +138,45 @@ public class BudgetManager {
         }).start();
     }
 
-    public Set<String> getSymbolRunning(MarketLevelChange level) {
-        Set<String> hashSet = new HashSet<>();
-        for (String symbol : symbol2Level.keySet()) {
-            if (level.equals(symbol2Level.get(symbol))) {
-                hashSet.add(symbol);
-            }
-        }
-        return hashSet;
-    }
-
     private void updateListSymbolAll() {
         try {
             Set<String> symbols = TickerFuturesHelper.getAllSymbol();
             Set<String> allSymbols = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS);
+            List<String> symbolNew = new ArrayList<>();
             for (String symbol : symbols) {
                 if (!allSymbols.contains(symbol) && StringUtils.endsWithIgnoreCase(symbol, "usdt")
                         && !Constants.diedSymbol.contains(symbol)) {
                     LOG.info("Add {} new to all symbol!", symbol);
+                    FundingFeeManagerProduction.getInstance().getFundingBySymbol(symbol);
+                    symbolNew.add(symbol.toLowerCase());
                     ClientSingleton.getInstance().initClient();
                     ClientSingleton.getInstance().syncRequestClient.changeInitialLeverage(symbol, BudgetManager.getInstance().getLeverage());
                     RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS, symbol, symbol);
                 }
+            }
+            if (symbolNew.size() > 0) {
+                ListenAllTicker.getInstance().startThreadListenASymbol(symbolNew);
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    public Double calRateMin2MoveSL(MarketLevelChange marketLevelChange, Double priceEntry, Double maxPrice15M) {
+    public Double calRateMin2MoveSL(String symbol, MarketLevelChange marketLevelChange, Double priceEntry,
+                                    Double maxPrice15M, OrderSide side) {
         Double rateMin2MoveSl = Configs.RATE_PROFIT_STOP_MARKET;
+        if (priceEntry == null || maxPrice15M == null || marketLevelChange == null) {
+            return rateMin2MoveSl;
+        }
         try {
-            if (marginRunning != null
-                    && marginRunning < 40 * BUDGET_PER_ORDER
-                    && priceEntry != null
-                    && maxPrice15M != null) {
-                double rateMaxTarget = 0.01;
+            double rateMaxTarget = 0.05;
+            if (marketLevelChange.equals(MarketLevelChange.BTC_TREND_REVERSE)) {
+                rateMaxTarget = 0.01;
+            }
+            if (marketLevelChange.equals(MarketLevelChange.FUNDING_FEE_BUY)) {
+                rateMaxTarget = 0.02;
+            }
+            if (priceEntry != null && maxPrice15M != null) {
                 if (marketLevelChange.equals(MarketLevelChange.BIG_DOWN)
                         || marketLevelChange.equals(MarketLevelChange.BIG_UP)
                         || marketLevelChange.equals(MarketLevelChange.MEDIUM_DOWN)
@@ -177,7 +186,10 @@ public class BudgetManager {
                 ) {
                     rateMaxTarget = 0.08;
                 }
-                Double rateChangeNew = Utils.rateOf2Double(maxPrice15M, priceEntry) / 2;
+                Double rateChangeNew = Utils.rateOf2Double(maxPrice15M, priceEntry) / 3;
+                if (side.equals(OrderSide.SELL)) {
+                    rateChangeNew = Utils.rateOf2Double(priceEntry, maxPrice15M) / 3;
+                }
                 if (rateChangeNew > rateMin2MoveSl) {
                     rateMin2MoveSl = rateChangeNew;
                     if (rateChangeNew > rateMaxTarget) {
@@ -185,6 +197,7 @@ public class BudgetManager {
                     }
                 }
             }
+
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -193,25 +206,14 @@ public class BudgetManager {
 
     public Double callRateLossDynamicBuy(Double unProfit, Double rateSLMin) {
         Double rateLoss = unProfit * 1000;
-        Double rateStopLoss = Configs.RATE_STOP_LOSS_ALT;
-//        if (Constants.specialSymbol.contains(symbol) || Constants.stableSymbol.contains(symbol)) {
-//            rateStopLoss = Configs.RATE_STOP_LOSS_SPECIAL;
-//        }
         Long tradingStopRate;
-        if (rateLoss < 60) {
+        if (rateLoss < 100) {
             tradingStopRate = rateLoss.longValue() / 2;
-            if (tradingStopRate > 5) {
-                tradingStopRate -= 2;
-            }
+            tradingStopRate -= 2;
         } else {
-            tradingStopRate = 30l;
+            tradingStopRate = 50l;
         }
-        if (rateLoss < rateSLMin * 1000) {
-            rateLoss = rateLoss.longValue() - rateStopLoss * 1000;
-        } else {
-            rateLoss = rateLoss.longValue() - tradingStopRate.doubleValue();
-        }
-
+        rateLoss = rateLoss.longValue() - tradingStopRate.doubleValue();
         return rateLoss / 1000;
     }
 
@@ -225,8 +227,49 @@ public class BudgetManager {
         if (!hashSet.isEmpty()) {
             LOG.info("Remove symbol trade success: {}", hashSet);
             for (String symbol : hashSet) {
+                RedisHelper.getInstance().delJsonData(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO, symbol);
                 symbol2Level.remove(symbol);
             }
         }
+    }
+
+    public Double callRate2DcaBuy(Double rateLoss2Dca, Double margin) {
+        Double rateLoss2DcaOfSym = rateLoss2Dca;
+        if (margin >= BudgetManager.getInstance().getBudget()) {
+            if (margin >= 1.5 * BudgetManager.getInstance().getBudget()) {
+                if (margin >= 2 * BudgetManager.getInstance().getBudget()) {
+                    if (margin >= 2.5 * BudgetManager.getInstance().getBudget()) {
+                        if (margin >= 3 * BudgetManager.getInstance().getBudget()) {
+                            rateLoss2DcaOfSym = -0.99;
+                        } else {
+                            rateLoss2DcaOfSym = -0.9;
+                        }
+                    } else {
+                        rateLoss2DcaOfSym = -0.8;
+                    }
+                } else {
+                    rateLoss2DcaOfSym = -0.7;
+                }
+            } else {
+                rateLoss2DcaOfSym = -0.5;
+            }
+        }
+        return rateLoss2DcaOfSym;
+    }
+
+    public Double callRate2DcaSell(Double margin) {
+        Double rateDca = -1.0;
+        if (margin > BudgetManager.getInstance().getBudget()) {
+            if (margin > 2 * BudgetManager.getInstance().getBudget()) {
+                if (margin > 3 * BudgetManager.getInstance().getBudget()) {
+                    rateDca = -20.0;
+                } else {
+                    rateDca = -5.0;
+                }
+            } else {
+                rateDca = -3.0;
+            }
+        }
+        return rateDca;
     }
 }

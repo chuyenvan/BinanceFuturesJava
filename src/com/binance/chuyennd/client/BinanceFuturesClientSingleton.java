@@ -28,7 +28,6 @@ import java.text.ParseException;
 import java.util.*;
 
 /**
- *
  * @author pc
  */
 public class BinanceFuturesClientSingleton {
@@ -110,9 +109,9 @@ public class BinanceFuturesClientSingleton {
     }
 
     private static void tracePnlAsymbol() throws ParseException {
-        String symbol = "RUNEUSDT";
+        String symbol = "TSTUSDT";
         List<Income> incomes = BinanceFuturesClientSingleton.getInstance().getPositionHistoryBySymbol(symbol,
-                Utils.sdfFileHour.parse("20250124 10:00").getTime(), System.currentTimeMillis());
+                Utils.sdfFileHour.parse("20250603 20:20").getTime(), System.currentTimeMillis());
         Double total = 0d;
         Double REALIZED_PNL = 0d;
         Double FUNDING_FEE = 0d;
@@ -201,6 +200,30 @@ public class BinanceFuturesClientSingleton {
         return openOrders;
     }
 
+    public List<Order> getAllOpenOrderHistory(Long startTime) {
+        LinkedHashMap<String, Object> parameters = new LinkedHashMap<>();
+        List<Order> openOrders = new ArrayList<>();
+        try {
+            parameters.put("startTime", String.valueOf(startTime));
+            parameters.put("symbol", "BTCUSDT");
+            String respon = umFuturesClient.account().allOrders(parameters);
+            if (StringUtils.isNotEmpty(respon)) {
+                List<LinkedTreeMap> list = Utils.gson.fromJson(respon, List.class);
+                for (LinkedTreeMap linkedTreeMap : list) {
+                    try {
+                        openOrders.add(Utils.gson.fromJson(Utils.toJson(linkedTreeMap), Order.class));
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return openOrders;
+    }
+
     public static void main(String[] args) throws ParseException {
 //        String symbol = "AMBUSDT";
 //        System.out.println(Utils.toJson(BinanceFuturesClientSingleton.getInstance().getOpenOrders(symbol)));
@@ -213,6 +236,12 @@ public class BinanceFuturesClientSingleton {
 //        Set<String> symbolLocks = BinanceFuturesClientSingleton.getInstance().getAllSymbolLock();
 //        System.out.println(symbolLocks);
         tracePnlAsymbol();
+//        List<Order> orders = BinanceFuturesClientSingleton.getInstance().getAllOpenOrderHistory(Utils.getStartTimeDayAgo(88));
+//        if (!orders.isEmpty()) {
+//            Long startTime = orders.get(0).getUpdateTime();
+//            Long endTime = orders.get(orders.size() - 1).getUpdateTime();
+//            LOG.info("{} {}", Utils.normalizeDateYYYYMMDDHHmm(startTime), Utils.normalizeDateYYYYMMDDHHmm(endTime));
+//        }
 //        System.out.println(Utils.toJson(BinanceFuturesClientSingleton.getInstance().getPositionInfo("ORBSUSDT")));
 //        BinanceFuturesClientSingleton.getInstance().positionMode();
 //        tracePnlAll();
@@ -331,6 +360,8 @@ public class BinanceFuturesClientSingleton {
         parameters.put("startTime", startTime);
         parameters.put("endTime", endTime);
 //        parameters.put("incomeType", "REALIZED_PNL");
+//        parameters.put("incomeType", "REALIZED_PNL");
+//        parameters.put("incomeType", "FUNDING_FEE");
         try {
             String respon = BinanceFuturesClientSingleton.getInstance().umFuturesClient.account().getIncomeHistory(parameters);
             if (StringUtils.isNotEmpty(respon)) {
@@ -342,6 +373,24 @@ public class BinanceFuturesClientSingleton {
                         Income inconme = Utils.gson.fromJson(jsonInconme, Income.class);
                         results.add(inconme);
                     }
+                }
+                while (results.get(results.size() - 1).getTime() < System.currentTimeMillis() - 5 * Utils.TIME_HOUR
+                        && !list.isEmpty()) {
+                    startTime = results.get(results.size() - 1).getTime() + 1;
+                    parameters.put("startTime", startTime);
+                    respon = BinanceFuturesClientSingleton.getInstance().umFuturesClient.account().getIncomeHistory(parameters);
+                    if (StringUtils.isNotEmpty(respon)) {
+                        list = Utils.gson.fromJson(respon, List.class);
+                        if (list != null && !list.isEmpty()) {
+                            for (LinkedTreeMap linkedTreeMap : list) {
+                                String jsonInconme = linkedTreeMap.toString();
+                                jsonInconme = StringUtils.replace(jsonInconme, "tradeId=}", "tradeId=1}");
+                                Income inconme = Utils.gson.fromJson(jsonInconme, Income.class);
+                                results.add(inconme);
+                            }
+                        }
+                    }
+                    Thread.sleep(1000);
                 }
             }
         } catch (Exception e) {
@@ -401,6 +450,7 @@ public class BinanceFuturesClientSingleton {
         LinkedHashMap<String, Object> parameters = new LinkedHashMap<>();
         return umFuturesClient.market().fundingRate(parameters);
     }
+
     public String getFundingRate(String symbol) {
         LinkedHashMap<String, Object> parameters = new LinkedHashMap<>();
         parameters.put("symbol", symbol);

@@ -16,12 +16,13 @@
 package com.binance.chuyennd.object;
 
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
+import com.binance.client.model.event.CandlestickEvent;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
- *
  * @author pc
  */
 public class KlineObjectNumber implements Serializable {
@@ -54,7 +55,6 @@ public class KlineObjectNumber implements Serializable {
 //        result.al = (Double) kline.get(8);
         return result;
     }
-
 
     public double getDefaultPrice() {
         return priceClose;

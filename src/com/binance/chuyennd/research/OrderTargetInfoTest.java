@@ -15,20 +15,21 @@
  */
 package com.binance.chuyennd.research;
 
-import com.binance.chuyennd.bigchange.market.MarketDataObject;
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
 import com.binance.chuyennd.object.KlineObjectNumber;
+import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
 import com.binance.client.model.enums.OrderSide;
+import com.binance.client.model.market.FundingRate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
-import java.util.List;
+import java.math.BigDecimal;
 import java.util.TreeMap;
 
 /**
@@ -42,7 +43,7 @@ public class OrderTargetInfoTest implements Serializable {
     public OrderSide side;
     public Double priceEntry;
     public Double lastEntry;
-    public Double rate15M;
+
     public Double priceTP;
     public Double priceSL;
     public Double quantity;
@@ -55,24 +56,18 @@ public class OrderTargetInfoTest implements Serializable {
     public Double maxPrice;
     public Double minPrice;
     public Double lastPrice;
-    public Double rateBreadAbove;
-    public Double rateBreadBelow;
+
     public Double rateChange;
     public Double avgVolume24h;
     public Double volume;
-    public Integer ordersRunning;
-    public Double unProfitTotal;
-    public Double slTotal;
-    public Double marginRunning;
-    public Double marginRealRunning;
+
     public Boolean isOrderStart = false;
     public TreeMap<Long, Double> time2FundingFee = new TreeMap<>();
-    public MarketDataObject marketData;
+    public MarketRateChange marketData;
     public MarketLevelChange marketLevelChange;
     public Integer dynamicTP_SL;
     public KlineObjectNumber tickerOpen;
     public KlineObjectNumber tickerClose;
-    public List<Object> datas;
 
 
     public OrderTargetInfoTest(OrderTargetStatus status, Double priceEntry,
@@ -155,22 +150,6 @@ public class OrderTargetInfoTest implements Serializable {
         return rate;
     }
 
-    public Double calCurrentRateSL() {
-        double rate = Utils.rateOf2Double(lastPrice, priceSL);
-        if (side.equals(OrderSide.SELL)) {
-            rate = -rate;
-        }
-        return rate;
-    }
-
-
-    public Double calRateStopLoss() {
-        double rate = Utils.rateOf2Double(priceSL, priceEntry);
-        if (side.equals(OrderSide.SELL)) {
-            rate = -rate;
-        }
-        return rate;
-    }
 
     public Double calFundingFee() {
         double fundingTotal = 0;
@@ -180,13 +159,6 @@ public class OrderTargetInfoTest implements Serializable {
         return fundingTotal;
     }
 
-    public void printFundingFee() {
-        double fundingTotal = 0;
-        for (Long time : time2FundingFee.keySet()) {
-            LOG.info("Funding: {} {}", Utils.normalizeDateYYYYMMDDHHmm(time), time2FundingFee.get(time));
-        }
-
-    }
 
     public Double calRateTp() {
         double rate = Utils.rateOf2Double(priceTP, priceEntry);
@@ -230,9 +202,11 @@ public class OrderTargetInfoTest implements Serializable {
 
     public void updateStatusNew() {
         Double rateLoss = calRateLoss();
-        Double rateMin2MoveSl = BudgetManagerSimple.getInstance().calRateMin2MoveSL(priceEntry, rateChange, marketLevelChange);        // for buy
+        Double rateMin2MoveSl = BudgetManagerSimple.getInstance().calRateMin2MoveSL(symbol, priceEntry,
+                rateChange, marketLevelChange, side);
+        // for buy
         if (side.equals(OrderSide.BUY)) {
-            Double rateStop = BudgetManagerSimple.getInstance().calRateLossDynamicBuy(rateLoss,  rateMin2MoveSl);
+            Double rateStop = BudgetManagerSimple.getInstance().calRateLossDynamicBuy(rateLoss, rateMin2MoveSl);
             Double priceSLNew = Utils.calPriceTarget(symbol, priceEntry, OrderSide.SELL, -rateStop);
             if (rateLoss > rateMin2MoveSl) {
                 if (priceSL == null) {
@@ -251,7 +225,6 @@ public class OrderTargetInfoTest implements Serializable {
         }
         // for Sell
         if (side.equals(OrderSide.SELL)) {
-            rateMin2MoveSl = 2 * rateMin2MoveSl;
             Double rateStop = BudgetManagerSimple.getInstance().calRateLossDynamicBuy(rateLoss, rateMin2MoveSl);
             Double priceSLNew = Utils.calPriceTarget(symbol, priceEntry, OrderSide.BUY, -rateStop);
             if (rateLoss > rateMin2MoveSl) {
@@ -273,15 +246,20 @@ public class OrderTargetInfoTest implements Serializable {
 
     public void updateTPSL() {
         Double rateLoss = calRateLoss();
+        Double rateMin2MoveSl = BudgetManagerSimple.getInstance().calRateMin2MoveSL(symbol, priceEntry,
+                rateChange, marketLevelChange, side);
+        if (!Constants.specialSymbol.contains(symbol)) {
+            if (side.equals(OrderSide.BUY)) {
+                rateMin2MoveSl = 4 * rateMin2MoveSl;
+            } else {
+                rateMin2MoveSl = 5 * rateMin2MoveSl;
+            }
+        }
+        Double rateSL = BudgetManagerSimple.getInstance().calRateLossDynamicBuy(rateLoss, rateMin2MoveSl);
         // for BUY
         if (side.equals(OrderSide.BUY)) {
             // move SL
             if (priceSL != null) {
-                Double rateMin2MoveSl = BudgetManagerSimple.getInstance().calRateMin2MoveSL(priceEntry, rateChange, marketLevelChange);
-                if (!Constants.specialSymbol.contains(symbol)) {
-                    rateMin2MoveSl = 3 * rateMin2MoveSl;
-                }
-                Double rateSL = BudgetManagerSimple.getInstance().calRateLossDynamicBuy(rateLoss, rateMin2MoveSl);
                 OrderSide side2Sl = OrderSide.SELL;
                 Double priceSLNew = Utils.calPriceTarget(symbol, priceEntry, side2Sl, -rateSL);
                 double priceSLChange = priceSLNew - priceSL;
@@ -295,9 +273,6 @@ public class OrderTargetInfoTest implements Serializable {
             }
         } else {
             if (priceSL != null) {
-                Double rateMin2MoveSl = BudgetManagerSimple.getInstance().calRateMin2MoveSL(priceEntry, rateChange, marketLevelChange);
-                rateMin2MoveSl = 2 * rateMin2MoveSl;
-                Double rateSL = BudgetManagerSimple.getInstance().calRateLossDynamicBuy(rateLoss, rateMin2MoveSl);
                 OrderSide side2Sl = OrderSide.BUY;
                 Double priceSLNew = Utils.calPriceTarget(symbol, priceEntry, side2Sl, -rateSL);
                 double priceSLChange = priceSLNew - priceSL;
@@ -337,21 +312,24 @@ public class OrderTargetInfoTest implements Serializable {
     }
 
 
-    public void updateFundingFee(Long time) {
-//        try {
-//            if (time == Utils.sdfFileHour.parse("20241210 11:00").getTime()) {
-//                System.out.println("Debug");
-//            }
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
-        Double fundingRate = FundingFeeManager.getInstance().getFundingFee(symbol, time);
-        if (fundingRate != null) {
-            double funding = quantity * lastPrice * fundingRate;
-            if (side.equals(OrderSide.SELL)) {
-                funding = -funding;
+    public void updateFundingFee() {
+        TreeMap<Long, FundingRate> fundingFee = FundingFeeManager.getInstance().getFundingFeeByTime(symbol, timeStart, timeUpdate);
+        if (fundingFee != null) {
+            for (Long time : fundingFee.keySet()) {
+                FundingRate fund = fundingFee.get(time);
+                BigDecimal markPrice = fund.getMarkPrice();
+                BigDecimal fundingRate = fund.getFundingRate();
+                if (markPrice.equals(new BigDecimal("0"))) {
+                    markPrice = markPrice.add(new BigDecimal(lastPrice));
+                }
+                BigDecimal funding = fundingRate.multiply(new BigDecimal(quantity));
+                funding = funding.multiply(markPrice);
+                if (side.equals(OrderSide.SELL)) {
+                    time2FundingFee.put(time, -funding.doubleValue());
+                } else {
+                    time2FundingFee.put(time, funding.doubleValue());
+                }
             }
-            time2FundingFee.put(time, funding);
         }
     }
 }

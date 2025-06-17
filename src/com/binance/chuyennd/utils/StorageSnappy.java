@@ -1,7 +1,5 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
+
+
 package com.binance.chuyennd.utils;
 
 import java.io.*;
@@ -10,14 +8,15 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.xerial.snappy.Snappy;
 
 /**
  *
  * @author pc
  */
-public class Storage {
+public class StorageSnappy {
 
-    public static final Logger LOG = LoggerFactory.getLogger(Storage.class);
+    public static final Logger LOG = LoggerFactory.getLogger(StorageSnappy.class);
 
     public static class Writer {
 
@@ -32,7 +31,13 @@ public class Storage {
         }
 
         public void write(Object o) throws IOException {
-            oos.writeObject(o);
+            // Nén dữ liệu trước khi ghi
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ObjectOutputStream tempOos = new ObjectOutputStream(baos);
+            tempOos.writeObject(o);
+            tempOos.close();
+            byte[] compressedData = Snappy.compress(baos.toByteArray());
+            oos.writeObject(compressedData);
         }
 
         public void close() throws IOException {
@@ -40,6 +45,9 @@ public class Storage {
         }
     }
 
+    public static void main(String[] args) {
+        System.out.println("test");
+    }
     public static class Reader {
 
         private final ObjectInputStream ois;
@@ -50,7 +58,11 @@ public class Storage {
 
         public Object next() {
             try {
-                return ois.readObject();
+                // Đọc và giải nén dữ liệu
+                byte[] compressedData = (byte[]) ois.readObject();
+                byte[] decompressedData = Snappy.uncompress(compressedData);
+                ObjectInputStream tempOis = new ObjectInputStream(new BufferedInputStream(new ByteArrayInputStream(decompressedData)));
+                return tempOis.readObject();
             } catch (IOException | ClassNotFoundException ex) {
                 ex.printStackTrace();
                 return null;
@@ -64,7 +76,7 @@ public class Storage {
 
     public static void writeObject2File(String fileName, Object data) {
         try {
-            Storage.Writer writer = new Storage.Writer(new File(fileName));
+            StorageSnappy.Writer writer = new StorageSnappy.Writer(new File(fileName));
             writer.write(data);
             writer.close();
         } catch (Exception e) {
@@ -79,7 +91,7 @@ public class Storage {
             if (!file.exists()) {
                 return object;
             }
-            Storage.Reader reader = new Storage.Reader(file);
+            StorageSnappy.Reader reader = new StorageSnappy.Reader(file);
             object = reader.next();
             reader.close();
         } catch (Exception e) {

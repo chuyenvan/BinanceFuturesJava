@@ -112,8 +112,7 @@ public class SimulatorWithEntryByTicker1M {
             orderInfo.priceTP = orderInfo.lastPrice;
             allOrderDone.put(orderInfo.timeStart + allOrderDone.size(), orderInfo);
         }
-        Storage.writeObject2File(FILE_STORAGE_ORDER_DONE + "-"
-                + Configs.TIME_AFTER_ORDER_2_SL, allOrderDone);
+        Storage.writeObject2File(FILE_STORAGE_ORDER_DONE, allOrderDone);
         BudgetManagerSimple.getInstance().printBalanceIndex();
 
 

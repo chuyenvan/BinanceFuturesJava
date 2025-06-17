@@ -3,13 +3,24 @@ package com.binance.client.model.market;
 import com.binance.client.constant.BinanceApiConstants;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 
-public class FundingRate {
+public class FundingRate implements Serializable {
 
     private String symbol;
 
     private BigDecimal fundingRate;
+
+    private BigDecimal markPrice;
+
+    public BigDecimal getMarkPrice() {
+        return markPrice;
+    }
+
+    public void setMarkPrice(BigDecimal markPrice) {
+        this.markPrice = markPrice;
+    }
 
     private Long fundingTime;
 

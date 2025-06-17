@@ -1,8 +1,10 @@
 package com.binance.chuyennd.trading;
 
-import com.binance.chuyennd.client.TickerFuturesHelper;
+import com.binance.chuyennd.helper.TickerFuturesHelper;
 import com.binance.chuyennd.grid.Price4hManager;
 import com.binance.chuyennd.object.KlineObjectNumber;
+import com.binance.chuyennd.redis.RedisConst;
+import com.binance.chuyennd.redis.RedisHelper;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Storage;
 import com.binance.chuyennd.utils.Utils;
@@ -10,22 +12,35 @@ import com.binance.client.constant.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.text.ParseException;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class Price4hManagerProduction {
     public static final Logger LOG = LoggerFactory.getLogger(Price4hManagerProduction.class);
     public ConcurrentHashMap<String, TreeMap<Long, Double>> symbol2Time2PriceMin = new ConcurrentHashMap<>();
     public ConcurrentHashMap<String, TreeMap<Long, Double>> symbol2Time2PriceMax = new ConcurrentHashMap<>();
+    public static final String FILE_DATA_PRICE_MAX = "storage/price/max.data";
+    public static final String FILE_DATA_PRICE_MIN = "storage/price/min.data";
     private static volatile Price4hManagerProduction INSTANCE = null;
+    public ExecutorService executorService = Executors.newFixedThreadPool(Configs.NUMBER_THREAD_ORDER_MANAGER);
 
     public static Price4hManagerProduction getInstance() {
         if (INSTANCE == null) {
             INSTANCE = new Price4hManagerProduction();
             INSTANCE.startThreadUpdateData();
+            if (new File(FILE_DATA_PRICE_MAX).exists()){
+                INSTANCE.symbol2Time2PriceMax = (ConcurrentHashMap<String, TreeMap<Long, Double>>) Storage.readObjectFromFile(FILE_DATA_PRICE_MAX);
+                INSTANCE.symbol2Time2PriceMin = (ConcurrentHashMap<String, TreeMap<Long, Double>>) Storage.readObjectFromFile(FILE_DATA_PRICE_MIN);
+            }else{
+                INSTANCE.updateAllData();
+            }
         }
         return INSTANCE;
     }
@@ -44,10 +59,10 @@ public class Price4hManagerProduction {
         }
         time2PriceMin = symbol2Time2PriceMin.get(symbol);
         if (time2PriceMin != null) {
-            long lastTime = Utils.get4Hour(time)- 4 * Utils.TIME_HOUR;
+            long lastTime = Utils.get4Hour(time) - 4 * Utils.TIME_HOUR;
             Double minPrice = time2PriceMin.get(lastTime);
             for (int i = 2; i < 30; i++) {
-                lastTime = Utils.get4Hour(time) - 4 * Utils.TIME_HOUR * i ;
+                lastTime = Utils.get4Hour(time) - 4 * Utils.TIME_HOUR * i;
 //                LOG.info("time4h manager: {} {}",Utils.normalizeDateYYYYMMDDHHmm(lastTime), Utils.normalizeDateYYYYMMDDHHmm(time));
                 if (time2PriceMin.get(lastTime) != null) {
                     minPrice = Math.min(minPrice, time2PriceMin.get(lastTime));
@@ -57,6 +72,7 @@ public class Price4hManagerProduction {
         }
         return null;
     }
+
     public Double getPriceMaxIn2D(String symbol, Long time) {
         Map<Long, Double> time2PriceMax = symbol2Time2PriceMax.get(symbol);
         if (time2PriceMax == null) {
@@ -67,7 +83,7 @@ public class Price4hManagerProduction {
             long lastTime = Utils.get4Hour(time) - 4 * Utils.TIME_HOUR;
             Double maxPrice = time2PriceMax.get(lastTime);
             for (int i = 2; i < 20; i++) {
-                lastTime = Utils.get4Hour(time) - 4 * Utils.TIME_HOUR * i ;
+                lastTime = Utils.get4Hour(time) - 4 * Utils.TIME_HOUR * i;
                 if (time2PriceMax.get(lastTime) != null) {
                     maxPrice = Math.max(maxPrice, time2PriceMax.get(lastTime));
                 }
@@ -83,17 +99,28 @@ public class Price4hManagerProduction {
             LOG.info("Start thread ThreadUpdatePriceAllSymbol !");
             while (true) {
                 try {
-                    for (String symbol : symbol2Time2PriceMin.keySet()) {
-                        updateForSymbol(symbol);
-                        Thread.sleep(300);
-                    }
-                    Thread.sleep(15 * Utils.TIME_MINUTE);
+                    Thread.sleep(Utils.TIME_HOUR);
                 } catch (Exception e) {
-                    LOG.error("ERROR during ThreadUpdatePriceAllSymbol: {}", e);
                     e.printStackTrace();
                 }
+                updateAllData();
             }
         }).start();
+    }
+
+    private void updateAllData() {
+        try {
+            Set<String> allSymbol = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS);
+            allSymbol.removeAll(Constants.diedSymbol);
+            for (String symbol : allSymbol) {
+                updateForSymbol(symbol);
+            }
+            Storage.writeObject2File(FILE_DATA_PRICE_MAX, symbol2Time2PriceMax);
+            Storage.writeObject2File(FILE_DATA_PRICE_MIN, symbol2Time2PriceMin);
+        } catch (Exception e) {
+            LOG.error("ERROR during ThreadUpdatePriceAllSymbol: {}", e);
+            e.printStackTrace();
+        }
     }
 
     private void updateForSymbol(String symbol) {

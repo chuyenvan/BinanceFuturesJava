@@ -1,6 +1,6 @@
 package com.binance.chuyennd.research;
 
-import com.binance.chuyennd.client.TickerFuturesHelper;
+import com.binance.chuyennd.helper.TickerFuturesHelper;
 import com.binance.chuyennd.indicators.SimpleMovingAverage;
 import com.binance.chuyennd.object.*;
 import com.binance.chuyennd.utils.Configs;

@@ -22,18 +22,13 @@ import com.binance.client.model.market.ExchangeInfoEntry;
 import com.binance.client.model.market.ExchangeInformation;
 import com.binance.client.model.market.SymbolPrice;
 import com.binance.client.model.trade.AccountBalance;
-
-import java.io.Serializable;
-import java.text.DecimalFormat;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.Serializable;
+import java.text.DecimalFormat;
+import java.util.*;
 
 /**
  * @author pc
@@ -222,7 +217,8 @@ public class ClientSingleton implements Serializable {
 //        
 //        System.out.println(ClientSingleton.getInstance().getCurrentPrice("CVCUSDT"));
 //        System.out.println(ClientSingleton.getInstance().getBalanceAvalible());
-        System.out.println(ClientSingleton.getInstance().getRateBalanceAvalible());
+//        System.out.println(ClientSingleton.getInstance().getRateBalanceAvalible());
+
     }
 
     public double getBalance() {
@@ -256,4 +252,6 @@ public class ClientSingleton implements Serializable {
         }
         return 0d;
     }
+
+
 }

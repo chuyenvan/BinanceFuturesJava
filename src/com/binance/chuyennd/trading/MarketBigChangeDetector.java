@@ -1,11 +1,8 @@
 package com.binance.chuyennd.trading;
 
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
-import com.binance.chuyennd.client.TickerFuturesHelper;
+import com.binance.chuyennd.helper.TickerFuturesHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
-import com.binance.chuyennd.object.sw.KlineObjectSimple;
-import com.binance.chuyennd.redis.RedisConst;
-import com.binance.chuyennd.redis.RedisHelper;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
@@ -21,7 +18,7 @@ public class MarketBigChangeDetector {
 
     public static void main(String[] args) throws ParseException {
         try {
-            Long startTime = Utils.sdfFileHour.parse("20250320 01:00").getTime();
+            Long startTime = Utils.sdfFileHour.parse("20250611 03:20").getTime();
 
             List<KlineObjectNumber> btcTickers = TickerFuturesHelper.getTickerWithStartTime(Constants.SYMBOL_PAIR_BTC, Constants.INTERVAL_1M,
                     startTime - 360 * Utils.TIME_MINUTE);
@@ -182,6 +179,9 @@ public class MarketBigChangeDetector {
     public static Double calRateChangeAvg(TreeMap<Double, String> rateLoss2Symbols, Integer period) {
         Double total = 0d;
         int counter = 0;
+        if (period > rateLoss2Symbols.size() * 4 / 5) {
+            period = rateLoss2Symbols.size() * 4 / 5;
+        }
         for (Map.Entry<Double, String> entry : rateLoss2Symbols.entrySet()) {
             Double key = entry.getKey();
             counter++;
@@ -219,58 +219,44 @@ public class MarketBigChangeDetector {
     }
 
     public static MarketLevelChange getMarketStatus1M(Double rateDownAvg, Double rateUpAvg,
-                                                      Double btcRateChange, Double rateDown15MAvg,
-                                                      Double rateUp15MAvg, Double rateBtcDown15M) {
+                                                      Double btcRateChange, Double rateDown15MAvg) {
         // big -> 2 order and x2 budget
         if (rateUpAvg > 0.025) {
             return MarketLevelChange.BIG_UP;
         }
-        if (rateDownAvg < -0.04
+        if (rateDownAvg < -0.032
                 && btcRateChange < -0.01) {
             return MarketLevelChange.BIG_DOWN;
         }
 
         // medium 2 order
-        if (rateUpAvg > 0.023
-                || (rateUpAvg > 0.015 && rateUp15MAvg > 0.11)
-        ) {
+        if (rateUpAvg > 0.015) {
             return MarketLevelChange.MEDIUM_UP;
         }
         if (rateDownAvg < -0.030 ||
-                (rateDownAvg < -0.015
-                        && rateDown15MAvg < -0.08
+                (rateDownAvg < -0.014
+                        && rateDown15MAvg < -0.07
                 )
         ) {
             return MarketLevelChange.MEDIUM_DOWN;
         }
-
-        // small 1 order
-        if (rateUpAvg > 0.009
-                && rateUp15MAvg > 0.12) {
+        // tiny 1 order and budget/2
+        if (rateUpAvg > 0.008 && rateDownAvg > 0) {
             return MarketLevelChange.SMALL_UP;
         }
-        if (rateDownAvg < -0.011
-                && rateDown15MAvg < -0.03) {
+        if (rateDownAvg < -0.006 && rateUpAvg < 0
+                && rateDown15MAvg < -0.025
+        ) {
             return MarketLevelChange.SMALL_DOWN;
         }
 
-        // tiny 1 order and budget/2
-        if (rateUpAvg > 0.009 && rateDownAvg > 0 && rateUp15MAvg > 0.016) {
-            return MarketLevelChange.TINY_UP;
-        }
-        if (rateDownAvg < -0.0065 && rateUpAvg < 0
-                && rateDown15MAvg < -0.028
-        ) {
-            return MarketLevelChange.TINY_DOWN;
-        }
-
-
-        if (rateDown15MAvg < -0.05) {
+        if (rateDown15MAvg < -0.045) {
             return MarketLevelChange.MEDIUM_DOWN_15M;
         }
-        if (rateDown15MAvg < -0.033) {
+        if (rateDown15MAvg < -0.028) {
             return MarketLevelChange.SMALL_DOWN_15M;
         }
+
         return null;
     }
 

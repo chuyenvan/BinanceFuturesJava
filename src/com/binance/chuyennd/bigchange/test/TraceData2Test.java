@@ -4,17 +4,13 @@ import com.binance.chuyennd.bigchange.market.MarketBigChangeDetectorTest;
 import com.binance.chuyennd.bigchange.market.MarketDataObject;
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
 import com.binance.chuyennd.bigchange.statistic.data.DataManager;
-import com.binance.chuyennd.bigchange.statistic.data.DataStatisticHelper;
-import com.binance.chuyennd.grid.GridBalanceIndex;
-import com.binance.chuyennd.grid.GridObjectTestResearch;
+
 import com.binance.chuyennd.object.KlineObjectNumber;
+import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.research.*;
 import com.binance.chuyennd.trading.OrderTargetStatus;
-import com.binance.chuyennd.utils.Configs;
-import com.binance.chuyennd.utils.GridConfigs;
-import com.binance.chuyennd.utils.Storage;
-import com.binance.chuyennd.utils.Utils;
+import com.binance.chuyennd.utils.*;
 import com.binance.client.constant.Constants;
 import com.binance.client.model.enums.OrderSide;
 import org.apache.commons.io.FileUtils;
@@ -97,7 +93,7 @@ public class TraceData2Test {
         }
     }
 
-    private static void traceDataByHand(String[] args) {
+    private static void traceDataByHand(String[] args) throws ParseException {
 //        LOG.info(args[0] + " " + args[1]);
         String mode = args[0];
         switch (mode) {
@@ -110,6 +106,12 @@ public class TraceData2Test {
             case "get_top_down":
                 getTopDown(args[1], args[2]);
                 break;
+            case "market_rate":
+                marketRate(args[1], args[2]);
+                break;
+            case "count_symbol":
+                countSymbol();
+                break;
             case "test_time":
                 testTradeTime(args[1], args[2]);
                 break;
@@ -118,13 +120,7 @@ public class TraceData2Test {
                 break;
             case "trace_loss":
                 traceLog(args[1]);
-                showFileAll("OrderTestDone.data-" + args[2]);
-                break;
-            case "trace_grid":
-                showGrid();
-                break;
-            case "trace_grids":
-                showGrids();
+                showFileAll("OrderTestDone.data");
                 break;
             case "trade":
                 tradeAOrder(args[1], args[2], args[3], args[4]);
@@ -146,6 +142,32 @@ public class TraceData2Test {
                 showFileAllBySymbol(args[1], args[2]);
                 break;
         }
+    }
+
+    private static void countSymbol() throws ParseException {
+        LOG.info("Count symbol");
+        Long startTime = Utils.sdfFile.parse(Configs.TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
+        //get data
+        while (true) {
+            TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers;
+            try {
+                time2Tickers = DataManager.readDataFromFile1M(startTime);
+                if (time2Tickers == null) {
+                    LOG.info("File data error: {} {}", Utils.normalizeDateYYYYMMDDHHmm(startTime),
+                            Configs.FOLDER_TICKER_1M_SNAPPY_FILE + startTime);
+                }
+                if (time2Tickers != null) {
+                    LOG.info("{} {}", Utils.normalizeDateYYYYMMDDHHmm(startTime), time2Tickers.firstEntry().getValue().size());
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            startTime += Utils.TIME_WEEK;
+            if (startTime > System.currentTimeMillis()) {
+                break;
+            }
+        }
+
     }
 
     private static void testTradeTime(String timeInput1, String timeInput2) {
@@ -187,7 +209,6 @@ public class TraceData2Test {
             List<String> symbols = MarketBigChangeDetectorTest.getTopSymbolSimple(marketData.rate2Max, 4, null);
             SimulatorMarketLevelTicker1MStopLoss test = new SimulatorMarketLevelTicker1MStopLoss();
             test.initData();
-            test.runMultiOrder(symbols, timeInput);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -218,8 +239,7 @@ public class TraceData2Test {
         }
 
         for (MarketLevelChange level : list) {
-            String fileName = "../simulator/storage/level/OrderTestDone-" + level + "-"
-                    + Configs.TIME_AFTER_ORDER_2_SL;
+            String fileName = "../simulator/storage/level/OrderTestDone-" + level;
             if (new File(fileName).exists()) {
                 String levelString = level.toString();
                 for (int i = 0; i < maxSize - level.toString().length(); i++) {
@@ -315,7 +335,7 @@ public class TraceData2Test {
                     timeOrder = orderTarget.timeUpdate - orderTarget.timeStart;
                 }
             }
-            if (timeOrder > 30 * Utils.TIME_DAY) {
+            if (timeOrder > 15 * Utils.TIME_DAY) {
                 int year = Utils.getYear(time);
                 if (orders.get(0).side.equals(OrderSide.BUY)) {
                     Integer counterOrderSlow = year2OrderBuySlowCounter.get(year);
@@ -335,8 +355,11 @@ public class TraceData2Test {
             }
             for (String symbol : symbol2Margin.keySet()) {
                 Double margin = symbol2Margin.get(symbol);
-
-                if (margin > 6 * BudgetManagerSimple.getInstance().getBudget()) {
+                int numberBudgetBig = 4;
+                if (Constants.specialSymbol.contains(symbol)){
+                    numberBudgetBig = 6;
+                }
+                if (margin > numberBudgetBig * BudgetManagerSimple.getInstance().getBudget()) {
                     int year = Utils.getYear(time);
                     Integer counterOrder = year2OrderBigCounter.get(year);
                     if (counterOrder == null) {
@@ -353,8 +376,8 @@ public class TraceData2Test {
                         year2OrderSpecialBigCounter.put(year, counterOrderSpecial);
                     }
                     OrderSide sideBig = null;
-                    for (OrderTargetInfoTest order: orders){
-                        if (StringUtils.equals(symbol, order.symbol)){
+                    for (OrderTargetInfoTest order : orders) {
+                        if (StringUtils.equals(symbol, order.symbol)) {
                             sideBig = order.side;
                             break;
                         }
@@ -362,7 +385,7 @@ public class TraceData2Test {
                     LOG.info("Big: {} {} {} {} ", symbol, sideBig,
                             Utils.normalizeDateYYYYMMDDHHmm(orders.get(0).timeUpdate), margin.longValue());
 
-                    if (timeOrder > 7 * Utils.TIME_DAY) {
+                    if (timeOrder > 15 * Utils.TIME_DAY) {
                         Integer counterOrderSlow = year2OrderBigSlowCounter.get(year);
                         if (counterOrderSlow == null) {
                             counterOrderSlow = 0;
@@ -476,212 +499,6 @@ public class TraceData2Test {
 
     }
 
-    public static String statisticResultGrid(ConcurrentHashMap<Long, GridObjectTestResearch> allGrid, Boolean isDetails) {
-        TreeMap<Long, OrderTargetInfoTest> time2Order = new TreeMap<>();
-
-        Map<Integer, List<GridObjectTestResearch>> year2Grids = new TreeMap<>();
-        for (GridObjectTestResearch grid : allGrid.values()) {
-            List<GridObjectTestResearch> grids = year2Grids.get(Utils.getYear(grid.endTime));
-            if (grids == null) {
-                grids = new ArrayList<>();
-            }
-            grids.add(grid);
-            year2Grids.put(Utils.getYear(grid.endTime), grids);
-            for (OrderTargetInfoTest order : grid.time2OrderDone.values()) {
-                time2Order.put(order.timeUpdate + time2Order.size(), order);
-            }
-        }
-        Map<Long, List<OrderTargetInfoTest>> times2OrderDone = new HashMap<>();
-        Map<Integer, List<Double>> year2Pnl = new HashMap<>();
-        TreeMap<Long, Double> date2Profit = new TreeMap();
-        for (OrderTargetInfoTest orderInfo : time2Order.values()) {
-            if (orderInfo.status.equals(OrderTargetStatus.REQUEST)) {
-                continue;
-            }
-            Long time = orderInfo.timeUpdate;
-            List<OrderTargetInfoTest> orderDoneByTimes = times2OrderDone.get(orderInfo.timeUpdate);
-            if (orderDoneByTimes == null) {
-                orderDoneByTimes = new ArrayList<>();
-                times2OrderDone.put(orderInfo.timeUpdate, orderDoneByTimes);
-            }
-            orderDoneByTimes.add(orderInfo);
-
-            Double profitOfDate = date2Profit.get(Utils.getDate(time));
-            if (profitOfDate == null) {
-                profitOfDate = 0d;
-            }
-            profitOfDate += orderInfo.calTp();
-            date2Profit.put(Utils.getDate(time), profitOfDate);
-            Double tp = orderInfo.calTp();
-            List<Double> pnlOfYear = year2Pnl.get(Utils.getYear(time));
-            if (pnlOfYear == null) {
-                pnlOfYear = new ArrayList<>();
-            }
-            pnlOfYear.add(tp);
-            year2Pnl.put(Utils.getYear(time), pnlOfYear);
-        }
-        TreeMap<Integer, Double> year2Profit = new TreeMap();
-        TreeMap<Integer, Double> year2MarginMax = new TreeMap();
-        TreeMap<Integer, Double> year2MarginRealMax = new TreeMap();
-        TreeMap<Integer, Double> year2UnProfitMin = new TreeMap();
-        TreeMap<Integer, Double> year2SLMin = new TreeMap();
-        GridBalanceIndex balanceIndex = (GridBalanceIndex) Storage.readObjectFromFile("../statistic/storage/BalanceIndex.data");
-        for (Long date : balanceIndex.date2MarginMax.keySet()) {
-            Double marginMax = balanceIndex.date2MarginMax.get(date);
-            Double yearMarginMax = year2MarginMax.get(Utils.getYear(date));
-            if (yearMarginMax == null || yearMarginMax < marginMax) {
-                yearMarginMax = marginMax;
-            }
-            year2MarginMax.put(Utils.getYear(date), yearMarginMax);
-        }
-
-        for (Long time : times2OrderDone.keySet()) {
-            List<OrderTargetInfoTest> orders = times2OrderDone.get(time);
-            Map<String, Double> symbol2Margin = new HashMap<>();
-            Long timeOrder = 0l;
-            for (OrderTargetInfoTest orderTarget : orders) {
-                Double margin = symbol2Margin.get(orderTarget.symbol);
-                if (margin == null) {
-                    margin = 0d;
-                }
-                margin += orderTarget.calMargin();
-                symbol2Margin.put(orderTarget.symbol, margin);
-                if (timeOrder < orderTarget.timeUpdate - orderTarget.timeStart) {
-                    timeOrder = orderTarget.timeUpdate - orderTarget.timeStart;
-                }
-            }
-
-        }
-        for (Long date : balanceIndex.date2MarginRealMax.keySet()) {
-            Double marginRealMax = balanceIndex.date2MarginRealMax.get(date);
-            Double yearMarginRealMax = year2MarginRealMax.get(Utils.getYear(date));
-            if (yearMarginRealMax == null || yearMarginRealMax < marginRealMax) {
-                yearMarginRealMax = marginRealMax;
-            }
-            year2MarginRealMax.put(Utils.getYear(date), yearMarginRealMax);
-        }
-        for (Long date : balanceIndex.date2ProfitMin.keySet()) {
-            Double profitMin = balanceIndex.date2ProfitMin.get(date);
-            Double yearProfitMin = year2UnProfitMin.get(Utils.getYear(date));
-            if (yearProfitMin == null || yearProfitMin > profitMin) {
-                yearProfitMin = profitMin;
-            }
-            year2UnProfitMin.put(Utils.getYear(date), yearProfitMin);
-        }
-        for (String month : balanceIndex.month2SLMax.keySet()) {
-            try {
-                Integer year = Utils.getYear(Utils.sdfMonth.parse(month).getTime());
-                Double slMin = year2SLMin.get(year);
-                Double monthSLMin = balanceIndex.month2SLMax.get(month);
-                if (slMin == null || slMin > monthSLMin) {
-                    slMin = monthSLMin;
-                }
-                year2SLMin.put(year, slMin);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-        for (Long time : date2Profit.keySet()) {
-            Integer year = Utils.getYear(time);
-            Double profitOfYear = year2Profit.get(year);
-            if (profitOfYear == null) {
-                profitOfYear = 0d;
-            }
-            profitOfYear += date2Profit.get(time);
-            year2Profit.put(year, profitOfYear);
-        }
-        TreeMap<Double, Long> profit30d2Date = new TreeMap();
-        Long dateFirst = date2Profit.firstKey();
-        for (int i = 30; i < date2Profit.size(); i++) {
-            Double profit30d = 0d;
-            for (int j = 0; j < 30; j++) {
-                Long date30 = dateFirst + (i - 30 + j) * Utils.TIME_DAY;
-                Double profitDate = date2Profit.get(date30);
-                if (profitDate == null) {
-                    profitDate = 0d;
-                }
-                profit30d += profitDate;
-            }
-            profit30d2Date.put(profit30d, dateFirst + i * Utils.TIME_DAY);
-        }
-
-        StringBuilder builder = new StringBuilder();
-        for (Map.Entry<Integer, Double> entry : year2Profit.entrySet()) {
-            builder.append("\n");
-            Integer year = entry.getKey();
-            builder.append(year).append("\t");
-            builder.append("Margin: ").append(year2MarginMax.get(year).longValue()).append("\t");
-            builder.append("MarginReal: ").append(year2MarginRealMax.get(year).longValue()).append("\t");
-            builder.append("UnProfitMin: ").append(year2SLMin.get(year).longValue()).append("\t");
-            builder.append("ProfitMin: ").append(Utils.formatLog(Utils.findMinSubarraySum(year2Pnl.get(year).toArray(new Double[0])).longValue(), 5)).append("\t");
-            List<GridObjectTestResearch> grids = year2Grids.get(year);
-            builder.append(calReportYearBySymbol("All", grids)).append("\t");
-            builder.append(entry.getValue().longValue()).append("\t");
-            builder.append(Utils.formatDouble(entry.getValue() / BudgetManagerSimple.getInstance().balanceBasic, 2));
-        }
-        if (isDetails) {
-            for (String symbol : Constants.specialSymbol) {
-                builder.append("\n").append(symbol).append(":\n");
-                for (Integer year : year2Profit.keySet()) {
-                    List<GridObjectTestResearch> grids = year2Grids.get(year);
-                    builder.append(year).append("\t");
-                    builder.append(calReportYearBySymbol(symbol, grids)).append("\n");
-                }
-            }
-            int counter = 0;
-            for (Map.Entry<Double, Long> entry : profit30d2Date.entrySet()) {
-                builder.append("\n").append(Utils.normalizeDateYYYYMMDD(entry.getValue())).append("\t")
-                        .append(entry.getKey().longValue());
-                counter++;
-                if (counter > 10) {
-                    break;
-                }
-            }
-        }
-        return builder.toString();
-
-    }
-
-    private static String calReportYearBySymbol(String symbol, List<GridObjectTestResearch> grids) {
-        int counterSellSuccess = 0;
-        int counterSellFalse = 0;
-        int counterBuySuccess = 0;
-        int counterBuyFalse = 0;
-        Double profitBuy = 0d;
-        Double profitSell = 0d;
-        for (GridObjectTestResearch grid : grids) {
-            if (!symbol.equalsIgnoreCase("all") && !symbol.equalsIgnoreCase(grid.symbol)) {
-                continue;
-            }
-            Double profit = grid.calProfit();
-            if (grid.side.equals(OrderSide.BUY)) {
-                if (profit > 0) {
-                    counterBuySuccess++;
-                } else {
-                    counterBuyFalse++;
-                }
-                profitBuy += profit;
-            } else {
-                if (profit > 0) {
-                    counterSellSuccess++;
-                } else {
-                    counterSellFalse++;
-                }
-                profitSell += profit;
-            }
-        }
-        StringBuilder builder = new StringBuilder();
-        builder.append("BUY orders: ").append(Utils.formatLog(counterBuyFalse, 3)).append("/")
-                .append(Utils.formatLog(counterBuySuccess, 3)).append("\t");
-        builder.append(Utils.formatLog(profitBuy.longValue(), 5)).append("\t");
-        builder.append("SELL orders: ").append(Utils.formatLog(counterSellFalse, 3))
-                .append("/").append(Utils.formatLog(counterSellSuccess, 3)).append("\t");
-        builder.append(Utils.formatLog(profitSell.longValue(), 5)).append("\t");
-        builder.append("all : ").append(Utils.formatLog(counterBuyFalse + counterSellFalse, 3))
-                .append("/").append(Utils.formatLog(counterBuySuccess + counterSellSuccess, 3)).append("\t");
-        builder.append(Utils.formatLog(profitBuy.longValue() + profitSell.longValue(), 5));
-        return builder.toString();
-    }
 
     private static Double calRateProfit(List<OrderTargetInfoTest> orders) {
         Double rate = 0d;
@@ -755,7 +572,7 @@ public class TraceData2Test {
             sb.append("\t => All: ").append(Utils.formatLog(Utils.formatDouble(totalRate * 100 / orderLevels.size(), 3), 5))
                     .append("\t").append(Utils.formatLog(orderLevels.size(), 5))
                     .append("\t").append(Utils.formatLog(totalProfit.longValue(), 5))
-                    .append("\t").append(Utils.formatLog(counterFalse, 4)).append("/").append(Utils.formatLog(counterDone, 4))
+//                    .append("\t").append(Utils.formatLog(counterFalse, 4)).append("/").append(Utils.formatLog(counterDone, 4))
                     .append("\t");
             for (String year : year2Orders.keySet()) {
                 List<OrderTargetInfoTest> orders = year2Orders.get(year);
@@ -773,48 +590,12 @@ public class TraceData2Test {
             rateSuccess2Log.put(-totalRate * 100 / orderLevels.size(), sb.toString());
         }
         StringBuilder sb = new StringBuilder();
+
         sb.append(statisticLog).append("\n");
         for (String line : rateSuccess2Log.values()) {
             sb.append(line).append("\n");
         }
         LOG.info(sb.toString());
-    }
-
-
-    private static void showGrid() {
-        String fileName = "../statistic/storage/GridTestDone.data";
-        ConcurrentHashMap<Long, GridObjectTestResearch> allGrid = (ConcurrentHashMap<Long, GridObjectTestResearch>) Storage.readObjectFromFile(fileName);
-//        fileName = "target/" + fileName;
-        LOG.info("Statistic grid report");
-        String statisticLog = statisticResultGrid(allGrid, true);
-        StringBuilder sb = new StringBuilder();
-        sb.append(statisticLog).append("\n");
-        LOG.info(sb.toString());
-    }
-
-    private static void showGrids() {
-        for (int i = 0; i < 2; i++) {
-            GridConfigs.GRID_RATE_TRADE = 0.04 + i * 0.01;
-            for (String symbol : Constants.btcReverseSymbol) {
-                try {
-                    Constants.specialSymbol.clear();
-                    Constants.specialSymbol.add(symbol);
-                    String fileName = "../statistic/storage/GridTest" + Constants.specialSymbol + "-" + GridConfigs.GRID_RATE_TRADE + ".data";
-                    if (new File(fileName).exists()) {
-                        LOG.info("Report for: {}-{}", Constants.specialSymbol, GridConfigs.GRID_RATE_TRADE);
-                        ConcurrentHashMap<Long, GridObjectTestResearch> allGrid =
-                                (ConcurrentHashMap<Long, GridObjectTestResearch>) Storage.readObjectFromFile(fileName);
-                        String statisticLog = statisticResultGrid(allGrid, false);
-                        StringBuilder sb = new StringBuilder();
-                        sb.append(statisticLog).append("\n");
-                        LOG.info(sb.toString());
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-
     }
 
 
@@ -943,7 +724,6 @@ public class TraceData2Test {
             if (StringUtils.containsIgnoreCase(side, "sell")) {
                 orderSide = OrderSide.SELL;
             }
-            test.runAOrder(symbol, timeInput, orderSide);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -1184,14 +964,28 @@ public class TraceData2Test {
             List<String> symbols = MarketBigChangeDetectorTest.getTopSymbolSimple(marketData.rate2Max, 20, null);
             marketData.rate2Max.clear();
             LOG.info("{} {}", symbols, Utils.toJson(marketData));
-            Map<String, Double> symbol2Volume24h = Volume24hrManager.getInstance().getVolume24h(time);
-            for (String symbol : symbols) {
-                LOG.info("{} {}M", symbol, Utils.formatDouble(symbol2Volume24h.get(symbol) / 1E6, 0));
-            }
+//            Map<String, Double> symbol2Volume24h = Volume24hrManager.getInstance().getVolume24h(time);
+//            for (String symbol : symbols) {
+//                LOG.info("{} {}M", symbol, Utils.formatDouble(symbol2Volume24h.get(symbol) / 1E6, 0));
+//            }
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
+
+    private static void marketRate(String timeInput1, String timeInput2) {
+        try {
+            String timeInput = timeInput1.trim() + " " + timeInput2.trim();
+            Long time = Utils.sdfFileHour.parse(timeInput).getTime();
+            TreeMap<Long, MarketRateChange> time2MarketRateChange = (TreeMap<Long, MarketRateChange>) StorageSnappy.readObjectFromFile(Configs.FILE_MARKET_RATE_CHANGE);
+            MarketRateChange marketRate = time2MarketRateChange.get(time);
+            LOG.info("{} {} {} {}", Utils.normalizeDateYYYYMMDDHHmm(time), marketRate.rateDownAvg
+                    , marketRate.rateUpAvg, marketRate.rateDown15MAvg);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
 
     private static void getTopUp(String timeInput1, String timeInput2) {
         try {
@@ -1265,46 +1059,6 @@ public class TraceData2Test {
             }
         }
         return hashSet;
-    }
-
-    private static void traceDataStatistic(Long time) {
-        Long duration = 48 * Utils.TIME_HOUR;
-        Long numberTicker = duration / (15 * Utils.TIME_MINUTE);
-        Long lastTime = time - 15 * Utils.TIME_MINUTE;
-        try {
-            Map<String, KlineObjectNumber> symbol2DataStatistic =
-                    DataStatisticHelper.getInstance().readDataStatic_15m(time, numberTicker);
-            TreeMap<Long, Map<String, KlineObjectNumber>> time2Tickers = DataManager.readData15mFromFile(Utils.getDate(time));
-            TreeMap<Long, Map<String, KlineObjectNumber>> time2LastTickers = DataManager.readData15mFromFile(Utils.getDate(lastTime));
-            Map<String, KlineObjectNumber> symbol2Ticker = time2Tickers.get(time);
-            Map<String, KlineObjectNumber> symbol2LastTicker = time2LastTickers.get(lastTime);
-            List<String> lines = new ArrayList<>();
-            for (Map.Entry<String, KlineObjectNumber> entry : symbol2DataStatistic.entrySet()) {
-                String symbol = entry.getKey();
-                KlineObjectNumber tickerStatistic = entry.getValue();
-                KlineObjectNumber lastTicker = symbol2LastTicker.get(symbol);
-                KlineObjectNumber ticker = symbol2Ticker.get(symbol);
-                StringBuilder builder = new StringBuilder();
-                builder.append(symbol).append(",");
-                builder.append(ticker.priceOpen).append(",");
-                builder.append(ticker.priceClose).append(",");
-                builder.append(ticker.maxPrice).append(",");
-                builder.append(ticker.minPrice).append(",");
-                builder.append(Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen)).append(",");
-                builder.append(lastTicker.totalUsdt).append(",");
-                builder.append(ticker.totalUsdt).append(",");
-                builder.append(tickerStatistic.minPrice).append(",");
-                builder.append(Utils.rateOf2Double(tickerStatistic.minPrice, ticker.priceClose)).append(",");
-                builder.append(tickerStatistic.maxPrice);
-                builder.append(Utils.rateOf2Double(tickerStatistic.maxPrice, ticker.priceClose)).append(",");
-                lines.add(builder.toString());
-
-            }
-            String fileName = Utils.normalizeDateYYYYMMDDHHmm(time).replace(" ", "_");
-            FileUtils.writeLines(new File("target/" + fileName.replace(":", "_") + ".csv"), lines);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
     }
 
 }

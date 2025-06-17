@@ -15,27 +15,18 @@
  */
 package com.binance.chuyennd.bigchange.statistic;
 
-import com.educa.chuyennd.funcs.BreadFunctions;
-import com.binance.chuyennd.client.ClientSingleton;
-import com.binance.chuyennd.client.TickerFuturesHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
-import com.binance.chuyennd.statistic24hr.Volume24hrManager;
-import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.SubscriptionClient;
-import com.binance.client.constant.Constants;
 import com.binance.client.model.enums.CandlestickInterval;
 import com.binance.client.model.enums.OrderSide;
-import com.binance.client.model.event.CandlestickEvent;
-import java.util.Collection;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  *

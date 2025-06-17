@@ -2,12 +2,10 @@ package com.binance.chuyennd.trading;
 
 import com.binance.chuyennd.client.BinanceFuturesClientSingleton;
 import com.binance.chuyennd.client.ClientSingleton;
-import com.binance.chuyennd.position.manager.PositionHelper;
+import com.binance.chuyennd.helper.PositionHelper;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
-import com.binance.chuyennd.trading.grid.GridFuturesClientSingleton;
 import com.binance.chuyennd.utils.Utils;
-import com.binance.client.model.enums.OrderSide;
 import com.binance.client.model.trade.Asset;
 import com.binance.client.model.trade.PositionRisk;
 import org.slf4j.Logger;
@@ -19,11 +17,13 @@ public class Reporter {
     public static final Logger LOG = LoggerFactory.getLogger(Reporter.class);
 
     public static void main(String[] args) {
-        Reporter.buildReport(BinanceFuturesClientSingleton.getInstance().getAllPositionInfos());
+        Reporter.buildReport();
     }
 
-    public static void buildReport(List<PositionRisk> positions) {
+    public static void buildReport() {
         try {
+            Set<PositionRisk> positions = new HashSet<>();
+            positions.addAll(BudgetManager.getInstance().symbol2Pos.values());
             StringBuilder reportRunning = calReportRunning(positions);
             Utils.sendSms2Telegram(reportRunning.toString());
         } catch (Exception e) {
@@ -31,7 +31,7 @@ public class Reporter {
         }
     }
 
-    public static StringBuilder calReportRunning(List<PositionRisk> positions) {
+    public static StringBuilder calReportRunning(Collection<PositionRisk> positions) {
         StringBuilder builder = new StringBuilder();
         Set<String> symbolsSell = new HashSet<>();
 
@@ -44,7 +44,7 @@ public class Reporter {
         TreeMap<Double, PositionRisk> rate2Order = new TreeMap<>();
         for (PositionRisk position : positions) {
             if (position.getPositionAmt() != null && position.getPositionAmt().doubleValue() != 0) {
-                Double rateLoss = Utils.rateOf2Double(position.getMarkPrice().doubleValue(), position.getEntryPrice().doubleValue()) * 100;
+                Double rateLoss = PositionHelper.calRateLoss(position) * 100;
                 rate2Order.put(rateLoss, position);
                 if (rateLoss < -5) {
                     totalOver5++;
@@ -55,17 +55,19 @@ public class Reporter {
             }
         }
         int counterLog = 0;
-        Double crossSLTotal = 0d;
         for (Map.Entry<Double, PositionRisk> entry : rate2Order.entrySet()) {
             Double rateLoss = entry.getKey();
             PositionRisk pos = entry.getValue();
             Long ratePercent = rateLoss.longValue();
             totalLoss += ratePercent;
+            Double rateLoss2DcaOfSym;
             if (pos.getPositionAmt().doubleValue() > 0) {
                 totalBuy += ratePercent;
+                rateLoss2DcaOfSym = BudgetManager.getInstance().callRate2DcaBuy(-0.25, PositionHelper.callMargin(pos));
             } else {
                 symbolsSell.add(pos.getSymbol());
                 totalSell += ratePercent;
+                rateLoss2DcaOfSym = -BudgetManager.getInstance().callRate2DcaSell(PositionHelper.callMargin(pos));
             }
             if (counterLog < 15) {
                 counterLog++;
@@ -73,21 +75,12 @@ public class Reporter {
                 Long pnlLong = pnl.longValue();
                 Double entryPrice = ClientSingleton.getInstance().normalizePrice(pos.getSymbol(), pos.getEntryPrice().doubleValue());
                 Double lastPrice = ClientSingleton.getInstance().normalizePrice(pos.getSymbol(), pos.getMarkPrice().doubleValue());
-                String orderJson = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO, pos.getSymbol());
-                OrderTargetInfo order = Utils.gson.fromJson(orderJson, OrderTargetInfo.class);
-                Double priceSl = 0d;
-                if (order != null) {
-                    priceSl = order.priceSL;
-                    if (priceSl == null) {
-                        priceSl = pos.getMarkPrice().doubleValue();
-                    }
-                    crossSLTotal += pos.getPositionAmt().doubleValue() * (priceSl - pos.getEntryPrice().doubleValue());
-                    BudgetManager.getInstance().slMax = Math.abs(crossSLTotal);
-                }
+                Double priceDCA = entryPrice * (1 + rateLoss2DcaOfSym);
+                priceDCA = ClientSingleton.getInstance().normalizePrice(pos.getSymbol(), priceDCA);
                 builder.append(pos.getSymbol().replace("USDT", "")).append(" ")
                         .append(PositionHelper.callMargin(pos).longValue())
                         .append(" ")
-                        .append(entryPrice).append("->").append(lastPrice).append("->").append(priceSl)
+                        .append(entryPrice).append("->").append(lastPrice).append("->").append(priceDCA)
                         .append(" ").append(ratePercent).append("%")
                         .append(" ").append(pnlLong.doubleValue() / 100).append("$")
                         .append("\n");
@@ -102,10 +95,9 @@ public class Reporter {
                 .append(" marginRun: ").append(BudgetManager.getInstance().calMarginRunning(positions).longValue()).append("/")
                 .append(marginRunning.longValue()).append("");
         builder.append("\nTotal: ").append(totalLoss.doubleValue()).append("% -> ")
-                .append(umInfo.getCrossUnPnl().longValue()).append("/").append(crossSLTotal.longValue());
+                .append(umInfo.getCrossUnPnl().longValue());
         builder.append(" Buy: ").append(totalBuy.doubleValue()).append("%");
         builder.append(" Sell: ").append(totalSell.doubleValue()).append("%");
-        builder.append(" ").append(symbolsSell);
         builder.append(" \nRunning: ").append(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS_RUNNING).size())
                 .append(" orders");
         builder.append(" Under3: ").append(totalUnder3);

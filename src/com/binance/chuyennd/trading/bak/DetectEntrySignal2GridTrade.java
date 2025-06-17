@@ -15,7 +15,7 @@
  */
 package com.binance.chuyennd.trading.bak;
 
-import com.binance.chuyennd.client.TickerFuturesHelper;
+import com.binance.chuyennd.helper.TickerFuturesHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
@@ -58,7 +58,7 @@ public class DetectEntrySignal2GridTrade {
     public void startThreadDetectMarketLevel2Trader() {
         new Thread(() -> {
             Thread.currentThread().setName("ThreadDetectMarketLevel2Trader");
-            LOG.info("Start thread ThreadDetectMarketLevel2Trader  target: {}", Configs.RATE_TARGET);
+            LOG.info("Start thread ThreadDetectMarketLevel2Trader");
             int counter = 0;
             while (true) {
                 counter++;
@@ -97,8 +97,6 @@ public class DetectEntrySignal2GridTrade {
             }
         }).start();
     }
-
-
 
 
     public static Double calMarginRunning(String symbol) {

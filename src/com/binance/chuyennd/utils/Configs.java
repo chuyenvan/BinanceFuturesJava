@@ -45,9 +45,6 @@ public class Configs {
     public static boolean MOD_RUN_CAPITAL_CONSTANT = Configs.getBoolean("MOD_RUN_CAPITAL_CONSTANT");
     public static Integer NUMBER_ENTRY_EACH_SIGNAL = Configs.getInt("NUMBER_ENTRY_EACH_SIGNAL");
     public static Integer NUMBER_TICKER_CAL_RATE_CHANGE = Configs.getInt("NUMBER_TICKER_CAL_RATE_CHANGE");
-    public static final Double RATE_TARGET = Configs.getDouble("RATE_TARGET");
-    public static final Double RATE_STOP_LOSS_ALT = Configs.getDouble("RATE_STOP_LOSS_ALT");
-    public static final Double RATE_STOP_LOSS_SPECIAL = Configs.getDouble("RATE_STOP_LOSS_SPECIAL");
     public static final Double RATE_PROFIT_STOP_MARKET = Configs.getDouble("RATE_PROFIT_STOP_MARKET");
     public static final Double MAX_CAPITAL_RATE = Configs.getDouble("MAX_CAPITAL_RATE");
     public static final Double RATE_FEE = Configs.getDouble("RATE_FEE");
@@ -62,21 +59,19 @@ public class Configs {
     public static String FOLDER_TICKER_1M_PRODUCTION = Configs.getString("FOLDER_TICKER_1M_PRODUCTION");//"../ticker/storage/ticker/symbols-15m/";
     public static String FOLDER_TICKER_15M_FILE = Configs.getString("FOLDER_TICKER_15M_FILE");
     public static String FOLDER_TICKER_1M_FILE = Configs.getString("FOLDER_TICKER_1M_FILE");
+    public static String FOLDER_TICKER_1M_SNAPPY_FILE = "../storage/ticker/ticker1m-snappy/";
     public static String FOLDER_TICKER_HOUR = Configs.getString("FOLDER_TICKER_1H");//"../ticker/storage/ticker/symbols-1h/";
     public static String FOLDER_TICKER_4HOUR = Configs.getString("FOLDER_TICKER_4H");//"../ticker/storage/ticker/symbols-4h/";
     public static String FOLDER_TICKER_1D = Configs.getString("FOLDER_TICKER_1D");//"../ticker/storage/ticker/symbols-1D/";
     public static String FILE_DATA_LOADED = Configs.getString("FILE_DATA_LOADED");//"storage/macd_data_time";
-    public static Integer TIME_AFTER_ORDER_2_SL = Configs.getInt("TIME_AFTER_ORDER_2_SL");
     public static Integer BTC_TREND_REVERSE_DURATION = Configs.getInt("BTC_TREND_REVERSE_DURATION");
     public static Double BTC_TREND_REVERSE_RATE_MAX = Configs.getDouble("BTC_TREND_REVERSE_RATE_MAX");
     public static Double BTC_TREND_REVERSE_RATE_MIN = Configs.getDouble("BTC_TREND_REVERSE_RATE_MIN");
     public static Double BTC_TREND_REVERSE_RATE_MIN_TRADE = Configs.getDouble("BTC_TREND_REVERSE_RATE_MIN_TRADE");
 
     public static String FILE_ENTRY_MARKET_LEVEL = "../storage/market_data/time2market.data";
-    public static String FILE_ENTRY_SELL_SIGNAL_1 = "../storage/market_data/time2SellSignal1.data";
-    public static String FILE_ENTRY_SELL_SIGNAL_2 = "../storage/market_data/time2SellSignal2.data";
-    public static String FILE_ENTRY_RATE_MAX_2D = "../storage/market_data/time2rateMax2d.data";
-    public static String FILE_ENTRY_RATE_MIN_2D = "../storage/market_data/time2rateMin2d.data";
+    public static String FILE_MARKET_RATE_CHANGE = "../storage/market_data/marketRateChange.data";
+    public static String FILE_ENTRY_SYMBOL_SELL = "../storage/market_data/time2symbolSell.data";
     public static String FILE_ENTRY_BTC_REVERSE = "../storage/btc/btcReverse-" + BTC_TREND_REVERSE_RATE_MIN + "-" + BTC_TREND_REVERSE_RATE_MAX + "-"
             + BTC_TREND_REVERSE_DURATION;
 

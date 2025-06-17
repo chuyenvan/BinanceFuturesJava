@@ -9,6 +9,7 @@ import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
+import com.binance.client.model.enums.OrderSide;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,6 +18,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author pc
@@ -36,12 +38,12 @@ public class BudgetManagerSimple {
     public Double totalFundingFee = 0d;
     public Double balanceBasic = Configs.getDouble("CAPITAL_START");
     public Double balanceCurrent = balanceBasic;
+    public AtomicInteger counterOrderCreated = new AtomicInteger(0);
 
     public Double profit = 0d;
     public Integer maxOrderRunning = 0;
     public Double fee = 0d;
     public int totalSL = 0;
-    public MarketLevelChange levelRun;
 
     private static volatile BudgetManagerSimple INSTANCE = null;
     public Double marginRunning = null;
@@ -77,18 +79,16 @@ public class BudgetManagerSimple {
     }
 
     public Double getBudget() {
-        return BUDGET_PER_ORDER / 2;
+        return BUDGET_PER_ORDER * 0.5;
     }
+
     public Double getBudgetSell() {
-        return BUDGET_PER_ORDER / 8;
+        return BUDGET_PER_ORDER / 20;
     }
+
     public Double getBudgetGrid() {
         return balanceBasic / (Constants.specialSymbol.size() * 10);
 //        return 1000d;
-    }
-
-    public Boolean isAvailableTrade() {
-        return investing < Configs.MAX_CAPITAL_RATE;
     }
 
 
@@ -101,17 +101,6 @@ public class BudgetManagerSimple {
             if (orderInfo.status.equals(OrderTargetStatus.STOP_LOSS_DONE)) {
                 totalSL++;
             }
-//            if (orderInfo.status.equals(OrderTargetStatus.STOP_MARKET_DONE)) {
-//                if (orderInfo.side.equals(OrderSide.BUY)) {
-//                    if (orderInfo.priceTP < orderInfo.priceEntry) {
-//                        totalSL++;
-//                    }
-//                } else {
-//                    if (orderInfo.priceTP > orderInfo.priceEntry) {
-//                        totalSL++;
-//                    }
-//                }
-//            }
             fee += calFee(orderInfo);
             totalFundingFee += orderInfo.calFundingFee();
             profit += orderInfo.calTp();
@@ -174,7 +163,7 @@ public class BudgetManagerSimple {
             Double rateMarginMaxDouble = balanceIndex.rateMarginMax * 100;
 
             LOG.info("Update {} => b:{} pD:{}\tm:{}\tmax:{}%\t{}\t{}\t{}\t{}\t" +
-                            "unP:{}\tunPMin:{}\t{}\t{}\t{}%\t{}\tdone:{}/{} run:{}/{} f:{}",
+                            "unP:{}\tunPMin:{}\t{}\t{}\t{}%\t{}\tdone:{}/{}/{} run:{}/{} f:{}",
                     Utils.normalizeDateYYYYMMDDHHmm(timeUpdate), Utils.formatLog(balance.longValue(), 5),
                     Utils.formatLog(profitOfDate.longValue(), 4),
                     Utils.formatLog(positionMargin.longValue(), 4),
@@ -188,8 +177,8 @@ public class BudgetManagerSimple {
                     Utils.formatLog(unProfitDate.longValue(), 5),
                     Utils.formatLog(unProfitMonth.longValue(), 5),
                     Utils.formatPercentNew(balanceIndex.unProfitMin / balanceBasic),
-                    slMonth.longValue(),
-                    totalSL, allOrderDone.size(), symbolRunning.size(), maxOrderRunning, totalFundingFee.longValue());
+                    slMonth.longValue(), totalSL, allOrderDone.size(), counterOrderCreated.get(),
+                    counterOrderRunning(symbol2OrdersEntry), maxOrderRunning, totalFundingFee.longValue());
             if (timeUpdate.equals(Utils.getToDay() + 7 * Utils.TIME_HOUR)) {
 //                LOG.info("Report: {}", Utils.normalizeDateYYYYMMDDHHmm(timeUpdate));
                 List<String> lines =
@@ -215,6 +204,14 @@ public class BudgetManagerSimple {
             LOG.info("Chay tai khoan {} -----------------------------------!", Utils.normalizeDateYYYYMMDDHHmm(timeUpdate));
         }
         updateBudget();
+    }
+
+    private Integer counterOrderRunning(ConcurrentHashMap<String, List<OrderTargetInfoTest>> symbol2OrdersEntry) {
+        int counter = 0;
+        for (List<OrderTargetInfoTest> orders : symbol2OrdersEntry.values()) {
+            counter += orders.size();
+        }
+        return counter;
     }
 
     private Double calFee(OrderTargetInfoTest orderInfo) {
@@ -293,29 +290,16 @@ public class BudgetManagerSimple {
 
     public Double calRateLossDynamicBuy(Double unProfit, Double rateSLMin) {
         Double rateLoss = unProfit * 1000;
-        Double rateStopLoss = Configs.RATE_STOP_LOSS_ALT;
-//        if (Constants.specialSymbol.contains(symbol)
-//                || Constants.stableSymbol.contains(symbol)) {
-//            rateStopLoss = Configs.RATE_STOP_LOSS_SPECIAL;
-//        }
         Long tradingStopRate;
-        if (rateLoss < 60) {
+        if (rateLoss < 100) {
             tradingStopRate = rateLoss.longValue() / 2;
-            if (tradingStopRate > 5) {
-                tradingStopRate -= 2;
-            }
+            tradingStopRate -= 2;
         } else {
-            tradingStopRate = 30l;
+            tradingStopRate = 50l;
         }
-        if (rateLoss < rateSLMin * 1000) {
-            rateLoss = rateLoss.longValue() - rateStopLoss * 1000;
-        } else {
-            rateLoss = rateLoss.longValue() - tradingStopRate.doubleValue();
-        }
-
+        rateLoss = rateLoss.longValue() - tradingStopRate.doubleValue();
         return rateLoss / 1000;
     }
-
 
 
     public static void main(String[] args) {
@@ -335,34 +319,29 @@ public class BudgetManagerSimple {
 //        }
     }
 
-
-    public void resetHistory() {
-        totalSL = 0;
-        fee = 0d;
-        profit = 0d;
-        balanceCurrent = balanceBasic;
-        unProfit = 0d;
-        profitLossMax = 0d;
-        totalFee = 0d;
-        totalFundingFee = 0d;
-        balanceIndex = new BalanceIndex();
-    }
-
     public void updateMaxOrderRunning(Integer counterOrderRunning) {
         if (maxOrderRunning < counterOrderRunning) {
             maxOrderRunning = counterOrderRunning;
         }
     }
 
-    public Double calRateMin2MoveSL(Double priceEntry, Double maxPrice15M, MarketLevelChange marketLevelChange) {
+    public Double calRateMin2MoveSL(String symbol, Double priceEntry, Double maxPrice15M,
+                                    MarketLevelChange marketLevelChange, OrderSide side) {
 
         Double rateMin2MoveSl = Configs.RATE_PROFIT_STOP_MARKET;
-        if (priceEntry == null || maxPrice15M == null || marketLevelChange == null){
+        if (priceEntry == null || maxPrice15M == null || marketLevelChange == null) {
             return rateMin2MoveSl;
         }
         try {
-            if (marginRunning != null && marginRunning < 40 * BUDGET_PER_ORDER) {
-                double rateMaxTarget = 0.01;
+            double rateMaxTarget = 0.05;
+            if (marketLevelChange.equals(MarketLevelChange.BTC_TREND_REVERSE)) {
+                rateMaxTarget = 0.01;
+            }
+            if (marketLevelChange.equals(MarketLevelChange.FUNDING_FEE_BUY)) {
+                rateMaxTarget = 0.02;
+            }
+
+            if (priceEntry != null && maxPrice15M != null) {
                 if (marketLevelChange.equals(MarketLevelChange.BIG_DOWN)
                         || marketLevelChange.equals(MarketLevelChange.BIG_UP)
                         || marketLevelChange.equals(MarketLevelChange.MEDIUM_DOWN)
@@ -372,7 +351,10 @@ public class BudgetManagerSimple {
                 ) {
                     rateMaxTarget = 0.08;
                 }
-                Double rateChangeNew = Utils.rateOf2Double(maxPrice15M, priceEntry) / 2;
+                Double rateChangeNew = Utils.rateOf2Double(maxPrice15M, priceEntry) / 3;
+                if (side.equals(OrderSide.SELL)) {
+                    rateChangeNew = Utils.rateOf2Double(priceEntry, maxPrice15M) / 3;
+                }
                 if (rateChangeNew > rateMin2MoveSl) {
                     rateMin2MoveSl = rateChangeNew;
                     if (rateChangeNew > rateMaxTarget) {
@@ -380,6 +362,7 @@ public class BudgetManagerSimple {
                     }
                 }
             }
+
         } catch (Exception e) {
             e.printStackTrace();
         }

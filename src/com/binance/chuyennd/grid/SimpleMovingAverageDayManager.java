@@ -20,7 +20,6 @@ import java.util.concurrent.ConcurrentHashMap;
 public class SimpleMovingAverageDayManager {
     public static final Logger LOG = LoggerFactory.getLogger(SimpleMovingAverageDayManager.class);
     public ConcurrentHashMap<String, TreeMap<Long, Double>> symbol2MADifference10And60 = new ConcurrentHashMap<>();
-    public ConcurrentHashMap<String, TreeMap<Long, Double>> symbol2MAD60 = new ConcurrentHashMap<>();
     private static volatile SimpleMovingAverageDayManager INSTANCE = null;
 
     public static SimpleMovingAverageDayManager getInstance() {

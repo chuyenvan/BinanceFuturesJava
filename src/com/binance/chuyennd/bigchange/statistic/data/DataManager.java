@@ -1,6 +1,5 @@
 package com.binance.chuyennd.bigchange.statistic.data;
 
-import com.binance.chuyennd.client.TickerFuturesHelper;
 import com.binance.chuyennd.indicators.MACD;
 import com.binance.chuyennd.indicators.RelativeStrengthIndex;
 import com.binance.chuyennd.indicators.SimpleMovingAverage;
@@ -11,6 +10,7 @@ import com.binance.chuyennd.object.RsiEntry;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Storage;
+import com.binance.chuyennd.utils.StorageSnappy;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
 import org.apache.commons.lang.StringUtils;
@@ -59,9 +59,9 @@ public class DataManager {
 
     public static TreeMap<Long, Map<String, KlineObjectSimple>> readDataFromFile1M(Long startTime) {
         try {
-            String fileName = Configs.FOLDER_TICKER_1M_FILE + startTime;
+            String fileName = Configs.FOLDER_TICKER_1M_SNAPPY_FILE + startTime;
             if (new File(fileName).exists()) {
-                return (TreeMap<Long, Map<String, KlineObjectSimple>>) Storage.readObjectFromFile(fileName);
+                return (TreeMap<Long, Map<String, KlineObjectSimple>>) StorageSnappy.readObjectFromFile(fileName);
             }
         } catch (Exception e) {
             e.printStackTrace();
