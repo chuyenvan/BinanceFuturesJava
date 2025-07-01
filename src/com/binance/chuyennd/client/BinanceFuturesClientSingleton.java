@@ -86,7 +86,7 @@ public class BinanceFuturesClientSingleton {
         while (true) {
             page++;
             List<Income> incomes = BinanceFuturesClientSingleton.getInstance().getAllPositionHistory(
-                    Utils.sdfFileHour.parse("20240306 04:00").getTime(), System.currentTimeMillis(), page);
+                    Utils.sdfFileHour.parse("20250531 05:42").getTime(), System.currentTimeMillis(), page);
             if (!incomes.isEmpty()) {
                 LOG.info("{} {} {}", page, incomes.get(0).getSymbol(), Utils.normalizeDateYYYYMMDDHHmm(incomes.get(0).getTime()));
                 for (Income income : incomes) {
@@ -109,9 +109,9 @@ public class BinanceFuturesClientSingleton {
     }
 
     private static void tracePnlAsymbol() throws ParseException {
-        String symbol = "TSTUSDT";
+        String symbol = "LAYERUSDT";
         List<Income> incomes = BinanceFuturesClientSingleton.getInstance().getPositionHistoryBySymbol(symbol,
-                Utils.sdfFileHour.parse("20250603 20:20").getTime(), System.currentTimeMillis());
+                Utils.sdfFileHour.parse("20250531 05:42").getTime(), System.currentTimeMillis());
         Double total = 0d;
         Double REALIZED_PNL = 0d;
         Double FUNDING_FEE = 0d;

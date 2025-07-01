@@ -159,15 +159,17 @@ public class BinanceOrderTradingManager {
                     + " market level: " + order.marketLevel;
             LOG.info(log);
             updatePositionInfo();
-            if (orderInfo == null) {
+        } catch (Exception e) {
+            LOG.info("Error during process order: {}", Utils.toJson(order));
+            try {
                 if (order.timeStart > System.currentTimeMillis() - 5 * Utils.TIME_MINUTE) {
                     RedisHelper.getInstance().get().rpush(RedisConst.REDIS_KEY_BINANCE_TD_ORDER_MANAGER_QUEUE, Utils.toJson(order));
                 }
-                LOG.info("Create order symbol {} false! {}", order.symbol, Utils.toJson(order));
+                LOG.info("ReCreate order symbol false! {} {}", order.symbol, Utils.toJson(order));
                 Thread.sleep(200);
+            } catch (Exception ex) {
+                ex.printStackTrace();
             }
-        } catch (Exception e) {
-            LOG.info("Error during process order: {}", Utils.toJson(order));
             e.printStackTrace();
         }
         symbol2Processing.remove(order.symbol);

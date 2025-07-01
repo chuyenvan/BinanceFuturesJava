@@ -326,7 +326,7 @@ public class BudgetManagerSimple {
     }
 
     public Double calRateMin2MoveSL(String symbol, Double priceEntry, Double maxPrice15M,
-                                    MarketLevelChange marketLevelChange, OrderSide side) {
+                                    MarketLevelChange marketLevelChange, OrderSide side, Long time) {
 
         Double rateMin2MoveSl = Configs.RATE_PROFIT_STOP_MARKET;
         if (priceEntry == null || maxPrice15M == null || marketLevelChange == null) {

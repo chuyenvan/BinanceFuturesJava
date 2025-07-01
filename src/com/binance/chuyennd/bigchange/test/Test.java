@@ -84,8 +84,8 @@ public class Test {
 
 //        deleteAllSLAtRedis();
 //        StorageSnappy.writeObject2File("target/test.data", new HashMap<>());
-        checkSellSignal();
-//                testProduction();
+//        checkSellSignal();
+                testProduction();
 //                removeSLRedis();
 //        difProductionWithTest();
 //        System.out.println(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO).size());
@@ -452,7 +452,7 @@ public class Test {
 
     private static void testProduction() {
 
-//        createAOrderTest();
+        createAOrderTest();
 //        System.out.println(FuturesRules.getInstance().getSymsLocked());
 //        System.out.println(Utils.getYear(System.currentTimeMillis()));
 //        new BinanceOrderTradingManager().processManagerPosition();
@@ -469,10 +469,10 @@ public class Test {
 //        System.out.println(FundingFeeManagerProduction.getInstance().fundingBuy.size());
 
 
-        BinanceOrderTradingManager test = new BinanceOrderTradingManager();
-        test.updatePositionInfo();
-//        test.processDynamicTP_SL();
-        test.initSLFirst();
+//        BinanceOrderTradingManager test = new BinanceOrderTradingManager();
+//        test.updatePositionInfo();
+////        test.processDynamicTP_SL();
+//        test.initSLFirst();
 //        test.checkSLErrorAtRedis();
 
         // delete all order not rung at redis
@@ -542,7 +542,7 @@ public class Test {
     }
 
     private static void createAOrderTest() {
-        String symbol = "AERGOUSDT";
+        String symbol = "FUNUSDT";
         MarketLevelChange levelChange = MarketLevelChange.SMALL_DOWN;
         Double budget = 2d;
         List<KlineObjectNumber> tickers = TickerFuturesHelper.getTicker(symbol, Constants.INTERVAL_1M);

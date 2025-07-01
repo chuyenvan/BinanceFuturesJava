@@ -48,7 +48,7 @@ public class FundingFeeManagerProduction {
                     while (time2Rate.size() > 3) {
                         time2Rate.remove(time2Rate.firstKey());
                     }
-                    while (time2Rate.firstKey() < System.currentTimeMillis() - 20 * Utils.TIME_HOUR) {
+                    while (time2Rate.size() > 0 && time2Rate.firstKey() < System.currentTimeMillis() - 20 * Utils.TIME_HOUR) {
                         time2Rate.remove(time2Rate.firstKey());
                     }
                     symbol2FundingFee.put(symbol, time2Rate);
@@ -64,7 +64,7 @@ public class FundingFeeManagerProduction {
                     if (isFundingSell) {
                         fundingBuy.remove(symbol);
                         fundingSell.add(symbol);
-                    }else{
+                    } else {
 //                        Long currentTime = System.currentTimeMillis();
 //                        StringBuilder builder = new StringBuilder();
 //                        for (Long time : time2Rate.keySet()) {
@@ -76,6 +76,7 @@ public class FundingFeeManagerProduction {
                     }
                 }
             } catch (Exception e) {
+                LOG.info("Error update list sell/buy funding fee: {}", symbol);
                 e.printStackTrace();
             }
         }
@@ -111,7 +112,8 @@ public class FundingFeeManagerProduction {
         for (Long time : time2Rate.keySet()) {
             LOG.info("{} {}", Utils.normalizeDateYYYYMMDDHHmm(time), time2Rate.get(time).getFundingRate());
         }
-        LOG.info("size: ------------------------------ {}", FundingFeeManagerProduction.getInstance().fundingBuy.size());
+        LOG.info("size: ------------------------------ {} {}", FundingFeeManagerProduction.getInstance().fundingBuy.size(),
+                FundingFeeManagerProduction.getInstance().symbol2FundingFee.size());
     }
 
 

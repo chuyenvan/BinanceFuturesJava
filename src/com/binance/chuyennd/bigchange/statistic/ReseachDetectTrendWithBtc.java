@@ -246,7 +246,7 @@ public class ReseachDetectTrendWithBtc {
 //        Map<TrendObjectDetail, List<TrendDataTrackingObject>> altBehaviors = getAllAltBehavior(btcTrends, symbol2Kline1Ds);
 //        printAltBehavior(altBehaviors);
         printTrendDetailObject(btcTrends, Constants.SYMBOL_PAIR_BTC);
-        // TODO Detect trend sell khi dat dinh => dang co dinh cuoi nho hon dinh truoc do va dinh truoc do la max trong 1 nam => sell grid
+
     }
 
     public void printTrendDetailObject(List<TrendObjectDetail> trendInfos, String symbol) {

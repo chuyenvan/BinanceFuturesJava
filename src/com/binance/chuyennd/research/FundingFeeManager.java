@@ -53,11 +53,14 @@ public class FundingFeeManager {
 
     public static void main(String[] args) {
         try {
-            long time = Utils.sdfFileHour.parse("20250509 05:11").getTime();
+            long time = Utils.sdfFileHour.parse("20250609 05:11").getTime();
 //            LOG.info("{}", Utils.normalizeDateYYYYMMDDHHmm(Utils.get2Hour(time)));
 //            LOG.info("{}", Utils.normalizeDateYYYYMMDDHHmm(Utils.get4Hour(time)));
 //            FundingFeeManager.getInstance().printLastFunding("HIPPOUSDT");
-            FundingFeeManager.getInstance().getFundingBuyNew(time);
+            Set<String> symbolAllFunding = FundingFeeManager.getInstance().getAllFunding(time);
+            Set<String> symbolFundingBuy = FundingFeeManager.getInstance().getFundingBuyNew(time);
+            LOG.info("{} {} {}", symbolAllFunding.size(), symbolFundingBuy.size(), symbolFundingBuy.size() * 100 / symbolAllFunding.size());
+//            FundingFeeManager.getInstance().getFundingBuyNew(time);
 //            FundingFeeManager.getInstance().printLastFunding();
 
 
@@ -194,6 +197,17 @@ public class FundingFeeManager {
             }
 //            LOG.info("{} {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time), builder);
 
+        }
+        return symbols;
+    }
+    public Set<String> getAllFunding(long time) {
+        Set<String> symbols = new HashSet();
+        long timeGet = Utils.getHour(time);
+        for (String symbol : symbol2FundingFee.keySet()) {
+            TreeMap<Long, FundingRate> time2Funding = symbol2FundingFee.get(symbol);
+            if (time2Funding != null && time2Funding.size() > 0 && time2Funding.firstKey() < timeGet){
+                symbols.add(symbol);
+            }
         }
         return symbols;
     }

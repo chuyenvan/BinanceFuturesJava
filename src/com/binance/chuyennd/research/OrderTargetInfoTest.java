@@ -203,7 +203,7 @@ public class OrderTargetInfoTest implements Serializable {
     public void updateStatusNew() {
         Double rateLoss = calRateLoss();
         Double rateMin2MoveSl = BudgetManagerSimple.getInstance().calRateMin2MoveSL(symbol, priceEntry,
-                rateChange, marketLevelChange, side);
+                rateChange, marketLevelChange, side, timeUpdate);
         // for buy
         if (side.equals(OrderSide.BUY)) {
             Double rateStop = BudgetManagerSimple.getInstance().calRateLossDynamicBuy(rateLoss, rateMin2MoveSl);
@@ -247,7 +247,7 @@ public class OrderTargetInfoTest implements Serializable {
     public void updateTPSL() {
         Double rateLoss = calRateLoss();
         Double rateMin2MoveSl = BudgetManagerSimple.getInstance().calRateMin2MoveSL(symbol, priceEntry,
-                rateChange, marketLevelChange, side);
+                rateChange, marketLevelChange, side, timeUpdate);
         if (!Constants.specialSymbol.contains(symbol)) {
             if (side.equals(OrderSide.BUY)) {
                 rateMin2MoveSl = 4 * rateMin2MoveSl;

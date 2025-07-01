@@ -222,7 +222,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                                     continue;
                                                 }
                                             }
-                                            if (calMarginRunning(symbol) < 1.3 * BudgetManagerSimple.getInstance().getBudget()
+                                            if (calMarginRunning(symbol) < BudgetManagerSimple.getInstance().getBudget()
                                                     && calMarginRunning() < 100 * BudgetManagerSimple.getInstance().getBudget()) {
                                                 createOrderBUY(symbol, ticker, MarketLevelChange.DCA_LEVEL1, time2MarketRateChange.get(time)
                                                         , symbol2PriceMax15M.get(symbol));
@@ -468,18 +468,18 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             if (levelChange.equals(MarketLevelChange.MEDIUM_DOWN)
                     || levelChange.equals(MarketLevelChange.BIG_UP)
             ) {
-                durationDca = 240;
+                durationDca = 15;
                 rateLoss2Dca = -0.08;
             }
             if (levelChange.equals(MarketLevelChange.MEDIUM_UP)
                     || levelChange.equals(MarketLevelChange.MEDIUM_DOWN_15M)
             ) {
-                durationDca = 480;
+                durationDca = 15;
                 rateLoss2Dca = -0.15;
             }
             if (levelChange.equals(MarketLevelChange.SMALL_DOWN)
             ) {
-                durationDca = 24 * 60;
+                durationDca = 15;
                 rateLoss2Dca = -0.2;
             }
         }
