@@ -53,13 +53,15 @@ public class FundingFeeManager {
 
     public static void main(String[] args) {
         try {
-            long time = Utils.sdfFileHour.parse("20250609 05:11").getTime();
+            long time = Utils.sdfFileHour.parse("20250705 05:11").getTime();
 //            LOG.info("{}", Utils.normalizeDateYYYYMMDDHHmm(Utils.get2Hour(time)));
 //            LOG.info("{}", Utils.normalizeDateYYYYMMDDHHmm(Utils.get4Hour(time)));
 //            FundingFeeManager.getInstance().printLastFunding("HIPPOUSDT");
             Set<String> symbolAllFunding = FundingFeeManager.getInstance().getAllFunding(time);
             Set<String> symbolFundingBuy = FundingFeeManager.getInstance().getFundingBuyNew(time);
-            LOG.info("{} {} {}", symbolAllFunding.size(), symbolFundingBuy.size(), symbolFundingBuy.size() * 100 / symbolAllFunding.size());
+            TreeMap<Double, String> symbolFundingBig = FundingFeeManager.getInstance().getFundingBig(time);
+            LOG.info("{} {} {} {}", symbolAllFunding.size(), symbolFundingBuy.size(),
+                    symbolFundingBuy.size() * 100 / symbolAllFunding.size(), symbolFundingBig);
 //            FundingFeeManager.getInstance().getFundingBuyNew(time);
 //            FundingFeeManager.getInstance().printLastFunding();
 
@@ -199,6 +201,35 @@ public class FundingFeeManager {
 
         }
         return symbols;
+    }
+    public TreeMap<Double, String> getFundingBig(long time) {
+        TreeMap<Double, String> fundingFee2Symbol = new TreeMap<>();
+        long timeGet = Utils.getHour(time);
+        for (String symbol : symbol2FundingFee.keySet()) {
+            TreeMap<Long, FundingRate> time2Funding = symbol2FundingFee.get(symbol);
+            TreeMap<Long, FundingRate> time2FundingGet = new TreeMap<>();
+            for (int i = 0; i < 20; i++) {
+                Long timeF = timeGet - i * Utils.TIME_HOUR;
+                if (time2Funding.containsKey(timeF)) {
+                    time2FundingGet.put(timeF, time2Funding.get(timeF));
+                }
+                if (time2FundingGet.size() >= 3) {
+                    break;
+                }
+            }
+            for (FundingRate funding : time2FundingGet.values()) {
+                if (funding.getFundingRate().doubleValue() < -0.003) {
+                    fundingFee2Symbol.put(funding.getFundingRate().doubleValue(),symbol);
+                }
+            }
+            StringBuilder builder = new StringBuilder();
+            for (Long key : time2FundingGet.keySet()) {
+                builder.append(Utils.normalizeDateYYYYMMDDHHmm(key)).append(" ").append(time2FundingGet.get(key).getFundingRate()).append(" ");
+            }
+//            LOG.info("{} {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time), builder);
+
+        }
+        return fundingFee2Symbol;
     }
     public Set<String> getAllFunding(long time) {
         Set<String> symbols = new HashSet();
