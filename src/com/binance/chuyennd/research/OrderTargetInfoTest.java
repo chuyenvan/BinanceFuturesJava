@@ -150,6 +150,14 @@ public class OrderTargetInfoTest implements Serializable {
         return rate;
     }
 
+    public Double calRateLossMax() {
+        double rate = Utils.rateOf2Double(maxPrice, priceEntry);
+        if (side.equals(OrderSide.SELL)) {
+            rate = -Utils.rateOf2Double(minPrice, priceEntry);
+        }
+        return rate;
+    }
+
 
     public Double calFundingFee() {
         double fundingTotal = 0;
@@ -201,7 +209,7 @@ public class OrderTargetInfoTest implements Serializable {
     }
 
     public void updateStatusNew() {
-        Double rateLoss = calRateLoss();
+        Double rateLoss = calRateLossMax();
         Double rateMin2MoveSl = BudgetManagerSimple.getInstance().calRateMin2MoveSL(symbol, priceEntry,
                 rateChange, marketLevelChange, side, timeUpdate);
         // for buy
@@ -245,7 +253,7 @@ public class OrderTargetInfoTest implements Serializable {
     }
 
     public void updateTPSL() {
-        Double rateLoss = calRateLoss();
+        Double rateLoss = calRateLossMax();
         Double rateMin2MoveSl = BudgetManagerSimple.getInstance().calRateMin2MoveSL(symbol, priceEntry,
                 rateChange, marketLevelChange, side, timeUpdate);
         if (!Constants.specialSymbol.contains(symbol)) {

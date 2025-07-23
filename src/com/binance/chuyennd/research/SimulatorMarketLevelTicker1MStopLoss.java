@@ -302,31 +302,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
                                         }
                                     }
-                                } else {
-                                    if (marketRateChange.rateDown15MAvg < -0.01) {
-                                        if (isAvailableTradeFundingFeeBig()) {
-                                            TreeMap<Double, String> fundingFee2Symbol = FundingFeeManager.getInstance().getFundingBig(time);
-                                            if (fundingFee2Symbol.size() > 0) {
-                                                LOG.info("Funding fee big:{} {}", Utils.normalizeDateYYYYMMDDHHmm(time), fundingFee2Symbol);
-                                            }
-                                            for (Double fundingFe : fundingFee2Symbol.keySet()) {
-                                                String symbol = fundingFee2Symbol.get(fundingFe);
-                                                if (!symbol2OrderRunning.containsKey(symbol)) {
-                                                    KlineObjectSimple ticker = symbol2Ticker.get(symbol);
-                                                    if (!Utils.isTickerAvailable(ticker)) {
-                                                        continue;
-                                                    }
-                                                    Double rateTicker = Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen);
-                                                    if (rateTicker < -0.01) {
-                                                        LOG.info("Funding big buy {} {} funding: {}", symbol,
-                                                                Utils.normalizeDateYYYYMMDDHHmm(time), fundingFe);
-                                                        createOrderBUY(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY_SPECIAL,
-                                                                time2MarketRateChange.get(time), symbol2PriceMax15M.get(symbol));
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
                                 }
                             }
 
