@@ -280,14 +280,6 @@ public class FundingFeeManager {
         long timeGet = Utils.getHour(time);
         for (String symbol : symbol2FundingFee.keySet()) {
             TreeMap<Long, FundingRate> time2Funding = symbol2FundingFee.get(symbol);
-            if (time2Funding.size() > 2){
-                Long lastTime = time2Funding.lastKey();
-                Long beforeLastTime = time2Funding.lowerKey(lastTime);
-                if (lastTime - beforeLastTime < Utils.TIME_HOUR * 2){
-                    symbols.add(symbol);
-                    continue;
-                }
-            }
             TreeMap<Long, FundingRate> time2FundingGet = new TreeMap<>();
             for (int i = 0; i < 50; i++) {
                 Long timeF = timeGet - i * Utils.TIME_HOUR;
@@ -304,10 +296,10 @@ public class FundingFeeManager {
                     symbols.add(symbol);
                 }
             }
-            StringBuilder builder = new StringBuilder();
-            for (Long key : time2FundingGet.keySet()) {
-                builder.append(Utils.normalizeDateYYYYMMDDHHmm(key)).append(" ");
-            }
+//            StringBuilder builder = new StringBuilder();
+//            for (Long key : time2FundingGet.keySet()) {
+//                builder.append(Utils.normalizeDateYYYYMMDDHHmm(key)).append(" ");
+//            }
 //            LOG.info("{} {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time), builder.toString());
 
         }
