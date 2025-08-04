@@ -50,7 +50,9 @@ public class DetectEntrySignal2TradeNormal {
     public static void main(String[] args) throws InterruptedException, ParseException {
 //        new DetectEntrySignal2Trader().getTickerBySymbol("QNTUSDT");
 //        String symbol = "ALTUSDT";
+        Long time = Utils.sdfFileHour.parse("20250726 08:16").getTime();
 
+        System.out.println(new DetectEntrySignal2TradeNormal().isBtcTrendSell(time));
 //        new DetectEntrySignal2Trader().testCreateOrder("BNBUSDT");
 //        List<KlineObjectNumber> tickers = TickerFuturesHelper.getTicker(symbol, Constants.INTERVAL_1M);
 //        new DetectEntrySignal2Trader().createOrderBuyRequest(symbol, tickers.get(tickers.size() - 1),
@@ -157,8 +159,8 @@ public class DetectEntrySignal2TradeNormal {
                     Double priceMin2d = Price4hManagerProduction.getInstance().getPriceMinIn2D(symbol, time);
                     Double priceMax2d = Price4hManagerProduction.getInstance().getPriceMaxIn2D(symbol, time);
 
-                    if (priceMin2d != null && Utils.rateOf2Double(ticker.priceClose, priceMin2d) > rateMin
-                            && priceMax2d != null && Utils.rateOf2Double(ticker.priceClose, priceMax2d) < -rateMax) {
+                    if (priceMax2d != null && Utils.rateOf2Double(ticker.priceClose, priceMax2d) < rateMax
+                            && priceMin2d != null && Utils.rateOf2Double(ticker.priceClose, priceMin2d) > rateMin) {
                         symbol2Sell.add(symbol);
                     }
 

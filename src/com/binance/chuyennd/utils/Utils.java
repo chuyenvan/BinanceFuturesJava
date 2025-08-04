@@ -448,7 +448,9 @@ public class Utils {
     public static long getTimeInterval15m(long time) {
         return (time / (15 * TIME_MINUTE)) * 15 * TIME_MINUTE;
     }
-
+    public static long getTimeInterval5m(long time) {
+        return (time / (5 * TIME_MINUTE)) * 5 * TIME_MINUTE;
+    }
 
     public static long get4Hour(long time) {
         return (time / 4 / TIME_HOUR) * 4 * TIME_HOUR;

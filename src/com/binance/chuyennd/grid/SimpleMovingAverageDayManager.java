@@ -3,10 +3,7 @@ package com.binance.chuyennd.grid;
 import com.binance.chuyennd.indicators.SimpleMovingAverage;
 import com.binance.chuyennd.object.IndicatorEntry;
 import com.binance.chuyennd.object.KlineObjectNumber;
-import com.binance.chuyennd.utils.Configs;
-import com.binance.chuyennd.utils.GridConfigs;
-import com.binance.chuyennd.utils.Storage;
-import com.binance.chuyennd.utils.Utils;
+import com.binance.chuyennd.utils.*;
 import com.binance.client.constant.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import java.text.ParseException;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -31,9 +29,21 @@ public class SimpleMovingAverageDayManager {
     }
 
     public static void main(String[] args) throws ParseException {
-        String symbol = Constants.SYMBOL_PAIR_BTC;
-        Long time = Utils.sdfFileHour.parse("20250203 08:00").getTime();
-        System.out.println(SimpleMovingAverageDayManager.getInstance().getDifferenceMa10AndMa60(symbol, time));
+//        String symbol = Constants.SYMBOL_PAIR_BTC;
+        Long time = Utils.sdfFileHour.parse("20250726 08:15").getTime();
+////        System.out.println(SimpleMovingAverageDayManager.getInstance().getDifferenceMa10AndMa60(symbol, time));
+//
+//        Double maDif1d = SimpleMovingAverageDayManager.getInstance().getDifferenceMa10AndMa60(Constants.SYMBOL_PAIR_BTC, time);
+//        Double maDif4h = SimpleMovingAverage4hManager.getInstance().getDifferenceMa10AndMa60(Constants.SYMBOL_PAIR_BTC, time);
+//        if ((maDif4h != null && maDif4h < 0)
+//                || (maDif1d != null && maDif1d < 0)
+//        ) {
+//            System.out.println("True");
+//        }
+
+
+        TreeMap<Long, Set<String>> time2SymbolsSell = (TreeMap<Long, Set<String>>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_SYMBOL_SELL);
+        System.out.println(time2SymbolsSell.get(time));
     }
 
     public Double getDifferenceMa10AndMa60(String symbol, Long time) {

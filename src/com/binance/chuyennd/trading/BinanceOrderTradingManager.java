@@ -20,6 +20,8 @@ import com.binance.chuyennd.client.BinanceFuturesClientSingleton;
 import com.binance.chuyennd.client.ClientSingleton;
 import com.binance.chuyennd.helper.OrderHelper;
 import com.binance.chuyennd.helper.PositionHelper;
+import com.binance.chuyennd.object.KlineObjectNumber;
+import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
 import com.binance.chuyennd.utils.Configs;
@@ -246,7 +248,17 @@ public class BinanceOrderTradingManager {
                 }
                 Double rateMin2MoveSl = BudgetManager.getInstance().calRateMin2MoveSL(position.getSymbol(), orderInfo.marketLevel,
                         position.getEntryPrice().doubleValue(), orderInfo.priceTP, orderInfo.side);
+
                 if (rateLoss > rateMin2MoveSl) {
+                    Boolean isBigChange = checkBigChange(symbol);
+                    if (isBigChange) {
+                        LOG.info("Check bigChange of {} {}", symbol, isBigChange);
+                        if (isBigChange) {
+                            if (rateMin2MoveSl < 0.02) {
+                                rateMin2MoveSl = 0.02;
+                            }
+                        }
+                    }
                     if (orderInfo.priceSL == null) {
                         OrderSide sideSL = OrderSide.SELL;
                         Double rateStop = BudgetManager.getInstance().callRateLossDynamicBuy(rateLoss, rateMin2MoveSl);
@@ -279,6 +291,23 @@ public class BinanceOrderTradingManager {
                 LOG.info("New order 2 redis because order null: {}", Utils.toJson(orderTrade));
             }
         }
+    }
+
+    private Boolean checkBigChange(String symbol) {
+        List<KlineObjectNumber> tickers = ListenAllTicker.getInstance().getTickerBySymbol(symbol);
+        if (tickers != null) {
+            int index = tickers.size() - 1;
+            for (int i = 0; i < 15; i++) {
+                if (index - i < 0) {
+                    break;
+                }
+                KlineObjectNumber tickerCheck = tickers.get(index - i);
+                if (Utils.rateOf2Double(tickerCheck.maxPrice, tickerCheck.minPrice) > 0.015) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     public void updatePositionInfo() {
@@ -376,6 +405,12 @@ public class BinanceOrderTradingManager {
                     // move sl
                     if (rateLoss >= rateMin2MoveSl
                             && priceSLChange > 0) {
+                        if (symbol2Processing.containsKey(symbol)) {
+                            if (symbol2Processing.get(symbol) > System.currentTimeMillis() - 5 * Utils.TIME_MINUTE) {
+                                LOG.info("{} is locking in list: {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(symbol2Processing.get(symbol)));
+                                return;
+                            }
+                        }
                         LOG.info("Update SL {} {} {} {}->{} {}%", Utils.normalizeDateYYYYMMDDHHmm(orderInfo.timeStart),
                                 Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()), symbol, priceSL,
                                 priceSLNew, Utils.formatPercent(rateSL));

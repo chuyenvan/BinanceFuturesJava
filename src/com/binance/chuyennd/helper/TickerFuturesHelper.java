@@ -115,8 +115,9 @@ public class TickerFuturesHelper {
     }
 
     public static KlineObjectNumber getTickerByTime(String symbol, String interval, long time) {
-        String urlM1 = Constants.URL_TICKER_FUTURES.replace("xxxxxx", symbol) + interval;
-        String respon = HttpRequest.getContentFromUrl(urlM1);
+        String urlM1 = Constants.URL_TICKER_FUTURES_STARTTIME.replace("xxxxxx", symbol) + interval;
+        String urlData = urlM1.replace("tttttt", String.valueOf(time));
+        String respon = HttpRequest.getContentFromUrl(urlData);
         try {
             List<List<Object>> allKlines = Utils.gson.fromJson(respon, List.class);
             for (List<Object> allKline : allKlines) {

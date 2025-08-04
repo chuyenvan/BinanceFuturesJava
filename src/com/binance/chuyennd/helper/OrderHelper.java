@@ -206,14 +206,6 @@ public class OrderHelper {
         return null;
     }
 
-    public static Order stopLoss(OrderInfo orderInfo) {
-        OrderSide side = OrderSide.BUY;
-        if (orderInfo.orderSide.equals(OrderSide.BUY)) {
-            side = OrderSide.SELL;
-        }
-        return stopLoss(orderInfo.symbol, side, orderInfo.quantity, orderInfo.priceSL);
-    }
-
 
     public static Order stopLoss(String symbol, OrderSide side, Double quantity, Double stopPrice) {
         try {
@@ -258,7 +250,7 @@ public class OrderHelper {
 //        System.out.println(Utils.formatMoney(quantity));
 //        OrderHelper.newOrder("MKRUSDT", OrderSide.BUY, 0.027, 2008.4, 7);
 //        OrderHelper.takeProfit("BNBUSDT", OrderSide.SELL, 0.25, 700.0);
-        System.out.println(OrderHelper.stopLoss("BNBUSDT", OrderSide.SELL, 0.25, 630.0));
+//        System.out.println(OrderHelper.stopLoss("BNBUSDT", OrderSide.SELL, 0.25, 630.0));
 //        System.out.println(ClientSingleton.getInstance().stopLimit("BNBUSDT", OrderSide.SELL, 0.25, 630.0));
 //        OrderHelper.takeProfit("Bigchange", OrderSide.BUY, 1.0, 6.0);
 //        System.out.println(OrderHelper.calQuantity(5, 5, 133.5, "TRBUSDT"));

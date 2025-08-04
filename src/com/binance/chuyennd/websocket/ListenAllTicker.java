@@ -99,7 +99,25 @@ public class ListenAllTicker {
     }
 
     public static void main(String[] args) {
-        ListenAllTicker.getInstance().startThreadMonitor();
+
+//        ListenAllTicker.getInstance().startThreadMonitor();
+        String symbol = "BTCUSDT";
+        List<KlineObjectNumber> tickers = ListenAllTicker.getInstance().getTickerBySymbol(symbol);
+        if (tickers != null) {
+            int index = tickers.size() - 1;
+            for (int i = 0; i < 15; i++) {
+                if (index - i < 0) {
+                    break;
+                }
+                KlineObjectNumber tickerCheck = tickers.get(index - i);
+                if (Utils.rateOf2Double(tickerCheck.maxPrice, tickerCheck.minPrice) > 0.001) {
+                    LOG.info("{} True", symbol);
+                    return;
+                }
+            }
+        }
+        LOG.info("{} False", symbol);
+        return ;
     }
 
     public void startThreadUpdateTicker() {
@@ -331,6 +349,15 @@ public class ListenAllTicker {
         }
         if (counterError > 0) {
             LOG.info("Symbol ticker error: {}", counterError);
+        }
+        return result;
+    }
+
+    public List<KlineObjectNumber> getTickerBySymbol(String symbol) {
+        TreeMap<Long, KlineObjectNumber> tickers = symbol2Tickers.get(symbol);
+        List<KlineObjectNumber> result = new ArrayList<>();
+        if (tickers != null) {
+            result.addAll(tickers.values());
         }
         return result;
     }

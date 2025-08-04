@@ -7,7 +7,6 @@ package com.binance.chuyennd.research;
 import com.binance.chuyennd.bigchange.statistic.data.DataManager;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.trading.OrderTargetStatus;
-import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Storage;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.model.enums.OrderSide;
@@ -183,7 +182,7 @@ public class SimulatorWithEntryByTicker1M {
         if (orderInfo != null) {
             if (orderInfo.timeStart < ticker.startTime.longValue()) {
                 orderInfo.updatePriceByKlineSimple(ticker);
-                orderInfo.updateStatusNew();
+//                orderInfo.updateStatusNew(false);
 //                orderInfo.updateStatusFixTPSL();
                 if (orderInfo.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)
                         || orderInfo.status.equals(OrderTargetStatus.STOP_LOSS_DONE)

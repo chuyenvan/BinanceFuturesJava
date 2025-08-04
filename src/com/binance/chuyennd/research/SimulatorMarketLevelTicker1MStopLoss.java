@@ -97,7 +97,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                     }
                                 }
                                 // update order Old
-                                startUpdateOldOrderTrading(symbol, ticker);
+                                startUpdateOldOrderTrading(symbol, tickers);
                             }
 
                             MarketRateChange marketRateChange = time2MarketRateChange.get(time);
@@ -167,10 +167,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                     List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
                                     Double priceMax15M = getMax15M(tickers);
                                     MarketLevelChange leveChange2Dca = MarketLevelChange.DCA_LEVEL1;
-                                    if (symbol2OrderRunning.get(symbol).marketLevelChange.equals(MarketLevelChange.FUNDING_FEE_BUY_SPECIAL)
-                                            || symbol2OrderRunning.get(symbol).marketLevelChange.equals(MarketLevelChange.DCA_LEVEL3)) {
-                                        leveChange2Dca = MarketLevelChange.DCA_LEVEL3;
-                                    }
                                     createOrderBUY(symbol, ticker, leveChange2Dca,
                                             time2MarketRateChange.get(time), priceMax15M);
                                 }
@@ -228,16 +224,11 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                                 }
                                             }
                                             MarketLevelChange leveChange2Dca;
-                                            if (symbol2OrderRunning.get(symbol).marketLevelChange.equals(MarketLevelChange.FUNDING_FEE_BUY_SPECIAL)
-                                                    || symbol2OrderRunning.get(symbol).marketLevelChange.equals(MarketLevelChange.DCA_LEVEL3)) {
-                                                leveChange2Dca = MarketLevelChange.DCA_LEVEL3;
+                                            if (calMarginRunning(symbol) < BudgetManagerSimple.getInstance().getBudget()
+                                                    && calMarginRunning() < 100 * BudgetManagerSimple.getInstance().getBudget()) {
+                                                leveChange2Dca = MarketLevelChange.DCA_LEVEL1;
                                             } else {
-                                                if (calMarginRunning(symbol) < BudgetManagerSimple.getInstance().getBudget()
-                                                        && calMarginRunning() < 100 * BudgetManagerSimple.getInstance().getBudget()) {
-                                                    leveChange2Dca = MarketLevelChange.DCA_LEVEL1;
-                                                } else {
-                                                    leveChange2Dca = MarketLevelChange.DCA_LEVEL2;
-                                                }
+                                                leveChange2Dca = MarketLevelChange.DCA_LEVEL2;
                                             }
                                             createOrderBUY(symbol, ticker, leveChange2Dca, time2MarketRateChange.get(time)
                                                     , symbol2PriceMax15M.get(symbol));
@@ -578,12 +569,24 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
     }
 
-    private void startUpdateOldOrderTrading(String symbol, KlineObjectSimple ticker) {
+    private void startUpdateOldOrderTrading(String symbol, List<KlineObjectSimple> tickers) {
         OrderTargetInfoTest orderMulti = symbol2OrderRunning.get(symbol);
         if (orderMulti != null) {
-            if (orderMulti.timeStart < ticker.startTime.longValue()) {
+            int index = tickers.size() - 1;
+            KlineObjectSimple ticker = tickers.get(index);
+            if (orderMulti.timeStart <= ticker.startTime.longValue()) {
+                Double maxChangeIn15M = null;
+                for (int i = 0; i < 15; i++) {
+                    if (index - i < 0) {
+                        break;
+                    }
+                    KlineObjectSimple tickerCheck = tickers.get(index - i);
+                    if (maxChangeIn15M == null || Utils.rateOf2Double(tickerCheck.maxPrice, tickerCheck.minPrice) > maxChangeIn15M) {
+                        maxChangeIn15M = Utils.rateOf2Double(tickerCheck.maxPrice, tickerCheck.minPrice);
+                    }
+                }
                 orderMulti.updatePriceByKlineSimple(ticker);
-                orderMulti.updateStatusNew();
+                orderMulti.updateStatusNew(maxChangeIn15M);
                 if (orderMulti.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)
                         || orderMulti.status.equals(OrderTargetStatus.STOP_LOSS_DONE)
                         || orderMulti.status.equals(OrderTargetStatus.STOP_MARKET_DONE)) {
@@ -666,18 +669,16 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         }
         if (levelChange.equals(MarketLevelChange.SMALL_DOWN)
                 || levelChange.equals(MarketLevelChange.MEDIUM_DOWN_15M)
-                || levelChange.equals(MarketLevelChange.BTC_TREND_REVERSE)
                 || levelChange.equals(MarketLevelChange.FUNDING_FEE_BUY)
                 || levelChange.equals(MarketLevelChange.DCA_LEVEL2)
+                || levelChange.equals(MarketLevelChange.BTC_TREND_REVERSE)
         ) {
             budget = budget / 3;
         }
-        if (levelChange.equals(MarketLevelChange.FUNDING_FEE_BUY_SPECIAL)) {
-            budget = budget / 10;
-        }
-        if (levelChange.equals(MarketLevelChange.DCA_LEVEL3)) {
-            budget = budget / 5;
-        }
+
+//        if (levelChange.equals(MarketLevelChange.BTC_TREND_REVERSE)) {
+//            budget = budget / 8;
+//        }
 
         if (levelChange.equals(MarketLevelChange.SMALL_DOWN_15M)
                 || levelChange.equals(MarketLevelChange.SMALL_UP)
@@ -809,10 +810,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             if (order.marketLevelChange.equals(MarketLevelChange.FUNDING_FEE_BUY_SPECIAL)
             ) {
                 counterBigFundingTrading++;
-            }
-            if (order.marketLevelChange.equals(MarketLevelChange.DCA_LEVEL3)
-            ) {
-                counterBigDcaL3++;
             }
             if (order.side.equals(OrderSide.BUY)) {
                 if (order.priceSL == null || order.priceSL < order.priceEntry) {

@@ -46,8 +46,8 @@ public class Price4hManagerProduction {
     }
 
     public static void main(String[] args) throws ParseException {
-        String symbol = "BNXUSDT";
-        Long time = Utils.sdfFileHour.parse("20250208 23:45").getTime();
+        String symbol = "ASRUSDT";
+        Long time = Utils.sdfFileHour.parse("20250726 08:15").getTime();
         System.out.println(Price4hManager.getInstance().getPriceMinIn2D(symbol, time));
         System.out.println(Price4hManager.getInstance().getPriceMaxIn2D(symbol, time));
     }

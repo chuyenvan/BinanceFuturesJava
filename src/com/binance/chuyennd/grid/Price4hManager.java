@@ -1,5 +1,6 @@
 package com.binance.chuyennd.grid;
 
+import com.binance.chuyennd.helper.TickerFuturesHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.ticker.TickerManager;
 import com.binance.chuyennd.utils.Configs;
@@ -32,13 +33,16 @@ public class Price4hManager {
     }
 
     public static void main(String[] args) throws ParseException {
-        long startTime = Utils.sdfFile.parse("20190101").getTime() + 7 * Utils.TIME_HOUR;
-        new TickerManager().updateDataBySymbolSimple("UNFIUSDT", Constants.INTERVAL_4H, startTime);
-
-        String symbol = "BTCUSDT";
-        Long time = Utils.sdfFileHour.parse("20250208 23:45").getTime();
-        System.out.println(Price4hManager.getInstance().getPriceMinIn2D(symbol, time));
-        System.out.println(Price4hManager.getInstance().getPriceMaxIn2D(symbol, time));
+//        long startTime = Utils.sdfFile.parse("20190101").getTime() + 7 * Utils.TIME_HOUR;
+//        new TickerManager().updateDataBySymbolSimple("UNFIUSDT", Constants.INTERVAL_4H, startTime);
+//
+        String symbol = "ASRUSDT";
+        Long time = Utils.sdfFileHour.parse("20250726 08:15").getTime();
+        KlineObjectNumber ticker = TickerFuturesHelper.getTickerByTime(symbol, Constants.INTERVAL_1M, time);
+        Double minPrice2d = Price4hManager.getInstance().getPriceMinIn2D(symbol, time);
+        Double maxPrice2d =Price4hManager.getInstance().getPriceMaxIn2D(symbol, time) ;
+        LOG.info("max: {} min:{} close:{} rateMax:{} rateMin:{}", maxPrice2d, minPrice2d, ticker.priceClose,
+                Utils.rateOf2Double(ticker.priceClose, maxPrice2d), Utils.rateOf2Double(ticker.priceClose, minPrice2d));
     }
 
     public Double getPriceMinIn2D(String symbol, Long time) {

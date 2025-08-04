@@ -81,31 +81,40 @@ public class BinanceFuturesClientSingleton {
 
     private static void tracePnlAll() throws ParseException {
 
-        Map<String, Double> symbol2Pnl = new HashMap<>();
         int page = 0;
+        Double total = 0d;
+        Double REALIZED_PNL = 0d;
+        Double FUNDING_FEE = 0d;
+
+        Double COMMISSION = 0d;
         while (true) {
             page++;
             List<Income> incomes = BinanceFuturesClientSingleton.getInstance().getAllPositionHistory(
-                    Utils.sdfFileHour.parse("20250531 05:42").getTime(), System.currentTimeMillis(), page);
+                    Utils.sdfFileHour.parse("20250723 07:00").getTime(), System.currentTimeMillis(), page);
             if (!incomes.isEmpty()) {
                 LOG.info("{} {} {}", page, incomes.get(0).getSymbol(), Utils.normalizeDateYYYYMMDDHHmm(incomes.get(0).getTime()));
                 for (Income income : incomes) {
-                    Double total = symbol2Pnl.get(income.getSymbol());
-                    if (total == null) {
-                        total = 0d;
-                    }
                     total += income.getIncome().doubleValue();
-                    symbol2Pnl.put(income.getSymbol(), total);
+                    if (StringUtils.equals(income.getIncomeType(), "REALIZED_PNL")) {
+                        REALIZED_PNL += income.getIncome().doubleValue();
+                    }
+                    if (StringUtils.equals(income.getIncomeType(), "COMMISSION")) {
+                        COMMISSION += income.getIncome().doubleValue();
+                    }
+                    if (StringUtils.equals(income.getIncomeType(), "FUNDING_FEE")) {
+                        FUNDING_FEE += income.getIncome().doubleValue();
+                    }
                 }
             } else {
                 break;
             }
         }
-        for (Map.Entry<String, Double> entry : symbol2Pnl.entrySet()) {
-            Double pnl = entry.getValue();
-            String symbol = entry.getKey();
-            LOG.info("{} {}", symbol, pnl);
-        }
+
+        Double rateF = FUNDING_FEE * 100 / REALIZED_PNL;
+        Double rateC = COMMISSION * 100 / REALIZED_PNL;
+        LOG.info("Pnl:{} total:{} Fundding:{} {}% Commission:{} {}%",
+                Utils.formatMoneyNew(total), Utils.formatMoneyNew(REALIZED_PNL), Utils.formatMoneyNew(FUNDING_FEE),
+                Utils.formatMoneyNew(rateF), Utils.formatMoneyNew(COMMISSION), Utils.formatMoneyNew(rateC));
     }
 
     private static void tracePnlAsymbol() throws ParseException {
@@ -235,7 +244,8 @@ public class BinanceFuturesClientSingleton {
 //        for (String symbol : allSymbol) {
 //        Set<String> symbolLocks = BinanceFuturesClientSingleton.getInstance().getAllSymbolLock();
 //        System.out.println(symbolLocks);
-        tracePnlAsymbol();
+//        tracePnlAsymbol();
+        tracePnlAll();
 //        List<Order> orders = BinanceFuturesClientSingleton.getInstance().getAllOpenOrderHistory(Utils.getStartTimeDayAgo(88));
 //        if (!orders.isEmpty()) {
 //            Long startTime = orders.get(0).getUpdateTime();
@@ -405,7 +415,7 @@ public class BinanceFuturesClientSingleton {
         parameters.put("startTime", startTime);
         parameters.put("page", page);
         parameters.put("endTime", endTime);
-        parameters.put("incomeType", "REALIZED_PNL");
+//        parameters.put("incomeType", "REALIZED_PNL");
         try {
             String respon = BinanceFuturesClientSingleton.getInstance().umFuturesClient.account().getIncomeHistory(parameters);
             if (StringUtils.isNotEmpty(respon)) {

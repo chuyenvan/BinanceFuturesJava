@@ -208,10 +208,15 @@ public class OrderTargetInfoTest implements Serializable {
         return profitMin;
     }
 
-    public void updateStatusNew() {
+    public void updateStatusNew(Double maxChange15M) {
         Double rateLoss = calRateLossMax();
         Double rateMin2MoveSl = BudgetManagerSimple.getInstance().calRateMin2MoveSL(symbol, priceEntry,
                 rateChange, marketLevelChange, side, timeUpdate);
+        if (maxChange15M != null && maxChange15M > 0.01) {
+            if (rateMin2MoveSl < 0.02) {
+                rateMin2MoveSl = 0.02;
+            }
+        }
         // for buy
         if (side.equals(OrderSide.BUY)) {
             Double rateStop = BudgetManagerSimple.getInstance().calRateLossDynamicBuy(rateLoss, rateMin2MoveSl);
