@@ -32,7 +32,6 @@ import com.binance.client.model.enums.OrderSide;
 import com.binance.client.model.enums.OrderType;
 import com.binance.client.model.trade.Order;
 import com.binance.client.model.trade.PositionRisk;
-import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -249,16 +248,25 @@ public class BinanceOrderTradingManager {
                 Double rateMin2MoveSl = BudgetManager.getInstance().calRateMin2MoveSL(position.getSymbol(), orderInfo.marketLevel,
                         position.getEntryPrice().doubleValue(), orderInfo.priceTP, orderInfo.side);
 
-                if (rateLoss > rateMin2MoveSl) {
-                    Boolean isBigChange = checkBigChange(symbol);
-                    if (isBigChange) {
-                        LOG.info("Check bigChange of {} {}", symbol, isBigChange);
-                        if (isBigChange) {
-                            if (rateMin2MoveSl < 0.02) {
-                                rateMin2MoveSl = 0.02;
-                            }
+                Double maxChange15M = getMaxChange15M(symbol);
+                if (maxChange15M != null && maxChange15M > 0.01) {
+                    if (maxChange15M < 0.015) {
+                        if (rateMin2MoveSl < 0.02) {
+                            rateMin2MoveSl = 0.02;
                         }
+                    } else {
+//                            if (maxChange15M < 0.025) {
+                        if (rateMin2MoveSl < 0.025) {
+                            rateMin2MoveSl = 0.025;
+                        }
+//                            }else{
+//                                if (rateMin2MoveSl < 0.04) {
+//                                    rateMin2MoveSl = 0.04;
+//                                }
+//                            }
                     }
+                }
+                if (rateLoss > rateMin2MoveSl) {
                     if (orderInfo.priceSL == null) {
                         OrderSide sideSL = OrderSide.SELL;
                         Double rateStop = BudgetManager.getInstance().callRateLossDynamicBuy(rateLoss, rateMin2MoveSl);
@@ -293,8 +301,9 @@ public class BinanceOrderTradingManager {
         }
     }
 
-    private Boolean checkBigChange(String symbol) {
+    private Double getMaxChange15M(String symbol) {
         List<KlineObjectNumber> tickers = ListenAllTicker.getInstance().getTickerBySymbol(symbol);
+        Double maxChangeIn15M = null;
         if (tickers != null) {
             int index = tickers.size() - 1;
             for (int i = 0; i < 15; i++) {
@@ -302,12 +311,12 @@ public class BinanceOrderTradingManager {
                     break;
                 }
                 KlineObjectNumber tickerCheck = tickers.get(index - i);
-                if (Utils.rateOf2Double(tickerCheck.maxPrice, tickerCheck.minPrice) > 0.015) {
-                    return true;
+                if (maxChangeIn15M == null || Utils.rateOf2Double(tickerCheck.maxPrice, tickerCheck.minPrice) > maxChangeIn15M) {
+                    maxChangeIn15M = Utils.rateOf2Double(tickerCheck.maxPrice, tickerCheck.minPrice);
                 }
             }
         }
-        return false;
+        return maxChangeIn15M;
     }
 
     public void updatePositionInfo() {
