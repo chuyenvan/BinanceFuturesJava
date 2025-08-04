@@ -255,15 +255,15 @@ public class BinanceOrderTradingManager {
                             rateMin2MoveSl = 0.02;
                         }
                     } else {
-//                            if (maxChange15M < 0.025) {
-                        if (rateMin2MoveSl < 0.025) {
-                            rateMin2MoveSl = 0.025;
+                        if (maxChange15M < 0.025) {
+                            if (rateMin2MoveSl < 0.025) {
+                                rateMin2MoveSl = 0.025;
+                            }
+                        } else {
+                            if (rateMin2MoveSl < 0.04) {
+                                rateMin2MoveSl = 0.04;
+                            }
                         }
-//                            }else{
-//                                if (rateMin2MoveSl < 0.04) {
-//                                    rateMin2MoveSl = 0.04;
-//                                }
-//                            }
                     }
                 }
                 if (rateLoss > rateMin2MoveSl) {

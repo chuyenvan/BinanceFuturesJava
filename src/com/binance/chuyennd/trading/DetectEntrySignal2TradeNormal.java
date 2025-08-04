@@ -206,8 +206,7 @@ public class DetectEntrySignal2TradeNormal {
                             KlineObjectNumber ticker = symbol2FinalTicker.get(symbol);
                             if (Utils.isTickerAvailable(ticker)
                                     && !BudgetManager.getInstance().symbol2Pos.containsKey(symbol)) {
-                                PositionRisk pos = BudgetManager.getInstance().symbol2Pos.get(symbol);
-                                if (pos == null) {
+                                if (FundingFeeManagerProduction.getInstance().isFundingSell(symbol)) {
                                     createOrderSELLRequest(symbol, ticker, MarketLevelChange.ORDER_SELL,
                                             symbol2Min15m.get(symbol), marketRate);
                                 }

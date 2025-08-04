@@ -169,4 +169,38 @@ public class FundingFeeManagerProduction {
         }
         updateListBuySell();
     }
+
+    public boolean isFundingSell(String symbol) {
+        TreeMap<Long, FundingRate> time2Funding = symbol2FundingFee.get(symbol);
+        if (time2Funding == null || time2Funding.size() < 1){
+            return false;
+        }
+//        if (time2Funding.size() > 2){
+//            Long lastTime = time2Funding.lastKey();
+//            Long beforeLastTime = time2Funding.lowerKey(lastTime);
+//            if (lastTime - beforeLastTime < Utils.TIME_HOUR * 2){
+//                symbols.add(symbol);
+//                continue;
+//            }
+//        }
+        long timeGet = Utils.getHour(System.currentTimeMillis());
+        TreeMap<Long, FundingRate> time2FundingGet = new TreeMap<>();
+
+        for (int i = 0; i < 50; i++) {
+            Long timeF = timeGet - i * Utils.TIME_HOUR;
+            if (time2Funding.containsKey(timeF)) {
+                time2FundingGet.put(timeF, time2Funding.get(timeF));
+            }
+            if (time2FundingGet.size() == 2) {
+                break;
+            }
+        }
+
+        for (FundingRate funding : time2FundingGet.values()) {
+            if (funding.getFundingRate().doubleValue() >= 0.00005) {
+                return true;
+            }
+        }
+        return false;
+    }
 }
