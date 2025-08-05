@@ -249,19 +249,31 @@ public class BinanceOrderTradingManager {
                         position.getEntryPrice().doubleValue(), orderInfo.priceTP, orderInfo.side);
 
                 Double maxChange15M = getMaxChange15M(symbol);
-                if (maxChange15M != null && maxChange15M > 0.01) {
-                    if (maxChange15M < 0.015) {
-                        if (rateMin2MoveSl < 0.02) {
-                            rateMin2MoveSl = 0.02;
+                if (maxChange15M != null && maxChange15M > 0.005) {
+                    if (maxChange15M < 0.01) {
+                        if (rateMin2MoveSl < 0.015) {
+                            rateMin2MoveSl = 0.015;
                         }
                     } else {
-                        if (maxChange15M < 0.025) {
-                            if (rateMin2MoveSl < 0.025) {
-                                rateMin2MoveSl = 0.025;
+                        if (maxChange15M < 0.015) {
+                            if (rateMin2MoveSl < 0.02) {
+                                rateMin2MoveSl = 0.02;
                             }
                         } else {
-                            if (rateMin2MoveSl < 0.04) {
-                                rateMin2MoveSl = 0.04;
+                            if (maxChange15M < 0.025) {
+                                if (rateMin2MoveSl < 0.025) {
+                                    rateMin2MoveSl = 0.025;
+                                }
+                            } else {
+                                if (maxChange15M < 0.035) {
+                                    if (rateMin2MoveSl < 0.04) {
+                                        rateMin2MoveSl = 0.04;
+                                    }
+                                } else {
+                                    if (rateMin2MoveSl < 0.06) {
+                                        rateMin2MoveSl = 0.06;
+                                    }
+                                }
                             }
                         }
                     }

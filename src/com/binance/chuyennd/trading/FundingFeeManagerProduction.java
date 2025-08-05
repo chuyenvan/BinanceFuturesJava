@@ -108,9 +108,14 @@ public class FundingFeeManagerProduction {
     }
 
     public static void main(String[] args) throws ParseException {
-        TreeMap<Long, FundingRate> time2Rate = FundingFeeManagerProduction.getInstance().symbol2FundingFee.get("SIGNUSDT");
-        for (Long time : time2Rate.keySet()) {
-            LOG.info("{} {}", Utils.normalizeDateYYYYMMDDHHmm(time), time2Rate.get(time).getFundingRate());
+//        TreeMap<Long, FundingRate> time2Rate = FundingFeeManagerProduction.getInstance().symbol2FundingFee.get("SIGNUSDT");
+        for (String symbol : FundingFeeManagerProduction.getInstance().symbol2FundingFee.keySet()) {
+            TreeMap<Long, FundingRate> time2Rate = FundingFeeManagerProduction.getInstance().symbol2FundingFee.get(symbol);
+            for (Long time : time2Rate.keySet()) {
+                if (Math.abs(time2Rate.get(time).getFundingRate().doubleValue()) >= 0.02) {
+                    LOG.info("{} {} {}",symbol, Utils.normalizeDateYYYYMMDDHHmm(time), time2Rate.get(time).getFundingRate());
+                }
+            }
         }
         LOG.info("size: ------------------------------ {} {}", FundingFeeManagerProduction.getInstance().fundingBuy.size(),
                 FundingFeeManagerProduction.getInstance().symbol2FundingFee.size());
@@ -172,7 +177,7 @@ public class FundingFeeManagerProduction {
 
     public boolean isFundingSell(String symbol) {
         TreeMap<Long, FundingRate> time2Funding = symbol2FundingFee.get(symbol);
-        if (time2Funding == null || time2Funding.size() < 1){
+        if (time2Funding == null || time2Funding.size() < 1) {
             return false;
         }
 //        if (time2Funding.size() > 2){

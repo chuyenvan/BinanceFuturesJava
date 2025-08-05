@@ -1,5 +1,6 @@
 package com.binance.chuyennd.research;
 
+import com.binance.chuyennd.trading.FundingFeeManagerProduction;
 import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Storage;
@@ -53,15 +54,24 @@ public class FundingFeeManager {
 
     public static void main(String[] args) {
         try {
-            long time = Utils.sdfFileHour.parse("20250705 05:11").getTime();
+//            long time = Utils.sdfFileHour.parse("20250705 05:11").getTime();
 //            LOG.info("{}", Utils.normalizeDateYYYYMMDDHHmm(Utils.get2Hour(time)));
 //            LOG.info("{}", Utils.normalizeDateYYYYMMDDHHmm(Utils.get4Hour(time)));
 //            FundingFeeManager.getInstance().printLastFunding("HIPPOUSDT");
-            Set<String> symbolAllFunding = FundingFeeManager.getInstance().getAllFunding(time);
-            Set<String> symbolFundingBuy = FundingFeeManager.getInstance().getFundingBuyNew(time);
-            TreeMap<Double, String> symbolFundingBig = FundingFeeManager.getInstance().getFundingBig(time);
-            LOG.info("{} {} {} {}", symbolAllFunding.size(), symbolFundingBuy.size(),
-                    symbolFundingBuy.size() * 100 / symbolAllFunding.size(), symbolFundingBig);
+            for (String symbol : FundingFeeManager.getInstance().symbol2FundingFee.keySet()) {
+                TreeMap<Long, FundingRate> time2Rate = FundingFeeManager.getInstance().symbol2FundingFee.get(symbol);
+                for (Long time : time2Rate.keySet()) {
+                    if (Math.abs(time2Rate.get(time).getFundingRate().doubleValue()) >= 0.02) {
+                        LOG.info("{} {} {} {}",symbol, Utils.normalizeDateYYYYMMDDHHmm(time), time2Rate.get(time).getFundingRate(),
+                                time2Rate.get(time).getMarkPrice().doubleValue());
+                    }
+                }
+            }
+//            Set<String> symbolAllFunding = FundingFeeManager.getInstance().getAllFunding(time);
+//            Set<String> symbolFundingBuy = FundingFeeManager.getInstance().getFundingBuyNew(time);
+//            TreeMap<Double, String> symbolFundingBig = FundingFeeManager.getInstance().getFundingBig(time);
+//            LOG.info("{} {} {} {}", symbolAllFunding.size(), symbolFundingBuy.size(),
+//                    symbolFundingBuy.size() * 100 / symbolAllFunding.size(), symbolFundingBig);
 //            FundingFeeManager.getInstance().getFundingBuyNew(time);
 //            FundingFeeManager.getInstance().printLastFunding();
 
