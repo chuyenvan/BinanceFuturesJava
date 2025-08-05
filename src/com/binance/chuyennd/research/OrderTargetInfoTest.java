@@ -228,8 +228,14 @@ public class OrderTargetInfoTest implements Serializable {
                             rateMin2MoveSl = 0.04;
                         }
                     } else {
-                        if (rateMin2MoveSl < 0.06) {
-                            rateMin2MoveSl = 0.06;
+                        if (maxChange15M < 0.05) {
+                            if (rateMin2MoveSl < 0.06) {
+                                rateMin2MoveSl = 0.06;
+                            }
+                        } else {
+                            if (rateMin2MoveSl < 0.08) {
+                                rateMin2MoveSl = 0.08;
+                            }
                         }
                     }
                 }

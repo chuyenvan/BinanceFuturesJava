@@ -102,33 +102,33 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
                             MarketRateChange marketRateChange = time2MarketRateChange.get(time);
                             // sell big change
-                            if (time == Utils.getTimeInterval15m(time)) {
-                                Set<String> symbol2Sell = time2SymbolsSell.get(time);
-                                if (symbol2Sell != null && !symbol2Sell.isEmpty()) {
-                                    Set<String> symbolFundingBuy = FundingFeeManager.getInstance().getFundingBuyNew(time);
-                                    Set<String> symbolFundingSell = FundingFeeManager.getInstance().getFundingSell(time);
-                                    symbol2Sell.removeAll(symbolFundingBuy);
-                                    symbol2Sell.removeAll(symbol2OrderRunning.keySet());
-                                    Double maDif1d = SimpleMovingAverageDayManager.getInstance().getDifferenceMa10AndMa60(Constants.SYMBOL_PAIR_BTC, time);
-                                    Double maDif4h = SimpleMovingAverage4hManager.getInstance().getDifferenceMa10AndMa60(Constants.SYMBOL_PAIR_BTC, time);
-                                    if ((maDif4h != null && maDif4h < 0)
-                                            || (maDif1d != null && maDif1d < 0)
-                                    ) {
-                                        for (String symbol : symbol2Sell) {
-                                            if (symbolFundingSell.contains(symbol)) {
-                                                KlineObjectSimple ticker = symbol2Ticker.get(symbol);
-                                                if (Utils.isTickerAvailable(ticker) && !symbol2OrderRunning.containsKey(symbol)) {
-                                                    List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
-                                                    Double priceMin15M = getMin15M(tickers);
-                                                    createOrderSELL(symbol, ticker, MarketLevelChange.ORDER_SELL,
-                                                            time2MarketRateChange.get(time), priceMin15M);
-
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+//                            if (time == Utils.getTimeInterval15m(time)) {
+//                                Set<String> symbol2Sell = time2SymbolsSell.get(time);
+//                                if (symbol2Sell != null && !symbol2Sell.isEmpty()) {
+//                                    Set<String> symbolFundingBuy = FundingFeeManager.getInstance().getFundingBuyNew(time);
+//                                    Set<String> symbolFundingSell = FundingFeeManager.getInstance().getFundingSell(time);
+//                                    symbol2Sell.removeAll(symbolFundingBuy);
+//                                    symbol2Sell.removeAll(symbol2OrderRunning.keySet());
+//                                    Double maDif1d = SimpleMovingAverageDayManager.getInstance().getDifferenceMa10AndMa60(Constants.SYMBOL_PAIR_BTC, time);
+//                                    Double maDif4h = SimpleMovingAverage4hManager.getInstance().getDifferenceMa10AndMa60(Constants.SYMBOL_PAIR_BTC, time);
+//                                    if ((maDif4h != null && maDif4h < 0)
+//                                            || (maDif1d != null && maDif1d < 0)
+//                                    ) {
+//                                        for (String symbol : symbol2Sell) {
+//                                            if (symbolFundingSell.contains(symbol)) {
+//                                                KlineObjectSimple ticker = symbol2Ticker.get(symbol);
+//                                                if (Utils.isTickerAvailable(ticker) && !symbol2OrderRunning.containsKey(symbol)) {
+//                                                    List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
+//                                                    Double priceMin15M = getMin15M(tickers);
+//                                                    createOrderSELL(symbol, ticker, MarketLevelChange.ORDER_SELL,
+//                                                            time2MarketRateChange.get(time), priceMin15M);
+//
+//                                                }
+//                                            }
+//                                        }
+//                                    }
+//                                }
+//                            }
 
 
                             // dca sell
