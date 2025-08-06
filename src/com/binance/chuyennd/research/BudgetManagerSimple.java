@@ -288,14 +288,18 @@ public class BudgetManagerSimple {
         );
     }
 
-    public Double calRateLossDynamicBuy(Double unProfit, Double rateSLMin) {
+    public Double calRateLossDynamicBuy(Double unProfit, Double maxChangeIn15M) {
         Double rateLoss = unProfit * 1000;
         Long tradingStopRate;
-        if (rateLoss < 100) {
+        Long maxRateTradingStop = 50l;
+//        if (maxChangeIn15M != null && maxChangeIn15M > 0.01) {
+//            maxRateTradingStop = maxRateTradingStop  + 20;
+//        }
+        if (rateLoss < maxRateTradingStop * 2) {
             tradingStopRate = rateLoss.longValue() / 2;
             tradingStopRate -= 2;
         } else {
-            tradingStopRate = 50l;
+            tradingStopRate = maxRateTradingStop;
         }
         rateLoss = rateLoss.longValue() - tradingStopRate.doubleValue();
         return rateLoss / 1000;

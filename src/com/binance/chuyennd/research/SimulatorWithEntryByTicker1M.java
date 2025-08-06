@@ -191,7 +191,7 @@ public class SimulatorWithEntryByTicker1M {
                     BudgetManagerSimple.getInstance().updatePnl(orderInfo);
                     orderRunning.remove(symbol);
                 } else {
-                    orderInfo.updateTPSL();
+//                    orderInfo.updateTPSL();
                 }
             }
         }

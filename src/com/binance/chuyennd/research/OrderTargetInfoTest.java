@@ -242,87 +242,44 @@ public class OrderTargetInfoTest implements Serializable {
                 }
             }
         }
-        // for buy
-        if (side.equals(OrderSide.BUY)) {
-            Double rateStop = BudgetManagerSimple.getInstance().calRateLossDynamicBuy(rateLoss, rateMin2MoveSl);
-            Double priceSLNew = Utils.calPriceTarget(symbol, priceEntry, OrderSide.SELL, -rateStop);
-            if (rateLoss > rateMin2MoveSl) {
-                if (priceSL == null) {
-                    minPrice = lastPrice;
-                    this.priceSL = priceSLNew;
-                }
-            }
-            if (priceSL != null && minPrice <= priceSL) {
-                if (priceSL > priceEntry) {
-                    status = OrderTargetStatus.STOP_MARKET_DONE;
-                } else {
-                    status = OrderTargetStatus.STOP_LOSS_DONE;
-                }
-                priceTP = priceSL;
+        Double rateStop = BudgetManagerSimple.getInstance().calRateLossDynamicBuy(rateLoss, maxChange15M);
+        Double priceSLNew = Utils.calPriceTarget(symbol, priceEntry, OrderSide.SELL, -rateStop);
+        if (rateLoss > rateMin2MoveSl) {
+            if (priceSL == null) {
+                minPrice = lastPrice;
+                this.priceSL = priceSLNew;
             }
         }
-        // for Sell
-        if (side.equals(OrderSide.SELL)) {
-            Double rateStop = BudgetManagerSimple.getInstance().calRateLossDynamicBuy(rateLoss, rateMin2MoveSl);
-            Double priceSLNew = Utils.calPriceTarget(symbol, priceEntry, OrderSide.BUY, -rateStop);
-            if (rateLoss > rateMin2MoveSl) {
-                if (priceSL == null) {
-                    maxPrice = lastPrice;
-                    this.priceSL = priceSLNew;
-                }
+        if (priceSL != null && minPrice <= priceSL) {
+            if (priceSL > priceEntry) {
+                status = OrderTargetStatus.STOP_MARKET_DONE;
+            } else {
+                status = OrderTargetStatus.STOP_LOSS_DONE;
             }
-            if (priceSL != null && maxPrice >= priceSL) {
-                if (priceSL < priceEntry) {
-                    status = OrderTargetStatus.STOP_MARKET_DONE;
-                } else {
-                    status = OrderTargetStatus.STOP_LOSS_DONE;
-                }
-                priceTP = priceSL;
-            }
+            priceTP = priceSL;
         }
     }
 
-    public void updateTPSL() {
+    public void updateTPSL(Double maxChange15M) {
         Double rateLoss = calRateLossMax();
         Double rateMin2MoveSl = BudgetManagerSimple.getInstance().calRateMin2MoveSL(symbol, priceEntry,
                 rateChange, marketLevelChange, side, timeUpdate);
         if (!Constants.specialSymbol.contains(symbol)) {
-            if (side.equals(OrderSide.BUY)) {
-                rateMin2MoveSl = 4 * rateMin2MoveSl;
-            } else {
-                rateMin2MoveSl = 5 * rateMin2MoveSl;
-            }
+            rateMin2MoveSl = 4 * rateMin2MoveSl;
         }
-        Double rateSL = BudgetManagerSimple.getInstance().calRateLossDynamicBuy(rateLoss, rateMin2MoveSl);
-        // for BUY
-        if (side.equals(OrderSide.BUY)) {
-            // move SL
-            if (priceSL != null) {
-                OrderSide side2Sl = OrderSide.SELL;
-                Double priceSLNew = Utils.calPriceTarget(symbol, priceEntry, side2Sl, -rateSL);
-                double priceSLChange = priceSLNew - priceSL;
-                if (priceSLChange > 0
-                        && rateLoss >= rateMin2MoveSl
-                        && priceSLNew > priceEntry
-                ) {
-                    priceSL = priceSLNew;
-                    minPrice = lastPrice;
-                }
+        Double rateSL = BudgetManagerSimple.getInstance().calRateLossDynamicBuy(rateLoss, maxChange15M);
+        // move SL
+        if (priceSL != null) {
+            OrderSide side2Sl = OrderSide.SELL;
+            Double priceSLNew = Utils.calPriceTarget(symbol, priceEntry, side2Sl, -rateSL);
+            double priceSLChange = priceSLNew - priceSL;
+            if (priceSLChange > 0
+                    && rateLoss >= rateMin2MoveSl
+                    && priceSLNew > priceEntry
+            ) {
+                priceSL = priceSLNew;
+                minPrice = lastPrice;
             }
-        } else {
-            if (priceSL != null) {
-                OrderSide side2Sl = OrderSide.BUY;
-                Double priceSLNew = Utils.calPriceTarget(symbol, priceEntry, side2Sl, -rateSL);
-                double priceSLChange = priceSLNew - priceSL;
-                if (priceSLChange < 0
-                        && rateLoss >= rateMin2MoveSl
-                        && priceSLNew < priceEntry
-                ) {
-                    priceSL = priceSLNew;
-                    maxPrice = lastPrice;
-                }
-            }
-
         }
     }
 

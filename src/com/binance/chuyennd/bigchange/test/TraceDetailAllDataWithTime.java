@@ -227,7 +227,7 @@ public class TraceDetailAllDataWithTime {
                     BudgetManagerSimple.getInstance().updatePnl(orderInfo);
                     orderRunning.remove(symbol);
                 } else {
-                    orderInfo.updateTPSL();
+//                    orderInfo.updateTPSL();
                 }
             }
         }

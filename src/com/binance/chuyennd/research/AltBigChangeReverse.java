@@ -156,7 +156,7 @@ public class AltBigChangeReverse {
                     BudgetManagerSimple.getInstance().updatePnl(orderInfo);
                     orderDone.add(orderInfo);
                 } else {
-                    orderInfo.updateTPSL();
+//                    orderInfo.updateTPSL();
                 }
             }
         }
