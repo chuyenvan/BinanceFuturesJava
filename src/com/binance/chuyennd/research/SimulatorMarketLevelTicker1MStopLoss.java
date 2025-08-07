@@ -219,7 +219,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                         if (priceMin4h != null) {
                                             rateMin4h = Utils.rateOf2Double(priceMin4h, ticker.priceClose);
                                         }
-                                        if (rateTicker < -0.013
+                                        if (rateTicker < -0.012
                                                 || rateMax15M < -0.045
                                                 || (rateTicker < -0.006 && rateMax15M < -0.04)
                                                 || (rateTicker < -0.01 && rateMax15M < -0.035)
