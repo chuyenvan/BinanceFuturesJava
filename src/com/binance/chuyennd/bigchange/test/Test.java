@@ -123,10 +123,6 @@ public class Test {
 //            LOG.info(" {} {}", Utils.rateOf2Double(priceClose, priceMax2d), Utils.rateOf2Double(priceClose, priceMin2d));
 //        }
 //        LOG.info("{} {}", priceMin2d, priceMax2d);
-        TreeMap<Long, Set<String>> time2SymbolsSell = (TreeMap<Long, Set<String>>)
-                StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_SYMBOL_SELL);
-        Set<String> symbol2Sell = time2SymbolsSell.get(time);
-        LOG.info("{}", symbol2Sell);
 
 
         Double maDif1d = SimpleMovingAverageDayManager.getInstance().getDifferenceMa10AndMa60(Constants.SYMBOL_PAIR_BTC, time);

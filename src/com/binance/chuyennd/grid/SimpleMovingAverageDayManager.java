@@ -42,8 +42,6 @@ public class SimpleMovingAverageDayManager {
 //        }
 
 
-        TreeMap<Long, Set<String>> time2SymbolsSell = (TreeMap<Long, Set<String>>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_SYMBOL_SELL);
-        System.out.println(time2SymbolsSell.get(time));
     }
 
     public Double getDifferenceMa10AndMa60(String symbol, Long time) {

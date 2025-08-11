@@ -71,7 +71,6 @@ public class Configs {
 
     public static String FILE_ENTRY_MARKET_LEVEL = "../storage/market_data/time2market.data";
     public static String FILE_MARKET_RATE_CHANGE = "../storage/market_data/marketRateChange.data";
-    public static String FILE_ENTRY_SYMBOL_SELL = "../storage/market_data/time2symbolSell.data";
     public static String FILE_ENTRY_BTC_REVERSE = "../storage/btc/btcReverse-" + BTC_TREND_REVERSE_RATE_MIN + "-" + BTC_TREND_REVERSE_RATE_MAX + "-"
             + BTC_TREND_REVERSE_DURATION;
 

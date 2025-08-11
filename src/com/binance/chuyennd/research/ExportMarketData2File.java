@@ -8,7 +8,6 @@ import com.binance.chuyennd.bigchange.market.MarketBigChangeDetectorTest;
 import com.binance.chuyennd.bigchange.market.MarketDataObject;
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
 import com.binance.chuyennd.bigchange.statistic.data.DataManager;
-import com.binance.chuyennd.grid.Price4hManager;
 import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.utils.Configs;
@@ -92,7 +91,6 @@ public class ExportMarketData2File {
         long endTime = System.currentTimeMillis();
         TreeMap<Long, MarketRateChange> time2MarketRateChange;
         TreeMap<Long, MarketDataObject> time2MarketData;
-        TreeMap<Long, Set<String>> time2SymbolSell;
 
         if (!new File(Configs.FILE_MARKET_RATE_CHANGE).exists()) {
             time2MarketRateChange = new TreeMap<>();
@@ -107,11 +105,6 @@ public class ExportMarketData2File {
             time2MarketData = (TreeMap<Long, MarketDataObject>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
         }
 
-        if (!new File(Configs.FILE_ENTRY_SYMBOL_SELL).exists()) {
-            time2SymbolSell = new TreeMap<>();
-        } else {
-            time2SymbolSell = (TreeMap<Long, Set<String>>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_SYMBOL_SELL);
-        }
 
         LOG.info("Export market entry: {}", Utils.normalizeDateYYYYMMDDHHmm(timeExport));
         Map<String, List<KlineObjectSimple>> symbol2LastTickers = new HashMap<>();
@@ -133,7 +126,6 @@ public class ExportMarketData2File {
                             Map<String, Double> symbol2MaxPrice = new HashMap<>();
                             Map<String, Double> symbol2MinPrice = new HashMap<>();
                             TreeMap<Double, String> rate2Max = new TreeMap<>();
-                            Set<String> symbolsSell = new HashSet<>();
 
                             for (Map.Entry<String, KlineObjectSimple> entry1 : symbol2Ticker.entrySet()) {
 
@@ -148,14 +140,6 @@ public class ExportMarketData2File {
                                 if (!Utils.isTickerAvailable(ticker)) {
                                     continue;
                                 }
-//                                if (time == Utils.getTimeInterval5m(time)) {
-                                Double priceMin2d = Price4hManager.getInstance().getPriceMinIn2D(symbol, time);
-                                Double priceMax2d = Price4hManager.getInstance().getPriceMaxIn2D(symbol, time);
-                                if (priceMax2d != null && Utils.rateOf2Double(ticker.priceClose, priceMax2d) < 0
-                                        && priceMin2d != null && Utils.rateOf2Double(ticker.priceClose, priceMin2d) > 0.5) {
-                                    symbolsSell.add(symbol);
-                                }
-//                                }
 
 
                                 List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
@@ -194,9 +178,7 @@ public class ExportMarketData2File {
 
                             }
 
-                            if (!symbolsSell.isEmpty()) {
-                                time2SymbolSell.put(time, symbolsSell);
-                            }
+
                             if (time2MarketRateChange.isEmpty() || time2MarketRateChange.lastKey() < time) {
                                 MarketDataObject marketData;
                                 marketData = MarketBigChangeDetectorTest.calMarketData(symbol2Ticker, symbol2MaxPrice, symbol2MinPrice);
@@ -230,7 +212,7 @@ public class ExportMarketData2File {
         }
         StorageSnappy.writeObject2File(Configs.FILE_ENTRY_MARKET_LEVEL, time2MarketData);
         StorageSnappy.writeObject2File(Configs.FILE_MARKET_RATE_CHANGE, time2MarketRateChange);
-        StorageSnappy.writeObject2File(Configs.FILE_ENTRY_SYMBOL_SELL, time2SymbolSell);
+
 
     }
 
