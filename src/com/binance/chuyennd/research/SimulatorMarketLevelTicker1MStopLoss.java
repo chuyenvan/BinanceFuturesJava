@@ -183,8 +183,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
                             if (marketRateChange != null) {
                                 if (marketRateChange.rateDown15MAvg < -0.018
-                                        || marketRateChange.rateUpAvg > 0.006
-                                        || marketRateChange.rateDownAvg < -0.006
+                                        || marketRateChange.rateUpAvg > 0.005
+                                        || marketRateChange.rateDownAvg < -0.0055
                                 ) {
                                     // funding level 1
                                     Set<String> symbolFundingBuy = FundingFeeManager.getInstance().getFundingBuyNew(time);
@@ -219,9 +219,9 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                         if (priceMin4h != null) {
                                             rateMin4h = Utils.rateOf2Double(priceMin4h, ticker.priceClose);
                                         }
-                                        if (rateTicker < -0.012
+                                        if (rateTicker < -0.013
                                                 || rateMax15M < -0.045
-                                                || (rateTicker < -0.006 && rateMax15M < -0.04)
+                                                || (rateTicker < -0.005 && rateMax15M < -0.04)
                                                 || (rateTicker < -0.01 && rateMax15M < -0.035)
                                                 || (rateTicker < -0.01 && rateMin15M < -0.03)
                                                 || (rateTicker < -0.006 && rateMax4h < -0.1)

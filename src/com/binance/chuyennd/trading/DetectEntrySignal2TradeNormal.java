@@ -255,8 +255,8 @@ public class DetectEntrySignal2TradeNormal {
 
             // funding fee trade
             if (rateDown15MAvg < -0.018
-                    || rateUpAvg > 0.006
-                    || rateDownAvg < -0.006) {
+                    || rateUpAvg > 0.005
+                    || rateDownAvg < -0.0055) {
                 Set<String> symbolBuyFundingFee = new HashSet<>();
                 symbolBuyFundingFee.addAll(FundingFeeManagerProduction.getInstance().fundingBuy);
                 symbolBuyFundingFee.removeAll(BudgetManager.getInstance().symbol2Pos.keySet());
@@ -286,7 +286,7 @@ public class DetectEntrySignal2TradeNormal {
                     }
                     if (rateTicker < -0.013
                             || rateMax15M < -0.045
-                            || (rateTicker < -0.006 && rateMax15M < -0.04)
+                            || (rateTicker < -0.005 && rateMax15M < -0.04)
                             || (rateTicker < -0.01 && rateMax15M < -0.035)
                             || (rateTicker < -0.01 && rateMin15M < -0.03)
                             || (rateTicker < -0.006 && rateMax4h < -0.1)
