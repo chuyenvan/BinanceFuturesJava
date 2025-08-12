@@ -93,6 +93,9 @@ public class ListenAllTicker {
                 time2Candle.put(candle.startTime.longValue(), candle);
             }
             symbol2Tickers.put(symbol, time2Candle);
+            if (symbol.equals(Constants.SYMBOL_PAIR_ETH)){
+                LOG.info("Init ticker {} {} {}", symbol, time2Candle.size(), Utils.normalizeDateYYYYMMDDHHmm(time2Candle.firstKey()));
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -117,7 +120,7 @@ public class ListenAllTicker {
             }
         }
         LOG.info("{} False", symbol);
-        return ;
+        return;
     }
 
     public void startThreadUpdateTicker() {
@@ -317,10 +320,7 @@ public class ListenAllTicker {
         for (String symbol : symbol2Tickers.keySet()) {
             try {
                 TreeMap<Long, KlineObjectNumber> tickers = symbol2Tickers.get(symbol);
-                int numberMax = Configs.NUMBER_TICKER_CAL_RATE_CHANGE * 16 + 5;
-                if (StringUtils.equals(symbol, Constants.SYMBOL_PAIR_BTC)) {
-                    numberMax = Configs.BTC_TREND_REVERSE_DURATION + 5;
-                }
+                int numberMax = Configs.BTC_TREND_REVERSE_DURATION + 5;
                 List<KlineObjectNumber> list = new ArrayList<>();
                 while (tickers.size() > numberMax) {
 //                LOG.info("Remove: {} {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(tickers.firstKey()), tickers.size());

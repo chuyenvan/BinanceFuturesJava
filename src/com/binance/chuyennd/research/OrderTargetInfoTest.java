@@ -214,17 +214,17 @@ public class OrderTargetInfoTest implements Serializable {
                 rateChange, marketLevelChange, side, timeUpdate);
 
         if (maxChange15M != null && maxChange15M > 0.006) {
-            if (maxChange15M < 0.015) {
+            if (maxChange15M < 0.01) {
                 if (rateMin2MoveSl < 0.02) {
                     rateMin2MoveSl = 0.02;
                 }
             } else {
-                if (maxChange15M < 0.025) {
+                if (maxChange15M < 0.02) {
                     if (rateMin2MoveSl < 0.025) {
                         rateMin2MoveSl = 0.025;
                     }
                 } else {
-                    if (maxChange15M < 0.035) {
+                    if (maxChange15M < 0.03) {
                         if (rateMin2MoveSl < 0.04) {
                             rateMin2MoveSl = 0.04;
                         }

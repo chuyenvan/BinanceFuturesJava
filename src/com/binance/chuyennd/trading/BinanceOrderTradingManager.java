@@ -21,7 +21,6 @@ import com.binance.chuyennd.client.ClientSingleton;
 import com.binance.chuyennd.helper.OrderHelper;
 import com.binance.chuyennd.helper.PositionHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
-import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
 import com.binance.chuyennd.utils.Configs;
@@ -248,19 +247,19 @@ public class BinanceOrderTradingManager {
                 Double rateMin2MoveSl = BudgetManager.getInstance().calRateMin2MoveSL(position.getSymbol(), orderInfo.marketLevel,
                         position.getEntryPrice().doubleValue(), orderInfo.priceTP, orderInfo.side);
 
-                Double maxChange15M = getMaxChange15M(symbol);
-                if (maxChange15M != null && maxChange15M > 0.006) {
-                    if (maxChange15M < 0.015) {
+                Double maxChange60M = getMaxChange60M(symbol);
+                if (maxChange60M != null && maxChange60M > 0.006) {
+                    if (maxChange60M < 0.01) {
                         if (rateMin2MoveSl < 0.02) {
                             rateMin2MoveSl = 0.02;
                         }
                     } else {
-                        if (maxChange15M < 0.025) {
+                        if (maxChange60M < 0.02) {
                             if (rateMin2MoveSl < 0.025) {
                                 rateMin2MoveSl = 0.025;
                             }
                         } else {
-                            if (maxChange15M < 0.035) {
+                            if (maxChange60M < 0.03) {
                                 if (rateMin2MoveSl < 0.04) {
                                     rateMin2MoveSl = 0.04;
                                 }
@@ -308,22 +307,22 @@ public class BinanceOrderTradingManager {
         }
     }
 
-    private Double getMaxChange15M(String symbol) {
+    private Double getMaxChange60M(String symbol) {
         List<KlineObjectNumber> tickers = ListenAllTicker.getInstance().getTickerBySymbol(symbol);
-        Double maxChangeIn15M = null;
+        Double maxChangeIn60M = null;
         if (tickers != null) {
             int index = tickers.size() - 1;
-            for (int i = 0; i < 15; i++) {
+            for (int i = 0; i < 60; i++) {
                 if (index - i < 0) {
                     break;
                 }
                 KlineObjectNumber tickerCheck = tickers.get(index - i);
-                if (maxChangeIn15M == null || Utils.rateOf2Double(tickerCheck.maxPrice, tickerCheck.minPrice) > maxChangeIn15M) {
-                    maxChangeIn15M = Utils.rateOf2Double(tickerCheck.maxPrice, tickerCheck.minPrice);
+                if (maxChangeIn60M == null || Utils.rateOf2Double(tickerCheck.maxPrice, tickerCheck.minPrice) > maxChangeIn60M) {
+                    maxChangeIn60M = Utils.rateOf2Double(tickerCheck.maxPrice, tickerCheck.minPrice);
                 }
             }
         }
-        return maxChangeIn15M;
+        return maxChangeIn60M;
     }
 
     public void updatePositionInfo() {

@@ -515,7 +515,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             KlineObjectSimple ticker = tickers.get(index);
             if (orderMulti.timeStart <= ticker.startTime.longValue()) {
                 Double maxChangeIn15M = null;
-                for (int i = 0; i < 15; i++) {
+                for (int i = 0; i < 60; i++) {
                     if (index - i < 0) {
                         break;
                     }

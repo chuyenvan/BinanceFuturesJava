@@ -272,11 +272,11 @@ public class MarketBigChangeDetectorTest {
         ) {
             return MarketLevelChange.MEDIUM_DOWN;
         }
-        if (rateUpAvg > 0.006 && rateDownAvg > 0) {
+        if (rateUpAvg > 0.008 && rateDownAvg > 0) {
             return MarketLevelChange.SMALL_UP;
         }
         if (rateDownAvg < -0.006 && rateUpAvg < 0
-                && rateDown15MAvg < -0.020
+                && rateDown15MAvg < -0.025
         ) {
             return MarketLevelChange.SMALL_DOWN;
         }
@@ -284,7 +284,7 @@ public class MarketBigChangeDetectorTest {
         if (rateDown15MAvg < -0.045) {
             return MarketLevelChange.MEDIUM_DOWN_15M;
         }
-        if (rateDown15MAvg < -0.020) {
+        if (rateDown15MAvg < -0.028) {
             return MarketLevelChange.SMALL_DOWN_15M;
         }
 
