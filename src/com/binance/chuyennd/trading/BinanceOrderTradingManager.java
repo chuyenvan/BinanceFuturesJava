@@ -244,9 +244,9 @@ public class BinanceOrderTradingManager {
                 } else {
                     BudgetManager.getInstance().symbol2Level.remove(symbol);
                 }
-                Double rateMin2MoveSl = BudgetManager.getInstance().calRateMin2MoveSL(position.getSymbol(), orderInfo.marketLevel,
-                        position.getEntryPrice().doubleValue(), orderInfo.priceTP, orderInfo.side);
-
+//                Double rateMin2MoveSl = BudgetManager.getInstance().calRateMin2MoveSL(position.getSymbol(), orderInfo.marketLevel,
+//                        position.getEntryPrice().doubleValue(), orderInfo.priceTP, orderInfo.side);
+                Double rateMin2MoveSl = Configs.RATE_PROFIT_STOP_MARKET;
                 Double maxChange60M = getMaxChange60M(symbol);
                 if (maxChange60M != null && maxChange60M > 0.006) {
                     if (maxChange60M < 0.01) {
@@ -391,8 +391,9 @@ public class BinanceOrderTradingManager {
                     orderInfo.priceEntry = priceEntry;
                 }
                 OrderSide side2Sl;
-                Double rateMin2MoveSl = BudgetManager.getInstance().calRateMin2MoveSL(position.getSymbol(), orderInfo.marketLevel,
-                        position.getEntryPrice().doubleValue(), orderInfo.priceTP, orderInfo.side);
+//                Double rateMin2MoveSl = BudgetManager.getInstance().calRateMin2MoveSL(position.getSymbol(), orderInfo.marketLevel,
+//                        position.getEntryPrice().doubleValue(), orderInfo.priceTP, orderInfo.side);
+                Double rateMin2MoveSl = Configs.RATE_PROFIT_STOP_MARKET;
                 // BUY
                 if (position.getPositionAmt().compareTo(new BigDecimal("0")) > 0) {
                     side2Sl = OrderSide.SELL;

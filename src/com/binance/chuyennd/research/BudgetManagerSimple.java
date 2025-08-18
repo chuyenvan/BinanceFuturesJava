@@ -329,47 +329,47 @@ public class BudgetManagerSimple {
         }
     }
 
-    public Double calRateMin2MoveSL(String symbol, Double priceEntry, Double maxPrice15M,
-                                    MarketLevelChange marketLevelChange, OrderSide side, Long time) {
-
-        Double rateMin2MoveSl = Configs.RATE_PROFIT_STOP_MARKET;
-        if (priceEntry == null || maxPrice15M == null || marketLevelChange == null) {
-            return rateMin2MoveSl;
-        }
-        try {
-            double rateMaxTarget = 0.03;
-            if (marketLevelChange.equals(MarketLevelChange.BTC_TREND_REVERSE)) {
-                rateMaxTarget = 0.01;
-            }
-            if (marketLevelChange.equals(MarketLevelChange.FUNDING_FEE_BUY)) {
-                rateMaxTarget = 0.02;
-            }
-
-            if (priceEntry != null && maxPrice15M != null) {
-                if (marketLevelChange.equals(MarketLevelChange.BIG_DOWN)
-                        || marketLevelChange.equals(MarketLevelChange.BIG_UP)
-                        || marketLevelChange.equals(MarketLevelChange.MEDIUM_DOWN)
-                        || marketLevelChange.equals(MarketLevelChange.MEDIUM_UP)
-                        || marketLevelChange.equals(MarketLevelChange.SMALL_DOWN)
-                        || marketLevelChange.equals(MarketLevelChange.SMALL_UP)
-                ) {
-                    rateMaxTarget = 0.08;
-                }
-                Double rateChangeNew = Utils.rateOf2Double(maxPrice15M, priceEntry) / 3;
-                if (side.equals(OrderSide.SELL)) {
-                    rateChangeNew = Utils.rateOf2Double(priceEntry, maxPrice15M) / 3;
-                }
-                if (rateChangeNew > rateMin2MoveSl) {
-                    rateMin2MoveSl = rateChangeNew;
-                    if (rateChangeNew > rateMaxTarget) {
-                        rateMin2MoveSl = rateMaxTarget;
-                    }
-                }
-            }
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return rateMin2MoveSl;
-    }
+//    public Double calRateMin2MoveSL(String symbol, Double priceEntry, Double maxPrice15M,
+//                                    MarketLevelChange marketLevelChange, OrderSide side, Long time) {
+//
+//        Double rateMin2MoveSl = Configs.RATE_PROFIT_STOP_MARKET;
+//        if (priceEntry == null || maxPrice15M == null || marketLevelChange == null) {
+//            return rateMin2MoveSl;
+//        }
+//        try {
+//            double rateMaxTarget = 0.02;
+//            if (marketLevelChange.equals(MarketLevelChange.BTC_TREND_REVERSE)) {
+//                rateMaxTarget = 0.01;
+//            }
+//            if (marketLevelChange.equals(MarketLevelChange.FUNDING_FEE_BUY)) {
+//                rateMaxTarget = 0.02;
+//            }
+//
+//            if (priceEntry != null && maxPrice15M != null) {
+//                if (marketLevelChange.equals(MarketLevelChange.BIG_DOWN)
+//                        || marketLevelChange.equals(MarketLevelChange.BIG_UP)
+//                        || marketLevelChange.equals(MarketLevelChange.MEDIUM_DOWN)
+//                        || marketLevelChange.equals(MarketLevelChange.MEDIUM_UP)
+//                        || marketLevelChange.equals(MarketLevelChange.SMALL_DOWN)
+//                        || marketLevelChange.equals(MarketLevelChange.SMALL_UP)
+//                ) {
+//                    rateMaxTarget = 0.08;
+//                }
+//                Double rateChangeNew = Utils.rateOf2Double(maxPrice15M, priceEntry) / 3;
+//                if (side.equals(OrderSide.SELL)) {
+//                    rateChangeNew = Utils.rateOf2Double(priceEntry, maxPrice15M) / 3;
+//                }
+//                if (rateChangeNew > rateMin2MoveSl) {
+//                    rateMin2MoveSl = rateChangeNew;
+//                    if (rateChangeNew > rateMaxTarget) {
+//                        rateMin2MoveSl = rateMaxTarget;
+//                    }
+//                }
+//            }
+//
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+//        return rateMin2MoveSl;
+//    }
 }

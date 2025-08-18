@@ -210,9 +210,9 @@ public class OrderTargetInfoTest implements Serializable {
 
     public void updateStatusNew(Double maxChange15M) {
         Double rateLoss = calRateLossMax();
-        Double rateMin2MoveSl = BudgetManagerSimple.getInstance().calRateMin2MoveSL(symbol, priceEntry,
-                rateChange, marketLevelChange, side, timeUpdate);
-
+//        Double rateMin2MoveSl = BudgetManagerSimple.getInstance().calRateMin2MoveSL(symbol, priceEntry,
+//                rateChange, marketLevelChange, side, timeUpdate);
+        Double rateMin2MoveSl = Configs.RATE_PROFIT_STOP_MARKET;
         if (maxChange15M != null && maxChange15M > 0.006) {
             if (maxChange15M < 0.01) {
                 if (rateMin2MoveSl < 0.02) {
@@ -257,8 +257,9 @@ public class OrderTargetInfoTest implements Serializable {
 
     public void updateTPSL(Double maxChange15M) {
         Double rateLoss = calRateLossMax();
-        Double rateMin2MoveSl = BudgetManagerSimple.getInstance().calRateMin2MoveSL(symbol, priceEntry,
-                rateChange, marketLevelChange, side, timeUpdate);
+//        Double rateMin2MoveSl = BudgetManagerSimple.getInstance().calRateMin2MoveSL(symbol, priceEntry,
+//                rateChange, marketLevelChange, side, timeUpdate);
+        Double rateMin2MoveSl = Configs.RATE_PROFIT_STOP_MARKET;
         if (!Constants.specialSymbol.contains(symbol)) {
             rateMin2MoveSl = 4 * rateMin2MoveSl;
         }
