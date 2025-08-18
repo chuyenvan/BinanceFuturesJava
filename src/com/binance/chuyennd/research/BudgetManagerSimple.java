@@ -337,7 +337,7 @@ public class BudgetManagerSimple {
             return rateMin2MoveSl;
         }
         try {
-            double rateMaxTarget = 0.05;
+            double rateMaxTarget = 0.03;
             if (marketLevelChange.equals(MarketLevelChange.BTC_TREND_REVERSE)) {
                 rateMaxTarget = 0.01;
             }
