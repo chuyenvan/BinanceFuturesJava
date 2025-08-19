@@ -207,6 +207,28 @@ public class MarketBigChangeDetectorTest {
         }
         return symbols;
     }
+    public static List<String> getUnderTopSymbolSimpleNew(TreeMap<Double, String> rateLoss2Symbols, MarketLevelChange levelChange, int period,
+                                                     Map<String, KlineObjectSimple> symbol2Ticker, Set<String> symbolLock) {
+
+        List<String> symbols = new ArrayList<>();
+        for (Map.Entry<Double, String> entry : rateLoss2Symbols.descendingMap().entrySet()) {
+            String symbol = entry.getValue();
+            Double rateScam = Configs.RATE_TICKER_MAX_SCAN_ORDER;
+            if (symbolLock != null && symbolLock.contains(symbol)) {
+                continue;
+            }
+            KlineObjectSimple ticker = symbol2Ticker.get(symbol);
+            if (ticker != null
+                    && Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen) < rateScam
+            ) {
+                symbols.add(symbol);
+                if (symbols.size() >= period) {
+                    break;
+                }
+            }
+        }
+        return symbols;
+    }
 
     public static Double calRateLossAvg(TreeMap<Double, String> rateLoss2Symbols, Integer period) {
         Double total = 0d;

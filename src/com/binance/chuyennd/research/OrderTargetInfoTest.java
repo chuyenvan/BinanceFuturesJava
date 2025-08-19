@@ -234,7 +234,12 @@ public class OrderTargetInfoTest implements Serializable {
                         }
                     }
                 }
-
+            }
+        } else {
+            if (maxChange15M != null && maxChange15M > 0.004) {
+                if (rateMin2MoveSl < 0.015) {
+                    rateMin2MoveSl = 0.015;
+                }
             }
         }
         Double rateStop = BudgetManagerSimple.getInstance().calRateLossDynamicBuy(rateLoss, maxChange15M);

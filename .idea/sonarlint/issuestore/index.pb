@@ -16,7 +16,5 @@ p
 :
 
 .gitignore,a\5\a5cc2925ca8258af241be7e5b0381edf30266302
-z
-Jsrc/com/binance/chuyennd/bigchange/market/MarketBigChangeDetectorTest.java,a\e\ae9a8bff5327ac7d6d9161422cf1b7cda7578fa3
 A
 config.properties,5\b\5b4197fb87e6e5ff44afbf358a3bd23a35f56456

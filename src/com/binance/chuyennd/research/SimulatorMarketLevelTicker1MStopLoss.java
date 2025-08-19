@@ -140,12 +140,13 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                     ) {
                                         numberOrder = numberOrder / 2;
                                     }
-                                    List<String> symbol2BUY = MarketBigChangeDetectorTest.getTopSymbolSimpleNew(rate2Max, levelChange,
-                                            numberOrder, symbol2Ticker, symbolLocked);
+                                    Set<String> symbol2BUY = new HashSet<>();
+                                    symbol2BUY.addAll(MarketBigChangeDetectorTest.getTopSymbolSimpleNew(rate2Max, levelChange,
+                                            numberOrder, symbol2Ticker, symbolLocked));
                                     if (symbol2BUY.size() < numberOrder) {
                                         LOG.info("Not symbol 2 buy: {} {} ", levelChange, Utils.normalizeDateYYYYMMDDHHmm(time));
                                     }
-                                    symbol2BUY = addSpecialSymbol(symbol2BUY, symbol2Ticker);
+                                    symbol2BUY.addAll(addSpecialSymbol(symbol2Ticker));
                                     List<String> symbolDcaLevel = getDCA(levelChange, time, marketRateChange);
                                     LOG.info("{} {} -> {}", Utils.normalizeDateYYYYMMDDHHmm(time), levelChange, symbol2BUY);
                                     // check create order new
@@ -472,8 +473,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         return symbols;
     }
 
-    private List<String> addSpecialSymbol
-            (List<String> symbol2BUY, Map<String, KlineObjectSimple> symbol2Ticker) {
+    private List<String> addSpecialSymbol(Map<String, KlineObjectSimple> symbol2Ticker) {
+        List<String> symbol2BUY = new ArrayList<>();
         Set<String> symbol2Checks = new HashSet<>();
         if (calMarginRunning() < 50 * BudgetManagerSimple.getInstance().getBudget()) {
             symbol2Checks.addAll(Constants.specialSymbol);
@@ -668,7 +669,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     }
 
 
-     private Integer counterOrderRunning() {
+    private Integer counterOrderRunning() {
         Integer counter = 0;
         for (List<OrderTargetInfoTest> orders : symbol2OrdersEntry.values()) {
             if (orders != null) {
