@@ -7,8 +7,6 @@ j
 :src/com/binance/chuyennd/research/AltBigChangeReverse.java,3\2\32e4e9378b2d3539740467a8cc401545fe2c14da
 w
 Gsrc/com/binance/chuyennd/bigchange/test/TraceDetailAllDataWithTime.java,7\8\7872e024c65a116e46b7fd327a5473cc68855221
-s
-Csrc/com/binance/chuyennd/trading/DetectEntrySignal2TradeNormal.java,3\8\384a2deebd566503dec7ea77f37c92b057428292
 l
 <src/com/binance/chuyennd/research/ExportMarketData2File.java,2\b\2b905388e8c44d0afa7fb42b15dbca79d0b9706b
 p
@@ -18,3 +16,9 @@ p
 .gitignore,a\5\a5cc2925ca8258af241be7e5b0381edf30266302
 A
 config.properties,5\b\5b4197fb87e6e5ff44afbf358a3bd23a35f56456
+j
+:src/com/binance/chuyennd/research/BudgetManagerSimple.java,5\1\5142a6d4b9729e48fa2aed5e51a5f675609d4d93
+^
+.src/com/binance/chuyennd/trading/Reporter.java,f\f\ffbef18cc8a9dea766f4ffeadc2c86db4af450e2
+[
++src/com/binance/chuyennd/utils/Configs.java,f\f\ff4066ceb35bb8ac8684815a5a70826a0d5afb9e

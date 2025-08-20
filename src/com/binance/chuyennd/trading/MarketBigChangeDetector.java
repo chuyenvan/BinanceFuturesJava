@@ -153,9 +153,9 @@ public class MarketBigChangeDetector {
     }
 
 
-    public static List<String> getTopSymbol(TreeMap<Double, String> rateLoss2Symbols, int period, Map<String,
+    public static Set<String> getTopSymbol(TreeMap<Double, String> rateLoss2Symbols, int period, Map<String,
             KlineObjectNumber> symbol2FinalTicker, Set<String> symbolLocked) {
-        List<String> symbols = new ArrayList<>();
+        Set<String> symbols = new HashSet<>();
         for (Map.Entry<Double, String> entry : rateLoss2Symbols.entrySet()) {
             String symbol = entry.getValue();
             if (symbolLocked != null && symbolLocked.contains(symbol)) {

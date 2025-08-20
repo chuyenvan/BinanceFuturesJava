@@ -189,12 +189,12 @@ public class FundingFeeManager {
         for (String symbol : symbol2FundingFee.keySet()) {
             TreeMap<Long, FundingRate> time2Funding = symbol2FundingFee.get(symbol);
             TreeMap<Long, FundingRate> time2FundingGet = new TreeMap<>();
-            for (int i = 0; i < 20; i++) {
+            for (int i = 0; i < 30; i++) {
                 Long timeF = timeGet - i * Utils.TIME_HOUR;
                 if (time2Funding.containsKey(timeF)) {
                     time2FundingGet.put(timeF, time2Funding.get(timeF));
                 }
-                if (time2FundingGet.size() >= 3) {
+                if (time2FundingGet.size() >= 10) {
                     break;
                 }
             }

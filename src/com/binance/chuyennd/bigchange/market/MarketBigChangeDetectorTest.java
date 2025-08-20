@@ -185,10 +185,10 @@ public class MarketBigChangeDetectorTest {
         return symbols;
     }
 
-    public static List<String> getTopSymbolSimpleNew(TreeMap<Double, String> rateLoss2Symbols, MarketLevelChange levelChange, int period,
+    public static Set<String> getTopSymbolSimpleNew(TreeMap<Double, String> rateLoss2Symbols, MarketLevelChange levelChange, int period,
                                                      Map<String, KlineObjectSimple> symbol2Ticker, Set<String> symbolLock) {
 
-        List<String> symbols = new ArrayList<>();
+        Set<String> symbols = new HashSet<>();
         for (Map.Entry<Double, String> entry : rateLoss2Symbols.entrySet()) {
             String symbol = entry.getValue();
             Double rateScam = Configs.RATE_TICKER_MAX_SCAN_ORDER;

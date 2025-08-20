@@ -496,7 +496,7 @@ public class BinanceOrderTradingManager {
             }
             String symbol = pos.getSymbol();
             if (symbol2Processing.containsKey(symbol)) {
-                if (symbol2Processing.get(symbol) > System.currentTimeMillis() - 5 * Utils.TIME_MINUTE) {
+                if (symbol2Processing.get(symbol) > System.currentTimeMillis() - 2 * Utils.TIME_MINUTE) {
                     LOG.info("{} is locking in list: {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(symbol2Processing.get(symbol)));
                     return false;
                 }

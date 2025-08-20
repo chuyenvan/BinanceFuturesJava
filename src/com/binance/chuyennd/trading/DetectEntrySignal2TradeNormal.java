@@ -208,14 +208,14 @@ public class DetectEntrySignal2TradeNormal {
                 ) {
                     numberOrder = numberOrder / 2;
                 }
-                List<String> symbol2BUY = MarketBigChangeDetector.getTopSymbol(rateDown15M2Symbols,
+                Set<String> symbol2BUY = MarketBigChangeDetector.getTopSymbol(rateDown15M2Symbols,
                         numberOrder, symbol2FinalTicker, symbolLocked);
 
                 if (symbol2BUY.size() < numberOrder) {
                     LOG.info("Not symbol 2 buy: {} {} ", levelChange, Utils.normalizeDateYYYYMMDDHHmm(time));
                 }
 
-                symbol2BUY = addSpecialSymbol(symbol2BUY, symbol2FinalTicker);
+                symbol2BUY.addAll(addSpecialSymbol(symbol2FinalTicker));
                 LOG.info("Level: {} {} -> {}", Utils.normalizeDateYYYYMMDDHHmm(btcTicker.startTime.longValue()),
                         levelChange, symbol2BUY);
                 for (String symbol : symbol2BUY) {
@@ -308,7 +308,7 @@ public class DetectEntrySignal2TradeNormal {
             Double rateTrendReverse = MarketBigChangeDetector.isBtcTrendReverse(btcTickers);
             if (rateTrendReverse != null && rateTrendReverse >= Configs.BTC_TREND_REVERSE_RATE_MIN_TRADE) {
                 levelChange = MarketLevelChange.BTC_TREND_REVERSE;
-                List<String> symbol2BUY = new ArrayList<>();
+                Set<String> symbol2BUY = new HashSet<>();
                 for (String symbol : Constants.specialSymbol) {
                     if (BudgetManager.getInstance().symbolSell.contains(symbol)) {
                         continue;
@@ -446,22 +446,20 @@ public class DetectEntrySignal2TradeNormal {
         return symbols;
     }
 
-    private List<String> addSpecialSymbol(List<String> symbol2BUY,
-                                          Map<String, KlineObjectNumber> symbol2Ticker) {
+    private Set<String> addSpecialSymbol(Map<String, KlineObjectNumber> symbol2Ticker) {
         Set<String> symbol2Checks = new HashSet<>();
         if (BudgetManager.getInstance().marginRunning < 50 * BudgetManager.getInstance().getBudget()) {
             symbol2Checks.addAll(Constants.specialSymbol);
             symbol2Checks.addAll(Constants.stableSymbol);
             symbol2Checks.removeAll(BudgetManager.getInstance().symbol2Pos.keySet());
-            symbol2Checks.removeAll(symbol2BUY);
         }
         for (String symbol : symbol2Checks) {
             KlineObjectNumber ticker = symbol2Ticker.get(symbol);
             if (ticker != null && Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen) < -0.013) {
-                symbol2BUY.add(symbol);
+                symbol2Checks.add(symbol);
             }
         }
-        return symbol2BUY;
+        return symbol2Checks;
     }
 
     public void createOrderBuyRequest(String symbol, KlineObjectNumber ticker,
