@@ -45,7 +45,7 @@ public class FundingFeeManagerProduction {
             try {
                 TreeMap<Long, FundingRate> time2Rate = symbol2FundingFee.get(symbol);
                 if (time2Rate != null && !time2Rate.isEmpty()) {
-                    while (time2Rate.size() > 10) {
+                    while (time2Rate.size() > 4) {
                         time2Rate.remove(time2Rate.firstKey());
                     }
                     while (time2Rate.size() > 0 && time2Rate.firstKey() < System.currentTimeMillis() - 30 * Utils.TIME_HOUR) {
@@ -81,6 +81,36 @@ public class FundingFeeManagerProduction {
             }
         }
         LOG.info("Total funding fee buy: {}", fundingBuy.size());
+    }
+    public TreeMap<Double, String> getExtremeNegativeFundingSymbols(long time) {
+        // ================== CÁC THAM SỐ CÓ THỂ TÙY CHỈNH ==================
+        // Mức funding được coi là "cực đoan". Mặc định là -0.001 tương đương -0.1%
+        // Các mức khác bạn có thể thử: -0.0005 (-0.05%), -0.002 (-0.2%)
+        final double EXTREME_FUNDING_THRESHOLD = -0.001;
+        // =================================================================
+
+        TreeMap<Double, String> extremeFundingSymbols = new TreeMap<>();
+        long timeGet = Utils.getHour(time); // Lấy giờ chẵn gần nhất để khớp với dữ liệu funding
+
+        for (String symbol : symbol2FundingFee.keySet()) {
+            TreeMap<Long, FundingRate> time2Funding = symbol2FundingFee.get(symbol);
+            if (time2Funding == null || time2Funding.isEmpty()) {
+                continue;
+            }
+
+            // Tìm entry funding gần nhất tại hoặc trước thời điểm kiểm tra
+            Map.Entry<Long, FundingRate> lastEntry = time2Funding.floorEntry(timeGet);
+
+            if (lastEntry != null) {
+                double currentRate = lastEntry.getValue().getFundingRate().doubleValue();
+
+                // Kiểm tra nếu mức funding đủ âm để được coi là cực đoan
+                if (currentRate < EXTREME_FUNDING_THRESHOLD) {
+                    extremeFundingSymbols.put(currentRate, symbol);
+                }
+            }
+        }
+        return extremeFundingSymbols;
     }
 
     private void initAllFunding() {

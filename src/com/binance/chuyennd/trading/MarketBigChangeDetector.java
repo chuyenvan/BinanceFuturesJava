@@ -3,6 +3,7 @@ package com.binance.chuyennd.trading;
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
 import com.binance.chuyennd.helper.TickerFuturesHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
+import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
@@ -52,6 +53,79 @@ public class MarketBigChangeDetector {
         }
     }
 
+    public static boolean isSellingExhausted(List<KlineObjectNumber> tickers, String symbol) {
+        // ================== CÁC THAM SỐ CÓ THỂ TÙY CHỈNH ==================
+        // 1. Số lượng nến 1M để xem xét
+        final int LOOKBACK_PERIOD = 20;
+        // 2. Tỷ lệ nến đỏ tối thiểu trong chuỗi (ví dụ: 0.7 tương đương 70%)
+        final double MIN_RED_CANDLE_PERCENTAGE = 0.7;
+        // 3. Mức giảm giá tối thiểu từ đỉnh của chuỗi đến giá đóng cửa hiện tại (số âm)
+        final double MIN_PRICE_DROP_PERCENTAGE = -0.05; // Yêu cầu giảm ít nhất 6%
+        // 4. Hệ số suy yếu của volume: volume cuối phải nhỏ hơn X lần volume trung bình
+        final double VOLUME_WEAKENING_FACTOR = 0.6; // Volume cuối < 80% volume trung bình
+        // =================================================================
+
+        // --- Bước 1: Kiểm tra dữ liệu đầu vào có đủ không ---
+        if (tickers == null || tickers.size() < LOOKBACK_PERIOD) {
+            return false;
+        }
+
+        // --- Bước 2: Lấy dữ liệu trong chuỗi nến xem xét ---
+        int redCandleCount = 0;
+        double totalRedCandleVolume = 0;
+        Double periodHigh = null;
+        int startIndex = tickers.size() - LOOKBACK_PERIOD;
+
+        for (int i = startIndex; i < tickers.size(); i++) {
+            KlineObjectNumber candle = tickers.get(i);
+
+            // Cập nhật giá cao nhất trong chuỗi
+            if (periodHigh == null || candle.maxPrice > periodHigh) {
+                periodHigh = candle.maxPrice;
+            }
+
+            // Đếm nến đỏ và tính tổng volume của chúng
+            if (candle.priceClose < candle.priceOpen) {
+                redCandleCount++;
+                totalRedCandleVolume += candle.totalUsdt;
+            }
+        }
+
+        // --- Bước 3: Áp dụng các bộ lọc điều kiện ---
+
+        // Điều kiện 1: Phải có một đợt bán tháo kéo dài
+        double redCandlePercentage = (double) redCandleCount / LOOKBACK_PERIOD;
+        if (redCandlePercentage < MIN_RED_CANDLE_PERCENTAGE) {
+            return false;
+        }
+
+        // Điều kiện 2: Mức giảm giá phải đủ sâu
+        KlineObjectNumber lastCandle = tickers.get(tickers.size() - 1);
+        double priceDropPercentage = Utils.rateOf2Double(lastCandle.priceClose, periodHigh);
+        if (priceDropPercentage > MIN_PRICE_DROP_PERCENTAGE) {
+            return false;
+        }
+
+        // Điều kiện 3: Lực bán (volume) phải có dấu hiệu suy yếu
+        if (redCandleCount == 0) { // Tránh chia cho 0
+            return false;
+        }
+        double averageRedVolume = totalRedCandleVolume / redCandleCount;
+        // So sánh volume của cây nến cuối cùng với volume trung bình của các nến đỏ
+        if (lastCandle.totalUsdt >= (averageRedVolume * VOLUME_WEAKENING_FACTOR)) {
+            return false;
+        }
+
+        // --- Nếu vượt qua tất cả các điều kiện, tín hiệu được kích hoạt ---
+//        LOG.info("!!! {} - TÍN HIỆU KIỆT SỨC PHE BÁN: Nến đỏ: {}% ({}/{}), Giảm giá: {}%, Volume cuối: {} < TB: {}",
+//                symbol,
+//                Utils.formatPercentNew(redCandlePercentage), redCandleCount, LOOKBACK_PERIOD,
+//                Utils.formatPercentNew(priceDropPercentage),
+//                Utils.formatLog(lastCandle.totalUsdt.longValue(), 4),
+//                Utils.formatLog((long) (averageRedVolume * VOLUME_WEAKENING_FACTOR), 4));
+
+        return true;
+    }
 
     public static Double isBtcTrendReverse(List<KlineObjectNumber> btcTickers) {
         int index = btcTickers.size() - 1;

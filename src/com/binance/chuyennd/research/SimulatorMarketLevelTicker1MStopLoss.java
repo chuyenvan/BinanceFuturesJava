@@ -13,6 +13,7 @@ import com.binance.chuyennd.grid.SimpleMovingAverage4hManager;
 import com.binance.chuyennd.grid.SimpleMovingAverageDayManager;
 import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
+import com.binance.chuyennd.trading.MarketBigChangeDetector;
 import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Storage;
@@ -71,6 +72,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                             Configs.FOLDER_TICKER_1M_SNAPPY_FILE + startTime);
                 }
                 if (time2Tickers != null) {
+                    Set<String> symbolSellingExhausted = new HashSet<>();
                     for (Map.Entry<Long, Map<String, KlineObjectSimple>> entry : time2Tickers.entrySet()) {
                         Long time = entry.getKey();
                         try {
@@ -95,6 +97,9 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                     for (int i = 0; i < 5; i++) {
                                         tickers.remove(0);
                                     }
+                                }
+                                if (MarketBigChangeDetectorTest.isSellingExhausted(tickers, symbol)) {
+                                    symbolSellingExhausted.add(symbol);
                                 }
                                 // update order Old
                                 startUpdateOldOrderTrading(symbol, tickers);
@@ -240,7 +245,28 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                     }
                                 }
                             }
+                            if (marketRateChange.rateDown15MAvg < -0.015) {
+                                // ========== LOGIC CHO TÍN HIỆU FUNDING ÂM CỰC ĐOAN ==========
+                                TreeMap<Double, String> extremeFundingSymbols = FundingFeeManager.getInstance().getExtremeNegativeFundingSymbols(time);
+//                                if (symbol2OrderRunning.size() < 30 && !extremeFundingSymbols.isEmpty()) {
+                                // Ghi log để theo dõi
+                                LOG.info("{} - TÍN HIỆU FUNDING CỰC ĐOAN: {}", Utils.normalizeDateYYYYMMDDHHmm(time), extremeFundingSymbols);
 
+                                // Duyệt qua danh sách các symbol đủ điều kiện
+                                // TreeMap tự động sắp xếp nên symbol có funding âm nhất sẽ được xử lý trước
+                                for (String symbol : extremeFundingSymbols.values()) {
+                                    // Chỉ vào lệnh nếu chưa có vị thế đang chạy cho symbol này
+                                    if (!symbol2OrderRunning.containsKey(symbol) && symbolSellingExhausted.contains(symbol)) {
+                                        KlineObjectSimple ticker = symbol2Ticker.get(symbol);
+                                        if (!Utils.isTickerAvailable(ticker)) {
+                                            continue;
+                                        }
+                                        createOrderBUY(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY_SPECIAL,
+                                                time2MarketRateChange.get(time), symbol2PriceMax15M.get(symbol));
+                                    }
+                                }
+//                                }
+                            }
                             // BTC trend reverse
                             Double rateBtcTrendReverse = time2BtcReverse.get(time);
                             if (rateBtcTrendReverse != null && rateBtcTrendReverse >= Configs.BTC_TREND_REVERSE_RATE_MIN_TRADE) {
@@ -610,6 +636,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         if (levelChange.equals(MarketLevelChange.SMALL_DOWN)
                 || levelChange.equals(MarketLevelChange.MEDIUM_DOWN_15M)
                 || levelChange.equals(MarketLevelChange.FUNDING_FEE_BUY)
+                || levelChange.equals(MarketLevelChange.FUNDING_FEE_BUY_SPECIAL)
                 || levelChange.equals(MarketLevelChange.DCA_LEVEL2)
                 || levelChange.equals(MarketLevelChange.BTC_TREND_REVERSE)
         ) {
@@ -674,6 +701,20 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         for (List<OrderTargetInfoTest> orders : symbol2OrdersEntry.values()) {
             if (orders != null) {
                 counter += orders.size();
+            }
+        }
+        return counter;
+    }
+
+    private Integer counterOrderRunning(MarketLevelChange level) {
+        Integer counter = 0;
+        for (List<OrderTargetInfoTest> orders : symbol2OrdersEntry.values()) {
+            if (orders != null && orders.size() != 0) {
+                for (OrderTargetInfoTest order : orders) {
+                    if (order.marketLevelChange.equals(level)) {
+                        counter++;
+                    }
+                }
             }
         }
         return counter;

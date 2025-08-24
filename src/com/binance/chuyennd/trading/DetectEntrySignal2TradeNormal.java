@@ -15,12 +15,15 @@
  */
 package com.binance.chuyennd.trading;
 
+import com.binance.chuyennd.bigchange.market.MarketBigChangeDetectorTest;
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.helper.PositionHelper;
+import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
+import com.binance.chuyennd.research.FundingFeeManager;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.StorageSnappy;
 import com.binance.chuyennd.utils.Utils;
@@ -105,6 +108,7 @@ public class DetectEntrySignal2TradeNormal {
             KlineObjectNumber btcTicker = btcTickers.get(btcTickers.size() - 1);
             Double btcRateChange = Utils.rateOf2Double(btcTicker.priceClose, btcTicker.priceOpen);
             Double btcMax15M = null;
+            Set<String> symbolSellingExhausted = new HashSet<>();
 
             long time = btcTicker.startTime.longValue();
 //            symbol2Sell.clear();
@@ -118,6 +122,9 @@ public class DetectEntrySignal2TradeNormal {
                     KlineObjectNumber ticker = tickers.get(tickers.size() - 1);
                     if (!Utils.isTickerAvailable(ticker)) {
                         continue;
+                    }
+                    if (MarketBigChangeDetector.isSellingExhausted(tickers, symbol)) {
+                        symbolSellingExhausted.add(symbol);
                     }
                     symbol2FinalTicker.put(symbol, ticker);
                     Double rateChange = Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen);
@@ -303,6 +310,21 @@ public class DetectEntrySignal2TradeNormal {
 
                 }
             }
+            if (rateDown15MAvg < -0.015) {
+                // ========== LOGIC CHO TÍN HIỆU FUNDING ÂM CỰC ĐOAN ==========
+                TreeMap<Double, String> extremeFundingSymbols = FundingFeeManagerProduction.getInstance().getExtremeNegativeFundingSymbols(time);
+                for (String symbol : extremeFundingSymbols.values()) {
+                    // Chỉ vào lệnh nếu chưa có vị thế đang chạy cho symbol này
+                    if (!BudgetManager.getInstance().symbol2Pos.containsKey(symbol) && symbolSellingExhausted.contains(symbol)) {
+                        KlineObjectNumber ticker = symbol2FinalTicker.get(symbol);
+                        if (!Utils.isTickerAvailable(ticker)) {
+                            continue;
+                        }
+                        createOrderBuyRequest(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY_SPECIAL,
+                                symbol2Max15m.get(symbol), marketRate);
+                    }
+                }
+            }
 
             // btc trend reverse
             Double rateTrendReverse = MarketBigChangeDetector.isBtcTrendReverse(btcTickers);
@@ -478,6 +500,7 @@ public class DetectEntrySignal2TradeNormal {
                 || levelChange.equals(MarketLevelChange.BTC_TREND_REVERSE)
                 || levelChange.equals(MarketLevelChange.DCA_LEVEL2)
                 || levelChange.equals(MarketLevelChange.FUNDING_FEE_BUY)
+                || levelChange.equals(MarketLevelChange.FUNDING_FEE_BUY_SPECIAL)
         ) {
             budget = budget / 3;
         }
