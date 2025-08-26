@@ -74,6 +74,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                 }
                 if (time2Tickers != null) {
                     Set<String> symbolSellingExhausted = new HashSet<>();
+
                     for (Map.Entry<Long, Map<String, KlineObjectSimple>> entry : time2Tickers.entrySet()) {
                         Long time = entry.getKey();
                         try {
@@ -96,8 +97,15 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                         tickers.remove(0);
                                     }
                                 }
+
                                 if (MarketBigChangeDetectorTest.isSellingExhausted(tickers, symbol)) {
                                     symbolSellingExhausted.add(symbol);
+                                }else{
+                                    int entryScore = calculateEntryScore(symbol, time, tickers);
+                                    if (entryScore >= 2) { // Ngưỡng điểm để vào lệnh
+                                        LOG.info("Signal new: {}", symbol);
+                                        symbolSellingExhausted.add(symbol);
+                                    }
                                 }
                                 // update order Old
                                 startUpdateOldOrderTrading(symbol, tickers);
@@ -266,6 +274,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                 }
 //                                }
                             }
+
                             // BTC trend reverse
                             Double rateBtcTrendReverse = time2BtcReverse.get(time);
                             if (rateBtcTrendReverse != null && rateBtcTrendReverse >= Configs.BTC_TREND_REVERSE_RATE_MIN_TRADE) {
@@ -348,6 +357,23 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         }
 
     }
+// Bên trong file SimulatorMarketLevelTicker1MStopLoss.java
+
+    private int calculateEntryScore(String symbol, long time, List<KlineObjectSimple> tickers) {
+        int totalScore = 0;
+
+        // Tín hiệu cũ
+//        if (MarketBigChangeDetectorTest.isSellingExhausted(tickers, symbol)) totalScore += 2;
+//        if (!FundingFeeManager.getInstance().getExtremeNegativeFundingSymbols(time, -0.0005).isEmpty()) totalScore += 3;
+
+        // Tín hiệu mới
+//        if (MarketBigChangeDetectorTest.isVolatilitySqueezeBreakout(tickers)) totalScore += 2;
+//        if (MarketBigChangeDetectorTest.isBullishDivergence(tickers)) totalScore += 4;
+//        if (MarketBigChangeDetectorTest.isSellSideAbsorption(tickers)) totalScore += 3;
+
+        return totalScore;
+    }
+
 
     private Double getMax15M(List<KlineObjectSimple> tickers) {
         Double priceMax15M = null;

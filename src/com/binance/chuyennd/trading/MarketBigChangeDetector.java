@@ -115,14 +115,6 @@ public class MarketBigChangeDetector {
             return false;
         }
 
-        // --- Nếu vượt qua tất cả các điều kiện, tín hiệu được kích hoạt ---
-//        LOG.info("!!! {} - TÍN HIỆU KIỆT SỨC PHE BÁN: Nến đỏ: {}% ({}/{}), Giảm giá: {}%, Volume cuối: {} < TB: {}",
-//                symbol,
-//                Utils.formatPercentNew(redCandlePercentage), redCandleCount, LOOKBACK_PERIOD,
-//                Utils.formatPercentNew(priceDropPercentage),
-//                Utils.formatLog(lastCandle.totalUsdt.longValue(), 4),
-//                Utils.formatLog((long) (averageRedVolume * VOLUME_WEAKENING_FACTOR), 4));
-
         return true;
     }
 
@@ -174,56 +166,6 @@ public class MarketBigChangeDetector {
         return null;
     }
 
-    public static boolean isBtcReverse(List<KlineObjectNumber> btcTickers, Double rateDown15MAvg) {
-        int period = 15;
-        int index = btcTickers.size() - 1;
-        if (index < period + 3) {
-            return false;
-        }
-        KlineObjectNumber finalTicker = btcTickers.get(index);
-        KlineObjectNumber lastTicker = btcTickers.get(index - 1);
-        Double volumeTotal = 0d;
-        for (int i = 3; i < period + 3; i++) {
-            KlineObjectNumber ticker = btcTickers.get(index - i);
-            volumeTotal += ticker.totalUsdt;
-        }
-        double volumeAvg = volumeTotal / period;
-        Double rateBtc = Utils.rateOf2Double(finalTicker.priceClose, finalTicker.priceOpen);
-        Double rateBtc2Ticker = Utils.rateOf2Double(finalTicker.priceClose, lastTicker.priceOpen);
-        LOG.info("Check btc reverse: {} {} {}% {} {}% {} {}", Utils.normalizeDateYYYYMMDDHHmm(finalTicker.startTime.longValue()),
-                finalTicker.priceClose, Utils.formatDouble(rateBtc * 100, 3), finalTicker.totalUsdt / volumeAvg,
-                Utils.formatDouble(rateBtc2Ticker * 100, 3),
-                Utils.formatDouble(rateDown15MAvg * 100, 3), lastTicker.totalUsdt / volumeAvg);
-        if ((finalTicker.totalUsdt > 10 * volumeAvg || lastTicker.totalUsdt > 10 * volumeAvg)
-                && (rateBtc < -0.0029 || rateBtc2Ticker < -0.0029)
-                && rateBtc > -0.02
-                && rateBtc < 0.002
-        ) {
-            return true;
-        }
-
-        return false;
-    }
-
-    public static boolean isBtcReverse15M(List<KlineObjectNumber> btcTickers) {
-        int period = 15;
-        int index = btcTickers.size() - 1;
-        if (index < period * 3) {
-            return false;
-        }
-        KlineObjectNumber finalTicker = btcTickers.get(index);
-        long minute = Utils.getCurrentMinute(finalTicker.startTime.longValue()) % 15;
-        if (minute != 14) {
-            return false;
-        }
-        KlineObjectNumber ticker15m = btcTickers.get(index - 14);
-        KlineObjectNumber ticker30m = btcTickers.get(index - 29);
-        if (Utils.rateOf2Double(finalTicker.priceClose, ticker15m.priceOpen) < -0.004
-                || Utils.rateOf2Double(finalTicker.priceClose, ticker30m.priceOpen) < -0.007) {
-            return true;
-        }
-        return false;
-    }
 
 
     public static Set<String> getTopSymbol(TreeMap<Double, String> rateLoss2Symbols, int period, Map<String,

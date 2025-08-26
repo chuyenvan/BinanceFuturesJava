@@ -40,7 +40,6 @@ public class BudgetManager {
     public Double BUDGET_PER_ORDER = 0d;
     public Double marginRunning = 0d;
     public Double balance = 0d;
-    public Double slMax = 0d;
     public Map<String, Double> symbol2Margin = new HashMap<>();
     public Map<String, PositionRisk> symbol2Pos = new HashMap<>();
     public Set<String> marginBig = new HashSet<>();
@@ -113,9 +112,7 @@ public class BudgetManager {
     }
 
 
-    public Double getBudgetGrid() {
-        return balanceBasic / (Constants.specialSymbol.size() * 10);
-    }
+
 
     public Integer getLeverage() {
         return LEVERAGE_ORDER;
@@ -215,19 +212,5 @@ public class BudgetManager {
         return rateLoss2DcaOfSym;
     }
 
-    public Double callRate2DcaSell(Double margin) {
-        Double rateDca = -1.0;
-        if (margin > BudgetManager.getInstance().getBudget()) {
-            if (margin > 2 * BudgetManager.getInstance().getBudget()) {
-                if (margin > 3 * BudgetManager.getInstance().getBudget()) {
-                    rateDca = -20.0;
-                } else {
-                    rateDca = -5.0;
-                }
-            } else {
-                rateDca = -3.0;
-            }
-        }
-        return rateDca;
-    }
+
 }

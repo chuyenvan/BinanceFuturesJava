@@ -4,12 +4,11 @@
  */
 package com.binance.chuyennd.research;
 
-import com.binance.chuyennd.bigchange.market.MarketLevelChange;
+import com.binance.chuyennd.object.CapitalMode;
 import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
-import com.binance.client.model.enums.OrderSide;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -288,7 +287,7 @@ public class BudgetManagerSimple {
         );
     }
 
-    public Double calRateLossDynamicBuy(Double unProfit, Double maxChangeIn15M) {
+    public Double calRateLossDynamicBuy(Double unProfit) {
         Double rateLoss = unProfit * 1000;
         Long tradingStopRate;
         Long maxRateTradingStop = 50l;
@@ -329,47 +328,24 @@ public class BudgetManagerSimple {
         }
     }
 
-//    public Double calRateMin2MoveSL(String symbol, Double priceEntry, Double maxPrice15M,
-//                                    MarketLevelChange marketLevelChange, OrderSide side, Long time) {
-//
-//        Double rateMin2MoveSl = Configs.RATE_PROFIT_STOP_MARKET;
-//        if (priceEntry == null || maxPrice15M == null || marketLevelChange == null) {
-//            return rateMin2MoveSl;
-//        }
-//        try {
-//            double rateMaxTarget = 0.02;
-//            if (marketLevelChange.equals(MarketLevelChange.BTC_TREND_REVERSE)) {
-//                rateMaxTarget = 0.01;
-//            }
-//            if (marketLevelChange.equals(MarketLevelChange.FUNDING_FEE_BUY)) {
-//                rateMaxTarget = 0.02;
-//            }
-//
-//            if (priceEntry != null && maxPrice15M != null) {
-//                if (marketLevelChange.equals(MarketLevelChange.BIG_DOWN)
-//                        || marketLevelChange.equals(MarketLevelChange.BIG_UP)
-//                        || marketLevelChange.equals(MarketLevelChange.MEDIUM_DOWN)
-//                        || marketLevelChange.equals(MarketLevelChange.MEDIUM_UP)
-//                        || marketLevelChange.equals(MarketLevelChange.SMALL_DOWN)
-//                        || marketLevelChange.equals(MarketLevelChange.SMALL_UP)
-//                ) {
-//                    rateMaxTarget = 0.08;
-//                }
-//                Double rateChangeNew = Utils.rateOf2Double(maxPrice15M, priceEntry) / 3;
-//                if (side.equals(OrderSide.SELL)) {
-//                    rateChangeNew = Utils.rateOf2Double(priceEntry, maxPrice15M) / 3;
-//                }
-//                if (rateChangeNew > rateMin2MoveSl) {
-//                    rateMin2MoveSl = rateChangeNew;
-//                    if (rateChangeNew > rateMaxTarget) {
-//                        rateMin2MoveSl = rateMaxTarget;
-//                    }
-//                }
-//            }
-//
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
-//        return rateMin2MoveSl;
-//    }
+// Thêm phương thức static này vào bên trong class BudgetManagerSimple.java
+
+    /**
+     * Xác định chế độ vốn hiện tại dựa trên mức độ sụt giảm của tài khoản.
+     *
+     * @param unProfitMin  Mức lỗ chưa thực hiện tối đa.
+     * @param balanceBasic Vốn ban đầu.
+     * @return Chế độ vốn hiện tại (SAFE, CAUTION, hoặc DEFENSIVE).
+     */
+    public static CapitalMode getCurrentCapitalMode(double unProfitMin, double balanceBasic) {
+        double drawdownPercentage = unProfitMin / balanceBasic;
+
+        if (drawdownPercentage < -0.40) { // Sụt giảm hơn 40% -> Phòng thủ
+            return CapitalMode.DEFENSIVE;
+        } else if (drawdownPercentage < -0.20) { // Sụt giảm từ 20% - 40% -> Thận trọng
+            return CapitalMode.CAUTION;
+        } else { // Sụt giảm dưới 20% -> An toàn
+            return CapitalMode.SAFE;
+        }
+    }
 }

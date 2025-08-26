@@ -124,9 +124,9 @@ public class TickerManager {
                         exporter.exportBtcTrendReverse();
                     }
 //
-//                    if (Utils.getCurrentHour() == 10) {
-//                        startResetTicker15mSimple();
-//                    }
+                    if (Utils.getCurrentHour() == 16) {
+                        startResetTicker15mSimple();
+                    }
                     Thread.sleep(Utils.TIME_HOUR);
                 } catch (Exception e) {
                     LOG.error("ERROR during ThreadUpdateTicker: {}", e);
@@ -493,6 +493,7 @@ public class TickerManager {
     private void startResetTicker15mSimple() {
         try {
             try {
+                LOG.info("Start get all ticker 15M: {}", Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()));
                 Set<String> symbols = TickerFuturesHelper.getAllSymbol();
                 symbols.removeAll(Constants.diedSymbol);
                 symbols.add(Constants.SYMBOL_PAIR_BTC);

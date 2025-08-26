@@ -195,7 +195,7 @@ public class FundingFeeManager {
                 }
             }
             for (FundingRate funding : time2FundingGet.values()) {
-                if (funding.getFundingRate().doubleValue() < 0.00) {
+                if (funding.getFundingRate().doubleValue() < 0.0000) {
                     symbols.add(symbol);
                 }
             }
