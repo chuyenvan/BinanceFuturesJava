@@ -48,8 +48,6 @@ public class Configs {
     public static final Double RATE_PROFIT_STOP_MARKET = Configs.getDouble("RATE_PROFIT_STOP_MARKET");
     public static final Double MAX_CAPITAL_RATE = Configs.getDouble("MAX_CAPITAL_RATE");
     public static final Double RATE_FEE = Configs.getDouble("RATE_FEE");
-    public static final  Boolean MODE_RUN_SERVER = Configs.getBoolean("MODE_RUN_SERVER");
-    public static Double RATE_TICKER_MAX_SCAN_ORDER = Configs.getDouble("RATE_TICKER_MAX_SCAN_ORDER");
     public static final Double RATE_BUDGET_LIMIT_A_SIGNAL = Configs.getDouble("RATE_BUDGET_LIMIT_A_SIGNAL");
     public static Integer LEVERAGE_ORDER = Configs.getInt("LEVERAGE_ORDER");
 

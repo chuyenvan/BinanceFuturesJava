@@ -30,61 +30,6 @@ public class MarketBigChangeDetectorTest {
 
     }
 
-    private static void testAltReverse() {
-
-        try {
-            Long startTime = Utils.sdfFileHour.parse("20241020 21:09").getTime();
-            List<KlineObjectSimple> tickers = TickerFuturesHelper.getTickerSimpleWithStartTime("APEUSDT",
-                    Constants.INTERVAL_1M, startTime - 400 * Utils.TIME_MINUTE);
-            List<KlineObjectSimple> tickerTests = new ArrayList<>();
-            for (KlineObjectSimple ticker : tickers) {
-                tickerTests.add(ticker);
-                if (isAltTrendReverse(tickerTests)) {
-                    LOG.info("{} {}", ticker.priceClose,
-                            Utils.normalizeDateYYYYMMDDHHmm(tickerTests.get(tickerTests.size() - 1).startTime.longValue()));
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-    }
-
-    public static boolean isAltTrendReverse(List<KlineObjectSimple> tickers) {
-        if (tickers.size() < Configs.NUMBER_TICKER_CAL_RATE_CHANGE + 2) {
-            return false;
-        }
-        int size = tickers.size();
-        Double priceMin2Trend = -0.01;
-        try {
-            Double priceReverse = null;
-            for (int i = 1; i < 20; i++) {
-                KlineObjectSimple ticker = tickers.get(size - i);
-                Double rate = Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen);
-                if (rate <= priceMin2Trend) {
-                    priceReverse = ticker.priceOpen;
-                    break;
-                }
-            }
-            if (priceReverse != null) {
-                // pass if before ticker over reverse
-                for (int i = 1; i < Configs.NUMBER_TICKER_CAL_RATE_CHANGE; i++) {
-                    KlineObjectSimple ticker = tickers.get(size - i - 1);
-                    if (ticker.priceClose >= tickers.get(size - 1).priceClose) {
-                        return false;
-                    }
-                    if (ticker.priceOpen == priceReverse) {
-                        break;
-                    }
-                }
-                return true;
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return false;
-    }
-
 
     public static MarketDataObject calMarketData(Map<String, KlineObjectSimple> symbol2Ticker, Map<String, Double> symbol2PriceMax,
                                                  Map<String, Double> symbol2MinPrice) {
@@ -150,25 +95,7 @@ public class MarketBigChangeDetectorTest {
     }
 
 
-    private static List<String> getTopSymbol(Map<String, KlineObjectNumber> symbol2Kline,
-                                             TreeMap<Double, String> rateLoss2Symbols, int period, Double maxVolume) {
-        List<String> symbols = new ArrayList<>();
-        for (Map.Entry<Double, String> entry : rateLoss2Symbols.entrySet()) {
-            KlineObjectNumber ticker = symbol2Kline.get(entry.getValue());
-            if (maxVolume != null) {
-                if (ticker != null
-                        && ticker.totalUsdt < maxVolume) {
-                    symbols.add(entry.getValue());
-                }
-            } else {
-                symbols.add(entry.getValue());
-            }
-            if (symbols.size() >= period) {
-                break;
-            }
-        }
-        return symbols;
-    }
+
 
     public static List<String> getTopSymbolSimple(TreeMap<Double, String> rateLoss2Symbols, int period, Set<String> symbolsRunning) {
         List<String> symbols = new ArrayList<>();
@@ -191,13 +118,13 @@ public class MarketBigChangeDetectorTest {
         Set<String> symbols = new HashSet<>();
         for (Map.Entry<Double, String> entry : rateLoss2Symbols.entrySet()) {
             String symbol = entry.getValue();
-            Double rateScam = Configs.RATE_TICKER_MAX_SCAN_ORDER;
+//            Double rateScam = Configs.RATE_TICKER_MAX_SCAN_ORDER;
             if (symbolLock != null && symbolLock.contains(symbol)) {
                 continue;
             }
             KlineObjectSimple ticker = symbol2Ticker.get(symbol);
             if (ticker != null
-                    && Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen) < rateScam
+//                    && Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen) < rateScam
             ) {
                 symbols.add(symbol);
                 if (symbols.size() >= period) {
@@ -208,28 +135,7 @@ public class MarketBigChangeDetectorTest {
         return symbols;
     }
 
-    public static List<String> getUnderTopSymbolSimpleNew(TreeMap<Double, String> rateLoss2Symbols, MarketLevelChange levelChange, int period,
-                                                          Map<String, KlineObjectSimple> symbol2Ticker, Set<String> symbolLock) {
 
-        List<String> symbols = new ArrayList<>();
-        for (Map.Entry<Double, String> entry : rateLoss2Symbols.descendingMap().entrySet()) {
-            String symbol = entry.getValue();
-            Double rateScam = Configs.RATE_TICKER_MAX_SCAN_ORDER;
-            if (symbolLock != null && symbolLock.contains(symbol)) {
-                continue;
-            }
-            KlineObjectSimple ticker = symbol2Ticker.get(symbol);
-            if (ticker != null
-                    && Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen) < rateScam
-            ) {
-                symbols.add(symbol);
-                if (symbols.size() >= period) {
-                    break;
-                }
-            }
-        }
-        return symbols;
-    }
 
     public static Double calRateLossAvg(TreeMap<Double, String> rateLoss2Symbols, Integer period) {
         Double total = 0d;

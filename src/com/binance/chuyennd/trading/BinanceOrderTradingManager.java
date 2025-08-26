@@ -102,7 +102,7 @@ public class BinanceOrderTradingManager {
                     java.util.logging.Logger.getLogger(DetectEntrySignal2TradeNormal.class.getName()).log(Level.SEVERE, null, ex);
                 }
                 try {
-                    Utils.reset();
+                    Utils.reset("Reset by Schedule");
                 } catch (Exception e) {
                     LOG.error("ERROR during Restart: {}", e);
                     e.printStackTrace();

@@ -86,7 +86,7 @@ public class FundingFeeManagerProduction {
         // ================== CÁC THAM SỐ CÓ THỂ TÙY CHỈNH ==================
         // Mức funding được coi là "cực đoan". Mặc định là -0.001 tương đương -0.1%
         // Các mức khác bạn có thể thử: -0.0005 (-0.05%), -0.002 (-0.2%)
-        final double EXTREME_FUNDING_THRESHOLD = -0.001;
+        final double EXTREME_FUNDING_THRESHOLD = -0.0005;
         // =================================================================
 
         TreeMap<Double, String> extremeFundingSymbols = new TreeMap<>();

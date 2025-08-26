@@ -39,6 +39,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
     public static final Logger LOG = LoggerFactory.getLogger(SimulatorMarketLevelTicker1MStopLoss.class);
     public static final String FILE_STORAGE_ORDER_DONE = "storage/OrderTestDone.data";
+    public static final String FILE_STORAGE_ORDER_RUNNING = "storage/orderRunning/orderRunning-RUNNINGDATA.data";
+    public static final String FILE_STORAGE_ORDER_RUNNING_ENTRY = "storage/orderRunning/orderRunning-entry-RUNNINGDATA.data";
 
     public TreeMap<Long, OrderTargetInfoTest> allOrderDone;
 
@@ -64,7 +66,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         while (true) {
             TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers;
             Map<String, List<KlineObjectSimple>> symbol2LastTickers = new HashMap<>();
-            Set<String> symbolBigChanges = new HashSet<>();
             try {
                 time2Tickers = DataManager.readDataFromFile1M(startTime);
                 if (time2Tickers == null) {
@@ -82,9 +83,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                 if (!Utils.isTickerAvailable(ticker)) {
                                     updateSymbolDeListed(symbol, time);
                                     continue;
-                                }
-                                if (Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen) < -0.15) {
-                                    symbolBigChanges.add(symbol);
                                 }
                                 List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
                                 if (tickers == null) {
@@ -247,7 +245,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                             }
                             if (marketRateChange.rateDown15MAvg < -0.015) {
                                 // ========== LOGIC CHO TÍN HIỆU FUNDING ÂM CỰC ĐOAN ==========
-                                TreeMap<Double, String> extremeFundingSymbols = FundingFeeManager.getInstance().getExtremeNegativeFundingSymbols(time);
+                                Double fundingFeeMin = -0.0005;
+                                TreeMap<Double, String> extremeFundingSymbols = FundingFeeManager.getInstance().getExtremeNegativeFundingSymbols(time, fundingFeeMin);
 //                                if (symbol2OrderRunning.size() < 30 && !extremeFundingSymbols.isEmpty()) {
                                 // Ghi log để theo dõi
                                 LOG.info("{} - TÍN HIỆU FUNDING CỰC ĐOAN: {}", Utils.normalizeDateYYYYMMDDHHmm(time), extremeFundingSymbols);
@@ -314,6 +313,11 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             }
             Long finalStartTime1 = startTime;
             startTime += Utils.TIME_DAY;
+            String month = Utils.getMonth(finalStartTime1);
+            if (Utils.getMonth(startTime).equals(month)) {
+                StorageSnappy.writeObject2File(FILE_STORAGE_ORDER_RUNNING.replace("RUNNINGDATA", month), symbol2OrderRunning);
+                StorageSnappy.writeObject2File(FILE_STORAGE_ORDER_RUNNING_ENTRY.replace("RUNNINGDATA", month), symbol2OrdersEntry);
+            }
             if (startTime > System.currentTimeMillis()) {
                 BudgetManagerSimple.getInstance().updateBalance(finalStartTime1, allOrderDone, symbol2OrderRunning, symbol2OrdersEntry, false);
                 break;
@@ -532,6 +536,12 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         time2MarketRateChange = (TreeMap<Long, MarketRateChange>) StorageSnappy.readObjectFromFile(Configs.FILE_MARKET_RATE_CHANGE);
         time2MarketData = (TreeMap<Long, MarketDataObject>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
         time2BtcReverse = (TreeMap<Long, Double>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_BTC_REVERSE);
+//        Long startTime = Utils.sdfFile.parse(Configs.TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
+//        String month = Utils.getMonth(startTime);
+//        if (new File(FILE_STORAGE_ORDER_RUNNING.replace("RUNNINGDATA", month)).exists()) {
+//            symbol2OrderRunning = (ConcurrentHashMap<String, OrderTargetInfoTest>) StorageSnappy.readObjectFromFile(FILE_STORAGE_ORDER_RUNNING.replace("RUNNINGDATA", month));
+//            symbol2OrdersEntry = (ConcurrentHashMap<String, List<OrderTargetInfoTest>>) StorageSnappy.readObjectFromFile(FILE_STORAGE_ORDER_RUNNING_ENTRY.replace("RUNNINGDATA", month));
+//        }
 
     }
 

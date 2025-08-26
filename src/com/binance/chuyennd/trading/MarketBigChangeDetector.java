@@ -3,7 +3,6 @@ package com.binance.chuyennd.trading;
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
 import com.binance.chuyennd.helper.TickerFuturesHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
-import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
@@ -238,8 +237,7 @@ public class MarketBigChangeDetector {
                 continue;
             }
             KlineObjectNumber ticker = symbol2FinalTicker.get(symbol);
-            if (ticker != null
-                    && Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen) < Configs.RATE_TICKER_MAX_SCAN_ORDER) {
+            if (ticker != null) {
                 symbols.add(symbol);
             }
             if (symbols.size() >= period) {

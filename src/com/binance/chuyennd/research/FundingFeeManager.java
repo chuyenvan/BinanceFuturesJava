@@ -214,15 +214,16 @@ public class FundingFeeManager {
      * Lấy danh sách các symbol có funding fee ÂM CỰC ĐOAN tại một thời điểm.
      * Tín hiệu này mạnh hơn so với việc chỉ kiểm tra funding âm thông thường.
      *
-     * @param time Thời điểm cần kiểm tra.
+     * @param time          Thời điểm cần kiểm tra.
+     * @param fundingFeeMin
      * @return Một TreeMap được sắp xếp, với key là mức funding fee (càng âm càng ở đầu),
      * và value là tên symbol. Trả về rỗng nếu không có symbol nào thỏa mãn.
      */
-    public TreeMap<Double, String> getExtremeNegativeFundingSymbols(long time) {
+    public TreeMap<Double, String> getExtremeNegativeFundingSymbols(long time, Double fundingFeeMin) {
         // ================== CÁC THAM SỐ CÓ THỂ TÙY CHỈNH ==================
         // Mức funding được coi là "cực đoan". Mặc định là -0.001 tương đương -0.1%
         // Các mức khác bạn có thể thử: -0.0005 (-0.05%), -0.002 (-0.2%)
-        final double EXTREME_FUNDING_THRESHOLD = -0.001;
+        final double EXTREME_FUNDING_THRESHOLD = fundingFeeMin;
         // =================================================================
 
         TreeMap<Double, String> extremeFundingSymbols = new TreeMap<>();

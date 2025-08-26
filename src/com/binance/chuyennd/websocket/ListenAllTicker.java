@@ -69,7 +69,7 @@ public class ListenAllTicker {
         try {
             LOG.info("Start get data of market for init {}", new Date());
             Long startTime = Utils.getMinute(System.currentTimeMillis() -
-                    (Configs.NUMBER_TICKER_CAL_RATE_CHANGE * 16 + 5) * Utils.TIME_MINUTE);
+                    (Configs.NUMBER_TICKER_CAL_RATE_CHANGE * 4 + 5) * Utils.TIME_MINUTE);
             Set<String> allSymbol = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS);
             allSymbol.removeAll(Constants.diedSymbol);
             allSymbol.remove(Constants.SYMBOL_PAIR_BTC);
@@ -349,6 +349,9 @@ public class ListenAllTicker {
         }
         if (counterError > 0) {
             LOG.info("Symbol ticker error: {}", counterError);
+            if (counterError > 100){
+                Utils.reset("Reset by ticker error over 100 " + counterError );
+            }
         }
         return result;
     }

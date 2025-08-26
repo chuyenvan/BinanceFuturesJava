@@ -5,32 +5,20 @@
  */
 package com.binance.chuyennd.utils;
 
-import com.alibaba.fastjson.JSONObject;
 import com.binance.chuyennd.client.ClientSingleton;
-import com.binance.chuyennd.helper.TickerFuturesHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.MACDEntry;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
-import com.binance.chuyennd.research.OrderTargetInfoTest;
-import com.binance.chuyennd.trading.OrderTargetStatus;
-import com.binance.client.constant.Constants;
 import com.binance.client.model.enums.OrderSide;
 import com.binance.client.model.trade.PositionRisk;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.*;
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
-import java.math.BigInteger;
 import java.net.URLEncoder;
-import java.security.MessageDigest;
 import java.text.*;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.bson.Document;
 
@@ -58,7 +46,6 @@ public class Utils {
     public static final DecimalFormat dfNew = new DecimalFormat("#");
 
 
-
     public static Double callPnl(PositionRisk pos) {
         Double pnl = pos.getPositionAmt().doubleValue();
         pnl = pnl * (pos.getMarkPrice().doubleValue() - pos.getEntryPrice().doubleValue());
@@ -71,7 +58,6 @@ public class Utils {
         cal.setTime(new Date());
         return cal.get(Calendar.HOUR_OF_DAY);
     }
-
 
 
     public static boolean sendSms2Telegram(String text) {
@@ -122,7 +108,6 @@ public class Utils {
     }
 
 
-
     public static String normalizeDateYYYYMMDD(Date input) {
         return sdfFile.format(input);
     }
@@ -138,7 +123,6 @@ public class Utils {
     public static String normalizeDateYYYYMMDDHHmmss(Long input) {
         return sdfFileFull.format(new Date(input));
     }
-
 
 
     public static long getStartTimeOfCurrentWeek(long time) {
@@ -228,7 +212,6 @@ public class Utils {
         }
         return 0.0;
     }
-
 
 
     public static Double calPriceTarget(String symbol, Double priceEntry, OrderSide orderSide, Double rateTarget) {
@@ -412,7 +395,6 @@ public class Utils {
     }
 
 
-
     public static boolean isTickerAvailable(KlineObjectNumber ticker) {
         if (ticker != null) {
             if (!ticker.minPrice.equals(ticker.maxPrice)) {
@@ -432,7 +414,6 @@ public class Utils {
     }
 
 
-
     public static String toJson(Object ob) {
         return gson.toJson(ob);
     }
@@ -448,6 +429,7 @@ public class Utils {
     public static long getTimeInterval15m(long time) {
         return (time / (15 * TIME_MINUTE)) * 15 * TIME_MINUTE;
     }
+
     public static long getTimeInterval5m(long time) {
         return (time / (5 * TIME_MINUTE)) * 5 * TIME_MINUTE;
     }
@@ -512,8 +494,6 @@ public class Utils {
     }
 
 
-
-
     public static String formatDouble(Double volume, Integer number) {
         String format = "###.";
         for (int i = 0; i < number; i++) {
@@ -559,7 +539,6 @@ public class Utils {
     }
 
 
-
     public static String formatLog(Object obj, int length) {
         String marginMax = String.valueOf(obj);
         while (marginMax.length() < length) {
@@ -575,7 +554,6 @@ public class Utils {
         }
         return marginMax;
     }
-
 
 
     public static Double maxPrice(KlineObjectNumber ticker, Double maxPrice) {
@@ -599,9 +577,9 @@ public class Utils {
         return minPrice;
     }
 
-    public static void reset() {
+    public static void reset(String resetBySchedule) {
         try {
-            LOG.info("Restart: {} ...", Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()));
+            LOG.info("Restart: {} {} ...", resetBySchedule, Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()));
 
             // Lấy đường dẫn tới Java binary
             String javaBin = System.getProperty("java.home") + "/bin/java";
