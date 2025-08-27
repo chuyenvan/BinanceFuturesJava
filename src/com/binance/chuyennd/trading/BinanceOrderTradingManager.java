@@ -334,6 +334,10 @@ public class BinanceOrderTradingManager {
         SymbolOrderLockingManager.getInstance().addLock(lockName);
         long startTime = System.currentTimeMillis();
         List<PositionRisk> positions = BinanceFuturesClientSingleton.getInstance().getAllPositionInfos();
+        if (positions == null || positions.isEmpty()) {
+            LOG.info("Error get position from binance! {}", Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()));
+            return;
+        }
         Map<String, PositionRisk> symbol2Pos = new HashMap<>();
         BudgetManager.getInstance().symbol2Margin.clear();
         BudgetManager.getInstance().marginBig.clear();
