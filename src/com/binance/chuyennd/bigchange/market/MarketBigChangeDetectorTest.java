@@ -505,7 +505,7 @@ public class MarketBigChangeDetectorTest {
         final double MIN_BOUNCE_RATIO_THRESHOLD = 0.35;
 
         // 3. Tham số cho bộ lọc "Thị trường ảm đạm"
-        final double MIN_MOVEMENT_RANGE_THRESHOLD = 0.06;
+        final double MIN_MOVEMENT_RANGE_THRESHOLD = 0.045;
         // =================================================================
 
         // --- Bước 1: Kiểm tra dữ liệu đầu vào ---
@@ -537,14 +537,14 @@ public class MarketBigChangeDetectorTest {
         // --- Bước 3: Áp dụng các bộ lọc ---
 
         // Lọc 1: "Vòng xoáy tử thần"
-        if (dow < MIN_DOW_THRESHOLD) {
-            double bounceRatio = up / Math.abs(dow);
-            if (bounceRatio < MIN_BOUNCE_RATIO_THRESHOLD) {
-                LOG.warn("!!! TRÁNH VÀO LỆNH (Vòng xoáy tử thần): {} | Giảm {}%, Phục hồi {}%",
-                        symbol, String.format("%.2f", dow * 100), String.format("%.2f", up * 100));
-                return true;
-            }
-        }
+//        if (dow < MIN_DOW_THRESHOLD) {
+//            double bounceRatio = up / Math.abs(dow);
+//            if (bounceRatio < MIN_BOUNCE_RATIO_THRESHOLD) {
+//                LOG.warn("!!! TRÁNH VÀO LỆNH (Vòng xoáy tử thần): {} | Giảm {}%, Phục hồi {}%",
+//                        symbol, String.format("%.2f", dow * 100), String.format("%.2f", up * 100));
+//                return true;
+//            }
+//        }
 
         // Lọc 2: "Thị trường ảm đạm"
         double movementRange = Math.abs(dow) + up;
