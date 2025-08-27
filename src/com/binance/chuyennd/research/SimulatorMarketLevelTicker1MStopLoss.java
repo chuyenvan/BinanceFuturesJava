@@ -100,7 +100,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
                                 if (MarketBigChangeDetectorTest.isSellingExhausted(tickers, symbol)) {
                                     symbolSellingExhausted.add(symbol);
-                                }else{
+                                } else {
                                     int entryScore = calculateEntryScore(symbol, time, tickers);
                                     if (entryScore >= 2) { // Ngưỡng điểm để vào lệnh
                                         LOG.info("Signal new: {}", symbol);
@@ -166,6 +166,11 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                         if (!Utils.isTickerAvailable(ticker)) {
                                             continue;
                                         }
+                                        List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
+                                        // ================== GỌI HÀM LỌC DUY NHẤT ==================
+                                        if (MarketBigChangeDetectorTest.shouldAvoidEntry(symbol, tickers)) {
+                                            continue; // Bỏ qua nếu có rủi ro
+                                        }
                                         createOrderBUY(symbol, ticker, levelChange, time2MarketRateChange.get(time), symbol2PriceMax15M.get(symbol));
                                     }
                                     for (String symbol : symbolDcaLevel) {
@@ -208,7 +213,12 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                         if (!Utils.isTickerAvailable(ticker)) {
                                             continue;
                                         }
+
                                         List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
+                                        // ================== GỌI HÀM LỌC DUY NHẤT ==================
+                                        if (MarketBigChangeDetectorTest.shouldAvoidEntry(symbol, tickers)) {
+                                            continue; // Bỏ qua nếu có rủi ro
+                                        }
                                         Double priceMax15M = getMax15M(tickers);
                                         Double priceMax4h = getMax4H(tickers);
                                         Double priceMin4h = getMin4H(tickers);
@@ -267,6 +277,11 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                         KlineObjectSimple ticker = symbol2Ticker.get(symbol);
                                         if (!Utils.isTickerAvailable(ticker)) {
                                             continue;
+                                        }
+                                        List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
+                                        // ================== GỌI HÀM LỌC DUY NHẤT ==================
+                                        if (MarketBigChangeDetectorTest.shouldAvoidEntry(symbol, tickers)) {
+                                            continue; // Bỏ qua nếu có rủi ro
                                         }
                                         createOrderBUY(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY_SPECIAL,
                                                 time2MarketRateChange.get(time), symbol2PriceMax15M.get(symbol));

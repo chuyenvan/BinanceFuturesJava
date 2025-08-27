@@ -19,6 +19,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+
 /**
  * @author pc
  */
@@ -32,6 +33,8 @@ public class BudgetManagerSimple {
     public Double investing = null;
     public Map<Long, Double> time2Balance = new HashMap<>();
     public Double unProfit = 0d;
+    public Double positionMargin = 0d;
+
     public Double profitLossMax = 0d;
     public Double totalFee = 0d;
     public Double totalFundingFee = 0d;
@@ -78,18 +81,17 @@ public class BudgetManagerSimple {
     }
 
     public Double getBudget() {
-        return BUDGET_PER_ORDER * 0.5;
-    }
+//        CapitalMode capitalMod = getCurrentCapitalMode();
+//        switch (capitalMod) {
+//            case SAFE:
+                return BUDGET_PER_ORDER * 0.5;
+//            case DEFENSIVE:
+//                return BUDGET_PER_ORDER * 0.3;
+//            default:
+//                return BUDGET_PER_ORDER * 0.4;
+//        }
 
-    public Double getBudgetSell() {
-        return BUDGET_PER_ORDER / 20;
     }
-
-    public Double getBudgetGrid() {
-        return balanceBasic / (Constants.specialSymbol.size() * 10);
-//        return 1000d;
-    }
-
 
     public Integer getLeverage() {
         return Configs.LEVERAGE_ORDER;
@@ -110,13 +112,12 @@ public class BudgetManagerSimple {
                               ConcurrentHashMap<String, OrderTargetInfoTest> orderRunning,
                               ConcurrentHashMap<String, List<OrderTargetInfoTest>> symbol2OrdersEntry, boolean isPrintBalance) {
         Double balance = balanceBasic;
-        Set<String> symbolRunning = orderRunning.keySet();
         totalFee = fee;
         balance = balance + profit;
         balanceCurrent = balance;
         unProfit = calUnrealizedProfit(orderRunning.values());
         profitLossMax = calProfitLossMax(orderRunning.values());
-        Double positionMargin = calPositionMargin(orderRunning.values());
+        positionMargin = calPositionMargin(orderRunning.values());
         Double positionMarginReal = calPositionMarginReal(orderRunning.values());
         Double balanceReal = balance + unProfit;
         Double unrealizedProfitMin = calUnrealizedProfitMin(orderRunning.values());
@@ -333,19 +334,21 @@ public class BudgetManagerSimple {
     /**
      * Xác định chế độ vốn hiện tại dựa trên mức độ sụt giảm của tài khoản.
      *
-     * @param unProfitMin  Mức lỗ chưa thực hiện tối đa.
-     * @param balanceBasic Vốn ban đầu.
      * @return Chế độ vốn hiện tại (SAFE, CAUTION, hoặc DEFENSIVE).
      */
-    public static CapitalMode getCurrentCapitalMode(double unProfitMin, double balanceBasic) {
-        double drawdownPercentage = unProfitMin / balanceBasic;
+    public CapitalMode getCurrentCapitalMode() {
+        double drawdownPercentage = unProfit / balanceBasic;
 
-        if (drawdownPercentage < -0.40) { // Sụt giảm hơn 40% -> Phòng thủ
+        if (drawdownPercentage < -0.50) { // Sụt giảm hơn 40% -> Phòng thủ
             return CapitalMode.DEFENSIVE;
-        } else if (drawdownPercentage < -0.20) { // Sụt giảm từ 20% - 40% -> Thận trọng
+        } else if (drawdownPercentage < -0.30) { // Sụt giảm từ 20% - 40% -> Thận trọng
             return CapitalMode.CAUTION;
-        } else { // Sụt giảm dưới 20% -> An toàn
-            return CapitalMode.SAFE;
+        } else { // Sụt giảm dưới 30% -> An toàn
+            if (positionMargin > balanceCurrent * 0.4) {
+                return CapitalMode.CAUTION;
+            } else {
+                return CapitalMode.SAFE;
+            }
         }
     }
 }

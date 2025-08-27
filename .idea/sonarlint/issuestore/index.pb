@@ -16,8 +16,6 @@ p
 .gitignore,a\5\a5cc2925ca8258af241be7e5b0381edf30266302
 A
 config.properties,5\b\5b4197fb87e6e5ff44afbf358a3bd23a35f56456
-j
-:src/com/binance/chuyennd/research/BudgetManagerSimple.java,5\1\5142a6d4b9729e48fa2aed5e51a5f675609d4d93
 ^
 .src/com/binance/chuyennd/trading/Reporter.java,f\f\ffbef18cc8a9dea766f4ffeadc2c86db4af450e2
 [
