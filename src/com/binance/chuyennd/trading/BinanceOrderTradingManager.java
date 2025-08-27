@@ -244,34 +244,9 @@ public class BinanceOrderTradingManager {
                 } else {
                     BudgetManager.getInstance().symbol2Level.remove(symbol);
                 }
-//                Double rateMin2MoveSl = BudgetManager.getInstance().calRateMin2MoveSL(position.getSymbol(), orderInfo.marketLevel,
-//                        position.getEntryPrice().doubleValue(), orderInfo.priceTP, orderInfo.side);
-                Double rateMin2MoveSl = Configs.RATE_PROFIT_STOP_MARKET;
-                Double maxChange60M = getMaxChange60M(symbol);
-                if (maxChange60M != null && maxChange60M > 0.006) {
-                    if (maxChange60M < 0.01) {
-                        if (rateMin2MoveSl < 0.02) {
-                            rateMin2MoveSl = 0.02;
-                        }
-                    } else {
-                        if (maxChange60M < 0.02) {
-                            if (rateMin2MoveSl < 0.025) {
-                                rateMin2MoveSl = 0.025;
-                            }
-                        } else {
-                            if (maxChange60M < 0.03) {
-                                if (rateMin2MoveSl < 0.04) {
-                                    rateMin2MoveSl = 0.04;
-                                }
-                            } else {
-                                if (rateMin2MoveSl < 0.06) {
-                                    rateMin2MoveSl = 0.06;
-                                }
-                            }
-                        }
 
-                    }
-                }
+                Double maxChange60M = getMaxChange60M(symbol);
+                Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange15M(maxChange60M);
                 if (rateLoss > rateMin2MoveSl) {
                     if (orderInfo.priceSL == null) {
                         OrderSide sideSL = OrderSide.SELL;
@@ -334,10 +309,6 @@ public class BinanceOrderTradingManager {
         SymbolOrderLockingManager.getInstance().addLock(lockName);
         long startTime = System.currentTimeMillis();
         List<PositionRisk> positions = BinanceFuturesClientSingleton.getInstance().getAllPositionInfos();
-        if (positions == null || positions.isEmpty()) {
-            LOG.info("Error get position from binance! {}", Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()));
-            return;
-        }
         Map<String, PositionRisk> symbol2Pos = new HashMap<>();
         BudgetManager.getInstance().symbol2Margin.clear();
         BudgetManager.getInstance().marginBig.clear();
@@ -377,11 +348,7 @@ public class BinanceOrderTradingManager {
         positions.addAll(BudgetManager.getInstance().symbol2Pos.values());
         for (PositionRisk position : positions) {
             try {
-                if (position == null) {
-                    continue;
-                }
-
-                if (position.getPositionAmt().compareTo(new BigDecimal("0")) == 0) {
+                if (position == null || position.getPositionAmt().compareTo(new BigDecimal("0")) == 0) {
                     continue;
                 }
                 Double rateLoss = PositionHelper.calRateLoss(position);
@@ -395,21 +362,13 @@ public class BinanceOrderTradingManager {
                     orderInfo.priceEntry = priceEntry;
                 }
                 OrderSide side2Sl;
-//                Double rateMin2MoveSl = BudgetManager.getInstance().calRateMin2MoveSL(position.getSymbol(), orderInfo.marketLevel,
-//                        position.getEntryPrice().doubleValue(), orderInfo.priceTP, orderInfo.side);
-                Double rateMin2MoveSl = Configs.RATE_PROFIT_STOP_MARKET;
+                Double maxChange60M = getMaxChange60M(symbol);
+                Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange15M(maxChange60M * 1.5);
                 // BUY
                 if (position.getPositionAmt().compareTo(new BigDecimal("0")) > 0) {
                     side2Sl = OrderSide.SELL;
                 } else { // SELL
                     side2Sl = OrderSide.BUY;
-                }
-                if (!Constants.specialSymbol.contains(symbol)) {
-                    if (position.getPositionAmt().compareTo(new BigDecimal("0")) > 0) {
-                        rateMin2MoveSl = 4 * rateMin2MoveSl;
-                    } else {
-                        rateMin2MoveSl = 5 * rateMin2MoveSl;
-                    }
                 }
                 if (orderInfo.priceSL != null && rateLoss > rateMin2MoveSl) {
                     // move SL

@@ -20,6 +20,7 @@ import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.trading.OrderTargetStatus;
+import com.binance.chuyennd.trading.TradeUtils;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
@@ -210,7 +211,7 @@ public class OrderTargetInfoTest implements Serializable {
 
     public void updateStatusNew(Double maxChange15M) {
         Double rateLoss = calRateLossMax();
-        Double rateMin2MoveSl = calRateMinWithMaxChange15M(maxChange15M);
+        Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange15M(maxChange15M);
         Double rateStop = BudgetManagerSimple.getInstance().calRateLossDynamicBuy(rateLoss);
         Double priceSLNew = Utils.calPriceTarget(symbol, priceEntry, OrderSide.SELL, -rateStop);
         if (rateLoss > rateMin2MoveSl) {
@@ -229,43 +230,10 @@ public class OrderTargetInfoTest implements Serializable {
         }
     }
 
-    private Double calRateMinWithMaxChange15M(Double maxChange15M) {
-        Double rateMin2MoveSl = Configs.RATE_PROFIT_STOP_MARKET;
-        if (maxChange15M != null && maxChange15M > 0.006) {
-            if (maxChange15M < 0.01) {
-                if (rateMin2MoveSl < 0.02) {
-                    rateMin2MoveSl = 0.02;
-                }
-            } else {
-                if (maxChange15M < 0.02) {
-                    if (rateMin2MoveSl < 0.025) {
-                        rateMin2MoveSl = 0.025;
-                    }
-                } else {
-                    if (maxChange15M < 0.03) {
-                        if (rateMin2MoveSl < 0.04) {
-                            rateMin2MoveSl = 0.04;
-                        }
-                    } else {
-                        if (rateMin2MoveSl < 0.06) {
-                            rateMin2MoveSl = 0.06;
-                        }
-                    }
-                }
-            }
-        } else {
-            if (maxChange15M != null && maxChange15M > 0.004) {
-                if (rateMin2MoveSl < 0.015) {
-                    rateMin2MoveSl = 0.015;
-                }
-            }
-        }
-        return rateMin2MoveSl;
-    }
 
     public void updateTPSL(Double rateChangeMax15M) {
         Double rateLoss = calRateLossMax();
-        Double rateMin2MoveSl = calRateMinWithMaxChange15M(rateChangeMax15M * 1.5);
+        Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange15M(rateChangeMax15M * 1.5);
         Double rateSL = BudgetManagerSimple.getInstance().calRateLossDynamicBuy(rateLoss);
         // move SL
         if (priceSL != null) {
