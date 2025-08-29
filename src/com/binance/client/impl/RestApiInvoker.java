@@ -11,11 +11,19 @@ import org.slf4j.LoggerFactory;
 import com.binance.client.exception.BinanceApiException;
 import com.binance.client.impl.utils.JsonWrapper;
 
+import java.util.concurrent.TimeUnit;
+
 abstract class RestApiInvoker {
 
     private static final Logger log = LoggerFactory.getLogger(RestApiInvoker.class);
-    private static final OkHttpClient client = new OkHttpClient();
-
+//    private static final OkHttpClient client = new OkHttpClient();
+    private static final OkHttpClient client = new OkHttpClient.Builder()
+            .followRedirects(false) // QUAN TRỌNG NHẤT: Tắt tính năng tự động chuyển hướng
+            .followSslRedirects(false) // Cũng tắt luôn cho SSL
+            .connectTimeout(10, TimeUnit.SECONDS) // Đặt thời gian chờ kết nối
+            .readTimeout(10, TimeUnit.SECONDS)    // Đặt thời gian chờ đọc phản hồi
+            .writeTimeout(10, TimeUnit.SECONDS)   // Đặt thời gian chờ ghi yêu cầu
+            .build();
     static void checkResponse(JsonWrapper json) {
         try {
             if (json.containKey("success")) {

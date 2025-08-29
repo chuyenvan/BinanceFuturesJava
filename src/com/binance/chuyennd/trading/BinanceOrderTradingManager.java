@@ -125,7 +125,7 @@ public class BinanceOrderTradingManager {
                         OrderTargetInfo order = Utils.gson.fromJson(orderJson, OrderTargetInfo.class);
                         LOG.info("Queue listen order to manager order received : {} {} ", order.side, order.symbol);
                         if (!symbol2Processing.containsKey(order.symbol)
-                                || symbol2Processing.get(order.symbol) < System.currentTimeMillis() - 5 * Utils.TIME_MINUTE) {
+                                || symbol2Processing.get(order.symbol) < System.currentTimeMillis() - 2 * Utils.TIME_MINUTE) {
                             if (order.status.equals(OrderTargetStatus.REQUEST)) {
                                 symbol2Processing.put(order.symbol, System.currentTimeMillis());
                                 executorServiceOrderNew.execute(() -> processOrderNewMarketNew(order));
@@ -161,15 +161,15 @@ public class BinanceOrderTradingManager {
             updatePositionInfo();
         } catch (Exception e) {
             LOG.info("Error during process order: {}", Utils.toJson(order));
-            try {
-                if (order.timeStart > System.currentTimeMillis() - 5 * Utils.TIME_MINUTE) {
-                    RedisHelper.getInstance().get().rpush(RedisConst.REDIS_KEY_BINANCE_TD_ORDER_MANAGER_QUEUE, Utils.toJson(order));
-                }
-                LOG.info("ReCreate order symbol false! {} {}", order.symbol, Utils.toJson(order));
-                Thread.sleep(200);
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            }
+//            try {
+//                if (order.timeStart > System.currentTimeMillis() - 5 * Utils.TIME_MINUTE) {
+//                    RedisHelper.getInstance().get().rpush(RedisConst.REDIS_KEY_BINANCE_TD_ORDER_MANAGER_QUEUE, Utils.toJson(order));
+//                }
+//                LOG.info("ReCreate order symbol false! {} {}", order.symbol, Utils.toJson(order));
+//                Thread.sleep(200);
+//            } catch (Exception ex) {
+//                ex.printStackTrace();
+//            }
             e.printStackTrace();
         }
         symbol2Processing.remove(order.symbol);
@@ -284,7 +284,7 @@ public class BinanceOrderTradingManager {
 
     private Double getMaxChange60M(String symbol) {
         List<KlineObjectNumber> tickers = ListenAllTicker.getInstance().getTickerBySymbol(symbol);
-        Double maxChangeIn60M = null;
+        Double maxChangeIn60M = 0d;
         if (tickers != null) {
             int index = tickers.size() - 1;
             for (int i = 0; i < 60; i++) {
@@ -309,6 +309,10 @@ public class BinanceOrderTradingManager {
         SymbolOrderLockingManager.getInstance().addLock(lockName);
         long startTime = System.currentTimeMillis();
         List<PositionRisk> positions = BinanceFuturesClientSingleton.getInstance().getAllPositionInfos();
+        if (positions == null || positions.isEmpty()) {
+            LOG.info("Error get position from binance! {}", Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()));
+            return;
+        }
         Map<String, PositionRisk> symbol2Pos = new HashMap<>();
         BudgetManager.getInstance().symbol2Margin.clear();
         BudgetManager.getInstance().marginBig.clear();

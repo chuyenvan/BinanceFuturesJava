@@ -74,8 +74,8 @@ public class ListenAllTicker {
             allSymbol.removeAll(Constants.diedSymbol);
             allSymbol.remove(Constants.SYMBOL_PAIR_BTC);
             executorService.execute(() -> initTickerBySymbol(Constants.SYMBOL_PAIR_BTC,
-                    startTime - (Configs.BTC_TREND_REVERSE_DURATION
-                            - Configs.NUMBER_TICKER_CAL_RATE_CHANGE * 16) * Utils.TIME_MINUTE));
+                    startTime - Configs.BTC_TREND_REVERSE_DURATION
+                            * Utils.TIME_MINUTE));
             for (String symbol : allSymbol) {
                 executorService.execute(() -> initTickerBySymbol(symbol, startTime));
             }
@@ -93,7 +93,7 @@ public class ListenAllTicker {
                 time2Candle.put(candle.startTime.longValue(), candle);
             }
             symbol2Tickers.put(symbol, time2Candle);
-            if (symbol.equals(Constants.SYMBOL_PAIR_ETH)){
+            if (symbol.equals(Constants.SYMBOL_PAIR_ETH)) {
                 LOG.info("Init ticker {} {} {}", symbol, time2Candle.size(), Utils.normalizeDateYYYYMMDDHHmm(time2Candle.firstKey()));
             }
         } catch (Exception e) {
@@ -349,8 +349,8 @@ public class ListenAllTicker {
         }
         if (counterError > 0) {
             LOG.info("Symbol ticker error: {}", counterError);
-            if (counterError > 100){
-                Utils.reset("Reset by ticker error over 100 " + counterError );
+            if (counterError > 100) {
+                Utils.reset("Reset by ticker error over 100 " + counterError);
             }
         }
         return result;
