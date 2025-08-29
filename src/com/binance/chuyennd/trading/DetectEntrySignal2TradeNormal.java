@@ -103,8 +103,8 @@ public class DetectEntrySignal2TradeNormal {
             Map<String, Double> symbol2Max4h = new HashMap<>();
             Map<String, Double> symbol2Min4h = new HashMap<>();
             Map<String, Double> symbol2Min15m = new HashMap<>();
-            ConcurrentHashMap<String, List<KlineObjectNumber>> symbol2Tickers = ListenAllTicker.getInstance().getAllTicker();
-            List<KlineObjectNumber> btcTickers = symbol2Tickers.get(Constants.SYMBOL_PAIR_BTC);
+            ConcurrentHashMap<String, List<KlineObjectNumber>> symbol2LastTickers = ListenAllTicker.getInstance().getAllTicker();
+            List<KlineObjectNumber> btcTickers = symbol2LastTickers.get(Constants.SYMBOL_PAIR_BTC);
             KlineObjectNumber btcTicker = btcTickers.get(btcTickers.size() - 1);
             Double btcRateChange = Utils.rateOf2Double(btcTicker.priceClose, btcTicker.priceOpen);
             Double btcMax15M = null;
@@ -112,7 +112,7 @@ public class DetectEntrySignal2TradeNormal {
 
             long time = btcTicker.startTime.longValue();
 //            symbol2Sell.clear();
-            for (Map.Entry<String, List<KlineObjectNumber>> entry : symbol2Tickers.entrySet()) {
+            for (Map.Entry<String, List<KlineObjectNumber>> entry : symbol2LastTickers.entrySet()) {
                 try {
                     String symbol = entry.getKey();
                     if (Constants.diedSymbol.contains(symbol)) {
@@ -228,6 +228,11 @@ public class DetectEntrySignal2TradeNormal {
                 for (String symbol : symbol2BUY) {
                     try {
                         KlineObjectNumber ticker = symbol2FinalTicker.get(symbol);
+                        List<KlineObjectNumber> tickers = symbol2LastTickers.get(symbol);
+                        // ================== GỌI HÀM LỌC DUY NHẤT ==================
+                        if (TradeUtils.shouldAvoidEntryProduction(symbol, tickers)) {
+                            continue; // Bỏ qua nếu có rủi ro
+                        }
                         createOrderBuyRequest(symbol, ticker, levelChange, symbol2Max15m.get(symbol), marketRate);
                     } catch (Exception e) {
                         e.printStackTrace();
@@ -302,7 +307,12 @@ public class DetectEntrySignal2TradeNormal {
                         LOG.info("Funding buy {} {} close: {} rate:{} max15M: {} min15M:{} max4h:{}" +
                                         " min4h:{} tickers:{}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time),
                                 ticker.priceClose, rateTicker,
-                                rateMax15M, rateMin15M, rateMax4h, rateMin4h, symbol2Tickers.get(symbol).size());
+                                rateMax15M, rateMin15M, rateMax4h, rateMin4h, symbol2LastTickers.get(symbol).size());
+                        List<KlineObjectNumber> tickers = symbol2LastTickers.get(symbol);
+                        // ================== GỌI HÀM LỌC DUY NHẤT ==================
+                        if (TradeUtils.shouldAvoidEntryProduction(symbol, tickers)) {
+                            continue; // Bỏ qua nếu có rủi ro
+                        }
                         createOrderBuyRequest(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY,
                                 symbol2Max15m.get(symbol), marketRate);
                     }
@@ -319,6 +329,11 @@ public class DetectEntrySignal2TradeNormal {
                         KlineObjectNumber ticker = symbol2FinalTicker.get(symbol);
                         if (!Utils.isTickerAvailable(ticker)) {
                             continue;
+                        }
+                        List<KlineObjectNumber> tickers = symbol2LastTickers.get(symbol);
+                        // ================== GỌI HÀM LỌC DUY NHẤT ==================
+                        if (TradeUtils.shouldAvoidEntryProduction(symbol, tickers)) {
+                            continue; // Bỏ qua nếu có rủi ro
                         }
                         createOrderBuyRequest(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY_SPECIAL,
                                 symbol2Max15m.get(symbol), marketRate);

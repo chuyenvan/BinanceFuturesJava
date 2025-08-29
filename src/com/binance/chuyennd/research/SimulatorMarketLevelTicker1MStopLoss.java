@@ -15,6 +15,7 @@ import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.trading.MarketBigChangeDetector;
 import com.binance.chuyennd.trading.OrderTargetStatus;
+import com.binance.chuyennd.trading.TradeUtils;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Storage;
 import com.binance.chuyennd.utils.StorageSnappy;
@@ -168,7 +169,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                         }
                                         List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
                                         // ================== GỌI HÀM LỌC DUY NHẤT ==================
-                                        if (MarketBigChangeDetectorTest.shouldAvoidEntry(symbol, tickers)) {
+                                        if (TradeUtils.shouldAvoidEntry(symbol, tickers)) {
                                             continue; // Bỏ qua nếu có rủi ro
                                         }
                                         createOrderBUY(symbol, ticker, levelChange, time2MarketRateChange.get(time), symbol2PriceMax15M.get(symbol));
@@ -216,7 +217,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
                                         List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
                                         // ================== GỌI HÀM LỌC DUY NHẤT ==================
-                                        if (MarketBigChangeDetectorTest.shouldAvoidEntry(symbol, tickers)) {
+                                        if (TradeUtils.shouldAvoidEntry(symbol, tickers)) {
                                             continue; // Bỏ qua nếu có rủi ro
                                         }
                                         Double priceMax15M = getMax15M(tickers);
@@ -280,7 +281,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                         }
                                         List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
                                         // ================== GỌI HÀM LỌC DUY NHẤT ==================
-                                        if (MarketBigChangeDetectorTest.shouldAvoidEntry(symbol, tickers)) {
+                                        if (TradeUtils.shouldAvoidEntry(symbol, tickers)) {
                                             continue; // Bỏ qua nếu có rủi ro
                                         }
                                         createOrderBUY(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY_SPECIAL,

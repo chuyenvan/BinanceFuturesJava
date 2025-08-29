@@ -84,7 +84,7 @@ public class BudgetManagerSimple {
 //        CapitalMode capitalMod = getCurrentCapitalMode();
 //        switch (capitalMod) {
 //            case SAFE:
-                return BUDGET_PER_ORDER * 0.5;
+        return BUDGET_PER_ORDER * 0.6;
 //            case DEFENSIVE:
 //                return BUDGET_PER_ORDER * 0.3;
 //            default:
