@@ -1,8 +1,6 @@
 package com.binance.chuyennd.trading;
 
 import com.binance.chuyennd.client.BinanceFuturesClientSingleton;
-import com.binance.chuyennd.client.ClientSingleton;
-import com.binance.chuyennd.helper.PositionHelper;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
 import com.binance.chuyennd.utils.Utils;

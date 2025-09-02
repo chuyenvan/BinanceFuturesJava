@@ -186,7 +186,7 @@ public class MarketBigChangeDetectorTest {
         // 2. Tỷ lệ nến đỏ tối thiểu trong chuỗi (ví dụ: 0.7 tương đương 70%)
         final double MIN_RED_CANDLE_PERCENTAGE = 0.7;
         // 3. Mức giảm giá tối thiểu từ đỉnh của chuỗi đến giá đóng cửa hiện tại (số âm)
-        final double MIN_PRICE_DROP_PERCENTAGE = -0.05; // Yêu cầu giảm ít nhất 6%
+        final double MIN_PRICE_DROP_PERCENTAGE = -0.045; // Yêu cầu giảm ít nhất 6%
         // 4. Hệ số suy yếu của volume: volume cuối phải nhỏ hơn X lần volume trung bình
         final double VOLUME_WEAKENING_FACTOR = 0.6; // Volume cuối < 80% volume trung bình
         // =================================================================
@@ -376,125 +376,7 @@ public class MarketBigChangeDetectorTest {
         }
         return false;
     }
-// Dán 3 phương thức này vào bên trong class MarketBigChangeDetectorTest.java
 
-    /**
-     * PHƯƠNG PHÁP 1: Tín hiệu "Lò xo Nén" (Volatility Squeeze) và phá vỡ lên trên.
-     */
-    public static boolean isVolatilitySqueezeBreakout(List<KlineObjectSimple> tickers) {
-        final int period = 20;
-        if (tickers == null || tickers.size() < period) return false;
-
-        Map<String, Double> bands = TechnicalAnalysisUtils.calculateBollingerBands(tickers, period, 2.0);
-        if (bands == null) return false;
-
-        double upperBand = bands.get("UPPER");
-        double lowerBand = bands.get("LOWER");
-        double middleBand = bands.get("MIDDLE");
-
-        // 1. Xác định "Lò xo Nén": Dải băng rất hẹp
-        double bandWidth = (upperBand - lowerBand) / middleBand;
-        boolean isSqueeze = bandWidth < 0.02; // Tùy chỉnh ngưỡng "hẹp", ví dụ 2%
-
-        // 2. Tín hiệu Mua: Giá đóng cửa của nến cuối cùng vượt lên trên dải băng trên SAU KHI bị nén
-        KlineObjectSimple lastCandle = tickers.get(tickers.size() - 1);
-        if (isSqueeze && lastCandle.priceClose > upperBand) {
-            // LOG.info("{} - TÍN HIỆU LÒ XO NÉN PHÁ VỠ", lastCandle.symbol);
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * PHƯƠNG PHÁP 2: Tín hiệu "Phân kỳ Tăng giá" (Bullish Divergence) với RSI.
-     * Đây là logic đơn giản, có thể được cải tiến thêm.
-     */
-    public static boolean isBullishDivergence(List<KlineObjectSimple> tickers) {
-        final int rsiPeriod = 14;
-        final int lookbackPeriod = 30; // Tìm kiếm đáy trong 30 nến gần nhất
-        if (tickers == null || tickers.size() < lookbackPeriod + rsiPeriod) return false;
-
-        // Tìm đáy giá gần nhất (low2)
-        int low2_index = -1;
-        double low2_price = Double.MAX_VALUE;
-        for (int i = tickers.size() - 1; i >= tickers.size() - lookbackPeriod; i--) {
-            if (tickers.get(i).minPrice < low2_price) {
-                low2_price = tickers.get(i).minPrice;
-                low2_index = i;
-            }
-        }
-
-        // Tìm đáy giá trước đó (low1) phải cao hơn low2
-        int low1_index = -1;
-        double low1_price = Double.MAX_VALUE;
-        for (int i = low2_index - 1; i >= tickers.size() - lookbackPeriod - 1; i--) {
-            if (tickers.get(i).minPrice < low1_price) {
-                low1_price = tickers.get(i).minPrice;
-                low1_index = i;
-            }
-        }
-
-        // Nếu tìm thấy 2 đáy thỏa mãn: đáy sau thấp hơn đáy trước
-        if (low1_index != -1 && low2_index != -1 && low2_price < low1_price) {
-            // Tính RSI tại 2 thời điểm đáy
-            double rsi1 = TechnicalAnalysisUtils.calculateRSI(tickers.subList(0, low1_index + 1), rsiPeriod);
-            double rsi2 = TechnicalAnalysisUtils.calculateRSI(tickers.subList(0, low2_index + 1), rsiPeriod);
-
-            // Kiểm tra điều kiện phân kỳ: RSI đáy sau cao hơn RSI đáy trước
-            if (rsi1 != -1 && rsi2 != -1 && rsi2 > rsi1) {
-                // LOG.info("{} - TÍN HIỆU PHÂN KỲ TĂNG GIÁ", tickers.get(0).symbol);
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * PHƯƠNG PHÁP 3: Tín hiệu "Hấp thụ Phe Bán" (Sell-side Absorption).
-     */
-    public static boolean isSellSideAbsorption(List<KlineObjectSimple> tickers) {
-        final int volumeLookback = 20;
-        if (tickers == null || tickers.size() < volumeLookback + 2) return false;
-
-        KlineObjectSimple lastCandle = tickers.get(tickers.size() - 1);
-        KlineObjectSimple prevCandle = tickers.get(tickers.size() - 2);
-
-        // 1. Nến trước đó phải là một nến bán tháo (đỏ, thân dài, volume lớn)
-        boolean isPrevCandleBearish = prevCandle.priceClose < prevCandle.priceOpen;
-        if (!isPrevCandleBearish) return false;
-
-        // Tính volume trung bình
-        double avgVolume = 0;
-        for(int i = tickers.size() - volumeLookback - 2; i < tickers.size() - 2; i++) {
-            avgVolume += tickers.get(i).totalUsdt;
-        }
-        avgVolume /= volumeLookback;
-
-        boolean isHighVolume = prevCandle.totalUsdt > (avgVolume * 3.0); // Volume gấp 3 lần trung bình
-        if (!isHighVolume) return false;
-
-        // 2. Nến cuối cùng phải là nến xanh và đóng cửa trên 50% thân nến đỏ trước đó
-        boolean isLastCandleBullish = lastCandle.priceClose > lastCandle.priceOpen;
-        if (!isLastCandleBullish) return false;
-
-        double prevCandleMidPoint = (prevCandle.priceOpen + prevCandle.priceClose) / 2.0;
-        if (lastCandle.priceClose > prevCandleMidPoint) {
-            // LOG.info("{} - TÍN HIỆU HẤP THỤ PHE BÁN", lastCandle.symbol);
-            return true;
-        }
-
-        return false;
-    }
-
-
-    /**
-     * Hàm gộp TOÀN DIỆN: Kiểm tra tất cả các điều kiện không thuận lợi trước khi vào lệnh,
-     * chỉ dựa vào danh sách các nến gần nhất của symbol.
-     *
-     * @param symbol        Tên của symbol để ghi log.
-     * @param recentTickers Danh sách các nến 1 phút gần nhất.
-     * @return true nếu nên TRÁNH vào lệnh, ngược lại false.
-     */
 
 }
 

@@ -8,7 +8,6 @@ import com.binance.chuyennd.object.CapitalMode;
 import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
-import com.binance.client.constant.Constants;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -84,6 +83,9 @@ public class BudgetManagerSimple {
 //        CapitalMode capitalMod = getCurrentCapitalMode();
 //        switch (capitalMod) {
 //            case SAFE:
+//        Double ratePerOrder = Configs.RATE_BUDGET_LIMIT_A_SIGNAL / Configs.NUMBER_ENTRY_EACH_SIGNAL;
+//        BUDGET_PER_ORDER = ratePerOrder * (balanceCurrent + unProfit) / number_order_budget;
+
         return BUDGET_PER_ORDER * 0.6;
 //            case DEFENSIVE:
 //                return BUDGET_PER_ORDER * 0.3;
@@ -286,23 +288,6 @@ public class BudgetManagerSimple {
                 balanceIndex.unProfitMin, Utils.formatPercent(balanceIndex.unProfitMin / balanceBasic),
                 Utils.normalizeDateYYYYMMDDHHmm(balanceIndex.timeUnProfitMin)
         );
-    }
-
-    public Double calRateLossDynamicBuy(Double unProfit) {
-        Double rateLoss = unProfit * 1000;
-        Long tradingStopRate;
-        Long maxRateTradingStop = 50l;
-//        if (maxChangeIn15M != null && maxChangeIn15M > 0.01) {
-//            maxRateTradingStop = maxRateTradingStop  + 20;
-//        }
-        if (rateLoss < maxRateTradingStop * 2) {
-            tradingStopRate = rateLoss.longValue() / 2;
-            tradingStopRate -= 2;
-        } else {
-            tradingStopRate = maxRateTradingStop;
-        }
-        rateLoss = rateLoss.longValue() - tradingStopRate.doubleValue();
-        return rateLoss / 1000;
     }
 
 

@@ -21,7 +21,6 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.text.ParseException;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class TraceData2Test {
     public static final Logger LOG = LoggerFactory.getLogger(TraceData2Test.class);
@@ -335,7 +334,7 @@ public class TraceData2Test {
                     timeOrder = orderTarget.timeUpdate - orderTarget.timeStart;
                 }
             }
-            if (timeOrder > 15 * Utils.TIME_DAY) {
+            if (timeOrder > 30 * Utils.TIME_DAY) {
                 int year = Utils.getYear(time);
                 if (orders.get(0).side.equals(OrderSide.BUY)) {
                     Integer counterOrderSlow = year2OrderBuySlowCounter.get(year);

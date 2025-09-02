@@ -54,16 +54,16 @@ public class FundingFeeManager {
 //            long time = Utils.sdfFileHour.parse("20250705 05:11").getTime();
 //            LOG.info("{}", Utils.normalizeDateYYYYMMDDHHmm(Utils.get2Hour(time)));
 //            LOG.info("{}", Utils.normalizeDateYYYYMMDDHHmm(Utils.get4Hour(time)));
-//            FundingFeeManager.getInstance().printLastFunding("HIPPOUSDT");
-            for (String symbol : FundingFeeManager.getInstance().symbol2FundingFee.keySet()) {
-                TreeMap<Long, FundingRate> time2Rate = FundingFeeManager.getInstance().symbol2FundingFee.get(symbol);
-                for (Long time : time2Rate.keySet()) {
-                    if (Math.abs(time2Rate.get(time).getFundingRate().doubleValue()) >= 0.02) {
-                        LOG.info("{} {} {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time), time2Rate.get(time).getFundingRate(),
-                                time2Rate.get(time).getMarkPrice().doubleValue());
-                    }
-                }
-            }
+            FundingFeeManager.getInstance().printLastFunding("MITOUSDT");
+//            for (String symbol : FundingFeeManager.getInstance().symbol2FundingFee.keySet()) {
+//                TreeMap<Long, FundingRate> time2Rate = FundingFeeManager.getInstance().symbol2FundingFee.get(symbol);
+//                for (Long time : time2Rate.keySet()) {
+//                    if (Math.abs(time2Rate.get(time).getFundingRate().doubleValue()) >= 0.02) {
+//                        LOG.info("{} {} {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time), time2Rate.get(time).getFundingRate(),
+//                                time2Rate.get(time).getMarkPrice().doubleValue());
+//                    }
+//                }
+//            }
 //            Set<String> symbolAllFunding = FundingFeeManager.getInstance().getAllFunding(time);
 //            Set<String> symbolFundingBuy = FundingFeeManager.getInstance().getFundingBuyNew(time);
 //            TreeMap<Double, String> symbolFundingBig = FundingFeeManager.getInstance().getFundingBig(time);
@@ -219,35 +219,34 @@ public class FundingFeeManager {
      * @return Một TreeMap được sắp xếp, với key là mức funding fee (càng âm càng ở đầu),
      * và value là tên symbol. Trả về rỗng nếu không có symbol nào thỏa mãn.
      */
-    public TreeMap<Double, String> getExtremeNegativeFundingSymbols(long time, Double fundingFeeMin) {
-        // ================== CÁC THAM SỐ CÓ THỂ TÙY CHỈNH ==================
-        // Mức funding được coi là "cực đoan". Mặc định là -0.001 tương đương -0.1%
-        // Các mức khác bạn có thể thử: -0.0005 (-0.05%), -0.002 (-0.2%)
-        final double EXTREME_FUNDING_THRESHOLD = fundingFeeMin;
-        // =================================================================
-
-        TreeMap<Double, String> extremeFundingSymbols = new TreeMap<>();
-        long timeGet = Utils.getHour(time); // Lấy giờ chẵn gần nhất để khớp với dữ liệu funding
-
+    public Set<String> getExtremeNegativeFundingSymbols(long time, Double fundingFeeMin) {
+        Set<String> symbols = new HashSet();
+        long timeGet = Utils.getHour(time);
         for (String symbol : symbol2FundingFee.keySet()) {
             TreeMap<Long, FundingRate> time2Funding = symbol2FundingFee.get(symbol);
-            if (time2Funding == null || time2Funding.isEmpty()) {
-                continue;
-            }
-
-            // Tìm entry funding gần nhất tại hoặc trước thời điểm kiểm tra
-            Map.Entry<Long, FundingRate> lastEntry = time2Funding.floorEntry(timeGet);
-
-            if (lastEntry != null) {
-                double currentRate = lastEntry.getValue().getFundingRate().doubleValue();
-
-                // Kiểm tra nếu mức funding đủ âm để được coi là cực đoan
-                if (currentRate < EXTREME_FUNDING_THRESHOLD) {
-                    extremeFundingSymbols.put(currentRate, symbol);
+            TreeMap<Long, FundingRate> time2FundingGet = new TreeMap<>();
+            for (int i = 0; i < 30; i++) {
+                Long timeF = timeGet - i * Utils.TIME_HOUR;
+                if (time2Funding.containsKey(timeF)) {
+                    time2FundingGet.put(timeF, time2Funding.get(timeF));
+                }
+                if (time2FundingGet.size() >= 4) {
+                    break;
                 }
             }
+            for (FundingRate funding : time2FundingGet.values()) {
+                if (funding.getFundingRate().doubleValue() < fundingFeeMin) {
+                    symbols.add(symbol);
+                }
+            }
+            StringBuilder builder = new StringBuilder();
+            for (Long key : time2FundingGet.keySet()) {
+                builder.append(Utils.normalizeDateYYYYMMDDHHmm(key)).append(" ").append(time2FundingGet.get(key).getFundingRate()).append(" ");
+            }
+//            LOG.info("{} {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time), builder);
+
         }
-        return extremeFundingSymbols;
+        return symbols;
     }
     public TreeMap<Double, String> getFundingBig(long time) {
         TreeMap<Double, String> fundingFee2Symbol = new TreeMap<>();

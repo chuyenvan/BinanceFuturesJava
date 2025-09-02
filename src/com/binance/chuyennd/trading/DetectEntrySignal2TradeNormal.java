@@ -15,15 +15,14 @@
  */
 package com.binance.chuyennd.trading;
 
-import com.binance.chuyennd.bigchange.market.MarketBigChangeDetectorTest;
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.helper.PositionHelper;
-import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
-import com.binance.chuyennd.research.FundingFeeManager;
+import com.binance.chuyennd.tradecore.DcaProcessor;
+import com.binance.chuyennd.tradecore.TradeUtils;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.StorageSnappy;
 import com.binance.chuyennd.utils.Utils;
@@ -35,6 +34,7 @@ import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.text.ParseException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -47,7 +47,9 @@ import java.util.concurrent.Executors;
 public class DetectEntrySignal2TradeNormal {
 
     public static final Logger LOG = LoggerFactory.getLogger(DetectEntrySignal2TradeNormal.class);
+    private static final String FILE_STORAGE_SELLING_EXHAUSTED = "storage/data/SellingExhausted.data";
     public ExecutorService executorService = Executors.newFixedThreadPool(Configs.NUMBER_THREAD_ORDER_MANAGER);
+    public ConcurrentHashMap<String, Long> symbolSellingExhausted = new ConcurrentHashMap<>();
 
     public static void main(String[] args) throws InterruptedException, ParseException {
 //        new DetectEntrySignal2Trader().getTickerBySymbol("QNTUSDT");
@@ -108,7 +110,7 @@ public class DetectEntrySignal2TradeNormal {
             KlineObjectNumber btcTicker = btcTickers.get(btcTickers.size() - 1);
             Double btcRateChange = Utils.rateOf2Double(btcTicker.priceClose, btcTicker.priceOpen);
             Double btcMax15M = null;
-            Set<String> symbolSellingExhausted = new HashSet<>();
+
 
             long time = btcTicker.startTime.longValue();
 //            symbol2Sell.clear();
@@ -124,7 +126,7 @@ public class DetectEntrySignal2TradeNormal {
                         continue;
                     }
                     if (MarketBigChangeDetector.isSellingExhausted(tickers, symbol)) {
-                        symbolSellingExhausted.add(symbol);
+                        symbolSellingExhausted.put(symbol, time);
                     }
                     symbol2FinalTicker.put(symbol, ticker);
                     Double rateChange = Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen);
@@ -181,7 +183,8 @@ public class DetectEntrySignal2TradeNormal {
 
 
             // dca buy
-            List<String> symbolDcaLossBig = getDCA(null);
+            List<String> symbolDcaLossBig = DcaProcessor.getDCAProduction(null, System.currentTimeMillis(),
+                    BudgetManager.getInstance().getBudget(), BudgetManager.getInstance().symbol2Pos);
             if (!symbolDcaLossBig.isEmpty()) {
                 LOG.info("DCA big loss:{}", symbolDcaLossBig);
             }
@@ -239,7 +242,8 @@ public class DetectEntrySignal2TradeNormal {
                     }
                 }
                 try {
-                    List<String> symbolDcaLevel = getDCA(levelChange);
+                    List<String> symbolDcaLevel = DcaProcessor.getDCAProduction(levelChange, System.currentTimeMillis(),
+                            BudgetManager.getInstance().getBudget(), BudgetManager.getInstance().symbol2Pos);
                     for (String symbol : symbolDcaLevel) {
                         KlineObjectNumber ticker = symbol2FinalTicker.get(symbol);
                         OrderTargetInfo orderRunning = getOrderInfo(symbol);
@@ -277,7 +281,6 @@ public class DetectEntrySignal2TradeNormal {
                     if (!Utils.isTickerAvailable(ticker)) {
                         continue;
                     }
-
                     Double priceMax15M = symbol2Max15m.get(symbol);
                     Double priceMin15M = symbol2Min15m.get(symbol);
                     Double rateTicker = Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen);
@@ -322,12 +325,18 @@ public class DetectEntrySignal2TradeNormal {
             }
             if (rateDown15MAvg < -0.015) {
                 // ========== LOGIC CHO TÍN HIỆU FUNDING ÂM CỰC ĐOAN ==========
-                TreeMap<Double, String> extremeFundingSymbols = FundingFeeManagerProduction.getInstance().getExtremeNegativeFundingSymbols(time);
-                for (String symbol : extremeFundingSymbols.values()) {
+                Set<String> extremeFundingSymbols = FundingFeeManagerProduction.getInstance().extremeNegative;
+                for (String symbol : extremeFundingSymbols) {
                     // Chỉ vào lệnh nếu chưa có vị thế đang chạy cho symbol này
-                    if (!BudgetManager.getInstance().symbol2Pos.containsKey(symbol) && symbolSellingExhausted.contains(symbol)) {
+                    if (!BudgetManager.getInstance().symbol2Pos.containsKey(symbol) && symbolSellingExhausted.containsKey(symbol)) {
                         KlineObjectNumber ticker = symbol2FinalTicker.get(symbol);
                         if (!Utils.isTickerAvailable(ticker)) {
+                            continue;
+                        }
+                        if (symbolSellingExhausted.get(symbol) < time - Utils.TIME_DAY) {
+                            LOG.info("SellingExhausted of {} over time: {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time),
+                                    Utils.normalizeDateYYYYMMDDHHmm(symbolSellingExhausted.get(symbol)));
+                            symbolSellingExhausted.remove(symbol);
                             continue;
                         }
                         List<KlineObjectNumber> tickers = symbol2LastTickers.get(symbol);
@@ -355,17 +364,17 @@ public class DetectEntrySignal2TradeNormal {
                             KlineObjectNumber ticker = symbol2FinalTicker.get(symbol);
                             OrderTargetInfo orderRunning = getOrderInfo(symbol);
                             if (ticker != null && orderRunning != null
-                                    && Utils.rateOf2Double(ticker.priceClose, orderRunning.priceEntry) < -0.03) {
+                                    && Utils.rateOf2Double(ticker.priceClose, orderRunning.priceEntry) < -0.1) {
                                 symbol2BUY.add(symbol);
 
                             }
                         } else {
-                            if (calRateLoss(symbol) < -0.03 || calRateLoss(symbol) > 0.02) {
+                            if (calRateLoss(symbol) < -0.05 || calRateLoss(symbol) > 0.02) {
                                 symbol2BUY.add(symbol);
                             }
                         }
                     } else {
-                        if (calRateLoss(symbol) < -0.02 || calRateLoss(symbol) > 0.02) {
+                        if (calRateLoss(symbol) < -0.03 || calRateLoss(symbol) > 0.02) {
                             symbol2BUY.add(symbol);
                         }
                     }
@@ -380,6 +389,7 @@ public class DetectEntrySignal2TradeNormal {
                     + "/" + time, rateDown15M2Symbols);
             StorageSnappy.writeObject2File("storage/data/rateDown1M/" + Utils.normalizeDateYYYYMMDD(time)
                     + "/" + time, rateDown2Symbols);
+            StorageSnappy.writeObject2File(FILE_STORAGE_SELLING_EXHAUSTED, symbolSellingExhausted);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -417,71 +427,6 @@ public class DetectEntrySignal2TradeNormal {
         return null;
     }
 
-
-    public static List<String> getDCA(MarketLevelChange levelChange) {
-        List<String> symbols = new ArrayList<>();
-        Integer durationDca = null;
-        Double rateLoss2Dca = null;
-        Boolean isAll = false;
-        if (levelChange == null) {
-            durationDca = 1;
-            rateLoss2Dca = -0.25;
-        } else {
-            if (levelChange.equals(MarketLevelChange.BIG_DOWN)) {
-                isAll = true;
-                durationDca = 8;
-                rateLoss2Dca = -0.05;
-            }
-            if (levelChange.equals(MarketLevelChange.MEDIUM_DOWN)
-                    || levelChange.equals(MarketLevelChange.BIG_UP)) {
-                durationDca = 15;
-                rateLoss2Dca = -0.08;
-            }
-            if (levelChange.equals(MarketLevelChange.MEDIUM_UP)
-                    || levelChange.equals(MarketLevelChange.MEDIUM_DOWN_15M)
-            ) {
-                durationDca = 15;
-                rateLoss2Dca = -0.15;
-            }
-            if (levelChange.equals(MarketLevelChange.SMALL_DOWN)
-            ) {
-                durationDca = 15;
-                rateLoss2Dca = -0.2;
-            }
-        }
-
-        if (rateLoss2Dca != null) {
-            Map<String, PositionRisk> symbol2Pos = new HashMap<>();
-            symbol2Pos.putAll(BudgetManager.getInstance().symbol2Pos);
-            for (PositionRisk pos : symbol2Pos.values()) {
-                Double rateLoss2DcaOfSym = rateLoss2Dca;
-                MarketLevelChange level = BudgetManager.getInstance().symbol2Level.get(pos.getSymbol());
-                if (!isAll) {
-                    Double margin = PositionHelper.callMargin(pos);
-                    rateLoss2DcaOfSym = BudgetManager.getInstance().callRate2DcaBuy(rateLoss2Dca, margin);
-                }
-                if (levelChange != null) {
-                    LOG.info("Check DCA: {} {} {} {} {}", pos.getSymbol(), level, Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()),
-                            PositionHelper.calRateLoss(pos), rateLoss2DcaOfSym);
-                }
-                if (pos != null
-                        && pos.getPositionAmt().doubleValue() > 0
-                        && PositionHelper.calRateLoss(pos) < rateLoss2DcaOfSym
-                ) {
-                    if (level != null
-                            && (level.equals(MarketLevelChange.DCA_LEVEL2)
-                            || level.equals(MarketLevelChange.DCA_LEVEL1))) {
-                        if (System.currentTimeMillis() > pos.getUpdateTime() + durationDca * Utils.TIME_MINUTE) {
-                            symbols.add(pos.getSymbol());
-                        }
-                    } else {
-                        symbols.add(pos.getSymbol());
-                    }
-                }
-            }
-        }
-        return symbols;
-    }
 
     private Set<String> addSpecialSymbol(Map<String, KlineObjectNumber> symbol2Ticker) {
         Set<String> symbol2Checks = new HashSet<>();
@@ -628,9 +573,11 @@ public class DetectEntrySignal2TradeNormal {
     }
 
     private void initData() {
-        Price4hManagerProduction.getInstance();
         SimpleMovingAverageDayManagerProduction.getInstance();
         SimpleMovingAverage4hManagerProduction.getInstance();
+        if (new File(FILE_STORAGE_SELLING_EXHAUSTED).exists()) {
+            symbolSellingExhausted = (ConcurrentHashMap<String, Long>) StorageSnappy.readObjectFromFile(FILE_STORAGE_SELLING_EXHAUSTED);
+        }
         ListenAllTicker.getInstance();
     }
 

@@ -1,7 +1,6 @@
 package com.binance.chuyennd.bigchange.test;
 
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
-import com.binance.chuyennd.grid.SimpleMovingAverageDayManager;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
@@ -10,7 +9,6 @@ import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.utils.Storage;
 import com.binance.chuyennd.utils.StorageSnappy;
 import com.binance.chuyennd.utils.Utils;
-import com.binance.client.constant.Constants;
 import com.binance.client.model.enums.OrderSide;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;

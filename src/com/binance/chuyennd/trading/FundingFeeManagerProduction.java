@@ -21,6 +21,7 @@ public class FundingFeeManagerProduction {
     private ConcurrentHashMap<String, TreeMap<Long, FundingRate>> symbol2FundingFee = new ConcurrentHashMap<>();
     public static final String FILE_DATA_FUNDING = "storage/funding/fundingData.data";
     public Set<String> fundingBuy = new HashSet<>();
+    public Set<String> extremeNegative = new HashSet<>();
     public Set<String> fundingSell = new HashSet<>();
     private static volatile FundingFeeManagerProduction INSTANCE = null;
 
@@ -55,13 +56,18 @@ public class FundingFeeManagerProduction {
                     Boolean isFundingSell = true;
                     for (FundingRate funding : time2Rate.values()) {
                         if (funding.getFundingRate().doubleValue() < 0.00) {
+                            if (funding.getFundingRate().doubleValue() < -0.0005) {
+                                extremeNegative.add(symbol);
+                            }
                             fundingBuy.add(symbol);
                             fundingSell.remove(symbol);
                             isFundingSell = false;
                             break;
                         }
+
                     }
                     if (isFundingSell) {
+                        extremeNegative.remove(symbol);
                         fundingBuy.remove(symbol);
                         fundingSell.add(symbol);
                     } else {
@@ -81,36 +87,6 @@ public class FundingFeeManagerProduction {
             }
         }
         LOG.info("Total funding fee buy: {}", fundingBuy.size());
-    }
-    public TreeMap<Double, String> getExtremeNegativeFundingSymbols(long time) {
-        // ================== CÁC THAM SỐ CÓ THỂ TÙY CHỈNH ==================
-        // Mức funding được coi là "cực đoan". Mặc định là -0.001 tương đương -0.1%
-        // Các mức khác bạn có thể thử: -0.0005 (-0.05%), -0.002 (-0.2%)
-        final double EXTREME_FUNDING_THRESHOLD = -0.0005;
-        // =================================================================
-
-        TreeMap<Double, String> extremeFundingSymbols = new TreeMap<>();
-        long timeGet = Utils.getHour(time); // Lấy giờ chẵn gần nhất để khớp với dữ liệu funding
-
-        for (String symbol : symbol2FundingFee.keySet()) {
-            TreeMap<Long, FundingRate> time2Funding = symbol2FundingFee.get(symbol);
-            if (time2Funding == null || time2Funding.isEmpty()) {
-                continue;
-            }
-
-            // Tìm entry funding gần nhất tại hoặc trước thời điểm kiểm tra
-            Map.Entry<Long, FundingRate> lastEntry = time2Funding.floorEntry(timeGet);
-
-            if (lastEntry != null) {
-                double currentRate = lastEntry.getValue().getFundingRate().doubleValue();
-
-                // Kiểm tra nếu mức funding đủ âm để được coi là cực đoan
-                if (currentRate < EXTREME_FUNDING_THRESHOLD) {
-                    extremeFundingSymbols.put(currentRate, symbol);
-                }
-            }
-        }
-        return extremeFundingSymbols;
     }
 
     private void initAllFunding() {
@@ -138,17 +114,22 @@ public class FundingFeeManagerProduction {
     }
 
     public static void main(String[] args) throws ParseException {
-//        TreeMap<Long, FundingRate> time2Rate = FundingFeeManagerProduction.getInstance().symbol2FundingFee.get("SIGNUSDT");
-        for (String symbol : FundingFeeManagerProduction.getInstance().symbol2FundingFee.keySet()) {
-            TreeMap<Long, FundingRate> time2Rate = FundingFeeManagerProduction.getInstance().symbol2FundingFee.get(symbol);
-            for (Long time : time2Rate.keySet()) {
-                if (Math.abs(time2Rate.get(time).getFundingRate().doubleValue()) >= 0.02) {
-                    LOG.info("{} {} {}",symbol, Utils.normalizeDateYYYYMMDDHHmm(time), time2Rate.get(time).getFundingRate());
-                }
-            }
+        TreeMap<Long, FundingRate> time2Rate = FundingFeeManagerProduction.getInstance().symbol2FundingFee.get("MITOUSDT");
+        for (Long time : time2Rate.keySet()) {
+            LOG.info("{} {}", Utils.normalizeDateYYYYMMDDHHmm(time), time2Rate.get(time).getFundingRate());
         }
-        LOG.info("size: ------------------------------ {} {}", FundingFeeManagerProduction.getInstance().fundingBuy.size(),
-                FundingFeeManagerProduction.getInstance().symbol2FundingFee.size());
+//        long time = Utils.sdfFileHour.parse("20250830 23:14").getTime();
+//        System.out.println(FundingFeeManagerProduction.getInstance().getExtremeNegativeFundingSymbols(time));
+//        for (String symbol : FundingFeeManagerProduction.getInstance().symbol2FundingFee.keySet()) {
+//            TreeMap<Long, FundingRate> time2Rate = FundingFeeManagerProduction.getInstance().symbol2FundingFee.get(symbol);
+//            for (Long time : time2Rate.keySet()) {
+//                if (Math.abs(time2Rate.get(time).getFundingRate().doubleValue()) >= 0.02) {
+//                    LOG.info("{} {} {}",symbol, Utils.normalizeDateYYYYMMDDHHmm(time), time2Rate.get(time).getFundingRate());
+//                }
+//            }
+//        }
+//        LOG.info("size: ------------------------------ {} {}", FundingFeeManagerProduction.getInstance().fundingBuy.size(),
+//                FundingFeeManagerProduction.getInstance().symbol2FundingFee.size());
     }
 
 

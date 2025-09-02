@@ -17,7 +17,6 @@ package com.binance.chuyennd.trading;
 
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
 import com.binance.client.model.enums.OrderSide;
-import com.binance.client.model.trade.Order;
 
 import java.io.Serializable;
 

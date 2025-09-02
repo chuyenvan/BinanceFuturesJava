@@ -1,4 +1,4 @@
-package com.binance.chuyennd.trading;
+package com.binance.chuyennd.tradecore;
 
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
@@ -11,7 +11,21 @@ import java.util.List;
 public class TradeUtils {
     public static final Logger LOG = LoggerFactory.getLogger(TradeUtils.class);
 
-    public static Double calRateMinWithMaxChange15M(Double maxChange15M) {
+    public static Double calRateLossDynamicBuy(Double unProfit) {
+        Double rateLoss = unProfit * 1000;
+        Long tradingStopRate;
+        Long maxRateTradingStop = 50l;
+        if (rateLoss < maxRateTradingStop * 2) {
+            tradingStopRate = rateLoss.longValue() / 2;
+            tradingStopRate -= 2;
+        } else {
+            tradingStopRate = maxRateTradingStop;
+        }
+        rateLoss = rateLoss.longValue() - tradingStopRate.doubleValue();
+        return rateLoss / 1000;
+    }
+
+    public static Double calRateMinWithMaxChange60M(Double maxChange15M) {
         Double rateMin2MoveSl = Configs.RATE_PROFIT_STOP_MARKET;
         if (maxChange15M != null && maxChange15M > 0.006) {
             if (maxChange15M < 0.01) {
@@ -29,8 +43,8 @@ public class TradeUtils {
                             rateMin2MoveSl = 0.04;
                         }
                     } else {
-                        if (rateMin2MoveSl < 0.06) {
-                            rateMin2MoveSl = 0.06;
+                        if (rateMin2MoveSl < 0.05) {
+                            rateMin2MoveSl = 0.05;
                         }
                     }
                 }
@@ -49,13 +63,8 @@ public class TradeUtils {
         // ================== CÁC THAM SỐ CÓ THỂ TÙY CHỈNH ==================
         // 1. Chu kỳ xem xét để tính toán đỉnh/đáy (ví dụ: 15 phút)
         final int PRICE_LOOKBACK_PERIOD = 15;
-
-        // 2. Tham số cho bộ lọc "Vòng xoáy tử thần"
-        final double MIN_DOW_THRESHOLD = -0.05;
-        final double MIN_BOUNCE_RATIO_THRESHOLD = 0.35;
-
         // 3. Tham số cho bộ lọc "Thị trường ảm đạm"
-        final double MIN_MOVEMENT_RANGE_THRESHOLD = 0.045;
+        double MIN_MOVEMENT_RANGE_THRESHOLD = 0.045;
         // =================================================================
 
         // --- Bước 1: Kiểm tra dữ liệu đầu vào ---
@@ -78,23 +87,10 @@ public class TradeUtils {
                 periodMin = candle.minPrice;
             }
         }
-
         if (periodHigh == 0 || periodMin == 0) return false; // Dữ liệu bất thường, bỏ qua
 
         double dow = (currentClose - periodHigh) / periodHigh;
         double up = (currentClose - periodMin) / periodMin;
-
-        // --- Bước 3: Áp dụng các bộ lọc ---
-
-        // Lọc 1: "Vòng xoáy tử thần"
-//        if (dow < MIN_DOW_THRESHOLD) {
-//            double bounceRatio = up / Math.abs(dow);
-//            if (bounceRatio < MIN_BOUNCE_RATIO_THRESHOLD) {
-//                LOG.warn("!!! TRÁNH VÀO LỆNH (Vòng xoáy tử thần): {} | Giảm {}%, Phục hồi {}%",
-//                        symbol, String.format("%.2f", dow * 100), String.format("%.2f", up * 100));
-//                return true;
-//            }
-//        }
 
         // Lọc 2: "Thị trường ảm đạm"
         double movementRange = Math.abs(dow) + up;
@@ -107,17 +103,13 @@ public class TradeUtils {
         // Nếu không rơi vào trường hợp nào, có thể vào lệnh
         return false;
     }
+
     public static boolean shouldAvoidEntryProduction(String symbol, List<KlineObjectNumber> recentTickers) {
         // ================== CÁC THAM SỐ CÓ THỂ TÙY CHỈNH ==================
         // 1. Chu kỳ xem xét để tính toán đỉnh/đáy (ví dụ: 15 phút)
         final int PRICE_LOOKBACK_PERIOD = 15;
-
-        // 2. Tham số cho bộ lọc "Vòng xoáy tử thần"
-        final double MIN_DOW_THRESHOLD = -0.05;
-        final double MIN_BOUNCE_RATIO_THRESHOLD = 0.35;
-
         // 3. Tham số cho bộ lọc "Thị trường ảm đạm"
-        final double MIN_MOVEMENT_RANGE_THRESHOLD = 0.045;
+        double MIN_MOVEMENT_RANGE_THRESHOLD = 0.045;
         // =================================================================
 
         // --- Bước 1: Kiểm tra dữ liệu đầu vào ---
@@ -140,23 +132,10 @@ public class TradeUtils {
                 periodMin = candle.minPrice;
             }
         }
-
         if (periodHigh == 0 || periodMin == 0) return false; // Dữ liệu bất thường, bỏ qua
 
         double dow = (currentClose - periodHigh) / periodHigh;
         double up = (currentClose - periodMin) / periodMin;
-
-        // --- Bước 3: Áp dụng các bộ lọc ---
-
-        // Lọc 1: "Vòng xoáy tử thần"
-//        if (dow < MIN_DOW_THRESHOLD) {
-//            double bounceRatio = up / Math.abs(dow);
-//            if (bounceRatio < MIN_BOUNCE_RATIO_THRESHOLD) {
-//                LOG.warn("!!! TRÁNH VÀO LỆNH (Vòng xoáy tử thần): {} | Giảm {}%, Phục hồi {}%",
-//                        symbol, String.format("%.2f", dow * 100), String.format("%.2f", up * 100));
-//                return true;
-//            }
-//        }
 
         // Lọc 2: "Thị trường ảm đạm"
         double movementRange = Math.abs(dow) + up;

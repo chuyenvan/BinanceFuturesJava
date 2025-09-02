@@ -23,6 +23,7 @@ import com.binance.chuyennd.helper.PositionHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
+import com.binance.chuyennd.tradecore.TradeUtils;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.chuyennd.websocket.ListenAllTicker;
@@ -161,15 +162,15 @@ public class BinanceOrderTradingManager {
             updatePositionInfo();
         } catch (Exception e) {
             LOG.info("Error during process order: {}", Utils.toJson(order));
-//            try {
-//                if (order.timeStart > System.currentTimeMillis() - 5 * Utils.TIME_MINUTE) {
-//                    RedisHelper.getInstance().get().rpush(RedisConst.REDIS_KEY_BINANCE_TD_ORDER_MANAGER_QUEUE, Utils.toJson(order));
-//                }
-//                LOG.info("ReCreate order symbol false! {} {}", order.symbol, Utils.toJson(order));
-//                Thread.sleep(200);
-//            } catch (Exception ex) {
-//                ex.printStackTrace();
-//            }
+            try {
+                Thread.sleep(200);
+                if (order.timeStart > System.currentTimeMillis() - 5 * Utils.TIME_MINUTE) {
+                    RedisHelper.getInstance().get().rpush(RedisConst.REDIS_KEY_BINANCE_TD_ORDER_MANAGER_QUEUE, Utils.toJson(order));
+                }
+                LOG.info("ReCreate order symbol false! {} {}", order.symbol, Utils.toJson(order));
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
             e.printStackTrace();
         }
         symbol2Processing.remove(order.symbol);
@@ -246,11 +247,11 @@ public class BinanceOrderTradingManager {
                 }
 
                 Double maxChange60M = getMaxChange60M(symbol);
-                Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange15M(maxChange60M);
+                Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60M(maxChange60M);
                 if (rateLoss > rateMin2MoveSl) {
                     if (orderInfo.priceSL == null) {
                         OrderSide sideSL = OrderSide.SELL;
-                        Double rateStop = BudgetManager.getInstance().callRateLossDynamicBuy(rateLoss, rateMin2MoveSl);
+                        Double rateStop = TradeUtils.calRateLossDynamicBuy(rateLoss);
                         if (orderInfo.side.equals(OrderSide.SELL)) {
                             sideSL = OrderSide.BUY;
                         }
@@ -367,7 +368,7 @@ public class BinanceOrderTradingManager {
                 }
                 OrderSide side2Sl;
                 Double maxChange60M = getMaxChange60M(symbol);
-                Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange15M(maxChange60M * 1.5);
+                Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60M(maxChange60M * 1.5);
                 // BUY
                 if (position.getPositionAmt().compareTo(new BigDecimal("0")) > 0) {
                     side2Sl = OrderSide.SELL;
@@ -377,7 +378,7 @@ public class BinanceOrderTradingManager {
                 if (orderInfo.priceSL != null && rateLoss > rateMin2MoveSl) {
                     // move SL
                     Double priceSL = orderInfo.priceSL;
-                    Double rateSL = BudgetManager.getInstance().callRateLossDynamicBuy(rateLoss, rateMin2MoveSl);
+                    Double rateSL = TradeUtils.calRateLossDynamicBuy(rateLoss);
                     Double priceSLNew = Utils.calPriceTarget(symbol, priceEntry, side2Sl, -rateSL);
                     double priceSLChange = priceSLNew - priceSL;
                     if (position.getPositionAmt().compareTo(new BigDecimal("0")) < 0) {

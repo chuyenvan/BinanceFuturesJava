@@ -15,7 +15,6 @@ import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.chuyennd.websocket.ListenAllTicker;
 import com.binance.client.constant.Constants;
-import com.binance.client.model.enums.OrderSide;
 import com.binance.client.model.trade.Asset;
 import com.binance.client.model.trade.PositionRisk;
 import org.apache.commons.lang.StringUtils;
@@ -112,8 +111,6 @@ public class BudgetManager {
     }
 
 
-
-
     public Integer getLeverage() {
         return LEVERAGE_ORDER;
     }
@@ -159,18 +156,6 @@ public class BudgetManager {
         }
     }
 
-    public Double callRateLossDynamicBuy(Double unProfit, Double rateSLMin) {
-        Double rateLoss = unProfit * 1000;
-        Long tradingStopRate;
-        if (rateLoss < 100) {
-            tradingStopRate = rateLoss.longValue() / 2;
-            tradingStopRate -= 2;
-        } else {
-            tradingStopRate = 50l;
-        }
-        rateLoss = rateLoss.longValue() - tradingStopRate.doubleValue();
-        return rateLoss / 1000;
-    }
 
     public void removeSymbolNotPos(Set<String> symbols) {
         Set<String> hashSet = new HashSet<>();
@@ -187,30 +172,4 @@ public class BudgetManager {
             }
         }
     }
-
-    public Double callRate2DcaBuy(Double rateLoss2Dca, Double margin) {
-        Double rateLoss2DcaOfSym = rateLoss2Dca;
-        if (margin >= BudgetManager.getInstance().getBudget()) {
-            if (margin >= 1.5 * BudgetManager.getInstance().getBudget()) {
-                if (margin >= 2 * BudgetManager.getInstance().getBudget()) {
-                    if (margin >= 2.5 * BudgetManager.getInstance().getBudget()) {
-                        if (margin >= 3 * BudgetManager.getInstance().getBudget()) {
-                            rateLoss2DcaOfSym = -0.99;
-                        } else {
-                            rateLoss2DcaOfSym = -0.9;
-                        }
-                    } else {
-                        rateLoss2DcaOfSym = -0.8;
-                    }
-                } else {
-                    rateLoss2DcaOfSym = -0.7;
-                }
-            } else {
-                rateLoss2DcaOfSym = -0.5;
-            }
-        }
-        return rateLoss2DcaOfSym;
-    }
-
-
 }

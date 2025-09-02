@@ -20,10 +20,9 @@ import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.trading.OrderTargetStatus;
-import com.binance.chuyennd.trading.TradeUtils;
+import com.binance.chuyennd.tradecore.TradeUtils;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
-import com.binance.client.constant.Constants;
 import com.binance.client.model.enums.OrderSide;
 import com.binance.client.model.market.FundingRate;
 import org.slf4j.Logger;
@@ -209,10 +208,10 @@ public class OrderTargetInfoTest implements Serializable {
         return profitMin;
     }
 
-    public void updateStatusNew(Double maxChange15M) {
+    public void updateStatusNew(Double maxChange60M) {
         Double rateLoss = calRateLossMax();
-        Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange15M(maxChange15M);
-        Double rateStop = BudgetManagerSimple.getInstance().calRateLossDynamicBuy(rateLoss);
+        Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60M(maxChange60M);
+        Double rateStop = TradeUtils.calRateLossDynamicBuy(rateLoss);
         Double priceSLNew = Utils.calPriceTarget(symbol, priceEntry, OrderSide.SELL, -rateStop);
         if (rateLoss > rateMin2MoveSl) {
             if (priceSL == null) {
@@ -231,10 +230,10 @@ public class OrderTargetInfoTest implements Serializable {
     }
 
 
-    public void updateTPSL(Double rateChangeMax15M) {
+    public void updateTPSL(Double rateChangeMax60M) {
         Double rateLoss = calRateLossMax();
-        Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange15M(rateChangeMax15M * 1.5);
-        Double rateSL = BudgetManagerSimple.getInstance().calRateLossDynamicBuy(rateLoss);
+        Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60M(rateChangeMax60M * 1.5);
+        Double rateSL = TradeUtils.calRateLossDynamicBuy(rateLoss);
         // move SL
         if (priceSL != null) {
             OrderSide side2Sl = OrderSide.SELL;

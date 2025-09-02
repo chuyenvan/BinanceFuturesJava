@@ -1,8 +1,10 @@
 package com.binance.chuyennd.trading;
 
+import com.binance.chuyennd.bigchange.market.MarketBigChangeDetectorTest;
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
 import com.binance.chuyennd.helper.TickerFuturesHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
+import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
@@ -18,22 +20,22 @@ public class MarketBigChangeDetector {
 
     public static void main(String[] args) throws ParseException {
         try {
-            Long startTime = Utils.sdfFileHour.parse("20250611 03:20").getTime();
-
-            List<KlineObjectNumber> btcTickers = TickerFuturesHelper.getTickerWithStartTime(Constants.SYMBOL_PAIR_BTC, Constants.INTERVAL_1M,
-                    startTime - 360 * Utils.TIME_MINUTE);
-            while (true) {
-                if (btcTickers.get(btcTickers.size() - 1).startTime.longValue() > startTime) {
-                    btcTickers.remove(btcTickers.size() - 1);
-                } else {
-                    break;
-                }
-            }
-
-            LOG.info("{} {}", Utils.normalizeDateYYYYMMDDHHmm(btcTickers.get(0).startTime.longValue()),
-                    Utils.normalizeDateYYYYMMDDHHmm(btcTickers.get(btcTickers.size() - 1).startTime.longValue()));
-
-            System.out.println(MarketBigChangeDetector.isBtcTrendReverse(btcTickers));
+//            Long startTime = Utils.sdfFileHour.parse("20250831 19:23").getTime();
+//
+//            List<KlineObjectNumber> btcTickers = TickerFuturesHelper.getTickerWithStartTime(Constants.SYMBOL_PAIR_BTC, Constants.INTERVAL_1M,
+//                    startTime - 360 * Utils.TIME_MINUTE);
+//            while (true) {
+//                if (btcTickers.get(btcTickers.size() - 1).startTime.longValue() > startTime) {
+//                    btcTickers.remove(btcTickers.size() - 1);
+//                } else {
+//                    break;
+//                }
+//            }
+//
+//            LOG.info("{} {}", Utils.normalizeDateYYYYMMDDHHmm(btcTickers.get(0).startTime.longValue()),
+//                    Utils.normalizeDateYYYYMMDDHHmm(btcTickers.get(btcTickers.size() - 1).startTime.longValue()));
+//
+//            System.out.println(MarketBigChangeDetector.isBtcTrendReverse(btcTickers));
 
 //            btcTickers.remove(btcTickers.size() - 1);
 //            if (MarketBigChangeDetector.isBtcTrendReverse(btcTickers)) {
@@ -47,6 +49,35 @@ public class MarketBigChangeDetector {
 //                            Utils.normalizeDateYYYYMMDDHHmm(btcTickers.get(btcTickers.size() - 1).startTime.longValue()));
 //                }
 //            }
+            Long start = Utils.sdfFileHour.parse("20250830 23:11").getTime();
+            for (int i = 0; i < 100; i++) {
+                Long startTime = start - Utils.TIME_MINUTE * i;
+                String symbol = "MUSDT";
+//                List<KlineObjectNumber> tickerProds = TickerFuturesHelper.getTickerWithStartTime(symbol, Constants.INTERVAL_1M,
+//                        startTime - 60 * Utils.TIME_MINUTE);
+                List<KlineObjectSimple> tickers = TickerFuturesHelper.getTickerSimpleWithStartTime(symbol, Constants.INTERVAL_1M,
+                        startTime - 60 * Utils.TIME_MINUTE);
+                while (true) {
+                    if (tickers.get(tickers.size() - 1).startTime.longValue() > startTime) {
+                        tickers.remove(tickers.size() - 1);
+                    } else {
+                        break;
+                    }
+//                    if (tickerProds.get(tickers.size() - 1).startTime.longValue() > startTime) {
+//                        tickerProds.remove(tickers.size() - 1);
+//                    } else {
+//                        break;
+//                    }
+                }
+
+//            LOG.info("{} {} {} {}", Utils.normalizeDateYYYYMMDDHHmm(tickers.get(0).startTime.longValue()),
+//                    Utils.normalizeDateYYYYMMDDHHmm(tickers.get(tickers.size() - 1).startTime.longValue()),
+//                    Utils.normalizeDateYYYYMMDDHHmm(tickerProds.get(0).startTime.longValue()),
+//                    Utils.normalizeDateYYYYMMDDHHmm(tickerProds.get(tickers.size() - 1).startTime.longValue()));
+                LOG.info("{} {} {}", Utils.normalizeDateYYYYMMDDHHmm(startTime), MarketBigChangeDetectorTest.isSellingExhausted(tickers, symbol));
+//                        ,                        MarketBigChangeDetector.isSellingExhausted(tickerProds, symbol));
+            }
+
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -59,7 +90,7 @@ public class MarketBigChangeDetector {
         // 2. Tỷ lệ nến đỏ tối thiểu trong chuỗi (ví dụ: 0.7 tương đương 70%)
         final double MIN_RED_CANDLE_PERCENTAGE = 0.7;
         // 3. Mức giảm giá tối thiểu từ đỉnh của chuỗi đến giá đóng cửa hiện tại (số âm)
-        final double MIN_PRICE_DROP_PERCENTAGE = -0.05; // Yêu cầu giảm ít nhất 6%
+        final double MIN_PRICE_DROP_PERCENTAGE = -0.045; // Yêu cầu giảm ít nhất 6%
         // 4. Hệ số suy yếu của volume: volume cuối phải nhỏ hơn X lần volume trung bình
         final double VOLUME_WEAKENING_FACTOR = 0.6; // Volume cuối < 80% volume trung bình
         // =================================================================
@@ -165,7 +196,6 @@ public class MarketBigChangeDetector {
         }
         return null;
     }
-
 
 
     public static Set<String> getTopSymbol(TreeMap<Double, String> rateLoss2Symbols, int period, Map<String,

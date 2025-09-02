@@ -29,16 +29,15 @@ public class Price4hManagerProduction {
     public static final String FILE_DATA_PRICE_MAX = "storage/price/max.data";
     public static final String FILE_DATA_PRICE_MIN = "storage/price/min.data";
     private static volatile Price4hManagerProduction INSTANCE = null;
-    public ExecutorService executorService = Executors.newFixedThreadPool(Configs.NUMBER_THREAD_ORDER_MANAGER);
 
     public static Price4hManagerProduction getInstance() {
         if (INSTANCE == null) {
             INSTANCE = new Price4hManagerProduction();
             INSTANCE.startThreadUpdateData();
-            if (new File(FILE_DATA_PRICE_MAX).exists()){
+            if (new File(FILE_DATA_PRICE_MAX).exists()) {
                 INSTANCE.symbol2Time2PriceMax = (ConcurrentHashMap<String, TreeMap<Long, Double>>) Storage.readObjectFromFile(FILE_DATA_PRICE_MAX);
                 INSTANCE.symbol2Time2PriceMin = (ConcurrentHashMap<String, TreeMap<Long, Double>>) Storage.readObjectFromFile(FILE_DATA_PRICE_MIN);
-            }else{
+            } else {
                 INSTANCE.updateAllData();
             }
         }

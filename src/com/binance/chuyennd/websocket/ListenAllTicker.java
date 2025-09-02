@@ -25,6 +25,7 @@ import com.binance.chuyennd.trading.BudgetManager;
 import com.binance.chuyennd.trading.DetectEntrySignal2TradeNormal;
 import com.binance.chuyennd.trading.MarketBigChangeDetector;
 import com.binance.chuyennd.utils.Configs;
+import com.binance.chuyennd.utils.StorageSnappy;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.SubscriptionClient;
 import com.binance.client.constant.Constants;
@@ -36,6 +37,7 @@ import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -48,8 +50,9 @@ import java.util.logging.Level;
 public class ListenAllTicker {
 
     public static final Logger LOG = LoggerFactory.getLogger(ListenAllTicker.class);
-    public final ConcurrentHashMap<String, TreeMap<Long, KlineObjectNumber>> symbol2Tickers = new ConcurrentHashMap<>();
+    public ConcurrentHashMap<String, TreeMap<Long, KlineObjectNumber>> symbol2Tickers = new ConcurrentHashMap<>();
     public final ConcurrentHashMap<String, Double> symbol2Price = new ConcurrentHashMap<>();
+    public static final String FILE_TICKER_1M_STORAGE = "storage/tickers/symbol2ticker1Ms";
     public ExecutorService executorService = Executors.newFixedThreadPool(Configs.NUMBER_THREAD_ORDER_MANAGER);
     public SubscriptionClient client;
     private static volatile ListenAllTicker INSTANCE = null;
@@ -57,9 +60,15 @@ public class ListenAllTicker {
     public static ListenAllTicker getInstance() {
         if (INSTANCE == null) {
             INSTANCE = new ListenAllTicker();
-            INSTANCE.initData();
+            if (new File(FILE_TICKER_1M_STORAGE).exists()) {
+                INSTANCE.symbol2Tickers = (ConcurrentHashMap<String, TreeMap<Long, KlineObjectNumber>>)
+                        StorageSnappy.readObjectFromFile(FILE_TICKER_1M_STORAGE);
+            } else {
+                INSTANCE.initData();
+            }
             INSTANCE.client = SubscriptionClient.create();
             INSTANCE.startThreadUpdateTicker();
+            INSTANCE.startThreadWriteTickerData();
 //            INSTANCE.startUserDataStream();
         }
         return INSTANCE;
@@ -186,6 +195,21 @@ public class ListenAllTicker {
                     e.printStackTrace();
                 }
             }), null);
+        }).start();
+    }
+
+    public void startThreadWriteTickerData() {
+        new Thread(() -> {
+            Thread.currentThread().setName("startThreadWriteTickerData");
+            LOG.info("Start thread startThreadWriteTickerData");
+            while (true) {
+                try {
+                    Thread.sleep(Utils.TIME_MINUTE);
+                    StorageSnappy.writeObject2File(FILE_TICKER_1M_STORAGE, symbol2Tickers);
+                } catch (InterruptedException ex) {
+                    java.util.logging.Logger.getLogger(DetectEntrySignal2TradeNormal.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
         }).start();
     }
 
