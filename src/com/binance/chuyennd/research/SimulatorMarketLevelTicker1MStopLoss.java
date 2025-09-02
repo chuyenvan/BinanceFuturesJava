@@ -596,6 +596,10 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
     public void createOrderBUY(String symbol, KlineObjectSimple ticker, MarketLevelChange levelChange,
                                MarketRateChange marketData, Double maxPrice15m) {
+//        if (symbol2OrderRunning.size() >= 120) {
+//            LOG.info("Not rade over capital: {} {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()), levelChange);
+//            return;
+//        }
         Double entry = ticker.priceClose;
         Double budget = BudgetManagerSimple.getInstance().getBudget();
         Integer leverage = BudgetManagerSimple.getInstance().getLeverage();

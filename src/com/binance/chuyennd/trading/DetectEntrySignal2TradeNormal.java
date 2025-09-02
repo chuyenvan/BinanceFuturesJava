@@ -537,34 +537,6 @@ public class DetectEntrySignal2TradeNormal {
         return 1d;
     }
 
-    private void createOrderSELLRequest(String symbol, KlineObjectNumber ticker, MarketLevelChange levelChange, Double priceMin15M,
-                                        MarketRateChange marketRate) {
-
-        Double budget = BudgetManager.getInstance().getBudgetSell();
-        Double priceEntry = ticker.priceClose;
-        Double quantity = Utils.calQuantity(budget, BudgetManager.getInstance().getLeverage(), priceEntry, symbol);
-        if (StringUtils.equals(symbol, Constants.SYMBOL_PAIR_BTC)) {
-            Double minBtcTrade = 0.002;
-            if (quantity < minBtcTrade) {
-                quantity = minBtcTrade;
-            }
-        }
-        LOG.info("Market level:{} {} {} {} {} {}", Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()),
-                levelChange, symbol, budget, quantity, ticker.priceClose);
-        if (quantity != null && quantity != 0) {
-            OrderTargetInfo orderTrade = new OrderTargetInfo(OrderTargetStatus.REQUEST, ticker.priceClose,
-                    null, quantity, BudgetManager.getInstance().getLeverage(), symbol, ticker.startTime.longValue(),
-                    ticker.startTime.longValue(), OrderSide.SELL, Constants.TRADING_TYPE_VOLUME_MINI);
-            orderTrade.marketLevel = levelChange;
-            orderTrade.priceTP = priceMin15M;
-            RedisHelper.getInstance().get().rpush(RedisConst.REDIS_KEY_BINANCE_TD_ORDER_MANAGER_QUEUE, Utils.toJson(orderTrade));
-            writeOrder2File(orderTrade, ticker, marketRate, priceMin15M);
-        } else {
-            LOG.info("{} {} quantity false", symbol, quantity);
-        }
-    }
-
-
     public boolean isTimeProcessData() {
         long time = System.currentTimeMillis();
         long second = (time / Utils.TIME_SECOND) % 60;

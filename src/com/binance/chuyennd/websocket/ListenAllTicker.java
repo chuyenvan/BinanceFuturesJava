@@ -205,12 +205,27 @@ public class ListenAllTicker {
             while (true) {
                 try {
                     Thread.sleep(Utils.TIME_MINUTE);
-                    StorageSnappy.writeObject2File(FILE_TICKER_1M_STORAGE, symbol2Tickers);
+                    writeTickerData2File();
+
                 } catch (InterruptedException ex) {
                     java.util.logging.Logger.getLogger(DetectEntrySignal2TradeNormal.class.getName()).log(Level.SEVERE, null, ex);
                 }
             }
         }).start();
+    }
+
+    private void writeTickerData2File() {
+        // 1. Tạo một bản sao của dữ liệu cần ghi
+        ConcurrentHashMap<String, TreeMap<Long, KlineObjectNumber>> tickersToSave = new ConcurrentHashMap<>();
+        // 2. Sử dụng synchronized để đảm bảo tạo bản sao một cách an toàn
+        //    Khối lệnh này chỉ chạy trong vài mili giây, rất nhanh.
+        synchronized (symbol2Tickers) {
+            // Tạo một ConcurrentHashMap mới
+            tickersToSave.putAll(symbol2Tickers);
+        }
+        // 3. Ghi "bản sao" này ra file.
+        //    Trong lúc này, `symbol2LastTickers` gốc vẫn có thể được cập nhật thoải mái.
+        StorageSnappy.writeObject2File(FILE_TICKER_1M_STORAGE, tickersToSave);
     }
 
     public void startThreadMonitor() {
@@ -350,7 +365,9 @@ public class ListenAllTicker {
 //                LOG.info("Remove: {} {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(tickers.firstKey()), tickers.size());
                     tickers.remove(tickers.firstKey());
                 }
-                list.addAll(tickers.values());
+                synchronized (tickers) {
+                    list.addAll(tickers.values());
+                }
                 if (list.size() < 1) {
                     LOG.info("Error process get ticker of: {}", symbol);
                     continue;
@@ -384,7 +401,12 @@ public class ListenAllTicker {
         TreeMap<Long, KlineObjectNumber> tickers = symbol2Tickers.get(symbol);
         List<KlineObjectNumber> result = new ArrayList<>();
         if (tickers != null) {
-            result.addAll(tickers.values());
+            synchronized (tickers) {
+                try {
+                    result.addAll(tickers.values());
+                } catch (Exception e) {
+                }
+            }
         }
         return result;
     }

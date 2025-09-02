@@ -84,7 +84,7 @@ public class BudgetManagerSimple {
 //        switch (capitalMod) {
 //            case SAFE:
 //        Double ratePerOrder = Configs.RATE_BUDGET_LIMIT_A_SIGNAL / Configs.NUMBER_ENTRY_EACH_SIGNAL;
-//        BUDGET_PER_ORDER = ratePerOrder * (balanceCurrent + unProfit) / number_order_budget;
+//        BUDGET_PER_ORDER = ratePerOrder * (balanceBasic + unProfit) / number_order_budget;
 
         return BUDGET_PER_ORDER * 0.6;
 //            case DEFENSIVE:
