@@ -6,6 +6,7 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,13 +76,29 @@ public class StorageSnappy {
         }
     }
 
-    public static void writeObject2File(String fileName, Object data) {
+    public static void writeObject2File(String path, Object obj) {
+        // 1. Định nghĩa file gốc và file tạm
+        File finalFile = new File(path);
+        File tempFile = new File(path + ".tmp");
+
         try {
-            StorageSnappy.Writer writer = new StorageSnappy.Writer(new File(fileName));
-            writer.write(data);
-            writer.close();
-        } catch (Exception e) {
-//            e.printStackTrace();
+            // 2. Luôn ghi dữ liệu vào file tạm
+            Writer writer = new Writer(tempFile);
+            writer.write(obj);
+            writer.close(); // Đảm bảo file tạm được ghi xong và đóng lại
+
+            // 3. Đổi tên file tạm thành file gốc (thao tác nguyên tử)
+            //    REPLACE_EXISTING đảm bảo file gốc cũ sẽ bị ghi đè bởi file tạm mới.
+            Files.move(tempFile.toPath(), finalFile.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+
+            // LOG.info("Ghi file {} thành công.", path);
+
+        } catch (IOException e) {
+            LOG.error("Lỗi khi ghi file an toàn tại {}: {}", path, e.getMessage());
+            // Nếu có lỗi, xóa file tạm đi để tránh rác
+            if (tempFile.exists()) {
+                tempFile.delete();
+            }
         }
     }
 

@@ -146,6 +146,7 @@ public class WebSocketConnection extends WebSocketListener {
         try {
             request.updateCallback.onReceive(obj);
         } catch (Exception e) {
+            e.printStackTrace();
             onError("Process error: " + e.getMessage() + " You should capture the exception in your error handler", e);
         }
     }

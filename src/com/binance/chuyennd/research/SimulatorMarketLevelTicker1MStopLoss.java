@@ -9,8 +9,10 @@ import com.binance.chuyennd.bigchange.market.MarketDataObject;
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
 import com.binance.chuyennd.bigchange.statistic.data.DataManager;
 import com.binance.chuyennd.bigchange.test.TraceOrderDone;
+import com.binance.chuyennd.grid.MarketRegimeManager;
 import com.binance.chuyennd.grid.SimpleMovingAverage4hManager;
 import com.binance.chuyennd.grid.SimpleMovingAverageDayManager;
+import com.binance.chuyennd.grid.TechnicalAnalysisUtils;
 import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.tradecore.DcaProcessor;
@@ -602,6 +604,9 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 //        }
         Double entry = ticker.priceClose;
         Double budget = BudgetManagerSimple.getInstance().getBudget();
+        if (MarketRegimeManager.getInstance().getRegimeByTime(ticker.startTime.longValue()).equals(TechnicalAnalysisUtils.MarketRegime.BEARISH)){
+            budget = budget/2;
+        }
         Integer leverage = BudgetManagerSimple.getInstance().getLeverage();
 
         if (levelChange.equals(MarketLevelChange.MEDIUM_DOWN)

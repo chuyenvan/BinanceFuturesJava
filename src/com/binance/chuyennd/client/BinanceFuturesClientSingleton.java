@@ -118,9 +118,9 @@ public class BinanceFuturesClientSingleton {
     }
 
     private static void tracePnlAsymbol() throws ParseException {
-        String symbol = "LAYERUSDT";
+        String symbol = "BTCUSDT";
         List<Income> incomes = BinanceFuturesClientSingleton.getInstance().getPositionHistoryBySymbol(symbol,
-                Utils.sdfFileHour.parse("20250531 05:42").getTime(), System.currentTimeMillis());
+                Utils.sdfFileHour.parse("20250831 05:42").getTime(), System.currentTimeMillis());
         Double total = 0d;
         Double REALIZED_PNL = 0d;
         Double FUNDING_FEE = 0d;
@@ -244,8 +244,8 @@ public class BinanceFuturesClientSingleton {
 //        for (String symbol : allSymbol) {
 //        Set<String> symbolLocks = BinanceFuturesClientSingleton.getInstance().getAllSymbolLock();
 //        System.out.println(symbolLocks);
-//        tracePnlAsymbol();
-        tracePnlAll();
+        tracePnlAsymbol();
+//        tracePnlAll();
 //        List<Order> orders = BinanceFuturesClientSingleton.getInstance().getAllOpenOrderHistory(Utils.getStartTimeDayAgo(88));
 //        if (!orders.isEmpty()) {
 //            Long startTime = orders.get(0).getUpdateTime();
