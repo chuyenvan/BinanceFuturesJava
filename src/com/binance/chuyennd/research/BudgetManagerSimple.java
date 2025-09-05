@@ -27,7 +27,7 @@ public class BudgetManagerSimple {
     public static final Logger LOG = LoggerFactory.getLogger(BudgetManagerSimple.class);
 
     public BalanceIndex balanceIndex = new BalanceIndex();
-    public Integer number_order_budget = 100;
+    public Integer number_order_budget = 60;
     public Double BUDGET_PER_ORDER;
     public Double investing = null;
     public Map<Long, Double> time2Balance = new HashMap<>();
@@ -86,7 +86,7 @@ public class BudgetManagerSimple {
 //        Double ratePerOrder = Configs.RATE_BUDGET_LIMIT_A_SIGNAL / Configs.NUMBER_ENTRY_EACH_SIGNAL;
 //        BUDGET_PER_ORDER = ratePerOrder * (balanceBasic + unProfit) / number_order_budget;
 
-        return BUDGET_PER_ORDER * 0.6;
+        return BUDGET_PER_ORDER * 0.4;
 //            case DEFENSIVE:
 //                return BUDGET_PER_ORDER * 0.3;
 //            default:

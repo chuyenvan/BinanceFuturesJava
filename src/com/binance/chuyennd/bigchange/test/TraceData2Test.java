@@ -299,6 +299,7 @@ public class TraceData2Test {
         TreeMap<Integer, Integer> year2OrderBigSlowCounter = new TreeMap();
         TreeMap<Integer, Integer> year2OrderBuySlowCounter = new TreeMap();
         TreeMap<Integer, Integer> year2OrderSellSlowCounter = new TreeMap();
+        TreeMap<Long, OrderTargetInfoTest> allOrderSlow = new TreeMap<>();
         BalanceIndex balanceIndex = (BalanceIndex) Storage.readObjectFromFile("../simulator/storage/BalanceIndex.data");
 //        BalanceIndex balanceIndex = (BalanceIndex) Storage.readObjectFromFile("target/BalanceIndex.data");
         for (Long date : balanceIndex.date2MarginMax.keySet()) {
@@ -334,7 +335,7 @@ public class TraceData2Test {
                     timeOrder = orderTarget.timeUpdate - orderTarget.timeStart;
                 }
             }
-            if (timeOrder > 30 * Utils.TIME_DAY) {
+            if (timeOrder > 20 * Utils.TIME_DAY) {
                 int year = Utils.getYear(time);
                 if (orders.get(0).side.equals(OrderSide.BUY)) {
                     Integer counterOrderSlow = year2OrderBuySlowCounter.get(year);
@@ -384,7 +385,7 @@ public class TraceData2Test {
                     LOG.info("Big: {} {} {} {} ", symbol, sideBig,
                             Utils.normalizeDateYYYYMMDDHHmm(orders.get(0).timeUpdate), margin.longValue());
 
-                    if (timeOrder > 15 * Utils.TIME_DAY) {
+                    if (timeOrder > 30 * Utils.TIME_DAY) {
                         Integer counterOrderSlow = year2OrderBigSlowCounter.get(year);
                         if (counterOrderSlow == null) {
                             counterOrderSlow = 0;

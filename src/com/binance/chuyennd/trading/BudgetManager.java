@@ -37,6 +37,7 @@ public class BudgetManager {
 
     public Integer LEVERAGE_ORDER = Configs.getInt("LEVERAGE_ORDER");
     public Double BUDGET_PER_ORDER = 0d;
+    public Integer number_order_budget = 60;
     public Double marginRunning = 0d;
     public Double balance = 0d;
     public Map<String, Double> symbol2Margin = new HashMap<>();
@@ -62,7 +63,7 @@ public class BudgetManager {
             Asset umInfo = BinanceFuturesClientSingleton.getInstance().getAccountUMInfo();
             Double balanceCurrent = umInfo.getWalletBalance().doubleValue();
             Double ratePerOrder = (Configs.RATE_BUDGET_LIMIT_A_SIGNAL / Configs.NUMBER_ENTRY_EACH_SIGNAL);
-            BUDGET_PER_ORDER = ratePerOrder * balanceBasic / 100;
+            BUDGET_PER_ORDER = ratePerOrder * balanceBasic / number_order_budget;
             long time = new File("lib/binance-java-sdk-1.2.4.jar").lastModified();
             LOG.info("Ba and Bu {}: {} -> {} balance init:{} marginRunning:{} ", Utils.normalizeDateYYYYMMDDHHmm(time),
                     balanceCurrent, BUDGET_PER_ORDER, balanceBasic, marginRunning);
@@ -88,7 +89,7 @@ public class BudgetManager {
     }
 
     public Double getBudget() {
-        return BUDGET_PER_ORDER * 0.6;
+        return BUDGET_PER_ORDER * 0.4;
     }
 
     public Double calMarginRunning(Collection<PositionRisk> positions) {

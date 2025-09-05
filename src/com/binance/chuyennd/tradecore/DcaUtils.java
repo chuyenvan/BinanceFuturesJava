@@ -55,15 +55,15 @@ public final class DcaUtils {
     }
 
     private static double calculateAdjustedRateLoss(double margin, double budget, double baseRateLoss, boolean isAll) {
-        if (isAll || margin < budget) {
+        if (isAll || margin < 1.5 * budget) {
             return baseRateLoss;
         }
         double marginRatio = margin / budget;
-        if (marginRatio >= 3.0) return -0.99;
-        if (marginRatio >= 2.5) return -0.9;
-        if (marginRatio >= 2.0) return -0.7;
-        if (marginRatio >= 1.5) return -0.6;
-        return -0.5;
+        if (marginRatio >= 5.0) return -0.99;
+        if (marginRatio >= 4.5) return -0.9;
+        if (marginRatio >= 3.0) return -0.7;
+        if (marginRatio >= 2) return -0.6;
+        return -0.4;
     }
 
     private static boolean isTimeConditionMet(MarketLevelChange orderMarketLevel, long orderTimeStart, long currentTime, int durationDca) {

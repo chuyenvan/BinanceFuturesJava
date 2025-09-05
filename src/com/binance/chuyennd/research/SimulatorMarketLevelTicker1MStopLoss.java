@@ -265,7 +265,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                 Set<String> extremeFundingSymbols = FundingFeeManager.getInstance().getExtremeNegativeFundingSymbols(time, fundingFeeMin);
 //                                if (symbol2OrderRunning.size() < 30 && !extremeFundingSymbols.isEmpty()) {
                                 // Ghi log để theo dõi
-                                LOG.info("{} - TÍN HIỆU FUNDING CỰC ĐOAN: {}", Utils.normalizeDateYYYYMMDDHHmm(time), extremeFundingSymbols);
+//                                LOG.info("{} - TÍN HIỆU FUNDING CỰC ĐOAN: {}", Utils.normalizeDateYYYYMMDDHHmm(time), extremeFundingSymbols);
 
                                 // Duyệt qua danh sách các symbol đủ điều kiện
                                 // TreeMap tự động sắp xếp nên symbol có funding âm nhất sẽ được xử lý trước
@@ -598,15 +598,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
     public void createOrderBUY(String symbol, KlineObjectSimple ticker, MarketLevelChange levelChange,
                                MarketRateChange marketData, Double maxPrice15m) {
-//        if (symbol2OrderRunning.size() >= 120) {
-//            LOG.info("Not rade over capital: {} {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()), levelChange);
-//            return;
-//        }
         Double entry = ticker.priceClose;
         Double budget = BudgetManagerSimple.getInstance().getBudget();
-        if (MarketRegimeManager.getInstance().getRegimeByTime(ticker.startTime.longValue()).equals(TechnicalAnalysisUtils.MarketRegime.BEARISH)){
-            budget = budget/2;
-        }
         Integer leverage = BudgetManagerSimple.getInstance().getLeverage();
 
         if (levelChange.equals(MarketLevelChange.MEDIUM_DOWN)
@@ -626,15 +619,16 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         }
 
 
-        if (levelChange.equals(MarketLevelChange.SMALL_DOWN_15M)
-                || levelChange.equals(MarketLevelChange.SMALL_UP)
+        if (levelChange.equals(MarketLevelChange.SMALL_UP)
+                || levelChange.equals(MarketLevelChange.SMALL_DOWN_15M)
         ) {
             long time = ticker.startTime.longValue();
             Double maDif1d = SimpleMovingAverageDayManager.getInstance().getDifferenceMa10AndMa60(Constants.SYMBOL_PAIR_BTC, time);
             Double maDif4h = SimpleMovingAverage4hManager.getInstance().getDifferenceMa10AndMa60(Constants.SYMBOL_PAIR_BTC, time);
             if ((maDif1d != null && maDif1d > 0)
                     || (maDif4h != null && maDif4h > 0)
-                    || Constants.specialSymbol.contains(symbol)) {
+                    || Constants.specialSymbol.contains(symbol)
+            ) {
                 budget = budget / 4;
             } else {
                 return;
