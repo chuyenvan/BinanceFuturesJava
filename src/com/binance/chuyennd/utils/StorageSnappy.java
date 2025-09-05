@@ -93,7 +93,7 @@ public class StorageSnappy {
 
             // LOG.info("Ghi file {} thành công.", path);
 
-        } catch (IOException e) {
+        } catch (Exception e) {
             LOG.error("Lỗi khi ghi file an toàn tại {}: {}", path, e.getMessage());
             // Nếu có lỗi, xóa file tạm đi để tránh rác
             if (tempFile.exists()) {
