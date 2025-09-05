@@ -207,8 +207,9 @@ public class ListenAllTicker {
                     Thread.sleep(Utils.TIME_MINUTE);
                     writeTickerData2File();
 
-                } catch (InterruptedException ex) {
-                    java.util.logging.Logger.getLogger(DetectEntrySignal2TradeNormal.class.getName()).log(Level.SEVERE, null, ex);
+                } catch (Exception ex) {
+                    LOG.info("Write ticker to file error: {}", Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()));
+                    ex.printStackTrace();
                 }
             }
         }).start();
