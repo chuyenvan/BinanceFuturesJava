@@ -3,6 +3,7 @@ package com.binance.chuyennd.tradecore;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.utils.Configs;
+import com.binance.client.constant.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,9 +65,12 @@ public class TradeUtils {
         // 1. Chu kỳ xem xét để tính toán đỉnh/đáy (ví dụ: 15 phút)
         final int PRICE_LOOKBACK_PERIOD = 15;
         // 3. Tham số cho bộ lọc "Thị trường ảm đạm"
-        double MIN_MOVEMENT_RANGE_THRESHOLD = 0.045;
+        double MIN_MOVEMENT_RANGE_THRESHOLD = 0.03;
         // =================================================================
 
+        if (Constants.specialSymbol.contains(symbol) || Constants.stableSymbol.contains(symbol)) {
+            return false;
+        }
         // --- Bước 1: Kiểm tra dữ liệu đầu vào ---
         if (recentTickers == null || recentTickers.size() < PRICE_LOOKBACK_PERIOD) {
             return false; // Không đủ dữ liệu, tạm thời cho phép
@@ -109,7 +113,7 @@ public class TradeUtils {
         // 1. Chu kỳ xem xét để tính toán đỉnh/đáy (ví dụ: 15 phút)
         final int PRICE_LOOKBACK_PERIOD = 15;
         // 3. Tham số cho bộ lọc "Thị trường ảm đạm"
-        double MIN_MOVEMENT_RANGE_THRESHOLD = 0.045;
+        double MIN_MOVEMENT_RANGE_THRESHOLD = 0.03;
         // =================================================================
 
         // --- Bước 1: Kiểm tra dữ liệu đầu vào ---

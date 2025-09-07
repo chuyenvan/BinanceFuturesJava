@@ -288,7 +288,7 @@ public class MarketBigChangeDetector {
         if (rateUpAvg > 0.008 && rateDownAvg > 0) {
             return MarketLevelChange.SMALL_UP;
         }
-        if (rateDownAvg < -0.006 && rateUpAvg < 0
+        if (rateDownAvg < -0.008 && rateUpAvg < 0
                 && rateDown15MAvg < -0.025
         ) {
             return MarketLevelChange.SMALL_DOWN;
@@ -297,7 +297,7 @@ public class MarketBigChangeDetector {
         if (rateDown15MAvg < -0.045) {
             return MarketLevelChange.MEDIUM_DOWN_15M;
         }
-        if (rateDown15MAvg < -0.028) {
+        if (rateDown15MAvg < -0.035) {
             return MarketLevelChange.SMALL_DOWN_15M;
         }
 

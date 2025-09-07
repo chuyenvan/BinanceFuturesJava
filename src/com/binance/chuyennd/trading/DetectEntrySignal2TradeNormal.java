@@ -48,8 +48,10 @@ public class DetectEntrySignal2TradeNormal {
 
     public static final Logger LOG = LoggerFactory.getLogger(DetectEntrySignal2TradeNormal.class);
     private static final String FILE_STORAGE_SELLING_EXHAUSTED = "storage/data/SellingExhausted.data";
+    private static final String FILE_STORAGE_TIME_RATE_DOWN15M = "storage/data/time2RatDown15M.data";
     public ExecutorService executorService = Executors.newFixedThreadPool(Configs.NUMBER_THREAD_ORDER_MANAGER);
     public ConcurrentHashMap<String, Long> symbolSellingExhausted = new ConcurrentHashMap<>();
+    public TreeMap<Long, Double> time2RateDown15MAvg = new TreeMap<>();
 
     public static void main(String[] args) throws InterruptedException, ParseException {
 //        new DetectEntrySignal2Trader().getTickerBySymbol("QNTUSDT");
@@ -111,7 +113,7 @@ public class DetectEntrySignal2TradeNormal {
             Double btcRateChange = Utils.rateOf2Double(btcTicker.priceClose, btcTicker.priceOpen);
             Double btcMax15M = null;
 
-
+            LOG.info("Btc ticker size: {}", symbol2LastTickers.get(Constants.SYMBOL_PAIR_BTC).size());
             long time = btcTicker.startTime.longValue();
 //            symbol2Sell.clear();
             for (Map.Entry<String, List<KlineObjectNumber>> entry : symbol2LastTickers.entrySet()) {
@@ -270,9 +272,15 @@ public class DetectEntrySignal2TradeNormal {
             }
 
             // funding fee trade
-            if (rateDown15MAvg < -0.018
-                    || rateUpAvg > 0.005
-                    || rateDownAvg < -0.0055) {
+            time2RateDown15MAvg.put(time, rateDown15MAvg);
+            while (time2RateDown15MAvg.size() > 60) {
+                time2RateDown15MAvg.remove(time2RateDown15MAvg.firstKey());
+            }
+            Double minRate15Min30M = Collections.min(time2RateDown15MAvg.values());
+            if ((rateDown15MAvg < -0.015 && rateDown15MAvg < minRate15Min30M)
+                    || rateDown15MAvg < -0.03
+                    || rateUpAvg > 0.006
+                    || rateDownAvg < -0.006) {
                 Set<String> symbolBuyFundingFee = new HashSet<>();
                 symbolBuyFundingFee.addAll(FundingFeeManagerProduction.getInstance().fundingBuy);
                 symbolBuyFundingFee.removeAll(BudgetManager.getInstance().symbol2Pos.keySet());
@@ -319,11 +327,7 @@ public class DetectEntrySignal2TradeNormal {
                         createOrderBuyRequest(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY,
                                 symbol2Max15m.get(symbol), marketRate);
                     }
-
-
                 }
-            }
-            if (rateDown15MAvg < -0.015) {
                 // ========== LOGIC CHO TÍN HIỆU FUNDING ÂM CỰC ĐOAN ==========
                 Set<String> extremeFundingSymbols = FundingFeeManagerProduction.getInstance().extremeNegative;
                 for (String symbol : extremeFundingSymbols) {
@@ -385,11 +389,12 @@ public class DetectEntrySignal2TradeNormal {
                     createOrderBuyRequest(symbol, ticker, levelChange, symbol2Max15m.get(symbol), marketRate);
                 }
             }
+            StorageSnappy.writeObject2File(FILE_STORAGE_TIME_RATE_DOWN15M, time2RateDown15MAvg);
+            StorageSnappy.writeObject2File(FILE_STORAGE_SELLING_EXHAUSTED, symbolSellingExhausted);
             StorageSnappy.writeObject2File("storage/data/rateMax15M/" + Utils.normalizeDateYYYYMMDD(time)
                     + "/" + time, rateDown15M2Symbols);
             StorageSnappy.writeObject2File("storage/data/rateDown1M/" + Utils.normalizeDateYYYYMMDD(time)
                     + "/" + time, rateDown2Symbols);
-            StorageSnappy.writeObject2File(FILE_STORAGE_SELLING_EXHAUSTED, symbolSellingExhausted);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -448,6 +453,15 @@ public class DetectEntrySignal2TradeNormal {
     public void createOrderBuyRequest(String symbol, KlineObjectNumber ticker,
                                       MarketLevelChange levelChange, Double priceMax15M, MarketRateChange marketRate) {
 
+        if (BudgetManager.getInstance().marginRunning >= BudgetManager.getInstance().balanceBasic * 0.3
+                && !levelChange.equals(MarketLevelChange.DCA_LEVEL1)
+                && !levelChange.equals(MarketLevelChange.DCA_LEVEL2)
+                && !StringUtils.containsIgnoreCase(levelChange.toString(), "big")
+        ) {
+            LOG.info("Not trade because over capital: {} {} {}", symbol, levelChange,
+                    Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()));
+            return;
+        }
         Double budget = BudgetManager.getInstance().getBudget();
 
         if (levelChange.equals(MarketLevelChange.MEDIUM_DOWN)
@@ -549,6 +563,9 @@ public class DetectEntrySignal2TradeNormal {
         SimpleMovingAverage4hManagerProduction.getInstance();
         if (new File(FILE_STORAGE_SELLING_EXHAUSTED).exists()) {
             symbolSellingExhausted = (ConcurrentHashMap<String, Long>) StorageSnappy.readObjectFromFile(FILE_STORAGE_SELLING_EXHAUSTED);
+        }
+        if (new File(FILE_STORAGE_TIME_RATE_DOWN15M).exists()) {
+            time2RateDown15MAvg = (TreeMap<Long, Double>) StorageSnappy.readObjectFromFile(FILE_STORAGE_TIME_RATE_DOWN15M);
         }
         ListenAllTicker.getInstance();
     }

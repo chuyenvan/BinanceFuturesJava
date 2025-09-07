@@ -327,7 +327,7 @@ public class BinanceOrderTradingManager {
                 continue;
             }
             symbol2Pos.put(position.getSymbol(), position);
-            if (PositionHelper.calRateLoss(position) < Configs.RATE_PROFIT_STOP_MARKET) {
+            if (PositionHelper.calRateLoss(position) < 6 * Configs.RATE_PROFIT_STOP_MARKET) {
                 marginTotal += PositionHelper.callMargin(position);
             }
             BudgetManager.getInstance().symbol2Margin.put(position.getSymbol(), PositionHelper.callMargin(position));

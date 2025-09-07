@@ -66,6 +66,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     public void simulatorWithInitEntry(String... inputs) throws ParseException {
         Long startTime = Utils.sdfFile.parse(Configs.TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
         Map<String, Long> symbolSellingExhausted = new HashMap<>();
+        TreeMap<Long, Double> time2RateDown15MAvg = new TreeMap<>();
         //get data
         while (true) {
             TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers;
@@ -155,7 +156,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                     }
                                     symbol2BUY.addAll(addSpecialSymbol(symbol2Ticker));
                                     List<String> symbolDcaLevel =
-//                                            getDCA(levelChange, time, BudgetManagerSimple.getInstance().getBudget());
                                             DcaProcessor.getDCA(levelChange, time, BudgetManagerSimple.getInstance().getBudget(), symbol2OrderRunning);
                                     LOG.info("{} {} -> {}", Utils.normalizeDateYYYYMMDDHHmm(time), levelChange, symbol2BUY);
                                     // check create order new
@@ -183,8 +183,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                                 }
                                             }
                                             MarketLevelChange leveChange2Dca;
-                                            if (calMarginRunning(symbol) < BudgetManagerSimple.getInstance().getBudget()
-                                                    && calMarginRunning() < 100 * BudgetManagerSimple.getInstance().getBudget()) {
+                                            if (calMarginRunning(symbol) < BudgetManagerSimple.getInstance().getBudget()) {
                                                 leveChange2Dca = MarketLevelChange.DCA_LEVEL1;
                                             } else {
                                                 leveChange2Dca = MarketLevelChange.DCA_LEVEL2;
@@ -197,15 +196,22 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                             }
 
                             if (marketRateChange != null) {
-                                if (marketRateChange.rateDown15MAvg < -0.018
-                                        || marketRateChange.rateUpAvg > 0.005
-                                        || marketRateChange.rateDownAvg < -0.0055
+                                time2RateDown15MAvg.put(time, marketRateChange.rateDown15MAvg);
+                                while (time2RateDown15MAvg.size() > 60) {
+                                    time2RateDown15MAvg.remove(time2RateDown15MAvg.firstKey());
+                                }
+                                Double minRate15Min30M = Collections.min(time2RateDown15MAvg.values());
+                                if ((marketRateChange.rateDown15MAvg < -0.015 && marketRateChange.rateDown15MAvg < minRate15Min30M)
+                                        || marketRateChange.rateDown15MAvg < -0.03
+                                        || marketRateChange.rateUpAvg > 0.006
+                                        || marketRateChange.rateDownAvg < -0.006
                                 ) {
                                     // funding level 1
                                     Set<String> symbolFundingBuy = FundingFeeManager.getInstance().getFundingBuyNew(time);
                                     Set<String> symbolBuyFundingFee = new HashSet<>();
                                     symbolBuyFundingFee.addAll(symbolFundingBuy);
                                     symbolBuyFundingFee.removeAll(symbol2OrderRunning.keySet());
+                                    TreeMap<Double, String> rate2Symbol = new TreeMap<>();
                                     for (String symbol : symbolBuyFundingFee) {
                                         KlineObjectSimple ticker = symbol2Ticker.get(symbol);
                                         if (!Utils.isTickerAvailable(ticker)) {
@@ -248,50 +254,45 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                             if (TradeUtils.shouldAvoidEntry(symbol, tickers)) {
                                                 continue; // Bỏ qua nếu có rủi ro
                                             }
+                                            rate2Symbol.put(rateTicker, symbol);
                                             LOG.info("Funding buy {} {} close: {} rate:{} max15M: {} min15M:{} max4h:{}" +
                                                             " min4h:{} tickers:{}", symbol,
                                                     Utils.normalizeDateYYYYMMDDHHmm(time), ticker.priceClose, rateTicker,
                                                     rateMax15M, rateMin15M, rateMax4h, rateMin4h, tickers.size());
-                                            createOrderBUY(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY,
-                                                    time2MarketRateChange.get(time), priceMax15M);
-
                                         }
                                     }
-                                }
-                            }
-                            if (marketRateChange.rateDown15MAvg < -0.015) {
-                                // ========== LOGIC CHO TÍN HIỆU FUNDING ÂM CỰC ĐOAN ==========
-                                Double fundingFeeMin = -0.0005;
-                                Set<String> extremeFundingSymbols = FundingFeeManager.getInstance().getExtremeNegativeFundingSymbols(time, fundingFeeMin);
-//                                if (symbol2OrderRunning.size() < 30 && !extremeFundingSymbols.isEmpty()) {
-                                // Ghi log để theo dõi
-//                                LOG.info("{} - TÍN HIỆU FUNDING CỰC ĐOAN: {}", Utils.normalizeDateYYYYMMDDHHmm(time), extremeFundingSymbols);
-
-                                // Duyệt qua danh sách các symbol đủ điều kiện
-                                // TreeMap tự động sắp xếp nên symbol có funding âm nhất sẽ được xử lý trước
-                                for (String symbol : extremeFundingSymbols) {
-                                    // Chỉ vào lệnh nếu chưa có vị thế đang chạy cho symbol này
-                                    if (!symbol2OrderRunning.containsKey(symbol) && symbolSellingExhausted.containsKey(symbol)) {
-                                        if (symbolSellingExhausted.get(symbol) < time - Utils.TIME_DAY) {
-                                            LOG.info("SellingExhausted of {} over time: {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time),
-                                                    Utils.normalizeDateYYYYMMDDHHmm(symbolSellingExhausted.get(symbol)));
-                                            symbolSellingExhausted.remove(symbol);
-                                            continue;
-                                        }
+                                    for (String symbol : rate2Symbol.values()) {
                                         KlineObjectSimple ticker = symbol2Ticker.get(symbol);
-                                        if (!Utils.isTickerAvailable(ticker)) {
-                                            continue;
+                                        createOrderBUY(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY,
+                                                time2MarketRateChange.get(time), null);
+                                    }
+                                    // ========== LOGIC CHO TÍN HIỆU FUNDING ÂM CỰC ĐOAN ==========
+                                    Double fundingFeeMin = -0.0005;
+                                    Set<String> extremeFundingSymbols = FundingFeeManager.getInstance().getExtremeNegativeFundingSymbols(time, fundingFeeMin);
+                                    // TreeMap tự động sắp xếp nên symbol có funding âm nhất sẽ được xử lý trước
+                                    for (String symbol : extremeFundingSymbols) {
+                                        // Chỉ vào lệnh nếu chưa có vị thế đang chạy cho symbol này
+                                        if (!symbol2OrderRunning.containsKey(symbol) && symbolSellingExhausted.containsKey(symbol)) {
+                                            if (symbolSellingExhausted.get(symbol) < time - Utils.TIME_DAY) {
+                                                LOG.info("SellingExhausted of {} over time: {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time),
+                                                        Utils.normalizeDateYYYYMMDDHHmm(symbolSellingExhausted.get(symbol)));
+                                                symbolSellingExhausted.remove(symbol);
+                                                continue;
+                                            }
+                                            KlineObjectSimple ticker = symbol2Ticker.get(symbol);
+                                            if (!Utils.isTickerAvailable(ticker)) {
+                                                continue;
+                                            }
+                                            List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
+                                            // ================== GỌI HÀM LỌC DUY NHẤT ==================
+                                            if (TradeUtils.shouldAvoidEntry(symbol, tickers)) {
+                                                continue; // Bỏ qua nếu có rủi ro
+                                            }
+                                            createOrderBUY(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY_SPECIAL,
+                                                    time2MarketRateChange.get(time), symbol2PriceMax15M.get(symbol));
                                         }
-                                        List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
-                                        // ================== GỌI HÀM LỌC DUY NHẤT ==================
-                                        if (TradeUtils.shouldAvoidEntry(symbol, tickers)) {
-                                            continue; // Bỏ qua nếu có rủi ro
-                                        }
-                                        createOrderBUY(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY_SPECIAL,
-                                                time2MarketRateChange.get(time), symbol2PriceMax15M.get(symbol));
                                     }
                                 }
-//                                }
                             }
 
                             // BTC trend reverse
@@ -598,6 +599,15 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
     public void createOrderBUY(String symbol, KlineObjectSimple ticker, MarketLevelChange levelChange,
                                MarketRateChange marketData, Double maxPrice15m) {
+        if (calMarginRunning() >= BudgetManagerSimple.getInstance().balanceBasic * 0.3
+                && !levelChange.equals(MarketLevelChange.DCA_LEVEL1)
+                && !levelChange.equals(MarketLevelChange.DCA_LEVEL2)
+                && !StringUtils.containsIgnoreCase(levelChange.toString(), "big")
+        ) {
+            LOG.info("Not trade because over capital: {} {} {}", symbol, levelChange,
+                    Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()));
+            return;
+        }
         Double entry = ticker.priceClose;
         Double budget = BudgetManagerSimple.getInstance().getBudget();
         Integer leverage = BudgetManagerSimple.getInstance().getLeverage();
@@ -699,14 +709,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     private Double calMarginRunning() {
         Double marginTotal = 0d;
         for (OrderTargetInfoTest order : symbol2OrderRunning.values()) {
-            if (order.side.equals(OrderSide.BUY)) {
-                if (order.priceSL == null || order.priceSL < order.priceEntry) {
-                    marginTotal += order.calMargin();
-                }
-            } else {
-                if (order.priceSL == null || order.priceSL > order.priceEntry) {
-                    marginTotal += order.calMargin();
-                }
+            if (order.priceSL == null || order.priceSL < order.priceEntry) {
+                marginTotal += order.calMargin();
             }
         }
         BudgetManagerSimple.getInstance().marginRunning = marginTotal;

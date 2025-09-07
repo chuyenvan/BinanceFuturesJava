@@ -36,7 +36,7 @@ public final class DcaUtils {
 
     private static DcaConfig getDcaConfig(MarketLevelChange levelChange) {
         if (levelChange == null) {
-            return new DcaConfig(1, -0.25, false);
+            return new DcaConfig(1, -0.4, false);
         }
         switch (levelChange) {
             case BIG_DOWN:
@@ -55,14 +55,14 @@ public final class DcaUtils {
     }
 
     private static double calculateAdjustedRateLoss(double margin, double budget, double baseRateLoss, boolean isAll) {
-        if (isAll || margin < 1.5 * budget) {
+        if (isAll || margin < budget) {
             return baseRateLoss;
         }
         double marginRatio = margin / budget;
-        if (marginRatio >= 5.0) return -0.99;
-        if (marginRatio >= 4.5) return -0.9;
-        if (marginRatio >= 3.0) return -0.7;
-        if (marginRatio >= 2) return -0.6;
+        if (marginRatio >= 3.0) return -0.99;
+        if (marginRatio >= 2.5) return -0.9;
+        if (marginRatio >= 2.0) return -0.7;
+        if (marginRatio >= 1.5) return -0.6;
         return -0.4;
     }
 

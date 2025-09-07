@@ -355,7 +355,6 @@ public class ListenAllTicker {
 
     public ConcurrentHashMap<String, List<KlineObjectNumber>> getAllTicker() {
         ConcurrentHashMap<String, List<KlineObjectNumber>> result = new ConcurrentHashMap<>();
-        LOG.info("Btc ticker size: {}", symbol2Tickers.get(Constants.SYMBOL_PAIR_BTC).size());
         int counterError = 0;
         for (String symbol : symbol2Tickers.keySet()) {
             try {

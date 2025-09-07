@@ -355,9 +355,9 @@ public class TraceData2Test {
             }
             for (String symbol : symbol2Margin.keySet()) {
                 Double margin = symbol2Margin.get(symbol);
-                int numberBudgetBig = 4;
+                int numberBudgetBig = 3;
                 if (Constants.specialSymbol.contains(symbol)){
-                    numberBudgetBig = 6;
+                    numberBudgetBig = 5;
                 }
                 if (margin > numberBudgetBig * BudgetManagerSimple.getInstance().getBudget()) {
                     int year = Utils.getYear(time);
@@ -385,7 +385,7 @@ public class TraceData2Test {
                     LOG.info("Big: {} {} {} {} ", symbol, sideBig,
                             Utils.normalizeDateYYYYMMDDHHmm(orders.get(0).timeUpdate), margin.longValue());
 
-                    if (timeOrder > 30 * Utils.TIME_DAY) {
+                    if (timeOrder > 15 * Utils.TIME_DAY) {
                         Integer counterOrderSlow = year2OrderBigSlowCounter.get(year);
                         if (counterOrderSlow == null) {
                             counterOrderSlow = 0;

@@ -89,7 +89,8 @@ public class BudgetManager {
     }
 
     public Double getBudget() {
-        return BUDGET_PER_ORDER * 0.4;
+
+        return BUDGET_PER_ORDER * 0.3;
     }
 
     public Double calMarginRunning(Collection<PositionRisk> positions) {
