@@ -4,7 +4,6 @@
  */
 package com.binance.chuyennd.research;
 
-import com.binance.chuyennd.bigchange.market.MarketBigChangeDetectorTest;
 import com.binance.chuyennd.bigchange.market.MarketDataObject;
 import com.binance.chuyennd.bigchange.statistic.data.DataManager;
 import com.binance.chuyennd.bigchange.test.TraceOrderDone;
@@ -97,15 +96,15 @@ public class AltBigChangeReverse {
                                 }
                             }
 
-                            if (MarketBigChangeDetectorTest.isAltReverse15M(tickers)) {
-                                List<String> symbolsEntry = time2Entry.get(ticker.startTime.longValue());
-                                if (symbolsEntry == null) {
-                                    symbolsEntry = new ArrayList<>();
-                                    time2Entry.put(ticker.startTime.longValue(), symbolsEntry);
-                                }
-                                symbolsEntry.add(symbol);
-                                createOrderBUYTarget(symbol, ticker);
-                            }
+//                            if (MarketBigChangeDetector.isAltReverse15M(tickers)) {
+//                                List<String> symbolsEntry = time2Entry.get(ticker.startTime.longValue());
+//                                if (symbolsEntry == null) {
+//                                    symbolsEntry = new ArrayList<>();
+//                                    time2Entry.put(ticker.startTime.longValue(), symbolsEntry);
+//                                }
+//                                symbolsEntry.add(symbol);
+//                                createOrderBUYTarget(symbol, ticker);
+//                            }
 
                         }
                     }

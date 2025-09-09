@@ -16,9 +16,9 @@
 package com.binance.chuyennd.trading;
 
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
-import com.binance.chuyennd.object.KlineObjectNumber;
-import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.helper.PositionHelper;
+import com.binance.chuyennd.object.MarketRateChange;
+import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
 import com.binance.chuyennd.tradecore.DcaProcessor;
@@ -98,32 +98,30 @@ public class DetectEntrySignal2TradeNormal {
     private void checkMarketLevelChange2Trade() {
         try {
             LOG.info("Start check level change of market for trade! {}", new Date());
-            Map<String, KlineObjectNumber> symbol2FinalTicker = new HashMap<>();
+            Map<String, KlineObjectSimple> symbol2FinalTicker = new HashMap<>();
             TreeMap<Double, String> rateDown15M2Symbols = new TreeMap<>();
             TreeMap<Double, String> rateUp15M2Symbols = new TreeMap<>();
             TreeMap<Double, String> rateDown2Symbols = new TreeMap<>();
             TreeMap<Double, String> rateUp2Symbols = new TreeMap<>();
             Map<String, Double> symbol2Max15m = new HashMap<>();
-            Map<String, Double> symbol2Max4h = new HashMap<>();
-            Map<String, Double> symbol2Min4h = new HashMap<>();
-            Map<String, Double> symbol2Min15m = new HashMap<>();
-            ConcurrentHashMap<String, List<KlineObjectNumber>> symbol2LastTickers = ListenAllTicker.getInstance().getAllTicker();
-            List<KlineObjectNumber> btcTickers = symbol2LastTickers.get(Constants.SYMBOL_PAIR_BTC);
-            KlineObjectNumber btcTicker = btcTickers.get(btcTickers.size() - 1);
+
+            ConcurrentHashMap<String, List<KlineObjectSimple>> symbol2LastTickers = ListenAllTicker.getInstance().getAllTicker();
+            List<KlineObjectSimple> btcTickers = symbol2LastTickers.get(Constants.SYMBOL_PAIR_BTC);
+            KlineObjectSimple btcTicker = btcTickers.get(btcTickers.size() - 1);
             Double btcRateChange = Utils.rateOf2Double(btcTicker.priceClose, btcTicker.priceOpen);
             Double btcMax15M = null;
 
             LOG.info("Btc ticker size: {}", symbol2LastTickers.get(Constants.SYMBOL_PAIR_BTC).size());
             long time = btcTicker.startTime.longValue();
 //            symbol2Sell.clear();
-            for (Map.Entry<String, List<KlineObjectNumber>> entry : symbol2LastTickers.entrySet()) {
+            for (Map.Entry<String, List<KlineObjectSimple>> entry : symbol2LastTickers.entrySet()) {
                 try {
                     String symbol = entry.getKey();
                     if (Constants.diedSymbol.contains(symbol)) {
                         continue;
                     }
-                    List<KlineObjectNumber> tickers = entry.getValue();
-                    KlineObjectNumber ticker = tickers.get(tickers.size() - 1);
+                    List<KlineObjectSimple> tickers = entry.getValue();
+                    KlineObjectSimple ticker = tickers.get(tickers.size() - 1);
                     if (!Utils.isTickerAvailable(ticker)) {
                         continue;
                     }
@@ -143,7 +141,7 @@ public class DetectEntrySignal2TradeNormal {
                     for (int i = 0; i < Configs.NUMBER_TICKER_CAL_RATE_CHANGE; i++) {
                         int index = tickers.size() - i - 1;
                         if (index >= 0) {
-                            KlineObjectNumber kline = tickers.get(index);
+                            KlineObjectSimple kline = tickers.get(index);
                             if (priceMax == null || priceMax < kline.maxPrice) {
                                 priceMax = kline.maxPrice;
                             }
@@ -158,7 +156,6 @@ public class DetectEntrySignal2TradeNormal {
                     }
                     rateDown15M2Symbols.put(Utils.rateOf2Double(tickers.get(tickers.size() - 1).priceClose, priceMax), symbol);
                     symbol2Max15m.put(symbol, priceMax);
-                    symbol2Min15m.put(symbol, priceMin);
                     rateUp15M2Symbols.put(-Utils.rateOf2Double(tickers.get(tickers.size() - 1).priceClose, priceMin), symbol);
 
                 } catch (Exception e) {
@@ -191,7 +188,7 @@ public class DetectEntrySignal2TradeNormal {
                 LOG.info("DCA big loss:{}", symbolDcaLossBig);
             }
             for (String symbol : symbolDcaLossBig) {
-                KlineObjectNumber ticker = symbol2FinalTicker.get(symbol);
+                KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
                 if (Utils.isTickerAvailable(ticker)) {
                     PositionRisk position = BudgetManager.getInstance().symbol2Pos.get(symbol);
                     if (position != null) {
@@ -232,10 +229,10 @@ public class DetectEntrySignal2TradeNormal {
                         levelChange, symbol2BUY);
                 for (String symbol : symbol2BUY) {
                     try {
-                        KlineObjectNumber ticker = symbol2FinalTicker.get(symbol);
-                        List<KlineObjectNumber> tickers = symbol2LastTickers.get(symbol);
+                        KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
+                        List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
                         // ================== GỌI HÀM LỌC DUY NHẤT ==================
-                        if (TradeUtils.shouldAvoidEntryProduction(symbol, tickers)) {
+                        if (TradeUtils.shouldAvoidEntry(symbol, tickers)) {
                             continue; // Bỏ qua nếu có rủi ro
                         }
                         createOrderBuyRequest(symbol, ticker, levelChange, symbol2Max15m.get(symbol), marketRate);
@@ -247,7 +244,7 @@ public class DetectEntrySignal2TradeNormal {
                     List<String> symbolDcaLevel = DcaProcessor.getDCAProduction(levelChange, System.currentTimeMillis(),
                             BudgetManager.getInstance().getBudget(), BudgetManager.getInstance().symbol2Pos);
                     for (String symbol : symbolDcaLevel) {
-                        KlineObjectNumber ticker = symbol2FinalTicker.get(symbol);
+                        KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
                         OrderTargetInfo orderRunning = getOrderInfo(symbol);
                         PositionRisk position = BudgetManager.getInstance().symbol2Pos.get(symbol);
                         if (position != null) {
@@ -256,14 +253,15 @@ public class DetectEntrySignal2TradeNormal {
                                 LOG.info("Not dca {} {} {}", symbol, orderRunning.priceEntry, ticker.priceClose);
                                 continue;
                             }
+                            levelChange = null;
                             if (PositionHelper.callMargin(position) < BudgetManager.getInstance().getBudget()
                                     && BudgetManager.getInstance().marginRunning < 100 * BudgetManager.getInstance().getBudget()) {
-                                createOrderBuyRequest(symbol, ticker, MarketLevelChange.DCA_LEVEL1,
-                                        symbol2Max15m.get(symbol), marketRate);
+                                levelChange = MarketLevelChange.DCA_LEVEL1;
                             } else {
-                                createOrderBuyRequest(symbol, ticker, MarketLevelChange.DCA_LEVEL2,
-                                        symbol2Max15m.get(symbol), marketRate);
+                                levelChange = MarketLevelChange.DCA_LEVEL2;
                             }
+                            createOrderBuyRequest(symbol, ticker, levelChange,
+                                    symbol2Max15m.get(symbol), marketRate);
                         }
                     }
                 } catch (Exception e) {
@@ -277,51 +275,28 @@ public class DetectEntrySignal2TradeNormal {
                 time2RateDown15MAvg.remove(time2RateDown15MAvg.firstKey());
             }
             Double minRate15Min30M = Collections.min(time2RateDown15MAvg.values());
-            if ((rateDown15MAvg < -0.015 && rateDown15MAvg < minRate15Min30M)
-                    || rateDown15MAvg < -0.03
+            if ((rateDown15MAvg < minRate15Min30M)
+                    || rateDown15MAvg < -0.02
                     || rateUpAvg > 0.006
                     || rateDownAvg < -0.006) {
                 Set<String> symbolBuyFundingFee = new HashSet<>();
                 symbolBuyFundingFee.addAll(FundingFeeManagerProduction.getInstance().fundingBuy);
                 symbolBuyFundingFee.removeAll(BudgetManager.getInstance().symbol2Pos.keySet());
                 for (String symbol : symbolBuyFundingFee) {
-                    KlineObjectNumber ticker = symbol2FinalTicker.get(symbol);
+                    KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
                     if (!Utils.isTickerAvailable(ticker)) {
                         continue;
                     }
                     Double priceMax15M = symbol2Max15m.get(symbol);
-                    Double priceMin15M = symbol2Min15m.get(symbol);
                     Double rateTicker = Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen);
                     Double rateMax15M = Utils.rateOf2Double(ticker.priceClose, priceMax15M);
-                    Double rateMax4h = 0.0;
-                    Double priceMax4h = symbol2Max4h.get(symbol);
-                    if (priceMax4h != null) {
-                        rateMax4h = Utils.rateOf2Double(ticker.priceClose, priceMax4h);
-                    }
-                    Double rateMin4h = 0.0;
-                    Double priceMin4h = symbol2Min4h.get(symbol);
-                    if (priceMin4h != null) {
-                        rateMin4h = Utils.rateOf2Double(priceMin4h, ticker.priceClose);
-                    }
-                    Double rateMin15M = 0.0;
-                    if (priceMin15M != null) {
-                        rateMin15M = Utils.rateOf2Double(priceMin15M, ticker.priceClose);
-                    }
-                    if (rateTicker < -0.013
-                            || rateMax15M < -0.045
-                            || (rateTicker < -0.005 && rateMax15M < -0.04)
-                            || (rateTicker < -0.01 && rateMax15M < -0.035)
-                            || (rateTicker < -0.01 && rateMin15M < -0.03)
-                            || (rateTicker < -0.006 && rateMax4h < -0.1)
-                            || (rateTicker < -0.01 && rateMin4h < -0.08)
-                    ) {
-                        LOG.info("Funding buy {} {} close: {} rate:{} max15M: {} min15M:{} max4h:{}" +
-                                        " min4h:{} tickers:{}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time),
-                                ticker.priceClose, rateTicker,
-                                rateMax15M, rateMin15M, rateMax4h, rateMin4h, symbol2LastTickers.get(symbol).size());
-                        List<KlineObjectNumber> tickers = symbol2LastTickers.get(symbol);
+
+                    if (rateTicker < -0.013 || rateMax15M < -0.045) {
+                        LOG.info("Funding buy {} {} close: {} rate:{} max15M: {} tickers:{}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time),
+                                ticker.priceClose, rateTicker, rateMax15M, symbol2LastTickers.get(symbol).size());
+                        List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
                         // ================== GỌI HÀM LỌC DUY NHẤT ==================
-                        if (TradeUtils.shouldAvoidEntryProduction(symbol, tickers)) {
+                        if (TradeUtils.shouldAvoidEntry(symbol, tickers)) {
                             continue; // Bỏ qua nếu có rủi ro
                         }
                         createOrderBuyRequest(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY,
@@ -333,7 +308,7 @@ public class DetectEntrySignal2TradeNormal {
                 for (String symbol : extremeFundingSymbols) {
                     // Chỉ vào lệnh nếu chưa có vị thế đang chạy cho symbol này
                     if (!BudgetManager.getInstance().symbol2Pos.containsKey(symbol) && symbolSellingExhausted.containsKey(symbol)) {
-                        KlineObjectNumber ticker = symbol2FinalTicker.get(symbol);
+                        KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
                         if (!Utils.isTickerAvailable(ticker)) {
                             continue;
                         }
@@ -343,9 +318,9 @@ public class DetectEntrySignal2TradeNormal {
                             symbolSellingExhausted.remove(symbol);
                             continue;
                         }
-                        List<KlineObjectNumber> tickers = symbol2LastTickers.get(symbol);
+                        List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
                         // ================== GỌI HÀM LỌC DUY NHẤT ==================
-                        if (TradeUtils.shouldAvoidEntryProduction(symbol, tickers)) {
+                        if (TradeUtils.shouldAvoidEntry(symbol, tickers)) {
                             continue; // Bỏ qua nếu có rủi ro
                         }
                         createOrderBuyRequest(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY_SPECIAL,
@@ -365,7 +340,7 @@ public class DetectEntrySignal2TradeNormal {
                     }
                     if (calMarginRunning(symbol) > 2 * BudgetManager.getInstance().getBudget()) {
                         if (calMarginRunning(symbol) > 4 * BudgetManager.getInstance().getBudget()) {
-                            KlineObjectNumber ticker = symbol2FinalTicker.get(symbol);
+                            KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
                             OrderTargetInfo orderRunning = getOrderInfo(symbol);
                             if (ticker != null && orderRunning != null
                                     && Utils.rateOf2Double(ticker.priceClose, orderRunning.priceEntry) < -0.1) {
@@ -385,7 +360,7 @@ public class DetectEntrySignal2TradeNormal {
                 }
                 LOG.info("Level: {} {} -> {}", Utils.normalizeDateYYYYMMDDHHmm(btcTicker.startTime.longValue()), levelChange, symbol2BUY);
                 for (String symbol : symbol2BUY) {
-                    KlineObjectNumber ticker = symbol2FinalTicker.get(symbol);
+                    KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
                     createOrderBuyRequest(symbol, ticker, levelChange, symbol2Max15m.get(symbol), marketRate);
                 }
             }
@@ -433,7 +408,7 @@ public class DetectEntrySignal2TradeNormal {
     }
 
 
-    private Set<String> addSpecialSymbol(Map<String, KlineObjectNumber> symbol2Ticker) {
+    private Set<String> addSpecialSymbol(Map<String, KlineObjectSimple> symbol2Ticker) {
         Set<String> symbol2Checks = new HashSet<>();
         Set<String> symbol2Trade = new HashSet<>();
         if (BudgetManager.getInstance().marginRunning < 50 * BudgetManager.getInstance().getBudget()) {
@@ -442,7 +417,7 @@ public class DetectEntrySignal2TradeNormal {
             symbol2Checks.removeAll(BudgetManager.getInstance().symbol2Pos.keySet());
         }
         for (String symbol : symbol2Checks) {
-            KlineObjectNumber ticker = symbol2Ticker.get(symbol);
+            KlineObjectSimple ticker = symbol2Ticker.get(symbol);
             if (ticker != null && Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen) < -0.013) {
                 symbol2Trade.add(symbol);
             }
@@ -450,10 +425,18 @@ public class DetectEntrySignal2TradeNormal {
         return symbol2Trade;
     }
 
-    public void createOrderBuyRequest(String symbol, KlineObjectNumber ticker,
+    public void createOrderBuyRequest(String symbol, KlineObjectSimple ticker,
                                       MarketLevelChange levelChange, Double priceMax15M, MarketRateChange marketRate) {
 
-        if (BudgetManager.getInstance().marginRunning >= BudgetManager.getInstance().balanceBasic * 0.3
+        Double budget = BudgetManager.getInstance().getBudget();
+        if (BudgetManager.getInstance().marginRunning >= BudgetManager.getInstance().balanceBasic * 0.25
+                && !levelChange.equals(MarketLevelChange.DCA_LEVEL1)
+                && !levelChange.equals(MarketLevelChange.DCA_LEVEL2)
+                && !StringUtils.containsIgnoreCase(levelChange.toString(), "big")
+        ) {
+            budget = budget / 2;
+        }
+        if (BudgetManager.getInstance().marginRunning >= BudgetManager.getInstance().balanceBasic * 0.35
                 && !levelChange.equals(MarketLevelChange.DCA_LEVEL1)
                 && !levelChange.equals(MarketLevelChange.DCA_LEVEL2)
                 && !StringUtils.containsIgnoreCase(levelChange.toString(), "big")
@@ -462,7 +445,15 @@ public class DetectEntrySignal2TradeNormal {
                     Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()));
             return;
         }
-        Double budget = BudgetManager.getInstance().getBudget();
+        if (BudgetManager.getInstance().marginRunning >= BudgetManager.getInstance().balanceBasic * 0.45
+        ) {
+            budget = budget / 2;
+        }
+        if (BudgetManager.getInstance().marginRunning >= BudgetManager.getInstance().balanceBasic * 0.6) {
+            LOG.info("Not trade because over capital: {} {} {}", symbol, levelChange,
+                    Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()));
+            return;
+        }
 
         if (levelChange.equals(MarketLevelChange.MEDIUM_DOWN)
                 || levelChange.equals(MarketLevelChange.MEDIUM_UP)
@@ -516,7 +507,7 @@ public class DetectEntrySignal2TradeNormal {
         }
     }
 
-    private void writeOrder2File(OrderTargetInfo orderTrade, KlineObjectNumber ticker, MarketRateChange marketRate, Double priceMax15M) {
+    private void writeOrder2File(OrderTargetInfo orderTrade, KlineObjectSimple ticker, MarketRateChange marketRate, Double priceMax15M) {
         try {
             Map<Object, Object> data = new HashMap<>();
             data.put("ticker", ticker);

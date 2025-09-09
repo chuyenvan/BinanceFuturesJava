@@ -21,6 +21,7 @@ import com.binance.chuyennd.client.ClientSingleton;
 import com.binance.chuyennd.helper.OrderHelper;
 import com.binance.chuyennd.helper.PositionHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
+import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
 import com.binance.chuyennd.tradecore.TradeUtils;
@@ -284,7 +285,7 @@ public class BinanceOrderTradingManager {
     }
 
     private Double getMaxChange60M(String symbol) {
-        List<KlineObjectNumber> tickers = ListenAllTicker.getInstance().getTickerBySymbol(symbol);
+        List<KlineObjectSimple> tickers = ListenAllTicker.getInstance().getTickerBySymbol(symbol);
         Double maxChangeIn60M = 0d;
         if (tickers != null) {
             int index = tickers.size() - 1;
@@ -292,7 +293,7 @@ public class BinanceOrderTradingManager {
                 if (index - i < 0) {
                     break;
                 }
-                KlineObjectNumber tickerCheck = tickers.get(index - i);
+                KlineObjectSimple tickerCheck = tickers.get(index - i);
                 if (maxChangeIn60M == null || Utils.rateOf2Double(tickerCheck.maxPrice, tickerCheck.minPrice) > maxChangeIn60M) {
                     maxChangeIn60M = Utils.rateOf2Double(tickerCheck.maxPrice, tickerCheck.minPrice);
                 }
@@ -387,8 +388,15 @@ public class BinanceOrderTradingManager {
                     }
 
                     // move sl
+                    Double priceChange2Move = 0d;
+                    if (rateLoss > 0.03){
+                        priceChange2Move = 0.003;
+                    }
+                    if (rateLoss > 0.1){
+                        priceChange2Move = 0.005;
+                    }
                     if (rateLoss >= rateMin2MoveSl
-                            && priceSLChange > 0) {
+                            && priceSLChange > priceChange2Move) {
                         if (symbol2Processing.containsKey(symbol)) {
                             if (symbol2Processing.get(symbol) > System.currentTimeMillis() - 5 * Utils.TIME_MINUTE) {
                                 LOG.info("{} is locking in list: {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(symbol2Processing.get(symbol)));
@@ -508,28 +516,7 @@ public class BinanceOrderTradingManager {
                                         + " -> " + priceSL + " rate: " + Utils.formatPercent(Math.abs(Utils.rateOf2Double(priceSL,
                                         pos.getEntryPrice().doubleValue())));
                                 LOG.info(log);
-                                orderSLResult = OrderHelper.stopLoss(pos.getSymbol(), OrderSide.SELL, pos.getPositionAmt().doubleValue(), priceSL);
-                            }
-                        }
-                    }
-                } else {
-                    if (pos.getPositionAmt().compareTo(new BigDecimal("0")) < 0) {
-                        if (pos.getEntryPrice().equals(new BigDecimal("0.0"))) {
-                            LOG.info("Error process SL for: {} {}", pos.getSymbol(), pos.getEntryPrice());
-                        } else {
-                            pos = BinanceFuturesClientSingleton.getInstance().getPositionInfo(pos.getSymbol());
-                            if (pos.getEntryPrice().equals(new BigDecimal("0.0"))) {
-                                LOG.info("Position has finished: {} {} {}", pos.getSymbol(), pos.getEntryPrice(),
-                                        Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()));
-                            } else {
-                                if (pos != null) {
-                                    log = "Create sl -> BUY "
-                                            + pos.getSymbol() + " " + pos.getPositionAmt().doubleValue() + " " + pos.getEntryPrice().doubleValue()
-                                            + " -> " + priceSL + " rate: " + Utils.formatPercent(Math.abs(Utils.rateOf2Double(priceSL,
-                                            pos.getEntryPrice().doubleValue())));
-                                    LOG.info(log);
-                                    orderSLResult = OrderHelper.stopLoss(pos.getSymbol(), OrderSide.BUY, -pos.getPositionAmt().doubleValue(), priceSL);
-                                }
+                                orderSLResult = OrderHelper.stopLoss(pos.getSymbol(), pos.getPositionAmt().doubleValue(), priceSL);
                             }
                         }
                     }

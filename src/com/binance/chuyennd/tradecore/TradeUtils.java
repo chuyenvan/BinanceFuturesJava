@@ -108,48 +108,4 @@ public class TradeUtils {
         return false;
     }
 
-    public static boolean shouldAvoidEntryProduction(String symbol, List<KlineObjectNumber> recentTickers) {
-        // ================== CÁC THAM SỐ CÓ THỂ TÙY CHỈNH ==================
-        // 1. Chu kỳ xem xét để tính toán đỉnh/đáy (ví dụ: 15 phút)
-        final int PRICE_LOOKBACK_PERIOD = 15;
-        // 3. Tham số cho bộ lọc "Thị trường ảm đạm"
-        double MIN_MOVEMENT_RANGE_THRESHOLD = 0.03;
-        // =================================================================
-
-        // --- Bước 1: Kiểm tra dữ liệu đầu vào ---
-        if (recentTickers == null || recentTickers.size() < PRICE_LOOKBACK_PERIOD) {
-            return false; // Không đủ dữ liệu, tạm thời cho phép
-        }
-
-        // --- Bước 2: Tính toán các chỉ số dow (rateFromMax) và up (rateFromMin) ---
-        double currentClose = recentTickers.get(recentTickers.size() - 1).priceClose;
-        double periodHigh = 0;
-        double periodMin = Double.MAX_VALUE;
-        int startIndex = recentTickers.size() - PRICE_LOOKBACK_PERIOD;
-
-        for (int i = startIndex; i < recentTickers.size(); i++) {
-            KlineObjectNumber candle = recentTickers.get(i);
-            if (candle.maxPrice > periodHigh) {
-                periodHigh = candle.maxPrice;
-            }
-            if (candle.minPrice < periodMin) {
-                periodMin = candle.minPrice;
-            }
-        }
-        if (periodHigh == 0 || periodMin == 0) return false; // Dữ liệu bất thường, bỏ qua
-
-        double dow = (currentClose - periodHigh) / periodHigh;
-        double up = (currentClose - periodMin) / periodMin;
-
-        // Lọc 2: "Thị trường ảm đạm"
-        double movementRange = Math.abs(dow) + up;
-        if (movementRange < MIN_MOVEMENT_RANGE_THRESHOLD) {
-            LOG.warn("!!! TRÁNH VÀO LỆNH (Thị trường ảm đạm): {} | Biến động chỉ {}%",
-                    symbol, String.format("%.2f", movementRange * 100));
-            return true;
-        }
-
-        // Nếu không rơi vào trường hợp nào, có thể vào lệnh
-        return false;
-    }
 }

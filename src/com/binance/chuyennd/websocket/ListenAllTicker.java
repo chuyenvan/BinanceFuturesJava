@@ -18,7 +18,7 @@ package com.binance.chuyennd.websocket;
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
 import com.binance.chuyennd.client.ClientSingleton;
 import com.binance.chuyennd.helper.TickerFuturesHelper;
-import com.binance.chuyennd.object.KlineObjectNumber;
+import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
 import com.binance.chuyennd.trading.BudgetManager;
@@ -50,7 +50,7 @@ import java.util.logging.Level;
 public class ListenAllTicker {
 
     public static final Logger LOG = LoggerFactory.getLogger(ListenAllTicker.class);
-    public ConcurrentHashMap<String, TreeMap<Long, KlineObjectNumber>> symbol2Tickers = new ConcurrentHashMap<>();
+    public ConcurrentHashMap<String, TreeMap<Long, KlineObjectSimple>> symbol2Tickers = new ConcurrentHashMap<>();
     public final ConcurrentHashMap<String, Double> symbol2Price = new ConcurrentHashMap<>();
     public static final String FILE_TICKER_1M_STORAGE = "storage/tickers/symbol2ticker1Ms";
     public ExecutorService executorService = Executors.newFixedThreadPool(Configs.NUMBER_THREAD_ORDER_MANAGER);
@@ -61,7 +61,7 @@ public class ListenAllTicker {
         if (INSTANCE == null) {
             INSTANCE = new ListenAllTicker();
             if (new File(FILE_TICKER_1M_STORAGE).exists()) {
-                INSTANCE.symbol2Tickers = (ConcurrentHashMap<String, TreeMap<Long, KlineObjectNumber>>)
+                INSTANCE.symbol2Tickers = (ConcurrentHashMap<String, TreeMap<Long, KlineObjectSimple>>)
                         StorageSnappy.readObjectFromFile(FILE_TICKER_1M_STORAGE);
             } else {
                 INSTANCE.initData();
@@ -96,9 +96,9 @@ public class ListenAllTicker {
 
     private void initTickerBySymbol(String symbol, Long startTime) {
         try {
-            List<KlineObjectNumber> candles = TickerFuturesHelper.getTickerWithStartTime(symbol, Constants.INTERVAL_1M, startTime);
-            TreeMap<Long, KlineObjectNumber> time2Candle = new TreeMap<>();
-            for (KlineObjectNumber candle : candles) {
+            List<KlineObjectSimple> candles = TickerFuturesHelper.getTickerSimpleWithStartTime(symbol, Constants.INTERVAL_1M, startTime);
+            TreeMap<Long, KlineObjectSimple> time2Candle = new TreeMap<>();
+            for (KlineObjectSimple candle : candles) {
                 time2Candle.put(candle.startTime.longValue(), candle);
             }
             symbol2Tickers.put(symbol, time2Candle);
@@ -114,14 +114,14 @@ public class ListenAllTicker {
 
 //        ListenAllTicker.getInstance().startThreadMonitor();
         String symbol = "BTCUSDT";
-        List<KlineObjectNumber> tickers = ListenAllTicker.getInstance().getTickerBySymbol(symbol);
+        List<KlineObjectSimple> tickers = ListenAllTicker.getInstance().getTickerBySymbol(symbol);
         if (tickers != null) {
             int index = tickers.size() - 1;
             for (int i = 0; i < 15; i++) {
                 if (index - i < 0) {
                     break;
                 }
-                KlineObjectNumber tickerCheck = tickers.get(index - i);
+                KlineObjectSimple tickerCheck = tickers.get(index - i);
                 if (Utils.rateOf2Double(tickerCheck.maxPrice, tickerCheck.minPrice) > 0.001) {
                     LOG.info("{} True", symbol);
                     return;
@@ -149,7 +149,7 @@ public class ListenAllTicker {
             symbols.add(symbol.toLowerCase());
         }
 
-        List<List<String>> sublist = Utils.subList(symbols, 150);
+        List<List<String>> sublist = Utils.subList(symbols, 170);
         for (List<String> list : sublist) {
             client.subscribeAllCandlestickEvent(list, CandlestickInterval.ONE_MINUTE, ((event) -> {
 //                LOG.info("Update ticker: {}", Utils.gson.toJson(event));
@@ -217,7 +217,7 @@ public class ListenAllTicker {
 
     private void writeTickerData2File() {
         // 1. Tạo một bản sao của dữ liệu cần ghi
-        ConcurrentHashMap<String, TreeMap<Long, KlineObjectNumber>> tickersToSave = new ConcurrentHashMap<>();
+        ConcurrentHashMap<String, TreeMap<Long, KlineObjectSimple>> tickersToSave = new ConcurrentHashMap<>();
         // 2. Sử dụng synchronized để đảm bảo tạo bản sao một cách an toàn
         //    Khối lệnh này chỉ chạy trong vài mili giây, rất nhanh.
         synchronized (symbol2Tickers) {
@@ -236,27 +236,27 @@ public class ListenAllTicker {
             while (true) {
                 if (isTimeGetData()) {
                     try {
-                        ConcurrentHashMap<String, List<KlineObjectNumber>> symbol2Tickers = getInstance().getAllTicker();
-                        Map<String, KlineObjectNumber> symbol2FinalTicker = new HashMap<>();
+                        ConcurrentHashMap<String, List<KlineObjectSimple>> symbol2Tickers = getInstance().getAllTicker();
+                        Map<String, KlineObjectSimple> symbol2FinalTicker = new HashMap<>();
                         TreeMap<Double, String> rateDown15M2Symbols = new TreeMap<>();
                         TreeMap<Double, String> rateUp15M2Symbols = new TreeMap<>();
                         TreeMap<Double, String> rateDown2Symbols = new TreeMap<>();
                         TreeMap<Double, String> rateUp2Symbols = new TreeMap<>();
                         Map<String, Double> symbol2Max15m = new HashMap<>();
 
-                        List<KlineObjectNumber> btcTickers = symbol2Tickers.get(Constants.SYMBOL_PAIR_BTC);
-                        KlineObjectNumber btcTicker = btcTickers.get(btcTickers.size() - 1);
+                        List<KlineObjectSimple> btcTickers = symbol2Tickers.get(Constants.SYMBOL_PAIR_BTC);
+                        KlineObjectSimple btcTicker = btcTickers.get(btcTickers.size() - 1);
                         Double btcRateChange = Utils.rateOf2Double(btcTicker.priceClose, btcTicker.priceOpen);
                         Double btcMax15M = null;
                         long time = btcTicker.startTime.longValue();
-                        for (Map.Entry<String, List<KlineObjectNumber>> entry : symbol2Tickers.entrySet()) {
+                        for (Map.Entry<String, List<KlineObjectSimple>> entry : symbol2Tickers.entrySet()) {
                             try {
                                 String symbol = entry.getKey();
                                 if (Constants.diedSymbol.contains(symbol)) {
                                     continue;
                                 }
-                                List<KlineObjectNumber> tickers = entry.getValue();
-                                KlineObjectNumber ticker = tickers.get(tickers.size() - 1);
+                                List<KlineObjectSimple> tickers = entry.getValue();
+                                KlineObjectSimple ticker = tickers.get(tickers.size() - 1);
                                 if (!Utils.isTickerAvailable(ticker)) {
                                     continue;
                                 }
@@ -273,7 +273,7 @@ public class ListenAllTicker {
                                 for (int i = 0; i < Configs.NUMBER_TICKER_CAL_RATE_CHANGE; i++) {
                                     int index = tickers.size() - i - 1;
                                     if (index >= 0) {
-                                        KlineObjectNumber kline = tickers.get(index);
+                                        KlineObjectSimple kline = tickers.get(index);
                                         if (priceMax == null || priceMax < kline.maxPrice) {
                                             priceMax = kline.maxPrice;
                                         }
@@ -353,14 +353,14 @@ public class ListenAllTicker {
         }).start();
     }
 
-    public ConcurrentHashMap<String, List<KlineObjectNumber>> getAllTicker() {
-        ConcurrentHashMap<String, List<KlineObjectNumber>> result = new ConcurrentHashMap<>();
+    public ConcurrentHashMap<String, List<KlineObjectSimple>> getAllTicker() {
+        ConcurrentHashMap<String, List<KlineObjectSimple>> result = new ConcurrentHashMap<>();
         int counterError = 0;
         for (String symbol : symbol2Tickers.keySet()) {
             try {
-                TreeMap<Long, KlineObjectNumber> tickers = symbol2Tickers.get(symbol);
+                TreeMap<Long, KlineObjectSimple> tickers = symbol2Tickers.get(symbol);
                 int numberMax = Configs.BTC_TREND_REVERSE_DURATION + 5;
-                List<KlineObjectNumber> list = new ArrayList<>();
+                List<KlineObjectSimple> list = new ArrayList<>();
                 while (tickers.size() > numberMax) {
 //                LOG.info("Remove: {} {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(tickers.firstKey()), tickers.size());
                     tickers.remove(tickers.firstKey());
@@ -397,9 +397,9 @@ public class ListenAllTicker {
         return result;
     }
 
-    public List<KlineObjectNumber> getTickerBySymbol(String symbol) {
-        TreeMap<Long, KlineObjectNumber> tickers = symbol2Tickers.get(symbol);
-        List<KlineObjectNumber> result = new ArrayList<>();
+    public List<KlineObjectSimple> getTickerBySymbol(String symbol) {
+        TreeMap<Long, KlineObjectSimple> tickers = symbol2Tickers.get(symbol);
+        List<KlineObjectSimple> result = new ArrayList<>();
         if (tickers != null) {
             synchronized (tickers) {
                 try {
@@ -419,7 +419,7 @@ public class ListenAllTicker {
     }
 
     private void updateDate(CandlestickEvent event) {
-        TreeMap<Long, KlineObjectNumber> tickers = symbol2Tickers.get(event.getSymbol());
+        TreeMap<Long, KlineObjectSimple> tickers = symbol2Tickers.get(event.getSymbol());
         if (tickers == null) {
             tickers = new TreeMap<>();
         }
@@ -438,17 +438,16 @@ public class ListenAllTicker {
         if (Constants.diedSymbol.contains(event.getSymbol())) {
             return;
         }
-        TreeMap<Long, KlineObjectNumber> tickers = symbol2Tickers.get(event.getSymbol());
+        TreeMap<Long, KlineObjectSimple> tickers = symbol2Tickers.get(event.getSymbol());
         if (tickers == null) {
             tickers = new TreeMap<>();
         }
         Long time = Utils.getMinute(event.getEventTime());
-        KlineObjectNumber kline = tickers.get(time);
+        KlineObjectSimple kline = tickers.get(time);
         Double lastPrice = event.getLastPrice().doubleValue();
         if (kline == null) {
-            kline = new KlineObjectNumber();
+            kline = new KlineObjectSimple();
             kline.startTime = time.doubleValue();
-            kline.endTime = time.doubleValue() + Utils.TIME_MINUTE - 1;
             kline.priceOpen = lastPrice;
             kline.maxPrice = lastPrice;
             kline.minPrice = lastPrice;
@@ -463,14 +462,13 @@ public class ListenAllTicker {
         symbol2Tickers.put(event.getSymbol(), tickers);
     }
 
-    private static KlineObjectNumber convertEvent2Kline(CandlestickEvent event) {
-        KlineObjectNumber result = new KlineObjectNumber();
+    private static KlineObjectSimple convertEvent2Kline(CandlestickEvent event) {
+        KlineObjectSimple result = new KlineObjectSimple();
         result.startTime = event.getStartTime().doubleValue();
         result.priceOpen = event.getOpen().doubleValue();
         result.maxPrice = event.getHigh().doubleValue();
         result.minPrice = event.getLow().doubleValue();
         result.priceClose = event.getClose().doubleValue();
-        result.endTime = event.getCloseTime().doubleValue();
         result.totalUsdt = event.getVolume().doubleValue();
         return result;
     }

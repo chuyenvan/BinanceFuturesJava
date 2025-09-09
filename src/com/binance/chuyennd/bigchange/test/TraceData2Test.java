@@ -1,16 +1,21 @@
 package com.binance.chuyennd.bigchange.test;
 
-import com.binance.chuyennd.bigchange.market.MarketBigChangeDetectorTest;
 import com.binance.chuyennd.bigchange.market.MarketDataObject;
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
 import com.binance.chuyennd.bigchange.statistic.data.DataManager;
-
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
-import com.binance.chuyennd.research.*;
+import com.binance.chuyennd.research.BalanceIndex;
+import com.binance.chuyennd.research.BudgetManagerSimple;
+import com.binance.chuyennd.research.OrderTargetInfoTest;
+import com.binance.chuyennd.research.SimulatorMarketLevelTicker1MStopLoss;
+import com.binance.chuyennd.trading.MarketBigChangeDetector;
 import com.binance.chuyennd.trading.OrderTargetStatus;
-import com.binance.chuyennd.utils.*;
+import com.binance.chuyennd.utils.Configs;
+import com.binance.chuyennd.utils.Storage;
+import com.binance.chuyennd.utils.StorageSnappy;
+import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
 import com.binance.client.model.enums.OrderSide;
 import org.apache.commons.io.FileUtils;
@@ -83,8 +88,8 @@ public class TraceData2Test {
 //                        if (BudgetManagerSimple.getInstance().isAvailableTrade()) {
                 KlineObjectSimple btcTicker = symbol2Ticker.get(Constants.SYMBOL_PAIR_BTC);
                 Double btcRateChange = Utils.rateOf2Double(btcTicker.priceClose, btcTicker.priceOpen);
-                Double rateChangeDownAvg = MarketBigChangeDetectorTest.calRateLossAvg(rateDown2Symbols, 50);
-                Double rateChangeUpAvg = -MarketBigChangeDetectorTest.calRateLossAvg(rateUp2Symbols, 50);
+                Double rateChangeDownAvg = MarketBigChangeDetector.calRateLossAvg(rateDown2Symbols, 50);
+                Double rateChangeUpAvg = -MarketBigChangeDetector.calRateLossAvg(rateUp2Symbols, 50);
                 LOG.info("{} down:{} up:{} btcRate:{} btcVol:{}", Utils.normalizeDateYYYYMMDDHHmm(time),
                         Utils.formatDouble(rateChangeDownAvg * 100, 2), Utils.formatDouble(rateChangeUpAvg * 100, 2),
                         Utils.formatDouble(btcRateChange * 100, 2), btcTicker.totalUsdt / 1E6);
@@ -203,9 +208,9 @@ public class TraceData2Test {
                     symbol2MinPrice.put(symbol, minPrice);
                 }
             }
-            MarketDataObject marketData = MarketBigChangeDetectorTest.calMarketData(time2Tickers.get(time), symbol2MaxPrice,
+            MarketDataObject marketData = MarketBigChangeDetector.calMarketData(time2Tickers.get(time), symbol2MaxPrice,
                     symbol2MinPrice);
-            List<String> symbols = MarketBigChangeDetectorTest.getTopSymbolSimple(marketData.rate2Max, 4, null);
+//            List<String> symbols = MarketBigChangeDetector.getTopSymbol(marketData.rate2Max, 4, null);
             SimulatorMarketLevelTicker1MStopLoss test = new SimulatorMarketLevelTicker1MStopLoss();
             test.initData();
         } catch (Exception e) {
@@ -959,11 +964,11 @@ public class TraceData2Test {
                     symbol2MinPrice.put(symbol, minPrice);
                 }
             }
-            MarketDataObject marketData = MarketBigChangeDetectorTest.calMarketData(time2Tickers.get(time), symbol2MaxPrice,
+            MarketDataObject marketData = MarketBigChangeDetector.calMarketData(time2Tickers.get(time), symbol2MaxPrice,
                     symbol2MinPrice);
-            List<String> symbols = MarketBigChangeDetectorTest.getTopSymbolSimple(marketData.rate2Max, 20, null);
-            marketData.rate2Max.clear();
-            LOG.info("{} {}", symbols, Utils.toJson(marketData));
+//            List<String> symbols = MarketBigChangeDetector.get(marketData.rate2Max, 20, null);
+//            marketData.rate2Max.clear();
+//            LOG.info("{} {}", symbols, Utils.toJson(marketData));
 //            Map<String, Double> symbol2Volume24h = Volume24hrManager.getInstance().getVolume24h(time);
 //            for (String symbol : symbols) {
 //                LOG.info("{} {}M", symbol, Utils.formatDouble(symbol2Volume24h.get(symbol) / 1E6, 0));
@@ -995,7 +1000,7 @@ public class TraceData2Test {
             LOG.info("{} {} {}", time, startTime, Utils.normalizeDateYYYYMMDDHHmm(startTime));
             // data ticker
             TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers = DataManager.readDataFromFile1M(startTime);
-            LOG.info("{}", MarketBigChangeDetectorTest.getTopUpSymbol2TradeSimple(time2Tickers.get(time), 4));
+//            LOG.info("{}", MarketBigChangeDetector.getMarketStatus1M(time2Tickers.get(time), 4));
         } catch (Exception e) {
             e.printStackTrace();
         }

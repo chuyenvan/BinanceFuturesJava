@@ -15,7 +15,6 @@
  */
 package com.binance.chuyennd.helper;
 
-import com.binance.chuyennd.bigchange.market.MarketBigChangeDetectorTest;
 import com.binance.chuyennd.client.ClientSingleton;
 import com.binance.chuyennd.indicators.MACD;
 import com.binance.chuyennd.indicators.RelativeStrengthIndex;
@@ -1687,52 +1686,4 @@ public class TickerFuturesHelper {
         return tickerVolumeMax24h;
     }
 
-    public static TreeMap<Long, List<String>> exportSellByKline4h() {
-        TreeMap<Long, List<String>> time2SignalSell = new TreeMap<>();
-        try {
-            File[] files = new File(Configs.FOLDER_TICKER_4HOUR).listFiles();
-            for (File file : files) {
-                List<KlineObjectNumber> tickers = (List<KlineObjectNumber>) Storage.readObjectFromFile(Configs.FOLDER_TICKER_4HOUR + file.getName());
-                List<KlineObjectNumber> tickerChecks = new ArrayList<>();
-                for (int i = 0; i < tickers.size(); i++) {
-                    KlineObjectNumber ticker = tickers.get(i);
-                    tickerChecks.add(ticker);
-
-                    Double minPrice = ticker.minPrice;
-                    for (int j = 1; j < 12; j++) {
-                        if (i - j >= 0) {
-                            minPrice = Math.min(minPrice, tickers.get(i - j).minPrice);
-//                            LOG.info("Time byKline: {} {}", Utils.normalizeDateYYYYMMDDHHmm(tickers.get(i-j).startTime.longValue())
-//                            , Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()));
-                        }
-                    }
-//                    if (!minPrice.equals(Price4hManager.getInstance().getPriceMinIn2D(file.getName(), ticker.startTime.longValue()))){
-//                        LOG.info("Lech:{} {} {} {}",file.getName(), Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()),
-//                                minPrice, Price4hManager.getInstance().getPriceMinIn2D(file.getName(), ticker.startTime.longValue()));
-//                    }
-                    if (Utils.rateOf2Double(ticker.priceClose, minPrice) > 0.9) {
-                        if (!MarketBigChangeDetectorTest.isSignalSell(tickerChecks)) {
-                            LOG.info("check false: {} {} {}", file.getName(), Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()),
-                                    MarketBigChangeDetectorTest.isSignalSell(tickerChecks));
-                        }
-                        List<String> symbolSell = time2SignalSell.get(ticker.startTime.longValue() + 4 * Utils.TIME_HOUR);
-                        if (symbolSell == null) {
-                            symbolSell = new ArrayList<>();
-                        }
-                        symbolSell.add(file.getName());
-                        time2SignalSell.put(ticker.startTime.longValue() + 4 * Utils.TIME_HOUR, symbolSell);
-                    } else {
-                        if (MarketBigChangeDetectorTest.isSignalSell(tickerChecks)) {
-                            LOG.info("check true: {} {} {}", file.getName(), Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()),
-                                    MarketBigChangeDetectorTest.isSignalSell(tickerChecks));
-                        }
-                    }
-
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return time2SignalSell;
-    }
 }

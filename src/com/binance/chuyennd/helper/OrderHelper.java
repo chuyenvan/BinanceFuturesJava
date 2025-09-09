@@ -207,35 +207,19 @@ public class OrderHelper {
     }
 
 
-    public static Order stopLoss(String symbol, OrderSide side, Double quantity, Double stopPrice) {
+    public static Order stopLoss(String symbol, Double quantity, Double stopPrice) {
         try {
             if (SymbolOrderLockingManager.getInstance().isLock(symbol, 10)) {
                 LOG.info("Symbol {} is locking for loop!", symbol);
                 return null;
             }
             SymbolOrderLockingManager.getInstance().addLock(symbol);
-            return ClientSingleton.getInstance().syncRequestClient.postOrder(symbol, side, null, OrderType.STOP_MARKET,
+            return ClientSingleton.getInstance().syncRequestClient.postOrder(symbol, OrderSide.SELL, null, OrderType.STOP_MARKET,
                     TimeInForce.GTC,
                     Utils.formatMoney(quantity), null, null, null, Utils.formatMoney(stopPrice),
                     null, null, null, null, null, NewOrderRespType.RESULT);
         } catch (Exception e) {
-            if (StringUtils.containsIgnoreCase(e.getMessage(), "Order would immediately trigger")) {
-                LOG.info("Error order stop market: {} {} {} {} {}", Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()),
-                        symbol, side, quantity, stopPrice);
-            } else {
-                if (StringUtils.containsIgnoreCase(e.getMessage(), "Futures Trading Quantitative Rules violated")) {
-                    try {
-                        return ClientSingleton.getInstance().syncRequestClient.postOrder(symbol, side, null, OrderType.STOP_MARKET,
-                                TimeInForce.GTC,
-                                Utils.formatMoney(quantity), null, "true", null, Utils.formatMoney(stopPrice),
-                                null, null, null, null, null, NewOrderRespType.RESULT);
-                    } catch (Exception ex) {
-                        ex.printStackTrace();
-                    }
-                } else {
-                    e.printStackTrace();
-                }
-            }
+            e.printStackTrace();
         }
         return null;
     }

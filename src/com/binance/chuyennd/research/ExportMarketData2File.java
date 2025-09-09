@@ -4,12 +4,12 @@
  */
 package com.binance.chuyennd.research;
 
-import com.binance.chuyennd.bigchange.market.MarketBigChangeDetectorTest;
 import com.binance.chuyennd.bigchange.market.MarketDataObject;
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
 import com.binance.chuyennd.bigchange.statistic.data.DataManager;
 import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
+import com.binance.chuyennd.trading.MarketBigChangeDetector;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.StorageSnappy;
 import com.binance.chuyennd.utils.Utils;
@@ -75,8 +75,8 @@ public class ExportMarketData2File {
             ticker2Check.add(ticker1Ms.get(i));
             long time = ticker1Ms.get(i).startTime.longValue();
             if (timeBtcReverse.isEmpty() || timeBtcReverse.lastKey() < time) {
-                Double rateBtcTrendReverse = MarketBigChangeDetectorTest.isBtcTrendReverse(
-                        ticker2Check, Configs.BTC_TREND_REVERSE_RATE_MAX, Configs.BTC_TREND_REVERSE_RATE_MIN);
+                Double rateBtcTrendReverse = MarketBigChangeDetector.isBtcTrendReverse(
+                        ticker2Check);
                 if (rateBtcTrendReverse != null) {
                     timeBtcReverse.put(ticker2Check.get(ticker2Check.size() - 1).startTime.longValue(), rateBtcTrendReverse);
                 }
@@ -181,9 +181,9 @@ public class ExportMarketData2File {
 
                             if (time2MarketRateChange.isEmpty() || time2MarketRateChange.lastKey() < time) {
                                 MarketDataObject marketData;
-                                marketData = MarketBigChangeDetectorTest.calMarketData(symbol2Ticker, symbol2MaxPrice, symbol2MinPrice);
+                                marketData = MarketBigChangeDetector.calMarketData(symbol2Ticker, symbol2MaxPrice, symbol2MinPrice);
                                 if (marketData != null) {
-                                    MarketLevelChange levelChange = MarketBigChangeDetectorTest.getMarketStatusSimple(marketData.rateDownAvg,
+                                    MarketLevelChange levelChange = MarketBigChangeDetector.getMarketStatus1M(marketData.rateDownAvg,
                                             marketData.rateUpAvg, marketData.rateBtc, marketData.rateDown15MAvg);
                                     if (levelChange != null) {
                                         marketData.rate2Min.clear();
