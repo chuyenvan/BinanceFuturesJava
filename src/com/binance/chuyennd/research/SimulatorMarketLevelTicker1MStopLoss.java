@@ -222,8 +222,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                         if (priceMax15M != null) {
                                             rateMax15M = Utils.rateOf2Double(ticker.priceClose, priceMax15M);
                                         }
-                                        if (rateTicker < -0.013 || rateMax15M < -0.045
-                                        ) {
+                                        if (rateTicker < -0.013 || rateMax15M < -0.04) {
                                             // ================== GỌI HÀM LỌC DUY NHẤT ==================
                                             if (TradeUtils.shouldAvoidEntry(symbol, tickers)) {
                                                 continue; // Bỏ qua nếu có rủi ro
