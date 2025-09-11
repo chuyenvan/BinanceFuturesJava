@@ -46,7 +46,7 @@ public class FundingFeeManagerProduction {
             try {
                 TreeMap<Long, FundingRate> time2Rate = symbol2FundingFee.get(symbol);
                 if (time2Rate != null && !time2Rate.isEmpty()) {
-                    while (time2Rate.size() > 4) {
+                    while (time2Rate.size() > 12) {
                         time2Rate.remove(time2Rate.firstKey());
                     }
                     while (time2Rate.size() > 0 && time2Rate.firstKey() < System.currentTimeMillis() - 30 * Utils.TIME_HOUR) {

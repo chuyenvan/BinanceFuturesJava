@@ -190,12 +190,12 @@ public class FundingFeeManager {
                 if (time2Funding.containsKey(timeF)) {
                     time2FundingGet.put(timeF, time2Funding.get(timeF));
                 }
-                if (time2FundingGet.size() >= 4) {
+                if (time2FundingGet.size() >= 12) {
                     break;
                 }
             }
             for (FundingRate funding : time2FundingGet.values()) {
-                if (funding.getFundingRate().doubleValue() < -0.000 || funding.getFundingRate().doubleValue() > 0.00055) {
+                if (funding.getFundingRate().doubleValue() < -0.000 || funding.getFundingRate().doubleValue() > 0.0006) {
                     symbols.add(symbol);
                 }
             }

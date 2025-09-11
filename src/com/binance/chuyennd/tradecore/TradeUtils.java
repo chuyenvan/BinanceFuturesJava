@@ -13,10 +13,17 @@ import java.util.List;
 public class TradeUtils {
     public static final Logger LOG = LoggerFactory.getLogger(TradeUtils.class);
 
+    public static void main(String[] args) {
+        for (int i = 0; i < 100; i++) {
+            Double rate = 0.01 + i * 0.001;
+            LOG.info("{} {}", rate, TradeUtils.calRateLossDynamicBuy(rate));
+        }
+    }
+
     public static Double calRateLossDynamicBuy(Double unProfit) {
-        Double rateLoss = unProfit * 1000;
+        Double rateLoss = unProfit * 200;
         Long tradingStopRate;
-        Long maxRateTradingStop = 50l;
+        Long maxRateTradingStop = 15l;
         if (rateLoss < maxRateTradingStop * 2) {
             tradingStopRate = rateLoss.longValue() / 2;
             tradingStopRate -= 2;
@@ -24,7 +31,7 @@ public class TradeUtils {
             tradingStopRate = maxRateTradingStop;
         }
         rateLoss = rateLoss.longValue() - tradingStopRate.doubleValue();
-        return rateLoss / 1000;
+        return rateLoss / 200;
     }
 
     public static Double calRateMinWithMaxChange60M(Double maxChange15M) {
