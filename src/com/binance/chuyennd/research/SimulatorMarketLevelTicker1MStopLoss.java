@@ -198,8 +198,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                     time2RateDown15MAvg.remove(time2RateDown15MAvg.firstKey());
                                 }
                                 Double minRate15Min60M = Collections.min(time2RateDown15MAvg.values());
-                                if ((marketRateChange.rateDown15MAvg < minRate15Min60M)
-                                        || marketRateChange.rateDown15MAvg < -0.02
+                                if (marketRateChange.rateDown15MAvg < minRate15Min60M
+                                        || marketRateChange.rateDown15MAvg < -0.03
                                         || marketRateChange.rateUpAvg > 0.006
                                         || marketRateChange.rateDownAvg < -0.006
                                 ) {
@@ -222,7 +222,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                         if (priceMax15M != null) {
                                             rateMax15M = Utils.rateOf2Double(ticker.priceClose, priceMax15M);
                                         }
-                                        if (rateTicker < -0.013 || rateMax15M < -0.04) {
+                                        if (rateTicker < -0.013 || rateMax15M < -0.045) {
                                             // ================== GỌI HÀM LỌC DUY NHẤT ==================
                                             if (TradeUtils.shouldAvoidEntry(symbol, tickers)) {
                                                 continue; // Bỏ qua nếu có rủi ro

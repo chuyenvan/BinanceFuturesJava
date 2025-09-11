@@ -328,7 +328,6 @@ public class MarketBigChangeDetector {
 
     public static MarketLevelChange getMarketStatus1M(Double rateDownAvg, Double rateUpAvg,
                                                       Double btcRateChange, Double rateDown15MAvg) {
-        // big -> 2 order and x2 budget
         if (rateUpAvg > 0.025) {
             return MarketLevelChange.BIG_UP;
         }
@@ -351,7 +350,7 @@ public class MarketBigChangeDetector {
         if (rateUpAvg > 0.008 && rateDownAvg > 0) {
             return MarketLevelChange.SMALL_UP;
         }
-        if (rateDownAvg < -0.008 && rateUpAvg < 0
+        if (rateDownAvg < -0.006 && rateUpAvg < 0
                 && rateDown15MAvg < -0.025
         ) {
             return MarketLevelChange.SMALL_DOWN;
@@ -360,11 +359,12 @@ public class MarketBigChangeDetector {
         if (rateDown15MAvg < -0.045) {
             return MarketLevelChange.MEDIUM_DOWN_15M;
         }
-        if (rateDown15MAvg < -0.03) {
+        if (rateDown15MAvg < -0.028) {
             return MarketLevelChange.SMALL_DOWN_15M;
         }
 
         return null;
+
     }
 
     public static List<Object> isUnderSideWay2Trade(List<KlineObjectNumber> tickers) {

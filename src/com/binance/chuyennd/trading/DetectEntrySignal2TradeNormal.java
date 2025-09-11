@@ -276,7 +276,7 @@ public class DetectEntrySignal2TradeNormal {
             }
             Double minRate15Min30M = Collections.min(time2RateDown15MAvg.values());
             if ((rateDown15MAvg < minRate15Min30M)
-                    || rateDown15MAvg < -0.02
+                    || rateDown15MAvg < -0.03
                     || rateUpAvg > 0.006
                     || rateDownAvg < -0.006) {
                 Set<String> symbolBuyFundingFee = new HashSet<>();

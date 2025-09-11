@@ -185,12 +185,12 @@ public class FundingFeeManager {
         for (String symbol : symbol2FundingFee.keySet()) {
             TreeMap<Long, FundingRate> time2Funding = symbol2FundingFee.get(symbol);
             TreeMap<Long, FundingRate> time2FundingGet = new TreeMap<>();
-            for (int i = 0; i < 40; i++) {
+            for (int i = 0; i < 30; i++) {
                 Long timeF = timeGet - i * Utils.TIME_HOUR;
                 if (time2Funding.containsKey(timeF)) {
                     time2FundingGet.put(timeF, time2Funding.get(timeF));
                 }
-                if (time2FundingGet.size() >= 12) {
+                if (time2FundingGet.size() >= 4) {
                     break;
                 }
             }
@@ -248,110 +248,6 @@ public class FundingFeeManager {
         }
         return symbols;
     }
-    public TreeMap<Double, String> getFundingBig(long time) {
-        TreeMap<Double, String> fundingFee2Symbol = new TreeMap<>();
-        long timeGet = Utils.getHour(time);
-        for (String symbol : symbol2FundingFee.keySet()) {
-            TreeMap<Long, FundingRate> time2Funding = symbol2FundingFee.get(symbol);
-            TreeMap<Long, FundingRate> time2FundingGet = new TreeMap<>();
-            for (int i = 0; i < 20; i++) {
-                Long timeF = timeGet - i * Utils.TIME_HOUR;
-                if (time2Funding.containsKey(timeF)) {
-                    time2FundingGet.put(timeF, time2Funding.get(timeF));
-                }
-                if (time2FundingGet.size() >= 3) {
-                    break;
-                }
-            }
-            for (FundingRate funding : time2FundingGet.values()) {
-                if (funding.getFundingRate().doubleValue() < -0.003) {
-                    fundingFee2Symbol.put(funding.getFundingRate().doubleValue(), symbol);
-                }
-            }
-            StringBuilder builder = new StringBuilder();
-            for (Long key : time2FundingGet.keySet()) {
-                builder.append(Utils.normalizeDateYYYYMMDDHHmm(key)).append(" ").append(time2FundingGet.get(key).getFundingRate()).append(" ");
-            }
-//            LOG.info("{} {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time), builder);
-
-        }
-        return fundingFee2Symbol;
-    }
-
-    public Set<String> getAllFunding(long time) {
-        Set<String> symbols = new HashSet();
-        long timeGet = Utils.getHour(time);
-        for (String symbol : symbol2FundingFee.keySet()) {
-            TreeMap<Long, FundingRate> time2Funding = symbol2FundingFee.get(symbol);
-            if (time2Funding != null && time2Funding.size() > 0 && time2Funding.firstKey() < timeGet) {
-                symbols.add(symbol);
-            }
-        }
-        return symbols;
-    }
-
-    public Set<String> getFundingBuySpecial(long time) {
-        Set<String> symbols = new HashSet();
-        long timeGet = Utils.getHour(time);
-        for (String symbol : symbol2FundingFee.keySet()) {
-            TreeMap<Long, FundingRate> time2Funding = symbol2FundingFee.get(symbol);
-            TreeMap<Long, FundingRate> time2FundingGet = new TreeMap<>();
-            for (int i = 0; i < 20; i++) {
-                Long timeF = timeGet - i * Utils.TIME_HOUR;
-                if (time2Funding.containsKey(timeF)) {
-                    time2FundingGet.put(timeF, time2Funding.get(timeF));
-                }
-                if (time2FundingGet.size() == 2) {
-                    break;
-                }
-            }
-
-            for (FundingRate funding : time2FundingGet.values()) {
-                if (funding.getFundingRate().doubleValue() < -0.005) {
-                    symbols.add(symbol);
-                }
-            }
-            StringBuilder builder = new StringBuilder();
-            for (Long key : time2FundingGet.keySet()) {
-                builder.append(Utils.normalizeDateYYYYMMDDHHmm(key)).append(" ").append(time2FundingGet.get(key).getFundingRate()).append(" ");
-            }
-//            LOG.info("{} {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time), builder);
-
-        }
-        return symbols;
-    }
-
-
-    public Set<String> getFundingSell(long time) {
-        Set<String> symbols = new HashSet();
-        long timeGet = Utils.getHour(time);
-        for (String symbol : symbol2FundingFee.keySet()) {
-            TreeMap<Long, FundingRate> time2Funding = symbol2FundingFee.get(symbol);
-            TreeMap<Long, FundingRate> time2FundingGet = new TreeMap<>();
-            for (int i = 0; i < 50; i++) {
-                Long timeF = timeGet - i * Utils.TIME_HOUR;
-                if (time2Funding.containsKey(timeF)) {
-                    time2FundingGet.put(timeF, time2Funding.get(timeF));
-                }
-                if (time2FundingGet.size() == 2) {
-                    break;
-                }
-            }
-
-            for (FundingRate funding : time2FundingGet.values()) {
-                if (funding.getFundingRate().doubleValue() >= 0.00005) {
-                    symbols.add(symbol);
-                }
-            }
-//            StringBuilder builder = new StringBuilder();
-//            for (Long key : time2FundingGet.keySet()) {
-//                builder.append(Utils.normalizeDateYYYYMMDDHHmm(key)).append(" ");
-//            }
-//            LOG.info("{} {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time), builder.toString());
-
-        }
-        return symbols;
-    }
 
     public TreeMap<Double, String> getTopDownFundingFee(Long time, Set<String> allSymbols) {
         TreeMap<Double, String> funding2Symbol = new TreeMap<>();
@@ -366,24 +262,5 @@ public class FundingFeeManager {
         return funding2Symbol;
     }
 
-    public TreeMap<Double, String> getTopDownFundingFee(Long time) {
-        TreeMap<Double, String> funding2Symbol = new TreeMap<>();
-        if (time % (4 * Utils.TIME_HOUR) == 0) {
-            for (String symbol : symbol2FundingFee.keySet()) {
-                Double funding = FundingFeeManager.getInstance().getFundingFee(symbol, time);
-                if (funding != null) {
-                    funding2Symbol.put(funding, symbol);
-                }
-            }
-        }
-        return funding2Symbol;
-    }
 
-    public TreeMap<Long, FundingRate> getFundingOfSym(String symbol) {
-        return symbol2FundingFee.get(symbol);
-    }
-
-    public Set<String> getAllSymbolFunding() {
-        return symbol2FundingFee.keySet();
-    }
 }
