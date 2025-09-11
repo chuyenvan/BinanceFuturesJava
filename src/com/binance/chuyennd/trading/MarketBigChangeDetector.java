@@ -418,6 +418,20 @@ public class MarketBigChangeDetector {
         return null;
     }
 
+    public static Double getMaxPriceIn60M(List<KlineObjectSimple> tickers) {
+        int index = tickers.size() - 1;
+        Double maxChangeIn60M = null;
+        for (int i = 0; i < 60; i++) {
+            if (index - i < 0) {
+                break;
+            }
+            KlineObjectSimple tickerCheck = tickers.get(index - i);
+            if (maxChangeIn60M == null || Utils.rateOf2Double(tickerCheck.maxPrice, tickerCheck.minPrice) > maxChangeIn60M) {
+                maxChangeIn60M = Utils.rateOf2Double(tickerCheck.maxPrice, tickerCheck.minPrice);
+            }
+        }
+        return maxChangeIn60M;
+    }
 }
 
 

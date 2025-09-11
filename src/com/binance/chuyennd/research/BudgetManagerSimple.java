@@ -4,7 +4,6 @@
  */
 package com.binance.chuyennd.research;
 
-import com.binance.chuyennd.object.CapitalMode;
 import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
@@ -314,26 +313,5 @@ public class BudgetManagerSimple {
         }
     }
 
-// Thêm phương thức static này vào bên trong class BudgetManagerSimple.java
 
-    /**
-     * Xác định chế độ vốn hiện tại dựa trên mức độ sụt giảm của tài khoản.
-     *
-     * @return Chế độ vốn hiện tại (SAFE, CAUTION, hoặc DEFENSIVE).
-     */
-    public CapitalMode getCurrentCapitalMode() {
-        double drawdownPercentage = unProfit / balanceBasic;
-
-        if (drawdownPercentage < -0.50) { // Sụt giảm hơn 40% -> Phòng thủ
-            return CapitalMode.DEFENSIVE;
-        } else if (drawdownPercentage < -0.30) { // Sụt giảm từ 20% - 40% -> Thận trọng
-            return CapitalMode.CAUTION;
-        } else { // Sụt giảm dưới 30% -> An toàn
-            if (positionMargin > balanceCurrent * 0.4) {
-                return CapitalMode.CAUTION;
-            } else {
-                return CapitalMode.SAFE;
-            }
-        }
-    }
 }

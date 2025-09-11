@@ -246,8 +246,8 @@ public class BinanceOrderTradingManager {
                 } else {
                     BudgetManager.getInstance().symbol2Level.remove(symbol);
                 }
-
-                Double maxChange60M = getMaxChange60M(symbol);
+                List<KlineObjectSimple> tickers = ListenAllTicker.getInstance().getTickerBySymbol(symbol);
+                Double maxChange60M = MarketBigChangeDetector.getMaxPriceIn60M(tickers);
                 Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60M(maxChange60M);
                 if (rateLoss > rateMin2MoveSl) {
                     if (orderInfo.priceSL == null) {
@@ -284,23 +284,6 @@ public class BinanceOrderTradingManager {
         }
     }
 
-    private Double getMaxChange60M(String symbol) {
-        List<KlineObjectSimple> tickers = ListenAllTicker.getInstance().getTickerBySymbol(symbol);
-        Double maxChangeIn60M = 0d;
-        if (tickers != null) {
-            int index = tickers.size() - 1;
-            for (int i = 0; i < 60; i++) {
-                if (index - i < 0) {
-                    break;
-                }
-                KlineObjectSimple tickerCheck = tickers.get(index - i);
-                if (maxChangeIn60M == null || Utils.rateOf2Double(tickerCheck.maxPrice, tickerCheck.minPrice) > maxChangeIn60M) {
-                    maxChangeIn60M = Utils.rateOf2Double(tickerCheck.maxPrice, tickerCheck.minPrice);
-                }
-            }
-        }
-        return maxChangeIn60M;
-    }
 
     public void updatePositionInfo() {
         String lockName = "UpdateAllPos";
@@ -368,7 +351,8 @@ public class BinanceOrderTradingManager {
                     orderInfo.priceEntry = priceEntry;
                 }
                 OrderSide side2Sl;
-                Double maxChange60M = getMaxChange60M(symbol);
+                List<KlineObjectSimple> tickers = ListenAllTicker.getInstance().getTickerBySymbol(symbol);
+                Double maxChange60M = MarketBigChangeDetector.getMaxPriceIn60M(tickers);
                 Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60M(maxChange60M * 1.5);
                 // BUY
                 if (position.getPositionAmt().compareTo(new BigDecimal("0")) > 0) {

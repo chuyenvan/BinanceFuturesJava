@@ -55,7 +55,7 @@ public class FundingFeeManagerProduction {
                     symbol2FundingFee.put(symbol, time2Rate);
                     Boolean isFundingSell = true;
                     for (FundingRate funding : time2Rate.values()) {
-                        if (funding.getFundingRate().doubleValue() < -0.000) {
+                        if (funding.getFundingRate().doubleValue() < -0.000 || funding.getFundingRate().doubleValue() > 0.0006 ) {
                             if (funding.getFundingRate().doubleValue() < -0.0005) {
                                 extremeNegative.add(symbol);
                             }

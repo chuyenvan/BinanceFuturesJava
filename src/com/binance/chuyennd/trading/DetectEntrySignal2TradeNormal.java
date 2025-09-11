@@ -386,11 +386,12 @@ public class DetectEntrySignal2TradeNormal {
         return false;
     }
 
-    public boolean isBtcTrendBuy(Long time) {
+    public boolean isBtcTrendBuy(Long time, String symbol) {
         Double maDif1d = SimpleMovingAverageDayManagerProduction.getInstance().getDifferenceMa10AndMa60(Constants.SYMBOL_PAIR_BTC, time);
         Double maDif4h = SimpleMovingAverage4hManagerProduction.getInstance().getDifferenceMa10AndMa60(Constants.SYMBOL_PAIR_BTC, time);
         if ((maDif1d != null && maDif1d > 0)
-                || (maDif4h != null && maDif4h > 0)) {
+                || (maDif4h != null && maDif4h > 0)
+                || Constants.specialSymbol.contains(symbol)) {
             return true;
         }
         return false;
@@ -428,58 +429,17 @@ public class DetectEntrySignal2TradeNormal {
     public void createOrderBuyRequest(String symbol, KlineObjectSimple ticker,
                                       MarketLevelChange levelChange, Double priceMax15M, MarketRateChange marketRate) {
 
+        long time = ticker.startTime.longValue();
+        Double marginRunning = BudgetManager.getInstance().marginRunning;
+        Double balanceBasic = BudgetManager.getInstance().balanceBasic;
+        boolean isTrendBuyWithBtc = isBtcTrendBuy(time, symbol);
         Double budget = BudgetManager.getInstance().getBudget();
-        if (BudgetManager.getInstance().marginRunning >= BudgetManager.getInstance().balanceBasic * 0.25
-                && !levelChange.equals(MarketLevelChange.DCA_LEVEL1)
-                && !levelChange.equals(MarketLevelChange.DCA_LEVEL2)
-                && !StringUtils.containsIgnoreCase(levelChange.toString(), "big")
-        ) {
-            budget = budget / 2;
-        }
-        if (BudgetManager.getInstance().marginRunning >= BudgetManager.getInstance().balanceBasic * 0.35
-                && !levelChange.equals(MarketLevelChange.DCA_LEVEL1)
-                && !levelChange.equals(MarketLevelChange.DCA_LEVEL2)
-                && !StringUtils.containsIgnoreCase(levelChange.toString(), "big")
-        ) {
-            LOG.info("Not trade because over capital: {} {} {}", symbol, levelChange,
-                    Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()));
-            return;
-        }
-        if (BudgetManager.getInstance().marginRunning >= BudgetManager.getInstance().balanceBasic * 0.45
-        ) {
-            budget = budget / 2;
-        }
-        if (BudgetManager.getInstance().marginRunning >= BudgetManager.getInstance().balanceBasic * 0.6) {
-            LOG.info("Not trade because over capital: {} {} {}", symbol, levelChange,
-                    Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()));
-            return;
-        }
 
-        if (levelChange.equals(MarketLevelChange.MEDIUM_DOWN)
-                || levelChange.equals(MarketLevelChange.MEDIUM_UP)
-                || levelChange.equals(MarketLevelChange.DCA_LEVEL1)
-        ) {
-            budget = budget / 2;
-        }
-        if (levelChange.equals(MarketLevelChange.SMALL_DOWN)
-                || levelChange.equals(MarketLevelChange.MEDIUM_DOWN_15M)
-                || levelChange.equals(MarketLevelChange.BTC_TREND_REVERSE)
-                || levelChange.equals(MarketLevelChange.DCA_LEVEL2)
-                || levelChange.equals(MarketLevelChange.FUNDING_FEE_BUY)
-                || levelChange.equals(MarketLevelChange.FUNDING_FEE_BUY_SPECIAL)
-        ) {
-            budget = budget / 3;
-        }
-        if (levelChange.equals(MarketLevelChange.SMALL_DOWN_15M)
-                || levelChange.equals(MarketLevelChange.SMALL_UP)
-        ) {
-            long time = ticker.startTime.longValue();
-            if (isBtcTrendBuy(time)
-                    || Constants.specialSymbol.contains(symbol)) {
-                budget = budget / 4;
-            } else {
-                return;
-            }
+        budget = TradeUtils.managerBudget(budget, marginRunning, balanceBasic, levelChange, isTrendBuyWithBtc);
+        if (budget == null) {
+            LOG.info("Not trade because over capital: {} {} {}", symbol, levelChange,
+                    Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()));
+            return;
         }
 
         Double priceEntry = ticker.priceClose;

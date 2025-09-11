@@ -1,9 +1,10 @@
 package com.binance.chuyennd.tradecore;
 
-import com.binance.chuyennd.object.KlineObjectNumber;
+import com.binance.chuyennd.bigchange.market.MarketLevelChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.client.constant.Constants;
+import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -108,4 +109,52 @@ public class TradeUtils {
         return false;
     }
 
+
+    public static Double managerBudget(Double budget, Double marginRunning, Double balanceBasic, MarketLevelChange levelChange, Boolean isTrendBuyWithBtc) {
+        if (marginRunning >= balanceBasic * 0.25
+                && !levelChange.equals(MarketLevelChange.DCA_LEVEL1)
+                && !levelChange.equals(MarketLevelChange.DCA_LEVEL2)
+                && !StringUtils.containsIgnoreCase(levelChange.toString(), "big")
+        ) {
+            budget = budget / 2;
+        }
+        if (marginRunning >= balanceBasic * 0.35
+                && !levelChange.equals(MarketLevelChange.DCA_LEVEL1)
+                && !levelChange.equals(MarketLevelChange.DCA_LEVEL2)
+                && !StringUtils.containsIgnoreCase(levelChange.toString(), "big")
+        ) {
+            return null;
+        }
+        if (marginRunning >= balanceBasic * 0.45) {
+            budget = budget / 2;
+        }
+        if (marginRunning >= balanceBasic * 0.6) {
+            return null;
+        }
+        if (levelChange.equals(MarketLevelChange.MEDIUM_DOWN)
+                || levelChange.equals(MarketLevelChange.MEDIUM_UP)
+                || levelChange.equals(MarketLevelChange.DCA_LEVEL1)
+        ) {
+            budget = budget / 2;
+        }
+        if (levelChange.equals(MarketLevelChange.SMALL_DOWN)
+                || levelChange.equals(MarketLevelChange.MEDIUM_DOWN_15M)
+                || levelChange.equals(MarketLevelChange.FUNDING_FEE_BUY)
+                || levelChange.equals(MarketLevelChange.FUNDING_FEE_BUY_SPECIAL)
+                || levelChange.equals(MarketLevelChange.DCA_LEVEL2)
+                || levelChange.equals(MarketLevelChange.BTC_TREND_REVERSE)
+        ) {
+            budget = budget / 3;
+        }
+        if (levelChange.equals(MarketLevelChange.SMALL_UP)
+                || levelChange.equals(MarketLevelChange.SMALL_DOWN_15M)
+        ) {
+            if (isTrendBuyWithBtc) {
+                budget = budget / 4;
+            } else {
+                return null;
+            }
+        }
+        return budget;
+    }
 }

@@ -487,16 +487,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             int index = tickers.size() - 1;
             KlineObjectSimple ticker = tickers.get(index);
             if (orderMulti.timeStart <= ticker.startTime.longValue()) {
-                Double maxChangeIn60M = null;
-                for (int i = 0; i < 60; i++) {
-                    if (index - i < 0) {
-                        break;
-                    }
-                    KlineObjectSimple tickerCheck = tickers.get(index - i);
-                    if (maxChangeIn60M == null || Utils.rateOf2Double(tickerCheck.maxPrice, tickerCheck.minPrice) > maxChangeIn60M) {
-                        maxChangeIn60M = Utils.rateOf2Double(tickerCheck.maxPrice, tickerCheck.minPrice);
-                    }
-                }
+                Double maxChangeIn60M = MarketBigChangeDetector.getMaxPriceIn60M(tickers);
                 orderMulti.updatePriceByKlineSimple(ticker);
                 orderMulti.updateStatusNew(maxChangeIn60M);
                 if (orderMulti.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)
@@ -570,67 +561,19 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     public void createOrderBUY(String symbol, KlineObjectSimple ticker, MarketLevelChange levelChange,
                                MarketRateChange marketData, Double maxPrice15m) {
         Double entry = ticker.priceClose;
-        Double budget = BudgetManagerSimple.getInstance().getBudget();
         Integer leverage = BudgetManagerSimple.getInstance().getLeverage();
-        if (calMarginRunning() >= BudgetManagerSimple.getInstance().balanceBasic * 0.25
-                && !levelChange.equals(MarketLevelChange.DCA_LEVEL1)
-                && !levelChange.equals(MarketLevelChange.DCA_LEVEL2)
-                && !StringUtils.containsIgnoreCase(levelChange.toString(), "big")
-        ) {
-            budget = budget / 2;
-        }
-        if (calMarginRunning() >= BudgetManagerSimple.getInstance().balanceBasic * 0.35
-                && !levelChange.equals(MarketLevelChange.DCA_LEVEL1)
-                && !levelChange.equals(MarketLevelChange.DCA_LEVEL2)
-                && !StringUtils.containsIgnoreCase(levelChange.toString(), "big")
-        ) {
+        long time = ticker.startTime.longValue();
+        Boolean isTrendBuyWithBtc = isTrendBuyWithBtcSMA(symbol, time);
+        Double marginRunning = calMarginRunning();
+        Double balanceBasic = BudgetManagerSimple.getInstance().balanceBasic;
+        Double budget = BudgetManagerSimple.getInstance().getBudget();
+
+        budget = TradeUtils.managerBudget(budget, marginRunning, balanceBasic, levelChange, isTrendBuyWithBtc);
+        if (budget == null) {
             LOG.info("Not trade because over capital: {} {} {}", symbol, levelChange,
                     Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()));
             return;
         }
-        if (calMarginRunning() >= BudgetManagerSimple.getInstance().balanceBasic * 0.45) {
-            budget = budget / 2;
-        }
-        if (calMarginRunning() >= BudgetManagerSimple.getInstance().balanceBasic * 0.6) {
-            LOG.info("Not trade because over capital: {} {} {}", symbol, levelChange,
-                    Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()));
-            return;
-        }
-
-
-        if (levelChange.equals(MarketLevelChange.MEDIUM_DOWN)
-                || levelChange.equals(MarketLevelChange.MEDIUM_UP)
-                || levelChange.equals(MarketLevelChange.DCA_LEVEL1)
-        ) {
-            budget = budget / 2;
-        }
-        if (levelChange.equals(MarketLevelChange.SMALL_DOWN)
-                || levelChange.equals(MarketLevelChange.MEDIUM_DOWN_15M)
-                || levelChange.equals(MarketLevelChange.FUNDING_FEE_BUY)
-                || levelChange.equals(MarketLevelChange.FUNDING_FEE_BUY_SPECIAL)
-                || levelChange.equals(MarketLevelChange.DCA_LEVEL2)
-                || levelChange.equals(MarketLevelChange.BTC_TREND_REVERSE)
-        ) {
-            budget = budget / 3;
-        }
-
-
-        if (levelChange.equals(MarketLevelChange.SMALL_UP)
-                || levelChange.equals(MarketLevelChange.SMALL_DOWN_15M)
-        ) {
-            long time = ticker.startTime.longValue();
-            Double maDif1d = SimpleMovingAverageDayManager.getInstance().getDifferenceMa10AndMa60(Constants.SYMBOL_PAIR_BTC, time);
-            Double maDif4h = SimpleMovingAverage4hManager.getInstance().getDifferenceMa10AndMa60(Constants.SYMBOL_PAIR_BTC, time);
-            if ((maDif1d != null && maDif1d > 0)
-                    || (maDif4h != null && maDif4h > 0)
-                    || Constants.specialSymbol.contains(symbol)
-            ) {
-                budget = budget / 4;
-            } else {
-                return;
-            }
-        }
-
         String log = OrderSide.BUY + " " + symbol + " entry: " + entry +
                 " budget: " + budget
                 + " time:" + Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue());
@@ -642,9 +585,9 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                 quantity = minBtcTrade;
             }
         }
+
         OrderTargetInfoTest order = new OrderTargetInfoTest(OrderTargetStatus.REQUEST, entry, null, quantity,
                 leverage, symbol, ticker.startTime.longValue(), ticker.startTime.longValue(), OrderSide.BUY);
-
         order.minPrice = entry;
         order.lastEntry = entry;
         order.maxPrice = entry;
@@ -665,6 +608,18 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         symbol2OrdersEntry.put(symbol, orders);
         symbol2OrderRunning.put(symbol, mergeOrder(orders, ticker));
         BudgetManagerSimple.getInstance().updateMaxOrderRunning(counterOrderRunning());
+    }
+
+    private Boolean isTrendBuyWithBtcSMA(String symbol, Long time) {
+        Double maDif1d = SimpleMovingAverageDayManager.getInstance().getDifferenceMa10AndMa60(Constants.SYMBOL_PAIR_BTC, time);
+        Double maDif4h = SimpleMovingAverage4hManager.getInstance().getDifferenceMa10AndMa60(Constants.SYMBOL_PAIR_BTC, time);
+        if ((maDif1d != null && maDif1d > 0)
+                || (maDif4h != null && maDif4h > 0)
+                || Constants.specialSymbol.contains(symbol)
+        ) {
+            return true;
+        }
+        return false;
     }
 
 
