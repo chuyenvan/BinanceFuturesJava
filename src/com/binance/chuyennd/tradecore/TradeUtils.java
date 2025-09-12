@@ -23,10 +23,9 @@ public class TradeUtils {
     public static Double calRateLossDynamicBuy(Double unProfit) {
         Double rateLoss = unProfit * 200;
         Long tradingStopRate;
-        Long maxRateTradingStop = 15l;
+        Long maxRateTradingStop = 10l;
         if (rateLoss < maxRateTradingStop * 2) {
             tradingStopRate = rateLoss.longValue() / 2;
-            tradingStopRate -= 2;
         } else {
             tradingStopRate = maxRateTradingStop;
         }

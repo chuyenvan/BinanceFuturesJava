@@ -24,8 +24,6 @@ j
 :src/com/binance/chuyennd/research/OrderTargetInfoTest.java,5\6\56102aa0882fd0480223b315c8cebfec17fff175
 h
 8src/com/binance/chuyennd/research/FundingFeeManager.java,d\d\dd60a980149d957cd55c2313ee0fb2fa5ea1bea9
-s
-Csrc/com/binance/chuyennd/trading/DetectEntrySignal2TradeNormal.java,3\8\384a2deebd566503dec7ea77f37c92b057428292
 k
 ;src/com/binance/chuyennd/bigchange/test/TraceOrderDone.java,9\d\9d89229e9f14018e1002f76ec45fcb5d3f30179d
 k
@@ -36,8 +34,6 @@ b
 2src/com/binance/chuyennd/ticker/TickerManager.java,9\8\981acec5be73966183cbee856e62b442133a5826
 l
 <src/com/binance/chuyennd/research/ExportMarketData2File.java,2\b\2b905388e8c44d0afa7fb42b15dbca79d0b9706b
-z
-Jsrc/com/binance/chuyennd/bigchange/market/MarketBigChangeDetectorTest.java,a\e\ae9a8bff5327ac7d6d9161422cf1b7cda7578fa3
 ]
 -src/com/binance/client/SyncRequestClient.java,8\d\8d2d7318dcad9fec788ebf8ef153ae253e37191d
 `
@@ -48,8 +44,6 @@ _
 0src/com/binance/chuyennd/helper/OrderHelper.java,0\0\00c2ebefb0661b78da30c509f541e14a8f486fd6
 j
 :src/com/binance/chuyennd/research/BudgetManagerSimple.java,5\1\5142a6d4b9729e48fa2aed5e51a5f675609d4d93
-{
-Ksrc/com/binance/chuyennd/research/SimulatorMarketLevelTicker1MStopLoss.java,4\1\4128deb67d7b1a8c3ca7337bff1468e710de5a84
 r
 Bsrc/com/binance/chuyennd/client/BinanceFuturesClientSingleton.java,d\0\d097bfde78fadd4e96b83a584e343228d96faedd
 _
@@ -58,5 +52,3 @@ l
 <src/com/binance/client/examples/constants/PrivateConfig.java,0\f\0fb2c8e0e94f8b1652e71e6ff282c6d802095c84
 c
 3src/com/binance/chuyennd/trading/BudgetManager.java,e\5\e52a4b9f5bc26de69d288096d283e4df3b31127f
-p
-@src/com/binance/chuyennd/trading/BinanceOrderTradingManager.java,3\7\37741684a96a56115f2ba829dd0dac22cfdbb23a
