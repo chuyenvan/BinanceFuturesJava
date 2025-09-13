@@ -412,11 +412,9 @@ public class DetectEntrySignal2TradeNormal {
     private Set<String> addSpecialSymbol(Map<String, KlineObjectSimple> symbol2Ticker) {
         Set<String> symbol2Checks = new HashSet<>();
         Set<String> symbol2Trade = new HashSet<>();
-        if (BudgetManager.getInstance().marginRunning < 50 * BudgetManager.getInstance().getBudget()) {
-            symbol2Checks.addAll(Constants.specialSymbol);
-            symbol2Checks.addAll(Constants.stableSymbol);
-            symbol2Checks.removeAll(BudgetManager.getInstance().symbol2Pos.keySet());
-        }
+        symbol2Checks.addAll(Constants.specialSymbol);
+        symbol2Checks.addAll(Constants.stableSymbol);
+        symbol2Checks.removeAll(BudgetManager.getInstance().symbol2Pos.keySet());
         for (String symbol : symbol2Checks) {
             KlineObjectSimple ticker = symbol2Ticker.get(symbol);
             if (ticker != null && Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen) < -0.013) {

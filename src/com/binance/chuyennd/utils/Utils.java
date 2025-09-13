@@ -579,6 +579,12 @@ public class Utils {
 
     public static void reset(String resetBySchedule) {
         try {
+            while (true){
+                if (Utils.getCurrentSecond() > 30){
+                    break;
+                }
+                Thread.sleep(1000);
+            }
             LOG.info("Restart: {} {} ...", resetBySchedule, Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()));
 
             // Lấy đường dẫn tới Java binary

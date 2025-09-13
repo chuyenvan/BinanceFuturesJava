@@ -198,7 +198,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                     time2RateDown15MAvg.remove(time2RateDown15MAvg.firstKey());
                                 }
                                 Double minRate15Min60M = Collections.min(time2RateDown15MAvg.values());
-                                if (marketRateChange.rateDown15MAvg < minRate15Min60M
+                                if (marketRateChange.rateDown15MAvg <= minRate15Min60M
                                         || marketRateChange.rateDown15MAvg < -0.03
                                         || marketRateChange.rateUpAvg > 0.006
                                         || marketRateChange.rateDownAvg < -0.006
@@ -442,12 +442,10 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     private List<String> addSpecialSymbol(Map<String, KlineObjectSimple> symbol2Ticker) {
         List<String> symbol2BUY = new ArrayList<>();
         Set<String> symbol2Checks = new HashSet<>();
-        if (calMarginRunning() < 50 * BudgetManagerSimple.getInstance().getBudget()) {
-            symbol2Checks.addAll(Constants.specialSymbol);
-            symbol2Checks.addAll(Constants.stableSymbol);
-            symbol2Checks.removeAll(symbol2OrderRunning.keySet());
-            symbol2Checks.removeAll(symbol2BUY);
-        }
+        symbol2Checks.addAll(Constants.specialSymbol);
+        symbol2Checks.addAll(Constants.stableSymbol);
+        symbol2Checks.removeAll(symbol2OrderRunning.keySet());
+        symbol2Checks.removeAll(symbol2BUY);
         for (String symbol : symbol2Checks) {
             KlineObjectSimple ticker = symbol2Ticker.get(symbol);
             if (ticker != null && Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen) < -0.013) {

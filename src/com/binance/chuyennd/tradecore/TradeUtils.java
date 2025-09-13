@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.Set;
 
 public class TradeUtils {
     public static final Logger LOG = LoggerFactory.getLogger(TradeUtils.class);
@@ -35,33 +36,17 @@ public class TradeUtils {
 
     public static Double calRateMinWithMaxChange60M(Double maxChange15M) {
         Double rateMin2MoveSl = Configs.RATE_PROFIT_STOP_MARKET;
-        if (maxChange15M != null && maxChange15M > 0.006) {
-            if (maxChange15M < 0.01) {
-                if (rateMin2MoveSl < 0.02) {
-                    rateMin2MoveSl = 0.02;
-                }
-            } else {
-                if (maxChange15M < 0.02) {
-                    if (rateMin2MoveSl < 0.025) {
-                        rateMin2MoveSl = 0.025;
-                    }
-                } else {
-                    if (maxChange15M < 0.03) {
-                        if (rateMin2MoveSl < 0.04) {
-                            rateMin2MoveSl = 0.04;
-                        }
-                    } else {
-                        if (rateMin2MoveSl < 0.05) {
-                            rateMin2MoveSl = 0.05;
-                        }
-                    }
-                }
-            }
-        } else {
-            if (maxChange15M != null && maxChange15M > 0.004) {
-                if (rateMin2MoveSl < 0.015) {
-                    rateMin2MoveSl = 0.015;
-                }
+        if (maxChange15M != null) {
+            if (maxChange15M >= 0.03) {
+                rateMin2MoveSl = Math.max(rateMin2MoveSl, 0.05);
+            } else if (maxChange15M >= 0.02) {
+                rateMin2MoveSl = Math.max(rateMin2MoveSl, 0.04);
+            } else if (maxChange15M >= 0.01) {
+                rateMin2MoveSl = Math.max(rateMin2MoveSl, 0.025);
+            } else if (maxChange15M > 0.006) {
+                rateMin2MoveSl = Math.max(rateMin2MoveSl, 0.02);
+            } else if (maxChange15M > 0.004) {
+                rateMin2MoveSl = Math.max(rateMin2MoveSl, 0.015);
             }
         }
         return rateMin2MoveSl;
@@ -116,51 +101,58 @@ public class TradeUtils {
     }
 
 
-    public static Double managerBudget(Double budget, Double marginRunning, Double balanceBasic, MarketLevelChange levelChange, Boolean isTrendBuyWithBtc) {
-        if (marginRunning >= balanceBasic * 0.25
-                && !levelChange.equals(MarketLevelChange.DCA_LEVEL1)
-                && !levelChange.equals(MarketLevelChange.DCA_LEVEL2)
-                && !StringUtils.containsIgnoreCase(levelChange.toString(), "big")
-        ) {
-            budget = budget / 2;
-        }
-        if (marginRunning >= balanceBasic * 0.35
-                && !levelChange.equals(MarketLevelChange.DCA_LEVEL1)
-                && !levelChange.equals(MarketLevelChange.DCA_LEVEL2)
-                && !StringUtils.containsIgnoreCase(levelChange.toString(), "big")
-        ) {
+    public static Double managerBudget(Double budget, Double marginRunning, Double balanceBasic,
+                                       MarketLevelChange levelChange, Boolean isTrendBuyWithBtc) {
+
+        final Set<MarketLevelChange> dcaOrBigLevels = Set.of(
+                MarketLevelChange.DCA_LEVEL1,
+                MarketLevelChange.DCA_LEVEL2
+        );
+        boolean isNormalLevel = !dcaOrBigLevels.contains(levelChange)
+                && !StringUtils.containsIgnoreCase(levelChange.toString(), "big");
+        double marginRatio = marginRunning / balanceBasic;
+
+        if (marginRatio >= 0.6) {
             return null;
         }
-        if (marginRunning >= balanceBasic * 0.45) {
-            budget = budget / 2;
-        }
-        if (marginRunning >= balanceBasic * 0.6) {
+        if (isNormalLevel && marginRatio >= 0.35) {
             return null;
         }
-        if (levelChange.equals(MarketLevelChange.MEDIUM_DOWN)
-                || levelChange.equals(MarketLevelChange.MEDIUM_UP)
-                || levelChange.equals(MarketLevelChange.DCA_LEVEL1)
-        ) {
-            budget = budget / 2;
-        }
-        if (levelChange.equals(MarketLevelChange.SMALL_DOWN)
-                || levelChange.equals(MarketLevelChange.MEDIUM_DOWN_15M)
-                || levelChange.equals(MarketLevelChange.FUNDING_FEE_BUY)
-                || levelChange.equals(MarketLevelChange.FUNDING_FEE_BUY_SPECIAL)
-                || levelChange.equals(MarketLevelChange.DCA_LEVEL2)
-                || levelChange.equals(MarketLevelChange.BTC_TREND_REVERSE)
-        ) {
-            budget = budget / 3;
-        }
+
         if (levelChange.equals(MarketLevelChange.SMALL_UP)
-                || levelChange.equals(MarketLevelChange.SMALL_DOWN_15M)
-        ) {
-            if (isTrendBuyWithBtc) {
-                budget = budget / 4;
-            } else {
+                || levelChange.equals(MarketLevelChange.SMALL_DOWN_15M)) {
+            if (!isTrendBuyWithBtc) {
                 return null;
             }
         }
+        if (marginRatio >= 0.45) {
+            budget /= 2;
+        }
+        if (isNormalLevel && marginRatio >= 0.25) {
+            budget /= 2;
+        }
+        switch (levelChange) {
+            case MEDIUM_DOWN:
+            case MEDIUM_UP:
+            case DCA_LEVEL1:
+                budget /= 2;
+                break;
+
+            case SMALL_DOWN:
+            case MEDIUM_DOWN_15M:
+            case FUNDING_FEE_BUY:
+            case FUNDING_FEE_BUY_SPECIAL:
+            case DCA_LEVEL2:
+            case BTC_TREND_REVERSE:
+                budget /= 3;
+                break;
+
+            case SMALL_UP:
+            case SMALL_DOWN_15M:
+                budget /= 4;
+                break;
+        }
+
         return budget;
     }
 }

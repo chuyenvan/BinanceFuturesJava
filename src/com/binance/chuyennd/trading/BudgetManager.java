@@ -37,7 +37,7 @@ public class BudgetManager {
 
     public Integer LEVERAGE_ORDER = Configs.getInt("LEVERAGE_ORDER");
     public Double BUDGET_PER_ORDER = 0d;
-    public Integer number_order_budget = 60;
+    public Integer number_order_budget = 200;
     public Double marginRunning = 0d;
     public Double balance = 0d;
     public Map<String, Double> symbol2Margin = new HashMap<>();
@@ -90,7 +90,7 @@ public class BudgetManager {
 
     public Double getBudget() {
 
-        return BUDGET_PER_ORDER * 0.3;
+        return BUDGET_PER_ORDER;
     }
 
     public Double calMarginRunning(Collection<PositionRisk> positions) {

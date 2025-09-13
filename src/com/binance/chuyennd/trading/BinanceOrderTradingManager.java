@@ -33,6 +33,7 @@ import com.binance.client.model.enums.OrderSide;
 import com.binance.client.model.enums.OrderType;
 import com.binance.client.model.trade.Order;
 import com.binance.client.model.trade.PositionRisk;
+import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -372,15 +373,9 @@ public class BinanceOrderTradingManager {
                     }
 
                     // move sl
-                    Double priceChange2Move = 0d;
-                    if (rateLoss > 0.03){
-                        priceChange2Move = 0.003;
-                    }
-                    if (rateLoss > 0.1){
-                        priceChange2Move = 0.005;
-                    }
+
                     if (rateLoss >= rateMin2MoveSl
-                            && priceSLChange > priceChange2Move) {
+                            && priceSLChange > 0) {
                         if (symbol2Processing.containsKey(symbol)) {
                             if (symbol2Processing.get(symbol) > System.currentTimeMillis() - 5 * Utils.TIME_MINUTE) {
                                 LOG.info("{} is locking in list: {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(symbol2Processing.get(symbol)));
