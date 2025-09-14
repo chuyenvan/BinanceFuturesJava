@@ -9,7 +9,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
@@ -185,17 +184,18 @@ public class FundingFeeManager {
         for (String symbol : symbol2FundingFee.keySet()) {
             TreeMap<Long, FundingRate> time2Funding = symbol2FundingFee.get(symbol);
             TreeMap<Long, FundingRate> time2FundingGet = new TreeMap<>();
-            for (int i = 0; i < 30; i++) {
+            for (int i = 0; i < Configs.NUMBER_HOUR_FUNDING_CAL; i++) {
                 Long timeF = timeGet - i * Utils.TIME_HOUR;
                 if (time2Funding.containsKey(timeF)) {
                     time2FundingGet.put(timeF, time2Funding.get(timeF));
                 }
-                if (time2FundingGet.size() >= 12) {
+                if (time2FundingGet.size() >= Configs.NUMBER_LAST_FUNDING_CAL) {
                     break;
                 }
             }
             for (FundingRate funding : time2FundingGet.values()) {
-                if (funding.getFundingRate().doubleValue() < -0.000 || funding.getFundingRate().doubleValue() > 0.0006) {
+                if (funding.getFundingRate().doubleValue() < Configs.FUNDING_MAX_TRADE
+                        || funding.getFundingRate().doubleValue() > Configs.FUNDING_MIN_TRADE) {
                     symbols.add(symbol);
                 }
             }
@@ -215,27 +215,26 @@ public class FundingFeeManager {
      * Tín hiệu này mạnh hơn so với việc chỉ kiểm tra funding âm thông thường.
      *
      * @param time          Thời điểm cần kiểm tra.
-     * @param fundingFeeMin
      * @return Một TreeMap được sắp xếp, với key là mức funding fee (càng âm càng ở đầu),
      * và value là tên symbol. Trả về rỗng nếu không có symbol nào thỏa mãn.
      */
-    public Set<String> getExtremeNegativeFundingSymbols(long time, Double fundingFeeMin) {
+    public Set<String> getExtremeNegativeFundingSymbols(long time) {
         Set<String> symbols = new HashSet();
         long timeGet = Utils.getHour(time);
         for (String symbol : symbol2FundingFee.keySet()) {
             TreeMap<Long, FundingRate> time2Funding = symbol2FundingFee.get(symbol);
             TreeMap<Long, FundingRate> time2FundingGet = new TreeMap<>();
-            for (int i = 0; i < 30; i++) {
+            for (int i = 0; i < Configs.NUMBER_HOUR_FUNDING_CAL; i++) {
                 Long timeF = timeGet - i * Utils.TIME_HOUR;
                 if (time2Funding.containsKey(timeF)) {
                     time2FundingGet.put(timeF, time2Funding.get(timeF));
                 }
-                if (time2FundingGet.size() >= 4) {
+                if (time2FundingGet.size() >= Configs.NUMBER_LAST_FUNDING_EXTREME) {
                     break;
                 }
             }
             for (FundingRate funding : time2FundingGet.values()) {
-                if (funding.getFundingRate().doubleValue() < fundingFeeMin) {
+                if (funding.getFundingRate().doubleValue() < Configs.FUNDING_MAX_TRADE_EXTREME) {
                     symbols.add(symbol);
                 }
             }

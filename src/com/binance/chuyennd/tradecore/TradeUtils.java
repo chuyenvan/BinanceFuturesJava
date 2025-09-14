@@ -22,16 +22,16 @@ public class TradeUtils {
     }
 
     public static Double calRateLossDynamicBuy(Double unProfit) {
-        Double rateLoss = unProfit * 200;
+        Double rateLoss = unProfit * 100;
         Long tradingStopRate;
-        Long maxRateTradingStop = 10l;
+        Long maxRateTradingStop = 6l;
         if (rateLoss < maxRateTradingStop * 2) {
             tradingStopRate = rateLoss.longValue() / 2;
         } else {
             tradingStopRate = maxRateTradingStop;
         }
         rateLoss = rateLoss.longValue() - tradingStopRate.doubleValue();
-        return rateLoss / 200;
+        return rateLoss / 100;
     }
 
     public static Double calRateMinWithMaxChange60M(Double maxChange15M) {

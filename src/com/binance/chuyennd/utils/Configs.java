@@ -41,6 +41,15 @@ public class Configs {
 
     public static String TIME_RUN = Configs.getString("TIME_RUN");
 
+    // funding fee config
+    public static final Integer NUMBER_LAST_FUNDING_CAL = 12;
+    public static final Integer NUMBER_LAST_FUNDING_EXTREME  = 4;
+    public static final Integer NUMBER_HOUR_FUNDING_CAL = 30;
+    public static final Double FUNDING_MAX_TRADE = 0.00001;
+    public static final Double FUNDING_MIN_TRADE = 0.0006;
+    public static final Double FUNDING_MAX_TRADE_EXTREME = -0.0005;
+
+
     public static final Integer NUMBER_THREAD_ORDER_MANAGER = Configs.getInt("NUMBER_THREAD_ORDER_MANAGER");
     public static boolean MOD_RUN_CAPITAL_CONSTANT = Configs.getBoolean("MOD_RUN_CAPITAL_CONSTANT");
     public static Integer NUMBER_ENTRY_EACH_SIGNAL = Configs.getInt("NUMBER_ENTRY_EACH_SIGNAL");

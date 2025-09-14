@@ -260,9 +260,9 @@ public class TraceData2Test {
         Map<Integer, List<Double>> year2Pnl = new HashMap<>();
         TreeMap<Long, Double> date2Profit = new TreeMap();
         for (OrderTargetInfoTest orderInfo : time2Order.values()) {
-            if (orderInfo.status.equals(OrderTargetStatus.REQUEST)) {
-                continue;
-            }
+//            if (orderInfo.status.equals(OrderTargetStatus.REQUEST)) {
+//                continue;
+//            }
             Long time = orderInfo.timeUpdate;
             List<OrderTargetInfoTest> orders = level2Orders.get(orderInfo.marketLevelChange);
             if (orders == null) {
@@ -340,7 +340,7 @@ public class TraceData2Test {
                     timeOrder = orderTarget.timeUpdate - orderTarget.timeStart;
                 }
             }
-            if (timeOrder > 20 * Utils.TIME_DAY) {
+            if (timeOrder > 45 * Utils.TIME_DAY) {
                 int year = Utils.getYear(time);
                 if (orders.get(0).side.equals(OrderSide.BUY)) {
                     Integer counterOrderSlow = year2OrderBuySlowCounter.get(year);
@@ -361,7 +361,7 @@ public class TraceData2Test {
             for (String symbol : symbol2Margin.keySet()) {
                 Double margin = symbol2Margin.get(symbol);
                 int numberBudgetBig = 3;
-                if (Constants.specialSymbol.contains(symbol)){
+                if (Constants.specialSymbol.contains(symbol)) {
                     numberBudgetBig = 5;
                 }
                 if (margin > numberBudgetBig * BudgetManagerSimple.getInstance().getBudget()) {
@@ -390,7 +390,7 @@ public class TraceData2Test {
                     LOG.info("Big: {} {} {} {} ", symbol, sideBig,
                             Utils.normalizeDateYYYYMMDDHHmm(orders.get(0).timeUpdate), margin.longValue());
 
-                    if (timeOrder > 15 * Utils.TIME_DAY) {
+                    if (timeOrder > 45 * Utils.TIME_DAY) {
                         Integer counterOrderSlow = year2OrderBigSlowCounter.get(year);
                         if (counterOrderSlow == null) {
                             counterOrderSlow = 0;

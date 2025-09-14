@@ -46,25 +46,34 @@ public class FundingFeeManagerProduction {
             try {
                 TreeMap<Long, FundingRate> time2Rate = symbol2FundingFee.get(symbol);
                 if (time2Rate != null && !time2Rate.isEmpty()) {
-                    while (time2Rate.size() > 12) {
+                    while (time2Rate.size() > Configs.NUMBER_LAST_FUNDING_CAL) {
                         time2Rate.remove(time2Rate.firstKey());
                     }
-                    while (time2Rate.size() > 0 && time2Rate.firstKey() < System.currentTimeMillis() - 30 * Utils.TIME_HOUR) {
+                    while (time2Rate.size() > 0 && time2Rate.firstKey() < System.currentTimeMillis() -
+                            Configs.NUMBER_HOUR_FUNDING_CAL * Utils.TIME_HOUR) {
                         time2Rate.remove(time2Rate.firstKey());
                     }
                     symbol2FundingFee.put(symbol, time2Rate);
                     Boolean isFundingSell = true;
                     for (FundingRate funding : time2Rate.values()) {
-                        if (funding.getFundingRate().doubleValue() < -0.000 || funding.getFundingRate().doubleValue() > 0.0006 ) {
-                            if (funding.getFundingRate().doubleValue() < -0.0005) {
-                                extremeNegative.add(symbol);
-                            }
+                        if (funding.getFundingRate().doubleValue() < Configs.FUNDING_MAX_TRADE
+                                || funding.getFundingRate().doubleValue() > Configs.FUNDING_MIN_TRADE) {
                             fundingBuy.add(symbol);
                             fundingSell.remove(symbol);
                             isFundingSell = false;
                             break;
                         }
 
+                    }
+                    while (time2Rate.size() > Configs.NUMBER_LAST_FUNDING_EXTREME) {
+                        time2Rate.remove(time2Rate.firstKey());
+                    }
+                    for (FundingRate funding : time2Rate.values()) {
+                        if (funding.getFundingRate().doubleValue() < Configs.FUNDING_MAX_TRADE_EXTREME) {
+                            extremeNegative.add(symbol);
+                            isFundingSell = false;
+                            break;
+                        }
                     }
                     if (isFundingSell) {
                         extremeNegative.remove(symbol);
@@ -99,10 +108,10 @@ public class FundingFeeManagerProduction {
 
     public void getFundingBySymbol(String symbol) {
         try {
-            long time = System.currentTimeMillis() - 2 * Utils.TIME_DAY;
+            long time = System.currentTimeMillis() - Configs.NUMBER_HOUR_FUNDING_CAL * Utils.TIME_HOUR;
             TreeMap<Long, FundingRate> time2Rate = TickerFuturesHelper.getFundingFeeWithStartTime(symbol, time);
             if (time2Rate != null && !time2Rate.isEmpty()) {
-                while (time2Rate.size() > 4) {
+                while (time2Rate.size() > Configs.NUMBER_LAST_FUNDING_CAL) {
                     time2Rate.remove(time2Rate.firstKey());
                 }
                 symbol2FundingFee.put(symbol, time2Rate);
@@ -186,37 +195,4 @@ public class FundingFeeManagerProduction {
         updateListBuySell();
     }
 
-    public boolean isFundingSell(String symbol) {
-        TreeMap<Long, FundingRate> time2Funding = symbol2FundingFee.get(symbol);
-        if (time2Funding == null || time2Funding.size() < 1) {
-            return false;
-        }
-//        if (time2Funding.size() > 2){
-//            Long lastTime = time2Funding.lastKey();
-//            Long beforeLastTime = time2Funding.lowerKey(lastTime);
-//            if (lastTime - beforeLastTime < Utils.TIME_HOUR * 2){
-//                symbols.add(symbol);
-//                continue;
-//            }
-//        }
-        long timeGet = Utils.getHour(System.currentTimeMillis());
-        TreeMap<Long, FundingRate> time2FundingGet = new TreeMap<>();
-
-        for (int i = 0; i < 50; i++) {
-            Long timeF = timeGet - i * Utils.TIME_HOUR;
-            if (time2Funding.containsKey(timeF)) {
-                time2FundingGet.put(timeF, time2Funding.get(timeF));
-            }
-            if (time2FundingGet.size() == 2) {
-                break;
-            }
-        }
-
-        for (FundingRate funding : time2FundingGet.values()) {
-            if (funding.getFundingRate().doubleValue() >= 0.00005) {
-                return true;
-            }
-        }
-        return false;
-    }
 }

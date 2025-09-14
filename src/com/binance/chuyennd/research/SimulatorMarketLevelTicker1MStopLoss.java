@@ -194,11 +194,11 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
                             if (marketRateChange != null) {
                                 time2RateDown15MAvg.put(time, marketRateChange.rateDown15MAvg);
-                                while (time2RateDown15MAvg.size() > 60) {
+                                while (time2RateDown15MAvg.size() > 30) {
                                     time2RateDown15MAvg.remove(time2RateDown15MAvg.firstKey());
                                 }
                                 Double minRate15Min60M = Collections.min(time2RateDown15MAvg.values());
-                                if (marketRateChange.rateDown15MAvg <= minRate15Min60M
+                                if ((marketRateChange.rateDown15MAvg < -0.015 && marketRateChange.rateDown15MAvg <= minRate15Min60M)
                                         || marketRateChange.rateDown15MAvg < -0.03
                                         || marketRateChange.rateUpAvg > 0.006
                                         || marketRateChange.rateDownAvg < -0.006
@@ -236,8 +236,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                     }
 
                                     // ========== LOGIC CHO TÍN HIỆU FUNDING ÂM CỰC ĐOAN ==========
-                                    Double fundingFeeMin = -0.0005;
-                                    Set<String> extremeFundingSymbols = FundingFeeManager.getInstance().getExtremeNegativeFundingSymbols(time, fundingFeeMin);
+
+                                    Set<String> extremeFundingSymbols = FundingFeeManager.getInstance().getExtremeNegativeFundingSymbols(time);
                                     // TreeMap tự động sắp xếp nên symbol có funding âm nhất sẽ được xử lý trước
                                     for (String symbol : extremeFundingSymbols) {
                                         // Chỉ vào lệnh nếu chưa có vị thế đang chạy cho symbol này
