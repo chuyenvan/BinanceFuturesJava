@@ -391,6 +391,7 @@ public class BinanceOrderTradingManager {
                 }
 
             } catch (Exception e) {
+                LOG.info("Error process position: {}", position.getSymbol());
                 e.printStackTrace();
             }
         }

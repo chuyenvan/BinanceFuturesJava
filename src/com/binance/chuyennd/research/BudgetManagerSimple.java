@@ -61,10 +61,10 @@ public class BudgetManagerSimple {
         try {
             // for test number order
             if (Configs.MOD_RUN_CAPITAL_CONSTANT) {
-                BUDGET_PER_ORDER =  balanceBasic / number_order_budget;
+                BUDGET_PER_ORDER = balanceBasic / number_order_budget;
             } else {
                 if (balanceCurrent / 3 > balanceBasic) {
-                    BUDGET_PER_ORDER =  (balanceCurrent / 3) / number_order_budget;
+                    BUDGET_PER_ORDER = (balanceCurrent / 3) / number_order_budget;
                 } else {
                     BUDGET_PER_ORDER = balanceBasic / number_order_budget;
                 }
@@ -78,19 +78,7 @@ public class BudgetManagerSimple {
     }
 
     public Double getBudget() {
-//        CapitalMode capitalMod = getCurrentCapitalMode();
-//        switch (capitalMod) {
-//            case SAFE:
-//        Double ratePerOrder = Configs.RATE_BUDGET_LIMIT_A_SIGNAL / Configs.NUMBER_ENTRY_EACH_SIGNAL;
-//        BUDGET_PER_ORDER = ratePerOrder * (balanceBasic + unProfit) / number_order_budget;
-
-        return BUDGET_PER_ORDER ;
-//            case DEFENSIVE:
-//                return BUDGET_PER_ORDER * 0.3;
-//            default:
-//                return BUDGET_PER_ORDER * 0.4;
-//        }
-
+        return BUDGET_PER_ORDER;
     }
 
     public Integer getLeverage() {
@@ -108,6 +96,10 @@ public class BudgetManagerSimple {
         }
     }
 
+    public void updatePositionMargin(Collection<OrderTargetInfoTest> orderInfos) {
+        positionMargin = calPositionMargin(orderInfos);
+    }
+
     public void updateBalance(Long timeUpdate, TreeMap<Long, OrderTargetInfoTest> allOrderDone,
                               ConcurrentHashMap<String, OrderTargetInfoTest> orderRunning,
                               ConcurrentHashMap<String, List<OrderTargetInfoTest>> symbol2OrdersEntry, boolean isPrintBalance) {
@@ -117,11 +109,12 @@ public class BudgetManagerSimple {
         balanceCurrent = balance;
         unProfit = calUnrealizedProfit(orderRunning.values());
         profitLossMax = calProfitLossMax(orderRunning.values());
-        positionMargin = calPositionMargin(orderRunning.values());
-        Double positionMarginReal = calPositionMarginReal(orderRunning.values());
-        Double balanceReal = balance + unProfit;
-        Double unrealizedProfitMin = calUnrealizedProfitMin(orderRunning.values());
-        balanceIndex.updateIndex(balanceBasic, positionMargin, positionMarginReal, timeUpdate, profitLossMax, unrealizedProfitMin, symbol2OrdersEntry,
+
+        Double positionMarginReal = positionMargin;
+//        Double positionMarginReal = calPositionMarginReal(orderRunning.values());
+//        Double balanceReal = balance + unProfit;
+//        Double unrealizedProfitMin = calUnrealizedProfitMin(orderRunning.values());
+        balanceIndex.updateIndex(balanceBasic, positionMargin, positionMarginReal, timeUpdate, profitLossMax, profitLossMax, symbol2OrdersEntry,
                 orderRunning);
         if (isPrintBalance) {
             time2Balance.put(timeUpdate, balance);
@@ -179,30 +172,30 @@ public class BudgetManagerSimple {
                     Utils.formatPercentNew(balanceIndex.unProfitMin / balanceBasic),
                     slMonth.longValue(), totalSL, allOrderDone.size(), counterOrderCreated.get(),
                     counterOrderRunning(symbol2OrdersEntry), maxOrderRunning, totalFundingFee.longValue());
-            if (timeUpdate.equals(Utils.getToDay() + 7 * Utils.TIME_HOUR)) {
-//                LOG.info("Report: {}", Utils.normalizeDateYYYYMMDDHHmm(timeUpdate));
-                List<String> lines =
-                        new ArrayList<>();
-                StringBuilder builder = new StringBuilder();
-                builder.append("capital: ").append(Configs.MAX_CAPITAL_RATE);
-                builder.append(" balance: ").append(balance.longValue());
-                builder.append(" balanceReal: ").append(balanceReal.longValue());
-                builder.append(" done: ").append(allOrderDone.size());
-                builder.append(balanceIndex.marginMax + " " + balanceIndex.rateMarginMax + " "
-                        + Utils.normalizeDateYYYYMMDDHHmm(balanceIndex.timeMarginMax) + " " +
-                        balanceIndex.profitLossMax);
-                lines.add(builder.toString());
-                try {
-                    FileUtils.writeLines(new File("storage/report.txt"), lines, true);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
+//            if (timeUpdate.equals(Utils.getToDay() + 7 * Utils.TIME_HOUR)) {
+////                LOG.info("Report: {}", Utils.normalizeDateYYYYMMDDHHmm(timeUpdate));
+//                List<String> lines =
+//                        new ArrayList<>();
+//                StringBuilder builder = new StringBuilder();
+//                builder.append("capital: ").append(Configs.MAX_CAPITAL_RATE);
+//                builder.append(" balance: ").append(balance.longValue());
+//                builder.append(" balanceReal: ").append(balanceReal.longValue());
+//                builder.append(" done: ").append(allOrderDone.size());
+//                builder.append(balanceIndex.marginMax + " " + balanceIndex.rateMarginMax + " "
+//                        + Utils.normalizeDateYYYYMMDDHHmm(balanceIndex.timeMarginMax) + " " +
+//                        balanceIndex.profitLossMax);
+//                lines.add(builder.toString());
+//                try {
+//                    FileUtils.writeLines(new File("storage/report.txt"), lines, true);
+//                } catch (IOException e) {
+//                    e.printStackTrace();
+//                }
+//            }
         }
-        if ((balance + unrealizedProfitMin) < 0) {
-            LOG.info("Chay tai khoan {} -----------------------------------!", Utils.normalizeDateYYYYMMDDHHmm(timeUpdate));
-        }
-        updateBudget();
+//        if ((balance + unrealizedProfitMin) < 0) {
+//            LOG.info("Chay tai khoan {} -----------------------------------!", Utils.normalizeDateYYYYMMDDHHmm(timeUpdate));
+//        }
+//        updateBudget();
     }
 
     private Integer counterOrderRunning(ConcurrentHashMap<String, List<OrderTargetInfoTest>> symbol2OrdersEntry) {
@@ -220,7 +213,7 @@ public class BudgetManagerSimple {
     public Double calUnrealizedProfitMin(Collection<OrderTargetInfoTest> orderInfos) {
         Double result = 0d;
         for (OrderTargetInfoTest orderInfo : orderInfos) {
-            Double profit = orderInfo.calProfitMin();
+            Double profit = orderInfo.profitMin;
             result += profit;
 //            LOG.info("{} {} {} {} {} {}",orderInfo.symbol, orderInfo.side, orderInfo.priceEntry, orderInfo.minPrice
 //            , orderInfo.maxPrice, profit);
@@ -240,8 +233,7 @@ public class BudgetManagerSimple {
     public Double calProfitLossMax(Collection<OrderTargetInfoTest> orderInfos) {
         Double result = 0d;
         for (OrderTargetInfoTest orderInfo : orderInfos) {
-            Double profit = orderInfo.calProfitLossMax();
-            result += profit;
+            result += orderInfo.profitMin;
         }
         return result;
     }

@@ -103,7 +103,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                 startUpdateOldOrderTrading(symbol, tickers);
                             }
                             logByProcessTime(startTimeRun, "Done update order", time);
-                            startTimeRun= System.currentTimeMillis();
+                            startTimeRun = System.currentTimeMillis();
 
                             Set<String> symbolsExhausted = time2SymbolSellingExhausted.get(time);
                             if (symbolsExhausted != null) {
@@ -130,7 +130,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                             }
 
                             logByProcessTime(startTimeRun, "Done dca big", time);
-                            startTimeRun= System.currentTimeMillis();
+                            startTimeRun = System.currentTimeMillis();
 
                             MarketDataObject marketData;
                             marketData = time2MarketData.get(time);
@@ -194,7 +194,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                 }
                             }
                             logByProcessTime(startTimeRun, "Done market data", time);
-                            startTimeRun= System.currentTimeMillis();
+                            startTimeRun = System.currentTimeMillis();
 
                             if (marketRateChange != null) {
                                 time2RateDown15MAvg.put(time, marketRateChange.rateDown15MAvg);
@@ -268,7 +268,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                 }
                             }
                             logByProcessTime(startTimeRun, "Done funding fee", time);
-                            startTimeRun= System.currentTimeMillis();
+                            startTimeRun = System.currentTimeMillis();
                             // BTC trend reverse
                             Double rateBtcTrendReverse = time2BtcReverse.get(time);
                             if (rateBtcTrendReverse != null && rateBtcTrendReverse >= Configs.BTC_TREND_REVERSE_RATE_MIN_TRADE) {
@@ -302,7 +302,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                 }
                             }
                             logByProcessTime(startTimeRun, "Done btc reverse done", time);
-                            startTimeRun= System.currentTimeMillis();
+                            startTimeRun = System.currentTimeMillis();
 
                             if (time % Utils.TIME_DAY == 0) {
                                 BudgetManagerSimple.getInstance().updateBalance(time, allOrderDone, symbol2OrderRunning, symbol2OrdersEntry, true);
@@ -354,25 +354,9 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
     private void logByProcessTime(Long startTimeRun, String msg, Long time) {
         long duration = (System.currentTimeMillis() - startTimeRun);
-        if (duration > 50) {
+        if (duration > 20) {
             LOG.info("{} {} {}", Utils.normalizeDateYYYYMMDDHHmm(time), msg, duration);
         }
-    }
-// Bên trong file SimulatorMarketLevelTicker1MStopLoss.java
-
-    private int calculateEntryScore(String symbol, long time, List<KlineObjectSimple> tickers) {
-        int totalScore = 0;
-
-        // Tín hiệu cũ
-//        if (MarketBigChangeDetectorTest.isSellingExhausted(tickers, symbol)) totalScore += 2;
-//        if (!FundingFeeManager.getInstance().getExtremeNegativeFundingSymbols(time, -0.0005).isEmpty()) totalScore += 3;
-
-        // Tín hiệu mới
-//        if (MarketBigChangeDetectorTest.isVolatilitySqueezeBreakout(tickers)) totalScore += 2;
-//        if (MarketBigChangeDetectorTest.isBullishDivergence(tickers)) totalScore += 4;
-//        if (MarketBigChangeDetectorTest.isSellSideAbsorption(tickers)) totalScore += 3;
-
-        return totalScore;
     }
 
 
@@ -439,23 +423,19 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         time2MarketData = (TreeMap<Long, MarketDataObject>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
         time2SymbolSellingExhausted = (Map<Long, Set<String>>) StorageSnappy.readObjectFromFile(Configs.FILE_TIME_SYMBOL_EXHAUSTED);
         time2BtcReverse = (TreeMap<Long, Double>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_BTC_REVERSE);
-//        Long startTime = Utils.sdfFile.parse(Configs.TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
-//        String month = Utils.getMonth(startTime);
-//        if (new File(FILE_STORAGE_ORDER_RUNNING.replace("RUNNINGDATA", month)).exists()) {
-//            symbol2OrderRunning = (ConcurrentHashMap<String, OrderTargetInfoTest>) StorageSnappy.readObjectFromFile(FILE_STORAGE_ORDER_RUNNING.replace("RUNNINGDATA", month));
-//            symbol2OrdersEntry = (ConcurrentHashMap<String, List<OrderTargetInfoTest>>) StorageSnappy.readObjectFromFile(FILE_STORAGE_ORDER_RUNNING_ENTRY.replace("RUNNINGDATA", month));
-//        }
 
     }
 
     private void startUpdateOldOrderTrading(String symbol, List<KlineObjectSimple> tickers) {
         OrderTargetInfoTest orderMulti = symbol2OrderRunning.get(symbol);
         if (orderMulti != null) {
-            int index = tickers.size() - 1;
-            KlineObjectSimple ticker = tickers.get(index);
+            KlineObjectSimple ticker = tickers.get(tickers.size() - 1);
             if (orderMulti.timeStart <= ticker.startTime.longValue()) {
-                Double maxChangeIn60M = MarketBigChangeDetector.getMaxRateIn60M(tickers);
                 orderMulti.updatePriceByKlineSimple(ticker);
+                Double maxChangeIn60M = ticker.maxPrice;
+                if (ticker.maxPrice > orderMulti.priceEntry) {
+                    maxChangeIn60M = MarketBigChangeDetector.getMaxRateIn60M(tickers);
+                }
                 orderMulti.updateStatusNew(maxChangeIn60M);
                 if (orderMulti.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)
                         || orderMulti.status.equals(OrderTargetStatus.STOP_LOSS_DONE)
@@ -486,6 +466,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         }
         symbol2OrdersEntry.remove(symbol);
         symbol2OrderRunning.remove(symbol);
+        BudgetManagerSimple.getInstance().updatePositionMargin(symbol2OrderRunning.values());
     }
 
     private OrderTargetInfoTest mergeOrder(List<OrderTargetInfoTest> orders, KlineObjectSimple ticker) {
@@ -575,6 +556,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         symbol2OrdersEntry.put(symbol, orders);
         symbol2OrderRunning.put(symbol, mergeOrder(orders, ticker));
         BudgetManagerSimple.getInstance().updateMaxOrderRunning(counterOrderRunning());
+        BudgetManagerSimple.getInstance().updatePositionMargin(symbol2OrderRunning.values());
     }
 
     private Boolean isTrendBuyWithBtcSMA(String symbol, Long time) {
@@ -600,19 +582,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         return counter;
     }
 
-    private Integer counterOrderRunning(MarketLevelChange level) {
-        Integer counter = 0;
-        for (List<OrderTargetInfoTest> orders : symbol2OrdersEntry.values()) {
-            if (orders != null && orders.size() != 0) {
-                for (OrderTargetInfoTest order : orders) {
-                    if (order.marketLevelChange.equals(level)) {
-                        counter++;
-                    }
-                }
-            }
-        }
-        return counter;
-    }
 
     private Double calMarginRunning() {
         Double marginTotal = 0d;
