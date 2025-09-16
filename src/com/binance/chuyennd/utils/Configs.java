@@ -44,7 +44,7 @@ public class Configs {
     // funding fee config
     public static final Integer NUMBER_LAST_FUNDING_CAL = 12;
     public static final Integer NUMBER_LAST_FUNDING_EXTREME  = 4;
-    public static final Integer NUMBER_HOUR_FUNDING_CAL = 30;
+    public static final Integer NUMBER_HOUR_FUNDING_CAL = 48;
     public static final Double FUNDING_MAX_TRADE = 0.00001;
     public static final Double FUNDING_MIN_TRADE = 0.0006;
     public static final Double FUNDING_MAX_TRADE_EXTREME = -0.0005;
@@ -57,7 +57,6 @@ public class Configs {
     public static final Double RATE_PROFIT_STOP_MARKET = Configs.getDouble("RATE_PROFIT_STOP_MARKET");
     public static final Double MAX_CAPITAL_RATE = Configs.getDouble("MAX_CAPITAL_RATE");
     public static final Double RATE_FEE = Configs.getDouble("RATE_FEE");
-    public static final Double RATE_BUDGET_LIMIT_A_SIGNAL = Configs.getDouble("RATE_BUDGET_LIMIT_A_SIGNAL");
     public static Integer LEVERAGE_ORDER = Configs.getInt("LEVERAGE_ORDER");
 
     public static String FOLDER_TICKER_15M = Configs.getString("FOLDER_TICKER_15M");//"../ticker/storage/ticker/symbols-15m/";
@@ -77,6 +76,7 @@ public class Configs {
     public static Double BTC_TREND_REVERSE_RATE_MIN_TRADE = Configs.getDouble("BTC_TREND_REVERSE_RATE_MIN_TRADE");
 
     public static String FILE_ENTRY_MARKET_LEVEL = "../storage/market_data/time2market.data";
+    public static String FILE_TIME_SYMBOL_EXHAUSTED = "../storage/market_data/time2SymbolSellingExhausted.data";
     public static String FILE_MARKET_RATE_CHANGE = "../storage/market_data/marketRateChange.data";
     public static String FILE_ENTRY_BTC_REVERSE = "../storage/btc/btcReverse-" + BTC_TREND_REVERSE_RATE_MIN + "-" + BTC_TREND_REVERSE_RATE_MAX + "-"
             + BTC_TREND_REVERSE_DURATION;

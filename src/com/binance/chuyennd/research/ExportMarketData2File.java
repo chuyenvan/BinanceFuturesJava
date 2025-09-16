@@ -38,21 +38,6 @@ public class ExportMarketData2File {
 //        test.exportFundingFeeBuy();
     }
 
-    private void exportFundingFeeBuy() throws ParseException {
-        Long timeStart = Utils.sdfFile.parse(Configs.TIME_RUN).getTime();
-        TreeMap<Long, Set<String>> time2SymbolFundingBuy = new TreeMap<>();
-        while (true) {
-            time2SymbolFundingBuy.put(timeStart, FundingFeeManager.getInstance().getFundingBuyNew(timeStart));
-            timeStart += Utils.TIME_MINUTE;
-            if (timeStart > System.currentTimeMillis() - Utils.TIME_HOUR) {
-                break;
-            }
-            if (timeStart == Utils.getDate(timeStart)) {
-                LOG.info("{}", Utils.normalizeDateYYYYMMDDHHmm(timeStart));
-            }
-        }
-//        Storage.writeObject2File(Configs.FILE_ENTRY_FUNDING_BUY, time2SymbolFundingBuy);
-    }
 
     public void exportBtcTrendReverse() {
         TreeMap<Long, Double> timeBtcReverse;
@@ -108,6 +93,7 @@ public class ExportMarketData2File {
 
         LOG.info("Export market entry: {}", Utils.normalizeDateYYYYMMDDHHmm(timeExport));
         Map<String, List<KlineObjectSimple>> symbol2LastTickers = new HashMap<>();
+        Map<Long, Set<String>> time2SymbolSellingExhausted = new HashMap<>();
         //get data
         while (true) {
             TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers;
@@ -171,7 +157,14 @@ public class ExportMarketData2File {
                                         minPrice = Math.min(minPrice, kline.minPrice);
                                     }
                                 }
-
+                                if (MarketBigChangeDetector.isSellingExhausted(tickers, symbol)) {
+                                    Set<String> symbolSellingExhausted = time2SymbolSellingExhausted.get(time);
+                                    if (symbolSellingExhausted == null){
+                                        symbolSellingExhausted = new HashSet<>();
+                                        time2SymbolSellingExhausted.put(time, symbolSellingExhausted);
+                                    }
+                                    symbolSellingExhausted.add(symbol);
+                                }
                                 symbol2MaxPrice.put(symbol, priceMax);
                                 rate2Max.put(Utils.rateOf2Double(ticker.priceClose, priceMax), symbol);
                                 symbol2MinPrice.put(symbol, minPrice);
@@ -192,7 +185,6 @@ public class ExportMarketData2File {
                                     }
                                     time2MarketRateChange.put(time, new MarketRateChange(marketData.rateDownAvg, marketData.rateDown15MAvg,
                                             marketData.rateUpAvg));
-
                                 }
                             }
                         } catch (Exception e) {
@@ -211,6 +203,7 @@ public class ExportMarketData2File {
             }
         }
         StorageSnappy.writeObject2File(Configs.FILE_ENTRY_MARKET_LEVEL, time2MarketData);
+        StorageSnappy.writeObject2File(Configs.FILE_TIME_SYMBOL_EXHAUSTED, time2SymbolSellingExhausted);
         StorageSnappy.writeObject2File(Configs.FILE_MARKET_RATE_CHANGE, time2MarketRateChange);
 
 

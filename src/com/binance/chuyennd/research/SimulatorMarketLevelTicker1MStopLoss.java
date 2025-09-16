@@ -40,13 +40,13 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
     public static final Logger LOG = LoggerFactory.getLogger(SimulatorMarketLevelTicker1MStopLoss.class);
     public static final String FILE_STORAGE_ORDER_DONE = "storage/OrderTestDone.data";
-    public static final String FILE_STORAGE_ORDER_RUNNING = "storage/orderRunning/orderRunning-RUNNINGDATA.data";
-    public static final String FILE_STORAGE_ORDER_RUNNING_ENTRY = "storage/orderRunning/orderRunning-entry-RUNNINGDATA.data";
 
     public TreeMap<Long, OrderTargetInfoTest> allOrderDone;
 
     public TreeMap<Long, MarketDataObject> time2MarketData;
     public TreeMap<Long, MarketRateChange> time2MarketRateChange;
+
+    public Map<Long, Set<String>> time2SymbolSellingExhausted;
 
 
     public TreeMap<Long, Double> time2BtcReverse;
@@ -78,6 +78,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                 if (time2Tickers != null) {
                     for (Map.Entry<Long, Map<String, KlineObjectSimple>> entry : time2Tickers.entrySet()) {
                         Long time = entry.getKey();
+                        Long startTimeRun = System.currentTimeMillis();
                         try {
                             Map<String, KlineObjectSimple> symbol2Ticker = entry.getValue();
                             for (String symbol : symbol2Ticker.keySet()) {
@@ -98,18 +99,24 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                         tickers.remove(0);
                                     }
                                 }
-
-                                if (MarketBigChangeDetector.isSellingExhausted(tickers, symbol)) {
-                                    symbolSellingExhausted.put(symbol, time);
-                                }
                                 // update order Old
                                 startUpdateOldOrderTrading(symbol, tickers);
+                            }
+                            logByProcessTime(startTimeRun, "Done update order", time);
+                            startTimeRun= System.currentTimeMillis();
+
+                            Set<String> symbolsExhausted = time2SymbolSellingExhausted.get(time);
+                            if (symbolsExhausted != null) {
+                                for (String symbol : symbolsExhausted) {
+                                    symbolSellingExhausted.put(symbol, time);
+                                }
                             }
 
                             MarketRateChange marketRateChange = time2MarketRateChange.get(time);
 
                             // dca buy
-                            List<String> symbolDcaLossBig = DcaProcessor.getDCA(null, time, BudgetManagerSimple.getInstance().getBudget(), symbol2OrderRunning);
+                            List<String> symbolDcaLossBig = DcaProcessor.getDCA(null, time,
+                                    BudgetManagerSimple.getInstance().getBudget(), symbol2OrderRunning);
                             for (String symbol : symbolDcaLossBig) {
                                 KlineObjectSimple ticker = symbol2Ticker.get(symbol);
                                 if (Utils.isTickerAvailable(ticker)) {
@@ -121,6 +128,9 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                             time2MarketRateChange.get(time), priceMax15M);
                                 }
                             }
+
+                            logByProcessTime(startTimeRun, "Done dca big", time);
+                            startTimeRun= System.currentTimeMillis();
 
                             MarketDataObject marketData;
                             marketData = time2MarketData.get(time);
@@ -171,14 +181,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                     for (String symbol : symbolDcaLevel) {
                                         KlineObjectSimple ticker = symbol2Ticker.get(symbol);
                                         if (Utils.isTickerAvailable(ticker)) {
-                                            OrderTargetInfoTest orderRunning = symbol2OrderRunning.get(symbol);
-                                            if (orderRunning != null) {
-                                                if (orderRunning.calMargin() > 2 * BudgetManagerSimple.getInstance().getBudget()
-                                                        && Utils.rateOf2Double(ticker.priceClose, orderRunning.lastEntry) > 0) {
-                                                    LOG.info("Not dca {} {} {}", symbol, orderRunning.lastEntry, ticker.priceClose);
-                                                    continue;
-                                                }
-                                            }
                                             MarketLevelChange leveChange2Dca;
                                             if (calMarginRunning(symbol) < BudgetManagerSimple.getInstance().getBudget()) {
                                                 leveChange2Dca = MarketLevelChange.DCA_LEVEL1;
@@ -191,6 +193,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                     }
                                 }
                             }
+                            logByProcessTime(startTimeRun, "Done market data", time);
+                            startTimeRun= System.currentTimeMillis();
 
                             if (marketRateChange != null) {
                                 time2RateDown15MAvg.put(time, marketRateChange.rateDown15MAvg);
@@ -263,7 +267,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                     }
                                 }
                             }
-
+                            logByProcessTime(startTimeRun, "Done funding fee", time);
+                            startTimeRun= System.currentTimeMillis();
                             // BTC trend reverse
                             Double rateBtcTrendReverse = time2BtcReverse.get(time);
                             if (rateBtcTrendReverse != null && rateBtcTrendReverse >= Configs.BTC_TREND_REVERSE_RATE_MIN_TRADE) {
@@ -296,11 +301,17 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                     }
                                 }
                             }
+                            logByProcessTime(startTimeRun, "Done btc reverse done", time);
+                            startTimeRun= System.currentTimeMillis();
+
                             if (time % Utils.TIME_DAY == 0) {
                                 BudgetManagerSimple.getInstance().updateBalance(time, allOrderDone, symbol2OrderRunning, symbol2OrdersEntry, true);
                             } else {
                                 BudgetManagerSimple.getInstance().updateBalance(time, allOrderDone, symbol2OrderRunning, symbol2OrdersEntry, false);
                             }
+                            logByProcessTime(startTimeRun, "Done budget data", time);
+
+
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
@@ -311,19 +322,13 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             }
             Long finalStartTime1 = startTime;
             startTime += Utils.TIME_DAY;
-            String month = Utils.getMonth(finalStartTime1);
-            if (Utils.getMonth(startTime).equals(month)) {
-                StorageSnappy.writeObject2File(FILE_STORAGE_ORDER_RUNNING.replace("RUNNINGDATA", month), symbol2OrderRunning);
-                StorageSnappy.writeObject2File(FILE_STORAGE_ORDER_RUNNING_ENTRY.replace("RUNNINGDATA", month), symbol2OrdersEntry);
-            }
             if (startTime > System.currentTimeMillis()) {
                 BudgetManagerSimple.getInstance().updateBalance(finalStartTime1, allOrderDone, symbol2OrderRunning, symbol2OrdersEntry, false);
                 break;
             }
         }
         // add all order running to done
-        for (
-                List<OrderTargetInfoTest> orderRunning : symbol2OrdersEntry.values()) {
+        for (List<OrderTargetInfoTest> orderRunning : symbol2OrdersEntry.values()) {
             for (OrderTargetInfoTest orderInfo : orderRunning) {
                 orderInfo.maxPrice = symbol2OrderRunning.get(orderInfo.symbol).maxPrice;
                 orderInfo.lastPrice = symbol2OrderRunning.get(orderInfo.symbol).lastPrice;
@@ -345,6 +350,13 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             e.printStackTrace();
         }
 
+    }
+
+    private void logByProcessTime(Long startTimeRun, String msg, Long time) {
+        long duration = (System.currentTimeMillis() - startTimeRun);
+        if (duration > 50) {
+            LOG.info("{} {} {}", Utils.normalizeDateYYYYMMDDHHmm(time), msg, duration);
+        }
     }
 // Bên trong file SimulatorMarketLevelTicker1MStopLoss.java
 
@@ -379,50 +391,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         return priceMax15M;
     }
 
-    private Double getMax4H(List<KlineObjectSimple> tickers) {
-        Double priceMax15M = null;
-        for (int i = 0; i < Configs.NUMBER_TICKER_CAL_RATE_CHANGE * 16; i++) {
-            int index = tickers.size() - i - 1;
-            if (index >= 0) {
-                KlineObjectSimple kline = tickers.get(index);
-                if (priceMax15M == null) {
-                    priceMax15M = kline.maxPrice;
-                }
-                priceMax15M = Math.max(priceMax15M, kline.maxPrice);
-            }
-        }
-        return priceMax15M;
-    }
-
-    private Double getMin4H(List<KlineObjectSimple> tickers) {
-        Double priceMin15M = null;
-        for (int i = 0; i < Configs.NUMBER_TICKER_CAL_RATE_CHANGE * 16; i++) {
-            int index = tickers.size() - i - 1;
-            if (index >= 0) {
-                KlineObjectSimple kline = tickers.get(index);
-                if (priceMin15M == null) {
-                    priceMin15M = kline.minPrice;
-                }
-                priceMin15M = Math.min(priceMin15M, kline.minPrice);
-            }
-        }
-        return priceMin15M;
-    }
-
-    private Double getMin15M(List<KlineObjectSimple> tickers) {
-        Double priceMin15M = null;
-        for (int i = 0; i < Configs.NUMBER_TICKER_CAL_RATE_CHANGE; i++) {
-            int index = tickers.size() - i - 1;
-            if (index >= 0) {
-                KlineObjectSimple kline = tickers.get(index);
-                if (priceMin15M == null) {
-                    priceMin15M = kline.minPrice;
-                }
-                priceMin15M = Math.min(priceMin15M, kline.minPrice);
-            }
-        }
-        return priceMin15M;
-    }
 
     public void updateSymbolDeListed(String symbol, Long time) {
         OrderTargetInfoTest order = symbol2OrderRunning.get(symbol);
@@ -469,6 +437,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         }
         time2MarketRateChange = (TreeMap<Long, MarketRateChange>) StorageSnappy.readObjectFromFile(Configs.FILE_MARKET_RATE_CHANGE);
         time2MarketData = (TreeMap<Long, MarketDataObject>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
+        time2SymbolSellingExhausted = (Map<Long, Set<String>>) StorageSnappy.readObjectFromFile(Configs.FILE_TIME_SYMBOL_EXHAUSTED);
         time2BtcReverse = (TreeMap<Long, Double>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_BTC_REVERSE);
 //        Long startTime = Utils.sdfFile.parse(Configs.TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
 //        String month = Utils.getMonth(startTime);
@@ -485,7 +454,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             int index = tickers.size() - 1;
             KlineObjectSimple ticker = tickers.get(index);
             if (orderMulti.timeStart <= ticker.startTime.longValue()) {
-                Double maxChangeIn60M = MarketBigChangeDetector.getMaxPriceIn60M(tickers);
+                Double maxChangeIn60M = MarketBigChangeDetector.getMaxRateIn60M(tickers);
                 orderMulti.updatePriceByKlineSimple(ticker);
                 orderMulti.updateStatusNew(maxChangeIn60M);
                 if (orderMulti.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)

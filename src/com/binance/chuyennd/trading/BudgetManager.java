@@ -62,8 +62,7 @@ public class BudgetManager {
         try {
             Asset umInfo = BinanceFuturesClientSingleton.getInstance().getAccountUMInfo();
             Double balanceCurrent = umInfo.getWalletBalance().doubleValue();
-            Double ratePerOrder = (Configs.RATE_BUDGET_LIMIT_A_SIGNAL / Configs.NUMBER_ENTRY_EACH_SIGNAL);
-            BUDGET_PER_ORDER = ratePerOrder * balanceBasic / number_order_budget;
+            BUDGET_PER_ORDER =  balanceBasic / number_order_budget;
             long time = new File("lib/binance-java-sdk-1.2.4.jar").lastModified();
             LOG.info("Ba and Bu {}: {} -> {} balance init:{} marginRunning:{} ", Utils.normalizeDateYYYYMMDDHHmm(time),
                     balanceCurrent, BUDGET_PER_ORDER, balanceBasic, marginRunning);

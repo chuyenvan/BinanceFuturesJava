@@ -37,7 +37,7 @@ public class TradeUtils {
     public static Double calRateMinWithMaxChange60M(Double maxChange15M) {
         Double rateMin2MoveSl = Configs.RATE_PROFIT_STOP_MARKET;
         if (maxChange15M != null) {
-            if (maxChange15M >= 0.03) {
+            if (maxChange15M >= 0.025) {
                 rateMin2MoveSl = Math.max(rateMin2MoveSl, 0.05);
             } else if (maxChange15M >= 0.02) {
                 rateMin2MoveSl = Math.max(rateMin2MoveSl, 0.04);

@@ -245,14 +245,8 @@ public class DetectEntrySignal2TradeNormal {
                             BudgetManager.getInstance().getBudget(), BudgetManager.getInstance().symbol2Pos);
                     for (String symbol : symbolDcaLevel) {
                         KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
-                        OrderTargetInfo orderRunning = getOrderInfo(symbol);
-                        PositionRisk position = BudgetManager.getInstance().symbol2Pos.get(symbol);
+                         PositionRisk position = BudgetManager.getInstance().symbol2Pos.get(symbol);
                         if (position != null) {
-                            if (orderRunning != null && orderRunning.priceEntry < ticker.priceClose
-                                    && PositionHelper.callMargin(position) < 2 * BudgetManager.getInstance().getBudget()) {
-                                LOG.info("Not dca {} {} {}", symbol, orderRunning.priceEntry, ticker.priceClose);
-                                continue;
-                            }
                             if (PositionHelper.callMargin(position) < BudgetManager.getInstance().getBudget()
                                     && BudgetManager.getInstance().marginRunning < 100 * BudgetManager.getInstance().getBudget()) {
                                 levelChange = MarketLevelChange.DCA_LEVEL1;

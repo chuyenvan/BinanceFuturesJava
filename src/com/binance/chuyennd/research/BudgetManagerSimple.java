@@ -59,15 +59,14 @@ public class BudgetManagerSimple {
     public void updateBudget() {
         investing = 0d;
         try {
-            Double ratePerOrder = Configs.RATE_BUDGET_LIMIT_A_SIGNAL / Configs.NUMBER_ENTRY_EACH_SIGNAL;
             // for test number order
             if (Configs.MOD_RUN_CAPITAL_CONSTANT) {
-                BUDGET_PER_ORDER = ratePerOrder * balanceBasic / number_order_budget;
+                BUDGET_PER_ORDER =  balanceBasic / number_order_budget;
             } else {
                 if (balanceCurrent / 3 > balanceBasic) {
-                    BUDGET_PER_ORDER = ratePerOrder * (balanceCurrent / 3) / number_order_budget;
+                    BUDGET_PER_ORDER =  (balanceCurrent / 3) / number_order_budget;
                 } else {
-                    BUDGET_PER_ORDER = ratePerOrder * balanceBasic / number_order_budget;
+                    BUDGET_PER_ORDER = balanceBasic / number_order_budget;
                 }
             }
 
@@ -185,8 +184,7 @@ public class BudgetManagerSimple {
                 List<String> lines =
                         new ArrayList<>();
                 StringBuilder builder = new StringBuilder();
-                builder.append("capital: ").append(Configs.MAX_CAPITAL_RATE).append(" rateBudget: ")
-                        .append(Configs.RATE_BUDGET_LIMIT_A_SIGNAL);
+                builder.append("capital: ").append(Configs.MAX_CAPITAL_RATE);
                 builder.append(" balance: ").append(balance.longValue());
                 builder.append(" balanceReal: ").append(balanceReal.longValue());
                 builder.append(" done: ").append(allOrderDone.size());

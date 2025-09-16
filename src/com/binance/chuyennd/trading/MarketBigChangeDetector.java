@@ -3,7 +3,6 @@ package com.binance.chuyennd.trading;
 import com.binance.chuyennd.bigchange.market.MarketDataObject;
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
 import com.binance.chuyennd.helper.TickerFuturesHelper;
-import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
@@ -304,28 +303,6 @@ public class MarketBigChangeDetector {
         return total / counter;
     }
 
-    private static boolean isDoubleReverse(List<Double> lastRateDown15Ms, int period, Double rateDown15MAvg) {
-        if (lastRateDown15Ms != null && lastRateDown15Ms.size() > period) {
-            int size = lastRateDown15Ms.size();
-            List<Long> lastRateLong = new ArrayList<>();
-            for (int i = 0; i < size; i++) {
-                Double rate = lastRateDown15Ms.get(i);
-                rate = rate * 1000;
-                lastRateLong.add(rate.longValue());
-            }
-
-            for (int i = 0; i < period; i++) {
-                if (lastRateLong.get(size - i - 1) > lastRateLong.get(size - i - 2)) {
-                    return false;
-                }
-            }
-            if (lastRateDown15Ms.get(size - 1) < rateDown15MAvg) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     public static MarketLevelChange getMarketStatus1M(Double rateDownAvg, Double rateUpAvg,
                                                       Double btcRateChange, Double rateDown15MAvg) {
         if (rateUpAvg > 0.025) {
@@ -367,70 +344,19 @@ public class MarketBigChangeDetector {
 
     }
 
-    public static List<Object> isUnderSideWay2Trade(List<KlineObjectNumber> tickers) {
-        List<Object> results = new ArrayList<>();
-
-        Double duration = 0.005;
-        KlineObjectNumber tickerClose = tickers.get(tickers.size() - 1);
-        Double priceClose = tickerClose.priceClose;
-
-        TreeMap<Double, Integer> price2Counter = new TreeMap<>();
-        for (int i = 0; i < 9; i++) {
-            price2Counter.put(priceClose + (i - 2) * duration * priceClose, 0);
-        }
-        for (KlineObjectNumber ticker : tickers) {
-            for (Map.Entry<Double, Integer> entry : price2Counter.entrySet()) {
-                Double price = entry.getKey();
-                Integer counter = entry.getValue();
-                if (ticker.minPrice <= price && price <= ticker.maxPrice) {
-                    counter++;
-                    price2Counter.put(price, counter);
-                }
-            }
-        }
-        Integer priceCloseCounter = price2Counter.get(priceClose);
-        int counterBelow = 0;
-        int counterAbove = 0;
-        for (Map.Entry<Double, Integer> entry : price2Counter.entrySet()) {
-            Double price = entry.getKey();
-            Integer counter = entry.getValue();
-            if (price < priceClose) {
-                counterBelow += counter;
-            } else {
-                if (price > priceClose) {
-                    counterAbove += counter;
-                }
-            }
-//            LOG.info("{} {}", price, counter);
-        }
-        if (priceCloseCounter >= 20
-                && counterAbove > 2 * priceCloseCounter
-                && Utils.rateOf2Double(tickerClose.priceClose, tickerClose.priceOpen) < -0.005
-        ) {
-            results.add(priceClose);
-            results.add(priceCloseCounter);
-            results.add(counterAbove);
-            results.add(counterBelow);
-            results.add(duration);
-            return results;
-        }
-
-        return null;
-    }
-
-    public static Double getMaxPriceIn60M(List<KlineObjectSimple> tickers) {
+    public static Double getMaxRateIn60M(List<KlineObjectSimple> tickers) {
         int index = tickers.size() - 1;
-        Double maxChangeIn60M = null;
+        Double maxRateChangeIn60M = null;
         for (int i = 0; i < 60; i++) {
             if (index - i < 0) {
                 break;
             }
             KlineObjectSimple tickerCheck = tickers.get(index - i);
-            if (maxChangeIn60M == null || Utils.rateOf2Double(tickerCheck.maxPrice, tickerCheck.minPrice) > maxChangeIn60M) {
-                maxChangeIn60M = Utils.rateOf2Double(tickerCheck.maxPrice, tickerCheck.minPrice);
+            if (maxRateChangeIn60M == null || Utils.rateOf2Double(tickerCheck.maxPrice, tickerCheck.minPrice) > maxRateChangeIn60M) {
+                maxRateChangeIn60M = Utils.rateOf2Double(tickerCheck.maxPrice, tickerCheck.minPrice);
             }
         }
-        return maxChangeIn60M;
+        return maxRateChangeIn60M;
     }
 }
 

@@ -20,7 +20,6 @@ import com.binance.chuyennd.client.BinanceFuturesClientSingleton;
 import com.binance.chuyennd.client.ClientSingleton;
 import com.binance.chuyennd.helper.OrderHelper;
 import com.binance.chuyennd.helper.PositionHelper;
-import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
@@ -33,7 +32,6 @@ import com.binance.client.model.enums.OrderSide;
 import com.binance.client.model.enums.OrderType;
 import com.binance.client.model.trade.Order;
 import com.binance.client.model.trade.PositionRisk;
-import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -248,7 +246,7 @@ public class BinanceOrderTradingManager {
                     BudgetManager.getInstance().symbol2Level.remove(symbol);
                 }
                 List<KlineObjectSimple> tickers = ListenAllTicker.getInstance().getTickerBySymbol(symbol);
-                Double maxChange60M = MarketBigChangeDetector.getMaxPriceIn60M(tickers);
+                Double maxChange60M = MarketBigChangeDetector.getMaxRateIn60M(tickers);
                 Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60M(maxChange60M);
                 if (rateLoss > rateMin2MoveSl) {
                     if (orderInfo.priceSL == null) {
@@ -353,7 +351,7 @@ public class BinanceOrderTradingManager {
                 }
                 OrderSide side2Sl;
                 List<KlineObjectSimple> tickers = ListenAllTicker.getInstance().getTickerBySymbol(symbol);
-                Double maxChange60M = MarketBigChangeDetector.getMaxPriceIn60M(tickers);
+                Double maxChange60M = MarketBigChangeDetector.getMaxRateIn60M(tickers);
                 Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60M(maxChange60M * 1.5);
                 // BUY
                 if (position.getPositionAmt().compareTo(new BigDecimal("0")) > 0) {
