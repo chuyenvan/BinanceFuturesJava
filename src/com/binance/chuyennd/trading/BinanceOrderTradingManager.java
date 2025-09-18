@@ -246,8 +246,8 @@ public class BinanceOrderTradingManager {
                     BudgetManager.getInstance().symbol2Level.remove(symbol);
                 }
                 List<KlineObjectSimple> tickers = ListenAllTicker.getInstance().getTickerBySymbol(symbol);
-                Double maxChange60M = MarketBigChangeDetector.getMaxRateIn60M(tickers);
-                Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60M(maxChange60M);
+                Double maxChange60M = MarketBigChangeDetector.getMaxRateIn60MForTradingStop(tickers);
+                Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60MForTradingStop(maxChange60M);
                 if (rateLoss > rateMin2MoveSl) {
                     if (orderInfo.priceSL == null) {
                         OrderSide sideSL = OrderSide.SELL;
@@ -351,8 +351,8 @@ public class BinanceOrderTradingManager {
                 }
                 OrderSide side2Sl;
                 List<KlineObjectSimple> tickers = ListenAllTicker.getInstance().getTickerBySymbol(symbol);
-                Double maxChange60M = MarketBigChangeDetector.getMaxRateIn60M(tickers);
-                Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60M(maxChange60M * 1.5);
+                Double maxChange60M = MarketBigChangeDetector.getMaxRateIn60MForTradingStop(tickers);
+                Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60MForTradingStop(maxChange60M * 1.5);
                 // BUY
                 if (position.getPositionAmt().compareTo(new BigDecimal("0")) > 0) {
                     side2Sl = OrderSide.SELL;

@@ -42,11 +42,11 @@ public class Configs {
     public static String TIME_RUN = Configs.getString("TIME_RUN");
 
     // funding fee config
-    public static final Integer NUMBER_LAST_FUNDING_CAL = 12;
+    public static final Integer NUMBER_LAST_FUNDING_CAL = 4;
     public static final Integer NUMBER_LAST_FUNDING_EXTREME  = 4;
-    public static final Integer NUMBER_HOUR_FUNDING_CAL = 48;
-    public static final Double FUNDING_MAX_TRADE = 0.00001;
-    public static final Double FUNDING_MIN_TRADE = 0.0006;
+    public static final Integer NUMBER_HOUR_FUNDING_CAL = 30;
+    public static final Double FUNDING_MAX_TRADE = -0.0001;
+//    public static final Double FUNDING_MIN_TRADE = 0.0006;
     public static final Double FUNDING_MAX_TRADE_EXTREME = -0.0005;
 
 

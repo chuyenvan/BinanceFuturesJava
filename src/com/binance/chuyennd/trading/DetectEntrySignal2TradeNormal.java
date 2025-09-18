@@ -263,13 +263,15 @@ public class DetectEntrySignal2TradeNormal {
             }
 
             // funding fee trade
-            time2RateDown15MAvg.put(time, rateDown15MAvg);
-            while (time2RateDown15MAvg.size() > 30) {
-                time2RateDown15MAvg.remove(time2RateDown15MAvg.firstKey());
-            }
-            Double minRate15Min30M = Collections.min(time2RateDown15MAvg.values());
-            if ((rateDown15MAvg < -0.015 && rateDown15MAvg < minRate15Min30M)
-                    || rateDown15MAvg < -0.03
+//            time2RateDown15MAvg.put(time, rateDown15MAvg);
+//            while (time2RateDown15MAvg.size() > 30) {
+//                time2RateDown15MAvg.remove(time2RateDown15MAvg.firstKey());
+//            }
+//            Double minRate15Min30M = Collections.min(time2RateDown15MAvg.values());
+            if (
+//                    (rateDown15MAvg < -0.015 && rateDown15MAvg < minRate15Min30M)
+//                    ||
+                            rateDown15MAvg < -0.03
                     || rateUpAvg > 0.006
                     || rateDownAvg < -0.006) {
                 Set<String> symbolBuyFundingFee = new HashSet<>();

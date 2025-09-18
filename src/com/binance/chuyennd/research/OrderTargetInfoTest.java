@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.util.Date;
 import java.util.TreeMap;
 
 /**
@@ -51,7 +52,7 @@ public class OrderTargetInfoTest implements Serializable {
     public String symbol;
     public long timeStart;
     public long timeUpdate;
-    public Double profitMin;
+    public Double profitMin = 0d;
 
     public Double maxPrice;
     public Double minPrice;
@@ -100,6 +101,7 @@ public class OrderTargetInfoTest implements Serializable {
     public OrderTargetInfoTest() {
 
     }
+
     public void updatePriceByKlineSimple(KlineObjectSimple ticker) {
         this.lastPrice = ticker.priceClose;
         if (this.maxPrice < ticker.maxPrice) {
@@ -117,8 +119,8 @@ public class OrderTargetInfoTest implements Serializable {
         return rate;
     }
 
-    public Double calRateLossMax() {
-        double rate = Utils.rateOf2Double(maxPrice, priceEntry);
+    public Double calRateLossMax(Double maxPriceTicker) {
+        double rate = Utils.rateOf2Double(maxPriceTicker, priceEntry);
         return rate;
     }
 
@@ -146,33 +148,52 @@ public class OrderTargetInfoTest implements Serializable {
         return quantity * priceEntry / leverage;
     }
 
-    public void updateStatusNew(Double maxChange60M) {
+    public void updateStatusNew(Double maxChange60M, KlineObjectSimple ticker) {
         if (priceSL == null) {
-            Double rateLoss = calRateLossMax();
-            Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60M(maxChange60M);
+            Double rateLoss = calRateLossMax(ticker.maxPrice);
+            Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60MForTradingStop(maxChange60M);
             Double rateStop = TradeUtils.calRateLossDynamicBuy(rateLoss);
             Double priceSLNew = Utils.calPriceTarget(symbol, priceEntry, OrderSide.SELL, -rateStop);
             if (rateLoss > rateMin2MoveSl) {
                 minPrice = lastPrice;
                 this.priceSL = priceSLNew;
+                if (maxPrice > ticker.maxPrice) {
+                    LOG.info("Update when max < entry: {} {} {} {} {} {} {} {}", symbol, maxPrice,
+                            priceEntry, ticker.maxPrice, Utils.formatPercent(maxChange60M),
+                            rateMin2MoveSl, priceSLNew, ticker.priceClose);
+                }
+                if (ticker.priceClose <= priceSLNew) {
+                    LOG.info("SL over last price: {} {} {} {} {} {} {} {} {}", symbol, maxPrice,
+                            priceEntry, ticker.maxPrice, Utils.formatPercent(maxChange60M),
+                            rateMin2MoveSl, priceSLNew, ticker.priceClose);
+                }
+                if (lastPrice <= priceSLNew) {
+                    LOG.info("Close now lastPrice under pSL: {} {} {} {} {} {} {} {} {}", symbol,
+                            Utils.sdfGoogle.format(new Date(timeStart)), maxPrice,
+                            priceEntry, ticker.maxPrice, Utils.formatPercent(maxChange60M),
+                            rateMin2MoveSl, priceSLNew, ticker.priceClose);
+                    status = OrderTargetStatus.TAKE_PROFIT_DONE;
+                    priceTP = priceSL;
+                }
             }
-        }
-        if (priceSL != null && minPrice <= priceSL) {
-            if (priceSL > priceEntry) {
-                status = OrderTargetStatus.STOP_MARKET_DONE;
-            } else {
-                status = OrderTargetStatus.STOP_LOSS_DONE;
+        } else {
+            if (minPrice <= priceSL) {
+                if (priceSL > priceEntry) {
+                    status = OrderTargetStatus.STOP_MARKET_DONE;
+                } else {
+                    status = OrderTargetStatus.STOP_LOSS_DONE;
+                }
+                priceTP = priceSL;
             }
-            priceTP = priceSL;
         }
     }
 
 
-    public void updateTPSL(Double rateChangeMax60M) {
+    public void updateTPSL(Double rateChangeMax60M, KlineObjectSimple ticker) {
         // move SL
         if (priceSL != null) {
-            Double rateLoss = calRateLossMax();
-            Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60M(rateChangeMax60M * 1.5);
+            Double rateLoss = calRateLossMax(ticker.maxPrice);
+            Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60MForTradingStop(rateChangeMax60M * 1.5);
             Double rateSL = TradeUtils.calRateLossDynamicBuy(rateLoss);
             OrderSide side2Sl = OrderSide.SELL;
             Double priceSLNew = Utils.calPriceTarget(symbol, priceEntry, side2Sl, -rateSL);

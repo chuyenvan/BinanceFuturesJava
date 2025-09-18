@@ -344,10 +344,10 @@ public class MarketBigChangeDetector {
 
     }
 
-    public static Double getMaxRateIn60M(List<KlineObjectSimple> tickers) {
+    public static Double getMaxRateIn60MForTradingStop(List<KlineObjectSimple> tickers) {
         int index = tickers.size() - 1;
         Double maxRateChangeIn60M = null;
-        for (int i = 0; i < 60; i++) {
+        for (int i = 0; i < 15; i++) {
             if (index - i < 0) {
                 break;
             }

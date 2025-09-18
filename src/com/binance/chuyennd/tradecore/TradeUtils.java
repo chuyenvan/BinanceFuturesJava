@@ -15,39 +15,41 @@ public class TradeUtils {
     public static final Logger LOG = LoggerFactory.getLogger(TradeUtils.class);
 
     public static void main(String[] args) {
-        for (int i = 0; i < 100; i++) {
-            Double rate = 0.01 + i * 0.001;
-            LOG.info("{} {}", rate, TradeUtils.calRateLossDynamicBuy(rate));
-        }
+//        for (int i = 0; i < 100; i++) {
+//            Double rate = 0.01 + i * 0.001;
+//            LOG.info("{} {}", rate, TradeUtils.calRateLossDynamicBuy(rate));
+//        }
+        System.out.println(TradeUtils.calRateMinWithMaxChange60MForTradingStop(0d));
     }
 
     public static Double calRateLossDynamicBuy(Double unProfit) {
-        Double rateLoss = unProfit * 100;
+        Double rateLoss = unProfit * 200;
         Long tradingStopRate;
-        Long maxRateTradingStop = 6l;
+        Long maxRateTradingStop = 12l;
         if (rateLoss < maxRateTradingStop * 2) {
             tradingStopRate = rateLoss.longValue() / 2;
         } else {
             tradingStopRate = maxRateTradingStop;
         }
         rateLoss = rateLoss.longValue() - tradingStopRate.doubleValue();
-        return rateLoss / 100;
+        return rateLoss / 200;
     }
 
-    public static Double calRateMinWithMaxChange60M(Double maxChange15M) {
+    public static Double calRateMinWithMaxChange60MForTradingStop(Double maxChange60M) {
         Double rateMin2MoveSl = Configs.RATE_PROFIT_STOP_MARKET;
-        if (maxChange15M != null) {
-            if (maxChange15M >= 0.025) {
+        if (maxChange60M != null) {
+            if (maxChange60M >= 0.03) {
                 rateMin2MoveSl = Math.max(rateMin2MoveSl, 0.05);
-            } else if (maxChange15M >= 0.02) {
-                rateMin2MoveSl = Math.max(rateMin2MoveSl, 0.04);
-            } else if (maxChange15M >= 0.01) {
-                rateMin2MoveSl = Math.max(rateMin2MoveSl, 0.025);
-            } else if (maxChange15M > 0.006) {
+            } else if (maxChange60M >= 0.025) {
+                rateMin2MoveSl = Math.max(rateMin2MoveSl, 0.03);
+            } else if (maxChange60M >= 0.015) {
                 rateMin2MoveSl = Math.max(rateMin2MoveSl, 0.02);
-            } else if (maxChange15M > 0.004) {
+            } else if (maxChange60M > 0.08) {
                 rateMin2MoveSl = Math.max(rateMin2MoveSl, 0.015);
             }
+//            else if (maxChange60M > 0.004) {
+//                rateMin2MoveSl = Math.max(rateMin2MoveSl, 0.015);
+//            }
         }
         return rateMin2MoveSl;
     }
