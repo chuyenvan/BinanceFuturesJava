@@ -36,7 +36,7 @@ public final class DcaUtils {
 
     private static DcaConfig getDcaConfig(MarketLevelChange levelChange) {
         if (levelChange == null) {
-            return new DcaConfig(1, -0.4, false);
+            return new DcaConfig(1, -0.25, false);
         }
         switch (levelChange) {
             case BIG_DOWN:
