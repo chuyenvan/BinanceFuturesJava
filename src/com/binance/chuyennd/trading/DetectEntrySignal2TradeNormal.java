@@ -245,7 +245,7 @@ public class DetectEntrySignal2TradeNormal {
                             BudgetManager.getInstance().getBudget(), BudgetManager.getInstance().symbol2Pos);
                     for (String symbol : symbolDcaLevel) {
                         KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
-                         PositionRisk position = BudgetManager.getInstance().symbol2Pos.get(symbol);
+                        PositionRisk position = BudgetManager.getInstance().symbol2Pos.get(symbol);
                         if (position != null) {
                             if (PositionHelper.callMargin(position) < BudgetManager.getInstance().getBudget()
                                     && BudgetManager.getInstance().marginRunning < 100 * BudgetManager.getInstance().getBudget()) {
@@ -264,14 +264,14 @@ public class DetectEntrySignal2TradeNormal {
 
             // funding fee trade
 //            time2RateDown15MAvg.put(time, rateDown15MAvg);
-//            while (time2RateDown15MAvg.size() > 30) {
+//            while (time2RateDown15MAvg.size() > 60) {
 //                time2RateDown15MAvg.remove(time2RateDown15MAvg.firstKey());
 //            }
 //            Double minRate15Min30M = Collections.min(time2RateDown15MAvg.values());
             if (
-//                    (rateDown15MAvg < -0.015 && rateDown15MAvg < minRate15Min30M)
+//                    (rateDown15MAvg < -0.02 && rateDown15MAvg < minRate15Min30M)
 //                    ||
-                            rateDown15MAvg < -0.03
+                    rateDown15MAvg < -0.03
                     || rateUpAvg > 0.006
                     || rateDownAvg < -0.006) {
                 Set<String> symbolBuyFundingFee = new HashSet<>();

@@ -42,11 +42,11 @@ public class Configs {
     public static String TIME_RUN = Configs.getString("TIME_RUN");
 
     // funding fee config
-    public static final Integer NUMBER_LAST_FUNDING_CAL = 8;
+    public static final Integer NUMBER_LAST_FUNDING_CAL = 4;
     public static final Integer NUMBER_LAST_FUNDING_EXTREME  = 4;
     public static final Integer NUMBER_HOUR_FUNDING_CAL = 30;
     public static final Double FUNDING_MAX_TRADE = -0.0001;
-//    public static final Double FUNDING_MIN_TRADE = 0.0006;
+    public static final Double FUNDING_MIN_TRADE = 0.0006;
     public static final Double FUNDING_MAX_TRADE_EXTREME = -0.0005;
 
 
@@ -55,7 +55,8 @@ public class Configs {
     public static Integer NUMBER_ENTRY_EACH_SIGNAL = Configs.getInt("NUMBER_ENTRY_EACH_SIGNAL");
     public static Integer NUMBER_TICKER_CAL_RATE_CHANGE = Configs.getInt("NUMBER_TICKER_CAL_RATE_CHANGE");
     public static final Double RATE_PROFIT_STOP_MARKET = Configs.getDouble("RATE_PROFIT_STOP_MARKET");
-    public static final Double MAX_CAPITAL_RATE = Configs.getDouble("MAX_CAPITAL_RATE");
+    public static Integer SMA_LONG = GridConfigs.getInt("SMA_LONG");
+    public static Integer SMA_SHORT = GridConfigs.getInt("SMA_SHORT");
     public static final Double RATE_FEE = Configs.getDouble("RATE_FEE");
     public static Integer LEVERAGE_ORDER = Configs.getInt("LEVERAGE_ORDER");
 

@@ -215,7 +215,7 @@ public class FundingFeeManager {
      * Lấy danh sách các symbol có funding fee ÂM CỰC ĐOAN tại một thời điểm.
      * Tín hiệu này mạnh hơn so với việc chỉ kiểm tra funding âm thông thường.
      *
-     * @param time          Thời điểm cần kiểm tra.
+     * @param time Thời điểm cần kiểm tra.
      * @return Một TreeMap được sắp xếp, với key là mức funding fee (càng âm càng ở đầu),
      * và value là tên symbol. Trả về rỗng nếu không có symbol nào thỏa mãn.
      */
