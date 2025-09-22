@@ -165,6 +165,7 @@ public class MarketBigChangeDetector {
         }
         return total / counter;
     }
+
     public static MarketDataObject calMarketData(Map<String, KlineObjectSimple> symbol2Ticker, Map<String, Double> symbol2PriceMax,
                                                  Map<String, Double> symbol2MinPrice) {
         TreeMap<Double, String> rateDown2Symbols = new TreeMap<>();
@@ -212,6 +213,7 @@ public class MarketBigChangeDetector {
         result.symbol2PriceMax15M = symbol2PriceMax;
         return result;
     }
+
     public static Double isBtcTrendReverse(List<KlineObjectSimple> btcTickers) {
         int index = btcTickers.size() - 1;
         Double rateTrend = Configs.BTC_TREND_REVERSE_RATE_MAX;
@@ -347,7 +349,7 @@ public class MarketBigChangeDetector {
     public static Double getMaxRateIn60MForTradingStop(List<KlineObjectSimple> tickers) {
         int index = tickers.size() - 1;
         Double maxRateChangeIn60M = null;
-        for (int i = 0; i < 15; i++) {
+        for (int i = 0; i < 90; i++) {
             if (index - i < 0) {
                 break;
             }
@@ -357,6 +359,36 @@ public class MarketBigChangeDetector {
             }
         }
         return maxRateChangeIn60M;
+    }
+
+    public static boolean isFundingFeeTrade(Double rateDown15MAvg, Double rateDownAvg, Double rateUpAvg, Double minRate15Min60M) {
+        return (rateDown15MAvg < -0.015 && rateDown15MAvg <= minRate15Min60M)
+                || rateDown15MAvg < -0.025
+                || rateUpAvg > 0.005
+                || rateDownAvg < -0.005;
+    }
+
+    public static boolean isDcaWithBtcReverse(Double rateLoss, Double budget, Double marginOfSym, Double priceClose, Double lastEntry) {
+        if (marginOfSym > 2 * budget) {
+            if (marginOfSym > 4 * budget) {
+                if (Utils.rateOf2Double(priceClose, lastEntry) < -0.1) {
+                    return true;
+                }
+            } else {
+                if (rateLoss < -0.05 || rateLoss > 0.02) {
+                    return true;
+                }
+            }
+        } else {
+            if (rateLoss < -0.03 || rateLoss > 0.02) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static boolean isRateChangeAvailable2Trade(Double rateTicker, Double rateMax15M) {
+        return rateTicker < -0.013 || rateMax15M < -0.045;
     }
 }
 

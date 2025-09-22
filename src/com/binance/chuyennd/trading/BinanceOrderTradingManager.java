@@ -286,7 +286,7 @@ public class BinanceOrderTradingManager {
 
     public void updatePositionInfo() {
         String lockName = "UpdateAllPos";
-        if (SymbolOrderLockingManager.getInstance().isLock(lockName, 5)) {
+        if (SymbolOrderLockingManager.getInstance().isLock(lockName, 3)) {
             LOG.info("Symbol {} is locking for loop!", lockName);
             return;
         }

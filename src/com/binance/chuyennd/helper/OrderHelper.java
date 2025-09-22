@@ -109,7 +109,7 @@ public class OrderHelper {
     public static Order newOrderMarket(String symbol, OrderSide side, Double quantity) {
         LOG.info("cat Order market {} {} {}", symbol, side, quantity);
         try {
-            if (SymbolOrderLockingManager.getInstance().isLock(symbol, 10)) {
+            if (SymbolOrderLockingManager.getInstance().isLock(symbol, 5)) {
                 LOG.info("Symbol {} is locking for loop!", symbol);
                 return null;
             }
@@ -209,7 +209,7 @@ public class OrderHelper {
 
     public static Order stopLoss(String symbol, Double quantity, Double stopPrice) {
         try {
-            if (SymbolOrderLockingManager.getInstance().isLock(symbol, 10)) {
+            if (SymbolOrderLockingManager.getInstance().isLock(symbol, 3)) {
                 LOG.info("Symbol {} is locking for loop!", symbol);
                 return null;
             }

@@ -38,13 +38,13 @@ public class TradeUtils {
     public static Double calRateMinWithMaxChange60MForTradingStop(Double maxChange60M) {
         Double rateMin2MoveSl = Configs.RATE_PROFIT_STOP_MARKET;
         if (maxChange60M != null) {
-            if (maxChange60M >= 0.03) {
-                rateMin2MoveSl = Math.max(rateMin2MoveSl, 0.05);
-            } else if (maxChange60M >= 0.025) {
-                rateMin2MoveSl = Math.max(rateMin2MoveSl, 0.03);
+            if (maxChange60M >= 0.02) {
+                rateMin2MoveSl = Math.max(rateMin2MoveSl, 0.04);
             } else if (maxChange60M >= 0.015) {
+                rateMin2MoveSl = Math.max(rateMin2MoveSl, 0.03);
+            } else if (maxChange60M >= 0.01) {
                 rateMin2MoveSl = Math.max(rateMin2MoveSl, 0.02);
-            } else if (maxChange60M > 0.06) {
+            } else if (maxChange60M > 0.05) {
                 rateMin2MoveSl = Math.max(rateMin2MoveSl, 0.015);
             }
         }
@@ -111,11 +111,14 @@ public class TradeUtils {
                 && !StringUtils.containsIgnoreCase(levelChange.toString(), "big");
         double marginRatio = marginRunning / balanceBasic;
 
+        if (marginRatio >= 0.5) {
+            budget /= 4;
+        }
         if (marginRatio >= 0.6) {
             return null;
         }
-        if (isNormalLevel && marginRatio >= 0.35) {
-            return null;
+        if (isNormalLevel && marginRatio >= 0.25) {
+            budget /= 3;
         }
 
         if (levelChange.equals(MarketLevelChange.SMALL_UP)
@@ -124,16 +127,16 @@ public class TradeUtils {
                 return null;
             }
         }
-        if (marginRatio >= 0.45) {
+        if (marginRatio >= 0.35) {
             budget /= 2;
         }
-        if (isNormalLevel && marginRatio >= 0.25) {
+        if (isNormalLevel && marginRatio >= 0.2) {
             budget /= 2;
         }
         switch (levelChange) {
             case MEDIUM_DOWN:
-            case MEDIUM_UP:
             case DCA_LEVEL1:
+            case MEDIUM_UP:
                 budget /= 2;
                 break;
 

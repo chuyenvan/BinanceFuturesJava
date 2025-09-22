@@ -45,8 +45,10 @@ public class Configs {
     public static final Integer NUMBER_LAST_FUNDING_CAL = 4;
     public static final Integer NUMBER_LAST_FUNDING_EXTREME  = 4;
     public static final Integer NUMBER_HOUR_FUNDING_CAL = 30;
-    public static final Double FUNDING_MAX_TRADE = -0.0001;
+    public static final Double FUNDING_MAX_TRADE = -0.000;
     public static final Double FUNDING_MIN_TRADE = 0.0006;
+
+    public static final Long FUNDING_TIME_EXTREME = 4 * Utils.TIME_HOUR;
     public static final Double FUNDING_MAX_TRADE_EXTREME = -0.0005;
 
 

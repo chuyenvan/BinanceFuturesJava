@@ -7,12 +7,9 @@ package com.binance.chuyennd.research;
 import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
-import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -26,7 +23,7 @@ public class BudgetManagerSimple {
     public static final Logger LOG = LoggerFactory.getLogger(BudgetManagerSimple.class);
 
     public BalanceIndex balanceIndex = new BalanceIndex();
-    public Integer number_order_budget = 200;
+    public Integer number_order_budget = 300;
     public Double BUDGET_PER_ORDER;
     public Double investing = null;
     public Map<Long, Double> time2Balance = new HashMap<>();

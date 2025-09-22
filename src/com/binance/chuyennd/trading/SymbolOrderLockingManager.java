@@ -20,17 +20,17 @@ public class SymbolOrderLockingManager {
     }
 
     public static void main(String[] args) throws InterruptedException {
-        String symbol = "BTCUSDT";
-        LOG.info("{}", SymbolOrderLockingManager.getInstance().isLock(symbol, 10));
-        LOG.info("{}", SymbolOrderLockingManager.getInstance().isLock(symbol + "123", 10));
-        SymbolOrderLockingManager.getInstance().addLock(symbol);
-        for (int i = 0; i < 11; i++) {
-            Thread.sleep(2000);
-            LOG.info("{} {}", Utils.normalizeDateYYYYMMDDHHmmss(System.currentTimeMillis()),
-                    SymbolOrderLockingManager.getInstance().isLock(symbol, 10));
-            LOG.info("{} {}", Utils.normalizeDateYYYYMMDDHHmmss(System.currentTimeMillis()),
-                    SymbolOrderLockingManager.getInstance().isLock(symbol + "123", 10));
-        }
+//        String symbol = "BTCUSDT";
+//        LOG.info("{}", SymbolOrderLockingManager.getInstance().isLock(symbol, 10));
+//        LOG.info("{}", SymbolOrderLockingManager.getInstance().isLock(symbol + "123", 10));
+//        SymbolOrderLockingManager.getInstance().addLock(symbol);
+//        for (int i = 0; i < 11; i++) {
+//            Thread.sleep(2000);
+//            LOG.info("{} {}", Utils.normalizeDateYYYYMMDDHHmmss(System.currentTimeMillis()),
+//                    SymbolOrderLockingManager.getInstance().isLock(symbol, 10));
+//            LOG.info("{} {}", Utils.normalizeDateYYYYMMDDHHmmss(System.currentTimeMillis()),
+//                    SymbolOrderLockingManager.getInstance().isLock(symbol + "123", 10));
+//        }
 
     }
 

@@ -263,17 +263,12 @@ public class DetectEntrySignal2TradeNormal {
             }
 
             // funding fee trade
-//            time2RateDown15MAvg.put(time, rateDown15MAvg);
-//            while (time2RateDown15MAvg.size() > 60) {
-//                time2RateDown15MAvg.remove(time2RateDown15MAvg.firstKey());
-//            }
-//            Double minRate15Min30M = Collections.min(time2RateDown15MAvg.values());
-            if (
-//                    (rateDown15MAvg < -0.02 && rateDown15MAvg < minRate15Min30M)
-//                    ||
-                    rateDown15MAvg < -0.03
-                    || rateUpAvg > 0.006
-                    || rateDownAvg < -0.006) {
+            time2RateDown15MAvg.put(time, rateDown15MAvg);
+            while (time2RateDown15MAvg.size() > 60) {
+                time2RateDown15MAvg.remove(time2RateDown15MAvg.firstKey());
+            }
+            Double minRate15Min30M = Collections.min(time2RateDown15MAvg.values());
+            if (MarketBigChangeDetector.isFundingFeeTrade(rateDown15MAvg, rateDownAvg, rateUpAvg, minRate15Min30M)) {
                 Set<String> symbolBuyFundingFee = new HashSet<>();
                 symbolBuyFundingFee.addAll(FundingFeeManagerProduction.getInstance().fundingBuy);
                 symbolBuyFundingFee.removeAll(BudgetManager.getInstance().symbol2Pos.keySet());
@@ -286,7 +281,7 @@ public class DetectEntrySignal2TradeNormal {
                     Double rateTicker = Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen);
                     Double rateMax15M = Utils.rateOf2Double(ticker.priceClose, priceMax15M);
 
-                    if (rateTicker < -0.013 || rateMax15M < -0.045) {
+                    if (MarketBigChangeDetector.isRateChangeAvailable2Trade(rateTicker, rateMax15M)) {
                         LOG.info("Funding buy {} {} close: {} rate:{} max15M: {} tickers:{}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time),
                                 ticker.priceClose, rateTicker, rateMax15M, symbol2LastTickers.get(symbol).size());
                         List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
@@ -307,7 +302,7 @@ public class DetectEntrySignal2TradeNormal {
                         if (!Utils.isTickerAvailable(ticker)) {
                             continue;
                         }
-                        if (symbolSellingExhausted.get(symbol) < time - Utils.TIME_DAY) {
+                        if (symbolSellingExhausted.get(symbol) < time - Configs.FUNDING_TIME_EXTREME) {
                             LOG.info("SellingExhausted of {} over time: {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time),
                                     Utils.normalizeDateYYYYMMDDHHmm(symbolSellingExhausted.get(symbol)));
                             symbolSellingExhausted.remove(symbol);
@@ -330,27 +325,20 @@ public class DetectEntrySignal2TradeNormal {
                 levelChange = MarketLevelChange.BTC_TREND_REVERSE;
                 Set<String> symbol2BUY = new HashSet<>();
                 for (String symbol : Constants.specialSymbol) {
-                    if (BudgetManager.getInstance().symbolSell.contains(symbol)) {
-                        continue;
-                    }
-                    if (calMarginRunning(symbol) > 2 * BudgetManager.getInstance().getBudget()) {
-                        if (calMarginRunning(symbol) > 4 * BudgetManager.getInstance().getBudget()) {
-                            KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
-                            OrderTargetInfo orderRunning = getOrderInfo(symbol);
-                            if (ticker != null && orderRunning != null
-                                    && Utils.rateOf2Double(ticker.priceClose, orderRunning.priceEntry) < -0.1) {
-                                symbol2BUY.add(symbol);
 
-                            }
-                        } else {
-                            if (calRateLoss(symbol) < -0.05 || calRateLoss(symbol) > 0.02) {
-                                symbol2BUY.add(symbol);
-                            }
-                        }
-                    } else {
-                        if (calRateLoss(symbol) < -0.03 || calRateLoss(symbol) > 0.02) {
-                            symbol2BUY.add(symbol);
-                        }
+                    Double rateLoss = calRateLoss(symbol);
+                    Double budget = BudgetManager.getInstance().getBudget();
+                    Double marginOfSym = calMarginRunning(symbol);
+                    KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
+                    OrderTargetInfo order = getOrderInfo(symbol);
+                    double lastEntry = 0d;
+                    if (order != null) {
+                        lastEntry = order.priceEntry;
+                    }
+                    boolean isDcaSpecialSymbol = MarketBigChangeDetector.isDcaWithBtcReverse(rateLoss,
+                            budget, marginOfSym, ticker.priceClose, lastEntry);
+                    if (isDcaSpecialSymbol) {
+                        symbol2BUY.add(symbol);
                     }
                 }
                 LOG.info("Level: {} {} -> {}", Utils.normalizeDateYYYYMMDDHHmm(btcTicker.startTime.longValue()), levelChange, symbol2BUY);

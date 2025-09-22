@@ -57,7 +57,7 @@ public class FundingFeeManagerProduction {
                     Boolean isFundingSell = true;
                     for (FundingRate funding : time2Rate.values()) {
                         if (funding.getFundingRate().doubleValue() < Configs.FUNDING_MAX_TRADE
-//                                || funding.getFundingRate().doubleValue() > Configs.FUNDING_MIN_TRADE
+                                || funding.getFundingRate().doubleValue() > Configs.FUNDING_MIN_TRADE
                         ) {
                             fundingBuy.add(symbol);
                             fundingSell.remove(symbol);
