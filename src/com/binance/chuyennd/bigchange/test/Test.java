@@ -227,98 +227,6 @@ public class Test {
 
     }
 
-    private static void testLinkedList() {
-        LinkedList<String> linkList = new LinkedList<String>();
-
-        // Adding elements to the LinkedList using add() method
-        linkList.add("One");
-        linkList.add("Two");
-        linkList.add("Three");
-        linkList.add("Four");
-        linkList.add("Five");
-
-        for (int i = 0; i < linkList.size(); i++) {
-
-            String l = linkList.element();
-            if (l != null) {
-                System.out.println(l);
-            } else {
-                break;
-            }
-        }
-        // Printing the LinkedList
-        System.out.println(linkList);
-    }
-
-    private static void testRate24h() {
-        Map<Long, Double> time2Rate24h = (Map<Long, Double>) Storage.readObjectFromFile("storage/time2rate24hAvg.data");
-        Map<Long, Double> time2Rate24hLive = (Map<Long, Double>) Storage.readObjectFromFile("storage/time2rate24hAvgLive.data");
-        TreeMap<Long, Double> time2Rate24hSet = new TreeMap<>();
-        for (Map.Entry<Long, Double> entry : time2Rate24hLive.entrySet()) {
-            Long time = entry.getKey();
-            Double rate24hLive = entry.getValue();
-            time2Rate24hSet.put(time, rate24hLive);
-        }
-        for (Map.Entry<Long, Double> entry : time2Rate24hSet.entrySet()) {
-            Long time = entry.getKey();
-            Double rate24hLive = entry.getValue();
-            Double rate24h = time2Rate24h.get(time);
-//            if (rate24h != null) {
-            LOG.info("{} {} {}", Utils.sdfGoogle.format(new Date(time)), rate24hLive, rate24h);
-//            }
-        }
-    }
-
-    private static List<Object> testStatisticPrice(String symbol, List<KlineObjectNumber> tickers) {
-
-        List<Object> results = new ArrayList<>();
-
-        Double duration = 0.005;
-        Double priceClose = tickers.get(tickers.size() - 1).priceClose;
-
-        TreeMap<Double, Integer> price2Counter = new TreeMap<>();
-        for (int i = 0; i < 5; i++) {
-            price2Counter.put(priceClose + (i - 2) * duration * priceClose, 0);
-        }
-        for (KlineObjectNumber ticker : tickers) {
-            for (Map.Entry<Double, Integer> entry : price2Counter.entrySet()) {
-                Double price = entry.getKey();
-                Integer counter = entry.getValue();
-                if (ticker.minPrice <= price && price <= ticker.maxPrice) {
-                    counter++;
-                    price2Counter.put(price, counter);
-                }
-            }
-        }
-        Integer priceCloseCounter = price2Counter.get(priceClose);
-        int counterBelow = 0;
-        int counterAbove = 0;
-        for (Map.Entry<Double, Integer> entry : price2Counter.entrySet()) {
-            Double price = entry.getKey();
-            Integer counter = entry.getValue();
-            if (price < priceClose) {
-                counterBelow += counter;
-            } else {
-                if (price > priceClose) {
-                    counterAbove += counter;
-                }
-            }
-            LOG.info("{} {}", price, counter);
-        }
-        if (priceCloseCounter >= 50
-                && counterAbove > 2 * priceCloseCounter
-        ) {
-            LOG.info("Under sideWay: {} {} {} {} {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(tickers.get(tickers.size() - 1).startTime.longValue())
-                    , priceClose, priceCloseCounter, counterAbove, counterBelow);
-            results.add(priceClose);
-            results.add(priceCloseCounter);
-            results.add(counterAbove);
-            results.add(counterBelow);
-            results.add(duration);
-            return results;
-        }
-        return null;
-    }
 
     private static void testFundingRate() {
 //        try {
@@ -429,16 +337,6 @@ public class Test {
     }
 
 
-    private static void testExtract24hWithTicker1M() {
-        List<KlineObjectSimple> tickers = TickerFuturesHelper.getTickerSimpleWithStartTime("BTCUSDT",
-                Constants.INTERVAL_1M, Utils.getStartTimeDayAgo(1));
-        KlineObjectSimple tickerMinPrice = TickerFuturesHelper.extractTickerPriceMin24h(tickers, null);
-        KlineObjectSimple tickerMaxVolume = TickerFuturesHelper.extractTickerVolumeMax24h(tickers, null);
-        LOG.info("{} minPrice:{} {} maxVolume:{} {}", Utils.normalizeDateYYYYMMDDHHmm(tickers.get(tickers.size() - 1).startTime.longValue()),
-                tickerMinPrice.minPrice, Utils.normalizeDateYYYYMMDDHHmm(tickerMinPrice.startTime.longValue()),
-                tickerMaxVolume.totalUsdt / 1E6, Utils.normalizeDateYYYYMMDDHHmm(tickerMaxVolume.startTime.longValue())
-        );
-    }
 
 
     private static void testProduction() {

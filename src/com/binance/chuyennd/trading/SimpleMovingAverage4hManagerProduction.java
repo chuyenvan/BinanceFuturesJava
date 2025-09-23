@@ -4,7 +4,7 @@ import com.binance.chuyennd.helper.TickerFuturesHelper;
 import com.binance.chuyennd.indicators.SimpleMovingAverage;
 import com.binance.chuyennd.object.IndicatorEntry;
 import com.binance.chuyennd.object.KlineObjectNumber;
-import com.binance.chuyennd.utils.GridConfigs;
+import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Storage;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
@@ -89,12 +89,12 @@ public class SimpleMovingAverage4hManagerProduction {
             TreeMap<Long, Double> time2Sma60 = new TreeMap<>();
             TreeMap<Long, Double> time2Sma20 = new TreeMap<>();
             TreeMap<Long, Double> time2MaDifferent = new TreeMap<>();
-            IndicatorEntry[] smaEntries = SimpleMovingAverage.calculate(ticker4hs, GridConfigs.SMA_LONG);
+            IndicatorEntry[] smaEntries = SimpleMovingAverage.calculate(ticker4hs, Configs.SMA_LONG);
             for (int i = 0; i < smaEntries.length; i++) {
                 IndicatorEntry sma = smaEntries[i];
                 time2Sma60.put(sma.startTime.longValue() + 4 * Utils.TIME_HOUR, sma.getValue());
             }
-            smaEntries = SimpleMovingAverage.calculate(ticker4hs, GridConfigs.SMA_SHORT);
+            smaEntries = SimpleMovingAverage.calculate(ticker4hs, Configs.SMA_SHORT);
             for (int i = 0; i < smaEntries.length; i++) {
                 IndicatorEntry sma = smaEntries[i];
                 time2Sma20.put(sma.startTime.longValue() + 4 * Utils.TIME_HOUR, sma.getValue());

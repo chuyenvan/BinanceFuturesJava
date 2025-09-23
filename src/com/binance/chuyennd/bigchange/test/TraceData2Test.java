@@ -2,7 +2,7 @@ package com.binance.chuyennd.bigchange.test;
 
 import com.binance.chuyennd.bigchange.market.MarketDataObject;
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
-import com.binance.chuyennd.bigchange.statistic.data.DataManager;
+import com.binance.chuyennd.bigchange.data.DataManager;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
@@ -130,11 +130,7 @@ public class TraceData2Test {
                 tradeAOrder(args[1], args[2], args[3], args[4]);
                 break;
             case "trade_detail":
-                try {
-                    new TraceDetailAllDataWithTime().simulatorEntryByTime(args[1], args[2], args[3]);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+
                 break;
             case "showbylevel":
                 showByLevel();

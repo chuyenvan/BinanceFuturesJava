@@ -17,7 +17,7 @@ package com.binance.chuyennd.client;
 
 import com.binance.client.RequestOptions;
 import com.binance.client.SyncRequestClient;
-import com.binance.client.examples.constants.PrivateConfig;
+import com.binance.chuyennd.config.PrivateConfig;
 import com.binance.client.model.market.ExchangeInfoEntry;
 import com.binance.client.model.market.ExchangeInformation;
 import com.binance.client.model.market.SymbolPrice;

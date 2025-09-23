@@ -72,13 +72,13 @@ public class SimpleMovingAverageDayManager {
             if (ticker1Ds == null || ticker1Ds.size() < 100){
                 return ;
             }
-            IndicatorEntry[] smaEntries = SimpleMovingAverage.calculate(ticker1Ds, GridConfigs.SMA_LONG);
+            IndicatorEntry[] smaEntries = SimpleMovingAverage.calculate(ticker1Ds, Configs.SMA_LONG);
             for (int i = 0; i < smaEntries.length; i++) {
                 IndicatorEntry sma = smaEntries[i];
                 time2Sma60.put(sma.startTime.longValue() + Utils.TIME_DAY, sma.getValue());
 //                time2Sma60.put(sma.startTime.longValue(), sma.getValue());
             }
-            smaEntries = SimpleMovingAverage.calculate(ticker1Ds, GridConfigs.SMA_SHORT);
+            smaEntries = SimpleMovingAverage.calculate(ticker1Ds, Configs.SMA_SHORT);
             for (int i = 0; i < smaEntries.length; i++) {
                 IndicatorEntry sma = smaEntries[i];
                 time2Sma20.put(sma.startTime.longValue() + Utils.TIME_DAY, sma.getValue());

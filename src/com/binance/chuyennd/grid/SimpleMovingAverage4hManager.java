@@ -4,7 +4,6 @@ import com.binance.chuyennd.indicators.SimpleMovingAverage;
 import com.binance.chuyennd.object.IndicatorEntry;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.utils.Configs;
-import com.binance.chuyennd.utils.GridConfigs;
 import com.binance.chuyennd.utils.Storage;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
@@ -66,13 +65,13 @@ public class SimpleMovingAverage4hManager {
             if (ticker4Hours == null || ticker4Hours.size() < 100){
                 return ;
             }
-            IndicatorEntry[] smaEntries = SimpleMovingAverage.calculate(ticker4Hours, GridConfigs.SMA_LONG);
+            IndicatorEntry[] smaEntries = SimpleMovingAverage.calculate(ticker4Hours, Configs.SMA_LONG);
             for (int i = 0; i < smaEntries.length; i++) {
                 IndicatorEntry sma = smaEntries[i];
                 time2Sma60.put(sma.startTime.longValue() + 4 * Utils.TIME_HOUR, sma.getValue());
 //                time2Sma60.put(sma.startTime.longValue(), sma.getValue());
             }
-            smaEntries = SimpleMovingAverage.calculate(ticker4Hours, GridConfigs.SMA_SHORT);
+            smaEntries = SimpleMovingAverage.calculate(ticker4Hours, Configs.SMA_SHORT);
             for (int i = 0; i < smaEntries.length; i++) {
                 IndicatorEntry sma = smaEntries[i];
                 time2Sma20.put(sma.startTime.longValue() + 4 * Utils.TIME_HOUR, sma.getValue());

@@ -5,8 +5,8 @@
  */
 package com.binance.chuyennd.utils;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import java.io.File;
 import java.util.HashMap;
@@ -57,8 +57,8 @@ public class Configs {
     public static Integer NUMBER_ENTRY_EACH_SIGNAL = Configs.getInt("NUMBER_ENTRY_EACH_SIGNAL");
     public static Integer NUMBER_TICKER_CAL_RATE_CHANGE = Configs.getInt("NUMBER_TICKER_CAL_RATE_CHANGE");
     public static final Double RATE_PROFIT_STOP_MARKET = Configs.getDouble("RATE_PROFIT_STOP_MARKET");
-    public static Integer SMA_LONG = GridConfigs.getInt("SMA_LONG");
-    public static Integer SMA_SHORT = GridConfigs.getInt("SMA_SHORT");
+    public static Integer SMA_LONG = Configs.getInt("SMA_LONG");
+    public static Integer SMA_SHORT = Configs.getInt("SMA_SHORT");
     public static final Double RATE_FEE = Configs.getDouble("RATE_FEE");
     public static Integer LEVERAGE_ORDER = Configs.getInt("LEVERAGE_ORDER");
 

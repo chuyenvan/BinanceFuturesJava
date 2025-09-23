@@ -6,7 +6,7 @@ package com.binance.chuyennd.research;
 
 import com.binance.chuyennd.bigchange.market.MarketDataObject;
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
-import com.binance.chuyennd.bigchange.statistic.data.DataManager;
+import com.binance.chuyennd.bigchange.data.DataManager;
 import com.binance.chuyennd.bigchange.test.TraceOrderDone;
 import com.binance.chuyennd.grid.SimpleMovingAverage4hManager;
 import com.binance.chuyennd.grid.SimpleMovingAverageDayManager;
@@ -123,7 +123,12 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                     LOG.info("Dca big loss: {} {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time), ticker.priceClose);
                                     List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
                                     Double priceMax15M = getMax15M(tickers);
-                                    MarketLevelChange leveChange2Dca = MarketLevelChange.DCA_LEVEL1;
+                                    MarketLevelChange leveChange2Dca;
+                                    if (calMarginRunning(symbol) < BudgetManagerSimple.getInstance().getBudget()) {
+                                        leveChange2Dca = MarketLevelChange.DCA_LEVEL1;
+                                    } else {
+                                        leveChange2Dca = MarketLevelChange.DCA_LEVEL2;
+                                    }
                                     createOrderBUY(symbol, ticker, leveChange2Dca,
                                             time2MarketRateChange.get(time), priceMax15M);
                                 }

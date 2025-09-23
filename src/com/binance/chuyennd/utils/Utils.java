@@ -341,28 +341,7 @@ public class Utils {
         return result;
     }
 
-    public static KlineObjectSimple convertKlineSimple(KlineObjectNumber ticker) {
-        KlineObjectSimple result = new KlineObjectSimple();
-        result.priceOpen = ticker.priceOpen;
-        result.priceClose = ticker.priceClose;
-        result.minPrice = ticker.minPrice;
-        result.maxPrice = ticker.maxPrice;
-        result.startTime = ticker.startTime;
-        result.totalUsdt = ticker.totalUsdt;
-        return result;
-    }
 
-
-    public static KlineObjectNumber cloneKlineObjectNumber(KlineObjectNumber ticker) {
-        KlineObjectNumber result = new KlineObjectNumber();
-        result.priceOpen = ticker.priceOpen;
-        result.priceClose = ticker.priceClose;
-        result.minPrice = ticker.minPrice;
-        result.maxPrice = ticker.maxPrice;
-        result.startTime = ticker.startTime;
-        result.totalUsdt = ticker.totalUsdt;
-        return result;
-    }
 
     public static void main(String[] args) {
 //        System.out.println(Utils.sendSms2Skype("test skype"));
@@ -395,14 +374,6 @@ public class Utils {
     }
 
 
-    public static boolean isTickerAvailable(KlineObjectNumber ticker) {
-        if (ticker != null) {
-            if (!ticker.minPrice.equals(ticker.maxPrice)) {
-                return true;
-            }
-        }
-        return false;
-    }
 
     public static boolean isTickerAvailable(KlineObjectSimple ticker) {
         if (ticker != null) {

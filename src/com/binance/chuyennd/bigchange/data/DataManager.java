@@ -1,4 +1,4 @@
-package com.binance.chuyennd.bigchange.statistic.data;
+package com.binance.chuyennd.bigchange.data;
 
 import com.binance.chuyennd.indicators.MACD;
 import com.binance.chuyennd.indicators.RelativeStrengthIndex;

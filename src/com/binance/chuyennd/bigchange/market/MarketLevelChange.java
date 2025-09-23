@@ -39,7 +39,6 @@ public enum MarketLevelChange {
 
     MEDIUM_DOWN_15M("MEDIUM_DOWN_15M"),
     SMALL_DOWN_15M("SMALL_DOWN_15M"),
-    GRID_TRADE("GRID_TRADE"),
     ORDER_PROFIT("ORDER_PROFIT");
 
     private final String code;

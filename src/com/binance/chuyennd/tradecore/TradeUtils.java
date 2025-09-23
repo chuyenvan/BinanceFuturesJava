@@ -25,7 +25,7 @@ public class TradeUtils {
     public static Double calRateLossDynamicBuy(Double unProfit) {
         Double rateLoss = unProfit * 200;
         Long tradingStopRate;
-        Long maxRateTradingStop = 12l;
+        Long maxRateTradingStop = 16l;
         if (rateLoss < maxRateTradingStop * 2) {
             tradingStopRate = rateLoss.longValue() / 2;
         } else {
@@ -38,9 +38,7 @@ public class TradeUtils {
     public static Double calRateMinWithMaxChange60MForTradingStop(Double maxChange60M) {
         Double rateMin2MoveSl = Configs.RATE_PROFIT_STOP_MARKET;
         if (maxChange60M != null) {
-            if (maxChange60M >= 0.02) {
-                rateMin2MoveSl = Math.max(rateMin2MoveSl, 0.04);
-            } else if (maxChange60M >= 0.015) {
+            if (maxChange60M >= 0.015) {
                 rateMin2MoveSl = Math.max(rateMin2MoveSl, 0.03);
             } else if (maxChange60M >= 0.01) {
                 rateMin2MoveSl = Math.max(rateMin2MoveSl, 0.02);
@@ -90,11 +88,10 @@ public class TradeUtils {
         // Lọc 2: "Thị trường ảm đạm"
         double movementRange = Math.abs(dow) + up;
         if (movementRange < MIN_MOVEMENT_RANGE_THRESHOLD) {
-            LOG.warn("!!! TRÁNH VÀO LỆNH (Thị trường ảm đạm): {} | Biến động chỉ {}%",
+            LOG.warn("!!! TRÁNH VÀO LỆNH (Thị trường ảm đạm): {} | Biến động chỉ {}% ",
                     symbol, String.format("%.2f", movementRange * 100));
             return true;
         }
-
         // Nếu không rơi vào trường hợp nào, có thể vào lệnh
         return false;
     }

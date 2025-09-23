@@ -16,7 +16,7 @@
 package com.binance.chuyennd.client;
 
 import com.binance.chuyennd.utils.Utils;
-import com.binance.client.examples.constants.PrivateConfig;
+import com.binance.chuyennd.config.PrivateConfig;
 import com.binance.client.model.trade.*;
 import com.binance.connector.futures.client.impl.UMFuturesClientImpl;
 import com.google.gson.internal.LinkedTreeMap;

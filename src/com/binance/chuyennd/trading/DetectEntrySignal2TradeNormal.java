@@ -193,7 +193,13 @@ public class DetectEntrySignal2TradeNormal {
                     PositionRisk position = BudgetManager.getInstance().symbol2Pos.get(symbol);
                     if (position != null) {
                         if (PositionHelper.callMargin(position) < 5 * BudgetManager.getInstance().getBudget()) {
-                            createOrderBuyRequest(symbol, ticker, MarketLevelChange.DCA_LEVEL1,
+                            MarketLevelChange levelDca;
+                            if (PositionHelper.callMargin(position) < BudgetManager.getInstance().getBudget()) {
+                                levelDca = MarketLevelChange.DCA_LEVEL1;
+                            } else {
+                                levelDca = MarketLevelChange.DCA_LEVEL2;
+                            }
+                            createOrderBuyRequest(symbol, ticker, levelDca,
                                     symbol2Max15m.get(symbol), marketRate);
                         } else {
                             LOG.info("Not dca because over budget:{} {}% {}/{}", symbol,
@@ -247,13 +253,13 @@ public class DetectEntrySignal2TradeNormal {
                         KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
                         PositionRisk position = BudgetManager.getInstance().symbol2Pos.get(symbol);
                         if (position != null) {
-                            if (PositionHelper.callMargin(position) < BudgetManager.getInstance().getBudget()
-                                    && BudgetManager.getInstance().marginRunning < 100 * BudgetManager.getInstance().getBudget()) {
-                                levelChange = MarketLevelChange.DCA_LEVEL1;
+                            MarketLevelChange levelDca;
+                            if (PositionHelper.callMargin(position) < BudgetManager.getInstance().getBudget()) {
+                                levelDca = MarketLevelChange.DCA_LEVEL1;
                             } else {
-                                levelChange = MarketLevelChange.DCA_LEVEL2;
+                                levelDca = MarketLevelChange.DCA_LEVEL2;
                             }
-                            createOrderBuyRequest(symbol, ticker, levelChange,
+                            createOrderBuyRequest(symbol, ticker, levelDca,
                                     symbol2Max15m.get(symbol), marketRate);
                         }
                     }
