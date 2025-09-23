@@ -434,9 +434,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             if (orderMulti.timeStart <= ticker.startTime.longValue()) {
                 orderMulti.updatePriceByKlineSimple(ticker);
                 Double maxChangeIn60M = 0d;
-//                if (ticker.maxPrice > orderMulti.priceEntry) {
                 maxChangeIn60M = MarketBigChangeDetector.getMaxRateIn60MForTradingStop(tickers);
-//                }
                 orderMulti.updateStatusNew(maxChangeIn60M, ticker);
                 if (orderMulti.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)
                         || orderMulti.status.equals(OrderTargetStatus.STOP_LOSS_DONE)

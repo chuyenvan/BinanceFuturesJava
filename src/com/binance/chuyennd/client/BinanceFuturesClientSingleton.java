@@ -66,7 +66,7 @@ public class BinanceFuturesClientSingleton {
 
     private void getCommissionRate() {
         LinkedHashMap<String, Object> parameters = new LinkedHashMap<>();
-        parameters.put("symbol", "BTCUSDT");
+        parameters.put("symbol", "OGUSDT");
         try {
             String respon = umFuturesClient.account().getCommissionRate(parameters);
             if (StringUtils.isNotEmpty(respon)) {
@@ -118,9 +118,9 @@ public class BinanceFuturesClientSingleton {
     }
 
     private static void tracePnlAsymbol() throws ParseException {
-        String symbol = "BTCUSDT";
+        String symbol = "PUMPBTCUSDT";
         List<Income> incomes = BinanceFuturesClientSingleton.getInstance().getPositionHistoryBySymbol(symbol,
-                Utils.sdfFileHour.parse("20250831 05:42").getTime(), System.currentTimeMillis());
+                Utils.sdfFileHour.parse("20250920 05:42").getTime(), System.currentTimeMillis());
         Double total = 0d;
         Double REALIZED_PNL = 0d;
         Double FUNDING_FEE = 0d;

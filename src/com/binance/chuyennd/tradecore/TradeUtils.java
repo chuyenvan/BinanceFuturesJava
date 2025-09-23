@@ -38,12 +38,14 @@ public class TradeUtils {
     public static Double calRateMinWithMaxChange60MForTradingStop(Double maxChange60M) {
         Double rateMin2MoveSl = Configs.RATE_PROFIT_STOP_MARKET;
         if (maxChange60M != null) {
-            if (maxChange60M >= 0.015) {
+            if (maxChange60M >= 0.01) {
                 rateMin2MoveSl = Math.max(rateMin2MoveSl, 0.03);
-            } else if (maxChange60M >= 0.01) {
+            } else if (maxChange60M >= 0.008) {
                 rateMin2MoveSl = Math.max(rateMin2MoveSl, 0.02);
-            } else if (maxChange60M > 0.05) {
-                rateMin2MoveSl = Math.max(rateMin2MoveSl, 0.015);
+            } else if (maxChange60M > 0.006) {
+                rateMin2MoveSl = Math.max(rateMin2MoveSl, 0.016);
+            } else if (maxChange60M > 0.004) {
+                rateMin2MoveSl = Math.max(rateMin2MoveSl, 0.013);
             }
         }
         return rateMin2MoveSl;
@@ -139,10 +141,10 @@ public class TradeUtils {
 
             case SMALL_DOWN:
             case MEDIUM_DOWN_15M:
-            case FUNDING_FEE_BUY:
-            case FUNDING_FEE_BUY_SPECIAL:
             case DCA_LEVEL2:
             case BTC_TREND_REVERSE:
+            case FUNDING_FEE_BUY:
+            case FUNDING_FEE_BUY_SPECIAL:
                 budget /= 3;
                 break;
 

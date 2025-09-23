@@ -3,6 +3,7 @@ package com.binance.chuyennd.bigchange.test;
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.MarketRateChange;
+import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
 import com.binance.chuyennd.trading.OrderTargetInfo;
 import com.binance.chuyennd.trading.OrderTargetStatus;
@@ -61,7 +62,7 @@ public class TraceOrderDone {
                 try {
                     LOG.info("Read file: {}", order.getAbsolutePath());
                     Map<Object, Object> data = (Map<Object, Object>) StorageSnappy.readObjectFromFile(order.getAbsolutePath());
-                    KlineObjectNumber ticker = (KlineObjectNumber) data.get("ticker");
+                    KlineObjectSimple ticker = (KlineObjectSimple) data.get("ticker");
                     OrderTargetInfo orderTrade = (OrderTargetInfo) data.get("order");
                     MarketRateChange marketRate = (MarketRateChange) data.get("marketRate");
                     Double priceMax15M = (Double) data.get("max15M");
@@ -85,7 +86,7 @@ public class TraceOrderDone {
         FileUtils.writeLines(new File("target/productOrder.csv"), lines);
     }
 
-    private static StringBuilder buildOrderInfo(KlineObjectNumber ticker,
+    private static StringBuilder buildOrderInfo(KlineObjectSimple ticker,
                                                 OrderTargetInfo orderTrade, MarketRateChange marketRate,
                                                 Double priceMax15M, List<String> symbol2Sell,
                                                 Set<String> fundingBuy, Set<String> fundingSell) {
