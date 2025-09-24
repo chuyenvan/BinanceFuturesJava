@@ -45,7 +45,7 @@ public class TradeUtils {
             } else if (maxChange60M > 0.006) {
                 rateMin2MoveSl = Math.max(rateMin2MoveSl, 0.016);
             } else if (maxChange60M > 0.004) {
-                rateMin2MoveSl = Math.max(rateMin2MoveSl, 0.013);
+                rateMin2MoveSl = Math.max(rateMin2MoveSl, 0.012);
             }
         }
         return rateMin2MoveSl;
