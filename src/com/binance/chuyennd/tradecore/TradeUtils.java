@@ -56,7 +56,8 @@ public class TradeUtils {
         // 1. Chu kỳ xem xét để tính toán đỉnh/đáy (ví dụ: 15 phút)
         final int PRICE_LOOKBACK_PERIOD = 15;
         // 3. Tham số cho bộ lọc "Thị trường ảm đạm"
-        double MIN_MOVEMENT_RANGE_THRESHOLD = 0.03;
+        double MIN_MOVEMENT_RANGE_THRESHOLD = 0.02;
+        double MIN_VOLUME_TRADING = 400 * 1000;
         // =================================================================
 
         if (Constants.specialSymbol.contains(symbol) || Constants.stableSymbol.contains(symbol)) {
@@ -71,6 +72,7 @@ public class TradeUtils {
         double currentClose = recentTickers.get(recentTickers.size() - 1).priceClose;
         double periodHigh = 0;
         double periodMin = Double.MAX_VALUE;
+        double totalVolume = 0;
         int startIndex = recentTickers.size() - PRICE_LOOKBACK_PERIOD;
 
         for (int i = startIndex; i < recentTickers.size(); i++) {
@@ -81,6 +83,7 @@ public class TradeUtils {
             if (candle.minPrice < periodMin) {
                 periodMin = candle.minPrice;
             }
+            totalVolume += candle.totalUsdt;
         }
         if (periodHigh == 0 || periodMin == 0) return false; // Dữ liệu bất thường, bỏ qua
 
@@ -89,7 +92,7 @@ public class TradeUtils {
 
         // Lọc 2: "Thị trường ảm đạm"
         double movementRange = Math.abs(dow) + up;
-        if (movementRange < MIN_MOVEMENT_RANGE_THRESHOLD) {
+        if (movementRange < MIN_MOVEMENT_RANGE_THRESHOLD || totalVolume < MIN_VOLUME_TRADING) {
             LOG.warn("!!! TRÁNH VÀO LỆNH (Thị trường ảm đạm): {} | Biến động chỉ {}% ",
                     symbol, String.format("%.2f", movementRange * 100));
             return true;
