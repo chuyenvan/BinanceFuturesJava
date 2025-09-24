@@ -56,8 +56,8 @@ public class TradeUtils {
         // 1. Chu kỳ xem xét để tính toán đỉnh/đáy (ví dụ: 15 phút)
         final int PRICE_LOOKBACK_PERIOD = 15;
         // 3. Tham số cho bộ lọc "Thị trường ảm đạm"
-        double MIN_MOVEMENT_RANGE_THRESHOLD = 0.02;
-        double MIN_VOLUME_TRADING = 400 * 1000;
+        double MIN_MOVEMENT_RANGE_THRESHOLD = 0.03;
+        double MIN_VOLUME_TRADING = 200 * 1000;
         // =================================================================
 
         if (Constants.specialSymbol.contains(symbol) || Constants.stableSymbol.contains(symbol)) {
