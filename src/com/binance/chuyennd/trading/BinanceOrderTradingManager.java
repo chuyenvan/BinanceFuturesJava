@@ -65,8 +65,6 @@ public class BinanceOrderTradingManager {
         startThreadListenQueueOrder2ManagerNew();
         startThreadManagerOrder();
         startThreadAutoRestartProgram();
-        testOrder();
-
     }
 
     private void testOrder() {

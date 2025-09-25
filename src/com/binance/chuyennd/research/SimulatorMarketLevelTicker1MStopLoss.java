@@ -75,11 +75,12 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                     LOG.info("File data error: {} {}", Utils.normalizeDateYYYYMMDDHHmm(startTime),
                             Configs.FOLDER_TICKER_1M_SNAPPY_FILE + startTime);
                 }
-//                Double marginRunning = calMarginRunning();
+                Double marginRunning = calMarginRunning();
                 if (time2Tickers != null) {
                     for (Map.Entry<Long, Map<String, KlineObjectSimple>> entry : time2Tickers.entrySet()) {
                         Long time = entry.getKey();
                         Long startTimeRun = System.currentTimeMillis();
+                        Boolean isTrendBuyWithETH = isTrendBuyWithSMAETH(null, time);
                         try {
                             Map<String, KlineObjectSimple> symbol2Ticker = entry.getValue();
                             Set<String> symbolBuySMA = new HashSet<>();
@@ -103,25 +104,26 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                     }
                                 }
 
-//                                if (marginRunning < BudgetManagerSimple.getInstance().balanceBasic * 0.1
-//                                        && !symbol2OrderRunning.containsKey(symbol)
-//                                        && tickers != null
-//                                        && tickers.size() > 200) {
-//                                    // --- Chiến lược 1: MA Crossover ---
-//                                    BacktestEntryStrategies.Signal maSignal = BacktestEntryStrategies.getSignal_CombinedWithTrendFilter(tickers);
-//                                    if (maSignal == BacktestEntryStrategies.Signal.BUY) {
-//                                        LOG.info("TÍN HIỆU MUA từ MA Crossover cho {} tại thời điểm {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time));
-//                                        symbolBuySMA.add(symbol);
-//                                    }
-//
-//                                    // --- Chiến lược 2: RSI ---
-//                                    // --- Gọi Chiến lược Nâng cao: RSI + BB + Trend ---
-//                                    BacktestEntryStrategies.Signal highQualitySignal = BacktestEntryStrategies.getSignal_RsiWithBBandAndTrendFilter(tickers);
-//
-//                                    if (highQualitySignal == BacktestEntryStrategies.Signal.BUY) {
-//                                        symbolBuyRSI.add(symbol);
-//                                    }
-//                                }
+                                if (isTrendBuyWithETH
+                                        && marginRunning < BudgetManagerSimple.getInstance().balanceBasic * 0.1
+                                        && !symbol2OrderRunning.containsKey(symbol)
+                                        && tickers != null
+                                        && tickers.size() > 200) {
+                                    // --- Chiến lược 1: MA Crossover ---
+                                    BacktestEntryStrategies.Signal maSignal = BacktestEntryStrategies.getSignal_CombinedWithTrendFilter(tickers);
+                                    if (maSignal == BacktestEntryStrategies.Signal.BUY) {
+                                        LOG.info("TÍN HIỆU MUA từ MA Crossover cho {} tại thời điểm {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time));
+                                        symbolBuySMA.add(symbol);
+                                    }
+
+                                    // --- Chiến lược 2: RSI ---
+                                    // --- Gọi Chiến lược Nâng cao: RSI + BB + Trend ---
+                                    BacktestEntryStrategies.Signal highQualitySignal = BacktestEntryStrategies.getSignal_RsiWithBBandAndTrendFilter(tickers);
+
+                                    if (highQualitySignal == BacktestEntryStrategies.Signal.BUY) {
+                                        symbolBuyRSI.add(symbol);
+                                    }
+                                }
                                 // update order Old
                                 startUpdateOldOrderTrading(symbol, tickers);
                             }
@@ -143,7 +145,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                             Set<String> symbolLocked = new HashSet<>();
                             MarketLevelChange levelChange = null;
                             Map<String, Double> symbol2PriceMax15M = new HashMap<>();
-                            Boolean isTrendBuyWithETH = isTrendBuyWithSMAETH(null, time);
+
                             if (marketData != null) {
                                 TreeMap<Double, String> rate2Max = new TreeMap<>();
                                 rate2Max.putAll(marketData.rate2Max);
@@ -297,38 +299,38 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                                     time2MarketRateChange.get(time), symbol2PriceMax15M.get(symbol));
                                         }
                                     }
-                                    // SMA
-                                    for (String symbol : symbolBuySMA) {
-                                        if (!symbol2OrderRunning.containsKey(symbol)) {
-                                            KlineObjectSimple ticker = symbol2Ticker.get(symbol);
-                                            if (!Utils.isTickerAvailable(ticker)) {
-                                                continue;
-                                            }
-                                            List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
-                                            // ================== GỌI HÀM LỌC DUY NHẤT ==================
-                                            if (TradeUtils.shouldAvoidEntry(symbol, tickers)) {
-                                                continue; // Bỏ qua nếu có rủi ro
-                                            }
-                                            createOrderBUY(symbol, ticker, MarketLevelChange.SMA_SIGNAL,
-                                                    time2MarketRateChange.get(time), symbol2PriceMax15M.get(symbol));
-                                        }
-                                    }
-                                    // RSI
-                                    for (String symbol : symbolBuyRSI) {
-                                        if (!symbol2OrderRunning.containsKey(symbol)) {
-                                            KlineObjectSimple ticker = symbol2Ticker.get(symbol);
-                                            if (!Utils.isTickerAvailable(ticker)) {
-                                                continue;
-                                            }
-                                            List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
-                                            // ================== GỌI HÀM LỌC DUY NHẤT ==================
-                                            if (TradeUtils.shouldAvoidEntry(symbol, tickers)) {
-                                                continue; // Bỏ qua nếu có rủi ro
-                                            }
-                                            createOrderBUY(symbol, ticker, MarketLevelChange.RSI_SIGNAL,
-                                                    time2MarketRateChange.get(time), symbol2PriceMax15M.get(symbol));
-                                        }
-                                    }
+//                                    // SMA
+//                                    for (String symbol : symbolBuySMA) {
+//                                        if (!symbol2OrderRunning.containsKey(symbol)) {
+//                                            KlineObjectSimple ticker = symbol2Ticker.get(symbol);
+//                                            if (!Utils.isTickerAvailable(ticker)) {
+//                                                continue;
+//                                            }
+//                                            List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
+//                                            // ================== GỌI HÀM LỌC DUY NHẤT ==================
+//                                            if (TradeUtils.shouldAvoidEntry(symbol, tickers)) {
+//                                                continue; // Bỏ qua nếu có rủi ro
+//                                            }
+//                                            createOrderBUY(symbol, ticker, MarketLevelChange.SMA_SIGNAL,
+//                                                    time2MarketRateChange.get(time), symbol2PriceMax15M.get(symbol));
+//                                        }
+//                                    }
+//                                    // RSI
+//                                    for (String symbol : symbolBuyRSI) {
+//                                        if (!symbol2OrderRunning.containsKey(symbol)) {
+//                                            KlineObjectSimple ticker = symbol2Ticker.get(symbol);
+//                                            if (!Utils.isTickerAvailable(ticker)) {
+//                                                continue;
+//                                            }
+//                                            List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
+//                                            // ================== GỌI HÀM LỌC DUY NHẤT ==================
+//                                            if (TradeUtils.shouldAvoidEntry(symbol, tickers)) {
+//                                                continue; // Bỏ qua nếu có rủi ro
+//                                            }
+//                                            createOrderBUY(symbol, ticker, MarketLevelChange.RSI_SIGNAL,
+//                                                    time2MarketRateChange.get(time), symbol2PriceMax15M.get(symbol));
+//                                        }
+//                                    }
 
                                 }
                             }
@@ -634,6 +636,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         }
         return false;
     }
+
     private Boolean isTrendBuyWithSMAETH(String symbol, Long time) {
         if (symbol == null) {
             symbol = "";
