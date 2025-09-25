@@ -28,9 +28,15 @@ public class SimpleMovingAverageDayManagerProduction {
         if (INSTANCE == null) {
             INSTANCE = new SimpleMovingAverageDayManagerProduction();
             if (new File(FILE_DATA_SMA1D).exists()) {
-                INSTANCE.symbol2MADifference10And60 = (ConcurrentHashMap<String, TreeMap<Long, Double>>) Storage.readObjectFromFile(FILE_DATA_SMA1D);
-            } else {
+                try {
+                    INSTANCE.symbol2MADifference10And60 = (ConcurrentHashMap<String, TreeMap<Long, Double>>) Storage.readObjectFromFile(FILE_DATA_SMA1D);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+            if (INSTANCE.symbol2MADifference10And60 == null) {
                 INSTANCE.symbol2MADifference10And60.put(Constants.SYMBOL_PAIR_BTC, new TreeMap<>());
+                INSTANCE.symbol2MADifference10And60.put(Constants.SYMBOL_PAIR_ETH, new TreeMap<>());
                 INSTANCE.updateAllSymbol();
             }
             INSTANCE.startThreadUpdateData();

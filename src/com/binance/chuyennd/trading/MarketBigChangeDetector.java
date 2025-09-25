@@ -390,6 +390,14 @@ public class MarketBigChangeDetector {
     public static boolean isRateChangeAvailable2Trade(Double rateTicker, Double rateMax15M) {
         return rateTicker < -0.013 || rateMax15M < -0.045;
     }
+
+    public static boolean isDcaAlt(Double rateDown15MAvg,
+                                   Double rateDownAvg,
+                                   Double rateUpAvg) {
+        return rateDown15MAvg < -0.035
+                || rateUpAvg > 0.01
+                || rateDownAvg < -0.01;
+    }
 }
 
 

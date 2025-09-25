@@ -169,6 +169,7 @@ public class DetectEntrySignal2TradeNormal {
             Double rateBtcDown15M = Utils.rateOf2Double(btcTicker.priceClose, btcMax15M);
             MarketLevelChange levelChange = MarketBigChangeDetector.getMarketStatus1M(rateDownAvg, rateUpAvg, btcRateChange
                     , rateDown15MAvg);
+            boolean isTrendBuyWithETH = isETHTrendBuy( null, time);
             LOG.info("Check level market: {} DownAvg: {}% UpAvg:{}% DownAvg15M:{}%  btcRate: {}% btcRate15M: {}% {}",
                     Utils.normalizeDateYYYYMMDDHHmm(btcTicker.startTime.longValue()),
                     Utils.formatDouble(rateDownAvg * 100, 3),
@@ -179,37 +180,6 @@ public class DetectEntrySignal2TradeNormal {
                     , levelChange);
             LOG.info("Market level change: {} level: {} symbols:{}", Utils.normalizeDateYYYYMMDDHHmm(time),
                     levelChange, symbol2FinalTicker.size());
-
-
-            // dca buy
-            List<String> symbolDcaLossBig = DcaProcessor.getDCAProduction(null, System.currentTimeMillis(),
-                    BudgetManager.getInstance().getBudget(), BudgetManager.getInstance().symbol2Pos);
-            if (!symbolDcaLossBig.isEmpty()) {
-                LOG.info("DCA big loss:{}", symbolDcaLossBig);
-            }
-            for (String symbol : symbolDcaLossBig) {
-                KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
-                if (Utils.isTickerAvailable(ticker)) {
-                    PositionRisk position = BudgetManager.getInstance().symbol2Pos.get(symbol);
-                    if (position != null) {
-                        if (PositionHelper.callMargin(position) < 5 * BudgetManager.getInstance().getBudget()) {
-                            MarketLevelChange levelDca;
-                            if (PositionHelper.callMargin(position) < BudgetManager.getInstance().getBudget()) {
-                                levelDca = MarketLevelChange.DCA_LEVEL1;
-                            } else {
-                                levelDca = MarketLevelChange.DCA_LEVEL2;
-                            }
-                            createOrderBuyRequest(symbol, ticker, levelDca,
-                                    symbol2Max15m.get(symbol), marketRate);
-                        } else {
-                            LOG.info("Not dca because over budget:{} {}% {}/{}", symbol,
-                                    Utils.formatPercent(PositionHelper.calRateLoss(position)),
-                                    PositionHelper.callMargin(position).longValue(),
-                                    5 * BudgetManager.getInstance().getBudget().longValue());
-                        }
-                    }
-                }
-            }
 
             Set<String> symbolLocked = new HashSet<>();
             symbolLocked.addAll(BudgetManager.getInstance().symbol2Pos.keySet());
@@ -247,8 +217,9 @@ public class DetectEntrySignal2TradeNormal {
                     }
                 }
                 try {
+
                     List<String> symbolDcaLevel = DcaProcessor.getDCAProduction(levelChange, System.currentTimeMillis(),
-                            BudgetManager.getInstance().getBudget(), BudgetManager.getInstance().symbol2Pos);
+                            BudgetManager.getInstance().getBudget(), BudgetManager.getInstance().symbol2Pos, isTrendBuyWithETH);
                     for (String symbol : symbolDcaLevel) {
                         KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
                         PositionRisk position = BudgetManager.getInstance().symbol2Pos.get(symbol);
@@ -267,7 +238,31 @@ public class DetectEntrySignal2TradeNormal {
                     e.printStackTrace();
                 }
             }
+            // dca buy
+            if (MarketBigChangeDetector.isDcaAlt(rateDown15MAvg, rateDownAvg, rateUpAvg)) {
+                List<String> symbolDcaLossBig = DcaProcessor.getDCAProduction(null, System.currentTimeMillis(),
+                        BudgetManager.getInstance().getBudget(), BudgetManager.getInstance().symbol2Pos, isTrendBuyWithETH);
+                if (!symbolDcaLossBig.isEmpty()) {
+                    LOG.info("DCA big loss:{}", symbolDcaLossBig);
+                }
+                for (String symbol : symbolDcaLossBig) {
+                    KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
+                    if (Utils.isTickerAvailable(ticker)) {
+                        PositionRisk position = BudgetManager.getInstance().symbol2Pos.get(symbol);
+                        if (position != null) {
+                            MarketLevelChange levelDca;
+                            if (PositionHelper.callMargin(position) < BudgetManager.getInstance().getBudget()) {
+                                levelDca = MarketLevelChange.DCA_LEVEL1;
+                            } else {
+                                levelDca = MarketLevelChange.DCA_LEVEL2;
+                            }
+                            createOrderBuyRequest(symbol, ticker, levelDca,
+                                    symbol2Max15m.get(symbol), marketRate);
 
+                        }
+                    }
+                }
+            }
             // funding fee trade
             time2RateDown15MAvg.put(time, rateDown15MAvg);
             while (time2RateDown15MAvg.size() > 60) {
@@ -338,11 +333,13 @@ public class DetectEntrySignal2TradeNormal {
                     KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
                     OrderTargetInfo order = getOrderInfo(symbol);
                     double lastEntry = 0d;
+                    boolean isDcaSpecialSymbol = true;
                     if (order != null) {
                         lastEntry = order.priceEntry;
+                    } else {
+                        isDcaSpecialSymbol = MarketBigChangeDetector.isDcaWithBtcReverse(rateLoss,
+                                budget, marginOfSym, ticker.priceClose, lastEntry);
                     }
-                    boolean isDcaSpecialSymbol = MarketBigChangeDetector.isDcaWithBtcReverse(rateLoss,
-                            budget, marginOfSym, ticker.priceClose, lastEntry);
                     if (isDcaSpecialSymbol) {
                         symbol2BUY.add(symbol);
                     }
@@ -375,9 +372,25 @@ public class DetectEntrySignal2TradeNormal {
         return false;
     }
 
-    public boolean isBtcTrendBuy(Long time, String symbol) {
+    public boolean isBtcTrendBuy(String symbol, Long time) {
+        if (symbol == null) {
+            symbol = "";
+        }
         Double maDif1d = SimpleMovingAverageDayManagerProduction.getInstance().getDifferenceMa10AndMa60(Constants.SYMBOL_PAIR_BTC, time);
         Double maDif4h = SimpleMovingAverage4hManagerProduction.getInstance().getDifferenceMa10AndMa60(Constants.SYMBOL_PAIR_BTC, time);
+        if ((maDif1d != null && maDif1d > 0)
+                || (maDif4h != null && maDif4h > 0)
+                || Constants.specialSymbol.contains(symbol)) {
+            return true;
+        }
+        return false;
+    }
+    public boolean isETHTrendBuy(String symbol, Long time) {
+        if (symbol == null) {
+            symbol = "";
+        }
+        Double maDif1d = SimpleMovingAverageDayManagerProduction.getInstance().getDifferenceMa10AndMa60(Constants.SYMBOL_PAIR_ETH, time);
+        Double maDif4h = SimpleMovingAverage4hManagerProduction.getInstance().getDifferenceMa10AndMa60(Constants.SYMBOL_PAIR_ETH, time);
         if ((maDif1d != null && maDif1d > 0)
                 || (maDif4h != null && maDif4h > 0)
                 || Constants.specialSymbol.contains(symbol)) {
@@ -419,7 +432,7 @@ public class DetectEntrySignal2TradeNormal {
         long time = ticker.startTime.longValue();
         Double marginRunning = BudgetManager.getInstance().marginRunning;
         Double balanceBasic = BudgetManager.getInstance().balanceBasic;
-        boolean isTrendBuyWithBtc = isBtcTrendBuy(time, symbol);
+        boolean isTrendBuyWithBtc = isBtcTrendBuy( symbol, time);
         Double budget = BudgetManager.getInstance().getBudget();
 
         budget = TradeUtils.managerBudget(budget, marginRunning, balanceBasic, levelChange, isTrendBuyWithBtc);

@@ -7,7 +7,28 @@ import java.util.List;
 import java.util.Map;
 
 public class TechnicalAnalysisUtils {
-
+    public enum Signal {
+        BUY,
+        SELL,
+        NONE
+    }
+    /**
+     * HÀM MỚI: Tính toán Đường trung bình động đơn giản (SMA).
+     * @param tickers Danh sách các nến.
+     * @param period Chu kỳ tính toán.
+     * @return Giá trị SMA, hoặc -1 nếu không đủ dữ liệu.
+     */
+    public static double calculateSMA(List<KlineObjectSimple> tickers, int period) {
+        if (tickers == null || tickers.size() < period) {
+            return -1; // Không đủ dữ liệu
+        }
+        double sum = 0;
+        // Chỉ lấy 'period' phần tử cuối cùng của list để tính toán
+        for (int i = tickers.size() - period; i < tickers.size(); i++) {
+            sum += tickers.get(i).priceClose;
+        }
+        return sum / period;
+    }
     /**
      * Tính toán chỉ báo RSI (Relative Strength Index).
      * @param tickers Danh sách các nến.
@@ -42,7 +63,60 @@ public class TechnicalAnalysisUtils {
         double rs = avgGain / avgLoss;
         return 100 - (100 / (1 + rs));
     }
+    // =================================================================================
+    // == CHIẾN LƯỢC NÂNG CAO: RSI + Bollinger Bands + Lọc Xu Hướng                  ==
+    // =================================================================================
 
+    /**
+     * CHIẾN LƯỢC NÂNG CAO: Tín hiệu RSI được xác nhận bởi Bollinger Bands và lọc bởi XU HƯỚNG.
+     * Đây là chiến lược cho tín hiệu chất lượng cao nhất.
+     * @param klines Dữ liệu nến 1 phút.
+     * @return Tín hiệu đã được lọc và xác nhận.
+     */
+    public static Signal getSignal_RsiWithBBandAndTrendFilter(List<KlineObjectSimple> klines) {
+        // --- Các tham số có thể tùy chỉnh ---
+        int trendPeriod = 200;      // Chu kỳ SMA để xác định xu hướng
+        int rsiPeriod = 14;         // Chu kỳ RSI
+        double rsiOverbought = 70.0; // Ngưỡng quá mua
+        double rsiOversold = 30.0;   // Ngưỡng quá bán
+        int bbPeriod = 20;          // Chu kỳ Bollinger Bands
+        double bbStdDev = 2.0;       // Độ lệch chuẩn cho Bollinger Bands
+
+        // --- Kiểm tra dữ liệu đầu vào ---
+        if (klines.size() < trendPeriod) {
+            return Signal.NONE;
+        }
+
+        // --- Lớp lọc 1: Xác định xu hướng ---
+        double longTermSMA = TechnicalAnalysisUtils.calculateSMA(klines, trendPeriod);
+        KlineObjectSimple lastCandle = klines.get(klines.size() - 1);
+        double currentPrice = lastCandle.priceClose;
+
+        // --- Tính toán các chỉ báo cần thiết ---
+        double currentRSI = TechnicalAnalysisUtils.calculateRSI(klines, rsiPeriod);
+        Map<String, Double> bollingerBands = TechnicalAnalysisUtils.calculateBollingerBands(klines, bbPeriod, bbStdDev);
+
+        if (currentRSI < 0 || bollingerBands == null) {
+            return Signal.NONE; // Không đủ dữ liệu để tính toán
+        }
+
+        // --- Áp dụng logic vào lệnh ---
+        if (currentPrice > longTermSMA) { // Chỉ xem xét tín hiệu MUA trong xu hướng TĂNG
+            Double lowerBand = bollingerBands.get("LOWER");
+            // Điều kiện MUA: Giá chạm hoặc xuống dưới dải BB dưới VÀ RSI đang quá bán
+            if (currentPrice <= lowerBand && currentRSI <= rsiOversold) {
+                return Signal.BUY;
+            }
+        } else if (currentPrice < longTermSMA) { // Chỉ xem xét tín hiệu BÁN trong xu hướng GIẢM
+            Double upperBand = bollingerBands.get("UPPER");
+            // Điều kiện BÁN: Giá chạm hoặc vượt lên trên dải BB trên VÀ RSI đang quá mua
+            if (currentPrice >= upperBand && currentRSI >= rsiOverbought) {
+                return Signal.SELL;
+            }
+        }
+
+        return Signal.NONE;
+    }
     /**
      * Tính toán dải Bollinger Bands.
      * @param tickers Danh sách các nến.

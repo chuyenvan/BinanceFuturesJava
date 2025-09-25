@@ -42,9 +42,9 @@ public class TradeUtils {
                 rateMin2MoveSl = Math.max(rateMin2MoveSl, 0.03);
             } else if (maxChange60M >= 0.008) {
                 rateMin2MoveSl = Math.max(rateMin2MoveSl, 0.02);
-            } else if (maxChange60M > 0.006) {
+            } else if (maxChange60M >= 0.006) {
                 rateMin2MoveSl = Math.max(rateMin2MoveSl, 0.016);
-            } else if (maxChange60M > 0.004) {
+            } else if (maxChange60M >= 0.004) {
                 rateMin2MoveSl = Math.max(rateMin2MoveSl, 0.012);
             }
         }
@@ -148,6 +148,8 @@ public class TradeUtils {
             case BTC_TREND_REVERSE:
             case FUNDING_FEE_BUY:
             case FUNDING_FEE_BUY_SPECIAL:
+            case SMA_SIGNAL:
+            case RSI_SIGNAL:
                 budget /= 3;
                 break;
 

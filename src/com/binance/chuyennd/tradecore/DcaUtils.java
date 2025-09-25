@@ -2,7 +2,6 @@ package com.binance.chuyennd.tradecore;
 
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
 import com.binance.chuyennd.utils.Utils;
-import com.binance.client.model.enums.OrderSide;
 
 public final class DcaUtils {
 
@@ -15,14 +14,16 @@ public final class DcaUtils {
      * Đây là hàm duy nhất bạn cần gọi từ bên ngoài.
      */
     public static boolean shouldDca(double margin, double currentRateLoss, MarketLevelChange orderMarketLevel, long orderTimeStart,
-                                    MarketLevelChange marketLevelChange, long currentTime, double budget) {
+                                    MarketLevelChange marketLevelChange, long currentTime, double budget, Boolean isTrendBuyWithBtc) {
 
 
         DcaConfig config = getDcaConfig(marketLevelChange);
         if (config == null) {
             return false;
         }
-
+        if (!isTrendBuyWithBtc) {
+            config.rateLoss2Dca = config.rateLoss2Dca * 1.5;
+        }
         double adjustedRateLoss = calculateAdjustedRateLoss(margin, budget, config.getRateLoss2Dca(), config.isAll());
 
         if (currentRateLoss >= adjustedRateLoss) {
@@ -80,7 +81,7 @@ public final class DcaUtils {
      */
     private static final class DcaConfig {
         private final int durationDca;
-        private final double rateLoss2Dca;
+        private double rateLoss2Dca;
         private final boolean isAll;
 
         public DcaConfig(int durationDca, double rateLoss2Dca, boolean isAll) {
