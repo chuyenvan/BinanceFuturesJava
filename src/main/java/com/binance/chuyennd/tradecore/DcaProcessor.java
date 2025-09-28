@@ -13,7 +13,7 @@ import java.util.stream.Collectors;
 public class DcaProcessor {
 
     public static List<String> getDCA(MarketLevelChange levelChange, Long time, Double budget,
-                                      Map<String, OrderTargetInfoTest> symbol2OrderRunning, Boolean isTrendBuyWithBtc) {
+                                      Map<String, OrderTargetInfoTest> symbol2OrderRunning, Boolean isTrendBuyWithETH) {
         return symbol2OrderRunning.entrySet()
                 .stream()
                 .filter(entry -> {
@@ -27,7 +27,7 @@ public class DcaProcessor {
                             levelChange,  // Trạng thái thị trường chung
                             time,         // Thời gian hiện tại
                             budget,
-                            isTrendBuyWithBtc
+                            isTrendBuyWithETH
                     );
                 })
                 .map(Map.Entry::getKey)
@@ -38,7 +38,7 @@ public class DcaProcessor {
      * Hàm DCA cho môi trường Production.
      */
     public static List<String> getDCAProduction(MarketLevelChange levelChange, Long time, Double budget,
-                                                Map<String, PositionRisk> symbol2OrderRunning, boolean isTrendBuyWithBtc) {
+                                                Map<String, PositionRisk> symbol2OrderRunning, boolean isTrendBuyWitETH) {
 
         return symbol2OrderRunning.entrySet()
                 .stream()
@@ -53,7 +53,7 @@ public class DcaProcessor {
                             levelChange,  // Trạng thái thị trường chung
                             time,         // Thời gian hiện tại
                             budget,
-                            isTrendBuyWithBtc);
+                            isTrendBuyWitETH);
                 })
                 .map(Map.Entry::getKey)
                 .collect(Collectors.toList());

@@ -64,7 +64,6 @@ public class OrderTargetInfoTest implements Serializable {
     public MarketRateChange marketData;
     public MarketLevelChange marketLevelChange;
     public KlineObjectNumber tickerOpen;
-    public Double currentAtr; // Lưu giá trị ATR gần nhất
 
 
     public OrderTargetInfoTest(OrderTargetStatus status, Double priceEntry,
@@ -79,8 +78,6 @@ public class OrderTargetInfoTest implements Serializable {
         this.timeStart = timeStart;
         this.timeUpdate = timeUpdate;
         this.side = side;
-        // Khởi tạo giá trị ban đầu
-        this.currentAtr = 0.0;
 
     }
 
@@ -134,7 +131,7 @@ public class OrderTargetInfoTest implements Serializable {
     public void updateStatusNew(Double maxChange60M, KlineObjectSimple ticker) {
         if (priceSL == null) {
             Double rateLoss = calRateLossMax(ticker.maxPrice);
-            Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60MForTradingStop(currentAtr);
+            Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60MForTradingStop(maxChange60M);
             Double rateStop = TradeUtils.calRateLossDynamicBuy(rateLoss);
             Double priceSLNew = Utils.calPriceTarget(symbol, priceEntry, OrderSide.SELL, -rateStop);
             if (rateLoss > rateMin2MoveSl) {
@@ -142,18 +139,18 @@ public class OrderTargetInfoTest implements Serializable {
                 this.priceSL = priceSLNew;
                 if (maxPrice > ticker.maxPrice) {
                     LOG.info("Update when max < entry: {} {} {} {} {} {} {} {}", symbol, maxPrice,
-                            priceEntry, ticker.maxPrice, Utils.formatPercent(currentAtr),
+                            priceEntry, ticker.maxPrice, Utils.formatPercent(maxChange60M),
                             rateMin2MoveSl, priceSLNew, ticker.priceClose);
                 }
                 if (ticker.priceClose <= priceSLNew) {
                     LOG.info("SL over last price: {} {} {} {} {} {} {} {} {}", symbol, maxPrice,
-                            priceEntry, ticker.maxPrice, Utils.formatPercent(currentAtr),
+                            priceEntry, ticker.maxPrice, Utils.formatPercent(maxChange60M),
                             rateMin2MoveSl, priceSLNew, ticker.priceClose);
                 }
                 if (lastPrice <= priceSLNew) {
                     LOG.info("Close now lastPrice under pSL: {} {} {} {} {} {} {} {} {}", symbol,
                             Utils.sdfGoogle.format(new Date(timeStart)), maxPrice,
-                            priceEntry, ticker.maxPrice, Utils.formatPercent(currentAtr),
+                            priceEntry, ticker.maxPrice, Utils.formatPercent(maxChange60M),
                             rateMin2MoveSl, priceSLNew, ticker.priceClose);
                     status = OrderTargetStatus.TAKE_PROFIT_DONE;
                     priceTP = priceSL;
@@ -176,7 +173,7 @@ public class OrderTargetInfoTest implements Serializable {
         // move SL
         if (priceSL != null) {
             Double rateLoss = calRateLossMax(ticker.maxPrice);
-            Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60MForTradingStop(currentAtr * 1.5);
+            Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60MForTradingStop(rateChangeMax60M* 1.5);
             Double rateSL = TradeUtils.calRateLossDynamicBuy(rateLoss);
             OrderSide side2Sl = OrderSide.SELL;
             Double priceSLNew = Utils.calPriceTarget(symbol, priceEntry, side2Sl, -rateSL);

@@ -440,36 +440,10 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         if (orderMulti != null) {
             KlineObjectSimple ticker = tickers.get(tickers.size() - 1);
 
-            // ================== TÍNH TOÁN TỊNH TIẾN SIÊU NHANH ==================
-            int atrPeriod = 90; // Chu kỳ ATR
-            double newAtr = 0.0;
-
-            if (orderMulti.currentAtr == 0.0 && tickers.size() > atrPeriod + 1) {
-                // Nếu chưa có ATR, tính lần đầu (chỉ xảy ra một lần cho mỗi lệnh)
-                newAtr = TechnicalAnalysisUtils.calculateATR(tickers, atrPeriod);
-            } else if (orderMulti.currentAtr > 0.0) {
-                // Tính toán tịnh tiến cho các lần sau
-                KlineObjectSimple previousTicker = tickers.get(tickers.size() - 2);
-                double currentTR = Math.max(
-                        ticker.maxPrice - ticker.minPrice,
-                        Math.max(
-                                Math.abs(ticker.maxPrice - previousTicker.priceClose),
-                                Math.abs(ticker.minPrice - previousTicker.priceClose)
-                        )
-                );
-                // Công thức làm mượt EMA/RMA
-                newAtr = ((orderMulti.currentAtr * (atrPeriod - 1)) + currentTR) / atrPeriod;
-            }
-
-            // Cập nhật ATR mới vào đối tượng order để dùng cho lần sau
-            if (newAtr > 0) {
-                orderMulti.currentAtr = newAtr;
-            }
-
             if (orderMulti.timeStart <= ticker.startTime.longValue()) {
                 orderMulti.updatePriceByKlineSimple(ticker);
                 Double maxChangeIn60M = 0d;
-//                maxChangeIn60M = MarketBigChangeDetector.getMaxRateIn60MForTradingStop(tickers);
+                maxChangeIn60M = MarketBigChangeDetector.getMaxRateIn60MForTradingStop(tickers);
                 orderMulti.updateStatusNew(maxChangeIn60M, ticker);
                 if (orderMulti.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)
                         || orderMulti.status.equals(OrderTargetStatus.STOP_LOSS_DONE)

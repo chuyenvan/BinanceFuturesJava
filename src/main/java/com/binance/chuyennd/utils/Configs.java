@@ -19,7 +19,6 @@ import java.util.Map;
 public class Configs {
 
 
-
     public static String configFile = "config.properties";
     public static volatile Map properties = new HashMap();
 
@@ -43,9 +42,9 @@ public class Configs {
 
     // funding fee config
     public static final Integer NUMBER_LAST_FUNDING_CAL = 4;
-    public static final Integer NUMBER_LAST_FUNDING_EXTREME  = 4;
+    public static final Integer NUMBER_LAST_FUNDING_EXTREME = 4;
     public static final Integer NUMBER_HOUR_FUNDING_CAL = 30;
-    public static final Double FUNDING_MAX_TRADE = -0.000;
+    public static final Double FUNDING_MAX_TRADE = 0.00001;
     public static final Double FUNDING_MIN_TRADE = 0.0006;
 
     public static final Long FUNDING_TIME_EXTREME = 4 * Utils.TIME_HOUR;
@@ -81,6 +80,7 @@ public class Configs {
     public static String FILE_ENTRY_MARKET_LEVEL = "../storage/market_data/time2market.data";
     public static String FILE_TIME_SYMBOL_EXHAUSTED = "../storage/market_data/time2SymbolSellingExhausted.data";
     public static String FILE_MARKET_RATE_CHANGE = "../storage/market_data/marketRateChange.data";
+
     public static String FILE_ENTRY_BTC_REVERSE = "../storage/btc/btcReverse-" + BTC_TREND_REVERSE_RATE_MIN + "-" + BTC_TREND_REVERSE_RATE_MAX + "-"
             + BTC_TREND_REVERSE_DURATION;
 

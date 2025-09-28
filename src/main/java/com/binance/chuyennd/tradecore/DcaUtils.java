@@ -14,7 +14,8 @@ public final class DcaUtils {
      * Đây là hàm duy nhất bạn cần gọi từ bên ngoài.
      */
     public static boolean shouldDca(double margin, double currentRateLoss, MarketLevelChange orderMarketLevel, long orderTimeStart,
-                                    MarketLevelChange marketLevelChange, long currentTime, double budget, Boolean isTrendBuyWithETH) {
+                                    MarketLevelChange marketLevelChange, long currentTime, double budget,
+                                    Boolean isTrendBuyWithETH) {
 
 
         DcaConfig config = getDcaConfig(marketLevelChange);

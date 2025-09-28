@@ -77,6 +77,7 @@ public class ExportMarketData2File {
         TreeMap<Long, MarketRateChange> time2MarketRateChange;
         TreeMap<Long, MarketDataObject> time2MarketData;
 
+
         if (!new File(Configs.FILE_MARKET_RATE_CHANGE).exists()) {
             time2MarketRateChange = new TreeMap<>();
         } else {
@@ -134,12 +135,13 @@ public class ExportMarketData2File {
                                     symbol2LastTickers.put(symbol, tickers);
                                 }
                                 tickers.add(ticker);
-                                int sizeRemove = 25;
+                                int sizeRemove = 100;
                                 if (tickers.size() > sizeRemove) {
                                     for (int i = 0; i < 5; i++) {
                                         tickers.remove(0);
                                     }
                                 }
+
                                 Double priceMax = null;
                                 Double minPrice = null;
                                 for (int i = 0; i < Configs.NUMBER_TICKER_CAL_RATE_CHANGE; i++) {
@@ -159,7 +161,7 @@ public class ExportMarketData2File {
                                 }
                                 if (MarketBigChangeDetector.isSellingExhausted(tickers, symbol)) {
                                     Set<String> symbolSellingExhausted = time2SymbolSellingExhausted.get(time);
-                                    if (symbolSellingExhausted == null){
+                                    if (symbolSellingExhausted == null) {
                                         symbolSellingExhausted = new HashSet<>();
                                         time2SymbolSellingExhausted.put(time, symbolSellingExhausted);
                                     }
@@ -205,7 +207,6 @@ public class ExportMarketData2File {
         StorageSnappy.writeObject2File(Configs.FILE_ENTRY_MARKET_LEVEL, time2MarketData);
         StorageSnappy.writeObject2File(Configs.FILE_TIME_SYMBOL_EXHAUSTED, time2SymbolSellingExhausted);
         StorageSnappy.writeObject2File(Configs.FILE_MARKET_RATE_CHANGE, time2MarketRateChange);
-
 
     }
 

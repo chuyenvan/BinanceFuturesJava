@@ -6,7 +6,7 @@
   <name>Binance java sdk</name>
   <version>1.2.4</version>
   <build>
-    <sourceDirectory>src/com/binance</sourceDirectory>
+    <sourceDirectory>src/main/java</sourceDirectory>
     <resources>
       <resource>
         <directory>src/main/resources</directory>
