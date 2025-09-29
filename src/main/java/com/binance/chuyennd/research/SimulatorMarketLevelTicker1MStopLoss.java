@@ -41,6 +41,9 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     public static final Logger LOG = LoggerFactory.getLogger(SimulatorMarketLevelTicker1MStopLoss.class);
     public static final String FILE_STORAGE_ORDER_DONE = "storage/OrderTestDone.data";
 
+    public String currentMonth = null;
+    public Map<String, TreeMap<Long, Double>> symbol2TimeAndMaxRate90M = null;
+
     public TreeMap<Long, OrderTargetInfoTest> allOrderDone;
 
     public TreeMap<Long, MarketDataObject> time2MarketData;
@@ -65,10 +68,10 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         Long startTime = Utils.sdfFile.parse(Configs.TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
         Map<String, Long> symbolSellingExhausted = new HashMap<>();
         TreeMap<Long, Double> time2RateDown15MAvg = new TreeMap<>();
+        Map<String, List<KlineObjectSimple>> symbol2LastTickers = new HashMap<>();
         //get data
         while (true) {
             TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers;
-            Map<String, List<KlineObjectSimple>> symbol2LastTickers = new HashMap<>();
             try {
                 time2Tickers = DataManager.readDataFromFile1M(startTime);
                 if (time2Tickers == null) {
@@ -101,7 +104,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                     }
                                 }
                                 // update order Old
-                                startUpdateOldOrderTrading(symbol, tickers);
+                                startUpdateOldOrderTrading(time, symbol, tickers);
                             }
                             logByProcessTime(startTimeRun, "Done update order", time);
                             Boolean isTrendBuyWithETH = isTrendBuyWithSMAETH(time);
@@ -435,7 +438,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
     }
 
-    private void startUpdateOldOrderTrading(String symbol, List<KlineObjectSimple> tickers) {
+    private void startUpdateOldOrderTrading(Long time, String symbol, List<KlineObjectSimple> tickers) {
         OrderTargetInfoTest orderMulti = symbol2OrderRunning.get(symbol);
         if (orderMulti != null) {
             KlineObjectSimple ticker = tickers.get(tickers.size() - 1);
@@ -443,7 +446,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             if (orderMulti.timeStart <= ticker.startTime.longValue()) {
                 orderMulti.updatePriceByKlineSimple(ticker);
                 Double maxChangeIn60M = 0d;
-                maxChangeIn60M = MarketBigChangeDetector.getMaxRateIn60MForTradingStop(tickers);
+                maxChangeIn60M = getMaxRateIn60MForTradingStop(time, symbol, tickers);
                 orderMulti.updateStatusNew(maxChangeIn60M, ticker);
                 if (orderMulti.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)
                         || orderMulti.status.equals(OrderTargetStatus.STOP_LOSS_DONE)
@@ -454,6 +457,42 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                 }
             }
         }
+    }
+
+    private Double getMaxRateIn60MForTradingStop(Long time, String symbol, List<KlineObjectSimple> tickers) {
+        Double maxChangeIn60M = null;
+        String month = Utils.getMonth(time);
+        if (currentMonth == null || !StringUtils.equals(currentMonth, month)) {
+            if (currentMonth != null) {
+                String fileName = "storage/rate_change_90m/" + currentMonth;
+                LOG.info("Write data max rate change 90M month: {}", fileName);
+                StorageSnappy.writeObject2File(fileName, symbol2TimeAndMaxRate90M);
+            }
+            String fileName = "storage/rate_change_90m/" + month;
+            if (new File(fileName).exists()) {
+                LOG.info("Read data max rate change 90M month: {}", fileName);
+                symbol2TimeAndMaxRate90M = (Map<String, TreeMap<Long, Double>>) StorageSnappy.readObjectFromFile(fileName);
+            } else {
+                symbol2TimeAndMaxRate90M = new HashMap<>();
+            }
+            currentMonth = month;
+        }
+
+        TreeMap<Long, Double> time2Rate = symbol2TimeAndMaxRate90M.get(symbol);
+        if (time2Rate != null) {
+            maxChangeIn60M = time2Rate.get(time);
+        }
+        if (maxChangeIn60M == null) {
+            LOG.info("Calculate max rate change 60M for trading stop: {} {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time), tickers.size());
+            maxChangeIn60M = MarketBigChangeDetector.getMaxRateIn60MForTradingStop(tickers);
+            if (time2Rate == null) {
+                time2Rate = new TreeMap<>();
+                symbol2TimeAndMaxRate90M.put(symbol, time2Rate);
+            }
+            time2Rate.put(time, maxChangeIn60M);
+        }
+
+        return maxChangeIn60M;
     }
 
 
