@@ -63,7 +63,6 @@ public class BalanceIndex implements Serializable {
                 if (orderAll != null) {
                     for (OrderTargetInfoTest order : allOrderEntry.get(symbol)) {
                         order.minPrice = orderAll.minPrice;
-                        order.maxPrice = orderAll.maxPrice;
                         order.priceSL = orderAll.priceSL;
                     }
                 }
@@ -80,7 +79,6 @@ public class BalanceIndex implements Serializable {
                 if (orderAll != null) {
                     for (OrderTargetInfoTest order : allOrderEntry.get(symbol)) {
                         order.minPrice = orderAll.minPrice;
-                        order.maxPrice = orderAll.maxPrice;
                         order.priceSL = orderAll.priceSL;
                     }
                 }
@@ -118,12 +116,7 @@ public class BalanceIndex implements Serializable {
                 if (orderAll != null) {
                     for (OrderTargetInfoTest order : allOrderEntry.get(symbol)) {
                         order.minPrice = orderAll.minPrice;
-                        order.maxPrice = orderAll.maxPrice;
-                        if (order.side.equals(OrderSide.BUY)) {
-                            order.priceTP = orderAll.minPrice;
-                        } else {
-                            order.priceTP = orderAll.maxPrice;
-                        }
+                        order.priceTP = orderAll.minPrice;
                     }
                 }
             }

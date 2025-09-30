@@ -620,6 +620,9 @@ public class TickerManager {
             }
         }
         try {
+            if (time2FundingRate == null){
+                time2FundingRate = new TreeMap<>();
+            }
 //            LOG.info("Start get funding fee for: {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time));
             while (true) {
                 if (time + Utils.TIME_HOUR > System.currentTimeMillis()) {

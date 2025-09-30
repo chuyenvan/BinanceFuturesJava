@@ -448,8 +448,6 @@ public class TraceOrderDone {
             builder.append(order.priceTP).append(",");
             builder.append(order.minPrice).append(",");
             builder.append(Utils.rateOf2Double(order.minPrice, order.priceEntry)).append(",");
-            builder.append(order.maxPrice).append(",");
-            builder.append(Utils.rateOf2Double(order.maxPrice, order.priceEntry)).append(",");
             builder.append(profit * 100).append(",");
             builder.append(order.status.toString()).append(",");
             builder.append(Utils.normalizeDateYYYYMMDDHHmm(order.timeStart)).append(",'");
@@ -506,11 +504,8 @@ public class TraceOrderDone {
         int counter = 0;
         for (List<OrderTargetInfoTest> orders : allOrderDone.values()) {
             for (OrderTargetInfoTest order : orders) {
-                if (order.side.equals(OrderSide.BUY)) {
-                    order.priceTP = order.minPrice;
-                } else {
-                    order.priceTP = order.maxPrice;
-                }
+                order.priceTP = order.minPrice;
+
                 Double profit = Utils.rateOf2Double(order.priceTP, order.priceEntry);
                 if (order.side.equals(OrderSide.SELL)) {
                     profit = -Utils.rateOf2Double(order.priceTP, order.priceEntry);
@@ -569,8 +564,6 @@ public class TraceOrderDone {
             builder.append(order.priceTP).append(",");
             builder.append(order.minPrice).append(",");
             builder.append(Utils.rateOf2Double(order.minPrice, order.priceEntry)).append(",");
-            builder.append(order.maxPrice).append(",");
-            builder.append(Utils.rateOf2Double(order.maxPrice, order.priceEntry)).append(",");
             builder.append(profit * 100).append(",");
             builder.append(order.status.toString()).append(",");
             builder.append(Utils.normalizeDateYYYYMMDDHHmm(order.timeStart)).append(",'");
@@ -628,8 +621,6 @@ public class TraceOrderDone {
             builder.append(order.priceSL).append(",");
             builder.append(order.minPrice).append(",");
             builder.append(Utils.rateOf2Double(order.minPrice, order.priceEntry)).append(",");
-            builder.append(order.maxPrice).append(",");
-            builder.append(Utils.rateOf2Double(order.maxPrice, order.priceEntry)).append(",");
             builder.append(profit).append(",");
             builder.append(order.status.toString()).append(",");
             builder.append(Utils.normalizeDateYYYYMMDDHHmm(order.timeStart)).append(",'");

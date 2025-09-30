@@ -85,11 +85,13 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
                         try {
                             Map<String, KlineObjectSimple> symbol2Ticker = entry.getValue();
-                            for (String symbol : symbol2Ticker.keySet()) {
+//                            for (String symbol : symbol2Ticker.keySet()) {
+                            symbol2Ticker.keySet().parallelStream().forEach(symbol -> {
                                 KlineObjectSimple ticker = symbol2Ticker.get(symbol);
                                 if (!Utils.isTickerAvailable(ticker)) {
                                     updateSymbolDeListed(symbol, time);
-                                    continue;
+//                                    continue;
+                                    return;
                                 }
                                 List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
                                 if (tickers == null) {
@@ -97,7 +99,10 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                     symbol2LastTickers.put(symbol, tickers);
                                 }
                                 tickers.add(ticker);
-                                int sizeRemove = 360;
+                                int sizeRemove = 100;
+                                if (!symbol2OrderRunning.containsKey(symbol)) {
+                                    sizeRemove = 21;
+                                }
                                 if (tickers.size() > sizeRemove) {
                                     for (int i = 0; i < 5; i++) {
                                         tickers.remove(0);
@@ -105,7 +110,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                 }
                                 // update order Old
                                 startUpdateOldOrderTrading(time, symbol, tickers);
-                            }
+                            });
                             logByProcessTime(startTimeRun, "Done update order", time);
                             Boolean isTrendBuyWithETH = isTrendBuyWithSMAETH(time);
                             startTimeRun = System.currentTimeMillis();
@@ -342,7 +347,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         // add all order running to done
         for (List<OrderTargetInfoTest> orderRunning : symbol2OrdersEntry.values()) {
             for (OrderTargetInfoTest orderInfo : orderRunning) {
-                orderInfo.maxPrice = symbol2OrderRunning.get(orderInfo.symbol).maxPrice;
                 orderInfo.lastPrice = symbol2OrderRunning.get(orderInfo.symbol).lastPrice;
                 orderInfo.priceTP = orderInfo.lastPrice;
                 orderInfo.minPrice = symbol2OrderRunning.get(orderInfo.symbol).minPrice;
@@ -442,18 +446,18 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         OrderTargetInfoTest orderMulti = symbol2OrderRunning.get(symbol);
         if (orderMulti != null) {
             KlineObjectSimple ticker = tickers.get(tickers.size() - 1);
-
             if (orderMulti.timeStart <= ticker.startTime.longValue()) {
                 orderMulti.updatePriceByKlineSimple(ticker);
-                Double maxChangeIn60M = 0d;
-                maxChangeIn60M = getMaxRateIn60MForTradingStop(time, symbol, tickers);
-                orderMulti.updateStatusNew(maxChangeIn60M, ticker);
-                if (orderMulti.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)
-                        || orderMulti.status.equals(OrderTargetStatus.STOP_LOSS_DONE)
-                        || orderMulti.status.equals(OrderTargetStatus.STOP_MARKET_DONE)) {
-                    closeOrder(symbol, orderMulti);
-                } else {
-                    orderMulti.updateTPSL(maxChangeIn60M, ticker);
+                if (ticker.maxPrice >= orderMulti.priceEntry * 1.009 || orderMulti.priceSL != null) {
+                    Double maxChangeIn60M = getMaxRateIn60MForTradingStop(time, symbol, tickers);
+                    orderMulti.updateStatusNew(maxChangeIn60M, ticker);
+                    if (orderMulti.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)
+                            || orderMulti.status.equals(OrderTargetStatus.STOP_LOSS_DONE)
+                            || orderMulti.status.equals(OrderTargetStatus.STOP_MARKET_DONE)) {
+                        closeOrder(symbol, orderMulti);
+                    } else {
+                        orderMulti.updateTPSL(maxChangeIn60M, ticker);
+                    }
                 }
             }
         }
@@ -465,8 +469,11 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         if (currentMonth == null || !StringUtils.equals(currentMonth, month)) {
             if (currentMonth != null) {
                 String fileName = "storage/rate_change_90m/" + currentMonth;
-                LOG.info("Write data max rate change 90M month: {}", fileName);
-                StorageSnappy.writeObject2File(fileName, symbol2TimeAndMaxRate90M);
+                if (!Utils.getMonth(System.currentTimeMillis() - Utils.TIME_HOUR).equals(currentMonth)
+                        && !new File(fileName).exists()) {
+                    LOG.info("Write data max rate change 90M month: {}", fileName);
+                    StorageSnappy.writeObject2File(fileName, symbol2TimeAndMaxRate90M);
+                }
             }
             String fileName = "storage/rate_change_90m/" + month;
             if (new File(fileName).exists()) {
@@ -502,7 +509,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             order.timeUpdate = orderMulti.timeUpdate;
             order.status = orderMulti.status;
             order.priceTP = orderMulti.priceTP;
-            order.maxPrice = orderMulti.maxPrice;
             order.minPrice = orderMulti.minPrice;
             order.lastPrice = orderMulti.lastPrice;
             order.updateFundingFee();
@@ -540,7 +546,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                 time2Order.lastEntry().getKey(), orders.get(0).side);
         orderResult.minPrice = ticker.priceClose;
         orderResult.lastPrice = ticker.priceClose;
-        orderResult.maxPrice = ticker.priceClose;
         orderResult.lastEntry = orders.get(orders.size() - 1).lastEntry;
         orderResult.rateChange = orders.get(orders.size() - 1).rateChange;
         orderResult.tickerOpen = time2Order.lastEntry().getValue().tickerOpen;
@@ -588,7 +593,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                 leverage, symbol, ticker.startTime.longValue(), ticker.startTime.longValue(), OrderSide.BUY);
         order.minPrice = entry;
         order.lastEntry = entry;
-        order.maxPrice = entry;
         order.lastPrice = entry;
 
         order.tickerOpen = Utils.convertKlineSimple(ticker);
