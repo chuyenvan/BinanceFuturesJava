@@ -37,7 +37,6 @@ import java.util.TreeMap;
  * @author pc
  */
 public class OrderTargetInfoTest implements Serializable {
-    public static final Logger LOG = LoggerFactory.getLogger(OrderTargetInfoTest.class);
     private static final long serialVersionUID = 6529685098267757691L;
 
     public OrderTargetStatus status;
@@ -63,7 +62,7 @@ public class OrderTargetInfoTest implements Serializable {
     public TreeMap<Long, Double> time2FundingFee = new TreeMap<>();
     public MarketRateChange marketData;
     public MarketLevelChange marketLevelChange;
-    public KlineObjectNumber tickerOpen;
+    public KlineObjectSimple tickerOpen;
 
 
     public OrderTargetInfoTest(OrderTargetStatus status, Double priceEntry,

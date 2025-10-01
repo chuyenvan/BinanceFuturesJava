@@ -85,13 +85,12 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
                         try {
                             Map<String, KlineObjectSimple> symbol2Ticker = entry.getValue();
-//                            for (String symbol : symbol2Ticker.keySet()) {
-                            symbol2Ticker.keySet().parallelStream().forEach(symbol -> {
+                            for (String symbol : symbol2Ticker.keySet()) {
+//                            symbol2Ticker.keySet().parallelStream().forEach(symbol -> {
                                 KlineObjectSimple ticker = symbol2Ticker.get(symbol);
                                 if (!Utils.isTickerAvailable(ticker)) {
                                     updateSymbolDeListed(symbol, time);
-//                                    continue;
-                                    return;
+                                    continue;
                                 }
                                 List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
                                 if (tickers == null) {
@@ -110,7 +109,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                 }
                                 // update order Old
                                 startUpdateOldOrderTrading(time, symbol, tickers);
-                            });
+                            }
                             logByProcessTime(startTimeRun, "Done update order", time);
                             Boolean isTrendBuyWithETH = isTrendBuyWithSMAETH(time);
                             startTimeRun = System.currentTimeMillis();
@@ -595,7 +594,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         order.lastEntry = entry;
         order.lastPrice = entry;
 
-        order.tickerOpen = Utils.convertKlineSimple(ticker);
+        order.tickerOpen = ticker;
         order.marketLevelChange = levelChange;
         order.rateChange = maxPrice15m;
         if (marketData != null) {
