@@ -88,8 +88,8 @@ public class TraceData2Test {
 //                        if (BudgetManagerSimple.getInstance().isAvailableTrade()) {
                 KlineObjectSimple btcTicker = symbol2Ticker.get(Constants.SYMBOL_PAIR_BTC);
                 Double btcRateChange = Utils.rateOf2Double(btcTicker.priceClose, btcTicker.priceOpen);
-                Double rateChangeDownAvg = MarketBigChangeDetector.calRateLossAvg(rateDown2Symbols, 50);
-                Double rateChangeUpAvg = -MarketBigChangeDetector.calRateLossAvg(rateUp2Symbols, 50);
+                Double rateChangeDownAvg = MarketBigChangeDetector.calRateChangeAvg(rateDown2Symbols, 100);
+                Double rateChangeUpAvg = -MarketBigChangeDetector.calRateChangeAvg(rateUp2Symbols, 100);
                 LOG.info("{} down:{} up:{} btcRate:{} btcVol:{}", Utils.normalizeDateYYYYMMDDHHmm(time),
                         Utils.formatDouble(rateChangeDownAvg * 100, 2), Utils.formatDouble(rateChangeUpAvg * 100, 2),
                         Utils.formatDouble(btcRateChange * 100, 2), btcTicker.totalUsdt / 1E6);
@@ -959,8 +959,8 @@ public class TraceData2Test {
                     symbol2MinPrice.put(symbol, minPrice);
                 }
             }
-            MarketDataObject marketData = MarketBigChangeDetector.calMarketData(time2Tickers.get(time), symbol2MaxPrice,
-                    symbol2MinPrice);
+//            MarketDataObject marketData = MarketBigChangeDetector.calMarketData(time2Tickers.get(time), symbol2MaxPrice,
+//                    symbol2MinPrice);
 //            List<String> symbols = MarketBigChangeDetector.get(marketData.rate2Max, 20, null);
 //            marketData.rate2Max.clear();
 //            LOG.info("{} {}", symbols, Utils.toJson(marketData));

@@ -146,26 +146,6 @@ public class MarketBigChangeDetector {
         return true;
     }
 
-    public static Double calRateLossAvg(TreeMap<Double, String> rateLoss2Symbols, Integer period) {
-        Double total = 0d;
-        int counter = 0;
-        if (period > rateLoss2Symbols.size() * 4 / 5) {
-            period = rateLoss2Symbols.size() * 4 / 5;
-        }
-        for (Map.Entry<Double, String> entry : rateLoss2Symbols.entrySet()) {
-            Double key = entry.getKey();
-            counter++;
-            total += key;
-            if (period != null && counter >= period) {
-                break;
-            }
-        }
-        if (rateLoss2Symbols.isEmpty()) {
-            return 0d;
-        }
-        return total / counter;
-    }
-
     public static MarketDataObject calMarketData(Map<String, KlineObjectSimple> symbol2Ticker, Map<String, Double> symbol2PriceMax,
                                                  Map<String, Double> symbol2MinPrice) {
         TreeMap<Double, String> rateDown2Symbols = new TreeMap<>();
@@ -197,9 +177,9 @@ public class MarketBigChangeDetector {
             }
         }
         Double btcRateChange = Utils.rateOf2Double(btcTicker.priceClose, btcTicker.priceOpen);
-        Double rateChangeDownAvg = MarketBigChangeDetector.calRateLossAvg(rateDown2Symbols, 100);
-        Double rateChangeUpAvg = -MarketBigChangeDetector.calRateLossAvg(rateUp2Symbols, 100);
-        Double rateChangeDown15MAvg = MarketBigChangeDetector.calRateLossAvg(rateMax2Symbols, 100);
+        Double rateChangeDownAvg = MarketBigChangeDetector.calRateChangeAvg(rateDown2Symbols, 100);
+        Double rateChangeUpAvg = -MarketBigChangeDetector.calRateChangeAvg(rateUp2Symbols, 100);
+        Double rateChangeDown15MAvg = MarketBigChangeDetector.calRateChangeAvg(rateMax2Symbols, 100);
 
 //        List<String> symbolsTopDown = MarketBigChangeDetectorTest.getTopSymbolSimple(rateDown2Symbols,
 //                Configs.NUMBER_ENTRY_EACH_SIGNAL, null);
