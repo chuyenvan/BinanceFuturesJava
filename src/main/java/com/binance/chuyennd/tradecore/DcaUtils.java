@@ -24,6 +24,9 @@ public final class DcaUtils {
         }
         if (!isTrendBuyWithETH) {
             config.rateLoss2Dca = config.rateLoss2Dca * 1.5;
+//            if (marketLevelChange != null){
+//                config.rateLoss2Dca = config.rateLoss2Dca * 1.5;
+//            }
             if (config.rateLoss2Dca < -0.9) {
                 config.rateLoss2Dca = -0.9;
             }

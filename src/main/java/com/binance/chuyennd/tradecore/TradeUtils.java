@@ -40,13 +40,19 @@ public class TradeUtils {
         if (isTrendBuyWithETH) {
             if (maxChange60M != null) {
                 if (maxChange60M >= 0.01) {
-                    rateMin2MoveSl = Math.max(rateMin2MoveSl, 0.03);
-                } else if (maxChange60M >= 0.008) {
-                    rateMin2MoveSl = Math.max(rateMin2MoveSl, 0.02);
+                    rateMin2MoveSl = 0.03;
                 } else if (maxChange60M >= 0.006) {
-                    rateMin2MoveSl = Math.max(rateMin2MoveSl, 0.016);
+                    rateMin2MoveSl = 0.02;
                 } else if (maxChange60M >= 0.004) {
-                    rateMin2MoveSl = Math.max(rateMin2MoveSl, 0.014);
+                    rateMin2MoveSl = 0.016;
+                }
+            }
+        } else {
+            if (maxChange60M != null) {
+                if (maxChange60M >= 0.02) {
+                    rateMin2MoveSl = 0.015;
+                } else if (maxChange60M >= 0.01) {
+                    rateMin2MoveSl = 0.012;
                 }
             }
         }
@@ -105,8 +111,14 @@ public class TradeUtils {
 
 
     public static Double managerBudget(Double budget, Double marginRunning, Double balanceBasic,
-                                       MarketLevelChange levelChange, Boolean isTrendBuyWithBtc) {
+                                       MarketLevelChange levelChange, Boolean isTrendBuyWithBtc, Boolean isTrendBuyETH) {
 
+        if (levelChange.equals(MarketLevelChange.SMALL_UP)
+                || levelChange.equals(MarketLevelChange.SMALL_DOWN_15M)) {
+            if (!isTrendBuyWithBtc) {
+                return null;
+            }
+        }
         final Set<MarketLevelChange> dcaOrBigLevels = Set.of(
                 MarketLevelChange.DCA_LEVEL1,
                 MarketLevelChange.DCA_LEVEL2
@@ -115,28 +127,21 @@ public class TradeUtils {
                 && !StringUtils.containsIgnoreCase(levelChange.toString(), "big");
         double marginRatio = marginRunning / balanceBasic;
 
-        if (marginRatio >= 0.5) {
-            budget /= 4;
-        }
-        if (marginRatio >= 0.6) {
-            return null;
+        if (isNormalLevel && marginRatio >= 0.2) {
+            budget /= 2;
         }
         if (isNormalLevel && marginRatio >= 0.25) {
             budget /= 3;
         }
 
-        if (levelChange.equals(MarketLevelChange.SMALL_UP)
-                || levelChange.equals(MarketLevelChange.SMALL_DOWN_15M)) {
-            if (!isTrendBuyWithBtc) {
-                return null;
-            }
-        }
-
         if (marginRatio >= 0.35) {
             budget /= 2;
         }
-        if (isNormalLevel && marginRatio >= 0.2) {
-            budget /= 2;
+        if (marginRatio >= 0.5) {
+            budget /= 4;
+        }
+        if (marginRatio >= 0.6) {
+            return null;
         }
         switch (levelChange) {
             case MEDIUM_DOWN:
@@ -161,7 +166,13 @@ public class TradeUtils {
                 budget /= 4;
                 break;
         }
+        if (!isTrendBuyETH) {
+            budget = budget * 0.8;
+        }
+        if (isTrendBuyETH) {
+            budget = budget * 1.2;
 
+        }
         return budget;
     }
 }

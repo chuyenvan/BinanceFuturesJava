@@ -22,6 +22,7 @@ import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
 import com.binance.chuyennd.tradecore.DcaProcessor;
+import com.binance.chuyennd.tradecore.MarketBigChangeDetector;
 import com.binance.chuyennd.tradecore.TradeUtils;
 import com.binance.chuyennd.tradecore.TrendDetector;
 import com.binance.chuyennd.utils.Configs;
@@ -270,7 +271,8 @@ public class DetectEntrySignal2TradeNormal {
                 time2RateDown15MAvg.remove(time2RateDown15MAvg.firstKey());
             }
             Double minRate15Min30M = Collections.min(time2RateDown15MAvg.values());
-            if (MarketBigChangeDetector.isFundingFeeTrade(rateDown15MAvg, rateDownAvg, rateUpAvg, minRate15Min30M)) {
+            if (MarketBigChangeDetector.isFundingFeeTrade(rateDown15MAvg, rateDownAvg, rateUpAvg,
+                    minRate15Min30M, isTrendBuyWithETH)) {
                 Set<String> symbolBuyFundingFee = new HashSet<>();
                 symbolBuyFundingFee.addAll(FundingFeeManagerProduction.getInstance().fundingBuy);
                 symbolBuyFundingFee.removeAll(BudgetManager.getInstance().symbol2Pos.keySet());
@@ -373,20 +375,6 @@ public class DetectEntrySignal2TradeNormal {
         return false;
     }
 
-    public boolean isBtcTrendBuy(String symbol, Long time) {
-        if (symbol == null) {
-            symbol = "";
-        }
-        Double maDif1d = SimpleMovingAverageDayManagerProduction.getInstance().getDifferenceMa10AndMa60(Constants.SYMBOL_PAIR_BTC, time);
-        Double maDif4h = SimpleMovingAverage4hManagerProduction.getInstance().getDifferenceMa10AndMa60(Constants.SYMBOL_PAIR_BTC, time);
-        if ((maDif1d != null && maDif1d > 0)
-                || (maDif4h != null && maDif4h > 0)
-                || Constants.specialSymbol.contains(symbol)) {
-            return true;
-        }
-        return false;
-    }
-
 
     private OrderTargetInfo getOrderInfo(String symbol) {
         try {
@@ -421,10 +409,11 @@ public class DetectEntrySignal2TradeNormal {
         long time = ticker.startTime.longValue();
         Double marginRunning = BudgetManager.getInstance().marginRunning;
         Double balanceBasic = BudgetManager.getInstance().balanceBasic;
-        boolean isTrendBuyWithBtc = isBtcTrendBuy(symbol, time);
+        boolean isTrendBuyWithBtc = TrendDetector.isBtcTrendBuyProduction(time);
+        boolean isTrendBuyETH = TrendDetector.isETHTrendBuyProduction(time);
         Double budget = BudgetManager.getInstance().getBudget();
 
-        budget = TradeUtils.managerBudget(budget, marginRunning, balanceBasic, levelChange, isTrendBuyWithBtc);
+        budget = TradeUtils.managerBudget(budget, marginRunning, balanceBasic, levelChange, isTrendBuyWithBtc, isTrendBuyETH);
         if (budget == null) {
             LOG.info("Not trade because over capital: {} {} {}", symbol, levelChange,
                     Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()));

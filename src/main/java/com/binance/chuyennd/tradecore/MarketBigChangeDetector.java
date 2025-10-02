@@ -1,4 +1,4 @@
-package com.binance.chuyennd.trading;
+package com.binance.chuyennd.tradecore;
 
 import com.binance.chuyennd.bigchange.market.MarketDataObject;
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
@@ -341,9 +341,16 @@ public class MarketBigChangeDetector {
         return maxRateChangeIn60M;
     }
 
-    public static boolean isFundingFeeTrade(Double rateDown15MAvg, Double rateDownAvg, Double rateUpAvg, Double minRate15Min60M) {
-        return (rateDown15MAvg < -0.015 && rateDown15MAvg <= minRate15Min60M)
-                || rateDown15MAvg < -0.025
+    public static boolean isFundingFeeTrade(Double rateDown15MAvg, Double rateDownAvg, Double rateUpAvg,
+                                            Double minRate15Min60M, Boolean isTrendBuyWithETH) {
+        Double rateMin2Trade = -0.015;
+        Double rateMin2TradeFull = -0.025;
+        if (isTrendBuyWithETH){
+            rateMin2Trade = -0.013;
+            rateMin2TradeFull = -0.023;
+        }
+        return (rateDown15MAvg < rateMin2Trade && rateDown15MAvg <= minRate15Min60M)
+                || rateDown15MAvg < rateMin2TradeFull
                 || rateUpAvg > 0.005
                 || rateDownAvg < -0.005;
     }

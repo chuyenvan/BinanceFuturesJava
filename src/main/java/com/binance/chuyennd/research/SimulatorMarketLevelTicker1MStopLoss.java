@@ -8,13 +8,11 @@ import com.binance.chuyennd.bigchange.market.MarketDataObject;
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
 import com.binance.chuyennd.bigchange.data.DataManager;
 import com.binance.chuyennd.bigchange.test.TraceOrderDone;
-import com.binance.chuyennd.grid.SimpleMovingAverage4hManager;
-import com.binance.chuyennd.grid.SimpleMovingAverageDayManager;
 import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.tradecore.DcaProcessor;
 import com.binance.chuyennd.tradecore.TrendDetector;
-import com.binance.chuyennd.trading.MarketBigChangeDetector;
+import com.binance.chuyennd.tradecore.MarketBigChangeDetector;
 import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.tradecore.TradeUtils;
 import com.binance.chuyennd.utils.Configs;
@@ -83,7 +81,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                     for (Map.Entry<Long, Map<String, KlineObjectSimple>> entry : time2Tickers.entrySet()) {
                         Long time = entry.getKey();
                         Long startTimeRun = System.currentTimeMillis();
-                        Boolean isTrendBuyWithETH = TrendDetector.isTrendBuyWithSMAETH(time);
+                        Boolean isTrendBuyWithETH = TrendDetector.isTrendETH(time);
                         try {
                             Map<String, KlineObjectSimple> symbol2Ticker = entry.getValue();
                             for (String symbol : symbol2Ticker.keySet()) {
@@ -225,7 +223,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
 
                                 if (MarketBigChangeDetector.isFundingFeeTrade(marketRateChange.rateDown15MAvg,
-                                        marketRateChange.rateDownAvg, marketRateChange.rateUpAvg, minRate15Min60M)
+                                        marketRateChange.rateDownAvg, marketRateChange.rateUpAvg, minRate15Min60M, isTrendBuyWithETH)
                                 ) {
                                     // funding level 1
                                     Set<String> symbolFundingBuy = FundingFeeManager.getInstance().getFundingBuyNew(time);
@@ -563,15 +561,14 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         Double entry = ticker.priceClose;
         Integer leverage = BudgetManagerSimple.getInstance().getLeverage();
         long time = ticker.startTime.longValue();
-        Boolean isTrendBuyWithBtc = isTrendBuyWithBtcSMABTC(time);
-        if (Constants.specialSymbol.contains(symbol)) {
-            isTrendBuyWithBtc = true;
-        }
+        Boolean isTrendBuyWithBtc = TrendDetector.isTrendBTC(time);
+        Boolean isTrendBuyETH = TrendDetector.isTrendETH(time);
         Double marginRunning = calMarginRunning();
         Double balanceBasic = BudgetManagerSimple.getInstance().balanceBasic;
         Double budget = BudgetManagerSimple.getInstance().getBudget();
 
-        budget = TradeUtils.managerBudget(budget, marginRunning, balanceBasic, levelChange, isTrendBuyWithBtc);
+        budget = TradeUtils.managerBudget(budget, marginRunning, balanceBasic, levelChange, isTrendBuyWithBtc, isTrendBuyETH);
+
         if (budget == null) {
             LOG.info("Not trade because over capital: {} {} {}", symbol, levelChange,
                     Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()));
@@ -613,21 +610,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         BudgetManagerSimple.getInstance().updateMaxOrderRunning(counterOrderRunning());
         BudgetManagerSimple.getInstance().updatePositionMargin(symbol2OrderRunning.values());
     }
-
-    private Boolean isTrendBuyWithBtcSMABTC(Long time) {
-
-        Double maDif1d = SimpleMovingAverageDayManager.getInstance().getDifferenceMa10AndMa60(Constants.SYMBOL_PAIR_BTC, time);
-        Double maDif4h = SimpleMovingAverage4hManager.getInstance().getDifferenceMa10AndMa60(Constants.SYMBOL_PAIR_BTC, time);
-        if ((maDif1d != null && maDif1d > 0)
-                || (maDif4h != null && maDif4h > 0)
-
-        ) {
-            return true;
-        }
-        return false;
-    }
-
-
 
 
     private Integer counterOrderRunning() {
