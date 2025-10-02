@@ -23,6 +23,7 @@ import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
 import com.binance.chuyennd.tradecore.DcaProcessor;
 import com.binance.chuyennd.tradecore.TradeUtils;
+import com.binance.chuyennd.tradecore.TrendDetector;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.StorageSnappy;
 import com.binance.chuyennd.utils.Utils;
@@ -169,7 +170,7 @@ public class DetectEntrySignal2TradeNormal {
             Double rateBtcDown15M = Utils.rateOf2Double(btcTicker.priceClose, btcMax15M);
             MarketLevelChange levelChange = MarketBigChangeDetector.getMarketStatus1M(rateDownAvg, rateUpAvg, btcRateChange
                     , rateDown15MAvg);
-            boolean isTrendBuyWithETH = isETHTrendBuy( null, time);
+            boolean isTrendBuyWithETH = TrendDetector.isETHTrendBuyProduction(time);
             LOG.info("Check level market: {} DownAvg: {}% UpAvg:{}% DownAvg15M:{}%  btcRate: {}% btcRate15M: {}% {}",
                     Utils.normalizeDateYYYYMMDDHHmm(btcTicker.startTime.longValue()),
                     Utils.formatDouble(rateDownAvg * 100, 3),
@@ -385,19 +386,7 @@ public class DetectEntrySignal2TradeNormal {
         }
         return false;
     }
-    public boolean isETHTrendBuy(String symbol, Long time) {
-        if (symbol == null) {
-            symbol = "";
-        }
-        Double maDif1d = SimpleMovingAverageDayManagerProduction.getInstance().getDifferenceMa10AndMa60(Constants.SYMBOL_PAIR_ETH, time);
-        Double maDif4h = SimpleMovingAverage4hManagerProduction.getInstance().getDifferenceMa10AndMa60(Constants.SYMBOL_PAIR_ETH, time);
-        if ((maDif1d != null && maDif1d > 0)
-                || (maDif4h != null && maDif4h > 0)
-                || Constants.specialSymbol.contains(symbol)) {
-            return true;
-        }
-        return false;
-    }
+
 
     private OrderTargetInfo getOrderInfo(String symbol) {
         try {
@@ -432,7 +421,7 @@ public class DetectEntrySignal2TradeNormal {
         long time = ticker.startTime.longValue();
         Double marginRunning = BudgetManager.getInstance().marginRunning;
         Double balanceBasic = BudgetManager.getInstance().balanceBasic;
-        boolean isTrendBuyWithBtc = isBtcTrendBuy( symbol, time);
+        boolean isTrendBuyWithBtc = isBtcTrendBuy(symbol, time);
         Double budget = BudgetManager.getInstance().getBudget();
 
         budget = TradeUtils.managerBudget(budget, marginRunning, balanceBasic, levelChange, isTrendBuyWithBtc);

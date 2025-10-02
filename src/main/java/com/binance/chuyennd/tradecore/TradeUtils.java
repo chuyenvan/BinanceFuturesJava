@@ -19,7 +19,7 @@ public class TradeUtils {
 //            Double rate = 0.01 + i * 0.001;
 //            LOG.info("{} {}", rate, TradeUtils.calRateLossDynamicBuy(rate));
 //        }
-        System.out.println(TradeUtils.calRateMinWithMaxChange60MForTradingStop(0d));
+//        System.out.println(TradeUtils.calRateMinWithMaxChange60MForTradingStop(0d, null));
     }
 
     public static Double calRateLossDynamicBuy(Double unProfit) {
@@ -35,17 +35,19 @@ public class TradeUtils {
         return rateLoss / 200;
     }
 
-    public static Double calRateMinWithMaxChange60MForTradingStop(Double maxChange60M) {
+    public static Double calRateMinWithMaxChange60MForTradingStop(Double maxChange60M, Boolean isTrendBuyWithETH) {
         Double rateMin2MoveSl = Configs.RATE_PROFIT_STOP_MARKET;
-        if (maxChange60M != null) {
-            if (maxChange60M >= 0.01) {
-                rateMin2MoveSl = Math.max(rateMin2MoveSl, 0.03);
-            } else if (maxChange60M >= 0.008) {
-                rateMin2MoveSl = Math.max(rateMin2MoveSl, 0.02);
-            } else if (maxChange60M >= 0.006) {
-                rateMin2MoveSl = Math.max(rateMin2MoveSl, 0.016);
-            } else if (maxChange60M >= 0.004) {
-                rateMin2MoveSl = Math.max(rateMin2MoveSl, 0.014);
+        if (isTrendBuyWithETH) {
+            if (maxChange60M != null) {
+                if (maxChange60M >= 0.01) {
+                    rateMin2MoveSl = Math.max(rateMin2MoveSl, 0.03);
+                } else if (maxChange60M >= 0.008) {
+                    rateMin2MoveSl = Math.max(rateMin2MoveSl, 0.02);
+                } else if (maxChange60M >= 0.006) {
+                    rateMin2MoveSl = Math.max(rateMin2MoveSl, 0.016);
+                } else if (maxChange60M >= 0.004) {
+                    rateMin2MoveSl = Math.max(rateMin2MoveSl, 0.014);
+                }
             }
         }
         return rateMin2MoveSl;

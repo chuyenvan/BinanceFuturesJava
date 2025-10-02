@@ -16,7 +16,6 @@
 package com.binance.chuyennd.research;
 
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
-import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.trading.OrderTargetStatus;
@@ -25,12 +24,9 @@ import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.model.enums.OrderSide;
 import com.binance.client.model.market.FundingRate;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
-import java.util.Date;
 import java.util.TreeMap;
 
 /**
@@ -124,10 +120,10 @@ public class OrderTargetInfoTest implements Serializable {
         return quantity * priceEntry / leverage;
     }
 
-    public void updateStatusNew(Double maxChange60M, KlineObjectSimple ticker) {
+    public void updateStatusNew(Double maxChange60M, KlineObjectSimple ticker, Boolean isTrendBuyWithETH) {
         if (priceSL == null) {
             Double rateLoss = calRateLossMax(ticker.maxPrice);
-            Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60MForTradingStop(maxChange60M);
+            Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60MForTradingStop(maxChange60M, isTrendBuyWithETH);
             Double rateStop = TradeUtils.calRateLossDynamicBuy(rateLoss);
             Double priceSLNew = Utils.calPriceTarget(symbol, priceEntry, OrderSide.SELL, -rateStop);
             if (rateLoss > rateMin2MoveSl) {
@@ -160,11 +156,11 @@ public class OrderTargetInfoTest implements Serializable {
     }
 
 
-    public void updateTPSL(Double rateChangeMax60M, KlineObjectSimple ticker) {
+    public void updateTPSL(Double rateChangeMax60M, KlineObjectSimple ticker, Boolean isTrendBuyWithETH) {
         // move SL
         if (priceSL != null) {
             Double rateLoss = calRateLossMax(ticker.maxPrice);
-            Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60MForTradingStop(rateChangeMax60M * 1.5);
+            Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60MForTradingStop(rateChangeMax60M * 1.5, isTrendBuyWithETH);
             Double rateSL = TradeUtils.calRateLossDynamicBuy(rateLoss);
             OrderSide side2Sl = OrderSide.SELL;
             Double priceSLNew = Utils.calPriceTarget(symbol, priceEntry, side2Sl, -rateSL);

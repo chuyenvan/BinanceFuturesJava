@@ -13,6 +13,7 @@ import com.binance.chuyennd.grid.SimpleMovingAverageDayManager;
 import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.tradecore.DcaProcessor;
+import com.binance.chuyennd.tradecore.TrendDetector;
 import com.binance.chuyennd.trading.MarketBigChangeDetector;
 import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.tradecore.TradeUtils;
@@ -82,7 +83,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                     for (Map.Entry<Long, Map<String, KlineObjectSimple>> entry : time2Tickers.entrySet()) {
                         Long time = entry.getKey();
                         Long startTimeRun = System.currentTimeMillis();
-
+                        Boolean isTrendBuyWithETH = TrendDetector.isTrendBuyWithSMAETH(time);
                         try {
                             Map<String, KlineObjectSimple> symbol2Ticker = entry.getValue();
                             for (String symbol : symbol2Ticker.keySet()) {
@@ -108,10 +109,10 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                     }
                                 }
                                 // update order Old
-                                startUpdateOldOrderTrading(time, symbol, tickers);
+                                startUpdateOldOrderTrading(time, symbol, tickers, isTrendBuyWithETH);
                             }
                             logByProcessTime(startTimeRun, "Done update order", time);
-                            Boolean isTrendBuyWithETH = isTrendBuyWithSMAETH(time);
+
                             startTimeRun = System.currentTimeMillis();
 
                             Set<String> symbolsExhausted = time2SymbolSellingExhausted.get(time);
@@ -441,7 +442,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
     }
 
-    private void startUpdateOldOrderTrading(Long time, String symbol, List<KlineObjectSimple> tickers) {
+    private void startUpdateOldOrderTrading(Long time, String symbol, List<KlineObjectSimple> tickers, Boolean isTrendBuyWithETH) {
         OrderTargetInfoTest orderMulti = symbol2OrderRunning.get(symbol);
         if (orderMulti != null) {
             KlineObjectSimple ticker = tickers.get(tickers.size() - 1);
@@ -449,13 +450,13 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                 orderMulti.updatePriceByKlineSimple(ticker);
                 if (ticker.maxPrice >= orderMulti.priceEntry * 1.009 || orderMulti.priceSL != null) {
                     Double maxChangeIn60M = getMaxRateIn60MForTradingStop(time, symbol, tickers);
-                    orderMulti.updateStatusNew(maxChangeIn60M, ticker);
+                    orderMulti.updateStatusNew(maxChangeIn60M, ticker, isTrendBuyWithETH);
                     if (orderMulti.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)
                             || orderMulti.status.equals(OrderTargetStatus.STOP_LOSS_DONE)
                             || orderMulti.status.equals(OrderTargetStatus.STOP_MARKET_DONE)) {
                         closeOrder(symbol, orderMulti);
                     } else {
-                        orderMulti.updateTPSL(maxChangeIn60M, ticker);
+                        orderMulti.updateTPSL(maxChangeIn60M, ticker, isTrendBuyWithETH);
                     }
                 }
             }
@@ -626,16 +627,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         return false;
     }
 
-    private Boolean isTrendBuyWithSMAETH(Long time) {
-        Double maDif1d = SimpleMovingAverageDayManager.getInstance().getDifferenceMa10AndMa60(Constants.SYMBOL_PAIR_ETH, time);
-        Double maDif4h = SimpleMovingAverage4hManager.getInstance().getDifferenceMa10AndMa60(Constants.SYMBOL_PAIR_ETH, time);
-        if ((maDif1d != null && maDif1d > 0)
-                || (maDif4h != null && maDif4h > 0)
-        ) {
-            return true;
-        }
-        return false;
-    }
+
 
 
     private Integer counterOrderRunning() {
