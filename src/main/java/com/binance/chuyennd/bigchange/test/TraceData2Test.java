@@ -10,7 +10,7 @@ import com.binance.chuyennd.research.BalanceIndex;
 import com.binance.chuyennd.research.BudgetManagerSimple;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
 import com.binance.chuyennd.research.SimulatorMarketLevelTicker1MStopLoss;
-import com.binance.chuyennd.trading.MarketBigChangeDetector;
+import com.binance.chuyennd.tradecore.MarketBigChangeDetector;
 import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Storage;

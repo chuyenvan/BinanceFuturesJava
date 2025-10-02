@@ -31,6 +31,7 @@ import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
 import com.binance.chuyennd.research.BudgetManagerSimple;
 import com.binance.chuyennd.research.FundingFeeManager;
+import com.binance.chuyennd.tradecore.MarketBigChangeDetector;
 import com.binance.chuyennd.trading.*;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Storage;

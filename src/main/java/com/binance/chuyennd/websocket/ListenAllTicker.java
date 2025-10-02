@@ -15,15 +15,12 @@
  */
 package com.binance.chuyennd.websocket;
 
-import com.binance.chuyennd.bigchange.market.MarketLevelChange;
 import com.binance.chuyennd.client.ClientSingleton;
 import com.binance.chuyennd.helper.TickerFuturesHelper;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
 import com.binance.chuyennd.trading.BudgetManager;
-import com.binance.chuyennd.trading.DetectEntrySignal2TradeNormal;
-import com.binance.chuyennd.trading.MarketBigChangeDetector;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.StorageSnappy;
 import com.binance.chuyennd.utils.Utils;
@@ -42,7 +39,6 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.logging.Level;
 
 /**
  * @author pc

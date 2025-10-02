@@ -25,6 +25,7 @@ import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
+import com.binance.chuyennd.tradecore.MarketBigChangeDetector;
 import com.binance.chuyennd.tradecore.TradeUtils;
 import com.binance.chuyennd.tradecore.TrendDetector;
 import com.binance.chuyennd.utils.Configs;

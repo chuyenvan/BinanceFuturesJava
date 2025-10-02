@@ -9,7 +9,7 @@ import com.binance.chuyennd.bigchange.market.MarketLevelChange;
 import com.binance.chuyennd.bigchange.data.DataManager;
 import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
-import com.binance.chuyennd.trading.MarketBigChangeDetector;
+import com.binance.chuyennd.tradecore.MarketBigChangeDetector;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.StorageSnappy;
 import com.binance.chuyennd.utils.Utils;
