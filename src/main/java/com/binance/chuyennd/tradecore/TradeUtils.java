@@ -22,10 +22,13 @@ public class TradeUtils {
 //        System.out.println(TradeUtils.calRateMinWithMaxChange60MForTradingStop(0d, null));
     }
 
-    public static Double calRateLossDynamicBuy(Double unProfit) {
+    public static Double calRateLossDynamicBuy(Double unProfit, Double maxChange90M) {
         Double rateLoss = unProfit * 200;
         Long tradingStopRate;
         Long maxRateTradingStop = 16l;
+        if (maxChange90M < 0.004) {
+            maxRateTradingStop = 6l;
+        }
         if (rateLoss < maxRateTradingStop * 2) {
             tradingStopRate = rateLoss.longValue() / 2;
         } else {
@@ -59,12 +62,15 @@ public class TradeUtils {
         return rateMin2MoveSl;
     }
 
-    public static boolean shouldAvoidEntry(String symbol, List<KlineObjectSimple> recentTickers) {
+    public static boolean shouldAvoidEntry(String symbol, List<KlineObjectSimple> recentTickers, Boolean isTrendBuyWithETH) {
         // ================== CÁC THAM SỐ CÓ THỂ TÙY CHỈNH ==================
         // 1. Chu kỳ xem xét để tính toán đỉnh/đáy (ví dụ: 15 phút)
         final int PRICE_LOOKBACK_PERIOD = 15;
         // 3. Tham số cho bộ lọc "Thị trường ảm đạm"
         double MIN_MOVEMENT_RANGE_THRESHOLD = 0.03;
+        if (!isTrendBuyWithETH) {
+            MIN_MOVEMENT_RANGE_THRESHOLD = 0.04;
+        }
         double MIN_VOLUME_TRADING = 200 * 1000;
         // =================================================================
 
@@ -171,7 +177,6 @@ public class TradeUtils {
         }
         if (isTrendBuyETH) {
             budget = budget * 1.2;
-
         }
         return budget;
     }

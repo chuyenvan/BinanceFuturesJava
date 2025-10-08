@@ -120,11 +120,11 @@ public class OrderTargetInfoTest implements Serializable {
         return quantity * priceEntry / leverage;
     }
 
-    public void updateStatusNew(Double maxChange60M, KlineObjectSimple ticker, Boolean isTrendBuyWithETH) {
+    public void updateStatusNew(Double maxChange90M, KlineObjectSimple ticker, Boolean isTrendBuyWithETH) {
         if (priceSL == null) {
             Double rateLoss = calRateLossMax(ticker.maxPrice);
-            Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60MForTradingStop(maxChange60M, isTrendBuyWithETH);
-            Double rateStop = TradeUtils.calRateLossDynamicBuy(rateLoss);
+            Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60MForTradingStop(maxChange90M, isTrendBuyWithETH);
+            Double rateStop = TradeUtils.calRateLossDynamicBuy(rateLoss, maxChange90M);
             Double priceSLNew = Utils.calPriceTarget(symbol, priceEntry, OrderSide.SELL, -rateStop);
             if (rateLoss > rateMin2MoveSl) {
                 minPrice = lastPrice;
@@ -156,12 +156,13 @@ public class OrderTargetInfoTest implements Serializable {
     }
 
 
-    public void updateTPSL(Double rateChangeMax60M, KlineObjectSimple ticker, Boolean isTrendBuyWithETH) {
+    public void updateTPSL(Double rateChangeMax90M, KlineObjectSimple ticker, Boolean isTrendBuyWithETH) {
         // move SL
         if (priceSL != null) {
             Double rateLoss = calRateLossMax(ticker.maxPrice);
-            Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60MForTradingStop(rateChangeMax60M * 1.5, isTrendBuyWithETH);
-            Double rateSL = TradeUtils.calRateLossDynamicBuy(rateLoss);
+            Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60MForTradingStop(rateChangeMax90M * 1.5,
+                    isTrendBuyWithETH);
+            Double rateSL = TradeUtils.calRateLossDynamicBuy(rateLoss, rateChangeMax90M);
             OrderSide side2Sl = OrderSide.SELL;
             Double priceSLNew = Utils.calPriceTarget(symbol, priceEntry, side2Sl, -rateSL);
             double priceSLChange = priceSLNew - priceSL;

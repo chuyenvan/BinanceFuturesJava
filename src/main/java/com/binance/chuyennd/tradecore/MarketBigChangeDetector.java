@@ -326,7 +326,7 @@ public class MarketBigChangeDetector {
 
     }
 
-    public static Double getMaxRateIn60MForTradingStop(List<KlineObjectSimple> tickers) {
+    public static Double getMaxRateIn90MForTradingStop(List<KlineObjectSimple> tickers) {
         int index = tickers.size() - 1;
         Double maxRateChangeIn60M = 0d;
         for (int i = 0; i < 90; i++) {
@@ -345,10 +345,10 @@ public class MarketBigChangeDetector {
                                             Double minRate15Min60M, Boolean isTrendBuyWithETH) {
         Double rateMin2Trade = -0.015;
         Double rateMin2TradeFull = -0.025;
-        if (isTrendBuyWithETH){
-            rateMin2Trade = -0.013;
-            rateMin2TradeFull = -0.023;
-        }
+//        if (!isTrendBuyWithETH){
+//            rateMin2Trade = -0.02;
+//            rateMin2TradeFull = -0.03;
+//        }
         return (rateDown15MAvg < rateMin2Trade && rateDown15MAvg <= minRate15Min60M)
                 || rateDown15MAvg < rateMin2TradeFull
                 || rateUpAvg > 0.005

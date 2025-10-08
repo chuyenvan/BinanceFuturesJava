@@ -15,14 +15,14 @@ public final class DcaUtils {
      */
     public static boolean shouldDca(double margin, double currentRateLoss, MarketLevelChange orderMarketLevel, long orderTimeStart,
                                     MarketLevelChange marketLevelChange, long currentTime, double budget,
-                                    Boolean isTrendBuyWithETH) {
+                                    Boolean isTrendBuyWithBtc, Boolean isTrendBuyWithETH) {
 
 
         DcaConfig config = getDcaConfig(marketLevelChange);
         if (config == null) {
             return false;
         }
-        if (!isTrendBuyWithETH) {
+        if (!isTrendBuyWithETH ) {
             config.rateLoss2Dca = config.rateLoss2Dca * 1.5;
 //            if (marketLevelChange != null){
 //                config.rateLoss2Dca = config.rateLoss2Dca * 1.5;

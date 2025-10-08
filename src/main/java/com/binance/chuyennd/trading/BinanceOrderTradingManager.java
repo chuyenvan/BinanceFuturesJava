@@ -272,12 +272,12 @@ public class BinanceOrderTradingManager {
                     BudgetManager.getInstance().symbol2Level.remove(symbol);
                 }
                 List<KlineObjectSimple> tickers = ListenAllTicker.getInstance().getTickerBySymbol(symbol);
-                Double maxChange60M = MarketBigChangeDetector.getMaxRateIn60MForTradingStop(tickers);
+                Double maxChange60M = MarketBigChangeDetector.getMaxRateIn90MForTradingStop(tickers);
                 Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60MForTradingStop(maxChange60M, isTrendBuyWithETH);
                 if (rateLoss > rateMin2MoveSl) {
                     if (orderInfo.priceSL == null) {
                         OrderSide sideSL = OrderSide.SELL;
-                        Double rateStop = TradeUtils.calRateLossDynamicBuy(rateLoss);
+                        Double rateStop = TradeUtils.calRateLossDynamicBuy(rateLoss, maxChange60M);
                         if (orderInfo.side.equals(OrderSide.SELL)) {
                             sideSL = OrderSide.BUY;
                         }
@@ -378,7 +378,7 @@ public class BinanceOrderTradingManager {
                 }
                 OrderSide side2Sl;
                 List<KlineObjectSimple> tickers = ListenAllTicker.getInstance().getTickerBySymbol(symbol);
-                Double maxChange60M = MarketBigChangeDetector.getMaxRateIn60MForTradingStop(tickers);
+                Double maxChange60M = MarketBigChangeDetector.getMaxRateIn90MForTradingStop(tickers);
                 Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60MForTradingStop(maxChange60M * 1.5, isTrendBuyWithETH);
                 // BUY
                 if (position.getPositionAmt().compareTo(new BigDecimal("0")) > 0) {
@@ -389,7 +389,7 @@ public class BinanceOrderTradingManager {
                 if (orderInfo.priceSL != null && rateLoss > rateMin2MoveSl) {
                     // move SL
                     Double priceSL = orderInfo.priceSL;
-                    Double rateSL = TradeUtils.calRateLossDynamicBuy(rateLoss);
+                    Double rateSL = TradeUtils.calRateLossDynamicBuy(rateLoss, maxChange60M);
                     Double priceSLNew = Utils.calPriceTarget(symbol, priceEntry, side2Sl, -rateSL);
                     double priceSLChange = priceSLNew - priceSL;
                     if (position.getPositionAmt().compareTo(new BigDecimal("0")) < 0) {
