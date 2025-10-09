@@ -57,9 +57,14 @@ public class ListenAllTicker {
         if (INSTANCE == null) {
             INSTANCE = new ListenAllTicker();
             if (new File(FILE_TICKER_1M_STORAGE).exists()) {
-                INSTANCE.symbol2Tickers = (ConcurrentHashMap<String, TreeMap<Long, KlineObjectSimple>>)
-                        StorageSnappy.readObjectFromFile(FILE_TICKER_1M_STORAGE);
-            } else {
+                try {
+                    INSTANCE.symbol2Tickers = (ConcurrentHashMap<String, TreeMap<Long, KlineObjectSimple>>)
+                            StorageSnappy.readObjectFromFile(FILE_TICKER_1M_STORAGE);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+            if (INSTANCE.symbol2Tickers == null) {
                 INSTANCE.initData();
             }
             INSTANCE.client = SubscriptionClient.create();
@@ -200,8 +205,10 @@ public class ListenAllTicker {
             LOG.info("Start thread startThreadWriteTickerData");
             while (true) {
                 try {
-                    Thread.sleep(Utils.TIME_MINUTE);
-                    writeTickerData2File();
+                    Thread.sleep(Utils.TIME_SECOND * 5);
+                    if (Utils.getCurrentSecond() > 15 && Utils.getCurrentSecond() < 20) {
+                        writeTickerData2File();
+                    }
 
                 } catch (Exception ex) {
                     LOG.info("Write ticker to file error: {}", Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()));

@@ -69,7 +69,7 @@ public class TradeUtils {
         // 3. Tham số cho bộ lọc "Thị trường ảm đạm"
         double MIN_MOVEMENT_RANGE_THRESHOLD = 0.03;
         if (!isTrendBuyWithETH) {
-            MIN_MOVEMENT_RANGE_THRESHOLD = 0.04;
+            MIN_MOVEMENT_RANGE_THRESHOLD = 0.05;
         }
         double MIN_VOLUME_TRADING = 200 * 1000;
         // =================================================================
