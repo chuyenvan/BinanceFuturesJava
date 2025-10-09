@@ -27,6 +27,7 @@ import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.MACDEntry;
 import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.object.RsiEntry;
+import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
 import com.binance.chuyennd.research.BudgetManagerSimple;
@@ -37,6 +38,7 @@ import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Storage;
 import com.binance.chuyennd.utils.StorageSnappy;
 import com.binance.chuyennd.utils.Utils;
+import com.binance.chuyennd.websocket.ListenAllTicker;
 import com.binance.client.SubscriptionClient;
 import com.binance.client.SubscriptionErrorHandler;
 import com.binance.client.constant.Constants;
@@ -80,7 +82,8 @@ public class Test {
 //        deleteAllSLAtRedis();
 //        StorageSnappy.writeObject2File("target/test.data", new HashMap<>());
 //        checkSellSignal();
-                testProduction();
+        checkTickerProduct();
+//                testProduction();
 //                removeSLRedis();
 //        difProductionWithTest();
 //        System.out.println(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO).size());
@@ -105,6 +108,17 @@ public class Test {
 //        new TickerManager().updateFundingFeeBySymbol("HIPPOUSDT", timeStart);
 
 
+    }
+
+    private static void checkTickerProduct() {
+        String FILE_TICKER_1M_STORAGE = "storage/tickers/symbol2ticker1Ms";
+        ConcurrentHashMap<String, TreeMap<Long, KlineObjectSimple>> symbo2Tickers = (ConcurrentHashMap<String, TreeMap<Long, KlineObjectSimple>>)
+                StorageSnappy.readObjectFromFile(FILE_TICKER_1M_STORAGE);
+        for (String symbol : symbo2Tickers.keySet()) {
+            TreeMap<Long, KlineObjectSimple> tickers = symbo2Tickers.get(symbol);
+            LOG.info("{} {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(tickers.firstKey()),
+                    Utils.normalizeDateYYYYMMDDHHmm(tickers.lastKey()));
+        }
     }
 
     private static void checkSellSignal() throws ParseException {
@@ -335,8 +349,6 @@ public class Test {
             }
         }
     }
-
-
 
 
     private static void testProduction() {

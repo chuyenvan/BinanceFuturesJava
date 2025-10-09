@@ -48,7 +48,7 @@ public class Configs {
     public static final Double FUNDING_MIN_TRADE = 0.0006;
 
     public static final Long FUNDING_TIME_EXTREME = 4 * Utils.TIME_HOUR;
-    public static final Double FUNDING_MAX_TRADE_EXTREME = -0.0005;
+    public static final Double FUNDING_MAX_TRADE_EXTREME = -0.0003;
 
 
     public static final Integer NUMBER_THREAD_ORDER_MANAGER = Configs.getInt("NUMBER_THREAD_ORDER_MANAGER");

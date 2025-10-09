@@ -205,10 +205,14 @@ public class ListenAllTicker {
             LOG.info("Start thread startThreadWriteTickerData");
             while (true) {
                 try {
-                    Thread.sleep(Utils.TIME_SECOND * 5);
-                    if (Utils.getCurrentSecond() > 15 && Utils.getCurrentSecond() < 20) {
-                        writeTickerData2File();
+                    while (true) {
+                        if (Utils.getCurrentSecond() > 15 && Utils.getCurrentSecond() < 20) {
+                            break;
+                        }
+                        Thread.sleep(2000);
                     }
+                    writeTickerData2File();
+                    Thread.sleep(5000);
 
                 } catch (Exception ex) {
                     LOG.info("Write ticker to file error: {}", Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()));
@@ -240,11 +244,6 @@ public class ListenAllTicker {
                 TreeMap<Long, KlineObjectSimple> tickers = symbol2Tickers.get(symbol);
 //                int numberMax = Configs.BTC_TREND_REVERSE_DURATION + 5;
                 List<KlineObjectSimple> list = new ArrayList<>();
-//                while (tickers.size() > numberMax) {
-////                LOG.info("Remove: {} {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(tickers.firstKey()), tickers.size());
-//                    tickers.remove(tickers.firstKey());
-//                }
-
                 synchronized (tickers) {
                     list.addAll(tickers.values());
                 }

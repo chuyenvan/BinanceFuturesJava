@@ -355,9 +355,12 @@ public class MarketBigChangeDetector {
                 || rateDownAvg < -0.005;
     }
 
-    public static boolean isDcaWithBtcReverse(Double rateLoss, Double budget, Double marginOfSym, Double priceClose, Double lastEntry) {
-        if (marginOfSym > 2 * budget) {
-            if (marginOfSym > 4 * budget) {
+    public static boolean isDcaWithBtcReverse(Double rateLoss, Double budget, Double marginOfSym, Double priceClose,
+                                              Double lastEntry) {
+        int marginRatioLevel1 = 2;
+        int marginRatioLevel2 = 4;
+        if (marginOfSym > marginRatioLevel1 * budget) {
+            if (marginOfSym > marginRatioLevel2 * budget) {
                 if (Utils.rateOf2Double(priceClose, lastEntry) < -0.1) {
                     return true;
                 }

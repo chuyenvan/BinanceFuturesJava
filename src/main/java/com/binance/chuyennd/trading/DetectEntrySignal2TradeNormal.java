@@ -223,7 +223,7 @@ public class DetectEntrySignal2TradeNormal {
                 try {
 
                     List<String> symbolDcaLevel = DcaProcessor.getDCAProduction(levelChange, System.currentTimeMillis(),
-                            BudgetManager.getInstance().getBudget(), BudgetManager.getInstance().symbol2Pos,isTrendBuyWithBtc,
+                            BudgetManager.getInstance().getBudget(), BudgetManager.getInstance().symbol2Pos, isTrendBuyWithBtc,
                             isTrendBuyWithETH);
                     for (String symbol : symbolDcaLevel) {
                         KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
@@ -338,13 +338,11 @@ public class DetectEntrySignal2TradeNormal {
                     Double marginOfSym = calMarginRunning(symbol);
                     KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
                     OrderTargetInfo order = getOrderInfo(symbol);
-                    double lastEntry = 0d;
+
                     boolean isDcaSpecialSymbol = true;
                     if (order != null) {
-                        lastEntry = order.priceEntry;
-                    } else {
                         isDcaSpecialSymbol = MarketBigChangeDetector.isDcaWithBtcReverse(rateLoss,
-                                budget, marginOfSym, ticker.priceClose, lastEntry);
+                                budget, marginOfSym, ticker.priceClose, order.priceEntry);
                     }
                     if (isDcaSpecialSymbol) {
                         symbol2BUY.add(symbol);

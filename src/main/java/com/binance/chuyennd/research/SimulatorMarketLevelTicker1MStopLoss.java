@@ -156,7 +156,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                     symbol2BUY.addAll(addSpecialSymbol(symbol2Ticker));
                                     List<String> symbolDcaLevel =
                                             DcaProcessor.getDCA(levelChange, time, BudgetManagerSimple.getInstance().getBudget(),
-                                                    symbol2OrderRunning,isTrendBuyWithBtc, isTrendBuyWithETH);
+                                                    symbol2OrderRunning, isTrendBuyWithBtc, isTrendBuyWithETH);
                                     LOG.info("{} {} -> {}", Utils.normalizeDateYYYYMMDDHHmm(time), levelChange, symbol2BUY);
                                     // check create order new
                                     for (String symbol : symbol2BUY) {
@@ -283,7 +283,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                                     time2MarketRateChange.get(time), symbol2PriceMax15M.get(symbol), isTrendBuyWithBtc, isTrendBuyWithETH);
                                         }
                                     }
-
                                 }
                             }
                             logByProcessTime(startTimeRun, "Done funding fee", time);
@@ -299,12 +298,10 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                     Double marginOfSym = calMarginRunning(symbol);
                                     KlineObjectSimple ticker = symbol2Ticker.get(symbol);
                                     OrderTargetInfoTest order = symbol2OrderRunning.get(symbol);
-                                    double lastEntry = 0d;
                                     boolean isDcaSpecialSymbol = true;
                                     if (order != null) {
-                                        lastEntry = order.lastEntry;
                                         isDcaSpecialSymbol = MarketBigChangeDetector.isDcaWithBtcReverse(rateLoss,
-                                                budget, marginOfSym, ticker.priceClose, lastEntry);
+                                                budget, marginOfSym, ticker.priceClose, order.lastEntry);
                                     }
                                     if (isDcaSpecialSymbol) {
                                         symbol2BUY.add(symbol);
