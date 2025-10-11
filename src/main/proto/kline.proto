@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+// Package cho các class Java được tạo ra
+option java_package = "com.binance.chuyennd.proto";
+
+// Tên của class Java bên ngoài cùng sẽ được tạo ra, chứa tất cả các message bên trong
+option java_outer_classname = "KlineProto";
+
+// Định nghĩa cấu trúc dữ liệu cho một cây nến
+message KlineObjectSimpleProto {
+  int64 start_time = 1;   // Dùng int64 cho timestamp (tương đương long trong Java)
+  float price_open = 2;   // Dùng float cho giá (tương đương float trong Java)
+  float max_price = 3;
+  float min_price = 4;
+  float price_close = 5;
+  float total_usdt = 6;
+}

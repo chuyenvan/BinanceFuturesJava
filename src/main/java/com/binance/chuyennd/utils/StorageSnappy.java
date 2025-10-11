@@ -8,9 +8,11 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 
+import com.binance.chuyennd.proto.KlineProto;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xerial.snappy.Snappy;
+
 
 /**
  * @author pc
@@ -115,5 +117,23 @@ public class StorageSnappy {
             e.printStackTrace();
         }
         return object;
+    }
+
+    public static void writeProto2File(String path, KlineProto.KlineObjectSimpleProto klineProto) {
+        try (FileOutputStream fos = new FileOutputStream(path)) {
+            klineProto.writeTo(fos);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // Đọc file
+    public static KlineProto.KlineObjectSimpleProto readProtoFromFile(String path) {
+        try (FileInputStream fis = new FileInputStream(path)) {
+            return KlineProto.KlineObjectSimpleProto.parseFrom(fis);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 }

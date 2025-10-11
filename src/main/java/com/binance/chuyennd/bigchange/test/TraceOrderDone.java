@@ -24,11 +24,11 @@ import java.util.concurrent.ConcurrentHashMap;
 public class TraceOrderDone {
     public static final Logger LOG = LoggerFactory.getLogger(TraceOrderDone.class);
 
-    public static String FILE_STORAGE_ORDER_DONE = "target/OrderTestDone.data-5";
+    public static String FILE_STORAGE_ORDER_DONE = "target/OrderTestDone.data";
     //    public static String FILE_STORAGE_ORDER_DONE = "target/FundingStatisticResearch.data-5";
 //    public static String FILE_STORAGE_ORDER_DONE = "target/OrderSELLDone.data";
 //    public static String FILE_STORAGE_ORDER_DONE = "target/SellTicker1MStatisticResearch.data-5";
-    public static String FILE_STORAGE_ORDER_GRID_DONE = "storage/GridTestDone.data";
+//    public static String FILE_STORAGE_ORDER_GRID_DONE = "storage/GridTestDone.data";
 
 
     public static void main(String[] args) throws IOException {
@@ -41,9 +41,9 @@ public class TraceOrderDone {
             fileOut = "target/market_level_statistic.csv";
             FILE_STORAGE_ORDER_DONE = "target/OrderStatisticDone.data";
         }
-//        TreeMap<Long, OrderTargetInfoTest> time2Order =
-//                (TreeMap<Long, OrderTargetInfoTest>) Storage.readObjectFromFile(FILE_STORAGE_ORDER_DONE);
-//        printOrderTestDone(fileName, time2Order);
+        TreeMap<Long, OrderTargetInfoTest> time2Order =
+                (TreeMap<Long, OrderTargetInfoTest>) Storage.readObjectFromFile(FILE_STORAGE_ORDER_DONE);
+        printOrderTestDone(fileName, time2Order);
 //        printOrderTestStatistic(fileName);
 //        printOrderRunning("target/202502");
 //        printOrderRunningAll("storage/data/unProfitMin/all-202102");
@@ -51,7 +51,7 @@ public class TraceOrderDone {
 //        traceOrderGrid();
 //        traceOrderGridAlt();
 //        testGridSide();
-        printOrderProduct();
+//        printOrderProduct();
     }
 
     private static void printOrderProduct() throws IOException {

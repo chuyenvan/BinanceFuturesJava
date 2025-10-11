@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+// Giữ nguyên package với file kline.proto
+option java_package = "com.binance.chuyennd.proto";
+// Tên class Java ngoài cùng
+option java_outer_classname = "KlineArchiveProto";
+
+// Import định nghĩa KlineObjectSimpleProto từ file kia
+import "kline.proto";
+
+// Message này chứa một danh sách các cây nến cho một symbol cụ thể
+message SymbolKlines {
+    string symbol = 1;
+    // Dùng map để giữ nguyên cấu trúc thời gian -> cây nến
+    map<int64, KlineObjectSimpleProto> time_to_kline = 2;
+}
+
+// Message cấp cao nhất, đại diện cho toàn bộ dữ liệu trong một file (một ngày)
+message KlineArchive {
+    // Dùng map để giữ cấu trúc symbol -> danh sách nến
+    map<string, SymbolKlines> symbol_klines = 1;
+}

@@ -165,6 +165,10 @@ public class MarketBigChangeDetector {
             if (rateChangeBtc > -0.004 && rateChange < -0.15) {
                 continue;
             }
+            // TODO remove only one symbol big bump
+            if (rateChange > 0.3) {
+                continue;
+            }
             rateDown2Symbols.put(rateChange, symbol);
             rateUp2Symbols.put(-rateChange, symbol);
             Double maxPrice = symbol2PriceMax.get(symbol);

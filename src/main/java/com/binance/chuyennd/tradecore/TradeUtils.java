@@ -133,20 +133,20 @@ public class TradeUtils {
                 && !StringUtils.containsIgnoreCase(levelChange.toString(), "big");
         double marginRatio = marginRunning / balanceBasic;
 
-        if (isNormalLevel && marginRatio >= 0.2) {
+        if (isNormalLevel && marginRatio >= 0.08) {
             budget /= 2;
         }
-        if (isNormalLevel && marginRatio >= 0.25) {
+        if (isNormalLevel && marginRatio >= 0.12) {
             budget /= 3;
         }
 
-        if (marginRatio >= 0.35) {
+        if (marginRatio >= 0.15) {
             budget /= 2;
         }
-        if (marginRatio >= 0.5) {
+        if (marginRatio >= 0.18) {
             budget /= 4;
         }
-        if (marginRatio >= 0.6) {
+        if (marginRatio >= 0.19) {
             return null;
         }
         switch (levelChange) {

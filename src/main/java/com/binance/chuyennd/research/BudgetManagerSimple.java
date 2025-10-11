@@ -23,7 +23,7 @@ public class BudgetManagerSimple {
     public static final Logger LOG = LoggerFactory.getLogger(BudgetManagerSimple.class);
 
     public BalanceIndex balanceIndex = new BalanceIndex();
-    public Integer number_order_budget = 300;
+    public Integer number_order_budget = 600;
     public Double BUDGET_PER_ORDER;
     public Double investing = null;
     public Map<Long, Double> time2Balance = new HashMap<>();
