@@ -39,6 +39,8 @@ public class Configs {
     }
 
     public static String TIME_RUN = Configs.getString("TIME_RUN");
+    //budget config
+    public static Integer number_order_budget = 120;
 
     // funding fee config
     public static final Integer NUMBER_LAST_FUNDING_CAL = 4;
