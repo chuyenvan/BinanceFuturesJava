@@ -23,7 +23,7 @@ public class BudgetManagerSimple {
     public static final Logger LOG = LoggerFactory.getLogger(BudgetManagerSimple.class);
 
     public BalanceIndex balanceIndex = new BalanceIndex();
-    public Integer number_order_budget = 600;
+    public Integer number_order_budget = 120;
     public Double BUDGET_PER_ORDER;
     public Double investing = null;
     public Map<Long, Double> time2Balance = new HashMap<>();
@@ -57,16 +57,20 @@ public class BudgetManagerSimple {
         investing = 0d;
         try {
             // for test number order
-            if (Configs.MOD_RUN_CAPITAL_CONSTANT) {
-                BUDGET_PER_ORDER = balanceBasic / number_order_budget;
+//            if (Configs.MOD_RUN_CAPITAL_CONSTANT) {
+//                BUDGET_PER_ORDER = balanceBasic / number_order_budget;
+//            } else {
+//                if (balanceCurrent / 3 > balanceBasic) {
+//                    BUDGET_PER_ORDER = (balanceCurrent / 3) / number_order_budget;
+//                } else {
+//                    BUDGET_PER_ORDER = balanceBasic / number_order_budget;
+//                }
+//            }
+            if (balanceCurrent != null && balanceCurrent > 0) {
+                BUDGET_PER_ORDER = balanceCurrent + unProfit/ number_order_budget;
             } else {
-                if (balanceCurrent / 3 > balanceBasic) {
-                    BUDGET_PER_ORDER = (balanceCurrent / 3) / number_order_budget;
-                } else {
-                    BUDGET_PER_ORDER = balanceBasic / number_order_budget;
-                }
+                BUDGET_PER_ORDER = balanceBasic / number_order_budget;
             }
-
 
 //            LOG.info("Update Budget: {}", BUDGET_PER_ORDER);
         } catch (Exception e) {

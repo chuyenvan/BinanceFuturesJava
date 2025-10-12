@@ -4,21 +4,20 @@
  */
 package com.binance.chuyennd.research;
 
+import com.binance.chuyennd.bigchange.data.DataManager;
 import com.binance.chuyennd.bigchange.market.MarketDataObject;
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
-import com.binance.chuyennd.bigchange.data.DataManager;
 import com.binance.chuyennd.bigchange.test.TraceOrderDone;
 import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
+import com.binance.chuyennd.proto.KlineArchiveProto;
+import com.binance.chuyennd.proto.KlineProto;
 import com.binance.chuyennd.tradecore.DcaProcessor;
-import com.binance.chuyennd.tradecore.TrendDetector;
 import com.binance.chuyennd.tradecore.MarketBigChangeDetector;
-import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.tradecore.TradeUtils;
-import com.binance.chuyennd.utils.Configs;
-import com.binance.chuyennd.utils.Storage;
-import com.binance.chuyennd.utils.StorageSnappy;
-import com.binance.chuyennd.utils.Utils;
+import com.binance.chuyennd.tradecore.TrendDetector;
+import com.binance.chuyennd.trading.OrderTargetStatus;
+import com.binance.chuyennd.utils.*;
 import com.binance.client.constant.Constants;
 import com.binance.client.model.enums.OrderSide;
 import org.apache.commons.io.FileUtils;
@@ -72,10 +71,10 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         while (true) {
             TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers;
             try {
+                // THAY ĐỔI: GỌI HÀM ĐỌC DỮ LIỆU TỪ PROTOBUF
                 time2Tickers = DataManager.readDataFromFile1M(startTime);
                 if (time2Tickers == null) {
-                    LOG.info("File data error: {} {}", Utils.normalizeDateYYYYMMDDHHmm(startTime),
-                            Configs.FOLDER_TICKER_1M_SNAPPY_FILE + startTime);
+                    LOG.info("File data error or not found for time: {}", Utils.normalizeDateYYYYMMDDHHmm(startTime));
                 }
                 if (time2Tickers != null) {
                     for (Map.Entry<Long, Map<String, KlineObjectSimple>> entry : time2Tickers.entrySet()) {
@@ -320,6 +319,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
                             if (time % Utils.TIME_DAY == 0) {
                                 BudgetManagerSimple.getInstance().updateBalance(time, allOrderDone, symbol2OrderRunning, symbol2OrdersEntry, true);
+                                BudgetManagerSimple.getInstance().updateBudget();
                             } else {
                                 BudgetManagerSimple.getInstance().updateBalance(time, allOrderDone, symbol2OrderRunning, symbol2OrdersEntry, false);
                             }
@@ -337,7 +337,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             Long finalStartTime1 = startTime;
             startTime += Utils.TIME_DAY;
             if (startTime > System.currentTimeMillis()) {
-                BudgetManagerSimple.getInstance().updateBalance(finalStartTime1, allOrderDone, symbol2OrderRunning, symbol2OrdersEntry, false);
+                BudgetManagerSimple.getInstance().updateBalance(finalStartTime1, allOrderDone, symbol2OrderRunning,
+                        symbol2OrdersEntry, false);
                 break;
             }
         }
@@ -559,7 +560,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                MarketRateChange marketData, Double maxPrice15m, Boolean isTrendBuyWithBtc, Boolean isTrendBuyWithETH) {
         Double entry = ticker.priceClose;
         Integer leverage = BudgetManagerSimple.getInstance().getLeverage();
-        long time = ticker.startTime.longValue();
 
         Double marginRunning = calMarginRunning();
         Double balanceBasic = BudgetManagerSimple.getInstance().balanceBasic;
@@ -650,5 +650,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         }
         return rateLoss;
     }
+
 
 }

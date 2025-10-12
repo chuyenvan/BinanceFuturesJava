@@ -8,10 +8,9 @@ import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.MACDEntry;
 import com.binance.chuyennd.object.RsiEntry;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
-import com.binance.chuyennd.utils.Configs;
-import com.binance.chuyennd.utils.Storage;
-import com.binance.chuyennd.utils.StorageSnappy;
-import com.binance.chuyennd.utils.Utils;
+import com.binance.chuyennd.proto.KlineArchiveProto;
+import com.binance.chuyennd.proto.KlineProto;
+import com.binance.chuyennd.utils.*;
 import com.binance.client.constant.Constants;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -57,16 +56,54 @@ public class DataManager {
         return null;
     }
 
-    public static TreeMap<Long, Map<String, KlineObjectSimple>> readDataFromFile1M(Long startTime) {
-        try {
-            String fileName = Configs.FOLDER_TICKER_1M_SNAPPY_FILE + startTime;
-            if (new File(fileName).exists()) {
-                return (TreeMap<Long, Map<String, KlineObjectSimple>>) StorageSnappy.readObjectFromFile(fileName);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
+    public static TreeMap<Long, Map<String, KlineObjectSimple>> readDataFromFile1M(long startTime) {
+        String fileName = Configs.FOLDER_TICKER_1M_PROTOBUF_SNAPPY_FILE + startTime + ".pb";
+        File dataFile = new File(fileName);
+        if (!dataFile.exists()) {
+            LOG.warn("Protobuf data file does not exist: {}", fileName);
+            return null;
         }
-        return null;
+
+        KlineArchiveProto.KlineArchive archive = StorageProto.readProtoWithSnappy(fileName);
+        if (archive == null) {
+            LOG.error("Failed to read or parse Protobuf file: {}", fileName);
+            return null;
+        }
+
+        return convertProtoArchiveToOldStructure(archive);
+    }
+
+
+    public static TreeMap<Long, Map<String, KlineObjectSimple>> convertProtoArchiveToOldStructure(KlineArchiveProto.KlineArchive archive) {
+        TreeMap<Long, Map<String, KlineObjectSimple>> time2SymbolAndKline = new TreeMap<>();
+        if (archive == null) {
+            return null;
+        }
+
+        Map<String, KlineArchiveProto.SymbolKlines> symbolKlinesMap = archive.getSymbolKlinesMap();
+
+        for (Map.Entry<String, KlineArchiveProto.SymbolKlines> symbolEntry : symbolKlinesMap.entrySet()) {
+            String symbol = symbolEntry.getKey();
+            Map<Long, KlineProto.KlineObjectSimpleProto> timeToKlineProtoMap = symbolEntry.getValue().getTimeToKlineMap();
+
+            for (Map.Entry<Long, KlineProto.KlineObjectSimpleProto> timeEntry : timeToKlineProtoMap.entrySet()) {
+                Long time = timeEntry.getKey();
+                KlineObjectSimple simpleKline = convertKlineProtoToSimple(timeEntry.getValue());
+                time2SymbolAndKline.computeIfAbsent(time, k -> new HashMap<>()).put(symbol, simpleKline);
+            }
+        }
+        return time2SymbolAndKline;
+    }
+
+    public static KlineObjectSimple convertKlineProtoToSimple(KlineProto.KlineObjectSimpleProto protoKline) {
+        KlineObjectSimple simpleKline = new KlineObjectSimple();
+        simpleKline.startTime = (double) protoKline.getStartTime();
+        simpleKline.priceOpen = (double) protoKline.getPriceOpen();
+        simpleKline.maxPrice = (double) protoKline.getMaxPrice();
+        simpleKline.minPrice = (double) protoKline.getMinPrice();
+        simpleKline.priceClose = (double) protoKline.getPriceClose();
+        simpleKline.totalUsdt = (double) protoKline.getTotalUsdt();
+        return simpleKline;
     }
 
     public static void createDataKlineByTime() {

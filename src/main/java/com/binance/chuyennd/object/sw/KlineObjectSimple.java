@@ -31,7 +31,6 @@ public class KlineObjectSimple implements Serializable {
     public Double priceClose;
     public Double totalUsdt;
 
-
     public static KlineObjectSimple convertString2Kline(List<Object> kline) {
         KlineObjectSimple result = new KlineObjectSimple();
         result.startTime = (Double) kline.get(0);

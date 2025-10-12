@@ -38,23 +38,23 @@ public class TradeUtils {
         return rateLoss / 200;
     }
 
-    public static Double calRateMinWithMaxChange60MForTradingStop(Double maxChange60M, Boolean isTrendBuyWithETH) {
+    public static Double calRateMinWithMaxChange60MForTradingStop(Double maxChange90M, Boolean isTrendBuyWithETH) {
         Double rateMin2MoveSl = Configs.RATE_PROFIT_STOP_MARKET;
         if (isTrendBuyWithETH) {
-            if (maxChange60M != null) {
-                if (maxChange60M >= 0.01) {
+            if (maxChange90M != null) {
+                if (maxChange90M >= 0.01) {
                     rateMin2MoveSl = 0.03;
-                } else if (maxChange60M >= 0.006) {
+                } else if (maxChange90M >= 0.006) {
                     rateMin2MoveSl = 0.02;
-                } else if (maxChange60M >= 0.004) {
+                } else if (maxChange90M >= 0.004) {
                     rateMin2MoveSl = 0.016;
                 }
             }
         } else {
-            if (maxChange60M != null) {
-                if (maxChange60M >= 0.02) {
+            if (maxChange90M != null) {
+                if (maxChange90M >= 0.02) {
                     rateMin2MoveSl = 0.015;
-                } else if (maxChange60M >= 0.01) {
+                } else if (maxChange90M >= 0.01) {
                     rateMin2MoveSl = 0.012;
                 }
             }
@@ -115,7 +115,6 @@ public class TradeUtils {
         return false;
     }
 
-
     public static Double managerBudget(Double budget, Double marginRunning, Double balanceBasic,
                                        MarketLevelChange levelChange, Boolean isTrendBuyWithBtc, Boolean isTrendBuyETH) {
 
@@ -133,20 +132,20 @@ public class TradeUtils {
                 && !StringUtils.containsIgnoreCase(levelChange.toString(), "big");
         double marginRatio = marginRunning / balanceBasic;
 
-        if (isNormalLevel && marginRatio >= 0.08) {
+        if (isNormalLevel && marginRatio >= 0.4) {
             budget /= 2;
         }
-        if (isNormalLevel && marginRatio >= 0.12) {
+        if (isNormalLevel && marginRatio >= 0.6) {
             budget /= 3;
         }
 
-        if (marginRatio >= 0.15) {
+        if (marginRatio >= 0.75) {
             budget /= 2;
         }
-        if (marginRatio >= 0.18) {
+        if (marginRatio >= 0.9) {
             budget /= 4;
         }
-        if (marginRatio >= 0.19) {
+        if (marginRatio >= 0.95) {
             return null;
         }
         switch (levelChange) {

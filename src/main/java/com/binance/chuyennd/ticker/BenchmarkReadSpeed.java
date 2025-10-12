@@ -1,5 +1,10 @@
+/*
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
+ */
 package com.binance.chuyennd.ticker;
 
+import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.proto.KlineArchiveProto;
 import com.binance.chuyennd.proto.KlineProto;
 import com.binance.chuyennd.utils.StorageProto;
@@ -8,18 +13,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
  * Class này dùng để so sánh tốc độ đọc dữ liệu giữa 2 định dạng:
  * 1. Định dạng cũ: Java Serializable + Snappy Compression.
- * 2. Định dạng mới: Protocol Buffers (Protobuf).
+ * 2. Định dạng mới: Protocol Buffers (Protobuf) + Snappy + Chuyển đổi cấu trúc.
  */
 public class BenchmarkReadSpeed {
 
@@ -27,7 +29,7 @@ public class BenchmarkReadSpeed {
 
     // TODO: CHỈNH SỬA LẠI CÁC ĐƯỜNG DẪN NÀY CHO ĐÚNG VỚI CẤU TRÚC PROJECT CỦA BẠN
     private static final String SNAPPY_DIR = "../storage/ticker/ticker1m-snappy/";
-    private static final String PROTOBUF_DIR = "../storage/ticker/ticker1m-protobuf/";
+    private static final String PROTOBUF_SNAPPY_DIR = "../storage/ticker/ticker1m-protobuf/";
 
     // --- Cấu hình Benchmark ---
     private static final int NUMBER_OF_FILES_TO_TEST = 10; // Số lượng file để test
@@ -46,7 +48,7 @@ public class BenchmarkReadSpeed {
 
         // Tìm các file Protobuf tương ứng
         List<File> protoFiles = snappyFiles.stream()
-                .map(snappyFile -> new File(PROTOBUF_DIR, snappyFile.getName() + ".pb"))
+                .map(snappyFile -> new File(PROTOBUF_SNAPPY_DIR, snappyFile.getName() + ".pb"))
                 .filter(File::exists)
                 .collect(Collectors.toList());
 
@@ -59,7 +61,6 @@ public class BenchmarkReadSpeed {
         LOG.info("Sẽ test trên {} cặp file.", snappyFiles.size());
 
         // --- Giai đoạn Warm-up ---
-        // Chạy vài lần đầu không tính giờ để JVM "làm nóng", giúp kết quả đo sau này chính xác hơn.
         LOG.info("Bắt đầu giai đoạn Warm-up ({} lần) để ổn định JVM...", WARMUP_RUNS);
         for (int i = 0; i < WARMUP_RUNS; i++) {
             runSnappyReadTest(snappyFiles, false);
@@ -84,11 +85,11 @@ public class BenchmarkReadSpeed {
         // --- In kết quả ---
         LOG.info("\n====================== KẾT QUẢ BENCHMARK ======================");
         LOG.info("Định dạng cũ (Snappy + Serializable): {} ms (trung bình)", averageSnappyTime);
-        LOG.info("Định dạng mới (Protobuf):             {} ms (trung bình)", averageProtoTime);
+        LOG.info("Định dạng mới (Protobuf + Snappy + Convert): {} ms (trung bình)", averageProtoTime);
         LOG.info("---------------------------------------------------------------");
         if (averageProtoTime > 0) {
             double factor = (double) averageSnappyTime / averageProtoTime;
-            LOG.info("=> Protobuf nhanh hơn khoảng {} lần.", factor);
+            LOG.info("=> Protobuf nhanh hơn khoảng {} lần.", String.format("%.2f", factor));
         }
         LOG.info("===============================================================");
     }
@@ -114,10 +115,11 @@ public class BenchmarkReadSpeed {
         long startTime = System.nanoTime();
         int objectCount = 0;
         for (File file : files) {
-            // Dùng try-with-resources để đảm bảo file được đóng đúng cách
-            try (FileInputStream fis = new FileInputStream(file)) {
-                KlineArchiveProto.KlineArchive archive = StorageProto.readProtoWithSnappy(file.getAbsolutePath());
-                if (archive != null) {
+            KlineArchiveProto.KlineArchive archive = StorageProto.readProtoWithSnappy(file.getAbsolutePath());
+            if (archive != null) {
+                // THÊM BƯỚC CHUYỂN ĐỔI VÀO BÀI TEST
+                TreeMap<Long, Map<String, KlineObjectSimple>> convertedData = convertProtoArchiveToOldStructure(archive);
+                if (convertedData != null) {
                     objectCount++;
                 }
             }
@@ -125,7 +127,7 @@ public class BenchmarkReadSpeed {
         long endTime = System.nanoTime();
         long durationMs = TimeUnit.NANOSECONDS.toMillis(endTime - startTime);
         if (logTime) {
-            LOG.info("[Protobuf] Đọc {}/{} files mất: {} ms", objectCount, files.size(), durationMs);
+            LOG.info("[Protobuf] Đọc + Convert {}/{} files mất: {} ms", objectCount, files.size(), durationMs);
         }
         return durationMs;
     }
@@ -148,5 +150,37 @@ public class BenchmarkReadSpeed {
             result.add(files[i]);
         }
         return result;
+    }
+
+    private static TreeMap<Long, Map<String, KlineObjectSimple>> convertProtoArchiveToOldStructure(KlineArchiveProto.KlineArchive archive) {
+        TreeMap<Long, Map<String, KlineObjectSimple>> time2SymbolAndKline = new TreeMap<>();
+        if (archive == null) {
+            return null;
+        }
+
+        Map<String, KlineArchiveProto.SymbolKlines> symbolKlinesMap = archive.getSymbolKlinesMap();
+
+        for (Map.Entry<String, KlineArchiveProto.SymbolKlines> symbolEntry : symbolKlinesMap.entrySet()) {
+            String symbol = symbolEntry.getKey();
+            Map<Long, KlineProto.KlineObjectSimpleProto> timeToKlineProtoMap = symbolEntry.getValue().getTimeToKlineMap();
+
+            for (Map.Entry<Long, KlineProto.KlineObjectSimpleProto> timeEntry : timeToKlineProtoMap.entrySet()) {
+                Long time = timeEntry.getKey();
+                KlineObjectSimple simpleKline = convertKlineProtoToSimple(timeEntry.getValue());
+                time2SymbolAndKline.computeIfAbsent(time, k -> new HashMap<>()).put(symbol, simpleKline);
+            }
+        }
+        return time2SymbolAndKline;
+    }
+
+    private static KlineObjectSimple convertKlineProtoToSimple(KlineProto.KlineObjectSimpleProto protoKline) {
+        KlineObjectSimple simpleKline = new KlineObjectSimple();
+        simpleKline.startTime = (double) protoKline.getStartTime();
+        simpleKline.priceOpen = (double) protoKline.getPriceOpen();
+        simpleKline.maxPrice = (double) protoKline.getMaxPrice();
+        simpleKline.minPrice = (double) protoKline.getMinPrice();
+        simpleKline.priceClose = (double) protoKline.getPriceClose();
+        simpleKline.totalUsdt = (double) protoKline.getTotalUsdt();
+        return simpleKline;
     }
 }

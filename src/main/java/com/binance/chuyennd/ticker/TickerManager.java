@@ -14,11 +14,10 @@ import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.MACDEntry;
 import com.binance.chuyennd.object.RsiEntry;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
+import com.binance.chuyennd.proto.KlineArchiveProto;
+import com.binance.chuyennd.proto.KlineProto;
 import com.binance.chuyennd.research.ExportMarketData2File;
-import com.binance.chuyennd.utils.Configs;
-import com.binance.chuyennd.utils.Storage;
-import com.binance.chuyennd.utils.StorageSnappy;
-import com.binance.chuyennd.utils.Utils;
+import com.binance.chuyennd.utils.*;
 import com.binance.client.constant.Constants;
 import com.binance.client.model.market.FundingRate;
 import org.bson.Document;
@@ -556,9 +555,12 @@ public class TickerManager {
                     if (time < timeEnd2Get) {
                         break;
                     }
-                    String fileData = Configs.FOLDER_TICKER_1M_SNAPPY_FILE + time;
-                    File file = new File(fileData);
-                    if (file.exists() && file.lastModified() > (time + Utils.TIME_DAY)) {
+                    String fileDataSnappy = Configs.FOLDER_TICKER_1M_SNAPPY_FILE + time;
+                    File file = new File(fileDataSnappy);
+                    // ĐỔI TÊN FILE ĐÍCH
+                    String fileDataProto = Configs.FOLDER_TICKER_1M_PROTOBUF_SNAPPY_FILE + time + ".pb";
+
+                    if (new File(fileDataProto).exists() && file.lastModified() > (time + Utils.TIME_DAY)) {
                         time = time - Utils.TIME_DAY;
                         continue;
                     }
@@ -569,9 +571,11 @@ public class TickerManager {
                                     Utils.normalizeDateYYYYMMDDHHmm(time));
                         }
                         TreeMap<Long, Map<String, KlineObjectSimple>> time2SymbolAndKline = getAllTicker1MBuyDate(time, symbols);
-                        if (time2SymbolAndKline != null) {
-                            LOG.info("Write {} records to file: {}", time2SymbolAndKline.size(), fileData);
-                            StorageSnappy.writeObject2File(fileData, time2SymbolAndKline);
+                        if (time2SymbolAndKline != null && !time2SymbolAndKline.isEmpty()) {
+                            LOG.info("Write {} records to file: {}", time2SymbolAndKline.size(), fileDataProto);
+                            // GHI RA FILE PROTOBUF
+                            KlineArchiveProto.KlineArchive protoArchive = convertToProto(time2SymbolAndKline);
+                            StorageProto.writeProtoWithSnappy(fileDataProto, protoArchive);
                         }
                     } catch (Exception e) {
                         LOG.info("Error get data for date: {}", Utils.normalizeDateYYYYMMDDHHmm(time));
@@ -859,6 +863,52 @@ public class TickerManager {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    // HÀM CHUYỂN ĐỔI MỚI
+    private KlineArchiveProto.KlineArchive convertToProto(TreeMap<Long, Map<String, KlineObjectSimple>> oldData) {
+        // Cần đảo ngược cấu trúc map để nhóm theo symbol trước
+        Map<String, TreeMap<Long, KlineObjectSimple>> dataBySymbol = new TreeMap<>();
+        for (Map.Entry<Long, Map<String, KlineObjectSimple>> entry : oldData.entrySet()) {
+            Long time = entry.getKey();
+            Map<String, KlineObjectSimple> symbolMap = entry.getValue();
+            for (Map.Entry<String, KlineObjectSimple> symbolEntry : symbolMap.entrySet()) {
+                String symbol = symbolEntry.getKey();
+                KlineObjectSimple kline = symbolEntry.getValue();
+                dataBySymbol.computeIfAbsent(symbol, k -> new TreeMap<>()).put(time, kline);
+            }
+        }
+
+        KlineArchiveProto.KlineArchive.Builder archiveBuilder = KlineArchiveProto.KlineArchive.newBuilder();
+
+        for (Map.Entry<String, TreeMap<Long, KlineObjectSimple>> symbolEntry : dataBySymbol.entrySet()) {
+            String symbol = symbolEntry.getKey();
+            TreeMap<Long, KlineObjectSimple> klines = symbolEntry.getValue();
+
+            KlineArchiveProto.SymbolKlines.Builder symbolKlinesBuilder = KlineArchiveProto.SymbolKlines.newBuilder();
+            symbolKlinesBuilder.setSymbol(symbol);
+
+            for (Map.Entry<Long, KlineObjectSimple> klineEntry : klines.entrySet()) {
+                KlineProto.KlineObjectSimpleProto protoKline = convertKline(klineEntry.getValue());
+                symbolKlinesBuilder.putTimeToKline(klineEntry.getKey(), protoKline);
+            }
+            archiveBuilder.putSymbolKlines(symbol, symbolKlinesBuilder.build());
+        }
+
+        return archiveBuilder.build();
+    }
+
+    private KlineProto.KlineObjectSimpleProto convertKline(KlineObjectSimple oldKline) {
+        KlineProto.KlineObjectSimpleProto.Builder builder = KlineProto.KlineObjectSimpleProto.newBuilder();
+
+        if (oldKline.startTime != null) builder.setStartTime(oldKline.startTime.longValue());
+        if (oldKline.priceOpen != null) builder.setPriceOpen(oldKline.priceOpen.floatValue());
+        if (oldKline.maxPrice != null) builder.setMaxPrice(oldKline.maxPrice.floatValue());
+        if (oldKline.minPrice != null) builder.setMinPrice(oldKline.minPrice.floatValue());
+        if (oldKline.priceClose != null) builder.setPriceClose(oldKline.priceClose.floatValue());
+        if (oldKline.totalUsdt != null) builder.setTotalUsdt(oldKline.totalUsdt.floatValue());
+
+        return builder.build();
     }
 
 }

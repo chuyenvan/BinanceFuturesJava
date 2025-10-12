@@ -117,14 +117,10 @@ public class ExportMarketData2File {
                             Map<String, KlineObjectSimple> symbol2Ticker = entry.getValue();
                             Map<String, Double> symbol2MaxPrice = new HashMap<>();
                             Map<String, Double> symbol2MinPrice = new HashMap<>();
-                            TreeMap<Double, String> rate2Max = new TreeMap<>();
 
                             for (Map.Entry<String, KlineObjectSimple> entry1 : symbol2Ticker.entrySet()) {
 
                                 String symbol = entry1.getKey();
-//                                if (StringUtils.equals(symbol, "NEIROETHUSDT")) {
-//                                    System.out.println("Debug");
-//                                }
                                 if (Constants.diedSymbol.contains(symbol)) {
                                     continue;
                                 }
@@ -132,7 +128,6 @@ public class ExportMarketData2File {
                                 if (!Utils.isTickerAvailable(ticker)) {
                                     continue;
                                 }
-
 
                                 List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
                                 if (tickers == null) {
@@ -173,7 +168,6 @@ public class ExportMarketData2File {
                                     symbolSellingExhausted.add(symbol);
                                 }
                                 symbol2MaxPrice.put(symbol, priceMax);
-                                rate2Max.put(Utils.rateOf2Double(ticker.priceClose, priceMax), symbol);
                                 symbol2MinPrice.put(symbol, minPrice);
 
                             }
@@ -213,16 +207,6 @@ public class ExportMarketData2File {
         StorageSnappy.writeObject2File(Configs.FILE_MARKET_RATE_CHANGE, time2MarketRateChange);
         StorageSnappy.writeObject2File(Configs.FILE_TIME_SYMBOL_EXHAUSTED, time2SymbolSellingExhausted);
 
-    }
-
-    public MarketDataObject cloneDataWithRateMin15m(MarketDataObject marketData) {
-        MarketDataObject result = new MarketDataObject(marketData.rateDownAvg, marketData.rateUpAvg, marketData.rateBtc,
-                marketData.level, marketData.symbolsTopDown);
-        result.rateDown15MAvg = marketData.rateDown15MAvg;
-        result.rateBtcUp15M = marketData.rateBtcUp15M;
-        result.rateBtcDown15M = marketData.rateBtcDown15M;
-        result.rate2Min = marketData.rate2Min;
-        return result;
     }
 
 

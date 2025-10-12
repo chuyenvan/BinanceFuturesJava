@@ -78,11 +78,11 @@ public class Test {
 
     public static void main(String[] args) throws Exception {
 //        checkRateProduction();
-
+        changeLeverage();
 //        deleteAllSLAtRedis();
 //        StorageSnappy.writeObject2File("target/test.data", new HashMap<>());
 //        checkSellSignal();
-        checkTickerProduct();
+//        checkTickerProduct();
 //                testProduction();
 //                removeSLRedis();
 //        difProductionWithTest();
@@ -619,13 +619,13 @@ public class Test {
 
     private static void changeLeverage() {
         Set<String> allSymbols = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS);
-        Integer counter = null;
+        Integer counter = 0;
         int leverage = BudgetManagerSimple.getInstance().getLeverage();
         for (String symbol : allSymbols) {
             try {
-                if (StringUtils.equals(symbol, "AKTUSDT")) {
-                    counter = 0;
-                }
+//                if (StringUtils.equals(symbol, "AKTUSDT")) {
+//                    counter = 0;
+//                }
                 if (counter != null) {
                     counter++;
                     LOG.info("Set leverage {} {} {}", symbol, leverage, counter);
