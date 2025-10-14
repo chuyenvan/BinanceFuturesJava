@@ -2,6 +2,7 @@ package com.binance.chuyennd.research;
 
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Storage;
+import com.binance.chuyennd.utils.StorageSnappy;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.model.market.FundingRate;
 import org.slf4j.Logger;
@@ -16,6 +17,10 @@ import java.util.concurrent.ConcurrentHashMap;
 public class FundingFeeManager {
     public static final Logger LOG = LoggerFactory.getLogger(FundingFeeManager.class);
     private ConcurrentHashMap<String, TreeMap<Long, FundingRate>> symbol2FundingFee = new ConcurrentHashMap<>();
+    public static final String FILE_FUNGDING_FEE = "storage/fundingfee_time.data";
+    public static final String FILE_FUNGDING_FEE_EXTREME = "storage/fundingfee_time_extreme.data";
+    public ConcurrentHashMap<Long, Set<String>> time2FundingFeeTrade;
+    public ConcurrentHashMap<Long, Set<String>> time2FundingFeeExtremeTrade;
     private static volatile FundingFeeManager INSTANCE = null;
 
     public static FundingFeeManager getInstance() {
@@ -42,10 +47,30 @@ public class FundingFeeManager {
                     e.printStackTrace();
                 }
             }
+            if (new File(FILE_FUNGDING_FEE).exists()) {
+                time2FundingFeeTrade = (ConcurrentHashMap<Long, Set<String>>) StorageSnappy.readObjectFromFile(FILE_FUNGDING_FEE);
+            } else {
+                time2FundingFeeTrade = new ConcurrentHashMap<>();
+            }
+            if (new File(FILE_FUNGDING_FEE_EXTREME).exists()) {
+                time2FundingFeeExtremeTrade = (ConcurrentHashMap<Long, Set<String>>) StorageSnappy.readObjectFromFile(FILE_FUNGDING_FEE);
+            } else {
+                time2FundingFeeExtremeTrade = new ConcurrentHashMap<>();
+            }
             LOG.info("Init funding fee: {} symbols", symbol2FundingFee.size());
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    public void writeData2File() {
+        try {
+            StorageSnappy.writeObject2File(FILE_FUNGDING_FEE, time2FundingFeeTrade);
+            StorageSnappy.writeObject2File(FILE_FUNGDING_FEE_EXTREME, time2FundingFeeExtremeTrade);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
     }
 
     public static void main(String[] args) {
@@ -143,18 +168,6 @@ public class FundingFeeManager {
         return null;
     }
 
-    public TreeMap<Long, FundingRate> getFullFundingFee(String symbol) {
-        TreeMap<Long, FundingRate> time2RateFunding = symbol2FundingFee.get(symbol);
-        if (time2RateFunding == null) {
-            time2RateFunding = (TreeMap<Long, FundingRate>) Storage.readObjectFromFile(Configs.FOLDER_FUNDING_FEE + symbol);
-        }
-        if (time2RateFunding != null) {
-            symbol2FundingFee.put(symbol, time2RateFunding);
-            return time2RateFunding;
-        }
-        return null;
-    }
-
     public TreeMap<Long, FundingRate> getFundingFeeByTime(String symbol, long startTime, long endTime) {
         TreeMap<Long, FundingRate> time2RateFunding = symbol2FundingFee.get(symbol);
         if (time2RateFunding == null) {
@@ -179,35 +192,40 @@ public class FundingFeeManager {
 
 
     public Set<String> getFundingBuyNew(long time) {
-        Set<String> symbols = new HashSet();
         long timeGet = Utils.getHour(time);
-        for (String symbol : symbol2FundingFee.keySet()) {
-            TreeMap<Long, FundingRate> time2Funding = symbol2FundingFee.get(symbol);
-            TreeMap<Long, FundingRate> time2FundingGet = new TreeMap<>();
-            for (int i = 0; i < Configs.NUMBER_HOUR_FUNDING_CAL; i++) {
-                Long timeF = timeGet - i * Utils.TIME_HOUR;
-                if (time2Funding.containsKey(timeF)) {
-                    time2FundingGet.put(timeF, time2Funding.get(timeF));
+        if (time2FundingFeeTrade.containsKey(timeGet)) {
+            return time2FundingFeeTrade.get(timeGet);
+        } else {
+            Set<String> symbols = new HashSet();
+            for (String symbol : symbol2FundingFee.keySet()) {
+                TreeMap<Long, FundingRate> time2Funding = symbol2FundingFee.get(symbol);
+                TreeMap<Long, FundingRate> time2FundingGet = new TreeMap<>();
+                for (int i = 0; i < Configs.NUMBER_HOUR_FUNDING_CAL; i++) {
+                    Long timeF = timeGet - i * Utils.TIME_HOUR;
+                    if (time2Funding.containsKey(timeF)) {
+                        time2FundingGet.put(timeF, time2Funding.get(timeF));
+                    }
+                    if (time2FundingGet.size() >= Configs.NUMBER_LAST_FUNDING_CAL) {
+                        break;
+                    }
                 }
-                if (time2FundingGet.size() >= Configs.NUMBER_LAST_FUNDING_CAL) {
-                    break;
+                for (FundingRate funding : time2FundingGet.values()) {
+                    if (funding.getFundingRate().doubleValue() < Configs.FUNDING_MAX_TRADE
+                            || funding.getFundingRate().doubleValue() > Configs.FUNDING_MIN_TRADE
+                    ) {
+                        symbols.add(symbol);
+                    }
                 }
-            }
-            for (FundingRate funding : time2FundingGet.values()) {
-                if (funding.getFundingRate().doubleValue() < Configs.FUNDING_MAX_TRADE
-                        || funding.getFundingRate().doubleValue() > Configs.FUNDING_MIN_TRADE
-                ) {
-                    symbols.add(symbol);
+                StringBuilder builder = new StringBuilder();
+                for (Long key : time2FundingGet.keySet()) {
+                    builder.append(Utils.normalizeDateYYYYMMDDHHmm(key)).append(" ").append(time2FundingGet.get(key).getFundingRate()).append(" ");
                 }
-            }
-            StringBuilder builder = new StringBuilder();
-            for (Long key : time2FundingGet.keySet()) {
-                builder.append(Utils.normalizeDateYYYYMMDDHHmm(key)).append(" ").append(time2FundingGet.get(key).getFundingRate()).append(" ");
-            }
 //            LOG.info("{} {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time), builder);
 
+            }
+            time2FundingFeeTrade.put(timeGet, symbols);
+            return symbols;
         }
-        return symbols;
     }
 
 
@@ -220,33 +238,38 @@ public class FundingFeeManager {
      * và value là tên symbol. Trả về rỗng nếu không có symbol nào thỏa mãn.
      */
     public Set<String> getExtremeNegativeFundingSymbols(long time) {
-        Set<String> symbols = new HashSet();
         long timeGet = Utils.getHour(time);
-        for (String symbol : symbol2FundingFee.keySet()) {
-            TreeMap<Long, FundingRate> time2Funding = symbol2FundingFee.get(symbol);
-            TreeMap<Long, FundingRate> time2FundingGet = new TreeMap<>();
-            for (int i = 0; i < Configs.NUMBER_HOUR_FUNDING_CAL; i++) {
-                Long timeF = timeGet - i * Utils.TIME_HOUR;
-                if (time2Funding.containsKey(timeF)) {
-                    time2FundingGet.put(timeF, time2Funding.get(timeF));
+        if (time2FundingFeeExtremeTrade.containsKey(timeGet)) {
+            return time2FundingFeeExtremeTrade.get(timeGet);
+        } else {
+            Set<String> symbols = new HashSet();
+            for (String symbol : symbol2FundingFee.keySet()) {
+                TreeMap<Long, FundingRate> time2Funding = symbol2FundingFee.get(symbol);
+                TreeMap<Long, FundingRate> time2FundingGet = new TreeMap<>();
+                for (int i = 0; i < Configs.NUMBER_HOUR_FUNDING_CAL; i++) {
+                    Long timeF = timeGet - i * Utils.TIME_HOUR;
+                    if (time2Funding.containsKey(timeF)) {
+                        time2FundingGet.put(timeF, time2Funding.get(timeF));
+                    }
+                    if (time2FundingGet.size() >= Configs.NUMBER_LAST_FUNDING_EXTREME) {
+                        break;
+                    }
                 }
-                if (time2FundingGet.size() >= Configs.NUMBER_LAST_FUNDING_EXTREME) {
-                    break;
+                for (FundingRate funding : time2FundingGet.values()) {
+                    if (funding.getFundingRate().doubleValue() < Configs.FUNDING_MAX_TRADE_EXTREME) {
+                        symbols.add(symbol);
+                    }
                 }
-            }
-            for (FundingRate funding : time2FundingGet.values()) {
-                if (funding.getFundingRate().doubleValue() < Configs.FUNDING_MAX_TRADE_EXTREME) {
-                    symbols.add(symbol);
+                StringBuilder builder = new StringBuilder();
+                for (Long key : time2FundingGet.keySet()) {
+                    builder.append(Utils.normalizeDateYYYYMMDDHHmm(key)).append(" ").append(time2FundingGet.get(key).getFundingRate()).append(" ");
                 }
-            }
-            StringBuilder builder = new StringBuilder();
-            for (Long key : time2FundingGet.keySet()) {
-                builder.append(Utils.normalizeDateYYYYMMDDHHmm(key)).append(" ").append(time2FundingGet.get(key).getFundingRate()).append(" ");
-            }
 //            LOG.info("{} {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time), builder);
 
+            }
+            time2FundingFeeExtremeTrade.put(timeGet, symbols);
+            return symbols;
         }
-        return symbols;
     }
 
     public TreeMap<Double, String> getTopDownFundingFee(Long time, Set<String> allSymbols) {

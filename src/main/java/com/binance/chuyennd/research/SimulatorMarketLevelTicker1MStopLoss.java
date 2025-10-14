@@ -10,14 +10,15 @@ import com.binance.chuyennd.bigchange.market.MarketLevelChange;
 import com.binance.chuyennd.bigchange.test.TraceOrderDone;
 import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
-import com.binance.chuyennd.proto.KlineArchiveProto;
-import com.binance.chuyennd.proto.KlineProto;
 import com.binance.chuyennd.tradecore.DcaProcessor;
 import com.binance.chuyennd.tradecore.MarketBigChangeDetector;
 import com.binance.chuyennd.tradecore.TradeUtils;
 import com.binance.chuyennd.tradecore.TrendDetector;
 import com.binance.chuyennd.trading.OrderTargetStatus;
-import com.binance.chuyennd.utils.*;
+import com.binance.chuyennd.utils.Configs;
+import com.binance.chuyennd.utils.Storage;
+import com.binance.chuyennd.utils.StorageSnappy;
+import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
 import com.binance.client.model.enums.OrderSide;
 import org.apache.commons.io.FileUtils;
@@ -273,6 +274,9 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                             if (!Utils.isTickerAvailable(ticker)) {
                                                 continue;
                                             }
+                                            if (Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen) > -0.01) {
+                                                continue;
+                                            }
                                             List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
                                             // ================== GỌI HÀM LỌC DUY NHẤT ==================
                                             if (TradeUtils.shouldAvoidEntry(symbol, tickers, isTrendBuyWithETH)) {
@@ -280,6 +284,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                             }
                                             createOrderBUY(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY_SPECIAL,
                                                     time2MarketRateChange.get(time), symbol2PriceMax15M.get(symbol), isTrendBuyWithBtc, isTrendBuyWithETH);
+
                                         }
                                     }
                                 }
@@ -353,7 +358,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                 allOrderDone.put(-orderInfo.timeUpdate + allOrderDone.size(), orderInfo);
             }
         }
-
+        FundingFeeManager.getInstance().writeData2File();
         Storage.writeObject2File(FILE_STORAGE_ORDER_DONE, allOrderDone);
         Storage.writeObject2File("storage/orderRunning.data", symbol2OrderRunning);
         Storage.writeObject2File("storage/BalanceIndex.data", BudgetManagerSimple.getInstance().balanceIndex);
@@ -466,14 +471,14 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         String month = Utils.getMonth(time);
         if (currentMonth == null || !StringUtils.equals(currentMonth, month)) {
             if (currentMonth != null) {
-                String fileName = "storage/rate_change_90m/" + currentMonth;
+                String fileName = "storage/rate_change_" + Configs.NUMBER_TICKER_RATE_CHANGE_MAX_TRADE + "m/" + currentMonth;
                 if (!Utils.getMonth(System.currentTimeMillis() - Utils.TIME_HOUR).equals(currentMonth)
                         && !new File(fileName).exists()) {
                     LOG.info("Write data max rate change 90M month: {}", fileName);
                     StorageSnappy.writeObject2File(fileName, symbol2TimeAndMaxRate90M);
                 }
             }
-            String fileName = "storage/rate_change_90m/" + month;
+            String fileName = "storage/rate_change_" + Configs.NUMBER_TICKER_RATE_CHANGE_MAX_TRADE + "m/" + month;
             if (new File(fileName).exists()) {
                 LOG.info("Read data max rate change 90M month: {}", fileName);
                 symbol2TimeAndMaxRate90M = (Map<String, TreeMap<Long, Double>>) StorageSnappy.readObjectFromFile(fileName);

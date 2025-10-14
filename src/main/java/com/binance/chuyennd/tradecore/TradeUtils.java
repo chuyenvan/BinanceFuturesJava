@@ -71,7 +71,7 @@ public class TradeUtils {
         if (!isTrendBuyWithETH) {
             MIN_MOVEMENT_RANGE_THRESHOLD = 0.05;
         }
-        double MIN_VOLUME_TRADING = 200 * 1000;
+        double MIN_VOLUME_TRADING = 100 * 1000;
         // =================================================================
 
         if (Constants.specialSymbol.contains(symbol) || Constants.stableSymbol.contains(symbol)) {

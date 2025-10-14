@@ -333,7 +333,7 @@ public class MarketBigChangeDetector {
     public static Double getMaxRateIn90MForTradingStop(List<KlineObjectSimple> tickers) {
         int index = tickers.size() - 1;
         Double maxRateChangeIn60M = 0d;
-        for (int i = 0; i < 90; i++) {
+        for (int i = 0; i < Configs.NUMBER_TICKER_RATE_CHANGE_MAX_TRADE; i++) {
             if (index - i < 0) {
                 break;
             }
@@ -347,7 +347,7 @@ public class MarketBigChangeDetector {
 
     public static boolean isFundingFeeTrade(Double rateDown15MAvg, Double rateDownAvg, Double rateUpAvg,
                                             Double minRate15Min60M, Boolean isTrendBuyWithETH) {
-        Double rateMin2Trade = -0.015;
+        Double rateMin2Trade = -0.018;
         Double rateMin2TradeFull = -0.025;
 //        if (!isTrendBuyWithETH){
 //            rateMin2Trade = -0.02;
@@ -389,8 +389,8 @@ public class MarketBigChangeDetector {
                                    Double rateDownAvg,
                                    Double rateUpAvg) {
         return rateDown15MAvg < -0.035
-                || rateUpAvg > 0.01
-                || rateDownAvg < -0.01;
+                || rateUpAvg > 0.012
+                || rateDownAvg < -0.012;
     }
 }
 

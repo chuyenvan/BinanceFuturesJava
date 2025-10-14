@@ -136,6 +136,9 @@ public class DetectEntrySignal2TradeNormal {
                     if (btcRateChange > -0.004 && rateChange < -0.15) {
                         continue;
                     }
+                    if (rateChange > 0.3) {
+                        continue;
+                    }
                     rateDown2Symbols.put(rateChange, symbol);
                     rateUp2Symbols.put(-rateChange, symbol);
                     Double priceMax = null;
@@ -307,6 +310,9 @@ public class DetectEntrySignal2TradeNormal {
                     if (!BudgetManager.getInstance().symbol2Pos.containsKey(symbol) && symbolSellingExhausted.containsKey(symbol)) {
                         KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
                         if (!Utils.isTickerAvailable(ticker)) {
+                            continue;
+                        }
+                        if (Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen) > -0.01) {
                             continue;
                         }
                         if (symbolSellingExhausted.get(symbol) < time - Configs.FUNDING_TIME_EXTREME) {
