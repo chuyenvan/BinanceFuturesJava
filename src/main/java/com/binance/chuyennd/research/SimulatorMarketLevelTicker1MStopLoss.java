@@ -234,6 +234,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                     Set<String> symbolBuyFundingFee = new HashSet<>();
                                     symbolBuyFundingFee.addAll(symbolFundingBuy);
                                     symbolBuyFundingFee.removeAll(symbol2OrderRunning.keySet());
+                                    Set<String> symbolCanTrade = new HashSet<>();
                                     for (String symbol : symbolBuyFundingFee) {
                                         KlineObjectSimple ticker = symbol2Ticker.get(symbol);
                                         if (!Utils.isTickerAvailable(ticker)) {
@@ -256,6 +257,27 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                             LOG.info("Funding buy {} {} close: {} rate:{} max15M: {} tickers:{}", symbol,
                                                     Utils.normalizeDateYYYYMMDDHHmm(time), ticker.priceClose, rateTicker,
                                                     rateMax15M, tickers.size());
+                                                symbolCanTrade.add(symbol);
+                                            createOrderBUY(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY,
+                                                    time2MarketRateChange.get(time), priceMax15M, isTrendBuyWithBtc, isTrendBuyWithETH);
+                                        } else {
+                                            if (rateTicker < -0.01 || rateMax15M < -0.04) {
+                                                symbolCanTrade.add(symbol);
+                                            }
+                                        }
+                                    }
+                                    if (symbolCanTrade.size() > 6) {
+                                        symbolCanTrade.removeAll(symbol2OrderRunning.keySet());
+                                        for (String symbol : symbolCanTrade) {
+                                            KlineObjectSimple ticker = symbol2Ticker.get(symbol);
+                                            if (!Utils.isTickerAvailable(ticker)) {
+                                                continue;
+                                            }
+                                            List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
+                                            if (TradeUtils.shouldAvoidEntry(symbol, tickers, isTrendBuyWithETH)) {
+                                                continue; // Bỏ qua nếu có rủi ro
+                                            }
+                                            Double priceMax15M = getMax15M(tickers);
                                             createOrderBUY(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY,
                                                     time2MarketRateChange.get(time), priceMax15M, isTrendBuyWithBtc, isTrendBuyWithETH);
                                         }

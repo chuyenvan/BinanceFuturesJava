@@ -174,17 +174,25 @@ public class BinanceOrderTradingManager {
     private void processOrderNewMarketNew(OrderTargetInfo order) {
         try {
             LOG.info("Create order market {} {}", order.side, order.symbol);
-            Order orderInfo = OrderHelper.newOrderMarket(order.symbol, order.side, order.quantity);
-            BudgetManager.getInstance().symbol2Level.put(order.symbol, order.marketLevel);
-            BudgetManager.getInstance().symbol2Pos.put(order.symbol, PositionHelper.createPosNew(order.symbol, orderInfo.getPrice()
-                    , orderInfo.getExecutedQty()));
-            RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO, order.symbol, Utils.toJson(order));
-            String log = order.side + " " + order.symbol + " entry: " + order.priceEntry
-                    + " quantity: " + order.quantity
-                    + " time:" + Utils.normalizeDateYYYYMMDDHHmm(order.timeStart)
-                    + " market level: " + order.marketLevel;
-            LOG.info(log);
-            updatePositionInfo();
+            if (SymbolOrderLockingManager.getInstance().isLockReduceOnly(order.symbol)) {
+                LOG.info("Symbol {} is locking ReduceOnly !", order.symbol);
+                return;
+            } else {
+                Order orderInfo = OrderHelper.newOrderMarket(order.symbol, order.side, order.quantity);
+                if (orderInfo == null){
+                    return;
+                }
+                BudgetManager.getInstance().symbol2Level.put(order.symbol, order.marketLevel);
+                BudgetManager.getInstance().symbol2Pos.put(order.symbol, PositionHelper.createPosNew(order.symbol, orderInfo.getPrice()
+                        , orderInfo.getExecutedQty()));
+                RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO, order.symbol, Utils.toJson(order));
+                String log = order.side + " " + order.symbol + " entry: " + order.priceEntry
+                        + " quantity: " + order.quantity
+                        + " time:" + Utils.normalizeDateYYYYMMDDHHmm(order.timeStart)
+                        + " market level: " + order.marketLevel;
+                LOG.info(log);
+                updatePositionInfo();
+            }
         } catch (Exception e) {
             LOG.info("Error during process order: {}", Utils.toJson(order));
             try {

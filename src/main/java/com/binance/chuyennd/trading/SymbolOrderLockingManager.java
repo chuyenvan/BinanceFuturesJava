@@ -9,12 +9,14 @@ import java.util.concurrent.ConcurrentHashMap;
 public class SymbolOrderLockingManager {
     public static final Logger LOG = LoggerFactory.getLogger(SymbolOrderLockingManager.class);
     public ConcurrentHashMap<String, Long> symbol2TimeLock;
+    public ConcurrentHashMap<String, Long> symbol2TimeLockReduceOnly;
     private static volatile SymbolOrderLockingManager INSTANCE = null;
 
     public static SymbolOrderLockingManager getInstance() {
         if (INSTANCE == null) {
             INSTANCE = new SymbolOrderLockingManager();
             INSTANCE.symbol2TimeLock = new ConcurrentHashMap<String, Long>();
+            INSTANCE.symbol2TimeLockReduceOnly = new ConcurrentHashMap<String, Long>();
         }
         return INSTANCE;
     }
@@ -48,5 +50,21 @@ public class SymbolOrderLockingManager {
 
     public void addLock(String symbol) {
         symbol2TimeLock.put(symbol, System.currentTimeMillis());
+    }
+
+    public void addLockReduceOnly(String symbol) {
+        symbol2TimeLockReduceOnly.put(symbol, System.currentTimeMillis());
+    }
+
+    public Boolean isLockReduceOnly(String symbol) {
+        Long time = symbol2TimeLockReduceOnly.get(symbol);
+        if (time != null && System.currentTimeMillis() - time < Utils.TIME_HOUR) {
+            return true;
+        } else {
+            if (time != null) {
+                symbol2TimeLockReduceOnly.remove(symbol);
+            }
+        }
+        return false;
     }
 }

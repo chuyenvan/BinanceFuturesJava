@@ -282,6 +282,7 @@ public class DetectEntrySignal2TradeNormal {
                 Set<String> symbolBuyFundingFee = new HashSet<>();
                 symbolBuyFundingFee.addAll(FundingFeeManagerProduction.getInstance().fundingBuy);
                 symbolBuyFundingFee.removeAll(BudgetManager.getInstance().symbol2Pos.keySet());
+                Set<String> symbolCanTrade = new HashSet<>();
                 for (String symbol : symbolBuyFundingFee) {
                     KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
                     if (!Utils.isTickerAvailable(ticker)) {
@@ -299,10 +300,37 @@ public class DetectEntrySignal2TradeNormal {
                         if (TradeUtils.shouldAvoidEntry(symbol, tickers, isTrendBuyWithETH)) {
                             continue; // Bỏ qua nếu có rủi ro
                         }
+                        symbolCanTrade.add(symbol);
+                        createOrderBuyRequest(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY,
+                                symbol2Max15m.get(symbol), marketRate, isTrendBuyWithBtc, isTrendBuyWithETH);
+                    }else{
+                        if (rateTicker < -0.01 || rateMax15M < -0.04) {
+                            symbolCanTrade.add(symbol);
+                        }
+                    }
+                }
+                if (symbolCanTrade.size() > 6) {
+                    symbolCanTrade.removeAll(BudgetManager.getInstance().symbol2Pos.keySet());
+                    for (String symbol: symbolCanTrade){
+                        KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
+                        if (!Utils.isTickerAvailable(ticker)) {
+                            continue;
+                        }
+                        Double priceMax15M = symbol2Max15m.get(symbol);
+                        Double rateTicker = Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen);
+                        Double rateMax15M = Utils.rateOf2Double(ticker.priceClose, priceMax15M);
+                        LOG.info("Funding buy {} {} close: {} rate:{} max15M: {} tickers:{}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time),
+                                ticker.priceClose, rateTicker, rateMax15M, symbol2LastTickers.get(symbol).size());
+                        List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
+                        // ================== GỌI HÀM LỌC DUY NHẤT ==================
+                        if (TradeUtils.shouldAvoidEntry(symbol, tickers, isTrendBuyWithETH)) {
+                            continue; // Bỏ qua nếu có rủi ro
+                        }
                         createOrderBuyRequest(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY,
                                 symbol2Max15m.get(symbol), marketRate, isTrendBuyWithBtc, isTrendBuyWithETH);
                     }
                 }
+
                 // ========== LOGIC CHO TÍN HIỆU FUNDING ÂM CỰC ĐOAN ==========
                 Set<String> extremeFundingSymbols = FundingFeeManagerProduction.getInstance().extremeNegative;
                 for (String symbol : extremeFundingSymbols) {

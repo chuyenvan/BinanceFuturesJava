@@ -90,7 +90,7 @@ public class BinanceFuturesClientSingleton {
         while (true) {
             page++;
             List<Income> incomes = BinanceFuturesClientSingleton.getInstance().getAllPositionHistory(
-                    Utils.sdfFileHour.parse("20250926 07:00").getTime(), System.currentTimeMillis(), page);
+                    Utils.sdfFileHour.parse("20251016 07:00").getTime(), System.currentTimeMillis(), page);
             if (!incomes.isEmpty()) {
                 LOG.info("{} {} {}", page, incomes.get(0).getSymbol(), Utils.normalizeDateYYYYMMDDHHmm(incomes.get(0).getTime()));
                 for (Income income : incomes) {
@@ -235,6 +235,8 @@ public class BinanceFuturesClientSingleton {
     }
 
     public static void main(String[] args) throws ParseException {
+//        tracePnlAsymbol();
+        tracePnlAll();
 //        String symbol = "AMBUSDT";
 //        System.out.println(Utils.toJson(BinanceFuturesClientSingleton.getInstance().getOpenOrders(symbol)));
 //        System.out.println(Utils.toJson(BinanceFuturesClientSingleton.getInstance().getOpenOrders(symbol)));
@@ -245,8 +247,6 @@ public class BinanceFuturesClientSingleton {
 //        for (String symbol : allSymbol) {
 //        Set<String> symbolLocks = BinanceFuturesClientSingleton.getInstance().getAllSymbolLock();
 //        System.out.println(symbolLocks);
-        tracePnlAsymbol();
-//        tracePnlAll();
 //        List<Order> orders = BinanceFuturesClientSingleton.getInstance().getAllOpenOrderHistory(Utils.getStartTimeDayAgo(88));
 //        if (!orders.isEmpty()) {
 //            Long startTime = orders.get(0).getUpdateTime();

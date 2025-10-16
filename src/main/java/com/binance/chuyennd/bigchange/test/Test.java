@@ -77,13 +77,13 @@ public class Test {
     private final ConcurrentHashMap<String, Long> symbol2Processing = new ConcurrentHashMap<>();
 
     public static void main(String[] args) throws Exception {
+        testProduction();
 //        checkRateProduction();
-        changeLeverage();
+//        changeLeverage();
 //        deleteAllSLAtRedis();
 //        StorageSnappy.writeObject2File("target/test.data", new HashMap<>());
 //        checkSellSignal();
 //        checkTickerProduct();
-//                testProduction();
 //                removeSLRedis();
 //        difProductionWithTest();
 //        System.out.println(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO).size());
@@ -353,7 +353,7 @@ public class Test {
 
     private static void testProduction() {
 
-        createAOrderTest();
+//        createAOrderTest();
 //        System.out.println(FuturesRules.getInstance().getSymsLocked());
 //        System.out.println(Utils.getYear(System.currentTimeMillis()));
 //        new BinanceOrderTradingManager().processManagerPosition();
@@ -370,11 +370,11 @@ public class Test {
 //        System.out.println(FundingFeeManagerProduction.getInstance().fundingBuy.size());
 
 //
-//        BinanceOrderTradingManager test = new BinanceOrderTradingManager();
-//        test.updatePositionInfo();
+        BinanceOrderTradingManager test = new BinanceOrderTradingManager();
+        test.updatePositionInfo();
 //        test.processDynamicTP_SL();
-////        test.initSLFirst();
-//        test.checkSLErrorAtRedis();
+        test.initSLFirst();
+        test.checkSLErrorAtRedis();
 
         // delete all order not rung at redis
 //        for (String symbol : RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO)) {
