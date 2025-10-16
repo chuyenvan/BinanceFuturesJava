@@ -326,6 +326,12 @@ public class DetectEntrySignal2TradeNormal {
                         if (TradeUtils.shouldAvoidEntry(symbol, tickers, isTrendBuyWithETH)) {
                             continue; // Bỏ qua nếu có rủi ro
                         }
+                        Double priceMax15M = symbol2Max15m.get(symbol);
+                        Double rateTicker = Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen);
+                        Double rateMax15M = Utils.rateOf2Double(ticker.priceClose, priceMax15M);
+                        if (rateTicker > -0.01 && rateMax15M > -0.04) {
+                            continue;
+                        }
                         createOrderBuyRequest(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY_SPECIAL,
                                 symbol2Max15m.get(symbol), marketRate, isTrendBuyWithBtc, isTrendBuyWithETH);
                     }

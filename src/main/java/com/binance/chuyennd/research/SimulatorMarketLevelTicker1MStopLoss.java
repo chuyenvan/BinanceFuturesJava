@@ -39,11 +39,13 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
     public static final Logger LOG = LoggerFactory.getLogger(SimulatorMarketLevelTicker1MStopLoss.class);
     public static final String FILE_STORAGE_ORDER_DONE = "storage/OrderTestDone.data";
+    public static final String FILE_TREND_BY_TIME = "storage/data_file_quick_run/trend_by_time.data";
 
     public String currentMonth = null;
     public Map<String, TreeMap<Long, Double>> symbol2TimeAndMaxRate90M = null;
 
     public TreeMap<Long, OrderTargetInfoTest> allOrderDone;
+    public ConcurrentHashMap<String, Map<Long, Boolean>> symbol2TrendData;
 
     public TreeMap<Long, MarketDataObject> time2MarketData;
     public TreeMap<Long, MarketRateChange> time2MarketRateChange;
@@ -81,8 +83,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                     for (Map.Entry<Long, Map<String, KlineObjectSimple>> entry : time2Tickers.entrySet()) {
                         Long time = entry.getKey();
                         Long startTimeRun = System.currentTimeMillis();
-                        Boolean isTrendBuyWithBtc = TrendDetector.isTrendBTC(time);
-                        Boolean isTrendBuyWithETH = TrendDetector.isTrendETH(time);
+                        Boolean isTrendBuyWithBtc = getTrendBySymbol(Constants.SYMBOL_PAIR_BTC, time);
+                        Boolean isTrendBuyWithETH = getTrendBySymbol(Constants.SYMBOL_PAIR_ETH, time);
                         try {
                             Map<String, KlineObjectSimple> symbol2Ticker = entry.getValue();
                             for (String symbol : symbol2Ticker.keySet()) {
@@ -274,10 +276,17 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                             if (!Utils.isTickerAvailable(ticker)) {
                                                 continue;
                                             }
-                                            if (Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen) > -0.01) {
+                                            List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
+                                            Double priceMax15M = getMax15M(tickers);
+                                            Double rateTicker = Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen);
+
+                                            Double rateMax15M = 0.0;
+                                            if (priceMax15M != null) {
+                                                rateMax15M = Utils.rateOf2Double(ticker.priceClose, priceMax15M);
+                                            }
+                                            if (rateTicker > -0.01 && rateMax15M > -0.04) {
                                                 continue;
                                             }
-                                            List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
                                             // ================== GỌI HÀM LỌC DUY NHẤT ==================
                                             if (TradeUtils.shouldAvoidEntry(symbol, tickers, isTrendBuyWithETH)) {
                                                 continue; // Bỏ qua nếu có rủi ro
@@ -359,6 +368,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             }
         }
         FundingFeeManager.getInstance().writeData2File();
+        StorageSnappy.writeObject2File(FILE_TREND_BY_TIME, symbol2TrendData);
         Storage.writeObject2File(FILE_STORAGE_ORDER_DONE, allOrderDone);
         Storage.writeObject2File("storage/orderRunning.data", symbol2OrderRunning);
         Storage.writeObject2File("storage/BalanceIndex.data", BudgetManagerSimple.getInstance().balanceIndex);
@@ -369,6 +379,29 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             e.printStackTrace();
         }
 
+    }
+
+    private Boolean getTrendBySymbol(String symbol, Long time) {
+        Map<Long, Boolean> trendData = symbol2TrendData.get(symbol);
+        if (trendData == null) {
+            trendData = new HashMap<>();
+            symbol2TrendData.put(symbol, trendData);
+        }
+        if (trendData.containsKey(time)) {
+            return trendData.get(time);
+        } else {
+            Boolean trend = false;
+            switch (symbol) {
+                case Constants.SYMBOL_PAIR_BTC:
+                    trend = TrendDetector.isTrendBTC(time);
+                    break;
+                case Constants.SYMBOL_PAIR_ETH:
+                    trend = TrendDetector.isTrendETH(time);
+                    break;
+            }
+            trendData.put(time, trend);
+            return trend;
+        }
     }
 
     private void logByProcessTime(Long startTimeRun, String msg, Long time) {
@@ -443,6 +476,12 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         time2SymbolSellingExhausted = (Map<Long, Set<String>>) StorageSnappy.readObjectFromFile(Configs.FILE_TIME_SYMBOL_EXHAUSTED);
         time2BtcReverse = (TreeMap<Long, Double>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_BTC_REVERSE);
 
+        if (new File(FILE_TREND_BY_TIME).exists()) {
+            symbol2TrendData = (ConcurrentHashMap<String, Map<Long, Boolean>>) StorageSnappy.readObjectFromFile(FILE_TREND_BY_TIME);
+        } else {
+            symbol2TrendData = new ConcurrentHashMap<>();
+        }
+
     }
 
     private void startUpdateOldOrderTrading(Long time, String symbol, List<KlineObjectSimple> tickers, Boolean isTrendBuyWithETH) {
@@ -493,7 +532,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             maxChangeIn60M = time2Rate.get(time);
         }
         if (maxChangeIn60M == null) {
-            LOG.info("Calculate max rate change 60M for trading stop: {} {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time), tickers.size());
+//            LOG.info("Calculate max rate change 60M for trading stop: {} {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time), tickers.size());
             maxChangeIn60M = MarketBigChangeDetector.getMaxRateIn90MForTradingStop(tickers);
             if (time2Rate == null) {
                 time2Rate = new TreeMap<>();

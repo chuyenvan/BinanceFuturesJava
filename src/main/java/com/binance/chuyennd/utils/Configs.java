@@ -49,7 +49,7 @@ public class Configs {
     public static final Double FUNDING_MAX_TRADE = 0.00001;
     public static final Double FUNDING_MIN_TRADE = 0.0006;
     public static final int NUMBER_TICKER_RATE_CHANGE_MAX_TRADE = 60;
-    public static final Long FUNDING_TIME_EXTREME = 12 * Utils.TIME_HOUR;
+    public static final Long FUNDING_TIME_EXTREME = 24 * Utils.TIME_HOUR;
     public static final Double FUNDING_MAX_TRADE_EXTREME = -0.0003;
 
 
