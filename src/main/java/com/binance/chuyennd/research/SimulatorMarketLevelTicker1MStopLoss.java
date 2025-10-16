@@ -261,12 +261,12 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                             createOrderBUY(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY,
                                                     time2MarketRateChange.get(time), priceMax15M, isTrendBuyWithBtc, isTrendBuyWithETH);
                                         } else {
-                                            if (rateTicker < -0.01 || rateMax15M < -0.04) {
+                                            if (rateTicker < -0.008 || rateMax15M < -0.04) {
                                                 symbolCanTrade.add(symbol);
                                             }
                                         }
                                     }
-                                    if (symbolCanTrade.size() > 6) {
+                                    if (symbolCanTrade.size() > 5) {
                                         symbolCanTrade.removeAll(symbol2OrderRunning.keySet());
                                         for (String symbol : symbolCanTrade) {
                                             KlineObjectSimple ticker = symbol2Ticker.get(symbol);
@@ -282,6 +282,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                                     time2MarketRateChange.get(time), priceMax15M, isTrendBuyWithBtc, isTrendBuyWithETH);
                                         }
                                     }
+                                    symbolCanTrade.clear();
                                     // ========== LOGIC CHO TÍN HIỆU FUNDING ÂM CỰC ĐOAN ==========
                                     Set<String> extremeFundingSymbols = FundingFeeManager.getInstance().getExtremeNegativeFundingSymbols(time);
                                     // TreeMap tự động sắp xếp nên symbol có funding âm nhất sẽ được xử lý trước
@@ -307,6 +308,9 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                                 rateMax15M = Utils.rateOf2Double(ticker.priceClose, priceMax15M);
                                             }
                                             if (rateTicker > -0.01 && rateMax15M > -0.04) {
+                                                if (rateTicker < -0.008 || rateMax15M <  -0.035){
+                                                    symbolCanTrade.add(symbol);
+                                                }
                                                 continue;
                                             }
                                             // ================== GỌI HÀM LỌC DUY NHẤT ==================
@@ -316,6 +320,22 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                             createOrderBUY(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY_SPECIAL,
                                                     time2MarketRateChange.get(time), symbol2PriceMax15M.get(symbol), isTrendBuyWithBtc, isTrendBuyWithETH);
 
+                                        }
+                                    }
+                                    if (symbolCanTrade.size() > 5) {
+                                        symbolCanTrade.removeAll(symbol2OrderRunning.keySet());
+                                        for (String symbol : symbolCanTrade) {
+                                            KlineObjectSimple ticker = symbol2Ticker.get(symbol);
+                                            if (!Utils.isTickerAvailable(ticker)) {
+                                                continue;
+                                            }
+                                            List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
+                                            if (TradeUtils.shouldAvoidEntry(symbol, tickers, isTrendBuyWithETH)) {
+                                                continue; // Bỏ qua nếu có rủi ro
+                                            }
+                                            Double priceMax15M = getMax15M(tickers);
+                                            createOrderBUY(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY_SPECIAL,
+                                                    time2MarketRateChange.get(time), priceMax15M, isTrendBuyWithBtc, isTrendBuyWithETH);
                                         }
                                     }
                                 }
