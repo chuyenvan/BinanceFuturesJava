@@ -47,6 +47,7 @@ import com.binance.client.model.enums.CandlestickInterval;
 import com.binance.client.model.enums.OrderSide;
 import com.binance.client.model.event.CandlestickEvent;
 import com.binance.client.model.event.SymbolTickerEvent;
+import com.binance.client.model.market.ExchangeInfoEntry;
 import com.binance.client.model.user.OrderUpdate;
 
 import com.google.gson.internal.LinkedTreeMap;
@@ -77,7 +78,7 @@ public class Test {
     private final ConcurrentHashMap<String, Long> symbol2Processing = new ConcurrentHashMap<>();
 
     public static void main(String[] args) throws Exception {
-        testProduction();
+//        testProduction();
 //        checkRateProduction();
 //        changeLeverage();
 //        deleteAllSLAtRedis();
@@ -88,7 +89,8 @@ public class Test {
 //        difProductionWithTest();
 //        System.out.println(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO).size());
 
-
+//        testsublist();
+        System.out.println(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS).size());
         //        difTestBetween2File();
 //
 //        TreeMap<Long, OrderTargetInfoTest> allOrderDone = (TreeMap<Long, OrderTargetInfoTest>) Storage.readObjectFromFile("target/OrderTestDone.data");
@@ -108,6 +110,47 @@ public class Test {
 //        new TickerManager().updateFundingFeeBySymbol("HIPPOUSDT", timeStart);
 
 
+    }
+
+    private static void testsublist() {
+        Set<String> symbolActive = new HashSet<>();
+        for (ExchangeInfoEntry symbol : ClientSingleton.getInstance().syncRequestClient.getExchangeInformation().getSymbols()) {
+            if (symbol.getStatus().contains("TRADING")) {
+                symbolActive.add(symbol.getSymbol());
+                RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS, symbol.getSymbol(), symbol.getSymbol());
+            }
+        }
+        System.out.println(symbolActive.size());
+        List<String> symbols = new ArrayList<>();
+        for (String symbol : RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS)) {
+            if (Constants.diedSymbol.contains(symbol)) {
+                continue;
+            }
+            if (!symbolActive.contains(symbol.toUpperCase())) {
+                LOG.info("symbol not active: {}", symbol);
+                RedisHelper.getInstance().delJsonData(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS, symbol);
+            }
+        }
+//
+//        LOG.info("Total: {}", symbols.size());
+//        List<List<String>> sublist = Utils.subList(symbols, 170);
+//        for (List<String> list : sublist) {
+//            for (String symbol: list){
+//                if (!symbolActive.contains(symbol.toUpperCase())){
+//                    LOG.info("symbol not active: {}", symbol);
+//                }
+//            }
+//            LOG.info("Size: {}", list.size());
+//        }
+//        sublist = Utils.subListPartInput(symbols, 3);
+//        for (List<String> list : sublist) {
+//            LOG.info("Size: {}", list.size());
+//            for (String symbol: list){
+//                if (!symbolActive.contains(symbol.toUpperCase())){
+//                    LOG.info("symbol not active: {}", symbol);
+//                }
+//            }
+//        }
     }
 
     private static void checkTickerProduct() {

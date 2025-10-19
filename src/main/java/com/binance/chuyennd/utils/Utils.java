@@ -283,6 +283,30 @@ public class Utils {
         }
         return (T) results;
     }
+    public static <T> T subListPartInput(List lines, int part) {
+        List<List<Object>> results = new ArrayList();
+        int limit = lines.size()/3 + 1;
+        int start = 0;
+//        LOG.info("size: {} start:{} end:{}", lines.size(), lines.get(0), lines.get(lines.size() - 1));
+        while (true) {
+            if (start > lines.size()) {
+                break;
+            }
+            int end = start + limit;
+            if (end > lines.size() - 1) {
+                end = lines.size();
+            }
+            List<Object> data = lines.subList(start, end);
+            if (!data.isEmpty()) {
+                results.add(data);
+//                LOG.info("size: {} start:{} end:{}", data.size(), data.get(0), data.get(data.size() - 1));
+            } else {
+                break;
+            }
+            start = end;
+        }
+        return (T) results;
+    }
 
     public static <T> T subList(Set lines, int limit) {
         List<List<Object>> results = new ArrayList();

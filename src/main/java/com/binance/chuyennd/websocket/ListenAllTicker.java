@@ -150,7 +150,7 @@ public class ListenAllTicker {
             symbols.add(symbol.toLowerCase());
         }
 
-        List<List<String>> sublist = Utils.subList(symbols, 170);
+        List<List<String>> sublist = Utils.subListPartInput(symbols, 3);
         for (List<String> list : sublist) {
             client.subscribeAllCandlestickEvent(list, CandlestickInterval.ONE_MINUTE, ((event) -> {
 //                LOG.info("Update ticker: {}", Utils.gson.toJson(event));

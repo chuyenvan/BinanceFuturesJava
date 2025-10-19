@@ -15,6 +15,7 @@ import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.chuyennd.websocket.ListenAllTicker;
 import com.binance.client.constant.Constants;
+import com.binance.client.model.market.ExchangeInfoEntry;
 import com.binance.client.model.trade.Asset;
 import com.binance.client.model.trade.PositionRisk;
 import org.apache.commons.lang.StringUtils;
@@ -126,7 +127,7 @@ public class BudgetManager {
 
     private void updateListSymbolAll() {
         try {
-            Set<String> symbols = TickerFuturesHelper.getAllSymbol();
+            Set<String> symbols = getAllSymbol();
             Set<String> allSymbols = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS);
             List<String> symbolNew = new ArrayList<>();
             for (String symbol : symbols) {
@@ -146,6 +147,16 @@ public class BudgetManager {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    private Set<String> getAllSymbol() {
+        Set<String> symbolActive = new HashSet<>();
+        for (ExchangeInfoEntry symbol : ClientSingleton.getInstance().syncRequestClient.getExchangeInformation().getSymbols()){
+            if (symbol.getStatus().contains("TRADING")){
+                symbolActive.add(symbol.getSymbol());
+            }
+        }
+        return symbolActive;
     }
 
 

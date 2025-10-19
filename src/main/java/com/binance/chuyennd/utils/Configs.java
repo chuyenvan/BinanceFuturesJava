@@ -43,7 +43,7 @@ public class Configs {
     public static Integer number_order_budget = 120;
 
     // funding fee config
-    public static final Integer NUMBER_LAST_FUNDING_CAL = 8;
+    public static final Integer NUMBER_LAST_FUNDING_CAL = 12;
     public static final Integer NUMBER_LAST_FUNDING_EXTREME = 4;
     public static final Integer NUMBER_HOUR_FUNDING_CAL = 30;
     public static final Double FUNDING_MAX_TRADE = 0.00001;

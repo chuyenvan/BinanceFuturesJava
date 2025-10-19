@@ -15,7 +15,6 @@ import java.util.*;
 
 public class MarketBigChangeDetector {
     public static final Logger LOG = LoggerFactory.getLogger(MarketBigChangeDetector.class);
-    public static final String TIME_RUN = Configs.getString("TIME_RUN");
 
     public static void main(String[] args) throws ParseException {
         try {
@@ -347,8 +346,11 @@ public class MarketBigChangeDetector {
 
     public static boolean isFundingFeeTrade(Double rateDown15MAvg, Double rateDownAvg, Double rateUpAvg,
                                             Double minRate15Min60M, Boolean isTrendBuyWithETH) {
-        Double rateMin2Trade = -0.018;
+        Double rateMin2Trade = -0.015;
         Double rateMin2TradeFull = -0.025;
+//        if (minRate15Min60M < -0.035) {
+//            rateMin2TradeFull = minRate15Min60M + 0.01;
+//        }
 //        if (!isTrendBuyWithETH){
 //            rateMin2Trade = -0.02;
 //            rateMin2TradeFull = -0.03;
