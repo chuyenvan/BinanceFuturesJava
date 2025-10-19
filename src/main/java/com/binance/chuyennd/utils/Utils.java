@@ -285,7 +285,7 @@ public class Utils {
     }
     public static <T> T subListPartInput(List lines, int part) {
         List<List<Object>> results = new ArrayList();
-        int limit = lines.size()/3 + 1;
+        int limit = lines.size()/part + 1;
         int start = 0;
 //        LOG.info("size: {} start:{} end:{}", lines.size(), lines.get(0), lines.get(lines.size() - 1));
         while (true) {

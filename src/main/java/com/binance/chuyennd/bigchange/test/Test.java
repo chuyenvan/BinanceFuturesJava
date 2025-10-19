@@ -90,7 +90,8 @@ public class Test {
 //        System.out.println(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO).size());
 
 //        testsublist();
-        System.out.println(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS).size());
+        findsymbolErrorStreming();
+//        System.out.println(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS).size());
         //        difTestBetween2File();
 //
 //        TreeMap<Long, OrderTargetInfoTest> allOrderDone = (TreeMap<Long, OrderTargetInfoTest>) Storage.readObjectFromFile("target/OrderTestDone.data");
@@ -112,12 +113,32 @@ public class Test {
 
     }
 
+    private static void findsymbolErrorStreming() {
+        // update ticker
+        List<String> symbols = new ArrayList<>();
+        for (String symbol : RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS)) {
+            if (Constants.diedSymbol.contains(symbol)) {
+                continue;
+            }
+            symbols.add(symbol.toLowerCase());
+        }
+        List<List<String>> sublistBase = Utils.subListPartInput(symbols, 3);
+        List<List<String>> sublist = Utils.subListPartInput(sublistBase.get(0), 4);
+        SubscriptionClient client = SubscriptionClient.create();
+        for (List<String> list: sublistBase) {
+            client.subscribeAllCandlestickEvent(list, CandlestickInterval.ONE_MINUTE, ((event) -> {
+//                LOG.info("Update ticker: {}", Utils.gson.toJson(event));
+
+            }), null);
+        }
+    }
+
     private static void testsublist() {
         Set<String> symbolActive = new HashSet<>();
         for (ExchangeInfoEntry symbol : ClientSingleton.getInstance().syncRequestClient.getExchangeInformation().getSymbols()) {
             if (symbol.getStatus().contains("TRADING")) {
                 symbolActive.add(symbol.getSymbol());
-                RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS, symbol.getSymbol(), symbol.getSymbol());
+//                RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS, symbol.getSymbol(), symbol.getSymbol());
             }
         }
         System.out.println(symbolActive.size());

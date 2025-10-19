@@ -206,7 +206,7 @@ public class DetectEntrySignal2TradeNormal {
                     LOG.info("Not symbol 2 buy: {} {} ", levelChange, Utils.normalizeDateYYYYMMDDHHmm(time));
                 }
 
-                symbol2BUY.addAll(addSpecialSymbol(symbol2FinalTicker));
+                symbol2BUY.addAll(addSpecialSymbol(symbol2FinalTicker, symbol2BUY));
                 LOG.info("Level: {} {} -> {}", Utils.normalizeDateYYYYMMDDHHmm(btcTicker.startTime.longValue()),
                         levelChange, symbol2BUY);
                 for (String symbol : symbol2BUY) {
@@ -448,12 +448,13 @@ public class DetectEntrySignal2TradeNormal {
     }
 
 
-    private Set<String> addSpecialSymbol(Map<String, KlineObjectSimple> symbol2Ticker) {
+    private Set<String> addSpecialSymbol(Map<String, KlineObjectSimple> symbol2Ticker, Set<String> symbol2BUY) {
         Set<String> symbol2Checks = new HashSet<>();
         Set<String> symbol2Trade = new HashSet<>();
         symbol2Checks.addAll(Constants.specialSymbol);
         symbol2Checks.addAll(Constants.stableSymbol);
         symbol2Checks.removeAll(BudgetManager.getInstance().symbol2Pos.keySet());
+        symbol2Checks.removeAll(symbol2BUY);
         for (String symbol : symbol2Checks) {
             KlineObjectSimple ticker = symbol2Ticker.get(symbol);
             if (ticker != null && Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen) < -0.013) {

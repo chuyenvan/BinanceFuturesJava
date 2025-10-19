@@ -155,7 +155,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                     if (symbol2BUY.size() < numberOrder) {
                                         LOG.info("Not symbol 2 buy: {} {} ", levelChange, Utils.normalizeDateYYYYMMDDHHmm(time));
                                     }
-                                    symbol2BUY.addAll(addSpecialSymbol(symbol2Ticker));
+                                    symbol2BUY.addAll(addSpecialSymbol(symbol2Ticker, symbol2BUY));
                                     List<String> symbolDcaLevel =
                                             DcaProcessor.getDCA(levelChange, time, BudgetManagerSimple.getInstance().getBudget(),
                                                     symbol2OrderRunning, isTrendBuyWithBtc, isTrendBuyWithETH);
@@ -257,7 +257,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                             LOG.info("Funding buy {} {} close: {} rate:{} max15M: {} tickers:{}", symbol,
                                                     Utils.normalizeDateYYYYMMDDHHmm(time), ticker.priceClose, rateTicker,
                                                     rateMax15M, tickers.size());
-                                                symbolCanTrade.add(symbol);
+                                            symbolCanTrade.add(symbol);
                                             createOrderBUY(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY,
                                                     time2MarketRateChange.get(time), priceMax15M, isTrendBuyWithBtc, isTrendBuyWithETH);
                                         } else {
@@ -308,7 +308,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                                 rateMax15M = Utils.rateOf2Double(ticker.priceClose, priceMax15M);
                                             }
                                             if (rateTicker > -0.01 && rateMax15M > -0.04) {
-                                                if (rateTicker < -0.008 || rateMax15M <  -0.035){
+                                                if (rateTicker < -0.008 || rateMax15M < -0.035) {
                                                     symbolCanTrade.add(symbol);
                                                 }
                                                 continue;
@@ -485,8 +485,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         }
     }
 
-    private List<String> addSpecialSymbol(Map<String, KlineObjectSimple> symbol2Ticker) {
-        List<String> symbol2BUY = new ArrayList<>();
+    private List<String> addSpecialSymbol(Map<String, KlineObjectSimple> symbol2Ticker, Set<String> symbol2BUY) {
+        List<String> hashSet = new ArrayList<>();
         Set<String> symbol2Checks = new HashSet<>();
         symbol2Checks.addAll(Constants.specialSymbol);
         symbol2Checks.addAll(Constants.stableSymbol);
@@ -495,10 +495,10 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         for (String symbol : symbol2Checks) {
             KlineObjectSimple ticker = symbol2Ticker.get(symbol);
             if (ticker != null && Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen) < -0.013) {
-                symbol2BUY.add(symbol);
+                hashSet.add(symbol);
             }
         }
-        return symbol2BUY;
+        return hashSet;
     }
 
     public void initData() throws IOException, ParseException {

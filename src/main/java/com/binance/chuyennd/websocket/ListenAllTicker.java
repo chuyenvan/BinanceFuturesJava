@@ -114,33 +114,39 @@ public class ListenAllTicker {
     public static void main(String[] args) {
 
 //        ListenAllTicker.getInstance().startThreadMonitor();
-        String symbol = "BTCUSDT";
-        List<KlineObjectSimple> tickers = ListenAllTicker.getInstance().getTickerBySymbol(symbol);
-        if (tickers != null) {
-            int index = tickers.size() - 1;
-            for (int i = 0; i < 15; i++) {
-                if (index - i < 0) {
-                    break;
-                }
-                KlineObjectSimple tickerCheck = tickers.get(index - i);
-                if (Utils.rateOf2Double(tickerCheck.maxPrice, tickerCheck.minPrice) > 0.001) {
-                    LOG.info("{} True", symbol);
-                    return;
-                }
+        while (true) {
+            try {
+                LOG.info("Number ticker available: {}", ListenAllTicker.getInstance().getAllTicker().size());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            try {
+                Thread.sleep(Utils.TIME_MINUTE);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
             }
         }
-        LOG.info("{} False", symbol);
-        return;
+//        String symbol = "BTCUSDT";
+//        List<KlineObjectSimple> tickers = ListenAllTicker.getInstance().getTickerBySymbol(symbol);
+//        if (tickers != null) {
+//            int index = tickers.size() - 1;
+//            for (int i = 0; i < 15; i++) {
+//                if (index - i < 0) {
+//                    break;
+//                }
+//                KlineObjectSimple tickerCheck = tickers.get(index - i);
+//                if (Utils.rateOf2Double(tickerCheck.maxPrice, tickerCheck.minPrice) > 0.001) {
+//                    LOG.info("{} True", symbol);
+//                    return;
+//                }
+//            }
+//        }
+//        LOG.info("{} False", symbol);
+
     }
 
     public void startThreadUpdateTicker() {
-        // update price
-        client.subscribeAllTickerEvent(((events) -> {
-            for (SymbolTickerEvent event : events) {
-                symbol2Price.put(event.getSymbol(), event.getLastPrice().doubleValue());
-                updateDate(event);
-            }
-        }), null);
+
         // update ticker
         List<String> symbols = new ArrayList<>();
         for (String symbol : RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS)) {
@@ -151,12 +157,21 @@ public class ListenAllTicker {
         }
 
         List<List<String>> sublist = Utils.subListPartInput(symbols, 3);
-        for (List<String> list : sublist) {
+        for (int i = sublist.size() - 1; i >= 0; i--) {
+            // Lấy List<String> tại chỉ mục i
+            List<String> list = sublist.get(i);
             client.subscribeAllCandlestickEvent(list, CandlestickInterval.ONE_MINUTE, ((event) -> {
 //                LOG.info("Update ticker: {}", Utils.gson.toJson(event));
                 updateDate(event);
             }), null);
         }
+        // update price
+        client.subscribeAllTickerEvent(((events) -> {
+            for (SymbolTickerEvent event : events) {
+                symbol2Price.put(event.getSymbol(), event.getLastPrice().doubleValue());
+                updateDate(event);
+            }
+        }), null);
     }
 
     public void startThreadListenASymbol(List<String> symbols) {
