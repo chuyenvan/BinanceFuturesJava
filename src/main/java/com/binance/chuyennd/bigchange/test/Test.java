@@ -65,6 +65,8 @@ import java.text.ParseException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * @author pc
@@ -91,6 +93,7 @@ public class Test {
 
 //        testsublist();
         findsymbolErrorStreming();
+        testShuffle();
 //        System.out.println(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS).size());
         //        difTestBetween2File();
 //
@@ -111,6 +114,43 @@ public class Test {
 //        new TickerManager().updateFundingFeeBySymbol("HIPPOUSDT", timeStart);
 
 
+    }
+
+    private static void testShuffle() {
+        // 1. Tạo danh sách 100 số từ 1 tới 100
+        List<Integer> numberList = IntStream.rangeClosed(1, 100)
+                .boxed()
+                .collect(Collectors.toList());
+
+        System.out.println("Danh sách gốc (10 số đầu): " + numberList.subList(0, 10));
+        System.out.println("-------------------------------------------------");
+
+        // 2. Chạy lần 1
+        System.out.println("--- CHẠY LẦN 1 ---");
+        Collections.shuffle(numberList); // Xáo trộn
+        List<List<Integer>> sublists1 = Utils.subListPartInput(numberList, 3);
+
+        System.out.println("Danh sách đã xáo trộn (10 số đầu): " + numberList.subList(0, 10));
+        System.out.println("Sublist đầu tiên (Lần 1): " + sublists1.get(0));
+        System.out.println("Sublist thứ hai (Lần 1): " + sublists1.get(1));
+
+        System.out.println("-------------------------------------------------");
+
+        // 3. Chạy lần 2 (xáo trộn lại chính danh sách đó)
+        System.out.println("--- CHẠY LẦN 2 ---");
+        Collections.shuffle(numberList); // Xáo trộn một lần nữa
+        List<List<Integer>> sublists2 =  Utils.subListPartInput(numberList, 3);
+
+        System.out.println("Danh sách đã xáo trộn (10 số đầu): " + numberList.subList(0, 10));
+        System.out.println("Sublist đầu tiên (Lần 2): " + sublists2.get(0));
+        System.out.println("Sublist thứ hai (Lần 2): " + sublists2.get(1));
+
+        System.out.println("-------------------------------------------------");
+
+        // 4. Xác minh
+        boolean isDifferent = !sublists1.get(0).equals(sublists2.get(0));
+        System.out.println("So sánh sublist đầu tiên của Lần 1 và Lần 2:");
+        System.out.println("Kết quả có khác nhau không? " + (isDifferent ? "CÓ 👍" : "KHÔNG 👎"));
     }
 
     private static void findsymbolErrorStreming() {

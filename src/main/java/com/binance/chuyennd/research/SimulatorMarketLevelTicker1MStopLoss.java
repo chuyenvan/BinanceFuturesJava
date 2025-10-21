@@ -194,7 +194,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
                             if (marketRateChange != null) {
                                 time2RateDown15MAvg.put(time, marketRateChange.rateDown15MAvg);
-                                while (time2RateDown15MAvg.size() > 60) {
+                                while (time2RateDown15MAvg.size() > 20) {
                                     time2RateDown15MAvg.remove(time2RateDown15MAvg.firstKey());
                                 }
                                 Double minRate15Min60M = Collections.min(time2RateDown15MAvg.values());

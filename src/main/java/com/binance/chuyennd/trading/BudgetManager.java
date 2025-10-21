@@ -63,7 +63,7 @@ public class BudgetManager {
         try {
             Asset umInfo = BinanceFuturesClientSingleton.getInstance().getAccountUMInfo();
             Double balanceCurrent = umInfo.getWalletBalance().doubleValue();
-            BUDGET_PER_ORDER =  balanceBasic / Configs.number_order_budget;
+            BUDGET_PER_ORDER = balanceBasic / Configs.number_order_budget;
             long time = new File("target/binance-java-sdk-1.2.4.jar").lastModified();
             LOG.info("Ba and Bu {}: {} -> {} balance init:{} marginRunning:{} ", Utils.normalizeDateYYYYMMDDHHmm(time),
                     balanceCurrent, BUDGET_PER_ORDER, balanceBasic, marginRunning);
@@ -151,8 +151,9 @@ public class BudgetManager {
 
     private Set<String> getAllSymbol() {
         Set<String> symbolActive = new HashSet<>();
-        for (ExchangeInfoEntry symbol : ClientSingleton.getInstance().syncRequestClient.getExchangeInformation().getSymbols()){
-            if (symbol.getStatus().contains("TRADING")){
+        for (ExchangeInfoEntry symbol : ClientSingleton.getInstance().syncRequestClient.getExchangeInformation().getSymbols()) {
+            if (StringUtils.endsWithIgnoreCase(symbol.getSymbol(), "usdt")
+                    && symbol.getStatus().contains("TRADING")) {
                 symbolActive.add(symbol.getSymbol());
             }
         }

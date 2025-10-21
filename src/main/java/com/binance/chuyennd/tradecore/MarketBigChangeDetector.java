@@ -346,8 +346,8 @@ public class MarketBigChangeDetector {
 
     public static boolean isFundingFeeTrade(Double rateDown15MAvg, Double rateDownAvg, Double rateUpAvg,
                                             Double minRate15Min60M, Boolean isTrendBuyWithETH) {
-        Double rateMin2Trade = -0.015;
-        Double rateMin2TradeFull = -0.025;
+        Double rateMin2Trade = -0.025;
+        Double rateMin2TradeFull = -0.03;
 //        if (minRate15Min60M < -0.035) {
 //            rateMin2TradeFull = minRate15Min60M + 0.01;
 //        }
