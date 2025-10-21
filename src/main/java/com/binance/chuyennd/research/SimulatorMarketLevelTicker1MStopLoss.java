@@ -194,7 +194,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
                             if (marketRateChange != null) {
                                 time2RateDown15MAvg.put(time, marketRateChange.rateDown15MAvg);
-                                while (time2RateDown15MAvg.size() > 20) {
+                                while (time2RateDown15MAvg.size() > Configs.NUMBER_RATE_DOWN_HISTORY_TRADE) {
                                     time2RateDown15MAvg.remove(time2RateDown15MAvg.firstKey());
                                 }
                                 Double minRate15Min60M = Collections.min(time2RateDown15MAvg.values());
@@ -225,16 +225,15 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                     startTimeRun = System.currentTimeMillis();
                                 }
 
-
+                                Set<String> symbolCanTrade = new HashSet<>();
+                                // funding level 1
                                 if (MarketBigChangeDetector.isFundingFeeTrade(marketRateChange.rateDown15MAvg,
                                         marketRateChange.rateDownAvg, marketRateChange.rateUpAvg, minRate15Min60M, isTrendBuyWithETH)
                                 ) {
-                                    // funding level 1
                                     Set<String> symbolFundingBuy = FundingFeeManager.getInstance().getFundingBuyNew(time);
                                     Set<String> symbolBuyFundingFee = new HashSet<>();
                                     symbolBuyFundingFee.addAll(symbolFundingBuy);
                                     symbolBuyFundingFee.removeAll(symbol2OrderRunning.keySet());
-                                    Set<String> symbolCanTrade = new HashSet<>();
                                     for (String symbol : symbolBuyFundingFee) {
                                         KlineObjectSimple ticker = symbol2Ticker.get(symbol);
                                         if (!Utils.isTickerAvailable(ticker)) {
@@ -282,9 +281,12 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                                     time2MarketRateChange.get(time), priceMax15M, isTrendBuyWithBtc, isTrendBuyWithETH);
                                         }
                                     }
-                                    symbolCanTrade.clear();
-                                    // ========== LOGIC CHO TÍN HIỆU FUNDING ÂM CỰC ĐOAN ==========
-                                    Set<String> extremeFundingSymbols = FundingFeeManager.getInstance().getExtremeNegativeFundingSymbols(time);
+                                }
+                                symbolCanTrade.clear();
+                                // ========== LOGIC CHO TÍN HIỆU FUNDING ÂM CỰC ĐOAN ==========
+                                if (MarketBigChangeDetector.isFundingExtremeTrade(marketRateChange.rateDown15MAvg,
+                                        marketRateChange.rateDownAvg, marketRateChange.rateUpAvg, minRate15Min60M)) {
+                                    Set<String> extremeFundingSymbols = FundingFeeManager.getInstance().getFundingBuyNew(time);
                                     // TreeMap tự động sắp xếp nên symbol có funding âm nhất sẽ được xử lý trước
                                     for (String symbol : extremeFundingSymbols) {
                                         // Chỉ vào lệnh nếu chưa có vị thế đang chạy cho symbol này
@@ -307,22 +309,12 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                             if (priceMax15M != null) {
                                                 rateMax15M = Utils.rateOf2Double(ticker.priceClose, priceMax15M);
                                             }
-                                            if (rateTicker > -0.01 && rateMax15M > -0.04) {
-                                                if (rateTicker < -0.008 || rateMax15M < -0.035) {
-                                                    symbolCanTrade.add(symbol);
-                                                }
-                                                continue;
+                                            if (rateTicker < -0.008 || rateMax15M < -0.035) {
+                                                symbolCanTrade.add(symbol);
                                             }
-                                            // ================== GỌI HÀM LỌC DUY NHẤT ==================
-                                            if (TradeUtils.shouldAvoidEntry(symbol, tickers, isTrendBuyWithETH)) {
-                                                continue; // Bỏ qua nếu có rủi ro
-                                            }
-                                            createOrderBUY(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY_SPECIAL,
-                                                    time2MarketRateChange.get(time), symbol2PriceMax15M.get(symbol), isTrendBuyWithBtc, isTrendBuyWithETH);
-
                                         }
                                     }
-                                    if (symbolCanTrade.size() > 5) {
+                                    if (symbolCanTrade.size() > 3) {
                                         symbolCanTrade.removeAll(symbol2OrderRunning.keySet());
                                         for (String symbol : symbolCanTrade) {
                                             KlineObjectSimple ticker = symbol2Ticker.get(symbol);
@@ -339,6 +331,46 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                         }
                                     }
                                 }
+
+//                                 extreme extend
+//                                if (MarketBigChangeDetector.isFundingExtremeExtend(marketRateChange.rateDown15MAvg,
+//                                        marketRateChange.rateDownAvg, marketRateChange.rateUpAvg, minRate15Min60M)) {
+//                                    Set<String> extremeFundingSymbols = FundingFeeManager.getInstance().getExtremeNegativeExtendFundingSymbols(time);
+//                                    // TreeMap tự động sắp xếp nên symbol có funding âm nhất sẽ được xử lý trước
+//                                    for (String symbol : extremeFundingSymbols) {
+//                                        // Chỉ vào lệnh nếu chưa có vị thế đang chạy cho symbol này
+//                                        if (!symbol2OrderRunning.containsKey(symbol) && symbolSellingExhausted.containsKey(symbol)) {
+//                                            if (symbolSellingExhausted.get(symbol) < time - Configs.FUNDING_TIME_EXTREME) {
+//                                                LOG.info("SellingExhausted of {} over time: {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time),
+//                                                        Utils.normalizeDateYYYYMMDDHHmm(symbolSellingExhausted.get(symbol)));
+//                                                symbolSellingExhausted.remove(symbol);
+//                                                continue;
+//                                            }
+//                                            KlineObjectSimple ticker = symbol2Ticker.get(symbol);
+//                                            if (!Utils.isTickerAvailable(ticker)) {
+//                                                continue;
+//                                            }
+//                                            List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
+//                                            Double priceMax15M = getMax15M(tickers);
+//                                            Double rateTicker = Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen);
+//
+//                                            Double rateMax15M = 0.0;
+//                                            if (priceMax15M != null) {
+//                                                rateMax15M = Utils.rateOf2Double(ticker.priceClose, priceMax15M);
+//                                            }
+//                                            if (rateTicker > -0.02 && rateMax15M > -0.08) {
+//                                                continue;
+//                                            }
+////                                             ================== GỌI HÀM LỌC DUY NHẤT ==================
+//                                            if (TradeUtils.shouldAvoidEntry(symbol, tickers, isTrendBuyWithETH)) {
+//                                                continue; // Bỏ qua nếu có rủi ro
+//                                            }
+//                                            createOrderBUY(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY_SPECIAL,
+//                                                    time2MarketRateChange.get(time), symbol2PriceMax15M.get(symbol), isTrendBuyWithBtc, isTrendBuyWithETH);
+//
+//                                        }
+//                                    }
+//                                }
                             }
                             logByProcessTime(startTimeRun, "Done funding fee", time);
                             startTimeRun = System.currentTimeMillis();

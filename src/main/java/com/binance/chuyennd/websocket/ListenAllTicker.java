@@ -307,9 +307,9 @@ public class ListenAllTicker {
             if (counterError > 100) {
                 Utils.reset("Reset by ticker error over 100 " + counterError);
             }
-            if (counterError > 3) {
+            if (symbolHadError.size() > 1) {
                 try {
-                    FileUtils.writeLines(new File("storage/data_error/symboltickerError.txt"), symbolHadError, true);
+                    FileUtils.writeLines(new File("storage/data_error/symbol_tickerError.txt"), symbolHadError, true);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }

@@ -348,13 +348,25 @@ public class MarketBigChangeDetector {
                                             Double minRate15Min60M, Boolean isTrendBuyWithETH) {
         Double rateMin2Trade = -0.025;
         Double rateMin2TradeFull = -0.03;
-//        if (minRate15Min60M < -0.035) {
-//            rateMin2TradeFull = minRate15Min60M + 0.01;
-//        }
-//        if (!isTrendBuyWithETH){
-//            rateMin2Trade = -0.02;
-//            rateMin2TradeFull = -0.03;
-//        }
+        return (rateDown15MAvg < rateMin2Trade && rateDown15MAvg <= minRate15Min60M)
+                || rateDown15MAvg < rateMin2TradeFull
+                || rateUpAvg > 0.005
+                || rateDownAvg < -0.005;
+    }
+
+    public static boolean isFundingExtremeTrade(Double rateDown15MAvg, Double rateDownAvg, Double rateUpAvg,
+                                                Double minRate15Min60M) {
+        Double rateMin2Trade = -0.02;
+        Double rateMin2TradeFull = -0.025;
+        return (rateDown15MAvg < rateMin2Trade && rateDown15MAvg <= minRate15Min60M)
+                || rateDown15MAvg < rateMin2TradeFull
+                || rateUpAvg > 0.005
+                || rateDownAvg < -0.005;
+    }
+    public static boolean isFundingExtremeExtend(Double rateDown15MAvg, Double rateDownAvg, Double rateUpAvg,
+                                                   Double minRate15Min60M) {
+        Double rateMin2Trade = -0.01;
+        Double rateMin2TradeFull = -0.02;
         return (rateDown15MAvg < rateMin2Trade && rateDown15MAvg <= minRate15Min60M)
                 || rateDown15MAvg < rateMin2TradeFull
                 || rateUpAvg > 0.005

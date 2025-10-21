@@ -42,6 +42,7 @@ public class Configs {
     //budget config
     public static Integer number_order_budget = 100;
 
+    public static final Integer NUMBER_RATE_DOWN_HISTORY_TRADE = 20;
     // funding fee config
     public static final Integer NUMBER_LAST_FUNDING_CAL = 12;
     public static final Integer NUMBER_LAST_FUNDING_EXTREME = 4;
@@ -51,6 +52,7 @@ public class Configs {
     public static final int NUMBER_TICKER_RATE_CHANGE_MAX_TRADE = 60;
     public static final Long FUNDING_TIME_EXTREME = 24 * Utils.TIME_HOUR;
     public static final Double FUNDING_MAX_TRADE_EXTREME = -0.0003;
+    public static final Double FUNDING_MAX_TRADE_EXTREME_EXTEND = -0.005;
 
 
     public static final Integer NUMBER_THREAD_ORDER_MANAGER = Configs.getInt("NUMBER_THREAD_ORDER_MANAGER");

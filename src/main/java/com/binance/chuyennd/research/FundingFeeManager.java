@@ -19,8 +19,10 @@ public class FundingFeeManager {
     private ConcurrentHashMap<String, TreeMap<Long, FundingRate>> symbol2FundingFee = new ConcurrentHashMap<>();
     public static final String FILE_FUNGDING_FEE = "storage/fundingfee_time.data";
     public static final String FILE_FUNGDING_FEE_EXTREME = "storage/fundingfee_time_extreme.data";
+    public static final String FILE_FUNGDING_FEE_EXTREME_EX = "storage/fundingfee_time_extreme_extend.data";
     public ConcurrentHashMap<Long, Set<String>> time2FundingFeeTrade;
     public ConcurrentHashMap<Long, Set<String>> time2FundingFeeExtremeTrade;
+    public ConcurrentHashMap<Long, Set<String>> time2FundingFeeExtremeExtendTrade;
     private static volatile FundingFeeManager INSTANCE = null;
 
     public static FundingFeeManager getInstance() {
@@ -53,9 +55,14 @@ public class FundingFeeManager {
                 time2FundingFeeTrade = new ConcurrentHashMap<>();
             }
             if (new File(FILE_FUNGDING_FEE_EXTREME).exists()) {
-                time2FundingFeeExtremeTrade = (ConcurrentHashMap<Long, Set<String>>) StorageSnappy.readObjectFromFile(FILE_FUNGDING_FEE);
+                time2FundingFeeExtremeTrade = (ConcurrentHashMap<Long, Set<String>>) StorageSnappy.readObjectFromFile(FILE_FUNGDING_FEE_EXTREME);
             } else {
                 time2FundingFeeExtremeTrade = new ConcurrentHashMap<>();
+            }
+            if (new File(FILE_FUNGDING_FEE_EXTREME_EX).exists()) {
+                time2FundingFeeExtremeExtendTrade = (ConcurrentHashMap<Long, Set<String>>) StorageSnappy.readObjectFromFile(FILE_FUNGDING_FEE_EXTREME_EX);
+            } else {
+                time2FundingFeeExtremeExtendTrade = new ConcurrentHashMap<>();
             }
             LOG.info("Init funding fee: {} symbols", symbol2FundingFee.size());
         } catch (Exception e) {
@@ -67,6 +74,7 @@ public class FundingFeeManager {
         try {
             StorageSnappy.writeObject2File(FILE_FUNGDING_FEE, time2FundingFeeTrade);
             StorageSnappy.writeObject2File(FILE_FUNGDING_FEE_EXTREME, time2FundingFeeExtremeTrade);
+            StorageSnappy.writeObject2File(FILE_FUNGDING_FEE_EXTREME_EX, time2FundingFeeExtremeExtendTrade);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -229,18 +237,10 @@ public class FundingFeeManager {
     }
 
 
-    /**
-     * Lấy danh sách các symbol có funding fee ÂM CỰC ĐOAN tại một thời điểm.
-     * Tín hiệu này mạnh hơn so với việc chỉ kiểm tra funding âm thông thường.
-     *
-     * @param time Thời điểm cần kiểm tra.
-     * @return Một TreeMap được sắp xếp, với key là mức funding fee (càng âm càng ở đầu),
-     * và value là tên symbol. Trả về rỗng nếu không có symbol nào thỏa mãn.
-     */
-    public Set<String> getExtremeNegativeFundingSymbols(long time) {
+    public Set<String> getExtremeNegativeExtendFundingSymbols(long time) {
         long timeGet = Utils.getHour(time);
-        if (time2FundingFeeExtremeTrade.containsKey(timeGet)) {
-            return time2FundingFeeExtremeTrade.get(timeGet);
+        if (time2FundingFeeExtremeExtendTrade.containsKey(timeGet)) {
+            return time2FundingFeeExtremeExtendTrade.get(timeGet);
         } else {
             Set<String> symbols = new HashSet();
             for (String symbol : symbol2FundingFee.keySet()) {
@@ -256,7 +256,7 @@ public class FundingFeeManager {
                     }
                 }
                 for (FundingRate funding : time2FundingGet.values()) {
-                    if (funding.getFundingRate().doubleValue() < Configs.FUNDING_MAX_TRADE_EXTREME) {
+                    if (funding.getFundingRate().doubleValue() < Configs.FUNDING_MAX_TRADE_EXTREME_EXTEND) {
                         symbols.add(symbol);
                     }
                 }
@@ -267,7 +267,7 @@ public class FundingFeeManager {
 //            LOG.info("{} {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time), builder);
 
             }
-            time2FundingFeeExtremeTrade.put(timeGet, symbols);
+            time2FundingFeeExtremeExtendTrade.put(timeGet, symbols);
             return symbols;
         }
     }
