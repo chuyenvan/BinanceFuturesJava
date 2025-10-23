@@ -165,9 +165,6 @@ public class DataPreprocessor {
         Indicators indicators = new Indicators();
         List<KlineObjectSimple> historyList = new ArrayList<>(history); // Chuyển sang List để dễ truy cập
 
-        // isSellingExhausted vẫn cần quét lại
-        indicators.isSellingExhausted = MarketBigChangeDetector.isSellingExhausted(historyList, symbol);
-
         // Tính các chỉ số 15M
         int startIndex15M = Math.max(0, historyList.size() - 15);
         if (startIndex15M < historyList.size()) {
@@ -216,7 +213,7 @@ public class DataPreprocessor {
         float maxPrice15M = 0.0f;
         float volume90M = 0.0f;
         float maxChange90M = 0.0f;
-        boolean isSellingExhausted = false;
+
     }
 
     private static void updateHistoryFromFile(Map<String, SymbolProcessingState> processingStates, File sourceFile) {

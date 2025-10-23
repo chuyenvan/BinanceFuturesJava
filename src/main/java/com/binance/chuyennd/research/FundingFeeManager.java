@@ -213,9 +213,6 @@ public class FundingFeeManager {
                     if (time2Funding.containsKey(timeF)) {
                         time2FundingGet.put(timeF, time2Funding.get(timeF));
                     }
-                    if (time2FundingGet.size() >= Configs.NUMBER_LAST_FUNDING_CAL) {
-                        break;
-                    }
                 }
                 for (FundingRate funding : time2FundingGet.values()) {
                     if (funding.getFundingRate().doubleValue() < Configs.FUNDING_MAX_TRADE
@@ -228,46 +225,9 @@ public class FundingFeeManager {
                 for (Long key : time2FundingGet.keySet()) {
                     builder.append(Utils.normalizeDateYYYYMMDDHHmm(key)).append(" ").append(time2FundingGet.get(key).getFundingRate()).append(" ");
                 }
-//            LOG.info("{} {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time), builder);
 
             }
             time2FundingFeeTrade.put(timeGet, symbols);
-            return symbols;
-        }
-    }
-
-
-    public Set<String> getExtremeNegativeExtendFundingSymbols(long time) {
-        long timeGet = Utils.getHour(time);
-        if (time2FundingFeeExtremeExtendTrade.containsKey(timeGet)) {
-            return time2FundingFeeExtremeExtendTrade.get(timeGet);
-        } else {
-            Set<String> symbols = new HashSet();
-            for (String symbol : symbol2FundingFee.keySet()) {
-                TreeMap<Long, FundingRate> time2Funding = symbol2FundingFee.get(symbol);
-                TreeMap<Long, FundingRate> time2FundingGet = new TreeMap<>();
-                for (int i = 0; i < Configs.NUMBER_HOUR_FUNDING_CAL; i++) {
-                    Long timeF = timeGet - i * Utils.TIME_HOUR;
-                    if (time2Funding.containsKey(timeF)) {
-                        time2FundingGet.put(timeF, time2Funding.get(timeF));
-                    }
-                    if (time2FundingGet.size() >= Configs.NUMBER_LAST_FUNDING_EXTREME) {
-                        break;
-                    }
-                }
-                for (FundingRate funding : time2FundingGet.values()) {
-                    if (funding.getFundingRate().doubleValue() < Configs.FUNDING_MAX_TRADE_EXTREME_EXTEND) {
-                        symbols.add(symbol);
-                    }
-                }
-                StringBuilder builder = new StringBuilder();
-                for (Long key : time2FundingGet.keySet()) {
-                    builder.append(Utils.normalizeDateYYYYMMDDHHmm(key)).append(" ").append(time2FundingGet.get(key).getFundingRate()).append(" ");
-                }
-//            LOG.info("{} {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time), builder);
-
-            }
-            time2FundingFeeExtremeExtendTrade.put(timeGet, symbols);
             return symbols;
         }
     }

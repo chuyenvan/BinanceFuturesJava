@@ -49,10 +49,8 @@ import java.util.concurrent.Executors;
 public class DetectEntrySignal2TradeNormal {
 
     public static final Logger LOG = LoggerFactory.getLogger(DetectEntrySignal2TradeNormal.class);
-    private static final String FILE_STORAGE_SELLING_EXHAUSTED = "storage/data/SellingExhausted.data";
     private static final String FILE_STORAGE_TIME_RATE_DOWN15M = "storage/data/time2RatDown15M.data";
     public ExecutorService executorService = Executors.newFixedThreadPool(Configs.NUMBER_THREAD_ORDER_MANAGER);
-    public ConcurrentHashMap<String, Long> symbolSellingExhausted = new ConcurrentHashMap<>();
     public TreeMap<Long, Double> time2RateDown15MAvg = new TreeMap<>();
 
     public static void main(String[] args) throws InterruptedException, ParseException {
@@ -127,9 +125,7 @@ public class DetectEntrySignal2TradeNormal {
                     if (!Utils.isTickerAvailable(ticker)) {
                         continue;
                     }
-                    if (MarketBigChangeDetector.isSellingExhausted(tickers, symbol)) {
-                        symbolSellingExhausted.put(symbol, time);
-                    }
+
                     symbol2FinalTicker.put(symbol, ticker);
                     Double rateChange = Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen);
                     // pass symbol big dump(delist/waring/monitor...)
@@ -280,7 +276,7 @@ public class DetectEntrySignal2TradeNormal {
                         symbolCanTrade.add(symbol);
                         createOrderBuyRequest(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY, symbol2Max15m.get(symbol), marketRate, isTrendBuyWithBtc, isTrendBuyWithETH);
                     } else {
-                        if (rateTicker < -0.008 || rateMax15M < -0.04) {
+                        if (MarketBigChangeDetector.isRateChangeAvailable2TradeMass(rateTicker, rateMax15M)) {
                             symbolCanTrade.add(symbol);
                         }
                     }
@@ -305,51 +301,6 @@ public class DetectEntrySignal2TradeNormal {
                     }
                 }
             }
-            // ========== LOGIC CHO TÍN HIỆU FUNDING ÂM CỰC ĐOAN ==========
-            if (MarketBigChangeDetector.isFundingExtremeTrade(rateDown15MAvg, rateDownAvg, rateUpAvg, minRate15Min30M)) {
-                symbolCanTrade.clear();
-                Set<String> extremeFundingSymbols = FundingFeeManagerProduction.getInstance().fundingBuy;
-                for (String symbol : extremeFundingSymbols) {
-                    // Chỉ vào lệnh nếu chưa có vị thế đang chạy cho symbol này
-                    if (!BudgetManager.getInstance().symbol2Pos.containsKey(symbol) && symbolSellingExhausted.containsKey(symbol)) {
-                        KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
-                        if (!Utils.isTickerAvailable(ticker)) {
-                            continue;
-                        }
-                        if (symbolSellingExhausted.get(symbol) < time - Configs.FUNDING_TIME_EXTREME) {
-                            LOG.info("SellingExhausted of {} over time: {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time), Utils.normalizeDateYYYYMMDDHHmm(symbolSellingExhausted.get(symbol)));
-                            symbolSellingExhausted.remove(symbol);
-                            continue;
-                        }
-                        List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
-                        // ================== GỌI HÀM LỌC DUY NHẤT ==================
-                        if (TradeUtils.shouldAvoidEntry(symbol, tickers, isTrendBuyWithETH)) {
-                            continue; // Bỏ qua nếu có rủi ro
-                        }
-                        Double priceMax15M = symbol2Max15m.get(symbol);
-                        Double rateTicker = Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen);
-                        Double rateMax15M = Utils.rateOf2Double(ticker.priceClose, priceMax15M);
-                        if (rateTicker < -0.008 || rateMax15M < -0.035) {
-                            symbolCanTrade.add(symbol);
-                        }
-                    }
-                }
-                if (symbolCanTrade.size() > 3) {
-                    symbolCanTrade.removeAll(BudgetManager.getInstance().symbol2Pos.keySet());
-                    for (String symbol : symbolCanTrade) {
-                        KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
-                        if (!Utils.isTickerAvailable(ticker)) {
-                            continue;
-                        }
-                        List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
-                        if (TradeUtils.shouldAvoidEntry(symbol, tickers, isTrendBuyWithETH)) {
-                            continue; // Bỏ qua nếu có rủi ro
-                        }
-                        createOrderBuyRequest(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY_SPECIAL, symbol2Max15m.get(symbol), marketRate, isTrendBuyWithBtc, isTrendBuyWithETH);
-                    }
-                }
-            }
-
             // btc trend reverse
             Double rateTrendReverse = MarketBigChangeDetector.isBtcTrendReverse(btcTickers);
             if (rateTrendReverse != null && rateTrendReverse >= Configs.BTC_TREND_REVERSE_RATE_MIN_TRADE) {
@@ -378,7 +329,6 @@ public class DetectEntrySignal2TradeNormal {
                 }
             }
             StorageSnappy.writeObject2File(FILE_STORAGE_TIME_RATE_DOWN15M, time2RateDown15MAvg);
-            StorageSnappy.writeObject2File(FILE_STORAGE_SELLING_EXHAUSTED, symbolSellingExhausted);
             StorageSnappy.writeObject2File("storage/data/rateMax15M/" + Utils.normalizeDateYYYYMMDD(time) + "/" + time, rateDown15M2Symbols);
             StorageSnappy.writeObject2File("storage/data/rateDown1M/" + Utils.normalizeDateYYYYMMDD(time) + "/" + time, rateDown2Symbols);
         } catch (Exception e) {
@@ -504,9 +454,7 @@ public class DetectEntrySignal2TradeNormal {
     private void initData() {
         SimpleMovingAverageDayManagerProduction.getInstance();
         SimpleMovingAverage4hManagerProduction.getInstance();
-        if (new File(FILE_STORAGE_SELLING_EXHAUSTED).exists()) {
-            symbolSellingExhausted = (ConcurrentHashMap<String, Long>) StorageSnappy.readObjectFromFile(FILE_STORAGE_SELLING_EXHAUSTED);
-        }
+
         if (new File(FILE_STORAGE_TIME_RATE_DOWN15M).exists()) {
             time2RateDown15MAvg = (TreeMap<Long, Double>) StorageSnappy.readObjectFromFile(FILE_STORAGE_TIME_RATE_DOWN15M);
         }

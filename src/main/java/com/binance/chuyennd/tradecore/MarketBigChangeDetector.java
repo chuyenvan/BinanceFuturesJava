@@ -79,72 +79,6 @@ public class MarketBigChangeDetector {
         }
     }
 
-    public static boolean isSellingExhausted(List<KlineObjectSimple> tickers, String symbol) {
-        // ================== CÁC THAM SỐ CÓ THỂ TÙY CHỈNH ==================
-        // 1. Số lượng nến 1M để xem xét
-        final int LOOKBACK_PERIOD = 20;
-        // 2. Tỷ lệ nến đỏ tối thiểu trong chuỗi (ví dụ: 0.7 tương đương 70%)
-        final double MIN_RED_CANDLE_PERCENTAGE = 0.7;
-        // 3. Mức giảm giá tối thiểu từ đỉnh của chuỗi đến giá đóng cửa hiện tại (số âm)
-        final double MIN_PRICE_DROP_PERCENTAGE = -0.045; // Yêu cầu giảm ít nhất 6%
-        // 4. Hệ số suy yếu của volume: volume cuối phải nhỏ hơn X lần volume trung bình
-        final double VOLUME_WEAKENING_FACTOR = 0.6; // Volume cuối < 80% volume trung bình
-        // =================================================================
-
-        // --- Bước 1: Kiểm tra dữ liệu đầu vào có đủ không ---
-        if (tickers == null || tickers.size() < LOOKBACK_PERIOD) {
-            return false;
-        }
-
-        // --- Bước 2: Lấy dữ liệu trong chuỗi nến xem xét ---
-        int redCandleCount = 0;
-        double totalRedCandleVolume = 0;
-        Double periodHigh = null;
-        int startIndex = tickers.size() - LOOKBACK_PERIOD;
-
-        for (int i = startIndex; i < tickers.size(); i++) {
-            KlineObjectSimple candle = tickers.get(i);
-
-            // Cập nhật giá cao nhất trong chuỗi
-            if (periodHigh == null || candle.maxPrice > periodHigh) {
-                periodHigh = candle.maxPrice;
-            }
-
-            // Đếm nến đỏ và tính tổng volume của chúng
-            if (candle.priceClose < candle.priceOpen) {
-                redCandleCount++;
-                totalRedCandleVolume += candle.totalUsdt;
-            }
-        }
-
-        // --- Bước 3: Áp dụng các bộ lọc điều kiện ---
-
-        // Điều kiện 1: Phải có một đợt bán tháo kéo dài
-        double redCandlePercentage = (double) redCandleCount / LOOKBACK_PERIOD;
-        if (redCandlePercentage < MIN_RED_CANDLE_PERCENTAGE) {
-            return false;
-        }
-
-        // Điều kiện 2: Mức giảm giá phải đủ sâu
-        KlineObjectSimple lastCandle = tickers.get(tickers.size() - 1);
-        double priceDropPercentage = Utils.rateOf2Double(lastCandle.priceClose, periodHigh);
-        if (priceDropPercentage > MIN_PRICE_DROP_PERCENTAGE) {
-            return false;
-        }
-
-        // Điều kiện 3: Lực bán (volume) phải có dấu hiệu suy yếu
-        if (redCandleCount == 0) { // Tránh chia cho 0
-            return false;
-        }
-        double averageRedVolume = totalRedCandleVolume / redCandleCount;
-        // So sánh volume của cây nến cuối cùng với volume trung bình của các nến đỏ
-        if (lastCandle.totalUsdt >= (averageRedVolume * VOLUME_WEAKENING_FACTOR)) {
-            return false;
-        }
-
-        return true;
-    }
-
     public static MarketDataObject calMarketData(Map<String, KlineObjectSimple> symbol2Ticker, Map<String, Double> symbol2PriceMax,
                                                  Map<String, Double> symbol2MinPrice) {
         TreeMap<Double, String> rateDown2Symbols = new TreeMap<>();
@@ -164,7 +98,6 @@ public class MarketBigChangeDetector {
             if (rateChangeBtc > -0.004 && rateChange < -0.15) {
                 continue;
             }
-            // TODO remove only one symbol big bump
             if (rateChange > 0.3) {
                 continue;
             }
@@ -353,26 +286,6 @@ public class MarketBigChangeDetector {
                 || rateUpAvg > 0.005
                 || rateDownAvg < -0.005;
     }
-
-    public static boolean isFundingExtremeTrade(Double rateDown15MAvg, Double rateDownAvg, Double rateUpAvg,
-                                                Double minRate15Min60M) {
-        Double rateMin2Trade = -0.02;
-        Double rateMin2TradeFull = -0.025;
-        return (rateDown15MAvg < rateMin2Trade && rateDown15MAvg <= minRate15Min60M)
-                || rateDown15MAvg < rateMin2TradeFull
-                || rateUpAvg > 0.005
-                || rateDownAvg < -0.005;
-    }
-    public static boolean isFundingExtremeExtend(Double rateDown15MAvg, Double rateDownAvg, Double rateUpAvg,
-                                                   Double minRate15Min60M) {
-        Double rateMin2Trade = -0.01;
-        Double rateMin2TradeFull = -0.02;
-        return (rateDown15MAvg < rateMin2Trade && rateDown15MAvg <= minRate15Min60M)
-                || rateDown15MAvg < rateMin2TradeFull
-                || rateUpAvg > 0.005
-                || rateDownAvg < -0.005;
-    }
-
     public static boolean isDcaWithBtcReverse(Double rateLoss, Double budget, Double marginOfSym, Double priceClose,
                                               Double lastEntry) {
         int marginRatioLevel1 = 2;
@@ -398,6 +311,11 @@ public class MarketBigChangeDetector {
     public static boolean isRateChangeAvailable2Trade(Double rateTicker, Double rateMax15M) {
         return rateTicker < -0.013 || rateMax15M < -0.045;
     }
+    public static boolean isRateChangeAvailable2TradeMass(Double rateTicker, Double rateMax15M) {
+        return rateTicker < -0.008 || rateMax15M < -0.04;
+    }
+
+
 
     public static boolean isDcaAlt(Double rateDown15MAvg,
                                    Double rateDownAvg,

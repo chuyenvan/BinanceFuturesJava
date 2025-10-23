@@ -15,12 +15,10 @@
  */
 package com.binance.chuyennd.websocket;
 
-import com.binance.chuyennd.client.ClientSingleton;
 import com.binance.chuyennd.helper.TickerFuturesHelper;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
-import com.binance.chuyennd.trading.BudgetManager;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.StorageSnappy;
 import com.binance.chuyennd.utils.Utils;
@@ -29,7 +27,6 @@ import com.binance.client.constant.Constants;
 import com.binance.client.model.enums.CandlestickInterval;
 import com.binance.client.model.event.CandlestickEvent;
 import com.binance.client.model.event.SymbolTickerEvent;
-import com.binance.client.model.user.OrderUpdate;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -88,6 +85,9 @@ public class ListenAllTicker {
                     startTime - Configs.BTC_TREND_REVERSE_DURATION
                             * Utils.TIME_MINUTE));
             for (String symbol : allSymbol) {
+                if (!StringUtils.endsWithIgnoreCase(symbol, "usdt")) {
+                    continue;
+                }
                 executorService.execute(() -> initTickerBySymbol(symbol, startTime));
             }
         } catch (Exception e) {
@@ -198,37 +198,6 @@ public class ListenAllTicker {
 
     }
 
-    private void startUserDataStream() {
-        new Thread(() -> {
-            String listenKey = ClientSingleton.getInstance().syncRequestClient.startUserDataStream();
-            LOG.info("listenKey: {}", listenKey);
-
-            // Keep user data stream
-            ClientSingleton.getInstance().syncRequestClient.keepUserDataStream(listenKey);
-
-            client.subscribeUserDataEvent(listenKey, ((event) -> {
-                try {
-                    if (event != null) {
-                        LOG.info("UserStream: {} {} {} {}", Utils.normalizeDateYYYYMMDDHHmm(event.getEventTime()),
-                                event.getEventType(), Utils.toJson(event.getOrderUpdate()), Utils.toJson(event.getAccountUpdate()));
-                        if (StringUtils.equals(event.getEventType(), "ORDER_TRADE_UPDATE")) {
-                            OrderUpdate orderUpdate = event.getOrderUpdate();
-                            if (orderUpdate != null
-                                    && StringUtils.equals(orderUpdate.getOrderStatus(), "FILLED")
-                                    && orderUpdate.getRealizedProfit().doubleValue() > 0) {
-                                LOG.info("Remove symbol trade success from stream: {}", orderUpdate.getSymbol());
-                                BudgetManager.getInstance().symbol2Pos.remove(orderUpdate.getSymbol());
-                                BudgetManager.getInstance().symbol2Level.remove(orderUpdate.getSymbol());
-                                RedisHelper.getInstance().delJsonData(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO, orderUpdate.getSymbol());
-                            }
-                        }
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }), null);
-        }).start();
-    }
 
     public void startThreadWriteTickerData() {
         new Thread(() -> {

@@ -22,7 +22,6 @@ import com.binance.chuyennd.grid.SimpleMovingAverage4hManager;
 import com.binance.chuyennd.grid.SimpleMovingAverageDayManager;
 import com.binance.chuyennd.helper.TickerFuturesHelper;
 import com.binance.chuyennd.indicators.MACD;
-import com.binance.chuyennd.mongo.TickerMongoHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.MACDEntry;
 import com.binance.chuyennd.object.MarketRateChange;
@@ -33,28 +32,24 @@ import com.binance.chuyennd.redis.RedisHelper;
 import com.binance.chuyennd.research.BudgetManagerSimple;
 import com.binance.chuyennd.research.FundingFeeManager;
 import com.binance.chuyennd.tradecore.MarketBigChangeDetector;
-import com.binance.chuyennd.trading.*;
+import com.binance.chuyennd.trading.BinanceOrderTradingManager;
+import com.binance.chuyennd.trading.BudgetManager;
+import com.binance.chuyennd.trading.OrderTargetInfo;
+import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Storage;
 import com.binance.chuyennd.utils.StorageSnappy;
 import com.binance.chuyennd.utils.Utils;
-import com.binance.chuyennd.websocket.ListenAllTicker;
 import com.binance.client.SubscriptionClient;
-import com.binance.client.SubscriptionErrorHandler;
 import com.binance.client.constant.Constants;
-import com.binance.client.exception.BinanceApiException;
 import com.binance.client.model.enums.CandlestickInterval;
 import com.binance.client.model.enums.OrderSide;
 import com.binance.client.model.event.CandlestickEvent;
 import com.binance.client.model.event.SymbolTickerEvent;
 import com.binance.client.model.market.ExchangeInfoEntry;
-import com.binance.client.model.user.OrderUpdate;
-
 import com.google.gson.internal.LinkedTreeMap;
-import com.mongodb.client.MongoCursor;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
-import org.bson.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,7 +59,6 @@ import java.math.BigDecimal;
 import java.text.ParseException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Level;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -92,8 +86,10 @@ public class Test {
 //        System.out.println(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO).size());
 
 //        testsublist();
-        findsymbolErrorStreming();
-        testShuffle();
+        testWS();
+//        System.out.println(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS));
+//        findsymbolErrorStreming();
+//        testShuffle();
 //        System.out.println(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS).size());
         //        difTestBetween2File();
 //
@@ -114,6 +110,17 @@ public class Test {
 //        new TickerManager().updateFundingFeeBySymbol("HIPPOUSDT", timeStart);
 
 
+    }
+
+    private static void testWS() {
+        SubscriptionClient client = SubscriptionClient.create();
+        // Giả sử client có phương thức subscribeMarkPriceStreamForAllSymbols
+// update price
+        client.subscribeAllTickerEvent(((events) -> {
+            for (SymbolTickerEvent event : events) {
+               LOG.info(Utils.toJson(event));
+            }
+        }), null);
     }
 
     private static void testShuffle() {
@@ -778,242 +785,6 @@ public class Test {
         return null;
     }
 
-
-    private static void testGetDataMongo() throws ParseException {
-        Long startTime = Utils.sdfFile.parse("202405012").getTime() + 7 * Utils.TIME_HOUR;
-        Long startTimeCheck = Utils.sdfFileHour.parse("20240511 19:15").getTime();
-        TreeMap<Long, Map<String, KlineObjectNumber>> time2Tickers = TickerMongoHelper.getInstance().getDataFromDb(startTime);
-        for (Map.Entry<Long, Map<String, KlineObjectNumber>> entry : time2Tickers.entrySet()) {
-            Long time = entry.getKey();
-            Map<String, KlineObjectNumber> symbol2Ticker = entry.getValue();
-            if (time.equals(startTimeCheck)) {
-                LOG.info("{} {}", Utils.normalizeDateYYYYMMDDHHmm(time), Utils.normalizeDateYYYYMMDDHHmm(startTimeCheck));
-                for (Map.Entry<String, KlineObjectNumber> entry1 : symbol2Ticker.entrySet()) {
-                    String symbol = entry1.getKey();
-                    KlineObjectNumber ticker = entry1.getValue();
-                    LOG.info("{} {} {} {}", Utils.normalizeDateYYYYMMDDHHmm(time), symbol, Utils.rateOf2Double(ticker.maxPrice, ticker.minPrice),
-                            Utils.toJson(ticker));
-                }
-            }
-//            LOG.info("{} ", Utils.normalizeDateYYYYMMDDHHmm(time));
-
-        }
-    }
-
-    private static void traceInfoSymbol(String symbol) throws ParseException {
-        List<KlineObjectNumber> tickers = (List<KlineObjectNumber>) Storage.readObjectFromFile("storage/ticker/symbols-15m/" + symbol);
-        for (int i = 0; i < tickers.size(); i++) {
-            if (tickers.get(i).startTime.longValue() >= Utils.sdfFileHour.parse("20240512 19:15").getTime()) {
-                LOG.info("{} {}", Utils.normalizeDateYYYYMMDDHHmm(tickers.get(i).startTime.longValue()),
-                        tickers.get(i).histogram);
-            }
-        }
-
-    }
-
-
-    private static void printTickerInMongo() throws ParseException {
-        Long time = Utils.sdfFile.parse("20240509").getTime() + 7 * Utils.TIME_HOUR;
-        System.out.println(time);
-        String symbol = "BATUSDT";
-        MongoCursor<Document> docs = TickerMongoHelper.getInstance().getTicker15m(time, symbol);
-        List<KlineObjectNumber> tickersOnline = TickerFuturesHelper.getTickerWithStartTime(symbol, Constants.INTERVAL_15M, time);
-        Map<Long, KlineObjectNumber> time2TickerOnline = new HashMap<>();
-        for (KlineObjectNumber tickerOnline : tickersOnline) {
-            time2TickerOnline.put(tickerOnline.startTime.longValue(), tickerOnline);
-        }
-
-        while (docs.hasNext()) {
-            Document doc = docs.next();
-            List<KlineObjectNumber> tickers = TickerMongoHelper.getInstance().extractDetails(doc);
-            for (KlineObjectNumber ticker : tickers) {
-                KlineObjectNumber tickerOnline = time2TickerOnline.get(ticker.startTime.longValue());
-                boolean khop = true;
-                if (tickersOnline == null || tickerOnline.minPrice != ticker.minPrice
-                        || tickerOnline.maxPrice != ticker.maxPrice
-                        || tickerOnline.priceClose != ticker.priceClose
-                        || tickerOnline.priceOpen != ticker.priceOpen) {
-                }
-                LOG.info("{} {}  Open:{} max: {} min: {} Close: {} vol:{} khop: {} ma:{} rsi:{}", ticker.startTime,
-                        Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()), ticker.priceOpen, ticker.maxPrice,
-                        ticker.minPrice, ticker.priceClose, ticker.totalUsdt, khop, ticker.ma20, ticker.rsi);
-            }
-        }
-    }
-
-
-    public static boolean isTimeRun() {
-        return Utils.getCurrentMinute() % 15 == 9 && Utils.getCurrentSecond() == 50;
-    }
-
-    private static void testUserDataStream() {
-
-        SubscriptionClient client = SubscriptionClient.create();
-        // update price
-//        client.subscribeAllTickerEvent(((events) -> {
-//
-//        }), null);
-        // update ticker
-        List<String> symbols = new ArrayList<>();
-        for (String symbol : RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS)) {
-            if (Constants.diedSymbol.contains(symbol)) {
-                continue;
-            }
-            symbols.add(symbol.toLowerCase());
-        }
-
-        List<List<String>> sublist = Utils.subList(symbols, 100);
-        for (List<String> list : sublist) {
-            client.subscribeAllCandlestickEvent(list, CandlestickInterval.ONE_MINUTE, ((event) -> {
-//                LOG.info("Update ticker: {}", Utils.gson.toJson(event));
-            }), null);
-        }
-
-
-        String listenKey = ClientSingleton.getInstance().syncRequestClient.startUserDataStream();
-        System.out.println("listenKey: " + listenKey);
-
-        // Keep user data stream
-        ClientSingleton.getInstance().syncRequestClient.keepUserDataStream(listenKey);
-
-        // Close user data stream
-        //syncRequestClient.closeUserDataStream(listenKey);
-        client = SubscriptionClient.create();
-
-        client.subscribeUserDataEvent(listenKey, ((event) -> {
-            try {
-                if (event != null) {
-                    LOG.info("UserStream: {} {} {} {}", Utils.normalizeDateYYYYMMDDHHmm(event.getEventTime()),
-                            event.getEventType(), Utils.toJson(event.getOrderUpdate()), Utils.toJson(event.getAccountUpdate()));
-                    if (StringUtils.equals(event.getEventType(), "ORDER_TRADE_UPDATE")) {
-                        OrderUpdate orderUpdate = event.getOrderUpdate();
-                        if (orderUpdate != null
-                                && StringUtils.equals(orderUpdate.getOrderStatus(), "FILLED")
-                                && orderUpdate.getRealizedProfit().doubleValue() > 0) {
-                            LOG.info("Remove symbol trade success from stream: {}", orderUpdate.getSymbol());
-                        }
-                    }
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }), null);
-
-    }
-
-    public static Double calRateLoss(OrderTargetInfo orderInfo, Double lastPrice) {
-        double rate = Utils.rateOf2Double(lastPrice, orderInfo.priceEntry);
-        if (orderInfo.side.equals(OrderSide.SELL)) {
-            rate = -rate;
-        }
-        return rate * 7 / 10;
-    }
-
-    private static long calTimeLock(long currentTime) {
-        return currentTime + (10 - Utils.getCurrentMinute(currentTime) % 10) * Utils.TIME_MINUTE;
-    }
-
-    private static void checkTimeLock() {
-        for (Map.Entry<String, String> entry : RedisHelper.getInstance().get().hgetAll(RedisConst.REDIS_KEY_BINANCE_SYMBOL_TIME_LOCK).entrySet()) {
-            String symbol = entry.getKey();
-            String timelock = entry.getValue();
-            long timeLockLong = Long.parseLong(timelock);
-            LOG.info("{} {} {}", symbol, new Date(timeLockLong), new Date(calTimeLock(timeLockLong)));
-        }
-    }
-
-
-    private static void writeAllSymbol2Redis() throws IOException {
-        List<String> lines = FileUtils.readLines(new File("target/allsymbols.txt"));
-        for (String sym : lines) {
-            RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS, sym, sym);
-        }
-    }
-
-    private static void traceSuccessBySymbol() {
-        List<String> lines = new ArrayList<>();
-        List<OrderTargetInfo> allOrderDone = getAllOrderDone();
-        Map<String, Integer> sym2Success = new HashMap<>();
-        for (OrderTargetInfo order : allOrderDone) {
-            Integer successCounter = sym2Success.get(order.symbol);
-            if (successCounter == null) {
-                successCounter = 0;
-            }
-            successCounter++;
-            sym2Success.put(order.symbol, successCounter);
-        }
-        for (Map.Entry<String, Integer> entry : sym2Success.entrySet()) {
-            String symbol = entry.getKey();
-            Integer counter = entry.getValue();
-            lines.add(symbol + "," + counter);
-        }
-        try {
-            FileUtils.writeLines(new File("target/symbol2success.csv"), lines);
-        } catch (IOException ex) {
-            java.util.logging.Logger.getLogger(Test.class.getName()).log(Level.SEVERE, null, ex);
-        }
-
-    }
-
-    public static List<OrderTargetInfo> getAllOrderDone() {
-        List<OrderTargetInfo> hashMap = new ArrayList<>();
-        try {
-            List<String> lines = FileUtils.readLines(new File(FILE_STORAGE_ORDER_DONE));
-            for (String line : lines) {
-                try {
-                    OrderTargetInfo order = Utils.gson.fromJson(line, OrderTargetInfo.class);
-                    if (order != null) {
-                        hashMap.add(order);
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return hashMap;
-
-    }
-
-    private static void threadListenVolume() {
-        SubscriptionClient client = SubscriptionClient.create();
-        SubscriptionErrorHandler errorHandler = (BinanceApiException exception) -> {
-        };
-//        client.subscribeAllTickerEvent(((event) -> {
-        //
-//            for (SymbolTickerEvent e : event) {
-//                LOG.info("{} -> {}", e.getSymbol(), e);
-//            }
-//        }), errorHandler);
-        client.subscribeCandlestickEvent("btcusdt", CandlestickInterval.ONE_MINUTE, ((e) -> {
-            LOG.info("{} -> {}", e.getSymbol(), Utils.toJson(e));
-        }), errorHandler);
-
-    }
-
-    private static void extractRateChangeInMonth(long time) {
-
-        Collection<? extends String> symbols = TickerFuturesHelper.getAllSymbol();
-        TreeMap<Double, String> rateChangeInMonth = new TreeMap<>();
-        for (String symbol : symbols) {
-
-            if (StringUtils.endsWithIgnoreCase(symbol, "usdt")) {
-                try {
-                    // only get symbol over 2 months
-                    double rateChange = getStartTimeAtExchange(symbol);
-                    rateChangeInMonth.put(rateChange, symbol);
-                } catch (Exception e) {
-
-                }
-            }
-        }
-        for (Map.Entry<Double, String> entry : rateChangeInMonth.entrySet()) {
-            Object rate = entry.getKey();
-            Object symbol = entry.getValue();
-            LOG.info("{} -> {}", symbol, rate);
-        }
-    }
 
     private static double getStartTimeAtExchange(String symbol) {
 

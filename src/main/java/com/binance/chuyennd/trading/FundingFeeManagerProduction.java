@@ -21,7 +21,6 @@ public class FundingFeeManagerProduction {
     private ConcurrentHashMap<String, TreeMap<Long, FundingRate>> symbol2FundingFee = new ConcurrentHashMap<>();
     public static final String FILE_DATA_FUNDING = "storage/funding/fundingData.data";
     public Set<String> fundingBuy = new HashSet<>();
-    public Set<String> extremeNegative = new HashSet<>();
     public Set<String> fundingSell = new HashSet<>();
     private static volatile FundingFeeManagerProduction INSTANCE = null;
 
@@ -46,9 +45,6 @@ public class FundingFeeManagerProduction {
             try {
                 TreeMap<Long, FundingRate> time2Rate = symbol2FundingFee.get(symbol);
                 if (time2Rate != null && !time2Rate.isEmpty()) {
-                    while (time2Rate.size() > Configs.NUMBER_LAST_FUNDING_CAL) {
-                        time2Rate.remove(time2Rate.firstKey());
-                    }
                     while (time2Rate.size() > 0 && time2Rate.firstKey() < System.currentTimeMillis() -
                             Configs.NUMBER_HOUR_FUNDING_CAL * Utils.TIME_HOUR) {
                         time2Rate.remove(time2Rate.firstKey());
@@ -64,31 +60,10 @@ public class FundingFeeManagerProduction {
                             isFundingSell = false;
                             break;
                         }
-
-                    }
-                    while (time2Rate.size() > Configs.NUMBER_LAST_FUNDING_EXTREME) {
-                        time2Rate.remove(time2Rate.firstKey());
-                    }
-                    for (FundingRate funding : time2Rate.values()) {
-                        if (funding.getFundingRate().doubleValue() < Configs.FUNDING_MAX_TRADE_EXTREME) {
-                            extremeNegative.add(symbol);
-                            isFundingSell = false;
-                            break;
-                        }
                     }
                     if (isFundingSell) {
-                        extremeNegative.remove(symbol);
                         fundingBuy.remove(symbol);
                         fundingSell.add(symbol);
-                    } else {
-//                        Long currentTime = System.currentTimeMillis();
-//                        StringBuilder builder = new StringBuilder();
-//                        for (Long time : time2Rate.keySet()) {
-//                            builder.append(Utils.normalizeDateYYYYMMDDHHmm(time)).append(" ").
-//                                    append(time2Rate.get(time).getFundingRate()).append(" ");
-//                        }
-//                        LOG.info("Update funding buy: {} {} {} ", symbol, Utils.normalizeDateYYYYMMDDHHmm(currentTime),
-//                                builder);
                     }
                 }
             } catch (Exception e) {
@@ -112,7 +87,8 @@ public class FundingFeeManagerProduction {
             long time = System.currentTimeMillis() - Configs.NUMBER_HOUR_FUNDING_CAL * Utils.TIME_HOUR;
             TreeMap<Long, FundingRate> time2Rate = TickerFuturesHelper.getFundingFeeWithStartTime(symbol, time);
             if (time2Rate != null && !time2Rate.isEmpty()) {
-                while (time2Rate.size() > Configs.NUMBER_LAST_FUNDING_CAL) {
+                while (time2Rate.size() > 0 && time2Rate.firstKey() < System.currentTimeMillis() -
+                        Configs.NUMBER_HOUR_FUNDING_CAL * Utils.TIME_HOUR) {
                     time2Rate.remove(time2Rate.firstKey());
                 }
                 symbol2FundingFee.put(symbol, time2Rate);

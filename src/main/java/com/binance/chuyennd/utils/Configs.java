@@ -44,15 +44,10 @@ public class Configs {
 
     public static final Integer NUMBER_RATE_DOWN_HISTORY_TRADE = 20;
     // funding fee config
-    public static final Integer NUMBER_LAST_FUNDING_CAL = 12;
-    public static final Integer NUMBER_LAST_FUNDING_EXTREME = 4;
     public static final Integer NUMBER_HOUR_FUNDING_CAL = 30;
     public static final Double FUNDING_MAX_TRADE = 0.00001;
     public static final Double FUNDING_MIN_TRADE = 0.0006;
     public static final int NUMBER_TICKER_RATE_CHANGE_MAX_TRADE = 60;
-    public static final Long FUNDING_TIME_EXTREME = 24 * Utils.TIME_HOUR;
-    public static final Double FUNDING_MAX_TRADE_EXTREME = -0.0003;
-    public static final Double FUNDING_MAX_TRADE_EXTREME_EXTEND = -0.005;
 
 
     public static final Integer NUMBER_THREAD_ORDER_MANAGER = Configs.getInt("NUMBER_THREAD_ORDER_MANAGER");
@@ -73,7 +68,6 @@ public class Configs {
     public static String FOLDER_TICKER_1M_FILE = Configs.getString("FOLDER_TICKER_1M_FILE");
     public static String FOLDER_TICKER_1M_SNAPPY_FILE = "../storage/ticker/ticker1m-snappy/";
     public static final String FOLDER_TICKER_1M_PROTOBUF_SNAPPY_FILE = "../storage/ticker/ticker1m-protobuf/";
-    public static final String FOLDER_TICKER_1M_PROTOBUF_SNAPPY_FILE_FULL = "../storage/ticker/ticker1m-protobuf-full/";
     public static String FOLDER_TICKER_HOUR = Configs.getString("FOLDER_TICKER_1H");//"../ticker/storage/ticker/symbols-1h/";
     public static String FOLDER_TICKER_4HOUR = Configs.getString("FOLDER_TICKER_4H");//"../ticker/storage/ticker/symbols-4h/";
     public static String FOLDER_TICKER_1D = Configs.getString("FOLDER_TICKER_1D");//"../ticker/storage/ticker/symbols-1D/";
@@ -84,7 +78,6 @@ public class Configs {
     public static Double BTC_TREND_REVERSE_RATE_MIN_TRADE = Configs.getDouble("BTC_TREND_REVERSE_RATE_MIN_TRADE");
 
     public static String FILE_ENTRY_MARKET_LEVEL = "../storage/market_data/time2market.data";
-    public static String FILE_TIME_SYMBOL_EXHAUSTED = "../storage/market_data/time2SymbolSellingExhausted.data";
     public static String FILE_MARKET_RATE_CHANGE = "../storage/market_data/marketRateChange.data";
 
     public static String FILE_ENTRY_BTC_REVERSE = "../storage/btc/btcReverse-" + BTC_TREND_REVERSE_RATE_MIN + "-" + BTC_TREND_REVERSE_RATE_MAX + "-"
