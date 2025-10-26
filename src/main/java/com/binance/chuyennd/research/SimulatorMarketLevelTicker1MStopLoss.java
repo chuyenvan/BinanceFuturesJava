@@ -238,7 +238,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                         if (priceMax15M != null) {
                                             rateMax15M = Utils.rateOf2Double(ticker.priceClose, priceMax15M);
                                         }
-                                        if (MarketBigChangeDetector.isRateChangeAvailable2Trade(rateTicker, rateMax15M)) {
+                                        if (MarketBigChangeDetector.isRateChangeAvailable2Trade(rateTicker, rateMax15M, isTrendBuyWithETH)) {
                                             // ================== GỌI HÀM LỌC DUY NHẤT ==================
                                             if (TradeUtils.shouldAvoidEntry(symbol, tickers, isTrendBuyWithETH)) {
                                                 continue; // Bỏ qua nếu có rủi ro
@@ -255,7 +255,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                             }
                                         }
                                     }
-                                    if (symbolCanTradeMass.size() > 5) {
+                                    if (symbolCanTradeMass.size() > 4) {
                                         symbolCanTradeMass.removeAll(symbol2OrderRunning.keySet());
                                         for (String symbol : symbolCanTradeMass) {
                                             KlineObjectSimple ticker = symbol2Ticker.get(symbol);

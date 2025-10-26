@@ -267,7 +267,7 @@ public class DetectEntrySignal2TradeNormal {
                     Double rateTicker = Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen);
                     Double rateMax15M = Utils.rateOf2Double(ticker.priceClose, priceMax15M);
 
-                    if (MarketBigChangeDetector.isRateChangeAvailable2Trade(rateTicker, rateMax15M)) {
+                    if (MarketBigChangeDetector.isRateChangeAvailable2Trade(rateTicker, rateMax15M, isTrendBuyWithETH)) {
                         LOG.info("Funding buy {} {} close: {} rate:{} max15M: {} tickers:{}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time), ticker.priceClose, rateTicker, rateMax15M, symbol2LastTickers.get(symbol).size());
                         List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
                         // ================== GỌI HÀM LỌC DUY NHẤT ==================

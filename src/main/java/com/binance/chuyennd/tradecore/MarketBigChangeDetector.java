@@ -286,6 +286,7 @@ public class MarketBigChangeDetector {
                 || rateUpAvg > 0.005
                 || rateDownAvg < -0.005;
     }
+
     public static boolean isDcaWithBtcReverse(Double rateLoss, Double budget, Double marginOfSym, Double priceClose,
                                               Double lastEntry) {
         int marginRatioLevel1 = 2;
@@ -308,13 +309,17 @@ public class MarketBigChangeDetector {
         return false;
     }
 
-    public static boolean isRateChangeAvailable2Trade(Double rateTicker, Double rateMax15M) {
-        return rateTicker < -0.013 || rateMax15M < -0.045;
+    public static boolean isRateChangeAvailable2Trade(Double rateTicker, Double rateMax15M, Boolean isTrendBuyWithETH) {
+        if (isTrendBuyWithETH) {
+            return rateTicker < -0.01 || rateMax15M < -0.04;
+        } else {
+            return rateTicker < -0.015 || rateMax15M < -0.045;
+        }
     }
+
     public static boolean isRateChangeAvailable2TradeMass(Double rateTicker, Double rateMax15M) {
         return rateTicker < -0.008 || rateMax15M < -0.04;
     }
-
 
 
     public static boolean isDcaAlt(Double rateDown15MAvg,
