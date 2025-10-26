@@ -46,7 +46,7 @@ public class ListenAllTicker {
     public static final Logger LOG = LoggerFactory.getLogger(ListenAllTicker.class);
     public ConcurrentHashMap<String, TreeMap<Long, KlineObjectSimple>> symbol2Tickers = new ConcurrentHashMap<>();
     public final ConcurrentHashMap<String, Double> symbol2Price = new ConcurrentHashMap<>();
-    public static final String FILE_TICKER_1M_STORAGE = "storage/tickers/symbol2ticker1Ms";
+
     public ExecutorService executorService = Executors.newFixedThreadPool(Configs.NUMBER_THREAD_ORDER_MANAGER);
     public SubscriptionClient client;
     private static volatile ListenAllTicker INSTANCE = null;
@@ -54,10 +54,10 @@ public class ListenAllTicker {
     public static ListenAllTicker getInstance() {
         if (INSTANCE == null) {
             INSTANCE = new ListenAllTicker();
-            if (new File(FILE_TICKER_1M_STORAGE).exists()) {
+            if (new File(Configs.FILE_TICKER_1M_STORAGE).exists()) {
                 try {
                     INSTANCE.symbol2Tickers = (ConcurrentHashMap<String, TreeMap<Long, KlineObjectSimple>>)
-                            StorageSnappy.readObjectFromFile(FILE_TICKER_1M_STORAGE);
+                            StorageSnappy.readObjectFromFile(Configs.FILE_TICKER_1M_STORAGE);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -233,7 +233,7 @@ public class ListenAllTicker {
         }
         // 3. Ghi "bản sao" này ra file.
         //    Trong lúc này, `symbol2LastTickers` gốc vẫn có thể được cập nhật thoải mái.
-        StorageSnappy.writeObject2File(FILE_TICKER_1M_STORAGE, tickersToSave);
+        StorageSnappy.writeObject2File(Configs.FILE_TICKER_1M_STORAGE, tickersToSave);
     }
 
     public ConcurrentHashMap<String, List<KlineObjectSimple>> getAllTicker() {

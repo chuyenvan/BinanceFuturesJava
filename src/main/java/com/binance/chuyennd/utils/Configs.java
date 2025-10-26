@@ -19,6 +19,7 @@ import java.util.Map;
 public class Configs {
 
 
+    public static final String FILE_TICKER_1M_STORAGE = "storage/tickers/symbol2ticker1Ms";
     public static String configFile = "config.properties";
     public static volatile Map properties = new HashMap();
 

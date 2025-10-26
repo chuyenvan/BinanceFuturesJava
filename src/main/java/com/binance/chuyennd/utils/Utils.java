@@ -13,9 +13,11 @@ import com.binance.client.model.enums.OrderSide;
 import com.binance.client.model.trade.PositionRisk;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.*;
+import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.net.URLEncoder;
 import java.text.*;
 import java.util.*;
@@ -283,9 +285,10 @@ public class Utils {
         }
         return (T) results;
     }
+
     public static <T> T subListPartInput(List lines, int part) {
         List<List<Object>> results = new ArrayList();
-        int limit = lines.size()/part + 1;
+        int limit = lines.size() / part + 1;
         int start = 0;
 //        LOG.info("size: {} start:{} end:{}", lines.size(), lines.get(0), lines.get(lines.size() - 1));
         while (true) {
@@ -577,6 +580,19 @@ public class Utils {
                     break;
                 }
                 Thread.sleep(1000);
+            }
+            // check if File market data orver 15m -> delete file
+            try {
+                File file = new File(Configs.FILE_TICKER_1M_STORAGE);
+                if (file.exists()){
+                    long lastModify = file.lastModified();
+                    if (System.currentTimeMillis() - lastModify > 10 * Utils.TIME_MINUTE){
+                        LOG.info("Delete file market {} {}", Configs.FILE_TICKER_1M_STORAGE, Utils.normalizeDateYYYYMMDDHHmm(lastModify));
+                        FileUtils.delete(file);
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
             }
             LOG.info("Restart: {} {} ...", resetBySchedule, Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()));
 

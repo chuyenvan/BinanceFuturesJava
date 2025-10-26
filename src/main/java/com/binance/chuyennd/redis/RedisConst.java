@@ -63,5 +63,6 @@ public class RedisConst {
     public static final String REDIS_KEY_BINANCE_TD_ORDER_MANAGER_QUEUE = "redis.key.educa.td.order.manager.queue";
     public static final String REDIS_KEY_BINANCE_TD_GRID_MANAGER_QUEUE = "redis.key.binance.td.grid.manager.queue";
     public static final String REDIS_KEY_SYMBOL_2_GRID_INFO = "redis.key.symbol.grid.info";
+    public static final String REDIS_KEY_LAST_TIME_CHECK_MARKET= "redis.key.last.time.check.market";
 
 }

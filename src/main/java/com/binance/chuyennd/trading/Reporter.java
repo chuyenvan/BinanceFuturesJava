@@ -6,6 +6,7 @@ import com.binance.chuyennd.redis.RedisHelper;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.model.trade.Asset;
 import com.binance.client.model.trade.PositionRisk;
+import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,6 +21,14 @@ public class Reporter {
 
     public static void buildReport() {
         try {
+            // check is last time market < 15m thi reset
+            String timeLastCheck = RedisHelper.getInstance().get().get(RedisConst.REDIS_KEY_LAST_TIME_CHECK_MARKET);
+            if (StringUtils.isNotEmpty(timeLastCheck)){
+                long time = Long.parseLong(timeLastCheck);
+                if (System.currentTimeMillis() - time > 15 * Utils.TIME_MINUTE){
+                    Utils.reset("Reset by last check market over 15m: " + Utils.normalizeDateYYYYMMDDHHmm(time));
+                }
+            }
             Set<PositionRisk> positions = new HashSet<>();
             positions.addAll(BudgetManager.getInstance().symbol2Pos.values());
             StringBuilder reportRunning = calReportRunning(positions);

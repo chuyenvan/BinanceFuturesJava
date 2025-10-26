@@ -113,14 +113,23 @@ public class Test {
     }
 
     private static void testWS() {
-        SubscriptionClient client = SubscriptionClient.create();
-        // Giả sử client có phương thức subscribeMarkPriceStreamForAllSymbols
-// update price
-        client.subscribeAllTickerEvent(((events) -> {
-            for (SymbolTickerEvent event : events) {
-               LOG.info(Utils.toJson(event));
+        String timeLastCheck = RedisHelper.getInstance().get().get(RedisConst.REDIS_KEY_LAST_TIME_CHECK_MARKET);
+        if (StringUtils.isNotEmpty(timeLastCheck)) {
+            long time = Long.parseLong(timeLastCheck);
+            if (System.currentTimeMillis() - time > 15 * Utils.TIME_MINUTE) {
+                LOG.info("Reset by last check market over 15m: " + Utils.normalizeDateYYYYMMDDHHmm(time));
+            } else {
+                LOG.info("Not reset by last check market over 15m: " + Utils.normalizeDateYYYYMMDDHHmm(time));
             }
-        }), null);
+        }
+//        SubscriptionClient client = SubscriptionClient.create();
+//        // Giả sử client có phương thức subscribeMarkPriceStreamForAllSymbols
+//// update price
+//        client.subscribeAllTickerEvent(((events) -> {
+//            for (SymbolTickerEvent event : events) {
+//               LOG.info(Utils.toJson(event));
+//            }
+//        }), null);
     }
 
     private static void testShuffle() {
@@ -146,7 +155,7 @@ public class Test {
         // 3. Chạy lần 2 (xáo trộn lại chính danh sách đó)
         System.out.println("--- CHẠY LẦN 2 ---");
         Collections.shuffle(numberList); // Xáo trộn một lần nữa
-        List<List<Integer>> sublists2 =  Utils.subListPartInput(numberList, 3);
+        List<List<Integer>> sublists2 = Utils.subListPartInput(numberList, 3);
 
         System.out.println("Danh sách đã xáo trộn (10 số đầu): " + numberList.subList(0, 10));
         System.out.println("Sublist đầu tiên (Lần 2): " + sublists2.get(0));
@@ -172,7 +181,7 @@ public class Test {
         List<List<String>> sublistBase = Utils.subListPartInput(symbols, 3);
         List<List<String>> sublist = Utils.subListPartInput(sublistBase.get(0), 4);
         SubscriptionClient client = SubscriptionClient.create();
-        for (List<String> list: sublistBase) {
+        for (List<String> list : sublistBase) {
             client.subscribeAllCandlestickEvent(list, CandlestickInterval.ONE_MINUTE, ((event) -> {
 //                LOG.info("Update ticker: {}", Utils.gson.toJson(event));
 
