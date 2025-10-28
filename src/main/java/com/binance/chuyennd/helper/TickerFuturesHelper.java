@@ -164,6 +164,7 @@ public class TickerFuturesHelper {
             }
 
         } catch (Exception e) {
+            LOG.info("Error get ticker {} {}", Utils.normalizeDateYYYYMMDDHHmm(startTime), symbol);
             e.printStackTrace();
         }
 

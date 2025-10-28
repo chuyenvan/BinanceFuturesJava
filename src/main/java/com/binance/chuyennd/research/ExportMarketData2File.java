@@ -102,6 +102,7 @@ public class ExportMarketData2File {
                 if (time2Tickers != null) {
                     for (Map.Entry<Long, Map<String, KlineObjectSimple>> entry : time2Tickers.entrySet()) {
                         Long time = entry.getKey();
+
                         try {
 //                            time2SymbolFundingBuy.put(time, FundingFeeManager.getInstance().getFundingBuyNew(time));
 //                            if (time == Utils.sdfFileHour.parse("20250603 11:00").getTime()) {

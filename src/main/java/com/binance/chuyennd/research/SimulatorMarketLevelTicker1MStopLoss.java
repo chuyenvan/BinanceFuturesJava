@@ -145,7 +145,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                     if (symbol2BUY.size() < numberOrder) {
                                         LOG.info("Not symbol 2 buy: {} {} ", levelChange, Utils.normalizeDateYYYYMMDDHHmm(time));
                                     }
-                                    symbol2BUY.addAll(addSpecialSymbol(symbol2Ticker, symbol2BUY));
+                                    symbol2BUY.addAll(MarketBigChangeDetector.addSpecialSymbol(symbol2Ticker, symbol2BUY,
+                                            isTrendBuyWithETH, symbol2OrderRunning.keySet()));
                                     List<String> symbolDcaLevel =
                                             DcaProcessor.getDCA(levelChange, time, BudgetManagerSimple.getInstance().getBudget(),
                                                     symbol2OrderRunning, isTrendBuyWithBtc, isTrendBuyWithETH);
@@ -250,7 +251,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                             createOrderBUY(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY,
                                                     time2MarketRateChange.get(time), priceMax15M, isTrendBuyWithBtc, isTrendBuyWithETH);
                                         } else {
-                                            if (MarketBigChangeDetector.isRateChangeAvailable2TradeMass(rateTicker, rateMax15M)) {
+                                            if (MarketBigChangeDetector.isRateChangeAvailable2TradeMass(rateTicker, rateMax15M, isTrendBuyWithETH)) {
                                                 symbolCanTradeMass.add(symbol);
                                             }
                                         }
@@ -289,7 +290,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                     boolean isDcaSpecialSymbol = true;
                                     if (order != null) {
                                         isDcaSpecialSymbol = MarketBigChangeDetector.isDcaWithBtcReverse(rateLoss,
-                                                budget, marginOfSym, ticker.priceClose, order.lastEntry);
+                                                budget, marginOfSym, ticker.priceClose, order.lastEntry, isTrendBuyWithETH);
                                     }
                                     if (isDcaSpecialSymbol) {
                                         symbol2BUY.add(symbol);
@@ -418,21 +419,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         }
     }
 
-    private List<String> addSpecialSymbol(Map<String, KlineObjectSimple> symbol2Ticker, Set<String> symbol2BUY) {
-        List<String> hashSet = new ArrayList<>();
-        Set<String> symbol2Checks = new HashSet<>();
-        symbol2Checks.addAll(Constants.specialSymbol);
-        symbol2Checks.addAll(Constants.stableSymbol);
-        symbol2Checks.removeAll(symbol2OrderRunning.keySet());
-        symbol2Checks.removeAll(symbol2BUY);
-        for (String symbol : symbol2Checks) {
-            KlineObjectSimple ticker = symbol2Ticker.get(symbol);
-            if (ticker != null && Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen) < -0.013) {
-                hashSet.add(symbol);
-            }
-        }
-        return hashSet;
-    }
 
     public void initData() throws IOException, ParseException {
         // clear Data Old

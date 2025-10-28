@@ -113,7 +113,7 @@ public class TickerManager {
                     if (Utils.getCurrentHour() == 4
                             || Utils.getCurrentHour() == 8
                             || Utils.getCurrentHour() == 15
-                            || Utils.getCurrentHour() == 23) {
+                            || Utils.getCurrentHour() == 21) {
 //                        startResetTicker1hSimple();
                         updateFullTicker1M(Constants.SYMBOL_PAIR_BTC);
                         startUpdateTicker1mSimple();

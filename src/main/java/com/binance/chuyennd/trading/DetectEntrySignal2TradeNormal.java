@@ -168,9 +168,9 @@ public class DetectEntrySignal2TradeNormal {
             Double rateDown15MAvg = MarketBigChangeDetector.calRateChangeAvg(rateDown15M2Symbols, 100);
             MarketRateChange marketRate = new MarketRateChange(rateDownAvg, rateDown15MAvg, rateUpAvg);
             Double rateBtcDown15M = Utils.rateOf2Double(btcTicker.priceClose, btcMax15M);
-            MarketLevelChange levelChange = MarketBigChangeDetector.getMarketStatus1M(rateDownAvg, rateUpAvg, btcRateChange, rateDown15MAvg);
             boolean isTrendBuyWithBtc = TrendDetector.isBtcTrendBuyProduction(time);
             boolean isTrendBuyWithETH = TrendDetector.isETHTrendBuyProduction(time);
+            MarketLevelChange levelChange = MarketBigChangeDetector.getMarketStatus1M(rateDownAvg, rateUpAvg, btcRateChange, rateDown15MAvg);
             RedisHelper.getInstance().get().set(RedisConst.REDIS_KEY_LAST_TIME_CHECK_MARKET, Utils.toJson(System.currentTimeMillis()));
             LOG.info("Check level market: {} DownAvg: {}% UpAvg:{}% DownAvg15M:{}%  btcRate: {}% btcRate15M: {}% {}", Utils.normalizeDateYYYYMMDDHHmm(btcTicker.startTime.longValue()), Utils.formatDouble(rateDownAvg * 100, 3), Utils.formatDouble(rateUpAvg * 100, 3), Utils.formatDouble(rateDown15MAvg * 100, 3), Utils.formatDouble(btcRateChange * 100, 3), Utils.formatDouble(rateBtcDown15M * 100, 3), levelChange);
             LOG.info("Market level change: {} level: {} symbols:{}", Utils.normalizeDateYYYYMMDDHHmm(time), levelChange, symbol2FinalTicker.size());
@@ -180,7 +180,10 @@ public class DetectEntrySignal2TradeNormal {
 
             if (levelChange != null) {
                 Integer numberOrder = Configs.NUMBER_ENTRY_EACH_SIGNAL;
-                if (levelChange.equals(MarketLevelChange.SMALL_DOWN) || levelChange.equals(MarketLevelChange.SMALL_UP) || levelChange.equals(MarketLevelChange.MEDIUM_DOWN_15M) || levelChange.equals(MarketLevelChange.SMALL_DOWN_15M)) {
+                if (levelChange.equals(MarketLevelChange.SMALL_DOWN)
+                        || levelChange.equals(MarketLevelChange.SMALL_UP)
+                        || levelChange.equals(MarketLevelChange.MEDIUM_DOWN_15M)
+                        || levelChange.equals(MarketLevelChange.SMALL_DOWN_15M)) {
                     numberOrder = numberOrder / 2;
                 }
                 Set<String> symbol2BUY = MarketBigChangeDetector.getTopSymbol(rateDown15M2Symbols, numberOrder, symbol2FinalTicker, symbolLocked);
@@ -189,7 +192,8 @@ public class DetectEntrySignal2TradeNormal {
                     LOG.info("Not symbol 2 buy: {} {} ", levelChange, Utils.normalizeDateYYYYMMDDHHmm(time));
                 }
 
-                symbol2BUY.addAll(addSpecialSymbol(symbol2FinalTicker, symbol2BUY));
+                symbol2BUY.addAll(MarketBigChangeDetector.addSpecialSymbol(symbol2FinalTicker, symbol2BUY, isTrendBuyWithETH,
+                        BudgetManager.getInstance().symbol2Pos.keySet()));
                 LOG.info("Level: {} {} -> {}", Utils.normalizeDateYYYYMMDDHHmm(btcTicker.startTime.longValue()), levelChange, symbol2BUY);
                 for (String symbol : symbol2BUY) {
                     try {
@@ -277,7 +281,7 @@ public class DetectEntrySignal2TradeNormal {
                         symbolCanTrade.add(symbol);
                         createOrderBuyRequest(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY, symbol2Max15m.get(symbol), marketRate, isTrendBuyWithBtc, isTrendBuyWithETH);
                     } else {
-                        if (MarketBigChangeDetector.isRateChangeAvailable2TradeMass(rateTicker, rateMax15M)) {
+                        if (MarketBigChangeDetector.isRateChangeAvailable2TradeMass(rateTicker, rateMax15M, isTrendBuyWithETH)) {
                             symbolCanTrade.add(symbol);
                         }
                     }
@@ -317,7 +321,7 @@ public class DetectEntrySignal2TradeNormal {
 
                     boolean isDcaSpecialSymbol = true;
                     if (order != null) {
-                        isDcaSpecialSymbol = MarketBigChangeDetector.isDcaWithBtcReverse(rateLoss, budget, marginOfSym, ticker.priceClose, order.priceEntry);
+                        isDcaSpecialSymbol = MarketBigChangeDetector.isDcaWithBtcReverse(rateLoss, budget, marginOfSym, ticker.priceClose, order.priceEntry, isTrendBuyWithETH);
                     }
                     if (isDcaSpecialSymbol) {
                         symbol2BUY.add(symbol);

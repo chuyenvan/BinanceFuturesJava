@@ -288,7 +288,7 @@ public class MarketBigChangeDetector {
     }
 
     public static boolean isDcaWithBtcReverse(Double rateLoss, Double budget, Double marginOfSym, Double priceClose,
-                                              Double lastEntry) {
+                                              Double lastEntry, Boolean isTrendBuyWithETH) {
         int marginRatioLevel1 = 2;
         int marginRatioLevel2 = 4;
         if (marginOfSym > marginRatioLevel1 * budget) {
@@ -311,13 +311,13 @@ public class MarketBigChangeDetector {
 
     public static boolean isRateChangeAvailable2Trade(Double rateTicker, Double rateMax15M, Boolean isTrendBuyWithETH) {
         if (isTrendBuyWithETH) {
-            return rateTicker < -0.01 || rateMax15M < -0.04;
+            return rateTicker < -0.011 || rateMax15M < -0.04;
         } else {
-            return rateTicker < -0.015 || rateMax15M < -0.045;
+            return rateTicker < -0.013 || rateMax15M < -0.045;
         }
     }
 
-    public static boolean isRateChangeAvailable2TradeMass(Double rateTicker, Double rateMax15M) {
+    public static boolean isRateChangeAvailable2TradeMass(Double rateTicker, Double rateMax15M, Boolean isTrendBuyWithETH) {
         return rateTicker < -0.008 || rateMax15M < -0.04;
     }
 
@@ -329,6 +329,29 @@ public class MarketBigChangeDetector {
                 || rateUpAvg > 0.012
                 || rateDownAvg < -0.012;
     }
+
+    public static List<String> addSpecialSymbol(Map<String, KlineObjectSimple> symbol2Ticker, Set<String> symbol2BUY,
+                                                Boolean isTrendBuyWithETH, Set<String> symbolRunning) {
+        List<String> hashSet = new ArrayList<>();
+        Double rateCheck = -0.013;
+        if (isTrendBuyWithETH) {
+            rateCheck = -0.011;
+        }
+        Set<String> symbol2Checks = new HashSet<>();
+        symbol2Checks.addAll(Constants.specialSymbol);
+        symbol2Checks.addAll(Constants.stableSymbol);
+        symbol2Checks.removeAll(symbolRunning);
+        symbol2Checks.removeAll(symbol2BUY);
+        for (String symbol : symbol2Checks) {
+            KlineObjectSimple ticker = symbol2Ticker.get(symbol);
+
+            if (ticker != null && Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen) < rateCheck) {
+                hashSet.add(symbol);
+            }
+        }
+        return hashSet;
+    }
+
 }
 
 
