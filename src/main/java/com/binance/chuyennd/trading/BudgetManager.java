@@ -176,4 +176,10 @@ public class BudgetManager {
             }
         }
     }
+
+    public void addMarginRunning(Double budget) {
+        if (marginRunning != null && budget != null) {
+            marginRunning += budget;
+        }
+    }
 }

@@ -115,7 +115,7 @@ public class TickerManager {
                             || Utils.getCurrentHour() == 15
                             || Utils.getCurrentHour() == 21) {
 //                        startResetTicker1hSimple();
-                        updateFullTicker1M(Constants.SYMBOL_PAIR_BTC);
+//                        updateFullTicker1M(Constants.SYMBOL_PAIR_BTC);
                         startUpdateTicker1mSimple();
                         startResetTicker1DAnd4HSimple();
                         startUpdateFundingFee();
@@ -555,10 +555,9 @@ public class TickerManager {
                     if (time < timeEnd2Get) {
                         break;
                     }
-                    String fileDataSnappy = Configs.FOLDER_TICKER_1M_SNAPPY_FILE + time;
-                    File file = new File(fileDataSnappy);
                     // ĐỔI TÊN FILE ĐÍCH
                     String fileDataProto = Configs.FOLDER_TICKER_1M_PROTOBUF_SNAPPY_FILE + time + ".pb";
+                    File file = new File(fileDataProto);
 
                     if (new File(fileDataProto).exists() && file.lastModified() > (time + Utils.TIME_DAY)) {
                         time = time - Utils.TIME_DAY;
@@ -624,7 +623,7 @@ public class TickerManager {
             }
         }
         try {
-            if (time2FundingRate == null){
+            if (time2FundingRate == null) {
                 time2FundingRate = new TreeMap<>();
             }
 //            LOG.info("Start get funding fee for: {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time));
@@ -661,16 +660,20 @@ public class TickerManager {
         Long startTime = time;
         while (true) {
             for (String symbol : symbols) {
-                List<KlineObjectSimple> tickers = TickerFuturesHelper.getTickerSimpleWithStartTime(symbol, Constants.INTERVAL_1M, startTime);
-                for (KlineObjectSimple ticker : tickers) {
-                    if (ticker.startTime.longValue() < time + Utils.TIME_DAY) {
-                        Map<String, KlineObjectSimple> symbol2Ticker = time2SymbolAndKline.get(ticker.startTime.longValue());
-                        if (symbol2Ticker == null) {
-                            symbol2Ticker = new HashMap<>();
-                            time2SymbolAndKline.put(ticker.startTime.longValue(), symbol2Ticker);
+                try {
+                    List<KlineObjectSimple> tickers = TickerFuturesHelper.getTickerSimpleWithStartTime(symbol, Constants.INTERVAL_1M, startTime);
+                    for (KlineObjectSimple ticker : tickers) {
+                        if (ticker.startTime.longValue() < time + Utils.TIME_DAY) {
+                            Map<String, KlineObjectSimple> symbol2Ticker = time2SymbolAndKline.get(ticker.startTime.longValue());
+                            if (symbol2Ticker == null) {
+                                symbol2Ticker = new HashMap<>();
+                                time2SymbolAndKline.put(ticker.startTime.longValue(), symbol2Ticker);
+                            }
+                            symbol2Ticker.put(symbol, ticker);
                         }
-                        symbol2Ticker.put(symbol, ticker);
                     }
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
             }
             startTime = startTime + 500 * Utils.TIME_MINUTE;

@@ -113,15 +113,16 @@ public class Test {
     }
 
     private static void testWS() {
-        String timeLastCheck = RedisHelper.getInstance().get().get(RedisConst.REDIS_KEY_LAST_TIME_CHECK_MARKET);
-        if (StringUtils.isNotEmpty(timeLastCheck)) {
-            long time = Long.parseLong(timeLastCheck);
-            if (System.currentTimeMillis() - time > 15 * Utils.TIME_MINUTE) {
-                LOG.info("Reset by last check market over 15m: " + Utils.normalizeDateYYYYMMDDHHmm(time));
-            } else {
-                LOG.info("Not reset by last check market over 15m: " + Utils.normalizeDateYYYYMMDDHHmm(time));
-            }
-        }
+        System.out.println(1755820800000L - Utils.TIME_DAY);
+//        String timeLastCheck = RedisHelper.getInstance().get().get(RedisConst.REDIS_KEY_LAST_TIME_CHECK_MARKET);
+//        if (StringUtils.isNotEmpty(timeLastCheck)) {
+//            long time = Long.parseLong(timeLastCheck);
+//            if (System.currentTimeMillis() - time > 15 * Utils.TIME_MINUTE) {
+//                LOG.info("Reset by last check market over 15m: " + Utils.normalizeDateYYYYMMDDHHmm(time));
+//            } else {
+//                LOG.info("Not reset by last check market over 15m: " + Utils.normalizeDateYYYYMMDDHHmm(time));
+//            }
+//        }
 //        SubscriptionClient client = SubscriptionClient.create();
 //        // Giả sử client có phương thức subscribeMarkPriceStreamForAllSymbols
 //// update price

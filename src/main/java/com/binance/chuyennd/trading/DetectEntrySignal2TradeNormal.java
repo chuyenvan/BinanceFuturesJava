@@ -407,6 +407,7 @@ public class DetectEntrySignal2TradeNormal {
             orderTrade.marketLevel = levelChange;
             orderTrade.priceTP = priceMax15M;
             LOG.info("Push redis order: {} {} {} {} {} {}", Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()), symbol, levelChange, budget.longValue(), quantity, ticker.priceClose);
+            BudgetManager.getInstance().addMarginRunning(budget);
             RedisHelper.getInstance().get().rpush(RedisConst.REDIS_KEY_BINANCE_TD_ORDER_MANAGER_QUEUE, Utils.toJson(orderTrade));
             writeOrder2File(orderTrade, ticker, marketRate, priceMax15M);
         } else {
