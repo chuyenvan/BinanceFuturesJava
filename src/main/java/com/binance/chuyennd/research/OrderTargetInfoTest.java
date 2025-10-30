@@ -185,6 +185,7 @@ public class OrderTargetInfoTest implements Serializable {
             tp = orderInfo.quantity * (orderInfo.priceEntry - orderInfo.priceTP)
                     - orderInfo.quantity * orderInfo.priceEntry * Configs.RATE_FEE;
         }
+        tp = tp - calFundingFee();
         return tp;
     }
 

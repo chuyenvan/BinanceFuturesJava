@@ -116,7 +116,7 @@ public class BudgetManagerSimple {
 //        Double balanceReal = balance + unProfit;
 //        Double unrealizedProfitMin = calUnrealizedProfitMin(orderRunning.values());
         balanceIndex.updateIndex(balanceBasic, positionMargin, positionMarginReal, timeUpdate, profitLossMax, profitLossMax, symbol2OrdersEntry,
-                orderRunning);
+                orderRunning, unProfit);
         if (isPrintBalance) {
             time2Balance.put(timeUpdate, balance);
             Double balanceYesterday = time2Balance.get(timeUpdate - Utils.TIME_DAY);

@@ -2,12 +2,12 @@ package com.binance.chuyennd.research;
 
 import com.binance.chuyennd.utils.Storage;
 import com.binance.chuyennd.utils.Utils;
-import com.binance.client.model.enums.OrderSide;
 
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class BalanceIndex implements Serializable {
@@ -17,7 +17,9 @@ public class BalanceIndex implements Serializable {
     public Double rateMarginRealMax;
     public Long timeMarginMax;
     public Double profitLossMax;
+
     public Long timeProfitLossMax;
+
 
     public Double unProfitMin;
     public Map<Long, Double> date2ProfitMin = new HashMap<>();
@@ -27,13 +29,14 @@ public class BalanceIndex implements Serializable {
     public Map<String, Double> month2SLMax = new HashMap<>();
     public Map<String, Double> month2MarginMax = new HashMap<>();
     public Map<String, Double> month2MarginRealMax = new HashMap<>();
+    public TreeMap<Integer, Double> year2UnrealizedPnl = new TreeMap<>();
     public Long timeUnProfitMin;
 
 
     public void updateIndex(Double balance, Double positionMargin, Double positionMarginReal,
                             Long timeUpdate, Double profitLossMin, Double unrealizedProfitMin,
                             ConcurrentHashMap<String, List<OrderTargetInfoTest>> allOrderEntry, ConcurrentHashMap<String,
-            OrderTargetInfoTest> orderRunning) {
+            OrderTargetInfoTest> orderRunning, Double unProfit) {
 
         if (rateMarginMax == null || rateMarginMax < positionMargin / balance) {
             rateMarginMax = positionMargin / balance;
@@ -123,6 +126,6 @@ public class BalanceIndex implements Serializable {
             Storage.writeObject2File("storage/data/unProfitMin/" + Utils.getMonth(timeUpdate), allOrderEntry);
         }
         month2ProfitMin.put(Utils.getMonth(timeUpdate), profitMinOfYear);
-
+        year2UnrealizedPnl.put(Utils.getYear(timeUpdate), unProfit);
     }
 }

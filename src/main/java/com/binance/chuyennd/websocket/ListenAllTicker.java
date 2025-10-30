@@ -161,6 +161,7 @@ public class ListenAllTicker {
             symbols.add(symbol.toLowerCase());
         }
         // clear data trash
+        LOG.info("Connect ws to {} symbols", symbols.size());
         Set<String> symbolTrash = new HashSet<>();
         for (String symbol : symbol2Tickers.keySet()) {
             if (!symbols.contains(symbol.toLowerCase())) {
@@ -172,7 +173,7 @@ public class ListenAllTicker {
         }
 
         Collections.shuffle(symbols);
-        List<List<String>> sublist = Utils.subListPartInput(symbols, 3);
+        List<List<String>> sublist = Utils.subListPartInput(symbols, 4);
         for (int i = sublist.size() - 1; i >= 0; i--) {
             // Lấy List<String> tại chỉ mục i
             List<String> list = sublist.get(i);

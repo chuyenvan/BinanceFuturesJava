@@ -250,6 +250,7 @@ public class TraceData2Test {
     }
 
     public static String statisticResult(TreeMap<Long, OrderTargetInfoTest> time2Order) {
+        int slow_days = 60;
         Map<MarketLevelChange, List<OrderTargetInfoTest>> level2Orders = new HashMap<>();
         Map<Long, List<OrderTargetInfoTest>> times2OrderDone = new HashMap<>();
         Map<Integer, List<Double>> year2Pnl = new HashMap<>();
@@ -292,14 +293,12 @@ public class TraceData2Test {
         TreeMap<Integer, Double> year2MarginMax = new TreeMap();
         TreeMap<Integer, Double> year2MarginRealMax = new TreeMap();
         TreeMap<Integer, Double> year2UnProfitMin = new TreeMap();
-        TreeMap<Integer, Double> year2SLMin = new TreeMap();
         TreeMap<Integer, Integer> year2OrderBigCounter = new TreeMap();
         TreeMap<Integer, Integer> year2OrderSpecialBigCounter = new TreeMap();
         TreeMap<Integer, Integer> year2OrderBigFalseCounter = new TreeMap();
         TreeMap<Integer, Integer> year2OrderBigSlowCounter = new TreeMap();
         TreeMap<Integer, Integer> year2OrderBuySlowCounter = new TreeMap();
-        TreeMap<Integer, Integer> year2OrderSellSlowCounter = new TreeMap();
-        TreeMap<Long, OrderTargetInfoTest> allOrderSlow = new TreeMap<>();
+
         BalanceIndex balanceIndex = (BalanceIndex) Storage.readObjectFromFile("../simulator/storage/BalanceIndex.data");
 //        BalanceIndex balanceIndex = (BalanceIndex) Storage.readObjectFromFile("target/BalanceIndex.data");
         for (Long date : balanceIndex.date2MarginMax.keySet()) {
@@ -316,7 +315,6 @@ public class TraceData2Test {
             year2OrderBigFalseCounter.put(year, 0);
             year2OrderBigSlowCounter.put(year, 0);
             year2OrderBuySlowCounter.put(year, 0);
-            year2OrderSellSlowCounter.put(year, 0);
         }
         for (Long time : times2OrderDone.keySet()) {
 
@@ -335,23 +333,15 @@ public class TraceData2Test {
                     timeOrder = orderTarget.timeUpdate - orderTarget.timeStart;
                 }
             }
-            if (timeOrder > 45 * Utils.TIME_DAY) {
+            if (timeOrder > slow_days * Utils.TIME_DAY) {
                 int year = Utils.getYear(time);
-                if (orders.get(0).side.equals(OrderSide.BUY)) {
-                    Integer counterOrderSlow = year2OrderBuySlowCounter.get(year);
-                    if (counterOrderSlow == null) {
-                        counterOrderSlow = 0;
-                    }
-                    counterOrderSlow++;
-                    year2OrderBuySlowCounter.put(year, counterOrderSlow);
-                } else {
-                    Integer counterOrderSlow = year2OrderSellSlowCounter.get(year);
-                    if (counterOrderSlow == null) {
-                        counterOrderSlow = 0;
-                    }
-                    counterOrderSlow++;
-                    year2OrderSellSlowCounter.put(year, counterOrderSlow);
+                Integer counterOrderSlow = year2OrderBuySlowCounter.get(year);
+                if (counterOrderSlow == null) {
+                    counterOrderSlow = 0;
                 }
+                counterOrderSlow++;
+                year2OrderBuySlowCounter.put(year, counterOrderSlow);
+
             }
             for (String symbol : symbol2Margin.keySet()) {
                 Double margin = symbol2Margin.get(symbol);
@@ -385,7 +375,7 @@ public class TraceData2Test {
                     LOG.info("Big: {} {} {} {} ", symbol, sideBig,
                             Utils.normalizeDateYYYYMMDDHHmm(orders.get(0).timeUpdate), margin.longValue());
 
-                    if (timeOrder > 45 * Utils.TIME_DAY) {
+                    if (timeOrder > slow_days * Utils.TIME_DAY) {
                         Integer counterOrderSlow = year2OrderBigSlowCounter.get(year);
                         if (counterOrderSlow == null) {
                             counterOrderSlow = 0;
@@ -419,19 +409,6 @@ public class TraceData2Test {
                 yearProfitMin = profitMin;
             }
             year2UnProfitMin.put(Utils.getYear(date), yearProfitMin);
-        }
-        for (String month : balanceIndex.month2SLMax.keySet()) {
-            try {
-                Integer year = Utils.getYear(Utils.sdfMonth.parse(month).getTime());
-                Double slMin = year2SLMin.get(year);
-                Double monthSLMin = balanceIndex.month2SLMax.get(month);
-                if (slMin == null || slMin > monthSLMin) {
-                    slMin = monthSLMin;
-                }
-                year2SLMin.put(year, slMin);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
         }
         for (Long time : date2Profit.keySet()) {
             Integer year = Utils.getYear(time);
@@ -469,6 +446,21 @@ public class TraceData2Test {
             }
         }
         for (Map.Entry<Integer, Double> entry : year2Profit.entrySet()) {
+            Integer year = entry.getKey();
+            int lastYear = year - 1;
+            Double unPLastYear = balanceIndex.year2UnrealizedPnl.get(lastYear);
+            if (unPLastYear == null) {
+                unPLastYear = 0d;
+            }
+            Double unPYear = balanceIndex.year2UnrealizedPnl.get(year);
+            if (balanceIndex.year2UnrealizedPnl.get(year + 1) == null) {
+                unPYear = 0d;
+            }
+            double profitOfYear = entry.getValue() - unPLastYear + unPYear;
+            LOG.info("{} {} {} {}-> {}", year, unPLastYear, unPYear, entry.getValue(), profitOfYear);
+            year2Profit.put(year, profitOfYear);
+        }
+        for (Map.Entry<Integer, Double> entry : year2Profit.entrySet()) {
             builder.append("\n");
             Integer year = entry.getKey();
             builder.append(year).append("\t");
@@ -479,10 +471,9 @@ public class TraceData2Test {
             builder.append("Big: ").append(Utils.formatLog(year2OrderSpecialBigCounter.get(year), 3))
                     .append("/").append(Utils.formatLog(year2OrderBigCounter.get(year), 3)).append("\t");
             builder.append("Big_False: ").append(Utils.formatLog(year2OrderBigFalseCounter.get(year), 3)).append("\t");
-            builder.append("Slow_Big_Buy_Sell: ").append(Utils.formatLog(year2OrderBigSlowCounter.get(year), 3))
-                    .append("/").append(Utils.formatLog(year2OrderBuySlowCounter.get(year), 3))
-                    .append("/").append(Utils.formatLog(year2OrderSellSlowCounter.get(year), 3)).append("\t");
-            builder.append("SLMin: ").append(year2SLMin.get(year).longValue()).append("\t");
+            builder.append("Slow_Big_Buy: ").append(Utils.formatLog(year2OrderBigSlowCounter.get(year), 3))
+                    .append("/").append(Utils.formatLog(year2OrderBuySlowCounter.get(year), 3)).append("\t");
+            builder.append("UnPnl: ").append(balanceIndex.year2UnrealizedPnl.get(year).longValue()).append("\t");
             builder.append(entry.getValue().longValue()).append("\t");
             builder.append(Utils.formatDouble(entry.getValue() / BudgetManagerSimple.getInstance().balanceBasic, 2));
         }

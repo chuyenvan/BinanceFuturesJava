@@ -3,6 +3,7 @@ package com.binance.chuyennd.tradecore;
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.utils.Configs;
+import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -87,6 +88,7 @@ public class TradeUtils {
         double periodHigh = 0;
         double periodMin = Double.MAX_VALUE;
         double totalVolume = 0;
+        double maxChange = 0;
         int startIndex = recentTickers.size() - PRICE_LOOKBACK_PERIOD;
 
         for (int i = startIndex; i < recentTickers.size(); i++) {
@@ -97,6 +99,9 @@ public class TradeUtils {
             if (candle.minPrice < periodMin) {
                 periodMin = candle.minPrice;
             }
+            if (maxChange < Utils.rateOf2Double(candle.maxPrice, candle.minPrice)) {
+                maxChange = Utils.rateOf2Double(candle.maxPrice, candle.minPrice);
+            }
             totalVolume += candle.totalUsdt;
         }
         if (periodHigh == 0 || periodMin == 0) return false; // Dữ liệu bất thường, bỏ qua
@@ -106,7 +111,10 @@ public class TradeUtils {
 
         // Lọc 2: "Thị trường ảm đạm"
         double movementRange = Math.abs(dow) + up;
-        if (movementRange < MIN_MOVEMENT_RANGE_THRESHOLD || totalVolume < MIN_VOLUME_TRADING) {
+        if (movementRange < MIN_MOVEMENT_RANGE_THRESHOLD
+                || totalVolume < MIN_VOLUME_TRADING
+                || maxChange < 0.01
+        ) {
             LOG.warn("!!! TRÁNH VÀO LỆNH (Thị trường ảm đạm): {} | Biến động chỉ {}% ",
                     symbol, String.format("%.2f", movementRange * 100));
             return true;
