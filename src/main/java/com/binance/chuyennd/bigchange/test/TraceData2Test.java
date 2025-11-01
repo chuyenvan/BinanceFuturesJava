@@ -321,6 +321,7 @@ public class TraceData2Test {
             List<OrderTargetInfoTest> orders = times2OrderDone.get(time);
             Map<String, Double> symbol2Margin = new HashMap<>();
             Long timeOrder = 0l;
+
             OrderTargetStatus status = orders.get(0).status;
             for (OrderTargetInfoTest orderTarget : orders) {
                 Double margin = symbol2Margin.get(orderTarget.symbol);
@@ -334,7 +335,7 @@ public class TraceData2Test {
                 }
             }
             if (timeOrder > slow_days * Utils.TIME_DAY) {
-                int year = Utils.getYear(time);
+                int year = Utils.getYear(orders.get(0).timeStart);
                 Integer counterOrderSlow = year2OrderBuySlowCounter.get(year);
                 if (counterOrderSlow == null) {
                     counterOrderSlow = 0;

@@ -45,7 +45,7 @@ public class Configs {
 
     public static final Integer NUMBER_RATE_DOWN_HISTORY_TRADE = 20;
     // funding fee config
-    public static final Integer NUMBER_HOUR_FUNDING_CAL = 24;
+    public static final Integer NUMBER_HOUR_FUNDING_CAL = 30;
     public static final Double FUNDING_MAX_TRADE = 0.00001;
     public static final Double FUNDING_MIN_TRADE = 0.0006;
     public static final int NUMBER_TICKER_RATE_CHANGE_MAX_TRADE = 60;

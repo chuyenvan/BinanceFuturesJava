@@ -423,9 +423,9 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     public void initData() throws IOException, ParseException {
         // clear Data Old
         allOrderDone = new TreeMap<>();
-        if (new File(FILE_STORAGE_ORDER_DONE).exists()) {
-            FileUtils.delete(new File(FILE_STORAGE_ORDER_DONE));
-        }
+//        if (new File(FILE_STORAGE_ORDER_DONE).exists()) {
+//            FileUtils.delete(new File(FILE_STORAGE_ORDER_DONE));
+//        }
         if (!new File(Configs.FILE_MARKET_RATE_CHANGE).exists()) {
             new ExportMarketData2File().exportMarketEntries();
         }
@@ -572,13 +572,13 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         budget = TradeUtils.managerBudget(budget, marginRunning, balanceBasic, levelChange, isTrendBuyWithBtc, isTrendBuyWithETH);
 
         if (budget == null) {
-            LOG.info("Not trade because over capital: {} {} {}", symbol, levelChange,
+            LOG.info("Not trade : {} {} {} {}", symbol, levelChange, isTrendBuyWithBtc,
                     Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()));
             return;
+        } else {
+            LOG.info("Trade : {} {} {} {}", symbol, levelChange, isTrendBuyWithBtc,
+                    Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()));
         }
-        String log = OrderSide.BUY + " " + symbol + " entry: " + entry +
-                " budget: " + budget
-                + " time:" + Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue());
         Double quantity = Utils.calQuantityTest(budget, leverage, entry, symbol);
 
         if (StringUtils.equals(symbol, Constants.SYMBOL_PAIR_BTC)) {
@@ -605,7 +605,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             orders = new ArrayList<>();
         }
         orders.add(order);
-        LOG.info(log);
+
         BudgetManagerSimple.getInstance().counterOrderCreated.incrementAndGet();
         symbol2OrdersEntry.put(symbol, orders);
         symbol2OrderRunning.put(symbol, mergeOrder(orders, ticker));

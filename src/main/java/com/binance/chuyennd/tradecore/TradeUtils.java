@@ -153,7 +153,7 @@ public class TradeUtils {
         if (marginRatio >= 0.9) {
             budget /= 4;
         }
-        if (marginRatio >= 0.95) {
+        if (marginRatio >= 0.99) {
             return null;
         }
         switch (levelChange) {
