@@ -21,7 +21,6 @@ import com.binance.chuyennd.utils.StorageSnappy;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
 import com.binance.client.model.enums.OrderSide;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -163,7 +162,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                             continue; // Bỏ qua nếu có rủi ro
                                         }
                                         createOrderBUY(symbol, ticker, levelChange, time2MarketRateChange.get(time), symbol2PriceMax15M.get(symbol)
-                                                , isTrendBuyWithBtc, isTrendBuyWithETH);
+                                                , isTrendBuyWithBtc, isTrendBuyWithETH, levelChange);
                                     }
                                     for (String symbol : symbolDcaLevel) {
                                         KlineObjectSimple ticker = symbol2Ticker.get(symbol);
@@ -175,7 +174,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                                 leveChange2Dca = MarketLevelChange.DCA_LEVEL2;
                                             }
                                             createOrderBUY(symbol, ticker, leveChange2Dca, time2MarketRateChange.get(time)
-                                                    , symbol2PriceMax15M.get(symbol), isTrendBuyWithBtc, isTrendBuyWithETH);
+                                                    , symbol2PriceMax15M.get(symbol), isTrendBuyWithBtc, isTrendBuyWithETH, levelChange);
                                         }
                                     }
                                 }
@@ -208,7 +207,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                                 leveChange2Dca = MarketLevelChange.DCA_LEVEL2;
                                             }
                                             createOrderBUY(symbol, ticker, leveChange2Dca,
-                                                    time2MarketRateChange.get(time), priceMax15M, isTrendBuyWithBtc, isTrendBuyWithETH);
+                                                    time2MarketRateChange.get(time), priceMax15M, isTrendBuyWithBtc, isTrendBuyWithETH, levelChange);
                                         }
                                     }
 
@@ -249,7 +248,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                                     rateMax15M, tickers.size());
                                             symbolCanTradeMass.add(symbol);
                                             createOrderBUY(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY,
-                                                    time2MarketRateChange.get(time), priceMax15M, isTrendBuyWithBtc, isTrendBuyWithETH);
+                                                    time2MarketRateChange.get(time), priceMax15M, isTrendBuyWithBtc, isTrendBuyWithETH, levelChange);
                                         } else {
                                             if (MarketBigChangeDetector.isRateChangeAvailable2TradeMass(rateTicker, rateMax15M, isTrendBuyWithETH)) {
                                                 symbolCanTradeMass.add(symbol);
@@ -267,9 +266,10 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                             if (TradeUtils.shouldAvoidEntry(symbol, tickers, isTrendBuyWithETH)) {
                                                 continue; // Bỏ qua nếu có rủi ro
                                             }
+
                                             Double priceMax15M = getMax15M(tickers);
                                             createOrderBUY(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY,
-                                                    time2MarketRateChange.get(time), priceMax15M, isTrendBuyWithBtc, isTrendBuyWithETH);
+                                                    time2MarketRateChange.get(time), priceMax15M, isTrendBuyWithBtc, isTrendBuyWithETH, levelChange);
                                         }
                                     }
                                 }
@@ -300,7 +300,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                 for (String symbol : symbol2BUY) {
                                     KlineObjectSimple ticker = symbol2Ticker.get(symbol);
                                     if (Utils.isTickerAvailable(ticker)) {
-                                        createOrderBUY(symbol, ticker, levelChange, time2MarketRateChange.get(time), symbol2PriceMax15M.get(symbol), isTrendBuyWithBtc, isTrendBuyWithETH);
+                                        createOrderBUY(symbol, ticker, levelChange, time2MarketRateChange.get(time), symbol2PriceMax15M.get(symbol), isTrendBuyWithBtc, isTrendBuyWithETH, levelChange);
                                     }
                                 }
                             }
@@ -561,7 +561,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
 
     public void createOrderBUY(String symbol, KlineObjectSimple ticker, MarketLevelChange levelChange,
-                               MarketRateChange marketData, Double maxPrice15m, Boolean isTrendBuyWithBtc, Boolean isTrendBuyWithETH) {
+                               MarketRateChange marketData, Double maxPrice15m, Boolean isTrendBuyWithBtc,
+                               Boolean isTrendBuyWithETH, MarketLevelChange levelChangeRoot) {
         Double entry = ticker.priceClose;
         Integer leverage = BudgetManagerSimple.getInstance().getLeverage();
 
@@ -572,12 +573,12 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         budget = TradeUtils.managerBudget(budget, marginRunning, balanceBasic, levelChange, isTrendBuyWithBtc, isTrendBuyWithETH);
 
         if (budget == null) {
-            LOG.info("Not trade : {} {} {} {}", symbol, levelChange, isTrendBuyWithBtc,
-                    Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()));
+            LOG.info("Not trade : {} {} {} {} {}", symbol, levelChange, isTrendBuyWithBtc,
+                    Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()), levelChangeRoot);
             return;
         } else {
-            LOG.info("Trade : {} {} {} {}", symbol, levelChange, isTrendBuyWithBtc,
-                    Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()));
+            LOG.info("Trade : {} {} {} {} {}", symbol, levelChange, isTrendBuyWithBtc,
+                    Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()), levelChangeRoot);
         }
         Double quantity = Utils.calQuantityTest(budget, leverage, entry, symbol);
 

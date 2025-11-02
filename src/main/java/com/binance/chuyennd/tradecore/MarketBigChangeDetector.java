@@ -318,9 +318,8 @@ public class MarketBigChangeDetector {
     }
 
     public static boolean isRateChangeAvailable2TradeMass(Double rateTicker, Double rateMax15M, Boolean isTrendBuyWithETH) {
-        return rateTicker < -0.008 || rateMax15M < -0.04;
+        return rateTicker < -0.007 || rateMax15M < -0.04;
     }
-
 
     public static boolean isDcaAlt(Double rateDown15MAvg,
                                    Double rateDownAvg,

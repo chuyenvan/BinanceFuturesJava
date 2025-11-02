@@ -137,7 +137,8 @@ public class TradeUtils {
                 MarketLevelChange.DCA_LEVEL2
         );
         boolean isNormalLevel = !dcaOrBigLevels.contains(levelChange)
-                && !StringUtils.containsIgnoreCase(levelChange.toString(), "big");
+                && !StringUtils.containsIgnoreCase(levelChange.toString(), "big")
+                && !StringUtils.containsIgnoreCase(levelChange.toString(), "medium");
         double marginRatio = marginRunning / balanceBasic;
 
         if (isNormalLevel && marginRatio >= 0.3) {
@@ -175,11 +176,10 @@ public class TradeUtils {
                 budget /= 4;
                 break;
         }
-        if (!isTrendBuyETH) {
-            budget = budget * 0.8;
-        }
         if (isTrendBuyETH) {
             budget = budget * 1.2;
+        }else{
+            budget = budget * 0.8;
         }
         return budget;
     }

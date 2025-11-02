@@ -156,22 +156,20 @@ public class BudgetManagerSimple {
 
             Double rateMarginMaxDouble = balanceIndex.rateMarginMax * 100;
 
-            LOG.info("Update {} => b:{} pD:{}\tm:{}\tmax:{}%\t{}\t{}\t{}\t{}\t" +
-                            "unP:{}\tunPMin:{}\t{}\t{}\t{}%\t{}\tdone:{}/{}/{} run:{}/{} f:{}",
+            LOG.info("Update {} => b:{} pD:{}\tm:{}\tmax:{}%\t{}\t{}\t" +
+                            "unP:{}\tunPMin:{}\t{}\t{}\t{}%\tdone:{}/{}/{} run:{}/{} f:{}",
                     Utils.normalizeDateYYYYMMDDHHmm(timeUpdate), Utils.formatLog(balance.longValue(), 5),
                     Utils.formatLog(profitOfDate.longValue(), 4),
                     Utils.formatLog(positionMargin.longValue(), 4),
                     Utils.formatLog(rateMarginMaxDouble.longValue(), 3),
                     Utils.formatLog(marginMaxDate.longValue(), 5),
                     Utils.formatLog(marginMaxMonth.longValue(), 5),
-                    Utils.formatLog(marginRealMaxDate.longValue(), 5),
-                    Utils.formatLog(marginRealMaxMonth.longValue(), 5),
                     Utils.formatLog(unProfit.longValue(), 5),
                     Utils.formatLog(balanceIndex.unProfitMin.longValue(), 5),
                     Utils.formatLog(unProfitDate.longValue(), 5),
                     Utils.formatLog(unProfitMonth.longValue(), 5),
                     Utils.formatPercentNew(balanceIndex.unProfitMin / balanceBasic),
-                    slMonth.longValue(), totalSL, allOrderDone.size(), counterOrderCreated.get(),
+                    totalSL, allOrderDone.size(), counterOrderCreated.get(),
                     counterOrderRunning(symbol2OrdersEntry), maxOrderRunning, totalFundingFee.longValue());
 //            if (timeUpdate.equals(Utils.getToDay() + 7 * Utils.TIME_HOUR)) {
 ////                LOG.info("Report: {}", Utils.normalizeDateYYYYMMDDHHmm(timeUpdate));

@@ -86,7 +86,14 @@ public class Test {
 //        System.out.println(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO).size());
 
 //        testsublist();
-        testWS();
+        Utils.writePid2File();
+        while (true) {
+            if (Utils.getCurrentSecond() == 0) {
+                Utils.reset("Reset by time: " + Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()));
+            }
+            Thread.sleep(1000);
+        }
+//        testWS();
 //        System.out.println(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS));
 //        findsymbolErrorStreming();
 //        testShuffle();

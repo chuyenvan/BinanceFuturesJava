@@ -19,6 +19,9 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.net.URLEncoder;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.text.*;
 import java.util.*;
 
@@ -636,5 +639,57 @@ public class Utils {
             minPrice = ticker.minPrice;
         }
         return minPrice;
+    }
+
+    public static void writePid2File() {
+        // --- BẮT ĐẦU ĐOẠN CODE GHI PID MỚI ---
+        try {
+            // 1. Lấy biến môi trường (giống hệt logic trong daemon.sh)
+            String pidDir = System.getenv("APP_PID_DIR");
+            String mainClass = System.getenv("APP_MAIN_CLASS");
+            LOG.info("MainClass: {} APPDir: {}", mainClass, pidDir);
+
+            // 2. Áp dụng giá trị mặc định (giống hệt logic trong daemon.sh)
+            if (pidDir == null || pidDir.isEmpty()) {
+                pidDir = "/run";
+            }
+
+            if (mainClass != null && !mainClass.isEmpty()) {
+                // 3. Lấy PID của tiến trình Java hiện tại
+                // Cách 1: Hiện đại (Java 9+)
+                long pid = ProcessHandle.current().pid();
+
+                // Cách 2: Truyền thống (Java 8 và cũ hơn)
+                // String pidName = ManagementFactory.getRuntimeMXBean().getName();
+                // long pid = Long.parseLong(pidName.split("@")[0]);
+
+                // 4. Ghi PID vào file
+                String pidFilePath = pidDir + "/" + mainClass + ".pid";
+                Files.write(
+                        Paths.get(pidFilePath),
+                        String.valueOf(pid).getBytes(),
+                        StandardOpenOption.CREATE,
+                        StandardOpenOption.TRUNCATE_EXISTING // Ghi đè file cũ (nếu có)
+                );
+
+                // 5. (Nên làm) Thêm Shutdown Hook để xóa file PID khi thoát
+                // Điều này mô phỏng hành vi "rm -f $pid" của hàm stop
+                final String finalPidFilePath = pidFilePath;
+                Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                    try {
+                        Files.deleteIfExists(Paths.get(finalPidFilePath));
+                    } catch (Exception e) {
+                        // Bỏ qua nếu có lỗi
+                    }
+                }));
+
+                LOG.info("PID " + pid + " written to " + pidFilePath);
+            }
+        } catch (Exception e) {
+            LOG.error("Failed to write PID file: " + e.getMessage());
+            // Bạn có thể quyết định thoát nếu không ghi được PID
+            // System.exit(1);
+        }
+        // --- KẾT THÚC ĐOẠN CODE GHI PID ---
     }
 }

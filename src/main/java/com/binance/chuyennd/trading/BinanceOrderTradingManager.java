@@ -58,6 +58,7 @@ public class BinanceOrderTradingManager {
 
 
     public static void main(String[] args) throws InterruptedException, ParseException {
+        Utils.writePid2File();
         new DetectEntrySignal2TradeNormal().start();
         new BinanceOrderTradingManager().start();
     }
