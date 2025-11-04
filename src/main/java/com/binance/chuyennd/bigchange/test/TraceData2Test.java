@@ -458,7 +458,7 @@ public class TraceData2Test {
                 unPYear = 0d;
             }
             double profitOfYear = entry.getValue() - unPLastYear + unPYear;
-            LOG.info("{} {} {} {}-> {}", year, unPLastYear, unPYear, entry.getValue(), profitOfYear);
+            LOG.info("{} {} {} {}-> {}", year, unPLastYear, balanceIndex.year2UnrealizedPnl.get(year), entry.getValue(), profitOfYear);
             year2Profit.put(year, profitOfYear);
         }
         for (Map.Entry<Integer, Double> entry : year2Profit.entrySet()) {

@@ -450,7 +450,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             KlineObjectSimple ticker = tickers.get(tickers.size() - 1);
             if (orderMulti.timeStart <= ticker.startTime.longValue()) {
                 orderMulti.updatePriceByKlineSimple(ticker);
-                if (ticker.maxPrice >= orderMulti.priceEntry * 1.009 || orderMulti.priceSL != null) {
+                if (ticker.maxPrice >= orderMulti.priceEntry * 1.006 || orderMulti.priceSL != null) {
                     Double maxChangeIn90M = getMaxRateIn90MForTradingStop(time, symbol, tickers);
                     orderMulti.updateStatusNew(maxChangeIn90M, ticker, isTrendBuyWithETH);
                     if (orderMulti.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)
