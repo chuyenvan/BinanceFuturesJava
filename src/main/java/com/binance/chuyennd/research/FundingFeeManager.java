@@ -4,6 +4,7 @@ import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Storage;
 import com.binance.chuyennd.utils.StorageSnappy;
 import com.binance.chuyennd.utils.Utils;
+import com.binance.chuyennd.ai_ml.RunOptimizationBudgetRatio;
 import com.binance.client.model.market.FundingRate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,11 +19,9 @@ public class FundingFeeManager {
     public static final Logger LOG = LoggerFactory.getLogger(FundingFeeManager.class);
     private ConcurrentHashMap<String, TreeMap<Long, FundingRate>> symbol2FundingFee = new ConcurrentHashMap<>();
     public static final String FILE_FUNGDING_FEE = "storage/fundingfee_time.data";
-    public static final String FILE_FUNGDING_FEE_EXTREME = "storage/fundingfee_time_extreme.data";
-    public static final String FILE_FUNGDING_FEE_EXTREME_EX = "storage/fundingfee_time_extreme_extend.data";
     public ConcurrentHashMap<Long, Set<String>> time2FundingFeeTrade;
-    public ConcurrentHashMap<Long, Set<String>> time2FundingFeeExtremeTrade;
-    public ConcurrentHashMap<Long, Set<String>> time2FundingFeeExtremeExtendTrade;
+    //    public ConcurrentHashMap<Long, Set<String>> time2FundingFeeExtremeTrade;
+//    public ConcurrentHashMap<Long, Set<String>> time2FundingFeeExtremeExtendTrade;
     private static volatile FundingFeeManager INSTANCE = null;
 
     public static FundingFeeManager getInstance() {
@@ -49,20 +48,14 @@ public class FundingFeeManager {
                     e.printStackTrace();
                 }
             }
-            if (new File(FILE_FUNGDING_FEE).exists()) {
-                time2FundingFeeTrade = (ConcurrentHashMap<Long, Set<String>>) StorageSnappy.readObjectFromFile(FILE_FUNGDING_FEE);
+            if (RunOptimizationBudgetRatio.CACHED_time2FundingFeeTrade != null) {
+                this.time2FundingFeeTrade = RunOptimizationBudgetRatio.CACHED_time2FundingFeeTrade;
             } else {
-                time2FundingFeeTrade = new ConcurrentHashMap<>();
-            }
-            if (new File(FILE_FUNGDING_FEE_EXTREME).exists()) {
-                time2FundingFeeExtremeTrade = (ConcurrentHashMap<Long, Set<String>>) StorageSnappy.readObjectFromFile(FILE_FUNGDING_FEE_EXTREME);
-            } else {
-                time2FundingFeeExtremeTrade = new ConcurrentHashMap<>();
-            }
-            if (new File(FILE_FUNGDING_FEE_EXTREME_EX).exists()) {
-                time2FundingFeeExtremeExtendTrade = (ConcurrentHashMap<Long, Set<String>>) StorageSnappy.readObjectFromFile(FILE_FUNGDING_FEE_EXTREME_EX);
-            } else {
-                time2FundingFeeExtremeExtendTrade = new ConcurrentHashMap<>();
+                if (new File(FILE_FUNGDING_FEE).exists()) {
+                    time2FundingFeeTrade = (ConcurrentHashMap<Long, Set<String>>) StorageSnappy.readObjectFromFile(FILE_FUNGDING_FEE);
+                } else {
+                    time2FundingFeeTrade = new ConcurrentHashMap<>();
+                }
             }
             LOG.info("Init funding fee: {} symbols", symbol2FundingFee.size());
         } catch (Exception e) {
@@ -73,8 +66,6 @@ public class FundingFeeManager {
     public void writeData2File() {
         try {
             StorageSnappy.writeObject2File(FILE_FUNGDING_FEE, time2FundingFeeTrade);
-            StorageSnappy.writeObject2File(FILE_FUNGDING_FEE_EXTREME, time2FundingFeeExtremeTrade);
-            StorageSnappy.writeObject2File(FILE_FUNGDING_FEE_EXTREME_EX, time2FundingFeeExtremeExtendTrade);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -133,19 +124,6 @@ public class FundingFeeManager {
         }
     }
 
-    private void printLastFunding() {
-        for (String symbol : symbol2FundingFee.keySet()) {
-            TreeMap<Long, FundingRate> time2Funding = symbol2FundingFee.get(symbol);
-            int counter = 0;
-            for (Long time : time2Funding.descendingKeySet()) {
-                LOG.info("{} {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time), time2Funding.get(time).getFundingRate());
-                counter++;
-                if (counter > 3) {
-                    break;
-                }
-            }
-        }
-    }
 
     private void printLastFunding(String symbol) {
 
@@ -201,6 +179,9 @@ public class FundingFeeManager {
 
     public Set<String> getFundingBuyNew(long time) {
         long timeGet = Utils.getHour(time);
+        if (time2FundingFeeTrade == null) {
+            time2FundingFeeTrade = new ConcurrentHashMap<>();
+        }
         if (time2FundingFeeTrade.containsKey(timeGet)) {
             return time2FundingFeeTrade.get(timeGet);
         } else {

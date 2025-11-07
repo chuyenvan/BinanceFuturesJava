@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+// Dinh nghia package giong voi cac file .proto khac cua ban
+package com.binance.chuyennd.proto;
+
+option java_outer_classname = "MinuteDataProto";
+
+// Dinh nghia lai cau truc KlineObjectSimple
+// (Ban phai dung ten va kieu du lieu giong het file .java)
+message KlineObjectSimpleProto {
+  double startTime = 1;
+  double priceOpen = 2;
+  double maxPrice = 3;
+  double minPrice = 4;
+  double priceClose = 5;
+  double totalUsdt = 6;
+}
+
+// Day la doi tuong chinh chung ta se luu tru
+// No chua 1 map tuong ung voi Map<String, KlineObjectSimple>
+message MinuteData {
+  map<string, KlineObjectSimpleProto> tickers = 1;
+}

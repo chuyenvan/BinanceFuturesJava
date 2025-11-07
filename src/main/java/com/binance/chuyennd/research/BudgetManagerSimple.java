@@ -112,9 +112,6 @@ public class BudgetManagerSimple {
         profitLossMax = calProfitLossMax(orderRunning.values());
 
         Double positionMarginReal = positionMargin;
-//        Double positionMarginReal = calPositionMarginReal(orderRunning.values());
-//        Double balanceReal = balance + unProfit;
-//        Double unrealizedProfitMin = calUnrealizedProfitMin(orderRunning.values());
         balanceIndex.updateIndex(balanceBasic, positionMargin, positionMarginReal, timeUpdate, profitLossMax, profitLossMax, symbol2OrdersEntry,
                 orderRunning, unProfit);
         if (isPrintBalance) {
@@ -133,14 +130,7 @@ public class BudgetManagerSimple {
             if (marginMaxMonth == null) {
                 marginMaxMonth = 0d;
             }
-            Double marginRealMaxDate = balanceIndex.date2MarginRealMax.get(Utils.getDate(timeUpdate - Utils.TIME_MINUTE));
-            if (marginRealMaxDate == null) {
-                marginRealMaxDate = 0d;
-            }
-            Double marginRealMaxMonth = balanceIndex.month2MarginRealMax.get(Utils.getMonth(timeUpdate - Utils.TIME_DAY));
-            if (marginRealMaxMonth == null) {
-                marginRealMaxMonth = 0d;
-            }
+
             Double unProfitDate = balanceIndex.date2ProfitMin.get(Utils.getDate(timeUpdate - Utils.TIME_MINUTE));
             if (unProfitDate == null) {
                 unProfitDate = 0d;
@@ -149,19 +139,14 @@ public class BudgetManagerSimple {
             if (unProfitMonth == null) {
                 unProfitMonth = 0d;
             }
-            Double slMonth = balanceIndex.month2SLMax.get(Utils.getMonth(timeUpdate - Utils.TIME_DAY));
-            if (slMonth == null) {
-                slMonth = 0d;
-            }
 
-            Double rateMarginMaxDouble = balanceIndex.rateMarginMax * 100;
 
-            LOG.info("Update {} => b:{} pD:{}\tm:{}\tmax:{}%\t{}\t{}\t" +
+            LOG.info("Update {} => b:{} pD:{}\tm:{}\tmax:{}%\t{}\t" +
                             "unP:{}\tunPMin:{}\t{}\t{}\t{}%\tdone:{}/{}/{} run:{}/{} f:{}",
                     Utils.normalizeDateYYYYMMDDHHmm(timeUpdate), Utils.formatLog(balance.longValue(), 5),
                     Utils.formatLog(profitOfDate.longValue(), 4),
                     Utils.formatLog(positionMargin.longValue(), 4),
-                    Utils.formatLog(rateMarginMaxDouble.longValue(), 3),
+
                     Utils.formatLog(marginMaxDate.longValue(), 5),
                     Utils.formatLog(marginMaxMonth.longValue(), 5),
                     Utils.formatLog(unProfit.longValue(), 5),
@@ -269,8 +254,6 @@ public class BudgetManagerSimple {
 
     public void printBalanceIndex() {
         LOG.info("MarginMax: {} {}% {} profitLossMax: {} {}% {} unProfitMin: {} {}% {}",
-                balanceIndex.marginMax, Utils.formatPercent(balanceIndex.rateMarginMax),
-                Utils.normalizeDateYYYYMMDDHHmm(balanceIndex.timeMarginMax),
                 balanceIndex.profitLossMax, Utils.formatPercent(balanceIndex.profitLossMax / balanceBasic),
                 Utils.normalizeDateYYYYMMDDHHmm(balanceIndex.timeProfitLossMax),
                 balanceIndex.unProfitMin, Utils.formatPercent(balanceIndex.unProfitMin / balanceBasic),
@@ -303,4 +286,8 @@ public class BudgetManagerSimple {
     }
 
 
+    public static void resetInstance() {
+        INSTANCE = null;
+        // Khi gọi getInstance() lần tới, nó sẽ tạo lại một đối tượng mới
+    }
 }

@@ -115,8 +115,8 @@ public class TradeUtils {
                 || totalVolume < MIN_VOLUME_TRADING
                 || maxChange < 0.01
         ) {
-            LOG.warn("!!! TRÁNH VÀO LỆNH (Thị trường ảm đạm): {} | Biến động chỉ {}% ",
-                    symbol, String.format("%.2f", movementRange * 100));
+//            LOG.warn("!!! TRÁNH VÀO LỆNH (Thị trường ảm đạm): {} | Biến động chỉ {}% ",
+//                    symbol, String.format("%.2f", movementRange * 100));
             return true;
         }
         // Nếu không rơi vào trường hợp nào, có thể vào lệnh
@@ -132,6 +132,7 @@ public class TradeUtils {
                 return null;
             }
         }
+
         final Set<MarketLevelChange> dcaOrBigLevels = Set.of(
                 MarketLevelChange.DCA_LEVEL1,
                 MarketLevelChange.DCA_LEVEL2
@@ -141,18 +142,25 @@ public class TradeUtils {
                 && !StringUtils.containsIgnoreCase(levelChange.toString(), "medium");
         double marginRatio = marginRunning / balanceBasic;
 
-        if (isNormalLevel && marginRatio >= 0.3) {
-            budget /= 2;
+        // === THAY ĐỔI 1: SỬ DỤNG BIẾN CONFIGS ===
+        if (isNormalLevel && marginRatio >= Configs.BUDGET_MARGIN_RATIO_1) {
+            budget /= Configs.BUDGET_DIVIDER_1;
         }
-        if (marginRatio >= 0.6) {
-            budget /= 2;
+        if (marginRatio >= Configs.BUDGET_MARGIN_RATIO_2) {
+            budget /= Configs.BUDGET_DIVIDER_2;
         }
+
+        // (Tôi giữ lại các logic cũ của bạn)
         if (marginRatio >= 0.9) {
             budget /= 4;
         }
         if (marginRatio >= 0.99) {
             return null;
         }
+
+        // ... (Switch case của bạn giữ nguyên) ...
+        // (Bạn cũng có thể tham số hóa các giá trị chia 2, 3, 4 này
+        //  nhưng chúng ta sẽ làm 6 tham số trên trước)
         switch (levelChange) {
             case MEDIUM_DOWN:
             case DCA_LEVEL1:
@@ -176,11 +184,14 @@ public class TradeUtils {
                 budget /= 4;
                 break;
         }
+
+        // === THAY ĐỔI 2: SỬ DỤNG BIẾN CONFIGS ===
         if (isTrendBuyETH) {
-            budget = budget * 1.2;
-        }else{
-            budget = budget * 0.8;
+            budget = budget * Configs.BUDGET_TREND_UP_MULTIPLIER;
+        } else {
+            budget = budget * Configs.BUDGET_TREND_DOWN_MULTIPLIER;
         }
+
         return budget;
     }
 }

@@ -38,6 +38,22 @@ public class Configs {
             System.exit(0);
         }
     }
+    // 1. Ngưỡng margin-ratio đầu tiên để giảm budget
+    public static double BUDGET_MARGIN_RATIO_1 = 0.3;
+    // 2. Mức chia budget ở ngưỡng 1
+    public static double BUDGET_DIVIDER_1 = 2.0;
+
+    // 3. Ngưỡng margin-ratio thứ hai
+    public static double BUDGET_MARGIN_RATIO_2 = 0.6;
+    // 4. Mức chia budget ở ngưỡng 2
+    public static double BUDGET_DIVIDER_2 = 2.0;
+
+    // 5. Hệ số nhân budget khi CÓ trend (uptrend)
+    public static double BUDGET_TREND_UP_MULTIPLIER = 1.2;
+    // 6. Hệ số nhân budget khi KHÔNG CÓ trend (downtrend/sideways)
+    public static double BUDGET_TREND_DOWN_MULTIPLIER = 0.8;
+
+
 
     public static String TIME_RUN = Configs.getString("TIME_RUN");
     //budget config
@@ -83,6 +99,7 @@ public class Configs {
 
     public static String FILE_ENTRY_BTC_REVERSE = "../storage/btc/btcReverse-" + BTC_TREND_REVERSE_RATE_MIN + "-" + BTC_TREND_REVERSE_RATE_MAX + "-"
             + BTC_TREND_REVERSE_DURATION;
+    public static final String FILE_TREND_BY_TIME = "../storage/data_file_quick_run/trend_by_time.data";
 
     public static final String URL_PREMIUM_INDEX = "https://fapi.binance.com/fapi/v1/premiumIndex";
 

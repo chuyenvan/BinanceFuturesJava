@@ -185,8 +185,8 @@ public class MarketBigChangeDetector {
         for (Map.Entry<Double, String> entry : rateLoss2Symbols.entrySet()) {
             String symbol = entry.getValue();
             if (symbolLocked != null && symbolLocked.contains(symbol)) {
-                LOG.info("Not trade {} because symbol locking: {}",
-                        symbol, Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()));
+//                LOG.info("Not trade {} because symbol locking: {}",
+//                        symbol, Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()));
                 continue;
             }
             KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);

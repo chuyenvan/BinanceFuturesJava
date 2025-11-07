@@ -124,9 +124,9 @@ public class OrderTargetInfoTest implements Serializable {
         if (priceSL == null) {
             Double rateLoss = calRateLossMax(ticker.maxPrice);
             Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60MForTradingStop(maxChange90M, isTrendBuyWithETH);
-            Double rateStop = TradeUtils.calRateLossDynamicBuy(rateLoss, maxChange90M);
-            Double priceSLNew = Utils.calPriceTarget(symbol, priceEntry, OrderSide.SELL, -rateStop);
             if (rateLoss > rateMin2MoveSl) {
+                Double rateStop = TradeUtils.calRateLossDynamicBuy(rateLoss, maxChange90M);
+                Double priceSLNew = Utils.calPriceTarget(symbol, priceEntry, OrderSide.SELL, -rateStop);
                 minPrice = lastPrice;
                 this.priceSL = priceSLNew;
 //                if (ticker.priceClose <= priceSLNew) {
@@ -162,16 +162,17 @@ public class OrderTargetInfoTest implements Serializable {
             Double rateLoss = calRateLossMax(ticker.maxPrice);
             Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60MForTradingStop(rateChangeMax90M * 1.5,
                     isTrendBuyWithETH);
-            Double rateSL = TradeUtils.calRateLossDynamicBuy(rateLoss, rateChangeMax90M);
-            OrderSide side2Sl = OrderSide.SELL;
-            Double priceSLNew = Utils.calPriceTarget(symbol, priceEntry, side2Sl, -rateSL);
-            double priceSLChange = priceSLNew - priceSL;
-            if (priceSLChange > 0
-                    && rateLoss >= rateMin2MoveSl
-                    && priceSLNew > priceEntry
-            ) {
-                priceSL = priceSLNew;
-                minPrice = lastPrice;
+            if (rateLoss >= rateMin2MoveSl) {
+                Double rateSL = TradeUtils.calRateLossDynamicBuy(rateLoss, rateChangeMax90M);
+                OrderSide side2Sl = OrderSide.SELL;
+                Double priceSLNew = Utils.calPriceTarget(symbol, priceEntry, side2Sl, -rateSL);
+                double priceSLChange = priceSLNew - priceSL;
+                if (priceSLChange > 0
+                        && priceSLNew > priceEntry
+                ) {
+                    priceSL = priceSLNew;
+                    minPrice = lastPrice;
+                }
             }
         }
     }

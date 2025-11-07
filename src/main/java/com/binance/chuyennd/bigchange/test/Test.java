@@ -15,6 +15,7 @@
  */
 package com.binance.chuyennd.bigchange.test;
 
+import com.binance.chuyennd.aerospike.DataManagerAerospike;
 import com.binance.chuyennd.bigchange.market.MarketDataObject;
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
 import com.binance.chuyennd.client.ClientSingleton;
@@ -86,13 +87,18 @@ public class Test {
 //        System.out.println(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO).size());
 
 //        testsublist();
-        Utils.writePid2File();
-        while (true) {
-            if (Utils.getCurrentSecond() == 0) {
-                Utils.reset("Reset by time: " + Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()));
-            }
-            Thread.sleep(1000);
-        }
+        Long startTime = Utils.sdfFile.parse(Configs.TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
+        TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers = DataManagerAerospike.readDataFromAerospike1M(startTime);
+        LOG.info("time2Tickers size: {}", time2Tickers.size());
+        LOG.info("First key: {} time:{} size: {}",time2Tickers.firstKey(), Utils.normalizeDateYYYYMMDDHHmm(time2Tickers.firstKey()),
+                time2Tickers.firstEntry().getValue().size());
+//        Utils.writePid2File();
+//        while (true) {
+//            if (Utils.getCurrentSecond() == 0) {
+//                Utils.reset("Reset by time: " + Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()));
+//            }
+//            Thread.sleep(1000);
+//        }
 //        testWS();
 //        System.out.println(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS));
 //        findsymbolErrorStreming();

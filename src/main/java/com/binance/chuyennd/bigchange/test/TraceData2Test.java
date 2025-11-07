@@ -291,7 +291,6 @@ public class TraceData2Test {
         TreeMap<Double, Long> profit2Date = new TreeMap();
         TreeMap<Integer, Double> year2Profit = new TreeMap();
         TreeMap<Integer, Double> year2MarginMax = new TreeMap();
-        TreeMap<Integer, Double> year2MarginRealMax = new TreeMap();
         TreeMap<Integer, Double> year2UnProfitMin = new TreeMap();
         TreeMap<Integer, Integer> year2OrderBigCounter = new TreeMap();
         TreeMap<Integer, Integer> year2OrderSpecialBigCounter = new TreeMap();
@@ -395,14 +394,6 @@ public class TraceData2Test {
                 }
             }
         }
-        for (Long date : balanceIndex.date2MarginRealMax.keySet()) {
-            Double marginRealMax = balanceIndex.date2MarginRealMax.get(date);
-            Double yearMarginRealMax = year2MarginRealMax.get(Utils.getYear(date));
-            if (yearMarginRealMax == null || yearMarginRealMax < marginRealMax) {
-                yearMarginRealMax = marginRealMax;
-            }
-            year2MarginRealMax.put(Utils.getYear(date), yearMarginRealMax);
-        }
         for (Long date : balanceIndex.date2ProfitMin.keySet()) {
             Double profitMin = balanceIndex.date2ProfitMin.get(date);
             Double yearProfitMin = year2UnProfitMin.get(Utils.getYear(date));
@@ -466,7 +457,6 @@ public class TraceData2Test {
             Integer year = entry.getKey();
             builder.append(year).append("\t");
             builder.append("Margin: ").append(year2MarginMax.get(year).longValue()).append("\t");
-            builder.append("MarginReal: ").append(year2MarginRealMax.get(year).longValue()).append("\t");
             builder.append("UnProfitMin: ").append(year2UnProfitMin.get(year).longValue()).append("\t");
             builder.append("ProfitMin: ").append(Utils.formatLog(Utils.findMinSubarraySum(year2Pnl.get(year).toArray(new Double[0])).longValue(), 5)).append("\t");
             builder.append("Big: ").append(Utils.formatLog(year2OrderSpecialBigCounter.get(year), 3))
