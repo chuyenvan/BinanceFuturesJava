@@ -17,8 +17,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.Executors; // <<<--- THEM IMPORT NAY
 
 public class RunOptimizationBudgetRatio {
 
@@ -40,7 +40,7 @@ public class RunOptimizationBudgetRatio {
     public static TreeMap<Long, MarketDataObject> time2MarketData;
     public static TreeMap<Long, MarketRateChange> time2MarketRateChange;
     public static TreeMap<Long, Double> time2BtcReverse;
-    public static final String FILE_FUNGDING_FEE = "storage/fundingfee_time.data";
+    public static final String FILE_FUNDING_FEE = "storage/fundingfee_time.data";
     public static ConcurrentHashMap<Long, Set<String>> CACHED_time2FundingFeeTrade;
 
 
@@ -104,7 +104,7 @@ public class RunOptimizationBudgetRatio {
         // === TAI DU LIEU VAO CACHE (1 LAN DUY NHAT) ===
         System.out.println("Dang tai du lieu vao bo nho (1 lan duy nhat)...");
         try {
-            CACHED_time2FundingFeeTrade = (ConcurrentHashMap<Long, Set<String>>) StorageSnappy.readObjectFromFile(FILE_FUNGDING_FEE);
+            CACHED_time2FundingFeeTrade = (ConcurrentHashMap<Long, Set<String>>) StorageSnappy.readObjectFromFile(FILE_FUNDING_FEE);
             time2MarketRateChange = (TreeMap<Long, MarketRateChange>) StorageSnappy.readObjectFromFile(Configs.FILE_MARKET_RATE_CHANGE);
             time2MarketData = (TreeMap<Long, MarketDataObject>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
             time2BtcReverse = (TreeMap<Long, Double>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_BTC_REVERSE);

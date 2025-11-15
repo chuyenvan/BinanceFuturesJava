@@ -18,10 +18,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import org.xerial.snappy.Snappy;
 
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 
 /**
  * Lop nay thay the DataManager, doc du lieu 1M (theo ngay) tu Aerospike
@@ -44,6 +41,7 @@ public class DataManagerAerospike {
 
     // Chinh sach doc hang loat mac dinh
     private static final BatchPolicy batchPolicy = new BatchPolicy();
+    private static final int BATCH_CHUNK_SIZE = 2000;
 
     /**
      * Khoi tao ket noi client
@@ -158,7 +156,92 @@ public class DataManagerAerospike {
         }
         return javaMap;
     }
+    /**
+     * Ham doc 7 ngay (10,080 phut) (cho LabelSimulator)
+     * (DA SUA LOI: Them logic chia nho - "Chunking")
+     */
+    public static TreeMap<Long, KlineObjectSimple> readDataForPeriod(String symbol, long startTime, long endTime) {
 
+        TreeMap<Long, KlineObjectSimple> results = new TreeMap<>();
+
+        // 1. Tinh toan so luong phut can doc (vi du: 10080)
+        int minutesToRead = (int) ((endTime - startTime) / Utils.TIME_MINUTE) + 1;
+        if (minutesToRead <= 0) return results;
+
+        // 2. Tao danh sach TOAN BO Keys (vi du: 10080 keys)
+        List<Key> allKeys = new ArrayList<>(minutesToRead);
+        List<Long> allTimestamps = new ArrayList<>(minutesToRead);
+
+        Calendar cal = Calendar.getInstance();
+        cal.setTimeInMillis(startTime);
+
+        for (int i = 0; i < minutesToRead; i++) {
+            String keyString = keyFormat.format(cal.getTime());
+            allKeys.add(new Key(AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME, keyString));
+            allTimestamps.add(cal.getTimeInMillis());
+            cal.add(Calendar.MINUTE, 1);
+        }
+
+        try {
+            // 3. === LOGIC MOI: CHIA NHO (CHUNK) 10080 KEYS ===
+            // Lap qua danh sach keys, moi lan lay 2000 (BATCH_CHUNK_SIZE)
+            for (int i = 0; i < allKeys.size(); i += BATCH_CHUNK_SIZE) {
+
+                // Tinh toan diem bat dau va ket thuc cua "chunk"
+                int endIndex = Math.min(i + BATCH_CHUNK_SIZE, allKeys.size());
+
+                // Lay 1 "chunk" (vi du: 0-1999, 2000-3999, ... , 10000-10080)
+                List<Key> keyChunk = allKeys.subList(i, endIndex);
+                List<Long> timestampChunk = allTimestamps.subList(i, endIndex);
+
+                // 4. Thuc hien Batch Read CHỈ TRÊN CHUNK do
+                Record[] records = getClient().get(batchPolicy, keyChunk.toArray(new Key[0]));
+
+                // 5. Xu ly ket qua (giong het code cu)
+                for (int j = 0; j < records.length; j++) {
+                    Record record = records[j];
+                    if (record == null) {
+                        continue;
+                    }
+
+                    long minuteTimestamp = timestampChunk.get(j); // Lay timestamp tuong ung
+
+                    byte[] snappyCompressedBytes = (byte[]) record.getValue("data");
+
+                    if (snappyCompressedBytes != null && snappyCompressedBytes.length > 0) {
+                        byte[] protoAsBytes = Snappy.uncompress(snappyCompressedBytes);
+                        MinuteData protoData = MinuteData.parseFrom(protoAsBytes);
+                        Map<String, KlineObjectSimpleProto> protoMap = protoData.getTickersMap();
+
+                        if (protoMap.containsKey(symbol)) {
+                            KlineObjectSimple javaKline = convertProtoToKline(protoMap.get(symbol));
+                            results.put(minuteTimestamp, javaKline);
+                        }
+                    }
+                }
+            } // Ket thuc vong lap "chunk"
+
+        } catch (Exception e) {
+            System.err.println("Loi khi doc batch read (readDataForPeriod) cho symbol " + symbol + ":");
+            e.printStackTrace(); // In ra loi (vi du: "Batch max requests")
+        }
+
+        return results;
+    }
+
+    /**
+     * Ham ho tro: Chuyen 1 Proto Kline -> 1 Java Kline
+     */
+    private static KlineObjectSimple convertProtoToKline(KlineObjectSimpleProto protoTicker) {
+        KlineObjectSimple javaTicker = new KlineObjectSimple();
+        javaTicker.startTime = protoTicker.getStartTime();
+        javaTicker.priceOpen = protoTicker.getPriceOpen();
+        javaTicker.maxPrice = protoTicker.getMaxPrice();
+        javaTicker.minPrice = protoTicker.getMinPrice();
+        javaTicker.priceClose = protoTicker.getPriceClose();
+        javaTicker.totalUsdt = protoTicker.getTotalUsdt();
+        return javaTicker;
+    }
     /**
      * (Tuy chon) Ham de dong ket noi khi ung dung tat
      */

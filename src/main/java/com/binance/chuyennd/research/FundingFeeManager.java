@@ -18,7 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class FundingFeeManager {
     public static final Logger LOG = LoggerFactory.getLogger(FundingFeeManager.class);
     private ConcurrentHashMap<String, TreeMap<Long, FundingRate>> symbol2FundingFee = new ConcurrentHashMap<>();
-    public static final String FILE_FUNGDING_FEE = "storage/fundingfee_time.data";
+    public static final String FILE_FUNDING_FEE = "storage/fundingfee_time.data";
     public ConcurrentHashMap<Long, Set<String>> time2FundingFeeTrade;
     //    public ConcurrentHashMap<Long, Set<String>> time2FundingFeeExtremeTrade;
 //    public ConcurrentHashMap<Long, Set<String>> time2FundingFeeExtremeExtendTrade;
@@ -51,8 +51,8 @@ public class FundingFeeManager {
             if (RunOptimizationBudgetRatio.CACHED_time2FundingFeeTrade != null) {
                 this.time2FundingFeeTrade = RunOptimizationBudgetRatio.CACHED_time2FundingFeeTrade;
             } else {
-                if (new File(FILE_FUNGDING_FEE).exists()) {
-                    time2FundingFeeTrade = (ConcurrentHashMap<Long, Set<String>>) StorageSnappy.readObjectFromFile(FILE_FUNGDING_FEE);
+                if (new File(FILE_FUNDING_FEE).exists()) {
+                    time2FundingFeeTrade = (ConcurrentHashMap<Long, Set<String>>) StorageSnappy.readObjectFromFile(FILE_FUNDING_FEE);
                 } else {
                     time2FundingFeeTrade = new ConcurrentHashMap<>();
                 }
@@ -65,7 +65,7 @@ public class FundingFeeManager {
 
     public void writeData2File() {
         try {
-            StorageSnappy.writeObject2File(FILE_FUNGDING_FEE, time2FundingFeeTrade);
+            StorageSnappy.writeObject2File(FILE_FUNDING_FEE, time2FundingFeeTrade);
         } catch (Exception e) {
             e.printStackTrace();
         }

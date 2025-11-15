@@ -15,7 +15,6 @@
         <okhttp3.version>4.9.1</okhttp3.version>
         <fastjson.version>1.2.76</fastjson.version>
     </properties>
-
     <dependencies>
         <dependency>
             <groupId>org.xerial.snappy</groupId>
@@ -121,6 +120,11 @@
             <artifactId>aerospike-client</artifactId>
             <version>5.1.6</version>
         </dependency>
+        <!--        <dependency>-->
+        <!--            <groupId>com.microsoft.onnxruntime</groupId>-->
+        <!--            <artifactId>onnxruntime</artifactId>-->
+        <!--            <version>1.16.3</version>-->
+        <!--        </dependency>-->
 
     </dependencies>
 
