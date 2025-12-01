@@ -38,7 +38,7 @@ public class DataMigratorToAerospike {
     // --------------------------------------------------
 
     private static final SimpleDateFormat keyFormat = new SimpleDateFormat("yyyyMMdd-HHmm");
-    private static final WritePolicy writePolicy = new WritePolicy();
+
 
     /**
      * Ham chinh de chay
@@ -140,7 +140,7 @@ public class DataMigratorToAerospike {
 
                 try {
                     // 2a. Chuyen Map thanh Protobuf byte[]
-                    byte[] protoAsBytes = convertMapToProtoBytes(minuteDataMap);
+                    byte[] protoAsBytes = AerospikeConfigs.convertMapToProtoBytes(minuteDataMap);
                     // 2b. Nen mang byte[] Protobuf bang Snappy
                     byte[] snappyCompressedBytes = Snappy.compress(protoAsBytes);
 
@@ -152,7 +152,7 @@ public class DataMigratorToAerospike {
                     Bin dataBin = new Bin("data", snappyCompressedBytes);
 
                     // 2d. Ghi vao Database
-                    client.put(writePolicy, key, dataBin);
+                    client.put(AerospikeConfigs.writePolicy, key, dataBin);
                     counter++;
 
                 }
@@ -190,21 +190,5 @@ public class DataMigratorToAerospike {
     /**
      * Ham ho tro: Chuyen doi Map Java (code cua ban) sang mang byte[] (Protobuf)
      */
-    private static byte[] convertMapToProtoBytes(Map<String, KlineObjectSimple> javaMap) {
-        // ... (Ham nay giu nguyen nhu cu) ...
-        MinuteData.Builder minuteBuilder = MinuteData.newBuilder();
-        for (Map.Entry<String, KlineObjectSimple> entry : javaMap.entrySet()) {
-            String symbol = entry.getKey();
-            KlineObjectSimple javaTicker = entry.getValue();
-            KlineObjectSimpleProto.Builder protoTickerBuilder = KlineObjectSimpleProto.newBuilder()
-                    .setStartTime(javaTicker.startTime)
-                    .setPriceOpen(javaTicker.priceOpen)
-                    .setMaxPrice(javaTicker.maxPrice)
-                    .setMinPrice(javaTicker.minPrice)
-                    .setPriceClose(javaTicker.priceClose)
-                    .setTotalUsdt(javaTicker.totalUsdt);
-            minuteBuilder.putTickers(symbol, protoTickerBuilder.build());
-        }
-        return minuteBuilder.build().toByteArray();
-    }
+
 }

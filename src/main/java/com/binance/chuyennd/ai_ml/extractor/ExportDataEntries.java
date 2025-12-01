@@ -112,7 +112,7 @@ public class ExportDataEntries {
                             if (marketData != null) {
                                 TreeMap<Double, String> rate2Max = new TreeMap<>();
                                 rate2Max.putAll(marketData.rate2Max);
-
+                                double predictedReturn = 0;
                                 levelChange = MarketBigChangeDetector.getMarketStatus1M(marketData.rateDownAvg,
                                         marketData.rateUpAvg, marketData.rateBtc, marketData.rateDown15MAvg);
                                 symbol2PriceMax15M.putAll(marketData.symbol2PriceMax15M);

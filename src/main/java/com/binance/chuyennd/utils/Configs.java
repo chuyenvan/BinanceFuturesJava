@@ -103,6 +103,13 @@ public class Configs {
 
     public static final String URL_PREMIUM_INDEX = "https://fapi.binance.com/fapi/v1/premiumIndex";
 
+    // aerospike
+    public static final String AEROSPIKE_HOST = Configs.getString("AEROSPIKE_HOST"); //"127.0.0.1";
+    public static final int AEROSPIKE_PORT = 3000;
+
+    public static final String AEROSPIKE_NAMESPACE = Configs.getString("AEROSPIKE_NAMESPACE"); //"ticker" ;
+
+    public static final String FILE_AI_PREDICTIONS = "../storage/ai_ml/ai_predictions.data";
     public static String getString(String configName) {
         return (String) properties.get(configName);
     }

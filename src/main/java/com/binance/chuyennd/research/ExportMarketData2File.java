@@ -4,6 +4,7 @@
  */
 package com.binance.chuyennd.research;
 
+import com.binance.chuyennd.aerospike.DataManagerAerospike;
 import com.binance.chuyennd.bigchange.market.MarketDataObject;
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
 import com.binance.chuyennd.bigchange.data.DataManager;
@@ -77,7 +78,6 @@ public class ExportMarketData2File {
         TreeMap<Long, MarketRateChange> time2MarketRateChange;
         TreeMap<Long, MarketDataObject> time2MarketData;
 
-
         if (!new File(Configs.FILE_MARKET_RATE_CHANGE).exists()) {
             time2MarketRateChange = new TreeMap<>();
         } else {
@@ -93,27 +93,26 @@ public class ExportMarketData2File {
 
         LOG.info("Export market entry: {}", Utils.normalizeDateYYYYMMDDHHmm(timeExport));
         Map<String, List<KlineObjectSimple>> symbol2LastTickers = new HashMap<>();
-        //get data
+
+        //get data - ĐÃ SỬA: đọc từ Aerospike thay vì file
         while (true) {
             TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers;
             try {
-                LOG.info("Read file ticker: {}", Utils.normalizeDateYYYYMMDDHHmm(startTime));
-                time2Tickers = DataManager.readDataFromFile1M(startTime);
+                LOG.info("Read data from Aerospike: {}", Utils.normalizeDateYYYYMMDDHHmm(startTime));
+
+                // ĐỌC TỪ AEROSPIKE THAY VÌ FILE
+                time2Tickers = DataManagerAerospike.readDataFromAerospike1M(startTime);
+
                 if (time2Tickers != null) {
                     for (Map.Entry<Long, Map<String, KlineObjectSimple>> entry : time2Tickers.entrySet()) {
                         Long time = entry.getKey();
 
                         try {
-//                            time2SymbolFundingBuy.put(time, FundingFeeManager.getInstance().getFundingBuyNew(time));
-//                            if (time == Utils.sdfFileHour.parse("20250603 11:00").getTime()) {
-//                                System.out.println("Debug");
-//                            }
                             Map<String, KlineObjectSimple> symbol2Ticker = entry.getValue();
                             Map<String, Double> symbol2MaxPrice = new HashMap<>();
                             Map<String, Double> symbol2MinPrice = new HashMap<>();
 
                             for (Map.Entry<String, KlineObjectSimple> entry1 : symbol2Ticker.entrySet()) {
-
                                 String symbol = entry1.getKey();
                                 if (Constants.diedSymbol.contains(symbol)) {
                                     continue;
@@ -156,14 +155,13 @@ public class ExportMarketData2File {
 
                                 symbol2MaxPrice.put(symbol, priceMax);
                                 symbol2MinPrice.put(symbol, minPrice);
-
                             }
-
 
                             if (time2MarketRateChange.isEmpty() || time2MarketRateChange.lastKey() < time) {
                                 MarketDataObject marketData;
                                 marketData = MarketBigChangeDetector.calMarketData(symbol2Ticker, symbol2MaxPrice, symbol2MinPrice);
                                 if (marketData != null) {
+                                    double predictedReturn = 0;
                                     MarketLevelChange levelChange = MarketBigChangeDetector.getMarketStatus1M(marketData.rateDownAvg,
                                             marketData.rateUpAvg, marketData.rateBtc, marketData.rateDown15MAvg);
                                     if (levelChange != null) {
@@ -185,15 +183,12 @@ public class ExportMarketData2File {
                 e.printStackTrace();
             }
             startTime += Utils.TIME_DAY;
-//            if (startTime > System.currentTimeMillis()) {
             if (startTime > endTime) {
                 break;
             }
         }
         StorageSnappy.writeObject2File(Configs.FILE_ENTRY_MARKET_LEVEL, time2MarketData);
         StorageSnappy.writeObject2File(Configs.FILE_MARKET_RATE_CHANGE, time2MarketRateChange);
-
     }
-
 
 }

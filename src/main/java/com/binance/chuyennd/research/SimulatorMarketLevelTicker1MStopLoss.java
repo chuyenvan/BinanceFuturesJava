@@ -5,7 +5,9 @@
 package com.binance.chuyennd.research;
 
 import com.binance.chuyennd.aerospike.DataManagerAerospike;
-import com.binance.chuyennd.bigchange.data.DataManager;
+import com.binance.chuyennd.ai_ml.onnx.AIRejectFilter;
+import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
+import com.binance.chuyennd.ai_ml.onnx.RunGeneratePredictions;
 import com.binance.chuyennd.bigchange.market.MarketDataObject;
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
 import com.binance.chuyennd.bigchange.test.TraceOrderDone;
@@ -48,9 +50,11 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
     public TreeMap<Long, MarketDataObject> time2MarketData;
     public TreeMap<Long, MarketRateChange> time2MarketRateChange;
-
+    public TreeMap<Long, AiPredictionData> predictionMap;
 
     public TreeMap<Long, Double> time2BtcReverse;
+    //    public OnnxInferenceManager.PredictionResult predictReturn = null;
+    public Map<String, KlineObjectSimple> symbol2LastTicker = new HashMap<>();
 
     public ConcurrentHashMap<String, List<OrderTargetInfoTest>> symbol2OrdersEntry = new ConcurrentHashMap();
     public ConcurrentHashMap<String, OrderTargetInfoTest> symbol2OrderRunning = new ConcurrentHashMap();
@@ -72,6 +76,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         Long startTime = Utils.sdfFile.parse(Configs.TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
         TreeMap<Long, Double> time2RateDown15MAvg = new TreeMap<>();
         Map<String, List<KlineObjectSimple>> symbol2LastTickers = new HashMap<>();
+
         //get data
         while (true) {
             TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers;
@@ -96,15 +101,16 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                     updateSymbolDeListed(symbol, time);
                                     continue;
                                 }
+                                symbol2LastTicker.put(symbol, ticker);
                                 List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
                                 if (tickers == null) {
                                     tickers = new ArrayList<>();
                                     symbol2LastTickers.put(symbol, tickers);
                                 }
                                 tickers.add(ticker);
-                                int sizeRemove = 100;
+                                int sizeRemove = 200;
                                 if (!symbol2OrderRunning.containsKey(symbol)) {
-                                    sizeRemove = 21;
+                                    sizeRemove = 201;
                                 }
                                 if (tickers.size() > sizeRemove) {
                                     for (int i = 0; i < 5; i++) {
@@ -114,6 +120,10 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                 // update order Old
                                 startUpdateOldOrderTrading(time, symbol, tickers, isTrendBuyWithETH);
                             }
+
+//                            AIPredictManager.getInstance().updateDataHistoryForAI(symbol2LastTicker);
+
+
                             logByProcessTime(startTimeRun, "Done update order", time);
 
                             startTimeRun = System.currentTimeMillis();
@@ -129,13 +139,18 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                             if (marketData != null) {
                                 TreeMap<Double, String> rate2Max = new TreeMap<>();
                                 rate2Max.putAll(marketData.rate2Max);
-
                                 levelChange = MarketBigChangeDetector.getMarketStatus1M(marketData.rateDownAvg,
                                         marketData.rateUpAvg, marketData.rateBtc, marketData.rateDown15MAvg);
                                 symbol2PriceMax15M.putAll(marketData.symbol2PriceMax15M);
-
                                 // buy signal new
                                 if (levelChange != null) {
+//                                    if (predictReturn == null) {
+//                                        predictReturn = AIPredictManager.getInstance().getAiPredict(marketData, time, symbol2LastTicker);
+//                                        if (predictReturn == null) {
+//                                            predictReturn = new OnnxInferenceManager.PredictionResult(0, 0, 0, 0);
+//                                        }
+//                                    }
+//                                    Utils.appendToFile("storage/level2predictreturn.csv", levelChange.toString(), predictReturn);
                                     Integer numberOrder = Configs.NUMBER_ENTRY_EACH_SIGNAL;
                                     symbolLocked.addAll(symbol2OrderRunning.keySet());
                                     if (levelChange.equals(MarketLevelChange.SMALL_DOWN)
@@ -317,7 +332,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                 BudgetManagerSimple.getInstance().updateBalance(time, allOrderDone, symbol2OrderRunning, symbol2OrdersEntry, true);
                                 BudgetManagerSimple.getInstance().updateBudget();
                             } else {
-                                if (time %  (15 * Utils.TIME_MINUTE) == 0) {
+                                if (time % (15 * Utils.TIME_MINUTE) == 0) {
                                     BudgetManagerSimple.getInstance().updateBalance(time, allOrderDone, symbol2OrderRunning, symbol2OrdersEntry, false);
                                 }
                             }
@@ -439,9 +454,18 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         if (!new File(Configs.FILE_ENTRY_BTC_REVERSE).exists()) {
             new ExportMarketData2File().exportBtcTrendReverse();
         }
+        if (!new File(Configs.FILE_AI_PREDICTIONS).exists()) {
+            try {
+                new RunGeneratePredictions().generateAndSave();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
         time2MarketRateChange = (TreeMap<Long, MarketRateChange>) StorageSnappy.readObjectFromFile(Configs.FILE_MARKET_RATE_CHANGE);
         time2MarketData = (TreeMap<Long, MarketDataObject>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
         time2BtcReverse = (TreeMap<Long, Double>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_BTC_REVERSE);
+        predictionMap = (TreeMap<Long, AiPredictionData>) StorageSnappy.readObjectFromFile(Configs.FILE_AI_PREDICTIONS);
+
 
         if (new File(Configs.FILE_TREND_BY_TIME).exists()) {
             symbol2TrendData = (ConcurrentHashMap<String, Map<Long, Boolean>>) StorageSnappy.readObjectFromFile(Configs.FILE_TREND_BY_TIME);
@@ -565,10 +589,16 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         return orderResult;
     }
 
-
     public void createOrderBUY(String symbol, KlineObjectSimple ticker, MarketLevelChange levelChange,
                                MarketRateChange marketData, Double maxPrice15m, Boolean isTrendBuyWithBtc,
                                Boolean isTrendBuyWithETH, MarketLevelChange levelChangeRoot) {
+        AiPredictionData predict = predictionMap.get(ticker.startTime.longValue());
+        if (predict != null) {
+            if (AIRejectFilter.checkSignal(predict).decision.equals(AIRejectFilter.FilterDecision.REJECT)) {
+                LOG.info("⛔ REJECTED BY RISK FILTER: {} {}", predict.predReturn1H, predict.predRisk4H);
+                return; // Dừng ngay
+            }
+        }
         Double entry = ticker.priceClose;
         Integer leverage = BudgetManagerSimple.getInstance().getLeverage();
 
@@ -604,6 +634,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         order.tickerOpen = ticker;
         order.marketLevelChange = levelChange;
         order.rateChange = maxPrice15m;
+        order.predict = predictionMap.get(ticker.startTime.longValue());
         if (marketData != null) {
             order.marketData = marketData;
         }

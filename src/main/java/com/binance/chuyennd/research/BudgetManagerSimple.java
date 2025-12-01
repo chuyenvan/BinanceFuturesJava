@@ -141,7 +141,7 @@ public class BudgetManagerSimple {
             }
 
 
-            LOG.info("Update {} => b:{} pD:{}\tm:{}\tmax:{}%\t{}\t" +
+            LOG.info("Update {} => b:{} pD:{}\tm:{}\tmax:{}\t{}\t" +
                             "unP:{}\tunPMin:{}\t{}\t{}\t{}%\tdone:{}/{}/{} run:{}/{} f:{}",
                     Utils.normalizeDateYYYYMMDDHHmm(timeUpdate), Utils.formatLog(balance.longValue(), 5),
                     Utils.formatLog(profitOfDate.longValue(), 4),

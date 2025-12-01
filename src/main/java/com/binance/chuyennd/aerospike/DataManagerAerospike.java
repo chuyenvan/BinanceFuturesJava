@@ -9,6 +9,7 @@ import com.aerospike.client.policy.BatchPolicy;
 
 // Import cac lop du an cua ban
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
+import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
 
 // Import cac lop Protobuf (tu Buoc 2 o tin nhan truoc)
@@ -27,14 +28,12 @@ import java.util.*;
 public class DataManagerAerospike {
 
     // --- Cau hinh Aerospike (phai giong file .conf) ---
-    private static final String AEROSPIKE_HOST = "127.0.0.1";
-    private static final int AEROSPIKE_PORT = 3000;
-    private static final String AEROSPIKE_NAMESPACE = "ticker";
+
     private static final String AEROSPIKE_SET_NAME = "kline_1m";
     // --------------------------------------------------
 
     // Dinh dang Key ma chung ta da dung de ghi
-    private static final SimpleDateFormat keyFormat = new SimpleDateFormat("yyyyMMdd-HHmm");
+
 
     // Tao mot client duy nhat (Singleton)
     private static volatile AerospikeClient client;
@@ -51,7 +50,7 @@ public class DataManagerAerospike {
             synchronized (DataManagerAerospike.class) {
                 if (client == null) {
                     System.out.println("Dang khoi tao ket noi Aerospike...");
-                    client = new AerospikeClient(AEROSPIKE_HOST, AEROSPIKE_PORT);
+                    client = new AerospikeClient(Configs.AEROSPIKE_HOST, Configs.AEROSPIKE_PORT);
                 }
             }
         }
@@ -65,9 +64,6 @@ public class DataManagerAerospike {
      * @return Mot TreeMap chua toan bo 1440 phut cua ngay do
      */
     public static TreeMap<Long, Map<String, KlineObjectSimple>> readDataFromAerospike1M(long startTime) {
-
-//        System.out.println("Doc du lieu Aerospike cho ngay: " + Utils.normalizeDateYYYYMMDD(startTime));
-
         // Map ket qua de tra ve
         TreeMap<Long, Map<String, KlineObjectSimple>> results = new TreeMap<>();
 
@@ -83,8 +79,8 @@ public class DataManagerAerospike {
         cal.set(Calendar.MILLISECOND, 0);
 
         for (int i = 0; i < 1440; i++) {
-            String keyString = keyFormat.format(cal.getTime());
-            keys[i] = new Key(AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME, keyString);
+            String keyString = AerospikeConfigs.keyFormat.format(cal.getTime());
+            keys[i] = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME, keyString);
             timestamps[i] = cal.getTimeInMillis();
             cal.add(Calendar.MINUTE, 1);
         }
@@ -176,8 +172,8 @@ public class DataManagerAerospike {
         cal.setTimeInMillis(startTime);
 
         for (int i = 0; i < minutesToRead; i++) {
-            String keyString = keyFormat.format(cal.getTime());
-            allKeys.add(new Key(AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME, keyString));
+            String keyString = AerospikeConfigs.keyFormat.format(cal.getTime());
+            allKeys.add(new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME, keyString));
             allTimestamps.add(cal.getTimeInMillis());
             cal.add(Calendar.MINUTE, 1);
         }
@@ -248,6 +244,16 @@ public class DataManagerAerospike {
     public static void closeConnection() {
         if (client != null) {
             client.close();
+        }
+    }
+    public static void writeDataToAerospike(String keyString, byte[] compressedData) {
+        try {
+            Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME, keyString);
+            Bin bin = new Bin("data", compressedData);
+            getClient().put(AerospikeConfigs.writePolicy, key, bin);
+        } catch (Exception e) {
+            System.err.println("Loi khi ghi du lieu vao Aerospike voi key: " + keyString);
+            e.printStackTrace();
         }
     }
 }

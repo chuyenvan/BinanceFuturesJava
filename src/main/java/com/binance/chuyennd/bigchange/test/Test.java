@@ -376,41 +376,6 @@ public class Test {
     }
 
 
-    private static void testFundingRate() {
-//        try {
-//            Long time = Utils.sdfFileHour.parse("20210101 07:00").getTime();
-//            Set<String> allSymbols = TickerFuturesHelper.getAllSymbol();
-//            while (true) {
-//                TreeMap<Double, String> funding2Symbol = FundingFeeManager.getInstance().getTopFundingFee(time, allSymbols);
-//                if (!funding2Symbol.isEmpty() && funding2Symbol.firstKey() < -0.005) {
-//                    LOG.info("{} {} {}", Utils.normalizeDateYYYYMMDDHHmm(time), funding2Symbol.firstKey(), funding2Symbol.firstEntry().getValue());
-//                }
-////                LOG.info("{} {} {}", funding2Symbol.lastKey(), funding2Symbol.lastEntry().getValue());
-//                time +=  Utils.TIME_MINUTE;
-//                if (time > System.currentTimeMillis()) {
-//                    break;
-//                }
-//            }
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
-        try {
-            Long time = Utils.sdfFileHour.parse("20250106 10:19").getTime();
-            TreeMap<Double, String> funding2Symbol = FundingFeeManager.getInstance().getTopDownFundingFee(
-                    Utils.get4Hour(time), TickerFuturesHelper.getAllSymbol());
-            LOG.info("{}", funding2Symbol);
-            for (Double funding : funding2Symbol.keySet()) {
-                if (funding > 0.002) {
-                    String symbol = funding2Symbol.lastEntry().getValue();
-
-                }
-            }
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
 
     private static void difProductionWithTest() {
         try {

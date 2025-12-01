@@ -16,28 +16,27 @@ public final class DcaUtils {
     public static boolean shouldDca(double margin, double currentRateLoss, MarketLevelChange orderMarketLevel, long orderTimeStart,
                                     MarketLevelChange marketLevelChange, long currentTime, double budget,
                                     Boolean isTrendBuyWithBtc, Boolean isTrendBuyWithETH) {
-
-
-        DcaConfig config = getDcaConfig(marketLevelChange);
-        if (config == null) {
-            return false;
-        }
-        if (!isTrendBuyWithETH ) {
-            config.rateLoss2Dca = config.rateLoss2Dca * 1.5;
+            DcaConfig config = getDcaConfig(marketLevelChange);
+            if (config == null) {
+                return false;
+            }
+            if (!isTrendBuyWithETH) {
+                config.rateLoss2Dca = config.rateLoss2Dca * 1.5;
 //            if (marketLevelChange != null){
 //                config.rateLoss2Dca = config.rateLoss2Dca * 1.5;
 //            }
-            if (config.rateLoss2Dca < -0.9) {
-                config.rateLoss2Dca = -0.9;
+                if (config.rateLoss2Dca < -0.9) {
+                    config.rateLoss2Dca = -0.9;
+                }
             }
-        }
-        double adjustedRateLoss = calculateAdjustedRateLoss(margin, budget, config.getRateLoss2Dca(), config.isAll());
+            double adjustedRateLoss = calculateAdjustedRateLoss(margin, budget, config.getRateLoss2Dca(), config.isAll());
 
-        if (currentRateLoss >= adjustedRateLoss) {
-            return false;
-        }
+            if (currentRateLoss >= adjustedRateLoss) {
+                return false;
+            }
 
-        return isTimeConditionMet(orderMarketLevel, orderTimeStart, currentTime, config.getDurationDca());
+            return isTimeConditionMet(orderMarketLevel, orderTimeStart, currentTime, config.getDurationDca());
+
     }
 
     // --- CÁC PHƯƠNG THỨC HỖ TRỢ (PRIVATE) ---

@@ -1,28 +1,20 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.binance.chuyennd.ticker;
 
+import com.binance.chuyennd.aerospike.AerospikeConfigs;
+import com.binance.chuyennd.aerospike.DataManagerAerospike;
 import com.binance.chuyennd.helper.TickerFuturesHelper;
-import com.binance.chuyennd.indicators.MACD;
-import com.binance.chuyennd.indicators.RelativeStrengthIndex;
-import com.binance.chuyennd.indicators.SimpleMovingAverage;
-import com.binance.chuyennd.mongo.TickerMongoHelper;
-import com.binance.chuyennd.object.IndicatorEntry;
 import com.binance.chuyennd.object.KlineObjectNumber;
-import com.binance.chuyennd.object.MACDEntry;
-import com.binance.chuyennd.object.RsiEntry;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
-import com.binance.chuyennd.proto.KlineArchiveProto;
-import com.binance.chuyennd.proto.KlineProto;
 import com.binance.chuyennd.research.ExportMarketData2File;
-import com.binance.chuyennd.utils.*;
+import com.binance.chuyennd.utils.Configs;
+import com.binance.chuyennd.utils.Storage;
+import com.binance.chuyennd.utils.StorageSnappy;
+import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
 import com.binance.client.model.market.FundingRate;
-import org.bson.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.xerial.snappy.Snappy;
 
 import java.io.File;
 import java.text.ParseException;
@@ -36,22 +28,47 @@ import java.util.concurrent.Executors;
 public class TickerManager {
 
     public static final Logger LOG = LoggerFactory.getLogger(TickerManager.class);
-
     public ExecutorService executorService = Executors.newFixedThreadPool(2);
-    public int counter = 0;
-    public int total = 0;
 
     public static void main(String[] args) throws ParseException {
-
         new TickerManager().startThreadUpdateTicker1MSimple();
-
-
-//        new TickerManager().updateDataBySymbolSimple(Constants.SYMBOL_PAIR_BTC, Constants.INTERVAL_1M, Utils.sdfFile.parse("20240701").getTime());
-//        new TickerManager().updateFundingFeeBySymbol(Constants.SYMBOL_PAIR_BTC, System.currentTimeMillis() - 3 * Utils.TIME_DAY);
-
-
     }
 
+    private void startThreadUpdateTicker1MSimple() {
+        new Thread(() -> {
+            Thread.currentThread().setName("ThreadUpdateTicker");
+            if (!new File(Configs.FOLDER_FUNDING_FEE + Constants.SYMBOL_PAIR_BTC).exists()) {
+                startUpdateFundingFee();
+            }
+            LOG.info("Start thread ThreadUpdateTicker!");
+
+            ExportMarketData2File exporter = new ExportMarketData2File();
+            while (true) {
+                try {
+                    if (Utils.getCurrentHour() == 4
+                            || Utils.getCurrentHour() == 8
+                            || Utils.getCurrentHour() == 15
+                            || Utils.getCurrentHour() == 21) {
+                        updateFullTicker1M(Constants.SYMBOL_PAIR_BTC);
+                        updateFullTicker1M(Constants.SYMBOL_PAIR_ETH);
+                        startUpdateTicker1mSimple(); // ĐÃ SỬA: lưu vào Aerospike
+                        startResetTicker1DAnd4HSimple();
+                        startUpdateFundingFee();
+                        exporter.exportMarketEntries();
+                        exporter.exportBtcTrendReverse();
+                    }
+
+                    if (Utils.getCurrentHour() == 16) {
+                        startResetTicker15mSimple();
+                    }
+                    Thread.sleep(Utils.TIME_HOUR);
+                } catch (Exception e) {
+                    LOG.error("ERROR during ThreadUpdateTicker: {}", e);
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+    }
     public static void updateFullTicker1M(String symbol) {
         try {
 
@@ -99,396 +116,6 @@ public class TickerManager {
         }
     }
 
-    private void startThreadUpdateTicker1MSimple() {
-        new Thread(() -> {
-            Thread.currentThread().setName("ThreadUpdateTicker");
-            if (!new File(Configs.FOLDER_FUNDING_FEE + Constants.SYMBOL_PAIR_BTC).exists()) {
-                startUpdateFundingFee();
-            }
-            LOG.info("Start thread ThreadUpdateTicker!");
-//            startUpdateTicker1mSimple();
-            ExportMarketData2File exporter = new ExportMarketData2File();
-            while (true) {
-                try {
-                    if (Utils.getCurrentHour() == 4
-                            || Utils.getCurrentHour() == 8
-                            || Utils.getCurrentHour() == 15
-                            || Utils.getCurrentHour() == 21) {
-//                        startResetTicker1hSimple();
-//                        updateFullTicker1M(Constants.SYMBOL_PAIR_BTC);
-                        startUpdateTicker1mSimple();
-                        startResetTicker1DAnd4HSimple();
-                        startUpdateFundingFee();
-                        exporter.exportMarketEntries();
-                        exporter.exportBtcTrendReverse();
-                    }
-//
-                    if (Utils.getCurrentHour() == 16) {
-                        startResetTicker15mSimple();
-                    }
-                    Thread.sleep(Utils.TIME_HOUR);
-                } catch (Exception e) {
-                    LOG.error("ERROR during ThreadUpdateTicker: {}", e);
-                    e.printStackTrace();
-                }
-            }
-        }).start();
-    }
-
-    private void startResetTicker1hSimple() {
-        try {
-            try {
-                Set<String> symbols = new HashSet<>();
-//                symbols.addAll(Constants.specialSymbol);
-//                symbols.addAll(Constants.stableSymbol);
-//                symbols.addAll(Constants.btcReverseSymbol);
-                symbols.add(Constants.SYMBOL_PAIR_BTC);
-                counter = 0;
-                total = symbols.size();
-                Long startTime = 1672506000000L;
-                for (String symbol : symbols) {
-                    executorService.execute(() -> updateDataBySymbolSimple(symbol, Constants.INTERVAL_1H, startTime));
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        } catch (Exception e) {
-            LOG.error("ERROR during UpdateTicker15m: {}", e);
-            e.printStackTrace();
-        }
-    }
-
-    private static void printTicker(String symbol) {
-        String fileName = Configs.FOLDER_TICKER_15M + symbol;
-        List<KlineObjectNumber> tickers = (List<KlineObjectNumber>) Storage.readObjectFromFile(fileName);
-        for (KlineObjectNumber ticker : tickers) {
-            LOG.info("{}", Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()));
-        }
-    }
-
-
-    private void updateAllTicker1h() {
-        for (String symbol : TickerMongoHelper.getInstance().getAllSymbol15m()) {
-            try {
-                updateTicker1hForASymbol(symbol);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-        writeTicker1hMMongo2File();
-    }
-
-    private void updateAllTicker4h() {
-        for (String symbol : TickerMongoHelper.getInstance().getAllSymbol15m()) {
-            try {
-                updateTicker4hForASymbol(symbol);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-        writeTicker4hMMongo2File();
-    }
-
-    private void updateAllTicker1d() {
-        for (String symbol : TickerMongoHelper.getInstance().getAllSymbol15m()) {
-            try {
-                updateTicker1dForASymbol(symbol);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-        writeTicker1dMMongo2File();
-    }
-
-    private static void updateTicker1hForASymbol(String symbol) {
-        LOG.info("Start update ticker 1h for {} ", symbol);
-        TickerMongoHelper.getInstance().deleteTicker1h(symbol);
-        List<KlineObjectNumber> allTickers = TickerFuturesHelper.getTickerWithStartTimeFull(symbol, Constants.INTERVAL_1H, 0);
-        RsiEntry[] rsi = RelativeStrengthIndex.calculateRSI(allTickers, 14);
-        MACDEntry[] entries = MACD.calculate(allTickers, 12, 26, 9);
-        Map<Double, Double> time2Rsi = new HashMap<>();
-        Map<Double, Double> time2Ma = new HashMap<>();
-        Map<Double, MACDEntry> time2Macd = new HashMap<>();
-        Map<Long, List<KlineObjectNumber>> time2Tickers = new HashMap<>();
-        for (RsiEntry rs : rsi) {
-            time2Rsi.put(rs.startTime, rs.getRsi());
-        }
-        for (MACDEntry entry : entries) {
-            time2Macd.put(entry.startTime, entry);
-        }
-        IndicatorEntry[] smaEntries = SimpleMovingAverage.calculate(allTickers, 20);
-        for (IndicatorEntry sma : smaEntries) {
-            time2Ma.put(sma.startTime, sma.getValue());
-        }
-        for (KlineObjectNumber ticker : allTickers) {
-            long timeDate = Utils.getDate(ticker.startTime.longValue());
-            List<KlineObjectNumber> tickers = time2Tickers.get(timeDate);
-            if (tickers == null) {
-                tickers = new ArrayList<>();
-                time2Tickers.put(timeDate, tickers);
-            }
-            tickers.add(ticker);
-        }
-        for (Map.Entry<Long, List<KlineObjectNumber>> entry : time2Tickers.entrySet()) {
-            Long timeDate = entry.getKey();
-            List<KlineObjectNumber> tickers = entry.getValue();
-            List<Document> details = new ArrayList<>();
-            Double maxPrice = null;
-            Double minPrice = null;
-            Double priceClose = null;
-            Double priceOpen = null;
-            for (KlineObjectNumber ticker : tickers) {
-                details.add(Utils.convertTicker2Doc(ticker, time2Rsi, time2Ma, time2Macd));
-                if (priceOpen == null) {
-                    priceOpen = ticker.priceOpen;
-                }
-                priceClose = ticker.priceClose;
-                if (maxPrice == null || maxPrice < ticker.maxPrice) {
-                    maxPrice = ticker.maxPrice;
-                }
-                if (minPrice == null || minPrice > ticker.minPrice) {
-                    minPrice = ticker.minPrice;
-                }
-            }
-            Document doc = new Document();
-            doc.append("sym", symbol);
-            doc.append("date", timeDate);
-            doc.append("priceOpen", priceOpen);
-            doc.append("maxPrice", maxPrice);
-            doc.append("minPrice", minPrice);
-            doc.append("priceClose", priceClose);
-            doc.append("details", details);
-            TickerMongoHelper.getInstance().insertTicker1h(doc);
-        }
-        LOG.info("Finished update ticker 1h for {}", symbol);
-    }
-
-    private static void updateTicker4hForASymbol(String symbol) {
-        LOG.info("Start update ticker 4h for {} ", symbol);
-        TickerMongoHelper.getInstance().deleteTicker4h(symbol);
-        List<KlineObjectNumber> allTickers = TickerFuturesHelper.getTickerWithStartTimeFull(symbol, Constants.INTERVAL_4H, 0);
-        RsiEntry[] rsi = RelativeStrengthIndex.calculateRSI(allTickers, 14);
-        MACDEntry[] entries = MACD.calculate(allTickers, 12, 26, 9);
-        Map<Double, Double> time2Rsi = new HashMap<>();
-        Map<Double, Double> time2Ma = new HashMap<>();
-        Map<Double, MACDEntry> time2Macd = new HashMap<>();
-        Map<Long, List<KlineObjectNumber>> time2Tickers = new HashMap<>();
-        for (RsiEntry rs : rsi) {
-            time2Rsi.put(rs.startTime, rs.getRsi());
-        }
-        for (MACDEntry entry : entries) {
-            time2Macd.put(entry.startTime, entry);
-        }
-        IndicatorEntry[] smaEntries = SimpleMovingAverage.calculate(allTickers, 20);
-        for (IndicatorEntry sma : smaEntries) {
-            time2Ma.put(sma.startTime, sma.getValue());
-        }
-        for (KlineObjectNumber ticker : allTickers) {
-            long timeDate = Utils.getDate(ticker.startTime.longValue());
-            List<KlineObjectNumber> tickers = time2Tickers.get(timeDate);
-            if (tickers == null) {
-                tickers = new ArrayList<>();
-                time2Tickers.put(timeDate, tickers);
-            }
-            tickers.add(ticker);
-        }
-        for (Map.Entry<Long, List<KlineObjectNumber>> entry : time2Tickers.entrySet()) {
-            Long timeDate = entry.getKey();
-            List<KlineObjectNumber> tickers = entry.getValue();
-            List<Document> details = new ArrayList<>();
-            Double maxPrice = null;
-            Double minPrice = null;
-            Double priceClose = null;
-            Double priceOpen = null;
-            for (KlineObjectNumber ticker : tickers) {
-                details.add(Utils.convertTicker2Doc(ticker, time2Rsi, time2Ma, time2Macd));
-                if (priceOpen == null) {
-                    priceOpen = ticker.priceOpen;
-                }
-                priceClose = ticker.priceClose;
-                if (maxPrice == null || maxPrice < ticker.maxPrice) {
-                    maxPrice = ticker.maxPrice;
-                }
-                if (minPrice == null || minPrice > ticker.minPrice) {
-                    minPrice = ticker.minPrice;
-                }
-            }
-            Document doc = new Document();
-            doc.append("sym", symbol);
-            doc.append("date", timeDate);
-            doc.append("priceOpen", priceOpen);
-            doc.append("maxPrice", maxPrice);
-            doc.append("minPrice", minPrice);
-            doc.append("priceClose", priceClose);
-            doc.append("details", details);
-            TickerMongoHelper.getInstance().insertTicker4h(doc);
-        }
-        LOG.info("Finished update ticker 4h for {}", symbol);
-    }
-
-    private static void updateTicker1dForASymbol(String symbol) {
-        LOG.info("Start update ticker 1d for {} ", symbol);
-        TickerMongoHelper.getInstance().deleteTicker1d(symbol);
-        List<KlineObjectNumber> allTickers = TickerFuturesHelper.getTickerWithStartTimeFull(symbol, Constants.INTERVAL_1D, 0);
-        RsiEntry[] rsi = RelativeStrengthIndex.calculateRSI(allTickers, 14);
-
-        MACDEntry[] entries = MACD.calculate(allTickers, 12, 26, 9);
-        Map<Double, Double> time2Rsi = new HashMap<>();
-        Map<Double, Double> time2Ma = new HashMap<>();
-        Map<Double, MACDEntry> time2Macd = new HashMap<>();
-        Map<Long, List<KlineObjectNumber>> time2Tickers = new HashMap<>();
-        for (RsiEntry rs : rsi) {
-            time2Rsi.put(rs.startTime, rs.getRsi());
-        }
-        for (MACDEntry entry : entries) {
-            time2Macd.put(entry.startTime, entry);
-        }
-        IndicatorEntry[] smaEntries = SimpleMovingAverage.calculate(allTickers, 20);
-        for (IndicatorEntry sma : smaEntries) {
-            time2Ma.put(sma.startTime, sma.getValue());
-        }
-        for (KlineObjectNumber ticker : allTickers) {
-            long timeDate = Utils.getDate(ticker.startTime.longValue());
-            List<KlineObjectNumber> tickers = time2Tickers.get(timeDate);
-            if (tickers == null) {
-                tickers = new ArrayList<>();
-                time2Tickers.put(timeDate, tickers);
-            }
-            tickers.add(ticker);
-        }
-        for (Map.Entry<Long, List<KlineObjectNumber>> entry : time2Tickers.entrySet()) {
-            Long timeDate = entry.getKey();
-            List<KlineObjectNumber> tickers = entry.getValue();
-            List<Document> details = new ArrayList<>();
-            Double maxPrice = null;
-            Double minPrice = null;
-            Double priceClose = null;
-            Double priceOpen = null;
-            for (KlineObjectNumber ticker : tickers) {
-                details.add(Utils.convertTicker2Doc(ticker, time2Rsi, time2Ma, time2Macd));
-                if (priceOpen == null) {
-                    priceOpen = ticker.priceOpen;
-                }
-                priceClose = ticker.priceClose;
-                if (maxPrice == null || maxPrice < ticker.maxPrice) {
-                    maxPrice = ticker.maxPrice;
-                }
-                if (minPrice == null || minPrice > ticker.minPrice) {
-                    minPrice = ticker.minPrice;
-                }
-            }
-            Document doc = new Document();
-            doc.append("sym", symbol);
-            doc.append("date", timeDate);
-            doc.append("priceOpen", priceOpen);
-            doc.append("maxPrice", maxPrice);
-            doc.append("minPrice", minPrice);
-            doc.append("priceClose", priceClose);
-            doc.append("details", details);
-            TickerMongoHelper.getInstance().insertTicker1d(doc);
-        }
-        LOG.info("Finished update ticker 1d for {}", symbol);
-    }
-
-    public void writeTicker15MMongo2File() {
-        for (String symbol : TickerMongoHelper.getInstance().getAllSymbol15m()) {
-            LOG.info("Start executor read ticker of {} ", symbol);
-            writeTicker15MMongo2FileASymbol(symbol);
-        }
-    }
-
-    public void writeTicker1hMMongo2File() {
-        for (String symbol : TickerMongoHelper.getInstance().getAllSymbol15m()) {
-            LOG.info("Start executor read ticker of {} ", symbol);
-            writeTicker1HourMongo2FileASymbol(symbol);
-        }
-    }
-
-    public void writeTicker4hMMongo2File() {
-        for (String symbol : TickerMongoHelper.getInstance().getAllSymbol15m()) {
-            LOG.info("Start executor read ticker of {} ", symbol);
-            writeTicker4HourMongo2FileASymbol(symbol);
-        }
-    }
-
-    public void writeTicker1dMMongo2File() {
-        for (String symbol : TickerMongoHelper.getInstance().getAllSymbol15m()) {
-            LOG.info("Start executor read ticker of {} ", symbol);
-            writeTicker1dMongo2FileASymbol(symbol);
-        }
-    }
-
-    private static void writeTicker15MMongo2FileASymbol(String symbol) {
-        List<KlineObjectNumber> tickers = TickerMongoHelper.getInstance().getTicker15mBySymbol(symbol);
-        String fileName = "storage/ticker/symbols-15m/" + symbol;
-        LOG.info("Write ticker of {} to file: {}", symbol, fileName);
-        Storage.writeObject2File(fileName, tickers);
-    }
-
-    private static void writeTicker1HourMongo2FileASymbol(String symbol) {
-        List<KlineObjectNumber> tickers = TickerMongoHelper.getInstance().getTicker1HourBySymbol(symbol);
-        String fileName = "storage/ticker/symbols-1h/" + symbol;
-        LOG.info("Write ticker of {} to file: {}", symbol, fileName);
-        Storage.writeObject2File(fileName, tickers);
-    }
-
-    private static void writeTicker4HourMongo2FileASymbol(String symbol) {
-        List<KlineObjectNumber> tickers = TickerMongoHelper.getInstance().getTicker4HourBySymbol(symbol);
-        String fileName = "storage/ticker/symbols-4h/" + symbol;
-        LOG.info("Write ticker of {} to file: {}", symbol, fileName);
-        Storage.writeObject2File(fileName, tickers);
-    }
-
-    private static void writeTicker1dMongo2FileASymbol(String symbol) {
-        List<KlineObjectNumber> tickers = TickerMongoHelper.getInstance().getTicker1dBySymbol(symbol);
-        String fileName = "storage/ticker/symbols-1d/" + symbol;
-        LOG.info("Write ticker of {} to file: {}", symbol, fileName);
-        Storage.writeObject2File(fileName, tickers);
-    }
-
-
-    private void startUpdateTicker15m() {
-        try {
-            try {
-                Set<String> symbols = TickerFuturesHelper.getAllSymbol();
-                symbols.removeAll(Constants.diedSymbol);
-                symbols.add(Constants.SYMBOL_PAIR_BTC);
-                symbols.add("ETHUSDT");
-                for (String symbol : symbols) {
-                    executorService.execute(() -> updateTickerASymbol15m(symbol));
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            executorService.execute(() -> writeTicker15MMongo2File());
-            Thread.sleep(Utils.TIME_DAY);
-        } catch (Exception e) {
-            LOG.error("ERROR during UpdateTicker15m: {}", e);
-            e.printStackTrace();
-        }
-    }
-
-    private void startResetTicker15m() {
-        try {
-            try {
-                Set<String> symbols = TickerFuturesHelper.getAllSymbol();
-                symbols.removeAll(Constants.diedSymbol);
-                symbols.add(Constants.SYMBOL_PAIR_BTC);
-                symbols.add("ETHUSDT");
-                for (String symbol : symbols) {
-                    executorService.execute(() -> updateDataBySymbol(symbol));
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            executorService.execute(() -> writeTicker15MMongo2File());
-
-        } catch (Exception e) {
-            LOG.error("ERROR during UpdateTicker15m: {}", e);
-            e.printStackTrace();
-        }
-    }
-
     private void startResetTicker15mSimple() {
         try {
             try {
@@ -497,8 +124,6 @@ public class TickerManager {
                 symbols.removeAll(Constants.diedSymbol);
                 symbols.add(Constants.SYMBOL_PAIR_BTC);
                 symbols.add("ETHUSDT");
-                counter = 0;
-                total = symbols.size();
                 Long startTime = 1672506000000L;
                 for (String symbol : symbols) {
                     if (Constants.specialSymbol.contains(symbol) || Constants.stableSymbol.contains(symbol)) {
@@ -516,16 +141,79 @@ public class TickerManager {
         }
     }
 
+    // PHƯƠNG THỨC MỚI: Lưu dữ liệu 1M vào Aerospike
+    private void startUpdateTicker1mSimple() {
+        try {
+            Set<String> symbols = TickerFuturesHelper.getAllSymbol();
+            symbols.removeAll(Constants.diedSymbol);
+            symbols.add(Constants.SYMBOL_PAIR_BTC);
+            symbols.add(Constants.SYMBOL_PAIR_ETH);
+
+            Long time = Utils.getStartTimeDayAgo(0) + 7 * Utils.TIME_HOUR;
+            Long timeEnd2Get = Utils.sdfFile.parse(Configs.TIME_RUN).getTime();
+
+            while (true) {
+                if (time < timeEnd2Get) {
+                    break;
+                }
+
+                LOG.info("Start get data ticker 1m for date: {}", Utils.normalizeDateYYYYMMDDHHmm(time));
+
+                try {
+                    TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers = DataManagerAerospike.readDataFromAerospike1M(time);
+                    if (time2Tickers.size() >= 1440){
+                        break;
+                    }
+                    TreeMap<Long, Map<String, KlineObjectSimple>> time2SymbolAndKline = getAllTicker1MBuyDate(time, symbols);
+                    if (time2SymbolAndKline != null && !time2SymbolAndKline.isEmpty()) {
+                        LOG.info("Write {} records to Aerospike for date: {}", time2SymbolAndKline.size(), Utils.normalizeDateYYYYMMDDHHmm(time));
+                        // LƯU VÀO AEROSPIKE THAY VÌ FILE
+                        saveToAerospike(time2SymbolAndKline);
+                    }
+                } catch (Exception e) {
+                    LOG.info("Error get data for date: {}", Utils.normalizeDateYYYYMMDDHHmm(time));
+                    e.printStackTrace();
+                }
+                time = time - Utils.TIME_DAY;
+            }
+
+        } catch (Exception e) {
+            LOG.error("ERROR during UpdateTicker1m: {}", e);
+            e.printStackTrace();
+        }
+    }
+
+    private void saveToAerospike(TreeMap<Long, Map<String, KlineObjectSimple>> time2SymbolAndKline) {
+        try {
+            for (Map.Entry<Long, Map<String, KlineObjectSimple>> entry : time2SymbolAndKline.entrySet()) {
+                Long timestamp = entry.getKey();
+                Map<String, KlineObjectSimple> symbolData = entry.getValue();
+
+                // Chuyển đổi sang Protobuf
+                // 2a. Chuyen Map thanh Protobuf byte[]
+                byte[] protoAsBytes = AerospikeConfigs.convertMapToProtoBytes(symbolData);
+                // 2b. Nen mang byte[] Protobuf bang Snappy
+                byte[] compressedData = Snappy.compress(protoAsBytes);
+
+                // Tạo key cho Aerospike
+                String keyString = AerospikeConfigs.keyFormat.format(new Date(timestamp));
+
+                // Lưu vào Aerospike (cần implement Aerospike client)
+                DataManagerAerospike.writeDataToAerospike(keyString, compressedData);
+            }
+            LOG.info("Successfully saved {} records to Aerospike", time2SymbolAndKline.size());
+        } catch (Exception e) {
+            LOG.error("Error saving to Aerospike: {}", e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+
     public void startResetTicker1DAnd4HSimple() {
         try {
             try {
                 Set<String> symbols = new HashSet<>();
                 symbols.addAll(TickerFuturesHelper.getAllSymbol());
-//                symbols.addAll(Constants.btcReverseSymbol);
-//                symbols.addAll(Constants.specialSymbol);
-//                symbols.addAll(Constants.stableSymbol);
-                counter = 0;
-                total = symbols.size();
                 Long startTime;
                 startTime = Utils.sdfFile.parse("20190101").getTime() + 7 * Utils.TIME_HOUR;
                 for (String symbol : symbols) {
@@ -542,55 +230,6 @@ public class TickerManager {
         }
     }
 
-    private void startUpdateTicker1mSimple() {
-        try {
-            try {
-                Set<String> symbols = TickerFuturesHelper.getAllSymbol();
-                symbols.removeAll(Constants.diedSymbol);
-                symbols.add(Constants.SYMBOL_PAIR_BTC);
-                symbols.add(Constants.SYMBOL_PAIR_ETH);
-                Long time = Utils.getStartTimeDayAgo(0) + 7 * Utils.TIME_HOUR;
-                Long timeEnd2Get = Utils.sdfFile.parse(Configs.TIME_RUN).getTime();
-                while (true) {
-                    if (time < timeEnd2Get) {
-                        break;
-                    }
-                    // ĐỔI TÊN FILE ĐÍCH
-                    String fileDataProto = Configs.FOLDER_TICKER_1M_PROTOBUF_SNAPPY_FILE + time + ".pb";
-                    File file = new File(fileDataProto);
-
-                    if (new File(fileDataProto).exists() && file.lastModified() > (time + Utils.TIME_DAY)) {
-                        time = time - Utils.TIME_DAY;
-                        continue;
-                    }
-                    LOG.info("Start get data ticker 1m for date: {}", Utils.normalizeDateYYYYMMDDHHmm(time));
-                    try {
-                        if (file.exists()) {
-                            LOG.info("ReLoad data for date: {} -> {}", Utils.normalizeDateYYYYMMDDHHmm(file.lastModified()),
-                                    Utils.normalizeDateYYYYMMDDHHmm(time));
-                        }
-                        TreeMap<Long, Map<String, KlineObjectSimple>> time2SymbolAndKline = getAllTicker1MBuyDate(time, symbols);
-                        if (time2SymbolAndKline != null && !time2SymbolAndKline.isEmpty()) {
-                            LOG.info("Write {} records to file: {}", time2SymbolAndKline.size(), fileDataProto);
-                            // GHI RA FILE PROTOBUF
-                            KlineArchiveProto.KlineArchive protoArchive = convertToProto(time2SymbolAndKline);
-                            StorageProto.writeProtoWithSnappy(fileDataProto, protoArchive);
-                        }
-                    } catch (Exception e) {
-                        LOG.info("Error get data for date: {}", Utils.normalizeDateYYYYMMDDHHmm(time));
-                        e.printStackTrace();
-                    }
-                    time = time - Utils.TIME_DAY;
-                }
-
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        } catch (Exception e) {
-            LOG.error("ERROR during UpdateTicker15m: {}", e);
-            e.printStackTrace();
-        }
-    }
 
     public void startUpdateFundingFee() {
         try {
@@ -684,145 +323,8 @@ public class TickerManager {
         return time2SymbolAndKline;
     }
 
-
-    private void updateTickerASymbol15m(String symbol) {
-        try {
-            LOG.info("Start update ticker 15m for {}", symbol);
-            Long date = TickerMongoHelper.getInstance().getLastDateTicker15mBySymbol(symbol);
-            LOG.info("update ticker 15m for {} from: {}", symbol, new Date(date));
-            updateDataByDate(symbol, date);
-            LOG.info("Finished update ticker 15m for {}", symbol);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-
-    private void updateDataByDate(String symbol, Long date) {
-        List<KlineObjectNumber> allTickers = TickerFuturesHelper.getTickerWithStartTimeFull(symbol, Constants.INTERVAL_15M, date);
-        if (date != 0) {
-            // delete hour start update
-            TickerMongoHelper.getInstance().deleteTicker15m(symbol, date);
-        }
-        Map<Long, List<KlineObjectNumber>> time2Tickers = new HashMap<>();
-
-        for (KlineObjectNumber ticker : allTickers) {
-            long timeDate = Utils.getDate(ticker.startTime.longValue());
-            List<KlineObjectNumber> docs = time2Tickers.get(timeDate);
-            if (docs == null) {
-                docs = new ArrayList<>();
-                time2Tickers.put(timeDate, docs);
-            }
-            docs.add(ticker);
-        }
-        for (Map.Entry<Long, List<KlineObjectNumber>> entry : time2Tickers.entrySet()) {
-            Long timeDate = entry.getKey();
-            List<KlineObjectNumber> tickers = entry.getValue();
-            List<Document> details = new ArrayList<>();
-            Double maxPrice = null;
-            Double minPrice = null;
-            Double priceClose = null;
-            Double priceOpen = null;
-            for (KlineObjectNumber ticker : tickers) {
-                details.add(Utils.convertTicker2Doc(ticker));
-                if (priceOpen == null) {
-                    priceOpen = ticker.priceOpen;
-                }
-                priceClose = ticker.priceClose;
-                if (maxPrice == null || maxPrice < ticker.maxPrice) {
-                    maxPrice = ticker.maxPrice;
-                }
-                if (minPrice == null || minPrice > ticker.minPrice) {
-                    minPrice = ticker.minPrice;
-                }
-            }
-            Document doc = new Document();
-            doc.append("sym", symbol);
-            doc.append("date", timeDate);
-            doc.append("priceOpen", priceOpen);
-            doc.append("maxPrice", maxPrice);
-            doc.append("minPrice", minPrice);
-            doc.append("priceClose", priceClose);
-            doc.append("details", details);
-            TickerMongoHelper.getInstance().insertTicker15m(doc);
-        }
-    }
-
-    private void updateDataBySymbol(String symbol) {
-        List<KlineObjectNumber> allTickers = TickerMongoHelper.getInstance().getTicker15mBySymbol(symbol);
-        Long lastTimeUpdate = 0l;
-        if (allTickers.size() > 0) {
-            lastTimeUpdate = allTickers.get(allTickers.size() - 1).startTime.longValue();
-        }
-        LOG.info("Start update ticker 15m for {} {}", symbol, lastTimeUpdate);
-
-        allTickers.remove(allTickers.size() - 1);
-        allTickers.addAll(TickerFuturesHelper.getTickerWithStartTimeFull(symbol, Constants.INTERVAL_15M, lastTimeUpdate));
-        // delete hour start update
-        TickerMongoHelper.getInstance().deleteTicker15m(symbol);
-
-        Map<Long, List<KlineObjectNumber>> time2Tickers = new HashMap<>();
-        RsiEntry[] rsi = RelativeStrengthIndex.calculateRSI(allTickers, 14);
-        MACDEntry[] entries = MACD.calculate(allTickers, 12, 26, 9);
-        IndicatorEntry[] smaEntries = SimpleMovingAverage.calculate(allTickers, 20);
-        Map<Double, Double> time2Rsi = new HashMap<>();
-        Map<Double, Double> time2Ma = new HashMap<>();
-        Map<Double, MACDEntry> time2Macd = new HashMap<>();
-        for (RsiEntry rs : rsi) {
-            time2Rsi.put(rs.startTime, rs.getRsi());
-        }
-        for (MACDEntry entry : entries) {
-            time2Macd.put(entry.startTime, entry);
-        }
-        for (IndicatorEntry sma : smaEntries) {
-            time2Ma.put(sma.startTime, sma.getValue());
-        }
-        for (KlineObjectNumber ticker : allTickers) {
-            long timeDate = Utils.getDate(ticker.startTime.longValue());
-            List<KlineObjectNumber> docs = time2Tickers.get(timeDate);
-            if (docs == null) {
-                docs = new ArrayList<>();
-                time2Tickers.put(timeDate, docs);
-            }
-            docs.add(ticker);
-        }
-        for (Map.Entry<Long, List<KlineObjectNumber>> entry : time2Tickers.entrySet()) {
-            Long timeDate = entry.getKey();
-            List<KlineObjectNumber> tickers = entry.getValue();
-            List<Document> details = new ArrayList<>();
-            Double maxPrice = null;
-            Double minPrice = null;
-            Double priceClose = null;
-            Double priceOpen = null;
-            for (KlineObjectNumber ticker : tickers) {
-                details.add(Utils.convertTicker2Doc(ticker, time2Rsi, time2Ma, time2Macd));
-                if (priceOpen == null) {
-                    priceOpen = ticker.priceOpen;
-                }
-                priceClose = ticker.priceClose;
-                if (maxPrice == null || maxPrice < ticker.maxPrice) {
-                    maxPrice = ticker.maxPrice;
-                }
-                if (minPrice == null || minPrice > ticker.minPrice) {
-                    minPrice = ticker.minPrice;
-                }
-            }
-            Document doc = new Document();
-            doc.append("sym", symbol);
-            doc.append("date", timeDate);
-            doc.append("priceOpen", priceOpen);
-            doc.append("maxPrice", maxPrice);
-            doc.append("minPrice", minPrice);
-            doc.append("priceClose", priceClose);
-            doc.append("details", details);
-            TickerMongoHelper.getInstance().insertTicker15m(doc);
-        }
-        LOG.info("Finished update ticker 15m for {}", symbol);
-    }
-
     public void updateDataBySymbolSimple(String symbol, String interval, Long startTime) {
         try {
-            counter++;
 //            LOG.info("Process: {}/{}", counter, total);
 //            LOG.info("Start get ticker symbol: {} {} {}", symbol, interval, Utils.normalizeDateYYYYMMDDHHmm(startTime));
             String fileName = null;
@@ -866,52 +368,6 @@ public class TickerManager {
         } catch (Exception e) {
             e.printStackTrace();
         }
-    }
-
-    // HÀM CHUYỂN ĐỔI MỚI
-    private KlineArchiveProto.KlineArchive convertToProto(TreeMap<Long, Map<String, KlineObjectSimple>> oldData) {
-        // Cần đảo ngược cấu trúc map để nhóm theo symbol trước
-        Map<String, TreeMap<Long, KlineObjectSimple>> dataBySymbol = new TreeMap<>();
-        for (Map.Entry<Long, Map<String, KlineObjectSimple>> entry : oldData.entrySet()) {
-            Long time = entry.getKey();
-            Map<String, KlineObjectSimple> symbolMap = entry.getValue();
-            for (Map.Entry<String, KlineObjectSimple> symbolEntry : symbolMap.entrySet()) {
-                String symbol = symbolEntry.getKey();
-                KlineObjectSimple kline = symbolEntry.getValue();
-                dataBySymbol.computeIfAbsent(symbol, k -> new TreeMap<>()).put(time, kline);
-            }
-        }
-
-        KlineArchiveProto.KlineArchive.Builder archiveBuilder = KlineArchiveProto.KlineArchive.newBuilder();
-
-        for (Map.Entry<String, TreeMap<Long, KlineObjectSimple>> symbolEntry : dataBySymbol.entrySet()) {
-            String symbol = symbolEntry.getKey();
-            TreeMap<Long, KlineObjectSimple> klines = symbolEntry.getValue();
-
-            KlineArchiveProto.SymbolKlines.Builder symbolKlinesBuilder = KlineArchiveProto.SymbolKlines.newBuilder();
-            symbolKlinesBuilder.setSymbol(symbol);
-
-            for (Map.Entry<Long, KlineObjectSimple> klineEntry : klines.entrySet()) {
-                KlineProto.KlineObjectSimpleProto protoKline = convertKline(klineEntry.getValue());
-                symbolKlinesBuilder.putTimeToKline(klineEntry.getKey(), protoKline);
-            }
-            archiveBuilder.putSymbolKlines(symbol, symbolKlinesBuilder.build());
-        }
-
-        return archiveBuilder.build();
-    }
-
-    private KlineProto.KlineObjectSimpleProto convertKline(KlineObjectSimple oldKline) {
-        KlineProto.KlineObjectSimpleProto.Builder builder = KlineProto.KlineObjectSimpleProto.newBuilder();
-
-        if (oldKline.startTime != null) builder.setStartTime(oldKline.startTime.longValue());
-        if (oldKline.priceOpen != null) builder.setPriceOpen(oldKline.priceOpen.floatValue());
-        if (oldKline.maxPrice != null) builder.setMaxPrice(oldKline.maxPrice.floatValue());
-        if (oldKline.minPrice != null) builder.setMinPrice(oldKline.minPrice.floatValue());
-        if (oldKline.priceClose != null) builder.setPriceClose(oldKline.priceClose.floatValue());
-        if (oldKline.totalUsdt != null) builder.setTotalUsdt(oldKline.totalUsdt.floatValue());
-
-        return builder.build();
     }
 
 }

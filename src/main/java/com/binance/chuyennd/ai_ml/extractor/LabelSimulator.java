@@ -44,7 +44,7 @@ public class LabelSimulator {
             KlineObjectSimple k = klines.get(i);
             if (k.maxPrice > maxFuturePrice) {
                 maxFuturePrice = k.maxPrice;
-                timeToProfit = i + 1;
+                timeToProfit = k.startTime;
             }
             if (k.minPrice < minFuturePrice) {
                 minFuturePrice = k.minPrice;
@@ -54,7 +54,8 @@ public class LabelSimulator {
         double pnl_final = (maxFuturePrice - entryPrice) / entryPrice;
         double max_drawdown = (minFuturePrice - entryPrice) / entryPrice;
 
-        return new LabelResult(pnl_final, max_drawdown, timeToProfit);
+        return new LabelResult(pnl_final, max_drawdown, timeToProfit,
+                entryPrice, maxFuturePrice);
     }
 
     // ... (Cac ham khac nhu calculateSingleSymbolLabel cu, loadFutureData... giu nguyen neu can) ...
@@ -64,10 +65,18 @@ public class LabelSimulator {
         public double max_drawdown;
         public double time_to_profit;
 
-        public LabelResult(double pnl_final, double max_drawdown, double time_to_profit) {
+        public double entry_price;
+        public double price_to_profit;
+
+        public LabelResult(double pnl_final, double max_drawdown, double time_to_profit,
+                           double entry_price, double price_to_profit) { // <-- SUA DONG NAY
             this.pnl_final = pnl_final;
             this.max_drawdown = max_drawdown;
             this.time_to_profit = time_to_profit;
+
+            // === THEM 2 DONG NAY ===
+            this.entry_price = entry_price;
+            this.price_to_profit = price_to_profit;
         }
     }
 }

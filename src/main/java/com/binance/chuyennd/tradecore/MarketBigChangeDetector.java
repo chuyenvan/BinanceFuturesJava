@@ -15,6 +15,11 @@ import java.util.*;
 
 public class MarketBigChangeDetector {
     public static final Logger LOG = LoggerFactory.getLogger(MarketBigChangeDetector.class);
+//    public static OnnxMarketPredictor predictor = new OnnxMarketPredictor("storage/ai_ml_data/market_predictor_v2.onnx");
+//    public static XGBoostMarketPredictor predictor = new XGBoostMarketPredictor("storage/ai_ml_data/xgboost");
+//    public static ComprehensiveMarketFeatureExtractor featureExtractor = new ComprehensiveMarketFeatureExtractor();
+
+
 
     public static void main(String[] args) throws ParseException {
         try {
@@ -350,6 +355,20 @@ public class MarketBigChangeDetector {
         }
         return hashSet;
     }
+
+//    public static XGBoostMarketPredictor.Forecast getAiPredict(MarketDataObject marketData, Long time, Map<String, KlineObjectSimple> symbol2LastTicker) {
+//        MarketRateChange rateChange = new MarketRateChange(marketData.rateDownAvg, marketData.rateDown15MAvg,
+//                marketData.rateUpAvg);
+//        MarketFeatures features = featureExtractor.extractAllFeatures(time, symbol2LastTicker, rateChange);
+//        XGBoostMarketPredictor.Forecast predictedReturn = predictor.predict(features);
+//        return predictedReturn;
+//    }
+//
+//    public static XGBoostMarketPredictor.Forecast getAiPredict(MarketRateChange rateChange, Long time, Map<String, KlineObjectSimple> symbol2LastTicker) {
+//        MarketFeatures features = featureExtractor.extractAllFeatures(time, symbol2LastTicker, rateChange);
+//        XGBoostMarketPredictor.Forecast predictedReturn = predictor.predict(features);
+//        return predictedReturn;
+//    }
 
 }
 

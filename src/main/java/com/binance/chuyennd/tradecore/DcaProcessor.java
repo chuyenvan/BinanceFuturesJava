@@ -4,13 +4,17 @@ import com.binance.chuyennd.bigchange.market.MarketLevelChange;
 import com.binance.chuyennd.helper.PositionHelper;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
 import com.binance.chuyennd.trading.BudgetManager;
+import com.binance.chuyennd.utils.Utils;
 import com.binance.client.model.trade.PositionRisk;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 public class DcaProcessor {
+    public static final Logger LOG = LoggerFactory.getLogger(DcaProcessor.class);
 
     public static List<String> getDCA(MarketLevelChange levelChange, Long time, Double budget,
                                       Map<String, OrderTargetInfoTest> symbol2OrderRunning, Boolean isTrendBuyWithBtc, Boolean isTrendBuyWithETH) {
@@ -18,18 +22,24 @@ public class DcaProcessor {
                 .stream()
                 .filter(entry -> {
                     OrderTargetInfoTest order = entry.getValue();
-                    // "Giải nén" các thuộc tính từ đối tượng 'order' và truyền vào hàm tiện ích
-                    return DcaUtils.shouldDca(
-                            order.calMargin(),
-                            order.calRateLoss(),
-                            order.marketLevelChange,
-                            order.timeStart,
-                            levelChange,  // Trạng thái thị trường chung
-                            time,         // Thời gian hiện tại
-                            budget,
-                            isTrendBuyWithBtc,
-                            isTrendBuyWithETH
-                    );
+                    try {
+                        // "Giải nén" các thuộc tính từ đối tượng 'order' và truyền vào hàm tiện ích
+                        return DcaUtils.shouldDca(
+                                order.calMargin(),
+                                order.calRateLoss(),
+                                order.marketLevelChange,
+                                order.timeStart,
+                                levelChange,  // Trạng thái thị trường chung
+                                time,         // Thời gian hiện tại
+                                budget,
+                                isTrendBuyWithBtc,
+                                isTrendBuyWithETH
+                        );
+                    } catch (Exception e) {
+                        LOG.info("Error when processing DCA for {}", Utils.toJson(order));
+                        e.printStackTrace();
+                    }
+                    return false;
                 })
                 .map(Map.Entry::getKey)
                 .collect(Collectors.toList());
