@@ -172,4 +172,25 @@ public class FundingFeeManagerProduction {
         updateListBuySell();
     }
 
+    public Double getNearestFundingFee(String symbol, long timestamp) {
+        TreeMap<Long, FundingRate> time2RateFunding = symbol2FundingFee.get(symbol);
+
+        // Kiểm tra null hoặc rỗng
+        if (time2RateFunding == null || time2RateFunding.isEmpty()) {
+            return 0.0; // Production không có dữ liệu thì trả về 0 để tránh lỗi
+        }
+
+        // Tìm mốc thời gian gần nhất <= timestamp
+        Map.Entry<Long, FundingRate> entry = time2RateFunding.floorEntry(timestamp);
+
+        if (entry != null) {
+            // Nếu dữ liệu trong RAM quá cũ (ví dụ > 24h trước) thì coi như không có
+            if (timestamp - entry.getKey() > 24 * 3600 * 1000L) {
+                return 0.0;
+            }
+            return entry.getValue().getFundingRate().doubleValue();
+        }
+
+        return 0.0;
+    }
 }

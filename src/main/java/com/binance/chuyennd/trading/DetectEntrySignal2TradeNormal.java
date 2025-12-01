@@ -15,6 +15,11 @@
  */
 package com.binance.chuyennd.trading;
 
+import com.binance.chuyennd.ai_ml.deepseek.ComprehensiveMarketFeatureExtractor;
+import com.binance.chuyennd.ai_ml.deepseek.MarketFeatures;
+import com.binance.chuyennd.ai_ml.deepseek.OnnxInferenceManager;
+import com.binance.chuyennd.ai_ml.onnx.AIRejectFilter;
+import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
 import com.binance.chuyennd.helper.PositionHelper;
 import com.binance.chuyennd.object.MarketRateChange;
@@ -50,8 +55,15 @@ public class DetectEntrySignal2TradeNormal {
 
     public static final Logger LOG = LoggerFactory.getLogger(DetectEntrySignal2TradeNormal.class);
     private static final String FILE_STORAGE_TIME_RATE_DOWN15M = "storage/data/time2RatDown15M.data";
+    private static final String MODEL_DIR = "../storage/ai_ml_data/ai_models_reg";
+
     public ExecutorService executorService = Executors.newFixedThreadPool(Configs.NUMBER_THREAD_ORDER_MANAGER);
     public TreeMap<Long, Double> time2RateDown15MAvg = new TreeMap<>();
+
+    // --- Biến AI ---
+    private OnnxInferenceManager aiBrain;
+    private ComprehensiveMarketFeatureExtractor featureExtractor;
+
 
     public static void main(String[] args) throws InterruptedException, ParseException {
 //        new DetectEntrySignal2Trader().getTickerBySymbol("QNTUSDT");
@@ -380,9 +392,59 @@ public class DetectEntrySignal2TradeNormal {
         }
         return symbol2Trade;
     }
-
+    private List<String> tempBasketForAI = new ArrayList<>();
     public void createOrderBuyRequest(String symbol, KlineObjectSimple ticker, MarketLevelChange levelChange, Double priceMax15M, MarketRateChange marketRate, boolean isTrendBuyWithBtc, boolean isTrendBuyWithETH) {
 
+        // -------------------------------------------------------------
+        // TÍCH HỢP AI REJECT FILTER
+        // -------------------------------------------------------------
+        if (aiBrain != null && featureExtractor != null) {
+            try {
+                long timestamp = ticker.startTime.longValue();
+                // 1. Lấy Snapshot toàn thị trường hiện tại để AI có cái nhìn tổng quan
+                Map<String, KlineObjectSimple> currentMarketMap = new HashMap<>();
+                ConcurrentHashMap<String, List<KlineObjectSimple>> allTickers = ListenAllTicker.getInstance().getAllTicker();
+                for (Map.Entry<String, List<KlineObjectSimple>> entry : allTickers.entrySet()) {
+                    List<KlineObjectSimple> list = entry.getValue();
+                    if (!list.isEmpty()) {
+                        currentMarketMap.put(entry.getKey(), list.get(list.size() - 1));
+                    }
+                }
+
+                // 2. Trích xuất Features
+                // Lưu ý: tempBasketForAI được cập nhật ở checkMarketLevelChange2Trade
+                MarketFeatures features = featureExtractor.extractAllFeatures(
+                        timestamp,
+                        currentMarketMap,
+                        marketRate,
+                        (tempBasketForAI != null && !tempBasketForAI.isEmpty()) ? tempBasketForAI : Collections.singletonList(symbol)
+                );
+
+                // 3. Dự báo
+                OnnxInferenceManager.PredictionResult prediction = aiBrain.predictAll(features);
+
+                // 4. Kiểm tra Lọc
+                AIRejectFilter.FilterResult filterResult = AIRejectFilter.checkSignal(prediction);
+
+                // Log kết quả AI để debug/monitor
+                LOG.info("AI CHECK [{}] Pred: {} -> Decision: {}", symbol, prediction, filterResult.decision);
+
+                if (filterResult.decision == AIRejectFilter.FilterDecision.REJECT) {
+                    LOG.info("❌ SKIP ORDER [{}] due to AI REJECT: {}", symbol, filterResult.reason);
+                    return; // <--- CHẶN LỆNH TẠI ĐÂY
+                } else {
+                    LOG.info("✅ AI PASS [{}] Reason: {}", symbol, filterResult.reason);
+                }
+
+            } catch (Exception e) {
+                LOG.error("AI Prediction Error for {}: {}", symbol, e.getMessage());
+                // Nếu AI lỗi, có thể chọn return (an toàn) hoặc cho qua (rủi ro).
+                // Ở đây tôi chọn cho qua nhưng log warning.
+            }
+        }
+        // -------------------------------------------------------------
+
+        // ... (Giữ nguyên logic tính toán margin, quantity cũ bên dưới) ...
         long time = ticker.startTime.longValue();
         Double marginRunning = BudgetManager.getInstance().marginRunning;
         Double balanceBasic = BudgetManager.getInstance().balanceBasic;
@@ -459,13 +521,29 @@ public class DetectEntrySignal2TradeNormal {
     }
 
     private void initData() {
+        ListenAllTicker tickerListener = ListenAllTicker.getInstance();
         SimpleMovingAverageDayManagerProduction.getInstance();
         SimpleMovingAverage4hManagerProduction.getInstance();
 
         if (new File(FILE_STORAGE_TIME_RATE_DOWN15M).exists()) {
             time2RateDown15MAvg = (TreeMap<Long, Double>) StorageSnappy.readObjectFromFile(FILE_STORAGE_TIME_RATE_DOWN15M);
         }
-        ListenAllTicker.getInstance();
+        // --- KHỞI TẠO AI & LOAD DỮ LIỆU LỊCH SỬ ---
+        try {
+            LOG.info("Initializing AI Brain & Feature Extractor...");
+            this.aiBrain = new OnnxInferenceManager(MODEL_DIR);
+            this.featureExtractor = new ComprehensiveMarketFeatureExtractor();
+
+            // QUAN TRỌNG: Sync dữ liệu lịch sử từ ListenAllTicker sang FeatureExtractor
+            // Để đảm bảo tính toán RSI, MA đúng ngay từ lệnh đầu tiên
+            this.featureExtractor.initDataFromTickerMap(tickerListener.symbol2Tickers);
+
+            LOG.info("AI System Initialized Successfully.");
+        } catch (Exception e) {
+            LOG.error("Failed to initialize AI System", e);
+            // Có thể throw exception để dừng chương trình nếu AI là bắt buộc
+        }
+        // ------------------------------------------
     }
 
 

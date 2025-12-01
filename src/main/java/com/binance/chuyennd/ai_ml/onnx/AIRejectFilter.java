@@ -1,25 +1,21 @@
-package com.binance.chuyennd.ai_ml.onnx;
+package com.binance.chuyennd.ai_ml.onnx; // Lưu ý package
 
-
+import com.binance.chuyennd.ai_ml.deepseek.OnnxInferenceManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class AIRejectFilter {
     private static final Logger LOG = LoggerFactory.getLogger(AIRejectFilter.class);
 
-    // --- CẤU HÌNH "SMART CUT" (Mục tiêu: Chỉ lọc 5-10% tệ nhất) ---
+    // --- CẤU HÌNH 1: CORE (1H & RISK) ---
+    private static final double HARD_RISK_LIMIT = -0.04;     // Sập > 5% là Rủi ro cao
+    private static final double MIN_PRED_RETURN_1H = 0.01;   // Lãi 1H tối thiểu 1%
+    private static final double HIGH_RETURN_THRESHOLD = 0.04;// Lãi > 4% là Kèo Siêu Thơm
 
-    // 1. Ngưỡng Lợi nhuận Mạnh (Strong Profit): > 0.8%
-    // Gặp lệnh này là MÚC NGAY, miễn bàn.
-    private static final double STRONG_PROFIT_THRESHOLD = 0.008;
-
-    // 2. Ngưỡng Rủi ro Tử thần (Deadly Risk): < -10%
-    // Chỉ chặn khi sập cực sâu (Thiên nga đen).
-    private static final double DEADLY_RISK_LIMIT = -0.10;
-
-    // 3. Ngưỡng Lợi nhuận Tối thiểu (Min Profit): > 0.1%
-    // Đủ trả phí sàn là chơi.
-    private static final double MIN_PROFIT_THRESHOLD = 0.001;
+    // --- CẤU HÌNH 2: BỔ SUNG (15M, 4H, 24H) ---
+    private static final double MIN_MOMENTUM_15M = 0.001;    // 15M phải tăng ít nhất 0.1% (Đang có đà)
+    private static final double MIN_TREND_4H = 0.005;        // 4H phải tăng ít nhất 0.5% (Thuận xu hướng)
+    private static final double DEAD_TREND_24H = -0.05;      // 24H sập quá 5% thì né ra (Downtrend dài)
 
     public enum FilterDecision { PASS, REJECT }
 
@@ -33,56 +29,88 @@ public class AIRejectFilter {
         }
     }
 
-//    public static FilterResult checkSignal(OnnxInferenceManager.PredictionResult prediction) {
-//        return evaluate(prediction.return1H, prediction.riskDrawdown4H);
-//    }
-
+    public static FilterResult checkSignal(OnnxInferenceManager.PredictionResult prediction) {
+        // Lấy đủ 4 chỉ số Return và 1 chỉ số Risk
+        return evaluate(
+                prediction.return15M,
+                prediction.return1H,
+                prediction.return4H,
+                prediction.return24H,
+                prediction.riskDrawdown4H
+        );
+    }
     public static FilterResult checkSignal(AiPredictionData prediction) {
-        return evaluate(prediction.predReturn1H, prediction.predRisk4H);
+        // Lấy đủ 4 chỉ số Return và 1 chỉ số Risk
+        return evaluate(
+                prediction.predReturn15M,
+                prediction.predReturn1H,
+                prediction.predReturn4H,
+                prediction.predReturn24H,
+                prediction.predRisk4H
+        );
     }
 
-    private static FilterResult evaluate(double pred1H, double risk4H) {
+    private static FilterResult evaluate(double pred15M, double pred1H, double pred4H, double pred24H, double risk4H) {
+
         // ---------------------------------------------------------
-        // QUY TẮC 1: ƯU TIÊN TUYỆT ĐỐI CHO KÈO THƠM
+        // BƯỚC 1: KIỂM TRA SINH TỒN (Risk vs Reward Khủng)
         // ---------------------------------------------------------
-        // Nếu AI dự báo lãi > 0.8% -> PASS NGAY LẬP TỨC
-        // (Cứu các lệnh 1.28%, 2.4% bị reject oan trước đó)
-        if (pred1H >= STRONG_PROFIT_THRESHOLD) {
-            return new FilterResult(
-                    FilterDecision.PASS,
-                    String.format("STRONG SIGNAL: Lãi to (%.2f%%) -> MÚC NGAY", pred1H * 100)
-            );
+        if (risk4H <= HARD_RISK_LIMIT) {
+            // Nếu Rủi ro cao (sập > 5%), chỉ vào nếu Lợi nhuận cực khủng (> 4%)
+            if (pred1H > HIGH_RETURN_THRESHOLD) {
+                return new FilterResult(FilterDecision.PASS, "HIGH RISK HIGH REWARD: Chấp nhận rủi ro để ăn dày");
+            }
+            return new FilterResult(FilterDecision.REJECT, String.format("DANGER: Risk %.2f%% quá cao, Return %.2f%% không đủ bù", risk4H*100, pred1H*100));
         }
 
         // ---------------------------------------------------------
-        // QUY TẮC 2: CHẶN TỬ THẦN (Lọc đuôi trái)
+        // BƯỚC 2: KIỂM TRA LỰC CHÍNH (1H)
         // ---------------------------------------------------------
-        // Chỉ reject khi rủi ro sập hầm quá lớn (> 10%)
-        if (risk4H < DEADLY_RISK_LIMIT) {
-            return new FilterResult(
-                    FilterDecision.REJECT,
-                    String.format("EXTREME RISK: Dự báo sập (%.2f%%) < -10%% -> NÉ GẤP", risk4H * 100)
-            );
+        if (pred1H <= MIN_PRED_RETURN_1H) {
+            return new FilterResult(FilterDecision.REJECT, String.format("WEAK 1H: Lãi %.2f%% < 1%% (Sideway)", pred1H * 100));
         }
 
         // ---------------------------------------------------------
-        // QUY TẮC 3: CHẶN SIDEWAY (Lọc lệnh rác)
+        // BƯỚC 3: KIỂM TRA ĐÀ TĂNG NGẮN HẠN (15M Check)
         // ---------------------------------------------------------
-        // Nếu lãi bé tí tẹo (< 0.1%) -> Bỏ qua cho đỡ tốn phí
-        if (pred1H < MIN_PROFIT_THRESHOLD) {
+        // Nếu 1H ngon nhưng 15M đang xìu (< 0.1%), coi chừng là đỉnh sóng hồi
+        if (pred15M < MIN_MOMENTUM_15M) {
             return new FilterResult(
                     FilterDecision.REJECT,
-                    String.format("NO PROFIT: Lãi (%.2f%%) < 0.1%% -> BỎ QUA", pred1H * 100)
+                    String.format("BAD MOMENTUM: 1H ngon nhưng 15M yếu (%.2f%%) -> Dễ bị Bull Trap", pred15M * 100)
             );
         }
 
         // ---------------------------------------------------------
-        // CÒN LẠI -> PASS HẾT (Vùng trung tính)
+        // BƯỚC 4: KIỂM TRA XU HƯỚNG TRUNG HẠN (4H Check)
         // ---------------------------------------------------------
-        // Chấp nhận cả các lệnh R:R xấu một chút, miễn là không sập hầm.
+        // Nếu 1H ngon nhưng 4H lại đỏ hoặc tăng quá yếu (< 0.5%),
+        // chứng tỏ đây chỉ là cú nảy con mèo chết (Dead Cat Bounce)
+        // TRỪ KHI: 1H cực mạnh (> 3%) thì có thể phá trend 4H -> Cho qua
+        if (pred4H < MIN_TREND_4H && pred1H < 0.03) {
+            return new FilterResult(
+                    FilterDecision.REJECT,
+                    String.format("AGAINST TREND: 4H yếu (%.2f%%) -> Ngược dòng nước", pred4H * 100)
+            );
+        }
+
+        // ---------------------------------------------------------
+        // BƯỚC 5: KIỂM TRA "THIÊN NGA ĐEN" DÀI HẠN (24H Check)
+        // ---------------------------------------------------------
+        // Nếu 24H dự báo sập hầm > 5%, thì mọi cú hồi 1H đều là để bán
+        if (pred24H < DEAD_TREND_24H) {
+            return new FilterResult(
+                    FilterDecision.REJECT,
+                    String.format("MACRO DUMP: 24H quá xấu (%.2f%%) -> Không bắt dao", pred24H * 100)
+            );
+        }
+
+        // ---------------------------------------------------------
+        // PASS: HỘI TỤ ĐỦ CÁC YẾU TỐ
+        // ---------------------------------------------------------
         return new FilterResult(
                 FilterDecision.PASS,
-                String.format("OK: Return %.2f%% | Risk %.2f%%", pred1H * 100, risk4H * 100)
+                String.format("PERFECT: 15M(%.2f%%) -> 1H(%.2f%%) -> 4H(%.2f%%)", pred15M*100, pred1H*100, pred4H*100)
         );
     }
 }

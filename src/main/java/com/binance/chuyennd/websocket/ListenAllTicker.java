@@ -323,6 +323,9 @@ public class ListenAllTicker {
         }
         tickers.put(event.getStartTime(), convertEvent2Kline(event));
         int numberMax = Configs.BTC_TREND_REVERSE_DURATION + 5;
+        if (StringUtils.equalsIgnoreCase(event.getSymbol(), Constants.SYMBOL_PAIR_BTC)) {
+            numberMax = 1445;
+        }
         while (tickers.size() > numberMax) {
             tickers.remove(tickers.firstKey());
         }
