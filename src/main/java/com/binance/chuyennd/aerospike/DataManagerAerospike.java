@@ -20,6 +20,9 @@ import org.xerial.snappy.Snappy;
 
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 /**
  * Lop nay thay the DataManager, doc du lieu 1M (theo ngay) tu Aerospike
@@ -41,7 +44,9 @@ public class DataManagerAerospike {
     // Chinh sach doc hang loat mac dinh
     private static final BatchPolicy batchPolicy = new BatchPolicy();
     private static final int BATCH_CHUNK_SIZE = 2000;
-
+    // 2. Cấu hình Đa luồng (16 Threads)
+    public static int threadCount = 3;
+    public static ExecutorService executor = Executors.newFixedThreadPool(threadCount);
     /**
      * Khoi tao ket noi client
      */
@@ -64,12 +69,13 @@ public class DataManagerAerospike {
      * @return Mot TreeMap chua toan bo 1440 phut cua ngay do
      */
     public static TreeMap<Long, Map<String, KlineObjectSimple>> readDataFromAerospike1M(long startTime) {
-        // Map ket qua de tra ve
+        // Map kết quả để trả về (TreeMap tự sắp xếp theo key)
         TreeMap<Long, Map<String, KlineObjectSimple>> results = new TreeMap<>();
 
-        // 1. Tao 1440 Keys va Timestamps cho ca ngay
-        Key[] keys = new Key[1440];
-        long[] timestamps = new long[1440];
+        // 1. Tạo 1440 Keys và Timestamps cho cả ngày
+        int totalRecords = 1440;
+        Key[] allKeys = new Key[totalRecords];
+        long[] allTimestamps = new long[totalRecords];
 
         Calendar cal = Calendar.getInstance();
         cal.setTimeInMillis(startTime);
@@ -78,60 +84,153 @@ public class DataManagerAerospike {
         cal.set(Calendar.SECOND, 0);
         cal.set(Calendar.MILLISECOND, 0);
 
-        for (int i = 0; i < 1440; i++) {
+        for (int i = 0; i < totalRecords; i++) {
             String keyString = AerospikeConfigs.keyFormat.format(cal.getTime());
-            keys[i] = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME, keyString);
-            timestamps[i] = cal.getTimeInMillis();
+            allKeys[i] = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME, keyString);
+            allTimestamps[i] = cal.getTimeInMillis();
             cal.add(Calendar.MINUTE, 1);
         }
 
-        try {
-            // 2. Thuc hien 1 lenh Batch Read duy nhat
-            Record[] records = getClient().get(batchPolicy, keys);
 
-            // 3. Xu ly ket qua
-            for (int i = 0; i < records.length; i++) {
-                Record record = records[i];
+        List<Future<Map<Long, Map<String, KlineObjectSimple>>>> futures = new ArrayList<>();
 
-                // Neu record la null, nghia la khong co data cho phut do -> bo qua
-                if (record == null) {
-                    continue;
+        // Chia nhỏ mảng keys thành các chunk (mỗi chunk khoảng 90 key)
+        int chunkSize = (totalRecords + threadCount - 1) / threadCount;
+
+        for (int i = 0; i < threadCount; i++) {
+            final int startIdx = i * chunkSize;
+            final int endIdx = Math.min(startIdx + chunkSize, totalRecords);
+
+            if (startIdx >= endIdx) break;
+
+            // Submit task xử lý song song
+            futures.add(executor.submit(() -> {
+                Map<Long, Map<String, KlineObjectSimple>> chunkResult = new HashMap<>();
+                try {
+                    // Cắt mảng key và timestamp cho luồng này
+                    Key[] chunkKeys = Arrays.copyOfRange(allKeys, startIdx, endIdx);
+                    long[] chunkTimestamps = Arrays.copyOfRange(allTimestamps, startIdx, endIdx);
+
+                    // Batch Read từ Aerospike cho chunk này
+                    Record[] records = getClient().get(batchPolicy, chunkKeys);
+
+                    // Xử lý giải nén và parse song song
+                    for (int j = 0; j < records.length; j++) {
+                        Record record = records[j];
+                        if (record == null) continue;
+
+                        long minuteTimestamp = chunkTimestamps[j];
+                        byte[] snappyCompressedBytes = (byte[]) record.getValue("data");
+
+                        if (snappyCompressedBytes != null) {
+                            // Phần tốn CPU nhất nằm ở đây: Giải nén và Parse
+                            byte[] protoAsBytes = Snappy.uncompress(snappyCompressedBytes);
+                            MinuteData protoData = MinuteData.parseFrom(protoAsBytes);
+                            Map<String, KlineObjectSimple> javaMap = convertProtoMapToJavaMap(protoData.getTickersMap());
+
+                            chunkResult.put(minuteTimestamp, javaMap);
+                        }
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
-
-                // Lay timestamp cua phut nay
-                long minuteTimestamp = timestamps[i];
-
-                // Lay du lieu byte[] tu bin "data"
-                byte[] snappyCompressedBytes = (byte[]) record.getValue("data");
-                if (snappyCompressedBytes != null) {
-                    byte[] protoAsBytes = Snappy.uncompress(snappyCompressedBytes);
-                    // Giai ma Protobuf
-                    MinuteData protoData = MinuteData.parseFrom(protoAsBytes);
-
-                    // Chuyen doi Proto Map -> Java Map
-                    Map<String, KlineObjectSimple> javaMap = convertProtoMapToJavaMap(protoData.getTickersMap());
-
-                    // Dat vao ket qua
-                    results.put(minuteTimestamp, javaMap);
-                }
-            }
-
-        } catch (InvalidProtocolBufferException e) {
-            System.err.println("Loi nghiem trong: Khong the giai ma Protobuf!");
-            e.printStackTrace();
-        } catch (Exception e) {
-            System.err.println("Loi khi doc batch read tu Aerospike:");
-            e.printStackTrace();
+                return chunkResult;
+            }));
         }
 
-//        System.out.println("Doc xong. Tim thay " + results.size() + " phut du lieu trong Aerospike.");
+        // 3. Tổng hợp kết quả từ các luồng
+        for (Future<Map<Long, Map<String, KlineObjectSimple>>> future : futures) {
+            try {
+                // get() sẽ đợi luồng chạy xong và lấy kết quả
+                results.putAll(future.get());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        return results;
+    }
+
+    public static TreeMap<Long, byte[]> readDataFromAerospike1MBytes(long startTime) {
+        // Map kết quả để trả về (TreeMap tự sắp xếp theo key)
+        TreeMap<Long, byte[]> results = new TreeMap<>();
+
+        // 1. Tạo 1440 Keys và Timestamps cho cả ngày
+        int totalRecords = 1440;
+        Key[] allKeys = new Key[totalRecords];
+        long[] allTimestamps = new long[totalRecords];
+
+        Calendar cal = Calendar.getInstance();
+        cal.setTimeInMillis(startTime);
+        cal.set(Calendar.HOUR_OF_DAY, 7);
+        cal.set(Calendar.MINUTE, 0);
+        cal.set(Calendar.SECOND, 0);
+        cal.set(Calendar.MILLISECOND, 0);
+
+        for (int i = 0; i < totalRecords; i++) {
+            String keyString = AerospikeConfigs.keyFormat.format(cal.getTime());
+            allKeys[i] = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME, keyString);
+            allTimestamps[i] = cal.getTimeInMillis();
+            cal.add(Calendar.MINUTE, 1);
+        }
+
+        List<Future<Map<Long, byte[]>>> futures = new ArrayList<>();
+
+        // Chia nhỏ mảng keys thành các chunk (mỗi chunk khoảng 90 key)
+        int chunkSize = (totalRecords + threadCount - 1) / threadCount;
+
+        for (int i = 0; i < threadCount; i++) {
+            final int startIdx = i * chunkSize;
+            final int endIdx = Math.min(startIdx + chunkSize, totalRecords);
+
+            if (startIdx >= endIdx) break;
+
+            // Submit task xử lý song song
+            futures.add(executor.submit(() -> {
+                Map<Long, byte[]> chunkResult = new HashMap<>();
+                try {
+                    // Cắt mảng key và timestamp cho luồng này
+                    Key[] chunkKeys = Arrays.copyOfRange(allKeys, startIdx, endIdx);
+                    long[] chunkTimestamps = Arrays.copyOfRange(allTimestamps, startIdx, endIdx);
+
+                    // Batch Read từ Aerospike cho chunk này
+                    Record[] records = getClient().get(batchPolicy, chunkKeys);
+
+                    // Chỉ lấy raw bytes, không giải nén/parse
+                    for (int j = 0; j < records.length; j++) {
+                        Record record = records[j];
+                        if (record == null) continue;
+
+                        long minuteTimestamp = chunkTimestamps[j];
+                        byte[] snappyCompressedBytes = (byte[]) record.getValue("data");
+
+                        if (snappyCompressedBytes != null) {
+                            chunkResult.put(minuteTimestamp, snappyCompressedBytes);
+                        }
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                return chunkResult;
+            }));
+        }
+
+        // 3. Tổng hợp kết quả từ các luồng
+        for (Future<Map<Long, byte[]>> future : futures) {
+            try {
+                results.putAll(future.get());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
         return results;
     }
 
     /**
      * Ham ho tro: Chuyen doi Map (Protobuf) sang Map (Java)
      */
-    private static Map<String, KlineObjectSimple> convertProtoMapToJavaMap(Map<String, KlineObjectSimpleProto> protoMap) {
+    public static Map<String, KlineObjectSimple> convertProtoMapToJavaMap(Map<String, KlineObjectSimpleProto> protoMap) {
 
         Map<String, KlineObjectSimple> javaMap = new HashMap<>(protoMap.size());
 

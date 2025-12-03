@@ -45,14 +45,18 @@ public class BudgetManagerSimple {
     private static volatile BudgetManagerSimple INSTANCE = null;
     public Double marginRunning = null;
 
+    // 1. Dùng ThreadLocal thay vì static instance đơn thuần
+    private static final ThreadLocal<BudgetManagerSimple> threadLocalInstance = ThreadLocal.withInitial(BudgetManagerSimple::new);
+
     public static BudgetManagerSimple getInstance() {
-        if (INSTANCE == null) {
-            INSTANCE = new BudgetManagerSimple();
-            INSTANCE.updateBudget();
-        }
-        return INSTANCE;
+        // Mỗi luồng gọi hàm này sẽ nhận được một instance riêng của nó
+        return threadLocalInstance.get();
     }
 
+    public static void resetInstance() {
+        // Xóa dữ liệu cũ của luồng hiện tại để bắt đầu test mới
+        threadLocalInstance.remove();
+    }
     public void updateBudget() {
         investing = 0d;
         try {
@@ -285,9 +289,4 @@ public class BudgetManagerSimple {
         }
     }
 
-
-    public static void resetInstance() {
-        INSTANCE = null;
-        // Khi gọi getInstance() lần tới, nó sẽ tạo lại một đối tượng mới
-    }
 }

@@ -140,10 +140,7 @@ public class ExportDataEntries {
                                             continue;
                                         }
                                         List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
-                                        // ================== GỌI HÀM LỌC DUY NHẤT ==================
-                                        if (TradeUtils.shouldAvoidEntry(symbol, tickers, isTrendBuyWithETH)) {
-                                            continue; // Bỏ qua nếu có rủi ro
-                                        }
+
                                         addEntries(symbol, ticker, levelChange, isTrendBuyWithBtc);
                                     }
                                 }
@@ -180,10 +177,7 @@ public class ExportDataEntries {
                                             rateMax15M = Utils.rateOf2Double(ticker.priceClose, priceMax15M);
                                         }
                                         if (MarketBigChangeDetector.isRateChangeAvailable2Trade(rateTicker, rateMax15M, isTrendBuyWithETH)) {
-                                            // ================== GỌI HÀM LỌC DUY NHẤT ==================
-                                            if (TradeUtils.shouldAvoidEntry(symbol, tickers, isTrendBuyWithETH)) {
-                                                continue; // Bỏ qua nếu có rủi ro
-                                            }
+
                                             symbolCanTradeMass.add(symbol);
                                             addEntries(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY, isTrendBuyWithBtc);
                                         } else {
@@ -199,10 +193,6 @@ public class ExportDataEntries {
                                             KlineObjectSimple ticker = symbol2Ticker.get(symbol);
                                             if (!Utils.isTickerAvailable(ticker)) {
                                                 continue;
-                                            }
-                                            List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
-                                            if (TradeUtils.shouldAvoidEntry(symbol, tickers, isTrendBuyWithETH)) {
-                                                continue; // Bỏ qua nếu có rủi ro
                                             }
                                             addEntries(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY, isTrendBuyWithBtc);
                                         }

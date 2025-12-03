@@ -8,16 +8,16 @@ public class AIRejectFilter {
     private static final Logger LOG = LoggerFactory.getLogger(AIRejectFilter.class);
 
     // --- CẤU HÌNH 1: CORE (1H & RISK) ---
-    private static final double HARD_RISK_LIMIT = -0.04;     // Sập > 5% là Rủi ro cao
-    private static final double MIN_PRED_RETURN_1H = 0.01;   // Lãi 1H tối thiểu 1%
-    private static final double HIGH_RETURN_THRESHOLD = 0.04;// Lãi > 4% là Kèo Siêu Thơm
+    private  double HARD_RISK_LIMIT = -0.04;     // Sập > 5% là Rủi ro cao
+    private  double MIN_PRED_RETURN_1H = 0.01;   // Lãi 1H tối thiểu 1%
+    private  double HIGH_RETURN_THRESHOLD = 0.04;// Lãi > 4% là Kèo Siêu Thơm
 
     // --- CẤU HÌNH 2: BỔ SUNG (15M, 4H, 24H) ---
-    private static final double MIN_MOMENTUM_15M = 0.001;    // 15M phải tăng ít nhất 0.1% (Đang có đà)
-    private static final double MIN_TREND_4H = 0.005;        // 4H phải tăng ít nhất 0.5% (Thuận xu hướng)
-    private static final double DEAD_TREND_24H = -0.05;      // 24H sập quá 5% thì né ra (Downtrend dài)
+    private  double MIN_MOMENTUM_15M = 0.001;    // 15M phải tăng ít nhất 0.1% (Đang có đà)
+    private  double MIN_TREND_4H = 0.005;        // 4H phải tăng ít nhất 0.5% (Thuận xu hướng)
+    private  double DEAD_TREND_24H = -0.05;      // 24H sập quá 5% thì né ra (Downtrend dài)
 
-    public enum FilterDecision { PASS, REJECT }
+    public enum FilterDecision {PASS, REJECT}
 
     public static class FilterResult {
         public FilterDecision decision;
@@ -29,7 +29,7 @@ public class AIRejectFilter {
         }
     }
 
-    public static FilterResult checkSignal(OnnxInferenceManager.PredictionResult prediction) {
+    public  FilterResult checkSignal(OnnxInferenceManager.PredictionResult prediction) {
         // Lấy đủ 4 chỉ số Return và 1 chỉ số Risk
         return evaluate(
                 prediction.return15M,
@@ -39,7 +39,8 @@ public class AIRejectFilter {
                 prediction.riskDrawdown4H
         );
     }
-    public static FilterResult checkSignal(AiPredictionData prediction) {
+
+    public  FilterResult checkSignal(AiPredictionData prediction) {
         // Lấy đủ 4 chỉ số Return và 1 chỉ số Risk
         return evaluate(
                 prediction.predReturn15M,
@@ -50,7 +51,17 @@ public class AIRejectFilter {
         );
     }
 
-    private static FilterResult evaluate(double pred15M, double pred1H, double pred4H, double pred24H, double risk4H) {
+    // Hàm thiết lập tham số nhanh cho bộ tối ưu
+    public  void setConfig(double risk, double min1h, double highRet, double min15m, double min4h, double dead24h) {
+        HARD_RISK_LIMIT = risk;
+        MIN_PRED_RETURN_1H = min1h;
+        HIGH_RETURN_THRESHOLD = highRet;
+        MIN_MOMENTUM_15M = min15m;
+        MIN_TREND_4H = min4h;
+        DEAD_TREND_24H = dead24h;
+    }
+
+    private  FilterResult evaluate(double pred15M, double pred1H, double pred4H, double pred24H, double risk4H) {
 
         // ---------------------------------------------------------
         // BƯỚC 1: KIỂM TRA SINH TỒN (Risk vs Reward Khủng)
@@ -60,7 +71,7 @@ public class AIRejectFilter {
             if (pred1H > HIGH_RETURN_THRESHOLD) {
                 return new FilterResult(FilterDecision.PASS, "HIGH RISK HIGH REWARD: Chấp nhận rủi ro để ăn dày");
             }
-            return new FilterResult(FilterDecision.REJECT, String.format("DANGER: Risk %.2f%% quá cao, Return %.2f%% không đủ bù", risk4H*100, pred1H*100));
+            return new FilterResult(FilterDecision.REJECT, String.format("DANGER: Risk %.2f%% quá cao, Return %.2f%% không đủ bù", risk4H * 100, pred1H * 100));
         }
 
         // ---------------------------------------------------------
@@ -110,7 +121,7 @@ public class AIRejectFilter {
         // ---------------------------------------------------------
         return new FilterResult(
                 FilterDecision.PASS,
-                String.format("PERFECT: 15M(%.2f%%) -> 1H(%.2f%%) -> 4H(%.2f%%)", pred15M*100, pred1H*100, pred4H*100)
+                String.format("PERFECT: 15M(%.2f%%) -> 1H(%.2f%%) -> 4H(%.2f%%)", pred15M * 100, pred1H * 100, pred4H * 100)
         );
     }
 }

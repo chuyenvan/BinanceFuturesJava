@@ -61,6 +61,7 @@ public class OrderTargetInfoTest implements Serializable {
     public MarketLevelChange marketLevelChange;
     public KlineObjectSimple tickerOpen;
     public AiPredictionData predict;
+    public String extendData;
 
 
     public OrderTargetInfoTest(OrderTargetStatus status, Double priceEntry,

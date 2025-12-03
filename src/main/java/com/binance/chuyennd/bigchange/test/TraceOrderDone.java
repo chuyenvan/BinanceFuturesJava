@@ -378,7 +378,7 @@ public class TraceOrderDone {
                 builder.append(order.predict.predRisk24H).append(",");
 
             }
-
+            builder.append(order.extendData);
             lines.add(builder.toString());
         }
         TreeMap<Double, String> profit2Symbol = new TreeMap<>();

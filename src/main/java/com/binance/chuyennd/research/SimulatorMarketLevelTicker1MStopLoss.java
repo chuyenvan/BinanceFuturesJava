@@ -41,7 +41,12 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
     public static final Logger LOG = LoggerFactory.getLogger(SimulatorMarketLevelTicker1MStopLoss.class);
     public static final String FILE_STORAGE_ORDER_DONE = "storage/OrderTestDone.data";
+    // File lưu trữ duy nhất
+    public static final String FILE_RATE_CHANGE_ALL = "storage/rate_change_90m_full.data";
 
+    // Cache dùng chung cho TOÀN BỘ các luồng (Static)
+// Dùng ConcurrentHashMap để an toàn khi nhiều luồng cùng đọc/ghi
+//    public ConcurrentHashMap<String, TreeMap<Long, Double>> GLOBAL_CACHE_RATE_90M = null;
     public String currentMonth = null;
     public Map<String, TreeMap<Long, Double>> symbol2TimeAndMaxRate90M = null;
 
@@ -51,13 +56,15 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     public TreeMap<Long, MarketDataObject> time2MarketData;
     public TreeMap<Long, MarketRateChange> time2MarketRateChange;
     public TreeMap<Long, AiPredictionData> predictionMap;
-
+    public AIRejectFilter aiRejectFilter;
     public TreeMap<Long, Double> time2BtcReverse;
     //    public OnnxInferenceManager.PredictionResult predictReturn = null;
     public Map<String, KlineObjectSimple> symbol2LastTicker = new HashMap<>();
 
     public ConcurrentHashMap<String, List<OrderTargetInfoTest>> symbol2OrdersEntry = new ConcurrentHashMap();
     public ConcurrentHashMap<String, OrderTargetInfoTest> symbol2OrderRunning = new ConcurrentHashMap();
+    public TreeMap<Long, byte[]> rawDataCache = null;
+
 
 
     public static void main(String[] args) throws ParseException, IOException, InterruptedException {
@@ -79,11 +86,38 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
         //get data
         while (true) {
-            TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers;
             try {
-                // THAY ĐỔI: GỌI HÀM ĐỌC DỮ LIỆU TỪ PROTOBUF
-//                time2Tickers = DataManager.readDataFromFile1M(startTime);
-                time2Tickers = DataManagerAerospike.readDataFromAerospike1M(startTime);
+                TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers = new TreeMap<>();
+                // 🔥 LOGIC MỚI: Check Cache trước khi gọi Aerospike
+                if (this.rawDataCache != null && !this.rawDataCache.isEmpty()) {
+                    // Lấy subMap chỉ trong ngày hôm đó (từ startTime -> startTime + 24h)
+                    long endTimeOfDay = startTime + Utils.TIME_DAY;
+                    SortedMap<Long, byte[]> dayData = this.rawDataCache.subMap(startTime, endTimeOfDay);
+
+                    if (!dayData.isEmpty()) {
+                        // Giải nén và Parse "On-the-fly"
+                        for (Map.Entry<Long, byte[]> entry : dayData.entrySet()) {
+                            try {
+                                byte[] compressed = entry.getValue();
+                                byte[] protoBytes = org.xerial.snappy.Snappy.uncompress(compressed);
+                                com.binance.chuyennd.proto.MinuteDataProto.MinuteData protoData =
+                                        com.binance.chuyennd.proto.MinuteDataProto.MinuteData.parseFrom(protoBytes);
+
+                                // Convert Proto -> Java Map
+                                Map<String, KlineObjectSimple> map = DataManagerAerospike.convertProtoMapToJavaMap(protoData.getTickersMap());
+                                time2Tickers.put(entry.getKey(), map);
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    }
+                }
+
+                // Nếu Cache không có (null hoặc rỗng) thì mới gọi Aerospike (Fallback)
+                if (time2Tickers.isEmpty()) {
+                     time2Tickers = DataManagerAerospike.readDataFromAerospike1M(startTime);
+                    // (Có thể comment lại dòng trên nếu chắc chắn cache có đủ data để tránh connect DB khi chạy optimize)
+                }
                 if (time2Tickers == null) {
                     LOG.info("File data error or not found for time: {}", Utils.normalizeDateYYYYMMDDHHmm(startTime));
                 }
@@ -112,17 +146,25 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                 if (!symbol2OrderRunning.containsKey(symbol)) {
                                     sizeRemove = 201;
                                 }
-                                if (tickers.size() > sizeRemove) {
-                                    for (int i = 0; i < 5; i++) {
-                                        tickers.remove(0);
-                                    }
+                                // Chỉ dọn dẹp khi dư ra một khoảng để đỡ tốn CPU dọn liên tục
+                                if (tickers.size() > sizeRemove + 1000) {
+                                    tickers.subList(0, tickers.size() - sizeRemove).clear();
                                 }
                                 // update order Old
-                                startUpdateOldOrderTrading(time, symbol, tickers, isTrendBuyWithETH);
+//                                startUpdateOldOrderTrading(time, symbol, tickers, isTrendBuyWithETH);
                             }
-
-//                            AIPredictManager.getInstance().updateDataHistoryForAI(symbol2LastTicker);
-
+                            // --- BƯỚC 2: UPDATE ACTIVE ORDERS (SIÊU TỐI ƯU) ---
+                            // Thay vì duyệt 2000 symbol, chỉ duyệt danh sách đang chạy (vài chục lệnh)
+                            if (!symbol2OrderRunning.isEmpty()) {
+                                // Dùng keySet copy hoặc iterator để tránh ConcurrentModificationException nếu có lệnh đóng
+                                for (String runningSymbol : new ArrayList<>(symbol2OrderRunning.keySet())) {
+                                    KlineObjectSimple ticker = symbol2Ticker.get(runningSymbol);
+                                    if (ticker != null) { // Chỉ update nếu có data mới của symbol đó
+                                        startUpdateOldOrderTrading(time, runningSymbol,
+                                                symbol2LastTickers.get(runningSymbol), isTrendBuyWithETH);
+                                    }
+                                }
+                            }
 
                             logByProcessTime(startTimeRun, "Done update order", time);
 
@@ -144,13 +186,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                 symbol2PriceMax15M.putAll(marketData.symbol2PriceMax15M);
                                 // buy signal new
                                 if (levelChange != null) {
-//                                    if (predictReturn == null) {
-//                                        predictReturn = AIPredictManager.getInstance().getAiPredict(marketData, time, symbol2LastTicker);
-//                                        if (predictReturn == null) {
-//                                            predictReturn = new OnnxInferenceManager.PredictionResult(0, 0, 0, 0);
-//                                        }
-//                                    }
-//                                    Utils.appendToFile("storage/level2predictreturn.csv", levelChange.toString(), predictReturn);
                                     Integer numberOrder = Configs.NUMBER_ENTRY_EACH_SIGNAL;
                                     symbolLocked.addAll(symbol2OrderRunning.keySet());
                                     if (levelChange.equals(MarketLevelChange.SMALL_DOWN)
@@ -177,13 +212,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                         if (!Utils.isTickerAvailable(ticker)) {
                                             continue;
                                         }
-                                        List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
-                                        // ================== GỌI HÀM LỌC DUY NHẤT ==================
-                                        if (TradeUtils.shouldAvoidEntry(symbol, tickers, isTrendBuyWithETH)) {
-                                            continue; // Bỏ qua nếu có rủi ro
-                                        }
                                         createOrderBUY(symbol, ticker, levelChange, time2MarketRateChange.get(time), symbol2PriceMax15M.get(symbol)
-                                                , isTrendBuyWithBtc, isTrendBuyWithETH, levelChange);
+                                                , isTrendBuyWithBtc, isTrendBuyWithETH);
                                     }
                                     for (String symbol : symbolDcaLevel) {
                                         KlineObjectSimple ticker = symbol2Ticker.get(symbol);
@@ -195,7 +225,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                                 leveChange2Dca = MarketLevelChange.DCA_LEVEL2;
                                             }
                                             createOrderBUY(symbol, ticker, leveChange2Dca, time2MarketRateChange.get(time)
-                                                    , symbol2PriceMax15M.get(symbol), isTrendBuyWithBtc, isTrendBuyWithETH, levelChange);
+                                                    , symbol2PriceMax15M.get(symbol), isTrendBuyWithBtc, isTrendBuyWithETH);
                                         }
                                     }
                                 }
@@ -228,7 +258,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                                 leveChange2Dca = MarketLevelChange.DCA_LEVEL2;
                                             }
                                             createOrderBUY(symbol, ticker, leveChange2Dca,
-                                                    time2MarketRateChange.get(time), priceMax15M, isTrendBuyWithBtc, isTrendBuyWithETH, levelChange);
+                                                    time2MarketRateChange.get(time), priceMax15M, isTrendBuyWithBtc, isTrendBuyWithETH);
                                         }
                                     }
 
@@ -260,16 +290,13 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                             rateMax15M = Utils.rateOf2Double(ticker.priceClose, priceMax15M);
                                         }
                                         if (MarketBigChangeDetector.isRateChangeAvailable2Trade(rateTicker, rateMax15M, isTrendBuyWithETH)) {
-                                            // ================== GỌI HÀM LỌC DUY NHẤT ==================
-                                            if (TradeUtils.shouldAvoidEntry(symbol, tickers, isTrendBuyWithETH)) {
-                                                continue; // Bỏ qua nếu có rủi ro
-                                            }
+
 //                                            LOG.info("Funding buy {} {} close: {} rate:{} max15M: {} tickers:{}", symbol,
 //                                                    Utils.normalizeDateYYYYMMDDHHmm(time), ticker.priceClose, rateTicker,
 //                                                    rateMax15M, tickers.size());
                                             symbolCanTradeMass.add(symbol);
                                             createOrderBUY(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY,
-                                                    time2MarketRateChange.get(time), priceMax15M, isTrendBuyWithBtc, isTrendBuyWithETH, levelChange);
+                                                    time2MarketRateChange.get(time), priceMax15M, isTrendBuyWithBtc, isTrendBuyWithETH);
                                         } else {
                                             if (MarketBigChangeDetector.isRateChangeAvailable2TradeMass(rateTicker, rateMax15M, isTrendBuyWithETH)) {
                                                 symbolCanTradeMass.add(symbol);
@@ -284,13 +311,10 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                                 continue;
                                             }
                                             List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
-                                            if (TradeUtils.shouldAvoidEntry(symbol, tickers, isTrendBuyWithETH)) {
-                                                continue; // Bỏ qua nếu có rủi ro
-                                            }
 
                                             Double priceMax15M = getMax15M(tickers);
                                             createOrderBUY(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY,
-                                                    time2MarketRateChange.get(time), priceMax15M, isTrendBuyWithBtc, isTrendBuyWithETH, levelChange);
+                                                    time2MarketRateChange.get(time), priceMax15M, isTrendBuyWithBtc, isTrendBuyWithETH);
                                         }
                                     }
                                 }
@@ -321,7 +345,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                 for (String symbol : symbol2BUY) {
                                     KlineObjectSimple ticker = symbol2Ticker.get(symbol);
                                     if (Utils.isTickerAvailable(ticker)) {
-                                        createOrderBUY(symbol, ticker, levelChange, time2MarketRateChange.get(time), symbol2PriceMax15M.get(symbol), isTrendBuyWithBtc, isTrendBuyWithETH, levelChange);
+                                        createOrderBUY(symbol, ticker, levelChange, time2MarketRateChange.get(time), symbol2PriceMax15M.get(symbol), isTrendBuyWithBtc, isTrendBuyWithETH);
                                     }
                                 }
                             }
@@ -405,7 +429,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
     private void logByProcessTime(Long startTimeRun, String msg, Long time) {
         long duration = (System.currentTimeMillis() - startTimeRun);
-        if (duration > 100) {
+        if (duration > 50) {
             LOG.info("{} {} {}", Utils.normalizeDateYYYYMMDDHHmm(time), msg, duration);
         }
     }
@@ -465,13 +489,15 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         time2MarketData = (TreeMap<Long, MarketDataObject>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
         time2BtcReverse = (TreeMap<Long, Double>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_BTC_REVERSE);
         predictionMap = (TreeMap<Long, AiPredictionData>) StorageSnappy.readObjectFromFile(Configs.FILE_AI_PREDICTIONS);
-
+//        GLOBAL_CACHE_RATE_90M = (ConcurrentHashMap<String, TreeMap<Long, Double>>) StorageSnappy.readObjectFromFile(FILE_RATE_CHANGE_ALL);
 
         if (new File(Configs.FILE_TREND_BY_TIME).exists()) {
             symbol2TrendData = (ConcurrentHashMap<String, Map<Long, Boolean>>) StorageSnappy.readObjectFromFile(Configs.FILE_TREND_BY_TIME);
         } else {
             symbol2TrendData = new ConcurrentHashMap<>();
         }
+
+        aiRejectFilter = new AIRejectFilter();
     }
 
     private void startUpdateOldOrderTrading(Long time, String symbol, List<KlineObjectSimple> tickers, Boolean isTrendBuyWithETH) {
@@ -494,6 +520,28 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             }
         }
     }
+
+//    private Double getMaxRateIn90MForTradingStop(Long time, String symbol, List<KlineObjectSimple> tickers) {
+//
+//        // 2. Lấy dữ liệu từ Cache
+//        Double maxChangeIn60M = null;
+//        TreeMap<Long, Double> time2Rate = GLOBAL_CACHE_RATE_90M.get(symbol);
+//
+//        if (time2Rate != null) {
+//            maxChangeIn60M = time2Rate.get(time);
+//        }
+//
+//        // 3. Nếu chưa có thì tính toán và lưu vào Cache
+//        if (maxChangeIn60M == null) {
+//            maxChangeIn60M = MarketBigChangeDetector.getMaxRateIn90MForTradingStop(tickers);
+//
+//            // Đoạn này dùng computeIfAbsent để an toàn đa luồng khi tạo mới TreeMap
+//            GLOBAL_CACHE_RATE_90M.computeIfAbsent(symbol, k -> new TreeMap<>()).put(time, maxChangeIn60M);
+//
+//        }
+//
+//        return maxChangeIn60M;
+//    }
 
     private Double getMaxRateIn90MForTradingStop(Long time, String symbol, List<KlineObjectSimple> tickers) {
         Double maxChangeIn60M = null;
@@ -545,8 +593,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             order.lastPrice = orderMulti.lastPrice;
             order.updateFundingFee();
             allOrderDone.put(-order.timeUpdate + allOrderDone.size(), order);
-//            LOG.info("Order done: {}\t{}\t{}\t{} -> {}\t{}%\t{}", order.side, order.symbol, Utils.normalizeDateYYYYMMDDHHmm(order.timeStart),
-//                    order.priceEntry, order.priceTP, Utils.formatPercent(Utils.rateOf2Double(order.priceTP, order.priceEntry)), order.status);
             BudgetManagerSimple.getInstance().updatePnl(order);
         }
         symbol2OrdersEntry.remove(symbol);
@@ -583,19 +629,16 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         orderResult.tickerOpen = time2Order.lastEntry().getValue().tickerOpen;
         orderResult.marketLevelChange = time2Order.lastEntry().getValue().marketLevelChange;
 
-//        if (orders.size() > 2) {
-//            LOG.info("Merger orders of {}: {} -> {}", orders.get(0).symbol, priceEntry, orderResult.priceEntry);
-//        }
         return orderResult;
     }
 
     public void createOrderBUY(String symbol, KlineObjectSimple ticker, MarketLevelChange levelChange,
                                MarketRateChange marketData, Double maxPrice15m, Boolean isTrendBuyWithBtc,
-                               Boolean isTrendBuyWithETH, MarketLevelChange levelChangeRoot) {
+                               Boolean isTrendBuyWithETH) {
         AiPredictionData predict = predictionMap.get(ticker.startTime.longValue());
         if (predict != null) {
-            if (AIRejectFilter.checkSignal(predict).decision.equals(AIRejectFilter.FilterDecision.REJECT)) {
-                LOG.info("⛔ REJECTED BY RISK FILTER: {} {}", predict.predReturn1H, predict.predRisk4H);
+            if (aiRejectFilter.checkSignal(predict).decision.equals(AIRejectFilter.FilterDecision.REJECT)) {
+//                LOG.info("⛔ REJECTED BY RISK FILTER: {} {}", predict.predReturn1H, predict.predRisk4H);
                 return; // Dừng ngay
             }
         }
@@ -635,6 +678,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         order.marketLevelChange = levelChange;
         order.rateChange = maxPrice15m;
         order.predict = predictionMap.get(ticker.startTime.longValue());
+        order.extendData = isTrendBuyWithBtc + "," + isTrendBuyWithETH;
         if (marketData != null) {
             order.marketData = marketData;
         }
@@ -696,15 +740,24 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
     public void initDataReady(TreeMap<Long, MarketDataObject> time2MarketData,
                               TreeMap<Long, MarketRateChange> time2MarketRateChange,
-                              TreeMap<Long, Double> time2BtcReverse, ConcurrentHashMap<String,
-            Map<Long, Boolean>> symbol2TrendData) {
-        // clear Data Old
+                              TreeMap<Long, Double> time2BtcReverse,
+                              ConcurrentHashMap<String, Map<Long, Boolean>> symbol2TrendData,
+                              TreeMap<Long, AiPredictionData> predictionMap, AIRejectFilter aiRejectFilter,
+                              TreeMap<Long, byte[]> globalRawBytesCache) { // <--- THÊM THAM SỐ NÀY
+
+        // Reset Data Old
         BudgetManagerSimple.getInstance().resetInstance();
         allOrderDone = new TreeMap<>();
+
+        // Gán dữ liệu cache vào biến của instance
         this.time2MarketData = time2MarketData;
         this.time2MarketRateChange = time2MarketRateChange;
         this.time2BtcReverse = time2BtcReverse;
         this.symbol2TrendData = symbol2TrendData;
-
+        this.predictionMap = predictionMap; // <--- GÁN DỮ LIỆU AI
+        this.aiRejectFilter = aiRejectFilter;
+//        this.GLOBAL_CACHE_RATE_90M = globalCacheRate90m;
+        this.rawDataCache = globalRawBytesCache;
     }
+
 }

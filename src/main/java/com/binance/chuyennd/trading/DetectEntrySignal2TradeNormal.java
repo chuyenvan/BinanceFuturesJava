@@ -59,6 +59,7 @@ public class DetectEntrySignal2TradeNormal {
 
     public ExecutorService executorService = Executors.newFixedThreadPool(Configs.NUMBER_THREAD_ORDER_MANAGER);
     public TreeMap<Long, Double> time2RateDown15MAvg = new TreeMap<>();
+    public AIRejectFilter aiRejectFilter = new AIRejectFilter();
 
     // --- Biến AI ---
     private OnnxInferenceManager aiBrain;
@@ -212,10 +213,7 @@ public class DetectEntrySignal2TradeNormal {
                     try {
                         KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
                         List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
-                        // ================== GỌI HÀM LỌC DUY NHẤT ==================
-                        if (TradeUtils.shouldAvoidEntry(symbol, tickers, isTrendBuyWithETH)) {
-                            continue; // Bỏ qua nếu có rủi ro
-                        }
+
                         createOrderBuyRequest(symbol, ticker, levelChange, symbol2Max15m.get(symbol), marketRate, isTrendBuyWithBtc, isTrendBuyWithETH);
                     } catch (Exception e) {
                         e.printStackTrace();
@@ -286,11 +284,6 @@ public class DetectEntrySignal2TradeNormal {
 
                     if (MarketBigChangeDetector.isRateChangeAvailable2Trade(rateTicker, rateMax15M, isTrendBuyWithETH)) {
                         LOG.info("Funding buy {} {} close: {} rate:{} max15M: {} tickers:{}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time), ticker.priceClose, rateTicker, rateMax15M, symbol2LastTickers.get(symbol).size());
-                        List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
-                        // ================== GỌI HÀM LỌC DUY NHẤT ==================
-                        if (TradeUtils.shouldAvoidEntry(symbol, tickers, isTrendBuyWithETH)) {
-                            continue; // Bỏ qua nếu có rủi ro
-                        }
                         symbolCanTrade.add(symbol);
                         createOrderBuyRequest(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY, symbol2Max15m.get(symbol), marketRate, isTrendBuyWithBtc, isTrendBuyWithETH);
                     } else {
@@ -310,11 +303,6 @@ public class DetectEntrySignal2TradeNormal {
                         Double rateTicker = Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen);
                         Double rateMax15M = Utils.rateOf2Double(ticker.priceClose, priceMax15M);
                         LOG.info("Funding buy {} {} close: {} rate:{} max15M: {} tickers:{}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time), ticker.priceClose, rateTicker, rateMax15M, symbol2LastTickers.get(symbol).size());
-                        List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
-                        // ================== GỌI HÀM LỌC DUY NHẤT ==================
-                        if (TradeUtils.shouldAvoidEntry(symbol, tickers, isTrendBuyWithETH)) {
-                            continue; // Bỏ qua nếu có rủi ro
-                        }
                         createOrderBuyRequest(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY, symbol2Max15m.get(symbol), marketRate, isTrendBuyWithBtc, isTrendBuyWithETH);
                     }
                 }
@@ -392,7 +380,9 @@ public class DetectEntrySignal2TradeNormal {
         }
         return symbol2Trade;
     }
+
     private List<String> tempBasketForAI = new ArrayList<>();
+
     public void createOrderBuyRequest(String symbol, KlineObjectSimple ticker, MarketLevelChange levelChange, Double priceMax15M, MarketRateChange marketRate, boolean isTrendBuyWithBtc, boolean isTrendBuyWithETH) {
 
         // -------------------------------------------------------------
@@ -424,7 +414,7 @@ public class DetectEntrySignal2TradeNormal {
                 OnnxInferenceManager.PredictionResult prediction = aiBrain.predictAll(features);
 
                 // 4. Kiểm tra Lọc
-                AIRejectFilter.FilterResult filterResult = AIRejectFilter.checkSignal(prediction);
+                AIRejectFilter.FilterResult filterResult = aiRejectFilter.checkSignal(prediction);
 
                 // Log kết quả AI để debug/monitor
                 LOG.info("AI CHECK [{}] Pred: {} -> Decision: {}", symbol, prediction, filterResult.decision);
