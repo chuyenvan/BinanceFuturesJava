@@ -8,8 +8,10 @@ public class AIRejectFilter {
     private static final Logger LOG = LoggerFactory.getLogger(AIRejectFilter.class);
 
     // --- CẤU HÌNH 1: CORE (1H & RISK) ---
-    private  double HARD_RISK_LIMIT = -0.04;     // Sập > 5% là Rủi ro cao
-    private  double MIN_PRED_RETURN_1H = 0.01;   // Lãi 1H tối thiểu 1%
+    // --- Test #22 / 50 --- [Risk: -0.0262 | 1H: 0.0213 | 15M: 0.0044 | 4H: -0.0024]
+
+    private  double HARD_RISK_LIMIT = -0.0262; // -0.04;     // Sập > 5% là Rủi ro cao
+    private  double MIN_PRED_RETURN_1H = 0.0213; //0.01;   // Lãi 1H tối thiểu 1%
     private  double HIGH_RETURN_THRESHOLD = 0.04;// Lãi > 4% là Kèo Siêu Thơm
 
     // --- CẤU HÌNH 2: BỔ SUNG (15M, 4H, 24H) ---
