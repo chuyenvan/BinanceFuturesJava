@@ -4,13 +4,12 @@
  */
 package com.binance.chuyennd.research;
 
-import com.binance.chuyennd.aerospike.DataManagerAerospike;
+import com.binance.chuyennd.ai_ml.data.HPOSmartCache;
 import com.binance.chuyennd.ai_ml.onnx.AIRejectFilter;
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.ai_ml.onnx.RunGeneratePredictions;
 import com.binance.chuyennd.bigchange.market.MarketDataObject;
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
-import com.binance.chuyennd.bigchange.test.TraceOrderDone;
 import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.tradecore.DcaProcessor;
@@ -63,8 +62,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
     public ConcurrentHashMap<String, List<OrderTargetInfoTest>> symbol2OrdersEntry = new ConcurrentHashMap();
     public ConcurrentHashMap<String, OrderTargetInfoTest> symbol2OrderRunning = new ConcurrentHashMap();
-    public TreeMap<Long, byte[]> rawDataCache = null;
-
 
 
     public static void main(String[] args) throws ParseException, IOException, InterruptedException {
@@ -77,6 +74,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         SimulatorMarketLevelTicker1MStopLoss test = new SimulatorMarketLevelTicker1MStopLoss();
         test.initData();
         test.simulatorWithInitEntry();
+        test.initData();
+        test.simulatorWithInitEntry();
     }
 
     public void simulatorWithInitEntry(String... inputs) throws ParseException {
@@ -86,38 +85,11 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
         //get data
         while (true) {
+            TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers;
             try {
-                TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers = new TreeMap<>();
-                // 🔥 LOGIC MỚI: Check Cache trước khi gọi Aerospike
-                if (this.rawDataCache != null && !this.rawDataCache.isEmpty()) {
-                    // Lấy subMap chỉ trong ngày hôm đó (từ startTime -> startTime + 24h)
-                    long endTimeOfDay = startTime + Utils.TIME_DAY;
-                    SortedMap<Long, byte[]> dayData = this.rawDataCache.subMap(startTime, endTimeOfDay);
+//                time2Tickers = DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime);
+                time2Tickers = HPOSmartCache.getData(startTime);
 
-                    if (!dayData.isEmpty()) {
-                        // Giải nén và Parse "On-the-fly"
-                        for (Map.Entry<Long, byte[]> entry : dayData.entrySet()) {
-                            try {
-                                byte[] compressed = entry.getValue();
-                                byte[] protoBytes = org.xerial.snappy.Snappy.uncompress(compressed);
-                                com.binance.chuyennd.proto.MinuteDataProto.MinuteData protoData =
-                                        com.binance.chuyennd.proto.MinuteDataProto.MinuteData.parseFrom(protoBytes);
-
-                                // Convert Proto -> Java Map
-                                Map<String, KlineObjectSimple> map = DataManagerAerospike.convertProtoMapToJavaMap(protoData.getTickersMap());
-                                time2Tickers.put(entry.getKey(), map);
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                            }
-                        }
-                    }
-                }
-
-                // Nếu Cache không có (null hoặc rỗng) thì mới gọi Aerospike (Fallback)
-                if (time2Tickers.isEmpty()) {
-                     time2Tickers = DataManagerAerospike.readDataFromAerospike1M(startTime);
-                    // (Có thể comment lại dòng trên nếu chắc chắn cache có đủ data để tránh connect DB khi chạy optimize)
-                }
                 if (time2Tickers == null) {
                     LOG.info("File data error or not found for time: {}", Utils.normalizeDateYYYYMMDDHHmm(startTime));
                 }
@@ -397,7 +369,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         Storage.writeObject2File("storage/BalanceIndex.data", BudgetManagerSimple.getInstance().balanceIndex);
         BudgetManagerSimple.getInstance().printBalanceIndex();
         try {
-            TraceOrderDone.printOrderTestDone("storage/printDone.csv", allOrderDone);
+//            TraceOrderDone.printOrderTestDone("storage/printDone.csv", allOrderDone);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -742,8 +714,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                               TreeMap<Long, MarketRateChange> time2MarketRateChange,
                               TreeMap<Long, Double> time2BtcReverse,
                               ConcurrentHashMap<String, Map<Long, Boolean>> symbol2TrendData,
-                              TreeMap<Long, AiPredictionData> predictionMap, AIRejectFilter aiRejectFilter,
-                              TreeMap<Long, byte[]> globalRawBytesCache) { // <--- THÊM THAM SỐ NÀY
+                              TreeMap<Long, AiPredictionData> predictionMap, AIRejectFilter aiRejectFilter) { // <--- THÊM THAM SỐ NÀY
 
         // Reset Data Old
         BudgetManagerSimple.getInstance().resetInstance();
@@ -757,7 +728,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         this.predictionMap = predictionMap; // <--- GÁN DỮ LIỆU AI
         this.aiRejectFilter = aiRejectFilter;
 //        this.GLOBAL_CACHE_RATE_90M = globalCacheRate90m;
-        this.rawDataCache = globalRawBytesCache;
     }
 
 }

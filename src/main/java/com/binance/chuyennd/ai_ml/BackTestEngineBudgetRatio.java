@@ -51,7 +51,7 @@ public class BackTestEngineBudgetRatio {
             //     Nếu có thể, hãy tối ưu để chỉ chạy 1 lần)
 //            test.initData();
             test.initDataReady(time2MarketData, time2MarketRateChange, time2BtcReverse, symbol2TrendData,
-                    null, null, null);
+                    null, null);
             test.simulatorWithInitEntry();
 
         } catch (Exception e) {

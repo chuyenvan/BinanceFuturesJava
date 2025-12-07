@@ -383,7 +383,9 @@ public class DetectEntrySignal2TradeNormal {
 
     private List<String> tempBasketForAI = new ArrayList<>();
 
-    public void createOrderBuyRequest(String symbol, KlineObjectSimple ticker, MarketLevelChange levelChange, Double priceMax15M, MarketRateChange marketRate, boolean isTrendBuyWithBtc, boolean isTrendBuyWithETH) {
+    public void createOrderBuyRequest(String symbol, KlineObjectSimple ticker, MarketLevelChange levelChange,
+                                      Double priceMax15M, MarketRateChange marketRate, boolean isTrendBuyWithBtc,
+                                      boolean isTrendBuyWithETH) {
 
         // -------------------------------------------------------------
         // TÍCH HỢP AI REJECT FILTER

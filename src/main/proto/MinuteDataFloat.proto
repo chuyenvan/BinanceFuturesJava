@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package com.binance.chuyennd.proto;
+
+option java_outer_classname = "MinuteDataFinalProto";
+
+// Object nến tối ưu: Float + Không còn startTime
+message KlineObjectOptimized {
+  float priceOpen = 1;
+  float maxPrice = 2;
+  float minPrice = 3;
+  float priceClose = 4;
+  float totalUsdt = 5;
+}
+
+// Map chứa danh sách nến của 1 phút
+message MinuteDataFinal {
+  map<string, KlineObjectOptimized> tickers = 1;
+}

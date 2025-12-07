@@ -17,6 +17,7 @@ public class BackTestEngineAI {
 
     // Constructor nhận các tham số gen từ Jenetics
     public AIRejectFilter aiRejectFilter = new AIRejectFilter();
+
     public BackTestEngineAI(double risk, double minRet1H, double highRet,
                             double minMom15M, double minTrend4H, double deadTrend24H) {
 
@@ -28,7 +29,7 @@ public class BackTestEngineAI {
                       TreeMap<Long, MarketRateChange> time2MarketRateChange,
                       TreeMap<Long, Double> time2BtcReverse,
                       ConcurrentHashMap<String, Map<Long, Boolean>> symbol2TrendData,
-                      TreeMap<Long, AiPredictionData> predictionMap, TreeMap<Long, byte[]> globalRawBytesCache) {
+                      TreeMap<Long, AiPredictionData> predictionMap) {
         try {
             // 1. Reset Singleton BudgetManager
             BudgetManagerSimple.resetInstance();
@@ -38,7 +39,7 @@ public class BackTestEngineAI {
 
             // 3. Inject dữ liệu Cache (bao gồm cả dữ liệu AI Prediction)
             test.initDataReady(time2MarketData, time2MarketRateChange, time2BtcReverse, symbol2TrendData,
-                    predictionMap,aiRejectFilter, globalRawBytesCache                    );
+                    predictionMap, aiRejectFilter);
 
             // 4. Chạy Simulation
             test.simulatorWithInitEntry();

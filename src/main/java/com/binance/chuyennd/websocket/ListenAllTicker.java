@@ -82,7 +82,7 @@ public class ListenAllTicker {
             allSymbol.removeAll(Constants.diedSymbol);
             allSymbol.remove(Constants.SYMBOL_PAIR_BTC);
             executorService.execute(() -> initTickerBySymbol(Constants.SYMBOL_PAIR_BTC,
-                    startTime - Configs.BTC_TREND_REVERSE_DURATION
+                    startTime - 1440
                             * Utils.TIME_MINUTE));
             for (String symbol : allSymbol) {
                 if (!StringUtils.endsWithIgnoreCase(symbol, "usdt")) {

@@ -57,12 +57,13 @@ public class Constants {
     public static final String URL_TICKER_FUTURES = "https://fapi.binance.com/fapi/v1/klines?symbol=xxxxxx&interval=";
     public static final String URL_TICKER_FUTURES_STARTTIME = "https://fapi.binance.com/fapi/v1/klines?symbol=xxxxxx&startTime=tttttt&interval=";
     public static final String URL_FUNDING_FEE_FUTURES_START_TIME = "https://fapi.binance.com/fapi/v1/fundingRate?startTime=tttttt&symbol=xxxxxx";
-    public static final String URL_TICKER_SPOT = "https://api.binance.com/api/v1/klines?symbol=xxxxxx&interval=";
-    public static final String URL_TICKER_SPOT_STARTTIME = "https://api.binance.com/api/v1/klines?symbol=xxxxxx&startTime=tttttt&interval=";
 
     static {
         String symbols = Configs.getString("DIED_SYMBOLS");
         for (String symbol : StringUtils.split(symbols, ",")) {
+            if (!StringUtils.contains(symbol, "USDT")) {
+                symbol = symbol + "USDT";
+            }
             diedSymbol.add(symbol);
         }
         symbols = Configs.getString("SPECIAL_SYMBOLS");
