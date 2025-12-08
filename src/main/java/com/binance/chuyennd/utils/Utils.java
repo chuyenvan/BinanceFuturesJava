@@ -7,30 +7,27 @@ package com.binance.chuyennd.utils;
 
 import com.binance.chuyennd.client.ClientSingleton;
 import com.binance.chuyennd.object.KlineObjectNumber;
-import com.binance.chuyennd.object.MACDEntry;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.client.model.enums.OrderSide;
 import com.binance.client.model.trade.PositionRisk;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.gson.*;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import org.apache.commons.io.FileUtils;
+import org.bson.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.text.*;
+import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
-
-import org.bson.Document;
 
 /**
  * @author chuyennd
@@ -439,14 +436,6 @@ public class Utils {
         return (time / TIME_MINUTE) * TIME_MINUTE;
     }
 
-    public static long getTimeInterval15m(long time) {
-        return (time / (15 * TIME_MINUTE)) * 15 * TIME_MINUTE;
-    }
-
-    public static long getTimeInterval5m(long time) {
-        return (time / (5 * TIME_MINUTE)) * 5 * TIME_MINUTE;
-    }
-
     public static long get4Hour(long time) {
         return (time / 4 / TIME_HOUR) * 4 * TIME_HOUR;
     }
@@ -456,55 +445,10 @@ public class Utils {
         return (time / TIME_DAY) * TIME_DAY;
     }
 
-    public static Long getTimeStartWeek(long time) {
-        Calendar c = GregorianCalendar.getInstance();
-// Set the calendar to monday of the current week
-        c.setTimeInMillis(time);
-        c.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY);
-        if (c.get(Calendar.DAY_OF_WEEK) == 2
-                && c.get(Calendar.HOUR_OF_DAY) < 7) {
-            return getDate(c.getTime().getTime()) - 6 * Utils.TIME_DAY;
-        }
-        return getDate(c.getTime().getTime());
-    }
-
     public static String getMonth(long time) {
         return Utils.sdfMonth.format(new Date(time));
     }
 
-    public static Document convertTicker2Doc(KlineObjectNumber ticker, Map<Double, Double> time2Rsi,
-                                             Map<Double, Double> time2Ma, Map<Double, MACDEntry> time2Macd) {
-        Document doc = new Document();
-        MACDEntry macd = time2Macd.get(ticker.startTime);
-        doc.append("startTime", ticker.startTime);
-        doc.append("endTime", ticker.endTime);
-        doc.append("maxPrice", ticker.maxPrice);
-        doc.append("minPrice", ticker.minPrice);
-        doc.append("priceOpen", ticker.priceOpen);
-        doc.append("priceClose", ticker.priceClose);
-        doc.append("totalUsdt", ticker.totalUsdt);
-        doc.append("rsi", time2Rsi.get(ticker.startTime));
-        doc.append("ma20", time2Ma.get(ticker.startTime));
-        if (macd != null) {
-            doc.append("signal", macd.getSignal());
-            doc.append("macd", macd.getMacd());
-            doc.append("histogram", macd.getHistogram());
-        }
-        return doc;
-    }
-
-    public static Document convertTicker2Doc(KlineObjectNumber ticker) {
-        Document doc = new Document();
-
-        doc.append("startTime", ticker.startTime);
-        doc.append("endTime", ticker.endTime);
-        doc.append("maxPrice", ticker.maxPrice);
-        doc.append("minPrice", ticker.minPrice);
-        doc.append("priceOpen", ticker.priceOpen);
-        doc.append("priceClose", ticker.priceClose);
-        doc.append("totalUsdt", ticker.totalUsdt);
-        return doc;
-    }
 
 
     public static String formatDouble(Double volume, Integer number) {
@@ -516,17 +460,6 @@ public class Utils {
         return formatter.format(volume);
     }
 
-    public static KlineObjectSimple updateTickerByTicker(KlineObjectSimple entrieUpdate, KlineObjectSimple candle) {
-        entrieUpdate.priceClose = candle.priceClose;
-        if (entrieUpdate.maxPrice < candle.maxPrice) {
-            entrieUpdate.maxPrice = candle.maxPrice;
-        }
-        if (entrieUpdate.minPrice > candle.minPrice) {
-            entrieUpdate.minPrice = candle.minPrice;
-        }
-        entrieUpdate.totalUsdt += candle.totalUsdt;
-        return entrieUpdate;
-    }
 
     public static Double findMinSubarraySum(Double[] numbers) {
         if (numbers.length == 0) {
@@ -556,14 +489,6 @@ public class Utils {
         String marginMax = String.valueOf(obj);
         while (marginMax.length() < length) {
             marginMax = " " + marginMax;
-        }
-        return marginMax;
-    }
-
-    public static String formatLogString(Object obj, int length) {
-        String marginMax = String.valueOf(obj);
-        while (marginMax.length() < length) {
-            marginMax = marginMax + " ";
         }
         return marginMax;
     }
@@ -706,10 +631,5 @@ public class Utils {
         }
         // --- KẾT THÚC ĐOẠN CODE GHI PID ---
     }
-
-    public static long toEpochMillis(LocalDateTime dateTime) {
-        return dateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
-    }
-
 
 }

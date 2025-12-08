@@ -81,8 +81,6 @@ public class Configs {
     public static String FOLDER_TICKER_1M = Configs.getString("FOLDER_TICKER_1M");//"../ticker/storage/ticker/symbols-15m/";
     public static String FOLDER_FUNDING_FEE = Configs.getString("FOLDER_FUNDING_FEE");//"../ticker/storage/ticker/symbols-15m/";
     public static String FOLDER_TICKER_1M_PRODUCTION = Configs.getString("FOLDER_TICKER_1M_PRODUCTION");//"../ticker/storage/ticker/symbols-15m/";
-    public static String FOLDER_TICKER_15M_FILE = Configs.getString("FOLDER_TICKER_15M_FILE");
-    public static String FOLDER_TICKER_1M_FILE = Configs.getString("FOLDER_TICKER_1M_FILE");
     public static String FOLDER_TICKER_1M_SNAPPY_FILE = "../storage/ticker/ticker1m-snappy/";
     public static final String FOLDER_TICKER_1M_PROTOBUF_SNAPPY_FILE = "../storage/ticker/ticker1m-protobuf/";
     public static String FOLDER_TICKER_HOUR = Configs.getString("FOLDER_TICKER_1H");//"../ticker/storage/ticker/symbols-1h/";
@@ -120,10 +118,6 @@ public class Configs {
 
     public static Boolean getBoolean(String configName) {
         return Boolean.parseBoolean((String) properties.get(configName));
-    }
-
-    public static long getLong(String configName) {
-        return Long.parseLong((String) properties.get(configName));
     }
 
     public static double getDouble(String configName) {

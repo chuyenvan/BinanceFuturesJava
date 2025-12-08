@@ -4,6 +4,7 @@
  */
 package com.binance.chuyennd.research;
 
+import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.ai_ml.data.HPOSmartCache;
 import com.binance.chuyennd.ai_ml.onnx.AIRejectFilter;
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
@@ -41,11 +42,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     public static final Logger LOG = LoggerFactory.getLogger(SimulatorMarketLevelTicker1MStopLoss.class);
     public static final String FILE_STORAGE_ORDER_DONE = "storage/OrderTestDone.data";
     // File lưu trữ duy nhất
-    public static final String FILE_RATE_CHANGE_ALL = "storage/rate_change_90m_full.data";
-
-    // Cache dùng chung cho TOÀN BỘ các luồng (Static)
-// Dùng ConcurrentHashMap để an toàn khi nhiều luồng cùng đọc/ghi
-//    public ConcurrentHashMap<String, TreeMap<Long, Double>> GLOBAL_CACHE_RATE_90M = null;
     public String currentMonth = null;
     public Map<String, TreeMap<Long, Double>> symbol2TimeAndMaxRate90M = null;
 
@@ -57,7 +53,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     public TreeMap<Long, AiPredictionData> predictionMap;
     public AIRejectFilter aiRejectFilter;
     public TreeMap<Long, Double> time2BtcReverse;
-    //    public OnnxInferenceManager.PredictionResult predictReturn = null;
     public Map<String, KlineObjectSimple> symbol2LastTicker = new HashMap<>();
 
     public ConcurrentHashMap<String, List<OrderTargetInfoTest>> symbol2OrdersEntry = new ConcurrentHashMap();
@@ -74,8 +69,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         SimulatorMarketLevelTicker1MStopLoss test = new SimulatorMarketLevelTicker1MStopLoss();
         test.initData();
         test.simulatorWithInitEntry();
-        test.initData();
-        test.simulatorWithInitEntry();
     }
 
     public void simulatorWithInitEntry(String... inputs) throws ParseException {
@@ -87,8 +80,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         while (true) {
             TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers;
             try {
-//                time2Tickers = DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime);
-                time2Tickers = HPOSmartCache.getData(startTime);
+                time2Tickers = DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime);
+//                time2Tickers = HPOSmartCache.getData(startTime);
 
                 if (time2Tickers == null) {
                     LOG.info("File data error or not found for time: {}", Utils.normalizeDateYYYYMMDDHHmm(startTime));
@@ -122,8 +115,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                 if (tickers.size() > sizeRemove + 1000) {
                                     tickers.subList(0, tickers.size() - sizeRemove).clear();
                                 }
-                                // update order Old
-//                                startUpdateOldOrderTrading(time, symbol, tickers, isTrendBuyWithETH);
+
                             }
                             // --- BƯỚC 2: UPDATE ACTIVE ORDERS (SIÊU TỐI ƯU) ---
                             // Thay vì duyệt 2000 symbol, chỉ duyệt danh sách đang chạy (vài chục lệnh)

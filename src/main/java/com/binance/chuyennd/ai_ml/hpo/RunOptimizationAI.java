@@ -33,23 +33,35 @@ public class RunOptimizationAI {
     public static TreeMap<Long, AiPredictionData> predictionMap;
     public static ConcurrentHashMap<Long, Set<String>> CACHED_time2FundingFeeTrade;
 
-    // Định nghĩa giới hạn toàn cục
+    // --- CẤU HÌNH GIỚI HẠN (RANGE) MỚI ---
+    // Đã ép Max xuống thấp để AI buộc phải trade nhiều hơn, không chờ kèo lịch sử
     private static final double MIN_RISK = -0.15, MAX_RISK = -0.01;
-    private static final double MIN_RET1H = 0.005, MAX_RET1H = 0.05;
-    private static final double MIN_HIGHRET = 0.02, MAX_HIGHRET = 0.15;
-    private static final double MIN_MOM15M = 0.001, MAX_MOM15M = 0.02;
-    private static final double MIN_TREND4H = 0.001, MAX_TREND4H = 0.05;
+
+    // Giảm kỳ vọng lãi 1H xuống 3% (thay vì 5%)
+    private static final double MIN_RET1H = 0.005, MAX_RET1H = 0.03;
+
+    // Giảm ngưỡng "Kèo thơm" xuống 6% (thay vì 15%) để bắt các kèo trung bình
+    private static final double MIN_HIGHRET = 0.02, MAX_HIGHRET = 0.06;
+
+    // Giảm đà tăng 15M xuống 1%
+    private static final double MIN_MOM15M = 0.001, MAX_MOM15M = 0.01;
+
+    // QUAN TRỌNG: Ép Trend 4H xuống tối đa 1.2% (thay vì 5%)
+    // AI sẽ phải học cách vào lệnh ở sóng nhỏ, thay vì chờ sóng thần 4.2%
+    private static final double MIN_TREND4H = 0.001, MAX_TREND4H = 0.012;
+
     private static final double MIN_DEADTREND = -0.20, MAX_DEADTREND = -0.01;
 
     public static void main(String[] args) {
         LOG.info("==============================================");
         LOG.info("===   AI HYPERPARAMETER OPTIMIZATION SYSTEM   ===");
-        LOG.info("===   MODE: 2-PHASE (MEMORY SAFE & FIXED)     ===");
+        LOG.info("===   MODE: FAST RUN (50% LOAD) & ANTI-OVERFIT ===");
         LOG.info("==============================================\n");
 
         // 1. LOAD DATA VÀO RAM
+        // Load từ 2024 (hoặc 2023 nếu RAM > 20GB)
         try {
-            Configs.TIME_RUN = "20230101";
+            Configs.TIME_RUN = "20240101";
             loadAndWarmUpData();
         } catch (Exception e) {
             e.printStackTrace();
@@ -84,29 +96,28 @@ public class RunOptimizationAI {
         );
 
         Engine<DoubleGene, Double> engine1 = Engine.builder(RunOptimizationAI::eval, gtfPhase1)
-                .populationSize(16)
+                .populationSize(10) // GIẢM TỪ 16 -> 10 (Chạy nhanh)
                 .survivorsSelector(new TournamentSelector<>(3))
                 .offspringSelector(new RouletteWheelSelector<>())
                 .alterers(new Mutator<>(0.2), new MeanAlterer<>(0.2))
                 .executor(Runnable::run)
                 .build();
 
-        EvolutionResult<DoubleGene, Double> bestResultPhase1 = runEvolutionLoop(engine1, 10, "PHASE 1");
+        // GIẢM SỐ VÒNG TỪ 10 -> 5
+        EvolutionResult<DoubleGene, Double> bestResultPhase1 = runEvolutionLoop(engine1, 5, "PHASE 1");
 
         LOG.info("🏆 BEST PHASE 1 SCORE: " + bestResultPhase1.bestFitness());
-
-        // [FIXED 1] Thêm .bestPhenotype() trước khi lấy genotype()
         printParams("PHASE 1 RESULT", bestResultPhase1.bestPhenotype().genotype());
 
         // =====================================================================
-        // PHASE 2: TINH CHỈNH (FINE TUNING) - DATA 2023 (FULL)
+        // PHASE 2: TINH CHỈNH (FINE TUNING) - DATA 2024 (FULL)
         // =====================================================================
-        LOG.info("\n🚀 --- PHASE 2: FINE TUNING (Data from 20230101) ---");
-        Configs.TIME_RUN = "20230101";
+        LOG.info("\n🚀 --- PHASE 2: FINE TUNING (Data from 20240101) ---");
+        Configs.TIME_RUN = "20240101";
 
-        // [FIXED 2] Lấy Genotype từ Phenotype tốt nhất của Phase 1
         Genotype<DoubleGene> bestGt1 = bestResultPhase1.bestPhenotype().genotype();
 
+        // Tạo không gian tìm kiếm hẹp (±20%) quanh kết quả Phase 1
         Factory<Genotype<DoubleGene>> gtfPhase2 = Genotype.of(
                 createNarrowChromo(bestGt1.get(0), MIN_RISK, MAX_RISK, 0.2),
                 createNarrowChromo(bestGt1.get(1), MIN_RET1H, MAX_RET1H, 0.2),
@@ -117,20 +128,19 @@ public class RunOptimizationAI {
         );
 
         Engine<DoubleGene, Double> engine2 = Engine.builder(RunOptimizationAI::eval, gtfPhase2)
-                .populationSize(16)
+                .populationSize(10) // GIẢM TỪ 16 -> 10
                 .survivorsSelector(new TournamentSelector<>(3))
                 .offspringSelector(new RouletteWheelSelector<>())
                 .alterers(new Mutator<>(0.05), new MeanAlterer<>(0.5))
                 .executor(Runnable::run)
                 .build();
 
-        EvolutionResult<DoubleGene, Double> bestResultPhase2 = runEvolutionLoop(engine2, 50, "PHASE 2");
+        // GIẢM SỐ VÒNG TỪ 50 -> 25
+        EvolutionResult<DoubleGene, Double> bestResultPhase2 = runEvolutionLoop(engine2, 25, "PHASE 2");
 
         // 6. KẾT QUẢ CUỐI CÙNG
         LOG.info("\n=== OPTIMIZATION FINISHED ===");
         LOG.info("🏆 FINAL BEST PROFIT: " + bestResultPhase2.bestFitness());
-
-        // [FIXED 3] Thêm .bestPhenotype()
         printParams("FINAL RESULT", bestResultPhase2.bestPhenotype().genotype());
     }
 
@@ -153,11 +163,13 @@ public class RunOptimizationAI {
                 bestResult = result;
                 LOG.info("[{}] NEW BEST at Gen {}: {}", phaseName, currentGen, String.format("%.4f", bestResult.bestFitness()));
             } else {
-                if (currentGen % 5 == 0) {
+                // In log mỗi 2 vòng cho đỡ sốt ruột (vì số vòng ít)
+                if (currentGen % 2 == 0) {
                     LOG.info("[{}] Gen {} | Current Best: {}", phaseName, currentGen, String.format("%.4f", bestResult.bestFitness()));
                 }
             }
 
+            // Dọn dẹp bộ nhớ mỗi 5 vòng
             if (currentGen % 5 == 0) {
                 System.gc();
                 printRamUsage();
@@ -246,6 +258,8 @@ public class RunOptimizationAI {
 
     private static void loadAndWarmUpData() throws Exception {
         LOG.info("Loading Metadata from Disk (Base Config: {})...", Configs.TIME_RUN);
+        LOG.info("Before load data cache:");
+        printRamUsage();
         CACHED_time2FundingFeeTrade = (ConcurrentHashMap<Long, Set<String>>) StorageSnappy.readObjectFromFile(FundingFeeManager.FILE_FUNDING_FEE);
         time2MarketRateChange = (TreeMap<Long, MarketRateChange>) StorageSnappy.readObjectFromFile(Configs.FILE_MARKET_RATE_CHANGE);
         time2MarketData = (TreeMap<Long, MarketDataObject>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
@@ -254,6 +268,8 @@ public class RunOptimizationAI {
         predictionMap = (TreeMap<Long, AiPredictionData>) StorageSnappy.readObjectFromFile(Configs.FILE_AI_PREDICTIONS);
         FundingFeeManager.getInstance();
 
+        LOG.info("After load data cache:");
+        printRamUsage();
         LOG.info("🔥 PRE-WARMING CACHE (Accessing Data)...");
         long startTimeLoad = Utils.sdfFile.parse(Configs.TIME_RUN).getTime();
         long endTimeLoad = System.currentTimeMillis();
