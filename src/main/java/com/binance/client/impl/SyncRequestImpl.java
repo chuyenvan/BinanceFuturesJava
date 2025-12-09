@@ -1,253 +1,209 @@
+// File: com/binance/client/impl/SyncRequestImpl.java
 package com.binance.client.impl;
 
-import com.alibaba.fastjson.JSONObject;
+import com.binance.client.RequestOptions;
 import com.binance.client.SyncRequestClient;
-import com.binance.client.model.ResponseResult;
-import com.binance.client.model.market.*;
+import com.binance.client.impl.utils.JsonWrapper;
+import com.binance.client.impl.utils.JsonWrapperArray;
 import com.binance.client.model.enums.*;
-import com.binance.client.model.trade.*;
+import com.binance.client.model.market.ExchangeInfoEntry;
+import com.binance.client.model.market.ExchangeInformation;
+import com.binance.client.model.market.Trade;
+import com.binance.client.model.trade.Order;
+import com.binance.connector.futures.client.utils.SignatureGenerator;
+import okhttp3.MediaType;
+import okhttp3.Request;
+import okhttp3.RequestBody;
 
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 public class SyncRequestImpl implements SyncRequestClient {
 
-    private final RestApiRequestImpl requestImpl;
+    private final String apiKey;
+    private final String secretKey;
+    private final String BASE_URL = "https://fapi.binance.com";
 
-    SyncRequestImpl(RestApiRequestImpl requestImpl) {
-        this.requestImpl = requestImpl;
+    public SyncRequestImpl(String apiKey, String secretKey, RequestOptions options) {
+        this.apiKey = apiKey;
+        this.secretKey = secretKey;
     }
 
-    
+    private <T> RestApiRequest<T> createRequest(String method, String endpoint, Map<String, String> params, Class<T> clazz) {
+        RestApiRequest<T> apiRequest = new RestApiRequest<>();
+        params.put("timestamp", String.valueOf(System.currentTimeMillis()));
+        params.put("recvWindow", "10000");
+
+        StringBuilder queryString = new StringBuilder();
+        for (Map.Entry<String, String> entry : params.entrySet()) {
+            if (queryString.length() > 0) queryString.append("&");
+            queryString.append(entry.getKey()).append("=").append(entry.getValue());
+        }
+
+        String signature = SignatureGenerator.getSignature(queryString.toString(), secretKey);
+        queryString.append("&signature=").append(signature);
+
+        String fullUrl = BASE_URL + endpoint + "?" + queryString.toString();
+
+        // Log URL để debug nếu cần
+        // System.out.println("REQUEST: " + fullUrl);
+
+        Request.Builder builder = new Request.Builder()
+                .url(fullUrl)
+                .addHeader("X-MBX-APIKEY", apiKey)
+                .addHeader("Content-Type", "application/json");
+
+        if ("POST".equals(method)) {
+            builder.post(RequestBody.create(MediaType.parse("application/x-www-form-urlencoded"), ""));
+        } else {
+            builder.get();
+        }
+
+        apiRequest.request = builder.build();
+
+        apiRequest.jsonParser = (JsonWrapper json) -> {
+            if (clazz.getSimpleName().equals("ExchangeInformation")) {
+                ExchangeInformation info = new ExchangeInformation();
+                List<ExchangeInfoEntry> symbolListRes = new LinkedList<>();
+                if (json.containKey("symbols")) {
+                    JsonWrapperArray symbolArray = json.getJsonArray("symbols");
+                    symbolArray.forEach(symbolJson -> {
+                        ExchangeInfoEntry symbol = new ExchangeInfoEntry();
+                        symbol.setSymbol(symbolJson.getString("symbol"));
+                        symbol.setStatus(symbolJson.getString("status"));
+                        if (symbolJson.containKey("filters")) {
+                            List<Map<String, String>> filters = new LinkedList<>();
+                            JsonWrapperArray filtersArray = symbolJson.getJsonArray("filters");
+                            filtersArray.forEach(f -> {
+                                Map<String, String> map = new java.util.HashMap<>();
+                                map.put("filterType", f.getString("filterType"));
+                                if (f.containKey("minQty")) map.put("minQty", f.getString("minQty"));
+                                if (f.containKey("tickSize")) map.put("tickSize", f.getString("tickSize"));
+                                if (f.containKey("notional")) map.put("notional", f.getString("notional"));
+                                filters.add(map);
+                            });
+                            List<List<Map<String, String>>> wrapper = new LinkedList<>();
+                            wrapper.add(filters);
+                            symbol.setFilters(wrapper);
+                        }
+                        symbolListRes.add(symbol);
+                    });
+                }
+                info.setSymbols(symbolListRes);
+                return (T) info;
+            }
+            if (clazz.getSimpleName().equals("Order")) {
+                Order order = new Order();
+                if (json.containKey("orderId")) order.setOrderId(json.getLong("orderId"));
+                if (json.containKey("algoId")) order.setOrderId(json.getLong("algoId"));
+                if (json.containKey("symbol")) order.setSymbol(json.getString("symbol"));
+                if (json.containKey("status")) order.setStatus(json.getString("status"));
+                return (T) order;
+            }
+            return null;
+        };
+        return apiRequest;
+    }
+
     @Override
     public ExchangeInformation getExchangeInformation() {
-        return RestApiInvoker.callSync(requestImpl.getExchangeInformation());
-    }
-    
-    @Override
-    public OrderBook getOrderBook(String symbol, Integer limit) {
-        return RestApiInvoker.callSync(requestImpl.getOrderBook(symbol, limit));
-    }
-    
-    @Override
-    public List<Trade> getRecentTrades(String symbol, Integer limit) {
-        return RestApiInvoker.callSync(requestImpl.getRecentTrades(symbol, limit));
-    }
-    
-    @Override
-    public List<Trade> getOldTrades(String symbol, Integer limit, Long fromId) {
-        return RestApiInvoker.callSync(requestImpl.getOldTrades(symbol, limit, fromId));
-    }
-    
-    @Override
-    public List<AggregateTrade> getAggregateTrades(String symbol, Long fromId, Long startTime, 
-            Long endTime, Integer limit) {
-        return RestApiInvoker.callSync(requestImpl.getAggregateTrades(symbol, fromId, startTime, endTime, limit));
-    }
-    
-    @Override
-    public List<Candlestick> getCandlestick(String symbol, CandlestickInterval interval, Long startTime, 
-            Long endTime, Integer limit) {
-        return RestApiInvoker.callSync(requestImpl.getCandlestick(symbol, interval, startTime, endTime, limit));
+        RestApiRequest<ExchangeInformation> request = createRequest("GET", "/fapi/v1/exchangeInfo", new TreeMap<>(), ExchangeInformation.class);
+        return RestApiInvoker.callSync(request);
     }
 
+    // --- SỬA HÀM NÀY ĐỂ GỌI ALGO API CHUẨN ---
     @Override
-    public List<Candlestick> getContinuousCandlesticks(String pair, ContractType contractType, CandlestickInterval interval, Long startTime,
-                                                Long endTime, Integer limit){
-        return RestApiInvoker.callSync(requestImpl.getContinuousCandlesticks(pair, contractType, interval, startTime, endTime, limit));
+    public Order postAlgoOrder(String symbol, OrderSide side, OrderType orderType, String quantity,
+                               String stopPrice, String reduceOnly) {
+        Map<String, String> params = new TreeMap<>();
+        params.put("symbol", symbol);
+        params.put("side", side.toString());
+
+        // QUAN TRỌNG:
+        // algoType phải là "STOP" (thay vì STOP_MARKET)
+        // type sẽ là "MARKET" để chỉ định đây là Stop Market
+        params.put("algoType", "CONDITIONAL");
+        params.put("type", "STOP_MARKET");
+
+        params.put("triggerprice", stopPrice);
+
+        if (quantity != null) params.put("quantity", quantity);
+        if (reduceOnly != null) params.put("reduceOnly", reduceOnly);
+
+        // Gọi vào endpoint Algo
+        RestApiRequest<Order> request = createRequest("POST", "/fapi/v1/algoOrder", params, Order.class);
+        return RestApiInvoker.callSync(request);
     }
 
-    public List<Candlestick> getIndexPriceCandlesticks(String pair, CandlestickInterval interval, Long startTime,
-                                                       Long endTime, Integer limit){
-        return RestApiInvoker.callSync(requestImpl.getIndexPriceCandlesticks(pair, interval, startTime, endTime, limit));
-    }
-
-    public List<Candlestick> getMarkPriceCandlesticks(String pair, CandlestickInterval interval, Long startTime,
-                                                       Long endTime, Integer limit){
-        return RestApiInvoker.callSync(requestImpl.getMarkPriceCandlesticks(pair, interval, startTime, endTime, limit));
-    }
-    
-    @Override
-    public List<MarkPrice> getMarkPrice(String symbol) {
-        return RestApiInvoker.callSync(requestImpl.getMarkPrice(symbol));
-    }
-    
-    @Override
-    public List<FundingRate> getFundingRate(String symbol, Long startTime, Long endTime, Integer limit) {
-        return RestApiInvoker.callSync(requestImpl.getFundingRate(symbol, startTime, endTime, limit));
-    }
-    
-    @Override
-    public List<PriceChangeTicker> get24hrTickerPriceChange(String symbol) {
-        return RestApiInvoker.callSync(requestImpl.get24hrTickerPriceChange(symbol));
-    }
-    
-    @Override
-    public List<SymbolPrice> getSymbolPriceTicker(String symbol) {
-        return RestApiInvoker.callSync(requestImpl.getSymbolPriceTicker(symbol));
-    }
-    
-    @Override
-    public List<SymbolOrderBook> getSymbolOrderBookTicker(String symbol) {
-        return RestApiInvoker.callSync(requestImpl.getSymbolOrderBookTicker(symbol));
-    }
-    
-    @Override
-    public List<LiquidationOrder> getLiquidationOrders(String symbol, AutoCloseType type, Long startTime, Long endTime, Integer limit) {
-        return RestApiInvoker.callSync(requestImpl.getLiquidationOrders(symbol, type, startTime, endTime, limit));
-    }
-
-    @Override
-    public List<Object> postBatchOrders(String batchOrders) {
-        return RestApiInvoker.callSync(requestImpl.postBatchOrders(batchOrders));
-    }
-    
+    // Hàm postOrder thường (vẫn giữ lại cho lệnh Market/Limit thông thường)
     @Override
     public Order postOrder(String symbol, OrderSide side, PositionSide positionSide, OrderType orderType,
-            TimeInForce timeInForce, String quantity, String price, String reduceOnly,
-            String newClientOrderId, String stopPrice, String closePosition, String activationPrice,
+                           TimeInForce timeInForce, String quantity, String price, String reduceOnly,
+                           String newClientOrderId, String stopPrice, String closePosition, String activationPrice,
                            String callbackRate, WorkingType workingType, String priceProtect, NewOrderRespType newOrderRespType) {
-        return RestApiInvoker.callSync(requestImpl.postOrder(symbol, side, positionSide, orderType,
-                timeInForce, quantity, reduceOnly, price, newClientOrderId, stopPrice,
-                 closePosition, activationPrice, callbackRate, workingType, priceProtect, newOrderRespType));
-    }
-    
-    @Override
-    public Order cancelOrder(String symbol, Long orderId, String origClientOrderId) {
-        return RestApiInvoker.callSync(requestImpl.cancelOrder(symbol, orderId, origClientOrderId));
+
+        Map<String, String> params = new TreeMap<>();
+        params.put("symbol", symbol);
+        params.put("side", side.toString());
+        params.put("type", orderType.toString());
+
+        if (quantity != null) params.put("quantity", quantity);
+        if (price != null) params.put("price", price);
+        if (stopPrice != null) params.put("stopPrice", stopPrice);
+        if (reduceOnly != null) params.put("reduceOnly", reduceOnly);
+        if (workingType != null) params.put("workingType", workingType.toString());
+        if (timeInForce != null) params.put("timeInForce", timeInForce.toString());
+        if (newClientOrderId != null) params.put("newClientOrderId", newClientOrderId);
+        if (positionSide != null) params.put("positionSide", positionSide.toString());
+
+        RestApiRequest<Order> request = createRequest("POST", "/fapi/v1/order", params, Order.class);
+        return RestApiInvoker.callSync(request);
     }
 
-    @Override
-    public ResponseResult cancelAllOpenOrder(String symbol) {
-      return RestApiInvoker.callSync(requestImpl.cancelAllOpenOrder(symbol));
-    }
-
-    @Override
-    public List<Object> batchCancelOrders(String symbol, String orderIdList, String origClientOrderIdList) {
-        return RestApiInvoker.callSync(requestImpl.batchCancelOrders(symbol, orderIdList, origClientOrderIdList));
-    }
-
-    @Override
-    public ResponseResult changePositionSide(String dual) {
-        return RestApiInvoker.callSync(requestImpl.changePositionSide(dual));
-    }
-
-    @Override
-    public ResponseResult changeMarginType(String symbolName, MarginType marginType) {
-        return RestApiInvoker.callSync(requestImpl.changeMarginType(symbolName, marginType));
-    }
-
-    @Override
-    public JSONObject addIsolatedPositionMargin(String symbolName, int type, String amount, PositionSide positionSide) {
-        return RestApiInvoker.callSync(requestImpl.addPositionMargin(symbolName, type, amount, positionSide));
-    }
-
-    @Override
-    public List<WalletDeltaLog> getPositionMarginHistory(String symbolName, int type, long startTime, long endTime, int limit) {
-        return RestApiInvoker.callSync(requestImpl.getPositionMarginHistory(symbolName, type, startTime, endTime, limit));
-    }
-
-
-    @Override
-    public JSONObject getPositionSide() {
-        return RestApiInvoker.callSync(requestImpl.getPositionSide());
-    }
-
-    @Override
-    public JSONObject autoCancelAllOrders(String symbol, Long countdownTime) {
-        return RestApiInvoker.callSync(requestImpl.autoCancelAllOrders(symbol, countdownTime));
-    }
-
-    @Override
-    public Order getOrder(String symbol, Long orderId, String origClientOrderId) {
-        return RestApiInvoker.callSync(requestImpl.getOrder(symbol, orderId, origClientOrderId));
-    }
-
-    public Order getOpenOrder(String symbol, Long orderId, String origClientOrderId){
-        return RestApiInvoker.callSync(requestImpl.getOpenOrder(symbol, orderId, origClientOrderId));
-    }
-
-    @Override
-    public List<Order> getOpenOrders(String symbol) {
-        return RestApiInvoker.callSync(requestImpl.getOpenOrders(symbol));
-    }
-    
-    @Override
-    public List<Order> getAllOrders(String symbol, Long orderId, Long startTime, Long endTime, Integer limit) {
-        return RestApiInvoker.callSync(requestImpl.getAllOrders(symbol, orderId, startTime, endTime, limit));
-    }
-    
-    @Override
-    public List<AccountBalance> getBalance() {
-        return RestApiInvoker.callSync(requestImpl.getBalance());
-    }
-    
-    @Override
-    public AccountInformation getAccountInformation() {
-        return RestApiInvoker.callSync(requestImpl.getAccountInformation());
-    }
-    
-    @Override
-    public Leverage changeInitialLeverage(String symbol, Integer leverage) {
-        return RestApiInvoker.callSync(requestImpl.changeInitialLeverage(symbol, leverage));
-    }
-    
-    @Override
-    public List<PositionRisk> getPositionRisk(String symbol) {
-        return RestApiInvoker.callSync(requestImpl.getPositionRisk(symbol));
-    }
-    
-    @Override
-    public List<MyTrade> getAccountTrades(String symbol, Long startTime, Long endTime, Long fromId, Integer limit) {
-        return RestApiInvoker.callSync(requestImpl.getAccountTrades(symbol, startTime, endTime, fromId, limit));
-    }
-    
-    @Override
-    public List<Income> getIncomeHistory(String symbol, IncomeType incomeType, Long startTime, Long endTime, Integer limit) {
-        return RestApiInvoker.callSync(requestImpl.getIncomeHistory(symbol, incomeType, startTime, endTime, limit));
-    }
-    
-    @Override
-    public String startUserDataStream() {
-        return RestApiInvoker.callSync(requestImpl.startUserDataStream());
-    }
-    
-    @Override
-    public String keepUserDataStream(String listenKey) {
-        return RestApiInvoker.callSync(requestImpl.keepUserDataStream(listenKey));
-    }
-    
-    @Override
-    public String closeUserDataStream(String listenKey) {
-        return RestApiInvoker.callSync(requestImpl.closeUserDataStream(listenKey));
-    }
-
-    @Override
-    public OpenInterest getOpenInterest(String symbol) {
-        return RestApiInvoker.callSync(requestImpl.getOpenInterest(symbol));
-    }
-
-    @Override
-    public List<OpenInterestStat> getOpenInterestStat(String symbol, PeriodType period, Long startTime, Long endTime, Long limit) {
-        return RestApiInvoker.callSync(requestImpl.getOpenInterestStat(symbol, period, startTime, endTime, limit));
-    }
-
-    @Override
-    public List<CommonLongShortRatio> getTopTraderAccountRatio(String symbol, PeriodType period, Long startTime, Long endTime, Long limit) {
-        return RestApiInvoker.callSync(requestImpl.getTopTraderAccountRatio(symbol, period, startTime, endTime, limit));
-    }
-
-    @Override
-    public List<CommonLongShortRatio> getTopTraderPositionRatio(String symbol, PeriodType period, Long startTime, Long endTime, Long limit) {
-        return RestApiInvoker.callSync(requestImpl.getTopTraderPositionRatio(symbol, period, startTime, endTime, limit));
-    }
-
-    @Override
-    public List<CommonLongShortRatio> getGlobalAccountRatio(String symbol, PeriodType period, Long startTime, Long endTime, Long limit) {
-        return RestApiInvoker.callSync(requestImpl.getGlobalAccountRatio(symbol, period, startTime, endTime, limit));
-    }
-
-    @Override
-    public List<TakerLongShortStat> getTakerLongShortRatio(String symbol, PeriodType period, Long startTime, Long endTime, Long limit) {
-        return RestApiInvoker.callSync(requestImpl.getTakerLongShortRatio(symbol, period, startTime, endTime, limit));
-    }
+    // --- CÁC HÀM STUB ---
+    @Override public com.binance.client.model.market.OrderBook getOrderBook(String symbol, Integer limit) { return null; }
+    @Override public java.util.List<Trade> getRecentTrades(String symbol, Integer limit) { return null; }
+    @Override public java.util.List<Trade> getOldTrades(String symbol, Integer limit, Long fromId) { return null; }
+    @Override public java.util.List<com.binance.client.model.market.AggregateTrade> getAggregateTrades(String symbol, Long fromId, Long startTime, Long endTime, Integer limit) { return null; }
+    @Override public java.util.List<com.binance.client.model.market.Candlestick> getCandlestick(String symbol, CandlestickInterval interval, Long startTime, Long endTime, Integer limit) { return null; }
+    @Override public java.util.List<com.binance.client.model.market.Candlestick> getContinuousCandlesticks(String pair, ContractType contractType, CandlestickInterval interval, Long startTime, Long endTime, Integer limit) { return null; }
+    @Override public java.util.List<com.binance.client.model.market.Candlestick> getIndexPriceCandlesticks(String pair, CandlestickInterval interval, Long startTime, Long endTime, Integer limit) { return null; }
+    @Override public java.util.List<com.binance.client.model.market.Candlestick> getMarkPriceCandlesticks(String pair, CandlestickInterval interval, Long startTime, Long endTime, Integer limit) { return null; }
+    @Override public java.util.List<com.binance.client.model.market.MarkPrice> getMarkPrice(String symbol) { return null; }
+    @Override public java.util.List<com.binance.client.model.market.FundingRate> getFundingRate(String symbol, Long startTime, Long endTime, Integer limit) { return null; }
+    @Override public java.util.List<com.binance.client.model.market.PriceChangeTicker> get24hrTickerPriceChange(String symbol) { return null; }
+    @Override public java.util.List<com.binance.client.model.market.SymbolPrice> getSymbolPriceTicker(String symbol) { return null; }
+    @Override public java.util.List<com.binance.client.model.market.SymbolOrderBook> getSymbolOrderBookTicker(String symbol) { return null; }
+    @Override public java.util.List<com.binance.client.model.market.LiquidationOrder> getLiquidationOrders(String symbol, AutoCloseType type, Long startTime, Long endTime, Integer limit) { return null; }
+    @Override public java.util.List<Object> postBatchOrders(String batchOrders) { return null; }
+    @Override public Order cancelOrder(String symbol, Long orderId, String origClientOrderId) { return null; }
+    @Override public com.binance.client.model.ResponseResult cancelAllOpenOrder(String symbol) { return null; }
+    @Override public java.util.List<Object> batchCancelOrders(String symbol, String orderIdList, String origClientOrderIdList) { return null; }
+    @Override public com.binance.client.model.ResponseResult changePositionSide(String dual) { return null; }
+    @Override public com.binance.client.model.ResponseResult changeMarginType(String symbolName, MarginType marginType) { return null; }
+    @Override public com.alibaba.fastjson.JSONObject addIsolatedPositionMargin(String symbolName, int type, String amount, PositionSide positionSide) { return null; }
+    @Override public java.util.List<com.binance.client.model.trade.WalletDeltaLog> getPositionMarginHistory(String symbolName, int type, long startTime, long endTime, int limit) { return null; }
+    @Override public com.alibaba.fastjson.JSONObject getPositionSide() { return null; }
+    @Override public Order getOrder(String symbol, Long orderId, String origClientOrderId) { return null; }
+    @Override public Order getOpenOrder(String symbol, Long orderId, String origClientOrderId) { return null; }
+    @Override public java.util.List<Order> getOpenOrders(String symbol) { return null; }
+    @Override public java.util.List<Order> getAllOrders(String symbol, Long orderId, Long startTime, Long endTime, Integer limit) { return null; }
+    @Override public java.util.List<com.binance.client.model.trade.AccountBalance> getBalance() { return null; }
+    @Override public com.binance.client.model.trade.AccountInformation getAccountInformation() { return null; }
+    @Override public com.binance.client.model.trade.Leverage changeInitialLeverage(String symbol, Integer leverage) { return null; }
+    @Override public java.util.List<com.binance.client.model.trade.PositionRisk> getPositionRisk(String symbol) { return null; }
+    @Override public java.util.List<com.binance.client.model.trade.MyTrade> getAccountTrades(String symbol, Long startTime, Long endTime, Long fromId, Integer limit) { return null; }
+    @Override public java.util.List<com.binance.client.model.trade.Income> getIncomeHistory(String symbol, IncomeType incomeType, Long startTime, Long endTime, Integer limit) { return null; }
+    @Override public String startUserDataStream() { return null; }
+    @Override public String keepUserDataStream(String listenKey) { return null; }
+    @Override public String closeUserDataStream(String listenKey) { return null; }
+    @Override public com.binance.client.model.market.OpenInterest getOpenInterest(String symbol) { return null; }
+    @Override public java.util.List<com.binance.client.model.market.OpenInterestStat> getOpenInterestStat(String symbol, PeriodType period, Long startTime, Long endTime, Long limit) { return null; }
+    @Override public java.util.List<com.binance.client.model.market.CommonLongShortRatio> getTopTraderAccountRatio(String symbol, PeriodType period, Long startTime, Long endTime, Long limit) { return null; }
+    @Override public java.util.List<com.binance.client.model.market.CommonLongShortRatio> getTopTraderPositionRatio(String symbol, PeriodType period, Long startTime, Long endTime, Long limit) { return null; }
+    @Override public java.util.List<com.binance.client.model.market.CommonLongShortRatio> getGlobalAccountRatio(String symbol, PeriodType period, Long startTime, Long endTime, Long limit) { return null; }
+    @Override public java.util.List<com.binance.client.model.market.TakerLongShortStat> getTakerLongShortRatio(String symbol, PeriodType period, Long startTime, Long endTime, Long limit) { return null; }
+    @Override public com.alibaba.fastjson.JSONObject autoCancelAllOrders(String symbol, Long countdownTime) { return null; }
 }

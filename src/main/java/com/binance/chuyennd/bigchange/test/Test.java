@@ -56,7 +56,6 @@ public class Test {
 
     public static final Logger LOG = LoggerFactory.getLogger(Test.class);
 
-    public static final String FILE_STORAGE_ORDER_DONE = "target/OrderTestDone.data";
 
     private final ConcurrentHashMap<String, Long> symbol2Processing = new ConcurrentHashMap<>();
 
@@ -73,11 +72,12 @@ public class Test {
 //        System.out.println(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO).size());
 
 //        testsublist();
-        Long startTime = Utils.sdfFile.parse(Configs.TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
-        TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers = DataManagerAerospike.readDataFromAerospike1M(startTime);
-        LOG.info("time2Tickers size: {}", time2Tickers.size());
-        LOG.info("First key: {} time:{} size: {}",time2Tickers.firstKey(), Utils.normalizeDateYYYYMMDDHHmm(time2Tickers.firstKey()),
-                time2Tickers.firstEntry().getValue().size());
+        System.out.println(ClientSingleton.getInstance().syncRequestClient.getExchangeInformation().getSymbols());
+//        Long startTime = Utils.sdfFile.parse(Configs.TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
+//        TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers = DataManagerAerospike.readDataFromAerospike1M(startTime);
+//        LOG.info("time2Tickers size: {}", time2Tickers.size());
+//        LOG.info("First key: {} time:{} size: {}",time2Tickers.firstKey(), Utils.normalizeDateYYYYMMDDHHmm(time2Tickers.firstKey()),
+//                time2Tickers.firstEntry().getValue().size());
 //        Utils.writePid2File();
 //        while (true) {
 //            if (Utils.getCurrentSecond() == 0) {

@@ -19,10 +19,7 @@ import com.binance.chuyennd.client.ClientSingleton;
 import com.binance.chuyennd.trading.SymbolOrderLockingManager;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.exception.BinanceApiException;
-import com.binance.client.model.enums.NewOrderRespType;
-import com.binance.client.model.enums.OrderSide;
-import com.binance.client.model.enums.OrderType;
-import com.binance.client.model.enums.TimeInForce;
+import com.binance.client.model.enums.*;
 import com.binance.client.model.trade.Order;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -63,42 +60,42 @@ public class OrderHelper {
 
 
     public static Order stopLoss(String symbol, Double quantity, Double stopPrice) {
+        LOG.info("Create Stop Loss Algo {} qty: {} price: {}", symbol, quantity, stopPrice);
         try {
             if (SymbolOrderLockingManager.getInstance().isLock(symbol, 3)) {
-                LOG.info("Symbol {} is locking for loop!", symbol);
                 return null;
             }
             SymbolOrderLockingManager.getInstance().addLock(symbol);
-            return ClientSingleton.getInstance().syncRequestClient.postOrder(
+
+            // Chuyển sang String
+            String strQty = Utils.formatMoney(quantity);
+            String strStopPrice = Utils.formatMoney(stopPrice);
+            String strReduceOnly = "true";
+
+            // SỬ DỤNG ALGO ORDER
+            return ClientSingleton.getInstance().syncRequestClient.postAlgoOrder(
                     symbol,
-                    OrderSide.SELL,
-                    null,                   // positionSide
-                    OrderType.STOP_MARKET,  // Đã xác nhận là STOP_MARKET
-                    TimeInForce.GTC,
-                    Utils.formatMoney(quantity),
-                    null,                   // price (tham số thứ 7) -> null là đúng cho STOP_MARKET
-                    "true",                 // SỬA LẠI (tham số thứ 8): Khai báo đây là lệnh chỉ giảm vị thế.
-                    null,                   // newClientOrderId
-                    Utils.formatMoney(stopPrice),
-                    null,                   // closePosition
-                    null,                   // activationPrice
-                    null,                   // callbackRate
-                    null,                   // workingType
-                    null,                   // priceProtect
-                    NewOrderRespType.RESULT
+                    OrderSide.SELL,         // Mặc định SL cho lệnh Long là Sell
+                    OrderType.STOP_MARKET,  // Tham số này trong hàm postAlgoOrder mới sẽ bị bỏ qua hoặc dùng để log
+                    strQty,
+                    strStopPrice,
+                    strReduceOnly
             );
+
         } catch (Exception e) {
+            LOG.error("Error stopLoss", e);
             e.printStackTrace();
         }
         return null;
+
     }
 
 
     public static void main(String[] args) {
-        OrderHelper.newOrderMarket("BLESSUSDT", OrderSide.BUY, 50.0);
+        OrderHelper.newOrderMarket("LUNA2USDT", OrderSide.BUY, 40.0);
 //        System.out.println(Utils.normalQuantity2Api(955.0));
 
-//        OrderHelper.stopLoss("CFXUSDT",202.0, 0.11222);
+//        OrderHelper.stopLoss("LUNA2USDT",74.0, 0.141);
 //        OrderHelper.newOrder("RVNUSDT", OrderSide.SELL, 955.0, 0.020, 7);
 //        Double quantity = 10044065d;
 //        System.out.println(Utils.formatMoney(quantity));

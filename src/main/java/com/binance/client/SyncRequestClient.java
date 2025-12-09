@@ -383,5 +383,7 @@ public interface SyncRequestClient {
      * @return Ack.
      */
     JSONObject autoCancelAllOrders(String symbol, Long countdownTime);
+    Order postAlgoOrder(String symbol, OrderSide side, OrderType orderType, String quantity,
+                        String stopPrice, String reduceOnly);
 
 }
