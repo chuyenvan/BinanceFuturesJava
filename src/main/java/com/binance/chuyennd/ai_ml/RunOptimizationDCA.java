@@ -34,7 +34,6 @@ public class RunOptimizationDCA {
     public static TreeMap<Long, MarketRateChange> CACHED_time2MarketRateChange;
     public static TreeMap<Long, MarketDataObject> CACHED_time2MarketData;
     public static TreeMap<Long, Double> CACHED_time2BtcReverse;
-    public static ConcurrentHashMap<String, Map<Long, Boolean>> CACHED_symbol2TrendData;
     public static ConcurrentHashMap<Long, Set<String>> CACHED_time2FundingFeeTrade;
 
 
@@ -100,7 +99,6 @@ public class RunOptimizationDCA {
             CACHED_time2MarketRateChange = (TreeMap<Long, MarketRateChange>) StorageSnappy.readObjectFromFile(Configs.FILE_MARKET_RATE_CHANGE);
             CACHED_time2MarketData = (TreeMap<Long, MarketDataObject>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
             CACHED_time2BtcReverse = (TreeMap<Long, Double>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_BTC_REVERSE);
-            CACHED_symbol2TrendData = (ConcurrentHashMap<String, Map<Long, Boolean>>) StorageSnappy.readObjectFromFile(Configs.FILE_TREND_BY_TIME);
 
             if (new File(FundingFeeManager.FILE_FUNDING_FEE).exists()) {
                 CACHED_time2FundingFeeTrade = (ConcurrentHashMap<Long, Set<String>>) StorageSnappy.readObjectFromFile(FundingFeeManager.FILE_FUNDING_FEE);

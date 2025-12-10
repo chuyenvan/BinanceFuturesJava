@@ -28,7 +28,6 @@ public class BackTestEngineAI {
     public double run(TreeMap<Long, MarketDataObject> time2MarketData,
                       TreeMap<Long, MarketRateChange> time2MarketRateChange,
                       TreeMap<Long, Double> time2BtcReverse,
-                      ConcurrentHashMap<String, Map<Long, Boolean>> symbol2TrendData,
                       TreeMap<Long, AiPredictionData> predictionMap) {
         try {
             // 1. Reset Singleton BudgetManager
@@ -38,7 +37,7 @@ public class BackTestEngineAI {
             SimulatorMarketLevelTicker1MStopLoss test = new SimulatorMarketLevelTicker1MStopLoss();
 
             // 3. Inject dữ liệu Cache (bao gồm cả dữ liệu AI Prediction)
-            test.initDataReady(time2MarketData, time2MarketRateChange, time2BtcReverse, symbol2TrendData,
+            test.initDataReady(time2MarketData, time2MarketRateChange, time2BtcReverse,
                     predictionMap, aiRejectFilter);
 
             // 4. Chạy Simulation

@@ -41,8 +41,6 @@ public class FeatureExtractor_BtcReverse {
     private static final int MACD_SLOW = 26;
     private static final int MACD_SIGNAL = 9;
 
-    // Cache du lieu Trend (BTC/ETH)
-    private static ConcurrentHashMap<String, Map<Long, Boolean>> CACHED_symbol2TrendData;
 
     // Cache toan bo 5 nam du lieu BTC
     private static TreeMap<Long, KlineObjectSimple> ALL_BTC_DATA;
@@ -60,9 +58,7 @@ public class FeatureExtractor_BtcReverse {
         try {
             // 1. Tai du lieu Trend
             System.out.println("Dang tai du lieu Trend...");
-            CACHED_symbol2TrendData = (ConcurrentHashMap<String, Map<Long, Boolean>>) StorageSnappy.readObjectFromFile(Configs.FILE_TREND_BY_TIME);
-
-            // 2. Tai TOAN BO 5 nam du lieu BTC vao RAM (TU FILE SNAPPY)
+             // 2. Tai TOAN BO 5 nam du lieu BTC vao RAM (TU FILE SNAPPY)
             System.out.println("Dang tai toan bo 5 nam du lieu BTC tu file Snappy vao RAM...");
             ALL_BTC_DATA = loadAllBtcDataFromFile();
             System.out.println("Tai thanh cong " + ALL_BTC_DATA.size() + " phut du lieu BTC.");
@@ -425,8 +421,6 @@ public class FeatureExtractor_BtcReverse {
         features.put("btc_rate_vs_60m_high", (currentPrice - high_60m) / high_60m);
         features.put("btc_rate_change_1m", Utils.rateOf2Double(lastKline.priceClose, lastKline.priceOpen));
         features.put("btc_rate_change_5m", Utils.rateOf2Double(currentPrice, kline_5m_ago.priceClose));
-        features.put("isTrendBuyWithETH", getTrend(Constants.SYMBOL_PAIR_ETH, timestamp) ? 1.0 : 0.0);
-        features.put("isTrendBuyWithBTC", getTrend(Constants.SYMBOL_PAIR_BTC, timestamp) ? 1.0 : 0.0);
 
         // --- 4 Features Moi (TA) ---
         features.put("rsi_14", TechnicalAnalysisUtils.calculateRSI(klines, RSI_PERIOD));
@@ -455,14 +449,7 @@ public class FeatureExtractor_BtcReverse {
         return maxPrice;
     }
 
-    private static boolean getTrend(String symbol, Long time) {
-        if (CACHED_symbol2TrendData == null || !CACHED_symbol2TrendData.containsKey(symbol)) {
-            return false;
-        }
-        long timeKey = Utils.getDate(time);
-        Boolean trend = CACHED_symbol2TrendData.get(symbol).get(timeKey);
-        return trend != null && trend;
-    }
+
 
     private static void setupCsvFile() throws java.io.IOException {
         File csvFile = new File(CSV_FILE_PATH);

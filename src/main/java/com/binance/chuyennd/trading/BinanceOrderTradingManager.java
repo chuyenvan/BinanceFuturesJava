@@ -27,7 +27,6 @@ import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
 import com.binance.chuyennd.tradecore.MarketBigChangeDetector;
 import com.binance.chuyennd.tradecore.TradeUtils;
-import com.binance.chuyennd.tradecore.TrendDetector;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.chuyennd.websocket.ListenAllTicker;
@@ -258,7 +257,6 @@ public class BinanceOrderTradingManager {
         long startTime = System.currentTimeMillis();
         Set<PositionRisk> positions = new HashSet<>();
         positions.addAll(BudgetManager.getInstance().symbol2Pos.values());
-        boolean isTrendBuyWithETH = TrendDetector.isETHTrendBuyProduction(startTime);
         for (PositionRisk position : positions) {
             if (position == null) {
                 continue;
@@ -281,7 +279,7 @@ public class BinanceOrderTradingManager {
                 }
                 List<KlineObjectSimple> tickers = ListenAllTicker.getInstance().getTickerBySymbol(symbol);
                 Double maxChange60M = MarketBigChangeDetector.getMaxRateIn90MForTradingStop(tickers);
-                Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60MForTradingStop(maxChange60M, isTrendBuyWithETH);
+                Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60MForTradingStop(maxChange60M);
                 if (rateLoss > rateMin2MoveSl) {
                     if (orderInfo.priceSL == null) {
                         OrderSide sideSL = OrderSide.SELL;
@@ -368,7 +366,6 @@ public class BinanceOrderTradingManager {
     public void processDynamicTP_SL() {
         Set<PositionRisk> positions = new HashSet<>();
         positions.addAll(BudgetManager.getInstance().symbol2Pos.values());
-        boolean isTrendBuyWithETH = TrendDetector.isETHTrendBuyProduction(System.currentTimeMillis());
         for (PositionRisk position : positions) {
             try {
                 if (position == null || position.getPositionAmt().compareTo(new BigDecimal("0")) == 0) {
@@ -387,7 +384,7 @@ public class BinanceOrderTradingManager {
                 OrderSide side2Sl;
                 List<KlineObjectSimple> tickers = ListenAllTicker.getInstance().getTickerBySymbol(symbol);
                 Double maxChange60M = MarketBigChangeDetector.getMaxRateIn90MForTradingStop(tickers);
-                Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60MForTradingStop(maxChange60M * 1.5, isTrendBuyWithETH);
+                Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60MForTradingStop(maxChange60M * 1.5);
                 // BUY
                 if (position.getPositionAmt().compareTo(new BigDecimal("0")) > 0) {
                     side2Sl = OrderSide.SELL;

@@ -16,16 +16,13 @@ public class BackTestEngineBudgetRatio {
 
     public BackTestEngineBudgetRatio(
             double budgetRatio1, double budgetDivider1,
-            double budgetRatio2, double budgetDivider2,
-            double trendUpMultiplier, double trendDownMultiplier) {
+            double budgetRatio2, double budgetDivider2) {
 
         // Gán các giá trị mới cho mỗi lần chạy
         Configs.BUDGET_MARGIN_RATIO_1 = budgetRatio1;
         Configs.BUDGET_DIVIDER_1 = budgetDivider1;
         Configs.BUDGET_MARGIN_RATIO_2 = budgetRatio2;
         Configs.BUDGET_DIVIDER_2 = budgetDivider2;
-        Configs.BUDGET_TREND_UP_MULTIPLIER = trendUpMultiplier;
-        Configs.BUDGET_TREND_DOWN_MULTIPLIER = trendDownMultiplier;
     }
 
     public static void main(String[] args) throws IOException, ParseException {
@@ -36,8 +33,7 @@ public class BackTestEngineBudgetRatio {
 
     public double run(TreeMap<Long, MarketDataObject> time2MarketData,
                       TreeMap<Long, MarketRateChange> time2MarketRateChange,
-                      TreeMap<Long, Double> time2BtcReverse, ConcurrentHashMap<String,
-            Map<Long, Boolean>> symbol2TrendData) {
+                      TreeMap<Long, Double> time2BtcReverse) {
         try {
             // 1. Reset Singleton về trạng thái ban đầu
             BudgetManagerSimple.resetInstance();
@@ -50,7 +46,7 @@ public class BackTestEngineBudgetRatio {
             //    (Lưu ý: test.initData() có thể làm chậm quá trình.
             //     Nếu có thể, hãy tối ưu để chỉ chạy 1 lần)
 //            test.initData();
-            test.initDataReady(time2MarketData, time2MarketRateChange, time2BtcReverse, symbol2TrendData,
+            test.initDataReady(time2MarketData, time2MarketRateChange, time2BtcReverse,
                     null, null);
             test.simulatorWithInitEntry();
 

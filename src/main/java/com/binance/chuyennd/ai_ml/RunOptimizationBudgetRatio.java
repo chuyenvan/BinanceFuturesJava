@@ -34,9 +34,6 @@ public class RunOptimizationBudgetRatio {
     // Bo dem an toan, dung de biet dang o lan test thu may
     private static final AtomicLong testCounter = new AtomicLong(0);
 
-    // Cache du lieu (de khac phuc OutOfMemoryError)
-    public static ConcurrentHashMap<String, Map<Long, Boolean>> symbol2TrendData;
-
     public static TreeMap<Long, MarketDataObject> time2MarketData;
     public static TreeMap<Long, MarketRateChange> time2MarketRateChange;
     public static TreeMap<Long, Double> time2BtcReverse;
@@ -71,11 +68,11 @@ public class RunOptimizationBudgetRatio {
         try {
             // 2. Khoi tao BacktestEngine
             BackTestEngineBudgetRatio engine = new BackTestEngineBudgetRatio(
-                    ratio1, divider1, ratio2, divider2, trendUp, trendDown
+                    ratio1, divider1, ratio2, divider2
             );
 
             // 3. Chay backtest
-            finalBalance = engine.run(time2MarketData, time2MarketRateChange, time2BtcReverse, symbol2TrendData);
+            finalBalance = engine.run(time2MarketData, time2MarketRateChange, time2BtcReverse);
 
             // In log *sau khi* chay (DA THEM TONG SO)
             System.out.printf(
@@ -108,9 +105,7 @@ public class RunOptimizationBudgetRatio {
             time2MarketRateChange = (TreeMap<Long, MarketRateChange>) StorageSnappy.readObjectFromFile(Configs.FILE_MARKET_RATE_CHANGE);
             time2MarketData = (TreeMap<Long, MarketDataObject>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
             time2BtcReverse = (TreeMap<Long, Double>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_BTC_REVERSE);
-            symbol2TrendData = (ConcurrentHashMap<String, Map<Long, Boolean>>) StorageSnappy.readObjectFromFile(Configs.FILE_TREND_BY_TIME);
             FundingFeeManager.getInstance();
-            System.out.println("Trend data size: + " + symbol2TrendData.size());
             // (Ban them file trend o day neu can)
             System.out.println("Tai du lieu thanh cong. Bat dau toi uu hoa...");
         } catch (Exception e) {

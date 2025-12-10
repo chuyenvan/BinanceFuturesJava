@@ -1,15 +1,11 @@
 package com.binance.chuyennd.tradecore;
 
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
-import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.utils.Configs;
-import com.binance.chuyennd.utils.Utils;
-import com.binance.client.constant.Constants;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
 import java.util.Set;
 
 public class TradeUtils {
@@ -39,25 +35,15 @@ public class TradeUtils {
         return rateLoss / 200;
     }
 
-    public static Double calRateMinWithMaxChange60MForTradingStop(Double maxChange90M, Boolean isTrendBuyWithETH) {
+    public static Double calRateMinWithMaxChange60MForTradingStop(Double maxChange90M) {
         Double rateMin2MoveSl = Configs.RATE_PROFIT_STOP_MARKET;
-        if (isTrendBuyWithETH) {
-            if (maxChange90M != null) {
-                if (maxChange90M >= 0.01) {
-                    rateMin2MoveSl = 0.03;
-                } else if (maxChange90M >= 0.006) {
-                    rateMin2MoveSl = 0.02;
-                } else if (maxChange90M >= 0.004) {
-                    rateMin2MoveSl = 0.016;
-                }
-            }
-        } else {
-            if (maxChange90M != null) {
-                if (maxChange90M >= 0.02) {
-                    rateMin2MoveSl = 0.015;
-                } else if (maxChange90M >= 0.01) {
-                    rateMin2MoveSl = 0.012;
-                }
+        if (maxChange90M != null) {
+            if (maxChange90M >= 0.01) {
+                rateMin2MoveSl = 0.03;
+            } else if (maxChange90M >= 0.006) {
+                rateMin2MoveSl = 0.02;
+            } else if (maxChange90M >= 0.004) {
+                rateMin2MoveSl = 0.016;
             }
         }
         return rateMin2MoveSl;
@@ -124,14 +110,8 @@ public class TradeUtils {
 //    }
 
     public static Double managerBudget(Double budget, Double marginRunning, Double balanceBasic,
-                                       MarketLevelChange levelChange, Boolean isTrendBuyWithBtc, Boolean isTrendBuyETH) {
+                                       MarketLevelChange levelChange) {
 
-        if (levelChange.equals(MarketLevelChange.SMALL_UP)
-                || levelChange.equals(MarketLevelChange.SMALL_DOWN_15M)) {
-            if (!isTrendBuyWithBtc) {
-                return null;
-            }
-        }
 
         final Set<MarketLevelChange> dcaOrBigLevels = Set.of(
                 MarketLevelChange.DCA_LEVEL1,
@@ -183,13 +163,6 @@ public class TradeUtils {
             case SMALL_DOWN_15M:
                 budget /= 4;
                 break;
-        }
-
-        // === THAY ĐỔI 2: SỬ DỤNG BIẾN CONFIGS ===
-        if (isTrendBuyETH) {
-            budget = budget * Configs.BUDGET_TREND_UP_MULTIPLIER;
-        } else {
-            budget = budget * Configs.BUDGET_TREND_DOWN_MULTIPLIER;
         }
 
         return budget;

@@ -14,21 +14,20 @@ public final class DcaUtils {
      * Đây là hàm duy nhất bạn cần gọi từ bên ngoài.
      */
     public static boolean shouldDca(double margin, double currentRateLoss, MarketLevelChange orderMarketLevel, long orderTimeStart,
-                                    MarketLevelChange marketLevelChange, long currentTime, double budget,
-                                    Boolean isTrendBuyWithBtc, Boolean isTrendBuyWithETH) {
+                                    MarketLevelChange marketLevelChange, long currentTime, double budget) {
             DcaConfig config = getDcaConfig(marketLevelChange);
             if (config == null) {
                 return false;
             }
-            if (!isTrendBuyWithETH) {
-                config.rateLoss2Dca = config.rateLoss2Dca * 1.5;
-//            if (marketLevelChange != null){
+//            if (!isTrendBuyWithETH) {
 //                config.rateLoss2Dca = config.rateLoss2Dca * 1.5;
+////            if (marketLevelChange != null){
+////                config.rateLoss2Dca = config.rateLoss2Dca * 1.5;
+////            }
+//                if (config.rateLoss2Dca < -0.9) {
+//                    config.rateLoss2Dca = -0.9;
+//                }
 //            }
-                if (config.rateLoss2Dca < -0.9) {
-                    config.rateLoss2Dca = -0.9;
-                }
-            }
             double adjustedRateLoss = calculateAdjustedRateLoss(margin, budget, config.getRateLoss2Dca(), config.isAll());
 
             if (currentRateLoss >= adjustedRateLoss) {

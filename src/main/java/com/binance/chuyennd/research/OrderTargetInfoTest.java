@@ -61,7 +61,6 @@ public class OrderTargetInfoTest implements Serializable {
     public MarketLevelChange marketLevelChange;
     public KlineObjectSimple tickerOpen;
     public AiPredictionData predict;
-    public String extendData;
 
 
     public OrderTargetInfoTest(OrderTargetStatus status, Double priceEntry,
@@ -123,10 +122,10 @@ public class OrderTargetInfoTest implements Serializable {
         return quantity * priceEntry / leverage;
     }
 
-    public void updateStatusNew(Double maxChange90M, KlineObjectSimple ticker, Boolean isTrendBuyWithETH) {
+    public void updateStatusNew(Double maxChange90M, KlineObjectSimple ticker) {
         if (priceSL == null) {
             Double rateLoss = calRateLossMax(ticker.maxPrice);
-            Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60MForTradingStop(maxChange90M, isTrendBuyWithETH);
+            Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60MForTradingStop(maxChange90M);
             if (rateLoss > rateMin2MoveSl) {
                 Double rateStop = TradeUtils.calRateLossDynamicBuy(rateLoss, maxChange90M);
                 Double priceSLNew = Utils.calPriceTarget(symbol, priceEntry, OrderSide.SELL, -rateStop);
@@ -159,12 +158,12 @@ public class OrderTargetInfoTest implements Serializable {
     }
 
 
-    public void updateTPSL(Double rateChangeMax90M, KlineObjectSimple ticker, Boolean isTrendBuyWithETH) {
+    public void updateTPSL(Double rateChangeMax90M, KlineObjectSimple ticker) {
         // move SL
         if (priceSL != null) {
             Double rateLoss = calRateLossMax(ticker.maxPrice);
-            Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60MForTradingStop(rateChangeMax90M * 1.5,
-                    isTrendBuyWithETH);
+            Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60MForTradingStop(rateChangeMax90M * 1.5
+            );
             if (rateLoss >= rateMin2MoveSl) {
                 Double rateSL = TradeUtils.calRateLossDynamicBuy(rateLoss, rateChangeMax90M);
                 OrderSide side2Sl = OrderSide.SELL;

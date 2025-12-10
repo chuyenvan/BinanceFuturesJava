@@ -17,7 +17,7 @@ public class DcaProcessor {
     public static final Logger LOG = LoggerFactory.getLogger(DcaProcessor.class);
 
     public static List<String> getDCA(MarketLevelChange levelChange, Long time, Double budget,
-                                      Map<String, OrderTargetInfoTest> symbol2OrderRunning, Boolean isTrendBuyWithBtc, Boolean isTrendBuyWithETH) {
+                                      Map<String, OrderTargetInfoTest> symbol2OrderRunning) {
         return symbol2OrderRunning.entrySet()
                 .stream()
                 .filter(entry -> {
@@ -31,9 +31,7 @@ public class DcaProcessor {
                                 order.timeStart,
                                 levelChange,  // Trạng thái thị trường chung
                                 time,         // Thời gian hiện tại
-                                budget,
-                                isTrendBuyWithBtc,
-                                isTrendBuyWithETH
+                                budget
                         );
                     } catch (Exception e) {
                         LOG.info("Error when processing DCA for {}", Utils.toJson(order));
@@ -49,7 +47,7 @@ public class DcaProcessor {
      * Hàm DCA cho môi trường Production.
      */
     public static List<String> getDCAProduction(MarketLevelChange levelChange, Long time, Double budget,
-                                                Map<String, PositionRisk> symbol2OrderRunning, boolean isTrendBuyWithBtc, boolean isTrendBuyWitETH) {
+                                                Map<String, PositionRisk> symbol2OrderRunning) {
 
         return symbol2OrderRunning.entrySet()
                 .stream()
@@ -63,9 +61,8 @@ public class DcaProcessor {
                             pos.getUpdateTime(),
                             levelChange,  // Trạng thái thị trường chung
                             time,         // Thời gian hiện tại
-                            budget,
-                            isTrendBuyWithBtc,
-                            isTrendBuyWitETH);
+                            budget
+                    );
                 })
                 .map(Map.Entry::getKey)
                 .collect(Collectors.toList());

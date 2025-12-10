@@ -68,6 +68,22 @@ public class Utils {
         cal.set(Calendar.MILLISECOND, 0);
         return cal.getTimeInMillis();
     }
+    public static long getStartOfDayGMT7(long time) {
+        Calendar cal = Calendar.getInstance(); // Nên set TimeZone nếu server khác múi giờ
+        cal.setTimeInMillis(time);
+        cal.set(Calendar.HOUR_OF_DAY, 7);
+        cal.set(Calendar.MINUTE, 0);
+        cal.set(Calendar.SECOND, 0);
+        cal.set(Calendar.MILLISECOND, 0);
+
+        // Nếu time input < 07:00 hôm nay -> Nó thuộc về phiên ngày hôm qua
+        // Ví dụ: time là 02:00 -> startOfDay phải là 07:00 hôm qua
+        if (cal.getTimeInMillis() > time) {
+            cal.add(Calendar.DAY_OF_MONTH, -1);
+        }
+
+        return cal.getTimeInMillis();
+    }
     public static int getCurrentHour() {
         Calendar cal = Calendar.getInstance();
         cal.setTimeZone(TimeZone.getTimeZone("GMT+7"));

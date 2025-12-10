@@ -45,9 +45,6 @@ public class FeatureCalculator {
         // 1. BTC Rate
         row.btc_rate_change_15m = Utils.rateOf2Double(kline_btc.priceClose, klines_btc.get(i - P_15M).priceClose);
 
-        // 2. Trends
-        row.isTrendBuyWithBTC = getTrend(Constants.SYMBOL_PAIR_BTC, timestamp) ? 1.0 : 0.0;
-        row.isTrendBuyWithETH = getTrend(Constants.SYMBOL_PAIR_ETH, timestamp) ? 1.0 : 0.0;
 
         // 3. Market Data
         MarketDataObject marketData = DataContext.CACHED_time2MarketData.get(timestamp);
@@ -156,12 +153,7 @@ public class FeatureCalculator {
     // --- Cac ham ho tro ---
     private static double findMaxPrice(List<KlineObjectSimple> klines) { double max = 0; for(KlineObjectSimple k:klines) max = Math.max(max, k.maxPrice); return max; }
     private static double findMinPrice(List<KlineObjectSimple> klines) { double min = Double.MAX_VALUE; for(KlineObjectSimple k:klines) min = Math.min(min, k.minPrice); return min; }
-    private static boolean getTrend(String symbol, Long time) {
-        Map<Long, Boolean> trendData = DataContext.CACHED_symbol2TrendData.get(symbol);
-        if (trendData == null) return false;
-        Boolean trend = trendData.get(Utils.getDate(time));
-        return trend != null && trend;
-    }
+
 
     /**
      * HAM MOI: Tinh SMA cho Volume

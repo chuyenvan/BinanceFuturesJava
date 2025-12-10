@@ -16,7 +16,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Iterator;
-import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
@@ -26,42 +25,43 @@ public class RunOptimizationAI {
     private static final Logger LOG = LoggerFactory.getLogger(RunOptimizationAI.class);
 
     // --- GLOBAL DATA STORE ---
-    public static ConcurrentHashMap<String, Map<Long, Boolean>> symbol2TrendData;
+    // (Đã bỏ symbol2TrendData theo code mẫu của bạn)
     public static TreeMap<Long, MarketDataObject> time2MarketData;
     public static TreeMap<Long, MarketRateChange> time2MarketRateChange;
     public static TreeMap<Long, Double> time2BtcReverse;
     public static TreeMap<Long, AiPredictionData> predictionMap;
     public static ConcurrentHashMap<Long, Set<String>> CACHED_time2FundingFeeTrade;
 
-    // --- CẤU HÌNH GIỚI HẠN (RANGE) MỚI ---
-    // Đã ép Max xuống thấp để AI buộc phải trade nhiều hơn, không chờ kèo lịch sử
+    // --- CẤU HÌNH 5 THAM SỐ (Đã thêm lại Trend 4H) ---
+
+    // 1. Risk: Mức cắt lỗ
     private static final double MIN_RISK = -0.15, MAX_RISK = -0.01;
 
-    // Giảm kỳ vọng lãi 1H xuống 3% (thay vì 5%)
+    // 2. Ret1H: Dự báo lợi nhuận 1H
     private static final double MIN_RET1H = 0.005, MAX_RET1H = 0.03;
 
-    // Giảm ngưỡng "Kèo thơm" xuống 6% (thay vì 15%) để bắt các kèo trung bình
+    // 3. HighRet: Ngưỡng "Kèo Thơm"
     private static final double MIN_HIGHRET = 0.02, MAX_HIGHRET = 0.06;
 
-    // Giảm đà tăng 15M xuống 1%
-    private static final double MIN_MOM15M = 0.001, MAX_MOM15M = 0.01;
+    // 4. Mom15M: Động lượng ngắn hạn
+    private static final double MIN_MOM15M = 0.001, MAX_MOM15M = 0.015;
 
-    // QUAN TRỌNG: Ép Trend 4H xuống tối đa 1.2% (thay vì 5%)
-    // AI sẽ phải học cách vào lệnh ở sóng nhỏ, thay vì chờ sóng thần 4.2%
-    private static final double MIN_TREND4H = 0.001, MAX_TREND4H = 0.012;
+    // 5. Trend4H: Xu hướng trung hạn (ĐÃ THÊM LẠI)
+    // Range: 0.1% -> 2% (Tìm điểm cân bằng giữa an toàn và số lượng lệnh)
+    private static final double MIN_TREND4H = 0.001, MAX_TREND4H = 0.02;
 
-    private static final double MIN_DEADTREND = -0.20, MAX_DEADTREND = -0.01;
+    // 6. DeadTrend24H: Vẫn bỏ qua
+    // private static final double MIN_DEADTREND = -0.20, MAX_DEADTREND = -0.01;
 
     public static void main(String[] args) {
         LOG.info("==============================================");
         LOG.info("===   AI HYPERPARAMETER OPTIMIZATION SYSTEM   ===");
-        LOG.info("===   MODE: FAST RUN (50% LOAD) & ANTI-OVERFIT ===");
+        LOG.info("===   MODE: SINGLE PHASE | 5 PARAMS (+Trend4H) ===");
         LOG.info("==============================================\n");
 
         // 1. LOAD DATA VÀO RAM
-        // Load từ 2024 (hoặc 2023 nếu RAM > 20GB)
         try {
-            Configs.TIME_RUN = "20240101";
+            Configs.TIME_RUN = "20220101";
             loadAndWarmUpData();
         } catch (Exception e) {
             e.printStackTrace();
@@ -70,87 +70,46 @@ public class RunOptimizationAI {
         }
 
         // 2. CHẠY KIỂM TRA TÍNH NHẤT QUÁN
-        LOG.info("\n🛑 --- STARTING CONSISTENCY CHECK (3 RUNS) ---");
-        Configs.TIME_RUN = "20250101";
+        LOG.info("\n🛑 --- STARTING CONSISTENCY CHECK ---");
         boolean isStable = runConsistencyCheck();
-
-        if (!isStable) {
-            LOG.error("❌ DATA IS UNSTABLE: Scores differ! Check Variables.");
-        } else {
+        if (isStable) {
             LOG.info("✅ SYSTEM STABLE. Proceeding...");
+        } else {
+            LOG.warn("⚠️ DATA UNSTABLE. Proceed with caution.");
         }
 
         // =====================================================================
-        // PHASE 1: QUÉT THÔ (COARSE SEARCH) - DATA 2025
+        // SINGLE PHASE EVOLUTION (300 GENERATIONS)
         // =====================================================================
-        LOG.info("\n🚀 --- PHASE 1: COARSE SEARCH (Data from 20250101) ---");
-        Configs.TIME_RUN = "20250101";
+        LOG.info("\n🚀 --- STARTING EVOLUTION (300 Gens) ---");
 
-        Factory<Genotype<DoubleGene>> gtfPhase1 = Genotype.of(
-                DoubleChromosome.of(MIN_RISK, MAX_RISK),
-                DoubleChromosome.of(MIN_RET1H, MAX_RET1H),
-                DoubleChromosome.of(MIN_HIGHRET, MAX_HIGHRET),
-                DoubleChromosome.of(MIN_MOM15M, MAX_MOM15M),
-                DoubleChromosome.of(MIN_TREND4H, MAX_TREND4H),
-                DoubleChromosome.of(MIN_DEADTREND, MAX_DEADTREND)
+        // Factory tạo 5 Chromosome (Risk, Ret1H, HighRet, Mom15M, Trend4H)
+        Factory<Genotype<DoubleGene>> gtf = Genotype.of(
+                DoubleChromosome.of(MIN_RISK, MAX_RISK),       // 0. Risk
+                DoubleChromosome.of(MIN_RET1H, MAX_RET1H),     // 1. MinRet1H
+                DoubleChromosome.of(MIN_HIGHRET, MAX_HIGHRET), // 2. HighRet
+                DoubleChromosome.of(MIN_MOM15M, MAX_MOM15M),   // 3. Mom15M
+                DoubleChromosome.of(MIN_TREND4H, MAX_TREND4H)  // 4. Trend4H (MỚI)
         );
 
-        Engine<DoubleGene, Double> engine1 = Engine.builder(RunOptimizationAI::eval, gtfPhase1)
-                .populationSize(10) // GIẢM TỪ 16 -> 10 (Chạy nhanh)
+        Engine<DoubleGene, Double> engine = Engine.builder(RunOptimizationAI::eval, gtf)
+                .populationSize(20)
                 .survivorsSelector(new TournamentSelector<>(3))
                 .offspringSelector(new RouletteWheelSelector<>())
-                .alterers(new Mutator<>(0.2), new MeanAlterer<>(0.2))
+                .alterers(new Mutator<>(0.1), new MeanAlterer<>(0.3))
                 .executor(Runnable::run)
                 .build();
 
-        // GIẢM SỐ VÒNG TỪ 10 -> 5
-        EvolutionResult<DoubleGene, Double> bestResultPhase1 = runEvolutionLoop(engine1, 5, "PHASE 1");
+        EvolutionResult<DoubleGene, Double> bestResult = runEvolutionLoop(engine, 300);
 
-        LOG.info("🏆 BEST PHASE 1 SCORE: " + bestResultPhase1.bestFitness());
-        printParams("PHASE 1 RESULT", bestResultPhase1.bestPhenotype().genotype());
-
-        // =====================================================================
-        // PHASE 2: TINH CHỈNH (FINE TUNING) - DATA 2024 (FULL)
-        // =====================================================================
-        LOG.info("\n🚀 --- PHASE 2: FINE TUNING (Data from 20240101) ---");
-        Configs.TIME_RUN = "20240101";
-
-        Genotype<DoubleGene> bestGt1 = bestResultPhase1.bestPhenotype().genotype();
-
-        // Tạo không gian tìm kiếm hẹp (±20%) quanh kết quả Phase 1
-        Factory<Genotype<DoubleGene>> gtfPhase2 = Genotype.of(
-                createNarrowChromo(bestGt1.get(0), MIN_RISK, MAX_RISK, 0.2),
-                createNarrowChromo(bestGt1.get(1), MIN_RET1H, MAX_RET1H, 0.2),
-                createNarrowChromo(bestGt1.get(2), MIN_HIGHRET, MAX_HIGHRET, 0.2),
-                createNarrowChromo(bestGt1.get(3), MIN_MOM15M, MAX_MOM15M, 0.2),
-                createNarrowChromo(bestGt1.get(4), MIN_TREND4H, MAX_TREND4H, 0.2),
-                createNarrowChromo(bestGt1.get(5), MIN_DEADTREND, MAX_DEADTREND, 0.2)
-        );
-
-        Engine<DoubleGene, Double> engine2 = Engine.builder(RunOptimizationAI::eval, gtfPhase2)
-                .populationSize(10) // GIẢM TỪ 16 -> 10
-                .survivorsSelector(new TournamentSelector<>(3))
-                .offspringSelector(new RouletteWheelSelector<>())
-                .alterers(new Mutator<>(0.05), new MeanAlterer<>(0.5))
-                .executor(Runnable::run)
-                .build();
-
-        // GIẢM SỐ VÒNG TỪ 50 -> 25
-        EvolutionResult<DoubleGene, Double> bestResultPhase2 = runEvolutionLoop(engine2, 25, "PHASE 2");
-
-        // 6. KẾT QUẢ CUỐI CÙNG
+        // KẾT QUẢ CUỐI CÙNG
         LOG.info("\n=== OPTIMIZATION FINISHED ===");
-        LOG.info("🏆 FINAL BEST PROFIT: " + bestResultPhase2.bestFitness());
-        printParams("FINAL RESULT", bestResultPhase2.bestPhenotype().genotype());
+        LOG.info("🏆 FINAL BEST PROFIT: " + bestResult.bestFitness());
+        printParams("FINAL RESULT", bestResult.bestPhenotype().genotype());
     }
 
-    /**
-     * HÀM CHẠY VÒNG LẶP TIẾN HÓA (MEMORY SAFE)
-     */
     private static EvolutionResult<DoubleGene, Double> runEvolutionLoop(
-            Engine<DoubleGene, Double> engine, int maxGenerations, String phaseName) {
-
-        LOG.info(">>> STARTING {} (Max Gen: {})", phaseName, maxGenerations);
+            Engine<DoubleGene, Double> engine, int maxGenerations) {
 
         Iterator<EvolutionResult<DoubleGene, Double>> stream = engine.stream().iterator();
         EvolutionResult<DoubleGene, Double> bestResult = null;
@@ -161,16 +120,14 @@ public class RunOptimizationAI {
 
             if (bestResult == null || result.bestFitness() > bestResult.bestFitness()) {
                 bestResult = result;
-                LOG.info("[{}] NEW BEST at Gen {}: {}", phaseName, currentGen, String.format("%.4f", bestResult.bestFitness()));
+                LOG.info("🔥 NEW BEST at Gen {}: {}", currentGen, String.format("%.2f", bestResult.bestFitness()));
             } else {
-                // In log mỗi 2 vòng cho đỡ sốt ruột (vì số vòng ít)
-                if (currentGen % 2 == 0) {
-                    LOG.info("[{}] Gen {} | Current Best: {}", phaseName, currentGen, String.format("%.4f", bestResult.bestFitness()));
+                if (currentGen % 10 == 0) {
+                    LOG.info("... Gen {} | Current Best: {}", currentGen, String.format("%.2f", bestResult.bestFitness()));
                 }
             }
 
-            // Dọn dẹp bộ nhớ mỗi 5 vòng
-            if (currentGen % 5 == 0) {
+            if (currentGen % 10 == 0) {
                 System.gc();
                 printRamUsage();
             }
@@ -186,29 +143,25 @@ public class RunOptimizationAI {
         LOG.info("   [RAM CHECK] Used: {} MB", usedMB);
     }
 
-    private static DoubleChromosome createNarrowChromo(Chromosome<DoubleGene> geneBase, double globalMin, double globalMax, double spreadRatio) {
-        double centerValue = geneBase.gene().doubleValue();
-        double rangeSpan = (globalMax - globalMin) * spreadRatio;
-
-        double newMin = Math.max(globalMin, centerValue - rangeSpan / 2);
-        double newMax = Math.min(globalMax, centerValue + rangeSpan / 2);
-
-        if (newMin >= newMax) newMax = newMin + 0.0001;
-        return DoubleChromosome.of(newMin, newMax);
-    }
-
+    // --- HÀM MỤC TIÊU (FITNESS FUNCTION) ---
     private static Double eval(Genotype<DoubleGene> gt) {
         try {
-            return new BackTestEngineAI(
-                    gt.get(0).gene().doubleValue(),
-                    gt.get(1).gene().doubleValue(),
-                    gt.get(2).gene().doubleValue(),
-                    gt.get(3).gene().doubleValue(),
-                    gt.get(4).gene().doubleValue(),
-                    gt.get(5).gene().doubleValue()
-            ).run(time2MarketData, time2MarketRateChange, time2BtcReverse, symbol2TrendData, predictionMap);
+            // Truyền 5 tham số Gen + 1 tham số Dummy (DeadTrend24H)
+            BackTestEngineAI engine = new BackTestEngineAI(
+                    gt.get(0).gene().doubleValue(), // 1. Risk
+                    gt.get(1).gene().doubleValue(), // 2. MinRet1H
+                    gt.get(2).gene().doubleValue(), // 3. HighRet
+                    gt.get(3).gene().doubleValue(), // 4. Mom15M
+                    gt.get(4).gene().doubleValue(), // 5. Trend4H (Đã kích hoạt lại)
+                    -0.99                           // 6. DeadTrend24H (Vẫn tắt)
+            );
+
+            // Chạy Run mà không cần symbol2TrendData (theo code mẫu bạn gửi)
+            Double profit = engine.run(time2MarketData, time2MarketRateChange, time2BtcReverse, predictionMap);
+
+            return profit;
+
         } catch (Exception e) {
-            e.printStackTrace();
             return -10000.0;
         }
     }
@@ -220,7 +173,7 @@ public class RunOptimizationAI {
         LOG.info("   HighRet      : {}", String.format("%.5f", bestGt.get(2).gene().doubleValue()));
         LOG.info("   MinMom15M    : {}", String.format("%.5f", bestGt.get(3).gene().doubleValue()));
         LOG.info("   MinTrend4H   : {}", String.format("%.5f", bestGt.get(4).gene().doubleValue()));
-        LOG.info("   DeadTrend24H : {}", String.format("%.5f", bestGt.get(5).gene().doubleValue()));
+        LOG.info("   (DeadTrend)  : DISABLED");
     }
 
     private static boolean runConsistencyCheck() {
@@ -228,24 +181,18 @@ public class RunOptimizationAI {
         double pMinRet1H = 0.02;
         double pHighRet = 0.08;
         double pMinMom15M = 0.01;
-        double pMinTrend4H = 0.03;
-        double pDeadTrend24H = -0.10;
+        double pTrend4H = 0.01; // Test value for Trend4H
 
-        LOG.info("   [Test Params]: Risk={}, Ret1H={} ...", pRisk, pMinRet1H);
+        LOG.info("   [Check Params]: Risk={}, Trend4H={} ...", pRisk, pTrend4H);
         Double firstScore = null;
         boolean isConsistent = true;
 
         for (int i = 1; i <= 3; i++) {
-            long tStart = System.currentTimeMillis();
             BackTestEngineAI testEngine = new BackTestEngineAI(
-                    pRisk, pMinRet1H, pHighRet, pMinMom15M, pMinTrend4H, pDeadTrend24H
+                    pRisk, pMinRet1H, pHighRet, pMinMom15M, pTrend4H, -0.99
             );
             Double currentScore = testEngine.run(
-                    time2MarketData, time2MarketRateChange, time2BtcReverse,
-                    symbol2TrendData, predictionMap
-            );
-            long tEnd = System.currentTimeMillis();
-            LOG.info("   Run #{} | Score: {} | Time: {} ms", i, String.format("%.8f", currentScore), (tEnd - tStart));
+                    time2MarketData, time2MarketRateChange, time2BtcReverse, predictionMap);
 
             if (firstScore == null) {
                 firstScore = currentScore;
@@ -258,18 +205,13 @@ public class RunOptimizationAI {
 
     private static void loadAndWarmUpData() throws Exception {
         LOG.info("Loading Metadata from Disk (Base Config: {})...", Configs.TIME_RUN);
-        LOG.info("Before load data cache:");
-        printRamUsage();
         CACHED_time2FundingFeeTrade = (ConcurrentHashMap<Long, Set<String>>) StorageSnappy.readObjectFromFile(FundingFeeManager.FILE_FUNDING_FEE);
         time2MarketRateChange = (TreeMap<Long, MarketRateChange>) StorageSnappy.readObjectFromFile(Configs.FILE_MARKET_RATE_CHANGE);
         time2MarketData = (TreeMap<Long, MarketDataObject>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
         time2BtcReverse = (TreeMap<Long, Double>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_BTC_REVERSE);
-        symbol2TrendData = (ConcurrentHashMap<String, Map<Long, Boolean>>) StorageSnappy.readObjectFromFile(Configs.FILE_TREND_BY_TIME);
         predictionMap = (TreeMap<Long, AiPredictionData>) StorageSnappy.readObjectFromFile(Configs.FILE_AI_PREDICTIONS);
         FundingFeeManager.getInstance();
 
-        LOG.info("After load data cache:");
-        printRamUsage();
         LOG.info("🔥 PRE-WARMING CACHE (Accessing Data)...");
         long startTimeLoad = Utils.sdfFile.parse(Configs.TIME_RUN).getTime();
         long endTimeLoad = System.currentTimeMillis();

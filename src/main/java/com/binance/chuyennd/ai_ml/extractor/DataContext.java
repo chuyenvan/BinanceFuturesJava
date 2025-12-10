@@ -20,7 +20,6 @@ public class DataContext {
     public static TreeMap<Long, KlineObjectSimple> ALL_BTC_DATA;
     public static TreeMap<Long, KlineObjectSimple> ALL_ETH_DATA;
     public static TreeMap<Long, MarketDataObject> CACHED_time2MarketData;
-    public static ConcurrentHashMap<String, Map<Long, Boolean>> CACHED_symbol2TrendData;
 
     // Du lieu truy xuat nhanh (bang index)
     public static List<Long> ALL_TIMESTAMPS_LIST;
@@ -32,9 +31,6 @@ public class DataContext {
 
     public static void loadAllStaticData() throws Exception {
         LOG.info("Bat dau tai du lieu vao DataContext...");
-
-        CACHED_symbol2TrendData = (ConcurrentHashMap<String, Map<Long, Boolean>>) StorageSnappy.readObjectFromFile(Configs.FILE_TREND_BY_TIME);
-        LOG.info("Tai xong Trend data.");
 
         CACHED_time2MarketData = (TreeMap<Long, MarketDataObject>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
         LOG.info("Tai xong Market data.");

@@ -1,8 +1,10 @@
 package com.binance.chuyennd.ai_ml.deepseek;
 
 //import com.binance.chuyennd.research.FundingFeeManager;
+
 import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
+import com.binance.chuyennd.research.FundingFeeManager;
 import com.binance.chuyennd.trading.FundingFeeManagerProduction;
 import com.binance.chuyennd.utils.Utils;
 import org.slf4j.Logger;
@@ -25,6 +27,7 @@ public class ComprehensiveMarketFeatureExtractor {
 //            LOG.error("Funding init failed", e);
 //        }
     }
+
     // --- NEW METHOD: Khởi tạo dữ liệu từ ListenAllTicker ---
     public void initDataFromTickerMap(ConcurrentHashMap<String, TreeMap<Long, KlineObjectSimple>> allTickers) {
         LOG.info("AI Feature Extractor: Syncing history from ListenAllTicker (TreeMap source)...");
@@ -58,6 +61,7 @@ public class ComprehensiveMarketFeatureExtractor {
         }
         LOG.info("AI Feature Extractor: Synced history for {} symbols.", count);
     }
+
     public MarketFeatures extractAllFeatures(long timestamp,
                                              Map<String, KlineObjectSimple> currentMarketData,
                                              MarketRateChange marketRateChange,
@@ -80,7 +84,38 @@ public class ComprehensiveMarketFeatureExtractor {
         extractBreadthFeatures(features, currentMarketData);
 
         // 3. 🔥 BASKET Features (Vi mô - Quan trọng cho bắt đáy)
-//        extractBasketFundingFeatures(features, targetBasket, timestamp);
+        extractBasketFundingFeatures(features, targetBasket, timestamp);
+        extractBasketTechnicalFeatures(features, targetBasket); // <--- MỚI
+
+        // 4. Time & Validate
+        extractTimeFeatures(features, timestamp);
+        validateAndCleanFeatures(features);
+
+        return features;
+    }
+
+    public MarketFeatures extractAllFeaturesProduction(long timestamp,
+                                                       Map<String, KlineObjectSimple> currentMarketData,
+                                                       MarketRateChange marketRateChange,
+                                                       List<String> targetBasket) {
+
+        MarketFeatures features = new MarketFeatures();
+        features.timestamp = timestamp;
+        features.dateKey = getDateString(timestamp);
+
+        updateMarketHistory(currentMarketData);
+
+        String anchorSymbol = "BTCUSDT";
+
+        // 1. BTC Features (Vĩ mô)
+        extractMomentumFeatures(features, anchorSymbol, marketRateChange);
+        extractVolatilityFeatures(features, anchorSymbol);
+        extractTechnicalIndicators(features, anchorSymbol);
+
+        // 2. Market Wide Features
+        extractBreadthFeatures(features, currentMarketData);
+
+        // 3. 🔥 BASKET Features (Vi mô - Quan trọng cho bắt đáy)
         extractBasketFundingFeaturesProduction(features, targetBasket, timestamp);
         extractBasketTechnicalFeatures(features, targetBasket); // <--- MỚI
 
@@ -89,6 +124,60 @@ public class ComprehensiveMarketFeatureExtractor {
         validateAndCleanFeatures(features);
 
         return features;
+    }
+
+    private void extractBasketFundingFeatures(MarketFeatures features, List<String> basket, long currentTime) {
+        try {
+            if (basket == null || basket.isEmpty()) {
+                // Fallback về BTC nếu không có basket
+                basket = Collections.singletonList("BTCUSDT");
+            }
+
+            double totalCurrentFunding = 0;
+            double totalAvg24H = 0;
+            int validCount = 0;
+
+            // Duyệt qua từng coin trong rổ để lấy Funding
+            for (String symbol : basket) {
+                Double currentFunding = FundingFeeManager.getInstance().getNearestFundingFee(symbol, currentTime);
+
+                if (currentFunding != null) {
+                    totalCurrentFunding += currentFunding;
+
+                    // Tính TB 24h cho coin này
+                    double sum24h = 0;
+                    int count24h = 0;
+                    for (int i = 0; i <= 24; i += 4) {
+                        long pastTime = currentTime - (i * 3600 * 1000L);
+                        Double past = FundingFeeManager.getInstance().getNearestFundingFee(symbol, pastTime);
+                        if (past != null) {
+                            sum24h += past;
+                            count24h++;
+                        }
+                    }
+                    if (count24h > 0) totalAvg24H += (sum24h / count24h);
+                    else totalAvg24H += currentFunding;
+
+                    validCount++;
+                }
+            }
+
+            if (validCount > 0) {
+                // Lấy trung bình cộng của cả rổ
+                features.fundingRateRaw = totalCurrentFunding / validCount;
+                features.fundingRateAvg24H = totalAvg24H / validCount;
+            } else {
+                features.fundingRateRaw = 0.0;
+                features.fundingRateAvg24H = 0.0;
+            }
+
+            features.fundingRateTrend = features.fundingRateRaw - features.fundingRateAvg24H;
+
+        } catch (Exception e) {
+            features.fundingRateRaw = 0.0;
+            features.fundingRateAvg24H = 0.0;
+            features.fundingRateTrend = 0.0;
+        }
     }
 
     // 🔥 HÀM MỚI: Tính Funding Fee trung bình của cả Basket

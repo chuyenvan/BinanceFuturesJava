@@ -15,12 +15,8 @@
  */
 package com.binance.chuyennd.bigchange.test;
 
-import com.binance.chuyennd.aerospike.DataManagerAerospike;
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
-import com.binance.chuyennd.client.BinanceFuturesClientSingleton;
 import com.binance.chuyennd.client.ClientSingleton;
-import com.binance.chuyennd.grid.SimpleMovingAverage4hManager;
-import com.binance.chuyennd.grid.SimpleMovingAverageDayManager;
 import com.binance.chuyennd.helper.TickerFuturesHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
@@ -37,8 +33,6 @@ import com.binance.chuyennd.utils.StorageSnappy;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
 import com.binance.client.model.enums.OrderSide;
-import com.binance.client.model.enums.OrderType;
-import com.binance.client.model.trade.Order;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -197,10 +191,6 @@ public class Test {
 //        }
 //        LOG.info("{} {}", priceMin2d, priceMax2d);
 
-
-        Double maDif1d = SimpleMovingAverageDayManager.getInstance().getDifferenceMa10AndMa60(Constants.SYMBOL_PAIR_BTC, time);
-        Double maDif4h = SimpleMovingAverage4hManager.getInstance().getDifferenceMa10AndMa60(Constants.SYMBOL_PAIR_BTC, time);
-        LOG.info("{} {}", maDif4h, maDif1d);
     }
 
     private static void removeSLRedis() {

@@ -20,7 +20,6 @@ public class MarketBigChangeDetector {
 //    public static ComprehensiveMarketFeatureExtractor featureExtractor = new ComprehensiveMarketFeatureExtractor();
 
 
-
     public static void main(String[] args) throws ParseException {
         try {
 //            Long startTime = Utils.sdfFileHour.parse("20250831 19:23").getTime();
@@ -283,7 +282,7 @@ public class MarketBigChangeDetector {
     }
 
     public static boolean isFundingFeeTrade(Double rateDown15MAvg, Double rateDownAvg, Double rateUpAvg,
-                                            Double minRate15Min60M, Boolean isTrendBuyWithETH) {
+                                            Double minRate15Min60M) {
         Double rateMin2Trade = -0.025;
         Double rateMin2TradeFull = -0.03;
         return (rateDown15MAvg < rateMin2Trade && rateDown15MAvg <= minRate15Min60M)
@@ -293,7 +292,7 @@ public class MarketBigChangeDetector {
     }
 
     public static boolean isDcaWithBtcReverse(Double rateLoss, Double budget, Double marginOfSym, Double priceClose,
-                                              Double lastEntry, Boolean isTrendBuyWithETH) {
+                                              Double lastEntry) {
         int marginRatioLevel1 = 2;
         int marginRatioLevel2 = 4;
         if (marginOfSym > marginRatioLevel1 * budget) {
@@ -314,15 +313,11 @@ public class MarketBigChangeDetector {
         return false;
     }
 
-    public static boolean isRateChangeAvailable2Trade(Double rateTicker, Double rateMax15M, Boolean isTrendBuyWithETH) {
-        if (isTrendBuyWithETH) {
-            return rateTicker < -0.011 || rateMax15M < -0.04;
-        } else {
-            return rateTicker < -0.013 || rateMax15M < -0.045;
-        }
+    public static boolean isRateChangeAvailable2Trade(Double rateTicker, Double rateMax15M) {
+        return rateTicker < -0.011 || rateMax15M < -0.04;
     }
 
-    public static boolean isRateChangeAvailable2TradeMass(Double rateTicker, Double rateMax15M, Boolean isTrendBuyWithETH) {
+    public static boolean isRateChangeAvailable2TradeMass(Double rateTicker, Double rateMax15M) {
         return rateTicker < -0.007 || rateMax15M < -0.04;
     }
 
@@ -335,12 +330,10 @@ public class MarketBigChangeDetector {
     }
 
     public static List<String> addSpecialSymbol(Map<String, KlineObjectSimple> symbol2Ticker, Set<String> symbol2BUY,
-                                                Boolean isTrendBuyWithETH, Set<String> symbolRunning) {
+                                                Set<String> symbolRunning) {
         List<String> hashSet = new ArrayList<>();
         Double rateCheck = -0.013;
-        if (isTrendBuyWithETH) {
-            rateCheck = -0.011;
-        }
+
         Set<String> symbol2Checks = new HashSet<>();
         symbol2Checks.addAll(Constants.specialSymbol);
         symbol2Checks.addAll(Constants.stableSymbol);

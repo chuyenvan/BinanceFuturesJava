@@ -19,7 +19,6 @@ public class RunOptimizationRam {
     private static final Logger LOG = LoggerFactory.getLogger(RunOptimizationRam.class);
 
     // CACHE DU LIEU TOAN CUC
-    public static ConcurrentHashMap<String, Map<Long, Boolean>> symbol2TrendData;
     public static TreeMap<Long, MarketDataObject> time2MarketData;
     public static TreeMap<Long, MarketRateChange> time2MarketRateChange;
     public static TreeMap<Long, Double> time2BtcReverse;
@@ -40,7 +39,6 @@ public class RunOptimizationRam {
             time2MarketRateChange = (TreeMap<Long, MarketRateChange>) StorageSnappy.readObjectFromFile(Configs.FILE_MARKET_RATE_CHANGE);
             time2MarketData = (TreeMap<Long, MarketDataObject>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
             time2BtcReverse = (TreeMap<Long, Double>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_BTC_REVERSE);
-            symbol2TrendData = (ConcurrentHashMap<String, Map<Long, Boolean>>) StorageSnappy.readObjectFromFile(Configs.FILE_TREND_BY_TIME);
             predictionMap = (TreeMap<Long, AiPredictionData>) StorageSnappy.readObjectFromFile(Configs.FILE_AI_PREDICTIONS);
 
             FundingFeeManager.getInstance();
@@ -84,7 +82,6 @@ public class RunOptimizationRam {
                         time2MarketData,
                         time2MarketRateChange,
                         time2BtcReverse,
-                        symbol2TrendData,
                         predictionMap
                 );
 

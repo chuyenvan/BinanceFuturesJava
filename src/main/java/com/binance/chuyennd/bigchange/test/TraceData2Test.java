@@ -44,6 +44,7 @@ public class TraceData2Test {
         // end debug
 //        if (args.length > 2) {
         traceDataByHand(args);
+//        showFileAll("OrderTestDone.data");
 //        } else {
 
 //        String symbol = "TIAUSDT";
@@ -250,7 +251,7 @@ public class TraceData2Test {
     }
 
     public static String statisticResult(TreeMap<Long, OrderTargetInfoTest> time2Order) {
-        int slow_days = 60;
+        int slow_days = 45;
         Map<MarketLevelChange, List<OrderTargetInfoTest>> level2Orders = new HashMap<>();
         Map<Long, List<OrderTargetInfoTest>> times2OrderDone = new HashMap<>();
         Map<Integer, List<Double>> year2Pnl = new HashMap<>();
@@ -299,7 +300,8 @@ public class TraceData2Test {
         TreeMap<Integer, Integer> year2OrderBuySlowCounter = new TreeMap();
 
         BalanceIndex balanceIndex = (BalanceIndex) Storage.readObjectFromFile("../simulator/storage/BalanceIndex.data");
-//        BalanceIndex balanceIndex = (BalanceIndex) Storage.readObjectFromFile("target/BalanceIndex.data");
+//        BalanceIndex balanceIndex = (BalanceIndex) Storage.readObjectFromFile("storage/BalanceIndex.data");
+
         for (Long date : balanceIndex.date2MarginMax.keySet()) {
             Double marginMax = balanceIndex.date2MarginMax.get(date);
             Double yearMarginMax = year2MarginMax.get(Utils.getYear(date));
@@ -496,7 +498,8 @@ public class TraceData2Test {
 
     private static void showFileAll(String fileName) {
         fileName = "../simulator/storage/" + fileName;
-//        fileName = "target/" + fileName;
+//        fileName = "storage/" + fileName;
+        BudgetManagerSimple.getInstance().updateBudget();
         TreeMap<Long, OrderTargetInfoTest> allOrderDone = (TreeMap<Long, OrderTargetInfoTest>) Storage.readObjectFromFile(fileName);
 
         Map<MarketLevelChange, List<OrderTargetInfoTest>> level2Order = new HashMap<>();

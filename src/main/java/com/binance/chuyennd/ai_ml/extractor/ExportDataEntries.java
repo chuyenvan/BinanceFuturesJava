@@ -14,8 +14,6 @@ import com.binance.chuyennd.research.ExportMarketData2File;
 import com.binance.chuyennd.research.FundingFeeManager;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
 import com.binance.chuyennd.tradecore.MarketBigChangeDetector;
-import com.binance.chuyennd.tradecore.TradeUtils;
-import com.binance.chuyennd.tradecore.TrendDetector;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.StorageSnappy;
 import com.binance.chuyennd.utils.Utils;
@@ -39,7 +37,6 @@ public class ExportDataEntries {
     public String currentMonth = null;
 
     public TreeMap<Long, OrderTargetInfoTest> allOrderDone;
-    public ConcurrentHashMap<String, Map<Long, Boolean>> symbol2TrendData;
 
     public TreeMap<Long, MarketDataObject> time2MarketData;
     public TreeMap<Long, MarketRateChange> time2MarketRateChange;
@@ -77,9 +74,6 @@ public class ExportDataEntries {
                 if (time2Tickers != null) {
                     for (Map.Entry<Long, Map<String, KlineObjectSimple>> entry : time2Tickers.entrySet()) {
                         Long time = entry.getKey();
-
-                        Boolean isTrendBuyWithBtc = getTrendBySymbol(Constants.SYMBOL_PAIR_BTC, time);
-                        Boolean isTrendBuyWithETH = getTrendBySymbol(Constants.SYMBOL_PAIR_ETH, time);
                         try {
                             Map<String, KlineObjectSimple> symbol2Ticker = entry.getValue();
                             for (String symbol : symbol2Ticker.keySet()) {
@@ -132,16 +126,14 @@ public class ExportDataEntries {
                                     Set<String> symbol2BUY = new HashSet<>();
                                     symbol2BUY.addAll(MarketBigChangeDetector.getTopSymbol(rate2Max, numberOrder, symbol2Ticker, symbolLocked));
                                     symbol2BUY.addAll(MarketBigChangeDetector.addSpecialSymbol(symbol2Ticker, symbol2BUY,
-                                            isTrendBuyWithETH, new HashSet<>()));
+                                            new HashSet<>()));
                                     // check create order new
                                     for (String symbol : symbol2BUY) {
                                         KlineObjectSimple ticker = symbol2Ticker.get(symbol);
                                         if (!Utils.isTickerAvailable(ticker)) {
                                             continue;
                                         }
-                                        List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
-
-                                        addEntries(symbol, ticker, levelChange, isTrendBuyWithBtc);
+                                        addEntries(symbol, ticker);
                                     }
                                 }
                             }
@@ -157,7 +149,7 @@ public class ExportDataEntries {
                                 Set<String> symbolHadTrade = new HashSet<>();
                                 // funding level 1
                                 if (MarketBigChangeDetector.isFundingFeeTrade(marketRateChange.rateDown15MAvg - 0.003,// ha dieu kien noi long lay them du lieu
-                                        marketRateChange.rateDownAvg, marketRateChange.rateUpAvg, minRate15Min60M, isTrendBuyWithETH)
+                                        marketRateChange.rateDownAvg, marketRateChange.rateUpAvg, minRate15Min60M)
                                 ) {
                                     Set<String> symbolFundingBuy = FundingFeeManager.getInstance().getFundingBuyNew(time);
                                     Set<String> symbolBuyFundingFee = new HashSet<>();
@@ -176,12 +168,12 @@ public class ExportDataEntries {
                                         if (priceMax15M != null) {
                                             rateMax15M = Utils.rateOf2Double(ticker.priceClose, priceMax15M);
                                         }
-                                        if (MarketBigChangeDetector.isRateChangeAvailable2Trade(rateTicker, rateMax15M, isTrendBuyWithETH)) {
+                                        if (MarketBigChangeDetector.isRateChangeAvailable2Trade(rateTicker, rateMax15M)) {
 
                                             symbolCanTradeMass.add(symbol);
-                                            addEntries(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY, isTrendBuyWithBtc);
+                                            addEntries(symbol, ticker);
                                         } else {
-                                            if (MarketBigChangeDetector.isRateChangeAvailable2TradeMass(rateTicker, rateMax15M, isTrendBuyWithETH)) {
+                                            if (MarketBigChangeDetector.isRateChangeAvailable2TradeMass(rateTicker, rateMax15M)) {
                                                 symbolCanTradeMass.add(symbol);
                                                 symbolHadTrade.add(symbol);
                                             }
@@ -194,7 +186,7 @@ public class ExportDataEntries {
                                             if (!Utils.isTickerAvailable(ticker)) {
                                                 continue;
                                             }
-                                            addEntries(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY, isTrendBuyWithBtc);
+                                            addEntries(symbol, ticker);
                                         }
                                     }
                                 }
@@ -228,36 +220,6 @@ public class ExportDataEntries {
 
     }
 
-    private Boolean getTrendBySymbol(String symbol, Long time) {
-        Map<Long, Boolean> trendData = symbol2TrendData.get(symbol);
-        if (trendData == null) {
-            trendData = new HashMap<>();
-            symbol2TrendData.put(symbol, trendData);
-        }
-        if (trendData.containsKey(time)) {
-            return trendData.get(time);
-        } else {
-            Boolean trend = false;
-            switch (symbol) {
-                case Constants.SYMBOL_PAIR_BTC:
-                    trend = TrendDetector.isTrendBTC(time);
-                    break;
-                case Constants.SYMBOL_PAIR_ETH:
-                    trend = TrendDetector.isTrendETH(time);
-                    break;
-            }
-            trendData.put(time, trend);
-            return trend;
-        }
-    }
-
-    private void logByProcessTime(Long startTimeRun, String msg, Long time) {
-        long duration = (System.currentTimeMillis() - startTimeRun);
-        if (duration > 100) {
-            LOG.info("{} {} {}", Utils.normalizeDateYYYYMMDDHHmm(time), msg, duration);
-        }
-    }
-
 
     private Double getMax15M(List<KlineObjectSimple> tickers) {
         Double priceMax15M = null;
@@ -288,24 +250,13 @@ public class ExportDataEntries {
         }
         time2MarketRateChange = (TreeMap<Long, MarketRateChange>) StorageSnappy.readObjectFromFile(Configs.FILE_MARKET_RATE_CHANGE);
         time2MarketData = (TreeMap<Long, MarketDataObject>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
-        time2BtcReverse = (TreeMap<Long, Double>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_BTC_REVERSE);
+       time2BtcReverse = (TreeMap<Long, Double>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_BTC_REVERSE);
 
-        if (new File(Configs.FILE_TREND_BY_TIME).exists()) {
-            symbol2TrendData = (ConcurrentHashMap<String, Map<Long, Boolean>>) StorageSnappy.readObjectFromFile(Configs.FILE_TREND_BY_TIME);
-        } else {
-            symbol2TrendData = new ConcurrentHashMap<>();
-        }
     }
 
 
-    public void addEntries(String symbol, KlineObjectSimple ticker, MarketLevelChange levelChange,
-                           Boolean isTrendBuyWithBtc) {
-        if (levelChange.equals(MarketLevelChange.SMALL_UP)
-                || levelChange.equals(MarketLevelChange.SMALL_DOWN_15M)) {
-            if (!isTrendBuyWithBtc) {
-                return;
-            }
-        }
+    public void addEntries(String symbol, KlineObjectSimple ticker) {
+
         Set<String> symbolEntries = time2Symbol2Trade.get(ticker.startTime.longValue());
         if (symbolEntries == null) {
             symbolEntries = new HashSet<>();
