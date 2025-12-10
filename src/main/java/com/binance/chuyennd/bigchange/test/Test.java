@@ -17,6 +17,7 @@ package com.binance.chuyennd.bigchange.test;
 
 import com.binance.chuyennd.aerospike.DataManagerAerospike;
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
+import com.binance.chuyennd.client.BinanceFuturesClientSingleton;
 import com.binance.chuyennd.client.ClientSingleton;
 import com.binance.chuyennd.grid.SimpleMovingAverage4hManager;
 import com.binance.chuyennd.grid.SimpleMovingAverageDayManager;
@@ -36,6 +37,8 @@ import com.binance.chuyennd.utils.StorageSnappy;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
 import com.binance.client.model.enums.OrderSide;
+import com.binance.client.model.enums.OrderType;
+import com.binance.client.model.trade.Order;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -60,7 +63,7 @@ public class Test {
     private final ConcurrentHashMap<String, Long> symbol2Processing = new ConcurrentHashMap<>();
 
     public static void main(String[] args) throws Exception {
-//        testProduction();
+        testProduction();
 //        checkRateProduction();
 //        changeLeverage();
 //        deleteAllSLAtRedis();
@@ -72,7 +75,7 @@ public class Test {
 //        System.out.println(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO).size());
 
 //        testsublist();
-        System.out.println(ClientSingleton.getInstance().syncRequestClient.getExchangeInformation().getSymbols());
+
 //        Long startTime = Utils.sdfFile.parse(Configs.TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
 //        TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers = DataManagerAerospike.readDataFromAerospike1M(startTime);
 //        LOG.info("time2Tickers size: {}", time2Tickers.size());
@@ -250,9 +253,9 @@ public class Test {
 //
         BinanceOrderTradingManager test = new BinanceOrderTradingManager();
         test.updatePositionInfo();
-//        test.processDynamicTP_SL();
-        test.initSLFirst();
-        test.checkSLErrorAtRedis();
+//        test.initSLFirst();
+        test.processDynamicTP_SL();
+
 
         // delete all order not rung at redis
 //        for (String symbol : RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO)) {

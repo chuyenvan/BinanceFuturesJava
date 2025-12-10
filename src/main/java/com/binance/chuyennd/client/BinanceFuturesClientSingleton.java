@@ -188,51 +188,7 @@ public class BinanceFuturesClientSingleton {
         return positions;
     }
 
-    public List<Order> getAllOpenOrderInfos() {
-        LinkedHashMap<String, Object> parameters = new LinkedHashMap<>();
-        List<Order> openOrders = new ArrayList<>();
-        try {
-            String respon = umFuturesClient.account().currentAllOpenOrders(parameters);
-            if (StringUtils.isNotEmpty(respon)) {
-                List<LinkedTreeMap> list = Utils.gson.fromJson(respon, List.class);
-                for (LinkedTreeMap linkedTreeMap : list) {
-                    try {
-                        openOrders.add(Utils.gson.fromJson(Utils.toJson(linkedTreeMap), Order.class));
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
 
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return openOrders;
-    }
-
-    public List<Order> getAllOpenOrderHistory(Long startTime) {
-        LinkedHashMap<String, Object> parameters = new LinkedHashMap<>();
-        List<Order> openOrders = new ArrayList<>();
-        try {
-            parameters.put("startTime", String.valueOf(startTime));
-            parameters.put("symbol", "BTCUSDT");
-            String respon = umFuturesClient.account().allOrders(parameters);
-            if (StringUtils.isNotEmpty(respon)) {
-                List<LinkedTreeMap> list = Utils.gson.fromJson(respon, List.class);
-                for (LinkedTreeMap linkedTreeMap : list) {
-                    try {
-                        openOrders.add(Utils.gson.fromJson(Utils.toJson(linkedTreeMap), Order.class));
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return openOrders;
-    }
 
     public static void main(String[] args) throws ParseException {
         tracePnlAsymbol();

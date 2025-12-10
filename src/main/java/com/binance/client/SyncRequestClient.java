@@ -385,5 +385,6 @@ public interface SyncRequestClient {
     JSONObject autoCancelAllOrders(String symbol, Long countdownTime);
     Order postAlgoOrder(String symbol, OrderSide side, OrderType orderType, String quantity,
                         String stopPrice, String reduceOnly);
-
+    List<Order> getOpenAlgoOrders(String symbol);
+    Order cancelAlgoOrder(Long algoId, String clientAlgoId);
 }

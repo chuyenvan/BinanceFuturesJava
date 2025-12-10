@@ -180,7 +180,7 @@ public class BinanceOrderTradingManager {
                 return;
             } else {
                 Order orderInfo = OrderHelper.newOrderMarket(order.symbol, order.side, order.quantity);
-                if (orderInfo == null){
+                if (orderInfo == null) {
                     return;
                 }
                 BudgetManager.getInstance().symbol2Level.put(order.symbol, order.marketLevel);
@@ -231,7 +231,6 @@ public class BinanceOrderTradingManager {
             }
             // reporter
             if (Utils.getCurrentMinute() % 15 == 0 && Utils.getCurrentSecond() == 30) {
-                executorServiceOrderNew.execute(() -> checkSLErrorAtRedis());
                 executorServiceOrderNew.execute(() -> new Reporter().buildReport());
             }
         } catch (Exception e) {
@@ -449,36 +448,6 @@ public class BinanceOrderTradingManager {
         }
     }
 
-    public void checkSLErrorAtRedis() {
-        try {
-            List<Order> orders = BinanceFuturesClientSingleton.getInstance().getAllOpenOrderInfos();
-            Set<String> symbolHasSLOrder = new HashSet<>();
-            for (Order order : orders) {
-                symbolHasSLOrder.add(order.getSymbol());
-            }
-            for (String symbol : RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO)) {
-                OrderTargetInfo orderInfo = getOrderInfo(symbol);
-                if (orderInfo == null) {
-                    continue;
-                }
-                if (!BudgetManager.getInstance().symbol2Pos.containsKey(symbol)) {
-                    continue;
-                }
-                if (orderInfo.priceSL != null && !symbolHasSLOrder.contains(symbol)) {
-                    LOG.info("Remove SL at redis of {} {} {}", symbol,
-                            orderInfo.priceSL, Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()));
-                    orderInfo.priceTP = null;
-                    orderInfo.priceSL = null;
-                    RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO, symbol, Utils.toJson(orderInfo));
-                }
-            }
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-    }
-
     public boolean createSL(PositionRisk pos, Double priceSL) {
         try {
             if (priceSL == null) {
@@ -494,17 +463,17 @@ public class BinanceOrderTradingManager {
             symbol2Processing.put(symbol, System.currentTimeMillis());
             Order orderSLResult = null;
             try {
-                List<Order> openOrders = BinanceFuturesClientSingleton.getInstance().getOpenOrders(pos.getSymbol());
+                List<Order> openOrders = ClientSingleton.getInstance().syncRequestClient.getOpenAlgoOrders(symbol);
                 if (!openOrders.isEmpty()) {
                     for (Order openOrder : openOrders) {
                         if (openOrder.getType().equals(OrderType.STOP_MARKET.toString())) {
-                            if (openOrder.getPrice().doubleValue() != priceSL) {
+                            if (openOrder.getStopPrice().doubleValue() != priceSL) {
                                 LOG.info("Cancel order sl to renew: {}", openOrder.getSymbol());
-                                BinanceFuturesClientSingleton.getInstance().cancelOrder(
-                                        openOrder.getSymbol(), openOrder.getClientOrderId());
+                                ClientSingleton.getInstance().syncRequestClient.cancelAlgoOrder(
+                                        openOrder.getOrderId(), null);
                             } else {
                                 LOG.info("{} have sl order -> not create sl", pos.getSymbol());
-                                return false;
+                                return true;
                             }
                         }
                         if (openOrder.getType().equals(OrderType.LIMIT.toString()) && openOrder.getPrice().doubleValue() == priceSL) {
