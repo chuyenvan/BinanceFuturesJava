@@ -1,4 +1,4 @@
-package com.binance.chuyennd.ai_ml.deepseek;
+package com.binance.chuyennd.ai_ml.features.export.entry;
 
 import java.io.Serializable;
 import java.util.Locale;
@@ -63,6 +63,8 @@ public class MarketFeatures implements Serializable {
     public double futureReturn24H;
     public double maxDrawdownNext4H;
     public double maxDrawdownNext24H;
+
+
 
     public String toCSVHeader() {
         return "timestamp,momentum1M,momentum5M,momentum15M,momentum1H,momentum4H,momentum24H," +

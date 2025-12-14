@@ -62,14 +62,12 @@ public class Configs {
     public static final Double FUNDING_MIN_TRADE = 0.00065;
     public static final int NUMBER_TICKER_RATE_CHANGE_MAX_TRADE = 60;
 
-    public static final String ENTRIES_DATA_FILE = "../storage/ai_ml/dl4j/entries.data";
+
     public static final Integer NUMBER_THREAD_ORDER_MANAGER = Configs.getInt("NUMBER_THREAD_ORDER_MANAGER");
-    public static boolean MOD_RUN_CAPITAL_CONSTANT = Configs.getBoolean("MOD_RUN_CAPITAL_CONSTANT");
     public static Integer NUMBER_ENTRY_EACH_SIGNAL = Configs.getInt("NUMBER_ENTRY_EACH_SIGNAL");
     public static Integer NUMBER_TICKER_CAL_RATE_CHANGE = Configs.getInt("NUMBER_TICKER_CAL_RATE_CHANGE");
     public static final Double RATE_PROFIT_STOP_MARKET = Configs.getDouble("RATE_PROFIT_STOP_MARKET");
-    public static Integer SMA_LONG = Configs.getInt("SMA_LONG");
-    public static Integer SMA_SHORT = Configs.getInt("SMA_SHORT");
+
     public static final Double RATE_FEE = Configs.getDouble("RATE_FEE");
     public static Integer LEVERAGE_ORDER = Configs.getInt("LEVERAGE_ORDER");
 
@@ -101,8 +99,9 @@ public class Configs {
     public static final int AEROSPIKE_PORT = 3000;
 
     public static final String AEROSPIKE_NAMESPACE = Configs.getString("AEROSPIKE_NAMESPACE"); //"ticker" ;
+    public static final String FILE_AI_PREDICTIONS = Configs.getString("FILE_AI_PREDICTIONS"); //"ticker" ;
 
-    public static final String FILE_AI_PREDICTIONS = "../storage/ai_ml/ai_predictions.data";
+//    public static final String FILE_AI_PREDICTIONS = "../storage/ai_ml/ai_predictions.data_v1";
     public static String getString(String configName) {
         return (String) properties.get(configName);
     }

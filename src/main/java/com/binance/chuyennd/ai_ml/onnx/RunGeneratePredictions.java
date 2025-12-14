@@ -1,10 +1,8 @@
 package com.binance.chuyennd.ai_ml.onnx;
 
-
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
-import com.binance.chuyennd.ai_ml.deepseek.ComprehensiveMarketFeatureExtractor;
-import com.binance.chuyennd.ai_ml.deepseek.MarketFeatures;
-import com.binance.chuyennd.ai_ml.deepseek.OnnxInferenceManager;
+import com.binance.chuyennd.ai_ml.features.export.entry.ComprehensiveMarketFeatureExtractor;
+import com.binance.chuyennd.ai_ml.features.export.entry.MarketFeatures;
 import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.research.FundingFeeManager;
@@ -19,16 +17,12 @@ import java.util.*;
 
 public class RunGeneratePredictions {
     private static final Logger LOG = LoggerFactory.getLogger(RunGeneratePredictions.class);
-
-    // File lưu kết quả dự báo (để Backtest dùng lại)
-
-
-    // Thư mục chứa Model ONNX
     private static final String MODEL_DIR = "../storage/ai_ml_data/ai_models_reg_final";
 
     public static void main(String[] args) {
         try {
-            FundingFeeManager.getInstance(); // Init Funding
+            System.setProperty("ai.onnxruntime.disable_telemetry", "true");
+            FundingFeeManager.getInstance();
             new RunGeneratePredictions().generateAndSave();
         } catch (Exception e) {
             LOG.error("Main error", e);
@@ -36,97 +30,128 @@ public class RunGeneratePredictions {
     }
 
     public void generateAndSave() throws Exception {
-        // 1. Khởi tạo AI Brain & Feature Extractor
         OnnxInferenceManager aiBrain = new OnnxInferenceManager(MODEL_DIR);
         ComprehensiveMarketFeatureExtractor featureExtractor = new ComprehensiveMarketFeatureExtractor();
 
-        // 2. Load Market Rate Data
         LOG.info("Loading Market Rates...");
         TreeMap<Long, MarketRateChange> time2Rate = loadMarketRateData();
 
-        // 3. Map chứa kết quả (Sẽ lưu xuống file)
-        // Dùng TreeMap để đảm bảo thứ tự thời gian
         TreeMap<Long, AiPredictionData> predictionMap = new TreeMap<>();
 
-        // 4. Cấu hình thời gian chạy (Từ 2021 đến nay)
         long currentTime = Utils.sdfFile.parse("20210101").getTime();
         long endTime = System.currentTimeMillis();
 
-        LOG.info("🚀 STARTING PREDICTION GENERATION...");
+        LOG.info("🚀 STARTING PREDICTION GENERATION (YEARLY SAVE MODE)...");
+
+        Calendar cal = Calendar.getInstance();
+        cal.setTimeInMillis(currentTime);
+        int currentYearProcessing = cal.get(Calendar.YEAR);
 
         int processedDays = 0;
 
-        // --- VÒNG LẶP CHÍNH ---
         while (currentTime <= endTime) {
             try {
-                // Load data hôm nay và ngày mai (để làm lookup)
+                cal.setTimeInMillis(currentTime);
+                int yearOfToday = cal.get(Calendar.YEAR);
+
+                // --- 🆕 ĐOẠN CODE MỚI THÊM: CHECK FILE EXISTING ---
+                // Kiểm tra nếu file của năm nay đã có trên ổ cứng thì bỏ qua cả năm luôn
+                String expectedFileName = Configs.FILE_AI_PREDICTIONS + "_" + yearOfToday;
+                if (new File(expectedFileName).exists()) {
+                    LOG.info("⏩ File data năm {} đã tồn tại ({}). Skip qua năm tiếp theo...", yearOfToday, expectedFileName);
+
+                    // Nhảy thời gian sang ngày 1 tháng 1 năm sau
+                    cal.set(Calendar.YEAR, yearOfToday + 1);
+                    cal.set(Calendar.DAY_OF_YEAR, 1);
+                    cal.set(Calendar.HOUR_OF_DAY, 0);
+                    cal.set(Calendar.MINUTE, 0);
+                    cal.set(Calendar.SECOND, 0);
+                    cal.set(Calendar.MILLISECOND, 0);
+
+                    currentTime = cal.getTimeInMillis();
+
+                    // Cập nhật biến theo dõi năm để logic phía dưới không bị loạn khi bắt đầu năm mới
+                    currentYearProcessing = yearOfToday + 1;
+                    continue;
+                }
+                // --------------------------------------------------
+
+                // 1. Kiểm tra chuyển giao năm (Năm cũ qua năm mới)
+                if (yearOfToday > currentYearProcessing) {
+                    saveAndClear(currentYearProcessing, predictionMap);
+                    currentYearProcessing = yearOfToday;
+                }
+
+                // 2. Load Data
                 TreeMap<Long, Map<String, KlineObjectSimple>> todayData =
                         DataManagerAerospikeFloatSim.readDataFromAerospike1M(currentTime);
-                TreeMap<Long, Map<String, KlineObjectSimple>> tomorrowData =
-                        DataManagerAerospikeFloatSim.readDataFromAerospike1M(currentTime + Utils.TIME_DAY);
 
-                TreeMap<Long, Map<String, KlineObjectSimple>> lookupData = new TreeMap<>();
-                if (todayData != null) lookupData.putAll(todayData);
-                if (tomorrowData != null) lookupData.putAll(tomorrowData);
+                TreeMap<Long, Map<String, KlineObjectSimple>> lookupData = todayData;
 
                 if (todayData != null && !todayData.isEmpty()) {
-                    // DUYỆT TỪNG PHÚT TRONG NGÀY
                     for (Map.Entry<Long, Map<String, KlineObjectSimple>> entry : todayData.entrySet()) {
                         Long timestamp = entry.getKey();
                         Map<String, KlineObjectSimple> marketData = entry.getValue();
                         MarketRateChange rateChange = time2Rate.get(timestamp);
 
-                        // 1. Xác định Rổ Coin (Basket) tại thời điểm đó
-                        // Dùng logic Top Losers giống hệt lúc train
                         List<String> targetBasket = findTop50LosersFromPeak15m(lookupData, timestamp);
 
-                        // Chỉ dự đoán nếu có rổ coin hợp lệ (> 3 coin)
-                        // Nếu không có basket, coi như thị trường sideway, không cần dự báo
                         if (targetBasket.size() >= 3) {
-
-                            // 2. Trích xuất Features
                             MarketFeatures features = featureExtractor.extractAllFeatures(
                                     timestamp, marketData, rateChange, targetBasket);
 
-                            // 3. Gọi AI Dự báo
                             OnnxInferenceManager.PredictionResult res = aiBrain.predictAll(features);
 
-                            // 4. Lưu kết quả
-                            AiPredictionData data = new AiPredictionData(
+                            predictionMap.put(timestamp, new AiPredictionData(
                                     timestamp,
                                     res.return15M, res.return1H, res.return4H, res.return24H,
                                     res.riskDrawdown4H, res.riskDrawdown24H
-                            );
-                            predictionMap.put(timestamp, data);
+                            ));
                         }
                     }
                 }
 
+                todayData = null; // Help GC
+                lookupData = null;
+
                 processedDays++;
-                if (processedDays % 10 == 0) {
-                    LOG.info("✅ Processed {} days. Total Predictions: {}", processedDays, predictionMap.size());
-                    // Lưu tạm để backup (Optional)
+                if (processedDays % 20 == 0) {
+                    LOG.info("... Day {}: Processed. Current Year Map Size: {}",
+                            Utils.normalizeDateYYYYMMDD(currentTime), predictionMap.size());
                 }
 
             } catch (Exception e) {
-                LOG.warn("Error day {}: {}", Utils.normalizeDateYYYYMMDD(currentTime), e.getMessage());
+                LOG.error("Error day " + currentTime, e);
             }
 
             currentTime += Utils.TIME_DAY;
         }
 
-        // 5. Lưu file cuối cùng
-        LOG.info("💾 Saving {} predictions to file: {}", predictionMap.size(), Configs.FILE_AI_PREDICTIONS);
-        StorageSnappy.writeObject2File(Configs.FILE_AI_PREDICTIONS, predictionMap);
+        // Lưu nốt phần còn lại (năm cuối cùng chưa hết hoặc năm hiện tại)
+        if (!predictionMap.isEmpty()) {
+            saveAndClear(currentYearProcessing, predictionMap);
+        }
 
         aiBrain.close();
-        LOG.info("🎉 DONE!");
+        LOG.info("🎉 DONE ALL!");
     }
 
-    // --- LOGIC TÌM BASKET (Copy y hệt từ RunFullDataCollection để nhất quán) ---
+    private void saveAndClear(int year, TreeMap<Long, AiPredictionData> map) {
+        if (map.isEmpty()) return;
+
+        String fileName = Configs.FILE_AI_PREDICTIONS + "_" + year;
+        LOG.info("💾 >>> END OF YEAR {}. Saving {} records to: {}", year, map.size(), fileName);
+
+        StorageSnappy.writeObject2File(fileName, map);
+        map.clear();
+        System.gc();
+        LOG.info("🧹 RAM Cleared. Ready for Year {}", year + 1);
+    }
+
+    // ... (Giữ nguyên các hàm findTop50Losers và loadMarketRateData như cũ)
     private List<String> findTop50LosersFromPeak15m(TreeMap<Long, Map<String, KlineObjectSimple>> dailyData, Long currentTimestamp) {
         Long startTime = currentTimestamp - (15 * 60 * 1000L);
-        Map<Long, Map<String, KlineObjectSimple>> recentData = dailyData.subMap(startTime, true, currentTimestamp, true);
+        NavigableMap<Long, Map<String, KlineObjectSimple>> recentData = dailyData.subMap(startTime, true, currentTimestamp, true);
         if (recentData.isEmpty()) return new ArrayList<>();
 
         Map<String, KlineObjectSimple> currentPrices = dailyData.get(currentTimestamp);
@@ -136,26 +161,21 @@ public class RunGeneratePredictions {
             for (Map.Entry<String, KlineObjectSimple> entry : minuteData.entrySet()) {
                 String symbol = entry.getKey();
                 double high = entry.getValue().maxPrice;
-                if (!maxPrices15m.containsKey(symbol) || high > maxPrices15m.get(symbol)) {
-                    maxPrices15m.put(symbol, high);
-                }
+                maxPrices15m.merge(symbol, high, Math::max);
             }
         }
 
         List<Map.Entry<String, Double>> drops = new ArrayList<>();
-        for (String symbol : currentPrices.keySet()) {
-            KlineObjectSimple currentKline = currentPrices.get(symbol);
-            if (currentKline.totalUsdt < 5000) continue;
+        for (Map.Entry<String, KlineObjectSimple> entry : currentPrices.entrySet()) {
+            String symbol = entry.getKey();
+            KlineObjectSimple kline = entry.getValue();
+            if (kline.totalUsdt < 5000) continue;
 
-            if (maxPrices15m.containsKey(symbol)) {
-                double peakPrice = maxPrices15m.get(symbol);
-                double currentPrice = currentKline.priceClose;
-                if (peakPrice > 0) {
-                    double dropFromPeak = (currentPrice - peakPrice) / peakPrice;
-                    // Logic Relaxed: Giảm > 0.1% là lấy
-                    if (dropFromPeak < -0.001) {
-                        drops.add(new AbstractMap.SimpleEntry<>(symbol, dropFromPeak));
-                    }
+            Double peakPrice = maxPrices15m.get(symbol);
+            if (peakPrice != null && peakPrice > 0) {
+                double drop = (kline.priceClose - peakPrice) / peakPrice;
+                if (drop < -0.001) {
+                    drops.add(new AbstractMap.SimpleEntry<>(symbol, drop));
                 }
             }
         }

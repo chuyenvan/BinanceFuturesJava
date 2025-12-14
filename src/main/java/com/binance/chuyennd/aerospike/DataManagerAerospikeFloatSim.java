@@ -33,7 +33,7 @@ public class DataManagerAerospikeFloatSim {
     private static final int BATCH_CHUNK_SIZE = 2000;
 
     // Cấu hình đa luồng
-    public static int threadCount = 16;
+    public static int threadCount = 2;
     public static ExecutorService executor = Executors.newFixedThreadPool(threadCount);
 
     private static AerospikeClient getClient() {

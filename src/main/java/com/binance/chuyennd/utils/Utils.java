@@ -68,6 +68,7 @@ public class Utils {
         cal.set(Calendar.MILLISECOND, 0);
         return cal.getTimeInMillis();
     }
+
     public static long getStartOfDayGMT7(long time) {
         Calendar cal = Calendar.getInstance(); // Nên set TimeZone nếu server khác múi giờ
         cal.setTimeInMillis(time);
@@ -84,6 +85,7 @@ public class Utils {
 
         return cal.getTimeInMillis();
     }
+
     public static int getCurrentHour() {
         Calendar cal = Calendar.getInstance();
         cal.setTimeZone(TimeZone.getTimeZone("GMT+7"));
@@ -466,7 +468,6 @@ public class Utils {
     }
 
 
-
     public static String formatDouble(Double volume, Integer number) {
         String format = "###.";
         for (int i = 0; i < number; i++) {
@@ -542,9 +543,9 @@ public class Utils {
             // check if File market data orver 15m -> delete file
             try {
                 File file = new File(Configs.FILE_TICKER_1M_STORAGE);
-                if (file.exists()){
+                if (file.exists()) {
                     long lastModify = file.lastModified();
-                    if (System.currentTimeMillis() - lastModify > 10 * Utils.TIME_MINUTE){
+                    if (System.currentTimeMillis() - lastModify > 10 * Utils.TIME_MINUTE) {
                         LOG.info("Delete file market {} {}", Configs.FILE_TICKER_1M_STORAGE, Utils.normalizeDateYYYYMMDDHHmm(lastModify));
                         FileUtils.delete(file);
                     }
@@ -648,4 +649,9 @@ public class Utils {
         // --- KẾT THÚC ĐOẠN CODE GHI PID ---
     }
 
+    public static void printMemoryUse() {
+        Runtime runtime = Runtime.getRuntime();
+        long usedMem = (runtime.totalMemory() - runtime.freeMemory()) / (1024 * 1024);
+        LOG.info(". RAM Used: {} MB", usedMem);
+    }
 }

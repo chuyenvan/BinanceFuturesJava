@@ -323,38 +323,6 @@ public class Test {
     }
 
 
-    private static void testData1MProduct() {
-        File folder = new File(Configs.FOLDER_TICKER_1M_PRODUCTION);
-        File[] dateFolder = folder.listFiles();
-        for (File folderDate : dateFolder) {
-            for (File file : folderDate.listFiles()) {
-                Map<String, KlineObjectNumber> symbol2Tickers = (Map<String, KlineObjectNumber>) Storage.readObjectFromFile(file.getPath());
-                int counterGap = 0;
-                for (Map.Entry<String, KlineObjectNumber> entry : symbol2Tickers.entrySet()) {
-                    String symbol = entry.getKey();
-                    KlineObjectNumber ticker = entry.getValue();
-                    try {
-                        List<KlineObjectNumber> tickerOnlines = TickerFuturesHelper.getTickerWithStartTime(symbol, Constants.INTERVAL_1M, ticker.startTime.longValue());
-                        KlineObjectNumber tickerOnline = tickerOnlines.get(0);
-                        if (!tickerOnline.priceClose.equals(ticker.priceClose)) {
-//                            LOG.info("{} {} {} {} {}", symbol, tickerOnline.priceClose, ticker.priceClose,
-//                                    Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()), Utils.toJson(ticker));
-                            counterGap++;
-                        }
-//                        if (symbol.equals("CKBUSDT")){
-//                        List<KlineObjectNumber> tickerOnlines = TickerFuturesHelper.getTickerWithStartTime(symbol, Constants.INTERVAL_1M, ticker.startTime.longValue());
-//                        KlineObjectNumber tickerOnline = tickerOnlines.get(0);
-//                            LOG.info("{} {} {} {} {}", symbol, tickerOnline.priceClose, ticker.priceClose,
-//                                    Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()), Utils.toJson(ticker));
-//                        }
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }
-                LOG.info("{} {}/{}", Utils.normalizeDateYYYYMMDDHHmm(Long.parseLong(file.getName())), counterGap, symbol2Tickers.size());
-            }
-        }
-    }
 
 
     private static void changeLeverage() {

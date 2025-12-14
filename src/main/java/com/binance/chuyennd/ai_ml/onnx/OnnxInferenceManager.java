@@ -1,12 +1,14 @@
-package com.binance.chuyennd.ai_ml.deepseek;
+package com.binance.chuyennd.ai_ml.onnx;
 
 import ai.onnxruntime.OnnxTensor;
 import ai.onnxruntime.OrtEnvironment;
 import ai.onnxruntime.OrtException;
 import ai.onnxruntime.OrtSession;
+import com.binance.chuyennd.ai_ml.features.export.entry.MarketFeatures;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Serializable;
 import java.nio.FloatBuffer;
 import java.util.Collections;
 import java.util.Map;
@@ -120,7 +122,7 @@ public class OnnxInferenceManager implements AutoCloseable {
         if (env != null) env.close();
     }
 
-    public static class PredictionResult {
+    public static class PredictionResult implements Serializable {
         public float return15M, return1H, return4H, return24H;
         public float riskDrawdown4H, riskDrawdown24H;
         public PredictionResult(float r15, float r1, float r4, float r24, float risk4, float risk24) {

@@ -9,6 +9,8 @@ import com.binance.chuyennd.ai_ml.data.HPOSmartCache;
 import com.binance.chuyennd.ai_ml.onnx.AIRejectFilter;
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.ai_ml.onnx.RunGeneratePredictions;
+import com.binance.chuyennd.ai_ml.v3.AiPredictionDataV3;
+import com.binance.chuyennd.ai_ml.v4.AiPredictionDataV4;
 import com.binance.chuyennd.bigchange.market.MarketDataObject;
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
 import com.binance.chuyennd.object.MarketRateChange;
@@ -78,8 +80,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         while (true) {
             TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers;
             try {
-//                time2Tickers = DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime);
-                time2Tickers = HPOSmartCache.getData(startTime);
+                time2Tickers = DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime);
+//                time2Tickers = HPOSmartCache.getData(startTime);
 
                 if (time2Tickers == null) {
                     LOG.info("File data error or not found for time: {}", Utils.normalizeDateYYYYMMDDHHmm(startTime));
@@ -161,7 +163,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 //                                        LOG.info("Not symbol 2 buy: {} {} ", levelChange, Utils.normalizeDateYYYYMMDDHHmm(time));
 //                                    }
                                     symbol2BUY.addAll(MarketBigChangeDetector.addSpecialSymbol(symbol2Ticker, symbol2BUY,
-                                             symbol2OrderRunning.keySet()));
+                                            symbol2OrderRunning.keySet()));
                                     List<String> symbolDcaLevel =
                                             DcaProcessor.getDCA(levelChange, time, BudgetManagerSimple.getInstance().getBudget(),
                                                     symbol2OrderRunning);
@@ -327,6 +329,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                         }
                     }
                 }
+                time2Tickers = null;
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -359,7 +362,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         } catch (Exception e) {
             e.printStackTrace();
         }
-
+        Utils.printMemoryUse();
     }
 
     private void logByProcessTime(Long startTimeRun, String msg, Long time) {
@@ -448,28 +451,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             }
         }
     }
-
-//    private Double getMaxRateIn90MForTradingStop(Long time, String symbol, List<KlineObjectSimple> tickers) {
-//
-//        // 2. Lấy dữ liệu từ Cache
-//        Double maxChangeIn60M = null;
-//        TreeMap<Long, Double> time2Rate = GLOBAL_CACHE_RATE_90M.get(symbol);
-//
-//        if (time2Rate != null) {
-//            maxChangeIn60M = time2Rate.get(time);
-//        }
-//
-//        // 3. Nếu chưa có thì tính toán và lưu vào Cache
-//        if (maxChangeIn60M == null) {
-//            maxChangeIn60M = MarketBigChangeDetector.getMaxRateIn90MForTradingStop(tickers);
-//
-//            // Đoạn này dùng computeIfAbsent để an toàn đa luồng khi tạo mới TreeMap
-//            GLOBAL_CACHE_RATE_90M.computeIfAbsent(symbol, k -> new TreeMap<>()).put(time, maxChangeIn60M);
-//
-//        }
-//
-//        return maxChangeIn60M;
-//    }
 
     private Double getMaxRateIn90MForTradingStop(Long time, String symbol, List<KlineObjectSimple> tickers) {
         Double maxChangeIn60M = null;
@@ -599,7 +580,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         order.tickerOpen = ticker;
         order.marketLevelChange = levelChange;
         order.rateChange = maxPrice15m;
-        order.predict = predictionMap.get(ticker.startTime.longValue());
         if (marketData != null) {
             order.marketData = marketData;
         }
@@ -674,6 +654,44 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         this.time2BtcReverse = time2BtcReverse;
 
         this.predictionMap = predictionMap; // <--- GÁN DỮ LIỆU AI
+        this.aiRejectFilter = aiRejectFilter;
+//        this.GLOBAL_CACHE_RATE_90M = globalCacheRate90m;
+    }
+
+    public void initDataReadyV3(TreeMap<Long, MarketDataObject> time2MarketData,
+                                TreeMap<Long, MarketRateChange> time2MarketRateChange,
+                                TreeMap<Long, Double> time2BtcReverse,
+                                TreeMap<Long, AiPredictionDataV3> predictionMap, AIRejectFilter aiRejectFilter) { // <--- THÊM THAM SỐ NÀY
+
+        // Reset Data Old
+        BudgetManagerSimple.getInstance().resetInstance();
+        allOrderDone = new TreeMap<>();
+
+        // Gán dữ liệu cache vào biến của instance
+        this.time2MarketData = time2MarketData;
+        this.time2MarketRateChange = time2MarketRateChange;
+        this.time2BtcReverse = time2BtcReverse;
+
+//        this.predictionMap = predictionMap; // <--- GÁN DỮ LIỆU AI
+        this.aiRejectFilter = aiRejectFilter;
+//        this.GLOBAL_CACHE_RATE_90M = globalCacheRate90m;
+    }
+
+    public void initDataReadyV4(TreeMap<Long, MarketDataObject> time2MarketData,
+                                TreeMap<Long, MarketRateChange> time2MarketRateChange,
+                                TreeMap<Long, Double> time2BtcReverse,
+                                TreeMap<Long, AiPredictionDataV4> predictionMap, AIRejectFilter aiRejectFilter) { // <--- THÊM THAM SỐ NÀY
+
+        // Reset Data Old
+        BudgetManagerSimple.getInstance().resetInstance();
+        allOrderDone = new TreeMap<>();
+
+        // Gán dữ liệu cache vào biến của instance
+        this.time2MarketData = time2MarketData;
+        this.time2MarketRateChange = time2MarketRateChange;
+        this.time2BtcReverse = time2BtcReverse;
+
+//        this.predictionMap = predictionMap; // <--- GÁN DỮ LIỆU AI
         this.aiRejectFilter = aiRejectFilter;
 //        this.GLOBAL_CACHE_RATE_90M = globalCacheRate90m;
     }

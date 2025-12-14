@@ -7,7 +7,6 @@ package com.binance.chuyennd.research;
 import com.binance.chuyennd.aerospike.DataManagerAerospike;
 import com.binance.chuyennd.bigchange.market.MarketDataObject;
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
-import com.binance.chuyennd.bigchange.data.DataManager;
 import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.tradecore.MarketBigChangeDetector;

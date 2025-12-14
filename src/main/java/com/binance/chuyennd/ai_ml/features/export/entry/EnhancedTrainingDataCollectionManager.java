@@ -1,4 +1,4 @@
-package com.binance.chuyennd.ai_ml.deepseek;
+package com.binance.chuyennd.ai_ml.features.export.entry;
 
 import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
@@ -27,7 +27,12 @@ public class EnhancedTrainingDataCollectionManager {
         collectedFeatures.clear();
         // LOG.info("Buffer cleared (Warm-up complete)");
     }
-
+    public List<String> identifyTargetBasket(long timestamp, Map<String, KlineObjectSimple> marketData) {
+        // 1. Cập nhật History trước
+        featureExtractor.updateMarketHistory(marketData);
+        // 2. Lấy danh sách từ logic nội tại của Extractor
+        return featureExtractor.findPotentialLosers(timestamp);
+    }
     public void processMarketData(long timestamp,
                                   Map<String, KlineObjectSimple> marketData,
                                   MarketRateChange marketRateChange, List<String> targetBasket,

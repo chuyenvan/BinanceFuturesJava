@@ -2,9 +2,11 @@ package com.binance.chuyennd.ticker;
 
 import com.binance.chuyennd.aerospike.AerospikeConfigs;
 import com.binance.chuyennd.aerospike.DataManagerAerospike;
+import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.helper.TickerFuturesHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
+import com.binance.chuyennd.proto.MinuteDataFinalProto;
 import com.binance.chuyennd.research.ExportMarketData2File;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Storage;
@@ -18,6 +20,7 @@ import org.xerial.snappy.Snappy;
 
 import java.io.File;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -47,7 +50,7 @@ public class TickerManager {
                 try {
                     if (Utils.getCurrentHour() == 4
                             || Utils.getCurrentHour() == 8
-                            || Utils.getCurrentHour() == 15
+                            || Utils.getCurrentHour() == 18
                             || Utils.getCurrentHour() == 21) {
                         updateFullTicker1M(Constants.SYMBOL_PAIR_BTC);
                         updateFullTicker1M(Constants.SYMBOL_PAIR_ETH);
@@ -69,6 +72,7 @@ public class TickerManager {
             }
         }).start();
     }
+
     public static void updateFullTicker1M(String symbol) {
         try {
 
@@ -160,8 +164,8 @@ public class TickerManager {
                 LOG.info("Start get data ticker 1m for date: {}", Utils.normalizeDateYYYYMMDDHHmm(time));
 
                 try {
-                    TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers = DataManagerAerospike.readDataFromAerospike1M(time);
-                    if (time2Tickers.size() >= 1440){
+                    TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers = DataManagerAerospikeFloatSim.readDataFromAerospike1M(time);
+                    if (time2Tickers.size() >= 1440) {
                         break;
                     }
                     TreeMap<Long, Map<String, KlineObjectSimple>> time2SymbolAndKline = getAllTicker1MBuyDate(time, symbols);
@@ -183,31 +187,59 @@ public class TickerManager {
         }
     }
 
+    // Thay thế toàn bộ hàm saveToAerospike cũ bằng hàm này
     private void saveToAerospike(TreeMap<Long, Map<String, KlineObjectSimple>> time2SymbolAndKline) {
         try {
+            SimpleDateFormat keyFormat = new SimpleDateFormat("yyyyMMdd-HHmm");
+
             for (Map.Entry<Long, Map<String, KlineObjectSimple>> entry : time2SymbolAndKline.entrySet()) {
                 Long timestamp = entry.getKey();
                 Map<String, KlineObjectSimple> symbolData = entry.getValue();
 
-                // Chuyển đổi sang Protobuf
-                // 2a. Chuyen Map thanh Protobuf byte[]
-                byte[] protoAsBytes = AerospikeConfigs.convertMapToProtoBytes(symbolData);
-                // 2b. Nen mang byte[] Protobuf bang Snappy
+                // --- 1. CHUYỂN ĐỔI SANG PROTOBUF TỐI ƯU (MinuteDataFinal) ---
+                MinuteDataFinalProto.MinuteDataFinal.Builder finalBuilder = MinuteDataFinalProto.MinuteDataFinal.newBuilder();
+
+                for (Map.Entry<String, KlineObjectSimple> item : symbolData.entrySet()) {
+                    String symbol = item.getKey();
+                    KlineObjectSimple kline = item.getValue();
+
+                    // Xử lý Symbol: Cắt "USDT" nếu cần (để tiết kiệm không gian như DataMigrator)
+                    // Hoặc giữ nguyên nếu bạn muốn (nhưng nên thống nhất với DataMigrator)
+                    // Ví dụ: Giữ nguyên tên đầy đủ để an toàn
+                    String storedSymbol = symbol;
+
+                    MinuteDataFinalProto.KlineObjectOptimized.Builder klineOpt = MinuteDataFinalProto.KlineObjectOptimized.newBuilder();
+                    // Ép kiểu Double -> Float
+                    klineOpt.setPriceOpen(kline.priceOpen.floatValue());
+                    klineOpt.setMaxPrice(kline.maxPrice.floatValue());
+                    klineOpt.setMinPrice(kline.minPrice.floatValue());
+                    klineOpt.setPriceClose(kline.priceClose.floatValue());
+                    klineOpt.setTotalUsdt(kline.totalUsdt.floatValue());
+
+                    // KHÔNG setStartTime (đã bỏ để tối ưu)
+
+                    finalBuilder.putTickers(storedSymbol, klineOpt.build());
+                }
+
+                MinuteDataFinalProto.MinuteDataFinal finalData = finalBuilder.build();
+
+                // --- 2. NÉN DỮ LIỆU ---
+                byte[] protoAsBytes = finalData.toByteArray();
                 byte[] compressedData = Snappy.compress(protoAsBytes);
 
-                // Tạo key cho Aerospike
-                String keyString = AerospikeConfigs.keyFormat.format(new Date(timestamp));
+                // --- 3. GHI VÀO AEROSPIKE (Set: kline_1m_opt) ---
+                String keyString = keyFormat.format(new Date(timestamp));
 
-                // Lưu vào Aerospike (cần implement Aerospike client)
-                DataManagerAerospike.writeDataToAerospike(keyString, compressedData);
+                // Gọi hàm ghi đè (cần update hàm này trong DataManagerAerospike hoặc gọi trực tiếp Client ở đây)
+                // Để đơn giản, ta tái sử dụng hàm writeDataToAerospike nhưng truyền tên SET mới
+                DataManagerAerospike.writeDataToAerospikeOptimized(keyString, compressedData);
             }
-            LOG.info("Successfully saved {} records to Aerospike", time2SymbolAndKline.size());
+            LOG.info("Successfully saved {} records to Aerospike (Optimized Set)", time2SymbolAndKline.size());
         } catch (Exception e) {
             LOG.error("Error saving to Aerospike: {}", e.getMessage());
             e.printStackTrace();
         }
     }
-
 
     public void startResetTicker1DAnd4HSimple() {
         try {

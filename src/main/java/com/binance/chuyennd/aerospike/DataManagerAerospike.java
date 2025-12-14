@@ -355,4 +355,18 @@ public class DataManagerAerospike {
             e.printStackTrace();
         }
     }
+    // Thêm vào DataManagerAerospike.java
+
+    // Hàm mới để ghi vào set tối ưu
+    public static void writeDataToAerospikeOptimized(String keyString, byte[] compressedData) {
+        try {
+            // Sử dụng tên SET mới: kline_1m_opt
+            Key key = new Key(Configs.AEROSPIKE_NAMESPACE, "kline_1m_opt", keyString);
+            Bin bin = new Bin("data", compressedData);
+            getClient().put(AerospikeConfigs.writePolicy, key, bin);
+        } catch (Exception e) {
+            System.err.println("Loi khi ghi du lieu vao Aerospike Opt voi key: " + keyString);
+            e.printStackTrace();
+        }
+    }
 }

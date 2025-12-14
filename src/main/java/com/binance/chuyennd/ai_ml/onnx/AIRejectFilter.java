@@ -1,6 +1,8 @@
 package com.binance.chuyennd.ai_ml.onnx; // Lưu ý package
 
-import com.binance.chuyennd.ai_ml.deepseek.OnnxInferenceManager;
+import com.binance.chuyennd.ai_ml.v3.AiPredictionDataV3;
+import com.binance.chuyennd.ai_ml.v3.OnnxInferenceManagerV3;
+import com.binance.chuyennd.ai_ml.v4.AiPredictionDataV4;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,7 +43,24 @@ public class AIRejectFilter {
                 prediction.riskDrawdown4H
         );
     }
-
+    public FilterResult checkSignalV3(AiPredictionDataV3 prediction) {
+        return evaluate(
+                prediction.p15M,
+                prediction.p1H,
+                prediction.p4H,
+                0.0f, // V3 không có 24H -> Truyền 0.0 để bỏ qua check 24H
+                prediction.maxDD4H // Map maxDrawdown4H vào Risk
+        );
+    }
+    public FilterResult checkSignalV4(AiPredictionDataV4 prediction) {
+        return evaluate(
+                prediction.p15M,
+                prediction.p1H,
+                prediction.p4H,
+                prediction.p24H,
+                prediction.maxDD4H // Map maxDrawdown4H vào Risk
+        );
+    }
     public  FilterResult checkSignal(AiPredictionData prediction) {
         // Lấy đủ 4 chỉ số Return và 1 chỉ số Risk
         return evaluate(

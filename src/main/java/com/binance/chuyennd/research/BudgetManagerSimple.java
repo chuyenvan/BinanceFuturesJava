@@ -57,26 +57,11 @@ public class BudgetManagerSimple {
         // Xóa dữ liệu cũ của luồng hiện tại để bắt đầu test mới
         threadLocalInstance.remove();
     }
+
     public void updateBudget() {
         investing = 0d;
         try {
-            // for test number order
-            if (Configs.MOD_RUN_CAPITAL_CONSTANT) {
-                BUDGET_PER_ORDER = balanceBasic / Configs.number_order_budget;
-            } else {
-                if (balanceCurrent / 3 > balanceBasic) {
-                    BUDGET_PER_ORDER = (balanceCurrent / 3) / Configs.number_order_budget;
-                } else {
-                    BUDGET_PER_ORDER = balanceBasic / Configs.number_order_budget;
-                }
-            }
-//            if (balanceCurrent != null && balanceCurrent > 0) {
-//                BUDGET_PER_ORDER = balanceCurrent + unProfit/ number_order_budget;
-//            } else {
-//                BUDGET_PER_ORDER = balanceBasic / number_order_budget;
-//            }
-
-//            LOG.info("Update Budget: {}", BUDGET_PER_ORDER);
+            BUDGET_PER_ORDER = balanceBasic / Configs.number_order_budget;
         } catch (Exception e) {
             e.printStackTrace();
         }
