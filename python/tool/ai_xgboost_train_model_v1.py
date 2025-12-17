@@ -132,7 +132,7 @@ class V1Trainer:
         best_params = self.optimize_xgboost(X_train, y_train, X_test, y_test, n_trials)
 
         logger.info("Training FINAL V1 Model (High Estimators)...")
-        best_params['n_estimators'] = 20000
+        best_params['n_estimators'] = 12000
         best_params['learning_rate'] = min(best_params['learning_rate'], 0.005)
         best_params['n_jobs'] = 2 # <--- DA SUA THANH 2
 

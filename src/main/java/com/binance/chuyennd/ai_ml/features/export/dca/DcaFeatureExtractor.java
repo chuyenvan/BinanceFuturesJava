@@ -2,6 +2,7 @@ package com.binance.chuyennd.ai_ml.features.export.dca;
 
 import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
+import com.binance.chuyennd.research.FundingFeeManager;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
 import com.binance.chuyennd.utils.Utils;
 
@@ -11,7 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class DcaFeatureExtractor {
 
     private final Map<String, Deque<KlineObjectSimple>> symbolHistoryMap = new ConcurrentHashMap<>();
-    private final int maxHistorySize = 1000;
+    private final int maxHistorySize = 1500;
 
     public void updateMarketHistory(Map<String, KlineObjectSimple> currentMarketData) {
         for (Map.Entry<String, KlineObjectSimple> entry : currentMarketData.entrySet()) {
@@ -19,7 +20,6 @@ public class DcaFeatureExtractor {
             KlineObjectSimple kline = entry.getValue();
             Deque<KlineObjectSimple> history = symbolHistoryMap.computeIfAbsent(symbol, k -> new ArrayDeque<>());
 
-            // Fix: Ép kiểu startTime từ Double sang long để so sánh
             if (!history.isEmpty() && (long)history.getLast().startTime.doubleValue() == (long)kline.startTime.doubleValue()) {
                 history.removeLast();
             }
@@ -28,14 +28,15 @@ public class DcaFeatureExtractor {
         }
     }
 
+    // [UPDATE] Thêm tham số dcaImpactRatio
     public DcaMarketFeatures extractFeatures(long timestamp,
                                              OrderTargetInfoTest order,
                                              MarketRateChange marketRate,
-                                             Map<String, KlineObjectSimple> currentSnapshots) {
+                                             Map<String, KlineObjectSimple> currentSnapshots,
+                                             double dcaImpactRatio) {
 
         DcaMarketFeatures f = new DcaMarketFeatures();
         f.timestamp = timestamp;
-        f.symbol = order.symbol;
         f.dateKey = Utils.normalizeDateYYYYMMDD(timestamp);
 
         KlineObjectSimple coinKline = currentSnapshots.get(order.symbol);
@@ -46,24 +47,17 @@ public class DcaFeatureExtractor {
         // --- GROUP 1: POSITION HEALTH ---
         f.currentDrawdown = (coinKline.priceClose - order.priceEntry) / order.priceEntry;
 
-        double price15mAgo = getPriceAgo(order.symbol, 15);
+        double price1HAgo = getPriceAgo(order.symbol, 60);
         double pnlNow = f.currentDrawdown;
-        double pnl15mAgo = (price15mAgo > 0) ? (price15mAgo - order.priceEntry) / order.priceEntry : pnlNow;
-        f.lossVelocity = pnlNow - pnl15mAgo;
-
-        f.orderAgeHours = (double) (timestamp - order.timeStart) / (3600 * 1000);
+        double pnl1HAgo = (price1HAgo > 0) ? (price1HAgo - order.priceEntry) / order.priceEntry : pnlNow;
+        f.lossVelocity1H = pnlNow - pnl1HAgo;
 
         // --- GROUP 2: FEASIBILITY ---
-        double volOld = order.quantity;
-        double volNew = order.quantity;
-        f.dcaImpactRatio = volNew / volOld;
-
-        double avgPriceNew = (order.priceEntry * volOld + coinKline.priceClose * volNew) / (volOld + volNew);
-        f.simulatedRecoveryDiff = (avgPriceNew - coinKline.priceClose) / coinKline.priceClose;
+        f.dcaImpactRatio = dcaImpactRatio; // [UPDATE] Sử dụng giá trị random từ bên ngoài
 
         // --- GROUP 3: RELATIVE STRENGTH ---
         double coinRet15 = getReturn(order.symbol, 15);
-        double btcRet15 = getReturn("BTCUSDT", 15); // Tự tính BTC return 15m từ lịch sử
+        double btcRet15 = getReturn("BTCUSDT", 15);
 
         f.instantAlpha = coinRet15 - btcRet15;
 
@@ -74,39 +68,65 @@ public class DcaFeatureExtractor {
         double btcBounce = (btcLow1H > 0) ? (btcKline.priceClose - btcLow1H) / btcLow1H : 0;
 
         f.recoveryElasticity = (btcBounce > 0.0001) ? coinBounce / btcBounce : 0;
-
         f.dangerIndex = f.currentDrawdown * (btcRet15 - coinRet15);
 
         // --- GROUP 4: MARKET CONTEXT ---
         if (marketRate != null) {
             f.globalRateDownAvg = marketRate.rateDownAvg;
-            // Fix: Sử dụng btcRet15 vừa tính thay vì marketRate.rateBtcDown15M (không tồn tại)
-            f.isPanicMode = (marketRate.rateDownAvg < -0.04 || btcRet15 < -0.02) ? 1 : 0;
             f.crashVelocity = marketRate.rateDownAvg - marketRate.rateDown15MAvg;
         }
 
+        Double funding = FundingFeeManager.getInstance().getNearestFundingFee(order.symbol, timestamp);
+        f.fundingRate = (funding != null) ? funding : 0.0;
+
+        // BTC Indicators
+        f.btcMomentum15M = btcRet15;
+        f.btcMomentum1H = getReturn("BTCUSDT", 60);
+        f.btcMomentum4H = getReturn("BTCUSDT", 240);
+        f.btcMomentum24H = getReturn("BTCUSDT", 1440);
+
+        double btcRet5 = getReturn("BTCUSDT", 5);
+        f.btcMomentumAcceleration = btcRet5 - f.btcMomentum15M;
+        f.ethTrendStrength = getReturn("ETHUSDT", 60);
+
         // --- GROUP 5: TECHNICAL ---
-        f.rsi14 = calculateRSI(order.symbol, 14);
+        f.rsi1H = calculateRSIHighTimeframe(order.symbol, 14, 60);
         double avgVol4H = getAvgVolume(order.symbol, 240);
         f.volumeAnomaly = (avgVol4H > 0) ? coinKline.totalUsdt / avgVol4H : 1.0;
 
         double low24H = getLowInPeriod(order.symbol, 1440);
         f.distFromLow24H = (low24H > 0) ? (coinKline.priceClose - low24H) / low24H : 0;
 
+        f.maxRateChange60M = calculateMaxRateChange(order.symbol, 60);
+
         return f;
     }
 
-    // --- Helpers (Fix kiểu Double -> Long) ---
+    // --- Helpers (Giữ nguyên) ---
+    private double calculateMaxRateChange(String symbol, int minutes) {
+        Deque<KlineObjectSimple> h = symbolHistoryMap.get(symbol);
+        if (h == null || h.isEmpty()) return 0.0;
+        long lastTime = (long) h.getLast().startTime.doubleValue();
+        long cutoff = lastTime - (minutes * 60000L);
+        double maxPrice = -Double.MAX_VALUE;
+        double minPrice = Double.MAX_VALUE;
+        Iterator<KlineObjectSimple> it = h.descendingIterator();
+        while (it.hasNext()) {
+            KlineObjectSimple k = it.next();
+            if ((long)k.startTime.doubleValue() < cutoff) break;
+            if (k.maxPrice > maxPrice) maxPrice = k.maxPrice;
+            if (k.minPrice < minPrice) minPrice = k.minPrice;
+        }
+        if (maxPrice == -Double.MAX_VALUE || minPrice == Double.MAX_VALUE || minPrice == 0) return 0.0;
+        return (maxPrice - minPrice) / minPrice;
+    }
+
     private double getPriceAgo(String symbol, int minutes) {
         Deque<KlineObjectSimple> h = symbolHistoryMap.get(symbol);
         if (h == null || h.isEmpty()) return -1;
-
-        // Fix: Ép kiểu Double -> Long
         long lastTime = (long) h.getLast().startTime.doubleValue();
         long targetTime = lastTime - (minutes * 60000L);
-
         for (KlineObjectSimple k : h) {
-            // Fix: Ép kiểu khi so sánh
             if ((long)k.startTime.doubleValue() >= targetTime) return k.priceClose;
         }
         return h.getFirst().priceClose;
@@ -122,16 +142,12 @@ public class DcaFeatureExtractor {
     private double getLowInPeriod(String symbol, int minutes) {
         Deque<KlineObjectSimple> h = symbolHistoryMap.get(symbol);
         if (h == null || h.isEmpty()) return -1;
-
-        // Fix: Ép kiểu Double -> Long
         long lastTime = (long) h.getLast().startTime.doubleValue();
         long cutoff = lastTime - (minutes * 60000L);
-
         double min = Double.MAX_VALUE;
         Iterator<KlineObjectSimple> it = h.descendingIterator();
         while (it.hasNext()) {
             KlineObjectSimple k = it.next();
-            // Fix: Ép kiểu khi so sánh
             if ((long)k.startTime.doubleValue() < cutoff) break;
             if (k.minPrice < min) min = k.minPrice;
         }
@@ -141,17 +157,13 @@ public class DcaFeatureExtractor {
     private double getAvgVolume(String symbol, int minutes) {
         Deque<KlineObjectSimple> h = symbolHistoryMap.get(symbol);
         if (h == null || h.isEmpty()) return 0;
-
-        // Fix: Ép kiểu Double -> Long
         long lastTime = (long) h.getLast().startTime.doubleValue();
         long cutoff = lastTime - (minutes * 60000L);
-
         double sum = 0;
         int count = 0;
         Iterator<KlineObjectSimple> it = h.descendingIterator();
         while (it.hasNext()) {
             KlineObjectSimple k = it.next();
-            // Fix: Ép kiểu khi so sánh
             if ((long)k.startTime.doubleValue() < cutoff) break;
             sum += k.totalUsdt;
             count++;
@@ -159,13 +171,21 @@ public class DcaFeatureExtractor {
         return (count == 0) ? 0 : sum / count;
     }
 
-    private double calculateRSI(String symbol, int period) {
+    private double calculateRSIHighTimeframe(String symbol, int period, int intervalMinutes) {
         Deque<KlineObjectSimple> h = symbolHistoryMap.get(symbol);
-        if (h == null || h.size() <= period) return 50.0;
+        if (h == null || h.size() < period * intervalMinutes) return 50.0;
         List<KlineObjectSimple> data = new ArrayList<>(h);
+        int size = data.size();
         double sumGain = 0, sumLoss = 0;
-        for (int i = data.size() - period; i < data.size(); i++) {
-            double change = data.get(i).priceClose - data.get(i - 1).priceClose;
+        List<Double> closes = new ArrayList<>();
+        for (int i = size - 1; i >= 0; i -= intervalMinutes) {
+            closes.add(data.get(i).priceClose);
+            if (closes.size() > period + 1) break;
+        }
+        Collections.reverse(closes);
+        if (closes.size() < period + 1) return 50.0;
+        for (int i = 1; i < closes.size(); i++) {
+            double change = closes.get(i) - closes.get(i - 1);
             if (change > 0) sumGain += change; else sumLoss -= change;
         }
         if (sumLoss == 0) return 100.0;

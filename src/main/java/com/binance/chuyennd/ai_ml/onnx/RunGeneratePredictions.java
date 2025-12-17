@@ -17,7 +17,7 @@ import java.util.*;
 
 public class RunGeneratePredictions {
     private static final Logger LOG = LoggerFactory.getLogger(RunGeneratePredictions.class);
-    private static final String MODEL_DIR = "../storage/ai_ml_data/ai_models_reg_final";
+    private static final String MODEL_DIR = "../storage/ai_ml_data/ai_models_reg_v3";
 
     public static void main(String[] args) {
         try {

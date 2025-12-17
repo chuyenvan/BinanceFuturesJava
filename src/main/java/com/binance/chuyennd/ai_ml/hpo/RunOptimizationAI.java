@@ -1,5 +1,6 @@
 package com.binance.chuyennd.ai_ml.hpo;
 
+import com.binance.chuyennd.ai_ml.data.HPOSmartCache;
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.bigchange.market.MarketDataObject;
 import com.binance.chuyennd.object.MarketRateChange;
@@ -39,13 +40,13 @@ public class RunOptimizationAI {
 
     public static void main(String[] args) {
         LOG.info("==============================================");
-        LOG.info("===   AI HPO CHECKER (V3) - ULTRA FAST     ===");
+        LOG.info("===   AI HPO CHECKER {} - ULTRA FAST     ===", Configs.FILE_AI_PREDICTIONS);
         LOG.info("===   TARGET: ~100-150 ITERATIONS ONLY     ===");
         LOG.info("==============================================\n");
 
         try {
             // Đảm bảo Time Range phủ đủ 3 năm để so sánh công bằng với V2
-            Configs.TIME_RUN = "20230101";
+            Configs.TIME_RUN = "20220101";
             loadAndWarmUpData();
         } catch (Exception e) {
             e.printStackTrace();
@@ -129,13 +130,15 @@ public class RunOptimizationAI {
 
         // Warmup (Chỉ cần 1 lần duyệt nhanh để đẩy vào RAM)
         LOG.info("🔥 Warming up cache...");
+        Utils.printMemoryUse();
         long startTimeLoad = Utils.sdfFile.parse(Configs.TIME_RUN).getTime();
         long endTimeLoad = System.currentTimeMillis();
         long current = startTimeLoad;
-//        while (current < endTimeLoad) {
-//            HPOSmartCache.getData(current);
-//            current += Utils.TIME_DAY;
-//        }
+        while (current < endTimeLoad) {
+            HPOSmartCache.getData(current);
+            current += Utils.TIME_DAY;
+        }
+        Utils.printMemoryUse();
         LOG.info("✅ Cache Ready.");
     }
 }

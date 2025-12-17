@@ -28,6 +28,14 @@ public class OnnxInferenceManager implements AutoCloseable {
         OrtSession.SessionOptions opts = new OrtSession.SessionOptions();
         opts.setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT);
 
+        // --- THÊM ĐOẠN NÀY ---
+        // Giới hạn số luồng tính toán song song bên trong một operator (phép tính ma trận)
+        opts.setIntraOpNumThreads(2);
+
+        // Giới hạn số luồng chạy song song giữa các operator (thường để 1 hoặc 2)
+        opts.setInterOpNumThreads(1);
+        // ---------------------
+
         // Load Models & Scalers
         this.sc15M = env.createSession(modelDir + "/Scaler_Return15M.onnx", opts);
         this.mod15M = env.createSession(modelDir + "/Model_Regressor_Return15M.onnx", opts);
