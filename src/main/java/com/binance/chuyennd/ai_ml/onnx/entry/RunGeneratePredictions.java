@@ -1,4 +1,4 @@
-package com.binance.chuyennd.ai_ml.onnx;
+package com.binance.chuyennd.ai_ml.onnx.entry;
 
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.ai_ml.features.export.entry.ComprehensiveMarketFeatureExtractor;
@@ -56,7 +56,7 @@ public class RunGeneratePredictions {
 
                 // --- 🆕 ĐOẠN CODE MỚI THÊM: CHECK FILE EXISTING ---
                 // Kiểm tra nếu file của năm nay đã có trên ổ cứng thì bỏ qua cả năm luôn
-                String expectedFileName = Configs.FILE_AI_PREDICTIONS + "_" + yearOfToday;
+                String expectedFileName = Configs.FILE_AI_ENTRY_PREDICTIONS + "_" + yearOfToday;
                 if (new File(expectedFileName).exists()) {
                     LOG.info("⏩ File data năm {} đã tồn tại ({}). Skip qua năm tiếp theo...", yearOfToday, expectedFileName);
 
@@ -139,7 +139,7 @@ public class RunGeneratePredictions {
     private void saveAndClear(int year, TreeMap<Long, AiPredictionData> map) {
         if (map.isEmpty()) return;
 
-        String fileName = Configs.FILE_AI_PREDICTIONS + "_" + year;
+        String fileName = Configs.FILE_AI_ENTRY_PREDICTIONS + "_" + year;
         LOG.info("💾 >>> END OF YEAR {}. Saving {} records to: {}", year, map.size(), fileName);
 
         StorageSnappy.writeObject2File(fileName, map);

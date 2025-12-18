@@ -1,4 +1,4 @@
-package com.binance.chuyennd.ai_ml.onnx;
+package com.binance.chuyennd.ai_ml.onnx.entry;
 
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.StorageSnappy;
@@ -13,7 +13,7 @@ public class MergePredictionFiles {
     private static final Logger LOG = LoggerFactory.getLogger(MergePredictionFiles.class);
 
     // Tên file đầu ra cuối cùng (file tổng)
-    private static final String FINAL_OUTPUT_FILE = Configs.FILE_AI_PREDICTIONS + "_FULL";
+    private static final String FINAL_OUTPUT_FILE = Configs.FILE_AI_ENTRY_PREDICTIONS + "_FULL";
 
     public static void main(String[] args) {
         new MergePredictionFiles().mergeAllYears();
@@ -34,7 +34,7 @@ public class MergePredictionFiles {
 
             // Vòng lặp quét từ năm bắt đầu đến năm hiện tại
             for (int year = startYear; year <= currentYear; year++) {
-                String fileName = Configs.FILE_AI_PREDICTIONS + "_" + year;
+                String fileName = Configs.FILE_AI_ENTRY_PREDICTIONS + "_" + year;
                 File file = new File(fileName);
 
                 if (file.exists()) {

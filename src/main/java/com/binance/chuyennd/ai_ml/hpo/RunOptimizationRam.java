@@ -1,6 +1,6 @@
 //package com.binance.chuyennd.ai_ml.hpo;
 //
-//import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
+//import com.binance.chuyennd.ai_ml.onnx.entry.AiPredictionData;
 //import com.binance.chuyennd.ai_ml.v3.AiPredictionDataV3;
 //import com.binance.chuyennd.bigchange.market.MarketDataObject;
 //import com.binance.chuyennd.object.MarketRateChange;

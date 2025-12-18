@@ -1,7 +1,6 @@
-package com.binance.chuyennd.ai_ml.onnx; // Lưu ý package
+package com.binance.chuyennd.ai_ml.onnx.entry; // Lưu ý package
 
 import com.binance.chuyennd.ai_ml.v3.AiPredictionDataV3;
-import com.binance.chuyennd.ai_ml.v3.OnnxInferenceManagerV3;
 import com.binance.chuyennd.ai_ml.v4.AiPredictionDataV4;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

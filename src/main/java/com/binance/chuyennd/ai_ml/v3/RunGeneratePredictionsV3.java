@@ -12,7 +12,6 @@ import com.binance.chuyennd.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.util.*;
 
 public class RunGeneratePredictionsV3 {
@@ -21,7 +20,7 @@ public class RunGeneratePredictionsV3 {
     // Thư mục chứa Model V3
     private static final String MODEL_DIR_V3 = "../storage/ai_ml_data/ai_models_reg_v3";
     // Tên file output V3 (để không đè lên file cũ)
-    private static final String OUTPUT_FILE_PREFIX = Configs.FILE_AI_PREDICTIONS + "_v3";
+    private static final String OUTPUT_FILE_PREFIX = Configs.FILE_AI_ENTRY_PREDICTIONS + "_v3";
 
     public static void main(String[] args) {
         try {

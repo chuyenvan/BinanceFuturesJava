@@ -4,11 +4,10 @@
  */
 package com.binance.chuyennd.research;
 
-import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.ai_ml.data.HPOSmartCache;
-import com.binance.chuyennd.ai_ml.onnx.AIRejectFilter;
-import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
-import com.binance.chuyennd.ai_ml.onnx.RunGeneratePredictions;
+import com.binance.chuyennd.ai_ml.onnx.entry.AIRejectFilter;
+import com.binance.chuyennd.ai_ml.onnx.entry.AiPredictionData;
+import com.binance.chuyennd.ai_ml.onnx.entry.RunGeneratePredictions;
 import com.binance.chuyennd.ai_ml.v3.AiPredictionDataV3;
 import com.binance.chuyennd.ai_ml.v4.AiPredictionDataV4;
 import com.binance.chuyennd.bigchange.market.MarketDataObject;
@@ -80,8 +79,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         while (true) {
             TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers;
             try {
-                time2Tickers = DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime);
-//                time2Tickers = HPOSmartCache.getData(startTime);
+//                time2Tickers = DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime);
+                time2Tickers = HPOSmartCache.getData(startTime);
 
                 if (time2Tickers == null) {
                     LOG.info("File data error or not found for time: {}", Utils.normalizeDateYYYYMMDDHHmm(startTime));
@@ -416,7 +415,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         if (!new File(Configs.FILE_ENTRY_BTC_REVERSE).exists()) {
             new ExportMarketData2File().exportBtcTrendReverse();
         }
-        if (!new File(Configs.FILE_AI_PREDICTIONS).exists()) {
+        if (!new File(Configs.FILE_AI_ENTRY_PREDICTIONS).exists()) {
             try {
                 new RunGeneratePredictions().generateAndSave();
             } catch (Exception e) {
@@ -426,7 +425,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         time2MarketRateChange = (TreeMap<Long, MarketRateChange>) StorageSnappy.readObjectFromFile(Configs.FILE_MARKET_RATE_CHANGE);
         time2MarketData = (TreeMap<Long, MarketDataObject>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
         time2BtcReverse = (TreeMap<Long, Double>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_BTC_REVERSE);
-        predictionMap = (TreeMap<Long, AiPredictionData>) StorageSnappy.readObjectFromFile(Configs.FILE_AI_PREDICTIONS);
+        predictionMap = (TreeMap<Long, AiPredictionData>) StorageSnappy.readObjectFromFile(Configs.FILE_AI_ENTRY_PREDICTIONS);
 
         aiRejectFilter = new AIRejectFilter();
     }

@@ -99,9 +99,10 @@ public class Configs {
     public static final int AEROSPIKE_PORT = 3000;
 
     public static final String AEROSPIKE_NAMESPACE = Configs.getString("AEROSPIKE_NAMESPACE"); //"ticker" ;
-    public static final String FILE_AI_PREDICTIONS = Configs.getString("FILE_AI_PREDICTIONS"); //"ticker" ;
-
+    public static final String FILE_AI_ENTRY_PREDICTIONS = Configs.getString("FILE_AI_PREDICTIONS"); //"ticker" ;
+    public static final String FILE_AI_DCA_PREDICTIONS = Configs.getString("FILE_AI_DCA_PREDICTIONS"); //"ticker" ;
 //    public static final String FILE_AI_PREDICTIONS = "../storage/ai_ml/ai_predictions.data_v1";
+
     public static String getString(String configName) {
         return (String) properties.get(configName);
     }

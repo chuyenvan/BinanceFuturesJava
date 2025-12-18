@@ -1,7 +1,7 @@
 package com.binance.chuyennd.ai_ml.hpo;
 
-import com.binance.chuyennd.ai_ml.onnx.AIRejectFilter;
-import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
+import com.binance.chuyennd.ai_ml.onnx.entry.AIRejectFilter;
+import com.binance.chuyennd.ai_ml.onnx.entry.AiPredictionData;
 import com.binance.chuyennd.bigchange.market.MarketDataObject;
 import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.research.BudgetManagerSimple;
@@ -17,11 +17,13 @@ public class BackTestEngineAI {
 
     public AIRejectFilter aiRejectFilter;
 
-    // --- CẬP NHẬT MỤC TIÊU LỢI NHUẬN CẦN VƯỢT QUA (DATA MỚI) ---
-    private static final double TARGET_2022 = 19157.0;
-    private static final double TARGET_2023 = 14929.0;
-    private static final double TARGET_2024 = 29243.0;
-    private static final double TARGET_2025 = 21009.0;
+    // --- BASELINE (MỐC ĐỂ SO SÁNH) ---
+    // Đây là kết quả tốt nhất hiện tại của bạn. AI cần phải đánh bại số này.
+    private static final double BASELINE_2021 = 81615.0;
+    private static final double BASELINE_2022 = 19157.0; // Lấy mốc cao hơn giữa 2 lần
+    private static final double BASELINE_2023 = 14929.0;
+    private static final double BASELINE_2024 = 33234.0;
+    private static final double BASELINE_2025 = 26037.0;
 
     public BackTestEngineAI(double risk, double minRet1H, double highRet,
                             double minMom15M, double minTrend4H, double deadTrend24H) {
@@ -34,94 +36,82 @@ public class BackTestEngineAI {
                       TreeMap<Long, Double> time2BtcReverse,
                       TreeMap<Long, AiPredictionData> predictionMap) {
         try {
-            // 1. Reset
             BudgetManagerSimple.resetInstance();
             SimulatorMarketLevelTicker1MStopLoss test = new SimulatorMarketLevelTicker1MStopLoss();
-
-            // 2. Inject Data
             test.initDataReady(time2MarketData, time2MarketRateChange, time2BtcReverse,
                     predictionMap, aiRejectFilter);
-
-            // 3. Chạy Simulation
-            // Lưu ý: Đảm bảo Configs.TIME_RUN bên ngoài đã set về "20220101" để chạy đủ 4 năm
             test.simulatorWithInitEntry();
 
-            // 4. --- TÍNH ĐIỂM (FITNESS FUNCTION) ---
-            return calculateFitnessWithConstraints(test);
+            return calculateAdvancedFitness(test);
 
         } catch (Exception e) {
-            e.printStackTrace();
             return -100000.0;
         }
     }
 
-    private double calculateFitnessWithConstraints(SimulatorMarketLevelTicker1MStopLoss simulator) {
-        // Map: Năm -> Lợi nhuận
+    private double calculateAdvancedFitness(SimulatorMarketLevelTicker1MStopLoss simulator) {
         Map<Integer, Double> yearProfits = new HashMap<>();
+        yearProfits.put(2021, 0.0);
         yearProfits.put(2022, 0.0);
         yearProfits.put(2023, 0.0);
         yearProfits.put(2024, 0.0);
         yearProfits.put(2025, 0.0);
 
         Calendar cal = Calendar.getInstance();
-
-        // Duyệt qua tất cả các lệnh đã đóng để cộng dồn lợi nhuận theo năm
         for (OrderTargetInfoTest order : simulator.allOrderDone.values()) {
-            cal.setTimeInMillis(order.timeUpdate); // Lấy thời gian đóng lệnh
+            cal.setTimeInMillis(order.timeUpdate);
             int year = cal.get(Calendar.YEAR);
-
-            if (yearProfits.containsKey(year)) {
-                yearProfits.put(year, yearProfits.get(year) + order.calTp());
-            }
+            yearProfits.put(year, yearProfits.getOrDefault(year, 0.0) + order.calTp());
         }
 
-        // Lấy lợi nhuận từng năm (dùng getOrDefault để an toàn)
-        double p22 = yearProfits.getOrDefault(2022, 0.0);
-        double p23 = yearProfits.getOrDefault(2023, 0.0);
-        double p24 = yearProfits.getOrDefault(2024, 0.0);
-        double p25 = yearProfits.getOrDefault(2025, 0.0);
+        double p21 = yearProfits.get(2021);
+        double p22 = yearProfits.get(2022);
+        double p23 = yearProfits.get(2023);
+        double p24 = yearProfits.get(2024);
+        double p25 = yearProfits.get(2025);
 
-        double totalProfit = p22 + p23 + p24 + p25;
-
-        // --- KIỂM TRA RÀNG BUỘC (CONSTRAINTS) ---
-
-        // 1. Nếu bất kỳ năm nào lỗ (Profit < 0) -> Phạt cực nặng (Loại ngay)
-        if (p22 < 0 || p23 < 0 || p24 < 0 || p25 < 0) {
-            return -50000.0 + totalProfit; // Rất thấp
+        // 1. Nếu có năm LỖ -> Loại ngay lập tức (Safety First)
+        if (p21 < 0 || p22 < 0 || p23 < 0 || p24 < 0 || p25 < 0) {
+            return -50000.0 + (p21+p22+p23+p24+p25);
         }
 
-        // 2. Nếu năm nào thấp hơn Target cũ -> Phạt nặng theo mức độ thiếu hụt
-        // Mục đích: Ép AI phải tìm ra bộ tham số tốt hơn lịch sử cũ
-        double penalty = 0;
-        boolean failConstraint = false;
+        // 2. Tính điểm dựa trên sự CẢI THIỆN (Improvement Score)
+        double score = 0;
 
-        // Check 2022
-        if (p22 < TARGET_2022) {
-            penalty += (TARGET_2022 - p22) * 3;
-            failConstraint = true;
-        }
-        // Check 2023
-        if (p23 < TARGET_2023) {
-            penalty += (TARGET_2023 - p23) * 3;
-            failConstraint = true;
-        }
-        // Check 2024
-        if (p24 < TARGET_2024) {
-            penalty += (TARGET_2024 - p24) * 3;
-            failConstraint = true;
-        }
-        // Check 2025
-        if (p25 < TARGET_2025) {
-            penalty += (TARGET_2025 - p25) * 3;
-            failConstraint = true;
+        // Logic:
+        // - Nếu vượt Baseline: Cộng thẳng vào điểm.
+        // - Nếu thua Baseline: Trừ điểm nhẹ (hệ số 1.5) để AI không quá sợ hãi, dám đánh đổi.
+
+        score += evaluateYear(p21, BASELINE_2021);
+        score += evaluateYear(p22, BASELINE_2022);
+        score += evaluateYear(p23, BASELINE_2023);
+        score += evaluateYear(p24, BASELINE_2024);
+        score += evaluateYear(p25, BASELINE_2025);
+
+        // BONUS: Nếu tất cả các năm đều > 90% Baseline -> Cộng thêm điểm thưởng lớn
+        // Để khuyến khích sự ổn định (Consistency)
+        if (p21 > 0.9 * BASELINE_2021 && p22 > 0.9 * BASELINE_2022 &&
+                p23 > 0.9 * BASELINE_2023 && p24 > 0.9 * BASELINE_2024 && p25 > 0.9 * BASELINE_2025) {
+            score += 20000;
         }
 
-        if (failConstraint) {
-            // Trả về điểm thấp để AI biết hướng này không tốt
-            return totalProfit - penalty - 10000;
+        // BONUS 2: Ưu tiên năm khó khăn (2023)
+        // Nếu 2023 > Baseline -> Thưởng thêm gấp đôi (Vì năm này khó lãi nhất)
+        if (p23 > BASELINE_2023) {
+            score += (p23 - BASELINE_2023) * 2;
         }
 
-        // 3. Nếu vượt qua mọi chỉ tiêu -> Trả về tổng lợi nhuận (Càng cao càng tốt)
-        return totalProfit;
+        return score;
+    }
+
+    private double evaluateYear(double actual, double baseline) {
+        double diff = actual - baseline;
+        if (diff >= 0) {
+            return actual; // Lãi bao nhiêu tính bấy nhiêu
+        } else {
+            // Nếu thấp hơn baseline, trừ điểm (phạt).
+            // Nhưng không phạt quá nặng (x1.5) để AI vẫn có thể chọn nếu các năm khác bù lại được nhiều.
+            return actual - (Math.abs(diff) * 1.5);
+        }
     }
 }

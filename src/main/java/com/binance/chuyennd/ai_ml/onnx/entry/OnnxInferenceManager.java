@@ -1,4 +1,4 @@
-package com.binance.chuyennd.ai_ml.onnx;
+package com.binance.chuyennd.ai_ml.onnx.entry;
 
 import ai.onnxruntime.OnnxTensor;
 import ai.onnxruntime.OrtEnvironment;
