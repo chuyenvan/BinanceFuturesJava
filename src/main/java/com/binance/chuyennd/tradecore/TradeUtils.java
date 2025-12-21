@@ -36,14 +36,21 @@ public class TradeUtils {
     }
 
     public static Double calRateMinWithMaxChange60MForTradingStop(Double maxChange90M) {
+        // Sử dụng biến từ Configs thay vì số cứng
         Double rateMin2MoveSl = Configs.RATE_PROFIT_STOP_MARKET;
+
         if (maxChange90M != null) {
-            if (maxChange90M >= 0.01) {
-                rateMin2MoveSl = 0.03;
-            } else if (maxChange90M >= 0.006) {
-                rateMin2MoveSl = 0.02;
-            } else if (maxChange90M >= 0.004) {
-                rateMin2MoveSl = 0.016;
+            // Logic cũ: 0.01 -> 0.03
+            if (maxChange90M >= Configs.TS_VOL_HIGH_THRES) {
+                rateMin2MoveSl = Configs.TS_RATE_HIGH;
+            }
+            // Logic cũ: 0.006 -> 0.02
+            else if (maxChange90M >= Configs.TS_VOL_MED_THRES) {
+                rateMin2MoveSl = Configs.TS_RATE_MED;
+            }
+            // Logic cũ: 0.004 -> 0.016
+            else if (maxChange90M >= Configs.TS_VOL_LOW_THRES) {
+                rateMin2MoveSl = Configs.TS_RATE_LOW;
             }
         }
         return rateMin2MoveSl;

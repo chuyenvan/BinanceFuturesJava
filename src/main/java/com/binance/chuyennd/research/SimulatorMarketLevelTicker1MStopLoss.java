@@ -4,14 +4,19 @@
  */
 package com.binance.chuyennd.research;
 
+import ai.onnxruntime.OrtException;
+import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.ai_ml.data.HPOSmartCache;
+import com.binance.chuyennd.ai_ml.features.export.dca.DcaFeatureExtractor;
+import com.binance.chuyennd.ai_ml.features.export.dca.DcaMarketFeatures;
+import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
+import com.binance.chuyennd.ai_ml.onnx.dca.DcaOnnxInferenceManager;
+import com.binance.chuyennd.ai_ml.onnx.dca.DcaPredictionResult;
 import com.binance.chuyennd.ai_ml.onnx.entry.AIRejectFilter;
-import com.binance.chuyennd.ai_ml.onnx.entry.AiPredictionData;
 import com.binance.chuyennd.ai_ml.onnx.entry.RunGeneratePredictions;
-import com.binance.chuyennd.ai_ml.v3.AiPredictionDataV3;
-import com.binance.chuyennd.ai_ml.v4.AiPredictionDataV4;
 import com.binance.chuyennd.bigchange.market.MarketDataObject;
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
+import com.binance.chuyennd.bigchange.test.TraceOrderDone;
 import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.tradecore.DcaProcessor;
@@ -54,17 +59,20 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     public TreeMap<Long, Double> time2BtcReverse;
     public Map<String, KlineObjectSimple> symbol2LastTicker = new HashMap<>();
 
+    public DcaFeatureExtractor extractor = new DcaFeatureExtractor();
+    public DcaOnnxInferenceManager dcaBrain;
+
     public ConcurrentHashMap<String, List<OrderTargetInfoTest>> symbol2OrdersEntry = new ConcurrentHashMap();
     public ConcurrentHashMap<String, OrderTargetInfoTest> symbol2OrderRunning = new ConcurrentHashMap();
 
 
     public static void main(String[] args) throws ParseException, IOException, InterruptedException {
-//        Configs.BUDGET_MARGIN_RATIO_1=     0.4971;
-//        Configs.BUDGET_DIVIDER_1=          2.0187;
-//        Configs.BUDGET_MARGIN_RATIO_2=     0.7991;
-//        Configs.BUDGET_DIVIDER_2=          1.5955;
-//        Configs.BUDGET_TREND_UP_MULTIPLIER=  1.1445;
-//        Configs.BUDGET_TREND_DOWN_MULTIPLIER=0.9413;
+        Configs.BUDGET_MARGIN_RATIO_1 = 0.4820;
+        Configs.BUDGET_DIVIDER_1 = 1.5578;
+        Configs.BUDGET_MARGIN_RATIO_2 = 0.7475;
+        Configs.BUDGET_DIVIDER_2 = 1.5984;
+//        Configs.BUDGET_TREND_UP_MULTIPLIER = 1.1231;
+//        Configs.BUDGET_TREND_DOWN_MULTIPLIER = 0.8094;
         SimulatorMarketLevelTicker1MStopLoss test = new SimulatorMarketLevelTicker1MStopLoss();
         test.initData();
         test.simulatorWithInitEntry();
@@ -85,9 +93,10 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                 if (time2Tickers == null) {
                     LOG.info("File data error or not found for time: {}", Utils.normalizeDateYYYYMMDDHHmm(startTime));
                 }
-                if (time2Tickers != null) {
+                if (time2Tickers != null && time2Tickers.size() >= 1440) {
                     for (Map.Entry<Long, Map<String, KlineObjectSimple>> entry : time2Tickers.entrySet()) {
                         Long time = entry.getKey();
+                        extractor.updateMarketHistory(entry.getValue());
                         Long startTimeRun = System.currentTimeMillis();
                         try {
                             Map<String, KlineObjectSimple> symbol2Ticker = entry.getValue();
@@ -173,7 +182,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                         if (!Utils.isTickerAvailable(ticker)) {
                                             continue;
                                         }
-                                        createOrderBUY(symbol, ticker, levelChange, time2MarketRateChange.get(time), symbol2PriceMax15M.get(symbol));
+                                        createOrderBUY(symbol, ticker, levelChange, time2MarketRateChange.get(time),
+                                                symbol2PriceMax15M.get(symbol), symbol2Ticker);
                                     }
                                     for (String symbol : symbolDcaLevel) {
                                         KlineObjectSimple ticker = symbol2Ticker.get(symbol);
@@ -185,7 +195,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                                 leveChange2Dca = MarketLevelChange.DCA_LEVEL2;
                                             }
                                             createOrderBUY(symbol, ticker, leveChange2Dca, time2MarketRateChange.get(time)
-                                                    , symbol2PriceMax15M.get(symbol));
+                                                    , symbol2PriceMax15M.get(symbol), symbol2Ticker);
                                         }
                                     }
                                 }
@@ -218,7 +228,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                                 leveChange2Dca = MarketLevelChange.DCA_LEVEL2;
                                             }
                                             createOrderBUY(symbol, ticker, leveChange2Dca,
-                                                    time2MarketRateChange.get(time), priceMax15M);
+                                                    time2MarketRateChange.get(time), priceMax15M, symbol2Ticker);
                                         }
                                     }
 
@@ -256,7 +266,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 //                                                    rateMax15M, tickers.size());
                                             symbolCanTradeMass.add(symbol);
                                             createOrderBUY(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY,
-                                                    time2MarketRateChange.get(time), priceMax15M);
+                                                    time2MarketRateChange.get(time), priceMax15M, symbol2Ticker);
                                         } else {
                                             if (MarketBigChangeDetector.isRateChangeAvailable2TradeMass(rateTicker, rateMax15M)) {
                                                 symbolCanTradeMass.add(symbol);
@@ -274,7 +284,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
                                             Double priceMax15M = getMax15M(tickers);
                                             createOrderBUY(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY,
-                                                    time2MarketRateChange.get(time), priceMax15M);
+                                                    time2MarketRateChange.get(time), priceMax15M, symbol2Ticker);
                                         }
                                     }
                                 }
@@ -305,7 +315,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                 for (String symbol : symbol2BUY) {
                                     KlineObjectSimple ticker = symbol2Ticker.get(symbol);
                                     if (Utils.isTickerAvailable(ticker)) {
-                                        createOrderBUY(symbol, ticker, levelChange, time2MarketRateChange.get(time), symbol2PriceMax15M.get(symbol));
+                                        createOrderBUY(symbol, ticker, levelChange, time2MarketRateChange.get(time), symbol2PriceMax15M.get(symbol), symbol2Ticker);
                                     }
                                 }
                             }
@@ -351,13 +361,17 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                 allOrderDone.put(-orderInfo.timeUpdate + allOrderDone.size(), orderInfo);
             }
         }
+        Calendar cal = Calendar.getInstance();
+        cal.setTimeInMillis(startTime); // Hoặc dùng biến startTime của vòng lặp
+        int finalYear = cal.get(Calendar.YEAR);
+        BudgetManagerSimple.getInstance().balanceIndex.year2UnrealizedPnl.put(finalYear, 0d);
         FundingFeeManager.getInstance().writeData2File();
         Storage.writeObject2File(FILE_STORAGE_ORDER_DONE, allOrderDone);
         Storage.writeObject2File("storage/orderRunning.data", symbol2OrderRunning);
         Storage.writeObject2File("storage/BalanceIndex.data", BudgetManagerSimple.getInstance().balanceIndex);
         BudgetManagerSimple.getInstance().printBalanceIndex();
         try {
-//            TraceOrderDone.printOrderTestDone("storage/printDone.csv", allOrderDone);
+            TraceOrderDone.printOrderTestDone("storage/printDone.csv", allOrderDone);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -426,7 +440,11 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         time2MarketData = (TreeMap<Long, MarketDataObject>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
         time2BtcReverse = (TreeMap<Long, Double>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_BTC_REVERSE);
         predictionMap = (TreeMap<Long, AiPredictionData>) StorageSnappy.readObjectFromFile(Configs.FILE_AI_ENTRY_PREDICTIONS);
-
+        try {
+            dcaBrain = new DcaOnnxInferenceManager(Configs.FILE_AI_DCA_PREDICTIONS);
+        } catch (OrtException e) {
+            e.printStackTrace();
+        }
         aiRejectFilter = new AIRejectFilter();
     }
 
@@ -541,8 +559,9 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     }
 
     public void createOrderBUY(String symbol, KlineObjectSimple ticker, MarketLevelChange levelChange,
-                               MarketRateChange marketData, Double maxPrice15m) {
+                               MarketRateChange marketData, Double maxPrice15m, Map<String, KlineObjectSimple> symbol2Ticker) {
         AiPredictionData predict = predictionMap.get(ticker.startTime.longValue());
+
         if (predict != null) {
             if (aiRejectFilter.checkSignal(predict).decision.equals(AIRejectFilter.FilterDecision.REJECT)) {
 //                LOG.info("⛔ REJECTED BY RISK FILTER: {} {}", predict.predReturn1H, predict.predRisk4H);
@@ -561,6 +580,38 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         if (budget == null) {
             return;
         }
+//        final Set<MarketLevelChange> dcaOrBigLevels = Set.of(
+//                MarketLevelChange.DCA_LEVEL1,
+//                MarketLevelChange.DCA_LEVEL2
+//        );
+//        boolean isDcaOrder = dcaOrBigLevels.contains(levelChange);
+//        if (isDcaOrder) {
+//            // 2. Trong vòng lặp xử lý lệnh
+//            OrderTargetInfoTest order = symbol2OrderRunning.get(symbol);
+//            if (order == null) {
+//                LOG.warn("❌ Chưa có lệnh chạy, không được DCA! {} {} {}", symbol,
+//                        levelChange, Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()));
+//                return; // Chưa có lệnh chạy, không được DCA
+//            }
+//            Double dcaRatio = budget / order.calMargin();
+//            DcaMarketFeatures features = extractor.extractFeatures(
+//                    ticker.startTime.longValue(), order, marketData, symbol2Ticker, dcaRatio);
+//
+//// 3. Hỏi ý kiến AI
+//            DcaPredictionResult result = dcaBrain.predict(features);
+//
+//
+//// 4. Ra quyết định
+//            if (result.recoverProbability < 0.1) {
+//                LOG.warn("❌ AI bảo 'Chết chắc', không được DCA!");
+//                return; // Stop DCA
+//            }
+//
+//            if (result.predictedMaxDrawdown < -0.30) {
+//                LOG.warn("⚠️ AI bảo còn giảm sâu 10% nữa. Chờ thêm!");
+//                return; // Chờ giá giảm thêm mới mua
+//            }
+//        }
         Double quantity = Utils.calQuantityTest(budget, leverage, entry, symbol);
 
         if (StringUtils.equals(symbol, Constants.SYMBOL_PAIR_BTC)) {
@@ -641,7 +692,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     public void initDataReady(TreeMap<Long, MarketDataObject> time2MarketData,
                               TreeMap<Long, MarketRateChange> time2MarketRateChange,
                               TreeMap<Long, Double> time2BtcReverse,
-                              TreeMap<Long, AiPredictionData> predictionMap, AIRejectFilter aiRejectFilter) { // <--- THÊM THAM SỐ NÀY
+                              TreeMap<Long, AiPredictionData> predictionMap, AIRejectFilter aiRejectFilter) throws OrtException { // <--- THÊM THAM SỐ NÀY
 
         // Reset Data Old
         BudgetManagerSimple.getInstance().resetInstance();
@@ -653,46 +704,11 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         this.time2BtcReverse = time2BtcReverse;
 
         this.predictionMap = predictionMap; // <--- GÁN DỮ LIỆU AI
-        this.aiRejectFilter = aiRejectFilter;
+//        this.aiRejectFilter = aiRejectFilter;
+        this.aiRejectFilter = new AIRejectFilter();
+//        this.dcaBrain = new DcaOnnxInferenceManager(Configs.FILE_AI_DCA_PREDICTIONS);
 //        this.GLOBAL_CACHE_RATE_90M = globalCacheRate90m;
     }
 
-    public void initDataReadyV3(TreeMap<Long, MarketDataObject> time2MarketData,
-                                TreeMap<Long, MarketRateChange> time2MarketRateChange,
-                                TreeMap<Long, Double> time2BtcReverse,
-                                TreeMap<Long, AiPredictionDataV3> predictionMap, AIRejectFilter aiRejectFilter) { // <--- THÊM THAM SỐ NÀY
-
-        // Reset Data Old
-        BudgetManagerSimple.getInstance().resetInstance();
-        allOrderDone = new TreeMap<>();
-
-        // Gán dữ liệu cache vào biến của instance
-        this.time2MarketData = time2MarketData;
-        this.time2MarketRateChange = time2MarketRateChange;
-        this.time2BtcReverse = time2BtcReverse;
-
-//        this.predictionMap = predictionMap; // <--- GÁN DỮ LIỆU AI
-        this.aiRejectFilter = aiRejectFilter;
-//        this.GLOBAL_CACHE_RATE_90M = globalCacheRate90m;
-    }
-
-    public void initDataReadyV4(TreeMap<Long, MarketDataObject> time2MarketData,
-                                TreeMap<Long, MarketRateChange> time2MarketRateChange,
-                                TreeMap<Long, Double> time2BtcReverse,
-                                TreeMap<Long, AiPredictionDataV4> predictionMap, AIRejectFilter aiRejectFilter) { // <--- THÊM THAM SỐ NÀY
-
-        // Reset Data Old
-        BudgetManagerSimple.getInstance().resetInstance();
-        allOrderDone = new TreeMap<>();
-
-        // Gán dữ liệu cache vào biến của instance
-        this.time2MarketData = time2MarketData;
-        this.time2MarketRateChange = time2MarketRateChange;
-        this.time2BtcReverse = time2BtcReverse;
-
-//        this.predictionMap = predictionMap; // <--- GÁN DỮ LIỆU AI
-        this.aiRejectFilter = aiRejectFilter;
-//        this.GLOBAL_CACHE_RATE_90M = globalCacheRate90m;
-    }
 
 }

@@ -3,6 +3,7 @@ package com.binance.chuyennd.ai_ml.onnx.entry;
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.ai_ml.features.export.entry.ComprehensiveMarketFeatureExtractor;
 import com.binance.chuyennd.ai_ml.features.export.entry.MarketFeatures;
+import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.research.FundingFeeManager;
@@ -17,7 +18,7 @@ import java.util.*;
 
 public class RunGeneratePredictions {
     private static final Logger LOG = LoggerFactory.getLogger(RunGeneratePredictions.class);
-    private static final String MODEL_DIR = "../storage/ai_ml_data/ai_models_reg_v3";
+    private static final String MODEL_DIR = "../storage/ai_ml_data/ai_models_reg_v4";
 
     public static void main(String[] args) {
         try {

@@ -8,138 +8,220 @@ import com.binance.chuyennd.ai_ml.features.export.entry.MarketFeatures;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
 import java.io.Serializable;
 import java.nio.FloatBuffer;
-import java.util.Collections;
-import java.util.Map;
+import java.util.*;
 
 public class OnnxInferenceManager implements AutoCloseable {
     private static final Logger LOG = LoggerFactory.getLogger(OnnxInferenceManager.class);
     private final OrtEnvironment env;
+    private final OrtSession.SessionOptions opts;
 
-    // Sessions
-    private final OrtSession sc15M, sc1H, sc4H, sc24H, scRisk4H, scRisk24H;
-    private final OrtSession mod15M, mod1H, mod4H, mod24H, modRisk4H, modRisk24H;
-    private static final String INPUT_NODE = "float_input";
+    // Các bộ dự đoán Ensemble (Thay vì session lẻ)
+    private final EnsemblePredictor p15M, p1H, p4H, p24H, pRisk4H, pRisk24H;
 
     public OnnxInferenceManager(String modelDir) throws OrtException {
-        LOG.info("🧠 Initializing AI Brain from: {}", modelDir);
+        LOG.info("🧠 Initializing AI Brain V4 (Ensemble Mode) from: {}", modelDir);
         this.env = OrtEnvironment.getEnvironment();
-        OrtSession.SessionOptions opts = new OrtSession.SessionOptions();
+        this.opts = new OrtSession.SessionOptions();
         opts.setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT);
+        opts.setIntraOpNumThreads(1); // Tối ưu cho chạy nhiều model nhỏ
 
-        // --- THÊM ĐOẠN NÀY ---
-        // Giới hạn số luồng tính toán song song bên trong một operator (phép tính ma trận)
-        opts.setIntraOpNumThreads(2);
+        // Khởi tạo 6 bộ não con cho 6 target
+        this.p15M = new EnsemblePredictor(modelDir, "Return15M");
+        this.p1H = new EnsemblePredictor(modelDir, "Return1H");
+        this.p4H = new EnsemblePredictor(modelDir, "Return4H");
+        this.p24H = new EnsemblePredictor(modelDir, "Return24H");
+        this.pRisk4H = new EnsemblePredictor(modelDir, "maxDrawdown4H");
+        this.pRisk24H = new EnsemblePredictor(modelDir, "maxDrawdown24H");
 
-        // Giới hạn số luồng chạy song song giữa các operator (thường để 1 hoặc 2)
-        opts.setInterOpNumThreads(1);
-        // ---------------------
-
-        // Load Models & Scalers
-        this.sc15M = env.createSession(modelDir + "/Scaler_Return15M.onnx", opts);
-        this.mod15M = env.createSession(modelDir + "/Model_Regressor_Return15M.onnx", opts);
-        this.sc1H = env.createSession(modelDir + "/Scaler_Return1H.onnx", opts);
-        this.mod1H = env.createSession(modelDir + "/Model_Regressor_Return1H.onnx", opts);
-        this.sc4H = env.createSession(modelDir + "/Scaler_Return4H.onnx", opts);
-        this.mod4H = env.createSession(modelDir + "/Model_Regressor_Return4H.onnx", opts);
-        this.sc24H = env.createSession(modelDir + "/Scaler_Return24H.onnx", opts);
-        this.mod24H = env.createSession(modelDir + "/Model_Regressor_Return24H.onnx", opts);
-        this.scRisk4H = env.createSession(modelDir + "/Scaler_maxDrawdown4H.onnx", opts);
-        this.modRisk4H = env.createSession(modelDir + "/Model_Regressor_maxDrawdown4H.onnx", opts);
-        this.scRisk24H = env.createSession(modelDir + "/Scaler_maxDrawdown24H.onnx", opts);
-        this.modRisk24H = env.createSession(modelDir + "/Model_Regressor_maxDrawdown24H.onnx", opts);
-
-        LOG.info("✅ All 12 ONNX files loaded successfully!");
+        LOG.info("✅ All Ensemble Models loaded!");
     }
 
     public PredictionResult predictAll(MarketFeatures f) {
         try {
+            // Convert Features sang mảng float[] chuẩn
             float[] rawFeatures = extractFeaturesToArray(f);
 
-            float p15m = runInference(sc15M, mod15M, rawFeatures);
-            float p1h = runInference(sc1H, mod1H, rawFeatures);
-            float p4h = runInference(sc4H, mod4H, rawFeatures);
-            float p24h = runInference(sc24H, mod24H, rawFeatures);
-            float r4h = runInference(scRisk4H, modRisk4H, rawFeatures);
-            float r24h = runInference(scRisk24H, modRisk24H, rawFeatures);
+            // Dự đoán song song hoặc tuần tự
+            float r15 = p15M.predict(rawFeatures);
+            float r1 = p1H.predict(rawFeatures);
+            float r4 = p4H.predict(rawFeatures);
+            float r24 = p24H.predict(rawFeatures);
+            float risk4 = pRisk4H.predict(rawFeatures);
+            float risk24 = pRisk24H.predict(rawFeatures);
 
-            return new PredictionResult(p15m, p1h, p4h, p24h, r4h, r24h);
+            return new PredictionResult(r15, r1, r4, r24, risk4, risk24);
         } catch (Exception e) {
-            LOG.error("❌ Inference Error: {}", e.getMessage());
+            LOG.error("❌ Inference Error", e);
             return new PredictionResult(0, 0, 0, 0, 0, 0);
         }
     }
 
-    private float runInference(OrtSession scaler, OrtSession model, float[] rawFeatures) throws OrtException {
-        long[] shape = new long[]{1, rawFeatures.length};
-        OnnxTensor inputTensor = OnnxTensor.createTensor(env, FloatBuffer.wrap(rawFeatures), shape);
-        Map<String, OnnxTensor> inputs = Collections.singletonMap(INPUT_NODE, inputTensor);
+    /**
+     * Class nội bộ xử lý logic Ensemble (Voting)
+     */
+    private class EnsemblePredictor {
+        private OrtSession scaler;
+        private OrtSession modelXGB;
+        private OrtSession modelLGBM;
+        private OrtSession modelCat;
 
-        try (OrtSession.Result scalerRes = scaler.run(inputs)) {
-            float[][] scaledData = (float[][]) scalerRes.get(0).getValue();
-            OnnxTensor scaledTensor = OnnxTensor.createTensor(env, scaledData);
-            Map<String, OnnxTensor> modInputs = Collections.singletonMap(INPUT_NODE, scaledTensor);
-            try (OrtSession.Result modelRes = model.run(modInputs)) {
-                float[][] output = (float[][]) modelRes.get(0).getValue();
-                return output[0][0];
+        // Trọng số chuẩn hóa (nếu thiếu model nào thì chia lại trọng số)
+        private double wXGB = 0, wLGBM = 0, wCat = 0;
+        private final String targetName;
+
+        public EnsemblePredictor(String dir, String target) {
+            this.targetName = target;
+            try {
+                // 1. Load Weights từ file txt
+                double[] rawWeights = loadWeights(dir + "/Weights_" + target + ".txt");
+
+                // 2. Load Scaler (Bắt buộc phải có)
+                this.scaler = env.createSession(dir + "/Scaler_" + target + ".onnx", opts);
+
+                // 3. Load Models & Gán Weight (Thứ tự Python: [XGB, LGBM, Cat])
+                // Load XGB
+                if (fileExists(dir + "/Model_Regressor_" + target + "_XGB.onnx")) {
+                    this.modelXGB = env.createSession(dir + "/Model_Regressor_" + target + "_XGB.onnx", opts);
+                    this.wXGB = (rawWeights.length > 0) ? rawWeights[0] : 0;
+                }
+
+                // Load LGBM
+                if (fileExists(dir + "/Model_Regressor_" + target + "_LGBM.onnx")) {
+                    this.modelLGBM = env.createSession(dir + "/Model_Regressor_" + target + "_LGBM.onnx", opts);
+                    this.wLGBM = (rawWeights.length > 1) ? rawWeights[1] : 0;
+                }
+
+                // Load CatBoost (Hiện tại bạn đang thiếu file này, code sẽ tự handle)
+                if (fileExists(dir + "/Model_Regressor_" + target + "_Cat.onnx")) {
+                    this.modelCat = env.createSession(dir + "/Model_Regressor_" + target + "_Cat.onnx", opts);
+                    this.wCat = (rawWeights.length > 2) ? rawWeights[2] : 0;
+                }
+
+                // 4. Normalize Weights (Phòng trường hợp thiếu file CatBoost hoặc file Weights bị lệch)
+                normalizeWeights();
+
+                LOG.info("  -> Target {}: Loaded Weights [XGB:{:.2f}, LGBM:{:.2f}, Cat:{:.2f}]",
+                        target, wXGB, wLGBM, wCat);
+
+            } catch (Exception e) {
+                LOG.error("  -> Failed to load ensemble for " + target, e);
+            }
+        }
+
+        private void normalizeWeights() {
+            double sum = 0;
+            if (modelXGB != null) sum += wXGB; else wXGB = 0;
+            if (modelLGBM != null) sum += wLGBM; else wLGBM = 0;
+            if (modelCat != null) sum += wCat; else wCat = 0;
+
+            if (sum > 0) {
+                wXGB /= sum; wLGBM /= sum; wCat /= sum;
+            } else {
+                // Fallback nếu lỗi hết: dùng XGB làm chính
+                if (modelXGB != null) wXGB = 1.0;
+            }
+        }
+
+        public float predict(float[] rawFeatures) throws OrtException {
+            if (scaler == null) return 0f;
+
+            // 1. Scale dữ liệu
+            float[][] scaledFeatures = runModel(scaler, rawFeatures); // Scaler trả về array đã scale
+            float[] inputForModel = scaledFeatures[0];
+
+            // 2. Chạy từng model con
+            float finalPred = 0;
+            if (modelXGB != null && wXGB > 0) {
+                finalPred += runModel(modelXGB, inputForModel)[0][0] * wXGB;
+            }
+            if (modelLGBM != null && wLGBM > 0) {
+                finalPred += runModel(modelLGBM, inputForModel)[0][0] * wLGBM;
+            }
+            if (modelCat != null && wCat > 0) {
+                finalPred += runModel(modelCat, inputForModel)[0][0] * wCat;
+            }
+
+            return finalPred;
+        }
+
+        // Helper chạy 1 session ONNX
+        private float[][] runModel(OrtSession session, float[] inputData) throws OrtException {
+            long[] shape = new long[]{1, inputData.length};
+            OnnxTensor tensor = OnnxTensor.createTensor(env, FloatBuffer.wrap(inputData), shape);
+            // Tên node input thường là "float_input", nếu lỗi hãy check lại bằng Netron
+            try (OrtSession.Result res = session.run(Collections.singletonMap("float_input", tensor))) {
+                return (float[][]) res.get(0).getValue();
             }
         }
     }
 
-    // 🔥 QUAN TRỌNG: Thứ tự này PHẢI KHỚP 100% với Code Python Train
-    // Code Python Train: numeric_features (đã loại bỏ String, var95, shortfall)
+    // --- CÁC HÀM TIỆN ÍCH ---
+
+    private double[] loadWeights(String path) {
+        try (BufferedReader br = new BufferedReader(new FileReader(path))) {
+            String line = br.readLine();
+            if (line == null) return new double[0];
+            // Format: "[0.3, 0.5, 0.2]" -> Remove [] -> Split
+            line = line.replace("[", "").replace("]", "").trim();
+            if (line.isEmpty()) return new double[0];
+
+            String[] parts = line.split(",");
+            double[] res = new double[parts.length];
+            for (int i = 0; i < parts.length; i++) res[i] = Double.parseDouble(parts[i].trim());
+            return res;
+        } catch (Exception e) {
+            LOG.warn("Could not read weights from {}, assuming equal weights or single model.", path);
+            return new double[0];
+        }
+    }
+
+    private boolean fileExists(String path) {
+        return new java.io.File(path).exists();
+    }
+
     private float[] extractFeaturesToArray(MarketFeatures f) {
+        // Thứ tự features PHẢI GIỐNG 100% Code Python
         return new float[] {
-                // 1. Momentum (10)
                 (float) f.momentum1M, (float) f.momentum5M, (float) f.momentum15M, (float) f.momentum1H,
                 (float) f.momentum4H, (float) f.momentum24H, (float) f.momentumAcceleration,
-                // trendStrengthBTC đã bỏ
                 (float) f.trendStrengthETH, (float) f.trendConsistency,
-
-                // 2. Volatility (5) - Đã bỏ var95, shortfall
                 (float) f.volatility1M, (float) f.volatility15M, (float) f.volatility1H,
                 (float) f.volatility24H, (float) f.volatilityTermStructure,
-
-                // 3. Breadth (5)
                 (float) f.advanceDeclineRatio, (float) f.percentAboveMA20, (float) f.volumeRatioUpDown,
                 (float) f.marketBreadthStrength, (float) f.btcDominance,
-
-                // 4. Indicators (3)
                 (float) f.rsi14, (float) f.volumeSpike, (float) f.distMA20,
-
-                // 5. Funding (3)
                 (float) f.fundingRateRaw, (float) f.fundingRateAvg24H, (float) f.fundingRateTrend,
-
-                // 6. Time (4)
                 (float) f.hourOfDay, (float) f.dayOfWeek, (float) f.weekOfMonth, (float) f.monthOfYear,
-
-                // 7. Basket (4) - Python tự động append vào cuối
                 (float) f.basketMomentum15M, (float) f.basketMomentum1H, (float) f.basketRsi14, (float) f.basketVolSpike
         };
     }
 
     @Override
     public void close() throws Exception {
-        if (sc15M != null) sc15M.close(); if (mod15M != null) mod15M.close();
-        if (sc1H != null) sc1H.close(); if (mod1H != null) mod1H.close();
-        if (sc4H != null) sc4H.close(); if (mod4H != null) mod4H.close();
-        if (sc24H != null) sc24H.close(); if (mod24H != null) mod24H.close();
-        if (scRisk4H != null) scRisk4H.close(); if (modRisk4H != null) modRisk4H.close();
-        if (scRisk24H != null) scRisk24H.close(); if (modRisk24H != null) modRisk24H.close();
+        // Close all sessions inside predictors
+        closePredictor(p15M); closePredictor(p1H); closePredictor(p4H);
+        closePredictor(p24H); closePredictor(pRisk4H); closePredictor(pRisk24H);
         if (env != null) env.close();
+    }
+
+    private void closePredictor(EnsemblePredictor p) throws OrtException {
+        if (p == null) return;
+        if (p.scaler != null) p.scaler.close();
+        if (p.modelXGB != null) p.modelXGB.close();
+        if (p.modelLGBM != null) p.modelLGBM.close();
+        if (p.modelCat != null) p.modelCat.close();
     }
 
     public static class PredictionResult implements Serializable {
         public float return15M, return1H, return4H, return24H;
         public float riskDrawdown4H, riskDrawdown24H;
         public PredictionResult(float r15, float r1, float r4, float r24, float risk4, float risk24) {
-            this.return15M = r15; this.return1H = r1; this.return4H = r4; this.return24H = r24;
-            this.riskDrawdown4H = risk4; this.riskDrawdown24H = risk24;
-        }
-        @Override
-        public String toString() {
-            return String.format("AI[15M:%.2f%% 1H:%.2f%% | Risk4H:%.2f%%]", return15M*100, return1H*100, riskDrawdown4H*100);
+            this.return15M = r15; this.return1H = r1; this.return4H = r4;
+            this.return24H = r24; this.riskDrawdown4H = risk4; this.riskDrawdown24H = risk24;
         }
     }
 }

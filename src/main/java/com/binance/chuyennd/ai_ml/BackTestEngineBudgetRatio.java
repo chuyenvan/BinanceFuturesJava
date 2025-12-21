@@ -1,5 +1,6 @@
 package com.binance.chuyennd.ai_ml;
 
+import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.bigchange.market.MarketDataObject;
 import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.research.BudgetManagerSimple;
@@ -33,7 +34,8 @@ public class BackTestEngineBudgetRatio {
 
     public double run(TreeMap<Long, MarketDataObject> time2MarketData,
                       TreeMap<Long, MarketRateChange> time2MarketRateChange,
-                      TreeMap<Long, Double> time2BtcReverse) {
+                      TreeMap<Long, Double> time2BtcReverse,
+                      TreeMap<Long, AiPredictionData> predictionMap) {
         try {
             // 1. Reset Singleton về trạng thái ban đầu
             BudgetManagerSimple.resetInstance();
@@ -47,7 +49,7 @@ public class BackTestEngineBudgetRatio {
             //     Nếu có thể, hãy tối ưu để chỉ chạy 1 lần)
 //            test.initData();
             test.initDataReady(time2MarketData, time2MarketRateChange, time2BtcReverse,
-                    null, null);
+                    predictionMap, null);
             test.simulatorWithInitEntry();
 
         } catch (Exception e) {

@@ -1,7 +1,7 @@
 package com.binance.chuyennd.ai_ml.hpo;
 
 import com.binance.chuyennd.ai_ml.data.HPOSmartCache;
-import com.binance.chuyennd.ai_ml.onnx.entry.AiPredictionData;
+import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.bigchange.market.MarketDataObject;
 import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.research.FundingFeeManager;

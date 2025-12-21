@@ -1,24 +1,38 @@
-package com.binance.chuyennd.ai_ml.onnx.entry; // Lưu ý package
+package com.binance.chuyennd.ai_ml.onnx.entry;
 
-import com.binance.chuyennd.ai_ml.v3.AiPredictionDataV3;
-import com.binance.chuyennd.ai_ml.v4.AiPredictionDataV4;
+import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class AIRejectFilter {
     private static final Logger LOG = LoggerFactory.getLogger(AIRejectFilter.class);
 
-    // --- CẤU HÌNH 1: CORE (1H & RISK) ---
-    // --- Test #22 / 50 --- [Risk: -0.0262 | 1H: 0.0213 | 15M: 0.0044 | 4H: -0.0024]
+    // =========================================================================
+    // LỊCH SỬ CẤU HÌNH (PARAMETER HISTORY)
+    // =========================================================================
+    // --- Test #22 (Manual): Profit ~?? ---
+    // [Risk: -0.0262 | 1H: 0.0213 | 15M: 0.0044 | 4H: -0.0024]
 
-    private  double HARD_RISK_LIMIT = -0.0262; // -0.04;     // Sập > 5% là Rủi ro cao
-    private  double MIN_PRED_RETURN_1H = 0.0213; //0.01;   // Lãi 1H tối thiểu 1%
-    private  double HIGH_RETURN_THRESHOLD = 0.04;// Lãi > 4% là Kèo Siêu Thơm
+    // --- Test #HPO_1 (18/12/2025): Score 71,344 ---
+    // [Risk: -0.0288 | 1H: 0.0217 | High: 0.042 | 15M: 0.0065 | 4H: 0.017]
 
-    // --- CẤU HÌNH 2: BỔ SUNG (15M, 4H, 24H) ---
-    private  double MIN_MOMENTUM_15M = 0.001;    // 15M phải tăng ít nhất 0.1% (Đang có đà)
-    private  double MIN_TREND_4H = 0.005;        // 4H phải tăng ít nhất 0.5% (Thuận xu hướng)
-    private  double DEAD_TREND_24H = -0.05;      // 24H sập quá 5% thì né ra (Downtrend dài)
+    // --- Test #HPO_2_DeepSearch (19/12/2025): Score 198,922 🏆🏆 ---
+    // AI đã thay đổi chiến thuật hoàn toàn: "Bắt dao sâu nhưng chờ xác nhận mạnh"
+    // 1. Risk nới xuống -5.6% (Chấp nhận giảm sâu).
+    // 2. Momentum 15M tăng vọt lên 1.35% (Yêu cầu cú nảy hồi cực mạnh mới vào).
+    // 3. Trend 4H giảm xuống 0.35% (Không quan trọng trend dài, chỉ cần sóng hồi ngắn).
+    // =========================================================================
+
+    // --- CẤU HÌNH HIỆN TẠI (BEST FOUND SCORE 198K) ---
+    private double HARD_RISK_LIMIT = -0.05636;      // Chấp nhận MaxDD lên tới 5.6%
+    private double MIN_PRED_RETURN_1H = 0.01607;    // Lãi 1H > 1.6% là vào (Thấp hơn mức 2.1% cũ)
+    private double HIGH_RETURN_THRESHOLD = 0.08568; // Chỉ kèo siêu tưởng (>8.5%) mới được phá rào Risk
+
+    // --- CẤU HÌNH BỔ SUNG ---
+    private double MIN_MOMENTUM_15M = 0.01358;      // 15M phải tăng cực mạnh > 1.35% (Key factor!)
+    private double MIN_TREND_4H = 0.00354;          // 4H chỉ cần xanh nhẹ > 0.35% là được
+    private double DEAD_TREND_24H = -0.05;          // 24H sập quá 5% thì né (Giữ nguyên)
 
     public enum FilterDecision {PASS, REJECT}
 
@@ -32,8 +46,8 @@ public class AIRejectFilter {
         }
     }
 
-    public  FilterResult checkSignal(OnnxInferenceManager.PredictionResult prediction) {
-        // Lấy đủ 4 chỉ số Return và 1 chỉ số Risk
+    // --- HỖ TRỢ V2 (PredictionResult cũ) ---
+    public FilterResult checkSignal(OnnxInferenceManager.PredictionResult prediction) {
         return evaluate(
                 prediction.return15M,
                 prediction.return1H,
@@ -42,26 +56,9 @@ public class AIRejectFilter {
                 prediction.riskDrawdown4H
         );
     }
-    public FilterResult checkSignalV3(AiPredictionDataV3 prediction) {
-        return evaluate(
-                prediction.p15M,
-                prediction.p1H,
-                prediction.p4H,
-                0.0f, // V3 không có 24H -> Truyền 0.0 để bỏ qua check 24H
-                prediction.maxDD4H // Map maxDrawdown4H vào Risk
-        );
-    }
-    public FilterResult checkSignalV4(AiPredictionDataV4 prediction) {
-        return evaluate(
-                prediction.p15M,
-                prediction.p1H,
-                prediction.p4H,
-                prediction.p24H,
-                prediction.maxDD4H // Map maxDrawdown4H vào Risk
-        );
-    }
-    public  FilterResult checkSignal(AiPredictionData prediction) {
-        // Lấy đủ 4 chỉ số Return và 1 chỉ số Risk
+
+    // --- HỖ TRỢ V2 (AiPredictionData cũ) ---
+    public FilterResult checkSignal(AiPredictionData prediction) {
         return evaluate(
                 prediction.predReturn15M,
                 prediction.predReturn1H,
@@ -71,8 +68,8 @@ public class AIRejectFilter {
         );
     }
 
-    // Hàm thiết lập tham số nhanh cho bộ tối ưu
-    public  void setConfig(double risk, double min1h, double highRet, double min15m, double min4h, double dead24h) {
+    // Hàm thiết lập tham số nhanh cho bộ tối ưu (Backtest Engine gọi vào đây)
+    public void setConfig(double risk, double min1h, double highRet, double min15m, double min4h, double dead24h) {
         HARD_RISK_LIMIT = risk;
         MIN_PRED_RETURN_1H = min1h;
         HIGH_RETURN_THRESHOLD = highRet;
@@ -81,67 +78,54 @@ public class AIRejectFilter {
         DEAD_TREND_24H = dead24h;
     }
 
-    private  FilterResult evaluate(double pred15M, double pred1H, double pred4H, double pred24H, double risk4H) {
+    /**
+     * LOGIC ĐÁNH GIÁ CHUNG CHO MỌI PHIÊN BẢN
+     */
+    private FilterResult evaluate(double pred15M, double pred1H, double pred4H, double pred24H, double risk4H) {
 
-        // ---------------------------------------------------------
-        // BƯỚC 1: KIỂM TRA SINH TỒN (Risk vs Reward Khủng)
-        // ---------------------------------------------------------
+        // 1. KIỂM TRA SINH TỒN (Risk vs Reward)
         if (risk4H <= HARD_RISK_LIMIT) {
-            // Nếu Rủi ro cao (sập > 5%), chỉ vào nếu Lợi nhuận cực khủng (> 4%)
+            // Nếu rủi ro cao (sâu hơn -5.6%), chỉ vào nếu lợi nhuận cực khủng (> 8.5%)
             if (pred1H > HIGH_RETURN_THRESHOLD) {
                 return new FilterResult(FilterDecision.PASS, "HIGH RISK HIGH REWARD: Chấp nhận rủi ro để ăn dày");
             }
-            return new FilterResult(FilterDecision.REJECT, String.format("DANGER: Risk %.2f%% quá cao, Return %.2f%% không đủ bù", risk4H * 100, pred1H * 100));
+            return new FilterResult(FilterDecision.REJECT,
+                    String.format("DANGER: MaxDD %.2f%% quá cao (Limit %.2f%%), Return %.2f%% không đủ bù",
+                            risk4H * 100, HARD_RISK_LIMIT * 100, pred1H * 100));
         }
 
-        // ---------------------------------------------------------
-        // BƯỚC 2: KIỂM TRA LỰC CHÍNH (1H)
-        // ---------------------------------------------------------
+        // 2. KIỂM TRA LỰC CHÍNH (1H)
         if (pred1H <= MIN_PRED_RETURN_1H) {
-            return new FilterResult(FilterDecision.REJECT, String.format("WEAK 1H: Lãi %.2f%% < 1%% (Sideway)", pred1H * 100));
+            return new FilterResult(FilterDecision.REJECT,
+                    String.format("WEAK 1H: Lãi %.2f%% < %.2f%% (Sideway/Yếu)", pred1H * 100, MIN_PRED_RETURN_1H * 100));
         }
 
-        // ---------------------------------------------------------
-        // BƯỚC 3: KIỂM TRA ĐÀ TĂNG NGẮN HẠN (15M Check)
-        // ---------------------------------------------------------
-        // Nếu 1H ngon nhưng 15M đang xìu (< 0.1%), coi chừng là đỉnh sóng hồi
+        // 3. KIỂM TRA ĐÀ TĂNG NGẮN HẠN (15M) - QUAN TRỌNG NHẤT
+        // HPO yêu cầu 15M phải > 1.35%. Nếu chưa hồi mạnh -> Reject.
         if (pred15M < MIN_MOMENTUM_15M) {
-            return new FilterResult(
-                    FilterDecision.REJECT,
-                    String.format("BAD MOMENTUM: 1H ngon nhưng 15M yếu (%.2f%%) -> Dễ bị Bull Trap", pred15M * 100)
-            );
+            return new FilterResult(FilterDecision.REJECT,
+                    String.format("BAD MOMENTUM: 1H ngon nhưng 15M chưa nảy mạnh (%.2f%% < %.2f%%) -> Chờ xác nhận thêm",
+                            pred15M * 100, MIN_MOMENTUM_15M * 100));
         }
 
-        // ---------------------------------------------------------
-        // BƯỚC 4: KIỂM TRA XU HƯỚNG TRUNG HẠN (4H Check)
-        // ---------------------------------------------------------
-        // Nếu 1H ngon nhưng 4H lại đỏ hoặc tăng quá yếu (< 0.5%),
-        // chứng tỏ đây chỉ là cú nảy con mèo chết (Dead Cat Bounce)
-        // TRỪ KHI: 1H cực mạnh (> 3%) thì có thể phá trend 4H -> Cho qua
+        // 4. KIỂM TRA XU HƯỚNG TRUNG HẠN (4H)
+        // HPO hạ thấp tiêu chuẩn 4H xuống 0.35% -> Chỉ cần không sập là được.
+        // Trừ khi 1H cực mạnh (> 3%) thì có thể phá trend.
         if (pred4H < MIN_TREND_4H && pred1H < 0.03) {
-            return new FilterResult(
-                    FilterDecision.REJECT,
-                    String.format("AGAINST TREND: 4H yếu (%.2f%%) -> Ngược dòng nước", pred4H * 100)
-            );
+            return new FilterResult(FilterDecision.REJECT,
+                    String.format("AGAINST TREND: 4H quá yếu (%.2f%% < %.2f%%) -> Ngược dòng nước",
+                            pred4H * 100, MIN_TREND_4H * 100));
         }
 
-        // ---------------------------------------------------------
-        // BƯỚC 5: KIỂM TRA "THIÊN NGA ĐEN" DÀI HẠN (24H Check)
-        // ---------------------------------------------------------
-        // Nếu 24H dự báo sập hầm > 5%, thì mọi cú hồi 1H đều là để bán
+        // 5. KIỂM TRA MACRO (24H)
         if (pred24H < DEAD_TREND_24H) {
-            return new FilterResult(
-                    FilterDecision.REJECT,
-                    String.format("MACRO DUMP: 24H quá xấu (%.2f%%) -> Không bắt dao", pred24H * 100)
-            );
+            return new FilterResult(FilterDecision.REJECT,
+                    String.format("MACRO DUMP: 24H quá xấu (%.2f%%) -> Không bắt dao rơi", pred24H * 100));
         }
 
-        // ---------------------------------------------------------
-        // PASS: HỘI TỤ ĐỦ CÁC YẾU TỐ
-        // ---------------------------------------------------------
-        return new FilterResult(
-                FilterDecision.PASS,
-                String.format("PERFECT: 15M(%.2f%%) -> 1H(%.2f%%) -> 4H(%.2f%%)", pred15M * 100, pred1H * 100, pred4H * 100)
-        );
+        // PASS
+        return new FilterResult(FilterDecision.PASS,
+                String.format("PERFECT 198K: 15M(%.2f%%) -> 1H(%.2f%%) -> 4H(%.2f%%) | DD(%.2f%%)",
+                        pred15M * 100, pred1H * 100, pred4H * 100, risk4H * 100));
     }
 }

@@ -15,6 +15,7 @@
  */
 package com.binance.chuyennd.bigchange.test;
 
+import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
 import com.binance.chuyennd.client.ClientSingleton;
 import com.binance.chuyennd.helper.TickerFuturesHelper;
@@ -23,6 +24,7 @@ import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
 import com.binance.chuyennd.research.BudgetManagerSimple;
+import com.binance.chuyennd.research.OrderTargetInfoTest;
 import com.binance.chuyennd.trading.BinanceOrderTradingManager;
 import com.binance.chuyennd.trading.BudgetManager;
 import com.binance.chuyennd.trading.OrderTargetInfo;
@@ -57,7 +59,15 @@ public class Test {
     private final ConcurrentHashMap<String, Long> symbol2Processing = new ConcurrentHashMap<>();
 
     public static void main(String[] args) throws Exception {
-        testProduction();
+//        testProduction();
+        Long startTime = Utils.sdfFile.parse("20251219").getTime() + 7 * Utils.TIME_HOUR;
+        TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers = DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime);
+          for (Long time : time2Tickers.keySet()) {
+              KlineObjectSimple lumia = time2Tickers.get(time).get("LUMIAUSDT");
+              if (lumia != null) {
+                  LOG.info("{} {} {}", Utils.normalizeDateYYYYMMDDHHmm(time), lumia.priceClose);
+              }
+          }
 //        checkRateProduction();
 //        changeLeverage();
 //        deleteAllSLAtRedis();

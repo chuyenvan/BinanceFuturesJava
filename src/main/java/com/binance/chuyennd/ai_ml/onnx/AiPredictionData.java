@@ -1,4 +1,4 @@
-package com.binance.chuyennd.ai_ml.onnx.entry;
+package com.binance.chuyennd.ai_ml.onnx;
 
 import java.io.Serializable;
 

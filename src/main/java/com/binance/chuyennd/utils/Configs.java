@@ -39,16 +39,27 @@ public class Configs {
         }
     }
     // 1. Ngưỡng margin-ratio đầu tiên để giảm budget
-    public static double BUDGET_MARGIN_RATIO_1 = 0.3;
+    public static double BUDGET_MARGIN_RATIO_1 = 0.4820;
     // 2. Mức chia budget ở ngưỡng 1
-    public static double BUDGET_DIVIDER_1 = 2.0;
+    public static double BUDGET_DIVIDER_1 = 1.5578;
 
     // 3. Ngưỡng margin-ratio thứ hai
-    public static double BUDGET_MARGIN_RATIO_2 = 0.6;
+    public static double BUDGET_MARGIN_RATIO_2 = 0.7475;
     // 4. Mức chia budget ở ngưỡng 2
-    public static double BUDGET_DIVIDER_2 = 2.0;
+    public static double BUDGET_DIVIDER_2 = 1.5984;
 
 
+
+    // --- CẤU HÌNH TRAILING STOP ĐỘNG (DYNAMIC) ---
+    // Ngưỡng biến động (Volatility Thresholds) - Mặc định cũ: 0.01, 0.006, 0.004
+    public static double TS_VOL_HIGH_THRES = 0.01;
+    public static double TS_VOL_MED_THRES = 0.006;
+    public static double TS_VOL_LOW_THRES = 0.004;
+
+    // Mức chốt lời tương ứng (Target Rates) - Mặc định cũ: 0.03, 0.02, 0.016
+    public static double TS_RATE_HIGH = 0.03;
+    public static double TS_RATE_MED = 0.02;
+    public static double TS_RATE_LOW = 0.016;
 
 
     public static String TIME_RUN = Configs.getString("TIME_RUN");
@@ -66,7 +77,7 @@ public class Configs {
     public static final Integer NUMBER_THREAD_ORDER_MANAGER = Configs.getInt("NUMBER_THREAD_ORDER_MANAGER");
     public static Integer NUMBER_ENTRY_EACH_SIGNAL = Configs.getInt("NUMBER_ENTRY_EACH_SIGNAL");
     public static Integer NUMBER_TICKER_CAL_RATE_CHANGE = Configs.getInt("NUMBER_TICKER_CAL_RATE_CHANGE");
-    public static final Double RATE_PROFIT_STOP_MARKET = Configs.getDouble("RATE_PROFIT_STOP_MARKET");
+    public static Double RATE_PROFIT_STOP_MARKET = Configs.getDouble("RATE_PROFIT_STOP_MARKET");
 
     public static final Double RATE_FEE = Configs.getDouble("RATE_FEE");
     public static Integer LEVERAGE_ORDER = Configs.getInt("LEVERAGE_ORDER");
@@ -96,7 +107,7 @@ public class Configs {
 
     // aerospike
     public static final String AEROSPIKE_HOST = Configs.getString("AEROSPIKE_HOST"); //"127.0.0.1";
-    public static final int AEROSPIKE_PORT = 3000;
+    public static final int AEROSPIKE_PORT = Configs.getInt("AEROSPIKE_PORT");;
 
     public static final String AEROSPIKE_NAMESPACE = Configs.getString("AEROSPIKE_NAMESPACE"); //"ticker" ;
     public static final String FILE_AI_ENTRY_PREDICTIONS = Configs.getString("FILE_AI_PREDICTIONS"); //"ticker" ;

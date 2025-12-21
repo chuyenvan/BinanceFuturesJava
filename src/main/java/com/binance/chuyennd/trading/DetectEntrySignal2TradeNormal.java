@@ -53,8 +53,6 @@ public class DetectEntrySignal2TradeNormal {
 
     public static final Logger LOG = LoggerFactory.getLogger(DetectEntrySignal2TradeNormal.class);
     private static final String FILE_STORAGE_TIME_RATE_DOWN15M = "storage/data/time2RatDown15M.data";
-    private static final String MODEL_DIR = "../storage/ai_ml_data/ai_models_reg";
-
     public ExecutorService executorService = Executors.newFixedThreadPool(Configs.NUMBER_THREAD_ORDER_MANAGER);
     public TreeMap<Long, Double> time2RateDown15MAvg = new TreeMap<>();
     public AIRejectFilter aiRejectFilter = new AIRejectFilter();
@@ -413,8 +411,9 @@ public class DetectEntrySignal2TradeNormal {
         Double budget = BudgetManager.getInstance().getBudget();
 
         budget = TradeUtils.managerBudget(budget, marginRunning, balanceBasic, levelChange);
-        if (budget == null) {
-            LOG.info("Not trade because over capital: {} {} {}", symbol, levelChange, Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()));
+        if (budget == null || budget < 5) {
+            LOG.info("Not trade because over capital or budget not enough: {} {} {} {}", symbol,
+                    levelChange, Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()), budget);
             return;
         }
 
@@ -491,7 +490,7 @@ public class DetectEntrySignal2TradeNormal {
         // --- KHỞI TẠO AI & LOAD DỮ LIỆU LỊCH SỬ ---
         try {
             LOG.info("Initializing AI Brain & Feature Extractor...");
-            this.aiBrain = new OnnxInferenceManager(MODEL_DIR);
+            this.aiBrain = new OnnxInferenceManager(Configs.FILE_AI_ENTRY_PREDICTIONS);
             this.featureExtractor = new ComprehensiveMarketFeatureExtractor();
 
             // QUAN TRỌNG: Sync dữ liệu lịch sử từ ListenAllTicker sang FeatureExtractor
