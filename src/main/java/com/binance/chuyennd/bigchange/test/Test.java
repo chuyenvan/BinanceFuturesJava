@@ -60,14 +60,10 @@ public class Test {
 
     public static void main(String[] args) throws Exception {
 //        testProduction();
-        Long startTime = Utils.sdfFile.parse("20251219").getTime() + 7 * Utils.TIME_HOUR;
-        TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers = DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime);
-          for (Long time : time2Tickers.keySet()) {
-              KlineObjectSimple lumia = time2Tickers.get(time).get("LUMIAUSDT");
-              if (lumia != null) {
-                  LOG.info("{} {} {}", Utils.normalizeDateYYYYMMDDHHmm(time), lumia.priceClose);
-              }
-          }
+   Random ran = new Random();
+        for (int i = 0; i < 100; i++) {
+            System.out.println(ran.nextInt(10));
+        }
 //        checkRateProduction();
 //        changeLeverage();
 //        deleteAllSLAtRedis();

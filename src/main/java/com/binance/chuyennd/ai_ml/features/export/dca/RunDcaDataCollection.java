@@ -33,38 +33,52 @@ public class RunDcaDataCollection {
     }
 
     public void run() throws Exception {
-        // Đổi tên folder output để không lẫn với data cũ ít ỏi
-        DcaDataCollectionManager manager = new DcaDataCollectionManager("storage/training_data_dca_bigdata");
+        // Folder lưu data tinh gọn (Clean Data)
+        DcaDataCollectionManager manager = new DcaDataCollectionManager("storage/training_data_dca_clean_1h");
 
         LOG.info("🚀 Loading Market Rates...");
         TreeMap<Long, MarketRateChange> time2Rate = loadMarketRateData();
 
         long startTime = Utils.sdfFile.parse("20210101").getTime();
-        long warmUpTime = startTime - Utils.TIME_DAY;
+        long warmUpTime = startTime - Utils.TIME_DAY; // Load trước 1 ngày để warm-up indicator
         long endTime = System.currentTimeMillis();
         long currentTime = warmUpTime;
 
         while (currentTime <= endTime) {
             try {
+                // 1. Load Data Hôm Nay
                 TreeMap<Long, Map<String, KlineObjectSimple>> dataDay0 = DataManagerAerospikeFloatSim.readDataFromAerospike1M(currentTime);
+
+                // 2. Chuẩn bị Lookup Data (Dùng để soi tương lai tính Label)
                 TreeMap<Long, Map<String, KlineObjectSimple>> lookupData = new TreeMap<>();
                 if (dataDay0 != null) lookupData.putAll(dataDay0);
 
-                // Load lookup data (giữ nguyên logic cũ của bạn để lấy data tương lai)
-                // ...
+                // 🔥 [PHẦN BỔ SUNG QUAN TRỌNG]: LOAD DỮ LIỆU 3 NGÀY TIẾP THEO 🔥
+                // Vì Label MaxDrop nhìn về tương lai 3 ngày (72h)
+                for (int i = 1; i <= 3; i++) {
+                    long nextDay = currentTime + ((long) i * Utils.TIME_DAY);
+                    if (nextDay > endTime) break; // Không load quá ngày hiện tại
 
+                    TreeMap<Long, Map<String, KlineObjectSimple>> dataNext = DataManagerAerospikeFloatSim.readDataFromAerospike1M(nextDay);
+                    if (dataNext != null) {
+                        lookupData.putAll(dataNext);
+                    }
+                }
+
+                // 3. Xử lý dữ liệu
                 if (dataDay0 != null) {
                     processDay(dataDay0, lookupData, time2Rate, manager, currentTime >= startTime);
                 }
 
+                // 4. Export & Log
                 if (currentTime >= startTime) {
                     manager.exportData();
-                    // Log rõ ràng: Ngày này lấy được bao nhiêu mẫu MỚI (New Samples)
-                    // Lưu ý: getCollectedCount() là tích lũy, nên muốn xem tốc độ thì cần trừ đi số cũ.
                     LOG.info("✅ Day {} done. Cumulative Count: {}",
                             Utils.normalizeDateYYYYMMDD(currentTime), manager.getCollectedCount());
                 }
-            } catch (Exception e) { e.printStackTrace(); }
+            } catch (Exception e) {
+                LOG.error("Error processing day " + currentTime, e);
+            }
             currentTime += Utils.TIME_DAY;
         }
     }
@@ -79,19 +93,15 @@ public class RunDcaDataCollection {
             Long timestamp = entry.getKey();
             Map<String, KlineObjectSimple> snapshot = entry.getValue();
 
-            // 1. Update History (Luôn chạy để chỉ báo kỹ thuật liền mạch)
+            // Luôn update history để chỉ báo (RSI, MA) liên tục
             manager.updateHistory(snapshot);
 
             if (!isCollecting) continue;
 
-            // 2. Lấy Market Rate (để làm feature)
             MarketRateChange rate = rateData != null ? rateData.get(timestamp) : null;
 
-            // 🔥 THAY ĐỔI QUAN TRỌNG NHẤT: BỎ FILTER "MarketBigChangeDetector" 🔥
-            // Chúng ta cần data của cả ngày thường để AI học được sự khác biệt giữa "Bình yên" và "Bão tố".
-            // if (rate == null || !MarketBigChangeDetector.isDcaAlt(...)) continue;  <-- XÓA DÒNG NÀY
+            // BỎ FILTER MarketBigChangeDetector để lấy cả dữ liệu ngày thường
 
-            // 3. Sinh giả lập
             List<OrderTargetInfoTest> stuckOrders = generateDeepStuckOrders(timestamp, snapshot);
             for (OrderTargetInfoTest order : stuckOrders) {
                 manager.processSimulatedOrder(timestamp, order, rate, snapshot, lookupData);
@@ -102,11 +112,12 @@ public class RunDcaDataCollection {
     private List<OrderTargetInfoTest> generateDeepStuckOrders(long currentTs, Map<String, KlineObjectSimple> snapshot) {
         List<String> candidates = new ArrayList<>();
 
-        // Cooldown 15 phút: Đủ để bắt biến động, không quá dày
-        long cooldownMillis = 15 * 60 * 1000L;
+        // 🔥 CẤU HÌNH TINH GỌN DATA (Tránh tràn RAM)
+        // 1. Cooldown 60 phút: Mỗi coin chỉ lấy mẫu 1 lần/giờ
+        long cooldownMillis = (11 + rand.nextInt(10)) * 60 * 1000L;
 
         for (Map.Entry<String, KlineObjectSimple> entry : snapshot.entrySet()) {
-            // Volume > 10k: Lọc bớt rác quá nhỏ, nhưng vẫn giữ Mid-cap
+            // Lọc Volume 50k (Chỉ lấy coin có thanh khoản ổn)
             if (entry.getValue().totalUsdt < 10000) continue;
 
             Long lastTime = symbolLastSampledTime.get(entry.getKey());
@@ -116,22 +127,19 @@ public class RunDcaDataCollection {
 
         Collections.shuffle(candidates);
 
-        // 🔥 TĂNG SỐ LƯỢNG MẪU: Lấy tối đa 100 coin mỗi lần quét (gần như toàn bộ market active)
-        int maxCoinsToPick = 100;
-        List<String> selectedSymbols = candidates.subList(0, Math.min(candidates.size(), maxCoinsToPick));
+        // 2. Lấy Top 40 coin ngẫu nhiên mỗi giờ
+        int maxCoinsToPick = 10;
 
+        List<String> selectedSymbols = candidates.subList(0, Math.min(candidates.size(), maxCoinsToPick));
         List<OrderTargetInfoTest> orders = new ArrayList<>();
 
         for (String symbol : selectedSymbols) {
             KlineObjectSimple currentKline = snapshot.get(symbol);
             symbolLastSampledTime.put(symbol, currentTs);
 
-            // Sinh ngẫu nhiên Drawdown
+            // Sinh 1 trạng thái ngẫu nhiên (1-1 Mapping)
             double drawdownPercent = generateWeightedDrawdown();
             double assumedEntryPrice = currentKline.priceClose / (1.0 - drawdownPercent);
-
-            // Tính ngược thời gian vào lệnh giả định
-            // (Không quá quan trọng chính xác từng phút, chủ yếu để logic không bị vô lý)
             long assumedStartTime = currentTs - (long)(drawdownPercent * 100 * 3600 * 1000);
 
             OrderTargetInfoTest order = new OrderTargetInfoTest(
@@ -144,7 +152,6 @@ public class RunDcaDataCollection {
     }
 
     private double generateWeightedDrawdown() {
-        // Giữ nguyên logic phân phối lỗ (Tập trung vùng 30-70%)
         double r = rand.nextDouble();
         if (r < 0.2) return 0.05 + rand.nextDouble() * 0.25; // 5-30%
         else if (r < 0.8) return 0.30 + rand.nextDouble() * 0.40; // 30-70% (Main)
