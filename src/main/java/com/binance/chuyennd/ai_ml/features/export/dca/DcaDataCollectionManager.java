@@ -2,7 +2,6 @@ package com.binance.chuyennd.ai_ml.features.export.dca;
 
 import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
-import com.binance.chuyennd.research.FundingFeeManager;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
 import com.binance.chuyennd.utils.Utils;
 import org.slf4j.Logger;
@@ -19,8 +18,6 @@ public class DcaDataCollectionManager {
     private final List<String> buffer = new ArrayList<>();
     private int collectedCount = 0;
     private final DcaFeatureExtractor featureExtractor = new DcaFeatureExtractor();
-
-    // Caching Basket
     private long lastBasketTimestamp = -1;
     private List<String> cachedBasket = new ArrayList<>();
 
@@ -31,15 +28,19 @@ public class DcaDataCollectionManager {
     }
 
     private void writeHeader() {
-        String header = "currentDrawdown,lossVelocity1H,dcaImpactRatio," +
-                "instantAlpha,recoveryElasticity,dangerIndex," +
-                "crashVelocity,globalRateDownAvg," +
-                "btcMomentum1H,btcMomentum24H," +
-                "rsi1H,volumeAnomaly,distFromLow24H,maxRateChange60M,volumeSpike,volatilityShock," +
-                "basketMomentum15M,basketMomentum1H,basketRsi14,basketVolSpike," +
-                "fundingRateRaw,fundingRateAvg24H,fundingRateTrend," +
+        // 🔥 HEADER ĐÃ CẬP NHẬT FULL
+        String header = "distFromHigh24H,distMA20," +
+                "instantAlpha,recoveryElasticity," +
+                "crashVelocity,globalRateDownAvg,advanceDeclineRatio,btcDominance,marketBreadthStrength," +
+                "btcMomentum15M,btcMomentum1H,btcMomentum4H,btcMomentum24H,btcMomentumAcceleration," +
+                "ethMomentum15M,ethMomentum4H," +
+                "momentum15M,momentum1H,momentum4H,momentum24H," + // Coin specific
+                "rsi1H,rsiChange,volumeAnomaly,volumeRatio15M_24H,distFromLow24H,maxRateChange60M,volatilityShock,volatilityTermStructure," +
+                "basketMomentum15M,basketMomentum1H,basketMomentum24H,basketRsi14,basketVolSpike," +
+                "coinFundingRate,fundingRateRaw,fundingRateAvg24H,fundingRateTrend," + // Added coinFundingRate
                 "hourOfDay,dayOfWeek,weekOfMonth,monthOfYear," +
-                "labelMaxDropFromNow";
+                "labelMaxDropFromNow,labelMaxRiseFromNow," +
+                "isDump30Pct3D,isPump20Pct3D";
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(outputDir + "/header.csv"))) {
             writer.write(header); writer.newLine();
         } catch (Exception e) { e.printStackTrace(); }
@@ -54,12 +55,6 @@ public class DcaDataCollectionManager {
                                       Map<String, KlineObjectSimple> currentSnapshot,
                                       TreeMap<Long, Map<String, KlineObjectSimple>> futureLookupData) {
         try {
-            // 1. Funding (Giữ nguyên)
-            Map<String, Double> fundingMap = new HashMap<>();
-            Double realFunding = FundingFeeManager.getInstance().getNearestFundingFee(order.symbol, currentTimestamp);
-            if (realFunding != null) fundingMap.put(order.symbol, realFunding);
-
-            // 2. Basket (Giữ nguyên logic Cache)
             if (currentTimestamp != lastBasketTimestamp) {
                 cachedBasket = featureExtractor.identifyTargetBasket(currentTimestamp);
                 lastBasketTimestamp = currentTimestamp;
@@ -67,32 +62,10 @@ public class DcaDataCollectionManager {
             List<String> targetBasket = cachedBasket;
             if (targetBasket == null || targetBasket.isEmpty()) targetBasket = Collections.singletonList(order.symbol);
 
-            // 3. 🔥 THAY ĐỔI: CHỌN 1 KỊCH BẢN BƠM VỐN NGẪU NHIÊN
-            // Thay vì loop qua mảng, ta random chọn 1 loại hành vi
-            double volumeMultiplier;
-            double r = Math.random();
-
-            if (r < 0.4) {
-                // 40% cơ hội là "Rải đinh" (Hết tiền/Sợ)
-                volumeMultiplier = 0.05 + Math.random() * 0.15;
-            } else if (r < 0.7) {
-                // 30% cơ hội là "Cầm cự"
-                volumeMultiplier = 0.20 + Math.random() * 0.20;
-            } else if (r < 0.9) {
-                // 20% cơ hội là "Tiêu chuẩn"
-                volumeMultiplier = 0.40 + Math.random() * 0.30;
-            } else {
-                // 10% cơ hội là "All-in"
-                volumeMultiplier = 0.70 + Math.random() * 0.30;
-            }
-
-            // Xử lý logic 1 lần duy nhất
             KlineObjectSimple k = currentSnapshot.get(order.symbol);
             if (k != null) {
-                double dcaRatio = volumeMultiplier;
-
                 DcaMarketFeatures features = featureExtractor.extractFeatures(
-                        currentTimestamp, order, marketRate, currentSnapshot, dcaRatio, targetBasket);
+                        currentTimestamp, order, marketRate, currentSnapshot, targetBasket);
 
                 if (features != null) {
                     String csvLine = calculateLabelsAndFormat(features, order, futureLookupData);
@@ -110,34 +83,65 @@ public class DcaDataCollectionManager {
     private String calculateLabelsAndFormat(DcaMarketFeatures f, OrderTargetInfoTest order,
                                             TreeMap<Long, Map<String, KlineObjectSimple>> futureLookupData) {
         double minPriceInFuture = Double.MAX_VALUE;
+        double maxPriceInFuture = -1.0;
+
         long endTime = order.timeStart + 3 * Utils.TIME_DAY;
         Map<Long, Map<String, KlineObjectSimple>> subMap = futureLookupData.subMap(order.timeStart, false, endTime, true);
 
         boolean found = false;
-        double currentPrice = order.priceEntry * (1.0 - f.currentDrawdown);
+        double basePrice = order.lastPrice;
+        if (basePrice <= 0) return null;
 
-        for (Map<String, KlineObjectSimple> m : subMap.values()) {
-            KlineObjectSimple k = m.get(order.symbol);
+        for (Map.Entry<Long, Map<String, KlineObjectSimple>> entry : subMap.entrySet()) {
+            KlineObjectSimple k = entry.getValue().get(order.symbol);
             if (k != null) {
                 if (k.minPrice < minPriceInFuture) minPriceInFuture = k.minPrice;
+                if (k.maxPrice > maxPriceInFuture) maxPriceInFuture = k.maxPrice;
                 found = true;
             }
         }
         if (!found) return null;
 
-        double labelMaxDrop = (minPriceInFuture - currentPrice) / currentPrice;
+        double labelMaxDrop = (minPriceInFuture - basePrice) / basePrice;
+        double labelMaxRise = (maxPriceInFuture - basePrice) / basePrice;
+
+        int isDump30Pct3D = (labelMaxDrop <= -0.30) ? 1 : 0;
+        int isPump20Pct3D = (labelMaxRise >= 0.20) ? 1 : 0;
 
         StringBuilder sb = new StringBuilder();
-        sb.append(String.format("%.6f,%.6f,%.4f,", f.currentDrawdown, f.lossVelocity1H, f.dcaImpactRatio));
-        sb.append(String.format("%.6f,%.6f,%.6f,", f.instantAlpha, f.recoveryElasticity, f.dangerIndex));
-        sb.append(String.format("%.6f,%.6f,", f.crashVelocity, f.globalRateDownAvg));
-        sb.append(String.format("%.6f,%.6f,", f.btcMomentum1H, f.btcMomentum24H));
-        sb.append(String.format("%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,",
-                f.rsi1H, f.volumeAnomaly, f.distFromLow24H, f.maxRateChange60M, f.volumeSpike, f.volatilityShock));
-        sb.append(String.format("%.6f,%.6f,%.6f,%.6f,", f.basketMomentum15M, f.basketMomentum1H, f.basketRsi14, f.basketVolSpike));
-        sb.append(String.format("%.8f,%.8f,%.8f,", f.fundingRateRaw, f.fundingRateAvg24H, f.fundingRateTrend));
+        // 1. Market Position
+        sb.append(String.format("%.6f,%.6f,", f.distFromHigh24H, f.distMA20));
+        // 2. Rel Strength
+        sb.append(String.format("%.6f,%.6f,", f.instantAlpha, f.recoveryElasticity));
+        // 3. Market Context
+        sb.append(String.format("%.6f,%.6f,%.6f,%.6f,%.6f,",
+                f.crashVelocity, f.globalRateDownAvg, f.advanceDeclineRatio, f.btcDominance, f.marketBreadthStrength));
+        // 4. Macro (Updated BTC & ETH)
+        sb.append(String.format("%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,",
+                f.btcMomentum15M, f.btcMomentum1H, f.btcMomentum4H, f.btcMomentum24H, f.btcMomentumAcceleration,
+                f.ethMomentum15M, f.ethMomentum4H));
+
+        // 5. Technicals (Updated Momentum, RSI Change, Vol Ratio)
+        sb.append(String.format("%.6f,%.6f,%.6f,%.6f,",
+                f.momentum15M, f.momentum1H, f.momentum4H, f.momentum24H));
+        sb.append(String.format("%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,",
+                f.rsi1H, f.rsiChange, f.volumeAnomaly, f.volumeRatio15M_24H,
+                f.distFromLow24H, f.maxRateChange60M, f.volatilityShock, f.volatilityTermStructure));
+
+        // 6. Basket
+        sb.append(String.format("%.6f,%.6f,%.6f,%.6f,%.6f,",
+                f.basketMomentum15M, f.basketMomentum1H, f.basketMomentum24H, f.basketRsi14, f.basketVolSpike));
+
+        // 7. Funding (Updated Coin Funding)
+        sb.append(String.format("%.8f,%.8f,%.8f,%.8f,",
+                f.coinFundingRate, f.fundingRateRaw, f.fundingRateAvg24H, f.fundingRateTrend));
+
+        // 8. Time
         sb.append(String.format("%d,%d,%d,%d,", f.hourOfDay, f.dayOfWeek, f.weekOfMonth, f.monthOfYear));
-        sb.append(String.format("%.6f", labelMaxDrop));
+
+        // Labels
+        sb.append(String.format("%.6f,%.6f,%d,%d", labelMaxDrop, labelMaxRise, isDump30Pct3D, isPump20Pct3D));
+
         return sb.toString();
     }
 

@@ -55,7 +55,8 @@ public class ClientSingleton implements Serializable {
         RequestOptions options = new RequestOptions();
         syncRequestClient = SyncRequestClient.create(PrivateConfig.API_KEY, PrivateConfig.SECRET_KEY,
                 options);
-        for (ExchangeInfoEntry symbol : ClientSingleton.getInstance().syncRequestClient.getExchangeInformation().getSymbols()) {
+        List<ExchangeInfoEntry> symbols = ClientSingleton.getInstance().syncRequestClient.getExchangeInformation().getSymbols();
+        for (ExchangeInfoEntry symbol : symbols) {
             Double quantityUnit = getMinQty(symbol);
             if (quantityUnit != null) {
                 symbol2UnitQuantity.put(symbol.getSymbol(), quantityUnit);
@@ -68,19 +69,6 @@ public class ClientSingleton implements Serializable {
             if (notional != null) {
                 symbol2Notional.put(symbol.getSymbol(), notional);
             }
-//            try {
-//                if (StringUtils.endsWithIgnoreCase(symbol.getSymbol(), "usdt")) {
-//                    Double min2TradeBase = quantityUnit
-//                            * ClientSingleton.getInstance().getCurrentPrice(symbol.getSymbol());
-//                    Double min2Trade = min2TradeBase;
-//                    while (min2Trade < notional) {
-//                        min2Trade = min2Trade + min2TradeBase;
-//                    }
-//                    symbol2UnitTrade.put(symbol.getSymbol(), min2Trade);
-//                }
-//            } catch (Exception e) {
-//            }
-
         }
     }
 

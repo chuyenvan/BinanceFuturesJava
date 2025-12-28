@@ -1,129 +1,220 @@
 # -*- coding: utf-8 -*-
 import os
+import gc
+import glob
+import logging
+import ctypes
+import random
 import pandas as pd
 import numpy as np
 import xgboost as xgb
-from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import r2_score, mean_absolute_error
-from onnxmltools.convert import convert_xgboost, convert_sklearn
-from onnxmltools.convert.common.data_types import FloatTensorType as OnnxFloatTensorType
-from skl2onnx import convert_sklearn
-from skl2onnx.common.data_types import FloatTensorType as SklFloatTensorType
-import logging
-import argparse
 import optuna
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error
+from onnxmltools.convert import convert_xgboost
+from onnxconverter_common.data_types import FloatTensorType
 
-N_JOBS = 2
-os.environ["OMP_NUM_THREADS"] = str(N_JOBS)
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
+# --- 1. CẤU HÌNH GRANDMASTER ---
+# Tận dụng tối đa 2 Core vật lý mạnh mẽ
+os.environ["OMP_NUM_THREADS"] = "2"
+os.environ["OPENBLAS_NUM_THREADS"] = "2"
+os.environ["MKL_NUM_THREADS"] = "2"
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-class DcaRiskTrainer:
-    def __init__(self, model_dir="ai_models_dca_risk"):
-        self.model_dir = model_dir
-        self.scaler = StandardScaler()
-        os.makedirs(model_dir, exist_ok=True)
+BASE_DIR = "storage/training_data_dca"
+HEADER_FILE = f"{BASE_DIR}/header.csv"
+DATA_PATTERN = f"{BASE_DIR}/data_*.csv"
+MODEL_DIR = "models_dca_grandmaster" # Lưu folder riêng cho bản xịn
 
-    def preprocess_data(self, df):
-        # --- FEATURE INPUT (18 Features) ---
-        # GIỮ: currentDrawdown, lossVelocity1H (Để biết ngữ cảnh vị thế)
-        # BỎ: dcaImpactRatio (Tuyệt đối không cho AI biết tiền nạp)
-        feature_columns = [
-            'currentDrawdown', 'lossVelocity1H', # <--- GIỮ LẠI
-            # 'dcaImpactRatio',  <--- ĐÃ BỎ
-            'instantAlpha', 'recoveryElasticity', 'dangerIndex',
-            'crashVelocity', 'globalRateDownAvg', 'fundingRate',
-            'btcMomentum15M', 'btcMomentum1H', 'btcMomentum4H', 'btcMomentum24H',
-            'btcMomentumAcceleration', 'ethTrendStrength',
-            'rsi1H', 'volumeAnomaly', 'distFromLow24H', 'maxRateChange60M'
-        ]
+# 🔥 NÂNG CẤP 1: Tăng mẫu lên 3.5 Triệu (Vì RAM đang dư)
+TARGET_SAMPLES_FINAL = 3500000
+ESTIMATED_TOTAL_ROWS = 11200000
 
-        target_col = 'labelMaxDropFromNow' # <--- TARGET MỚI
+# Tìm kiếm tham số kỹ hơn (100 vòng)
+N_TRIALS = 100
 
-        # Check features
-        valid_features = [c for c in feature_columns if c in df.columns]
-        if len(valid_features) < len(feature_columns): return None, None
+os.makedirs(MODEL_DIR, exist_ok=True)
 
-        X = df[valid_features].replace([np.inf, -np.inf], np.nan).fillna(0).astype('float32')
+def force_release_ram():
+    """Ép OS thu hồi RAM ngay lập tức"""
+    gc.collect()
+    try:
+        ctypes.CDLL('libc.so.6').malloc_trim(0)
+    except:
+        pass
 
-        if target_col not in df.columns: return None, None
-        y = df[target_col].replace([np.inf, -np.inf], np.nan)
+def load_data_chunked_hd():
+    logger.info("1. Reading Header...")
+    if not os.path.exists(HEADER_FILE): return None
 
-        return X.values, y.values
+    header_df = pd.read_csv(HEADER_FILE)
+    col_names = header_df.columns.tolist()
 
-    def load_data(self, data_directory):
-        logger.info(f"Scanning data in {data_directory}...")
-        all_files = sorted([f for f in os.listdir(data_directory) if f.endswith(".csv")])
+    # Tính toán tỷ lệ lấy mẫu
+    sampling_rate = TARGET_SAMPLES_FINAL / ESTIMATED_TOTAL_ROWS
+    sampling_rate = min(sampling_rate * 1.1, 1.0) # Lấy dư 10% để lọc rác
 
-        X_list, y_list = [], []
-        for f in all_files:
-            try:
-                df = pd.read_csv(os.path.join(data_directory, f))
-                if len(df) < 50: continue
-                X, y = self.preprocess_data(df)
-                if X is not None:
-                    X_list.append(X)
-                    y_list.append(y)
-            except: pass
+    logger.info(f"Target: {TARGET_SAMPLES_FINAL} rows. Sampling Rate: {sampling_rate:.1%}")
 
-        if not X_list: return None, None
-        X_all = np.vstack(X_list)
-        y_all = np.hstack(y_list)
-        logger.info(f"✅ Loaded TOTAL: {len(X_all)} samples.")
+    file_list = glob.glob(DATA_PATTERN)
+    chunks_list = []
+    total_loaded = 0
 
-        X_scaled = self.scaler.fit_transform(X_all)
-        return X_scaled, y_all
+    logger.info(f"2. Processing {len(file_list)} files (HD Quality)...")
 
-    def train(self, data_dir, n_trials=50):
-        X, y = self.load_data(data_dir)
-        if X is None: return
+    for file_path in file_list:
+        # Load chunk vừa phải (200k)
+        chunk_iter = pd.read_csv(file_path, names=col_names, header=None, chunksize=200000)
 
-        # Split 90/10
-        split = int(len(X) * 0.9)
-        X_train, X_test, y_train, y_test = X[:split], X[split:], y[:split], y[split:]
+        for chunk in chunk_iter:
+            # Lọc rác
+            chunk = chunk[chunk['volatilityShock'] > 0.3] # Lấy cả biến động nhẹ hơn (0.3 thay vì 0.5)
 
-        # Optuna Optimize
-        def objective(trial):
-            params = {
-                'verbosity': 0, 'objective': 'reg:squarederror', 'tree_method': 'hist', 'n_jobs': N_JOBS,
-                'learning_rate': trial.suggest_float('learning_rate', 0.01, 0.2, log=True),
-                'max_depth': trial.suggest_int('max_depth', 5, 10),
-                'min_child_weight': trial.suggest_int('min_child_weight', 20, 200),
-                'subsample': trial.suggest_float('subsample', 0.6, 0.9),
-                'colsample_bytree': trial.suggest_float('colsample_bytree', 0.6, 0.9),
-                'reg_alpha': trial.suggest_float('reg_alpha', 0.1, 10.0, log=True),
-                'reg_lambda': trial.suggest_float('reg_lambda', 0.1, 10.0, log=True),
-            }
-            model = xgb.XGBRegressor(**params, n_estimators=1000, early_stopping_rounds=50)
-            model.fit(X_train, y_train, eval_set=[(X_test, y_test)], verbose=False)
-            return r2_score(y_test, model.predict(X_test))
+            # Khử trùng
+            chunk = chunk.drop_duplicates(subset=['distFromHigh24H', 'rsi1H', 'crashVelocity'])
 
-        logger.info("Running Optuna...")
-        study = optuna.create_study(direction="maximize")
-        study.optimize(objective, n_trials=n_trials)
+            # Sampling
+            if sampling_rate < 1.0 and not chunk.empty:
+                chunk = chunk.sample(frac=sampling_rate, random_state=42)
 
-        # Train Final
-        best_params = study.best_params
-        best_params.update({'n_estimators': 3000, 'n_jobs': N_JOBS, 'objective': 'reg:squarederror'})
+            # Ép kiểu Float32 (Tiết kiệm RAM để dành cho thuật toán nặng)
+            float_cols = chunk.select_dtypes(include=['float64']).columns
+            chunk[float_cols] = chunk[float_cols].astype('float32')
 
-        logger.info("Training Final Risk Model...")
-        model = xgb.XGBRegressor(**best_params)
-        model.fit(X_train, y_train, eval_set=[(X_test, y_test)], verbose=500, early_stopping_rounds=100)
+            if not chunk.empty:
+                chunks_list.append(chunk)
+                total_loaded += len(chunk)
 
-        preds = model.predict(X_test)
-        logger.info(f"🚀 FINAL R2: {r2_score(y_test, preds):.4f} | MAE: {mean_absolute_error(y_test, preds):.6f}")
+            if len(chunks_list) % 50 == 0:
+                print(f"   -> Collected so far: {total_loaded} rows...", end='\r')
 
-        # Export ONNX
-        initial_type = [('float_input', OnnxFloatTensorType([None, X.shape[1]]))]
-        onnx_model = convert_xgboost(model, initial_types=initial_type)
-        with open(f"{self.model_dir}/Model_DCA_MaxDrop.onnx", "wb") as f: f.write(onnx_model.SerializeToString())
+    logger.info(f"\nMerging {len(chunks_list)} chunks...")
+    if not chunks_list: return None
 
-        initial_type_scaler = [('float_input', SklFloatTensorType([None, X.shape[1]]))]
-        onnx_scaler = convert_sklearn(self.scaler, initial_types=initial_type_scaler)
-        with open(f"{self.model_dir}/Scaler_DCA_MaxDrop.onnx", "wb") as f: f.write(onnx_scaler.SerializeToString())
+    df = pd.concat(chunks_list, ignore_index=True)
+    del chunks_list
+    force_release_ram()
+
+    # Chốt số lượng mẫu cuối cùng
+    if len(df) > TARGET_SAMPLES_FINAL:
+        logger.info(f"Refining size: {len(df)} -> {TARGET_SAMPLES_FINAL}")
+        df = df.sample(n=TARGET_SAMPLES_FINAL, random_state=42)
+        force_release_ram()
+
+    logger.info(f"✅ HD Dataset ready: {len(df)} rows.")
+    return df
+
+def train_and_export_grandmaster(df, target_col, model_name_suffix):
+    logger.info(f"\n{'='*50}\n🔥 START GRANDMASTER TRAINING: {target_col}\n{'='*50}")
+    if target_col not in df.columns: return
+
+    force_release_ram()
+
+    ignore_cols = ['labelMaxDropFromNow', 'labelMaxRiseFromNow']
+    feature_cols = [c for c in df.columns if c not in ignore_cols]
+
+    # Split Data (Giữ Validation lớn để đánh giá chuẩn)
+    X_train, X_valid, y_train, y_valid = train_test_split(
+        df[feature_cols], df[target_col], test_size=0.15, random_state=999, shuffle=True
+    )
+
+    # --- GIAI ĐOẠN 1: OPTUNA (Tìm cấu trúc cây tốt nhất) ---
+    logger.info("PHASE 1: Searching for best Architecture (Optuna)...")
+
+    def objective(trial):
+        param = {
+            'verbosity': 0,
+            'objective': 'reg:squarederror',
+            'tree_method': 'hist',
+            'n_jobs': 2,
+
+            # 🔥 NÂNG CẤP 2: Tăng độ phân giải lên chuẩn (HD)
+            'max_bin': 256,   # Trả về 256 vì RAM đang dư -> Chính xác hơn
+            'enable_categorical': False,
+
+            # Search space rộng
+            'learning_rate': trial.suggest_float('learning_rate', 0.05, 0.2), # LR cao để dò nhanh cấu trúc
+            'max_depth': trial.suggest_int('max_depth', 6, 14), # Cho phép cây sâu hơn
+            'min_child_weight': trial.suggest_int('min_child_weight', 50, 400),
+            'subsample': trial.suggest_float('subsample', 0.6, 0.9),
+            'colsample_bytree': trial.suggest_float('colsample_bytree', 0.6, 0.9),
+            'gamma': trial.suggest_float('gamma', 0.0, 5.0), # Thêm Gamma để tỉa cành
+            'reg_alpha': trial.suggest_float('reg_alpha', 0.1, 20.0, log=True),
+            'reg_lambda': trial.suggest_float('reg_lambda', 0.1, 20.0, log=True),
+        }
+
+        # Train nhanh để test cấu trúc (1000 cây)
+        model = xgb.XGBRegressor(**param, n_estimators=1000, early_stopping_rounds=50)
+
+        pruning_callback = optuna.integration.XGBoostPruningCallback(trial, "validation_0-rmse")
+
+        model.fit(
+            X_train, y_train, eval_set=[(X_valid, y_valid)],
+            verbose=False, callbacks=[pruning_callback]
+        )
+        return np.sqrt(mean_squared_error(y_valid, model.predict(X_valid)))
+
+    study = optuna.create_study(direction='minimize')
+    study.optimize(objective, n_trials=N_TRIALS)
+    logger.info(f"Best Structure RMSE: {study.best_value:.5f}")
+
+    # --- GIAI ĐOẠN 2: SLOW COOKING (Train thật sự) ---
+    logger.info("PHASE 2: Slow Cooking with Low Learning Rate...")
+
+    best_params = study.best_params
+
+    # Cập nhật thông số cố định
+    best_params['n_jobs'] = 2
+    best_params['tree_method'] = 'hist'
+    best_params['objective'] = 'reg:squarederror'
+    best_params['max_bin'] = 256            # Giữ nguyên HD
+    best_params['enable_categorical'] = False
+
+    # 🔥 NÂNG CẤP 3: Ép Learning Rate siêu nhỏ để học chi tiết
+    best_params['learning_rate'] = 0.005  # Rất nhỏ (Chậm nhưng chắc)
+
+    # 🔥 NÂNG CẤP 4: Tăng số lượng cây lên cực đại
+    # Với LR=0.005, ta cần khoảng 20k-50k cây để hội tụ
+    final_model = xgb.XGBRegressor(
+        **best_params,
+        n_estimators=50000,        # Max 50k cây
+        early_stopping_rounds=1000 # Kiên nhẫn chờ 1000 vòng
+    )
+
+    final_model.fit(
+        X_train, y_train,
+        eval_set=[(X_valid, y_valid)],
+        verbose=1000 # In log mỗi 1000 cây
+    )
+
+    # --- EXPORT ---
+    onnx_path = f"{MODEL_DIR}/Model_Grandmaster_{model_name_suffix}.onnx"
+
+    # Xóa tên cột để tránh lỗi Feature Name
+    final_model.get_booster().feature_names = None
+
+    initial_type = [('float_input', FloatTensorType([None, len(feature_cols)]))]
+    onnx_model = convert_xgboost(final_model, initial_types=initial_type)
+    with open(onnx_path, "wb") as f: f.write(onnx_model.SerializeToString())
+
+    logger.info(f"✅ DONE {model_name_suffix} (Slow Cooked)")
+    del final_model, X_train, X_valid, y_train, y_valid
+    force_release_ram()
+
+def main():
+    # Load Data xịn
+    df = load_data_chunked_hd()
+    if df is None: return
+
+    # Train Risk (Sập)
+    train_and_export_grandmaster(df, 'labelMaxDropFromNow', 'Risk')
+
+    # Train Reward (Hồi)
+    train_and_export_grandmaster(df, 'labelMaxRiseFromNow', 'Reward')
+
+    logger.info("\n🏆 GRANDMASTER TRAINING COMPLETED!")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--dir', type=str, required=True)
-    args = parser.parse_args()
-    DcaRiskTrainer().train(args.dir)
+    main()

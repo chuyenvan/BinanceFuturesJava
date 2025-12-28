@@ -61,6 +61,15 @@ public class Configs {
     public static double TS_RATE_MED = 0.02;
     public static double TS_RATE_LOW = 0.016;
 
+//    public static double TS_VOL_HIGH_THRES = 0.01302; // Tăng ngưỡng High (Cũ: 0.01)
+//    public static double TS_VOL_MED_THRES = 0.00759;  // Tăng ngưỡng Med (Cũ: 0.006)
+//    public static double TS_VOL_LOW_THRES = 0.00496;  // Tăng ngưỡng Low (Cũ: 0.004)
+//
+//    // Mức chốt lời tương ứng (Target Rates)
+//    public static double TS_RATE_HIGH = 0.04799;      // Gồng lãi cực mạnh ~4.8% (Cũ: 3%)
+//    public static double TS_RATE_MED = 0.02463;       // Gồng lãi ~2.5% (Cũ: 2%)
+//    public static double TS_RATE_LOW = 0.01415;       // Chốt sớm ~1.4% (
+
 
     public static String TIME_RUN = Configs.getString("TIME_RUN");
     //budget config

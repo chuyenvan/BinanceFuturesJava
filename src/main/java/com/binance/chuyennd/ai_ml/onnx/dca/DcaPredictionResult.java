@@ -1,21 +1,20 @@
 package com.binance.chuyennd.ai_ml.onnx.dca;
 
 public class DcaPredictionResult {
-    // Xác suất về bờ trong 3 ngày (0.0 -> 1.0)
-    // Nếu > 0.5 (hoặc ngưỡng bạn chọn) -> Cứu được
-    public float recoverProbability;
-
-    // Dự báo mức lỗ tối đa thêm trong 3 ngày (Số âm, ví dụ -0.05 là lỗ thêm 5%)
+    // Dự báo mức lỗ tối đa thêm trong 3 ngày (Risk - Số âm)
     public float predictedMaxDrawdown;
 
-    public DcaPredictionResult(float recoverProb, float predictedDD) {
-        this.recoverProbability = recoverProb;
+    // Dự báo mức hồi phục tối đa trong 3 ngày (Reward - Số dương)
+    public float predictedMaxRise;
+
+    public DcaPredictionResult(float predictedDD, float predictedRise) {
         this.predictedMaxDrawdown = predictedDD;
+        this.predictedMaxRise = predictedRise;
     }
 
     @Override
     public String toString() {
-        return String.format("AI_DCA[RecoverProb: %.2f%% | MaxDD: %.2f%%]",
-                recoverProbability * 100, predictedMaxDrawdown * 100);
+        return String.format("AI_DCA[Risk(MaxDD): %.2f%% | Reward(MaxRise): %.2f%%]",
+                predictedMaxDrawdown * 100, predictedMaxRise * 100);
     }
 }

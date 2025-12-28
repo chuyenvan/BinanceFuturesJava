@@ -16,130 +16,118 @@ public class DcaOnnxInferenceManager implements AutoCloseable {
     private static final Logger LOG = LoggerFactory.getLogger(DcaOnnxInferenceManager.class);
     private final OrtEnvironment env;
 
-    // Sessions cho Classification (Recoverable / Risk Warning)
-    private final OrtSession scRecover, modRecover;
-
-    // Sessions cho Regression (MaxDrawdown / MaxDropFromNow)
-    private final OrtSession scDrawdown, modDrawdown;
+    // 2 Sessions riêng biệt cho 2 Model
+    private final OrtSession sessionRisk;   // Dự báo Sập (Drop)
+    private final OrtSession sessionReward; // Dự báo Hồi (Rise)
 
     private static final String INPUT_NODE = "float_input";
 
     public DcaOnnxInferenceManager(String modelDir) throws OrtException {
-        LOG.info("🧠 Initializing DCA AI Brain (Advanced Risk - 16 Features) from: {}", modelDir);
+        LOG.info("🧠 Initializing DCA AI Brain (Dual Models) from: {}", modelDir);
         this.env = OrtEnvironment.getEnvironment();
         OrtSession.SessionOptions opts = new OrtSession.SessionOptions();
+
+        // Tối ưu hóa Inference
         opts.setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT);
+        opts.setIntraOpNumThreads(2); // Dùng 2 luồng CPU
 
-        // Tối ưu luồng
-        opts.setIntraOpNumThreads(2);
-        opts.setInterOpNumThreads(1);
+        // 1. Load Model Risk (Sập)
+        String riskPath = modelDir + "/Model_DCA_Risk.onnx";
+        LOG.info("Loading Risk Model: {}", riskPath);
+        this.sessionRisk = env.createSession(riskPath, opts);
 
-        // 1. Load Model Classification (Có thể là IsRecoverable hoặc RiskAlert tùy file bạn train)
-        this.scRecover = env.createSession(modelDir + "/Scaler_DCA_IsRecoverable3D.onnx", opts);
-        this.modRecover = env.createSession(modelDir + "/Model_DCA_IsRecoverable3D.onnx", opts);
+        // 2. Load Model Reward (Hồi)
+        String rewardPath = modelDir + "/Model_DCA_Reward.onnx";
+        LOG.info("Loading Reward Model: {}", rewardPath);
+        this.sessionReward = env.createSession(rewardPath, opts);
 
-        // 2. Load Model Regression (MaxDropFromNow)
-        // Lưu ý: Nếu bạn train file mới tên là Model_DCA_MaxDrop.onnx thì sửa lại tên file ở đây nhé
-        // Ở đây tôi giữ tên cũ hoặc bạn đổi tên file model cho khớp
-        this.scDrawdown = env.createSession(modelDir + "/Scaler_DCA_MaxDrawdown3D.onnx", opts);
-        this.modDrawdown = env.createSession(modelDir + "/Model_DCA_MaxDrawdown3D.onnx", opts);
-
-        LOG.info("✅ DCA Models loaded successfully!");
+        LOG.info("✅ DCA Dual Models loaded successfully!");
     }
 
     public DcaPredictionResult predict(DcaMarketFeatures f) {
         try {
+            // Trích xuất features thô (Không cần Scaler nữa vì Model mới đã bỏ Scaler)
             float[] rawFeatures = extractFeaturesToArray(f);
 
-            // 1. Chạy Classification
-            float recoverProb = runInferenceClassification(scRecover, modRecover, rawFeatures);
+            // Chạy 2 model song song hoặc tuần tự
+            float predictedDD = runInference(sessionRisk, rawFeatures);   // Dự báo Sập
+            float predictedRise = runInference(sessionReward, rawFeatures); // Dự báo Hồi
 
-            // 2. Chạy Regression
-            float predictedDD = runInferenceRegression(scDrawdown, modDrawdown, rawFeatures);
-
-            return new DcaPredictionResult(recoverProb, predictedDD);
+            return new DcaPredictionResult(predictedDD, predictedRise);
 
         } catch (Exception e) {
-            LOG.error("❌ DCA Inference Error: {}", e.getMessage(), e);
-            // Trả về kết quả an toàn (Rủi ro cao nhất)
-            return new DcaPredictionResult(0.0f, -1.0f);
+            LOG.error("❌ DCA Inference Error: {}", e.getMessage());
+            // Trả về kết quả "An toàn nhất" khi lỗi:
+            // Risk cực cao (-100%) để không vào lệnh
+            // Reward cực thấp (0%)
+            return new DcaPredictionResult(-1.0f, 0.0f);
         }
     }
 
-    private float runInferenceRegression(OrtSession scaler, OrtSession model, float[] rawFeatures) throws OrtException {
-        long[] shape = new long[]{1, rawFeatures.length};
-        OnnxTensor inputTensor = OnnxTensor.createTensor(env, FloatBuffer.wrap(rawFeatures), shape);
+    private float runInference(OrtSession modelSession, float[] features) throws OrtException {
+        // Tạo Tensor đầu vào [1, num_features]
+        long[] shape = new long[]{1, features.length};
+        OnnxTensor inputTensor = OnnxTensor.createTensor(env, FloatBuffer.wrap(features), shape);
         Map<String, OnnxTensor> inputs = Collections.singletonMap(INPUT_NODE, inputTensor);
 
-        try (OrtSession.Result scalerRes = scaler.run(inputs)) {
-            float[][] scaledData = (float[][]) scalerRes.get(0).getValue();
-            OnnxTensor scaledTensor = OnnxTensor.createTensor(env, scaledData);
-            Map<String, OnnxTensor> modInputs = Collections.singletonMap(INPUT_NODE, scaledTensor);
-
-            try (OrtSession.Result modelRes = model.run(modInputs)) {
-                float[][] output = (float[][]) modelRes.get(0).getValue();
-                return output[0][0]; // Giá trị dự báo (float)
-            }
+        // Chạy Inference
+        try (OrtSession.Result result = modelSession.run(inputs)) {
+            // XGBoost Regressor trả về float[1][1]
+            float[][] output = (float[][]) result.get(0).getValue();
+            return output[0][0];
         }
     }
 
-    private float runInferenceClassification(OrtSession scaler, OrtSession model, float[] rawFeatures) throws OrtException {
-        long[] shape = new long[]{1, rawFeatures.length};
-        OnnxTensor inputTensor = OnnxTensor.createTensor(env, FloatBuffer.wrap(rawFeatures), shape);
-        Map<String, OnnxTensor> inputs = Collections.singletonMap(INPUT_NODE, inputTensor);
-
-        try (OrtSession.Result scalerRes = scaler.run(inputs)) {
-            float[][] scaledData = (float[][]) scalerRes.get(0).getValue();
-            OnnxTensor scaledTensor = OnnxTensor.createTensor(env, scaledData);
-            Map<String, OnnxTensor> modInputs = Collections.singletonMap(INPUT_NODE, scaledTensor);
-
-            try (OrtSession.Result modelRes = model.run(modInputs)) {
-                Object labelVal = modelRes.get(0).getValue();
-                if (labelVal instanceof long[]) return (float) ((long[]) labelVal)[0];
-                if (labelVal instanceof int[]) return (float) ((int[]) labelVal)[0];
-                return 0.0f;
-            }
-        }
-    }
-
-    // 🔥 CẬP NHẬT: 16 FEATURES (Bỏ dcaImpactRatio, Bớt BTC, Thêm Spike/Shock)
-    // Thứ tự này phải khớp 100% với Python train
+    // 🔥 CẬP NHẬT: 24 FEATURES (Khớp với Code Python Grandmaster mới nhất)
+    // Lưu ý: distFromHigh7D đã bị bỏ
     private float[] extractFeaturesToArray(DcaMarketFeatures f) {
         return new float[] {
-                // Group 1: Position Context (2) - ĐÃ BỎ dcaImpactRatio
-                (float) f.currentDrawdown,
-                (float) f.lossVelocity1H,
+                // --- 1. Market Position ---
+                (float) f.distFromHigh24H,
 
-                // Group 2: Relative Strength (3)
+                // --- 2. Relative Strength ---
                 (float) f.instantAlpha,
                 (float) f.recoveryElasticity,
-                (float) f.dangerIndex,
 
-                // Group 3: Market Context (3)
+                // --- 3. Market Context ---
                 (float) f.crashVelocity,
                 (float) f.globalRateDownAvg,
 
-
-                // Group 4: Macro BTC (2) - ĐÃ RÚT GỌN
+                // --- 4. Macro BTC ---
                 (float) f.btcMomentum1H,
                 (float) f.btcMomentum24H,
 
-                // Group 5: Coin Specific Technicals (6) - ĐÃ BỔ SUNG
+                // --- 5. Coin Specific Technicals ---
                 (float) f.rsi1H,
-                (float) f.volumeAnomaly,     // Giữ lại hoặc thay bằng logic khác nếu cần
+                (float) f.volumeAnomaly,
                 (float) f.distFromLow24H,
                 (float) f.maxRateChange60M,
-                (float) f.volumeSpike,       // Feature Mới
-                (float) f.volatilityShock    // Feature Mới
+                (float) f.volatilityShock,
+
+                // --- 6. Basket Features ---
+                (float) f.basketMomentum15M,
+                (float) f.basketMomentum1H,
+                (float) f.basketMomentum24H,
+                (float) f.basketRsi14,
+                (float) f.basketVolSpike,
+
+                // --- 7. Funding ---
+                (float) f.fundingRateRaw,
+                (float) f.fundingRateAvg24H,
+                (float) f.fundingRateTrend,
+
+                // --- 8. Time ---
+                (float) f.hourOfDay,
+                (float) f.dayOfWeek,
+                (float) f.weekOfMonth,
+                (float) f.monthOfYear
         };
     }
 
     @Override
     public void close() throws Exception {
-        if (scRecover != null) scRecover.close();
-        if (modRecover != null) modRecover.close();
-        if (scDrawdown != null) scDrawdown.close();
-        if (modDrawdown != null) modDrawdown.close();
+        if (sessionRisk != null) sessionRisk.close();
+        if (sessionReward != null) sessionReward.close();
         if (env != null) env.close();
     }
 }

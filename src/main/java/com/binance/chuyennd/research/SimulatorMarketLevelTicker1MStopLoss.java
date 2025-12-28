@@ -65,6 +65,9 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     public ConcurrentHashMap<String, List<OrderTargetInfoTest>> symbol2OrdersEntry = new ConcurrentHashMap();
     public ConcurrentHashMap<String, OrderTargetInfoTest> symbol2OrderRunning = new ConcurrentHashMap();
 
+    private long lastBasketTimestamp = -1;
+    private List<String> cachedBasket = new ArrayList<>();
+
 
     public static void main(String[] args) throws ParseException, IOException, InterruptedException {
         Configs.BUDGET_MARGIN_RATIO_1 = 0.4820;
@@ -76,6 +79,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         SimulatorMarketLevelTicker1MStopLoss test = new SimulatorMarketLevelTicker1MStopLoss();
         test.initData();
         test.simulatorWithInitEntry();
+        Thread.sleep(5000);
+        System.exit(1);
     }
 
     public void simulatorWithInitEntry(String... inputs) throws ParseException {
@@ -87,8 +92,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         while (true) {
             TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers;
             try {
-//                time2Tickers = DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime);
-                time2Tickers = HPOSmartCache.getData(startTime);
+                time2Tickers = DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime);
+//                time2Tickers = HPOSmartCache.getData(startTime);
 
                 if (time2Tickers == null) {
                     LOG.info("File data error or not found for time: {}", Utils.normalizeDateYYYYMMDDHHmm(startTime));
@@ -97,6 +102,11 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                     for (Map.Entry<Long, Map<String, KlineObjectSimple>> entry : time2Tickers.entrySet()) {
                         Long time = entry.getKey();
                         extractor.updateMarketHistory(entry.getValue());
+                        if (time != lastBasketTimestamp) {
+                            cachedBasket = extractor.identifyTargetBasket(time);
+                            lastBasketTimestamp = time;
+                        }
+
                         Long startTimeRun = System.currentTimeMillis();
                         try {
                             Map<String, KlineObjectSimple> symbol2Ticker = entry.getValue();
@@ -580,36 +590,46 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         if (budget == null) {
             return;
         }
-//        final Set<MarketLevelChange> dcaOrBigLevels = Set.of(
-//                MarketLevelChange.DCA_LEVEL1,
-//                MarketLevelChange.DCA_LEVEL2
-//        );
-//        boolean isDcaOrder = dcaOrBigLevels.contains(levelChange);
-//        if (isDcaOrder) {
-//            // 2. Trong vòng lặp xử lý lệnh
-//            OrderTargetInfoTest order = symbol2OrderRunning.get(symbol);
-//            if (order == null) {
-//                LOG.warn("❌ Chưa có lệnh chạy, không được DCA! {} {} {}", symbol,
-//                        levelChange, Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()));
-//                return; // Chưa có lệnh chạy, không được DCA
+        // --- 3. TÍCH HỢP DCA AI ---
+//        final Set<MarketLevelChange> dcaLevels = Set.of(MarketLevelChange.DCA_LEVEL1, MarketLevelChange.DCA_LEVEL2);
+//        boolean isDcaOrder = dcaLevels.contains(levelChange);
+//
+//        if (isDcaOrder && dcaBrain != null) {
+//            OrderTargetInfoTest orderRunning = symbol2OrderRunning.get(symbol);
+//            if (orderRunning == null) {
+//                return; // Safety check
 //            }
-//            Double dcaRatio = budget / order.calMargin();
+//
+//            // Sử dụng Basket đã cache ở vòng lặp chính
+//            List<String> basket = (cachedBasket != null && !cachedBasket.isEmpty()) ? cachedBasket : Collections.singletonList(symbol);
+//
+//            // Trích xuất đặc trưng
 //            DcaMarketFeatures features = extractor.extractFeatures(
-//                    ticker.startTime.longValue(), order, marketData, symbol2Ticker, dcaRatio);
+//                    ticker.startTime.longValue(),
+//                    orderRunning,
+//                    marketData,
+//                    symbol2Ticker,
+//                    basket
+//            );
 //
-//// 3. Hỏi ý kiến AI
-//            DcaPredictionResult result = dcaBrain.predict(features);
+//            if (features != null) {
+//                // Gọi AI phán đoán (Trả về cả Risk và Reward)
+//                DcaPredictionResult result = dcaBrain.predict(features);
 //
+//                // --- LOGIC 1: PHÒNG THỦ (RISK FILTER) ---
+//                // Nếu AI dự báo còn sập thêm > 5% nữa (-0.05) -> Tạm hoãn DCA
+//                // (Con số -0.2 cũ là quá an toàn, với model mới chính xác hơn có thể siết chặt hơn)
+//                if (result.predictedMaxDrawdown < -0.3 || result.predictedMaxRise < 0.15) {
+//                    // LOG.info("🛡️ AI Block DCA {}: Risk too high ({:.2f}%)", symbol, result.predictedMaxDrawdown * 100);
+//                    return;
+//                }
 //
-//// 4. Ra quyết định
-//            if (result.recoverProbability < 0.1) {
-//                LOG.warn("❌ AI bảo 'Chết chắc', không được DCA!");
-//                return; // Stop DCA
-//            }
-//
-//            if (result.predictedMaxDrawdown < -0.30) {
-//                LOG.warn("⚠️ AI bảo còn giảm sâu 10% nữa. Chờ thêm!");
-//                return; // Chờ giá giảm thêm mới mua
+//                // --- LOGIC 2: TẤN CÔNG (REWARD OPTIMIZATION - OPTIONAL) ---
+//                // Có thể dùng result.predictedMaxRise để set Dynamic TP
+//                // Ví dụ: Nếu dự báo hồi mạnh > 10%, có thể nới TP ra xa hơn
+//                // if (result.predictedMaxRise > 0.10) {
+//                //     dynamicTP = ...;
+//                // }
 //            }
 //        }
         Double quantity = Utils.calQuantityTest(budget, leverage, entry, symbol);

@@ -16,6 +16,8 @@
 package com.binance.chuyennd.bigchange.test;
 
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
+import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
+import com.binance.chuyennd.ai_ml.onnx.entry.OnnxInferenceManager;
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
 import com.binance.chuyennd.client.ClientSingleton;
 import com.binance.chuyennd.helper.TickerFuturesHelper;
@@ -24,13 +26,11 @@ import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
 import com.binance.chuyennd.research.BudgetManagerSimple;
-import com.binance.chuyennd.research.OrderTargetInfoTest;
 import com.binance.chuyennd.trading.BinanceOrderTradingManager;
 import com.binance.chuyennd.trading.BudgetManager;
 import com.binance.chuyennd.trading.OrderTargetInfo;
 import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.utils.Configs;
-import com.binance.chuyennd.utils.Storage;
 import com.binance.chuyennd.utils.StorageSnappy;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
@@ -60,10 +60,8 @@ public class Test {
 
     public static void main(String[] args) throws Exception {
 //        testProduction();
-   Random ran = new Random();
-        for (int i = 0; i < 100; i++) {
-            System.out.println(ran.nextInt(10));
-        }
+        testAIDATA();
+
 //        checkRateProduction();
 //        changeLeverage();
 //        deleteAllSLAtRedis();
@@ -112,6 +110,18 @@ public class Test {
 //        new TickerManager().updateFundingFeeBySymbol("HIPPOUSDT", timeStart);
 
 
+    }
+
+    private static void testAIDATA() throws ParseException {
+        Long startTime = Utils.sdfFile.parse("20251217").getTime() + 7 * Utils.TIME_HOUR;
+
+
+        TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers;
+        for (int i = 0; i < 10; i++) {
+            time2Tickers = DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime);
+            LOG.info("{} {} {}", Utils.normalizeDateYYYYMMDDHHmm(startTime), time2Tickers.size(), time2Tickers.firstEntry().getValue().get("BTCDOMUSDT"));
+            startTime += Utils.TIME_DAY;
+        }
     }
 
     private static void testWS() {
@@ -173,7 +183,6 @@ public class Test {
     }
 
 
-
     private static void checkTickerProduct() {
         String FILE_TICKER_1M_STORAGE = "storage/tickers/symbol2ticker1Ms";
         ConcurrentHashMap<String, TreeMap<Long, KlineObjectSimple>> symbo2Tickers = (ConcurrentHashMap<String, TreeMap<Long, KlineObjectSimple>>)
@@ -207,8 +216,6 @@ public class Test {
         order.priceSL = null;
         RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO, symbol, Utils.toJson(order));
     }
-
-
 
 
     private static void testTimeDetectProduction() throws IOException {
@@ -327,8 +334,6 @@ public class Test {
                 symbol, levelChange, quantity, ticker.priceClose);
         RedisHelper.getInstance().get().rpush(RedisConst.REDIS_KEY_BINANCE_TD_ORDER_MANAGER_QUEUE, Utils.toJson(orderTrade));
     }
-
-
 
 
     private static void changeLeverage() {

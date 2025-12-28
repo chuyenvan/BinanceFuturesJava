@@ -233,7 +233,9 @@ public class Utils {
     public static String formatPercent(Double number) {
         return df.format(number * 100);
     }
-
+    public static String formatPercent(Float number) {
+        return df.format(number * 100);
+    }
     public static String formatPercentNew(Double number) {
         return dfNew.format(number * 100);
     }

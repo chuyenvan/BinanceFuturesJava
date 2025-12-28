@@ -49,19 +49,18 @@ public class TickerManager {
             while (true) {
                 try {
                     if (Utils.getCurrentHour() == 4
-                            || Utils.getCurrentHour() == 8
-                            || Utils.getCurrentHour() == 18
-                            || Utils.getCurrentHour() == 21) {
+                            || Utils.getCurrentHour() == 11
+                            || Utils.getCurrentHour() == 18) {
                         updateFullTicker1M(Constants.SYMBOL_PAIR_BTC);
                         updateFullTicker1M(Constants.SYMBOL_PAIR_ETH);
                         startUpdateTicker1mSimple(); // ĐÃ SỬA: lưu vào Aerospike
-                        startResetTicker1DAnd4HSimple();
-                        startUpdateFundingFee();
                         exporter.exportMarketEntries();
                         exporter.exportBtcTrendReverse();
                     }
 
                     if (Utils.getCurrentHour() == 16) {
+                        startResetTicker1DAnd4HSimple();
+                        startUpdateFundingFee();
                         startResetTicker15mSimple();
                     }
                     Thread.sleep(Utils.TIME_HOUR);

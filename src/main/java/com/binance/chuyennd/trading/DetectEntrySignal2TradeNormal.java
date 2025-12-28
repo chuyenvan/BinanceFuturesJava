@@ -187,6 +187,7 @@ public class DetectEntrySignal2TradeNormal {
             Set<String> symbolLocked = new HashSet<>();
             symbolLocked.addAll(BudgetManager.getInstance().symbol2Pos.keySet());
             OnnxInferenceManager.PredictionResult prediction = null;
+            MarketFeatures features = null;
             if (aiBrain != null && featureExtractor != null) {
                 try {
                     long timestamp = time;
@@ -203,7 +204,7 @@ public class DetectEntrySignal2TradeNormal {
                     // 2. Trích xuất Features
                     // Lưu ý: tempBasketForAI được cập nhật ở checkMarketLevelChange2Trade
 
-                    MarketFeatures features = featureExtractor.extractAllFeaturesProduction(
+                    features = featureExtractor.extractAllFeaturesProduction(
                             timestamp,
                             currentMarketMap,
                             marketRate,
@@ -363,6 +364,8 @@ public class DetectEntrySignal2TradeNormal {
             StorageSnappy.writeObject2File("storage/data/rateMax15M/" + Utils.normalizeDateYYYYMMDD(time) + "/" + time, rateDown15M2Symbols);
             StorageSnappy.writeObject2File("storage/data/rateDown1M/" + Utils.normalizeDateYYYYMMDD(time) + "/" + time, rateDown2Symbols);
             StorageSnappy.writeObject2File("storage/data/prediction/" + Utils.normalizeDateYYYYMMDD(time) + "/" + time, prediction);
+            StorageSnappy.writeObject2File("storage/data/prediction/" + Utils.normalizeDateYYYYMMDD(time) + "/" + time + ".features", features);
+            LOG.info("Predict: {}", Utils.toJson(prediction));
         } catch (Exception e) {
             e.printStackTrace();
         }
