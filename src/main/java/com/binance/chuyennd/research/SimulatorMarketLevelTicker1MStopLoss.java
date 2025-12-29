@@ -591,47 +591,47 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             return;
         }
         // --- 3. TÍCH HỢP DCA AI ---
-//        final Set<MarketLevelChange> dcaLevels = Set.of(MarketLevelChange.DCA_LEVEL1, MarketLevelChange.DCA_LEVEL2);
-//        boolean isDcaOrder = dcaLevels.contains(levelChange);
-//
-//        if (isDcaOrder && dcaBrain != null) {
-//            OrderTargetInfoTest orderRunning = symbol2OrderRunning.get(symbol);
-//            if (orderRunning == null) {
-//                return; // Safety check
-//            }
-//
-//            // Sử dụng Basket đã cache ở vòng lặp chính
-//            List<String> basket = (cachedBasket != null && !cachedBasket.isEmpty()) ? cachedBasket : Collections.singletonList(symbol);
-//
-//            // Trích xuất đặc trưng
-//            DcaMarketFeatures features = extractor.extractFeatures(
-//                    ticker.startTime.longValue(),
-//                    orderRunning,
-//                    marketData,
-//                    symbol2Ticker,
-//                    basket
-//            );
-//
-//            if (features != null) {
-//                // Gọi AI phán đoán (Trả về cả Risk và Reward)
-//                DcaPredictionResult result = dcaBrain.predict(features);
-//
-//                // --- LOGIC 1: PHÒNG THỦ (RISK FILTER) ---
-//                // Nếu AI dự báo còn sập thêm > 5% nữa (-0.05) -> Tạm hoãn DCA
-//                // (Con số -0.2 cũ là quá an toàn, với model mới chính xác hơn có thể siết chặt hơn)
-//                if (result.predictedMaxDrawdown < -0.3 || result.predictedMaxRise < 0.15) {
-//                    // LOG.info("🛡️ AI Block DCA {}: Risk too high ({:.2f}%)", symbol, result.predictedMaxDrawdown * 100);
-//                    return;
-//                }
-//
-//                // --- LOGIC 2: TẤN CÔNG (REWARD OPTIMIZATION - OPTIONAL) ---
-//                // Có thể dùng result.predictedMaxRise để set Dynamic TP
-//                // Ví dụ: Nếu dự báo hồi mạnh > 10%, có thể nới TP ra xa hơn
-//                // if (result.predictedMaxRise > 0.10) {
-//                //     dynamicTP = ...;
-//                // }
-//            }
-//        }
+        final Set<MarketLevelChange> dcaLevels = Set.of(MarketLevelChange.DCA_LEVEL1, MarketLevelChange.DCA_LEVEL2);
+        boolean isDcaOrder = dcaLevels.contains(levelChange);
+
+        if (isDcaOrder && dcaBrain != null) {
+            OrderTargetInfoTest orderRunning = symbol2OrderRunning.get(symbol);
+            if (orderRunning == null) {
+                return; // Safety check
+            }
+
+            // Sử dụng Basket đã cache ở vòng lặp chính
+            List<String> basket = (cachedBasket != null && !cachedBasket.isEmpty()) ? cachedBasket : Collections.singletonList(symbol);
+
+            // Trích xuất đặc trưng
+            DcaMarketFeatures features = extractor.extractFeatures(
+                    ticker.startTime.longValue(),
+                    orderRunning,
+                    marketData,
+                    symbol2Ticker,
+                    basket
+            );
+
+            if (features != null) {
+                // Gọi AI phán đoán (Trả về cả Risk và Reward)
+                DcaPredictionResult result = dcaBrain.predict(features);
+
+                // --- LOGIC 1: PHÒNG THỦ (RISK FILTER) ---
+                // Nếu AI dự báo còn sập thêm > 5% nữa (-0.05) -> Tạm hoãn DCA
+                // (Con số -0.2 cũ là quá an toàn, với model mới chính xác hơn có thể siết chặt hơn)
+                if (result.probPump20Pct < 0.8 || result.probDump30Pct > 0.8) {
+                    // LOG.info("🛡️ AI Block DCA {}: Risk too high ({:.2f}%)", symbol, result.predictedMaxDrawdown * 100);
+                    return;
+                }
+
+                // --- LOGIC 2: TẤN CÔNG (REWARD OPTIMIZATION - OPTIONAL) ---
+                // Có thể dùng result.predictedMaxRise để set Dynamic TP
+                // Ví dụ: Nếu dự báo hồi mạnh > 10%, có thể nới TP ra xa hơn
+                // if (result.predictedMaxRise > 0.10) {
+                //     dynamicTP = ...;
+                // }
+            }
+        }
         Double quantity = Utils.calQuantityTest(budget, leverage, entry, symbol);
 
         if (StringUtils.equals(symbol, Constants.SYMBOL_PAIR_BTC)) {
