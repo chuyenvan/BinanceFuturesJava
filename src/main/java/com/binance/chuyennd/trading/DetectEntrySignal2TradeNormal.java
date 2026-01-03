@@ -421,7 +421,7 @@ public class DetectEntrySignal2TradeNormal {
         }
 
         Double priceEntry = ticker.priceClose;
-        Double quantity = Utils.calQuantity(budget, BudgetManager.getInstance().getLeverage(), priceEntry, symbol);
+        Double quantity = Utils.calQuantity(budget, Configs.LEVERAGE_ORDER, priceEntry, symbol);
         if (StringUtils.equals(symbol, Constants.SYMBOL_PAIR_BTC)) {
             Double minBtcTrade = 0.002;
             if (quantity < minBtcTrade) {
@@ -430,7 +430,7 @@ public class DetectEntrySignal2TradeNormal {
         }
         LOG.info("Market level:{} {} {} {} {} {}", Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()), levelChange, symbol, budget, quantity, ticker.priceClose);
         if (quantity != null && quantity != 0) {
-            OrderTargetInfo orderTrade = new OrderTargetInfo(OrderTargetStatus.REQUEST, ticker.priceClose, null, quantity, BudgetManager.getInstance().getLeverage(), symbol, ticker.startTime.longValue(), ticker.startTime.longValue(), OrderSide.BUY, Constants.TRADING_TYPE_VOLUME_MINI);
+            OrderTargetInfo orderTrade = new OrderTargetInfo(OrderTargetStatus.REQUEST, ticker.priceClose, null, quantity, Configs.LEVERAGE_ORDER, symbol, ticker.startTime.longValue(), ticker.startTime.longValue(), OrderSide.BUY, Constants.TRADING_TYPE_VOLUME_MINI);
             orderTrade.marketLevel = levelChange;
             orderTrade.priceTP = priceMax15M;
             LOG.info("Push redis order: {} {} {} {} {} {}", Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()), symbol, levelChange, budget.longValue(), quantity, ticker.priceClose);

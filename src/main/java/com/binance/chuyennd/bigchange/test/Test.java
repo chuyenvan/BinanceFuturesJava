@@ -16,8 +16,6 @@
 package com.binance.chuyennd.bigchange.test;
 
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
-import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
-import com.binance.chuyennd.ai_ml.onnx.entry.OnnxInferenceManager;
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
 import com.binance.chuyennd.client.ClientSingleton;
 import com.binance.chuyennd.helper.TickerFuturesHelper;
@@ -25,9 +23,7 @@ import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
-import com.binance.chuyennd.research.BudgetManagerSimple;
 import com.binance.chuyennd.trading.BinanceOrderTradingManager;
-import com.binance.chuyennd.trading.BudgetManager;
 import com.binance.chuyennd.trading.OrderTargetInfo;
 import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.utils.Configs;
@@ -60,7 +56,7 @@ public class Test {
 
     public static void main(String[] args) throws Exception {
 //        testProduction();
-        testAIDATA();
+//        testAIDATA();
 
 //        checkRateProduction();
 //        changeLeverage();
@@ -71,7 +67,7 @@ public class Test {
 //                removeSLRedis();
 //        difProductionWithTest();
 //        System.out.println(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO).size());
-
+        System.out.println(ClientSingleton.getInstance().syncRequestClient.getSymbolPriceTicker("CGPTUSDT"));
 //        testsublist();
 
 //        Long startTime = Utils.sdfFile.parse(Configs.TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
@@ -325,9 +321,9 @@ public class Test {
         Double budget = 2d;
         List<KlineObjectNumber> tickers = TickerFuturesHelper.getTicker(symbol, Constants.INTERVAL_1M);
         KlineObjectNumber ticker = tickers.get(tickers.size() - 1);
-        Double quantity = Utils.calQuantity(budget, BudgetManager.getInstance().getLeverage(), ticker.priceClose, symbol);
+        Double quantity = Utils.calQuantity(budget, Configs.LEVERAGE_ORDER, ticker.priceClose, symbol);
         OrderTargetInfo orderTrade = new OrderTargetInfo(OrderTargetStatus.REQUEST, ticker.priceClose,
-                null, quantity, BudgetManager.getInstance().getLeverage(), symbol, ticker.startTime.longValue(),
+                null, quantity, Configs.LEVERAGE_ORDER, symbol, ticker.startTime.longValue(),
                 ticker.startTime.longValue(), OrderSide.BUY, Constants.TRADING_TYPE_VOLUME_MINI);
         orderTrade.marketLevel = levelChange;
         LOG.info("Push redis order: {} {} {} {} {}", Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()),
@@ -339,7 +335,7 @@ public class Test {
     private static void changeLeverage() {
         Set<String> allSymbols = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS);
         Integer counter = 0;
-        int leverage = BudgetManagerSimple.getInstance().getLeverage();
+        int leverage = Configs.LEVERAGE_ORDER;
         for (String symbol : allSymbols) {
             try {
 //                if (StringUtils.equals(symbol, "AKTUSDT")) {

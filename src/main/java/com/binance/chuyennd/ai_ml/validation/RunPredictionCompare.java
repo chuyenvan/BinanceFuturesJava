@@ -22,8 +22,8 @@ public class RunPredictionCompare {
     private static final Logger LOG = LoggerFactory.getLogger(RunPredictionCompare.class);
 
     // --- CẤU HÌNH ---
-    private static final String START_DATE_STR = "20251213";
-    private static final String MODEL_DIR = "../storage/ai_ml_data/ai_models_reg_v4";
+    private static final String START_DATE_STR = "20251227";
+    private static final String MODEL_DIR = "../storage/ai_ml_data/ai_models_reg_v3";
     private static final String PROD_DIR = "storage/data/prediction/";
     private static final String TEST_DIR = "storage/predictiontest/";
 
@@ -85,7 +85,7 @@ public class RunPredictionCompare {
                 if (rateChange == null) rateChange = new MarketRateChange(0.0, 0.0, 0.0);
 
                 // A. TẠO TEST FEATURES & PREDICT
-                MarketFeatures testFeatures = featureExtractor.extractAllFeaturesProduction(
+                MarketFeatures testFeatures = featureExtractor.extractAllFeatures(
                         currentTime, marketSnapshot, rateChange, new ArrayList<>());
 
                 OnnxInferenceManager.PredictionResult testResult = aiBrain.predictAll(testFeatures);

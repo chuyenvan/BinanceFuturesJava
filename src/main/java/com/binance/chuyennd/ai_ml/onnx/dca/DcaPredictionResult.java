@@ -1,6 +1,8 @@
 package com.binance.chuyennd.ai_ml.onnx.dca;
 
-public class DcaPredictionResult {
+import java.io.Serializable;
+
+public class DcaPredictionResult implements Serializable {
     // --- Regression Outputs ---
     // Dự báo mức lỗ tối đa thêm trong 3 ngày (Risk - Số âm)
     public float predictedMaxDrawdown;

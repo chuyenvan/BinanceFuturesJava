@@ -1,11 +1,14 @@
 package com.binance.chuyennd.aerospike;
 
 import com.aerospike.client.AerospikeClient;
+import com.aerospike.client.Bin;
 import com.aerospike.client.Key;
 import com.aerospike.client.Record;
 import com.aerospike.client.policy.BatchPolicy;
 
 // Import Object Java cũ
+import com.aerospike.client.policy.RecordExistsAction;
+import com.aerospike.client.policy.WritePolicy;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
@@ -14,8 +17,12 @@ import com.binance.chuyennd.utils.Utils;
 import com.binance.chuyennd.proto.MinuteDataFinalProto.MinuteDataFinal;
 import com.binance.chuyennd.proto.MinuteDataFinalProto.KlineObjectOptimized;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.xerial.snappy.Snappy;
 
+import java.io.File;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
@@ -23,22 +30,31 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 public class DataManagerAerospikeFloatSim {
-
+    public static final Logger LOG = LoggerFactory.getLogger(DataManagerAerospikeFloatSim.class);
     // --- CẤU HÌNH ---
     // Đổi sang Set mới đã tối ưu
-    private static final String AEROSPIKE_SET_NAME = "kline_1m_opt";
+    private static final String AEROSPIKE_SET_NAME_TICKER = "kline_1m_opt";
+    private static final String AEROSPIKE_SET_NAME_PRICE = "price_realtime";
+    private static final String AEROSPIKE_SET_NAME_FUNDINGFEE = "funding_data";
 
     private static volatile AerospikeClient client;
     private static final BatchPolicy batchPolicy = new BatchPolicy();
     private static final int BATCH_CHUNK_SIZE = 2000;
+    private static final WritePolicy writePolicy = new WritePolicy();
 
     // Cấu hình đa luồng
     public static int threadCount = 2;
     public static ExecutorService executor = Executors.newFixedThreadPool(threadCount);
 
-    private static AerospikeClient getClient() {
+    static {
+        // 🔥 GIÁ TRỊ 0: Lưu trữ vĩnh viễn, không bao giờ tự động xóa
+        writePolicy.expiration = 0;
+        writePolicy.recordExistsAction = RecordExistsAction.UPDATE;
+    }
+
+    public static AerospikeClient getClient() {
         if (client == null) {
-            synchronized (DataManagerAerospike.class) {
+            synchronized (DataManagerAerospikeFloatSim.class) {
                 if (client == null) {
                     client = new AerospikeClient(Configs.AEROSPIKE_HOST, Configs.AEROSPIKE_PORT);
                 }
@@ -46,6 +62,178 @@ public class DataManagerAerospikeFloatSim {
         }
         return client;
     }
+
+    public static void writeMinuteBatch(long timestamp, Map<String, KlineObjectOptimized> newTickers) {
+        try {
+            SimpleDateFormat fmt = new SimpleDateFormat("yyyyMMdd-HHmm");
+            Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_TICKER, fmt.format(new Date(timestamp)));
+
+            // Gộp dữ liệu cũ (nếu có) để bảo toàn nến của các mã khác
+            Map<String, KlineObjectOptimized> finalMap = getExistingTickersMap(key);
+            finalMap.putAll(newTickers);
+
+            byte[] compressed = Snappy.compress(MinuteDataFinal.newBuilder().putAllTickers(finalMap).build().toByteArray());
+            getClient().put(writePolicy, key, new Bin("data", compressed));
+        } catch (Exception e) {
+            LOG.error("❌ Error writing batch at {}: {}", timestamp, e.getMessage());
+        }
+    }
+    public static void writePriceRealtime(Map<String, Double> priceMap) {
+        if (priceMap == null || priceMap.isEmpty()) return;
+        try {
+            long now = System.currentTimeMillis();
+            for (Map.Entry<String, Double> entry : priceMap.entrySet()) {
+                // Sử dụng UPPERCASE cho symbol để đồng bộ
+                String symbol = entry.getKey().toUpperCase();
+                Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_PRICE, symbol);
+
+                // Ghi giá và timestamp cập nhật
+                getClient().put(null, key,
+                        new Bin("price", entry.getValue()),
+                        new Bin("ts", now)
+                );
+            }
+        } catch (Exception e) {
+            LOG.error("❌ Error writing Price Realtime: {}", e.getMessage());
+        }
+    }
+
+    // =========================================================================
+    // LOGIC FUNDING (Tối ưu Snappy Compression để lưu 5 năm)
+    // =========================================================================
+
+    /**
+     * Ghi Funding Map sử dụng Snappy để nén, phá bỏ giới hạn 2000 kỳ
+     */
+    public static void writeFundingMap(String symbol, Map<Long, Float> fundingRates) {
+        try {
+            Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_FUNDINGFEE, symbol);
+
+            // 1. Lấy dữ liệu cũ
+            Map<Long, Double> existingMap = getFundingMap(symbol);
+
+            // 2. Gộp dữ liệu (Dùng TreeMap để luôn sắp xếp theo thời gian)
+            TreeMap<Long, Float> finalMap = new TreeMap<>();
+            existingMap.forEach((k, v) -> finalMap.put(k, v.floatValue()));
+            fundingRates.forEach(finalMap::put);
+
+            // 3. Serialize Map thành byte[] và nén bằng Snappy để tránh lỗi "Record too big"
+            // Chúng ta lưu Map dưới dạng Map đơn giản để Snappy xử lý hiệu quả
+            byte[] rawBytes = Utils.gson.toJson(finalMap).getBytes("UTF-8");
+            byte[] compressedBytes = Snappy.compress(rawBytes);
+
+            // 4. Ghi vào bin "f_data" dạng blob thay vì CDT Map trực tiếp
+            getClient().put(writePolicy, key, new Bin("f_data", compressedBytes));
+
+            if (finalMap.size() % 100 == 0) {
+                LOG.info("💾 Saved Funding {}: {} records (Compressed)", symbol, finalMap.size());
+            }
+        } catch (Exception e) {
+            LOG.error("❌ Error writing Funding for {}: {}", symbol, e.getMessage());
+        }
+    }
+
+    /**
+     * Giải nén và đọc Map Funding
+     */
+    public static Map<Long, Double> getFundingMap(String symbol) {
+        Map<Long, Double> results = new HashMap<>();
+        try {
+            Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_FUNDINGFEE, symbol);
+            Record record = getClient().get(null, key);
+            if (record != null) {
+                byte[] compressedData = (byte[]) record.getValue("f_data");
+                if (compressedData != null) {
+                    // Giải nén Snappy
+                    String json = new String(Snappy.uncompress(compressedData), "UTF-8");
+                    Map<String, Double> rawMap = Utils.gson.fromJson(json, Map.class);
+
+                    // Convert Key từ String (JSON) về Long
+                    rawMap.forEach((k, v) -> results.put(Long.parseLong(k), v));
+                }
+            }
+        } catch (Exception e) {
+            // Trường hợp dữ liệu cũ vẫn là CDT Map (f_map)
+            try {
+                Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_FUNDINGFEE, symbol);
+                Record record = getClient().get(null, key);
+                if (record != null && record.getMap("f_map") != null) {
+                    record.getMap("f_map").forEach((k, v) -> results.put((Long) k, ((Number) v).doubleValue()));
+                }
+            } catch (Exception ignored) {}
+        }
+        return results;
+    }
+    public static void migrateHistoricalFunding(String folderPath) {
+        File folder = new File(folderPath);
+        if (!folder.exists() || !folder.isDirectory()) {
+            LOG.error("❌ Thư mục funding không tồn tại: {}", folderPath);
+            return;
+        }
+
+        File[] files = folder.listFiles();
+        if (files == null) return;
+
+        LOG.info("🚀 Bắt đầu Migrate Funding Fee từ {} tệp tin...", files.length);
+
+        for (File file : files) {
+            try {
+                String symbol = file.getName(); // Tên file chính là symbol
+
+                // Đọc đối tượng TreeMap từ file bằng Storage (giống logic FundingFeeManager)
+                TreeMap<Long, com.binance.client.model.market.FundingRate> time2RateFunding =
+                        (TreeMap<Long, com.binance.client.model.market.FundingRate>) com.binance.chuyennd.utils.Storage.readObjectFromFile(file.getAbsolutePath());
+
+                if (time2RateFunding != null && !time2RateFunding.isEmpty()) {
+                    Map<Long, Float> fundingMapForAS = new HashMap<>();
+
+                    // Chuyển đổi từ Object FundingRate sang Double để lưu vào AS
+                    time2RateFunding.forEach((time, fundingObj) -> {
+                        if (fundingObj != null && fundingObj.getFundingRate() != null) {
+                            // Ép kiểu về Float để giảm kích thước record ngay từ lúc migrate
+                            fundingMapForAS.put(time, fundingObj.getFundingRate().floatValue());
+                        }
+                    });
+                    // Ghi vào Aerospike (Hàm này đã có logic gộp và lưu vĩnh viễn)
+                    writeFundingMap(symbol, fundingMapForAS);
+                    LOG.info("✅ Migrated {}: {} records", symbol, fundingMapForAS.size());
+                }
+            } catch (Exception e) {
+                LOG.error("❌ Lỗi migrate file {}: {}", file.getName(), e.getMessage());
+            }
+        }
+        LOG.info("🏁 Hoàn tất Migration Funding Rate.");
+    }
+
+    // =========================================================================
+    // LOGIC KIỂM TRA DỮ LIỆU (REPAIR)
+    // =========================================================================
+
+    public static boolean isSymbolMissingInPoints(String shortSymbol, long start, int limit) {
+        SimpleDateFormat fmt = new SimpleDateFormat("yyyyMMdd-HHmm");
+        long[] points = {start, start + (limit/2)*60000L, start + (limit-1)*60000L};
+        for (long p : points) {
+            if (p > System.currentTimeMillis()) continue;
+            Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_TICKER, fmt.format(new Date(p)));
+            Map<String, KlineObjectOptimized> map = getExistingTickersMap(key);
+            if (map.isEmpty() || !map.containsKey(shortSymbol)) return true;
+        }
+        return false;
+    }
+    public static Map<String, KlineObjectOptimized> getExistingTickersMap(Key key) {
+        Map<String, KlineObjectOptimized> map = new HashMap<>();
+        try {
+            Record record = getClient().get(null, key);
+            if (record != null) {
+                byte[] data = (byte[]) record.getValue("data");
+                if (data != null) {
+                    map.putAll(MinuteDataFinal.parseFrom(Snappy.uncompress(data)).getTickersMap());
+                }
+            }
+        } catch (Exception e) {}
+        return map;
+    }
+
 
     /**
      * Đọc dữ liệu toàn bộ thị trường trong 1 ngày (1440 phút)
@@ -88,7 +276,7 @@ public class DataManagerAerospikeFloatSim {
 
                     for (int k = 0; k < chunkKeys.length; k++) {
                         String keyString = localKeyFormat.format(new Date(chunkTimestamps[k]));
-                        chunkKeys[k] = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME, keyString);
+                        chunkKeys[k] = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_TICKER, keyString);
                     }
 
                     // Batch Read
@@ -162,7 +350,7 @@ public class DataManagerAerospikeFloatSim {
                 Key[] keyChunk = new Key[timestampChunk.size()];
                 for (int k = 0; k < timestampChunk.size(); k++) {
                     String keyString = localKeyFormat.format(new Date(timestampChunk.get(k)));
-                    keyChunk[k] = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME, keyString);
+                    keyChunk[k] = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_TICKER, keyString);
                 }
 
                 Record[] records = getClient().get(batchPolicy, keyChunk);
@@ -237,5 +425,11 @@ public class DataManagerAerospikeFloatSim {
         if (client != null) {
             client.close();
         }
+    }
+
+    public static void main(String[] args) throws ParseException {
+//        Long startTime = Utils.sdfFile.parse("20260102").getTime() + 7 * Utils.TIME_HOUR;
+//        System.out.println(DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime).size());
+        DataManagerAerospikeFloatSim.migrateHistoricalFunding("../storage/funding_fee/");
     }
 }

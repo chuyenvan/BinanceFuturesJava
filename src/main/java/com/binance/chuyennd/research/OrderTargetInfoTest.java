@@ -16,6 +16,7 @@
 package com.binance.chuyennd.research;
 
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
+import com.binance.chuyennd.ai_ml.onnx.dca.DcaPredictionResult;
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
 import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
@@ -60,7 +61,7 @@ public class OrderTargetInfoTest implements Serializable {
     public MarketRateChange marketData;
     public MarketLevelChange marketLevelChange;
     public KlineObjectSimple tickerOpen;
-    public AiPredictionData predict;
+    public DcaPredictionResult predict;
 
 
     public OrderTargetInfoTest(OrderTargetStatus status, Double priceEntry,

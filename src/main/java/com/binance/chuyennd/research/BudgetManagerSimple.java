@@ -71,10 +71,6 @@ public class BudgetManagerSimple {
         return BUDGET_PER_ORDER;
     }
 
-    public Integer getLeverage() {
-        return Configs.LEVERAGE_ORDER;
-    }
-
     public void updatePnl(OrderTargetInfoTest orderInfo) {
         if (orderInfo != null) {
             if (orderInfo.status.equals(OrderTargetStatus.STOP_LOSS_DONE)) {

@@ -9,188 +9,173 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.FloatBuffer;
-import java.util.Collections;
-import java.util.Map;
+import java.util.*;
 
 public class DcaOnnxInferenceManager implements AutoCloseable {
     private static final Logger LOG = LoggerFactory.getLogger(DcaOnnxInferenceManager.class);
     private final OrtEnvironment env;
 
-    // 4 Sessions cho 4 Models (Ultimate Ensemble)
-    private final OrtSession sessionRisk;   // Regression: Max Drop
-    private final OrtSession sessionReward; // Regression: Max Rise
-    private final OrtSession sessionPump;   // Classification: Pump > 20%
-    private final OrtSession sessionDump;   // Classification: Dump > 30%
+    // Định nghĩa cấu trúc lưu Session kèm Trọng số (Weight)
+    private static class ModelSession {
+        OrtSession session;
+        float weight;
+        String name;
+
+        public ModelSession(OrtSession session, float weight, String name) {
+            this.session = session;
+            this.weight = weight;
+            this.name = name;
+        }
+    }
+
+    // Danh sách Ensemble cho từng loại
+    private final List<ModelSession> modelsRisk = new ArrayList<>();
+    private final List<ModelSession> modelsReward = new ArrayList<>();
+    private final List<ModelSession> modelsPump = new ArrayList<>();
+    private final List<ModelSession> modelsDump = new ArrayList<>();
 
     private static final String INPUT_NODE = "float_input";
 
     public DcaOnnxInferenceManager(String modelDir) throws OrtException {
-        LOG.info("🧠 Initializing DCA AI Brain (Quad-Core Models) from: {}", modelDir);
+        LOG.info("🧠 Initializing DCA AI (Optimized Edition) from: {}", modelDir);
         this.env = OrtEnvironment.getEnvironment();
         OrtSession.SessionOptions opts = new OrtSession.SessionOptions();
-
-        // Tối ưu hóa Inference
         opts.setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT);
-        opts.setIntraOpNumThreads(1); // Mỗi model dùng 1 thread để chạy song song hiệu quả hơn
+        opts.setIntraOpNumThreads(1);
 
-        // 1. Load Model Risk
-        this.sessionRisk = loadSession(modelDir, "Model_Risk.onnx", opts);
+        // --- CẤU HÌNH TRỌNG SỐ DỰA TRÊN TRAINING LOG ---
 
-        // 2. Load Model Reward
-        this.sessionReward = loadSession(modelDir, "Model_Reward.onnx", opts);
+        // 1. RISK: LightGBM (RMSE 0.0444) tốt hơn XGB (0.0445) một chút
+        loadModel(modelDir, "LGBM_Risk.onnx", 1.5f, modelsRisk, opts);  // Trọng số cao hơn
+        loadModel(modelDir, "XGB_Risk.onnx", 1.0f, modelsRisk, opts);
 
-        // 3. Load Model Pump
-        this.sessionPump = loadSession(modelDir, "Model_Pump.onnx", opts);
+        // 2. REWARD: LightGBM (0.2057) tốt hơn XGB (0.2065)
+        loadModel(modelDir, "LGBM_Reward.onnx", 1.5f, modelsReward, opts);
+        loadModel(modelDir, "XGB_Reward.onnx", 1.0f, modelsReward, opts);
 
-        // 4. Load Model Dump
-        this.sessionDump = loadSession(modelDir, "Model_Dump.onnx", opts);
+        // 3. PUMP: XGBoost (AUC 0.861) tốt hơn LightGBM (0.858)
+        loadModel(modelDir, "XGB_Pump.onnx", 1.5f, modelsPump, opts);   // Ưu tiên XGB bắt Pump
+        loadModel(modelDir, "LGBM_Pump.onnx", 1.0f, modelsPump, opts);
 
-        LOG.info("✅ DCA Quad-Core Models loaded successfully!");
+        // 4. DUMP: Cả 2 đều cực tốt (AUC > 0.975). Dùng cả 2 để chắc chắn.
+        loadModel(modelDir, "XGB_Dump.onnx", 1.0f, modelsDump, opts);
+        loadModel(modelDir, "LGBM_Dump.onnx", 1.0f, modelsDump, opts);
+
+        // LƯU Ý: Đã loại bỏ hoàn toàn CatBoost để tiết kiệm ~10GB RAM
+
+        LOG.info("✅ AI Loaded. Performance Optimized.");
     }
 
-    private OrtSession loadSession(String dir, String fileName, OrtSession.SessionOptions opts) {
+    private void loadModel(String dir, String fileName, float weight, List<ModelSession> targetList, OrtSession.SessionOptions opts) {
         try {
             String path = dir + "/" + fileName;
-            LOG.info("Loading Model: {}", path);
-            return env.createSession(path, opts);
+            java.io.File f = new java.io.File(path);
+            if (f.exists()) {
+                targetList.add(new ModelSession(env.createSession(path, opts), weight, fileName));
+                LOG.info("  + Loaded: {} (Weight: {})", fileName, weight);
+            } else {
+                LOG.warn("  - Missing: {} (Skipping, auto-rebalance weights)", fileName);
+            }
         } catch (Exception e) {
-            LOG.warn("⚠️ Warning: Could not load model {}. Feature will be disabled.", fileName);
-            return null;
+            LOG.error("  x Error loading {}: {}", fileName, e.getMessage());
         }
     }
 
     public DcaPredictionResult predict(DcaMarketFeatures f) {
         try {
-            // Trích xuất features thô (41 features - Khớp với Python)
             float[] rawFeatures = extractFeaturesToArray(f);
 
-            // Chạy Inference
-            float predictedDD = runRegression(sessionRisk, rawFeatures, -1.0f);
-            float predictedRise = runRegression(sessionReward, rawFeatures, 0.0f);
-            float probPump = runClassification(sessionPump, rawFeatures);
-            float probDump = runClassification(sessionDump, rawFeatures);
+            // Tính trung bình có trọng số (Weighted Ensemble)
+            float risk = runWeightedRegression(modelsRisk, rawFeatures, -1.0f);
+            float reward = runWeightedRegression(modelsReward, rawFeatures, 0.0f);
+            float pump = runWeightedClassification(modelsPump, rawFeatures);
+            float dump = runWeightedClassification(modelsDump, rawFeatures);
 
-            return new DcaPredictionResult(predictedDD, predictedRise, probPump, probDump);
+            return new DcaPredictionResult(risk, reward, pump, dump);
 
         } catch (Exception e) {
-            LOG.error("❌ DCA Inference Error: {}", e.getMessage());
-            return new DcaPredictionResult(-1.0f, 0.0f, 0.0f, 1.0f); // Default: Rất nguy hiểm
+            LOG.error("❌ Inference Error: {}", e.getMessage());
+            return new DcaPredictionResult(-1f, 0f, 0f, 1f);
         }
     }
 
-    private float runRegression(OrtSession session, float[] features, float defaultValue) {
-        if (session == null) return defaultValue;
-        try (OrtSession.Result result = runSession(session, features)) {
-            float[][] output = (float[][]) result.get(0).getValue();
-            return output[0][0];
-        } catch (Exception e) {
-            return defaultValue;
-        }
-    }
+    // Hàm tính Regression (Risk/Reward) theo trọng số
+    private float runWeightedRegression(List<ModelSession> models, float[] features, float defaultValue) {
+        if (models.isEmpty()) return defaultValue;
 
-    private float runClassification(OrtSession session, float[] features) {
-        if (session == null) return 0.0f;
-        try (OrtSession.Result result = runSession(session, features)) {
-            // XGBoost Classifier thường trả về [1][1] là xác suất lớp 1 (nếu binary:logistic)
-            // Hoặc [1][2] (lớp 0, lớp 1) nếu multi:softprob.
-            // Với code Python binary:logistic output là xác suất lớp 1.
-            float[][] output = (float[][]) result.get(1).getValue(); // Index 1 thường là probabilities map
-            // Tuy nhiên với ONNX export từ XGBoost, output 0 là label, output 1 là probability map
-            // Để an toàn và đơn giản với float_input tensor, ta check output shape.
+        float totalValue = 0;
+        float totalWeight = 0;
 
-            // Cách xử lý an toàn cho Binary Classification ONNX:
-            // Output thường là float array xác suất.
-            Object val = result.get(1).getValue();
-            if (val instanceof float[][]) {
-                // Check shape
-                return ((float[][]) val)[0][1]; // Lấy xác suất của class 1 (Positive)
+        for (ModelSession ms : models) {
+            try (OrtSession.Result result = runSession(ms.session, features)) {
+                float[][] output = (float[][]) result.get(0).getValue();
+                float val = output[0][0];
+
+                totalValue += val * ms.weight;
+                totalWeight += ms.weight;
+            } catch (Exception e) {
+                LOG.error("Error running {}: {}", ms.name, e.getMessage());
             }
-            return 0.0f;
-        } catch (Exception e) {
-            // Fallback nếu cấu trúc ONNX khác biệt (ví dụ chỉ trả về label)
-            return 0.0f;
         }
+        return totalWeight > 0 ? totalValue / totalWeight : defaultValue;
+    }
+
+    // Hàm tính Classification (Pump/Dump) theo trọng số
+    private float runWeightedClassification(List<ModelSession> models, float[] features) {
+        if (models.isEmpty()) return 0.0f;
+
+        float totalProb = 0;
+        float totalWeight = 0;
+
+        for (ModelSession ms : models) {
+            try (OrtSession.Result result = runSession(ms.session, features)) {
+                // Lấy xác suất lớp 1 (Positive)
+                // XGBoost/LGBM ONNX thường trả về output[1] là một list map hoặc tensor array
+                // Code check này xử lý trường hợp output là Tensor float[][]
+                Object val = result.get(1).getValue();
+                float prob = 0.0f;
+
+                if (val instanceof float[][]) {
+                    prob = ((float[][]) val)[0][1]; // Index 1 = Lớp "Có" (Pump/Dump)
+                }
+
+                totalProb += prob * ms.weight;
+                totalWeight += ms.weight;
+            } catch (Exception e) {
+                LOG.error("Error running {}: {}", ms.name, e.getMessage());
+            }
+        }
+        return totalWeight > 0 ? totalProb / totalWeight : 0.0f;
     }
 
     private OrtSession.Result runSession(OrtSession session, float[] features) throws OrtException {
         long[] shape = new long[]{1, features.length};
         OnnxTensor inputTensor = OnnxTensor.createTensor(env, FloatBuffer.wrap(features), shape);
-        Map<String, OnnxTensor> inputs = Collections.singletonMap(INPUT_NODE, inputTensor);
-        return session.run(inputs);
+        return session.run(Collections.singletonMap(INPUT_NODE, inputTensor));
     }
 
-    // 🔥 CẬP NHẬT: 41 FEATURES (Khớp 100% với Header Python mới nhất)
     private float[] extractFeaturesToArray(DcaMarketFeatures f) {
+        // Copy lại hàm extract feature 41 cột của bạn vào đây
         return new float[] {
-                // 1. Market Position (2)
-                (float) f.distFromHigh24H,
-                (float) f.distMA20,
-
-                // 2. Rel Strength (2)
-                (float) f.instantAlpha,
-                (float) f.recoveryElasticity,
-
-                // 3. Market Context (5)
-                (float) f.crashVelocity,
-                (float) f.globalRateDownAvg,
-                (float) f.advanceDeclineRatio,
-                (float) f.btcDominance,
-                (float) f.marketBreadthStrength,
-
-                // 4. Macro BTC (5)
-                (float) f.btcMomentum15M,
-                (float) f.btcMomentum1H,
-                (float) f.btcMomentum4H,
-                (float) f.btcMomentum24H,
-                (float) f.btcMomentumAcceleration,
-
-                // 5. Macro ETH (2)
-                (float) f.ethMomentum15M,
-                (float) f.ethMomentum4H,
-
-                // 6. Coin Momentum (4)
-                (float) f.momentum15M,
-                (float) f.momentum1H,
-                (float) f.momentum4H,
-                (float) f.momentum24H,
-
-                // 7. Technicals (8)
-                (float) f.rsi1H,
-                (float) f.rsiChange,
-                (float) f.volumeAnomaly,
-                (float) f.volumeRatio15M_24H,
-                (float) f.distFromLow24H,
-                (float) f.maxRateChange60M,
-                (float) f.volatilityShock,
-                (float) f.volatilityTermStructure,
-
-                // 8. Basket (5)
-                (float) f.basketMomentum15M,
-                (float) f.basketMomentum1H,
-                (float) f.basketMomentum24H,
-                (float) f.basketRsi14,
-                (float) f.basketVolSpike,
-
-                // 9. Funding (4)
-                (float) f.coinFundingRate,
-                (float) f.fundingRateRaw,
-                (float) f.fundingRateAvg24H,
-                (float) f.fundingRateTrend,
-
-                // 10. Time (4)
-                (float) f.hourOfDay,
-                (float) f.dayOfWeek,
-                (float) f.weekOfMonth,
-                (float) f.monthOfYear
+                (float)f.distFromHigh24H, (float)f.distMA20, (float)f.instantAlpha, (float)f.recoveryElasticity,
+                (float)f.crashVelocity, (float)f.globalRateDownAvg, (float)f.advanceDeclineRatio, (float)f.btcDominance, (float)f.marketBreadthStrength,
+                (float)f.btcMomentum15M, (float)f.btcMomentum1H, (float)f.btcMomentum4H, (float)f.btcMomentum24H, (float)f.btcMomentumAcceleration,
+                (float)f.ethMomentum15M, (float)f.ethMomentum4H,
+                (float)f.momentum15M, (float)f.momentum1H, (float)f.momentum4H, (float)f.momentum24H,
+                (float)f.rsi1H, (float)f.rsiChange, (float)f.volumeAnomaly, (float)f.volumeRatio15M_24H,
+                (float)f.distFromLow24H, (float)f.maxRateChange60M, (float)f.volatilityShock, (float)f.volatilityTermStructure,
+                (float)f.basketMomentum15M, (float)f.basketMomentum1H, (float)f.basketMomentum24H, (float)f.basketRsi14, (float)f.basketVolSpike,
+                (float)f.coinFundingRate, (float)f.fundingRateRaw, (float)f.fundingRateAvg24H, (float)f.fundingRateTrend,
+                (float)f.hourOfDay, (float)f.dayOfWeek, (float)f.weekOfMonth, (float)f.monthOfYear
         };
     }
 
     @Override
     public void close() throws Exception {
-        if (sessionRisk != null) sessionRisk.close();
-        if (sessionReward != null) sessionReward.close();
-        if (sessionPump != null) sessionPump.close();
-        if (sessionDump != null) sessionDump.close();
+        for (ModelSession ms : modelsRisk) ms.session.close();
+        for (ModelSession ms : modelsReward) ms.session.close();
+        for (ModelSession ms : modelsPump) ms.session.close();
+        for (ModelSession ms : modelsDump) ms.session.close();
         if (env != null) env.close();
     }
 }

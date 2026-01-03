@@ -77,9 +77,9 @@ public class BinanceOrderTradingManager {
             Double budget = 2d;
             List<KlineObjectNumber> tickers = TickerFuturesHelper.getTicker(symbol, Constants.INTERVAL_1M);
             KlineObjectNumber ticker = tickers.get(tickers.size() - 1);
-            Double quantity = Utils.calQuantity(budget, BudgetManager.getInstance().getLeverage(), ticker.priceClose, symbol);
+            Double quantity = Utils.calQuantity(budget, Configs.LEVERAGE_ORDER, ticker.priceClose, symbol);
             OrderTargetInfo orderTrade = new OrderTargetInfo(OrderTargetStatus.REQUEST, ticker.priceClose,
-                    null, quantity, BudgetManager.getInstance().getLeverage(), symbol, ticker.startTime.longValue(),
+                    null, quantity, Configs.LEVERAGE_ORDER, symbol, ticker.startTime.longValue(),
                     ticker.startTime.longValue(), OrderSide.BUY, Constants.TRADING_TYPE_VOLUME_MINI);
             orderTrade.marketLevel = levelChange;
             LOG.info("Push redis order: {} {} {} {} {}", Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()),
@@ -306,7 +306,7 @@ public class BinanceOrderTradingManager {
                     side = OrderSide.SELL;
                 }
                 OrderTargetInfo orderTrade = new OrderTargetInfo(OrderTargetStatus.REQUEST, position.getEntryPrice().doubleValue(),
-                        null, position.getPositionAmt().doubleValue(), BudgetManager.getInstance().getLeverage(), symbol, position.getUpdateTime(),
+                        null, position.getPositionAmt().doubleValue(), Configs.LEVERAGE_ORDER, symbol, position.getUpdateTime(),
                         position.getUpdateTime(), side, Constants.TRADING_TYPE_VOLUME_MINI);
                 orderTrade.marketLevel = MarketLevelChange.ORDER_PROFIT;
                 RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO, symbol, Utils.toJson(orderTrade));

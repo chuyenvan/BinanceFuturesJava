@@ -7,7 +7,6 @@ package com.binance.chuyennd.trading;
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
 import com.binance.chuyennd.client.BinanceFuturesClientSingleton;
 import com.binance.chuyennd.client.ClientSingleton;
-import com.binance.chuyennd.helper.TickerFuturesHelper;
 import com.binance.chuyennd.helper.PositionHelper;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
@@ -36,7 +35,6 @@ public class BudgetManager {
     public static Double balanceBasic = Configs.getDouble("CAPITAL_START");
 
 
-    public Integer LEVERAGE_ORDER = Configs.getInt("LEVERAGE_ORDER");
     public Double BUDGET_PER_ORDER = 0d;
 
     public Double marginRunning = 0d;
@@ -53,7 +51,6 @@ public class BudgetManager {
         if (INSTANCE == null) {
             INSTANCE = new BudgetManager();
             INSTANCE.updateBudget();
-            INSTANCE.updateAllSymbol();
             INSTANCE.startThreadUpdateDataByHour();
         }
         return INSTANCE;
@@ -104,50 +101,8 @@ public class BudgetManager {
     }
 
 
-    public Integer getLeverage() {
-        return LEVERAGE_ORDER;
-    }
 
 
-    private void updateAllSymbol() {
-        new Thread(() -> {
-            Thread.currentThread().setName("ThreadUpdateAllSymbol");
-            LOG.info("Start thread updateAllSymbol !");
-            while (true) {
-                try {
-                    updateListSymbolAll();
-                    Thread.sleep(Utils.TIME_HOUR);
-                } catch (Exception e) {
-                    LOG.error("ERROR during updateAllSymbol: {}", e);
-                    e.printStackTrace();
-                }
-            }
-        }).start();
-    }
-
-    private void updateListSymbolAll() {
-        try {
-            Set<String> symbols = getAllSymbol();
-            Set<String> allSymbols = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS);
-            List<String> symbolNew = new ArrayList<>();
-            for (String symbol : symbols) {
-                if (!allSymbols.contains(symbol) && StringUtils.endsWithIgnoreCase(symbol, "usdt")
-                        && !Constants.diedSymbol.contains(symbol)) {
-                    LOG.info("Add {} new to all symbol!", symbol);
-                    FundingFeeManagerProduction.getInstance().getFundingBySymbol(symbol);
-                    symbolNew.add(symbol.toLowerCase());
-                    ClientSingleton.getInstance().initClient();
-                    ClientSingleton.getInstance().syncRequestClient.changeInitialLeverage(symbol, BudgetManager.getInstance().getLeverage());
-                    RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS, symbol, symbol);
-                }
-            }
-            if (symbolNew.size() > 0) {
-                ListenAllTicker.getInstance().startThreadListenASymbol(symbolNew);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
 
     private Set<String> getAllSymbol() {
         Set<String> symbolActive = new HashSet<>();

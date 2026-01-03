@@ -554,7 +554,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         }
         double entry = margin / quantity;
         OrderTargetInfoTest orderResult = new OrderTargetInfoTest(OrderTargetStatus.REQUEST, entry,
-                null, quantity, BudgetManagerSimple.getInstance().getLeverage(),
+                null, quantity, Configs.LEVERAGE_ORDER,
                 time2Order.lastEntry().getValue().symbol,
                 time2Order.lastEntry().getKey(),
                 time2Order.lastEntry().getKey(), orders.get(0).side);
@@ -579,7 +579,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             }
         }
         Double entry = ticker.priceClose;
-        Integer leverage = BudgetManagerSimple.getInstance().getLeverage();
+        Integer leverage = Configs.LEVERAGE_ORDER;
 
         Double marginRunning = calMarginRunning();
         Double balanceBasic = BudgetManagerSimple.getInstance().balanceBasic;
@@ -593,7 +593,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         // --- 3. TÍCH HỢP DCA AI ---
         final Set<MarketLevelChange> dcaLevels = Set.of(MarketLevelChange.DCA_LEVEL1, MarketLevelChange.DCA_LEVEL2);
         boolean isDcaOrder = dcaLevels.contains(levelChange);
-
+        DcaPredictionResult predictDca = null;
         if (isDcaOrder && dcaBrain != null) {
             OrderTargetInfoTest orderRunning = symbol2OrderRunning.get(symbol);
             if (orderRunning == null) {
@@ -613,23 +613,66 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             );
 
             if (features != null) {
-                // Gọi AI phán đoán (Trả về cả Risk và Reward)
-                DcaPredictionResult result = dcaBrain.predict(features);
+                // 1. Gọi AI phán đoán
+                // Hàm predict trả về object chứa 4 giá trị: Risk, Reward, Pump%, Dump%
+                predictDca = dcaBrain.predict(features);
 
-                // --- LOGIC 1: PHÒNG THỦ (RISK FILTER) ---
-                // Nếu AI dự báo còn sập thêm > 5% nữa (-0.05) -> Tạm hoãn DCA
-                // (Con số -0.2 cũ là quá an toàn, với model mới chính xác hơn có thể siết chặt hơn)
-                if (result.probPump20Pct < 0.8 || result.probDump30Pct > 0.8) {
-                    // LOG.info("🛡️ AI Block DCA {}: Risk too high ({:.2f}%)", symbol, result.predictedMaxDrawdown * 100);
+                // Lưu ý: Cần gán giá trị vào order object ngay tại đây để Log CSV không bị null
+                // (Giả sử bạn có biến order hoặc logData ở context này)
+                // order.predictedMaxDrawdown = predictDca.predictedMaxDrawdown;
+                // order.predictedMaxRise = predictDca.predictedMaxRise;
+                // ...
+
+                // ==========================================================
+                // 🛡️ TẦNG 1: LÁ CHẮN TUYỆT ĐỐI (Dựa trên Model Dump - AUC 0.97)
+                // ==========================================================
+                // Nếu xác suất sập mạnh > 40%, lập tức HUỶ LỆNH.
+                // Model Dump của bạn rất chính xác, hãy tin nó.
+                if (predictDca.probDump30Pct > 0.40) {
+                    // LOG.info("⛔ AI REJECT: Nguy cơ sập cao (Dump Prob: {:.2f})", predictDca.probDump30Pct);
                     return;
                 }
 
-                // --- LOGIC 2: TẤN CÔNG (REWARD OPTIMIZATION - OPTIONAL) ---
-                // Có thể dùng result.predictedMaxRise để set Dynamic TP
-                // Ví dụ: Nếu dự báo hồi mạnh > 10%, có thể nới TP ra xa hơn
-                // if (result.predictedMaxRise > 0.10) {
-                //     dynamicTP = ...;
-                // }
+                // ==========================================================
+                // 📉 TẦNG 2: TRÁNH DAO RƠI (Dựa trên Model Risk)
+                // ==========================================================
+                // Nếu dự báo giá còn giảm thêm quá 8% (-0.08) tính từ giá hiện tại
+                // thì chưa nên vào, đợi giá tốt hơn.
+                // (Con số -0.3 cũ của bạn là -30%, quá sâu, DCA nên bắt sớm hơn chút)
+                if (predictDca.predictedMaxDrawdown < -0.08) {
+                    // LOG.info("✋ AI WAIT: Giá còn giảm sâu (Risk: {:.2f}%)", predictDca.predictedMaxDrawdown * 100);
+                    return;
+                }
+
+                // ==========================================================
+                // 🚀 TẦNG 3: LỌC KÈO TIỀM NĂNG (Dựa trên Model Pump - AUC 0.86)
+                // ==========================================================
+                // Chỉ vào lệnh nếu có ít nhất 25% cơ hội Pump mạnh.
+                // Nếu xác suất Pump quá thấp (< 0.2), coi như coin "chết lâm sàng", bỏ qua.
+                if (predictDca.probPump20Pct < 0.25) {
+                    // LOG.info("⚠️ AI PASS: Lực mua yếu (Pump Prob: {:.2f})", predictDca.probPump20Pct);
+                    return;
+                }
+
+                // ==========================================================
+                // 💰 TẦNG 4: HIỆU SUẤT (Dựa trên Model Reward)
+                // ==========================================================
+                // Chỉ vào lệnh nếu biên độ hồi phục dự kiến > 3% (đủ để TP cơ bản).
+                // Model này sai số cao (20%) nên đừng đặt ngưỡng quá cao (như 10-15%).
+                if (predictDca.predictedMaxRise < 0.03) {
+                    // LOG.info("📉 AI PASS: Biên độ hồi phục thấp (Reward: {:.2f}%)", predictDca.predictedMaxRise * 100);
+                    return;
+                }
+
+                // --- NẾU VƯỢT QUA HẾT 4 TẦNG TRÊN -> CHO PHÉP MUA ---
+
+                // (Optional) Dynamic Take Profit Strategy
+                // Nếu tín hiệu cực mạnh (Pump > 70% và Reward > 15%), có thể set TP xa hơn.
+                /*
+                if (predictDca.probPump20Pct > 0.7 && predictDca.predictedMaxRise > 0.15) {
+                    targetTpPercent = 0.05; // Set TP 5% thay vì mặc định
+                }
+                */
             }
         }
         Double quantity = Utils.calQuantityTest(budget, leverage, entry, symbol);
@@ -653,6 +696,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         if (marketData != null) {
             order.marketData = marketData;
         }
+        order.predict = predictDca;
         List<OrderTargetInfoTest> orders = symbol2OrdersEntry.get(symbol);
         if (orders == null) {
             orders = new ArrayList<>();
