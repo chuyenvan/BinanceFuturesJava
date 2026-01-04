@@ -8,6 +8,7 @@ import com.aerospike.client.policy.BatchPolicy;
 
 // Import Object Java cũ
 import com.aerospike.client.policy.RecordExistsAction;
+import com.aerospike.client.policy.ScanPolicy;
 import com.aerospike.client.policy.WritePolicy;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.utils.Configs;
@@ -48,6 +49,7 @@ public class DataManagerAerospikeFloatSim {
 
     static {
         // 🔥 GIÁ TRỊ 0: Lưu trữ vĩnh viễn, không bao giờ tự động xóa
+        writePolicy.sendKey = true; // Thêm dòng này
         writePolicy.expiration = 0;
         writePolicy.recordExistsAction = RecordExistsAction.UPDATE;
     }
@@ -426,10 +428,19 @@ public class DataManagerAerospikeFloatSim {
             client.close();
         }
     }
-
+    public static void debugKeys() {
+        try (AerospikeClient client = new AerospikeClient("103.157.218.242", 3222)) {
+            ScanPolicy sp = new ScanPolicy();
+            sp.maxRecords = 10;
+            client.scanAll(sp, "ticker", "kline_1m_opt", (key, rec) -> {
+                System.out.println("🔑 Key thực tế trong DB: " + key.userKey);
+            });
+        }
+    }
     public static void main(String[] args) throws ParseException {
-//        Long startTime = Utils.sdfFile.parse("20260102").getTime() + 7 * Utils.TIME_HOUR;
+//        Long startTime = Utils.sdfFile.parse("20260103").getTime() + 7 * Utils.TIME_HOUR;
 //        System.out.println(DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime).size());
+//        debugKeys();
         DataManagerAerospikeFloatSim.migrateHistoricalFunding("../storage/funding_fee/");
     }
 }

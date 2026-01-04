@@ -6,7 +6,6 @@ package com.binance.chuyennd.research;
 
 import ai.onnxruntime.OrtException;
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
-import com.binance.chuyennd.ai_ml.data.HPOSmartCache;
 import com.binance.chuyennd.ai_ml.features.export.dca.DcaFeatureExtractor;
 import com.binance.chuyennd.ai_ml.features.export.dca.DcaMarketFeatures;
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
@@ -60,7 +59,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     public Map<String, KlineObjectSimple> symbol2LastTicker = new HashMap<>();
 
     public DcaFeatureExtractor extractor = new DcaFeatureExtractor();
-    public DcaOnnxInferenceManager dcaBrain;
+//    public DcaOnnxInferenceManager dcaBrain;
 
     public ConcurrentHashMap<String, List<OrderTargetInfoTest>> symbol2OrdersEntry = new ConcurrentHashMap();
     public ConcurrentHashMap<String, OrderTargetInfoTest> symbol2OrderRunning = new ConcurrentHashMap();
@@ -450,11 +449,11 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         time2MarketData = (TreeMap<Long, MarketDataObject>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
         time2BtcReverse = (TreeMap<Long, Double>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_BTC_REVERSE);
         predictionMap = (TreeMap<Long, AiPredictionData>) StorageSnappy.readObjectFromFile(Configs.FILE_AI_ENTRY_PREDICTIONS);
-        try {
-            dcaBrain = new DcaOnnxInferenceManager(Configs.FILE_AI_DCA_PREDICTIONS);
-        } catch (OrtException e) {
-            e.printStackTrace();
-        }
+//        try {
+//            dcaBrain = new DcaOnnxInferenceManager(Configs.FILE_AI_DCA_PREDICTIONS);
+//        } catch (OrtException e) {
+//            e.printStackTrace();
+//        }
         aiRejectFilter = new AIRejectFilter();
     }
 
@@ -594,87 +593,87 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         final Set<MarketLevelChange> dcaLevels = Set.of(MarketLevelChange.DCA_LEVEL1, MarketLevelChange.DCA_LEVEL2);
         boolean isDcaOrder = dcaLevels.contains(levelChange);
         DcaPredictionResult predictDca = null;
-        if (isDcaOrder && dcaBrain != null) {
-            OrderTargetInfoTest orderRunning = symbol2OrderRunning.get(symbol);
-            if (orderRunning == null) {
-                return; // Safety check
-            }
-
-            // Sử dụng Basket đã cache ở vòng lặp chính
-            List<String> basket = (cachedBasket != null && !cachedBasket.isEmpty()) ? cachedBasket : Collections.singletonList(symbol);
-
-            // Trích xuất đặc trưng
-            DcaMarketFeatures features = extractor.extractFeatures(
-                    ticker.startTime.longValue(),
-                    orderRunning,
-                    marketData,
-                    symbol2Ticker,
-                    basket
-            );
-
-            if (features != null) {
-                // 1. Gọi AI phán đoán
-                // Hàm predict trả về object chứa 4 giá trị: Risk, Reward, Pump%, Dump%
-                predictDca = dcaBrain.predict(features);
-
-                // Lưu ý: Cần gán giá trị vào order object ngay tại đây để Log CSV không bị null
-                // (Giả sử bạn có biến order hoặc logData ở context này)
-                // order.predictedMaxDrawdown = predictDca.predictedMaxDrawdown;
-                // order.predictedMaxRise = predictDca.predictedMaxRise;
-                // ...
-
-                // ==========================================================
-                // 🛡️ TẦNG 1: LÁ CHẮN TUYỆT ĐỐI (Dựa trên Model Dump - AUC 0.97)
-                // ==========================================================
-                // Nếu xác suất sập mạnh > 40%, lập tức HUỶ LỆNH.
-                // Model Dump của bạn rất chính xác, hãy tin nó.
-                if (predictDca.probDump30Pct > 0.40) {
-                    // LOG.info("⛔ AI REJECT: Nguy cơ sập cao (Dump Prob: {:.2f})", predictDca.probDump30Pct);
-                    return;
-                }
-
-                // ==========================================================
-                // 📉 TẦNG 2: TRÁNH DAO RƠI (Dựa trên Model Risk)
-                // ==========================================================
-                // Nếu dự báo giá còn giảm thêm quá 8% (-0.08) tính từ giá hiện tại
-                // thì chưa nên vào, đợi giá tốt hơn.
-                // (Con số -0.3 cũ của bạn là -30%, quá sâu, DCA nên bắt sớm hơn chút)
-                if (predictDca.predictedMaxDrawdown < -0.08) {
-                    // LOG.info("✋ AI WAIT: Giá còn giảm sâu (Risk: {:.2f}%)", predictDca.predictedMaxDrawdown * 100);
-                    return;
-                }
-
-                // ==========================================================
-                // 🚀 TẦNG 3: LỌC KÈO TIỀM NĂNG (Dựa trên Model Pump - AUC 0.86)
-                // ==========================================================
-                // Chỉ vào lệnh nếu có ít nhất 25% cơ hội Pump mạnh.
-                // Nếu xác suất Pump quá thấp (< 0.2), coi như coin "chết lâm sàng", bỏ qua.
-                if (predictDca.probPump20Pct < 0.25) {
-                    // LOG.info("⚠️ AI PASS: Lực mua yếu (Pump Prob: {:.2f})", predictDca.probPump20Pct);
-                    return;
-                }
-
-                // ==========================================================
-                // 💰 TẦNG 4: HIỆU SUẤT (Dựa trên Model Reward)
-                // ==========================================================
-                // Chỉ vào lệnh nếu biên độ hồi phục dự kiến > 3% (đủ để TP cơ bản).
-                // Model này sai số cao (20%) nên đừng đặt ngưỡng quá cao (như 10-15%).
-                if (predictDca.predictedMaxRise < 0.03) {
-                    // LOG.info("📉 AI PASS: Biên độ hồi phục thấp (Reward: {:.2f}%)", predictDca.predictedMaxRise * 100);
-                    return;
-                }
-
-                // --- NẾU VƯỢT QUA HẾT 4 TẦNG TRÊN -> CHO PHÉP MUA ---
-
-                // (Optional) Dynamic Take Profit Strategy
-                // Nếu tín hiệu cực mạnh (Pump > 70% và Reward > 15%), có thể set TP xa hơn.
-                /*
-                if (predictDca.probPump20Pct > 0.7 && predictDca.predictedMaxRise > 0.15) {
-                    targetTpPercent = 0.05; // Set TP 5% thay vì mặc định
-                }
-                */
-            }
-        }
+//        if (isDcaOrder && dcaBrain != null) {
+//            OrderTargetInfoTest orderRunning = symbol2OrderRunning.get(symbol);
+//            if (orderRunning == null) {
+//                return; // Safety check
+//            }
+//
+//            // Sử dụng Basket đã cache ở vòng lặp chính
+//            List<String> basket = (cachedBasket != null && !cachedBasket.isEmpty()) ? cachedBasket : Collections.singletonList(symbol);
+//
+//            // Trích xuất đặc trưng
+//            DcaMarketFeatures features = extractor.extractFeatures(
+//                    ticker.startTime.longValue(),
+//                    orderRunning,
+//                    marketData,
+//                    symbol2Ticker,
+//                    basket
+//            );
+//
+//            if (features != null) {
+//                // 1. Gọi AI phán đoán
+//                // Hàm predict trả về object chứa 4 giá trị: Risk, Reward, Pump%, Dump%
+//                predictDca = dcaBrain.predict(features);
+//
+//                // Lưu ý: Cần gán giá trị vào order object ngay tại đây để Log CSV không bị null
+//                // (Giả sử bạn có biến order hoặc logData ở context này)
+//                // order.predictedMaxDrawdown = predictDca.predictedMaxDrawdown;
+//                // order.predictedMaxRise = predictDca.predictedMaxRise;
+//                // ...
+//
+//                // ==========================================================
+//                // 🛡️ TẦNG 1: LÁ CHẮN TUYỆT ĐỐI (Dựa trên Model Dump - AUC 0.97)
+//                // ==========================================================
+//                // Nếu xác suất sập mạnh > 40%, lập tức HUỶ LỆNH.
+//                // Model Dump của bạn rất chính xác, hãy tin nó.
+//                if (predictDca.probDump30Pct > 0.40) {
+//                    // LOG.info("⛔ AI REJECT: Nguy cơ sập cao (Dump Prob: {:.2f})", predictDca.probDump30Pct);
+//                    return;
+//                }
+//
+//                // ==========================================================
+//                // 📉 TẦNG 2: TRÁNH DAO RƠI (Dựa trên Model Risk)
+//                // ==========================================================
+//                // Nếu dự báo giá còn giảm thêm quá 8% (-0.08) tính từ giá hiện tại
+//                // thì chưa nên vào, đợi giá tốt hơn.
+//                // (Con số -0.3 cũ của bạn là -30%, quá sâu, DCA nên bắt sớm hơn chút)
+//                if (predictDca.predictedMaxDrawdown < -0.08) {
+//                    // LOG.info("✋ AI WAIT: Giá còn giảm sâu (Risk: {:.2f}%)", predictDca.predictedMaxDrawdown * 100);
+//                    return;
+//                }
+//
+//                // ==========================================================
+//                // 🚀 TẦNG 3: LỌC KÈO TIỀM NĂNG (Dựa trên Model Pump - AUC 0.86)
+//                // ==========================================================
+//                // Chỉ vào lệnh nếu có ít nhất 25% cơ hội Pump mạnh.
+//                // Nếu xác suất Pump quá thấp (< 0.2), coi như coin "chết lâm sàng", bỏ qua.
+//                if (predictDca.probPump20Pct < 0.25) {
+//                    // LOG.info("⚠️ AI PASS: Lực mua yếu (Pump Prob: {:.2f})", predictDca.probPump20Pct);
+//                    return;
+//                }
+//
+//                // ==========================================================
+//                // 💰 TẦNG 4: HIỆU SUẤT (Dựa trên Model Reward)
+//                // ==========================================================
+//                // Chỉ vào lệnh nếu biên độ hồi phục dự kiến > 3% (đủ để TP cơ bản).
+//                // Model này sai số cao (20%) nên đừng đặt ngưỡng quá cao (như 10-15%).
+//                if (predictDca.predictedMaxRise < 0.03) {
+//                    // LOG.info("📉 AI PASS: Biên độ hồi phục thấp (Reward: {:.2f}%)", predictDca.predictedMaxRise * 100);
+//                    return;
+//                }
+//
+//                // --- NẾU VƯỢT QUA HẾT 4 TẦNG TRÊN -> CHO PHÉP MUA ---
+//
+//                // (Optional) Dynamic Take Profit Strategy
+//                // Nếu tín hiệu cực mạnh (Pump > 70% và Reward > 15%), có thể set TP xa hơn.
+//                /*
+//                if (predictDca.probPump20Pct > 0.7 && predictDca.predictedMaxRise > 0.15) {
+//                    targetTpPercent = 0.05; // Set TP 5% thay vì mặc định
+//                }
+//                */
+//            }
+//        }
         Double quantity = Utils.calQuantityTest(budget, leverage, entry, symbol);
 
         if (StringUtils.equals(symbol, Constants.SYMBOL_PAIR_BTC)) {

@@ -94,13 +94,10 @@ public class Configs {
     public static String FOLDER_TICKER_15M = Configs.getString("FOLDER_TICKER_15M");//"../ticker/storage/ticker/symbols-15m/";
     public static String FOLDER_TICKER_1M = Configs.getString("FOLDER_TICKER_1M");//"../ticker/storage/ticker/symbols-15m/";
     public static String FOLDER_FUNDING_FEE = Configs.getString("FOLDER_FUNDING_FEE");//"../ticker/storage/ticker/symbols-15m/";
-    public static String FOLDER_TICKER_1M_PRODUCTION = Configs.getString("FOLDER_TICKER_1M_PRODUCTION");//"../ticker/storage/ticker/symbols-15m/";
-    public static String FOLDER_TICKER_1M_SNAPPY_FILE = "../storage/ticker/ticker1m-snappy/";
-    public static final String FOLDER_TICKER_1M_PROTOBUF_SNAPPY_FILE = "../storage/ticker/ticker1m-protobuf/";
+
     public static String FOLDER_TICKER_HOUR = Configs.getString("FOLDER_TICKER_1H");//"../ticker/storage/ticker/symbols-1h/";
     public static String FOLDER_TICKER_4HOUR = Configs.getString("FOLDER_TICKER_4H");//"../ticker/storage/ticker/symbols-4h/";
     public static String FOLDER_TICKER_1D = Configs.getString("FOLDER_TICKER_1D");//"../ticker/storage/ticker/symbols-1D/";
-    public static String FILE_DATA_LOADED = Configs.getString("FILE_DATA_LOADED");//"storage/macd_data_time";
     public static Integer BTC_TREND_REVERSE_DURATION = Configs.getInt("BTC_TREND_REVERSE_DURATION");
     public static Double BTC_TREND_REVERSE_RATE_MAX = Configs.getDouble("BTC_TREND_REVERSE_RATE_MAX");
     public static Double BTC_TREND_REVERSE_RATE_MIN = Configs.getDouble("BTC_TREND_REVERSE_RATE_MIN");

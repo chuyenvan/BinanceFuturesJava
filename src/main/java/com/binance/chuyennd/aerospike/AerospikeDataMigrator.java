@@ -1,59 +1,62 @@
 package com.binance.chuyennd.aerospike;
 
 import com.aerospike.client.*;
-import com.aerospike.client.policy.ClientPolicy;
-import com.aerospike.client.policy.ScanPolicy;
+import com.aerospike.client.Record;
 import com.aerospike.client.policy.WritePolicy;
 import com.binance.chuyennd.utils.Configs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.atomic.AtomicInteger;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class AerospikeDataMigrator {
     private static final Logger LOG = LoggerFactory.getLogger(AerospikeDataMigrator.class);
 
-    private static final String SOURCE_HOST = "103.157.218.226";
-    private static final String TARGET_HOST = "103.157.218.242";
-    private static final String NAMESPACE = Configs.AEROSPIKE_NAMESPACE;
-    private static final String SET_NAME = "kline_1m_opt";
-
     public static void main(String[] args) {
-        migrate();
+        // Cấu hình mốc thời gian muốn migrate (Ví dụ từ 01/01/2021)
+        long startTime = 1609459200000L; // 2021-01-01 00:00:00 UTC
+        migrateByTimeRange(startTime);
     }
 
-    public static void migrate() {
-        try (AerospikeClient source = new AerospikeClient(SOURCE_HOST, 3222);
-             AerospikeClient target = new AerospikeClient(TARGET_HOST, 3222)) {
+    public static void migrateByTimeRange(long startTs) {
+        AerospikeClient source = new AerospikeClient("103.157.218.226", 3222);
+        AerospikeClient target = new AerospikeClient("103.157.218.242", 3222);
 
-            LOG.info("🚀 Bắt đầu chuyển nến 1m từ .226 sang .242...");
+        SimpleDateFormat fmt = new SimpleDateFormat("yyyyMMdd-HHmm");
+        WritePolicy wp = new WritePolicy();
+        wp.sendKey = true; // 🔥 Bắt buộc để server mới lưu được tên String
+        wp.expiration = 0;
 
-            ScanPolicy scanPolicy = new ScanPolicy();
-            scanPolicy.concurrentNodes = true; // Quét song song tất cả các node
+        long currentTime = System.currentTimeMillis();
+        long movingTs = startTs;
 
-            WritePolicy writePolicy = new WritePolicy();
-            writePolicy.expiration = 0; // Lưu vĩnh viễn
-            writePolicy.sendKey = true; // Bắt buộc lưu UserKey để giữ định dạng yyyyMMdd-HHmm
+        LOG.info("🚀 Bắt đầu Force Migrate theo mốc thời gian...");
 
-            AtomicInteger total = new AtomicInteger(0);
+        int count = 0;
+        while (movingTs <= currentTime) {
+            String keyStr = fmt.format(new Date(movingTs));
+            Key key = new Key(Configs.AEROSPIKE_NAMESPACE, "kline_1m_opt", keyStr);
 
-            source.scanAll(scanPolicy, NAMESPACE, SET_NAME, (key, record) -> {
-                // Vì bạn dùng yyyyMMdd-HHmm, lấy giá trị String từ userKey
-                Object userKey = (key.userKey != null) ? key.userKey.getObject() : key.digest;
+            // Đọc từ nguồn
+            Record record = source.get(null, key);
+            if (record != null) {
+                // Chuyển bins sang mảng
+                Bin[] bins = record.bins.entrySet().stream()
+                        .map(e -> new Bin(e.getKey(), e.getValue()))
+                        .toArray(Bin[]::new);
 
-                Key targetKey = new Key(NAMESPACE, SET_NAME, Value.get(userKey));
+                // Ghi sang đích
+                target.put(wp, key, bins);
+                count++;
+                if (count % 1000 == 0) LOG.info("🔄 Đã chuyển: {} (Time: {})", count, keyStr);
+            }
 
-                // Copy Bin "data" (chứa Protobuf + Snappy)
-                target.put(writePolicy, targetKey, new Bin("data", record.getValue("data")));
-
-                int count = total.incrementAndGet();
-                if (count % 500 == 0) LOG.info("🔄 Đã copy {} nến...", count);
-            });
-
-            LOG.info("🏁 Hoàn tất! Đã migrate thành công {} bản ghi.", total.get());
-
-        } catch (Exception e) {
-            LOG.error("❌ Lỗi Migration: {}", e.getMessage());
+            movingTs += 60000L; // Nhảy 1 phút
         }
+
+        LOG.info("🏁 Hoàn tất! Đã chuyển {} bản ghi chuẩn Key String.", count);
+        source.close();
+        target.close();
     }
 }

@@ -15,6 +15,7 @@
  */
 package com.binance.chuyennd.bigchange.test;
 
+import com.aerospike.client.AerospikeClient;
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
 import com.binance.chuyennd.client.ClientSingleton;
@@ -67,12 +68,16 @@ public class Test {
 //                removeSLRedis();
 //        difProductionWithTest();
 //        System.out.println(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO).size());
-        System.out.println(ClientSingleton.getInstance().syncRequestClient.getSymbolPriceTicker("CGPTUSDT"));
-//        testsublist();
 
-//        Long startTime = Utils.sdfFile.parse(Configs.TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
-//        TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers = DataManagerAerospike.readDataFromAerospike1M(startTime);
-//        LOG.info("time2Tickers size: {}", time2Tickers.size());
+//        testsublist();
+//        try (AerospikeClient client = new AerospikeClient("103.157.218.242", 3222)) {
+//            client.truncate(null, Configs.AEROSPIKE_NAMESPACE, "kline_1m_opt", null);
+//            System.out.println("✅ Đã dọn sạch set kline_1m_opt trên .242");
+//        } catch (Exception e) { e.printStackTrace(); }
+
+        Long startTime = Utils.sdfFile.parse("20210102").getTime() + 7 * Utils.TIME_HOUR;
+        TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers = DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime);
+        LOG.info("time2Tickers size: {}", time2Tickers.size());
 //        LOG.info("First key: {} time:{} size: {}",time2Tickers.firstKey(), Utils.normalizeDateYYYYMMDDHHmm(time2Tickers.firstKey()),
 //                time2Tickers.firstEntry().getValue().size());
 //        Utils.writePid2File();

@@ -10,6 +10,7 @@ import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -21,7 +22,11 @@ public class FundingValidator {
         FundingValidator validator = new FundingValidator();
         // 1. Đối soát dữ liệu
         validator.validateFunding(200);
-        // 2. In mẫu dữ liệu lịch sử của 5 mã
+// 2. Đối soát ngẫu nhiên 10 file từ storage vs Aerospike (Code mới)
+        String storagePath = "../storage/funding_fee/";
+        validator.validateRandomFiles(storagePath, 10);
+
+        // 3. In mẫu dữ liệu
         validator.printSampleHistoricalFunding(5);
     }
 
@@ -107,10 +112,100 @@ public class FundingValidator {
             // Sắp xếp theo thời gian tăng dần để in
             TreeMap<Long, Double> sortedMap = new TreeMap<>(asFundingMap);
 
-                LOG.info("   [🕒 {}] Rate: {}", Utils.normalizeDateYYYYMMDDHHmm(sortedMap.firstKey()),
-                        String.format("%.8f", sortedMap.firstEntry().getValue()));
+            LOG.info("   [🕒 {}] Rate: {}", Utils.normalizeDateYYYYMMDDHHmm(sortedMap.firstKey()),
+                    String.format("%.8f", sortedMap.firstEntry().getValue()));
 
         }
         LOG.info("--------------------------------------------------");
+    }
+
+    /**
+     * Đối soát ngẫu nhiên dữ liệu giữa File System và Aerospike
+     *
+     * @param folderPath  Đường dẫn thư mục chứa file .data
+     * @param randomCount Số lượng file muốn chọn ngẫu nhiên để kiểm tra
+     */
+    public void validateRandomFiles(String folderPath, int randomCount) {
+        LOG.info("🚀 BẮT ĐẦU ĐỐI SOÁT NGẪU NHIÊN: FILE SYSTEM vs AEROSPIKE");
+        File folder = new File(folderPath);
+        if (!folder.exists() || !folder.isDirectory()) {
+            LOG.error("❌ Thư mục không tồn tại: {}", folderPath);
+            return;
+        }
+
+        File[] allFiles = folder.listFiles();
+        if (allFiles == null || allFiles.length == 0) {
+            LOG.warn("⚠️ Không có file nào để kiểm tra.");
+            return;
+        }
+
+        // Lấy danh sách file và xáo trộn để chọn ngẫu nhiên
+        List<File> fileList = new ArrayList<>(Arrays.asList(allFiles));
+        Collections.shuffle(fileList);
+        List<File> targetFiles = fileList.stream().limit(randomCount).collect(Collectors.toList());
+
+        int totalFilesChecked = 0;
+        int filesMatch = 0;
+
+        for (File file : targetFiles) {
+            try {
+                String symbol = file.getName().toUpperCase();
+
+                // 1. Đọc dữ liệu từ File (Dữ liệu gốc)
+                Object rawData = com.binance.chuyennd.utils.Storage.readObjectFromFile(file.getAbsolutePath());
+                if (!(rawData instanceof TreeMap)) continue;
+
+                TreeMap<Long, com.binance.client.model.market.FundingRate> fileData =
+                        (TreeMap<Long, com.binance.client.model.market.FundingRate>) rawData;
+
+                // 2. Đọc dữ liệu từ Aerospike
+                Map<Long, Double> asData = DataManagerAerospikeFloatSim.getFundingMap(symbol);
+
+                totalFilesChecked++;
+                LOG.info("--------------------------------------------------");
+                LOG.info("📄 Kiểm tra Symbol: {} (File: {} records | AS: {} records)",
+                        symbol, fileData.size(), asData.size());
+
+                if (asData.isEmpty()) {
+                    LOG.error("   ❌ Thất bại: Aerospike không có dữ liệu cho {}", symbol);
+                    continue;
+                }
+
+                // 3. Đối soát từng mốc thời gian
+                boolean isAllMatch = true;
+                int matchInFileCount = 0;
+
+                for (Map.Entry<Long, com.binance.client.model.market.FundingRate> entry : fileData.entrySet()) {
+                    Long ts = entry.getKey();
+                    Double fileRate = entry.getValue().getFundingRate().doubleValue();
+                    Double asRate = asData.get(ts);
+
+                    if (asRate == null) {
+                        LOG.warn("   ⚠️ Thiếu mốc TS {} trong AS", Utils.normalizeDateYYYYMMDDHHmm(ts));
+                        isAllMatch = false;
+                    } else if (Math.abs(fileRate - asRate) > 0.00000001) {
+                        LOG.error("   ❌ Sai lệch tại {}: File={} | AS={}",
+                                Utils.normalizeDateYYYYMMDDHHmm(ts), fileRate, asRate);
+                        isAllMatch = false;
+                    } else {
+                        matchInFileCount++;
+                    }
+                }
+
+                if (isAllMatch && fileData.size() <= asData.size()) {
+                    filesMatch++;
+                    LOG.info("   ✅ Khớp hoàn toàn {}/{} mốc thời gian.", matchInFileCount, fileData.size());
+                } else {
+                    LOG.warn("   ⚠️ Khớp {}/{} mốc thời gian (Có sự sai khác về số lượng hoặc giá trị).",
+                            matchInFileCount, fileData.size());
+                }
+
+            } catch (Exception e) {
+                LOG.error("❌ Lỗi khi xử lý file {}: {}", file.getName(), e.getMessage());
+            }
+        }
+
+        LOG.info("==================================================");
+        LOG.info("📊 TỔNG KẾT ĐỐI SOÁT FILE: Khớp {}/{} file ngẫu nhiên.", filesMatch, totalFilesChecked);
     }
 }
