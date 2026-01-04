@@ -75,9 +75,15 @@ public class Test {
 //            System.out.println("✅ Đã dọn sạch set kline_1m_opt trên .242");
 //        } catch (Exception e) { e.printStackTrace(); }
 
-        Long startTime = Utils.sdfFile.parse("20210102").getTime() + 7 * Utils.TIME_HOUR;
-        TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers = DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime);
-        LOG.info("time2Tickers size: {}", time2Tickers.size());
+//        Long startTime = Utils.sdfFile.parse("20210102").getTime() + 7 * Utils.TIME_HOUR;
+//        TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers = DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime);
+//        LOG.info("time2Tickers size: {}", time2Tickers.size());
+
+        Map<String, List<KlineObjectSimple>> symbol2Tickers = DataManagerAerospikeFloatSim.readDataForSymbols(System.currentTimeMillis() - 2 * Utils.TIME_DAY, 90);
+        System.out.println(symbol2Tickers.keySet());
+        LOG.info("startTime: {} endTime: {} size: {}", Utils.normalizeDateYYYYMMDDHHmm(symbol2Tickers.get("BTCUSDT").get(0).startTime.longValue()),
+                Utils.normalizeDateYYYYMMDDHHmm(symbol2Tickers.get("BTCUSDT").get(symbol2Tickers.get("BTCUSDT").size() - 1).startTime.longValue()),
+                symbol2Tickers.get("BTCUSDT").size());
 //        LOG.info("First key: {} time:{} size: {}",time2Tickers.firstKey(), Utils.normalizeDateYYYYMMDDHHmm(time2Tickers.firstKey()),
 //                time2Tickers.firstEntry().getValue().size());
 //        Utils.writePid2File();

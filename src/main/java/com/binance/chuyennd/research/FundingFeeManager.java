@@ -1,5 +1,6 @@
 package com.binance.chuyennd.research;
 
+import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Storage;
 import com.binance.chuyennd.utils.StorageSnappy;
@@ -17,7 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class FundingFeeManager {
     public static final Logger LOG = LoggerFactory.getLogger(FundingFeeManager.class);
-    private ConcurrentHashMap<String, TreeMap<Long, FundingRate>> symbol2FundingFee = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<String, TreeMap<Long, Double>> symbol2FundingFee = new ConcurrentHashMap<>();
     public static final String FILE_FUNDING_FEE = "storage/fundingfee_time.data";
     public ConcurrentHashMap<Long, Set<String>> time2FundingFeeTrade;
 
@@ -42,9 +43,9 @@ public class FundingFeeManager {
                 for (File file : folder.listFiles()) {
                     try {
                         String symbol = file.getName();
-                        TreeMap<Long, FundingRate> time2RateFunding = symbol2FundingFee.get(symbol);
+                        TreeMap<Long, Double> time2RateFunding = symbol2FundingFee.get(symbol);
                         if (time2RateFunding == null) {
-                            time2RateFunding = (TreeMap<Long, FundingRate>) Storage.readObjectFromFile(Configs.FOLDER_FUNDING_FEE + symbol);
+                            time2RateFunding = DataManagerAerospikeFloatSim.getFundingMap(symbol);
                         }
                         if (time2RateFunding != null) {
                             symbol2FundingFee.put(symbol, time2RateFunding);
@@ -79,11 +80,11 @@ public class FundingFeeManager {
     }
 
     public Double getFundingFee(String symbol, long time) {
-        TreeMap<Long, FundingRate> time2RateFunding = symbol2FundingFee.get(symbol);
+        TreeMap<Long, Double> time2RateFunding = symbol2FundingFee.get(symbol);
         if (time2RateFunding == null) {
             // Thử load lại nếu chưa có (Lazy loading)
             try {
-                time2RateFunding = (TreeMap<Long, FundingRate>) Storage.readObjectFromFile(Configs.FOLDER_FUNDING_FEE + symbol);
+                time2RateFunding = DataManagerAerospikeFloatSim.getFundingMap(symbol);
                 if (time2RateFunding != null) {
                     symbol2FundingFee.put(symbol, time2RateFunding);
                 }
@@ -93,7 +94,7 @@ public class FundingFeeManager {
         }
 
         if (time2RateFunding != null && time2RateFunding.containsKey(time)) {
-            return time2RateFunding.get(time).getFundingRate().doubleValue();
+            return time2RateFunding.get(time);
         }
         return null;
     }
@@ -103,10 +104,10 @@ public class FundingFeeManager {
      * Dùng TreeMap.floorEntry để tìm bản ghi có thời gian <= timestamp
      */
     public Double getNearestFundingFee(String symbol, long timestamp) {
-        TreeMap<Long, FundingRate> time2RateFunding = symbol2FundingFee.get(symbol);
+        TreeMap<Long, Double> time2RateFunding = symbol2FundingFee.get(symbol);
         if (time2RateFunding == null) {
             try {
-                time2RateFunding = (TreeMap<Long, FundingRate>) Storage.readObjectFromFile(Configs.FOLDER_FUNDING_FEE + symbol);
+                time2RateFunding = DataManagerAerospikeFloatSim.getFundingMap(symbol);
                 if (time2RateFunding != null) symbol2FundingFee.put(symbol, time2RateFunding);
             } catch (Exception e) {
                 return null;
@@ -116,14 +117,14 @@ public class FundingFeeManager {
         if (time2RateFunding == null || time2RateFunding.isEmpty()) return null;
 
         // Tìm mốc thời gian gần nhất <= timestamp
-        java.util.Map.Entry<Long, FundingRate> entry = time2RateFunding.floorEntry(timestamp);
+        java.util.Map.Entry<Long, Double> entry = time2RateFunding.floorEntry(timestamp);
 
         if (entry != null) {
             // Nếu dữ liệu quá cũ (ví dụ > 24h trước) thì coi như không có (tránh lấy data năm ngoái)
             if (timestamp - entry.getKey() > 24 * 3600 * 1000L) {
                 return 0.0;
             }
-            return entry.getValue().getFundingRate().doubleValue();
+            return entry.getValue();
         }
 
         return null;
@@ -138,19 +139,19 @@ public class FundingFeeManager {
         } else {
             Set<String> symbols = new HashSet<>();
             for (String symbol : symbol2FundingFee.keySet()) {
-                TreeMap<Long, FundingRate> time2Funding = symbol2FundingFee.get(symbol);
+                TreeMap<Long, Double> time2Funding = symbol2FundingFee.get(symbol);
                 if (time2Funding == null) continue;
 
-                TreeMap<Long, FundingRate> time2FundingGet = new TreeMap<>();
+                TreeMap<Long, Double> time2FundingGet = new TreeMap<>();
                 for (int i = 0; i < Configs.NUMBER_HOUR_FUNDING_CAL; i++) {
                     Long timeF = timeGet - i * Utils.TIME_HOUR;
                     if (time2Funding.containsKey(timeF)) {
                         time2FundingGet.put(timeF, time2Funding.get(timeF));
                     }
                 }
-                for (FundingRate funding : time2FundingGet.values()) {
-                    if (funding.getFundingRate().doubleValue() < Configs.FUNDING_MAX_TRADE
-                            || funding.getFundingRate().doubleValue() > Configs.FUNDING_MIN_TRADE) {
+                for (Double funding : time2FundingGet.values()) {
+                    if (funding < Configs.FUNDING_MAX_TRADE
+                            || funding > Configs.FUNDING_MIN_TRADE) {
                         symbols.add(symbol);
                     }
                 }
@@ -160,14 +161,14 @@ public class FundingFeeManager {
         }
     }
 
-    public TreeMap<Long, FundingRate> getFundingFeeByTime(String symbol, long startTime, long endTime) {
-        TreeMap<Long, FundingRate> time2RateFunding = symbol2FundingFee.get(symbol);
+    public TreeMap<Long, Double> getFundingFeeByTime(String symbol, long startTime, long endTime) {
+        TreeMap<Long, Double> time2RateFunding = symbol2FundingFee.get(symbol);
         if (time2RateFunding == null) {
-            time2RateFunding = (TreeMap<Long, FundingRate>) Storage.readObjectFromFile(Configs.FOLDER_FUNDING_FEE + symbol);
+            time2RateFunding = DataManagerAerospikeFloatSim.getFundingMap(symbol);
         }
         if (time2RateFunding != null) {
             symbol2FundingFee.put(symbol, time2RateFunding);
-            TreeMap<Long, FundingRate> results = new TreeMap<>();
+            TreeMap<Long, Double> results = new TreeMap<>();
             for (Long time : time2RateFunding.keySet()) {
                 if (time <= startTime) {
                     continue;

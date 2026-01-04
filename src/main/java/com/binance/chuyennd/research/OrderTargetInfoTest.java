@@ -194,23 +194,23 @@ public class OrderTargetInfoTest implements Serializable {
     }
 
     public void updateFundingFee() {
-        TreeMap<Long, FundingRate> fundingFee = FundingFeeManager.getInstance().getFundingFeeByTime(symbol, timeStart, timeUpdate);
-        if (fundingFee != null) {
-            for (Long time : fundingFee.keySet()) {
-                FundingRate fund = fundingFee.get(time);
-                BigDecimal markPrice = fund.getMarkPrice();
-                BigDecimal fundingRate = fund.getFundingRate();
-                if (markPrice.equals(new BigDecimal("0"))) {
-                    markPrice = markPrice.add(new BigDecimal(lastPrice));
-                }
-                BigDecimal funding = fundingRate.multiply(new BigDecimal(quantity));
-                funding = funding.multiply(markPrice);
-                if (side.equals(OrderSide.SELL)) {
-                    time2FundingFee.put(time, -funding.doubleValue());
-                } else {
-                    time2FundingFee.put(time, funding.doubleValue());
-                }
-            }
-        }
+//        TreeMap<Long, Double> fundingFee = FundingFeeManager.getInstance().getFundingFeeByTime(symbol, timeStart, timeUpdate);
+//        if (fundingFee != null) {
+//            for (Long time : fundingFee.keySet()) {
+//                FundingRate fund = fundingFee.get(time);
+//                BigDecimal markPrice = fund.getMarkPrice();
+//                BigDecimal fundingRate = fund.getFundingRate();
+//                if (markPrice.equals(new BigDecimal("0"))) {
+//                    markPrice = markPrice.add(new BigDecimal(lastPrice));
+//                }
+//                BigDecimal funding = fundingRate.multiply(new BigDecimal(quantity));
+//                funding = funding.multiply(markPrice);
+//                if (side.equals(OrderSide.SELL)) {
+//                    time2FundingFee.put(time, -funding.doubleValue());
+//                } else {
+//                    time2FundingFee.put(time, funding.doubleValue());
+//                }
+//            }
+//        }
     }
 }

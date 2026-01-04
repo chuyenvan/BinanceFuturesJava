@@ -12,8 +12,6 @@ import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
-import com.binance.chuyennd.websocket.ListenAllTicker;
-import com.binance.client.constant.Constants;
 import com.binance.client.model.market.ExchangeInfoEntry;
 import com.binance.client.model.trade.Asset;
 import com.binance.client.model.trade.PositionRisk;

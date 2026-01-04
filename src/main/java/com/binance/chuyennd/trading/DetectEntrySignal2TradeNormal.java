@@ -15,6 +15,7 @@
  */
 package com.binance.chuyennd.trading;
 
+import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.ai_ml.features.export.entry.ComprehensiveMarketFeatureExtractor;
 import com.binance.chuyennd.ai_ml.features.export.entry.MarketFeatures;
 import com.binance.chuyennd.ai_ml.onnx.entry.AIRejectFilter;
@@ -31,7 +32,6 @@ import com.binance.chuyennd.tradecore.TradeUtils;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.StorageSnappy;
 import com.binance.chuyennd.utils.Utils;
-import com.binance.chuyennd.websocket.ListenAllTicker;
 import com.binance.client.constant.Constants;
 import com.binance.client.model.enums.OrderSide;
 import com.binance.client.model.trade.PositionRisk;
@@ -114,7 +114,8 @@ public class DetectEntrySignal2TradeNormal {
             TreeMap<Double, String> rateUp2Symbols = new TreeMap<>();
             Map<String, Double> symbol2Max15m = new HashMap<>();
 
-            ConcurrentHashMap<String, List<KlineObjectSimple>> symbol2LastTickers = ListenAllTicker.getInstance().getAllTicker();
+            Map<String, List<KlineObjectSimple>> symbol2LastTickers = DataManagerAerospikeFloatSim.readDataForSymbols(
+                    System.currentTimeMillis() - 1500 * Utils.TIME_MINUTE, 1500);
             List<KlineObjectSimple> btcTickers = symbol2LastTickers.get(Constants.SYMBOL_PAIR_BTC);
             KlineObjectSimple btcTicker = btcTickers.get(btcTickers.size() - 1);
             Double btcRateChange = Utils.rateOf2Double(btcTicker.priceClose, btcTicker.priceOpen);
@@ -193,8 +194,8 @@ public class DetectEntrySignal2TradeNormal {
                     long timestamp = time;
                     // 1. Lấy Snapshot toàn thị trường hiện tại để AI có cái nhìn tổng quan
                     Map<String, KlineObjectSimple> currentMarketMap = new HashMap<>();
-                    ConcurrentHashMap<String, List<KlineObjectSimple>> allTickers = ListenAllTicker.getInstance().getAllTicker();
-                    for (Map.Entry<String, List<KlineObjectSimple>> entry : allTickers.entrySet()) {
+
+                    for (Map.Entry<String, List<KlineObjectSimple>> entry : symbol2LastTickers.entrySet()) {
                         List<KlineObjectSimple> list = entry.getValue();
                         if (!list.isEmpty()) {
                             currentMarketMap.put(entry.getKey(), list.get(list.size() - 1));
@@ -208,7 +209,7 @@ public class DetectEntrySignal2TradeNormal {
                             timestamp,
                             currentMarketMap,
                             marketRate,
-                           new ArrayList<>()
+                            new ArrayList<>()
                     );
 
                     // 3. Dự báo
@@ -406,7 +407,6 @@ public class DetectEntrySignal2TradeNormal {
         }
 
 
-
         // ... (Giữ nguyên logic tính toán margin, quantity cũ bên dưới) ...
         long time = ticker.startTime.longValue();
         Double marginRunning = BudgetManager.getInstance().marginRunning;
@@ -485,7 +485,6 @@ public class DetectEntrySignal2TradeNormal {
     }
 
     private void initData() {
-        ListenAllTicker tickerListener = ListenAllTicker.getInstance();
 
         if (new File(FILE_STORAGE_TIME_RATE_DOWN15M).exists()) {
             time2RateDown15MAvg = (TreeMap<Long, Double>) StorageSnappy.readObjectFromFile(FILE_STORAGE_TIME_RATE_DOWN15M);
@@ -498,7 +497,10 @@ public class DetectEntrySignal2TradeNormal {
 
             // QUAN TRỌNG: Sync dữ liệu lịch sử từ ListenAllTicker sang FeatureExtractor
             // Để đảm bảo tính toán RSI, MA đúng ngay từ lệnh đầu tiên
-            this.featureExtractor.initDataFromTickerMap(tickerListener.symbol2Tickers);
+            TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers =
+                    DataManagerAerospikeFloatSim.readDataFromAerospike1M(System.currentTimeMillis()
+                            - 1500 * Utils.TIME_MINUTE);
+            this.featureExtractor.initDataFromTickerMap(time2Tickers);
 
             LOG.info("AI System Initialized Successfully.");
         } catch (Exception e) {

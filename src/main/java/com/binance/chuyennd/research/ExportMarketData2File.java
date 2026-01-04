@@ -5,6 +5,7 @@
 package com.binance.chuyennd.research;
 
 import com.binance.chuyennd.aerospike.DataManagerAerospike;
+import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.bigchange.market.MarketDataObject;
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
 import com.binance.chuyennd.object.MarketRateChange;
@@ -100,7 +101,7 @@ public class ExportMarketData2File {
                 LOG.info("Read data from Aerospike: {}", Utils.normalizeDateYYYYMMDDHHmm(startTime));
 
                 // ĐỌC TỪ AEROSPIKE THAY VÌ FILE
-                time2Tickers = DataManagerAerospike.readDataFromAerospike1M(startTime);
+                time2Tickers = DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime);
 
                 if (time2Tickers != null) {
                     for (Map.Entry<Long, Map<String, KlineObjectSimple>> entry : time2Tickers.entrySet()) {

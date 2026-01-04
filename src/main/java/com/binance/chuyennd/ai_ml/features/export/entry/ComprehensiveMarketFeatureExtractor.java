@@ -22,24 +22,14 @@ public class ComprehensiveMarketFeatureExtractor {
         this.symbolHistoryMap = new ConcurrentHashMap<>();
     }
 
-    public void initDataFromTickerMap(ConcurrentHashMap<String, TreeMap<Long, KlineObjectSimple>> allTickers) {
-        LOG.info("AI Feature Extractor: Syncing history from ListenAllTicker...");
-        for (Map.Entry<String, TreeMap<Long, KlineObjectSimple>> entry : allTickers.entrySet()) {
-            String symbol = entry.getKey();
-            TreeMap<Long, KlineObjectSimple> timeMap = entry.getValue();
-            if (timeMap == null || timeMap.isEmpty()) continue;
-
-            Deque<KlineObjectSimple> history = new ArrayDeque<>();
-            Collection<KlineObjectSimple> sortedKlines = timeMap.values();
-            int skipCount = Math.max(0, sortedKlines.size() - maxHistorySize);
-
-            int i = 0;
-            for (KlineObjectSimple kline : sortedKlines) {
-                if (i >= skipCount) history.addLast(kline);
-                i++;
-            }
-            symbolHistoryMap.put(symbol, history);
+    public void initDataFromTickerMap(TreeMap<Long, Map<String, KlineObjectSimple>> time2Ticker) {
+        LOG.info("AI Feature Extractor: Syncing history from {} size: {}",
+                Utils.normalizeDateYYYYMMDDHHmm(time2Ticker.firstKey()), time2Ticker.size());
+        for (Map<String, KlineObjectSimple> tickerMap : time2Ticker.values()) {
+            updateMarketHistory(tickerMap);
         }
+        LOG.info("AI Feature Extractor: Completed syncing {} history from {}.",
+                time2Ticker.size(), Utils.normalizeDateYYYYMMDDHHmm(time2Ticker.firstKey()));
     }
 
     // 🔥 METHOD MỚI: Tự động tìm Basket dựa trên History (Thay thế findPotentialLosersRelaxed bên ngoài)
@@ -196,7 +186,10 @@ public class ComprehensiveMarketFeatureExtractor {
                     for (int i = 0; i <= 24; i += 4) {
                         long pastTime = currentTime - (i * 3600 * 1000L);
                         Double past = FundingFeeManager.getInstance().getNearestFundingFee(symbol, pastTime);
-                        if (past != null) { sum24h += past; count24h++; }
+                        if (past != null) {
+                            sum24h += past;
+                            count24h++;
+                        }
                     }
                     if (count24h > 0) totalAvg24H += (sum24h / count24h);
                     else totalAvg24H += currentFunding;
@@ -233,7 +226,10 @@ public class ComprehensiveMarketFeatureExtractor {
                     for (int i = 0; i <= 24; i += 4) {
                         long pastTime = currentTime - (i * 3600 * 1000L);
                         Double past = FundingFeeManagerProduction.getInstance().getNearestFundingFee(symbol, pastTime);
-                        if (past != null) { sum24h += past; count24h++; }
+                        if (past != null) {
+                            sum24h += past;
+                            count24h++;
+                        }
                     }
                     if (count24h > 0) totalAvg24H += (sum24h / count24h);
                     else totalAvg24H += currentFunding;
@@ -299,7 +295,10 @@ public class ComprehensiveMarketFeatureExtractor {
 
     // Copy Private helpers: calculateRSI, calculateReturn, calculateVolatility, etc.
     private void extractMomentumFeatures(MarketFeatures features, String symbol, MarketRateChange rate) {
-        if (rate != null) { features.momentum1M = rate.rateDownAvg; features.momentum15M = rate.rateDown15MAvg; }
+        if (rate != null) {
+            features.momentum1M = rate.rateDownAvg;
+            features.momentum15M = rate.rateDown15MAvg;
+        }
         features.momentum5M = calculateReturn(symbol, 5);
         features.momentum1H = calculateReturn(symbol, 60);
         features.momentum4H = calculateReturn(symbol, 240);
@@ -308,16 +307,19 @@ public class ComprehensiveMarketFeatureExtractor {
         features.trendStrengthETH = calculateReturn("ETHUSDT", 60);
         features.trendConsistency = (features.momentum5M * features.momentum1H > 0) ? 1.0 : -1.0;
     }
+
     private void extractVolatilityFeatures(MarketFeatures features, String symbol) {
         features.volatility1M = calculateVolatility(symbol, 2);
         features.volatility15M = calculateVolatility(symbol, 15);
         features.volatility1H = calculateVolatility(symbol, 60);
         features.volatility24H = calculateVolatility(symbol, 1440);
-        if (features.volatility24H != 0) features.volatilityTermStructure = features.volatility1H / features.volatility24H;
+        if (features.volatility24H != 0)
+            features.volatilityTermStructure = features.volatility1H / features.volatility24H;
         if (features.volatility1H > 0.01) features.volatilityRegime = "HIGH";
         else if (features.volatility1H < 0.002) features.volatilityRegime = "LOW";
         else features.volatilityRegime = "NORMAL";
     }
+
     private void extractBreadthFeatures(MarketFeatures features, Map<String, KlineObjectSimple> marketData) {
         int upCount = 0, downCount = 0;
         double upVol = 0, downVol = 0;
@@ -326,8 +328,13 @@ public class ComprehensiveMarketFeatureExtractor {
             KlineObjectSimple k = entry.getValue();
             if (k.totalUsdt < 5000) continue;
             totalValid++;
-            if (k.priceClose > k.priceOpen) { upCount++; upVol += k.totalUsdt; }
-            else if (k.priceClose < k.priceOpen) { downCount++; downVol += k.totalUsdt; }
+            if (k.priceClose > k.priceOpen) {
+                upCount++;
+                upVol += k.totalUsdt;
+            } else if (k.priceClose < k.priceOpen) {
+                downCount++;
+                downVol += k.totalUsdt;
+            }
             if (isAboveMA(entry.getKey(), 20, k.priceClose)) aboveMA20Count++;
         }
         features.advanceDeclineRatio = (downCount > 0) ? (double) upCount / downCount : 10.0;
@@ -337,31 +344,46 @@ public class ComprehensiveMarketFeatureExtractor {
         double btcVol = marketData.containsKey("BTCUSDT") ? marketData.get("BTCUSDT").totalUsdt : 0;
         features.btcDominance = (upVol + downVol > 0) ? btcVol / (upVol + downVol) : 0.0;
     }
+
     private void extractTechnicalIndicators(MarketFeatures features, String symbol) {
         Deque<KlineObjectSimple> history = symbolHistoryMap.get(symbol);
         if (history == null || history.size() < 25) {
-            features.rsi14 = 50.0; features.volumeSpike = 1.0; features.distMA20 = 0.0; return;
+            features.rsi14 = 50.0;
+            features.volumeSpike = 1.0;
+            features.distMA20 = 0.0;
+            return;
         }
         List<KlineObjectSimple> list = new ArrayList<>(history);
         KlineObjectSimple current = list.get(list.size() - 1);
         features.rsi14 = calculateRSI(list, 14);
-        double avgVol = 0; int count = 0;
-        for (int i = list.size() - 2; i >= Math.max(0, list.size() - 22); i--) { avgVol += list.get(i).totalUsdt; count++; }
+        double avgVol = 0;
+        int count = 0;
+        for (int i = list.size() - 2; i >= Math.max(0, list.size() - 22); i--) {
+            avgVol += list.get(i).totalUsdt;
+            count++;
+        }
         features.volumeSpike = (count > 0 && avgVol > 0) ? current.totalUsdt / (avgVol / count) : 1.0;
-        double ma20 = 0; count = 0;
-        for (int i = list.size() - 1; i >= Math.max(0, list.size() - 20); i--) { ma20 += list.get(i).priceClose; count++; }
+        double ma20 = 0;
+        count = 0;
+        for (int i = list.size() - 1; i >= Math.max(0, list.size() - 20); i--) {
+            ma20 += list.get(i).priceClose;
+            count++;
+        }
         features.distMA20 = (count > 0 && ma20 > 0) ? (current.priceClose - ma20 / count) / (ma20 / count) : 0.0;
     }
+
     private double calculateRSI(List<KlineObjectSimple> data, int period) {
         if (data.size() <= period) return 50.0;
         double sumGain = 0, sumLoss = 0;
         for (int i = data.size() - period; i < data.size(); i++) {
             double change = data.get(i).priceClose - data.get(i - 1).priceClose;
-            if (change > 0) sumGain += change; else sumLoss -= change;
+            if (change > 0) sumGain += change;
+            else sumLoss -= change;
         }
         if (sumLoss == 0) return 100.0;
         return 100.0 - (100.0 / (1.0 + (sumGain / sumLoss)));
     }
+
     private double calculateReturn(String symbol, int periods) {
         Deque<KlineObjectSimple> h = symbolHistoryMap.get(symbol);
         if (h == null || h.size() <= periods) return 0.0;
@@ -370,33 +392,45 @@ public class ComprehensiveMarketFeatureExtractor {
         double past = l.get(Math.max(0, l.size() - 1 - periods)).priceClose;
         return (past > 0) ? (cur - past) / past : 0.0;
     }
+
     private double calculateVolatility(String symbol, int periods) {
         Deque<KlineObjectSimple> h = symbolHistoryMap.get(symbol);
         if (h == null || h.size() < 5) return 0.0;
         List<KlineObjectSimple> l = new ArrayList<>(h);
         int start = Math.max(0, l.size() - periods);
-        double sum = 0, sumSq = 0; int count = 0;
+        double sum = 0, sumSq = 0;
+        int count = 0;
         for (int i = start; i < l.size() - 1; i++) {
             double r = (l.get(i + 1).priceClose - l.get(i).priceClose) / l.get(i).priceClose;
-            sum += r; sumSq += r * r; count++;
+            sum += r;
+            sumSq += r * r;
+            count++;
         }
         return (count < 2) ? 0.0 : Math.sqrt(Math.max(0, (sumSq - (sum * sum) / count) / (count - 1)));
     }
+
     private boolean isAboveMA(String symbol, int period, double price) {
         Deque<KlineObjectSimple> h = symbolHistoryMap.get(symbol);
         if (h == null || h.size() < period) return false;
-        double sum = 0; int count = 0;
+        double sum = 0;
+        int count = 0;
         Iterator<KlineObjectSimple> it = h.descendingIterator();
-        while (it.hasNext() && count < period) { sum += it.next().priceClose; count++; }
+        while (it.hasNext() && count < period) {
+            sum += it.next().priceClose;
+            count++;
+        }
         return price > (sum / count);
     }
+
     private void extractTimeFeatures(MarketFeatures features, long timestamp) {
-        Calendar c = Calendar.getInstance(); c.setTimeInMillis(timestamp);
+        Calendar c = Calendar.getInstance();
+        c.setTimeInMillis(timestamp);
         features.hourOfDay = c.get(Calendar.HOUR_OF_DAY);
         features.dayOfWeek = c.get(Calendar.DAY_OF_WEEK);
         features.weekOfMonth = c.get(Calendar.WEEK_OF_MONTH);
         features.monthOfYear = c.get(Calendar.MONTH) + 1;
     }
+
     private void validateAndCleanFeatures(MarketFeatures f) {
         if (Double.isNaN(f.momentum1M)) f.momentum1M = 0.0;
         if (Double.isNaN(f.rsi14)) f.rsi14 = 50.0;

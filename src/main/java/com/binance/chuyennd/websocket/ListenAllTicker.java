@@ -1,383 +1,383 @@
-/*
- * Copyright 2023 pc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-package com.binance.chuyennd.websocket;
-
-import com.binance.chuyennd.helper.TickerFuturesHelper;
-import com.binance.chuyennd.object.sw.KlineObjectSimple;
-import com.binance.chuyennd.redis.RedisConst;
-import com.binance.chuyennd.redis.RedisHelper;
-import com.binance.chuyennd.utils.Configs;
-import com.binance.chuyennd.utils.StorageSnappy;
-import com.binance.chuyennd.utils.Utils;
-import com.binance.client.SubscriptionClient;
-import com.binance.client.constant.Constants;
-import com.binance.client.model.enums.CandlestickInterval;
-import com.binance.client.model.event.CandlestickEvent;
-import com.binance.client.model.event.SymbolTickerEvent;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.File;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
-/**
- * @author pc
- */
-public class ListenAllTicker {
-
-    public static final Logger LOG = LoggerFactory.getLogger(ListenAllTicker.class);
-    public ConcurrentHashMap<String, TreeMap<Long, KlineObjectSimple>> symbol2Tickers = new ConcurrentHashMap<>();
-    public final ConcurrentHashMap<String, Double> symbol2Price = new ConcurrentHashMap<>();
-
-    public ExecutorService executorService = Executors.newFixedThreadPool(Configs.NUMBER_THREAD_ORDER_MANAGER);
-    public SubscriptionClient client;
-    private static volatile ListenAllTicker INSTANCE = null;
-
-    public static ListenAllTicker getInstance() {
-        if (INSTANCE == null) {
-            INSTANCE = new ListenAllTicker();
-            if (new File(Configs.FILE_TICKER_1M_STORAGE).exists()) {
-                try {
-                    INSTANCE.symbol2Tickers = (ConcurrentHashMap<String, TreeMap<Long, KlineObjectSimple>>)
-                            StorageSnappy.readObjectFromFile(Configs.FILE_TICKER_1M_STORAGE);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-            if (INSTANCE.symbol2Tickers.isEmpty()) {
-                INSTANCE.initData();
-            }
-            INSTANCE.client = SubscriptionClient.create();
-            INSTANCE.startThreadUpdateTicker();
-            INSTANCE.startThreadWriteTickerData();
-//            INSTANCE.startUserDataStream();
-        }
-        return INSTANCE;
-    }
-
-    private void initData() {
-        try {
-            LOG.info("Start get data of market for init {}", new Date());
-            Long startTime = Utils.getMinute(System.currentTimeMillis() -
-                    (Configs.NUMBER_TICKER_CAL_RATE_CHANGE * 4 + 5) * Utils.TIME_MINUTE);
-            Set<String> allSymbol = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS);
-            allSymbol.removeAll(Constants.diedSymbol);
-            allSymbol.remove(Constants.SYMBOL_PAIR_BTC);
-            executorService.execute(() -> initTickerBySymbol(Constants.SYMBOL_PAIR_BTC,
-                    startTime - 1440
-                            * Utils.TIME_MINUTE));
-            for (String symbol : allSymbol) {
-                if (!StringUtils.endsWithIgnoreCase(symbol, "usdt")) {
-                    continue;
-                }
-                executorService.execute(() -> initTickerBySymbol(symbol, startTime));
-            }
-        } catch (Exception e) {
-            LOG.error("ERROR during ThreadDetectMarketLevel2Trader: {}", e);
-            e.printStackTrace();
-        }
-    }
-
-    private void initTickerBySymbol(String symbol, Long startTime) {
-        try {
-            List<KlineObjectSimple> candles = TickerFuturesHelper.getTickerSimpleWithStartTime(symbol, Constants.INTERVAL_1M, startTime);
-            TreeMap<Long, KlineObjectSimple> time2Candle = new TreeMap<>();
-            for (KlineObjectSimple candle : candles) {
-                time2Candle.put(candle.startTime.longValue(), candle);
-            }
-            symbol2Tickers.put(symbol, time2Candle);
-            if (symbol.equals(Constants.SYMBOL_PAIR_ETH)) {
-                LOG.info("Init ticker {} {} {}", symbol, time2Candle.size(), Utils.normalizeDateYYYYMMDDHHmm(time2Candle.firstKey()));
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    public static void main(String[] args) {
-
-//        ListenAllTicker.getInstance().startThreadMonitor();
-        while (true) {
-            try {
-                LOG.info("Number ticker available: {}", ListenAllTicker.getInstance().getAllTicker().size());
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            try {
-                Thread.sleep(Utils.TIME_MINUTE);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-        }
-//        String symbol = "BTCUSDT";
-//        List<KlineObjectSimple> tickers = ListenAllTicker.getInstance().getTickerBySymbol(symbol);
-//        if (tickers != null) {
-//            int index = tickers.size() - 1;
-//            for (int i = 0; i < 15; i++) {
-//                if (index - i < 0) {
-//                    break;
+///*
+// * Copyright 2023 pc.
+// *
+// * Licensed under the Apache License, Version 2.0 (the "License");
+// * you may not use this file except in compliance with the License.
+// * You may obtain a copy of the License at
+// *
+// *      http://www.apache.org/licenses/LICENSE-2.0
+// *
+// * Unless required by applicable law or agreed to in writing, software
+// * distributed under the License is distributed on an "AS IS" BASIS,
+// * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// * See the License for the specific language governing permissions and
+// * limitations under the License.
+// */
+//package com.binance.chuyennd.websocket;
+//
+//import com.binance.chuyennd.helper.TickerFuturesHelper;
+//import com.binance.chuyennd.object.sw.KlineObjectSimple;
+//import com.binance.chuyennd.redis.RedisConst;
+//import com.binance.chuyennd.redis.RedisHelper;
+//import com.binance.chuyennd.utils.Configs;
+//import com.binance.chuyennd.utils.StorageSnappy;
+//import com.binance.chuyennd.utils.Utils;
+//import com.binance.client.SubscriptionClient;
+//import com.binance.client.constant.Constants;
+//import com.binance.client.model.enums.CandlestickInterval;
+//import com.binance.client.model.event.CandlestickEvent;
+//import com.binance.client.model.event.SymbolTickerEvent;
+//import org.apache.commons.io.FileUtils;
+//import org.apache.commons.lang.StringUtils;
+//import org.slf4j.Logger;
+//import org.slf4j.LoggerFactory;
+//
+//import java.io.File;
+//import java.util.*;
+//import java.util.concurrent.ConcurrentHashMap;
+//import java.util.concurrent.ExecutorService;
+//import java.util.concurrent.Executors;
+//
+///**
+// * @author pc
+// */
+//public class ListenAllTicker {
+//
+//    public static final Logger LOG = LoggerFactory.getLogger(ListenAllTicker.class);
+//    public ConcurrentHashMap<String, TreeMap<Long, KlineObjectSimple>> symbol2Tickers = new ConcurrentHashMap<>();
+//    public final ConcurrentHashMap<String, Double> symbol2Price = new ConcurrentHashMap<>();
+//
+//    public ExecutorService executorService = Executors.newFixedThreadPool(Configs.NUMBER_THREAD_ORDER_MANAGER);
+//    public SubscriptionClient client;
+//    private static volatile ListenAllTicker INSTANCE = null;
+//
+//    public static ListenAllTicker getInstance() {
+//        if (INSTANCE == null) {
+//            INSTANCE = new ListenAllTicker();
+//            if (new File(Configs.FILE_TICKER_1M_STORAGE).exists()) {
+//                try {
+//                    INSTANCE.symbol2Tickers = (ConcurrentHashMap<String, TreeMap<Long, KlineObjectSimple>>)
+//                            StorageSnappy.readObjectFromFile(Configs.FILE_TICKER_1M_STORAGE);
+//                } catch (Exception e) {
+//                    e.printStackTrace();
 //                }
-//                KlineObjectSimple tickerCheck = tickers.get(index - i);
-//                if (Utils.rateOf2Double(tickerCheck.maxPrice, tickerCheck.minPrice) > 0.001) {
-//                    LOG.info("{} True", symbol);
-//                    return;
+//            }
+//            if (INSTANCE.symbol2Tickers.isEmpty()) {
+//                INSTANCE.initData();
+//            }
+//            INSTANCE.client = SubscriptionClient.create();
+//            INSTANCE.startThreadUpdateTicker();
+//            INSTANCE.startThreadWriteTickerData();
+////            INSTANCE.startUserDataStream();
+//        }
+//        return INSTANCE;
+//    }
+//
+//    private void initData() {
+//        try {
+//            LOG.info("Start get data of market for init {}", new Date());
+//            Long startTime = Utils.getMinute(System.currentTimeMillis() -
+//                    (Configs.NUMBER_TICKER_CAL_RATE_CHANGE * 4 + 5) * Utils.TIME_MINUTE);
+//            Set<String> allSymbol = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS);
+//            allSymbol.removeAll(Constants.diedSymbol);
+//            allSymbol.remove(Constants.SYMBOL_PAIR_BTC);
+//            executorService.execute(() -> initTickerBySymbol(Constants.SYMBOL_PAIR_BTC,
+//                    startTime - 1440
+//                            * Utils.TIME_MINUTE));
+//            for (String symbol : allSymbol) {
+//                if (!StringUtils.endsWithIgnoreCase(symbol, "usdt")) {
+//                    continue;
+//                }
+//                executorService.execute(() -> initTickerBySymbol(symbol, startTime));
+//            }
+//        } catch (Exception e) {
+//            LOG.error("ERROR during ThreadDetectMarketLevel2Trader: {}", e);
+//            e.printStackTrace();
+//        }
+//    }
+//
+//    private void initTickerBySymbol(String symbol, Long startTime) {
+//        try {
+//            List<KlineObjectSimple> candles = TickerFuturesHelper.getTickerSimpleWithStartTime(symbol, Constants.INTERVAL_1M, startTime);
+//            TreeMap<Long, KlineObjectSimple> time2Candle = new TreeMap<>();
+//            for (KlineObjectSimple candle : candles) {
+//                time2Candle.put(candle.startTime.longValue(), candle);
+//            }
+//            symbol2Tickers.put(symbol, time2Candle);
+//            if (symbol.equals(Constants.SYMBOL_PAIR_ETH)) {
+//                LOG.info("Init ticker {} {} {}", symbol, time2Candle.size(), Utils.normalizeDateYYYYMMDDHHmm(time2Candle.firstKey()));
+//            }
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+//    }
+//
+//    public static void main(String[] args) {
+//
+////        ListenAllTicker.getInstance().startThreadMonitor();
+//        while (true) {
+//            try {
+//                LOG.info("Number ticker available: {}", ListenAllTicker.getInstance().getAllTicker().size());
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//            }
+//            try {
+//                Thread.sleep(Utils.TIME_MINUTE);
+//            } catch (InterruptedException e) {
+//                throw new RuntimeException(e);
+//            }
+//        }
+////        String symbol = "BTCUSDT";
+////        List<KlineObjectSimple> tickers = ListenAllTicker.getInstance().getTickerBySymbol(symbol);
+////        if (tickers != null) {
+////            int index = tickers.size() - 1;
+////            for (int i = 0; i < 15; i++) {
+////                if (index - i < 0) {
+////                    break;
+////                }
+////                KlineObjectSimple tickerCheck = tickers.get(index - i);
+////                if (Utils.rateOf2Double(tickerCheck.maxPrice, tickerCheck.minPrice) > 0.001) {
+////                    LOG.info("{} True", symbol);
+////                    return;
+////                }
+////            }
+////        }
+////        LOG.info("{} False", symbol);
+//
+//    }
+//
+//    public void startThreadUpdateTicker() {
+//
+//
+//        // update ticker
+//        List<String> symbols = new ArrayList<>();
+//        for (String symbol : RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS)) {
+//            if (Constants.diedSymbol.contains(symbol)) {
+//                continue;
+//            }
+//            if (!StringUtils.endsWithIgnoreCase(symbol, "usdt")) {
+//                continue;
+//            }
+//            symbols.add(symbol.toLowerCase());
+//        }
+//        // clear data trash
+//        LOG.info("Connect ws to {} symbols", symbols.size());
+//        Set<String> symbolTrash = new HashSet<>();
+//        for (String symbol : symbol2Tickers.keySet()) {
+//            if (!symbols.contains(symbol.toLowerCase())) {
+//                symbolTrash.add(symbol);
+//            }
+//        }
+//        for (String symbol : symbolTrash) {
+//            symbol2Tickers.remove(symbol);
+//        }
+//
+//        Collections.shuffle(symbols);
+//        List<List<String>> sublist = Utils.subListPartInput(symbols, 4);
+//        for (int i = sublist.size() - 1; i >= 0; i--) {
+//            // Lấy List<String> tại chỉ mục i
+//            List<String> list = sublist.get(i);
+//            client.subscribeAllCandlestickEvent(list, CandlestickInterval.ONE_MINUTE, ((event) -> {
+////                LOG.info("Update ticker: {}", Utils.gson.toJson(event));
+//                updateData(event);
+//            }), null);
+//        }
+//        // update price
+//        client.subscribeAllTickerEvent(((events) -> {
+//            for (SymbolTickerEvent event : events) {
+//                symbol2Price.put(event.getSymbol(), event.getLastPrice().doubleValue());
+//                updatePrice(event);
+//            }
+//        }), null);
+//    }
+//
+//    public void startThreadListenASymbol(List<String> symbols) {
+//        LOG.info("Listen: {} new to all symbol", symbols);
+//        client.subscribeAllCandlestickEvent(symbols, CandlestickInterval.ONE_MINUTE, ((event) -> {
+//            updateData(event);
+//        }), null);
+//
+//    }
+//
+//
+//    public void startThreadWriteTickerData() {
+//        new Thread(() -> {
+//            Thread.currentThread().setName("startThreadWriteTickerData");
+//            LOG.info("Start thread startThreadWriteTickerData");
+//            while (true) {
+//                try {
+//                    while (true) {
+//                        if (Utils.getCurrentSecond() > 15 && Utils.getCurrentSecond() < 20) {
+//                            break;
+//                        }
+//                        Thread.sleep(2000);
+//                    }
+//                    writeTickerData2File();
+//                    Thread.sleep(5000);
+//
+//                } catch (Exception ex) {
+//                    LOG.info("Write ticker to file error: {}", Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()));
+//                    ex.printStackTrace();
+//                }
+//            }
+//        }).start();
+//    }
+//
+//    private void writeTickerData2File() {
+//        // 1. Tạo một bản sao của dữ liệu cần ghi
+//        ConcurrentHashMap<String, TreeMap<Long, KlineObjectSimple>> tickersToSave = new ConcurrentHashMap<>();
+//        // 2. Sử dụng synchronized để đảm bảo tạo bản sao một cách an toàn
+//        //    Khối lệnh này chỉ chạy trong vài mili giây, rất nhanh.
+//        synchronized (symbol2Tickers) {
+//            // Tạo một ConcurrentHashMap mới
+//            tickersToSave.putAll(symbol2Tickers);
+//        }
+//        // 3. Ghi "bản sao" này ra file.
+//        //    Trong lúc này, `symbol2LastTickers` gốc vẫn có thể được cập nhật thoải mái.
+//        StorageSnappy.writeObject2File(Configs.FILE_TICKER_1M_STORAGE, tickersToSave);
+//    }
+//
+//    public ConcurrentHashMap<String, List<KlineObjectSimple>> getAllTicker() {
+//        ConcurrentHashMap<String, List<KlineObjectSimple>> result = new ConcurrentHashMap<>();
+//        int counterError = 0;
+//        Set<String> symbolHadError = new HashSet<>();
+//        symbolHadError.add(Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()));
+//        for (String symbol : symbol2Tickers.keySet()) {
+//            try {
+//                TreeMap<Long, KlineObjectSimple> tickers = symbol2Tickers.get(symbol);
+////                int numberMax = Configs.BTC_TREND_REVERSE_DURATION + 5;
+//                List<KlineObjectSimple> list = new ArrayList<>();
+//                synchronized (tickers) {
+//                    list.addAll(tickers.values());
+//                }
+//
+//                if (list.size() < 1) {
+//                    LOG.info("Error process get ticker of: {}", symbol);
+//                    continue;
+//                }
+//                if (list.get(list.size() - 1).startTime == Utils.getMinute(System.currentTimeMillis())) {
+////                    LOG.info("Remove last ticker: {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(list.get(list.size() - 1).startTime.longValue()));
+//                    list.remove(list.size() - 1);
+//                    counterError++;
+//                }
+//                if (list.get(list.size() - 1).startTime < Utils.getMinute(System.currentTimeMillis()) - Utils.TIME_MINUTE) {
+////                    LOG.info("Error last ticker: {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(list.get(list.size() - 1).startTime.longValue()));
+//                    symbolHadError.add(symbol);
+//                    counterError++;
+//                    continue;
+//                }
+//                result.put(symbol, list);
+//            } catch (Exception e) {
+//                LOG.info("Error process get ticker of: {}", symbol);
+//                e.printStackTrace();
+//            }
+//        }
+//        if (counterError > 0) {
+//            LOG.info("Symbol ticker error: {}", counterError);
+//            if (counterError > 100) {
+//                Utils.reset("Reset by ticker error over 100 " + counterError);
+//            }
+//            if (symbolHadError.size() > 1) {
+//                try {
+//                    FileUtils.writeLines(new File("storage/data_error/symbol_tickerError.txt"), symbolHadError, true);
+//                } catch (Exception e) {
+//                    e.printStackTrace();
+//                }
+//
+//            }
+//        }
+//        return result;
+//    }
+//
+//    public List<KlineObjectSimple> getTickerBySymbol(String symbol) {
+//        TreeMap<Long, KlineObjectSimple> tickers = symbol2Tickers.get(symbol);
+//        List<KlineObjectSimple> result = new ArrayList<>();
+//        if (tickers != null) {
+//            synchronized (tickers) {
+//                try {
+//                    result.addAll(tickers.values());
+//                } catch (Exception e) {
 //                }
 //            }
 //        }
-//        LOG.info("{} False", symbol);
-
-    }
-
-    public void startThreadUpdateTicker() {
-
-
-        // update ticker
-        List<String> symbols = new ArrayList<>();
-        for (String symbol : RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS)) {
-            if (Constants.diedSymbol.contains(symbol)) {
-                continue;
-            }
-            if (!StringUtils.endsWithIgnoreCase(symbol, "usdt")) {
-                continue;
-            }
-            symbols.add(symbol.toLowerCase());
-        }
-        // clear data trash
-        LOG.info("Connect ws to {} symbols", symbols.size());
-        Set<String> symbolTrash = new HashSet<>();
-        for (String symbol : symbol2Tickers.keySet()) {
-            if (!symbols.contains(symbol.toLowerCase())) {
-                symbolTrash.add(symbol);
-            }
-        }
-        for (String symbol : symbolTrash) {
-            symbol2Tickers.remove(symbol);
-        }
-
-        Collections.shuffle(symbols);
-        List<List<String>> sublist = Utils.subListPartInput(symbols, 4);
-        for (int i = sublist.size() - 1; i >= 0; i--) {
-            // Lấy List<String> tại chỉ mục i
-            List<String> list = sublist.get(i);
-            client.subscribeAllCandlestickEvent(list, CandlestickInterval.ONE_MINUTE, ((event) -> {
-//                LOG.info("Update ticker: {}", Utils.gson.toJson(event));
-                updateData(event);
-            }), null);
-        }
-        // update price
-        client.subscribeAllTickerEvent(((events) -> {
-            for (SymbolTickerEvent event : events) {
-                symbol2Price.put(event.getSymbol(), event.getLastPrice().doubleValue());
-                updatePrice(event);
-            }
-        }), null);
-    }
-
-    public void startThreadListenASymbol(List<String> symbols) {
-        LOG.info("Listen: {} new to all symbol", symbols);
-        client.subscribeAllCandlestickEvent(symbols, CandlestickInterval.ONE_MINUTE, ((event) -> {
-            updateData(event);
-        }), null);
-
-    }
-
-
-    public void startThreadWriteTickerData() {
-        new Thread(() -> {
-            Thread.currentThread().setName("startThreadWriteTickerData");
-            LOG.info("Start thread startThreadWriteTickerData");
-            while (true) {
-                try {
-                    while (true) {
-                        if (Utils.getCurrentSecond() > 15 && Utils.getCurrentSecond() < 20) {
-                            break;
-                        }
-                        Thread.sleep(2000);
-                    }
-                    writeTickerData2File();
-                    Thread.sleep(5000);
-
-                } catch (Exception ex) {
-                    LOG.info("Write ticker to file error: {}", Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()));
-                    ex.printStackTrace();
-                }
-            }
-        }).start();
-    }
-
-    private void writeTickerData2File() {
-        // 1. Tạo một bản sao của dữ liệu cần ghi
-        ConcurrentHashMap<String, TreeMap<Long, KlineObjectSimple>> tickersToSave = new ConcurrentHashMap<>();
-        // 2. Sử dụng synchronized để đảm bảo tạo bản sao một cách an toàn
-        //    Khối lệnh này chỉ chạy trong vài mili giây, rất nhanh.
-        synchronized (symbol2Tickers) {
-            // Tạo một ConcurrentHashMap mới
-            tickersToSave.putAll(symbol2Tickers);
-        }
-        // 3. Ghi "bản sao" này ra file.
-        //    Trong lúc này, `symbol2LastTickers` gốc vẫn có thể được cập nhật thoải mái.
-        StorageSnappy.writeObject2File(Configs.FILE_TICKER_1M_STORAGE, tickersToSave);
-    }
-
-    public ConcurrentHashMap<String, List<KlineObjectSimple>> getAllTicker() {
-        ConcurrentHashMap<String, List<KlineObjectSimple>> result = new ConcurrentHashMap<>();
-        int counterError = 0;
-        Set<String> symbolHadError = new HashSet<>();
-        symbolHadError.add(Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()));
-        for (String symbol : symbol2Tickers.keySet()) {
-            try {
-                TreeMap<Long, KlineObjectSimple> tickers = symbol2Tickers.get(symbol);
-//                int numberMax = Configs.BTC_TREND_REVERSE_DURATION + 5;
-                List<KlineObjectSimple> list = new ArrayList<>();
-                synchronized (tickers) {
-                    list.addAll(tickers.values());
-                }
-
-                if (list.size() < 1) {
-                    LOG.info("Error process get ticker of: {}", symbol);
-                    continue;
-                }
-                if (list.get(list.size() - 1).startTime == Utils.getMinute(System.currentTimeMillis())) {
-//                    LOG.info("Remove last ticker: {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(list.get(list.size() - 1).startTime.longValue()));
-                    list.remove(list.size() - 1);
-                    counterError++;
-                }
-                if (list.get(list.size() - 1).startTime < Utils.getMinute(System.currentTimeMillis()) - Utils.TIME_MINUTE) {
-//                    LOG.info("Error last ticker: {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(list.get(list.size() - 1).startTime.longValue()));
-                    symbolHadError.add(symbol);
-                    counterError++;
-                    continue;
-                }
-                result.put(symbol, list);
-            } catch (Exception e) {
-                LOG.info("Error process get ticker of: {}", symbol);
-                e.printStackTrace();
-            }
-        }
-        if (counterError > 0) {
-            LOG.info("Symbol ticker error: {}", counterError);
-            if (counterError > 100) {
-                Utils.reset("Reset by ticker error over 100 " + counterError);
-            }
-            if (symbolHadError.size() > 1) {
-                try {
-                    FileUtils.writeLines(new File("storage/data_error/symbol_tickerError.txt"), symbolHadError, true);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-
-            }
-        }
-        return result;
-    }
-
-    public List<KlineObjectSimple> getTickerBySymbol(String symbol) {
-        TreeMap<Long, KlineObjectSimple> tickers = symbol2Tickers.get(symbol);
-        List<KlineObjectSimple> result = new ArrayList<>();
-        if (tickers != null) {
-            synchronized (tickers) {
-                try {
-                    result.addAll(tickers.values());
-                } catch (Exception e) {
-                }
-            }
-        }
-        return result;
-    }
-
-    public boolean isTimeGetData() {
-        long time = System.currentTimeMillis();
-        long second = (time / Utils.TIME_SECOND) % 60;
-        long miniSecond = (time % Utils.TIME_SECOND);
-        return second == 0 && miniSecond < 100;
-    }
-
-    private void updateData(CandlestickEvent event) {
-        if (!StringUtils.endsWithIgnoreCase(event.getSymbol(), "usdt")) {
-            return;
-        }
-        if (Constants.diedSymbol.contains(event.getSymbol())) {
-            return;
-        }
-        TreeMap<Long, KlineObjectSimple> tickers = symbol2Tickers.get(event.getSymbol());
-        if (tickers == null) {
-            tickers = new TreeMap<>();
-        }
-        tickers.put(event.getStartTime(), convertEvent2Kline(event));
-        int numberMax = Configs.BTC_TREND_REVERSE_DURATION + 5;
-        if (StringUtils.equalsIgnoreCase(event.getSymbol(), Constants.SYMBOL_PAIR_BTC)) {
-            numberMax = 1445;
-        }
-        while (tickers.size() > numberMax) {
-            tickers.remove(tickers.firstKey());
-        }
-        symbol2Tickers.put(event.getSymbol(), tickers);
-        symbol2Price.put(event.getSymbol(), event.getClose().doubleValue());
-//        if (Constants.specialSymbol.contains(event.getSymbol())) {
-//            LOG.info("{} {}", event.getSymbol(), symbol2Price.get(event.getSymbol()));
+//        return result;
+//    }
+//
+//    public boolean isTimeGetData() {
+//        long time = System.currentTimeMillis();
+//        long second = (time / Utils.TIME_SECOND) % 60;
+//        long miniSecond = (time % Utils.TIME_SECOND);
+//        return second == 0 && miniSecond < 100;
+//    }
+//
+//    private void updateData(CandlestickEvent event) {
+//        if (!StringUtils.endsWithIgnoreCase(event.getSymbol(), "usdt")) {
+//            return;
 //        }
-    }
-
-    private void updatePrice(SymbolTickerEvent event) {
-        if (!StringUtils.endsWithIgnoreCase(event.getSymbol(), "usdt")) {
-            return;
-        }
-        if (Constants.diedSymbol.contains(event.getSymbol())) {
-            return;
-        }
-        TreeMap<Long, KlineObjectSimple> tickers = symbol2Tickers.get(event.getSymbol());
-        if (tickers == null) {
-            tickers = new TreeMap<>();
-        }
-        Long time = Utils.getMinute(event.getEventTime());
-        KlineObjectSimple kline = tickers.get(time);
-        Double lastPrice = event.getLastPrice().doubleValue();
-        if (kline == null) {
-            kline = new KlineObjectSimple();
-            kline.startTime = time.doubleValue();
-            kline.priceOpen = lastPrice;
-            kline.maxPrice = lastPrice;
-            kline.minPrice = lastPrice;
-            kline.priceClose = lastPrice;
-            kline.totalUsdt = 0.0;
-        } else {
-            kline.priceClose = lastPrice;
-            kline.maxPrice = Math.max(kline.maxPrice, lastPrice);
-            kline.minPrice = Math.min(kline.minPrice, lastPrice);
-        }
-        tickers.put(time, kline);
-        symbol2Tickers.put(event.getSymbol(), tickers);
-        symbol2Price.put(event.getSymbol(), event.getLastPrice().doubleValue());
-    }
-
-    private static KlineObjectSimple convertEvent2Kline(CandlestickEvent event) {
-        KlineObjectSimple result = new KlineObjectSimple();
-        result.startTime = event.getStartTime().doubleValue();
-        result.priceOpen = event.getOpen().doubleValue();
-        result.maxPrice = event.getHigh().doubleValue();
-        result.minPrice = event.getLow().doubleValue();
-        result.priceClose = event.getClose().doubleValue();
-        result.totalUsdt = event.getVolume().doubleValue();
-        return result;
-    }
-
-
-}
+//        if (Constants.diedSymbol.contains(event.getSymbol())) {
+//            return;
+//        }
+//        TreeMap<Long, KlineObjectSimple> tickers = symbol2Tickers.get(event.getSymbol());
+//        if (tickers == null) {
+//            tickers = new TreeMap<>();
+//        }
+//        tickers.put(event.getStartTime(), convertEvent2Kline(event));
+//        int numberMax = Configs.BTC_TREND_REVERSE_DURATION + 5;
+//        if (StringUtils.equalsIgnoreCase(event.getSymbol(), Constants.SYMBOL_PAIR_BTC)) {
+//            numberMax = 1445;
+//        }
+//        while (tickers.size() > numberMax) {
+//            tickers.remove(tickers.firstKey());
+//        }
+//        symbol2Tickers.put(event.getSymbol(), tickers);
+//        symbol2Price.put(event.getSymbol(), event.getClose().doubleValue());
+////        if (Constants.specialSymbol.contains(event.getSymbol())) {
+////            LOG.info("{} {}", event.getSymbol(), symbol2Price.get(event.getSymbol()));
+////        }
+//    }
+//
+//    private void updatePrice(SymbolTickerEvent event) {
+//        if (!StringUtils.endsWithIgnoreCase(event.getSymbol(), "usdt")) {
+//            return;
+//        }
+//        if (Constants.diedSymbol.contains(event.getSymbol())) {
+//            return;
+//        }
+//        TreeMap<Long, KlineObjectSimple> tickers = symbol2Tickers.get(event.getSymbol());
+//        if (tickers == null) {
+//            tickers = new TreeMap<>();
+//        }
+//        Long time = Utils.getMinute(event.getEventTime());
+//        KlineObjectSimple kline = tickers.get(time);
+//        Double lastPrice = event.getLastPrice().doubleValue();
+//        if (kline == null) {
+//            kline = new KlineObjectSimple();
+//            kline.startTime = time.doubleValue();
+//            kline.priceOpen = lastPrice;
+//            kline.maxPrice = lastPrice;
+//            kline.minPrice = lastPrice;
+//            kline.priceClose = lastPrice;
+//            kline.totalUsdt = 0.0;
+//        } else {
+//            kline.priceClose = lastPrice;
+//            kline.maxPrice = Math.max(kline.maxPrice, lastPrice);
+//            kline.minPrice = Math.min(kline.minPrice, lastPrice);
+//        }
+//        tickers.put(time, kline);
+//        symbol2Tickers.put(event.getSymbol(), tickers);
+//        symbol2Price.put(event.getSymbol(), event.getLastPrice().doubleValue());
+//    }
+//
+//    private static KlineObjectSimple convertEvent2Kline(CandlestickEvent event) {
+//        KlineObjectSimple result = new KlineObjectSimple();
+//        result.startTime = event.getStartTime().doubleValue();
+//        result.priceOpen = event.getOpen().doubleValue();
+//        result.maxPrice = event.getHigh().doubleValue();
+//        result.minPrice = event.getLow().doubleValue();
+//        result.priceClose = event.getClose().doubleValue();
+//        result.totalUsdt = event.getVolume().doubleValue();
+//        return result;
+//    }
+//
+//
+//}

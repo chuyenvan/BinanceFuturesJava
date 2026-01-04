@@ -99,7 +99,40 @@ public class DataManagerAerospikeFloatSim {
             LOG.error("❌ Error writing Price Realtime: {}", e.getMessage());
         }
     }
+    /**
+     * Lấy toàn bộ giá realtime của tất cả các mã đang có trong Aerospike
+     * @return Map chứa Symbol -> Giá (Double)
+     */
+    public static Map<String, Double> getAllPriceRealtimeLegacy(Set<String> expectedSymbols) {
+        Map<String, Double> results = new HashMap<>();
+        // 1. Tạo bản đồ: Digest -> Symbol để tra cứu nhanh
+        Map<String, String> digestToSymbol = new HashMap<>();
+        for (String s : expectedSymbols) {
+            String upperS = s.toUpperCase();
+            Key k = new Key(Configs.AEROSPIKE_NAMESPACE, "price_realtime", upperS);
+            // Digest là mảng byte định danh duy nhất của Key
+            digestToSymbol.put(Base64.getEncoder().encodeToString(k.digest), upperS);
+        }
 
+        try {
+            ScanPolicy scanPolicy = new ScanPolicy();
+            scanPolicy.concurrentNodes = true;
+            scanPolicy.includeBinData = true;
+
+            getClient().scanAll(scanPolicy, Configs.AEROSPIKE_NAMESPACE, "price_realtime", (key, record) -> {
+                // Lấy Digest của bản ghi hiện tại
+                String currentDigest = Base64.getEncoder().encodeToString(key.digest);
+                String symbol = digestToSymbol.get(currentDigest);
+
+                if (symbol != null) {
+                    results.put(symbol, record.getDouble("price"));
+                }
+            }, "price");
+        } catch (Exception e) {
+            LOG.error("❌ Error Legacy Scan: {}", e.getMessage());
+        }
+        return results;
+    }
     // =========================================================================
     // LOGIC FUNDING (Tối ưu Snappy Compression để lưu 5 năm)
     // =========================================================================
@@ -138,8 +171,8 @@ public class DataManagerAerospikeFloatSim {
     /**
      * Giải nén và đọc Map Funding
      */
-    public static Map<Long, Double> getFundingMap(String symbol) {
-        Map<Long, Double> results = new HashMap<>();
+    public static TreeMap<Long, Double> getFundingMap(String symbol) {
+        TreeMap<Long, Double> results = new TreeMap<>();
         try {
             Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_FUNDINGFEE, symbol);
             Record record = getClient().get(null, key);
@@ -319,6 +352,99 @@ public class DataManagerAerospikeFloatSim {
             }
         }
         return results;
+    }
+
+    /**
+     * Đọc dữ liệu nến 1m từ Aerospike và trả về Map theo Symbol.
+     * Không chuẩn hóa startTime (lấy chính xác từ mốc truyền vào).
+     * * @param startTime Mốc thời gian bắt đầu (ms)
+     * @param minutesToRead Số lượng phút muốn đọc (ví dụ: 1440 cho 1 ngày)
+     * @return Map<Symbol, List<KlineObjectSimple>>
+     */
+    public static Map<String, List<KlineObjectSimple>> readDataForSymbols(long startTime, int minutesToRead) {
+        // 1. Chuẩn bị danh sách Timestamps từ startTime chính xác
+        long[] allTimestamps = new long[minutesToRead];
+        for (int i = 0; i < minutesToRead; i++) {
+            allTimestamps[i] = startTime + (i * 60000L);
+        }
+        LOG.info("Read ticker from Aerospike: startTime={} | minutes={}", Utils.normalizeDateYYYYMMDDHHmm(startTime), minutesToRead);
+        // Kết quả trung gian (Thời gian -> Map các Symbol)
+        TreeMap<Long, Map<String, KlineObjectSimple>> timeToTickers = new TreeMap<>();
+        List<Future<Map<Long, Map<String, KlineObjectSimple>>>> futures = new ArrayList<>();
+        int chunkSize = (minutesToRead + threadCount - 1) / threadCount;
+
+        // 2. Chia đa luồng để đọc Batch từ Aerospike
+        for (int i = 0; i < threadCount; i++) {
+            final int startIdx = i * chunkSize;
+            final int endIdx = Math.min(startIdx + chunkSize, minutesToRead);
+            if (startIdx >= endIdx) break;
+
+            futures.add(executor.submit(() -> {
+                SimpleDateFormat localKeyFormat = new SimpleDateFormat("yyyyMMdd-HHmm");
+                Map<Long, Map<String, KlineObjectSimple>> chunkResult = new HashMap<>();
+
+                try {
+                    Key[] chunkKeys = new Key[endIdx - startIdx];
+                    long[] chunkTimestamps = Arrays.copyOfRange(allTimestamps, startIdx, endIdx);
+
+                    for (int k = 0; k < chunkKeys.length; k++) {
+                        String keyString = localKeyFormat.format(new Date(chunkTimestamps[k]));
+                        chunkKeys[k] = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_TICKER, keyString);
+                    }
+
+                    // Batch Read tối ưu
+                    Record[] records = getClient().get(batchPolicy, chunkKeys);
+
+                    for (int j = 0; j < records.length; j++) {
+                        Record record = records[j];
+                        if (record == null) continue;
+
+                        long minuteTimestamp = chunkTimestamps[j];
+                        byte[] snappyCompressedBytes = (byte[]) record.getValue("data");
+
+                        if (snappyCompressedBytes != null) {
+                            byte[] protoAsBytes = Snappy.uncompress(snappyCompressedBytes);
+                            MinuteDataFinal protoData = MinuteDataFinal.parseFrom(protoAsBytes);
+
+                            // Sử dụng hàm convert hiện tại của bạn
+                            Map<String, KlineObjectSimple> javaMap = convertProtoMapToJavaMap(protoData.getTickersMap(), minuteTimestamp);
+                            chunkResult.put(minuteTimestamp, javaMap);
+                        }
+                    }
+                } catch (Exception e) {
+                    LOG.error("❌ Error in Batch Read Thread: {}", e.getMessage());
+                }
+                return chunkResult;
+            }));
+        }
+
+        // 3. Tổng hợp kết quả từ các Thread
+        for (Future<Map<Long, Map<String, KlineObjectSimple>>> future : futures) {
+            try {
+                timeToTickers.putAll(future.get());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        // 4. CHUYỂN ĐỔI CẤU TRÚC: Time-Major -> Symbol-Major
+        Map<String, List<KlineObjectSimple>> symbolToKlines = new HashMap<>();
+
+        for (Map.Entry<Long, Map<String, KlineObjectSimple>> entry : timeToTickers.entrySet()) {
+            Map<String, KlineObjectSimple> tickersAtTime = entry.getValue();
+
+            for (Map.Entry<String, KlineObjectSimple> tickerEntry : tickersAtTime.entrySet()) {
+                String symbolInDb = tickerEntry.getKey();
+
+                // 🔥 Bổ sung lại "USDT" nếu symbol trong DB đang bị cắt đuôi (ví dụ "BTC" -> "BTCUSDT")
+                String fullSymbol = symbolInDb.endsWith("USDT") ? symbolInDb : symbolInDb + "USDT";
+
+                KlineObjectSimple kline = tickerEntry.getValue();
+                symbolToKlines.computeIfAbsent(fullSymbol, k -> new ArrayList<>()).add(kline);
+            }
+        }
+
+        return symbolToKlines;
     }
 
     /**

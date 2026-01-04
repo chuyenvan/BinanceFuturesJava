@@ -15,6 +15,7 @@
  */
 package com.binance.chuyennd.trading;
 
+import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;
 import com.binance.chuyennd.client.BinanceFuturesClientSingleton;
 import com.binance.chuyennd.client.ClientSingleton;
@@ -29,7 +30,6 @@ import com.binance.chuyennd.tradecore.MarketBigChangeDetector;
 import com.binance.chuyennd.tradecore.TradeUtils;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
-import com.binance.chuyennd.websocket.ListenAllTicker;
 import com.binance.client.constant.Constants;
 import com.binance.client.model.enums.OrderSide;
 import com.binance.client.model.enums.OrderType;
@@ -54,7 +54,7 @@ public class BinanceOrderTradingManager {
     public static final Logger LOG = LoggerFactory.getLogger(BinanceOrderTradingManager.class);
     public ExecutorService executorServiceOrderNew = Executors.newFixedThreadPool(Configs.NUMBER_THREAD_ORDER_MANAGER);
     private final ConcurrentHashMap<String, Long> symbol2Processing = new ConcurrentHashMap<>();
-
+    private final Map<String, List<KlineObjectSimple>> symbol2Tickers = new HashMap<>();
 
     public static void main(String[] args) throws InterruptedException, ParseException {
         Utils.writePid2File();
@@ -213,6 +213,8 @@ public class BinanceOrderTradingManager {
     private void initData() {
         FundingFeeManagerProduction.getInstance();
         ClientSingleton.getInstance();
+        symbol2Tickers.putAll(DataManagerAerospikeFloatSim.readDataForSymbols(
+                System.currentTimeMillis() - 90 * Utils.TIME_MINUTE, 90));
     }
 
     public void processManagerPosition() {
@@ -228,6 +230,11 @@ public class BinanceOrderTradingManager {
                 executorServiceOrderNew.execute(() -> initSLFirst());
 
             }
+            // sl dynamic
+            if (currentSecond % 30 == 0) {
+                symbol2Tickers.putAll(DataManagerAerospikeFloatSim.readDataForSymbols(
+                        System.currentTimeMillis() - 90 * Utils.TIME_MINUTE, 90));
+            }
             // reporter
             if (Utils.getCurrentMinute() % 15 == 0 && Utils.getCurrentSecond() == 30) {
                 executorServiceOrderNew.execute(() -> new Reporter().buildReport());
@@ -242,8 +249,9 @@ public class BinanceOrderTradingManager {
         try {
             Set<PositionRisk> positions = new HashSet<>();
             positions.addAll(BudgetManager.getInstance().symbol2Pos.values());
+            Map<String, Double> symbol2Price = DataManagerAerospikeFloatSim.getAllPriceRealtimeLegacy(BudgetManager.getInstance().symbol2Pos.keySet());
             for (PositionRisk pos : positions) {
-                Double lastPrice = ListenAllTicker.getInstance().symbol2Price.get(pos.getSymbol());
+                Double lastPrice = symbol2Price.get(pos.getSymbol());
                 if (lastPrice != null) {
                     pos.setMarkPrice(new BigDecimal(lastPrice));
                 }
@@ -277,7 +285,8 @@ public class BinanceOrderTradingManager {
                 } else {
                     BudgetManager.getInstance().symbol2Level.remove(symbol);
                 }
-                List<KlineObjectSimple> tickers = ListenAllTicker.getInstance().getTickerBySymbol(symbol);
+                List<KlineObjectSimple> tickers = symbol2Tickers.get(symbol);
+
                 Double maxChange60M = MarketBigChangeDetector.getMaxRateIn90MForTradingStop(tickers);
                 Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60MForTradingStop(maxChange60M);
                 if (rateLoss > rateMin2MoveSl) {
@@ -382,7 +391,7 @@ public class BinanceOrderTradingManager {
                     orderInfo.priceEntry = priceEntry;
                 }
                 OrderSide side2Sl;
-                List<KlineObjectSimple> tickers = ListenAllTicker.getInstance().getTickerBySymbol(symbol);
+                List<KlineObjectSimple> tickers = symbol2Tickers.get(symbol);
                 Double maxChange60M = MarketBigChangeDetector.getMaxRateIn90MForTradingStop(tickers);
                 Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60MForTradingStop(maxChange60M * 1.5);
                 // BUY
