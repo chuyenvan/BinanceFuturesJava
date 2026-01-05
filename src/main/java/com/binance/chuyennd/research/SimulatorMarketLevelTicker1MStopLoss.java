@@ -479,42 +479,50 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     }
 
     private Double getMaxRateIn90MForTradingStop(Long time, String symbol, List<KlineObjectSimple> tickers) {
-        Double maxChangeIn60M = null;
-        String month = Utils.getMonth(time);
-        if (currentMonth == null || !StringUtils.equals(currentMonth, month)) {
-            if (currentMonth != null) {
-                String fileName = "storage/rate_change_" + Configs.NUMBER_TICKER_RATE_CHANGE_MAX_TRADE + "m/" + currentMonth;
-                if (!Utils.getMonth(System.currentTimeMillis() - Utils.TIME_HOUR).equals(currentMonth)
-                        && !new File(fileName).exists()) {
-                    LOG.info("Write data max rate change 90M month: {}", fileName);
-                    StorageSnappy.writeObject2File(fileName, symbol2TimeAndMaxRate90M);
-                }
-            }
-            String fileName = "storage/rate_change_" + Configs.NUMBER_TICKER_RATE_CHANGE_MAX_TRADE + "m/" + month;
-            if (new File(fileName).exists()) {
-                LOG.info("Read data max rate change 90M month: {}", fileName);
-                symbol2TimeAndMaxRate90M = (Map<String, TreeMap<Long, Double>>) StorageSnappy.readObjectFromFile(fileName);
-            } else {
-                symbol2TimeAndMaxRate90M = new HashMap<>();
-            }
-            currentMonth = month;
+        AiPredictionData predict = predictionMap.get(time);
+        if (predict == null){
+            return 0d;
+        }else {
+            return Double.valueOf(predict.predReturn15M);
         }
 
-        TreeMap<Long, Double> time2Rate = symbol2TimeAndMaxRate90M.get(symbol);
-        if (time2Rate != null) {
-            maxChangeIn60M = time2Rate.get(time);
-        }
-        if (maxChangeIn60M == null) {
-//            LOG.info("Calculate max rate change 60M for trading stop: {} {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time), tickers.size());
-            maxChangeIn60M = MarketBigChangeDetector.getMaxRateIn90MForTradingStop(tickers);
-            if (time2Rate == null) {
-                time2Rate = new TreeMap<>();
-                symbol2TimeAndMaxRate90M.put(symbol, time2Rate);
-            }
-            time2Rate.put(time, maxChangeIn60M);
-        }
 
-        return maxChangeIn60M;
+//        Double maxChangeIn60M = null;
+//        String month = Utils.getMonth(time);
+//        if (currentMonth == null || !StringUtils.equals(currentMonth, month)) {
+//            if (currentMonth != null) {
+//                String fileName = "storage/rate_change_" + Configs.NUMBER_TICKER_RATE_CHANGE_MAX_TRADE + "m/" + currentMonth;
+//                if (!Utils.getMonth(System.currentTimeMillis() - Utils.TIME_HOUR).equals(currentMonth)
+//                        && !new File(fileName).exists()) {
+//                    LOG.info("Write data max rate change 90M month: {}", fileName);
+//                    StorageSnappy.writeObject2File(fileName, symbol2TimeAndMaxRate90M);
+//                }
+//            }
+//            String fileName = "storage/rate_change_" + Configs.NUMBER_TICKER_RATE_CHANGE_MAX_TRADE + "m/" + month;
+//            if (new File(fileName).exists()) {
+//                LOG.info("Read data max rate change 90M month: {}", fileName);
+//                symbol2TimeAndMaxRate90M = (Map<String, TreeMap<Long, Double>>) StorageSnappy.readObjectFromFile(fileName);
+//            } else {
+//                symbol2TimeAndMaxRate90M = new HashMap<>();
+//            }
+//            currentMonth = month;
+//        }
+//
+//        TreeMap<Long, Double> time2Rate = symbol2TimeAndMaxRate90M.get(symbol);
+//        if (time2Rate != null) {
+//            maxChangeIn60M = time2Rate.get(time);
+//        }
+//        if (maxChangeIn60M == null) {
+////            LOG.info("Calculate max rate change 60M for trading stop: {} {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time), tickers.size());
+//            maxChangeIn60M = MarketBigChangeDetector.getMaxRateIn90MForTradingStop(tickers);
+//            if (time2Rate == null) {
+//                time2Rate = new TreeMap<>();
+//                symbol2TimeAndMaxRate90M.put(symbol, time2Rate);
+//            }
+//            time2Rate.put(time, maxChangeIn60M);
+//        }
+//
+//        return maxChangeIn60M;
     }
 
 

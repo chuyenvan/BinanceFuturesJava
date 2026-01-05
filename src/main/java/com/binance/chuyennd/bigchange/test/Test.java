@@ -32,6 +32,7 @@ import com.binance.chuyennd.utils.StorageSnappy;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
 import com.binance.client.model.enums.OrderSide;
+import com.binance.connector.futures.client.impl.UMWebsocketClientImpl;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -79,11 +80,13 @@ public class Test {
 //        TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers = DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime);
 //        LOG.info("time2Tickers size: {}", time2Tickers.size());
 
-        Map<String, List<KlineObjectSimple>> symbol2Tickers = DataManagerAerospikeFloatSim.readDataForSymbols(System.currentTimeMillis() - 2 * Utils.TIME_DAY, 90);
-        System.out.println(symbol2Tickers.keySet());
-        LOG.info("startTime: {} endTime: {} size: {}", Utils.normalizeDateYYYYMMDDHHmm(symbol2Tickers.get("BTCUSDT").get(0).startTime.longValue()),
-                Utils.normalizeDateYYYYMMDDHHmm(symbol2Tickers.get("BTCUSDT").get(symbol2Tickers.get("BTCUSDT").size() - 1).startTime.longValue()),
-                symbol2Tickers.get("BTCUSDT").size());
+        UMWebsocketClientImpl client = new UMWebsocketClientImpl();
+
+        // speed = 3: Cập nhật mỗi 3 giây
+        client.allMarkPriceStream(3, (event) -> {
+            LOG.info("Received mark price event: {}", Utils.toJson(event));
+        });
+
 //        LOG.info("First key: {} time:{} size: {}",time2Tickers.firstKey(), Utils.normalizeDateYYYYMMDDHHmm(time2Tickers.firstKey()),
 //                time2Tickers.firstEntry().getValue().size());
 //        Utils.writePid2File();

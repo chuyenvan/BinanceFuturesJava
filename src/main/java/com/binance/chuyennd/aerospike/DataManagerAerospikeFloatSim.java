@@ -80,6 +80,7 @@ public class DataManagerAerospikeFloatSim {
             LOG.error("❌ Error writing batch at {}: {}", timestamp, e.getMessage());
         }
     }
+
     public static void writePriceRealtime(Map<String, Double> priceMap) {
         if (priceMap == null || priceMap.isEmpty()) return;
         try {
@@ -99,8 +100,10 @@ public class DataManagerAerospikeFloatSim {
             LOG.error("❌ Error writing Price Realtime: {}", e.getMessage());
         }
     }
+
     /**
      * Lấy toàn bộ giá realtime của tất cả các mã đang có trong Aerospike
+     *
      * @return Map chứa Symbol -> Giá (Double)
      */
     public static Map<String, Double> getAllPriceRealtimeLegacy(Set<String> expectedSymbols) {
@@ -195,10 +198,59 @@ public class DataManagerAerospikeFloatSim {
                 if (record != null && record.getMap("f_map") != null) {
                     record.getMap("f_map").forEach((k, v) -> results.put((Long) k, ((Number) v).doubleValue()));
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
         }
         return results;
     }
+
+    /**
+     * Quét toàn bộ dữ liệu Funding từ Aerospike
+     *
+     * @return Map<Symbol, TreeMap < Timestamp, Rate>>
+     */
+    public static Map<String, TreeMap<Long, Double>> getAllFundingMap() {
+        Map<String, TreeMap<Long, Double>> allResults = new HashMap<>();
+        try {
+            ScanPolicy scanPolicy = new ScanPolicy();
+            scanPolicy.concurrentNodes = true; // Quét song song trên các node
+            scanPolicy.includeBinData = true;
+
+            // Chỉ định rõ bin "f_data" (nén Snappy) và "f_map" (dữ liệu cũ) để tối ưu
+            getClient().scanAll(scanPolicy, Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_FUNDINGFEE, (key, record) -> {
+                String symbol = (key.userKey != null) ? key.userKey.toString() : null;
+                if (symbol == null) return;
+
+                TreeMap<Long, Double> symbolFunding = new TreeMap<>();
+                try {
+                    // Ưu tiên xử lý dữ liệu mới (Snappy Compressed)
+                    byte[] compressedData = (byte[]) record.getValue("f_data");
+                    if (compressedData != null) {
+                        String json = new String(Snappy.uncompress(compressedData), "UTF-8");
+                        Map<String, Double> rawMap = Utils.gson.fromJson(json, Map.class);
+                        rawMap.forEach((k, v) -> symbolFunding.put(Long.parseLong(k), v));
+                    } else {
+                        // Xử lý dữ liệu cũ (CDT Map) nếu không có f_data
+                        Map<?, ?> fMap = record.getMap("f_map");
+                        if (fMap != null) {
+                            fMap.forEach((k, v) -> symbolFunding.put((Long) k, ((Number) v).doubleValue()));
+                        }
+                    }
+
+                    if (!symbolFunding.isEmpty()) {
+                        allResults.put(symbol, symbolFunding);
+                    }
+                } catch (Exception e) {
+                    LOG.error("❌ Lỗi giải mã Funding cho {}: {}", symbol, e.getMessage());
+                }
+            }, "f_data", "f_map");
+
+        } catch (Exception e) {
+            LOG.error("❌ Error Scanning all Funding data: {}", e.getMessage());
+        }
+        return allResults;
+    }
+
     public static void migrateHistoricalFunding(String folderPath) {
         File folder = new File(folderPath);
         if (!folder.exists() || !folder.isDirectory()) {
@@ -246,7 +298,7 @@ public class DataManagerAerospikeFloatSim {
 
     public static boolean isSymbolMissingInPoints(String shortSymbol, long start, int limit) {
         SimpleDateFormat fmt = new SimpleDateFormat("yyyyMMdd-HHmm");
-        long[] points = {start, start + (limit/2)*60000L, start + (limit-1)*60000L};
+        long[] points = {start, start + (limit / 2) * 60000L, start + (limit - 1) * 60000L};
         for (long p : points) {
             if (p > System.currentTimeMillis()) continue;
             Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_TICKER, fmt.format(new Date(p)));
@@ -255,6 +307,7 @@ public class DataManagerAerospikeFloatSim {
         }
         return false;
     }
+
     public static Map<String, KlineObjectOptimized> getExistingTickersMap(Key key) {
         Map<String, KlineObjectOptimized> map = new HashMap<>();
         try {
@@ -265,7 +318,8 @@ public class DataManagerAerospikeFloatSim {
                     map.putAll(MinuteDataFinal.parseFrom(Snappy.uncompress(data)).getTickersMap());
                 }
             }
-        } catch (Exception e) {}
+        } catch (Exception e) {
+        }
         return map;
     }
 
@@ -358,8 +412,9 @@ public class DataManagerAerospikeFloatSim {
      * Đọc dữ liệu nến 1m từ Aerospike và trả về Map theo Symbol.
      * Không chuẩn hóa startTime (lấy chính xác từ mốc truyền vào).
      * * @param startTime Mốc thời gian bắt đầu (ms)
+     *
      * @param minutesToRead Số lượng phút muốn đọc (ví dụ: 1440 cho 1 ngày)
-     * @return Map<Symbol, List<KlineObjectSimple>>
+     * @return Map<Symbol, List < KlineObjectSimple>>
      */
     public static Map<String, List<KlineObjectSimple>> readDataForSymbols(long startTime, int minutesToRead) {
         // 1. Chuẩn bị danh sách Timestamps từ startTime chính xác
@@ -554,6 +609,7 @@ public class DataManagerAerospikeFloatSim {
             client.close();
         }
     }
+
     public static void debugKeys() {
         try (AerospikeClient client = new AerospikeClient("103.157.218.242", 3222)) {
             ScanPolicy sp = new ScanPolicy();
@@ -563,10 +619,16 @@ public class DataManagerAerospikeFloatSim {
             });
         }
     }
+
     public static void main(String[] args) throws ParseException {
 //        Long startTime = Utils.sdfFile.parse("20260103").getTime() + 7 * Utils.TIME_HOUR;
 //        System.out.println(DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime).size());
 //        debugKeys();
-        DataManagerAerospikeFloatSim.migrateHistoricalFunding("../storage/funding_fee/");
+        Map<String, TreeMap<Long, Double>> symbol2FundingMap = DataManagerAerospikeFloatSim.getAllFundingMap();
+        for (String symbol : symbol2FundingMap.keySet()) {
+            LOG.info("{} -> {} records first: {} last: {}", symbol, symbol2FundingMap.get(symbol).size()
+                    , Utils.normalizeDateYYYYMMDDHHmm(symbol2FundingMap.get(symbol).firstKey())
+                    , Utils.normalizeDateYYYYMMDDHHmm(symbol2FundingMap.get(symbol).lastKey()));
+        }
     }
 }

@@ -22,7 +22,7 @@ public class RunPredictionCompare {
     private static final Logger LOG = LoggerFactory.getLogger(RunPredictionCompare.class);
 
     // --- CẤU HÌNH ---
-    private static final String START_DATE_STR = "20251227";
+    private static final String START_DATE_STR = "20260105";
     private static final String MODEL_DIR = "../storage/ai_ml_data/ai_models_reg_v3";
     private static final String PROD_DIR = "storage/data/prediction/";
     private static final String TEST_DIR = "storage/predictiontest/";
@@ -47,15 +47,11 @@ public class RunPredictionCompare {
 
         // 1. WARM-UP
         LOG.info("🔥 START WARM-UP (Previous Day Data)...");
-        long warmUpTimestamp = startTime - Utils.TIME_DAY;
-        TreeMap<Long, Map<String, KlineObjectSimple>> warmUpData =
-                DataManagerAerospikeFloatSim.readDataFromAerospike1M(warmUpTimestamp);
-        if (warmUpData != null) {
-            for (Map.Entry<Long, Map<String, KlineObjectSimple>> entry : warmUpData.entrySet()) {
-                featureExtractor.updateMarketHistory(entry.getValue());
-            }
-            LOG.info("✅ Warm-up Finished.");
-        }
+        TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers =
+                DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime
+                        - 1500 * Utils.TIME_MINUTE);
+        this.featureExtractor.initDataFromTickerMap(time2Tickers);
+        LOG.info("✅ Warm-up Finished.");
 
         // 2. MAIN LOOP
         long currentTime = startTime;
@@ -74,7 +70,10 @@ public class RunPredictionCompare {
             // Load Data theo ngày
             if (!currentDateKey.equals(loadedDateKey)) {
                 LOG.info("📥 Processing Day: {}", currentDateKey);
-                if (currentDailyData != null) { currentDailyData.clear(); currentDailyData = null; }
+                if (currentDailyData != null) {
+                    currentDailyData.clear();
+                    currentDailyData = null;
+                }
                 currentDailyData = DataManagerAerospikeFloatSim.readDataFromAerospike1M(currentTime);
                 loadedDateKey = currentDateKey;
             }
@@ -199,7 +198,9 @@ public class RunPredictionCompare {
             new File(folder).mkdirs();
             StorageSnappy.writeObject2File(folder + timestamp, res);
             StorageSnappy.writeObject2File(folder + timestamp + ".features", feat);
-        } catch (Exception e) { e.printStackTrace(); }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private void initSystem() throws Exception {

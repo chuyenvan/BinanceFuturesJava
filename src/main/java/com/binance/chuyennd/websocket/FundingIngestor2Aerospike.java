@@ -1,14 +1,14 @@
 package com.binance.chuyennd.websocket;
 
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
-import com.binance.chuyennd.utils.Utils;
 import com.binance.connector.futures.client.impl.UMWebsocketClientImpl;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -47,10 +47,8 @@ public class FundingIngestor2Aerospike {
                 if (symbol.endsWith("USDT")) {
                     float fundingRate = data.getFloat("r"); // Lấy float trực tiếp
                     long nextFundingTime = data.getLong("T");
-                    long periodStart = nextFundingTime - (8 * Utils.TIME_HOUR);
-
                     fundingBuffer.computeIfAbsent(symbol, k -> new HashMap<>())
-                            .put(periodStart, fundingRate);
+                            .put(nextFundingTime, fundingRate);
                 }
             }
         } catch (Exception e) {
