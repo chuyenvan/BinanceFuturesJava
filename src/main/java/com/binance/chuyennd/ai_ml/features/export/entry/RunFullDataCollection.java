@@ -1,14 +1,15 @@
 package com.binance.chuyennd.ai_ml.features.export.entry;
 
-import com.binance.chuyennd.aerospike.DataManagerAerospike;
+import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
+import com.binance.chuyennd.research.FundingFeeManager;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.StorageSnappy;
 import com.binance.chuyennd.utils.Utils;
-import com.binance.chuyennd.research.FundingFeeManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import java.io.File;
 import java.util.*;
 
@@ -43,9 +44,9 @@ public class RunFullDataCollection {
         while (currentTime <= endTime) {
             try {
                 TreeMap<Long, Map<String, KlineObjectSimple>> todayData =
-                        DataManagerAerospike.readDataFromAerospike1M(currentTime);
+                        DataManagerAerospikeFloatSim.readDataFromAerospike1M(currentTime);
                 TreeMap<Long, Map<String, KlineObjectSimple>> tomorrowData =
-                        DataManagerAerospike.readDataFromAerospike1M(currentTime + Utils.TIME_DAY);
+                        DataManagerAerospikeFloatSim.readDataFromAerospike1M(currentTime + Utils.TIME_DAY);
 
                 TreeMap<Long, Map<String, KlineObjectSimple>> lookupData = new TreeMap<>();
                 if (todayData != null) lookupData.putAll(todayData);

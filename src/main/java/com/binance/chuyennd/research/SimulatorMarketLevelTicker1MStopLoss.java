@@ -7,9 +7,7 @@ package com.binance.chuyennd.research;
 import ai.onnxruntime.OrtException;
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.ai_ml.features.export.dca.DcaFeatureExtractor;
-import com.binance.chuyennd.ai_ml.features.export.dca.DcaMarketFeatures;
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
-import com.binance.chuyennd.ai_ml.onnx.dca.DcaOnnxInferenceManager;
 import com.binance.chuyennd.ai_ml.onnx.dca.DcaPredictionResult;
 import com.binance.chuyennd.ai_ml.onnx.entry.AIRejectFilter;
 import com.binance.chuyennd.ai_ml.onnx.entry.RunGeneratePredictions;
@@ -45,9 +43,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
     public static final Logger LOG = LoggerFactory.getLogger(SimulatorMarketLevelTicker1MStopLoss.class);
     public static final String FILE_STORAGE_ORDER_DONE = "storage/OrderTestDone.data";
-    // File lưu trữ duy nhất
-    public String currentMonth = null;
-    public Map<String, TreeMap<Long, Double>> symbol2TimeAndMaxRate90M = null;
 
     public TreeMap<Long, OrderTargetInfoTest> allOrderDone;
 

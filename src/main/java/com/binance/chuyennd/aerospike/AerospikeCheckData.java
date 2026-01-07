@@ -4,9 +4,9 @@ import com.aerospike.client.Info;
 
 public class AerospikeCheckData {
     public static void main(String[] args) {
-        AerospikeClient client = new AerospikeClient("103.157.218.242", 3222);
+        AerospikeClient client = new AerospikeClient("172.25.80.188", 3000);
         try {
-            String namespace = "ticker";
+            String namespace = "educa";
 
             // Lấy thống kê namespace
             String nsResponse = Info.request(client.getNodes()[0], "namespace/" + namespace);

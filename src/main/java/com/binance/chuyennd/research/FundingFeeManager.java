@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
@@ -38,24 +39,10 @@ public class FundingFeeManager {
 
     private void initData() {
         try {
-            File folder = new File(Configs.FOLDER_FUNDING_FEE);
-            if (folder.exists() && folder.isDirectory()) {
-                for (File file : folder.listFiles()) {
-                    try {
-                        String symbol = file.getName();
-                        TreeMap<Long, Double> time2RateFunding = symbol2FundingFee.get(symbol);
-                        if (time2RateFunding == null) {
-                            time2RateFunding = DataManagerAerospikeFloatSim.getFundingMap(symbol);
-                        }
-                        if (time2RateFunding != null) {
-                            symbol2FundingFee.put(symbol, time2RateFunding);
-                        }
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }
+            Map<String, TreeMap<Long, Double>> symbol2Funding = DataManagerAerospikeFloatSim.getAllFundingMap();
+            for (String symbol : symbol2Funding.keySet()) {
+                symbol2FundingFee.put(symbol, symbol2Funding.get(symbol));
             }
-
             if (RunOptimizationBudgetRatio.CACHED_time2FundingFeeTrade != null) {
                 this.time2FundingFeeTrade = RunOptimizationBudgetRatio.CACHED_time2FundingFeeTrade;
             } else {

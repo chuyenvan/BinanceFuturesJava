@@ -309,7 +309,7 @@ public class ComprehensiveMarketFeatureExtractor {
     }
 
     private void extractVolatilityFeatures(MarketFeatures features, String symbol) {
-        features.volatility1M = calculateVolatility(symbol, 2);
+        features.volatility1M = calculateVolatility(symbol, 3);
         features.volatility15M = calculateVolatility(symbol, 15);
         features.volatility1H = calculateVolatility(symbol, 60);
         features.volatility24H = calculateVolatility(symbol, 1440);

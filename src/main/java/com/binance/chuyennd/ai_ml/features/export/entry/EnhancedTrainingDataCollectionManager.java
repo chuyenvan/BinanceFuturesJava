@@ -27,12 +27,14 @@ public class EnhancedTrainingDataCollectionManager {
         collectedFeatures.clear();
         // LOG.info("Buffer cleared (Warm-up complete)");
     }
+
     public List<String> identifyTargetBasket(long timestamp, Map<String, KlineObjectSimple> marketData) {
         // 1. Cập nhật History trước
         featureExtractor.updateMarketHistory(marketData);
         // 2. Lấy danh sách từ logic nội tại của Extractor
         return featureExtractor.findPotentialLosers(timestamp);
     }
+
     public void processMarketData(long timestamp,
                                   Map<String, KlineObjectSimple> marketData,
                                   MarketRateChange marketRateChange, List<String> targetBasket,
@@ -82,7 +84,9 @@ public class EnhancedTrainingDataCollectionManager {
 
     private boolean shouldCollectData(MarketRateChange rate) {
         if (rate == null) return false;
-        return Math.abs(rate.rateDown15MAvg) > 0.002 || Math.abs(rate.rateUpAvg) > 0.002;
+        return Math.abs(rate.rateDown15MAvg) > 0.0018
+                || Math.abs(rate.rateUpAvg) > 0.002
+                || rate.rateDownAvg < -0.005;
     }
 
     public void exportCollectedData() {

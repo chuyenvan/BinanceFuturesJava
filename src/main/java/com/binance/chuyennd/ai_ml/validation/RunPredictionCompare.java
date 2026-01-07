@@ -22,7 +22,7 @@ public class RunPredictionCompare {
     private static final Logger LOG = LoggerFactory.getLogger(RunPredictionCompare.class);
 
     // --- CẤU HÌNH ---
-    private static final String START_DATE_STR = "20260105";
+    private static final String START_DATE_STR = "20260107";
     private static final String MODEL_DIR = "../storage/ai_ml_data/ai_models_reg_v3";
     private static final String PROD_DIR = "storage/data/prediction/";
     private static final String TEST_DIR = "storage/predictiontest/";
@@ -48,10 +48,11 @@ public class RunPredictionCompare {
         // 1. WARM-UP
         LOG.info("🔥 START WARM-UP (Previous Day Data)...");
         TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers =
-                DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime
-                        - 1500 * Utils.TIME_MINUTE);
+                DataManagerAerospikeFloatSim.readDataFromAerospikeCustom(
+                        startTime- 1500 * Utils.TIME_MINUTE, 1500);
         this.featureExtractor.initDataFromTickerMap(time2Tickers);
-        LOG.info("✅ Warm-up Finished.");
+        LOG.info("✅ Warm-up Finished.. {} {} {}", time2Tickers.size(),
+                Utils.normalizeDateYYYYMMDDHHmm(time2Tickers.firstKey()), Utils.normalizeDateYYYYMMDDHHmm(time2Tickers.lastKey()));
 
         // 2. MAIN LOOP
         long currentTime = startTime;
@@ -74,7 +75,8 @@ public class RunPredictionCompare {
                     currentDailyData.clear();
                     currentDailyData = null;
                 }
-                currentDailyData = DataManagerAerospikeFloatSim.readDataFromAerospike1M(currentTime);
+                currentDailyData = DataManagerAerospikeFloatSim.readDataFromAerospikeCustom(
+                        currentTime, 1440);
                 loadedDateKey = currentDateKey;
             }
 

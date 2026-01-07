@@ -1,7 +1,5 @@
 package com.binance.chuyennd.ticker;
 
-import com.binance.chuyennd.aerospike.AerospikeConfigs;
-import com.binance.chuyennd.aerospike.DataManagerAerospike;
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.helper.TickerFuturesHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
@@ -40,9 +38,9 @@ public class TickerManager {
     private void startThreadUpdateTicker1MSimple() {
         new Thread(() -> {
             Thread.currentThread().setName("ThreadUpdateTicker");
-            if (!new File(Configs.FOLDER_FUNDING_FEE + Constants.SYMBOL_PAIR_BTC).exists()) {
-                startUpdateFundingFee();
-            }
+//            if (!new File(Configs.FOLDER_FUNDING_FEE + Constants.SYMBOL_PAIR_BTC).exists()) {
+//                startUpdateFundingFee();
+//            }
             LOG.info("Start thread ThreadUpdateTicker!");
 
             ExportMarketData2File exporter = new ExportMarketData2File();
@@ -231,7 +229,7 @@ public class TickerManager {
 
                 // Gọi hàm ghi đè (cần update hàm này trong DataManagerAerospike hoặc gọi trực tiếp Client ở đây)
                 // Để đơn giản, ta tái sử dụng hàm writeDataToAerospike nhưng truyền tên SET mới
-                DataManagerAerospike.writeDataToAerospikeOptimized(keyString, compressedData);
+//                DataManagerAerospikeFloatSim.writeMinuteBatch(keyString, compressedData);
             }
             LOG.info("Successfully saved {} records to Aerospike (Optimized Set)", time2SymbolAndKline.size());
         } catch (Exception e) {
@@ -278,51 +276,51 @@ public class TickerManager {
     }
 
     public void updateFundingFeeBySymbol(String symbol, Long timeStart) {
-        String fileData = Configs.FOLDER_FUNDING_FEE + symbol;
-        File file = new File(fileData);
-        Long time = timeStart;
-        TreeMap<Long, FundingRate> time2FundingRate = new TreeMap<>();
-        if (file.exists()) {
-            try {
-                time2FundingRate = (TreeMap<Long, FundingRate>) Storage.readObjectFromFile(fileData);
-                if (time2FundingRate != null && time2FundingRate.size() > 0) {
-                    time = time2FundingRate.lastKey() + Utils.TIME_HOUR;
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-        try {
-            if (time2FundingRate == null) {
-                time2FundingRate = new TreeMap<>();
-            }
-//            LOG.info("Start get funding fee for: {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time));
-            while (true) {
-                if (time + Utils.TIME_HOUR > System.currentTimeMillis()) {
-                    break;
-                }
-                try {
-                    TreeMap<Long, FundingRate> time2Rate = TickerFuturesHelper.getFundingFeeWithStartTime(symbol, time);
-                    if (time2Rate == null
-                            || time2Rate.isEmpty()) {
-                        break;
-                    } else {
-                        time2FundingRate.putAll(time2Rate);
-                        time = time2Rate.lastKey() + Utils.TIME_HOUR;
-                    }
-                } catch (Exception e) {
-                    LOG.info("Error get funding rate for : {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time));
-                    e.printStackTrace();
-                    break;
-                }
-                Thread.sleep(300);
-            }
-//            LOG.info("Write funding fee for: {} {} {}", symbol, time2FundingRate.size(), Utils.normalizeDateYYYYMMDDHHmm(time));
-            Storage.writeObject2File(fileData, time2FundingRate);
-        } catch (Exception e) {
-            LOG.info("Error get funding rate for : {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time));
-            e.printStackTrace();
-        }
+//        String fileData = Configs.FOLDER_FUNDING_FEE + symbol;
+//        File file = new File(fileData);
+//        Long time = timeStart;
+//        TreeMap<Long, FundingRate> time2FundingRate = new TreeMap<>();
+//        if (file.exists()) {
+//            try {
+//                time2FundingRate = (TreeMap<Long, FundingRate>) Storage.readObjectFromFile(fileData);
+//                if (time2FundingRate != null && time2FundingRate.size() > 0) {
+//                    time = time2FundingRate.lastKey() + Utils.TIME_HOUR;
+//                }
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//            }
+//        }
+//        try {
+//            if (time2FundingRate == null) {
+//                time2FundingRate = new TreeMap<>();
+//            }
+////            LOG.info("Start get funding fee for: {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time));
+//            while (true) {
+//                if (time + Utils.TIME_HOUR > System.currentTimeMillis()) {
+//                    break;
+//                }
+//                try {
+//                    TreeMap<Long, FundingRate> time2Rate = TickerFuturesHelper.getFundingFeeWithStartTime(symbol, time);
+//                    if (time2Rate == null
+//                            || time2Rate.isEmpty()) {
+//                        break;
+//                    } else {
+//                        time2FundingRate.putAll(time2Rate);
+//                        time = time2Rate.lastKey() + Utils.TIME_HOUR;
+//                    }
+//                } catch (Exception e) {
+//                    LOG.info("Error get funding rate for : {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time));
+//                    e.printStackTrace();
+//                    break;
+//                }
+//                Thread.sleep(300);
+//            }
+////            LOG.info("Write funding fee for: {} {} {}", symbol, time2FundingRate.size(), Utils.normalizeDateYYYYMMDDHHmm(time));
+//            Storage.writeObject2File(fileData, time2FundingRate);
+//        } catch (Exception e) {
+//            LOG.info("Error get funding rate for : {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time));
+//            e.printStackTrace();
+//        }
     }
 
     private TreeMap<Long, Map<String, KlineObjectSimple>> getAllTicker1MBuyDate(Long time, Set<String> symbols) {

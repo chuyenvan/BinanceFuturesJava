@@ -4,7 +4,6 @@
  */
 package com.binance.chuyennd.research;
 
-import com.binance.chuyennd.aerospike.DataManagerAerospike;
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.bigchange.market.MarketDataObject;
 import com.binance.chuyennd.bigchange.market.MarketLevelChange;

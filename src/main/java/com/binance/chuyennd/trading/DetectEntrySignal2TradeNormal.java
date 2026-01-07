@@ -114,14 +114,13 @@ public class DetectEntrySignal2TradeNormal {
             TreeMap<Double, String> rateUp2Symbols = new TreeMap<>();
             Map<String, Double> symbol2Max15m = new HashMap<>();
 
-            Map<String, List<KlineObjectSimple>> symbol2LastTickers = DataManagerAerospikeFloatSim.readDataForSymbols(
-                    System.currentTimeMillis() - 1500 * Utils.TIME_MINUTE, 1500);
+            Map<String, List<KlineObjectSimple>> symbol2LastTickers = DataManagerAerospikeFloatSim.readDataForSymbols(System.currentTimeMillis() - 1500 * Utils.TIME_MINUTE, 1500);
             List<KlineObjectSimple> btcTickers = symbol2LastTickers.get(Constants.SYMBOL_PAIR_BTC);
             KlineObjectSimple btcTicker = btcTickers.get(btcTickers.size() - 1);
             Double btcRateChange = Utils.rateOf2Double(btcTicker.priceClose, btcTicker.priceOpen);
             Double btcMax15M = null;
 
-            LOG.info("Btc ticker size: {}", symbol2LastTickers.get(Constants.SYMBOL_PAIR_BTC).size());
+            LOG.info("Btc ticker size: {} {} -> {}", symbol2LastTickers.get(Constants.SYMBOL_PAIR_BTC).size(), Utils.normalizeDateYYYYMMDDHHmm(btcTickers.get(0).startTime.longValue()), Utils.normalizeDateYYYYMMDDHHmm(btcTicker.startTime.longValue()));
             long time = btcTicker.startTime.longValue();
 
             for (Map.Entry<String, List<KlineObjectSimple>> entry : symbol2LastTickers.entrySet()) {
@@ -205,12 +204,7 @@ public class DetectEntrySignal2TradeNormal {
                     // 2. Trích xuất Features
                     // Lưu ý: tempBasketForAI được cập nhật ở checkMarketLevelChange2Trade
 
-                    features = featureExtractor.extractAllFeaturesProduction(
-                            timestamp,
-                            currentMarketMap,
-                            marketRate,
-                            new ArrayList<>()
-                    );
+                    features = featureExtractor.extractAllFeaturesProduction(timestamp, currentMarketMap, marketRate, new ArrayList<>());
 
                     // 3. Dự báo
                     prediction = aiBrain.predictAll(features);
@@ -222,10 +216,7 @@ public class DetectEntrySignal2TradeNormal {
 
             if (levelChange != null) {
                 Integer numberOrder = Configs.NUMBER_ENTRY_EACH_SIGNAL;
-                if (levelChange.equals(MarketLevelChange.SMALL_DOWN)
-                        || levelChange.equals(MarketLevelChange.SMALL_UP)
-                        || levelChange.equals(MarketLevelChange.MEDIUM_DOWN_15M)
-                        || levelChange.equals(MarketLevelChange.SMALL_DOWN_15M)) {
+                if (levelChange.equals(MarketLevelChange.SMALL_DOWN) || levelChange.equals(MarketLevelChange.SMALL_UP) || levelChange.equals(MarketLevelChange.MEDIUM_DOWN_15M) || levelChange.equals(MarketLevelChange.SMALL_DOWN_15M)) {
                     numberOrder = numberOrder / 2;
                 }
                 Set<String> symbol2BUY = MarketBigChangeDetector.getTopSymbol(rateDown15M2Symbols, numberOrder, symbol2FinalTicker, symbolLocked);
@@ -234,8 +225,7 @@ public class DetectEntrySignal2TradeNormal {
                     LOG.info("Not symbol 2 buy: {} {} ", levelChange, Utils.normalizeDateYYYYMMDDHHmm(time));
                 }
 
-                symbol2BUY.addAll(MarketBigChangeDetector.addSpecialSymbol(symbol2FinalTicker, symbol2BUY,
-                        BudgetManager.getInstance().symbol2Pos.keySet()));
+                symbol2BUY.addAll(MarketBigChangeDetector.addSpecialSymbol(symbol2FinalTicker, symbol2BUY, BudgetManager.getInstance().symbol2Pos.keySet()));
                 LOG.info("Level: {} {} -> {}", Utils.normalizeDateYYYYMMDDHHmm(btcTicker.startTime.longValue()), levelChange, symbol2BUY);
                 for (String symbol : symbol2BUY) {
                     try {
@@ -247,8 +237,7 @@ public class DetectEntrySignal2TradeNormal {
                 }
                 try {
 
-                    List<String> symbolDcaLevel = DcaProcessor.getDCAProduction(levelChange, System.currentTimeMillis(),
-                            BudgetManager.getInstance().getBudget(), BudgetManager.getInstance().symbol2Pos);
+                    List<String> symbolDcaLevel = DcaProcessor.getDCAProduction(levelChange, System.currentTimeMillis(), BudgetManager.getInstance().getBudget(), BudgetManager.getInstance().symbol2Pos);
                     for (String symbol : symbolDcaLevel) {
                         KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
                         PositionRisk position = BudgetManager.getInstance().symbol2Pos.get(symbol);
@@ -385,8 +374,7 @@ public class DetectEntrySignal2TradeNormal {
         return null;
     }
 
-    public void createOrderBuyRequest(String symbol, KlineObjectSimple ticker, MarketLevelChange levelChange,
-                                      Double priceMax15M, MarketRateChange marketRate, OnnxInferenceManager.PredictionResult prediction) {
+    public void createOrderBuyRequest(String symbol, KlineObjectSimple ticker, MarketLevelChange levelChange, Double priceMax15M, MarketRateChange marketRate, OnnxInferenceManager.PredictionResult prediction) {
 
 
         if (prediction == null) {
@@ -415,8 +403,7 @@ public class DetectEntrySignal2TradeNormal {
 
         budget = TradeUtils.managerBudget(budget, marginRunning, balanceBasic, levelChange);
         if (budget == null || budget < 5) {
-            LOG.info("Not trade because over capital or budget not enough: {} {} {} {}", symbol,
-                    levelChange, Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()), budget);
+            LOG.info("Not trade because over capital or budget not enough: {} {} {} {}", symbol, levelChange, Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()), budget);
             return;
         }
 
@@ -498,11 +485,11 @@ public class DetectEntrySignal2TradeNormal {
             // QUAN TRỌNG: Sync dữ liệu lịch sử từ ListenAllTicker sang FeatureExtractor
             // Để đảm bảo tính toán RSI, MA đúng ngay từ lệnh đầu tiên
             TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers =
-                    DataManagerAerospikeFloatSim.readDataFromAerospike1M(System.currentTimeMillis()
-                            - 1500 * Utils.TIME_MINUTE);
+                    DataManagerAerospikeFloatSim.readDataFromAerospikeCustom(
+                            System.currentTimeMillis() - 1500 * Utils.TIME_MINUTE, 1500);
             this.featureExtractor.initDataFromTickerMap(time2Tickers);
 
-            LOG.info("AI System Initialized Successfully.");
+            LOG.info("AI System Initialized Successfully. {} {} {}", time2Tickers.size(), Utils.normalizeDateYYYYMMDDHHmm(time2Tickers.firstKey()), Utils.normalizeDateYYYYMMDDHHmm(time2Tickers.lastKey()));
         } catch (Exception e) {
             LOG.error("Failed to initialize AI System", e);
             // Có thể throw exception để dừng chương trình nếu AI là bắt buộc

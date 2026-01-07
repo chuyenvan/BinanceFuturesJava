@@ -409,6 +409,86 @@ public class DataManagerAerospikeFloatSim {
     }
 
     /**
+     * Đọc dữ liệu từ Aerospike theo mốc thời gian và số lượng phút tùy chỉnh.
+     * Không chuẩn hóa startTime (lấy chính xác mốc truyền vào).
+     * * @param startTime Mốc thời gian bắt đầu (miliseconds)
+     *
+     * @param totalMinutes Số lượng phút (records) cần lấy
+     * @return TreeMap<Long, Map < String, KlineObjectSimple>>
+     */
+    public static TreeMap<Long, Map<String, KlineObjectSimple>> readDataFromAerospikeCustom(long startTime, int totalMinutes) {
+        TreeMap<Long, Map<String, KlineObjectSimple>> results = new TreeMap<>();
+
+        // 1. Tạo danh sách Timestamps chính xác từ startTime
+        long[] allTimestamps = new long[totalMinutes];
+        for (int i = 0; i < totalMinutes; i++) {
+            allTimestamps[i] = startTime + (i * Utils.TIME_MINUTE); // Nhảy từng phút từ mốc truyền vào
+        }
+
+        List<Future<Map<Long, Map<String, KlineObjectSimple>>>> futures = new ArrayList<>();
+        int chunkSize = (totalMinutes + threadCount - 1) / threadCount;
+
+        // 2. Chia đa luồng để thực hiện Batch Read
+        for (int i = 0; i < threadCount; i++) {
+            final int startIdx = i * chunkSize;
+            final int endIdx = Math.min(startIdx + chunkSize, totalMinutes);
+            if (startIdx >= endIdx) break;
+
+            futures.add(executor.submit(() -> {
+                // Đảm bảo thread-safety cho format ngày
+                SimpleDateFormat localKeyFormat = new SimpleDateFormat("yyyyMMdd-HHmm");
+                Map<Long, Map<String, KlineObjectSimple>> chunkResult = new HashMap<>();
+
+                try {
+                    // Tạo mảng Keys cho chunk này
+                    Key[] chunkKeys = new Key[endIdx - startIdx];
+                    long[] chunkTimestamps = Arrays.copyOfRange(allTimestamps, startIdx, endIdx);
+
+                    for (int k = 0; k < chunkKeys.length; k++) {
+                        String keyString = localKeyFormat.format(new Date(chunkTimestamps[k]));
+                        chunkKeys[k] = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_TICKER, keyString);
+                    }
+
+                    // Batch Read từ Aerospike
+                    Record[] records = getClient().get(batchPolicy, chunkKeys);
+
+                    for (int j = 0; j < records.length; j++) {
+                        Record record = records[j];
+                        if (record == null) continue;
+
+                        long minuteTimestamp = chunkTimestamps[j];
+                        byte[] snappyCompressedBytes = (byte[]) record.getValue("data");
+
+                        if (snappyCompressedBytes != null) {
+                            // Giải nén và parse Proto
+                            byte[] protoAsBytes = Snappy.uncompress(snappyCompressedBytes);
+                            MinuteDataFinal protoData = MinuteDataFinal.parseFrom(protoAsBytes);
+
+                            // Convert sang Object Java và inject lại timestamp
+                            Map<String, KlineObjectSimple> javaMap = convertProtoMapToJavaMap(protoData.getTickersMap(), minuteTimestamp);
+                            chunkResult.put(minuteTimestamp, javaMap);
+                        }
+                    }
+                } catch (Exception e) {
+                    LOG.error("❌ Lỗi trong luồng đọc Batch: {}", e.getMessage());
+                }
+                return chunkResult;
+            }));
+        }
+
+        // 3. Tổng hợp kết quả từ các Future
+        for (Future<Map<Long, Map<String, KlineObjectSimple>>> future : futures) {
+            try {
+                results.putAll(future.get());
+            } catch (Exception e) {
+                LOG.error("❌ Lỗi khi lấy kết quả từ Future: {}", e.getMessage());
+            }
+        }
+
+        return results;
+    }
+
+    /**
      * Đọc dữ liệu nến 1m từ Aerospike và trả về Map theo Symbol.
      * Không chuẩn hóa startTime (lấy chính xác từ mốc truyền vào).
      * * @param startTime Mốc thời gian bắt đầu (ms)
@@ -576,11 +656,8 @@ public class DataManagerAerospikeFloatSim {
         for (Map.Entry<String, KlineObjectOptimized> entry : protoMap.entrySet()) {
             String shortSymbol = entry.getKey(); // Đang là "BTC"
             KlineObjectOptimized protoTicker = entry.getValue();
-
-            // 1. Khôi phục tên đầy đủ: BTC -> BTCUSDT
-
-            String fullSymbol = shortSymbol;
-
+            // 🔥 Bổ sung lại "USDT" nếu symbol trong DB đang bị cắt đuôi (ví dụ "BTC" -> "BTCUSDT")
+            String fullSymbol = shortSymbol.endsWith("USDT") ? shortSymbol : shortSymbol + "USDT";
             // 2. Convert Object
             javaMap.put(fullSymbol, convertProtoToKline(protoTicker, timestamp));
         }
@@ -621,14 +698,19 @@ public class DataManagerAerospikeFloatSim {
     }
 
     public static void main(String[] args) throws ParseException {
-//        Long startTime = Utils.sdfFile.parse("20260103").getTime() + 7 * Utils.TIME_HOUR;
-//        System.out.println(DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime).size());
+        Long startTime = Utils.sdfFile.parse("20260103").getTime() + 7 * Utils.TIME_HOUR;
+        TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers = DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime);
+        LOG.info("{} {} {} {}",time2Tickers.firstEntry().getValue().keySet(), Utils.normalizeDateYYYYMMDDHHmm(time2Tickers.firstKey()),
+                Utils.normalizeDateYYYYMMDDHHmm(time2Tickers.lastKey()), time2Tickers.size());
 //        debugKeys();
-        Map<String, TreeMap<Long, Double>> symbol2FundingMap = DataManagerAerospikeFloatSim.getAllFundingMap();
-        for (String symbol : symbol2FundingMap.keySet()) {
-            LOG.info("{} -> {} records first: {} last: {}", symbol, symbol2FundingMap.get(symbol).size()
-                    , Utils.normalizeDateYYYYMMDDHHmm(symbol2FundingMap.get(symbol).firstKey())
-                    , Utils.normalizeDateYYYYMMDDHHmm(symbol2FundingMap.get(symbol).lastKey()));
-        }
+//        Map<String, TreeMap<Long, Double>> symbol2FundingMap = DataManagerAerospikeFloatSim.getAllFundingMap();
+//        for (String symbol : symbol2FundingMap.keySet()) {
+//            LOG.info("{} -> {} records first: {} last: {}", symbol, symbol2FundingMap.get(symbol).size()
+//                    , Utils.normalizeDateYYYYMMDDHHmm(symbol2FundingMap.get(symbol).firstKey())
+//                    , Utils.normalizeDateYYYYMMDDHHmm(symbol2FundingMap.get(symbol).lastKey()));
+//        }
+//        TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers = DataManagerAerospikeFloatSim.readDataFromAerospikeCustom(System.currentTimeMillis() - 1500 * Utils.TIME_MINUTE, 1500);
+//        LOG.info("{} {} {} {}",time2Tickers.firstEntry().getValue().keySet(), Utils.normalizeDateYYYYMMDDHHmm(time2Tickers.firstKey()),
+//                Utils.normalizeDateYYYYMMDDHHmm(time2Tickers.lastKey()), time2Tickers.size());
     }
 }

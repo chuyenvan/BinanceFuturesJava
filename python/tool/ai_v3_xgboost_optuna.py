@@ -105,7 +105,7 @@ class V1Trainer:
                 'verbosity': 0,
                 'objective': 'reg:squarederror',
                 'tree_method': 'hist',
-                'n_jobs': 4,
+                'n_jobs': 3,
                 'learning_rate': trial.suggest_float('learning_rate', 0.005, 0.1, log=True),
                 'max_depth': trial.suggest_int('max_depth', 5, 15), # Cho phep sau hon
                 'min_child_weight': trial.suggest_int('min_child_weight', 5, 100),
