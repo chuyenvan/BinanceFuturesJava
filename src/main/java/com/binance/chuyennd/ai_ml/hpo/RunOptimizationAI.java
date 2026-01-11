@@ -19,8 +19,7 @@ import org.slf4j.LoggerFactory;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class RunOptimizationAI {
 
@@ -33,28 +32,23 @@ public class RunOptimizationAI {
     public static TreeMap<Long, AiPredictionData> predictionMap;
     public static ConcurrentHashMap<Long, Set<String>> CACHED_time2FundingFeeTrade;
 
-    // --- CẤU HÌNH PARAM GEN (NỚI RỘNG ĐỂ TÌM KIẾM ĐỘT PHÁ) ---
-    // 1. Risk: Cho phép rủi ro sâu hơn (từ -1% đến -6%) để bắt dao sâu hơn
+    // Bộ đếm số lần thử nghiệm để biết tiến độ
+    private static final AtomicInteger evalCounter = new AtomicInteger(0);
+
+    // --- CẤU HÌNH PARAM GEN ---
     private static final double MIN_RISK = -0.06, MAX_RISK = -0.01;
-
-    // 2. Ret1H: Mở rộng biên độ lợi nhuận (từ 0.5% đến 6%)
     private static final double MIN_RET1H = 0.005, MAX_RET1H = 0.06;
-
-    // 3. HighRet: Ngưỡng "kèo thơm"
-    private static final double MIN_HIGHRET = 0.03, MAX_HIGHRET = 0.10;
-
-    // 4. Momentum & Trend: Cho phép bắt cả sóng yếu lẫn sóng mạnh
+    private static final double MIN_HIGHRET = 0.01, MAX_HIGHRET = 0.10;
     private static final double MIN_MOM15M = 0.001, MAX_MOM15M = 0.02;
     private static final double MIN_TREND4H = 0.001, MAX_TREND4H = 0.03;
 
     public static void main(String[] args) {
         LOG.info("==============================================");
-        LOG.info("===   AI HPO: DEEP SEARCH MODE             ===");
-        LOG.info("===   STRATEGY: WIDER RANGE & SMART SCORE  ===");
+        LOG.info("===   AI HPO: SINGLE THREAD (SAFE MODE)    ===");
+        LOG.info("===   Fix: Data Race & Real-time Log       ===");
         LOG.info("==============================================\n");
 
         try {
-            // TIME_RUN phải là 2021 hoặc 2022 để bao phủ đủ dữ liệu
             Configs.TIME_RUN = "20210101";
             loadAndWarmUpData();
         } catch (Exception e) {
@@ -64,11 +58,7 @@ public class RunOptimizationAI {
 
         LOG.info("\n🚀 --- STARTING EVOLUTION ---");
 
-        // Tăng số luồng để chạy nhanh
-        int nThreads = Runtime.getRuntime().availableProcessors();
-        ExecutorService executor = Executors.newFixedThreadPool(nThreads);
-        LOG.info("⚡ Engine running with {} threads.", nThreads);
-
+        // CẤU HÌNH GENE
         Factory<Genotype<DoubleGene>> gtf = Genotype.of(
                 DoubleChromosome.of(MIN_RISK, MAX_RISK),
                 DoubleChromosome.of(MIN_RET1H, MAX_RET1H),
@@ -77,46 +67,69 @@ public class RunOptimizationAI {
                 DoubleChromosome.of(MIN_TREND4H, MAX_TREND4H)
         );
 
+        // --- QUAN TRỌNG: CHẠY 1 LUỒNG ĐỂ TRÁNH LỖI SINGLETON ---
+        // Đã bỏ .executor() để mặc định chạy main thread
         Engine<DoubleGene, Double> engine = Engine.builder(RunOptimizationAI::eval, gtf)
-                // --- TĂNG NHẸ QUY MÔ ĐỂ THOÁT KHỎI CỰC TRỊ CỤC BỘ ---
-                .populationSize(30) // Tăng từ 15 -> 30 để đa dạng gen hơn
+                .populationSize(20) // 20 cá thể mỗi thế hệ
                 .survivorsSelector(new TournamentSelector<>(3))
                 .offspringSelector(new RouletteWheelSelector<>())
-                // Tăng Mutation (0.25) để AI dám thử nghiệm cái mới lạ
                 .alterers(new Mutator<>(0.25), new MeanAlterer<>(0.6))
-                .executor(executor)
                 .build();
 
         EvolutionResult<DoubleGene, Double> bestResult = engine.stream()
-                // Cho phép chạy lâu hơn 1 chút để tìm ra kết quả tốt nhất
-                .limit(Limits.bySteadyFitness(5))
-                .limit(20) // Max 20 thế hệ (khoảng 600 lần test)
+                .limit(Limits.bySteadyFitness(5)) // Dừng nếu 5 gen không cải thiện
+                .limit(20) // Chạy tối đa 20 gen
                 .peek(RunOptimizationAI::monitor)
                 .collect(EvolutionResult.toBestEvolutionResult());
 
-        executor.shutdown();
-
         LOG.info("\n=== 🏁 OPTIMIZATION FINISHED ===");
-        LOG.info("🏆 BEST PROFIT SCORE: " + bestResult.bestFitness());
-        printParams("BEST PARAMS FOUND", bestResult.bestPhenotype().genotype());
+        LOG.info("🏆 FINAL BEST SCORE: " + bestResult.bestFitness());
+        printParams("FINAL PARAMS", bestResult.bestPhenotype().genotype());
     }
 
+    // --- MONITOR: TỔNG KẾT SAU MỖI GEN ---
     private static void monitor(EvolutionResult<DoubleGene, Double> result) {
-        LOG.info("Gen {}: Best Score = {}", result.generation(), String.format("%.2f", result.bestFitness()));
+        Genotype<DoubleGene> bestGt = result.bestPhenotype().genotype();
+        double bestScore = result.bestFitness();
+        int gen = (int) result.generation();
+
+        LOG.info("----------------------------------------------------------------");
+        LOG.info("📍 Gen {:02d} COMPLETE | Best Score So Far: {:.2f}", gen, bestScore);
+        printParams("BEST OF GEN " + gen, bestGt);
+        evalCounter.set(0); // Reset bộ đếm cho Gen mới để dễ theo dõi
+        LOG.info("----------------------------------------------------------------");
     }
 
+    // --- EVAL: ĐÁNH GIÁ TỪNG CÁ THỂ (CÓ LOG CHI TIẾT) ---
     private static Double eval(Genotype<DoubleGene> gt) {
+        int count = evalCounter.incrementAndGet();
+
+        // Lấy tham số ra để log
+        double pRisk = gt.get(0).gene().doubleValue();
+        double pRet1H = gt.get(1).gene().doubleValue();
+        double pHighRet = gt.get(2).gene().doubleValue();
+        double pMom15M = gt.get(3).gene().doubleValue();
+        double pTrend4H = gt.get(4).gene().doubleValue();
+
+        long start = System.currentTimeMillis();
         try {
+            // Khởi tạo Engine Backtest với bộ tham số của cá thể này
             BackTestEngineAI engine = new BackTestEngineAI(
-                    gt.get(0).gene().doubleValue(),
-                    gt.get(1).gene().doubleValue(),
-                    gt.get(2).gene().doubleValue(),
-                    gt.get(3).gene().doubleValue(),
-                    gt.get(4).gene().doubleValue(),
-                    -0.99
+                    pRisk, pRet1H, pHighRet, pMom15M, pTrend4H, -0.99
             );
-            return engine.run(time2MarketData, time2MarketRateChange, time2BtcReverse, predictionMap);
+
+            Double score = engine.run(time2MarketData, time2MarketRateChange, time2BtcReverse, predictionMap);
+
+            long duration = (System.currentTimeMillis() - start) / 1000;
+
+            // --- LOG TIẾN ĐỘ THỜI GIAN THỰC ---
+            // Format: [#STT] Score | Time | Các tham số chính
+            LOG.info("   [#{}] Score: {:8.0f} ({:3}s) | Risk:{:.4f} | R1H:{:.4f} | Mom:{:.4f}",
+                    count, score, duration, pRisk, pRet1H, pMom15M);
+
+            return score;
         } catch (Exception e) {
+            LOG.error("Eval Error", e);
             return -100000.0;
         }
     }
@@ -139,7 +152,7 @@ public class RunOptimizationAI {
         predictionMap = (TreeMap<Long, AiPredictionData>) StorageSnappy.readObjectFromFile(Configs.FILE_AI_ENTRY_PREDICTIONS);
         FundingFeeManager.getInstance();
 
-        LOG.info("🔥 Warming up cache...");
+        LOG.info("🔥 Warming up cache (2021-NOW)...");
         long startTimeLoad = Utils.sdfFile.parse(Configs.TIME_RUN).getTime();
         long endTimeLoad = System.currentTimeMillis();
         long current = startTimeLoad;
@@ -147,6 +160,6 @@ public class RunOptimizationAI {
             HPOSmartCache.getData(current);
             current += Utils.TIME_DAY;
         }
-        LOG.info("✅ Cache Ready.");
+        LOG.info("✅ Cache Ready. Start Optimization!");
     }
 }

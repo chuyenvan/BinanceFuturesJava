@@ -48,6 +48,7 @@ public class FundingFeeManager {
             } else {
                 if (new File(FILE_FUNDING_FEE).exists()) {
                     time2FundingFeeTrade = (ConcurrentHashMap<Long, Set<String>>) StorageSnappy.readObjectFromFile(FILE_FUNDING_FEE);
+                    LOG.info("Init funding fee time: {} times", time2FundingFeeTrade.size());
                 } else {
                     time2FundingFeeTrade = new ConcurrentHashMap<>();
                 }

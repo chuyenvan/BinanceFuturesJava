@@ -6,8 +6,11 @@ package com.binance.chuyennd.research;
 
 import ai.onnxruntime.OrtException;
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
+import com.binance.chuyennd.ai_ml.data.HPOSmartCache;
 import com.binance.chuyennd.ai_ml.features.export.dca.DcaFeatureExtractor;
+import com.binance.chuyennd.ai_ml.features.export.dca.DcaMarketFeatures;
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
+import com.binance.chuyennd.ai_ml.onnx.dca.DcaOnnxInferenceManager;
 import com.binance.chuyennd.ai_ml.onnx.dca.DcaPredictionResult;
 import com.binance.chuyennd.ai_ml.onnx.entry.AIRejectFilter;
 import com.binance.chuyennd.ai_ml.onnx.entry.RunGeneratePredictions;
@@ -53,7 +56,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     public TreeMap<Long, Double> time2BtcReverse;
     public Map<String, KlineObjectSimple> symbol2LastTicker = new HashMap<>();
 
-    public DcaFeatureExtractor extractor = new DcaFeatureExtractor();
+//    public DcaFeatureExtractor extractor = new DcaFeatureExtractor();
 //    public DcaOnnxInferenceManager dcaBrain;
 
     public ConcurrentHashMap<String, List<OrderTargetInfoTest>> symbol2OrdersEntry = new ConcurrentHashMap();
@@ -86,8 +89,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         while (true) {
             TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers;
             try {
-                time2Tickers = DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime);
-//                time2Tickers = HPOSmartCache.getData(startTime);
+//                time2Tickers = DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime);
+                time2Tickers = HPOSmartCache.getData(startTime);
 
                 if (time2Tickers == null) {
                     LOG.info("File data error or not found for time: {}", Utils.normalizeDateYYYYMMDDHHmm(startTime));
@@ -95,11 +98,11 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                 if (time2Tickers != null && time2Tickers.size() >= 1440) {
                     for (Map.Entry<Long, Map<String, KlineObjectSimple>> entry : time2Tickers.entrySet()) {
                         Long time = entry.getKey();
-                        extractor.updateMarketHistory(entry.getValue());
-                        if (time != lastBasketTimestamp) {
-                            cachedBasket = extractor.identifyTargetBasket(time);
-                            lastBasketTimestamp = time;
-                        }
+//                        extractor.updateMarketHistory(entry.getValue());
+//                        if (time != lastBasketTimestamp) {
+//                            cachedBasket = extractor.identifyTargetBasket(time);
+//                            lastBasketTimestamp = time;
+//                        }
 
                         Long startTimeRun = System.currentTimeMillis();
                         try {
@@ -593,9 +596,9 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             return;
         }
         // --- 3. TÍCH HỢP DCA AI ---
-        final Set<MarketLevelChange> dcaLevels = Set.of(MarketLevelChange.DCA_LEVEL1, MarketLevelChange.DCA_LEVEL2);
-        boolean isDcaOrder = dcaLevels.contains(levelChange);
-        DcaPredictionResult predictDca = null;
+//        final Set<MarketLevelChange> dcaLevels = Set.of(MarketLevelChange.DCA_LEVEL1, MarketLevelChange.DCA_LEVEL2);
+//        boolean isDcaOrder = dcaLevels.contains(levelChange);
+//        DcaPredictionResult predictDca = null;
 //        if (isDcaOrder && dcaBrain != null) {
 //            OrderTargetInfoTest orderRunning = symbol2OrderRunning.get(symbol);
 //            if (orderRunning == null) {
@@ -698,7 +701,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         if (marketData != null) {
             order.marketData = marketData;
         }
-        order.predict = predictDca;
+//        order.predict = predictDca;
         List<OrderTargetInfoTest> orders = symbol2OrdersEntry.get(symbol);
         if (orders == null) {
             orders = new ArrayList<>();
@@ -770,10 +773,10 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         this.time2BtcReverse = time2BtcReverse;
 
         this.predictionMap = predictionMap; // <--- GÁN DỮ LIỆU AI
-//        this.aiRejectFilter = aiRejectFilter;
-        this.aiRejectFilter = new AIRejectFilter();
+        this.aiRejectFilter = aiRejectFilter;
+//        this.aiRejectFilter = new AIRejectFilter();
 //        this.dcaBrain = new DcaOnnxInferenceManager(Configs.FILE_AI_DCA_PREDICTIONS);
-//        this.GLOBAL_CACHE_RATE_90M = globalCacheRate90m;
+
     }
 
 

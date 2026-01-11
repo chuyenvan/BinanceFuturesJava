@@ -4,7 +4,7 @@ import com.aerospike.client.Info;
 
 public class AerospikeCheckData {
     public static void main(String[] args) {
-        AerospikeClient client = new AerospikeClient("172.25.80.188", 3000);
+        AerospikeClient client = new AerospikeClient("172.25.80.187", 3000);
         try {
             String namespace = "educa";
 

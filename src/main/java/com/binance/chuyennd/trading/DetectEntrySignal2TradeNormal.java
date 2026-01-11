@@ -287,7 +287,7 @@ public class DetectEntrySignal2TradeNormal {
             Set<String> symbolCanTrade = new HashSet<>();
             if (MarketBigChangeDetector.isFundingFeeTrade(rateDown15MAvg, rateDownAvg, rateUpAvg, minRate15Min30M)) {
                 Set<String> symbolBuyFundingFee = new HashSet<>();
-                symbolBuyFundingFee.addAll(FundingFeeManagerProduction.getInstance().fundingBuy);
+                symbolBuyFundingFee.addAll(FundingFeeManagerProduction.getInstance().getFundingBuy());
                 symbolBuyFundingFee.removeAll(BudgetManager.getInstance().symbol2Pos.keySet());
                 for (String symbol : symbolBuyFundingFee) {
                     KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
@@ -437,8 +437,7 @@ public class DetectEntrySignal2TradeNormal {
             data.put("marketRate", marketRate);
             data.put("max15M", priceMax15M);
 //            data.put("symbol2Sell", symbol2Sell);
-            data.put("fundingBuy", FundingFeeManagerProduction.getInstance().fundingBuy);
-            data.put("fundingSell", FundingFeeManagerProduction.getInstance().fundingSell);
+            data.put("fundingBuy", FundingFeeManagerProduction.getInstance().getFundingBuy());
             String fileName = "storage/data/order/";
             fileName += Utils.normalizeDateYYYYMMDD(ticker.startTime.longValue());
             fileName += "/";

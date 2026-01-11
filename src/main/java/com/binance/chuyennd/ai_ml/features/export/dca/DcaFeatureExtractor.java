@@ -27,7 +27,6 @@ public class DcaFeatureExtractor {
                                              List<String> targetBasket) {
 
         KlineObjectSimple kline = currentSnapshot.get(order.symbol);
-        KlineObjectSimple btcKline = currentSnapshot.get("BTCUSDT");
 
         if (kline == null) return null;
 

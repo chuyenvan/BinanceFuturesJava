@@ -38,11 +38,38 @@ public class OnnxInferenceManager implements AutoCloseable {
 
         LOG.info("✅ All Single XGBoost Models loaded!");
     }
-
+    // Thay thế hàm này để trả về đúng 20 features
+    private float[] extractFeaturesToArrayNew(MarketFeatures f) {
+        // --- MAPPING ĐÚNG 20 FEATURES (KHÔNG CÓ BIẾN TƯƠNG TÁC) ---
+        // Thứ tự phải khớp 100% với danh sách trong file ai_v3_top20_features.py
+        return new float[] {
+                (float) f.dayOfWeek,             // 1
+                (float) f.momentum15M,           // 2
+                (float) f.momentumAcceleration,  // 3
+                (float) f.volatility1H,          // 4
+                (float) f.volatility24H,         // 5
+                (float) f.monthOfYear,           // 6
+                (float) f.basketVolSpike,        // 7
+                (float) f.momentum4H,            // 8
+                (float) f.volatility15M,         // 9
+                (float) f.volatilityTermStructure,// 10
+                (float) f.rsi14,                 // 11
+                (float) f.trendConsistency,      // 12
+                (float) f.hourOfDay,             // 13
+                (float) f.basketMomentum15M,     // 14
+                (float) f.basketMomentum1H,      // 15
+                (float) f.momentum24H,           // 16
+                (float) f.fundingRateRaw,        // 17
+                (float) f.basketRsi14,           // 18
+                (float) f.btcDominance,          // 19
+                (float) f.percentAboveMA20       // 20
+        };
+    }
     public PredictionResult predictAll(MarketFeatures f) {
         try {
             // Convert Features sang mảng float[] chuẩn
             float[] rawFeatures = extractFeaturesToArray(f);
+            float[] rawFeaturesNew = extractFeaturesToArrayNew(f);
 
             // Dự đoán
             float r15 = p15M.predict(rawFeatures);
