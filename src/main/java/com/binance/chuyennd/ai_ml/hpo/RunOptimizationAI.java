@@ -49,7 +49,7 @@ public class RunOptimizationAI {
         LOG.info("==============================================\n");
 
         try {
-            Configs.TIME_RUN = "20210101";
+            Configs.TIME_RUN = "20250101";
             loadAndWarmUpData();
         } catch (Exception e) {
             e.printStackTrace();
@@ -152,14 +152,14 @@ public class RunOptimizationAI {
         predictionMap = (TreeMap<Long, AiPredictionData>) StorageSnappy.readObjectFromFile(Configs.FILE_AI_ENTRY_PREDICTIONS);
         FundingFeeManager.getInstance();
 
-        LOG.info("🔥 Warming up cache (2021-NOW)...");
-        long startTimeLoad = Utils.sdfFile.parse(Configs.TIME_RUN).getTime();
-        long endTimeLoad = System.currentTimeMillis();
-        long current = startTimeLoad;
-        while (current < endTimeLoad) {
-            HPOSmartCache.getData(current);
-            current += Utils.TIME_DAY;
-        }
-        LOG.info("✅ Cache Ready. Start Optimization!");
+//        LOG.info("🔥 Warming up cache ({}-NOW)...", Configs.TIME_RUN);
+//        long startTimeLoad = Utils.sdfFile.parse(Configs.TIME_RUN).getTime();
+//        long endTimeLoad = System.currentTimeMillis();
+//        long current = startTimeLoad;
+//        while (current < endTimeLoad) {
+//            HPOSmartCache.getData(current);
+//            current += Utils.TIME_DAY;
+//        }
+//        LOG.info("✅ Cache Ready. Start Optimization!");
     }
 }

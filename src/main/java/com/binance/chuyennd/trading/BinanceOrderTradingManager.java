@@ -183,8 +183,8 @@ public class BinanceOrderTradingManager {
                     return;
                 }
                 BudgetManager.getInstance().symbol2Level.put(order.symbol, order.marketLevel);
-                BudgetManager.getInstance().symbol2Pos.put(order.symbol, PositionHelper.createPosNew(order.symbol, orderInfo.getPrice()
-                        , orderInfo.getExecutedQty()));
+                BudgetManager.getInstance().symbol2Pos.put(order.symbol, PositionHelper.createPosNew(order.symbol, new BigDecimal(order.priceEntry)
+                        , new BigDecimal(order.quantity)));
                 RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO, order.symbol, Utils.toJson(order));
                 String log = order.side + " " + order.symbol + " entry: " + order.priceEntry
                         + " quantity: " + order.quantity

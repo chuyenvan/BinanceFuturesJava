@@ -25,14 +25,15 @@ public class AIRejectFilter {
     // =========================================================================
 
     // --- CẤU HÌNH HIỆN TẠI (BEST FOUND SCORE 198K) ---
-    private double HARD_RISK_LIMIT = -0.05636;      // Chấp nhận MaxDD lên tới 5.6%
-    private double MIN_PRED_RETURN_1H = 0.01607;    // Lãi 1H > 1.6% là vào (Thấp hơn mức 2.1% cũ)
-    private double HIGH_RETURN_THRESHOLD = 0.08568; // Chỉ kèo siêu tưởng (>8.5%) mới được phá rào Risk
+    private double HARD_RISK_LIMIT = -0.04745;      // Chấp nhận MaxDD lên tới 5.6%
+    private double MIN_PRED_RETURN_1H = 0.02602;    // Lãi 1H > 1.6% là vào (Thấp hơn mức 2.1% cũ)
+    private double HIGH_RETURN_THRESHOLD = 0.05949; // Chỉ kèo siêu tưởng (>8.5%) mới được phá rào Risk
 
     // --- CẤU HÌNH BỔ SUNG ---
-    private double MIN_MOMENTUM_15M = 0.01358;      // 15M phải tăng cực mạnh > 1.35% (Key factor!)
-    private double MIN_TREND_4H = 0.00354;          // 4H chỉ cần xanh nhẹ > 0.35% là được
+    private double MIN_MOMENTUM_15M = 0.01750 ;      // 15M phải tăng cực mạnh > 1.35% (Key factor!)
+    private double MIN_TREND_4H = 0.01680;          // 4H chỉ cần xanh nhẹ > 0.35% là được
     private double DEAD_TREND_24H = -0.05;          // 24H sập quá 5% thì né (Giữ nguyên)
+
 
     public enum FilterDecision {PASS, REJECT}
 

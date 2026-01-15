@@ -42,7 +42,8 @@ public class BackTestEngineAI {
                     predictionMap, aiRejectFilter);
             test.simulatorWithInitEntry();
 
-            return calculateAdvancedFitness(test);
+//            return calculateAdvancedFitness(test);
+            return BudgetManagerSimple.getInstance().balanceCurrent;
 
         } catch (Exception e) {
             return -100000.0;

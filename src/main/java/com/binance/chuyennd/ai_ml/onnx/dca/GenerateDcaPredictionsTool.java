@@ -15,147 +15,198 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class GenerateDcaPredictionsTool {
     private static final Logger LOG = LoggerFactory.getLogger(GenerateDcaPredictionsTool.class);
 
-    // Đường dẫn lưu file cache (Theo yêu cầu của bạn)
+    // Đường dẫn lưu file cache
     public static final String PREDICT_STORAGE_DIR = "../storage/al_ml/dca_predictions_cache/";
 
     public static void main(String[] args) throws Exception {
-        // 1. Cấu hình thời gian chạy: Từ 2021-01-01 đến Hiện tại
-        String startTimeStr = "20210101";
-        long startTime = Utils.sdfFile.parse(startTimeStr).getTime();
-        long endTime = System.currentTimeMillis(); // Chạy đến hiện tại
+        // Cấu hình thời gian chạy: Từ 2021-01-01 đến Hiện tại
+        String startTimeStr = "2021-01-01 00:00:00";
 
-        new GenerateDcaPredictionsTool().generate(startTime, endTime);
+        // Parse thời gian (Đảm bảo Utils.sdfFile đã được khởi tạo đúng format yyyy-MM-dd HH:mm:ss)
+        long startTime = Utils.sdfFile.parse(startTimeStr).getTime();
+        long endTime = System.currentTimeMillis();
+
+        LOG.info("🔥 Starting Multi-Thread AI Generation...");
+        LOG.info("   -> Time Range: {} to {}", startTimeStr, Utils.normalizeDateYYYYMMDDHHmm(endTime));
+        LOG.info("   -> Storage: {}", PREDICT_STORAGE_DIR);
+
+        // Chạy hàm tạo dữ liệu
+        new GenerateDcaPredictionsTool().generateMultiThread(startTime, endTime);
     }
 
-    public void generate(long globalStartTime, long globalEndTime) throws Exception {
-        // Tạo thư mục lưu trữ nếu chưa có
+    public void generateMultiThread(long globalStartTime, long globalEndTime) throws Exception {
+        // Tạo thư mục nếu chưa có
         new File(PREDICT_STORAGE_DIR).mkdirs();
 
-        // Khởi tạo AI Brain (Load model ONNX)
-        // Lưu ý: Đảm bảo bạn đã dùng bản tối ưu (bỏ CatBoost) để tiết kiệm RAM
-        DcaOnnxInferenceManager dcaBrain = new DcaOnnxInferenceManager(Configs.FILE_AI_DCA_PREDICTIONS);
+        // 1. Khởi tạo AI Brain (Load model ONNX - Bản tối ưu bỏ CatBoost)
+        DcaOnnxInferenceManager dcaBrain = new DcaOnnxInferenceManager(Configs.FILE_AI_DCA_MODEL);
 
-        // Khởi tạo Extractor (Cần duy trì liên tục để tính chỉ báo kỹ thuật)
+        // 2. Khởi tạo Feature Extractor (Giữ state lịch sử nến)
         DcaFeatureExtractor extractor = new DcaFeatureExtractor();
 
-        long currentChunkStart = globalStartTime;
+        long currentYearStart = globalStartTime;
         long lastBasketTimestamp = -1;
         List<String> cachedBasket = new ArrayList<>();
 
-        LOG.info("🚀 START PRE-COMPUTING AI (2021 -> Now). Storage: {}", PREDICT_STORAGE_DIR);
-
-        // --- VÒNG LẶP CHUNK (MỖI 6 THÁNG) ---
-        while (currentChunkStart < globalEndTime) {
-            // Tính thời gian kết thúc của Chunk này (Start + 6 tháng)
+        // --- VÒNG LẶP THEO NĂM (YEARLY LOOP) ---
+        while (currentYearStart < globalEndTime) {
             Calendar cal = Calendar.getInstance();
-            cal.setTimeInMillis(currentChunkStart);
-            cal.add(Calendar.MONTH, 6);
-            long currentChunkEnd = Math.min(cal.getTimeInMillis(), globalEndTime);
+            cal.setTimeInMillis(currentYearStart);
+            int year = cal.get(Calendar.YEAR);
 
-            String chunkName = Utils.normalizeDateYYYYMMDD(currentChunkStart) + "_" + Utils.normalizeDateYYYYMMDD(currentChunkEnd);
-            LOG.info("🔄 Processing Chunk: {} -> {}", Utils.normalizeDateYYYYMMDD(currentChunkStart), Utils.normalizeDateYYYYMMDD(currentChunkEnd));
+            // Tính thời điểm kết thúc năm
+            cal.add(Calendar.YEAR, 1);
+            long currentYearEnd = Math.min(cal.getTimeInMillis(), globalEndTime);
 
-            // Map chứa dữ liệu của 6 tháng: <Time, <Symbol, Result>>
-            // Cảnh báo: Map này có thể rất lớn (vài GB)
-            TreeMap<Long, HashMap<String, DcaPredictionResult>> chunkPredictions = new TreeMap<>();
+            LOG.info("================================================================");
+            LOG.info("🔄 Processing YEAR: {} ({} -> {})", year, Utils.normalizeDateYYYYMMDD(currentYearStart), Utils.normalizeDateYYYYMMDD(currentYearEnd));
+            LOG.info("================================================================");
 
-            long currentTime = currentChunkStart;
+            // Structure lưu dữ liệu cả năm: Time -> (SymbolID -> [Risk, Reward, Pump, Dump])
+            // Dùng TreeMap để key (Time) luôn được sắp xếp
+            TreeMap<Long, HashMap<Short, float[]>> yearPredictions = new TreeMap<>();
 
-            // --- VÒNG LẶP THỜI GIAN (TỪNG PHÚT TRONG 6 THÁNG) ---
-            while (currentTime < currentChunkEnd) {
-                // Đọc data từ Aerospike (hoặc nguồn dữ liệu gốc của bạn)
+            // Map Symbol -> ID (Riêng biệt cho từng năm, Thread-safe)
+            final ConcurrentHashMap<String, Short> localSymbolMap = new ConcurrentHashMap<>();
+            AtomicInteger symbolCounter = new AtomicInteger(0);
+
+            long currentTime = currentYearStart;
+
+            // --- VÒNG LẶP THỜI GIAN (TUẦN TỰ) ---
+            while (currentTime < currentYearEnd) {
+                // 1. Đọc Data (I/O tuần tự)
                 TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers = DataManagerAerospikeFloatSim.readDataFromAerospike1M(currentTime);
 
-                for (Map.Entry<Long, Map<String, KlineObjectSimple>> entry : time2Tickers.entrySet()) {
-                    long time = entry.getKey();
-                    if (time >= currentChunkEnd) break;
+                if (time2Tickers == null || time2Tickers.isEmpty()) {
+                    currentTime += Utils.TIME_HOUR; // Nhảy cóc nếu không có data
+                    continue;
+                }
 
-                    Map<String, KlineObjectSimple> symbol2Ticker = entry.getValue();
+                // Duyệt qua từng phút trong block data vừa đọc
+                // Đổi tên biến entry -> timeEntry để tránh trùng tên trong lambda
+                for (Map.Entry<Long, Map<String, KlineObjectSimple>> timeEntry : time2Tickers.entrySet()) {
+                    long time = timeEntry.getKey();
+                    if (time >= currentYearEnd) break;
 
-                    // 1. Cập nhật lịch sử giá cho Extractor (Rất quan trọng để tính RSI, MA...)
+                    Map<String, KlineObjectSimple> symbol2Ticker = timeEntry.getValue();
+
+                    // 2. Update History & Basket (BẮT BUỘC CHẠY TUẦN TỰ TRÊN MAIN THREAD)
                     extractor.updateMarketHistory(symbol2Ticker);
 
-                    // 2. Cập nhật rổ coin (Basket) nếu cần
                     if (time != lastBasketTimestamp) {
                         cachedBasket = extractor.identifyTargetBasket(time);
                         lastBasketTimestamp = time;
                     }
+                    // Biến final để dùng an toàn trong lambda
+                    final List<String> currentBasket = cachedBasket;
 
-                    // 3. Dự báo cho từng Symbol
-                    HashMap<String, DcaPredictionResult> frameResult = new HashMap<>();
+                    // 3. XỬ LÝ SONG SONG (PARALLEL) TÍNH TOÁN AI
+                    // Map tạm chứa kết quả của 1 phút (ConcurrentHashMap để put song song không lỗi)
+                    ConcurrentHashMap<Short, float[]> frameResultConcurrent = new ConcurrentHashMap<>(symbol2Ticker.size());
 
-                    for (String symbol : symbol2Ticker.keySet()) {
-                        KlineObjectSimple ticker = symbol2Ticker.get(symbol);
-                        if (ticker == null) continue;
+                    // Sử dụng Parallel Stream để tận dụng hết các core CPU
+                    symbol2Ticker.entrySet().parallelStream().forEach(tickerEntry -> {
+                        String symbol = tickerEntry.getKey();
+                        KlineObjectSimple ticker = tickerEntry.getValue();
 
-                        // Tạo lệnh giả định (Dummy Order) tại giá Close hiện tại
-                        // Để AI trả lời câu hỏi: "Nếu mua ngay bây giờ thì sao?"
+                        if (ticker == null) return;
+
+                        // a. Lấy hoặc Tạo ID cho Symbol (Thread-safe)
+                        // Nếu symbol chưa có ID thì tạo mới bằng atomic counter
+                        short symId = localSymbolMap.computeIfAbsent(symbol, k -> (short) symbolCounter.incrementAndGet());
+
+                        // b. Tạo dummy order (Local Object - An toàn cho Thread)
                         OrderTargetInfoTest dummyOrder = new OrderTargetInfoTest(
                                 OrderTargetStatus.REQUEST, ticker.priceClose, null, 1.0,
                                 Configs.LEVERAGE_ORDER, symbol, time, time, OrderSide.BUY
                         );
                         dummyOrder.lastEntry = ticker.priceClose;
 
-                        List<String> basket = (cachedBasket != null && !cachedBasket.isEmpty()) ? cachedBasket : Collections.singletonList(symbol);
+                        try {
+                            // c. Trích xuất đặc trưng (Feature Extraction)
+                            // Lưu ý: Hàm extractFeatures phải được viết Stateless (không dùng biến global tạm)
+                            DcaMarketFeatures features = extractor.extractFeatures(
+                                    time, dummyOrder, null, symbol2Ticker, currentBasket
+                            );
 
-                        // Trích xuất 41 features
-                        DcaMarketFeatures features = extractor.extractFeatures(
-                                time, dummyOrder, null, symbol2Ticker, basket
-                        );
+                            if (features != null) {
+                                // d. Dự báo AI (Inference)
+                                DcaPredictionResult result = dcaBrain.predict(features);
 
-                        if (features != null) {
-                            DcaPredictionResult result = dcaBrain.predict(features);
-
-                            // OPTIONAL: Lọc bớt dữ liệu rác để giảm dung lượng file
-                            // Nếu kèo quá xấu (Dump cao hoặc Risk cao), có thể không cần lưu (đỡ tốn RAM/Disk)
-                            // Tuy nhiên để Backtest chính xác nhất thì nên lưu ALL.
-                            // Ở đây tôi lưu ALL.
-                            frameResult.put(symbol, result);
+                                // e. Lưu kết quả gọn nhẹ (float array)
+                                frameResultConcurrent.put(symId, new float[]{
+                                        result.predictedMaxDrawdown, // 0: Risk
+                                        result.predictedMaxRise,     // 1: Reward
+                                        result.probPump20Pct,        // 2: Pump Prob
+                                        result.probDump30Pct         // 3: Dump Prob
+                                });
+                            }
+                        } catch (Exception e) {
+                            // Log lỗi nhẹ để không spam console nếu lỗi hàng loạt
+                            // LOG.error("Error processing symbol {}: {}", symbol, e.getMessage());
                         }
-                    }
+                    });
 
-                    if (!frameResult.isEmpty()) {
-                        chunkPredictions.put(time, frameResult);
+                    // 4. Gom kết quả về Map chính của năm
+                    if (!frameResultConcurrent.isEmpty()) {
+                        // Convert về HashMap thường để tiết kiệm bộ nhớ hơn ConcurrentHashMap khi lưu lâu dài
+                        yearPredictions.put(time, new HashMap<>(frameResultConcurrent));
                     }
                 }
 
-                // Cập nhật thời gian chạy để đọc block tiếp theo
-                // (Giả sử time2Tickers trả về dữ liệu liên tục, lấy key cuối cùng + 1 phút)
+                // Tăng thời gian để đọc block tiếp theo
                 if (!time2Tickers.isEmpty()) {
                     currentTime = time2Tickers.lastKey() + Utils.TIME_MINUTE;
                 } else {
                     currentTime += Utils.TIME_MINUTE;
                 }
 
-                // Log tiến độ nhẹ
-                if (time2Tickers.size() > 0 && currentTime % (5 * Utils.TIME_DAY) == 0) {
-                    LOG.info("   ... reached {}", Utils.normalizeDateYYYYMMDDHHmm(currentTime));
+                // Log tiến độ mỗi 10 ngày
+                if (currentTime % (10 * Utils.TIME_DAY) == 0) {
+                    long ramUsed = (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / 1024 / 1024;
+                    LOG.info("   ... reached {} | Symbols Mapped: {} | RAM Used: {} MB",
+                            Utils.normalizeDateYYYYMMDDHHmm(currentTime),
+                            localSymbolMap.size(),
+                            ramUsed);
                 }
             }
 
-            // --- KẾT THÚC 6 THÁNG: LƯU FILE ---
-            if (!chunkPredictions.isEmpty()) {
-                String fileName = PREDICT_STORAGE_DIR + "dca_pred_" + chunkName + ".data";
-                LOG.info("💾 Saving Chunk to file: {} (Size: {} timestamps)", fileName, chunkPredictions.size());
+            // --- LƯU FILE KẾT THÚC NĂM ---
+            if (!yearPredictions.isEmpty()) {
+                // Convert ConcurrentMap -> Map thường để serialize
+                Map<String, Short> finalSymbolMap = new HashMap<>(localSymbolMap);
 
-                // Dùng Snappy để nén, giảm dung lượng đĩa
-                StorageSnappy.writeObject2File(fileName, chunkPredictions);
+                // Đóng gói cả Map và Data vào 1 Object duy nhất
+                DcaYearlyDataPackage dataPackage = new DcaYearlyDataPackage(finalSymbolMap, yearPredictions);
+
+                String fileName = PREDICT_STORAGE_DIR + "dca_pred_" + year + ".data";
+                LOG.info("💾 SAVING FILE: {} (Timestamps: {}, Symbols: {})", fileName, yearPredictions.size(), finalSymbolMap.size());
+
+                StorageSnappy.writeObject2File(fileName, dataPackage);
+            } else {
+                LOG.warn("⚠️ No data generated for year {}", year);
             }
 
             // --- DỌN DẸP RAM ---
-            chunkPredictions.clear();
-            chunkPredictions = null; // Help GC
-            System.gc(); // Gợi ý JVM dọn rác ngay lập tức trước khi sang chunk mới
+            yearPredictions.clear();
+            localSymbolMap.clear();
 
-            // Chuyển sang 6 tháng tiếp theo
-            currentChunkStart = currentChunkEnd;
+            // Gọi GC để giải phóng RAM triệt để trước khi sang năm mới (file mới)
+            System.gc();
+            LOG.info("🧹 Cleaned RAM. Moving to next year...");
+
+            // Chuyển sang năm tiếp theo
+            currentYearStart = currentYearEnd;
         }
 
+        // Đóng AI Session
         dcaBrain.close();
-        LOG.info("✅ DONE! All predictions generated.");
+        LOG.info("✅ DONE! All predictions generated successfully.");
     }
 }

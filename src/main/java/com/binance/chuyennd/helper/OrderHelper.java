@@ -92,7 +92,8 @@ public class OrderHelper {
 
 
     public static void main(String[] args) {
-        OrderHelper.newOrderMarket("LUNA2USDT", OrderSide.BUY, 40.0);
+        Order order = OrderHelper.newOrderMarket("LUNA2USDT", OrderSide.BUY, 62.0);
+        System.out.println(Utils.toJson(order));
 //        System.out.println(Utils.normalQuantity2Api(955.0));
 
 //        OrderHelper.stopLoss("LUNA2USDT",74.0, 0.141);

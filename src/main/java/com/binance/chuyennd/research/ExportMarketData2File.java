@@ -39,18 +39,15 @@ public class ExportMarketData2File {
     }
 
 
-    public void exportBtcTrendReverse() {
+    public void exportBtcTrendReverse(List<KlineObjectSimple> ticker1Ms) {
         TreeMap<Long, Double> timeBtcReverse;
-        List<KlineObjectSimple> ticker1Ms =
-                (List<KlineObjectSimple>) StorageSnappy.readObjectFromFile(Configs.FOLDER_TICKER_1M + Constants.SYMBOL_PAIR_BTC);
-        Long timeExport = ticker1Ms.get(0).startTime.longValue();
         if (!new File(Configs.FILE_ENTRY_BTC_REVERSE).exists()) {
             timeBtcReverse = new TreeMap<>();
         } else {
             timeBtcReverse = (TreeMap<Long, Double>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_BTC_REVERSE);
-            timeExport = timeBtcReverse.lastKey();
         }
-        LOG.info("Export btc trend reverse: {}", Utils.normalizeDateYYYYMMDDHHmm(timeExport));
+        Long timeExport = ticker1Ms.get(0).startTime.longValue();
+        LOG.info("Export btc trend reverse: {} {}", Utils.normalizeDateYYYYMMDDHHmm(timeExport), ticker1Ms.size());
         List<KlineObjectSimple> ticker2Check = new ArrayList<>();
         for (int i = 0; i < Configs.BTC_TREND_REVERSE_DURATION; i++) {
             ticker2Check.add(ticker1Ms.get(i));
@@ -92,7 +89,7 @@ public class ExportMarketData2File {
 
         LOG.info("Export market entry: {}", Utils.normalizeDateYYYYMMDDHHmm(timeExport));
         Map<String, List<KlineObjectSimple>> symbol2LastTickers = new HashMap<>();
-
+        List<KlineObjectSimple> btcTicker1Msg = new ArrayList<>();
         //get data - ĐÃ SỬA: đọc từ Aerospike thay vì file
         while (true) {
             TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers;
@@ -110,7 +107,10 @@ public class ExportMarketData2File {
                             Map<String, KlineObjectSimple> symbol2Ticker = entry.getValue();
                             Map<String, Double> symbol2MaxPrice = new HashMap<>();
                             Map<String, Double> symbol2MinPrice = new HashMap<>();
-
+                            KlineObjectSimple btcTicker = symbol2Ticker.get("BTCUSDT");
+                            if (btcTicker != null) {
+                                btcTicker1Msg.add(btcTicker);
+                            }
                             for (Map.Entry<String, KlineObjectSimple> entry1 : symbol2Ticker.entrySet()) {
                                 String symbol = entry1.getKey();
                                 if (Constants.diedSymbol.contains(symbol)) {
@@ -188,6 +188,7 @@ public class ExportMarketData2File {
         }
         StorageSnappy.writeObject2File(Configs.FILE_ENTRY_MARKET_LEVEL, time2MarketData);
         StorageSnappy.writeObject2File(Configs.FILE_MARKET_RATE_CHANGE, time2MarketRateChange);
+        exportBtcTrendReverse(btcTicker1Msg);
     }
 
 }

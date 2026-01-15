@@ -52,8 +52,6 @@ public class TickerManager {
                         updateFullTicker1M(Constants.SYMBOL_PAIR_BTC);
                         updateFullTicker1M(Constants.SYMBOL_PAIR_ETH);
                         startUpdateTicker1mSimple(); // ĐÃ SỬA: lưu vào Aerospike
-                        exporter.exportMarketEntries();
-                        exporter.exportBtcTrendReverse();
                     }
 
                     if (Utils.getCurrentHour() == 16) {

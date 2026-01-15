@@ -22,7 +22,7 @@ public class RunPredictionCompare {
     private static final Logger LOG = LoggerFactory.getLogger(RunPredictionCompare.class);
 
     // --- CẤU HÌNH ---
-    private static final String START_DATE_STR = "20260107";
+    private static final String START_DATE_STR = "20260111";
     private static final String MODEL_DIR = "../storage/ai_ml_data/ai_models_reg_v3";
     private static final String PROD_DIR = "storage/data/prediction/";
     private static final String TEST_DIR = "storage/predictiontest/";

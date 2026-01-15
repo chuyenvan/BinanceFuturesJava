@@ -108,15 +108,13 @@ public class Configs {
     public static String FILE_ENTRY_BTC_REVERSE = "../storage/btc/btcReverse-" + BTC_TREND_REVERSE_RATE_MIN + "-" + BTC_TREND_REVERSE_RATE_MAX + "-"
             + BTC_TREND_REVERSE_DURATION;
 
-    public static final String URL_PREMIUM_INDEX = "https://fapi.binance.com/fapi/v1/premiumIndex";
-
     // aerospike
     public static final String AEROSPIKE_HOST = Configs.getString("AEROSPIKE_HOST"); //"127.0.0.1";
     public static final int AEROSPIKE_PORT = Configs.getInt("AEROSPIKE_PORT");;
 
     public static final String AEROSPIKE_NAMESPACE = Configs.getString("AEROSPIKE_NAMESPACE"); //"ticker" ;
     public static final String FILE_AI_ENTRY_PREDICTIONS = Configs.getString("FILE_AI_PREDICTIONS"); //"ticker" ;
-    public static final String FILE_AI_DCA_PREDICTIONS = Configs.getString("FILE_AI_DCA_PREDICTIONS"); //"ticker" ;
+    public static final String FILE_AI_DCA_MODEL = Configs.getString("FILE_AI_DCA_PREDICTIONS"); //"ticker" ;
 //    public static final String FILE_AI_PREDICTIONS = "../storage/ai_ml/ai_predictions.data_v1";
 
     public static String getString(String configName) {

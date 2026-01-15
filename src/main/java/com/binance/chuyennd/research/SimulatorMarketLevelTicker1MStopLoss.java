@@ -6,12 +6,7 @@ package com.binance.chuyennd.research;
 
 import ai.onnxruntime.OrtException;
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
-import com.binance.chuyennd.ai_ml.data.HPOSmartCache;
-import com.binance.chuyennd.ai_ml.features.export.dca.DcaFeatureExtractor;
-import com.binance.chuyennd.ai_ml.features.export.dca.DcaMarketFeatures;
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
-import com.binance.chuyennd.ai_ml.onnx.dca.DcaOnnxInferenceManager;
-import com.binance.chuyennd.ai_ml.onnx.dca.DcaPredictionResult;
 import com.binance.chuyennd.ai_ml.onnx.entry.AIRejectFilter;
 import com.binance.chuyennd.ai_ml.onnx.entry.RunGeneratePredictions;
 import com.binance.chuyennd.bigchange.market.MarketDataObject;
@@ -89,8 +84,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         while (true) {
             TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers;
             try {
-//                time2Tickers = DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime);
-                time2Tickers = HPOSmartCache.getData(startTime);
+                time2Tickers = DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime);
+//                time2Tickers = HPOSmartCache.getData(startTime);
 
                 if (time2Tickers == null) {
                     LOG.info("File data error or not found for time: {}", Utils.normalizeDateYYYYMMDDHHmm(startTime));
@@ -429,13 +424,11 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         // clear Data Old
         BudgetManagerSimple.getInstance().resetInstance();
         allOrderDone = new TreeMap<>();
-
-        if (!new File(Configs.FILE_MARKET_RATE_CHANGE).exists()) {
+        File fileMarketData = new File(Configs.FILE_MARKET_RATE_CHANGE);
+        if (!fileMarketData.exists() || fileMarketData.lastModified() < System.currentTimeMillis() - Utils.TIME_DAY) {
             new ExportMarketData2File().exportMarketEntries();
         }
-        if (!new File(Configs.FILE_ENTRY_BTC_REVERSE).exists()) {
-            new ExportMarketData2File().exportBtcTrendReverse();
-        }
+
         if (!new File(Configs.FILE_AI_ENTRY_PREDICTIONS).exists()) {
             try {
                 new RunGeneratePredictions().generateAndSave();
@@ -478,9 +471,9 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
     private Double getMaxRateIn90MForTradingStop(Long time, String symbol, List<KlineObjectSimple> tickers) {
         AiPredictionData predict = predictionMap.get(time);
-        if (predict == null){
+        if (predict == null) {
             return 0d;
-        }else {
+        } else {
             return Double.valueOf(predict.predReturn15M);
         }
 
