@@ -38,6 +38,12 @@ public class Configs {
             System.exit(0);
         }
     }
+
+    public static Double FUNDING_RATE_MIN_TRADE = -0.01720;      // Param 1
+    public static Double FUNDING_RATE_MIN_TRADE_FULL = -0.03234;  // Param 2
+    public static Double FUNDING_RATE_UP_AVG = 0.00454;          // Param 3
+    public static Double FUNDING_RATE_DOWN_AVG = -0.00503;       // Param 4
+
     // 1. Ngưỡng margin-ratio đầu tiên để giảm budget
     public static double BUDGET_MARGIN_RATIO_1 = 0.4820;
     // 2. Mức chia budget ở ngưỡng 1
@@ -91,22 +97,12 @@ public class Configs {
     public static final Double RATE_FEE = Configs.getDouble("RATE_FEE");
     public static Integer LEVERAGE_ORDER = Configs.getInt("LEVERAGE_ORDER");
 
-    public static String FOLDER_TICKER_15M = Configs.getString("FOLDER_TICKER_15M");//"../ticker/storage/ticker/symbols-15m/";
-    public static String FOLDER_TICKER_1M = Configs.getString("FOLDER_TICKER_1M");//"../ticker/storage/ticker/symbols-15m/";
-
-    public static String FOLDER_TICKER_HOUR = Configs.getString("FOLDER_TICKER_1H");//"../ticker/storage/ticker/symbols-1h/";
-    public static String FOLDER_TICKER_4HOUR = Configs.getString("FOLDER_TICKER_4H");//"../ticker/storage/ticker/symbols-4h/";
-    public static String FOLDER_TICKER_1D = Configs.getString("FOLDER_TICKER_1D");//"../ticker/storage/ticker/symbols-1D/";
-    public static Integer BTC_TREND_REVERSE_DURATION = Configs.getInt("BTC_TREND_REVERSE_DURATION");
+     public static Integer BTC_TREND_REVERSE_DURATION = Configs.getInt("BTC_TREND_REVERSE_DURATION");
     public static Double BTC_TREND_REVERSE_RATE_MAX = Configs.getDouble("BTC_TREND_REVERSE_RATE_MAX");
-    public static Double BTC_TREND_REVERSE_RATE_MIN = Configs.getDouble("BTC_TREND_REVERSE_RATE_MIN");
     public static Double BTC_TREND_REVERSE_RATE_MIN_TRADE = Configs.getDouble("BTC_TREND_REVERSE_RATE_MIN_TRADE");
 
-    public static String FILE_ENTRY_MARKET_LEVEL = "../storage/market_data/time2market.data";
-    public static String FILE_MARKET_RATE_CHANGE = "../storage/market_data/marketRateChange.data";
+    public static String FILE_ENTRY_MARKET_LEVEL = "../storage/market_data_one_file/time2market.data";
 
-    public static String FILE_ENTRY_BTC_REVERSE = "../storage/btc/btcReverse-" + BTC_TREND_REVERSE_RATE_MIN + "-" + BTC_TREND_REVERSE_RATE_MAX + "-"
-            + BTC_TREND_REVERSE_DURATION;
 
     // aerospike
     public static final String AEROSPIKE_HOST = Configs.getString("AEROSPIKE_HOST"); //"127.0.0.1";
@@ -115,7 +111,6 @@ public class Configs {
     public static final String AEROSPIKE_NAMESPACE = Configs.getString("AEROSPIKE_NAMESPACE"); //"ticker" ;
     public static final String FILE_AI_ENTRY_PREDICTIONS = Configs.getString("FILE_AI_PREDICTIONS"); //"ticker" ;
     public static final String FILE_AI_DCA_MODEL = Configs.getString("FILE_AI_DCA_PREDICTIONS"); //"ticker" ;
-//    public static final String FILE_AI_PREDICTIONS = "../storage/ai_ml/ai_predictions.data_v1";
 
     public static String getString(String configName) {
         return (String) properties.get(configName);

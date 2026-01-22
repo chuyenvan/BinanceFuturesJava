@@ -4,7 +4,7 @@
  */
 package com.binance.chuyennd.trading;
 
-import com.binance.chuyennd.bigchange.market.MarketLevelChange;
+import com.binance.chuyennd.object.MarketLevelChange;
 import com.binance.chuyennd.client.BinanceFuturesClientSingleton;
 import com.binance.chuyennd.client.ClientSingleton;
 import com.binance.chuyennd.helper.PositionHelper;

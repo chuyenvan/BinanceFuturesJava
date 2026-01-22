@@ -1,7 +1,8 @@
 package com.binance.chuyennd.tradecore;
 
-import com.binance.chuyennd.bigchange.market.MarketDataObject;
-import com.binance.chuyennd.bigchange.market.MarketLevelChange;
+import com.binance.chuyennd.ai_ml.data.SimpleSymbolMapper;
+import com.binance.chuyennd.object.MarketDataObject;
+import com.binance.chuyennd.object.MarketLevelChange;
 import com.binance.chuyennd.helper.TickerFuturesHelper;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.utils.Configs;
@@ -85,19 +86,24 @@ public class MarketBigChangeDetector {
 
     public static MarketDataObject calMarketData(Map<String, KlineObjectSimple> symbol2Ticker, Map<String, Double> symbol2PriceMax,
                                                  Map<String, Double> symbol2MinPrice) {
-        TreeMap<Double, String> rateDown2Symbols = new TreeMap<>();
-        TreeMap<Double, String> rateMin2Symbols = new TreeMap<>();
-        TreeMap<Double, String> rateMax2Symbols = new TreeMap<>();
-        TreeMap<Double, String> rateUp2Symbols = new TreeMap<>();
+        TreeMap<Float, String> rateDown2Symbols = new TreeMap<>();
+        TreeMap<Float, String> rateMin2Symbols = new TreeMap<>();
+        TreeMap<Float, String> rateMax2Symbols = new TreeMap<>();
+        TreeMap<Float, String> rateUp2Symbols = new TreeMap<>();
         KlineObjectSimple btcTicker = symbol2Ticker.get(Constants.SYMBOL_PAIR_BTC);
-        Double rateChangeBtc = Utils.rateOf2Double(btcTicker.priceClose, btcTicker.priceOpen);
+        Double rateChangeBtc;
+        if (btcTicker == null){
+            rateChangeBtc = 0d;
+        }else{
+            rateChangeBtc = Utils.rateOf2Double(btcTicker.priceClose, btcTicker.priceOpen);
+        }
         for (Map.Entry<String, KlineObjectSimple> entry1 : symbol2Ticker.entrySet()) {
             String symbol = entry1.getKey();
             if (Constants.diedSymbol.contains(symbol)) {
                 continue;
             }
             KlineObjectSimple ticker = entry1.getValue();
-            Double rateChange = Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen);
+            Float rateChange = Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen).floatValue();
             // pass symbol big dump(delist/waring/monitor...)
             if (rateChangeBtc > -0.004 && rateChange < -0.15) {
                 continue;
@@ -109,28 +115,24 @@ public class MarketBigChangeDetector {
             rateUp2Symbols.put(-rateChange, symbol);
             Double maxPrice = symbol2PriceMax.get(symbol);
             if (maxPrice != null) {
-                rateMax2Symbols.put(Utils.rateOf2Double(ticker.priceClose, maxPrice), symbol);
+                rateMax2Symbols.put(Utils.rateOf2Double(ticker.priceClose, maxPrice).floatValue(), symbol);
             }
             Double minPrice = symbol2MinPrice.get(symbol);
             if (minPrice != null) {
-                rateMin2Symbols.put(-Utils.rateOf2Double(ticker.priceClose, minPrice), symbol);
+                rateMin2Symbols.put(-Utils.rateOf2Double(ticker.priceClose, minPrice).floatValue(), symbol);
             }
         }
-        Double btcRateChange = Utils.rateOf2Double(btcTicker.priceClose, btcTicker.priceOpen);
-        Double rateChangeDownAvg = MarketBigChangeDetector.calRateChangeAvg(rateDown2Symbols, 100);
-        Double rateChangeUpAvg = -MarketBigChangeDetector.calRateChangeAvg(rateUp2Symbols, 100);
-        Double rateChangeDown15MAvg = MarketBigChangeDetector.calRateChangeAvg(rateMax2Symbols, 100);
+        Float rateChangeDownAvg = MarketBigChangeDetector.calRateChangeAvg(rateDown2Symbols, 100);
+        Float rateChangeUpAvg = -MarketBigChangeDetector.calRateChangeAvg(rateUp2Symbols, 100);
+        Float rateChangeDown15MAvg = MarketBigChangeDetector.calRateChangeAvg(rateMax2Symbols, 100);
 
 //        List<String> symbolsTopDown = MarketBigChangeDetectorTest.getTopSymbolSimple(rateDown2Symbols,
 //                Configs.NUMBER_ENTRY_EACH_SIGNAL, null);
-        MarketDataObject result = new MarketDataObject(rateChangeDownAvg, rateChangeUpAvg, btcRateChange,
-                null, null);
-        result.rate2Max = rateMax2Symbols;
-        result.rate2Min = rateMin2Symbols;
-        result.rateDown15MAvg = rateChangeDown15MAvg;
-        result.rateBtcUp15M = Utils.rateOf2Double(btcTicker.priceClose, symbol2MinPrice.get(Constants.SYMBOL_PAIR_BTC));
-        result.rateBtcDown15M = Utils.rateOf2Double(btcTicker.priceClose, symbol2PriceMax.get(Constants.SYMBOL_PAIR_BTC));
-        result.symbol2PriceMax15M = symbol2PriceMax;
+        MarketDataObject result = new MarketDataObject(rateChangeDownAvg, rateChangeUpAvg, rateChangeBtc.floatValue());
+        result.rate2Max = SimpleSymbolMapper.getInstance().convertSymbolList(rateMax2Symbols);
+        result.rateDown15MAvg = rateChangeDown15MAvg.floatValue();
+
+
         return result;
     }
 
@@ -183,10 +185,10 @@ public class MarketBigChangeDetector {
     }
 
 
-    public static Set<String> getTopSymbol(TreeMap<Double, String> rateLoss2Symbols, int period, Map<String,
+    public static Set<String> getTopSymbol(TreeMap<Float, String> rateLoss2Symbols, int period, Map<String,
             KlineObjectSimple> symbol2FinalTicker, Set<String> symbolLocked) {
         Set<String> symbols = new HashSet<>();
-        for (Map.Entry<Double, String> entry : rateLoss2Symbols.entrySet()) {
+        for (Map.Entry<Float, String> entry : rateLoss2Symbols.entrySet()) {
             String symbol = entry.getValue();
             if (symbolLocked != null && symbolLocked.contains(symbol)) {
 //                LOG.info("Not trade {} because symbol locking: {}",
@@ -205,14 +207,14 @@ public class MarketBigChangeDetector {
     }
 
 
-    public static Double calRateChangeAvg(TreeMap<Double, String> rateLoss2Symbols, Integer period) {
-        Double total = 0d;
+    public static Float calRateChangeAvg(TreeMap<Float, String> rateLoss2Symbols, Integer period) {
+        Float total = 0f;
         int counter = 0;
         if (period > rateLoss2Symbols.size() * 4 / 5) {
             period = rateLoss2Symbols.size() * 4 / 5;
         }
-        for (Map.Entry<Double, String> entry : rateLoss2Symbols.entrySet()) {
-            Double key = entry.getKey();
+        for (Map.Entry<Float, String> entry : rateLoss2Symbols.entrySet()) {
+            Float key = entry.getKey();
             counter++;
             total += key;
             if (period != null && counter >= period) {
@@ -220,13 +222,13 @@ public class MarketBigChangeDetector {
             }
         }
         if (rateLoss2Symbols.isEmpty()) {
-            return 0d;
+            return 0f;
         }
         return total / counter;
     }
 
-    public static MarketLevelChange getMarketStatus1M(Double rateDownAvg, Double rateUpAvg,
-                                                      Double btcRateChange, Double rateDown15MAvg) {
+    public static MarketLevelChange getMarketStatus1M(Float rateDownAvg, Float rateUpAvg,
+                                                      Float btcRateChange, Float rateDown15MAvg) {
         if (rateUpAvg > 0.025) {
             return MarketLevelChange.BIG_UP;
         }
@@ -285,14 +287,18 @@ public class MarketBigChangeDetector {
         return maxRateChangeIn60M;
     }
 
-    public static boolean isFundingFeeTrade(Double rateDown15MAvg, Double rateDownAvg, Double rateUpAvg,
-                                            Double minRate15Min60M) {
-        Double rateMin2Trade = -0.025;
-        Double rateMin2TradeFull = -0.03;
-        return (rateDown15MAvg < rateMin2Trade && rateDown15MAvg <= minRate15Min60M)
-                || rateDown15MAvg < rateMin2TradeFull
-                || rateUpAvg > 0.005
-                || rateDownAvg < -0.005;
+    public static boolean isFundingFeeTrade(Float rateDown15MAvg, Float rateDownAvg, Float rateUpAvg,
+                                            Float minRate15Min60M) {
+//        Double rateMin2Trade = -0.025;
+//        Double rateMin2TradeFull = -0.03;
+//        return (rateDown15MAvg < rateMin2Trade && rateDown15MAvg <= minRate15Min60M)
+//                || rateDown15MAvg < rateMin2TradeFull
+//                || rateUpAvg > 0.005
+//                || rateDownAvg < -0.005;
+        return (rateDown15MAvg < Configs.FUNDING_RATE_MIN_TRADE && rateDown15MAvg <= minRate15Min60M)
+                || rateDown15MAvg < Configs.FUNDING_RATE_MIN_TRADE_FULL
+                || rateUpAvg > Configs.FUNDING_RATE_UP_AVG
+                || rateDownAvg < Configs.FUNDING_RATE_DOWN_AVG;
     }
 
     public static boolean isDcaWithBtcReverse(Double rateLoss, Double budget, Double marginOfSym, Double priceClose,
@@ -325,9 +331,9 @@ public class MarketBigChangeDetector {
         return rateTicker < -0.007 || rateMax15M < -0.04;
     }
 
-    public static boolean isDcaAlt(Double rateDown15MAvg,
-                                   Double rateDownAvg,
-                                   Double rateUpAvg) {
+    public static boolean isDcaAlt(Float rateDown15MAvg,
+                                   Float rateDownAvg,
+                                   Float rateUpAvg) {
         return rateDown15MAvg < -0.035
                 || rateUpAvg > 0.012
                 || rateDownAvg < -0.012;

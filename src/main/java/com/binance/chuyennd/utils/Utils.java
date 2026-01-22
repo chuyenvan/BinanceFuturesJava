@@ -10,11 +10,9 @@ import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.client.model.enums.OrderSide;
 import com.binance.client.model.trade.PositionRisk;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import org.apache.commons.io.FileUtils;
-import org.bson.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,8 +23,6 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.*;
 
 /**
@@ -41,7 +37,6 @@ public class Utils {
     public static final long TIME_DAY = 24 * TIME_HOUR;
     public static final long TIME_WEEK = 7 * TIME_DAY;
     public static Gson gson = new GsonBuilder().serializeNulls().create();
-    public static ObjectMapper mapper = new ObjectMapper();
 
     public static final SimpleDateFormat sdfFile = new SimpleDateFormat("yyyyMMdd");
     public static final SimpleDateFormat sdfMonth = new SimpleDateFormat("yyyyMM");
@@ -471,6 +466,14 @@ public class Utils {
 
 
     public static String formatDouble(Double volume, Integer number) {
+        String format = "###.";
+        for (int i = 0; i < number; i++) {
+            format += "#";
+        }
+        DecimalFormat formatter = new DecimalFormat(format);
+        return formatter.format(volume);
+    }
+    public static String formatDouble(Float volume, Integer number) {
         String format = "###.";
         for (int i = 0; i < number; i++) {
             format += "#";

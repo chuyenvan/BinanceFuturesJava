@@ -1,6 +1,6 @@
 package com.binance.chuyennd.bigchange.test;
 
-import com.binance.chuyennd.bigchange.market.MarketLevelChange;
+import com.binance.chuyennd.object.MarketLevelChange;
 import com.binance.chuyennd.research.BalanceIndex;
 import com.binance.chuyennd.research.BudgetManagerSimple;
 import com.binance.chuyennd.research.OrderTargetInfoTest;

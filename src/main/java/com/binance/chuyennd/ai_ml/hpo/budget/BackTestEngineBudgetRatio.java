@@ -1,7 +1,8 @@
-package com.binance.chuyennd.ai_ml;
+package com.binance.chuyennd.ai_ml.hpo.budget;
 
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
-import com.binance.chuyennd.bigchange.market.MarketDataObject;
+import com.binance.chuyennd.ai_ml.onnx.entry.AIRejectFilter;
+import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.research.BudgetManagerSimple;
 import com.binance.chuyennd.research.SimulatorMarketLevelTicker1MStopLoss;
@@ -9,9 +10,7 @@ import com.binance.chuyennd.utils.Configs;
 
 import java.io.IOException;
 import java.text.ParseException;
-import java.util.Map;
 import java.util.TreeMap;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class BackTestEngineBudgetRatio {
 
@@ -33,8 +32,6 @@ public class BackTestEngineBudgetRatio {
     }
 
     public double run(TreeMap<Long, MarketDataObject> time2MarketData,
-                      TreeMap<Long, MarketRateChange> time2MarketRateChange,
-                      TreeMap<Long, Double> time2BtcReverse,
                       TreeMap<Long, AiPredictionData> predictionMap) {
         try {
             // 1. Reset Singleton về trạng thái ban đầu
@@ -48,8 +45,7 @@ public class BackTestEngineBudgetRatio {
             //    (Lưu ý: test.initData() có thể làm chậm quá trình.
             //     Nếu có thể, hãy tối ưu để chỉ chạy 1 lần)
 //            test.initData();
-            test.initDataReady(time2MarketData, time2MarketRateChange, time2BtcReverse,
-                    predictionMap, null);
+            test.initDataReady(time2MarketData, predictionMap, new AIRejectFilter());
             test.simulatorWithInitEntry();
 
         } catch (Exception e) {

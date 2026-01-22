@@ -3,12 +3,12 @@ package com.binance.chuyennd.object;
 import java.io.Serializable;
 
 public class MarketRateChange implements Serializable {
-    public Double rateDownAvg;
-    public Double rateDown15MAvg;
-    public Double rateUpAvg;
+    public Float rateDownAvg;
+    public Float rateDown15MAvg;
+    public Float rateUpAvg;
 
 
-    public MarketRateChange(Double rateDownAvg, Double rateDown15MAvg, Double rateUpAvg) {
+    public MarketRateChange(Float rateDownAvg, Float rateDown15MAvg, Float rateUpAvg) {
         this.rateDownAvg = rateDownAvg;
         this.rateDown15MAvg = rateDown15MAvg;
         this.rateUpAvg = rateUpAvg;

@@ -1,7 +1,7 @@
-package com.binance.chuyennd.ai_ml;
+package com.binance.chuyennd.ai_ml.hpo.budget;
 
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
-import com.binance.chuyennd.bigchange.market.MarketDataObject;
+import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.research.FundingFeeManager;
 import com.binance.chuyennd.utils.Configs;
@@ -14,7 +14,6 @@ import io.jenetics.engine.EvolutionResult;
 import io.jenetics.util.DoubleRange;
 
 import java.time.Duration;
-import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
@@ -36,8 +35,6 @@ public class RunOptimizationBudgetRatio {
     private static final AtomicLong testCounter = new AtomicLong(0);
 
     public static TreeMap<Long, MarketDataObject> time2MarketData;
-    public static TreeMap<Long, MarketRateChange> time2MarketRateChange;
-    public static TreeMap<Long, Double> time2BtcReverse;
     public static TreeMap<Long, AiPredictionData> predictionMap;
     public static final String FILE_FUNDING_FEE = "storage/fundingfee_time.data";
     public static ConcurrentHashMap<Long, Set<String>> CACHED_time2FundingFeeTrade;
@@ -74,7 +71,7 @@ public class RunOptimizationBudgetRatio {
             );
 
             // 3. Chay backtest
-            finalBalance = engine.run(time2MarketData, time2MarketRateChange, time2BtcReverse, predictionMap);
+            finalBalance = engine.run(time2MarketData, predictionMap);
 
             // In log *sau khi* chay (DA THEM TONG SO)
             System.out.printf(
@@ -104,9 +101,7 @@ public class RunOptimizationBudgetRatio {
         System.out.println("Dang tai du lieu vao bo nho (1 lan duy nhat)...");
         try {
             CACHED_time2FundingFeeTrade = (ConcurrentHashMap<Long, Set<String>>) StorageSnappy.readObjectFromFile(FILE_FUNDING_FEE);
-            time2MarketRateChange = (TreeMap<Long, MarketRateChange>) StorageSnappy.readObjectFromFile(Configs.FILE_MARKET_RATE_CHANGE);
             time2MarketData = (TreeMap<Long, MarketDataObject>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
-            time2BtcReverse = (TreeMap<Long, Double>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_BTC_REVERSE);
             predictionMap = (TreeMap<Long, AiPredictionData>) StorageSnappy.readObjectFromFile(Configs.FILE_AI_ENTRY_PREDICTIONS);
             FundingFeeManager.getInstance();
             // (Ban them file trend o day neu can)

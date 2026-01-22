@@ -1,6 +1,6 @@
 package com.binance.chuyennd.tradecore;
 
-import com.binance.chuyennd.bigchange.market.MarketLevelChange;
+import com.binance.chuyennd.object.MarketLevelChange;
 import com.binance.chuyennd.helper.PositionHelper;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
 import com.binance.chuyennd.trading.BudgetManager;

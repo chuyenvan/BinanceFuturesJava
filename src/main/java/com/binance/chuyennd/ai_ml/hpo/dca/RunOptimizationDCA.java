@@ -1,20 +1,27 @@
-package com.binance.chuyennd.ai_ml;
+package com.binance.chuyennd.ai_ml.hpo.dca;
 
+import com.binance.chuyennd.object.MarketDataObject;
+import com.binance.chuyennd.object.MarketRateChange;
+import com.binance.chuyennd.research.FundingFeeManager;
+import com.binance.chuyennd.utils.Configs;
+import com.binance.chuyennd.utils.StorageSnappy;
 import io.jenetics.DoubleChromosome;
 import io.jenetics.DoubleGene;
 import io.jenetics.Genotype;
 import io.jenetics.engine.Engine;
 import io.jenetics.engine.EvolutionResult;
 import io.jenetics.util.DoubleRange;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.time.Duration;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicLong;
 
-public class TestParams {
-    public static final Logger log = LoggerFactory.getLogger(TestParams.class);
+public class RunOptimizationDCA {
+
     // === DINH NGHIA CAU HINH CHAY ===
     private static final int POPULATION_SIZE = 20;
     private static final int GENERATIONS = 10;
@@ -23,6 +30,9 @@ public class TestParams {
     private static final AtomicLong testCounter = new AtomicLong(0);
 
     // === CACHE DU LIEU ===
+
+    public static TreeMap<Long, MarketDataObject> CACHED_time2MarketData;
+    public static ConcurrentHashMap<Long, Set<String>> CACHED_time2FundingFeeTrade;
 
 
     /**
@@ -49,9 +59,6 @@ public class TestParams {
                 "\n--- Bat dau Test #%d / %d ---%n",
                 currentTestNumber, TOTAL_TRIALS
         );
-        if (currentTestNumber == 25) {
-            System.out.println("Genotype: " + genotype);
-        }
 
         try {
             // 2. Khoi tao BacktestEngine
@@ -87,11 +94,18 @@ public class TestParams {
         // (Giu nguyen code tai cache cua ban)
         try {
             System.out.println("Dang tai du lieu vao bo nho (1 lan duy nhat)...");
+            CACHED_time2MarketData = (TreeMap<Long, MarketDataObject>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
 
+
+            if (new File(FundingFeeManager.FILE_FUNDING_FEE).exists()) {
+                CACHED_time2FundingFeeTrade = (ConcurrentHashMap<Long, Set<String>>) StorageSnappy.readObjectFromFile(FundingFeeManager.FILE_FUNDING_FEE);
+            } else {
+                CACHED_time2FundingFeeTrade = new ConcurrentHashMap<>();
+            }
             // ... (tai 2 file funding con lai) ...
 
             // Goi de tai symbol2FundingFee vao bo nho
-//            FundingFeeManager.getInstance();
+            FundingFeeManager.getInstance();
             System.out.println("Tai du lieu thanh cong. Bat dau toi uu hoa...");
         } catch (Exception e) {
             e.printStackTrace();
@@ -130,7 +144,7 @@ public class TestParams {
 
         // 2. CAU HINH "ENGINE" (BUOC CHAY 1 LUONG)
         Engine<DoubleGene, Double> engine = Engine
-                .builder(TestParams::evaluate, genotypeFactory)
+                .builder(RunOptimizationDCA::evaluate, genotypeFactory)
                 .populationSize(POPULATION_SIZE)
                 .maximizing()
                 // Buoc chay 1 luong de tranh loi ghi de Configs

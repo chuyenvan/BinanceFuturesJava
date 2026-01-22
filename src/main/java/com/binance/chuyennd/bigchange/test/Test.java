@@ -15,9 +15,9 @@
  */
 package com.binance.chuyennd.bigchange.test;
 
-import com.aerospike.client.AerospikeClient;
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
-import com.binance.chuyennd.bigchange.market.MarketLevelChange;
+import com.binance.chuyennd.object.MarketDataObject;
+import com.binance.chuyennd.object.MarketLevelChange;
 import com.binance.chuyennd.client.ClientSingleton;
 import com.binance.chuyennd.helper.TickerFuturesHelper;
 import com.binance.chuyennd.object.KlineObjectNumber;
@@ -59,7 +59,11 @@ public class Test {
     public static void main(String[] args) throws Exception {
 //        testProduction();
 //        testAIDATA();
-
+        TreeMap<Long, MarketDataObject> time2MarketData = (TreeMap<Long, MarketDataObject>)
+                StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
+        LOG.info("{} {} {}", time2MarketData.size(),
+                Utils.normalizeDateYYYYMMDDHHmm(time2MarketData.firstKey()) + " -> " +
+                        Utils.normalizeDateYYYYMMDDHHmm(time2MarketData.lastKey()));
 //        checkRateProduction();
 //        changeLeverage();
 //        deleteAllSLAtRedis();
@@ -80,12 +84,7 @@ public class Test {
 //        TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers = DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime);
 //        LOG.info("time2Tickers size: {}", time2Tickers.size());
 
-        UMWebsocketClientImpl client = new UMWebsocketClientImpl();
 
-        // speed = 3: Cập nhật mỗi 3 giây
-        client.allMarkPriceStream(3, (event) -> {
-            LOG.info("Received mark price event: {}", Utils.toJson(event));
-        });
 
 //        LOG.info("First key: {} time:{} size: {}",time2Tickers.firstKey(), Utils.normalizeDateYYYYMMDDHHmm(time2Tickers.firstKey()),
 //                time2Tickers.firstEntry().getValue().size());

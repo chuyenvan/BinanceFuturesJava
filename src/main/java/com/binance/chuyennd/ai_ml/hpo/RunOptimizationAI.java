@@ -1,13 +1,11 @@
 package com.binance.chuyennd.ai_ml.hpo;
 
-import com.binance.chuyennd.ai_ml.data.HPOSmartCache;
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
-import com.binance.chuyennd.bigchange.market.MarketDataObject;
+import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.research.FundingFeeManager;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.StorageSnappy;
-import com.binance.chuyennd.utils.Utils;
 import io.jenetics.*;
 import io.jenetics.engine.Engine;
 import io.jenetics.engine.EvolutionResult;
@@ -27,8 +25,7 @@ public class RunOptimizationAI {
 
     // --- GLOBAL DATA STORE ---
     public static TreeMap<Long, MarketDataObject> time2MarketData;
-    public static TreeMap<Long, MarketRateChange> time2MarketRateChange;
-    public static TreeMap<Long, Double> time2BtcReverse;
+
     public static TreeMap<Long, AiPredictionData> predictionMap;
     public static ConcurrentHashMap<Long, Set<String>> CACHED_time2FundingFeeTrade;
 
@@ -118,7 +115,7 @@ public class RunOptimizationAI {
                     pRisk, pRet1H, pHighRet, pMom15M, pTrend4H, -0.99
             );
 
-            Double score = engine.run(time2MarketData, time2MarketRateChange, time2BtcReverse, predictionMap);
+            Double score = engine.run(time2MarketData, predictionMap);
 
             long duration = (System.currentTimeMillis() - start) / 1000;
 
@@ -146,9 +143,7 @@ public class RunOptimizationAI {
     private static void loadAndWarmUpData() throws Exception {
         LOG.info("Loading Data...");
         CACHED_time2FundingFeeTrade = (ConcurrentHashMap<Long, Set<String>>) StorageSnappy.readObjectFromFile(FundingFeeManager.FILE_FUNDING_FEE);
-        time2MarketRateChange = (TreeMap<Long, MarketRateChange>) StorageSnappy.readObjectFromFile(Configs.FILE_MARKET_RATE_CHANGE);
         time2MarketData = (TreeMap<Long, MarketDataObject>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
-        time2BtcReverse = (TreeMap<Long, Double>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_BTC_REVERSE);
         predictionMap = (TreeMap<Long, AiPredictionData>) StorageSnappy.readObjectFromFile(Configs.FILE_AI_ENTRY_PREDICTIONS);
         FundingFeeManager.getInstance();
 

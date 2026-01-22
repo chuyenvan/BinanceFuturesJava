@@ -1,0 +1,34 @@
+package com.binance.chuyennd.object;
+
+import java.io.Serializable;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+
+public class MarketDataObject implements Serializable {
+    public Float rateDownAvg;
+    public Float rateDown15MAvg;
+    public Float rateUpAvg;
+    public Float rateBtc;
+    // Trường mới thêm theo yêu cầu
+    public Double btcReversion;
+    public TreeMap<Float, Short> rate2Max;
+
+
+    public MarketDataObject(Float rateDownAvg, Float rateUpAvg, Float rateBtc) {
+        this.rateDownAvg = rateDownAvg;
+        this.rateUpAvg = rateUpAvg;
+        this.rateBtc = rateBtc;
+
+    }
+    // Constructor đầy đủ để merge dữ liệu
+    public MarketDataObject(Float rateDownAvg, Float rateDown15MAvg, Float rateUpAvg,
+                            Float rateBtc, Double btcReversion, TreeMap<Float, Short> rate2Max) {
+        this.rateDownAvg = rateDownAvg;
+        this.rateDown15MAvg = rateDown15MAvg;
+        this.rateUpAvg = rateUpAvg;
+        this.rateBtc = rateBtc;
+        this.btcReversion = btcReversion;
+        this.rate2Max = rate2Max;
+    }
+}

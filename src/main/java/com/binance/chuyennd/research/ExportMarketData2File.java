@@ -5,8 +5,8 @@
 package com.binance.chuyennd.research;
 
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
-import com.binance.chuyennd.bigchange.market.MarketDataObject;
-import com.binance.chuyennd.bigchange.market.MarketLevelChange;
+import com.binance.chuyennd.object.MarketDataObject;
+import com.binance.chuyennd.object.MarketLevelChange;
 import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.tradecore.MarketBigChangeDetector;
@@ -34,18 +34,62 @@ public class ExportMarketData2File {
     public static void main(String[] args) throws ParseException, IOException, InterruptedException {
         ExportMarketData2File test = new ExportMarketData2File();
 //        test.exportBtcTrendReverse();
-        test.exportMarketEntries();
+        test.exportMarketEntries("20251215");
 //        test.exportFundingFeeBuy();
     }
 
+    // Hàm này thay thế hàm export cũ
+    public void exportMarketEntries(TreeMap<Long, MarketRateChange> mapRateChanges,
+                                    TreeMap<Long, MarketDataObject> mapInfo,
+                                    TreeMap<Long, Double> mapBtcReversion) {
 
-    public void exportBtcTrendReverse(List<KlineObjectSimple> ticker1Ms) {
-        TreeMap<Long, Double> timeBtcReverse;
-        if (!new File(Configs.FILE_ENTRY_BTC_REVERSE).exists()) {
-            timeBtcReverse = new TreeMap<>();
-        } else {
-            timeBtcReverse = (TreeMap<Long, Double>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_BTC_REVERSE);
+        // 1. Khởi tạo Map tổng để chứa dữ liệu gộp (chỉ dùng 1 map này để lưu file)
+        TreeMap<Long, MarketDataObject> finalMap = new TreeMap<>();
+
+        // 2. Duyệt loop để gộp dữ liệu (Lấy mapRateChanges làm chuẩn thời gian)
+        for (Long time : mapRateChanges.keySet()) {
+
+            // Lấy dữ liệu từ nguồn 1: RateChange
+            MarketRateChange rateData = mapRateChanges.get(time);
+
+            // Lấy dữ liệu từ nguồn 2: Info cũ (BTC, Max) - cần check null an toàn
+            MarketDataObject infoData = mapInfo.get(time);
+            Float valRateBtc = (infoData != null) ? infoData.rateBtc : null;
+            TreeMap<Float, Short> valRate2Max = (infoData != null) ? infoData.rate2Max : null;
+
+            // Lấy dữ liệu từ nguồn 3: BtcReversion
+            Double valBtcReversion = mapBtcReversion.get(time);
+
+            // --- GỘP DỮ LIỆU ---
+            // Tạo object MarketDataObject mới chứa đầy đủ thông tin của cả 3 nguồn
+            MarketDataObject mergedObject = new MarketDataObject(
+                    rateData.rateDownAvg,
+                    rateData.rateDown15MAvg,
+                    rateData.rateUpAvg,
+                    valRateBtc,
+                    valBtcReversion,
+                    valRate2Max
+            );
+
+            // Đưa vào map tổng
+            finalMap.put(time, mergedObject);
         }
+
+        // 3. Lưu ra 1 file duy nhất
+        // Configs.FILE_ENTRY_MARKET_LEVEL: Đường dẫn file bạn muốn lưu
+        String filePath = Configs.FILE_ENTRY_MARKET_LEVEL;
+
+        // Gọi hàm lưu Snappy cũ của bạn
+        StorageSnappy.writeObject2File(Configs.FILE_ENTRY_MARKET_LEVEL, finalMap);
+
+        // Log kết quả
+        System.out.println("Refactor done. Exported " + finalMap.size() + " entries to single file: " + filePath);
+    }
+
+    public TreeMap<Long, Double> exportBtcTrendReverse(List<KlineObjectSimple> ticker1Ms) {
+        TreeMap<Long, Double> timeBtcReverse;
+        timeBtcReverse = new TreeMap<>();
+
         Long timeExport = ticker1Ms.get(0).startTime.longValue();
         LOG.info("Export btc trend reverse: {} {}", Utils.normalizeDateYYYYMMDDHHmm(timeExport), ticker1Ms.size());
         List<KlineObjectSimple> ticker2Check = new ArrayList<>();
@@ -64,27 +108,25 @@ public class ExportMarketData2File {
                 }
             }
         }
-        StorageSnappy.writeObject2File(Configs.FILE_ENTRY_BTC_REVERSE, timeBtcReverse);
+        return timeBtcReverse;
     }
 
-    public void exportMarketEntries() throws ParseException {
+    public void exportMarketEntries(String timeRun) throws ParseException {
         Long startTime = Utils.sdfFile.parse(TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
+        if (timeRun != null){
+            startTime = Utils.sdfFile.parse(timeRun).getTime() + 7 * Utils.TIME_HOUR;
+        }
         Long timeExport = startTime;
         long endTime = System.currentTimeMillis();
         TreeMap<Long, MarketRateChange> time2MarketRateChange;
         TreeMap<Long, MarketDataObject> time2MarketData;
-
-        if (!new File(Configs.FILE_MARKET_RATE_CHANGE).exists()) {
-            time2MarketRateChange = new TreeMap<>();
-        } else {
-            time2MarketRateChange = (TreeMap<Long, MarketRateChange>) StorageSnappy.readObjectFromFile(Configs.FILE_MARKET_RATE_CHANGE);
-            timeExport = time2MarketRateChange.lastKey();
-            startTime = Utils.getDate(time2MarketRateChange.lastKey());
-        }
+        time2MarketRateChange = new TreeMap<>();
         if (!new File(Configs.FILE_ENTRY_MARKET_LEVEL).exists()) {
             time2MarketData = new TreeMap<>();
         } else {
             time2MarketData = (TreeMap<Long, MarketDataObject>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
+            timeExport = time2MarketData.lastKey();
+            startTime = Utils.getDate(time2MarketData.lastKey());
         }
 
         LOG.info("Export market entry: {}", Utils.normalizeDateYYYYMMDDHHmm(timeExport));
@@ -160,12 +202,9 @@ public class ExportMarketData2File {
                                 MarketDataObject marketData;
                                 marketData = MarketBigChangeDetector.calMarketData(symbol2Ticker, symbol2MaxPrice, symbol2MinPrice);
                                 if (marketData != null) {
-                                    double predictedReturn = 0;
                                     MarketLevelChange levelChange = MarketBigChangeDetector.getMarketStatus1M(marketData.rateDownAvg,
                                             marketData.rateUpAvg, marketData.rateBtc, marketData.rateDown15MAvg);
                                     if (levelChange != null) {
-                                        marketData.rate2Min.clear();
-                                        marketData.level = levelChange;
                                         time2MarketData.put(time, marketData);
                                     }
                                     time2MarketRateChange.put(time, new MarketRateChange(marketData.rateDownAvg, marketData.rateDown15MAvg,
@@ -186,9 +225,8 @@ public class ExportMarketData2File {
                 break;
             }
         }
-        StorageSnappy.writeObject2File(Configs.FILE_ENTRY_MARKET_LEVEL, time2MarketData);
-        StorageSnappy.writeObject2File(Configs.FILE_MARKET_RATE_CHANGE, time2MarketRateChange);
-        exportBtcTrendReverse(btcTicker1Msg);
+
+        exportMarketEntries(time2MarketRateChange, time2MarketData, exportBtcTrendReverse(btcTicker1Msg));
     }
 
 }

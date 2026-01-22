@@ -20,13 +20,12 @@ package com.binance.chuyennd.object;
  * @author pc
  */
 import com.binance.client.constant.BinanceApiConstants;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 
 /**
  * 24 hour price change statistics for a ticker.
  */
-@JsonIgnoreProperties(ignoreUnknown = true)
+
 public class TickerStatistics {
 
     /**

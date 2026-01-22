@@ -2,7 +2,7 @@ package com.binance.chuyennd.ai_ml.hpo;
 
 import com.binance.chuyennd.ai_ml.onnx.entry.AIRejectFilter;
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
-import com.binance.chuyennd.bigchange.market.MarketDataObject;
+import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.research.BudgetManagerSimple;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
@@ -32,13 +32,11 @@ public class BackTestEngineAI {
     }
 
     public double run(TreeMap<Long, MarketDataObject> time2MarketData,
-                      TreeMap<Long, MarketRateChange> time2MarketRateChange,
-                      TreeMap<Long, Double> time2BtcReverse,
                       TreeMap<Long, AiPredictionData> predictionMap) {
         try {
             BudgetManagerSimple.resetInstance();
             SimulatorMarketLevelTicker1MStopLoss test = new SimulatorMarketLevelTicker1MStopLoss();
-            test.initDataReady(time2MarketData, time2MarketRateChange, time2BtcReverse,
+            test.initDataReady(time2MarketData,
                     predictionMap, aiRejectFilter);
             test.simulatorWithInitEntry();
 
@@ -73,7 +71,7 @@ public class BackTestEngineAI {
 
         // 1. Nếu có năm LỖ -> Loại ngay lập tức (Safety First)
         if (p21 < 0 || p22 < 0 || p23 < 0 || p24 < 0 || p25 < 0) {
-            return -50000.0 + (p21+p22+p23+p24+p25);
+            return -50000.0 + (p21 + p22 + p23 + p24 + p25);
         }
 
         // 2. Tính điểm dựa trên sự CẢI THIỆN (Improvement Score)

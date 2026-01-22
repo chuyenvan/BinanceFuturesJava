@@ -83,7 +83,7 @@ public class RunPredictionCompare {
             if (currentDailyData != null && currentDailyData.containsKey(currentTime)) {
                 Map<String, KlineObjectSimple> marketSnapshot = currentDailyData.get(currentTime);
                 MarketRateChange rateChange = time2Rate.get(currentTime);
-                if (rateChange == null) rateChange = new MarketRateChange(0.0, 0.0, 0.0);
+                if (rateChange == null) rateChange = new MarketRateChange(0f, 0f, 0f);
 
                 // A. TẠO TEST FEATURES & PREDICT
                 MarketFeatures testFeatures = featureExtractor.extractAllFeatures(
@@ -209,8 +209,8 @@ public class RunPredictionCompare {
         FundingFeeManager.getInstance();
         this.aiBrain = new OnnxInferenceManager(MODEL_DIR);
         this.featureExtractor = new ComprehensiveMarketFeatureExtractor();
-        if (new File(Configs.FILE_MARKET_RATE_CHANGE).exists()) {
-            this.time2Rate = (TreeMap<Long, MarketRateChange>) StorageSnappy.readObjectFromFile(Configs.FILE_MARKET_RATE_CHANGE);
+        if (new File(Configs.FILE_ENTRY_MARKET_LEVEL).exists()) {
+            this.time2Rate = (TreeMap<Long, MarketRateChange>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
         } else {
             this.time2Rate = new TreeMap<>();
         }

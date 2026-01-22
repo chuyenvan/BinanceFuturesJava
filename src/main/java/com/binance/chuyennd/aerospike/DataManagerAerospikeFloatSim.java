@@ -1,9 +1,9 @@
 package com.binance.chuyennd.aerospike;
 
-import com.aerospike.client.AerospikeClient;
-import com.aerospike.client.Bin;
-import com.aerospike.client.Key;
+import com.aerospike.client.*;
 import com.aerospike.client.Record;
+import com.aerospike.client.cdt.MapOperation;
+import com.aerospike.client.cdt.MapPolicy;
 import com.aerospike.client.policy.BatchPolicy;
 
 // Import Object Java cũ
@@ -26,6 +26,7 @@ import java.io.File;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -37,6 +38,11 @@ public class DataManagerAerospikeFloatSim {
     private static final String AEROSPIKE_SET_NAME_TICKER = "kline_1m_opt";
     private static final String AEROSPIKE_SET_NAME_PRICE = "price_realtime";
     private static final String AEROSPIKE_SET_NAME_FUNDINGFEE = "funding_data";
+
+    // 1. CẤU HÌNH SET NAME VÀ KEY
+    private static final String AEROSPIKE_SET_NAME_MAPPER = "symbol_mapper"; // Set name mới
+    private static final String MAPPER_KEY_GLOBAL = "global_id_map";         // Key chứa Map
+    private static final String MAPPER_BIN_NAME = "data";                    // Tên Bin chứa Map
 
     private static volatile AerospikeClient client;
     private static final BatchPolicy batchPolicy = new BatchPolicy();
@@ -64,7 +70,52 @@ public class DataManagerAerospikeFloatSim {
         }
         return client;
     }
+    /**
+     * Hàm lấy toàn bộ Mapper (String -> Short) từ Aerospike khi khởi động
+     */
+    public static Map<String, Short> loadSymbolMapper() {
+        Map<String, Short> result = new ConcurrentHashMap<>();
+        try {
+            Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_MAPPER, MAPPER_KEY_GLOBAL);
+            Record record = getClient().get(null, key);
 
+            if (record != null) {
+                // Lấy dữ liệu Map từ Aerospike
+                Map<String, Long> rawMap = (Map<String, Long>) record.getMap(MAPPER_BIN_NAME);
+
+                if (rawMap != null) {
+                    // Convert từ Long (Aerospike) sang Short (Java)
+                    for (Map.Entry<String, Long> entry : rawMap.entrySet()) {
+                        result.put(entry.getKey(), entry.getValue().shortValue());
+                    }
+                    LOG.info("✅ Loaded Symbol Mapper: {} symbols from Aerospike.", result.size());
+                }
+            }
+        } catch (Exception e) {
+            LOG.error("❌ Error loading Symbol Mapper: {}", e.getMessage());
+        }
+        return result;
+    }
+
+    /**
+     * Hàm ghi 1 cặp Symbol - ID mới vào Aerospike (Append vào Map)
+     * Dùng MapOperation để chỉ ghi thêm, không cần ghi đè toàn bộ record.
+     */
+    public static void saveSymbolMapping(String symbol, short id) {
+        try {
+            Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_MAPPER, MAPPER_KEY_GLOBAL);
+
+            // MapPolicy.Default: Tạo map nếu chưa tồn tại
+            // MapOperation.put: Thêm key-value mới vào Map
+            getClient().operate(writePolicy, key,
+                    MapOperation.put(MapPolicy.Default, MAPPER_BIN_NAME, Value.get(symbol), Value.get(id))
+            );
+
+            // LOG.info("💾 Saved Mapping: {} -> {}", symbol, id);
+        } catch (Exception e) {
+            LOG.error("❌ Error saving symbol mapping {} -> {}: {}", symbol, id, e.getMessage());
+        }
+    }
     public static void writeMinuteBatch(long timestamp, Map<String, KlineObjectOptimized> newTickers) {
         try {
             SimpleDateFormat fmt = new SimpleDateFormat("yyyyMMdd-HHmm");

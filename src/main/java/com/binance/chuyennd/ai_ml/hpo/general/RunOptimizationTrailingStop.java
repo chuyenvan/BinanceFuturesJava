@@ -1,7 +1,7 @@
 package com.binance.chuyennd.ai_ml.hpo.general;
 
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
-import com.binance.chuyennd.bigchange.market.MarketDataObject;
+import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.research.FundingFeeManager;
 import com.binance.chuyennd.utils.Configs;
@@ -29,8 +29,7 @@ public class RunOptimizationTrailingStop {
 
     private static final AtomicLong testCounter = new AtomicLong(0);
     public static TreeMap<Long, MarketDataObject> time2MarketData;
-    public static TreeMap<Long, MarketRateChange> time2MarketRateChange;
-    public static TreeMap<Long, Double> time2BtcReverse;
+
     public static TreeMap<Long, AiPredictionData> predictionMap;
     public static final String FILE_FUNDING_FEE = "storage/fundingfee_time.data";
     public static ConcurrentHashMap<Long, Set<String>> CACHED_time2FundingFeeTrade;
@@ -66,7 +65,7 @@ public class RunOptimizationTrailingStop {
                     volMedThres, rateMed,
                     volLowThres, rateLow
             );
-            profit = engine.run(time2MarketData, time2MarketRateChange, time2BtcReverse, predictionMap);
+            profit = engine.run(time2MarketData, predictionMap);
 
             System.out.printf("Test #%d: Profit=%.2f | Base=%.4f | Vol[H/M/L]=[%.4f, %.4f, %.4f] | Rate[H/M/L]=[%.4f, %.4f, %.4f]%n",
                     currentTest, profit, baseRate, volHighThres, volMedThres, volLowThres, rateHigh, rateMed, rateLow);
@@ -88,29 +87,29 @@ public class RunOptimizationTrailingStop {
         // Range được mở rộng so với mặc định cũ (0.01)
         Genotype<DoubleGene> genotypeFactory = Genotype.of(
                 // 0. Base Rate (Default 0.01) -> Range: 0.005 -> 0.02
-                DoubleChromosome.of(DoubleRange.of(0.005, 0.02)),
+                DoubleChromosome.of(DoubleRange.of(0.01, 0.03)),
 
                 // 1. Vol High Thres (Def 0.01) -> Range: 0.008 -> 0.025
                 DoubleChromosome.of(DoubleRange.of(0.008, 0.025)),
                 // 2. Rate High (Def 0.03) -> Range: 0.025 -> 0.06 (Cho phép ăn dày hơn)
-                DoubleChromosome.of(DoubleRange.of(0.025, 0.06)),
+                DoubleChromosome.of(DoubleRange.of(0.03, 0.1)),
 
                 // 3. Vol Med Thres (Def 0.006) -> Range: 0.005 -> 0.012
                 DoubleChromosome.of(DoubleRange.of(0.005, 0.012)),
                 // 4. Rate Med (Def 0.02) -> Range: 0.015 -> 0.035
-                DoubleChromosome.of(DoubleRange.of(0.015, 0.035)),
+                DoubleChromosome.of(DoubleRange.of(0.015, 0.05)),
 
                 // 5. Vol Low Thres (Def 0.004) -> Range: 0.002 -> 0.007
                 DoubleChromosome.of(DoubleRange.of(0.002, 0.007)),
                 // 6. Rate Low (Def 0.016) -> Range: 0.01 -> 0.025
-                DoubleChromosome.of(DoubleRange.of(0.01, 0.025))
+                DoubleChromosome.of(DoubleRange.of(0.01, 0.03))
         );
 
         Engine<DoubleGene, Double> engine = Engine
                 .builder(RunOptimizationTrailingStop::evaluate, genotypeFactory)
                 .populationSize(POPULATION_SIZE)
                 .maximizing()
-                .executor(Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors())) // Chạy đa luồng
+                .executor(Executors.newSingleThreadExecutor())
                 .build();
 
         EvolutionResult<DoubleGene, Double> result = engine.stream()
@@ -125,9 +124,7 @@ public class RunOptimizationTrailingStop {
         try {
             System.out.println("Loading Data...");
             CACHED_time2FundingFeeTrade = (ConcurrentHashMap<Long, Set<String>>) StorageSnappy.readObjectFromFile(FILE_FUNDING_FEE);
-            time2MarketRateChange = (TreeMap<Long, MarketRateChange>) StorageSnappy.readObjectFromFile(Configs.FILE_MARKET_RATE_CHANGE);
             time2MarketData = (TreeMap<Long, MarketDataObject>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
-            time2BtcReverse = (TreeMap<Long, Double>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_BTC_REVERSE);
             predictionMap = (TreeMap<Long, AiPredictionData>) StorageSnappy.readObjectFromFile(Configs.FILE_AI_ENTRY_PREDICTIONS);
             FundingFeeManager.getInstance();
             System.out.println("Data Loaded.");

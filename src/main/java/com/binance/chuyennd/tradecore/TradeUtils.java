@@ -1,6 +1,6 @@
 package com.binance.chuyennd.tradecore;
 
-import com.binance.chuyennd.bigchange.market.MarketLevelChange;
+import com.binance.chuyennd.object.MarketLevelChange;
 import com.binance.chuyennd.utils.Configs;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;

@@ -20,7 +20,7 @@ import com.binance.chuyennd.ai_ml.features.export.entry.ComprehensiveMarketFeatu
 import com.binance.chuyennd.ai_ml.features.export.entry.MarketFeatures;
 import com.binance.chuyennd.ai_ml.onnx.entry.AIRejectFilter;
 import com.binance.chuyennd.ai_ml.onnx.entry.OnnxInferenceManager;
-import com.binance.chuyennd.bigchange.market.MarketLevelChange;
+import com.binance.chuyennd.object.MarketLevelChange;
 import com.binance.chuyennd.helper.PositionHelper;
 import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
@@ -42,7 +42,6 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.text.ParseException;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -54,7 +53,7 @@ public class DetectEntrySignal2TradeNormal {
     public static final Logger LOG = LoggerFactory.getLogger(DetectEntrySignal2TradeNormal.class);
     private static final String FILE_STORAGE_TIME_RATE_DOWN15M = "storage/data/time2RatDown15M.data";
     public ExecutorService executorService = Executors.newFixedThreadPool(Configs.NUMBER_THREAD_ORDER_MANAGER);
-    public TreeMap<Long, Double> time2RateDown15MAvg = new TreeMap<>();
+    public TreeMap<Long, Float> time2RateDown15MAvg = new TreeMap<>();
     public AIRejectFilter aiRejectFilter = new AIRejectFilter();
 
     // --- Biến AI ---
@@ -108,16 +107,16 @@ public class DetectEntrySignal2TradeNormal {
         try {
             LOG.info("Start check level change of market for trade! {}", new Date());
             Map<String, KlineObjectSimple> symbol2FinalTicker = new HashMap<>();
-            TreeMap<Double, String> rateDown15M2Symbols = new TreeMap<>();
-            TreeMap<Double, String> rateUp15M2Symbols = new TreeMap<>();
-            TreeMap<Double, String> rateDown2Symbols = new TreeMap<>();
-            TreeMap<Double, String> rateUp2Symbols = new TreeMap<>();
+            TreeMap<Float, String> rateDown15M2Symbols = new TreeMap<>();
+            TreeMap<Float, String> rateUp15M2Symbols = new TreeMap<>();
+            TreeMap<Float, String> rateDown2Symbols = new TreeMap<>();
+            TreeMap<Float, String> rateUp2Symbols = new TreeMap<>();
             Map<String, Double> symbol2Max15m = new HashMap<>();
 
             Map<String, List<KlineObjectSimple>> symbol2LastTickers = DataManagerAerospikeFloatSim.readDataForSymbols(System.currentTimeMillis() - 1500 * Utils.TIME_MINUTE, 1500);
             List<KlineObjectSimple> btcTickers = symbol2LastTickers.get(Constants.SYMBOL_PAIR_BTC);
             KlineObjectSimple btcTicker = btcTickers.get(btcTickers.size() - 1);
-            Double btcRateChange = Utils.rateOf2Double(btcTicker.priceClose, btcTicker.priceOpen);
+            Float btcRateChange = Utils.rateOf2Double(btcTicker.priceClose, btcTicker.priceOpen).floatValue();
             Double btcMax15M = null;
 
             LOG.info("Btc ticker size: {} {} -> {}", symbol2LastTickers.get(Constants.SYMBOL_PAIR_BTC).size(), Utils.normalizeDateYYYYMMDDHHmm(btcTickers.get(0).startTime.longValue()), Utils.normalizeDateYYYYMMDDHHmm(btcTicker.startTime.longValue()));
@@ -136,7 +135,7 @@ public class DetectEntrySignal2TradeNormal {
                     }
 
                     symbol2FinalTicker.put(symbol, ticker);
-                    Double rateChange = Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen);
+                    Float rateChange = Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen).floatValue();
                     // pass symbol big dump(delist/waring/monitor...)
                     if (btcRateChange > -0.004 && rateChange < -0.15) {
                         continue;
@@ -164,9 +163,9 @@ public class DetectEntrySignal2TradeNormal {
                     if (StringUtils.equals(symbol, Constants.SYMBOL_PAIR_BTC)) {
                         btcMax15M = priceMax;
                     }
-                    rateDown15M2Symbols.put(Utils.rateOf2Double(tickers.get(tickers.size() - 1).priceClose, priceMax), symbol);
+                    rateDown15M2Symbols.put(Utils.rateOf2Double(tickers.get(tickers.size() - 1).priceClose, priceMax).floatValue(), symbol);
                     symbol2Max15m.put(symbol, priceMax);
-                    rateUp15M2Symbols.put(-Utils.rateOf2Double(tickers.get(tickers.size() - 1).priceClose, priceMin), symbol);
+                    rateUp15M2Symbols.put(-Utils.rateOf2Double(tickers.get(tickers.size() - 1).priceClose, priceMin).floatValue(), symbol);
 
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -174,14 +173,19 @@ public class DetectEntrySignal2TradeNormal {
             }
 
 
-            Double rateDownAvg = MarketBigChangeDetector.calRateChangeAvg(rateDown2Symbols, 100);
-            Double rateUpAvg = -MarketBigChangeDetector.calRateChangeAvg(rateUp2Symbols, 100);
-            Double rateDown15MAvg = MarketBigChangeDetector.calRateChangeAvg(rateDown15M2Symbols, 100);
+            Float rateDownAvg = MarketBigChangeDetector.calRateChangeAvg(rateDown2Symbols, 100);
+            Float rateUpAvg = -MarketBigChangeDetector.calRateChangeAvg(rateUp2Symbols, 100);
+            Float rateDown15MAvg = MarketBigChangeDetector.calRateChangeAvg(rateDown15M2Symbols, 100);
             MarketRateChange marketRate = new MarketRateChange(rateDownAvg, rateDown15MAvg, rateUpAvg);
             Double rateBtcDown15M = Utils.rateOf2Double(btcTicker.priceClose, btcMax15M);
             MarketLevelChange levelChange = MarketBigChangeDetector.getMarketStatus1M(rateDownAvg, rateUpAvg, btcRateChange, rateDown15MAvg);
             RedisHelper.getInstance().get().set(RedisConst.REDIS_KEY_LAST_TIME_CHECK_MARKET, Utils.toJson(System.currentTimeMillis()));
-            LOG.info("Check level market: {} DownAvg: {}% UpAvg:{}% DownAvg15M:{}%  btcRate: {}% btcRate15M: {}% {}", Utils.normalizeDateYYYYMMDDHHmm(btcTicker.startTime.longValue()), Utils.formatDouble(rateDownAvg * 100, 3), Utils.formatDouble(rateUpAvg * 100, 3), Utils.formatDouble(rateDown15MAvg * 100, 3), Utils.formatDouble(btcRateChange * 100, 3), Utils.formatDouble(rateBtcDown15M * 100, 3), levelChange);
+            LOG.info("Check level market: {} DownAvg: {}% UpAvg:{}% DownAvg15M:{}%  btcRate: {}% btcRate15M: {}% {}", Utils.normalizeDateYYYYMMDDHHmm(btcTicker.startTime.longValue()),
+                    Utils.formatDouble(rateDownAvg * 100, 3),
+                    Utils.formatDouble(rateUpAvg * 100, 3),
+                    Utils.formatDouble(rateDown15MAvg * 100, 3),
+                    Utils.formatDouble(btcRateChange * 100, 3),
+                    Utils.formatDouble(rateBtcDown15M * 100, 3), levelChange);
             LOG.info("Market level change: {} level: {} symbols:{}", Utils.normalizeDateYYYYMMDDHHmm(time), levelChange, symbol2FinalTicker.size());
 
             Set<String> symbolLocked = new HashSet<>();
@@ -283,7 +287,7 @@ public class DetectEntrySignal2TradeNormal {
             while (time2RateDown15MAvg.size() > Configs.NUMBER_RATE_DOWN_HISTORY_TRADE) {
                 time2RateDown15MAvg.remove(time2RateDown15MAvg.firstKey());
             }
-            Double minRate15Min30M = Collections.min(time2RateDown15MAvg.values());
+            Float minRate15Min30M = Collections.min(time2RateDown15MAvg.values());
             Set<String> symbolCanTrade = new HashSet<>();
             if (MarketBigChangeDetector.isFundingFeeTrade(rateDown15MAvg, rateDownAvg, rateUpAvg, minRate15Min30M)) {
                 Set<String> symbolBuyFundingFee = new HashSet<>();
@@ -473,7 +477,7 @@ public class DetectEntrySignal2TradeNormal {
     private void initData() {
 
         if (new File(FILE_STORAGE_TIME_RATE_DOWN15M).exists()) {
-            time2RateDown15MAvg = (TreeMap<Long, Double>) StorageSnappy.readObjectFromFile(FILE_STORAGE_TIME_RATE_DOWN15M);
+            time2RateDown15MAvg = (TreeMap<Long, Float>) StorageSnappy.readObjectFromFile(FILE_STORAGE_TIME_RATE_DOWN15M);
         }
         // --- KHỞI TẠO AI & LOAD DỮ LIỆU LỊCH SỬ ---
         try {

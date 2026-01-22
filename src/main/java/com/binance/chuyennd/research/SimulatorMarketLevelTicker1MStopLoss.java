@@ -6,13 +6,14 @@ package com.binance.chuyennd.research;
 
 import ai.onnxruntime.OrtException;
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
+import com.binance.chuyennd.ai_ml.data.HPOSmartCache;
+import com.binance.chuyennd.ai_ml.data.SimpleSymbolMapper;
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.ai_ml.onnx.entry.AIRejectFilter;
 import com.binance.chuyennd.ai_ml.onnx.entry.RunGeneratePredictions;
-import com.binance.chuyennd.bigchange.market.MarketDataObject;
-import com.binance.chuyennd.bigchange.market.MarketLevelChange;
+import com.binance.chuyennd.object.MarketDataObject;
+import com.binance.chuyennd.object.MarketLevelChange;
 import com.binance.chuyennd.bigchange.test.TraceOrderDone;
-import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.tradecore.DcaProcessor;
 import com.binance.chuyennd.tradecore.MarketBigChangeDetector;
@@ -41,14 +42,11 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
     public static final Logger LOG = LoggerFactory.getLogger(SimulatorMarketLevelTicker1MStopLoss.class);
     public static final String FILE_STORAGE_ORDER_DONE = "storage/OrderTestDone.data";
-
     public TreeMap<Long, OrderTargetInfoTest> allOrderDone;
-
     public TreeMap<Long, MarketDataObject> time2MarketData;
-    public TreeMap<Long, MarketRateChange> time2MarketRateChange;
     public TreeMap<Long, AiPredictionData> predictionMap;
     public AIRejectFilter aiRejectFilter;
-    public TreeMap<Long, Double> time2BtcReverse;
+
     public Map<String, KlineObjectSimple> symbol2LastTicker = new HashMap<>();
 
 //    public DcaFeatureExtractor extractor = new DcaFeatureExtractor();
@@ -60,14 +58,12 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     private long lastBasketTimestamp = -1;
     private List<String> cachedBasket = new ArrayList<>();
 
+    public String currentMonth = null;
+    public Map<String, TreeMap<Long, Double>> symbol2TimeAndMaxRate90M = null;
+
 
     public static void main(String[] args) throws ParseException, IOException, InterruptedException {
-        Configs.BUDGET_MARGIN_RATIO_1 = 0.4820;
-        Configs.BUDGET_DIVIDER_1 = 1.5578;
-        Configs.BUDGET_MARGIN_RATIO_2 = 0.7475;
-        Configs.BUDGET_DIVIDER_2 = 1.5984;
-//        Configs.BUDGET_TREND_UP_MULTIPLIER = 1.1231;
-//        Configs.BUDGET_TREND_DOWN_MULTIPLIER = 0.8094;
+
         SimulatorMarketLevelTicker1MStopLoss test = new SimulatorMarketLevelTicker1MStopLoss();
         test.initData();
         test.simulatorWithInitEntry();
@@ -77,15 +73,15 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
     public void simulatorWithInitEntry(String... inputs) throws ParseException {
         Long startTime = Utils.sdfFile.parse(Configs.TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
-        TreeMap<Long, Double> time2RateDown15MAvg = new TreeMap<>();
+        TreeMap<Long, Float> time2RateDown15MAvg = new TreeMap<>();
         Map<String, List<KlineObjectSimple>> symbol2LastTickers = new HashMap<>();
 
         //get data
         while (true) {
             TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers;
             try {
-                time2Tickers = DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime);
-//                time2Tickers = HPOSmartCache.getData(startTime);
+//                time2Tickers = DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime);
+                time2Tickers = HPOSmartCache.getData(startTime);
 
                 if (time2Tickers == null) {
                     LOG.info("File data error or not found for time: {}", Utils.normalizeDateYYYYMMDDHHmm(startTime));
@@ -142,20 +138,18 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
                             startTimeRun = System.currentTimeMillis();
 
-                            MarketRateChange marketRateChange = time2MarketRateChange.get(time);
-
                             MarketDataObject marketData;
                             marketData = time2MarketData.get(time);
                             Set<String> symbolLocked = new HashSet<>();
                             MarketLevelChange levelChange = null;
-                            Map<String, Double> symbol2PriceMax15M = new HashMap<>();
+//                            Map<String, Double> symbol2PriceMax15M = new HashMap<>();
 
-                            if (marketData != null) {
-                                TreeMap<Double, String> rate2Max = new TreeMap<>();
-                                rate2Max.putAll(marketData.rate2Max);
+                            if (marketData != null && marketData.rate2Max != null && !marketData.rate2Max.isEmpty()) {
+                                TreeMap<Float, String> rate2Max = new TreeMap<>();
+                                rate2Max.putAll(SimpleSymbolMapper.getInstance().extractSymbol(marketData.rate2Max));
                                 levelChange = MarketBigChangeDetector.getMarketStatus1M(marketData.rateDownAvg,
                                         marketData.rateUpAvg, marketData.rateBtc, marketData.rateDown15MAvg);
-                                symbol2PriceMax15M.putAll(marketData.symbol2PriceMax15M);
+//                                symbol2PriceMax15M.putAll(marketData.symbol2PriceMax15M);
                                 // buy signal new
                                 if (levelChange != null) {
                                     Integer numberOrder = Configs.NUMBER_ENTRY_EACH_SIGNAL;
@@ -184,8 +178,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                         if (!Utils.isTickerAvailable(ticker)) {
                                             continue;
                                         }
-                                        createOrderBUY(symbol, ticker, levelChange, time2MarketRateChange.get(time),
-                                                symbol2PriceMax15M.get(symbol), symbol2Ticker);
+                                        createOrderBUY(symbol, ticker, levelChange, time2MarketData.get(time),
+                                                null, symbol2Ticker);
                                     }
                                     for (String symbol : symbolDcaLevel) {
                                         KlineObjectSimple ticker = symbol2Ticker.get(symbol);
@@ -196,8 +190,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                             } else {
                                                 leveChange2Dca = MarketLevelChange.DCA_LEVEL2;
                                             }
-                                            createOrderBUY(symbol, ticker, leveChange2Dca, time2MarketRateChange.get(time)
-                                                    , symbol2PriceMax15M.get(symbol), symbol2Ticker);
+                                            createOrderBUY(symbol, ticker, leveChange2Dca, time2MarketData.get(time)
+                                                    , null, symbol2Ticker);
                                         }
                                     }
                                 }
@@ -205,15 +199,15 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                             logByProcessTime(startTimeRun, "Done market data", time);
                             startTimeRun = System.currentTimeMillis();
 
-                            if (marketRateChange != null) {
-                                time2RateDown15MAvg.put(time, marketRateChange.rateDown15MAvg);
+                            if (marketData != null) {
+                                time2RateDown15MAvg.put(time, marketData.rateDown15MAvg);
                                 while (time2RateDown15MAvg.size() > Configs.NUMBER_RATE_DOWN_HISTORY_TRADE) {
                                     time2RateDown15MAvg.remove(time2RateDown15MAvg.firstKey());
                                 }
-                                Double minRate15Min60M = Collections.min(time2RateDown15MAvg.values());
+                                Float minRate15Min60M = Collections.min(time2RateDown15MAvg.values());
 
-                                if (MarketBigChangeDetector.isDcaAlt(marketRateChange.rateDown15MAvg,
-                                        marketRateChange.rateDownAvg, marketRateChange.rateUpAvg)) {
+                                if (MarketBigChangeDetector.isDcaAlt(marketData.rateDown15MAvg,
+                                        marketData.rateDownAvg, marketData.rateUpAvg)) {
                                     // dca buy
                                     List<String> symbolDcaLossBig = DcaProcessor.getDCA(null, time,
                                             BudgetManagerSimple.getInstance().getBudget(), symbol2OrderRunning);
@@ -230,7 +224,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                                 leveChange2Dca = MarketLevelChange.DCA_LEVEL2;
                                             }
                                             createOrderBUY(symbol, ticker, leveChange2Dca,
-                                                    time2MarketRateChange.get(time), priceMax15M, symbol2Ticker);
+                                                    time2MarketData.get(time), priceMax15M, symbol2Ticker);
                                         }
                                     }
 
@@ -240,8 +234,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
                                 Set<String> symbolCanTradeMass = new HashSet<>();
                                 // funding level 1
-                                if (MarketBigChangeDetector.isFundingFeeTrade(marketRateChange.rateDown15MAvg,
-                                        marketRateChange.rateDownAvg, marketRateChange.rateUpAvg, minRate15Min60M)
+                                if (MarketBigChangeDetector.isFundingFeeTrade(marketData.rateDown15MAvg,
+                                        marketData.rateDownAvg, marketData.rateUpAvg, minRate15Min60M)
                                 ) {
                                     Set<String> symbolFundingBuy = FundingFeeManager.getInstance().getFundingBuyNew(time);
                                     Set<String> symbolBuyFundingFee = new HashSet<>();
@@ -268,7 +262,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 //                                                    rateMax15M, tickers.size());
                                             symbolCanTradeMass.add(symbol);
                                             createOrderBUY(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY,
-                                                    time2MarketRateChange.get(time), priceMax15M, symbol2Ticker);
+                                                    time2MarketData.get(time), priceMax15M, symbol2Ticker);
                                         } else {
                                             if (MarketBigChangeDetector.isRateChangeAvailable2TradeMass(rateTicker, rateMax15M)) {
                                                 symbolCanTradeMass.add(symbol);
@@ -286,7 +280,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
                                             Double priceMax15M = getMax15M(tickers);
                                             createOrderBUY(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY,
-                                                    time2MarketRateChange.get(time), priceMax15M, symbol2Ticker);
+                                                    time2MarketData.get(time), priceMax15M, symbol2Ticker);
                                         }
                                     }
                                 }
@@ -294,7 +288,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                             logByProcessTime(startTimeRun, "Done funding fee", time);
                             startTimeRun = System.currentTimeMillis();
                             // BTC trend reverse
-                            Double rateBtcTrendReverse = time2BtcReverse.get(time);
+                            Double rateBtcTrendReverse = time2MarketData.get(time).btcReversion;
                             if (rateBtcTrendReverse != null && rateBtcTrendReverse >= Configs.BTC_TREND_REVERSE_RATE_MIN_TRADE) {
                                 levelChange = MarketLevelChange.BTC_TREND_REVERSE;
                                 List<String> symbol2BUY = new ArrayList<>();
@@ -317,7 +311,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                 for (String symbol : symbol2BUY) {
                                     KlineObjectSimple ticker = symbol2Ticker.get(symbol);
                                     if (Utils.isTickerAvailable(ticker)) {
-                                        createOrderBUY(symbol, ticker, levelChange, time2MarketRateChange.get(time), symbol2PriceMax15M.get(symbol), symbol2Ticker);
+                                        createOrderBUY(symbol, ticker, levelChange, time2MarketData.get(time), null, symbol2Ticker);
                                     }
                                 }
                             }
@@ -424,9 +418,9 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         // clear Data Old
         BudgetManagerSimple.getInstance().resetInstance();
         allOrderDone = new TreeMap<>();
-        File fileMarketData = new File(Configs.FILE_MARKET_RATE_CHANGE);
+        File fileMarketData = new File(Configs.FILE_ENTRY_MARKET_LEVEL);
         if (!fileMarketData.exists() || fileMarketData.lastModified() < System.currentTimeMillis() - Utils.TIME_DAY) {
-            new ExportMarketData2File().exportMarketEntries();
+            new ExportMarketData2File().exportMarketEntries(null);
         }
 
         if (!new File(Configs.FILE_AI_ENTRY_PREDICTIONS).exists()) {
@@ -436,9 +430,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                 throw new RuntimeException(e);
             }
         }
-        time2MarketRateChange = (TreeMap<Long, MarketRateChange>) StorageSnappy.readObjectFromFile(Configs.FILE_MARKET_RATE_CHANGE);
         time2MarketData = (TreeMap<Long, MarketDataObject>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
-        time2BtcReverse = (TreeMap<Long, Double>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_BTC_REVERSE);
         predictionMap = (TreeMap<Long, AiPredictionData>) StorageSnappy.readObjectFromFile(Configs.FILE_AI_ENTRY_PREDICTIONS);
 //        try {
 //            dcaBrain = new DcaOnnxInferenceManager(Configs.FILE_AI_DCA_PREDICTIONS);
@@ -477,7 +469,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             return Double.valueOf(predict.predReturn15M);
         }
 
-
+//
 //        Double maxChangeIn60M = null;
 //        String month = Utils.getMonth(time);
 //        if (currentMonth == null || !StringUtils.equals(currentMonth, month)) {
@@ -567,7 +559,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     }
 
     public void createOrderBUY(String symbol, KlineObjectSimple ticker, MarketLevelChange levelChange,
-                               MarketRateChange marketData, Double maxPrice15m, Map<String, KlineObjectSimple> symbol2Ticker) {
+                               MarketDataObject marketData, Double maxPrice15m, Map<String, KlineObjectSimple> symbol2Ticker) {
         AiPredictionData predict = predictionMap.get(ticker.startTime.longValue());
 
         if (predict != null) {
@@ -690,7 +682,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
         order.tickerOpen = ticker;
         order.marketLevelChange = levelChange;
-        order.rateChange = maxPrice15m;
+//        order.rateChange = maxPrice15m;
         if (marketData != null) {
             order.marketData = marketData;
         }
@@ -752,8 +744,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
 
     public void initDataReady(TreeMap<Long, MarketDataObject> time2MarketData,
-                              TreeMap<Long, MarketRateChange> time2MarketRateChange,
-                              TreeMap<Long, Double> time2BtcReverse,
                               TreeMap<Long, AiPredictionData> predictionMap, AIRejectFilter aiRejectFilter) throws OrtException { // <--- THÊM THAM SỐ NÀY
 
         // Reset Data Old
@@ -762,9 +752,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
         // Gán dữ liệu cache vào biến của instance
         this.time2MarketData = time2MarketData;
-        this.time2MarketRateChange = time2MarketRateChange;
-        this.time2BtcReverse = time2BtcReverse;
-
         this.predictionMap = predictionMap; // <--- GÁN DỮ LIỆU AI
         this.aiRejectFilter = aiRejectFilter;
 //        this.aiRejectFilter = new AIRejectFilter();

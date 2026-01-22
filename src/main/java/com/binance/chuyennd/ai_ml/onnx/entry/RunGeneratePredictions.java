@@ -18,7 +18,7 @@ import java.util.*;
 
 public class RunGeneratePredictions {
     private static final Logger LOG = LoggerFactory.getLogger(RunGeneratePredictions.class);
-    private static final String MODEL_DIR = "../storage/ai_ml_data/ai_models_reg_v4";
+    private static final String MODEL_DIR = "../storage/ai_ml_data/ai_models_reg_v3";
 
     public static void main(String[] args) {
         try {
@@ -188,7 +188,7 @@ public class RunGeneratePredictions {
     }
 
     private TreeMap<Long, MarketRateChange> loadMarketRateData() throws Exception {
-        if (!new File(Configs.FILE_MARKET_RATE_CHANGE).exists()) return new TreeMap<>();
-        return (TreeMap<Long, MarketRateChange>) StorageSnappy.readObjectFromFile(Configs.FILE_MARKET_RATE_CHANGE);
+        if (!new File(Configs.FILE_ENTRY_MARKET_LEVEL).exists()) return new TreeMap<>();
+        return (TreeMap<Long, MarketRateChange>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
     }
 }

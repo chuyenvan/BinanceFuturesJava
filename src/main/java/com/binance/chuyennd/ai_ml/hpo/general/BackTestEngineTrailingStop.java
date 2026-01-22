@@ -1,7 +1,8 @@
 package com.binance.chuyennd.ai_ml.hpo.general;
 
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
-import com.binance.chuyennd.bigchange.market.MarketDataObject;
+import com.binance.chuyennd.ai_ml.onnx.entry.AIRejectFilter;
+import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.research.BudgetManagerSimple;
 import com.binance.chuyennd.research.SimulatorMarketLevelTicker1MStopLoss;
@@ -32,15 +33,13 @@ public class BackTestEngineTrailingStop {
     }
 
     public double run(TreeMap<Long, MarketDataObject> time2MarketData,
-                      TreeMap<Long, MarketRateChange> time2MarketRateChange,
-                      TreeMap<Long, Double> time2BtcReverse,
                       TreeMap<Long, AiPredictionData> predictionMap) {
         try {
             BudgetManagerSimple.resetInstance();
             SimulatorMarketLevelTicker1MStopLoss test = new SimulatorMarketLevelTicker1MStopLoss();
 
             // Init Data Ready (Giả sử bạn đã tích hợp method này từ các bước trước)
-            test.initDataReady(time2MarketData, time2MarketRateChange, time2BtcReverse, predictionMap, null);
+            test.initDataReady(time2MarketData, predictionMap, new AIRejectFilter());
 
             test.simulatorWithInitEntry();
             return BudgetManagerSimple.getInstance().balanceCurrent;

@@ -68,7 +68,7 @@ public class HPOSmartCache {
         for (Map.Entry<Short, CompactDayData> entry : compressedMap.entrySet()) {
             KlineObjectSimple kline = entry.getValue().get(dayStart, minuteIndex);
             if (kline != null) {
-                String symbol = SimpleSymbolMapper.getSymbol(entry.getKey());
+                String symbol = SimpleSymbolMapper.getInstance().getSymbol(entry.getKey());
                 if (symbol != null) result.put(symbol, kline);
             }
         }
@@ -84,7 +84,7 @@ public class HPOSmartCache {
             long time = entry.getKey();
             Map<String, KlineObjectSimple> symbolMap = entry.getValue();
             for (Map.Entry<String, KlineObjectSimple> ticker : symbolMap.entrySet()) {
-                short symbolId = SimpleSymbolMapper.getId(ticker.getKey());
+                short symbolId = SimpleSymbolMapper.getInstance().getId(ticker.getKey());
                 KlineObjectSimple kline = ticker.getValue();
                 CompactDayData compactData = compactMap.computeIfAbsent(symbolId, k -> new CompactDayData());
                 compactData.set(dayStart, time, kline);
@@ -104,7 +104,7 @@ public class HPOSmartCache {
         List<Short> allSymbolIds = new ArrayList<>(compressedMap.keySet());
         Map<Short, String> idCache = new HashMap<>(allSymbolIds.size());
         for (Short id : allSymbolIds) {
-            String sym = SimpleSymbolMapper.getSymbol(id);
+            String sym = SimpleSymbolMapper.getInstance().getSymbol(id);
             if (sym != null) idCache.put(id, sym);
         }
 
