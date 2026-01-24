@@ -128,7 +128,8 @@ public class MarketBigChangeDetector {
 
 //        List<String> symbolsTopDown = MarketBigChangeDetectorTest.getTopSymbolSimple(rateDown2Symbols,
 //                Configs.NUMBER_ENTRY_EACH_SIGNAL, null);
-        MarketDataObject result = new MarketDataObject(rateChangeDownAvg, rateChangeUpAvg, rateChangeBtc.floatValue());
+        MarketDataObject result = new MarketDataObject(rateChangeDownAvg, rateChangeUpAvg, rateChangeDown15MAvg);
+        result.rateBtc = rateChangeBtc.floatValue();
         result.rate2Max = SimpleSymbolMapper.getInstance().convertSymbolList(rateMax2Symbols);
         result.rateDown15MAvg = rateChangeDown15MAvg.floatValue();
 
@@ -266,25 +267,6 @@ public class MarketBigChangeDetector {
 
         return null;
 
-    }
-
-    public static Double getMaxRateIn90MForTradingStop(List<KlineObjectSimple> tickers) {
-
-        Double maxRateChangeIn60M = 0d;
-        if (tickers == null || tickers.size() == 0) {
-            return maxRateChangeIn60M;
-        }
-        int index = tickers.size() - 1;
-        for (int i = 0; i < Configs.NUMBER_TICKER_RATE_CHANGE_MAX_TRADE; i++) {
-            if (index - i < 0) {
-                break;
-            }
-            KlineObjectSimple tickerCheck = tickers.get(index - i);
-            if (maxRateChangeIn60M == null || Utils.rateOf2Double(tickerCheck.maxPrice, tickerCheck.minPrice) > maxRateChangeIn60M) {
-                maxRateChangeIn60M = Utils.rateOf2Double(tickerCheck.maxPrice, tickerCheck.minPrice);
-            }
-        }
-        return maxRateChangeIn60M;
     }
 
     public static boolean isFundingFeeTrade(Float rateDown15MAvg, Float rateDownAvg, Float rateUpAvg,

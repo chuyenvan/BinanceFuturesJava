@@ -121,7 +121,7 @@ public class OrderTargetInfoTest implements Serializable {
         return quantity * priceEntry / leverage;
     }
 
-    public void updateStatusNew(Double maxChange90M, KlineObjectSimple ticker) {
+    public void updateStatusNew(Float maxChange90M, KlineObjectSimple ticker) {
         if (priceSL == null) {
             Double rateLoss = calRateLossMax(ticker.maxPrice);
             Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60MForTradingStop(maxChange90M);
@@ -157,12 +157,11 @@ public class OrderTargetInfoTest implements Serializable {
     }
 
 
-    public void updateTPSL(Double rateChangeMax90M, KlineObjectSimple ticker) {
+    public void updateTPSL(Float rateChangeMax90M, KlineObjectSimple ticker) {
         // move SL
         if (priceSL != null) {
             Double rateLoss = calRateLossMax(ticker.maxPrice);
-            Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60MForTradingStop(rateChangeMax90M * 1.5
-            );
+            Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60MForTradingStop(rateChangeMax90M);
             if (rateLoss >= rateMin2MoveSl) {
                 Double rateSL = TradeUtils.calRateLossDynamicBuy(rateLoss, rateChangeMax90M);
                 OrderSide side2Sl = OrderSide.SELL;

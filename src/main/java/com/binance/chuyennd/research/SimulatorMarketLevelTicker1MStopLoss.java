@@ -58,11 +58,9 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     private long lastBasketTimestamp = -1;
     private List<String> cachedBasket = new ArrayList<>();
 
-    public String currentMonth = null;
-    public Map<String, TreeMap<Long, Double>> symbol2TimeAndMaxRate90M = null;
-
 
     public static void main(String[] args) throws ParseException, IOException, InterruptedException {
+
 
         SimulatorMarketLevelTicker1MStopLoss test = new SimulatorMarketLevelTicker1MStopLoss();
         test.initData();
@@ -80,8 +78,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         while (true) {
             TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers;
             try {
-//                time2Tickers = DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime);
-                time2Tickers = HPOSmartCache.getData(startTime);
+                time2Tickers = DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime);
+//                time2Tickers = HPOSmartCache.getData(startTime);
 
                 if (time2Tickers == null) {
                     LOG.info("File data error or not found for time: {}", Utils.normalizeDateYYYYMMDDHHmm(startTime));
@@ -288,7 +286,10 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                             logByProcessTime(startTimeRun, "Done funding fee", time);
                             startTimeRun = System.currentTimeMillis();
                             // BTC trend reverse
-                            Double rateBtcTrendReverse = time2MarketData.get(time).btcReversion;
+                            Double rateBtcTrendReverse = null;
+                            if (time2MarketData.get(time) != null) {
+                                rateBtcTrendReverse = time2MarketData.get(time).btcReversion;
+                            }
                             if (rateBtcTrendReverse != null && rateBtcTrendReverse >= Configs.BTC_TREND_REVERSE_RATE_MIN_TRADE) {
                                 levelChange = MarketLevelChange.BTC_TREND_REVERSE;
                                 List<String> symbol2BUY = new ArrayList<>();
@@ -447,7 +448,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             if (orderMulti.timeStart <= ticker.startTime.longValue()) {
                 orderMulti.updatePriceByKlineSimple(ticker);
                 if (ticker.maxPrice >= orderMulti.priceEntry * 1.007 || orderMulti.priceSL != null) {
-                    Double maxChangeIn90M = getMaxRateIn90MForTradingStop(time, symbol, tickers);
+                    Float maxChangeIn90M = getMaxRateIn90MForTradingStop(time);
                     orderMulti.updateStatusNew(maxChangeIn90M, ticker);
                     if (orderMulti.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)
                             || orderMulti.status.equals(OrderTargetStatus.STOP_LOSS_DONE)
@@ -461,51 +462,13 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         }
     }
 
-    private Double getMaxRateIn90MForTradingStop(Long time, String symbol, List<KlineObjectSimple> tickers) {
+    private Float getMaxRateIn90MForTradingStop(Long time) {
         AiPredictionData predict = predictionMap.get(time);
         if (predict == null) {
-            return 0d;
+            return 0f;
         } else {
-            return Double.valueOf(predict.predReturn15M);
+            return predict.predReturn15M;
         }
-
-//
-//        Double maxChangeIn60M = null;
-//        String month = Utils.getMonth(time);
-//        if (currentMonth == null || !StringUtils.equals(currentMonth, month)) {
-//            if (currentMonth != null) {
-//                String fileName = "storage/rate_change_" + Configs.NUMBER_TICKER_RATE_CHANGE_MAX_TRADE + "m/" + currentMonth;
-//                if (!Utils.getMonth(System.currentTimeMillis() - Utils.TIME_HOUR).equals(currentMonth)
-//                        && !new File(fileName).exists()) {
-//                    LOG.info("Write data max rate change 90M month: {}", fileName);
-//                    StorageSnappy.writeObject2File(fileName, symbol2TimeAndMaxRate90M);
-//                }
-//            }
-//            String fileName = "storage/rate_change_" + Configs.NUMBER_TICKER_RATE_CHANGE_MAX_TRADE + "m/" + month;
-//            if (new File(fileName).exists()) {
-//                LOG.info("Read data max rate change 90M month: {}", fileName);
-//                symbol2TimeAndMaxRate90M = (Map<String, TreeMap<Long, Double>>) StorageSnappy.readObjectFromFile(fileName);
-//            } else {
-//                symbol2TimeAndMaxRate90M = new HashMap<>();
-//            }
-//            currentMonth = month;
-//        }
-//
-//        TreeMap<Long, Double> time2Rate = symbol2TimeAndMaxRate90M.get(symbol);
-//        if (time2Rate != null) {
-//            maxChangeIn60M = time2Rate.get(time);
-//        }
-//        if (maxChangeIn60M == null) {
-////            LOG.info("Calculate max rate change 60M for trading stop: {} {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time), tickers.size());
-//            maxChangeIn60M = MarketBigChangeDetector.getMaxRateIn90MForTradingStop(tickers);
-//            if (time2Rate == null) {
-//                time2Rate = new TreeMap<>();
-//                symbol2TimeAndMaxRate90M.put(symbol, time2Rate);
-//            }
-//            time2Rate.put(time, maxChangeIn60M);
-//        }
-//
-//        return maxChangeIn60M;
     }
 
 

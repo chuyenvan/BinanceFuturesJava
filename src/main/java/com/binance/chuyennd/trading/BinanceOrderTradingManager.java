@@ -16,6 +16,7 @@
 package com.binance.chuyennd.trading;
 
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
+import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.object.MarketLevelChange;
 import com.binance.chuyennd.client.BinanceFuturesClientSingleton;
 import com.binance.chuyennd.client.ClientSingleton;
@@ -287,7 +288,12 @@ public class BinanceOrderTradingManager {
                 }
                 List<KlineObjectSimple> tickers = symbol2Tickers.get(symbol);
 
-                Double maxChange60M = MarketBigChangeDetector.getMaxRateIn90MForTradingStop(tickers);
+                Float maxChange60M = 0f;
+                AiPredictionData predictData = DataManagerAerospikeFloatSim.getAiPredictionAtTime(System.currentTimeMillis() - Utils.TIME_MINUTE);
+                if (predictData != null) {
+//                    LOG.info("Predict data for SL init: {} {}", Utils.normalizeDateYYYYMMDDHHmm(predictData.timestamp), Utils.toJson(predictData));
+                    maxChange60M = predictData.predReturn15M;
+                }
                 Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60MForTradingStop(maxChange60M);
                 if (rateLoss > rateMin2MoveSl) {
                     if (orderInfo.priceSL == null) {
@@ -391,9 +397,13 @@ public class BinanceOrderTradingManager {
                     orderInfo.priceEntry = priceEntry;
                 }
                 OrderSide side2Sl;
-                List<KlineObjectSimple> tickers = symbol2Tickers.get(symbol);
-                Double maxChange60M = MarketBigChangeDetector.getMaxRateIn90MForTradingStop(tickers);
-                Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60MForTradingStop(maxChange60M * 1.5);
+                Float maxChange60M = 0f;
+                AiPredictionData predictData = DataManagerAerospikeFloatSim.getAiPredictionAtTime(System.currentTimeMillis() - Utils.TIME_MINUTE);
+                if (predictData != null) {
+//                    LOG.info("Predict data for SL DL: {} {}", Utils.normalizeDateYYYYMMDDHHmm(predictData.timestamp), Utils.toJson(predictData));
+                    maxChange60M = predictData.predReturn15M;
+                }
+                Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60MForTradingStop(maxChange60M);
                 // BUY
                 if (position.getPositionAmt().compareTo(new BigDecimal("0")) > 0) {
                     side2Sl = OrderSide.SELL;

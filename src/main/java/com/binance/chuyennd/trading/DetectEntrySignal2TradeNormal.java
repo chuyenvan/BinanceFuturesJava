@@ -18,6 +18,7 @@ package com.binance.chuyennd.trading;
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.ai_ml.features.export.entry.ComprehensiveMarketFeatureExtractor;
 import com.binance.chuyennd.ai_ml.features.export.entry.MarketFeatures;
+import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.ai_ml.onnx.entry.AIRejectFilter;
 import com.binance.chuyennd.ai_ml.onnx.entry.OnnxInferenceManager;
 import com.binance.chuyennd.object.MarketLevelChange;
@@ -190,7 +191,7 @@ public class DetectEntrySignal2TradeNormal {
 
             Set<String> symbolLocked = new HashSet<>();
             symbolLocked.addAll(BudgetManager.getInstance().symbol2Pos.keySet());
-            OnnxInferenceManager.PredictionResult prediction = null;
+            OnnxInferenceManager.PredictionResult predictData = null;
             MarketFeatures features = null;
             if (aiBrain != null && featureExtractor != null) {
                 try {
@@ -211,7 +212,15 @@ public class DetectEntrySignal2TradeNormal {
                     features = featureExtractor.extractAllFeaturesProduction(timestamp, currentMarketMap, marketRate, new ArrayList<>());
 
                     // 3. Dự báo
-                    prediction = aiBrain.predictAll(features);
+                    predictData = aiBrain.predictAll(features);
+                    if (predictData != null){
+                        AiPredictionData preData = new AiPredictionData(
+                                timestamp,
+                                predictData.return15M, predictData.return1H, predictData.return4H, predictData.return24H,
+                                predictData.riskDrawdown4H, predictData.riskDrawdown24H
+                        );
+                        DataManagerAerospikeFloatSim.saveAiPrediction1M(preData);
+                    }
 
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -234,7 +243,7 @@ public class DetectEntrySignal2TradeNormal {
                 for (String symbol : symbol2BUY) {
                     try {
                         KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
-                        createOrderBuyRequest(symbol, ticker, levelChange, symbol2Max15m.get(symbol), marketRate, prediction);
+                        createOrderBuyRequest(symbol, ticker, levelChange, symbol2Max15m.get(symbol), marketRate, predictData);
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
@@ -252,7 +261,7 @@ public class DetectEntrySignal2TradeNormal {
                             } else {
                                 levelDca = MarketLevelChange.DCA_LEVEL2;
                             }
-                            createOrderBuyRequest(symbol, ticker, levelDca, symbol2Max15m.get(symbol), marketRate, prediction);
+                            createOrderBuyRequest(symbol, ticker, levelDca, symbol2Max15m.get(symbol), marketRate, predictData);
                         }
                     }
                 } catch (Exception e) {
@@ -276,7 +285,7 @@ public class DetectEntrySignal2TradeNormal {
                             } else {
                                 levelDca = MarketLevelChange.DCA_LEVEL2;
                             }
-                            createOrderBuyRequest(symbol, ticker, levelDca, symbol2Max15m.get(symbol), marketRate, prediction);
+                            createOrderBuyRequest(symbol, ticker, levelDca, symbol2Max15m.get(symbol), marketRate, predictData);
 
                         }
                     }
@@ -305,7 +314,7 @@ public class DetectEntrySignal2TradeNormal {
                     if (MarketBigChangeDetector.isRateChangeAvailable2Trade(rateTicker, rateMax15M)) {
                         LOG.info("Funding buy {} {} close: {} rate:{} max15M: {} tickers:{}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time), ticker.priceClose, rateTicker, rateMax15M, symbol2LastTickers.get(symbol).size());
                         symbolCanTrade.add(symbol);
-                        createOrderBuyRequest(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY, symbol2Max15m.get(symbol), marketRate, prediction);
+                        createOrderBuyRequest(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY, symbol2Max15m.get(symbol), marketRate, predictData);
                     } else {
                         if (MarketBigChangeDetector.isRateChangeAvailable2TradeMass(rateTicker, rateMax15M)) {
                             symbolCanTrade.add(symbol);
@@ -323,7 +332,7 @@ public class DetectEntrySignal2TradeNormal {
                         Double rateTicker = Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen);
                         Double rateMax15M = Utils.rateOf2Double(ticker.priceClose, priceMax15M);
                         LOG.info("Funding buy {} {} close: {} rate:{} max15M: {} tickers:{}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time), ticker.priceClose, rateTicker, rateMax15M, symbol2LastTickers.get(symbol).size());
-                        createOrderBuyRequest(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY, symbol2Max15m.get(symbol), marketRate, prediction);
+                        createOrderBuyRequest(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY, symbol2Max15m.get(symbol), marketRate, predictData);
                     }
                 }
             }
@@ -351,15 +360,15 @@ public class DetectEntrySignal2TradeNormal {
                 LOG.info("Level: {} {} -> {}", Utils.normalizeDateYYYYMMDDHHmm(btcTicker.startTime.longValue()), levelChange, symbol2BUY);
                 for (String symbol : symbol2BUY) {
                     KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
-                    createOrderBuyRequest(symbol, ticker, levelChange, symbol2Max15m.get(symbol), marketRate, prediction);
+                    createOrderBuyRequest(symbol, ticker, levelChange, symbol2Max15m.get(symbol), marketRate, predictData);
                 }
             }
             StorageSnappy.writeObject2File(FILE_STORAGE_TIME_RATE_DOWN15M, time2RateDown15MAvg);
             StorageSnappy.writeObject2File("storage/data/rateMax15M/" + Utils.normalizeDateYYYYMMDD(time) + "/" + time, rateDown15M2Symbols);
             StorageSnappy.writeObject2File("storage/data/rateDown1M/" + Utils.normalizeDateYYYYMMDD(time) + "/" + time, rateDown2Symbols);
-            StorageSnappy.writeObject2File("storage/data/prediction/" + Utils.normalizeDateYYYYMMDD(time) + "/" + time, prediction);
+            StorageSnappy.writeObject2File("storage/data/prediction/" + Utils.normalizeDateYYYYMMDD(time) + "/" + time, predictData);
             StorageSnappy.writeObject2File("storage/data/prediction/" + Utils.normalizeDateYYYYMMDD(time) + "/" + time + ".features", features);
-            LOG.info("Predict: {}", Utils.toJson(prediction));
+            LOG.info("Predict: {}", Utils.toJson(predictData));
         } catch (Exception e) {
             e.printStackTrace();
         }

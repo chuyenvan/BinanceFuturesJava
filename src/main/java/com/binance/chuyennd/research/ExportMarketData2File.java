@@ -39,40 +39,16 @@ public class ExportMarketData2File {
     }
 
     // Hàm này thay thế hàm export cũ
-    public void exportMarketEntries(TreeMap<Long, MarketRateChange> mapRateChanges,
-                                    TreeMap<Long, MarketDataObject> mapInfo,
+    public void exportMarketEntries(TreeMap<Long, MarketDataObject> mapInfo,
                                     TreeMap<Long, Double> mapBtcReversion) {
 
-        // 1. Khởi tạo Map tổng để chứa dữ liệu gộp (chỉ dùng 1 map này để lưu file)
-        TreeMap<Long, MarketDataObject> finalMap = new TreeMap<>();
+
 
         // 2. Duyệt loop để gộp dữ liệu (Lấy mapRateChanges làm chuẩn thời gian)
-        for (Long time : mapRateChanges.keySet()) {
-
-            // Lấy dữ liệu từ nguồn 1: RateChange
-            MarketRateChange rateData = mapRateChanges.get(time);
-
+        for (Long time : mapBtcReversion.keySet()) {
             // Lấy dữ liệu từ nguồn 2: Info cũ (BTC, Max) - cần check null an toàn
             MarketDataObject infoData = mapInfo.get(time);
-            Float valRateBtc = (infoData != null) ? infoData.rateBtc : null;
-            TreeMap<Float, Short> valRate2Max = (infoData != null) ? infoData.rate2Max : null;
-
-            // Lấy dữ liệu từ nguồn 3: BtcReversion
-            Double valBtcReversion = mapBtcReversion.get(time);
-
-            // --- GỘP DỮ LIỆU ---
-            // Tạo object MarketDataObject mới chứa đầy đủ thông tin của cả 3 nguồn
-            MarketDataObject mergedObject = new MarketDataObject(
-                    rateData.rateDownAvg,
-                    rateData.rateDown15MAvg,
-                    rateData.rateUpAvg,
-                    valRateBtc,
-                    valBtcReversion,
-                    valRate2Max
-            );
-
-            // Đưa vào map tổng
-            finalMap.put(time, mergedObject);
+            infoData.btcReversion = mapBtcReversion.get(time);
         }
 
         // 3. Lưu ra 1 file duy nhất
@@ -80,10 +56,10 @@ public class ExportMarketData2File {
         String filePath = Configs.FILE_ENTRY_MARKET_LEVEL;
 
         // Gọi hàm lưu Snappy cũ của bạn
-        StorageSnappy.writeObject2File(Configs.FILE_ENTRY_MARKET_LEVEL, finalMap);
+        StorageSnappy.writeObject2File(Configs.FILE_ENTRY_MARKET_LEVEL, mapInfo);
 
         // Log kết quả
-        System.out.println("Refactor done. Exported " + finalMap.size() + " entries to single file: " + filePath);
+       LOG.info("Refactor done. Exported " + mapInfo.size() + " entries to single file: " + filePath);
     }
 
     public TreeMap<Long, Double> exportBtcTrendReverse(List<KlineObjectSimple> ticker1Ms) {
@@ -113,14 +89,12 @@ public class ExportMarketData2File {
 
     public void exportMarketEntries(String timeRun) throws ParseException {
         Long startTime = Utils.sdfFile.parse(TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
-        if (timeRun != null){
+        if (timeRun != null) {
             startTime = Utils.sdfFile.parse(timeRun).getTime() + 7 * Utils.TIME_HOUR;
         }
         Long timeExport = startTime;
         long endTime = System.currentTimeMillis();
-        TreeMap<Long, MarketRateChange> time2MarketRateChange;
         TreeMap<Long, MarketDataObject> time2MarketData;
-        time2MarketRateChange = new TreeMap<>();
         if (!new File(Configs.FILE_ENTRY_MARKET_LEVEL).exists()) {
             time2MarketData = new TreeMap<>();
         } else {
@@ -198,19 +172,20 @@ public class ExportMarketData2File {
                                 symbol2MinPrice.put(symbol, minPrice);
                             }
 
-                            if (time2MarketRateChange.isEmpty() || time2MarketRateChange.lastKey() < time) {
-                                MarketDataObject marketData;
-                                marketData = MarketBigChangeDetector.calMarketData(symbol2Ticker, symbol2MaxPrice, symbol2MinPrice);
-                                if (marketData != null) {
-                                    MarketLevelChange levelChange = MarketBigChangeDetector.getMarketStatus1M(marketData.rateDownAvg,
-                                            marketData.rateUpAvg, marketData.rateBtc, marketData.rateDown15MAvg);
-                                    if (levelChange != null) {
-                                        time2MarketData.put(time, marketData);
-                                    }
-                                    time2MarketRateChange.put(time, new MarketRateChange(marketData.rateDownAvg, marketData.rateDown15MAvg,
-                                            marketData.rateUpAvg));
+//                            if (time2MarketData.isEmpty() || time2MarketData.lastKey() < time) {
+                            MarketDataObject marketData;
+                            marketData = MarketBigChangeDetector.calMarketData(symbol2Ticker, symbol2MaxPrice, symbol2MinPrice);
+                            if (marketData != null) {
+                                MarketLevelChange levelChange = MarketBigChangeDetector.getMarketStatus1M(marketData.rateDownAvg,
+                                        marketData.rateUpAvg, marketData.rateBtc, marketData.rateDown15MAvg);
+                                if (levelChange != null) {
+                                    time2MarketData.put(time, marketData);
+                                } else {
+                                    time2MarketData.put(time, new MarketDataObject(marketData.rateDownAvg,
+                                            marketData.rateUpAvg, marketData.rateDown15MAvg));
                                 }
                             }
+//                            }
                         } catch (Exception e) {
                             LOG.info("Error process time: {}", Utils.normalizeDateYYYYMMDDHHmm(time));
                             e.printStackTrace();
@@ -226,7 +201,7 @@ public class ExportMarketData2File {
             }
         }
 
-        exportMarketEntries(time2MarketRateChange, time2MarketData, exportBtcTrendReverse(btcTicker1Msg));
+        exportMarketEntries(time2MarketData, exportBtcTrendReverse(btcTicker1Msg));
     }
 
 }

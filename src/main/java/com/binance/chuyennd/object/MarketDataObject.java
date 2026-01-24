@@ -15,12 +15,13 @@ public class MarketDataObject implements Serializable {
     public TreeMap<Float, Short> rate2Max;
 
 
-    public MarketDataObject(Float rateDownAvg, Float rateUpAvg, Float rateBtc) {
+    public MarketDataObject(Float rateDownAvg, Float rateUpAvg, Float rateDown15MAvg) {
         this.rateDownAvg = rateDownAvg;
         this.rateUpAvg = rateUpAvg;
-        this.rateBtc = rateBtc;
+        this.rateDown15MAvg = rateDown15MAvg;
 
     }
+
     // Constructor đầy đủ để merge dữ liệu
     public MarketDataObject(Float rateDownAvg, Float rateDown15MAvg, Float rateUpAvg,
                             Float rateBtc, Double btcReversion, TreeMap<Float, Short> rate2Max) {

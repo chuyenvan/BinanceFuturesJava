@@ -19,7 +19,7 @@ public class TradeUtils {
 //        System.out.println(TradeUtils.calRateMinWithMaxChange60MForTradingStop(0d, null));
     }
 
-    public static Double calRateLossDynamicBuy(Double unProfit, Double maxChange90M) {
+    public static Double calRateLossDynamicBuy(Double unProfit, Float maxChange90M) {
         Double rateLoss = unProfit * 200;
         Long tradingStopRate;
         Long maxRateTradingStop = 16l;
@@ -35,7 +35,7 @@ public class TradeUtils {
         return rateLoss / 200;
     }
 
-    public static Double calRateMinWithMaxChange60MForTradingStop(Double maxChange90M) {
+    public static Double calRateMinWithMaxChange60MForTradingStop(Float maxChange90M) {
         // Sử dụng biến từ Configs thay vì số cứng
         Double rateMin2MoveSl = Configs.RATE_PROFIT_STOP_MARKET;
 

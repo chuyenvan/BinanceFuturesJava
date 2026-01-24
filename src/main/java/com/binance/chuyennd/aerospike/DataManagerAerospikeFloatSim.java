@@ -10,6 +10,7 @@ import com.aerospike.client.policy.BatchPolicy;
 import com.aerospike.client.policy.RecordExistsAction;
 import com.aerospike.client.policy.ScanPolicy;
 import com.aerospike.client.policy.WritePolicy;
+import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
@@ -43,7 +44,7 @@ public class DataManagerAerospikeFloatSim {
     private static final String AEROSPIKE_SET_NAME_MAPPER = "symbol_mapper"; // Set name mới
     private static final String MAPPER_KEY_GLOBAL = "global_id_map";         // Key chứa Map
     private static final String MAPPER_BIN_NAME = "data";                    // Tên Bin chứa Map
-
+    private static final String AEROSPIKE_SET_NAME_AI_PRED_1M = "ai_pred_1m";
     private static volatile AerospikeClient client;
     private static final BatchPolicy batchPolicy = new BatchPolicy();
     private static final int BATCH_CHUNK_SIZE = 2000;
@@ -747,7 +748,173 @@ public class DataManagerAerospikeFloatSim {
             });
         }
     }
+// =========================================================================
+    // 🔥🔥 AI PREDICTION DATA: GHI VÀ ĐỌC THEO PHÚT (GIỐNG TICKER 1M) 🔥🔥
+    // =========================================================================
 
+    /**
+     * 1. GHI DỮ LIỆU (WRITE BY MINUTE)
+     * Ghi 1 record cho mỗi phút. Key = yyyyMMdd-HHmm
+     */
+    public static void saveAiPrediction1M(AiPredictionData data) {
+        if (data == null) return;
+        try {
+            SimpleDateFormat fmt = new SimpleDateFormat("yyyyMMdd-HHmm");
+            String keyString = fmt.format(new Date(data.timestamp));
+            Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_AI_PRED_1M, keyString);
+
+            // Serialize JSON -> Bytes -> Snappy Compress
+            String json = Utils.gson.toJson(data);
+            byte[] rawBytes = json.getBytes("UTF-8");
+            byte[] compressed = Snappy.compress(rawBytes);
+
+            // Ghi vào bin "data"
+            getClient().put(writePolicy, key, new Bin("data", compressed));
+
+        } catch (Exception e) {
+            LOG.error("❌ Error saving AI Pred 1M at {}: {}", data.timestamp, e.getMessage());
+        }
+    }
+
+    /**
+     * Helper: Ghi danh sách lớn (Batch Write) bằng đa luồng để tăng tốc độ
+     */
+    public static void saveListAiPrediction1M(TreeMap<Long, AiPredictionData> dataMap) {
+        if (dataMap == null || dataMap.isEmpty()) return;
+        LOG.info("🚀 Starting batch save for {} AI records...", dataMap.size());
+
+        dataMap.values().parallelStream().forEach(data -> {
+            saveAiPrediction1M(data);
+        });
+
+        LOG.info("✅ Done batch save AI records.");
+    }
+
+    /**
+     * 2. LẤY DỮ LIỆU THEO PHÚT (READ SINGLE MINUTE)
+     */
+    public static AiPredictionData getAiPredictionAtTime(long timestamp) {
+        try {
+            SimpleDateFormat fmt = new SimpleDateFormat("yyyyMMdd-HHmm");
+            String keyString = fmt.format(new Date(timestamp));
+            Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_AI_PRED_1M, keyString);
+
+            Record record = getClient().get(null, key);
+            if (record != null) {
+                return parseAiRecord(record);
+            }
+        } catch (Exception e) {
+            LOG.error("❌ Error getting AI Pred at {}: {}", timestamp, e.getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * 3. LẤY DỮ LIỆU THEO THÁNG (READ MONTH - BATCH READ)
+     * Logic giống hệt readDataFromAerospike1M của Ticker: Tạo key cho từng phút trong tháng -> Batch Read
+     * @param monthStr format "yyyyMM" (Ví dụ: "202401")
+     */
+    public static TreeMap<Long, AiPredictionData> getAiPredictionsForMonth(String monthStr) {
+        TreeMap<Long, AiPredictionData> results = new TreeMap<>();
+        try {
+            SimpleDateFormat sdfMonth = new SimpleDateFormat("yyyyMM");
+            Date date = sdfMonth.parse(monthStr);
+            Calendar cal = Calendar.getInstance();
+            cal.setTime(date);
+
+            // Xác định thời gian bắt đầu và kết thúc của tháng
+            long startTime = cal.getTimeInMillis();
+            cal.add(Calendar.MONTH, 1);
+            long endTime = cal.getTimeInMillis();
+
+            // Tính tổng số phút (records) trong tháng
+            int totalMinutes = (int) ((endTime - startTime) / (60 * 1000));
+            LOG.info("📥 Reading AI Data for month {} ({} records)...", monthStr, totalMinutes);
+
+            // Tận dụng hàm đọc Batch tùy chỉnh
+            results = readAiBatchCustom(startTime, totalMinutes);
+
+        } catch (Exception e) {
+            LOG.error("❌ Error reading AI Month {}: {}", monthStr, e.getMessage());
+        }
+        return results;
+    }
+
+    /**
+     * Helper: Đọc Batch AI Data theo range thời gian (Đa luồng)
+     */
+    public static TreeMap<Long, AiPredictionData> readAiBatchCustom(long startTime, int totalMinutes) {
+        TreeMap<Long, AiPredictionData> results = new TreeMap<>();
+
+        // 1. Tạo danh sách Timestamps
+        long[] allTimestamps = new long[totalMinutes];
+        for (int i = 0; i < totalMinutes; i++) {
+            allTimestamps[i] = startTime + (i * 60000L);
+        }
+
+        List<Future<Map<Long, AiPredictionData>>> futures = new ArrayList<>();
+        int chunkSize = (totalMinutes + threadCount - 1) / threadCount;
+
+        // 2. Chia đa luồng Batch Read
+        for (int i = 0; i < threadCount; i++) {
+            final int startIdx = i * chunkSize;
+            final int endIdx = Math.min(startIdx + chunkSize, totalMinutes);
+            if (startIdx >= endIdx) break;
+
+            futures.add(executor.submit(() -> {
+                SimpleDateFormat localKeyFormat = new SimpleDateFormat("yyyyMMdd-HHmm");
+                Map<Long, AiPredictionData> chunkResult = new HashMap<>();
+                try {
+                    Key[] chunkKeys = new Key[endIdx - startIdx];
+                    long[] chunkTimestamps = Arrays.copyOfRange(allTimestamps, startIdx, endIdx);
+
+                    for (int k = 0; k < chunkKeys.length; k++) {
+                        String keyString = localKeyFormat.format(new Date(chunkTimestamps[k]));
+                        chunkKeys[k] = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_AI_PRED_1M, keyString);
+                    }
+
+                    // Batch Read
+                    Record[] records = getClient().get(batchPolicy, chunkKeys);
+
+                    for (int j = 0; j < records.length; j++) {
+                        Record record = records[j];
+                        if (record != null) {
+                            AiPredictionData data = parseAiRecord(record);
+                            if (data != null) {
+                                chunkResult.put(data.timestamp, data);
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                return chunkResult;
+            }));
+        }
+
+        // 3. Tổng hợp kết quả
+        for (Future<Map<Long, AiPredictionData>> future : futures) {
+            try {
+                results.putAll(future.get());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        return results;
+    }
+
+    private static AiPredictionData parseAiRecord(Record record) {
+        try {
+            byte[] compressedData = (byte[]) record.getValue("data");
+            if (compressedData != null) {
+                byte[] uncompressed = Snappy.uncompress(compressedData);
+                String json = new String(uncompressed, "UTF-8");
+                return Utils.gson.fromJson(json, AiPredictionData.class);
+            }
+        } catch (Exception e) {
+        }
+        return null;
+    }
     public static void main(String[] args) throws ParseException {
         Long startTime = Utils.sdfFile.parse("20260103").getTime() + 7 * Utils.TIME_HOUR;
         TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers = DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime);
