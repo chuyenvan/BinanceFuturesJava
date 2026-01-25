@@ -45,6 +45,8 @@ public class DataManagerAerospikeFloatSim {
     private static final String MAPPER_KEY_GLOBAL = "global_id_map";         // Key chứa Map
     private static final String MAPPER_BIN_NAME = "data";                    // Tên Bin chứa Map
     private static final String AEROSPIKE_SET_NAME_AI_PRED_1M = "ai_pred_1m";
+    // 🔥 SET NAME MỚI CHO AI PREDICT
+    private static final String AEROSPIKE_SET_NAME_DCA_PRED = "dca_pred_1m";
     private static volatile AerospikeClient client;
     private static final BatchPolicy batchPolicy = new BatchPolicy();
     private static final int BATCH_CHUNK_SIZE = 2000;
@@ -915,10 +917,156 @@ public class DataManagerAerospikeFloatSim {
         }
         return null;
     }
+
+    // =========================================================================
+    // 2. DCA PREDICTIONS (WRITE PER MINUTE)
+    // =========================================================================
+
+    /**
+     * Ghi kết quả dự báo của TOÀN BỘ thị trường trong 1 phút vào 1 record.
+     * Key: yyyyMMdd-HHmm
+     * Value: JSON Compressed (Map<Short, float[]>)
+     */
+    public static void saveDcaPredictions1M(long timestamp, Map<Short, float[]> predictions) {
+        if (predictions == null || predictions.isEmpty()) return;
+        try {
+            SimpleDateFormat fmt = new SimpleDateFormat("yyyyMMdd-HHmm");
+            String keyString = fmt.format(new Date(timestamp));
+            Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_DCA_PRED, keyString);
+
+            // Serialize: Map -> JSON -> Bytes -> Snappy
+            // Dùng JSON thay vì Proto vì Map<Short, float[]> linh hoạt, Gson xử lý nhanh
+            String json = Utils.gson.toJson(predictions);
+            byte[] rawBytes = json.getBytes("UTF-8");
+            byte[] compressed = Snappy.compress(rawBytes);
+
+            getClient().put(writePolicy, key, new Bin("data", compressed));
+
+        } catch (Exception e) {
+            LOG.error("❌ Error saving DCA Pred at {}: {}", timestamp, e.getMessage());
+        }
+    }
+    /**
+     * 🔥 MỚI: Đọc dự báo DCA tại 1 thời điểm cụ thể
+     */
+    public static Map<Short, float[]> getDcaPredictionAtTime(long timestamp) {
+        try {
+            SimpleDateFormat fmt = new SimpleDateFormat("yyyyMMdd-HHmm");
+            String keyString = fmt.format(new Date(timestamp));
+            Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_DCA_PRED, keyString);
+
+            Record record = getClient().get(null, key);
+            if (record != null) {
+                byte[] compressed = (byte[]) record.getValue("data");
+                if (compressed != null) {
+                    byte[] rawBytes = Snappy.uncompress(compressed);
+                    String json = new String(rawBytes, "UTF-8");
+                    // Sử dụng TypeToken để parse về Map<Short, float[]>
+                    return Utils.gson.fromJson(json, new com.google.gson.reflect.TypeToken<Map<Short, float[]>>(){}.getType());
+                }
+            }
+        } catch (Exception e) {
+            LOG.error("❌ Error reading DCA Pred at {}: {}", timestamp, e.getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * 🔥 MỚI: Đọc dự báo DCA theo tháng (Batch Read đa luồng giống Ticker 1M)
+     * @param monthStr format "yyyyMM" (Ví dụ: "202401")
+     */
+    public static TreeMap<Long, Map<Short, float[]>> getDcaPredictionsForMonth(String monthStr) {
+        TreeMap<Long, Map<Short, float[]>> results = new TreeMap<>();
+        try {
+            SimpleDateFormat sdfMonth = new SimpleDateFormat("yyyyMM");
+            Date date = sdfMonth.parse(monthStr);
+            Calendar cal = Calendar.getInstance();
+            cal.setTime(date);
+
+            long startTime = cal.getTimeInMillis();
+            cal.add(Calendar.MONTH, 1);
+            long endTime = cal.getTimeInMillis();
+
+            int totalMinutes = (int) ((endTime - startTime) / (60 * 1000));
+            LOG.info("📥 Reading DCA Data for month {} ({} records)...", monthStr, totalMinutes);
+
+            results = readDcaBatchCustom(startTime, totalMinutes);
+
+        } catch (Exception e) {
+            LOG.error("❌ Error reading DCA Month {}: {}", monthStr, e.getMessage());
+        }
+        return results;
+    }
+
+    /**
+     * Helper: Đọc Batch DCA Data theo range thời gian (Đa luồng)
+     */
+    public static TreeMap<Long, Map<Short, float[]>> readDcaBatchCustom(long startTime, int totalMinutes) {
+        TreeMap<Long, Map<Short, float[]>> results = new TreeMap<>();
+
+        // Tạo mảng timestamp
+        long[] allTimestamps = new long[totalMinutes];
+        for (int i = 0; i < totalMinutes; i++) {
+            allTimestamps[i] = startTime + (i * 60000L);
+        }
+
+        List<Future<Map<Long, Map<Short, float[]>>>> futures = new ArrayList<>();
+        int chunkSize = (totalMinutes + threadCount - 1) / threadCount;
+
+        // Chia chunk cho các threads
+        for (int i = 0; i < threadCount; i++) {
+            final int startIdx = i * chunkSize;
+            final int endIdx = Math.min(startIdx + chunkSize, totalMinutes);
+            if (startIdx >= endIdx) break;
+
+            futures.add(executor.submit(() -> {
+                SimpleDateFormat localKeyFormat = new SimpleDateFormat("yyyyMMdd-HHmm");
+                Map<Long, Map<Short, float[]>> chunkResult = new HashMap<>();
+                try {
+                    Key[] chunkKeys = new Key[endIdx - startIdx];
+                    long[] chunkTimestamps = Arrays.copyOfRange(allTimestamps, startIdx, endIdx);
+
+                    for (int k = 0; k < chunkKeys.length; k++) {
+                        String keyString = localKeyFormat.format(new Date(chunkTimestamps[k]));
+                        chunkKeys[k] = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_DCA_PRED, keyString);
+                    }
+
+                    // Batch Get
+                    Record[] records = getClient().get(batchPolicy, chunkKeys);
+
+                    for (int j = 0; j < records.length; j++) {
+                        Record record = records[j];
+                        if (record != null) {
+                            byte[] compressed = (byte[]) record.getValue("data");
+                            if (compressed != null) {
+                                byte[] rawBytes = Snappy.uncompress(compressed);
+                                String json = new String(rawBytes, "UTF-8");
+                                Map<Short, float[]> data = Utils.gson.fromJson(json, new com.google.gson.reflect.TypeToken<Map<Short, float[]>>(){}.getType());
+                                chunkResult.put(chunkTimestamps[j], data);
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                return chunkResult;
+            }));
+        }
+
+        // Gom kết quả
+        for (Future<Map<Long, Map<Short, float[]>>> f : futures) {
+            try {
+                results.putAll(f.get());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        return results;
+    }
     public static void main(String[] args) throws ParseException {
-        Long startTime = Utils.sdfFile.parse("20260103").getTime() + 7 * Utils.TIME_HOUR;
-        TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers = DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime);
-        LOG.info("{} {} {} {}",time2Tickers.firstEntry().getValue().keySet(), Utils.normalizeDateYYYYMMDDHHmm(time2Tickers.firstKey()),
+        Long startTime = Utils.sdfFile.parse("20210103").getTime() + 7 * Utils.TIME_HOUR;
+        TreeMap<Long, Map<Short, float[]>> time2Tickers = DataManagerAerospikeFloatSim.readDcaBatchCustom(startTime, 1440);
+        LOG.info("{} {} {} {}",Utils.toJson(time2Tickers.firstEntry().getValue()), Utils.normalizeDateYYYYMMDDHHmm(time2Tickers.firstKey()),
                 Utils.normalizeDateYYYYMMDDHHmm(time2Tickers.lastKey()), time2Tickers.size());
 //        debugKeys();
 //        Map<String, TreeMap<Long, Double>> symbol2FundingMap = DataManagerAerospikeFloatSim.getAllFundingMap();

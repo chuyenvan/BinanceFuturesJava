@@ -7,7 +7,7 @@ import java.util.TreeMap;
 
 /**
  * Gói dữ liệu "All-in-One" cho 1 năm.
- * Chứa cả dữ liệu dự báo và bảng mapping để đảm bảo tính nhất quán tuyệt đối.
+ * Chứa cả dữ liệu dự báo và bảng mapping symbol -> ID.
  */
 public class DcaYearlyDataPackage implements Serializable {
     private static final long serialVersionUID = 1L;
