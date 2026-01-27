@@ -1063,9 +1063,43 @@ public class DataManagerAerospikeFloatSim {
         }
         return results;
     }
+    /**
+     * 🔥 HÀM MỚI: Kiểm tra nhanh xem một list thời gian đã có dữ liệu AI chưa.
+     * Trả về Set<Long> chứa các timestamp ĐÃ TỒN TẠI.
+     */
+    public static Set<Long> checkExistingDcaPredictions(List<Long> timestamps) {
+        Set<Long> existing = new HashSet<>();
+        if (timestamps == null || timestamps.isEmpty()) return existing;
+
+        try {
+            SimpleDateFormat fmt = new SimpleDateFormat("yyyyMMdd-HHmm");
+            Key[] keys = new Key[timestamps.size()];
+
+            for (int i = 0; i < timestamps.size(); i++) {
+                String keyString = fmt.format(new Date(timestamps.get(i)));
+                keys[i] = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_DCA_PRED, keyString);
+            }
+
+            // Batch Exists: Cực nhanh, chỉ kiểm tra metadata không đọc dữ liệu
+            boolean[] existsArray = getClient().exists(batchPolicy, keys);
+
+            for (int i = 0; i < existsArray.length; i++) {
+                if (existsArray[i]) {
+                    existing.add(timestamps.get(i));
+                }
+            }
+        } catch (Exception e) {
+            LOG.error("❌ Error checking existence: {}", e.getMessage());
+        }
+        return existing;
+    }
     public static void main(String[] args) throws ParseException {
         Long startTime = Utils.sdfFile.parse("20210103").getTime() + 7 * Utils.TIME_HOUR;
         TreeMap<Long, Map<Short, float[]>> time2Tickers = DataManagerAerospikeFloatSim.readDcaBatchCustom(startTime, 1440);
+        for (Long timeKey : time2Tickers.keySet()) {
+
+            LOG.info("Time: {} -> {} records", Utils.normalizeDateYYYYMMDDHHmm(timeKey), time2Tickers.get(timeKey).size());
+        }
         LOG.info("{} {} {} {}",Utils.toJson(time2Tickers.firstEntry().getValue()), Utils.normalizeDateYYYYMMDDHHmm(time2Tickers.firstKey()),
                 Utils.normalizeDateYYYYMMDDHHmm(time2Tickers.lastKey()), time2Tickers.size());
 //        debugKeys();

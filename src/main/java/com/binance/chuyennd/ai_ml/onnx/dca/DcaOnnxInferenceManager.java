@@ -9,121 +9,120 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.FloatBuffer;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 
 public class DcaOnnxInferenceManager implements AutoCloseable {
     private static final Logger LOG = LoggerFactory.getLogger(DcaOnnxInferenceManager.class);
     private final OrtEnvironment env;
 
-    // Các Session đơn lẻ (XGBoost Ultimate Only)
     private OrtSession sessionRisk;
     private OrtSession sessionReward;
     private OrtSession sessionPump;
     private OrtSession sessionDump;
 
     private static final String INPUT_NODE = "float_input";
+    private static final int NUM_FEATURES = 41; // Số lượng feature cố định
 
     public DcaOnnxInferenceManager(String modelDir) throws OrtException {
-        LOG.info("🧠 Initializing DCA AI (XGBoost Ultimate) from: {}", modelDir);
+        LOG.info("🧠 Initializing DCA AI (BATCH MODE) from: {}", modelDir);
         this.env = OrtEnvironment.getEnvironment();
         OrtSession.SessionOptions opts = new OrtSession.SessionOptions();
 
-        // Tối ưu hoá mức cao nhất cho Inference
-        opts.setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT);
-        opts.setIntraOpNumThreads(1); // Single thread mỗi session để tiết kiệm CPU cho việc khác
+        // Tối ưu cho Batch lớn
+        opts.addConfigEntry("session.disable_cpu_mem_arena", "1");
+        opts.setIntraOpNumThreads(Math.min(4, Runtime.getRuntime().availableProcessors())); // Cho phép đa luồng nội bộ khi tính batch
+        opts.setInterOpNumThreads(1);
 
-        // --- LOAD 4 MODEL XGBOOST CHÍNH ---
-        // Tên file phải khớp với code Python output
         this.sessionRisk = loadSession(modelDir, "Model_Risk.onnx", opts);
         this.sessionReward = loadSession(modelDir, "Model_Reward.onnx", opts);
         this.sessionPump = loadSession(modelDir, "Model_Pump.onnx", opts);
         this.sessionDump = loadSession(modelDir, "Model_Dump.onnx", opts);
-
-        if (sessionRisk == null || sessionReward == null || sessionPump == null || sessionDump == null) {
-            LOG.warn("⚠️ Warning: Some AI models failed to load. Predictions may be incomplete.");
-        } else {
-            LOG.info("✅ All 4 XGBoost Models Loaded Successfully.");
-        }
     }
 
     private OrtSession loadSession(String dir, String fileName, OrtSession.SessionOptions opts) {
         try {
             String path = dir + "/" + fileName;
             java.io.File f = new java.io.File(path);
-            if (f.exists()) {
-                LOG.info("  + Loaded: {}", fileName);
-                return env.createSession(path, opts);
-            } else {
-                LOG.error("  ❌ Missing Model File: {}", path);
-                return null;
-            }
-        } catch (Exception e) {
-            LOG.error("  ❌ Error loading {}: {}", fileName, e.getMessage());
-            return null;
-        }
+            if (f.exists()) return env.createSession(path, opts);
+        } catch (Exception e) {}
+        return null;
     }
 
-    public DcaPredictionResult predict(DcaMarketFeatures f) {
+    // --- 🔥 HÀM MỚI: PREDICT BATCH 🔥 ---
+    // Input: List các mảng feature (mỗi mảng 41 phần tử)
+    // Output: List kết quả tương ứng
+    public List<DcaPredictionResult> predictBatch(List<float[]> batchFeatures) {
+        int batchSize = batchFeatures.size();
+        if (batchSize == 0) return new ArrayList<>();
+
+        // 1. Flatten dữ liệu: Chuyển List<float[]> thành 1 mảng float khổng lồ 1 chiều
+        // Kích thước = batchSize * 41
+        FloatBuffer buffer = FloatBuffer.allocate(batchSize * NUM_FEATURES);
+        for (float[] f : batchFeatures) {
+            buffer.put(f);
+        }
+        buffer.flip();
+
+        List<DcaPredictionResult> results = new ArrayList<>(batchSize);
+
+        // Khởi tạo giá trị mặc định
+        float[] riskArr = new float[batchSize];
+        float[] rewardArr = new float[batchSize];
+        float[] pumpArr = new float[batchSize];
+        float[] dumpArr = new float[batchSize];
+
         try {
-            float[] rawFeatures = extractFeaturesToArray(f);
+            // Chạy Batch cho từng Model (Chỉ tạo Tensor 4 lần thay vì 4 * batchSize lần)
+            runBatchRegression(sessionRisk, buffer, batchSize, riskArr, -0.1f);
+            buffer.rewind(); // Tua lại buffer để dùng cho model sau
 
-            // Chạy Inference đơn lẻ
-            float risk = runRegression(sessionRisk, rawFeatures, -0.1f); // Default risk -10%
-            float reward = runRegression(sessionReward, rawFeatures, 0.05f); // Default reward 5%
-            float pump = runClassification(sessionPump, rawFeatures);
-            float dump = runClassification(sessionDump, rawFeatures);
+            runBatchRegression(sessionReward, buffer, batchSize, rewardArr, 0.05f);
+            buffer.rewind();
 
-            return new DcaPredictionResult(risk, reward, pump, dump);
+            runBatchRegression(sessionPump, buffer, batchSize, pumpArr, 0.0f);
+            buffer.rewind();
+
+            runBatchRegression(sessionDump, buffer, batchSize, dumpArr, 0.0f);
 
         } catch (Exception e) {
-            // e.printStackTrace(); // Uncomment để debug nếu cần
-            // Trả về giá trị an toàn nếu lỗi: Không Pump, Không Dump, Risk nhẹ
-            return new DcaPredictionResult(0f, 0f, 0f, 0f);
+            LOG.error("Batch inference error: {}", e.getMessage());
         }
+
+        // Gom kết quả lại
+        for (int i = 0; i < batchSize; i++) {
+            results.add(new DcaPredictionResult(riskArr[i], rewardArr[i], pumpArr[i], dumpArr[i]));
+        }
+        return results;
     }
 
-    // Hàm chạy cho Risk/Reward (Output là giá trị thực)
-    private float runRegression(OrtSession session, float[] features, float defaultValue) {
-        if (session == null) return defaultValue;
-        try (OrtSession.Result result = runSession(session, features)) {
+    private void runBatchRegression(OrtSession session, FloatBuffer buffer, int batchSize, float[] outputArr, float defaultVal) {
+        if (session == null) {
+            Arrays.fill(outputArr, defaultVal);
+            return;
+        }
+
+        long[] shape = new long[]{batchSize, NUM_FEATURES};
+
+        try (
+                OnnxTensor inputTensor = OnnxTensor.createTensor(env, buffer, shape);
+                OrtSession.Result result = session.run(Collections.singletonMap(INPUT_NODE, inputTensor))
+        ) {
+            // Output của Batch là mảng 2 chiều [batchSize][1]
             float[][] output = (float[][]) result.get(0).getValue();
-            return output[0][0];
-        } catch (Exception e) {
-            return defaultValue;
-        }
-    }
 
-    // Hàm chạy cho Pump/Dump (Output là xác suất lớp 1)
-    private float runClassification(OrtSession session, float[] features) {
-        if (session == null) return 0.0f;
-        try (OrtSession.Result result = runSession(session, features)) {
-            // XGBoost Classifier ONNX output:
-            // Node 0: Label dự đoán (0 hoặc 1) -> Không dùng
-            // Node 1: Probabilities (List Map hoặc Tensor) -> Dùng cái này
-
-            Object val = result.get(1).getValue();
-
-            if (val instanceof float[][]) {
-                // Trường hợp output là Tensor [1, 2] (Class 0, Class 1)
-                return ((float[][]) val)[0][1];
-            } else {
-                // Trường hợp thư viện cũ trả về dạng khác, mặc định 0
-                return 0.0f;
+            for (int i = 0; i < batchSize; i++) {
+                outputArr[i] = output[i][0];
             }
         } catch (Exception e) {
-            return 0.0f;
+            Arrays.fill(outputArr, defaultVal);
         }
     }
 
-    private OrtSession.Result runSession(OrtSession session, float[] features) throws OrtException {
-        // Tạo Tensor đầu vào [1, n_features]
-        long[] shape = new long[]{1, features.length};
-        OnnxTensor inputTensor = OnnxTensor.createTensor(env, FloatBuffer.wrap(features), shape);
-        return session.run(Collections.singletonMap(INPUT_NODE, inputTensor));
-    }
-
-    // Map 41 Features từ Object sang mảng float (Thứ tự phải khớp tuyệt đối với Python training)
-    private float[] extractFeaturesToArray(DcaMarketFeatures f) {
+    // Helper trích xuất feature (public để bên ngoài gọi trước khi gom batch)
+    public float[] extractFeaturesToArray(DcaMarketFeatures f) {
         return new float[] {
                 (float)f.distFromHigh24H, (float)f.distMA20, (float)f.instantAlpha, (float)f.recoveryElasticity,
                 (float)f.crashVelocity, (float)f.globalRateDownAvg, (float)f.advanceDeclineRatio, (float)f.btcDominance, (float)f.marketBreadthStrength,

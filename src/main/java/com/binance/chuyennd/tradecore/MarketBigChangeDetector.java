@@ -92,9 +92,9 @@ public class MarketBigChangeDetector {
         TreeMap<Float, String> rateUp2Symbols = new TreeMap<>();
         KlineObjectSimple btcTicker = symbol2Ticker.get(Constants.SYMBOL_PAIR_BTC);
         Double rateChangeBtc;
-        if (btcTicker == null){
+        if (btcTicker == null) {
             rateChangeBtc = 0d;
-        }else{
+        } else {
             rateChangeBtc = Utils.rateOf2Double(btcTicker.priceClose, btcTicker.priceOpen);
         }
         for (Map.Entry<String, KlineObjectSimple> entry1 : symbol2Ticker.entrySet()) {
@@ -228,45 +228,90 @@ public class MarketBigChangeDetector {
         return total / counter;
     }
 
+    //    public static MarketLevelChange getMarketStatus1M(Float rateDownAvg, Float rateUpAvg,
+//                                                      Float btcRateChange, Float rateDown15MAvg) {
+//        if (rateUpAvg > 0.025) {
+//            return MarketLevelChange.BIG_UP;
+//        }
+//        if (rateDownAvg < -0.032
+//                && btcRateChange < -0.01) {
+//            return MarketLevelChange.BIG_DOWN;
+//        }
+//
+//        // medium 2 order
+//        if (rateUpAvg > 0.015) {
+//            return MarketLevelChange.MEDIUM_UP;
+//        }
+//        if (rateDownAvg < -0.030 ||
+//                (rateDownAvg < -0.014
+//                        && rateDown15MAvg < -0.07
+//                )
+//        ) {
+//            return MarketLevelChange.MEDIUM_DOWN;
+//        }
+//        if (rateUpAvg > 0.008 && rateDownAvg > 0) {
+//            return MarketLevelChange.SMALL_UP;
+//        }
+//        if (rateDownAvg < -0.006 && rateUpAvg < 0
+//                && rateDown15MAvg < -0.025
+//        ) {
+//            return MarketLevelChange.SMALL_DOWN;
+//        }
+//
+//        if (rateDown15MAvg < -0.045) {
+//            return MarketLevelChange.MEDIUM_DOWN_15M;
+//        }
+//        if (rateDown15MAvg < -0.028) {
+//            return MarketLevelChange.SMALL_DOWN_15M;
+//        }
+//
+//        return null;
+//
+//    }
     public static MarketLevelChange getMarketStatus1M(Float rateDownAvg, Float rateUpAvg,
                                                       Float btcRateChange, Float rateDown15MAvg) {
-        if (rateUpAvg > 0.025) {
+
+        // 1. BIG UP / BIG DOWN
+        if (rateUpAvg > Configs.MS_UP_BIG_THRES) {
             return MarketLevelChange.BIG_UP;
         }
-        if (rateDownAvg < -0.032
-                && btcRateChange < -0.01) {
+        if (rateDownAvg < Configs.MS_DOWN_BIG_AVG
+                && btcRateChange < Configs.MS_DOWN_BIG_BTC) {
             return MarketLevelChange.BIG_DOWN;
         }
 
-        // medium 2 order
-        if (rateUpAvg > 0.015) {
+        // 2. MEDIUM UP / DOWN
+        if (rateUpAvg > Configs.MS_UP_MED_THRES) {
             return MarketLevelChange.MEDIUM_UP;
         }
-        if (rateDownAvg < -0.030 ||
-                (rateDownAvg < -0.014
-                        && rateDown15MAvg < -0.07
+        // Logic Medium Down phức tạp (AVG < X HOẶC (AVG < Y VÀ 15M < Z))
+        if (rateDownAvg < Configs.MS_DOWN_MED_AVG ||
+                (rateDownAvg < Configs.MS_DOWN_MED_AVG_CMB
+                        && rateDown15MAvg < Configs.MS_DOWN_MED_15M_CMB
                 )
         ) {
             return MarketLevelChange.MEDIUM_DOWN;
         }
-        if (rateUpAvg > 0.008 && rateDownAvg > 0) {
+
+        // 3. SMALL UP / DOWN
+        if (rateUpAvg > Configs.MS_UP_SMALL_THRES && rateDownAvg > 0) {
             return MarketLevelChange.SMALL_UP;
         }
-        if (rateDownAvg < -0.006 && rateUpAvg < 0
-                && rateDown15MAvg < -0.025
+        if (rateDownAvg < Configs.MS_DOWN_SMALL_AVG && rateUpAvg < 0
+                && rateDown15MAvg < Configs.MS_DOWN_SMALL_15M
         ) {
             return MarketLevelChange.SMALL_DOWN;
         }
 
-        if (rateDown15MAvg < -0.045) {
+        // 4. RIÊNG BIỆT THEO 15M (Trường hợp Avg không giảm mạnh nhưng 15M sập)
+        if (rateDown15MAvg < Configs.MS_DOWN_15M_MED_ONLY) {
             return MarketLevelChange.MEDIUM_DOWN_15M;
         }
-        if (rateDown15MAvg < -0.028) {
+        if (rateDown15MAvg < Configs.MS_DOWN_15M_SMALL_ONLY) {
             return MarketLevelChange.SMALL_DOWN_15M;
         }
 
         return null;
-
     }
 
     public static boolean isFundingFeeTrade(Float rateDown15MAvg, Float rateDownAvg, Float rateUpAvg,
@@ -341,19 +386,6 @@ public class MarketBigChangeDetector {
         return hashSet;
     }
 
-//    public static XGBoostMarketPredictor.Forecast getAiPredict(MarketDataObject marketData, Long time, Map<String, KlineObjectSimple> symbol2LastTicker) {
-//        MarketRateChange rateChange = new MarketRateChange(marketData.rateDownAvg, marketData.rateDown15MAvg,
-//                marketData.rateUpAvg);
-//        MarketFeatures features = featureExtractor.extractAllFeatures(time, symbol2LastTicker, rateChange);
-//        XGBoostMarketPredictor.Forecast predictedReturn = predictor.predict(features);
-//        return predictedReturn;
-//    }
-//
-//    public static XGBoostMarketPredictor.Forecast getAiPredict(MarketRateChange rateChange, Long time, Map<String, KlineObjectSimple> symbol2LastTicker) {
-//        MarketFeatures features = featureExtractor.extractAllFeatures(time, symbol2LastTicker, rateChange);
-//        XGBoostMarketPredictor.Forecast predictedReturn = predictor.predict(features);
-//        return predictedReturn;
-//    }
 
 }
 

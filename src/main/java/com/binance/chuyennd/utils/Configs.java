@@ -171,6 +171,28 @@ public class Configs {
         return Double.parseDouble((String) properties.get(configName));
     }
 
+    // Trong file com.binance.chuyennd.utils.Configs
+
+    // === MARKET STATUS THRESHOLDS (Mặc định ban đầu) ===
+    public static double MS_UP_BIG_THRES       = 0.025;  // Default: 0.025
+
+    public static double MS_DOWN_BIG_AVG       = -0.032; // Default: -0.032
+    public static double MS_DOWN_BIG_BTC       = -0.01;  // Default: -0.01
+
+    public static double MS_UP_MED_THRES       = 0.015;  // Default: 0.015
+
+    public static double MS_DOWN_MED_AVG       = -0.030; // Default: -0.030
+    public static double MS_DOWN_MED_AVG_CMB   = -0.014; // Default: -0.014 (Combined logic)
+    public static double MS_DOWN_MED_15M_CMB   = -0.07;  // Default: -0.07  (Combined logic)
+
+    public static double MS_UP_SMALL_THRES     = 0.008;  // Default: 0.008
+
+    public static double MS_DOWN_SMALL_AVG     = -0.006; // Default: -0.006
+    public static double MS_DOWN_SMALL_15M     = -0.025; // Default: -0.025 (Combined logic)
+
+    public static double MS_DOWN_15M_MED_ONLY  = -0.045; // Default: -0.045
+    public static double MS_DOWN_15M_SMALL_ONLY= -0.028; // Default: -0.028
+
     public static void main(String[] args) {
 
     }
