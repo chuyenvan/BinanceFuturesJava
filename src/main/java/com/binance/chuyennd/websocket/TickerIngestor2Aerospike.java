@@ -36,14 +36,19 @@ public class TickerIngestor2Aerospike {
     private static final int MAX_STREAM_PER_CONNECTION = 150;
 
     public void start() {
+
         LOG.info("🚀 TickerIngestor V3 Started - Filtering invalid symbols");
 
+        // 1. Khởi động luồng Auto Restart (4h/lần)
+        startThreadAutoRestartProgram();
+
+        // 2. Tạo kết nối Kline cho tất cả symbol trong Redis
         List<String> symbols = collectSymbolsFromRedis();
         List<List<String>> partitions = subListBySize(symbols, MAX_STREAM_PER_CONNECTION);
         for (List<String> batch : partitions) {
             createNewKlineConnection(batch);
         }
-
+        // 3. Kết nối Websocket để lấy price real time và symbol mới
         new UMWebsocketClientImpl().allTickerStream(this::processAllTickerJson);
 
         startDataRepair(30 * 60);
@@ -139,7 +144,23 @@ public class TickerIngestor2Aerospike {
         }
         return symbols;
     }
-
+    // --- CHANGE 1: AUTO RESTART 4H ---
+    private void startThreadAutoRestartProgram() {
+        new Thread(() -> {
+            Thread.currentThread().setName("ThreadAutoRestartProgram");
+            LOG.info("⏰ Đã kích hoạt chế độ tự khởi động lại sau mỗi 4 giờ.");
+            while (true) {
+                try {
+                    Thread.sleep(Utils.TIME_HOUR * 4); // 4 Tiếng
+                    LOG.info("♻️ Reset by Schedule ...");
+                    // Sử dụng System.exit(0) để PM2 hoặc Docker tự start lại process mới sạch sẽ
+                    System.exit(0);
+                } catch (Exception e) {
+                    LOG.error("❌ Lỗi trong luồng Auto Restart: {}", e.getMessage());
+                }
+            }
+        }).start();
+    }
     private void createNewKlineConnection(List<String> symbols) {
         SubscriptionOptions opt = new SubscriptionOptions();
         opt.setAutoReconnect(true);
@@ -147,12 +168,15 @@ public class TickerIngestor2Aerospike {
         List<String> low = new ArrayList<>();
         for (String s : symbols) low.add(s.toLowerCase());
         sc.subscribeAllCandlestickEvent(low, CandlestickInterval.ONE_MINUTE, (e) -> {
+            String fullSymbol = e.getSymbol().toUpperCase();
             String shortS = e.getSymbol().toUpperCase().replace("USDT", "");
             KlineObjectOptimized optP = KlineObjectOptimized.newBuilder()
                     .setPriceOpen(e.getOpen().floatValue()).setPriceClose(e.getClose().floatValue())
                     .setMaxPrice(e.getHigh().floatValue()).setMinPrice(e.getLow().floatValue())
                     .setTotalUsdt(e.getQuoteAssetVolume().floatValue()).build();
             timeBuffer.computeIfAbsent(e.getStartTime(), k -> new ConcurrentHashMap<>()).put(shortS, optP);
+            // Backup Price
+            priceBuffer.put(fullSymbol, e.getClose().doubleValue());
         }, null);
         klineClients.add(sc);
         globalSubscribedSymbols.addAll(symbols);
