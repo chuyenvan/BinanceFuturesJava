@@ -227,6 +227,18 @@ public class TickerFuturesHelper {
         }
         return results;
     }
+    public static TreeMap<String, Double> getSymbolPrice() {
+        TreeMap<String, Double>  results = new TreeMap<>();
+        String allFuturePrices = HttpRequest.getContentFromUrl("https://fapi.binance.com/fapi/v1/ticker/24hr");
+        List<Object> futurePrices = Utils.gson.fromJson(allFuturePrices, List.class);
+        for (Object futurePrice : futurePrices) {
+            TickerStatistics ticker = Utils.gson.fromJson(futurePrice.toString(), TickerStatistics.class);
+            if (StringUtils.endsWithIgnoreCase(ticker.getSymbol(), "usdt")) {
+                results.put( ticker.getSymbol(),Double.parseDouble(ticker.getLastPrice()));
+            }
+        }
+        return results;
+    }
 
     public static void main(String[] args) throws ParseException {
 //        System.out.println(TickerHelper.getCurrentSide("BIGTIMEUSDT", Constants.INTERVAL_1D));

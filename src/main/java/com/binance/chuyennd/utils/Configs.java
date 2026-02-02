@@ -147,9 +147,11 @@ public class Configs {
 
 
     // aerospike
-    public static final String AEROSPIKE_HOST = Configs.getString("AEROSPIKE_HOST"); //"127.0.0.1";
-    public static final int AEROSPIKE_PORT = Configs.getInt("AEROSPIKE_PORT");
-    ;
+    public static final String AEROSPIKE_HOST_242 = Configs.getString("AEROSPIKE_HOST"); //"127.0.0.1";
+    public static final int AEROSPIKE_PORT_242 = Configs.getInt("AEROSPIKE_PORT");
+    public static final String AEROSPIKE_HOST_226 = Configs.getString("AEROSPIKE_HOST_226"); //"127.0.0.1";
+    public static final int AEROSPIKE_PORT_226 = Configs.getInt("AEROSPIKE_PORT_226");
+
 
     public static final String AEROSPIKE_NAMESPACE = Configs.getString("AEROSPIKE_NAMESPACE"); //"ticker" ;
     public static final String FILE_AI_ENTRY_PREDICTIONS = Configs.getString("FILE_AI_PREDICTIONS"); //"ticker" ;

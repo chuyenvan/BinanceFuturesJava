@@ -40,6 +40,9 @@ public class DataManagerAerospikeFloatSim {
     private static final String AEROSPIKE_SET_NAME_PRICE = "price_realtime";
     private static final String AEROSPIKE_SET_NAME_FUNDINGFEE = "funding_data";
 
+    // set name 226
+    private static final String AEROSPIKE_SET_NAME_FUNDING_PRED = "funding_pred_1m";
+
     // 1. CẤU HÌNH SET NAME VÀ KEY
     private static final String AEROSPIKE_SET_NAME_MAPPER = "symbol_mapper"; // Set name mới
     private static final String MAPPER_KEY_GLOBAL = "global_id_map";         // Key chứa Map
@@ -47,10 +50,11 @@ public class DataManagerAerospikeFloatSim {
     private static final String AEROSPIKE_SET_NAME_AI_PRED_1M = "ai_pred_1m";
     // 🔥 SET NAME MỚI CHO AI PREDICT
     private static final String AEROSPIKE_SET_NAME_DCA_PRED = "dca_pred_1m";
-    private static volatile AerospikeClient client;
+    private static volatile AerospikeClient client242;
     private static final BatchPolicy batchPolicy = new BatchPolicy();
     private static final int BATCH_CHUNK_SIZE = 2000;
     private static final WritePolicy writePolicy = new WritePolicy();
+    private static volatile AerospikeClient client226;
 
     // Cấu hình đa luồng
     public static int threadCount = 2;
@@ -63,16 +67,28 @@ public class DataManagerAerospikeFloatSim {
         writePolicy.recordExistsAction = RecordExistsAction.UPDATE;
     }
 
-    public static AerospikeClient getClient() {
-        if (client == null) {
+    public static AerospikeClient getClient242() {
+        if (client242 == null) {
             synchronized (DataManagerAerospikeFloatSim.class) {
-                if (client == null) {
-                    client = new AerospikeClient(Configs.AEROSPIKE_HOST, Configs.AEROSPIKE_PORT);
+                if (client242 == null) {
+                    client242 = new AerospikeClient(Configs.AEROSPIKE_HOST_242, Configs.AEROSPIKE_PORT_242);
                 }
             }
         }
-        return client;
+        return client242;
     }
+
+    public static AerospikeClient getClient226() {
+        if (client226 == null) {
+            synchronized (DataManagerAerospikeFloatSim.class) {
+                if (client226 == null) {
+                    client226 = new AerospikeClient(Configs.AEROSPIKE_HOST_226, Configs.AEROSPIKE_PORT_226);
+                }
+            }
+        }
+        return client226;
+    }
+
     /**
      * Hàm lấy toàn bộ Mapper (String -> Short) từ Aerospike khi khởi động
      */
@@ -80,7 +96,7 @@ public class DataManagerAerospikeFloatSim {
         Map<String, Short> result = new ConcurrentHashMap<>();
         try {
             Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_MAPPER, MAPPER_KEY_GLOBAL);
-            Record record = getClient().get(null, key);
+            Record record = getClient242().get(null, key);
 
             if (record != null) {
                 // Lấy dữ liệu Map từ Aerospike
@@ -110,7 +126,7 @@ public class DataManagerAerospikeFloatSim {
 
             // MapPolicy.Default: Tạo map nếu chưa tồn tại
             // MapOperation.put: Thêm key-value mới vào Map
-            getClient().operate(writePolicy, key,
+            getClient242().operate(writePolicy, key,
                     MapOperation.put(MapPolicy.Default, MAPPER_BIN_NAME, Value.get(symbol), Value.get(id))
             );
 
@@ -119,6 +135,7 @@ public class DataManagerAerospikeFloatSim {
             LOG.error("❌ Error saving symbol mapping {} -> {}: {}", symbol, id, e.getMessage());
         }
     }
+
     public static void writeMinuteBatch(long timestamp, Map<String, KlineObjectOptimized> newTickers) {
         try {
             SimpleDateFormat fmt = new SimpleDateFormat("yyyyMMdd-HHmm");
@@ -129,7 +146,7 @@ public class DataManagerAerospikeFloatSim {
             finalMap.putAll(newTickers);
 
             byte[] compressed = Snappy.compress(MinuteDataFinal.newBuilder().putAllTickers(finalMap).build().toByteArray());
-            getClient().put(writePolicy, key, new Bin("data", compressed));
+            getClient242().put(writePolicy, key, new Bin("data", compressed));
         } catch (Exception e) {
             LOG.error("❌ Error writing batch at {}: {}", timestamp, e.getMessage());
         }
@@ -145,7 +162,7 @@ public class DataManagerAerospikeFloatSim {
                 Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_PRICE, symbol);
 
                 // Ghi giá và timestamp cập nhật
-                getClient().put(null, key,
+                getClient242().put(null, key,
                         new Bin("price", entry.getValue()),
                         new Bin("ts", now)
                 );
@@ -176,7 +193,7 @@ public class DataManagerAerospikeFloatSim {
             scanPolicy.concurrentNodes = true;
             scanPolicy.includeBinData = true;
 
-            getClient().scanAll(scanPolicy, Configs.AEROSPIKE_NAMESPACE, "price_realtime", (key, record) -> {
+            getClient242().scanAll(scanPolicy, Configs.AEROSPIKE_NAMESPACE, "price_realtime", (key, record) -> {
                 // Lấy Digest của bản ghi hiện tại
                 String currentDigest = Base64.getEncoder().encodeToString(key.digest);
                 String symbol = digestToSymbol.get(currentDigest);
@@ -215,7 +232,7 @@ public class DataManagerAerospikeFloatSim {
             byte[] compressedBytes = Snappy.compress(rawBytes);
 
             // 4. Ghi vào bin "f_data" dạng blob thay vì CDT Map trực tiếp
-            getClient().put(writePolicy, key, new Bin("f_data", compressedBytes));
+            getClient242().put(writePolicy, key, new Bin("f_data", compressedBytes));
 
             if (finalMap.size() % 100 == 0) {
                 LOG.info("💾 Saved Funding {}: {} records (Compressed)", symbol, finalMap.size());
@@ -232,7 +249,7 @@ public class DataManagerAerospikeFloatSim {
         TreeMap<Long, Double> results = new TreeMap<>();
         try {
             Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_FUNDINGFEE, symbol);
-            Record record = getClient().get(null, key);
+            Record record = getClient242().get(null, key);
             if (record != null) {
                 byte[] compressedData = (byte[]) record.getValue("f_data");
                 if (compressedData != null) {
@@ -248,7 +265,7 @@ public class DataManagerAerospikeFloatSim {
             // Trường hợp dữ liệu cũ vẫn là CDT Map (f_map)
             try {
                 Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_FUNDINGFEE, symbol);
-                Record record = getClient().get(null, key);
+                Record record = getClient242().get(null, key);
                 if (record != null && record.getMap("f_map") != null) {
                     record.getMap("f_map").forEach((k, v) -> results.put((Long) k, ((Number) v).doubleValue()));
                 }
@@ -271,7 +288,7 @@ public class DataManagerAerospikeFloatSim {
             scanPolicy.includeBinData = true;
 
             // Chỉ định rõ bin "f_data" (nén Snappy) và "f_map" (dữ liệu cũ) để tối ưu
-            getClient().scanAll(scanPolicy, Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_FUNDINGFEE, (key, record) -> {
+            getClient242().scanAll(scanPolicy, Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_FUNDINGFEE, (key, record) -> {
                 String symbol = (key.userKey != null) ? key.userKey.toString() : null;
                 if (symbol == null) return;
 
@@ -365,7 +382,7 @@ public class DataManagerAerospikeFloatSim {
     public static Map<String, KlineObjectOptimized> getExistingTickersMap(Key key) {
         Map<String, KlineObjectOptimized> map = new HashMap<>();
         try {
-            Record record = getClient().get(null, key);
+            Record record = getClient242().get(null, key);
             if (record != null) {
                 byte[] data = (byte[]) record.getValue("data");
                 if (data != null) {
@@ -423,7 +440,7 @@ public class DataManagerAerospikeFloatSim {
                     }
 
                     // Batch Read
-                    Record[] records = getClient().get(batchPolicy, chunkKeys);
+                    Record[] records = getClient242().get(batchPolicy, chunkKeys);
 
                     for (int j = 0; j < records.length; j++) {
                         Record record = records[j];
@@ -504,7 +521,7 @@ public class DataManagerAerospikeFloatSim {
                     }
 
                     // Batch Read từ Aerospike
-                    Record[] records = getClient().get(batchPolicy, chunkKeys);
+                    Record[] records = getClient242().get(batchPolicy, chunkKeys);
 
                     for (int j = 0; j < records.length; j++) {
                         Record record = records[j];
@@ -582,7 +599,7 @@ public class DataManagerAerospikeFloatSim {
                     }
 
                     // Batch Read tối ưu
-                    Record[] records = getClient().get(batchPolicy, chunkKeys);
+                    Record[] records = getClient242().get(batchPolicy, chunkKeys);
 
                     for (int j = 0; j < records.length; j++) {
                         Record record = records[j];
@@ -670,7 +687,7 @@ public class DataManagerAerospikeFloatSim {
                     keyChunk[k] = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_TICKER, keyString);
                 }
 
-                Record[] records = getClient().get(batchPolicy, keyChunk);
+                Record[] records = getClient242().get(batchPolicy, keyChunk);
 
                 for (int j = 0; j < records.length; j++) {
                     Record record = records[j];
@@ -736,8 +753,8 @@ public class DataManagerAerospikeFloatSim {
     }
 
     public static void closeConnection() {
-        if (client != null) {
-            client.close();
+        if (client242 != null) {
+            client242.close();
         }
     }
 
@@ -771,7 +788,7 @@ public class DataManagerAerospikeFloatSim {
             byte[] compressed = Snappy.compress(rawBytes);
 
             // Ghi vào bin "data"
-            getClient().put(writePolicy, key, new Bin("data", compressed));
+            getClient242().put(writePolicy, key, new Bin("data", compressed));
 
         } catch (Exception e) {
             LOG.error("❌ Error saving AI Pred 1M at {}: {}", data.timestamp, e.getMessage());
@@ -801,7 +818,7 @@ public class DataManagerAerospikeFloatSim {
             String keyString = fmt.format(new Date(timestamp));
             Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_AI_PRED_1M, keyString);
 
-            Record record = getClient().get(null, key);
+            Record record = getClient242().get(null, key);
             if (record != null) {
                 return parseAiRecord(record);
             }
@@ -814,6 +831,7 @@ public class DataManagerAerospikeFloatSim {
     /**
      * 3. LẤY DỮ LIỆU THEO THÁNG (READ MONTH - BATCH READ)
      * Logic giống hệt readDataFromAerospike1M của Ticker: Tạo key cho từng phút trong tháng -> Batch Read
+     *
      * @param monthStr format "yyyyMM" (Ví dụ: "202401")
      */
     public static TreeMap<Long, AiPredictionData> getAiPredictionsForMonth(String monthStr) {
@@ -876,7 +894,7 @@ public class DataManagerAerospikeFloatSim {
                     }
 
                     // Batch Read
-                    Record[] records = getClient().get(batchPolicy, chunkKeys);
+                    Record[] records = getClient242().get(batchPolicy, chunkKeys);
 
                     for (int j = 0; j < records.length; j++) {
                         Record record = records[j];
@@ -940,12 +958,13 @@ public class DataManagerAerospikeFloatSim {
             byte[] rawBytes = json.getBytes("UTF-8");
             byte[] compressed = Snappy.compress(rawBytes);
 
-            getClient().put(writePolicy, key, new Bin("data", compressed));
+            getClient242().put(writePolicy, key, new Bin("data", compressed));
 
         } catch (Exception e) {
             LOG.error("❌ Error saving DCA Pred at {}: {}", timestamp, e.getMessage());
         }
     }
+
     /**
      * 🔥 MỚI: Đọc dự báo DCA tại 1 thời điểm cụ thể
      */
@@ -955,14 +974,15 @@ public class DataManagerAerospikeFloatSim {
             String keyString = fmt.format(new Date(timestamp));
             Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_DCA_PRED, keyString);
 
-            Record record = getClient().get(null, key);
+            Record record = getClient242().get(null, key);
             if (record != null) {
                 byte[] compressed = (byte[]) record.getValue("data");
                 if (compressed != null) {
                     byte[] rawBytes = Snappy.uncompress(compressed);
                     String json = new String(rawBytes, "UTF-8");
                     // Sử dụng TypeToken để parse về Map<Short, float[]>
-                    return Utils.gson.fromJson(json, new com.google.gson.reflect.TypeToken<Map<Short, float[]>>(){}.getType());
+                    return Utils.gson.fromJson(json, new com.google.gson.reflect.TypeToken<Map<Short, float[]>>() {
+                    }.getType());
                 }
             }
         } catch (Exception e) {
@@ -973,6 +993,7 @@ public class DataManagerAerospikeFloatSim {
 
     /**
      * 🔥 MỚI: Đọc dự báo DCA theo tháng (Batch Read đa luồng giống Ticker 1M)
+     *
      * @param monthStr format "yyyyMM" (Ví dụ: "202401")
      */
     public static TreeMap<Long, Map<Short, float[]>> getDcaPredictionsForMonth(String monthStr) {
@@ -1032,7 +1053,7 @@ public class DataManagerAerospikeFloatSim {
                     }
 
                     // Batch Get
-                    Record[] records = getClient().get(batchPolicy, chunkKeys);
+                    Record[] records = getClient242().get(batchPolicy, chunkKeys);
 
                     for (int j = 0; j < records.length; j++) {
                         Record record = records[j];
@@ -1041,7 +1062,8 @@ public class DataManagerAerospikeFloatSim {
                             if (compressed != null) {
                                 byte[] rawBytes = Snappy.uncompress(compressed);
                                 String json = new String(rawBytes, "UTF-8");
-                                Map<Short, float[]> data = Utils.gson.fromJson(json, new com.google.gson.reflect.TypeToken<Map<Short, float[]>>(){}.getType());
+                                Map<Short, float[]> data = Utils.gson.fromJson(json, new com.google.gson.reflect.TypeToken<Map<Short, float[]>>() {
+                                }.getType());
                                 chunkResult.put(chunkTimestamps[j], data);
                             }
                         }
@@ -1063,6 +1085,7 @@ public class DataManagerAerospikeFloatSim {
         }
         return results;
     }
+
     /**
      * 🔥 HÀM MỚI: Kiểm tra nhanh xem một list thời gian đã có dữ liệu AI chưa.
      * Trả về Set<Long> chứa các timestamp ĐÃ TỒN TẠI.
@@ -1081,7 +1104,7 @@ public class DataManagerAerospikeFloatSim {
             }
 
             // Batch Exists: Cực nhanh, chỉ kiểm tra metadata không đọc dữ liệu
-            boolean[] existsArray = getClient().exists(batchPolicy, keys);
+            boolean[] existsArray = getClient242().exists(batchPolicy, keys);
 
             for (int i = 0; i < existsArray.length; i++) {
                 if (existsArray[i]) {
@@ -1093,15 +1116,266 @@ public class DataManagerAerospikeFloatSim {
         }
         return existing;
     }
-    public static void main(String[] args) throws ParseException {
-        Long startTime = Utils.sdfFile.parse("20210103").getTime() + 7 * Utils.TIME_HOUR;
-        TreeMap<Long, Map<Short, float[]>> time2Tickers = DataManagerAerospikeFloatSim.readDcaBatchCustom(startTime, 1440);
-        for (Long timeKey : time2Tickers.keySet()) {
+    // =========================================================================
+    // LOGIC CHECK GIÁ & SO SÁNH (MỚI)
+    // =========================================================================
 
-            LOG.info("Time: {} -> {} records", Utils.normalizeDateYYYYMMDDHHmm(timeKey), time2Tickers.get(timeKey).size());
+    /**
+     * Quét toàn bộ giá Realtime từ Aerospike (Set: price_realtime).
+     * Yêu cầu: Dữ liệu khi ghi phải bật 'writePolicy.sendKey = true' để lấy lại được Symbol từ Key.
+     * @return Map<Symbol, Price>
+     */
+
+
+    /**
+     * So sánh giá giữa Aerospike và Binance API
+     */
+    public static int checkAndComparePriceDiff() {
+//        LOG.info("🚀 Bắt đầu kiểm tra lệch giá (Aerospike vs Binance API)...");
+
+        // BƯỚC 1: Lấy giá từ Binance API trước (Để lấy danh sách Symbol chuẩn)
+        long t1 = System.currentTimeMillis();
+        // Map này lấy từ TickerFuturesHelper của bạn
+        Map<String, Double> binPrices = com.binance.chuyennd.helper.TickerFuturesHelper.getSymbolPrice();
+        long t2 = System.currentTimeMillis();
+//        LOG.info("✅ Binance API: Loaded {} symbols in {}ms", binPrices.size(), (t2 - t1));
+
+        if (binPrices.isEmpty()) {
+            LOG.error("❌ Không lấy được giá từ Binance, hủy kiểm tra.");
+            return 0;
         }
-        LOG.info("{} {} {} {}",Utils.toJson(time2Tickers.firstEntry().getValue()), Utils.normalizeDateYYYYMMDDHHmm(time2Tickers.firstKey()),
-                Utils.normalizeDateYYYYMMDDHHmm(time2Tickers.lastKey()), time2Tickers.size());
+
+        // BƯỚC 2: Truyền danh sách key của Binance vào Scan Aerospike để map ngược
+        Map<String, Double> asPrices = getAllPriceRealtimeLegacy(binPrices.keySet());
+        long t3 = System.currentTimeMillis();
+//        LOG.info("✅ Aerospike: Loaded {} symbols in {}ms", asPrices.size(), (t3 - t2));
+
+        // BƯỚC 3: So sánh (Logic giữ nguyên)
+        double totalDiffPercent = 0;
+        int countChecked = 0;
+        int countHighDiff = 0;
+        double maxDiff = 0;
+        String maxDiffSymbol = "";
+
+//        LOG.info("⚠️ --- DANH SÁCH LỆCH GIÁ > 0.2% ---");
+
+        for (Map.Entry<String, Double> entry : asPrices.entrySet()) {
+            String symbol = entry.getKey();
+            double asPrice = entry.getValue();
+
+            if (binPrices.containsKey(symbol)) {
+                double binPrice = binPrices.get(symbol);
+
+                // Tính % lệch
+                double diffAbs = Math.abs(asPrice - binPrice);
+                double diffPercent = (diffAbs / binPrice) * 100f;
+
+                totalDiffPercent += diffPercent;
+                countChecked++;
+
+                if (diffPercent > maxDiff) {
+                    maxDiff = diffPercent;
+                    maxDiffSymbol = symbol;
+                }
+
+                if (diffPercent > 0.2) {
+//                    LOG.warn("🚨 [High Diff] {}: AS={}, Bin={}, Diff={}%",
+//                            symbol,
+//                            String.format("%.5f", asPrice),
+//                            String.format("%.5f", binPrice),
+//                            String.format("%.4f", diffPercent));
+                    countHighDiff++;
+                }
+            }
+        }
+
+        double avgDiff = (countChecked > 0) ? (totalDiffPercent / countChecked) : 0;
+
+        LOG.info("=========================================");
+//        LOG.info("📊 TỔNG KẾT SO SÁNH GIÁ");
+//        LOG.info("   - Tổng mã kiểm tra: {}", countChecked);
+        LOG.info("   - So ma lech > 0.2%: {}/{}", countHighDiff, countChecked);
+//        LOG.info("   - Lệch trung bình: {}%", String.format("%.5f", avgDiff));
+//        LOG.info("   - Lệch lớn nhất: {} ({}%)", maxDiffSymbol, String.format("%.4f", maxDiff));
+        LOG.info("=========================================");
+        return countHighDiff;
+    }
+
+    public static void saveFundingPredictions1M(long timestamp, Map<Short, float[]> predictions) {
+        if (predictions == null || predictions.isEmpty()) return;
+        try {
+            SimpleDateFormat fmt = new SimpleDateFormat("yyyyMMdd-HHmm");
+            String keyString = fmt.format(new Date(timestamp));
+            Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_FUNDING_PRED, keyString);
+
+            // Serialize: Map -> JSON -> Bytes -> Snappy
+            String json = Utils.gson.toJson(predictions);
+            byte[] rawBytes = json.getBytes("UTF-8");
+            byte[] compressed = Snappy.compress(rawBytes);
+
+            getClient226().put(writePolicy, key, new Bin("data", compressed));
+
+        } catch (Exception e) {
+            LOG.error("❌ Error saving Funding Pred at {}: {}", timestamp, e.getMessage());
+        }
+    }
+
+    /**
+     * Đọc dự báo Funding tại 1 thời điểm cụ thể
+     */
+    public static Map<Short, float[]> getFundingPredictionAtTime(long timestamp) {
+        try {
+            SimpleDateFormat fmt = new SimpleDateFormat("yyyyMMdd-HHmm");
+            String keyString = fmt.format(new Date(timestamp));
+            Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_FUNDING_PRED, keyString);
+
+            Record record = getClient226().get(null, key);
+            if (record != null) {
+                byte[] compressed = (byte[]) record.getValue("data");
+                if (compressed != null) {
+                    byte[] rawBytes = Snappy.uncompress(compressed);
+                    String json = new String(rawBytes, "UTF-8");
+                    // Parse JSON về Map<Short, float[]>
+                    return Utils.gson.fromJson(json, new com.google.gson.reflect.TypeToken<Map<Short, float[]>>() {
+                    }.getType());
+                }
+            }
+        } catch (Exception e) {
+            LOG.error("❌ Error reading Funding Pred at {}: {}", timestamp, e.getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * Kiểm tra nhanh danh sách timestamp đã có dữ liệu Funding chưa (Dùng cho Resume)
+     */
+    public static Set<Long> checkExistingFundingPredictions(List<Long> timestamps) {
+        Set<Long> existing = new HashSet<>();
+        if (timestamps == null || timestamps.isEmpty()) return existing;
+
+        try {
+            SimpleDateFormat fmt = new SimpleDateFormat("yyyyMMdd-HHmm");
+            Key[] keys = new Key[timestamps.size()];
+
+            for (int i = 0; i < timestamps.size(); i++) {
+                String keyString = fmt.format(new Date(timestamps.get(i)));
+                keys[i] = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_FUNDING_PRED, keyString);
+            }
+
+            // Batch Exists: Chỉ kiểm tra metadata
+            boolean[] existsArray = getClient226().exists(batchPolicy, keys);
+
+            for (int i = 0; i < existsArray.length; i++) {
+                if (existsArray[i]) {
+                    existing.add(timestamps.get(i));
+                }
+            }
+        } catch (Exception e) {
+            LOG.error("❌ Error checking Funding existence: {}", e.getMessage());
+        }
+        return existing;
+    }
+
+    /**
+     * Đọc dự báo Funding theo tháng (Batch Read đa luồng)
+     */
+    public static TreeMap<Long, Map<Short, float[]>> getFundingPredictionsForMonth(String monthStr) {
+        TreeMap<Long, Map<Short, float[]>> results = new TreeMap<>();
+        try {
+            SimpleDateFormat sdfMonth = new SimpleDateFormat("yyyyMM");
+            Date date = sdfMonth.parse(monthStr);
+            Calendar cal = Calendar.getInstance();
+            cal.setTime(date);
+
+            long startTime = cal.getTimeInMillis();
+            cal.add(Calendar.MONTH, 1);
+            long endTime = cal.getTimeInMillis();
+
+            int totalMinutes = (int) ((endTime - startTime) / (60 * 1000));
+            LOG.info("📥 Reading Funding Pred Data for month {} ({} records)...", monthStr, totalMinutes);
+
+            results = readFundingBatchCustom(startTime, totalMinutes);
+
+        } catch (Exception e) {
+            LOG.error("❌ Error reading Funding Month {}: {}", monthStr, e.getMessage());
+        }
+        return results;
+    }
+
+    /**
+     * Helper: Đọc Batch Funding Data theo range thời gian
+     */
+    public static TreeMap<Long, Map<Short, float[]>> readFundingBatchCustom(long startTime, int totalMinutes) {
+        TreeMap<Long, Map<Short, float[]>> results = new TreeMap<>();
+
+        long[] allTimestamps = new long[totalMinutes];
+        for (int i = 0; i < totalMinutes; i++) {
+            allTimestamps[i] = startTime + (i * 60000L);
+        }
+
+        List<Future<Map<Long, Map<Short, float[]>>>> futures = new ArrayList<>();
+        int chunkSize = (totalMinutes + threadCount - 1) / threadCount;
+
+        for (int i = 0; i < threadCount; i++) {
+            final int startIdx = i * chunkSize;
+            final int endIdx = Math.min(startIdx + chunkSize, totalMinutes);
+            if (startIdx >= endIdx) break;
+
+            futures.add(executor.submit(() -> {
+                SimpleDateFormat localKeyFormat = new SimpleDateFormat("yyyyMMdd-HHmm");
+                Map<Long, Map<Short, float[]>> chunkResult = new HashMap<>();
+                try {
+                    Key[] chunkKeys = new Key[endIdx - startIdx];
+                    long[] chunkTimestamps = Arrays.copyOfRange(allTimestamps, startIdx, endIdx);
+
+                    for (int k = 0; k < chunkKeys.length; k++) {
+                        String keyString = localKeyFormat.format(new Date(chunkTimestamps[k]));
+                        chunkKeys[k] = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_FUNDING_PRED, keyString);
+                    }
+
+                    Record[] records = getClient226().get(batchPolicy, chunkKeys);
+
+                    for (int j = 0; j < records.length; j++) {
+                        Record record = records[j];
+                        if (record != null) {
+                            byte[] compressed = (byte[]) record.getValue("data");
+                            if (compressed != null) {
+                                byte[] rawBytes = Snappy.uncompress(compressed);
+                                String json = new String(rawBytes, "UTF-8");
+                                Map<Short, float[]> data = Utils.gson.fromJson(json, new com.google.gson.reflect.TypeToken<Map<Short, float[]>>() {
+                                }.getType());
+                                chunkResult.put(chunkTimestamps[j], data);
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                return chunkResult;
+            }));
+        }
+
+        for (Future<Map<Long, Map<Short, float[]>>> f : futures) {
+            try {
+                results.putAll(f.get());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        return results;
+    }
+
+    public static void main(String[] args) throws ParseException {
+//        System.out.println(checkAndComparePriceDiff());
+        Long startTime = Utils.sdfFile.parse("20210203").getTime() + 7 * Utils.TIME_HOUR;
+        System.out.println(Utils.toJson(readFundingBatchCustom(startTime, 1440)));
+//        TreeMap<Long, Map<Short, float[]>> time2Tickers = DataManagerAerospikeFloatSim.readDcaBatchCustom(startTime, 1440);
+//        for (Long timeKey : time2Tickers.keySet()) {
+//
+//            LOG.info("Time: {} -> {} records", Utils.normalizeDateYYYYMMDDHHmm(timeKey), time2Tickers.get(timeKey).size());
+//        }
+//        LOG.info("{} {} {} {}",Utils.toJson(time2Tickers.firstEntry().getValue()), Utils.normalizeDateYYYYMMDDHHmm(time2Tickers.firstKey()),
+//                Utils.normalizeDateYYYYMMDDHHmm(time2Tickers.lastKey()), time2Tickers.size());
 //        debugKeys();
 //        Map<String, TreeMap<Long, Double>> symbol2FundingMap = DataManagerAerospikeFloatSim.getAllFundingMap();
 //        for (String symbol : symbol2FundingMap.keySet()) {

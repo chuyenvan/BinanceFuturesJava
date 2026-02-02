@@ -40,7 +40,7 @@ public class DataMigrator {
     public static void main(String[] args) throws ParseException {
         // Init Client
         try {
-            client = new AerospikeClient(Configs.AEROSPIKE_HOST, Configs.AEROSPIKE_PORT);
+            client = new AerospikeClient(Configs.AEROSPIKE_HOST_242, Configs.AEROSPIKE_PORT_242);
 
             // Ví dụ: Migrate 1 năm qua
             long endTime = System.currentTimeMillis();
