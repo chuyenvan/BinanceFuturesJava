@@ -1,5 +1,6 @@
 package com.binance.chuyennd.ai_ml.features.export.dca;
 
+import com.binance.chuyennd.ai_ml.features.export.HistoryManager;
 import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.research.FundingFeeManager;

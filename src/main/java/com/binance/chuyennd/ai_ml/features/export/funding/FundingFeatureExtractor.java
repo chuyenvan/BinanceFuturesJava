@@ -1,9 +1,10 @@
 package com.binance.chuyennd.ai_ml.features.export.funding;
 
-import com.binance.chuyennd.ai_ml.features.export.dca.HistoryManager;
+import com.binance.chuyennd.ai_ml.features.export.HistoryManager;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.research.FundingFeeManager;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
+import com.binance.chuyennd.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -127,6 +128,7 @@ public class FundingFeatureExtractor {
             f.fundingRateTrend = f.coinFundingRate - f.fundingRateAvg24H;
 
         } catch (Exception e) {
+            e.printStackTrace();
             f.coinFundingRate = 0;
             f.fundingRateRaw = 0;
             f.fundingRateAvg24H = 0;
@@ -143,6 +145,30 @@ public class FundingFeatureExtractor {
             return (current.priceClose - pastPrice) / pastPrice;
         }
         return 0.0;
+    }
+    public double calculateDropFromHigh(String symbol, int minutes) {
+        List<KlineObjectSimple> h = historyManager.getHistory(symbol);
+        if (h == null || h.isEmpty()) return 0.0;
+
+        // Lấy giá hiện tại
+        double currentClose = h.get(h.size() - 1).priceClose;
+
+        // Tìm giá cao nhất (High) trong khoảng 'minutes' nến gần nhất
+        double maxHigh = -1.0;
+
+        // Duyệt ngược từ cuối về (tối đa 'minutes' cây nến)
+        int startIndex = Math.max(0, h.size() - minutes);
+        for (int i = startIndex; i < h.size(); i++) {
+            KlineObjectSimple k = h.get(i);
+            if (k.maxPrice > maxHigh) {
+                maxHigh = k.maxPrice;
+            }
+        }
+
+        if (maxHigh <= 0) return 0.0;
+
+        // Trả về % sụt giảm
+        return (currentClose - maxHigh) / maxHigh;
     }
 
     private void extractMarketContext(FundingMarketFeatures f, Map<String, KlineObjectSimple> marketData) {
@@ -175,5 +201,16 @@ public class FundingFeatureExtractor {
         double avgRange = historyManager.getAverageRange(symbol, 20);
         double currentRange = kline.maxPrice - kline.minPrice;
         return (avgRange > 0) ? currentRange / avgRange : 1.0;
+    }
+
+
+    public void initDataFromTickerMap(TreeMap<Long, Map<String, KlineObjectSimple>> time2Ticker) {
+        LOG.info("AI Funding Feature Extractor: Syncing history from {} size: {}",
+                Utils.normalizeDateYYYYMMDDHHmm(time2Ticker.firstKey()), time2Ticker.size());
+        for (Map<String, KlineObjectSimple> tickerMap : time2Ticker.values()) {
+            updateMarketHistory(tickerMap);
+        }
+        LOG.info("AI Funding Feature Extractor: Completed syncing {} history from {}.",
+                time2Ticker.size(), Utils.normalizeDateYYYYMMDDHHmm(time2Ticker.firstKey()));
     }
 }

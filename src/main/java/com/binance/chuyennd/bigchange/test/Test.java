@@ -59,11 +59,12 @@ public class Test {
     public static void main(String[] args) throws Exception {
 //        testProduction();
 //        testAIDATA();
-        TreeMap<Long, MarketDataObject> time2MarketData = (TreeMap<Long, MarketDataObject>)
-                StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
-        LOG.info("{} {} {}", time2MarketData.size(),
-                Utils.normalizeDateYYYYMMDDHHmm(time2MarketData.firstKey()) + " -> " +
-                        Utils.normalizeDateYYYYMMDDHHmm(time2MarketData.lastKey()));
+
+//        TreeMap<Long, MarketDataObject> time2MarketData = (TreeMap<Long, MarketDataObject>)
+//                StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
+//        LOG.info("{} {} {}", time2MarketData.size(),
+//                Utils.normalizeDateYYYYMMDDHHmm(time2MarketData.firstKey()) + " -> " +
+//                        Utils.normalizeDateYYYYMMDDHHmm(time2MarketData.lastKey()));
 //        checkRateProduction();
 //        changeLeverage();
 //        deleteAllSLAtRedis();

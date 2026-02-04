@@ -31,9 +31,9 @@ public class BinanceDataIngestor {
                 }
                 try {
                     int totalSymbolPriceError = DataManagerAerospikeFloatSim.checkAndComparePriceDiff();
-                    if (totalSymbolPriceError > 30) {
+                    if (totalSymbolPriceError > 50) {
                         LOG.error("Too many symbol price errors: {}. Restarting...", totalSymbolPriceError);
-                        Utils.reset("Reset by Price Error Count");
+                        Utils.reset("Reset by Price Error Count " + totalSymbolPriceError);
                     }
                 } catch (Exception e) {
                     e.printStackTrace();

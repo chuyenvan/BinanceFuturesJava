@@ -2,7 +2,6 @@ package com.binance.chuyennd.ai_ml.features.export.funding;
 
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.object.MarketDataObject;
-import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.research.FundingFeeManager;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
@@ -147,7 +146,7 @@ public class RunFundingDataCollection {
                         minRate15Min60M)) {
 
                     // 3. Lấy danh sách coin tiềm năng từ FundingFeeManager
-                    Set<String> symbolFundingBuy = FundingFeeManager.getInstance().getFundingBuyNew(timestamp);
+                    Set<String> symbolFundingBuy = FundingFeeManager.getInstance().getFundingListSymbol2Trade(timestamp);
 
                     if (symbolFundingBuy == null || symbolFundingBuy.isEmpty()) continue;
 
@@ -157,13 +156,11 @@ public class RunFundingDataCollection {
                         // Lọc cơ bản
                         if (!Utils.isTickerAvailable(ticker)) continue;
 
-                        if (ticker.totalUsdt < 20000) continue;
                         // 🔥🔥🔥 UPDATE LOGIC LỌC TỐC ĐỘ RƠI 🔥🔥🔥
                         // 1. Tính Rate 1M: (Close - Open) / Open
                         double rate1m = (ticker.priceClose - ticker.priceOpen) / ticker.priceOpen;
                         // 2. Tính Rate 15M từ Manager (dùng History)
-                        double rate15m = manager.getReturn(symbol, 15);
-                        if (rate1m >= -0.004 && rate15m >= -0.015)
+                        if (rate1m >= -0.007)
                             continue; // Phải giảm > 0.5% trong 1 phút này
                         // --- (Optional) Lọc thêm điều kiện Rate Change như Simulator ---
                         // Simulator có đoạn: isRateChangeAvailable2Trade(...)

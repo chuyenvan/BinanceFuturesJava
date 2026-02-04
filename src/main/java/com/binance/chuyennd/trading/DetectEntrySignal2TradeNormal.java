@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,15 +18,20 @@ package com.binance.chuyennd.trading;
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.ai_ml.features.export.entry.ComprehensiveMarketFeatureExtractor;
 import com.binance.chuyennd.ai_ml.features.export.entry.MarketFeatures;
+import com.binance.chuyennd.ai_ml.features.export.funding.FundingFeatureExtractor;
+import com.binance.chuyennd.ai_ml.features.export.funding.FundingMarketFeatures;
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.ai_ml.onnx.entry.AIRejectFilter;
 import com.binance.chuyennd.ai_ml.onnx.entry.OnnxInferenceManager;
+import com.binance.chuyennd.ai_ml.onnx.funding.FundingOnnxInferenceManager;
 import com.binance.chuyennd.object.MarketLevelChange;
 import com.binance.chuyennd.helper.PositionHelper;
 import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
+import com.binance.chuyennd.research.FundingFeeManager;
+import com.binance.chuyennd.research.OrderTargetInfoTest;
 import com.binance.chuyennd.tradecore.DcaProcessor;
 import com.binance.chuyennd.tradecore.MarketBigChangeDetector;
 import com.binance.chuyennd.tradecore.TradeUtils;
@@ -45,6 +50,7 @@ import java.text.ParseException;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 
 /**
  * @author pc
@@ -53,31 +59,33 @@ public class DetectEntrySignal2TradeNormal {
 
     public static final Logger LOG = LoggerFactory.getLogger(DetectEntrySignal2TradeNormal.class);
     private static final String FILE_STORAGE_TIME_RATE_DOWN15M = "storage/data/time2RatDown15M.data";
+    // Đường dẫn model Funding
+    private static final String MODEL_FUNDING_PATH = "../storage/ai_ml_data/models_funding/Funding_Classifier_Final.onnx";
+
     public ExecutorService executorService = Executors.newFixedThreadPool(Configs.NUMBER_THREAD_ORDER_MANAGER);
     public TreeMap<Long, Float> time2RateDown15MAvg = new TreeMap<>();
     public AIRejectFilter aiRejectFilter = new AIRejectFilter();
 
-    // --- Biến AI ---
+    // --- Biến AI Entry (Cũ) ---
     private OnnxInferenceManager aiBrain;
-    private ComprehensiveMarketFeatureExtractor featureExtractor;
+    private ComprehensiveMarketFeatureExtractor featureEntryExtractor;
+
+    // --- Biến AI Funding (MỚI) ---
+    private FundingOnnxInferenceManager fundingBrain;
+    private FundingFeatureExtractor fundingExtractor;
 
 
     public static void main(String[] args) throws InterruptedException, ParseException {
 //        new DetectEntrySignal2Trader().getTickerBySymbol("QNTUSDT");
 //        String symbol = "ALTUSDT";
         Long time = Utils.sdfFileHour.parse("20250726 08:16").getTime();
-
-
-//        new DetectEntrySignal2Trader().testCreateOrder("BNBUSDT");
-//        List<KlineObjectNumber> tickers = TickerFuturesHelper.getTicker(symbol, Constants.INTERVAL_1M);
-//        new DetectEntrySignal2Trader().createOrderBuyRequest(symbol, tickers.get(tickers.size() - 1),
-//                MarketLevelChange.DCA_ORDER);
-//        System.out.println(getOrderMarketLevelRunning());
     }
 
 
     public void start() throws InterruptedException, ParseException {
         initData();
+        // 🔥 BẬT CHẾ ĐỘ PRODUCTION cho FundingFeeManager để lấy data realtime
+        FundingFeeManager.getInstance().setProductionMode(true);
         startThreadDetectMarketLevel2Trader();
     }
 
@@ -189,31 +197,26 @@ public class DetectEntrySignal2TradeNormal {
                     Utils.formatDouble(rateBtcDown15M * 100, 3), levelChange);
             LOG.info("Market level change: {} level: {} symbols:{}", Utils.normalizeDateYYYYMMDDHHmm(time), levelChange, symbol2FinalTicker.size());
 
+            // --- CẬP NHẬT HISTORY CHO FUNDING EXTRACTOR ---
+            if (fundingExtractor != null) {
+                fundingExtractor.updateMarketHistory(symbol2FinalTicker);
+            }
+
             Set<String> symbolLocked = new HashSet<>();
             symbolLocked.addAll(BudgetManager.getInstance().symbol2Pos.keySet());
             OnnxInferenceManager.PredictionResult predictData = null;
             MarketFeatures features = null;
-            if (aiBrain != null && featureExtractor != null) {
+            if (aiBrain != null && featureEntryExtractor != null) {
                 try {
                     long timestamp = time;
-                    // 1. Lấy Snapshot toàn thị trường hiện tại để AI có cái nhìn tổng quan
-                    Map<String, KlineObjectSimple> currentMarketMap = new HashMap<>();
+                    Map<String, KlineObjectSimple> currentMarketMap = new HashMap<>(symbol2FinalTicker);
 
-                    for (Map.Entry<String, List<KlineObjectSimple>> entry : symbol2LastTickers.entrySet()) {
-                        List<KlineObjectSimple> list = entry.getValue();
-                        if (!list.isEmpty()) {
-                            currentMarketMap.put(entry.getKey(), list.get(list.size() - 1));
-                        }
-                    }
+                    // 2. Trích xuất Features cho Entry Model
+                    features = featureEntryExtractor.extractAllFeatures(timestamp, currentMarketMap, marketRate, new ArrayList<>());
 
-                    // 2. Trích xuất Features
-                    // Lưu ý: tempBasketForAI được cập nhật ở checkMarketLevelChange2Trade
-
-                    features = featureExtractor.extractAllFeaturesProduction(timestamp, currentMarketMap, marketRate, new ArrayList<>());
-
-                    // 3. Dự báo
+                    // 3. Dự báo Entry Model
                     predictData = aiBrain.predictAll(features);
-                    if (predictData != null){
+                    if (predictData != null) {
                         AiPredictionData preData = new AiPredictionData(
                                 timestamp,
                                 predictData.return15M, predictData.return1H, predictData.return4H, predictData.return24H,
@@ -232,7 +235,8 @@ public class DetectEntrySignal2TradeNormal {
                 if (levelChange.equals(MarketLevelChange.SMALL_DOWN) || levelChange.equals(MarketLevelChange.SMALL_UP) || levelChange.equals(MarketLevelChange.MEDIUM_DOWN_15M) || levelChange.equals(MarketLevelChange.SMALL_DOWN_15M)) {
                     numberOrder = numberOrder / 2;
                 }
-                Set<String> symbol2BUY = MarketBigChangeDetector.getTopSymbol(rateDown15M2Symbols, numberOrder, symbol2FinalTicker, symbolLocked);
+                Set<String> symbol2BUY = new HashSet<>();
+                symbol2BUY.addAll(MarketBigChangeDetector.getTopSymbol(rateDown15M2Symbols, numberOrder, symbol2FinalTicker, symbolLocked));
 
                 if (symbol2BUY.size() < numberOrder) {
                     LOG.info("Not symbol 2 buy: {} {} ", levelChange, Utils.normalizeDateYYYYMMDDHHmm(time));
@@ -249,7 +253,6 @@ public class DetectEntrySignal2TradeNormal {
                     }
                 }
                 try {
-
                     List<String> symbolDcaLevel = DcaProcessor.getDCAProduction(levelChange, System.currentTimeMillis(), BudgetManager.getInstance().getBudget(), BudgetManager.getInstance().symbol2Pos);
                     for (String symbol : symbolDcaLevel) {
                         KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
@@ -291,51 +294,102 @@ public class DetectEntrySignal2TradeNormal {
                     }
                 }
             }
-            // funding fee trade
+
+            // ==========================================================
+            // 🔥 FUNDING FEE TRADE LOGIC (SORTED & FILTERED & LIMITED)
+            // ==========================================================
             time2RateDown15MAvg.put(time, rateDown15MAvg);
             while (time2RateDown15MAvg.size() > Configs.NUMBER_RATE_DOWN_HISTORY_TRADE) {
                 time2RateDown15MAvg.remove(time2RateDown15MAvg.firstKey());
             }
             Float minRate15Min30M = Collections.min(time2RateDown15MAvg.values());
-            Set<String> symbolCanTrade = new HashSet<>();
+
             if (MarketBigChangeDetector.isFundingFeeTrade(rateDown15MAvg, rateDownAvg, rateUpAvg, minRate15Min30M)) {
+                // 1. Lấy danh sách candidate
                 Set<String> symbolBuyFundingFee = new HashSet<>();
-                symbolBuyFundingFee.addAll(FundingFeeManagerProduction.getInstance().getFundingBuy());
+                symbolBuyFundingFee.addAll(FundingFeeManager.getInstance().getFundingListSymbol2Trade(time));
                 symbolBuyFundingFee.removeAll(BudgetManager.getInstance().symbol2Pos.keySet());
+
+                // 2. Chuẩn bị AI Input
+                List<String> aiCandidates = new ArrayList<>();
+                List<FundingMarketFeatures> aiFeaturesList = new ArrayList<>();
+                List<String> currentBasket = null;
+
+                if (fundingExtractor != null && fundingBrain != null) {
+                    currentBasket = fundingExtractor.identifyTargetBasket(symbol2FinalTicker);
+                }
+
                 for (String symbol : symbolBuyFundingFee) {
                     KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
-                    if (!Utils.isTickerAvailable(ticker)) {
+                    if (!Utils.isTickerAvailable(ticker)) continue;
+
+                    double rate1m = (ticker.priceClose - ticker.priceOpen) / ticker.priceOpen;
+                    // 🔥 HARD FILTER: Chỉ giữ lại nếu đang sập mạnh (Rate1M < -0.65%)
+                    if (rate1m >= -0.0065) {
                         continue;
                     }
-                    Double priceMax15M = symbol2Max15m.get(symbol);
-                    Double rateTicker = Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen);
-                    Double rateMax15M = Utils.rateOf2Double(ticker.priceClose, priceMax15M);
 
-                    if (MarketBigChangeDetector.isRateChangeAvailable2Trade(rateTicker, rateMax15M)) {
-                        LOG.info("Funding buy {} {} close: {} rate:{} max15M: {} tickers:{}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time), ticker.priceClose, rateTicker, rateMax15M, symbol2LastTickers.get(symbol).size());
-                        symbolCanTrade.add(symbol);
-                        createOrderBuyRequest(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY, symbol2Max15m.get(symbol), marketRate, predictData);
-                    } else {
-                        if (MarketBigChangeDetector.isRateChangeAvailable2TradeMass(rateTicker, rateMax15M)) {
-                            symbolCanTrade.add(symbol);
+                    if (fundingExtractor != null && fundingBrain != null) {
+                        OrderTargetInfoTest dummyOrder = new OrderTargetInfoTest(
+                                OrderTargetStatus.REQUEST, ticker.priceClose, null, 1.0,
+                                Configs.LEVERAGE_ORDER, symbol, time, time, OrderSide.BUY
+                        );
+                        dummyOrder.lastEntry = ticker.priceClose;
+
+                        FundingMarketFeatures feats = fundingExtractor.extractFeatures(
+                                time, dummyOrder, symbol2FinalTicker, currentBasket
+                        );
+                        if (feats != null) {
+                            aiCandidates.add(symbol);
+                            aiFeaturesList.add(feats);
                         }
+                    } else {
+                        // Fallback nếu không có AI
+                        aiCandidates.add(symbol);
                     }
                 }
-                if (symbolCanTrade.size() > 5) {
-                    symbolCanTrade.removeAll(BudgetManager.getInstance().symbol2Pos.keySet());
-                    for (String symbol : symbolCanTrade) {
-                        KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
-                        if (!Utils.isTickerAvailable(ticker)) {
-                            continue;
+
+                // 3. Chạy AI Predict -> Sort theo L0 (Prob Fail) từ bé đến lớn
+                TreeMap<Float, String> sortedCandidates = new TreeMap<>();
+
+                if (fundingBrain != null && !aiFeaturesList.isEmpty()) {
+                    List<float[]> featureArrays = aiFeaturesList.stream()
+                            .map(f -> fundingBrain.extractFeaturesToArray(f))
+                            .collect(Collectors.toList());
+
+                    List<float[]> results = fundingBrain.predictBatch(featureArrays);
+
+                    for (int i = 0; i < aiCandidates.size(); i++) {
+                        String sym = aiCandidates.get(i);
+                        float[] probs = results.get(i);
+
+                        // 🔥 FILTER: Reject nếu Fail Prob > 0.3
+                        if (probs[0] > 0.3) {
+                            LOG.info("❌ [FILTER AI FUNDING] {}: Prediction FAIL too high ({})", sym, probs[0]);
+                        } else {
+                            // Tự động sắp xếp: Key càng bé (ProbFail thấp) càng đứng đầu
+                            sortedCandidates.put(probs[0], sym);
                         }
-                        Double priceMax15M = symbol2Max15m.get(symbol);
-                        Double rateTicker = Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen);
-                        Double rateMax15M = Utils.rateOf2Double(ticker.priceClose, priceMax15M);
-                        LOG.info("Funding buy {} {} close: {} rate:{} max15M: {} tickers:{}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time), ticker.priceClose, rateTicker, rateMax15M, symbol2LastTickers.get(symbol).size());
-                        createOrderBuyRequest(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY, symbol2Max15m.get(symbol), marketRate, predictData);
                     }
+                } else {
+                    // Fallback: Random sort nếu không có AI
+                    for (String sym : aiCandidates) sortedCandidates.put((float) Math.random(), sym);
+                }
+
+                // 4. Final Trade Logic (Limit TOP 30)
+                int countChecked = 0;
+
+                // Duyệt qua danh sách đã sắp xếp (con ngon nhất duyệt trước)
+                for (Map.Entry<Float, String> entry : sortedCandidates.entrySet()) {
+                    if (countChecked >= 30) break; // Chỉ lấy Top 30
+                    countChecked++;
+                    String symbol = entry.getValue();
+                    KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
+                    if (ticker == null) continue;
+                    createOrderBuyRequest(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY, symbol2Max15m.get(symbol), marketRate, predictData);
                 }
             }
+
             // btc trend reverse
             Double rateTrendReverse = MarketBigChangeDetector.isBtcTrendReverse(btcTickers);
             if (rateTrendReverse != null && rateTrendReverse >= Configs.BTC_TREND_REVERSE_RATE_MIN_TRADE) {
@@ -407,9 +461,6 @@ public class DetectEntrySignal2TradeNormal {
             LOG.info("✅ AI PASS [{}] Reason: {}", symbol, filterResult.reason);
         }
 
-
-        // ... (Giữ nguyên logic tính toán margin, quantity cũ bên dưới) ...
-        long time = ticker.startTime.longValue();
         Double marginRunning = BudgetManager.getInstance().marginRunning;
         Double balanceBasic = BudgetManager.getInstance().balanceBasic;
         Double budget = BudgetManager.getInstance().getBudget();
@@ -450,7 +501,7 @@ public class DetectEntrySignal2TradeNormal {
             data.put("marketRate", marketRate);
             data.put("max15M", priceMax15M);
 //            data.put("symbol2Sell", symbol2Sell);
-            data.put("fundingBuy", FundingFeeManagerProduction.getInstance().getFundingBuy());
+            data.put("fundingBuy", FundingFeeManager.getInstance().getFundingListSymbol2Trade(ticker.startTime.longValue()));
             String fileName = "storage/data/order/";
             fileName += Utils.normalizeDateYYYYMMDD(ticker.startTime.longValue());
             fileName += "/";
@@ -488,26 +539,36 @@ public class DetectEntrySignal2TradeNormal {
         if (new File(FILE_STORAGE_TIME_RATE_DOWN15M).exists()) {
             time2RateDown15MAvg = (TreeMap<Long, Float>) StorageSnappy.readObjectFromFile(FILE_STORAGE_TIME_RATE_DOWN15M);
         }
-        // --- KHỞI TẠO AI & LOAD DỮ LIỆU LỊCH SỬ ---
+
+        // --- 1. KHỞI TẠO AI ENTRY (CŨ) ---
         try {
             LOG.info("Initializing AI Brain & Feature Extractor...");
             this.aiBrain = new OnnxInferenceManager(Configs.FILE_AI_ENTRY_PREDICTIONS);
-            this.featureExtractor = new ComprehensiveMarketFeatureExtractor();
+            this.featureEntryExtractor = new ComprehensiveMarketFeatureExtractor();
 
-            // QUAN TRỌNG: Sync dữ liệu lịch sử từ ListenAllTicker sang FeatureExtractor
-            // Để đảm bảo tính toán RSI, MA đúng ngay từ lệnh đầu tiên
+            // Sync dữ liệu lịch sử
             TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers =
                     DataManagerAerospikeFloatSim.readDataFromAerospikeCustom(
                             System.currentTimeMillis() - 1500 * Utils.TIME_MINUTE, 1500);
-            this.featureExtractor.initDataFromTickerMap(time2Tickers);
+            this.featureEntryExtractor.initDataFromTickerMap(time2Tickers);
 
             LOG.info("AI System Initialized Successfully. {} {} {}", time2Tickers.size(), Utils.normalizeDateYYYYMMDDHHmm(time2Tickers.firstKey()), Utils.normalizeDateYYYYMMDDHHmm(time2Tickers.lastKey()));
+
+            // --- 2. KHỞI TẠO AI FUNDING (MỚI) ---
+            if (new File(MODEL_FUNDING_PATH).exists()) {
+                LOG.info("🚀 Initializing Funding AI from: {}", MODEL_FUNDING_PATH);
+                this.fundingBrain = new FundingOnnxInferenceManager(MODEL_FUNDING_PATH);
+                this.fundingExtractor = new FundingFeatureExtractor();
+
+                // Đồng bộ history cho Funding Extractor luôn
+                this.fundingExtractor.initDataFromTickerMap(time2Tickers);
+                LOG.info("✅ Funding AI System Ready!");
+            } else {
+                LOG.warn("⚠️ Funding Model not found at: {}. Running without AI Filter for Funding!", MODEL_FUNDING_PATH);
+            }
+
         } catch (Exception e) {
             LOG.error("Failed to initialize AI System", e);
-            // Có thể throw exception để dừng chương trình nếu AI là bắt buộc
         }
-        // ------------------------------------------
     }
-
-
 }

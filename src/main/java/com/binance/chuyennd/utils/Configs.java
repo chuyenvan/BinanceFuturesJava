@@ -143,6 +143,8 @@ public class Configs {
     public static Double BTC_TREND_REVERSE_RATE_MAX = Configs.getDouble("BTC_TREND_REVERSE_RATE_MAX");
     public static Double BTC_TREND_REVERSE_RATE_MIN_TRADE = Configs.getDouble("BTC_TREND_REVERSE_RATE_MIN_TRADE");
 
+    // kaggle
+//    public static String FILE_ENTRY_MARKET_LEVEL = "storage/market_data_one_file/time2market.data";
     public static String FILE_ENTRY_MARKET_LEVEL = "../storage/market_data_one_file/time2market.data";
 
 

@@ -6,8 +6,8 @@ package com.binance.chuyennd.research;
 
 import ai.onnxruntime.OrtException;
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
-import com.binance.chuyennd.ai_ml.data.HPOSmartCache;
 import com.binance.chuyennd.ai_ml.data.SimpleSymbolMapper;
+import com.binance.chuyennd.ai_ml.features.export.funding.FundingFeatureExtractor;
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.ai_ml.onnx.entry.AIRejectFilter;
 import com.binance.chuyennd.ai_ml.onnx.entry.RunGeneratePredictions;
@@ -46,7 +46,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     public TreeMap<Long, MarketDataObject> time2MarketData;
     public TreeMap<Long, AiPredictionData> predictionMap;
     public AIRejectFilter aiRejectFilter;
-
+    FundingFeatureExtractor extractor = new FundingFeatureExtractor();
     public Map<String, KlineObjectSimple> symbol2LastTicker = new HashMap<>();
 
 //    public DcaFeatureExtractor extractor = new DcaFeatureExtractor();
@@ -63,6 +63,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
 
         SimulatorMarketLevelTicker1MStopLoss test = new SimulatorMarketLevelTicker1MStopLoss();
+        // 🔥 BẬT CHẾ ĐỘ PRODUCTION
+        FundingFeeManager.getInstance().setProductionMode(false);
         test.initData();
         test.simulatorWithInitEntry();
         Thread.sleep(5000);
@@ -77,8 +79,10 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         //get data
         while (true) {
             TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers;
+            TreeMap<Long, Map<Short, float[]>> time2FundingPre;
             try {
                 time2Tickers = DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime);
+                time2FundingPre = DataManagerAerospikeFloatSim.readFundingBatchCustom(startTime, 1440);
 //                time2Tickers = HPOSmartCache.getData(startTime);
 
                 if (time2Tickers == null) {
@@ -92,10 +96,10 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 //                            cachedBasket = extractor.identifyTargetBasket(time);
 //                            lastBasketTimestamp = time;
 //                        }
-
                         Long startTimeRun = System.currentTimeMillis();
                         try {
                             Map<String, KlineObjectSimple> symbol2Ticker = entry.getValue();
+                            extractor.updateMarketHistory(symbol2Ticker);
                             for (String symbol : symbol2Ticker.keySet()) {
                                 KlineObjectSimple ticker = symbol2Ticker.get(symbol);
                                 if (!Utils.isTickerAvailable(ticker)) {
@@ -230,56 +234,55 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                     startTimeRun = System.currentTimeMillis();
                                 }
 
-                                Set<String> symbolCanTradeMass = new HashSet<>();
                                 // funding level 1
                                 if (MarketBigChangeDetector.isFundingFeeTrade(marketData.rateDown15MAvg,
                                         marketData.rateDownAvg, marketData.rateUpAvg, minRate15Min60M)
                                 ) {
-                                    Set<String> symbolFundingBuy = FundingFeeManager.getInstance().getFundingBuyNew(time);
+                                    Set<String> symbolFundingBuy = FundingFeeManager.getInstance().getFundingListSymbol2Trade(time);
                                     Set<String> symbolBuyFundingFee = new HashSet<>();
                                     symbolBuyFundingFee.addAll(symbolFundingBuy);
                                     symbolBuyFundingFee.removeAll(symbol2OrderRunning.keySet());
+                                    TreeMap<Float, String> fundingPredict2Symbol = new TreeMap<>();
                                     for (String symbol : symbolBuyFundingFee) {
                                         KlineObjectSimple ticker = symbol2Ticker.get(symbol);
                                         if (!Utils.isTickerAvailable(ticker)) {
                                             continue;
                                         }
-                                        List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
+                                        double rate1m = (ticker.priceClose - ticker.priceOpen) / ticker.priceOpen;
+                                        double rate15m = extractor.calculateReturn(symbol, 15);
 
-                                        Double priceMax15M = getMax15M(tickers);
-                                        Double rateTicker = Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen);
-
-                                        Double rateMax15M = 0.0;
-                                        if (priceMax15M != null) {
-                                            rateMax15M = Utils.rateOf2Double(ticker.priceClose, priceMax15M);
+                                        // Logic: Chỉ giữ lại nếu (rate1m < -0.65%)
+                                        // Tức là đang sập mạnh.
+                                        if (rate1m >= -0.0065 ) {
+                                            continue;
                                         }
-                                        if (MarketBigChangeDetector.isRateChangeAvailable2Trade(rateTicker, rateMax15M)) {
 
-//                                            LOG.info("Funding buy {} {} close: {} rate:{} max15M: {} tickers:{}", symbol,
-//                                                    Utils.normalizeDateYYYYMMDDHHmm(time), ticker.priceClose, rateTicker,
-//                                                    rateMax15M, tickers.size());
-                                            symbolCanTradeMass.add(symbol);
-                                            createOrderBUY(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY,
-                                                    time2MarketData.get(time), priceMax15M, symbol2Ticker);
-                                        } else {
-                                            if (MarketBigChangeDetector.isRateChangeAvailable2TradeMass(rateTicker, rateMax15M)) {
-                                                symbolCanTradeMass.add(symbol);
+                                        List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
+                                        Map<Short, float[]> symbol2Pred = time2FundingPre.get(time);
+                                        if (symbol2Pred != null) {
+                                            float[] fundingPred = symbol2Pred.get(SimpleSymbolMapper.getInstance().getId(symbol));
+                                            if (fundingPred != null) {
+                                                if (fundingPred[0] > 0.3) {
+                                                    LOG.info("❌ [FILTER AI] {}: Funding Prediction too high ({})", symbol, fundingPred[0]);
+                                                    continue;
+                                                }
+                                                fundingPredict2Symbol.put(fundingPred[0], symbol);
                                             }
+                                        } else {
+                                            LOG.info("No funding prediction data for time: {}", Utils.normalizeDateYYYYMMDDHHmm(time));
                                         }
                                     }
-                                    if (symbolCanTradeMass.size() > 4) {
-                                        symbolCanTradeMass.removeAll(symbol2OrderRunning.keySet());
-                                        for (String symbol : symbolCanTradeMass) {
-                                            KlineObjectSimple ticker = symbol2Ticker.get(symbol);
-                                            if (!Utils.isTickerAvailable(ticker)) {
-                                                continue;
-                                            }
-                                            List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
-
-                                            Double priceMax15M = getMax15M(tickers);
-                                            createOrderBUY(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY,
-                                                    time2MarketData.get(time), priceMax15M, symbol2Ticker);
+                                    int counter = 0;
+                                    for (String symbol : fundingPredict2Symbol.values()) {
+                                        counter++;
+                                        if (counter > 30) {
+                                            break;
                                         }
+                                        KlineObjectSimple ticker = symbol2Ticker.get(symbol);
+                                        List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
+                                        Double priceMax15M = getMax15M(tickers);
+                                        createOrderBUY(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY,
+                                                time2MarketData.get(time), priceMax15M, symbol2Ticker);
                                     }
                                 }
                             }

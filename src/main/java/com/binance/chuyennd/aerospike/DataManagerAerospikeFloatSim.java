@@ -41,7 +41,7 @@ public class DataManagerAerospikeFloatSim {
     private static final String AEROSPIKE_SET_NAME_FUNDINGFEE = "funding_data";
 
     // set name 226
-    private static final String AEROSPIKE_SET_NAME_FUNDING_PRED = "funding_pred_1m";
+    private static final String AEROSPIKE_SET_NAME_FUNDING_PRED = "funding_pred_1m_v2";
 
     // 1. CẤU HÌNH SET NAME VÀ KEY
     private static final String AEROSPIKE_SET_NAME_MAPPER = "symbol_mapper"; // Set name mới
@@ -1386,5 +1386,9 @@ public class DataManagerAerospikeFloatSim {
 //        TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers = DataManagerAerospikeFloatSim.readDataFromAerospikeCustom(System.currentTimeMillis() - 1500 * Utils.TIME_MINUTE, 1500);
 //        LOG.info("{} {} {} {}",time2Tickers.firstEntry().getValue().keySet(), Utils.normalizeDateYYYYMMDDHHmm(time2Tickers.firstKey()),
 //                Utils.normalizeDateYYYYMMDDHHmm(time2Tickers.lastKey()), time2Tickers.size());
+    }
+
+    public static void setThreadCount(int i) {
+        threadCount = i;
     }
 }
