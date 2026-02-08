@@ -5,10 +5,13 @@ import com.aerospike.client.Info;
 public class AerospikeCheckData {
     public static void main(String[] args) {
         AerospikeClient client = new AerospikeClient("103.157.218.226", 3222);
+//        AerospikeClient client = new AerospikeClient("103.157.218.242", 3222);
         try {
 
             String namespace = "ticker";
 
+            // truncate toàn bộ set
+//            client.truncate(null, namespace, "funding_pred_1m_v2", null);
             // Lấy thống kê namespace
             String nsResponse = Info.request(client.getNodes()[0], "namespace/" + namespace);
             System.out.println("=== Namespace Stats ===");

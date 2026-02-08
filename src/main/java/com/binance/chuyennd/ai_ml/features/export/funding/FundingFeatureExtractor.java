@@ -1,10 +1,10 @@
 package com.binance.chuyennd.ai_ml.features.export.funding;
 
 import com.binance.chuyennd.ai_ml.features.export.HistoryManager;
+import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.research.FundingFeeManager;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
-import com.binance.chuyennd.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,7 +36,8 @@ public class FundingFeatureExtractor {
 
     public FundingMarketFeatures extractFeatures(long currentTimestamp, OrderTargetInfoTest order,
                                                  Map<String, KlineObjectSimple> currentSnapshot,
-                                                 List<String> targetBasket) {
+                                                 List<String> targetBasket,
+                                                 MarketDataObject rate) {
 
         KlineObjectSimple kline = currentSnapshot.get(order.symbol);
         if (kline == null) return null;
@@ -50,7 +51,15 @@ public class FundingFeatureExtractor {
         extractMarketContext(f, currentSnapshot);
 
         // --- 2. COIN SPECIFIC ---
-        f.momentum15M = calculateReturn(order.symbol, 15); // ✅ Tính lại 15M
+        // ✅ GÁN TRỰC TIẾP TỪ MarketDataObject
+        if (rate != null) {
+            f.momentum1M = rate.rateDownAvg;
+            f.momentum15M = rate.rateDown15MAvg;
+        } else {
+            f.momentum1M = 0;
+            f.momentum15M = 0;
+        }
+
         f.momentum1H = calculateReturn(order.symbol, 60);
         f.momentum4H = calculateReturn(order.symbol, 240);
         f.momentum24H = calculateReturn(order.symbol, 1440);
@@ -66,8 +75,6 @@ public class FundingFeatureExtractor {
         // --- 4. FUNDING FEE ---
         extractFundingFeatures(f, order.symbol, targetBasket, currentTimestamp);
 
-        // (❌ Bỏ phần extractTimeFeatures)
-
         return f;
     }
 
@@ -76,7 +83,6 @@ public class FundingFeatureExtractor {
     private void extractBasketFeatures(FundingMarketFeatures f, List<String> basket, long currentTime) {
         double sumMom15m = 0, sumMom1h = 0, sumMom24h = 0, sumRsi = 0, sumVolSpike = 0;
         int count = 0;
-
         for (String symbol : basket) {
             Double rsi = historyManager.getRsi14(symbol);
             if (rsi != null) {
@@ -90,7 +96,6 @@ public class FundingFeatureExtractor {
                 count++;
             }
         }
-
         if (count > 0) {
             f.basketMomentum15M = sumMom15m / count;
             f.basketMomentum1H = sumMom1h / count;
@@ -105,18 +110,13 @@ public class FundingFeatureExtractor {
             FundingFeeManager fm = FundingFeeManager.getInstance();
             Double cf = fm.getNearestFundingFee(symbol, currentTime);
             f.coinFundingRate = (cf != null) ? cf : 0.0;
-
             double totalBasketFunding = 0;
             int validCount = 0;
             for (String s : basket) {
                 Double rate = fm.getNearestFundingFee(s, currentTime);
-                if (rate != null) {
-                    totalBasketFunding += rate;
-                    validCount++;
-                }
+                if (rate != null) { totalBasketFunding += rate; validCount++; }
             }
             f.fundingRateRaw = (validCount > 0) ? totalBasketFunding / validCount : 0.0;
-
             double sum24h = 0;
             int count24h = 0;
             for (int i = 0; i <= 24; i += 4) {
@@ -126,12 +126,8 @@ public class FundingFeatureExtractor {
             }
             f.fundingRateAvg24H = (count24h > 0) ? sum24h / count24h : f.coinFundingRate;
             f.fundingRateTrend = f.coinFundingRate - f.fundingRateAvg24H;
-
         } catch (Exception e) {
-            e.printStackTrace();
-            f.coinFundingRate = 0;
-            f.fundingRateRaw = 0;
-            f.fundingRateAvg24H = 0;
+            f.coinFundingRate = 0; f.fundingRateRaw = 0; f.fundingRateAvg24H = 0;
         }
     }
 
@@ -141,51 +137,20 @@ public class FundingFeatureExtractor {
         KlineObjectSimple current = h.get(h.size() - 1);
         long pastTime = current.startTime.longValue() - (minutes * 60000L);
         Double pastPrice = historyManager.getPriceAt(symbol, pastTime);
-        if (pastPrice != null && pastPrice > 0) {
-            return (current.priceClose - pastPrice) / pastPrice;
-        }
+        if (pastPrice != null && pastPrice > 0) return (current.priceClose - pastPrice) / pastPrice;
         return 0.0;
-    }
-    public double calculateDropFromHigh(String symbol, int minutes) {
-        List<KlineObjectSimple> h = historyManager.getHistory(symbol);
-        if (h == null || h.isEmpty()) return 0.0;
-
-        // Lấy giá hiện tại
-        double currentClose = h.get(h.size() - 1).priceClose;
-
-        // Tìm giá cao nhất (High) trong khoảng 'minutes' nến gần nhất
-        double maxHigh = -1.0;
-
-        // Duyệt ngược từ cuối về (tối đa 'minutes' cây nến)
-        int startIndex = Math.max(0, h.size() - minutes);
-        for (int i = startIndex; i < h.size(); i++) {
-            KlineObjectSimple k = h.get(i);
-            if (k.maxPrice > maxHigh) {
-                maxHigh = k.maxPrice;
-            }
-        }
-
-        if (maxHigh <= 0) return 0.0;
-
-        // Trả về % sụt giảm
-        return (currentClose - maxHigh) / maxHigh;
     }
 
     private void extractMarketContext(FundingMarketFeatures f, Map<String, KlineObjectSimple> marketData) {
         int upCount = 0;
         int totalValid = 0;
         double upVol = 0, downVol = 0;
-
         for (Map.Entry<String, KlineObjectSimple> entry : marketData.entrySet()) {
             KlineObjectSimple k = entry.getValue();
             if (k.totalUsdt < 5000) continue;
             totalValid++;
-            if (k.priceClose > k.priceOpen) {
-                upCount++;
-                upVol += k.totalUsdt;
-            } else {
-                downVol += k.totalUsdt;
-            }
+            if (k.priceClose > k.priceOpen) { upCount++; upVol += k.totalUsdt; }
+            else { downVol += k.totalUsdt; }
         }
         f.marketBreadthStrength = (totalValid > 0) ? (double) upCount / totalValid : 0.5;
         double btcVol = marketData.containsKey("BTCUSDT") ? marketData.get("BTCUSDT").totalUsdt : 0;
@@ -204,13 +169,4 @@ public class FundingFeatureExtractor {
     }
 
 
-    public void initDataFromTickerMap(TreeMap<Long, Map<String, KlineObjectSimple>> time2Ticker) {
-        LOG.info("AI Funding Feature Extractor: Syncing history from {} size: {}",
-                Utils.normalizeDateYYYYMMDDHHmm(time2Ticker.firstKey()), time2Ticker.size());
-        for (Map<String, KlineObjectSimple> tickerMap : time2Ticker.values()) {
-            updateMarketHistory(tickerMap);
-        }
-        LOG.info("AI Funding Feature Extractor: Completed syncing {} history from {}.",
-                time2Ticker.size(), Utils.normalizeDateYYYYMMDDHHmm(time2Ticker.firstKey()));
-    }
 }

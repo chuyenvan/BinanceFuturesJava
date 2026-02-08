@@ -41,7 +41,7 @@ public class DataManagerAerospikeFloatSim {
     private static final String AEROSPIKE_SET_NAME_FUNDINGFEE = "funding_data";
 
     // set name 226
-    private static final String AEROSPIKE_SET_NAME_FUNDING_PRED = "funding_pred_1m_v2";
+    private static final String AEROSPIKE_SET_NAME_FUNDING_PRED = Configs.AEROSPIKE_SET_NAME_FUNDING_PRED;
 
     // 1. CẤU HÌNH SET NAME VÀ KEY
     private static final String AEROSPIKE_SET_NAME_MAPPER = "symbol_mapper"; // Set name mới

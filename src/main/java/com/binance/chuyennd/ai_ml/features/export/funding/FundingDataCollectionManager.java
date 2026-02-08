@@ -1,5 +1,6 @@
 package com.binance.chuyennd.ai_ml.features.export.funding;
 
+import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
 import com.binance.chuyennd.utils.Utils;
@@ -20,7 +21,10 @@ public class FundingDataCollectionManager {
 
     private long lastBasketTimestamp = -1;
     private List<String> cachedBasket = new ArrayList<>();
-    private final int[] labelCounts = new int[5];
+
+    // Counter cho 2 loại label
+    private final int[] label6Counts = new int[5];
+    private final int[] label40Counts = new int[5];
 
     public FundingDataCollectionManager(String outputDir) {
         this.outputDir = outputDir;
@@ -33,13 +37,13 @@ public class FundingDataCollectionManager {
                 // Context
                 "btcMomentum1H,btcMomentum4H,btcMomentum24H,btcDominance,marketBreadthStrength," +
                         // Coin
-                        "momentum15M,momentum1H,momentum4H,momentum24H,rsi1H,distFromLow24H,volatilityShock," +
+                        "momentum1M,momentum15M,momentum1H,momentum4H,momentum24H,rsi1H,distFromLow24H,volatilityShock," +
                         // Basket
                         "basketMomentum15M,basketMomentum1H,basketMomentum24H,basketRsi14,basketVolSpike," +
                         // Funding
                         "coinFundingRate,fundingRateRaw,fundingRateAvg24H,fundingRateTrend," +
-                        // LABEL (Single column)
-                        "label";
+                        // LABELS (2 columns)
+                        "label6,label40";
 
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(outputDir + "/header_funding.csv"))) {
             writer.write(header);
@@ -53,14 +57,14 @@ public class FundingDataCollectionManager {
         featureExtractor.updateMarketHistory(snapshot);
     }
 
-    // 🔥 HÀM MỚI: Dùng để check rate15m trong Runner
     public double getReturn(String symbol, int minutes) {
         return featureExtractor.calculateReturn(symbol, minutes);
     }
 
     public void processSample(long currentTimestamp, OrderTargetInfoTest order,
                               Map<String, KlineObjectSimple> currentSnapshot,
-                              TreeMap<Long, Map<String, KlineObjectSimple>> futureLookupData) {
+                              TreeMap<Long, Map<String, KlineObjectSimple>> futureLookupData,
+                              MarketDataObject marketData) {
         try {
             if (currentTimestamp != lastBasketTimestamp) {
                 cachedBasket = featureExtractor.identifyTargetBasket(currentSnapshot);
@@ -68,7 +72,7 @@ public class FundingDataCollectionManager {
             }
 
             FundingMarketFeatures features = featureExtractor.extractFeatures(
-                    currentTimestamp, order, currentSnapshot, cachedBasket);
+                    currentTimestamp, order, currentSnapshot, cachedBasket, marketData);
 
             if (features != null) {
                 String csvLine = calculateLabelsAndFormat(features, order, futureLookupData);
@@ -87,49 +91,55 @@ public class FundingDataCollectionManager {
         double entryPrice = order.lastPrice;
         if (entryPrice <= 0) return null;
 
-        double targetPrice = entryPrice * 1.06; // Mục tiêu lãi 6%
+        // 1. Tính toán Label 6 (Target 6%)
+        double targetPrice6 = entryPrice * 1.06;
+        f.label6 = calculateLabelType(order.symbol, targetPrice6, order.timeStart, futureLookupData);
+        if (f.label6 >= 0 && f.label6 <= 4) label6Counts[f.label6]++;
 
-        // Tính Label theo thứ tự ưu tiên (Nhanh nhất -> Chậm nhất)
-        // 4: 15M, 3: 4H, 2: 24H, 1: 72H, 0: Fail
-        int label = 0;
+        // 2. Tính toán Label 40 (Target 40%)
+        double targetPrice40 = entryPrice * 1.40;
+        f.label40 = calculateLabelType(order.symbol, targetPrice40, order.timeStart, futureLookupData);
+        if (f.label40 >= 0 && f.label40 <= 4) label40Counts[f.label40]++;
 
-        if (checkProfit(order.symbol, targetPrice, order.timeStart, 15 * Utils.TIME_MINUTE, futureLookupData)) {
-            label = 4;
-        } else if (checkProfit(order.symbol, targetPrice, order.timeStart, 4 * Utils.TIME_HOUR, futureLookupData)) {
-            label = 3;
-        } else if (checkProfit(order.symbol, targetPrice, order.timeStart, 24 * Utils.TIME_HOUR, futureLookupData)) {
-            label = 2;
-        } else if (checkProfit(order.symbol, targetPrice, order.timeStart, 72 * Utils.TIME_HOUR, futureLookupData)) {
-            label = 1;
-        } else {
-            label = 0;
-        }
-// 🔥 CẬP NHẬT COUNTER
-        if (label >= 0 && label <= 4) {
-            labelCounts[label]++;
-        }
+        // 3. Format CSV
         StringBuilder sb = new StringBuilder();
 
-        // 1. Context
+        // Context
         sb.append(String.format("%.6f,%.6f,%.6f,%.6f,%.6f,",
                 f.btcMomentum1H, f.btcMomentum4H, f.btcMomentum24H, f.btcDominance, f.marketBreadthStrength));
 
-        // 2. Coin (Đã thêm momentum15M)
-        sb.append(String.format("%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,",
-                f.momentum15M, f.momentum1H, f.momentum4H, f.momentum24H, f.rsi1H, f.distFromLow24H, f.volatilityShock));
+        // Coin
+        sb.append(String.format("%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,",
+                f.momentum1M, f.momentum15M, f.momentum1H, f.momentum4H, f.momentum24H, f.rsi1H, f.distFromLow24H, f.volatilityShock));
 
-        // 3. Basket
+        // Basket
         sb.append(String.format("%.6f,%.6f,%.6f,%.6f,%.6f,",
                 f.basketMomentum15M, f.basketMomentum1H, f.basketMomentum24H, f.basketRsi14, f.basketVolSpike));
 
-        // 4. Funding
+        // Funding
         sb.append(String.format("%.8f,%.8f,%.8f,%.8f,",
                 f.coinFundingRate, f.fundingRateRaw, f.fundingRateAvg24H, f.fundingRateTrend));
 
-        // 5. Label
-        sb.append(String.format("%d", label));
+        // Labels
+        sb.append(String.format("%d,%d", f.label6, f.label40));
 
         return sb.toString();
+    }
+
+    // Hàm chung để tính loại Label (0-4) dựa trên Target Price
+    private int calculateLabelType(String symbol, double targetPrice, long startTime,
+                                   TreeMap<Long, Map<String, KlineObjectSimple>> futureLookupData) {
+        if (checkProfit(symbol, targetPrice, startTime, 15 * Utils.TIME_MINUTE, futureLookupData)) {
+            return 4;
+        } else if (checkProfit(symbol, targetPrice, startTime, 4 * Utils.TIME_HOUR, futureLookupData)) {
+            return 3;
+        } else if (checkProfit(symbol, targetPrice, startTime, 24 * Utils.TIME_HOUR, futureLookupData)) {
+            return 2;
+        } else if (checkProfit(symbol, targetPrice, startTime, 72 * Utils.TIME_HOUR, futureLookupData)) {
+            return 1;
+        } else {
+            return 0;
+        }
     }
 
     private boolean checkProfit(String symbol, double targetPrice, long startTime, long duration,
@@ -162,10 +172,10 @@ public class FundingDataCollectionManager {
     public int getCollectedCount() {
         return collectedCount;
     }
-    // 🔥 HÀM MỚI ĐỂ LẤY REPORT
-    public String getLabelReport() {
-        return String.format("[L4(15m):%d, L3(4h):%d, L2(24h):%d, L1(72h):%d, L0(Fail):%d]",
-                labelCounts[4], labelCounts[3], labelCounts[2], labelCounts[1], labelCounts[0]);
-    }
 
+    public String getLabelReport() {
+        return String.format("L6:[%d,%d,%d,%d,F:%d] | L40:[%d,%d,%d,%d,F:%d]",
+                label6Counts[4], label6Counts[3], label6Counts[2], label6Counts[1], label6Counts[0],
+                label40Counts[4], label40Counts[3], label40Counts[2], label40Counts[1], label40Counts[0]);
+    }
 }

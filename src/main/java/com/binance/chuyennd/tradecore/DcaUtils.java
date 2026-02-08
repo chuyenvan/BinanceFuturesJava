@@ -46,15 +46,15 @@ public final class DcaUtils {
         }
         switch (levelChange) {
             case BIG_DOWN:
-                return new DcaConfig(8, -0.05, true);
+                return new DcaConfig(8, -0.15, true);
             case MEDIUM_DOWN:
             case BIG_UP:
-                return new DcaConfig(15, -0.08, false);
-            case MEDIUM_UP:
-            case MEDIUM_DOWN_15M:
-                return new DcaConfig(15, -0.15, false);
-            case SMALL_DOWN:
-                return new DcaConfig(15, -0.20, false);
+                return new DcaConfig(15, -0.28, false);
+//            case MEDIUM_UP:
+//            case MEDIUM_DOWN_15M:
+//                return new DcaConfig(15, -0.15, false);
+//            case SMALL_DOWN:
+//                return new DcaConfig(15, -0.20, false);
             default:
                 return null;
         }

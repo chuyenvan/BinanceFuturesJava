@@ -1,11 +1,13 @@
 package com.binance.chuyennd.ai_ml.hpo;
 
+import com.binance.chuyennd.ai_ml.data.HPOSmartCache;
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.research.FundingFeeManager;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.StorageSnappy;
+import com.binance.chuyennd.utils.Utils;
 import io.jenetics.*;
 import io.jenetics.engine.Engine;
 import io.jenetics.engine.EvolutionResult;
@@ -147,14 +149,14 @@ public class RunOptimizationAI {
         predictionMap = (TreeMap<Long, AiPredictionData>) StorageSnappy.readObjectFromFile(Configs.FILE_AI_ENTRY_PREDICTIONS);
         FundingFeeManager.getInstance();
 
-//        LOG.info("🔥 Warming up cache ({}-NOW)...", Configs.TIME_RUN);
-//        long startTimeLoad = Utils.sdfFile.parse(Configs.TIME_RUN).getTime();
-//        long endTimeLoad = System.currentTimeMillis();
-//        long current = startTimeLoad;
-//        while (current < endTimeLoad) {
-//            HPOSmartCache.getData(current);
-//            current += Utils.TIME_DAY;
-//        }
-//        LOG.info("✅ Cache Ready. Start Optimization!");
+        LOG.info("🔥 Warming up cache ({}-NOW)...", Configs.TIME_RUN);
+        long startTimeLoad = Utils.sdfFile.parse(Configs.TIME_RUN).getTime();
+        long endTimeLoad = System.currentTimeMillis();
+        long current = startTimeLoad;
+        while (current < endTimeLoad) {
+            HPOSmartCache.getData(current);
+            current += Utils.TIME_DAY;
+        }
+        LOG.info("✅ Cache Ready. Start Optimization!");
     }
 }

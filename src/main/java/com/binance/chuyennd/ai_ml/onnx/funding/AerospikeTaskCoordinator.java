@@ -1,0 +1,122 @@
+package com.binance.chuyennd.ai_ml.onnx.funding;
+
+import com.aerospike.client.*;
+import com.aerospike.client.policy.ScanPolicy;
+import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
+import com.binance.chuyennd.utils.Configs;
+import com.binance.chuyennd.utils.Utils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.text.ParseException;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Collections;
+import java.util.List;
+
+public class AerospikeTaskCoordinator {
+    private static final Logger LOG = LoggerFactory.getLogger(AerospikeTaskCoordinator.class);
+
+    // Tên Set lưu danh sách công việc
+    private static final String TASK_SET_NAME = "funding_tasks_dist_v1";
+
+    /**
+     * KHỞI TẠO DANH SÁCH VIỆC (Chỉ chạy 1 lần ở máy Admin hoặc Server đầu tiên)
+     * Chia thời gian thành các gói (Chunk) theo TUẦN.
+     */
+    public static void initTasks(long startTime, long endTime) {
+        LOG.info("🛠 Initializing Task Queue in Aerospike...");
+        AerospikeClient client = DataManagerAerospikeFloatSim.getClient242();
+
+        Calendar cal = Calendar.getInstance();
+        cal.setTimeInMillis(startTime);
+
+        int count = 0;
+        // Chia nhỏ task: Mỗi task 7 ngày (1 tuần)
+        long chunkDuration = 7L * 24 * 60 * 60 * 1000L;
+
+        while (cal.getTimeInMillis() < endTime) {
+            long chunkStart = cal.getTimeInMillis();
+            long chunkEnd = Math.min(chunkStart + chunkDuration, endTime);
+
+            // Key ví dụ: TASK_20210101
+            String keyString = "TASK_" + Utils.normalizeDateYYYYMMDD(chunkStart);
+            Key key = new Key(Configs.AEROSPIKE_NAMESPACE, TASK_SET_NAME, keyString);
+
+            // Ghi metadata (Start, End) vào Aerospike
+            // Dùng Put (Create/Update)
+            client.put(null, key,
+                    new Bin("start", chunkStart),
+                    new Bin("end", chunkEnd)
+            );
+
+            cal.setTimeInMillis(chunkEnd); // Nhảy sang tuần tiếp theo
+            count++;
+        }
+        LOG.info("✅ Created {} tasks (Weeks) in Set '{}'", count, TASK_SET_NAME);
+    }
+
+    /**
+     * WORKER GỌI HÀM NÀY ĐỂ NHẬN VIỆC
+     * Cơ chế: Scan tìm task -> Atomic Delete -> Nếu xóa được thì nhận.
+     */
+    public static TaskRange claimNextTask() {
+        AerospikeClient client = DataManagerAerospikeFloatSim.getClient242();
+        ScanPolicy policy = new ScanPolicy();
+        policy.maxRecords = 50; // Scan lấy mẫu 50 task đầu tiên
+
+        final List<TaskRange> candidates = new ArrayList<>();
+
+        try {
+            client.scanAll(policy, Configs.AEROSPIKE_NAMESPACE, TASK_SET_NAME, (key, record) -> {
+                long start = record.getLong("start");
+                long end = record.getLong("end");
+                candidates.add(new TaskRange(key, start, end));
+            }, "start", "end");
+        } catch (AerospikeException e) {
+            // Ignore scan errors
+        }
+
+        if (candidates.isEmpty()) return null; // Hết việc
+
+        // Shuffle để các server đỡ tranh nhau cùng 1 task đầu tiên
+        Collections.shuffle(candidates);
+
+        // Thử Atomic Delete để giành quyền xử lý
+        for (TaskRange task : candidates) {
+            try {
+                // Xóa record. Return true nếu record tồn tại và xóa thành công.
+                boolean existed = client.delete(null, task.key);
+                if (existed) {
+                    LOG.info("🎯 Claimed Task: {} -> {}",
+                            Utils.normalizeDateYYYYMMDD(task.start),
+                            Utils.normalizeDateYYYYMMDD(task.end));
+                    return task;
+                }
+            } catch (Exception e) {
+                // Bị tranh mất, thử cái khác
+            }
+        }
+
+        return null;
+    }
+
+    public static class TaskRange {
+        public Key key;
+        public long start;
+        public long end;
+
+        public TaskRange(Key key, long start, long end) {
+            this.key = key;
+            this.start = start;
+            this.end = end;
+        }
+    }
+
+    public static void main(String[] args) throws ParseException {
+        String startStr = "20210101";
+        long globalStart = Utils.sdfFile.parse(startStr).getTime();
+        long globalEnd = System.currentTimeMillis();
+        AerospikeTaskCoordinator.initTasks(globalStart, globalEnd);
+    }
+}

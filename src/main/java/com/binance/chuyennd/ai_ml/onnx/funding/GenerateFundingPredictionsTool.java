@@ -20,7 +20,6 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 public class GenerateFundingPredictionsTool {
@@ -39,14 +38,11 @@ public class GenerateFundingPredictionsTool {
     }
 
     public static void main(String[] args) throws Exception {
-        // 1. Ép Java dùng tối đa năng lực CPU cho các tác vụ tính toán song song (Stream API)
-        // Mặc định nó chỉ dùng ít core, ta set lên 80 để chừa lại chút cho OS
-        System.setProperty("java.util.concurrent.ForkJoinPool.common.parallelism", "80");
+        // 1. Ép Java dùng tối đa năng lực CPU (TPU VM có 96 cores -> set 90)
+        System.setProperty("java.util.concurrent.ForkJoinPool.common.parallelism", "90");
 
-        // 2. Tăng luồng đọc/ghi Aerospike (IO Bound)
-        // Vì máy mạnh, ta có thể mở rộng băng thông đọc dữ liệu
-        DataManagerAerospikeFloatSim.setThreadCount(30);
-
+        // 2. Tăng luồng đọc/ghi Aerospike
+        DataManagerAerospikeFloatSim.setThreadCount(60);
 
         // Cấu hình tham số lọc
         Configs.FUNDING_RATE_MIN_TRADE = -0.013;
@@ -54,42 +50,68 @@ public class GenerateFundingPredictionsTool {
         Configs.FUNDING_RATE_UP_AVG = 0.004;
         Configs.FUNDING_RATE_DOWN_AVG = -0.005;
 
-        // Init Funding Manager
         try {
             FundingFeeManager.getInstance();
         } catch (Exception e) {
         }
 
-        // ⚠️ CẤU HÌNH THỜI GIAN CHẠY TẠI ĐÂY
+        // ⚠️ CẤU HÌNH THỜI GIAN
         String startTimeStr = "20210101";
         long startTime = Utils.sdfFile.parse(startTimeStr).getTime();
         long endTime = System.currentTimeMillis();
 
-        LOG.info("🔥 STARTING FUNDING PREDICTION GENERATION (BATCH MODE + RESUME)...");
-        new GenerateFundingPredictionsTool().generateToAerospike(startTime, endTime);
+        String mode = args.length > 0 ? args[0] : "worker";
+
+        if ("init".equalsIgnoreCase(mode)) {
+            AerospikeTaskCoordinator.initTasks(startTime, endTime);
+            return;
+        }
+
+        new GenerateFundingPredictionsTool().processDistributedTasks();
     }
-
-    public void generateToAerospike(long startTime, long endTime) throws Exception {
-        // 1. Load Model & Data
-        String modelPath = "models_funding/Funding_Classifier_Final_v2.onnx";
+    public void processDistributedTasks() throws Exception {
+        // Load model & data 1 lần (tránh load lại mỗi task)
+            String modelPath = "models_funding/Funding_Classifier_Final_v2.onnx";
         FundingOnnxInferenceManager aiBrain = new FundingOnnxInferenceManager(modelPath);
-        FundingFeatureExtractor extractor = new FundingFeatureExtractor();
-
-        LOG.info("📥 Loading Market Rates...");
         TreeMap<Long, MarketDataObject> time2MarketData = loadMarketRateData();
-
         LOG.info("📥 Loading Symbol Mapper...");
         Map<String, Short> globalMapper = DataManagerAerospikeFloatSim.loadSymbolMapper();
-        int maxId = globalMapper.values().stream().mapToInt(Short::intValue).max().orElse(0);
-        AtomicInteger idCounter = new AtomicInteger(maxId);
         final ConcurrentHashMap<String, Short> symbolMap = new ConcurrentHashMap<>(globalMapper);
+        int consecutiveFailures = 0;
+        while (true) {
+            // Claim task từ queue
+            AerospikeTaskCoordinator.TaskRange task = AerospikeTaskCoordinator.claimNextTask();
+
+            if (task == null) {
+                // Retry 3 lần, sau đó shutdown
+                if (++consecutiveFailures >= 3) break;
+                Thread.sleep(10000);
+                continue;
+            }
+
+            // Xử lý task
+            generateToAerospike(task.start, task.end, aiBrain, time2MarketData, symbolMap);
+        }
+    }
+    private void generateToAerospike(
+            long startTime,
+            long endTime,
+            FundingOnnxInferenceManager aiBrain,  // ← Tái sử dụng
+            TreeMap<Long, MarketDataObject> time2MarketData,  // ← Tái sử dụng
+            ConcurrentHashMap<String, Short> symbolMap
+    ) {
+        FundingFeatureExtractor extractor = new FundingFeatureExtractor();
+
+
+
 
         long currentTime = startTime;
         long lastBasketTimestamp = -1;
         List<String> cachedBasket = new ArrayList<>();
 
         while (currentTime <= endTime) {
-            int minutesToRead = 60;
+            // Đọc 2 tiếng một lần để giảm IO overhead
+            int minutesToRead = 120;
             TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers =
                     DataManagerAerospikeFloatSim.readDataFromAerospikeCustom(currentTime, minutesToRead);
 
@@ -98,34 +120,18 @@ public class GenerateFundingPredictionsTool {
                 continue;
             }
 
-            // 🔥 BƯỚC 1: CHECK EXISTING (Để Skip những phút đã chạy rồi)
-//            List<Long> timestampsToCheck = new ArrayList<>(time2Tickers.keySet());
-//            Set<Long> existingTimestamps = DataManagerAerospikeFloatSim.checkExistingFundingPredictions(timestampsToCheck);
-
             int processedCount = 0;
-            int skippedCount = 0;
             int generatedCount = 0;
-//            long timeDebug = Utils.sdfFileHour.parse("20241202 14:22").getTime();
+
             for (Map.Entry<Long, Map<String, KlineObjectSimple>> timeEntry : time2Tickers.entrySet()) {
                 long time = timeEntry.getKey();
                 if (time > endTime) break;
 
                 Map<String, KlineObjectSimple> symbol2Ticker = timeEntry.getValue();
 
-                // LUÔN UPDATE HISTORY để indicator đúng
+                // LUÔN UPDATE HISTORY (Tuần tự vì cần đúng thứ tự thời gian)
                 extractor.updateMarketHistory(symbol2Ticker);
                 updateMarketRateHistory(time, time2MarketData);
-
-//                if (time == timeDebug) {
-//                    LOG.info("Debug: {} ", Utils.normalizeDateYYYYMMDDHHmm(time));
-//                }else {
-//                    continue;
-//                }
-                // Nếu đã có data trong DB -> Skip logic tính toán nặng
-//                if (existingTimestamps.contains(time)) {
-//                    skippedCount++;
-//                    continue;
-//                }
 
                 // CHECK ĐIỀU KIỆN THỊ TRƯỜNG
                 if (!isMarketConditionMet(time, time2MarketData)) {
@@ -142,37 +148,19 @@ public class GenerateFundingPredictionsTool {
                 final List<String> currentBasket = cachedBasket;
 
                 // LỌC SYMBOL TIỀM NĂNG
-                Set<String> symbolFundingBuy = FundingFeeManager.getInstance().getFundingListSymbol2Trade(time);
-                if (symbolFundingBuy == null || symbolFundingBuy.isEmpty()) continue;
+                Set<String> symbolFundingBuy = symbol2Ticker.keySet();
+//                Set<String> symbolFundingBuy = FundingFeeManager.getInstance().getFundingListSymbol2Trade(time);
+//                if (symbolFundingBuy == null || symbolFundingBuy.isEmpty()) continue;
 
-                // CHUẨN BỊ BATCH INPUT
-                List<PrepareData> batchInput = symbolFundingBuy.stream() // Tạm bỏ parallel để log không bị lộn xộn
+                // =================================================================
+                // 🔥 PHASE 1: PARALLEL FEATURE EXTRACTION (Tận dụng 96 Cores)
+                // =================================================================
+                List<PrepareData> batchInput = symbolFundingBuy.parallelStream() // QUAN TRỌNG: Dùng parallelStream
                         .map(symbol -> {
                             try {
                                 KlineObjectSimple ticker = symbol2Ticker.get(symbol);
+                                if (ticker == null || !Utils.isTickerAvailable(ticker)) return null;
 
-                                // Check 1: Data Ticker
-                                if (ticker == null) {
-                                    LOG.info("❌ [FILTER] {}: Ticker NULL", symbol);
-                                    return null;
-                                }
-                                if (!Utils.isTickerAvailable(ticker)) return null;
-
-
-                                // Check 3: Rate Filters (QUAN TRỌNG NHẤT)
-//                                double rate1m = (ticker.priceClose - ticker.priceOpen) / ticker.priceOpen;
-//                                double rate15m = extractor.calculateReturn(symbol, 15);
-
-                                // Logic: Chỉ giữ lại nếu (rate1m < -0.4%) HOẶC (rate15m < -1.5%)
-                                // Tức là đang sập mạnh.
-//                                if (rate1m >= -0.0065) {
-//                                    // Mở comment dòng này để xem tại sao bị loại
-////                                    LOG.info("❌ [FILTER RATE] {}: Rate1m={}%, Rate15m={}% (Chưa đủ sập)",
-////                                            symbol, String.format("%.3f", rate1m * 100), String.format("%.3f", rate15m * 100));
-//                                    return null;
-//                                }
-
-                                // Map Symbol -> Short ID
                                 short symId = SimpleSymbolMapper.getInstance().getId(symbol);
 
                                 OrderTargetInfoTest dummyOrder = new OrderTargetInfoTest(
@@ -181,20 +169,13 @@ public class GenerateFundingPredictionsTool {
                                 );
                                 dummyOrder.lastEntry = ticker.priceClose;
 
-                                // Check 4: Feature Extraction
                                 FundingMarketFeatures features = extractor.extractFeatures(
-                                        time, dummyOrder, symbol2Ticker, currentBasket
+                                        time, dummyOrder, symbol2Ticker, currentBasket, time2MarketData.get(time)
                                 );
 
-                                if (features == null) {
-//                                    LOG.info("❌ [FILTER FEATURE] {}: Extract Features NULL (Thiếu history RSI?)", symbol);
-                                    return null;
+                                if (features != null) {
+                                    return new PrepareData(symId, aiBrain.extractFeaturesToArray(features));
                                 }
-
-                                // PASS TẤT CẢ -> LẤY
-//                                LOG.info("✅ [PASS] {}: Đủ điều kiện vào AI predict", symbol);
-                                return new PrepareData(symId, aiBrain.extractFeaturesToArray(features));
-
                             } catch (Exception e) {
                                 LOG.error("Error processing " + symbol, e);
                             }
@@ -203,46 +184,53 @@ public class GenerateFundingPredictionsTool {
                         .filter(Objects::nonNull)
                         .collect(Collectors.toList());
 
-                LOG.info("📊 DEBUG SUMMARY: Input Candidates={}, Passed Filters={}", symbolFundingBuy.size(), batchInput.size());
-
                 if (batchInput.isEmpty()) continue;
 
-                // RUN AI (BATCH)
-                List<float[]> featureList = batchInput.stream().map(p -> p.features).collect(Collectors.toList());
-                List<float[]> aiResults = aiBrain.predictBatch(featureList);
+                // =================================================================
+                // 🔥 PHASE 2: PARALLEL BATCH PREDICTION (Chia nhỏ để chạy song song)
+                // =================================================================
+                Map<Short, float[]> finalResults = new ConcurrentHashMap<>();
+
+                // Chia batch lớn thành các chunk nhỏ (ví dụ 10 item/chunk) để ép chạy song song nhiều luồng
+                int chunkSize = 10;
+                List<List<PrepareData>> chunks = new ArrayList<>();
+                for (int i = 0; i < batchInput.size(); i += chunkSize) {
+                    chunks.add(batchInput.subList(i, Math.min(batchInput.size(), i + chunkSize)));
+                }
+
+                // Chạy Predict song song cho từng chunk
+                chunks.parallelStream().forEach(chunk -> {
+                    List<float[]> featureList = chunk.stream().map(p -> p.features).collect(Collectors.toList());
+                    // Gọi AI Predict cho chunk này
+                    List<float[]> chunkResults = aiBrain.predictBatch(featureList);
+
+                    for (int i = 0; i < chunk.size(); i++) {
+                        finalResults.put(chunk.get(i).id, chunkResults.get(i));
+                    }
+                });
 
                 // SAVE TO DB
-                Map<Short, float[]> finalResults = new HashMap<>();
-                for (int i = 0; i < batchInput.size(); i++) {
-                    finalResults.put(batchInput.get(i).id, aiResults.get(i));
-                }
                 DataManagerAerospikeFloatSim.saveFundingPredictions1M(time, finalResults);
                 generatedCount += finalResults.size();
             }
 
-            // Log & Clean
+            // Log Progress
             if (time2Tickers.size() > 0) {
                 long lastTimeInBlock = time2Tickers.lastKey();
-                String status = (skippedCount == time2Tickers.size()) ? "(SKIP ALL)" :
-                        String.format("(Run: %d, Skip: %d, Gen: %d)", processedCount, skippedCount, generatedCount);
-
-                LOG.info("   ✅ Block: {} | {}", Utils.normalizeDateYYYYMMDDHHmm(lastTimeInBlock), status);
+                LOG.info("   ✅ Block: {} | Gen: {} candidates (Processed {} minutes)",
+                        Utils.normalizeDateYYYYMMDDHHmm(lastTimeInBlock), generatedCount, processedCount);
 
                 time2Tickers = null;
-                // Chỉ GC nếu thực sự có chạy tính toán mới
                 if (processedCount > 0) System.gc();
-
                 currentTime = lastTimeInBlock + Utils.TIME_MINUTE;
             } else {
                 currentTime += minutesToRead * Utils.TIME_MINUTE;
             }
         }
-
-        aiBrain.close();
         LOG.info("🎉 DONE GENERATION!");
     }
 
-    // --- Helper Methods cho gọn code ---
+    // --- Helper Methods ---
 
     private void updateMarketRateHistory(long time, TreeMap<Long, MarketDataObject> time2MarketData) {
         MarketDataObject marketData = time2MarketData.get(time);
@@ -256,19 +244,14 @@ public class GenerateFundingPredictionsTool {
     private boolean isMarketConditionMet(long time, TreeMap<Long, MarketDataObject> time2MarketData) {
         MarketDataObject marketData = time2MarketData.get(time);
         if (marketData == null) return false;
-
         Float minRate15Min60M = time2RateDown15MAvg.isEmpty() ? 0f : Collections.min(time2RateDown15MAvg.values());
-
         return MarketBigChangeDetector.isFundingFeeTrade(
-                marketData.rateDown15MAvg,
-                marketData.rateDownAvg,
-                marketData.rateUpAvg,
-                minRate15Min60M);
+                marketData.rateDown15MAvg, marketData.rateDownAvg, marketData.rateUpAvg, minRate15Min60M);
     }
 
     private TreeMap<Long, MarketDataObject> loadMarketRateData() throws Exception {
         if (!new File(Configs.FILE_ENTRY_MARKET_LEVEL).exists()) {
-            LOG.info("Khong co file market data! {}", Configs.FILE_ENTRY_MARKET_LEVEL);
+            LOG.info("Khong co file: {}", Configs.FILE_ENTRY_MARKET_LEVEL);
             return new TreeMap<>();
         }
         return (TreeMap<Long, MarketDataObject>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);

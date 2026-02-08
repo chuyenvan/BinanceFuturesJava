@@ -20,6 +20,7 @@ public class Configs {
 
 
     public static final String FILE_TICKER_1M_STORAGE = "storage/tickers/symbol2ticker1Ms";
+
     public static String configFile = "config.properties";
     public static volatile Map properties = new HashMap();
 
@@ -145,7 +146,7 @@ public class Configs {
 
     // kaggle
 //    public static String FILE_ENTRY_MARKET_LEVEL = "storage/market_data_one_file/time2market.data";
-    public static String FILE_ENTRY_MARKET_LEVEL = "../storage/market_data_one_file/time2market.data";
+    public static String FILE_ENTRY_MARKET_LEVEL = Configs.getString("FILE_ENTRY_MARKET_LEVEL");
 
 
     // aerospike
@@ -153,6 +154,8 @@ public class Configs {
     public static final int AEROSPIKE_PORT_242 = Configs.getInt("AEROSPIKE_PORT");
     public static final String AEROSPIKE_HOST_226 = Configs.getString("AEROSPIKE_HOST_226"); //"127.0.0.1";
     public static final int AEROSPIKE_PORT_226 = Configs.getInt("AEROSPIKE_PORT_226");
+
+    public static final String AEROSPIKE_SET_NAME_FUNDING_PRED =  Configs.getString("AEROSPIKE_SET_NAME_FUNDING_PRED");
 
 
     public static final String AEROSPIKE_NAMESPACE = Configs.getString("AEROSPIKE_NAMESPACE"); //"ticker" ;

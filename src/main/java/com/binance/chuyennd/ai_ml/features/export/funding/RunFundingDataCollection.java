@@ -156,11 +156,13 @@ public class RunFundingDataCollection {
                         // Lọc cơ bản
                         if (!Utils.isTickerAvailable(ticker)) continue;
 
+                        if (ticker.totalUsdt < 10000) continue;
                         // 🔥🔥🔥 UPDATE LOGIC LỌC TỐC ĐỘ RƠI 🔥🔥🔥
                         // 1. Tính Rate 1M: (Close - Open) / Open
                         double rate1m = (ticker.priceClose - ticker.priceOpen) / ticker.priceOpen;
                         // 2. Tính Rate 15M từ Manager (dùng History)
-                        if (rate1m >= -0.007)
+                        double rate15m = manager.getReturn(symbol, 15);
+                        if (rate1m >= -0.004 && rate15m >= -0.015)
                             continue; // Phải giảm > 0.5% trong 1 phút này
                         // --- (Optional) Lọc thêm điều kiện Rate Change như Simulator ---
                         // Simulator có đoạn: isRateChangeAvailable2Trade(...)
@@ -177,11 +179,11 @@ public class RunFundingDataCollection {
                             );
                             order.lastPrice = ticker.priceClose;
 
-                            manager.processSample(timestamp, order, snapshot, lookupData);
+                            // 🔥 CẬP NHẬT GỌI HÀM: Truyền thêm 'marketData' vào cuối
+                            manager.processSample(timestamp, order, snapshot, lookupData, marketData);
 
                         } catch (Exception e) {
                             e.printStackTrace();
-                            // Ignore error
                         }
                     }
                 }

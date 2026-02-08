@@ -24,6 +24,7 @@ import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.ai_ml.onnx.entry.AIRejectFilter;
 import com.binance.chuyennd.ai_ml.onnx.entry.OnnxInferenceManager;
 import com.binance.chuyennd.ai_ml.onnx.funding.FundingOnnxInferenceManager;
+import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.MarketLevelChange;
 import com.binance.chuyennd.helper.PositionHelper;
 import com.binance.chuyennd.object.MarketRateChange;
@@ -335,9 +336,10 @@ public class DetectEntrySignal2TradeNormal {
                                 Configs.LEVERAGE_ORDER, symbol, time, time, OrderSide.BUY
                         );
                         dummyOrder.lastEntry = ticker.priceClose;
-
+                        MarketDataObject marketData = new MarketDataObject(rateDownAvg,
+                                rateUpAvg, rateDown15MAvg);
                         FundingMarketFeatures feats = fundingExtractor.extractFeatures(
-                                time, dummyOrder, symbol2FinalTicker, currentBasket
+                                time, dummyOrder, symbol2FinalTicker, currentBasket, marketData
                         );
                         if (feats != null) {
                             aiCandidates.add(symbol);
@@ -561,7 +563,7 @@ public class DetectEntrySignal2TradeNormal {
                 this.fundingExtractor = new FundingFeatureExtractor();
 
                 // Đồng bộ history cho Funding Extractor luôn
-                this.fundingExtractor.initDataFromTickerMap(time2Tickers);
+                initDataFromTickerMap(time2Tickers);
                 LOG.info("✅ Funding AI System Ready!");
             } else {
                 LOG.warn("⚠️ Funding Model not found at: {}. Running without AI Filter for Funding!", MODEL_FUNDING_PATH);
@@ -570,5 +572,15 @@ public class DetectEntrySignal2TradeNormal {
         } catch (Exception e) {
             LOG.error("Failed to initialize AI System", e);
         }
+    }
+
+    public void initDataFromTickerMap(TreeMap<Long, Map<String, KlineObjectSimple>> time2Ticker) {
+        LOG.info("AI Feature Extractor: Syncing history from {} size: {}",
+                Utils.normalizeDateYYYYMMDDHHmm(time2Ticker.firstKey()), time2Ticker.size());
+        for (Map<String, KlineObjectSimple> tickerMap : time2Ticker.values()) {
+            this.fundingExtractor.updateMarketHistory(tickerMap);
+        }
+        LOG.info("AI Feature Extractor: Completed syncing {} history from {}.",
+                time2Ticker.size(), Utils.normalizeDateYYYYMMDDHHmm(time2Ticker.firstKey()));
     }
 }
