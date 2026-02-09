@@ -9,5 +9,10 @@
         <module name="binance-java-sdk" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="binance-java-sdk" target="11" />
+      <module name="binance-java-sdk (1)" target="1.5" />
+      <module name="binance-java-sdk (2)" target="11" />
+    </bytecodeTargetLevel>
   </component>
 </project>

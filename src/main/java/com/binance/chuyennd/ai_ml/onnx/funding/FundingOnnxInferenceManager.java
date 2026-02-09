@@ -10,7 +10,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 public class FundingOnnxInferenceManager implements AutoCloseable {
     private static final Logger LOG = LoggerFactory.getLogger(FundingOnnxInferenceManager.class);
@@ -18,7 +17,9 @@ public class FundingOnnxInferenceManager implements AutoCloseable {
     private OrtSession session;
 
     private String inputNodeName = "X";
-    private static final int NUM_FEATURES = 21;
+
+    // 🔥 SỬA TẠI ĐÂY: Tăng từ 21 lên 22
+    private static final int NUM_FEATURES = 22;
 
     public FundingOnnxInferenceManager(String modelPath) throws OrtException {
         LOG.info("🧠 Initializing Funding AI (BATCH MODE) from: {}", modelPath);
@@ -47,8 +48,15 @@ public class FundingOnnxInferenceManager implements AutoCloseable {
         int batchSize = batchFeatures.size();
         if (batchSize == 0) return new ArrayList<>();
 
+        // Cấp phát bộ nhớ dựa trên NUM_FEATURES mới (22)
         FloatBuffer buffer = FloatBuffer.allocate(batchSize * NUM_FEATURES);
+
         for (float[] f : batchFeatures) {
+            // Kiểm tra an toàn: Nếu mảng f không đủ 22 phần tử thì báo lỗi hoặc skip
+            if (f.length != NUM_FEATURES) {
+                LOG.error("❌ Feature size mismatch! Expected {}, Got {}", NUM_FEATURES, f.length);
+                continue;
+            }
             buffer.put(f);
         }
         buffer.flip();
@@ -60,29 +68,26 @@ public class FundingOnnxInferenceManager implements AutoCloseable {
                 OnnxTensor inputTensor = OnnxTensor.createTensor(env, buffer, shape);
                 OrtSession.Result result = session.run(Collections.singletonMap(inputNodeName, inputTensor))
         ) {
-            // 🔥 SỬA LỖI TẠI ĐÂY: Tìm đúng Output là float[][] (Probabilities)
-            // Model Classifier thường trả về: [0]: Label (long[]), [1]: Probs (float[][])
             float[][] output = null;
 
-            // Cách 1: Duyệt qua các output để tìm mảng float 2 chiều
-            for (Map.Entry<String, OnnxValue> entry : result) {
-                Object val = entry.getValue().getValue();
+            // Tìm output đúng định dạng
+            if (result.size() > 0) {
+                // Ưu tiên lấy output index 1 (thường là probabilities trong scikit-learn/xgboost wrapper)
+                // Nếu model native xgboost thì có thể là index 0
+                int targetIndex = (result.size() > 1) ? 1 : 0;
+
+                Object val = result.get(targetIndex).getValue();
                 if (val instanceof float[][]) {
                     output = (float[][]) val;
-                    break;
-                }
-            }
-
-            // Cách 2: Nếu loop trên không tìm thấy (hiếm), thử lấy Index 1 cứng
-            if (output == null) {
-                if (result.size() > 1) {
-                    Object val1 = result.get(1).getValue();
-                    if (val1 instanceof float[][]) output = (float[][]) val1;
-                }
-                // Fallback cuối cùng: thử index 0 nếu model chỉ có 1 output
-                if (output == null) {
-                    Object val0 = result.get(0).getValue();
-                    if (val0 instanceof float[][]) output = (float[][]) val0;
+                } else {
+                    // Fallback: Duyệt tìm mảng float[][]
+                    for (Map.Entry<String, OnnxValue> entry : result) {
+                        Object v = entry.getValue().getValue();
+                        if (v instanceof float[][]) {
+                            output = (float[][]) v;
+                            break;
+                        }
+                    }
                 }
             }
 
@@ -94,7 +99,6 @@ public class FundingOnnxInferenceManager implements AutoCloseable {
 
         } catch (Exception e) {
             LOG.error("❌ Batch inference error: {}", e.getMessage());
-            // Crash safe: Điền kết quả rỗng
             for (int i = 0; i < batchSize; i++) {
                 results.add(new float[]{0, 0, 0, 0, 0});
             }
@@ -104,13 +108,35 @@ public class FundingOnnxInferenceManager implements AutoCloseable {
 
     public float[] extractFeaturesToArray(FundingMarketFeatures f) {
         return new float[]{
-                (float) f.btcMomentum1H, (float) f.btcMomentum4H, (float) f.btcMomentum24H,
-                (float) f.btcDominance, (float) f.marketBreadthStrength,
-                (float) f.momentum15M, (float) f.momentum1H, (float) f.momentum4H, (float) f.momentum24H,
-                (float) f.rsi1H, (float) f.distFromLow24H, (float) f.volatilityShock,
-                (float) f.basketMomentum15M, (float) f.basketMomentum1H, (float) f.basketMomentum24H,
-                (float) f.basketRsi14, (float) f.basketVolSpike,
-                (float) f.coinFundingRate, (float) f.fundingRateRaw, (float) f.fundingRateAvg24H, (float) f.fundingRateTrend
+                // 1. Context (5)
+                (float) f.btcMomentum1H,
+                (float) f.btcMomentum4H,
+                (float) f.btcMomentum24H,
+                (float) f.btcDominance,
+                (float) f.marketBreadthStrength,
+
+                // 2. Coin Specific (8)
+                (float) f.momentum1M,   // Feature mới
+                (float) f.momentum15M,
+                (float) f.momentum1H,
+                (float) f.momentum4H,
+                (float) f.momentum24H,
+                (float) f.rsi1H,
+                (float) f.distFromLow24H,
+                (float) f.volatilityShock,
+
+                // 3. Basket (5)
+                (float) f.basketMomentum15M,
+                (float) f.basketMomentum1H,
+                (float) f.basketMomentum24H,
+                (float) f.basketRsi14,
+                (float) f.basketVolSpike,
+
+                // 4. Funding (4)
+                (float) f.coinFundingRate,
+                (float) f.fundingRateRaw,
+                (float) f.fundingRateAvg24H,
+                (float) f.fundingRateTrend
         };
     }
 

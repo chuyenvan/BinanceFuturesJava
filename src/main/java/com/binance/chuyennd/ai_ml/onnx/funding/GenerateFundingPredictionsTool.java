@@ -69,9 +69,10 @@ public class GenerateFundingPredictionsTool {
 
         new GenerateFundingPredictionsTool().processDistributedTasks();
     }
+
     public void processDistributedTasks() throws Exception {
         // Load model & data 1 lần (tránh load lại mỗi task)
-            String modelPath = "models_funding/Funding_Classifier_Final_v2.onnx";
+        String modelPath = "models_funding/Funding_Classifier_Label6_GPU_Simple.onnx";
         FundingOnnxInferenceManager aiBrain = new FundingOnnxInferenceManager(modelPath);
         TreeMap<Long, MarketDataObject> time2MarketData = loadMarketRateData();
         LOG.info("📥 Loading Symbol Mapper...");
@@ -93,6 +94,7 @@ public class GenerateFundingPredictionsTool {
             generateToAerospike(task.start, task.end, aiBrain, time2MarketData, symbolMap);
         }
     }
+
     private void generateToAerospike(
             long startTime,
             long endTime,
@@ -101,8 +103,6 @@ public class GenerateFundingPredictionsTool {
             ConcurrentHashMap<String, Short> symbolMap
     ) {
         FundingFeatureExtractor extractor = new FundingFeatureExtractor();
-
-
 
 
         long currentTime = startTime;
