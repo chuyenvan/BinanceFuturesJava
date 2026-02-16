@@ -9,10 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 public class AerospikeTaskCoordinator {
     private static final Logger LOG = LoggerFactory.getLogger(AerospikeTaskCoordinator.class);
@@ -112,11 +109,55 @@ public class AerospikeTaskCoordinator {
             this.end = end;
         }
     }
+    /**
+     * CHỈ KHỞI TẠO LẠI CÁC TASK CỤ THỂ (Dùng khi một số task bị lỗi)
+     * @param specificDates Danh sách chuỗi ngày định dạng YYYYMMDD (ví dụ: "20251016", "20221117")
+     */
+    public static void reInitSpecificTasks(List<String> specificDates) {
+        LOG.info("🛠 Re-initializing {} specific tasks in Aerospike...", specificDates.size());
+        AerospikeClient client = DataManagerAerospikeFloatSim.getClient242();
 
+        long chunkDuration = 7L * 24 * 60 * 60 * 1000L;
+
+        for (String dateStr : specificDates) {
+            try {
+                // Chuyển từ YYYYMMDD sang timestamp
+                long chunkStart = Utils.sdfFile.parse(dateStr).getTime();
+                long chunkEnd = chunkStart + chunkDuration;
+
+                String keyString = "TASK_" + dateStr;
+                Key key = new Key(Configs.AEROSPIKE_NAMESPACE, TASK_SET_NAME, keyString);
+
+                // Ghi đè vào Aerospike
+                client.put(null, key,
+                        new Bin("start", chunkStart),
+                        new Bin("end", chunkEnd)
+                );
+                LOG.info("✅ Re-queued Task: {}", keyString);
+
+            } catch (ParseException e) {
+                LOG.error("❌ Invalid date format: {}", dateStr);
+            }
+        }
+    }
     public static void main(String[] args) throws ParseException {
         String startStr = "20210101";
         long globalStart = Utils.sdfFile.parse(startStr).getTime();
         long globalEnd = System.currentTimeMillis();
         AerospikeTaskCoordinator.initTasks(globalStart, globalEnd);
+
+//        // Danh sách các task bạn lọc được từ log là bị lỗi hoặc chạy quá lâu
+//        List<String> claimedTasks = Arrays.asList(
+//                "20221117", "20210805", "20211125", "20241107", "20241219",
+//                "20230824", "20221124", "20210401", "20231005", "20210318",
+//                "20240321", "20230316", "20240411", "20251016", "20250130"
+//        );
+//        // failedTasks.add("...");
+//
+//        if (!claimedTasks.isEmpty()) {
+//            AerospikeTaskCoordinator.reInitSpecificTasks(claimedTasks);
+//        } else {
+//            LOG.info("No tasks to re-initialize.");
+//        }
     }
 }

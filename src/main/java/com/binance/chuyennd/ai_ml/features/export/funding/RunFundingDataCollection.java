@@ -146,11 +146,11 @@ public class RunFundingDataCollection {
                         minRate15Min60M)) {
 
                     // 3. Lấy danh sách coin tiềm năng từ FundingFeeManager
-                    Set<String> symbolFundingBuy = FundingFeeManager.getInstance().getFundingListSymbol2Trade(timestamp);
+//                    Set<String> symbolFundingBuy = FundingFeeManager.getInstance().getFundingListSymbol2Trade(timestamp);
+//
+//                    if (symbolFundingBuy == null || symbolFundingBuy.isEmpty()) continue;
 
-                    if (symbolFundingBuy == null || symbolFundingBuy.isEmpty()) continue;
-
-                    for (String symbol : symbolFundingBuy) {
+                    for (String symbol : snapshot.keySet()) {
                         KlineObjectSimple ticker = snapshot.get(symbol);
 
                         // Lọc cơ bản

@@ -42,6 +42,7 @@ public class DataManagerAerospikeFloatSim {
 
     // set name 226
     private static final String AEROSPIKE_SET_NAME_FUNDING_PRED = Configs.AEROSPIKE_SET_NAME_FUNDING_PRED;
+    private static final String AEROSPIKE_SET_NAME_PRED_40 = Configs.AEROSPIKE_SET_NAME_PRED_40;
 
     // 1. CẤU HÌNH SET NAME VÀ KEY
     private static final String AEROSPIKE_SET_NAME_MAPPER = "symbol_mapper"; // Set name mới
@@ -522,6 +523,12 @@ public class DataManagerAerospikeFloatSim {
 
                     // Batch Read từ Aerospike
                     Record[] records = getClient242().get(batchPolicy, chunkKeys);
+                    // 🔥 LOGIC CHECK LỖI TRẢ VỀ TỪ CLIENT 🔥
+                    if (records == null) {
+                        LOG.info("❌ [AEROSPIKE ERROR] Client.get() returned NULL for chunk starting at {}",
+                                Utils.normalizeDateYYYYMMDDHHmm(chunkTimestamps[0]));
+                        return chunkResult; // Trả về rỗng
+                    }
 
                     for (int j = 0; j < records.length; j++) {
                         Record record = records[j];
@@ -1387,7 +1394,125 @@ public class DataManagerAerospikeFloatSim {
 //        LOG.info("{} {} {} {}",time2Tickers.firstEntry().getValue().keySet(), Utils.normalizeDateYYYYMMDDHHmm(time2Tickers.firstKey()),
 //                Utils.normalizeDateYYYYMMDDHHmm(time2Tickers.lastKey()), time2Tickers.size());
     }
+// =========================================================================
+    // 🔥 LABEL 40 PREDICTIONS (WRITE/READ FOR LABEL 40)
+    // =========================================================================
 
+    /**
+     * Ghi dự báo Label 40 vào Aerospike
+     */
+    public static void saveFundingPredictionsLabel40(long timestamp, Map<Short, float[]> predictions) {
+        if (predictions == null || predictions.isEmpty()) return;
+        try {
+            SimpleDateFormat fmt = new SimpleDateFormat("yyyyMMdd-HHmm");
+            String keyString = fmt.format(new Date(timestamp));
+            // Sử dụng Set Name PRED_40
+            Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_PRED_40, keyString);
+
+            String json = Utils.gson.toJson(predictions);
+            byte[] rawBytes = json.getBytes("UTF-8");
+            byte[] compressed = Snappy.compress(rawBytes);
+
+            // Ghi vào client226 (giống logic cũ)
+            getClient226().put(writePolicy, key, new Bin("data", compressed));
+
+        } catch (Exception e) {
+            LOG.error("❌ Error saving Funding Label 40 Pred at {}: {}", timestamp, e.getMessage());
+        }
+    }
+
+    /**
+     * Kiểm tra nhanh danh sách timestamp đã có dữ liệu Label 40 chưa
+     */
+    public static Set<Long> checkExistingFundingLabel40Predictions(List<Long> timestamps) {
+        Set<Long> existing = new HashSet<>();
+        if (timestamps == null || timestamps.isEmpty()) return existing;
+
+        try {
+            SimpleDateFormat fmt = new SimpleDateFormat("yyyyMMdd-HHmm");
+            Key[] keys = new Key[timestamps.size()];
+
+            for (int i = 0; i < timestamps.size(); i++) {
+                String keyString = fmt.format(new Date(timestamps.get(i)));
+                keys[i] = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_PRED_40, keyString);
+            }
+
+            boolean[] existsArray = getClient226().exists(batchPolicy, keys);
+
+            for (int i = 0; i < existsArray.length; i++) {
+                if (existsArray[i]) {
+                    existing.add(timestamps.get(i));
+                }
+            }
+        } catch (Exception e) {
+            LOG.error("❌ Error checking Funding Label 40 existence: {}", e.getMessage());
+        }
+        return existing;
+    }
+
+    /**
+     * Đọc Batch Funding Label 40 Data theo range thời gian
+     */
+    public static TreeMap<Long, Map<Short, float[]>> readFundingLabel40BatchCustom(long startTime, int totalMinutes) {
+        TreeMap<Long, Map<Short, float[]>> results = new TreeMap<>();
+
+        long[] allTimestamps = new long[totalMinutes];
+        for (int i = 0; i < totalMinutes; i++) {
+            allTimestamps[i] = startTime + (i * 60000L);
+        }
+
+        List<Future<Map<Long, Map<Short, float[]>>>> futures = new ArrayList<>();
+        int chunkSize = (totalMinutes + threadCount - 1) / threadCount;
+
+        for (int i = 0; i < threadCount; i++) {
+            final int startIdx = i * chunkSize;
+            final int endIdx = Math.min(startIdx + chunkSize, totalMinutes);
+            if (startIdx >= endIdx) break;
+
+            futures.add(executor.submit(() -> {
+                SimpleDateFormat localKeyFormat = new SimpleDateFormat("yyyyMMdd-HHmm");
+                Map<Long, Map<Short, float[]>> chunkResult = new HashMap<>();
+                try {
+                    Key[] chunkKeys = new Key[endIdx - startIdx];
+                    long[] chunkTimestamps = Arrays.copyOfRange(allTimestamps, startIdx, endIdx);
+
+                    for (int k = 0; k < chunkKeys.length; k++) {
+                        String keyString = localKeyFormat.format(new Date(chunkTimestamps[k]));
+                        // Sử dụng Set Name PRED_40
+                        chunkKeys[k] = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_PRED_40, keyString);
+                    }
+
+                    Record[] records = getClient226().get(batchPolicy, chunkKeys);
+
+                    for (int j = 0; j < records.length; j++) {
+                        Record record = records[j];
+                        if (record != null) {
+                            byte[] compressed = (byte[]) record.getValue("data");
+                            if (compressed != null) {
+                                byte[] rawBytes = Snappy.uncompress(compressed);
+                                String json = new String(rawBytes, "UTF-8");
+                                Map<Short, float[]> data = Utils.gson.fromJson(json, new com.google.gson.reflect.TypeToken<Map<Short, float[]>>() {
+                                }.getType());
+                                chunkResult.put(chunkTimestamps[j], data);
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                return chunkResult;
+            }));
+        }
+
+        for (Future<Map<Long, Map<Short, float[]>>> f : futures) {
+            try {
+                results.putAll(f.get());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        return results;
+    }
     public static void setThreadCount(int i) {
         threadCount = i;
     }

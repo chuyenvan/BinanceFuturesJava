@@ -125,12 +125,11 @@ public class Configs {
     //budget config
     public static Integer number_order_budget = 70;
 
-    public static final Integer NUMBER_RATE_DOWN_HISTORY_TRADE = 20;
+    public static Integer NUMBER_RATE_DOWN_HISTORY_TRADE = 60;
     // funding fee config
     public static final Integer NUMBER_HOUR_FUNDING_CAL = 30;
     public static final Double FUNDING_MAX_TRADE = -0.00001;
     public static final Double FUNDING_MIN_TRADE = 0.00065;
-    public static final int NUMBER_TICKER_RATE_CHANGE_MAX_TRADE = 60;
 
 
     public static final Integer NUMBER_THREAD_ORDER_MANAGER = Configs.getInt("NUMBER_THREAD_ORDER_MANAGER");
@@ -156,6 +155,7 @@ public class Configs {
     public static final int AEROSPIKE_PORT_226 = Configs.getInt("AEROSPIKE_PORT_226");
 
     public static final String AEROSPIKE_SET_NAME_FUNDING_PRED =  Configs.getString("AEROSPIKE_SET_NAME_FUNDING_PRED");
+    public static final String AEROSPIKE_SET_NAME_PRED_40 =  Configs.getString("AEROSPIKE_SET_NAME_PRED_40");
 
 
     public static final String AEROSPIKE_NAMESPACE = Configs.getString("AEROSPIKE_NAMESPACE"); //"ticker" ;

@@ -24,9 +24,9 @@ import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.ai_ml.onnx.entry.AIRejectFilter;
 import com.binance.chuyennd.ai_ml.onnx.entry.OnnxInferenceManager;
 import com.binance.chuyennd.ai_ml.onnx.funding.FundingOnnxInferenceManager;
+import com.binance.chuyennd.helper.PositionHelper;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.MarketLevelChange;
-import com.binance.chuyennd.helper.PositionHelper;
 import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.redis.RedisConst;
@@ -233,7 +233,10 @@ public class DetectEntrySignal2TradeNormal {
 
             if (levelChange != null) {
                 Integer numberOrder = Configs.NUMBER_ENTRY_EACH_SIGNAL;
-                if (levelChange.equals(MarketLevelChange.SMALL_DOWN) || levelChange.equals(MarketLevelChange.SMALL_UP) || levelChange.equals(MarketLevelChange.MEDIUM_DOWN_15M) || levelChange.equals(MarketLevelChange.SMALL_DOWN_15M)) {
+                if (levelChange.equals(MarketLevelChange.SMALL_DOWN)
+                        || levelChange.equals(MarketLevelChange.SMALL_UP)
+                        || levelChange.equals(MarketLevelChange.MEDIUM_DOWN_15M)
+                        || levelChange.equals(MarketLevelChange.SMALL_DOWN_15M)) {
                     numberOrder = numberOrder / 2;
                 }
                 Set<String> symbol2BUY = new HashSet<>();
@@ -366,7 +369,7 @@ public class DetectEntrySignal2TradeNormal {
                         float[] probs = results.get(i);
 
                         // 🔥 FILTER: Reject nếu Fail Prob > 0.3
-                        if (probs[0] > 0.3) {
+                        if (probs[0] > 0.2) {
                             LOG.info("❌ [FILTER AI FUNDING] {}: Prediction FAIL too high ({})", sym, probs[0]);
                         } else {
                             // Tự động sắp xếp: Key càng bé (ProbFail thấp) càng đứng đầu
@@ -392,33 +395,6 @@ public class DetectEntrySignal2TradeNormal {
                 }
             }
 
-            // btc trend reverse
-            Double rateTrendReverse = MarketBigChangeDetector.isBtcTrendReverse(btcTickers);
-            if (rateTrendReverse != null && rateTrendReverse >= Configs.BTC_TREND_REVERSE_RATE_MIN_TRADE) {
-                levelChange = MarketLevelChange.BTC_TREND_REVERSE;
-                Set<String> symbol2BUY = new HashSet<>();
-                for (String symbol : Constants.specialSymbol) {
-
-                    Double rateLoss = calRateLoss(symbol);
-                    Double budget = BudgetManager.getInstance().getBudget();
-                    Double marginOfSym = calMarginRunning(symbol);
-                    KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
-                    OrderTargetInfo order = getOrderInfo(symbol);
-
-                    boolean isDcaSpecialSymbol = true;
-                    if (order != null) {
-                        isDcaSpecialSymbol = MarketBigChangeDetector.isDcaWithBtcReverse(rateLoss, budget, marginOfSym, ticker.priceClose, order.priceEntry);
-                    }
-                    if (isDcaSpecialSymbol) {
-                        symbol2BUY.add(symbol);
-                    }
-                }
-                LOG.info("Level: {} {} -> {}", Utils.normalizeDateYYYYMMDDHHmm(btcTicker.startTime.longValue()), levelChange, symbol2BUY);
-                for (String symbol : symbol2BUY) {
-                    KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
-                    createOrderBuyRequest(symbol, ticker, levelChange, symbol2Max15m.get(symbol), marketRate, predictData);
-                }
-            }
             StorageSnappy.writeObject2File(FILE_STORAGE_TIME_RATE_DOWN15M, time2RateDown15MAvg);
             StorageSnappy.writeObject2File("storage/data/rateMax15M/" + Utils.normalizeDateYYYYMMDD(time) + "/" + time, rateDown15M2Symbols);
             StorageSnappy.writeObject2File("storage/data/rateDown1M/" + Utils.normalizeDateYYYYMMDD(time) + "/" + time, rateDown2Symbols);

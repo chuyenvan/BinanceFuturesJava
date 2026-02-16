@@ -372,12 +372,6 @@ public class TraceOrderDone {
                 builder.append(order.marketData.rateDown15MAvg).append(",");
             }
 
-            if (order.predict != null) {
-                builder.append(order.predict.predictedMaxDrawdown).append(",");
-                builder.append(order.predict.predictedMaxRise).append(",");
-                builder.append(order.predict.probPump20Pct).append(",");
-                builder.append(order.predict.probDump30Pct).append(",");
-            }
             lines.add(builder.toString());
         }
         TreeMap<Double, String> profit2Symbol = new TreeMap<>();

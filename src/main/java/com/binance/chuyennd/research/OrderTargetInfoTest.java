@@ -15,13 +15,11 @@
  */
 package com.binance.chuyennd.research;
 
-import com.binance.chuyennd.ai_ml.onnx.dca.DcaPredictionResult;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.MarketLevelChange;
-import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
-import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.tradecore.TradeUtils;
+import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.model.enums.OrderSide;
@@ -59,7 +57,6 @@ public class OrderTargetInfoTest implements Serializable {
     public MarketDataObject marketData;
     public MarketLevelChange marketLevelChange;
     public KlineObjectSimple tickerOpen;
-    public DcaPredictionResult predict;
 
 
     public OrderTargetInfoTest(OrderTargetStatus status, Double priceEntry,

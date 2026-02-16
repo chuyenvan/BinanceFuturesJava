@@ -81,10 +81,12 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         while (true) {
             TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers;
             TreeMap<Long, Map<Short, float[]>> time2FundingPre;
+//            TreeMap<Long, Map<Short, float[]>> time2FundingPreDca;
             try {
+//                time2Tickers = HPOSmartCache.getData(startTime);
                 time2Tickers = DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime);
                 time2FundingPre = DataManagerAerospikeFloatSim.readFundingBatchCustom(startTime, 1440);
-//                time2Tickers = HPOSmartCache.getData(startTime);
+//                time2FundingPreDca = DataManagerAerospikeFloatSim.readFundingLabel40BatchCustom(startTime, 1440);
 
                 if (time2Tickers == null) {
                     LOG.info("File data error or not found for time: {}", Utils.normalizeDateYYYYMMDDHHmm(startTime));
@@ -187,6 +189,19 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                     for (String symbol : symbolDcaLevel) {
                                         KlineObjectSimple ticker = symbol2Ticker.get(symbol);
                                         if (Utils.isTickerAvailable(ticker)) {
+//                                            Map<Short, float[]> symbol2PredDca = time2FundingPreDca.get(time);
+//                                            if (symbol2PredDca != null) {
+//                                                float[] fundingPred = symbol2PredDca.get(SimpleSymbolMapper.getInstance().getId(symbol));
+//                                                if (fundingPred != null) {
+//                                                    if (fundingPred[0] > 0.4) {
+//                                                        LOG.info("❌ [FILTER AI] {}: Dca Prediction too high ({})", symbol, fundingPred[0]);
+//                                                        continue;
+//                                                    }
+//                                                }
+//                                            } else {
+//                                                LOG.info("No Dca prediction data for time: {}", Utils.normalizeDateYYYYMMDDHHmm(time));
+//                                            }
+
                                             MarketLevelChange leveChange2Dca;
                                             if (calMarginRunning(symbol) < BudgetManagerSimple.getInstance().getBudget()) {
                                                 leveChange2Dca = MarketLevelChange.DCA_LEVEL1;
@@ -217,6 +232,18 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                     for (String symbol : symbolDcaLossBig) {
                                         KlineObjectSimple ticker = symbol2Ticker.get(symbol);
                                         if (Utils.isTickerAvailable(ticker)) {
+//                                            Map<Short, float[]> symbol2PredDca = time2FundingPreDca.get(time);
+//                                            if (symbol2PredDca != null) {
+//                                                float[] fundingPred = symbol2PredDca.get(SimpleSymbolMapper.getInstance().getId(symbol));
+//                                                if (fundingPred != null) {
+//                                                    if (fundingPred[0] > 0.4) {
+//                                                        LOG.info("❌ [FILTER AI] {}: Dca Prediction too high ({})", symbol, fundingPred[0]);
+//                                                        continue;
+//                                                    }
+//                                                }
+//                                            } else {
+//                                                LOG.info("No Dca prediction data for time: {}", Utils.normalizeDateYYYYMMDDHHmm(time));
+//                                            }
                                             List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
 //                                            LOG.info("Dca big loss: {} {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(time), ticker.priceClose);
                                             Double priceMax15M = getMax15M(tickers);
@@ -250,11 +277,9 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                             continue;
                                         }
                                         double rate1m = (ticker.priceClose - ticker.priceOpen) / ticker.priceOpen;
-                                        double rate15m = extractor.calculateReturn(symbol, 15);
-
-                                        // Logic: Chỉ giữ lại nếu (rate1m < -0.65%)
+                                                        // Logic: Chỉ giữ lại nếu (rate1m < -0.65%)
                                         // Tức là đang sập mạnh.
-                                        if (rate1m >= -0.0065 ) {
+                                        if (rate1m >= -0.0065) {
                                             continue;
                                         }
 
@@ -262,7 +287,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                         if (symbol2Pred != null) {
                                             float[] fundingPred = symbol2Pred.get(SimpleSymbolMapper.getInstance().getId(symbol));
                                             if (fundingPred != null) {
-                                                if (fundingPred[0] > 0.3) {
+                                                if (fundingPred[0] > 0.2) {
                                                     LOG.info("❌ [FILTER AI] {}: Funding Prediction too high ({})", symbol, fundingPred[0]);
                                                     continue;
                                                 }
@@ -289,38 +314,38 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                             logByProcessTime(startTimeRun, "Done funding fee", time);
                             startTimeRun = System.currentTimeMillis();
                             // BTC trend reverse
-                            Double rateBtcTrendReverse = null;
-                            if (time2MarketData.get(time) != null) {
-                                rateBtcTrendReverse = time2MarketData.get(time).btcReversion;
-                            }
-                            if (rateBtcTrendReverse != null && rateBtcTrendReverse >= Configs.BTC_TREND_REVERSE_RATE_MIN_TRADE) {
-                                levelChange = MarketLevelChange.BTC_TREND_REVERSE;
-                                List<String> symbol2BUY = new ArrayList<>();
-                                for (String symbol : Constants.specialSymbol) {
-                                    Double rateLoss = calRateLoss(symbol);
-                                    Double budget = BudgetManagerSimple.getInstance().getBudget();
-                                    Double marginOfSym = calMarginRunning(symbol);
-                                    KlineObjectSimple ticker = symbol2Ticker.get(symbol);
-                                    OrderTargetInfoTest order = symbol2OrderRunning.get(symbol);
-                                    boolean isDcaSpecialSymbol = true;
-                                    if (order != null) {
-                                        isDcaSpecialSymbol = MarketBigChangeDetector.isDcaWithBtcReverse(rateLoss,
-                                                budget, marginOfSym, ticker.priceClose, order.lastEntry);
-                                    }
-                                    if (isDcaSpecialSymbol) {
-                                        symbol2BUY.add(symbol);
-                                    }
-
-                                }
-                                for (String symbol : symbol2BUY) {
-                                    KlineObjectSimple ticker = symbol2Ticker.get(symbol);
-                                    if (Utils.isTickerAvailable(ticker)) {
-                                        createOrderBUY(symbol, ticker, levelChange, time2MarketData.get(time), null, symbol2Ticker);
-                                    }
-                                }
-                            }
-                            logByProcessTime(startTimeRun, "Done btc reverse done", time);
-                            startTimeRun = System.currentTimeMillis();
+//                            Double rateBtcTrendReverse = null;
+//                            if (time2MarketData.get(time) != null) {
+//                                rateBtcTrendReverse = time2MarketData.get(time).btcReversion;
+//                            }
+//                            if (rateBtcTrendReverse != null && rateBtcTrendReverse >= Configs.BTC_TREND_REVERSE_RATE_MIN_TRADE) {
+//                                levelChange = MarketLevelChange.BTC_TREND_REVERSE;
+//                                List<String> symbol2BUY = new ArrayList<>();
+//                                for (String symbol : Constants.specialSymbol) {
+//                                    Double rateLoss = calRateLoss(symbol);
+//                                    Double budget = BudgetManagerSimple.getInstance().getBudget();
+//                                    Double marginOfSym = calMarginRunning(symbol);
+//                                    KlineObjectSimple ticker = symbol2Ticker.get(symbol);
+//                                    OrderTargetInfoTest order = symbol2OrderRunning.get(symbol);
+//                                    boolean isDcaSpecialSymbol = true;
+//                                    if (order != null) {
+//                                        isDcaSpecialSymbol = MarketBigChangeDetector.isDcaWithBtcReverse(rateLoss,
+//                                                budget, marginOfSym, ticker.priceClose, order.lastEntry);
+//                                    }
+//                                    if (isDcaSpecialSymbol) {
+//                                        symbol2BUY.add(symbol);
+//                                    }
+//
+//                                }
+//                                for (String symbol : symbol2BUY) {
+//                                    KlineObjectSimple ticker = symbol2Ticker.get(symbol);
+//                                    if (Utils.isTickerAvailable(ticker)) {
+//                                        createOrderBUY(symbol, ticker, levelChange, time2MarketData.get(time), null, symbol2Ticker);
+//                                    }
+//                                }
+//                            }
+//                            logByProcessTime(startTimeRun, "Done btc reverse done", time);
+//                            startTimeRun = System.currentTimeMillis();
 
                             if (time % Utils.TIME_DAY == 0) {
                                 BudgetManagerSimple.getInstance().updateBalance(time, allOrderDone, symbol2OrderRunning, symbol2OrdersEntry, true);
@@ -528,7 +553,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                MarketDataObject marketData, Double maxPrice15m, Map<String, KlineObjectSimple> symbol2Ticker) {
         AiPredictionData predict = predictionMap.get(ticker.startTime.longValue());
 
-        if (predict != null) {
+
+        if (predict != null && !levelChange.equals(MarketLevelChange.BIG_DOWN)) {
             if (aiRejectFilter.checkSignal(predict).decision.equals(AIRejectFilter.FilterDecision.REJECT)) {
 //                LOG.info("⛔ REJECTED BY RISK FILTER: {} {}", predict.predReturn1H, predict.predRisk4H);
                 return; // Dừng ngay

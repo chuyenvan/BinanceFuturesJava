@@ -38,54 +38,7 @@ public class ExportMarketData2File {
 //        test.exportFundingFeeBuy();
     }
 
-    // Hàm này thay thế hàm export cũ
-    public void exportMarketEntries(TreeMap<Long, MarketDataObject> mapInfo,
-                                    TreeMap<Long, Double> mapBtcReversion) {
 
-
-
-        // 2. Duyệt loop để gộp dữ liệu (Lấy mapRateChanges làm chuẩn thời gian)
-        for (Long time : mapBtcReversion.keySet()) {
-            // Lấy dữ liệu từ nguồn 2: Info cũ (BTC, Max) - cần check null an toàn
-            MarketDataObject infoData = mapInfo.get(time);
-            infoData.btcReversion = mapBtcReversion.get(time);
-        }
-
-        // 3. Lưu ra 1 file duy nhất
-        // Configs.FILE_ENTRY_MARKET_LEVEL: Đường dẫn file bạn muốn lưu
-        String filePath = Configs.FILE_ENTRY_MARKET_LEVEL;
-
-        // Gọi hàm lưu Snappy cũ của bạn
-        StorageSnappy.writeObject2File(Configs.FILE_ENTRY_MARKET_LEVEL, mapInfo);
-
-        // Log kết quả
-       LOG.info("Refactor done. Exported " + mapInfo.size() + " entries to single file: " + filePath);
-    }
-
-    public TreeMap<Long, Double> exportBtcTrendReverse(List<KlineObjectSimple> ticker1Ms) {
-        TreeMap<Long, Double> timeBtcReverse;
-        timeBtcReverse = new TreeMap<>();
-
-        Long timeExport = ticker1Ms.get(0).startTime.longValue();
-        LOG.info("Export btc trend reverse: {} {}", Utils.normalizeDateYYYYMMDDHHmm(timeExport), ticker1Ms.size());
-        List<KlineObjectSimple> ticker2Check = new ArrayList<>();
-        for (int i = 0; i < Configs.BTC_TREND_REVERSE_DURATION; i++) {
-            ticker2Check.add(ticker1Ms.get(i));
-        }
-        for (int i = Configs.BTC_TREND_REVERSE_DURATION; i < ticker1Ms.size(); i++) {
-            ticker2Check.remove(0);
-            ticker2Check.add(ticker1Ms.get(i));
-            long time = ticker1Ms.get(i).startTime.longValue();
-            if (timeBtcReverse.isEmpty() || timeBtcReverse.lastKey() < time) {
-                Double rateBtcTrendReverse = MarketBigChangeDetector.isBtcTrendReverse(
-                        ticker2Check);
-                if (rateBtcTrendReverse != null) {
-                    timeBtcReverse.put(ticker2Check.get(ticker2Check.size() - 1).startTime.longValue(), rateBtcTrendReverse);
-                }
-            }
-        }
-        return timeBtcReverse;
-    }
 
     public void exportMarketEntries(String timeRun) throws ParseException {
         Long startTime = Utils.sdfFile.parse(TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
@@ -201,7 +154,13 @@ public class ExportMarketData2File {
             }
         }
 
-        exportMarketEntries(time2MarketData, exportBtcTrendReverse(btcTicker1Msg));
+        // 3. Lưu ra 1 file duy nhất
+        // Configs.FILE_ENTRY_MARKET_LEVEL: Đường dẫn file bạn muốn lưu
+        String filePath = Configs.FILE_ENTRY_MARKET_LEVEL;
+        // Gọi hàm lưu Snappy cũ của bạn
+        StorageSnappy.writeObject2File(Configs.FILE_ENTRY_MARKET_LEVEL, time2MarketData);
+        // Log kết quả
+        LOG.info("Refactor done. Exported " + time2MarketData.size() + " entries to single file: " + filePath);
     }
 
 }

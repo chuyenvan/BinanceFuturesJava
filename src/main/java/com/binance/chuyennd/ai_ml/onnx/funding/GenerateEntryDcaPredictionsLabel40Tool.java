@@ -21,11 +21,13 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
-public class GenerateFundingPredictionsTool {
-    private static final Logger LOG = LoggerFactory.getLogger(GenerateFundingPredictionsTool.class);
+public class GenerateEntryDcaPredictionsLabel40Tool {
+    private static final Logger LOG = LoggerFactory.getLogger(GenerateEntryDcaPredictionsLabel40Tool.class);
 
-    // Xóa biến toàn cục extractor và time2RateDown15MAvg để tránh dính state giữa các task
-    // private final FundingFeatureExtractor extractor = new FundingFeatureExtractor();
+    // Singleton resources cho On-Demand Label 40
+    private static EntryDcaOnnxInferenceManager sharedAiBrain;
+    private static ConcurrentHashMap<String, Short> sharedSymbolMap;
+    private static TreeMap<Long, MarketDataObject> sharedMarketData;
 
     private static class PrepareData {
         short id;
@@ -67,26 +69,25 @@ public class GenerateFundingPredictionsTool {
             return;
         }
 
-        new GenerateFundingPredictionsTool().processDistributedTasks();
-
-
-
+        new GenerateEntryDcaPredictionsLabel40Tool().processDistributedTasks();
     }
 
     public void processDistributedTasks() throws Exception {
-        String modelPath = "models_funding/Funding_Classifier_Final_Fixed.onnx";
+        // 🔥 ĐỔI MODEL SANG LABEL 40
+        String modelPath = "models_funding/Funding_Classifier_Label40_GPU_Simple.onnx";
 
         // Load Data Market Rate
         TreeMap<Long, MarketDataObject> time2MarketData = loadMarketRateData();
 
         LOG.info("📥 Loading Symbol Mapper...");
         Map<String, Short> globalMapper = DataManagerAerospikeFloatSim.loadSymbolMapper();
-        // Map dùng để tra cứu ID
         final ConcurrentHashMap<String, Short> symbolMap = new ConcurrentHashMap<>(globalMapper);
 
-        try (FundingOnnxInferenceManager aiBrain = new FundingOnnxInferenceManager(modelPath)) {
+        try (EntryDcaOnnxInferenceManager aiBrain = new EntryDcaOnnxInferenceManager(modelPath)) {
             int consecutiveFailures = 0;
             while (true) {
+                // Có thể dùng chung Task Coordinator với Label 6 hoặc tạo set task riêng tùy logic
+                // Ở đây giả sử dùng chung task range
                 AerospikeTaskCoordinator.TaskRange task = AerospikeTaskCoordinator.claimNextTask();
 
                 if (task == null) {
@@ -101,57 +102,85 @@ public class GenerateFundingPredictionsTool {
                 }
                 consecutiveFailures = 0;
 
-                LOG.info("🚀 Processing Task: {} -> {}",
+                LOG.info("🚀 Processing Task Label 40: {} -> {}",
                         Utils.normalizeDateYYYYMMDDHHmm(task.start),
                         Utils.normalizeDateYYYYMMDDHHmm(task.end));
 
                 try {
-                    // Truyền symbolMap vào hàm xử lý
                     generateToAerospike(task.start, task.end, aiBrain, time2MarketData, symbolMap);
                 } catch (Exception e) {
                     LOG.error("❌ Error processing task " + task.start, e);
                 }
             }
         }
-        LOG.info("👋 Worker shutdown cleanly.");
+        LOG.info("👋 Worker Label 40 shutdown cleanly.");
         System.exit(0);
+    }
+
+    // =========================================================================
+    // ON-DEMAND GENERATION FOR LABEL 40 (CHO SIMULATOR)
+    // =========================================================================
+
+    public static synchronized void initGlobalResources() throws Exception {
+        if (sharedAiBrain != null) return;
+
+        LOG.info("⚙️ Initializing Label 40 Resources...");
+        String modelPath = "models_funding/Funding_Classifier_Label40_GPU_Simple.onnx";
+
+        sharedAiBrain = new EntryDcaOnnxInferenceManager(modelPath);
+        sharedMarketData = (TreeMap<Long, MarketDataObject>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
+        Map<String, Short> globalMapper = DataManagerAerospikeFloatSim.loadSymbolMapper();
+        sharedSymbolMap = new ConcurrentHashMap<>(globalMapper);
+        DataManagerAerospikeFloatSim.setThreadCount(4);
+    }
+
+    public static void generateOnDemand(long startTime, int durationMinutes) {
+        try {
+            if (sharedAiBrain == null) initGlobalResources();
+
+            long endTime = startTime + durationMinutes * Utils.TIME_MINUTE;
+            LOG.warn("⚠️ TRIGGER LABEL 40 GENERATE ON-DEMAND: {} -> {}",
+                    Utils.normalizeDateYYYYMMDDHHmm(startTime), Utils.normalizeDateYYYYMMDDHHmm(endTime));
+
+            new GenerateEntryDcaPredictionsLabel40Tool().generateToAerospike(
+                    startTime, endTime, sharedAiBrain, sharedMarketData, sharedSymbolMap);
+
+        } catch (Exception e) {
+            LOG.error("❌ Error generating Label 40 on-demand data", e);
+        }
     }
 
     private void generateToAerospike(
             long startTime,
             long endTime,
-            FundingOnnxInferenceManager aiBrain,
+            EntryDcaOnnxInferenceManager aiBrain,
             TreeMap<Long, MarketDataObject> time2MarketData,
             ConcurrentHashMap<String, Short> symbolMap
     ) {
-        // 🔥 QUAN TRỌNG: Tạo mới Extractor và RateHistory cho MỖI TASK
-        // Để đảm bảo không bị lẫn dữ liệu lịch sử của task trước đó
         FundingFeatureExtractor extractor = new FundingFeatureExtractor();
         TreeMap<Long, Float> time2RateDown15MAvg = new TreeMap<>();
 
-        // --- GIAI ĐOẠN 1: WARMUP ---
+        // --- WARMUP ---
         long warmupStartTime = startTime - (24 * 60 * 60 * 1000L);
-        LOG.info("🔥 WARMUP: {} -> {}", Utils.normalizeDateYYYYMMDDHHmm(warmupStartTime), Utils.normalizeDateYYYYMMDDHHmm(startTime));
+        LOG.info("🔥 WARMUP LABEL 40: {} -> {}", Utils.normalizeDateYYYYMMDDHHmm(warmupStartTime), Utils.normalizeDateYYYYMMDDHHmm(startTime));
 
-        // Chạy Warmup (isWarmup = true)
         runDataLoop(warmupStartTime, startTime, time2MarketData, null, symbolMap, true, extractor, time2RateDown15MAvg);
 
-        LOG.info("✅ WARMUP DONE. Generating...");
+        LOG.info("✅ WARMUP DONE. Generating Label 40...");
 
-        // --- GIAI ĐOẠN 2: GENERATION ---
-        // Chạy Generate (isWarmup = false)
+        // --- GENERATION ---
         runDataLoop(startTime, endTime, time2MarketData, aiBrain, symbolMap, false, extractor, time2RateDown15MAvg);
 
-        LOG.info("🎉 DONE TASK: {} -> {}", Utils.normalizeDateYYYYMMDDHHmm(startTime), Utils.normalizeDateYYYYMMDDHHmm(endTime));
+        LOG.info("🎉 DONE TASK LABEL 40: {} -> {}", Utils.normalizeDateYYYYMMDDHHmm(startTime), Utils.normalizeDateYYYYMMDDHHmm(endTime));
     }
 
     private void runDataLoop(long start, long end,
                              TreeMap<Long, MarketDataObject> time2MarketData,
-                             FundingOnnxInferenceManager aiBrain,
+                             EntryDcaOnnxInferenceManager aiBrain,
                              ConcurrentHashMap<String, Short> symbolMap,
                              boolean isWarmup,
-                             FundingFeatureExtractor extractor, // Truyền vào
-                             TreeMap<Long, Float> time2RateDown15MAvg // Truyền vào
+                             FundingFeatureExtractor extractor,
+                             TreeMap<Long, Float> time2RateDown15MAvg
     ) {
         long currentTime = start;
         long lastBasketTimestamp = -1;
@@ -163,12 +192,12 @@ public class GenerateFundingPredictionsTool {
                 minutesToRead = (int) ((end - currentTime) / Utils.TIME_MINUTE) + 1;
             }
 
-            // Check existing (chỉ khi generate)
+            // 🔥 Check existing Label 40
             Set<Long> existingTimestamps = new HashSet<>();
             if (!isWarmup) {
                 List<Long> timestampsToCheck = new ArrayList<>();
                 for(int i=0; i<minutesToRead; i++) timestampsToCheck.add(currentTime + i * Utils.TIME_MINUTE);
-                existingTimestamps = DataManagerAerospikeFloatSim.checkExistingFundingPredictions(timestampsToCheck);
+                existingTimestamps = DataManagerAerospikeFloatSim.checkExistingFundingLabel40Predictions(timestampsToCheck);
             }
 
             long readStart = System.currentTimeMillis();
@@ -181,10 +210,6 @@ public class GenerateFundingPredictionsTool {
                         Utils.normalizeDateYYYYMMDDHHmm(currentTime),
                         Utils.normalizeDateYYYYMMDDHHmm(currentTime + minutesToRead * Utils.TIME_MINUTE),
                         minutesToRead, readDuration);
-
-                // Mẹo: Nếu nghi ngờ lỗi mạng, có thể thêm logic retry nhẹ ở đây
-                // Ví dụ: Thread.sleep(1000) rồi gọi lại lần nữa nếu cần thiết.
-
                 currentTime += minutesToRead * Utils.TIME_MINUTE;
                 continue;
             }
@@ -194,7 +219,6 @@ public class GenerateFundingPredictionsTool {
 
             for (Map.Entry<Long, Map<String, KlineObjectSimple>> timeEntry : time2Tickers.entrySet()) {
                 long time = timeEntry.getKey();
-                // 🔥 SỬA: Dùng >= để đảm bảo không chạy lố end, nhưng lưu ý logic Task range
                 if (time >= end) break;
 
                 Map<String, KlineObjectSimple> symbol2Ticker = timeEntry.getValue();
@@ -223,12 +247,8 @@ public class GenerateFundingPredictionsTool {
                 List<PrepareData> batchInput = symbolFundingBuy.parallelStream()
                         .map(symbol -> {
                             try {
-                                // 🔥 FIX LỖI MAPPER: Dùng symbolMap được truyền vào
                                 Short symId = symbolMap.get(symbol);
-                                if (symId == null) {
-                                    // LOG.warn("⚠️ Symbol missing in Mapper: {}", symbol);
-                                    return null;
-                                }
+                                if (symId == null) return null;
 
                                 KlineObjectSimple ticker = symbol2Ticker.get(symbol);
                                 if (ticker == null || !Utils.isTickerAvailable(ticker)) return null;
@@ -280,13 +300,14 @@ public class GenerateFundingPredictionsTool {
                 });
 
                 if (!finalResults.isEmpty()) {
-                    DataManagerAerospikeFloatSim.saveFundingPredictions1M(time, finalResults);
+                    // 🔥 GHI VÀO SET LABEL 40
+                    DataManagerAerospikeFloatSim.saveFundingPredictionsLabel40(time, finalResults);
                     generatedCount += finalResults.size();
                 }
             }
 
             if (!isWarmup && (generatedCount > 0 || processedCount > 0)) {
-                LOG.info("   ✅ Block: {} | Gen: {} records | Processed: {} mins",
+                LOG.info("   ✅ Block Label 40: {} | Gen: {} records | Processed: {} mins",
                         Utils.normalizeDateYYYYMMDDHHmm(time2Tickers.lastKey()), generatedCount, processedCount);
             }
 
@@ -296,8 +317,6 @@ public class GenerateFundingPredictionsTool {
             currentTime = lastKey + Utils.TIME_MINUTE;
         }
     }
-
-    // --- Helpers ---
 
     private void updateMarketRateHistory(long time, TreeMap<Long, MarketDataObject> time2MarketData, TreeMap<Long, Float> history) {
         MarketDataObject marketData = time2MarketData.get(time);

@@ -24,6 +24,7 @@ import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
+import com.binance.chuyennd.tradecore.MarketBigChangeDetector;
 import com.binance.chuyennd.trading.BinanceOrderTradingManager;
 import com.binance.chuyennd.trading.OrderTargetInfo;
 import com.binance.chuyennd.trading.OrderTargetStatus;
@@ -59,7 +60,17 @@ public class Test {
     public static void main(String[] args) throws Exception {
 //        testProduction();
 //        testAIDATA();
-
+        long startTime = Utils.sdfFileHour.parse("20251030 02:25").getTime();
+        TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers =
+                DataManagerAerospikeFloatSim.readDataFromAerospikeCustom(startTime, 120);
+        LOG.info("{} {} {} {}", Utils.normalizeDateYYYYMMDDHHmm(time2Tickers.firstKey()), Utils.normalizeDateYYYYMMDDHHmm(time2Tickers.lastKey()), time2Tickers.size(),
+                Utils.toJson(time2Tickers.firstEntry().getValue().get("BTCUSDT")));
+        TreeMap<Long, MarketDataObject> time2MarketData = (TreeMap<Long, MarketDataObject>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
+        MarketDataObject marketData = time2MarketData.get(startTime);
+        System.out.println(Utils.toJson(marketData));
+        Float minRate15Min60M = -0.005f;
+        System.out.println(MarketBigChangeDetector.isFundingFeeTrade(marketData.rateDown15MAvg, marketData.rateDownAvg, marketData.rateUpAvg, minRate15Min60M));
+        System.out.println(Utils.toJson(DataManagerAerospikeFloatSim.getFundingPredictionAtTime(startTime)));
 //        TreeMap<Long, MarketDataObject> time2MarketData = (TreeMap<Long, MarketDataObject>)
 //                StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
 //        LOG.info("{} {} {}", time2MarketData.size(),
@@ -84,7 +95,6 @@ public class Test {
 //        Long startTime = Utils.sdfFile.parse("20210102").getTime() + 7 * Utils.TIME_HOUR;
 //        TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers = DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime);
 //        LOG.info("time2Tickers size: {}", time2Tickers.size());
-
 
 
 //        LOG.info("First key: {} time:{} size: {}",time2Tickers.firstKey(), Utils.normalizeDateYYYYMMDDHHmm(time2Tickers.firstKey()),
