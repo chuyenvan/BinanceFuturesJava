@@ -4,7 +4,7 @@ import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.ai_ml.features.export.entry.ComprehensiveMarketFeatureExtractor;
 import com.binance.chuyennd.ai_ml.features.export.entry.MarketFeatures;
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
-import com.binance.chuyennd.object.MarketRateChange;
+import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.research.FundingFeeManager;
 import com.binance.chuyennd.utils.Configs;
@@ -35,7 +35,7 @@ public class RunGeneratePredictions {
         ComprehensiveMarketFeatureExtractor featureExtractor = new ComprehensiveMarketFeatureExtractor();
 
         LOG.info("Loading Market Rates...");
-        TreeMap<Long, MarketRateChange> time2Rate = loadMarketRateData();
+        TreeMap<Long, MarketDataObject> time2Rate = loadMarketRateData();
 
         TreeMap<Long, AiPredictionData> predictionMap = new TreeMap<>();
 
@@ -93,7 +93,7 @@ public class RunGeneratePredictions {
                     for (Map.Entry<Long, Map<String, KlineObjectSimple>> entry : todayData.entrySet()) {
                         Long timestamp = entry.getKey();
                         Map<String, KlineObjectSimple> marketData = entry.getValue();
-                        MarketRateChange rateChange = time2Rate.get(timestamp);
+                        MarketDataObject rateChange = time2Rate.get(timestamp);
 
                         List<String> targetBasket = findTop50LosersFromPeak15m(lookupData, timestamp);
 
@@ -187,8 +187,8 @@ public class RunGeneratePredictions {
         return result;
     }
 
-    private TreeMap<Long, MarketRateChange> loadMarketRateData() throws Exception {
+    private TreeMap<Long, MarketDataObject> loadMarketRateData() throws Exception {
         if (!new File(Configs.FILE_ENTRY_MARKET_LEVEL).exists()) return new TreeMap<>();
-        return (TreeMap<Long, MarketRateChange>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
+        return (TreeMap<Long, MarketDataObject>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
     }
 }

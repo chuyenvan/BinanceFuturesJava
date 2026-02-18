@@ -27,7 +27,6 @@ import com.binance.chuyennd.ai_ml.onnx.funding.FundingOnnxInferenceManager;
 import com.binance.chuyennd.helper.PositionHelper;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.MarketLevelChange;
-import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
@@ -186,7 +185,7 @@ public class DetectEntrySignal2TradeNormal {
             Float rateDownAvg = MarketBigChangeDetector.calRateChangeAvg(rateDown2Symbols, 100);
             Float rateUpAvg = -MarketBigChangeDetector.calRateChangeAvg(rateUp2Symbols, 100);
             Float rateDown15MAvg = MarketBigChangeDetector.calRateChangeAvg(rateDown15M2Symbols, 100);
-            MarketRateChange marketRate = new MarketRateChange(rateDownAvg, rateDown15MAvg, rateUpAvg);
+            MarketDataObject marketRate = new MarketDataObject(rateDownAvg, rateDown15MAvg, rateUpAvg);
             Double rateBtcDown15M = Utils.rateOf2Double(btcTicker.priceClose, btcMax15M);
             MarketLevelChange levelChange = MarketBigChangeDetector.getMarketStatus1M(rateDownAvg, rateUpAvg, btcRateChange, rateDown15MAvg);
             RedisHelper.getInstance().get().set(RedisConst.REDIS_KEY_LAST_TIME_CHECK_MARKET, Utils.toJson(System.currentTimeMillis()));
@@ -239,8 +238,19 @@ public class DetectEntrySignal2TradeNormal {
                         || levelChange.equals(MarketLevelChange.SMALL_DOWN_15M)) {
                     numberOrder = numberOrder / 2;
                 }
+                // 1. Lấy danh sách candidate
+                Set<String> allSymbols = new HashSet<>();
+                allSymbols.addAll(FundingFeeManager.getInstance().getFundingListSymbol2Trade(time));
+                allSymbols.removeAll(BudgetManager.getInstance().symbol2Pos.keySet());
+
+                // 3. Chạy AI Predict -> Sort theo L0 (Prob Fail) từ bé đến lớn
+                TreeMap<Float, String> sortedCandidates = predictAllCandidates(allSymbols, symbol2FinalTicker,
+                        rateDownAvg, rateUpAvg, rateDown15MAvg, time);
+
                 Set<String> symbol2BUY = new HashSet<>();
-                symbol2BUY.addAll(MarketBigChangeDetector.getTopSymbol(rateDown15M2Symbols, numberOrder, symbol2FinalTicker, symbolLocked));
+                symbol2BUY.addAll(MarketBigChangeDetector.getTopSymbol(rateDown15M2Symbols, numberOrder,
+                        symbol2FinalTicker, symbolLocked,sortedCandidates));
+
 
                 if (symbol2BUY.size() < numberOrder) {
                     LOG.info("Not symbol 2 buy: {} {} ", levelChange, Utils.normalizeDateYYYYMMDDHHmm(time));
@@ -310,76 +320,14 @@ public class DetectEntrySignal2TradeNormal {
 
             if (MarketBigChangeDetector.isFundingFeeTrade(rateDown15MAvg, rateDownAvg, rateUpAvg, minRate15Min30M)) {
                 // 1. Lấy danh sách candidate
-                Set<String> symbolBuyFundingFee = new HashSet<>();
-                symbolBuyFundingFee.addAll(FundingFeeManager.getInstance().getFundingListSymbol2Trade(time));
-                symbolBuyFundingFee.removeAll(BudgetManager.getInstance().symbol2Pos.keySet());
-
-                // 2. Chuẩn bị AI Input
-                List<String> aiCandidates = new ArrayList<>();
-                List<FundingMarketFeatures> aiFeaturesList = new ArrayList<>();
-                List<String> currentBasket = null;
-
-                if (fundingExtractor != null && fundingBrain != null) {
-                    currentBasket = fundingExtractor.identifyTargetBasket(symbol2FinalTicker);
-                }
-
-                for (String symbol : symbolBuyFundingFee) {
-                    KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
-                    if (!Utils.isTickerAvailable(ticker)) continue;
-
-                    double rate1m = (ticker.priceClose - ticker.priceOpen) / ticker.priceOpen;
-                    // 🔥 HARD FILTER: Chỉ giữ lại nếu đang sập mạnh (Rate1M < -0.65%)
-                    if (rate1m >= -0.0065) {
-                        continue;
-                    }
-
-                    if (fundingExtractor != null && fundingBrain != null) {
-                        OrderTargetInfoTest dummyOrder = new OrderTargetInfoTest(
-                                OrderTargetStatus.REQUEST, ticker.priceClose, null, 1.0,
-                                Configs.LEVERAGE_ORDER, symbol, time, time, OrderSide.BUY
-                        );
-                        dummyOrder.lastEntry = ticker.priceClose;
-                        MarketDataObject marketData = new MarketDataObject(rateDownAvg,
-                                rateUpAvg, rateDown15MAvg);
-                        FundingMarketFeatures feats = fundingExtractor.extractFeatures(
-                                time, dummyOrder, symbol2FinalTicker, currentBasket, marketData
-                        );
-                        if (feats != null) {
-                            aiCandidates.add(symbol);
-                            aiFeaturesList.add(feats);
-                        }
-                    } else {
-                        // Fallback nếu không có AI
-                        aiCandidates.add(symbol);
-                    }
-                }
+                Set<String> allSymbols = new HashSet<>();
+                allSymbols.addAll(FundingFeeManager.getInstance().getFundingListSymbol2Trade(time));
+                allSymbols.removeAll(BudgetManager.getInstance().symbol2Pos.keySet());
 
                 // 3. Chạy AI Predict -> Sort theo L0 (Prob Fail) từ bé đến lớn
-                TreeMap<Float, String> sortedCandidates = new TreeMap<>();
+                TreeMap<Float, String> sortedCandidates = predictAllCandidates(allSymbols, symbol2FinalTicker,
+                        rateDownAvg, rateUpAvg, rateDown15MAvg, time);
 
-                if (fundingBrain != null && !aiFeaturesList.isEmpty()) {
-                    List<float[]> featureArrays = aiFeaturesList.stream()
-                            .map(f -> fundingBrain.extractFeaturesToArray(f))
-                            .collect(Collectors.toList());
-
-                    List<float[]> results = fundingBrain.predictBatch(featureArrays);
-
-                    for (int i = 0; i < aiCandidates.size(); i++) {
-                        String sym = aiCandidates.get(i);
-                        float[] probs = results.get(i);
-
-                        // 🔥 FILTER: Reject nếu Fail Prob > 0.3
-                        if (probs[0] > 0.2) {
-                            LOG.info("❌ [FILTER AI FUNDING] {}: Prediction FAIL too high ({})", sym, probs[0]);
-                        } else {
-                            // Tự động sắp xếp: Key càng bé (ProbFail thấp) càng đứng đầu
-                            sortedCandidates.put(probs[0], sym);
-                        }
-                    }
-                } else {
-                    // Fallback: Random sort nếu không có AI
-                    for (String sym : aiCandidates) sortedCandidates.put((float) Math.random(), sym);
-                }
 
                 // 4. Final Trade Logic (Limit TOP 30)
                 int countChecked = 0;
@@ -407,6 +355,75 @@ public class DetectEntrySignal2TradeNormal {
         LOG.info("Finish check level change of market 2 trade: {}", new Date());
     }
 
+    private TreeMap<Float, String> predictAllCandidates(Set<String> allSymbols, Map<String,
+            KlineObjectSimple> symbol2FinalTicker, Float rateDownAvg, Float rateUpAvg, Float rateDown15MAvg, long time) {
+        TreeMap<Float, String> sortedCandidates = new TreeMap<>();
+                // 2. Chuẩn bị AI Input
+        List<String> aiCandidates = new ArrayList<>();
+        List<FundingMarketFeatures> aiFeaturesList = new ArrayList<>();
+        List<String> currentBasket = null;
+
+        if (fundingExtractor != null && fundingBrain != null) {
+            currentBasket = fundingExtractor.identifyTargetBasket(symbol2FinalTicker);
+        }
+
+        for (String symbol : allSymbols) {
+            KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
+            if (!Utils.isTickerAvailable(ticker)) continue;
+
+            double rate1m = (ticker.priceClose - ticker.priceOpen) / ticker.priceOpen;
+            // 🔥 HARD FILTER: Chỉ giữ lại nếu đang sập mạnh (Rate1M < -0.65%)
+            if (rate1m >= -0.0065) {
+                continue;
+            }
+
+            if (fundingExtractor != null && fundingBrain != null) {
+                OrderTargetInfoTest dummyOrder = new OrderTargetInfoTest(
+                        OrderTargetStatus.REQUEST, ticker.priceClose, null, 1.0,
+                        Configs.LEVERAGE_ORDER, symbol, time, time, OrderSide.BUY
+                );
+                dummyOrder.lastEntry = ticker.priceClose;
+                MarketDataObject marketData = new MarketDataObject(rateDownAvg,
+                        rateUpAvg, rateDown15MAvg);
+                FundingMarketFeatures feats = fundingExtractor.extractFeatures(
+                        time, dummyOrder, symbol2FinalTicker, currentBasket, marketData
+                );
+                if (feats != null) {
+                    aiCandidates.add(symbol);
+                    aiFeaturesList.add(feats);
+                }
+            } else {
+                // Fallback nếu không có AI
+                aiCandidates.add(symbol);
+            }
+        }
+
+        if (fundingBrain != null && !aiFeaturesList.isEmpty()) {
+            List<float[]> featureArrays = aiFeaturesList.stream()
+                    .map(f -> fundingBrain.extractFeaturesToArray(f))
+                    .collect(Collectors.toList());
+
+            List<float[]> results = fundingBrain.predictBatch(featureArrays);
+
+            for (int i = 0; i < aiCandidates.size(); i++) {
+                String sym = aiCandidates.get(i);
+                float[] probs = results.get(i);
+
+                // 🔥 FILTER: Reject nếu Fail Prob > 0.3
+                if (probs[0] > 0.2) {
+                    LOG.info("❌ [FILTER AI FUNDING] {}: Prediction FAIL too high ({})", sym, probs[0]);
+                } else {
+                    // Tự động sắp xếp: Key càng bé (ProbFail thấp) càng đứng đầu
+                    sortedCandidates.put(probs[0], sym);
+                }
+            }
+        } else {
+            // Fallback: Random sort nếu không có AI
+            for (String sym : aiCandidates) sortedCandidates.put((float) Math.random(), sym);
+        }
+        return sortedCandidates;
+    }
+
 
     private OrderTargetInfo getOrderInfo(String symbol) {
         try {
@@ -419,7 +436,8 @@ public class DetectEntrySignal2TradeNormal {
         return null;
     }
 
-    public void createOrderBuyRequest(String symbol, KlineObjectSimple ticker, MarketLevelChange levelChange, Double priceMax15M, MarketRateChange marketRate, OnnxInferenceManager.PredictionResult prediction) {
+    public void createOrderBuyRequest(String symbol, KlineObjectSimple ticker, MarketLevelChange levelChange, Double priceMax15M,
+                                      MarketDataObject marketRate, OnnxInferenceManager.PredictionResult prediction) {
 
 
         if (prediction == null) {
@@ -433,7 +451,7 @@ public class DetectEntrySignal2TradeNormal {
         LOG.info("AI CHECK [{}] Pred: {} -> Decision: {}", symbol, prediction, filterResult.decision);
 
         if (filterResult.decision == AIRejectFilter.FilterDecision.REJECT) {
-            LOG.info("❌ SKIP ORDER [{}] due to AI REJECT: {}", symbol, filterResult.reason);
+            LOG.info("❌ SKIP ORDER [{} {}] due to AI REJECT: {}", symbol, levelChange, filterResult.reason);
             return; // <--- CHẶN LỆNH TẠI ĐÂY
         } else {
             LOG.info("✅ AI PASS [{}] Reason: {}", symbol, filterResult.reason);
@@ -471,7 +489,8 @@ public class DetectEntrySignal2TradeNormal {
         }
     }
 
-    private void writeOrder2File(OrderTargetInfo orderTrade, KlineObjectSimple ticker, MarketRateChange marketRate, Double priceMax15M) {
+    private void writeOrder2File(OrderTargetInfo orderTrade, KlineObjectSimple ticker,
+                                 MarketDataObject marketRate, Double priceMax15M) {
         try {
             Map<Object, Object> data = new HashMap<>();
             data.put("ticker", ticker);

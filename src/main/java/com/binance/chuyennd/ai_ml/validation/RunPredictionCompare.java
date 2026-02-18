@@ -4,7 +4,7 @@ import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.ai_ml.features.export.entry.ComprehensiveMarketFeatureExtractor;
 import com.binance.chuyennd.ai_ml.features.export.entry.MarketFeatures;
 import com.binance.chuyennd.ai_ml.onnx.entry.OnnxInferenceManager;
-import com.binance.chuyennd.object.MarketRateChange;
+import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.research.FundingFeeManager;
 import com.binance.chuyennd.utils.Configs;
@@ -15,7 +15,9 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.lang.reflect.Field;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class RunPredictionCompare {
@@ -29,7 +31,7 @@ public class RunPredictionCompare {
 
     private OnnxInferenceManager aiBrain;
     private ComprehensiveMarketFeatureExtractor featureExtractor;
-    private TreeMap<Long, MarketRateChange> time2Rate;
+    private TreeMap<Long, MarketDataObject> time2Rate;
 
     public static void main(String[] args) {
         try {
@@ -82,8 +84,8 @@ public class RunPredictionCompare {
 
             if (currentDailyData != null && currentDailyData.containsKey(currentTime)) {
                 Map<String, KlineObjectSimple> marketSnapshot = currentDailyData.get(currentTime);
-                MarketRateChange rateChange = time2Rate.get(currentTime);
-                if (rateChange == null) rateChange = new MarketRateChange(0f, 0f, 0f);
+                MarketDataObject rateChange = time2Rate.get(currentTime);
+                if (rateChange == null) rateChange = new MarketDataObject(0f, 0f, 0f);
 
                 // A. TẠO TEST FEATURES & PREDICT
                 MarketFeatures testFeatures = featureExtractor.extractAllFeatures(
@@ -210,7 +212,7 @@ public class RunPredictionCompare {
         this.aiBrain = new OnnxInferenceManager(MODEL_DIR);
         this.featureExtractor = new ComprehensiveMarketFeatureExtractor();
         if (new File(Configs.FILE_ENTRY_MARKET_LEVEL).exists()) {
-            this.time2Rate = (TreeMap<Long, MarketRateChange>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
+            this.time2Rate = (TreeMap<Long, MarketDataObject>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
         } else {
             this.time2Rate = new TreeMap<>();
         }

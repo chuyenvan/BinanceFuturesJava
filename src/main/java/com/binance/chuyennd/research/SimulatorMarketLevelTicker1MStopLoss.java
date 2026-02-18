@@ -167,7 +167,9 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                         numberOrder = numberOrder / 2;
                                     }
                                     Set<String> symbol2BUY = new HashSet<>();
-                                    symbol2BUY.addAll(MarketBigChangeDetector.getTopSymbol(rate2Max, numberOrder, symbol2Ticker, symbolLocked));
+                                    TreeMap<Float, String> predict2Symbol = extractPredict2Symbol(time2FundingPre.get(time));
+                                    symbol2BUY.addAll(MarketBigChangeDetector.getTopSymbol(rate2Max, numberOrder,
+                                            symbol2Ticker, symbolLocked, predict2Symbol));
 //                                    if (symbol2BUY.size() < numberOrder) {
 //                                        LOG.info("Not symbol 2 buy: {} {} ", levelChange, Utils.normalizeDateYYYYMMDDHHmm(time));
 //                                    }
@@ -277,7 +279,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                             continue;
                                         }
                                         double rate1m = (ticker.priceClose - ticker.priceOpen) / ticker.priceOpen;
-                                                        // Logic: Chỉ giữ lại nếu (rate1m < -0.65%)
+                                        // Logic: Chỉ giữ lại nếu (rate1m < -0.65%)
                                         // Tức là đang sập mạnh.
                                         if (rate1m >= -0.0065) {
                                             continue;
@@ -401,6 +403,22 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             e.printStackTrace();
         }
         Utils.printMemoryUse();
+    }
+
+    private TreeMap<Float, String> extractPredict2Symbol(Map<Short, float[]> shortMap) {
+        TreeMap<Float, String> predict2Symbol = new TreeMap<>();
+        if (shortMap != null && !shortMap.isEmpty()) {
+            for (Map.Entry<Short, float[]> entry : shortMap.entrySet()) {
+                String symbol = SimpleSymbolMapper.getInstance().getSymbol(entry.getKey());
+                if (StringUtils.isNotEmpty(symbol)) {
+                    float[] pred = entry.getValue();
+                    if (pred != null && pred.length > 0) {
+                        predict2Symbol.put(pred[0], symbol);
+                    }
+                }
+            }
+        }
+        return predict2Symbol;
     }
 
     private void logByProcessTime(Long startTimeRun, String msg, Long time) {

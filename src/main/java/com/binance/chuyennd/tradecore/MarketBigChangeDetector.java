@@ -126,21 +126,40 @@ public class MarketBigChangeDetector {
     }
 
     public static Set<String> getTopSymbol(TreeMap<Float, String> rateLoss2Symbols, int period, Map<String,
-            KlineObjectSimple> symbol2FinalTicker, Set<String> symbolLocked) {
+            KlineObjectSimple> symbol2FinalTicker, Set<String> symbolLocked, TreeMap<Float, String> predict2Symbol) {
         Set<String> symbols = new HashSet<>();
-        for (Map.Entry<Float, String> entry : rateLoss2Symbols.entrySet()) {
-            String symbol = entry.getValue();
-            if (symbolLocked != null && symbolLocked.contains(symbol)) {
+        if (predict2Symbol != null && !predict2Symbol.isEmpty()) {
+            for (Map.Entry<Float, String> entry : predict2Symbol.entrySet()) {
+                String symbol = entry.getValue();
+                if (symbolLocked != null && symbolLocked.contains(symbol)) {
 //                LOG.info("Not trade {} because symbol locking: {}",
 //                        symbol, Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()));
-                continue;
+                    continue;
+                }
+                KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
+                if (ticker != null) {
+                    symbols.add(symbol);
+                }
+                if (symbols.size() >= period) {
+                    break;
+                }
             }
-            KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
-            if (ticker != null) {
-                symbols.add(symbol);
-            }
-            if (symbols.size() >= period) {
-                break;
+
+        } else {
+            for (Map.Entry<Float, String> entry : rateLoss2Symbols.entrySet()) {
+                String symbol = entry.getValue();
+                if (symbolLocked != null && symbolLocked.contains(symbol)) {
+//                LOG.info("Not trade {} because symbol locking: {}",
+//                        symbol, Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()));
+                    continue;
+                }
+                KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
+                if (ticker != null) {
+                    symbols.add(symbol);
+                }
+                if (symbols.size() >= period) {
+                    break;
+                }
             }
         }
         return symbols;

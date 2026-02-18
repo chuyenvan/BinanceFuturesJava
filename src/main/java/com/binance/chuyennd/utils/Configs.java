@@ -139,10 +139,6 @@ public class Configs {
     public static final Double RATE_FEE = Configs.getDouble("RATE_FEE");
     public static Integer LEVERAGE_ORDER = Configs.getInt("LEVERAGE_ORDER");
 
-    public static Integer BTC_TREND_REVERSE_DURATION = Configs.getInt("BTC_TREND_REVERSE_DURATION");
-    public static Double BTC_TREND_REVERSE_RATE_MAX = Configs.getDouble("BTC_TREND_REVERSE_RATE_MAX");
-    public static Double BTC_TREND_REVERSE_RATE_MIN_TRADE = Configs.getDouble("BTC_TREND_REVERSE_RATE_MIN_TRADE");
-
     // kaggle
 //    public static String FILE_ENTRY_MARKET_LEVEL = "storage/market_data_one_file/time2market.data";
     public static String FILE_ENTRY_MARKET_LEVEL = Configs.getString("FILE_ENTRY_MARKET_LEVEL");
@@ -160,7 +156,6 @@ public class Configs {
 
     public static final String AEROSPIKE_NAMESPACE = Configs.getString("AEROSPIKE_NAMESPACE"); //"ticker" ;
     public static final String FILE_AI_ENTRY_PREDICTIONS = Configs.getString("FILE_AI_PREDICTIONS"); //"ticker" ;
-    public static final String FILE_AI_DCA_MODEL = Configs.getString("FILE_AI_DCA_PREDICTIONS"); //"ticker" ;
 
     public static String getString(String configName) {
         return (String) properties.get(configName);

@@ -1,7 +1,6 @@
 package com.binance.chuyennd.research; // Hoặc package phù hợp với project của bạn
 
 import com.binance.chuyennd.object.MarketDataObject;
-import com.binance.chuyennd.object.MarketRateChange;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,7 +26,7 @@ public class MarketDataExporter {
      * @param outputFilePath Đường dẫn file output (Configs.FILE_ENTRY_MARKET_LEVEL)
      */
     public void exportMarketEntries(
-            TreeMap<Long, MarketRateChange> rateChangesMap,
+            TreeMap<Long, MarketDataObject> rateChangesMap,
             TreeMap<Long, MarketDataObject> oldDataMap,
             TreeMap<Long, Double> btcReversionMap,
             String outputFilePath) {
@@ -36,9 +35,9 @@ public class MarketDataExporter {
         TreeMap<Long, MarketDataObject> mergedDataMap = new TreeMap<>();
 
         // 1. Duyệt qua tất cả các mốc thời gian có trong rateChangesMap (làm mốc chính)
-        for (Map.Entry<Long, MarketRateChange> entry : rateChangesMap.entrySet()) {
+        for (Map.Entry<Long, MarketDataObject> entry : rateChangesMap.entrySet()) {
             Long time = entry.getKey();
-            MarketRateChange rateChange = entry.getValue();
+            MarketDataObject rateChange = entry.getValue();
 
             // 2. Lấy dữ liệu tương ứng từ các nguồn khác
             MarketDataObject oldObj = oldDataMap.get(time);

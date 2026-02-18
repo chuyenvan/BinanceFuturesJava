@@ -2,7 +2,7 @@ package com.binance.chuyennd.ai_ml.features.export.entry;
 
 
 import com.binance.chuyennd.ai_ml.features.export.HistoryManager;
-import com.binance.chuyennd.object.MarketRateChange;
+import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.research.FundingFeeManager;
 import com.binance.chuyennd.utils.Utils;
@@ -91,7 +91,7 @@ public class ComprehensiveMarketFeatureExtractor {
 
     public MarketFeatures extractAllFeatures(long timestamp,
                                              Map<String, KlineObjectSimple> currentMarketData,
-                                             MarketRateChange marketRateChange,
+                                             MarketDataObject marketData,
                                              List<String> targetBasket) {
 
         // 1. Cập nhật dữ liệu mới nhất
@@ -108,7 +108,7 @@ public class ComprehensiveMarketFeatureExtractor {
 
         String anchorSymbol = "BTCUSDT";
 
-        extractMomentumFeatures(features, anchorSymbol, marketRateChange);
+        extractMomentumFeatures(features, anchorSymbol, marketData);
         extractVolatilityFeatures(features, anchorSymbol);
         extractTechnicalIndicators(features, anchorSymbol);
         extractBreadthFeatures(features, currentMarketData);
@@ -126,7 +126,7 @@ public class ComprehensiveMarketFeatureExtractor {
 
     // --- CÁC HÀM EXTRACT SỬ DỤNG HISTORY MANAGER ---
 
-    private void extractMomentumFeatures(MarketFeatures features, String symbol, MarketRateChange rate) {
+    private void extractMomentumFeatures(MarketFeatures features, String symbol, MarketDataObject rate) {
         if (rate != null) {
             features.momentum1M = rate.rateDownAvg;
             features.momentum15M = rate.rateDown15MAvg;

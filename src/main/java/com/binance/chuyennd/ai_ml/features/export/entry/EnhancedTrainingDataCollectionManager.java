@@ -1,12 +1,17 @@
 package com.binance.chuyennd.ai_ml.features.export.entry;
 
-import com.binance.chuyennd.object.MarketRateChange;
+import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
-import java.util.*;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 public class EnhancedTrainingDataCollectionManager {
     private static final Logger LOG = LoggerFactory.getLogger(EnhancedTrainingDataCollectionManager.class);
@@ -37,14 +42,14 @@ public class EnhancedTrainingDataCollectionManager {
 
     public void processMarketData(long timestamp,
                                   Map<String, KlineObjectSimple> marketData,
-                                  MarketRateChange marketRateChange, List<String> targetBasket,
+                                  MarketDataObject marketRate, List<String> targetBasket,
                                   double ret15M, double ret1H, double ret4H, double ret24H,
                                   double maxDD4H, double maxDD24H) {
 
-        if (!shouldCollectData(marketRateChange)) return;
+        if (!shouldCollectData(marketRate)) return;
 
         try {
-            MarketFeatures features = featureExtractor.extractAllFeatures(timestamp, marketData, marketRateChange, targetBasket);
+            MarketFeatures features = featureExtractor.extractAllFeatures(timestamp, marketData, marketRate, targetBasket);
 
             // Gán Labels (Output)
             features.futureReturn15M = ret15M;
@@ -82,7 +87,7 @@ public class EnhancedTrainingDataCollectionManager {
         else f.regimeLabel = "WAIT";
     }
 
-    private boolean shouldCollectData(MarketRateChange rate) {
+    private boolean shouldCollectData(MarketDataObject rate) {
         if (rate == null) return false;
         return Math.abs(rate.rateDown15MAvg) > 0.0018
                 || Math.abs(rate.rateUpAvg) > 0.002

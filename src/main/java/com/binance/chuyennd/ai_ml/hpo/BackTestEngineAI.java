@@ -1,9 +1,8 @@
 package com.binance.chuyennd.ai_ml.hpo;
 
-import com.binance.chuyennd.ai_ml.onnx.entry.AIRejectFilter;
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
+import com.binance.chuyennd.ai_ml.onnx.entry.AIRejectFilter;
 import com.binance.chuyennd.object.MarketDataObject;
-import com.binance.chuyennd.object.MarketRateChange;
 import com.binance.chuyennd.research.BudgetManagerSimple;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
 import com.binance.chuyennd.research.SimulatorMarketLevelTicker1MStopLoss;

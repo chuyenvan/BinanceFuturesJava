@@ -1,7 +1,7 @@
 package com.binance.chuyennd.ai_ml.features.export.entry;
 
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
-import com.binance.chuyennd.object.MarketRateChange;
+import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.research.FundingFeeManager;
 import com.binance.chuyennd.utils.Configs;
@@ -30,7 +30,7 @@ public class RunFullDataCollection {
                 new EnhancedTrainingDataCollectionManager("storage/training_data_big_sequential");
 
         LOG.info("🚀 LOADING MARKET RATES...");
-        TreeMap<Long, MarketRateChange> time2Rate = loadMarketRateData();
+        TreeMap<Long, MarketDataObject> time2Rate = loadMarketRateData();
 
         long currentTime = Utils.sdfFile.parse("20210101").getTime();
         long endTime = System.currentTimeMillis();
@@ -74,7 +74,7 @@ public class RunFullDataCollection {
 
     private void processDailyData(TreeMap<Long, Map<String, KlineObjectSimple>> todayData,
                                   TreeMap<Long, Map<String, KlineObjectSimple>> lookupData,
-                                  TreeMap<Long, MarketRateChange> rateData,
+                                  TreeMap<Long, MarketDataObject> rateData,
                                   EnhancedTrainingDataCollectionManager dataManager) {
 
         for (Map.Entry<Long, Map<String, KlineObjectSimple>> entry : todayData.entrySet()) {
@@ -96,7 +96,7 @@ public class RunFullDataCollection {
             double maxDD4H = calculateBasketMaxDrawdown(lookupData, timestamp, 240, targetBasket);
             double maxDD24H = calculateBasketMaxDrawdown(lookupData, timestamp, 1440, targetBasket);
 
-            MarketRateChange rate = (rateData != null) ? rateData.get(timestamp) : null;
+            MarketDataObject rate = (rateData != null) ? rateData.get(timestamp) : null;
 
             // Truyền lại basket vào processMarketData (Extractor sẽ dùng lại, không cần tính lại)
             dataManager.processMarketData(timestamp, currentMarketSnapshot, rate,
@@ -170,8 +170,8 @@ public class RunFullDataCollection {
         if (worstBasketDrawdown < -1.0) return -1.0;
         return worstBasketDrawdown;
     }
-    private TreeMap<Long, MarketRateChange> loadMarketRateData() throws Exception {
+    private TreeMap<Long, MarketDataObject> loadMarketRateData() throws Exception {
         if (!new File(Configs.FILE_ENTRY_MARKET_LEVEL).exists()) return new TreeMap<>();
-        return (TreeMap<Long, MarketRateChange>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
+        return (TreeMap<Long, MarketDataObject>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
     }
 }

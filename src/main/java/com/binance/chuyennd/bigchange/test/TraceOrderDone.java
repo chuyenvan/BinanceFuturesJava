@@ -1,8 +1,8 @@
 package com.binance.chuyennd.bigchange.test;
 
-import com.binance.chuyennd.object.MarketLevelChange;
 import com.binance.chuyennd.object.KlineObjectNumber;
-import com.binance.chuyennd.object.MarketRateChange;
+import com.binance.chuyennd.object.MarketDataObject;
+import com.binance.chuyennd.object.MarketLevelChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
 import com.binance.chuyennd.trading.OrderTargetInfo;
@@ -64,7 +64,7 @@ public class TraceOrderDone {
                     Map<Object, Object> data = (Map<Object, Object>) StorageSnappy.readObjectFromFile(order.getAbsolutePath());
                     KlineObjectSimple ticker = (KlineObjectSimple) data.get("ticker");
                     OrderTargetInfo orderTrade = (OrderTargetInfo) data.get("order");
-                    MarketRateChange marketRate = (MarketRateChange) data.get("marketRate");
+                    MarketDataObject marketRate = (MarketDataObject) data.get("marketRate");
                     Double priceMax15M = (Double) data.get("max15M");
                     List<String> symbol2Sell = (List<String>) data.get("symbol2Sell");
                     Set<String> fundingBuy = (Set<String>) data.get("fundingBuy");
@@ -87,7 +87,7 @@ public class TraceOrderDone {
     }
 
     private static StringBuilder buildOrderInfo(KlineObjectSimple ticker,
-                                                OrderTargetInfo orderTrade, MarketRateChange marketRate,
+                                                OrderTargetInfo orderTrade, MarketDataObject marketRate,
                                                 Double priceMax15M, List<String> symbol2Sell,
                                                 Set<String> fundingBuy, Set<String> fundingSell) {
         StringBuilder builder = new StringBuilder();
