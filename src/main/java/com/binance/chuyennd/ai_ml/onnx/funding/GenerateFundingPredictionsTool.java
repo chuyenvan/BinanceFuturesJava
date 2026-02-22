@@ -10,22 +10,17 @@ import com.binance.chuyennd.research.OrderTargetInfoTest;
 import com.binance.chuyennd.tradecore.MarketBigChangeDetector;
 import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.utils.Configs;
-import com.binance.chuyennd.utils.StorageSnappy;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.model.enums.OrderSide;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 public class GenerateFundingPredictionsTool {
     private static final Logger LOG = LoggerFactory.getLogger(GenerateFundingPredictionsTool.class);
-
-    // Xóa biến toàn cục extractor và time2RateDown15MAvg để tránh dính state giữa các task
-    // private final FundingFeatureExtractor extractor = new FundingFeatureExtractor();
 
     private static class PrepareData {
         short id;
@@ -37,17 +32,30 @@ public class GenerateFundingPredictionsTool {
         }
     }
 
+    /**
+     * 🔥 HÀM QUAN TRỌNG: Cấu hình SIÊU LỎNG để đảm bảo sinh dư Data cho HPO.
+     * Cấu hình này phải nới lỏng hơn tất cả các biên (bounds) lớn nhất mà HPO có thể quét tới.
+     */
+    private static void setLooseConfigsForGeneration() {
+        LOG.info("🔧 Áp dụng cấu hình SIÊU LỎNG để sinh Data bao phủ toàn bộ HPO...");
+        // HPO min trade quét tới -0.015 -> Ta mở rộng đến -0.008
+        Configs.FUNDING_RATE_MIN_TRADE = -0.008;
+        // HPO min full quét tới -0.020 -> Ta mở rộng đến -0.012
+        Configs.FUNDING_RATE_MIN_TRADE_FULL = -0.012;
+        // HPO up avg quét tới 0.004 -> Ta mở rộng đến 0.002
+        Configs.FUNDING_RATE_UP_AVG = 0.002;
+        // HPO down avg quét tới -0.004 -> Ta mở rộng đến -0.002
+        Configs.FUNDING_RATE_DOWN_AVG = -0.002;
+        Configs.NUMBER_RATE_DOWN_HISTORY_TRADE = 60;
+    }
+
     public static void main(String[] args) throws Exception {
         // 1. Cấu hình số luồng (4 Core)
         System.setProperty("java.util.concurrent.ForkJoinPool.common.parallelism", "4");
         DataManagerAerospikeFloatSim.setThreadCount(4);
 
-        // Cấu hình tham số lọc
-        Configs.FUNDING_RATE_MIN_TRADE = -0.013;
-        Configs.FUNDING_RATE_MIN_TRADE_FULL = -0.025;
-        Configs.FUNDING_RATE_UP_AVG = 0.004;
-        Configs.FUNDING_RATE_DOWN_AVG = -0.005;
-        Configs.NUMBER_RATE_DOWN_HISTORY_TRADE = 60;
+        // 2. Ép cấu hình siêu lỏng để Generate Data
+        setLooseConfigsForGeneration();
 
         try {
             FundingFeeManager.getInstance();
@@ -68,9 +76,6 @@ public class GenerateFundingPredictionsTool {
         }
 
         new GenerateFundingPredictionsTool().processDistributedTasks();
-
-
-
     }
 
     public void processDistributedTasks() throws Exception {
@@ -81,7 +86,6 @@ public class GenerateFundingPredictionsTool {
 
         LOG.info("📥 Loading Symbol Mapper...");
         Map<String, Short> globalMapper = DataManagerAerospikeFloatSim.loadSymbolMapper();
-        // Map dùng để tra cứu ID
         final ConcurrentHashMap<String, Short> symbolMap = new ConcurrentHashMap<>(globalMapper);
 
         try (FundingOnnxInferenceManager aiBrain = new FundingOnnxInferenceManager(modelPath)) {
@@ -106,7 +110,6 @@ public class GenerateFundingPredictionsTool {
                         Utils.normalizeDateYYYYMMDDHHmm(task.end));
 
                 try {
-                    // Truyền symbolMap vào hàm xử lý
                     generateToAerospike(task.start, task.end, aiBrain, time2MarketData, symbolMap);
                 } catch (Exception e) {
                     LOG.error("❌ Error processing task " + task.start, e);
@@ -124,8 +127,6 @@ public class GenerateFundingPredictionsTool {
             TreeMap<Long, MarketDataObject> time2MarketData,
             ConcurrentHashMap<String, Short> symbolMap
     ) {
-        // 🔥 QUAN TRỌNG: Tạo mới Extractor và RateHistory cho MỖI TASK
-        // Để đảm bảo không bị lẫn dữ liệu lịch sử của task trước đó
         FundingFeatureExtractor extractor = new FundingFeatureExtractor();
         TreeMap<Long, Float> time2RateDown15MAvg = new TreeMap<>();
 
@@ -133,13 +134,11 @@ public class GenerateFundingPredictionsTool {
         long warmupStartTime = startTime - (24 * 60 * 60 * 1000L);
         LOG.info("🔥 WARMUP: {} -> {}", Utils.normalizeDateYYYYMMDDHHmm(warmupStartTime), Utils.normalizeDateYYYYMMDDHHmm(startTime));
 
-        // Chạy Warmup (isWarmup = true)
         runDataLoop(warmupStartTime, startTime, time2MarketData, null, symbolMap, true, extractor, time2RateDown15MAvg);
 
         LOG.info("✅ WARMUP DONE. Generating...");
 
         // --- GIAI ĐOẠN 2: GENERATION ---
-        // Chạy Generate (isWarmup = false)
         runDataLoop(startTime, endTime, time2MarketData, aiBrain, symbolMap, false, extractor, time2RateDown15MAvg);
 
         LOG.info("🎉 DONE TASK: {} -> {}", Utils.normalizeDateYYYYMMDDHHmm(startTime), Utils.normalizeDateYYYYMMDDHHmm(endTime));
@@ -150,8 +149,8 @@ public class GenerateFundingPredictionsTool {
                              FundingOnnxInferenceManager aiBrain,
                              ConcurrentHashMap<String, Short> symbolMap,
                              boolean isWarmup,
-                             FundingFeatureExtractor extractor, // Truyền vào
-                             TreeMap<Long, Float> time2RateDown15MAvg // Truyền vào
+                             FundingFeatureExtractor extractor,
+                             TreeMap<Long, Float> time2RateDown15MAvg
     ) {
         long currentTime = start;
         long lastBasketTimestamp = -1;
@@ -163,7 +162,6 @@ public class GenerateFundingPredictionsTool {
                 minutesToRead = (int) ((end - currentTime) / Utils.TIME_MINUTE) + 1;
             }
 
-            // Check existing (chỉ khi generate)
             Set<Long> existingTimestamps = new HashSet<>();
             if (!isWarmup) {
                 List<Long> timestampsToCheck = new ArrayList<>();
@@ -171,20 +169,10 @@ public class GenerateFundingPredictionsTool {
                 existingTimestamps = DataManagerAerospikeFloatSim.checkExistingFundingPredictions(timestampsToCheck);
             }
 
-            long readStart = System.currentTimeMillis();
             TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers =
                     DataManagerAerospikeFloatSim.readDataFromAerospikeCustom(currentTime, minutesToRead);
-            long readDuration = System.currentTimeMillis() - readStart;
 
             if (time2Tickers == null || time2Tickers.isEmpty()) {
-                LOG.info("⚠️ [AEROSPIKE WARNING] No data returned for block: {} -> {} (Requested {} mins). Time taken: {}ms",
-                        Utils.normalizeDateYYYYMMDDHHmm(currentTime),
-                        Utils.normalizeDateYYYYMMDDHHmm(currentTime + minutesToRead * Utils.TIME_MINUTE),
-                        minutesToRead, readDuration);
-
-                // Mẹo: Nếu nghi ngờ lỗi mạng, có thể thêm logic retry nhẹ ở đây
-                // Ví dụ: Thread.sleep(1000) rồi gọi lại lần nữa nếu cần thiết.
-
                 currentTime += minutesToRead * Utils.TIME_MINUTE;
                 continue;
             }
@@ -194,7 +182,6 @@ public class GenerateFundingPredictionsTool {
 
             for (Map.Entry<Long, Map<String, KlineObjectSimple>> timeEntry : time2Tickers.entrySet()) {
                 long time = timeEntry.getKey();
-                // 🔥 SỬA: Dùng >= để đảm bảo không chạy lố end, nhưng lưu ý logic Task range
                 if (time >= end) break;
 
                 Map<String, KlineObjectSimple> symbol2Ticker = timeEntry.getValue();
@@ -205,7 +192,7 @@ public class GenerateFundingPredictionsTool {
 
                 if (isWarmup || existingTimestamps.contains(time)) continue;
 
-                // 2. CHECK CONDITION
+                // 2. CHECK CONDITION (Điều kiện lúc này đang dùng Cấu hình siêu lỏng)
                 if (!isMarketConditionMet(time, time2MarketData, time2RateDown15MAvg)) {
                     continue;
                 }
@@ -223,12 +210,8 @@ public class GenerateFundingPredictionsTool {
                 List<PrepareData> batchInput = symbolFundingBuy.parallelStream()
                         .map(symbol -> {
                             try {
-                                // 🔥 FIX LỖI MAPPER: Dùng symbolMap được truyền vào
                                 Short symId = symbolMap.get(symbol);
-                                if (symId == null) {
-                                    // LOG.warn("⚠️ Symbol missing in Mapper: {}", symbol);
-                                    return null;
-                                }
+                                if (symId == null) return null;
 
                                 KlineObjectSimple ticker = symbol2Ticker.get(symbol);
                                 if (ticker == null || !Utils.isTickerAvailable(ticker)) return null;
@@ -297,8 +280,6 @@ public class GenerateFundingPredictionsTool {
         }
     }
 
-    // --- Helpers ---
-
     private void updateMarketRateHistory(long time, TreeMap<Long, MarketDataObject> time2MarketData, TreeMap<Long, Float> history) {
         MarketDataObject marketData = time2MarketData.get(time);
         if (marketData == null) return;
@@ -315,11 +296,14 @@ public class GenerateFundingPredictionsTool {
         return MarketBigChangeDetector.isFundingFeeTrade(
                 marketData.rateDown15MAvg, marketData.rateDownAvg, marketData.rateUpAvg, minRate15Min60M);
     }
+
     // --- THÊM HÀM NÀY CHO SIMULATOR GỌI (CHẠY BÙ) ---
     public void generateAndSave(Long lastTimestamp) throws Exception {
+        // 🔥 Gọi Config siêu lỏng trước khi chạy bù
+        setLooseConfigsForGeneration();
+
         String modelPath = "models_funding/Funding_Classifier_Final_Fixed.onnx";
 
-        // Tải Market Data để dùng làm base check isMet
         TreeMap<Long, MarketDataObject> time2MarketData = DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
 
         LOG.info("📥 Loading Symbol Mapper cho Funding Tool...");
@@ -328,7 +312,7 @@ public class GenerateFundingPredictionsTool {
 
         long currentTime;
         if (lastTimestamp != null && lastTimestamp > 0) {
-            currentTime = Utils.getDate(lastTimestamp); // Lùi về đầu ngày đó
+            currentTime = Utils.getDate(lastTimestamp);
             LOG.info("🔄 Resuming Funding Predictions từ ngày: {}", Utils.normalizeDateYYYYMMDDHHmm(currentTime));
         } else {
             currentTime = Utils.sdfFile.parse("20210101").getTime();
@@ -338,9 +322,7 @@ public class GenerateFundingPredictionsTool {
         long endTime = System.currentTimeMillis();
 
         try (FundingOnnxInferenceManager aiBrain = new FundingOnnxInferenceManager(modelPath)) {
-            // Tận dụng lại hàm generateToAerospike đã có logic Warmup và Check Existing rất xịn
             generateToAerospike(currentTime, endTime, aiBrain, time2MarketData, symbolMap);
         }
     }
-
 }
