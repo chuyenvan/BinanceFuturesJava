@@ -12,9 +12,10 @@ import com.binance.chuyennd.ai_ml.features.export.funding.FundingFeatureExtracto
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.ai_ml.onnx.entry.AIRejectFilter;
 import com.binance.chuyennd.ai_ml.onnx.entry.RunGeneratePredictions;
+import com.binance.chuyennd.ai_ml.onnx.funding.GenerateFundingPredictionsTool;
+import com.binance.chuyennd.bigchange.test.TraceOrderDone;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.MarketLevelChange;
-import com.binance.chuyennd.bigchange.test.TraceOrderDone;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.tradecore.DcaProcessor;
 import com.binance.chuyennd.tradecore.MarketBigChangeDetector;
@@ -22,7 +23,6 @@ import com.binance.chuyennd.tradecore.TradeUtils;
 import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Storage;
-import com.binance.chuyennd.utils.StorageSnappy;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
 import com.binance.client.model.enums.OrderSide;
@@ -30,7 +30,6 @@ import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.io.IOException;
 import java.text.ParseException;
 import java.util.*;
@@ -46,18 +45,13 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     public TreeMap<Long, OrderTargetInfoTest> allOrderDone;
     public TreeMap<Long, MarketDataObject> time2MarketData;
     public TreeMap<Long, AiPredictionData> predictionMap;
+    public TreeMap<Long, Map<Short, float[]>> time2FundingPre;
     public AIRejectFilter aiRejectFilter;
     FundingFeatureExtractor extractor = new FundingFeatureExtractor();
     public Map<String, KlineObjectSimple> symbol2LastTicker = new HashMap<>();
 
-//    public DcaFeatureExtractor extractor = new DcaFeatureExtractor();
-//    public DcaOnnxInferenceManager dcaBrain;
-
     public ConcurrentHashMap<String, List<OrderTargetInfoTest>> symbol2OrdersEntry = new ConcurrentHashMap();
     public ConcurrentHashMap<String, OrderTargetInfoTest> symbol2OrderRunning = new ConcurrentHashMap();
-
-    private long lastBasketTimestamp = -1;
-    private List<String> cachedBasket = new ArrayList<>();
 
 
     public static void main(String[] args) throws ParseException, IOException, InterruptedException {
@@ -80,12 +74,11 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         //get data
         while (true) {
             TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers;
-            TreeMap<Long, Map<Short, float[]>> time2FundingPre;
+
 //            TreeMap<Long, Map<Short, float[]>> time2FundingPreDca;
             try {
-//                time2Tickers = HPOSmartCache.getData(startTime);
-                time2Tickers = DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime);
-                time2FundingPre = DataManagerAerospikeFloatSim.readFundingBatchCustom(startTime, 1440);
+                time2Tickers = HPOSmartCache.getData(startTime);
+//                time2Tickers = DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime);
 //                time2FundingPreDca = DataManagerAerospikeFloatSim.readFundingLabel40BatchCustom(startTime, 1440);
 
                 if (time2Tickers == null) {
@@ -149,12 +142,10 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                             MarketLevelChange levelChange = null;
 //                            Map<String, Double> symbol2PriceMax15M = new HashMap<>();
 
-                            if (marketData != null && marketData.rate2Max != null && !marketData.rate2Max.isEmpty()) {
-                                TreeMap<Float, String> rate2Max = new TreeMap<>();
-                                rate2Max.putAll(SimpleSymbolMapper.getInstance().extractSymbol(marketData.rate2Max));
+                            if (marketData != null) {
+
                                 levelChange = MarketBigChangeDetector.getMarketStatus1M(marketData.rateDownAvg,
                                         marketData.rateUpAvg, marketData.rateBtc, marketData.rateDown15MAvg);
-//                                symbol2PriceMax15M.putAll(marketData.symbol2PriceMax15M);
                                 // buy signal new
                                 if (levelChange != null) {
                                     Integer numberOrder = Configs.NUMBER_ENTRY_EACH_SIGNAL;
@@ -168,7 +159,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                     }
                                     Set<String> symbol2BUY = new HashSet<>();
                                     TreeMap<Float, String> predict2Symbol = extractPredict2Symbol(time2FundingPre.get(time));
-                                    symbol2BUY.addAll(MarketBigChangeDetector.getTopSymbol(rate2Max, numberOrder,
+                                    symbol2BUY.addAll(MarketBigChangeDetector.getTopSymbol(numberOrder,
                                             symbol2Ticker, symbolLocked, predict2Symbol));
 //                                    if (symbol2BUY.size() < numberOrder) {
 //                                        LOG.info("Not symbol 2 buy: {} {} ", levelChange, Utils.normalizeDateYYYYMMDDHHmm(time));
@@ -289,8 +280,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                         if (symbol2Pred != null) {
                                             float[] fundingPred = symbol2Pred.get(SimpleSymbolMapper.getInstance().getId(symbol));
                                             if (fundingPred != null) {
-                                                if (fundingPred[0] > 0.2) {
-                                                    LOG.info("❌ [FILTER AI] {}: Funding Prediction too high ({})", symbol, fundingPred[0]);
+                                                if (fundingPred[0] > Configs.FUNDING_PRED_MAX_THRESHOLD) {
+//                                                    LOG.info("❌ [FILTER AI] {}: Funding Prediction too high ({})", symbol, fundingPred[0]);
                                                     continue;
                                                 }
                                                 fundingPredict2Symbol.put(fundingPred[0], symbol);
@@ -315,39 +306,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                             }
                             logByProcessTime(startTimeRun, "Done funding fee", time);
                             startTimeRun = System.currentTimeMillis();
-                            // BTC trend reverse
-//                            Double rateBtcTrendReverse = null;
-//                            if (time2MarketData.get(time) != null) {
-//                                rateBtcTrendReverse = time2MarketData.get(time).btcReversion;
-//                            }
-//                            if (rateBtcTrendReverse != null && rateBtcTrendReverse >= Configs.BTC_TREND_REVERSE_RATE_MIN_TRADE) {
-//                                levelChange = MarketLevelChange.BTC_TREND_REVERSE;
-//                                List<String> symbol2BUY = new ArrayList<>();
-//                                for (String symbol : Constants.specialSymbol) {
-//                                    Double rateLoss = calRateLoss(symbol);
-//                                    Double budget = BudgetManagerSimple.getInstance().getBudget();
-//                                    Double marginOfSym = calMarginRunning(symbol);
-//                                    KlineObjectSimple ticker = symbol2Ticker.get(symbol);
-//                                    OrderTargetInfoTest order = symbol2OrderRunning.get(symbol);
-//                                    boolean isDcaSpecialSymbol = true;
-//                                    if (order != null) {
-//                                        isDcaSpecialSymbol = MarketBigChangeDetector.isDcaWithBtcReverse(rateLoss,
-//                                                budget, marginOfSym, ticker.priceClose, order.lastEntry);
-//                                    }
-//                                    if (isDcaSpecialSymbol) {
-//                                        symbol2BUY.add(symbol);
-//                                    }
-//
-//                                }
-//                                for (String symbol : symbol2BUY) {
-//                                    KlineObjectSimple ticker = symbol2Ticker.get(symbol);
-//                                    if (Utils.isTickerAvailable(ticker)) {
-//                                        createOrderBUY(symbol, ticker, levelChange, time2MarketData.get(time), null, symbol2Ticker);
-//                                    }
-//                                }
-//                            }
-//                            logByProcessTime(startTimeRun, "Done btc reverse done", time);
-//                            startTimeRun = System.currentTimeMillis();
 
                             if (time % Utils.TIME_DAY == 0) {
                                 BudgetManagerSimple.getInstance().updateBalance(time, allOrderDone, symbol2OrderRunning, symbol2OrdersEntry, true);
@@ -465,26 +423,67 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         // clear Data Old
         BudgetManagerSimple.getInstance().resetInstance();
         allOrderDone = new TreeMap<>();
-        File fileMarketData = new File(Configs.FILE_ENTRY_MARKET_LEVEL);
-        if (!fileMarketData.exists() || fileMarketData.lastModified() < System.currentTimeMillis() - Utils.TIME_DAY) {
-            new ExportMarketData2File().exportMarketEntries(null);
+
+        // =====================================================================
+        // 1. KIỂM TRA & CHẠY BÙ MARKET DATA
+        // =====================================================================
+        LOG.info("🔍 Đang kiểm tra Metadata của Market Data...");
+        long lastMarketDataTime = DataManagerAerospikeFloatSim.getLastTimestampFromSet(DataManagerAerospikeFloatSim.AEROSPIKE_SET_NAME_MARKET_DATA);
+
+        if (lastMarketDataTime == 0L || lastMarketDataTime < System.currentTimeMillis() - Utils.TIME_DAY) {
+            LOG.info("⚠️ Market Data cần cập nhật (Last: {}). Kích hoạt ExportMarketData2File...",
+                    lastMarketDataTime == 0L ? "NULL" : Utils.normalizeDateYYYYMMDDHHmm(lastMarketDataTime));
+
+            Long timeToRun = (lastMarketDataTime == 0L) ? null : lastMarketDataTime;
+            new ExportMarketData2File().exportMarketEntries(timeToRun);
         }
 
-        if (!new File(Configs.FILE_AI_ENTRY_PREDICTIONS).exists()) {
+        // Chỉ tải vào RAM SAU KHI đã sinh bù xong
+        time2MarketData = DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
+
+        // =====================================================================
+        // 2. KIỂM TRA & CHẠY BÙ AI PREDICTION (ENTRY)
+        // =====================================================================
+        LOG.info("🔍 Đang kiểm tra Metadata của AI Prediction (Entry)...");
+        long lastPredictionTime = DataManagerAerospikeFloatSim.getLastTimestampFromSet(DataManagerAerospikeFloatSim.AEROSPIKE_SET_NAME_AI_PRED_MARKET);
+
+        if (lastPredictionTime == 0L || lastPredictionTime < System.currentTimeMillis() - Utils.TIME_DAY) {
+            LOG.info("⚠️ AI Prediction Data cần cập nhật (Last: {}). Kích hoạt RunGeneratePredictions...",
+                    lastPredictionTime == 0L ? "NULL" : Utils.normalizeDateYYYYMMDDHHmm(lastPredictionTime));
+
             try {
-                new RunGeneratePredictions().generateAndSave();
+                Long timeToRunAI = (lastPredictionTime == 0L) ? null : lastPredictionTime;
+                new RunGeneratePredictions().generateAndSave(timeToRunAI);
             } catch (Exception e) {
-                throw new RuntimeException(e);
+                throw new RuntimeException("Lỗi khi chạy RunGeneratePredictions: " + e.getMessage(), e);
             }
         }
-        time2MarketData = (TreeMap<Long, MarketDataObject>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
-        predictionMap = (TreeMap<Long, AiPredictionData>) StorageSnappy.readObjectFromFile(Configs.FILE_AI_ENTRY_PREDICTIONS);
-//        try {
-//            dcaBrain = new DcaOnnxInferenceManager(Configs.FILE_AI_DCA_PREDICTIONS);
-//        } catch (OrtException e) {
-//            e.printStackTrace();
-//        }
+
+        // Chỉ tải vào RAM SAU KHI đã sinh bù xong
+        predictionMap = DataManagerAerospikeFloatSim.getAllMarketAiPredictionsFromAerospike();
         aiRejectFilter = new AIRejectFilter();
+
+        // =====================================================================
+        // 3. KIỂM TRA & CHẠY BÙ FUNDING PREDICTION
+        // =====================================================================
+        LOG.info("🔍 Đang kiểm tra Metadata của Funding Prediction...");
+        // Lưu ý: Đảm bảo Configs.AEROSPIKE_SET_NAME_FUNDING_PRED đúng với tên set của bạn
+        long lastFundingTime = DataManagerAerospikeFloatSim.getLastTimestampFromSet(Configs.AEROSPIKE_SET_NAME_FUNDING_PRED);
+
+        if (lastFundingTime == 0L || lastFundingTime < System.currentTimeMillis() - Utils.TIME_DAY) {
+            LOG.info("⚠️ Funding Prediction Data cần cập nhật (Last: {}). Kích hoạt GenerateFundingPredictionsTool...",
+                    lastFundingTime == 0L ? "NULL" : Utils.normalizeDateYYYYMMDDHHmm(lastFundingTime));
+
+            try {
+                Long timeToRunFunding = (lastFundingTime == 0L) ? null : lastFundingTime;
+                new GenerateFundingPredictionsTool().generateAndSave(timeToRunFunding);
+            } catch (Exception e) {
+                throw new RuntimeException("Lỗi khi chạy GenerateFundingPredictionsTool: " + e.getMessage(), e);
+            }
+        }
+        time2FundingPre = DataManagerAerospikeFloatSim.getAllFundingPredictionsDataFromAerospike();
+
+        LOG.info("✅ TẤT CẢ DỮ LIỆU ĐÃ SẴN SÀNG. BẮT ĐẦU SIMULATE...");
     }
 
     private void startUpdateOldOrderTrading(Long time, String symbol, List<KlineObjectSimple> tickers) {
@@ -669,8 +668,11 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     }
 
 
+    // 🔥 THÊM THAM SỐ time2FundingPre
     public void initDataReady(TreeMap<Long, MarketDataObject> time2MarketData,
-                              TreeMap<Long, AiPredictionData> predictionMap, AIRejectFilter aiRejectFilter) throws OrtException { // <--- THÊM THAM SỐ NÀY
+                              TreeMap<Long, AiPredictionData> predictionMap,
+                              TreeMap<Long, Map<Short, float[]>> time2FundingPre,
+                              AIRejectFilter aiRejectFilter) throws OrtException {
 
         // Reset Data Old
         BudgetManagerSimple.getInstance().resetInstance();
@@ -678,11 +680,9 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
         // Gán dữ liệu cache vào biến của instance
         this.time2MarketData = time2MarketData;
-        this.predictionMap = predictionMap; // <--- GÁN DỮ LIỆU AI
+        this.predictionMap = predictionMap;
+        this.time2FundingPre = time2FundingPre; // 🔥 GÁN BIẾN MỚI
         this.aiRejectFilter = aiRejectFilter;
-//        this.aiRejectFilter = new AIRejectFilter();
-//        this.dcaBrain = new DcaOnnxInferenceManager(Configs.FILE_AI_DCA_PREDICTIONS);
-
     }
 
 

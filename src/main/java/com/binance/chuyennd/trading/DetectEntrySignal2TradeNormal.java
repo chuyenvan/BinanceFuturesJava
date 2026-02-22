@@ -248,7 +248,7 @@ public class DetectEntrySignal2TradeNormal {
                         rateDownAvg, rateUpAvg, rateDown15MAvg, time);
 
                 Set<String> symbol2BUY = new HashSet<>();
-                symbol2BUY.addAll(MarketBigChangeDetector.getTopSymbol(rateDown15M2Symbols, numberOrder,
+                symbol2BUY.addAll(MarketBigChangeDetector.getTopSymbol(numberOrder,
                         symbol2FinalTicker, symbolLocked,sortedCandidates));
 
 

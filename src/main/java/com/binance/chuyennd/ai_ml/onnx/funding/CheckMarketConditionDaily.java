@@ -1,5 +1,6 @@
 package com.binance.chuyennd.ai_ml.onnx.funding;
 
+import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.tradecore.MarketBigChangeDetector;
 import com.binance.chuyennd.utils.Configs;
@@ -33,14 +34,8 @@ public class CheckMarketConditionDaily {
         long targetStart = Utils.sdfFile.parse(targetDateStr).getTime();
         long targetEnd = targetStart + Utils.TIME_DAY;
 
-        LOG.info("📥 Đang đọc file Market Data: {}", Configs.FILE_ENTRY_MARKET_LEVEL);
-        if (!new File(Configs.FILE_ENTRY_MARKET_LEVEL).exists()) {
-            LOG.error("❌ File không tồn tại!");
-            return;
-        }
 
-        TreeMap<Long, MarketDataObject> time2MarketData =
-                (TreeMap<Long, MarketDataObject>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
+        TreeMap<Long, MarketDataObject> time2MarketData = DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
 
         LOG.info("✅ Đã load {} records. Bắt đầu quét...", time2MarketData.size());
 

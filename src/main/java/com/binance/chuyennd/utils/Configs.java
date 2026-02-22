@@ -40,6 +40,8 @@ public class Configs {
         }
     }
 
+    // Thêm dòng này vào Configs.java
+    public static double FUNDING_PRED_MAX_THRESHOLD = 0.2;
     public static Double FUNDING_RATE_MIN_TRADE = -0.01720;      // Param 1
     public static Double FUNDING_RATE_MIN_TRADE_FULL = -0.03234;  // Param 2
     public static Double FUNDING_RATE_UP_AVG = 0.00454;          // Param 3
@@ -141,7 +143,7 @@ public class Configs {
 
     // kaggle
 //    public static String FILE_ENTRY_MARKET_LEVEL = "storage/market_data_one_file/time2market.data";
-    public static String FILE_ENTRY_MARKET_LEVEL = Configs.getString("FILE_ENTRY_MARKET_LEVEL");
+//    public static String FILE_ENTRY_MARKET_LEVEL = Configs.getString("FILE_ENTRY_MARKET_LEVEL");
 
 
     // aerospike

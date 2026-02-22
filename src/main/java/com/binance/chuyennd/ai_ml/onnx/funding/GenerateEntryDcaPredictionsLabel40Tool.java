@@ -77,7 +77,7 @@ public class GenerateEntryDcaPredictionsLabel40Tool {
         String modelPath = "models_funding/Funding_Classifier_Label40_GPU_Simple.onnx";
 
         // Load Data Market Rate
-        TreeMap<Long, MarketDataObject> time2MarketData = loadMarketRateData();
+        TreeMap<Long, MarketDataObject> time2MarketData = DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
 
         LOG.info("📥 Loading Symbol Mapper...");
         Map<String, Short> globalMapper = DataManagerAerospikeFloatSim.loadSymbolMapper();
@@ -128,7 +128,6 @@ public class GenerateEntryDcaPredictionsLabel40Tool {
         String modelPath = "models_funding/Funding_Classifier_Label40_GPU_Simple.onnx";
 
         sharedAiBrain = new EntryDcaOnnxInferenceManager(modelPath);
-        sharedMarketData = (TreeMap<Long, MarketDataObject>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
         Map<String, Short> globalMapper = DataManagerAerospikeFloatSim.loadSymbolMapper();
         sharedSymbolMap = new ConcurrentHashMap<>(globalMapper);
         DataManagerAerospikeFloatSim.setThreadCount(4);
@@ -335,10 +334,5 @@ public class GenerateEntryDcaPredictionsLabel40Tool {
                 marketData.rateDown15MAvg, marketData.rateDownAvg, marketData.rateUpAvg, minRate15Min60M);
     }
 
-    private TreeMap<Long, MarketDataObject> loadMarketRateData() throws Exception {
-        if (!new File(Configs.FILE_ENTRY_MARKET_LEVEL).exists()) {
-            return new TreeMap<>();
-        }
-        return (TreeMap<Long, MarketDataObject>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
-    }
+
 }

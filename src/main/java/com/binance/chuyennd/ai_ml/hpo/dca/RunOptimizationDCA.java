@@ -1,9 +1,6 @@
 package com.binance.chuyennd.ai_ml.hpo.dca;
 
-import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.research.FundingFeeManager;
-import com.binance.chuyennd.utils.Configs;
-import com.binance.chuyennd.utils.StorageSnappy;
 import io.jenetics.DoubleChromosome;
 import io.jenetics.DoubleGene;
 import io.jenetics.Genotype;
@@ -11,11 +8,7 @@ import io.jenetics.engine.Engine;
 import io.jenetics.engine.EvolutionResult;
 import io.jenetics.util.DoubleRange;
 
-import java.io.File;
 import java.time.Duration;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -30,8 +23,7 @@ public class RunOptimizationDCA {
 
     // === CACHE DU LIEU ===
 
-    public static TreeMap<Long, MarketDataObject> CACHED_time2MarketData;
-    public static ConcurrentHashMap<Long, Set<String>> CACHED_time2FundingFeeTrade;
+
 
 
     /**
@@ -93,15 +85,6 @@ public class RunOptimizationDCA {
         // (Giu nguyen code tai cache cua ban)
         try {
             System.out.println("Dang tai du lieu vao bo nho (1 lan duy nhat)...");
-            CACHED_time2MarketData = (TreeMap<Long, MarketDataObject>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
-
-
-            if (new File(FundingFeeManager.FILE_FUNDING_FEE).exists()) {
-                CACHED_time2FundingFeeTrade = (ConcurrentHashMap<Long, Set<String>>) StorageSnappy.readObjectFromFile(FundingFeeManager.FILE_FUNDING_FEE);
-            } else {
-                CACHED_time2FundingFeeTrade = new ConcurrentHashMap<>();
-            }
-            // ... (tai 2 file funding con lai) ...
 
             // Goi de tai symbol2FundingFee vao bo nho
             FundingFeeManager.getInstance();

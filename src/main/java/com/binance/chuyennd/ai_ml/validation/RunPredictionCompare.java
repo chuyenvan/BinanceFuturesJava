@@ -51,7 +51,7 @@ public class RunPredictionCompare {
         LOG.info("🔥 START WARM-UP (Previous Day Data)...");
         TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers =
                 DataManagerAerospikeFloatSim.readDataFromAerospikeCustom(
-                        startTime- 1500 * Utils.TIME_MINUTE, 1500);
+                        startTime - 1500 * Utils.TIME_MINUTE, 1500);
         this.featureExtractor.initDataFromTickerMap(time2Tickers);
         LOG.info("✅ Warm-up Finished.. {} {} {}", time2Tickers.size(),
                 Utils.normalizeDateYYYYMMDDHHmm(time2Tickers.firstKey()), Utils.normalizeDateYYYYMMDDHHmm(time2Tickers.lastKey()));
@@ -211,10 +211,6 @@ public class RunPredictionCompare {
         FundingFeeManager.getInstance();
         this.aiBrain = new OnnxInferenceManager(MODEL_DIR);
         this.featureExtractor = new ComprehensiveMarketFeatureExtractor();
-        if (new File(Configs.FILE_ENTRY_MARKET_LEVEL).exists()) {
-            this.time2Rate = (TreeMap<Long, MarketDataObject>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
-        } else {
-            this.time2Rate = new TreeMap<>();
-        }
+        this.time2Rate = DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
     }
 }

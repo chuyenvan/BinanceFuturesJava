@@ -11,8 +11,10 @@ import com.aerospike.client.policy.RecordExistsAction;
 import com.aerospike.client.policy.ScanPolicy;
 import com.aerospike.client.policy.WritePolicy;
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
+import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.utils.Configs;
+import com.binance.chuyennd.utils.StorageSnappy;
 import com.binance.chuyennd.utils.Utils;
 
 // --- QUAN TRỌNG: Import Proto MỚI (Float + No Time) ---
@@ -38,7 +40,8 @@ public class DataManagerAerospikeFloatSim {
     // Đổi sang Set mới đã tối ưu
     private static final String AEROSPIKE_SET_NAME_TICKER = "kline_1m_opt";
     private static final String AEROSPIKE_SET_NAME_PRICE = "price_realtime";
-    private static final String AEROSPIKE_SET_NAME_FUNDINGFEE = "funding_data";
+    public static final String AEROSPIKE_SET_NAME_FUNDINGFEE = "funding_data";
+    public static final String AEROSPIKE_SET_NAME_MARKET_DATA = "market_data_object";
 
     // set name 226
     private static final String AEROSPIKE_SET_NAME_FUNDING_PRED = Configs.AEROSPIKE_SET_NAME_FUNDING_PRED;
@@ -48,9 +51,9 @@ public class DataManagerAerospikeFloatSim {
     private static final String AEROSPIKE_SET_NAME_MAPPER = "symbol_mapper"; // Set name mới
     private static final String MAPPER_KEY_GLOBAL = "global_id_map";         // Key chứa Map
     private static final String MAPPER_BIN_NAME = "data";                    // Tên Bin chứa Map
-    private static final String AEROSPIKE_SET_NAME_AI_PRED_1M = "ai_pred_1m";
+    public static final String AEROSPIKE_SET_NAME_AI_PRED_1M = "ai_pred_1m";
     // 🔥 SET NAME MỚI CHO AI PREDICT
-    private static final String AEROSPIKE_SET_NAME_DCA_PRED = "dca_pred_1m";
+    public static final String AEROSPIKE_SET_NAME_DCA_PRED = "dca_pred_1m";
     private static volatile AerospikeClient client242;
     private static final BatchPolicy batchPolicy = new BatchPolicy();
     private static final int BATCH_CHUNK_SIZE = 2000;
@@ -1510,6 +1513,246 @@ public class DataManagerAerospikeFloatSim {
             } catch (Exception e) {
                 e.printStackTrace();
             }
+        }
+        return results;
+    }
+    // =========================================================================
+    // 🔥 MARKET AI PREDICTIONS (ENTRY PREDICTIONS) - SET: ai_pred_market
+    // =========================================================================
+    public static final String AEROSPIKE_SET_NAME_AI_PRED_MARKET = "ai_pred_market";
+
+    /**
+     * Ghi một Batch (Nhiều phút) kết quả Market AI Prediction vào Aerospike
+     */
+    public static void saveMarketAiPredictionsBatch(Map<Long, AiPredictionData> predictions) {
+        if (predictions == null || predictions.isEmpty()) return;
+        try {
+            SimpleDateFormat fmt = new SimpleDateFormat("yyyyMMdd-HHmm");
+            for (Map.Entry<Long, AiPredictionData> entry : predictions.entrySet()) {
+                long timestamp = entry.getKey();
+                AiPredictionData data = entry.getValue();
+
+                String keyString = fmt.format(new Date(timestamp));
+                Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_AI_PRED_MARKET, keyString);
+
+                // Serialize: Object -> JSON -> Bytes -> Snappy
+                String json = Utils.gson.toJson(data);
+                byte[] rawBytes = json.getBytes("UTF-8");
+                byte[] compressed = Snappy.compress(rawBytes);
+
+                // Dùng client226 để san tải giống Funding
+                getClient226().put(writePolicy, key, new Bin("data", compressed));
+            }
+        } catch (Exception e) {
+            LOG.error("❌ Error saving Market AI Pred Batch: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Kiểm tra nhanh danh sách timestamp đã có Market AI Prediction chưa
+     */
+    public static Set<Long> checkExistingMarketAiPredictions(List<Long> timestamps) {
+        Set<Long> existing = new HashSet<>();
+        if (timestamps == null || timestamps.isEmpty()) return existing;
+
+        try {
+            SimpleDateFormat fmt = new SimpleDateFormat("yyyyMMdd-HHmm");
+            Key[] keys = new Key[timestamps.size()];
+
+            for (int i = 0; i < timestamps.size(); i++) {
+                String keyString = fmt.format(new Date(timestamps.get(i)));
+                keys[i] = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_AI_PRED_MARKET, keyString);
+            }
+
+            // Batch Exists: Chỉ kiểm tra metadata, rất nhanh
+            boolean[] existsArray = getClient226().exists(batchPolicy, keys);
+
+            for (int i = 0; i < existsArray.length; i++) {
+                if (existsArray[i]) {
+                    existing.add(timestamps.get(i));
+                }
+            }
+        } catch (Exception e) {
+            LOG.error("❌ Error checking Market AI Pred existence: {}", e.getMessage());
+        }
+        return existing;
+    }
+
+    /**
+     * HÀM ĐỌC FULL: Tải toàn bộ dữ liệu Market AI Prediction (Entry) từ Aerospike
+     * Thay thế hoàn toàn cho việc đọc file Snappy Configs.FILE_AI_ENTRY_PREDICTIONS
+     */
+    public static TreeMap<Long, AiPredictionData> getAllMarketAiPredictionsFromAerospike() {
+        TreeMap<Long, AiPredictionData> results = new TreeMap<>();
+        try {
+            LOG.info("📥 Đang tải FULL Market AI Predictions từ Aerospike (Set: {})...", AEROSPIKE_SET_NAME_AI_PRED_MARKET);
+
+            ScanPolicy scanPolicy = new ScanPolicy();
+            scanPolicy.concurrentNodes = true; // Quét song song đa luồng từ các node
+
+            // Dùng client226 vì lúc save chúng ta đã lưu vào client226
+            getClient226().scanAll(scanPolicy, Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_AI_PRED_MARKET, (key, record) -> {
+                try {
+                    byte[] compressed = (byte[]) record.getValue("data");
+                    if (compressed != null) {
+                        // Giải nén Snappy và parse JSON
+                        String json = new String(Snappy.uncompress(compressed), "UTF-8");
+                        AiPredictionData data = Utils.gson.fromJson(json, AiPredictionData.class);
+
+                        // Object AiPredictionData đã chứa sẵn timestamp, ta lấy làm key luôn
+                        if (data != null && data.timestamp > 0) {
+                            results.put(data.timestamp, data);
+                        }
+                    }
+                } catch (Exception e) {
+                    // Bỏ qua các record lỗi cục bộ để không chết toàn bộ tiến trình
+                }
+            }, "data");
+
+            LOG.info("✅ Đã tải xong {} records Market AI Predictions từ Aerospike.", results.size());
+        } catch (Exception e) {
+            LOG.error("❌ Lỗi khi Scan Market AI Predictions", e);
+        }
+        return results;
+    }
+    /**
+     * Ghi một Batch Market Data vào Aerospike (Dùng cho ExportMarketData2File)
+     */
+    public static void saveMarketDataBatch(Map<Long, MarketDataObject> dataMap) {
+        if (dataMap == null || dataMap.isEmpty()) return;
+        try {
+            SimpleDateFormat fmt = new SimpleDateFormat("yyyyMMdd-HHmm");
+            dataMap.entrySet().parallelStream().forEach(entry -> {
+                try {
+                    long timestamp = entry.getKey();
+                    MarketDataObject data = entry.getValue();
+
+                    String keyString = fmt.format(new Date(timestamp));
+                    Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_MARKET_DATA, keyString);
+
+                    String json = Utils.gson.toJson(data);
+                    byte[] compressed = Snappy.compress(json.getBytes("UTF-8"));
+
+                    getClient226().put(writePolicy, key,
+                            new Bin("data", compressed),
+                            new Bin("time", timestamp) // Lưu time để sau scanAll lấy lại làm Key
+                    );
+                } catch (Exception e) {
+                    LOG.error("❌ Error saving Market Data at {}: {}", entry.getKey(), e.getMessage());
+                }
+            });
+        } catch (Exception e) {
+            LOG.error("❌ Error in saveMarketDataBatch", e);
+        }
+    }
+    // =========================================================================
+    // 🔥 MARKET DATA LEVEL (Thay thế market_level.snappy)
+    // =========================================================================
+
+    /**
+     * HÀM CHẠY 1 LẦN: Chuyển toàn bộ dữ liệu từ File snappy lên Aerospike
+     */
+
+    /**
+     * HÀM ĐỌC FULL: Tải toàn bộ dữ liệu thay thế cho đọc File (Dùng trong initData của Simulator)
+     */
+    public static TreeMap<Long, MarketDataObject> getAllMarketDataFromAerospike() {
+        TreeMap<Long, MarketDataObject> results = new TreeMap<>();
+        try {
+            LOG.info("📥 Đang tải FULL Market Data từ Aerospike (Thay thế File)...");
+            ScanPolicy scanPolicy = new ScanPolicy();
+            scanPolicy.concurrentNodes = true; // Quét song song đa luồng từ các node AS
+
+            getClient226().scanAll(scanPolicy, Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_MARKET_DATA, (key, record) -> {
+                try {
+                    Long timestamp = record.getLong("time");
+                    byte[] compressed = (byte[]) record.getValue("data");
+
+                    if (timestamp != null && compressed != null) {
+                        String json = new String(Snappy.uncompress(compressed), "UTF-8");
+                        MarketDataObject data = Utils.gson.fromJson(json, MarketDataObject.class);
+                        results.put(timestamp, data);
+                    }
+                } catch (Exception e) {
+                    // Bỏ qua các record bị lỗi format nếu có
+                }
+            }, "data", "time");
+
+            LOG.info("✅ Đã tải xong {} records Market Data từ Aerospike.", results.size());
+        } catch (Exception e) {
+            LOG.error("❌ Lỗi khi Scan Market Data", e);
+        }
+        return results;
+    }
+
+    public static long getLastTimestampFromSet(String setName) {
+        final long[] maxTime = {0L};
+        try {
+            ScanPolicy scanPolicy = new ScanPolicy();
+            scanPolicy.concurrentNodes = true;
+            // 🔥 ĐIỂM QUAN TRỌNG NHẤT: Bỏ qua Data, chỉ kéo Metadata (Key) về
+            scanPolicy.includeBinData = false;
+
+            getClient226().scanAll(scanPolicy, Configs.AEROSPIKE_NAMESPACE, setName, (key, record) -> {
+                if (key.userKey != null) {
+                    try {
+                        String keyStr = key.userKey.toString();
+                        // Format chuẩn mà chúng ta đã lưu
+                        SimpleDateFormat fmt = new SimpleDateFormat("yyyyMMdd-HHmm");
+                        long time = fmt.parse(keyStr).getTime();
+
+                        // Dùng synchronized vì scanAll chạy đa luồng
+                        synchronized (maxTime) {
+                            if (time > maxTime[0]) {
+                                maxTime[0] = time;
+                            }
+                        }
+                    } catch (Exception e) {
+                        // Bỏ qua lỗi parse của các key không hợp lệ
+                    }
+                }
+            });
+        } catch (Exception e) {
+            LOG.error("❌ Error scanning metadata for set: " + setName, e);
+        }
+        return maxTime[0];
+    }
+    /**
+     * HÀM ĐỌC FULL DATA: Tải toàn bộ Funding Predictions từ Aerospike vào RAM cho Simulator.
+     */
+    public static TreeMap<Long, Map<Short, float[]>> getAllFundingPredictionsDataFromAerospike() {
+        TreeMap<Long, Map<Short, float[]>> results = new TreeMap<>();
+        try {
+            LOG.info("📥 Đang tải FULL dữ liệu Funding Predictions từ Aerospike (Set: {})...", AEROSPIKE_SET_NAME_FUNDING_PRED);
+            ScanPolicy scanPolicy = new ScanPolicy();
+            scanPolicy.concurrentNodes = true;
+            // Mặc định scanPolicy.includeBinData = true nên sẽ lấy được cột "data"
+
+            getClient226().scanAll(scanPolicy, Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_FUNDING_PRED, (key, record) -> {
+                try {
+                    if (key.userKey != null) {
+                        String keyStr = key.userKey.toString();
+                        SimpleDateFormat fmt = new SimpleDateFormat("yyyyMMdd-HHmm");
+                        long timestamp = fmt.parse(keyStr).getTime();
+
+                        byte[] compressed = (byte[]) record.getValue("data");
+                        if (compressed != null) {
+                            byte[] rawBytes = Snappy.uncompress(compressed);
+                            String json = new String(rawBytes, "UTF-8");
+                            Map<Short, float[]> data = Utils.gson.fromJson(json, new com.google.gson.reflect.TypeToken<Map<Short, float[]>>() {}.getType());
+
+                            results.put(timestamp, data);
+                        }
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    // Bỏ qua lỗi parse cục bộ
+                }
+            }, "data");
+
+            LOG.info("✅ Đã tải xong {} records Funding Predictions.", results.size());
+        } catch (Exception e) {
+            LOG.error("❌ Lỗi khi Scan Full Funding Predictions Data", e);
         }
         return results;
     }

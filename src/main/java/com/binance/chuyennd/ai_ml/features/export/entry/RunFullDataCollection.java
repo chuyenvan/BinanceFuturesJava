@@ -30,7 +30,7 @@ public class RunFullDataCollection {
                 new EnhancedTrainingDataCollectionManager("storage/training_data_big_sequential");
 
         LOG.info("🚀 LOADING MARKET RATES...");
-        TreeMap<Long, MarketDataObject> time2Rate = loadMarketRateData();
+        TreeMap<Long, MarketDataObject> time2Rate = DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
 
         long currentTime = Utils.sdfFile.parse("20210101").getTime();
         long endTime = System.currentTimeMillis();
@@ -170,8 +170,5 @@ public class RunFullDataCollection {
         if (worstBasketDrawdown < -1.0) return -1.0;
         return worstBasketDrawdown;
     }
-    private TreeMap<Long, MarketDataObject> loadMarketRateData() throws Exception {
-        if (!new File(Configs.FILE_ENTRY_MARKET_LEVEL).exists()) return new TreeMap<>();
-        return (TreeMap<Long, MarketDataObject>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
-    }
+
 }

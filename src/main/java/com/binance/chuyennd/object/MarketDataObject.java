@@ -10,9 +10,8 @@ public class MarketDataObject implements Serializable {
     public Float rateDown15MAvg;
     public Float rateUpAvg;
     public Float rateBtc;
-    // Trường mới thêm theo yêu cầu
-    public Double btcReversion;
-    public TreeMap<Float, Short> rate2Max;
+
+
 
 
     public MarketDataObject(Float rateDownAvg, Float rateUpAvg, Float rateDown15MAvg) {
@@ -24,12 +23,11 @@ public class MarketDataObject implements Serializable {
 
     // Constructor đầy đủ để merge dữ liệu
     public MarketDataObject(Float rateDownAvg, Float rateDown15MAvg, Float rateUpAvg,
-                            Float rateBtc, Double btcReversion, TreeMap<Float, Short> rate2Max) {
+                            Float rateBtc) {
         this.rateDownAvg = rateDownAvg;
         this.rateDown15MAvg = rateDown15MAvg;
         this.rateUpAvg = rateUpAvg;
         this.rateBtc = rateBtc;
-        this.btcReversion = btcReversion;
-        this.rate2Max = rate2Max;
+
     }
 }

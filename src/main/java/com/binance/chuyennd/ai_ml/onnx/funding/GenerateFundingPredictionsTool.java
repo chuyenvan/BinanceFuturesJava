@@ -77,7 +77,7 @@ public class GenerateFundingPredictionsTool {
         String modelPath = "models_funding/Funding_Classifier_Final_Fixed.onnx";
 
         // Load Data Market Rate
-        TreeMap<Long, MarketDataObject> time2MarketData = loadMarketRateData();
+        TreeMap<Long, MarketDataObject> time2MarketData =  DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
 
         LOG.info("📥 Loading Symbol Mapper...");
         Map<String, Short> globalMapper = DataManagerAerospikeFloatSim.loadSymbolMapper();
@@ -315,11 +315,32 @@ public class GenerateFundingPredictionsTool {
         return MarketBigChangeDetector.isFundingFeeTrade(
                 marketData.rateDown15MAvg, marketData.rateDownAvg, marketData.rateUpAvg, minRate15Min60M);
     }
+    // --- THÊM HÀM NÀY CHO SIMULATOR GỌI (CHẠY BÙ) ---
+    public void generateAndSave(Long lastTimestamp) throws Exception {
+        String modelPath = "models_funding/Funding_Classifier_Final_Fixed.onnx";
 
-    private TreeMap<Long, MarketDataObject> loadMarketRateData() throws Exception {
-        if (!new File(Configs.FILE_ENTRY_MARKET_LEVEL).exists()) {
-            return new TreeMap<>();
+        // Tải Market Data để dùng làm base check isMet
+        TreeMap<Long, MarketDataObject> time2MarketData = DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
+
+        LOG.info("📥 Loading Symbol Mapper cho Funding Tool...");
+        Map<String, Short> globalMapper = DataManagerAerospikeFloatSim.loadSymbolMapper();
+        final ConcurrentHashMap<String, Short> symbolMap = new ConcurrentHashMap<>(globalMapper);
+
+        long currentTime;
+        if (lastTimestamp != null && lastTimestamp > 0) {
+            currentTime = Utils.getDate(lastTimestamp); // Lùi về đầu ngày đó
+            LOG.info("🔄 Resuming Funding Predictions từ ngày: {}", Utils.normalizeDateYYYYMMDDHHmm(currentTime));
+        } else {
+            currentTime = Utils.sdfFile.parse("20210101").getTime();
+            LOG.info("🚀 STARTING FUNDING PREDICTION GENERATION FROM SCRATCH...");
         }
-        return (TreeMap<Long, MarketDataObject>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
+
+        long endTime = System.currentTimeMillis();
+
+        try (FundingOnnxInferenceManager aiBrain = new FundingOnnxInferenceManager(modelPath)) {
+            // Tận dụng lại hàm generateToAerospike đã có logic Warmup và Check Existing rất xịn
+            generateToAerospike(currentTime, endTime, aiBrain, time2MarketData, symbolMap);
+        }
     }
+
 }

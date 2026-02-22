@@ -118,14 +118,13 @@ public class MarketBigChangeDetector {
 //                Configs.NUMBER_ENTRY_EACH_SIGNAL, null);
         MarketDataObject result = new MarketDataObject(rateChangeDownAvg, rateChangeUpAvg, rateChangeDown15MAvg);
         result.rateBtc = rateChangeBtc.floatValue();
-        result.rate2Max = SimpleSymbolMapper.getInstance().convertSymbolList(rateMax2Symbols);
         result.rateDown15MAvg = rateChangeDown15MAvg.floatValue();
 
 
         return result;
     }
 
-    public static Set<String> getTopSymbol(TreeMap<Float, String> rateLoss2Symbols, int period, Map<String,
+    public static Set<String> getTopSymbol( int period, Map<String,
             KlineObjectSimple> symbol2FinalTicker, Set<String> symbolLocked, TreeMap<Float, String> predict2Symbol) {
         Set<String> symbols = new HashSet<>();
         if (predict2Symbol != null && !predict2Symbol.isEmpty()) {
@@ -145,22 +144,6 @@ public class MarketBigChangeDetector {
                 }
             }
 
-        } else {
-            for (Map.Entry<Float, String> entry : rateLoss2Symbols.entrySet()) {
-                String symbol = entry.getValue();
-                if (symbolLocked != null && symbolLocked.contains(symbol)) {
-//                LOG.info("Not trade {} because symbol locking: {}",
-//                        symbol, Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()));
-                    continue;
-                }
-                KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
-                if (ticker != null) {
-                    symbols.add(symbol);
-                }
-                if (symbols.size() >= period) {
-                    break;
-                }
-            }
         }
         return symbols;
     }

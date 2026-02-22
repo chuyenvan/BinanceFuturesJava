@@ -1,10 +1,10 @@
 package com.binance.chuyennd.ai_ml.hpo.fundingfee;
 
+import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.research.FundingFeeManager;
 import com.binance.chuyennd.utils.Configs;
-import com.binance.chuyennd.utils.StorageSnappy;
 import io.jenetics.*;
 import io.jenetics.engine.Engine;
 import io.jenetics.engine.EvolutionResult;
@@ -13,9 +13,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
-import java.util.Set;
+import java.util.Map;
 import java.util.TreeMap;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -23,41 +22,34 @@ public class RunOptimizationFundingFee {
 
     private static final Logger LOG = LoggerFactory.getLogger(RunOptimizationFundingFee.class);
 
-    // CẤU HÌNH SỐ LƯỢNG CHẠY
     private static final int POPULATION_SIZE = 20;
     private static final int GENERATIONS = 30;
     private static final AtomicLong testCounter = new AtomicLong(0);
     private static final long TOTAL_TRIALS = POPULATION_SIZE * GENERATIONS;
 
-    // DATA STORE
     public static TreeMap<Long, MarketDataObject> time2MarketData;
     public static TreeMap<Long, AiPredictionData> predictionMap;
-    public static ConcurrentHashMap<Long, Set<String>> CACHED_time2FundingFeeTrade;
+    public static TreeMap<Long, Map<Short, float[]>> time2FundingPre; // 🔥 THÊM BIẾN NÀY
 
     public static void main(String[] args) {
         LOG.info("=== BẮT ĐẦU TỐI ƯU HÓA FUNDING FEE PARAMETERS ===");
         try {
-            Configs.TIME_RUN = "20250101"; // Cấu hình thời gian chạy giả lập
+            Configs.TIME_RUN = "20250101";
             loadAndWarmUpData();
         } catch (Exception e) {
             e.printStackTrace();
             return;
         }
 
-        // 1. ĐỊNH NGHĨA GEN (4 Tham số)
-        // Param 0: FUNDING_RATE_MIN_TRADE (Default: -0.025)
-        // Param 1: FUNDING_RATE_MIN_TRADE_FULL (Default: -0.03)
-        // Param 2: FUNDING_RATE_UP_AVG (Default: 0.005)
-        // Param 3: FUNDING_RATE_DOWN_AVG (Default: -0.005)
+        // 1. ĐỊNH NGHĨA GEN (5 Tham số)
         Factory<Genotype<DoubleGene>> gtf = Genotype.of(
-                DoubleChromosome.of(-0.04, -0.015), // Range MinTrade
-                DoubleChromosome.of(-0.05, -0.02),  // Range MinTradeFull
-                DoubleChromosome.of(0.004, 0.012),  // Range UpAvg
-                DoubleChromosome.of(-0.012, -0.004) // Range DownAvg
+                DoubleChromosome.of(-0.04, -0.015), // 0: MinTrade
+                DoubleChromosome.of(-0.05, -0.02),  // 1: MinTradeFull
+                DoubleChromosome.of(0.004, 0.012),  // 2: UpAvg
+                DoubleChromosome.of(-0.012, -0.004),// 3: DownAvg
+                DoubleChromosome.of(0.1, 0.5)       // 🔥 4: AI Funding Threshold (Tìm từ 10% đến 50%)
         );
 
-        // 2. CẤU HÌNH ENGINE
-        // Quan trọng: Dùng singleThreadExecutor vì Configs là static global
         Engine<DoubleGene, Double> engine = Engine.builder(RunOptimizationFundingFee::eval, gtf)
                 .populationSize(POPULATION_SIZE)
                 .survivorsSelector(new TournamentSelector<>(3))
@@ -66,7 +58,6 @@ public class RunOptimizationFundingFee {
                 .executor(Executors.newSingleThreadExecutor())
                 .build();
 
-        // 3. CHẠY
         long startTime = System.currentTimeMillis();
         EvolutionResult<DoubleGene, Double> bestResult = engine.stream()
                 .limit(GENERATIONS)
@@ -76,7 +67,6 @@ public class RunOptimizationFundingFee {
                 })
                 .collect(EvolutionResult.toBestEvolutionResult());
 
-        // 4. IN KẾT QUẢ
         long totalTime = System.currentTimeMillis() - startTime;
         Genotype<DoubleGene> bestGt = bestResult.bestPhenotype().genotype();
 
@@ -89,6 +79,7 @@ public class RunOptimizationFundingFee {
         System.out.printf("Configs.FUNDING_RATE_MIN_TRADE_FULL = %.5f;%n", bestGt.get(1).gene().doubleValue());
         System.out.printf("Configs.FUNDING_RATE_UP_AVG         = %.5f;%n", bestGt.get(2).gene().doubleValue());
         System.out.printf("Configs.FUNDING_RATE_DOWN_AVG       = %.5f;%n", bestGt.get(3).gene().doubleValue());
+        System.out.printf("Configs.FUNDING_PRED_MAX_THRESHOLD  = %.5f;%n", bestGt.get(4).gene().doubleValue());
         System.out.println("=============================================");
     }
 
@@ -99,20 +90,20 @@ public class RunOptimizationFundingFee {
         double pMinFull = gt.get(1).gene().doubleValue();
         double pUpAvg = gt.get(2).gene().doubleValue();
         double pDownAvg = gt.get(3).gene().doubleValue();
+        double pFundingPred = gt.get(4).gene().doubleValue(); // Lấy gen thứ 5
 
-        // Ràng buộc logic: MinFull phải bé hơn MinTrade (điều kiện khắt khe hơn thì số âm phải bé hơn)
         if (pMinFull > pMinTrade) return -10000.0;
 
         try {
-            // Khởi tạo Engine, nó sẽ tự update Configs
             BackTestEngineFundingFee engine = new BackTestEngineFundingFee(
-                    pMinTrade, pMinFull, pUpAvg, pDownAvg
+                    pMinTrade, pMinFull, pUpAvg, pDownAvg, pFundingPred
             );
 
-            double score = engine.run(time2MarketData, predictionMap);
+            // 🔥 Truyền đủ 3 bộ RAM vào
+            double score = engine.run(time2MarketData, predictionMap, time2FundingPre);
 
-            System.out.printf("Trial #%d/%d: Score=%.2f | Params: %.4f, %.4f, %.4f, %.4f%n",
-                    c, TOTAL_TRIALS, score, pMinTrade, pMinFull, pUpAvg, pDownAvg);
+            System.out.printf("Trial #%d/%d: Score=%.2f | Param: %.4f, %.4f, %.4f, %.4f, Thresh: %.4f%n",
+                    c, TOTAL_TRIALS, score, pMinTrade, pMinFull, pUpAvg, pDownAvg, pFundingPred);
 
             return score;
 
@@ -123,11 +114,14 @@ public class RunOptimizationFundingFee {
     }
 
     private static void loadAndWarmUpData() throws Exception {
-        System.out.println("Đang load dữ liệu vào RAM...");
-        CACHED_time2FundingFeeTrade = (ConcurrentHashMap<Long, Set<String>>) StorageSnappy.readObjectFromFile(FundingFeeManager.FILE_FUNDING_FEE);
-        time2MarketData = (TreeMap<Long, MarketDataObject>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
-        predictionMap = (TreeMap<Long, AiPredictionData>) StorageSnappy.readObjectFromFile(Configs.FILE_AI_ENTRY_PREDICTIONS);
+        System.out.println("🚀 Đang load TẤT CẢ dữ liệu từ Aerospike vào RAM...");
+
+        // 🔥 ĐỌC THẲNG TỪ AEROSPIKE (KHÔNG CẦN CHỜ CHECK SINH BÙ NỮA)
+        time2MarketData = DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
+        predictionMap = DataManagerAerospikeFloatSim.getAllMarketAiPredictionsFromAerospike();
+        time2FundingPre = DataManagerAerospikeFloatSim.getAllFundingPredictionsDataFromAerospike();
+
         FundingFeeManager.getInstance();
-        System.out.println("Load dữ liệu thành công.");
+        System.out.println("✅ Load dữ liệu vào RAM thành công.");
     }
 }

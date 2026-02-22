@@ -18,84 +18,80 @@ import java.util.*;
 
 public class RunGeneratePredictions {
     private static final Logger LOG = LoggerFactory.getLogger(RunGeneratePredictions.class);
-    private static final String MODEL_DIR = "../storage/ai_ml_data/ai_models_reg_v3";
+    private static final String MODEL_DIR = "../storage/ai_ml_data/ai_models_reg_v3"; // Sửa lại đường dẫn model nếu cần
 
     public static void main(String[] args) {
         try {
             System.setProperty("ai.onnxruntime.disable_telemetry", "true");
+            System.setProperty("java.util.concurrent.ForkJoinPool.common.parallelism", "4");
+            DataManagerAerospikeFloatSim.setThreadCount(4);
+
             FundingFeeManager.getInstance();
-            new RunGeneratePredictions().generateAndSave();
+            // Truyền null để chạy từ đầu nếu chạy file này độc lập
+            new RunGeneratePredictions().generateAndSave(null);
         } catch (Exception e) {
             LOG.error("Main error", e);
         }
     }
 
-    public void generateAndSave() throws Exception {
+    // Thêm tham số lastTimestamp
+    public void generateAndSave(Long lastTimestamp) throws Exception {
         OnnxInferenceManager aiBrain = new OnnxInferenceManager(MODEL_DIR);
         ComprehensiveMarketFeatureExtractor featureExtractor = new ComprehensiveMarketFeatureExtractor();
 
-        LOG.info("Loading Market Rates...");
+        LOG.info("📥 Loading Market Rates từ Aerospike...");
         TreeMap<Long, MarketDataObject> time2Rate = loadMarketRateData();
 
-        TreeMap<Long, AiPredictionData> predictionMap = new TreeMap<>();
+        long currentTime;
+        if (lastTimestamp != null && lastTimestamp > 0) {
+            // Lùi về 00:00:00 của ngày chứa bản ghi cuối cùng để quét cho chắc chắn
+            currentTime = Utils.getDate(lastTimestamp);
+            LOG.info("🔄 Resuming Market AI Predictions từ ngày: {}", Utils.normalizeDateYYYYMMDDHHmm(currentTime));
+        } else {
+            currentTime = Utils.sdfFile.parse("20210101").getTime();
+            LOG.info("🚀 STARTING MARKET AI PREDICTION GENERATION FROM SCRATCH...");
+        }
 
-        long currentTime = Utils.sdfFile.parse("20210101").getTime();
         long endTime = System.currentTimeMillis();
-
-        LOG.info("🚀 STARTING PREDICTION GENERATION (YEARLY SAVE MODE)...");
-
-        Calendar cal = Calendar.getInstance();
-        cal.setTimeInMillis(currentTime);
-        int currentYearProcessing = cal.get(Calendar.YEAR);
-
         int processedDays = 0;
 
         while (currentTime <= endTime) {
             try {
-                cal.setTimeInMillis(currentTime);
-                int yearOfToday = cal.get(Calendar.YEAR);
+                // 1. Tạo danh sách các phút trong ngày để kiểm tra Aerospike
+                List<Long> timestampsToCheck = new ArrayList<>();
+                for (int i = 0; i < 1440; i++) {
+                    timestampsToCheck.add(currentTime + i * Utils.TIME_MINUTE);
+                }
 
-                // --- 🆕 ĐOẠN CODE MỚI THÊM: CHECK FILE EXISTING ---
-                // Kiểm tra nếu file của năm nay đã có trên ổ cứng thì bỏ qua cả năm luôn
-                String expectedFileName = Configs.FILE_AI_ENTRY_PREDICTIONS + "_" + yearOfToday;
-                if (new File(expectedFileName).exists()) {
-                    LOG.info("⏩ File data năm {} đã tồn tại ({}). Skip qua năm tiếp theo...", yearOfToday, expectedFileName);
+                // 2. Check xem các phút này ĐÃ TỒN TẠI trong Aerospike chưa
+                Set<Long> existingTimestamps = DataManagerAerospikeFloatSim.checkExistingMarketAiPredictions(timestampsToCheck);
 
-                    // Nhảy thời gian sang ngày 1 tháng 1 năm sau
-                    cal.set(Calendar.YEAR, yearOfToday + 1);
-                    cal.set(Calendar.DAY_OF_YEAR, 1);
-                    cal.set(Calendar.HOUR_OF_DAY, 0);
-                    cal.set(Calendar.MINUTE, 0);
-                    cal.set(Calendar.SECOND, 0);
-                    cal.set(Calendar.MILLISECOND, 0);
-
-                    currentTime = cal.getTimeInMillis();
-
-                    // Cập nhật biến theo dõi năm để logic phía dưới không bị loạn khi bắt đầu năm mới
-                    currentYearProcessing = yearOfToday + 1;
+                // Nếu cả ngày đều đã có data -> Bỏ qua toàn bộ ngày
+                if (existingTimestamps.size() >= 1440) {
+                    LOG.info("⏩ Day {} already fully generated ({} records). Skipping...",
+                            Utils.normalizeDateYYYYMMDD(currentTime), existingTimestamps.size());
+                    currentTime += Utils.TIME_DAY;
                     continue;
                 }
-                // --------------------------------------------------
 
-                // 1. Kiểm tra chuyển giao năm (Năm cũ qua năm mới)
-                if (yearOfToday > currentYearProcessing) {
-                    saveAndClear(currentYearProcessing, predictionMap);
-                    currentYearProcessing = yearOfToday;
-                }
-
-                // 2. Load Data
+                // 3. Đọc nến 1M của ngày hôm nay từ Aerospike (Dùng Custom để chuẩn giờ 00:00:00)
                 TreeMap<Long, Map<String, KlineObjectSimple>> todayData =
-                        DataManagerAerospikeFloatSim.readDataFromAerospike1M(currentTime);
+                        DataManagerAerospikeFloatSim.readDataFromAerospikeCustom(currentTime, 1440);
 
-                TreeMap<Long, Map<String, KlineObjectSimple>> lookupData = todayData;
+                Map<Long, AiPredictionData> batchPredictions = new HashMap<>();
 
                 if (todayData != null && !todayData.isEmpty()) {
                     for (Map.Entry<Long, Map<String, KlineObjectSimple>> entry : todayData.entrySet()) {
                         Long timestamp = entry.getKey();
+
+                        if (existingTimestamps.contains(timestamp)) {
+                            continue;
+                        }
+
                         Map<String, KlineObjectSimple> marketData = entry.getValue();
                         MarketDataObject rateChange = time2Rate.get(timestamp);
 
-                        List<String> targetBasket = findTop50LosersFromPeak15m(lookupData, timestamp);
+                        List<String> targetBasket = findTop50LosersFromPeak15m(todayData, timestamp);
 
                         if (targetBasket.size() >= 3) {
                             MarketFeatures features = featureExtractor.extractAllFeatures(
@@ -103,7 +99,7 @@ public class RunGeneratePredictions {
 
                             OnnxInferenceManager.PredictionResult res = aiBrain.predictAll(features);
 
-                            predictionMap.put(timestamp, new AiPredictionData(
+                            batchPredictions.put(timestamp, new AiPredictionData(
                                     timestamp,
                                     res.return15M, res.return1H, res.return4H, res.return24H,
                                     res.riskDrawdown4H, res.riskDrawdown24H
@@ -112,44 +108,37 @@ public class RunGeneratePredictions {
                     }
                 }
 
-                todayData = null; // Help GC
-                lookupData = null;
-
-                processedDays++;
-                if (processedDays % 20 == 0) {
-                    LOG.info("... Day {}: Processed. Current Year Map Size: {}",
-                            Utils.normalizeDateYYYYMMDD(currentTime), predictionMap.size());
+                // 4. Lưu vào Aerospike
+                if (!batchPredictions.isEmpty()) {
+                    DataManagerAerospikeFloatSim.saveMarketAiPredictionsBatch(batchPredictions);
                 }
 
+                processedDays++;
+                LOG.info("✅ Day {}: Generated and Saved {} NEW records. (Skipped {} existing)",
+                        Utils.normalizeDateYYYYMMDD(currentTime), batchPredictions.size(), existingTimestamps.size());
+
+                todayData = null;
+                batchPredictions.clear();
+
             } catch (Exception e) {
-                LOG.error("Error day " + currentTime, e);
+                LOG.error("❌ Error processing day " + Utils.normalizeDateYYYYMMDD(currentTime), e);
             }
 
             currentTime += Utils.TIME_DAY;
         }
 
-        // Lưu nốt phần còn lại (năm cuối cùng chưa hết hoặc năm hiện tại)
-        if (!predictionMap.isEmpty()) {
-            saveAndClear(currentYearProcessing, predictionMap);
-        }
-
         aiBrain.close();
-        LOG.info("🎉 DONE ALL!");
+        LOG.info("🎉 DONE ALL MARKET PREDICTIONS!");
     }
 
-    private void saveAndClear(int year, TreeMap<Long, AiPredictionData> map) {
-        if (map.isEmpty()) return;
-
-        String fileName = Configs.FILE_AI_ENTRY_PREDICTIONS + "_" + year;
-        LOG.info("💾 >>> END OF YEAR {}. Saving {} records to: {}", year, map.size(), fileName);
-
-        StorageSnappy.writeObject2File(fileName, map);
-        map.clear();
-        System.gc();
-        LOG.info("🧹 RAM Cleared. Ready for Year {}", year + 1);
+    // Đổi hàm này để đọc từ Aerospike thay vì File Snappy
+    private TreeMap<Long, MarketDataObject> loadMarketRateData() throws Exception {
+        TreeMap<Long, MarketDataObject> data = DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
+        if (data == null) return new TreeMap<>();
+        return data;
     }
 
-    // ... (Giữ nguyên các hàm findTop50Losers và loadMarketRateData như cũ)
+
     private List<String> findTop50LosersFromPeak15m(TreeMap<Long, Map<String, KlineObjectSimple>> dailyData, Long currentTimestamp) {
         Long startTime = currentTimestamp - (15 * 60 * 1000L);
         NavigableMap<Long, Map<String, KlineObjectSimple>> recentData = dailyData.subMap(startTime, true, currentTimestamp, true);
@@ -185,10 +174,5 @@ public class RunGeneratePredictions {
         int limit = Math.min(drops.size(), 60);
         for (int i = 0; i < limit; i++) result.add(drops.get(i).getKey());
         return result;
-    }
-
-    private TreeMap<Long, MarketDataObject> loadMarketRateData() throws Exception {
-        if (!new File(Configs.FILE_ENTRY_MARKET_LEVEL).exists()) return new TreeMap<>();
-        return (TreeMap<Long, MarketDataObject>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
     }
 }

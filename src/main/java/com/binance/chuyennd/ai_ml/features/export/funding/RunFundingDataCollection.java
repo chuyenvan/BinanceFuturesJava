@@ -48,7 +48,7 @@ public class RunFundingDataCollection {
         FundingDataCollectionManager manager = new FundingDataCollectionManager("storage/training_data_funding");
 
         LOG.info("🚀 Loading Market Rates...");
-        TreeMap<Long, MarketDataObject> time2Rate = loadMarketRateData();
+        TreeMap<Long, MarketDataObject> time2Rate =  DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
         LOG.info("🚀 Loading Market Rates Done: {}", time2Rate.size());
 
         long startTime = Utils.sdfFile.parse("20210101").getTime();
@@ -193,10 +193,5 @@ public class RunFundingDataCollection {
         }
     }
 
-    private TreeMap<Long, MarketDataObject> loadMarketRateData() throws Exception {
-        if (!new File(Configs.FILE_ENTRY_MARKET_LEVEL).exists()) return new TreeMap<>();
-        // Đọc Object MarketDataObject nhưng ép kiểu về MarketRateChange (hoặc mapping tương đương)
-        // Lưu ý: MarketDataObject kế thừa hoặc chứa các field tương tự MarketRateChange
-        return (TreeMap<Long, MarketDataObject>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
-    }
+
 }

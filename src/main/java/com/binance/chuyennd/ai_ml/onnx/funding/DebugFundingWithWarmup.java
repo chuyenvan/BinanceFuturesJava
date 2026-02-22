@@ -38,8 +38,7 @@ public class DebugFundingWithWarmup {
         LOG.info("🔥 START WARMUP from {} to {}", Utils.normalizeDateYYYYMMDDHHmm(warmupTime), targetTimeStr);
 
         // Load toàn bộ Market Rate Data (Load 1 lần cho nhanh)
-        TreeMap<Long, MarketDataObject> time2MarketData =
-                (TreeMap<Long, MarketDataObject>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
+        TreeMap<Long, MarketDataObject> time2MarketData = DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
 
         // Init Extractor & Cache
         FundingFeatureExtractor extractor = new FundingFeatureExtractor();

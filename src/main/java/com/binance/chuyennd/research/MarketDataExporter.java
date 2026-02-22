@@ -1,14 +1,21 @@
 package com.binance.chuyennd.research; // Hoặc package phù hợp với project của bạn
 
+import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.object.MarketDataObject;
+import com.binance.chuyennd.object.MarketLevelChange;
+import com.binance.chuyennd.object.sw.KlineObjectSimple;
+import com.binance.chuyennd.tradecore.MarketBigChangeDetector;
+import com.binance.chuyennd.utils.Configs;
+import com.binance.chuyennd.utils.Utils;
+import com.binance.client.constant.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
-import java.util.Map;
-import java.util.TreeMap;
+import java.text.ParseException;
+import java.util.*;
 
 /**
  * Class mới chuyên trách việc xuất dữ liệu thị trường (Refactored)
@@ -17,53 +24,112 @@ public class MarketDataExporter {
 
     private static final Logger LOG = LoggerFactory.getLogger(MarketDataExporter.class);
 
-    /**
-     * Hàm gộp dữ liệu và xuất ra file duy nhất.
-     *
-     * @param rateChangesMap Map chứa thông tin rateDown, rateUp, rate15m (Time -> MarketRateChange)
-     * @param oldDataMap Map chứa thông tin rateBtc, rate2Max cũ (Time -> MarketDataObject cũ)
-     * @param btcReversionMap Map chứa trạng thái hồi của BTC (Time -> Double)
-     * @param outputFilePath Đường dẫn file output (Configs.FILE_ENTRY_MARKET_LEVEL)
-     */
-    public void exportMarketEntries(
-            TreeMap<Long, MarketDataObject> rateChangesMap,
-            TreeMap<Long, MarketDataObject> oldDataMap,
-            TreeMap<Long, Double> btcReversionMap,
-            String outputFilePath) {
 
-        LOG.info("🔄 Starting merge market data...");
-        TreeMap<Long, MarketDataObject> mergedDataMap = new TreeMap<>();
-
-        // 1. Duyệt qua tất cả các mốc thời gian có trong rateChangesMap (làm mốc chính)
-        for (Map.Entry<Long, MarketDataObject> entry : rateChangesMap.entrySet()) {
-            Long time = entry.getKey();
-            MarketDataObject rateChange = entry.getValue();
-
-            // 2. Lấy dữ liệu tương ứng từ các nguồn khác
-            MarketDataObject oldObj = oldDataMap.get(time);
-            Double btcRev = btcReversionMap.get(time);
-
-            // Xử lý null safety nếu dữ liệu ở map khác không đồng bộ
-            Float rateBtc = (oldObj != null) ? oldObj.rateBtc : null;
-            TreeMap<Float, Short> rate2Max = (oldObj != null) ? oldObj.rate2Max : null;
-
-            // 3. Tạo đối tượng MarketDataObject mới đã gộp đủ thông tin
-            MarketDataObject newObj = new MarketDataObject(
-                    rateChange.rateDownAvg,
-                    rateChange.rateDown15MAvg,
-                    rateChange.rateUpAvg,
-                    rateBtc,
-                    btcRev,
-                    rate2Max
-            );
-
-            mergedDataMap.put(time, newObj);
+    public void exportMarketEntries(Long lastTimestamp) throws ParseException {
+        Long startTime;
+        if (lastTimestamp != null && lastTimestamp > 0) {
+            // Đã có dữ liệu trong Aerospike -> Resume từ ngày của lastTimestamp
+            startTime = Utils.getDate(lastTimestamp);
+        } else {
+            // Chạy mới hoàn toàn
+            startTime = Utils.sdfFile.parse(Configs.TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
         }
 
-        LOG.info("✅ Merged complete. Total entries: {}", mergedDataMap.size());
+        long endTime = System.currentTimeMillis();
+        LOG.info("🚀 Export market entry starting from: {}", Utils.normalizeDateYYYYMMDDHHmm(startTime));
 
-        // 4. Ghi ra file (Sử dụng ObjectOutputStream tiêu chuẩn)
-        saveToFile(mergedDataMap, outputFilePath);
+        Map<String, List<KlineObjectSimple>> symbol2LastTickers = new HashMap<>();
+
+        //get data - đọc từ Aerospike
+        while (startTime <= endTime) {
+            TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers;
+            TreeMap<Long, MarketDataObject> dailyMarketData = new TreeMap<>(); // Lưu theo ngày để đẩy batch
+
+            try {
+                LOG.info("Read data from Aerospike: {}", Utils.normalizeDateYYYYMMDDHHmm(startTime));
+                time2Tickers = DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime);
+
+                if (time2Tickers != null && !time2Tickers.isEmpty()) {
+                    for (Map.Entry<Long, Map<String, KlineObjectSimple>> entry : time2Tickers.entrySet()) {
+                        Long time = entry.getKey();
+
+                        // Bỏ qua nếu thời gian này đã cũ hơn hoặc bằng lastTimestamp (tránh tính lại)
+                        if (lastTimestamp != null && time <= lastTimestamp) continue;
+
+                        try {
+                            Map<String, KlineObjectSimple> symbol2Ticker = entry.getValue();
+                            Map<String, Double> symbol2MaxPrice = new HashMap<>();
+                            Map<String, Double> symbol2MinPrice = new HashMap<>();
+
+                            for (Map.Entry<String, KlineObjectSimple> entry1 : symbol2Ticker.entrySet()) {
+                                String symbol = entry1.getKey();
+                                if (Constants.diedSymbol.contains(symbol)) continue;
+
+                                KlineObjectSimple ticker = entry1.getValue();
+                                if (!Utils.isTickerAvailable(ticker)) continue;
+
+                                List<KlineObjectSimple> tickers = symbol2LastTickers.get(symbol);
+                                if (tickers == null) {
+                                    tickers = new ArrayList<>();
+                                    symbol2LastTickers.put(symbol, tickers);
+                                }
+                                tickers.add(ticker);
+
+                                int sizeRemove = 100;
+                                if (tickers.size() > sizeRemove) {
+                                    for (int i = 0; i < 5; i++) {
+                                        tickers.remove(0);
+                                    }
+                                }
+
+                                Double priceMax = null;
+                                Double minPrice = null;
+                                for (int i = 0; i < Configs.NUMBER_TICKER_CAL_RATE_CHANGE; i++) {
+                                    int index = tickers.size() - i - 1;
+                                    if (index >= 0) {
+                                        KlineObjectSimple kline = tickers.get(index);
+                                        if (priceMax == null) priceMax = kline.maxPrice;
+                                        priceMax = Math.max(priceMax, kline.maxPrice);
+
+                                        if (minPrice == null) minPrice = kline.minPrice;
+                                        minPrice = Math.min(minPrice, kline.minPrice);
+                                    }
+                                }
+
+                                symbol2MaxPrice.put(symbol, priceMax);
+                                symbol2MinPrice.put(symbol, minPrice);
+                            }
+
+                            MarketDataObject marketData = MarketBigChangeDetector.calMarketData(symbol2Ticker, symbol2MaxPrice, symbol2MinPrice);
+                            if (marketData != null) {
+                                MarketLevelChange levelChange = MarketBigChangeDetector.getMarketStatus1M(
+                                        marketData.rateDownAvg, marketData.rateUpAvg, marketData.rateBtc, marketData.rateDown15MAvg);
+                                if (levelChange != null) {
+                                    dailyMarketData.put(time, marketData);
+                                } else {
+                                    dailyMarketData.put(time, new MarketDataObject(marketData.rateDownAvg, marketData.rateUpAvg, marketData.rateDown15MAvg));
+                                }
+                            }
+                        } catch (Exception e) {
+                            LOG.info("Error process time: {}", Utils.normalizeDateYYYYMMDDHHmm(time));
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            // GHI DỮ LIỆU LÊN AEROSPIKE SAU MỖI NGÀY
+            if (!dailyMarketData.isEmpty()) {
+                DataManagerAerospikeFloatSim.saveMarketDataBatch(dailyMarketData);
+                LOG.info("✅ Saved {} market entries to Aerospike.", dailyMarketData.size());
+            }
+
+            startTime += Utils.TIME_DAY;
+        }
+
+        LOG.info("🎉 Export Market Data to Aerospike DONE!");
     }
 
     private void saveToFile(TreeMap<Long, MarketDataObject> data, String filePath) {

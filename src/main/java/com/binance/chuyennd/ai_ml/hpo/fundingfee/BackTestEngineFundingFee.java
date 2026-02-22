@@ -7,35 +7,35 @@ import com.binance.chuyennd.research.BudgetManagerSimple;
 import com.binance.chuyennd.research.SimulatorMarketLevelTicker1MStopLoss;
 import com.binance.chuyennd.utils.Configs;
 
+import java.util.Map;
 import java.util.TreeMap;
 
 public class BackTestEngineFundingFee {
 
+    // 🔥 THÊM THAM SỐ THỨ 5
     public BackTestEngineFundingFee(double rateMin2Trade, double rateMin2TradeFull,
-                                    double rateUpAvg, double rateDownAvg) {
-        // GÁN GIÁ TRỊ TỪ HPO VÀO CONFIGS
+                                    double rateUpAvg, double rateDownAvg, double fundingPredMaxThreshold) {
+
         Configs.FUNDING_RATE_MIN_TRADE = rateMin2Trade;
         Configs.FUNDING_RATE_MIN_TRADE_FULL = rateMin2TradeFull;
         Configs.FUNDING_RATE_UP_AVG = rateUpAvg;
         Configs.FUNDING_RATE_DOWN_AVG = rateDownAvg;
+        Configs.FUNDING_PRED_MAX_THRESHOLD = fundingPredMaxThreshold; // Nhận biến mới
     }
 
+    // 🔥 THÊM time2FundingPre VÀO HÀM RUN
     public double run(TreeMap<Long, MarketDataObject> time2MarketData,
-                       TreeMap<Long, AiPredictionData> predictionMap) {
+                      TreeMap<Long, AiPredictionData> predictionMap,
+                      TreeMap<Long, Map<Short, float[]>> time2FundingPre) {
         try {
-            // Reset Budget
             BudgetManagerSimple.resetInstance();
-
-            // Gọi Simulator Gốc (Nó sẽ tự dùng Configs mới)
             SimulatorMarketLevelTicker1MStopLoss test = new SimulatorMarketLevelTicker1MStopLoss();
 
-            test.initDataReady(time2MarketData,
-                    predictionMap, new AIRejectFilter());
-
-            test.simulatorWithInitEntry(); // Hàm này gọi MarketBigChangeDetector -> Lấy Configs mới
+            // 🔥 TRUYỀN ĐỦ 3 MAP VÀO
+            test.initDataReady(time2MarketData, predictionMap, time2FundingPre, new AIRejectFilter());
+            test.simulatorWithInitEntry();
 
             return BudgetManagerSimple.getInstance().balanceCurrent;
-
         } catch (Exception e) {
             e.printStackTrace();
             return 0.0;

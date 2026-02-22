@@ -51,17 +51,11 @@ public class FundingFeeManager {
             for (String symbol : symbol2Funding.keySet()) {
                 symbol2FundingFee.put(symbol, symbol2Funding.get(symbol));
             }
-
-            // Load Cache danh sách coin trade (Chỉ cho Backtest)
-            if (RunOptimizationBudgetRatio.CACHED_time2FundingFeeTrade != null) {
-                this.time2FundingFeeTrade = RunOptimizationBudgetRatio.CACHED_time2FundingFeeTrade;
+            if (new File(FILE_FUNDING_FEE).exists()) {
+                time2FundingFeeTrade = (ConcurrentHashMap<Long, Set<String>>) StorageSnappy.readObjectFromFile(FILE_FUNDING_FEE);
+                LOG.info("Init funding fee time cache: {} records", time2FundingFeeTrade.size());
             } else {
-                if (new File(FILE_FUNDING_FEE).exists()) {
-                    time2FundingFeeTrade = (ConcurrentHashMap<Long, Set<String>>) StorageSnappy.readObjectFromFile(FILE_FUNDING_FEE);
-                    LOG.info("Init funding fee time cache: {} records", time2FundingFeeTrade.size());
-                } else {
-                    time2FundingFeeTrade = new ConcurrentHashMap<>();
-                }
+                time2FundingFeeTrade = new ConcurrentHashMap<>();
             }
             LOG.info("Init funding fee data: {} symbols", symbol2FundingFee.size());
         } catch (Exception e) {

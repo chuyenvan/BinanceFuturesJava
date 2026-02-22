@@ -60,12 +60,12 @@ public class Test {
     public static void main(String[] args) throws Exception {
 //        testProduction();
 //        testAIDATA();
-        long startTime = Utils.sdfFileHour.parse("20251030 02:25").getTime();
+        long startTime = Utils.sdfFileHour.parse("20250108 14:11").getTime();
         TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers =
                 DataManagerAerospikeFloatSim.readDataFromAerospikeCustom(startTime, 120);
         LOG.info("{} {} {} {}", Utils.normalizeDateYYYYMMDDHHmm(time2Tickers.firstKey()), Utils.normalizeDateYYYYMMDDHHmm(time2Tickers.lastKey()), time2Tickers.size(),
                 Utils.toJson(time2Tickers.firstEntry().getValue().get("BTCUSDT")));
-        TreeMap<Long, MarketDataObject> time2MarketData = (TreeMap<Long, MarketDataObject>) StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
+        TreeMap<Long, MarketDataObject> time2MarketData =  DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
         MarketDataObject marketData = time2MarketData.get(startTime);
         System.out.println(Utils.toJson(marketData));
         Float minRate15Min60M = -0.005f;
