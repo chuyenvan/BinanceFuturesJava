@@ -14,7 +14,6 @@ import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.utils.Configs;
-import com.binance.chuyennd.utils.StorageSnappy;
 import com.binance.chuyennd.utils.Utils;
 
 // --- QUAN TRỌNG: Import Proto MỚI (Float + No Time) ---
@@ -1218,13 +1217,11 @@ public class DataManagerAerospikeFloatSim {
             String keyString = fmt.format(new Date(timestamp));
             Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_FUNDING_PRED, keyString);
 
-            // Serialize: Map -> JSON -> Bytes -> Snappy
-            String json = Utils.gson.toJson(predictions);
-            byte[] rawBytes = json.getBytes("UTF-8");
+            // 🔥 THAY ĐỔI: Dùng Binary Codec thay cho JSON
+            byte[] rawBytes = encodeFundingMapToBinary(predictions);
             byte[] compressed = Snappy.compress(rawBytes);
 
             getClient226().put(writePolicy, key, new Bin("data", compressed));
-
         } catch (Exception e) {
             LOG.error("❌ Error saving Funding Pred at {}: {}", timestamp, e.getMessage());
         }
@@ -1244,10 +1241,9 @@ public class DataManagerAerospikeFloatSim {
                 byte[] compressed = (byte[]) record.getValue("data");
                 if (compressed != null) {
                     byte[] rawBytes = Snappy.uncompress(compressed);
-                    String json = new String(rawBytes, "UTF-8");
-                    // Parse JSON về Map<Short, float[]>
-                    return Utils.gson.fromJson(json, new com.google.gson.reflect.TypeToken<Map<Short, float[]>>() {
-                    }.getType());
+
+                    // 🔥 THAY ĐỔI: Dùng Binary Codec thay cho JSON
+                    return decodeFundingMapFromBinary(rawBytes);
                 }
             }
         } catch (Exception e) {
@@ -1519,7 +1515,8 @@ public class DataManagerAerospikeFloatSim {
     // =========================================================================
     // 🔥 MARKET AI PREDICTIONS (ENTRY PREDICTIONS) - SET: ai_pred_market
     // =========================================================================
-    public static final String AEROSPIKE_SET_NAME_AI_PRED_MARKET = "ai_pred_market";
+//    public static final String AEROSPIKE_SET_NAME_AI_PRED_MARKET = "ai_pred_market";
+    public static final String AEROSPIKE_SET_NAME_AI_PRED_MARKET = "ai_pred_market_full_basket";
 
     /**
      * Ghi một Batch (Nhiều phút) kết quả Market AI Prediction vào Aerospike
@@ -1684,7 +1681,42 @@ public class DataManagerAerospikeFloatSim {
         }
         return results;
     }
+    /**
+     * HÀM ĐỌC 1 BẢN GHI: Lấy dữ liệu Market AI Prediction (Entry) tại 1 thời điểm cụ thể
+     * @param timestamp Thời gian (milliseconds) cần lấy dữ liệu
+     * @return AiPredictionData hoặc null nếu không tồn tại
+     */
+    /**
+     * HÀM ĐỌC 1 BẢN GHI: Lấy dữ liệu Market Data tại 1 thời điểm cụ thể
+     * * @param timestamp Thời gian (milliseconds) cần lấy dữ liệu
+     * @return MarketDataObject hoặc null nếu không tồn tại
+     */
+    public static MarketDataObject getMarketDataAtTime(long timestamp) {
+        try {
+            // Khởi tạo key chuẩn xác theo format đã lưu
+            SimpleDateFormat fmt = new SimpleDateFormat("yyyyMMdd-HHmm");
+            String keyString = fmt.format(new Date(timestamp));
+            Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_MARKET_DATA, keyString);
 
+            // Dùng client226 vì set market_data đang lưu ở đây
+            Record record = getClient226().get(null, key);
+
+            if (record != null) {
+                // Lấy dữ liệu từ bin "data" (bỏ qua bin "time" vì ta đã có sẵn timestamp rồi)
+                byte[] compressed = (byte[]) record.getValue("data");
+
+                if (compressed != null) {
+                    // Giải nén Snappy và parse JSON theo đúng logic của hàm getAll
+                    byte[] uncompressed = Snappy.uncompress(compressed);
+                    String json = new String(uncompressed, "UTF-8");
+                    return Utils.gson.fromJson(json, MarketDataObject.class);
+                }
+            }
+        } catch (Exception e) {
+            LOG.error("❌ Error reading Market Data at {}: {}", timestamp, e.getMessage());
+        }
+        return null; // Trả về null nếu không tìm thấy hoặc có lỗi
+    }
     public static long getLastTimestampFromSet(String setName) {
         final long[] maxTime = {0L};
         try {
@@ -1735,13 +1767,18 @@ public class DataManagerAerospikeFloatSim {
                         SimpleDateFormat fmt = new SimpleDateFormat("yyyyMMdd-HHmm");
                         long timestamp = fmt.parse(keyStr).getTime();
 
+                        // Bên trong vòng lặp client.scanAll(...)
                         byte[] compressed = (byte[]) record.getValue("data");
                         if (compressed != null) {
                             byte[] rawBytes = Snappy.uncompress(compressed);
-                            String json = new String(rawBytes, "UTF-8");
-                            Map<Short, float[]> data = Utils.gson.fromJson(json, new com.google.gson.reflect.TypeToken<Map<Short, float[]>>() {}.getType());
 
-                            results.put(timestamp, data);
+                            // 🔥 THAY ĐỔI: Dùng Binary Codec thay cho JSON
+                            Map<Short, float[]> data = decodeFundingMapFromBinary(rawBytes);
+
+                            // Check dữ liệu tránh lỗi
+                            if (data != null && !data.isEmpty()) {
+                                results.put(timestamp, data);
+                            }
                         }
                     }
                 } catch (Exception e) {
@@ -1756,7 +1793,159 @@ public class DataManagerAerospikeFloatSim {
         }
         return results;
     }
+    /**
+     * Đọc dữ liệu Funding Predictions theo khoảng thời gian tùy chỉnh
+     * @param startTime Mốc thời gian bắt đầu (milliseconds)
+     * @param totalMinutes Số lượng phút cần load
+     */
+    public static TreeMap<Long, Map<Short, float[]>> getFundingPredictionsByRange(long startTime, int totalMinutes) {
+        TreeMap<Long, Map<Short, float[]>> results = new TreeMap<>();
+
+        // 1. Tạo danh sách Timestamps/Keys cần lấy
+        long[] allTimestamps = new long[totalMinutes];
+        for (int i = 0; i < totalMinutes; i++) {
+            allTimestamps[i] = startTime + (i * 60000L);
+        }
+
+        // 2. Chia đa luồng để Batch Read (tận dụng executor có sẵn)
+        List<Future<Map<Long, Map<Short, float[]>>>> futures = new ArrayList<>();
+        int chunkSize = (totalMinutes + threadCount - 1) / threadCount;
+
+        for (int i = 0; i < threadCount; i++) {
+            final int startIdx = i * chunkSize;
+            final int endIdx = Math.min(startIdx + chunkSize, totalMinutes);
+            if (startIdx >= endIdx) break;
+
+            futures.add(executor.submit(() -> {
+                SimpleDateFormat localKeyFormat = new SimpleDateFormat("yyyyMMdd-HHmm");
+                Map<Long, Map<Short, float[]>> chunkResult = new HashMap<>();
+                try {
+                    Key[] chunkKeys = new Key[endIdx - startIdx];
+                    long[] chunkTimestamps = Arrays.copyOfRange(allTimestamps, startIdx, endIdx);
+
+                    for (int k = 0; k < chunkKeys.length; k++) {
+                        String keyString = localKeyFormat.format(new Date(chunkTimestamps[k]));
+                        chunkKeys[k] = new Key(Configs.AEROSPIKE_NAMESPACE, Configs.AEROSPIKE_SET_NAME_FUNDING_PRED, keyString);
+                    }
+
+                    // Batch Read từ client226
+                    Record[] records = getClient226().get(batchPolicy, chunkKeys);
+
+                    for (int j = 0; j < records.length; j++) {
+                        Record record = records[j];
+                        if (record != null) {
+                            byte[] compressed = (byte[]) record.getValue("data");
+                            if (compressed != null) {
+                                byte[] rawBytes = Snappy.uncompress(compressed);
+                                // Sử dụng Binary Codec tối ưu bạn đã viết
+                                Map<Short, float[]> data = decodeFundingMapFromBinary(rawBytes);
+                                chunkResult.put(chunkTimestamps[j], data);
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    LOG.error("❌ Lỗi load range funding: {}", e.getMessage());
+                }
+                return chunkResult;
+            }));
+        }
+
+        // 3. Tổng hợp kết quả
+        for (Future<Map<Long, Map<Short, float[]>>> f : futures) {
+            try {
+                results.putAll(f.get());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        LOG.info("✅ Đã load xong {} records Funding Pred từ {}", results.size(), Utils.normalizeDateYYYYMMDDHHmm(startTime));
+        return results;
+    }
+    // =========================================================================
+    // 🔥 BINARY CODEC TỐI ƯU CHO MAP<SHORT, FLOAT[]> (THAY THẾ JSON)
+    // =========================================================================
+
+    /**
+     * Mã hóa Map thành mảng Byte nguyên thủy
+     */
+    public static byte[] encodeFundingMapToBinary(Map<Short, float[]> map) {
+        if (map == null) return new byte[0];
+
+        // Tính toán kích thước bộ đệm (RAM) cần thiết
+        int size = 4; // 4 bytes lưu số lượng phần tử của Map
+        for (float[] arr : map.values()) {
+            size += 2; // 2 bytes lưu Key (Short)
+            size += 4; // 4 bytes lưu độ dài mảng (Int)
+            size += arr.length * 4; // 4 bytes cho mỗi giá trị Float
+        }
+
+        java.nio.ByteBuffer buffer = java.nio.ByteBuffer.allocate(size);
+        buffer.putInt(map.size()); // Ghi số lượng Entry
+
+        for (Map.Entry<Short, float[]> entry : map.entrySet()) {
+            buffer.putShort(entry.getKey()); // Ghi ID (Symbol)
+            float[] arr = entry.getValue();
+            buffer.putInt(arr.length);       // Ghi số phần tử mảng
+            for (float v : arr) {
+                buffer.putFloat(v);          // Ghi từng giá trị float
+            }
+        }
+        return buffer.array();
+    }
+
+    /**
+     * Giải mã từ mảng Byte nguyên thủy về lại Map
+     */
+    public static Map<Short, float[]> decodeFundingMapFromBinary(byte[] data) {
+        if (data == null || data.length == 0) return new HashMap<>();
+
+        java.nio.ByteBuffer buffer = java.nio.ByteBuffer.wrap(data);
+        int mapSize = buffer.getInt(); // Đọc số lượng Entry
+
+        // Cấp phát Map với dung lượng chuẩn để tránh tốn RAM resize
+        Map<Short, float[]> map = new HashMap<>(mapSize);
+
+        for (int i = 0; i < mapSize; i++) {
+            short key = buffer.getShort();     // Đọc ID
+            int arrLen = buffer.getInt();      // Đọc độ dài mảng
+            float[] arr = new float[arrLen];
+            for (int j = 0; j < arrLen; j++) {
+                arr[j] = buffer.getFloat();    // Đọc từng float
+            }
+            map.put(key, arr);
+        }
+        return map;
+    }
     public static void setThreadCount(int i) {
         threadCount = i;
+    }
+
+    /**
+     * HÀM ĐỌC 1 BẢN GHI: Lấy dữ liệu Market AI Prediction (Entry) tại 1 thời điểm cụ thể
+     * @param timestamp Thời gian (milliseconds) cần lấy dữ liệu
+     * @return AiPredictionData hoặc null nếu không tồn tại
+     */
+    public static AiPredictionData getMarketAiPredictionAtTime(long timestamp) {
+        try {
+            SimpleDateFormat fmt = new SimpleDateFormat("yyyyMMdd-HHmm");
+            String keyString = fmt.format(new Date(timestamp));
+            Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_AI_PRED_MARKET, keyString);
+
+            // Dùng client226 vì set ai_pred_market đang lưu ở đây
+            Record record = getClient226().get(null, key);
+
+            if (record != null) {
+                byte[] compressed = (byte[]) record.getValue("data");
+                if (compressed != null) {
+                    // Giải nén Snappy và parse JSON
+                    byte[] uncompressed = Snappy.uncompress(compressed);
+                    String json = new String(uncompressed, "UTF-8");
+                    return Utils.gson.fromJson(json, AiPredictionData.class);
+                }
+            }
+        } catch (Exception e) {
+            LOG.error("❌ Error reading Market AI Pred at {}: {}", timestamp, e.getMessage());
+        }
+        return null;
     }
 }

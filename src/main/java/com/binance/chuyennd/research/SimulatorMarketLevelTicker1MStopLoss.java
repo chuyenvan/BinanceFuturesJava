@@ -56,10 +56,16 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
     public static void main(String[] args) throws ParseException, IOException, InterruptedException {
 
+//        Configs.FUNDING_RATE_MIN_TRADE      = -0.03530;
+//        Configs.FUNDING_RATE_MIN_TRADE_FULL = -0.04045;
+//        Configs.FUNDING_RATE_UP_AVG         = 0.00479;
+//        Configs.FUNDING_RATE_DOWN_AVG       = -0.00434;
+//        Configs.FUNDING_PRED_MAX_THRESHOLD  = 0.43233;
 
         SimulatorMarketLevelTicker1MStopLoss test = new SimulatorMarketLevelTicker1MStopLoss();
         // 🔥 BẬT CHẾ ĐỘ PRODUCTION
         FundingFeeManager.getInstance().setProductionMode(false);
+
         test.initData();
         test.simulatorWithInitEntry();
         Thread.sleep(5000);

@@ -6,12 +6,15 @@ import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.research.FundingFeeManager;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.StorageSnappy;
+import com.binance.chuyennd.utils.Utils;
 import io.jenetics.DoubleChromosome;
 import io.jenetics.DoubleGene;
 import io.jenetics.Genotype;
 import io.jenetics.engine.Engine;
 import io.jenetics.engine.EvolutionResult;
 import io.jenetics.util.DoubleRange;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.Map;
@@ -22,7 +25,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class RunOptimizationMarketThreshold {
-
+    public static final Logger LOG = LoggerFactory.getLogger(RunOptimizationMarketThreshold.class);
     private static final int POPULATION_SIZE = 15;
     private static final int GENERATIONS = 30;
 
@@ -30,7 +33,6 @@ public class RunOptimizationMarketThreshold {
     public static TreeMap<Long, MarketDataObject> time2MarketData;
     public static TreeMap<Long, AiPredictionData> predictionMap;
     public static TreeMap<Long, Map<Short, float[]>> time2FundingPre;
-    public static final String FILE_FUNDING_FEE = "storage/fundingfee_time.data";
 
     private static double evaluate(Genotype<DoubleGene> genotype) {
         long currentTest = testCounter.incrementAndGet();
@@ -109,11 +111,13 @@ public class RunOptimizationMarketThreshold {
 
     private static void loadData() {
         try {
-            System.out.println("Loading Data...");
+            Long startTime = Utils.sdfFile.parse(Configs.TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
+            int numberMinutes = System.currentTimeMillis() - startTime > 0 ? (int) ((System.currentTimeMillis() - startTime) / Utils.TIME_MINUTE) : 0;
+            LOG.info("Loading Data... {} {} minutes", Utils.normalizeDateYYYYMMDDHHmm(startTime), numberMinutes);
 
             time2MarketData = DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
             predictionMap = DataManagerAerospikeFloatSim.getAllMarketAiPredictionsFromAerospike();
-            time2FundingPre = DataManagerAerospikeFloatSim.getAllFundingPredictionsDataFromAerospike();
+            time2FundingPre = DataManagerAerospikeFloatSim.getFundingPredictionsByRange(startTime, numberMinutes);
 
             FundingFeeManager.getInstance();
             System.out.println("Data Loaded.");

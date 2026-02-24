@@ -91,20 +91,16 @@ public class RunGeneratePredictions {
                         Map<String, KlineObjectSimple> marketData = entry.getValue();
                         MarketDataObject rateChange = time2Rate.get(timestamp);
 
-                        List<String> targetBasket = findTop50LosersFromPeak15m(todayData, timestamp);
+                        MarketFeatures features = featureExtractor.extractAllFeatures(
+                                timestamp, marketData, rateChange);
+                        OnnxInferenceManager.PredictionResult res = aiBrain.predictAll(features);
 
-                        if (targetBasket.size() >= 3) {
-                            MarketFeatures features = featureExtractor.extractAllFeatures(
-                                    timestamp, marketData, rateChange, targetBasket);
+                        batchPredictions.put(timestamp, new AiPredictionData(
+                                timestamp,
+                                res.return15M, res.return1H, res.return4H, res.return24H,
+                                res.riskDrawdown4H, res.riskDrawdown24H
+                        ));
 
-                            OnnxInferenceManager.PredictionResult res = aiBrain.predictAll(features);
-
-                            batchPredictions.put(timestamp, new AiPredictionData(
-                                    timestamp,
-                                    res.return15M, res.return1H, res.return4H, res.return24H,
-                                    res.riskDrawdown4H, res.riskDrawdown24H
-                            ));
-                        }
                     }
                 }
 
@@ -138,41 +134,4 @@ public class RunGeneratePredictions {
         return data;
     }
 
-
-    private List<String> findTop50LosersFromPeak15m(TreeMap<Long, Map<String, KlineObjectSimple>> dailyData, Long currentTimestamp) {
-        Long startTime = currentTimestamp - (15 * 60 * 1000L);
-        NavigableMap<Long, Map<String, KlineObjectSimple>> recentData = dailyData.subMap(startTime, true, currentTimestamp, true);
-        if (recentData.isEmpty()) return new ArrayList<>();
-
-        Map<String, KlineObjectSimple> currentPrices = dailyData.get(currentTimestamp);
-        Map<String, Double> maxPrices15m = new HashMap<>();
-
-        for (Map<String, KlineObjectSimple> minuteData : recentData.values()) {
-            for (Map.Entry<String, KlineObjectSimple> entry : minuteData.entrySet()) {
-                String symbol = entry.getKey();
-                double high = entry.getValue().maxPrice;
-                maxPrices15m.merge(symbol, high, Math::max);
-            }
-        }
-
-        List<Map.Entry<String, Double>> drops = new ArrayList<>();
-        for (Map.Entry<String, KlineObjectSimple> entry : currentPrices.entrySet()) {
-            String symbol = entry.getKey();
-            KlineObjectSimple kline = entry.getValue();
-            if (kline.totalUsdt < 5000) continue;
-
-            Double peakPrice = maxPrices15m.get(symbol);
-            if (peakPrice != null && peakPrice > 0) {
-                double drop = (kline.priceClose - peakPrice) / peakPrice;
-                if (drop < -0.001) {
-                    drops.add(new AbstractMap.SimpleEntry<>(symbol, drop));
-                }
-            }
-        }
-        drops.sort(Map.Entry.comparingByValue());
-        List<String> result = new ArrayList<>();
-        int limit = Math.min(drops.size(), 60);
-        for (int i = 0; i < limit; i++) result.add(drops.get(i).getKey());
-        return result;
-    }
 }

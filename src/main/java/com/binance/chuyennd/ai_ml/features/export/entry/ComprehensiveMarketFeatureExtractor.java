@@ -50,33 +50,35 @@ public class ComprehensiveMarketFeatureExtractor {
             List<KlineObjectSimple> history = historyManager.getHistory(symbol);
             if (history == null || history.isEmpty()) continue;
 
-            KlineObjectSimple currentKline = history.get(history.size() - 1);
+//            KlineObjectSimple currentKline = history.get(history.size() - 1);
+//
+//            // 1. Lọc Volume rác (< 50k USDT)
+//            if (currentKline.totalUsdt < 5000) continue;
+//
+//            // 2. Tìm đỉnh giá trong 15 phút gần nhất
+//            double maxPrice15m = -1.0;
+//
+//            // Duyệt ngược từ cuối lên
+//            for (int i = history.size() - 1; i >= 0; i--) {
+//                KlineObjectSimple k = history.get(i);
+//                if (k.startTime < startTime) break;
+//                if (k.maxPrice > maxPrice15m) {
+//                    maxPrice15m = k.maxPrice;
+//                }
+//            }
+//
+//            // 3. Tính độ sụt giảm
+//            if (maxPrice15m > 0) {
+//                double currentPrice = currentKline.priceClose;
+//                double dropFromPeak = (currentPrice - maxPrice15m) / maxPrice15m;
+//
+//                // Giảm > 0.1% là lấy (Logic Relaxed)
+//                if (dropFromPeak < -0.001) {
+//                    drops.add(new AbstractMap.SimpleEntry<>(symbol, dropFromPeak));
+//                }
+//            }
 
-            // 1. Lọc Volume rác (< 50k USDT)
-            if (currentKline.totalUsdt < 50000) continue;
-
-            // 2. Tìm đỉnh giá trong 15 phút gần nhất
-            double maxPrice15m = -1.0;
-
-            // Duyệt ngược từ cuối lên
-            for (int i = history.size() - 1; i >= 0; i--) {
-                KlineObjectSimple k = history.get(i);
-                if (k.startTime < startTime) break;
-                if (k.maxPrice > maxPrice15m) {
-                    maxPrice15m = k.maxPrice;
-                }
-            }
-
-            // 3. Tính độ sụt giảm
-            if (maxPrice15m > 0) {
-                double currentPrice = currentKline.priceClose;
-                double dropFromPeak = (currentPrice - maxPrice15m) / maxPrice15m;
-
-                // Giảm > 0.1% là lấy (Logic Relaxed)
-                if (dropFromPeak < -0.001) {
-                    drops.add(new AbstractMap.SimpleEntry<>(symbol, dropFromPeak));
-                }
-            }
+                    drops.add(new AbstractMap.SimpleEntry<>(symbol, 0d));
         }
 
         // Sort giảm dần theo mức giảm (giảm nhiều nhất lên đầu)
@@ -91,23 +93,18 @@ public class ComprehensiveMarketFeatureExtractor {
 
     public MarketFeatures extractAllFeatures(long timestamp,
                                              Map<String, KlineObjectSimple> currentMarketData,
-                                             MarketDataObject marketData,
-                                             List<String> targetBasket) {
+                                             MarketDataObject marketData) {
 
         // 1. Cập nhật dữ liệu mới nhất
         updateMarketHistory(currentMarketData);
+        List<String> targetBasket = findPotentialLosers(timestamp);
 
-        // 2. Nếu không truyền Basket -> Tự động tính toán
-        if (targetBasket == null || targetBasket.isEmpty()) {
-            targetBasket = findPotentialLosers(timestamp);
-        }
 
         MarketFeatures features = new MarketFeatures();
         features.timestamp = timestamp;
         features.dateKey = Utils.normalizeDateYYYYMMDD(timestamp);
 
         String anchorSymbol = "BTCUSDT";
-
         extractMomentumFeatures(features, anchorSymbol, marketData);
         extractVolatilityFeatures(features, anchorSymbol);
         extractTechnicalIndicators(features, anchorSymbol);

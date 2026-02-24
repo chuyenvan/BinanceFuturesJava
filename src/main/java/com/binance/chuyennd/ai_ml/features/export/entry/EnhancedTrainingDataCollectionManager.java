@@ -49,7 +49,7 @@ public class EnhancedTrainingDataCollectionManager {
         if (!shouldCollectData(marketRate)) return;
 
         try {
-            MarketFeatures features = featureExtractor.extractAllFeatures(timestamp, marketData, marketRate, targetBasket);
+            MarketFeatures features = featureExtractor.extractAllFeatures(timestamp, marketData, marketRate);
 
             // Gán Labels (Output)
             features.futureReturn15M = ret15M;

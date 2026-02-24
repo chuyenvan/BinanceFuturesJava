@@ -212,7 +212,8 @@ public class DetectEntrySignal2TradeNormal {
                     Map<String, KlineObjectSimple> currentMarketMap = new HashMap<>(symbol2FinalTicker);
 
                     // 2. Trích xuất Features cho Entry Model
-                    features = featureEntryExtractor.extractAllFeatures(timestamp, currentMarketMap, marketRate, new ArrayList<>());
+                    List<String> baskets = featureEntryExtractor.findPotentialLosers(timestamp);
+                    features = featureEntryExtractor.extractAllFeatures(timestamp, currentMarketMap, marketRate);
 
                     // 3. Dự báo Entry Model
                     predictData = aiBrain.predictAll(features);

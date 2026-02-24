@@ -33,7 +33,6 @@ import com.binance.chuyennd.utils.StorageSnappy;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
 import com.binance.client.model.enums.OrderSide;
-import com.binance.connector.futures.client.impl.UMWebsocketClientImpl;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -60,13 +59,10 @@ public class Test {
     public static void main(String[] args) throws Exception {
 //        testProduction();
 //        testAIDATA();
-        long startTime = Utils.sdfFileHour.parse("20250108 14:11").getTime();
-        TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers =
-                DataManagerAerospikeFloatSim.readDataFromAerospikeCustom(startTime, 120);
-        LOG.info("{} {} {} {}", Utils.normalizeDateYYYYMMDDHHmm(time2Tickers.firstKey()), Utils.normalizeDateYYYYMMDDHHmm(time2Tickers.lastKey()), time2Tickers.size(),
-                Utils.toJson(time2Tickers.firstEntry().getValue().get("BTCUSDT")));
-        TreeMap<Long, MarketDataObject> time2MarketData =  DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
-        MarketDataObject marketData = time2MarketData.get(startTime);
+        long startTime = Utils.sdfFileHour.parse("20260123 04:32").getTime();
+
+//        TreeMap<Long, MarketDataObject> time2MarketData =  DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
+        MarketDataObject marketData = DataManagerAerospikeFloatSim.getMarketDataAtTime(startTime);
         System.out.println(Utils.toJson(marketData));
         Float minRate15Min60M = -0.005f;
         System.out.println(MarketBigChangeDetector.isFundingFeeTrade(marketData.rateDown15MAvg, marketData.rateDownAvg, marketData.rateUpAvg, minRate15Min60M));
