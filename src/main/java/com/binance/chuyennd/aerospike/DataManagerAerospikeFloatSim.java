@@ -1800,16 +1800,15 @@ public class DataManagerAerospikeFloatSim {
      */
     public static TreeMap<Long, Map<Short, float[]>> getFundingPredictionsByRange(long startTime, int totalMinutes) {
         TreeMap<Long, Map<Short, float[]>> results = new TreeMap<>();
-
-        // 1. Tạo danh sách Timestamps/Keys cần lấy
         long[] allTimestamps = new long[totalMinutes];
         for (int i = 0; i < totalMinutes; i++) {
             allTimestamps[i] = startTime + (i * 60000L);
         }
 
-        // 2. Chia đa luồng để Batch Read (tận dụng executor có sẵn)
+        // Tăng kích thước luồng xử lý nhưng chia nhỏ khối lượng gửi đi
         List<Future<Map<Long, Map<Short, float[]>>>> futures = new ArrayList<>();
         int chunkSize = (totalMinutes + threadCount - 1) / threadCount;
+        int SUB_BATCH_SIZE = 5000; // Giới hạn an toàn để không bị Error 151
 
         for (int i = 0; i < threadCount; i++) {
             final int startIdx = i * chunkSize;
@@ -1819,46 +1818,46 @@ public class DataManagerAerospikeFloatSim {
             futures.add(executor.submit(() -> {
                 SimpleDateFormat localKeyFormat = new SimpleDateFormat("yyyyMMdd-HHmm");
                 Map<Long, Map<Short, float[]>> chunkResult = new HashMap<>();
-                try {
-                    Key[] chunkKeys = new Key[endIdx - startIdx];
-                    long[] chunkTimestamps = Arrays.copyOfRange(allTimestamps, startIdx, endIdx);
 
-                    for (int k = 0; k < chunkKeys.length; k++) {
-                        String keyString = localKeyFormat.format(new Date(chunkTimestamps[k]));
-                        chunkKeys[k] = new Key(Configs.AEROSPIKE_NAMESPACE, Configs.AEROSPIKE_SET_NAME_FUNDING_PRED, keyString);
+                long[] chunkTimestamps = Arrays.copyOfRange(allTimestamps, startIdx, endIdx);
+
+                // 🔥 CHIA NHỎ SUB-BATCH TẠI ĐÂY
+                for (int j = 0; j < chunkTimestamps.length; j += SUB_BATCH_SIZE) {
+                    int limit = Math.min(j + SUB_BATCH_SIZE, chunkTimestamps.length);
+                    int currentSubSize = limit - j;
+
+                    Key[] subKeys = new Key[currentSubSize];
+                    for (int k = 0; k < currentSubSize; k++) {
+                        String keyString = localKeyFormat.format(new Date(chunkTimestamps[j + k]));
+                        subKeys[k] = new Key(Configs.AEROSPIKE_NAMESPACE, Configs.AEROSPIKE_SET_NAME_FUNDING_PRED, keyString);
                     }
 
-                    // Batch Read từ client226
-                    Record[] records = getClient226().get(batchPolicy, chunkKeys);
-
-                    for (int j = 0; j < records.length; j++) {
-                        Record record = records[j];
-                        if (record != null) {
-                            byte[] compressed = (byte[]) record.getValue("data");
-                            if (compressed != null) {
-                                byte[] rawBytes = Snappy.uncompress(compressed);
-                                // Sử dụng Binary Codec tối ưu bạn đã viết
-                                Map<Short, float[]> data = decodeFundingMapFromBinary(rawBytes);
-                                chunkResult.put(chunkTimestamps[j], data);
+                    try {
+                        Record[] records = getClient226().get(batchPolicy, subKeys);
+                        if (records != null) {
+                            for (int r = 0; r < records.length; r++) {
+                                if (records[r] != null) {
+                                    byte[] compressed = (byte[]) records[r].getValue("data");
+                                    if (compressed != null) {
+                                        byte[] rawBytes = org.xerial.snappy.Snappy.uncompress(compressed);
+                                        Map<Short, float[]> data = decodeFundingMapFromBinary(rawBytes);
+                                        chunkResult.put(chunkTimestamps[j + r], data);
+                                    }
+                                }
                             }
                         }
+                    } catch (Exception e) {
+                        LOG.error("❌ Lỗi load sub-batch: {}", e.getMessage());
                     }
-                } catch (Exception e) {
-                    LOG.error("❌ Lỗi load range funding: {}", e.getMessage());
                 }
                 return chunkResult;
             }));
         }
 
-        // 3. Tổng hợp kết quả
         for (Future<Map<Long, Map<Short, float[]>>> f : futures) {
-            try {
-                results.putAll(f.get());
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            try { results.putAll(f.get()); } catch (Exception e) { e.printStackTrace(); }
         }
-        LOG.info("✅ Đã load xong {} records Funding Pred từ {}", results.size(), Utils.normalizeDateYYYYMMDDHHmm(startTime));
+        LOG.info("✅ Đã load xong {} records Funding Pred.", results.size());
         return results;
     }
     // =========================================================================
