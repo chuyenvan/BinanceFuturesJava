@@ -1,6 +1,5 @@
 package com.binance.chuyennd.ai_ml.hpo.dca;
 
-import com.binance.chuyennd.research.FundingFeeManager;
 import io.jenetics.DoubleChromosome;
 import io.jenetics.DoubleGene;
 import io.jenetics.Genotype;
@@ -81,19 +80,6 @@ public class RunOptimizationDCA {
 
         System.out.println("BAT DAU TOI UU HOA LOGIC DCA...");
 
-        // === TAI DU LIEU VAO CACHE (1 LAN DUY NHAT) ===
-        // (Giu nguyen code tai cache cua ban)
-        try {
-            System.out.println("Dang tai du lieu vao bo nho (1 lan duy nhat)...");
-
-            // Goi de tai symbol2FundingFee vao bo nho
-            FundingFeeManager.getInstance();
-            System.out.println("Tai du lieu thanh cong. Bat dau toi uu hoa...");
-        } catch (Exception e) {
-            e.printStackTrace();
-            return;
-        }
-        // ================================================
 
         long startTime = System.currentTimeMillis();
 

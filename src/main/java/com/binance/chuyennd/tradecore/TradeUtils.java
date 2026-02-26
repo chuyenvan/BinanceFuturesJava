@@ -150,17 +150,16 @@ public class TradeUtils {
         //  nhưng chúng ta sẽ làm 6 tham số trên trước)
         switch (levelChange) {
             case MEDIUM_DOWN:
-            case DCA_LEVEL1:
             case MEDIUM_UP:
                 budget /= 2;
                 break;
 
+            case DCA_LEVEL1:
             case SMALL_DOWN:
             case MEDIUM_DOWN_15M:
             case DCA_LEVEL2:
             case BTC_TREND_REVERSE:
-            case FUNDING_FEE_BUY:
-            case FUNDING_FEE_BUY_SPECIAL:
+            case PREDICT_SYMBOL_TRADE:
             case SMA_SIGNAL:
             case RSI_SIGNAL:
                 budget /= 3;

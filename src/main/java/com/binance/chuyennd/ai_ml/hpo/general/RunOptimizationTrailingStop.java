@@ -3,7 +3,6 @@ package com.binance.chuyennd.ai_ml.hpo.general;
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.object.MarketDataObject;
-import com.binance.chuyennd.research.FundingFeeManager;
 import io.jenetics.DoubleChromosome;
 import io.jenetics.DoubleGene;
 import io.jenetics.Genotype;
@@ -105,8 +104,6 @@ public class RunOptimizationTrailingStop {
             time2MarketData = DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
             predictionMap = DataManagerAerospikeFloatSim.getAllMarketAiPredictionsFromAerospike();
             time2FundingPre = DataManagerAerospikeFloatSim.getAllFundingPredictionsDataFromAerospike();
-
-            FundingFeeManager.getInstance();
             System.out.println("Data Loaded.");
         } catch (Exception e) {
             e.printStackTrace();

@@ -59,14 +59,17 @@ public class Test {
     public static void main(String[] args) throws Exception {
 //        testProduction();
 //        testAIDATA();
-        long startTime = Utils.sdfFileHour.parse("20260123 04:32").getTime();
+        long startTime = Utils.sdfFileHour.parse("20250410 22:32").getTime();
 
 //        TreeMap<Long, MarketDataObject> time2MarketData =  DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
         MarketDataObject marketData = DataManagerAerospikeFloatSim.getMarketDataAtTime(startTime);
         System.out.println(Utils.toJson(marketData));
         Float minRate15Min60M = -0.005f;
-        System.out.println(MarketBigChangeDetector.isFundingFeeTrade(marketData.rateDown15MAvg, marketData.rateDownAvg, marketData.rateUpAvg, minRate15Min60M));
+        System.out.println(MarketBigChangeDetector.isAiPredictTrade(marketData.rateDown15MAvg, marketData.rateDownAvg, marketData.rateUpAvg));
         System.out.println(Utils.toJson(DataManagerAerospikeFloatSim.getFundingPredictionAtTime(startTime)));
+
+
+
 //        TreeMap<Long, MarketDataObject> time2MarketData = (TreeMap<Long, MarketDataObject>)
 //                StorageSnappy.readObjectFromFile(Configs.FILE_ENTRY_MARKET_LEVEL);
 //        LOG.info("{} {} {}", time2MarketData.size(),

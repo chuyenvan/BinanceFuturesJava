@@ -5,7 +5,6 @@ import com.binance.chuyennd.ai_ml.features.export.funding.FundingFeatureExtracto
 import com.binance.chuyennd.ai_ml.features.export.funding.FundingMarketFeatures;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
-import com.binance.chuyennd.research.FundingFeeManager;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
 import com.binance.chuyennd.tradecore.MarketBigChangeDetector;
 import com.binance.chuyennd.trading.OrderTargetStatus;
@@ -39,13 +38,13 @@ public class GenerateFundingPredictionsTool {
     private static void setLooseConfigsForGeneration() {
         LOG.info("🔧 Áp dụng cấu hình SIÊU LỎNG để sinh Data bao phủ toàn bộ HPO...");
         // HPO min trade quét tới -0.015 -> Ta mở rộng đến -0.008
-        Configs.FUNDING_RATE_MIN_TRADE = -0.008;
+        Configs.PREDICT_SYMBOL_RATE_DOWN_15M = -0.008;
         // HPO min full quét tới -0.020 -> Ta mở rộng đến -0.012
-        Configs.FUNDING_RATE_MIN_TRADE_FULL = -0.012;
+        Configs.PREDICT_SYMBOL_RATE_DOWN_15M = -0.012;
         // HPO up avg quét tới 0.004 -> Ta mở rộng đến 0.002
-        Configs.FUNDING_RATE_UP_AVG = 0.002;
+        Configs.PREDICT_SYMBOL_RATE_UP_AVG = 0.002;
         // HPO down avg quét tới -0.004 -> Ta mở rộng đến -0.002
-        Configs.FUNDING_RATE_DOWN_AVG = -0.002;
+        Configs.PREDICT_SYMBOL_RATE_DOWN_AVG = -0.002;
         Configs.NUMBER_RATE_DOWN_HISTORY_TRADE = 60;
     }
 
@@ -56,12 +55,6 @@ public class GenerateFundingPredictionsTool {
 
         // 2. Ép cấu hình siêu lỏng để Generate Data
         setLooseConfigsForGeneration();
-
-        try {
-            FundingFeeManager.getInstance();
-        } catch (Exception e) {
-            LOG.warn("Could not init FundingFeeManager", e);
-        }
 
         // Cấu hình thời gian chạy
         String startTimeStr = "20210101";
@@ -293,8 +286,8 @@ public class GenerateFundingPredictionsTool {
         MarketDataObject marketData = time2MarketData.get(time);
         if (marketData == null) return false;
         Float minRate15Min60M = history.isEmpty() ? 0f : Collections.min(history.values());
-        return MarketBigChangeDetector.isFundingFeeTrade(
-                marketData.rateDown15MAvg, marketData.rateDownAvg, marketData.rateUpAvg, minRate15Min60M);
+        return MarketBigChangeDetector.isAiPredictTrade(
+                marketData.rateDown15MAvg, marketData.rateDownAvg, marketData.rateUpAvg);
     }
 
     // --- THÊM HÀM NÀY CHO SIMULATOR GỌI (CHẠY BÙ) ---

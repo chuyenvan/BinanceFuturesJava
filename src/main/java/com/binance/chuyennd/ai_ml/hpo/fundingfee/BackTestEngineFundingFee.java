@@ -16,11 +16,11 @@ public class BackTestEngineFundingFee {
     public BackTestEngineFundingFee(double rateMin2Trade, double rateMin2TradeFull,
                                     double rateUpAvg, double rateDownAvg, double fundingPredMaxThreshold) {
 
-        Configs.FUNDING_RATE_MIN_TRADE = rateMin2Trade;
-        Configs.FUNDING_RATE_MIN_TRADE_FULL = rateMin2TradeFull;
-        Configs.FUNDING_RATE_UP_AVG = rateUpAvg;
-        Configs.FUNDING_RATE_DOWN_AVG = rateDownAvg;
-        Configs.FUNDING_PRED_MAX_THRESHOLD = fundingPredMaxThreshold; // Nhận biến mới
+        Configs.PREDICT_SYMBOL_RATE_DOWN_15M = rateMin2Trade;
+        Configs.PREDICT_SYMBOL_RATE_DOWN_15M = rateMin2TradeFull;
+        Configs.PREDICT_SYMBOL_RATE_UP_AVG = rateUpAvg;
+        Configs.PREDICT_SYMBOL_RATE_DOWN_AVG = rateDownAvg;
+        Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD = fundingPredMaxThreshold; // Nhận biến mới
     }
 
     // 🔥 THÊM time2FundingPre VÀO HÀM RUN

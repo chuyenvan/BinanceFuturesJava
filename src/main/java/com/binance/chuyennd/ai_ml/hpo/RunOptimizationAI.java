@@ -4,9 +4,7 @@ import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.ai_ml.data.HPOSmartCache;
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.object.MarketDataObject;
-import com.binance.chuyennd.research.FundingFeeManager;
 import com.binance.chuyennd.utils.Configs;
-import com.binance.chuyennd.utils.StorageSnappy;
 import com.binance.chuyennd.utils.Utils;
 import io.jenetics.*;
 import io.jenetics.engine.Engine;
@@ -17,9 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeMap;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class RunOptimizationAI {
@@ -132,8 +128,6 @@ public class RunOptimizationAI {
         time2MarketData = DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
         predictionMap = DataManagerAerospikeFloatSim.getAllMarketAiPredictionsFromAerospike();
         time2FundingPre = DataManagerAerospikeFloatSim.getAllFundingPredictionsDataFromAerospike();
-
-        FundingFeeManager.getInstance();
 
         LOG.info("🔥 Warming up cache ({}-NOW)...", Configs.TIME_RUN);
         long startTimeLoad = Utils.sdfFile.parse(Configs.TIME_RUN).getTime();

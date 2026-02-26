@@ -241,7 +241,7 @@ public class DetectEntrySignal2TradeNormal {
                 }
                 // 1. Lấy danh sách candidate
                 Set<String> allSymbols = new HashSet<>();
-                allSymbols.addAll(FundingFeeManager.getInstance().getFundingListSymbol2Trade(time));
+                allSymbols.addAll(symbol2FinalTicker.keySet());
                 allSymbols.removeAll(BudgetManager.getInstance().symbol2Pos.keySet());
 
                 // 3. Chạy AI Predict -> Sort theo L0 (Prob Fail) từ bé đến lớn
@@ -252,12 +252,6 @@ public class DetectEntrySignal2TradeNormal {
                 symbol2BUY.addAll(MarketBigChangeDetector.getTopSymbol(numberOrder,
                         symbol2FinalTicker, symbolLocked,sortedCandidates));
 
-
-                if (symbol2BUY.size() < numberOrder) {
-                    LOG.info("Not symbol 2 buy: {} {} ", levelChange, Utils.normalizeDateYYYYMMDDHHmm(time));
-                }
-
-                symbol2BUY.addAll(MarketBigChangeDetector.addSpecialSymbol(symbol2FinalTicker, symbol2BUY, BudgetManager.getInstance().symbol2Pos.keySet()));
                 LOG.info("Level: {} {} -> {}", Utils.normalizeDateYYYYMMDDHHmm(btcTicker.startTime.longValue()), levelChange, symbol2BUY);
                 for (String symbol : symbol2BUY) {
                     try {
@@ -317,12 +311,11 @@ public class DetectEntrySignal2TradeNormal {
             while (time2RateDown15MAvg.size() > Configs.NUMBER_RATE_DOWN_HISTORY_TRADE) {
                 time2RateDown15MAvg.remove(time2RateDown15MAvg.firstKey());
             }
-            Float minRate15Min30M = Collections.min(time2RateDown15MAvg.values());
 
-            if (MarketBigChangeDetector.isFundingFeeTrade(rateDown15MAvg, rateDownAvg, rateUpAvg, minRate15Min30M)) {
+            if (MarketBigChangeDetector.isAiPredictTrade(rateDown15MAvg, rateDownAvg, rateUpAvg)) {
                 // 1. Lấy danh sách candidate
                 Set<String> allSymbols = new HashSet<>();
-                allSymbols.addAll(FundingFeeManager.getInstance().getFundingListSymbol2Trade(time));
+                allSymbols.addAll(symbol2FinalTicker.keySet());
                 allSymbols.removeAll(BudgetManager.getInstance().symbol2Pos.keySet());
 
                 // 3. Chạy AI Predict -> Sort theo L0 (Prob Fail) từ bé đến lớn
@@ -340,7 +333,7 @@ public class DetectEntrySignal2TradeNormal {
                     String symbol = entry.getValue();
                     KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
                     if (ticker == null) continue;
-                    createOrderBuyRequest(symbol, ticker, MarketLevelChange.FUNDING_FEE_BUY, symbol2Max15m.get(symbol), marketRate, predictData);
+                    createOrderBuyRequest(symbol, ticker, MarketLevelChange.PREDICT_SYMBOL_TRADE, symbol2Max15m.get(symbol), marketRate, predictData);
                 }
             }
 
@@ -371,12 +364,6 @@ public class DetectEntrySignal2TradeNormal {
         for (String symbol : allSymbols) {
             KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
             if (!Utils.isTickerAvailable(ticker)) continue;
-
-            double rate1m = (ticker.priceClose - ticker.priceOpen) / ticker.priceOpen;
-            // 🔥 HARD FILTER: Chỉ giữ lại nếu đang sập mạnh (Rate1M < -0.65%)
-            if (rate1m >= -0.0065) {
-                continue;
-            }
 
             if (fundingExtractor != null && fundingBrain != null) {
                 OrderTargetInfoTest dummyOrder = new OrderTargetInfoTest(
@@ -426,16 +413,6 @@ public class DetectEntrySignal2TradeNormal {
     }
 
 
-    private OrderTargetInfo getOrderInfo(String symbol) {
-        try {
-            String orderJson = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO, symbol);
-            OrderTargetInfo order = Utils.gson.fromJson(orderJson, OrderTargetInfo.class);
-            return order;
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
 
     public void createOrderBuyRequest(String symbol, KlineObjectSimple ticker, MarketLevelChange levelChange, Double priceMax15M,
                                       MarketDataObject marketRate, OnnxInferenceManager.PredictionResult prediction) {
@@ -499,7 +476,7 @@ public class DetectEntrySignal2TradeNormal {
             data.put("marketRate", marketRate);
             data.put("max15M", priceMax15M);
 //            data.put("symbol2Sell", symbol2Sell);
-            data.put("fundingBuy", FundingFeeManager.getInstance().getFundingListSymbol2Trade(ticker.startTime.longValue()));
+//            data.put("fundingBuy", FundingFeeManager.getInstance().getFundingListSymbol2Trade(ticker.startTime.longValue()));
             String fileName = "storage/data/order/";
             fileName += Utils.normalizeDateYYYYMMDD(ticker.startTime.longValue());
             fileName += "/";
@@ -510,20 +487,6 @@ public class DetectEntrySignal2TradeNormal {
         }
     }
 
-    public static Double calMarginRunning(String symbol) {
-        if (BudgetManager.getInstance().symbol2Margin.get(symbol) != null) {
-            return BudgetManager.getInstance().symbol2Margin.get(symbol);
-        }
-        return 0d;
-    }
-
-    public static Double calRateLoss(String symbol) {
-        PositionRisk pos = BudgetManager.getInstance().symbol2Pos.get(symbol);
-        if (pos != null) {
-            return PositionHelper.calRateLoss(pos);
-        }
-        return 1d;
-    }
 
     public boolean isTimeProcessData() {
         long time = System.currentTimeMillis();

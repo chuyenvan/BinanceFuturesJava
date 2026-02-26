@@ -41,11 +41,10 @@ public class Configs {
     }
 
     // Thêm dòng này vào Configs.java
-    public static double FUNDING_PRED_MAX_THRESHOLD = 0.2;
-    public static Double FUNDING_RATE_MIN_TRADE = -0.01720;      // Param 1
-    public static Double FUNDING_RATE_MIN_TRADE_FULL = -0.03234;  // Param 2
-    public static Double FUNDING_RATE_UP_AVG = 0.00454;          // Param 3
-    public static Double FUNDING_RATE_DOWN_AVG = -0.00503;       // Param 4
+    public static double PREDICT_SYMBOL_RATE_MAX_THRESHOLD = 0.2;
+    public static Double PREDICT_SYMBOL_RATE_DOWN_15M = -0.03234;  // Param 2
+    public static Double PREDICT_SYMBOL_RATE_UP_AVG = 0.00454;          // Param 3
+    public static Double PREDICT_SYMBOL_RATE_DOWN_AVG = -0.00503;       // Param 4
 
     // 1. Ngưỡng margin-ratio đầu tiên để giảm budget
     public static double BUDGET_MARGIN_RATIO_1 = 0.4820;
@@ -58,51 +57,6 @@ public class Configs {
     public static double BUDGET_DIVIDER_2 = 1.5984;
 
 
-    // --- CẤU HÌNH TRAILING STOP ĐỘNG (DYNAMIC) ---
-    // Ngưỡng biến động (Volatility Thresholds) - Mặc định cũ: 0.01, 0.006, 0.004
-//    public static Double RATE_PROFIT_STOP_MARKET = Configs.getDouble("RATE_PROFIT_STOP_MARKET");
-//    public static double TS_VOL_HIGH_THRES = 0.01;
-//    public static double TS_VOL_MED_THRES = 0.006;
-//    public static double TS_VOL_LOW_THRES = 0.004;
-//
-//    // Mức chốt lời tương ứng (Target Rates) - Mặc định cũ: 0.03, 0.02, 0.016
-//    public static double TS_RATE_HIGH = 0.03;
-//    public static double TS_RATE_MED = 0.02;
-//    public static double TS_RATE_LOW = 0.016;
-
-    // Base Rate (Mức lãi tối thiểu để kích hoạt Trailing Stop)
-
-
-    /*
-    [root@web003 ~]#
-        Base Rate:             0.01151
-        --- HIGH VOLATILITY ---
-        Threshold:             0.01760
-        Target Rate:           0.05549
-        --- MEDIUM VOLATILITY ---
-        Threshold:             0.01020
-        Target Rate:           0.04172
-        --- LOW VOLATILITY ---
-        Threshold:             0.00239
-        Target Rate:           0.01189
-
-
-        === KẾT QUẢ TỐI ƯU TRAILING STOP ===
-        Time: 218 mins
-        Profit Max: 74413.5656257369
-        ------------------------------------
-        Base Rate:             0.01651
-        --- HIGH VOLATILITY ---
-        Threshold:             0.02433
-        Target Rate:           0.05105
-        --- MEDIUM VOLATILITY ---
-        Threshold:             0.01106
-        Target Rate:           0.04157
-        --- LOW VOLATILITY ---
-        Threshold:             0.00289
-        Target Rate:           0.01850
-
-     */
     public static double RATE_PROFIT_STOP_MARKET = 0.01151;
 
     // --- HIGH VOLATILITY (Biến động mạnh) ---
@@ -128,10 +82,6 @@ public class Configs {
     public static Integer number_order_budget = 70;
 
     public static Integer NUMBER_RATE_DOWN_HISTORY_TRADE = 60;
-    // funding fee config
-    public static final Integer NUMBER_HOUR_FUNDING_CAL = 30;
-    public static final Double FUNDING_MAX_TRADE = -0.00001;
-    public static final Double FUNDING_MIN_TRADE = 0.00065;
 
 
     public static final Integer NUMBER_THREAD_ORDER_MANAGER = Configs.getInt("NUMBER_THREAD_ORDER_MANAGER");
@@ -175,27 +125,31 @@ public class Configs {
         return Double.parseDouble((String) properties.get(configName));
     }
 
-    // Trong file com.binance.chuyennd.utils.Configs
+    // =========================================================
+    // 1. NHÓM 8 THAM SỐ ĐÃ ĐƯỢC UPDATE TỪ KẾT QUẢ HPO
+    // =========================================================
+    public static double MS_UP_BIG_THRES       = 0.02046;  // Default cũ: 0.025
+    public static double MS_DOWN_BIG_AVG       = -0.03157; // Default cũ: -0.032
 
-    // === MARKET STATUS THRESHOLDS (Mặc định ban đầu) ===
-    public static double MS_UP_BIG_THRES       = 0.025;  // Default: 0.025
+    public static double MS_UP_MED_THRES       = 0.01204;  // Default cũ: 0.015
+    public static double MS_DOWN_MED_AVG       = -0.02069; // Default cũ: -0.030
 
-    public static double MS_DOWN_BIG_AVG       = -0.032; // Default: -0.032
+    public static double MS_UP_SMALL_THRES     = 0.00442;  // Default cũ: 0.008
+    public static double MS_DOWN_SMALL_AVG     = -0.01713; // Default cũ: -0.006
+
+    public static double MS_DOWN_15M_MED_ONLY  = -0.06725; // Default cũ: -0.045
+    public static double MS_DOWN_15M_SMALL_ONLY= -0.02145; // Default cũ: -0.028
+
+    // =========================================================
+    // 2. NHÓM 4 THAM SỐ THIẾU TRONG HPO (GIỮ NGUYÊN DEFAULT)
+    // =========================================================
     public static double MS_DOWN_BIG_BTC       = -0.01;  // Default: -0.01
 
-    public static double MS_UP_MED_THRES       = 0.015;  // Default: 0.015
-
-    public static double MS_DOWN_MED_AVG       = -0.030; // Default: -0.030
     public static double MS_DOWN_MED_AVG_CMB   = -0.014; // Default: -0.014 (Combined logic)
     public static double MS_DOWN_MED_15M_CMB   = -0.07;  // Default: -0.07  (Combined logic)
 
-    public static double MS_UP_SMALL_THRES     = 0.008;  // Default: 0.008
-
-    public static double MS_DOWN_SMALL_AVG     = -0.006; // Default: -0.006
     public static double MS_DOWN_SMALL_15M     = -0.025; // Default: -0.025 (Combined logic)
 
-    public static double MS_DOWN_15M_MED_ONLY  = -0.045; // Default: -0.045
-    public static double MS_DOWN_15M_SMALL_ONLY= -0.028; // Default: -0.028
 
     public static void main(String[] args) {
 

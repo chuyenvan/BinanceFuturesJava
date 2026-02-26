@@ -6,14 +6,10 @@ import com.binance.chuyennd.ai_ml.features.export.entry.MarketFeatures;
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
-import com.binance.chuyennd.research.FundingFeeManager;
-import com.binance.chuyennd.utils.Configs;
-import com.binance.chuyennd.utils.StorageSnappy;
 import com.binance.chuyennd.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.util.*;
 
 public class RunGeneratePredictions {
@@ -26,7 +22,6 @@ public class RunGeneratePredictions {
             System.setProperty("java.util.concurrent.ForkJoinPool.common.parallelism", "4");
             DataManagerAerospikeFloatSim.setThreadCount(4);
 
-            FundingFeeManager.getInstance();
             // Truyền null để chạy từ đầu nếu chạy file này độc lập
             new RunGeneratePredictions().generateAndSave(null);
         } catch (Exception e) {

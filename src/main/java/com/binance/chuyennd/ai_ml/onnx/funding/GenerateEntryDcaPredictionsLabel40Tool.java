@@ -5,18 +5,15 @@ import com.binance.chuyennd.ai_ml.features.export.funding.FundingFeatureExtracto
 import com.binance.chuyennd.ai_ml.features.export.funding.FundingMarketFeatures;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
-import com.binance.chuyennd.research.FundingFeeManager;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
 import com.binance.chuyennd.tradecore.MarketBigChangeDetector;
 import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.utils.Configs;
-import com.binance.chuyennd.utils.StorageSnappy;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.model.enums.OrderSide;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -45,17 +42,11 @@ public class GenerateEntryDcaPredictionsLabel40Tool {
         DataManagerAerospikeFloatSim.setThreadCount(4);
 
         // Cấu hình tham số lọc
-        Configs.FUNDING_RATE_MIN_TRADE = -0.013;
-        Configs.FUNDING_RATE_MIN_TRADE_FULL = -0.025;
-        Configs.FUNDING_RATE_UP_AVG = 0.004;
-        Configs.FUNDING_RATE_DOWN_AVG = -0.005;
+        Configs.PREDICT_SYMBOL_RATE_DOWN_15M = -0.013;
+        Configs.PREDICT_SYMBOL_RATE_DOWN_15M = -0.025;
+        Configs.PREDICT_SYMBOL_RATE_UP_AVG = 0.004;
+        Configs.PREDICT_SYMBOL_RATE_DOWN_AVG = -0.005;
         Configs.NUMBER_RATE_DOWN_HISTORY_TRADE = 60;
-
-        try {
-            FundingFeeManager.getInstance();
-        } catch (Exception e) {
-            LOG.warn("Could not init FundingFeeManager", e);
-        }
 
         // Cấu hình thời gian chạy
         String startTimeStr = "20210101";
@@ -330,8 +321,8 @@ public class GenerateEntryDcaPredictionsLabel40Tool {
         MarketDataObject marketData = time2MarketData.get(time);
         if (marketData == null) return false;
         Float minRate15Min60M = history.isEmpty() ? 0f : Collections.min(history.values());
-        return MarketBigChangeDetector.isFundingFeeTrade(
-                marketData.rateDown15MAvg, marketData.rateDownAvg, marketData.rateUpAvg, minRate15Min60M);
+        return MarketBigChangeDetector.isAiPredictTrade(
+                marketData.rateDown15MAvg, marketData.rateDownAvg, marketData.rateUpAvg);
     }
 
 

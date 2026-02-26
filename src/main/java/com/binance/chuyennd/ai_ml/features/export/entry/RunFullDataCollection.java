@@ -3,14 +3,10 @@ package com.binance.chuyennd.ai_ml.features.export.entry;
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
-import com.binance.chuyennd.research.FundingFeeManager;
-import com.binance.chuyennd.utils.Configs;
-import com.binance.chuyennd.utils.StorageSnappy;
 import com.binance.chuyennd.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.util.*;
 
 public class RunFullDataCollection {
@@ -18,7 +14,6 @@ public class RunFullDataCollection {
 
     public static void main(String[] args) {
         try {
-            FundingFeeManager.getInstance();
             new RunFullDataCollection().runSequentialCollection();
         } catch (Exception e) {
             LOG.error("Main error", e);

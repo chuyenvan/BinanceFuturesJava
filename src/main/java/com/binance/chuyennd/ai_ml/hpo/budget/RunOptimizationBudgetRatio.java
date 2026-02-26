@@ -3,7 +3,6 @@ package com.binance.chuyennd.ai_ml.hpo.budget;
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.object.MarketDataObject;
-import com.binance.chuyennd.research.FundingFeeManager;
 import io.jenetics.DoubleChromosome;
 import io.jenetics.DoubleGene;
 import io.jenetics.Genotype;
@@ -80,7 +79,6 @@ public class RunOptimizationBudgetRatio {
             time2MarketData =  DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
             predictionMap = DataManagerAerospikeFloatSim.getAllMarketAiPredictionsFromAerospike();
             time2FundingPre = DataManagerAerospikeFloatSim.getAllFundingPredictionsDataFromAerospike();
-            FundingFeeManager.getInstance();
             System.out.println("Tai du lieu thanh cong. Bat dau toi uu hoa...");
         } catch (Exception e) {
             System.err.println("KHONG THE TAI DU LIEU. DUNG CHUONG TRINH.");

@@ -4,12 +4,10 @@ import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.tradecore.MarketBigChangeDetector;
 import com.binance.chuyennd.utils.Configs;
-import com.binance.chuyennd.utils.StorageSnappy;
 import com.binance.chuyennd.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.util.Collections;
 import java.util.Map;
 import java.util.TreeMap;
@@ -22,10 +20,10 @@ public class CheckMarketConditionDaily {
 
     public static void main(String[] args) throws Exception {
         // 1. CẤU HÌNH THAM SỐ (Giống hệt lúc chạy Generate Tool)
-        Configs.FUNDING_RATE_MIN_TRADE = -0.013;
-        Configs.FUNDING_RATE_MIN_TRADE_FULL = -0.025;
-        Configs.FUNDING_RATE_UP_AVG = 0.004;
-        Configs.FUNDING_RATE_DOWN_AVG = -0.005;
+        Configs.PREDICT_SYMBOL_RATE_DOWN_15M = -0.013;
+        Configs.PREDICT_SYMBOL_RATE_DOWN_15M = -0.025;
+        Configs.PREDICT_SYMBOL_RATE_UP_AVG = 0.004;
+        Configs.PREDICT_SYMBOL_RATE_DOWN_AVG = -0.005;
         Configs.NUMBER_RATE_DOWN_HISTORY_TRADE = 60; // Giữ lịch sử 60 phút
 
         // 2. NGÀY CẦN CHECK (Sửa ngày tại đây)
@@ -103,10 +101,10 @@ public class CheckMarketConditionDaily {
         // Tính min rate trong 60 phút gần nhất từ lịch sử đã update
         Float minRate15Min60M = time2RateDown15MAvg.isEmpty() ? 0f : Collections.min(time2RateDown15MAvg.values());
 
-        return MarketBigChangeDetector.isFundingFeeTrade(
+        return MarketBigChangeDetector.isAiPredictTrade(
                 marketData.rateDown15MAvg,
                 marketData.rateDownAvg,
-                marketData.rateUpAvg,
-                minRate15Min60M);
+                marketData.rateUpAvg
+        );
     }
 }

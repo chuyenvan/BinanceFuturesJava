@@ -3,7 +3,6 @@ package com.binance.chuyennd.ai_ml.hpo.fundingfee;
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.object.MarketDataObject;
-import com.binance.chuyennd.research.FundingFeeManager;
 import com.binance.chuyennd.utils.Configs;
 import io.jenetics.*;
 import io.jenetics.engine.Engine;
@@ -121,7 +120,6 @@ public class RunOptimizationFundingFee {
         predictionMap = DataManagerAerospikeFloatSim.getAllMarketAiPredictionsFromAerospike();
         time2FundingPre = DataManagerAerospikeFloatSim.getAllFundingPredictionsDataFromAerospike();
 
-        FundingFeeManager.getInstance();
         System.out.println("✅ Load dữ liệu vào RAM thành công.");
     }
 }

@@ -8,7 +8,6 @@ import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
 import com.binance.chuyennd.tradecore.MarketBigChangeDetector;
 import com.binance.chuyennd.utils.Configs;
-import com.binance.chuyennd.utils.StorageSnappy;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.model.enums.OrderSide;
 import org.slf4j.Logger;
@@ -22,10 +21,10 @@ public class DebugFundingWithWarmup {
 
     public static void main(String[] args) throws Exception {
         // Cấu hình
-        Configs.FUNDING_RATE_MIN_TRADE = -0.013;
-        Configs.FUNDING_RATE_MIN_TRADE_FULL = -0.025;
-        Configs.FUNDING_RATE_UP_AVG = 0.004;
-        Configs.FUNDING_RATE_DOWN_AVG = -0.005;
+        Configs.PREDICT_SYMBOL_RATE_DOWN_15M = -0.013;
+        Configs.PREDICT_SYMBOL_RATE_DOWN_15M = -0.025;
+        Configs.PREDICT_SYMBOL_RATE_UP_AVG = 0.004;
+        Configs.PREDICT_SYMBOL_RATE_DOWN_AVG = -0.005;
 //        Configs.NUMBER_RATE_DOWN_HISTORY_TRADE = 60; // Quan trọng cho bộ nhớ Rate
 
         // 1. Setup thời gian Target
@@ -117,8 +116,8 @@ public class DebugFundingWithWarmup {
 
         // 2. Check Condition IsMet
         Float minRate60M = Collections.min(time2RateDown15MAvg.values());
-        boolean isCondMet = MarketBigChangeDetector.isFundingFeeTrade(
-                mData.rateDown15MAvg, mData.rateDownAvg, mData.rateUpAvg, minRate60M);
+        boolean isCondMet = MarketBigChangeDetector.isAiPredictTrade(
+                mData.rateDown15MAvg, mData.rateDownAvg, mData.rateUpAvg);
 
         LOG.info("📊 CONDITION CHECK:");
         LOG.info("   rateDown15M: {}", mData.rateDown15MAvg);

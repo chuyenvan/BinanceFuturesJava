@@ -3,18 +3,18 @@ package com.binance.chuyennd.ai_ml.features.export.funding;
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
-import com.binance.chuyennd.research.FundingFeeManager;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
 import com.binance.chuyennd.tradecore.MarketBigChangeDetector;
 import com.binance.chuyennd.utils.Configs;
-import com.binance.chuyennd.utils.StorageSnappy;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.model.enums.OrderSide;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.TreeMap;
 
 public class RunFundingDataCollection {
     private static final Logger LOG = LoggerFactory.getLogger(RunFundingDataCollection.class);
@@ -27,19 +27,11 @@ public class RunFundingDataCollection {
 
     public static void main(String[] args) throws Exception {
         // 1. CẤU HÌNH THAM SỐ (Override Configs theo yêu cầu)
-        Configs.FUNDING_RATE_MIN_TRADE = -0.013;
-        Configs.FUNDING_RATE_MIN_TRADE_FULL = -0.025;
-        Configs.FUNDING_RATE_UP_AVG = 0.004;
-        Configs.FUNDING_RATE_DOWN_AVG = -0.005;
+        Configs.PREDICT_SYMBOL_RATE_DOWN_15M = -0.013;
+        Configs.PREDICT_SYMBOL_RATE_DOWN_15M = -0.025;
+        Configs.PREDICT_SYMBOL_RATE_UP_AVG = 0.004;
+        Configs.PREDICT_SYMBOL_RATE_DOWN_AVG = -0.005;
 
-        // Init Funding Manager
-        try {
-            FundingFeeManager.getInstance();
-            LOG.info("✅ FundingFeeManager Initialized!");
-        } catch (Exception e) {
-            LOG.error("❌ Failed to init FundingFeeManager", e);
-            return;
-        }
         new RunFundingDataCollection().run();
     }
 
@@ -139,17 +131,13 @@ public class RunFundingDataCollection {
             if (!isCollecting) continue;
             try {
                 // 2. Kiểm tra điều kiện thị trường (Market Level Condition)
-                if (MarketBigChangeDetector.isFundingFeeTrade(
+                if (MarketBigChangeDetector.isAiPredictTrade(
                         marketData.rateDown15MAvg,
                         marketData.rateDownAvg,
-                        marketData.rateUpAvg,
-                        minRate15Min60M)) {
+                        marketData.rateUpAvg
+                )) {
 
-                    // 3. Lấy danh sách coin tiềm năng từ FundingFeeManager
-//                    Set<String> symbolFundingBuy = FundingFeeManager.getInstance().getFundingListSymbol2Trade(timestamp);
-//
-//                    if (symbolFundingBuy == null || symbolFundingBuy.isEmpty()) continue;
-
+                    // 3. Lấy danh sách coin tiềm năng từ
                     for (String symbol : snapshot.keySet()) {
                         KlineObjectSimple ticker = snapshot.get(symbol);
 
@@ -164,12 +152,7 @@ public class RunFundingDataCollection {
                         double rate15m = manager.getReturn(symbol, 15);
                         if (rate1m >= -0.004 && rate15m >= -0.015)
                             continue; // Phải giảm > 0.5% trong 1 phút này
-                        // --- (Optional) Lọc thêm điều kiện Rate Change như Simulator ---
-                        // Simulator có đoạn: isRateChangeAvailable2Trade(...)
-                        // Tuy nhiên, khi làm Data Training, ta nên lấy rộng hơn một chút (tất cả các case Funding Buy)
-                        // để Model học được cả kèo Fail lẫn kèo Win.
-                        // Nếu lọc quá kỹ bằng Rule ở đây thì Model sẽ không học được pattern xấu.
-                        // -> GIỮ NGUYÊN DANH SÁCH TỪ getFundingBuyNew
+
 
                         try {
                             // Tạo lệnh giả lập tại giá Close

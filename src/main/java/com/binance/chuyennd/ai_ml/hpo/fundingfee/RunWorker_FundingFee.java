@@ -4,7 +4,6 @@ import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.ai_ml.hpo.distributed.DistributedQueueManager;
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.object.MarketDataObject;
-import com.binance.chuyennd.research.FundingFeeManager;
 import com.binance.chuyennd.utils.Configs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -96,7 +95,6 @@ public class RunWorker_FundingFee {
         time2MarketData = DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
         predictionMap = DataManagerAerospikeFloatSim.getAllMarketAiPredictionsFromAerospike();
         time2FundingPre = DataManagerAerospikeFloatSim.getAllFundingPredictionsDataFromAerospike();
-        FundingFeeManager.getInstance();
         LOG.info("✅ Load dữ liệu vào RAM thành công.");
     }
 }

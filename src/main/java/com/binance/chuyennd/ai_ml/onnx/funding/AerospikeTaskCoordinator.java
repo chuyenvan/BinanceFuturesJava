@@ -14,27 +14,28 @@ import java.util.*;
 public class AerospikeTaskCoordinator {
     private static final Logger LOG = LoggerFactory.getLogger(AerospikeTaskCoordinator.class);
 
-    // Tên Set lưu danh sách công việc
-    private static final String TASK_SET_NAME = "funding_tasks_dist_v1";
+    // 🔥 Đổi tên Set để tạo Queue mới hoàn toàn, không dính với Queue tuần cũ
+    private static final String TASK_SET_NAME = "funding_tasks_monthly_v1";
 
     /**
      * KHỞI TẠO DANH SÁCH VIỆC (Chỉ chạy 1 lần ở máy Admin hoặc Server đầu tiên)
-     * Chia thời gian thành các gói (Chunk) theo TUẦN.
+     * Chia thời gian thành các gói (Chunk) theo THÁNG.
      */
     public static void initTasks(long startTime, long endTime) {
-        LOG.info("🛠 Initializing Task Queue in Aerospike...");
+        LOG.info("🛠 Initializing Task Queue in Aerospike (MONTHLY)...");
         AerospikeClient client = DataManagerAerospikeFloatSim.getClient242();
 
         Calendar cal = Calendar.getInstance();
         cal.setTimeInMillis(startTime);
 
         int count = 0;
-        // Chia nhỏ task: Mỗi task 7 ngày (1 tuần)
-        long chunkDuration = 7L * 24 * 60 * 60 * 1000L;
 
         while (cal.getTimeInMillis() < endTime) {
             long chunkStart = cal.getTimeInMillis();
-            long chunkEnd = Math.min(chunkStart + chunkDuration, endTime);
+
+            // 🔥 Thêm 1 tháng bằng Calendar để chuẩn xác số ngày (28, 30, 31)
+            cal.add(Calendar.MONTH, 1);
+            long chunkEnd = Math.min(cal.getTimeInMillis(), endTime);
 
             // Key ví dụ: TASK_20210101
             String keyString = "TASK_" + Utils.normalizeDateYYYYMMDD(chunkStart);
@@ -47,10 +48,9 @@ public class AerospikeTaskCoordinator {
                     new Bin("end", chunkEnd)
             );
 
-            cal.setTimeInMillis(chunkEnd); // Nhảy sang tuần tiếp theo
             count++;
         }
-        LOG.info("✅ Created {} tasks (Weeks) in Set '{}'", count, TASK_SET_NAME);
+        LOG.info("✅ Created {} tasks (Months) in Set '{}'", count, TASK_SET_NAME);
     }
 
     /**
@@ -109,21 +109,25 @@ public class AerospikeTaskCoordinator {
             this.end = end;
         }
     }
+
     /**
      * CHỈ KHỞI TẠO LẠI CÁC TASK CỤ THỂ (Dùng khi một số task bị lỗi)
-     * @param specificDates Danh sách chuỗi ngày định dạng YYYYMMDD (ví dụ: "20251016", "20221117")
+     * @param specificDates Danh sách chuỗi ngày định dạng YYYYMMDD (ví dụ: "20210101", "20210201")
      */
     public static void reInitSpecificTasks(List<String> specificDates) {
-        LOG.info("🛠 Re-initializing {} specific tasks in Aerospike...", specificDates.size());
+        LOG.info("🛠 Re-initializing {} specific tasks in Aerospike (MONTHLY)...", specificDates.size());
         AerospikeClient client = DataManagerAerospikeFloatSim.getClient242();
-
-        long chunkDuration = 7L * 24 * 60 * 60 * 1000L;
 
         for (String dateStr : specificDates) {
             try {
                 // Chuyển từ YYYYMMDD sang timestamp
                 long chunkStart = Utils.sdfFile.parse(dateStr).getTime();
-                long chunkEnd = chunkStart + chunkDuration;
+
+                // Tính chunkEnd bằng cách cộng 1 tháng
+                Calendar cal = Calendar.getInstance();
+                cal.setTimeInMillis(chunkStart);
+                cal.add(Calendar.MONTH, 1);
+                long chunkEnd = cal.getTimeInMillis();
 
                 String keyString = "TASK_" + dateStr;
                 Key key = new Key(Configs.AEROSPIKE_NAMESPACE, TASK_SET_NAME, keyString);
@@ -140,19 +144,17 @@ public class AerospikeTaskCoordinator {
             }
         }
     }
+
     public static void main(String[] args) throws ParseException {
         String startStr = "20210101";
         long globalStart = Utils.sdfFile.parse(startStr).getTime();
         long globalEnd = System.currentTimeMillis();
         AerospikeTaskCoordinator.initTasks(globalStart, globalEnd);
 
-//        // Danh sách các task bạn lọc được từ log là bị lỗi hoặc chạy quá lâu
+//        // Danh sách các task bạn lọc được từ log là bị lỗi hoặc chạy quá lâu (Phải trúng mốc đầu tháng nếu khởi tạo theo tháng)
 //        List<String> claimedTasks = Arrays.asList(
-//                "20221117", "20210805", "20211125", "20241107", "20241219",
-//                "20230824", "20221124", "20210401", "20231005", "20210318",
-//                "20240321", "20230316", "20240411", "20251016", "20250130"
+//                "20210101", "20210201"
 //        );
-//        // failedTasks.add("...");
 //
 //        if (!claimedTasks.isEmpty()) {
 //            AerospikeTaskCoordinator.reInitSpecificTasks(claimedTasks);

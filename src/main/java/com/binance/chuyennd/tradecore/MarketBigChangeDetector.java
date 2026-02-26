@@ -1,6 +1,5 @@
 package com.binance.chuyennd.tradecore;
 
-import com.binance.chuyennd.ai_ml.data.SimpleSymbolMapper;
 import com.binance.chuyennd.helper.TickerFuturesHelper;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.MarketLevelChange;
@@ -124,7 +123,7 @@ public class MarketBigChangeDetector {
         return result;
     }
 
-    public static Set<String> getTopSymbol( int period, Map<String,
+    public static Set<String> getTopSymbol(int period, Map<String,
             KlineObjectSimple> symbol2FinalTicker, Set<String> symbolLocked, TreeMap<Float, String> predict2Symbol) {
         Set<String> symbols = new HashSet<>();
         if (predict2Symbol != null && !predict2Symbol.isEmpty()) {
@@ -216,18 +215,11 @@ public class MarketBigChangeDetector {
         return null;
     }
 
-    public static boolean isFundingFeeTrade(Float rateDown15MAvg, Float rateDownAvg, Float rateUpAvg,
-                                            Float minRate15Min60M) {
-//        Double rateMin2Trade = -0.025;
-//        Double rateMin2TradeFull = -0.03;
-//        return (rateDown15MAvg < rateMin2Trade && rateDown15MAvg <= minRate15Min60M)
-//                || rateDown15MAvg < rateMin2TradeFull
-//                || rateUpAvg > 0.005
-//                || rateDownAvg < -0.005;
-        return (rateDown15MAvg < Configs.FUNDING_RATE_MIN_TRADE && rateDown15MAvg <= minRate15Min60M)
-                || rateDown15MAvg < Configs.FUNDING_RATE_MIN_TRADE_FULL
-                || rateUpAvg > Configs.FUNDING_RATE_UP_AVG
-                || rateDownAvg < Configs.FUNDING_RATE_DOWN_AVG;
+    public static boolean isAiPredictTrade(Float rateDown15MAvg, Float rateDownAvg, Float rateUpAvg) {
+
+        return rateDown15MAvg < Configs.PREDICT_SYMBOL_RATE_DOWN_15M
+                || rateUpAvg > Configs.PREDICT_SYMBOL_RATE_UP_AVG
+                || rateDownAvg < Configs.PREDICT_SYMBOL_RATE_DOWN_AVG;
     }
 
     public static boolean isDcaAlt(Float rateDown15MAvg,
@@ -238,25 +230,6 @@ public class MarketBigChangeDetector {
                 || rateDownAvg < -0.012;
     }
 
-    public static List<String> addSpecialSymbol(Map<String, KlineObjectSimple> symbol2Ticker, Set<String> symbol2BUY,
-                                                Set<String> symbolRunning) {
-        List<String> hashSet = new ArrayList<>();
-        Double rateCheck = -0.013;
-
-        Set<String> symbol2Checks = new HashSet<>();
-        symbol2Checks.addAll(Constants.specialSymbol);
-        symbol2Checks.addAll(Constants.stableSymbol);
-        symbol2Checks.removeAll(symbolRunning);
-        symbol2Checks.removeAll(symbol2BUY);
-        for (String symbol : symbol2Checks) {
-            KlineObjectSimple ticker = symbol2Ticker.get(symbol);
-
-            if (ticker != null && Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen) < rateCheck) {
-                hashSet.add(symbol);
-            }
-        }
-        return hashSet;
-    }
 
 
 }
