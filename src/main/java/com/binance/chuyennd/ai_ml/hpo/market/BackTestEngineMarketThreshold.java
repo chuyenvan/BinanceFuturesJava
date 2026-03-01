@@ -33,7 +33,7 @@ public class BackTestEngineMarketThreshold {
 
     public double run(TreeMap<Long, MarketDataObject> time2MarketData,
                       TreeMap<Long, AiPredictionData> predictionMap,
-                      TreeMap<Long, Map<Short, float[]>> time2FundingPre) {
+                      TreeMap<Long, long[]> time2FundingPre) {
         try {
             BudgetManagerSimple.resetInstance();
             SimulatorMarketLevelTicker1MStopLoss test = new SimulatorMarketLevelTicker1MStopLoss();

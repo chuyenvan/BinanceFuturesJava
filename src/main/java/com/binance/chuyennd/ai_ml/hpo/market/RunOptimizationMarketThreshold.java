@@ -1,6 +1,7 @@
 package com.binance.chuyennd.ai_ml.hpo.market;
 
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
+import com.binance.chuyennd.ai_ml.data.HPOSmartCache;
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.utils.Configs;
@@ -28,7 +29,7 @@ public class RunOptimizationMarketThreshold {
     private static final AtomicLong testCounter = new AtomicLong(0);
     public static TreeMap<Long, MarketDataObject> time2MarketData;
     public static TreeMap<Long, AiPredictionData> predictionMap;
-    public static TreeMap<Long, Map<Short, float[]>> time2FundingPre;
+    public static TreeMap<Long, long[]> time2FundingPre;
 
     private static double evaluate(Genotype<DoubleGene> genotype) {
         long currentTest = testCounter.incrementAndGet();
@@ -73,9 +74,9 @@ public class RunOptimizationMarketThreshold {
         return profit;
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         System.out.println("=== START OPTIMIZING MARKET THRESHOLDS ===");
-        loadData();
+        loadAndWarmUpData();
 
         long startTime = System.currentTimeMillis();
 
@@ -105,20 +106,31 @@ public class RunOptimizationMarketThreshold {
         printResult(result, startTime);
     }
 
-    private static void loadData() {
-        try {
-            Long startTime = Utils.sdfFile.parse(Configs.TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
-            int numberMinutes = System.currentTimeMillis() - startTime > 0 ? (int) ((System.currentTimeMillis() - startTime) / Utils.TIME_MINUTE) : 0;
-            LOG.info("Loading Data... {} {} minutes", Utils.normalizeDateYYYYMMDDHHmm(startTime), numberMinutes);
+    private static void loadAndWarmUpData() throws Exception {
+        LOG.info("Loading Data... {}", Configs.TIME_RUN);
+        Long startTime = Utils.sdfFile.parse(Configs.TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
+        int numberMinutes = System.currentTimeMillis() - startTime > 0 ? (int) ((System.currentTimeMillis() - startTime) / Utils.TIME_MINUTE) : 0;
 
-            time2MarketData = DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
-            predictionMap = DataManagerAerospikeFloatSim.getAllMarketAiPredictionsFromAerospike();
-            time2FundingPre = DataManagerAerospikeFloatSim.getFundingPredictionsByRange(startTime, numberMinutes);
-            System.out.println("Data Loaded.");
-        } catch (Exception e) {
-            e.printStackTrace();
-            System.exit(1);
+        time2MarketData = DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
+        Utils.printMemoryUsage("Load time2MarketData");
+
+        predictionMap = DataManagerAerospikeFloatSim.getAllMarketAiPredictionsFromAerospike();
+        Utils.printMemoryUsage("Load predictionMap");
+
+        time2FundingPre = DataManagerAerospikeFloatSim.getFundingPredictionsPrimitiveByRange(startTime,numberMinutes); // HOẶC HÀM GET THEO RANGE CỦA BẠN
+        Utils.printMemoryUsage("Load time2FundingPre (time2SymbolPred)");
+
+        // Warmup HPOSmartCache...
+        LOG.info("🔥 Warming up cache ({}-NOW)...", Configs.TIME_RUN);
+        long startTimeLoad = Utils.sdfFile.parse(Configs.TIME_RUN).getTime();
+        long endTimeLoad = System.currentTimeMillis();
+        long current = startTimeLoad;
+        while (current < endTimeLoad) {
+            HPOSmartCache.getData(current);
+            current += Utils.TIME_DAY;
         }
+        Utils.printMemoryUsage("Load HPOSmartCache");
+
     }
 
     private static void printResult(EvolutionResult<DoubleGene, Double> result, long startTime) {

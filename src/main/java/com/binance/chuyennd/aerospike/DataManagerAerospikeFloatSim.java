@@ -1512,6 +1512,7 @@ public class DataManagerAerospikeFloatSim {
         }
         return results;
     }
+
     // =========================================================================
     // 🔥 MARKET AI PREDICTIONS (ENTRY PREDICTIONS) - SET: ai_pred_market
     // =========================================================================
@@ -1612,6 +1613,7 @@ public class DataManagerAerospikeFloatSim {
         }
         return results;
     }
+
     /**
      * Ghi một Batch Market Data vào Aerospike (Dùng cho ExportMarketData2File)
      */
@@ -1689,6 +1691,7 @@ public class DataManagerAerospikeFloatSim {
     /**
      * HÀM ĐỌC 1 BẢN GHI: Lấy dữ liệu Market Data tại 1 thời điểm cụ thể
      * * @param timestamp Thời gian (milliseconds) cần lấy dữ liệu
+     *
      * @return MarketDataObject hoặc null nếu không tồn tại
      */
     public static MarketDataObject getMarketDataAtTime(long timestamp) {
@@ -1717,6 +1720,7 @@ public class DataManagerAerospikeFloatSim {
         }
         return null; // Trả về null nếu không tìm thấy hoặc có lỗi
     }
+
     public static long getLastTimestampFromSet(String setName) {
         final long[] maxTime = {0L};
         try {
@@ -1749,56 +1753,21 @@ public class DataManagerAerospikeFloatSim {
         }
         return maxTime[0];
     }
+
     /**
      * HÀM ĐỌC FULL DATA: Tải toàn bộ Funding Predictions từ Aerospike vào RAM cho Simulator.
      */
-    public static TreeMap<Long, Map<Short, float[]>> getAllFundingPredictionsDataFromAerospike() {
-        TreeMap<Long, Map<Short, float[]>> results = new TreeMap<>();
-        try {
-            LOG.info("📥 Đang tải FULL dữ liệu Funding Predictions từ Aerospike (Set: {})...", AEROSPIKE_SET_NAME_FUNDING_PRED);
-            ScanPolicy scanPolicy = new ScanPolicy();
-            scanPolicy.concurrentNodes = true;
-            // Mặc định scanPolicy.includeBinData = true nên sẽ lấy được cột "data"
 
-            getClient226().scanAll(scanPolicy, Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_FUNDING_PRED, (key, record) -> {
-                try {
-                    if (key.userKey != null) {
-                        String keyStr = key.userKey.toString();
-                        SimpleDateFormat fmt = new SimpleDateFormat("yyyyMMdd-HHmm");
-                        long timestamp = fmt.parse(keyStr).getTime();
-
-                        // Bên trong vòng lặp client.scanAll(...)
-                        byte[] compressed = (byte[]) record.getValue("data");
-                        if (compressed != null) {
-                            byte[] rawBytes = Snappy.uncompress(compressed);
-
-                            // 🔥 THAY ĐỔI: Dùng Binary Codec thay cho JSON
-                            Map<Short, float[]> data = decodeFundingMapFromBinary(rawBytes);
-
-                            // Check dữ liệu tránh lỗi
-                            if (data != null && !data.isEmpty()) {
-                                results.put(timestamp, data);
-                            }
-                        }
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    // Bỏ qua lỗi parse cục bộ
-                }
-            }, "data");
-
-            LOG.info("✅ Đã tải xong {} records Funding Predictions.", results.size());
-        } catch (Exception e) {
-            LOG.error("❌ Lỗi khi Scan Full Funding Predictions Data", e);
-        }
-        return results;
-    }
     /**
      * Đọc dữ liệu Funding Predictions theo khoảng thời gian tùy chỉnh
-     * @param startTime Mốc thời gian bắt đầu (milliseconds)
+     *
+     * @param startTime    Mốc thời gian bắt đầu (milliseconds)
      * @param totalMinutes Số lượng phút cần load
      */
-    public static TreeMap<Long, Map<Short, float[]>> getFundingPredictionsByRange(long startTime, int totalMinutes) {
+    public static TreeMap<Long, Map<Short, float[]>> getSymbolPredictionsByRange(long startTime, int totalMinutes) {
+
+        LOG.info("📥 Đang tải AI Symbol Predictions từ Aerospike (Set: {} from: {} records: {})...", AEROSPIKE_SET_NAME_FUNDING_PRED
+                , Utils.normalizeDateYYYYMMDDHHmm(startTime), totalMinutes);
         TreeMap<Long, Map<Short, float[]>> results = new TreeMap<>();
         long[] allTimestamps = new long[totalMinutes];
         for (int i = 0; i < totalMinutes; i++) {
@@ -1855,7 +1824,11 @@ public class DataManagerAerospikeFloatSim {
         }
 
         for (Future<Map<Long, Map<Short, float[]>>> f : futures) {
-            try { results.putAll(f.get()); } catch (Exception e) { e.printStackTrace(); }
+            try {
+                results.putAll(f.get());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
         LOG.info("✅ Đã load xong {} records Funding Pred.", results.size());
         return results;
@@ -1915,12 +1888,14 @@ public class DataManagerAerospikeFloatSim {
         }
         return map;
     }
+
     public static void setThreadCount(int i) {
         threadCount = i;
     }
 
     /**
      * HÀM ĐỌC 1 BẢN GHI: Lấy dữ liệu Market AI Prediction (Entry) tại 1 thời điểm cụ thể
+     *
      * @param timestamp Thời gian (milliseconds) cần lấy dữ liệu
      * @return AiPredictionData hoặc null nếu không tồn tại
      */
@@ -1946,5 +1921,96 @@ public class DataManagerAerospikeFloatSim {
             LOG.error("❌ Error reading Market AI Pred at {}: {}", timestamp, e.getMessage());
         }
         return null;
+    }
+    /**
+     * TỐI ƯU RAM HPO: Đọc Map Funding chuyển thành mảng long nguyên thủy (Bitwise Packing)
+     * Đóng gói (Short symbolId + Float pred[0]) vào 1 biến long.
+     */
+    public static long[] decodeFundingMapToPrimitiveArray(byte[] data) {
+        if (data == null || data.length == 0) return new long[0];
+
+        java.nio.ByteBuffer buffer = java.nio.ByteBuffer.wrap(data);
+        int mapSize = buffer.getInt(); // Đọc số lượng Entry
+
+        long[] result = new long[mapSize];
+
+        for (int i = 0; i < mapSize; i++) {
+            short symbolId = buffer.getShort();     // Đọc ID
+            int arrLen = buffer.getInt();           // Đọc độ dài mảng float
+
+            float firstPred = 0f;
+            if (arrLen > 0) {
+                firstPred = buffer.getFloat();      // Chỉ lấy giá trị pred[0]
+            }
+
+            // Bỏ qua các phần tử float còn lại (nếu có) để nhảy đến record tiếp theo
+            for (int j = 1; j < arrLen; j++) {
+                buffer.getFloat();
+            }
+
+            // ĐÓNG GÓI: 16 bit đầu là symbolId, 32 bit cuối là bit của float
+            long encoded = ((long) symbolId << 32) | (Float.floatToRawIntBits(firstPred) & 0xFFFFFFFFL);
+            result[i] = encoded;
+        }
+        return result;
+    }
+    /**
+     * DÀNH RIÊNG CHO HPO: Đọc Funding Data và nén thành mảng long[] nguyên thủy
+     */
+    public static TreeMap<Long, long[]> getFundingPredictionsPrimitiveByRange(long startTime, int totalMinutes) {
+        LOG.info("📥 [HPO OPTIMIZED] Đang tải AI Symbol Predictions (Set: {} from: {} records: {})...",
+                AEROSPIKE_SET_NAME_FUNDING_PRED, Utils.normalizeDateYYYYMMDDHHmm(startTime), totalMinutes);
+
+        TreeMap<Long, long[]> results = new TreeMap<>();
+        long[] allTimestamps = new long[totalMinutes];
+        for (int i = 0; i < totalMinutes; i++) allTimestamps[i] = startTime + (i * 60000L);
+
+        List<java.util.concurrent.Future<Map<Long, long[]>>> futures = new ArrayList<>();
+        int chunkSize = (totalMinutes + threadCount - 1) / threadCount;
+        int SUB_BATCH_SIZE = 5000;
+
+        for (int i = 0; i < threadCount; i++) {
+            final int startIdx = i * chunkSize;
+            final int endIdx = Math.min(startIdx + chunkSize, totalMinutes);
+            if (startIdx >= endIdx) break;
+
+            futures.add(executor.submit(() -> {
+                SimpleDateFormat localKeyFormat = new SimpleDateFormat("yyyyMMdd-HHmm");
+                Map<Long, long[]> chunkResult = new HashMap<>();
+                long[] chunkTimestamps = Arrays.copyOfRange(allTimestamps, startIdx, endIdx);
+
+                for (int j = 0; j < chunkTimestamps.length; j += SUB_BATCH_SIZE) {
+                    int limit = Math.min(j + SUB_BATCH_SIZE, chunkTimestamps.length);
+                    Key[] subKeys = new Key[limit - j];
+                    for (int k = 0; k < subKeys.length; k++) {
+                        subKeys[k] = new Key(Configs.AEROSPIKE_NAMESPACE, Configs.AEROSPIKE_SET_NAME_FUNDING_PRED,
+                                localKeyFormat.format(new java.util.Date(chunkTimestamps[j + k])));
+                    }
+
+                    try {
+                        Record[] records = getClient226().get(batchPolicy, subKeys);
+                        if (records != null) {
+                            for (int r = 0; r < records.length; r++) {
+                                if (records[r] != null) {
+                                    byte[] compressed = (byte[]) records[r].getValue("data");
+                                    if (compressed != null) {
+                                        byte[] rawBytes = org.xerial.snappy.Snappy.uncompress(compressed);
+                                        // Gọi hàm decode ra long[] mà bạn đã viết
+                                        chunkResult.put(chunkTimestamps[j + r], decodeFundingMapToPrimitiveArray(rawBytes));
+                                    }
+                                }
+                            }
+                        }
+                    } catch (Exception e) {}
+                }
+                return chunkResult;
+            }));
+        }
+
+        for (java.util.concurrent.Future<Map<Long, long[]>> f : futures) {
+            try { results.putAll(f.get()); } catch (Exception e) {}
+        }
+        LOG.info("✅ Đã load xong {} records Funding Pred (Primitive Optimized).", results.size());
+        return results;
     }
 }

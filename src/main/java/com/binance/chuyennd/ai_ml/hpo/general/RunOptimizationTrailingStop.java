@@ -1,14 +1,19 @@
 package com.binance.chuyennd.ai_ml.hpo.general;
 
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
+import com.binance.chuyennd.ai_ml.data.HPOSmartCache;
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.object.MarketDataObject;
+import com.binance.chuyennd.utils.Configs;
+import com.binance.chuyennd.utils.Utils;
 import io.jenetics.DoubleChromosome;
 import io.jenetics.DoubleGene;
 import io.jenetics.Genotype;
 import io.jenetics.engine.Engine;
 import io.jenetics.engine.EvolutionResult;
 import io.jenetics.util.DoubleRange;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.Map;
@@ -17,14 +22,14 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class RunOptimizationTrailingStop {
-
+    public static final Logger LOG = LoggerFactory.getLogger(RunOptimizationTrailingStop.class);
     private static final int POPULATION_SIZE = 15;
     private static final int GENERATIONS = 30;
 
     private static final AtomicLong testCounter = new AtomicLong(0);
     public static TreeMap<Long, MarketDataObject> time2MarketData;
     public static TreeMap<Long, AiPredictionData> predictionMap;
-    public static TreeMap<Long, Map<Short, float[]>> time2FundingPre;
+    public static TreeMap<Long, long[]> time2FundingPre;
     public static final String FILE_FUNDING_FEE = "storage/fundingfee_time.data";
 
     private static double evaluate(Genotype<DoubleGene> genotype) {
@@ -66,9 +71,9 @@ public class RunOptimizationTrailingStop {
         return profit;
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         System.out.println("=== BAT DAU TOI UU TRAILING STOP ===");
-        loadData();
+        loadAndWarmUpData();
 
         long startTime = System.currentTimeMillis();
 
@@ -97,18 +102,31 @@ public class RunOptimizationTrailingStop {
         printResult(result, startTime);
     }
 
-    private static void loadData() {
-        try {
-            System.out.println("Loading Data...");
+    private static void loadAndWarmUpData() throws Exception {
+        LOG.info("Loading Data... {}", Configs.TIME_RUN);
+        Long startTime = Utils.sdfFile.parse(Configs.TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
+        int numberMinutes = System.currentTimeMillis() - startTime > 0 ? (int) ((System.currentTimeMillis() - startTime) / Utils.TIME_MINUTE) : 0;
 
-            time2MarketData = DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
-            predictionMap = DataManagerAerospikeFloatSim.getAllMarketAiPredictionsFromAerospike();
-            time2FundingPre = DataManagerAerospikeFloatSim.getAllFundingPredictionsDataFromAerospike();
-            System.out.println("Data Loaded.");
-        } catch (Exception e) {
-            e.printStackTrace();
-            System.exit(1);
+        time2MarketData = DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
+        Utils.printMemoryUsage("Load time2MarketData");
+
+        predictionMap = DataManagerAerospikeFloatSim.getAllMarketAiPredictionsFromAerospike();
+        Utils.printMemoryUsage("Load predictionMap");
+
+        time2FundingPre = DataManagerAerospikeFloatSim.getFundingPredictionsPrimitiveByRange(startTime, numberMinutes); // HOẶC HÀM GET THEO RANGE CỦA BẠN
+        Utils.printMemoryUsage("Load time2FundingPre (time2SymbolPred)");
+
+        // Warmup HPOSmartCache...
+        LOG.info("🔥 Warming up cache ({}-NOW)...", Configs.TIME_RUN);
+        long startTimeLoad = Utils.sdfFile.parse(Configs.TIME_RUN).getTime();
+        long endTimeLoad = System.currentTimeMillis();
+        long current = startTimeLoad;
+        while (current < endTimeLoad) {
+            HPOSmartCache.getData(current);
+            current += Utils.TIME_DAY;
         }
+        Utils.printMemoryUsage("Load HPOSmartCache");
+
     }
 
     private static void printResult(EvolutionResult<DoubleGene, Double> result, long startTime) {

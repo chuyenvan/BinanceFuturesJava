@@ -172,4 +172,5 @@ public class HPOSmartCache {
         if (index < 0 || index >= 1440) return null;
         return data.get(dayStart, index);
     }
+
 }

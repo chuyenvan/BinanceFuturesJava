@@ -42,6 +42,7 @@ public class Configs {
 
     // Thêm dòng này vào Configs.java
     public static double PREDICT_SYMBOL_RATE_MAX_THRESHOLD = 0.2;
+    public static boolean IS_HPO_MODE = false;
     public static Double PREDICT_SYMBOL_RATE_DOWN_15M = -0.03234;  // Param 2
     public static Double PREDICT_SYMBOL_RATE_UP_AVG = 0.00454;          // Param 3
     public static Double PREDICT_SYMBOL_RATE_DOWN_AVG = -0.00503;       // Param 4

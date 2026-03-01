@@ -30,7 +30,6 @@ import com.binance.chuyennd.object.MarketLevelChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
-import com.binance.chuyennd.research.FundingFeeManager;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
 import com.binance.chuyennd.tradecore.DcaProcessor;
 import com.binance.chuyennd.tradecore.MarketBigChangeDetector;
@@ -84,8 +83,6 @@ public class DetectEntrySignal2TradeNormal {
 
     public void start() throws InterruptedException, ParseException {
         initData();
-        // 🔥 BẬT CHẾ ĐỘ PRODUCTION cho FundingFeeManager để lấy data realtime
-        FundingFeeManager.getInstance().setProductionMode(true);
         startThreadDetectMarketLevel2Trader();
     }
 
@@ -395,14 +392,14 @@ public class DetectEntrySignal2TradeNormal {
 
             for (int i = 0; i < aiCandidates.size(); i++) {
                 String sym = aiCandidates.get(i);
-                float[] probs = results.get(i);
+                float[] preds = results.get(i);
 
                 // 🔥 FILTER: Reject nếu Fail Prob > 0.3
-                if (probs[0] > 0.2) {
-                    LOG.info("❌ [FILTER AI FUNDING] {}: Prediction FAIL too high ({})", sym, probs[0]);
+                if (preds[0] > Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD) {
+//                    LOG.info("❌ [FILTER AI SYMBOL] {}: Prediction FAIL too high ({})", sym, probs[0]);
                 } else {
                     // Tự động sắp xếp: Key càng bé (ProbFail thấp) càng đứng đầu
-                    sortedCandidates.put(probs[0], sym);
+                    sortedCandidates.put(preds[0], sym);
                 }
             }
         } else {
@@ -475,8 +472,6 @@ public class DetectEntrySignal2TradeNormal {
             data.put("order", orderTrade);
             data.put("marketRate", marketRate);
             data.put("max15M", priceMax15M);
-//            data.put("symbol2Sell", symbol2Sell);
-//            data.put("fundingBuy", FundingFeeManager.getInstance().getFundingListSymbol2Trade(ticker.startTime.longValue()));
             String fileName = "storage/data/order/";
             fileName += Utils.normalizeDateYYYYMMDD(ticker.startTime.longValue());
             fileName += "/";

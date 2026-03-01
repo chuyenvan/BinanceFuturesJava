@@ -45,7 +45,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     public TreeMap<Long, OrderTargetInfoTest> allOrderDone;
     public TreeMap<Long, MarketDataObject> time2MarketData;
     public TreeMap<Long, AiPredictionData> predictionMap;
-    public TreeMap<Long, Map<Short, float[]>> time2SymbolPred;
+    public TreeMap<Long, long[]> time2SymbolPred;
     public AIRejectFilter aiRejectFilter;
     FundingFeatureExtractor extractor = new FundingFeatureExtractor();
     public Map<String, KlineObjectSimple> symbol2LastTicker = new HashMap<>();
@@ -57,8 +57,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     public static void main(String[] args) throws ParseException, IOException, InterruptedException {
 
         SimulatorMarketLevelTicker1MStopLoss test = new SimulatorMarketLevelTicker1MStopLoss();
-        // 🔥 BẬT CHẾ ĐỘ PRODUCTION
-        FundingFeeManager.getInstance().setProductionMode(false);
 
         test.initData();
         test.simulatorWithInitEntry();
@@ -74,8 +72,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         while (true) {
             TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers;
             try {
-                time2Tickers = HPOSmartCache.getData(startTime);
-//                time2Tickers = DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime);
+//                time2Tickers = HPOSmartCache.getData(startTime);
+                time2Tickers = DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime);
 
                 if (time2Tickers == null) {
                     LOG.info("File data error or not found for time: {}", Utils.normalizeDateYYYYMMDDHHmm(startTime));
@@ -204,25 +202,25 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                         if (!Utils.isTickerAvailable(ticker)) {
                                             continue;
                                         }
-//                                        double rate1m = (ticker.priceClose - ticker.priceOpen) / ticker.priceOpen;
-                                        // Logic: Chỉ giữ lại nếu (rate1m < -0.65%)
-                                        // Tức là đang sập mạnh.
-//                                        if (rate1m >= -0.0065) {
-//                                            continue;
-//                                        }
 
-                                        Map<Short, float[]> symbol2Pred = time2SymbolPred.get(time);
+                                        long[] symbol2Pred = time2SymbolPred.get(time);
                                         if (symbol2Pred != null) {
-                                            float[] fundingPred = symbol2Pred.get(SimpleSymbolMapper.getInstance().getId(symbol));
-                                            if (fundingPred != null) {
-                                                if (fundingPred[0] > Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD) {
-//                                                    LOG.info("❌ [FILTER AI] {}: Funding Prediction too high ({})", symbol, fundingPred[0]);
+                                            // Dùng Helper thay cho lệnh Map.get()
+                                            Float symbolPred = getPredictionFromPrimitiveArray(symbol2Pred,
+                                                    SimpleSymbolMapper.getInstance().getId(symbol));
+
+                                            if (symbolPred != null) {
+                                                // Biến symbolPred giờ là 1 số thực đơn thuần, không phải mảng nữa
+                                                if (symbolPred > Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD) {
                                                     continue;
                                                 }
-                                                fundingPredict2Symbol.put(fundingPred[0], symbol);
+                                                fundingPredict2Symbol.put(symbolPred, symbol);
                                             }
                                         } else {
-                                            LOG.info("No funding prediction data for time: {}", Utils.normalizeDateYYYYMMDDHHmm(time));
+                                            LOG.error("🚨 LOGIC ERROR tại {}: Data[15mAvg: {}, DownAvg: {}, UpAvg: {}] | Thresholds[15m: {}, Down: {}, Up: {}]",
+                                                    Utils.normalizeDateYYYYMMDDHHmm(time),
+                                                    marketData.rateDown15MAvg, marketData.rateDownAvg, marketData.rateUpAvg,
+                                                    Configs.PREDICT_SYMBOL_RATE_DOWN_15M, Configs.PREDICT_SYMBOL_RATE_DOWN_AVG, Configs.PREDICT_SYMBOL_RATE_UP_AVG);
                                         }
                                     }
                                     int counter = 0;
@@ -283,7 +281,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         cal.setTimeInMillis(startTime); // Hoặc dùng biến startTime của vòng lặp
         int finalYear = cal.get(Calendar.YEAR);
         BudgetManagerSimple.getInstance().balanceIndex.year2UnrealizedPnl.put(finalYear, 0d);
-        FundingFeeManager.getInstance().writeData2File();
         Storage.writeObject2File(FILE_STORAGE_ORDER_DONE, allOrderDone);
         Storage.writeObject2File("storage/orderRunning.data", symbol2OrderRunning);
         Storage.writeObject2File("storage/BalanceIndex.data", BudgetManagerSimple.getInstance().balanceIndex);
@@ -296,16 +293,15 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         Utils.printMemoryUse();
     }
 
-    private TreeMap<Float, String> extractPredict2Symbol(Map<Short, float[]> shortMap) {
+    private TreeMap<Float, String> extractPredict2Symbol(long[] encodedDataArray) {
         TreeMap<Float, String> predict2Symbol = new TreeMap<>();
-        if (shortMap != null && !shortMap.isEmpty()) {
-            for (Map.Entry<Short, float[]> entry : shortMap.entrySet()) {
-                String symbol = SimpleSymbolMapper.getInstance().getSymbol(entry.getKey());
+        if (encodedDataArray != null && encodedDataArray.length > 0) {
+            for (long encodedData : encodedDataArray) {
+                short symbolId = (short) (encodedData >> 32);
+                float pred = Float.intBitsToFloat((int) encodedData);
+                String symbol = SimpleSymbolMapper.getInstance().getSymbol(symbolId);
                 if (StringUtils.isNotEmpty(symbol)) {
-                    float[] pred = entry.getValue();
-                    if (pred != null && pred.length > 0) {
-                        predict2Symbol.put(pred[0], symbol);
-                    }
+                    predict2Symbol.put(pred, symbol);
                 }
             }
         }
@@ -397,11 +393,15 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         // =====================================================================
         // 2. TẢI TOÀN BỘ DỮ LIỆU VÀO RAM SAU KHI ĐÃ ĐỒNG BỘ
         // =====================================================================
+        Long startTime = Utils.sdfFile.parse(Configs.TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
+        int numberMinutes = System.currentTimeMillis() - startTime > 0 ? (int) ((System.currentTimeMillis() - startTime) / Utils.TIME_MINUTE) : 0;
+
         LOG.info("📥 Đang tải dữ liệu vào RAM...");
         time2MarketData = DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
         predictionMap = DataManagerAerospikeFloatSim.getAllMarketAiPredictionsFromAerospike();
-        time2SymbolPred = DataManagerAerospikeFloatSim.getAllFundingPredictionsDataFromAerospike();
+        time2SymbolPred = DataManagerAerospikeFloatSim.getFundingPredictionsPrimitiveByRange(startTime, numberMinutes);
         aiRejectFilter = new AIRejectFilter();
+        Utils.printMemoryUsage("Load time2FundingPre (time2SymbolPred)");
 
         LOG.info("✅ TẤT CẢ DỮ LIỆU ĐÃ SẴN SÀNG. BẮT ĐẦU SIMULATE...");
     }
@@ -445,8 +445,11 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             order.priceTP = orderMulti.priceTP;
             order.minPrice = orderMulti.minPrice;
             order.lastPrice = orderMulti.lastPrice;
-            order.updateFundingFee();
-            allOrderDone.put(-order.timeUpdate + allOrderDone.size(), order);
+//            order.updateFundingFee();
+            // Nếu là HPO, bỏ qua để Garbage Collector tự động xóa Object Order này đi
+            if (!Configs.IS_HPO_MODE) {
+                allOrderDone.put(-order.timeUpdate + allOrderDone.size(), order);
+            }
             BudgetManagerSimple.getInstance().updatePnl(order);
         }
         symbol2OrdersEntry.remove(symbol);
@@ -589,7 +592,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     // 🔥 THÊM THAM SỐ time2FundingPre
     public void initDataReady(TreeMap<Long, MarketDataObject> time2MarketData,
                               TreeMap<Long, AiPredictionData> predictionMap,
-                              TreeMap<Long, Map<Short, float[]>> time2FundingPre,
+                              TreeMap<Long, long[]> time2FundingPre,
                               AIRejectFilter aiRejectFilter) throws OrtException {
 
         // Reset Data Old
@@ -603,5 +606,12 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         this.aiRejectFilter = aiRejectFilter;
     }
 
-
+    private Float getPredictionFromPrimitiveArray(long[] encodedArray, short targetId) {
+        for (long encodedData : encodedArray) {
+            if ((short) (encodedData >> 32) == targetId) {
+                return Float.intBitsToFloat((int) encodedData);
+            }
+        }
+        return null;
+    }
 }

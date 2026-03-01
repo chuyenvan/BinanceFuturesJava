@@ -27,8 +27,6 @@ import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
-import com.binance.chuyennd.research.FundingFeeManager;
-import com.binance.chuyennd.tradecore.MarketBigChangeDetector;
 import com.binance.chuyennd.tradecore.TradeUtils;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
@@ -60,8 +58,6 @@ public class BinanceOrderTradingManager {
 
     public static void main(String[] args) throws InterruptedException, ParseException {
         Utils.writePid2File();
-        // 🔥 BẬT CHẾ ĐỘ PRODUCTION
-        FundingFeeManager.getInstance().setProductionMode(true);
         new DetectEntrySignal2TradeNormal().start();
         new BinanceOrderTradingManager().start();
     }

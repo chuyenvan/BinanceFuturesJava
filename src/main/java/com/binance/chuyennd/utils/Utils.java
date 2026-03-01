@@ -659,4 +659,15 @@ public class Utils {
         long usedMem = (runtime.totalMemory() - runtime.freeMemory()) / (1024 * 1024);
         LOG.info(". RAM Used: {} MB", usedMem);
     }
+
+    public static void printMemoryUsage(String stepName) {
+        System.gc(); // Ép dọn rác
+        try {
+            Thread.sleep(500);
+        } catch (InterruptedException e) {
+        } // Chờ GC chạy xong
+        Runtime rt = Runtime.getRuntime();
+        long usedMB = (rt.totalMemory() - rt.freeMemory()) / (1024 * 1024);
+        LOG.info("💾 RAM SAU KHI [{}]: {} MB", stepName, usedMB);
+    }
 }

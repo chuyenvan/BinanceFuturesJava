@@ -18,8 +18,6 @@ public class FundingFeeManager {
     private ConcurrentHashMap<String, TreeMap<Long, Double>> symbol2FundingFee = new ConcurrentHashMap<>();
 
     // Cache danh sách coin cần trade theo giờ (Dùng cho Backtest)
-    public static final String FILE_FUNDING_FEE = "storage/fundingfee_time.data";
-    public ConcurrentHashMap<Long, Set<String>> time2FundingFeeTrade;
 
     private static volatile FundingFeeManager INSTANCE = null;
 
@@ -50,26 +48,12 @@ public class FundingFeeManager {
             for (String symbol : symbol2Funding.keySet()) {
                 symbol2FundingFee.put(symbol, symbol2Funding.get(symbol));
             }
-            if (new File(FILE_FUNDING_FEE).exists()) {
-                time2FundingFeeTrade = (ConcurrentHashMap<Long, Set<String>>) StorageSnappy.readObjectFromFile(FILE_FUNDING_FEE);
-                LOG.info("Init funding fee time cache: {} records", time2FundingFeeTrade.size());
-            } else {
-                time2FundingFeeTrade = new ConcurrentHashMap<>();
-            }
             LOG.info("Init funding fee data: {} symbols", symbol2FundingFee.size());
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    public void writeData2File() {
-        if (isProductionMode) return; // Production không ghi file
-        try {
-            StorageSnappy.writeObject2File(FILE_FUNDING_FEE, time2FundingFeeTrade);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
 
 
     public Double getNearestFundingFee(String symbol, long timestamp) {

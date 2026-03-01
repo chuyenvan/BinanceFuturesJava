@@ -12,7 +12,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 
-public class BackTestEngineAI {
+public class BackTestEngineAIMarket {
 
     public AIRejectFilter aiRejectFilter;
 
@@ -22,15 +22,15 @@ public class BackTestEngineAI {
     private static final double BASELINE_2024 = 33234.0;
     private static final double BASELINE_2025 = 26037.0;
 
-    public BackTestEngineAI(double risk, double minRet1H, double highRet,
-                            double minMom15M, double minTrend4H, double deadTrend24H) {
+    public BackTestEngineAIMarket(double risk, double minRet1H, double highRet,
+                                  double minMom15M, double minTrend4H, double deadTrend24H) {
         aiRejectFilter = new AIRejectFilter();
         aiRejectFilter.setConfig(risk, minRet1H, highRet, minMom15M, minTrend4H, deadTrend24H);
     }
 
     public double run(TreeMap<Long, MarketDataObject> time2MarketData,
                       TreeMap<Long, AiPredictionData> predictionMap,
-                      TreeMap<Long, Map<Short, float[]>> time2FundingPre) {
+                      TreeMap<Long, long[]> time2FundingPre) {
         try {
             BudgetManagerSimple.resetInstance();
             SimulatorMarketLevelTicker1MStopLoss test = new SimulatorMarketLevelTicker1MStopLoss();

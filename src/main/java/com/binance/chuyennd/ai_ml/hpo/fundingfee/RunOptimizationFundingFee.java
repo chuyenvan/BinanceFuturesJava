@@ -1,9 +1,11 @@
 package com.binance.chuyennd.ai_ml.hpo.fundingfee;
 
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
+import com.binance.chuyennd.ai_ml.data.HPOSmartCache;
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.utils.Configs;
+import com.binance.chuyennd.utils.Utils;
 import io.jenetics.*;
 import io.jenetics.engine.Engine;
 import io.jenetics.engine.EvolutionResult;
@@ -28,7 +30,7 @@ public class RunOptimizationFundingFee {
 
     public static TreeMap<Long, MarketDataObject> time2MarketData;
     public static TreeMap<Long, AiPredictionData> predictionMap;
-    public static TreeMap<Long, Map<Short, float[]>> time2FundingPre; // 🔥 THÊM BIẾN NÀY
+    public static TreeMap<Long, long[]> time2FundingPre; // 🔥 THÊM BIẾN NÀY
 
     public static void main(String[] args) {
         LOG.info("=== BẮT ĐẦU TỐI ƯU HÓA FUNDING FEE PARAMETERS ===");
@@ -113,13 +115,29 @@ public class RunOptimizationFundingFee {
     }
 
     private static void loadAndWarmUpData() throws Exception {
-        System.out.println("🚀 Đang load TẤT CẢ dữ liệu từ Aerospike vào RAM...");
+        LOG.info("Loading Data... {}", Configs.TIME_RUN);
+        Long startTime = Utils.sdfFile.parse(Configs.TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
+        int numberMinutes = System.currentTimeMillis() - startTime > 0 ? (int) ((System.currentTimeMillis() - startTime) / Utils.TIME_MINUTE) : 0;
 
-        // 🔥 ĐỌC THẲNG TỪ AEROSPIKE (KHÔNG CẦN CHỜ CHECK SINH BÙ NỮA)
         time2MarketData = DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
-        predictionMap = DataManagerAerospikeFloatSim.getAllMarketAiPredictionsFromAerospike();
-        time2FundingPre = DataManagerAerospikeFloatSim.getAllFundingPredictionsDataFromAerospike();
+        Utils.printMemoryUsage("Load time2MarketData");
 
-        System.out.println("✅ Load dữ liệu vào RAM thành công.");
+        predictionMap = DataManagerAerospikeFloatSim.getAllMarketAiPredictionsFromAerospike();
+        Utils.printMemoryUsage("Load predictionMap");
+
+        time2FundingPre = DataManagerAerospikeFloatSim.getFundingPredictionsPrimitiveByRange(startTime,numberMinutes); // HOẶC HÀM GET THEO RANGE CỦA BẠN
+        Utils.printMemoryUsage("Load time2FundingPre (time2SymbolPred)");
+
+        // Warmup HPOSmartCache...
+        LOG.info("🔥 Warming up cache ({}-NOW)...", Configs.TIME_RUN);
+        long startTimeLoad = Utils.sdfFile.parse(Configs.TIME_RUN).getTime();
+        long endTimeLoad = System.currentTimeMillis();
+        long current = startTimeLoad;
+        while (current < endTimeLoad) {
+            HPOSmartCache.getData(current);
+            current += Utils.TIME_DAY;
+        }
+        Utils.printMemoryUsage("Load HPOSmartCache");
+
     }
 }
