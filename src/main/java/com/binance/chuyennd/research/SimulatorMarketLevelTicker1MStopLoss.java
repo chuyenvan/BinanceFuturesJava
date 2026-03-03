@@ -72,8 +72,11 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         while (true) {
             TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers;
             try {
-//                time2Tickers = HPOSmartCache.getData(startTime);
-                time2Tickers = DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime);
+                if (Configs.IS_HPO_MODE) {
+                    time2Tickers = HPOSmartCache.getData(startTime);
+                } else {
+                    time2Tickers = DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime);
+                }
 
                 if (time2Tickers == null) {
                     LOG.info("File data error or not found for time: {}", Utils.normalizeDateYYYYMMDDHHmm(startTime));
