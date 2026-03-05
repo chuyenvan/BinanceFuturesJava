@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,6 +15,7 @@
  */
 package com.binance.chuyennd.client;
 
+import com.binance.chuyennd.utils.Configs;
 import com.binance.client.RequestOptions;
 import com.binance.client.SyncRequestClient;
 import com.binance.chuyennd.config.PrivateConfig;
@@ -22,11 +23,15 @@ import com.binance.client.model.market.ExchangeInfoEntry;
 import com.binance.client.model.market.ExchangeInformation;
 import com.binance.client.model.market.SymbolPrice;
 import com.binance.client.model.trade.AccountBalance;
+import com.google.gson.Gson; // Thêm thư viện Gson
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.Serializable;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.text.DecimalFormat;
 import java.util.*;
 
@@ -36,6 +41,10 @@ import java.util.*;
 public class ClientSingleton implements Serializable {
 
     public static final Logger LOG = LoggerFactory.getLogger(ClientSingleton.class);
+
+    // ĐƯỜNG DẪN FILE ĐỂ ĐỌC/GHI LOCAL
+    // Đổi đường dẫn này thành "/kaggle/input/ten-dataset-cua-ban/exchange_info.json" khi chạy trên Kaggle
+    public static final String EXCHANGE_INFO_PATH = "exchange_info.data";
     public SyncRequestClient syncRequestClient;
     public Map<String, Double> symbol2UnitQuantity = new HashMap<>();
     public Map<String, Double> symbol2UnitTrade = new HashMap<>();
@@ -52,10 +61,32 @@ public class ClientSingleton implements Serializable {
     }
 
     public void initClient() {
-        RequestOptions options = new RequestOptions();
-        syncRequestClient = SyncRequestClient.create(PrivateConfig.API_KEY, PrivateConfig.SECRET_KEY,
-                options);
-        List<ExchangeInfoEntry> symbols = ClientSingleton.getInstance().syncRequestClient.getExchangeInformation().getSymbols();
+        File localFile = new File(EXCHANGE_INFO_PATH);
+        List<ExchangeInfoEntry> symbols = null;
+        Gson gson = new Gson();
+
+        // 1. CỐ GẮNG LOAD TỪ FILE LOCAL (Dùng cho Kaggle)
+        if (localFile.exists() && !localFile.isDirectory()) {
+            LOG.info("Found local file {}. Loading Exchange Information from file (Offline Mode)...", EXCHANGE_INFO_PATH);
+            try {
+                String jsonContent = new String(Files.readAllBytes(Paths.get(EXCHANGE_INFO_PATH)));
+                ExchangeInformation exchangeInfo = gson.fromJson(jsonContent, ExchangeInformation.class);
+                symbols = exchangeInfo.getSymbols();
+                LOG.info("Successfully loaded {} symbols from local file.", symbols.size());
+            } catch (Exception e) {
+                LOG.error("Error reading ExchangeInfo from local file. Will fallback to API.", e);
+            }
+        }
+
+        // 2. NẾU KHÔNG CÓ FILE, GỌI API BINANCE (Dùng cho VPS)
+        if (symbols == null) {
+            LOG.info("Local file not found or failed to load. Connecting to Binance API...");
+            RequestOptions options = new RequestOptions();
+            syncRequestClient = SyncRequestClient.create(PrivateConfig.API_KEY, PrivateConfig.SECRET_KEY, options);
+            symbols = syncRequestClient.getExchangeInformation().getSymbols();
+        }
+
+        // 3. PARSE DỮ LIỆU VÀO CACHE MAPS
         for (ExchangeInfoEntry symbol : symbols) {
             Double quantityUnit = getMinQty(symbol);
             if (quantityUnit != null) {
@@ -69,6 +100,26 @@ public class ClientSingleton implements Serializable {
             if (notional != null) {
                 symbol2Notional.put(symbol.getSymbol(), notional);
             }
+        }
+    }
+
+    /**
+     * HÀM MỚI: Dùng để chạy trên VPS 1 lần duy nhất, lấy data từ API và lưu thành file .json
+     */
+    public void dumpExchangeInfoToFile() {
+        LOG.info("Dumping Exchange Information to file {} ...", EXCHANGE_INFO_PATH);
+        try {
+            RequestOptions options = new RequestOptions();
+            SyncRequestClient tempClient = SyncRequestClient.create(PrivateConfig.API_KEY, PrivateConfig.SECRET_KEY, options);
+            ExchangeInformation exchangeInfo = tempClient.getExchangeInformation();
+
+            Gson gson = new Gson();
+            String json = gson.toJson(exchangeInfo);
+            Files.write(Paths.get(EXCHANGE_INFO_PATH), json.getBytes());
+
+            LOG.info("Successfully dumped Exchange Information to local file!");
+        } catch (Exception e) {
+            LOG.error("Failed to dump Exchange Information", e);
         }
     }
 
@@ -94,7 +145,6 @@ public class ClientSingleton implements Serializable {
         return null;
     }
 
-
     private Double getTickSize(ExchangeInfoEntry symbol) {
         for (List<Map<String, String>> filters : symbol.getFilters()) {
             for (Map<String, String> filter : filters) {
@@ -107,6 +157,7 @@ public class ClientSingleton implements Serializable {
     }
 
     public Double getCurrentPrice(String symbol) {
+        if (syncRequestClient == null) return null; // Tránh NullPointer khi chạy offline trên Kaggle
         List<SymbolPrice> datas = syncRequestClient.getSymbolPriceTicker(symbol);
         if (datas != null && !datas.isEmpty()) {
             return datas.get(0).getPrice().doubleValue();
@@ -115,11 +166,11 @@ public class ClientSingleton implements Serializable {
     }
 
     public Set<String> getAllSymbol() {
+        // Đã sửa lại để lấy từ Local Cache thay vì gọi API (Giúp chạy offline tốt hơn)
         Set<String> symbols = new HashSet<>();
-        ExchangeInformation exchangeInfo = syncRequestClient.getExchangeInformation();
-        for (ExchangeInfoEntry symbol : exchangeInfo.getSymbols()) {
-            if (StringUtils.endsWithIgnoreCase(symbol.getSymbol(), "usdt")) {
-                symbols.add(symbol.getSymbol());
+        for (String symbol : symbol2UnitQuantity.keySet()) {
+            if (StringUtils.endsWithIgnoreCase(symbol, "usdt")) {
+                symbols.add(symbol);
             }
         }
         return symbols;
@@ -155,8 +206,7 @@ public class ClientSingleton implements Serializable {
         }
     }
 
-    public Double
-    normalizePrice(String symbol, Double price) {
+    public Double normalizePrice(String symbol, Double price) {
         Double unitPrice = symbol2UnitPrice.get(symbol);
         if (unitPrice != null) {
             price = price - (price % unitPrice);
@@ -197,19 +247,12 @@ public class ClientSingleton implements Serializable {
     }
 
     public static void main(String[] args) {
-//        System.out.println(Utils.calPriceTarget("WOOUSDT", 0.37745, OrderSide.BUY, 0.005));
-//        Double entry = 0.6715;
-//        Double target = Utils.calPriceTarget("STORJUSDT", entry, OrderSide.BUY, 0.005);
-//        Double rate = Utils.rateOf2Double(target, entry);
-//        System.out.println(target + " -> " + rate);
-//        
-//        System.out.println(ClientSingleton.getInstance().getCurrentPrice("CVCUSDT"));
-//        System.out.println(ClientSingleton.getInstance().getBalanceAvalible());
-//        System.out.println(ClientSingleton.getInstance().getRateBalanceAvalible());
-
+        // CÁCH SỬ DỤNG TRÊN VPS ĐỂ SINH FILE:
+        ClientSingleton.getInstance().dumpExchangeInfoToFile();
     }
 
     public double getBalance() {
+        if (syncRequestClient == null) return 0d; // Tránh NullPointer khi chạy offline
         List<AccountBalance> balanceInfos = ClientSingleton.getInstance().syncRequestClient.getBalance();
         for (AccountBalance balanceInfo : balanceInfos) {
             if (StringUtils.equalsIgnoreCase(balanceInfo.getAsset(), "usdt")) {
@@ -221,6 +264,7 @@ public class ClientSingleton implements Serializable {
     }
 
     public double getBalanceAvalible() {
+        if (syncRequestClient == null) return 0d; // Tránh NullPointer khi chạy offline
         List<AccountBalance> balanceInfos = ClientSingleton.getInstance().syncRequestClient.getBalance();
         for (AccountBalance balanceInfo : balanceInfos) {
             if (StringUtils.equalsIgnoreCase(balanceInfo.getAsset(), "usdt")) {
@@ -232,6 +276,7 @@ public class ClientSingleton implements Serializable {
     }
 
     public double getRateBalanceAvalible() {
+        if (syncRequestClient == null) return 0d; // Tránh NullPointer khi chạy offline
         List<AccountBalance> balanceInfos = ClientSingleton.getInstance().syncRequestClient.getBalance();
         for (AccountBalance balanceInfo : balanceInfos) {
             if (StringUtils.equalsIgnoreCase(balanceInfo.getAsset(), "usdt")) {
@@ -240,6 +285,4 @@ public class ClientSingleton implements Serializable {
         }
         return 0d;
     }
-
-
 }

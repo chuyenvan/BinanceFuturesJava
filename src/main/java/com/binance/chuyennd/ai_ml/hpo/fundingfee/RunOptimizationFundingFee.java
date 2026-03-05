@@ -4,6 +4,7 @@ import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.ai_ml.data.HPOSmartCache;
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.object.MarketDataObject;
+import com.binance.chuyennd.research.DataManager;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
 import io.jenetics.*;
@@ -35,6 +36,7 @@ public class RunOptimizationFundingFee {
     public static void main(String[] args) {
         LOG.info("=== BẮT ĐẦU TỐI ƯU HÓA FUNDING FEE PARAMETERS ===");
         try {
+//            Configs.IS_HPO_MODE = true;
             Configs.TIME_RUN = "20250101";
             loadAndWarmUpData();
         } catch (Exception e) {
@@ -62,26 +64,26 @@ public class RunOptimizationFundingFee {
         long startTime = System.currentTimeMillis();
         EvolutionResult<DoubleGene, Double> bestResult = engine.stream()
                 .limit(GENERATIONS)
-                .peek(result -> {
-                    System.out.printf(">>> Gen %d/%d Xong. PnL Tốt nhất: %.2f%n",
-                            result.generation(), GENERATIONS, result.bestFitness());
-                })
+                .peek(r -> LOG.info(">>> Gen {}/{} Xong. Fitness Tốt nhất: {}",
+                        r.generation(), GENERATIONS, String.format("%.4f", r.bestFitness())))
                 .collect(EvolutionResult.toBestEvolutionResult());
 
-        long totalTime = System.currentTimeMillis() - startTime;
-        Genotype<DoubleGene> bestGt = bestResult.bestPhenotype().genotype();
+        printFinalResult(bestResult, startTime);
+    }
 
-        System.out.println("\n=============================================");
-        System.out.println("=== KẾT QUẢ TỐI ƯU HÓA FUNDING FEE ===");
-        System.out.println("Thời gian: " + Duration.ofMillis(totalTime).toMinutes() + " phút");
-        System.out.println("Lợi nhuận Max: " + bestResult.bestFitness());
-        System.out.println("Configs tốt nhất:");
-        System.out.printf("Configs.FUNDING_RATE_MIN_TRADE      = %.5f;%n", bestGt.get(0).gene().doubleValue());
-        System.out.printf("Configs.FUNDING_RATE_MIN_TRADE_FULL = %.5f;%n", bestGt.get(1).gene().doubleValue());
-        System.out.printf("Configs.FUNDING_RATE_UP_AVG         = %.5f;%n", bestGt.get(2).gene().doubleValue());
-        System.out.printf("Configs.FUNDING_RATE_DOWN_AVG       = %.5f;%n", bestGt.get(3).gene().doubleValue());
-        System.out.printf("Configs.FUNDING_PRED_MAX_THRESHOLD  = %.5f;%n", bestGt.get(4).gene().doubleValue());
-        System.out.println("=============================================");
+    private static void printFinalResult(EvolutionResult<DoubleGene, Double> result, long startTime) {
+        Genotype<DoubleGene> best = result.bestPhenotype().genotype();
+        LOG.info("");
+        LOG.info("=============================================");
+        LOG.info("=== KẾT QUẢ TỐI ƯU HÓA HOÀN TẤT ===");
+        LOG.info("Thời gian chạy: {} phút", Duration.ofMillis(System.currentTimeMillis() - startTime).toMinutes());
+        LOG.info("Điểm Fitness cao nhất: {}", String.format("%.4f", result.bestFitness()));
+        LOG.info("---------------------------------------------");
+        LOG.info("aiPredictRateMaxThreshold = {};", String.format("%.5f", best.get(0).gene().doubleValue()));
+        LOG.info("aiPredictRateDown15m      = {};", String.format("%.5f", best.get(1).gene().doubleValue()));
+        LOG.info("aiPredictRateUpAvg        = {};", String.format("%.5f", best.get(2).gene().doubleValue()));
+        LOG.info("aiPredictRateDownAvg      = {};", String.format("%.5f", best.get(3).gene().doubleValue()));
+        LOG.info("=============================================");
     }
 
     private static Double eval(Genotype<DoubleGene> gt) {
@@ -103,8 +105,11 @@ public class RunOptimizationFundingFee {
             // 🔥 Truyền đủ 3 bộ RAM vào
             double score = engine.run(time2MarketData, predictionMap, time2FundingPre);
 
-            System.out.printf("Trial #%d/%d: Score=%.2f | Param: %.4f, %.4f, %.4f, %.4f, Thresh: %.4f%n",
-                    c, TOTAL_TRIALS, score, pMinTrade, pMinFull, pUpAvg, pDownAvg, pFundingPred);
+            LOG.info("Trial #{}/{}: Score={} | Param: {}, {}, {}, {}, Thresh: {}",
+                    c, TOTAL_TRIALS, String.format("%.2f", score),
+                    String.format("%.4f", pMinTrade), String.format("%.4f", pMinFull),
+                    String.format("%.4f", pUpAvg), String.format("%.4f", pDownAvg),
+                    String.format("%.4f", pFundingPred));
 
             return score;
 
@@ -114,30 +119,34 @@ public class RunOptimizationFundingFee {
         }
     }
 
+    // Trong class RunOptimizationFundingFee
+
     private static void loadAndWarmUpData() throws Exception {
         LOG.info("Loading Data... {}", Configs.TIME_RUN);
         Long startTime = Utils.sdfFile.parse(Configs.TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
         int numberMinutes = System.currentTimeMillis() - startTime > 0 ? (int) ((System.currentTimeMillis() - startTime) / Utils.TIME_MINUTE) : 0;
 
-        time2MarketData = DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
+        // SỬ DỤNG DATAMANAGER
+        time2MarketData = DataManager.getMarketData();
         Utils.printMemoryUsage("Load time2MarketData");
 
-        predictionMap = DataManagerAerospikeFloatSim.getAllMarketAiPredictionsFromAerospike();
+        predictionMap = DataManager.getAiPredictionData();
         Utils.printMemoryUsage("Load predictionMap");
 
-        time2FundingPre = DataManagerAerospikeFloatSim.getFundingPredictionsPrimitiveByRange(startTime,numberMinutes); // HOẶC HÀM GET THEO RANGE CỦA BẠN
-        Utils.printMemoryUsage("Load time2FundingPre (time2SymbolPred)");
+        time2FundingPre = DataManager.getFundingPredictionData(startTime, numberMinutes);
+        Utils.printMemoryUsage("Load time2FundingPre");
 
-        // Warmup HPOSmartCache...
+        // Warmup HPOSmartCache (Đảm bảo HPOSmartCache bên trong cũng gọi DataManager.getTickers1M)
         LOG.info("🔥 Warming up cache ({}-NOW)...", Configs.TIME_RUN);
         long startTimeLoad = Utils.sdfFile.parse(Configs.TIME_RUN).getTime();
         long endTimeLoad = System.currentTimeMillis();
         long current = startTimeLoad;
         while (current < endTimeLoad) {
-            HPOSmartCache.getData(current);
+            // Lấy dữ liệu thông qua DataManager thay vì Aerospike trực tiếp
+            DataManager.getTickers1M(current);
+            // Nếu bạn vẫn muốn dùng HPOSmartCache thì gọi HPOSmartCache.getData(current);
             current += Utils.TIME_DAY;
         }
         Utils.printMemoryUsage("Load HPOSmartCache");
-
     }
 }

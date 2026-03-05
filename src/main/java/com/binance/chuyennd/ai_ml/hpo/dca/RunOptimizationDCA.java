@@ -6,13 +6,15 @@ import io.jenetics.Genotype;
 import io.jenetics.engine.Engine;
 import io.jenetics.engine.EvolutionResult;
 import io.jenetics.util.DoubleRange;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class RunOptimizationDCA {
-
+    public static final Logger LOG = LoggerFactory.getLogger(RunOptimizationDCA.class);
     // === DINH NGHIA CAU HINH CHAY ===
     private static final int POPULATION_SIZE = 20;
     private static final int GENERATIONS = 10;
@@ -21,8 +23,6 @@ public class RunOptimizationDCA {
     private static final AtomicLong testCounter = new AtomicLong(0);
 
     // === CACHE DU LIEU ===
-
-
 
 
     /**
@@ -45,7 +45,7 @@ public class RunOptimizationDCA {
 
         double finalBalance = 0.0;
 
-        System.out.printf(
+        LOG.info(
                 "\n--- Bat dau Test #%d / %d ---%n",
                 currentTestNumber, TOTAL_TRIALS
         );
@@ -57,14 +57,14 @@ public class RunOptimizationDCA {
             // 3. Chay backtest
             finalBalance = engine.run();
 
-            System.out.printf(
+            LOG.info(
                     "--- Ket thuc Test #%d / %d => Loi nhuan: %.2f ---%n",
                     currentTestNumber, TOTAL_TRIALS, finalBalance
             );
 
         } catch (Exception e) {
             e.printStackTrace();
-            System.out.printf("--- Test #%d / %d BI LOI => Loi nhuan: 0.0 ---%n",
+            LOG.info("--- Test #%d / %d BI LOI => Loi nhuan: 0.0 ---%n",
                     currentTestNumber, TOTAL_TRIALS
             );
             return 0.0; // Phat neu co loi
@@ -78,7 +78,7 @@ public class RunOptimizationDCA {
      */
     public static void main(String[] args) {
 
-        System.out.println("BAT DAU TOI UU HOA LOGIC DCA...");
+        LOG.info("BAT DAU TOI UU HOA LOGIC DCA...");
 
 
         long startTime = System.currentTimeMillis();
@@ -121,7 +121,7 @@ public class RunOptimizationDCA {
 
         // 3. CHAY TOI UU HOA
         EvolutionResult<DoubleGene, Double> result = engine.stream()
-                .peek(er -> System.out.printf(
+                .peek(er -> LOG.info(
                         "%n>>> Hoan tat The he %d / %d. Loi nhuan tot nhat hien tai: %.2f%n%n",
                         er.generation(), GENERATIONS, er.bestFitness()
                 ))
@@ -143,19 +143,19 @@ public class RunOptimizationDCA {
         double p8 = bestParams.get(7).gene().doubleValue();
 
         // 5. IN KET QUA
-        System.out.println("\n=============================================");
-        System.out.println("=== TOI UU HOA LOGIC DCA HOAN TAT ===");
-        System.out.println("Thoi gian chay: " + Duration.ofMillis(totalTime).toMinutes() + " phut");
-        System.out.println(String.format("Loi nhuan cao nhat: %.2f", bestProfit));
-        System.out.println("Voi cac tham so tot nhat:");
-        System.out.println(String.format(" - rateLossBigDown:    %.4f (Goc: -0.05)", p1));
-        System.out.println(String.format(" - rateLossMediumDown: %.4f (Goc: -0.08)", p2));
-        System.out.println(String.format(" - rateLossMediumUp:   %.4f (Goc: -0.15)", p3));
-        System.out.println(String.format(" - rateLossSmallDown:  %.4f (Goc: -0.20)", p4));
-        System.out.println(String.format(" - rateLossNull:       %.4f (Goc: -0.40)", p5));
-        System.out.println(String.format(" - marginRate_1_5:     %.4f (Goc: -0.60)", p6));
-        System.out.println(String.format(" - marginRate_2_0:     %.4f (Goc: -0.70)", p7));
-        System.out.println(String.format(" - marginRate_2_5:     %.4f (Goc: -0.90)", p8));
-        System.out.println("=============================================");
+        LOG.info("\n=============================================");
+        LOG.info("=== TOI UU HOA LOGIC DCA HOAN TAT ===");
+        LOG.info("Thoi gian chay: " + Duration.ofMillis(totalTime).toMinutes() + " phut");
+        LOG.info(String.format("Loi nhuan cao nhat: %.2f", bestProfit));
+        LOG.info("Voi cac tham so tot nhat:");
+        LOG.info(String.format(" - rateLossBigDown:    %.4f (Goc: -0.05)", p1));
+        LOG.info(String.format(" - rateLossMediumDown: %.4f (Goc: -0.08)", p2));
+        LOG.info(String.format(" - rateLossMediumUp:   %.4f (Goc: -0.15)", p3));
+        LOG.info(String.format(" - rateLossSmallDown:  %.4f (Goc: -0.20)", p4));
+        LOG.info(String.format(" - rateLossNull:       %.4f (Goc: -0.40)", p5));
+        LOG.info(String.format(" - marginRate_1_5:     %.4f (Goc: -0.60)", p6));
+        LOG.info(String.format(" - marginRate_2_0:     %.4f (Goc: -0.70)", p7));
+        LOG.info(String.format(" - marginRate_2_5:     %.4f (Goc: -0.90)", p8));
+        LOG.info("=============================================");
     }
 }

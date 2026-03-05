@@ -64,7 +64,7 @@ public class RunOptimizationMarketThreshold {
             );
             profit = engine.run(time2MarketData, predictionMap, time2FundingPre);
 
-            System.out.printf("Test #%d: Profit=%.2f | Up[B/M/S]=[%.3f, %.3f, %.3f] | Down[B/M/S]=[%.3f, %.3f, %.3f]%n",
+            LOG.info("Test #%d: Profit=%.2f | Up[B/M/S]=[%.3f, %.3f, %.3f] | Down[B/M/S]=[%.3f, %.3f, %.3f]%n",
                     currentTest, profit, upBig, upMed, upSmall, downBigAvg, downMedAvg, downSmallAvg);
 
         } catch (Exception e) {
@@ -75,7 +75,7 @@ public class RunOptimizationMarketThreshold {
     }
 
     public static void main(String[] args) throws Exception {
-        System.out.println("=== START OPTIMIZING MARKET THRESHOLDS ===");
+        LOG.info("=== START OPTIMIZING MARKET THRESHOLDS ===");
         loadAndWarmUpData();
 
         long startTime = System.currentTimeMillis();
@@ -100,7 +100,7 @@ public class RunOptimizationMarketThreshold {
 
         EvolutionResult<DoubleGene, Double> result = engine.stream()
                 .limit(GENERATIONS)
-                .peek(r -> System.out.printf(">>> Generation %d Best: %.2f%n", r.generation(), r.bestFitness()))
+                .peek(r -> LOG.info(">>> Generation %d Best: %.2f%n", r.generation(), r.bestFitness()))
                 .collect(EvolutionResult.toBestEvolutionResult());
 
         printResult(result, startTime);
@@ -135,20 +135,20 @@ public class RunOptimizationMarketThreshold {
 
     private static void printResult(EvolutionResult<DoubleGene, Double> result, long startTime) {
         Genotype<DoubleGene> best = result.bestPhenotype().genotype();
-        System.out.println("\n=== KẾT QUẢ TỐI ƯU MARKET THRESHOLDS ===");
-        System.out.println("Time: " + Duration.ofMillis(System.currentTimeMillis() - startTime).toMinutes() + " mins");
-        System.out.println("Profit Max: " + result.bestFitness());
-        System.out.println("------------------------------------");
-        System.out.printf("MS_UP_BIG_THRES:        %.5f%n", best.get(0).gene().doubleValue());
-        System.out.printf("MS_DOWN_BIG_AVG:        %.5f%n", best.get(1).gene().doubleValue());
-        System.out.println("---");
-        System.out.printf("MS_UP_MED_THRES:        %.5f%n", best.get(2).gene().doubleValue());
-        System.out.printf("MS_DOWN_MED_AVG:        %.5f%n", best.get(3).gene().doubleValue());
-        System.out.println("---");
-        System.out.printf("MS_UP_SMALL_THRES:      %.5f%n", best.get(4).gene().doubleValue());
-        System.out.printf("MS_DOWN_SMALL_AVG:      %.5f%n", best.get(5).gene().doubleValue());
-        System.out.println("---");
-        System.out.printf("MS_DOWN_15M_MED_ONLY:   %.5f%n", best.get(6).gene().doubleValue());
-        System.out.printf("MS_DOWN_15M_SMALL_ONLY: %.5f%n", best.get(7).gene().doubleValue());
+        LOG.info("\n=== KẾT QUẢ TỐI ƯU MARKET THRESHOLDS ===");
+        LOG.info("Time: " + Duration.ofMillis(System.currentTimeMillis() - startTime).toMinutes() + " mins");
+        LOG.info("Profit Max: " + result.bestFitness());
+        LOG.info("------------------------------------");
+        LOG.info("MS_UP_BIG_THRES:        %.5f%n", best.get(0).gene().doubleValue());
+        LOG.info("MS_DOWN_BIG_AVG:        %.5f%n", best.get(1).gene().doubleValue());
+        LOG.info("---");
+        LOG.info("MS_UP_MED_THRES:        %.5f%n", best.get(2).gene().doubleValue());
+        LOG.info("MS_DOWN_MED_AVG:        %.5f%n", best.get(3).gene().doubleValue());
+        LOG.info("---");
+        LOG.info("MS_UP_SMALL_THRES:      %.5f%n", best.get(4).gene().doubleValue());
+        LOG.info("MS_DOWN_SMALL_AVG:      %.5f%n", best.get(5).gene().doubleValue());
+        LOG.info("---");
+        LOG.info("MS_DOWN_15M_MED_ONLY:   %.5f%n", best.get(6).gene().doubleValue());
+        LOG.info("MS_DOWN_15M_SMALL_ONLY: %.5f%n", best.get(7).gene().doubleValue());
     }
 }

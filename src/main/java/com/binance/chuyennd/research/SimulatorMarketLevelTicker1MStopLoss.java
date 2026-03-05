@@ -17,6 +17,7 @@ import com.binance.chuyennd.bigchange.test.TraceOrderDone;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.MarketLevelChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
+import com.binance.chuyennd.tradecore.BotTradingConfig;
 import com.binance.chuyennd.tradecore.DcaProcessor;
 import com.binance.chuyennd.tradecore.MarketBigChangeDetector;
 import com.binance.chuyennd.tradecore.TradeUtils;
@@ -47,7 +48,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     public TreeMap<Long, AiPredictionData> predictionMap;
     public TreeMap<Long, long[]> time2SymbolPred;
     public AIRejectFilter aiRejectFilter;
-    FundingFeatureExtractor extractor = new FundingFeatureExtractor();
     public Map<String, KlineObjectSimple> symbol2LastTicker = new HashMap<>();
 
     public ConcurrentHashMap<String, List<OrderTargetInfoTest>> symbol2OrdersEntry = new ConcurrentHashMap();
@@ -72,11 +72,11 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         while (true) {
             TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers;
             try {
-                if (Configs.IS_HPO_MODE) {
-                    time2Tickers = HPOSmartCache.getData(startTime);
-                } else {
+//                if (Configs.IS_HPO_MODE) {
+//                    time2Tickers = HPOSmartCache.getData(startTime);
+//                } else {
                     time2Tickers = DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime);
-                }
+//                }
 
                 if (time2Tickers == null) {
                     LOG.info("File data error or not found for time: {}", Utils.normalizeDateYYYYMMDDHHmm(startTime));
@@ -87,7 +87,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                         Long startTimeRun = System.currentTimeMillis();
                         try {
                             Map<String, KlineObjectSimple> symbol2Ticker = entry.getValue();
-                            extractor.updateMarketHistory(symbol2Ticker);
                             for (String symbol : symbol2Ticker.keySet()) {
                                 KlineObjectSimple ticker = symbol2Ticker.get(symbol);
                                 if (!Utils.isTickerAvailable(ticker)) {
@@ -219,12 +218,13 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                                 }
                                                 fundingPredict2Symbol.put(symbolPred, symbol);
                                             }
-                                        } else {
-                                            LOG.error("🚨 LOGIC ERROR tại {}: Data[15mAvg: {}, DownAvg: {}, UpAvg: {}] | Thresholds[15m: {}, Down: {}, Up: {}]",
-                                                    Utils.normalizeDateYYYYMMDDHHmm(time),
-                                                    marketData.rateDown15MAvg, marketData.rateDownAvg, marketData.rateUpAvg,
-                                                    Configs.PREDICT_SYMBOL_RATE_DOWN_15M, Configs.PREDICT_SYMBOL_RATE_DOWN_AVG, Configs.PREDICT_SYMBOL_RATE_UP_AVG);
                                         }
+//                                        else {
+//                                            LOG.error("🚨 LOGIC ERROR tại {}: Data[15mAvg: {}, DownAvg: {}, UpAvg: {}] | Thresholds[15m: {}, Down: {}, Up: {}]",
+//                                                    Utils.normalizeDateYYYYMMDDHHmm(time),
+//                                                    marketData.rateDown15MAvg, marketData.rateDownAvg, marketData.rateUpAvg,
+//                                                    Configs.PREDICT_SYMBOL_RATE_DOWN_15M, Configs.PREDICT_SYMBOL_RATE_DOWN_AVG, Configs.PREDICT_SYMBOL_RATE_UP_AVG);
+//                                        }
                                     }
                                     int counter = 0;
                                     for (String symbol : fundingPredict2Symbol.values()) {
@@ -608,7 +608,28 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         this.time2SymbolPred = time2FundingPre; // 🔥 GÁN BIẾN MỚI
         this.aiRejectFilter = aiRejectFilter;
     }
+    // --- Thêm vào phần khai báo thuộc tính ---
+    private BotTradingConfig config = new BotTradingConfig(); // Mặc định
 
+    // --- Thêm hàm setConfig ---
+    public void setConfig(BotTradingConfig config) {
+        this.config = config;
+    }
+
+    // --- Tìm đến các logic Check Entry và sửa Configs.XXX thành config.XXX ---
+// Ví dụ logic AI Predict:
+    private boolean checkAiPredict(MarketDataObject marketData, float symbolPred) {
+        // Sửa các hằng số Configs.AI_... thành config.aiPredictRate...
+        if (marketData.rateDown15MAvg < config.aiPredictRateDown15m
+                || marketData.rateUpAvg > config.aiPredictRateUpAvg
+                || marketData.rateDownAvg < config.aiPredictRateDownAvg) {
+
+            if (symbolPred > config.aiPredictRateMaxThreshold) {
+                return false; // Reject
+            }
+        }
+        return true;
+    }
     private Float getPredictionFromPrimitiveArray(long[] encodedArray, short targetId) {
         for (long encodedData : encodedArray) {
             if ((short) (encodedData >> 32) == targetId) {

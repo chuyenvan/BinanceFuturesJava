@@ -2,10 +2,12 @@ settings.xml
 /target/
 /logs/
 /storage/
+/storage_data/
 *.log
 *.csv
 *.data
 *.idea
+*.rar
 /.idea
 .idea/compiler.xml
 .idea/dbnavigator.xml

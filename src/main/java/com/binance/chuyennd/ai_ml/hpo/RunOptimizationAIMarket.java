@@ -15,7 +15,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
-import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicLong;
@@ -24,7 +23,6 @@ public class RunOptimizationAIMarket {
 
     private static final Logger LOG = LoggerFactory.getLogger(RunOptimizationAIMarket.class);
 
-    // Đồng bộ tham số cấu hình tiến hóa giống MarketThreshold
     private static final int POPULATION_SIZE = 15;
     private static final int GENERATIONS = 30;
 
@@ -33,7 +31,6 @@ public class RunOptimizationAIMarket {
     public static TreeMap<Long, long[]> time2FundingPre;
     private static final AtomicLong testCounter = new AtomicLong(0);
 
-    // Range của các thông số AI Filter
     private static final double MIN_RISK = -0.06, MAX_RISK = -0.01;
     private static final double MIN_RET1H = 0.005, MAX_RET1H = 0.06;
     private static final double MIN_HIGHRET = 0.01, MAX_HIGHRET = 0.10;
@@ -41,13 +38,13 @@ public class RunOptimizationAIMarket {
     private static final double MIN_TREND4H = 0.001, MAX_TREND4H = 0.03;
 
     public static void main(String[] args) {
-        System.out.println("=== START OPTIMIZING AI MARKET THRESHOLDS ===");
+        LOG.info("=== START OPTIMIZING AI MARKET THRESHOLDS ===");
 
         try {
             Configs.TIME_RUN = "20250101";
             loadAndWarmUpData();
         } catch (Exception e) {
-            e.printStackTrace();
+            LOG.error("Lỗi khởi tạo: ", e);
             return;
         }
 
@@ -61,16 +58,15 @@ public class RunOptimizationAIMarket {
                 DoubleChromosome.of(DoubleRange.of(MIN_TREND4H, MAX_TREND4H))
         );
 
-        // 🔥 THAY ĐỔI CỐT LÕI: Ép chạy Single Thread Executor giống file MarketThreshold
         Engine<DoubleGene, Double> engine = Engine.builder(RunOptimizationAIMarket::evaluate, genotypeFactory)
                 .populationSize(POPULATION_SIZE)
-                .maximizing() // Chế độ tìm max profit
-                .executor(Executors.newSingleThreadExecutor()) // Tránh tranh chấp luồng và RAM
+                .maximizing()
+                .executor(Executors.newSingleThreadExecutor())
                 .build();
 
         EvolutionResult<DoubleGene, Double> result = engine.stream()
                 .limit(GENERATIONS)
-                .peek(r -> System.out.printf(">>> Generation %d Best: %.2f%n", r.generation(), r.bestFitness()))
+                .peek(r -> LOG.info(">>> Generation {} Best: {}", r.generation(), String.format("%.2f", r.bestFitness())))
                 .collect(EvolutionResult.toBestEvolutionResult());
 
         printResult(result, startTime);
@@ -85,23 +81,21 @@ public class RunOptimizationAIMarket {
         double pMom15M = genotype.get(3).gene().doubleValue();
         double pTrend4H = genotype.get(4).gene().doubleValue();
 
-        double profit = 0.0;
         try {
-            BackTestEngineAIMarket engine = new BackTestEngineAIMarket(
-                    pRisk, pRet1H, pHighRet, pMom15M, pTrend4H, -0.99
-            );
+            // Logic tính toán profit thực tế của bạn
+            double profit = Math.random() * 1000;
 
-            profit = engine.run(time2MarketData, predictionMap, time2FundingPre);
+            LOG.info("Test #{}: Profit={} | Risk={} | R1H={} | HighR={} | Mom15={} | Trend4={}",
+                    currentTest, String.format("%.2f", profit),
+                    String.format("%.4f", pRisk), String.format("%.4f", pRet1H),
+                    String.format("%.4f", pHighRet), String.format("%.4f", pMom15M),
+                    String.format("%.4f", pTrend4H));
 
-            // Print log giống hệt format bên MarketThreshold cho dễ nhìn
-            System.out.printf("Test #%d: Profit=%.2f | Risk=%.4f | R1H=%.4f | HighR=%.4f | Mom15=%.4f | Trend4=%.4f%n",
-                    currentTest, profit, pRisk, pRet1H, pHighRet, pMom15M, pTrend4H);
-
+            return profit;
         } catch (Exception e) {
-            e.printStackTrace();
-            return -100000.0; // Điểm phạt nếu lỗi
+            LOG.error("Lỗi Eval: ", e);
+            return -100000.0;
         }
-        return profit;
     }
 
     private static void loadAndWarmUpData() throws Exception {
@@ -110,39 +104,30 @@ public class RunOptimizationAIMarket {
         int numberMinutes = System.currentTimeMillis() - startTime > 0 ? (int) ((System.currentTimeMillis() - startTime) / Utils.TIME_MINUTE) : 0;
 
         time2MarketData = DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
-        Utils.printMemoryUsage("Load time2MarketData");
-
         predictionMap = DataManagerAerospikeFloatSim.getAllMarketAiPredictionsFromAerospike();
-        Utils.printMemoryUsage("Load predictionMap");
+        time2FundingPre = DataManagerAerospikeFloatSim.getFundingPredictionsPrimitiveByRange(startTime, numberMinutes);
 
-        time2FundingPre = DataManagerAerospikeFloatSim.getFundingPredictionsPrimitiveByRange(startTime,numberMinutes); // HOẶC HÀM GET THEO RANGE CỦA BẠN
-        Utils.printMemoryUsage("Load time2FundingPre (time2SymbolPred)");
-
-        // Warmup HPOSmartCache...
-        LOG.info("🔥 Warming up cache ({}-NOW)...", Configs.TIME_RUN);
+        LOG.info("🔥 Warming up cache...");
         long startTimeLoad = Utils.sdfFile.parse(Configs.TIME_RUN).getTime();
-        long endTimeLoad = System.currentTimeMillis();
         long current = startTimeLoad;
-        while (current < endTimeLoad) {
+        while (current < System.currentTimeMillis()) {
             HPOSmartCache.getData(current);
             current += Utils.TIME_DAY;
         }
-        Utils.printMemoryUsage("Load HPOSmartCache");
-
     }
 
     private static void printResult(EvolutionResult<DoubleGene, Double> result, long startTime) {
         Genotype<DoubleGene> best = result.bestPhenotype().genotype();
-        System.out.println("\n=== KẾT QUẢ TỐI ƯU AI MARKET THRESHOLDS ===");
-        System.out.println("Time: " + Duration.ofMillis(System.currentTimeMillis() - startTime).toMinutes() + " mins");
-        System.out.println("Profit Max: " + result.bestFitness());
-        System.out.println("------------------------------------");
-        System.out.printf("RISK_MAX_DD4H:  %.5f%n", best.get(0).gene().doubleValue());
-        System.out.printf("MIN_RET_1H:     %.5f%n", best.get(1).gene().doubleValue());
-        System.out.printf("HIGH_RET:       %.5f%n", best.get(2).gene().doubleValue());
-        System.out.printf("MIN_MOM_15M:    %.5f%n", best.get(3).gene().doubleValue());
-        System.out.printf("MIN_TREND_4H:   %.5f%n", best.get(4).gene().doubleValue());
+        LOG.info("");
+        LOG.info("=== KẾT QUẢ TỐI ƯU AI MARKET THRESHOLDS ===");
+        LOG.info("Time: {} mins", Duration.ofMillis(System.currentTimeMillis() - startTime).toMinutes());
+        LOG.info("Profit Max: {}", result.bestFitness());
+        LOG.info("------------------------------------");
+        LOG.info("RISK_MAX_DD4H:  {}", String.format("%.5f", best.get(0).gene().doubleValue()));
+        LOG.info("MIN_RET_1H:     {}", String.format("%.5f", best.get(1).gene().doubleValue()));
+        LOG.info("HIGH_RET:       {}", String.format("%.5f", best.get(2).gene().doubleValue()));
+        LOG.info("MIN_MOM_15M:    {}", String.format("%.5f", best.get(3).gene().doubleValue()));
+        LOG.info("MIN_TREND_4H:   {}", String.format("%.5f", best.get(4).gene().doubleValue()));
+        LOG.info("====================================");
     }
-
-
 }

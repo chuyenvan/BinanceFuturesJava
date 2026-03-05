@@ -1,5 +1,6 @@
 package com.binance.chuyennd.ai_ml.hpo.fundingfee;
 
+import com.binance.chuyennd.ai_ml.hpo.HPOFitnessCalculator;
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.ai_ml.onnx.entry.AIRejectFilter;
 import com.binance.chuyennd.object.MarketDataObject;
@@ -7,7 +8,6 @@ import com.binance.chuyennd.research.BudgetManagerSimple;
 import com.binance.chuyennd.research.SimulatorMarketLevelTicker1MStopLoss;
 import com.binance.chuyennd.utils.Configs;
 
-import java.util.Map;
 import java.util.TreeMap;
 
 public class BackTestEngineFundingFee {
@@ -15,7 +15,6 @@ public class BackTestEngineFundingFee {
     // 🔥 THÊM THAM SỐ THỨ 5
     public BackTestEngineFundingFee(double rateMin2Trade, double rateMin2TradeFull,
                                     double rateUpAvg, double rateDownAvg, double fundingPredMaxThreshold) {
-;
         Configs.PREDICT_SYMBOL_RATE_DOWN_15M = rateMin2Trade;
         Configs.PREDICT_SYMBOL_RATE_UP_AVG = rateUpAvg;
         Configs.PREDICT_SYMBOL_RATE_DOWN_AVG = rateDownAvg;
@@ -34,10 +33,12 @@ public class BackTestEngineFundingFee {
             test.initDataReady(time2MarketData, predictionMap, time2FundingPre, new AIRejectFilter());
             test.simulatorWithInitEntry();
 
-            return BudgetManagerSimple.getInstance().balanceCurrent;
+            return HPOFitnessCalculator.evaluateProfitVelocity(test);
         } catch (Exception e) {
             e.printStackTrace();
             return 0.0;
         }
     }
+
+
 }

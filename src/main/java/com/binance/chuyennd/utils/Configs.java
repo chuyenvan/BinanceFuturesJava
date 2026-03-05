@@ -9,6 +9,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.File;
+import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,6 +21,7 @@ public class Configs {
 
 
     public static final String FILE_TICKER_1M_STORAGE = "storage/tickers/symbol2ticker1Ms";
+
 
     public static String configFile = "config.properties";
     public static volatile Map properties = new HashMap();
@@ -40,12 +42,18 @@ public class Configs {
         }
     }
 
-    // Thêm dòng này vào Configs.java
-    public static double PREDICT_SYMBOL_RATE_MAX_THRESHOLD = 0.2;
     public static boolean IS_HPO_MODE = false;
-    public static Double PREDICT_SYMBOL_RATE_DOWN_15M = -0.03234;  // Param 2
-    public static Double PREDICT_SYMBOL_RATE_UP_AVG = 0.00454;          // Param 3
-    public static Double PREDICT_SYMBOL_RATE_DOWN_AVG = -0.00503;       // Param 4
+    // Thêm dòng này vào Configs.java
+// Các tham số đã được cập nhật từ kết quả tối ưu hóa Funding Fee
+    public static double PREDICT_SYMBOL_RATE_MAX_THRESHOLD = 0.19076; // Cập nhật từ FUNDING_PRED_MAX_THRESHOLD
+
+    // Nhóm tham số lọc tín hiệu thị trường (Market Filters)
+    public static Double PREDICT_SYMBOL_RATE_DOWN_15M = -0.04749;     // Cập nhật từ FUNDING_RATE_MIN_TRADE_FULL
+    public static Double PREDICT_SYMBOL_RATE_UP_AVG = 0.00958;        // Cập nhật từ FUNDING_RATE_UP_AVG
+    public static Double PREDICT_SYMBOL_RATE_DOWN_AVG = -0.00683;     // Cập nhật từ FUNDING_RATE_DOWN_AVG
+
+    // Tham số bổ sung từ kết quả HPO
+
 
     // 1. Ngưỡng margin-ratio đầu tiên để giảm budget
     public static double BUDGET_MARGIN_RATIO_1 = 0.4820;
@@ -103,8 +111,8 @@ public class Configs {
     public static final String AEROSPIKE_HOST_226 = Configs.getString("AEROSPIKE_HOST_226"); //"127.0.0.1";
     public static final int AEROSPIKE_PORT_226 = Configs.getInt("AEROSPIKE_PORT_226");
 
-    public static final String AEROSPIKE_SET_NAME_FUNDING_PRED =  Configs.getString("AEROSPIKE_SET_NAME_FUNDING_PRED");
-    public static final String AEROSPIKE_SET_NAME_PRED_40 =  Configs.getString("AEROSPIKE_SET_NAME_PRED_40");
+    public static final String AEROSPIKE_SET_NAME_FUNDING_PRED = Configs.getString("AEROSPIKE_SET_NAME_FUNDING_PRED");
+    public static final String AEROSPIKE_SET_NAME_PRED_40 = Configs.getString("AEROSPIKE_SET_NAME_PRED_40");
 
 
     public static final String AEROSPIKE_NAMESPACE = Configs.getString("AEROSPIKE_NAMESPACE"); //"ticker" ;
@@ -129,27 +137,27 @@ public class Configs {
     // =========================================================
     // 1. NHÓM 8 THAM SỐ ĐÃ ĐƯỢC UPDATE TỪ KẾT QUẢ HPO
     // =========================================================
-    public static double MS_UP_BIG_THRES       = 0.02046;  // Default cũ: 0.025
-    public static double MS_DOWN_BIG_AVG       = -0.03157; // Default cũ: -0.032
+    public static double MS_UP_BIG_THRES = 0.02046;  // Default cũ: 0.025
+    public static double MS_DOWN_BIG_AVG = -0.03157; // Default cũ: -0.032
 
-    public static double MS_UP_MED_THRES       = 0.01204;  // Default cũ: 0.015
-    public static double MS_DOWN_MED_AVG       = -0.02069; // Default cũ: -0.030
+    public static double MS_UP_MED_THRES = 0.01204;  // Default cũ: 0.015
+    public static double MS_DOWN_MED_AVG = -0.02069; // Default cũ: -0.030
 
-    public static double MS_UP_SMALL_THRES     = 0.00442;  // Default cũ: 0.008
-    public static double MS_DOWN_SMALL_AVG     = -0.01713; // Default cũ: -0.006
+    public static double MS_UP_SMALL_THRES = 0.00442;  // Default cũ: 0.008
+    public static double MS_DOWN_SMALL_AVG = -0.01713; // Default cũ: -0.006
 
-    public static double MS_DOWN_15M_MED_ONLY  = -0.06725; // Default cũ: -0.045
-    public static double MS_DOWN_15M_SMALL_ONLY= -0.02145; // Default cũ: -0.028
+    public static double MS_DOWN_15M_MED_ONLY = -0.06725; // Default cũ: -0.045
+    public static double MS_DOWN_15M_SMALL_ONLY = -0.02145; // Default cũ: -0.028
 
     // =========================================================
     // 2. NHÓM 4 THAM SỐ THIẾU TRONG HPO (GIỮ NGUYÊN DEFAULT)
     // =========================================================
-    public static double MS_DOWN_BIG_BTC       = -0.01;  // Default: -0.01
+    public static double MS_DOWN_BIG_BTC = -0.01;  // Default: -0.01
 
-    public static double MS_DOWN_MED_AVG_CMB   = -0.014; // Default: -0.014 (Combined logic)
-    public static double MS_DOWN_MED_15M_CMB   = -0.07;  // Default: -0.07  (Combined logic)
+    public static double MS_DOWN_MED_AVG_CMB = -0.014; // Default: -0.014 (Combined logic)
+    public static double MS_DOWN_MED_15M_CMB = -0.07;  // Default: -0.07  (Combined logic)
 
-    public static double MS_DOWN_SMALL_15M     = -0.025; // Default: -0.025 (Combined logic)
+    public static double MS_DOWN_SMALL_15M = -0.025; // Default: -0.025 (Combined logic)
 
 
     public static void main(String[] args) {
