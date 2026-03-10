@@ -12,16 +12,17 @@ import java.util.TreeMap;
 
 public class BackTestEngineFundingFee {
 
-    // 🔥 THÊM THAM SỐ THỨ 5
-    public BackTestEngineFundingFee(double rateMin2Trade, double rateMin2TradeFull,
-                                    double rateUpAvg, double rateDownAvg, double fundingPredMaxThreshold) {
+    // Đã loại bỏ rateMin2TradeFull (pMinFull)
+    public BackTestEngineFundingFee(double rateMin2Trade,
+                                    double rateUpAvg,
+                                    double rateDownAvg,
+                                    double fundingPredMaxThreshold) {
         Configs.PREDICT_SYMBOL_RATE_DOWN_15M = rateMin2Trade;
         Configs.PREDICT_SYMBOL_RATE_UP_AVG = rateUpAvg;
         Configs.PREDICT_SYMBOL_RATE_DOWN_AVG = rateDownAvg;
-        Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD = fundingPredMaxThreshold; // Nhận biến mới
+        Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD = fundingPredMaxThreshold;
     }
 
-    // 🔥 THÊM time2FundingPre VÀO HÀM RUN
     public double run(TreeMap<Long, MarketDataObject> time2MarketData,
                       TreeMap<Long, AiPredictionData> predictionMap,
                       TreeMap<Long, long[]> time2FundingPre) {
@@ -29,7 +30,6 @@ public class BackTestEngineFundingFee {
             BudgetManagerSimple.resetInstance();
             SimulatorMarketLevelTicker1MStopLoss test = new SimulatorMarketLevelTicker1MStopLoss();
 
-            // 🔥 TRUYỀN ĐỦ 3 MAP VÀO
             test.initDataReady(time2MarketData, predictionMap, time2FundingPre, new AIRejectFilter());
             test.simulatorWithInitEntry();
 
@@ -39,6 +39,4 @@ public class BackTestEngineFundingFee {
             return 0.0;
         }
     }
-
-
 }

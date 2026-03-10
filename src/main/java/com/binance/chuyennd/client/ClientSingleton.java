@@ -44,7 +44,7 @@ public class ClientSingleton implements Serializable {
 
     // ĐƯỜNG DẪN FILE ĐỂ ĐỌC/GHI LOCAL
     // Đổi đường dẫn này thành "/kaggle/input/ten-dataset-cua-ban/exchange_info.json" khi chạy trên Kaggle
-    public static final String EXCHANGE_INFO_PATH = "exchange_info.data";
+    public static final String EXCHANGE_INFO_PATH = "/kaggle/input/datasets/chuyendinh/java-dataset/exchange_info.data";
     public SyncRequestClient syncRequestClient;
     public Map<String, Double> symbol2UnitQuantity = new HashMap<>();
     public Map<String, Double> symbol2UnitTrade = new HashMap<>();

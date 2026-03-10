@@ -88,4 +88,12 @@ public class BotTradingConfig implements Serializable {
     // Constructor mặc định
     public BotTradingConfig() {
     }
+    @Override
+    public BotTradingConfig clone() {
+        try {
+            return (BotTradingConfig) super.clone();
+        } catch (CloneNotSupportedException e) {
+            return new BotTradingConfig();
+        }
+    }
 }

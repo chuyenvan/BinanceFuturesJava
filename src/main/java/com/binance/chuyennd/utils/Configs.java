@@ -43,14 +43,18 @@ public class Configs {
     }
 
     public static boolean IS_HPO_MODE = false;
+    // Mặc định là false, sẽ được ghi đè nếu trong config.properties có key này
+    public static boolean IS_KAGGLE_MODE = properties.get("IS_KAGGLE_MODE") != null
+            ? getBoolean("IS_KAGGLE_MODE")
+            : false;
     // Thêm dòng này vào Configs.java
 // Các tham số đã được cập nhật từ kết quả tối ưu hóa Funding Fee
-    public static double PREDICT_SYMBOL_RATE_MAX_THRESHOLD = 0.19076; // Cập nhật từ FUNDING_PRED_MAX_THRESHOLD
+    public static double PREDICT_SYMBOL_RATE_MAX_THRESHOLD = 0.2; // Cập nhật từ FUNDING_PRED_MAX_THRESHOLD
 
     // Nhóm tham số lọc tín hiệu thị trường (Market Filters)
-    public static Double PREDICT_SYMBOL_RATE_DOWN_15M = -0.04749;     // Cập nhật từ FUNDING_RATE_MIN_TRADE_FULL
-    public static Double PREDICT_SYMBOL_RATE_UP_AVG = 0.00958;        // Cập nhật từ FUNDING_RATE_UP_AVG
-    public static Double PREDICT_SYMBOL_RATE_DOWN_AVG = -0.00683;     // Cập nhật từ FUNDING_RATE_DOWN_AVG
+    public static Double PREDICT_SYMBOL_RATE_DOWN_15M = -0.03234;  // Param 2
+    public static Double PREDICT_SYMBOL_RATE_UP_AVG = 0.00454;          // Param 3
+    public static Double PREDICT_SYMBOL_RATE_DOWN_AVG = -0.00503;
 
     // Tham số bổ sung từ kết quả HPO
 

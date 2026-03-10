@@ -6,9 +6,7 @@ package com.binance.chuyennd.research;
 
 import ai.onnxruntime.OrtException;
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
-import com.binance.chuyennd.ai_ml.data.HPOSmartCache;
 import com.binance.chuyennd.ai_ml.data.SimpleSymbolMapper;
-import com.binance.chuyennd.ai_ml.features.export.funding.FundingFeatureExtractor;
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.ai_ml.onnx.entry.AIRejectFilter;
 import com.binance.chuyennd.ai_ml.onnx.entry.RunGeneratePredictions;
@@ -56,12 +54,38 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
     public static void main(String[] args) throws ParseException, IOException, InterruptedException {
 
+        LOG.info("Start with kaggle mode: {} ", Configs.IS_KAGGLE_MODE);
         SimulatorMarketLevelTicker1MStopLoss test = new SimulatorMarketLevelTicker1MStopLoss();
-
-        test.initData();
+        if (Configs.IS_KAGGLE_MODE) {
+            test.initDataOnKaggle();
+        } else {
+            test.initData();
+        }
         test.simulatorWithInitEntry();
         Thread.sleep(5000);
         System.exit(1);
+    }
+
+    private void initDataOnKaggle() throws ParseException {
+        Configs.TIME_RUN = "20250101";
+        BudgetManagerSimple.getInstance().resetInstance();
+        allOrderDone = new TreeMap<>();
+
+        LOG.info("Loading Data... {}", Configs.TIME_RUN);
+        Long startTime = Utils.sdfFile.parse(Configs.TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
+        int numberMinutes = System.currentTimeMillis() - startTime > 0 ? (int) ((System.currentTimeMillis() - startTime) / Utils.TIME_MINUTE) : 0;
+
+        // SỬ DỤNG DATAMANAGER
+        time2MarketData = DataManager.getMarketData();
+        Utils.printMemoryUsage("Load time2MarketData");
+
+        predictionMap = DataManager.getAiPredictionData();
+        Utils.printMemoryUsage("Load predictionMap");
+
+        time2SymbolPred = DataManager.getFundingPredictionData(startTime, numberMinutes);
+        Utils.printMemoryUsage("Load time2FundingPre");
+        aiRejectFilter = new AIRejectFilter();
+        Utils.printMemoryUsage("Load time2FundingPre (time2SymbolPred)");
     }
 
     public void simulatorWithInitEntry(String... inputs) throws ParseException {
@@ -72,11 +96,12 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         while (true) {
             TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers;
             try {
-//                if (Configs.IS_HPO_MODE) {
+                if (Configs.IS_KAGGLE_MODE) {
 //                    time2Tickers = HPOSmartCache.getData(startTime);
-//                } else {
+                    time2Tickers = DataManager.getTickers1M(startTime);
+                } else {
                     time2Tickers = DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime);
-//                }
+                }
 
                 if (time2Tickers == null) {
                     LOG.info("File data error or not found for time: {}", Utils.normalizeDateYYYYMMDDHHmm(startTime));
@@ -608,6 +633,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         this.time2SymbolPred = time2FundingPre; // 🔥 GÁN BIẾN MỚI
         this.aiRejectFilter = aiRejectFilter;
     }
+
     // --- Thêm vào phần khai báo thuộc tính ---
     private BotTradingConfig config = new BotTradingConfig(); // Mặc định
 
@@ -630,6 +656,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         }
         return true;
     }
+
     private Float getPredictionFromPrimitiveArray(long[] encodedArray, short targetId) {
         for (long encodedData : encodedArray) {
             if ((short) (encodedData >> 32) == targetId) {
