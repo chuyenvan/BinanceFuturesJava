@@ -749,7 +749,7 @@ public class DataManagerAerospikeFloatSim {
 
         // 1. INJECT TIMESTAMP TỪ BÊN NGOÀI VÀO (Vì trong DB không còn lưu nữa)
         // Ép kiểu về double theo đúng định nghĩa class cũ của bạn
-        javaTicker.startTime = (double) timestamp;
+        javaTicker.startTime = timestamp;
 
         // 2. ÉP KIỂU FLOAT (DB) -> DOUBLE (JAVA)
         javaTicker.priceOpen = (double) protoTicker.getPriceOpen();

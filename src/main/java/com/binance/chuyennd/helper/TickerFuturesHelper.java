@@ -271,7 +271,7 @@ public class TickerFuturesHelper {
         Double minPrice = null;
         Double lastPrice = null;
         Double openPrice = null;
-        Double timeStart = null;
+        Long timeStart = null;
         Double timeEnd = null;
         Double totalUsdt = 0d;
 

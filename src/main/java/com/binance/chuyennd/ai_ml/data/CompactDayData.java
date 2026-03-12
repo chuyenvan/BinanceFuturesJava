@@ -38,7 +38,7 @@ public class CompactDayData {
             return false;
         }
 
-        output.startTime = (double) (dayStart + index * 60000L);
+        output.startTime =  (dayStart + index * 60000L);
         output.priceOpen = (double) data[base];
         output.maxPrice  = (double) data[base + 1];
         output.minPrice  = (double) data[base + 2];

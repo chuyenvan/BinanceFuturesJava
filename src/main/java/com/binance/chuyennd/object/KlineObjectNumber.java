@@ -23,7 +23,7 @@ import java.util.List;
  */
 public class KlineObjectNumber implements Serializable {
 
-    public Double startTime;
+    public Long startTime;
     public Double priceOpen;
     public Double maxPrice;
     public Double minPrice;
@@ -40,7 +40,7 @@ public class KlineObjectNumber implements Serializable {
 
     public static KlineObjectNumber convertString2Kline(List<Object> kline) {
         KlineObjectNumber result = new KlineObjectNumber();
-        result.startTime = (Double) kline.get(0);
+        result.startTime = (Long) kline.get(0);
         result.priceOpen = Double.valueOf(kline.get(1).toString());
         result.maxPrice = Double.valueOf(kline.get(2).toString());
         result.minPrice = Double.valueOf(kline.get(3).toString());
