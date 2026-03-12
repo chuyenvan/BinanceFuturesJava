@@ -31,7 +31,7 @@ public class WFOOrchestrator {
             BotTradingConfig finalIS = WFOTier3BudgetRunner.optimize(current, trainEnd, bestRisk);
 
             // Bước chốt: Kiểm chứng OOS [cite: 323]
-            double oosScore = WFOBacktestEngine.run(trainEnd, testEnd, finalIS);
+            float oosScore = WFOBacktestEngine.run(trainEnd, testEnd, finalIS);
 
             LOG.info("🏁 RESULT OOS [{}]: Score = {}", Utils.normalizeDateYYYYMMDD(testEnd), oosScore);
 

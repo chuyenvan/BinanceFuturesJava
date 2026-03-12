@@ -49,45 +49,45 @@ public class Configs {
             : false;
     // Thêm dòng này vào Configs.java
 // Các tham số đã được cập nhật từ kết quả tối ưu hóa Funding Fee
-    public static double PREDICT_SYMBOL_RATE_MAX_THRESHOLD = 0.2; // Cập nhật từ FUNDING_PRED_MAX_THRESHOLD
+    public static float PREDICT_SYMBOL_RATE_MAX_THRESHOLD = 0.2f; // Cập nhật từ FUNDING_PRED_MAX_THRESHOLD
 
     // Nhóm tham số lọc tín hiệu thị trường (Market Filters)
-    public static Double PREDICT_SYMBOL_RATE_DOWN_15M = -0.03234;  // Param 2
-    public static Double PREDICT_SYMBOL_RATE_UP_AVG = 0.00454;          // Param 3
-    public static Double PREDICT_SYMBOL_RATE_DOWN_AVG = -0.00503;
+    public static Float PREDICT_SYMBOL_RATE_DOWN_15M = -0.03234f;  // Param 2
+    public static Float PREDICT_SYMBOL_RATE_UP_AVG = 0.00454f;          // Param 3
+    public static Float PREDICT_SYMBOL_RATE_DOWN_AVG = -0.00503f;
 
     // Tham số bổ sung từ kết quả HPO
 
 
     // 1. Ngưỡng margin-ratio đầu tiên để giảm budget
-    public static double BUDGET_MARGIN_RATIO_1 = 0.4820;
+    public static float BUDGET_MARGIN_RATIO_1 = 0.4820f;
     // 2. Mức chia budget ở ngưỡng 1
-    public static double BUDGET_DIVIDER_1 = 1.5578;
+    public static float BUDGET_DIVIDER_1 = 1.5578f;
 
     // 3. Ngưỡng margin-ratio thứ hai
-    public static double BUDGET_MARGIN_RATIO_2 = 0.7475;
+    public static float BUDGET_MARGIN_RATIO_2 = 0.7475f;
     // 4. Mức chia budget ở ngưỡng 2
-    public static double BUDGET_DIVIDER_2 = 1.5984;
+    public static float BUDGET_DIVIDER_2 = 1.5984f;
 
 
-    public static double RATE_PROFIT_STOP_MARKET = 0.01151;
+    public static float RATE_PROFIT_STOP_MARKET = 0.01151f;
 
     // --- HIGH VOLATILITY (Biến động mạnh) ---
-    public static double TS_VOL_HIGH_THRES = 0.01760; // Ngưỡng nhận diện High Vol
-    public static double TS_RATE_HIGH = 0.05549; // Target dời SL khi High Vol
+    public static float TS_VOL_HIGH_THRES = 0.01760f; // Ngưỡng nhận diện High Vol
+    public static float TS_RATE_HIGH = 0.05549f; // Target dời SL khi High Vol
 
     // --- MEDIUM VOLATILITY (Biến động vừa) ---
-    public static double TS_VOL_MED_THRES = 0.01020; // Ngưỡng nhận diện Med Vol
-    public static double TS_RATE_MED = 0.04172; // Target dời SL khi Med Vol
+    public static float TS_VOL_MED_THRES = 0.01020f; // Ngưỡng nhận diện Med Vol
+    public static float TS_RATE_MED = 0.04172f; // Target dời SL khi Med Vol
 
     // --- LOW VOLATILITY (Biến động thấp) ---
-    public static double TS_VOL_LOW_THRES = 0.00239; // Ngưỡng nhận diện Low Vol
-    public static double TS_RATE_LOW = 0.01189; // Ta
+    public static float TS_VOL_LOW_THRES = 0.00239f; // Ngưỡng nhận diện Low Vol
+    public static float TS_RATE_LOW = 0.01189f; // Ta
 //
 //    // Mức chốt lời tương ứng (Target Rates)
-//    public static double TS_RATE_HIGH = 0.04799;      // Gồng lãi cực mạnh ~4.8% (Cũ: 3%)
-//    public static double TS_RATE_MED = 0.02463;       // Gồng lãi ~2.5% (Cũ: 2%)
-//    public static double TS_RATE_LOW = 0.01415;       // Chốt sớm ~1.4% (
+//    public static float TS_RATE_HIGH = 0.04799;      // Gồng lãi cực mạnh ~4.8% (Cũ: 3%)
+//    public static float TS_RATE_MED = 0.02463;       // Gồng lãi ~2.5% (Cũ: 2%)
+//    public static float TS_RATE_LOW = 0.01415;       // Chốt sớm ~1.4% (
 
 
     public static String TIME_RUN = Configs.getString("TIME_RUN");
@@ -101,7 +101,7 @@ public class Configs {
     public static Integer NUMBER_ENTRY_EACH_SIGNAL = Configs.getInt("NUMBER_ENTRY_EACH_SIGNAL");
     public static Integer NUMBER_TICKER_CAL_RATE_CHANGE = Configs.getInt("NUMBER_TICKER_CAL_RATE_CHANGE");
 
-    public static final Double RATE_FEE = Configs.getDouble("RATE_FEE");
+    public static final Float RATE_FEE = Configs.getDouble("RATE_FEE");
     public static Integer LEVERAGE_ORDER = Configs.getInt("LEVERAGE_ORDER");
 
     // kaggle
@@ -134,34 +134,34 @@ public class Configs {
         return Boolean.parseBoolean((String) properties.get(configName));
     }
 
-    public static double getDouble(String configName) {
-        return Double.parseDouble((String) properties.get(configName));
+    public static float getDouble(String configName) {
+        return Float.parseFloat((String) properties.get(configName));
     }
 
     // =========================================================
     // 1. NHÓM 8 THAM SỐ ĐÃ ĐƯỢC UPDATE TỪ KẾT QUẢ HPO
     // =========================================================
-    public static double MS_UP_BIG_THRES = 0.02046;  // Default cũ: 0.025
-    public static double MS_DOWN_BIG_AVG = -0.03157; // Default cũ: -0.032
+    public static float MS_UP_BIG_THRES = 0.02046f;  // Default cũ: 0.025
+    public static float MS_DOWN_BIG_AVG = -0.03157f; // Default cũ: -0.032
 
-    public static double MS_UP_MED_THRES = 0.01204;  // Default cũ: 0.015
-    public static double MS_DOWN_MED_AVG = -0.02069; // Default cũ: -0.030
+    public static float MS_UP_MED_THRES = 0.01204f;  // Default cũ: 0.015
+    public static float MS_DOWN_MED_AVG = -0.02069f; // Default cũ: -0.030
 
-    public static double MS_UP_SMALL_THRES = 0.00442;  // Default cũ: 0.008
-    public static double MS_DOWN_SMALL_AVG = -0.01713; // Default cũ: -0.006
+    public static float MS_UP_SMALL_THRES = 0.00442f;  // Default cũ: 0.008
+    public static float MS_DOWN_SMALL_AVG = -0.01713f; // Default cũ: -0.006
 
-    public static double MS_DOWN_15M_MED_ONLY = -0.06725; // Default cũ: -0.045
-    public static double MS_DOWN_15M_SMALL_ONLY = -0.02145; // Default cũ: -0.028
+    public static float MS_DOWN_15M_MED_ONLY = -0.06725f; // Default cũ: -0.045
+    public static float MS_DOWN_15M_SMALL_ONLY = -0.02145f; // Default cũ: -0.028
 
     // =========================================================
     // 2. NHÓM 4 THAM SỐ THIẾU TRONG HPO (GIỮ NGUYÊN DEFAULT)
     // =========================================================
-    public static double MS_DOWN_BIG_BTC = -0.01;  // Default: -0.01
+    public static float MS_DOWN_BIG_BTC = -0.01f;  // Default: -0.01
 
-    public static double MS_DOWN_MED_AVG_CMB = -0.014; // Default: -0.014 (Combined logic)
-    public static double MS_DOWN_MED_15M_CMB = -0.07;  // Default: -0.07  (Combined logic)
+    public static float MS_DOWN_MED_AVG_CMB = -0.014f; // Default: -0.014 (Combined logic)
+    public static float MS_DOWN_MED_15M_CMB = -0.07f;  // Default: -0.07  (Combined logic)
 
-    public static double MS_DOWN_SMALL_15M = -0.025; // Default: -0.025 (Combined logic)
+    public static float MS_DOWN_SMALL_15M = -0.025f; // Default: -0.025 (Combined logic)
 
 
     public static void main(String[] args) {

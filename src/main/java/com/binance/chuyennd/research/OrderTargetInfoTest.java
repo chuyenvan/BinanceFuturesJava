@@ -35,32 +35,32 @@ public class OrderTargetInfoTest implements Serializable {
 
     public OrderTargetStatus status;
     public OrderSide side;
-    public Double priceEntry;
-    public Double lastEntry;
+    public Float priceEntry;
+    public Float lastEntry;
 
-    public Double priceTP;
-    public Double priceSL;
-    public Double quantity;
+    public Float priceTP;
+    public Float priceSL;
+    public Float quantity;
     public Integer leverage;
     public String symbol;
     public long timeStart;
     public long timeUpdate;
-    public Double profitMin = 0d;
+    public Float profitMin = 0f;
 
-    //    public Double maxPrice;
-    public Double minPrice;
-    public Double lastPrice;
+    //    public Float maxPrice;
+    public Float minPrice;
+    public Float lastPrice;
 
-    public Double rateChange;
-    public Double volume;
-    public TreeMap<Long, Double> time2FundingFee = new TreeMap<>();
+    public Float rateChange;
+    public Float volume;
+    public TreeMap<Long, Float> time2FundingFee = new TreeMap<>();
     public MarketDataObject marketData;
     public MarketLevelChange marketLevelChange;
     public KlineObjectSimple tickerOpen;
 
 
-    public OrderTargetInfoTest(OrderTargetStatus status, Double priceEntry,
-                               Double priceTP, Double quantity, Integer leverage, String symbol,
+    public OrderTargetInfoTest(OrderTargetStatus status, Float priceEntry,
+                               Float priceTP, Float quantity, Integer leverage, String symbol,
                                long timeStart, long timeUpdate, OrderSide side) {
         this.status = status;
         this.priceEntry = priceEntry;
@@ -84,47 +84,47 @@ public class OrderTargetInfoTest implements Serializable {
         this.timeUpdate = ticker.startTime.longValue();
     }
 
-    public Double calRateLoss() {
-        double rate = Utils.rateOf2Double(lastPrice, priceEntry);
+    public Float calRateLoss() {
+        float rate = Utils.rateOf2Double(lastPrice, priceEntry);
         return rate;
     }
 
-    public Double calRateLossMax(Double maxPriceTicker) {
-        double rate = Utils.rateOf2Double(maxPriceTicker, priceEntry);
+    public Float calRateLossMax(Float maxPriceTicker) {
+        float rate = Utils.rateOf2Double(maxPriceTicker, priceEntry);
         return rate;
     }
 
 
-    public Double calFundingFee() {
-        double fundingTotal = 0;
-        for (Double funding : time2FundingFee.values()) {
+    public Float calFundingFee() {
+        float fundingTotal = 0;
+        for (Float funding : time2FundingFee.values()) {
             fundingTotal += funding;
         }
         return fundingTotal;
     }
 
 
-    public Double calRateTp() {
-        double rate = Utils.rateOf2Double(priceTP, priceEntry);
+    public Float calRateTp() {
+        float rate = Utils.rateOf2Double(priceTP, priceEntry);
         return rate;
     }
 
-    public Double calProfit() {
-        double profit = quantity * (lastPrice - priceEntry);
+    public Float calProfit() {
+        float profit = quantity * (lastPrice - priceEntry);
         return profit;
     }
 
-    public Double calMargin() {
+    public Float calMargin() {
         return quantity * priceEntry / leverage;
     }
 
     public void updateStatusNew(Float maxChange90M, KlineObjectSimple ticker) {
         if (priceSL == null) {
-            Double rateLoss = calRateLossMax(ticker.maxPrice);
-            Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60MForTradingStop(maxChange90M);
+            Float rateLoss = calRateLossMax(ticker.maxPrice);
+            Float rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60MForTradingStop(maxChange90M);
             if (rateLoss > rateMin2MoveSl) {
-                Double rateStop = TradeUtils.calRateLossDynamicBuy(rateLoss, maxChange90M);
-                Double priceSLNew = Utils.calPriceTarget(symbol, priceEntry, OrderSide.SELL, -rateStop);
+                Float rateStop = TradeUtils.calRateLossDynamicBuy(rateLoss, maxChange90M);
+                Float priceSLNew = Utils.calPriceTarget(symbol, priceEntry, OrderSide.SELL, -rateStop);
                 minPrice = lastPrice;
                 this.priceSL = priceSLNew;
 //                if (ticker.priceClose <= priceSLNew) {
@@ -157,13 +157,13 @@ public class OrderTargetInfoTest implements Serializable {
     public void updateTPSL(Float rateChangeMax90M, KlineObjectSimple ticker) {
         // move SL
         if (priceSL != null) {
-            Double rateLoss = calRateLossMax(ticker.maxPrice);
-            Double rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60MForTradingStop(rateChangeMax90M);
+            Float rateLoss = calRateLossMax(ticker.maxPrice);
+            Float rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60MForTradingStop(rateChangeMax90M);
             if (rateLoss >= rateMin2MoveSl) {
-                Double rateSL = TradeUtils.calRateLossDynamicBuy(rateLoss, rateChangeMax90M);
+                Float rateSL = TradeUtils.calRateLossDynamicBuy(rateLoss, rateChangeMax90M);
                 OrderSide side2Sl = OrderSide.SELL;
-                Double priceSLNew = Utils.calPriceTarget(symbol, priceEntry, side2Sl, -rateSL);
-                double priceSLChange = priceSLNew - priceSL;
+                Float priceSLNew = Utils.calPriceTarget(symbol, priceEntry, side2Sl, -rateSL);
+                float priceSLChange = priceSLNew - priceSL;
                 if (priceSLChange > 0
                         && priceSLNew > priceEntry
                 ) {
@@ -175,9 +175,9 @@ public class OrderTargetInfoTest implements Serializable {
     }
 
 
-    public Double calTp() {
+    public Float calTp() {
         OrderTargetInfoTest orderInfo = this;
-        Double tp = orderInfo.quantity * (orderInfo.priceTP - orderInfo.priceEntry)
+        Float tp = orderInfo.quantity * (orderInfo.priceTP - orderInfo.priceEntry)
                 - orderInfo.quantity * orderInfo.priceEntry * Configs.RATE_FEE;
         if (orderInfo.side.equals(OrderSide.SELL)) {
             tp = orderInfo.quantity * (orderInfo.priceEntry - orderInfo.priceTP)
@@ -188,7 +188,7 @@ public class OrderTargetInfoTest implements Serializable {
     }
 
     public void updateFundingFee() {
-//        TreeMap<Long, Double> fundingFee = FundingFeeManager.getInstance().getFundingFeeByTime(symbol, timeStart, timeUpdate);
+//        TreeMap<Long, Float> fundingFee = FundingFeeManager.getInstance().getFundingFeeByTime(symbol, timeStart, timeUpdate);
 //        if (fundingFee != null) {
 //            for (Long time : fundingFee.keySet()) {
 //                FundingRate fund = fundingFee.get(time);

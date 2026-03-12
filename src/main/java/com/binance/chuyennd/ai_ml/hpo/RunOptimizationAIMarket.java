@@ -31,11 +31,11 @@ public class RunOptimizationAIMarket {
     public static TreeMap<Long, long[]> time2FundingPre;
     private static final AtomicLong testCounter = new AtomicLong(0);
 
-    private static final double MIN_RISK = -0.06, MAX_RISK = -0.01;
-    private static final double MIN_RET1H = 0.005, MAX_RET1H = 0.06;
-    private static final double MIN_HIGHRET = 0.01, MAX_HIGHRET = 0.10;
-    private static final double MIN_MOM15M = 0.001, MAX_MOM15M = 0.02;
-    private static final double MIN_TREND4H = 0.001, MAX_TREND4H = 0.03;
+    private static final float MIN_RISK = -0.06f, MAX_RISK = -0.01f;
+    private static final float MIN_RET1H = 0.005f, MAX_RET1H = 0.06f;
+    private static final float MIN_HIGHRET = 0.01f, MAX_HIGHRET = 0.10f;
+    private static final float MIN_MOM15M = 0.001f, MAX_MOM15M = 0.02f;
+    private static final float MIN_TREND4H = 0.001f, MAX_TREND4H = 0.03f;
 
     public static void main(String[] args) {
         LOG.info("=== START OPTIMIZING AI MARKET THRESHOLDS ===");
@@ -58,13 +58,13 @@ public class RunOptimizationAIMarket {
                 DoubleChromosome.of(DoubleRange.of(MIN_TREND4H, MAX_TREND4H))
         );
 
-        Engine<DoubleGene, Double> engine = Engine.builder(RunOptimizationAIMarket::evaluate, genotypeFactory)
+        Engine<DoubleGene, Float> engine = Engine.builder(RunOptimizationAIMarket::evaluate, genotypeFactory)
                 .populationSize(POPULATION_SIZE)
                 .maximizing()
                 .executor(Executors.newSingleThreadExecutor())
                 .build();
 
-        EvolutionResult<DoubleGene, Double> result = engine.stream()
+        EvolutionResult<DoubleGene, Float> result = engine.stream()
                 .limit(GENERATIONS)
                 .peek(r -> LOG.info(">>> Generation {} Best: {}", r.generation(), String.format("%.2f", r.bestFitness())))
                 .collect(EvolutionResult.toBestEvolutionResult());
@@ -72,18 +72,18 @@ public class RunOptimizationAIMarket {
         printResult(result, startTime);
     }
 
-    private static Double evaluate(Genotype<DoubleGene> genotype) {
+    private static Float evaluate(Genotype<DoubleGene> genotype) {
         long currentTest = testCounter.incrementAndGet();
 
-        double pRisk = genotype.get(0).gene().doubleValue();
-        double pRet1H = genotype.get(1).gene().doubleValue();
-        double pHighRet = genotype.get(2).gene().doubleValue();
-        double pMom15M = genotype.get(3).gene().doubleValue();
-        double pTrend4H = genotype.get(4).gene().doubleValue();
+        float pRisk = genotype.get(0).gene().floatValue();
+        float pRet1H = genotype.get(1).gene().floatValue();
+        float pHighRet = genotype.get(2).gene().floatValue();
+        float pMom15M = genotype.get(3).gene().floatValue();
+        float pTrend4H = genotype.get(4).gene().floatValue();
 
         try {
             // Logic tính toán profit thực tế của bạn
-            double profit = Math.random() * 1000;
+            float profit = 0f;
 
             LOG.info("Test #{}: Profit={} | Risk={} | R1H={} | HighR={} | Mom15={} | Trend4={}",
                     currentTest, String.format("%.2f", profit),
@@ -94,7 +94,7 @@ public class RunOptimizationAIMarket {
             return profit;
         } catch (Exception e) {
             LOG.error("Lỗi Eval: ", e);
-            return -100000.0;
+            return -100000.0f;
         }
     }
 
@@ -116,18 +116,18 @@ public class RunOptimizationAIMarket {
         }
     }
 
-    private static void printResult(EvolutionResult<DoubleGene, Double> result, long startTime) {
+    private static void printResult(EvolutionResult<DoubleGene, Float> result, long startTime) {
         Genotype<DoubleGene> best = result.bestPhenotype().genotype();
         LOG.info("");
         LOG.info("=== KẾT QUẢ TỐI ƯU AI MARKET THRESHOLDS ===");
         LOG.info("Time: {} mins", Duration.ofMillis(System.currentTimeMillis() - startTime).toMinutes());
         LOG.info("Profit Max: {}", result.bestFitness());
         LOG.info("------------------------------------");
-        LOG.info("RISK_MAX_DD4H:  {}", String.format("%.5f", best.get(0).gene().doubleValue()));
-        LOG.info("MIN_RET_1H:     {}", String.format("%.5f", best.get(1).gene().doubleValue()));
-        LOG.info("HIGH_RET:       {}", String.format("%.5f", best.get(2).gene().doubleValue()));
-        LOG.info("MIN_MOM_15M:    {}", String.format("%.5f", best.get(3).gene().doubleValue()));
-        LOG.info("MIN_TREND_4H:   {}", String.format("%.5f", best.get(4).gene().doubleValue()));
+        LOG.info("RISK_MAX_DD4H:  {}", String.format("%.5f", best.get(0).gene().floatValue()));
+        LOG.info("MIN_RET_1H:     {}", String.format("%.5f", best.get(1).gene().floatValue()));
+        LOG.info("HIGH_RET:       {}", String.format("%.5f", best.get(2).gene().floatValue()));
+        LOG.info("MIN_MOM_15M:    {}", String.format("%.5f", best.get(3).gene().floatValue()));
+        LOG.info("MIN_TREND_4H:   {}", String.format("%.5f", best.get(4).gene().floatValue()));
         LOG.info("====================================");
     }
 }

@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 public class DcaProcessor {
     public static final Logger LOG = LoggerFactory.getLogger(DcaProcessor.class);
 
-    public static List<String> getDCA(MarketLevelChange levelChange, Long time, Double budget,
+    public static List<String> getDCA(MarketLevelChange levelChange, Long time, Float budget,
                                       Map<String, OrderTargetInfoTest> symbol2OrderRunning) {
         return symbol2OrderRunning.entrySet()
                 .stream()
@@ -46,7 +46,7 @@ public class DcaProcessor {
     /**
      * Hàm DCA cho môi trường Production.
      */
-    public static List<String> getDCAProduction(MarketLevelChange levelChange, Long time, Double budget,
+    public static List<String> getDCAProduction(MarketLevelChange levelChange, Long time, Float budget,
                                                 Map<String, PositionRisk> symbol2OrderRunning) {
 
         return symbol2OrderRunning.entrySet()

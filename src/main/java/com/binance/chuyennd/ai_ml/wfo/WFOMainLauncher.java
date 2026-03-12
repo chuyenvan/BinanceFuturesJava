@@ -10,29 +10,29 @@ public class WFOMainLauncher {
     private static final Logger LOG = LoggerFactory.getLogger(WFOMainLauncher.class);
 
     public static void main(String[] args) throws Exception {
-        LOG.info("=== 🚀 BẮT ĐẦU WALK-FORWARD OPTIMIZATION (3 TẦNG) ===");
-
-        // 1. Cấu hình môi trường (Bật Kaggle Mode nếu chạy trên Kaggle để đọc file .dat) [cite: 946]
+        LOG.info("=== 🚀 KHỞI ĐỘNG HỆ THỐNG WFO CHẾ ĐỘ TUẦN TỰ ===");
         Configs.IS_HPO_MODE = true;
 
-        // 2. Nạp dữ liệu vào RAM một lần duy nhất để Backtest xé gió
-        LOG.info("📥 Đang nạp dữ liệu lịch sử vào RAM...");
+        // ÉP NẠP DỮ LIỆU TẠI LUỒNG MAIN TRƯỚC
+        LOG.info("Step 1: Nạp Market Data...");
         DataManager.getMarketData();
+
+        LOG.info("Step 2: Nạp AI Predictions...");
         DataManager.getAiPredictionData();
-        // Nạp thêm Tickers 1M cho khoảng thời gian định chạy (Ví dụ từ 20240101)
-        long current = Utils.sdfFile.parse("20240101").getTime();
-        while (current < System.currentTimeMillis()) {
-            DataManager.getTickers1M(current);
-            current += Utils.TIME_DAY;
-        }
 
-        // 3. Kích hoạt Orchestrator [cite: 739]
-        WFOOrchestrator orchestrator = new WFOOrchestrator();
-        long startWFO = Utils.sdfFile.parse("20240101").getTime();
-        long endWFO = System.currentTimeMillis();
+        // Xác định dải thời gian
+        long startTs = Utils.sdfFile.parse("20240101").getTime();
 
-        orchestrator.startProcess(startWFO, endWFO);
+//        LOG.info("Step 3: Nạp Tickers 1M...");
+//        long current = startTs;
+//        while (current < System.currentTimeMillis()) {
+//            DataManager.getTickers1M(current);
+//            current += Utils.TIME_DAY;
+//        }
 
-        LOG.info("✅ QUY TRÌNH WFO HOÀN TẤT!");
+        LOG.info("✅ TẤT CẢ DỮ LIỆU ĐÃ SẴN SÀNG TRONG RAM. Bắt đầu tối ưu...");
+
+        // Bây giờ mới khởi chạy tối ưu
+        new WFOOrchestrator().startProcess(startTs, System.currentTimeMillis());
     }
 }

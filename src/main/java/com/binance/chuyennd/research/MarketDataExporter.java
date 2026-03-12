@@ -58,8 +58,8 @@ public class MarketDataExporter {
 
                         try {
                             Map<String, KlineObjectSimple> symbol2Ticker = entry.getValue();
-                            Map<String, Double> symbol2MaxPrice = new HashMap<>();
-                            Map<String, Double> symbol2MinPrice = new HashMap<>();
+                            Map<String, Float> symbol2MaxPrice = new HashMap<>();
+                            Map<String, Float> symbol2MinPrice = new HashMap<>();
 
                             for (Map.Entry<String, KlineObjectSimple> entry1 : symbol2Ticker.entrySet()) {
                                 String symbol = entry1.getKey();
@@ -82,8 +82,8 @@ public class MarketDataExporter {
                                     }
                                 }
 
-                                Double priceMax = null;
-                                Double minPrice = null;
+                                Float priceMax = null;
+                                Float minPrice = null;
                                 for (int i = 0; i < Configs.NUMBER_TICKER_CAL_RATE_CHANGE; i++) {
                                     int index = tickers.size() - i - 1;
                                     if (index >= 0) {

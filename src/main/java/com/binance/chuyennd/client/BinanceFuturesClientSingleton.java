@@ -82,11 +82,11 @@ public class BinanceFuturesClientSingleton {
     private static void tracePnlAll() throws ParseException {
 
         int page = 0;
-        Double total = 0d;
-        Double REALIZED_PNL = 0d;
-        Double FUNDING_FEE = 0d;
+        Float total = 0f;
+        Float REALIZED_PNL = 0f;
+        Float FUNDING_FEE = 0f;
 
-        Double COMMISSION = 0d;
+        Float COMMISSION = 0f;
         while (true) {
             page++;
             List<Income> incomes = BinanceFuturesClientSingleton.getInstance().getAllPositionHistory(
@@ -94,15 +94,15 @@ public class BinanceFuturesClientSingleton {
             if (!incomes.isEmpty()) {
                 LOG.info("{} {} {}", page, incomes.get(0).getSymbol(), Utils.normalizeDateYYYYMMDDHHmm(incomes.get(0).getTime()));
                 for (Income income : incomes) {
-                    total += income.getIncome().doubleValue();
+                    total += income.getIncome().floatValue();
                     if (StringUtils.equals(income.getIncomeType(), "REALIZED_PNL")) {
-                        REALIZED_PNL += income.getIncome().doubleValue();
+                        REALIZED_PNL += income.getIncome().floatValue();
                     }
                     if (StringUtils.equals(income.getIncomeType(), "COMMISSION")) {
-                        COMMISSION += income.getIncome().doubleValue();
+                        COMMISSION += income.getIncome().floatValue();
                     }
                     if (StringUtils.equals(income.getIncomeType(), "FUNDING_FEE")) {
-                        FUNDING_FEE += income.getIncome().doubleValue();
+                        FUNDING_FEE += income.getIncome().floatValue();
                     }
                 }
             } else {
@@ -111,8 +111,8 @@ public class BinanceFuturesClientSingleton {
             }
         }
 
-        Double rateF = FUNDING_FEE * 100 / REALIZED_PNL;
-        Double rateC = COMMISSION * 100 / REALIZED_PNL;
+        Float rateF = FUNDING_FEE * 100 / REALIZED_PNL;
+        Float rateC = COMMISSION * 100 / REALIZED_PNL;
         LOG.info("Pnl:{} total:{} Fundding:{} {}% Commission:{} {}%",
                 Utils.formatMoneyNew(total), Utils.formatMoneyNew(REALIZED_PNL), Utils.formatMoneyNew(FUNDING_FEE),
                 Utils.formatMoneyNew(rateF), Utils.formatMoneyNew(COMMISSION), Utils.formatMoneyNew(rateC));
@@ -122,27 +122,27 @@ public class BinanceFuturesClientSingleton {
         String symbol = "LSKUSDT";
         List<Income> incomes = BinanceFuturesClientSingleton.getInstance().getPositionHistoryBySymbol(symbol,
                 Utils.sdfFileHour.parse("20260119 05:32").getTime(), System.currentTimeMillis());
-        Double total = 0d;
-        Double REALIZED_PNL = 0d;
-        Double FUNDING_FEE = 0d;
+        Float total = 0f;
+        Float REALIZED_PNL = 0f;
+        Float FUNDING_FEE = 0f;
 
-        Double COMMISSION = 0d;
+        Float COMMISSION = 0f;
         for (Income income : incomes) {
-            total += income.getIncome().doubleValue();
+            total += income.getIncome().floatValue();
             if (StringUtils.equals(income.getIncomeType(), "REALIZED_PNL")) {
-                REALIZED_PNL += income.getIncome().doubleValue();
+                REALIZED_PNL += income.getIncome().floatValue();
             }
             if (StringUtils.equals(income.getIncomeType(), "COMMISSION")) {
-                COMMISSION += income.getIncome().doubleValue();
+                COMMISSION += income.getIncome().floatValue();
             }
             if (StringUtils.equals(income.getIncomeType(), "FUNDING_FEE")) {
-                FUNDING_FEE += income.getIncome().doubleValue();
+                FUNDING_FEE += income.getIncome().floatValue();
             }
             LOG.info("{} {} {} {} {} ", income.getSymbol(), income.getAsset(), Utils.normalizeDateYYYYMMDDHHmm(income.getTime()),
-                    income.getIncomeType(), income.getIncome().doubleValue());
+                    income.getIncomeType(), income.getIncome().floatValue());
         }
-        Double rateF = FUNDING_FEE * 100 / REALIZED_PNL;
-        Double rateC = COMMISSION * 100 / REALIZED_PNL;
+        Float rateF = FUNDING_FEE * 100 / REALIZED_PNL;
+        Float rateC = COMMISSION * 100 / REALIZED_PNL;
         LOG.info("{} -> Pnl:{} total:{} Fundding:{} {}% Commission:{} {}%", symbol,
                 Utils.formatMoneyNew(total), Utils.formatMoneyNew(REALIZED_PNL), Utils.formatMoneyNew(FUNDING_FEE),
                 Utils.formatMoneyNew(rateF), Utils.formatMoneyNew(COMMISSION), Utils.formatMoneyNew(rateC));

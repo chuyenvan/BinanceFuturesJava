@@ -4,101 +4,89 @@ import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
-import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
-import java.text.ParseException;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class DataManager {
-
     private static final Logger LOG = LoggerFactory.getLogger(DataManager.class);
-
-    // Lấy đường dẫn linh hoạt: Nếu có cấu hình từ bên ngoài thì dùng, không thì mặc định là storage_data/
-    public static String DATA_DIR = System.getProperty("data.dir", "storage_data/");
-
+    public static String DATA_DIR = "storage_data/";
     public static boolean isDumpingMode = false;
 
-    static {
-        // Đảm bảo DATA_DIR luôn có dấu '/' ở cuối
-        if (!DATA_DIR.endsWith("/")) {
-            DATA_DIR += "/";
-        }
-        File dir = new File(DATA_DIR);
-        if (!dir.exists() && !DATA_DIR.startsWith("/kaggle")) {
-            dir.mkdirs();
-        }
-    }
+    // Bộ nhớ đệm Static - Duy nhất cho toàn bộ chương trình
+    private static volatile TreeMap<Long, MarketDataObject> cachedMarketData = null;
+    private static volatile TreeMap<Long, AiPredictionData> cachedAiPredictionData = null;
+    private static volatile TreeMap<Long, long[]> cachedFundingPred = null;
+//    private static final ConcurrentHashMap<Long, TreeMap<Long, Map<String, KlineObjectSimple>>>
+//            cachedTickers1M = new ConcurrentHashMap<>();
 
-    // TÌM ĐÚNG FILE .dat NHƯ TRÊN KAGGLE CỦA BẠN
+    private static final Object lockMarket = new Object();
+    private static final Object lockAi = new Object();
+    private static final Object lockFunding = new Object();
+
     public static TreeMap<Long, MarketDataObject> getMarketData() {
-        String filePath = DATA_DIR + "market_data.dat";
-        TreeMap<Long, MarketDataObject> data = readObjectFromFile(filePath);
-
-        if (data == null || data.isEmpty()) {
-            LOG.info("Không tìm thấy file: {}. Đang tải từ Aerospike...", filePath);
-            data = DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
-            if (isDumpingMode && data != null && !data.isEmpty()) writeObjectToFile(filePath, data);
-        } else {
-            LOG.info("✅ Đã load Market Data từ file offline.");
+        if (cachedMarketData == null) {
+            synchronized (lockMarket) {
+                if (cachedMarketData == null) {
+                    LOG.info("📥 [RAM] Đang nạp Market Data độc quyền từ Aerospike...");
+                    cachedMarketData = DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
+                }
+            }
         }
-        return data;
+        return cachedMarketData;
     }
 
     public static TreeMap<Long, AiPredictionData> getAiPredictionData() {
-        String filePath = DATA_DIR + "ai_prediction_data.dat";
-        TreeMap<Long, AiPredictionData> data = readObjectFromFile(filePath);
-
-        if (data == null || data.isEmpty()) {
-            LOG.info("Không tìm thấy file: {}. Đang tải từ Aerospike...", filePath);
-            data = DataManagerAerospikeFloatSim.getAllMarketAiPredictionsFromAerospike();
-            if (isDumpingMode && data != null && !data.isEmpty()) writeObjectToFile(filePath, data);
-        } else {
-            LOG.info("✅ Đã load AI Prediction từ file offline.");
+        if (cachedAiPredictionData == null) {
+            synchronized (lockAi) {
+                if (cachedAiPredictionData == null) {
+                    LOG.info("📥 [RAM] Đang nạp AI Predictions độc quyền từ Aerospike...");
+                    cachedAiPredictionData = DataManagerAerospikeFloatSim.getAllMarketAiPredictionsFromAerospike();
+                }
+            }
         }
-        return data;
+        return cachedAiPredictionData;
     }
 
+    // Hàm trả về Funding Pred (Dùng trong HPO và Simulator)
     public static TreeMap<Long, long[]> getFundingPredictionData(Long startTime, int numberMinutes) {
-        String filePath = DATA_DIR + "funding_prediction_" + startTime + ".dat";
-        TreeMap<Long, long[]> data = readObjectFromFile(filePath);
-
-        if (data == null || data.isEmpty()) {
-            LOG.info("Không tìm thấy file: {}. Đang tải từ Aerospike...", filePath);
-            data = DataManagerAerospikeFloatSim.getFundingPredictionsPrimitiveByRange(startTime, numberMinutes);
-            if (isDumpingMode && data != null && !data.isEmpty()) writeObjectToFile(filePath, data);
-        } else {
-            LOG.info("✅ Đã load Funding Prediction từ file offline.");
+        if (cachedFundingPred == null) {
+            synchronized (lockFunding) {
+                if (cachedFundingPred == null) {
+                    LOG.info("📥 [RAM] Đang nạp Funding Predictions độc quyền cho dải thời gian này...");
+                    cachedFundingPred = DataManagerAerospikeFloatSim.getFundingPredictionsPrimitiveByRange(startTime, numberMinutes);
+                }
+            }
         }
-        return data;
+        return cachedFundingPred;
     }
 
     public static TreeMap<Long, Map<String, KlineObjectSimple>> getTickers1M(Long startTime) {
-        String filePath = DATA_DIR + "tickers_1m_" + startTime + ".dat";
-        TreeMap<Long, Map<String, KlineObjectSimple>> data = readObjectFromFile(filePath);
-
-        if (data == null || data.isEmpty()) {
-            LOG.info("Không tìm thấy file: {}. Đang tải từ Aerospike...", filePath);
-            data = DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime);
-            if (isDumpingMode && data != null && !data.isEmpty()) {
-                writeObjectToFile(filePath, data);
-            }
-        }
+//        if (!cachedTickers1M.containsKey(startTime)) {
+//            synchronized (cachedTickers1M) {
+//                if (!cachedTickers1M.containsKey(startTime)) {
+//                    LOG.info("📥 [RAM] Đang nạp nến 1M ngày {}...", Utils.normalizeDateYYYYMMDD(startTime));
+        TreeMap<Long, Map<String, KlineObjectSimple>> data = DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime);
         return data;
+//                    if (data != null) cachedTickers1M.put(startTime, data);
+//                }
+//            }
+//        }
+//        return cachedTickers1M.get(startTime);
     }
 
-    // ĐỌC FILE DẠNG CƠ BẢN (KHÔNG GZIP)
+    // --- HÀM TIỆN ÍCH ĐỂ ĐỌC/GHI FILE ---
     private static <T> T readObjectFromFile(String filePath) {
         File file = new File(filePath);
         if (!file.exists()) return null;
         try (ObjectInputStream ois = new ObjectInputStream(new BufferedInputStream(new FileInputStream(file)))) {
             return (T) ois.readObject();
         } catch (Exception e) {
-            LOG.error("Lỗi khi đọc file: " + filePath, e);
             return null;
         }
     }
@@ -107,9 +95,9 @@ public class DataManager {
         if (DATA_DIR.startsWith("/kaggle/input")) return;
         try (ObjectOutputStream oos = new ObjectOutputStream(new BufferedOutputStream(new FileOutputStream(filePath)))) {
             oos.writeObject(obj);
-            LOG.info("Đã lưu file offline thành công: " + filePath);
+            LOG.info("💾 Đã dump dữ liệu ra file: {}", filePath);
         } catch (Exception e) {
-            LOG.error("Lỗi khi ghi file: " + filePath, e);
+            LOG.error("❌ Lỗi ghi file: {}", filePath);
         }
     }
 }

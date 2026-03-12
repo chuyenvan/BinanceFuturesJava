@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
 
 public class PriceRealtimeValidator {
     private static final Logger LOG = LoggerFactory.getLogger(PriceRealtimeValidator.class);
-    private static final double PRICE_THRESHOLD = 0.002; // Ngưỡng lệch 0.2%
+    private static final float PRICE_THRESHOLD = 0.002f; // Ngưỡng lệch 0.2%
     public static final String URL_PREMIUM_INDEX = "https://fapi.binance.com/fapi/v1/premiumIndex";
 
     public static void main(String[] args) {
@@ -34,7 +34,7 @@ public class PriceRealtimeValidator {
                 .collect(Collectors.toList());
 
         // 2. Lấy dữ liệu MarkPrice từ API Binance
-        Map<String, Double> apiPrices = new HashMap<>();
+        Map<String, Float> apiPrices = new HashMap<>();
         try {
             String response = HttpRequest.getContentFromUrl(URL_PREMIUM_INDEX);
             List<Map<String, Object>> objects = Utils.gson.fromJson(response, List.class);
@@ -42,7 +42,7 @@ public class PriceRealtimeValidator {
             for (Map<String, Object> data : objects) {
                 String symbol = data.get("symbol").toString().toUpperCase();
                 if (symbol.endsWith("USDT")) {
-                    double markPrice = Double.parseDouble(data.get("markPrice").toString());
+                    float markPrice = Float.parseFloat(data.get("markPrice").toString());
                     apiPrices.put(symbol, markPrice);
                 }
             }
@@ -53,7 +53,7 @@ public class PriceRealtimeValidator {
         }
 
         // 3. 🔥 ĐỐI SOÁT: Lấy toàn bộ giá từ Aerospike bằng hàm tối ưu
-        Map<String, Double> asPrices = DataManagerAerospikeFloatSim.getAllPriceRealtimeLegacy(apiPrices.keySet());
+        Map<String, Float> asPrices = DataManagerAerospikeFloatSim.getAllPriceRealtimeLegacy(apiPrices.keySet());
         LOG.info("📥 Đã lấy {} bản ghi giá từ Aerospike (Scan).", asPrices.size());
 
         int totalMatches = 0;
@@ -61,14 +61,14 @@ public class PriceRealtimeValidator {
 
         for (String symbol : allSymbols) {
             String upperS = symbol.toUpperCase();
-            Double apiPrice = apiPrices.get(upperS);
-            Double asPrice = asPrices.get(upperS); // Lấy trực tiếp từ Map snapshot
+            Float apiPrice = apiPrices.get(upperS);
+            Float asPrice = asPrices.get(upperS); // Lấy trực tiếp từ Map snapshot
 
             if (apiPrice == null) continue;
 
             if (asPrice != null) {
                 totalChecks++;
-                double diff = Math.abs(apiPrice - asPrice) / apiPrice;
+                float diff = Math.abs(apiPrice - asPrice) / apiPrice;
                 boolean isMatch = diff <= PRICE_THRESHOLD;
 
                 if (isMatch) {

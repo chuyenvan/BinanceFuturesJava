@@ -8,16 +8,16 @@ public class DcaOptimizationConfig {
 
     // 5 Tham so tu 'getDcaConfig'
     // 5 Tham so tu 'getDcaConfig'
-    public double rateLossBigDown     = -0.05;
-    public double rateLossMediumDown  = -0.08;
-    public double rateLossMediumUp    = -0.15;
-    public double rateLossSmallDown   = -0.20;
-    public double rateLossNull        = -0.4;
+    public float rateLossBigDown     = -0.05f;
+    public float rateLossMediumDown  = -0.08f;
+    public float rateLossMediumUp    = -0.15f;
+    public float rateLossSmallDown   = -0.20f;
+    public float rateLossNull        = -0.4f;
 
     // 4 Tham so tu 'calculateAdjustedRateLoss'
-    public double marginRate_1_5      = -0.6;
-    public double marginRate_2_0      = -0.7;
-    public double marginRate_2_5      = -0.9;
+    public float marginRate_1_5      = -0.6f;
+    public float marginRate_2_0      = -0.7f;
+    public float marginRate_2_5      = -0.9f;
 
     /**
      * Constructor mac dinh (khong can lam gi,

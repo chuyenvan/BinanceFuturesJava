@@ -155,11 +155,11 @@ public class DataManagerAerospikeFloatSim {
         }
     }
 
-    public static void writePriceRealtime(Map<String, Double> priceMap) {
+    public static void writePriceRealtime(Map<String, Float> priceMap) {
         if (priceMap == null || priceMap.isEmpty()) return;
         try {
             long now = System.currentTimeMillis();
-            for (Map.Entry<String, Double> entry : priceMap.entrySet()) {
+            for (Map.Entry<String, Float> entry : priceMap.entrySet()) {
                 // Sử dụng UPPERCASE cho symbol để đồng bộ
                 String symbol = entry.getKey().toUpperCase();
                 Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_PRICE, symbol);
@@ -178,10 +178,10 @@ public class DataManagerAerospikeFloatSim {
     /**
      * Lấy toàn bộ giá realtime của tất cả các mã đang có trong Aerospike
      *
-     * @return Map chứa Symbol -> Giá (Double)
+     * @return Map chứa Symbol -> Giá (Float)
      */
-    public static Map<String, Double> getAllPriceRealtimeLegacy(Set<String> expectedSymbols) {
-        Map<String, Double> results = new HashMap<>();
+    public static Map<String, Float> getAllPriceRealtimeLegacy(Set<String> expectedSymbols) {
+        Map<String, Float> results = new HashMap<>();
         // 1. Tạo bản đồ: Digest -> Symbol để tra cứu nhanh
         Map<String, String> digestToSymbol = new HashMap<>();
         for (String s : expectedSymbols) {
@@ -202,7 +202,7 @@ public class DataManagerAerospikeFloatSim {
                 String symbol = digestToSymbol.get(currentDigest);
 
                 if (symbol != null) {
-                    results.put(symbol, record.getDouble("price"));
+                    results.put(symbol, record.getFloat("price"));
                 }
             }, "price");
         } catch (Exception e) {
@@ -222,7 +222,7 @@ public class DataManagerAerospikeFloatSim {
             Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_FUNDINGFEE, symbol);
 
             // 1. Lấy dữ liệu cũ
-            Map<Long, Double> existingMap = getFundingMap(symbol);
+            Map<Long, Float> existingMap = getFundingMap(symbol);
 
             // 2. Gộp dữ liệu (Dùng TreeMap để luôn sắp xếp theo thời gian)
             TreeMap<Long, Float> finalMap = new TreeMap<>();
@@ -248,8 +248,8 @@ public class DataManagerAerospikeFloatSim {
     /**
      * Giải nén và đọc Map Funding
      */
-    public static TreeMap<Long, Double> getFundingMap(String symbol) {
-        TreeMap<Long, Double> results = new TreeMap<>();
+    public static TreeMap<Long, Float> getFundingMap(String symbol) {
+        TreeMap<Long, Float> results = new TreeMap<>();
         try {
             Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_FUNDINGFEE, symbol);
             Record record = getClient242().get(null, key);
@@ -258,7 +258,7 @@ public class DataManagerAerospikeFloatSim {
                 if (compressedData != null) {
                     // Giải nén Snappy
                     String json = new String(Snappy.uncompress(compressedData), "UTF-8");
-                    Map<String, Double> rawMap = Utils.gson.fromJson(json, Map.class);
+                    Map<String, Float> rawMap = Utils.gson.fromJson(json, Map.class);
 
                     // Convert Key từ String (JSON) về Long
                     rawMap.forEach((k, v) -> results.put(Long.parseLong(k), v));
@@ -270,7 +270,7 @@ public class DataManagerAerospikeFloatSim {
                 Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_FUNDINGFEE, symbol);
                 Record record = getClient242().get(null, key);
                 if (record != null && record.getMap("f_map") != null) {
-                    record.getMap("f_map").forEach((k, v) -> results.put((Long) k, ((Number) v).doubleValue()));
+                    record.getMap("f_map").forEach((k, v) -> results.put((Long) k, ((Number) v).floatValue()));
                 }
             } catch (Exception ignored) {
             }
@@ -283,8 +283,8 @@ public class DataManagerAerospikeFloatSim {
      *
      * @return Map<Symbol, TreeMap < Timestamp, Rate>>
      */
-    public static Map<String, TreeMap<Long, Double>> getAllFundingMap() {
-        Map<String, TreeMap<Long, Double>> allResults = new HashMap<>();
+    public static Map<String, TreeMap<Long, Float>> getAllFundingMap() {
+        Map<String, TreeMap<Long, Float>> allResults = new HashMap<>();
         try {
             ScanPolicy scanPolicy = new ScanPolicy();
             scanPolicy.concurrentNodes = true; // Quét song song trên các node
@@ -295,19 +295,19 @@ public class DataManagerAerospikeFloatSim {
                 String symbol = (key.userKey != null) ? key.userKey.toString() : null;
                 if (symbol == null) return;
 
-                TreeMap<Long, Double> symbolFunding = new TreeMap<>();
+                TreeMap<Long, Float> symbolFunding = new TreeMap<>();
                 try {
                     // Ưu tiên xử lý dữ liệu mới (Snappy Compressed)
                     byte[] compressedData = (byte[]) record.getValue("f_data");
                     if (compressedData != null) {
                         String json = new String(Snappy.uncompress(compressedData), "UTF-8");
-                        Map<String, Double> rawMap = Utils.gson.fromJson(json, Map.class);
+                        Map<String, Float> rawMap = Utils.gson.fromJson(json, Map.class);
                         rawMap.forEach((k, v) -> symbolFunding.put(Long.parseLong(k), v));
                     } else {
                         // Xử lý dữ liệu cũ (CDT Map) nếu không có f_data
                         Map<?, ?> fMap = record.getMap("f_map");
                         if (fMap != null) {
-                            fMap.forEach((k, v) -> symbolFunding.put((Long) k, ((Number) v).doubleValue()));
+                            fMap.forEach((k, v) -> symbolFunding.put((Long) k, ((Number) v).floatValue()));
                         }
                     }
 
@@ -315,6 +315,7 @@ public class DataManagerAerospikeFloatSim {
                         allResults.put(symbol, symbolFunding);
                     }
                 } catch (Exception e) {
+                    e.printStackTrace();
                     LOG.error("❌ Lỗi giải mã Funding cho {}: {}", symbol, e.getMessage());
                 }
             }, "f_data", "f_map");
@@ -348,7 +349,7 @@ public class DataManagerAerospikeFloatSim {
                 if (time2RateFunding != null && !time2RateFunding.isEmpty()) {
                     Map<Long, Float> fundingMapForAS = new HashMap<>();
 
-                    // Chuyển đổi từ Object FundingRate sang Double để lưu vào AS
+                    // Chuyển đổi từ Object FundingRate sang Float để lưu vào AS
                     time2RateFunding.forEach((time, fundingObj) -> {
                         if (fundingObj != null && fundingObj.getFundingRate() != null) {
                             // Ép kiểu về Float để giảm kích thước record ngay từ lúc migrate
@@ -748,15 +749,15 @@ public class DataManagerAerospikeFloatSim {
         KlineObjectSimple javaTicker = new KlineObjectSimple();
 
         // 1. INJECT TIMESTAMP TỪ BÊN NGOÀI VÀO (Vì trong DB không còn lưu nữa)
-        // Ép kiểu về double theo đúng định nghĩa class cũ của bạn
+        // Ép kiểu về float theo đúng định nghĩa class cũ của bạn
         javaTicker.startTime = timestamp;
 
         // 2. ÉP KIỂU FLOAT (DB) -> DOUBLE (JAVA)
-        javaTicker.priceOpen = (double) protoTicker.getPriceOpen();
-        javaTicker.maxPrice = (double) protoTicker.getMaxPrice();
-        javaTicker.minPrice = (double) protoTicker.getMinPrice();
-        javaTicker.priceClose = (double) protoTicker.getPriceClose();
-        javaTicker.totalUsdt = (double) protoTicker.getTotalUsdt();
+        javaTicker.priceOpen = (float) protoTicker.getPriceOpen();
+        javaTicker.maxPrice = (float) protoTicker.getMaxPrice();
+        javaTicker.minPrice = (float) protoTicker.getMinPrice();
+        javaTicker.priceClose = (float) protoTicker.getPriceClose();
+        javaTicker.totalUsdt = (float) protoTicker.getTotalUsdt();
 
         return javaTicker;
     }
@@ -1145,7 +1146,7 @@ public class DataManagerAerospikeFloatSim {
         // BƯỚC 1: Lấy giá từ Binance API trước (Để lấy danh sách Symbol chuẩn)
         long t1 = System.currentTimeMillis();
         // Map này lấy từ TickerFuturesHelper của bạn
-        Map<String, Double> binPrices = com.binance.chuyennd.helper.TickerFuturesHelper.getSymbolPrice();
+        Map<String, Float> binPrices = com.binance.chuyennd.helper.TickerFuturesHelper.getSymbolPrice();
         long t2 = System.currentTimeMillis();
 //        LOG.info("✅ Binance API: Loaded {} symbols in {}ms", binPrices.size(), (t2 - t1));
 
@@ -1155,29 +1156,29 @@ public class DataManagerAerospikeFloatSim {
         }
 
         // BƯỚC 2: Truyền danh sách key của Binance vào Scan Aerospike để map ngược
-        Map<String, Double> asPrices = getAllPriceRealtimeLegacy(binPrices.keySet());
+        Map<String, Float> asPrices = getAllPriceRealtimeLegacy(binPrices.keySet());
         long t3 = System.currentTimeMillis();
 //        LOG.info("✅ Aerospike: Loaded {} symbols in {}ms", asPrices.size(), (t3 - t2));
 
         // BƯỚC 3: So sánh (Logic giữ nguyên)
-        double totalDiffPercent = 0;
+        float totalDiffPercent = 0;
         int countChecked = 0;
         int countHighDiff = 0;
-        double maxDiff = 0;
+        float maxDiff = 0;
         String maxDiffSymbol = "";
 
 //        LOG.info("⚠️ --- DANH SÁCH LỆCH GIÁ > 0.2% ---");
 
-        for (Map.Entry<String, Double> entry : asPrices.entrySet()) {
+        for (Map.Entry<String, Float> entry : asPrices.entrySet()) {
             String symbol = entry.getKey();
-            double asPrice = entry.getValue();
+            float asPrice = entry.getValue();
 
             if (binPrices.containsKey(symbol)) {
-                double binPrice = binPrices.get(symbol);
+                float binPrice = binPrices.get(symbol);
 
                 // Tính % lệch
-                double diffAbs = Math.abs(asPrice - binPrice);
-                double diffPercent = (diffAbs / binPrice) * 100f;
+                float diffAbs = Math.abs(asPrice - binPrice);
+                float diffPercent = (diffAbs / binPrice) * 100f;
 
                 totalDiffPercent += diffPercent;
                 countChecked++;
@@ -1198,7 +1199,7 @@ public class DataManagerAerospikeFloatSim {
             }
         }
 
-        double avgDiff = (countChecked > 0) ? (totalDiffPercent / countChecked) : 0;
+        float avgDiff = (countChecked > 0) ? (totalDiffPercent / countChecked) : 0;
 
         LOG.info("=========================================");
 //        LOG.info("📊 TỔNG KẾT SO SÁNH GIÁ");
@@ -1383,7 +1384,7 @@ public class DataManagerAerospikeFloatSim {
 //        LOG.info("{} {} {} {}",Utils.toJson(time2Tickers.firstEntry().getValue()), Utils.normalizeDateYYYYMMDDHHmm(time2Tickers.firstKey()),
 //                Utils.normalizeDateYYYYMMDDHHmm(time2Tickers.lastKey()), time2Tickers.size());
 //        debugKeys();
-//        Map<String, TreeMap<Long, Double>> symbol2FundingMap = DataManagerAerospikeFloatSim.getAllFundingMap();
+//        Map<String, TreeMap<Long, Float>> symbol2FundingMap = DataManagerAerospikeFloatSim.getAllFundingMap();
 //        for (String symbol : symbol2FundingMap.keySet()) {
 //            LOG.info("{} -> {} records first: {} last: {}", symbol, symbol2FundingMap.get(symbol).size()
 //                    , Utils.normalizeDateYYYYMMDDHHmm(symbol2FundingMap.get(symbol).firstKey())

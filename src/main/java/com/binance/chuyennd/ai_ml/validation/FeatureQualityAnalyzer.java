@@ -65,7 +65,7 @@ public class FeatureQualityAnalyzer {
         counts.entrySet().stream()
                 .sorted((a, b) -> b.getValue().compareTo(a.getValue()))
                 .forEach(e -> {
-                    double rate = (double) e.getValue() / total * 100;
+                    float rate = (float) e.getValue() / total * 100;
                     System.out.println(String.format("%-25s | %-10d | %.2f%%",
                             e.getKey(), e.getValue(), rate));
                 });

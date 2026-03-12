@@ -25,24 +25,24 @@ import java.util.List;
 public class KlineObjectSimple implements Serializable {
 
     public Long startTime;
-    public Double priceOpen;
-    public Double maxPrice;
-    public Double minPrice;
-    public Double priceClose;
-    public Double totalUsdt;
+    public Float priceOpen;
+    public Float maxPrice;
+    public Float minPrice;
+    public Float priceClose;
+    public Float totalUsdt;
 
     public static KlineObjectSimple convertString2Kline(List<Object> kline) {
         KlineObjectSimple result = new KlineObjectSimple();
         result.startTime = (Long) kline.get(0);
-        result.priceOpen = Double.valueOf(kline.get(1).toString());
-        result.maxPrice = Double.valueOf(kline.get(2).toString());
-        result.minPrice = Double.valueOf(kline.get(3).toString());
-        result.priceClose = Double.valueOf(kline.get(4).toString());
-        result.totalUsdt = Double.valueOf(kline.get(7).toString());
+        result.priceOpen = Float.valueOf(kline.get(1).toString());
+        result.maxPrice = Float.valueOf(kline.get(2).toString());
+        result.minPrice = Float.valueOf(kline.get(3).toString());
+        result.priceClose = Float.valueOf(kline.get(4).toString());
+        result.totalUsdt = Float.valueOf(kline.get(7).toString());
         return result;
     }
 
-    public double getDefaultPrice() {
+    public float getDefaultPrice() {
         return priceClose;
     }
 

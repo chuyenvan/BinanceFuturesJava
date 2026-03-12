@@ -6,6 +6,7 @@ import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.research.BudgetManagerSimple;
 import com.binance.chuyennd.research.SimulatorMarketLevelTicker1MStopLoss;
 import com.binance.chuyennd.utils.Configs;
+import com.binance.chuyennd.utils.Utils;
 
 import java.util.Map;
 import java.util.TreeMap;
@@ -13,10 +14,10 @@ import java.util.TreeMap;
 public class BackTestEngineMarketThreshold {
 
     public BackTestEngineMarketThreshold(
-            double upBig, double downBigAvg,
-            double upMed, double downMedAvg,
-            double upSmall, double downSmallAvg,
-            double down15mMed, double down15mSmall) {
+            float upBig, float downBigAvg,
+            float upMed, float downMedAvg,
+            float upSmall, float downSmallAvg,
+            float down15mMed, float down15mSmall) {
 
         Configs.MS_UP_BIG_THRES = upBig;
         Configs.MS_DOWN_BIG_AVG = downBigAvg;
@@ -31,7 +32,7 @@ public class BackTestEngineMarketThreshold {
         Configs.MS_DOWN_15M_SMALL_ONLY = down15mSmall;
     }
 
-    public double run(TreeMap<Long, MarketDataObject> time2MarketData,
+    public float run(TreeMap<Long, MarketDataObject> time2MarketData,
                       TreeMap<Long, AiPredictionData> predictionMap,
                       TreeMap<Long, long[]> time2FundingPre) {
         try {
@@ -39,12 +40,12 @@ public class BackTestEngineMarketThreshold {
             SimulatorMarketLevelTicker1MStopLoss test = new SimulatorMarketLevelTicker1MStopLoss();
 
             test.initDataReady(time2MarketData, predictionMap, time2FundingPre, new AIRejectFilter());
-
-            test.simulatorWithInitEntry();
+            Long startTime = Utils.sdfFile.parse(Configs.TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
+            test.simulatorWithInitEntry(startTime, System.currentTimeMillis());
             return BudgetManagerSimple.getInstance().balanceCurrent;
         } catch (Exception e) {
             e.printStackTrace();
-            return 0.0;
+            return 0.0f;
         }
     }
 }

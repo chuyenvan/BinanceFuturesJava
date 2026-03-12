@@ -42,7 +42,7 @@ public class AdvancedDataValidator {
                 .limit(symbolLimit)
                 .collect(Collectors.toList());
 
-        double priceThreshold = 0.00001; // 0.05%
+        float priceThreshold = 0.00001f; // 0.05%
         int totalChecks = 0;
         int totalMatches = 0;
         Map<Long, Integer> minuteStats = new HashMap<>();
@@ -80,10 +80,10 @@ public class AdvancedDataValidator {
                     totalChecks++;
 
                     // So sánh giá (Ngưỡng 0.05%)
-                    double priceDiff = Math.abs(apiKline.priceClose - asKline.priceClose) / apiKline.priceClose;
+                    float priceDiff = Math.abs(apiKline.priceClose - asKline.priceClose) / apiKline.priceClose;
 
                     // So sánh Volume (Ngưỡng 1% do sai số float và thời điểm chốt nến)
-                    double volDiff = Math.abs(apiKline.totalUsdt - asKline.totalUsdt) / (apiKline.totalUsdt + 1);
+                    float volDiff = Math.abs(apiKline.totalUsdt - asKline.totalUsdt) / (apiKline.totalUsdt + 1);
 
                     if (priceDiff <= priceThreshold) {
                         minuteMatches++;

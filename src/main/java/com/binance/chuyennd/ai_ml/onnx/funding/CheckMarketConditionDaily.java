@@ -20,10 +20,10 @@ public class CheckMarketConditionDaily {
 
     public static void main(String[] args) throws Exception {
         // 1. CẤU HÌNH THAM SỐ (Giống hệt lúc chạy Generate Tool)
-        Configs.PREDICT_SYMBOL_RATE_DOWN_15M = -0.013;
-        Configs.PREDICT_SYMBOL_RATE_DOWN_15M = -0.025;
-        Configs.PREDICT_SYMBOL_RATE_UP_AVG = 0.004;
-        Configs.PREDICT_SYMBOL_RATE_DOWN_AVG = -0.005;
+        Configs.PREDICT_SYMBOL_RATE_DOWN_15M = -0.013f;
+        Configs.PREDICT_SYMBOL_RATE_DOWN_15M = -0.025f;
+        Configs.PREDICT_SYMBOL_RATE_UP_AVG = 0.004f;
+        Configs.PREDICT_SYMBOL_RATE_DOWN_AVG = -0.005f;
         Configs.NUMBER_RATE_DOWN_HISTORY_TRADE = 60; // Giữ lịch sử 60 phút
 
         // 2. NGÀY CẦN CHECK (Sửa ngày tại đây)

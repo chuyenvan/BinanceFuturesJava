@@ -140,15 +140,15 @@ public class TickerFuturesHelper {
     public static CandlestickEvent convertString2Candle(String symbol, List<Object> kline) {
         CandlestickEvent result = new CandlestickEvent();
         result.setSymbol(symbol);
-        Double startTime = (Double) kline.get(0);
+        Float startTime = (Float) kline.get(0);
         result.setStartTime(startTime.longValue());
-        result.setOpen(new BigDecimal(Double.valueOf(kline.get(1).toString())));
-        result.setHigh(new BigDecimal(Double.valueOf(kline.get(2).toString())));
-        result.setLow(new BigDecimal(Double.valueOf(kline.get(3).toString())));
-        result.setClose(new BigDecimal(Double.valueOf(kline.get(4).toString())));
-        Double endTime = (Double) kline.get(6);
+        result.setOpen(new BigDecimal(Float.valueOf(kline.get(1).toString())));
+        result.setHigh(new BigDecimal(Float.valueOf(kline.get(2).toString())));
+        result.setLow(new BigDecimal(Float.valueOf(kline.get(3).toString())));
+        result.setClose(new BigDecimal(Float.valueOf(kline.get(4).toString())));
+        Float endTime = (Float) kline.get(6);
         result.setCloseTime(endTime.longValue());
-        result.setVolume(new BigDecimal(Double.valueOf(kline.get(7).toString())));
+        result.setVolume(new BigDecimal(Float.valueOf(kline.get(7).toString())));
         return result;
     }
 
@@ -215,26 +215,26 @@ public class TickerFuturesHelper {
         return results;
     }
 
-    public static TreeMap<Double, String> getSymbolVolumeLower() {
-        TreeMap<Double, String> results = new TreeMap<Double, String>();
+    public static TreeMap<Float, String> getSymbolVolumeLower() {
+        TreeMap<Float, String> results = new TreeMap<Float, String>();
         String allFuturePrices = HttpRequest.getContentFromUrl("https://fapi.binance.com/fapi/v1/ticker/24hr");
         List<Object> futurePrices = Utils.gson.fromJson(allFuturePrices, List.class);
         for (Object futurePrice : futurePrices) {
             TickerStatistics ticker = Utils.gson.fromJson(futurePrice.toString(), TickerStatistics.class);
             if (StringUtils.endsWithIgnoreCase(ticker.getSymbol(), "usdt")) {
-                results.put(Double.parseDouble(ticker.getQuoteVolume()), ticker.getSymbol());
+                results.put(Float.parseFloat(ticker.getQuoteVolume()), ticker.getSymbol());
             }
         }
         return results;
     }
-    public static TreeMap<String, Double> getSymbolPrice() {
-        TreeMap<String, Double>  results = new TreeMap<>();
+    public static TreeMap<String, Float> getSymbolPrice() {
+        TreeMap<String, Float>  results = new TreeMap<>();
         String allFuturePrices = HttpRequest.getContentFromUrl("https://fapi.binance.com/fapi/v1/ticker/24hr");
         List<Object> futurePrices = Utils.gson.fromJson(allFuturePrices, List.class);
         for (Object futurePrice : futurePrices) {
             TickerStatistics ticker = Utils.gson.fromJson(futurePrice.toString(), TickerStatistics.class);
             if (StringUtils.endsWithIgnoreCase(ticker.getSymbol(), "usdt")) {
-                results.put( ticker.getSymbol(),Double.parseDouble(ticker.getLastPrice()));
+                results.put( ticker.getSymbol(),Float.parseFloat(ticker.getLastPrice()));
             }
         }
         return results;
@@ -251,8 +251,8 @@ public class TickerFuturesHelper {
 //            LOG.info("{} {}", symbol, tickers.size());
 //        }
 //        testGetTicker24hr();
-        TreeMap<Double, String> volume2Symbol = getSymbolVolumeLower();
-        for (Double volume : volume2Symbol.keySet()) {
+        TreeMap<Float, String> volume2Symbol = getSymbolVolumeLower();
+        for (Float volume : volume2Symbol.keySet()) {
             LOG.info("{} {} ", volume2Symbol.get(volume), volume / 1E6);
         }
 //        LOG.info("{}", TickerFuturesHelper.getFundingFeeWithStartTime("OCEANUSDT", 1731916800000L));
@@ -267,13 +267,13 @@ public class TickerFuturesHelper {
         if (index < numberTicker) {
             return null;
         }
-        Double maxPrice = null;
-        Double minPrice = null;
-        Double lastPrice = null;
-        Double openPrice = null;
+        Float maxPrice = null;
+        Float minPrice = null;
+        Float lastPrice = null;
+        Float openPrice = null;
         Long timeStart = null;
-        Double timeEnd = null;
-        Double totalUsdt = 0d;
+        Float timeEnd = null;
+        Float totalUsdt = 0f;
 
         for (int i = index - numberTicker; i < index - numberAgo; i++) {
             KlineObjectNumber ticker = tickers.get(i);

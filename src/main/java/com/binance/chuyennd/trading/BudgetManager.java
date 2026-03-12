@@ -30,14 +30,14 @@ public class BudgetManager {
 
     public static final Logger LOG = LoggerFactory.getLogger(BudgetManager.class);
     private static volatile BudgetManager INSTANCE = null;
-    public static Double balanceBasic = Configs.getDouble("CAPITAL_START");
+    public static Float balanceBasic = Configs.getDouble("CAPITAL_START");
 
 
-    public Double BUDGET_PER_ORDER = 0d;
+    public Float BUDGET_PER_ORDER = 0f;
 
-    public Double marginRunning = 0d;
-    public Double balance = 0d;
-    public Map<String, Double> symbol2Margin = new HashMap<>();
+    public Float marginRunning = 0f;
+    public Float balance = 0f;
+    public Map<String, Float> symbol2Margin = new HashMap<>();
     public Map<String, PositionRisk> symbol2Pos = new HashMap<>();
     public Set<String> marginBig = new HashSet<>();
     public Set<String> symbolSell = new HashSet<>();
@@ -57,7 +57,7 @@ public class BudgetManager {
     private void updateBudget() {
         try {
             Asset umInfo = BinanceFuturesClientSingleton.getInstance().getAccountUMInfo();
-            Double balanceCurrent = umInfo.getWalletBalance().doubleValue();
+            Float balanceCurrent = umInfo.getWalletBalance().floatValue();
             BUDGET_PER_ORDER = balanceBasic / Configs.number_order_budget;
             long time = new File("target/binance-java-sdk-1.2.4.jar").lastModified();
             LOG.info("Ba and Bu {}: {} -> {} balance init:{} marginRunning:{} ", Utils.normalizeDateYYYYMMDDHHmm(time),
@@ -83,13 +83,13 @@ public class BudgetManager {
         }).start();
     }
 
-    public Double getBudget() {
+    public Float getBudget() {
 
         return BUDGET_PER_ORDER;
     }
 
-    public Double calMarginRunning(Collection<PositionRisk> positions) {
-        Double margin = 0d;
+    public Float calMarginRunning(Collection<PositionRisk> positions) {
+        Float margin = 0f;
         for (PositionRisk pos : positions) {
             if (pos.getPositionAmt().compareTo(new BigDecimal("0")) != 0) {
                 margin += PositionHelper.callMargin(pos);
@@ -130,7 +130,7 @@ public class BudgetManager {
         }
     }
 
-    public void addMarginRunning(Double budget) {
+    public void addMarginRunning(Float budget) {
         if (marginRunning != null && budget != null) {
             marginRunning += budget;
         }

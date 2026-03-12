@@ -30,8 +30,8 @@ public class AerospikeInfo {
             }
 
             if (deviceAvailablePct >= 0) {
-                double usedPct = 100 - deviceAvailablePct;
-                double totalBytes = deviceDataBytes / (usedPct / 100.0);
+                float usedPct = 100 - deviceAvailablePct;
+                float totalBytes = deviceDataBytes / (usedPct / 100.0f);
                 System.out.printf("Namespace educa đang dùng %.2f%% dung lượng\n", usedPct);
                 System.out.printf("Tổng dung lượng cấu hình: %.2f GB\n", totalBytes / (1024.0*1024*1024));
             }

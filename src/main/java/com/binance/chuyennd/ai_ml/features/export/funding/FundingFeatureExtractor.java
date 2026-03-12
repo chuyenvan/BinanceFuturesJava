@@ -19,7 +19,7 @@ public class FundingFeatureExtractor {
     }
 
     public List<String> identifyTargetBasket(Map<String, KlineObjectSimple> snapshot) {
-        List<Map.Entry<String, Double>> volList = new ArrayList<>();
+        List<Map.Entry<String, Float>> volList = new ArrayList<>();
         for (Map.Entry<String, KlineObjectSimple> entry : snapshot.entrySet()) {
             if (entry.getValue().totalUsdt > 100000) {
                 volList.add(new AbstractMap.SimpleEntry<>(entry.getKey(), entry.getValue().totalUsdt));
@@ -81,17 +81,17 @@ public class FundingFeatureExtractor {
     // ================= HELPER METHODS =================
 
     private void extractBasketFeatures(FundingMarketFeatures f, List<String> basket, long currentTime) {
-        double sumMom15m = 0, sumMom1h = 0, sumMom24h = 0, sumRsi = 0, sumVolSpike = 0;
+        float sumMom15m = 0, sumMom1h = 0, sumMom24h = 0, sumRsi = 0, sumVolSpike = 0;
         int count = 0;
         for (String symbol : basket) {
-            Double rsi = historyManager.getRsi14(symbol);
+            Float rsi = historyManager.getRsi14(symbol);
             if (rsi != null) {
                 sumRsi += rsi;
                 sumMom15m += calculateReturn(symbol, 15);
                 sumMom1h += calculateReturn(symbol, 60);
                 sumMom24h += calculateReturn(symbol, 1440);
-                double currentVol = historyManager.getSumVolume(symbol, 1);
-                double avgVol = historyManager.getAverageVolume(symbol, 20);
+                float currentVol = historyManager.getSumVolume(symbol, 1);
+                float avgVol = historyManager.getAverageVolume(symbol, 20);
                 if (avgVol > 0) sumVolSpike += currentVol / avgVol; else sumVolSpike += 1.0;
                 count++;
             }
@@ -108,20 +108,20 @@ public class FundingFeatureExtractor {
     private void extractFundingFeatures(FundingMarketFeatures f, String symbol, List<String> basket, long currentTime) {
         try {
             FundingFeeManager fm = FundingFeeManager.getInstance();
-            Double cf = fm.getNearestFundingFee(symbol, currentTime);
-            f.coinFundingRate = (cf != null) ? cf : 0.0;
-            double totalBasketFunding = 0;
+            Float cf = fm.getNearestFundingFee(symbol, currentTime);
+            f.coinFundingRate = (cf != null) ? cf : 0.0f;
+            float totalBasketFunding = 0;
             int validCount = 0;
             for (String s : basket) {
-                Double rate = fm.getNearestFundingFee(s, currentTime);
+                Float rate = fm.getNearestFundingFee(s, currentTime);
                 if (rate != null) { totalBasketFunding += rate; validCount++; }
             }
-            f.fundingRateRaw = (validCount > 0) ? totalBasketFunding / validCount : 0.0;
-            double sum24h = 0;
+            f.fundingRateRaw = (validCount > 0) ? totalBasketFunding / validCount : 0.0f;
+            float sum24h = 0;
             int count24h = 0;
             for (int i = 0; i <= 24; i += 4) {
                 long pastTime = currentTime - (i * 3600 * 1000L);
-                Double past = fm.getNearestFundingFee(symbol, pastTime);
+                Float past = fm.getNearestFundingFee(symbol, pastTime);
                 if (past != null) { sum24h += past; count24h++; }
             }
             f.fundingRateAvg24H = (count24h > 0) ? sum24h / count24h : f.coinFundingRate;
@@ -131,20 +131,20 @@ public class FundingFeatureExtractor {
         }
     }
 
-    public double calculateReturn(String symbol, int minutes) {
+    public float calculateReturn(String symbol, int minutes) {
         List<KlineObjectSimple> h = historyManager.getHistory(symbol);
-        if (h == null || h.isEmpty()) return 0.0;
+        if (h == null || h.isEmpty()) return 0.0f;
         KlineObjectSimple current = h.get(h.size() - 1);
         long pastTime = current.startTime.longValue() - (minutes * 60000L);
-        Double pastPrice = historyManager.getPriceAt(symbol, pastTime);
+        Float pastPrice = historyManager.getPriceAt(symbol, pastTime);
         if (pastPrice != null && pastPrice > 0) return (current.priceClose - pastPrice) / pastPrice;
-        return 0.0;
+        return 0.0f;
     }
 
     private void extractMarketContext(FundingMarketFeatures f, Map<String, KlineObjectSimple> marketData) {
         int upCount = 0;
         int totalValid = 0;
-        double upVol = 0, downVol = 0;
+        float upVol = 0, downVol = 0;
         for (Map.Entry<String, KlineObjectSimple> entry : marketData.entrySet()) {
             KlineObjectSimple k = entry.getValue();
             if (k.totalUsdt < 5000) continue;
@@ -152,20 +152,20 @@ public class FundingFeatureExtractor {
             if (k.priceClose > k.priceOpen) { upCount++; upVol += k.totalUsdt; }
             else { downVol += k.totalUsdt; }
         }
-        f.marketBreadthStrength = (totalValid > 0) ? (double) upCount / totalValid : 0.5;
-        double btcVol = marketData.containsKey("BTCUSDT") ? marketData.get("BTCUSDT").totalUsdt : 0;
-        f.btcDominance = (upVol + downVol > 0) ? btcVol / (upVol + downVol) : 0.0;
+        f.marketBreadthStrength = (totalValid > 0) ? (float) upCount / totalValid : 0.5f;
+        float btcVol = marketData.containsKey("BTCUSDT") ? marketData.get("BTCUSDT").totalUsdt : 0;
+        f.btcDominance = (upVol + downVol > 0) ? btcVol / (upVol + downVol) : 0.0f;
     }
 
-    private double calculateDistFromLow24H(String symbol, KlineObjectSimple kline) {
-        Double low24 = historyManager.getLow24H(symbol);
-        return (low24 != null && low24 > 0) ? (kline.priceClose - low24) / low24 : 0.0;
+    private float calculateDistFromLow24H(String symbol, KlineObjectSimple kline) {
+        Float low24 = historyManager.getLow24H(symbol);
+        return (low24 != null && low24 > 0) ? (kline.priceClose - low24) / low24 : 0.0f;
     }
 
-    private double calculateVolatilityShock(String symbol, KlineObjectSimple kline) {
-        double avgRange = historyManager.getAverageRange(symbol, 20);
-        double currentRange = kline.maxPrice - kline.minPrice;
-        return (avgRange > 0) ? currentRange / avgRange : 1.0;
+    private float calculateVolatilityShock(String symbol, KlineObjectSimple kline) {
+        float avgRange = historyManager.getAverageRange(symbol, 20);
+        float currentRange = kline.maxPrice - kline.minPrice;
+        return (avgRange > 0) ? currentRange / avgRange : 1.0f;
     }
 
 

@@ -10,9 +10,9 @@ public class BackTestEngineDCA {
      * Constructor: Nhan 9 tham so tu Jenetics
      */
     public BackTestEngineDCA(
-            double rateLossBigDown, double rateLossMediumDown, double rateLossMediumUp,
-            double rateLossSmallDown, double rateLossNull, double marginRate_1_5,
-            double marginRate_2_0, double marginRate_2_5) {
+            float rateLossBigDown, float rateLossMediumDown, float rateLossMediumUp,
+            float rateLossSmallDown, float rateLossNull, float marginRate_1_5,
+            float marginRate_2_0, float marginRate_2_5) {
 
         // 1. Tao doi tuong Config
         this.dcaConfig = new DcaOptimizationConfig();
@@ -29,7 +29,7 @@ public class BackTestEngineDCA {
     /**
      * Ham nay se duoc Jenetics goi hang nghin lan
      */
-    public double run() {
+    public float run() {
         try {
             // 1. Reset cac Singleton
 //            BudgetManagerSimple.resetInstance();
@@ -44,7 +44,7 @@ public class BackTestEngineDCA {
 
         } catch (Exception e) {
             e.printStackTrace();
-            return 0.0; // Phat neu co loi
+            return 0.0f; // Phat neu co loi
         }
 
         // 4. Tra ve loi nhuan

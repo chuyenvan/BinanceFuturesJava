@@ -9,26 +9,29 @@ import io.jenetics.util.Factory;
 public class WFOTier2RiskRunner {
     public static BotTradingConfig optimize(long start, long end, BotTradingConfig bestEntry) {
         Factory<Genotype<DoubleGene>> gtf = Genotype.of(
-                DoubleChromosome.of(0.008, 0.025), // rateProfitStopMarket [cite: 809]
-                DoubleChromosome.of(0.04, 0.08),    // tsRateHigh [cite: 809]
-                DoubleChromosome.of(-0.15, -0.05)   // dcaRateLossBigDown [cite: 810]
+                DoubleChromosome.of(0.008, 0.025), // rateProfitStopMarket
+                DoubleChromosome.of(0.04, 0.08),    // tsRateHigh
+                DoubleChromosome.of(-0.15, -0.05)   // dcaRateLossBigDown
         );
 
-        Engine<DoubleGene, Double> engine = Engine.builder(gt -> {
-            BotTradingConfig config = bestEntry.clone();
-            config.rateProfitStopMarket = gt.get(0).gene().doubleValue();
-            config.tsRateHigh = gt.get(1).gene().doubleValue();
-            config.dcaRateLossBigDown = gt.get(2).gene().doubleValue();
-            return WFOBacktestEngine.run(start, end, config);
-        }, gtf).maximizing().build();
+        Engine<DoubleGene, Float> engine = Engine.builder(gt -> {
+                    BotTradingConfig config = bestEntry.clone();
+                    config.rateProfitStopMarket = gt.get(0).gene().floatValue();
+                    config.tsRateHigh = gt.get(1).gene().floatValue();
+                    config.dcaRateLossBigDown = gt.get(2).gene().floatValue();
+                    return WFOBacktestEngine.run(start, end, config);
+                }, gtf)
+                .maximizing()
+                .executor(Runnable::run) // ÉP CHẠY 1 LUỒNG TUẦN TỰ
+                .build();
 
         Genotype<DoubleGene> best = engine.stream().limit(25)
                 .collect(EvolutionResult.toBestEvolutionResult()).bestPhenotype().genotype();
 
         BotTradingConfig res = bestEntry.clone();
-        res.rateProfitStopMarket = best.get(0).gene().doubleValue();
-        res.tsRateHigh = best.get(1).gene().doubleValue();
-        res.dcaRateLossBigDown = best.get(2).gene().doubleValue();
+        res.rateProfitStopMarket = best.get(0).gene().floatValue();
+        res.tsRateHigh = best.get(1).gene().floatValue();
+        res.dcaRateLossBigDown = best.get(2).gene().floatValue();
         return res;
     }
 }

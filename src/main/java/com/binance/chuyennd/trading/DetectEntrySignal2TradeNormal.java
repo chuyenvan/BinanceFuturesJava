@@ -117,13 +117,13 @@ public class DetectEntrySignal2TradeNormal {
             TreeMap<Float, String> rateUp15M2Symbols = new TreeMap<>();
             TreeMap<Float, String> rateDown2Symbols = new TreeMap<>();
             TreeMap<Float, String> rateUp2Symbols = new TreeMap<>();
-            Map<String, Double> symbol2Max15m = new HashMap<>();
+            Map<String, Float> symbol2Max15m = new HashMap<>();
 
             Map<String, List<KlineObjectSimple>> symbol2LastTickers = DataManagerAerospikeFloatSim.readDataForSymbols(System.currentTimeMillis() - 1500 * Utils.TIME_MINUTE, 1500);
             List<KlineObjectSimple> btcTickers = symbol2LastTickers.get(Constants.SYMBOL_PAIR_BTC);
             KlineObjectSimple btcTicker = btcTickers.get(btcTickers.size() - 1);
             Float btcRateChange = Utils.rateOf2Double(btcTicker.priceClose, btcTicker.priceOpen).floatValue();
-            Double btcMax15M = null;
+            Float btcMax15M = null;
 
             LOG.info("Btc ticker size: {} {} -> {}", symbol2LastTickers.get(Constants.SYMBOL_PAIR_BTC).size(), Utils.normalizeDateYYYYMMDDHHmm(btcTickers.get(0).startTime.longValue()), Utils.normalizeDateYYYYMMDDHHmm(btcTicker.startTime.longValue()));
             long time = btcTicker.startTime.longValue();
@@ -151,8 +151,8 @@ public class DetectEntrySignal2TradeNormal {
                     }
                     rateDown2Symbols.put(rateChange, symbol);
                     rateUp2Symbols.put(-rateChange, symbol);
-                    Double priceMax = null;
-                    Double priceMin = null;
+                    Float priceMax = null;
+                    Float priceMin = null;
                     for (int i = 0; i < Configs.NUMBER_TICKER_CAL_RATE_CHANGE; i++) {
                         int index = tickers.size() - i - 1;
                         if (index >= 0) {
@@ -183,7 +183,7 @@ public class DetectEntrySignal2TradeNormal {
             Float rateUpAvg = -MarketBigChangeDetector.calRateChangeAvg(rateUp2Symbols, 100);
             Float rateDown15MAvg = MarketBigChangeDetector.calRateChangeAvg(rateDown15M2Symbols, 100);
             MarketDataObject marketRate = new MarketDataObject(rateDownAvg, rateDown15MAvg, rateUpAvg);
-            Double rateBtcDown15M = Utils.rateOf2Double(btcTicker.priceClose, btcMax15M);
+            Float rateBtcDown15M = Utils.rateOf2Double(btcTicker.priceClose, btcMax15M);
             MarketLevelChange levelChange = MarketBigChangeDetector.getMarketStatus1M(rateDownAvg, rateUpAvg, btcRateChange, rateDown15MAvg);
             RedisHelper.getInstance().get().set(RedisConst.REDIS_KEY_LAST_TIME_CHECK_MARKET, Utils.toJson(System.currentTimeMillis()));
             LOG.info("Check level market: {} DownAvg: {}% UpAvg:{}% DownAvg15M:{}%  btcRate: {}% btcRate15M: {}% {}", Utils.normalizeDateYYYYMMDDHHmm(btcTicker.startTime.longValue()),
@@ -364,7 +364,7 @@ public class DetectEntrySignal2TradeNormal {
 
             if (fundingExtractor != null && fundingBrain != null) {
                 OrderTargetInfoTest dummyOrder = new OrderTargetInfoTest(
-                        OrderTargetStatus.REQUEST, ticker.priceClose, null, 1.0,
+                        OrderTargetStatus.REQUEST, ticker.priceClose, null, 1.0f,
                         Configs.LEVERAGE_ORDER, symbol, time, time, OrderSide.BUY
                 );
                 dummyOrder.lastEntry = ticker.priceClose;
@@ -411,7 +411,7 @@ public class DetectEntrySignal2TradeNormal {
 
 
 
-    public void createOrderBuyRequest(String symbol, KlineObjectSimple ticker, MarketLevelChange levelChange, Double priceMax15M,
+    public void createOrderBuyRequest(String symbol, KlineObjectSimple ticker, MarketLevelChange levelChange, Float priceMax15M,
                                       MarketDataObject marketRate, OnnxInferenceManager.PredictionResult prediction) {
 
 
@@ -432,9 +432,9 @@ public class DetectEntrySignal2TradeNormal {
             LOG.info("✅ AI PASS [{}] Reason: {}", symbol, filterResult.reason);
         }
 
-        Double marginRunning = BudgetManager.getInstance().marginRunning;
-        Double balanceBasic = BudgetManager.getInstance().balanceBasic;
-        Double budget = BudgetManager.getInstance().getBudget();
+        Float marginRunning = BudgetManager.getInstance().marginRunning;
+        Float balanceBasic = BudgetManager.getInstance().balanceBasic;
+        Float budget = BudgetManager.getInstance().getBudget();
 
         budget = TradeUtils.managerBudget(budget, marginRunning, balanceBasic, levelChange);
         if (budget == null || budget < 5) {
@@ -442,10 +442,10 @@ public class DetectEntrySignal2TradeNormal {
             return;
         }
 
-        Double priceEntry = ticker.priceClose;
-        Double quantity = Utils.calQuantity(budget, Configs.LEVERAGE_ORDER, priceEntry, symbol);
+        Float priceEntry = ticker.priceClose;
+        Float quantity = Utils.calQuantity(budget, Configs.LEVERAGE_ORDER, priceEntry, symbol);
         if (StringUtils.equals(symbol, Constants.SYMBOL_PAIR_BTC)) {
-            Double minBtcTrade = 0.002;
+            Float minBtcTrade = 0.002f;
             if (quantity < minBtcTrade) {
                 quantity = minBtcTrade;
             }
@@ -465,7 +465,7 @@ public class DetectEntrySignal2TradeNormal {
     }
 
     private void writeOrder2File(OrderTargetInfo orderTrade, KlineObjectSimple ticker,
-                                 MarketDataObject marketRate, Double priceMax15M) {
+                                 MarketDataObject marketRate, Float priceMax15M) {
         try {
             Map<Object, Object> data = new HashMap<>();
             data.put("ticker", ticker);

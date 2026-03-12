@@ -48,9 +48,9 @@ public class Utils {
     public static final DecimalFormat dfNew = new DecimalFormat("#");
 
 
-    public static Double callPnl(PositionRisk pos) {
-        Double pnl = pos.getPositionAmt().doubleValue();
-        pnl = pnl * (pos.getMarkPrice().doubleValue() - pos.getEntryPrice().doubleValue());
+    public static Float callPnl(PositionRisk pos) {
+        Float pnl = pos.getPositionAmt().floatValue();
+        pnl = pnl * (pos.getMarkPrice().floatValue() - pos.getEntryPrice().floatValue());
         return pnl;
     }
 
@@ -208,7 +208,7 @@ public class Utils {
         }
     }
 
-    public static String formatMoney(Double revenue) {
+    public static String formatMoney(Float revenue) {
         if (revenue == null) {
             return null;
         }
@@ -216,7 +216,7 @@ public class Utils {
         return formatter.format(revenue);
     }
 
-    public static String formatMoneyNew(Double revenue) {
+    public static String formatMoneyNew(Float revenue) {
         if (revenue == null) {
             return null;
         }
@@ -225,29 +225,27 @@ public class Utils {
     }
 
 
-    public static String formatPercent(Double number) {
-        return df.format(number * 100);
-    }
     public static String formatPercent(Float number) {
         return df.format(number * 100);
     }
-    public static String formatPercentNew(Double number) {
+
+    public static String formatPercentNew(Float number) {
         return dfNew.format(number * 100);
     }
 
 
-    public static Double rateOf2Double(Double start, Double end) {
+    public static Float rateOf2Double(Float start, Float end) {
         try {
             return (start - end) / end;
         } catch (Exception e) {
         }
-        return 0.0;
+        return 0.0f;
     }
 
 
-    public static Double calPriceTarget(String symbol, Double priceEntry, OrderSide orderSide, Double rateTarget) {
-        Double result;
-        Double priceChange2Target = rateTarget * priceEntry;
+    public static Float calPriceTarget(String symbol, Float priceEntry, OrderSide orderSide, Float rateTarget) {
+        Float result;
+        Float priceChange2Target = rateTarget * priceEntry;
         if (orderSide.equals(OrderSide.BUY)) {
             result = priceEntry + priceChange2Target;
         } else {
@@ -257,8 +255,8 @@ public class Utils {
         return result;
     }
 
-    public static Double calQuantity(Double budget, Integer leverage, Double priceEntry, String symbol) {
-        Double quantity = budget * leverage / priceEntry;
+    public static Float calQuantity(Float budget, Integer leverage, Float priceEntry, String symbol) {
+        Float quantity = budget * leverage / priceEntry;
         quantity = ClientSingleton.getInstance().normalizeQuantity(symbol, quantity);
         for (int i = 1; i < 10; i++) {
             if (quantity == 0) {
@@ -274,8 +272,8 @@ public class Utils {
         return quantity;
     }
 
-    public static Double calQuantityTest(Double budget, Integer leverage, Double priceEntry, String symbol) {
-        Double quantity = budget * leverage / priceEntry;
+    public static Float calQuantityTest(Float budget, Integer leverage, Float priceEntry, String symbol) {
+        Float quantity = budget * leverage / priceEntry;
         quantity = ClientSingleton.getInstance().normalizeQuantityTest(symbol, quantity);
         for (int i = 1; i < 10; i++) {
             if (quantity == 0) {
@@ -418,7 +416,7 @@ public class Utils {
 //        checkTickerFalse();
 //        testDescendingKeySet();
 //        System.out.println(Utils.readSms2Telegram());
-//        Double test = 5.1723243E-2;
+//        Float test = 5.1723243E-2;
 //        System.out.println(Utils.formatMoneyByPeriod(test, 2));
 //        System.out.println(Utils.normalPrice2Api(99.95804261161376d));
 //        System.out.println(Utils.normalPrice2Api(991.95804261161376d));
@@ -465,14 +463,6 @@ public class Utils {
     }
 
 
-    public static String formatDouble(Double volume, Integer number) {
-        String format = "###.";
-        for (int i = 0; i < number; i++) {
-            format += "#";
-        }
-        DecimalFormat formatter = new DecimalFormat(format);
-        return formatter.format(volume);
-    }
     public static String formatDouble(Float volume, Integer number) {
         String format = "###.";
         for (int i = 0; i < number; i++) {
@@ -483,21 +473,21 @@ public class Utils {
     }
 
 
-    public static Double findMinSubarraySum(Double[] numbers) {
+    public static Float findMinSubarraySum(Float[] numbers) {
         if (numbers.length == 0) {
             throw new IllegalArgumentException("Dãy số phải có ít nhất 1 phần tử.");
         }
 
         // Khởi tạo giá trị tổng nhỏ nhất và tổng nhỏ nhất hiện tại bằng phần tử đầu tiên
-        double minSum = numbers[0];
-        double currentSum = numbers[0];
+        float minSum = numbers[0];
+        float currentSum = numbers[0];
 
         // Duyệt qua mảng từ phần tử thứ hai
         for (int i = 1; i < numbers.length; i++) {
             // Tìm tổng nhỏ nhất hiện tại, nếu số hiện tại nhỏ hơn tổng hiện tại, ta chọn số hiện tại
             currentSum = Math.min(numbers[i], currentSum + numbers[i]);
             // Cập nhật tổng nhỏ nhất
-            double minSumNew = Math.min(minSum, currentSum);
+            float minSumNew = Math.min(minSum, currentSum);
             if (minSumNew < minSum) {
                 minSum = Math.min(minSum, currentSum);
             }
@@ -516,21 +506,21 @@ public class Utils {
     }
 
 
-    public static Double maxPrice(KlineObjectNumber ticker, Double maxPrice) {
+    public static Float maxPrice(KlineObjectNumber ticker, Float maxPrice) {
         if (maxPrice == null || maxPrice < ticker.maxPrice) {
             maxPrice = ticker.maxPrice;
         }
         return maxPrice;
     }
 
-    public static Double maxPrice(KlineObjectSimple ticker, Double maxPrice) {
+    public static Float maxPrice(KlineObjectSimple ticker, Float maxPrice) {
         if (maxPrice == null || maxPrice < ticker.maxPrice) {
             maxPrice = ticker.maxPrice;
         }
         return maxPrice;
     }
 
-    public static Double minPrice(KlineObjectNumber ticker, Double minPrice) {
+    public static Float minPrice(KlineObjectNumber ticker, Float minPrice) {
         if (minPrice == null || minPrice > ticker.minPrice) {
             minPrice = ticker.minPrice;
         }
@@ -595,7 +585,7 @@ public class Utils {
         }
     }
 
-    public static Double minPrice(KlineObjectSimple ticker, Double minPrice) {
+    public static Float minPrice(KlineObjectSimple ticker, Float minPrice) {
         if (minPrice == null || minPrice > ticker.minPrice) {
             minPrice = ticker.minPrice;
         }

@@ -57,7 +57,7 @@ public class FundingDataCollectionManager {
         featureExtractor.updateMarketHistory(snapshot);
     }
 
-    public double getReturn(String symbol, int minutes) {
+    public float getReturn(String symbol, int minutes) {
         return featureExtractor.calculateReturn(symbol, minutes);
     }
 
@@ -88,16 +88,16 @@ public class FundingDataCollectionManager {
 
     private String calculateLabelsAndFormat(FundingMarketFeatures f, OrderTargetInfoTest order,
                                             TreeMap<Long, Map<String, KlineObjectSimple>> futureLookupData) {
-        double entryPrice = order.lastPrice;
+        float entryPrice = order.lastPrice;
         if (entryPrice <= 0) return null;
 
         // 1. Tính toán Label 6 (Target 6%)
-        double targetPrice6 = entryPrice * 1.06;
+        float targetPrice6 = entryPrice * 1.06f;
         f.label6 = calculateLabelType(order.symbol, targetPrice6, order.timeStart, futureLookupData);
         if (f.label6 >= 0 && f.label6 <= 4) label6Counts[f.label6]++;
 
         // 2. Tính toán Label 40 (Target 40%)
-        double targetPrice40 = entryPrice * 1.40;
+        float targetPrice40 = entryPrice * 1.40f;
         f.label40 = calculateLabelType(order.symbol, targetPrice40, order.timeStart, futureLookupData);
         if (f.label40 >= 0 && f.label40 <= 4) label40Counts[f.label40]++;
 
@@ -127,7 +127,7 @@ public class FundingDataCollectionManager {
     }
 
     // Hàm chung để tính loại Label (0-4) dựa trên Target Price
-    private int calculateLabelType(String symbol, double targetPrice, long startTime,
+    private int calculateLabelType(String symbol, float targetPrice, long startTime,
                                    TreeMap<Long, Map<String, KlineObjectSimple>> futureLookupData) {
         if (checkProfit(symbol, targetPrice, startTime, 15 * Utils.TIME_MINUTE, futureLookupData)) {
             return 4;
@@ -142,7 +142,7 @@ public class FundingDataCollectionManager {
         }
     }
 
-    private boolean checkProfit(String symbol, double targetPrice, long startTime, long duration,
+    private boolean checkProfit(String symbol, float targetPrice, long startTime, long duration,
                                 TreeMap<Long, Map<String, KlineObjectSimple>> futureData) {
         long endTime = startTime + duration;
         Map<Long, Map<String, KlineObjectSimple>> periodData = futureData.subMap(startTime, false, endTime, true);

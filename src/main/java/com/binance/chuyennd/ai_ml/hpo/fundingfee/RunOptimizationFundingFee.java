@@ -50,7 +50,7 @@ public class RunOptimizationFundingFee {
                 DoubleChromosome.of(0.1, 0.5)       // 3: Funding Max Threshold
         );
 
-        Engine<DoubleGene, Double> engine = Engine.builder(RunOptimizationFundingFee::eval, gtf)
+        Engine<DoubleGene, Float> engine = Engine.builder(RunOptimizationFundingFee::eval, gtf)
                 .populationSize(POPULATION_SIZE)
                 .survivorsSelector(new TournamentSelector<>(3))
                 .offspringSelector(new RouletteWheelSelector<>())
@@ -59,7 +59,7 @@ public class RunOptimizationFundingFee {
                 .build();
 
         long startTime = System.currentTimeMillis();
-        EvolutionResult<DoubleGene, Double> bestResult = engine.stream()
+        EvolutionResult<DoubleGene, Float> bestResult = engine.stream()
                 .limit(GENERATIONS)
                 .peek(r -> LOG.info(">>> Gen {}/{} | Best Fitness: {}",
                         r.generation(), GENERATIONS, String.format("%.4f", r.bestFitness())))
@@ -68,21 +68,21 @@ public class RunOptimizationFundingFee {
         printFinalResult(bestResult, startTime);
     }
 
-    private static Double eval(Genotype<DoubleGene> gt) {
+    private static Float eval(Genotype<DoubleGene> gt) {
         long c = testCounter.incrementAndGet();
 
         // Map lại index sau khi đã xóa pMinFull
-        double pMinTrade    = gt.get(0).gene().doubleValue();
-        double pUpAvg       = gt.get(1).gene().doubleValue();
-        double pDownAvg     = gt.get(2).gene().doubleValue();
-        double pFundingPred = gt.get(3).gene().doubleValue();
+        float pMinTrade    = gt.get(0).gene().floatValue();
+        float pUpAvg       = gt.get(1).gene().floatValue();
+        float pDownAvg     = gt.get(2).gene().floatValue();
+        float pFundingPred = gt.get(3).gene().floatValue();
 
         try {
             BackTestEngineFundingFee engine = new BackTestEngineFundingFee(
                     pMinTrade, pUpAvg, pDownAvg, pFundingPred
             );
 
-            double score = engine.run(time2MarketData, predictionMap, time2FundingPre);
+            float score = engine.run(time2MarketData, predictionMap, time2FundingPre);
 
             LOG.info("Trial #{}/{}: Score={} | Params: [Min15m:{}, Up:{}, Down:{}, Thresh:{}]",
                     c, TOTAL_TRIALS, String.format("%.2f", score),
@@ -92,7 +92,7 @@ public class RunOptimizationFundingFee {
             return score;
         } catch (Exception e) {
             e.printStackTrace();
-            return 0.0;
+            return 0.0f;
         } finally {
             System.gc(); // Giải phóng rác sau mỗi lần Backtest
         }
@@ -117,7 +117,7 @@ public class RunOptimizationFundingFee {
         LOG.info("✅ Data Ready.");
     }
 
-    private static void printFinalResult(EvolutionResult<DoubleGene, Double> result, long startTime) {
+    private static void printFinalResult(EvolutionResult<DoubleGene, Float> result, long startTime) {
         Genotype<DoubleGene> best = result.bestPhenotype().genotype();
         LOG.info("\n=============================================");
         LOG.info("=== KẾT QUẢ TỐI ƯU HÓA HOÀN TẤT (4 PARAMS) ===");

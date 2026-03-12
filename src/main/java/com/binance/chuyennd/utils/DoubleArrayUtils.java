@@ -5,9 +5,9 @@ import java.util.Collection;
 public class DoubleArrayUtils
 {
 
-	public static int maxIndex(double[] values, int startIndex, int endIndex)
+	public static int maxIndex(float[] values, int startIndex, int endIndex)
 	{
-		double value = values[startIndex];
+		float value = values[startIndex];
 		int index = startIndex;
 
 		for (int i = startIndex; i <= endIndex; i++)
@@ -22,9 +22,9 @@ public class DoubleArrayUtils
 		return index;
 	}
 
-	public static double maxValue(double[] values, int startIndex, int endIndex)
+	public static float maxValue(float[] values, int startIndex, int endIndex)
 	{
-		double value = values[startIndex];
+		float value = values[startIndex];
 
 		for (int i = startIndex; i <= endIndex; i++)
 		{
@@ -37,9 +37,9 @@ public class DoubleArrayUtils
 		return value;
 	}
 
-	public static int minIndex(double[] values, int startIndex, int endIndex)
+	public static int minIndex(float[] values, int startIndex, int endIndex)
 	{
-		double value = values[startIndex];
+		float value = values[startIndex];
 		int index = startIndex;
 
 		for (int i = startIndex; i <= endIndex; i++)
@@ -54,9 +54,9 @@ public class DoubleArrayUtils
 		return index;
 	}
 
-	public static double minValue(double[] values, int startIndex, int endIndex)
+	public static float minValue(float[] values, int startIndex, int endIndex)
 	{
-		double value = values[startIndex];
+		float value = values[startIndex];
 
 		for (int i = startIndex; i <= endIndex; i++)
 		{
@@ -69,9 +69,9 @@ public class DoubleArrayUtils
 		return value;
 	}
 
-	public static double sum(double[] values, int startIndex, int endIndex)
+	public static float sum(float[] values, int startIndex, int endIndex)
 	{
-		double sum = 0;
+		float sum = 0;
 		for (int i = startIndex; i <= endIndex; i++)
 		{
 			sum += values[i];
@@ -79,28 +79,28 @@ public class DoubleArrayUtils
 		return sum;
 	}
 
-	public static double avg(double[] values, int startIndex, int endIndex)
+	public static float avg(float[] values, int startIndex, int endIndex)
 	{
-		double sum = 0;
+		float sum = 0;
 		for (int i = startIndex; i <= endIndex; i++)
 		{
 			sum += values[i];
 		}
 		return sum / (endIndex - startIndex + 1);
 	}
-	public static double avg(Collection<Double> values)
+	public static float avg(Collection<Float> values)
 	{
-		double sum = 0;
-		for (Double value:values)
+		float sum = 0;
+		for (Float value:values)
 		{
 			sum += value;
 		}
 		return sum / (values.size());
 	}
 
-	public static double[] slice(double[] values, int startIndex, int endIndex)
+	public static float[] slice(float[] values, int startIndex, int endIndex)
 	{
-		double[] newCandles = new double[endIndex - startIndex + 1];
+		float[] newCandles = new float[endIndex - startIndex + 1];
 		for (int i = startIndex; i <= endIndex; i++)
 		{
 			newCandles[i - startIndex] = values[i];

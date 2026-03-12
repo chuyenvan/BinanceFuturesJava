@@ -24,35 +24,35 @@ import java.util.List;
 public class KlineObjectNumber implements Serializable {
 
     public Long startTime;
-    public Double priceOpen;
-    public Double maxPrice;
-    public Double minPrice;
-    public Double priceClose;
-    public Double totalUsdt;
-    public Double endTime;
-    public Double rsi;
-    public Double ma20;
+    public Float priceOpen;
+    public Float maxPrice;
+    public Float minPrice;
+    public Float priceClose;
+    public Float totalUsdt;
+    public Float endTime;
+    public Float rsi;
+    public Float ma20;
     // macd
-    public Double signal;
-    public Double macd;
-    public Double histogram;
-//    public Double al;
+    public Float signal;
+    public Float macd;
+    public Float histogram;
+//    public Float al;
 
     public static KlineObjectNumber convertString2Kline(List<Object> kline) {
         KlineObjectNumber result = new KlineObjectNumber();
         result.startTime = (Long) kline.get(0);
-        result.priceOpen = Double.valueOf(kline.get(1).toString());
-        result.maxPrice = Double.valueOf(kline.get(2).toString());
-        result.minPrice = Double.valueOf(kline.get(3).toString());
-        result.priceClose = Double.valueOf(kline.get(4).toString());
-//        result.volume = Double.valueOf(kline.get(5).toString());
-        result.endTime = (Double) kline.get(6);
-        result.totalUsdt = Double.valueOf(kline.get(7).toString());
-//        result.al = (Double) kline.get(8);
+        result.priceOpen = Float.valueOf(kline.get(1).toString());
+        result.maxPrice = Float.valueOf(kline.get(2).toString());
+        result.minPrice = Float.valueOf(kline.get(3).toString());
+        result.priceClose = Float.valueOf(kline.get(4).toString());
+//        result.volume = Float.valueOf(kline.get(5).toString());
+        result.endTime = (Float) kline.get(6);
+        result.totalUsdt = Float.valueOf(kline.get(7).toString());
+//        result.al = (Float) kline.get(8);
         return result;
     }
 
-    public double getDefaultPrice() {
+    public float getDefaultPrice() {
         return priceClose;
     }
 }

@@ -2,23 +2,38 @@ package com.binance.chuyennd.ai_ml.wfo;
 
 import com.binance.chuyennd.tradecore.BotTradingConfig;
 import com.binance.chuyennd.ai_ml.hpo.HPOFitnessCalculator;
-import com.binance.chuyennd.research.BudgetManagerSimple;
+import com.binance.chuyennd.ai_ml.onnx.entry.AIRejectFilter;
+import com.binance.chuyennd.research.*;
+import com.binance.chuyennd.utils.Utils;
+
+import java.util.TreeMap;
 
 public class WFOBacktestEngine {
-    public static double run(long start, long end, BotTradingConfig config) {
+    public static float run(long start, long end, BotTradingConfig config) {
         try {
             BudgetManagerSimple.resetInstance();
 
-            // Khởi tạo Class Simulator mới dành riêng cho WFO
-            WFOSimulator simulator = new WFOSimulator(config);
+            // 1. Lấy dữ liệu từ RAM Cache [cite: 719-720]
+            int durationMins = (int) ((end - start) / Utils.TIME_MINUTE);
 
-            // Thực thi mô phỏng trong dải thời gian yêu cầu
-            simulator.run(start, end);
+            // 2. Khởi tạo Simulator GỐC
+            SimulatorMarketLevelTicker1MStopLoss simulator = new SimulatorMarketLevelTicker1MStopLoss();
 
-            // Tính điểm Fitness để Jenetics tối ưu
+            // 3. Đấu nối Config và Dữ liệu
+            simulator.setConfig(config);
+            simulator.initDataReady(
+                    DataManager.getMarketData(),
+                    DataManager.getAiPredictionData(),
+                    DataManager.getFundingPredictionData(start, durationMins),
+                    new AIRejectFilter()
+            );
+
+            // 4. Thực thi mô phỏng
+            simulator.simulatorWithInitEntry(start, end);
+
             return HPOFitnessCalculator.evaluateProfitVelocity(simulator);
         } catch (Exception e) {
-            return -100000.0;
+            return -100000.0f;
         }
     }
 }

@@ -10,44 +10,44 @@ public class MarketFeatures implements Serializable {
     public String dateKey;
 
     // === GROUP 1: BTC MACRO (Thị trường chung) ===
-    public double momentum1M;      // BTC
-    public double momentum5M;      // BTC
-    public double momentum15M;     // BTC
-    public double momentum1H;      // BTC
-    public double momentum4H;      // BTC
-    public double momentum24H;     // BTC
-    public double momentumAcceleration; // BTC
-    public double trendStrengthETH;
-    public double trendConsistency;
+    public float momentum1M;      // BTC
+    public float momentum5M;      // BTC
+    public float momentum15M;     // BTC
+    public float momentum1H;      // BTC
+    public float momentum4H;      // BTC
+    public float momentum24H;     // BTC
+    public float momentumAcceleration; // BTC
+    public float trendStrengthETH;
+    public float trendConsistency;
 
-    public double volatility1M;    // BTC
-    public double volatility15M;   // BTC
-    public double volatility1H;    // BTC
-    public double volatility24H;   // BTC
-    public double volatilityTermStructure;
+    public float volatility1M;    // BTC
+    public float volatility15M;   // BTC
+    public float volatility1H;    // BTC
+    public float volatility24H;   // BTC
+    public float volatilityTermStructure;
     public String volatilityRegime;
 
-    public double rsi14;           // BTC RSI
-    public double volumeSpike;     // BTC Volume
-    public double distMA20;        // BTC MA
+    public float rsi14;           // BTC RSI
+    public float volumeSpike;     // BTC Volume
+    public float distMA20;        // BTC MA
 
     // === GROUP 2: MARKET BREADTH (Độ rộng) ===
-    public double advanceDeclineRatio;
-    public double percentAboveMA20;
-    public double volumeRatioUpDown;
-    public double marketBreadthStrength;
-    public double btcDominance;
+    public float advanceDeclineRatio;
+    public float percentAboveMA20;
+    public float volumeRatioUpDown;
+    public float marketBreadthStrength;
+    public float btcDominance;
 
     // === GROUP 3: 🔥 BASKET SPECIFIC (Của chính rổ coin định mua) ===
-    public double basketMomentum15M; // TB Momentum 15M của rổ
-    public double basketMomentum1H;  // TB Momentum 1H của rổ
-    public double basketRsi14;       // TB RSI 14 của rổ (Quan trọng nhất để bắt đáy)
-    public double basketVolSpike;    // TB Volume Spike của rổ (Tiền vào hay chưa)
+    public float basketMomentum15M; // TB Momentum 15M của rổ
+    public float basketMomentum1H;  // TB Momentum 1H của rổ
+    public float basketRsi14;       // TB RSI 14 của rổ (Quan trọng nhất để bắt đáy)
+    public float basketVolSpike;    // TB Volume Spike của rổ (Tiền vào hay chưa)
 
     // === GROUP 4: FUNDING (Của rổ) ===
-    public double fundingRateRaw;
-    public double fundingRateAvg24H;
-    public double fundingRateTrend;
+    public float fundingRateRaw;
+    public float fundingRateAvg24H;
+    public float fundingRateTrend;
 
     // === GROUP 5: TIME ===
     public int hourOfDay;
@@ -57,12 +57,12 @@ public class MarketFeatures implements Serializable {
 
     // === LABELS ===
     public String regimeLabel;
-    public double futureReturn15M;
-    public double futureReturn1H;
-    public double futureReturn4H;
-    public double futureReturn24H;
-    public double maxDrawdownNext4H;
-    public double maxDrawdownNext24H;
+    public float futureReturn15M;
+    public float futureReturn1H;
+    public float futureReturn4H;
+    public float futureReturn24H;
+    public float maxDrawdownNext4H;
+    public float maxDrawdownNext24H;
 
 
 
@@ -144,8 +144,8 @@ public class MarketFeatures implements Serializable {
         return sb.toString();
     }
 
-    private String formatDouble(double value) {
-        if (Double.isNaN(value) || Double.isInfinite(value)) return "0.000000";
+    private String formatDouble(float value) {
+        if (Float.isNaN(value) || Float.isInfinite(value)) return "0.000000";
         return String.format(Locale.US, "%.8f", value);
     }
 

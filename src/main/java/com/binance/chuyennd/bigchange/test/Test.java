@@ -216,9 +216,9 @@ public class Test {
     private static void checkSellSignal() throws ParseException {
         long time = Utils.sdfFileHour.parse("20250603 11:00").getTime();
         String symbol = "NEIROETHUSDT";
-//        Double priceMin2d = Price4hManager.getInstance().getPriceMinIn2D(symbol, time);
-//        Double priceMax2d = Price4hManager.getInstance().getPriceMaxIn2D(symbol, time);
-//        Double priceClose = 0.10107;
+//        Float priceMin2d = Price4hManager.getInstance().getPriceMinIn2D(symbol, time);
+//        Float priceMax2d = Price4hManager.getInstance().getPriceMaxIn2D(symbol, time);
+//        Float priceClose = 0.10107;
 //        if (priceMax2d != null && Utils.rateOf2Double(priceClose, priceMax2d) < 0
 //                && priceMin2d != null && Utils.rateOf2Double(priceClose, priceMin2d) > 0.5) {
 //            LOG.info(" {} {}", Utils.rateOf2Double(priceClose, priceMax2d), Utils.rateOf2Double(priceClose, priceMin2d));
@@ -262,8 +262,8 @@ public class Test {
 //        new BinanceOrderTradingManager().processManagerPosition();
 //        List<PositionRisk> positions = BinanceFuturesClientSingleton.getInstance().getAllPositionInfos();
 //        for (int i = 1; i < 10; i++) {
-//            double rateLoss = 0.01 * i;
-//            double rateMin2MoveSl = 0.01;
+//            float rateLoss = 0.01 * i;
+//            float rateMin2MoveSl = 0.01;
 //            LOG.info("{} {} {}", rateLoss, rateMin2MoveSl,
 //                    BudgetManagerSimple.getInstance().calRateLossDynamicBuy(rateLoss, rateMin2MoveSl));
 //        }
@@ -341,10 +341,10 @@ public class Test {
     private static void createAOrderTest() {
         String symbol = "BNBUSDT";
         MarketLevelChange levelChange = MarketLevelChange.SMALL_DOWN;
-        Double budget = 2d;
+        Float budget = 2f;
         List<KlineObjectNumber> tickers = TickerFuturesHelper.getTicker(symbol, Constants.INTERVAL_1M);
         KlineObjectNumber ticker = tickers.get(tickers.size() - 1);
-        Double quantity = Utils.calQuantity(budget, Configs.LEVERAGE_ORDER, ticker.priceClose, symbol);
+        Float quantity = Utils.calQuantity(budget, Configs.LEVERAGE_ORDER, ticker.priceClose, symbol);
         OrderTargetInfo orderTrade = new OrderTargetInfo(OrderTargetStatus.REQUEST, ticker.priceClose,
                 null, quantity, Configs.LEVERAGE_ORDER, symbol, ticker.startTime.longValue(),
                 ticker.startTime.longValue(), OrderSide.BUY, Constants.TRADING_TYPE_VOLUME_MINI);

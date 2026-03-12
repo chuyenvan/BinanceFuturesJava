@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class DataMigrator {
 
     // --- CẤU HÌNH ---
-    private static final String OLD_SET_NAME = "kline_1m";       // Nguồn (Double)
+    private static final String OLD_SET_NAME = "kline_1m";       // Nguồn (Float)
     private static final String NEW_SET_NAME = "kline_1m_opt";   // Đích (Optimized: Float, No Time)
 
     private static AerospikeClient client;
@@ -160,7 +160,7 @@ public class DataMigrator {
     }
     /**
      * CORE LOGIC:
-     * 1. Double -> Float
+     * 1. Float -> Float
      * 2. Bỏ field startTime
      */
     private static MinuteDataFinal convertToOptimizedProto(MinuteData oldData) {

@@ -46,10 +46,10 @@ public class ClientSingleton implements Serializable {
     // Đổi đường dẫn này thành "/kaggle/input/ten-dataset-cua-ban/exchange_info.json" khi chạy trên Kaggle
     public static final String EXCHANGE_INFO_PATH = "/kaggle/input/datasets/chuyendinh/java-dataset/exchange_info.data";
     public SyncRequestClient syncRequestClient;
-    public Map<String, Double> symbol2UnitQuantity = new HashMap<>();
-    public Map<String, Double> symbol2UnitTrade = new HashMap<>();
-    public Map<String, Double> symbol2Notional = new HashMap<>();
-    public Map<String, Double> symbol2UnitPrice = new HashMap<>();
+    public Map<String, Float> symbol2UnitQuantity = new HashMap<>();
+    public Map<String, Float> symbol2UnitTrade = new HashMap<>();
+    public Map<String, Float> symbol2Notional = new HashMap<>();
+    public Map<String, Float> symbol2UnitPrice = new HashMap<>();
     private static volatile ClientSingleton INSTANCE = null;
 
     public static ClientSingleton getInstance() {
@@ -88,15 +88,15 @@ public class ClientSingleton implements Serializable {
 
         // 3. PARSE DỮ LIỆU VÀO CACHE MAPS
         for (ExchangeInfoEntry symbol : symbols) {
-            Double quantityUnit = getMinQty(symbol);
+            Float quantityUnit = getMinQty(symbol);
             if (quantityUnit != null) {
                 symbol2UnitQuantity.put(symbol.getSymbol(), quantityUnit);
             }
-            Double tickSize = getTickSize(symbol);
+            Float tickSize = getTickSize(symbol);
             if (tickSize != null) {
                 symbol2UnitPrice.put(symbol.getSymbol(), tickSize);
             }
-            Double notional = getNotional(symbol);
+            Float notional = getNotional(symbol);
             if (notional != null) {
                 symbol2Notional.put(symbol.getSymbol(), notional);
             }
@@ -123,44 +123,44 @@ public class ClientSingleton implements Serializable {
         }
     }
 
-    private Double getMinQty(ExchangeInfoEntry symbol) {
+    private Float getMinQty(ExchangeInfoEntry symbol) {
         for (List<Map<String, String>> filters : symbol.getFilters()) {
             for (Map<String, String> filter : filters) {
                 if (filter.get("minQty") != null) {
-                    return Double.valueOf(filter.get("minQty"));
+                    return Float.valueOf(filter.get("minQty"));
                 }
             }
         }
         return null;
     }
 
-    public Double getNotional(ExchangeInfoEntry symbol) {
+    public Float getNotional(ExchangeInfoEntry symbol) {
         for (List<Map<String, String>> filters : symbol.getFilters()) {
             for (Map<String, String> filter : filters) {
                 if (filter.get("notional") != null) {
-                    return Double.valueOf(filter.get("notional"));
+                    return Float.valueOf(filter.get("notional"));
                 }
             }
         }
         return null;
     }
 
-    private Double getTickSize(ExchangeInfoEntry symbol) {
+    private Float getTickSize(ExchangeInfoEntry symbol) {
         for (List<Map<String, String>> filters : symbol.getFilters()) {
             for (Map<String, String> filter : filters) {
                 if (filter.get("tickSize") != null) {
-                    return Double.valueOf(filter.get("tickSize"));
+                    return Float.valueOf(filter.get("tickSize"));
                 }
             }
         }
         return null;
     }
 
-    public Double getCurrentPrice(String symbol) {
+    public Float getCurrentPrice(String symbol) {
         if (syncRequestClient == null) return null; // Tránh NullPointer khi chạy offline trên Kaggle
         List<SymbolPrice> datas = syncRequestClient.getSymbolPriceTicker(symbol);
         if (datas != null && !datas.isEmpty()) {
-            return datas.get(0).getPrice().doubleValue();
+            return datas.get(0).getPrice().floatValue();
         }
         return null;
     }
@@ -176,8 +176,8 @@ public class ClientSingleton implements Serializable {
         return symbols;
     }
 
-    public Double normalizeQuantity(String symbol, Double quantity) {
-        Double unitQuantity = symbol2UnitQuantity.get(symbol);
+    public Float normalizeQuantity(String symbol, Float quantity) {
+        Float unitQuantity = symbol2UnitQuantity.get(symbol);
         if (unitQuantity == null) {
             LOG.info("Init Unit Quantity because {} is null!", symbol);
             initClient();
@@ -185,51 +185,51 @@ public class ClientSingleton implements Serializable {
         if (unitQuantity != null) {
             quantity = quantity - (quantity % unitQuantity);
             if (quantity.toString().contains("0000") || quantity.toString().contains("9999")) {
-                quantity = Double.valueOf(formatDouble(quantity));
+                quantity = Float.valueOf(formatDouble(quantity));
             }
             return quantity;
         } else {
-            return Double.valueOf(formatDouble(quantity));
+            return Float.valueOf(formatDouble(quantity));
         }
     }
 
-    public Double normalizeQuantityTest(String symbol, Double quantity) {
-        Double unitQuantity = symbol2UnitQuantity.get(symbol);
+    public Float normalizeQuantityTest(String symbol, Float quantity) {
+        Float unitQuantity = symbol2UnitQuantity.get(symbol);
         if (unitQuantity != null) {
             quantity = quantity - (quantity % unitQuantity);
             if (quantity.toString().contains("0000") || quantity.toString().contains("9999")) {
-                quantity = Double.valueOf(formatDouble(quantity));
+                quantity = Float.valueOf(formatDouble(quantity));
             }
             return quantity;
         } else {
-            return Double.valueOf(formatDouble(quantity));
+            return Float.valueOf(formatDouble(quantity));
         }
     }
 
-    public Double normalizePrice(String symbol, Double price) {
-        Double unitPrice = symbol2UnitPrice.get(symbol);
+    public Float normalizePrice(String symbol, Float price) {
+        Float unitPrice = symbol2UnitPrice.get(symbol);
         if (unitPrice != null) {
             price = price - (price % unitPrice);
             if (price.toString().contains("0000") || price.toString().contains("9999")) {
-                price = Double.valueOf(formatDouble(price));
+                price = Float.valueOf(formatDouble(price));
             }
             return price;
         } else {
-            return Double.valueOf(formatDouble(price));
+            return Float.valueOf(formatDouble(price));
         }
     }
 
-    public Double getMinQuantity(String symbol) {
+    public Float getMinQuantity(String symbol) {
         return symbol2UnitQuantity.get(symbol);
     }
 
-    public Double getNotional(String symbol) {
+    public Float getNotional(String symbol) {
         return symbol2Notional.get(symbol);
     }
 
-    public static String formatDouble(Double revenue) {
+    public static String formatDouble(Float revenue) {
         String format = "###.";
-        Double check = revenue;
+        Float check = revenue;
         int counter = 0;
         for (int i = 0; i < 10; i++) {
             if (check > 10000) {
@@ -251,38 +251,38 @@ public class ClientSingleton implements Serializable {
         ClientSingleton.getInstance().dumpExchangeInfoToFile();
     }
 
-    public double getBalance() {
-        if (syncRequestClient == null) return 0d; // Tránh NullPointer khi chạy offline
+    public float getBalance() {
+        if (syncRequestClient == null) return 0f; // Tránh NullPointer khi chạy offline
         List<AccountBalance> balanceInfos = ClientSingleton.getInstance().syncRequestClient.getBalance();
         for (AccountBalance balanceInfo : balanceInfos) {
             if (StringUtils.equalsIgnoreCase(balanceInfo.getAsset(), "usdt")) {
-                double balance = balanceInfo.getBalance().doubleValue();
+                float balance = balanceInfo.getBalance().floatValue();
                 return balance;
             }
         }
-        return 0d;
+        return 0f;
     }
 
-    public double getBalanceAvalible() {
-        if (syncRequestClient == null) return 0d; // Tránh NullPointer khi chạy offline
+    public float getBalanceAvalible() {
+        if (syncRequestClient == null) return 0f; // Tránh NullPointer khi chạy offline
         List<AccountBalance> balanceInfos = ClientSingleton.getInstance().syncRequestClient.getBalance();
         for (AccountBalance balanceInfo : balanceInfos) {
             if (StringUtils.equalsIgnoreCase(balanceInfo.getAsset(), "usdt")) {
-                double balance = balanceInfo.getAvailableBalance().doubleValue();
+                float balance = balanceInfo.getAvailableBalance().floatValue();
                 return balance;
             }
         }
-        return 0d;
+        return 0f;
     }
 
-    public double getRateBalanceAvalible() {
-        if (syncRequestClient == null) return 0d; // Tránh NullPointer khi chạy offline
+    public float getRateBalanceAvalible() {
+        if (syncRequestClient == null) return 0f; // Tránh NullPointer khi chạy offline
         List<AccountBalance> balanceInfos = ClientSingleton.getInstance().syncRequestClient.getBalance();
         for (AccountBalance balanceInfo : balanceInfos) {
             if (StringUtils.equalsIgnoreCase(balanceInfo.getAsset(), "usdt")) {
-                return balanceInfo.getAvailableBalance().doubleValue() / balanceInfo.getBalance().doubleValue();
+                return balanceInfo.getAvailableBalance().floatValue() / balanceInfo.getBalance().floatValue();
             }
         }
-        return 0d;
+        return 0f;
     }
 }

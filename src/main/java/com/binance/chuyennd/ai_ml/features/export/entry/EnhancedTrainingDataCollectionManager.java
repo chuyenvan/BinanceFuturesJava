@@ -43,8 +43,8 @@ public class EnhancedTrainingDataCollectionManager {
     public void processMarketData(long timestamp,
                                   Map<String, KlineObjectSimple> marketData,
                                   MarketDataObject marketRate, List<String> targetBasket,
-                                  double ret15M, double ret1H, double ret4H, double ret24H,
-                                  double maxDD4H, double maxDD24H) {
+                                  float ret15M, float ret1H, float ret4H, float ret24H,
+                                  float maxDD4H, float maxDD24H) {
 
         if (!shouldCollectData(marketRate)) return;
 
@@ -79,7 +79,7 @@ public class EnhancedTrainingDataCollectionManager {
     }
 
     // ... (Các hàm private khác giữ nguyên như cũ) ...
-    private void assignRegimeLabel(MarketFeatures f, double r15m, double r1h, double r4h, double dd4h) {
+    private void assignRegimeLabel(MarketFeatures f, float r15m, float r1h, float r4h, float dd4h) {
         if (r15m > 0.008 && dd4h > -0.03) f.regimeLabel = "SCALP_WIN";
         else if (r4h > 0.01 && r1h < 0.0) f.regimeLabel = "BUY_DIP";
         else if (r4h < -0.02 && r1h < -0.01) f.regimeLabel = "CATCH_BOTTOM";

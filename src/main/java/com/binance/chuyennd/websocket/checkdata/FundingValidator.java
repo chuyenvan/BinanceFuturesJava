@@ -41,7 +41,7 @@ public class FundingValidator {
                 .limit(limit)
                 .collect(Collectors.toList());
 
-        Map<String, Double> apiFundingRates = new HashMap<>();
+        Map<String, Float> apiFundingRates = new HashMap<>();
         try {
             String response = HttpRequest.getContentFromUrl(URL_PREMIUM_INDEX);
             List<Map<String, Object>> objects = Utils.gson.fromJson(response, List.class);
@@ -49,7 +49,7 @@ public class FundingValidator {
             for (Map<String, Object> data : objects) {
                 String symbol = data.get("symbol").toString().toUpperCase();
                 if (symbol.endsWith("USDT")) {
-                    double lastFundingRate = Double.parseDouble(data.get("lastFundingRate").toString());
+                    float lastFundingRate = Float.parseFloat(data.get("lastFundingRate").toString());
                     apiFundingRates.put(symbol, lastFundingRate);
                 }
             }
@@ -63,15 +63,15 @@ public class FundingValidator {
 
         for (String symbol : allSymbols) {
             String upperS = symbol.toUpperCase();
-            Double apiRate = apiFundingRates.get(upperS);
+            Float apiRate = apiFundingRates.get(upperS);
             if (apiRate == null) continue;
 
-            Map<Long, Double> asFundingMap = DataManagerAerospikeFloatSim.getFundingMap(upperS);
+            Map<Long, Float> asFundingMap = DataManagerAerospikeFloatSim.getFundingMap(upperS);
 
             if (asFundingMap != null && !asFundingMap.isEmpty()) {
                 totalChecks++;
                 Long latestTs = Collections.max(asFundingMap.keySet());
-                Double asRate = asFundingMap.get(latestTs);
+                Float asRate = asFundingMap.get(latestTs);
 
                 boolean isMatch = Math.abs(apiRate - asRate) < 0.00000001;
                 if (isMatch) totalMatches++;
@@ -99,7 +99,7 @@ public class FundingValidator {
 
         for (String symbol : symbols) {
             String upperS = symbol.toUpperCase();
-            Map<Long, Double> asFundingMap = DataManagerAerospikeFloatSim.getFundingMap(upperS);
+            Map<Long, Float> asFundingMap = DataManagerAerospikeFloatSim.getFundingMap(upperS);
 
             LOG.info("--------------------------------------------------");
             LOG.info("📝 Symbol: {} (Số kỳ ghi nhận: {})", upperS, asFundingMap.size());
@@ -110,7 +110,7 @@ public class FundingValidator {
             }
 
             // Sắp xếp theo thời gian tăng dần để in
-            TreeMap<Long, Double> sortedMap = new TreeMap<>(asFundingMap);
+            TreeMap<Long, Float> sortedMap = new TreeMap<>(asFundingMap);
 
             LOG.info("   [🕒 {}] Rate: {}", Utils.normalizeDateYYYYMMDDHHmm(sortedMap.firstKey()),
                     String.format("%.8f", sortedMap.firstEntry().getValue()));
@@ -159,7 +159,7 @@ public class FundingValidator {
                         (TreeMap<Long, com.binance.client.model.market.FundingRate>) rawData;
 
                 // 2. Đọc dữ liệu từ Aerospike
-                Map<Long, Double> asData = DataManagerAerospikeFloatSim.getFundingMap(symbol);
+                Map<Long, Float> asData = DataManagerAerospikeFloatSim.getFundingMap(symbol);
 
                 totalFilesChecked++;
                 LOG.info("--------------------------------------------------");
@@ -177,8 +177,8 @@ public class FundingValidator {
 
                 for (Map.Entry<Long, com.binance.client.model.market.FundingRate> entry : fileData.entrySet()) {
                     Long ts = entry.getKey();
-                    Double fileRate = entry.getValue().getFundingRate().doubleValue();
-                    Double asRate = asData.get(ts);
+                    Float fileRate = entry.getValue().getFundingRate().floatValue();
+                    Float asRate = asData.get(ts);
 
                     if (asRate == null) {
                         LOG.warn("   ⚠️ Thiếu mốc TS {} trong AS", Utils.normalizeDateYYYYMMDDHHmm(ts));

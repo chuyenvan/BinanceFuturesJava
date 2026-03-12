@@ -65,9 +65,9 @@ public class AerospikeCheckData {
     }
 
     private static String formatSize(long size) {
-        double kb = (double) size / 1024;
-        double mb = kb / 1024;
-        double gb = mb / 1024;
+        float kb = (float) size / 1024;
+        float mb = kb / 1024;
+        float gb = mb / 1024;
         if (gb >= 1) {
             return String.format("%.2f GB", gb);
         } else if (mb >= 1) {

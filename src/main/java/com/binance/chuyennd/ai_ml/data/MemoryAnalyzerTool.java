@@ -113,14 +113,14 @@ public class MemoryAnalyzerTool {
     private static void printMemoryStatus(String label) {
         long used = getUsedHeap();
         long max = Runtime.getRuntime().maxMemory();
-        double percent = (double) used / max * 100;
+        float percent = (float) used / max * 100;
         System.out.println("MEMORY [" + label + "]: " + formatSize(used) + " / " + formatSize(max) + " (" + String.format("%.2f", percent) + "%)");
     }
 
     private static String formatSize(long bytes) {
-        double kb = bytes / 1024.0;
-        double mb = kb / 1024.0;
-        double gb = mb / 1024.0;
+        float kb = bytes / 1024.0f;
+        float mb = kb / 1024.0f;
+        float gb = mb / 1024.0f;
 
         if (gb >= 1) return df.format(gb) + " GB";
         else if (mb >= 1) return df.format(mb) + " MB";

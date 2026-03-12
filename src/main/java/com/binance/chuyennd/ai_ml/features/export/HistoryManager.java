@@ -43,7 +43,7 @@ public class HistoryManager {
 
     // --- CÁC HÀM TRUY XUẤT ---
 
-    public Double getPriceAt(String symbol, long timestamp) {
+    public Float getPriceAt(String symbol, long timestamp) {
         ArrayList<KlineObjectSimple> list = historyMap.get(symbol);
         if (list == null || list.isEmpty()) return null;
 
@@ -58,16 +58,16 @@ public class HistoryManager {
         return null;
     }
 
-    public Double getHighInPeriod(String symbol, int minutesLookback) {
+    public Float getHighInPeriod(String symbol, int minutesLookback) {
         ArrayList<KlineObjectSimple> list = historyMap.get(symbol);
         if (list == null || list.isEmpty()) return null;
 
         int lookback = Math.min(list.size(), minutesLookback);
-        double maxPrice = -1.0;
+        float maxPrice = -1.0f;
 
         for (int i = 0; i < lookback; i++) {
             // Lấy từ cuối list về trước
-            double p = list.get(list.size() - 1 - i).maxPrice;
+            float p = list.get(list.size() - 1 - i).maxPrice;
             if (p > maxPrice) maxPrice = p;
         }
         return (maxPrice == -1.0) ? null : maxPrice;
@@ -75,55 +75,55 @@ public class HistoryManager {
 
     // --- INDICATORS (ArrayList get(index) cực nhanh) ---
 
-    public Double getRsi14(String symbol) {
+    public Float getRsi14(String symbol) {
         ArrayList<KlineObjectSimple> list = historyMap.get(symbol);
-        if (list == null || list.size() < 15) return 50.0;
+        if (list == null || list.size() < 15) return 50.0f;
         return calculateRSI(list, 14);
     }
 
-    public Double getMa(String symbol, int period) {
+    public Float getMa(String symbol, int period) {
         ArrayList<KlineObjectSimple> list = historyMap.get(symbol);
         if (list == null || list.size() < period) return null;
-        double sum = 0;
+        float sum = 0;
         for (int i = 0; i < period; i++) {
             sum += list.get(list.size() - 1 - i).priceClose;
         }
         return sum / period;
     }
 
-    public Double getLow24H(String symbol) {
+    public Float getLow24H(String symbol) {
         ArrayList<KlineObjectSimple> list = historyMap.get(symbol);
         if (list == null || list.isEmpty()) return null;
         int lookback = Math.min(list.size(), 1440);
-        double minPrice = Double.MAX_VALUE;
+        float minPrice = Float.MAX_VALUE;
         for (int i = 0; i < lookback; i++) {
-            double price = list.get(list.size() - 1 - i).minPrice;
+            float price = list.get(list.size() - 1 - i).minPrice;
             if (price < minPrice) minPrice = price;
         }
-        return minPrice == Double.MAX_VALUE ? null : minPrice;
+        return minPrice == Float.MAX_VALUE ? null : minPrice;
     }
 
-    public Double getMaxRateChange(String symbol, int minutes) {
+    public Float getMaxRateChange(String symbol, int minutes) {
         ArrayList<KlineObjectSimple> list = historyMap.get(symbol);
-        if (list == null || list.size() < 2) return 0.0;
+        if (list == null || list.size() < 2) return 0.0f;
         int lookback = Math.min(list.size(), minutes);
-        double maxP = -1.0;
-        double minP = Double.MAX_VALUE;
+        float maxP = -1.0f;
+        float minP = Float.MAX_VALUE;
         for (int i = 0; i < lookback; i++) {
             KlineObjectSimple k = list.get(list.size() - 1 - i);
             if (k.maxPrice > maxP) maxP = k.maxPrice;
             if (k.minPrice < minP) minP = k.minPrice;
         }
-        if (minP == 0 || minP == Double.MAX_VALUE) return 0.0;
+        if (minP == 0 || minP == Float.MAX_VALUE) return 0.0f;
         return (maxP - minP) / minP;
     }
 
     // --- VOLUME INDICATORS ---
 
-    public double getSumVolume(String symbol, int minutes) {
+    public float getSumVolume(String symbol, int minutes) {
         ArrayList<KlineObjectSimple> list = historyMap.get(symbol);
-        if (list == null || list.isEmpty()) return 0.0;
-        double sum = 0;
+        if (list == null || list.isEmpty()) return 0.0f;
+        float sum = 0;
         int lookback = Math.min(list.size(), minutes);
         for (int i = 0; i < lookback; i++) {
             sum += list.get(list.size() - 1 - i).totalUsdt;
@@ -131,12 +131,12 @@ public class HistoryManager {
         return sum;
     }
 
-    public double getAverageVolume(String symbol, int periods) {
+    public float getAverageVolume(String symbol, int periods) {
         ArrayList<KlineObjectSimple> list = historyMap.get(symbol);
-        if (list == null || list.size() < periods) return 0.0;
-        double totalVol = 0;
+        if (list == null || list.size() < periods) return 0.0f;
+        float totalVol = 0;
         int startIndex = list.size() - 2;
-        if (startIndex < 0) return 0.0;
+        if (startIndex < 0) return 0.0f;
         int count = 0;
         for (int i = 0; i < periods; i++) {
             int idx = startIndex - i;
@@ -145,15 +145,15 @@ public class HistoryManager {
                 count++;
             }
         }
-        return count == 0 ? 0.0 : totalVol / count;
+        return count == 0 ? 0.0f : totalVol / count;
     }
 
-    public double getAverageRange(String symbol, int periods) {
+    public float getAverageRange(String symbol, int periods) {
         ArrayList<KlineObjectSimple> list = historyMap.get(symbol);
-        if (list == null || list.size() < periods) return 0.0;
-        double totalRange = 0;
+        if (list == null || list.size() < periods) return 0.0f;
+        float totalRange = 0;
         int startIndex = list.size() - 2;
-        if (startIndex < 0) return 0.0;
+        if (startIndex < 0) return 0.0f;
         int count = 0;
         for (int i = 0; i < periods; i++) {
             int idx = startIndex - i;
@@ -163,29 +163,29 @@ public class HistoryManager {
                 count++;
             }
         }
-        return count == 0 ? 0.0 : totalRange / count;
+        return count == 0 ? 0.0f : totalRange / count;
     }
 
     // --- HELPER RSI ---
-    private Double calculateRSI(List<KlineObjectSimple> data, int period) {
-        if (data.size() <= period) return 50.0;
-        double gain = 0.0;
-        double loss = 0.0;
+    private Float calculateRSI(List<KlineObjectSimple> data, int period) {
+        if (data.size() <= period) return 50.0f;
+        float gain = 0.0f;
+        float loss = 0.0f;
         for (int i = data.size() - period - 1; i < data.size() - 1; i++) {
-            double change = data.get(i + 1).priceClose - data.get(i).priceClose;
+            float change = data.get(i + 1).priceClose - data.get(i).priceClose;
             if (change > 0) gain += change;
             else loss -= change;
         }
-        double avgGain = gain / period;
-        double avgLoss = loss / period;
-        if (avgLoss == 0) return 100.0;
-        double rs = avgGain / avgLoss;
-        return 100.0 - (100.0 / (1.0 + rs));
+        float avgGain = gain / period;
+        float avgLoss = loss / period;
+        if (avgLoss == 0) return 100.0f;
+        float rs = avgGain / avgLoss;
+        return 100.0f - (100.0f / (1.0f + rs));
     }
 
     // --- BASKET FINDER (Sửa lỗi descendingIterator) ---
     public List<String> findPotentialLosers(long currentTimestamp) {
-        List<Map.Entry<String, Double>> drops = new ArrayList<>();
+        List<Map.Entry<String, Float>> drops = new ArrayList<>();
         long startTime = currentTimestamp - (15 * 60 * 1000L);
 
         for (Map.Entry<String, ArrayList<KlineObjectSimple>> entry : historyMap.entrySet()) {
@@ -198,7 +198,7 @@ public class HistoryManager {
             // Filter Volume 5k
             if (currentKline.totalUsdt < 5000) continue;
 
-            double maxPrice15m = -1.0;
+            float maxPrice15m = -1.0f;
 
             // 🔥 SỬA LỖI: Thay Iterator bằng vòng lặp ngược
             for (int i = history.size() - 1; i >= 0; i--) {
@@ -208,7 +208,7 @@ public class HistoryManager {
             }
 
             if (maxPrice15m > 0) {
-                double dropFromPeak = (currentKline.priceClose - maxPrice15m) / maxPrice15m;
+                float dropFromPeak = (currentKline.priceClose - maxPrice15m) / maxPrice15m;
                 if (dropFromPeak < -0.001) {
                     drops.add(new AbstractMap.SimpleEntry<>(symbol, dropFromPeak));
                 }

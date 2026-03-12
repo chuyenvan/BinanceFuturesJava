@@ -38,13 +38,13 @@ public class GenerateFundingPredictionsTool {
     private static void setLooseConfigsForGeneration() {
         LOG.info("🔧 Áp dụng cấu hình SIÊU LỎNG để sinh Data bao phủ toàn bộ HPO...");
         // HPO min trade quét tới -0.015 -> Ta mở rộng đến -0.008
-        Configs.PREDICT_SYMBOL_RATE_DOWN_15M = -0.008;
+        Configs.PREDICT_SYMBOL_RATE_DOWN_15M = -0.008f;
         // HPO min full quét tới -0.020 -> Ta mở rộng đến -0.012
-        Configs.PREDICT_SYMBOL_RATE_DOWN_15M = -0.012;
+        Configs.PREDICT_SYMBOL_RATE_DOWN_15M = -0.012f;
         // HPO up avg quét tới 0.004 -> Ta mở rộng đến 0.002
-        Configs.PREDICT_SYMBOL_RATE_UP_AVG = 0.002;
+        Configs.PREDICT_SYMBOL_RATE_UP_AVG = 0.002f;
         // HPO down avg quét tới -0.004 -> Ta mở rộng đến -0.002
-        Configs.PREDICT_SYMBOL_RATE_DOWN_AVG = -0.002;
+        Configs.PREDICT_SYMBOL_RATE_DOWN_AVG = -0.002f;
         Configs.NUMBER_RATE_DOWN_HISTORY_TRADE = 60;
     }
 
@@ -210,7 +210,7 @@ public class GenerateFundingPredictionsTool {
                                 if (ticker == null || !Utils.isTickerAvailable(ticker)) return null;
 
                                 OrderTargetInfoTest dummyOrder = new OrderTargetInfoTest(
-                                        OrderTargetStatus.REQUEST, ticker.priceClose, null, 1.0,
+                                        OrderTargetStatus.REQUEST, ticker.priceClose, null, 1.0f,
                                         Configs.LEVERAGE_ORDER, symbol, time, time, OrderSide.BUY
                                 );
                                 dummyOrder.lastEntry = ticker.priceClose;

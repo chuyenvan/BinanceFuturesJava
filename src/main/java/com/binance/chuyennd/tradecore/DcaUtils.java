@@ -13,8 +13,8 @@ public final class DcaUtils {
      * Phương thức chính, chỉ nhận vào các tham số đơn để kiểm tra.
      * Đây là hàm duy nhất bạn cần gọi từ bên ngoài.
      */
-    public static boolean shouldDca(double margin, double currentRateLoss, MarketLevelChange orderMarketLevel, long orderTimeStart,
-                                    MarketLevelChange marketLevelChange, long currentTime, double budget) {
+    public static boolean shouldDca(float margin, float currentRateLoss, MarketLevelChange orderMarketLevel, long orderTimeStart,
+                                    MarketLevelChange marketLevelChange, long currentTime, float budget) {
             DcaConfig config = getDcaConfig(marketLevelChange);
             if (config == null) {
                 return false;
@@ -28,7 +28,7 @@ public final class DcaUtils {
 //                    config.rateLoss2Dca = -0.9;
 //                }
 //            }
-            double adjustedRateLoss = calculateAdjustedRateLoss(margin, budget, config.getRateLoss2Dca(), config.isAll());
+            float adjustedRateLoss = calculateAdjustedRateLoss(margin, budget, config.getRateLoss2Dca(), config.isAll());
 
             if (currentRateLoss >= adjustedRateLoss) {
                 return false;
@@ -42,14 +42,14 @@ public final class DcaUtils {
 
     private static DcaConfig getDcaConfig(MarketLevelChange levelChange) {
         if (levelChange == null) {
-            return new DcaConfig(1, -0.4, false);
+            return new DcaConfig(1, -0.4f, false);
         }
         switch (levelChange) {
             case BIG_DOWN:
-                return new DcaConfig(8, -0.15, true);
+                return new DcaConfig(8, -0.15f, true);
             case MEDIUM_DOWN:
             case BIG_UP:
-                return new DcaConfig(15, -0.28, false);
+                return new DcaConfig(15, -0.28f, false);
 //            case MEDIUM_UP:
 //            case MEDIUM_DOWN_15M:
 //                return new DcaConfig(15, -0.15, false);
@@ -60,16 +60,16 @@ public final class DcaUtils {
         }
     }
 
-    private static double calculateAdjustedRateLoss(double margin, double budget, double baseRateLoss, boolean isAll) {
+    private static float calculateAdjustedRateLoss(float margin, float budget, float baseRateLoss, boolean isAll) {
         if (isAll || margin < budget) {
             return baseRateLoss;
         }
-        double marginRatio = margin / budget;
-        if (marginRatio >= 3.0) return -0.99;
-        if (marginRatio >= 2.5) return -0.9;
-        if (marginRatio >= 2.0) return -0.7;
-        if (marginRatio >= 1.5) return -0.6;
-        return -0.4;
+        float marginRatio = margin / budget;
+        if (marginRatio >= 3.0) return -0.99f;
+        if (marginRatio >= 2.5) return -0.9f;
+        if (marginRatio >= 2.0) return -0.7f;
+        if (marginRatio >= 1.5) return -0.6f;
+        return -0.4f;
     }
 
     private static boolean isTimeConditionMet(MarketLevelChange orderMarketLevel, long orderTimeStart, long currentTime, int durationDca) {
@@ -86,10 +86,10 @@ public final class DcaUtils {
      */
     private static final class DcaConfig {
         private final int durationDca;
-        private double rateLoss2Dca;
+        private float rateLoss2Dca;
         private final boolean isAll;
 
-        public DcaConfig(int durationDca, double rateLoss2Dca, boolean isAll) {
+        public DcaConfig(int durationDca, float rateLoss2Dca, boolean isAll) {
             this.durationDca = durationDca;
             this.rateLoss2Dca = rateLoss2Dca;
             this.isAll = isAll;
@@ -99,7 +99,7 @@ public final class DcaUtils {
             return durationDca;
         }
 
-        public double getRateLoss2Dca() {
+        public float getRateLoss2Dca() {
             return rateLoss2Dca;
         }
 

@@ -33,18 +33,18 @@ public class RunOptimizationBudgetRatio {
     public static TreeMap<Long, AiPredictionData> predictionMap;
     public static TreeMap<Long, long[]> time2FundingPre;
 
-    private static double evaluate(Genotype<DoubleGene> genotype) {
+    private static float evaluate(Genotype<DoubleGene> genotype) {
 
         long currentTestNumber = testCounter.incrementAndGet();
 
-        double ratio1 = genotype.get(0).gene().doubleValue();
-        double divider1 = genotype.get(1).gene().doubleValue();
-        double ratio2 = genotype.get(2).gene().doubleValue();
-        double divider2 = genotype.get(3).gene().doubleValue();
-        double trendUp = genotype.get(4).gene().doubleValue();
-        double trendDown = genotype.get(5).gene().doubleValue();
+        float ratio1 = genotype.get(0).gene().floatValue();
+        float divider1 = genotype.get(1).gene().floatValue();
+        float ratio2 = genotype.get(2).gene().floatValue();
+        float divider2 = genotype.get(3).gene().floatValue();
+        float trendUp = genotype.get(4).gene().floatValue();
+        float trendDown = genotype.get(5).gene().floatValue();
 
-        double finalBalance = 0.0;
+        float finalBalance = 0.0f;
 
         LOG.info("--- Bat dau Test #%d / %d ---%n{R1=%.2f, D1=%.1f, R2=%.2f, D2=%.1f, Up=%.1f, Down=%.1f}%n",
                 currentTestNumber, TOTAL_TRIALS, ratio1, divider1, ratio2, divider2, trendUp, trendDown);
@@ -59,7 +59,7 @@ public class RunOptimizationBudgetRatio {
         } catch (Exception e) {
             e.printStackTrace();
             LOG.info("--- Test #%d / %d BI LOI => Loi nhuan: 0.0 ---%n", currentTestNumber, TOTAL_TRIALS);
-            return 0.0;
+            return 0.0f;
         }
 
         return finalBalance;
@@ -101,21 +101,21 @@ public class RunOptimizationBudgetRatio {
 
         Genotype<DoubleGene> genotypeFactory = Genotype.of(DoubleChromosome.of(DoubleRange.of(0.2, 0.5)), DoubleChromosome.of(DoubleRange.of(1.5, 2.5)), DoubleChromosome.of(DoubleRange.of(0.5, 0.8)), DoubleChromosome.of(DoubleRange.of(1.5, 2.5)), DoubleChromosome.of(DoubleRange.of(1.0, 1.2)), DoubleChromosome.of(DoubleRange.of(0.8, 1.0)));
 
-        Engine<DoubleGene, Double> engine = Engine.builder(RunOptimizationBudgetRatio::evaluate, genotypeFactory).populationSize(POPULATION_SIZE).maximizing().executor(Executors.newSingleThreadExecutor()).build();
+        Engine<DoubleGene, Float> engine = Engine.builder(RunOptimizationBudgetRatio::evaluate, genotypeFactory).populationSize(POPULATION_SIZE).maximizing().executor(Executors.newSingleThreadExecutor()).build();
 
-        EvolutionResult<DoubleGene, Double> result = engine.stream().peek(
+        EvolutionResult<DoubleGene, Float> result = engine.stream().peek(
                 er -> LOG.info("%n>>> Hoan tat The he %d / %d. Loi nhuan tot nhat hien tai: %.2f%n%n", er.generation(), GENERATIONS, er.bestFitness())).limit(GENERATIONS).collect(EvolutionResult.toBestEvolutionResult());
 
         Genotype<DoubleGene> bestParams = result.bestPhenotype().genotype();
-        double bestProfit = result.bestFitness();
+        float bestProfit = result.bestFitness();
         long totalTime = System.currentTimeMillis() - startTime;
 
-        double r1 = bestParams.get(0).gene().doubleValue();
-        double d1 = bestParams.get(1).gene().doubleValue();
-        double r2 = bestParams.get(2).gene().doubleValue();
-        double d2 = bestParams.get(3).gene().doubleValue();
-        double tUp = bestParams.get(4).gene().doubleValue();
-        double tDown = bestParams.get(5).gene().doubleValue();
+        float r1 = bestParams.get(0).gene().floatValue();
+        float d1 = bestParams.get(1).gene().floatValue();
+        float r2 = bestParams.get(2).gene().floatValue();
+        float d2 = bestParams.get(3).gene().floatValue();
+        float tUp = bestParams.get(4).gene().floatValue();
+        float tDown = bestParams.get(5).gene().floatValue();
 
         LOG.info("\n=============================================");
         LOG.info("=== TOI UU HOA QUAN LY VON HOAN TAT ===");

@@ -25,14 +25,14 @@ public class AIRejectFilter {
     // =========================================================================
 
     // --- CẤU HÌNH HIỆN TẠI (BEST FOUND SCORE 198K) ---
-    private double HARD_RISK_LIMIT = -0.04745;      // Chấp nhận MaxDD lên tới 5.6%
-    private double MIN_PRED_RETURN_1H = 0.02602;    // Lãi 1H > 1.6% là vào (Thấp hơn mức 2.1% cũ)
-    private double HIGH_RETURN_THRESHOLD = 0.05949; // Chỉ kèo siêu tưởng (>8.5%) mới được phá rào Risk
+    private float HARD_RISK_LIMIT = -0.04745f;      // Chấp nhận MaxDD lên tới 5.6%
+    private float MIN_PRED_RETURN_1H = 0.02602f;    // Lãi 1H > 1.6% là vào (Thấp hơn mức 2.1% cũ)
+    private float HIGH_RETURN_THRESHOLD = 0.05949f; // Chỉ kèo siêu tưởng (>8.5%) mới được phá rào Risk
 
     // --- CẤU HÌNH BỔ SUNG ---
-    private double MIN_MOMENTUM_15M = 0.01750 ;      // 15M phải tăng cực mạnh > 1.35% (Key factor!)
-    private double MIN_TREND_4H = 0.01680;          // 4H chỉ cần xanh nhẹ > 0.35% là được
-    private double DEAD_TREND_24H = -0.05;          // 24H sập quá 5% thì né (Giữ nguyên)
+    private float MIN_MOMENTUM_15M = 0.01750f ;      // 15M phải tăng cực mạnh > 1.35% (Key factor!)
+    private float MIN_TREND_4H = 0.01680f;          // 4H chỉ cần xanh nhẹ > 0.35% là được
+    private float DEAD_TREND_24H = -0.05f;          // 24H sập quá 5% thì né (Giữ nguyên)
 
 
     public enum FilterDecision {PASS, REJECT}
@@ -70,7 +70,7 @@ public class AIRejectFilter {
     }
 
     // Hàm thiết lập tham số nhanh cho bộ tối ưu (Backtest Engine gọi vào đây)
-    public void setConfig(double risk, double min1h, double highRet, double min15m, double min4h, double dead24h) {
+    public void setConfig(float risk, float min1h, float highRet, float min15m, float min4h, float dead24h) {
         HARD_RISK_LIMIT = risk;
         MIN_PRED_RETURN_1H = min1h;
         HIGH_RETURN_THRESHOLD = highRet;
@@ -82,7 +82,7 @@ public class AIRejectFilter {
     /**
      * LOGIC ĐÁNH GIÁ CHUNG CHO MỌI PHIÊN BẢN
      */
-    private FilterResult evaluate(double pred15M, double pred1H, double pred4H, double pred24H, double risk4H) {
+    private FilterResult evaluate(float pred15M, float pred1H, float pred4H, float pred24H, float risk4H) {
 
         // 1. KIỂM TRA SINH TỒN (Risk vs Reward)
         if (risk4H <= HARD_RISK_LIMIT) {

@@ -21,10 +21,10 @@ public class DebugFundingWithWarmup {
 
     public static void main(String[] args) throws Exception {
         // Cấu hình
-        Configs.PREDICT_SYMBOL_RATE_DOWN_15M = -0.013;
-        Configs.PREDICT_SYMBOL_RATE_DOWN_15M = -0.025;
-        Configs.PREDICT_SYMBOL_RATE_UP_AVG = 0.004;
-        Configs.PREDICT_SYMBOL_RATE_DOWN_AVG = -0.005;
+        Configs.PREDICT_SYMBOL_RATE_DOWN_15M = -0.013f;
+        Configs.PREDICT_SYMBOL_RATE_DOWN_15M = -0.025f;
+        Configs.PREDICT_SYMBOL_RATE_UP_AVG = 0.004f;
+        Configs.PREDICT_SYMBOL_RATE_DOWN_AVG = -0.005f;
 //        Configs.NUMBER_RATE_DOWN_HISTORY_TRADE = 60; // Quan trọng cho bộ nhớ Rate
 
         // 1. Setup thời gian Target
@@ -131,8 +131,8 @@ public class DebugFundingWithWarmup {
 
         // 3. Test Extract Feature (Thử 1 coin đại diện)
         String testSymbol = "BTCUSDT"; // Hoặc coin nào đang hot lúc đó
-        OrderTargetInfoTest dummy = new OrderTargetInfoTest(null, 100d, null, 1d, 10, testSymbol, time, time, OrderSide.BUY);
-        dummy.lastEntry = 100d;
+        OrderTargetInfoTest dummy = new OrderTargetInfoTest(null, 100f, null, 1f, 10, testSymbol, time, time, OrderSide.BUY);
+        dummy.lastEntry = 100f;
 
         FundingMarketFeatures f = extractor.extractFeatures(time, dummy, symbol2Ticker, basket, mData);
 

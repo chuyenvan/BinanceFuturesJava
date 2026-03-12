@@ -28,7 +28,7 @@ public class TickerIngestor2Aerospike {
     public static final Logger LOG = LoggerFactory.getLogger(TickerIngestor2Aerospike.class);
 
     private final ConcurrentHashMap<Long, ConcurrentHashMap<String, KlineObjectOptimized>> timeBuffer = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<String, Double> priceBuffer = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Float> priceBuffer = new ConcurrentHashMap<>();
     private final Set<String> globalSubscribedSymbols = Collections.newSetFromMap(new ConcurrentHashMap<>());
     private final List<SubscriptionClient> klineClients = new CopyOnWriteArrayList<>();
     private final ExecutorService repairService = Executors.newSingleThreadExecutor();
@@ -63,7 +63,7 @@ public class TickerIngestor2Aerospike {
                 String symbol = obj.getString("s").toUpperCase();
 
                 if (symbol.endsWith("USDT") && symbol.matches(regex)) {
-                    priceBuffer.put(symbol, obj.getDouble("c"));
+                    priceBuffer.put(symbol, obj.getFloat("c"));
                     if (!globalSubscribedSymbols.contains(symbol) && !Constants.diedSymbol.contains(symbol)) {
                         LOG.info("✨ New Valid Symbol: {}", symbol);
                         initNewSymbolConfig(symbol);
@@ -156,7 +156,7 @@ public class TickerIngestor2Aerospike {
                     .setTotalUsdt(e.getQuoteAssetVolume().floatValue()).build();
             timeBuffer.computeIfAbsent(e.getStartTime(), k -> new ConcurrentHashMap<>()).put(shortS, optP);
             // Backup Price
-            priceBuffer.put(fullSymbol, e.getClose().doubleValue());
+            priceBuffer.put(fullSymbol, e.getClose().floatValue());
         }, null);
         klineClients.add(sc);
         globalSubscribedSymbols.addAll(symbols);

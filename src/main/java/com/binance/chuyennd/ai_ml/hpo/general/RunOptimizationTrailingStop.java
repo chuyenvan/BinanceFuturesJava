@@ -32,26 +32,26 @@ public class RunOptimizationTrailingStop {
     public static TreeMap<Long, long[]> time2FundingPre;
     public static final String FILE_FUNDING_FEE = "storage/fundingfee_time.data";
 
-    private static double evaluate(Genotype<DoubleGene> genotype) {
+    private static float evaluate(Genotype<DoubleGene> genotype) {
         long currentTest = testCounter.incrementAndGet();
 
-        double baseRate = genotype.get(0).gene().doubleValue();
+        float baseRate = genotype.get(0).gene().floatValue();
 
-        double volHighThres = genotype.get(1).gene().doubleValue();
-        double rateHigh = genotype.get(2).gene().doubleValue();
+        float volHighThres = genotype.get(1).gene().floatValue();
+        float rateHigh = genotype.get(2).gene().floatValue();
 
-        double volMedThres = genotype.get(3).gene().doubleValue();
-        double rateMed = genotype.get(4).gene().doubleValue();
+        float volMedThres = genotype.get(3).gene().floatValue();
+        float rateMed = genotype.get(4).gene().floatValue();
 
-        double volLowThres = genotype.get(5).gene().doubleValue();
-        double rateLow = genotype.get(6).gene().doubleValue();
+        float volLowThres = genotype.get(5).gene().floatValue();
+        float rateLow = genotype.get(6).gene().floatValue();
 
         if (volHighThres <= volMedThres || volMedThres <= volLowThres ||
                 rateHigh <= rateMed || rateMed <= rateLow || rateLow <= baseRate) {
-            return -1000.0;
+            return -1000.0f;
         }
 
-        double profit = 0.0;
+        float profit = 0.0f;
         try {
             BackTestEngineTrailingStop engine = new BackTestEngineTrailingStop(
                     baseRate,
@@ -66,7 +66,7 @@ public class RunOptimizationTrailingStop {
 
         } catch (Exception e) {
             e.printStackTrace();
-            return 0.0;
+            return 0.0f;
         }
         return profit;
     }
@@ -87,14 +87,14 @@ public class RunOptimizationTrailingStop {
                 DoubleChromosome.of(DoubleRange.of(0.01, 0.03))
         );
 
-        Engine<DoubleGene, Double> engine = Engine
+        Engine<DoubleGene, Float> engine = Engine
                 .builder(RunOptimizationTrailingStop::evaluate, genotypeFactory)
                 .populationSize(POPULATION_SIZE)
                 .maximizing()
                 .executor(Executors.newSingleThreadExecutor())
                 .build();
 
-        EvolutionResult<DoubleGene, Double> result = engine.stream()
+        EvolutionResult<DoubleGene, Float> result = engine.stream()
                 .limit(GENERATIONS)
                 .peek(r -> System.out.printf(">>> Generation %d Best: %.2f%n", r.generation(), r.bestFitness()))
                 .collect(EvolutionResult.toBestEvolutionResult());
@@ -129,21 +129,21 @@ public class RunOptimizationTrailingStop {
 
     }
 
-    private static void printResult(EvolutionResult<DoubleGene, Double> result, long startTime) {
+    private static void printResult(EvolutionResult<DoubleGene, Float> result, long startTime) {
         Genotype<DoubleGene> best = result.bestPhenotype().genotype();
         System.out.println("\n=== KẾT QUẢ TỐI ƯU TRAILING STOP ===");
         System.out.println("Time: " + Duration.ofMillis(System.currentTimeMillis() - startTime).toMinutes() + " mins");
         System.out.println("Profit Max: " + result.bestFitness());
         System.out.println("------------------------------------");
-        System.out.printf("Base Rate:             %.5f%n", best.get(0).gene().doubleValue());
+        System.out.printf("Base Rate:             %.5f%n", best.get(0).gene().floatValue());
         System.out.println("--- HIGH VOLATILITY ---");
-        System.out.printf("Threshold:             %.5f%n", best.get(1).gene().doubleValue());
-        System.out.printf("Target Rate:           %.5f%n", best.get(2).gene().doubleValue());
+        System.out.printf("Threshold:             %.5f%n", best.get(1).gene().floatValue());
+        System.out.printf("Target Rate:           %.5f%n", best.get(2).gene().floatValue());
         System.out.println("--- MEDIUM VOLATILITY ---");
-        System.out.printf("Threshold:             %.5f%n", best.get(3).gene().doubleValue());
-        System.out.printf("Target Rate:           %.5f%n", best.get(4).gene().doubleValue());
+        System.out.printf("Threshold:             %.5f%n", best.get(3).gene().floatValue());
+        System.out.printf("Target Rate:           %.5f%n", best.get(4).gene().floatValue());
         System.out.println("--- LOW VOLATILITY ---");
-        System.out.printf("Threshold:             %.5f%n", best.get(5).gene().doubleValue());
-        System.out.printf("Target Rate:           %.5f%n", best.get(6).gene().doubleValue());
+        System.out.printf("Threshold:             %.5f%n", best.get(5).gene().floatValue());
+        System.out.printf("Target Rate:           %.5f%n", best.get(6).gene().floatValue());
     }
 }

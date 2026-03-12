@@ -129,25 +129,25 @@ public class JsonWrapper {
                     "[Json] Get long error: " + name + " " + e.getMessage());
         }
     }
-    public Double getDouble(String name) {
+    public Float getDouble(String name) {
         checkMandatoryField(name);
         try {
-            return json.getDouble(name);
+            return json.getFloat(name);
         } catch (Exception e) {
             throw new BinanceApiException(BinanceApiException.RUNTIME_ERROR,
-                    "[Json] Get double error: " + name + " " + e.getMessage());
+                    "[Json] Get float error: " + name + " " + e.getMessage());
         }
     }
 
-    public Double getDoubleOrDefault(String name, Double defValue) {
+    public Float getDoubleOrDefault(String name, Float defValue) {
         try {
             if (!containKey(name)) {
                 return defValue;
             }
-            return json.getDouble(name);
+            return json.getFloat(name);
         } catch (Exception e) {
             throw new BinanceApiException(BinanceApiException.RUNTIME_ERROR,
-                    "[Json] Get double error: " + name + " " + e.getMessage());
+                    "[Json] Get float error: " + name + " " + e.getMessage());
         }
     }
 

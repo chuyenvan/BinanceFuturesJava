@@ -24,26 +24,26 @@ public class BudgetManagerSimple {
 
     public BalanceIndex balanceIndex = new BalanceIndex();
 
-    public Double BUDGET_PER_ORDER;
-    public Double investing = null;
-    public Map<Long, Double> time2Balance = new HashMap<>();
-    public Double unProfit = 0d;
-    public Double positionMargin = 0d;
+    public Float BUDGET_PER_ORDER;
+    public Float investing = null;
+    public Map<Long, Float> time2Balance = new HashMap<>();
+    public Float unProfit = 0f;
+    public Float positionMargin = 0f;
 
-    public Double profitLossMax = 0d;
-    public Double totalFee = 0d;
-    public Double totalFundingFee = 0d;
-    public Double balanceBasic = Configs.getDouble("CAPITAL_START");
-    public Double balanceCurrent = balanceBasic;
+    public Float profitLossMax = 0f;
+    public Float totalFee = 0f;
+    public Float totalFundingFee = 0f;
+    public Float balanceBasic = Configs.getDouble("CAPITAL_START");
+    public Float balanceCurrent = balanceBasic;
     public AtomicInteger counterOrderCreated = new AtomicInteger(0);
 
-    public Double profit = 0d;
+    public Float profit = 0f;
     public Integer maxOrderRunning = 0;
-    public Double fee = 0d;
+    public Float fee = 0f;
     public int totalSL = 0;
 
     private static volatile BudgetManagerSimple INSTANCE = null;
-    public Double marginRunning = null;
+    public Float marginRunning = null;
 
     // 1. Dùng ThreadLocal thay vì static instance đơn thuần
     private static final ThreadLocal<BudgetManagerSimple> threadLocalInstance = ThreadLocal.withInitial(BudgetManagerSimple::new);
@@ -59,7 +59,7 @@ public class BudgetManagerSimple {
     }
 
     public void updateBudget() {
-        investing = 0d;
+        investing = 0f;
         try {
             BUDGET_PER_ORDER = balanceBasic / Configs.number_order_budget;
         } catch (Exception e) {
@@ -67,7 +67,8 @@ public class BudgetManagerSimple {
         }
     }
 
-    public Double getBudget() {
+    public Float getBudget() {
+        if (BUDGET_PER_ORDER == null || BUDGET_PER_ORDER == 0.0f) updateBudget();
         return BUDGET_PER_ORDER;
     }
 
@@ -89,40 +90,40 @@ public class BudgetManagerSimple {
     public void updateBalance(Long timeUpdate, TreeMap<Long, OrderTargetInfoTest> allOrderDone,
                               ConcurrentHashMap<String, OrderTargetInfoTest> orderRunning,
                               ConcurrentHashMap<String, List<OrderTargetInfoTest>> symbol2OrdersEntry, boolean isPrintBalance) {
-        Double balance = balanceBasic;
+        Float balance = balanceBasic;
         totalFee = fee;
         balance = balance + profit;
         balanceCurrent = balance;
         unProfit = calUnrealizedProfit(orderRunning.values());
         profitLossMax = calProfitLossMax(orderRunning.values());
 
-        Double positionMarginReal = positionMargin;
+        Float positionMarginReal = positionMargin;
         balanceIndex.updateIndex(balanceBasic, positionMargin, positionMarginReal, timeUpdate, profitLossMax, profitLossMax, symbol2OrdersEntry,
                 orderRunning, unProfit);
         if (isPrintBalance) {
             time2Balance.put(timeUpdate, balance);
-            Double balanceYesterday = time2Balance.get(timeUpdate - Utils.TIME_DAY);
-            Double profitOfDate = 0d;
+            Float balanceYesterday = time2Balance.get(timeUpdate - Utils.TIME_DAY);
+            Float profitOfDate = 0f;
             if (balanceYesterday != null) {
                 profitOfDate = balance - balanceYesterday;
             }
 
-            Double marginMaxDate = balanceIndex.date2MarginMax.get(Utils.getDate(timeUpdate - Utils.TIME_MINUTE));
+            Float marginMaxDate = balanceIndex.date2MarginMax.get(Utils.getDate(timeUpdate - Utils.TIME_MINUTE));
             if (marginMaxDate == null) {
-                marginMaxDate = 0d;
+                marginMaxDate = 0f;
             }
-            Double marginMaxMonth = balanceIndex.month2MarginMax.get(Utils.getMonth(timeUpdate - Utils.TIME_DAY));
+            Float marginMaxMonth = balanceIndex.month2MarginMax.get(Utils.getMonth(timeUpdate - Utils.TIME_DAY));
             if (marginMaxMonth == null) {
-                marginMaxMonth = 0d;
+                marginMaxMonth = 0f;
             }
 
-            Double unProfitDate = balanceIndex.date2ProfitMin.get(Utils.getDate(timeUpdate - Utils.TIME_MINUTE));
+            Float unProfitDate = balanceIndex.date2ProfitMin.get(Utils.getDate(timeUpdate - Utils.TIME_MINUTE));
             if (unProfitDate == null) {
-                unProfitDate = 0d;
+                unProfitDate = 0f;
             }
-            Double unProfitMonth = balanceIndex.month2ProfitMin.get(Utils.getMonth(timeUpdate - Utils.TIME_DAY));
+            Float unProfitMonth = balanceIndex.month2ProfitMin.get(Utils.getMonth(timeUpdate - Utils.TIME_DAY));
             if (unProfitMonth == null) {
-                unProfitMonth = 0d;
+                unProfitMonth = 0f;
             }
 
 
@@ -175,14 +176,14 @@ public class BudgetManagerSimple {
         return counter;
     }
 
-    private Double calFee(OrderTargetInfoTest orderInfo) {
+    private Float calFee(OrderTargetInfoTest orderInfo) {
         return orderInfo.quantity * orderInfo.priceEntry * Configs.RATE_FEE;
     }
 
-    public Double calUnrealizedProfitMin(Collection<OrderTargetInfoTest> orderInfos) {
-        Double result = 0d;
+    public Float calUnrealizedProfitMin(Collection<OrderTargetInfoTest> orderInfos) {
+        Float result = 0f;
         for (OrderTargetInfoTest orderInfo : orderInfos) {
-            Double profit = orderInfo.profitMin;
+            Float profit = orderInfo.profitMin;
             result += profit;
 //            LOG.info("{} {} {} {} {} {}",orderInfo.symbol, orderInfo.side, orderInfo.priceEntry, orderInfo.minPrice
 //            , orderInfo.maxPrice, profit);
@@ -190,17 +191,17 @@ public class BudgetManagerSimple {
         return result;
     }
 
-    public Double calUnrealizedProfit(Collection<OrderTargetInfoTest> orderInfos) {
-        Double result = 0d;
+    public Float calUnrealizedProfit(Collection<OrderTargetInfoTest> orderInfos) {
+        Float result = 0f;
         for (OrderTargetInfoTest orderInfo : orderInfos) {
-            Double profit = orderInfo.calProfit();
+            Float profit = orderInfo.calProfit();
             result += profit;
         }
         return result;
     }
 
-    public Double calProfitLossMax(Collection<OrderTargetInfoTest> orderInfos) {
-        Double result = 0d;
+    public Float calProfitLossMax(Collection<OrderTargetInfoTest> orderInfos) {
+        Float result = 0f;
         for (OrderTargetInfoTest orderInfo : orderInfos) {
             result += orderInfo.profitMin;
         }
@@ -208,22 +209,22 @@ public class BudgetManagerSimple {
     }
 
 
-    public Double calPositionMargin(Collection<OrderTargetInfoTest> values) {
-        Double totalMargin = 0d;
+    public Float calPositionMargin(Collection<OrderTargetInfoTest> values) {
+        Float totalMargin = 0f;
         if (values != null) {
             for (OrderTargetInfoTest orderInfo : values) {
-                Double margin = orderInfo.calMargin();
+                Float margin = orderInfo.calMargin();
                 totalMargin += margin;
             }
         }
         return totalMargin;
     }
 
-    public Double calPositionMarginReal(Collection<OrderTargetInfoTest> values) {
-        Double totalMargin = 0d;
+    public Float calPositionMarginReal(Collection<OrderTargetInfoTest> values) {
+        Float totalMargin = 0f;
         if (values != null) {
             for (OrderTargetInfoTest orderInfo : values) {
-                Double margin = orderInfo.calMargin();
+                Float margin = orderInfo.calMargin();
                 totalMargin += margin - orderInfo.calProfit();
             }
         }
@@ -233,7 +234,7 @@ public class BudgetManagerSimple {
 
     public void updateInvesting(Collection<OrderTargetInfoTest> orderRunning) {
         LOG.info("Update for symbol: {}", orderRunning.stream().count());
-//        Double margin = calPositionMargin(orderRunning);
+//        Float margin = calPositionMargin(orderRunning);
 //        investing = margin * 100 / balanceCurrent;
     }
 
@@ -256,10 +257,10 @@ public class BudgetManagerSimple {
 //        }
 //        String symbol = "CATIUSDT";
         System.out.println(BudgetManagerSimple.getInstance().getBudget());
-//        Double rate = Utils.rateOf2Double(1.454, 1.441);
+//        Float rate = Utils.rateOf2Double(1.454, 1.441);
 //        System.out.println(BudgetManagerSimple.getInstance().calRateStop(rate,symbol));
 //        for (int i = 0; i < 30; i++) {
-//            Double rate = -0.032 + i * 0.005;
+//            Float rate = -0.032 + i * 0.005;
 //            LOG.info("{}  -> {}", rate, BudgetManagerSimple.getInstance().calRateLossDynamic(rate, symbol, 0.004));
 //        }
     }

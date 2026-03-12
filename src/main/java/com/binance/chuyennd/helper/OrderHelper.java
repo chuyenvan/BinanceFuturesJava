@@ -31,7 +31,7 @@ public class OrderHelper {
 
     public static final Logger LOG = LoggerFactory.getLogger(OrderHelper.class);
 
-     public static Order newOrderMarket(String symbol, OrderSide side, Double quantity) {
+     public static Order newOrderMarket(String symbol, OrderSide side, Float quantity) {
         LOG.info("Create Order market {} {} {}", symbol, side, quantity);
         try {
             if (SymbolOrderLockingManager.getInstance().isLock(symbol, 5)) {
@@ -59,7 +59,7 @@ public class OrderHelper {
     }
 
 
-    public static Order stopLoss(String symbol, Double quantity, Double stopPrice) {
+    public static Order stopLoss(String symbol, Float quantity, Float stopPrice) {
         LOG.info("Create Stop Loss Algo {} qty: {} price: {}", symbol, quantity, stopPrice);
         try {
             if (SymbolOrderLockingManager.getInstance().isLock(symbol, 3)) {
@@ -92,13 +92,13 @@ public class OrderHelper {
 
 
     public static void main(String[] args) {
-        Order order = OrderHelper.newOrderMarket("LUNA2USDT", OrderSide.BUY, 62.0);
+        Order order = OrderHelper.newOrderMarket("LUNA2USDT", OrderSide.BUY, 62.0f);
         System.out.println(Utils.toJson(order));
 //        System.out.println(Utils.normalQuantity2Api(955.0));
 
 //        OrderHelper.stopLoss("LUNA2USDT",74.0, 0.141);
 //        OrderHelper.newOrder("RVNUSDT", OrderSide.SELL, 955.0, 0.020, 7);
-//        Double quantity = 10044065d;
+//        Float quantity = 10044065d;
 //        System.out.println(Utils.formatMoney(quantity));
 //        OrderHelper.newOrder("MKRUSDT", OrderSide.BUY, 0.027, 2008.4, 7);
 //        OrderHelper.takeProfit("BNBUSDT", OrderSide.SELL, 0.25, 700.0);

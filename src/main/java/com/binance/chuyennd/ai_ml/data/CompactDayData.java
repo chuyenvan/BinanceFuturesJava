@@ -39,11 +39,11 @@ public class CompactDayData {
         }
 
         output.startTime =  (dayStart + index * 60000L);
-        output.priceOpen = (double) data[base];
-        output.maxPrice  = (double) data[base + 1];
-        output.minPrice  = (double) data[base + 2];
-        output.priceClose= (double) data[base + 3];
-        output.totalUsdt = 0.0;
+        output.priceOpen = (float) data[base];
+        output.maxPrice  = (float) data[base + 1];
+        output.minPrice  = (float) data[base + 2];
+        output.priceClose= (float) data[base + 3];
+        output.totalUsdt = 0.0f;
 
         return true; // Có dữ liệu
     }

@@ -12,35 +12,35 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class BalanceIndex implements Serializable {
 
-    public Double marginMax;
-    public Double profitLossMax;
+    public Float marginMax;
+    public Float profitLossMax;
    public Long timeProfitLossMax;
 
 
-    public Double unProfitMin;
-    public Map<Long, Double> date2ProfitMin = new HashMap<>();
-    public Map<Long, Double> date2MarginMax = new HashMap<>();
-    public Map<String, Double> month2ProfitMin = new HashMap<>();
-    public Map<String, Double> month2SLMax = new HashMap<>();
-    public Map<String, Double> month2MarginMax = new HashMap<>();
-    public TreeMap<Integer, Double> year2UnrealizedPnl = new TreeMap<>();
+    public Float unProfitMin;
+    public Map<Long, Float> date2ProfitMin = new HashMap<>();
+    public Map<Long, Float> date2MarginMax = new HashMap<>();
+    public Map<String, Float> month2ProfitMin = new HashMap<>();
+    public Map<String, Float> month2SLMax = new HashMap<>();
+    public Map<String, Float> month2MarginMax = new HashMap<>();
+    public TreeMap<Integer, Float> year2UnrealizedPnl = new TreeMap<>();
     public Long timeUnProfitMin;
 
 
-    public void updateIndex(Double balance, Double positionMargin, Double positionMarginReal,
-                            Long timeUpdate, Double profitLossMin, Double unrealizedProfitMin,
+    public void updateIndex(Float balance, Float positionMargin, Float positionMarginReal,
+                            Long timeUpdate, Float profitLossMin, Float unrealizedProfitMin,
                             ConcurrentHashMap<String, List<OrderTargetInfoTest>> allOrderEntry, ConcurrentHashMap<String,
-            OrderTargetInfoTest> orderRunning, Double unProfit) {
+            OrderTargetInfoTest> orderRunning, Float unProfit) {
 
 
-        Double dateMarginMax = date2MarginMax.get(Utils.getDate(timeUpdate));
+        Float dateMarginMax = date2MarginMax.get(Utils.getDate(timeUpdate));
         if (dateMarginMax == null || dateMarginMax < positionMargin) {
             dateMarginMax = positionMargin;
         }
         date2MarginMax.put(Utils.getDate(timeUpdate), dateMarginMax);
 
 
-        Double monthMarginMax = month2MarginMax.get(Utils.getMonth(timeUpdate));
+        Float monthMarginMax = month2MarginMax.get(Utils.getMonth(timeUpdate));
         if (monthMarginMax == null || monthMarginMax < positionMargin) {
             monthMarginMax = positionMargin;
             for (String symbol : allOrderEntry.keySet()) {
@@ -61,7 +61,7 @@ public class BalanceIndex implements Serializable {
             this.profitLossMax = profitLossMin;
             this.timeProfitLossMax = timeUpdate;
         }
-        Double slMax = month2SLMax.get(Utils.getMonth(timeUpdate));
+        Float slMax = month2SLMax.get(Utils.getMonth(timeUpdate));
         if (slMax == null || slMax > profitLossMin) {
             slMax = profitLossMin;
 //            Storage.writeObject2File("storage/data/slMin/" + Utils.getMonth(timeUpdate), allOrderEntry);
@@ -73,12 +73,12 @@ public class BalanceIndex implements Serializable {
             this.timeUnProfitMin = timeUpdate;
         }
 
-        Double profitMinOfDate = date2ProfitMin.get(Utils.getDate(timeUpdate));
+        Float profitMinOfDate = date2ProfitMin.get(Utils.getDate(timeUpdate));
         if (profitMinOfDate == null || profitMinOfDate > unrealizedProfitMin) {
             profitMinOfDate = unrealizedProfitMin;
         }
         date2ProfitMin.put(Utils.getDate(timeUpdate), profitMinOfDate);
-        Double profitMinOfYear = month2ProfitMin.get(Utils.getMonth(timeUpdate));
+        Float profitMinOfYear = month2ProfitMin.get(Utils.getMonth(timeUpdate));
         if (profitMinOfYear == null || profitMinOfYear > unrealizedProfitMin) {
             profitMinOfYear = unrealizedProfitMin;
             for (String symbol : allOrderEntry.keySet()) {

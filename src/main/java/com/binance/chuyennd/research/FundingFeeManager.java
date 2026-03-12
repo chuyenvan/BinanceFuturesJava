@@ -15,7 +15,7 @@ public class FundingFeeManager {
     public static final Logger LOG = LoggerFactory.getLogger(FundingFeeManager.class);
 
     // Cache danh sách Funding Rate của từng coin
-    private ConcurrentHashMap<String, TreeMap<Long, Double>> symbol2FundingFee = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<String, TreeMap<Long, Float>> symbol2FundingFee = new ConcurrentHashMap<>();
 
     // Cache danh sách coin cần trade theo giờ (Dùng cho Backtest)
 
@@ -44,7 +44,7 @@ public class FundingFeeManager {
     private void initData() {
         try {
             // Load toàn bộ Funding Data từ Aerospike (Nặng nhưng cần thiết cho Backtest nhanh)
-            Map<String, TreeMap<Long, Double>> symbol2Funding = DataManagerAerospikeFloatSim.getAllFundingMap();
+            Map<String, TreeMap<Long, Float>> symbol2Funding = DataManagerAerospikeFloatSim.getAllFundingMap();
             for (String symbol : symbol2Funding.keySet()) {
                 symbol2FundingFee.put(symbol, symbol2Funding.get(symbol));
             }
@@ -56,8 +56,8 @@ public class FundingFeeManager {
 
 
 
-    public Double getNearestFundingFee(String symbol, long timestamp) {
-        TreeMap<Long, Double> time2RateFunding = symbol2FundingFee.get(symbol);
+    public Float getNearestFundingFee(String symbol, long timestamp) {
+        TreeMap<Long, Float> time2RateFunding = symbol2FundingFee.get(symbol);
 
         // Lazy load
         if (time2RateFunding == null) {
@@ -71,9 +71,9 @@ public class FundingFeeManager {
 
         if (time2RateFunding == null || time2RateFunding.isEmpty()) return null;
 
-        Map.Entry<Long, Double> entry = time2RateFunding.floorEntry(timestamp);
+        Map.Entry<Long, Float> entry = time2RateFunding.floorEntry(timestamp);
         if (entry != null) {
-            if (timestamp - entry.getKey() > 24 * 3600 * 1000L) return 0.0;
+            if (timestamp - entry.getKey() > 24 * 3600 * 1000L) return 0.0f;
             return entry.getValue();
         }
         return null;

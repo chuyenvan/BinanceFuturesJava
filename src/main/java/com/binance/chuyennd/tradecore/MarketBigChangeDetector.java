@@ -71,16 +71,16 @@ public class MarketBigChangeDetector {
         }
     }
 
-    public static MarketDataObject calMarketData(Map<String, KlineObjectSimple> symbol2Ticker, Map<String, Double> symbol2PriceMax,
-                                                 Map<String, Double> symbol2MinPrice) {
+    public static MarketDataObject calMarketData(Map<String, KlineObjectSimple> symbol2Ticker, Map<String, Float> symbol2PriceMax,
+                                                 Map<String, Float> symbol2MinPrice) {
         TreeMap<Float, String> rateDown2Symbols = new TreeMap<>();
         TreeMap<Float, String> rateMin2Symbols = new TreeMap<>();
         TreeMap<Float, String> rateMax2Symbols = new TreeMap<>();
         TreeMap<Float, String> rateUp2Symbols = new TreeMap<>();
         KlineObjectSimple btcTicker = symbol2Ticker.get(Constants.SYMBOL_PAIR_BTC);
-        Double rateChangeBtc;
+        Float rateChangeBtc;
         if (btcTicker == null) {
-            rateChangeBtc = 0d;
+            rateChangeBtc = 0f;
         } else {
             rateChangeBtc = Utils.rateOf2Double(btcTicker.priceClose, btcTicker.priceOpen);
         }
@@ -100,11 +100,11 @@ public class MarketBigChangeDetector {
             }
             rateDown2Symbols.put(rateChange, symbol);
             rateUp2Symbols.put(-rateChange, symbol);
-            Double maxPrice = symbol2PriceMax.get(symbol);
+            Float maxPrice = symbol2PriceMax.get(symbol);
             if (maxPrice != null) {
                 rateMax2Symbols.put(Utils.rateOf2Double(ticker.priceClose, maxPrice).floatValue(), symbol);
             }
-            Double minPrice = symbol2MinPrice.get(symbol);
+            Float minPrice = symbol2MinPrice.get(symbol);
             if (minPrice != null) {
                 rateMin2Symbols.put(-Utils.rateOf2Double(ticker.priceClose, minPrice).floatValue(), symbol);
             }
@@ -217,6 +217,7 @@ public class MarketBigChangeDetector {
 
     public static boolean isAiPredictTrade(Float rateDown15MAvg, Float rateDownAvg, Float rateUpAvg) {
 
+//        return true;
         return rateDown15MAvg < Configs.PREDICT_SYMBOL_RATE_DOWN_15M
                 || rateUpAvg > Configs.PREDICT_SYMBOL_RATE_UP_AVG
                 || rateDownAvg < Configs.PREDICT_SYMBOL_RATE_DOWN_AVG;

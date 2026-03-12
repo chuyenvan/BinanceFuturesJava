@@ -6,6 +6,7 @@ import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.research.BudgetManagerSimple;
 import com.binance.chuyennd.research.SimulatorMarketLevelTicker1MStopLoss;
 import com.binance.chuyennd.utils.Configs;
+import com.binance.chuyennd.utils.Utils;
 
 import java.util.Map;
 import java.util.TreeMap;
@@ -13,10 +14,10 @@ import java.util.TreeMap;
 public class BackTestEngineTrailingStop {
 
     public BackTestEngineTrailingStop(
-            double baseRate,
-            double volHighThres, double rateHigh,
-            double volMedThres, double rateMed,
-            double volLowThres, double rateLow) {
+            float baseRate,
+            float volHighThres, float rateHigh,
+            float volMedThres, float rateMed,
+            float volLowThres, float rateLow) {
 
         Configs.RATE_PROFIT_STOP_MARKET = baseRate;
 
@@ -29,20 +30,21 @@ public class BackTestEngineTrailingStop {
         Configs.TS_RATE_LOW = rateLow;
     }
 
-    public double run(TreeMap<Long, MarketDataObject> time2MarketData,
+    public float run(TreeMap<Long, MarketDataObject> time2MarketData,
                       TreeMap<Long, AiPredictionData> predictionMap,
                       TreeMap<Long, long[]> time2FundingPre) {
         try {
+            Long startTime = Utils.sdfFile.parse(Configs.TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
             BudgetManagerSimple.resetInstance();
             SimulatorMarketLevelTicker1MStopLoss test = new SimulatorMarketLevelTicker1MStopLoss();
 
             test.initDataReady(time2MarketData, predictionMap, time2FundingPre, new AIRejectFilter());
 
-            test.simulatorWithInitEntry();
+            test.simulatorWithInitEntry(startTime, System.currentTimeMillis());
             return BudgetManagerSimple.getInstance().balanceCurrent;
         } catch (Exception e) {
             e.printStackTrace();
-            return 0.0;
+            return 0.0f;
         }
     }
 }

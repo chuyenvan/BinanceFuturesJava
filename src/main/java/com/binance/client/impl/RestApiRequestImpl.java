@@ -1299,7 +1299,7 @@ class RestApiRequestImpl {
             Leverage result = new Leverage();
             result.setLeverage(jsonWrapper.getBigDecimal("leverage"));
             if(jsonWrapper.getString("maxNotionalValue").equalsIgnoreCase("INF")) {
-                result.setMaxNotionalValue(Double.POSITIVE_INFINITY);
+                result.setMaxNotionalValue(Float.POSITIVE_INFINITY);
             } else {
                 result.setMaxNotionalValue(jsonWrapper.getDouble("maxNotionalValue"));
             }

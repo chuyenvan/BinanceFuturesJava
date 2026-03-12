@@ -22,10 +22,10 @@ public class CompareProdLogWithAerospike {
 
     // Ngưỡng sai số cho phép đối với Market Data
 // Nới lỏng cho Market Data (Lệch dưới 0.02% là OK)
-    private static final double TOLERANCE = 0.0002;
+    private static final float TOLERANCE = 0.0002f;
 
     // Nới lỏng cho AI Data (Lệch dưới 0.6% là OK)
-    private static final double TOLERANCE_AI = 0.006;
+    private static final float TOLERANCE_AI = 0.006f;
 
     public static void main(String[] args) {
         LOG.info("🚀 BẮT ĐẦU QUÉT LOG VÀ SO SÁNH VỚI AEROSPIKE...");
@@ -53,9 +53,9 @@ public class CompareProdLogWithAerospike {
                     currentTargetTimeStr = marketMatcher.group(1);
                     currentTargetTime = logTimeFmt.parse(currentTargetTimeStr).getTime();
 
-                    double prodDownAvg = Double.parseDouble(marketMatcher.group(2)) / 100.0;
-                    double prodUpAvg = Double.parseDouble(marketMatcher.group(3)) / 100.0;
-                    double prodDown15MAvg = Double.parseDouble(marketMatcher.group(4)) / 100.0;
+                    float prodDownAvg = Float.parseFloat(marketMatcher.group(2)) / 100.0f;
+                    float prodUpAvg = Float.parseFloat(marketMatcher.group(3)) / 100.0f;
+                    float prodDown15MAvg = Float.parseFloat(marketMatcher.group(4)) / 100.0f;
 
                     MarketDataObject testData = DataManagerAerospikeFloatSim.getMarketDataAtTime(currentTargetTime);
 
@@ -83,14 +83,14 @@ public class CompareProdLogWithAerospike {
                     if (testData != null) {
                         try {
                             // Parse JSON của PROD thành Map để bóc tách từng giá trị
-                            Map<String, Double> prodMap = Utils.gson.fromJson(prodJson, new com.google.gson.reflect.TypeToken<Map<String, Double>>(){}.getType());
+                            Map<String, Float> prodMap = Utils.gson.fromJson(prodJson, new com.google.gson.reflect.TypeToken<Map<String, Float>>(){}.getType());
 
-                            double pRet15M = prodMap.getOrDefault("return15M", 0.0);
-                            double pRet1H  = prodMap.getOrDefault("return1H", 0.0);
-                            double pRet4H  = prodMap.getOrDefault("return4H", 0.0);
-                            double pRet24H = prodMap.getOrDefault("return24H", 0.0);
-                            double pRisk4H = prodMap.getOrDefault("riskDrawdown4H", 0.0);
-                            double pRisk24H = prodMap.getOrDefault("riskDrawdown24H", 0.0);
+                            float pRet15M = prodMap.getOrDefault("return15M", 0.0f);
+                            float pRet1H  = prodMap.getOrDefault("return1H", 0.0f);
+                            float pRet4H  = prodMap.getOrDefault("return4H", 0.0f);
+                            float pRet24H = prodMap.getOrDefault("return24H", 0.0f);
+                            float pRisk4H = prodMap.getOrDefault("riskDrawdown4H", 0.0f);
+                            float pRisk24H = prodMap.getOrDefault("riskDrawdown24H", 0.0f);
 
                             // So sánh từng thông số
                             printDiffAi("Return 15M", pRet15M, testData.predReturn15M);
@@ -117,8 +117,8 @@ public class CompareProdLogWithAerospike {
     /**
      * So sánh hiển thị cho Market Data (6 chữ số thập phân)
      */
-    private static void printDiff(String label, double prodVal, double testVal) {
-        double diff = Math.abs(prodVal - testVal);
+    private static void printDiff(String label, float prodVal, float testVal) {
+        float diff = Math.abs(prodVal - testVal);
         String status = (diff <= TOLERANCE) ? "✅ OK" : "❌ LỆCH";
         System.out.printf("   - %s | PROD: %9.6f | TEST: %9.6f | %s%n",
                 label, prodVal, testVal, status);
@@ -127,8 +127,8 @@ public class CompareProdLogWithAerospike {
     /**
      * So sánh hiển thị cho AI Data (9 chữ số thập phân, bổ sung cột DIFF)
      */
-    private static void printDiffAi(String label, double prodVal, double testVal) {
-        double diff = Math.abs(prodVal - testVal);
+    private static void printDiffAi(String label, float prodVal, float testVal) {
+        float diff = Math.abs(prodVal - testVal);
         String status = (diff <= TOLERANCE_AI) ? "✅ OK" : "❌ LỆCH";
 
         // Dùng %12.9f để in ra tới 9 số thập phân, căn phải

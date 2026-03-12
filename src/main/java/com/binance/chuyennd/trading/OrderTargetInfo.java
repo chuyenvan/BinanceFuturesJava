@@ -27,10 +27,10 @@ public class OrderTargetInfo implements Serializable {
 
     public OrderTargetStatus status;
     public OrderSide side;
-    public Double priceEntry;
-    public Double priceTP;
-    public Double priceSL;
-    public Double quantity;
+    public Float priceEntry;
+    public Float priceTP;
+    public Float priceSL;
+    public Float quantity;
     public Integer leverage;
     public String tradingType;
     public String symbol;
@@ -39,7 +39,7 @@ public class OrderTargetInfo implements Serializable {
     public long timeUpdate;
 
 
-    public OrderTargetInfo(OrderTargetStatus status, Double priceEntry, Double priceTP, Double quantity,
+    public OrderTargetInfo(OrderTargetStatus status, Float priceEntry, Float priceTP, Float quantity,
                            Integer leverage, String symbol, long timeStart, long timeUpdate, OrderSide side, String tradingType) {
         this.status = status;
         this.priceEntry = priceEntry;

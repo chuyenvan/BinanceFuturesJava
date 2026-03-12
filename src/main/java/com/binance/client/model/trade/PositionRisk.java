@@ -22,7 +22,7 @@ public class PositionRisk implements Serializable{
 
     private BigDecimal markPrice;
 
-    private Double maxNotionalValue;
+    private Float maxNotionalValue;
 
     private BigDecimal positionAmt;
 
@@ -66,11 +66,11 @@ public class PositionRisk implements Serializable{
         this.leverage = leverage;
     }
 
-    public Double getMaxNotionalValue() {
+    public Float getMaxNotionalValue() {
         return maxNotionalValue;
     }
 
-    public void setMaxNotionalValue(Double maxNotionalValue) {
+    public void setMaxNotionalValue(Float maxNotionalValue) {
         this.maxNotionalValue = maxNotionalValue;
     }
 

@@ -73,8 +73,8 @@ public class ExportMarketData2File {
 
                         try {
                             Map<String, KlineObjectSimple> symbol2Ticker = entry.getValue();
-                            Map<String, Double> symbol2MaxPrice = new HashMap<>();
-                            Map<String, Double> symbol2MinPrice = new HashMap<>();
+                            Map<String, Float> symbol2MaxPrice = new HashMap<>();
+                            Map<String, Float> symbol2MinPrice = new HashMap<>();
 
                             KlineObjectSimple btcTicker = symbol2Ticker.get("BTCUSDT");
                             if (btcTicker != null) {
@@ -105,8 +105,8 @@ public class ExportMarketData2File {
                                     }
                                 }
 
-                                Double priceMax = null;
-                                Double minPrice = null;
+                                Float priceMax = null;
+                                Float minPrice = null;
                                 for (int i = 0; i < Configs.NUMBER_TICKER_CAL_RATE_CHANGE; i++) {
                                     int index = tickers.size() - i - 1;
                                     if (index >= 0) {

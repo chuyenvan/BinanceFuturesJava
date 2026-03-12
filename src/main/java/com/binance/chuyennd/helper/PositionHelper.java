@@ -29,18 +29,18 @@ public class PositionHelper {
 
     public static final Logger LOG = LoggerFactory.getLogger(OrderHelper.class);
 
-    public static Double callMargin(PositionRisk pos) {
+    public static Float callMargin(PositionRisk pos) {
         try {
-            return Math.abs(pos.getEntryPrice().doubleValue() * pos.getPositionAmt().doubleValue() / pos.getLeverage().doubleValue());
+            return Math.abs(pos.getEntryPrice().floatValue() * pos.getPositionAmt().floatValue() / pos.getLeverage().floatValue());
         } catch (Exception e) {
             e.printStackTrace();
         }
         return null;
     }
 
-    public static Double calRateLoss(PositionRisk pos) {
+    public static Float calRateLoss(PositionRisk pos) {
         try {
-            Double rate = Utils.rateOf2Double(pos.getMarkPrice().doubleValue(), pos.getEntryPrice().doubleValue());
+            Float rate = Utils.rateOf2Double(pos.getMarkPrice().floatValue(), pos.getEntryPrice().floatValue());
             if (pos.getPositionAmt().compareTo(new BigDecimal("0")) < 0) {
                 rate = -rate;
             }

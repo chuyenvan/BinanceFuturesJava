@@ -28,22 +28,22 @@ public class RunOptimizationDCA {
     /**
      * HAM CHAM DIEM (FITNESS FUNCTION)
      */
-    private static double evaluate(Genotype<DoubleGene> genotype) {
+    private static float evaluate(Genotype<DoubleGene> genotype) {
 
         long currentTestNumber = testCounter.incrementAndGet();
 
         // 1. Lay 9 tham so tu "bo gen"
-        double p1 = genotype.get(0).gene().doubleValue(); // rateLossBigDown
-        double p2 = genotype.get(1).gene().doubleValue(); // rateLossMediumDown
-        double p3 = genotype.get(2).gene().doubleValue(); // rateLossMediumUp
-        double p4 = genotype.get(3).gene().doubleValue(); // rateLossSmallDown
-        double p5 = genotype.get(4).gene().doubleValue(); // rateLossNull
-        double p6 = genotype.get(5).gene().doubleValue(); // marginRate_1_5
-        double p7 = genotype.get(6).gene().doubleValue(); // marginRate_2_0
-        double p8 = genotype.get(7).gene().doubleValue(); // marginRate_2_5
+        float p1 = genotype.get(0).gene().floatValue(); // rateLossBigDown
+        float p2 = genotype.get(1).gene().floatValue(); // rateLossMediumDown
+        float p3 = genotype.get(2).gene().floatValue(); // rateLossMediumUp
+        float p4 = genotype.get(3).gene().floatValue(); // rateLossSmallDown
+        float p5 = genotype.get(4).gene().floatValue(); // rateLossNull
+        float p6 = genotype.get(5).gene().floatValue(); // marginRate_1_5
+        float p7 = genotype.get(6).gene().floatValue(); // marginRate_2_0
+        float p8 = genotype.get(7).gene().floatValue(); // marginRate_2_5
         // (p9 la gene_marginRate_base, chung ta da thay bang p5 (rateLossNull))
 
-        double finalBalance = 0.0;
+        float finalBalance = 0.0f;
 
         LOG.info(
                 "\n--- Bat dau Test #%d / %d ---%n",
@@ -67,7 +67,7 @@ public class RunOptimizationDCA {
             LOG.info("--- Test #%d / %d BI LOI => Loi nhuan: 0.0 ---%n",
                     currentTestNumber, TOTAL_TRIALS
             );
-            return 0.0; // Phat neu co loi
+            return 0.0f; // Phat neu co loi
         }
 
         return finalBalance;
@@ -111,7 +111,7 @@ public class RunOptimizationDCA {
         );
 
         // 2. CAU HINH "ENGINE" (BUOC CHAY 1 LUONG)
-        Engine<DoubleGene, Double> engine = Engine
+        Engine<DoubleGene, Float> engine = Engine
                 .builder(RunOptimizationDCA::evaluate, genotypeFactory)
                 .populationSize(POPULATION_SIZE)
                 .maximizing()
@@ -120,7 +120,7 @@ public class RunOptimizationDCA {
                 .build();
 
         // 3. CHAY TOI UU HOA
-        EvolutionResult<DoubleGene, Double> result = engine.stream()
+        EvolutionResult<DoubleGene, Float> result = engine.stream()
                 .peek(er -> LOG.info(
                         "%n>>> Hoan tat The he %d / %d. Loi nhuan tot nhat hien tai: %.2f%n%n",
                         er.generation(), GENERATIONS, er.bestFitness()
@@ -130,17 +130,17 @@ public class RunOptimizationDCA {
 
         // 4. LAY KET QUA TOT NHAT
         Genotype<DoubleGene> bestParams = result.bestPhenotype().genotype();
-        double bestProfit = result.bestFitness();
+        float bestProfit = result.bestFitness();
         long totalTime = System.currentTimeMillis() - startTime;
 
-        double p1 = bestParams.get(0).gene().doubleValue();
-        double p2 = bestParams.get(1).gene().doubleValue();
-        double p3 = bestParams.get(2).gene().doubleValue();
-        double p4 = bestParams.get(3).gene().doubleValue();
-        double p5 = bestParams.get(4).gene().doubleValue();
-        double p6 = bestParams.get(5).gene().doubleValue();
-        double p7 = bestParams.get(6).gene().doubleValue();
-        double p8 = bestParams.get(7).gene().doubleValue();
+        float p1 = bestParams.get(0).gene().floatValue();
+        float p2 = bestParams.get(1).gene().floatValue();
+        float p3 = bestParams.get(2).gene().floatValue();
+        float p4 = bestParams.get(3).gene().floatValue();
+        float p5 = bestParams.get(4).gene().floatValue();
+        float p6 = bestParams.get(5).gene().floatValue();
+        float p7 = bestParams.get(6).gene().floatValue();
+        float p8 = bestParams.get(7).gene().floatValue();
 
         // 5. IN KET QUA
         LOG.info("\n=============================================");

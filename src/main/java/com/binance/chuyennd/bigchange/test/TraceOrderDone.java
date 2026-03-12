@@ -65,7 +65,7 @@ public class TraceOrderDone {
                     KlineObjectSimple ticker = (KlineObjectSimple) data.get("ticker");
                     OrderTargetInfo orderTrade = (OrderTargetInfo) data.get("order");
                     MarketDataObject marketRate = (MarketDataObject) data.get("marketRate");
-                    Double priceMax15M = (Double) data.get("max15M");
+                    Float priceMax15M = (Float) data.get("max15M");
                     List<String> symbol2Sell = (List<String>) data.get("symbol2Sell");
                     Set<String> fundingBuy = (Set<String>) data.get("fundingBuy");
                     Set<String> fundingSell = (Set<String>) data.get("fundingSell");
@@ -88,7 +88,7 @@ public class TraceOrderDone {
 
     private static StringBuilder buildOrderInfo(KlineObjectSimple ticker,
                                                 OrderTargetInfo orderTrade, MarketDataObject marketRate,
-                                                Double priceMax15M, List<String> symbol2Sell,
+                                                Float priceMax15M, List<String> symbol2Sell,
                                                 Set<String> fundingBuy, Set<String> fundingSell) {
         StringBuilder builder = new StringBuilder();
         builder.append(orderTrade.symbol.replace("USDT", "")).append(",");
@@ -120,7 +120,7 @@ public class TraceOrderDone {
 
         ConcurrentHashMap<String, OrderTargetInfoTest> allOrderDone =
                 (ConcurrentHashMap<String, OrderTargetInfoTest>) Storage.readObjectFromFile(FILE_STORAGE_ORDER_DONE);
-        Map<Long, Double> date2Profit = new HashMap<>();
+        Map<Long, Float> date2Profit = new HashMap<>();
         TreeMap<Long, List<OrderTargetInfoTest>> rateChange2Orders = new TreeMap<>();
         int shardNumber = 20;
         List<String> lines = FileUtils.readLines(new File("target/market_level_1m.csv"));
@@ -151,7 +151,7 @@ public class TraceOrderDone {
             List<OrderTargetInfoTest> orders = time2Orders.get(time);
             String[] marketInfos = time2MarketInfo.get(time);
             int counterSuccess = 0;
-            Double profit = 0d;
+            Float profit = 0f;
             int totalOrder = 0;
             if (orders != null) {
 //                if (orders.size() != 20){
@@ -163,16 +163,16 @@ public class TraceOrderDone {
                     }
                     profit += Utils.rateOf2Double(order.priceTP, order.priceEntry);
                     Long date = Utils.getDate(order.timeUpdate);
-                    Double profitOfDate = date2Profit.get(date);
+                    Float profitOfDate = date2Profit.get(date);
                     if (profitOfDate == null) {
-                        profitOfDate = 0d;
+                        profitOfDate = 0f;
                     }
                     profitOfDate += order.calProfit();
                     date2Profit.put(date, profitOfDate);
                 }
                 totalOrder = orders.size();
                 // statistic with ratechange
-                Double rateChange;
+                Float rateChange;
 
                 if (orders.get(0).marketLevelChange.equals(MarketLevelChange.BIG_DOWN)
                         || orders.get(0).marketLevelChange.equals(MarketLevelChange.MEDIUM_DOWN)
@@ -180,10 +180,10 @@ public class TraceOrderDone {
 //                        || orders.get(0).marketLevelChange.equals(MarketLevelChange.SMALL_DOWN_EXTEND)
                 ) {
                     // ratedown = 1, rateup = 2, ratebtc = 4
-                    rateChange = Double.parseDouble(marketInfos[1]) * shardNumber;
+                    rateChange = Float.parseFloat(marketInfos[1]) * shardNumber;
 //                    rateChange = orders.get(0).marketData.rateDownAvg * 100 * shardNumber;
 //                } else {
-//                    rateChange = Double.parseDouble(marketInfos[2]) * shardNumber;
+//                    rateChange = Float.parseFloat(marketInfos[2]) * shardNumber;
                     Long rateChangeL = rateChange.longValue();
                     List<OrderTargetInfoTest> ordersOfRate = rateChange2Orders.get(rateChangeL);
                     if (ordersOfRate == null) {
@@ -221,14 +221,14 @@ public class TraceOrderDone {
 
 
         // print profit min
-        TreeMap<Double, Long> profit2Date = new TreeMap<>();
-        for (Map.Entry<Long, Double> entry : date2Profit.entrySet()) {
+        TreeMap<Float, Long> profit2Date = new TreeMap<>();
+        for (Map.Entry<Long, Float> entry : date2Profit.entrySet()) {
             Long date = entry.getKey();
-            Double profit = entry.getValue();
+            Float profit = entry.getValue();
             profit2Date.put(profit, date);
         }
         int counter = 0;
-        for (Double profit : profit2Date.keySet()) {
+        for (Float profit : profit2Date.keySet()) {
             LOG.info("{} {}", Utils.normalizeDateYYYYMMDDHHmm(profit2Date.get(profit)), profit);
             counter++;
             if (counter > 10) {
@@ -236,7 +236,7 @@ public class TraceOrderDone {
             }
         }
         counter = 0;
-        for (Double profit : profit2Date.descendingMap().keySet()) {
+        for (Float profit : profit2Date.descendingMap().keySet()) {
             LOG.info("{} {}", Utils.normalizeDateYYYYMMDDHHmm(profit2Date.descendingMap().get(profit)), profit);
             counter++;
             if (counter > 10) {
@@ -249,8 +249,8 @@ public class TraceOrderDone {
             List<OrderTargetInfoTest> orders = rateChange2Orders.get(rate);
 
             int counterSuccess = 0;
-            Double rateLoss = 0d;
-            Double rateSuccess = 0d;
+            Float rateLoss = 0f;
+            Float rateSuccess = 0f;
 
             for (OrderTargetInfoTest order : orders) {
                 if (order.priceTP > order.priceEntry) {
@@ -260,7 +260,7 @@ public class TraceOrderDone {
                     rateLoss += Utils.rateOf2Double(order.priceTP, order.priceEntry);
                 }
             }
-            Double rateAvg = (rateLoss + rateSuccess) / orders.size();
+            Float rateAvg = (rateLoss + rateSuccess) / orders.size();
             LOG.info("rateChange: {} {}/{} {}/{} {}%", rate.doubleValue() / shardNumber,
                     counterSuccess, orders.size(), Utils.formatDouble(rateLoss, 2),
                     Utils.formatDouble(rateSuccess, 2), Utils.formatPercent(rateAvg));
@@ -296,20 +296,20 @@ public class TraceOrderDone {
 //            time2Ticker.put(ticker.startTime.longValue(), ticker);
 //            time2Index.put(ticker.startTime.longValue(), i);
 //        }
-        Map<String, Double> symbol2Profit = new HashMap<>();
-        List<Double> pnls = new ArrayList<>();
-        List<Double> pnlNotMays = new ArrayList<>();
-        List<Double> pnlNot2021 = new ArrayList<>();
-        List<Double> pnl2024 = new ArrayList<>();
-        Map<Double, String> pnl2Info = new HashMap<>();
-//        Double rateTrend = 0.01;
+        Map<String, Float> symbol2Profit = new HashMap<>();
+        List<Float> pnls = new ArrayList<>();
+        List<Float> pnlNotMays = new ArrayList<>();
+        List<Float> pnlNot2021 = new ArrayList<>();
+        List<Float> pnl2024 = new ArrayList<>();
+        Map<Float, String> pnl2Info = new HashMap<>();
+//        Float rateTrend = 0.01;
 //        Integer duration = 360;
 //        String fileNameBtcReverse = "../storage/btc/btcReverse-" + rateTrend + "-" + duration;
 //
-//        TreeMap<Long, Double> timeBtcReverse = null;
+//        TreeMap<Long, Float> timeBtcReverse = null;
 //
 //        if (new File(fileNameBtcReverse).exists()) {
-//            timeBtcReverse = (TreeMap<Long, Double>) Storage.readObjectFromFile(fileNameBtcReverse);
+//            timeBtcReverse = (TreeMap<Long, Float>) Storage.readObjectFromFile(fileNameBtcReverse);
 //        }
         for (OrderTargetInfoTest order : time2Order.values()) {
 //            if (!order.time2FundingFee.isEmpty()) {
@@ -332,11 +332,11 @@ public class TraceOrderDone {
 //            if (StringUtils.equals(order.symbol, "GALAUSDT")) {
 //                System.out.println("Debug");
 //            }
-            Double profitOfSymbol = symbol2Profit.get(order.symbol);
+            Float profitOfSymbol = symbol2Profit.get(order.symbol);
             if (profitOfSymbol == null) {
-                profitOfSymbol = 0d;
+                profitOfSymbol = 0f;
             }
-            Double profit = Utils.rateOf2Double(order.priceTP, order.priceEntry);
+            Float profit = Utils.rateOf2Double(order.priceTP, order.priceEntry);
             if (order.side.equals(OrderSide.SELL)) {
                 profit = -Utils.rateOf2Double(order.priceTP, order.priceEntry);
             }
@@ -374,23 +374,23 @@ public class TraceOrderDone {
 
             lines.add(builder.toString());
         }
-        TreeMap<Double, String> profit2Symbol = new TreeMap<>();
-        for (Map.Entry<String, Double> entry : symbol2Profit.entrySet()) {
+        TreeMap<Float, String> profit2Symbol = new TreeMap<>();
+        for (Map.Entry<String, Float> entry : symbol2Profit.entrySet()) {
             String key = entry.getKey();
-            Double values = entry.getValue();
+            Float values = entry.getValue();
             profit2Symbol.put(values, key);
         }
-//        for (Map.Entry<Double, String> entry : profit2Symbol.entrySet()) {
+//        for (Map.Entry<Float, String> entry : profit2Symbol.entrySet()) {
 //            String key = entry.getValue();
-//            Double values = entry.getKey();
+//            Float values = entry.getKey();
 //            LOG.info("{} {}", values, key);
 //        }
 
 //        LOG.info("\n PnlMin: {} {} \n PnlMinNot20210519:{} {} \n PnlMinNot2021: {} {} \n pnlMin2024: {} {}",
-//                Utils.findMinSubarraySum(pnls.toArray(new Double[0])), pnl2Info.get(Utils.findMinSubarraySumIndex(pnls.toArray(new Double[0]))),
-//                Utils.findMinSubarraySum(pnlNotMays.toArray(new Double[0])), pnl2Info.get(Utils.findMinSubarraySumIndex(pnlNotMays.toArray(new Double[0]))),
-//                Utils.findMinSubarraySum(pnlNot2021.toArray(new Double[0])), pnl2Info.get(Utils.findMinSubarraySumIndex(pnlNot2021.toArray(new Double[0]))),
-//                Utils.findMinSubarraySum(pnl2024.toArray(new Double[0])), pnl2Info.get(Utils.findMinSubarraySumIndex(pnl2024.toArray(new Double[0]))));
+//                Utils.findMinSubarraySum(pnls.toArray(new Float[0])), pnl2Info.get(Utils.findMinSubarraySumIndex(pnls.toArray(new Float[0]))),
+//                Utils.findMinSubarraySum(pnlNotMays.toArray(new Float[0])), pnl2Info.get(Utils.findMinSubarraySumIndex(pnlNotMays.toArray(new Float[0]))),
+//                Utils.findMinSubarraySum(pnlNot2021.toArray(new Float[0])), pnl2Info.get(Utils.findMinSubarraySumIndex(pnlNot2021.toArray(new Float[0]))),
+//                Utils.findMinSubarraySum(pnl2024.toArray(new Float[0])), pnl2Info.get(Utils.findMinSubarraySumIndex(pnl2024.toArray(new Float[0]))));
         FileUtils.writeLines(new File(fileName), lines);
     }
 
@@ -399,20 +399,20 @@ public class TraceOrderDone {
         lines.add("sym,side,entry,tp,min,rate,max,rate,profit,status,start,time, end,level,rate60m,rate ticker,volume,quantity,margin,pnl,time,funding,dow,up,dow15m,up15m,btcrate,btcdown15m,btcup15m");
         Map<Long, KlineObjectNumber> time2Ticker = new HashMap<>();
         Map<Long, Integer> time2Index = new HashMap<>();
-        Map<String, Double> symbol2Profit = new HashMap<>();
-        List<Double> pnls = new ArrayList<>();
-        List<Double> pnlNotMays = new ArrayList<>();
-        List<Double> pnlNot2021 = new ArrayList<>();
-        List<Double> pnl2024 = new ArrayList<>();
-        Map<Double, String> pnl2Info = new HashMap<>();
-//        Double rateTrend = 0.01;
+        Map<String, Float> symbol2Profit = new HashMap<>();
+        List<Float> pnls = new ArrayList<>();
+        List<Float> pnlNotMays = new ArrayList<>();
+        List<Float> pnlNot2021 = new ArrayList<>();
+        List<Float> pnl2024 = new ArrayList<>();
+        Map<Float, String> pnl2Info = new HashMap<>();
+//        Float rateTrend = 0.01;
 //        Integer duration = 360;
 //        String fileNameBtcReverse = "../storage/btc/btcReverse-" + rateTrend + "-" + duration;
 //
-//        TreeMap<Long, Double> timeBtcReverse = null;
+//        TreeMap<Long, Float> timeBtcReverse = null;
 //
 //        if (new File(fileNameBtcReverse).exists()) {
-//            timeBtcReverse = (TreeMap<Long, Double>) Storage.readObjectFromFile(fileNameBtcReverse);
+//            timeBtcReverse = (TreeMap<Long, Float>) Storage.readObjectFromFile(fileNameBtcReverse);
 //        }
         for (OrderTargetInfoTest order : time2Order.values()) {
 //            if (!order.time2FundingFee.isEmpty()) {
@@ -435,11 +435,11 @@ public class TraceOrderDone {
 //            if (StringUtils.equals(order.symbol, "GALAUSDT")) {
 //                System.out.println("Debug");
 //            }
-            Double profitOfSymbol = symbol2Profit.get(order.symbol);
+            Float profitOfSymbol = symbol2Profit.get(order.symbol);
             if (profitOfSymbol == null) {
-                profitOfSymbol = 0d;
+                profitOfSymbol = 0f;
             }
-            Double profit = Utils.rateOf2Double(order.priceTP, order.priceEntry);
+            Float profit = Utils.rateOf2Double(order.priceTP, order.priceEntry);
             if (order.side.equals(OrderSide.SELL)) {
                 profit = -Utils.rateOf2Double(order.priceTP, order.priceEntry);
             }
@@ -478,23 +478,23 @@ public class TraceOrderDone {
 //            builder.append(timeBtcReverse.get(order.timeStart)).append(",");
             lines.add(builder.toString());
         }
-        TreeMap<Double, String> profit2Symbol = new TreeMap<>();
-        for (Map.Entry<String, Double> entry : symbol2Profit.entrySet()) {
+        TreeMap<Float, String> profit2Symbol = new TreeMap<>();
+        for (Map.Entry<String, Float> entry : symbol2Profit.entrySet()) {
             String key = entry.getKey();
-            Double values = entry.getValue();
+            Float values = entry.getValue();
             profit2Symbol.put(values, key);
         }
-//        for (Map.Entry<Double, String> entry : profit2Symbol.entrySet()) {
+//        for (Map.Entry<Float, String> entry : profit2Symbol.entrySet()) {
 //            String key = entry.getValue();
-//            Double values = entry.getKey();
+//            Float values = entry.getKey();
 //            LOG.info("{} {}", values, key);
 //        }
 
 //        LOG.info("\n PnlMin: {} {} \n PnlMinNot20210519:{} {} \n PnlMinNot2021: {} {} \n pnlMin2024: {} {}",
-//                Utils.findMinSubarraySum(pnls.toArray(new Double[0])), pnl2Info.get(Utils.findMinSubarraySumIndex(pnls.toArray(new Double[0]))),
-//                Utils.findMinSubarraySum(pnlNotMays.toArray(new Double[0])), pnl2Info.get(Utils.findMinSubarraySumIndex(pnlNotMays.toArray(new Double[0]))),
-//                Utils.findMinSubarraySum(pnlNot2021.toArray(new Double[0])), pnl2Info.get(Utils.findMinSubarraySumIndex(pnlNot2021.toArray(new Double[0]))),
-//                Utils.findMinSubarraySum(pnl2024.toArray(new Double[0])), pnl2Info.get(Utils.findMinSubarraySumIndex(pnl2024.toArray(new Double[0]))));
+//                Utils.findMinSubarraySum(pnls.toArray(new Float[0])), pnl2Info.get(Utils.findMinSubarraySumIndex(pnls.toArray(new Float[0]))),
+//                Utils.findMinSubarraySum(pnlNotMays.toArray(new Float[0])), pnl2Info.get(Utils.findMinSubarraySumIndex(pnlNotMays.toArray(new Float[0]))),
+//                Utils.findMinSubarraySum(pnlNot2021.toArray(new Float[0])), pnl2Info.get(Utils.findMinSubarraySumIndex(pnlNot2021.toArray(new Float[0]))),
+//                Utils.findMinSubarraySum(pnl2024.toArray(new Float[0])), pnl2Info.get(Utils.findMinSubarraySumIndex(pnl2024.toArray(new Float[0]))));
 //        FileUtils.writeLines(new File("storage/" + SellTicker1MStatisticResearch.class.getSimpleName() + ".csv"), lines);
     }
 
@@ -510,7 +510,7 @@ public class TraceOrderDone {
             for (OrderTargetInfoTest order : orders) {
                 order.priceTP = order.minPrice;
 
-                Double profit = Utils.rateOf2Double(order.priceTP, order.priceEntry);
+                Float profit = Utils.rateOf2Double(order.priceTP, order.priceEntry);
                 if (order.side.equals(OrderSide.SELL)) {
                     profit = -Utils.rateOf2Double(order.priceTP, order.priceEntry);
                 }
@@ -558,7 +558,7 @@ public class TraceOrderDone {
         int counter = 0;
         for (OrderTargetInfoTest order : allOrderDone.values()) {
             order.priceTP = order.minPrice;
-            Double profit = Utils.rateOf2Double(order.priceTP, order.priceEntry);
+            Float profit = Utils.rateOf2Double(order.priceTP, order.priceEntry);
             if (order.side.equals(OrderSide.SELL)) {
                 profit = -Utils.rateOf2Double(order.priceTP, order.priceEntry);
             }
@@ -605,14 +605,14 @@ public class TraceOrderDone {
         }
         List<String> lines = new ArrayList<>();
         lines.add("sym,side,entry,tp,sl,min,rate,max,rate,profit,status,start,end,rateBtc15M,rateTicker,rateBtc,volume,quantity,pnl,time");
-        Map<String, Double> symbol2Profit = new HashMap<>();
+        Map<String, Float> symbol2Profit = new HashMap<>();
         for (OrderTargetInfoTest order : time2Order.values()) {
-            Double profitOfSymbol = symbol2Profit.get(order.symbol);
+            Float profitOfSymbol = symbol2Profit.get(order.symbol);
             if (profitOfSymbol == null) {
-                profitOfSymbol = 0d;
+                profitOfSymbol = 0f;
             }
             profitOfSymbol += Utils.rateOf2Double(order.priceTP, order.priceEntry);
-            Double profit = Utils.rateOf2Double(order.priceTP, order.priceEntry);
+            Float profit = Utils.rateOf2Double(order.priceTP, order.priceEntry);
             if (order.side.equals(OrderSide.SELL)) {
                 profit = -Utils.rateOf2Double(order.priceTP, order.priceEntry);
             }

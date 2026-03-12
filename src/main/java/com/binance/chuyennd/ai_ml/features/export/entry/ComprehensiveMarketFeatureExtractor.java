@@ -43,7 +43,7 @@ public class ComprehensiveMarketFeatureExtractor {
 
     // 🔥 METHOD: Tìm Basket dựa trên History (Logic drop 15m)
     public List<String> findPotentialLosers(long currentTimestamp) {
-        List<Map.Entry<String, Double>> drops = new ArrayList<>();
+        List<Map.Entry<String, Float>> drops = new ArrayList<>();
         long startTime = currentTimestamp - (15 * 60 * 1000L); // 15 phút trước
 
         for (String symbol : activeSymbols) {
@@ -56,7 +56,7 @@ public class ComprehensiveMarketFeatureExtractor {
 //            if (currentKline.totalUsdt < 5000) continue;
 //
 //            // 2. Tìm đỉnh giá trong 15 phút gần nhất
-//            double maxPrice15m = -1.0;
+//            float maxPrice15m = -1.0;
 //
 //            // Duyệt ngược từ cuối lên
 //            for (int i = history.size() - 1; i >= 0; i--) {
@@ -69,8 +69,8 @@ public class ComprehensiveMarketFeatureExtractor {
 //
 //            // 3. Tính độ sụt giảm
 //            if (maxPrice15m > 0) {
-//                double currentPrice = currentKline.priceClose;
-//                double dropFromPeak = (currentPrice - maxPrice15m) / maxPrice15m;
+//                float currentPrice = currentKline.priceClose;
+//                float dropFromPeak = (currentPrice - maxPrice15m) / maxPrice15m;
 //
 //                // Giảm > 0.1% là lấy (Logic Relaxed)
 //                if (dropFromPeak < -0.001) {
@@ -78,7 +78,7 @@ public class ComprehensiveMarketFeatureExtractor {
 //                }
 //            }
 
-                    drops.add(new AbstractMap.SimpleEntry<>(symbol, 0d));
+                    drops.add(new AbstractMap.SimpleEntry<>(symbol, 0f));
         }
 
         // Sort giảm dần theo mức giảm (giảm nhiều nhất lên đầu)
@@ -134,7 +134,7 @@ public class ComprehensiveMarketFeatureExtractor {
         features.momentum24H = calculateReturn(symbol, 1440);
         features.momentumAcceleration = features.momentum5M - features.momentum15M;
         features.trendStrengthETH = calculateReturn("ETHUSDT", 60);
-        features.trendConsistency = (features.momentum5M * features.momentum1H > 0) ? 1.0 : -1.0;
+        features.trendConsistency = (features.momentum5M * features.momentum1H > 0) ? 1.0f : -1.0f;
     }
 
     private void extractVolatilityFeatures(MarketFeatures features, String symbol) {
@@ -153,26 +153,26 @@ public class ComprehensiveMarketFeatureExtractor {
 
     private void extractTechnicalIndicators(MarketFeatures features, String symbol) {
         // Sử dụng hàm có sẵn trong HistoryManager nếu có, hoặc tính thủ công từ history list
-        Double rsi = historyManager.getRsi14(symbol);
-        features.rsi14 = (rsi != null) ? rsi : 50.0;
+        Float rsi = historyManager.getRsi14(symbol);
+        features.rsi14 = (rsi != null) ? rsi : 50.0f;
 
-        double currentVol = historyManager.getSumVolume(symbol, 1);
-        double avgVol = historyManager.getAverageVolume(symbol, 20); // 20 nến gần nhất
-        features.volumeSpike = (avgVol > 0) ? currentVol / avgVol : 1.0;
+        float currentVol = historyManager.getSumVolume(symbol, 1);
+        float avgVol = historyManager.getAverageVolume(symbol, 20); // 20 nến gần nhất
+        features.volumeSpike = (avgVol > 0) ? currentVol / avgVol : 1.0f;
 
-        Double ma20 = historyManager.getMa(symbol, 20);
+        Float ma20 = historyManager.getMa(symbol, 20);
         List<KlineObjectSimple> h = historyManager.getHistory(symbol);
         if (h != null && !h.isEmpty() && ma20 != null && ma20 > 0) {
-            double close = h.get(h.size() - 1).priceClose;
+            float close = h.get(h.size() - 1).priceClose;
             features.distMA20 = (close - ma20) / ma20;
         } else {
-            features.distMA20 = 0.0;
+            features.distMA20 = 0.0f;
         }
     }
 
     private void extractBreadthFeatures(MarketFeatures features, Map<String, KlineObjectSimple> marketData) {
         int upCount = 0, downCount = 0;
-        double upVol = 0, downVol = 0;
+        float upVol = 0, downVol = 0;
         int totalValid = 0, aboveMA20Count = 0;
         for (Map.Entry<String, KlineObjectSimple> entry : marketData.entrySet()) {
             String symbol = entry.getKey();
@@ -187,15 +187,15 @@ public class ComprehensiveMarketFeatureExtractor {
                 downVol += k.totalUsdt;
             }
 
-            Double ma20 = historyManager.getMa(symbol, 20);
+            Float ma20 = historyManager.getMa(symbol, 20);
             if (ma20 != null && k.priceClose > ma20) aboveMA20Count++;
         }
-        features.advanceDeclineRatio = (downCount > 0) ? (double) upCount / downCount : 10.0;
-        features.volumeRatioUpDown = (downVol > 0) ? upVol / downVol : 10.0;
-        features.marketBreadthStrength = (totalValid > 0) ? (double) upCount / totalValid : 0.5;
-        features.percentAboveMA20 = (totalValid > 0) ? (double) aboveMA20Count / totalValid : 0.5;
-        double btcVol = marketData.containsKey("BTCUSDT") ? marketData.get("BTCUSDT").totalUsdt : 0;
-        features.btcDominance = (upVol + downVol > 0) ? btcVol / (upVol + downVol) : 0.0;
+        features.advanceDeclineRatio = (downCount > 0) ? (float) upCount / downCount : 10.0f;
+        features.volumeRatioUpDown = (downVol > 0) ? upVol / downVol : 10.0f;
+        features.marketBreadthStrength = (totalValid > 0) ? (float) upCount / totalValid : 0.5f;
+        features.percentAboveMA20 = (totalValid > 0) ? (float) aboveMA20Count / totalValid : 0.5f;
+        float btcVol = marketData.containsKey("BTCUSDT") ? marketData.get("BTCUSDT").totalUsdt : 0;
+        features.btcDominance = (upVol + downVol > 0) ? btcVol / (upVol + downVol) : 0.0f;
     }
 
     private void extractBasketTechnicalFeatures(MarketFeatures features, List<String> basket) {
@@ -206,18 +206,18 @@ public class ComprehensiveMarketFeatureExtractor {
             features.basketVolSpike = features.volumeSpike;
             return;
         }
-        double sumRsi = 0, sumMom15m = 0, sumMom1h = 0, sumVolSpike = 0;
+        float sumRsi = 0, sumMom15m = 0, sumMom1h = 0, sumVolSpike = 0;
         int count = 0;
         for (String symbol : basket) {
-            Double rsi = historyManager.getRsi14(symbol);
+            Float rsi = historyManager.getRsi14(symbol);
             if (rsi != null) {
                 sumRsi += rsi;
                 sumMom15m += calculateReturn(symbol, 15);
                 sumMom1h += calculateReturn(symbol, 60);
 
-                double currentVol = historyManager.getSumVolume(symbol, 1);
-                double avgVol = historyManager.getAverageVolume(symbol, 20);
-                double volSpike = (avgVol > 0) ? currentVol / avgVol : 1.0;
+                float currentVol = historyManager.getSumVolume(symbol, 1);
+                float avgVol = historyManager.getAverageVolume(symbol, 20);
+                float volSpike = (avgVol > 0) ? currentVol / avgVol : 1.0f;
                 sumVolSpike += volSpike;
 
                 count++;
@@ -238,51 +238,51 @@ public class ComprehensiveMarketFeatureExtractor {
 
     // --- HELPER METHODS SỬ DỤNG HISTORY LIST TỪ MANAGER ---
 
-    private double calculateReturn(String symbol, int minutes) {
+    private float calculateReturn(String symbol, int minutes) {
         List<KlineObjectSimple> h = historyManager.getHistory(symbol);
-        if (h == null || h.isEmpty()) return 0.0;
+        if (h == null || h.isEmpty()) return 0.0f;
 
         KlineObjectSimple current = h.get(h.size() - 1);
         long pastTime = current.startTime.longValue() - (minutes * 60000L);
 
-        Double pastPrice = historyManager.getPriceAt(symbol, pastTime);
+        Float pastPrice = historyManager.getPriceAt(symbol, pastTime);
         if (pastPrice != null && pastPrice > 0) {
             return (current.priceClose - pastPrice) / pastPrice;
         }
-        return 0.0;
+        return 0.0f;
     }
 
-    private double calculateVolatility(String symbol, int periods) {
+    private float calculateVolatility(String symbol, int periods) {
         List<KlineObjectSimple> h = historyManager.getHistory(symbol);
-        if (h == null || h.size() < 5) return 0.0;
+        if (h == null || h.size() < 5) return 0.0f;
 
         int start = Math.max(0, h.size() - periods);
-        double sum = 0, sumSq = 0;
+        float sum = 0, sumSq = 0;
         int count = 0;
         for (int i = start; i < h.size() - 1; i++) {
-            double r = (h.get(i + 1).priceClose - h.get(i).priceClose) / h.get(i).priceClose;
+            float r = (h.get(i + 1).priceClose - h.get(i).priceClose) / h.get(i).priceClose;
             sum += r;
             sumSq += r * r;
             count++;
         }
-        return (count < 2) ? 0.0 : Math.sqrt(Math.max(0, (sumSq - (sum * sum) / count) / (count - 1)));
+        return (count < 2) ? 0.0f : (float)Math.sqrt(Math.max(0, (sumSq - (sum * sum) / count) / (count - 1)));
     }
 
     private void extractBasketFundingFeatures(MarketFeatures features, List<String> basket, long currentTime) {
         try {
             if (basket == null || basket.isEmpty()) basket = Collections.singletonList("BTCUSDT");
-            double totalCurrentFunding = 0;
-            double totalAvg24H = 0;
+            float totalCurrentFunding = 0;
+            float totalAvg24H = 0;
             int validCount = 0;
             for (String symbol : basket) {
-                Double currentFunding = FundingFeeManager.getInstance().getNearestFundingFee(symbol, currentTime);
+                Float currentFunding = FundingFeeManager.getInstance().getNearestFundingFee(symbol, currentTime);
                 if (currentFunding != null) {
                     totalCurrentFunding += currentFunding;
-                    double sum24h = 0;
+                    float sum24h = 0;
                     int count24h = 0;
                     for (int i = 0; i <= 24; i += 4) {
                         long pastTime = currentTime - (i * 3600 * 1000L);
-                        Double past = FundingFeeManager.getInstance().getNearestFundingFee(symbol, pastTime);
+                        Float past = FundingFeeManager.getInstance().getNearestFundingFee(symbol, pastTime);
                         if (past != null) {
                             sum24h += past;
                             count24h++;
@@ -297,14 +297,14 @@ public class ComprehensiveMarketFeatureExtractor {
                 features.fundingRateRaw = totalCurrentFunding / validCount;
                 features.fundingRateAvg24H = totalAvg24H / validCount;
             } else {
-                features.fundingRateRaw = 0.0;
-                features.fundingRateAvg24H = 0.0;
+                features.fundingRateRaw = 0.0f;
+                features.fundingRateAvg24H = 0.0f;
             }
             features.fundingRateTrend = features.fundingRateRaw - features.fundingRateAvg24H;
         } catch (Exception e) {
-            features.fundingRateRaw = 0.0;
-            features.fundingRateAvg24H = 0.0;
-            features.fundingRateTrend = 0.0;
+            features.fundingRateRaw = 0.0f;
+            features.fundingRateAvg24H = 0.0f;
+            features.fundingRateTrend = 0.0f;
         }
     }
 
@@ -319,9 +319,9 @@ public class ComprehensiveMarketFeatureExtractor {
     }
 
     private void validateAndCleanFeatures(MarketFeatures f) {
-        if (Double.isNaN(f.momentum1M)) f.momentum1M = 0.0;
-        if (Double.isNaN(f.rsi14)) f.rsi14 = 50.0;
-        if (Double.isInfinite(f.advanceDeclineRatio)) f.advanceDeclineRatio = 10.0;
-        if (Double.isNaN(f.fundingRateRaw)) f.fundingRateRaw = 0.0;
+        if (Float.isNaN(f.momentum1M)) f.momentum1M = 0.0f;
+        if (Float.isNaN(f.rsi14)) f.rsi14 = 50.0f;
+        if (Float.isInfinite(f.advanceDeclineRatio)) f.advanceDeclineRatio = 10.0f;
+        if (Float.isNaN(f.fundingRateRaw)) f.fundingRateRaw = 0.0f;
     }
 }

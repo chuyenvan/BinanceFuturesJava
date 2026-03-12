@@ -31,30 +31,30 @@ public class RunOptimizationMarketThreshold {
     public static TreeMap<Long, AiPredictionData> predictionMap;
     public static TreeMap<Long, long[]> time2FundingPre;
 
-    private static double evaluate(Genotype<DoubleGene> genotype) {
+    private static float evaluate(Genotype<DoubleGene> genotype) {
         long currentTest = testCounter.incrementAndGet();
 
-        double upBig       = genotype.get(0).gene().doubleValue();
-        double downBigAvg  = genotype.get(1).gene().doubleValue();
+        float upBig       = genotype.get(0).gene().floatValue();
+        float downBigAvg  = genotype.get(1).gene().floatValue();
 
-        double upMed       = genotype.get(2).gene().doubleValue();
-        double downMedAvg  = genotype.get(3).gene().doubleValue();
+        float upMed       = genotype.get(2).gene().floatValue();
+        float downMedAvg  = genotype.get(3).gene().floatValue();
 
-        double upSmall     = genotype.get(4).gene().doubleValue();
-        double downSmallAvg= genotype.get(5).gene().doubleValue();
+        float upSmall     = genotype.get(4).gene().floatValue();
+        float downSmallAvg= genotype.get(5).gene().floatValue();
 
-        double down15mMed  = genotype.get(6).gene().doubleValue();
-        double down15mSmall= genotype.get(7).gene().doubleValue();
+        float down15mMed  = genotype.get(6).gene().floatValue();
+        float down15mSmall= genotype.get(7).gene().floatValue();
 
         boolean invalidUp = (upBig <= upMed) || (upMed <= upSmall);
         boolean invalidDown = (downBigAvg >= downMedAvg) || (downMedAvg >= downSmallAvg);
         boolean invalid15m = (down15mMed >= down15mSmall);
 
         if (invalidUp || invalidDown || invalid15m) {
-            return -10000.0;
+            return -10000.0f;
         }
 
-        double profit = 0.0;
+        float profit = 0.0f;
         try {
             BackTestEngineMarketThreshold engine = new BackTestEngineMarketThreshold(
                     upBig, downBigAvg,
@@ -69,7 +69,7 @@ public class RunOptimizationMarketThreshold {
 
         } catch (Exception e) {
             e.printStackTrace();
-            return 0.0;
+            return 0.0f;
         }
         return profit;
     }
@@ -91,14 +91,14 @@ public class RunOptimizationMarketThreshold {
                 DoubleChromosome.of(DoubleRange.of(-0.045, -0.02))
         );
 
-        Engine<DoubleGene, Double> engine = Engine
+        Engine<DoubleGene, Float> engine = Engine
                 .builder(RunOptimizationMarketThreshold::evaluate, genotypeFactory)
                 .populationSize(POPULATION_SIZE)
                 .maximizing()
                 .executor(Executors.newSingleThreadExecutor())
                 .build();
 
-        EvolutionResult<DoubleGene, Double> result = engine.stream()
+        EvolutionResult<DoubleGene, Float> result = engine.stream()
                 .limit(GENERATIONS)
                 .peek(r -> LOG.info(">>> Generation %d Best: %.2f%n", r.generation(), r.bestFitness()))
                 .collect(EvolutionResult.toBestEvolutionResult());
@@ -133,7 +133,7 @@ public class RunOptimizationMarketThreshold {
 
     }
 
-    private static void printResult(EvolutionResult<DoubleGene, Double> result, long startTime) {
+    private static void printResult(EvolutionResult<DoubleGene, Float> result, long startTime) {
         Genotype<DoubleGene> best = result.bestPhenotype().genotype();
         LOG.info("\n=== KẾT QUẢ TỐI ƯU MARKET THRESHOLDS ===");
         LOG.info("Time: " + Duration.ofMillis(System.currentTimeMillis() - startTime).toMinutes() + " mins");

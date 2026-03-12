@@ -114,12 +114,12 @@ public class BenchmarkFullComparison {
             LOG.info("=======================================================");
             LOG.info("1. Direct DB (Disk IO) : {} ms  (Baseline)", durationDB);
             LOG.info("2. Old Cache (TreeMap) : {} ms  ({}x faster than DB)",
-                    durationOld, String.format("%.1f", (double) durationDB / durationOld));
+                    durationOld, String.format("%.1f", (float) durationDB / durationOld));
             LOG.info("3. New Cache (Per Min) : {} ms  ({}x faster than DB)",
-                    durationNew, String.format("%.1f", (double) durationDB / durationNew));
+                    durationNew, String.format("%.1f", (float) durationDB / durationNew));
 
             LOG.info("\n⚡ New Method vs Old Cache: {}x FASTER",
-                    String.format("%.1f", (double) durationOld / durationNew));
+                    String.format("%.1f", (float) durationOld / durationNew));
             LOG.info("=======================================================");
 
         } catch (Exception e) {

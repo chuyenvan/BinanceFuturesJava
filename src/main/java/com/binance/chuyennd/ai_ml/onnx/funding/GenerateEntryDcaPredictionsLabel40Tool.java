@@ -42,10 +42,10 @@ public class GenerateEntryDcaPredictionsLabel40Tool {
         DataManagerAerospikeFloatSim.setThreadCount(4);
 
         // Cấu hình tham số lọc
-        Configs.PREDICT_SYMBOL_RATE_DOWN_15M = -0.013;
-        Configs.PREDICT_SYMBOL_RATE_DOWN_15M = -0.025;
-        Configs.PREDICT_SYMBOL_RATE_UP_AVG = 0.004;
-        Configs.PREDICT_SYMBOL_RATE_DOWN_AVG = -0.005;
+        Configs.PREDICT_SYMBOL_RATE_DOWN_15M = -0.013f;
+        Configs.PREDICT_SYMBOL_RATE_DOWN_15M = -0.025f;
+        Configs.PREDICT_SYMBOL_RATE_UP_AVG = 0.004f;
+        Configs.PREDICT_SYMBOL_RATE_DOWN_AVG = -0.005f;
         Configs.NUMBER_RATE_DOWN_HISTORY_TRADE = 60;
 
         // Cấu hình thời gian chạy
@@ -244,7 +244,7 @@ public class GenerateEntryDcaPredictionsLabel40Tool {
                                 if (ticker == null || !Utils.isTickerAvailable(ticker)) return null;
 
                                 OrderTargetInfoTest dummyOrder = new OrderTargetInfoTest(
-                                        OrderTargetStatus.REQUEST, ticker.priceClose, null, 1.0,
+                                        OrderTargetStatus.REQUEST, ticker.priceClose, null, 1.0f,
                                         Configs.LEVERAGE_ORDER, symbol, time, time, OrderSide.BUY
                                 );
                                 dummyOrder.lastEntry = ticker.priceClose;

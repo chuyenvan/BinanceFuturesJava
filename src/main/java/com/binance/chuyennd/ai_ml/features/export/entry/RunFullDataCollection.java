@@ -83,13 +83,13 @@ public class RunFullDataCollection {
             if (targetBasket.size() < 3) continue;
 
             // Tính toán Labels (Targets) dựa trên Basket vừa lấy được
-            double ret15M = calculateBasketMaxPotential(lookupData, timestamp, 15, targetBasket);
-            double ret1H = calculateBasketMaxPotential(lookupData, timestamp, 60, targetBasket);
-            double ret4H = calculateBasketMaxPotential(lookupData, timestamp, 240, targetBasket);
-            double ret24H = calculateBasketMaxPotential(lookupData, timestamp, 1440, targetBasket);
+            float ret15M = calculateBasketMaxPotential(lookupData, timestamp, 15, targetBasket);
+            float ret1H = calculateBasketMaxPotential(lookupData, timestamp, 60, targetBasket);
+            float ret4H = calculateBasketMaxPotential(lookupData, timestamp, 240, targetBasket);
+            float ret24H = calculateBasketMaxPotential(lookupData, timestamp, 1440, targetBasket);
 
-            double maxDD4H = calculateBasketMaxDrawdown(lookupData, timestamp, 240, targetBasket);
-            double maxDD24H = calculateBasketMaxDrawdown(lookupData, timestamp, 1440, targetBasket);
+            float maxDD4H = calculateBasketMaxDrawdown(lookupData, timestamp, 240, targetBasket);
+            float maxDD24H = calculateBasketMaxDrawdown(lookupData, timestamp, 1440, targetBasket);
 
             MarketDataObject rate = (rateData != null) ? rateData.get(timestamp) : null;
 
@@ -102,67 +102,67 @@ public class RunFullDataCollection {
     // ĐÃ XÓA method findPotentialLosersRelaxed khỏi class này
 
     // ... (Giữ nguyên các hàm calculateBasketMaxPotential, calculateBasketMaxDrawdown, loadMarketRateData) ...
-    private double calculateBasketMaxPotential(TreeMap<Long, Map<String, KlineObjectSimple>> data, Long currentTs, int minutes, List<String> basket) {
+    private float calculateBasketMaxPotential(TreeMap<Long, Map<String, KlineObjectSimple>> data, Long currentTs, int minutes, List<String> basket) {
         Long endTime = currentTs + (minutes * 60000L);
         Map<String, KlineObjectSimple> currentSnapshot = data.get(currentTs);
-        if (currentSnapshot == null) return 0.0;
-        Map<String, Double> entryPrices = new HashMap<>();
+        if (currentSnapshot == null) return 0.0f;
+        Map<String, Float> entryPrices = new HashMap<>();
         for (String sym : basket) if (currentSnapshot.containsKey(sym)) entryPrices.put(sym, currentSnapshot.get(sym).priceClose);
         NavigableMap<Long, Map<String, KlineObjectSimple>> futureRange = data.subMap(currentTs, false, endTime, true);
-        Map<String, Double> maxReturns = new HashMap<>();
-        for (String sym : basket) maxReturns.put(sym, -999.0);
+        Map<String, Float> maxReturns = new HashMap<>();
+        for (String sym : basket) maxReturns.put(sym, -999.0f);
         for (Map<String, KlineObjectSimple> minuteData : futureRange.values()) {
             for (String sym : basket) {
                 if (minuteData.containsKey(sym) && entryPrices.containsKey(sym)) {
-                    double entry = entryPrices.get(sym);
-                    double currentHigh = minuteData.get(sym).maxPrice;
+                    float entry = entryPrices.get(sym);
+                    float currentHigh = minuteData.get(sym).maxPrice;
                     if (entry > 0) {
-                        double potentialReturn = (currentHigh - entry) / entry;
+                        float potentialReturn = (currentHigh - entry) / entry;
                         if (potentialReturn > maxReturns.get(sym)) maxReturns.put(sym, potentialReturn);
                     }
                 }
             }
         }
-        double sumMaxReturn = 0; int count = 0;
-        for (String sym : basket) { double ret = maxReturns.get(sym); if (ret != -999.0) { sumMaxReturn += ret; count++; } }
-        return (count > 0) ? sumMaxReturn / count : 0.0;
+        float sumMaxReturn = 0; int count = 0;
+        for (String sym : basket) { float ret = maxReturns.get(sym); if (ret != -999.0) { sumMaxReturn += ret; count++; } }
+        return (count > 0) ? sumMaxReturn / count : 0.0f;
     }
 
-    private double calculateBasketMaxDrawdown(TreeMap<Long, Map<String, KlineObjectSimple>> data, Long currentTs, int minutes, List<String> basket) {
+    private float calculateBasketMaxDrawdown(TreeMap<Long, Map<String, KlineObjectSimple>> data, Long currentTs, int minutes, List<String> basket) {
         Long endTime = currentTs + (minutes * 60000L);
         NavigableMap<Long, Map<String, KlineObjectSimple>> range = data.subMap(currentTs, false, endTime, true);
-        Map<String, Double> entryPrices = new HashMap<>();
+        Map<String, Float> entryPrices = new HashMap<>();
         Map<String, KlineObjectSimple> currentParams = data.get(currentTs);
-        if (currentParams == null) return 0.0;
+        if (currentParams == null) return 0.0f;
         for(String sym : basket) {
             if(currentParams.containsKey(sym)) {
-                double p = currentParams.get(sym).priceClose;
+                float p = currentParams.get(sym).priceClose;
                 if (p > 0.0000001) entryPrices.put(sym, p);
             }
         }
-        if (entryPrices.isEmpty()) return 0.0;
-        double worstBasketDrawdown = 0.0;
+        if (entryPrices.isEmpty()) return 0.0f;
+        float worstBasketDrawdown = 0.0f;
         for (Map<String, KlineObjectSimple> minuteData : range.values()) {
-            double currentMinuteSumPL = 0; int count = 0;
+            float currentMinuteSumPL = 0; int count = 0;
             for (String sym : entryPrices.keySet()) {
                 if (minuteData.containsKey(sym) && entryPrices.containsKey(sym)) {
-                    double low = minuteData.get(sym).minPrice;
-                    double entry = entryPrices.get(sym);
+                    float low = minuteData.get(sym).minPrice;
+                    float entry = entryPrices.get(sym);
                     if (low > 0 && entry > 0) {
-                        double dd = (low - entry) / entry;
-                        if (dd < -1.0) dd = -1.0;
-                        if (dd > 10.0) dd = 0.0;
+                        float dd = (low - entry) / entry;
+                        if (dd < -1.0) dd = -1.0f;
+                        if (dd > 10.0) dd = 0.0f;
                         currentMinuteSumPL += dd;
                         count++;
                     }
                 }
             }
             if (count > 0) {
-                double currentMinuteAvgPL = currentMinuteSumPL / count;
+                float currentMinuteAvgPL = currentMinuteSumPL / count;
                 if (currentMinuteAvgPL < worstBasketDrawdown) worstBasketDrawdown = currentMinuteAvgPL;
             }
         }
-        if (worstBasketDrawdown < -1.0) return -1.0;
+        if (worstBasketDrawdown < -1.0) return -1.0f;
         return worstBasketDrawdown;
     }
 

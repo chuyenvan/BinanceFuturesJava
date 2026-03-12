@@ -27,10 +27,10 @@ public class RunFundingDataCollection {
 
     public static void main(String[] args) throws Exception {
         // 1. CẤU HÌNH THAM SỐ (Override Configs theo yêu cầu)
-        Configs.PREDICT_SYMBOL_RATE_DOWN_15M = -0.013;
-        Configs.PREDICT_SYMBOL_RATE_DOWN_15M = -0.025;
-        Configs.PREDICT_SYMBOL_RATE_UP_AVG = 0.004;
-        Configs.PREDICT_SYMBOL_RATE_DOWN_AVG = -0.005;
+        Configs.PREDICT_SYMBOL_RATE_DOWN_15M = -0.013f;
+        Configs.PREDICT_SYMBOL_RATE_DOWN_15M = -0.025f;
+        Configs.PREDICT_SYMBOL_RATE_UP_AVG = 0.004f;
+        Configs.PREDICT_SYMBOL_RATE_DOWN_AVG = -0.005f;
 
         new RunFundingDataCollection().run();
     }
@@ -147,9 +147,9 @@ public class RunFundingDataCollection {
                         if (ticker.totalUsdt < 10000) continue;
                         // 🔥🔥🔥 UPDATE LOGIC LỌC TỐC ĐỘ RƠI 🔥🔥🔥
                         // 1. Tính Rate 1M: (Close - Open) / Open
-                        double rate1m = (ticker.priceClose - ticker.priceOpen) / ticker.priceOpen;
+                        float rate1m = (ticker.priceClose - ticker.priceOpen) / ticker.priceOpen;
                         // 2. Tính Rate 15M từ Manager (dùng History)
-                        double rate15m = manager.getReturn(symbol, 15);
+                        float rate15m = manager.getReturn(symbol, 15);
                         if (rate1m >= -0.004 && rate15m >= -0.015)
                             continue; // Phải giảm > 0.5% trong 1 phút này
 
@@ -157,7 +157,7 @@ public class RunFundingDataCollection {
                         try {
                             // Tạo lệnh giả lập tại giá Close
                             OrderTargetInfoTest order = new OrderTargetInfoTest(
-                                    null, ticker.priceClose, null, 100.0, 10, symbol,
+                                    null, ticker.priceClose, null, 100.0f, 10, symbol,
                                     timestamp, timestamp, OrderSide.BUY
                             );
                             order.lastPrice = ticker.priceClose;

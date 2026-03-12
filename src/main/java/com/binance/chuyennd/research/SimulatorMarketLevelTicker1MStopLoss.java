@@ -50,10 +50,15 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
     public ConcurrentHashMap<String, List<OrderTargetInfoTest>> symbol2OrdersEntry = new ConcurrentHashMap();
     public ConcurrentHashMap<String, OrderTargetInfoTest> symbol2OrderRunning = new ConcurrentHashMap();
+    private BotTradingConfig config = new BotTradingConfig(); // DNA của Bot
+
+    public void setConfig(BotTradingConfig config) {
+        this.config = config;
+    }
 
 
     public static void main(String[] args) throws ParseException, IOException, InterruptedException {
-
+        Long startTime = Utils.sdfFile.parse(Configs.TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
         LOG.info("Start with kaggle mode: {} ", Configs.IS_KAGGLE_MODE);
         SimulatorMarketLevelTicker1MStopLoss test = new SimulatorMarketLevelTicker1MStopLoss();
         if (Configs.IS_KAGGLE_MODE) {
@@ -61,7 +66,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         } else {
             test.initData();
         }
-        test.simulatorWithInitEntry();
+        test.simulatorWithInitEntry(startTime, System.currentTimeMillis());
         Thread.sleep(5000);
         System.exit(1);
     }
@@ -88,8 +93,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         Utils.printMemoryUsage("Load time2FundingPre (time2SymbolPred)");
     }
 
-    public void simulatorWithInitEntry(String... inputs) throws ParseException {
-        Long startTime = Utils.sdfFile.parse(Configs.TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
+    public void simulatorWithInitEntry(Long startTime, Long endTime) throws ParseException {
+
         Map<String, List<KlineObjectSimple>> symbol2LastTickers = new HashMap<>();
 
         //get data
@@ -288,7 +293,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             }
             Long finalStartTime1 = startTime;
             startTime += Utils.TIME_DAY;
-            if (startTime > System.currentTimeMillis()) {
+            if (startTime > endTime) {
                 BudgetManagerSimple.getInstance().updateBalance(finalStartTime1, allOrderDone, symbol2OrderRunning,
                         symbol2OrdersEntry, false);
                 break;
@@ -308,11 +313,11 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         Calendar cal = Calendar.getInstance();
         cal.setTimeInMillis(startTime); // Hoặc dùng biến startTime của vòng lặp
         int finalYear = cal.get(Calendar.YEAR);
-        BudgetManagerSimple.getInstance().balanceIndex.year2UnrealizedPnl.put(finalYear, 0d);
+        BudgetManagerSimple.getInstance().balanceIndex.year2UnrealizedPnl.put(finalYear, 0f);
         Storage.writeObject2File(FILE_STORAGE_ORDER_DONE, allOrderDone);
         Storage.writeObject2File("storage/orderRunning.data", symbol2OrderRunning);
         Storage.writeObject2File("storage/BalanceIndex.data", BudgetManagerSimple.getInstance().balanceIndex);
-        BudgetManagerSimple.getInstance().printBalanceIndex();
+
         try {
             TraceOrderDone.printOrderTestDone("storage/printDone.csv", allOrderDone);
         } catch (Exception e) {
@@ -343,23 +348,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         }
     }
 
-
-    private Double getMax15M(List<KlineObjectSimple> tickers) {
-        Double priceMax15M = null;
-        for (int i = 0; i < Configs.NUMBER_TICKER_CAL_RATE_CHANGE; i++) {
-            int index = tickers.size() - i - 1;
-            if (index >= 0) {
-                KlineObjectSimple kline = tickers.get(index);
-                if (priceMax15M == null) {
-                    priceMax15M = kline.maxPrice;
-                }
-                priceMax15M = Math.max(priceMax15M, kline.maxPrice);
-            }
-        }
-        return priceMax15M;
-    }
-
-
     public void updateSymbolDeListed(String symbol, Long time) {
         OrderTargetInfoTest order = symbol2OrderRunning.get(symbol);
         if (order != null) {
@@ -386,10 +374,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         // =====================================================================
         LOG.info("🔍 Đang kiểm tra Metadata của Market Data để làm mốc chuẩn...");
         long lastMarketDataTime = DataManagerAerospikeFloatSim.getLastTimestampFromSet(DataManagerAerospikeFloatSim.AEROSPIKE_SET_NAME_MARKET_DATA);
-
-        // hard code run by time
-//        long lastMarketDataTime = Utils.sdfFileHour.parse("20260220 23:59").getTime();
-
 
         if (lastMarketDataTime == 0L || lastMarketDataTime < System.currentTimeMillis() - Utils.TIME_DAY) {
             String lastTimeStr = (lastMarketDataTime == 0L) ? "NULL" : Utils.normalizeDateYYYYMMDDHHmm(lastMarketDataTime);
@@ -487,9 +471,9 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
     private OrderTargetInfoTest mergeOrder(List<OrderTargetInfoTest> orders, KlineObjectSimple ticker) {
         TreeMap<Long, OrderTargetInfoTest> time2Order = new TreeMap<>();
-        Double quantity = 0d;
+        Float quantity = 0f;
         String priceEntry = "";
-        Double margin = 0d;
+        Float margin = 0f;
         OrderSide side = orders.get(0).side;
         for (OrderTargetInfoTest orderInfo : orders) {
             if (!side.equals(orderInfo.side)) {
@@ -501,7 +485,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             quantity += orderInfo.quantity;
             priceEntry += orderInfo.priceEntry + "-";
         }
-        double entry = margin / quantity;
+        float entry = margin / quantity;
         OrderTargetInfoTest orderResult = new OrderTargetInfoTest(OrderTargetStatus.REQUEST, entry,
                 null, quantity, Configs.LEVERAGE_ORDER,
                 time2Order.lastEntry().getValue().symbol,
@@ -519,7 +503,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
     public void createOrderBUY(String symbol, KlineObjectSimple ticker, MarketLevelChange levelChange,
                                MarketDataObject marketData) {
-        AiPredictionData predict = predictionMap.get(ticker.startTime.longValue());
+        AiPredictionData predict = predictionMap.get(ticker.startTime);
 
 
         if (predict != null && !levelChange.equals(MarketLevelChange.BIG_DOWN)) {
@@ -528,12 +512,12 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                 return; // Dừng ngay
             }
         }
-        Double entry = ticker.priceClose;
+        Float entry = ticker.priceClose;
         Integer leverage = Configs.LEVERAGE_ORDER;
 
-        Double marginRunning = calMarginRunning();
-        Double balanceBasic = BudgetManagerSimple.getInstance().balanceBasic;
-        Double budget = BudgetManagerSimple.getInstance().getBudget();
+        Float marginRunning = calMarginRunning();
+        Float balanceBasic = BudgetManagerSimple.getInstance().balanceBasic;
+        Float budget = BudgetManagerSimple.getInstance().getBudget();
 
         budget = TradeUtils.managerBudget(budget, marginRunning, balanceBasic, levelChange);
 
@@ -541,10 +525,10 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             return;
         }
 
-        Double quantity = Utils.calQuantityTest(budget, leverage, entry, symbol);
+        Float quantity = Utils.calQuantityTest(budget, leverage, entry, symbol);
 
         if (StringUtils.equals(symbol, Constants.SYMBOL_PAIR_BTC)) {
-            Double minBtcTrade = 0.002;
+            Float minBtcTrade = 0.002f;
             if (quantity < minBtcTrade) {
                 quantity = minBtcTrade;
             }
@@ -586,8 +570,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     }
 
 
-    private Double calMarginRunning() {
-        Double marginTotal = 0d;
+    private Float calMarginRunning() {
+        Float marginTotal = 0f;
         for (OrderTargetInfoTest order : symbol2OrderRunning.values()) {
             if (order.priceSL == null) {
                 marginTotal += order.calMargin();
@@ -598,8 +582,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     }
 
 
-    private Double calMarginRunning(String symbol) {
-        Double marginTotal = 0d;
+    private Float calMarginRunning(String symbol) {
+        Float marginTotal = 0f;
         OrderTargetInfoTest order = symbol2OrderRunning.get(symbol);
         if (order != null) {
             return order.calMargin();
@@ -607,8 +591,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         return marginTotal;
     }
 
-    private Double calRateLoss(String symbol) {
-        Double rateLoss = 1d;
+    private Float calRateLoss(String symbol) {
+        Float rateLoss = 1f;
         OrderTargetInfoTest order = symbol2OrderRunning.get(symbol);
         if (order != null) {
             return order.calRateLoss();
@@ -634,29 +618,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         this.aiRejectFilter = aiRejectFilter;
     }
 
-    // --- Thêm vào phần khai báo thuộc tính ---
-    private BotTradingConfig config = new BotTradingConfig(); // Mặc định
-
-    // --- Thêm hàm setConfig ---
-    public void setConfig(BotTradingConfig config) {
-        this.config = config;
-    }
-
-    // --- Tìm đến các logic Check Entry và sửa Configs.XXX thành config.XXX ---
-// Ví dụ logic AI Predict:
-    private boolean checkAiPredict(MarketDataObject marketData, float symbolPred) {
-        // Sửa các hằng số Configs.AI_... thành config.aiPredictRate...
-        if (marketData.rateDown15MAvg < config.aiPredictRateDown15m
-                || marketData.rateUpAvg > config.aiPredictRateUpAvg
-                || marketData.rateDownAvg < config.aiPredictRateDownAvg) {
-
-            if (symbolPred > config.aiPredictRateMaxThreshold) {
-                return false; // Reject
-            }
-        }
-        return true;
-    }
-
     private Float getPredictionFromPrimitiveArray(long[] encodedArray, short targetId) {
         for (long encodedData : encodedArray) {
             if ((short) (encodedData >> 32) == targetId) {
@@ -665,4 +626,5 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         }
         return null;
     }
+
 }

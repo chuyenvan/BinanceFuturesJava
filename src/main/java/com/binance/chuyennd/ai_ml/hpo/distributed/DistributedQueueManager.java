@@ -45,7 +45,7 @@ public class DistributedQueueManager {
     }
 
     /** Master: Chờ Worker xử lý xong và lấy điểm */
-    public static Double waitForResult(String genomeKey) {
+    public static Float waitForResult(String genomeKey) {
         Key taskKey = new Key(Configs.AEROSPIKE_NAMESPACE, SET_TASKS, genomeKey);
         int timeoutSeconds = 300; // Đợi tối đa 5 phút cho 1 task
 
@@ -53,7 +53,7 @@ public class DistributedQueueManager {
             try {
                 Record record = DataManagerAerospikeFloatSim.getClient242().get(null, taskKey);
                 if (record != null && "DONE".equals(record.getString("status"))) {
-                    return record.getDouble("score");
+                    return record.getFloat("score");
                 }
                 Thread.sleep(1000); // Ngủ 1 giây rồi check lại
                 timeoutSeconds--;
@@ -62,7 +62,7 @@ public class DistributedQueueManager {
             }
         }
         LOG.warn("⚠️ Task Timeout: {}", genomeKey);
-        return -10000.0; // Phạt nặng nếu Worker chết giữa chừng gây timeout
+        return -10000.0f; // Phạt nặng nếu Worker chết giữa chừng gây timeout
     }
 
     // ================== DÀNH CHO WORKERS ==================
@@ -98,7 +98,7 @@ public class DistributedQueueManager {
     }
 
     /** Worker: Nộp điểm số và đóng Task */
-    public static void submitResult(String genomeKey, double score) {
+    public static void submitResult(String genomeKey, float score) {
         try {
             Key taskKey = new Key(Configs.AEROSPIKE_NAMESPACE, SET_TASKS, genomeKey);
             DataManagerAerospikeFloatSim.getClient242().put(writePolicy, taskKey,
