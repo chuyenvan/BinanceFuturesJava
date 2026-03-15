@@ -57,16 +57,14 @@ public class CheckMarketConditionDaily {
 
             // --- CHỈ CHECK TRONG NGÀY MỤC TIÊU ---
             if (time >= targetStart && time < targetEnd) {
-                if (isMarketConditionMet(time, time2MarketData)) {
-                    countMet++;
-                    MarketDataObject mData = entry.getValue();
-                    Float minRate60M = Collections.min(time2RateDown15MAvg.values());
+                countMet++;
+                MarketDataObject mData = entry.getValue();
+                Float minRate60M = Collections.min(time2RateDown15MAvg.values());
 
-                    LOG.info("✅ MATCH: {} | Rate15M: {} | Min60M: {}",
-                            Utils.normalizeDateYYYYMMDDHHmm(time),
-                            String.format("%.4f", mData.rateDown15MAvg),
-                            String.format("%.4f", minRate60M));
-                }
+                LOG.info("✅ MATCH: {} | Rate15M: {} | Min60M: {}",
+                        Utils.normalizeDateYYYYMMDDHHmm(time),
+                        String.format("%.4f", mData.rateDown15MAvg),
+                        String.format("%.4f", minRate60M));
             }
 
             // Dừng nếu vượt quá ngày cần check
@@ -94,17 +92,4 @@ public class CheckMarketConditionDaily {
         }
     }
 
-    private static boolean isMarketConditionMet(long time, TreeMap<Long, MarketDataObject> time2MarketData) {
-        MarketDataObject marketData = time2MarketData.get(time);
-        if (marketData == null) return false;
-
-        // Tính min rate trong 60 phút gần nhất từ lịch sử đã update
-        Float minRate15Min60M = time2RateDown15MAvg.isEmpty() ? 0f : Collections.min(time2RateDown15MAvg.values());
-
-        return MarketBigChangeDetector.isAiPredictTrade(
-                marketData.rateDown15MAvg,
-                marketData.rateDownAvg,
-                marketData.rateUpAvg
-        );
-    }
 }

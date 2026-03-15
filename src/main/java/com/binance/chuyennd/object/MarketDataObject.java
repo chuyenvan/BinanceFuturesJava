@@ -6,10 +6,10 @@ import java.util.Map;
 import java.util.TreeMap;
 
 public class MarketDataObject implements Serializable {
-    public Float rateDownAvg;
-    public Float rateDown15MAvg;
-    public Float rateUpAvg;
-    public Float rateBtc;
+    public float rateDownAvg;
+    public float rateDown15MAvg;
+    public float rateUpAvg;
+    public float rateBtc;
 
 
 

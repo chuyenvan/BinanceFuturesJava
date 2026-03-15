@@ -20,10 +20,10 @@ public class CompactDayData {
         if (index >= 0 && index < 1440) {
             int base = index << 2; // Tương đương index * 4 nhưng nhanh hơn (Bit shift)
 
-            data[base]     = kline.priceOpen.floatValue();
-            data[base + 1] = kline.maxPrice.floatValue();
-            data[base + 2] = kline.minPrice.floatValue();
-            data[base + 3] = kline.priceClose.floatValue();
+            data[base]     = kline.priceOpen;
+            data[base + 1] = kline.maxPrice;
+            data[base + 2] = kline.minPrice;
+            data[base + 3] = kline.priceClose;
         }
     }
 

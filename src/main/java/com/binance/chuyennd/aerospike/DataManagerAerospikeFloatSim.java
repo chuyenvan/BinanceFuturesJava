@@ -301,7 +301,11 @@ public class DataManagerAerospikeFloatSim {
                     byte[] compressedData = (byte[]) record.getValue("f_data");
                     if (compressedData != null) {
                         String json = new String(Snappy.uncompress(compressedData), "UTF-8");
-                        Map<String, Float> rawMap = Utils.gson.fromJson(json, Map.class);
+
+                        // SỬA Ở ĐÂY: Dùng TypeToken để ép Gson parse đúng kiểu số
+                        java.lang.reflect.Type mapType = new com.google.gson.reflect.TypeToken<Map<String, Float>>(){}.getType();
+                        Map<String, Float> rawMap = Utils.gson.fromJson(json, mapType);
+
                         rawMap.forEach((k, v) -> symbolFunding.put(Long.parseLong(k), v));
                     } else {
                         // Xử lý dữ liệu cũ (CDT Map) nếu không có f_data

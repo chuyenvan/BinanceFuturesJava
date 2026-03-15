@@ -116,18 +116,12 @@ public class DebugFundingWithWarmup {
 
         // 2. Check Condition IsMet
         Float minRate60M = Collections.min(time2RateDown15MAvg.values());
-        boolean isCondMet = MarketBigChangeDetector.isAiPredictTrade(
-                mData.rateDown15MAvg, mData.rateDownAvg, mData.rateUpAvg);
+
 
         LOG.info("📊 CONDITION CHECK:");
         LOG.info("   rateDown15M: {}", mData.rateDown15MAvg);
         LOG.info("   minRate60M : {} (History size: {})", minRate60M, time2RateDown15MAvg.size());
-        LOG.info("   => isMet   : {}", isCondMet);
 
-        if (!isCondMet) {
-            LOG.error("❌ SKIP REASON: Condition False!");
-            return;
-        }
 
         // 3. Test Extract Feature (Thử 1 coin đại diện)
         String testSymbol = "BTCUSDT"; // Hoặc coin nào đang hot lúc đó

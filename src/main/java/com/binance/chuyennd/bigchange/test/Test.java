@@ -65,7 +65,6 @@ public class Test {
         MarketDataObject marketData = DataManagerAerospikeFloatSim.getMarketDataAtTime(startTime);
         System.out.println(Utils.toJson(marketData));
         Float minRate15Min60M = -0.005f;
-        System.out.println(MarketBigChangeDetector.isAiPredictTrade(marketData.rateDown15MAvg, marketData.rateDownAvg, marketData.rateUpAvg));
         System.out.println(Utils.toJson(DataManagerAerospikeFloatSim.getFundingPredictionAtTime(startTime)));
 
 

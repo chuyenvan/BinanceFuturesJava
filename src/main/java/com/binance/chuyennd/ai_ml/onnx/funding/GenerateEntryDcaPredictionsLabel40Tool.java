@@ -186,7 +186,7 @@ public class GenerateEntryDcaPredictionsLabel40Tool {
             Set<Long> existingTimestamps = new HashSet<>();
             if (!isWarmup) {
                 List<Long> timestampsToCheck = new ArrayList<>();
-                for(int i=0; i<minutesToRead; i++) timestampsToCheck.add(currentTime + i * Utils.TIME_MINUTE);
+                for (int i = 0; i < minutesToRead; i++) timestampsToCheck.add(currentTime + i * Utils.TIME_MINUTE);
                 existingTimestamps = DataManagerAerospikeFloatSim.checkExistingFundingLabel40Predictions(timestampsToCheck);
             }
 
@@ -218,12 +218,6 @@ public class GenerateEntryDcaPredictionsLabel40Tool {
                 updateMarketRateHistory(time, time2MarketData, time2RateDown15MAvg);
 
                 if (isWarmup || existingTimestamps.contains(time)) continue;
-
-                // 2. CHECK CONDITION
-                if (!isMarketConditionMet(time, time2MarketData, time2RateDown15MAvg)) {
-                    continue;
-                }
-
                 processedCount++;
 
                 if (time != lastBasketTimestamp) {
@@ -315,14 +309,6 @@ public class GenerateEntryDcaPredictionsLabel40Tool {
         while (history.size() > Configs.NUMBER_RATE_DOWN_HISTORY_TRADE) {
             history.remove(history.firstKey());
         }
-    }
-
-    private boolean isMarketConditionMet(long time, TreeMap<Long, MarketDataObject> time2MarketData, TreeMap<Long, Float> history) {
-        MarketDataObject marketData = time2MarketData.get(time);
-        if (marketData == null) return false;
-        Float minRate15Min60M = history.isEmpty() ? 0f : Collections.min(history.values());
-        return MarketBigChangeDetector.isAiPredictTrade(
-                marketData.rateDown15MAvg, marketData.rateDownAvg, marketData.rateUpAvg);
     }
 
 

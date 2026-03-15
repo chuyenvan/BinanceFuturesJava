@@ -84,6 +84,7 @@ public class ClientSingleton implements Serializable {
             RequestOptions options = new RequestOptions();
             syncRequestClient = SyncRequestClient.create(PrivateConfig.API_KEY, PrivateConfig.SECRET_KEY, options);
             symbols = syncRequestClient.getExchangeInformation().getSymbols();
+            LOG.info("Successfully fetched Exchange Information from Binance API with {} symbols.");
         }
 
         // 3. PARSE DỮ LIỆU VÀO CACHE MAPS

@@ -251,7 +251,7 @@ public class TickerIngestor2Aerospike {
     }
 
     private KlineObjectOptimized convertToProto(KlineObjectSimple c) {
-        return KlineObjectOptimized.newBuilder().setPriceOpen(c.priceOpen.floatValue()).setPriceClose(c.priceClose.floatValue())
-                .setMaxPrice(c.maxPrice.floatValue()).setMinPrice(c.minPrice.floatValue()).setTotalUsdt(c.totalUsdt.floatValue()).build();
+        return KlineObjectOptimized.newBuilder().setPriceOpen(c.priceOpen).setPriceClose(c.priceClose)
+                .setMaxPrice(c.maxPrice).setMinPrice(c.minPrice).setTotalUsdt(c.totalUsdt).build();
     }
 }

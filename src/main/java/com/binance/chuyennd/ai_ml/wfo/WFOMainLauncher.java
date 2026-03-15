@@ -23,12 +23,15 @@ public class WFOMainLauncher {
         // Xác định dải thời gian
         long startTs = Utils.sdfFile.parse("20240101").getTime();
 
-//        LOG.info("Step 3: Nạp Tickers 1M...");
-//        long current = startTs;
-//        while (current < System.currentTimeMillis()) {
-//            DataManager.getTickers1M(current);
-//            current += Utils.TIME_DAY;
-//        }
+        if (Configs.IS_KAGGLE_MODE) {
+            LOG.info("Step 3: Nạp Tickers 1M...");
+            long current = startTs;
+            while (current < System.currentTimeMillis()) {
+                DataManager.getTickers1M(current);
+                current += Utils.TIME_DAY;
+            }
+        }
+
 
         LOG.info("✅ TẤT CẢ DỮ LIỆU ĐÃ SẴN SÀNG TRONG RAM. Bắt đầu tối ưu...");
 

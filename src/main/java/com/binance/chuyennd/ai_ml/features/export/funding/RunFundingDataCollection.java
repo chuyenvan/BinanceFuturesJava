@@ -130,12 +130,7 @@ public class RunFundingDataCollection {
 
             if (!isCollecting) continue;
             try {
-                // 2. Kiểm tra điều kiện thị trường (Market Level Condition)
-                if (MarketBigChangeDetector.isAiPredictTrade(
-                        marketData.rateDown15MAvg,
-                        marketData.rateDownAvg,
-                        marketData.rateUpAvg
-                )) {
+
 
                     // 3. Lấy danh sách coin tiềm năng từ
                     for (String symbol : snapshot.keySet()) {
@@ -169,7 +164,6 @@ public class RunFundingDataCollection {
                             e.printStackTrace();
                         }
                     }
-                }
             } catch (Exception e) {
                 e.printStackTrace();
             }

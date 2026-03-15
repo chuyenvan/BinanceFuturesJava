@@ -6,7 +6,7 @@ import java.io.Serializable;
  * Object lưu trữ toàn bộ Tham số Giao dịch (Trading Parameters) đã được làm sạch.
  * Phục vụ cho việc chạy Bot Live và quá trình HPO (Hyperparameter Optimization).
  */
-public class BotTradingConfig implements Serializable {
+public class BotTradingConfig implements Serializable, Cloneable {
     private static final long serialVersionUID = 1L;
 
     // =========================================================
@@ -85,6 +85,12 @@ public class BotTradingConfig implements Serializable {
     public int numberRateDownHistoryTrade = 60;
     public int numberEntryEachSignal = 1;
 
+    // =========================================================
+    // 7. NHÓM ĐIỀU PHỐI VÀO LỆNH (Time-Weighted & Concurrency)
+    // =========================================================
+    public int maxConcurrentOrders = 10;     // Tối đa ôm 10 mã cùng lúc
+    public int globalCooldownMins = 30;      // Đóng băng DCA trong 30 phút nếu đang lỗ
+
     // Constructor mặc định
     public BotTradingConfig() {
     }
@@ -92,8 +98,8 @@ public class BotTradingConfig implements Serializable {
     public BotTradingConfig clone() {
         try {
             return (BotTradingConfig) super.clone();
-        } catch (CloneNotSupportedException e) {
-            return new BotTradingConfig();
+        } catch (Exception e) {
+            throw new RuntimeException("Error cloning BotTradingConfig");
         }
     }
 }

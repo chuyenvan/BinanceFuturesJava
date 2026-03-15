@@ -121,18 +121,18 @@ public class GenerateFundingPredictionsTool {
             ConcurrentHashMap<String, Short> symbolMap
     ) {
         FundingFeatureExtractor extractor = new FundingFeatureExtractor();
-        TreeMap<Long, Float> time2RateDown15MAvg = new TreeMap<>();
+
 
         // --- GIAI ĐOẠN 1: WARMUP ---
         long warmupStartTime = startTime - (24 * 60 * 60 * 1000L);
         LOG.info("🔥 WARMUP: {} -> {}", Utils.normalizeDateYYYYMMDDHHmm(warmupStartTime), Utils.normalizeDateYYYYMMDDHHmm(startTime));
 
-        runDataLoop(warmupStartTime, startTime, time2MarketData, null, symbolMap, true, extractor, time2RateDown15MAvg);
+        runDataLoop(warmupStartTime, startTime, time2MarketData, null, symbolMap, true, extractor);
 
         LOG.info("✅ WARMUP DONE. Generating...");
 
         // --- GIAI ĐOẠN 2: GENERATION ---
-        runDataLoop(startTime, endTime, time2MarketData, aiBrain, symbolMap, false, extractor, time2RateDown15MAvg);
+        runDataLoop(startTime, endTime, time2MarketData, aiBrain, symbolMap, false, extractor);
 
         LOG.info("🎉 DONE TASK: {} -> {}", Utils.normalizeDateYYYYMMDDHHmm(startTime), Utils.normalizeDateYYYYMMDDHHmm(endTime));
     }
@@ -142,8 +142,7 @@ public class GenerateFundingPredictionsTool {
                              FundingOnnxInferenceManager aiBrain,
                              ConcurrentHashMap<String, Short> symbolMap,
                              boolean isWarmup,
-                             FundingFeatureExtractor extractor,
-                             TreeMap<Long, Float> time2RateDown15MAvg
+                             FundingFeatureExtractor extractor
     ) {
         long currentTime = start;
         long lastBasketTimestamp = -1;
@@ -181,17 +180,10 @@ public class GenerateFundingPredictionsTool {
 
                 // 1. UPDATE HISTORY
                 extractor.updateMarketHistory(symbol2Ticker);
-                updateMarketRateHistory(time, time2MarketData, time2RateDown15MAvg);
 
                 if (isWarmup || existingTimestamps.contains(time)) continue;
 
-                // 2. CHECK CONDITION (Điều kiện lúc này đang dùng Cấu hình siêu lỏng)
-                if (!isMarketConditionMet(time, time2MarketData, time2RateDown15MAvg)) {
-                    continue;
-                }
-
                 processedCount++;
-
                 if (time != lastBasketTimestamp) {
                     cachedBasket = extractor.identifyTargetBasket(symbol2Ticker);
                     lastBasketTimestamp = time;
@@ -273,22 +265,7 @@ public class GenerateFundingPredictionsTool {
         }
     }
 
-    private void updateMarketRateHistory(long time, TreeMap<Long, MarketDataObject> time2MarketData, TreeMap<Long, Float> history) {
-        MarketDataObject marketData = time2MarketData.get(time);
-        if (marketData == null) return;
-        history.put(time, marketData.rateDown15MAvg);
-        while (history.size() > Configs.NUMBER_RATE_DOWN_HISTORY_TRADE) {
-            history.remove(history.firstKey());
-        }
-    }
 
-    private boolean isMarketConditionMet(long time, TreeMap<Long, MarketDataObject> time2MarketData, TreeMap<Long, Float> history) {
-        MarketDataObject marketData = time2MarketData.get(time);
-        if (marketData == null) return false;
-        Float minRate15Min60M = history.isEmpty() ? 0f : Collections.min(history.values());
-        return MarketBigChangeDetector.isAiPredictTrade(
-                marketData.rateDown15MAvg, marketData.rateDownAvg, marketData.rateUpAvg);
-    }
 
     // --- THÊM HÀM NÀY CHO SIMULATOR GỌI (CHẠY BÙ) ---
     public void generateAndSave(Long lastTimestamp) throws Exception {

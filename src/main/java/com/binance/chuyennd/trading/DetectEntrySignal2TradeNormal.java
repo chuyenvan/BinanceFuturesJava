@@ -247,7 +247,7 @@ public class DetectEntrySignal2TradeNormal {
 
                 Set<String> symbol2BUY = new HashSet<>();
                 symbol2BUY.addAll(MarketBigChangeDetector.getTopSymbol(numberOrder,
-                        symbol2FinalTicker, symbolLocked,sortedCandidates));
+                        symbol2FinalTicker, symbolLocked, sortedCandidates));
 
                 LOG.info("Level: {} {} -> {}", Utils.normalizeDateYYYYMMDDHHmm(btcTicker.startTime.longValue()), levelChange, symbol2BUY);
                 for (String symbol : symbol2BUY) {
@@ -309,29 +309,27 @@ public class DetectEntrySignal2TradeNormal {
                 time2RateDown15MAvg.remove(time2RateDown15MAvg.firstKey());
             }
 
-            if (MarketBigChangeDetector.isAiPredictTrade(rateDown15MAvg, rateDownAvg, rateUpAvg)) {
-                // 1. Lấy danh sách candidate
-                Set<String> allSymbols = new HashSet<>();
-                allSymbols.addAll(symbol2FinalTicker.keySet());
-                allSymbols.removeAll(BudgetManager.getInstance().symbol2Pos.keySet());
 
-                // 3. Chạy AI Predict -> Sort theo L0 (Prob Fail) từ bé đến lớn
-                TreeMap<Float, String> sortedCandidates = predictAllCandidates(allSymbols, symbol2FinalTicker,
-                        rateDownAvg, rateUpAvg, rateDown15MAvg, time);
+            // 1. Lấy danh sách candidate
+            Set<String> allSymbols = new HashSet<>();
+            allSymbols.addAll(symbol2FinalTicker.keySet());
+            allSymbols.removeAll(BudgetManager.getInstance().symbol2Pos.keySet());
 
+            // 3. Chạy AI Predict -> Sort theo L0 (Prob Fail) từ bé đến lớn
+            TreeMap<Float, String> sortedCandidates = predictAllCandidates(allSymbols, symbol2FinalTicker,
+                    rateDownAvg, rateUpAvg, rateDown15MAvg, time);
 
-                // 4. Final Trade Logic (Limit TOP 30)
-                int countChecked = 0;
+            // 4. Final Trade Logic (Limit TOP 30)
+            int countChecked = 0;
 
-                // Duyệt qua danh sách đã sắp xếp (con ngon nhất duyệt trước)
-                for (Map.Entry<Float, String> entry : sortedCandidates.entrySet()) {
-                    if (countChecked >= 30) break; // Chỉ lấy Top 30
-                    countChecked++;
-                    String symbol = entry.getValue();
-                    KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
-                    if (ticker == null) continue;
-                    createOrderBuyRequest(symbol, ticker, MarketLevelChange.PREDICT_SYMBOL_TRADE, symbol2Max15m.get(symbol), marketRate, predictData);
-                }
+            // Duyệt qua danh sách đã sắp xếp (con ngon nhất duyệt trước)
+            for (Map.Entry<Float, String> entry : sortedCandidates.entrySet()) {
+                if (countChecked >= 30) break; // Chỉ lấy Top 30
+                countChecked++;
+                String symbol = entry.getValue();
+                KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
+                if (ticker == null) continue;
+                createOrderBuyRequest(symbol, ticker, MarketLevelChange.PREDICT_SYMBOL_TRADE, symbol2Max15m.get(symbol), marketRate, predictData);
             }
 
             StorageSnappy.writeObject2File(FILE_STORAGE_TIME_RATE_DOWN15M, time2RateDown15MAvg);
@@ -349,7 +347,7 @@ public class DetectEntrySignal2TradeNormal {
     private TreeMap<Float, String> predictAllCandidates(Set<String> allSymbols, Map<String,
             KlineObjectSimple> symbol2FinalTicker, Float rateDownAvg, Float rateUpAvg, Float rateDown15MAvg, long time) {
         TreeMap<Float, String> sortedCandidates = new TreeMap<>();
-                // 2. Chuẩn bị AI Input
+        // 2. Chuẩn bị AI Input
         List<String> aiCandidates = new ArrayList<>();
         List<FundingMarketFeatures> aiFeaturesList = new ArrayList<>();
         List<String> currentBasket = null;
@@ -408,7 +406,6 @@ public class DetectEntrySignal2TradeNormal {
         }
         return sortedCandidates;
     }
-
 
 
     public void createOrderBuyRequest(String symbol, KlineObjectSimple ticker, MarketLevelChange levelChange, Float priceMax15M,

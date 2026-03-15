@@ -24,18 +24,18 @@ import java.util.List;
 public class KlineObjectNumber implements Serializable {
 
     public Long startTime;
-    public Float priceOpen;
-    public Float maxPrice;
-    public Float minPrice;
-    public Float priceClose;
-    public Float totalUsdt;
-    public Float endTime;
-    public Float rsi;
-    public Float ma20;
+    public float priceOpen;
+    public float maxPrice;
+    public float minPrice;
+    public float priceClose;
+    public float totalUsdt;
+    public Long endTime;
+    public float rsi;
+    public float ma20;
     // macd
-    public Float signal;
-    public Float macd;
-    public Float histogram;
+    public float signal;
+    public float macd;
+    public float histogram;
 //    public Float al;
 
     public static KlineObjectNumber convertString2Kline(List<Object> kline) {
@@ -46,7 +46,7 @@ public class KlineObjectNumber implements Serializable {
         result.minPrice = Float.valueOf(kline.get(3).toString());
         result.priceClose = Float.valueOf(kline.get(4).toString());
 //        result.volume = Float.valueOf(kline.get(5).toString());
-        result.endTime = (Float) kline.get(6);
+        result.endTime = (Long) kline.get(6);
         result.totalUsdt = Float.valueOf(kline.get(7).toString());
 //        result.al = (Float) kline.get(8);
         return result;

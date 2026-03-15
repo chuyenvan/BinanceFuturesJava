@@ -25,11 +25,11 @@ import java.util.List;
 public class KlineObjectSimple implements Serializable {
 
     public Long startTime;
-    public Float priceOpen;
-    public Float maxPrice;
-    public Float minPrice;
-    public Float priceClose;
-    public Float totalUsdt;
+    public float priceOpen;
+    public float maxPrice;
+    public float minPrice;
+    public float priceClose;
+    public float totalUsdt;
 
     public static KlineObjectSimple convertString2Kline(List<Object> kline) {
         KlineObjectSimple result = new KlineObjectSimple();

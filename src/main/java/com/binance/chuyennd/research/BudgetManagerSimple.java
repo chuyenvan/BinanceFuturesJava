@@ -142,30 +142,8 @@ public class BudgetManagerSimple {
                     Utils.formatPercentNew(balanceIndex.unProfitMin / balanceBasic),
                     totalSL, allOrderDone.size(), counterOrderCreated.get(),
                     counterOrderRunning(symbol2OrdersEntry), maxOrderRunning, totalFundingFee.longValue());
-//            if (timeUpdate.equals(Utils.getToDay() + 7 * Utils.TIME_HOUR)) {
-////                LOG.info("Report: {}", Utils.normalizeDateYYYYMMDDHHmm(timeUpdate));
-//                List<String> lines =
-//                        new ArrayList<>();
-//                StringBuilder builder = new StringBuilder();
-//                builder.append("capital: ").append(Configs.MAX_CAPITAL_RATE);
-//                builder.append(" balance: ").append(balance.longValue());
-//                builder.append(" balanceReal: ").append(balanceReal.longValue());
-//                builder.append(" done: ").append(allOrderDone.size());
-//                builder.append(balanceIndex.marginMax + " " + balanceIndex.rateMarginMax + " "
-//                        + Utils.normalizeDateYYYYMMDDHHmm(balanceIndex.timeMarginMax) + " " +
-//                        balanceIndex.profitLossMax);
-//                lines.add(builder.toString());
-//                try {
-//                    FileUtils.writeLines(new File("storage/report.txt"), lines, true);
-//                } catch (IOException e) {
-//                    e.printStackTrace();
-//                }
-//            }
+
         }
-//        if ((balance + unrealizedProfitMin) < 0) {
-//            LOG.info("Chay tai khoan {} -----------------------------------!", Utils.normalizeDateYYYYMMDDHHmm(timeUpdate));
-//        }
-//        updateBudget();
     }
 
     private Integer counterOrderRunning(ConcurrentHashMap<String, List<OrderTargetInfoTest>> symbol2OrdersEntry) {

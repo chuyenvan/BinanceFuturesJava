@@ -81,6 +81,17 @@ public class Utils {
         return cal.getTimeInMillis();
     }
 
+    public static boolean isMidnightFirstDay(long timeMillis) {
+        // Kiểm tra 0h0p
+        if (timeMillis % TIME_DAY == 0) {
+            Calendar cal = Calendar.getInstance();
+            cal.setTimeInMillis(timeMillis);
+            // Kiểm tra ngày trong tháng có phải mùng 1
+            return cal.get(Calendar.DAY_OF_MONTH) == 1;
+        }
+        return false;
+    }
+
     public static int getCurrentHour() {
         Calendar cal = Calendar.getInstance();
         cal.setTimeZone(TimeZone.getTimeZone("GMT+7"));
@@ -429,7 +440,8 @@ public class Utils {
 
     public static boolean isTickerAvailable(KlineObjectSimple ticker) {
         if (ticker != null) {
-            if (!ticker.minPrice.equals(ticker.maxPrice) || ticker.totalUsdt != 0) {
+            if (ticker.minPrice != ticker.maxPrice
+                    || ticker.totalUsdt != 0) {
                 return true;
             }
         }

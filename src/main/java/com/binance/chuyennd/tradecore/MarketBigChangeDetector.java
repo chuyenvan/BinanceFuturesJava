@@ -4,6 +4,7 @@ import com.binance.chuyennd.helper.TickerFuturesHelper;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.MarketLevelChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
+import com.binance.chuyennd.research.OrderTargetInfoTest;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
@@ -176,8 +177,7 @@ public class MarketBigChangeDetector {
         if (rateUpAvg > Configs.MS_UP_BIG_THRES) {
             return MarketLevelChange.BIG_UP;
         }
-        if (rateDownAvg < Configs.MS_DOWN_BIG_AVG
-                && btcRateChange < Configs.MS_DOWN_BIG_BTC) {
+        if (rateDownAvg < Configs.MS_DOWN_BIG_AVG) {
             return MarketLevelChange.BIG_DOWN;
         }
 
@@ -215,14 +215,6 @@ public class MarketBigChangeDetector {
         return null;
     }
 
-    public static boolean isAiPredictTrade(Float rateDown15MAvg, Float rateDownAvg, Float rateUpAvg) {
-
-//        return true;
-        return rateDown15MAvg < Configs.PREDICT_SYMBOL_RATE_DOWN_15M
-                || rateUpAvg > Configs.PREDICT_SYMBOL_RATE_UP_AVG
-                || rateDownAvg < Configs.PREDICT_SYMBOL_RATE_DOWN_AVG;
-    }
-
     public static boolean isDcaAlt(Float rateDown15MAvg,
                                    Float rateDownAvg,
                                    Float rateUpAvg) {
@@ -232,7 +224,21 @@ public class MarketBigChangeDetector {
     }
 
 
-
+    public static boolean is50PercentOrderLoss(Map<String, OrderTargetInfoTest> symbolTradeInLastest) {
+        if (symbolTradeInLastest == null
+                || symbolTradeInLastest.isEmpty()
+                || symbolTradeInLastest.size() < Configs.MAX_CONCURRENT_ORDERS) {
+            return false;
+        }
+        int counter = 0;
+        for (Map.Entry<String, OrderTargetInfoTest> entry : symbolTradeInLastest.entrySet()) {
+            OrderTargetInfoTest info = entry.getValue();
+            if (info == null || info.priceSL != null) {
+                counter++;
+            }
+        }
+        return counter < symbolTradeInLastest.size() / 2;
+    }
 }
 
 

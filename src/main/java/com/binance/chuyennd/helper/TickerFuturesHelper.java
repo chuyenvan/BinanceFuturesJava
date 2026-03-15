@@ -99,10 +99,10 @@ public class TickerFuturesHelper {
                     for (List<Object> allKline : allKlines) {
                         results.add(KlineObjectNumber.convertString2Kline(allKline));
                     }
-                    if (results.get(results.size() - 1).endTime.longValue() > System.currentTimeMillis()) {
+                    if (results.get(results.size() - 1).endTime> System.currentTimeMillis()) {
                         break;
                     } else {
-                        time = results.get(results.size() - 1).endTime.longValue() + 1;
+                        time = results.get(results.size() - 1).endTime + 1;
                     }
                 } catch (Exception e) {
 //                    LOG.info("Error respon of sym: {} {}", respon, new Date(time));
@@ -272,7 +272,7 @@ public class TickerFuturesHelper {
         Float lastPrice = null;
         Float openPrice = null;
         Long timeStart = null;
-        Float timeEnd = null;
+        Long timeEnd = null;
         Float totalUsdt = 0f;
 
         for (int i = index - numberTicker; i < index - numberAgo; i++) {

@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
@@ -22,8 +23,8 @@ public class DataManager {
     private static volatile TreeMap<Long, MarketDataObject> cachedMarketData = null;
     private static volatile TreeMap<Long, AiPredictionData> cachedAiPredictionData = null;
     private static volatile TreeMap<Long, long[]> cachedFundingPred = null;
-//    private static final ConcurrentHashMap<Long, TreeMap<Long, Map<String, KlineObjectSimple>>>
-//            cachedTickers1M = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<Long, TreeMap<Long, Map<String, KlineObjectSimple>>>
+            cachedTickers1M = new ConcurrentHashMap<>();
 
     private static final Object lockMarket = new Object();
     private static final Object lockAi = new Object();
@@ -67,6 +68,7 @@ public class DataManager {
     }
 
     public static TreeMap<Long, Map<String, KlineObjectSimple>> getTickers1M(Long startTime) {
+
 //        if (!cachedTickers1M.containsKey(startTime)) {
 //            synchronized (cachedTickers1M) {
 //                if (!cachedTickers1M.containsKey(startTime)) {

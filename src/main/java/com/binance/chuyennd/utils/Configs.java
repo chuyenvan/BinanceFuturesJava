@@ -21,6 +21,8 @@ public class Configs {
 
 
     public static final String FILE_TICKER_1M_STORAGE = "storage/tickers/symbol2ticker1Ms";
+    public static int MAX_CONCURRENT_ORDERS = 30;
+    public static int GLOBAL_COOLDOWN_MINS = 10;
 
 
     public static String configFile = "config.properties";
@@ -52,9 +54,9 @@ public class Configs {
     public static float PREDICT_SYMBOL_RATE_MAX_THRESHOLD = 0.2f; // Cập nhật từ FUNDING_PRED_MAX_THRESHOLD
 
     // Nhóm tham số lọc tín hiệu thị trường (Market Filters)
-    public static Float PREDICT_SYMBOL_RATE_DOWN_15M = -0.03234f;  // Param 2
-    public static Float PREDICT_SYMBOL_RATE_UP_AVG = 0.00454f;          // Param 3
-    public static Float PREDICT_SYMBOL_RATE_DOWN_AVG = -0.00503f;
+    public static float PREDICT_SYMBOL_RATE_DOWN_15M = -0.03234f;  // Param 2
+    public static float PREDICT_SYMBOL_RATE_UP_AVG = 0.00454f;          // Param 3
+    public static float PREDICT_SYMBOL_RATE_DOWN_AVG = -0.00503f;
 
     // Tham số bổ sung từ kết quả HPO
 
@@ -83,11 +85,6 @@ public class Configs {
     // --- LOW VOLATILITY (Biến động thấp) ---
     public static float TS_VOL_LOW_THRES = 0.00239f; // Ngưỡng nhận diện Low Vol
     public static float TS_RATE_LOW = 0.01189f; // Ta
-//
-//    // Mức chốt lời tương ứng (Target Rates)
-//    public static float TS_RATE_HIGH = 0.04799;      // Gồng lãi cực mạnh ~4.8% (Cũ: 3%)
-//    public static float TS_RATE_MED = 0.02463;       // Gồng lãi ~2.5% (Cũ: 2%)
-//    public static float TS_RATE_LOW = 0.01415;       // Chốt sớm ~1.4% (
 
 
     public static String TIME_RUN = Configs.getString("TIME_RUN");
@@ -103,10 +100,6 @@ public class Configs {
 
     public static final Float RATE_FEE = Configs.getDouble("RATE_FEE");
     public static Integer LEVERAGE_ORDER = Configs.getInt("LEVERAGE_ORDER");
-
-    // kaggle
-//    public static String FILE_ENTRY_MARKET_LEVEL = "storage/market_data_one_file/time2market.data";
-//    public static String FILE_ENTRY_MARKET_LEVEL = Configs.getString("FILE_ENTRY_MARKET_LEVEL");
 
 
     // aerospike

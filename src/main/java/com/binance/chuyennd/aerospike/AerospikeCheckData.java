@@ -7,6 +7,7 @@ public class AerospikeCheckData {
         AerospikeClient client = new AerospikeClient("103.157.218.226", 3222);
 //        AerospikeClient client = new AerospikeClient("103.157.218.242", 3222);
         try {
+
             String namespace = "ticker";
 
             // truncate toàn bộ set

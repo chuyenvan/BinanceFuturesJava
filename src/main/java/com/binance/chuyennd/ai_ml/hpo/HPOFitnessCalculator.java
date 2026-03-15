@@ -8,36 +8,37 @@ import java.util.Collection;
 public class HPOFitnessCalculator {
     public static float evaluateProfitVelocity(SimulatorMarketLevelTicker1MStopLoss simulator) {
         Collection<OrderTargetInfoTest> orders = simulator.allOrderDone.values();
-        if (orders.isEmpty()) return 0;
+        int tradeCount = orders.size();
 
+        // 🔥 LOGIC CHỈ ĐƯỜNG CHO AI (GRADIENT PENALTY)
+        if (tradeCount == 0) {
+            return -10000.0f; // Ngu nhất: Phạt kịch khung
+        } else if (tradeCount < 20) {
+            // Khôn hơn 1 chút: 1 lệnh bị phạt -9500, 10 lệnh bị phạt -5000...
+            // AI sẽ tự hiểu là phải tăng số lệnh lên để đỡ bị phạt!
+            return -10000.0f + (tradeCount * 500.0f);
+        }
+
+        // Nếu qua được mốc 20 lệnh (Sống sót), mới bắt đầu tính toán lợi nhuận
         float totalProfit = 0;
         long totalHoldingTime = 0;
 
         for (OrderTargetInfoTest order : orders) {
-            // 1. calTp() đã tự động trừ đi calFundingFee() ở bên trong class OrderTargetInfoTest
             totalProfit += order.calTp();
-
-            // 2. Tính thời gian giữ lệnh (từ lúc Start đến lúc Update/Close)
             totalHoldingTime += (order.timeUpdate - order.timeStart);
         }
 
-        // 3. Tính thời gian giữ lệnh trung bình quy đổi ra GIỜ (hoặc NGÀY)
-        // Utils.TIME_HOUR = 60 * 60 * 1000
-        float avgHoldingTimeHours = (float) totalHoldingTime / orders.size() / Utils.TIME_HOUR;
+//        float avgHoldingTimeHours = (float) totalHoldingTime / tradeCount / Utils.TIME_HOUR;
+//        if (avgHoldingTimeHours <= 0) avgHoldingTimeHours = 1;
+//
+//        float fitnessScore;
+//        if (totalProfit > 0) {
+//            fitnessScore = totalProfit / avgHoldingTimeHours;
+//        } else {
+//            fitnessScore = totalProfit * avgHoldingTimeHours;
+//        }
 
-        // Đảm bảo không bị lỗi chia cho 0 nếu lệnh đóng/mở ngay tức thì
-        if (avgHoldingTimeHours <= 0) avgHoldingTimeHours = 1;
-
-        // 4. Đưa hệ số vòng quay vốn vào Hàm mục tiêu (Fitness)
-        float fitnessScore;
-        if (totalProfit > 0) {
-            // Lãi: Tối đa hóa Lợi nhuận sinh ra TRÊN MỖI GIỜ KẸT VỐN (Profit Velocity)
-            fitnessScore = totalProfit / avgHoldingTimeHours;
-        } else {
-            // Lỗ: Trừng phạt nặng thêm nếu đã lỗ mà còn gồng lâu (nhân thời gian kẹt vốn)
-            fitnessScore = totalProfit * avgHoldingTimeHours;
-        }
-
-        return fitnessScore;
+//        return fitnessScore;
+        return totalProfit;
     }
 }
