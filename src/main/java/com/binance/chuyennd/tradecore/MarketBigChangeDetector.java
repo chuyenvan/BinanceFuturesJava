@@ -1,6 +1,8 @@
 package com.binance.chuyennd.tradecore;
 
+import com.binance.chuyennd.ai_ml.features.export.HistoryManager;
 import com.binance.chuyennd.helper.TickerFuturesHelper;
+import com.binance.chuyennd.object.CoinTier;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.MarketLevelChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
@@ -224,20 +226,100 @@ public class MarketBigChangeDetector {
     }
 
 
-    public static boolean is50PercentOrderLoss(Map<String, OrderTargetInfoTest> symbolTradeInLastest) {
-        if (symbolTradeInLastest == null
-                || symbolTradeInLastest.isEmpty()
-                || symbolTradeInLastest.size() < Configs.MAX_CONCURRENT_ORDERS) {
+    public static boolean is50PercentOrderLoss(Map<String, OrderTargetInfoTest> symbolTradeInLastest, long currentTime) {
+        if (symbolTradeInLastest == null || symbolTradeInLastest.isEmpty()) {
             return false;
         }
-        int counter = 0;
-        for (Map.Entry<String, OrderTargetInfoTest> entry : symbolTradeInLastest.entrySet()) {
-            OrderTargetInfoTest info = entry.getValue();
-            if (info == null || info.priceSL != null) {
-                counter++;
+
+        List<OrderTargetInfoTest> recentOrders = new ArrayList<>(symbolTradeInLastest.values());
+        recentOrders.sort((o1, o2) -> Long.compare(o2.timeStart, o1.timeStart));
+
+        // =========================================================================
+        // LỚP 1: KIỂM TRA MẬT ĐỘ THEO "TOKEN BUCKET" (CHUẨN INSIGHT THỰC CHIẾN)
+        // =========================================================================
+        int baseBurst = Configs.MAX_CONCURRENT_ORDERS; // Sức nổ (VD: 30)
+        float recoveryRate = Configs.RECOVERY_RATE_PER_MIN; // CHỈ SỐ DUY NHẤT ĐỂ HPO DÒ TÌM
+
+        int orderCount = 1; // Tính luôn lệnh đang chờ duyệt
+
+        for (OrderTargetInfoTest order : recentOrders) {
+            if (order == null) continue;
+
+            long diffMillis = currentTime - order.timeStart;
+            if (diffMillis < 0) continue;
+
+            int diffMins = (int) (diffMillis / 60000L);
+
+            // Quá 4H (240p) thì bỏ qua, không tính làm áp lực nữa
+            if (diffMins > 240) break;
+
+            // CÔNG THỨC: 10 phút đầu giữ nguyên Base Burst. Sau 10 phút cộng thêm Recovery Rate
+            float extraOrders = Math.max(0, diffMins - 10) * recoveryRate;
+            int allowedOrders = baseBurst + (int) extraOrders;
+
+            orderCount++;
+
+            // Chặn ngay nếu vượt ngưỡng động tại bất kỳ thời điểm nào trong quá khứ
+            if (orderCount > allowedOrders) {
+                return true;
             }
         }
-        return counter < symbolTradeInLastest.size() / 2;
+
+        // =========================================================================
+        // LỚP 2: CẦU DAO CHỐNG BÃO (Dựa trên tỷ lệ lỗ)
+        // =========================================================================
+        int totalOrders = recentOrders.size();
+
+        // Cho phép bot xả đạn đủ một nửa sức nổ rồi mới check cầu dao
+        if (totalOrders < (baseBurst / 2.0)) {
+            return false;
+        }
+
+        int safeOrders = 0;
+        for (OrderTargetInfoTest info : recentOrders) {
+            if (info != null && info.priceSL != null) {
+                safeOrders++; // Lệnh đã dời SL là lệnh an toàn
+            }
+        }
+
+        return safeOrders < (totalOrders / 2.0);
+    }
+    public static Map<String, CoinTier> rankCoinsByVolume(Set<String> activeSymbols, HistoryManager historyManager) {
+        Map<String, CoinTier> symbolTiers = new HashMap<>();
+        List<Map.Entry<String, Float>> volumeList = new ArrayList<>();
+
+        // 1. Tính tổng Volume 24H (1440 phút) để xếp hạng độ uy tín
+        int lookbackMins = 1440;
+
+        for (String symbol : activeSymbols) {
+            // Sử dụng hàm có sẵn của HistoryManager để lấy tổng Volume
+            float vol = historyManager.getSumVolume(symbol, lookbackMins);
+            volumeList.add(new AbstractMap.SimpleEntry<>(symbol, vol));
+        }
+
+        // 2. Sắp xếp giảm dần theo Volume (Thằng to nhất lên đầu)
+        volumeList.sort((a, b) -> b.getValue().compareTo(a.getValue()));
+
+        int totalCoins = volumeList.size();
+        if (totalCoins == 0) return symbolTiers;
+
+        // 3. Chia mốc 20% - 60% - 20%
+        int top20Index = (int) (totalCoins * 0.20);
+        int bottom20Index = (int) (totalCoins * 0.80);
+
+        for (int i = 0; i < totalCoins; i++) {
+            String symbol = volumeList.get(i).getKey();
+
+            if (i < top20Index) {
+                symbolTiers.put(symbol, CoinTier.TIER_1_BLUECHIP);
+            } else if (i >= bottom20Index) {
+                symbolTiers.put(symbol, CoinTier.TIER_3_SHITCOIN);
+            } else {
+                symbolTiers.put(symbol, CoinTier.TIER_2_MIDCAP);
+            }
+        }
+
+        return symbolTiers;
     }
 }
 

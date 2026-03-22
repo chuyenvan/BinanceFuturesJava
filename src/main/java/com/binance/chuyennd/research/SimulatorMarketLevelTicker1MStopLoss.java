@@ -15,10 +15,7 @@ import com.binance.chuyennd.bigchange.test.TraceOrderDone;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.MarketLevelChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
-import com.binance.chuyennd.tradecore.BotTradingConfig;
-import com.binance.chuyennd.tradecore.DcaProcessor;
-import com.binance.chuyennd.tradecore.MarketBigChangeDetector;
-import com.binance.chuyennd.tradecore.TradeUtils;
+import com.binance.chuyennd.tradecore.*;
 import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Storage;
@@ -121,7 +118,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         Configs.NUMBER_ENTRY_EACH_SIGNAL = config.numberEntryEachSignal;
 
         Configs.MAX_CONCURRENT_ORDERS = config.maxConcurrentOrders; // Nhớ khai báo public static int MAX_CONCURRENT_ORDERS = 10 trong Configs.java
-        Configs.GLOBAL_COOLDOWN_MINS = config.globalCooldownMins;
     }
 
 
@@ -248,12 +244,12 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                         if (!Utils.isTickerAvailable(ticker)) {
                                             continue;
                                         }
-                                        createOrderBUY(symbol, ticker, levelChange, time2MarketData.get(time));
+                                        createOrderBUY(symbol, ticker, levelChange, time2MarketData.get(time), symbol2LastTickers);
                                     }
                                     for (String symbol : symbolDcaLevel) {
                                         KlineObjectSimple ticker = symbol2Ticker.get(symbol);
                                         if (Utils.isTickerAvailable(ticker)) {
-                                            createOrderBUY(symbol, ticker, MarketLevelChange.DCA_LEVEL1, time2MarketData.get(time));
+                                            createOrderBUY(symbol, ticker, MarketLevelChange.DCA_LEVEL1, time2MarketData.get(time), symbol2LastTickers);
                                         }
                                     }
                                 }
@@ -262,13 +258,14 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                             startTimeRun = System.currentTimeMillis();
 
                             if (marketData != null) {
+                                float hungerMultiplier = TradeUtils.getHungerMultiplier(symbol2OrderRunning, time);
                                 if (MarketBigChangeDetector.isDcaAlt(marketData.rateDown15MAvg, marketData.rateDownAvg, marketData.rateUpAvg)) {
                                     // dca buy
                                     List<String> symbolDcaLossBig = DcaProcessor.getDCA(null, time, BudgetManagerSimple.getInstance().getBudget(), symbol2OrderRunning);
                                     for (String symbol : symbolDcaLossBig) {
                                         KlineObjectSimple ticker = symbol2Ticker.get(symbol);
                                         if (Utils.isTickerAvailable(ticker)) {
-                                            createOrderBUY(symbol, ticker, MarketLevelChange.DCA_LEVEL1, time2MarketData.get(time));
+                                            createOrderBUY(symbol, ticker, MarketLevelChange.DCA_LEVEL1, time2MarketData.get(time), symbol2LastTickers);
                                         }
                                     }
 
@@ -295,21 +292,16 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
                                         if (symbolPred != null) {
                                             // Biến symbolPred giờ là 1 số thực đơn thuần, không phải mảng nữa
-                                            if (symbolPred > Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD) {
+                                            if (symbolPred > Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD * (1 / hungerMultiplier)) {
                                                 continue;
                                             }
                                             fundingPredict2Symbol.put(symbolPred, symbol);
                                         }
                                     }
                                 }
-                                int counter = 0;
                                 for (String symbol : fundingPredict2Symbol.values()) {
-                                    counter++;
-                                    if (counter > Configs.MAX_CONCURRENT_ORDERS) {
-                                        break;
-                                    }
                                     KlineObjectSimple ticker = symbol2Ticker.get(symbol);
-                                    createOrderBUY(symbol, ticker, MarketLevelChange.PREDICT_SYMBOL_TRADE, time2MarketData.get(time));
+                                    createOrderBUY(symbol, ticker, MarketLevelChange.PREDICT_SYMBOL_TRADE, time2MarketData.get(time), symbol2LastTickers);
                                 }
                             }
                             logByProcessTime(startTimeRun, "Done funding fee", time);
@@ -545,12 +537,12 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         return orderResult;
     }
 
-    public void createOrderBUY(String symbol, KlineObjectSimple ticker, MarketLevelChange levelChange, MarketDataObject marketData) {
+    public void createOrderBUY(String symbol, KlineObjectSimple ticker, MarketLevelChange levelChange,
+                               MarketDataObject marketData, Map<String, List<KlineObjectSimple>> symbol2LastTickers) {
 
 // 🔥 NÂNG CẤP 1: Chỉ bật Cầu dao dò mìn đối với lệnh MỚI (Không chặn lệnh DCA)
         if (levelChange != MarketLevelChange.DCA_LEVEL1 && levelChange != MarketLevelChange.DCA_LEVEL2) {
-            Map<String, OrderTargetInfoTest> symbolTradeInLastest = getAllSymbolTradeInLastest(ticker.startTime);
-            if (MarketBigChangeDetector.is50PercentOrderLoss(symbolTradeInLastest)) {
+            if (MarketBigChangeDetector.is50PercentOrderLoss(symbol2OrderRunning, ticker.startTime)) {
                 // LOG.debug("⚠️ CẦU DAO BẬT: >=50% lệnh mua trong 30p qua đang lỗ. Tạm ngưng mở mới!");
                 return;
             }
@@ -558,9 +550,9 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             // 🔥 NÂNG CẤP 2: Giới hạn tổng số lệnh chạy đồng thời CHUẨN XÁC
             // (Bạn code ở vòng for bên ngoài thì nó chỉ giới hạn số lệnh của 1 nến 1M,
             // chứ nến sau nó lại táng tiếp 30 lệnh). Phải chặn ở đây!
-            if (symbol2OrderRunning.size() >= Configs.MAX_CONCURRENT_ORDERS) {
-                return;
-            }
+//            if (symbol2OrderRunning.size() >= Configs.MAX_CONCURRENT_ORDERS) {
+//                return;
+//            }
         }
         AiPredictionData predict = predictionMap.get(ticker.startTime);
         if (predict != null && !levelChange.equals(MarketLevelChange.BIG_DOWN)) {
@@ -581,6 +573,27 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         if (budget == null) {
             return;
         }
+
+        // =========================================================
+        // 🚀 CẤP VỐN THÔNG MINH BẰNG COIN RANK MANAGER
+        // =========================================================
+        long currentTs = ticker.startTime.longValue();
+
+        // 1. Lấy Hệ số nhân Budget (1.2 | 1.0 | 0.5)
+        // Lưu ý: Tự động truyền symbol2LastTickers để Manager tự tính toán khi cần
+        float tierMultiplier = CoinRankManager.getInstance().getBudgetMultiplier(symbol);
+
+        // 2. Chặn đứng DCA rác
+        CoinRankManager.CoinTier myTier = CoinRankManager.getInstance().getCoinTier(symbol, currentTs, symbol2LastTickers);
+        if (myTier == CoinRankManager.CoinTier.TIER_3_SHITCOIN) {
+            if (levelChange == MarketLevelChange.DCA_LEVEL1 || levelChange == MarketLevelChange.DCA_LEVEL2) {
+                LOG.info("🚫 Chặn DCA vào đồng Shitcoin: {}", symbol);
+                return;
+            }
+        }
+
+        // Áp dụng hệ số vào Budget
+        budget *= tierMultiplier;
 
         Float quantity = Utils.calQuantityTest(budget, leverage, entry, symbol);
 
@@ -613,22 +626,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         symbol2LastTimeTrade.put(symbol, order.timeStart);
         BudgetManagerSimple.getInstance().updateMaxOrderRunning(counterOrderRunning());
         BudgetManagerSimple.getInstance().updatePositionMargin(symbol2OrderRunning.values());
-    }
-
-    private Map<String, OrderTargetInfoTest> getAllSymbolTradeInLastest(Long startTime) {
-        Map<String, OrderTargetInfoTest> hashMap = new HashMap<>();
-        Set<String> symbols = new HashSet<>();
-        symbols.addAll(symbol2LastTimeTrade.keySet());
-        for (String symbol : symbols) {
-            Long timeTrade = symbol2LastTimeTrade.get(symbol);
-            if (timeTrade != null && timeTrade < startTime - Configs.GLOBAL_COOLDOWN_MINS * Utils.TIME_MINUTE) {
-                symbol2LastTimeTrade.remove(symbol);
-                continue;
-            }
-            OrderTargetInfoTest order = symbol2OrderRunning.get(symbol);
-            hashMap.put(symbol, order);
-        }
-        return hashMap;
     }
 
 

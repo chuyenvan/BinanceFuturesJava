@@ -89,7 +89,6 @@ public class BotTradingConfig implements Serializable, Cloneable {
     // 7. NHÓM ĐIỀU PHỐI VÀO LỆNH (Time-Weighted & Concurrency)
     // =========================================================
     public int maxConcurrentOrders = 10;     // Tối đa ôm 10 mã cùng lúc
-    public int globalCooldownMins = 30;      // Đóng băng DCA trong 30 phút nếu đang lỗ
 
     // Constructor mặc định
     public BotTradingConfig() {

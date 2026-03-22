@@ -22,8 +22,16 @@ public class Configs {
 
     public static final String FILE_TICKER_1M_STORAGE = "storage/tickers/symbol2ticker1Ms";
     public static int MAX_CONCURRENT_ORDERS = 30;
-    public static int GLOBAL_COOLDOWN_MINS = 10;
+    // Tham số kiểm soát mật độ vào lệnh (Đưa vào HPO)
+    public static float RECOVERY_RATE_PER_MIN = 1.0f;   // Số lệnh xả tối đa ngay phút đầu
 
+    // =========================================================
+    // THAM SỐ "ĐỘ KHÁT LỆNH" (HUNGER MODE - DYNAMIC THRESHOLD)
+    // =========================================================
+    public static int HUNGER_LOOKBACK_HOURS = 72; // Soi lịch sử 3 ngày gần nhất
+    public static int HUNGER_TARGET_TRADES = 10;  // Kỳ vọng bot phải cắn 10 lệnh / 3 ngày
+    public static float HUNGER_MAX_RELAX = 0.5f;  // Khi cực đói: Giảm tiêu chuẩn xuống tối đa 50%
+    public static float HUNGER_MAX_STRICT = 1.3f; // Khi quá no (Bão): Tăng tiêu chuẩn lên 130%
 
     public static String configFile = "config.properties";
     public static volatile Map properties = new HashMap();
