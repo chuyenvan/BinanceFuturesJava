@@ -47,6 +47,12 @@
                     <exclude>META-INF/*.RSA</exclude>
                   </excludes>
                 </filter>
+                <filter>
+                  <artifact>io.github.binance:binance-futures-connector-java</artifact>
+                  <excludes>
+                    <exclude>logback.xml</exclude>
+                  </excludes>
+                </filter>
               </filters>
             </configuration>
           </execution>

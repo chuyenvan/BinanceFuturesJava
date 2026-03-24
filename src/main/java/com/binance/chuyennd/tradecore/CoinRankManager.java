@@ -114,7 +114,7 @@ public class CoinRankManager {
 
         // 3. Phân mảnh 20% - 60% - 20%
         int top20Index = (int) (totalCoins * 0.20);
-        int bottom20Index = (int) (totalCoins * 0.80);
+        int bottom20Index = (int) (totalCoins * 0.70);
 
         symbolTiers.clear();
 

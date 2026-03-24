@@ -21,17 +21,13 @@ public class Configs {
 
 
     public static final String FILE_TICKER_1M_STORAGE = "storage/tickers/symbol2ticker1Ms";
-    public static int MAX_CONCURRENT_ORDERS = 30;
+    public static int MAX_CONCURRENT_ORDERS = 40;
     // Tham số kiểm soát mật độ vào lệnh (Đưa vào HPO)
     public static float RECOVERY_RATE_PER_MIN = 1.0f;   // Số lệnh xả tối đa ngay phút đầu
 
-    // =========================================================
-    // THAM SỐ "ĐỘ KHÁT LỆNH" (HUNGER MODE - DYNAMIC THRESHOLD)
-    // =========================================================
-    public static int HUNGER_LOOKBACK_HOURS = 72; // Soi lịch sử 3 ngày gần nhất
-    public static int HUNGER_TARGET_TRADES = 10;  // Kỳ vọng bot phải cắn 10 lệnh / 3 ngày
-    public static float HUNGER_MAX_RELAX = 0.5f;  // Khi cực đói: Giảm tiêu chuẩn xuống tối đa 50%
-    public static float HUNGER_MAX_STRICT = 1.3f; // Khi quá no (Bão): Tăng tiêu chuẩn lên 130%
+    public static float DENSITY_SUSTAIN = 10.0f; // HPO: Dò từ 5 -> 20
+    public static float DENSITY_ALPHA = 0.6f;    // HPO: Dò từ 0.2 -> 0.8 (Độ cong)
+
 
     public static String configFile = "config.properties";
     public static volatile Map properties = new HashMap();
@@ -59,7 +55,7 @@ public class Configs {
             : false;
     // Thêm dòng này vào Configs.java
 // Các tham số đã được cập nhật từ kết quả tối ưu hóa Funding Fee
-    public static float PREDICT_SYMBOL_RATE_MAX_THRESHOLD = 0.2f; // Cập nhật từ FUNDING_PRED_MAX_THRESHOLD
+    public static float PREDICT_SYMBOL_RATE_MAX_THRESHOLD = 0.15f; // Cập nhật từ FUNDING_PRED_MAX_THRESHOLD
 
     // Nhóm tham số lọc tín hiệu thị trường (Market Filters)
     public static float PREDICT_SYMBOL_RATE_DOWN_15M = -0.03234f;  // Param 2

@@ -258,7 +258,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                             startTimeRun = System.currentTimeMillis();
 
                             if (marketData != null) {
-                                float hungerMultiplier = TradeUtils.getHungerMultiplier(symbol2OrderRunning, time);
                                 if (MarketBigChangeDetector.isDcaAlt(marketData.rateDown15MAvg, marketData.rateDownAvg, marketData.rateUpAvg)) {
                                     // dca buy
                                     List<String> symbolDcaLossBig = DcaProcessor.getDCA(null, time, BudgetManagerSimple.getInstance().getBudget(), symbol2OrderRunning);
@@ -292,7 +291,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
                                         if (symbolPred != null) {
                                             // Biến symbolPred giờ là 1 số thực đơn thuần, không phải mảng nữa
-                                            if (symbolPred > Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD * (1 / hungerMultiplier)) {
+                                            if (symbolPred > Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD) {
                                                 continue;
                                             }
                                             fundingPredict2Symbol.put(symbolPred, symbol);
@@ -542,17 +541,11 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
 // 🔥 NÂNG CẤP 1: Chỉ bật Cầu dao dò mìn đối với lệnh MỚI (Không chặn lệnh DCA)
         if (levelChange != MarketLevelChange.DCA_LEVEL1 && levelChange != MarketLevelChange.DCA_LEVEL2) {
-            if (MarketBigChangeDetector.is50PercentOrderLoss(symbol2OrderRunning, ticker.startTime)) {
-                // LOG.debug("⚠️ CẦU DAO BẬT: >=50% lệnh mua trong 30p qua đang lỗ. Tạm ngưng mở mới!");
+            // Truyền cả lệnh đang chạy và lệnh đã chốt vào để hệ thống có cái nhìn khách quan nhất
+            if (MarketBigChangeDetector.is50PercentOrderLoss(symbol2OrderRunning.values(), allOrderDone.values(), ticker.startTime)) {
+                // LOG.debug("⚠️ CẦU DAO BẬT: Đa số các lệnh mới vào gần đây đều chết hoặc gồng lỗ. Ngưng mở mới!");
                 return;
             }
-
-            // 🔥 NÂNG CẤP 2: Giới hạn tổng số lệnh chạy đồng thời CHUẨN XÁC
-            // (Bạn code ở vòng for bên ngoài thì nó chỉ giới hạn số lệnh của 1 nến 1M,
-            // chứ nến sau nó lại táng tiếp 30 lệnh). Phải chặn ở đây!
-//            if (symbol2OrderRunning.size() >= Configs.MAX_CONCURRENT_ORDERS) {
-//                return;
-//            }
         }
         AiPredictionData predict = predictionMap.get(ticker.startTime);
         if (predict != null && !levelChange.equals(MarketLevelChange.BIG_DOWN)) {

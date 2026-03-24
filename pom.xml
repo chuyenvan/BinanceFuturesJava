@@ -15,6 +15,7 @@
         <okhttp3.version>4.9.1</okhttp3.version>
         <fastjson.version>1.2.76</fastjson.version>
     </properties>
+
     <dependencies>
         <dependency>
             <groupId>org.xerial.snappy</groupId>
@@ -66,6 +67,7 @@
             <artifactId>jedis</artifactId>
             <version>3.1.0</version>
         </dependency>
+
         <dependency>
             <groupId>io.github.binance</groupId>
             <artifactId>binance-futures-connector-java</artifactId>
@@ -97,11 +99,6 @@
             <artifactId>onnxruntime</artifactId>
             <version>1.16.3</version>
         </dependency>
-        <dependency>
-            <groupId>io.github.binance</groupId>
-            <artifactId>binance-futures-connector-java</artifactId>
-            <version>3.0.1</version> </dependency>
-
     </dependencies>
 
     <build>
@@ -143,11 +140,18 @@
                                         <exclude>META-INF/*.RSA</exclude>
                                     </excludes>
                                 </filter>
+                                <filter>
+                                    <artifact>io.github.binance:binance-futures-connector-java</artifact>
+                                    <excludes>
+                                        <exclude>logback.xml</exclude>
+                                    </excludes>
+                                </filter>
                             </filters>
                         </configuration>
                     </execution>
                 </executions>
             </plugin>
+
             <plugin>
                 <groupId>org.xolstice.maven.plugins</groupId>
                 <artifactId>protobuf-maven-plugin</artifactId>
