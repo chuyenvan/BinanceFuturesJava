@@ -102,6 +102,11 @@ public class Configs {
     public static Integer NUMBER_ENTRY_EACH_SIGNAL = Configs.getInt("NUMBER_ENTRY_EACH_SIGNAL");
     public static Integer NUMBER_TICKER_CAL_RATE_CHANGE = Configs.getInt("NUMBER_TICKER_CAL_RATE_CHANGE");
 
+    // Funding Fee related configurations
+    public static Integer NUMBER_HOUR_FUNDING_CAL = Configs.getInt("NUMBER_HOUR_FUNDING_CAL");
+    public static float FUNDING_MAX_TRADE = Configs.getDouble("FUNDING_MAX_TRADE");
+    public static float FUNDING_MIN_TRADE = Configs.getDouble("FUNDING_MIN_TRADE");
+
     public static final Float RATE_FEE = Configs.getDouble("RATE_FEE");
     public static Integer LEVERAGE_ORDER = Configs.getInt("LEVERAGE_ORDER");
 
