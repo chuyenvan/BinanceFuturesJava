@@ -57,12 +57,10 @@ import java.util.stream.Collectors;
 public class DetectEntrySignal2TradeNormal {
 
     public static final Logger LOG = LoggerFactory.getLogger(DetectEntrySignal2TradeNormal.class);
-    private static final String FILE_STORAGE_TIME_RATE_DOWN15M = "storage/data/time2RatDown15M.data";
     // Đường dẫn model Funding
     private static final String MODEL_FUNDING_PATH = "../storage/ai_ml_data/models_funding/Funding_Classifier_Final.onnx";
 
     public ExecutorService executorService = Executors.newFixedThreadPool(Configs.NUMBER_THREAD_ORDER_MANAGER);
-    public TreeMap<Long, Float> time2RateDown15MAvg = new TreeMap<>();
     public AIRejectFilter aiRejectFilter = new AIRejectFilter();
 
     // --- Biến AI Entry (Cũ) ---
@@ -301,14 +299,6 @@ public class DetectEntrySignal2TradeNormal {
                 }
             }
 
-            // ==========================================================
-            // 🔥 FUNDING FEE TRADE LOGIC (SORTED & FILTERED & LIMITED)
-            // ==========================================================
-            time2RateDown15MAvg.put(time, rateDown15MAvg);
-            while (time2RateDown15MAvg.size() > Configs.NUMBER_RATE_DOWN_HISTORY_TRADE) {
-                time2RateDown15MAvg.remove(time2RateDown15MAvg.firstKey());
-            }
-
 
             // 1. Lấy danh sách candidate
             Set<String> allSymbols = new HashSet<>();
@@ -332,7 +322,6 @@ public class DetectEntrySignal2TradeNormal {
                 createOrderBuyRequest(symbol, ticker, MarketLevelChange.PREDICT_SYMBOL_TRADE, symbol2Max15m.get(symbol), marketRate, predictData);
             }
 
-            StorageSnappy.writeObject2File(FILE_STORAGE_TIME_RATE_DOWN15M, time2RateDown15MAvg);
             StorageSnappy.writeObject2File("storage/data/rateMax15M/" + Utils.normalizeDateYYYYMMDD(time) + "/" + time, rateDown15M2Symbols);
             StorageSnappy.writeObject2File("storage/data/rateDown1M/" + Utils.normalizeDateYYYYMMDD(time) + "/" + time, rateDown2Symbols);
             StorageSnappy.writeObject2File("storage/data/prediction/" + Utils.normalizeDateYYYYMMDD(time) + "/" + time, predictData);
@@ -488,10 +477,6 @@ public class DetectEntrySignal2TradeNormal {
     }
 
     private void initData() {
-
-        if (new File(FILE_STORAGE_TIME_RATE_DOWN15M).exists()) {
-            time2RateDown15MAvg = (TreeMap<Long, Float>) StorageSnappy.readObjectFromFile(FILE_STORAGE_TIME_RATE_DOWN15M);
-        }
 
         // --- 1. KHỞI TẠO AI ENTRY (CŨ) ---
         try {

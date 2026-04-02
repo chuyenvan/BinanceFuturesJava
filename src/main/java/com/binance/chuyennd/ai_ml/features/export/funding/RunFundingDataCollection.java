@@ -22,8 +22,6 @@ public class RunFundingDataCollection {
     // Cache data để lookup tương lai
     private final Map<Long, TreeMap<Long, Map<String, KlineObjectSimple>>> dataCache = new HashMap<>();
 
-    // Lưu lịch sử rateDown15M để tính minRate15Min60M (Giống Simulator)
-    private final TreeMap<Long, Float> time2RateDown15MAvg = new TreeMap<>();
 
     public static void main(String[] args) throws Exception {
         // 1. CẤU HÌNH THAM SỐ (Override Configs theo yêu cầu)
@@ -120,13 +118,6 @@ public class RunFundingDataCollection {
 
             // --- LOGIC GIỐNG SIMULATOR ---
 
-            // 1. Cập nhật lịch sử RateDown15M để tính minRate15Min60M
-            time2RateDown15MAvg.put(timestamp, marketData.rateDown15MAvg);
-            // Giữ size lịch sử giống cấu hình (thường là 60 hoặc 100)
-            while (time2RateDown15MAvg.size() > Configs.NUMBER_RATE_DOWN_HISTORY_TRADE) {
-                time2RateDown15MAvg.remove(time2RateDown15MAvg.firstKey());
-            }
-            Float minRate15Min60M = Collections.min(time2RateDown15MAvg.values());
 
             if (!isCollecting) continue;
             try {

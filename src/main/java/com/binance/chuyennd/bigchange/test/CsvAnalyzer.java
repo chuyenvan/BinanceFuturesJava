@@ -9,10 +9,11 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Reader;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -22,7 +23,6 @@ import java.util.stream.Collectors;
 
 public class CsvAnalyzer {
 
-    // Lớp nội tại để lưu trữ dữ liệu mỗi dòng
     private static class TradeEntry {
         public CSVRecord originalRecord;
         public LocalDateTime startTime;
@@ -37,7 +37,9 @@ public class CsvAnalyzer {
             DateTimeFormatter[] formatters = {
                     DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"),
                     DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"),
-                    DateTimeFormatter.ofPattern("yyyyMMdd HH:mm")
+                    DateTimeFormatter.ofPattern("yyyyMMdd HH:mm"),
+                    DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS"),
+                    DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")
             };
             for (DateTimeFormatter formatter : formatters) {
                 try {
@@ -69,8 +71,8 @@ public class CsvAnalyzer {
 
     public static void main(String[] args) {
         String inputFile = "target/printDone.csv";
-        String outputFile = "target/long_duration_trades_details.csv";
-        long durationThresholdDays = 30;
+        String outputFile = "target/high_frequency_details.csv";
+        int orderThreshold = 100;
 
         System.out.println("--- BẮT ĐẦU CHƯƠNG TRÌNH PHÂN TÍCH (JAVA 11 COMPATIBLE) ---");
         try {
@@ -78,7 +80,6 @@ public class CsvAnalyzer {
             System.out.println("1. Đang đọc và xử lý file '" + inputFile + "'...");
             List<TradeEntry> allEntries = new ArrayList<>();
             Reader in = new FileReader(inputFile);
-            // Sử dụng cú pháp cũ hơn của CSVFormat để tương thích Java 11
             CSVFormat csvFormat = CSVFormat.DEFAULT.withHeader().withSkipHeaderRecord(true).withIgnoreEmptyLines(true).withIgnoreSurroundingSpaces(true);
             CSVParser records = new CSVParser(in, csvFormat);
 
@@ -99,63 +100,68 @@ public class CsvAnalyzer {
                 return;
             }
 
-            // 2. Sắp xếp và xác định chuỗi lệnh
-            System.out.println("\n2. Đang xác định các chuỗi lệnh DCA...");
-            allEntries.sort(Comparator.comparing((TradeEntry e) -> e.symbol).thenComparing(e -> e.startTime));
+            // 2. Phân tích theo ngày
+            System.out.println("\n2. Phân tích số lượng giao dịch theo ngày...");
+            Map<LocalDate, Long> tradesPerDay = allEntries.stream()
+                    .collect(Collectors.groupingBy(trade -> trade.startTime.toLocalDate(), Collectors.counting()));
 
-            Map<String, Integer> sequenceCounter = new HashMap<>();
-            for (TradeEntry entry : allEntries) {
-                boolean isDca = entry.level != null && entry.level.contains("DCA");
-                if (!isDca) {
-                    int nextId = sequenceCounter.getOrDefault(entry.symbol, 0) + 1;
-                    sequenceCounter.put(entry.symbol, nextId);
-                }
-                entry.sequenceId = entry.symbol + "_" + sequenceCounter.getOrDefault(entry.symbol, 1);
-            }
-            long totalSequences = allEntries.stream().map(e -> e.sequenceId).distinct().count();
-            System.out.println("-> Đã xác định được " + totalSequences + " chuỗi lệnh.");
+            List<LocalDate> highVolumeDays = tradesPerDay.entrySet().stream()
+                    .filter(entry -> entry.getValue() > orderThreshold)
+                    .map(Map.Entry::getKey)
+                    .collect(Collectors.toList());
 
-            // 3. Tính toán và lọc các chuỗi lệnh dài ngày
-            System.out.println("\n3. Đang lọc các chuỗi lệnh có thời gian > " + durationThresholdDays + " ngày...");
-            Map<String, List<TradeEntry>> sequencesById = allEntries.stream().collect(Collectors.groupingBy(e -> e.sequenceId));
-            List<String> longSequenceIds = new ArrayList<>();
+            System.out.println("-> Tìm thấy " + highVolumeDays.size() + " ngày có số lượng giao dịch vượt quá " + orderThreshold + ".");
 
-            for (Map.Entry<String, List<TradeEntry>> seqEntry : sequencesById.entrySet()) {
-                List<TradeEntry> sequence = seqEntry.getValue();
-                LocalDateTime startTime = sequence.stream().min(Comparator.comparing(e -> e.startTime)).get().startTime;
-                LocalDateTime endTime = sequence.stream().max(Comparator.comparing(e -> e.endTime)).get().endTime;
-                long durationDays = ChronoUnit.DAYS.between(startTime, endTime);
+            // 3. Phân tích theo giờ
+            System.out.println("\n3. Phân tích số lượng giao dịch theo giờ...");
+            Map<LocalDateTime, Long> tradesPerHour = allEntries.stream()
+                    .collect(Collectors.groupingBy(trade -> LocalDateTime.of(trade.startTime.toLocalDate(), LocalTime.of(trade.startTime.getHour(), 0)), Collectors.counting()));
 
-                if (durationDays > durationThresholdDays) {
-                    longSequenceIds.add(seqEntry.getKey());
-                }
-            }
+            List<LocalDateTime> highVolumeHours = tradesPerHour.entrySet().stream()
+                    .filter(entry -> entry.getValue() > orderThreshold)
+                    .map(Map.Entry::getKey)
+                    .collect(Collectors.toList());
 
-            if (longSequenceIds.isEmpty()) {
-                System.out.println("\n==> KẾT QUẢ: Không tìm thấy chuỗi lệnh nào thỏa mãn điều kiện (> " + durationThresholdDays + " ngày).");
-                records.close();
-                in.close();
-                return;
-            }
-            System.out.println("-> Tìm thấy " + longSequenceIds.size() + " chuỗi lệnh dài hơn " + durationThresholdDays + " ngày.");
+            System.out.println("-> Tìm thấy " + highVolumeHours.size() + " giờ có số lượng giao dịch vượt quá " + orderThreshold + ".");
 
-            // 4. Xuất dữ liệu ra file
-            System.out.println("\n4. Đang ghi dữ liệu chi tiết ra file '" + outputFile + "'...");
-            List<TradeEntry> longTradeDetails = new ArrayList<>();
-            for(TradeEntry entry : allEntries){
-                if(longSequenceIds.contains(entry.sequenceId)){
-                    longTradeDetails.add(entry);
-                }
-            }
+            // 4. Phân tích theo 15 phút
+            System.out.println("\n4. Phân tích số lượng giao dịch theo 15 phút...");
+            Map<LocalDateTime, Long> tradesPer15Min = allEntries.stream()
+                    .collect(Collectors.groupingBy(trade -> {
+                        int minute = trade.startTime.getMinute();
+                        int quarter = (minute / 15) * 15;
+                        return LocalDateTime.of(trade.startTime.toLocalDate(), LocalTime.of(trade.startTime.getHour(), quarter));
+                    }, Collectors.counting()));
 
+            List<LocalDateTime> highVolume15MinIntervals = tradesPer15Min.entrySet().stream()
+                    .filter(entry -> entry.getValue() > orderThreshold)
+                    .map(Map.Entry::getKey)
+                    .collect(Collectors.toList());
+
+            System.out.println("-> Tìm thấy " + highVolume15MinIntervals.size() + " khoảng 15 phút có số lượng giao dịch vượt quá " + orderThreshold + ".");
+
+
+            // 5. Lọc các TradeEntry liên quan đến các khoảng thời gian có khối lượng giao dịch cao
+            System.out.println("\n5. Lọc dữ liệu chi tiết...");
+            List<TradeEntry> highFrequencyTrades = allEntries.stream()
+                    .filter(entry ->
+                            highVolumeDays.contains(entry.startTime.toLocalDate()) ||
+                                    highVolumeHours.contains(LocalDateTime.of(entry.startTime.toLocalDate(), LocalTime.of(entry.startTime.getHour(), 0))) ||
+                                    highVolume15MinIntervals.contains(LocalDateTime.of(entry.startTime.toLocalDate(), LocalTime.of(entry.startTime.getHour(), (entry.startTime.getMinute()/15)*15))))
+                    .collect(Collectors.toList());
+
+            System.out.println("-> Tìm thấy " + highFrequencyTrades.size() + " giao dịch trong các khoảng thời gian có khối lượng cao.");
+
+            // 6. Xuất dữ liệu ra file
+            System.out.println("\n6. Đang ghi dữ liệu chi tiết ra file '" + outputFile + "'...");
             FileWriter out = new FileWriter(outputFile);
             try (CSVPrinter printer = new CSVPrinter(out, CSVFormat.DEFAULT.withHeader(records.getHeaderMap().keySet().toArray(new String[0])))) {
-                for (TradeEntry entry : longTradeDetails) {
+                for (TradeEntry entry : highFrequencyTrades) {
                     printer.printRecord(entry.originalRecord);
                 }
             }
             System.out.println("\n--- THÀNH CÔNG! ---");
-            System.out.println("Đã lưu toàn bộ " + longTradeDetails.size() + " dòng dữ liệu chi tiết vào file '" + outputFile + "'.");
+            System.out.println("Đã lưu toàn bộ " + highFrequencyTrades.size() + " dòng dữ liệu chi tiết vào file '" + outputFile + "'.");
 
             records.close();
             in.close();

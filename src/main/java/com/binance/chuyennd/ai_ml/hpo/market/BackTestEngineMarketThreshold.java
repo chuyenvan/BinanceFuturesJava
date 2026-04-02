@@ -8,33 +8,21 @@ import com.binance.chuyennd.research.SimulatorMarketLevelTicker1MStopLoss;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
 
-import java.util.Map;
 import java.util.TreeMap;
 
 public class BackTestEngineMarketThreshold {
 
-    public BackTestEngineMarketThreshold(
-            float upBig, float downBigAvg,
-            float upMed, float downMedAvg,
-            float upSmall, float downSmallAvg,
-            float down15mMed, float down15mSmall) {
-
-        Configs.MS_UP_BIG_THRES = upBig;
-        Configs.MS_DOWN_BIG_AVG = downBigAvg;
-
-        Configs.MS_UP_MED_THRES = upMed;
-        Configs.MS_DOWN_MED_AVG = downMedAvg;
-
-        Configs.MS_UP_SMALL_THRES = upSmall;
-        Configs.MS_DOWN_SMALL_AVG = downSmallAvg;
-
-        Configs.MS_DOWN_15M_MED_ONLY = down15mMed;
-        Configs.MS_DOWN_15M_SMALL_ONLY = down15mSmall;
+    public BackTestEngineMarketThreshold(float baseDown, float ratioDown, float baseUp, float ratioUp) {
+        // Gán 4 tham số Geometric (Cấp số nhân) vào Configs
+        Configs.BASE_DOWN = baseDown;
+        Configs.RATIO_DOWN = ratioDown;
+        Configs.BASE_UP = baseUp;
+        Configs.RATIO_UP = ratioUp;
     }
 
     public float run(TreeMap<Long, MarketDataObject> time2MarketData,
-                      TreeMap<Long, AiPredictionData> predictionMap,
-                      TreeMap<Long, long[]> time2FundingPre) {
+                     TreeMap<Long, AiPredictionData> predictionMap,
+                     TreeMap<Long, long[]> time2FundingPre) {
         try {
             BudgetManagerSimple.resetInstance();
             SimulatorMarketLevelTicker1MStopLoss test = new SimulatorMarketLevelTicker1MStopLoss();

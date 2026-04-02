@@ -34,6 +34,16 @@ public class AIRejectFilter {
     private float MIN_TREND_4H = 0.01680f;          // 4H chỉ cần xanh nhẹ > 0.35% là được
     private float DEAD_TREND_24H = -0.05f;          // 24H sập quá 5% thì né (Giữ nguyên)
 
+    // =========================================================================
+    // KẾT QUẢ HPO AI MARKET THRESHOLDS (Cập nhật 29/03/2026)
+    // =========================================================================
+//    private static  float HARD_RISK_LIMIT    = -0.13116f;  // Chấp nhận rủi ro âm tới 13.1%
+//    private static  float MIN_PRED_RETURN_1H = 0.02349f; // Kỳ vọng lãi 1H > 2.34%
+//    private static  float HIGH_RETURN_THRESHOLD   = 0.06507f;   // Lãi cao nới lên 6.5%
+//    private static  float MIN_MOMENTUM_15M = 0.01545f;   // 15M phải nảy > 1.54% mới xác nhận đáy
+//    private static  float MIN_TREND_4H     = 0.01022f;   // Trend 4H dương > 1.02%
+//    private static  float DEAD_TREND_24H   = -0.01306f;  // 24H không được sập quá 1.3%
+
 
     public enum FilterDecision {PASS, REJECT}
 

@@ -46,7 +46,7 @@ public class GenerateEntryDcaPredictionsLabel40Tool {
         Configs.PREDICT_SYMBOL_RATE_DOWN_15M = -0.025f;
         Configs.PREDICT_SYMBOL_RATE_UP_AVG = 0.004f;
         Configs.PREDICT_SYMBOL_RATE_DOWN_AVG = -0.005f;
-        Configs.NUMBER_RATE_DOWN_HISTORY_TRADE = 60;
+
 
         // Cấu hình thời gian chạy
         String startTimeStr = "20210101";
@@ -215,7 +215,7 @@ public class GenerateEntryDcaPredictionsLabel40Tool {
 
                 // 1. UPDATE HISTORY
                 extractor.updateMarketHistory(symbol2Ticker);
-                updateMarketRateHistory(time, time2MarketData, time2RateDown15MAvg);
+
 
                 if (isWarmup || existingTimestamps.contains(time)) continue;
                 processedCount++;
@@ -302,14 +302,7 @@ public class GenerateEntryDcaPredictionsLabel40Tool {
         }
     }
 
-    private void updateMarketRateHistory(long time, TreeMap<Long, MarketDataObject> time2MarketData, TreeMap<Long, Float> history) {
-        MarketDataObject marketData = time2MarketData.get(time);
-        if (marketData == null) return;
-        history.put(time, marketData.rateDown15MAvg);
-        while (history.size() > Configs.NUMBER_RATE_DOWN_HISTORY_TRADE) {
-            history.remove(history.firstKey());
-        }
-    }
+
 
 
 }

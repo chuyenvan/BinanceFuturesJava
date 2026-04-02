@@ -41,7 +41,6 @@ public class DebugFundingWithWarmup {
 
         // Init Extractor & Cache
         FundingFeatureExtractor extractor = new FundingFeatureExtractor();
-        TreeMap<Long, Float> time2RateDown15MAvg = new TreeMap<>();
         List<String> cachedBasket = new ArrayList<>();
         long lastBasketTime = -1;
 
@@ -74,17 +73,13 @@ public class DebugFundingWithWarmup {
                 // 2. UPDATE MARKET RATE HISTORY
                 MarketDataObject mData = time2MarketData.get(time);
                 if (mData != null) {
-                    time2RateDown15MAvg.put(time, mData.rateDown15MAvg);
-                    // Giữ size history chuẩn
-                    while (time2RateDown15MAvg.size() > Configs.NUMBER_RATE_DOWN_HISTORY_TRADE) {
-                        time2RateDown15MAvg.remove(time2RateDown15MAvg.firstKey());
-                    }
+
                 }
 
                 // 3. NẾU LÀ THỜI ĐIỂM TARGET -> CHECK KỸ
                 if (time == targetTime) {
                     LOG.info("🎯 REACHED TARGET TIME: {}", targetTimeStr);
-                    checkTargetTime(time, mData, time2RateDown15MAvg, symbol2Ticker, extractor, cachedBasket);
+//                    checkTargetTime(time, mData, time2RateDown15MAvg, symbol2Ticker, extractor, cachedBasket);
                     return; // Xong việc
                 }
 

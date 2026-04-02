@@ -10,6 +10,13 @@ public class BotTradingConfig implements Serializable, Cloneable {
     private static final long serialVersionUID = 1L;
 
     // =========================================================
+    // 2. NHÓM ĐIỀU KIỆN THỊ TRƯỜNG (GEOMETRIC THRESHOLDS)
+    // =========================================================
+    public float baseDown = 0.006f;  // Ngưỡng sập cơ sở (VD: 0.6%)
+    public float ratioDown = 2.0f;   // Tốc độ giãn nở chiều sập (VD: x2)
+    public float baseUp = 0.005f;    // Ngưỡng bơm cơ sở
+    public float ratioUp = 2.0f;     // Tốc độ giãn nở chiều bơm
+    // =========================================================
     // 1. NHÓM BỘ LỌC AI & DỰ ĐOÁN (Từ HPO Funding/AI Reject)
     // =========================================================
     public float aiPredictRateMaxThreshold = 0.19076f;

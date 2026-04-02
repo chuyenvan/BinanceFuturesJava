@@ -16,7 +16,7 @@ public class FundingFeeManager {
     public static final Logger LOG = LoggerFactory.getLogger(FundingFeeManager.class);
 
     // Cache danh sách Funding Rate của từng coin
-    private ConcurrentHashMap<String, TreeMap<Long, Double>> symbol2FundingFee = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<String, TreeMap<Long, Float>> symbol2FundingFee = new ConcurrentHashMap<>();
 
     // Cache danh sách coin cần trade theo giờ (Dùng cho Backtest)
     public static final String FILE_FUNDING_FEE = "storage/fundingfee_time.data";
@@ -47,21 +47,9 @@ public class FundingFeeManager {
     private void initData() {
         try {
             // Load toàn bộ Funding Data từ Aerospike (Nặng nhưng cần thiết cho Backtest nhanh)
-            Map<String, TreeMap<Long, Double>> symbol2Funding = DataManagerAerospikeFloatSim.getAllFundingMap();
+            Map<String, TreeMap<Long, Float>> symbol2Funding = DataManagerAerospikeFloatSim.getAllFundingMap();
             for (String symbol : symbol2Funding.keySet()) {
                 symbol2FundingFee.put(symbol, symbol2Funding.get(symbol));
-            }
-
-            // Load Cache danh sách coin trade (Chỉ cho Backtest)
-            if (RunOptimizationBudgetRatio.CACHED_time2FundingFeeTrade != null) {
-                this.time2FundingFeeTrade = RunOptimizationBudgetRatio.CACHED_time2FundingFeeTrade;
-            } else {
-                if (new File(FILE_FUNDING_FEE).exists()) {
-                    time2FundingFeeTrade = (ConcurrentHashMap<Long, Set<String>>) StorageSnappy.readObjectFromFile(FILE_FUNDING_FEE);
-                    LOG.info("Init funding fee time cache: {} records", time2FundingFeeTrade.size());
-                } else {
-                    time2FundingFeeTrade = new ConcurrentHashMap<>();
-                }
             }
             LOG.info("Init funding fee data: {} symbols", symbol2FundingFee.size());
         } catch (Exception e) {
@@ -112,7 +100,7 @@ public class FundingFeeManager {
         long startTimeCalc = currentTime - (Configs.NUMBER_HOUR_FUNDING_CAL * Utils.TIME_HOUR);
 
         for (String symbol : symbol2FundingFee.keySet()) {
-            TreeMap<Long, Double> time2Funding = symbol2FundingFee.get(symbol);
+            TreeMap<Long, Float> time2Funding = symbol2FundingFee.get(symbol);
 
             // Lazy load cho Production: Nếu chưa có data thì load từ Aerospike
             if (time2Funding == null && isProductionMode) {
@@ -124,9 +112,9 @@ public class FundingFeeManager {
 
             // Kiểm tra trong khoảng thời gian quy định (ví dụ 48h qua)
             // Lấy subset từ map để tối ưu
-            SortedMap<Long, Double> subMap = time2Funding.subMap(startTimeCalc, true, currentTime, true);
+            SortedMap<Long, Float> subMap = time2Funding.subMap(startTimeCalc, true, currentTime, true);
 
-            for (Double funding : subMap.values()) {
+            for (Float funding : subMap.values()) {
                 if (funding < Configs.FUNDING_MAX_TRADE || funding > Configs.FUNDING_MIN_TRADE) {
                     symbols.add(symbol);
                     break; // Chỉ cần 1 lần thỏa mãn là add luôn
@@ -136,8 +124,8 @@ public class FundingFeeManager {
         return symbols;
     }
 
-    public Double getNearestFundingFee(String symbol, long timestamp) {
-        TreeMap<Long, Double> time2RateFunding = symbol2FundingFee.get(symbol);
+    public Float getNearestFundingFee(String symbol, long timestamp) {
+        TreeMap<Long, Float> time2RateFunding = symbol2FundingFee.get(symbol);
 
         // Lazy load
         if (time2RateFunding == null) {
@@ -151,9 +139,9 @@ public class FundingFeeManager {
 
         if (time2RateFunding == null || time2RateFunding.isEmpty()) return null;
 
-        Map.Entry<Long, Double> entry = time2RateFunding.floorEntry(timestamp);
+        Map.Entry<Long, Float> entry = time2RateFunding.floorEntry(timestamp);
         if (entry != null) {
-            if (timestamp - entry.getKey() > 24 * 3600 * 1000L) return 0.0;
+            if (timestamp - entry.getKey() > 24 * 3600 * 1000L) return 0.0f;
             return entry.getValue();
         }
         return null;

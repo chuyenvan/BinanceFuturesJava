@@ -62,7 +62,7 @@ public class Configs {
     public static float PREDICT_SYMBOL_RATE_UP_AVG = 0.00454f;          // Param 3
     public static float PREDICT_SYMBOL_RATE_DOWN_AVG = -0.00503f;
 
-    // Tham số bổ sung từ kết quả HPO
+
 
 
     // 1. Ngưỡng margin-ratio đầu tiên để giảm budget
@@ -95,8 +95,11 @@ public class Configs {
     //budget config
     public static Integer number_order_budget = 70;
 
-    public static Integer NUMBER_RATE_DOWN_HISTORY_TRADE = 60;
-
+    // Nhóm tham số lọc tín hiệu thị trường (Geometric Filters)
+    public static float BASE_DOWN = 0.006f;
+    public static float RATIO_DOWN = 2.0f;
+    public static float BASE_UP = 0.005f;
+    public static float RATIO_UP = 2.0f;
 
     public static final Integer NUMBER_THREAD_ORDER_MANAGER = Configs.getInt("NUMBER_THREAD_ORDER_MANAGER");
     public static Integer NUMBER_ENTRY_EACH_SIGNAL = Configs.getInt("NUMBER_ENTRY_EACH_SIGNAL");

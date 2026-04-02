@@ -56,7 +56,15 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         // Đảm bảo Simulator và các class Core (TradeUtils, BigChangeDetector)
         // luôn chạy đúng bộ gen/tham số vừa được thuật toán tối ưu sinh ra.
         // =================================================================
-
+// ---------------------------------------------------------
+        // NHÓM 2: ĐIỀU KIỆN THỊ TRƯỜNG (Geometric Thresholds)
+        // ---------------------------------------------------------
+        Configs.BASE_DOWN = config.baseDown;
+        Configs.RATIO_DOWN = config.ratioDown;
+        Configs.BASE_UP = config.baseUp;
+        Configs.RATIO_UP = config.ratioUp;
+        // Xóa sạch các dòng gán Configs.MS_UP_BIG_THRES cũ...
+        // (Xóa các dòng gán Configs.MS_UP_BIG_THRES... cũ đi)
         // ---------------------------------------------------------
         // NHÓM 1: BỘ LỌC AI & DỰ ĐOÁN (AI Thresholds)
         // ---------------------------------------------------------
@@ -114,7 +122,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         Configs.LEVERAGE_ORDER = config.leverageOrder;
         // Bỏ comment dòng dưới nếu bạn muốn map động Rate Fee và khai báo biến này không phải là final trong Configs
         // Configs.RATE_FEE = config.rateFee;
-        Configs.NUMBER_RATE_DOWN_HISTORY_TRADE = config.numberRateDownHistoryTrade;
         Configs.NUMBER_ENTRY_EACH_SIGNAL = config.numberEntryEachSignal;
 
         Configs.MAX_CONCURRENT_ORDERS = config.maxConcurrentOrders; // Nhớ khai báo public static int MAX_CONCURRENT_ORDERS = 10 trong Configs.java
@@ -221,10 +228,21 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                             marketData = time2MarketData.get(time);
                             Set<String> symbolLocked = new HashSet<>();
                             MarketLevelChange levelChange = null;
+                            AiPredictionData predict = predictionMap.get(time);
 
-                            if (marketData != null) {
 
-                                levelChange = MarketBigChangeDetector.getMarketStatus1M(marketData.rateDownAvg, marketData.rateUpAvg, marketData.rateBtc, marketData.rateDown15MAvg);
+                            if (predict != null && marketData != null) {
+
+//                                levelChange = MarketBigChangeDetector.getMarketStatus1M(marketData.rateDownAvg, marketData.rateUpAvg, marketData.rateBtc, marketData.rateDown15MAvg);
+                                levelChange = MarketBigChangeDetector.getMarketStatus1MGeometric(
+                                        marketData.rateDownAvg,
+                                        marketData.rateUpAvg,
+                                        marketData.rateDown15MAvg,
+                                        Configs.BASE_DOWN,
+                                        Configs.RATIO_DOWN,
+                                        Configs.BASE_UP,
+                                        Configs.RATIO_UP
+                                );
                                 // buy signal new
                                 if (levelChange != null) {
                                     Integer numberOrder = Configs.NUMBER_ENTRY_EACH_SIGNAL;
@@ -277,7 +295,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                 Set<String> symbolPred2Buy = new HashSet<>();
                                 symbolPred2Buy.addAll(symbolFundingBuy);
                                 symbolPred2Buy.removeAll(symbol2OrderRunning.keySet());
-                                TreeMap<Float, String> fundingPredict2Symbol = new TreeMap<>();
+                                TreeMap<Float, String> predict2Symbol = new TreeMap<>();
                                 for (String symbol : symbolPred2Buy) {
                                     KlineObjectSimple ticker = symbol2Ticker.get(symbol);
                                     if (!Utils.isTickerAvailable(ticker)) {
@@ -294,14 +312,15 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                             if (symbolPred > Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD) {
                                                 continue;
                                             }
-                                            fundingPredict2Symbol.put(symbolPred, symbol);
+                                            predict2Symbol.put(symbolPred, symbol);
                                         }
                                     }
                                 }
-                                for (String symbol : fundingPredict2Symbol.values()) {
+                                for (String symbol : predict2Symbol.values()) {
                                     KlineObjectSimple ticker = symbol2Ticker.get(symbol);
                                     createOrderBUY(symbol, ticker, MarketLevelChange.PREDICT_SYMBOL_TRADE, time2MarketData.get(time), symbol2LastTickers);
                                 }
+
                             }
                             logByProcessTime(startTimeRun, "Done funding fee", time);
                             startTimeRun = System.currentTimeMillis();
@@ -327,7 +346,52 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                             }
                             logByProcessTime(startTimeRun, "Done budget data", time);
 
-
+//// =========================================================================
+//                            // 🛸 TẦNG 2: VỆ TINH MICRO-SCALPING (FUNDING SQUEEZE & SELLING CLIMAX)
+//                            // =========================================================================
+//
+//                            // Chỉ kích hoạt khi Vĩ mô bình yên (Không có bão lớn)
+//                            boolean isMarketCalm = (levelChange != MarketLevelChange.BIG_DOWN && levelChange != MarketLevelChange.MEDIUM_DOWN);
+//                            Set<String> predict2Symbol = FundingFeeManager.getInstance().getFundingBuyNew(time);
+//                            // BẮT BUỘC: Phải nằm trong danh sách AI phát hiện Funding bất thường (predict2Symbol)
+//                            if (isMarketCalm && predict2Symbol != null && !predict2Symbol.isEmpty()) {
+//
+//                                for (String symbol : predict2Symbol) {
+//                                    if (symbolLocked.contains(symbol)) continue; // Lõi đang đánh thì nhường
+//
+//                                    // 🔥 SẮC BẾN 1: Dùng CoinRankManager chặn đứng bọn Coin hẻo/Coin rác sắp tèo
+//                                    CoinRankManager.CoinTier tier = CoinRankManager.getInstance().getCoinTier(symbol, time, symbol2LastTickers);
+//                                    if (tier == CoinRankManager.CoinTier.TIER_3_SHITCOIN) continue;
+//
+//                                    KlineObjectSimple ticker = symbol2Ticker.get(symbol);
+//                                    if (!Utils.isTickerAvailable(ticker)) continue;
+//
+//                                    // 🔥 SẮC BẾN 2: Tính Volume trung bình 15 phút qua để tìm Base-line
+//                                    List<KlineObjectSimple> history = symbol2LastTickers.get(symbol);
+//                                    float avgVol15m = 1f; // Tránh lỗi chia 0
+//                                    if (history != null && history.size() >= 15) {
+//                                        float sumVol = 0;
+//                                        int startIndex = history.size() - 15;
+//                                        for (int i = startIndex; i < history.size(); i++) {
+//                                            sumVol += history.get(i).totalUsdt;
+//                                        }
+//                                        avgVol15m = sumVol / 15f;
+//                                    }
+//
+//                                    float currentVol = ticker.totalUsdt;
+//                                    float drop1Min = Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen).floatValue();
+//
+//                                    // 🔥 SẮC BẾN 3: ĐIỂM KÍCH NỔ HOÀN HẢO (TRẬN CHIẾN THANH KHOẢN)
+//                                    // 1. Rớt nhanh ( > 0.6% )
+//                                    // 2. NHƯNG Volume 1 phút đó phải ĐỘT BIẾN GẤP 3 LẦN trung bình 15 phút.
+//                                    // (Nghĩa là: Lực bán cực mạnh, nhưng Lực mua cũng nhào vào hứng hàng khớp lệnh điên cuồng)
+//                                    if (drop1Min < -0.006f && currentVol > avgVol15m * 3.0f) {
+//
+//                                        // Vào lệnh đánh nhanh rút gọn
+//                                        createOrderBUY(symbol, ticker, MarketLevelChange.SMART_TRADE, time2MarketData.get(time), symbol2LastTickers);
+//                                    }
+//                                }
+//                            }
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
@@ -580,7 +644,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         CoinRankManager.CoinTier myTier = CoinRankManager.getInstance().getCoinTier(symbol, currentTs, symbol2LastTickers);
         if (myTier == CoinRankManager.CoinTier.TIER_3_SHITCOIN) {
             if (levelChange == MarketLevelChange.DCA_LEVEL1 || levelChange == MarketLevelChange.DCA_LEVEL2) {
-                LOG.info("🚫 Chặn DCA vào đồng Shitcoin: {}", symbol);
+//                LOG.info("🚫 Chặn DCA vào đồng Shitcoin: {}", symbol);
                 return;
             }
         }
@@ -646,7 +710,9 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
 
     // 🔥 THÊM THAM SỐ time2FundingPre
-    public void initDataReady(TreeMap<Long, MarketDataObject> time2MarketData, TreeMap<Long, AiPredictionData> predictionMap, TreeMap<Long, long[]> time2FundingPre, AIRejectFilter aiRejectFilter) throws OrtException {
+    public void initDataReady(TreeMap<Long, MarketDataObject> time2MarketData,
+                              TreeMap<Long, AiPredictionData> predictionMap, TreeMap<Long, long[]> time2FundingPre,
+                              AIRejectFilter aiRejectFilter) throws OrtException {
 
         // Reset Data Old
         BudgetManagerSimple.getInstance().resetInstance();

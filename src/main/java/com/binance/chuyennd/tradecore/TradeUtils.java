@@ -1,15 +1,11 @@
 package com.binance.chuyennd.tradecore;
 
 import com.binance.chuyennd.object.MarketLevelChange;
-import com.binance.chuyennd.research.OrderTargetInfoTest;
 import com.binance.chuyennd.utils.Configs;
-import com.binance.chuyennd.utils.Utils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 public class TradeUtils {
@@ -104,13 +100,12 @@ public class TradeUtils {
             case DCA_LEVEL2:
             case BTC_TREND_REVERSE:
             case PREDICT_SYMBOL_TRADE:
-            case SMA_SIGNAL:
-            case RSI_SIGNAL:
                 budget /= 3;
                 break;
 
             case SMALL_UP:
             case SMALL_DOWN_15M:
+            case SMART_TRADE:
                 budget /= 4;
                 break;
         }

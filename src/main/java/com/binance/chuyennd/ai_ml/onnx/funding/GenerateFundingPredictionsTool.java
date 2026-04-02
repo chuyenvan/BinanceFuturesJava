@@ -45,7 +45,7 @@ public class GenerateFundingPredictionsTool {
         Configs.PREDICT_SYMBOL_RATE_UP_AVG = 0.002f;
         // HPO down avg quét tới -0.004 -> Ta mở rộng đến -0.002
         Configs.PREDICT_SYMBOL_RATE_DOWN_AVG = -0.002f;
-        Configs.NUMBER_RATE_DOWN_HISTORY_TRADE = 60;
+
     }
 
     public static void main(String[] args) throws Exception {
