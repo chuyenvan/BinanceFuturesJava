@@ -177,6 +177,9 @@ public class OrderTargetInfoTest implements Serializable {
 
     public Float calTp() {
         OrderTargetInfoTest orderInfo = this;
+        if (orderInfo.priceTP == null) {
+            return 0f;
+        }
         Float tp = orderInfo.quantity * (orderInfo.priceTP - orderInfo.priceEntry)
                 - orderInfo.quantity * orderInfo.priceEntry * Configs.RATE_FEE;
         if (orderInfo.side.equals(OrderSide.SELL)) {

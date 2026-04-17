@@ -412,7 +412,8 @@ public class MarketBigChangeDetector {
         }
 
         // Nếu số lệnh an toàn (đã chốt lãi + đang gồng lãi) < 50% -> Tắt điện!
-        return safeOrders < (totalOrders / 2.0);
+//        return safeOrders < (totalOrders / 2.0);
+        return (totalOrders - safeOrders > Configs.MAX_CONCURRENT_ORDERS * 0.7);
     }
 }
 

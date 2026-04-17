@@ -223,16 +223,22 @@ public class Utils {
         if (revenue == null) {
             return null;
         }
-        DecimalFormat formatter = new DecimalFormat("###.##########");
-        return formatter.format(revenue);
+        // Dùng Float.toString() để lấy đúng giá trị hiển thị,
+        // sau đó bọc qua BigDecimal để loại bỏ các số 0 thừa ở đuôi (ví dụ 0.1000 -> 0.1)
+        // Tuyệt đối không dùng DecimalFormat với Float vì sẽ bị ép kiểu sang Double sinh ra rác!
+        return new java.math.BigDecimal(revenue.toString()).stripTrailingZeros().toPlainString();
     }
 
     public static String formatMoneyNew(Float revenue) {
         if (revenue == null) {
             return null;
         }
-        DecimalFormat formatter = new DecimalFormat("###.##");
-        return formatter.format(revenue);
+        // Tương tự formatMoney nhưng có thể giữ nguyên nếu bạn chỉ cần 2 số thập phân
+        // Hoặc an toàn nhất là dùng BigDecimal như trên và setScale(2)
+        return new java.math.BigDecimal(revenue.toString())
+                .setScale(2, java.math.RoundingMode.HALF_DOWN)
+                .stripTrailingZeros()
+                .toPlainString();
     }
 
 

@@ -93,7 +93,7 @@ public class Configs {
 
     public static String TIME_RUN = Configs.getString("TIME_RUN");
     //budget config
-    public static Integer number_order_budget = 70;
+    public static Integer number_order_budget = 50;
 
     // Nhóm tham số lọc tín hiệu thị trường (Geometric Filters)
     public static float BASE_DOWN = 0.006f;

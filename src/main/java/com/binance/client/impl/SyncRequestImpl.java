@@ -116,7 +116,30 @@ public class SyncRequestImpl implements SyncRequestClient {
         return RestApiInvoker.callSync(request);
     }
 
-    // --- SỬA HÀM NÀY ĐỂ GỌI ALGO API CHUẨN ---
+    //    // --- SỬA HÀM NÀY ĐỂ GỌI ALGO API CHUẨN ---
+//    @Override
+//    public Order postAlgoOrder(String symbol, OrderSide side, OrderType orderType, String quantity,
+//                               String stopPrice, String reduceOnly) {
+//        Map<String, String> params = new TreeMap<>();
+//        params.put("symbol", symbol);
+//        params.put("side", side.toString());
+//
+//        // QUAN TRỌNG:
+//        // algoType phải là "STOP" (thay vì STOP_MARKET)
+//        // type sẽ là "MARKET" để chỉ định đây là Stop Market
+//        params.put("algoType", "CONDITIONAL");
+//        params.put("type", "STOP_MARKET");
+//
+//        params.put("triggerprice", stopPrice);
+//
+//        if (quantity != null) params.put("quantity", quantity);
+//        if (reduceOnly != null) params.put("reduceOnly", reduceOnly);
+//
+//        // Gọi vào endpoint Algo
+//        RestApiRequest<Order> request = createRequest("POST", "/fapi/v1/algoOrder", params, Order.class);
+//        return RestApiInvoker.callSync(request);
+//    }
+// --- SỬA HÀM NÀY ĐỂ GỌI ALGO API CHUẨN ---
     @Override
     public Order postAlgoOrder(String symbol, OrderSide side, OrderType orderType, String quantity,
                                String stopPrice, String reduceOnly) {
@@ -124,19 +147,47 @@ public class SyncRequestImpl implements SyncRequestClient {
         params.put("symbol", symbol);
         params.put("side", side.toString());
 
-        // QUAN TRỌNG:
-        // algoType phải là "STOP" (thay vì STOP_MARKET)
-        // type sẽ là "MARKET" để chỉ định đây là Stop Market
+        // 1. Khai báo hệ Algo theo luật mới Binance
         params.put("algoType", "CONDITIONAL");
-        params.put("type", "STOP_MARKET");
+        params.put("type", orderType.toString()); // STOP_MARKET
 
-        params.put("triggerprice", stopPrice);
+        // 2. 🔥 SỬA LỖI CHẾT NGƯỜI: Binance bắt buộc dùng 'triggerPrice' (Chữ P viết hoa)
+        // Code cũ của bạn dùng 'triggerprice' (p viết thường) nên Algo Engine không hiểu và âm thầm vứt lệnh đi!
+        params.put("triggerPrice", stopPrice);
 
-        if (quantity != null) params.put("quantity", quantity);
-        if (reduceOnly != null) params.put("reduceOnly", reduceOnly);
+        // 3. 🔥 MẸO QUANT ĐỂ HIỆN LÊN APP (TAB POSITION TP/SL)
+        // Khi muốn cắt lỗ, dùng closePosition=true là chuẩn nhất.
+        // Binance quy định: Đã dùng closePosition thì CẤM gửi quantity và reduceOnly lên.
+        if (reduceOnly != null && reduceOnly.equals("true")) {
+            params.put("closePosition", "true");
+        } else {
+            if (quantity != null) params.put("quantity", quantity);
+            if (reduceOnly != null) params.put("reduceOnly", reduceOnly);
+        }
 
-        // Gọi vào endpoint Algo
         RestApiRequest<Order> request = createRequest("POST", "/fapi/v1/algoOrder", params, Order.class);
+
+        // 4. 🔥 TỰ ĐỘNG BÙ ĐẮP DỮ LIỆU BỊ THIẾU ĐỂ LOG KHÔNG CÒN NULL
+        request.jsonParser = (json) -> {
+            Order order = new Order();
+
+            if (json.containKey("algoId")) order.setOrderId(json.getLong("algoId"));
+            if (json.containKey("clientAlgoId")) order.setClientOrderId(json.getString("clientAlgoId"));
+
+            // Tự nhét lại các tham số đầu vào để Java theo dõi được trạng thái
+            order.setSymbol(symbol);
+            order.setSide(side.toString());
+            order.setType(orderType.toString());
+            order.setStopPrice(new java.math.BigDecimal(stopPrice));
+
+            if (json.containKey("msg") && json.getString("msg").equalsIgnoreCase("success")) {
+                order.setStatus("NEW");
+            } else if (json.containKey("status")) {
+                order.setStatus(json.getString("status"));
+            }
+            return order;
+        };
+
         return RestApiInvoker.callSync(request);
     }
 

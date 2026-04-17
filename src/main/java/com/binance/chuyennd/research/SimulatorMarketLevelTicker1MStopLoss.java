@@ -233,16 +233,16 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
                             if (predict != null && marketData != null) {
 
-//                                levelChange = MarketBigChangeDetector.getMarketStatus1M(marketData.rateDownAvg, marketData.rateUpAvg, marketData.rateBtc, marketData.rateDown15MAvg);
-                                levelChange = MarketBigChangeDetector.getMarketStatus1MGeometric(
-                                        marketData.rateDownAvg,
-                                        marketData.rateUpAvg,
-                                        marketData.rateDown15MAvg,
-                                        Configs.BASE_DOWN,
-                                        Configs.RATIO_DOWN,
-                                        Configs.BASE_UP,
-                                        Configs.RATIO_UP
-                                );
+                                levelChange = MarketBigChangeDetector.getMarketStatus1M(marketData.rateDownAvg, marketData.rateUpAvg, marketData.rateBtc, marketData.rateDown15MAvg);
+//                                levelChange = MarketBigChangeDetector.getMarketStatus1MGeometric(
+//                                        marketData.rateDownAvg,
+//                                        marketData.rateUpAvg,
+//                                        marketData.rateDown15MAvg,
+//                                        Configs.BASE_DOWN,
+//                                        Configs.RATIO_DOWN,
+//                                        Configs.BASE_UP,
+//                                        Configs.RATIO_UP
+//                                );
                                 // buy signal new
                                 if (levelChange != null) {
                                     Integer numberOrder = Configs.NUMBER_ENTRY_EACH_SIGNAL;
@@ -561,11 +561,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             order.priceTP = orderMulti.priceTP;
             order.minPrice = orderMulti.minPrice;
             order.lastPrice = orderMulti.lastPrice;
-//            order.updateFundingFee();
-            // Nếu là HPO, bỏ qua để Garbage Collector tự động xóa Object Order này đi
-            if (!Configs.IS_HPO_MODE) {
-                allOrderDone.put(-order.timeUpdate + allOrderDone.size(), order);
-            }
+
+            allOrderDone.put(-order.timeUpdate + allOrderDone.size(), order);
             BudgetManagerSimple.getInstance().updatePnl(order);
         }
         symbol2OrdersEntry.remove(symbol);
@@ -604,18 +601,19 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                MarketDataObject marketData, Map<String, List<KlineObjectSimple>> symbol2LastTickers) {
 
 // 🔥 NÂNG CẤP 1: Chỉ bật Cầu dao dò mìn đối với lệnh MỚI (Không chặn lệnh DCA)
-        if (levelChange != MarketLevelChange.DCA_LEVEL1 && levelChange != MarketLevelChange.DCA_LEVEL2) {
-            // Truyền cả lệnh đang chạy và lệnh đã chốt vào để hệ thống có cái nhìn khách quan nhất
-            if (MarketBigChangeDetector.is50PercentOrderLoss(symbol2OrderRunning.values(), allOrderDone.values(), ticker.startTime)) {
-                // LOG.debug("⚠️ CẦU DAO BẬT: Đa số các lệnh mới vào gần đây đều chết hoặc gồng lỗ. Ngưng mở mới!");
-                return;
-            }
-        }
+
         AiPredictionData predict = predictionMap.get(ticker.startTime);
         if (predict != null && !levelChange.equals(MarketLevelChange.BIG_DOWN)) {
             if (aiRejectFilter.checkSignal(predict).decision.equals(AIRejectFilter.FilterDecision.REJECT)) {
 //                LOG.info("⛔ REJECTED BY RISK FILTER: {} {}", predict.predReturn1H, predict.predRisk4H);
                 return; // Dừng ngay
+            }
+        }
+        if (levelChange != MarketLevelChange.DCA_LEVEL1 && levelChange != MarketLevelChange.DCA_LEVEL2) {
+            // Truyền cả lệnh đang chạy và lệnh đã chốt vào để hệ thống có cái nhìn khách quan nhất
+            if (MarketBigChangeDetector.is50PercentOrderLoss(symbol2OrderRunning.values(), allOrderDone.values(), ticker.startTime)) {
+                // LOG.debug("⚠️ CẦU DAO BẬT: Đa số các lệnh mới vào gần đây đều chết hoặc gồng lỗ. Ngưng mở mới!");
+                return;
             }
         }
         Float entry = ticker.priceClose;

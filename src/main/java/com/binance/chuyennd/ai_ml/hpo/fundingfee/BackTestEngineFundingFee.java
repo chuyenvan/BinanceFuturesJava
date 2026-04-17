@@ -13,32 +13,35 @@ import java.util.TreeMap;
 
 public class BackTestEngineFundingFee {
 
-    // Đã loại bỏ rateMin2TradeFull (pMinFull)
-    public BackTestEngineFundingFee(float rateMin2Trade,
-                                    float rateUpAvg,
-                                    float rateDownAvg,
-                                    float fundingPredMaxThreshold) {
-        Configs.PREDICT_SYMBOL_RATE_DOWN_15M = rateMin2Trade;
-        Configs.PREDICT_SYMBOL_RATE_UP_AVG = rateUpAvg;
-        Configs.PREDICT_SYMBOL_RATE_DOWN_AVG = rateDownAvg;
-        Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD = fundingPredMaxThreshold;
+    private AIRejectFilter aiRejectFilter;
+
+    // Nhận 3 tham số AI Reject Filter thay vì 4 tham số Funding cũ
+    public BackTestEngineFundingFee(float risk, float min15m, float min24h) {
+        this.aiRejectFilter = new AIRejectFilter();
+        this.aiRejectFilter.setConfig(risk, min15m, min24h);
     }
 
-    public float run(TreeMap<Long, MarketDataObject> time2MarketData,
-                      TreeMap<Long, AiPredictionData> predictionMap,
-                      TreeMap<Long, long[]> time2FundingPre) {
+    public HPOFitnessCalculator.FitnessReport run(TreeMap<Long, MarketDataObject> time2MarketData,
+                                                  TreeMap<Long, AiPredictionData> predictionMap,
+                                                  TreeMap<Long, long[]> time2FundingPre) {
         try {
             Long startTime = Utils.sdfFile.parse(Configs.TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
             BudgetManagerSimple.resetInstance();
             SimulatorMarketLevelTicker1MStopLoss test = new SimulatorMarketLevelTicker1MStopLoss();
 
-            test.initDataReady(time2MarketData, predictionMap, time2FundingPre, new AIRejectFilter());
+            // Đưa màng lọc AI vừa cấu hình vào Simulator
+            test.initDataReady(time2MarketData, predictionMap, time2FundingPre, aiRejectFilter);
             test.simulatorWithInitEntry(startTime, System.currentTimeMillis());
 
-            return HPOFitnessCalculator.evaluateProfitVelocity(test);
+            // Dùng evaluateDetailed để lấy báo cáo đầy đủ (chứa Drawdown, Profit...)
+            return HPOFitnessCalculator.evaluateDetailed(test);
+
         } catch (Exception e) {
             e.printStackTrace();
-            return 0.0f;
+            HPOFitnessCalculator.FitnessReport err = new HPOFitnessCalculator.FitnessReport();
+            err.finalFitness = -10000f;
+            err.note = "EXCEPTION_ERROR";
+            return err;
         }
     }
 }
