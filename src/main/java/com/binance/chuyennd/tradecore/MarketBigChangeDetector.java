@@ -7,10 +7,12 @@ import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.MarketLevelChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
+import com.binance.chuyennd.trading.OrderTargetInfo;
 import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
+import com.binance.client.model.enums.OrderSide;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -174,8 +176,8 @@ public class MarketBigChangeDetector {
 
     /**
      * @param predReturn15M: Giá trị AI dự báo (Ví dụ: 0.015)
-     * @param k_down: Tham số HPO 1 (Ví dụ: 0.8)
-     * @param k_up: Tham số HPO 2 (Ví dụ: 1.0)
+     * @param k_down:        Tham số HPO 1 (Ví dụ: 0.8)
+     * @param k_up:          Tham số HPO 2 (Ví dụ: 1.0)
      */
     public static MarketLevelChange getMarketStatus1MDynamic(Float rateDownAvg, Float rateUpAvg,
                                                              Float rateDown15MAvg, Float predReturn15M,
@@ -188,12 +190,12 @@ public class MarketBigChangeDetector {
         // 2. TỰ ĐỘNG SINH CÁC NGƯỠNG (Ép 12 param thành logic nội suy)
         // Hệ số phân bậc: Nhỏ (x1) -> Vừa (x2) -> Lớn (x3)
         float dynDownSmall = -(v * k_down);         // Vd: -0.01
-        float dynDownMed   = -(v * k_down * 2.0f);  // Vd: -0.02
-        float dynDownBig   = -(v * k_down * 3.0f);  // Vd: -0.03
+        float dynDownMed = -(v * k_down * 2.0f);  // Vd: -0.02
+        float dynDownBig = -(v * k_down * 3.0f);  // Vd: -0.03
 
-        float dynUpSmall   = (v * k_up);            // Vd: 0.01
-        float dynUpMed     = (v * k_up * 2.0f);     // Vd: 0.02
-        float dynUpBig     = (v * k_up * 3.0f);     // Vd: 0.03
+        float dynUpSmall = (v * k_up);            // Vd: 0.01
+        float dynUpMed = (v * k_up * 2.0f);     // Vd: 0.02
+        float dynUpBig = (v * k_up * 3.0f);     // Vd: 0.03
 
         // 3. Logic bắt Tín hiệu
 
@@ -221,6 +223,7 @@ public class MarketBigChangeDetector {
 
         return null;
     }
+
     /**
      * MÔ HÌNH GEOMETRIC PROGRESSION (CẤP SỐ NHÂN)
      * Giải quyết bài toán Fat Tails và giảm số lượng tham số cho HPO.
@@ -234,17 +237,17 @@ public class MarketBigChangeDetector {
         // Ví dụ: baseDown = 0.005 (0.5%), ratioDown = 2.0
         // Small = -0.005 | Med = -0.010 | Big = -0.020
         float downSmall = -baseDown;
-        float downMed   = downSmall * ratioDown;
-        float downBig   = downMed * ratioDown;
+        float downMed = downSmall * ratioDown;
+        float downBig = downMed * ratioDown;
 
         // 15M Threshold (Khung ngắn giật râu mạnh hơn, nhân hệ số giãn 1.5)
         float down15mSmall = downSmall * 1.5f;
-        float down15mMed   = downMed * 1.5f;
+        float down15mMed = downMed * 1.5f;
 
         // --- CHIỀU UP (Tính bằng số dương) ---
         float upSmall = baseUp;
-        float upMed   = upSmall * ratioUp;
-        float upBig   = upMed * ratioUp;
+        float upMed = upSmall * ratioUp;
+        float upBig = upMed * ratioUp;
 
         // --- LOGIC PHÂN LOẠI THỊ TRƯỜNG (Ưu tiên check mốc Lớn nhất trước) ---
 
@@ -270,6 +273,7 @@ public class MarketBigChangeDetector {
 
         return null;
     }
+
     public static MarketLevelChange getMarketStatus1M(Float rateDownAvg, Float rateUpAvg,
                                                       Float btcRateChange, Float rateDown15MAvg) {
 
@@ -324,38 +328,151 @@ public class MarketBigChangeDetector {
     }
 
 
-    /**
-     * CẦU DAO 2 LỚP BẢO VỆ THIÊN NGA ĐEN (ĐÃ FIX REVERSE SURVIVORSHIP BIAS)
-     * Lớp 1: Giới hạn mật độ theo đường cong lũy thừa.
-     * Lớp 2: Đo lường tỷ lệ an toàn của TẤT CẢ các lệnh gần đây (Cả đang chạy & Đã chốt).
-     */
+//    /**
+//     * CẦU DAO 2 LỚP BẢO VỆ THIÊN NGA ĐEN (ĐÃ FIX REVERSE SURVIVORSHIP BIAS)
+//     * Lớp 1: Giới hạn mật độ theo đường cong lũy thừa.
+//     * Lớp 2: Đo lường tỷ lệ an toàn của TẤT CẢ các lệnh gần đây (Cả đang chạy & Đã chốt).
+//     */
+//        public static boolean is50PercentOrderLoss(
+//            Collection<OrderTargetInfoTest> runningOrders,
+//            long currentTime) {
+//
+//        List<OrderTargetInfoTest> recentOrders = new ArrayList<>();
+//
+//        // 1. Gộp tất cả các lệnh (Đang chạy + Đã đóng) trong 4H qua vào một rổ
+//        long lookbackMillis = 240 * 60000L; // Soi 4 tiếng quay đầu
+//
+//        if (runningOrders != null) {
+//            for (OrderTargetInfoTest o : runningOrders) {
+//                if (currentTime - o.timeStart <= lookbackMillis) {
+//                    recentOrders.add(o);
+//                }
+//            }
+//        }
+//
+//
+//        if (recentOrders.isEmpty()) return false;
+//
+//        // Sắp xếp từ mới nhất -> cũ nhất theo timeStart
+//        recentOrders.sort((o1, o2) -> Long.compare(o2.timeStart, o1.timeStart));
+//
+//        // =========================================================================
+//        // LỚP 1: KIỂM TRA MẬT ĐỘ THEO ĐƯỜNG CONG LŨY THỪA (POWER LAW)
+//        // =========================================================================
+//        int baseBurst = Configs.MAX_CONCURRENT_ORDERS;
+//        float sustain = Configs.DENSITY_SUSTAIN;
+//        float alpha = Configs.DENSITY_ALPHA;
+//
+//        int orderCount = 1; // Tính luôn lệnh đang chờ duyệt
+//
+//        for (OrderTargetInfoTest order : recentOrders) {
+//            long diffMillis = currentTime - order.timeStart;
+//            if (diffMillis < 0) continue;
+//
+//            int diffMins = (int) (diffMillis / 60000L);
+//            int checkMins = Math.max(1, diffMins);
+//
+//            int allowedOrders = (int) (baseBurst + sustain * Math.pow(checkMins, alpha));
+//            orderCount++;
+//
+//            if (orderCount > allowedOrders) {
+//                return true; // Vượt mật độ -> Chặn
+//            }
+//        }
+//
+//        // =========================================================================
+//        // LỚP 2: CẦU DAO CHỐNG BÃO (ĐÁNH GIÁ LẠI TỶ LỆ LỖ THỰC SỰ)
+//        // =========================================================================
+//        int totalOrders = recentOrders.size();
+//
+//        // Vùng miễn trừ: Vẫn cho phép xả một lượng đạn nhất định lúc bão mới tới
+//        if (totalOrders < (baseBurst / 2.0)) {
+//            return false;
+//        }
+//
+//        int safeOrders = 0;
+//        for (OrderTargetInfoTest info : recentOrders) {
+//            // Lệnh ĐÃ ĐÓNG: Được tính là an toàn nếu chốt lời dương (Status = TP hoặc PnL > 0)
+//            boolean isDoneAndProfitable = (info.status == OrderTargetStatus.TAKE_PROFIT_DONE)
+//                    || (info.status == OrderTargetStatus.STOP_MARKET_DONE && info.calTp() > 0);
+//
+//            // Lệnh ĐANG CHẠY: Được tính là an toàn nếu đã dời Stoploss dương
+//            boolean isRunningAndSafe = (info.status != OrderTargetStatus.TAKE_PROFIT_DONE
+//                    && info.status != OrderTargetStatus.STOP_LOSS_DONE
+//                    && info.priceSL != null);
+//
+//            if (isDoneAndProfitable || isRunningAndSafe) {
+//                safeOrders++;
+//            }
+//        }
+//
+//        // Nếu số lệnh an toàn (đã chốt lãi + đang gồng lãi) < 50% -> Tắt điện!
+
+    /// /        return safeOrders < (totalOrders / 2.0);
+//        return (totalOrders - safeOrders > Configs.MAX_CONCURRENT_ORDERS * 0.7);
+//    }
     public static boolean is50PercentOrderLoss(
             Collection<OrderTargetInfoTest> runningOrders,
-            Collection<OrderTargetInfoTest> doneOrders,
             long currentTime) {
 
-        List<OrderTargetInfoTest> recentOrders = new ArrayList<>();
-
-        // 1. Gộp tất cả các lệnh (Đang chạy + Đã đóng) trong 4H qua vào một rổ
+        List<CircuitOrder> recentOrders = new ArrayList<>();
         long lookbackMillis = 240 * 60000L; // Soi 4 tiếng quay đầu
 
         if (runningOrders != null) {
             for (OrderTargetInfoTest o : runningOrders) {
                 if (currentTime - o.timeStart <= lookbackMillis) {
-                    recentOrders.add(o);
+                    recentOrders.add(new CircuitOrder(o.timeStart, o.status, o.priceSL != null, false)); // Lệnh đang chạy thì chưa chốt lãi
                 }
             }
         }
-        if (doneOrders != null) {
-            for (OrderTargetInfoTest o : doneOrders) {
+        return evaluateCircuitBreakerCore(recentOrders, currentTime);
+    }
+
+    // 1. Tạo một Object siêu nhẹ để chứa chung dữ liệu cho cả Test và Prod
+    public static class CircuitOrder {
+        public long timeStart;
+        public OrderTargetStatus status;
+        public boolean hasPriceSL;
+        public boolean isProfitable;
+
+        public CircuitOrder(long timeStart, OrderTargetStatus status, boolean hasPriceSL, boolean isProfitable) {
+            this.timeStart = timeStart;
+            this.status = status;
+            this.hasPriceSL = hasPriceSL;
+            this.isProfitable = isProfitable;
+        }
+    }
+
+    /**
+     * 2. Hàm VỎ (Wrapper) dành riêng cho MÔI TRƯỜNG PRODUCTION (Real Trade)
+     */
+    public static boolean is50PercentOrderLossProd(
+            Collection<OrderTargetInfo> runningOrders,
+            long currentTime) {
+
+        List<CircuitOrder> recentOrders = new ArrayList<>();
+        long lookbackMillis = 240 * 60000L;
+
+        if (runningOrders != null) {
+            for (OrderTargetInfo o : runningOrders) {
                 if (currentTime - o.timeStart <= lookbackMillis) {
-                    recentOrders.add(o);
-                } else {
-                    break;
+                    boolean isProfitable = false;
+                    // Lệnh Prod không có calTp(), ta nhẩm tính Lãi dựa vào Entry và TP/Giá hiện tại
+                    if (o.priceTP != null && o.priceEntry != null) {
+                        isProfitable = (o.side == OrderSide.BUY) ? (o.priceTP > o.priceEntry) : (o.priceEntry > o.priceTP);
+                    }
+                    recentOrders.add(new CircuitOrder(o.timeStart, o.status, o.priceSL != null, isProfitable));
                 }
             }
         }
 
+        return evaluateCircuitBreakerCore(recentOrders, currentTime);
+    }
+
+    /**
+     * 3. HÀM LÕI (CORE LOGIC) CHUNG CHO CẢ 2 MÔI TRƯỜNG
+     */
+    private static boolean evaluateCircuitBreakerCore(List<CircuitOrder> recentOrders, long currentTime) {
         if (recentOrders.isEmpty()) return false;
 
         // Sắp xếp từ mới nhất -> cũ nhất theo timeStart
@@ -370,7 +487,7 @@ public class MarketBigChangeDetector {
 
         int orderCount = 1; // Tính luôn lệnh đang chờ duyệt
 
-        for (OrderTargetInfoTest order : recentOrders) {
+        for (CircuitOrder order : recentOrders) {
             long diffMillis = currentTime - order.timeStart;
             if (diffMillis < 0) continue;
 
@@ -396,23 +513,21 @@ public class MarketBigChangeDetector {
         }
 
         int safeOrders = 0;
-        for (OrderTargetInfoTest info : recentOrders) {
-            // Lệnh ĐÃ ĐÓNG: Được tính là an toàn nếu chốt lời dương (Status = TP hoặc PnL > 0)
+        for (CircuitOrder info : recentOrders) {
+            // Lệnh ĐÃ ĐÓNG: Được tính là an toàn nếu chốt lời dương
             boolean isDoneAndProfitable = (info.status == OrderTargetStatus.TAKE_PROFIT_DONE)
-                    || (info.status == OrderTargetStatus.STOP_MARKET_DONE && info.calTp() > 0);
+                    || (info.status == OrderTargetStatus.STOP_MARKET_DONE && info.isProfitable);
 
             // Lệnh ĐANG CHẠY: Được tính là an toàn nếu đã dời Stoploss dương
             boolean isRunningAndSafe = (info.status != OrderTargetStatus.TAKE_PROFIT_DONE
                     && info.status != OrderTargetStatus.STOP_LOSS_DONE
-                    && info.priceSL != null);
+                    && info.hasPriceSL);
 
             if (isDoneAndProfitable || isRunningAndSafe) {
                 safeOrders++;
             }
         }
 
-        // Nếu số lệnh an toàn (đã chốt lãi + đang gồng lãi) < 50% -> Tắt điện!
-//        return safeOrders < (totalOrders / 2.0);
         return (totalOrders - safeOrders > Configs.MAX_CONCURRENT_ORDERS * 0.7);
     }
 }

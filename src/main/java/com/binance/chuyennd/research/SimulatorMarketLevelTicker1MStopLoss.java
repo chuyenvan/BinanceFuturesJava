@@ -346,52 +346,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                             }
                             logByProcessTime(startTimeRun, "Done budget data", time);
 
-//// =========================================================================
-//                            // 🛸 TẦNG 2: VỆ TINH MICRO-SCALPING (FUNDING SQUEEZE & SELLING CLIMAX)
-//                            // =========================================================================
-//
-//                            // Chỉ kích hoạt khi Vĩ mô bình yên (Không có bão lớn)
-//                            boolean isMarketCalm = (levelChange != MarketLevelChange.BIG_DOWN && levelChange != MarketLevelChange.MEDIUM_DOWN);
-//                            Set<String> predict2Symbol = FundingFeeManager.getInstance().getFundingBuyNew(time);
-//                            // BẮT BUỘC: Phải nằm trong danh sách AI phát hiện Funding bất thường (predict2Symbol)
-//                            if (isMarketCalm && predict2Symbol != null && !predict2Symbol.isEmpty()) {
-//
-//                                for (String symbol : predict2Symbol) {
-//                                    if (symbolLocked.contains(symbol)) continue; // Lõi đang đánh thì nhường
-//
-//                                    // 🔥 SẮC BẾN 1: Dùng CoinRankManager chặn đứng bọn Coin hẻo/Coin rác sắp tèo
-//                                    CoinRankManager.CoinTier tier = CoinRankManager.getInstance().getCoinTier(symbol, time, symbol2LastTickers);
-//                                    if (tier == CoinRankManager.CoinTier.TIER_3_SHITCOIN) continue;
-//
-//                                    KlineObjectSimple ticker = symbol2Ticker.get(symbol);
-//                                    if (!Utils.isTickerAvailable(ticker)) continue;
-//
-//                                    // 🔥 SẮC BẾN 2: Tính Volume trung bình 15 phút qua để tìm Base-line
-//                                    List<KlineObjectSimple> history = symbol2LastTickers.get(symbol);
-//                                    float avgVol15m = 1f; // Tránh lỗi chia 0
-//                                    if (history != null && history.size() >= 15) {
-//                                        float sumVol = 0;
-//                                        int startIndex = history.size() - 15;
-//                                        for (int i = startIndex; i < history.size(); i++) {
-//                                            sumVol += history.get(i).totalUsdt;
-//                                        }
-//                                        avgVol15m = sumVol / 15f;
-//                                    }
-//
-//                                    float currentVol = ticker.totalUsdt;
-//                                    float drop1Min = Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen).floatValue();
-//
-//                                    // 🔥 SẮC BẾN 3: ĐIỂM KÍCH NỔ HOÀN HẢO (TRẬN CHIẾN THANH KHOẢN)
-//                                    // 1. Rớt nhanh ( > 0.6% )
-//                                    // 2. NHƯNG Volume 1 phút đó phải ĐỘT BIẾN GẤP 3 LẦN trung bình 15 phút.
-//                                    // (Nghĩa là: Lực bán cực mạnh, nhưng Lực mua cũng nhào vào hứng hàng khớp lệnh điên cuồng)
-//                                    if (drop1Min < -0.006f && currentVol > avgVol15m * 3.0f) {
-//
-//                                        // Vào lệnh đánh nhanh rút gọn
-//                                        createOrderBUY(symbol, ticker, MarketLevelChange.SMART_TRADE, time2MarketData.get(time), symbol2LastTickers);
-//                                    }
-//                                }
-//                            }
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
@@ -572,9 +526,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
     private OrderTargetInfoTest mergeOrder(List<OrderTargetInfoTest> orders, KlineObjectSimple ticker) {
         TreeMap<Long, OrderTargetInfoTest> time2Order = new TreeMap<>();
-        Float quantity = 0f;
-        String priceEntry = "";
-        Float margin = 0f;
+        float quantity = 0f;
+        float margin = 0f;
         OrderSide side = orders.get(0).side;
         for (OrderTargetInfoTest orderInfo : orders) {
             if (!side.equals(orderInfo.side)) {
@@ -583,7 +536,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             time2Order.put(orderInfo.timeStart, orderInfo);
             margin += orderInfo.priceEntry * orderInfo.quantity;
             quantity += orderInfo.quantity;
-            priceEntry += orderInfo.priceEntry + "-";
         }
         float entry = margin / quantity;
         OrderTargetInfoTest orderResult = new OrderTargetInfoTest(OrderTargetStatus.REQUEST, entry, null, quantity, Configs.LEVERAGE_ORDER, time2Order.lastEntry().getValue().symbol, time2Order.lastEntry().getKey(), time2Order.lastEntry().getKey(), orders.get(0).side);
@@ -609,9 +561,9 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                 return; // Dừng ngay
             }
         }
-        if (levelChange != MarketLevelChange.DCA_LEVEL1 && levelChange != MarketLevelChange.DCA_LEVEL2) {
+        if (levelChange != MarketLevelChange.DCA_LEVEL1) {
             // Truyền cả lệnh đang chạy và lệnh đã chốt vào để hệ thống có cái nhìn khách quan nhất
-            if (MarketBigChangeDetector.is50PercentOrderLoss(symbol2OrderRunning.values(), allOrderDone.values(), ticker.startTime)) {
+            if (MarketBigChangeDetector.is50PercentOrderLoss(symbol2OrderRunning.values(), ticker.startTime)) {
                 // LOG.debug("⚠️ CẦU DAO BẬT: Đa số các lệnh mới vào gần đây đều chết hoặc gồng lỗ. Ngưng mở mới!");
                 return;
             }
@@ -641,7 +593,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         // 2. Chặn đứng DCA rác
         CoinRankManager.CoinTier myTier = CoinRankManager.getInstance().getCoinTier(symbol, currentTs, symbol2LastTickers);
         if (myTier == CoinRankManager.CoinTier.TIER_3_SHITCOIN) {
-            if (levelChange == MarketLevelChange.DCA_LEVEL1 || levelChange == MarketLevelChange.DCA_LEVEL2) {
+            if (levelChange == MarketLevelChange.DCA_LEVEL1) {
 //                LOG.info("🚫 Chặn DCA vào đồng Shitcoin: {}", symbol);
                 return;
             }

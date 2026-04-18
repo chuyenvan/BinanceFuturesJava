@@ -36,21 +36,13 @@ public class TradeUtils {
     }
 
     public static Float calRateMinWithMaxChange60MForTradingStop(Float maxChange90M) {
-        // Sử dụng biến từ Configs thay vì số cứng
         Float rateMin2MoveSl = Configs.RATE_PROFIT_STOP_MARKET;
 
-        if (maxChange90M != null) {
-            // Logic cũ: 0.01 -> 0.03
-            if (maxChange90M >= Configs.TS_VOL_HIGH_THRES) {
-                rateMin2MoveSl = Configs.TS_RATE_HIGH;
-            }
-            // Logic cũ: 0.006 -> 0.02
-            else if (maxChange90M >= Configs.TS_VOL_MED_THRES) {
-                rateMin2MoveSl = Configs.TS_RATE_MED;
-            }
-            // Logic cũ: 0.004 -> 0.016
-            else if (maxChange90M >= Configs.TS_VOL_LOW_THRES) {
-                rateMin2MoveSl = Configs.TS_RATE_LOW;
+        // 🔥 LOGIC MỚI: Dùng hệ số nhân K tuyến tính theo biên độ nến
+        if (maxChange90M != null && maxChange90M > 0) {
+            float dynamicRate = maxChange90M * Configs.TS_DYNAMIC_K;
+            if (dynamicRate > rateMin2MoveSl) {
+                rateMin2MoveSl = dynamicRate;
             }
         }
         return rateMin2MoveSl;
@@ -61,8 +53,7 @@ public class TradeUtils {
 
 
         final Set<MarketLevelChange> dcaOrBigLevels = Set.of(
-                MarketLevelChange.DCA_LEVEL1,
-                MarketLevelChange.DCA_LEVEL2
+                MarketLevelChange.DCA_LEVEL1
         );
         boolean isNormalLevel = !dcaOrBigLevels.contains(levelChange)
                 && !StringUtils.containsIgnoreCase(levelChange.toString(), "big")
@@ -97,7 +88,6 @@ public class TradeUtils {
             case DCA_LEVEL1:
             case SMALL_DOWN:
             case MEDIUM_DOWN_15M:
-            case DCA_LEVEL2:
             case BTC_TREND_REVERSE:
             case PREDICT_SYMBOL_TRADE:
                 budget /= 3;

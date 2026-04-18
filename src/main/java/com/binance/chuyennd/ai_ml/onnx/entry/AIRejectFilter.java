@@ -8,8 +8,8 @@ public class AIRejectFilter {
     private static final Logger LOG = LoggerFactory.getLogger(AIRejectFilter.class);
 
     // --- CẤU HÌNH HIỆN TẠI (ĐÃ TINH GỌN XUỐNG 3 THAM SỐ) ---
-    private float HARD_RISK_LIMIT_4H = -0.08f;
-    private float MIN_MOMENTUM_15M   = 0.0155f;
+    private float HARD_RISK_LIMIT_4H = -0.09985f;
+    private float MIN_MOMENTUM_15M   = 0.016f;
     private float MIN_MOMENTUM_24H   = 0.02f;
 
 //    private float HARD_RISK_LIMIT_4H = -0.10425f;

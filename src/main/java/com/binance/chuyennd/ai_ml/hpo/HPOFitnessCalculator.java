@@ -79,7 +79,7 @@ public class HPOFitnessCalculator {
             return report;
         }
 
-        // 2. Tính toán Net Score
+        // 2. Tính toán Net Score (Điểm Lãi ròng sau khi trừ phí giam vốn)
         report.penaltyCost = (float) (totalCapitalTimeLocked * HOURLY_COST);
         report.netScore = report.totalProfit - report.penaltyCost;
 
@@ -96,7 +96,7 @@ public class HPOFitnessCalculator {
         float drawdownPenalty = absMaxDrawdown * 1.5f;
         report.finalFitness = report.netScore - drawdownPenalty;
 
-        // Khuyến khích nhẹ bot trade nhiều (cộng thêm vài chục điểm để phá vỡ thế hòa)
+        // Khuyến khích nhẹ bot trade nhiều (cộng thêm vài chục điểm để phá vỡ thế hòa khi 2 bộ gen có điểm bằng nhau)
         report.finalFitness += (report.tradeCount * 0.1f);
 
         report.note = "SUCCESS";

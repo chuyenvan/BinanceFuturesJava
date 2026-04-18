@@ -76,7 +76,9 @@ public class Configs {
     public static float BUDGET_DIVIDER_2 = 1.5984f;
 
 
-    public static float RATE_PROFIT_STOP_MARKET = 0.01151f;
+    public static float RATE_PROFIT_STOP_MARKET = 0.01032f;
+    public static float TS_DYNAMIC_K = 0.29774f;
+    public static float TS_PROFIT_MULTIPLIER = 5.21847f;
 
     // --- HIGH VOLATILITY (Biến động mạnh) ---
     public static float TS_VOL_HIGH_THRES = 0.01760f; // Ngưỡng nhận diện High Vol

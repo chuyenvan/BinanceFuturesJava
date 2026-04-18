@@ -25,7 +25,6 @@ public enum MarketLevelChange {
     MEDIUM_UP("MEDIUM_UP"),
     SMALL_UP("SMALL_UP"),
 
-    DCA_LEVEL2("DCA_LEVEL2"),
     DCA_LEVEL1("DCA_LEVEL1"),
     BTC_TREND_REVERSE("BTC_TREND_REVERSE"),
 

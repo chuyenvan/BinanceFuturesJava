@@ -262,13 +262,7 @@ public class DetectEntrySignal2TradeNormal {
                         KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
                         PositionRisk position = BudgetManager.getInstance().symbol2Pos.get(symbol);
                         if (position != null) {
-                            MarketLevelChange levelDca;
-                            if (PositionHelper.callMargin(position) < BudgetManager.getInstance().getBudget()) {
-                                levelDca = MarketLevelChange.DCA_LEVEL1;
-                            } else {
-                                levelDca = MarketLevelChange.DCA_LEVEL2;
-                            }
-                            createOrderBuyRequest(symbol, ticker, levelDca, symbol2Max15m.get(symbol), marketRate, predictData);
+                            createOrderBuyRequest(symbol, ticker, MarketLevelChange.DCA_LEVEL1, symbol2Max15m.get(symbol), marketRate, predictData);
                         }
                     }
                 } catch (Exception e) {
@@ -286,13 +280,7 @@ public class DetectEntrySignal2TradeNormal {
                     if (Utils.isTickerAvailable(ticker)) {
                         PositionRisk position = BudgetManager.getInstance().symbol2Pos.get(symbol);
                         if (position != null) {
-                            MarketLevelChange levelDca;
-                            if (PositionHelper.callMargin(position) < BudgetManager.getInstance().getBudget()) {
-                                levelDca = MarketLevelChange.DCA_LEVEL1;
-                            } else {
-                                levelDca = MarketLevelChange.DCA_LEVEL2;
-                            }
-                            createOrderBuyRequest(symbol, ticker, levelDca, symbol2Max15m.get(symbol), marketRate, predictData);
+                            createOrderBuyRequest(symbol, ticker, MarketLevelChange.DCA_LEVEL1, symbol2Max15m.get(symbol), marketRate, predictData);
 
                         }
                     }
@@ -417,6 +405,13 @@ public class DetectEntrySignal2TradeNormal {
         } else {
             LOG.info("✅ AI PASS [{}] Reason: {}", symbol, filterResult.reason);
         }
+// 🔥 NÂNG CẤP: CHỐT CHẶN CẦU DAO CHO BOT LIVE
+        if (levelChange != MarketLevelChange.DCA_LEVEL1) {
+            if (MarketBigChangeDetector.is50PercentOrderLossProd(getAllOrderRunning(), ticker.startTime)) {
+                LOG.info("⚠️ CẦU DAO BẬT: Từ chối mở lệnh [{}] do đa số các lệnh mới vào gần đây đều chết hoặc gồng lỗ!", symbol);
+                return;
+            }
+        }
 
         Float marginRunning = BudgetManager.getInstance().marginRunning;
         Float balanceBasic = BudgetManager.getInstance().balanceBasic;
@@ -448,6 +443,26 @@ public class DetectEntrySignal2TradeNormal {
         } else {
             LOG.info("{} {} quantity false", symbol, quantity);
         }
+    }
+
+    private Collection<OrderTargetInfo> getAllOrderRunning() {
+        List<OrderTargetInfo> orders = new ArrayList<>();
+        try {
+            for (String symbol : RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO)) {
+                try {
+                    String orderJson = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO, symbol);
+                    OrderTargetInfo order = Utils.gson.fromJson(orderJson, OrderTargetInfo.class);
+                    if (order != null) {
+                        orders.add(order);
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return orders;
     }
 
     private void writeOrder2File(OrderTargetInfo orderTrade, KlineObjectSimple ticker,

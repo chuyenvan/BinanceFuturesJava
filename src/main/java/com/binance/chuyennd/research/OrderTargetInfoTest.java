@@ -158,7 +158,7 @@ public class OrderTargetInfoTest implements Serializable {
         // move SL
         if (priceSL != null) {
             Float rateLoss = calRateLossMax(ticker.maxPrice);
-            Float rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60MForTradingStop(rateChangeMax90M);
+            Float rateMin2MoveSl = Configs.TS_PROFIT_MULTIPLIER * TradeUtils.calRateMinWithMaxChange60MForTradingStop(rateChangeMax90M);
             if (rateLoss >= rateMin2MoveSl) {
                 Float rateSL = TradeUtils.calRateLossDynamicBuy(rateLoss, rateChangeMax90M);
                 OrderSide side2Sl = OrderSide.SELL;

@@ -15,10 +15,10 @@ public final class DcaUtils {
      */
     public static boolean shouldDca(float margin, float currentRateLoss, MarketLevelChange orderMarketLevel, long orderTimeStart,
                                     MarketLevelChange marketLevelChange, long currentTime, float budget) {
-            DcaConfig config = getDcaConfig(marketLevelChange);
-            if (config == null) {
-                return false;
-            }
+        DcaConfig config = getDcaConfig(marketLevelChange);
+        if (config == null) {
+            return false;
+        }
 //            if (!isTrendBuyWithETH) {
 //                config.rateLoss2Dca = config.rateLoss2Dca * 1.5;
 ////            if (marketLevelChange != null){
@@ -28,13 +28,13 @@ public final class DcaUtils {
 //                    config.rateLoss2Dca = -0.9;
 //                }
 //            }
-            float adjustedRateLoss = calculateAdjustedRateLoss(margin, budget, config.getRateLoss2Dca(), config.isAll());
+        float adjustedRateLoss = calculateAdjustedRateLoss(margin, budget, config.getRateLoss2Dca(), config.isAll());
 
-            if (currentRateLoss >= adjustedRateLoss) {
-                return false;
-            }
+        if (currentRateLoss >= adjustedRateLoss) {
+            return false;
+        }
 
-            return isTimeConditionMet(orderMarketLevel, orderTimeStart, currentTime, config.getDurationDca());
+        return isTimeConditionMet(orderMarketLevel, orderTimeStart, currentTime, config.getDurationDca());
 
     }
 
@@ -73,8 +73,7 @@ public final class DcaUtils {
     }
 
     private static boolean isTimeConditionMet(MarketLevelChange orderMarketLevel, long orderTimeStart, long currentTime, int durationDca) {
-        boolean isSpecialDcaLevel = orderMarketLevel.equals(MarketLevelChange.DCA_LEVEL2)
-                || orderMarketLevel.equals(MarketLevelChange.DCA_LEVEL1);
+        boolean isSpecialDcaLevel = orderMarketLevel.equals(MarketLevelChange.DCA_LEVEL1);
         if (isSpecialDcaLevel) {
             return currentTime > orderTimeStart + (long) durationDca * Utils.TIME_MINUTE;
         }
