@@ -24,7 +24,6 @@ import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.ai_ml.onnx.entry.AIRejectFilter;
 import com.binance.chuyennd.ai_ml.onnx.entry.OnnxInferenceManager;
 import com.binance.chuyennd.ai_ml.onnx.funding.FundingOnnxInferenceManager;
-import com.binance.chuyennd.helper.PositionHelper;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.MarketLevelChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
@@ -251,7 +250,7 @@ public class DetectEntrySignal2TradeNormal {
                 for (String symbol : symbol2BUY) {
                     try {
                         KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
-                        createOrderBuyRequest(symbol, ticker, levelChange, symbol2Max15m.get(symbol), marketRate, predictData);
+                        createOrderBuyRequest(symbol, ticker, levelChange, symbol2Max15m.get(symbol), marketRate, predictData, null);
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
@@ -262,7 +261,7 @@ public class DetectEntrySignal2TradeNormal {
                         KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
                         PositionRisk position = BudgetManager.getInstance().symbol2Pos.get(symbol);
                         if (position != null) {
-                            createOrderBuyRequest(symbol, ticker, MarketLevelChange.DCA_LEVEL1, symbol2Max15m.get(symbol), marketRate, predictData);
+                            createOrderBuyRequest(symbol, ticker, MarketLevelChange.DCA_LEVEL1, symbol2Max15m.get(symbol), marketRate, predictData, null);
                         }
                     }
                 } catch (Exception e) {
@@ -280,7 +279,7 @@ public class DetectEntrySignal2TradeNormal {
                     if (Utils.isTickerAvailable(ticker)) {
                         PositionRisk position = BudgetManager.getInstance().symbol2Pos.get(symbol);
                         if (position != null) {
-                            createOrderBuyRequest(symbol, ticker, MarketLevelChange.DCA_LEVEL1, symbol2Max15m.get(symbol), marketRate, predictData);
+                            createOrderBuyRequest(symbol, ticker, MarketLevelChange.DCA_LEVEL1, symbol2Max15m.get(symbol), marketRate, predictData, null);
 
                         }
                     }
@@ -305,9 +304,11 @@ public class DetectEntrySignal2TradeNormal {
                 if (countChecked >= 30) break; // Chỉ lấy Top 30
                 countChecked++;
                 String symbol = entry.getValue();
+                Float symbolPred = entry.getKey();
                 KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
                 if (ticker == null) continue;
-                createOrderBuyRequest(symbol, ticker, MarketLevelChange.PREDICT_SYMBOL_TRADE, symbol2Max15m.get(symbol), marketRate, predictData);
+                createOrderBuyRequest(symbol, ticker, MarketLevelChange.PREDICT_SYMBOL_TRADE,
+                        symbol2Max15m.get(symbol), marketRate, predictData, symbolPred);
             }
 
             StorageSnappy.writeObject2File("storage/data/rateMax15M/" + Utils.normalizeDateYYYYMMDD(time) + "/" + time, rateDown15M2Symbols);
@@ -386,24 +387,28 @@ public class DetectEntrySignal2TradeNormal {
 
 
     public void createOrderBuyRequest(String symbol, KlineObjectSimple ticker, MarketLevelChange levelChange, Float priceMax15M,
-                                      MarketDataObject marketRate, OnnxInferenceManager.PredictionResult prediction) {
+                                      MarketDataObject marketRate, OnnxInferenceManager.PredictionResult prediction, Float symbolPred) {
 
 
         if (prediction == null) {
-            LOG.info("No AI prediction data for {} at time {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()));
+            LOG.info("No AI prediction data for {} at time {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime));
             return;
         }
+
         // 4. Kiểm tra Lọc
-        AIRejectFilter.FilterResult filterResult = aiRejectFilter.checkSignal(prediction);
+        AIRejectFilter.FilterResult filterResult = aiRejectFilter.checkSignal(new AiPredictionData(
+                ticker.startTime,
+                prediction.return15M, prediction.return1H, prediction.return4H, prediction.return24H,
+                prediction.riskDrawdown4H, prediction.riskDrawdown24H));
 
         // Log kết quả AI để debug/monitor
         LOG.info("AI CHECK [{}] Pred: {} -> Decision: {}", symbol, prediction, filterResult.decision);
 
         if (filterResult.decision == AIRejectFilter.FilterDecision.REJECT) {
-            LOG.info("❌ SKIP ORDER [{} {}] due to AI REJECT: {}", symbol, levelChange, filterResult.reason);
+            LOG.info("❌ SKIP ORDER [{} {}] due to AI REJECT: {} symbolPred: {}", symbol, levelChange, filterResult.reason, symbolPred);
             return; // <--- CHẶN LỆNH TẠI ĐÂY
         } else {
-            LOG.info("✅ AI PASS [{}] Reason: {}", symbol, filterResult.reason);
+            LOG.info("✅ AI PASS [{}] Reason: {} symbolPred: {}", symbol, filterResult.reason, symbolPred);
         }
 // 🔥 NÂNG CẤP: CHỐT CHẶN CẦU DAO CHO BOT LIVE
         if (levelChange != MarketLevelChange.DCA_LEVEL1) {

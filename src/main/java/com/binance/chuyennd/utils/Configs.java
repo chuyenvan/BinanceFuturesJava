@@ -23,7 +23,6 @@ public class Configs {
     public static final String FILE_TICKER_1M_STORAGE = "storage/tickers/symbol2ticker1Ms";
     public static int MAX_CONCURRENT_ORDERS = 40;
     // Tham số kiểm soát mật độ vào lệnh (Đưa vào HPO)
-    public static float RECOVERY_RATE_PER_MIN = 1.0f;   // Số lệnh xả tối đa ngay phút đầu
 
     public static float DENSITY_SUSTAIN = 10.0f; // HPO: Dò từ 5 -> 20
     public static float DENSITY_ALPHA = 0.6f;    // HPO: Dò từ 0.2 -> 0.8 (Độ cong)
@@ -74,6 +73,13 @@ public class Configs {
     public static float BUDGET_MARGIN_RATIO_2 = 0.7475f;
     // 4. Mức chia budget ở ngưỡng 2
     public static float BUDGET_DIVIDER_2 = 1.5984f;
+
+    // =========================================================
+    // AI DYNAMIC REJECT FILTER
+    // =========================================================
+    public static float AI_DYNAMIC_MULTIPLIER = 1.85219f; // Hệ số nhân tỷ lệ (Base scale)
+    public static float AI_DYNAMIC_MIN = 0.26654f;        // Mức nới lỏng tối đa (Hạ chuẩn)
+    public static float AI_DYNAMIC_MAX = 1.0f;        // Mức siết chặt tối đa (Siết chuẩn)
 
 
     public static float RATE_PROFIT_STOP_MARKET = 0.01032f;

@@ -309,7 +309,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
                                         if (symbolPred != null) {
                                             // Biến symbolPred giờ là 1 số thực đơn thuần, không phải mảng nữa
-                                            if (symbolPred > Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD) {
+                                            if (symbolPred > Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD * Configs.AI_DYNAMIC_MAX) {
                                                 continue;
                                             }
                                             predict2Symbol.put(symbolPred, symbol);
@@ -556,8 +556,19 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
         AiPredictionData predict = predictionMap.get(ticker.startTime);
         if (predict != null && !levelChange.equals(MarketLevelChange.BIG_DOWN)) {
-            if (aiRejectFilter.checkSignal(predict).decision.equals(AIRejectFilter.FilterDecision.REJECT)) {
-//                LOG.info("⛔ REJECTED BY RISK FILTER: {} {}", predict.predReturn1H, predict.predRisk4H);
+            AIRejectFilter.FilterResult filterResult = null;
+            // Nếu là kèo AI Funding -> Dùng Logic Động
+            if (levelChange == MarketLevelChange.PREDICT_SYMBOL_TRADE) {
+                long[] symbol2Pred = time2SymbolPred.get(ticker.startTime);
+                if (symbol2Pred != null) {
+                    Float symbolPred = getPredictionFromPrimitiveArray(symbol2Pred, SimpleSymbolMapper.getInstance().getId(symbol));
+                    filterResult = aiRejectFilter.checkSignalDynamic(predict, symbolPred);
+                }
+            }
+            if (filterResult == null)                // Các kèo Market khác -> Dùng Logic Cứng
+                filterResult = aiRejectFilter.checkSignal(predict);
+
+            if (filterResult.decision == AIRejectFilter.FilterDecision.REJECT) {
                 return; // Dừng ngay
             }
         }

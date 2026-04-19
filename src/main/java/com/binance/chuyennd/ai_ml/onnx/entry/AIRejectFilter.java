@@ -1,6 +1,7 @@
 package com.binance.chuyennd.ai_ml.onnx.entry;
 
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
+import com.binance.chuyennd.utils.Configs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -9,12 +10,8 @@ public class AIRejectFilter {
 
     // --- CẤU HÌNH HIỆN TẠI (ĐÃ TINH GỌN XUỐNG 3 THAM SỐ) ---
     private float HARD_RISK_LIMIT_4H = -0.09985f;
-    private float MIN_MOMENTUM_15M   = 0.016f;
-    private float MIN_MOMENTUM_24H   = 0.02f;
-
-//    private float HARD_RISK_LIMIT_4H = -0.10425f;
-//    private float MIN_MOMENTUM_15M   = 0.025f;
-//    private float MIN_MOMENTUM_24H   = 0.03049f;
+    private float MIN_MOMENTUM_15M = 0.016f;
+    private float MIN_MOMENTUM_24H = 0.02f;
 
     public enum FilterDecision {PASS, REJECT}
 
@@ -28,22 +25,58 @@ public class AIRejectFilter {
         }
     }
 
-    // --- HỖ TRỢ V2 (PredictionResult cũ) ---
-    public FilterResult checkSignal(OnnxInferenceManager.PredictionResult prediction) {
-        return evaluate(
-                prediction.return15M,
-                prediction.return24H,
-                prediction.riskDrawdown4H
-        );
+    //    // --- HỖ TRỢ V2 (PredictionResult cũ) ---
+//    public FilterResult checkSignal(OnnxInferenceManager.PredictionResult prediction) {
+//        return evaluate(
+//                prediction.return15M,
+//                prediction.return24H,
+//                prediction.riskDrawdown4H
+//        );
+//    }
+//
+//    // --- HỖ TRỢ V2 (AiPredictionData cũ) ---
+//    public FilterResult checkSignal(AiPredictionData prediction) {
+//        return evaluate(
+//                prediction.predReturn15M,
+//                prediction.predReturn24H,
+//                prediction.predRisk4H
+//        );
+//    }
+// ==============================================================
+// LUỒNG 1: DÙNG CHO CÁC TÍN HIỆU THỊ TRƯỜNG CHUNG (CỨNG NHẮC)
+// ==============================================================
+    public FilterResult checkSignal(AiPredictionData prediction) {
+        return evaluate(prediction.predReturn15M, prediction.predReturn24H, prediction.predRisk4H,
+                MIN_MOMENTUM_15M, MIN_MOMENTUM_24H, HARD_RISK_LIMIT_4H);
     }
 
-    // --- HỖ TRỢ V2 (AiPredictionData cũ) ---
-    public FilterResult checkSignal(AiPredictionData prediction) {
-        return evaluate(
-                prediction.predReturn15M,
-                prediction.predReturn24H,
-                prediction.predRisk4H
-        );
+    // ==============================================================
+    // LUỒNG 2: DÙNG RIÊNG CHO PREDICT_SYMBOL_TRADE (ĐỘNG)
+    // ==============================================================
+    public FilterResult checkSignalDynamic(AiPredictionData prediction, Float symbolPred) {
+        if (symbolPred == null) {
+            return checkSignal(prediction); // Fallback về cứng nếu lỗi
+        }
+
+        if (prediction.predReturn15M < MIN_MOMENTUM_15M && symbolPred > Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD) {
+            return new FilterResult(FilterDecision.REJECT,
+                    String.format("DANGER: MaxDD 4H %.2f%% quá cao (Limit %.2f%%)", prediction.predReturn15M * 100, MIN_MOMENTUM_15M * 100));
+        }
+        // Lấy baseline
+        float baselineProb = Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD;
+
+        // 🔥 LOGIC MỚI: Tính toán dựa trên Configs
+        float scaleFactor = (symbolPred / baselineProb) * Configs.AI_DYNAMIC_MULTIPLIER;
+
+        // Chặn Trần/Sàn bằng Configs
+        scaleFactor = Math.max(Configs.AI_DYNAMIC_MIN, Math.min(scaleFactor, Configs.AI_DYNAMIC_MAX));
+
+        float dynamic_15M = MIN_MOMENTUM_15M * scaleFactor;
+        float dynamic_24H = MIN_MOMENTUM_24H * scaleFactor;
+        float dynamic_Risk4H = HARD_RISK_LIMIT_4H / scaleFactor;
+
+        return evaluate(prediction.predReturn15M, prediction.predReturn24H, prediction.predRisk4H,
+                dynamic_15M, dynamic_24H, dynamic_Risk4H);
     }
 
     // 🔥 HÀM MỚI: Chỉ nhận 3 tham số
@@ -56,32 +89,55 @@ public class AIRejectFilter {
     /**
      * LOGIC ĐÁNH GIÁ CHUNG (Đã gọt bỏ các if không dùng)
      */
-    private FilterResult evaluate(float pred15M, float pred24H, float risk4H) {
+//    private FilterResult evaluate(float pred15M, float pred24H, float risk4H) {
+//
+//        // 1. KIỂM TRA SINH TỒN (Risk Limit)
+//        if (risk4H <= HARD_RISK_LIMIT_4H) {
+//            return new FilterResult(FilterDecision.REJECT,
+//                    String.format("DANGER: MaxDD 4H %.2f%% quá cao (Limit %.2f%%)",
+//                            risk4H * 100, HARD_RISK_LIMIT_4H * 100));
+//        }
+//
+//        // 2. KIỂM TRA ĐÀ TĂNG NGẮN HẠN (15M) - QUAN TRỌNG NHẤT
+//        if (pred15M < MIN_MOMENTUM_15M) {
+//            return new FilterResult(FilterDecision.REJECT,
+//                    String.format("BAD MOMENTUM: 15M chưa nảy mạnh (%.2f%% < %.2f%%) -> Chờ xác nhận thêm",
+//                            pred15M * 100, MIN_MOMENTUM_15M * 100));
+//        }
+//
+//        // 3. KIỂM TRA MACRO (24H)
+//        if (pred24H < MIN_MOMENTUM_24H) {
+//            return new FilterResult(FilterDecision.REJECT,
+//                    String.format("MACRO DUMP: 24H quá xấu (%.2f%% < %.2f%%) -> Không bắt dao rơi",
+//                            pred24H * 100, MIN_MOMENTUM_24H * 100));
+//        }
+//
+//        // PASS
+//        return new FilterResult(FilterDecision.PASS,
+//                String.format("PERFECT: 15M(%.2f%%) | 24H(%.2f%%) | DD4H(%.2f%%)",
+//                        pred15M * 100, pred24H * 100, risk4H * 100));
+//    }
 
-        // 1. KIỂM TRA SINH TỒN (Risk Limit)
-        if (risk4H <= HARD_RISK_LIMIT_4H) {
+    /**
+     * LOGIC ĐÁNH GIÁ LÕI
+     */
+    private FilterResult evaluate(float pred15M, float pred24H, float risk4H,
+                                  float thres15M, float thres24H, float thresRisk) {
+
+        if (risk4H <= thresRisk) {
             return new FilterResult(FilterDecision.REJECT,
-                    String.format("DANGER: MaxDD 4H %.2f%% quá cao (Limit %.2f%%)",
-                            risk4H * 100, HARD_RISK_LIMIT_4H * 100));
+                    String.format("DANGER: MaxDD 4H %.2f%% quá cao (Limit %.2f%%)", risk4H * 100, thresRisk * 100));
+        }
+        if (pred15M < thres15M) {
+            return new FilterResult(FilterDecision.REJECT,
+                    String.format("BAD MOMENTUM: 15M chưa nảy mạnh (%.2f%% < %.2f%%)", pred15M * 100, thres15M * 100));
+        }
+        if (pred24H < thres24H) {
+            return new FilterResult(FilterDecision.REJECT,
+                    String.format("MACRO DUMP: 24H quá xấu (%.2f%% < %.2f%%)", pred24H * 100, thres24H * 100));
         }
 
-        // 2. KIỂM TRA ĐÀ TĂNG NGẮN HẠN (15M) - QUAN TRỌNG NHẤT
-        if (pred15M < MIN_MOMENTUM_15M) {
-            return new FilterResult(FilterDecision.REJECT,
-                    String.format("BAD MOMENTUM: 15M chưa nảy mạnh (%.2f%% < %.2f%%) -> Chờ xác nhận thêm",
-                            pred15M * 100, MIN_MOMENTUM_15M * 100));
-        }
-
-        // 3. KIỂM TRA MACRO (24H)
-        if (pred24H < MIN_MOMENTUM_24H) {
-            return new FilterResult(FilterDecision.REJECT,
-                    String.format("MACRO DUMP: 24H quá xấu (%.2f%% < %.2f%%) -> Không bắt dao rơi",
-                            pred24H * 100, MIN_MOMENTUM_24H * 100));
-        }
-
-        // PASS
         return new FilterResult(FilterDecision.PASS,
-                String.format("PERFECT: 15M(%.2f%%) | 24H(%.2f%%) | DD4H(%.2f%%)",
-                        pred15M * 100, pred24H * 100, risk4H * 100));
+                String.format("PERFECT: 15M(%.2f%%) | 24H(%.2f%%) | DD4H(%.2f%%)", pred15M * 100, pred24H * 100, risk4H * 100));
     }
 }
