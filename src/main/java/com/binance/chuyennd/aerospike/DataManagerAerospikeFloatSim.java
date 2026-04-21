@@ -822,7 +822,34 @@ public class DataManagerAerospikeFloatSim {
 
         LOG.info("✅ Done batch save AI records.");
     }
+    /**
+     * Lấy DUY NHẤT 1 bản ghi AI Market Prediction tại 1 thời điểm cụ thể (Tránh Full Scan)
+     */
+    public static AiPredictionData getAiPredictionMarketAtTime(long timestamp) {
+        try {
+            // Định dạng Key phải giống hệt lúc bạn lưu vào Aerospike
+            SimpleDateFormat fmt = new SimpleDateFormat("yyyyMMdd-HHmm");
+            String keyString = fmt.format(new Date(timestamp));
 
+            // Lấy từ Set AEROSPIKE_SET_NAME_AI_PRED_MARKET (Set dùng cho HPO)
+            Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_AI_PRED_MARKET, keyString);
+
+            // Dùng client226 vì dữ liệu HPO lưu ở đây
+            Record record = getClient226().get(null, key);
+
+            if (record != null) {
+                byte[] compressed = (byte[]) record.getValue("data");
+                if (compressed != null) {
+                    String json = new String(Snappy.uncompress(compressed), "UTF-8");
+                    return Utils.gson.fromJson(json, AiPredictionData.class);
+                }
+            }
+        } catch (Exception e) {
+            // Dùng debug thay vì error để không spam log nếu data thiếu
+            LOG.debug("Không tìm thấy data Market Pred tại: {}", timestamp);
+        }
+        return null;
+    }
     /**
      * 2. LẤY DỮ LIỆU THEO PHÚT (READ SINGLE MINUTE)
      */

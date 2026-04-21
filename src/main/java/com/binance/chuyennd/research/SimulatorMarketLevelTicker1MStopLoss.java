@@ -85,25 +85,12 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         Configs.MS_DOWN_15M_MED_ONLY = config.msDown15mMedOnly;
         Configs.MS_DOWN_15M_SMALL_ONLY = config.msDown15mSmallOnly;
 
-        // Các biến mở rộng kết hợp BTC/Logic phụ
-        Configs.MS_DOWN_BIG_BTC = config.msDownBigBtc;
-        Configs.MS_DOWN_MED_AVG_CMB = config.msDownMedAvgCmb;
-        Configs.MS_DOWN_MED_15M_CMB = config.msDownMed15mCmb;
-        Configs.MS_DOWN_SMALL_15M = config.msDownSmall15m;
 
         // ---------------------------------------------------------
         // NHÓM 3: CHỐT LỜI & DỜI CẮT LỖ ĐỘNG (Trailing Stop)
         // ---------------------------------------------------------
         Configs.RATE_PROFIT_STOP_MARKET = config.rateProfitStopMarket;
 
-        Configs.TS_VOL_HIGH_THRES = config.tsVolHighThres;
-        Configs.TS_RATE_HIGH = config.tsRateHigh;
-
-        Configs.TS_VOL_MED_THRES = config.tsVolMedThres;
-        Configs.TS_RATE_MED = config.tsRateMed;
-
-        Configs.TS_VOL_LOW_THRES = config.tsVolLowThres;
-        Configs.TS_RATE_LOW = config.tsRateLow;
 
         // ---------------------------------------------------------
         // NHÓM 4: QUẢN TRỊ VỐN & NGÂN SÁCH (Budget Management)
@@ -201,7 +188,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                     symbol2LastTickers.put(symbol, tickers);
                                 }
                                 tickers.add(ticker);
-                                int sizeRemove = 201;
+                                int sizeRemove = 300;
                                 // Chỉ dọn dẹp khi dư ra một khoảng để đỡ tốn CPU dọn liên tục
                                 if (tickers.size() > sizeRemove + 50) {
                                     tickers.subList(0, tickers.size() - sizeRemove).clear();
@@ -318,7 +305,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                 }
                                 for (String symbol : predict2Symbol.values()) {
                                     KlineObjectSimple ticker = symbol2Ticker.get(symbol);
-                                    createOrderBUY(symbol, ticker, MarketLevelChange.PREDICT_SYMBOL_TRADE, time2MarketData.get(time), symbol2LastTickers);
+                                    createOrderBUY(symbol, ticker, MarketLevelChange.PREDICT_SYMBOL_TRADE, time2MarketData.get(time),
+                                            symbol2LastTickers);
                                 }
 
                             }
@@ -553,6 +541,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                MarketDataObject marketData, Map<String, List<KlineObjectSimple>> symbol2LastTickers) {
 
 // 🔥 NÂNG CẤP 1: Chỉ bật Cầu dao dò mìn đối với lệnh MỚI (Không chặn lệnh DCA)
+        Float symbolPred = null;
 
         AiPredictionData predict = predictionMap.get(ticker.startTime);
         if (predict != null && !levelChange.equals(MarketLevelChange.BIG_DOWN)) {
@@ -561,7 +550,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             if (levelChange == MarketLevelChange.PREDICT_SYMBOL_TRADE) {
                 long[] symbol2Pred = time2SymbolPred.get(ticker.startTime);
                 if (symbol2Pred != null) {
-                    Float symbolPred = getPredictionFromPrimitiveArray(symbol2Pred, SimpleSymbolMapper.getInstance().getId(symbol));
+                    symbolPred = getPredictionFromPrimitiveArray(symbol2Pred, SimpleSymbolMapper.getInstance().getId(symbol));
                     filterResult = aiRejectFilter.checkSignalDynamic(predict, symbolPred);
                 }
             }
@@ -595,7 +584,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         // =========================================================
         // 🚀 CẤP VỐN THÔNG MINH BẰNG COIN RANK MANAGER
         // =========================================================
-        long currentTs = ticker.startTime.longValue();
+        long currentTs = ticker.startTime;
 
         // 1. Lấy Hệ số nhân Budget (1.2 | 1.0 | 0.5)
         // Lưu ý: Tự động truyền symbol2LastTickers để Manager tự tính toán khi cần
@@ -632,6 +621,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         if (marketData != null) {
             order.marketData = marketData;
         }
+        order.predict = predict;
+        order.symbolPred = symbolPred;
         List<OrderTargetInfoTest> orders = symbol2OrdersEntry.get(symbol);
         if (orders == null) {
             orders = new ArrayList<>();

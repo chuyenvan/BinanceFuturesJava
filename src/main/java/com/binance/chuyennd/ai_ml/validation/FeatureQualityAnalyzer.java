@@ -11,7 +11,7 @@ import java.util.*;
 
 public class FeatureQualityAnalyzer {
     private static final Logger LOG = LoggerFactory.getLogger(FeatureQualityAnalyzer.class);
-    private static final String PROD_DIR = "storage/data/prediction/";
+    private static final String PROD_DIR = "storage/data/predict/";
     private static final int MAX_FILES = 10000; // Tăng số lượng file để thống kê chính xác hơn
 
     public static void main(String[] args) {

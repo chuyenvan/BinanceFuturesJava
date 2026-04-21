@@ -28,77 +28,51 @@ public class ComprehensiveMarketFeatureExtractor {
     public void initDataFromTickerMap(TreeMap<Long, Map<String, KlineObjectSimple>> time2Ticker) {
         LOG.info("AI Feature Extractor: Syncing history from {} size: {}",
                 Utils.normalizeDateYYYYMMDDHHmm(time2Ticker.firstKey()), time2Ticker.size());
+
         for (Map<String, KlineObjectSimple> tickerMap : time2Ticker.values()) {
             updateMarketHistory(tickerMap);
         }
+
         LOG.info("AI Feature Extractor: Completed syncing {} history from {}.",
                 time2Ticker.size(), Utils.normalizeDateYYYYMMDDHHmm(time2Ticker.firstKey()));
     }
 
-    // Cập nhật History thông qua Manager
+    // =========================================================================
+    // 🔥 TRÙM CUỐI: CHẶN ĐỨNG SAI SỐ MILI-GIÂY KHI NẠP NẾN VÀO LỊCH SỬ
+    // =========================================================================
     public void updateMarketHistory(Map<String, KlineObjectSimple> currentMarketData) {
-        historyManager.updateHistory(currentMarketData);
-        activeSymbols.addAll(currentMarketData.keySet());
-    }
+        Map<String, KlineObjectSimple> cleanedMarketData = new HashMap<>();
 
-    // 🔥 METHOD: Tìm Basket dựa trên History (Logic drop 15m)
-    public List<String> findPotentialLosers(long currentTimestamp) {
-        List<Map.Entry<String, Float>> drops = new ArrayList<>();
-        long startTime = currentTimestamp - (15 * 60 * 1000L); // 15 phút trước
+        for (Map.Entry<String, KlineObjectSimple> entry : currentMarketData.entrySet()) {
+            String symbol = entry.getKey();
+            KlineObjectSimple originalKline = entry.getValue();
 
-        for (String symbol : activeSymbols) {
-            List<KlineObjectSimple> history = historyManager.getHistory(symbol);
-            if (history == null || history.isEmpty()) continue;
+            // Bỏ qua nến hỏng
+            if (originalKline == null || originalKline.startTime == null) continue;
 
-//            KlineObjectSimple currentKline = history.get(history.size() - 1);
-//
-//            // 1. Lọc Volume rác (< 50k USDT)
-//            if (currentKline.totalUsdt < 5000) continue;
-//
-//            // 2. Tìm đỉnh giá trong 15 phút gần nhất
-//            float maxPrice15m = -1.0;
-//
-//            // Duyệt ngược từ cuối lên
-//            for (int i = history.size() - 1; i >= 0; i--) {
-//                KlineObjectSimple k = history.get(i);
-//                if (k.startTime < startTime) break;
-//                if (k.maxPrice > maxPrice15m) {
-//                    maxPrice15m = k.maxPrice;
-//                }
-//            }
-//
-//            // 3. Tính độ sụt giảm
-//            if (maxPrice15m > 0) {
-//                float currentPrice = currentKline.priceClose;
-//                float dropFromPeak = (currentPrice - maxPrice15m) / maxPrice15m;
-//
-//                // Giảm > 0.1% là lấy (Logic Relaxed)
-//                if (dropFromPeak < -0.001) {
-//                    drops.add(new AbstractMap.SimpleEntry<>(symbol, dropFromPeak));
-//                }
-//            }
+            // Chặt bỏ phần mili-giây thừa mứa để Key luôn là chẵn phút (VD: 1776603120000)
+            long cleanStartTime = (originalKline.startTime.longValue() / 60000L) * 60000L;
 
-                    drops.add(new AbstractMap.SimpleEntry<>(symbol, 0f));
+            // Cập nhật trực tiếp lại startTime của nến
+            originalKline.startTime = cleanStartTime;
+
+            cleanedMarketData.put(symbol, originalKline);
         }
 
-        // Sort giảm dần theo mức giảm (giảm nhiều nhất lên đầu)
-        drops.sort(Map.Entry.comparingByValue());
-
-        // Lấy Top 60
-        return drops.stream()
-                .limit(60)
-                .map(Map.Entry::getKey)
-                .collect(Collectors.toList());
+        historyManager.updateHistory(cleanedMarketData);
+        activeSymbols.addAll(cleanedMarketData.keySet());
     }
 
     public MarketFeatures extractAllFeatures(long timestamp,
                                              Map<String, KlineObjectSimple> currentMarketData,
                                              MarketDataObject marketData) {
 
-        // 1. Cập nhật dữ liệu mới nhất
-        updateMarketHistory(currentMarketData);
-        List<String> targetBasket = findPotentialLosers(timestamp);
+        // 🔥 ÉP LÀM TRÒN VỀ ĐẦU PHÚT CHẴN ĐỂ ĐỒNG BỘ VỚI HISTORY MANAGER
+        timestamp = (timestamp / 60000L) * 60000L;
 
+        // 1. Cập nhật dữ liệu mới nhất (Đã được chặt mili-giây ở hàm trên)
+        updateMarketHistory(currentMarketData);
+        List<String> targetBasket = new ArrayList<>(currentMarketData.keySet());
 
         MarketFeatures features = new MarketFeatures();
         features.timestamp = timestamp;
@@ -109,16 +83,12 @@ public class ComprehensiveMarketFeatureExtractor {
         extractVolatilityFeatures(features, anchorSymbol);
         extractTechnicalIndicators(features, anchorSymbol);
         extractBreadthFeatures(features, currentMarketData);
-
-        extractBasketFundingFeatures(features, targetBasket, timestamp);
         extractBasketTechnicalFeatures(features, targetBasket);
-
+        extractBasketFundingFeatures(features, targetBasket, timestamp);
         extractTimeFeatures(features, timestamp);
-        validateAndCleanFeatures(features);
 
         return features;
     }
-
 
 
     // --- CÁC HÀM EXTRACT SỬ DỤNG HISTORY MANAGER ---
@@ -265,7 +235,7 @@ public class ComprehensiveMarketFeatureExtractor {
             sumSq += r * r;
             count++;
         }
-        return (count < 2) ? 0.0f : (float)Math.sqrt(Math.max(0, (sumSq - (sum * sum) / count) / (count - 1)));
+        return (count < 2) ? 0.0f : (float) Math.sqrt(Math.max(0, (sumSq - (sum * sum) / count) / (count - 1)));
     }
 
     private void extractBasketFundingFeatures(MarketFeatures features, List<String> basket, long currentTime) {

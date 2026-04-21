@@ -9,32 +9,26 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.File;
-import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
  * @author chuyennd
+ * Class quản lý toàn bộ cấu hình siêu tham số của hệ thống Bot Trading.
  */
 public class Configs {
 
-
-    public static final String FILE_TICKER_1M_STORAGE = "storage/tickers/symbol2ticker1Ms";
-    public static int MAX_CONCURRENT_ORDERS = 40;
-    // Tham số kiểm soát mật độ vào lệnh (Đưa vào HPO)
-
-    public static float DENSITY_SUSTAIN = 10.0f; // HPO: Dò từ 5 -> 20
-    public static float DENSITY_ALPHA = 0.6f;    // HPO: Dò từ 0.2 -> 0.8 (Độ cong)
-
-
+    // =========================================================
+    // 1. HỆ THỐNG & KHỞI TẠO (SYSTEM & INIT)
+    // =========================================================
     public static String configFile = "config.properties";
-    public static volatile Map properties = new HashMap();
+    public static volatile Map<String, String> properties = new HashMap<>();
 
     static {
         try {
-            File configFile = new File(Configs.configFile);
-            List<String> lines = FileUtils.readLines(configFile);
+            File file = new File(Configs.configFile);
+            List<String> lines = FileUtils.readLines(file, "UTF-8");
             for (String line : lines) {
                 if (StringUtils.contains(line, "=")) {
                     properties.put(line.split("=")[0].trim(), line.split("=")[1].trim());
@@ -47,137 +41,130 @@ public class Configs {
         }
     }
 
-    public static boolean IS_HPO_MODE = false;
-    // Mặc định là false, sẽ được ghi đè nếu trong config.properties có key này
+    // =========================================================
+    // 2. CHẾ ĐỘ CHẠY (RUNNING MODES)
+    // =========================================================
+    public static boolean IS_HPO_MODE = false; // Bật khi chạy tối ưu hóa Jenetics
     public static boolean IS_KAGGLE_MODE = properties.get("IS_KAGGLE_MODE") != null
             ? getBoolean("IS_KAGGLE_MODE")
             : false;
-    // Thêm dòng này vào Configs.java
-// Các tham số đã được cập nhật từ kết quả tối ưu hóa Funding Fee
-    public static float PREDICT_SYMBOL_RATE_MAX_THRESHOLD = 0.15f; // Cập nhật từ FUNDING_PRED_MAX_THRESHOLD
+    public static String TIME_RUN = Configs.getString("TIME_RUN");
 
-    // Nhóm tham số lọc tín hiệu thị trường (Market Filters)
-    public static float PREDICT_SYMBOL_RATE_DOWN_15M = -0.03234f;  // Param 2
-    public static float PREDICT_SYMBOL_RATE_UP_AVG = 0.00454f;          // Param 3
-    public static float PREDICT_SYMBOL_RATE_DOWN_AVG = -0.00503f;
+    // =========================================================
+    // 3. CẤU HÌNH GIAO DỊCH CƠ BẢN (BASIC TRADING)
+    // =========================================================
+    public static Integer LEVERAGE_ORDER = 1; // Đòn bẩy
+    public static final Float RATE_FEE = 0.001f; // Phí giao dịch sàn
+    public static Integer NUMBER_ENTRY_EACH_SIGNAL = 2; // Số lệnh vào mỗi khi có tín hiệu
+    public static Integer NUMBER_TICKER_CAL_RATE_CHANGE = 15; // Số nến để tính biến động
+    public static final Integer NUMBER_THREAD_ORDER_MANAGER = Configs.getInt("NUMBER_THREAD_ORDER_MANAGER");
 
+    // =========================================================
+    // 4. QUẢN TRỊ VỐN TỰ ĐỘNG (BUDGET MANAGEMENT - HPO)
+    // =========================================================
+    public static Integer number_order_budget = 50; // Tổng số phần chia vốn
 
-
-
-    // 1. Ngưỡng margin-ratio đầu tiên để giảm budget
+    // Ngưỡng bóp vốn 1: Khi dùng hết x% vốn, chia nhỏ budget đi y lần
     public static float BUDGET_MARGIN_RATIO_1 = 0.4820f;
-    // 2. Mức chia budget ở ngưỡng 1
     public static float BUDGET_DIVIDER_1 = 1.5578f;
 
-    // 3. Ngưỡng margin-ratio thứ hai
+    // Ngưỡng bóp vốn 2: Khi dùng hết x% vốn, tiếp tục chia nhỏ budget đi y lần
     public static float BUDGET_MARGIN_RATIO_2 = 0.7475f;
-    // 4. Mức chia budget ở ngưỡng 2
     public static float BUDGET_DIVIDER_2 = 1.5984f;
 
     // =========================================================
-    // AI DYNAMIC REJECT FILTER
+    // 5. CẦU DAO & MẬT ĐỘ LỆNH (CIRCUIT BREAKER - HPO)
     // =========================================================
-    public static float AI_DYNAMIC_MULTIPLIER = 1.85219f; // Hệ số nhân tỷ lệ (Base scale)
-    public static float AI_DYNAMIC_MIN = 0.26654f;        // Mức nới lỏng tối đa (Hạ chuẩn)
-    public static float AI_DYNAMIC_MAX = 1.0f;        // Mức siết chặt tối đa (Siết chuẩn)
+    public static int MAX_CONCURRENT_ORDERS = 40; // Số lệnh tối đa cùng chạy
+    public static float DENSITY_SUSTAIN = 10.0f;  // Sức chịu đựng mật độ mở lệnh
+    public static float DENSITY_ALPHA = 0.6f;     // Độ cong của hàm kiểm soát mật độ
 
+    // =========================================================
+    // 6. TRAILING STOP ĐỘNG (DYNAMIC TRAILING - HPO)
+    // =========================================================
+    public static float RATE_PROFIT_STOP_MARKET = 0.01032f; // Khoảng dời SL tối thiểu (Base rate)
+    public static float TS_DYNAMIC_K = 0.29774f;            // Hệ số nhân Volatility để dời SL
+    public static float TS_PROFIT_MULTIPLIER = 5.21847f;    // Hệ số kích hoạt Trailing (Bao nhiêu % lãi thì bắt đầu kéo)
 
-    public static float RATE_PROFIT_STOP_MARKET = 0.01032f;
-    public static float TS_DYNAMIC_K = 0.29774f;
-    public static float TS_PROFIT_MULTIPLIER = 5.21847f;
+    // =========================================================
+    // 7. AI & BỘ LỌC TÍN HIỆU ĐỘNG (AI DYNAMIC FILTER - HPO)
+    // =========================================================
+    // Ngưỡng giới hạn cốt lõi của AI
+    public static float PREDICT_SYMBOL_RATE_MAX_THRESHOLD = 0.15f; // Tỉ lệ tạch tối đa cho phép
+    public static float HARD_RISK_LIMIT_4H = -0.09985f;            // Ngưỡng Drawdown 4H cấm vào lệnh
+    public static float MIN_MOMENTUM_15M = 0.016f;                 // Đà nảy tối thiểu nến 15M
+    public static float MIN_MOMENTUM_24H = 0.02f;                  // Đà nảy tối thiểu nến 24H
 
-    // --- HIGH VOLATILITY (Biến động mạnh) ---
-    public static float TS_VOL_HIGH_THRES = 0.01760f; // Ngưỡng nhận diện High Vol
-    public static float TS_RATE_HIGH = 0.05549f; // Target dời SL khi High Vol
+    // Bộ bù trừ chéo (Trade-off) giữa AI Funding và AI Entry
+    public static float AI_DYNAMIC_MULTIPLIER = 1.40234f; // Hệ số nhân tỷ lệ (Base scale)
+    public static float AI_DYNAMIC_MIN = 0.14568f;        // Mức nới lỏng tiêu chuẩn tối đa (Hạ chuẩn)
+    public static float AI_DYNAMIC_MAX = 2.24405f;        // Mức siết chặt tiêu chuẩn tối đa (Siết chuẩn)
 
-    // --- MEDIUM VOLATILITY (Biến động vừa) ---
-    public static float TS_VOL_MED_THRES = 0.01020f; // Ngưỡng nhận diện Med Vol
-    public static float TS_RATE_MED = 0.04172f; // Target dời SL khi Med Vol
+    // Các tham số lọc tín hiệu dự đoán chung
+    public static float PREDICT_SYMBOL_RATE_DOWN_15M = -0.03234f;
+    public static float PREDICT_SYMBOL_RATE_UP_AVG = 0.00454f;
+    public static float PREDICT_SYMBOL_RATE_DOWN_AVG = -0.00503f;
 
-    // --- LOW VOLATILITY (Biến động thấp) ---
-    public static float TS_VOL_LOW_THRES = 0.00239f; // Ngưỡng nhận diện Low Vol
-    public static float TS_RATE_LOW = 0.01189f; // Ta
+    // =========================================================
+    // 8. NGƯỠNG BÁO ĐỘNG THỊ TRƯỜNG (MARKET STATUS THRESHOLDS - HPO)
+    // =========================================================
+    // Ngưỡng Bão Lớn (BIG)
+    public static float MS_UP_BIG_THRES = 0.02046f;
+    public static float MS_DOWN_BIG_AVG = -0.03157f;
 
+    // Ngưỡng Bão Vừa (MEDIUM)
+    public static float MS_UP_MED_THRES = 0.01204f;
+    public static float MS_DOWN_MED_AVG = -0.02069f;
 
-    public static String TIME_RUN = Configs.getString("TIME_RUN");
-    //budget config
-    public static Integer number_order_budget = 50;
+    // Ngưỡng Bão Nhỏ (SMALL)
+    public static float MS_UP_SMALL_THRES = 0.00442f;
+    public static float MS_DOWN_SMALL_AVG = -0.01713f;
 
-    // Nhóm tham số lọc tín hiệu thị trường (Geometric Filters)
+    // Bắt dao rơi ngắn hạn (15M ONLY)
+    public static float MS_DOWN_15M_MED_ONLY = -0.06725f;
+    public static float MS_DOWN_15M_SMALL_ONLY = -0.02145f;
+
+    // Nhóm tham số cấp số nhân (Geometric Filters - Dự phòng)
     public static float BASE_DOWN = 0.006f;
     public static float RATIO_DOWN = 2.0f;
     public static float BASE_UP = 0.005f;
     public static float RATIO_UP = 2.0f;
 
-    public static final Integer NUMBER_THREAD_ORDER_MANAGER = Configs.getInt("NUMBER_THREAD_ORDER_MANAGER");
-    public static Integer NUMBER_ENTRY_EACH_SIGNAL = Configs.getInt("NUMBER_ENTRY_EACH_SIGNAL");
-    public static Integer NUMBER_TICKER_CAL_RATE_CHANGE = Configs.getInt("NUMBER_TICKER_CAL_RATE_CHANGE");
+    // =========================================================
+    // 9. KẾT NỐI DỮ LIỆU (STORAGE & AEROSPIKE)
+    // =========================================================
+    public static final String FILE_AI_ENTRY_PREDICTIONS = Configs.getString("FILE_AI_PREDICTIONS");
 
-    // Funding Fee related configurations
-    public static Integer NUMBER_HOUR_FUNDING_CAL = Configs.getInt("NUMBER_HOUR_FUNDING_CAL");
-    public static float FUNDING_MAX_TRADE = Configs.getDouble("FUNDING_MAX_TRADE");
-    public static float FUNDING_MIN_TRADE = Configs.getDouble("FUNDING_MIN_TRADE");
-
-    public static final Float RATE_FEE = Configs.getDouble("RATE_FEE");
-    public static Integer LEVERAGE_ORDER = Configs.getInt("LEVERAGE_ORDER");
-
-
-    // aerospike
-    public static final String AEROSPIKE_HOST_242 = Configs.getString("AEROSPIKE_HOST"); //"127.0.0.1";
+    public static final String AEROSPIKE_HOST_242 = Configs.getString("AEROSPIKE_HOST");
     public static final int AEROSPIKE_PORT_242 = Configs.getInt("AEROSPIKE_PORT");
-    public static final String AEROSPIKE_HOST_226 = Configs.getString("AEROSPIKE_HOST_226"); //"127.0.0.1";
+
+    public static final String AEROSPIKE_HOST_226 = Configs.getString("AEROSPIKE_HOST_226");
     public static final int AEROSPIKE_PORT_226 = Configs.getInt("AEROSPIKE_PORT_226");
 
+    public static final String AEROSPIKE_NAMESPACE = Configs.getString("AEROSPIKE_NAMESPACE");
     public static final String AEROSPIKE_SET_NAME_FUNDING_PRED = Configs.getString("AEROSPIKE_SET_NAME_FUNDING_PRED");
     public static final String AEROSPIKE_SET_NAME_PRED_40 = Configs.getString("AEROSPIKE_SET_NAME_PRED_40");
 
-
-    public static final String AEROSPIKE_NAMESPACE = Configs.getString("AEROSPIKE_NAMESPACE"); //"ticker" ;
-    public static final String FILE_AI_ENTRY_PREDICTIONS = Configs.getString("FILE_AI_PREDICTIONS"); //"ticker" ;
-
+    // =========================================================
+    // 10. TIỆN ÍCH GETTER
+    // =========================================================
     public static String getString(String configName) {
-        return (String) properties.get(configName);
+        return properties.get(configName);
     }
 
     public static int getInt(String configName) {
-        return Integer.parseInt((String) properties.get(configName));
+        return Integer.parseInt(properties.get(configName));
     }
 
     public static Boolean getBoolean(String configName) {
-        return Boolean.parseBoolean((String) properties.get(configName));
+        return Boolean.parseBoolean(properties.get(configName));
     }
 
     public static float getDouble(String configName) {
-        return Float.parseFloat((String) properties.get(configName));
+        return Float.parseFloat(properties.get(configName));
     }
 
-    // =========================================================
-    // 1. NHÓM 8 THAM SỐ ĐÃ ĐƯỢC UPDATE TỪ KẾT QUẢ HPO
-    // =========================================================
-    public static float MS_UP_BIG_THRES = 0.02046f;  // Default cũ: 0.025
-    public static float MS_DOWN_BIG_AVG = -0.03157f; // Default cũ: -0.032
-
-    public static float MS_UP_MED_THRES = 0.01204f;  // Default cũ: 0.015
-    public static float MS_DOWN_MED_AVG = -0.02069f; // Default cũ: -0.030
-
-    public static float MS_UP_SMALL_THRES = 0.00442f;  // Default cũ: 0.008
-    public static float MS_DOWN_SMALL_AVG = -0.01713f; // Default cũ: -0.006
-
-    public static float MS_DOWN_15M_MED_ONLY = -0.06725f; // Default cũ: -0.045
-    public static float MS_DOWN_15M_SMALL_ONLY = -0.02145f; // Default cũ: -0.028
-
-    // =========================================================
-    // 2. NHÓM 4 THAM SỐ THIẾU TRONG HPO (GIỮ NGUYÊN DEFAULT)
-    // =========================================================
-    public static float MS_DOWN_BIG_BTC = -0.01f;  // Default: -0.01
-
-    public static float MS_DOWN_MED_AVG_CMB = -0.014f; // Default: -0.014 (Combined logic)
-    public static float MS_DOWN_MED_15M_CMB = -0.07f;  // Default: -0.07  (Combined logic)
-
-    public static float MS_DOWN_SMALL_15M = -0.025f; // Default: -0.025 (Combined logic)
-
-
     public static void main(String[] args) {
-
+        // Test configurations here
     }
 }

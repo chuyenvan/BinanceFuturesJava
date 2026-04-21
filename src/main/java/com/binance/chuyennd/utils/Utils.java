@@ -553,19 +553,6 @@ public class Utils {
                 }
                 Thread.sleep(1000);
             }
-            // check if File market data orver 15m -> delete file
-            try {
-                File file = new File(Configs.FILE_TICKER_1M_STORAGE);
-                if (file.exists()) {
-                    long lastModify = file.lastModified();
-                    if (System.currentTimeMillis() - lastModify > 10 * Utils.TIME_MINUTE) {
-                        LOG.info("Delete file market {} {}", Configs.FILE_TICKER_1M_STORAGE, Utils.normalizeDateYYYYMMDDHHmm(lastModify));
-                        FileUtils.delete(file);
-                    }
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
             LOG.info("Restart: {} {} ...", resetBySchedule, Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()));
 
             // Lấy đường dẫn tới Java binary

@@ -290,11 +290,7 @@ public class MarketBigChangeDetector {
             return MarketLevelChange.MEDIUM_UP;
         }
         // Logic Medium Down phức tạp (AVG < X HOẶC (AVG < Y VÀ 15M < Z))
-        if (rateDownAvg < Configs.MS_DOWN_MED_AVG ||
-                (rateDownAvg < Configs.MS_DOWN_MED_AVG_CMB
-                        && rateDown15MAvg < Configs.MS_DOWN_MED_15M_CMB
-                )
-        ) {
+        if (rateDownAvg < Configs.MS_DOWN_MED_AVG ) {
             return MarketLevelChange.MEDIUM_DOWN;
         }
 
@@ -302,16 +298,10 @@ public class MarketBigChangeDetector {
         if (rateUpAvg > Configs.MS_UP_SMALL_THRES && rateDownAvg > 0) {
             return MarketLevelChange.SMALL_UP;
         }
-        if (rateDownAvg < Configs.MS_DOWN_SMALL_AVG && rateUpAvg < 0
-                && rateDown15MAvg < Configs.MS_DOWN_SMALL_15M
-        ) {
+        if (rateDownAvg < Configs.MS_DOWN_SMALL_AVG) {
             return MarketLevelChange.SMALL_DOWN;
         }
 
-        // 4. RIÊNG BIỆT THEO 15M (Trường hợp Avg không giảm mạnh nhưng 15M sập)
-        if (rateDown15MAvg < Configs.MS_DOWN_15M_MED_ONLY) {
-            return MarketLevelChange.MEDIUM_DOWN_15M;
-        }
         if (rateDown15MAvg < Configs.MS_DOWN_15M_SMALL_ONLY) {
             return MarketLevelChange.SMALL_DOWN_15M;
         }
@@ -326,91 +316,6 @@ public class MarketBigChangeDetector {
                 || rateUpAvg > 0.012
                 || rateDownAvg < -0.012;
     }
-
-
-//    /**
-//     * CẦU DAO 2 LỚP BẢO VỆ THIÊN NGA ĐEN (ĐÃ FIX REVERSE SURVIVORSHIP BIAS)
-//     * Lớp 1: Giới hạn mật độ theo đường cong lũy thừa.
-//     * Lớp 2: Đo lường tỷ lệ an toàn của TẤT CẢ các lệnh gần đây (Cả đang chạy & Đã chốt).
-//     */
-//        public static boolean is50PercentOrderLoss(
-//            Collection<OrderTargetInfoTest> runningOrders,
-//            long currentTime) {
-//
-//        List<OrderTargetInfoTest> recentOrders = new ArrayList<>();
-//
-//        // 1. Gộp tất cả các lệnh (Đang chạy + Đã đóng) trong 4H qua vào một rổ
-//        long lookbackMillis = 240 * 60000L; // Soi 4 tiếng quay đầu
-//
-//        if (runningOrders != null) {
-//            for (OrderTargetInfoTest o : runningOrders) {
-//                if (currentTime - o.timeStart <= lookbackMillis) {
-//                    recentOrders.add(o);
-//                }
-//            }
-//        }
-//
-//
-//        if (recentOrders.isEmpty()) return false;
-//
-//        // Sắp xếp từ mới nhất -> cũ nhất theo timeStart
-//        recentOrders.sort((o1, o2) -> Long.compare(o2.timeStart, o1.timeStart));
-//
-//        // =========================================================================
-//        // LỚP 1: KIỂM TRA MẬT ĐỘ THEO ĐƯỜNG CONG LŨY THỪA (POWER LAW)
-//        // =========================================================================
-//        int baseBurst = Configs.MAX_CONCURRENT_ORDERS;
-//        float sustain = Configs.DENSITY_SUSTAIN;
-//        float alpha = Configs.DENSITY_ALPHA;
-//
-//        int orderCount = 1; // Tính luôn lệnh đang chờ duyệt
-//
-//        for (OrderTargetInfoTest order : recentOrders) {
-//            long diffMillis = currentTime - order.timeStart;
-//            if (diffMillis < 0) continue;
-//
-//            int diffMins = (int) (diffMillis / 60000L);
-//            int checkMins = Math.max(1, diffMins);
-//
-//            int allowedOrders = (int) (baseBurst + sustain * Math.pow(checkMins, alpha));
-//            orderCount++;
-//
-//            if (orderCount > allowedOrders) {
-//                return true; // Vượt mật độ -> Chặn
-//            }
-//        }
-//
-//        // =========================================================================
-//        // LỚP 2: CẦU DAO CHỐNG BÃO (ĐÁNH GIÁ LẠI TỶ LỆ LỖ THỰC SỰ)
-//        // =========================================================================
-//        int totalOrders = recentOrders.size();
-//
-//        // Vùng miễn trừ: Vẫn cho phép xả một lượng đạn nhất định lúc bão mới tới
-//        if (totalOrders < (baseBurst / 2.0)) {
-//            return false;
-//        }
-//
-//        int safeOrders = 0;
-//        for (OrderTargetInfoTest info : recentOrders) {
-//            // Lệnh ĐÃ ĐÓNG: Được tính là an toàn nếu chốt lời dương (Status = TP hoặc PnL > 0)
-//            boolean isDoneAndProfitable = (info.status == OrderTargetStatus.TAKE_PROFIT_DONE)
-//                    || (info.status == OrderTargetStatus.STOP_MARKET_DONE && info.calTp() > 0);
-//
-//            // Lệnh ĐANG CHẠY: Được tính là an toàn nếu đã dời Stoploss dương
-//            boolean isRunningAndSafe = (info.status != OrderTargetStatus.TAKE_PROFIT_DONE
-//                    && info.status != OrderTargetStatus.STOP_LOSS_DONE
-//                    && info.priceSL != null);
-//
-//            if (isDoneAndProfitable || isRunningAndSafe) {
-//                safeOrders++;
-//            }
-//        }
-//
-//        // Nếu số lệnh an toàn (đã chốt lãi + đang gồng lãi) < 50% -> Tắt điện!
-
-    /// /        return safeOrders < (totalOrders / 2.0);
-//        return (totalOrders - safeOrders > Configs.MAX_CONCURRENT_ORDERS * 0.7);
-//    }
     public static boolean is50PercentOrderLoss(
             Collection<OrderTargetInfoTest> runningOrders,
             long currentTime) {

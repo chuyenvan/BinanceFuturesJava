@@ -98,7 +98,12 @@ public class CoinRankManager {
         for (Map.Entry<String, List<KlineObjectSimple>> entry : symbol2LastTickers.entrySet()) {
             String sym = entry.getKey();
             float sumVol = 0;
+            int counter = 0;
             for (KlineObjectSimple k : entry.getValue()) {
+                counter ++;
+                if (counter > 200) {
+                    break;
+                }
                 if (k != null) {
                     sumVol += k.totalUsdt;
                 }

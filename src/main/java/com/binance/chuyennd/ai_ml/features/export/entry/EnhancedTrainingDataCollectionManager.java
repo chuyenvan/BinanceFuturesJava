@@ -33,12 +33,6 @@ public class EnhancedTrainingDataCollectionManager {
         // LOG.info("Buffer cleared (Warm-up complete)");
     }
 
-    public List<String> identifyTargetBasket(long timestamp, Map<String, KlineObjectSimple> marketData) {
-        // 1. Cập nhật History trước
-        featureExtractor.updateMarketHistory(marketData);
-        // 2. Lấy danh sách từ logic nội tại của Extractor
-        return featureExtractor.findPotentialLosers(timestamp);
-    }
 
     public void processMarketData(long timestamp,
                                   Map<String, KlineObjectSimple> marketData,

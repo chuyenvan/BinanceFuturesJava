@@ -6,13 +6,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class AIRejectFilter {
-    private static final Logger LOG = LoggerFactory.getLogger(AIRejectFilter.class);
-
-    // --- CẤU HÌNH HIỆN TẠI (ĐÃ TINH GỌN XUỐNG 3 THAM SỐ) ---
-    private float HARD_RISK_LIMIT_4H = -0.09985f;
-    private float MIN_MOMENTUM_15M = 0.016f;
-    private float MIN_MOMENTUM_24H = 0.02f;
-
     public enum FilterDecision {PASS, REJECT}
 
     public static class FilterResult {
@@ -25,29 +18,10 @@ public class AIRejectFilter {
         }
     }
 
-    //    // --- HỖ TRỢ V2 (PredictionResult cũ) ---
-//    public FilterResult checkSignal(OnnxInferenceManager.PredictionResult prediction) {
-//        return evaluate(
-//                prediction.return15M,
-//                prediction.return24H,
-//                prediction.riskDrawdown4H
-//        );
-//    }
-//
-//    // --- HỖ TRỢ V2 (AiPredictionData cũ) ---
-//    public FilterResult checkSignal(AiPredictionData prediction) {
-//        return evaluate(
-//                prediction.predReturn15M,
-//                prediction.predReturn24H,
-//                prediction.predRisk4H
-//        );
-//    }
-// ==============================================================
-// LUỒNG 1: DÙNG CHO CÁC TÍN HIỆU THỊ TRƯỜNG CHUNG (CỨNG NHẮC)
-// ==============================================================
+
     public FilterResult checkSignal(AiPredictionData prediction) {
         return evaluate(prediction.predReturn15M, prediction.predReturn24H, prediction.predRisk4H,
-                MIN_MOMENTUM_15M, MIN_MOMENTUM_24H, HARD_RISK_LIMIT_4H);
+                Configs.MIN_MOMENTUM_15M, Configs.MIN_MOMENTUM_24H, Configs.HARD_RISK_LIMIT_4H);
     }
 
     // ==============================================================
@@ -58,9 +32,9 @@ public class AIRejectFilter {
             return checkSignal(prediction); // Fallback về cứng nếu lỗi
         }
 
-        if (prediction.predReturn15M < MIN_MOMENTUM_15M && symbolPred > Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD) {
+        if (prediction.predReturn15M < Configs.MIN_MOMENTUM_15M && symbolPred > Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD) {
             return new FilterResult(FilterDecision.REJECT,
-                    String.format("DANGER: MaxDD 4H %.2f%% quá cao (Limit %.2f%%)", prediction.predReturn15M * 100, MIN_MOMENTUM_15M * 100));
+                    String.format("DANGER: MaxDD 4H %.2f%% quá cao (Limit %.2f%%)", prediction.predReturn15M * 100, Configs.MIN_MOMENTUM_15M * 100));
         }
         // Lấy baseline
         float baselineProb = Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD;
@@ -71,9 +45,9 @@ public class AIRejectFilter {
         // Chặn Trần/Sàn bằng Configs
         scaleFactor = Math.max(Configs.AI_DYNAMIC_MIN, Math.min(scaleFactor, Configs.AI_DYNAMIC_MAX));
 
-        float dynamic_15M = MIN_MOMENTUM_15M * scaleFactor;
-        float dynamic_24H = MIN_MOMENTUM_24H * scaleFactor;
-        float dynamic_Risk4H = HARD_RISK_LIMIT_4H / scaleFactor;
+        float dynamic_15M = Configs.MIN_MOMENTUM_15M * scaleFactor;
+        float dynamic_24H = Configs.MIN_MOMENTUM_24H * scaleFactor;
+        float dynamic_Risk4H = Configs.HARD_RISK_LIMIT_4H / scaleFactor;
 
         return evaluate(prediction.predReturn15M, prediction.predReturn24H, prediction.predRisk4H,
                 dynamic_15M, dynamic_24H, dynamic_Risk4H);
@@ -81,9 +55,9 @@ public class AIRejectFilter {
 
     // 🔥 HÀM MỚI: Chỉ nhận 3 tham số
     public void setConfig(float risk, float min15m, float min24h) {
-        HARD_RISK_LIMIT_4H = risk;
-        MIN_MOMENTUM_15M = min15m;
-        MIN_MOMENTUM_24H = min24h;
+        Configs.HARD_RISK_LIMIT_4H = risk;
+        Configs.MIN_MOMENTUM_15M = min15m;
+        Configs.MIN_MOMENTUM_24H = min24h;
     }
 
     /**

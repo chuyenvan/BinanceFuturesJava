@@ -18,16 +18,5 @@ public class MarketDataObject implements Serializable {
         this.rateDownAvg = rateDownAvg;
         this.rateUpAvg = rateUpAvg;
         this.rateDown15MAvg = rateDown15MAvg;
-
-    }
-
-    // Constructor đầy đủ để merge dữ liệu
-    public MarketDataObject(Float rateDownAvg, Float rateDown15MAvg, Float rateUpAvg,
-                            Float rateBtc) {
-        this.rateDownAvg = rateDownAvg;
-        this.rateDown15MAvg = rateDown15MAvg;
-        this.rateUpAvg = rateUpAvg;
-        this.rateBtc = rateBtc;
-
     }
 }

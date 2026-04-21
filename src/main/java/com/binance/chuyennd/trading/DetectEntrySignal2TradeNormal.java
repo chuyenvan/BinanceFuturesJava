@@ -30,6 +30,7 @@ import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
+import com.binance.chuyennd.tradecore.CoinRankManager;
 import com.binance.chuyennd.tradecore.DcaProcessor;
 import com.binance.chuyennd.tradecore.MarketBigChangeDetector;
 import com.binance.chuyennd.tradecore.TradeUtils;
@@ -116,7 +117,8 @@ public class DetectEntrySignal2TradeNormal {
             TreeMap<Float, String> rateUp2Symbols = new TreeMap<>();
             Map<String, Float> symbol2Max15m = new HashMap<>();
 
-            Map<String, List<KlineObjectSimple>> symbol2LastTickers = DataManagerAerospikeFloatSim.readDataForSymbols(System.currentTimeMillis() - 1500 * Utils.TIME_MINUTE, 1500);
+            Map<String, List<KlineObjectSimple>> symbol2LastTickers = DataManagerAerospikeFloatSim.readDataForSymbols(
+                    System.currentTimeMillis() - 1500 * Utils.TIME_MINUTE, 1500);
             List<KlineObjectSimple> btcTickers = symbol2LastTickers.get(Constants.SYMBOL_PAIR_BTC);
             KlineObjectSimple btcTicker = btcTickers.get(btcTickers.size() - 1);
             Float btcRateChange = Utils.rateOf2Double(btcTicker.priceClose, btcTicker.priceOpen).floatValue();
@@ -175,11 +177,10 @@ public class DetectEntrySignal2TradeNormal {
                 }
             }
 
-
             Float rateDownAvg = MarketBigChangeDetector.calRateChangeAvg(rateDown2Symbols, 100);
             Float rateUpAvg = -MarketBigChangeDetector.calRateChangeAvg(rateUp2Symbols, 100);
             Float rateDown15MAvg = MarketBigChangeDetector.calRateChangeAvg(rateDown15M2Symbols, 100);
-            MarketDataObject marketRate = new MarketDataObject(rateDownAvg, rateDown15MAvg, rateUpAvg);
+            MarketDataObject marketRate = new MarketDataObject(rateDownAvg, rateUpAvg,rateDown15MAvg);
             Float rateBtcDown15M = Utils.rateOf2Double(btcTicker.priceClose, btcMax15M);
             MarketLevelChange levelChange = MarketBigChangeDetector.getMarketStatus1M(rateDownAvg, rateUpAvg, btcRateChange, rateDown15MAvg);
             RedisHelper.getInstance().get().set(RedisConst.REDIS_KEY_LAST_TIME_CHECK_MARKET, Utils.toJson(System.currentTimeMillis()));
@@ -206,7 +207,6 @@ public class DetectEntrySignal2TradeNormal {
                     Map<String, KlineObjectSimple> currentMarketMap = new HashMap<>(symbol2FinalTicker);
 
                     // 2. Trích xuất Features cho Entry Model
-                    List<String> baskets = featureEntryExtractor.findPotentialLosers(timestamp);
                     features = featureEntryExtractor.extractAllFeatures(timestamp, currentMarketMap, marketRate);
 
                     // 3. Dự báo Entry Model
@@ -224,7 +224,9 @@ public class DetectEntrySignal2TradeNormal {
                     e.printStackTrace();
                 }
             }
-
+            // 3. Chạy AI Predict -> Sort theo L0 (Prob Fail) từ bé đến lớn
+            TreeMap<Float, String> sortedCandidates = predictAllCandidates(symbol2FinalTicker.keySet(), symbol2FinalTicker,
+                    rateDownAvg, rateUpAvg, rateDown15MAvg, time);
             if (levelChange != null) {
                 Integer numberOrder = Configs.NUMBER_ENTRY_EACH_SIGNAL;
                 if (levelChange.equals(MarketLevelChange.SMALL_DOWN)
@@ -238,10 +240,6 @@ public class DetectEntrySignal2TradeNormal {
                 allSymbols.addAll(symbol2FinalTicker.keySet());
                 allSymbols.removeAll(BudgetManager.getInstance().symbol2Pos.keySet());
 
-                // 3. Chạy AI Predict -> Sort theo L0 (Prob Fail) từ bé đến lớn
-                TreeMap<Float, String> sortedCandidates = predictAllCandidates(allSymbols, symbol2FinalTicker,
-                        rateDownAvg, rateUpAvg, rateDown15MAvg, time);
-
                 Set<String> symbol2BUY = new HashSet<>();
                 symbol2BUY.addAll(MarketBigChangeDetector.getTopSymbol(numberOrder,
                         symbol2FinalTicker, symbolLocked, sortedCandidates));
@@ -250,7 +248,8 @@ public class DetectEntrySignal2TradeNormal {
                 for (String symbol : symbol2BUY) {
                     try {
                         KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
-                        createOrderBuyRequest(symbol, ticker, levelChange, symbol2Max15m.get(symbol), marketRate, predictData, null);
+                        createOrderBuyRequest(symbol, ticker, levelChange, symbol2Max15m.get(symbol), marketRate,
+                                predictData, null, symbol2LastTickers);
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
@@ -261,7 +260,7 @@ public class DetectEntrySignal2TradeNormal {
                         KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
                         PositionRisk position = BudgetManager.getInstance().symbol2Pos.get(symbol);
                         if (position != null) {
-                            createOrderBuyRequest(symbol, ticker, MarketLevelChange.DCA_LEVEL1, symbol2Max15m.get(symbol), marketRate, predictData, null);
+                            createOrderBuyRequest(symbol, ticker, MarketLevelChange.DCA_LEVEL1, symbol2Max15m.get(symbol), marketRate, predictData, null, symbol2LastTickers);
                         }
                     }
                 } catch (Exception e) {
@@ -279,7 +278,7 @@ public class DetectEntrySignal2TradeNormal {
                     if (Utils.isTickerAvailable(ticker)) {
                         PositionRisk position = BudgetManager.getInstance().symbol2Pos.get(symbol);
                         if (position != null) {
-                            createOrderBuyRequest(symbol, ticker, MarketLevelChange.DCA_LEVEL1, symbol2Max15m.get(symbol), marketRate, predictData, null);
+                            createOrderBuyRequest(symbol, ticker, MarketLevelChange.DCA_LEVEL1, symbol2Max15m.get(symbol), marketRate, predictData, null, symbol2LastTickers);
 
                         }
                     }
@@ -292,9 +291,7 @@ public class DetectEntrySignal2TradeNormal {
             allSymbols.addAll(symbol2FinalTicker.keySet());
             allSymbols.removeAll(BudgetManager.getInstance().symbol2Pos.keySet());
 
-            // 3. Chạy AI Predict -> Sort theo L0 (Prob Fail) từ bé đến lớn
-            TreeMap<Float, String> sortedCandidates = predictAllCandidates(allSymbols, symbol2FinalTicker,
-                    rateDownAvg, rateUpAvg, rateDown15MAvg, time);
+
 
             // 4. Final Trade Logic (Limit TOP 30)
             int countChecked = 0;
@@ -308,7 +305,7 @@ public class DetectEntrySignal2TradeNormal {
                 KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
                 if (ticker == null) continue;
                 createOrderBuyRequest(symbol, ticker, MarketLevelChange.PREDICT_SYMBOL_TRADE,
-                        symbol2Max15m.get(symbol), marketRate, predictData, symbolPred);
+                        symbol2Max15m.get(symbol), marketRate, predictData, symbolPred, symbol2LastTickers);
             }
 
             StorageSnappy.writeObject2File("storage/data/rateMax15M/" + Utils.normalizeDateYYYYMMDD(time) + "/" + time, rateDown15M2Symbols);
@@ -387,7 +384,7 @@ public class DetectEntrySignal2TradeNormal {
 
 
     public void createOrderBuyRequest(String symbol, KlineObjectSimple ticker, MarketLevelChange levelChange, Float priceMax15M,
-                                      MarketDataObject marketRate, OnnxInferenceManager.PredictionResult prediction, Float symbolPred) {
+                                      MarketDataObject marketRate, OnnxInferenceManager.PredictionResult prediction, Float symbolPred, Map<String, List<KlineObjectSimple>> symbol2LastTickers) {
 
 
         if (prediction == null) {
@@ -427,6 +424,28 @@ public class DetectEntrySignal2TradeNormal {
             LOG.info("Not trade because over capital or budget not enough: {} {} {} {}", symbol, levelChange, Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()), budget);
             return;
         }
+
+        // =========================================================
+        // 🚀 CẤP VỐN THÔNG MINH BẰNG COIN RANK MANAGER
+        // =========================================================
+        long currentTs = ticker.startTime;
+
+        // 1. Lấy Hệ số nhân Budget (1.2 | 1.0 | 0.5)
+        // Lưu ý: Tự động truyền symbol2LastTickers để Manager tự tính toán khi cần
+        float tierMultiplier = CoinRankManager.getInstance().getBudgetMultiplier(symbol);
+
+        // 2. Chặn đứng DCA rác
+        CoinRankManager.CoinTier myTier = CoinRankManager.getInstance().getCoinTier(symbol, currentTs, symbol2LastTickers);
+        if (myTier == CoinRankManager.CoinTier.TIER_3_SHITCOIN) {
+            if (levelChange == MarketLevelChange.DCA_LEVEL1) {
+//                LOG.info("🚫 Chặn DCA vào đồng Shitcoin: {}", symbol);
+                return;
+            }
+        }
+
+        // Áp dụng hệ số vào Budget
+        budget *= tierMultiplier;
+
 
         Float priceEntry = ticker.priceClose;
         Float quantity = Utils.calQuantity(budget, Configs.LEVERAGE_ORDER, priceEntry, symbol);
@@ -493,7 +512,7 @@ public class DetectEntrySignal2TradeNormal {
         long time = System.currentTimeMillis();
         long second = (time / Utils.TIME_SECOND) % 60;
         long miniSecond = (time % Utils.TIME_SECOND);
-        return second == 0 && miniSecond < 100;
+        return second == 2 && miniSecond < 100;
     }
 
     private void initData() {

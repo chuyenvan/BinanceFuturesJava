@@ -38,12 +38,6 @@ public class WFOTier2RiskRunner {
                     BotTradingConfig config = bestEntry.clone();
 
                     config.rateProfitStopMarket = gt.get(0).gene().floatValue();
-                    config.tsVolHighThres = gt.get(1).gene().floatValue();
-                    config.tsRateHigh = gt.get(2).gene().floatValue();
-                    config.tsVolMedThres = gt.get(3).gene().floatValue();
-                    config.tsRateMed = gt.get(4).gene().floatValue();
-                    config.tsVolLowThres = gt.get(5).gene().floatValue();
-                    config.tsRateLow = gt.get(6).gene().floatValue();
 
                     config.dcaRateLossBigDown = gt.get(7).gene().floatValue();
                     config.dcaRateLossMediumDown = gt.get(8).gene().floatValue();
@@ -68,12 +62,6 @@ public class WFOTier2RiskRunner {
 
         BotTradingConfig res = bestEntry.clone();
         res.rateProfitStopMarket = best.get(0).gene().floatValue();
-        res.tsVolHighThres = best.get(1).gene().floatValue();
-        res.tsRateHigh = best.get(2).gene().floatValue();
-        res.tsVolMedThres = best.get(3).gene().floatValue();
-        res.tsRateMed = best.get(4).gene().floatValue();
-        res.tsVolLowThres = best.get(5).gene().floatValue();
-        res.tsRateLow = best.get(6).gene().floatValue();
 
         res.dcaRateLossBigDown = best.get(7).gene().floatValue();
         res.dcaRateLossMediumDown = best.get(8).gene().floatValue();

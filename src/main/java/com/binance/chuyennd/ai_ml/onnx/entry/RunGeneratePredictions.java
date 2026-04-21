@@ -32,7 +32,6 @@ public class RunGeneratePredictions {
     // Thêm tham số lastTimestamp
     public void generateAndSave(Long lastTimestamp) throws Exception {
         OnnxInferenceManager aiBrain = new OnnxInferenceManager(MODEL_DIR);
-        ComprehensiveMarketFeatureExtractor featureExtractor = new ComprehensiveMarketFeatureExtractor();
 
         LOG.info("📥 Loading Market Rates từ Aerospike...");
         TreeMap<Long, MarketDataObject> time2Rate = loadMarketRateData();
@@ -52,24 +51,37 @@ public class RunGeneratePredictions {
 
         while (currentTime <= endTime) {
             try {
-                // 1. Tạo danh sách các phút trong ngày để kiểm tra Aerospike
                 List<Long> timestampsToCheck = new ArrayList<>();
                 for (int i = 0; i < 1440; i++) {
                     timestampsToCheck.add(currentTime + i * Utils.TIME_MINUTE);
                 }
 
-                // 2. Check xem các phút này ĐÃ TỒN TẠI trong Aerospike chưa
                 Set<Long> existingTimestamps = DataManagerAerospikeFloatSim.checkExistingMarketAiPredictions(timestampsToCheck);
 
                 // Nếu cả ngày đều đã có data -> Bỏ qua toàn bộ ngày
                 if (existingTimestamps.size() >= 1440) {
-                    LOG.info("⏩ Day {} already fully generated ({} records). Skipping...",
+                    LOG.info("⏩ Day {} đã full ({} records). Skipping...",
                             Utils.normalizeDateYYYYMMDD(currentTime), existingTimestamps.size());
                     currentTime += Utils.TIME_DAY;
-                    continue;
+                    continue; // Bỏ qua
                 }
 
-                // 3. Đọc nến 1M của ngày hôm nay từ Aerospike (Dùng Custom để chuẩn giờ 00:00:00)
+                // =====================================================================
+                // 🔥 BẮT BUỘC: KHỞI TẠO LẠI VÀ WARM-UP TRƯỚC KHI TÍNH NGÀY MỚI
+                // =====================================================================
+                ComprehensiveMarketFeatureExtractor featureExtractor = new ComprehensiveMarketFeatureExtractor();
+
+                long warmupStartTime = currentTime - (1500 * Utils.TIME_MINUTE);
+                LOG.info("📥 Đang kéo 1500 phút quá khứ từ Aerospike để Warm-Up Extractor...");
+                TreeMap<Long, Map<String, KlineObjectSimple>> warmupData =
+                        DataManagerAerospikeFloatSim.readDataFromAerospikeCustom(warmupStartTime, 1500);
+
+                if (warmupData != null && !warmupData.isEmpty()) {
+                    featureExtractor.initDataFromTickerMap(warmupData);
+                    LOG.info("✅ Warm-up thành công!");
+                }
+                // =====================================================================
+
                 TreeMap<Long, Map<String, KlineObjectSimple>> todayData =
                         DataManagerAerospikeFloatSim.readDataFromAerospikeCustom(currentTime, 1440);
 
@@ -86,6 +98,7 @@ public class RunGeneratePredictions {
                         Map<String, KlineObjectSimple> marketData = entry.getValue();
                         MarketDataObject rateChange = time2Rate.get(timestamp);
 
+                        // Tính Features
                         MarketFeatures features = featureExtractor.extractAllFeatures(
                                 timestamp, marketData, rateChange);
                         OnnxInferenceManager.PredictionResult res = aiBrain.predictAll(features);
@@ -95,20 +108,19 @@ public class RunGeneratePredictions {
                                 res.return15M, res.return1H, res.return4H, res.return24H,
                                 res.riskDrawdown4H, res.riskDrawdown24H
                         ));
-
                     }
                 }
 
-                // 4. Lưu vào Aerospike
                 if (!batchPredictions.isEmpty()) {
                     DataManagerAerospikeFloatSim.saveMarketAiPredictionsBatch(batchPredictions);
                 }
 
                 processedDays++;
-                LOG.info("✅ Day {}: Generated and Saved {} NEW records. (Skipped {} existing)",
+                LOG.info("✅ Day {}: Đã lưu {} records mới. (Bỏ qua {} records cũ)",
                         Utils.normalizeDateYYYYMMDD(currentTime), batchPredictions.size(), existingTimestamps.size());
 
                 todayData = null;
+                warmupData = null; // Clear RAM
                 batchPredictions.clear();
 
             } catch (Exception e) {

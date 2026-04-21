@@ -15,6 +15,7 @@
  */
 package com.binance.chuyennd.research;
 
+import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.MarketLevelChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
@@ -57,6 +58,8 @@ public class OrderTargetInfoTest implements Serializable {
     public MarketDataObject marketData;
     public MarketLevelChange marketLevelChange;
     public KlineObjectSimple tickerOpen;
+    public AiPredictionData predict;
+    public Float symbolPred;
 
 
     public OrderTargetInfoTest(OrderTargetStatus status, Float priceEntry,

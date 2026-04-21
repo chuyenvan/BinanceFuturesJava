@@ -37,25 +37,11 @@ public class BotTradingConfig implements Serializable, Cloneable {
     public float msDown15mMedOnly = -0.06725f;
     public float msDown15mSmallOnly = -0.02145f;
 
-    // --- Nhóm giữ nguyên Default (Kết hợp Logic & BTC) ---
-    public float msDownBigBtc = -0.010f;
-    public float msDownMedAvgCmb = -0.014f;
-    public float msDownMed15mCmb = -0.070f;
-    public float msDownSmall15m = -0.025f;
 
     // =========================================================
     // 3. NHÓM CHỐT LỜI & DỜI CẮT LỖ ĐỘNG (Trailing Stop)
     // =========================================================
     public float rateProfitStopMarket = 0.01151f; // Mức chốt lời Market cơ bản
-
-    public float tsVolHighThres = 0.01760f; // Ngưỡng nhận diện Volatility Cao
-    public float tsRateHigh = 0.05549f; // Target dời SL khi Volatility Cao
-
-    public float tsVolMedThres = 0.01020f; // Ngưỡng nhận diện Volatility Vừa
-    public float tsRateMed = 0.04172f; // Target dời SL khi Volatility Vừa
-
-    public float tsVolLowThres = 0.00239f; // Ngưỡng nhận diện Volatility Thấp
-    public float tsRateLow = 0.01189f; // Target dời SL khi Volatility Thấp
 
     // =========================================================
     // 4. NHÓM QUẢN LÝ VỊ THẾ & TRUNG BÌNH GIÁ (DCA)

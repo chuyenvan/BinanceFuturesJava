@@ -16,7 +16,7 @@ import java.util.*;
  */
 public class ProductionFeatureStabilityChecker {
     private static final Logger LOG = LoggerFactory.getLogger(ProductionFeatureStabilityChecker.class);
-    private static final String PROD_DIR = "storage/data/prediction/";
+    private static final String PROD_DIR = "storage/data/predict/";
 
     // Cấu hình số lượng file tối đa để kiểm tra (tránh quá tải)
 

@@ -23,14 +23,14 @@ public class HistoryManager {
 
             ArrayList<KlineObjectSimple> list = historyMap.computeIfAbsent(symbol, k -> new ArrayList<>());
 
-            // Logic check duplicate (Thay removeLast bằng remove index cuối)
-            if (!list.isEmpty() && list.get(list.size() - 1).startTime.equals(kline.startTime)) {
+            // Logic check duplicate (Dùng .longValue() để phòng trường hợp kiểu Number)
+            if (!list.isEmpty() && list.get(list.size() - 1).startTime.longValue() == kline.startTime.longValue()) {
                 list.remove(list.size() - 1);
             }
 
             list.add(kline);
 
-            // Logic trim size (Thay removeFirst bằng remove index 0)
+            // Logic trim size
             if (list.size() > MAX_HISTORY_SIZE) {
                 list.remove(0);
             }
@@ -47,16 +47,23 @@ public class HistoryManager {
         ArrayList<KlineObjectSimple> list = historyMap.get(symbol);
         if (list == null || list.isEmpty()) return null;
 
-        // Duyệt ngược từ cuối mảng
+        // Duyệt ngược từ cuối mảng lên để tìm nến gần nhất với thời điểm yêu cầu
         for (int i = list.size() - 1; i >= 0; i--) {
             KlineObjectSimple k = list.get(i);
-            if (k.startTime <= timestamp) {
-                if (timestamp - k.startTime > 300000) return null;
+
+            // Tìm thấy nến có thời gian <= thời gian cần lấy
+            if (k.startTime.longValue() <= timestamp) {
+                // Tăng độ trễ cho phép lên 30 phút (1800000 ms) thay vì 5 phút như cũ.
+                // Nếu vượt qua 30 phút mà không có nến nào thì coi như Dead Coin, trả về null.
+                if (timestamp - k.startTime.longValue() > 1800000L) {
+                    return null;
+                }
                 return k.priceClose;
             }
         }
         return null;
     }
+
 
     public Float getHighInPeriod(String symbol, int minutesLookback) {
         ArrayList<KlineObjectSimple> list = historyMap.get(symbol);

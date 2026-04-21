@@ -49,7 +49,7 @@ public final class DcaUtils {
                 return new DcaConfig(8, -0.15f, true);
             case MEDIUM_DOWN:
             case BIG_UP:
-                return new DcaConfig(15, -0.28f, false);
+                return new DcaConfig(15, -0.25f, false);
 //            case MEDIUM_UP:
 //            case MEDIUM_DOWN_15M:
 //                return new DcaConfig(15, -0.15, false);

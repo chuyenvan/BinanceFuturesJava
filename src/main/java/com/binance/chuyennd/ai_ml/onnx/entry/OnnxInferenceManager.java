@@ -20,9 +20,9 @@ public class OnnxInferenceManager implements AutoCloseable {
 
     // Các bộ dự đoán
     // P: Profit (Dùng Model V4 Sideway)
-    private final SinglePredictor p15M, p1H, p4H, p24H;
+    private final SinglePredictor p15M, p24H;
     // R: Risk (Dùng Model V3.0 Trend/Full)
-    private final SinglePredictor pRisk4H, pRisk24H;
+    private final SinglePredictor pRisk4H;
 
     public OnnxInferenceManager(String modelDir) throws OrtException {
         LOG.info("🧠 Initializing V4 Experimental AI Brain from: {}", modelDir);
@@ -37,13 +37,10 @@ public class OnnxInferenceManager implements AutoCloseable {
 
         // 1. Load Model Lợi Nhuận
         this.p15M = new SinglePredictor(modelDir, "futureReturn15M", "Regressor");
-        this.p1H = new SinglePredictor(modelDir, "futureReturn1H", "Regressor");
-        this.p4H = new SinglePredictor(modelDir, "futureReturn4H", "Regressor");
         this.p24H = new SinglePredictor(modelDir, "futureReturn24H", "Regressor");
-
         // 2. Load Model Rủi Ro
         this.pRisk4H = new SinglePredictor(modelDir, "maxDrawdownNext4H", "Regressor");
-        this.pRisk24H = new SinglePredictor(modelDir, "maxDrawdownNext24H", "Regressor");
+
 
         LOG.info("✅ All V4 Models loaded successfully!");
     }
@@ -56,14 +53,11 @@ public class OnnxInferenceManager implements AutoCloseable {
 
             // 2. Dự đoán
             float r15 = p15M.predict(featuresV3);
-            float r1 = p1H.predict(featuresV3);
-            float r4 = p4H.predict(featuresV3);
             float r24 = p24H.predict(featuresV3);
 
             float risk4 = pRisk4H.predict(featuresV3);
-            float risk24 = pRisk24H.predict(featuresV3);
 
-            return new PredictionResult(r15, r1, r4, r24, risk4, risk24);
+            return new PredictionResult(r15, 0f, 0f, r24, risk4, 0f);
         } catch (Exception e) {
             LOG.error("❌ Inference Error", e);
             return new PredictionResult(0, 0, 0, 0, 0, 0);
@@ -266,11 +260,8 @@ public class OnnxInferenceManager implements AutoCloseable {
     @Override
     public void close() throws Exception {
         if (p15M != null) p15M.close();
-        if (p1H != null) p1H.close();
-        if (p4H != null) p4H.close();
         if (p24H != null) p24H.close();
         if (pRisk4H != null) pRisk4H.close();
-        if (pRisk24H != null) pRisk24H.close();
         if (env != null) env.close();
     }
 

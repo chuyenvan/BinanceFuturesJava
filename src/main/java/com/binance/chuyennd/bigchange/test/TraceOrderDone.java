@@ -286,7 +286,7 @@ public class TraceOrderDone {
 
         List<String> lines = new ArrayList<>();
         lines.add("sym,side,entry,tp,profit,status,start,time_start_format,end,level,maxmin15m,lastentry,volume,quantity,margin," +
-                "pnl,time_order,funding,dow,up,dow15m,predictedMaxDrawdown,predictedMaxRise,probPump20Pct,probDump30Pct");
+                "pnl,time_order,funding,dow,up,dow15m,pred15m,pred24h,risk4h,symbolPred");
 //                "pnl,time_order,funding,dow,up,dow15m,return15M,return1H,return4H,return24H,predRisk4H, predRisk24H");
 //        List<KlineObjectNumber> tickers = (List<KlineObjectNumber>) Storage.readObjectFromFile(DataManager.FOLDER_TICKER_15M + Constants.SYMBOL_PAIR_BTC);
         Map<Long, KlineObjectNumber> time2Ticker = new HashMap<>();
@@ -371,6 +371,14 @@ public class TraceOrderDone {
                 builder.append(order.marketData.rateUpAvg).append(",");
                 builder.append(order.marketData.rateDown15MAvg).append(",");
             }
+
+            if (order.predict != null) {
+                builder.append(order.predict.predReturn15M).append(",");
+                builder.append(order.predict.predReturn24H).append(",");
+                builder.append(order.predict.predRisk4H).append(",");
+                builder.append(order.symbolPred).append(",");
+            }
+
 
             lines.add(builder.toString());
         }

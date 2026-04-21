@@ -78,9 +78,7 @@ public class RunFullDataCollection {
 
             // 🔥 THAY ĐỔI LỚN TẠI ĐÂY:
             // Gọi Manager để (1) Update History vào Extractor và (2) Lấy Basket từ logic bên trong Extractor
-            List<String> targetBasket = dataManager.identifyTargetBasket(timestamp, currentMarketSnapshot);
-
-            if (targetBasket.size() < 3) continue;
+            List<String> targetBasket = new ArrayList<>(currentMarketSnapshot.keySet());
 
             // Tính toán Labels (Targets) dựa trên Basket vừa lấy được
             float ret15M = calculateBasketMaxPotential(lookupData, timestamp, 15, targetBasket);
@@ -98,16 +96,14 @@ public class RunFullDataCollection {
                     targetBasket, ret15M, ret1H, ret4H, ret24H, maxDD4H, maxDD24H);
         }
     }
-
-    // ĐÃ XÓA method findPotentialLosersRelaxed khỏi class này
-
-    // ... (Giữ nguyên các hàm calculateBasketMaxPotential, calculateBasketMaxDrawdown, loadMarketRateData) ...
-    private float calculateBasketMaxPotential(TreeMap<Long, Map<String, KlineObjectSimple>> data, Long currentTs, int minutes, List<String> basket) {
+    private float calculateBasketMaxPotential(TreeMap<Long, Map<String, KlineObjectSimple>> data, Long currentTs,
+                                              int minutes, List<String> basket) {
         Long endTime = currentTs + (minutes * 60000L);
         Map<String, KlineObjectSimple> currentSnapshot = data.get(currentTs);
         if (currentSnapshot == null) return 0.0f;
         Map<String, Float> entryPrices = new HashMap<>();
-        for (String sym : basket) if (currentSnapshot.containsKey(sym)) entryPrices.put(sym, currentSnapshot.get(sym).priceClose);
+        for (String sym : basket)
+            if (currentSnapshot.containsKey(sym)) entryPrices.put(sym, currentSnapshot.get(sym).priceClose);
         NavigableMap<Long, Map<String, KlineObjectSimple>> futureRange = data.subMap(currentTs, false, endTime, true);
         Map<String, Float> maxReturns = new HashMap<>();
         for (String sym : basket) maxReturns.put(sym, -999.0f);
@@ -123,8 +119,15 @@ public class RunFullDataCollection {
                 }
             }
         }
-        float sumMaxReturn = 0; int count = 0;
-        for (String sym : basket) { float ret = maxReturns.get(sym); if (ret != -999.0) { sumMaxReturn += ret; count++; } }
+        float sumMaxReturn = 0;
+        int count = 0;
+        for (String sym : basket) {
+            float ret = maxReturns.get(sym);
+            if (ret != -999.0) {
+                sumMaxReturn += ret;
+                count++;
+            }
+        }
         return (count > 0) ? sumMaxReturn / count : 0.0f;
     }
 
@@ -134,8 +137,8 @@ public class RunFullDataCollection {
         Map<String, Float> entryPrices = new HashMap<>();
         Map<String, KlineObjectSimple> currentParams = data.get(currentTs);
         if (currentParams == null) return 0.0f;
-        for(String sym : basket) {
-            if(currentParams.containsKey(sym)) {
+        for (String sym : basket) {
+            if (currentParams.containsKey(sym)) {
                 float p = currentParams.get(sym).priceClose;
                 if (p > 0.0000001) entryPrices.put(sym, p);
             }
@@ -143,7 +146,8 @@ public class RunFullDataCollection {
         if (entryPrices.isEmpty()) return 0.0f;
         float worstBasketDrawdown = 0.0f;
         for (Map<String, KlineObjectSimple> minuteData : range.values()) {
-            float currentMinuteSumPL = 0; int count = 0;
+            float currentMinuteSumPL = 0;
+            int count = 0;
             for (String sym : entryPrices.keySet()) {
                 if (minuteData.containsKey(sym) && entryPrices.containsKey(sym)) {
                     float low = minuteData.get(sym).minPrice;
