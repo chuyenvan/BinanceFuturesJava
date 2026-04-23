@@ -19,8 +19,6 @@ public class FundingDataCollectionManager {
     private int collectedCount = 0;
     private final FundingFeatureExtractor featureExtractor = new FundingFeatureExtractor();
 
-    private long lastBasketTimestamp = -1;
-    private List<String> cachedBasket = new ArrayList<>();
 
     // Counter cho 2 loại label
     private final int[] label6Counts = new int[5];
@@ -66,13 +64,9 @@ public class FundingDataCollectionManager {
                               TreeMap<Long, Map<String, KlineObjectSimple>> futureLookupData,
                               MarketDataObject marketData) {
         try {
-            if (currentTimestamp != lastBasketTimestamp) {
-                cachedBasket = featureExtractor.identifyTargetBasket(currentSnapshot);
-                lastBasketTimestamp = currentTimestamp;
-            }
 
             FundingMarketFeatures features = featureExtractor.extractFeatures(
-                    currentTimestamp, order, currentSnapshot, cachedBasket, marketData);
+                    currentTimestamp, order, currentSnapshot, marketData);
 
             if (features != null) {
                 String csvLine = calculateLabelsAndFormat(features, order, futureLookupData);

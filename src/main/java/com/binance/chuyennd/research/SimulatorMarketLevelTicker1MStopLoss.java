@@ -591,7 +591,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         float tierMultiplier = CoinRankManager.getInstance().getBudgetMultiplier(symbol);
 
         // 2. Chặn đứng DCA rác
-        CoinRankManager.CoinTier myTier = CoinRankManager.getInstance().getCoinTier(symbol, currentTs, symbol2LastTickers);
+        CoinRankManager.CoinTier myTier = CoinRankManager.getInstance().getCoinTier(symbol, currentTs);
         if (myTier == CoinRankManager.CoinTier.TIER_3_SHITCOIN) {
             if (levelChange == MarketLevelChange.DCA_LEVEL1) {
 //                LOG.info("🚫 Chặn DCA vào đồng Shitcoin: {}", symbol);

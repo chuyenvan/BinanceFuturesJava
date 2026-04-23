@@ -1549,7 +1549,7 @@ public class DataManagerAerospikeFloatSim {
     // 🔥 MARKET AI PREDICTIONS (ENTRY PREDICTIONS) - SET: ai_pred_market
     // =========================================================================
 //    public static final String AEROSPIKE_SET_NAME_AI_PRED_MARKET = "ai_pred_market";
-    public static final String AEROSPIKE_SET_NAME_AI_PRED_MARKET = "ai_pred_market_full_basket";
+    public static final String AEROSPIKE_SET_NAME_AI_PRED_MARKET = "ai_pred_market_full_basket_v2";
 
     /**
      * Ghi một Batch (Nhiều phút) kết quả Market AI Prediction vào Aerospike

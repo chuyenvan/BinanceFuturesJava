@@ -5,22 +5,18 @@ import com.binance.chuyennd.ai_ml.features.export.HistoryManager;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.research.FundingFeeManager;
+import com.binance.chuyennd.tradecore.CoinRankManager;
 import com.binance.chuyennd.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 public class ComprehensiveMarketFeatureExtractor {
     private static final Logger LOG = LoggerFactory.getLogger(ComprehensiveMarketFeatureExtractor.class);
 
     // 🔥 DÙNG HISTORY MANAGER THAY VÌ MAP RIÊNG
-    private final HistoryManager historyManager = new HistoryManager();
-
-    // Theo dõi danh sách symbol đang có history để iterate (Vì HistoryManager có thể ẩn Map)
-    private final Set<String> activeSymbols = ConcurrentHashMap.newKeySet();
+    private final HistoryManager historyManager = HistoryManager.getInstance();
 
     public ComprehensiveMarketFeatureExtractor() {
     }
@@ -60,7 +56,6 @@ public class ComprehensiveMarketFeatureExtractor {
         }
 
         historyManager.updateHistory(cleanedMarketData);
-        activeSymbols.addAll(cleanedMarketData.keySet());
     }
 
     public MarketFeatures extractAllFeatures(long timestamp,
@@ -72,7 +67,7 @@ public class ComprehensiveMarketFeatureExtractor {
 
         // 1. Cập nhật dữ liệu mới nhất (Đã được chặt mili-giây ở hàm trên)
         updateMarketHistory(currentMarketData);
-        List<String> targetBasket = new ArrayList<>(currentMarketData.keySet());
+        List<String> targetBasket = CoinRankManager.getInstance().getTopCoin(timestamp);
 
         MarketFeatures features = new MarketFeatures();
         features.timestamp = timestamp;

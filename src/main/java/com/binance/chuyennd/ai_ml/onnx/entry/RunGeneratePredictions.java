@@ -55,9 +55,9 @@ public class RunGeneratePredictions {
                 for (int i = 0; i < 1440; i++) {
                     timestampsToCheck.add(currentTime + i * Utils.TIME_MINUTE);
                 }
-
+//
                 Set<Long> existingTimestamps = DataManagerAerospikeFloatSim.checkExistingMarketAiPredictions(timestampsToCheck);
-
+//                Set<Long> existingTimestamps = new HashSet<>();
                 // Nếu cả ngày đều đã có data -> Bỏ qua toàn bộ ngày
                 if (existingTimestamps.size() >= 1440) {
                     LOG.info("⏩ Day {} đã full ({} records). Skipping...",
@@ -87,7 +87,7 @@ public class RunGeneratePredictions {
 
                 Map<Long, AiPredictionData> batchPredictions = new HashMap<>();
 
-                if (todayData != null && !todayData.isEmpty()) {
+                if (!todayData.isEmpty()) {
                     for (Map.Entry<Long, Map<String, KlineObjectSimple>> entry : todayData.entrySet()) {
                         Long timestamp = entry.getKey();
 

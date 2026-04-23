@@ -249,7 +249,7 @@ public class DetectEntrySignal2TradeNormal {
                     try {
                         KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
                         createOrderBuyRequest(symbol, ticker, levelChange, symbol2Max15m.get(symbol), marketRate,
-                                predictData, null, symbol2LastTickers);
+                                predictData, getSymbolPred(sortedCandidates, symbol), symbol2LastTickers);
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
@@ -260,7 +260,7 @@ public class DetectEntrySignal2TradeNormal {
                         KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
                         PositionRisk position = BudgetManager.getInstance().symbol2Pos.get(symbol);
                         if (position != null) {
-                            createOrderBuyRequest(symbol, ticker, MarketLevelChange.DCA_LEVEL1, symbol2Max15m.get(symbol), marketRate, predictData, null, symbol2LastTickers);
+                            createOrderBuyRequest(symbol, ticker, MarketLevelChange.DCA_LEVEL1, symbol2Max15m.get(symbol), marketRate, predictData, getSymbolPred(sortedCandidates, symbol), symbol2LastTickers);
                         }
                     }
                 } catch (Exception e) {
@@ -278,7 +278,7 @@ public class DetectEntrySignal2TradeNormal {
                     if (Utils.isTickerAvailable(ticker)) {
                         PositionRisk position = BudgetManager.getInstance().symbol2Pos.get(symbol);
                         if (position != null) {
-                            createOrderBuyRequest(symbol, ticker, MarketLevelChange.DCA_LEVEL1, symbol2Max15m.get(symbol), marketRate, predictData, null, symbol2LastTickers);
+                            createOrderBuyRequest(symbol, ticker, MarketLevelChange.DCA_LEVEL1, symbol2Max15m.get(symbol), marketRate, predictData, getSymbolPred(sortedCandidates, symbol), symbol2LastTickers);
 
                         }
                     }
@@ -319,17 +319,31 @@ public class DetectEntrySignal2TradeNormal {
         LOG.info("Finish check level change of market 2 trade: {}", new Date());
     }
 
+    private Float getSymbolPred(TreeMap<Float, String> sortedCandidates, String symbol) {
+
+        if (sortedCandidates == null || symbol == null) {
+            return null;
+        }
+
+        // Vì Symbol là Value, chúng ta phải duyệt qua các entry
+        for (Map.Entry<Float, String> entry : sortedCandidates.entrySet()) {
+            // So sánh symbol (Value)
+            if (symbol.equals(entry.getValue())) {
+                return entry.getKey(); // Trả về điểm số (Key)
+            }
+        }
+
+        // Không tìm thấy symbol trong danh sách ứng viên
+        return null;
+    }
+
     private TreeMap<Float, String> predictAllCandidates(Set<String> allSymbols, Map<String,
             KlineObjectSimple> symbol2FinalTicker, Float rateDownAvg, Float rateUpAvg, Float rateDown15MAvg, long time) {
         TreeMap<Float, String> sortedCandidates = new TreeMap<>();
         // 2. Chuẩn bị AI Input
         List<String> aiCandidates = new ArrayList<>();
         List<FundingMarketFeatures> aiFeaturesList = new ArrayList<>();
-        List<String> currentBasket = null;
 
-        if (fundingExtractor != null && fundingBrain != null) {
-            currentBasket = fundingExtractor.identifyTargetBasket(symbol2FinalTicker);
-        }
 
         for (String symbol : allSymbols) {
             KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
@@ -344,7 +358,7 @@ public class DetectEntrySignal2TradeNormal {
                 MarketDataObject marketData = new MarketDataObject(rateDownAvg,
                         rateUpAvg, rateDown15MAvg);
                 FundingMarketFeatures feats = fundingExtractor.extractFeatures(
-                        time, dummyOrder, symbol2FinalTicker, currentBasket, marketData
+                        time, dummyOrder, symbol2FinalTicker, marketData
                 );
                 if (feats != null) {
                     aiCandidates.add(symbol);
@@ -435,7 +449,7 @@ public class DetectEntrySignal2TradeNormal {
         float tierMultiplier = CoinRankManager.getInstance().getBudgetMultiplier(symbol);
 
         // 2. Chặn đứng DCA rác
-        CoinRankManager.CoinTier myTier = CoinRankManager.getInstance().getCoinTier(symbol, currentTs, symbol2LastTickers);
+        CoinRankManager.CoinTier myTier = CoinRankManager.getInstance().getCoinTier(symbol, currentTs);
         if (myTier == CoinRankManager.CoinTier.TIER_3_SHITCOIN) {
             if (levelChange == MarketLevelChange.DCA_LEVEL1) {
 //                LOG.info("🚫 Chặn DCA vào đồng Shitcoin: {}", symbol);

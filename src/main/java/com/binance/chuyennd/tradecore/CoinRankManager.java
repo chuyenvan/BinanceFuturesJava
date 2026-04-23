@@ -1,39 +1,49 @@
 package com.binance.chuyennd.tradecore;
 
+import com.binance.chuyennd.ai_ml.features.export.HistoryManager;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
+import com.binance.chuyennd.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Class chuyên quản lý việc xếp hạng thanh khoản của các đồng coin.
- * Áp dụng mô hình Singleton để dùng chung Cache cho toàn bộ hệ thống.
+ * Giữ nguyên signature hàm getCoinTier cũ.
  */
 public class CoinRankManager {
     public static final Logger LOG = LoggerFactory.getLogger(CoinRankManager.class);
 
-    // Enum định nghĩa 3 phân khúc
+    public List<String> getTopCoin(long currentTime) {
+        // 1. Kiểm tra mốc 15 phút chẵn (00, 15, 30, 45)
+        // Dùng thêm lastIntervalKey để đảm bảo trong 60 giây của phút đó chỉ chạy update 1 lần duy nhất
+        long currentIntervalKey = currentTime / (15 * Utils.TIME_MINUTE);
+
+        if (((currentTime / Utils.TIME_MINUTE) % 15 == 0 && currentIntervalKey > lastIntervalKey) || symbolTiers.isEmpty()) {
+            updateRanking(currentTime);
+            lastIntervalKey = currentIntervalKey; // Khóa lại ngay
+        }
+        return new ArrayList<>(top50PercentSymbols);
+    }
+
     public enum CoinTier {
         TIER_1_BLUECHIP, // Top 20% (Volume siêu lớn)
         TIER_2_MIDCAP,   // Mid 60% (Volume tầm trung)
-        TIER_3_SHITCOIN  // Bottom 20% (Volume rác, dễ quét râu)
+        TIER_3_SHITCOIN  // Bottom 20% (Volume rác)
     }
 
-    // --- CƠ CHẾ SINGLETON ---
     private static volatile CoinRankManager INSTANCE = null;
 
-    // --- BỘ NHỚ CACHE ---
     private final ConcurrentHashMap<String, CoinTier> symbolTiers = new ConcurrentHashMap<>();
-    private long lastUpdateTime = 0L;
+    private final List<String> top50PercentSymbols = new CopyOnWriteArrayList<>();
 
-    // Cập nhật 1 giờ / 1 lần (Có thể đưa vào Configs nếu muốn)
-    private static final long UPDATE_INTERVAL_MILLIS = 60 * 60 * 1000L;
+    // Biến phụ để chốt chặn không cho update liên tục trong cùng 1 phút chẵn
+    private long lastIntervalKey = -1L;
 
-    private CoinRankManager() {
-        // Private constructor
-    }
+    private CoinRankManager() {}
 
     public static CoinRankManager getInstance() {
         if (INSTANCE == null) {
@@ -45,21 +55,6 @@ public class CoinRankManager {
         }
         return INSTANCE;
     }
-
-    /**
-     * Lấy Tier của một đồng coin. Tự động tính toán lại nền nếu Cache đã hết hạn.
-     */
-    public CoinTier getCoinTier(String symbol, long currentTime, Map<String, List<KlineObjectSimple>> symbol2LastTickers) {
-        // Kiểm tra xem đã đến giờ phải tính toán lại bảng xếp hạng chưa
-        if (currentTime - lastUpdateTime > UPDATE_INTERVAL_MILLIS || symbolTiers.isEmpty()) {
-            updateRanking(symbol2LastTickers, currentTime);
-        }
-
-        // Trả về kết quả từ Cache siêu tốc (O(1)).
-        // Mặc định ném vào Tier 3 nếu không tìm thấy (Để an toàn vốn).
-        return symbolTiers.getOrDefault(symbol, CoinTier.TIER_3_SHITCOIN);
-    }
-
     /**
      * Trả về Hệ số nhân Ngân sách (Budget Multiplier) dựa trên Tier.
      * Tiện ích giúp Simulator gọi 1 dòng là xong.
@@ -77,54 +72,72 @@ public class CoinRankManager {
                 return 1.00f;
         }
     }
+    /**
+     * 🔥 GIỮ NGUYÊN SIGNATURE CŨ CỦA BÁC
+     */
+    public CoinTier getCoinTier(String symbol, long currentTime) {
+        // 1. Kiểm tra mốc 15 phút chẵn (00, 15, 30, 45)
+        // Dùng thêm lastIntervalKey để đảm bảo trong 60 giây của phút đó chỉ chạy update 1 lần duy nhất
+        long currentIntervalKey = currentTime / (15 * Utils.TIME_MINUTE);
+
+        if (((currentTime / Utils.TIME_MINUTE) % 15 == 0 && currentIntervalKey > lastIntervalKey) || symbolTiers.isEmpty()) {
+            updateRanking(currentTime);
+            lastIntervalKey = currentIntervalKey; // Khóa lại ngay
+        }
+
+        return symbolTiers.getOrDefault(symbol, CoinTier.TIER_3_SHITCOIN);
+    }
 
     /**
-     * Trái tim của class: Thuật toán chia rổ 20-60-20.
-     * Dùng synchronized để tránh nhiều luồng cùng tranh nhau tính toán một lúc.
+     * Thuật toán sắp xếp bằng TreeMap và lọc Top 50%
      */
-    private synchronized void updateRanking(Map<String, List<KlineObjectSimple>> symbol2LastTickers, long currentTime) {
-        // Double-check bên trong synchronized (để luồng thứ 2 đến sau sẽ tự thoát ra)
-        if (currentTime - lastUpdateTime <= UPDATE_INTERVAL_MILLIS && !symbolTiers.isEmpty()) {
-            return;
-        }
+    private synchronized void updateRanking( long currentTime) {
+        Map<String, ArrayList<KlineObjectSimple>> symbol2LastTickers = HistoryManager.getInstance().getAllHistory();
 
-        if (symbol2LastTickers == null || symbol2LastTickers.isEmpty()) {
-            return;
-        }
+        // 1. Dùng TreeMap sắp xếp Volume giảm dần
+        TreeMap<Float, List<String>> volumeMap = new TreeMap<>(Collections.reverseOrder());
 
-        List<Map.Entry<String, Float>> volumeList = new ArrayList<>();
-
-        // 1. Tính tổng Volume trong khoảng thời gian hiện có
-        for (Map.Entry<String, List<KlineObjectSimple>> entry : symbol2LastTickers.entrySet()) {
+        for (Map.Entry<String, ArrayList<KlineObjectSimple>> entry : symbol2LastTickers.entrySet()) {
             String sym = entry.getKey();
             float sumVol = 0;
             int counter = 0;
-            for (KlineObjectSimple k : entry.getValue()) {
-                counter ++;
-                if (counter > 200) {
-                    break;
-                }
-                if (k != null) {
-                    sumVol += k.totalUsdt;
-                }
+            List<KlineObjectSimple> tickers = entry.getValue();
+
+            // Tính Volume 200 nến
+            for (int i = tickers.size() - 1; i >= 0 && counter < 200; i--) {
+                KlineObjectSimple k = tickers.get(i);
+                if (k != null) sumVol += k.totalUsdt;
+                counter++;
             }
-            volumeList.add(new AbstractMap.SimpleEntry<>(sym, sumVol));
+
+            if (counter > 0) {
+                volumeMap.computeIfAbsent(sumVol, k -> new ArrayList<>()).add(sym);
+            }
         }
 
-        // 2. Sắp xếp giảm dần theo Volume
-        volumeList.sort((a, b) -> b.getValue().compareTo(a.getValue()));
+        // 2. Chuyển sang List phẳng để tính toán index
+        List<String> sortedSymbols = new ArrayList<>();
+        for (List<String> syms : volumeMap.values()) {
+            sortedSymbols.addAll(syms);
+        }
 
-        int totalCoins = volumeList.size();
+        int totalCoins = sortedSymbols.size();
         if (totalCoins == 0) return;
 
-        // 3. Phân mảnh 20% - 60% - 20%
+        // 3. Cập nhật danh sách TOP 50% (Giải pháp 2)
+        top50PercentSymbols.clear();
+        int top50Count = totalCoins / 2;
+        for (int i = 0; i < top50Count; i++) {
+            top50PercentSymbols.add(sortedSymbols.get(i));
+        }
+
+        // 4. Phân rổ Tier 20-60-20
+        symbolTiers.clear();
         int top20Index = (int) (totalCoins * 0.20);
         int bottom20Index = (int) (totalCoins * 0.80);
 
-        symbolTiers.clear();
-
         for (int i = 0; i < totalCoins; i++) {
-            String sym = volumeList.get(i).getKey();
+            String sym = sortedSymbols.get(i);
             if (i < top20Index) {
                 symbolTiers.put(sym, CoinTier.TIER_1_BLUECHIP);
             } else if (i >= bottom20Index) {
@@ -134,13 +147,20 @@ public class CoinRankManager {
             }
         }
 
-        lastUpdateTime = currentTime; // Chốt mốc thời gian
-        // LOG.info("🔄 Re-ranked {} coins based on Volume. Top 20% cut-off index: {}", totalCoins, top20Index);
+//        LOG.info("🔄 Ranking Updated at {}: Total={}, Top50%={}",
+//                Utils.normalizeDateYYYYMMDDHHmm(currentTime), totalCoins, top50PercentSymbols.size());
     }
 
-    // Thêm hàm dọn dẹp Cache (nếu cần thiết khi chạy backtest nhiều năm liên tục)
+    /**
+     * Hàm bổ sung để bác gọi từ Feature Extractor (Giải pháp 2)
+     */
+    public boolean isInsideStandardUniverse(String symbol) {
+        return top50PercentSymbols.contains(symbol);
+    }
+
     public void resetCache() {
         symbolTiers.clear();
-        lastUpdateTime = 0L;
+        top50PercentSymbols.clear();
+        lastIntervalKey = -1L;
     }
 }

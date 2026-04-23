@@ -6,7 +6,7 @@ import com.binance.chuyennd.ai_ml.features.export.funding.FundingMarketFeatures;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
-import com.binance.chuyennd.tradecore.MarketBigChangeDetector;
+import com.binance.chuyennd.tradecore.CoinRankManager;
 import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
@@ -173,8 +173,6 @@ public class GenerateEntryDcaPredictionsLabel40Tool {
                              TreeMap<Long, Float> time2RateDown15MAvg
     ) {
         long currentTime = start;
-        long lastBasketTimestamp = -1;
-        List<String> cachedBasket = new ArrayList<>();
 
         while (currentTime < end) {
             int minutesToRead = 1440;
@@ -220,11 +218,7 @@ public class GenerateEntryDcaPredictionsLabel40Tool {
                 if (isWarmup || existingTimestamps.contains(time)) continue;
                 processedCount++;
 
-                if (time != lastBasketTimestamp) {
-                    cachedBasket = extractor.identifyTargetBasket(symbol2Ticker);
-                    lastBasketTimestamp = time;
-                }
-                final List<String> currentBasket = cachedBasket;
+                final List<String> currentBasket = CoinRankManager.getInstance().getTopCoin(time);
                 Set<String> symbolFundingBuy = symbol2Ticker.keySet();
 
                 // 3. FEATURE EXTRACTION
@@ -244,7 +238,7 @@ public class GenerateEntryDcaPredictionsLabel40Tool {
                                 dummyOrder.lastEntry = ticker.priceClose;
 
                                 FundingMarketFeatures features = extractor.extractFeatures(
-                                        time, dummyOrder, symbol2Ticker, currentBasket, time2MarketData.get(time)
+                                        time, dummyOrder, symbol2Ticker, time2MarketData.get(time)
                                 );
 
                                 if (features != null) {

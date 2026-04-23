@@ -6,7 +6,6 @@ import com.binance.chuyennd.ai_ml.features.export.funding.FundingMarketFeatures;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
-import com.binance.chuyennd.tradecore.MarketBigChangeDetector;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.model.enums.OrderSide;
@@ -41,8 +40,6 @@ public class DebugFundingWithWarmup {
 
         // Init Extractor & Cache
         FundingFeatureExtractor extractor = new FundingFeatureExtractor();
-        List<String> cachedBasket = new ArrayList<>();
-        long lastBasketTime = -1;
 
         // --- VÒNG LẶP WARMUP + CHECK ---
         long currentTime = warmupTime;
@@ -82,12 +79,6 @@ public class DebugFundingWithWarmup {
 //                    checkTargetTime(time, mData, time2RateDown15MAvg, symbol2Ticker, extractor, cachedBasket);
                     return; // Xong việc
                 }
-
-                // Update Basket logic (giống tool thật)
-                if (time != lastBasketTime) {
-                    cachedBasket = extractor.identifyTargetBasket(symbol2Ticker);
-                    lastBasketTime = time;
-                }
             }
             currentTime = endTimeBlock + Utils.TIME_MINUTE;
         }
@@ -96,8 +87,7 @@ public class DebugFundingWithWarmup {
     private static void checkTargetTime(long time, MarketDataObject mData,
                                         TreeMap<Long, Float> time2RateDown15MAvg,
                                         Map<String, KlineObjectSimple> symbol2Ticker,
-                                        FundingFeatureExtractor extractor,
-                                        List<String> basket) {
+                                        FundingFeatureExtractor extractor) {
 
         // 1. Check Data Availability
         if (mData == null) {
@@ -123,7 +113,7 @@ public class DebugFundingWithWarmup {
         OrderTargetInfoTest dummy = new OrderTargetInfoTest(null, 100f, null, 1f, 10, testSymbol, time, time, OrderSide.BUY);
         dummy.lastEntry = 100f;
 
-        FundingMarketFeatures f = extractor.extractFeatures(time, dummy, symbol2Ticker, basket, mData);
+        FundingMarketFeatures f = extractor.extractFeatures(time, dummy, symbol2Ticker, mData);
 
         if (f == null) {
             LOG.error("❌ SKIP REASON: Extract Features returned NULL!");

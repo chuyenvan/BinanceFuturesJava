@@ -5,6 +5,7 @@ import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.research.FundingFeeManager;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
+import com.binance.chuyennd.tradecore.CoinRankManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,31 +13,15 @@ import java.util.*;
 
 public class FundingFeatureExtractor {
     private static final Logger LOG = LoggerFactory.getLogger(FundingFeatureExtractor.class);
-    private final HistoryManager historyManager = new HistoryManager();
+    private final HistoryManager historyManager = HistoryManager.getInstance();
 
     public void updateMarketHistory(Map<String, KlineObjectSimple> snapshot) {
         historyManager.updateHistory(snapshot);
     }
 
-    public List<String> identifyTargetBasket(Map<String, KlineObjectSimple> snapshot) {
-        List<Map.Entry<String, Float>> volList = new ArrayList<>();
-        for (Map.Entry<String, KlineObjectSimple> entry : snapshot.entrySet()) {
-            if (entry.getValue().totalUsdt > 100000) {
-                volList.add(new AbstractMap.SimpleEntry<>(entry.getKey(), entry.getValue().totalUsdt));
-            }
-        }
-        volList.sort((o1, o2) -> o2.getValue().compareTo(o1.getValue()));
-
-        List<String> basket = new ArrayList<>();
-        for (int i = 0; i < Math.min(20, volList.size()); i++) {
-            basket.add(volList.get(i).getKey());
-        }
-        return basket;
-    }
 
     public FundingMarketFeatures extractFeatures(long currentTimestamp, OrderTargetInfoTest order,
                                                  Map<String, KlineObjectSimple> currentSnapshot,
-                                                 List<String> targetBasket,
                                                  MarketDataObject rate) {
 
         KlineObjectSimple kline = currentSnapshot.get(order.symbol);
@@ -69,6 +54,7 @@ public class FundingFeatureExtractor {
         f.volatilityShock = calculateVolatilityShock(order.symbol, kline);
 
         // --- 3. BASKET SPECIFIC ---
+        List<String> targetBasket = CoinRankManager.getInstance().getTopCoin(currentTimestamp);
         if (targetBasket == null || targetBasket.isEmpty()) targetBasket = Collections.singletonList("BTCUSDT");
         extractBasketFeatures(f, targetBasket, currentTimestamp);
 
@@ -92,7 +78,8 @@ public class FundingFeatureExtractor {
                 sumMom24h += calculateReturn(symbol, 1440);
                 float currentVol = historyManager.getSumVolume(symbol, 1);
                 float avgVol = historyManager.getAverageVolume(symbol, 20);
-                if (avgVol > 0) sumVolSpike += currentVol / avgVol; else sumVolSpike += 1.0;
+                if (avgVol > 0) sumVolSpike += currentVol / avgVol;
+                else sumVolSpike += 1.0;
                 count++;
             }
         }
@@ -114,7 +101,10 @@ public class FundingFeatureExtractor {
             int validCount = 0;
             for (String s : basket) {
                 Float rate = fm.getNearestFundingFee(s, currentTime);
-                if (rate != null) { totalBasketFunding += rate; validCount++; }
+                if (rate != null) {
+                    totalBasketFunding += rate;
+                    validCount++;
+                }
             }
             f.fundingRateRaw = (validCount > 0) ? totalBasketFunding / validCount : 0.0f;
             float sum24h = 0;
@@ -122,12 +112,17 @@ public class FundingFeatureExtractor {
             for (int i = 0; i <= 24; i += 4) {
                 long pastTime = currentTime - (i * 3600 * 1000L);
                 Float past = fm.getNearestFundingFee(symbol, pastTime);
-                if (past != null) { sum24h += past; count24h++; }
+                if (past != null) {
+                    sum24h += past;
+                    count24h++;
+                }
             }
             f.fundingRateAvg24H = (count24h > 0) ? sum24h / count24h : f.coinFundingRate;
             f.fundingRateTrend = f.coinFundingRate - f.fundingRateAvg24H;
         } catch (Exception e) {
-            f.coinFundingRate = 0; f.fundingRateRaw = 0; f.fundingRateAvg24H = 0;
+            f.coinFundingRate = 0;
+            f.fundingRateRaw = 0;
+            f.fundingRateAvg24H = 0;
         }
     }
 
@@ -149,8 +144,12 @@ public class FundingFeatureExtractor {
             KlineObjectSimple k = entry.getValue();
             if (k.totalUsdt < 5000) continue;
             totalValid++;
-            if (k.priceClose > k.priceOpen) { upCount++; upVol += k.totalUsdt; }
-            else { downVol += k.totalUsdt; }
+            if (k.priceClose > k.priceOpen) {
+                upCount++;
+                upVol += k.totalUsdt;
+            } else {
+                downVol += k.totalUsdt;
+            }
         }
         f.marketBreadthStrength = (totalValid > 0) ? (float) upCount / totalValid : 0.5f;
         float btcVol = marketData.containsKey("BTCUSDT") ? marketData.get("BTCUSDT").totalUsdt : 0;

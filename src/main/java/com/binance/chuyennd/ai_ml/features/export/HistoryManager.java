@@ -5,16 +5,33 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 public class HistoryManager {
-    private static final Logger LOG = LoggerFactory.getLogger(HistoryManager.class);
-
     // 🔥 GIỮ SIZE 2000 ĐỂ TIẾT KIỆM RAM
     private static final int MAX_HISTORY_SIZE = 2000;
 
-    // 🔥 DÙNG ARRAYLIST CHO TỐC ĐỘ TRUY XUẤT O(1)
-    private final Map<String, ArrayList<KlineObjectSimple>> historyMap = new HashMap<>();
+    // --- CƠ CHẾ SINGLETON ---
+    private static volatile HistoryManager INSTANCE = null;
+
+    // Dùng ConcurrentHashMap để an toàn khi nhiều luồng cùng truy cập singleton
+    private final Map<String, ArrayList<KlineObjectSimple>> historyMap = new ConcurrentHashMap<>();
+
+    private HistoryManager() {
+        // Private constructor
+    }
+
+    public static HistoryManager getInstance() {
+        if (INSTANCE == null) {
+            synchronized (HistoryManager.class) {
+                if (INSTANCE == null) {
+                    INSTANCE = new HistoryManager();
+                }
+            }
+        }
+        return INSTANCE;
+    }
 
     public void updateHistory(Map<String, KlineObjectSimple> snapshot) {
         for (Map.Entry<String, KlineObjectSimple> entry : snapshot.entrySet()) {
@@ -64,23 +81,6 @@ public class HistoryManager {
         return null;
     }
 
-
-    public Float getHighInPeriod(String symbol, int minutesLookback) {
-        ArrayList<KlineObjectSimple> list = historyMap.get(symbol);
-        if (list == null || list.isEmpty()) return null;
-
-        int lookback = Math.min(list.size(), minutesLookback);
-        float maxPrice = -1.0f;
-
-        for (int i = 0; i < lookback; i++) {
-            // Lấy từ cuối list về trước
-            float p = list.get(list.size() - 1 - i).maxPrice;
-            if (p > maxPrice) maxPrice = p;
-        }
-        return (maxPrice == -1.0) ? null : maxPrice;
-    }
-
-    // --- INDICATORS (ArrayList get(index) cực nhanh) ---
 
     public Float getRsi14(String symbol) {
         ArrayList<KlineObjectSimple> list = historyMap.get(symbol);
@@ -224,5 +224,9 @@ public class HistoryManager {
 
         drops.sort(Map.Entry.comparingByValue());
         return drops.stream().limit(60).map(Map.Entry::getKey).collect(Collectors.toList());
+    }
+
+    public  Map<String, ArrayList<KlineObjectSimple>> getAllHistory() {
+        return historyMap;
     }
 }
