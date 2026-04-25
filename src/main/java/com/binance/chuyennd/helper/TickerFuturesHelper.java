@@ -351,4 +351,40 @@ public class TickerFuturesHelper {
         return tickerVolumeMax24h;
     }
 
+    /**
+     * Lấy danh sách nến (Kline) của Futures có giới hạn số lượng (Limit).
+     * Đã được bọc thép chống lỗi JSON Crash (Limit Exceeded) từ Binance.
+     */
+    public static List<KlineObjectSimple> getTickerSimpleWithStartTimeAndLimit(String symbol, String interval, Long startTime, int limit) {
+        // Tự construct URL chuẩn của Binance có chứa limit để tránh phụ thuộc vào hằng số cũ
+        String url = "https://fapi.binance.com/fapi/v1/klines?symbol=" + symbol
+                + "&interval=" + interval
+                + "&startTime=" + startTime
+                + "&limit=" + limit;
+
+        List<KlineObjectSimple> results = new ArrayList<>();
+        try {
+            String respon = HttpRequest.getContentFromUrl(url);
+
+            // 🔥 BỌC THÉP CHỐNG JSON CRASH: Chỉ parse nếu Binance trả về một Mảng (Bắt đầu bằng "[")
+            // Nếu sàn trả về lỗi kiểu Object "{code:-1121, msg: ...}", nó sẽ bỏ qua để không sập luồng
+            if (StringUtils.isBlank(respon) || respon.trim().startsWith("{")) {
+                if (StringUtils.isNotBlank(respon)) {
+                    LOG.warn("⚠️ API Binance trả về lỗi cho {} (Có thể do Limit/Delist): {}", symbol, respon);
+                }
+                return results;
+            }
+
+            // Parse danh sách nến
+            List<List<Object>> allKlines = Utils.gson.fromJson(respon, List.class);
+            for (List<Object> allKline : allKlines) {
+                results.add(KlineObjectSimple.convertString2Kline(allKline));
+            }
+
+        } catch (Exception e) {
+            LOG.error("❌ Lỗi lấy nến {} {}: {}", Utils.normalizeDateYYYYMMDDHHmm(startTime), symbol, e.getMessage());
+        }
+
+        return results;
+    }
 }

@@ -15,13 +15,13 @@ import java.util.concurrent.ConcurrentHashMap;
  * Thu thập Funding Rate toàn sàn và lưu vào Aerospike vĩnh viễn qua DataManager.
  */
 public class FundingIngestor2Aerospike {
-    private static final Logger LOG = LoggerFactory.getLogger(FundingIngestor2Aerospike.class);
+    private static final Logger LOG = LoggerFactory.getLogger(FundingIngestor2AerospikeNew.class);
 
     // Buffer RAM: Symbol -> (Mốc thời gian kỳ funding -> Tỷ lệ Funding Float)
     private final ConcurrentHashMap<String, Map<Long, Float>> fundingBuffer = new ConcurrentHashMap<>();
 
     public static void main(String[] args) {
-        new FundingIngestor2Aerospike().start();
+        new FundingIngestor2AerospikeNew().start();
     }
 
     public void start() {

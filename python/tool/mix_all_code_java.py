@@ -1,7 +1,7 @@
 import os
 
 # Đường dẫn thư mục của bạn (Sử dụng r'' để tránh lỗi dấu gạch chéo Windows)
-input_dir = r'E:\educa\source\github\BinanceFuturesJava\src'
+input_dir = r'E:\educa\source\github\20260415\BinanceFuturesJava\src'
 output_file = 'Binance_Futures_Full_Code.txt'
 
 def combine_java_files(source_dir, output_path):

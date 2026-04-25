@@ -73,7 +73,9 @@ public final class DcaUtils {
     }
 
     private static boolean isTimeConditionMet(MarketLevelChange orderMarketLevel, long orderTimeStart, long currentTime, int durationDca) {
-        boolean isSpecialDcaLevel = orderMarketLevel.equals(MarketLevelChange.DCA_LEVEL1);
+
+        boolean isSpecialDcaLevel = true;
+        if (orderMarketLevel != null) isSpecialDcaLevel = orderMarketLevel.equals(MarketLevelChange.DCA_LEVEL1);
         if (isSpecialDcaLevel) {
             return currentTime > orderTimeStart + (long) durationDca * Utils.TIME_MINUTE;
         }

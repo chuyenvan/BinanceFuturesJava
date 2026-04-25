@@ -269,7 +269,8 @@ public class DetectEntrySignal2TradeNormal {
             }
             // dca buy
             if (MarketBigChangeDetector.isDcaAlt(rateDown15MAvg, rateDownAvg, rateUpAvg)) {
-                List<String> symbolDcaLossBig = DcaProcessor.getDCAProduction(null, System.currentTimeMillis(), BudgetManager.getInstance().getBudget(), BudgetManager.getInstance().symbol2Pos);
+                List<String> symbolDcaLossBig = DcaProcessor.getDCAProduction(null, System.currentTimeMillis(),
+                        BudgetManager.getInstance().getBudget(), BudgetManager.getInstance().symbol2Pos);
                 if (!symbolDcaLossBig.isEmpty()) {
                     LOG.info("DCA big loss:{}", symbolDcaLossBig);
                 }

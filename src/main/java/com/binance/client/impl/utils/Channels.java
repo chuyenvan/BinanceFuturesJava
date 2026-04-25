@@ -49,7 +49,8 @@ public abstract class Channels {
             params.add(symbol + "@kline_" + interval);
         }
         json.put("params", params);
-        json.put("id", System.currentTimeMillis());
+// Dùng phần dư để ép nó thành một số int nhỏ hơn 1 triệu, hoàn toàn hợp lệ với Binance
+        json.put("id", (int) (System.currentTimeMillis() % 1000000));
         json.put("method", "SUBSCRIBE");
         return json.toJSONString();
     }

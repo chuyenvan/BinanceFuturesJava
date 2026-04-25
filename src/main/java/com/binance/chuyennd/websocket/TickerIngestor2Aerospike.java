@@ -25,7 +25,7 @@ import java.util.*;
 import java.util.concurrent.*;
 
 public class TickerIngestor2Aerospike {
-    public static final Logger LOG = LoggerFactory.getLogger(TickerIngestor2Aerospike.class);
+    public static final Logger LOG = LoggerFactory.getLogger(TickerIngestor2AerospikeNew.class);
 
     private final ConcurrentHashMap<Long, ConcurrentHashMap<String, KlineObjectOptimized>> timeBuffer = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Float> priceBuffer = new ConcurrentHashMap<>();

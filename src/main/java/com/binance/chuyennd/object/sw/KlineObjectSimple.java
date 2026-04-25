@@ -33,7 +33,8 @@ public class KlineObjectSimple implements Serializable {
 
     public static KlineObjectSimple convertString2Kline(List<Object> kline) {
         KlineObjectSimple result = new KlineObjectSimple();
-        result.startTime = (Long) kline.get(0);
+        Double time = (Double) kline.get(0);
+        result.startTime = time.longValue();
         result.priceOpen = Float.valueOf(kline.get(1).toString());
         result.maxPrice = Float.valueOf(kline.get(2).toString());
         result.minPrice = Float.valueOf(kline.get(3).toString());

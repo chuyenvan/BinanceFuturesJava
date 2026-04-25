@@ -13,9 +13,11 @@ public class BinanceDataIngestor {
 
     public static void main(String[] args) {
         Utils.writePid2File();
-        new FundingIngestor2Aerospike().start();
-        new TickerIngestor2Aerospike().start();
-        startThreadAutoRestartProgram();
+//        new FundingIngestor2Aerospike().start();
+        new FundingIngestor2AerospikeNew().start();
+//        new TickerIngestor2Aerospike().start();
+        new TickerIngestor2AerospikeNew().start();
+//        startThreadAutoRestartProgram();
     }
 
     private static void startThreadAutoRestartProgram() {
@@ -51,3 +53,4 @@ public class BinanceDataIngestor {
         }).start();
     }
 }
+
