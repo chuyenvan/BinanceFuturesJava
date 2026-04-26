@@ -26,7 +26,7 @@ public class CoinRankManager {
             updateRanking(currentTime);
             lastIntervalKey = currentIntervalKey; // Khóa lại ngay
         }
-        return new ArrayList<>(top50PercentSymbols);
+        return top50PercentSymbols;
     }
 
     public enum CoinTier {
@@ -38,7 +38,7 @@ public class CoinRankManager {
     private static volatile CoinRankManager INSTANCE = null;
 
     private final ConcurrentHashMap<String, CoinTier> symbolTiers = new ConcurrentHashMap<>();
-    private final List<String> top50PercentSymbols = new CopyOnWriteArrayList<>();
+    private final List<String> top50PercentSymbols = new ArrayList<>();
 
     // Biến phụ để chốt chặn không cho update liên tục trong cùng 1 phút chẵn
     private long lastIntervalKey = -1L;
@@ -132,23 +132,29 @@ public class CoinRankManager {
         }
 
         // 4. Phân rổ Tier 20-60-20
-        symbolTiers.clear();
         int top20Index = (int) (totalCoins * 0.20);
         int bottom20Index = (int) (totalCoins * 0.80);
+
+        int countTier1 = 0;
+        int countTier2 = 0;
+        int countTier3 = 0;
 
         for (int i = 0; i < totalCoins; i++) {
             String sym = sortedSymbols.get(i);
             if (i < top20Index) {
                 symbolTiers.put(sym, CoinTier.TIER_1_BLUECHIP);
+                countTier1++;
             } else if (i >= bottom20Index) {
                 symbolTiers.put(sym, CoinTier.TIER_3_SHITCOIN);
+                countTier3++;
             } else {
                 symbolTiers.put(sym, CoinTier.TIER_2_MIDCAP);
+                countTier2++;
             }
         }
 
-//        LOG.info("🔄 Ranking Updated at {}: Total={}, Top50%={}",
-//                Utils.normalizeDateYYYYMMDDHHmm(currentTime), totalCoins, top50PercentSymbols.size());
+        LOG.info("🔄 Ranking Updated at {}: Total={}, TIER_1={}, TIER_2={}, TIER_3={} (Top50%={})",
+                Utils.normalizeDateYYYYMMDDHHmm(currentTime), totalCoins, countTier1, countTier2, countTier3, top50PercentSymbols.size());
     }
 
     /**

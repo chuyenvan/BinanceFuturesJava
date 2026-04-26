@@ -7,6 +7,7 @@ package com.binance.chuyennd.research;
 import ai.onnxruntime.OrtException;
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.ai_ml.data.SimpleSymbolMapper;
+import com.binance.chuyennd.ai_ml.features.export.HistoryManager;
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.ai_ml.onnx.entry.AIRejectFilter;
 import com.binance.chuyennd.ai_ml.onnx.entry.RunGeneratePredictions;
@@ -175,6 +176,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                         Long startTimeRun = System.currentTimeMillis();
                         try {
                             Map<String, KlineObjectSimple> symbol2Ticker = entry.getValue();
+                            // update for update ranking coin
+                            HistoryManager.getInstance().updateHistory(symbol2Ticker);
                             for (String symbol : symbol2Ticker.keySet()) {
                                 KlineObjectSimple ticker = symbol2Ticker.get(symbol);
                                 if (!Utils.isTickerAvailable(ticker)) {

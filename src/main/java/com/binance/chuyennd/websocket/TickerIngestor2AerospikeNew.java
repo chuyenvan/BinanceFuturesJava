@@ -31,7 +31,7 @@ public class TickerIngestor2AerospikeNew {
     private final ExecutorService repairService = Executors.newSingleThreadExecutor();
 
     public void start() {
-        LOG.info("🚀 TickerIngestor V8 (TỐI ƯU RATE LIMIT CỰC HẠN) Started!");
+        LOG.info("🚀 TickerIngestor V8.1 (HYBRID REALTIME - KHẮC PHỤC TRỄ 1 PHÚT) Started!");
 
         List<String> symbols = collectSymbolsFromRedis();
         globalSubscribedSymbols.addAll(symbols);
@@ -41,7 +41,7 @@ public class TickerIngestor2AerospikeNew {
     }
 
     private void startIngestorLoops() {
-        // --- LUỒNG 1: LẤY GIÁ REALTIME (3s/lần) ---
+        // --- LUỒNG 1: LẤY GIÁ & "HOẠT HÌNH" NẾN HIỆN TẠI (3s/lần) ---
         new Thread(() -> {
             Thread.currentThread().setName("Rest-Price-Loop");
             String endpoint = "https://fapi.binance.com/fapi/v1/ticker/price"; // Chỉ tốn 2 weight
@@ -50,6 +50,10 @@ public class TickerIngestor2AerospikeNew {
                 try {
                     String response = HttpRequest.getContentFromUrl(endpoint, 5000);
                     List<String> newSymbolsToRepair = new ArrayList<>();
+                    long curMin = Utils.getMinute(System.currentTimeMillis());
+
+                    // Lấy hoặc tạo mới rổ chứa nến của phút HIỆN TẠI
+                    ConcurrentHashMap<String, KlineObjectOptimized> currentMinuteCandles = timeBuffer.computeIfAbsent(curMin, k -> new ConcurrentHashMap<>());
 
                     if (StringUtils.isNotBlank(response) && response.trim().startsWith("[")) {
                         JSONArray tickers = new JSONArray(response);
@@ -62,6 +66,26 @@ public class TickerIngestor2AerospikeNew {
                                 float price = obj.getFloat("price");
                                 priceBuffer.put(symbol, price);
 
+                                // --- LOGIC NẶN NẾN REALTIME ---
+                                String shortS = symbol.replace("USDT", "");
+                                currentMinuteCandles.compute(shortS, (k, existingCandle) -> {
+                                    if (existingCandle == null) {
+                                        // Phút mới chưa có data -> Lấy giá hiện tại làm râu nến ban đầu
+                                        return KlineObjectOptimized.newBuilder()
+                                                .setPriceOpen(price).setPriceClose(price)
+                                                .setMaxPrice(price).setMinPrice(price)
+                                                .setTotalUsdt(0).build();
+                                    } else {
+                                        // Đã có data -> Cập nhật Close và nới râu High/Low theo giá Realtime
+                                        return KlineObjectOptimized.newBuilder()
+                                                .setPriceOpen(existingCandle.getPriceOpen())
+                                                .setPriceClose(price)
+                                                .setMaxPrice(Math.max(existingCandle.getMaxPrice(), price))
+                                                .setMinPrice(Math.min(existingCandle.getMinPrice(), price))
+                                                .setTotalUsdt(existingCandle.getTotalUsdt()).build();
+                                    }
+                                });
+
                                 if (!globalSubscribedSymbols.contains(symbol)) {
                                     LOG.info("✨ Mã mới gia nhập cuộc chơi: {}", symbol);
                                     initNewSymbolConfig(symbol);
@@ -71,9 +95,14 @@ public class TickerIngestor2AerospikeNew {
                             }
                         }
 
-                        // Ghi giá cho Bot chạy
+                        // Ghi Giá Realtime cho Bot chạy
                         if (!priceBuffer.isEmpty()) {
                             DataManagerAerospikeFloatSim.writePriceRealtime(new HashMap<>(priceBuffer));
+                        }
+
+                        // 🔥 ĐIỂM SỬA QUAN TRỌNG: Ghi liên tục NẾN HIỆN TẠI xuống DB để Bot không bị trễ
+                        if (!currentMinuteCandles.isEmpty()) {
+                            DataManagerAerospikeFloatSim.writeMinuteBatch(curMin, new HashMap<>(currentMinuteCandles));
                         }
 
                         // Repair mã mới
@@ -86,7 +115,7 @@ public class TickerIngestor2AerospikeNew {
                         LOG.warn("⚠️ API Price báo lỗi (Limit): {}", response);
                     }
 
-                    Thread.sleep(3000); // 3 giây lấy giá 1 lần -> Tốn vỏn vẹn 40 weight/phút
+                    Thread.sleep(3000);
 
                 } catch (Exception e) {
                     LOG.error("❌ Rest-Price-Loop Error: {}", e.getMessage());
@@ -95,10 +124,10 @@ public class TickerIngestor2AerospikeNew {
             }
         }).start();
 
-        // --- LUỒNG 2: LẤY NẾN 1 PHÚT CHUẨN TỪ SÀN (ĐÚNG 1 LẦN/PHÚT) ---
+        // --- LUỒNG 2: CHỐT NẾN CHUẨN (ĐÚNG 1 LẦN KHI SANG PHÚT MỚI) ---
         new Thread(() -> {
             Thread.currentThread().setName("Rest-Kline-Loop");
-            long lastProcessedMinute = 0; // Đánh dấu phút đã lấy
+            long lastProcessedMinute = 0;
 
             while (true) {
                 try {
@@ -106,11 +135,10 @@ public class TickerIngestor2AerospikeNew {
                     long curMin = Utils.getMinute(now);
                     long second = (now / 1000) % 60;
 
-                    // CHIẾN THUẬT: Chỉ kéo nến khi vừa sang phút mới (giây thứ 02 đến 10)
+                    // Chỉ kích hoạt lấy Klines vào đúng giây thứ 02 đến 10 của phút mới
                     if (second >= 2 && second <= 10 && curMin > lastProcessedMinute) {
                         List<String> currentSymbols = new ArrayList<>(globalSubscribedSymbols);
                         if (!currentSymbols.isEmpty()) {
-                            // Chia lô nhỏ hơn để tránh đứt kết nối mạng
                             List<List<String>> batches = subListBySize(currentSymbols, 15);
                             List<Future<?>> futures = new ArrayList<>();
 
@@ -122,11 +150,11 @@ public class TickerIngestor2AerospikeNew {
                                 f.get(20, TimeUnit.SECONDS);
                             }
 
-                            flushKlinesToDatabase();
-                            lastProcessedMinute = curMin; // Đánh dấu đã chốt xong phút này
+                            flushKlinesToDatabase(curMin);
+                            lastProcessedMinute = curMin;
                         }
                     }
-                    Thread.sleep(1000); // Ngủ nhẹ 1 giây rồi check lại đồng hồ
+                    Thread.sleep(1000);
                 } catch (Exception e) {
                     LOG.error("❌ Rest-Kline-Loop Error: {}", e.getMessage());
                 }
@@ -137,14 +165,13 @@ public class TickerIngestor2AerospikeNew {
     private void fetchKlinesForBatch(List<String> symbols) {
         for (String symbol : symbols) {
             try {
-                // MẸO CỰC HAY: Lấy limit=2 để chắc chắn lấy được nến ĐÃ ĐÓNG của phút trước
+                // limit=2 sẽ lấy cây nến ĐÃ ĐÓNG của phút trước, VÀ cây nến VỪA MỞ của phút hiện tại
                 String url = "https://fapi.binance.com/fapi/v1/klines?symbol=" + symbol + "&interval=1m&limit=2";
                 String response = HttpRequest.getContentFromUrl(url, 5000);
 
                 if (StringUtils.isNotBlank(response) && response.trim().startsWith("[")) {
                     JSONArray klines = new JSONArray(response);
 
-                    // Duyệt qua cả 2 cây nến (Cây vừa đóng và cây đang chạy)
                     for (int i = 0; i < klines.length(); i++) {
                         JSONArray k = klines.getJSONArray(i);
 
@@ -161,10 +188,10 @@ public class TickerIngestor2AerospikeNew {
                                 .setMaxPrice(high).setMinPrice(low)
                                 .setTotalUsdt(volume).build();
 
+                        // Nạp đè dữ liệu CHUẨN TỪ SÀN vào RAM (thay thế cho cây nến ta tự nặn lúc đầu)
                         timeBuffer.computeIfAbsent(startTime, key -> new ConcurrentHashMap<>()).put(shortS, optP);
                     }
                 }
-                // Giãn cách request nhẹ để API FAPI không bị giật mình
                 Thread.sleep(10);
             } catch (Exception e) {
                 // Ignore
@@ -172,19 +199,22 @@ public class TickerIngestor2AerospikeNew {
         }
     }
 
-    private void flushKlinesToDatabase() {
-        long now = System.currentTimeMillis();
-        long curMin = Utils.getMinute(now);
+    private void flushKlinesToDatabase(long curMin) {
         long lastMin = curMin - 60000;
 
         try {
-            // Chốt và lưu nến phút trước
+            // 1. Lưu cây nến hiện tại (Đã được cập nhật Open/Volume chuẩn)
+            if (timeBuffer.containsKey(curMin)) {
+                DataManagerAerospikeFloatSim.writeMinuteBatch(curMin, new HashMap<>(timeBuffer.get(curMin)));
+            }
+
+            // 2. Chốt lưu vĩnh viễn cây nến của phút trước
             if (timeBuffer.containsKey(lastMin)) {
                 DataManagerAerospikeFloatSim.writeMinuteBatch(lastMin, new HashMap<>(timeBuffer.get(lastMin)));
 
                 int finalSize = timeBuffer.get(lastMin).size();
                 timeBuffer.remove(lastMin);
-                LOG.info("✅ [KLINE V8] Chốt nến phút {} thành công. Total: {} symbols", Utils.normalizeDateYYYYMMDDHHmm(lastMin), finalSize);
+                LOG.info("✅ [KLINE V8.1] Chốt nến phút {} thành công. Total: {} symbols", Utils.normalizeDateYYYYMMDDHHmm(lastMin), finalSize);
             }
 
             // Dọn rác
@@ -210,7 +240,6 @@ public class TickerIngestor2AerospikeNew {
         return symbols;
     }
 
-    // --- LUỒNG VÁ DỮ LIỆU ĐÃ ĐƯỢC THẮNG PHANH AN TOÀN ---
     private void startDataRepair(int totalMinutes) {
         repairService.execute(() -> {
             try {
@@ -230,7 +259,7 @@ public class TickerIngestor2AerospikeNew {
 
                     if (!missing.isEmpty()) {
                         repairBatchOptimized(missing, batchStart, step);
-                        Thread.sleep(5000); // Ngủ 5 giây sau mỗi lô 500 phút của cả sàn
+                        Thread.sleep(5000);
                     }
                 }
             } catch (Exception e) { LOG.error("Repair Task Error", e); }
@@ -257,11 +286,10 @@ public class TickerIngestor2AerospikeNew {
                     }
                 }
 
-                // 🔥 ĐỘNG CƠ HÃM TỐC: Tăng lên 300ms. Repair chạy chậm lại nhưng KHÔNG BAO GIỜ bị Limit!
                 Thread.sleep(300);
 
             } catch (Exception e) {
-                //
+                // Ignore
             }
         }
     }

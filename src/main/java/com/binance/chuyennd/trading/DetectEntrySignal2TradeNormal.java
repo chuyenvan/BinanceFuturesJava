@@ -522,14 +522,20 @@ public class DetectEntrySignal2TradeNormal {
         }
     }
 
-
+    private long lastProcessedMinute = 0; // Biến đánh dấu phút đã quét
     public boolean isTimeProcessData() {
         long time = System.currentTimeMillis();
         long second = (time / Utils.TIME_SECOND) % 60;
-        long miniSecond = (time % Utils.TIME_SECOND);
-        return second == 2 && miniSecond < 100;
-    }
+        long curMin = time / (60 * Utils.TIME_SECOND); // Tính ra phút hiện tại
 
+        // Mở rộng cửa sổ thời gian từ giây 03 đến giây 10 (rộng 7 giây).
+        // Cờ lastProcessedMinute đảm bảo trong 7 giây này nó chỉ được phép trả về TRUE đúng 1 lần.
+        if (second >= 3 && second <= 10 && curMin > lastProcessedMinute) {
+            lastProcessedMinute = curMin;
+            return true;
+        }
+        return false;
+    }
     private void initData() {
 
         // --- 1. KHỞI TẠO AI ENTRY (CŨ) ---

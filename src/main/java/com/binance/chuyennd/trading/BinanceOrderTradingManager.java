@@ -28,6 +28,7 @@ import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
 import com.binance.chuyennd.tradecore.TradeUtils;
+import com.binance.chuyennd.trading.monitor.Reporter;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
@@ -236,7 +237,7 @@ public class BinanceOrderTradingManager {
                         System.currentTimeMillis() - 90 * Utils.TIME_MINUTE, 90));
             }
             // reporter
-            if (Utils.getCurrentMinute() % 15 == 0 && Utils.getCurrentSecond() == 30) {
+            if (Utils.getCurrentMinute() % 60 == 0 && Utils.getCurrentSecond() == 30) {
                 executorServiceOrderNew.execute(() -> new Reporter().buildReport());
             }
         } catch (Exception e) {
