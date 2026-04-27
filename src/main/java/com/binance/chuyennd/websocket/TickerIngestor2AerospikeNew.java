@@ -162,40 +162,89 @@ public class TickerIngestor2AerospikeNew {
         }).start();
     }
 
+    //    private void fetchKlinesForBatch(List<String> symbols) {
+//        for (String symbol : symbols) {
+//            try {
+//                // limit=2 sẽ lấy cây nến ĐÃ ĐÓNG của phút trước, VÀ cây nến VỪA MỞ của phút hiện tại
+//                String url = "https://fapi.binance.com/fapi/v1/klines?symbol=" + symbol + "&interval=1m&limit=2";
+//                String response = HttpRequest.getContentFromUrl(url, 5000);
+//
+//                if (StringUtils.isNotBlank(response) && response.trim().startsWith("[")) {
+//                    JSONArray klines = new JSONArray(response);
+//
+//                    for (int i = 0; i < klines.length(); i++) {
+//                        JSONArray k = klines.getJSONArray(i);
+//
+//                        long startTime = k.getLong(0);
+//                        float open = k.getFloat(1);
+//                        float high = k.getFloat(2);
+//                        float low = k.getFloat(3);
+//                        float close = k.getFloat(4);
+//                        float volume = k.getFloat(7);
+//
+//                        String shortS = symbol.replace("USDT", "");
+//                        KlineObjectOptimized optP = KlineObjectOptimized.newBuilder()
+//                                .setPriceOpen(open).setPriceClose(close)
+//                                .setMaxPrice(high).setMinPrice(low)
+//                                .setTotalUsdt(volume).build();
+//
+//                        // Nạp đè dữ liệu CHUẨN TỪ SÀN vào RAM (thay thế cho cây nến ta tự nặn lúc đầu)
+//                        timeBuffer.computeIfAbsent(startTime, key -> new ConcurrentHashMap<>()).put(shortS, optP);
+//                    }
+//                }
+//                Thread.sleep(10);
+//            } catch (Exception e) {
+//                // Ignore
+//            }
+//        }
+//    }
     private void fetchKlinesForBatch(List<String> symbols) {
-        for (String symbol : symbols) {
-            try {
-                // limit=2 sẽ lấy cây nến ĐÃ ĐÓNG của phút trước, VÀ cây nến VỪA MỞ của phút hiện tại
-                String url = "https://fapi.binance.com/fapi/v1/klines?symbol=" + symbol + "&interval=1m&limit=2";
-                String response = HttpRequest.getContentFromUrl(url, 5000);
+        // Khởi tạo một ThreadPool riêng để gọi API Binance song song (Khoảng 30 luồng là mượt nhất)
+        java.util.concurrent.ForkJoinPool customThreadPool = new java.util.concurrent.ForkJoinPool(30);
 
-                if (StringUtils.isNotBlank(response) && response.trim().startsWith("[")) {
-                    JSONArray klines = new JSONArray(response);
+        try {
+            customThreadPool.submit(() ->
+                    symbols.parallelStream().forEach(symbol -> {
+                        try {
+                            String url = "https://fapi.binance.com/fapi/v1/klines?symbol=" + symbol + "&interval=1m&limit=2";
+                            // Giảm timeout xuống 3000ms để luồng không bị kẹt nếu mạng lag
+                            String response = HttpRequest.getContentFromUrl(url, 3000);
 
-                    for (int i = 0; i < klines.length(); i++) {
-                        JSONArray k = klines.getJSONArray(i);
+                            if (org.apache.commons.lang.StringUtils.isNotBlank(response) && response.trim().startsWith("[")) {
+                                org.json.JSONArray klines = new org.json.JSONArray(response);
 
-                        long startTime = k.getLong(0);
-                        float open = k.getFloat(1);
-                        float high = k.getFloat(2);
-                        float low = k.getFloat(3);
-                        float close = k.getFloat(4);
-                        float volume = k.getFloat(7);
+                                for (int i = 0; i < klines.length(); i++) {
+                                    org.json.JSONArray k = klines.getJSONArray(i);
 
-                        String shortS = symbol.replace("USDT", "");
-                        KlineObjectOptimized optP = KlineObjectOptimized.newBuilder()
-                                .setPriceOpen(open).setPriceClose(close)
-                                .setMaxPrice(high).setMinPrice(low)
-                                .setTotalUsdt(volume).build();
+                                    long startTime = k.getLong(0);
+                                    float open = k.getFloat(1);
+                                    float high = k.getFloat(2);
+                                    float low = k.getFloat(3);
+                                    float close = k.getFloat(4);
+                                    float volume = k.getFloat(7);
 
-                        // Nạp đè dữ liệu CHUẨN TỪ SÀN vào RAM (thay thế cho cây nến ta tự nặn lúc đầu)
-                        timeBuffer.computeIfAbsent(startTime, key -> new ConcurrentHashMap<>()).put(shortS, optP);
-                    }
-                }
-                Thread.sleep(10);
-            } catch (Exception e) {
-                // Ignore
-            }
+                                    String shortS = symbol.replace("USDT", "");
+                                    com.binance.chuyennd.proto.MinuteDataFinalProto.KlineObjectOptimized optP =
+                                            com.binance.chuyennd.proto.MinuteDataFinalProto.KlineObjectOptimized.newBuilder()
+                                                    .setPriceOpen(open).setPriceClose(close)
+                                                    .setMaxPrice(high).setMinPrice(low)
+                                                    .setTotalUsdt(volume).build();
+
+                                    // Nạp đè dữ liệu CHUẨN TỪ SÀN vào RAM
+                                    // timeBuffer là ConcurrentHashMap nên rất an toàn khi dùng đa luồng
+                                    timeBuffer.computeIfAbsent(startTime, key -> new java.util.concurrent.ConcurrentHashMap<>()).put(shortS, optP);
+                                }
+                            }
+                            // 🔥 ĐÃ XÓA THREAD.SLEEP(10)
+                        } catch (Exception e) {
+                            // Ignore lỗi của từng đồng coin để không ảnh hưởng các coin khác
+                        }
+                    })
+            ).get(); // Đợi tất cả 554 đồng coin tải xong
+        } catch (Exception e) {
+            LOG.error("Lỗi khi fetch kline đa luồng: ", e);
+        } finally {
+            customThreadPool.shutdown();
         }
     }
 
@@ -252,7 +301,7 @@ public class TickerIngestor2AerospikeNew {
                     List<String> missing = new ArrayList<>();
 
                     for (String s : symbols) {
-                        if (DataManagerAerospikeFloatSim.isSymbolMissingInPoints(s.replace("USDT",""), batchStart, step)) {
+                        if (DataManagerAerospikeFloatSim.isSymbolMissingInPoints(s.replace("USDT", ""), batchStart, step)) {
                             missing.add(s);
                         }
                     }
@@ -262,7 +311,9 @@ public class TickerIngestor2AerospikeNew {
                         Thread.sleep(5000);
                     }
                 }
-            } catch (Exception e) { LOG.error("Repair Task Error", e); }
+            } catch (Exception e) {
+                LOG.error("Repair Task Error", e);
+            }
         });
     }
 
@@ -298,7 +349,8 @@ public class TickerIngestor2AerospikeNew {
         try {
             RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS, symbol, symbol);
             ClientSingleton.getInstance().syncRequestClient.changeInitialLeverage(symbol, Configs.LEVERAGE_ORDER);
-        } catch (Exception e) {}
+        } catch (Exception e) {
+        }
     }
 
     private List<List<String>> subListBySize(List<String> list, int size) {

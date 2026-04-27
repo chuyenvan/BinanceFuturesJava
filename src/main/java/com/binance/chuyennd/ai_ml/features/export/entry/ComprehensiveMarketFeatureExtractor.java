@@ -77,7 +77,7 @@ public class ComprehensiveMarketFeatureExtractor {
         extractMomentumFeatures(features, anchorSymbol, marketData);
         extractVolatilityFeatures(features, anchorSymbol);
         extractTechnicalIndicators(features, anchorSymbol);
-        extractBreadthFeatures(features, currentMarketData);
+        extractBreadthFeatures(features, currentMarketData, targetBasket);
         extractBasketTechnicalFeatures(features, targetBasket);
         extractBasketFundingFeatures(features, targetBasket, timestamp);
         extractTimeFeatures(features, timestamp);
@@ -135,14 +135,13 @@ public class ComprehensiveMarketFeatureExtractor {
         }
     }
 
-    private void extractBreadthFeatures(MarketFeatures features, Map<String, KlineObjectSimple> marketData) {
+    private void extractBreadthFeatures(MarketFeatures features, Map<String, KlineObjectSimple> marketData, List<String> targetBasket) {
         int upCount = 0, downCount = 0;
         float upVol = 0, downVol = 0;
         int totalValid = 0, aboveMA20Count = 0;
-        for (Map.Entry<String, KlineObjectSimple> entry : marketData.entrySet()) {
-            String symbol = entry.getKey();
-            KlineObjectSimple k = entry.getValue();
-            if (k.totalUsdt < 5000) continue;
+        for (String symbol : targetBasket) {
+            KlineObjectSimple k = marketData.get(symbol);
+            if (k == null) continue;
             totalValid++;
             if (k.priceClose > k.priceOpen) {
                 upCount++;

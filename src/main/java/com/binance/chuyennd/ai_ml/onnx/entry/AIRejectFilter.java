@@ -34,7 +34,7 @@ public class AIRejectFilter {
 
         if (prediction.predReturn15M < Configs.MIN_MOMENTUM_15M && symbolPred > Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD) {
             return new FilterResult(FilterDecision.REJECT,
-                    String.format("DANGER: MaxDD 4H %.2f%% quá cao (Limit %.2f%%)", prediction.predReturn15M * 100, Configs.MIN_MOMENTUM_15M * 100));
+                    String.format("DANGER: pred 15m %.2f%% thap (Min %.2f%%)", prediction.predReturn15M * 100, Configs.MIN_MOMENTUM_15M * 100));
         }
         // Lấy baseline
         float baselineProb = Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD;

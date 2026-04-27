@@ -20,21 +20,31 @@ public class ProductionVsBacktestFeatureComparator {
     private static final Logger LOG = LoggerFactory.getLogger(ProductionVsBacktestFeatureComparator.class);
     private static final String PROD_PREDICT_DIR = "storage/data/prediction/";
 
-    // 🔥 ĐƯỜNG DẪN TỚI FOLDER CHỨA MODEL ONNX (Sửa lại nếu cần)
+    // 🔥 ĐƯỜNG DẪN TỚI FOLDER CHỨA MODEL ONNX (Giữ nguyên của bác)
     private static final String MODEL_DIR = "C:\\Users\\pc\\Desktop\\data\\ai_models_reg_v3";
+
+    // --- CÁC BIẾN LƯU TRỮ THỐNG KÊ TRUNG BÌNH ---
+    private Map<String, Double> featureDiffSum = new TreeMap<>();
+    private Map<String, Integer> featureDiffCount = new TreeMap<>();
+    private Map<String, Double> predictDiffSum = new TreeMap<>();
+    private Map<String, Integer> predictDiffCount = new TreeMap<>();
 
     public static void main(String[] args) {
         new ProductionVsBacktestFeatureComparator().runCompare();
     }
 
     public void runCompare() {
-        LOG.info("🚀 KHỞI ĐỘNG CÔNG CỤ SOI FEATURES & PREDICTIONS (TEST 10 MẪU)...");
+        LOG.info("🚀 KHỞI ĐỘNG CÔNG CỤ SOI FEATURES & PREDICTIONS TRÊN TOÀN BỘ DỮ LIỆU...");
 
         List<File> featureFiles = collectFeatureFiles(PROD_PREDICT_DIR);
-        if (featureFiles.isEmpty()) return;
-        Collections.shuffle(featureFiles);
-        int limit = Math.min(10, featureFiles.size()); // LẤY 10 MẪU
+        if (featureFiles.isEmpty()) {
+            LOG.error("❌ Không tìm thấy file dữ liệu nào!");
+            return;
+        }
 
+        // 🔥 Quét toàn bộ dữ liệu thay vì 10 mẫu
+        int limit = featureFiles.size();
+        LOG.info("📊 TỔNG SỐ MẪU CẦN ĐỐI SOÁT: {}", limit);
 
         // 🧠 KHỞI TẠO BỘ NÃO AI ĐỂ CHẠY ON-THE-FLY
         OnnxInferenceManager aiBrain = null;
@@ -74,20 +84,27 @@ public class ProductionVsBacktestFeatureComparator {
                 // 1. TRÍCH XUẤT FEATURES BẰNG CODE BACKTEST
                 MarketFeatures btFeatures = extractor.extractAllFeatures(targetTime, targetMarketData, targetMarketRate);
 
-                // 2. ĐỐI SOÁT FEATURES
+                // 2. ĐỐI SOÁT FEATURES VÀ LƯU THỐNG KÊ
                 compareFeatureFields(prodFeatures, btFeatures);
 
-                // 3. ĐỐI SOÁT PREDICTIONS BẰNG AI MODEL
+                // 3. ĐỐI SOÁT PREDICTIONS BẰNG AI MODEL (3 CHIỀU)
                 if (aiBrain != null) {
+                    // Đọc file predict gốc của Production (Xóa đuôi .features đi)
                     String predictFilePath = prodFile.getPath().replace(".features", "");
-                    OnnxInferenceManager.PredictionResult prodPred =
+                    OnnxInferenceManager.PredictionResult prodSavedPred =
                             (OnnxInferenceManager.PredictionResult) StorageSnappy.readObjectFromFile(predictFilePath);
 
-                    if (prodPred != null) {
-                        OnnxInferenceManager.PredictionResult btPred = aiBrain.predictAll(btFeatures);
-                        comparePredictions(prodPred, btPred);
+                    // Prod_Fly (Tính lại trên Prod_Features) và BT_Fly (Tính trên BT_Features)
+                    // 🔥 Thay đổi hàm thành predictAll theo code của bác
+                    OnnxInferenceManager.PredictionResult prodFlyPred = aiBrain.predictAll(prodFeatures);
+                    OnnxInferenceManager.PredictionResult btFlyPred = aiBrain.predictAll(btFeatures);
+
+                    if (prodSavedPred != null) {
+                        comparePredictions3Way(prodSavedPred, prodFlyPred, btFlyPred);
                     } else {
                         LOG.warn("⚠️ Không tìm thấy file Prediction của PROD tại: {}", predictFilePath);
+                        // Fallback: So sánh 2 chiều thông thường nếu ko có file
+                        comparePredictions3Way(prodFlyPred, prodFlyPred, btFlyPred);
                     }
                 }
 
@@ -99,48 +116,144 @@ public class ProductionVsBacktestFeatureComparator {
         if (aiBrain != null) {
             try { aiBrain.close(); } catch (Exception e) {}
         }
+
+        // 🔥 IN BẢNG THỐNG KÊ TRUNG BÌNH KHI KẾT THÚC
+        printStatisticsSummary(limit);
     }
 
-    private void comparePredictions(OnnxInferenceManager.PredictionResult prod, OnnxInferenceManager.PredictionResult bt) {
-        LOG.info("--- 🧠 ĐỐI SOÁT AI PREDICTION ---");
-        // Sai số cho phép: 0.0001 (Nếu lệch dưới mức này thì coi như bằng nhau)
+    private void comparePredictions3Way(OnnxInferenceManager.PredictionResult prodSaved,
+                                        OnnxInferenceManager.PredictionResult prodFly,
+                                        OnnxInferenceManager.PredictionResult bt) {
+        LOG.info("--- 🧠 ĐỐI SOÁT AI PREDICTION (3 CHIỀU) ---");
         float epsilon = 0.0001f;
-        int diff = 0;
 
-        // CHỈ CHECK 3 LABEL QUAN TRỌNG NHẤT, BỎ QUA CÁC LABEL CÒN LẠI
-        diff += checkPred("return15M", prod.return15M, bt.return15M, epsilon);
-        diff += checkPred("return24H", prod.return24H, bt.return24H, epsilon);
-        diff += checkPred("riskDrawdown4H", prod.riskDrawdown4H, bt.riskDrawdown4H, epsilon);
+        // BƯỚC 1: Check tính nhất quán của Model (Prod Saved vs Prod Fly)
+        int diffModel = 0;
+        diffModel += checkPred("return15M (Fly)", prodSaved.return15M, prodFly.return15M, epsilon, false);
+        diffModel += checkPred("return24H (Fly)", prodSaved.return24H, prodFly.return24H, epsilon, false);
+        diffModel += checkPred("risk4H (Fly)", prodSaved.riskDrawdown4H, prodFly.riskDrawdown4H, epsilon, false);
 
-        if (diff == 0) {
-            LOG.info("✅ PREDICTION CỦA 3 BIẾN NÒNG CỐT KHỚP HOÀN HẢO 100%!");
+        if (diffModel > 0) {
+            LOG.error("🚨 CẢNH BÁO ĐỎ: ONNX Model tính toán không nhất quán! (Cùng 1 Features nhưng lúc Realtime ra kết quả khác lúc Test)");
+        }
+
+        // BƯỚC 2: Check độ lệch môi trường (Prod Saved vs Backtest Fly)
+        int diffEnv = 0;
+        diffEnv += checkPred("return15M", prodSaved.return15M, bt.return15M, epsilon, true);
+        diffEnv += checkPred("return24H", prodSaved.return24H, bt.return24H, epsilon, true);
+        diffEnv += checkPred("riskDrawdown4H", prodSaved.riskDrawdown4H, bt.riskDrawdown4H, epsilon, true);
+
+        if (diffEnv == 0) {
+            LOG.info("✅ PREDICTION CỦA PROD VÀ BACKTEST KHỚP HOÀN HẢO 100%!");
         } else {
-            LOG.info("❌ Số lượng biến Prediction bị lệch: {}", diff);
+            LOG.info("❌ Số lượng biến Prediction bị lệch: {}", diffEnv);
         }
     }
 
-    private int checkPred(String name, float prod, float bt, float epsilon) {
+    private int checkPred(String name, float prod, float bt, float epsilon, boolean isRecordStats) {
+        float percentDiff = 0f;
+        float maxAbs = Math.max(Math.abs(prod), Math.abs(bt));
+
+        if (maxAbs > 0.000001f) {
+            percentDiff = (Math.abs(prod - bt) / maxAbs) * 100f;
+        }
+
+        // Chỉ cộng dồn thống kê cho trường hợp đối chiếu Prod vs BT (Môi trường thực)
+        if (isRecordStats) {
+            predictDiffSum.put(name, predictDiffSum.getOrDefault(name, 0.0) + percentDiff);
+            predictDiffCount.put(name, predictDiffCount.getOrDefault(name, 0) + 1);
+        }
+
         if (Math.abs(prod - bt) > epsilon) {
-            // Tính phần trăm lệch (Dựa trên giá trị lớn hơn để tránh chia cho 0 hoặc số quá nhỏ)
-            float percentDiff = 0;
-            float maxAbs = Math.max(Math.abs(prod), Math.abs(bt));
-
-            if (maxAbs > 0.000001f) {
-                percentDiff = (Math.abs(prod - bt) / maxAbs) * 100;
-            }
-
-            // Format log in ra 2 chữ số thập phân cho dễ nhìn
             String percentStr = String.format("%.2f%%", percentDiff);
-
             LOG.error("❌ LỆCH PREDICT [{}]: PROD = {} | BT = {} | Lệch: {}",
-                    name, String.format("%.6f", prod), String.format("%.6f", bt), percentStr);
+                    String.format("%-20s", name), String.format("%10.6f", prod), String.format("%10.6f", bt), percentStr);
             return 1;
         }
         return 0;
     }
 
+    private void compareFeatureFields(MarketFeatures prod, MarketFeatures bt) {
+        int diffCount = 0;
+        Field[] fields = MarketFeatures.class.getFields();
+        for (Field field : fields) {
+            try {
+                field.setAccessible(true);
+                Object prodVal = field.get(prod);
+                Object btVal = field.get(bt);
+                if (prodVal == null && btVal == null) continue;
+
+                boolean isMatch = false;
+                float diffPercent = 0f;
+
+                if (prodVal instanceof Number && btVal instanceof Number) {
+                    float p = ((Number) prodVal).floatValue();
+                    float b = ((Number) btVal).floatValue();
+                    if (Math.abs(p - b) < 0.0001f) {
+                        isMatch = true;
+                    }
+                    float maxAbs = Math.max(Math.abs(p), Math.abs(b));
+                    if (maxAbs > 0.000001f) {
+                        diffPercent = (Math.abs(p - b) / maxAbs) * 100f;
+                    }
+                } else {
+                    isMatch = Objects.equals(prodVal, btVal);
+                }
+
+                // Ghi nhận thống kê cho tất cả các biến Number (Dù lệch 0% vẫn ghi nhận)
+                if (prodVal instanceof Number && btVal instanceof Number) {
+                    String fieldName = field.getName();
+                    featureDiffSum.put(fieldName, featureDiffSum.getOrDefault(fieldName, 0.0) + diffPercent);
+                    featureDiffCount.put(fieldName, featureDiffCount.getOrDefault(fieldName, 0) + 1);
+                }
+
+                if (!isMatch) {
+                    diffCount++;
+                    if (prodVal instanceof Number && btVal instanceof Number) {
+                        float p = ((Number) prodVal).floatValue();
+                        float b = ((Number) btVal).floatValue();
+                        LOG.warn("   ⚠️ [FEATURE] {}: PROD = {} | BT = {} | Lệch: {}%",
+                                String.format("%-25s", field.getName()),
+                                String.format("%10.6f", p),
+                                String.format("%10.6f", b),
+                                String.format("%5.2f", diffPercent));
+                    } else {
+                        LOG.warn("   ⚠️ [FEATURE] {}: PROD = {} | BT = {}", field.getName(), prodVal, btVal);
+                    }
+                }
+            } catch (Exception e) {}
+        }
+        LOG.info("=> Tổng lệch {} Features", diffCount);
+    }
+
+    private void printStatisticsSummary(int totalSamples) {
+        LOG.info("\n========================================================");
+        LOG.info("📊 TỔNG KẾT LỆCH TRUNG BÌNH TRÊN {} MẪU DỮ LIỆU", totalSamples);
+        LOG.info("========================================================");
+
+        LOG.info("--- 1. LỆCH TRUNG BÌNH CỦA MARKET FEATURES ---");
+        for (Map.Entry<String, Double> entry : featureDiffSum.entrySet()) {
+            String name = entry.getKey();
+            int count = featureDiffCount.getOrDefault(name, 1);
+            double avgDiff = entry.getValue() / count;
+
+            if (avgDiff > 0.01) { // Lọc bỏ nhiễu li ti
+                LOG.info("   🔸 {}: {}%", String.format("%-25s", name), String.format("%6.3f", avgDiff));
+            }
+        }
+
+        LOG.info("\n--- 2. LỆCH TRUNG BÌNH CỦA AI PREDICTIONS ---");
+        for (Map.Entry<String, Double> entry : predictDiffSum.entrySet()) {
+            String name = entry.getKey();
+            int count = predictDiffCount.getOrDefault(name, 1);
+            double avgDiff = entry.getValue() / count;
+            LOG.info("   🎯 {}: {}%", String.format("%-25s", name), String.format("%6.3f", avgDiff));
+        }
+        LOG.info("========================================================\n");
+    }
+
     // =========================================================================
-    // HÀM TỰ TÍNH MARKET DATA
+    // HÀM TỰ TÍNH MARKET DATA (GIỮ NGUYÊN HOÀN TOÀN CỦA BÁC)
     // =========================================================================
     private MarketDataObject calculateMarketData(long targetTime,
                                                  TreeMap<Long, Map<String, KlineObjectSimple>> warmupData,
@@ -173,33 +286,9 @@ public class ProductionVsBacktestFeatureComparator {
         }
     }
 
-    private void compareFeatureFields(MarketFeatures prod, MarketFeatures bt) {
-        int diffCount = 0;
-        Field[] fields = MarketFeatures.class.getFields();
-        for (Field field : fields) {
-            try {
-                field.setAccessible(true);
-                Object prodVal = field.get(prod); Object btVal = field.get(bt);
-                if (prodVal == null && btVal == null) continue;
-
-                boolean isMatch = false;
-                if (prodVal instanceof Float && btVal instanceof Float) {
-                    isMatch = Math.abs((Float) prodVal - (Float) btVal) < 0.0001f;
-                } else if (prodVal instanceof Double && btVal instanceof Double) {
-                    isMatch = Math.abs((Double) prodVal - (Double) btVal) < 0.0001f;
-                } else {
-                    isMatch = Objects.equals(prodVal, btVal);
-                }
-
-                if (!isMatch) {
-                    diffCount++;
-                    // LOG.error("❌ LỆCH FEATURE: [{}] -> PROD: {} | BT: {}", field.getName(), prodVal, btVal);
-                }
-            } catch (Exception e) {}
-        }
-        LOG.info("=> Lệch {} Features (Đa phần là Breadth/Basket do sai số lượng Coin active)", diffCount);
-    }
-
+    // =========================================================================
+    // HÀM TÌM KIẾM FILE (GIỮ NGUYÊN HOÀN TOÀN CỦA BÁC)
+    // =========================================================================
     private List<File> collectFeatureFiles(String path) {
         List<File> allFiles = new ArrayList<>(); File root = new File(path);
         if (!root.exists() || !root.isDirectory()) return allFiles;

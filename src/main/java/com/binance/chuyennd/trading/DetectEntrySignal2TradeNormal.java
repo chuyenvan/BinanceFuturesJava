@@ -16,6 +16,7 @@
 package com.binance.chuyennd.trading;
 
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
+import com.binance.chuyennd.ai_ml.data.SimpleSymbolMapper;
 import com.binance.chuyennd.ai_ml.features.export.entry.ComprehensiveMarketFeatureExtractor;
 import com.binance.chuyennd.ai_ml.features.export.entry.MarketFeatures;
 import com.binance.chuyennd.ai_ml.features.export.funding.FundingFeatureExtractor;
@@ -180,7 +181,7 @@ public class DetectEntrySignal2TradeNormal {
             Float rateDownAvg = MarketBigChangeDetector.calRateChangeAvg(rateDown2Symbols, 100);
             Float rateUpAvg = -MarketBigChangeDetector.calRateChangeAvg(rateUp2Symbols, 100);
             Float rateDown15MAvg = MarketBigChangeDetector.calRateChangeAvg(rateDown15M2Symbols, 100);
-            MarketDataObject marketRate = new MarketDataObject(rateDownAvg, rateUpAvg,rateDown15MAvg);
+            MarketDataObject marketRate = new MarketDataObject(rateDownAvg, rateUpAvg, rateDown15MAvg);
             Float rateBtcDown15M = Utils.rateOf2Double(btcTicker.priceClose, btcMax15M);
             MarketLevelChange levelChange = MarketBigChangeDetector.getMarketStatus1M(rateDownAvg, rateUpAvg, btcRateChange, rateDown15MAvg);
             RedisHelper.getInstance().get().set(RedisConst.REDIS_KEY_LAST_TIME_CHECK_MARKET, Utils.toJson(System.currentTimeMillis()));
@@ -244,7 +245,8 @@ public class DetectEntrySignal2TradeNormal {
                 symbol2BUY.addAll(MarketBigChangeDetector.getTopSymbol(numberOrder,
                         symbol2FinalTicker, symbolLocked, sortedCandidates));
 
-                LOG.info("Level: {} {} -> {}", Utils.normalizeDateYYYYMMDDHHmm(btcTicker.startTime.longValue()), levelChange, symbol2BUY);
+                LOG.info("Level: {} {} -> {}", Utils.normalizeDateYYYYMMDDHHmm(btcTicker.startTime.longValue()),
+                        levelChange, symbol2BUY);
                 for (String symbol : symbol2BUY) {
                     try {
                         KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
@@ -255,12 +257,16 @@ public class DetectEntrySignal2TradeNormal {
                     }
                 }
                 try {
-                    List<String> symbolDcaLevel = DcaProcessor.getDCAProduction(levelChange, System.currentTimeMillis(), BudgetManager.getInstance().getBudget(), BudgetManager.getInstance().symbol2Pos);
+                    List<String> symbolDcaLevel = DcaProcessor.getDCAProduction(levelChange,
+                            System.currentTimeMillis(), BudgetManager.getInstance().getBudget(),
+                            BudgetManager.getInstance().symbol2Pos);
                     for (String symbol : symbolDcaLevel) {
                         KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
                         PositionRisk position = BudgetManager.getInstance().symbol2Pos.get(symbol);
                         if (position != null) {
-                            createOrderBuyRequest(symbol, ticker, MarketLevelChange.DCA_LEVEL1, symbol2Max15m.get(symbol), marketRate, predictData, getSymbolPred(sortedCandidates, symbol), symbol2LastTickers);
+                            createOrderBuyRequest(symbol, ticker, MarketLevelChange.DCA_LEVEL1,
+                                    symbol2Max15m.get(symbol), marketRate, predictData,
+                                    getSymbolPred(sortedCandidates, symbol), symbol2LastTickers);
                         }
                     }
                 } catch (Exception e) {
@@ -293,7 +299,6 @@ public class DetectEntrySignal2TradeNormal {
             allSymbols.removeAll(BudgetManager.getInstance().symbol2Pos.keySet());
 
 
-
             // 4. Final Trade Logic (Limit TOP 30)
             int countChecked = 0;
 
@@ -309,8 +314,7 @@ public class DetectEntrySignal2TradeNormal {
                         symbol2Max15m.get(symbol), marketRate, predictData, symbolPred, symbol2LastTickers);
             }
 
-            StorageSnappy.writeObject2File("storage/data/rateMax15M/" + Utils.normalizeDateYYYYMMDD(time) + "/" + time, rateDown15M2Symbols);
-            StorageSnappy.writeObject2File("storage/data/rateDown1M/" + Utils.normalizeDateYYYYMMDD(time) + "/" + time, rateDown2Symbols);
+
             StorageSnappy.writeObject2File("storage/data/prediction/" + Utils.normalizeDateYYYYMMDD(time) + "/" + time, predictData);
             StorageSnappy.writeObject2File("storage/data/prediction/" + Utils.normalizeDateYYYYMMDD(time) + "/" + time + ".features", features);
             LOG.info("Predict: {}", Utils.toJson(predictData));
@@ -344,7 +348,8 @@ public class DetectEntrySignal2TradeNormal {
         // 2. Chuẩn bị AI Input
         List<String> aiCandidates = new ArrayList<>();
         List<FundingMarketFeatures> aiFeaturesList = new ArrayList<>();
-
+        Map<String, FundingMarketFeatures> symbol2FundingFeatures = new HashMap<>();
+        Map<String, Float> symbol2FundingPred = new HashMap<>();
 
         for (String symbol : allSymbols) {
             KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
@@ -364,10 +369,8 @@ public class DetectEntrySignal2TradeNormal {
                 if (feats != null) {
                     aiCandidates.add(symbol);
                     aiFeaturesList.add(feats);
+                    symbol2FundingFeatures.put(symbol, feats);
                 }
-            } else {
-                // Fallback nếu không có AI
-                aiCandidates.add(symbol);
             }
         }
 
@@ -377,29 +380,35 @@ public class DetectEntrySignal2TradeNormal {
                     .collect(Collectors.toList());
 
             List<float[]> results = fundingBrain.predictBatch(featureArrays);
-
+            float maxThres = Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD * Configs.AI_DYNAMIC_MAX;
             for (int i = 0; i < aiCandidates.size(); i++) {
                 String sym = aiCandidates.get(i);
                 float[] preds = results.get(i);
-
+                symbol2FundingPred.put(sym, preds[0]);
                 // 🔥 FILTER: Reject nếu Fail Prob > 0.3
-                if (preds[0] > Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD) {
+                if (preds[0] > maxThres) {
 //                    LOG.info("❌ [FILTER AI SYMBOL] {}: Prediction FAIL too high ({})", sym, probs[0]);
                 } else {
                     // Tự động sắp xếp: Key càng bé (ProbFail thấp) càng đứng đầu
                     sortedCandidates.put(preds[0], sym);
                 }
             }
-        } else {
-            // Fallback: Random sort nếu không có AI
-            for (String sym : aiCandidates) sortedCandidates.put((float) Math.random(), sym);
+        }
+        try {
+            StorageSnappy.writeObject2File("storage/data/predictionSymbol/" + Utils.normalizeDateYYYYMMDD(time)
+                    + "/" + time, symbol2FundingPred);
+            StorageSnappy.writeObject2File("storage/data/predictionSymbol/" + Utils.normalizeDateYYYYMMDD(time)
+                    + "/" + time + ".features", symbol2FundingFeatures);
+        } catch (Exception e) {
+            e.printStackTrace();
         }
         return sortedCandidates;
     }
 
 
     public void createOrderBuyRequest(String symbol, KlineObjectSimple ticker, MarketLevelChange levelChange, Float priceMax15M,
-                                      MarketDataObject marketRate, OnnxInferenceManager.PredictionResult prediction, Float symbolPred, Map<String, List<KlineObjectSimple>> symbol2LastTickers) {
+                                      MarketDataObject marketRate, OnnxInferenceManager.PredictionResult prediction,
+                                      Float symbolPred, Map<String, List<KlineObjectSimple>> symbol2LastTickers) {
 
 
         if (prediction == null) {
@@ -408,11 +417,20 @@ public class DetectEntrySignal2TradeNormal {
         }
 
         // 4. Kiểm tra Lọc
-        AIRejectFilter.FilterResult filterResult = aiRejectFilter.checkSignal(new AiPredictionData(
+        AIRejectFilter.FilterResult filterResult = null;
+        // Nếu là kèo AI Funding -> Dùng Logic Động
+        AiPredictionData predict = new AiPredictionData(
                 ticker.startTime,
                 prediction.return15M, prediction.return1H, prediction.return4H, prediction.return24H,
-                prediction.riskDrawdown4H, prediction.riskDrawdown24H));
-
+                prediction.riskDrawdown4H, prediction.riskDrawdown24H);
+        if (levelChange == MarketLevelChange.PREDICT_SYMBOL_TRADE) {
+            if (symbolPred != null) {
+                filterResult = aiRejectFilter.checkSignalDynamic(predict, symbolPred);
+            }
+        }
+        if (filterResult == null) {
+            filterResult = aiRejectFilter.checkSignal(predict);
+        }
         // Log kết quả AI để debug/monitor
         LOG.info("AI CHECK [{}] Pred: {} -> Decision: {}", symbol, prediction, filterResult.decision);
 
@@ -523,6 +541,7 @@ public class DetectEntrySignal2TradeNormal {
     }
 
     private long lastProcessedMinute = 0; // Biến đánh dấu phút đã quét
+
     public boolean isTimeProcessData() {
         long time = System.currentTimeMillis();
         long second = (time / Utils.TIME_SECOND) % 60;
@@ -530,12 +549,13 @@ public class DetectEntrySignal2TradeNormal {
 
         // Mở rộng cửa sổ thời gian từ giây 03 đến giây 10 (rộng 7 giây).
         // Cờ lastProcessedMinute đảm bảo trong 7 giây này nó chỉ được phép trả về TRUE đúng 1 lần.
-        if (second >= 3 && second <= 10 && curMin > lastProcessedMinute) {
+        if (second >= 6 && second <= 10 && curMin > lastProcessedMinute) {
             lastProcessedMinute = curMin;
             return true;
         }
         return false;
     }
+
     private void initData() {
 
         // --- 1. KHỞI TẠO AI ENTRY (CŨ) ---

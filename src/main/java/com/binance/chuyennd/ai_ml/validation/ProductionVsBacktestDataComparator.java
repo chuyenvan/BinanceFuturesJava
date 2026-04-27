@@ -96,7 +96,6 @@ public class ProductionVsBacktestDataComparator {
         LOG.info("\n==========================================");
         LOG.info("=== 🚨 TOP 10 TRƯỜNG HỢP LỆCH NẶNG NHẤT VÀ PHÂN TÍCH FEATURE ===");
 
-        TreeMap<Long, MarketDataObject> allMarketData = DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
 
         int limit = Math.min(10, mismatchList.size());
         for (int i = 0; i < limit; i++) {
@@ -104,7 +103,7 @@ public class ProductionVsBacktestDataComparator {
             LOG.info("\n🔴 Top {}: Time: {} | {}", i + 1, Utils.normalizeDateYYYYMMDDHHmm(record.time), record.logDetail);
 
             // --- TRÍCH XUẤT VÀ ĐỐI CHIẾU FEATURE CỦA RIÊNG MẪU NÀY ---
-            analyzeFeatureMismatch(record.time, allMarketData);
+            analyzeFeatureMismatch(record.time);
         }
 
         LOG.info("\n==========================================");
@@ -117,7 +116,7 @@ public class ProductionVsBacktestDataComparator {
     // =========================================================================
     // HÀM TỰ ĐỘNG CÀO FEATURE VÀ ĐỐI CHIẾU
     // =========================================================================
-    private void analyzeFeatureMismatch(long targetTime, TreeMap<Long, MarketDataObject> allMarketData) {
+    private void analyzeFeatureMismatch(long targetTime) {
         try {
             // 1. Đọc PROD Features
             String featurePath = PROD_PREDICT_DIR + Utils.normalizeDateYYYYMMDD(targetTime) + "/" + targetTime + ".features";
@@ -145,7 +144,7 @@ public class ProductionVsBacktestDataComparator {
             ComprehensiveMarketFeatureExtractor extractor = new ComprehensiveMarketFeatureExtractor();
             extractor.initDataFromTickerMap(warmupData);
 
-            MarketDataObject targetMarketRate = allMarketData.get(targetTime);
+            MarketDataObject targetMarketRate = DataManagerAerospikeFloatSim.getMarketDataAtTime(targetTime);
             if (targetMarketRate == null) {
                 targetMarketRate = calculateMarketData(targetTime, warmupData, targetMarketData);
             }

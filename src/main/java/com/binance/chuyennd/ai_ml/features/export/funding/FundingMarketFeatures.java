@@ -1,6 +1,8 @@
 package com.binance.chuyennd.ai_ml.features.export.funding;
 
-public class FundingMarketFeatures {
+import java.io.Serializable;
+
+public class FundingMarketFeatures implements Serializable {
     // --- GROUP 1: MARKET CONTEXT ---
     public float btcMomentum1H;
     public float btcMomentum4H;

@@ -12,11 +12,9 @@ import com.binance.client.model.enums.OrderSide;
 import com.binance.client.model.trade.PositionRisk;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.net.URLEncoder;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -446,14 +444,11 @@ public class Utils {
 
     public static boolean isTickerAvailable(KlineObjectSimple ticker) {
         if (ticker != null) {
-            if (ticker.minPrice != ticker.maxPrice
-                    || ticker.totalUsdt != 0) {
-                return true;
-            }
+            return ticker.minPrice != ticker.maxPrice
+                    || ticker.totalUsdt != 0;
         }
         return false;
     }
-
 
     public static String toJson(Object ob) {
         return gson.toJson(ob);
