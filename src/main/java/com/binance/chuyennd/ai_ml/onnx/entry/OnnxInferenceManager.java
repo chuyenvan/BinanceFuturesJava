@@ -57,10 +57,10 @@ public class OnnxInferenceManager implements AutoCloseable {
 
             float risk4 = pRisk4H.predict(featuresV3);
 
-            return new PredictionResult(r15, 0f, 0f, r24, risk4, 0f);
+            return new PredictionResult(r15,  r24, risk4 );
         } catch (Exception e) {
             LOG.error("❌ Inference Error", e);
-            return new PredictionResult(0, 0, 0, 0, 0, 0);
+            return new PredictionResult(0, 0, 0);
         }
     }
 
@@ -266,17 +266,19 @@ public class OnnxInferenceManager implements AutoCloseable {
     }
 
     public static class PredictionResult implements Serializable {
-        public float return15M, return1H, return4H, return24H;
-        public float riskDrawdown4H, riskDrawdown24H;
-        public PredictionResult(float r15, float r1, float r4, float r24, float risk4, float risk24) {
-            this.return15M = r15; this.return1H = r1; this.return4H = r4;
-            this.return24H = r24; this.riskDrawdown4H = risk4; this.riskDrawdown24H = risk24;
+        public float return15M, return24H;
+        public float riskDrawdown4H;
+
+        public PredictionResult(float riskDrawdown4H, float return24H, float return15M) {
+            this.riskDrawdown4H = riskDrawdown4H;
+            this.return24H = return24H;
+            this.return15M = return15M;
         }
 
         @Override
         public String toString() {
             return String.format("[15M:%.2f%% 1H:%.2f%% 4H:%.2f%% | Risk4H:%.2f%%]",
-                    return15M*100, return1H*100, return4H*100, riskDrawdown4H*100);
+                    return15M*100,  return24H*100, riskDrawdown4H*100);
         }
     }
 }

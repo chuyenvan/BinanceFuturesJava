@@ -178,18 +178,23 @@ public class ClientSingleton implements Serializable {
     }
 
     public Float normalizeQuantity(String symbol, Float quantity) {
-        Float unitQuantity = symbol2UnitQuantity.get(symbol);
-        if (unitQuantity == null) {
-            LOG.info("Init Unit Quantity because {} is null!", symbol);
-            initClient();
-        }
-        if (unitQuantity != null) {
-            quantity = quantity - (quantity % unitQuantity);
-            if (quantity.toString().contains("0000") || quantity.toString().contains("9999")) {
-                quantity = Float.valueOf(formatDouble(quantity));
-            }
-            return quantity;
-        } else {
+        Float stepSize = symbol2UnitQuantity.get(symbol); // minQty hoặc stepSize
+        if (stepSize == null || stepSize <= 0) return quantity;
+
+        try {
+            java.math.BigDecimal bdQty = new java.math.BigDecimal(quantity.toString());
+            java.math.BigDecimal bdStepSize = new java.math.BigDecimal(stepSize.toString());
+
+            // normalizedQty = floor(qty / stepSize) * stepSize
+            java.math.BigDecimal normalized = bdQty.divide(bdStepSize, 0, java.math.RoundingMode.FLOOR)
+                    .multiply(bdStepSize);
+
+            int scale = bdStepSize.stripTrailingZeros().scale();
+            if (scale < 0) scale = 0;
+            normalized = normalized.setScale(scale, java.math.RoundingMode.HALF_UP);
+
+            return normalized.floatValue();
+        } catch (Exception e) {
             return Float.valueOf(formatDouble(quantity));
         }
     }
@@ -209,14 +214,29 @@ public class ClientSingleton implements Serializable {
 
     public Float normalizePrice(String symbol, Float price) {
         Float unitPrice = symbol2UnitPrice.get(symbol);
-        if (unitPrice != null) {
-            price = price - (price % unitPrice);
-            if (price.toString().contains("0000") || price.toString().contains("9999")) {
-                price = Float.valueOf(formatDouble(price));
-            }
+        if (unitPrice == null || unitPrice <= 0) {
             return price;
-        } else {
-            return Float.valueOf(formatDouble(price));
+        }
+
+        try {
+            // Sử dụng BigDecimal để tránh sai số float
+            java.math.BigDecimal bdPrice = new java.math.BigDecimal(price.toString());
+            java.math.BigDecimal bdTickSize = new java.math.BigDecimal(unitPrice.toString());
+
+            // Quy tắc: Price phải là bội số của tickSize
+            // Công thức: normalizedPrice = floor(price / tickSize) * tickSize
+            java.math.BigDecimal normalized = bdPrice.divide(bdTickSize, 0, java.math.RoundingMode.FLOOR)
+                    .multiply(bdTickSize);
+
+            // Đảm bảo không còn rác sau dấu phẩy bằng cách setScale theo tickSize
+            int scale = bdTickSize.stripTrailingZeros().scale();
+            if (scale < 0) scale = 0;
+            normalized = normalized.setScale(scale, java.math.RoundingMode.HALF_UP);
+
+            return normalized.floatValue();
+        } catch (Exception e) {
+            LOG.error("Error normalizing price for " + symbol, e);
+            return price;
         }
     }
 

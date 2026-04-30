@@ -9,6 +9,7 @@ import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
 import com.binance.chuyennd.tradecore.CoinRankManager;
+import com.binance.chuyennd.tradecore.MarketBigChangeDetector;
 import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.StorageSnappy;
@@ -29,13 +30,12 @@ public class ProductionVsBacktestFundingComparator {
 
     // ĐƯỜNG DẪN FILE ONNX TƯƠNG ỨNG
     private static final String MODEL_PATH = "models_funding/Funding_Classifier_Final_Fixed.onnx";
-
     public static void main(String[] args) {
         new ProductionVsBacktestFundingComparator().runCompare();
     }
 
     public void runCompare() {
-        LOG.info("🚀 KHỞI ĐỘNG ĐỐI SOÁT FUNDING: PROD (FILE) vs BACKTEST (BATCH PREDICT ON-THE-FLY)...");
+        LOG.info("🚀 KHỞI ĐỘNG ĐỐI SOÁT FUNDING: PROD vs BACKTEST (CHỈ CHECK PRED < 0.2, MAX 20 COIN/PHÚT)...");
 
         List<File> featureFiles = collectFeatureFiles(PROD_PREDICT_DIR);
         if (featureFiles.isEmpty()) {
@@ -112,7 +112,9 @@ public class ProductionVsBacktestFundingComparator {
                 // BƯỚC 3: EXTRACT FEATURE VÀ PREDICT BATCH GIỐNG TOOL GENERATE
                 // -------------------------------------------------------------------
                 Map<String, KlineObjectSimple> symbol2Ticker = time2Tickers.get(targetTime);
-                MarketDataObject marketData = time2MarketData.get(targetTime);
+
+                // TÍNH TOÁN ON-THE-FLY MARKET DATA (Khắc phục lỗi momentum1M = 0)
+                MarketDataObject marketData = calculateMarketData(targetTime, time2Tickers, symbol2Ticker);
 
                 List<String> validSymbols = new ArrayList<>();
                 List<float[]> btFeatureArrays = new ArrayList<>();
@@ -122,14 +124,14 @@ public class ProductionVsBacktestFundingComparator {
                     KlineObjectSimple ticker = symbol2Ticker.get(symbol);
                     if (ticker == null || !Utils.isTickerAvailable(ticker)) continue;
 
-                    // 🔥 Tạo Dummy Order chuẩn y hệt code Generate
+                    // Tạo Dummy Order chuẩn y hệt code Generate
                     OrderTargetInfoTest dummyOrder = new OrderTargetInfoTest(
                             OrderTargetStatus.REQUEST, ticker.priceClose, null, 1.0f,
                             Configs.LEVERAGE_ORDER, symbol, targetTime, targetTime, OrderSide.BUY
                     );
                     dummyOrder.lastEntry = ticker.priceClose;
 
-                    // Extract Feature
+                    // Extract Feature (Giữ nguyên tham số không sửa đổi theo ý bác)
                     FundingMarketFeatures features = btExtractor.extractFeatures(
                             targetTime, dummyOrder, symbol2Ticker, marketData
                     );
@@ -141,7 +143,7 @@ public class ProductionVsBacktestFundingComparator {
                     }
                 }
 
-                // 🔥 GỌI HÀM PREDICT BATCH ĐA LUỒNG THEO CHUNK SIZE (20)
+                // GỌI HÀM PREDICT BATCH ĐA LUỒNG THEO CHUNK SIZE (20)
                 Map<String, Float> btPredMap = new HashMap<>();
                 int chunkSize = 20;
                 for (int j = 0; j < btFeatureArrays.size(); j += chunkSize) {
@@ -153,14 +155,13 @@ public class ProductionVsBacktestFundingComparator {
 
                     if (chunkResults.size() == chunkFeatures.size()) {
                         for (int k = 0; k < chunkResults.size(); k++) {
-                            // Lấy Prob [0] từ kết quả
                             btPredMap.put(chunkSymbols.get(k), chunkResults.get(k)[0]);
                         }
                     }
                 }
 
                 // -------------------------------------------------------------------
-                // BƯỚC 4: ĐỐI SOÁT RANDOM 1 COIN ĐỂ TRÁNH SPAM LOG
+                // BƯỚC 4: ĐỐI SOÁT (CHỈ CHECK PROD PRED < 0.2, RANDOM TỐI ĐA 20 COIN)
                 // -------------------------------------------------------------------
                 List<String> commonSymbols = new ArrayList<>(prodFeatureMap.keySet());
                 commonSymbols.retainAll(btFeatureMap.keySet());
@@ -170,34 +171,65 @@ public class ProductionVsBacktestFundingComparator {
                     continue;
                 }
 
-                Collections.shuffle(commonSymbols);
-                String testSymbol = commonSymbols.get(0);
-                LOG.info("   🎯 Chọn Random Coin [{}] để soi chi tiết", testSymbol);
-
-                FundingMarketFeatures prodFeats = prodFeatureMap.get(testSymbol);
-                FundingMarketFeatures btFeats = btFeatureMap.get(testSymbol);
-
-                LOG.info("   --- 📊 ĐỐI SOÁT FEATURES ---");
-                compareFeatureFields(prodFeats, btFeats);
-
-                LOG.info("   --- 🧠 ĐỐI SOÁT AI PREDICTION ---");
-                Float prodPred = prodPredMap.get(testSymbol);
-                Float btPred = btPredMap.get(testSymbol);
-
-                if (btPred == null || prodPred == null) {
-                    LOG.error("   ❌ Lỗi: Có 1 bên Predict bị NULL");
-                } else {
-                    float maxAbs = Math.max(Math.abs(prodPred), Math.abs(btPred));
-                    float percentDiff = (maxAbs == 0) ? 0 : (Math.abs(prodPred - btPred) / maxAbs) * 100f;
-
-                    if (percentDiff > 0.01f) {
-                        LOG.error("   ❌ LỆCH PREDICT [Prob 0]: PROD = {} | BT = {} | Lệch: {}%",
-                                String.format("%.6f", prodPred),
-                                String.format("%.6f", btPred),
-                                String.format("%.2f", percentDiff));
-                    } else {
-                        LOG.info("   ✅ PREDICTION KHỚP HOÀN HẢO! (Prob = {})", String.format("%.6f", prodPred));
+                // 🔥 LỌC NHỮNG COIN CÓ PROD PREDICT < 0.2
+                List<String> filteredSymbols = new ArrayList<>();
+                for (String sym : commonSymbols) {
+                    Float pPred = prodPredMap.get(sym);
+                    if (pPred != null && pPred < 0.2f) {
+                        filteredSymbols.add(sym);
                     }
+                }
+
+                if (filteredSymbols.isEmpty()) {
+                    LOG.info("   🎯 Không có coin nào có Prod Predict < 0.2 tại phút này để đối soát.");
+                    continue;
+                }
+
+                // 🔥 RANDOM TỐI ĐA 20 SYMBOLS
+                Collections.shuffle(filteredSymbols);
+                int checkLimit = Math.min(20, filteredSymbols.size());
+                List<String> testSymbols = filteredSymbols.subList(0, checkLimit);
+
+                LOG.info("   🎯 Bắt đầu đối soát chi tiết {}/{} coin (Prod Pred < 0.2)", testSymbols.size(), filteredSymbols.size());
+
+                int totalDiffFeatures = 0;
+                int totalDiffPredicts = 0;
+
+                for (String testSymbol : testSymbols) {
+                    FundingMarketFeatures prodFeats = prodFeatureMap.get(testSymbol);
+                    FundingMarketFeatures btFeats = btFeatureMap.get(testSymbol);
+
+                    int diffCount = compareFeatureFieldsCount(prodFeats, btFeats, testSymbol);
+                    if (diffCount > 0) {
+                        totalDiffFeatures++;
+                    }
+
+                    Float prodPred = prodPredMap.get(testSymbol);
+                    Float btPred = btPredMap.get(testSymbol);
+
+                    if (btPred == null || prodPred == null) {
+                        LOG.error("   ❌ [{}] Lỗi: Có 1 bên Predict bị NULL", testSymbol);
+                        totalDiffPredicts++;
+                    } else {
+                        float maxAbs = Math.max(Math.abs(prodPred), Math.abs(btPred));
+                        float percentDiff = (maxAbs == 0) ? 0 : (Math.abs(prodPred - btPred) / maxAbs) * 100f;
+
+                        if (percentDiff > 0.01f) {
+                            LOG.error("   ❌ [{}] LỆCH PREDICT [Prob 0]: PROD = {} | BT = {} | Lệch: {}%",
+                                    testSymbol,
+                                    String.format("%.6f", prodPred),
+                                    String.format("%.6f", btPred),
+                                    String.format("%.2f", percentDiff));
+                            totalDiffPredicts++;
+                        }
+                    }
+                }
+
+                if (totalDiffFeatures == 0 && totalDiffPredicts == 0) {
+                    LOG.info("   ✅ HOÀN HẢO! Cả {} coin đều khớp 100% Features và Predictions.", testSymbols.size());
+                } else {
+                    LOG.warn("   ⚠️ TỔNG KẾT PHÚT: Có {}/{} coin bị lệch Features, {}/{} coin bị lệch Prediction.",
+                            totalDiffFeatures, testSymbols.size(), totalDiffPredicts, testSymbols.size());
                 }
 
             } catch (Exception e) {
@@ -206,7 +238,43 @@ public class ProductionVsBacktestFundingComparator {
         }
     }
 
-    private void compareFeatureFields(FundingMarketFeatures prod, FundingMarketFeatures bt) {
+    // =========================================================================
+    // 🔥 TÍNH TOÁN MARKET DATA TRỰC TIẾP TỪ WARMUP DATA (KHẮC PHỤC LỖI = 0)
+    // =========================================================================
+    private MarketDataObject calculateMarketData(long targetTime,
+                                                 TreeMap<Long, Map<String, KlineObjectSimple>> warmupData,
+                                                 Map<String, KlineObjectSimple> targetMarketData) {
+        Map<String, Float> symbol2MaxPrice = new HashMap<>();
+        Map<String, Float> symbol2MinPrice = new HashMap<>();
+        int lookback = 15;
+
+        for (String symbol : targetMarketData.keySet()) {
+            float maxP = -1f;
+            float minP = Float.MAX_VALUE;
+            for (int i = 0; i < lookback; i++) {
+                long pastTime = targetTime - (i * 60000L);
+                Map<String, KlineObjectSimple> snapshot = (pastTime == targetTime) ? targetMarketData : warmupData.get(pastTime);
+                if (snapshot != null) {
+                    KlineObjectSimple k = snapshot.get(symbol);
+                    if (k != null) {
+                        if (k.maxPrice > maxP) maxP = k.maxPrice;
+                        if (k.minPrice < minP) minP = k.minPrice;
+                    }
+                }
+            }
+            if (maxP != -1f) symbol2MaxPrice.put(symbol, maxP);
+            if (minP != Float.MAX_VALUE) symbol2MinPrice.put(symbol, minP);
+        }
+
+        try {
+            return MarketBigChangeDetector.calMarketData(targetMarketData, symbol2MaxPrice, symbol2MinPrice);
+        } catch (Exception e) {
+            LOG.error("Lỗi khi tính toán Market Data On-The-Fly", e);
+            return new MarketDataObject(0f, 0f, 0f);
+        }
+    }
+
+    private int compareFeatureFieldsCount(FundingMarketFeatures prod, FundingMarketFeatures bt, String symbol) {
         int diffCount = 0;
         Field[] fields = FundingMarketFeatures.class.getFields();
         for (Field field : fields) {
@@ -234,25 +302,21 @@ public class ProductionVsBacktestFundingComparator {
                         float maxAbs = Math.max(Math.abs(p), Math.abs(b));
                         float diffPercent = (maxAbs == 0) ? 0 : (Math.abs(p - b) / maxAbs) * 100f;
 
-                        LOG.warn("      ⚠️ [FEATURE] {}: PROD = {} | BT = {} | Lệch: {}%",
+                        LOG.warn("      ⚠️ [{}] [FEATURE] {}: PROD = {} | BT = {} | Lệch: {}%",
+                                symbol,
                                 String.format("%-25s", field.getName()),
                                 String.format("%10.6f", p),
                                 String.format("%10.6f", b),
                                 String.format("%5.2f", diffPercent));
                     } else {
-                        LOG.warn("      ⚠️ [FEATURE] {}: PROD = {} | BT = {}", field.getName(), prodVal, btVal);
+                        LOG.warn("      ⚠️ [{}] [FEATURE] {}: PROD = {} | BT = {}", symbol, field.getName(), prodVal, btVal);
                     }
                 }
             } catch (Exception e) {
-                // Bỏ qua
+                // Bỏ qua field không thể truy cập
             }
         }
-
-        if (diffCount == 0) {
-            LOG.info("   ✅ Tất cả {} features khớp nhau 100%!", fields.length);
-        } else {
-            LOG.warn("   => Tổng lệch {}/{} Features.", diffCount, fields.length);
-        }
+        return diffCount;
     }
 
     private List<File> collectFeatureFiles(String path) {

@@ -36,6 +36,7 @@ public class Reporter {
             String logStats = LogMonitor.getStats(4); // Lấy thống kê 4 tiếng qua
             reportRunning.append("\n").append(logStats); // Ghép vào cuối báo cáo
             Utils.sendSms2Telegram(reportRunning.toString());
+            Utils.printMemoryUsage("Total ram used");
         } catch (Exception e) {
             e.printStackTrace();
         }

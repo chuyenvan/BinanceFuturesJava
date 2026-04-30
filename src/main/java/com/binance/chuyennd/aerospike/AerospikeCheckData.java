@@ -1,54 +1,69 @@
 package com.binance.chuyennd.aerospike;
+
 import com.aerospike.client.AerospikeClient;
 import com.aerospike.client.Info;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 public class AerospikeCheckData {
     public static void main(String[] args) {
-//        AerospikeClient client = new AerospikeClient("103.157.218.226", 3222);
-        AerospikeClient client = new AerospikeClient("103.157.218.242", 3222);
-        try {
+        Map<String, AerospikeClient> clients = new HashMap<>();
+        clients.put("226", new AerospikeClient("103.157.218.226", 3222));
+        clients.put("242", new AerospikeClient("103.157.218.242", 3222));
+        for (Map.Entry<String, AerospikeClient> entry : clients.entrySet()) {
+            AerospikeClient client = entry.getValue();
+            String host = entry.getKey();
+            try {
 
-            String namespace = "ticker";
+                String namespace = "ticker";
+                // truncate toàn bộ set
+//            client.truncate(null, namespace, "funding_pred_1m_v3", null);
+//            client.truncate(null, namespace, "funding_pred_1m_v2", null);
+//            client.truncate(null, namespace, "funding_pred_1m", null);
+//            client.truncate(null, namespace, "pred_40_1m", null);
+//            client.truncate(null, namespace, "ai_pred_1m", null);
+                // Lấy thống kê namespace
+                String nsResponse = Info.request(client.getNodes()[0], "namespace/" + namespace);
+                System.out.println("=== Namespace Stats ===");
+                printStatInMB(nsResponse, "memory-size");
+                printStatInMB(nsResponse, "memory_used_bytes");
+                printStatInMB(nsResponse, "device_total_bytes");
+                printStatInMB(nsResponse, "device_used_bytes");
 
-            // truncate toàn bộ set
-//            client.truncate(null, namespace, "ai_pred_market_full_basket_v2", null);
-            // Lấy thống kê namespace
-            String nsResponse = Info.request(client.getNodes()[0], "namespace/" + namespace);
-            System.out.println("=== Namespace Stats ===");
-            printStatInMB(nsResponse, "memory-size");
-            printStatInMB(nsResponse, "memory_used_bytes");
-            printStatInMB(nsResponse, "device_total_bytes");
-            printStatInMB(nsResponse, "device_used_bytes");
-
-            System.out.println("=== Set Stats (MB/GB) ===");
-            String setsResponse = Info.request(client.getNodes()[0], "sets/" + namespace);
+                System.out.println("=== Set Stats (MB/GB) ===");
+                String setsResponse = Info.request(client.getNodes()[0], "sets/" + namespace);
 
 
-            String[] sets = setsResponse.split(";");
-            for (String setStat : sets) {
-                if (setStat.contains("set=")) {
-                    String[] fields = setStat.split(":");
-                    String setName = "";
-                    long objects = 0;
-                    long memBytes = 0;
-                    long devBytes = 0;
+                String[] sets = setsResponse.split(";");
+                for (String setStat : sets) {
+                    if (setStat.contains("set=")) {
+                        String[] fields = setStat.split(":");
+                        String setName = "";
+                        long objects = 0;
+                        long memBytes = 0;
+                        long devBytes = 0;
 
-                    for (String f : fields) {
-                        if (f.startsWith("set=")) setName = f.split("=")[1];
-                        if (f.startsWith("objects=")) objects = Long.parseLong(f.split("=")[1]);
-                        if (f.startsWith("memory_data_bytes=")) memBytes = Long.parseLong(f.split("=")[1]);
-                        if (f.startsWith("device_data_bytes=")) devBytes = Long.parseLong(f.split("=")[1]);
+                        for (String f : fields) {
+                            if (f.startsWith("set=")) setName = f.split("=")[1];
+                            if (f.startsWith("objects=")) objects = Long.parseLong(f.split("=")[1]);
+                            if (f.startsWith("memory_data_bytes=")) memBytes = Long.parseLong(f.split("=")[1]);
+                            if (f.startsWith("device_data_bytes=")) devBytes = Long.parseLong(f.split("=")[1]);
+                        }
+                        if (objects == 0) continue;
+
+                        System.out.printf("Set: %s %s%n", host, setName);
+                        System.out.printf("  Objects: %d%n", objects);
+                        System.out.printf("  Memory Used: %s%n", formatSize(memBytes));
+                        System.out.printf("  Device Used: %s%n%n", formatSize(devBytes));
                     }
-
-                    System.out.printf("Set: %s%n", setName);
-                    System.out.printf("  Objects: %d%n", objects);
-                    System.out.printf("  Memory Used: %s%n", formatSize(memBytes));
-                    System.out.printf("  Device Used: %s%n%n", formatSize(devBytes));
                 }
-            }
 
-        } finally {
-            client.close();
+            } finally {
+                client.close();
+            }
         }
     }
 

@@ -438,7 +438,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             // 1.3 Chạy bù Funding Prediction
             LOG.info("▶️ 3/3: Kích hoạt GenerateFundingPredictionsTool...");
             try {
-                new GenerateFundingPredictionsTool().generateAndSave(timeToRun);
+                new GenerateFundingPredictionsTool().startGeneration(timeToRun, System.currentTimeMillis());
             } catch (Exception e) {
                 throw new RuntimeException("Lỗi khi chạy GenerateFundingPredictionsTool: " + e.getMessage(), e);
             }

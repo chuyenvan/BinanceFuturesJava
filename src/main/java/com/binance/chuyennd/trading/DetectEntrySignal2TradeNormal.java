@@ -16,7 +16,6 @@
 package com.binance.chuyennd.trading;
 
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
-import com.binance.chuyennd.ai_ml.data.SimpleSymbolMapper;
 import com.binance.chuyennd.ai_ml.features.export.entry.ComprehensiveMarketFeatureExtractor;
 import com.binance.chuyennd.ai_ml.features.export.entry.MarketFeatures;
 import com.binance.chuyennd.ai_ml.features.export.funding.FundingFeatureExtractor;
@@ -215,8 +214,7 @@ public class DetectEntrySignal2TradeNormal {
                     if (predictData != null) {
                         AiPredictionData preData = new AiPredictionData(
                                 timestamp,
-                                predictData.return15M, predictData.return1H, predictData.return4H, predictData.return24H,
-                                predictData.riskDrawdown4H, predictData.riskDrawdown24H
+                                predictData.return15M, predictData.return24H, predictData.riskDrawdown4H
                         );
                         DataManagerAerospikeFloatSim.saveAiPrediction1M(preData);
                     }
@@ -292,13 +290,6 @@ public class DetectEntrySignal2TradeNormal {
                 }
             }
 
-
-            // 1. Lấy danh sách candidate
-            Set<String> allSymbols = new HashSet<>();
-            allSymbols.addAll(symbol2FinalTicker.keySet());
-            allSymbols.removeAll(BudgetManager.getInstance().symbol2Pos.keySet());
-
-
             // 4. Final Trade Logic (Limit TOP 30)
             int countChecked = 0;
 
@@ -309,7 +300,7 @@ public class DetectEntrySignal2TradeNormal {
                 String symbol = entry.getValue();
                 Float symbolPred = entry.getKey();
                 KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
-                if (ticker == null) continue;
+                if (ticker == null || BudgetManager.getInstance().symbol2Pos.containsKey(symbol)) continue;
                 createOrderBuyRequest(symbol, ticker, MarketLevelChange.PREDICT_SYMBOL_TRADE,
                         symbol2Max15m.get(symbol), marketRate, predictData, symbolPred, symbol2LastTickers);
             }
@@ -421,8 +412,8 @@ public class DetectEntrySignal2TradeNormal {
         // Nếu là kèo AI Funding -> Dùng Logic Động
         AiPredictionData predict = new AiPredictionData(
                 ticker.startTime,
-                prediction.return15M, prediction.return1H, prediction.return4H, prediction.return24H,
-                prediction.riskDrawdown4H, prediction.riskDrawdown24H);
+                prediction.return15M, prediction.return24H, prediction.riskDrawdown4H
+        );
         if (levelChange == MarketLevelChange.PREDICT_SYMBOL_TRADE) {
             if (symbolPred != null) {
                 filterResult = aiRejectFilter.checkSignalDynamic(predict, symbolPred);

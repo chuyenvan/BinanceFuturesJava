@@ -1,11 +1,13 @@
 package com.binance.chuyennd.ai_ml.onnx.entry;
 
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
+import com.binance.chuyennd.ai_ml.features.export.HistoryManager;
 import com.binance.chuyennd.ai_ml.features.export.entry.ComprehensiveMarketFeatureExtractor;
 import com.binance.chuyennd.ai_ml.features.export.entry.MarketFeatures;
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
+import com.binance.chuyennd.tradecore.CoinRankManager;
 import com.binance.chuyennd.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -105,8 +107,8 @@ public class RunGeneratePredictions {
 
                         batchPredictions.put(timestamp, new AiPredictionData(
                                 timestamp,
-                                res.return15M, res.return1H, res.return4H, res.return24H,
-                                res.riskDrawdown4H, res.riskDrawdown24H
+                                res.return15M,  res.return24H,
+                                res.riskDrawdown4H
                         ));
                     }
                 }
@@ -139,6 +141,45 @@ public class RunGeneratePredictions {
         TreeMap<Long, MarketDataObject> data = DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
         if (data == null) return new TreeMap<>();
         return data;
+    }
+    // Thêm vào class RunGeneratePredictions.java
+
+    /**
+     * Hàm tính toán Predict cho Duy Nhất 1 thời điểm.
+     * Lưu ý: Extractor truyền vào phải được Warm-up/Update history trước khi gọi hàm này.
+     */
+    public AiPredictionData predictSingle(long timestamp,
+                                          Map<String, KlineObjectSimple> currentMarketSnapshot,
+                                          MarketDataObject rateChange,
+                                          OnnxInferenceManager aiBrain,
+                                          ComprehensiveMarketFeatureExtractor featureExtractor) {
+        try {
+            if (currentMarketSnapshot == null || currentMarketSnapshot.isEmpty()) return null;
+            // B. Warm-up 1500 phút nến để tính toán lại
+            LOG.info("   ⏳ Đang Warm-up 1500 nến từ Aerospike...");
+            HistoryManager.getInstance().getAllHistory().clear();
+            CoinRankManager.getInstance().resetCache();
+
+            // 1. Trích xuất Features (Dựa trên history đã được update trong featureExtractor)
+            MarketFeatures features = featureExtractor.extractAllFeatures(timestamp, currentMarketSnapshot, rateChange);
+
+            // 2. Chạy AI Inference
+            OnnxInferenceManager.PredictionResult res = aiBrain.predictAll(features);
+
+            // 3. Đóng gói kết quả
+            return new AiPredictionData(
+                    timestamp,
+                    res.return15M, res.return24H, res.riskDrawdown4H
+            );
+        } catch (Exception e) {
+            LOG.error("❌ Lỗi khi tính predictSingle tại " + Utils.normalizeDateYYYYMMDDHHmm(timestamp), e);
+            return null;
+        }
+    }
+
+    // Hàm bổ trợ để load Model tập trung
+    public OnnxInferenceManager getModelManager() throws Exception {
+        return new OnnxInferenceManager(MODEL_DIR);
     }
 
 }

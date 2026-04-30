@@ -237,7 +237,7 @@ public class BinanceOrderTradingManager {
                         System.currentTimeMillis() - 90 * Utils.TIME_MINUTE, 90));
             }
             // reporter
-            if (Utils.getCurrentMinute() % 60 == 0 && Utils.getCurrentSecond() == 30) {
+            if (Utils.getCurrentMinute() % 30 == 0 && Utils.getCurrentSecond() == 30) {
                 executorServiceOrderNew.execute(() -> new Reporter().buildReport());
             }
         } catch (Exception e) {

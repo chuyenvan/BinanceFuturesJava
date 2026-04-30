@@ -414,7 +414,8 @@ public class Utils {
     public static void main(String[] args) {
 //        System.out.println(Utils.sendSms2Skype("test skype"));
 //        System.out.println(Utils.normalizeHHmm(System.currentTimeMillis()));
-        Utils.sendSms2Telegram("test");
+        System.out.println(Utils.calPriceTarget("BSBUSDT", 0.43919724f, OrderSide.SELL, -0.025f));
+//        Utils.sendSms2Telegram("test");
 //        for (int i = 0; i < 5; i++) {
 //            long time = System.currentTimeMillis() - i * Utils.TIME_WEEK;
 //            LOG.info("{} -> {}", Utils.normalizeDateYYYYMMDDHHmm(time),
