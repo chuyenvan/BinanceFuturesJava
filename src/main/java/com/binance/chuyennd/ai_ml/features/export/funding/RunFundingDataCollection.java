@@ -25,7 +25,6 @@ public class RunFundingDataCollection {
 
     public static void main(String[] args) throws Exception {
         // 1. CẤU HÌNH THAM SỐ (Override Configs theo yêu cầu)
-        Configs.PREDICT_SYMBOL_RATE_DOWN_15M = -0.013f;
         Configs.PREDICT_SYMBOL_RATE_DOWN_15M = -0.025f;
         Configs.PREDICT_SYMBOL_RATE_UP_AVG = 0.004f;
         Configs.PREDICT_SYMBOL_RATE_DOWN_AVG = -0.005f;
@@ -121,8 +120,6 @@ public class RunFundingDataCollection {
 
             if (!isCollecting) continue;
             try {
-
-
                     // 3. Lấy danh sách coin tiềm năng từ
                     for (String symbol : snapshot.keySet()) {
                         KlineObjectSimple ticker = snapshot.get(symbol);

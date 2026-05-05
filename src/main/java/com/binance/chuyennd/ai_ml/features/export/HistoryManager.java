@@ -39,10 +39,13 @@ public class HistoryManager {
             KlineObjectSimple kline = entry.getValue();
 
             ArrayList<KlineObjectSimple> list = historyMap.computeIfAbsent(symbol, k -> new ArrayList<>());
-
-            // Logic check duplicate (Dùng .longValue() để phòng trường hợp kiểu Number)
-            if (!list.isEmpty() && list.get(list.size() - 1).startTime.longValue() == kline.startTime.longValue()) {
-                list.remove(list.size() - 1);
+            try {
+                // Logic check duplicate (Dùng .longValue() để phòng trường hợp kiểu Number)
+                if (!list.isEmpty() && list.get(list.size() - 1).startTime.longValue() == kline.startTime.longValue()) {
+                    list.remove(list.size() - 1);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
             }
 
             list.add(kline);
@@ -226,7 +229,7 @@ public class HistoryManager {
         return drops.stream().limit(60).map(Map.Entry::getKey).collect(Collectors.toList());
     }
 
-    public  Map<String, ArrayList<KlineObjectSimple>> getAllHistory() {
+    public Map<String, ArrayList<KlineObjectSimple>> getAllHistory() {
         return historyMap;
     }
 }

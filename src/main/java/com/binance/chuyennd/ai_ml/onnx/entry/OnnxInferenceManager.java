@@ -57,7 +57,7 @@ public class OnnxInferenceManager implements AutoCloseable {
 
             float risk4 = pRisk4H.predict(featuresV3);
 
-            return new PredictionResult(r15,  r24, risk4 );
+            return new PredictionResult(r15, r24, risk4);
         } catch (Exception e) {
             LOG.error("❌ Inference Error", e);
             return new PredictionResult(0, 0, 0);
@@ -104,7 +104,7 @@ public class OnnxInferenceManager implements AutoCloseable {
         float panic_index = vol1H * (100f - rsi14);
 
         // 3. XÂY DỰNG MẢNG FEATURE (Thứ tự phải khớp tuyệt đối với danh sách feature_columns)
-        return new float[] {
+        return new float[]{
                 // --- Nhóm Tín Hiệu Nhanh ---
                 mom15M,                             // 1. momentum15M
                 mom1H,                              // 2. momentum1H
@@ -156,7 +156,7 @@ public class OnnxInferenceManager implements AutoCloseable {
      * Giữ nguyên logic cũ (33 features)
      */
     private float[] extractFeaturesV3Full(MarketFeatures f) {
-        return new float[] {
+        return new float[]{
                 (float) f.momentum1M, (float) f.momentum5M, (float) f.momentum15M, (float) f.momentum1H,
                 (float) f.momentum4H, (float) f.momentum24H, (float) f.momentumAcceleration,
                 (float) f.trendStrengthETH, (float) f.trendConsistency,
@@ -269,16 +269,18 @@ public class OnnxInferenceManager implements AutoCloseable {
         public float return15M, return24H;
         public float riskDrawdown4H;
 
-        public PredictionResult(float riskDrawdown4H, float return24H, float return15M) {
-            this.riskDrawdown4H = riskDrawdown4H;
-            this.return24H = return24H;
+        // Sửa thứ tự tham số truyền vào cho đúng tên biến
+        public PredictionResult(float return15M, float return24H, float riskDrawdown4H) {
             this.return15M = return15M;
+            this.return24H = return24H;
+            this.riskDrawdown4H = riskDrawdown4H;
         }
 
         @Override
         public String toString() {
-            return String.format("[15M:%.2f%% 1H:%.2f%% 4H:%.2f%% | Risk4H:%.2f%%]",
-                    return15M*100,  return24H*100, riskDrawdown4H*100);
+            // Chỉ để 3 format tương ứng với 3 biến
+            return String.format("[15M:%.2f%% 24H:%.2f%% | Risk4H:%.2f%%]",
+                    return15M * 100, return24H * 100, riskDrawdown4H * 100);
         }
     }
 }

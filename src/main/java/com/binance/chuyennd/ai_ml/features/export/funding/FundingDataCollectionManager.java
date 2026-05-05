@@ -1,9 +1,12 @@
 package com.binance.chuyennd.ai_ml.features.export.funding;
 
+import com.binance.chuyennd.ai_ml.features.export.HistoryManager;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
+import com.binance.chuyennd.tradecore.CoinRankManager;
 import com.binance.chuyennd.utils.Utils;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,9 +67,10 @@ public class FundingDataCollectionManager {
                               TreeMap<Long, Map<String, KlineObjectSimple>> futureLookupData,
                               MarketDataObject marketData) {
         try {
+            final List<String> basket = HistoryManager.getInstance().findPotentialLosers(currentTimestamp);
 
             FundingMarketFeatures features = featureExtractor.extractFeatures(
-                    currentTimestamp, order, currentSnapshot, marketData);
+                    currentTimestamp, order, currentSnapshot, marketData, basket);
 
             if (features != null) {
                 String csvLine = calculateLabelsAndFormat(features, order, futureLookupData);
@@ -96,6 +100,13 @@ public class FundingDataCollectionManager {
         if (f.label40 >= 0 && f.label40 <= 4) label40Counts[f.label40]++;
 
         // 3. Format CSV
+        StringBuilder sb = getStringBuilder(f);
+
+        return sb.toString();
+    }
+
+    @NotNull
+    private static StringBuilder getStringBuilder(FundingMarketFeatures f) {
         StringBuilder sb = new StringBuilder();
 
         // Context
@@ -116,8 +127,7 @@ public class FundingDataCollectionManager {
 
         // Labels
         sb.append(String.format("%d,%d", f.label6, f.label40));
-
-        return sb.toString();
+        return sb;
     }
 
     // Hàm chung để tính loại Label (0-4) dựa trên Target Price

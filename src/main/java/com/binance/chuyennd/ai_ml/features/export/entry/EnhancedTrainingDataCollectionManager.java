@@ -27,44 +27,38 @@ public class EnhancedTrainingDataCollectionManager {
         new File(outputPath).mkdirs();
     }
 
-    // Thêm vào class EnhancedTrainingDataCollectionManager
     public void clearBuffer() {
         collectedFeatures.clear();
-        // LOG.info("Buffer cleared (Warm-up complete)");
     }
 
-
+    /**
+     * Chỉ nhận và gán 3 nhãn quan trọng: Return 15m, Return 24h và Max Drawdown 4h
+     */
     public void processMarketData(long timestamp,
                                   Map<String, KlineObjectSimple> marketData,
-                                  MarketDataObject marketRate, List<String> targetBasket,
-                                  float ret15M, float ret1H, float ret4H, float ret24H,
-                                  float maxDD4H, float maxDD24H) {
+                                  MarketDataObject marketRate,
+                                  float ret15M, float ret24H, float maxDD4H) {
 
         if (!shouldCollectData(marketRate)) return;
 
         try {
             MarketFeatures features = featureExtractor.extractAllFeatures(timestamp, marketData, marketRate);
 
-            // Gán Labels (Output)
+            // 🔥 Gán 3 nhãn duy nhất (Khớp với MarketFeatures mới)
             features.futureReturn15M = ret15M;
-            features.futureReturn1H = ret1H;
-            features.futureReturn4H = ret4H;
             features.futureReturn24H = ret24H;
-
             features.maxDrawdownNext4H = maxDD4H;
-            features.maxDrawdownNext24H = maxDD24H; // Đã gán vào Object để ghi CSV
-
-            // Gán nhãn tham khảo
-            assignRegimeLabel(features, ret15M, ret1H, ret4H, maxDD4H);
 
             collectedFeatures.add(features);
             triggeredCollections++;
 
             if (triggeredCollections % 1000 == 0) {
-                LOG.info("Collected {}. Label: {} | 15M: {}% | DD24H: {}%",
-                        triggeredCollections, features.regimeLabel,
+                // Log thông tin 3 nhãn để bác theo dõi tiến độ
+                LOG.info("Collected {}. Label: 15M: {}% | 24H: {}% | DD4H: {}%",
+                        triggeredCollections,
                         String.format("%.2f", ret15M * 100),
-                        String.format("%.2f", maxDD24H * 100));
+                        String.format("%.2f", ret24H * 100),
+                        String.format("%.2f", maxDD4H * 100));
             }
 
         } catch (Exception e) {
@@ -72,15 +66,9 @@ public class EnhancedTrainingDataCollectionManager {
         }
     }
 
-    // ... (Các hàm private khác giữ nguyên như cũ) ...
-    private void assignRegimeLabel(MarketFeatures f, float r15m, float r1h, float r4h, float dd4h) {
-        if (r15m > 0.008 && dd4h > -0.03) f.regimeLabel = "SCALP_WIN";
-        else if (r4h > 0.01 && r1h < 0.0) f.regimeLabel = "BUY_DIP";
-        else if (r4h < -0.02 && r1h < -0.01) f.regimeLabel = "CATCH_BOTTOM";
-        else if (dd4h < -0.05) f.regimeLabel = "DONT_CATCH";
-        else f.regimeLabel = "WAIT";
-    }
-
+    /**
+     * Giữ nguyên logic lọc điểm dữ liệu có biến động mạnh để train hiệu quả hơn
+     */
     private boolean shouldCollectData(MarketDataObject rate) {
         if (rate == null) return false;
         return Math.abs(rate.rateDown15MAvg) > 0.0018
@@ -93,6 +81,7 @@ public class EnhancedTrainingDataCollectionManager {
         try {
             String filename = outputPath + "/features_" + System.currentTimeMillis() + ".csv";
             try (PrintWriter writer = new PrintWriter(new FileWriter(filename))) {
+                // Header và Row lúc này chỉ chứa 3 cột label cuối cùng
                 writer.println(collectedFeatures.get(0).toCSVHeader());
                 for (MarketFeatures f : collectedFeatures) {
                     writer.println(f.toCSVRow());

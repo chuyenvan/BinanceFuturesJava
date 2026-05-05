@@ -222,6 +222,7 @@ public class GenerateEntryDcaPredictionsLabel40Tool {
                 Set<String> symbolFundingBuy = symbol2Ticker.keySet();
 
                 // 3. FEATURE EXTRACTION
+                final List<String> basket = CoinRankManager.getInstance().getTopCoin(time);
                 List<PrepareData> batchInput = symbolFundingBuy.parallelStream()
                         .map(symbol -> {
                             try {
@@ -238,8 +239,8 @@ public class GenerateEntryDcaPredictionsLabel40Tool {
                                 dummyOrder.lastEntry = ticker.priceClose;
 
                                 FundingMarketFeatures features = extractor.extractFeatures(
-                                        time, dummyOrder, symbol2Ticker, time2MarketData.get(time)
-                                );
+                                        time, dummyOrder, symbol2Ticker, time2MarketData.get(time),
+                                        basket);
 
                                 if (features != null) {
                                     return new PrepareData(symId, aiBrain.extractFeaturesToArray(features));

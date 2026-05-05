@@ -1,6 +1,7 @@
 package com.binance.chuyennd.ai_ml.features.export.entry;
 
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
+import com.binance.chuyennd.ai_ml.features.export.HistoryManager;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.utils.Utils;
@@ -44,10 +45,10 @@ public class RunFullDataCollection {
                         DataManagerAerospikeFloatSim.readDataFromAerospike1M(currentTime + Utils.TIME_DAY);
 
                 TreeMap<Long, Map<String, KlineObjectSimple>> lookupData = new TreeMap<>();
-                if (todayData != null) lookupData.putAll(todayData);
-                if (tomorrowData != null) lookupData.putAll(tomorrowData);
+                lookupData.putAll(todayData);
+                lookupData.putAll(tomorrowData);
 
-                if (todayData != null && !todayData.isEmpty()) {
+                if (!todayData.isEmpty()) {
                     processDailyData(todayData, lookupData, time2Rate, dataManager);
                 }
 
@@ -75,25 +76,20 @@ public class RunFullDataCollection {
         for (Map.Entry<Long, Map<String, KlineObjectSimple>> entry : todayData.entrySet()) {
             Long timestamp = entry.getKey();
             Map<String, KlineObjectSimple> currentMarketSnapshot = entry.getValue();
+//
+//            List<String> targetBasket = new ArrayList<>(currentMarketSnapshot.keySet());
+            List<String> targetBasket = HistoryManager.getInstance().findPotentialLosers(timestamp);
 
-            // 🔥 THAY ĐỔI LỚN TẠI ĐÂY:
-            // Gọi Manager để (1) Update History vào Extractor và (2) Lấy Basket từ logic bên trong Extractor
-            List<String> targetBasket = new ArrayList<>(currentMarketSnapshot.keySet());
-
-            // Tính toán Labels (Targets) dựa trên Basket vừa lấy được
+            // Chỉ tính toán 3 nhãn cần thiết
             float ret15M = calculateBasketMaxPotential(lookupData, timestamp, 15, targetBasket);
-            float ret1H = calculateBasketMaxPotential(lookupData, timestamp, 60, targetBasket);
-            float ret4H = calculateBasketMaxPotential(lookupData, timestamp, 240, targetBasket);
             float ret24H = calculateBasketMaxPotential(lookupData, timestamp, 1440, targetBasket);
-
             float maxDD4H = calculateBasketMaxDrawdown(lookupData, timestamp, 240, targetBasket);
-            float maxDD24H = calculateBasketMaxDrawdown(lookupData, timestamp, 1440, targetBasket);
 
             MarketDataObject rate = (rateData != null) ? rateData.get(timestamp) : null;
 
-            // Truyền lại basket vào processMarketData (Extractor sẽ dùng lại, không cần tính lại)
+            // Đưa vào dataManager (Đảm bảo bên trong Manager này gán đúng 3 trường vào MarketFeatures)
             dataManager.processMarketData(timestamp, currentMarketSnapshot, rate,
-                    targetBasket, ret15M, ret1H, ret4H, ret24H, maxDD4H, maxDD24H);
+                    ret15M, ret24H, maxDD4H); //
         }
     }
     private float calculateBasketMaxPotential(TreeMap<Long, Map<String, KlineObjectSimple>> data, Long currentTs,

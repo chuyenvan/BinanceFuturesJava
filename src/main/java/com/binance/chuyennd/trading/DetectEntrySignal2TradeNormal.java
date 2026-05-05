@@ -18,8 +18,8 @@ package com.binance.chuyennd.trading;
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.ai_ml.features.export.entry.ComprehensiveMarketFeatureExtractor;
 import com.binance.chuyennd.ai_ml.features.export.entry.MarketFeatures;
-import com.binance.chuyennd.ai_ml.features.export.funding.FundingFeatureExtractor;
 import com.binance.chuyennd.ai_ml.features.export.funding.FundingMarketFeatures;
+import com.binance.chuyennd.ai_ml.features.export.fundingv2.FundingFeatureExtractorV2;
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.ai_ml.onnx.entry.AIRejectFilter;
 import com.binance.chuyennd.ai_ml.onnx.entry.OnnxInferenceManager;
@@ -69,7 +69,7 @@ public class DetectEntrySignal2TradeNormal {
 
     // --- Biến AI Funding (MỚI) ---
     private FundingOnnxInferenceManager fundingBrain;
-    private FundingFeatureExtractor fundingExtractor;
+    private FundingFeatureExtractorV2 fundingExtractor;
 
 
     public static void main(String[] args) throws InterruptedException, ParseException {
@@ -290,13 +290,9 @@ public class DetectEntrySignal2TradeNormal {
                 }
             }
 
-            // 4. Final Trade Logic (Limit TOP 30)
-            int countChecked = 0;
 
             // Duyệt qua danh sách đã sắp xếp (con ngon nhất duyệt trước)
             for (Map.Entry<Float, String> entry : sortedCandidates.entrySet()) {
-                if (countChecked >= 30) break; // Chỉ lấy Top 30
-                countChecked++;
                 String symbol = entry.getValue();
                 Float symbolPred = entry.getKey();
                 KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
@@ -341,7 +337,7 @@ public class DetectEntrySignal2TradeNormal {
         List<FundingMarketFeatures> aiFeaturesList = new ArrayList<>();
         Map<String, FundingMarketFeatures> symbol2FundingFeatures = new HashMap<>();
         Map<String, Float> symbol2FundingPred = new HashMap<>();
-
+        final List<String> basket = CoinRankManager.getInstance().getTopCoin(time);
         for (String symbol : allSymbols) {
             KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
             if (!Utils.isTickerAvailable(ticker)) continue;
@@ -355,8 +351,8 @@ public class DetectEntrySignal2TradeNormal {
                 MarketDataObject marketData = new MarketDataObject(rateDownAvg,
                         rateUpAvg, rateDown15MAvg);
                 FundingMarketFeatures feats = fundingExtractor.extractFeatures(
-                        time, dummyOrder, symbol2FinalTicker, marketData
-                );
+                        time, dummyOrder, symbol2FinalTicker, marketData,
+                        basket);
                 if (feats != null) {
                     aiCandidates.add(symbol);
                     aiFeaturesList.add(feats);
@@ -567,7 +563,7 @@ public class DetectEntrySignal2TradeNormal {
             if (new File(MODEL_FUNDING_PATH).exists()) {
                 LOG.info("🚀 Initializing Funding AI from: {}", MODEL_FUNDING_PATH);
                 this.fundingBrain = new FundingOnnxInferenceManager(MODEL_FUNDING_PATH);
-                this.fundingExtractor = new FundingFeatureExtractor();
+                this.fundingExtractor = new FundingFeatureExtractorV2();
 
                 // Đồng bộ history cho Funding Extractor luôn
                 initDataFromTickerMap(time2Tickers);

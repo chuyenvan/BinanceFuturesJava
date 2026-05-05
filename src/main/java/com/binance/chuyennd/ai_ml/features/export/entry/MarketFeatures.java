@@ -9,42 +9,42 @@ public class MarketFeatures implements Serializable {
     public long timestamp;
     public String dateKey;
 
-    // === GROUP 1: BTC MACRO (Thị trường chung) ===
-    public float momentum1M;      // BTC
-    public float momentum5M;      // BTC
-    public float momentum15M;     // BTC
-    public float momentum1H;      // BTC
-    public float momentum4H;      // BTC
-    public float momentum24H;     // BTC
-    public float momentumAcceleration; // BTC
+    // === GROUP 1: BTC MACRO ===
+    public float momentum1M;
+    public float momentum5M;
+    public float momentum15M;
+    public float momentum1H;
+    public float momentum4H;
+    public float momentum24H;
+    public float momentumAcceleration;
     public float trendStrengthETH;
     public float trendConsistency;
 
-    public float volatility1M;    // BTC
-    public float volatility15M;   // BTC
-    public float volatility1H;    // BTC
-    public float volatility24H;   // BTC
+    public float volatility1M;
+    public float volatility15M;
+    public float volatility1H;
+    public float volatility24H;
     public float volatilityTermStructure;
     public String volatilityRegime;
 
-    public float rsi14;           // BTC RSI
-    public float volumeSpike;     // BTC Volume
-    public float distMA20;        // BTC MA
+    public float rsi14;
+    public float volumeSpike;
+    public float distMA20;
 
-    // === GROUP 2: MARKET BREADTH (Độ rộng) ===
+    // === GROUP 2: MARKET BREADTH ===
     public float advanceDeclineRatio;
     public float percentAboveMA20;
     public float volumeRatioUpDown;
     public float marketBreadthStrength;
     public float btcDominance;
 
-    // === GROUP 3: 🔥 BASKET SPECIFIC (Của chính rổ coin định mua) ===
-    public float basketMomentum15M; // TB Momentum 15M của rổ
-    public float basketMomentum1H;  // TB Momentum 1H của rổ
-    public float basketRsi14;       // TB RSI 14 của rổ (Quan trọng nhất để bắt đáy)
-    public float basketVolSpike;    // TB Volume Spike của rổ (Tiền vào hay chưa)
+    // === GROUP 3: BASKET SPECIFIC ===
+    public float basketMomentum15M;
+    public float basketMomentum1H;
+    public float basketRsi14;
+    public float basketVolSpike;
 
-    // === GROUP 4: FUNDING (Của rổ) ===
+    // === GROUP 4: FUNDING ===
     public float fundingRateRaw;
     public float fundingRateAvg24H;
     public float fundingRateTrend;
@@ -55,16 +55,10 @@ public class MarketFeatures implements Serializable {
     public int weekOfMonth;
     public int monthOfYear;
 
-    // === LABELS ===
-    public String regimeLabel;
-    public float futureReturn15M;
-    public float futureReturn1H;
-    public float futureReturn4H;
-    public float futureReturn24H;
-    public float maxDrawdownNext4H;
-    public float maxDrawdownNext24H;
-
-
+    // === LABELS (Đã rút gọn còn 3 nhãn chính) ===
+    public float futureReturn15M;  //
+    public float futureReturn24H;  //
+    public float maxDrawdownNext4H; //
 
     public String toCSVHeader() {
         return "timestamp,momentum1M,momentum5M,momentum15M,momentum1H,momentum4H,momentum24H," +
@@ -72,19 +66,19 @@ public class MarketFeatures implements Serializable {
                 "volatility1M,volatility15M,volatility1H,volatility24H,volatilityTermStructure," +
                 "volatilityRegime," +
                 "advanceDeclineRatio,percentAboveMA20,volumeRatioUpDown,marketBreadthStrength,btcDominance," +
-                "rsi14,volumeSpike,distMA20," + // BTC Features
-                "basketMomentum15M,basketMomentum1H,basketRsi14,basketVolSpike," + // 🔥 BASKET Features
+                "rsi14,volumeSpike,distMA20," +
+                "basketMomentum15M,basketMomentum1H,basketRsi14,basketVolSpike," +
                 "fundingRateRaw,fundingRateAvg24H,fundingRateTrend," +
                 "hourOfDay,dayOfWeek,weekOfMonth,monthOfYear," +
-                "regimeLabel,futureReturn15M,futureReturn1H,futureReturn4H,futureReturn24H," +
-                "maxDrawdownNext4H,maxDrawdownNext24H";
+                "futureReturn15M,futureReturn24H,maxDrawdownNext4H"; // Đã bỏ các nhãn khác
     }
 
     public String toCSVRow() {
         StringBuilder sb = new StringBuilder();
         sb.append(timestamp).append(",");
 
-        // BTC Momentum
+        // BTC Momentum & Volatility & Breadth & Indicators & Basket & Funding & Time ...
+        // (Giữ nguyên các append cũ cho tới phần Labels)
         sb.append(formatDouble(momentum1M)).append(",");
         sb.append(formatDouble(momentum5M)).append(",");
         sb.append(formatDouble(momentum15M)).append(",");
@@ -94,52 +88,36 @@ public class MarketFeatures implements Serializable {
         sb.append(formatDouble(momentumAcceleration)).append(",");
         sb.append(formatDouble(trendStrengthETH)).append(",");
         sb.append(formatDouble(trendConsistency)).append(",");
-
-        // BTC Volatility
         sb.append(formatDouble(volatility1M)).append(",");
         sb.append(formatDouble(volatility15M)).append(",");
         sb.append(formatDouble(volatility1H)).append(",");
         sb.append(formatDouble(volatility24H)).append(",");
         sb.append(formatDouble(volatilityTermStructure)).append(",");
         sb.append(escapeCSV(volatilityRegime)).append(",");
-
-        // Breadth
         sb.append(formatDouble(advanceDeclineRatio)).append(",");
         sb.append(formatDouble(percentAboveMA20)).append(",");
         sb.append(formatDouble(volumeRatioUpDown)).append(",");
         sb.append(formatDouble(marketBreadthStrength)).append(",");
         sb.append(formatDouble(btcDominance)).append(",");
-
-        // BTC Indicators
         sb.append(formatDouble(rsi14)).append(",");
         sb.append(formatDouble(volumeSpike)).append(",");
         sb.append(formatDouble(distMA20)).append(",");
-
-        // 🔥 BASKET Indicators
         sb.append(formatDouble(basketMomentum15M)).append(",");
         sb.append(formatDouble(basketMomentum1H)).append(",");
         sb.append(formatDouble(basketRsi14)).append(",");
         sb.append(formatDouble(basketVolSpike)).append(",");
-
-        // Funding
         sb.append(formatDouble(fundingRateRaw)).append(",");
         sb.append(formatDouble(fundingRateAvg24H)).append(",");
         sb.append(formatDouble(fundingRateTrend)).append(",");
-
-        // Time
         sb.append(hourOfDay).append(",");
         sb.append(dayOfWeek).append(",");
         sb.append(weekOfMonth).append(",");
         sb.append(monthOfYear).append(",");
 
-        // Labels
-        sb.append(escapeCSV(regimeLabel)).append(",");
-        sb.append(formatDouble(futureReturn15M)).append(",");
-        sb.append(formatDouble(futureReturn1H)).append(",");
-        sb.append(formatDouble(futureReturn4H)).append(",");
-        sb.append(formatDouble(futureReturn24H)).append(",");
-        sb.append(formatDouble(maxDrawdownNext4H)).append(",");
-        sb.append(formatDouble(maxDrawdownNext24H));
+        // Labels (Chỉ còn 3 cột)
+        sb.append(formatDouble(futureReturn15M)).append(","); //
+        sb.append(formatDouble(futureReturn24H)).append(","); //
+        sb.append(formatDouble(maxDrawdownNext4H));           //
 
         return sb.toString();
     }

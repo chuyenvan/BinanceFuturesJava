@@ -31,7 +31,7 @@ public class CheckGapPredictMarket {
             SimpleDateFormat keyFmt = new SimpleDateFormat("yyyyMMdd-HHmm");
 
             long startTime = dayFmt.parse(startDateStr).getTime() + 7 * Utils.TIME_HOUR;
-            long endTime = System.currentTimeMillis();
+            long endTime = System.currentTimeMillis()- 2 * Utils.TIME_DAY;
             long step = 60000L;
 
             BatchPolicy batchPolicy = new BatchPolicy();

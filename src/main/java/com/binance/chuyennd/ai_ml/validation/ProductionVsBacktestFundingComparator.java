@@ -130,11 +130,11 @@ public class ProductionVsBacktestFundingComparator {
                             Configs.LEVERAGE_ORDER, symbol, targetTime, targetTime, OrderSide.BUY
                     );
                     dummyOrder.lastEntry = ticker.priceClose;
-
+                    final List<String> basket = CoinRankManager.getInstance().getTopCoin(targetTime);
                     // Extract Feature (Giữ nguyên tham số không sửa đổi theo ý bác)
                     FundingMarketFeatures features = btExtractor.extractFeatures(
-                            targetTime, dummyOrder, symbol2Ticker, marketData
-                    );
+                            targetTime, dummyOrder, symbol2Ticker, marketData,
+                            basket);
 
                     if (features != null) {
                         validSymbols.add(symbol);

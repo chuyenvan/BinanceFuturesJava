@@ -6,6 +6,7 @@ import com.binance.chuyennd.ai_ml.features.export.funding.FundingMarketFeatures;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
+import com.binance.chuyennd.tradecore.CoinRankManager;
 import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
@@ -118,6 +119,7 @@ public class GenerateFundingPredictionsTool {
                 if (isWarmup) continue;
 
                 // 3. TRÍCH XUẤT ĐẶC TRƯNG - DÙNG CHO TOÀN BỘ COIN (NO FILTER)
+                final List<String> basket = CoinRankManager.getInstance().getTopCoin(time);
                 List<PrepareData> batchInput = symbol2Ticker.keySet().parallelStream()
                         .map(symbol -> {
                             try {
@@ -135,7 +137,7 @@ public class GenerateFundingPredictionsTool {
 
                                 // Tính toán bộ Features (Không áp dụng filter momentum/rate ở đây)
                                 FundingMarketFeatures features = extractor.extractFeatures(
-                                        time, dummyOrder, symbol2Ticker, time2MarketData.get(time)
+                                        time, dummyOrder, symbol2Ticker, time2MarketData.get(time), basket
                                 );
 
                                 if (features != null) {

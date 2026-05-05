@@ -22,7 +22,7 @@ public class FundingFeatureExtractor {
 
     public FundingMarketFeatures extractFeatures(long currentTimestamp, OrderTargetInfoTest order,
                                                  Map<String, KlineObjectSimple> currentSnapshot,
-                                                 MarketDataObject rate) {
+                                                 MarketDataObject rate, List<String> targetBasket) {
 
         KlineObjectSimple kline = currentSnapshot.get(order.symbol);
         if (kline == null) return null;
@@ -54,7 +54,7 @@ public class FundingFeatureExtractor {
         f.volatilityShock = calculateVolatilityShock(order.symbol, kline);
 
         // --- 3. BASKET SPECIFIC ---
-        List<String> targetBasket = CoinRankManager.getInstance().getTopCoin(currentTimestamp);
+
         if (targetBasket == null || targetBasket.isEmpty()) targetBasket = Collections.singletonList("BTCUSDT");
         extractBasketFeatures(f, targetBasket, currentTimestamp);
 
