@@ -8,6 +8,7 @@ settings.xml
 *.data
 *.idea
 *.rar
+*.gz
 /.idea
 .idea/compiler.xml
 .idea/dbnavigator.xml

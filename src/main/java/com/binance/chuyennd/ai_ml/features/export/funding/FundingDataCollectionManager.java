@@ -1,6 +1,7 @@
 package com.binance.chuyennd.ai_ml.features.export.funding;
 
 import com.binance.chuyennd.ai_ml.features.export.HistoryManager;
+import com.binance.chuyennd.ai_ml.features.export.fundingv2.FundingFeatureExtractorV2;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
@@ -20,7 +21,7 @@ public class FundingDataCollectionManager {
     private final String outputDir;
     private final List<String> buffer = new ArrayList<>();
     private int collectedCount = 0;
-    private final FundingFeatureExtractor featureExtractor = new FundingFeatureExtractor();
+    private final FundingFeatureExtractorV2 featureExtractor = new FundingFeatureExtractorV2();
 
 
     // Counter cho 2 loại label

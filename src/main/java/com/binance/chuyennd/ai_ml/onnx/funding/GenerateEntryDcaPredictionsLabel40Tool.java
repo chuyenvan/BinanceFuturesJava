@@ -1,8 +1,8 @@
 package com.binance.chuyennd.ai_ml.onnx.funding;
 
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
-import com.binance.chuyennd.ai_ml.features.export.funding.FundingFeatureExtractor;
 import com.binance.chuyennd.ai_ml.features.export.funding.FundingMarketFeatures;
+import com.binance.chuyennd.ai_ml.features.export.fundingv2.FundingFeatureExtractorV2;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
@@ -147,7 +147,7 @@ public class GenerateEntryDcaPredictionsLabel40Tool {
             TreeMap<Long, MarketDataObject> time2MarketData,
             ConcurrentHashMap<String, Short> symbolMap
     ) {
-        FundingFeatureExtractor extractor = new FundingFeatureExtractor();
+        FundingFeatureExtractorV2 extractor = new FundingFeatureExtractorV2();
         TreeMap<Long, Float> time2RateDown15MAvg = new TreeMap<>();
 
         // --- WARMUP ---
@@ -169,7 +169,7 @@ public class GenerateEntryDcaPredictionsLabel40Tool {
                              EntryDcaOnnxInferenceManager aiBrain,
                              ConcurrentHashMap<String, Short> symbolMap,
                              boolean isWarmup,
-                             FundingFeatureExtractor extractor,
+                             FundingFeatureExtractorV2 extractor,
                              TreeMap<Long, Float> time2RateDown15MAvg
     ) {
         long currentTime = start;

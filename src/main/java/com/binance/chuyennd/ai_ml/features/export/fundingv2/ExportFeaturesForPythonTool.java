@@ -167,9 +167,16 @@ public class ExportFeaturesForPythonTool {
 
     private float[] convertFeaturesToArray(FundingMarketFeatures f) {
         return new float[]{
+                // Context (5)
                 f.btcMomentum1H, f.btcMomentum4H, f.btcMomentum24H, f.btcDominance, f.marketBreadthStrength,
-                f.momentum1M, f.momentum15M, f.momentum1H, f.momentum4H, f.momentum24H, f.rsi1H, f.distFromLow24H, f.volatilityShock,
+
+                // Coin Specific (7) - Đã xóa momentum1M để khớp 100% với model ONNX
+                f.momentum15M, f.momentum1H, f.momentum4H, f.momentum24H, f.rsi1H, f.distFromLow24H, f.volatilityShock,
+
+                // Basket (5)
                 f.basketMomentum15M, f.basketMomentum1H, f.basketMomentum24H, f.basketRsi14, f.basketVolSpike,
+
+                // Funding (4)
                 f.coinFundingRate, f.fundingRateRaw, f.fundingRateAvg24H, f.fundingRateTrend
         };
     }

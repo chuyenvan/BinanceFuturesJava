@@ -118,6 +118,7 @@ public class CoinRankManager {
         // 2. Chuyển sang List phẳng để tính toán index
         List<String> sortedSymbols = new ArrayList<>();
         for (List<String> syms : volumeMap.values()) {
+            Collections.sort(syms);
             sortedSymbols.addAll(syms);
         }
 
