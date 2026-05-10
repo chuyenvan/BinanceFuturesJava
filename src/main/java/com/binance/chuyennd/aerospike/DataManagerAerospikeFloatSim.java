@@ -42,6 +42,7 @@ public class DataManagerAerospikeFloatSim {
     public static final String AEROSPIKE_SET_NAME_FUNDINGFEE = "funding_data";
     public static final String AEROSPIKE_SET_NAME_MARKET_DATA = "market_data_object";
 
+
     // set name 226
     private static final String AEROSPIKE_SET_NAME_FUNDING_PRED = Configs.AEROSPIKE_SET_NAME_FUNDING_PRED;
     private static final String AEROSPIKE_SET_NAME_PRED_40 = Configs.AEROSPIKE_SET_NAME_PRED_40;
@@ -303,7 +304,8 @@ public class DataManagerAerospikeFloatSim {
                         String json = new String(Snappy.uncompress(compressedData), "UTF-8");
 
                         // SỬA Ở ĐÂY: Dùng TypeToken để ép Gson parse đúng kiểu số
-                        java.lang.reflect.Type mapType = new com.google.gson.reflect.TypeToken<Map<String, Float>>(){}.getType();
+                        java.lang.reflect.Type mapType = new com.google.gson.reflect.TypeToken<Map<String, Float>>() {
+                        }.getType();
                         Map<String, Float> rawMap = Utils.gson.fromJson(json, mapType);
 
                         rawMap.forEach((k, v) -> symbolFunding.put(Long.parseLong(k), v));
@@ -330,46 +332,6 @@ public class DataManagerAerospikeFloatSim {
         return allResults;
     }
 
-    public static void migrateHistoricalFunding(String folderPath) {
-        File folder = new File(folderPath);
-        if (!folder.exists() || !folder.isDirectory()) {
-            LOG.error("❌ Thư mục funding không tồn tại: {}", folderPath);
-            return;
-        }
-
-        File[] files = folder.listFiles();
-        if (files == null) return;
-
-        LOG.info("🚀 Bắt đầu Migrate Funding Fee từ {} tệp tin...", files.length);
-
-        for (File file : files) {
-            try {
-                String symbol = file.getName(); // Tên file chính là symbol
-
-                // Đọc đối tượng TreeMap từ file bằng Storage (giống logic FundingFeeManager)
-                TreeMap<Long, com.binance.client.model.market.FundingRate> time2RateFunding =
-                        (TreeMap<Long, com.binance.client.model.market.FundingRate>) com.binance.chuyennd.utils.Storage.readObjectFromFile(file.getAbsolutePath());
-
-                if (time2RateFunding != null && !time2RateFunding.isEmpty()) {
-                    Map<Long, Float> fundingMapForAS = new HashMap<>();
-
-                    // Chuyển đổi từ Object FundingRate sang Float để lưu vào AS
-                    time2RateFunding.forEach((time, fundingObj) -> {
-                        if (fundingObj != null && fundingObj.getFundingRate() != null) {
-                            // Ép kiểu về Float để giảm kích thước record ngay từ lúc migrate
-                            fundingMapForAS.put(time, fundingObj.getFundingRate().floatValue());
-                        }
-                    });
-                    // Ghi vào Aerospike (Hàm này đã có logic gộp và lưu vĩnh viễn)
-                    writeFundingMap(symbol, fundingMapForAS);
-                    LOG.info("✅ Migrated {}: {} records", symbol, fundingMapForAS.size());
-                }
-            } catch (Exception e) {
-                LOG.error("❌ Lỗi migrate file {}: {}", file.getName(), e.getMessage());
-            }
-        }
-        LOG.info("🏁 Hoàn tất Migration Funding Rate.");
-    }
 
     // =========================================================================
     // LOGIC KIỂM TRA DỮ LIỆU (REPAIR)
@@ -667,69 +629,6 @@ public class DataManagerAerospikeFloatSim {
         return symbolToKlines;
     }
 
-    /**
-     * Đọc dữ liệu lịch sử của 1 Symbol cụ thể
-     */
-    public static TreeMap<Long, KlineObjectSimple> readDataForPeriod(String symbol, long startTime, long endTime) {
-        TreeMap<Long, KlineObjectSimple> results = new TreeMap<>();
-
-        // Xử lý Symbol: Vì DB lưu "BTC" mà input là "BTCUSDT", ta cần cắt đuôi
-        final String shortSymbol = symbol.endsWith("USDT") ? symbol.substring(0, symbol.length() - 4) : symbol;
-
-        int minutesToRead = (int) ((endTime - startTime) / Utils.TIME_MINUTE) + 1;
-        if (minutesToRead <= 0) return results;
-
-        List<Long> allTimestamps = new ArrayList<>(minutesToRead);
-        Calendar cal = Calendar.getInstance();
-        cal.setTimeInMillis(startTime);
-        for (int i = 0; i < minutesToRead; i++) {
-            allTimestamps.add(cal.getTimeInMillis());
-            cal.add(Calendar.MINUTE, 1);
-        }
-
-        try {
-            // Chia nhỏ request (Chunking)
-            for (int i = 0; i < allTimestamps.size(); i += BATCH_CHUNK_SIZE) {
-                int endIndex = Math.min(i + BATCH_CHUNK_SIZE, allTimestamps.size());
-                List<Long> timestampChunk = allTimestamps.subList(i, endIndex);
-
-                // Tạo Keys (Dùng Local Formatter)
-                SimpleDateFormat localKeyFormat = new SimpleDateFormat("yyyyMMdd-HHmm");
-                Key[] keyChunk = new Key[timestampChunk.size()];
-                for (int k = 0; k < timestampChunk.size(); k++) {
-                    String keyString = localKeyFormat.format(new Date(timestampChunk.get(k)));
-                    keyChunk[k] = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_TICKER, keyString);
-                }
-
-                Record[] records = getClient242().get(batchPolicy, keyChunk);
-
-                for (int j = 0; j < records.length; j++) {
-                    Record record = records[j];
-                    if (record == null) continue;
-
-                    long minuteTimestamp = timestampChunk.get(j);
-                    byte[] snappyCompressedBytes = (byte[]) record.getValue("data");
-
-                    if (snappyCompressedBytes != null && snappyCompressedBytes.length > 0) {
-                        byte[] protoAsBytes = Snappy.uncompress(snappyCompressedBytes);
-
-                        // --- DÙNG PROTO MỚI ---
-                        MinuteDataFinal protoData = MinuteDataFinal.parseFrom(protoAsBytes);
-                        Map<String, KlineObjectOptimized> protoMap = protoData.getTickersMap();
-
-                        // Tìm theo Short Symbol (ví dụ "BTC")
-                        if (protoMap.containsKey(shortSymbol)) {
-                            KlineObjectSimple javaKline = convertProtoToKline(protoMap.get(shortSymbol), minuteTimestamp);
-                            results.put(minuteTimestamp, javaKline);
-                        }
-                    }
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return results;
-    }
 
     // =========================================================================
     // LOGIC CONVERT MỚI (FLOAT -> DOUBLE, APPEND USDT, INJECT TIME)
@@ -822,6 +721,7 @@ public class DataManagerAerospikeFloatSim {
 
         LOG.info("✅ Done batch save AI records.");
     }
+
     /**
      * Lấy DUY NHẤT 1 bản ghi AI Market Prediction tại 1 thời điểm cụ thể (Tránh Full Scan)
      */
@@ -850,6 +750,7 @@ public class DataManagerAerospikeFloatSim {
         }
         return null;
     }
+
     /**
      * 2. LẤY DỮ LIỆU THEO PHÚT (READ SINGLE MINUTE)
      */
@@ -1455,100 +1356,7 @@ public class DataManagerAerospikeFloatSim {
     /**
      * Kiểm tra nhanh danh sách timestamp đã có dữ liệu Label 40 chưa
      */
-    public static Set<Long> checkExistingFundingLabel40Predictions(List<Long> timestamps) {
-        Set<Long> existing = new HashSet<>();
-        if (timestamps == null || timestamps.isEmpty()) return existing;
 
-        try {
-            SimpleDateFormat fmt = new SimpleDateFormat("yyyyMMdd-HHmm");
-            Key[] keys = new Key[timestamps.size()];
-
-            for (int i = 0; i < timestamps.size(); i++) {
-                String keyString = fmt.format(new Date(timestamps.get(i)));
-                keys[i] = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_PRED_40, keyString);
-            }
-
-            boolean[] existsArray = getClient226().exists(batchPolicy, keys);
-
-            for (int i = 0; i < existsArray.length; i++) {
-                if (existsArray[i]) {
-                    existing.add(timestamps.get(i));
-                }
-            }
-        } catch (Exception e) {
-            LOG.error("❌ Error checking Funding Label 40 existence: {}", e.getMessage());
-        }
-        return existing;
-    }
-
-    /**
-     * Đọc Batch Funding Label 40 Data theo range thời gian
-     */
-    public static TreeMap<Long, Map<Short, float[]>> readFundingLabel40BatchCustom(long startTime, int totalMinutes) {
-        TreeMap<Long, Map<Short, float[]>> results = new TreeMap<>();
-
-        long[] allTimestamps = new long[totalMinutes];
-        for (int i = 0; i < totalMinutes; i++) {
-            allTimestamps[i] = startTime + (i * 60000L);
-        }
-
-        List<Future<Map<Long, Map<Short, float[]>>>> futures = new ArrayList<>();
-        int chunkSize = (totalMinutes + threadCount - 1) / threadCount;
-
-        for (int i = 0; i < threadCount; i++) {
-            final int startIdx = i * chunkSize;
-            final int endIdx = Math.min(startIdx + chunkSize, totalMinutes);
-            if (startIdx >= endIdx) break;
-
-            futures.add(executor.submit(() -> {
-                SimpleDateFormat localKeyFormat = new SimpleDateFormat("yyyyMMdd-HHmm");
-                Map<Long, Map<Short, float[]>> chunkResult = new HashMap<>();
-                try {
-                    Key[] chunkKeys = new Key[endIdx - startIdx];
-                    long[] chunkTimestamps = Arrays.copyOfRange(allTimestamps, startIdx, endIdx);
-
-                    for (int k = 0; k < chunkKeys.length; k++) {
-                        String keyString = localKeyFormat.format(new Date(chunkTimestamps[k]));
-                        // Sử dụng Set Name PRED_40
-                        chunkKeys[k] = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_PRED_40, keyString);
-                    }
-
-                    Record[] records = getClient226().get(batchPolicy, chunkKeys);
-
-                    for (int j = 0; j < records.length; j++) {
-                        Record record = records[j];
-                        if (record != null) {
-                            byte[] compressed = (byte[]) record.getValue("data");
-                            if (compressed != null) {
-                                byte[] rawBytes = Snappy.uncompress(compressed);
-                                String json = new String(rawBytes, "UTF-8");
-                                Map<Short, float[]> data = Utils.gson.fromJson(json, new com.google.gson.reflect.TypeToken<Map<Short, float[]>>() {
-                                }.getType());
-                                chunkResult.put(chunkTimestamps[j], data);
-                            }
-                        }
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-                return chunkResult;
-            }));
-        }
-
-        for (Future<Map<Long, Map<Short, float[]>>> f : futures) {
-            try {
-                results.putAll(f.get());
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-        return results;
-    }
-
-    // =========================================================================
-    // 🔥 MARKET AI PREDICTIONS (ENTRY PREDICTIONS) - SET: ai_pred_market
-    // =========================================================================
-//    public static final String AEROSPIKE_SET_NAME_AI_PRED_MARKET = "ai_pred_market";
     public static final String AEROSPIKE_SET_NAME_AI_PRED_MARKET = "ai_pred_market_full_basket_v2";
 
     /**
@@ -1660,9 +1468,7 @@ public class DataManagerAerospikeFloatSim {
 
                     String keyString = fmt.format(new Date(timestamp));
                     Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_MARKET_DATA, keyString);
-
-                    String json = Utils.gson.toJson(data);
-                    byte[] compressed = Snappy.compress(json.getBytes("UTF-8"));
+                    byte[] compressed = data.endCode();
 
                     getClient226().put(writePolicy, key,
                             new Bin("data", compressed),
@@ -1679,10 +1485,10 @@ public class DataManagerAerospikeFloatSim {
     // =========================================================================
     // 🔥 MARKET DATA LEVEL (Thay thế market_level.snappy)
     // =========================================================================
+// =========================================================================
+    // 🔥 TỐI ƯU BINARY CHO MARKET DATA (Chỉ tốn 12 bytes)
+    // =========================================================================
 
-    /**
-     * HÀM CHẠY 1 LẦN: Chuyển toàn bộ dữ liệu từ File snappy lên Aerospike
-     */
 
     /**
      * HÀM ĐỌC FULL: Tải toàn bộ dữ liệu thay thế cho đọc File (Dùng trong initData của Simulator)
@@ -1700,8 +1506,7 @@ public class DataManagerAerospikeFloatSim {
                     byte[] compressed = (byte[]) record.getValue("data");
 
                     if (timestamp != null && compressed != null) {
-                        String json = new String(Snappy.uncompress(compressed), "UTF-8");
-                        MarketDataObject data = Utils.gson.fromJson(json, MarketDataObject.class);
+                        MarketDataObject data = MarketDataObject.decodeMarketDataFromBinary(compressed);
                         results.put(timestamp, data);
                     }
                 } catch (Exception e) {
@@ -1742,9 +1547,7 @@ public class DataManagerAerospikeFloatSim {
 
                 if (compressed != null) {
                     // Giải nén Snappy và parse JSON theo đúng logic của hàm getAll
-                    byte[] uncompressed = Snappy.uncompress(compressed);
-                    String json = new String(uncompressed, "UTF-8");
-                    return Utils.gson.fromJson(json, MarketDataObject.class);
+                    return MarketDataObject.decodeMarketDataFromBinary(compressed);
                 }
             }
         } catch (Exception e) {
@@ -1786,88 +1589,6 @@ public class DataManagerAerospikeFloatSim {
         return maxTime[0];
     }
 
-    /**
-     * HÀM ĐỌC FULL DATA: Tải toàn bộ Funding Predictions từ Aerospike vào RAM cho Simulator.
-     */
-
-    /**
-     * Đọc dữ liệu Funding Predictions theo khoảng thời gian tùy chỉnh
-     *
-     * @param startTime    Mốc thời gian bắt đầu (milliseconds)
-     * @param totalMinutes Số lượng phút cần load
-     */
-    public static TreeMap<Long, Map<Short, float[]>> getSymbolPredictionsByRange(long startTime, int totalMinutes) {
-
-        LOG.info("📥 Đang tải AI Symbol Predictions từ Aerospike (Set: {} from: {} records: {})...", AEROSPIKE_SET_NAME_FUNDING_PRED
-                , Utils.normalizeDateYYYYMMDDHHmm(startTime), totalMinutes);
-        TreeMap<Long, Map<Short, float[]>> results = new TreeMap<>();
-        long[] allTimestamps = new long[totalMinutes];
-        for (int i = 0; i < totalMinutes; i++) {
-            allTimestamps[i] = startTime + (i * 60000L);
-        }
-
-        // Tăng kích thước luồng xử lý nhưng chia nhỏ khối lượng gửi đi
-        List<Future<Map<Long, Map<Short, float[]>>>> futures = new ArrayList<>();
-        int chunkSize = (totalMinutes + threadCount - 1) / threadCount;
-        int SUB_BATCH_SIZE = 5000; // Giới hạn an toàn để không bị Error 151
-
-        for (int i = 0; i < threadCount; i++) {
-            final int startIdx = i * chunkSize;
-            final int endIdx = Math.min(startIdx + chunkSize, totalMinutes);
-            if (startIdx >= endIdx) break;
-
-            futures.add(executor.submit(() -> {
-                SimpleDateFormat localKeyFormat = new SimpleDateFormat("yyyyMMdd-HHmm");
-                Map<Long, Map<Short, float[]>> chunkResult = new HashMap<>();
-
-                long[] chunkTimestamps = Arrays.copyOfRange(allTimestamps, startIdx, endIdx);
-
-                // 🔥 CHIA NHỎ SUB-BATCH TẠI ĐÂY
-                for (int j = 0; j < chunkTimestamps.length; j += SUB_BATCH_SIZE) {
-                    int limit = Math.min(j + SUB_BATCH_SIZE, chunkTimestamps.length);
-                    int currentSubSize = limit - j;
-
-                    Key[] subKeys = new Key[currentSubSize];
-                    for (int k = 0; k < currentSubSize; k++) {
-                        String keyString = localKeyFormat.format(new Date(chunkTimestamps[j + k]));
-                        subKeys[k] = new Key(Configs.AEROSPIKE_NAMESPACE, Configs.AEROSPIKE_SET_NAME_FUNDING_PRED, keyString);
-                    }
-
-                    try {
-                        Record[] records = getClient226().get(batchPolicy, subKeys);
-                        if (records != null) {
-                            for (int r = 0; r < records.length; r++) {
-                                if (records[r] != null) {
-                                    byte[] compressed = (byte[]) records[r].getValue("data");
-                                    if (compressed != null) {
-                                        byte[] rawBytes = org.xerial.snappy.Snappy.uncompress(compressed);
-                                        Map<Short, float[]> data = decodeFundingMapFromBinary(rawBytes);
-                                        chunkResult.put(chunkTimestamps[j + r], data);
-                                    }
-                                }
-                            }
-                        }
-                    } catch (Exception e) {
-                        LOG.error("❌ Lỗi load sub-batch: {}", e.getMessage());
-                    }
-                }
-                return chunkResult;
-            }));
-        }
-
-        for (Future<Map<Long, Map<Short, float[]>>> f : futures) {
-            try {
-                results.putAll(f.get());
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-        LOG.info("✅ Đã load xong {} records Funding Pred.", results.size());
-        return results;
-    }
-    // =========================================================================
-    // 🔥 BINARY CODEC TỐI ƯU CHO MAP<SHORT, FLOAT[]> (THAY THẾ JSON)
-    // =========================================================================
 
     /**
      * Mã hóa Map thành mảng Byte nguyên thủy
@@ -1954,6 +1675,7 @@ public class DataManagerAerospikeFloatSim {
         }
         return null;
     }
+
     /**
      * TỐI ƯU RAM HPO: Đọc Map Funding chuyển thành mảng long nguyên thủy (Bitwise Packing)
      * Đóng gói (Short symbolId + Float pred[0]) vào 1 biến long.
@@ -1986,6 +1708,7 @@ public class DataManagerAerospikeFloatSim {
         }
         return result;
     }
+
     /**
      * DÀNH RIÊNG CHO HPO: Đọc Funding Data và nén thành mảng long[] nguyên thủy
      */
@@ -2033,14 +1756,18 @@ public class DataManagerAerospikeFloatSim {
                                 }
                             }
                         }
-                    } catch (Exception e) {}
+                    } catch (Exception e) {
+                    }
                 }
                 return chunkResult;
             }));
         }
 
         for (java.util.concurrent.Future<Map<Long, long[]>> f : futures) {
-            try { results.putAll(f.get()); } catch (Exception e) {}
+            try {
+                results.putAll(f.get());
+            } catch (Exception e) {
+            }
         }
         LOG.info("✅ Đã load xong {} records Funding Pred (Primitive Optimized).", results.size());
         return results;

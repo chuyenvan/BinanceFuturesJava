@@ -1,8 +1,6 @@
 package com.binance.chuyennd.tradecore;
 
-import com.binance.chuyennd.ai_ml.features.export.HistoryManager;
 import com.binance.chuyennd.helper.TickerFuturesHelper;
-import com.binance.chuyennd.object.CoinTier;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.MarketLevelChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
@@ -122,7 +120,6 @@ public class MarketBigChangeDetector {
 //        List<String> symbolsTopDown = MarketBigChangeDetectorTest.getTopSymbolSimple(rateDown2Symbols,
 //                Configs.NUMBER_ENTRY_EACH_SIGNAL, null);
         MarketDataObject result = new MarketDataObject(rateChangeDownAvg, rateChangeUpAvg, rateChangeDown15MAvg);
-        result.rateBtc = rateChangeBtc.floatValue();
         result.rateDown15MAvg = rateChangeDown15MAvg.floatValue();
 
 
@@ -275,7 +272,7 @@ public class MarketBigChangeDetector {
     }
 
     public static MarketLevelChange getMarketStatus1M(Float rateDownAvg, Float rateUpAvg,
-                                                      Float btcRateChange, Float rateDown15MAvg) {
+                                                      Float rateDown15MAvg) {
 
         // 1. BIG UP / BIG DOWN
         if (rateUpAvg > Configs.MS_UP_BIG_THRES) {

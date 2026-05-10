@@ -27,14 +27,15 @@ public class ExportFeaturesForPythonTool {
         long time;
         short id;
         float[] features;
+
         public PrepareData(long time, short id, float[] features) {
-            this.time = time; this.id = id; this.features = features;
+            this.time = time;
+            this.id = id;
+            this.features = features;
         }
     }
 
     public static void main(String[] args) throws Exception {
-        System.setProperty("java.util.concurrent.ForkJoinPool.common.parallelism", "8");
-
         String outputDir = "features_export_python/";
         new File(outputDir).mkdirs();
 
@@ -47,62 +48,72 @@ public class ExportFeaturesForPythonTool {
         Map<String, Short> globalMapper = DataManagerAerospikeFloatSim.loadSymbolMapper();
         final ConcurrentHashMap<String, Short> symbolMap = new ConcurrentHashMap<>(globalMapper);
 
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd-HHmm");
+        SimpleDateFormat sdfFull = new SimpleDateFormat("yyyyMMdd-HHmm");
         FundingFeatureExtractorV2 extractor = new FundingFeatureExtractorV2();
 
         int currentYear = Calendar.getInstance().get(Calendar.YEAR);
+        long now = System.currentTimeMillis();
 
+        // 🔄 VÒNG LẶP THEO NĂM
         for (int year = 2021; year <= 2026; year++) {
             String outputFilePath = outputDir + "features_" + year + ".bin.gz";
             File outFile = new File(outputFilePath);
 
-            // LOGIC BỎ QUA: Nếu file tồn tại VÀ năm đó đã kết thúc (year < currentYear)
+            long startOfYearTs = sdfFull.parse(year + "0101-0000").getTime();
+            long endOfYearTs = sdfFull.parse(year + "1231-2359").getTime();
+
+            if (endOfYearTs > now) endOfYearTs = now;
+            if (startOfYearTs > now) continue;
+
             if (outFile.exists() && year < currentYear) {
-                LOG.info("⏩ File [{}] đã tồn tại và năm {} đã khép lại. BỎ QUA XUẤT LẠI!", outFile.getName(), year);
+                LOG.info("⏩ File [{}] đã tồn tại. BỎ QUA NĂM {}!", outFile.getName(), year);
                 continue;
             }
 
             LOG.info("======================================================");
             LOG.info("🚀 BẮT ĐẦU XUẤT MỚI FEATURES CHO NĂM {} TỪ AEROSPIKE...", year);
 
-            // Setup thời gian Warm-up (Lùi lại 2 ngày cuối năm trước)
-            String warmupStr = (year - 1) + "1229-0000";
-            String endStr = year + "1231-2359";
-            long startFetchTime = sdf.parse(warmupStr).getTime();
-            long endFetchTime = sdf.parse(endStr).getTime();
-            long startOfYearTs = sdf.parse(year + "0101-0000").getTime();
-            long currentTimeMs = System.currentTimeMillis();
+            // 🔥 ĐÃ TRẢ LẠI WARM-UP CHUẨN 48 TIẾNG (2 NGÀY) TÍNH TỪ ĐẦU NĂM
+            long warmupStartTs = startOfYearTs - (48 * 3600000L);
 
-            if (startFetchTime > currentTimeMs) continue; // Tương lai -> Bỏ qua
-            if (endFetchTime > currentTimeMs) endFetchTime = currentTimeMs; // Chặn mốc cuối ở hiện tại
+            LOG.info("   - Thời gian Warmup bắt đầu từ: {}", sdfFull.format(new Date(warmupStartTs)));
+            LOG.info("   - Thời gian ghi File bắt đầu từ: {}", sdfFull.format(new Date(startOfYearTs)));
+
+            // DỌN DẸP SẠCH SẼ TRƯỚC KHI CHẠY NĂM MỚI
+            CoinRankManager.getInstance().resetCache();
 
             try (DataOutputStream dos = new DataOutputStream(
-                    new BufferedOutputStream(new GZIPOutputStream(new FileOutputStream(outputFilePath))))) {
+                    new BufferedOutputStream(new GZIPOutputStream(new FileOutputStream(outputFilePath)), 1024 * 1024))) {
 
                 int yearRecordCount = 0;
                 List<PrepareData> batch = new ArrayList<>();
-                long currentDayTs = startFetchTime;
+                long currentReadTs = warmupStartTs;
 
-                // VÒNG LẶP ĐỌC THEO TỪNG NGÀY TỪ AEROSPIKE
-                while (currentDayTs <= endFetchTime) {
-                    // Đọc 1 ngày data (1440 phút)
+                while (currentReadTs <= endOfYearTs) {
+                    int minutesToRead = 1440;
+                    if (currentReadTs + minutesToRead * Utils.TIME_MINUTE > endOfYearTs) {
+                        minutesToRead = (int) ((endOfYearTs - currentReadTs) / Utils.TIME_MINUTE) + 1;
+                    }
+
                     TreeMap<Long, Map<String, KlineObjectSimple>> dailyData =
-                            DataManagerAerospikeFloatSim.readDataFromAerospikeCustom(currentDayTs, 1440);
+                            DataManagerAerospikeFloatSim.readDataFromAerospikeCustom(currentReadTs, minutesToRead);
 
                     if (dailyData != null && !dailyData.isEmpty()) {
                         for (Map.Entry<Long, Map<String, KlineObjectSimple>> timeEntry : dailyData.entrySet()) {
                             long time = timeEntry.getKey();
                             Map<String, KlineObjectSimple> symbol2Ticker = timeEntry.getValue();
 
-                            // 1. Luôn cập nhật lịch sử (Warm-up)
+                            // 1. Luôn cập nhật lịch sử (Dù là đang Warm-up hay Ghi file)
                             extractor.updateMarketHistory(symbol2Ticker);
 
-                            // 2. Nếu nằm trong giai đoạn Warm-up thì bỏ qua, không tính feature
+                            // 2. CHẶN GHI FILE NẾU ĐANG TRONG GIAI ĐOẠN WARM-UP
                             if (time < startOfYearTs) continue;
 
                             // 3. Rút trích Feature
                             final List<String> basket = CoinRankManager.getInstance().getTopCoin(time);
-                            List<PrepareData> minuteData = symbol2Ticker.keySet().parallelStream()
+
+                            // 🔥 CHẠY .stream() TUẦN TỰ ĐỂ AN TOÀN TUYỆT ĐỐI CHO MẢNG HISTORY
+                            List<PrepareData> minuteData = symbol2Ticker.keySet().stream()
                                     .map(symbol -> {
                                         try {
                                             Short symId = symbolMap.get(symbol);
@@ -142,12 +153,10 @@ public class ExportFeaturesForPythonTool {
                         }
                     }
 
-                    // Tiến tới ngày tiếp theo
-                    currentDayTs += 1440 * Utils.TIME_MINUTE;
-                    System.out.print("."); // In dấu chấm để biết tool đang chạy
+                    currentReadTs += minutesToRead * Utils.TIME_MINUTE;
+                    System.out.print(".");
                 }
 
-                // Ghi nốt phần còn sót lại trong rổ batch
                 if (!batch.isEmpty()) {
                     for (PrepareData pd : batch) {
                         dos.writeLong(pd.time);
@@ -167,16 +176,9 @@ public class ExportFeaturesForPythonTool {
 
     private float[] convertFeaturesToArray(FundingMarketFeatures f) {
         return new float[]{
-                // Context (5)
                 f.btcMomentum1H, f.btcMomentum4H, f.btcMomentum24H, f.btcDominance, f.marketBreadthStrength,
-
-                // Coin Specific (7) - Đã xóa momentum1M để khớp 100% với model ONNX
                 f.momentum15M, f.momentum1H, f.momentum4H, f.momentum24H, f.rsi1H, f.distFromLow24H, f.volatilityShock,
-
-                // Basket (5)
                 f.basketMomentum15M, f.basketMomentum1H, f.basketMomentum24H, f.basketRsi14, f.basketVolSpike,
-
-                // Funding (4)
                 f.coinFundingRate, f.fundingRateRaw, f.fundingRateAvg24H, f.fundingRateTrend
         };
     }

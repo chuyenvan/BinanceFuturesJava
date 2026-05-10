@@ -3,6 +3,7 @@ package com.binance.chuyennd.tradecore;
 import com.binance.chuyennd.ai_ml.features.export.HistoryManager;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.utils.Utils;
+import com.binance.client.constant.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,13 +17,14 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 public class CoinRankManager {
     public static final Logger LOG = LoggerFactory.getLogger(CoinRankManager.class);
+    public static int number_minute_update = 60;
 
     public List<String> getTopCoin(long currentTime) {
         // 1. Kiểm tra mốc 15 phút chẵn (00, 15, 30, 45)
         // Dùng thêm lastIntervalKey để đảm bảo trong 60 giây của phút đó chỉ chạy update 1 lần duy nhất
-        long currentIntervalKey = currentTime / (15 * Utils.TIME_MINUTE);
+        long currentIntervalKey = currentTime / (number_minute_update * Utils.TIME_MINUTE);
 
-        if (((currentTime / Utils.TIME_MINUTE) % 15 == 0 && currentIntervalKey > lastIntervalKey) || symbolTiers.isEmpty()) {
+        if (((currentTime / Utils.TIME_MINUTE) % number_minute_update == 0 && currentIntervalKey > lastIntervalKey) || symbolTiers.isEmpty()) {
             updateRanking(currentTime);
             lastIntervalKey = currentIntervalKey; // Khóa lại ngay
         }
@@ -43,7 +45,8 @@ public class CoinRankManager {
     // Biến phụ để chốt chặn không cho update liên tục trong cùng 1 phút chẵn
     private long lastIntervalKey = -1L;
 
-    private CoinRankManager() {}
+    private CoinRankManager() {
+    }
 
     public static CoinRankManager getInstance() {
         if (INSTANCE == null) {
@@ -55,6 +58,7 @@ public class CoinRankManager {
         }
         return INSTANCE;
     }
+
     /**
      * Trả về Hệ số nhân Ngân sách (Budget Multiplier) dựa trên Tier.
      * Tiện ích giúp Simulator gọi 1 dòng là xong.
@@ -72,15 +76,16 @@ public class CoinRankManager {
                 return 1.00f;
         }
     }
+
     /**
      * 🔥 GIỮ NGUYÊN SIGNATURE CŨ CỦA BÁC
      */
     public CoinTier getCoinTier(String symbol, long currentTime) {
         // 1. Kiểm tra mốc 15 phút chẵn (00, 15, 30, 45)
         // Dùng thêm lastIntervalKey để đảm bảo trong 60 giây của phút đó chỉ chạy update 1 lần duy nhất
-        long currentIntervalKey = currentTime / (15 * Utils.TIME_MINUTE);
+        long currentIntervalKey = currentTime / (number_minute_update * Utils.TIME_MINUTE);
 
-        if (((currentTime / Utils.TIME_MINUTE) % 15 == 0 && currentIntervalKey > lastIntervalKey) || symbolTiers.isEmpty()) {
+        if (((currentTime / Utils.TIME_MINUTE) % number_minute_update == 0 && currentIntervalKey > lastIntervalKey) || symbolTiers.isEmpty()) {
             updateRanking(currentTime);
             lastIntervalKey = currentIntervalKey; // Khóa lại ngay
         }
@@ -91,12 +96,12 @@ public class CoinRankManager {
     /**
      * Thuật toán sắp xếp bằng TreeMap và lọc Top 50%
      */
-    private synchronized void updateRanking( long currentTime) {
+    private synchronized void updateRanking(long currentTime) {
         Map<String, ArrayList<KlineObjectSimple>> symbol2LastTickers = HistoryManager.getInstance().getAllHistory();
 
         // 1. Dùng TreeMap sắp xếp Volume giảm dần
         TreeMap<Float, List<String>> volumeMap = new TreeMap<>(Collections.reverseOrder());
-
+        int size = symbol2LastTickers.get(Constants.SYMBOL_PAIR_BTC).size();
         for (Map.Entry<String, ArrayList<KlineObjectSimple>> entry : symbol2LastTickers.entrySet()) {
             String sym = entry.getKey();
             float sumVol = 0;
@@ -104,7 +109,7 @@ public class CoinRankManager {
             List<KlineObjectSimple> tickers = entry.getValue();
 
             // Tính Volume 200 nến
-            for (int i = tickers.size() - 1; i >= 0 && counter < 200; i--) {
+            for (int i = tickers.size() - 1; i >= 0 && counter < 720; i--) {
                 KlineObjectSimple k = tickers.get(i);
                 if (k != null) sumVol += k.totalUsdt;
                 counter++;
@@ -154,8 +159,9 @@ public class CoinRankManager {
             }
         }
 
-        LOG.info("🔄 Ranking Updated at {}: Total={}, TIER_1={}, TIER_2={}, TIER_3={} (Top50%={})",
-                Utils.normalizeDateYYYYMMDDHHmm(currentTime), totalCoins, countTier1, countTier2, countTier3, top50PercentSymbols.size());
+        LOG.info("🔄 Ranking Updated at {}: Total={} size={}, TIER_1={}, TIER_2={}, TIER_3={} (Top50%={})",
+                Utils.normalizeDateYYYYMMDDHHmm(currentTime), totalCoins, size, countTier1, countTier2,
+                countTier3, top50PercentSymbols.size());
     }
 
     /**

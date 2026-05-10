@@ -103,7 +103,7 @@ public class MarketDataExporter {
                             MarketDataObject marketData = MarketBigChangeDetector.calMarketData(symbol2Ticker, symbol2MaxPrice, symbol2MinPrice);
                             if (marketData != null) {
                                 MarketLevelChange levelChange = MarketBigChangeDetector.getMarketStatus1M(
-                                        marketData.rateDownAvg, marketData.rateUpAvg, marketData.rateBtc, marketData.rateDown15MAvg);
+                                        marketData.rateDownAvg, marketData.rateUpAvg, marketData.rateDown15MAvg);
                                 if (levelChange != null) {
                                     dailyMarketData.put(time, marketData);
                                 } else {

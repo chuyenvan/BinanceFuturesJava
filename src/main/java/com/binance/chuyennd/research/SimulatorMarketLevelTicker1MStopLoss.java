@@ -211,7 +211,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
                             if (predict != null && marketData != null) {
 
-                                levelChange = MarketBigChangeDetector.getMarketStatus1M(marketData.rateDownAvg, marketData.rateUpAvg, marketData.rateBtc, marketData.rateDown15MAvg);
+                                levelChange = MarketBigChangeDetector.getMarketStatus1M(marketData.rateDownAvg, marketData.rateUpAvg,
+                                        marketData.rateDown15MAvg);
 //                                levelChange = MarketBigChangeDetector.getMarketStatus1MGeometric(
 //                                        marketData.rateDownAvg,
 //                                        marketData.rateUpAvg,

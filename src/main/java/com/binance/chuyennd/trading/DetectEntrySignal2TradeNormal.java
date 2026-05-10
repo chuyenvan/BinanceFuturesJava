@@ -182,7 +182,7 @@ public class DetectEntrySignal2TradeNormal {
             Float rateDown15MAvg = MarketBigChangeDetector.calRateChangeAvg(rateDown15M2Symbols, 100);
             MarketDataObject marketRate = new MarketDataObject(rateDownAvg, rateUpAvg, rateDown15MAvg);
             Float rateBtcDown15M = Utils.rateOf2Double(btcTicker.priceClose, btcMax15M);
-            MarketLevelChange levelChange = MarketBigChangeDetector.getMarketStatus1M(rateDownAvg, rateUpAvg, btcRateChange, rateDown15MAvg);
+            MarketLevelChange levelChange = MarketBigChangeDetector.getMarketStatus1M(rateDownAvg, rateUpAvg, rateDown15MAvg);
             RedisHelper.getInstance().get().set(RedisConst.REDIS_KEY_LAST_TIME_CHECK_MARKET, Utils.toJson(System.currentTimeMillis()));
             LOG.info("Check level market: {} DownAvg: {}% UpAvg:{}% DownAvg15M:{}%  btcRate: {}% btcRate15M: {}% {}", Utils.normalizeDateYYYYMMDDHHmm(btcTicker.startTime.longValue()),
                     Utils.formatDouble(rateDownAvg * 100, 3),

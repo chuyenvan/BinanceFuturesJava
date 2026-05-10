@@ -232,4 +232,8 @@ public class HistoryManager {
     public Map<String, ArrayList<KlineObjectSimple>> getAllHistory() {
         return historyMap;
     }
+
+    public void clearAll() {
+        historyMap.clear();
+    }
 }

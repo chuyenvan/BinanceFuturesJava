@@ -30,7 +30,7 @@ public class ExportMarketData2File {
     public static void main(String[] args) throws ParseException, IOException, InterruptedException {
         ExportMarketData2File test = new ExportMarketData2File();
 //        test.exportBtcTrendReverse();
-//        test.exportMarketEntries();
+        test.exportMarketEntries(null);
 //        test.exportFundingFeeBuy();
     }
 
@@ -130,7 +130,7 @@ public class ExportMarketData2File {
                             MarketDataObject marketData = MarketBigChangeDetector.calMarketData(symbol2Ticker, symbol2MaxPrice, symbol2MinPrice);
                             if (marketData != null) {
                                 MarketLevelChange levelChange = MarketBigChangeDetector.getMarketStatus1M(marketData.rateDownAvg,
-                                        marketData.rateUpAvg, marketData.rateBtc, marketData.rateDown15MAvg);
+                                        marketData.rateUpAvg, marketData.rateDown15MAvg);
 
                                 // 🔥 THAY ĐỔI: Put data vào map của ngày thay vì map tổng
                                 if (levelChange != null) {
