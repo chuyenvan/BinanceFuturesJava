@@ -53,7 +53,7 @@ public class ExportFeaturesForPythonTool {
         FundingFeatureExtractorV2 extractor = new FundingFeatureExtractorV2();
 
         // 1. CÀI ĐẶT CÁC MỐC THỜI GIAN THEO YÊU CẦU
-        long targetStartTs = sdfFull.parse("20250101 07:00").getTime();
+        long targetStartTs = sdfFull.parse("20210101 07:00").getTime();
         long warmupStartTs = targetStartTs - (48 * 3600000L); // Warmup 48h
         long globalEndTs = System.currentTimeMillis(); // Kéo đến hiện tại
 
