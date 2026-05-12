@@ -40,6 +40,7 @@ public class CoinRankManager {
     private static volatile CoinRankManager INSTANCE = null;
 
     private final ConcurrentHashMap<String, CoinTier> symbolTiers = new ConcurrentHashMap<>();
+
     private final List<String> top50PercentSymbols = new ArrayList<>();
 
     // Biến phụ để chốt chặn không cho update liên tục trong cùng 1 phút chẵn
@@ -98,15 +99,15 @@ public class CoinRankManager {
      */
     private synchronized void updateRanking(long currentTime) {
         Map<String, ArrayList<KlineObjectSimple>> symbol2LastTickers = HistoryManager.getInstance().getAllHistory();
-
+        Set<String> symbolLastUpdate = HistoryManager.getInstance().getAllSymbols();
         // 1. Dùng TreeMap sắp xếp Volume giảm dần
         TreeMap<Float, List<String>> volumeMap = new TreeMap<>(Collections.reverseOrder());
         int size = symbol2LastTickers.get(Constants.SYMBOL_PAIR_BTC).size();
-        for (Map.Entry<String, ArrayList<KlineObjectSimple>> entry : symbol2LastTickers.entrySet()) {
-            String sym = entry.getKey();
+        for (String sym: symbolLastUpdate) {
             float sumVol = 0;
             int counter = 0;
-            List<KlineObjectSimple> tickers = entry.getValue();
+            List<KlineObjectSimple> tickers =symbol2LastTickers.get(sym);
+            if (tickers == null || tickers.size() == 0) continue;
 
             // Tính Volume 200 nến
             for (int i = tickers.size() - 1; i >= 0 && counter < 720; i--) {

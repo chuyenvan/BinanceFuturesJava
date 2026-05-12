@@ -113,7 +113,7 @@ public class ExportFeaturesForPythonTool {
                             final List<String> basket = CoinRankManager.getInstance().getTopCoin(time);
 
                             // 🔥 CHẠY .stream() TUẦN TỰ ĐỂ AN TOÀN TUYỆT ĐỐI CHO MẢNG HISTORY
-                            List<PrepareData> minuteData = symbol2Ticker.keySet().stream()
+                            List<PrepareData> minuteData = symbol2Ticker.keySet().parallelStream()
                                     .map(symbol -> {
                                         try {
                                             Short symId = symbolMap.get(symbol);

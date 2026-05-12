@@ -14,7 +14,7 @@ public class HistoryManager {
 
     // --- CƠ CHẾ SINGLETON ---
     private static volatile HistoryManager INSTANCE = null;
-
+    private final Set<String> symbolsLastUpdate = new HashSet<>();
     // Dùng ConcurrentHashMap để an toàn khi nhiều luồng cùng truy cập singleton
     private final Map<String, ArrayList<KlineObjectSimple>> historyMap = new ConcurrentHashMap<>();
 
@@ -34,6 +34,8 @@ public class HistoryManager {
     }
 
     public void updateHistory(Map<String, KlineObjectSimple> snapshot) {
+        symbolsLastUpdate.clear();
+        symbolsLastUpdate.addAll(snapshot.keySet());
         for (Map.Entry<String, KlineObjectSimple> entry : snapshot.entrySet()) {
             String symbol = entry.getKey();
             KlineObjectSimple kline = entry.getValue();
@@ -233,6 +235,9 @@ public class HistoryManager {
         return historyMap;
     }
 
+    public Set<String> getAllSymbols() {
+        return symbolsLastUpdate;
+    }
     public void clearAll() {
         historyMap.clear();
     }
