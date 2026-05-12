@@ -48,130 +48,154 @@ public class ExportFeaturesForPythonTool {
         Map<String, Short> globalMapper = DataManagerAerospikeFloatSim.loadSymbolMapper();
         final ConcurrentHashMap<String, Short> symbolMap = new ConcurrentHashMap<>(globalMapper);
 
-        SimpleDateFormat sdfFull = new SimpleDateFormat("yyyyMMdd-HHmm");
+        SimpleDateFormat sdfFull = new SimpleDateFormat("yyyyMMdd HH:mm");
+        SimpleDateFormat sdfFile = new SimpleDateFormat("yyyyMMdd");
         FundingFeatureExtractorV2 extractor = new FundingFeatureExtractorV2();
 
-        int currentYear = Calendar.getInstance().get(Calendar.YEAR);
-        long now = System.currentTimeMillis();
+        // 1. CÀI ĐẶT CÁC MỐC THỜI GIAN THEO YÊU CẦU
+        long targetStartTs = sdfFull.parse("20250101 07:00").getTime();
+        long warmupStartTs = targetStartTs - (48 * 3600000L); // Warmup 48h
+        long globalEndTs = System.currentTimeMillis(); // Kéo đến hiện tại
 
-        // 🔄 VÒNG LẶP THEO NĂM
-        for (int year = 2021; year <= 2026; year++) {
-            String outputFilePath = outputDir + "features_" + year + ".bin.gz";
-            File outFile = new File(outputFilePath);
+        LOG.info("======================================================");
+        LOG.info("🚀 BẮT ĐẦU XUẤT FEATURES (LIÊN TỤC KHÔNG RESET STATE)");
+        LOG.info("   - Thời gian Warmup: {}", sdfFull.format(new Date(warmupStartTs)));
+        LOG.info("   - Thời gian bắt đầu ghi File: {}", sdfFull.format(new Date(targetStartTs)));
+        LOG.info("   - Thời gian kết thúc (Hiện tại): {}", sdfFull.format(new Date(globalEndTs)));
+        LOG.info("======================================================");
 
-            long startOfYearTs = sdfFull.parse(year + "0101-0000").getTime();
-            long endOfYearTs = sdfFull.parse(year + "1231-2359").getTime();
+        long currentReadTs = warmupStartTs;
 
-            if (endOfYearTs > now) endOfYearTs = now;
-            if (startOfYearTs > now) continue;
+        // Quản lý chia file 3 tháng/lần
+        long chunkStartTs = targetStartTs;
+        Calendar cal = Calendar.getInstance();
+        cal.setTimeInMillis(chunkStartTs);
+        cal.add(Calendar.MONTH, 3);
+        long chunkEndTs = cal.getTimeInMillis();
 
-            if (outFile.exists() && year < currentYear) {
-                LOG.info("⏩ File [{}] đã tồn tại. BỎ QUA NĂM {}!", outFile.getName(), year);
-                continue;
-            }
+        DataOutputStream dos = null;
+        String currentFilePath = "";
+        int fileRecordCount = 0;
+        List<PrepareData> batch = new ArrayList<>();
 
-            LOG.info("======================================================");
-            LOG.info("🚀 BẮT ĐẦU XUẤT MỚI FEATURES CHO NĂM {} TỪ AEROSPIKE...", year);
+        try {
+            // VÒNG LẶP LIÊN TỤC KHÔNG RESET
+            while (currentReadTs <= globalEndTs) {
+                int minutesToRead = 1440;
+                if (currentReadTs + minutesToRead * Utils.TIME_MINUTE > globalEndTs) {
+                    minutesToRead = (int) ((globalEndTs - currentReadTs) / Utils.TIME_MINUTE) + 1;
+                }
 
-            // 🔥 ĐÃ TRẢ LẠI WARM-UP CHUẨN 48 TIẾNG (2 NGÀY) TÍNH TỪ ĐẦU NĂM
-            long warmupStartTs = startOfYearTs - (48 * 3600000L);
+                if (minutesToRead <= 0) break;
 
-            LOG.info("   - Thời gian Warmup bắt đầu từ: {}", sdfFull.format(new Date(warmupStartTs)));
-            LOG.info("   - Thời gian ghi File bắt đầu từ: {}", sdfFull.format(new Date(startOfYearTs)));
+                TreeMap<Long, Map<String, KlineObjectSimple>> dailyData =
+                        DataManagerAerospikeFloatSim.readDataFromAerospikeCustom(currentReadTs, minutesToRead);
 
-            // DỌN DẸP SẠCH SẼ TRƯỚC KHI CHẠY NĂM MỚI
-            CoinRankManager.getInstance().resetCache();
+                if (dailyData != null && !dailyData.isEmpty()) {
+                    for (Map.Entry<Long, Map<String, KlineObjectSimple>> timeEntry : dailyData.entrySet()) {
+                        long time = timeEntry.getKey();
+                        Map<String, KlineObjectSimple> symbol2Ticker = timeEntry.getValue();
 
-            try (DataOutputStream dos = new DataOutputStream(
-                    new BufferedOutputStream(new GZIPOutputStream(new FileOutputStream(outputFilePath)), 1024 * 1024))) {
+                        // [QUAN TRỌNG NHẤT]: Luôn nạp State liên tục
+                        extractor.updateMarketHistory(symbol2Ticker);
+                        final List<String> basket = CoinRankManager.getInstance().getTopCoin(time);
 
-                int yearRecordCount = 0;
-                List<PrepareData> batch = new ArrayList<>();
-                long currentReadTs = warmupStartTs;
+                        // Bỏ qua nếu vẫn đang trong giai đoạn Warmup
+                        if (time < targetStartTs) continue;
 
-                while (currentReadTs <= endOfYearTs) {
-                    int minutesToRead = 1440;
-                    if (currentReadTs + minutesToRead * Utils.TIME_MINUTE > endOfYearTs) {
-                        minutesToRead = (int) ((endOfYearTs - currentReadTs) / Utils.TIME_MINUTE) + 1;
-                    }
-
-                    TreeMap<Long, Map<String, KlineObjectSimple>> dailyData =
-                            DataManagerAerospikeFloatSim.readDataFromAerospikeCustom(currentReadTs, minutesToRead);
-
-                    if (dailyData != null && !dailyData.isEmpty()) {
-                        for (Map.Entry<Long, Map<String, KlineObjectSimple>> timeEntry : dailyData.entrySet()) {
-                            long time = timeEntry.getKey();
-                            Map<String, KlineObjectSimple> symbol2Ticker = timeEntry.getValue();
-
-                            // 1. Luôn cập nhật lịch sử (Dù là đang Warm-up hay Ghi file)
-                            extractor.updateMarketHistory(symbol2Ticker);
-
-                            // 2. CHẶN GHI FILE NẾU ĐANG TRONG GIAI ĐOẠN WARM-UP
-                            if (time < startOfYearTs) continue;
-
-                            // 3. Rút trích Feature
-                            final List<String> basket = CoinRankManager.getInstance().getTopCoin(time);
-
-                            // 🔥 CHẠY .stream() TUẦN TỰ ĐỂ AN TOÀN TUYỆT ĐỐI CHO MẢNG HISTORY
-                            List<PrepareData> minuteData = symbol2Ticker.keySet().parallelStream()
-                                    .map(symbol -> {
-                                        try {
-                                            Short symId = symbolMap.get(symbol);
-                                            KlineObjectSimple ticker = symbol2Ticker.get(symbol);
-                                            if (symId == null || ticker == null || !Utils.isTickerAvailable(ticker)) return null;
-
-                                            OrderTargetInfoTest dummyOrder = new OrderTargetInfoTest(
-                                                    OrderTargetStatus.REQUEST, ticker.priceClose, null, 1.0f,
-                                                    Configs.LEVERAGE_ORDER, symbol, time, time, OrderSide.BUY
-                                            );
-                                            dummyOrder.lastEntry = ticker.priceClose;
-
-                                            FundingMarketFeatures features = extractor.extractFeatures(
-                                                    time, dummyOrder, symbol2Ticker, time2MarketData.get(time), basket);
-
-                                            if (features != null) {
-                                                return new PrepareData(time, symId, convertFeaturesToArray(features));
-                                            }
-                                        } catch (Exception e) {}
-                                        return null;
-                                    })
-                                    .filter(Objects::nonNull)
-                                    .collect(Collectors.toList());
-
-                            batch.addAll(minuteData);
-
-                            // 4. Batch ghi file
-                            if (batch.size() >= 100000) {
-                                for (PrepareData pd : batch) {
-                                    dos.writeLong(pd.time);
-                                    dos.writeShort(pd.id);
-                                    for (float f : pd.features) dos.writeFloat(f);
-                                }
-                                yearRecordCount += batch.size();
+                        // KIỂM TRA MỐC CẮT FILE (3 THÁNG)
+                        if (time >= chunkEndTs) {
+                            if (dos != null) {
+                                writeBatch(dos, batch);
+                                fileRecordCount += batch.size();
                                 batch.clear();
+                                dos.close();
+                                LOG.info("\n🎉 Đã đóng file: {} (Tổng: {} records)", currentFilePath, fileRecordCount);
                             }
+
+                            // Cập nhật mốc 3 tháng tiếp theo
+                            chunkStartTs = chunkEndTs;
+                            cal.setTimeInMillis(chunkStartTs);
+                            cal.add(Calendar.MONTH, 3);
+                            chunkEndTs = cal.getTimeInMillis();
+                            dos = null; // Kích hoạt tạo file mới ở dưới
+                        }
+
+                        // MỞ FILE MỚI NẾU CẦN
+                        if (dos == null) {
+                            currentFilePath = outputDir + "features_" + sdfFile.format(new Date(chunkStartTs))
+                                    + "_to_" + sdfFile.format(new Date(chunkEndTs)) + ".bin.gz";
+                            LOG.info("📂 Đang tạo file mới: {}", currentFilePath);
+                            dos = new DataOutputStream(new BufferedOutputStream(new GZIPOutputStream(new FileOutputStream(currentFilePath)), 1024 * 1024));
+                            fileRecordCount = 0;
+                        }
+
+                        // TRÍCH XUẤT FEATURE BẰNG SINGLE THREAD (stream)
+                        List<PrepareData> minuteData = symbol2Ticker.keySet().parallelStream()
+                                .map(symbol -> {
+                                    try {
+                                        Short symId = symbolMap.get(symbol);
+                                        KlineObjectSimple ticker = symbol2Ticker.get(symbol);
+                                        if (symId == null || ticker == null || !Utils.isTickerAvailable(ticker)) return null;
+
+                                        OrderTargetInfoTest dummyOrder = new OrderTargetInfoTest(
+                                                OrderTargetStatus.REQUEST, ticker.priceClose, null, 1.0f,
+                                                Configs.LEVERAGE_ORDER, symbol, time, time, OrderSide.BUY
+                                        );
+                                        dummyOrder.lastEntry = ticker.priceClose;
+
+                                        FundingMarketFeatures features = extractor.extractFeatures(
+                                                time, dummyOrder, symbol2Ticker, time2MarketData.get(time), basket);
+
+                                        if (features != null) {
+                                            return new PrepareData(time, symId, convertFeaturesToArray(features));
+                                        }
+                                    } catch (Exception e) {}
+                                    return null;
+                                })
+                                .filter(Objects::nonNull)
+                                .collect(Collectors.toList());
+
+                        batch.addAll(minuteData);
+
+                        // FLUSH XUỐNG FILE KHI BATCH ĐẦY ĐỂ TRÁNH TRÀN RAM
+                        if (batch.size() >= 100000) {
+                            writeBatch(dos, batch);
+                            fileRecordCount += batch.size();
+                            batch.clear();
                         }
                     }
-
-                    currentReadTs += minutesToRead * Utils.TIME_MINUTE;
-                    System.out.print(".");
                 }
 
+                currentReadTs += minutesToRead * Utils.TIME_MINUTE;
+                System.out.print(".");
+            }
+
+            // DỌN DẸP CUỐI CÙNG (Đóng file cuối cùng đang ghi dở)
+            if (dos != null) {
                 if (!batch.isEmpty()) {
-                    for (PrepareData pd : batch) {
-                        dos.writeLong(pd.time);
-                        dos.writeShort(pd.id);
-                        for (float f : pd.features) dos.writeFloat(f);
-                    }
-                    yearRecordCount += batch.size();
+                    writeBatch(dos, batch);
+                    fileRecordCount += batch.size();
                     batch.clear();
                 }
-
-                LOG.info("\n🎉 HOÀN TẤT NĂM {}! Tổng cộng {} records đã được ghi.", year, yearRecordCount);
+                dos.close();
+                LOG.info("\n🎉 Đã đóng file cuối: {} (Tổng: {} records)", currentFilePath, fileRecordCount);
             }
+
+        } catch (Exception e) {
+            LOG.error("❌ Lỗi trong quá trình xuất feature", e);
         }
+
         LOG.info("🏁 HOÀN TẤT TOÀN BỘ QUÁ TRÌNH XUẤT FEATURES!");
         System.exit(0);
+    }
+
+    private void writeBatch(DataOutputStream dos, List<PrepareData> batch) throws IOException {
+        for (PrepareData pd : batch) {
+            dos.writeLong(pd.time);
+            dos.writeShort(pd.id);
+            for (float f : pd.features) dos.writeFloat(f);
+        }
     }
 
     private float[] convertFeaturesToArray(FundingMarketFeatures f) {
