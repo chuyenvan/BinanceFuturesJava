@@ -14,6 +14,7 @@ public class BackTestEngineOfflineKaggle {
 
     private AIRejectFilter aiRejectFilter;
 
+    // Chỉ nhận 2 tham số như bản mới
     public BackTestEngineOfflineKaggle(float min15m, float min24h) {
         this.aiRejectFilter = new AIRejectFilter();
         this.aiRejectFilter.setConfig(min15m, min24h);
@@ -24,19 +25,20 @@ public class BackTestEngineOfflineKaggle {
                                                   TreeMap<Long, long[]> time2FundingPre,
                                                   long startTs, long endTs) {
         try {
-            // Reset global managers before running simulation
+            // Đảm bảo các Singleton được dọn sạch trước mỗi Trial
             BudgetManagerSimple.getInstance().resetInstance();
             HistoryManager.getInstance().resetCache();
             CoinRankManager.getInstance().resetCache();
 
-            // Use the offline simulator
+            // 🔥 SỬ DỤNG BẢN SIMULATOR OFFLINE CHUNK (Đọc bằng KaggleDataLoader)
             SimulatorOfflineKaggle test = new SimulatorOfflineKaggle();
 
             test.initDataReady(time2MarketData, predictionMap, time2FundingPre, aiRejectFilter);
+
+            // Chạy mô phỏng (Ticker sẽ load lazy từ đĩa)
             test.simulate(startTs, endTs);
 
-            // Pass the completed offline simulator to the original HPOFitnessCalculator.
-            // Since SimulatorOfflineKaggle maintains `allOrderDone` now, this will work perfectly.
+            // Gửi dữ liệu (allOrderDone) sang Calculator gốc để tính điểm chuẩn xác
             return HPOFitnessCalculator.evaluateDetailed(test.allOrderDone);
 
         } catch (Exception e) {
