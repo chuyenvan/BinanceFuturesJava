@@ -214,7 +214,7 @@ public class DetectEntrySignal2TradeNormal {
                     if (predictData != null) {
                         AiPredictionData preData = new AiPredictionData(
                                 timestamp,
-                                predictData.return15M, predictData.return24H, predictData.riskDrawdown4H
+                                predictData.return15M, predictData.return24H
                         );
                         DataManagerAerospikeFloatSim.saveAiPrediction1M(preData);
                     }
@@ -408,7 +408,7 @@ public class DetectEntrySignal2TradeNormal {
         // Nếu là kèo AI Funding -> Dùng Logic Động
         AiPredictionData predict = new AiPredictionData(
                 ticker.startTime,
-                prediction.return15M, prediction.return24H, prediction.riskDrawdown4H
+                prediction.return15M, prediction.return24H
         );
         if (levelChange == MarketLevelChange.PREDICT_SYMBOL_TRADE) {
             if (symbolPred != null) {
@@ -548,13 +548,14 @@ public class DetectEntrySignal2TradeNormal {
         // --- 1. KHỞI TẠO AI ENTRY (CŨ) ---
         try {
             LOG.info("Initializing AI Brain & Feature Extractor...");
+            int minutesWranup = 2000;
             this.aiBrain = new OnnxInferenceManager(Configs.FILE_AI_ENTRY_PREDICTIONS);
             this.featureEntryExtractor = new ComprehensiveMarketFeatureExtractor();
 
             // Sync dữ liệu lịch sử
             TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers =
                     DataManagerAerospikeFloatSim.readDataFromAerospikeCustom(
-                            System.currentTimeMillis() - 1500 * Utils.TIME_MINUTE, 1500);
+                            System.currentTimeMillis() - minutesWranup * Utils.TIME_MINUTE, minutesWranup);
             this.featureEntryExtractor.initDataFromTickerMap(time2Tickers);
 
             LOG.info("AI System Initialized Successfully. {} {} {}", time2Tickers.size(), Utils.normalizeDateYYYYMMDDHHmm(time2Tickers.firstKey()), Utils.normalizeDateYYYYMMDDHHmm(time2Tickers.lastKey()));

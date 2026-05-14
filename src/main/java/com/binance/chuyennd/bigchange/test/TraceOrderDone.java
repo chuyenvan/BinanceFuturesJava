@@ -375,7 +375,6 @@ public class TraceOrderDone {
             if (order.predict != null) {
                 builder.append(order.predict.predReturn15M).append(",");
                 builder.append(order.predict.predReturn24H).append(",");
-                builder.append(order.predict.predRisk4H).append(",");
                 builder.append(order.symbolPred).append(",");
             }
 

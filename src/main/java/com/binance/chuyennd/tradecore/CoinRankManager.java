@@ -160,9 +160,9 @@ public class CoinRankManager {
             }
         }
 
-        LOG.info("🔄 Ranking Updated at {}: Total={} size={}, TIER_1={}, TIER_2={}, TIER_3={} (Top50%={})",
-                Utils.normalizeDateYYYYMMDDHHmm(currentTime), totalCoins, size, countTier1, countTier2,
-                countTier3, top50PercentSymbols.size());
+//        LOG.info("🔄 Ranking Updated at {}: Total={} size={}, TIER_1={}, TIER_2={}, TIER_3={} (Top50%={})",
+//                Utils.normalizeDateYYYYMMDDHHmm(currentTime), totalCoins, size, countTier1, countTier2,
+//                countTier3, top50PercentSymbols.size());
     }
 
     /**

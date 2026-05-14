@@ -86,7 +86,7 @@ public class TopCoinLogicTester {
      */
     private static void resetSystemCache() {
         CoinRankManager.getInstance().resetCache();
-        HistoryManager.getInstance().clearAll(); // Phải clear cả HistoryManager
+        HistoryManager.getInstance().resetCache(); // Phải clear cả HistoryManager
     }
 
     /**

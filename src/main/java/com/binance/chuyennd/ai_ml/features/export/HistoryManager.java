@@ -9,9 +9,13 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 public class HistoryManager {
+    public static final Logger LOG = LoggerFactory.getLogger(HistoryManager.class);
     // 🔥 GIỮ SIZE 2000 ĐỂ TIẾT KIỆM RAM
     private static final int MAX_HISTORY_SIZE = 2000;
-
+    // --- CƠ CHẾ DỌN DẸP ZOMBIE COIN ---
+    private static final long CLEANUP_INTERVAL = 24 * 60 * 60 * 1000L; // Kiểm tra dọn dẹp mỗi 24 tiếng
+    private static final long ZOMBIE_THRESHOLD = 4 * 60 * 60 * 1000L;  // Coin không có data mới quá 4 tiếng thì xóa
+    private long lastCleanTime = -1L;
     // --- CƠ CHẾ SINGLETON ---
     private static volatile HistoryManager INSTANCE = null;
     private final Set<String> symbolsLastUpdate = new HashSet<>();
@@ -36,6 +40,18 @@ public class HistoryManager {
     public void updateHistory(Map<String, KlineObjectSimple> snapshot) {
         symbolsLastUpdate.clear();
         symbolsLastUpdate.addAll(snapshot.keySet());
+
+        // Lấy currentTime từ 1 nến bất kỳ trong snapshot để làm mốc thời gian hiện hành
+        long currentTime = snapshot.values().iterator().next().startTime.longValue();
+
+        // --- BƯỚC 1: KIỂM TRA DỌN DẸP ZOMBIE (Mỗi 24h chạy 1 lần) ---
+        if (lastCleanTime == -1L) {
+            lastCleanTime = currentTime; // Khởi tạo mốc ban đầu
+        } else if (currentTime - lastCleanTime >= CLEANUP_INTERVAL) {
+            cleanupZombieCoins(currentTime);
+            lastCleanTime = currentTime;
+        }
+
         for (Map.Entry<String, KlineObjectSimple> entry : snapshot.entrySet()) {
             String symbol = entry.getKey();
             KlineObjectSimple kline = entry.getValue();
@@ -57,6 +73,39 @@ public class HistoryManager {
                 list.remove(0);
             }
         }
+    }
+
+    /**
+     * Dọn dẹp các đồng coin đã bị Delist hoặc mất thanh khoản (Không có nến mới > 4 tiếng)
+     */
+    private void cleanupZombieCoins(long currentTime) {
+        int removedCount = 0;
+        Iterator<Map.Entry<String, ArrayList<KlineObjectSimple>>> it = historyMap.entrySet().iterator();
+
+        while (it.hasNext()) {
+            Map.Entry<String, ArrayList<KlineObjectSimple>> entry = it.next();
+            ArrayList<KlineObjectSimple> history = entry.getValue();
+
+            if (history == null || history.isEmpty()) {
+                it.remove();
+                removedCount++;
+                continue;
+            }
+
+            // Lấy nến cuối cùng
+            long lastKlineTime = history.get(history.size() - 1).startTime.longValue();
+
+            // Nếu nến cuối cùng cách hiện tại quá 4 tiếng (ZOMBIE_THRESHOLD)
+            if (currentTime - lastKlineTime >= ZOMBIE_THRESHOLD) {
+                it.remove(); // Trảm!
+                removedCount++;
+//                LOG.debug("🗑️ Đã xóa Zombie Symbol [{}] khỏi History do quá 4h không có data.", entry.getKey());
+            }
+        }
+
+//        if (removedCount > 0) {
+//            LOG.info("🧹 History Cleanup: Đã dọn dẹp {} Zombie symbols. (Size hiện tại: {})", removedCount, historyMap.size());
+//        }
     }
 
     public List<KlineObjectSimple> getHistory(String symbol) {
@@ -238,7 +287,10 @@ public class HistoryManager {
     public Set<String> getAllSymbols() {
         return symbolsLastUpdate;
     }
-    public void clearAll() {
+
+    public void resetCache() {
         historyMap.clear();
+        lastCleanTime = -1L; // Cần reset cái này luôn
+        symbolsLastUpdate.clear();
     }
 }

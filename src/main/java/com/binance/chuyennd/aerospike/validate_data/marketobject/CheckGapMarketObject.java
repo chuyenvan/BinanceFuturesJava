@@ -18,11 +18,11 @@ public class CheckGapMarketObject {
     public static final Logger LOG = LoggerFactory.getLogger(CheckGapMarketObject.class);
 
     public static void main(String[] args) {
-        String setName = "market_data_object";
+
         AerospikeClient client = DataManagerAerospikeFloatSim.getClient226();
         String startDateStr = "20210101";
 
-        scanMissingData(client, setName, startDateStr);
+        scanMissingData(client, DataManagerAerospikeFloatSim.AEROSPIKE_SET_NAME_MARKET_DATA, startDateStr);
     }
 
     public static void scanMissingData(AerospikeClient client, String setName, String startDateStr) {

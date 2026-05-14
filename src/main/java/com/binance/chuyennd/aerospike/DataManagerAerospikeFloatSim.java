@@ -37,7 +37,7 @@ public class DataManagerAerospikeFloatSim {
     public static final Logger LOG = LoggerFactory.getLogger(DataManagerAerospikeFloatSim.class);
     // --- CẤU HÌNH ---
     // Đổi sang Set mới đã tối ưu
-    private static final String AEROSPIKE_SET_NAME_TICKER = "kline_1m_opt";
+    public static final String AEROSPIKE_SET_NAME_TICKER = "kline_1m_opt";
     private static final String AEROSPIKE_SET_NAME_PRICE = "price_realtime";
     public static final String AEROSPIKE_SET_NAME_FUNDINGFEE = "funding_data";
     public static final String AEROSPIKE_SET_NAME_MARKET_DATA = "market_data_object";
@@ -187,7 +187,7 @@ public class DataManagerAerospikeFloatSim {
         Map<String, String> digestToSymbol = new HashMap<>();
         for (String s : expectedSymbols) {
             String upperS = s.toUpperCase();
-            Key k = new Key(Configs.AEROSPIKE_NAMESPACE, "price_realtime", upperS);
+            Key k = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_PRICE, upperS);
             // Digest là mảng byte định danh duy nhất của Key
             digestToSymbol.put(Base64.getEncoder().encodeToString(k.digest), upperS);
         }
@@ -197,7 +197,7 @@ public class DataManagerAerospikeFloatSim {
             scanPolicy.concurrentNodes = true;
             scanPolicy.includeBinData = true;
 
-            getClient242().scanAll(scanPolicy, Configs.AEROSPIKE_NAMESPACE, "price_realtime", (key, record) -> {
+            getClient242().scanAll(scanPolicy, Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_PRICE, (key, record) -> {
                 // Lấy Digest của bản ghi hiện tại
                 String currentDigest = Base64.getEncoder().encodeToString(key.digest);
                 String symbol = digestToSymbol.get(currentDigest);
@@ -1063,7 +1063,7 @@ public class DataManagerAerospikeFloatSim {
     // =========================================================================
 
     /**
-     * Quét toàn bộ giá Realtime từ Aerospike (Set: price_realtime).
+     * Quét toàn bộ giá Realtime từ Aerospike (Set: AEROSPIKE_SET_NAME_PRICE).
      * Yêu cầu: Dữ liệu khi ghi phải bật 'writePolicy.sendKey = true' để lấy lại được Symbol từ Key.
      * @return Map<Symbol, Price>
      */
@@ -1770,6 +1770,149 @@ public class DataManagerAerospikeFloatSim {
             }
         }
         LOG.info("✅ Đã load xong {} records Funding Pred (Primitive Optimized).", results.size());
+        return results;
+    }
+    // =========================================================================
+    // 🔥🔥 KAGGLE EXPORT BATCH READERS (READ BY RANGE) 🔥🔥
+    // =========================================================================
+
+    /**
+     * DÀNH CHO KAGGLE EXPORT: Đọc Market Data theo Range thời gian (Multi-thread, Sub-batching)
+     * Set: AEROSPIKE_SET_NAME_MARKET_DATA
+     */
+    public static TreeMap<Long, MarketDataObject> getMarketDataByRange(long startTime, int totalMinutes) {
+        LOG.info("📥 [KAGGLE EXPORT] Đang tải Market Data (Set: {} from: {} records: {})...",
+                AEROSPIKE_SET_NAME_MARKET_DATA, Utils.normalizeDateYYYYMMDDHHmm(startTime), totalMinutes);
+
+        TreeMap<Long, MarketDataObject> results = new TreeMap<>();
+        long[] allTimestamps = new long[totalMinutes];
+        for (int i = 0; i < totalMinutes; i++) allTimestamps[i] = startTime + (i * 60000L);
+
+        List<java.util.concurrent.Future<Map<Long, MarketDataObject>>> futures = new ArrayList<>();
+        int chunkSize = (totalMinutes + threadCount - 1) / threadCount;
+        int SUB_BATCH_SIZE = 5000;
+
+        for (int i = 0; i < threadCount; i++) {
+            final int startIdx = i * chunkSize;
+            final int endIdx = Math.min(startIdx + chunkSize, totalMinutes);
+            if (startIdx >= endIdx) break;
+
+            futures.add(executor.submit(() -> {
+                SimpleDateFormat localKeyFormat = new SimpleDateFormat("yyyyMMdd-HHmm");
+                Map<Long, MarketDataObject> chunkResult = new HashMap<>();
+                long[] chunkTimestamps = Arrays.copyOfRange(allTimestamps, startIdx, endIdx);
+
+                for (int j = 0; j < chunkTimestamps.length; j += SUB_BATCH_SIZE) {
+                    int limit = Math.min(j + SUB_BATCH_SIZE, chunkTimestamps.length);
+                    Key[] subKeys = new Key[limit - j];
+                    for (int k = 0; k < subKeys.length; k++) {
+                        subKeys[k] = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_MARKET_DATA,
+                                localKeyFormat.format(new java.util.Date(chunkTimestamps[j + k])));
+                    }
+
+                    try {
+                        Record[] records = getClient226().get(batchPolicy, subKeys);
+                        if (records != null) {
+                            for (int r = 0; r < records.length; r++) {
+                                if (records[r] != null) {
+                                    byte[] compressed = (byte[]) records[r].getValue("data");
+                                    if (compressed != null) {
+                                        // Sử dụng hàm giải nén có sẵn của MarketDataObject
+                                        MarketDataObject data = MarketDataObject.decodeMarketDataFromBinary(compressed);
+                                        if (data != null) {
+                                            chunkResult.put(chunkTimestamps[j + r], data);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } catch (Exception e) {
+                        LOG.error("Lỗi khi đọc batch Market Data", e);
+                    }
+                }
+                return chunkResult;
+            }));
+        }
+
+        for (java.util.concurrent.Future<Map<Long, MarketDataObject>> f : futures) {
+            try {
+                results.putAll(f.get());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        LOG.info("✅ Đã load xong {} records Market Data.", results.size());
+        return results;
+    }
+
+    /**
+     * DÀNH CHO KAGGLE EXPORT: Đọc Market AI Prediction (Entry) theo Range thời gian (Multi-thread, Sub-batching)
+     * Set: AEROSPIKE_SET_NAME_AI_PRED_MARKET
+     */
+    public static TreeMap<Long, AiPredictionData> getMarketAiPredictionsByRange(long startTime, int totalMinutes) {
+        LOG.info("📥 [KAGGLE EXPORT] Đang tải AiPredictionData (Set: {} from: {} records: {})...",
+                AEROSPIKE_SET_NAME_AI_PRED_MARKET, Utils.normalizeDateYYYYMMDDHHmm(startTime), totalMinutes);
+
+        TreeMap<Long, AiPredictionData> results = new TreeMap<>();
+        long[] allTimestamps = new long[totalMinutes];
+        for (int i = 0; i < totalMinutes; i++) allTimestamps[i] = startTime + (i * 60000L);
+
+        List<java.util.concurrent.Future<Map<Long, AiPredictionData>>> futures = new ArrayList<>();
+        int chunkSize = (totalMinutes + threadCount - 1) / threadCount;
+        int SUB_BATCH_SIZE = 5000;
+
+        for (int i = 0; i < threadCount; i++) {
+            final int startIdx = i * chunkSize;
+            final int endIdx = Math.min(startIdx + chunkSize, totalMinutes);
+            if (startIdx >= endIdx) break;
+
+            futures.add(executor.submit(() -> {
+                SimpleDateFormat localKeyFormat = new SimpleDateFormat("yyyyMMdd-HHmm");
+                Map<Long, AiPredictionData> chunkResult = new HashMap<>();
+                long[] chunkTimestamps = Arrays.copyOfRange(allTimestamps, startIdx, endIdx);
+
+                for (int j = 0; j < chunkTimestamps.length; j += SUB_BATCH_SIZE) {
+                    int limit = Math.min(j + SUB_BATCH_SIZE, chunkTimestamps.length);
+                    Key[] subKeys = new Key[limit - j];
+                    for (int k = 0; k < subKeys.length; k++) {
+                        subKeys[k] = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_AI_PRED_MARKET,
+                                localKeyFormat.format(new java.util.Date(chunkTimestamps[j + k])));
+                    }
+
+                    try {
+                        Record[] records = getClient226().get(batchPolicy, subKeys);
+                        if (records != null) {
+                            for (int r = 0; r < records.length; r++) {
+                                if (records[r] != null) {
+                                    byte[] compressed = (byte[]) records[r].getValue("data");
+                                    if (compressed != null) {
+                                        // Giải nén Snappy và Parse Json -> AiPredictionData
+                                        byte[] uncompressed = org.xerial.snappy.Snappy.uncompress(compressed);
+                                        String json = new String(uncompressed, "UTF-8");
+                                        AiPredictionData data = Utils.gson.fromJson(json, AiPredictionData.class);
+                                        if (data != null) {
+                                            chunkResult.put(chunkTimestamps[j + r], data);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } catch (Exception e) {
+                        LOG.error("Lỗi khi đọc batch AI Prediction", e);
+                    }
+                }
+                return chunkResult;
+            }));
+        }
+
+        for (java.util.concurrent.Future<Map<Long, AiPredictionData>> f : futures) {
+            try {
+                results.putAll(f.get());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        LOG.info("✅ Đã load xong {} records AiPredictionData.", results.size());
         return results;
     }
 }

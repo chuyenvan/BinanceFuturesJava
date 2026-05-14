@@ -10,8 +10,6 @@ import com.binance.chuyennd.ai_ml.data.SimpleSymbolMapper;
 import com.binance.chuyennd.ai_ml.features.export.HistoryManager;
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.ai_ml.onnx.entry.AIRejectFilter;
-import com.binance.chuyennd.ai_ml.onnx.entry.RunGeneratePredictions;
-import com.binance.chuyennd.ai_ml.onnx.funding.GenerateFundingPredictionsTool;
 import com.binance.chuyennd.bigchange.test.TraceOrderDone;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.MarketLevelChange;
@@ -119,37 +117,12 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         Long startTime = Utils.sdfFile.parse(Configs.TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
         LOG.info("Start with kaggle mode: {} ", Configs.IS_KAGGLE_MODE);
         SimulatorMarketLevelTicker1MStopLoss test = new SimulatorMarketLevelTicker1MStopLoss();
-        if (Configs.IS_KAGGLE_MODE) {
-            test.initDataOnKaggle();
-        } else {
-            test.initData();
-        }
+        test.initData();
         test.simulatorWithInitEntry(startTime, System.currentTimeMillis());
         Thread.sleep(5000);
         System.exit(1);
     }
 
-    private void initDataOnKaggle() throws ParseException {
-        Configs.TIME_RUN = "20250101";
-        BudgetManagerSimple.getInstance().resetInstance();
-        allOrderDone = new TreeMap<>();
-
-        LOG.info("Loading Data... {}", Configs.TIME_RUN);
-        Long startTime = Utils.sdfFile.parse(Configs.TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
-        int numberMinutes = System.currentTimeMillis() - startTime > 0 ? (int) ((System.currentTimeMillis() - startTime) / Utils.TIME_MINUTE) : 0;
-
-        // SỬ DỤNG DATAMANAGER
-        time2MarketData = DataManager.getMarketData();
-        Utils.printMemoryUsage("Load time2MarketData");
-
-        predictionMap = DataManager.getAiPredictionData();
-        Utils.printMemoryUsage("Load predictionMap");
-
-        time2SymbolPred = DataManager.getFundingPredictionData(startTime, numberMinutes);
-        Utils.printMemoryUsage("Load time2FundingPre");
-        aiRejectFilter = new AIRejectFilter();
-        Utils.printMemoryUsage("Load time2FundingPre (time2SymbolPred)");
-    }
 
     public void simulatorWithInitEntry(Long startTime, Long endTime) throws ParseException {
         LOG.info("=== 🚀 BẮT ĐẦU SIMULATE TỪ {} ĐẾN {} ===", Utils.normalizeDateYYYYMMDDHHmm(startTime), Utils.normalizeDateYYYYMMDDHHmm(endTime));
@@ -193,7 +166,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                 for (String runningSymbol : new ArrayList<>(symbol2OrderRunning.keySet())) {
                                     KlineObjectSimple ticker = symbol2Ticker.get(runningSymbol);
                                     if (ticker != null) { // Chỉ update nếu có data mới của symbol đó
-                                        startUpdateOldOrderTrading(time, runningSymbol,ticker);
+                                        startUpdateOldOrderTrading(time, runningSymbol, ticker);
                                     }
                                 }
                             }
@@ -316,7 +289,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                         BudgetManagerSimple.getInstance().updateBudget();
                                     }
                                 } else {
-                                    if (Utils.isMidnightFirstDay(time)){
+                                    if (Utils.isMidnightFirstDay(time)) {
                                         System.gc();
                                     }
                                     BudgetManagerSimple.getInstance().updateBalance(time, allOrderDone, symbol2OrderRunning, symbol2OrdersEntry, true);
@@ -411,39 +384,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         // clear Data Old
         BudgetManagerSimple.getInstance().resetInstance();
         allOrderDone = new TreeMap<>();
-
-        // =====================================================================
-        // 1. KIỂM TRA MỐC THỜI GIAN CHUẨN TỪ MARKET DATA
-        // =====================================================================
-        LOG.info("🔍 Đang kiểm tra Metadata của Market Data để làm mốc chuẩn...");
-        long lastMarketDataTime = DataManagerAerospikeFloatSim.getLastTimestampFromSet(DataManagerAerospikeFloatSim.AEROSPIKE_SET_NAME_MARKET_DATA);
-
-        if (lastMarketDataTime == 0L || lastMarketDataTime < System.currentTimeMillis() - Utils.TIME_DAY) {
-            String lastTimeStr = (lastMarketDataTime == 0L) ? "NULL" : Utils.normalizeDateYYYYMMDDHHmm(lastMarketDataTime);
-            LOG.info("⚠️ Dữ liệu cần cập nhật (Last: {}). Bắt đầu chạy bù cả 3 loại dữ liệu...", lastTimeStr);
-
-            Long timeToRun = (lastMarketDataTime == 0L) ? null : lastMarketDataTime;
-
-            // 1.1 Chạy bù Market Data
-            LOG.info("▶️ 1/3: Kích hoạt ExportMarketData2File...");
-            new ExportMarketData2File().exportMarketEntries(timeToRun);
-
-            // 1.2 Chạy bù AI Prediction (Entry)
-            LOG.info("▶️ 2/3: Kích hoạt RunGeneratePredictions...");
-            try {
-                new RunGeneratePredictions().generateAndSave(timeToRun);
-            } catch (Exception e) {
-                throw new RuntimeException("Lỗi khi chạy RunGeneratePredictions: " + e.getMessage(), e);
-            }
-
-            // 1.3 Chạy bù Funding Prediction
-            LOG.info("▶️ 3/3: Kích hoạt GenerateFundingPredictionsTool...");
-            try {
-                new GenerateFundingPredictionsTool().startGeneration(timeToRun, System.currentTimeMillis());
-            } catch (Exception e) {
-                throw new RuntimeException("Lỗi khi chạy GenerateFundingPredictionsTool: " + e.getMessage(), e);
-            }
-        }
 
         // =====================================================================
         // 2. TẢI TOÀN BỘ DỮ LIỆU VÀO RAM SAU KHI ĐÃ ĐỒNG BỘ

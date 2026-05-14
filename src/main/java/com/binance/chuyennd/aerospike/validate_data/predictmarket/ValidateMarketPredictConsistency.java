@@ -21,8 +21,6 @@ import java.util.concurrent.ThreadLocalRandom;
 public class ValidateMarketPredictConsistency {
     public static final Logger LOG = LoggerFactory.getLogger(ValidateMarketPredictConsistency.class);
 
-    // Tên Set chứa dữ liệu Market Predict cũ
-    private static final String SET_NAME = "ai_pred_market_full_basket_v2";
 
     public static void main(String[] args) {
         new ValidateMarketPredictConsistency().runRandomValidation();

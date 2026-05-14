@@ -70,21 +70,20 @@ public class ProductionVsBacktestDataComparator {
                 AiPredictionData backtestData = DataManagerAerospikeFloatSim.getAiPredictionMarketAtTime(timestamp);
                 if (backtestData == null) continue;
 
-                // Tính % lệch của 3 biến nòng cốt
+                // Tính % lệch của 2 biến nòng cốt
                 double dev15M = getDeviation(prodData.return15M, backtestData.predReturn15M);
                 double dev24H = getDeviation(prodData.return24H, backtestData.predReturn24H);
-                double devRisk4H = getDeviation(prodData.riskDrawdown4H, backtestData.predRisk4H);
 
                 // Độ lệch lớn nhất đại diện cho mẫu này
-                double maxDev = Math.max(dev15M, Math.max(dev24H, devRisk4H));
+                double maxDev = Math.max(dev15M, dev24H);
 
                 if (maxDev <= TOLERANCE_THRESHOLD) {
                     matchCount++;
                 } else {
                     mismatchCount++;
-                    String detail = String.format("PROD [15M:%8.5f, 24H:%8.5f, Risk4H:%8.5f] vs BT [15M:%8.5f, 24H:%8.5f, Risk4H:%8.5f] | Max Lệch: %.2f%%",
-                            prodData.return15M, prodData.return24H, prodData.riskDrawdown4H,
-                            backtestData.predReturn15M, backtestData.predReturn24H, backtestData.predRisk4H,
+                    String detail = String.format("PROD [15M:%8.5f, 24H:%8.5f] vs BT [15M:%8.5f, 24H:%8.5f] | Max Lệch: %.2f%%",
+                            prodData.return15M, prodData.return24H,
+                            backtestData.predReturn15M, backtestData.predReturn24H,
                             maxDev * 100);
                     mismatchList.add(new MismatchRecord(timestamp, maxDev, detail));
                 }
@@ -95,7 +94,6 @@ public class ProductionVsBacktestDataComparator {
 
         LOG.info("\n==========================================");
         LOG.info("=== 🚨 TOP 10 TRƯỜNG HỢP LỆCH NẶNG NHẤT VÀ PHÂN TÍCH FEATURE ===");
-
 
         int limit = Math.min(10, mismatchList.size());
         for (int i = 0; i < limit; i++) {
@@ -113,9 +111,6 @@ public class ProductionVsBacktestDataComparator {
         LOG.info("==========================================");
     }
 
-    // =========================================================================
-    // HÀM TỰ ĐỘNG CÀO FEATURE VÀ ĐỐI CHIẾU
-    // =========================================================================
     private void analyzeFeatureMismatch(long targetTime) {
         try {
             // 1. Đọc PROD Features

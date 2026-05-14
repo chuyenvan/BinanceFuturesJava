@@ -24,129 +24,119 @@ public class RunGeneratePredictions {
             System.setProperty("java.util.concurrent.ForkJoinPool.common.parallelism", "4");
             DataManagerAerospikeFloatSim.setThreadCount(4);
 
-            // Truyền null để chạy từ đầu nếu chạy file này độc lập
+            // Chạy thẳng 1 luồng từ ngày mong muốn (ví dụ 20210101)
             new RunGeneratePredictions().generateAndSave(null);
         } catch (Exception e) {
             LOG.error("Main error", e);
         }
     }
 
-    // Thêm tham số lastTimestamp
-    public void generateAndSave(Long lastTimestamp) throws Exception {
+    public void generateAndSave(Long targetStartTs) throws Exception {
         OnnxInferenceManager aiBrain = new OnnxInferenceManager(MODEL_DIR);
+        ComprehensiveMarketFeatureExtractor featureExtractor = new ComprehensiveMarketFeatureExtractor();
 
-        LOG.info("📥 Loading Market Rates từ Aerospike...");
+        LOG.info("📥 Loading FULL Market Rates từ Aerospike...");
         TreeMap<Long, MarketDataObject> time2Rate = loadMarketRateData();
 
-        long currentTime;
-        if (lastTimestamp != null && lastTimestamp > 0) {
-            // Lùi về 00:00:00 của ngày chứa bản ghi cuối cùng để quét cho chắc chắn
-            currentTime = Utils.getDate(lastTimestamp);
-            LOG.info("🔄 Resuming Market AI Predictions từ ngày: {}", Utils.normalizeDateYYYYMMDDHHmm(currentTime));
+        long startGenerateTime;
+        if (targetStartTs != null && targetStartTs > 0) {
+            startGenerateTime = Utils.getDate(targetStartTs); // Tròn về 00:00:00 của ngày
         } else {
-            currentTime = Utils.sdfFile.parse("20210101").getTime();
-            LOG.info("🚀 STARTING MARKET AI PREDICTION GENERATION FROM SCRATCH...");
+            startGenerateTime = Utils.sdfFile.parse("20210101").getTime();
         }
 
+        // 🔥 WARMUP CHUẨN 48 TIẾNG (GIỐNG HỆT FILE EXPORT .BIN)
+        long warmupStartTime = startGenerateTime - (48 * 3600000L);
         long endTime = System.currentTimeMillis();
-        int processedDays = 0;
 
-        while (currentTime <= endTime) {
+        LOG.info("=========================================================");
+        LOG.info("🚀 BẮT ĐẦU CHẠY PREDICTION LIÊN TỤC (KHÔNG KIỂM TRA TRÙNG)");
+        LOG.info("   - Thời gian Warmup: {}", Utils.normalizeDateYYYYMMDDHHmm(warmupStartTime));
+        LOG.info("   - Thời gian bắt đầu ghi: {}", Utils.normalizeDateYYYYMMDDHHmm(startGenerateTime));
+        LOG.info("   - Thời gian kết thúc: {}", Utils.normalizeDateYYYYMMDDHHmm(endTime));
+        LOG.info("=========================================================");
+
+        // Dọn dẹp sạch sẽ 1 lần duy nhất lúc khởi động
+        HistoryManager.getInstance().resetCache();
+        CoinRankManager.getInstance().resetCache();
+
+        long currentReadTs = warmupStartTime;
+        Map<Long, AiPredictionData> batchPredictions = new HashMap<>();
+        long totalGenerated = 0;
+
+        while (currentReadTs <= endTime) {
             try {
-                List<Long> timestampsToCheck = new ArrayList<>();
-                for (int i = 0; i < 1440; i++) {
-                    timestampsToCheck.add(currentTime + i * Utils.TIME_MINUTE);
-                }
-//
-                Set<Long> existingTimestamps = DataManagerAerospikeFloatSim.checkExistingMarketAiPredictions(timestampsToCheck);
-//                Set<Long> existingTimestamps = new HashSet<>();
-                // Nếu cả ngày đều đã có data -> Bỏ qua toàn bộ ngày
-                if (existingTimestamps.size() >= 1440) {
-                    LOG.info("⏩ Day {} đã full ({} records). Skipping...",
-                            Utils.normalizeDateYYYYMMDD(currentTime), existingTimestamps.size());
-                    currentTime += Utils.TIME_DAY;
-                    continue; // Bỏ qua
-                }
+                // Đọc theo chunk 1 ngày (1440 phút) để tối ưu IO Aerospike
+                int chunkMinutes = 1440;
+                TreeMap<Long, Map<String, KlineObjectSimple>> chunkData =
+                        DataManagerAerospikeFloatSim.readDataFromAerospikeCustom(currentReadTs, chunkMinutes);
 
-                // =====================================================================
-                // 🔥 BẮT BUỘC: KHỞI TẠO LẠI VÀ WARM-UP TRƯỚC KHI TÍNH NGÀY MỚI
-                // =====================================================================
-                ComprehensiveMarketFeatureExtractor featureExtractor = new ComprehensiveMarketFeatureExtractor();
+                if (chunkData != null && !chunkData.isEmpty()) {
+                    for (Map.Entry<Long, Map<String, KlineObjectSimple>> entry : chunkData.entrySet()) {
+                        long timestamp = entry.getKey();
+                        Map<String, KlineObjectSimple> marketData = entry.getValue();
 
-                long warmupStartTime = currentTime - (1500 * Utils.TIME_MINUTE);
-                LOG.info("📥 Đang kéo 1500 phút quá khứ từ Aerospike để Warm-Up Extractor...");
-                TreeMap<Long, Map<String, KlineObjectSimple>> warmupData =
-                        DataManagerAerospikeFloatSim.readDataFromAerospikeCustom(warmupStartTime, 1500);
+                        // 1. LUÔN LUÔN NUÔI HISTORY VÀ RANK (Bất kể đang warmup hay ghi)
+                        HistoryManager.getInstance().updateHistory(marketData);
+                        CoinRankManager.getInstance().getTopCoin(timestamp);
 
-                if (warmupData != null && !warmupData.isEmpty()) {
-                    featureExtractor.initDataFromTickerMap(warmupData);
-                    LOG.info("✅ Warm-up thành công!");
-                }
-                // =====================================================================
-
-                TreeMap<Long, Map<String, KlineObjectSimple>> todayData =
-                        DataManagerAerospikeFloatSim.readDataFromAerospikeCustom(currentTime, 1440);
-
-                Map<Long, AiPredictionData> batchPredictions = new HashMap<>();
-
-                if (!todayData.isEmpty()) {
-                    for (Map.Entry<Long, Map<String, KlineObjectSimple>> entry : todayData.entrySet()) {
-                        Long timestamp = entry.getKey();
-
-                        if (existingTimestamps.contains(timestamp)) {
+                        // 2. NẾU ĐANG WARMUP THÌ BỎ QUA PREDICT
+                        if (timestamp < startGenerateTime) {
                             continue;
                         }
 
-                        Map<String, KlineObjectSimple> marketData = entry.getValue();
+                        // 3. TRÍCH XUẤT VÀ DỰ ĐOÁN
                         MarketDataObject rateChange = time2Rate.get(timestamp);
+                        MarketFeatures features = featureExtractor.extractAllFeatures(timestamp, marketData, rateChange);
 
-                        // Tính Features
-                        MarketFeatures features = featureExtractor.extractAllFeatures(
-                                timestamp, marketData, rateChange);
-                        OnnxInferenceManager.PredictionResult res = aiBrain.predictAll(features);
+                        if (features != null) {
+                            OnnxInferenceManager.PredictionResult res = aiBrain.predictAll(features);
 
-                        batchPredictions.put(timestamp, new AiPredictionData(
-                                timestamp,
-                                res.return15M,  res.return24H,
-                                res.riskDrawdown4H
-                        ));
+                            batchPredictions.put(timestamp, new AiPredictionData(
+                                    timestamp,
+                                    res.return15M, res.return24H
+                            ));
+                        }
+
+                        // 4. GHI BATCH XUỐNG DB & XÓA RAM (Ghi mỗi 5000 record)
+                        if (batchPredictions.size() >= 5000) {
+                            DataManagerAerospikeFloatSim.saveMarketAiPredictionsBatch(batchPredictions);
+                            totalGenerated += batchPredictions.size();
+                            batchPredictions.clear();
+                        }
                     }
                 }
 
-                if (!batchPredictions.isEmpty()) {
-                    DataManagerAerospikeFloatSim.saveMarketAiPredictionsBatch(batchPredictions);
-                }
-
-                processedDays++;
-                LOG.info("✅ Day {}: Đã lưu {} records mới. (Bỏ qua {} records cũ)",
-                        Utils.normalizeDateYYYYMMDD(currentTime), batchPredictions.size(), existingTimestamps.size());
-
-                todayData = null;
-                warmupData = null; // Clear RAM
-                batchPredictions.clear();
+                LOG.info("⏩ Đã xử lý qua mốc: {} | Tổng ghi đè: {}", Utils.normalizeDateYYYYMMDDHHmm(currentReadTs), totalGenerated);
+                currentReadTs += chunkMinutes * Utils.TIME_MINUTE;
 
             } catch (Exception e) {
-                LOG.error("❌ Error processing day " + Utils.normalizeDateYYYYMMDD(currentTime), e);
+                LOG.error("❌ Lỗi khi xử lý đoạn thời gian " + Utils.normalizeDateYYYYMMDDHHmm(currentReadTs), e);
+                currentReadTs += 1440 * Utils.TIME_MINUTE; // Bỏ qua chunk lỗi để đi tiếp
             }
+        }
 
-            currentTime += Utils.TIME_DAY;
+        // Ghi nốt phần dư
+        if (!batchPredictions.isEmpty()) {
+            DataManagerAerospikeFloatSim.saveMarketAiPredictionsBatch(batchPredictions);
+            totalGenerated += batchPredictions.size();
+            batchPredictions.clear();
         }
 
         aiBrain.close();
-        LOG.info("🎉 DONE ALL MARKET PREDICTIONS!");
+        LOG.info("🎉 HOÀN TẤT! ĐÃ GEN & GHI ĐÈ TỔNG CỘNG {} RECORDS.", totalGenerated);
     }
 
-    // Đổi hàm này để đọc từ Aerospike thay vì File Snappy
     private TreeMap<Long, MarketDataObject> loadMarketRateData() throws Exception {
         TreeMap<Long, MarketDataObject> data = DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
         if (data == null) return new TreeMap<>();
         return data;
     }
-    // Thêm vào class RunGeneratePredictions.java
 
     /**
-     * Hàm tính toán Predict cho Duy Nhất 1 thời điểm.
-     * Lưu ý: Extractor truyền vào phải được Warm-up/Update history trước khi gọi hàm này.
+     * Hàm tính toán Predict cho Duy Nhất 1 thời điểm (DÙNG CHO STREAMING LIVE).
+     * ⚠️ QUAN TRỌNG: KHÔNG ĐƯỢC CLEAR HISTORY Ở ĐÂY.
+     * Môi trường gọi hàm này phải chịu trách nhiệm nạp snapshot liên tục mỗi phút!
      */
     public AiPredictionData predictSingle(long timestamp,
                                           Map<String, KlineObjectSimple> currentMarketSnapshot,
@@ -155,21 +145,24 @@ public class RunGeneratePredictions {
                                           ComprehensiveMarketFeatureExtractor featureExtractor) {
         try {
             if (currentMarketSnapshot == null || currentMarketSnapshot.isEmpty()) return null;
-            // B. Warm-up 1500 phút nến để tính toán lại
-            LOG.info("   ⏳ Đang Warm-up 1500 nến từ Aerospike...");
-            HistoryManager.getInstance().getAllHistory().clear();
-            CoinRankManager.getInstance().resetCache();
 
-            // 1. Trích xuất Features (Dựa trên history đã được update trong featureExtractor)
+            // ❌ ĐÃ XÓA LỆNH CLEAR HISTORY/RANK Ở ĐÂY ĐỂ TRÁNH LÀM MẤT TRÍ NHỚ CỦA RSI & BASKET
+
+            // 1. Cập nhật dữ liệu mới nhất vào History & Rank
+            HistoryManager.getInstance().updateHistory(currentMarketSnapshot);
+            CoinRankManager.getInstance().getTopCoin(timestamp);
+
+            // 2. Trích xuất Features
             MarketFeatures features = featureExtractor.extractAllFeatures(timestamp, currentMarketSnapshot, rateChange);
 
-            // 2. Chạy AI Inference
+            // 3. Chạy AI Inference
+            if (features == null) return null;
             OnnxInferenceManager.PredictionResult res = aiBrain.predictAll(features);
 
-            // 3. Đóng gói kết quả
+            // 4. Đóng gói kết quả
             return new AiPredictionData(
                     timestamp,
-                    res.return15M, res.return24H, res.riskDrawdown4H
+                    res.return15M, res.return24H
             );
         } catch (Exception e) {
             LOG.error("❌ Lỗi khi tính predictSingle tại " + Utils.normalizeDateYYYYMMDDHHmm(timestamp), e);
@@ -177,9 +170,7 @@ public class RunGeneratePredictions {
         }
     }
 
-    // Hàm bổ trợ để load Model tập trung
     public OnnxInferenceManager getModelManager() throws Exception {
         return new OnnxInferenceManager(MODEL_DIR);
     }
-
 }
