@@ -304,7 +304,6 @@ public class TraceData2Test {
     private static void showFileAll(String fileName) {
         fileName = "../simulator/storage/" + fileName;
 //        fileName = "storage/" + fileName;
-        BudgetManagerSimple.getInstance().updateBudget();
         TreeMap<Long, OrderTargetInfoTest> allOrderDone = (TreeMap<Long, OrderTargetInfoTest>) Storage.readObjectFromFile(fileName);
 
         Map<MarketLevelChange, List<OrderTargetInfoTest>> level2Order = new HashMap<>();

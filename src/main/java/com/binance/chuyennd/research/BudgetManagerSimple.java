@@ -25,10 +25,9 @@ public class BudgetManagerSimple {
     public BalanceIndex balanceIndex = new BalanceIndex();
 
     public Float BUDGET_PER_ORDER;
-    public Float investing = null;
+
     public Map<Long, Float> time2Balance = new HashMap<>();
     public Float unProfit = 0f;
-    public Float positionMargin = 0f;
 
     public Float profitLossMax = 0f;
     public Float totalFee = 0f;
@@ -43,7 +42,7 @@ public class BudgetManagerSimple {
     public int totalSL = 0;
 
     private static volatile BudgetManagerSimple INSTANCE = null;
-    public Float marginRunning = null;
+    public Float marginRunning = 0f;
 
     // 1. Dùng ThreadLocal thay vì static instance đơn thuần
     private static final ThreadLocal<BudgetManagerSimple> threadLocalInstance = ThreadLocal.withInitial(BudgetManagerSimple::new);
@@ -59,7 +58,6 @@ public class BudgetManagerSimple {
     }
 
     public void updateBudget() {
-        investing = 0f;
         try {
             BUDGET_PER_ORDER = balanceBasic / Configs.number_order_budget;
         } catch (Exception e) {
@@ -83,13 +81,11 @@ public class BudgetManagerSimple {
         }
     }
 
-    public void updatePositionMargin(Collection<OrderTargetInfoTest> orderInfos) {
-        positionMargin = calPositionMargin(orderInfos);
-    }
+
 
     public void updateBalance(Long timeUpdate, TreeMap<Long, OrderTargetInfoTest> allOrderDone,
-                              ConcurrentHashMap<String, OrderTargetInfoTest> orderRunning,
-                              ConcurrentHashMap<String, List<OrderTargetInfoTest>> symbol2OrdersEntry, boolean isPrintBalance) {
+                              HashMap<String, OrderTargetInfoTest> orderRunning,
+                              HashMap<String, List<OrderTargetInfoTest>> symbol2OrdersEntry, boolean isPrintBalance) {
         Float balance = balanceBasic;
         totalFee = fee;
         balance = balance + profit;
@@ -97,8 +93,8 @@ public class BudgetManagerSimple {
         unProfit = calUnrealizedProfit(orderRunning.values());
         profitLossMax = calProfitLossMax(orderRunning.values());
 
-        Float positionMarginReal = positionMargin;
-        balanceIndex.updateIndex(balanceBasic, positionMargin, positionMarginReal, timeUpdate, profitLossMax, profitLossMax, symbol2OrdersEntry,
+        Float positionMarginReal = marginRunning;
+        balanceIndex.updateIndex(balanceBasic, marginRunning, positionMarginReal, timeUpdate, profitLossMax, profitLossMax, symbol2OrdersEntry,
                 orderRunning, unProfit);
         if (isPrintBalance) {
             time2Balance.put(timeUpdate, balance);
@@ -131,7 +127,7 @@ public class BudgetManagerSimple {
                             "unP:{}\tunPMin:{}\t{}\t{}\t{}%\tdone:{}/{}/{} run:{}/{} f:{}",
                     Utils.normalizeDateYYYYMMDDHHmm(timeUpdate), Utils.formatLog(balance.longValue(), 5),
                     Utils.formatLog(profitOfDate.longValue(), 4),
-                    Utils.formatLog(positionMargin.longValue(), 4),
+                    Utils.formatLog(marginRunning.longValue(), 4),
 
                     Utils.formatLog(marginMaxDate.longValue(), 5),
                     Utils.formatLog(marginMaxMonth.longValue(), 5),
@@ -146,7 +142,7 @@ public class BudgetManagerSimple {
         }
     }
 
-    private Integer counterOrderRunning(ConcurrentHashMap<String, List<OrderTargetInfoTest>> symbol2OrdersEntry) {
+    private Integer counterOrderRunning(HashMap<String, List<OrderTargetInfoTest>> symbol2OrdersEntry) {
         int counter = 0;
         for (List<OrderTargetInfoTest> orders : symbol2OrdersEntry.values()) {
             counter += orders.size();

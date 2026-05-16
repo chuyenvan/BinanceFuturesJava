@@ -2,6 +2,7 @@ package com.binance.chuyennd.aerospike;
 
 import com.aerospike.client.AerospikeClient;
 import com.aerospike.client.Info;
+import com.binance.chuyennd.utils.Configs;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -13,6 +14,8 @@ public class AerospikeCheckData {
         Map<String, AerospikeClient> clients = new HashMap<>();
         clients.put("226", new AerospikeClient("103.157.218.226", 3222));
 //        clients.put("242", new AerospikeClient("103.157.218.242", 3222));
+
+
         for (Map.Entry<String, AerospikeClient> entry : clients.entrySet()) {
             AerospikeClient client = entry.getValue();
             String host = entry.getKey();
@@ -20,6 +23,7 @@ public class AerospikeCheckData {
 
                 String namespace = "ticker";
                 // truncate toàn bộ set
+//                client.truncate(null, namespace, "hpo_fitness_cache", null);
                 // Lấy thống kê namespace
                 String nsResponse = Info.request(client.getNodes()[0], "namespace/" + namespace);
                 System.out.println("=== Namespace Stats ===");

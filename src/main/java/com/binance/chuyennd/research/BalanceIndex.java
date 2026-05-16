@@ -1,6 +1,5 @@
 package com.binance.chuyennd.research;
 
-import com.binance.chuyennd.utils.Storage;
 import com.binance.chuyennd.utils.Utils;
 
 import java.io.Serializable;
@@ -8,7 +7,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class BalanceIndex implements Serializable {
 
@@ -29,7 +27,7 @@ public class BalanceIndex implements Serializable {
 
     public void updateIndex(Float balance, Float positionMargin, Float positionMarginReal,
                             Long timeUpdate, Float profitLossMin, Float unrealizedProfitMin,
-                            ConcurrentHashMap<String, List<OrderTargetInfoTest>> allOrderEntry, ConcurrentHashMap<String,
+                            HashMap<String, List<OrderTargetInfoTest>> allOrderEntry, HashMap<String,
             OrderTargetInfoTest> orderRunning, Float unProfit) {
 
 

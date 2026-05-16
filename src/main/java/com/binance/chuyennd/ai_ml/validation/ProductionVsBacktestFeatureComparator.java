@@ -20,9 +20,10 @@ public class ProductionVsBacktestFeatureComparator {
     private static final Logger LOG = LoggerFactory.getLogger(ProductionVsBacktestFeatureComparator.class);
     private static final String PROD_PREDICT_DIR = "storage/data/prediction/";
 
-    // 🔥 ĐƯỜNG DẪN TỚI FOLDER CHỨA MODEL ONNX
+    // 🔥 ĐƯỜNG DẪN TỚI FOLDER CHỨA MODEL ONNX (Giữ nguyên của bác)
     private static final String MODEL_DIR = "C:\\Users\\pc\\Desktop\\data\\ai_models_reg_v3";
 
+    // --- CÁC BIẾN LƯU TRỮ THỐNG KÊ TRUNG BÌNH ---
     private Map<String, Double> featureDiffSum = new TreeMap<>();
     private Map<String, Integer> featureDiffCount = new TreeMap<>();
     private Map<String, Double> predictDiffSum = new TreeMap<>();
@@ -41,9 +42,11 @@ public class ProductionVsBacktestFeatureComparator {
             return;
         }
 
+        // 🔥 Quét toàn bộ dữ liệu thay vì 10 mẫu
         int limit = featureFiles.size();
         LOG.info("📊 TỔNG SỐ MẪU CẦN ĐỐI SOÁT: {}", limit);
 
+        // 🧠 KHỞI TẠO BỘ NÃO AI ĐỂ CHẠY ON-THE-FLY
         OnnxInferenceManager aiBrain = null;
         try {
             aiBrain = new OnnxInferenceManager(MODEL_DIR);
@@ -78,23 +81,30 @@ public class ProductionVsBacktestFeatureComparator {
                 extractor.initDataFromTickerMap(warmupData);
                 MarketDataObject targetMarketRate = calculateMarketData(targetTime, warmupData, targetMarketData);
 
+                // 1. TRÍCH XUẤT FEATURES BẰNG CODE BACKTEST
                 MarketFeatures btFeatures = extractor.extractAllFeatures(targetTime, targetMarketData, targetMarketRate);
 
+                // 2. ĐỐI SOÁT FEATURES VÀ LƯU THỐNG KÊ
                 compareFeatureFields(prodFeatures, btFeatures);
 
+                // 3. ĐỐI SOÁT PREDICTIONS BẰNG AI MODEL (3 CHIỀU)
                 if (aiBrain != null) {
+                    // Đọc file predict gốc của Production (Xóa đuôi .features đi)
                     String predictFilePath = prodFile.getPath().replace(".features", "");
                     OnnxInferenceManager.PredictionResult prodSavedPred =
                             (OnnxInferenceManager.PredictionResult) StorageSnappy.readObjectFromFile(predictFilePath);
 
+                    // Prod_Fly (Tính lại trên Prod_Features) và BT_Fly (Tính trên BT_Features)
+                    // 🔥 Thay đổi hàm thành predictAll theo code của bác
                     OnnxInferenceManager.PredictionResult prodFlyPred = aiBrain.predictAll(prodFeatures);
                     OnnxInferenceManager.PredictionResult btFlyPred = aiBrain.predictAll(btFeatures);
 
                     if (prodSavedPred != null) {
-                        comparePredictions(prodSavedPred, prodFlyPred, btFlyPred);
+                        comparePredictions3Way(prodSavedPred, prodFlyPred, btFlyPred);
                     } else {
                         LOG.warn("⚠️ Không tìm thấy file Prediction của PROD tại: {}", predictFilePath);
-                        comparePredictions(prodFlyPred, prodFlyPred, btFlyPred);
+                        // Fallback: So sánh 2 chiều thông thường nếu ko có file
+                        comparePredictions3Way(prodFlyPred, prodFlyPred, btFlyPred);
                     }
                 }
 
@@ -107,28 +117,31 @@ public class ProductionVsBacktestFeatureComparator {
             try { aiBrain.close(); } catch (Exception e) {}
         }
 
+        // 🔥 IN BẢNG THỐNG KÊ TRUNG BÌNH KHI KẾT THÚC
         printStatisticsSummary(limit);
     }
 
-    private void comparePredictions(OnnxInferenceManager.PredictionResult prodSaved,
-                                    OnnxInferenceManager.PredictionResult prodFly,
-                                    OnnxInferenceManager.PredictionResult bt) {
-        LOG.info("--- 🧠 ĐỐI SOÁT AI PREDICTION (2 CHIỀU) ---");
+    private void comparePredictions3Way(OnnxInferenceManager.PredictionResult prodSaved,
+                                        OnnxInferenceManager.PredictionResult prodFly,
+                                        OnnxInferenceManager.PredictionResult bt) {
+        LOG.info("--- 🧠 ĐỐI SOÁT AI PREDICTION (3 CHIỀU) ---");
         float epsilon = 0.0001f;
 
-        // BƯỚC 1: Check tính nhất quán của Model
+        // BƯỚC 1: Check tính nhất quán của Model (Prod Saved vs Prod Fly)
         int diffModel = 0;
         diffModel += checkPred("return15M (Fly)", prodSaved.return15M, prodFly.return15M, epsilon, false);
         diffModel += checkPred("return24H (Fly)", prodSaved.return24H, prodFly.return24H, epsilon, false);
+        diffModel += checkPred("risk4H (Fly)", prodSaved.riskDrawdown4H, prodFly.riskDrawdown4H, epsilon, false);
 
         if (diffModel > 0) {
-            LOG.error("🚨 CẢNH BÁO ĐỎ: ONNX Model tính toán không nhất quán! (Cùng Features nhưng Realtime ra kết quả khác Test)");
+            LOG.error("🚨 CẢNH BÁO ĐỎ: ONNX Model tính toán không nhất quán! (Cùng 1 Features nhưng lúc Realtime ra kết quả khác lúc Test)");
         }
 
-        // BƯỚC 2: Check độ lệch môi trường
+        // BƯỚC 2: Check độ lệch môi trường (Prod Saved vs Backtest Fly)
         int diffEnv = 0;
         diffEnv += checkPred("return15M", prodSaved.return15M, bt.return15M, epsilon, true);
         diffEnv += checkPred("return24H", prodSaved.return24H, bt.return24H, epsilon, true);
+        diffEnv += checkPred("riskDrawdown4H", prodSaved.riskDrawdown4H, bt.riskDrawdown4H, epsilon, true);
 
         if (diffEnv == 0) {
             LOG.info("✅ PREDICTION CỦA PROD VÀ BACKTEST KHỚP HOÀN HẢO 100%!");
@@ -145,6 +158,7 @@ public class ProductionVsBacktestFeatureComparator {
             percentDiff = (Math.abs(prod - bt) / maxAbs) * 100f;
         }
 
+        // Chỉ cộng dồn thống kê cho trường hợp đối chiếu Prod vs BT (Môi trường thực)
         if (isRecordStats) {
             predictDiffSum.put(name, predictDiffSum.getOrDefault(name, 0.0) + percentDiff);
             predictDiffCount.put(name, predictDiffCount.getOrDefault(name, 0) + 1);
@@ -186,6 +200,7 @@ public class ProductionVsBacktestFeatureComparator {
                     isMatch = Objects.equals(prodVal, btVal);
                 }
 
+                // Ghi nhận thống kê cho tất cả các biến Number (Dù lệch 0% vẫn ghi nhận)
                 if (prodVal instanceof Number && btVal instanceof Number) {
                     String fieldName = field.getName();
                     featureDiffSum.put(fieldName, featureDiffSum.getOrDefault(fieldName, 0.0) + diffPercent);
@@ -222,7 +237,7 @@ public class ProductionVsBacktestFeatureComparator {
             int count = featureDiffCount.getOrDefault(name, 1);
             double avgDiff = entry.getValue() / count;
 
-            if (avgDiff > 0.01) {
+            if (avgDiff > 0.01) { // Lọc bỏ nhiễu li ti
                 LOG.info("   🔸 {}: {}%", String.format("%-25s", name), String.format("%6.3f", avgDiff));
             }
         }
@@ -237,6 +252,9 @@ public class ProductionVsBacktestFeatureComparator {
         LOG.info("========================================================\n");
     }
 
+    // =========================================================================
+    // HÀM TỰ TÍNH MARKET DATA (GIỮ NGUYÊN HOÀN TOÀN CỦA BÁC)
+    // =========================================================================
     private MarketDataObject calculateMarketData(long targetTime,
                                                  TreeMap<Long, Map<String, KlineObjectSimple>> warmupData,
                                                  Map<String, KlineObjectSimple> targetMarketData) {
@@ -268,6 +286,9 @@ public class ProductionVsBacktestFeatureComparator {
         }
     }
 
+    // =========================================================================
+    // HÀM TÌM KIẾM FILE (GIỮ NGUYÊN HOÀN TOÀN CỦA BÁC)
+    // =========================================================================
     private List<File> collectFeatureFiles(String path) {
         List<File> allFiles = new ArrayList<>(); File root = new File(path);
         if (!root.exists() || !root.isDirectory()) return allFiles;

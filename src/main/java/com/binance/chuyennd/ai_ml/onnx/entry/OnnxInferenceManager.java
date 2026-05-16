@@ -267,18 +267,20 @@ public class OnnxInferenceManager implements AutoCloseable {
 
     public static class PredictionResult implements Serializable {
         public float return15M, return24H;
+        public float riskDrawdown4H;
 
         // Sửa thứ tự tham số truyền vào cho đúng tên biến
         public PredictionResult(float return15M, float return24H, float riskDrawdown4H) {
             this.return15M = return15M;
             this.return24H = return24H;
-           }
+            this.riskDrawdown4H = riskDrawdown4H;
+        }
 
         @Override
         public String toString() {
             // Chỉ để 3 format tương ứng với 3 biến
-            return String.format("[15M:%.2f%% 24H:%.2f%% ]",
-                    return15M * 100, return24H * 100);
+            return String.format("[15M:%.2f%% 24H:%.2f%% | Risk4H:%.2f%%]",
+                    return15M * 100, return24H * 100, riskDrawdown4H * 100);
         }
     }
 }

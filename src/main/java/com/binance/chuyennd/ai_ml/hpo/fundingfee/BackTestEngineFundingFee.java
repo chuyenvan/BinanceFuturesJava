@@ -17,52 +17,29 @@ public class BackTestEngineFundingFee {
 
     private AIRejectFilter aiRejectFilter;
 
-    // 🔥 CHỈ CÒN NHẬN 2 THAM SỐ
-    public BackTestEngineFundingFee(float min15m, float min24h) {
+    // 🔥 PHỤC HỒI 3 THAM SỐ
+    public BackTestEngineFundingFee(float risk, float min15m, float min24h) {
         this.aiRejectFilter = new AIRejectFilter();
-        this.aiRejectFilter.setConfig(min15m, min24h);
+        this.aiRejectFilter.setConfig(risk, min15m, min24h);
     }
 
-    public HPOFitnessCalculator.FitnessReport run(TreeMap<Long, MarketDataObject> time2MarketData,
-                                                  TreeMap<Long, AiPredictionData> predictionMap,
-                                                  TreeMap<Long, long[]> time2FundingPre) {
-        try {
-            Long startTime = Utils.sdfFile.parse(Configs.TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
-            BudgetManagerSimple.getInstance().resetInstance(); // Gọi instance chuẩn
-            HistoryManager.getInstance().resetCache();
-            CoinRankManager.getInstance().resetCache();
-            SimulatorMarketLevelTicker1MStopLoss test = new SimulatorMarketLevelTicker1MStopLoss();
-
-            test.initDataReady(time2MarketData, predictionMap, time2FundingPre, aiRejectFilter);
-            test.simulatorWithInitEntry(startTime, System.currentTimeMillis());
-
-            return HPOFitnessCalculator.evaluateDetailed(test);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            HPOFitnessCalculator.FitnessReport err = new HPOFitnessCalculator.FitnessReport();
-            err.finalFitness = -10000f;
-            err.note = "EXCEPTION_ERROR";
-            return err;
-        }
-    }
-
-    // PHƯƠNG THỨC MỚI DÀNH CHO OFFLINE/KAGGLE (END TIME LIMIT)
     public HPOFitnessCalculator.FitnessReport run(TreeMap<Long, MarketDataObject> time2MarketData,
                                                   TreeMap<Long, AiPredictionData> predictionMap,
                                                   TreeMap<Long, long[]> time2FundingPre,
-                                                  long endTime) {
+                                                  long offlineEndTime) {
         try {
             Long startTime = Utils.sdfFile.parse(Configs.TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
-            BudgetManagerSimple.getInstance().resetInstance();
+            BudgetManagerSimple.resetInstance();
             HistoryManager.getInstance().resetCache();
             CoinRankManager.getInstance().resetCache();
+
+            // DÙNG SIMULATOR GỐC (Bản đã được bác tối ưu tốc độ siêu nhanh)
             SimulatorMarketLevelTicker1MStopLoss test = new SimulatorMarketLevelTicker1MStopLoss();
 
             test.initDataReady(time2MarketData, predictionMap, time2FundingPre, aiRejectFilter);
-            test.simulatorWithInitEntry(startTime, endTime);
+            test.simulatorWithInitEntry(startTime, offlineEndTime);
 
-            return HPOFitnessCalculator.evaluateDetailed(test);
+            return HPOFitnessCalculator.evaluateDetailed(test.allOrderDone);
 
         } catch (Exception e) {
             e.printStackTrace();

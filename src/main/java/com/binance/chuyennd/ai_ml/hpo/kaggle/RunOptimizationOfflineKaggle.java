@@ -5,6 +5,7 @@ import com.aerospike.client.Record;
 import com.aerospike.client.policy.WritePolicy;
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.ai_ml.hpo.HPOFitnessCalculator;
+import com.binance.chuyennd.ai_ml.hpo.fundingfee.BackTestEngineFundingFee;
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.utils.Configs;
@@ -34,27 +35,26 @@ public class RunOptimizationOfflineKaggle {
     public static TreeMap<Long, MarketDataObject> time2MarketData;
     public static TreeMap<Long, AiPredictionData> predictionMap;
     public static TreeMap<Long, long[]> time2FundingPre;
-    public static long offlineStartTime;
     public static long offlineEndTime;
 
+    // 🔥 CẬP NHẬT CẤU TRÚC GEN ĐỂ LƯU THÊM RISK
     static class GeneRecord {
+        public float pRisk;
         public float p15M;
         public float p24H;
         public float score;
-        public GeneRecord(float p15M, float p24H, float score) {
-            this.p15M = p15M; this.p24H = p24H; this.score = score;
+        public GeneRecord(float pRisk, float p15M, float p24H, float score) {
+            this.pRisk = pRisk; this.p15M = p15M; this.p24H = p24H; this.score = score;
         }
     }
 
     public static void main(String[] args) {
-        LOG.info("=== BẮT ĐẦU TỐI ƯU HÓA HPO (ISLAND MODEL - KAGGLE OFFLINE CHUNK) ===");
+        LOG.info("=== BẮT ĐẦU TỐI ƯU HÓA HPO (ISLAND MODEL 3 PARAMS - KAGGLE) ===");
         try {
             Configs.IS_HPO_MODE = true;
             Configs.IS_KAGGLE_MODE = true;
 
             Configs.TIME_RUN = "20251001";
-
-            offlineStartTime = Utils.sdfFile.parse(Configs.TIME_RUN).getTime() + (7 * Utils.TIME_HOUR);
             offlineEndTime = Utils.sdfFile.parse("20260430").getTime() + (24 * Utils.TIME_HOUR) - Utils.TIME_MINUTE;
 
             loadKaggleData();
@@ -63,9 +63,11 @@ public class RunOptimizationOfflineKaggle {
             return;
         }
 
+        // 🔥 PHỤC HỒI 3 GEN (Dò tìm trên 3 chiều)
         Genotype<DoubleGene> gtf = Genotype.of(
-                DoubleChromosome.of(DoubleRange.of(0.01, 0.025)), // 0: MIN_MOMENTUM_15M
-                DoubleChromosome.of(DoubleRange.of(0.01, 0.09))    // 1: MIN_MOMENTUM_24H
+                DoubleChromosome.of(DoubleRange.of(-0.2, -0.08)),  // 0: HARD_RISK_LIMIT_4H
+                DoubleChromosome.of(DoubleRange.of(0.012, 0.025)), // 1: MIN_MOMENTUM_15M
+                DoubleChromosome.of(DoubleRange.of(0.01, 0.06))    // 2: MIN_MOMENTUM_24H
         );
 
         Engine<DoubleGene, Float> engine = Engine.builder(RunOptimizationOfflineKaggle::eval, gtf)
@@ -81,6 +83,7 @@ public class RunOptimizationOfflineKaggle {
         int steadyCount = 0;
         final int MAX_STEADY_GENERATIONS = 5;
 
+        // WARM-START
         ISeq<Phenotype<DoubleGene, Float>> initialPopulation = loadInitialPopulationFromAerospike(gtf);
 
         for (int gen = 1; gen <= GENERATIONS; gen++) {
@@ -103,6 +106,7 @@ public class RunOptimizationOfflineKaggle {
             LOG.info(">>> 🏆 KẾT THÚC GEN {}/{} | SCORE BEST: {} <<<", gen, GENERATIONS, String.format("%.2f", currentGenBest));
             LOG.info("===================================================================\n");
 
+            // EARLY STOPPING
             if (currentGenBest > globalBestScore) {
                 globalBestScore = currentGenBest;
                 steadyCount = 0;
@@ -111,7 +115,7 @@ public class RunOptimizationOfflineKaggle {
             }
 
             if (steadyCount >= MAX_STEADY_GENERATIONS) {
-                LOG.info("🛑 KÍCH HOẠT EARLY STOPPING: Điểm số đã đi ngang (hội tụ) trong {} thế hệ liên tiếp. Tiết kiệm thời gian, dừng chương trình!", MAX_STEADY_GENERATIONS);
+                LOG.info("🛑 KÍCH HOẠT EARLY STOPPING: Điểm số đã đi ngang trong {} thế hệ. Dừng chương trình!", MAX_STEADY_GENERATIONS);
                 break;
             }
         }
@@ -122,14 +126,14 @@ public class RunOptimizationOfflineKaggle {
     private static Float eval(Genotype<DoubleGene> gt) {
         long c = testCounter.incrementAndGet();
 
-        float pMin15M = gt.get(0).gene().floatValue();
-        float pMin24H = gt.get(1).gene().floatValue();
+        // 🔥 LẤY ĐỦ 3 GEN
+        float pRisk   = gt.get(0).gene().floatValue();
+        float pMin15M = gt.get(1).gene().floatValue();
+        float pMin24H = gt.get(2).gene().floatValue();
 
         try {
-            // 🔥 GỌI ENGINE OFFLINE ĐỂ TRÁNH THẮT CỔ CHAI AEROSPIKE I/O
-            BackTestEngineOfflineKaggle engine = new BackTestEngineOfflineKaggle(pMin15M, pMin24H);
-
-            HPOFitnessCalculator.FitnessReport report = engine.run(time2MarketData, predictionMap, time2FundingPre, offlineStartTime, offlineEndTime);
+            BackTestEngineFundingFee engine = new BackTestEngineFundingFee(pRisk, pMin15M, pMin24H);
+            HPOFitnessCalculator.FitnessReport report = engine.run(time2MarketData, predictionMap, time2FundingPre, offlineEndTime);
 
             float maxAllowedDrawdown = -15000f;
             if (report.maxDrawdown < maxAllowedDrawdown) {
@@ -138,10 +142,10 @@ public class RunOptimizationOfflineKaggle {
                 report.note = "PENALTY: Over MaxDD";
             }
 
-            LOG.info(String.format("Trial %4d | Score: %8.1f | Trades: %4d | PnL: %6.1f$ | MaxDD: %6.1f$ | Pen: %4.1f$ | 15M: %.5f | 24H: %.5f | %s",
+            LOG.info(String.format("Trial %4d | Score: %8.1f | Trades: %4d | PnL: %6.1f$ | MaxDD: %6.1f$ | Pen: %4.1f$ | Risk: %.5f | 15M: %.5f | 24H: %.5f | %s",
                     c, report.finalFitness,
                     report.tradeCount, report.totalProfit, report.maxDrawdown,
-                    report.penaltyCost, pMin15M, pMin24H, report.note));
+                    report.penaltyCost, pRisk, pMin15M, pMin24H, report.note));
 
             return report.finalFitness;
 
@@ -169,7 +173,9 @@ public class RunOptimizationOfflineKaggle {
 
             List<Phenotype<DoubleGene, Float>> seedPop = new ArrayList<>();
             for (GeneRecord gr : pool) {
+                // 🔥 ĐƯA RISK VÀO GENOTYPE KHỞI ĐỘNG
                 Genotype<DoubleGene> genotype = Genotype.of(
+                        DoubleChromosome.of(DoubleGene.of(gr.pRisk, -0.2, -0.08)),
                         DoubleChromosome.of(DoubleGene.of(gr.p15M, 0.012, 0.025)),
                         DoubleChromosome.of(DoubleGene.of(gr.p24H, 0.01, 0.06))
                 );
@@ -188,8 +194,9 @@ public class RunOptimizationOfflineKaggle {
             if (myBest == null) return population;
 
             float myScore = myBest.fitness();
-            float my15M = myBest.genotype().get(0).gene().floatValue();
-            float my24H = myBest.genotype().get(1).gene().floatValue();
+            float myRisk = myBest.genotype().get(0).gene().floatValue();
+            float my15M = myBest.genotype().get(1).gene().floatValue();
+            float my24H = myBest.genotype().get(2).gene().floatValue();
 
             Key key = new Key(Configs.AEROSPIKE_NAMESPACE, "hpo_island_pool", Configs.TIME_RUN);
             List<GeneRecord> globalPool = new ArrayList<>();
@@ -211,14 +218,15 @@ public class RunOptimizationOfflineKaggle {
                     break;
                 }
 
-                globalPool.add(new GeneRecord(my15M, my24H, myScore));
+                globalPool.add(new GeneRecord(myRisk, my15M, my24H, myScore));
                 globalPool.sort((a, b) -> Float.compare(b.score, a.score));
 
+                // 🔥 LỌC TRÙNG LẶP TRÊN 3 CHIỀU KHÔNG GIAN
                 List<GeneRecord> uniquePool = new ArrayList<>();
                 for (GeneRecord g : globalPool) {
                     boolean isDup = false;
                     for (GeneRecord u : uniquePool) {
-                        if (Math.abs(g.p15M - u.p15M) < 0.0001 && Math.abs(g.p24H - u.p24H) < 0.0001) {
+                        if (Math.abs(g.pRisk - u.pRisk) < 0.0001 && Math.abs(g.p15M - u.p15M) < 0.0001 && Math.abs(g.p24H - u.p24H) < 0.0001) {
                             isDup = true; break;
                         }
                     }
@@ -252,9 +260,12 @@ public class RunOptimizationOfflineKaggle {
 
             int replacedCount = 0;
             for (GeneRecord immigrant : globalPool) {
-                if (immigrant.score > myScore || (immigrant.score == myScore && (immigrant.p15M != my15M || immigrant.p24H != my24H))) {
+                // Nhận người nhập cư nếu họ mạnh hơn hoặc bằng (nhưng mang bộ gen mới trên 1 trong 3 tham số)
+                if (immigrant.score > myScore || (immigrant.score == myScore && (immigrant.pRisk != myRisk || immigrant.p15M != my15M || immigrant.p24H != my24H))) {
 
+                    // 🔥 LAI GHÉP GEN NHẬP CƯ
                     Genotype<DoubleGene> newGt = Genotype.of(
+                            DoubleChromosome.of(DoubleGene.of(immigrant.pRisk, -0.2, -0.08)),
                             DoubleChromosome.of(DoubleGene.of(immigrant.p15M, 0.012, 0.025)),
                             DoubleChromosome.of(DoubleGene.of(immigrant.p24H, 0.01, 0.06))
                     );
@@ -262,8 +273,8 @@ public class RunOptimizationOfflineKaggle {
                     popList.set(replacedCount, Phenotype.of(newGt, 1));
                     replacedCount++;
 
-                    LOG.info("🛸 Đã tiếp nhận Gen Tinh Hoa từ mảng (Score: {}, 15M: {}, 24H: {})",
-                            String.format("%.2f", immigrant.score), immigrant.p15M, immigrant.p24H);
+                    LOG.info("🛸 Đã tiếp nhận Gen Tinh Hoa từ mạng (Score: {}, Risk: {}, 15M: {}, 24H: {})",
+                            String.format("%.2f", immigrant.score), immigrant.pRisk, immigrant.p15M, immigrant.p24H);
 
                     if (replacedCount >= 3) break;
                 }
@@ -291,12 +302,13 @@ public class RunOptimizationOfflineKaggle {
     private static void printFinalResult(EvolutionResult<DoubleGene, Float> result, long startTime) {
         Genotype<DoubleGene> best = result.bestPhenotype().genotype();
         LOG.info("\n=============================================");
-        LOG.info("=== KẾT QUẢ TỐI ƯU HÓA HPO (ISLAND MODEL) ===");
+        LOG.info("=== KẾT QUẢ TỐI ƯU HÓA HPO (ISLAND MODEL 3 PARAMS) ===");
         LOG.info("Thời gian chạy: {} phút", Duration.ofMillis(System.currentTimeMillis() - startTime).toMinutes());
         LOG.info("Fitness tốt nhất: {}", String.format("%.4f", result.bestFitness()));
         LOG.info("---------------------------------------------");
-        LOG.info("MIN_MOMENTUM_15M   = {}f;", String.format("%.5f", best.get(0).gene().floatValue()));
-        LOG.info("MIN_MOMENTUM_24H   = {}f;", String.format("%.5f", best.get(1).gene().floatValue()));
+        LOG.info("HARD_RISK_LIMIT_4H = {}f;", String.format("%.5f", best.get(0).gene().floatValue()));
+        LOG.info("MIN_MOMENTUM_15M   = {}f;", String.format("%.5f", best.get(1).gene().floatValue()));
+        LOG.info("MIN_MOMENTUM_24H   = {}f;", String.format("%.5f", best.get(2).gene().floatValue()));
         LOG.info("=============================================");
     }
 }

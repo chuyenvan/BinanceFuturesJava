@@ -90,6 +90,17 @@ public class Utils {
         return false;
     }
 
+    public static boolean isFirstDayOfYear(long timeMillis) {
+        // Kiểm tra 0h0p
+        if (timeMillis % TIME_DAY == 0) {
+            Calendar cal = Calendar.getInstance();
+            cal.setTimeInMillis(timeMillis);
+            // Kiểm tra ngày trong tháng có phải mùng 1
+            return cal.get(Calendar.DAY_OF_MONTH) == 1 && cal.get(Calendar.MONTH) == Calendar.JANUARY;
+        }
+        return false;
+    }
+
     public static int getCurrentHour() {
         Calendar cal = Calendar.getInstance();
         cal.setTimeZone(TimeZone.getTimeZone("GMT+7"));
