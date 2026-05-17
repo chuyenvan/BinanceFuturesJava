@@ -41,7 +41,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     public TreeMap<Long, AiPredictionData> predictionMap;
     public TreeMap<Long, long[]> time2SymbolPred;
     public AIRejectFilter aiRejectFilter;
-    public Map<String, KlineObjectSimple> symbol2LastTicker = new HashMap<>();
     public Boolean is50PercentOrderLoss = null;
 
     public HashMap<String, List<OrderTargetInfoTest>> symbol2OrdersEntry = new HashMap<>();
@@ -143,20 +142,12 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                 if (time2Tickers != null && time2Tickers.size() >= 1440) {
                     for (Map.Entry<Long, Map<String, KlineObjectSimple>> entry : time2Tickers.entrySet()) {
                         Long time = entry.getKey();
-                        Long startTimeRun = System.currentTimeMillis();
                         try {
+                            Long startTimeRun = System.currentTimeMillis();
                             Map<String, KlineObjectSimple> symbol2Ticker = entry.getValue();
                             // update for update ranking coin
                             HistoryManager.getInstance().updateHistory(symbol2Ticker);
-                            for (String symbol : symbol2Ticker.keySet()) {
-                                KlineObjectSimple ticker = symbol2Ticker.get(symbol);
-                                if (!Utils.isTickerAvailable(ticker)) {
-                                    updateSymbolDeListed(symbol, time);
-                                    continue;
-                                }
-                                symbol2LastTicker.put(symbol, ticker);
 
-                            }
                             // --- BƯỚC 2: UPDATE ACTIVE ORDERS (SIÊU TỐI ƯU) ---
                             // Thay vì duyệt 2000 symbol, chỉ duyệt danh sách đang chạy (vài chục lệnh)
                             if (!symbol2OrderRunning.isEmpty()) {
@@ -178,8 +169,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                             Set<String> symbolLocked = new HashSet<>();
                             MarketLevelChange levelChange = null;
                             AiPredictionData predict = predictionMap.get(time);
-
-
                             if (predict != null && marketData != null) {
 
                                 levelChange = MarketBigChangeDetector.getMarketStatus1M(marketData.rateDownAvg, marketData.rateUpAvg,
@@ -295,6 +284,12 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                 }
                             } else {
                                 if (time % (60 * Utils.TIME_MINUTE) == 0) {
+                                    for (String symbol : symbol2Ticker.keySet()) {
+                                        KlineObjectSimple ticker = symbol2Ticker.get(symbol);
+                                        if (!Utils.isTickerAvailable(ticker)) {
+                                            updateSymbolDeListed(symbol, time);
+                                        }
+                                    }
                                     BudgetManagerSimple.getInstance().updateBalance(time, allOrderDone, symbol2OrderRunning, symbol2OrdersEntry, false);
                                 }
                             }
@@ -304,6 +299,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                         }
                         is50PercentOrderLoss = null;
                     }
+                }else{
+                    LOG.info("Date data error: {}", Utils.normalizeDateYYYYMMDD(startTime));
                 }
                 time2Tickers = null;
             } catch (Exception e) {

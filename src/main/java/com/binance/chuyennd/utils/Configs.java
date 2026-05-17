@@ -91,9 +91,9 @@ public class Configs {
     // =========================================================
     // Ngưỡng giới hạn cốt lõi của AI
     public static float PREDICT_SYMBOL_RATE_MAX_THRESHOLD = 0.15f; // Tỉ lệ tạch tối đa cho phép
-    public static float HARD_RISK_LIMIT_4H = -0.09985f;            // Ngưỡng Drawdown 4H cấm vào lệnh
-    public static float MIN_MOMENTUM_15M = 0.016f;                 // Đà nảy tối thiểu nến 15M
-    public static float MIN_MOMENTUM_24H = 0.02f;                  // Đà nảy tối thiểu nến 24H
+    public static float HARD_RISK_LIMIT_4H = -0.2f;            // Ngưỡng Drawdown 4H cấm vào lệnh
+    public static float MIN_MOMENTUM_15M = 0.02284f;        // Đà nảy tối thiểu nến 15M
+    public static float MIN_MOMENTUM_24H = 0.01682f;                  // Đà nảy tối thiểu nến 24H
 
     // Bộ bù trừ chéo (Trade-off) giữa AI Funding và AI Entry
     public static float AI_DYNAMIC_MULTIPLIER = 1.40234f; // Hệ số nhân tỷ lệ (Base scale)
