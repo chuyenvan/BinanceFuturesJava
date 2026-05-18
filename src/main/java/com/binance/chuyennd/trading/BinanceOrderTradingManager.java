@@ -278,7 +278,6 @@ public class BinanceOrderTradingManager {
             Float rateLoss = PositionHelper.calRateLoss(position);
             OrderSide positionSide = OrderSide.BUY;
             if (position.getPositionAmt().compareTo(new BigDecimal("0")) < 0) {
-                positionSide = OrderSide.SELL;
                 continue;
             }
             if (orderInfo != null && orderInfo.side.equals(positionSide)) {
