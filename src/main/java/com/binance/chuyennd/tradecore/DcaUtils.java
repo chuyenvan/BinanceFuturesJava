@@ -1,10 +1,15 @@
 package com.binance.chuyennd.tradecore;
 
+import com.aerospike.client.Log;
 import com.binance.chuyennd.object.MarketLevelChange;
+import com.binance.chuyennd.research.SimulatorMarketLevelTicker1MStopLoss;
 import com.binance.chuyennd.utils.Utils;
+import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class DcaUtils {
-
+    public static final Logger LOG = LoggerFactory.getLogger(DcaUtils.class);
     // Private constructor để ngăn việc khởi tạo đối tượng từ lớp tiện ích
     private DcaUtils() {
     }
@@ -13,10 +18,15 @@ public final class DcaUtils {
      * Phương thức chính, chỉ nhận vào các tham số đơn để kiểm tra.
      * Đây là hàm duy nhất bạn cần gọi từ bên ngoài.
      */
-    public static boolean shouldDca(float margin, float currentRateLoss, MarketLevelChange orderMarketLevel, long orderTimeStart,
+    public static boolean shouldDca(Float margin, float currentRateLoss, MarketLevelChange orderMarketLevel, long orderTimeStart,
                                     MarketLevelChange marketLevelChange, long currentTime, float budget) {
         DcaConfig config = getDcaConfig(marketLevelChange);
         if (config == null) {
+            return false;
+        }
+        if (margin == null) {
+            LOG.info("DCA SKIP - margin is null. orderMarketLevel={}, orderTimeStart={}, marketLevelChange={}, currentTime={}, budget={}",
+                    orderMarketLevel, orderTimeStart, marketLevelChange, currentTime, budget);
             return false;
         }
 //            if (!isTrendBuyWithETH) {

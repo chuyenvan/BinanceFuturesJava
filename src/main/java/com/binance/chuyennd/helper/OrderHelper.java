@@ -31,7 +31,7 @@ public class OrderHelper {
 
     public static final Logger LOG = LoggerFactory.getLogger(OrderHelper.class);
 
-     public static Order newOrderMarket(String symbol, OrderSide side, Float quantity) {
+    public static Order newOrderMarket(String symbol, OrderSide side, Float quantity) {
         LOG.info("Create Order market {} {} {}", symbol, side, quantity);
         try {
             if (SymbolOrderLockingManager.getInstance().isLock(symbol, 5)) {
@@ -42,17 +42,35 @@ public class OrderHelper {
             return ClientSingleton.getInstance().syncRequestClient.postOrder(symbol, side, null, OrderType.MARKET, null,
                     Utils.formatMoney(quantity), null, null, null, null, null, null, null, null, null, NewOrderRespType.RESULT);
         } catch (BinanceApiException e) { // Bắt cụ thể lỗi API của Binance
-            // Kiểm tra xem có phải chính xác là lỗi -4400 không
-            if (e.getMessage().contains("-4400") ) {
+            String errorMsg = e.getMessage();
+
+            // 1. Lỗi -4400: Reduce-only mode
+            if (errorMsg != null && errorMsg.contains("-4400")) {
                 LOG.warn("CANNOT OPEN NEW ORDER for {}: Exchange is in reduce-only mode. Pausing new trades for this symbol.", symbol);
                 SymbolOrderLockingManager.getInstance().addLockReduceOnly(symbol);
-                // 3. Bot sẽ bỏ qua việc mở lệnh mới cho mã này trong một khoảng thời gian (ví dụ: 1 giờ).
-            } else {
-                // Đối với các lỗi khác, vẫn in ra như bình thường
+            }
+            // 2. Lỗi -1008: Request throttled by system-level protection (Quá tải API)
+            else if (errorMsg != null && errorMsg.contains("-1008")) {
+                LOG.warn("API THROTTLED (-1008) for {}: Binance system is overloaded. Pausing new trades to prevent ban.", symbol);
+
+                // Khóa symbol này tương tự như lỗi 4400 để bot tạm ngưng mở lệnh
+                SymbolOrderLockingManager.getInstance().addLockReduceOnly(symbol);
+
+                // CỰC KỲ QUAN TRỌNG: Cho Thread ngủ 1-2 giây để xả Rate Limit, tránh spam liên tục dẫn đến Band IP
+                try {
+                    Thread.sleep(1500);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+            // Các lỗi API khác
+            else {
+                LOG.error("Binance API Exception when creating order for {}: {}", symbol, errorMsg);
                 e.printStackTrace();
             }
         } catch (Exception e) {
-            // Bắt các lỗi chung khác (ví dụ: mất kết nối mạng)
+            // Bắt các lỗi chung khác (ví dụ: mất kết nối mạng, timeout)
+            LOG.error("General Exception when creating order for {}: {}", symbol, e.getMessage());
             e.printStackTrace();
         }
         return null;

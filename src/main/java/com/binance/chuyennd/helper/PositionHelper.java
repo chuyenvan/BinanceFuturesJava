@@ -30,6 +30,9 @@ public class PositionHelper {
     public static final Logger LOG = LoggerFactory.getLogger(OrderHelper.class);
 
     public static Float callMargin(PositionRisk pos) {
+        if (pos == null){
+            return null;
+        }
         try {
             return Math.abs(pos.getEntryPrice().floatValue() * pos.getPositionAmt().floatValue() / pos.getLeverage().floatValue());
         } catch (Exception e) {
