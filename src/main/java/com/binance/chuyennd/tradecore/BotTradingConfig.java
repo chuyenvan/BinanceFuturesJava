@@ -34,7 +34,6 @@ public class BotTradingConfig implements Serializable, Cloneable {
     public float msDownMedAvg = -0.02069f;
     public float msUpSmallThres = 0.00442f;
     public float msDownSmallAvg = -0.01713f;
-    public float msDown15mMedOnly = -0.06725f;
     public float msDown15mSmallOnly = -0.02145f;
 
 
@@ -86,6 +85,7 @@ public class BotTradingConfig implements Serializable, Cloneable {
     // Constructor mặc định
     public BotTradingConfig() {
     }
+
     @Override
     public BotTradingConfig clone() {
         try {

@@ -120,8 +120,6 @@ public class Configs {
     public static float MS_UP_SMALL_THRES = 0.00442f;
     public static float MS_DOWN_SMALL_AVG = -0.01713f;
 
-    // Bắt dao rơi ngắn hạn (15M ONLY)
-    public static float MS_DOWN_15M_MED_ONLY = -0.06725f;
     public static float MS_DOWN_15M_SMALL_ONLY = -0.02145f;
 
     // Nhóm tham số cấp số nhân (Geometric Filters - Dự phòng)

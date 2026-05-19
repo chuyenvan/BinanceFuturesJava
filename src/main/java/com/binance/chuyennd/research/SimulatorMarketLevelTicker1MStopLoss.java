@@ -78,7 +78,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         Configs.MS_DOWN_MED_AVG = config.msDownMedAvg;
         Configs.MS_UP_SMALL_THRES = config.msUpSmallThres;
         Configs.MS_DOWN_SMALL_AVG = config.msDownSmallAvg;
-        Configs.MS_DOWN_15M_MED_ONLY = config.msDown15mMedOnly;
         Configs.MS_DOWN_15M_SMALL_ONLY = config.msDown15mSmallOnly;
 
 

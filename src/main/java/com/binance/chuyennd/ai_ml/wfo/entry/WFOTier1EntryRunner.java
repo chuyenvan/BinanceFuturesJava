@@ -41,7 +41,6 @@ public class WFOTier1EntryRunner {
                     config.msDownMedAvg = gt.get(7).gene().floatValue();
                     config.msUpSmallThres = gt.get(8).gene().floatValue();
                     config.msDownSmallAvg = gt.get(9).gene().floatValue();
-                    config.msDown15mMedOnly = gt.get(10).gene().floatValue();
                     config.msDown15mSmallOnly = gt.get(11).gene().floatValue();
 
                     return WFOBacktestEngine.run(start, end, config);
@@ -65,7 +64,6 @@ public class WFOTier1EntryRunner {
         res.msDownMedAvg = best.get(7).gene().floatValue();
         res.msUpSmallThres = best.get(8).gene().floatValue();
         res.msDownSmallAvg = best.get(9).gene().floatValue();
-        res.msDown15mMedOnly = best.get(10).gene().floatValue();
         res.msDown15mSmallOnly = best.get(11).gene().floatValue();
         return res;
     }
