@@ -656,10 +656,10 @@ public class Utils {
         // --- KẾT THÚC ĐOẠN CODE GHI PID ---
     }
 
-    public static void printMemoryUse() {
+    public static void printMemoryUse(long duration) {
         Runtime runtime = Runtime.getRuntime();
         long usedMem = (runtime.totalMemory() - runtime.freeMemory()) / (1024 * 1024);
-        LOG.info(". RAM Used: {} MB", usedMem);
+        LOG.info(". RAM Used: {} MB duration: {} seconds", usedMem, duration / Utils.TIME_SECOND);
     }
 
     public static void printMemoryUsage(String stepName) {

@@ -122,6 +122,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
 
     public void simulatorWithInitEntry(Long startTime, Long endTime) throws ParseException {
+        long timeSimulator = System.currentTimeMillis();
         LOG.info("=== 🚀 BẮT ĐẦU SIMULATE TỪ {} ĐẾN {} ===", Utils.normalizeDateYYYYMMDDHHmm(startTime), Utils.normalizeDateYYYYMMDDHHmm(endTime));
 //        Map<String, List<KlineObjectSimple>> symbol2LastTickers = new HashMap<>();
 
@@ -205,8 +206,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                     for (String symbol : symbolDcaLevel) {
                                         KlineObjectSimple ticker = symbol2Ticker.get(symbol);
                                         if (Utils.isTickerAvailable(ticker)) {
-                                            createOrderBUY(symbol, ticker, MarketLevelChange.DCA_LEVEL1, time2MarketData.get(time)
-                                            );
+                                            createOrderBUY(symbol, ticker, MarketLevelChange.DCA_LEVEL1, time2MarketData.get(time));
                                         }
                                     }
                                 }
@@ -298,7 +298,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                         }
                         is50PercentOrderLoss = null;
                     }
-                }else{
+                } else {
                     LOG.info("Date data error: {}", Utils.normalizeDateYYYYMMDD(startTime));
                 }
                 time2Tickers = null;
@@ -327,16 +327,17 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         cal.setTimeInMillis(startTime); // Hoặc dùng biến startTime của vòng lặp
         int finalYear = cal.get(Calendar.YEAR);
         BudgetManagerSimple.getInstance().balanceIndex.year2UnrealizedPnl.put(finalYear, 0f);
-        Storage.writeObject2File(FILE_STORAGE_ORDER_DONE, allOrderDone);
-        Storage.writeObject2File("storage/orderRunning.data", symbol2OrderRunning);
-        Storage.writeObject2File("storage/BalanceIndex.data", BudgetManagerSimple.getInstance().balanceIndex);
-
-        try {
-            TraceOrderDone.printOrderTestDone("storage/printDone.csv", allOrderDone);
-        } catch (Exception e) {
-            e.printStackTrace();
+        if (!Configs.IS_KAGGLE_MODE) {
+            try {
+                Storage.writeObject2File(FILE_STORAGE_ORDER_DONE, allOrderDone);
+                Storage.writeObject2File("storage/orderRunning.data", symbol2OrderRunning);
+                Storage.writeObject2File("storage/BalanceIndex.data", BudgetManagerSimple.getInstance().balanceIndex);
+                TraceOrderDone.printOrderTestDone("storage/printDone.csv", allOrderDone);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
-        Utils.printMemoryUse();
+        Utils.printMemoryUse(System.currentTimeMillis() - timeSimulator);
     }
 
     private TreeMap<Float, String> extractPredict2Symbol(long[] encodedDataArray) {

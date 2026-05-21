@@ -23,7 +23,7 @@ public class AerospikeCheckData {
 
                 String namespace = "ticker";
                 // truncate toàn bộ set
-//                client.truncate(null, namespace, "hpo_fitness_cache", null);
+//                client.truncate(null, namespace, "hpo_market_thres_pool", null);
                 // Lấy thống kê namespace
                 String nsResponse = Info.request(client.getNodes()[0], "namespace/" + namespace);
                 System.out.println("=== Namespace Stats ===");

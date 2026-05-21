@@ -28,7 +28,7 @@ public class RunHpoMaster_EntryLogic {
 
     private static final Logger LOG = LoggerFactory.getLogger(RunHpoMaster_EntryLogic.class);
 
-    private static final int POPULATION_SIZE = 40;
+    private static final int POPULATION_SIZE = 20;
     private static final int GENERATIONS = 50;
     private static final AtomicLong testCounter = new AtomicLong(0);
 
@@ -104,8 +104,15 @@ public class RunHpoMaster_EntryLogic {
                     result = engine.stream().limit(1).collect(EvolutionResult.toBestEvolutionResult());
                 }
             } else {
-                ISeq<Phenotype<DoubleGene, Float>> currentPop = syncIslandModelWithAerospike(result.population());
-                result = engine.stream(currentPop).limit(1).collect(EvolutionResult.toBestEvolutionResult());
+                // 🔥 CHIẾN THUẬT TỐI ƯU ISLAND: Chỉ Sync (Nhập cư) mỗi 5 thế hệ
+                if (gen % 5 == 0) {
+                    LOG.info("🌍 MỞ CỬA BIÊN GIỚI: Sync dữ liệu với Aerospike (Global Pool)...");
+                    ISeq<Phenotype<DoubleGene, Float>> currentPop = syncIslandModelWithAerospike(result.population());
+                    result = engine.stream(currentPop).limit(1).collect(EvolutionResult.toBestEvolutionResult());
+                } else {
+                    // Các thế hệ bình thường: Tiến hóa khép kín trên đảo (Chạy cực nhanh)
+                    result = engine.stream(result.population()).limit(1).collect(EvolutionResult.toBestEvolutionResult());
+                }
             }
 
             float currentGenBest = result.bestFitness();
@@ -147,8 +154,11 @@ public class RunHpoMaster_EntryLogic {
             BackTestEngineMaster engine = new BackTestEngineMaster(ds, dm, db, us, um, ub, d15s, aiRisk, ai15m, ai24h);
             HPOFitnessCalculatorV2.FitnessReport report = engine.run(time2MarketData, predictionMap, time2FundingPre, offlineEndTime);
 
-            LOG.info(String.format("Trial %4d | Fit: %8.1f | PnL: %6.1f$ | MaxDD: %6.1f$ | RF: %.2f | Pen: %.1f | %s",
-                    c, report.finalFitness, report.totalProfit, report.maxDrawdown, report.recoveryFactor, report.penaltyCost, report.note));
+            // Bổ sung Log cực kỳ chi tiết: Số lệnh (Trades), 4 Tham số quan trọng nhất (BigDown, AI-Risk, AI-15M, AI-24H)
+            LOG.info(String.format("Trial %4d | Fit: %8.0f | PnL: %6.0f$ | MaxDD: %6.0f$ | RF: %4.1f | Pen: %4.0f$ " +
+                            "| Trades: %5d | [D_Big:%.3f, aiR:%.3f, ai15:%.3f, ai24:%.3f] %s",
+                    c, report.finalFitness, report.totalProfit, report.maxDrawdown, report.recoveryFactor, report.penaltyCost,
+                    report.tradeCount, db, aiRisk, ai15m, ai24h, report.note));
 
             return report.finalFitness;
         } catch (Exception e) {
@@ -220,7 +230,8 @@ public class RunHpoMaster_EntryLogic {
 
                 if (record != null && record.getString("pool") != null) {
                     currentGen = record.generation;
-                    globalPool = Utils.gson.fromJson(record.getString("pool"), new TypeToken<List<GeneRecord>>(){}.getType());
+                    globalPool = Utils.gson.fromJson(record.getString("pool"),
+                            new TypeToken<List<GeneRecord>>(){}.getType());
                 }
 
                 if (globalPool.size() >= 10 && myScore <= globalPool.get(globalPool.size() - 1).score) break;
