@@ -277,6 +277,7 @@ public class Utils {
         } else {
             result = priceEntry - priceChange2Target;
         }
+
         result = ClientSingleton.getInstance().normalizePrice(symbol, result);
         return result;
     }

@@ -1,30 +1,37 @@
 package com.binance.chuyennd.ai_ml.features.export;
 
+import com.binance.chuyennd.ai_ml.data.SimpleSymbolMapper;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 public class HistoryManager {
     public static final Logger LOG = LoggerFactory.getLogger(HistoryManager.class);
-    // 🔥 GIỮ SIZE 2000 ĐỂ TIẾT KIỆM RAM
-    private static final int MAX_HISTORY_SIZE = 2000;
-    // --- CƠ CHẾ DỌN DẸP ZOMBIE COIN ---
-    private static final long CLEANUP_INTERVAL = 24 * 60 * 60 * 1000L; // Kiểm tra dọn dẹp mỗi 24 tiếng
-    private static final long ZOMBIE_THRESHOLD = 4 * 60 * 60 * 1000L;  // Coin không có data mới quá 4 tiếng thì xóa
-    private long lastCleanTime = -1L;
-    // --- CƠ CHẾ SINGLETON ---
-    private static volatile HistoryManager INSTANCE = null;
-    private final Set<String> symbolsLastUpdate = new HashSet<>();
-    // Dùng ConcurrentHashMap để an toàn khi nhiều luồng cùng truy cập singleton
-    private final Map<String, ArrayList<KlineObjectSimple>> historyMap = new ConcurrentHashMap<>();
 
-    private HistoryManager() {
-        // Private constructor
-    }
+    // 🔥 RING BUFFER CONSTANTS
+    private static final int MAX_COINS = 1000;
+    private static final int RING_SIZE = 2048; // Phải là lũy thừa của 2 để dùng Bitwise
+    private static final int RING_MASK = 2047; // Tương đương (RING_SIZE - 1)
+
+    private static final long CLEANUP_INTERVAL = 24 * 60 * 60 * 1000L;
+    private static final long ZOMBIE_THRESHOLD = 4 * 60 * 60 * 1000L;
+    private long lastCleanTime = -1L;
+
+    private static volatile HistoryManager INSTANCE = null;
+
+    // ========================================================
+    // 🔥 CHIẾN LƯỢC ZERO-ALLOCATION CIRCULAR RING BUFFER O(1)
+    // ========================================================
+    private final KlineObjectSimple[][] historyRing = new KlineObjectSimple[MAX_COINS][RING_SIZE];
+    private final int[] historyHead = new int[MAX_COINS]; // Con trỏ lưu số lượng nến đã nạp
+    private final long[] lastUpdateTime = new long[MAX_COINS]; // Lưu thời gian cập nhật để quét Zombie
+
+    private final Set<String> symbolsLastUpdate = new HashSet<>();
+    private final Set<Short> symbolsLastUpdateShort = new HashSet<>();
+
+    private HistoryManager() {}
 
     public static HistoryManager getInstance() {
         if (INSTANCE == null) {
@@ -37,206 +44,143 @@ public class HistoryManager {
         return INSTANCE;
     }
 
+    // ========================================================
+    // 1. NHÓM HÀM CẬP NHẬT (HỖ TRỢ STRING VÀ ARRAY)
+    // ========================================================
+
     public void updateHistory(Map<String, KlineObjectSimple> snapshot) {
         symbolsLastUpdate.clear();
+        symbolsLastUpdateShort.clear();
         symbolsLastUpdate.addAll(snapshot.keySet());
 
-        // Lấy currentTime từ 1 nến bất kỳ trong snapshot để làm mốc thời gian hiện hành
+        if (snapshot.isEmpty()) return;
         long currentTime = snapshot.values().iterator().next().startTime.longValue();
+        checkAndCleanup(currentTime);
 
-        // --- BƯỚC 1: KIỂM TRA DỌN DẸP ZOMBIE (Mỗi 24h chạy 1 lần) ---
+        for (Map.Entry<String, KlineObjectSimple> entry : snapshot.entrySet()) {
+            String symbol = entry.getKey();
+            short symbolId = SimpleSymbolMapper.getInstance().getId(symbol);
+            if (symbolId >= MAX_COINS) continue; // Bảo vệ mảng
+
+            symbolsLastUpdateShort.add(symbolId);
+            processKline(symbolId, entry.getValue());
+        }
+    }
+
+    public void updateHistoryArray(KlineObjectSimple[] snapshot) {
+        symbolsLastUpdateShort.clear();
+        symbolsLastUpdate.clear();
+        long currentTime = -1;
+
+        for (short symbolId = 0; symbolId < snapshot.length && symbolId < MAX_COINS; symbolId++) {
+            KlineObjectSimple kline = snapshot[symbolId];
+            if (kline != null) {
+                if (currentTime == -1) currentTime = kline.startTime;
+                symbolsLastUpdateShort.add(symbolId);
+                String symbolStr = com.binance.chuyennd.ai_ml.data.SimpleSymbolMapper.getInstance().getSymbol(symbolId);
+                symbolsLastUpdate.add(symbolStr);
+
+                processKline(symbolId, kline);
+            }
+        }
+        if (currentTime != -1) checkAndCleanup(currentTime);
+    }
+
+    /**
+     * Logic lõi cập nhật nến O(1) tuyệt đối trên Ring Buffer
+     */
+    private void processKline(short symbolId, KlineObjectSimple kline) {
+        int head = historyHead[symbolId];
+
+        // Giữ nguyên logic cũ: Nếu nến mới có cùng startTime với nến cuối cùng -> Xóa/Ghi đè nến cuối
+        if (head > 0) {
+            KlineObjectSimple lastKline = historyRing[symbolId][(head - 1) & RING_MASK];
+            if (lastKline != null && lastKline.startTime.longValue() == kline.startTime.longValue()) {
+                head--; // Lùi con trỏ lại 1 bước để ghi đè
+            }
+        }
+
+        historyRing[symbolId][head & RING_MASK] = kline;
+        historyHead[symbolId] = head + 1;
+        lastUpdateTime[symbolId] = kline.startTime;
+    }
+
+    private void checkAndCleanup(long currentTime) {
         if (lastCleanTime == -1L) {
-            lastCleanTime = currentTime; // Khởi tạo mốc ban đầu
+            lastCleanTime = currentTime;
         } else if (currentTime - lastCleanTime >= CLEANUP_INTERVAL) {
             cleanupZombieCoins(currentTime);
             lastCleanTime = currentTime;
         }
-
-        for (Map.Entry<String, KlineObjectSimple> entry : snapshot.entrySet()) {
-            String symbol = entry.getKey();
-            KlineObjectSimple kline = entry.getValue();
-
-            ArrayList<KlineObjectSimple> list = historyMap.computeIfAbsent(symbol, k -> new ArrayList<>());
-            try {
-                // Logic check duplicate (Dùng .longValue() để phòng trường hợp kiểu Number)
-                if (!list.isEmpty() && list.get(list.size() - 1).startTime.longValue() == kline.startTime.longValue()) {
-                    list.remove(list.size() - 1);
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-
-            list.add(kline);
-
-            // Logic trim size
-            if (list.size() > MAX_HISTORY_SIZE) {
-                list.remove(0);
-            }
-        }
     }
 
-    /**
-     * Dọn dẹp các đồng coin đã bị Delist hoặc mất thanh khoản (Không có nến mới > 4 tiếng)
-     */
     private void cleanupZombieCoins(long currentTime) {
-        int removedCount = 0;
-        Iterator<Map.Entry<String, ArrayList<KlineObjectSimple>>> it = historyMap.entrySet().iterator();
-
-        while (it.hasNext()) {
-            Map.Entry<String, ArrayList<KlineObjectSimple>> entry = it.next();
-            ArrayList<KlineObjectSimple> history = entry.getValue();
-
-            if (history == null || history.isEmpty()) {
-                it.remove();
-                removedCount++;
-                continue;
-            }
-
-            // Lấy nến cuối cùng
-            long lastKlineTime = history.get(history.size() - 1).startTime.longValue();
-
-            // Nếu nến cuối cùng cách hiện tại quá 4 tiếng (ZOMBIE_THRESHOLD)
-            if (currentTime - lastKlineTime >= ZOMBIE_THRESHOLD) {
-                it.remove(); // Trảm!
-                removedCount++;
-//                LOG.debug("🗑️ Đã xóa Zombie Symbol [{}] khỏi History do quá 4h không có data.", entry.getKey());
+        for (short id = 0; id < MAX_COINS; id++) {
+            if (historyHead[id] > 0) {
+                if (currentTime - lastUpdateTime[id] >= ZOMBIE_THRESHOLD) {
+                    historyHead[id] = 0; // Đưa con trỏ về 0 (Tương đương clear list)
+                    lastUpdateTime[id] = 0;
+                }
             }
         }
-
-//        if (removedCount > 0) {
-//            LOG.info("🧹 History Cleanup: Đã dọn dẹp {} Zombie symbols. (Size hiện tại: {})", removedCount, historyMap.size());
-//        }
     }
 
-    public List<KlineObjectSimple> getHistory(String symbol) {
-        return historyMap.get(symbol);
-    }
+    // ========================================================
+    // 2. NHÓM HÀM TRUY XUẤT THÔNG DỤNG (XỬ LÝ QUA ID CHO NHANH)
+    // ========================================================
 
-    // --- CÁC HÀM TRUY XUẤT ---
+    // Chuyển String thành ID để gọi hàm lõi
+    public Float getPriceAt(String symbol, long timestamp) { return getPriceAt(SimpleSymbolMapper.getInstance().getId(symbol), timestamp); }
+    public Float getRsi14(String symbol) { return getRsi14(SimpleSymbolMapper.getInstance().getId(symbol)); }
+    public Float getMa(String symbol, int period) { return getMa(SimpleSymbolMapper.getInstance().getId(symbol), period); }
+    public Float getLow24H(String symbol) { return getLow24H(SimpleSymbolMapper.getInstance().getId(symbol)); }
+    public Float getMaxRateChange(String symbol, int minutes) { return getMaxRateChange(SimpleSymbolMapper.getInstance().getId(symbol), minutes); }
+    public float getSumVolume(String symbol, int minutes) { return getSumVolume(SimpleSymbolMapper.getInstance().getId(symbol), minutes); }
+    public float getAverageVolume(String symbol, int periods) { return getAverageVolume(SimpleSymbolMapper.getInstance().getId(symbol), periods); }
+    public float getAverageRange(String symbol, int periods) { return getAverageRange(SimpleSymbolMapper.getInstance().getId(symbol), periods); }
 
-    public Float getPriceAt(String symbol, long timestamp) {
-        ArrayList<KlineObjectSimple> list = historyMap.get(symbol);
-        if (list == null || list.isEmpty()) return null;
+    public Set<String> getAllSymbols() { return symbolsLastUpdate; }
 
-        // Duyệt ngược từ cuối mảng lên để tìm nến gần nhất với thời điểm yêu cầu
-        for (int i = list.size() - 1; i >= 0; i--) {
-            KlineObjectSimple k = list.get(i);
+    public Set<Short> getAllSymbolsShort() { return symbolsLastUpdateShort; }
 
-            // Tìm thấy nến có thời gian <= thời gian cần lấy
+    // ========================================================
+    // 3. LOGIC TÍNH TOÁN LÕI TRÊN RING BUFFER (Giữ chuẩn 100% logic cũ)
+    // ========================================================
+
+    public Float getPriceAt(short symbolId, long timestamp) {
+        int count = Math.min(historyHead[symbolId], RING_SIZE);
+        if (count == 0) return null;
+        int head = historyHead[symbolId] - 1; // Vị trí nến mới nhất
+
+        for (int i = 0; i < count; i++) {
+            KlineObjectSimple k = historyRing[symbolId][(head - i) & RING_MASK];
             if (k.startTime.longValue() <= timestamp) {
-                // Tăng độ trễ cho phép lên 30 phút (1800000 ms) thay vì 5 phút như cũ.
-                // Nếu vượt qua 30 phút mà không có nến nào thì coi như Dead Coin, trả về null.
-                if (timestamp - k.startTime.longValue() > 1800000L) {
-                    return null;
-                }
+                if (timestamp - k.startTime.longValue() > 1800000L) return null;
                 return k.priceClose;
             }
         }
         return null;
     }
 
+    public Float getRsi14(short symbolId) {
+        int period = 14;
+        int count = Math.min(historyHead[symbolId], RING_SIZE);
+        if (count <= period) return 50.0f;
 
-    public Float getRsi14(String symbol) {
-        ArrayList<KlineObjectSimple> list = historyMap.get(symbol);
-        if (list == null || list.size() < 15) return 50.0f;
-        return calculateRSI(list, 14);
-    }
-
-    public Float getMa(String symbol, int period) {
-        ArrayList<KlineObjectSimple> list = historyMap.get(symbol);
-        if (list == null || list.size() < period) return null;
-        float sum = 0;
-        for (int i = 0; i < period; i++) {
-            sum += list.get(list.size() - 1 - i).priceClose;
-        }
-        return sum / period;
-    }
-
-    public Float getLow24H(String symbol) {
-        ArrayList<KlineObjectSimple> list = historyMap.get(symbol);
-        if (list == null || list.isEmpty()) return null;
-        int lookback = Math.min(list.size(), 1440);
-        float minPrice = Float.MAX_VALUE;
-        for (int i = 0; i < lookback; i++) {
-            float price = list.get(list.size() - 1 - i).minPrice;
-            if (price < minPrice) minPrice = price;
-        }
-        return minPrice == Float.MAX_VALUE ? null : minPrice;
-    }
-
-    public Float getMaxRateChange(String symbol, int minutes) {
-        ArrayList<KlineObjectSimple> list = historyMap.get(symbol);
-        if (list == null || list.size() < 2) return 0.0f;
-        int lookback = Math.min(list.size(), minutes);
-        float maxP = -1.0f;
-        float minP = Float.MAX_VALUE;
-        for (int i = 0; i < lookback; i++) {
-            KlineObjectSimple k = list.get(list.size() - 1 - i);
-            if (k.maxPrice > maxP) maxP = k.maxPrice;
-            if (k.minPrice < minP) minP = k.minPrice;
-        }
-        if (minP == 0 || minP == Float.MAX_VALUE) return 0.0f;
-        return (maxP - minP) / minP;
-    }
-
-    // --- VOLUME INDICATORS ---
-
-    public float getSumVolume(String symbol, int minutes) {
-        ArrayList<KlineObjectSimple> list = historyMap.get(symbol);
-        if (list == null || list.isEmpty()) return 0.0f;
-        float sum = 0;
-        int lookback = Math.min(list.size(), minutes);
-        for (int i = 0; i < lookback; i++) {
-            sum += list.get(list.size() - 1 - i).totalUsdt;
-        }
-        return sum;
-    }
-
-    public float getAverageVolume(String symbol, int periods) {
-        ArrayList<KlineObjectSimple> list = historyMap.get(symbol);
-        if (list == null || list.size() < periods) return 0.0f;
-        float totalVol = 0;
-        int startIndex = list.size() - 2;
-        if (startIndex < 0) return 0.0f;
-        int count = 0;
-        for (int i = 0; i < periods; i++) {
-            int idx = startIndex - i;
-            if (idx >= 0) {
-                totalVol += list.get(idx).totalUsdt;
-                count++;
-            }
-        }
-        return count == 0 ? 0.0f : totalVol / count;
-    }
-
-    public float getAverageRange(String symbol, int periods) {
-        ArrayList<KlineObjectSimple> list = historyMap.get(symbol);
-        if (list == null || list.size() < periods) return 0.0f;
-        float totalRange = 0;
-        int startIndex = list.size() - 2;
-        if (startIndex < 0) return 0.0f;
-        int count = 0;
-        for (int i = 0; i < periods; i++) {
-            int idx = startIndex - i;
-            if (idx >= 0) {
-                KlineObjectSimple k = list.get(idx);
-                totalRange += (k.maxPrice - k.minPrice);
-                count++;
-            }
-        }
-        return count == 0 ? 0.0f : totalRange / count;
-    }
-
-    // --- HELPER RSI ---
-    private Float calculateRSI(List<KlineObjectSimple> data, int period) {
-        if (data.size() <= period) return 50.0f;
         float gain = 0.0f;
         float loss = 0.0f;
-        for (int i = data.size() - period - 1; i < data.size() - 1; i++) {
-            float change = data.get(i + 1).priceClose - data.get(i).priceClose;
+        int head = historyHead[symbolId] - 1;
+
+        // Vòng lặp chạy từ quá khứ đến hiện tại trong cửa sổ period
+        for (int i = period; i > 0; i--) {
+            KlineObjectSimple prev = historyRing[symbolId][(head - i) & RING_MASK];
+            KlineObjectSimple curr = historyRing[symbolId][(head - i + 1) & RING_MASK];
+
+            float change = curr.priceClose - prev.priceClose;
             if (change > 0) gain += change;
             else loss -= change;
         }
+
         float avgGain = gain / period;
         float avgLoss = loss / period;
         if (avgLoss == 0) return 100.0f;
@@ -244,26 +188,123 @@ public class HistoryManager {
         return 100.0f - (100.0f / (1.0f + rs));
     }
 
-    // --- BASKET FINDER (Sửa lỗi descendingIterator) ---
-    public List<String> findPotentialLosers(long currentTimestamp) {
-        List<Map.Entry<String, Float>> drops = new ArrayList<>();
+    public Float getMa(short symbolId, int period) {
+        int count = Math.min(historyHead[symbolId], RING_SIZE);
+        if (count < period) return null;
+
+        float sum = 0;
+        int head = historyHead[symbolId] - 1;
+        for (int i = 0; i < period; i++) {
+            sum += historyRing[symbolId][(head - i) & RING_MASK].priceClose;
+        }
+        return sum / period;
+    }
+
+    public Float getLow24H(short symbolId) {
+        int count = Math.min(historyHead[symbolId], RING_SIZE);
+        if (count == 0) return null;
+
+        int lookback = Math.min(count, 1440);
+        float minPrice = Float.MAX_VALUE;
+        int head = historyHead[symbolId] - 1;
+
+        for (int i = 0; i < lookback; i++) {
+            float price = historyRing[symbolId][(head - i) & RING_MASK].minPrice;
+            if (price < minPrice) minPrice = price;
+        }
+        return minPrice == Float.MAX_VALUE ? null : minPrice;
+    }
+
+    public Float getMaxRateChange(short symbolId, int minutes) {
+        int count = Math.min(historyHead[symbolId], RING_SIZE);
+        if (count < 2) return 0.0f;
+
+        int lookback = Math.min(count, minutes);
+        float maxP = -1.0f;
+        float minP = Float.MAX_VALUE;
+        int head = historyHead[symbolId] - 1;
+
+        for (int i = 0; i < lookback; i++) {
+            KlineObjectSimple k = historyRing[symbolId][(head - i) & RING_MASK];
+            if (k.maxPrice > maxP) maxP = k.maxPrice;
+            if (k.minPrice < minP) minP = k.minPrice;
+        }
+        if (minP == 0 || minP == Float.MAX_VALUE) return 0.0f;
+        return (maxP - minP) / minP;
+    }
+
+    public float getSumVolume(short symbolId, int minutes) {
+        int count = Math.min(historyHead[symbolId], RING_SIZE);
+        if (count == 0) return 0.0f;
+
+        float sum = 0;
+        int lookback = Math.min(count, minutes);
+        int head = historyHead[symbolId] - 1;
+
+        for (int i = 0; i < lookback; i++) {
+            sum += historyRing[symbolId][(head - i) & RING_MASK].totalUsdt;
+        }
+        return sum;
+    }
+
+    public float getAverageVolume(short symbolId, int periods) {
+        int count = Math.min(historyHead[symbolId], RING_SIZE);
+        if (count < periods) return 0.0f;
+
+        float totalVol = 0;
+        int startIndex = historyHead[symbolId] - 2; // list.size() - 2
+        if (startIndex < 0) return 0.0f;
+
+        int validCount = 0;
+        for (int i = 0; i < periods; i++) {
+            int idx = startIndex - i;
+            if (idx >= 0) {
+                totalVol += historyRing[symbolId][idx & RING_MASK].totalUsdt;
+                validCount++;
+            }
+        }
+        return validCount == 0 ? 0.0f : totalVol / validCount;
+    }
+
+    public float getAverageRange(short symbolId, int periods) {
+        int count = Math.min(historyHead[symbolId], RING_SIZE);
+        if (count < periods) return 0.0f;
+
+        float totalRange = 0;
+        int startIndex = historyHead[symbolId] - 2; // list.size() - 2
+        if (startIndex < 0) return 0.0f;
+
+        int validCount = 0;
+        for (int i = 0; i < periods; i++) {
+            int idx = startIndex - i;
+            if (idx >= 0) {
+                KlineObjectSimple k = historyRing[symbolId][idx & RING_MASK];
+                totalRange += (k.maxPrice - k.minPrice);
+                validCount++;
+            }
+        }
+        return validCount == 0 ? 0.0f : totalRange / validCount;
+    }
+
+    // ========================================================
+    // 4. BỘ TÌM KIẾM TIỀM NĂNG (Duyệt Array thay vì EntrySet)
+    // ========================================================
+
+    public List<Short> findPotentialLosersShort(long currentTimestamp) {
+        List<Map.Entry<Short, Float>> drops = new ArrayList<>();
         long startTime = currentTimestamp - (15 * 60 * 1000L);
 
-        for (Map.Entry<String, ArrayList<KlineObjectSimple>> entry : historyMap.entrySet()) {
-            String symbol = entry.getKey();
-            ArrayList<KlineObjectSimple> history = entry.getValue();
-            if (history == null || history.isEmpty()) continue;
+        for (short id = 0; id < MAX_COINS; id++) {
+            int count = Math.min(historyHead[id], RING_SIZE);
+            if (count == 0) continue;
 
-            KlineObjectSimple currentKline = history.get(history.size() - 1);
-
-            // Filter Volume 5k
+            int head = historyHead[id] - 1;
+            KlineObjectSimple currentKline = historyRing[id][head & RING_MASK];
             if (currentKline.totalUsdt < 5000) continue;
 
             float maxPrice15m = -1.0f;
-
-            // 🔥 SỬA LỖI: Thay Iterator bằng vòng lặp ngược
-            for (int i = history.size() - 1; i >= 0; i--) {
-                KlineObjectSimple k = history.get(i);
+            for (int i = 0; i < count; i++) {
+                KlineObjectSimple k = historyRing[id][(head - i) & RING_MASK];
                 if (k.startTime < startTime) break;
                 if (k.maxPrice > maxPrice15m) maxPrice15m = k.maxPrice;
             }
@@ -271,26 +312,42 @@ public class HistoryManager {
             if (maxPrice15m > 0) {
                 float dropFromPeak = (currentKline.priceClose - maxPrice15m) / maxPrice15m;
                 if (dropFromPeak < -0.001) {
-                    drops.add(new AbstractMap.SimpleEntry<>(symbol, dropFromPeak));
+                    drops.add(new AbstractMap.SimpleEntry<>(id, dropFromPeak));
                 }
             }
         }
 
         drops.sort(Map.Entry.comparingByValue());
-        return drops.stream().limit(60).map(Map.Entry::getKey).collect(Collectors.toList());
+        List<Short> result = new ArrayList<>();
+        for (int i = 0; i < Math.min(60, drops.size()); i++) {
+            result.add(drops.get(i).getKey());
+        }
+        return result;
     }
 
-    public Map<String, ArrayList<KlineObjectSimple>> getAllHistory() {
-        return historyMap;
-    }
-
-    public Set<String> getAllSymbols() {
-        return symbolsLastUpdate;
+    // Trả về String cho tương thích ngược (Hạn chế dùng trong HPO)
+    public List<String> findPotentialLosers(long currentTimestamp) {
+        List<Short> ids = findPotentialLosersShort(currentTimestamp);
+        List<String> result = new ArrayList<>(ids.size());
+        for (Short id : ids) {
+            result.add(SimpleSymbolMapper.getInstance().getSymbol(id));
+        }
+        return result;
     }
 
     public void resetCache() {
-        historyMap.clear();
-        lastCleanTime = -1L; // Cần reset cái này luôn
+        Arrays.fill(historyHead, 0);
+        Arrays.fill(lastUpdateTime, 0L);
         symbolsLastUpdate.clear();
+        symbolsLastUpdateShort.clear();
+        lastCleanTime = -1L;
     }
+
+    // Tạm thời Disable hàm trả về List thuần để ép hệ thống dùng Indicator O(1)
+    // Bác có thể tự tạo lại bằng ArrayList nếu chỗ nào khác thực sự cần
+    public List<KlineObjectSimple> getHistory(String symbol) {
+        LOG.warn("getHistory() bị gọi! Cảnh báo tụt hiệu năng.");
+        return new ArrayList<>();
+    }
+    public List<KlineObjectSimple> getHistory(short symbolId) { return new ArrayList<>(); }
 }

@@ -6,14 +6,14 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 public class BalanceIndex implements Serializable {
 
     public Float marginMax;
     public Float profitLossMax;
-   public Long timeProfitLossMax;
-
+    public Long timeProfitLossMax;
 
     public Float unProfitMin;
     public Map<Long, Float> date2ProfitMin = new HashMap<>();
@@ -24,11 +24,11 @@ public class BalanceIndex implements Serializable {
     public TreeMap<Integer, Float> year2UnrealizedPnl = new TreeMap<>();
     public Long timeUnProfitMin;
 
-
+    // 🔥 HÀM MỚI: Nhận Set và Mảng thay vì Map
     public void updateIndex(Float balance, Float positionMargin, Float positionMarginReal,
                             Long timeUpdate, Float profitLossMin, Float unrealizedProfitMin,
-                            HashMap<String, List<OrderTargetInfoTest>> allOrderEntry, HashMap<String,
-            OrderTargetInfoTest> orderRunning, Float unProfit) {
+                            Set<Short> activeIds, List<OrderTargetInfoTest>[] allOrderEntry,
+                            OrderTargetInfoTest[] orderRunning, Float unProfit) {
 
 
         Float dateMarginMax = date2MarginMax.get(Utils.getDate(timeUpdate));
@@ -41,16 +41,17 @@ public class BalanceIndex implements Serializable {
         Float monthMarginMax = month2MarginMax.get(Utils.getMonth(timeUpdate));
         if (monthMarginMax == null || monthMarginMax < positionMargin) {
             monthMarginMax = positionMargin;
-            for (String symbol : allOrderEntry.keySet()) {
-                OrderTargetInfoTest orderAll = orderRunning.get(symbol);
-                if (orderAll != null) {
-                    for (OrderTargetInfoTest order : allOrderEntry.get(symbol)) {
+
+            // Xử lý bằng Array
+            for (short symbolId : activeIds) {
+                OrderTargetInfoTest orderAll = orderRunning[symbolId];
+                if (orderAll != null && allOrderEntry[symbolId] != null) {
+                    for (OrderTargetInfoTest order : allOrderEntry[symbolId]) {
                         order.minPrice = orderAll.minPrice;
                         order.priceSL = orderAll.priceSL;
                     }
                 }
             }
-//            Storage.writeObject2File("storage/data/marginMax/" + Utils.getMonth(timeUpdate), allOrderEntry);
         }
         month2MarginMax.put(Utils.getMonth(timeUpdate), monthMarginMax);
 
@@ -62,7 +63,6 @@ public class BalanceIndex implements Serializable {
         Float slMax = month2SLMax.get(Utils.getMonth(timeUpdate));
         if (slMax == null || slMax > profitLossMin) {
             slMax = profitLossMin;
-//            Storage.writeObject2File("storage/data/slMin/" + Utils.getMonth(timeUpdate), allOrderEntry);
         }
         month2SLMax.put(Utils.getMonth(timeUpdate), slMax);
 
@@ -76,19 +76,21 @@ public class BalanceIndex implements Serializable {
             profitMinOfDate = unrealizedProfitMin;
         }
         date2ProfitMin.put(Utils.getDate(timeUpdate), profitMinOfDate);
+
         Float profitMinOfYear = month2ProfitMin.get(Utils.getMonth(timeUpdate));
         if (profitMinOfYear == null || profitMinOfYear > unrealizedProfitMin) {
             profitMinOfYear = unrealizedProfitMin;
-            for (String symbol : allOrderEntry.keySet()) {
-                OrderTargetInfoTest orderAll = orderRunning.get(symbol);
-                if (orderAll != null) {
-                    for (OrderTargetInfoTest order : allOrderEntry.get(symbol)) {
+
+            // Xử lý bằng Array
+            for (short symbolId : activeIds) {
+                OrderTargetInfoTest orderAll = orderRunning[symbolId];
+                if (orderAll != null && allOrderEntry[symbolId] != null) {
+                    for (OrderTargetInfoTest order : allOrderEntry[symbolId]) {
                         order.minPrice = orderAll.minPrice;
                         order.priceTP = orderAll.minPrice;
                     }
                 }
             }
-//            Storage.writeObject2File("storage/data/unProfitMin/" + Utils.getMonth(timeUpdate), allOrderEntry);
         }
         month2ProfitMin.put(Utils.getMonth(timeUpdate), profitMinOfYear);
         year2UnrealizedPnl.put(Utils.getYear(timeUpdate), unProfit);

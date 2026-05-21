@@ -95,7 +95,7 @@ public class SimpleSymbolMapper {
      * - Nếu đã có trong RAM -> Trả về ngay.
      * - Nếu chưa có -> Tạo ID mới -> Lưu RAM -> Lưu Aerospike -> Trả về.
      */
-    public synchronized short getId(String symbol) {
+    public short getId(String symbol) {
         // Tự động init nếu chưa init (Lazy Load an toàn)
         if (!isInitialized) {
             init();

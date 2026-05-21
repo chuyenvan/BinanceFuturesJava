@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.binance.chuyennd.research;
 
 import com.binance.chuyennd.trading.OrderTargetStatus;
@@ -11,9 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-
 
 /**
  * @author pc
@@ -44,16 +38,13 @@ public class BudgetManagerSimple {
     private static volatile BudgetManagerSimple INSTANCE = null;
     public Float marginRunning = 0f;
 
-    // 1. Dùng ThreadLocal thay vì static instance đơn thuần
     private static final ThreadLocal<BudgetManagerSimple> threadLocalInstance = ThreadLocal.withInitial(BudgetManagerSimple::new);
 
     public static BudgetManagerSimple getInstance() {
-        // Mỗi luồng gọi hàm này sẽ nhận được một instance riêng của nó
         return threadLocalInstance.get();
     }
 
     public static void resetInstance() {
-        // Xóa dữ liệu cũ của luồng hiện tại để bắt đầu test mới
         threadLocalInstance.remove();
     }
 
@@ -81,21 +72,30 @@ public class BudgetManagerSimple {
         }
     }
 
-
-
+    // 🔥 HÀM MỚI: TƯƠNG THÍCH VỚI ARRAY SIÊU TỐC TỪ SIMULATOR
     public void updateBalance(Long timeUpdate, TreeMap<Long, OrderTargetInfoTest> allOrderDone,
-                              HashMap<String, OrderTargetInfoTest> orderRunning,
-                              HashMap<String, List<OrderTargetInfoTest>> symbol2OrdersEntry, boolean isPrintBalance) {
+                              Set<Short> activeIds, OrderTargetInfoTest[] orderRunning,
+                              List<OrderTargetInfoTest>[] symbol2OrdersEntry, boolean isPrintBalance) {
         Float balance = balanceBasic;
         totalFee = fee;
         balance = balance + profit;
         balanceCurrent = balance;
-        unProfit = calUnrealizedProfit(orderRunning.values());
-        profitLossMax = calProfitLossMax(orderRunning.values());
+
+        // Trích xuất list đang chạy
+        List<OrderTargetInfoTest> runningList = new ArrayList<>(activeIds.size());
+        for (short id : activeIds) {
+            if (orderRunning[id] != null) runningList.add(orderRunning[id]);
+        }
+
+        unProfit = calUnrealizedProfit(runningList);
+        profitLossMax = calProfitLossMax(runningList);
 
         Float positionMarginReal = marginRunning;
-        balanceIndex.updateIndex(balanceBasic, marginRunning, positionMarginReal, timeUpdate, profitLossMax, profitLossMax, symbol2OrdersEntry,
-                orderRunning, unProfit);
+
+        // Truyền thẳng Set và Mảng sang BalanceIndex
+        balanceIndex.updateIndex(balanceBasic, marginRunning, positionMarginReal, timeUpdate, profitLossMax,
+                profitLossMax, activeIds, symbol2OrdersEntry, orderRunning, unProfit);
+
         if (isPrintBalance) {
             time2Balance.put(timeUpdate, balance);
             Float balanceYesterday = time2Balance.get(timeUpdate - Utils.TIME_DAY);
@@ -105,30 +105,22 @@ public class BudgetManagerSimple {
             }
 
             Float marginMaxDate = balanceIndex.date2MarginMax.get(Utils.getDate(timeUpdate - Utils.TIME_MINUTE));
-            if (marginMaxDate == null) {
-                marginMaxDate = 0f;
-            }
+            if (marginMaxDate == null) marginMaxDate = 0f;
+
             Float marginMaxMonth = balanceIndex.month2MarginMax.get(Utils.getMonth(timeUpdate - Utils.TIME_DAY));
-            if (marginMaxMonth == null) {
-                marginMaxMonth = 0f;
-            }
+            if (marginMaxMonth == null) marginMaxMonth = 0f;
 
             Float unProfitDate = balanceIndex.date2ProfitMin.get(Utils.getDate(timeUpdate - Utils.TIME_MINUTE));
-            if (unProfitDate == null) {
-                unProfitDate = 0f;
-            }
-            Float unProfitMonth = balanceIndex.month2ProfitMin.get(Utils.getMonth(timeUpdate - Utils.TIME_DAY));
-            if (unProfitMonth == null) {
-                unProfitMonth = 0f;
-            }
+            if (unProfitDate == null) unProfitDate = 0f;
 
+            Float unProfitMonth = balanceIndex.month2ProfitMin.get(Utils.getMonth(timeUpdate - Utils.TIME_DAY));
+            if (unProfitMonth == null) unProfitMonth = 0f;
 
             LOG.info("Update {} => b:{} pD:{}\tm:{}\tmax:{}\t{}\t" +
                             "unP:{}\tunPMin:{}\t{}\t{}\t{}%\tdone:{}/{}/{} run:{}/{} f:{}",
                     Utils.normalizeDateYYYYMMDDHHmm(timeUpdate), Utils.formatLog(balance.longValue(), 5),
                     Utils.formatLog(profitOfDate.longValue(), 4),
                     Utils.formatLog(marginRunning.longValue(), 4),
-
                     Utils.formatLog(marginMaxDate.longValue(), 5),
                     Utils.formatLog(marginMaxMonth.longValue(), 5),
                     Utils.formatLog(unProfit.longValue(), 5),
@@ -137,15 +129,17 @@ public class BudgetManagerSimple {
                     Utils.formatLog(unProfitMonth.longValue(), 5),
                     Utils.formatPercentNew(balanceIndex.unProfitMin / balanceBasic),
                     totalSL, allOrderDone.size(), counterOrderCreated.get(),
-                    counterOrderRunning(symbol2OrdersEntry), maxOrderRunning, totalFundingFee.longValue());
-
+                    counterOrderRunning(activeIds, symbol2OrdersEntry), maxOrderRunning, totalFundingFee.longValue());
         }
     }
 
-    private Integer counterOrderRunning(HashMap<String, List<OrderTargetInfoTest>> symbol2OrdersEntry) {
+    // Đếm lệnh bằng Set và Array
+    private Integer counterOrderRunning(Set<Short> activeIds, List<OrderTargetInfoTest>[] symbol2OrdersEntry) {
         int counter = 0;
-        for (List<OrderTargetInfoTest> orders : symbol2OrdersEntry.values()) {
-            counter += orders.size();
+        for (short id : activeIds) {
+            if (symbol2OrdersEntry[id] != null) {
+                counter += symbol2OrdersEntry[id].size();
+            }
         }
         return counter;
     }
@@ -157,10 +151,7 @@ public class BudgetManagerSimple {
     public Float calUnrealizedProfitMin(Collection<OrderTargetInfoTest> orderInfos) {
         Float result = 0f;
         for (OrderTargetInfoTest orderInfo : orderInfos) {
-            Float profit = orderInfo.profitMin;
-            result += profit;
-//            LOG.info("{} {} {} {} {} {}",orderInfo.symbol, orderInfo.side, orderInfo.priceEntry, orderInfo.minPrice
-//            , orderInfo.maxPrice, profit);
+            result += orderInfo.profitMin;
         }
         return result;
     }
@@ -168,8 +159,7 @@ public class BudgetManagerSimple {
     public Float calUnrealizedProfit(Collection<OrderTargetInfoTest> orderInfos) {
         Float result = 0f;
         for (OrderTargetInfoTest orderInfo : orderInfos) {
-            Float profit = orderInfo.calProfit();
-            result += profit;
+            result += orderInfo.calProfit();
         }
         return result;
     }
@@ -182,13 +172,11 @@ public class BudgetManagerSimple {
         return result;
     }
 
-
     public Float calPositionMargin(Collection<OrderTargetInfoTest> values) {
         Float totalMargin = 0f;
         if (values != null) {
             for (OrderTargetInfoTest orderInfo : values) {
-                Float margin = orderInfo.calMargin();
-                totalMargin += margin;
+                totalMargin += orderInfo.calMargin();
             }
         }
         return totalMargin;
@@ -198,45 +186,10 @@ public class BudgetManagerSimple {
         Float totalMargin = 0f;
         if (values != null) {
             for (OrderTargetInfoTest orderInfo : values) {
-                Float margin = orderInfo.calMargin();
-                totalMargin += margin - orderInfo.calProfit();
+                totalMargin += orderInfo.calMargin() - orderInfo.calProfit();
             }
         }
         return totalMargin;
-    }
-
-
-    public void updateInvesting(Collection<OrderTargetInfoTest> orderRunning) {
-        LOG.info("Update for symbol: {}", orderRunning.stream().count());
-//        Float margin = calPositionMargin(orderRunning);
-//        investing = margin * 100 / balanceCurrent;
-    }
-
-    public void printBalanceIndex() {
-        LOG.info("MarginMax: {} {}% {} profitLossMax: {} {}% {} unProfitMin: {} {}% {}",
-                balanceIndex.profitLossMax, Utils.formatPercent(balanceIndex.profitLossMax / balanceBasic),
-                Utils.normalizeDateYYYYMMDDHHmm(balanceIndex.timeProfitLossMax),
-                balanceIndex.unProfitMin, Utils.formatPercent(balanceIndex.unProfitMin / balanceBasic),
-                Utils.normalizeDateYYYYMMDDHHmm(balanceIndex.timeUnProfitMin)
-        );
-    }
-
-
-    public static void main(String[] args) {
-//        for (int i = 2; i < 11; i++) {
-//            int numberOrder = i * 2;
-//            Configs.NUMBER_ENTRY_EACH_SIGNAL = numberOrder;
-//            BudgetManagerSimple.getInstance().updateBudget();
-//            LOG.info("{} -> {}", Configs.NUMBER_ENTRY_EACH_SIGNAL, BudgetManagerSimple.getInstance().getBudget());
-//        }
-//        String symbol = "CATIUSDT";
-        System.out.println(BudgetManagerSimple.getInstance().getBudget());
-//        Float rate = Utils.rateOf2Double(1.454, 1.441);
-//        System.out.println(BudgetManagerSimple.getInstance().calRateStop(rate,symbol));
-//        for (int i = 0; i < 30; i++) {
-//            Float rate = -0.032 + i * 0.005;
-//            LOG.info("{}  -> {}", rate, BudgetManagerSimple.getInstance().calRateLossDynamic(rate, symbol, 0.004));
-//        }
     }
 
     public void updateMaxOrderRunning(Integer counterOrderRunning) {
@@ -244,5 +197,4 @@ public class BudgetManagerSimple {
             maxOrderRunning = counterOrderRunning;
         }
     }
-
 }

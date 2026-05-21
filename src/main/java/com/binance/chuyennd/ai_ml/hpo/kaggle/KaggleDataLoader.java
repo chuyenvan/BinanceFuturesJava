@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.zip.GZIPInputStream;
@@ -61,8 +62,32 @@ public class KaggleDataLoader {
         return loadObject("core_funding_pred");
     }
 
-    public static TreeMap<Long, Map<String, KlineObjectSimple>> loadDailyTickers(long dayTs) {
-        String baseName = "ticker_" + Utils.sdfFile.format(new Date(dayTs));
-        return loadObject(baseName);
+    /**
+     * Hàm tải dữ liệu Ticker từ File (String) và Convert nóng sang Short trong RAM.
+     * Giải pháp này giúp không phải Export lại cục data Kaggle khổng lồ.
+     */
+    public static TreeMap<Long, KlineObjectSimple[]> loadDailyTickersShort(long dayTs) {
+        String baseName = "ticker_" + Utils.sdfFile.format(new java.util.Date(dayTs));
+        TreeMap<Long, Map<String, KlineObjectSimple>> rawData = loadObject(baseName);
+
+        if (rawData == null || rawData.isEmpty()) return null;
+
+        TreeMap<Long, KlineObjectSimple[]> optimizedData = new TreeMap<>();
+
+        for (Map.Entry<Long, Map<String, KlineObjectSimple>> timeEntry : rawData.entrySet()) {
+            // Khởi tạo mảng 5000 phần tử (tốn cực ít RAM vì chỉ chứa reference)
+            KlineObjectSimple[] klineArray = new KlineObjectSimple[1000];
+
+            for (Map.Entry<String, KlineObjectSimple> symbolEntry : timeEntry.getValue().entrySet()) {
+                String fullSymbol = symbolEntry.getKey().endsWith("USDT") ? symbolEntry.getKey() : symbolEntry.getKey() + "USDT";
+                short symbolId = com.binance.chuyennd.ai_ml.data.SimpleSymbolMapper.getInstance().getId(fullSymbol);
+
+                // Nạp thẳng vào Index của mảng
+                klineArray[symbolId] = symbolEntry.getValue();
+            }
+            optimizedData.put(timeEntry.getKey(), klineArray);
+        }
+        rawData.clear();
+        return optimizedData;
     }
 }

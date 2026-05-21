@@ -91,7 +91,7 @@ public class ProductionVsBacktestFundingComparator {
                 // BƯỚC 2: TÁI TẠO MÔI TRƯỜNG BACKTEST BẰNG AEROSPIKE (WARM-UP)
                 // -------------------------------------------------------------------
                 LOG.info("   ⏳ Đang Warm-up 1500 phút dữ liệu cho HistoryManager...");
-                HistoryManager.getInstance().getAllHistory().clear();
+                HistoryManager.getInstance().resetCache();
                 CoinRankManager.getInstance().resetCache();
 
                 long startTime = targetTime - 1500 * Utils.TIME_MINUTE;

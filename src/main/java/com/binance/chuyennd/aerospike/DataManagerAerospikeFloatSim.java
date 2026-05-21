@@ -10,6 +10,7 @@ import com.aerospike.client.policy.BatchPolicy;
 import com.aerospike.client.policy.RecordExistsAction;
 import com.aerospike.client.policy.ScanPolicy;
 import com.aerospike.client.policy.WritePolicy;
+import com.binance.chuyennd.ai_ml.data.SimpleSymbolMapper;
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
@@ -440,6 +441,90 @@ public class DataManagerAerospikeFloatSim {
 
         // Tổng hợp kết quả
         for (Future<Map<Long, Map<String, KlineObjectSimple>>> future : futures) {
+            try {
+                results.putAll(future.get());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        return results;
+    }
+
+    public static TreeMap<Long, KlineObjectSimple[]> readDataFromAerospike1M_ShortKey(long startTime) {
+        TreeMap<Long, KlineObjectSimple[]> results = new TreeMap<>();
+        int totalRecords = 1440;
+
+        // Tạo Key và Timestamp
+        long[] allTimestamps = new long[totalRecords];
+        Calendar cal = Calendar.getInstance();
+        cal.setTimeInMillis(startTime);
+        cal.set(Calendar.HOUR_OF_DAY, 7);
+        cal.set(Calendar.MINUTE, 0);
+        cal.set(Calendar.SECOND, 0);
+        cal.set(Calendar.MILLISECOND, 0);
+
+        for (int i = 0; i < totalRecords; i++) {
+            allTimestamps[i] = cal.getTimeInMillis();
+            cal.add(Calendar.MINUTE, 1);
+        }
+
+        List<Future<Map<Long, KlineObjectSimple[]>>> futures = new ArrayList<>();
+        int chunkSize = (totalRecords + threadCount - 1) / threadCount;
+
+        for (int i = 0; i < threadCount; i++) {
+            final int startIdx = i * chunkSize;
+            final int endIdx = Math.min(startIdx + chunkSize, totalRecords);
+            if (startIdx >= endIdx) break;
+
+            futures.add(executor.submit(() -> {
+                // --- FIX THREAD SAFETY: Tạo SimpleDateFormat riêng cho từng luồng ---
+                SimpleDateFormat localKeyFormat = new SimpleDateFormat("yyyyMMdd-HHmm");
+
+                Map<Long, KlineObjectSimple[]> chunkResult = new HashMap<>();
+                try {
+                    // Tạo Keys cho chunk này
+                    Key[] chunkKeys = new Key[endIdx - startIdx];
+                    long[] chunkTimestamps = Arrays.copyOfRange(allTimestamps, startIdx, endIdx);
+
+                    for (int k = 0; k < chunkKeys.length; k++) {
+                        String keyString = localKeyFormat.format(new Date(chunkTimestamps[k]));
+                        chunkKeys[k] = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_TICKER, keyString);
+                    }
+
+                    // Batch Read
+                    Record[] records = getClient242().get(batchPolicy, chunkKeys);
+
+                    for (int j = 0; j < records.length; j++) {
+                        Record record = records[j];
+                        if (record == null) continue;
+
+                        // Lấy timestamp từ mảng (Vì trong Data không còn lưu timestamp nữa)
+                        long minuteTimestamp = chunkTimestamps[j];
+
+                        byte[] snappyCompressedBytes = (byte[]) record.getValue("data");
+                        if (snappyCompressedBytes != null) {
+                            byte[] protoAsBytes = Snappy.uncompress(snappyCompressedBytes);
+                            MinuteDataFinal protoData = MinuteDataFinal.parseFrom(protoAsBytes);
+
+                            KlineObjectSimple[] klineArray = new KlineObjectSimple[1000];
+                            for (Map.Entry<String, KlineObjectOptimized> entry : protoData.getTickersMap().entrySet()) {
+                                String fullSymbol = entry.getKey().endsWith("USDT") ? entry.getKey() : entry.getKey() + "USDT";
+                                // Ép sang Short ngay lập tức
+                                short symbolId = SimpleSymbolMapper.getInstance().getId(fullSymbol);
+                                klineArray[symbolId] = convertProtoToKline(entry.getValue(), minuteTimestamp);
+                            }
+                            chunkResult.put(minuteTimestamp, klineArray);
+                        }
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                return chunkResult;
+            }));
+        }
+
+        // Tổng hợp kết quả
+        for (Future<Map<Long, KlineObjectSimple[]>> future : futures) {
             try {
                 results.putAll(future.get());
             } catch (Exception e) {

@@ -15,6 +15,7 @@
  */
 package com.binance.chuyennd.research;
 
+import com.binance.chuyennd.ai_ml.data.SimpleSymbolMapper;
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.MarketLevelChange;
@@ -44,6 +45,7 @@ public class OrderTargetInfoTest implements Serializable {
     public Float quantity;
     public Integer leverage;
     public String symbol;
+    public short symbolId;   // Dùng cho Simulator tốc độ cao
     public long timeStart;
     public long timeUpdate;
     public Float profitMin = 0f;
@@ -71,6 +73,9 @@ public class OrderTargetInfoTest implements Serializable {
         this.quantity = quantity;
         this.leverage = leverage;
         this.symbol = symbol;
+        if (symbol != null) {
+            this.symbolId = SimpleSymbolMapper.getInstance().getId(symbol);
+        }
         this.timeStart = timeStart;
         this.timeUpdate = timeUpdate;
         this.side = side;

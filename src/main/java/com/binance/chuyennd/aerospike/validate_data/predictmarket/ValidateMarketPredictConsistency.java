@@ -69,7 +69,7 @@ public class ValidateMarketPredictConsistency {
 
                 // B. Warm-up 1500 phút nến để tính toán lại
                 LOG.info("   ⏳ Đang Warm-up 1500 nến từ Aerospike...");
-                HistoryManager.getInstance().getAllHistory().clear();
+                HistoryManager.getInstance().resetCache();
                 CoinRankManager.getInstance().resetCache();
 
                 long warmupStart = targetTime - 1500 * Utils.TIME_MINUTE;

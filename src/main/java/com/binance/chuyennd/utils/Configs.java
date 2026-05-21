@@ -122,6 +122,8 @@ public class Configs {
 
     public static float MS_DOWN_15M_SMALL_ONLY = -0.02145f;
 
+
+
     // Nhóm tham số cấp số nhân (Geometric Filters - Dự phòng)
     public static float BASE_DOWN = 0.006f;
     public static float RATIO_DOWN = 2.0f;

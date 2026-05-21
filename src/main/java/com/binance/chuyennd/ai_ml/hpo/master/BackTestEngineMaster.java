@@ -1,7 +1,7 @@
 package com.binance.chuyennd.ai_ml.hpo.master;
 
 import com.binance.chuyennd.ai_ml.features.export.HistoryManager;
-import com.binance.chuyennd.ai_ml.hpo.HPOFitnessCalculatorV2;
+import com.binance.chuyennd.ai_ml.hpo.HPOFitnessCalculatorV3;
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.ai_ml.onnx.entry.AIRejectFilter;
 import com.binance.chuyennd.object.MarketDataObject;
@@ -17,10 +17,11 @@ public class BackTestEngineMaster {
 
     private AIRejectFilter aiRejectFilter;
 
-    // Nhận 10 Tham số từ HPO (Đã bỏ d15mMed)
+    // Nhận 11 Tham số từ HPO (Đã thêm aiMaxThres)
     public BackTestEngineMaster(float dSmall, float dMed, float dBig, float uSmall, float uMed, float uBig,
                                 float d15mSmall,
-                                float aiRisk, float ai15m, float ai24h) {
+                                float aiRisk, float ai15m, float ai24h,
+                                float aiMaxThres) { // 🔥 THÊM MỚI Ở ĐÂY
 
         // 1. Gán 7 Ngưỡng Thị trường
         Configs.MS_DOWN_SMALL_AVG = dSmall;
@@ -31,12 +32,13 @@ public class BackTestEngineMaster {
         Configs.MS_UP_BIG_THRES = uBig;
         Configs.MS_DOWN_15M_SMALL_ONLY = d15mSmall;
 
-        // 2. Gán 3 Ngưỡng AI Filter
+        // 2. Gán 4 Ngưỡng AI Filter
+        Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD = aiMaxThres; // 🔥 THÊM MỚI Ở ĐÂY
+
         this.aiRejectFilter = new AIRejectFilter();
         this.aiRejectFilter.setConfig(aiRisk, ai15m, ai24h);
     }
-
-    public HPOFitnessCalculatorV2.FitnessReport run(TreeMap<Long, MarketDataObject> time2MarketData,
+    public HPOFitnessCalculatorV3.FitnessReport run(TreeMap<Long, MarketDataObject> time2MarketData,
                                                     TreeMap<Long, AiPredictionData> predictionMap,
                                                     TreeMap<Long, long[]> time2FundingPre,
                                                     long offlineEndTime) {
@@ -51,11 +53,11 @@ public class BackTestEngineMaster {
             test.simulatorWithInitEntry(startTime, offlineEndTime);
 
             // Dùng Fitness Calculator V2
-            return HPOFitnessCalculatorV2.evaluateDetailed(test.allOrderDone);
+            return HPOFitnessCalculatorV3.evaluateDetailed(test.allOrderDone);
 
         } catch (Exception e) {
             e.printStackTrace();
-            HPOFitnessCalculatorV2.FitnessReport err = new HPOFitnessCalculatorV2.FitnessReport();
+            HPOFitnessCalculatorV3.FitnessReport err = new HPOFitnessCalculatorV3.FitnessReport();
             err.finalFitness = -10000f;
             err.note = "EXCEPTION_ERROR";
             return err;

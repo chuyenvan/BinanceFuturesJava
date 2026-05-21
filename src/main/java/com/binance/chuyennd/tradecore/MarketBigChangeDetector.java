@@ -126,26 +126,52 @@ public class MarketBigChangeDetector {
         return result;
     }
 
-    public static Set<String> getTopSymbol(int period, Map<String,
-            KlineObjectSimple> symbol2FinalTicker, Set<String> symbolLocked, TreeMap<Float, String> predict2Symbol) {
-        Set<String> symbols = new HashSet<>();
+    // Thêm <K> vào hàm getTopSymbol
+    public static <K> Set<K> getTopSymbol(int period,
+                                          Map<K, KlineObjectSimple> symbol2FinalTicker,
+                                          Set<K> symbolLocked,
+                                          TreeMap<Float, K> predict2Symbol) {
+        Set<K> symbols = new HashSet<>();
         if (predict2Symbol != null && !predict2Symbol.isEmpty()) {
-            for (Map.Entry<Float, String> entry : predict2Symbol.entrySet()) {
-                String symbol = entry.getValue();
-                if (symbolLocked != null && symbolLocked.contains(symbol)) {
-//                LOG.info("Not trade {} because symbol locking: {}",
-//                        symbol, Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()));
+            for (Map.Entry<Float, K> entry : predict2Symbol.entrySet()) {
+                K symbolKey = entry.getValue(); // Có thể là String hoặc Short
+
+                if (symbolLocked != null && symbolLocked.contains(symbolKey)) {
                     continue;
                 }
-                KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
+
+                KlineObjectSimple ticker = symbol2FinalTicker.get(symbolKey);
                 if (ticker != null) {
-                    symbols.add(symbol);
+                    symbols.add(symbolKey);
                 }
                 if (symbols.size() >= period) {
                     break;
                 }
             }
+        }
+        return symbols;
+    }
+ public static  Set<Short> getTopSymbolArray(int period,
+                                          KlineObjectSimple[] symbol2FinalTicker,
+                                          Set<Short> symbolLocked,
+                                          TreeMap<Float, Short> predict2Symbol) {
+        Set<Short> symbols = new HashSet<>();
+        if (predict2Symbol != null && !predict2Symbol.isEmpty()) {
+            for (Map.Entry<Float, Short> entry : predict2Symbol.entrySet()) {
+                Short symbolKey = entry.getValue(); // Có thể là String hoặc Short
 
+                if (symbolLocked != null && symbolLocked.contains(symbolKey)) {
+                    continue;
+                }
+
+                KlineObjectSimple ticker = symbol2FinalTicker[symbolKey];
+                if (ticker != null) {
+                    symbols.add(symbolKey);
+                }
+                if (symbols.size() >= period) {
+                    break;
+                }
+            }
         }
         return symbols;
     }

@@ -16,32 +16,29 @@ import java.util.stream.Collectors;
 public class DcaProcessor {
     public static final Logger LOG = LoggerFactory.getLogger(DcaProcessor.class);
 
-    public static List<String> getDCA(MarketLevelChange levelChange, Long time, Float budget,
-                                      Map<String, OrderTargetInfoTest> symbol2OrderRunning) {
+
+    // Thêm <K> đại diện cho Key (có thể là String hoặc Short)
+    public static <K> List<K> getDCA(MarketLevelChange levelChange, Long time, Float budget,
+                                     Map<K, OrderTargetInfoTest> symbol2OrderRunning) {
         return symbol2OrderRunning.entrySet()
                 .stream()
                 .filter(entry -> {
                     OrderTargetInfoTest order = entry.getValue();
                     try {
-                        // "Giải nén" các thuộc tính từ đối tượng 'order' và truyền vào hàm tiện ích
+                        // Logic lõi giữ nguyên 100%
                         return DcaUtils.shouldDca(
-                                order.calMargin(),
-                                order.calRateLoss(),
-                                order.marketLevelChange,
-                                order.timeStart,
-                                levelChange,  // Trạng thái thị trường chung
-                                time,         // Thời gian hiện tại
-                                budget
+                                order.calMargin(), order.calRateLoss(), order.marketLevelChange,
+                                order.timeStart, levelChange, time, budget
                         );
                     } catch (Exception e) {
-                        LOG.info("Error when processing DCA for {}", Utils.toJson(order));
-                        e.printStackTrace();
+                        LOG.info("Error when processing DCA");
                     }
                     return false;
                 })
-                .map(Map.Entry::getKey)
+                .map(Map.Entry::getKey) // Nếu đầu vào là Map<Short,...> thì nó trả về List<Short>
                 .collect(Collectors.toList());
     }
+
 
     /**
      * Hàm DCA cho môi trường Production.
