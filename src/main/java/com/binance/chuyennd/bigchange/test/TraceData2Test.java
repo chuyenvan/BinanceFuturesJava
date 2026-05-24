@@ -465,7 +465,8 @@ public class TraceData2Test {
                     Float profit30d = 0f;
                     for (int j = 0; j < 30; j++) {
                         Long date30 = dateFirst + (i - 30 + j) * Utils.TIME_DAY;
-                        profit30d += date2Profit.get(date30);
+                        if (date2Profit.containsKey(date30))
+                            profit30d += date2Profit.get(date30);
                     }
                     profit30d2Date.put(profit30d, dateFirst + i * Utils.TIME_DAY);
                 }
@@ -505,7 +506,6 @@ public class TraceData2Test {
         }
 
     }
-
 
 
 }

@@ -68,7 +68,7 @@ public class RunHpoMaster_EntryLogic {
         try {
             Configs.IS_HPO_MODE = true;
             Configs.IS_KAGGLE_MODE = true;
-            Configs.TIME_RUN = "20251001"; // Key mới
+            Configs.TIME_RUN = "20260101"; // Key mới
             offlineEndTime = Utils.sdfFile.parse("20260430").getTime() + (24 * Utils.TIME_HOUR) - Utils.TIME_MINUTE;
             loadKaggleData();
         } catch (Exception e) {
@@ -229,10 +229,10 @@ public class RunHpoMaster_EntryLogic {
             BackTestEngineMaster engine = new BackTestEngineMaster(ds, dm, db, us, um, ub, d15s, aiRisk, ai15m, ai24h, aiMaxThres);
             HPOFitnessCalculatorV3.FitnessReport report = engine.run(time2MarketData, predictionMap, time2FundingPre, offlineEndTime);
 
-            LOG.info(String.format("Trial %4d | Fit: %8.0f | PnL: %6.0f$ | MaxDD: %6.0f$ | RF: %4.1f | Pen: %4.0f$ " +
-                            "| Trades: %5d | [D_Big:%.3f, aiR:%.3f, ai15:%.3f, aiMax:%.3f] %s",
-                    c, report.finalFitness, report.totalProfit, report.maxDrawdown, report.recoveryFactor, report.penaltyCost,
-                    report.tradeCount, db, aiRisk, ai15m, aiMaxThres, report.note));
+            // Xóa RF, bổ sung Net (Net Score sau khi trừ phạt) và Trades
+            LOG.info(String.format("Trial %4d | Fit: %8.0f | PnL: %6.0f$ | Net: %6.0f$ | MaxDD: %6.0f$ | Pen: %4.0f$ | Trades: %5d | [D_Big:%.3f, aiR:%.3f, aiMax:%.3f] %s",
+                    c, report.finalFitness, report.totalProfit, report.netScore, report.maxDrawdown, report.penaltyCost, report.tradeCount,
+                    db, aiRisk, aiMaxThres, report.note));
 
             return report.finalFitness;
         } catch (Exception e) {
