@@ -13,7 +13,9 @@ import com.aerospike.client.policy.WritePolicy;
 import com.binance.chuyennd.ai_ml.data.SimpleSymbolMapper;
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.object.MarketDataObject;
+import com.binance.chuyennd.object.MarketDataObject15M;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
+import com.binance.chuyennd.research.FundingFeeManager;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
 
@@ -21,6 +23,7 @@ import com.binance.chuyennd.utils.Utils;
 import com.binance.chuyennd.proto.MinuteDataFinalProto.MinuteDataFinal;
 import com.binance.chuyennd.proto.MinuteDataFinalProto.KlineObjectOptimized;
 
+import com.binance.client.constant.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xerial.snappy.Snappy;
@@ -39,8 +42,9 @@ public class DataManagerAerospikeFloatSim {
     // --- CẤU HÌNH ---
     // Đổi sang Set mới đã tối ưu
     public static final String AEROSPIKE_SET_NAME_TICKER = "kline_1m_opt";
+    public static final String AEROSPIKE_SET_NAME_TICKER_15M = "kline_15m_opt";
     private static final String AEROSPIKE_SET_NAME_PRICE = "price_realtime";
-    public static final String AEROSPIKE_SET_NAME_FUNDINGFEE = "funding_data";
+    public static final String AEROSPIKE_SET_NAME_FUNDINGFEE = "funding_data_new";
     public static final String AEROSPIKE_SET_NAME_MARKET_DATA = "market_data_object";
 
 
@@ -1391,8 +1395,12 @@ public class DataManagerAerospikeFloatSim {
 
     public static void main(String[] args) throws ParseException {
 //        System.out.println(checkAndComparePriceDiff());
-        Long startTime = Utils.sdfFile.parse("20210203").getTime() + 7 * Utils.TIME_HOUR;
-        System.out.println(Utils.toJson(readFundingBatchCustom(startTime, 1440)));
+        TreeMap<Long, Float> time2Funding = FundingFeeManager.getInstance().symbol2FundingFee.get("CGPTUSDT");
+        for (Long time : time2Funding.keySet()) {
+            LOG.info("{} {}", Utils.normalizeDateYYYYMMDDHHmm(time), time2Funding.get(time));
+        }
+//        Long startTime = Utils.sdfFile.parse("20210203").getTime() + 7 * Utils.TIME_HOUR;
+//        System.out.println(Utils.toJson(readFundingBatchCustom(startTime, 1440)));
 //        TreeMap<Long, Map<Short, float[]>> time2Tickers = DataManagerAerospikeFloatSim.readDcaBatchCustom(startTime, 1440);
 //        for (Long timeKey : time2Tickers.keySet()) {
 //
@@ -1999,5 +2007,160 @@ public class DataManagerAerospikeFloatSim {
         }
         LOG.info("✅ Đã load xong {} records AiPredictionData.", results.size());
         return results;
+    }
+
+    /**
+     * Đọc Batch nến 15m từ Aerospike.
+     *
+     * @param startTime      Mốc thời gian bắt đầu (Phải là mốc chẵn 15m, VD: 00, 15, 30, 45)
+     * @param total15mBlocks Số lượng cây nến 15m muốn đọc
+     */
+    public static TreeMap<Long, Map<Short, KlineObjectSimple>> readDataFromAerospike15mCustom(long startTime, int total15mBlocks) {
+        TreeMap<Long, Map<Short, KlineObjectSimple>> results = new TreeMap<>();
+        // Nhảy mỗi bước là 15 phút
+        long[] allTimestamps = new long[total15mBlocks];
+        for (int i = 0; i < total15mBlocks; i++) {
+            allTimestamps[i] = startTime + (i * 15 * Utils.TIME_MINUTE);
+        }
+
+        List<java.util.concurrent.Future<Map<Long, Map<Short, KlineObjectSimple>>>> futures = new ArrayList<>();
+        int chunkSize = (total15mBlocks + threadCount - 1) / threadCount;
+
+        for (int i = 0; i < threadCount; i++) {
+            final int startIdx = i * chunkSize;
+            final int endIdx = Math.min(startIdx + chunkSize, total15mBlocks);
+            if (startIdx >= endIdx) break;
+
+            futures.add(executor.submit(() -> {
+                SimpleDateFormat localKeyFormat = new SimpleDateFormat("yyyyMMdd-HHmm");
+                Map<Long, Map<Short, KlineObjectSimple>> chunkResult = new HashMap<>();
+
+                try {
+                    Key[] chunkKeys = new Key[endIdx - startIdx];
+                    long[] chunkTimestamps = Arrays.copyOfRange(allTimestamps, startIdx, endIdx);
+
+                    for (int k = 0; k < chunkKeys.length; k++) {
+                        String keyString = localKeyFormat.format(new Date(chunkTimestamps[k]));
+                        chunkKeys[k] = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_TICKER_15M, keyString);
+                    }
+
+                    // Đọc từ Node 224
+                    Record[] records = getClient226().get(batchPolicy, chunkKeys);
+
+                    if (records == null) return chunkResult;
+
+                    for (int j = 0; j < records.length; j++) {
+                        Record record = records[j];
+                        if (record == null) continue;
+                        long chunkStartTs = chunkTimestamps[j];
+                        byte[] compressedBytes = (byte[]) record.getValue("data");
+                        if (compressedBytes != null) {
+                            byte[] rawBytes = org.xerial.snappy.Snappy.uncompress(compressedBytes);
+                            // Gọi hàm decode trả về Short
+                            Map<Short, KlineObjectSimple> decodedMap = decodeKline15mMapFromBinary(rawBytes, chunkStartTs);
+                            chunkResult.put(chunkStartTs, decodedMap);
+                        }
+                    }
+                } catch (Exception e) {
+                    LOG.error("❌ Lỗi luồng đọc 15m Batch: {}", e.getMessage());
+                }
+                return chunkResult;
+            }));
+        }
+
+        for (java.util.concurrent.Future<Map<Long, Map<Short, KlineObjectSimple>>> future : futures) {
+            try {
+                results.putAll(future.get());
+            } catch (Exception e) {
+                LOG.error("❌ Lỗi lấy kết quả Future 15m: {}", e.getMessage());
+            }
+        }
+
+        return results;
+    }
+
+    /**
+     * Decode Binary Custom 15m và Map ID về String Symbol
+     */
+    private static Map<Short, KlineObjectSimple> decodeKline15mMapFromBinary(byte[] data, long chunkStartTs) {
+        if (data == null || data.length == 0) return new HashMap<>();
+        java.nio.ByteBuffer buffer = java.nio.ByteBuffer.wrap(data);
+        int mapSize = buffer.getInt();
+
+        // Dùng Short làm Key
+        Map<Short, KlineObjectSimple> map = new HashMap<>(mapSize);
+
+        for (int i = 0; i < mapSize; i++) {
+            short symId = buffer.getShort();
+            KlineObjectSimple k = new KlineObjectSimple();
+            k.startTime = chunkStartTs;
+            k.priceOpen = buffer.getFloat();
+            k.maxPrice = buffer.getFloat();
+            k.minPrice = buffer.getFloat();
+            k.priceClose = buffer.getFloat();
+            k.totalUsdt = buffer.getFloat();
+
+            map.put(symId, k); // Add trực tiếp Short, KHÔNG map sang String nữa
+        }
+        return map;
+    }
+
+    public static final String AEROSPIKE_SET_NAME_MARKET_DATA_15M = "market_data_object_15m";
+
+    // Thêm hàm này vào class
+    public static void saveMarketDataBatch15M(Map<Long, MarketDataObject15M> dataMap, WritePolicy writePolicy) {
+        if (dataMap == null || dataMap.isEmpty()) return;
+        try {
+            // Tên Set lưu dữ liệu 15m
+            String AEROSPIKE_SET_NAME_MARKET_DATA_15M = "market_data_object_15m";
+
+            dataMap.entrySet().parallelStream().forEach(entry -> {
+                try {
+                    // 🔥 FIX CHÍ KHÍ: Khởi tạo DateFormat BÊN TRONG luồng để đảm bảo Thread-Safe 100%
+                    SimpleDateFormat fmt = new SimpleDateFormat("yyyyMMdd-HHmm");
+
+                    long timestamp = entry.getKey();
+                    MarketDataObject15M data = entry.getValue();
+
+                    String keyString = fmt.format(new Date(timestamp));
+                    Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_MARKET_DATA_15M, keyString);
+                    byte[] compressed = data.endCode();
+
+                    // Đẩy vào Node 226
+                    getClient226().put(writePolicy, key,
+                            new Bin("data", compressed),
+                            new Bin("time", timestamp)
+                    );
+                } catch (Exception e) {
+                    LOG.error("❌ Error saving Market Data 15M at {}: {}", entry.getKey(), e.getMessage());
+                }
+            });
+        } catch (Exception e) {
+            LOG.error("❌ Error in saveMarketDataBatch15M", e);
+        }
+    }
+
+    /**
+     * HÀM ĐỌC 1 BẢN GHI: Lấy dữ liệu Market Data 15M tại 1 thời điểm cụ thể
+     */
+    public static MarketDataObject15M getMarketData15MAtTime(long timestamp) {
+        try {
+            SimpleDateFormat fmt = new SimpleDateFormat("yyyyMMdd-HHmm");
+            String keyString = fmt.format(new Date(timestamp));
+            Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_MARKET_DATA_15M, keyString);
+
+            // Dùng client226 như lúc bác save
+            Record record = getClient226().get(null, key);
+
+            if (record != null) {
+                byte[] compressed = (byte[]) record.getValue("data");
+                if (compressed != null) {
+                    return MarketDataObject15M.decodeMarketDataFromBinary(compressed);
+                }
+            }
+        } catch (Exception e) {
+            LOG.error("❌ Error reading Market Data 15M at {}: {}", timestamp, e.getMessage());
+        }
+        return null;
     }
 }

@@ -22,13 +22,13 @@ import java.util.*;
 /**
  * @author pc
  */
-public class ExportMarketData2File {
+public class ExportMarketData2Aerospike {
 
-    public static final Logger LOG = LoggerFactory.getLogger(ExportMarketData2File.class);
+    public static final Logger LOG = LoggerFactory.getLogger(ExportMarketData2Aerospike.class);
 
 
     public static void main(String[] args) throws ParseException, IOException, InterruptedException {
-        ExportMarketData2File test = new ExportMarketData2File();
+        ExportMarketData2Aerospike test = new ExportMarketData2Aerospike();
 //        test.exportBtcTrendReverse();
         test.exportMarketEntries(null);
 //        test.exportFundingFeeBuy();

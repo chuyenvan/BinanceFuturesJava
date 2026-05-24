@@ -12,8 +12,8 @@ import java.util.Map;
 public class AerospikeCheckData {
     public static void main(String[] args) {
         Map<String, AerospikeClient> clients = new HashMap<>();
-        clients.put("226", new AerospikeClient("103.157.218.226", 3222));
-//        clients.put("242", new AerospikeClient("103.157.218.242", 3222));
+//        clients.put("226", new AerospikeClient("103.157.218.226", 3222));
+        clients.put("242", new AerospikeClient("103.157.218.242", 3222));
 
 
         for (Map.Entry<String, AerospikeClient> entry : clients.entrySet()) {

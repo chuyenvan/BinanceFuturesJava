@@ -16,10 +16,9 @@ public class FundingFeeManager {
     public static final Logger LOG = LoggerFactory.getLogger(FundingFeeManager.class);
 
     // Cache danh sách Funding Rate của từng coin
-    private ConcurrentHashMap<String, TreeMap<Long, Float>> symbol2FundingFee = new ConcurrentHashMap<>();
+    public ConcurrentHashMap<String, TreeMap<Long, Float>> symbol2FundingFee = new ConcurrentHashMap<>();
 
     // Cache danh sách coin cần trade theo giờ (Dùng cho Backtest)
-    public static final String FILE_FUNDING_FEE = "storage/fundingfee_time.data";
     public ConcurrentHashMap<Long, Set<String>> time2FundingFeeTrade;
 
     private static volatile FundingFeeManager INSTANCE = null;

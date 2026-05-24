@@ -56,7 +56,7 @@ public class DataUpdaterManager {
         try {
             // 1.1 Chạy bù Market Data
             LOG.info("▶️ 1/3: Kích hoạt ExportMarketData2File...");
-            new ExportMarketData2File().exportMarketEntries(timeToRun);
+            new ExportMarketData2Aerospike().exportMarketEntries(timeToRun);
 
             // 1.2 Chạy bù AI Prediction (Entry)
             LOG.info("▶️ 2/3: Kích hoạt RunGeneratePredictions...");

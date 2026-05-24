@@ -14,15 +14,14 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-public class CheckGapMarketObject {
-    public static final Logger LOG = LoggerFactory.getLogger(CheckGapMarketObject.class);
+public class CheckGapMarketObject15M {
+    public static final Logger LOG = LoggerFactory.getLogger(CheckGapMarketObject15M.class);
 
     public static void main(String[] args) {
-
         AerospikeClient client = DataManagerAerospikeFloatSim.getClient226();
         String startDateStr = "20210101";
 
-        scanMissingData(client, DataManagerAerospikeFloatSim.AEROSPIKE_SET_NAME_MARKET_DATA, startDateStr);
+        scanMissingData(client, DataManagerAerospikeFloatSim.AEROSPIKE_SET_NAME_MARKET_DATA_15M, startDateStr);
     }
 
     public static void scanMissingData(AerospikeClient client, String setName, String startDateStr) {
@@ -30,9 +29,12 @@ public class CheckGapMarketObject {
             SimpleDateFormat dayFmt = new SimpleDateFormat("yyyyMMdd");
             SimpleDateFormat keyFmt = new SimpleDateFormat("yyyyMMdd-HHmm");
 
-            long startTime = dayFmt.parse(startDateStr).getTime() + 7 * Utils.TIME_HOUR;
+            long rawStartTime = dayFmt.parse(startDateStr).getTime() + 7 * Utils.TIME_HOUR;
+            // Ép về mốc chẵn 15 phút
+            long startTime = rawStartTime - (rawStartTime % (15 * Utils.TIME_MINUTE));
+
             long endTime = System.currentTimeMillis() - 2 * Utils.TIME_DAY;
-            long step = 60000L;
+            long step = 15 * 60000L; // 🔥 BƯỚC NHẢY 15 PHÚT
 
             BatchPolicy batchPolicy = new BatchPolicy();
             batchPolicy.maxConcurrentThreads = 4;
@@ -44,7 +46,7 @@ public class CheckGapMarketObject {
             long totalMissing = 0;
             long totalChecked = 0;
 
-            LOG.info("🚀 [MARKET OBJECT] BẮT ĐẦU QUÉT SET [{}] TỪ {} ĐẾN NAY...", setName, startDateStr);
+            LOG.info("🚀 [MARKET OBJECT 15M] BẮT ĐẦU QUÉT SET [{}] TỪ {} ĐẾN NAY...", setName, startDateStr);
 
             for (long t = startTime; t <= endTime; t += step) {
                 timeBuffer.add(t);
@@ -59,7 +61,7 @@ public class CheckGapMarketObject {
                         if (!existsArray[i]) {
                             totalMissing++;
                             if (totalMissing <= 100) {
-                                LOG.warn("❌ [MARKET OBJ] THIẾU TẠI PHÚT: {}", keyFmt.format(new Date(timeBuffer.get(i))));
+                                LOG.warn("❌ [MDO 15M] THIẾU TẠI PHÚT: {}", keyFmt.format(new Date(timeBuffer.get(i))));
                             } else if (totalMissing == 101) {
                                 LOG.warn("⚠️ ... (Phát hiện quá nhiều lổ hổng, đã ẩn bớt log) ...");
                             }
@@ -67,8 +69,8 @@ public class CheckGapMarketObject {
                     }
 
                     totalChecked += keyBuffer.size();
-                    if (totalChecked % 500000 == 0) {
-                        LOG.info("🔄 [MARKET OBJ] Tiến độ: {} phút...", totalChecked);
+                    if (totalChecked % 50000 == 0) {
+                        LOG.info("🔄 [MDO 15M] Tiến độ: {} block 15m...", totalChecked);
                     }
 
                     timeBuffer.clear();
@@ -77,8 +79,8 @@ public class CheckGapMarketObject {
             }
 
             LOG.info("==========================================================");
-            LOG.info("✅ HOÀN TẤT QUÉT MARKET OBJECT: [{}]", setName);
-            LOG.info("📊 Tổng kiểm tra : {}", totalChecked);
+            LOG.info("✅ HOÀN TẤT QUÉT MARKET OBJECT 15M: [{}]", setName);
+            LOG.info("📊 Tổng kiểm tra : {} block", totalChecked);
             LOG.info("🚨 THIẾU        : {} ({}%)", totalMissing, String.format("%.4f", (float) totalMissing / totalChecked * 100));
             LOG.info("==========================================================");
         } catch (Exception e) {

@@ -2,6 +2,7 @@ package com.binance.chuyennd.tradecore;
 
 import com.binance.chuyennd.helper.TickerFuturesHelper;
 import com.binance.chuyennd.object.MarketDataObject;
+import com.binance.chuyennd.object.MarketDataObject15M;
 import com.binance.chuyennd.object.MarketLevelChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
@@ -151,10 +152,11 @@ public class MarketBigChangeDetector {
         }
         return symbols;
     }
- public static  Set<Short> getTopSymbolArray(int period,
-                                          KlineObjectSimple[] symbol2FinalTicker,
-                                          Set<Short> symbolLocked,
-                                          TreeMap<Float, Short> predict2Symbol) {
+
+    public static Set<Short> getTopSymbolArray(int period,
+                                               KlineObjectSimple[] symbol2FinalTicker,
+                                               Set<Short> symbolLocked,
+                                               TreeMap<Float, Short> predict2Symbol) {
         Set<Short> symbols = new HashSet<>();
         if (predict2Symbol != null && !predict2Symbol.isEmpty()) {
             for (Map.Entry<Float, Short> entry : predict2Symbol.entrySet()) {
@@ -313,7 +315,7 @@ public class MarketBigChangeDetector {
             return MarketLevelChange.MEDIUM_UP;
         }
         // Logic Medium Down phức tạp (AVG < X HOẶC (AVG < Y VÀ 15M < Z))
-        if (rateDownAvg < Configs.MS_DOWN_MED_AVG ) {
+        if (rateDownAvg < Configs.MS_DOWN_MED_AVG) {
             return MarketLevelChange.MEDIUM_DOWN;
         }
 
@@ -339,6 +341,7 @@ public class MarketBigChangeDetector {
                 || rateUpAvg > 0.012
                 || rateDownAvg < -0.012;
     }
+
     public static boolean is50PercentOrderLoss(
             Collection<OrderTargetInfoTest> runningOrders,
             long currentTime) {
@@ -457,6 +460,64 @@ public class MarketBigChangeDetector {
         }
 
         return (totalOrders - safeOrders > Configs.MAX_CONCURRENT_ORDERS * 0.7);
+    }
+
+    public static com.binance.chuyennd.object.MarketDataObject15M calMarketData15M(
+            Map<Short, com.binance.chuyennd.object.sw.KlineObjectSimple> symbol2Ticker,
+            Map<Short, Float> symbol2PriceMax,
+            Map<Short, Float> symbol2MinPrice) {
+
+        TreeMap<Float, Short> rateDown2Symbols = new TreeMap<>();
+        TreeMap<Float, Short> rateMin2Symbols = new TreeMap<>();
+        TreeMap<Float, Short> rateMax2Symbols = new TreeMap<>();
+        TreeMap<Float, Short> rateUp2Symbols = new TreeMap<>();
+
+        // Lấy ID của BTCUSDT một lần duy nhất
+        short btcId = com.binance.chuyennd.ai_ml.data.SimpleSymbolMapper.getInstance().getId(com.binance.client.constant.Constants.SYMBOL_PAIR_BTC);
+        com.binance.chuyennd.object.sw.KlineObjectSimple btcTicker = symbol2Ticker.get(btcId);
+        Float rateChangeBtc = (btcTicker != null) ? com.binance.chuyennd.utils.Utils.rateOf2Double(btcTicker.priceClose, btcTicker.priceOpen) : 0f;
+
+        for (Map.Entry<Short, com.binance.chuyennd.object.sw.KlineObjectSimple> entry : symbol2Ticker.entrySet()) {
+            short symId = entry.getKey();
+            // Optional: Bác có thể cache diedSymbol thành Set<Short> để filter O(1) chỗ này
+
+            com.binance.chuyennd.object.sw.KlineObjectSimple ticker = entry.getValue();
+            Float rateChange = com.binance.chuyennd.utils.Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen).floatValue();
+
+            if (rateChangeBtc > -0.004 && rateChange < -0.15) continue;
+            if (rateChange > 0.3) continue;
+
+            rateDown2Symbols.put(rateChange, symId);
+            rateUp2Symbols.put(-rateChange, symId);
+
+            Float maxPrice = symbol2PriceMax.get(symId);
+            if (maxPrice != null) {
+                rateMax2Symbols.put(com.binance.chuyennd.utils.Utils.rateOf2Double(ticker.priceClose, maxPrice).floatValue(), symId);
+            }
+
+            Float minPrice = symbol2MinPrice.get(symId);
+            if (minPrice != null) {
+                rateMin2Symbols.put(-com.binance.chuyennd.utils.Utils.rateOf2Double(ticker.priceClose, minPrice).floatValue(), symId);
+            }
+        }
+
+        // Hàm calRateChangeAvg của bác có thể ép kiểu Float qua String, nhưng ở đây tính AVG thì key (Float) là đủ rồi
+        Float rateChangeDownAvg = calRateChangeAvgShort(rateDown2Symbols, 100);
+        Float rateChangeUpAvg = -calRateChangeAvgShort(rateUp2Symbols, 100);
+        Float rateChangeDown4HAvg = calRateChangeAvgShort(rateMax2Symbols, 100);
+
+        return new com.binance.chuyennd.object.MarketDataObject15M(rateChangeDownAvg, rateChangeUpAvg, rateChangeDown4HAvg);
+    }
+
+    // Viết thêm hàm nhỏ này để nó nhận TreeMap<Float, Short>
+    public static Float calRateChangeAvgShort(TreeMap<Float, Short> rateLoss2Symbols, Integer period) {
+        Float total = 0f; int counter = 0;
+        if (period > rateLoss2Symbols.size() * 4 / 5) period = rateLoss2Symbols.size() * 4 / 5;
+        for (Map.Entry<Float, Short> entry : rateLoss2Symbols.entrySet()) {
+            counter++; total += entry.getKey();
+            if (period != null && counter >= period) break;
+        }
+        return rateLoss2Symbols.isEmpty() ? 0f : total / counter;
     }
 }
 
