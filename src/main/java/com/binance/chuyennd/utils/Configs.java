@@ -121,11 +121,24 @@ public class Configs {
 
     // Ngưỡng Bão Nhỏ (SMALL)
     public static float MS_UP_SMALL_THRES = 0.00442f;
-    public static float MS_DOWN_SMALL_AVG = -0.01713f;
-
     public static float MS_DOWN_15M_SMALL_ONLY = -0.02145f;
 
+    // =========================================================
+    // THÊM MỚI: THAM SỐ CHUẨN BỊ CHO HPO PHASE 2 (SURVIVAL)
+    // =========================================================
+    // 1. Bắt đáy Altcoin (isDcaAlt)
+    public static float DCA_ALT_DOWN_15M_THRES = -0.035f;
+    public static float DCA_ALT_UP_AVG_THRES = 0.012f;
+    public static float DCA_ALT_DOWN_AVG_THRES = -0.012f;
 
+    // 2. Cầu dao chống bão (Circuit Breaker)
+    public static float CIRCUIT_DANGER_RATIO = 0.7f;    // 70% lệnh rủi ro
+
+    // 3. Cấu hình DCA Nhồi lệnh (DcaUtils)
+    public static int DCA_TIME_BIG_DOWN = 8;
+    public static float DCA_LOSS_BIG_DOWN = -0.15f;
+    public static int DCA_TIME_MED_DOWN = 15;
+    public static float DCA_LOSS_MED_DOWN = -0.25f;
 
     // Nhóm tham số cấp số nhân (Geometric Filters - Dự phòng)
     public static float BASE_DOWN = 0.006f;

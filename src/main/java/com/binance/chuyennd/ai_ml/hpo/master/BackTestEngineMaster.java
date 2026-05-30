@@ -24,7 +24,6 @@ public class BackTestEngineMaster {
                                 float aiMaxThres) { // 🔥 THÊM MỚI Ở ĐÂY
 
         // 1. Gán 7 Ngưỡng Thị trường
-        Configs.MS_DOWN_SMALL_AVG = dSmall;
         Configs.MS_DOWN_MED_AVG = dMed;
         Configs.MS_DOWN_BIG_AVG = dBig;
         Configs.MS_UP_SMALL_THRES = uSmall;

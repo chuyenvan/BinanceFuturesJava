@@ -228,8 +228,7 @@ public class DetectEntrySignal2TradeNormal {
                     rateDownAvg, rateUpAvg, rateDown15MAvg, time);
             if (levelChange != null) {
                 Integer numberOrder = Configs.NUMBER_ENTRY_EACH_SIGNAL;
-                if (levelChange.equals(MarketLevelChange.SMALL_DOWN)
-                        || levelChange.equals(MarketLevelChange.SMALL_UP)
+                if (levelChange.equals(MarketLevelChange.SMALL_UP)
                         || levelChange.equals(MarketLevelChange.MEDIUM_DOWN_15M)
                         || levelChange.equals(MarketLevelChange.SMALL_DOWN_15M)) {
                     numberOrder = numberOrder / 2;

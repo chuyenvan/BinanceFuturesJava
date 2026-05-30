@@ -151,10 +151,11 @@ public class MarketBigChangeDetector {
         }
         return symbols;
     }
- public static  Set<Short> getTopSymbolArray(int period,
-                                          KlineObjectSimple[] symbol2FinalTicker,
-                                          Set<Short> symbolLocked,
-                                          TreeMap<Float, Short> predict2Symbol) {
+
+    public static Set<Short> getTopSymbolArray(int period,
+                                               KlineObjectSimple[] symbol2FinalTicker,
+                                               Set<Short> symbolLocked,
+                                               TreeMap<Float, Short> predict2Symbol) {
         Set<Short> symbols = new HashSet<>();
         if (predict2Symbol != null && !predict2Symbol.isEmpty()) {
             for (Map.Entry<Float, Short> entry : predict2Symbol.entrySet()) {
@@ -198,104 +199,9 @@ public class MarketBigChangeDetector {
     }
 
     /**
-     * @param predReturn15M: Giá trị AI dự báo (Ví dụ: 0.015)
-     * @param k_down:        Tham số HPO 1 (Ví dụ: 0.8)
-     * @param k_up:          Tham số HPO 2 (Ví dụ: 1.0)
-     */
-    public static MarketLevelChange getMarketStatus1MDynamic(Float rateDownAvg, Float rateUpAvg,
-                                                             Float rateDown15MAvg, Float predReturn15M,
-                                                             float k_down, float k_up) {
-
-        // 1. Lấy Volatility động từ AI
-        // Lấy giá trị tuyệt đối để làm baseline. Đặt đáy 0.5% (0.005) để tránh lúc AI dự báo Vol = 0 gây lỗi chia
-        float v = (predReturn15M != null && Math.abs(predReturn15M) > 0.005f) ? Math.abs(predReturn15M) : 0.005f;
-
-        // 2. TỰ ĐỘNG SINH CÁC NGƯỠNG (Ép 12 param thành logic nội suy)
-        // Hệ số phân bậc: Nhỏ (x1) -> Vừa (x2) -> Lớn (x3)
-        float dynDownSmall = -(v * k_down);         // Vd: -0.01
-        float dynDownMed = -(v * k_down * 2.0f);  // Vd: -0.02
-        float dynDownBig = -(v * k_down * 3.0f);  // Vd: -0.03
-
-        float dynUpSmall = (v * k_up);            // Vd: 0.01
-        float dynUpMed = (v * k_up * 2.0f);     // Vd: 0.02
-        float dynUpBig = (v * k_up * 3.0f);     // Vd: 0.03
-
-        // 3. Logic bắt Tín hiệu
-
-        // 3.1 BIG UP / DOWN
-        if (rateUpAvg > dynUpBig) return MarketLevelChange.BIG_UP;
-        if (rateDownAvg < dynDownBig) return MarketLevelChange.BIG_DOWN;
-
-        // 3.2 MEDIUM UP / DOWN
-        if (rateUpAvg > dynUpMed) return MarketLevelChange.MEDIUM_UP;
-
-        // Gộp chung điều kiện Medium: Avg sập hoặc 15M sập mạnh
-        if (rateDownAvg < dynDownMed || rateDown15MAvg < (dynDownMed * 1.5f)) {
-            return MarketLevelChange.MEDIUM_DOWN;
-        }
-
-        // 3.3 SMALL UP / DOWN
-        if (rateUpAvg > dynUpSmall && rateDownAvg > 0) return MarketLevelChange.SMALL_UP;
-        if (rateDownAvg < dynDownSmall && rateUpAvg < 0 && rateDown15MAvg < dynDownSmall) {
-            return MarketLevelChange.SMALL_DOWN;
-        }
-
-        // 3.4 15M ONLY (Đánh bắt gãy khung ngắn)
-        if (rateDown15MAvg < dynDownMed) return MarketLevelChange.MEDIUM_DOWN_15M;
-        if (rateDown15MAvg < dynDownSmall) return MarketLevelChange.SMALL_DOWN_15M;
-
-        return null;
-    }
-
-    /**
      * MÔ HÌNH GEOMETRIC PROGRESSION (CẤP SỐ NHÂN)
      * Giải quyết bài toán Fat Tails và giảm số lượng tham số cho HPO.
      */
-    public static MarketLevelChange getMarketStatus1MGeometric(
-            Float rateDownAvg, Float rateUpAvg, Float rateDown15MAvg,
-            float baseDown, float ratioDown,
-            float baseUp, float ratioUp) {
-
-        // --- CHIỀU DOWN (Tính bằng số âm) ---
-        // Ví dụ: baseDown = 0.005 (0.5%), ratioDown = 2.0
-        // Small = -0.005 | Med = -0.010 | Big = -0.020
-        float downSmall = -baseDown;
-        float downMed = downSmall * ratioDown;
-        float downBig = downMed * ratioDown;
-
-        // 15M Threshold (Khung ngắn giật râu mạnh hơn, nhân hệ số giãn 1.5)
-        float down15mSmall = downSmall * 1.5f;
-        float down15mMed = downMed * 1.5f;
-
-        // --- CHIỀU UP (Tính bằng số dương) ---
-        float upSmall = baseUp;
-        float upMed = upSmall * ratioUp;
-        float upBig = upMed * ratioUp;
-
-        // --- LOGIC PHÂN LOẠI THỊ TRƯỜNG (Ưu tiên check mốc Lớn nhất trước) ---
-
-        // 1. BIG (Bão bùng / Thiên nga đen)
-        if (rateDownAvg < downBig) return MarketLevelChange.BIG_DOWN;
-        if (rateUpAvg > upBig) return MarketLevelChange.BIG_UP;
-
-        // 2. MEDIUM (Sóng vừa)
-        if (rateDownAvg < downMed) return MarketLevelChange.MEDIUM_DOWN;
-        if (rateDown15MAvg < down15mMed) return MarketLevelChange.MEDIUM_DOWN_15M;
-        if (rateUpAvg > upMed) return MarketLevelChange.MEDIUM_UP;
-
-        // 3. SMALL (Sóng lăn tăn)
-        if (rateDownAvg < downSmall && rateUpAvg < 0 && rateDown15MAvg < down15mSmall) {
-            return MarketLevelChange.SMALL_DOWN;
-        }
-        if (rateUpAvg > upSmall && rateDownAvg > 0) {
-            return MarketLevelChange.SMALL_UP;
-        }
-
-        // 4. 15M ONLY (Rớt mạnh khung ngắn nhưng Avg tổng chưa rớt)
-        if (rateDown15MAvg < down15mSmall) return MarketLevelChange.SMALL_DOWN_15M;
-
-        return null;
-    }
 
     public static MarketLevelChange getMarketStatus1M(Float rateDownAvg, Float rateUpAvg,
                                                       Float rateDown15MAvg) {
@@ -313,16 +219,13 @@ public class MarketBigChangeDetector {
             return MarketLevelChange.MEDIUM_UP;
         }
         // Logic Medium Down phức tạp (AVG < X HOẶC (AVG < Y VÀ 15M < Z))
-        if (rateDownAvg < Configs.MS_DOWN_MED_AVG ) {
+        if (rateDownAvg < Configs.MS_DOWN_MED_AVG) {
             return MarketLevelChange.MEDIUM_DOWN;
         }
 
         // 3. SMALL UP / DOWN
         if (rateUpAvg > Configs.MS_UP_SMALL_THRES && rateDownAvg > 0) {
             return MarketLevelChange.SMALL_UP;
-        }
-        if (rateDownAvg < Configs.MS_DOWN_SMALL_AVG) {
-            return MarketLevelChange.SMALL_DOWN;
         }
 
         if (rateDown15MAvg < Configs.MS_DOWN_15M_SMALL_ONLY) {
@@ -332,13 +235,12 @@ public class MarketBigChangeDetector {
         return null;
     }
 
-    public static boolean isDcaAlt(Float rateDown15MAvg,
-                                   Float rateDownAvg,
-                                   Float rateUpAvg) {
-        return rateDown15MAvg < -0.035
-                || rateUpAvg > 0.012
-                || rateDownAvg < -0.012;
+    public static boolean isDcaAlt(Float rateDown15MAvg, Float rateDownAvg, Float rateUpAvg) {
+        return rateDown15MAvg < Configs.DCA_ALT_DOWN_15M_THRES
+                || rateUpAvg > Configs.DCA_ALT_UP_AVG_THRES
+                || rateDownAvg < Configs.DCA_ALT_DOWN_AVG_THRES;
     }
+
     public static boolean is50PercentOrderLoss(
             Collection<OrderTargetInfoTest> runningOrders,
             long currentTime) {
@@ -456,7 +358,7 @@ public class MarketBigChangeDetector {
             }
         }
 
-        return (totalOrders - safeOrders > Configs.MAX_CONCURRENT_ORDERS * 0.7);
+        return (totalOrders - safeOrders > Configs.MAX_CONCURRENT_ORDERS * Configs.CIRCUIT_DANGER_RATIO);
     }
 }
 

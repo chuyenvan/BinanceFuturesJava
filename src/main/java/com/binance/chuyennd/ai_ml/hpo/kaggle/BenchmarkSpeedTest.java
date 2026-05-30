@@ -30,7 +30,6 @@ public class BenchmarkSpeedTest {
             long offlineEndTime = Utils.sdfFile.parse("20260430").getTime() + (24 * Utils.TIME_HOUR) - Utils.TIME_MINUTE;
 
             // Nạp thông số "Cứng" để test logic
-            Configs.MS_DOWN_SMALL_AVG = -0.01214f;
             Configs.MS_DOWN_MED_AVG = -0.02658f;
             Configs.MS_DOWN_BIG_AVG = -0.04165f;
             Configs.MS_UP_SMALL_THRES = 0.00897f;

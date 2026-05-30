@@ -339,7 +339,7 @@ public class Test {
 
     private static void createAOrderTest() {
         String symbol = "BNBUSDT";
-        MarketLevelChange levelChange = MarketLevelChange.SMALL_DOWN;
+        MarketLevelChange levelChange = MarketLevelChange.SMALL_DOWN_15M;
         Float budget = 2f;
         List<KlineObjectNumber> tickers = TickerFuturesHelper.getTicker(symbol, Constants.INTERVAL_1M);
         KlineObjectNumber ticker = tickers.get(tickers.size() - 1);

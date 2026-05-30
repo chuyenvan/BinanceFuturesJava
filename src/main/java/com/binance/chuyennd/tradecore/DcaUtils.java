@@ -3,6 +3,7 @@ package com.binance.chuyennd.tradecore;
 import com.aerospike.client.Log;
 import com.binance.chuyennd.object.MarketLevelChange;
 import com.binance.chuyennd.research.SimulatorMarketLevelTicker1MStopLoss;
+import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
 import org.apache.commons.logging.LogFactory;
 import org.slf4j.Logger;
@@ -29,15 +30,7 @@ public final class DcaUtils {
                     orderMarketLevel, orderTimeStart, marketLevelChange, currentTime, budget);
             return false;
         }
-//            if (!isTrendBuyWithETH) {
-//                config.rateLoss2Dca = config.rateLoss2Dca * 1.5;
-////            if (marketLevelChange != null){
-////                config.rateLoss2Dca = config.rateLoss2Dca * 1.5;
-////            }
-//                if (config.rateLoss2Dca < -0.9) {
-//                    config.rateLoss2Dca = -0.9;
-//                }
-//            }
+
         float adjustedRateLoss = calculateAdjustedRateLoss(margin, budget, config.getRateLoss2Dca(), config.isAll());
 
         if (currentRateLoss >= adjustedRateLoss) {
@@ -51,20 +44,13 @@ public final class DcaUtils {
     // --- CÁC PHƯƠNG THỨC HỖ TRỢ (PRIVATE) ---
 
     private static DcaConfig getDcaConfig(MarketLevelChange levelChange) {
-        if (levelChange == null) {
-            return new DcaConfig(1, -0.4f, false);
-        }
+        if (levelChange == null) return new DcaConfig(1, -0.4f, false);
         switch (levelChange) {
             case BIG_DOWN:
-                return new DcaConfig(8, -0.15f, true);
+                return new DcaConfig(Configs.DCA_TIME_BIG_DOWN, Configs.DCA_LOSS_BIG_DOWN, true);
             case MEDIUM_DOWN:
             case BIG_UP:
-                return new DcaConfig(15, -0.25f, false);
-//            case MEDIUM_UP:
-//            case MEDIUM_DOWN_15M:
-//                return new DcaConfig(15, -0.15, false);
-//            case SMALL_DOWN:
-//                return new DcaConfig(15, -0.20, false);
+                return new DcaConfig(Configs.DCA_TIME_MED_DOWN, Configs.DCA_LOSS_MED_DOWN, false);
             default:
                 return null;
         }

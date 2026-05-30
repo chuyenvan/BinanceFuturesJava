@@ -68,7 +68,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         Configs.MS_UP_MED_THRES = config.msUpMedThres;
         Configs.MS_DOWN_MED_AVG = config.msDownMedAvg;
         Configs.MS_UP_SMALL_THRES = config.msUpSmallThres;
-        Configs.MS_DOWN_SMALL_AVG = config.msDownSmallAvg;
         Configs.MS_DOWN_15M_SMALL_ONLY = config.msDown15mSmallOnly;
 
         Configs.RATE_PROFIT_STOP_MARKET = config.rateProfitStopMarket;
@@ -150,7 +149,9 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                     // Chép ID đang chạy vào Set để khóa
                                     for (int i = 0; i < activeRunningCount; i++) symbolLocked.add(activeRunningIds[i]);
 
-                                    if (levelChange.equals(MarketLevelChange.SMALL_DOWN) || levelChange.equals(MarketLevelChange.SMALL_UP) || levelChange.equals(MarketLevelChange.MEDIUM_DOWN_15M) || levelChange.equals(MarketLevelChange.SMALL_DOWN_15M)) {
+                                    if (levelChange.equals(MarketLevelChange.SMALL_UP) ||
+                                            levelChange.equals(MarketLevelChange.MEDIUM_DOWN_15M)
+                                            || levelChange.equals(MarketLevelChange.SMALL_DOWN_15M)) {
                                         numberOrder = numberOrder / 2;
                                     }
 
@@ -425,7 +426,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         if (orderMulti != null) {
             if (orderMulti.timeStart <= ticker.startTime) {
                 orderMulti.updatePriceByKlineSimple(ticker);
-                if (ticker.maxPrice >= orderMulti.priceEntry * 1.007 || orderMulti.priceSL != null) {
+                if (ticker.maxPrice >= orderMulti.priceEntry * (1 + Configs.RATE_PROFIT_STOP_MARKET)
+                        || orderMulti.priceSL != null) {
                     Float maxChangeIn90M = getMaxRateIn90MForTradingStop(time);
                     orderMulti.updateStatusNew(maxChangeIn90M, ticker);
                     if (orderMulti.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)

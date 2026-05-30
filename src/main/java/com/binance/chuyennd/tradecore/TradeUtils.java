@@ -86,16 +86,13 @@ public class TradeUtils {
                 break;
 
             case DCA_LEVEL1:
-            case SMALL_DOWN:
             case MEDIUM_DOWN_15M:
-            case BTC_TREND_REVERSE:
             case PREDICT_SYMBOL_TRADE:
                 budget /= 3;
                 break;
 
             case SMALL_UP:
             case SMALL_DOWN_15M:
-            case SMART_TRADE:
                 budget /= 4;
                 break;
         }

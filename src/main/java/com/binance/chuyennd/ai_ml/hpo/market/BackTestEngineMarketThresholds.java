@@ -20,7 +20,6 @@ public class BackTestEngineMarketThresholds {
     // Khởi tạo Engine với 6 tham số thị trường
     public BackTestEngineMarketThresholds(float dSmall, float dMed, float dBig, float uSmall, float uMed, float uBig) {
         // 1. Ép 6 tham số vào Configs hệ thống (Biến Static)
-        Configs.MS_DOWN_SMALL_AVG = dSmall;
         Configs.MS_DOWN_MED_AVG = dMed;
         Configs.MS_DOWN_BIG_AVG = dBig;
 
