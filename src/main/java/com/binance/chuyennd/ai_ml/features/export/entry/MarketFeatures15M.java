@@ -14,7 +14,7 @@ public class MarketFeatures15M implements Serializable {
     public float momentum1H;
     public float momentum4H;
     public float momentum24H;
-    public float momentumAcceleration; // Gia tốc giữa 1H và 15M
+    public float momentumAcceleration;
     public float trendStrengthETH;
     public float trendConsistency;
 
@@ -52,10 +52,10 @@ public class MarketFeatures15M implements Serializable {
     public int weekOfMonth;
     public int monthOfYear;
 
-    // === LABELS (Đã nâng cấp tầm nhìn xa hơn) ===
-    public float futureReturn4H;   // Đổi từ 15m -> 4H (16 nến)
-    public float futureReturn24H;  // 24H (96 nến)
-    public float maxDrawdownNext12H; // Đổi từ 4H -> 12H
+    // 🔥 === LABELS (ĐÃ CHUẨN HÓA TẦM NHÌN THỰC CHIẾN) === 🔥
+    public float futureReturn1H;   // Đổi thành 1H (4 nến 15m)
+    public float futureReturn4H;   // Đổi thành 4H (16 nến 15m)
+    public float maxDrawdownNext4H; // Đổi thành 4H (16 nến 15m)
 
     public String toCSVHeader() {
         return "timestamp,momentum15M,momentum1H,momentum4H,momentum24H," +
@@ -67,7 +67,7 @@ public class MarketFeatures15M implements Serializable {
                 "basketMomentum1H,basketMomentum4H,basketRsi14,basketVolSpike," +
                 "fundingRateRaw,fundingRateAvg24H,fundingRateTrend," +
                 "hourOfDay,dayOfWeek,weekOfMonth,monthOfYear," +
-                "futureReturn4H,futureReturn24H,maxDrawdownNext12H";
+                "futureReturn1H,futureReturn4H,maxDrawdownNext4H"; // Đã sửa Tên Cột
     }
 
     public String toCSVRow() {
@@ -112,10 +112,10 @@ public class MarketFeatures15M implements Serializable {
         sb.append(weekOfMonth).append(",");
         sb.append(monthOfYear).append(",");
 
-        // Labels
+        // 🔥 Gắn Nhãn Mới
+        sb.append(formatDouble(futureReturn1H)).append(",");
         sb.append(formatDouble(futureReturn4H)).append(",");
-        sb.append(formatDouble(futureReturn24H)).append(",");
-        sb.append(formatDouble(maxDrawdownNext12H));
+        sb.append(formatDouble(maxDrawdownNext4H));
 
         return sb.toString();
     }

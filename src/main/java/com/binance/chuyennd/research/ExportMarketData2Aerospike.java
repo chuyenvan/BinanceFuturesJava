@@ -5,7 +5,7 @@
 package com.binance.chuyennd.research;
 
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
-import com.binance.chuyennd.object.MarketDataObject;
+import com.binance.chuyennd.object.MarketDataObject15M;
 import com.binance.chuyennd.object.MarketLevelChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.tradecore.MarketBigChangeDetector;
@@ -35,7 +35,6 @@ public class ExportMarketData2Aerospike {
     }
 
 
-
     public void exportMarketEntries(Long timeRun) throws ParseException {
         Long startTime = Utils.sdfFile.parse(Configs.TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
 
@@ -56,7 +55,7 @@ public class ExportMarketData2Aerospike {
             TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers;
 
             // 🔥 THAY ĐỔI: Khai báo Map chỉ lưu data của 1 ngày để ghi Batch
-            TreeMap<Long, MarketDataObject> dailyMarketData = new TreeMap<>();
+            TreeMap<Long, MarketDataObject15M> dailyMarketData = new TreeMap<>();
 
             try {
                 LOG.info("Read data from Aerospike: {}", Utils.normalizeDateYYYYMMDDHHmm(startTime));
@@ -127,17 +126,17 @@ public class ExportMarketData2Aerospike {
                                 symbol2MinPrice.put(symbol, minPrice);
                             }
 
-                            MarketDataObject marketData = MarketBigChangeDetector.calMarketData(symbol2Ticker, symbol2MaxPrice, symbol2MinPrice);
+                            MarketDataObject15M marketData = MarketBigChangeDetector.calMarketData(symbol2Ticker, symbol2MaxPrice, symbol2MinPrice);
                             if (marketData != null) {
                                 MarketLevelChange levelChange = MarketBigChangeDetector.getMarketStatus1M(marketData.rateDownAvg,
-                                        marketData.rateUpAvg, marketData.rateDown15MAvg);
+                                        marketData.rateUpAvg, marketData.rateDown4HAvg);
 
                                 // 🔥 THAY ĐỔI: Put data vào map của ngày thay vì map tổng
                                 if (levelChange != null) {
                                     dailyMarketData.put(time, marketData);
                                 } else {
-                                    dailyMarketData.put(time, new MarketDataObject(marketData.rateDownAvg,
-                                            marketData.rateUpAvg, marketData.rateDown15MAvg));
+                                    dailyMarketData.put(time, new MarketDataObject15M(marketData.rateDownAvg,
+                                            marketData.rateUpAvg, marketData.rateDown4HAvg));
                                 }
                             }
                         } catch (Exception e) {
@@ -154,7 +153,7 @@ public class ExportMarketData2Aerospike {
             // 🔥 THAY ĐỔI LỚN: GHI DỮ LIỆU LÊN AEROSPIKE SAU MỖI NGÀY
             // =========================================================
             if (!dailyMarketData.isEmpty()) {
-                DataManagerAerospikeFloatSim.saveMarketDataBatch(dailyMarketData);
+                DataManagerAerospikeFloatSim.saveMarketDataBatch15M(dailyMarketData, null);
                 LOG.info("✅ Saved {} market entries to Aerospike for day {}.", dailyMarketData.size(), Utils.normalizeDateYYYYMMDD(startTime));
             }
 

@@ -1,14 +1,14 @@
 package com.binance.chuyennd.aerospike.validate_data.predictmarket;
 
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
-import com.binance.chuyennd.ai_ml.features.export.HistoryManager;
-import com.binance.chuyennd.ai_ml.features.export.entry.ComprehensiveMarketFeatureExtractor;
-import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
+import com.binance.chuyennd.ai_ml.features.export.HistoryManager15M;
+import com.binance.chuyennd.ai_ml.features.export.entry.ComprehensiveMarketFeatureExtractor15M;
+import com.binance.chuyennd.ai_ml.onnx.entry.AiPredictionData;
 import com.binance.chuyennd.ai_ml.onnx.entry.OnnxInferenceManager;
 import com.binance.chuyennd.ai_ml.onnx.entry.RunGeneratePredictions;
-import com.binance.chuyennd.object.MarketDataObject;
+import com.binance.chuyennd.object.MarketDataObject15M;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
-import com.binance.chuyennd.tradecore.CoinRankManager;
+import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,36 +21,40 @@ import java.util.concurrent.ThreadLocalRandom;
 public class ValidateMarketPredictConsistency {
     public static final Logger LOG = LoggerFactory.getLogger(ValidateMarketPredictConsistency.class);
 
-
     public static void main(String[] args) {
         new ValidateMarketPredictConsistency().runRandomValidation();
     }
 
     public void runRandomValidation() {
-        LOG.info("🚀 KHỞI ĐỘNG ĐỐI SOÁT DỰ BÁO THỊ TRƯỜNG: AEROSPIKE (CŨ) vs TÍNH TOÁN LẠI (MỚI)...");
+        LOG.info("🚀 KHỞI ĐỘNG ĐỐI SOÁT DỰ BÁO 15M: AEROSPIKE (CŨ) vs TÍNH TOÁN LẠI (MỚI)...");
 
         try {
-
             SimpleDateFormat fmt = new SimpleDateFormat("yyyyMMdd-HHmm");
             long startTime = fmt.parse("20210101-0700").getTime();
             long endTime = System.currentTimeMillis() - 60 * Utils.TIME_MINUTE; // Bỏ qua 1h gần nhất
             long thirtyDaysAgo = endTime - (30L * 24 * 60 * 60 * 1000);
 
-            // 1. SINH 20 MỐC THỜI GIAN NGẪU NHIÊN
+            // 1. SINH 20 MỐC THỜI GIAN NGẪU NHIÊN CHUẨN 15 PHÚT
             Set<Long> randomTimestamps = new HashSet<>();
+            long block15m = 15 * 60000L;
+
             while (randomTimestamps.size() < 10) {
-                randomTimestamps.add(Utils.getMinute(ThreadLocalRandom.current().nextLong(thirtyDaysAgo, endTime)));
+                long rawTime = ThreadLocalRandom.current().nextLong(thirtyDaysAgo, endTime);
+                // 🔥 Ép mốc thời gian về chẵn 15 phút (00, 15, 30, 45)
+                randomTimestamps.add((rawTime / block15m) * block15m);
             }
             while (randomTimestamps.size() < 20) {
-                randomTimestamps.add(Utils.getMinute(ThreadLocalRandom.current().nextLong(startTime, thirtyDaysAgo)));
+                long rawTime = ThreadLocalRandom.current().nextLong(startTime, thirtyDaysAgo);
+                randomTimestamps.add((rawTime / block15m) * block15m);
             }
 
             List<Long> testTimestamps = new ArrayList<>(randomTimestamps);
             Collections.sort(testTimestamps);
 
             RunGeneratePredictions generator = new RunGeneratePredictions();
-            OnnxInferenceManager aiBrain = generator.getModelManager();
-            ComprehensiveMarketFeatureExtractor featureExtractor = new ComprehensiveMarketFeatureExtractor();
+            OnnxInferenceManager aiBrain = new OnnxInferenceManager(Configs.MODEL_MARKET_PREDICT_DIR);
+            ComprehensiveMarketFeatureExtractor15M featureExtractor = new ComprehensiveMarketFeatureExtractor15M();
+
             int totalChecked = 0;
             int totalErrors = 0;
 
@@ -67,41 +71,33 @@ public class ValidateMarketPredictConsistency {
                     continue;
                 }
 
-                // B. Warm-up 1500 phút nến để tính toán lại
-                LOG.info("   ⏳ Đang Warm-up 1500 nến từ Aerospike...");
-                HistoryManager.getInstance().resetCache();
-                CoinRankManager.getInstance().resetCache();
+                // B. Warm-up 100 nến 15M (Tương đương 25 giờ) để tính toán lại
+                LOG.info("   ⏳ Đang Warm-up 100 block 15m từ Aerospike...");
+                HistoryManager15M.getInstance().resetCache();
 
-                long warmupStart = targetTime - 1500 * Utils.TIME_MINUTE;
-                TreeMap<Long, Map<String, KlineObjectSimple>> warmupData =
-                        DataManagerAerospikeFloatSim.readDataFromAerospikeCustom(warmupStart, 1501);
+                long warmupStart = targetTime - 100 * block15m;
+                TreeMap<Long, Map<Short, KlineObjectSimple>> warmupData =
+                        DataManagerAerospikeFloatSim.readDataFromAerospike15mCustom(warmupStart, 101);
 
                 if (warmupData == null || !warmupData.containsKey(targetTime)) {
                     LOG.error("   ❌ Thiếu dữ liệu nến để tính toán lại. Bỏ qua!");
                     continue;
                 }
 
-                // Nạp lịch sử
-                for (Map.Entry<Long, Map<String, KlineObjectSimple>> entry : warmupData.entrySet()) {
-                    HistoryManager.getInstance().updateHistory(entry.getValue());
+                // Nạp lịch sử (trừ cây nến target để truyền vào hàm predictSingle)
+                for (Map.Entry<Long, Map<Short, KlineObjectSimple>> entry : warmupData.entrySet()) {
+                    if (entry.getKey() < targetTime) {
+                        HistoryManager15M.getInstance().updateHistory(entry.getValue());
+                    }
                 }
 
                 // C. Tính toán lại kết quả mới (On-the-fly)
-
-                // Lưu ý: warmupData ở BƯỚC B phải chứa cả nến của targetTime để tính toán
-                Map<String, KlineObjectSimple> snapshot = warmupData.get(targetTime);
-                MarketDataObject rateChange = DataManagerAerospikeFloatSim.getMarketDataAtTime(targetTime);
-
+                Map<Short, KlineObjectSimple> snapshot = warmupData.get(targetTime);
+                MarketDataObject15M rateChange = DataManagerAerospikeFloatSim.getMarketData15MAtTime(targetTime);
 
                 AiPredictionData newPred = generator.predictSingle(
                         targetTime, snapshot, rateChange, aiBrain, featureExtractor
                 );
-
-                if (newPred != null) {
-                    totalChecked++;
-                    comparePredictions(oldPred, newPred);
-
-                }
 
                 if (newPred == null) {
                     LOG.error("   ❌ Không thể tính toán lại dự báo mới!");
@@ -115,7 +111,7 @@ public class ValidateMarketPredictConsistency {
             }
             aiBrain.close();
             LOG.info("\n========================================================");
-            LOG.info("🎉 TỔNG KẾT ĐỐI SOÁT PREDICT:");
+            LOG.info("🎉 TỔNG KẾT ĐỐI SOÁT PREDICT 15M:");
             LOG.info("📊 Mẫu đã check   : {}", totalChecked);
             LOG.info("🚨 Mẫu bị sai lệch : {} (Sai số > 0.5%)", totalErrors);
             LOG.info("========================================================");
@@ -130,8 +126,8 @@ public class ValidateMarketPredictConsistency {
      */
     private int comparePredictions(AiPredictionData oldP, AiPredictionData newP) {
         int errorCount = 0;
-        // Danh sách các biến quan trọng cần check
-        String[] fieldsToCheck = {"predReturn15M", "predReturn24H", "riskDrawdown4H"};
+        // 🔥 Đã đổi tên 3 biến sang hệ quy chiếu 15M (1H, 4H, Risk4H)
+        String[] fieldsToCheck = {"predReturn1H", "predReturn4H", "predRisk4H"};
 
         for (String fieldName : fieldsToCheck) {
             try {
@@ -148,7 +144,7 @@ public class ValidateMarketPredictConsistency {
                             fieldName, valOld, valNew, String.format("%.2f", diffPercent));
                 }
             } catch (Exception e) {
-                LOG.error("Lỗi truy cập field: " + fieldName);
+                LOG.error("Lỗi truy cập field: " + fieldName, e);
             }
         }
 

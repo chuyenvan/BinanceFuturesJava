@@ -1,20 +1,16 @@
 package com.binance.chuyennd.research;
 
-import com.aerospike.client.Bin;
-import com.aerospike.client.Key;
 import com.aerospike.client.policy.WritePolicy;
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.object.MarketDataObject15M;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.tradecore.MarketBigChangeDetector;
-import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.*;
 
 public class MarketDataExporter15M {

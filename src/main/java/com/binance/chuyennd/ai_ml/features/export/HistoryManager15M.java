@@ -56,7 +56,28 @@ public class HistoryManager15M {
             processKline(symbolId, entry.getValue()); // Nạp trực tiếp ID vào mảng O(1)
         }
     }
+    // =========================================================================
+    // 🔥 ĐÃ BỔ SUNG: HÀM CẬP NHẬT TRỰC TIẾP TỪ ARRAY (ZERO ALLOCATION)
+    // =========================================================================
+    public void updateHistoryArray(KlineObjectSimple[] snapshot) {
+        symbolsLastUpdateShort.clear();
+        symbolsLastUpdate.clear();
+        long currentTime = -1;
 
+        for (short symbolId = 0; symbolId < snapshot.length && symbolId < MAX_COINS; symbolId++) {
+            KlineObjectSimple kline = snapshot[symbolId];
+            if (kline != null) {
+                if (currentTime == -1) currentTime = kline.startTime;
+
+                symbolsLastUpdateShort.add(symbolId);
+                String symbolStr = SimpleSymbolMapper.getInstance().getSymbol(symbolId);
+                if (symbolStr != null) symbolsLastUpdate.add(symbolStr);
+
+                processKline(symbolId, kline);
+            }
+        }
+        if (currentTime != -1) checkAndCleanup(currentTime);
+    }
     private void processKline(short symbolId, KlineObjectSimple kline) {
         int head = historyHead[symbolId];
         if (head > 0) {

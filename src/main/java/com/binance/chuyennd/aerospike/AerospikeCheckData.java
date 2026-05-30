@@ -12,8 +12,8 @@ import java.util.Map;
 public class AerospikeCheckData {
     public static void main(String[] args) {
         Map<String, AerospikeClient> clients = new HashMap<>();
-//        clients.put("226", new AerospikeClient("103.157.218.226", 3222));
-        clients.put("242", new AerospikeClient("103.157.218.242", 3222));
+        clients.put("226", new AerospikeClient("103.157.218.226", 3222));
+//        clients.put("242", new AerospikeClient("103.157.218.242", 3222));
 
 
         for (Map.Entry<String, AerospikeClient> entry : clients.entrySet()) {
@@ -24,7 +24,7 @@ public class AerospikeCheckData {
                 String namespace = "ticker";
                 // truncate toàn bộ set
 //                client.truncate(null, namespace, "hpo_master_entry_pool_10p", null);
-//                client.truncate(null, namespace, "hpo_node_roles", null);
+//                client.truncate(null, namespace, "hpo_task_queue", null);
                 // Lấy thống kê namespace
                 String nsResponse = Info.request(client.getNodes()[0], "namespace/" + namespace);
                 System.out.println("=== Namespace Stats ===");

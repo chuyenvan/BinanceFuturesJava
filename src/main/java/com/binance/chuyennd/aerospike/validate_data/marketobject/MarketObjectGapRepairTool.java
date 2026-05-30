@@ -1,10 +1,9 @@
 package com.binance.chuyennd.aerospike.validate_data.marketobject;
 
-import com.aerospike.client.AerospikeClient;
 import com.aerospike.client.Key;
 import com.aerospike.client.policy.BatchPolicy;
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
-import com.binance.chuyennd.object.MarketDataObject;
+import com.binance.chuyennd.object.MarketDataObject15M;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.tradecore.MarketBigChangeDetector;
 import com.binance.chuyennd.utils.Configs;
@@ -52,20 +51,20 @@ public class MarketObjectGapRepairTool {
                 }
 
                 int count = 0;
-                TreeMap<Long, MarketDataObject> dailyMarketData = new TreeMap<>();
+                TreeMap<Long, MarketDataObject15M> dailyMarketData = new TreeMap<>();
                 for (long t = task.startTime; t <= task.endTime; t += Utils.TIME_MINUTE) {
                     Map<String, KlineObjectSimple> currentTickers = allTickers.get(t);
                     if (currentTickers == null || currentTickers.isEmpty()) continue;
 
                     // Tính toán MarketDataObject On-The-Fly
-                    MarketDataObject mdo = calculateMDO(t, allTickers, currentTickers);
+                    MarketDataObject15M mdo = calculateMDO(t, allTickers, currentTickers);
 
                     if (mdo != null) {
                         dailyMarketData.put(t, mdo);
                         count++;
                     }
                 }
-                DataManagerAerospikeFloatSim.saveMarketDataBatch(dailyMarketData);
+                DataManagerAerospikeFloatSim.saveMarketDataBatch15M(dailyMarketData, null);
                 LOG.info("   ✅ Đã vá xong {} phút.", count);
 
             } catch (Exception e) {
@@ -74,7 +73,7 @@ public class MarketObjectGapRepairTool {
         }
     }
 
-    private static MarketDataObject calculateMDO(long targetTime, TreeMap<Long, Map<String, KlineObjectSimple>> history, Map<String, KlineObjectSimple> current) {
+    private static MarketDataObject15M calculateMDO(long targetTime, TreeMap<Long, Map<String, KlineObjectSimple>> history, Map<String, KlineObjectSimple> current) {
         Map<String, Float> symbol2Max = new HashMap<>();
         Map<String, Float> symbol2Min = new HashMap<>();
 

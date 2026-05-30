@@ -16,7 +16,7 @@
 package com.binance.chuyennd.bigchange.test;
 
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
-import com.binance.chuyennd.object.MarketDataObject;
+import com.binance.chuyennd.object.MarketDataObject15M;
 import com.binance.chuyennd.object.MarketLevelChange;
 import com.binance.chuyennd.client.ClientSingleton;
 import com.binance.chuyennd.helper.TickerFuturesHelper;
@@ -24,8 +24,6 @@ import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
-import com.binance.chuyennd.tradecore.MarketBigChangeDetector;
-import com.binance.chuyennd.trading.BinanceOrderTradingManager;
 import com.binance.chuyennd.trading.OrderTargetInfo;
 import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.utils.Configs;
@@ -62,7 +60,7 @@ public class Test {
         long startTime = Utils.sdfFileHour.parse("20250410 22:32").getTime();
 
 //        TreeMap<Long, MarketDataObject> time2MarketData =  DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
-        MarketDataObject marketData = DataManagerAerospikeFloatSim.getMarketDataAtTime(startTime);
+        MarketDataObject15M marketData = DataManagerAerospikeFloatSim.getMarketData15MAtTime(startTime);
         System.out.println(Utils.toJson(marketData));
         Float minRate15Min60M = -0.005f;
         System.out.println(Utils.toJson(DataManagerAerospikeFloatSim.getFundingPredictionAtTime(startTime)));
@@ -272,10 +270,10 @@ public class Test {
 //        System.out.println(FundingFeeManagerProduction.getInstance().fundingBuy.size());
 
 //
-        BinanceOrderTradingManager test = new BinanceOrderTradingManager();
-        test.updatePositionInfo();
+//        BinanceOrderTradingManager test = new BinanceOrderTradingManager();
+//        test.updatePositionInfo();
 //        test.initSLFirst();
-        test.processDynamicTP_SL();
+//        test.processDynamicTP_SL();
 
 
         // delete all order not rung at redis

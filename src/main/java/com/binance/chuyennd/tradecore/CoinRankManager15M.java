@@ -16,6 +16,11 @@ public class CoinRankManager15M {
     // Nến 15m, cập nhật hạng mỗi 60 phút là hợp lý
     public static int number_minute_update = 60;
 
+    public float getBudgetMultiplier(short symbolId) {
+        //TODO clone từ 1m sang
+        return 1f;
+    }
+
     public enum CoinTier {
         TIER_1_BLUECHIP, // Top 20%
         TIER_2_MIDCAP,   // Mid 60%

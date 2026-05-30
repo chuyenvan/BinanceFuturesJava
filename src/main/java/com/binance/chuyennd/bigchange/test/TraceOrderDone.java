@@ -1,7 +1,7 @@
 package com.binance.chuyennd.bigchange.test;
 
 import com.binance.chuyennd.object.KlineObjectNumber;
-import com.binance.chuyennd.object.MarketDataObject;
+import com.binance.chuyennd.object.MarketDataObject15M;
 import com.binance.chuyennd.object.MarketLevelChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
@@ -64,7 +64,7 @@ public class TraceOrderDone {
                     Map<Object, Object> data = (Map<Object, Object>) StorageSnappy.readObjectFromFile(order.getAbsolutePath());
                     KlineObjectSimple ticker = (KlineObjectSimple) data.get("ticker");
                     OrderTargetInfo orderTrade = (OrderTargetInfo) data.get("order");
-                    MarketDataObject marketRate = (MarketDataObject) data.get("marketRate");
+                    MarketDataObject15M marketRate = (MarketDataObject15M) data.get("marketRate");
                     Float priceMax15M = (Float) data.get("max15M");
                     List<String> symbol2Sell = (List<String>) data.get("symbol2Sell");
                     Set<String> fundingBuy = (Set<String>) data.get("fundingBuy");
@@ -87,7 +87,7 @@ public class TraceOrderDone {
     }
 
     private static StringBuilder buildOrderInfo(KlineObjectSimple ticker,
-                                                OrderTargetInfo orderTrade, MarketDataObject marketRate,
+                                                OrderTargetInfo orderTrade, MarketDataObject15M marketRate,
                                                 Float priceMax15M, List<String> symbol2Sell,
                                                 Set<String> fundingBuy, Set<String> fundingSell) {
         StringBuilder builder = new StringBuilder();
@@ -101,7 +101,7 @@ public class TraceOrderDone {
         builder.append(priceMax15M).append(",");
         builder.append(marketRate.rateDownAvg).append(",");
         builder.append(marketRate.rateUpAvg).append(",");
-        builder.append(marketRate.rateDown15MAvg).append(",");
+        builder.append(marketRate.rateDown4HAvg).append(",");
         builder.append(Utils.toJson(symbol2Sell).replaceAll(",", " ").replaceAll("USDT", "")).append(",");
         builder.append(Utils.toJson(fundingBuy).replaceAll(",", " ").replaceAll("USDT", "")).append(",");
         builder.append(Utils.toJson(fundingSell).replaceAll(",", " ").replaceAll("USDT", "")).append(",");
@@ -369,12 +369,12 @@ public class TraceOrderDone {
             if (order.marketData != null) {
                 builder.append(order.marketData.rateDownAvg).append(",");
                 builder.append(order.marketData.rateUpAvg).append(",");
-                builder.append(order.marketData.rateDown15MAvg).append(",");
+                builder.append(order.marketData.rateDown4HAvg).append(",");
             }
 
             if (order.predict != null) {
-                builder.append(order.predict.predReturn15M).append(",");
-                builder.append(order.predict.predReturn24H).append(",");
+                builder.append(order.predict.predReturn1H).append(",");
+                builder.append(order.predict.predReturn4H).append(",");
                 builder.append(order.predict.predRisk4H).append(",");
                 builder.append(order.symbolPred).append(",");
             }
@@ -481,7 +481,7 @@ public class TraceOrderDone {
             if (order.marketData != null) {
                 builder.append(order.marketData.rateDownAvg).append(",");
                 builder.append(order.marketData.rateUpAvg).append(",");
-                builder.append(order.marketData.rateDown15MAvg).append(",");
+                builder.append(order.marketData.rateDown4HAvg).append(",");
             }
 //            builder.append(timeBtcReverse.get(order.timeStart)).append(",");
             lines.add(builder.toString());
@@ -547,7 +547,7 @@ public class TraceOrderDone {
                 if (order.marketData != null) {
                     builder.append(order.marketData.rateDownAvg).append(",");
                     builder.append(order.marketData.rateUpAvg).append(",");
-                    builder.append(order.marketData.rateDown15MAvg).append(",");
+                    builder.append(order.marketData.rateDown4HAvg).append(",");
                 }
                 lines.add(builder.toString());
             }
@@ -592,7 +592,7 @@ public class TraceOrderDone {
             if (order.marketData != null) {
                 builder.append(order.marketData.rateDownAvg).append(",");
                 builder.append(order.marketData.rateUpAvg).append(",");
-                builder.append(order.marketData.rateDown15MAvg).append(",");
+                builder.append(order.marketData.rateDown4HAvg).append(",");
             }
             lines.add(builder.toString());
         }

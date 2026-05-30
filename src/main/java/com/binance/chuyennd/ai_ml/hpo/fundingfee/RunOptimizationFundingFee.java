@@ -1,8 +1,8 @@
 package com.binance.chuyennd.ai_ml.hpo.fundingfee;
 
 import com.binance.chuyennd.ai_ml.hpo.HPOFitnessCalculator;
-import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
-import com.binance.chuyennd.object.MarketDataObject;
+import com.binance.chuyennd.ai_ml.onnx.entry.AiPredictionData;
+import com.binance.chuyennd.object.MarketDataObject15M;
 import com.binance.chuyennd.research.DataManager;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
@@ -27,7 +27,7 @@ public class RunOptimizationFundingFee {
     private static final AtomicLong testCounter = new AtomicLong(0);
     private static final long TOTAL_TRIALS = (long) POPULATION_SIZE * GENERATIONS;
 
-    public static TreeMap<Long, MarketDataObject> time2MarketData;
+    public static TreeMap<Long, MarketDataObject15M> time2MarketData;
     public static TreeMap<Long, AiPredictionData> predictionMap;
     public static TreeMap<Long, long[]> time2FundingPre;
     public static long offlineEndTime;

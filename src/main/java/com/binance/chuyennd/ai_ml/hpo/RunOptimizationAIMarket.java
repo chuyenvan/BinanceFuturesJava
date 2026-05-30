@@ -2,8 +2,8 @@ package com.binance.chuyennd.ai_ml.hpo;
 
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.ai_ml.data.HPOSmartCache;
-import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
-import com.binance.chuyennd.object.MarketDataObject;
+import com.binance.chuyennd.ai_ml.onnx.entry.AiPredictionData;
+import com.binance.chuyennd.object.MarketDataObject15M;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
 import io.jenetics.*;
@@ -26,7 +26,7 @@ public class RunOptimizationAIMarket {
     private static final int POPULATION_SIZE = 15;
     private static final int GENERATIONS = 30;
 
-    public static TreeMap<Long, MarketDataObject> time2MarketData;
+    public static TreeMap<Long, MarketDataObject15M> time2MarketData;
     public static TreeMap<Long, AiPredictionData> predictionMap;
     public static TreeMap<Long, long[]> time2FundingPre;
     private static final AtomicLong testCounter = new AtomicLong(0);
@@ -103,7 +103,7 @@ public class RunOptimizationAIMarket {
         Long startTime = Utils.sdfFile.parse(Configs.TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
         int numberMinutes = System.currentTimeMillis() - startTime > 0 ? (int) ((System.currentTimeMillis() - startTime) / Utils.TIME_MINUTE) : 0;
 
-        time2MarketData = DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
+        time2MarketData = DataManagerAerospikeFloatSim.getAllMarketData15MFromAerospike();
         predictionMap = DataManagerAerospikeFloatSim.getAllMarketAiPredictionsFromAerospike();
         time2FundingPre = DataManagerAerospikeFloatSim.getFundingPredictionsPrimitiveByRange(startTime, numberMinutes);
 

@@ -1,7 +1,6 @@
 package com.binance.chuyennd.tradecore;
 
 import com.binance.chuyennd.helper.TickerFuturesHelper;
-import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.MarketDataObject15M;
 import com.binance.chuyennd.object.MarketLevelChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
@@ -76,8 +75,8 @@ public class MarketBigChangeDetector {
         }
     }
 
-    public static MarketDataObject calMarketData(Map<String, KlineObjectSimple> symbol2Ticker, Map<String, Float> symbol2PriceMax,
-                                                 Map<String, Float> symbol2MinPrice) {
+    public static MarketDataObject15M calMarketData(Map<String, KlineObjectSimple> symbol2Ticker, Map<String, Float> symbol2PriceMax,
+                                                    Map<String, Float> symbol2MinPrice) {
         TreeMap<Float, String> rateDown2Symbols = new TreeMap<>();
         TreeMap<Float, String> rateMin2Symbols = new TreeMap<>();
         TreeMap<Float, String> rateMax2Symbols = new TreeMap<>();
@@ -120,8 +119,8 @@ public class MarketBigChangeDetector {
 
 //        List<String> symbolsTopDown = MarketBigChangeDetectorTest.getTopSymbolSimple(rateDown2Symbols,
 //                Configs.NUMBER_ENTRY_EACH_SIGNAL, null);
-        MarketDataObject result = new MarketDataObject(rateChangeDownAvg, rateChangeUpAvg, rateChangeDown15MAvg);
-        result.rateDown15MAvg = rateChangeDown15MAvg.floatValue();
+        MarketDataObject15M result = new MarketDataObject15M(rateChangeDownAvg, rateChangeUpAvg, rateChangeDown15MAvg);
+        result.rateDown4HAvg = rateChangeDown15MAvg.floatValue();
 
 
         return result;

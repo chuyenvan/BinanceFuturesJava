@@ -52,6 +52,12 @@ public class Utils {
         return pnl;
     }
 
+    public static boolean isStartOfDay(long timestamp) {
+        return timestamp % TIME_DAY == 0;
+    }
+    public static boolean isStartOfHour(long timestamp) {
+        return timestamp % TIME_HOUR == 0;
+    }
     public static long getStartTimeOfDay(long timestamp) {
         Calendar cal = Calendar.getInstance();
         cal.setTimeInMillis(timestamp);

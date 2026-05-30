@@ -1,13 +1,12 @@
 package com.binance.chuyennd.ai_ml.onnx.entry;
 
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
-import com.binance.chuyennd.ai_ml.features.export.HistoryManager;
-import com.binance.chuyennd.ai_ml.features.export.entry.ComprehensiveMarketFeatureExtractor;
-import com.binance.chuyennd.ai_ml.features.export.entry.MarketFeatures;
-import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
-import com.binance.chuyennd.object.MarketDataObject;
+import com.binance.chuyennd.ai_ml.features.export.HistoryManager15M;
+import com.binance.chuyennd.ai_ml.features.export.entry.ComprehensiveMarketFeatureExtractor15M;
+import com.binance.chuyennd.ai_ml.features.export.entry.MarketFeatures15M;
+import com.binance.chuyennd.object.MarketDataObject15M;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
-import com.binance.chuyennd.tradecore.CoinRankManager;
+import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,7 +15,6 @@ import java.util.*;
 
 public class RunGeneratePredictions {
     private static final Logger LOG = LoggerFactory.getLogger(RunGeneratePredictions.class);
-    private static final String MODEL_DIR = "../storage/ai_ml_data/ai_models_reg_v3"; // Sửa lại đường dẫn model nếu cần
 
     public static void main(String[] args) {
         try {
@@ -24,7 +22,6 @@ public class RunGeneratePredictions {
             System.setProperty("java.util.concurrent.ForkJoinPool.common.parallelism", "4");
             DataManagerAerospikeFloatSim.setThreadCount(4);
 
-            // Chạy thẳng 1 luồng từ ngày mong muốn (ví dụ 20210101)
             new RunGeneratePredictions().generateAndSave(null);
         } catch (Exception e) {
             LOG.error("Main error", e);
@@ -32,74 +29,77 @@ public class RunGeneratePredictions {
     }
 
     public void generateAndSave(Long targetStartTs) throws Exception {
-        OnnxInferenceManager aiBrain = new OnnxInferenceManager(MODEL_DIR);
-        ComprehensiveMarketFeatureExtractor featureExtractor = new ComprehensiveMarketFeatureExtractor();
-
-        LOG.info("📥 Loading FULL Market Rates từ Aerospike...");
-        TreeMap<Long, MarketDataObject> time2Rate = loadMarketRateData();
+        OnnxInferenceManager aiBrain = new OnnxInferenceManager(Configs.MODEL_MARKET_PREDICT_DIR);
+        ComprehensiveMarketFeatureExtractor15M featureExtractor = new ComprehensiveMarketFeatureExtractor15M();
 
         long startGenerateTime;
         if (targetStartTs != null && targetStartTs > 0) {
-            startGenerateTime = Utils.getDate(targetStartTs); // Tròn về 00:00:00 của ngày
+            startGenerateTime = Utils.getDate(targetStartTs);
         } else {
             startGenerateTime = Utils.sdfFile.parse("20210101").getTime();
         }
 
-        // 🔥 WARMUP CHUẨN 48 TIẾNG (GIỐNG HỆT FILE EXPORT .BIN)
         long warmupStartTime = startGenerateTime - (48 * 3600000L);
         long endTime = System.currentTimeMillis();
 
         LOG.info("=========================================================");
-        LOG.info("🚀 BẮT ĐẦU CHẠY PREDICTION LIÊN TỤC (KHÔNG KIỂM TRA TRÙNG)");
+        LOG.info("🚀 BẮT ĐẦU CHẠY PREDICTION LIÊN TỤC (HỆ 15 PHÚT)");
         LOG.info("   - Thời gian Warmup: {}", Utils.normalizeDateYYYYMMDDHHmm(warmupStartTime));
-        LOG.info("   - Thời gian bắt đầu ghi: {}", Utils.normalizeDateYYYYMMDDHHmm(startGenerateTime));
-        LOG.info("   - Thời gian kết thúc: {}", Utils.normalizeDateYYYYMMDDHHmm(endTime));
+        LOG.info("   - Thời gian ghi: {}", Utils.normalizeDateYYYYMMDDHHmm(startGenerateTime));
         LOG.info("=========================================================");
 
-        // Dọn dẹp sạch sẽ 1 lần duy nhất lúc khởi động
-        HistoryManager.getInstance().resetCache();
-        CoinRankManager.getInstance().resetCache();
+        HistoryManager15M.getInstance().resetCache();
 
         long currentReadTs = warmupStartTime;
         Map<Long, AiPredictionData> batchPredictions = new HashMap<>();
         long totalGenerated = 0;
 
+        int chunkBlocks15m = 96; // 1 Ngày
+
         while (currentReadTs <= endTime) {
             try {
-                // Đọc theo chunk 1 ngày (1440 phút) để tối ưu IO Aerospike
-                int chunkMinutes = 1440;
-                TreeMap<Long, Map<String, KlineObjectSimple>> chunkData =
-                        DataManagerAerospikeFloatSim.readDataFromAerospikeCustom(currentReadTs, chunkMinutes);
+                // Đọc 96 blocks = 1 ngày (Data Kline)
+                TreeMap<Long, Map<Short, KlineObjectSimple>> chunkData =
+                        DataManagerAerospikeFloatSim.readDataFromAerospike15mCustom(currentReadTs, chunkBlocks15m);
 
                 if (chunkData != null && !chunkData.isEmpty()) {
-                    for (Map.Entry<Long, Map<String, KlineObjectSimple>> entry : chunkData.entrySet()) {
+
+                    // 🔥 CÚ HACK TỐI ƯU CỦA BÁC: Lấy tất cả RateChange 1 lần duy nhất bằng hàm Batch
+                    // Bác chú ý: Cần đảm bảo trong DataManagerAerospikeFloatSim có hàm lấy Batch trả về Map
+                    Map<Long, MarketDataObject15M> rateChangeMap =
+                            DataManagerAerospikeFloatSim.getMarketData15MBatch(chunkData.keySet());
+
+                    for (Map.Entry<Long, Map<Short, KlineObjectSimple>> entry : chunkData.entrySet()) {
                         long timestamp = entry.getKey();
-                        Map<String, KlineObjectSimple> marketData = entry.getValue();
+                        Map<Short, KlineObjectSimple> marketData = entry.getValue();
 
-                        // 1. LUÔN LUÔN NUÔI HISTORY VÀ RANK (Bất kể đang warmup hay ghi)
-                        HistoryManager.getInstance().updateHistory(marketData);
-                        CoinRankManager.getInstance().getTopCoin(timestamp);
+                        // 1. LUÔN NUÔI HISTORY
+                        HistoryManager15M.getInstance().updateHistory(marketData);
 
-                        // 2. NẾU ĐANG WARMUP THÌ BỎ QUA PREDICT
                         if (timestamp < startGenerateTime) {
                             continue;
                         }
 
-                        // 3. TRÍCH XUẤT VÀ DỰ ĐOÁN
-                        MarketDataObject rateChange = time2Rate.get(timestamp);
-                        MarketFeatures features = featureExtractor.extractAllFeatures(timestamp, marketData, rateChange);
+                        // 2. TRÍCH XUẤT DATA 15M TỪ RAM (Thay vì ping Aerospike)
+                        MarketDataObject15M rateChange = null;
+                        if (rateChangeMap != null) {
+                            rateChange = rateChangeMap.get(timestamp);
+                        }
+
+                        List<Short> basket = HistoryManager15M.getInstance().findPotentialLosersShort(timestamp);
+
+                        MarketFeatures15M features = featureExtractor.extractAllFeatures(timestamp, marketData, rateChange, basket);
 
                         if (features != null) {
                             OnnxInferenceManager.PredictionResult res = aiBrain.predictAll(features);
 
                             batchPredictions.put(timestamp, new AiPredictionData(
                                     timestamp,
-                                    res.return15M, res.return24H, res.riskDrawdown4H
+                                    res.return1H, res.return4H, res.riskDrawdown4H
                             ));
                         }
 
-                        // 4. GHI BATCH XUỐNG DB & XÓA RAM (Ghi mỗi 5000 record)
-                        if (batchPredictions.size() >= 5000) {
+                        if (batchPredictions.size() >= 1000) {
                             DataManagerAerospikeFloatSim.saveMarketAiPredictionsBatch(batchPredictions);
                             totalGenerated += batchPredictions.size();
                             batchPredictions.clear();
@@ -107,70 +107,48 @@ public class RunGeneratePredictions {
                     }
                 }
 
-                LOG.info("⏩ Đã xử lý qua mốc: {} | Tổng ghi đè: {}", Utils.normalizeDateYYYYMMDDHHmm(currentReadTs), totalGenerated);
-                currentReadTs += chunkMinutes * Utils.TIME_MINUTE;
+                LOG.info("⏩ Đã xử lý qua mốc: {} | Tổng ghi đè: {}", Utils.normalizeDateYYYYMMDDHHmm(currentReadTs),
+                        totalGenerated);
+                currentReadTs += chunkBlocks15m * 15 * Utils.TIME_MINUTE;
 
             } catch (Exception e) {
                 LOG.error("❌ Lỗi khi xử lý đoạn thời gian " + Utils.normalizeDateYYYYMMDDHHmm(currentReadTs), e);
-                currentReadTs += 1440 * Utils.TIME_MINUTE; // Bỏ qua chunk lỗi để đi tiếp
+                currentReadTs += chunkBlocks15m * 15 * Utils.TIME_MINUTE;
             }
         }
 
-        // Ghi nốt phần dư
         if (!batchPredictions.isEmpty()) {
             DataManagerAerospikeFloatSim.saveMarketAiPredictionsBatch(batchPredictions);
             totalGenerated += batchPredictions.size();
-            batchPredictions.clear();
         }
 
         aiBrain.close();
-        LOG.info("🎉 HOÀN TẤT! ĐÃ GEN & GHI ĐÈ TỔNG CỘNG {} RECORDS.", totalGenerated);
+        LOG.info("🎉 HOÀN TẤT! ĐÃ GEN TỔNG CỘNG {} RECORDS (HỆ 15M).", totalGenerated);
     }
 
-    private TreeMap<Long, MarketDataObject> loadMarketRateData() throws Exception {
-        TreeMap<Long, MarketDataObject> data = DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
-        if (data == null) return new TreeMap<>();
-        return data;
-    }
-
-    /**
-     * Hàm tính toán Predict cho Duy Nhất 1 thời điểm (DÙNG CHO STREAMING LIVE).
-     * ⚠️ QUAN TRỌNG: KHÔNG ĐƯỢC CLEAR HISTORY Ở ĐÂY.
-     * Môi trường gọi hàm này phải chịu trách nhiệm nạp snapshot liên tục mỗi phút!
-     */
     public AiPredictionData predictSingle(long timestamp,
-                                          Map<String, KlineObjectSimple> currentMarketSnapshot,
-                                          MarketDataObject rateChange,
+                                          Map<Short, KlineObjectSimple> currentMarketSnapshot,
+                                          MarketDataObject15M rateChange,
                                           OnnxInferenceManager aiBrain,
-                                          ComprehensiveMarketFeatureExtractor featureExtractor) {
+                                          ComprehensiveMarketFeatureExtractor15M featureExtractor) {
         try {
             if (currentMarketSnapshot == null || currentMarketSnapshot.isEmpty()) return null;
 
-            // ❌ ĐÃ XÓA LỆNH CLEAR HISTORY/RANK Ở ĐÂY ĐỂ TRÁNH LÀM MẤT TRÍ NHỚ CỦA RSI & BASKET
+            HistoryManager15M.getInstance().updateHistory(currentMarketSnapshot);
+            List<Short> basket = HistoryManager15M.getInstance().findPotentialLosersShort(timestamp);
 
-            // 1. Cập nhật dữ liệu mới nhất vào History & Rank
-            HistoryManager.getInstance().updateHistory(currentMarketSnapshot);
-            CoinRankManager.getInstance().getTopCoin(timestamp);
-
-            // 2. Trích xuất Features
-            MarketFeatures features = featureExtractor.extractAllFeatures(timestamp, currentMarketSnapshot, rateChange);
-
-            // 3. Chạy AI Inference
+            MarketFeatures15M features = featureExtractor.extractAllFeatures(timestamp, currentMarketSnapshot, rateChange, basket);
             if (features == null) return null;
+
             OnnxInferenceManager.PredictionResult res = aiBrain.predictAll(features);
 
-            // 4. Đóng gói kết quả
             return new AiPredictionData(
                     timestamp,
-                    res.return15M, res.return24H, res.riskDrawdown4H
+                    res.return1H, res.return4H, res.riskDrawdown4H
             );
         } catch (Exception e) {
             LOG.error("❌ Lỗi khi tính predictSingle tại " + Utils.normalizeDateYYYYMMDDHHmm(timestamp), e);
             return null;
         }
-    }
-
-    public OnnxInferenceManager getModelManager() throws Exception {
-        return new OnnxInferenceManager(MODEL_DIR);
     }
 }

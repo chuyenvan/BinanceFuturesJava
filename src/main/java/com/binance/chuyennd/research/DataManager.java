@@ -1,15 +1,13 @@
 package com.binance.chuyennd.research;
 
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
-import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
-import com.binance.chuyennd.object.MarketDataObject;
+import com.binance.chuyennd.ai_ml.onnx.entry.AiPredictionData;
+import com.binance.chuyennd.object.MarketDataObject15M;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
-import com.binance.chuyennd.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
@@ -20,7 +18,7 @@ public class DataManager {
     public static boolean isDumpingMode = false;
 
     // Bộ nhớ đệm Static - Duy nhất cho toàn bộ chương trình
-    private static volatile TreeMap<Long, MarketDataObject> cachedMarketData = null;
+    private static volatile TreeMap<Long, MarketDataObject15M> cachedMarketData = null;
     private static volatile TreeMap<Long, AiPredictionData> cachedAiPredictionData = null;
     private static volatile TreeMap<Long, long[]> cachedFundingPred = null;
     private static final ConcurrentHashMap<Long, TreeMap<Long, Map<String, KlineObjectSimple>>>
@@ -30,12 +28,12 @@ public class DataManager {
     private static final Object lockAi = new Object();
     private static final Object lockFunding = new Object();
 
-    public static TreeMap<Long, MarketDataObject> getMarketData() {
+    public static TreeMap<Long, MarketDataObject15M> getMarketData() {
         if (cachedMarketData == null) {
             synchronized (lockMarket) {
                 if (cachedMarketData == null) {
                     LOG.info("📥 [RAM] Đang nạp Market Data độc quyền từ Aerospike...");
-                    cachedMarketData = DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
+                    cachedMarketData = DataManagerAerospikeFloatSim.getAllMarketData15MFromAerospike();
                 }
             }
         }

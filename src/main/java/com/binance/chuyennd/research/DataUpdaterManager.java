@@ -2,7 +2,7 @@ package com.binance.chuyennd.research;
 
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.ai_ml.onnx.entry.RunGeneratePredictions;
-import com.binance.chuyennd.ai_ml.onnx.funding.GenerateFundingPredictionsTool;
+import com.binance.chuyennd.ai_ml.onnx.funding.GenerateFundingPredictionsTool15M;
 import com.binance.chuyennd.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -64,7 +64,7 @@ public class DataUpdaterManager {
 
             // 1.3 Chạy bù Funding Prediction
             LOG.info("▶️ 3/3: Kích hoạt GenerateFundingPredictionsTool...");
-            new GenerateFundingPredictionsTool().startGeneration(timeToRun, System.currentTimeMillis());
+            new GenerateFundingPredictionsTool15M().startGeneration(timeToRun, System.currentTimeMillis());
 
             LOG.info("🎉 HOÀN TẤT QUÁ TRÌNH CẬP NHẬT DỮ LIỆU!");
 

@@ -16,8 +16,8 @@
 package com.binance.chuyennd.research;
 
 import com.binance.chuyennd.ai_ml.data.SimpleSymbolMapper;
-import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
-import com.binance.chuyennd.object.MarketDataObject;
+import com.binance.chuyennd.ai_ml.onnx.entry.AiPredictionData;
+import com.binance.chuyennd.object.MarketDataObject15M;
 import com.binance.chuyennd.object.MarketLevelChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.tradecore.TradeUtils;
@@ -57,7 +57,7 @@ public class OrderTargetInfoTest implements Serializable {
     public Float rateChange;
     public Float volume;
     public TreeMap<Long, Float> time2FundingFee = new TreeMap<>();
-    public MarketDataObject marketData;
+    public MarketDataObject15M marketData;
     public MarketLevelChange marketLevelChange;
     public KlineObjectSimple tickerOpen;
     public AiPredictionData predict;

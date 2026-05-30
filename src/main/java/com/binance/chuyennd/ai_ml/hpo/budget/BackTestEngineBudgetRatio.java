@@ -1,14 +1,13 @@
 package com.binance.chuyennd.ai_ml.hpo.budget;
 
-import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
+import com.binance.chuyennd.ai_ml.onnx.entry.AiPredictionData;
 import com.binance.chuyennd.ai_ml.onnx.entry.AIRejectFilter;
-import com.binance.chuyennd.object.MarketDataObject;
+import com.binance.chuyennd.object.MarketDataObject15M;
 import com.binance.chuyennd.research.BudgetManagerSimple;
 import com.binance.chuyennd.research.SimulatorMarketLevelTicker1MStopLoss;
 import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
 
-import java.util.Map;
 import java.util.TreeMap;
 
 public class BackTestEngineBudgetRatio {
@@ -23,7 +22,7 @@ public class BackTestEngineBudgetRatio {
         Configs.BUDGET_DIVIDER_2 = budgetDivider2;
     }
 
-    public float run(TreeMap<Long, MarketDataObject> time2MarketData,
+    public float run(TreeMap<Long, MarketDataObject15M> time2MarketData,
                       TreeMap<Long, AiPredictionData> predictionMap,
                       TreeMap<Long, long[]> time2FundingPre) {
         try {

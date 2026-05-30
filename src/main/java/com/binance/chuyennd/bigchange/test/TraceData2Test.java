@@ -37,7 +37,7 @@ public class TraceData2Test {
 //        traceDataByHand(args);
 
         traceLog("Update");
-        showFileAll("OrderTestDone.data");
+        showFileAll("OrderTestDone15M.data");
 
 //        showFileAll("OrderTestDone.data");
 //        } else {

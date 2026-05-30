@@ -103,27 +103,27 @@ public class Configs {
 
 
 
-    public static float PREDICT_SYMBOL_RATE_MAX_THRESHOLD = 0.15f; // Tỉ lệ tạch tối đa cho phép
-    public static float HARD_RISK_LIMIT_4H = -0.2f;            // Ngưỡng Drawdown 4H cấm vào lệnh
-    public static float MIN_MOMENTUM_15M = 0.02284f;        // Đà nảy tối thiểu nến 15M
-    public static float MIN_MOMENTUM_24H = 0.01682f;                  // Đà nảy tối thiểu nến 24H
+    public static float PREDICT_SYMBOL_RATE_MAX_THRESHOLD = 0.10034f; // Tỉ lệ tạch tối đa cho phép
+    public static float HARD_RISK_LIMIT_4H = -0.16815f;            // Ngưỡng Drawdown 4H cấm vào lệnh
+    public static float MIN_MOMENTUM_15M = 0.01865f;        // Đà nảy tối thiểu nến 15M
+    public static float MIN_MOMENTUM_24H = 0.02799f;                  // Đà nảy tối thiểu nến 24H
 
     // =========================================================
     // 8. NGƯỠNG BÁO ĐỘNG THỊ TRƯỜNG (MARKET STATUS THRESHOLDS - HPO)
     // =========================================================
     // Ngưỡng Bão Lớn (BIG)
-    public static float MS_UP_BIG_THRES = 0.02046f;
-    public static float MS_DOWN_BIG_AVG = -0.03157f;
+    public static float MS_UP_BIG_THRES = 0.09822f;
+    public static float MS_DOWN_BIG_AVG = -0.09783f;
 
     // Ngưỡng Bão Vừa (MEDIUM)
-    public static float MS_UP_MED_THRES = 0.01204f;
-    public static float MS_DOWN_MED_AVG = -0.02069f;
+    public static float MS_UP_MED_THRES = 0.02789f;
+    public static float MS_DOWN_MED_AVG = -0.02253f;
 
     // Ngưỡng Bão Nhỏ (SMALL)
-    public static float MS_UP_SMALL_THRES = 0.00442f;
-    public static float MS_DOWN_SMALL_AVG = -0.01713f;
+    public static float MS_UP_SMALL_THRES = 0.00805f;
+    public static float MS_DOWN_SMALL_AVG = -0.03418f;
 
-    public static float MS_DOWN_15M_SMALL_ONLY = -0.02145f;
+    public static float MS_DOWN_15M_SMALL_ONLY = -0.00763f;
 
 
 
@@ -145,7 +145,6 @@ public class Configs {
     public static final int AEROSPIKE_PORT_226 = Configs.getInt("AEROSPIKE_PORT_226");
 
     public static final String AEROSPIKE_NAMESPACE = Configs.getString("AEROSPIKE_NAMESPACE");
-    public static final String AEROSPIKE_SET_NAME_FUNDING_PRED = Configs.getString("AEROSPIKE_SET_NAME_FUNDING_PRED");
     public static final String AEROSPIKE_SET_NAME_PRED_40 = Configs.getString("AEROSPIKE_SET_NAME_PRED_40");
 
     // =========================================================
@@ -166,7 +165,7 @@ public class Configs {
     public static float getDouble(String configName) {
         return Float.parseFloat(properties.get(configName));
     }
-
+    public static final String MODEL_MARKET_PREDICT_DIR = "../storage/ai_model/model_market_15m";
     public static void main(String[] args) {
         // Test configurations here
     }
