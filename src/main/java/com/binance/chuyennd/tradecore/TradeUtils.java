@@ -81,20 +81,18 @@ public class TradeUtils {
         //  nhưng chúng ta sẽ làm 6 tham số trên trước)
         switch (levelChange) {
             case MEDIUM_DOWN:
-            case MEDIUM_UP:
                 budget /= 2;
                 break;
 
             case DCA_LEVEL1:
-            case MEDIUM_DOWN_15M:
             case PREDICT_SYMBOL_TRADE:
+            case SMALL_UP:
+            case SMALL_DOWN_15M:
                 budget /= 3;
                 break;
 
-            case SMALL_UP:
-            case SMALL_DOWN_15M:
-                budget /= 4;
-                break;
+//                budget /= 4;
+//                break;
         }
 
         return budget;

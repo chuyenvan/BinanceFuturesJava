@@ -150,8 +150,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                     for (int i = 0; i < activeRunningCount; i++) symbolLocked.add(activeRunningIds[i]);
 
                                     if (levelChange.equals(MarketLevelChange.SMALL_UP) ||
-                                            levelChange.equals(MarketLevelChange.MEDIUM_DOWN_15M)
-                                            || levelChange.equals(MarketLevelChange.SMALL_DOWN_15M)) {
+                                            levelChange.equals(MarketLevelChange.SMALL_DOWN_15M)) {
                                         numberOrder = numberOrder / 2;
                                     }
 

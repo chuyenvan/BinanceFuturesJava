@@ -22,7 +22,7 @@ public enum MarketLevelChange {
 
     // UP
     BIG_UP("BIG_UP"),
-    MEDIUM_UP("MEDIUM_UP"),
+//    SMALL_UP("MEDIUM_UP"),
     SMALL_UP("SMALL_UP"),
 
     DCA_LEVEL1("DCA_LEVEL1"),
@@ -31,8 +31,6 @@ public enum MarketLevelChange {
     MEDIUM_DOWN("MEDIUM_DOWN"),
 
     PREDICT_SYMBOL_TRADE("PREDICT_SYMBOL_TRADE"),
-
-    MEDIUM_DOWN_15M("MEDIUM_DOWN_15M"),
     SMALL_DOWN_15M("SMALL_DOWN_15M"),
     ORDER_PROFIT("ORDER_PROFIT");
 

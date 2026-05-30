@@ -216,7 +216,7 @@ public class MarketBigChangeDetector {
 
         // 2. MEDIUM UP / DOWN
         if (rateUpAvg > Configs.MS_UP_MED_THRES) {
-            return MarketLevelChange.MEDIUM_UP;
+            return MarketLevelChange.SMALL_UP;
         }
         // Logic Medium Down phức tạp (AVG < X HOẶC (AVG < Y VÀ 15M < Z))
         if (rateDownAvg < Configs.MS_DOWN_MED_AVG) {
