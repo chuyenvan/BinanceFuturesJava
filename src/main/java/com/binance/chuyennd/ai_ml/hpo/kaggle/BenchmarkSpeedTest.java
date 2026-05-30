@@ -33,7 +33,6 @@ public class BenchmarkSpeedTest {
             Configs.MS_DOWN_MED_AVG = -0.02658f;
             Configs.MS_DOWN_BIG_AVG = -0.04165f;
             Configs.MS_UP_SMALL_THRES = 0.00897f;
-            Configs.MS_UP_MED_THRES = 0.03801f;
             Configs.MS_UP_BIG_THRES = 0.07208f;
             Configs.MS_DOWN_15M_SMALL_ONLY = -0.03283f;
             Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD = 0.15f; // Ngưỡng AI Funding

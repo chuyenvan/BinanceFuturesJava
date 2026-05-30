@@ -24,7 +24,7 @@ public class BackTestEngineMarketThresholds {
         Configs.MS_DOWN_BIG_AVG = dBig;
 
         Configs.MS_UP_SMALL_THRES = uSmall;
-        Configs.MS_UP_MED_THRES = uMed;
+
         Configs.MS_UP_BIG_THRES = uBig;
 
         // 2. KHÓA CỨNG BỘ LỌC AI (Dùng thông số chuẩn bác đang có để làm nền tảng)

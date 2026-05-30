@@ -52,37 +52,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     public short[] activeRunningIds = new short[1000]; // Tối đa 100 lệnh chạy cùng lúc
     public int activeRunningCount = 0;
 
-    public void setConfig(BotTradingConfig config) {
-        Configs.BASE_DOWN = config.baseDown;
-        Configs.RATIO_DOWN = config.ratioDown;
-        Configs.BASE_UP = config.baseUp;
-        Configs.RATIO_UP = config.ratioUp;
-
-        Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD = config.aiPredictRateMaxThreshold;
-        Configs.PREDICT_SYMBOL_RATE_DOWN_15M = config.aiPredictRateDown15m;
-        Configs.PREDICT_SYMBOL_RATE_UP_AVG = config.aiPredictRateUpAvg;
-        Configs.PREDICT_SYMBOL_RATE_DOWN_AVG = config.aiPredictRateDownAvg;
-
-        Configs.MS_UP_BIG_THRES = config.msUpBigThres;
-        Configs.MS_DOWN_BIG_AVG = config.msDownBigAvg;
-        Configs.MS_UP_MED_THRES = config.msUpMedThres;
-        Configs.MS_DOWN_MED_AVG = config.msDownMedAvg;
-        Configs.MS_UP_SMALL_THRES = config.msUpSmallThres;
-        Configs.MS_DOWN_15M_SMALL_ONLY = config.msDown15mSmallOnly;
-
-        Configs.RATE_PROFIT_STOP_MARKET = config.rateProfitStopMarket;
-
-        Configs.number_order_budget = config.numberOrderBudget;
-        Configs.BUDGET_MARGIN_RATIO_1 = config.budgetMarginRatio1;
-        Configs.BUDGET_DIVIDER_1 = config.budgetDivider1;
-        Configs.BUDGET_MARGIN_RATIO_2 = config.budgetMarginRatio2;
-        Configs.BUDGET_DIVIDER_2 = config.budgetDivider2;
-
-        Configs.LEVERAGE_ORDER = config.leverageOrder;
-        Configs.NUMBER_ENTRY_EACH_SIGNAL = config.numberEntryEachSignal;
-        Configs.MAX_CONCURRENT_ORDERS = config.maxConcurrentOrders;
-    }
-
     public static void main(String[] args) throws ParseException, IOException, InterruptedException {
         Long startTime = Utils.sdfFile.parse(Configs.TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
         LOG.info("Start with kaggle mode: {} ", Configs.IS_KAGGLE_MODE);

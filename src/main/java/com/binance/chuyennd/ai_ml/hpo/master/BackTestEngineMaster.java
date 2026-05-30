@@ -27,7 +27,6 @@ public class BackTestEngineMaster {
         Configs.MS_DOWN_MED_AVG = dMed;
         Configs.MS_DOWN_BIG_AVG = dBig;
         Configs.MS_UP_SMALL_THRES = uSmall;
-        Configs.MS_UP_MED_THRES = uMed;
         Configs.MS_UP_BIG_THRES = uBig;
         Configs.MS_DOWN_15M_SMALL_ONLY = d15mSmall;
 

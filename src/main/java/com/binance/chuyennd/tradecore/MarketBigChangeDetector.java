@@ -214,17 +214,14 @@ public class MarketBigChangeDetector {
             return MarketLevelChange.BIG_DOWN;
         }
 
-        // 2. MEDIUM UP / DOWN
-        if (rateUpAvg > Configs.MS_UP_MED_THRES) {
-            return MarketLevelChange.SMALL_UP;
-        }
+
         // Logic Medium Down phức tạp (AVG < X HOẶC (AVG < Y VÀ 15M < Z))
         if (rateDownAvg < Configs.MS_DOWN_MED_AVG) {
             return MarketLevelChange.MEDIUM_DOWN;
         }
 
         // 3. SMALL UP / DOWN
-        if (rateUpAvg > Configs.MS_UP_SMALL_THRES && rateDownAvg > 0) {
+        if (rateUpAvg > Configs.MS_UP_SMALL_THRES) {
             return MarketLevelChange.SMALL_UP;
         }
 

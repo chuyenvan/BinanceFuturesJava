@@ -116,7 +116,6 @@ public class Configs {
     public static float MS_DOWN_BIG_AVG = -0.03157f;
 
     // Ngưỡng Bão Vừa (MEDIUM)
-    public static float MS_UP_MED_THRES = 0.01204f;
     public static float MS_DOWN_MED_AVG = -0.02069f;
 
     // Ngưỡng Bão Nhỏ (SMALL)
@@ -140,11 +139,6 @@ public class Configs {
     public static int DCA_TIME_MED_DOWN = 15;
     public static float DCA_LOSS_MED_DOWN = -0.25f;
 
-    // Nhóm tham số cấp số nhân (Geometric Filters - Dự phòng)
-    public static float BASE_DOWN = 0.006f;
-    public static float RATIO_DOWN = 2.0f;
-    public static float BASE_UP = 0.005f;
-    public static float RATIO_UP = 2.0f;
 
     // =========================================================
     // 9. KẾT NỐI DỮ LIỆU (STORAGE & AEROSPIKE)
