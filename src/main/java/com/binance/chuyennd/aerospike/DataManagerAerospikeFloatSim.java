@@ -14,7 +14,7 @@ import com.binance.chuyennd.ai_ml.data.SimpleSymbolMapper;
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
-import com.binance.chuyennd.utils.Configs;
+import com.binance.chuyennd.tradecore.Configs;
 import com.binance.chuyennd.utils.Utils;
 
 // --- QUAN TRỌNG: Import Proto MỚI (Float + No Time) ---
@@ -25,7 +25,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xerial.snappy.Snappy;
 
-import java.io.File;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -1393,54 +1392,9 @@ public class DataManagerAerospikeFloatSim {
 //        System.out.println(checkAndComparePriceDiff());
         Long startTime = Utils.sdfFile.parse("20210203").getTime() + 7 * Utils.TIME_HOUR;
         System.out.println(Utils.toJson(readFundingBatchCustom(startTime, 1440)));
-//        TreeMap<Long, Map<Short, float[]>> time2Tickers = DataManagerAerospikeFloatSim.readDcaBatchCustom(startTime, 1440);
-//        for (Long timeKey : time2Tickers.keySet()) {
-//
-//            LOG.info("Time: {} -> {} records", Utils.normalizeDateYYYYMMDDHHmm(timeKey), time2Tickers.get(timeKey).size());
-//        }
-//        LOG.info("{} {} {} {}",Utils.toJson(time2Tickers.firstEntry().getValue()), Utils.normalizeDateYYYYMMDDHHmm(time2Tickers.firstKey()),
-//                Utils.normalizeDateYYYYMMDDHHmm(time2Tickers.lastKey()), time2Tickers.size());
-//        debugKeys();
-//        Map<String, TreeMap<Long, Float>> symbol2FundingMap = DataManagerAerospikeFloatSim.getAllFundingMap();
-//        for (String symbol : symbol2FundingMap.keySet()) {
-//            LOG.info("{} -> {} records first: {} last: {}", symbol, symbol2FundingMap.get(symbol).size()
-//                    , Utils.normalizeDateYYYYMMDDHHmm(symbol2FundingMap.get(symbol).firstKey())
-//                    , Utils.normalizeDateYYYYMMDDHHmm(symbol2FundingMap.get(symbol).lastKey()));
-//        }
-//        TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers = DataManagerAerospikeFloatSim.readDataFromAerospikeCustom(System.currentTimeMillis() - 1500 * Utils.TIME_MINUTE, 1500);
-//        LOG.info("{} {} {} {}",time2Tickers.firstEntry().getValue().keySet(), Utils.normalizeDateYYYYMMDDHHmm(time2Tickers.firstKey()),
-//                Utils.normalizeDateYYYYMMDDHHmm(time2Tickers.lastKey()), time2Tickers.size());
-    }
-// =========================================================================
-    // 🔥 LABEL 40 PREDICTIONS (WRITE/READ FOR LABEL 40)
-    // =========================================================================
 
-    /**
-     * Ghi dự báo Label 40 vào Aerospike
-     */
-    public static void saveFundingPredictionsLabel40(long timestamp, Map<Short, float[]> predictions) {
-        if (predictions == null || predictions.isEmpty()) return;
-        try {
-            SimpleDateFormat fmt = new SimpleDateFormat("yyyyMMdd-HHmm");
-            String keyString = fmt.format(new Date(timestamp));
-            // Sử dụng Set Name PRED_40
-            Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_PRED_40, keyString);
-
-            String json = Utils.gson.toJson(predictions);
-            byte[] rawBytes = json.getBytes("UTF-8");
-            byte[] compressed = Snappy.compress(rawBytes);
-
-            // Ghi vào client226 (giống logic cũ)
-            getClient226().put(writePolicy, key, new Bin("data", compressed));
-
-        } catch (Exception e) {
-            LOG.error("❌ Error saving Funding Label 40 Pred at {}: {}", timestamp, e.getMessage());
-        }
     }
 
-    /**
-     * Kiểm tra nhanh danh sách timestamp đã có dữ liệu Label 40 chưa
-     */
 
     public static final String AEROSPIKE_SET_NAME_AI_PRED_MARKET = "ai_pred_market_full_basket_v2";
 
@@ -1471,35 +1425,6 @@ public class DataManagerAerospikeFloatSim {
         }
     }
 
-    /**
-     * Kiểm tra nhanh danh sách timestamp đã có Market AI Prediction chưa
-     */
-    public static Set<Long> checkExistingMarketAiPredictions(List<Long> timestamps) {
-        Set<Long> existing = new HashSet<>();
-        if (timestamps == null || timestamps.isEmpty()) return existing;
-
-        try {
-            SimpleDateFormat fmt = new SimpleDateFormat("yyyyMMdd-HHmm");
-            Key[] keys = new Key[timestamps.size()];
-
-            for (int i = 0; i < timestamps.size(); i++) {
-                String keyString = fmt.format(new Date(timestamps.get(i)));
-                keys[i] = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_AI_PRED_MARKET, keyString);
-            }
-
-            // Batch Exists: Chỉ kiểm tra metadata, rất nhanh
-            boolean[] existsArray = getClient226().exists(batchPolicy, keys);
-
-            for (int i = 0; i < existsArray.length; i++) {
-                if (existsArray[i]) {
-                    existing.add(timestamps.get(i));
-                }
-            }
-        } catch (Exception e) {
-            LOG.error("❌ Error checking Market AI Pred existence: {}", e.getMessage());
-        }
-        return existing;
-    }
 
     /**
      * HÀM ĐỌC FULL: Tải toàn bộ dữ liệu Market AI Prediction (Entry) từ Aerospike
@@ -1999,5 +1924,47 @@ public class DataManagerAerospikeFloatSim {
         }
         LOG.info("✅ Đã load xong {} records AiPredictionData.", results.size());
         return results;
+    }
+
+    // Dùng ThreadLocal để format ngày tháng an toàn trong môi trường đa luồng của ScanAll
+    private static final ThreadLocal<SimpleDateFormat> tlKeyFormat = ThreadLocal.withInitial(() -> new SimpleDateFormat("yyyyMMdd-HHmm"));
+
+    /**
+     * 🔥 TỐI ƯU RAM/SPEED: Dùng ScanAll để load 5 năm dữ liệu thay vì Batch Get
+     */
+    public static TreeMap<Long, long[]> getAllFundingPredictionsPrimitiveFromAerospike() {
+        LOG.info("📥 Đang tải FULL Funding Pred từ Aerospike bằng ScanAll (Siêu tốc)...");
+        // Dùng ConcurrentSkipListMap để hứng dữ liệu an toàn từ nhiều luồng, tự động sort key
+        java.util.concurrent.ConcurrentSkipListMap<Long, long[]> concurrentResults = new java.util.concurrent.ConcurrentSkipListMap<>();
+
+        try {
+            ScanPolicy scanPolicy = new ScanPolicy();
+            scanPolicy.concurrentNodes = true; // Quét song song đa luồng
+
+            getClient226().scanAll(scanPolicy, Configs.AEROSPIKE_NAMESPACE, Configs.AEROSPIKE_SET_NAME_FUNDING_PRED, (key, record) -> {
+                try {
+                    byte[] compressed = (byte[]) record.getValue("data");
+                    if (compressed != null && key.userKey != null) {
+                        // Parse timestamp từ key (Ví dụ: "20210101-0700")
+                        long timestamp = tlKeyFormat.get().parse(key.userKey.toString()).getTime();
+
+                        // Giải nén & Decode ra primitive array
+                        byte[] rawBytes = org.xerial.snappy.Snappy.uncompress(compressed);
+                        long[] primitives = decodeFundingMapToPrimitiveArray(rawBytes);
+
+                        concurrentResults.put(timestamp, primitives);
+                    }
+                } catch (Exception e) {
+                    // Bỏ qua record lỗi
+                }
+            }, "data");
+
+            LOG.info("✅ Đã Scan xong {} records Funding Pred.", concurrentResults.size());
+        } catch (Exception e) {
+            LOG.error("❌ Lỗi khi Scan Funding Pred", e);
+        }
+
+        // Trả về TreeMap thông thường để dùng O(1) ở Simulator
+        return new TreeMap<>(concurrentResults);
     }
 }

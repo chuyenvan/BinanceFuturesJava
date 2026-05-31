@@ -7,7 +7,6 @@ import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
 import com.binance.chuyennd.trading.OrderTargetInfo;
 import com.binance.chuyennd.trading.OrderTargetStatus;
-import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
 import com.binance.client.model.enums.OrderSide;
@@ -22,35 +21,6 @@ public class MarketBigChangeDetector {
 
     public static void main(String[] args) throws ParseException {
         try {
-//            Long startTime = Utils.sdfFileHour.parse("20250831 19:23").getTime();
-//
-//            List<KlineObjectNumber> btcTickers = TickerFuturesHelper.getTickerWithStartTime(Constants.SYMBOL_PAIR_BTC, Constants.INTERVAL_1M,
-//                    startTime - 360 * Utils.TIME_MINUTE);
-//            while (true) {
-//                if (btcTickers.get(btcTickers.size() - 1).startTime.longValue() > startTime) {
-//                    btcTickers.remove(btcTickers.size() - 1);
-//                } else {
-//                    break;
-//                }
-//            }
-//
-//            LOG.info("{} {}", Utils.normalizeDateYYYYMMDDHHmm(btcTickers.get(0).startTime.longValue()),
-//                    Utils.normalizeDateYYYYMMDDHHmm(btcTickers.get(btcTickers.size() - 1).startTime.longValue()));
-//
-//            System.out.println(MarketBigChangeDetector.isBtcTrendReverse(btcTickers));
-
-//            btcTickers.remove(btcTickers.size() - 1);
-//            if (MarketBigChangeDetector.isBtcTrendReverse(btcTickers)) {
-//                // check last time not btc trend reverse -> btc trend reverse
-//                String finalTimeTrendReverse = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_MARKET_LEVEL_FINAL,
-//                        MarketLevelChange.BTC_TREND_REVERSE.toString());
-//                if (finalTimeTrendReverse == null || Long.parseLong(finalTimeTrendReverse) < btcTickers.get(btcTickers.size() - 1).startTime.longValue()) {
-//                    RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_MARKET_LEVEL_FINAL,
-//                            MarketLevelChange.BTC_TREND_REVERSE.toString(), String.valueOf(btcTickers.get(btcTickers.size() - 1).startTime.longValue()));
-//                    LOG.info("Fixbug btc trend reverse error {} ",
-//                            Utils.normalizeDateYYYYMMDDHHmm(btcTickers.get(btcTickers.size() - 1).startTime.longValue()));
-//                }
-//            }
             Long start = Utils.sdfFileHour.parse("20250830 23:11").getTime();
             for (int i = 0; i < 100; i++) {
                 Long startTime = start - Utils.TIME_MINUTE * i;
@@ -117,8 +87,6 @@ public class MarketBigChangeDetector {
         Float rateChangeUpAvg = -MarketBigChangeDetector.calRateChangeAvg(rateUp2Symbols, 100);
         Float rateChangeDown15MAvg = MarketBigChangeDetector.calRateChangeAvg(rateMax2Symbols, 100);
 
-//        List<String> symbolsTopDown = MarketBigChangeDetectorTest.getTopSymbolSimple(rateDown2Symbols,
-//                Configs.NUMBER_ENTRY_EACH_SIGNAL, null);
         MarketDataObject result = new MarketDataObject(rateChangeDownAvg, rateChangeUpAvg, rateChangeDown15MAvg);
         result.rateDown15MAvg = rateChangeDown15MAvg.floatValue();
 
@@ -214,18 +182,13 @@ public class MarketBigChangeDetector {
             return MarketLevelChange.BIG_DOWN;
         }
 
-
-        // Logic Medium Down phức tạp (AVG < X HOẶC (AVG < Y VÀ 15M < Z))
-        if (rateDownAvg < Configs.MS_DOWN_MED_AVG) {
-            return MarketLevelChange.MEDIUM_DOWN;
-        }
-
         // 3. SMALL UP / DOWN
         if (rateUpAvg > Configs.MS_UP_SMALL_THRES) {
             return MarketLevelChange.SMALL_UP;
         }
 
-        if (rateDown15MAvg < Configs.MS_DOWN_15M_SMALL_ONLY) {
+        if (rateDownAvg < Configs.MS_DOWN_SMALL_AVG_OR_15M
+                || rateDown15MAvg < Configs.MS_DOWN_SMALL_AVG_OR_15M) {
             return MarketLevelChange.SMALL_DOWN_15M;
         }
 
@@ -233,9 +196,8 @@ public class MarketBigChangeDetector {
     }
 
     public static boolean isDcaAlt(Float rateDown15MAvg, Float rateDownAvg, Float rateUpAvg) {
-        return rateDown15MAvg < Configs.DCA_ALT_DOWN_15M_THRES
-                || rateUpAvg > Configs.DCA_ALT_UP_AVG_THRES
-                || rateDownAvg < Configs.DCA_ALT_DOWN_AVG_THRES;
+        return rateDown15MAvg < Configs.MS_DOWN_BIG_AVG
+                || rateDownAvg < Configs.MS_DOWN_BIG_AVG / 3;
     }
 
     public static boolean is50PercentOrderLoss(
@@ -243,7 +205,7 @@ public class MarketBigChangeDetector {
             long currentTime) {
 
         List<CircuitOrder> recentOrders = new ArrayList<>();
-        long lookbackMillis = 240 * 60000L; // Soi 4 tiếng quay đầu
+        long lookbackMillis = Configs.CIRCUIT_LOOKBACK_MINUTES * 60000L;
 
         if (runningOrders != null) {
             for (OrderTargetInfoTest o : runningOrders) {
@@ -278,7 +240,7 @@ public class MarketBigChangeDetector {
             long currentTime) {
 
         List<CircuitOrder> recentOrders = new ArrayList<>();
-        long lookbackMillis = 240 * 60000L;
+        long lookbackMillis = Configs.CIRCUIT_LOOKBACK_MINUTES * 60000L;
 
         if (runningOrders != null) {
             for (OrderTargetInfo o : runningOrders) {
@@ -357,6 +319,7 @@ public class MarketBigChangeDetector {
 
         return (totalOrders - safeOrders > Configs.MAX_CONCURRENT_ORDERS * Configs.CIRCUIT_DANGER_RATIO);
     }
+
 }
 
 

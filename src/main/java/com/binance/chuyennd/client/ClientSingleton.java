@@ -15,7 +15,6 @@
  */
 package com.binance.chuyennd.client;
 
-import com.binance.chuyennd.utils.Configs;
 import com.binance.client.RequestOptions;
 import com.binance.client.SyncRequestClient;
 import com.binance.chuyennd.config.PrivateConfig;

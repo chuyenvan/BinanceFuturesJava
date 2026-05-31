@@ -7,7 +7,7 @@ import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.ai_ml.hpo.HPOFitnessCalculator;
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.object.MarketDataObject;
-import com.binance.chuyennd.utils.Configs;
+import com.binance.chuyennd.tradecore.Configs;
 import com.binance.chuyennd.utils.Utils;
 import com.google.gson.reflect.TypeToken;
 import io.jenetics.*;
@@ -18,7 +18,6 @@ import io.jenetics.util.ISeq;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicLong;

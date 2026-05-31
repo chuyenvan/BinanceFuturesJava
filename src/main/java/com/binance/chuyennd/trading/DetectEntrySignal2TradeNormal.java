@@ -34,7 +34,7 @@ import com.binance.chuyennd.tradecore.CoinRankManager;
 import com.binance.chuyennd.tradecore.DcaProcessor;
 import com.binance.chuyennd.tradecore.MarketBigChangeDetector;
 import com.binance.chuyennd.tradecore.TradeUtils;
-import com.binance.chuyennd.utils.Configs;
+import com.binance.chuyennd.tradecore.Configs;
 import com.binance.chuyennd.utils.StorageSnappy;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;

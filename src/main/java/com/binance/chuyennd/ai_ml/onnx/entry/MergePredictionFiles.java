@@ -1,7 +1,7 @@
 package com.binance.chuyennd.ai_ml.onnx.entry;
 
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
-import com.binance.chuyennd.utils.Configs;
+import com.binance.chuyennd.tradecore.Configs;
 import com.binance.chuyennd.utils.StorageSnappy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

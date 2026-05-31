@@ -8,7 +8,7 @@ import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.research.BudgetManagerSimple;
 import com.binance.chuyennd.research.SimulatorMarketLevelTicker1MStopLoss;
 import com.binance.chuyennd.tradecore.CoinRankManager;
-import com.binance.chuyennd.utils.Configs;
+import com.binance.chuyennd.tradecore.Configs;
 import com.binance.chuyennd.utils.Utils;
 
 import java.util.TreeMap;
@@ -17,25 +17,12 @@ public class BackTestEngineMaster {
 
     private AIRejectFilter aiRejectFilter;
 
-    // Nhận 11 Tham số từ HPO (Đã thêm aiMaxThres)
-    public BackTestEngineMaster(float dSmall, float dMed, float dBig, float uSmall, float uMed, float uBig,
-                                float d15mSmall,
-                                float aiRisk, float ai15m, float ai24h,
-                                float aiMaxThres) { // 🔥 THÊM MỚI Ở ĐÂY
-
-        // 1. Gán 7 Ngưỡng Thị trường
-        Configs.MS_DOWN_MED_AVG = dMed;
-        Configs.MS_DOWN_BIG_AVG = dBig;
-        Configs.MS_UP_SMALL_THRES = uSmall;
-        Configs.MS_UP_BIG_THRES = uBig;
-        Configs.MS_DOWN_15M_SMALL_ONLY = d15mSmall;
-
-        // 2. Gán 4 Ngưỡng AI Filter
-        Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD = aiMaxThres; // 🔥 THÊM MỚI Ở ĐÂY
-
+    // Không cần nhận tham số nữa, AIRejectFilter sẽ đọc trực tiếp từ Configs
+    public BackTestEngineMaster() {
         this.aiRejectFilter = new AIRejectFilter();
-        this.aiRejectFilter.setConfig(aiRisk, ai15m, ai24h);
+        // Không gọi setConfig nữa vì AIRejectFilter tự gọi Configs.xxx
     }
+
     public HPOFitnessCalculatorV3.FitnessReport run(TreeMap<Long, MarketDataObject> time2MarketData,
                                                     TreeMap<Long, AiPredictionData> predictionMap,
                                                     TreeMap<Long, long[]> time2FundingPre,
@@ -50,7 +37,6 @@ public class BackTestEngineMaster {
             test.initDataReady(time2MarketData, predictionMap, time2FundingPre, aiRejectFilter);
             test.simulatorWithInitEntry(startTime, offlineEndTime);
 
-            // Dùng Fitness Calculator V2
             return HPOFitnessCalculatorV3.evaluateDetailed(test.allOrderDone);
 
         } catch (Exception e) {

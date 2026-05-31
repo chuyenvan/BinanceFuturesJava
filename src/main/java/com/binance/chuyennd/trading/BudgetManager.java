@@ -10,7 +10,7 @@ import com.binance.chuyennd.client.ClientSingleton;
 import com.binance.chuyennd.helper.PositionHelper;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
-import com.binance.chuyennd.utils.Configs;
+import com.binance.chuyennd.tradecore.Configs;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.model.market.ExchangeInfoEntry;
 import com.binance.client.model.trade.Asset;

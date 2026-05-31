@@ -2,13 +2,11 @@ package com.binance.chuyennd.ai_ml.onnx.funding;
 
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.object.MarketDataObject;
-import com.binance.chuyennd.tradecore.MarketBigChangeDetector;
-import com.binance.chuyennd.utils.Configs;
+import com.binance.chuyennd.tradecore.Configs;
 import com.binance.chuyennd.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Collections;
 import java.util.Map;
 import java.util.TreeMap;
 

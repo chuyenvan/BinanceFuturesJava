@@ -1,11 +1,7 @@
 package com.binance.chuyennd.tradecore;
 
-import com.aerospike.client.Log;
 import com.binance.chuyennd.object.MarketLevelChange;
-import com.binance.chuyennd.research.SimulatorMarketLevelTicker1MStopLoss;
-import com.binance.chuyennd.utils.Configs;
 import com.binance.chuyennd.utils.Utils;
-import org.apache.commons.logging.LogFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,9 +44,9 @@ public final class DcaUtils {
         switch (levelChange) {
             case BIG_DOWN:
                 return new DcaConfig(Configs.DCA_TIME_BIG_DOWN, Configs.DCA_LOSS_BIG_DOWN, true);
-            case MEDIUM_DOWN:
+//            case MEDIUM_DOWN:
             case BIG_UP:
-                return new DcaConfig(Configs.DCA_TIME_MED_DOWN, Configs.DCA_LOSS_MED_DOWN, false);
+                return new DcaConfig(Configs.DCA_TIME_BIG_Up, Configs.DCA_LOSS_BIG_UP, false);
             default:
                 return null;
         }

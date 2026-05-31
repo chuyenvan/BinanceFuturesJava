@@ -7,7 +7,7 @@ import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.proto.MinuteDataFinalProto.KlineObjectOptimized;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
-import com.binance.chuyennd.utils.Configs;
+import com.binance.chuyennd.tradecore.Configs;
 import com.binance.chuyennd.utils.HttpRequest;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;

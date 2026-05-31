@@ -3,7 +3,7 @@ package com.binance.chuyennd.ai_ml.onnx.funding;
 import com.aerospike.client.*;
 import com.aerospike.client.policy.ScanPolicy;
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
-import com.binance.chuyennd.utils.Configs;
+import com.binance.chuyennd.tradecore.Configs;
 import com.binance.chuyennd.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

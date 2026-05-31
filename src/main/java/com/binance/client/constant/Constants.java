@@ -15,7 +15,7 @@
  */
 package com.binance.client.constant;
 
-import com.binance.chuyennd.utils.Configs;
+import com.binance.chuyennd.tradecore.Configs;
 import org.apache.commons.lang.StringUtils;
 
 import java.util.HashSet;

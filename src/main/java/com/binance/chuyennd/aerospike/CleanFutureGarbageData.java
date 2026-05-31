@@ -1,7 +1,7 @@
 package com.binance.chuyennd.aerospike;
 
 import com.aerospike.client.policy.ScanPolicy;
-import com.binance.chuyennd.utils.Configs;
+import com.binance.chuyennd.tradecore.Configs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -10,7 +10,7 @@ import com.binance.chuyennd.proto.MinuteDataFinalProto.KlineObjectOptimized;
 import com.binance.chuyennd.proto.MinuteDataFinalProto.MinuteDataFinal;
 import com.binance.chuyennd.proto.MinuteDataProto.KlineObjectSimpleProto;
 import com.binance.chuyennd.proto.MinuteDataProto.MinuteData;
-import com.binance.chuyennd.utils.Configs;
+import com.binance.chuyennd.tradecore.Configs;
 import com.binance.chuyennd.utils.Utils;
 import org.xerial.snappy.Snappy;
 

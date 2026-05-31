@@ -6,7 +6,7 @@ import com.binance.chuyennd.ai_ml.onnx.entry.AIRejectFilter;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.research.BudgetManagerSimple;
 import com.binance.chuyennd.research.SimulatorMarketLevelTicker1MStopLoss;
-import com.binance.chuyennd.utils.Configs;
+import com.binance.chuyennd.tradecore.Configs;
 import com.binance.chuyennd.utils.Utils;
 
 import java.util.TreeMap;

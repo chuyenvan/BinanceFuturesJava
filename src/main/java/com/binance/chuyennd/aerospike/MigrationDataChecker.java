@@ -5,12 +5,10 @@ import com.aerospike.client.Record;
 import com.aerospike.client.policy.ClientPolicy;
 import com.aerospike.client.policy.ScanPolicy;
 import com.binance.chuyennd.proto.MinuteDataFinalProto.MinuteDataFinal;
-import com.binance.chuyennd.utils.Configs;
+import com.binance.chuyennd.tradecore.Configs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xerial.snappy.Snappy;
-
-import java.util.Map;
 
 public class MigrationDataChecker {
     private static final Logger LOG = LoggerFactory.getLogger(MigrationDataChecker.class);

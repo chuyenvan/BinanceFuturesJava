@@ -2,11 +2,8 @@ package com.binance.chuyennd.aerospike;
 
 import com.aerospike.client.AerospikeClient;
 import com.aerospike.client.Info;
-import com.binance.chuyennd.utils.Configs;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class AerospikeCheckData {

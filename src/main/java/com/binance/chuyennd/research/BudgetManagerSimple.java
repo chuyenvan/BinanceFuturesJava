@@ -1,7 +1,7 @@
 package com.binance.chuyennd.research;
 
 import com.binance.chuyennd.trading.OrderTargetStatus;
-import com.binance.chuyennd.utils.Configs;
+import com.binance.chuyennd.tradecore.Configs;
 import com.binance.chuyennd.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

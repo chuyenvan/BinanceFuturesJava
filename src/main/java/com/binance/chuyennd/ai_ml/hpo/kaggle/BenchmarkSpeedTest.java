@@ -8,12 +8,11 @@ import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.research.BudgetManagerSimple;
 import com.binance.chuyennd.research.SimulatorMarketLevelTicker1MStopLoss;
 import com.binance.chuyennd.tradecore.CoinRankManager;
-import com.binance.chuyennd.utils.Configs;
+import com.binance.chuyennd.tradecore.Configs;
 import com.binance.chuyennd.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Arrays;
 import java.util.TreeMap;
 
 public class BenchmarkSpeedTest {
@@ -30,11 +29,11 @@ public class BenchmarkSpeedTest {
             long offlineEndTime = Utils.sdfFile.parse("20260430").getTime() + (24 * Utils.TIME_HOUR) - Utils.TIME_MINUTE;
 
             // Nạp thông số "Cứng" để test logic
-            Configs.MS_DOWN_MED_AVG = -0.02658f;
+            Configs.MS_DOWN_SMALL_AVG_OR_15M = -0.02658f;
             Configs.MS_DOWN_BIG_AVG = -0.04165f;
             Configs.MS_UP_SMALL_THRES = 0.00897f;
             Configs.MS_UP_BIG_THRES = 0.07208f;
-            Configs.MS_DOWN_15M_SMALL_ONLY = -0.03283f;
+            Configs.MS_DOWN_SMALL_AVG_OR_15M = -0.03283f;
             Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD = 0.15f; // Ngưỡng AI Funding
 
             AIRejectFilter aiFilter = new AIRejectFilter();

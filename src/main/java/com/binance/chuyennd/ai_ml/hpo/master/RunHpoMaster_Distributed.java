@@ -1,0 +1,251 @@
+package com.binance.chuyennd.ai_ml.hpo.master;
+
+import com.aerospike.client.Key;
+import com.aerospike.client.Record;
+import com.aerospike.client.policy.RecordExistsAction;
+import com.aerospike.client.policy.WritePolicy;
+import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
+import com.binance.chuyennd.tradecore.Configs;
+import com.binance.chuyennd.utils.Utils;
+import io.jenetics.*;
+import io.jenetics.engine.Engine;
+import io.jenetics.engine.EvolutionResult;
+import io.jenetics.util.DoubleRange;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.Locale;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicLong;
+
+public class RunHpoMaster_Distributed {
+
+    private static final Logger LOG = LoggerFactory.getLogger(RunHpoMaster_Distributed.class);
+
+    // Cấu hình HPO cho Master
+    private static final int POPULATION_SIZE = 50;  // 50 Task mỗi Gen ném lên DB
+    private static final int GENERATIONS = 100;     // Tối đa 100 thế hệ
+    private static final int MAX_STEADY_GENERATIONS = 15; // Dừng sớm
+
+    private static final int TOTAL_PARAMS = 14;
+
+    // =========================================================
+    // 🔥 VERSION HOÁ CACHE
+    // BẮT BUỘC bump biến này MỖI KHI đổi bất cứ thứ gì ngoài genome mà có ảnh
+    // hưởng tới kết quả backtest: RATE_FEE, logic trailing (calRateLossDynamicBuy),
+    // budget divider, MAX_CONCURRENT_ORDERS, circuit breaker, hay thêm/bớt gene...
+    // =========================================================
+    public static final String CONFIG_VERSION = "v4";
+
+    // 🔥 TÁCH 2 SET:
+    //  - QUEUE_SET: chỉ chứa task ĐANG active (PENDING/RUNNING). Worker scanAll cái này nên LUÔN NHỎ.
+    //    Task xong là bị XOÁ khỏi đây => scan không bao giờ chậm dần theo số thế hệ.
+    //  - RESULT_SET: kho điểm vĩnh viễn (cache). Chỉ truy cập bằng get(key), KHÔNG bao giờ scan.
+    public static final String QUEUE_SET  = "hpo_queue_"   + CONFIG_VERSION;
+    public static final String RESULT_SET = "hpo_results_" + CONFIG_VERSION;
+
+    private static final AtomicLong testCounter = new AtomicLong(0);
+
+    // =========================================================
+    // 🔥 CLASS DEFINITION: THE WORK PACKAGE (TASK)
+    // =========================================================
+    public static class HpoDistributedTask {
+        public String taskId;
+        public String status; // PENDING, RUNNING, DONE
+
+        // NHÓM 1: Market Signals (3 Tham số)
+        public float msUpBig, msDownBig, msSmall;
+
+        // NHÓM 2: AI & ONNX (7 Tham số)
+        public float aiMaxThres, aiMin15M, aiMin24H, aiRisk4H;
+        public float aiDynMul, aiDynMin, aiDynMax;
+
+        // NHÓM 3: DCA (4 Tham số)
+        public float dcaLossBigDown, dcaLossBigUp, dcaTimeBigDown, dcaTimeBigUp;
+
+        // Báo cáo
+        public float fitnessScore = -10000f;
+        public String logDetail = "";
+        public long startTime = 0L;
+    }
+
+    public static void main(String[] args) {
+        LOG.info("👑 MÁY CHỦ ORACLE (MASTER) KHỞI ĐỘNG HỆ THỐNG PHÂN TÁN ({} PARAMS)...", TOTAL_PARAMS);
+        LOG.info("⚡ Queue set={} | Result set={}", QUEUE_SET, RESULT_SET);
+
+        // Nhóm 1 (3) + Nhóm 2 (7) + Nhóm 3 DCA (4) = 14 Genes
+        Genotype<DoubleGene> gtf = Genotype.of(
+                // NHÓM 1
+                DoubleChromosome.of(DoubleRange.of(0.010, 0.040)),   // 0: MS_UP_BIG_THRES
+                DoubleChromosome.of(DoubleRange.of(-0.100, -0.025)), // 1: MS_DOWN_BIG_AVG
+                DoubleChromosome.of(DoubleRange.of(-0.030, -0.010)), // 2: MS_DOWN_SMALL_AVG_OR_15M
+
+                // NHÓM 2
+                DoubleChromosome.of(DoubleRange.of(0.10, 0.25)),     // 3: AI_MAX_THRES
+                DoubleChromosome.of(DoubleRange.of(0.010, 0.035)),   // 4: MIN_MOMENTUM_15M
+                DoubleChromosome.of(DoubleRange.of(0.010, 0.080)),   // 5: MIN_MOMENTUM_24H
+                DoubleChromosome.of(DoubleRange.of(-0.25, -0.05)),   // 6: HARD_RISK_LIMIT_4H
+                DoubleChromosome.of(DoubleRange.of(1.0, 2.0)),       // 7: AI_DYN_MULTIPLIER
+                DoubleChromosome.of(DoubleRange.of(0.1, 0.5)),       // 8: AI_DYN_MIN
+                DoubleChromosome.of(DoubleRange.of(1.5, 3.0)),       // 9: AI_DYN_MAX
+
+                // NHÓM 3 - DCA
+                DoubleChromosome.of(DoubleRange.of(-0.30, -0.08)),   // 10: DCA_LOSS_BIG_DOWN
+                DoubleChromosome.of(DoubleRange.of(-0.40, -0.10)),   // 11: DCA_LOSS_BIG_UP
+                DoubleChromosome.of(DoubleRange.of(3, 20)),          // 12: DCA_TIME_BIG_DOWN (phút)
+                DoubleChromosome.of(DoubleRange.of(5, 30))           // 13: DCA_TIME_BIG_Up   (phút)
+        );
+
+        Engine<DoubleGene, Float> engine = Engine.builder(RunHpoMaster_Distributed::eval, gtf)
+                .populationSize(POPULATION_SIZE)
+                .maximizing()
+                .alterers(new Mutator<>(0.15), new MeanAlterer<>(0.60))
+                .executor(Executors.newFixedThreadPool(POPULATION_SIZE)) // Nhồi 50 Task lên DB cùng lúc
+                .build();
+
+        EvolutionResult<DoubleGene, Float> result = null;
+        float globalBestScore = -Float.MAX_VALUE;
+        int steadyCount = 0;
+
+        for (int gen = 1; gen <= GENERATIONS; gen++) {
+            LOG.info("🚀 ĐANG BẮT ĐẦU GEN {}/{} - Đang bơm việc vào Hàng đợi...", gen, GENERATIONS);
+
+            if (result == null) {
+                result = engine.stream().limit(1).collect(EvolutionResult.toBestEvolutionResult());
+            } else {
+                result = engine.stream(result.population()).limit(1).collect(EvolutionResult.toBestEvolutionResult());
+            }
+
+            float currentGenBest = result.bestFitness();
+
+            LOG.info("===================================================================");
+            LOG.info(">>> 🏆 KẾT THÚC GEN {}/{} | SCORE BEST: {} <<<", gen, GENERATIONS, String.format("%.2f", currentGenBest));
+            LOG.info("===================================================================\n");
+
+            if (currentGenBest > globalBestScore) {
+                globalBestScore = currentGenBest;
+                steadyCount = 0;
+            } else {
+                steadyCount++;
+            }
+
+            if (steadyCount >= MAX_STEADY_GENERATIONS) {
+                LOG.info("🛑 EARLY STOPPING: Đã hội tụ sau {} thế hệ không cải thiện!", steadyCount);
+                break;
+            }
+        }
+
+        printFinalResult(result);
+        System.exit(0);
+    }
+
+    /**
+     * 🔥 EVAL MASTER: KHÔNG CHẠY BACKTEST.
+     *  1. Tra RESULT_SET theo key -> trúng cache thì trả điểm tức thì.
+     *  2. Trượt cache -> tạo task PENDING trong QUEUE_SET (set nhỏ).
+     *  3. Poll RESULT_SET (get theo key) tới khi worker ghi điểm xong.
+     */
+    private static Float eval(Genotype<DoubleGene> gt) {
+        long c = testCounter.incrementAndGet();
+
+        HpoDistributedTask task = new HpoDistributedTask();
+        task.msUpBig = gt.get(0).gene().floatValue();
+        task.msDownBig = gt.get(1).gene().floatValue();
+        task.msSmall = gt.get(2).gene().floatValue();
+        task.aiMaxThres = gt.get(3).gene().floatValue();
+        task.aiMin15M = gt.get(4).gene().floatValue();
+        task.aiMin24H = gt.get(5).gene().floatValue();
+        task.aiRisk4H = gt.get(6).gene().floatValue();
+        task.aiDynMul = gt.get(7).gene().floatValue();
+        task.aiDynMin = gt.get(8).gene().floatValue();
+        task.aiDynMax = gt.get(9).gene().floatValue();
+        task.dcaLossBigDown = gt.get(10).gene().floatValue();
+        task.dcaLossBigUp = gt.get(11).gene().floatValue();
+        task.dcaTimeBigDown = gt.get(12).gene().floatValue();
+        task.dcaTimeBigUp = gt.get(13).gene().floatValue();
+
+        task.taskId = buildTaskId(task);
+
+        Key resultKey = new Key(Configs.AEROSPIKE_NAMESPACE, RESULT_SET, task.taskId);
+        Key queueKey  = new Key(Configs.AEROSPIKE_NAMESPACE, QUEUE_SET,  task.taskId);
+
+        try {
+            // 1. Tra cache kết quả (point get, không scan)
+            Record done = DataManagerAerospikeFloatSim.getClient226().get(null, resultKey);
+            if (done != null) {
+                return done.getFloat("score"); // 0.001 giây trả điểm, cứu hàng tiếng CPU
+            }
+
+            // 2. Chưa ai làm -> đẩy vào QUEUE (CREATE_ONLY chống 2 luồng cùng tạo)
+            WritePolicy wp = new WritePolicy();
+            wp.recordExistsAction = RecordExistsAction.CREATE_ONLY;
+            try {
+                DataManagerAerospikeFloatSim.getClient226().put(wp, queueKey,
+                        new com.aerospike.client.Bin("status", "PENDING"),
+                        new com.aerospike.client.Bin("startTime", 0L),
+                        new com.aerospike.client.Bin("data", Utils.gson.toJson(task))
+                );
+            } catch (com.aerospike.client.AerospikeException e) {
+                // Ignore: luồng khác vừa nhét task này vào queue
+            }
+
+            // 3. TRẠM CHỜ ORACLE: poll kho kết quả theo key.
+            // Lưu ý: nếu KHÔNG có worker nào sống, thread này chờ vô hạn.
+            while (true) {
+                Thread.sleep(5000);
+
+                Record checkRec = DataManagerAerospikeFloatSim.getClient226().get(null, resultKey);
+                if (checkRec != null) {
+                    float finalScore = checkRec.getFloat("score");
+                    String dataJson = checkRec.getString("data");
+                    HpoDistributedTask finishedTask = Utils.gson.fromJson(dataJson, HpoDistributedTask.class);
+                    LOG.info(String.format("Trial %4d | %s | [ID: %s]", c, finishedTask.logDetail, task.taskId));
+                    return finalScore;
+                }
+            }
+        } catch (Exception e) {
+            LOG.error("❌ Lỗi Eval Master: ", e);
+            return -10000.0f;
+        }
+    }
+
+    /**
+     * Khóa cache PHẢI phản ánh đúng cấu hình thực sự chạy:
+     * - 12 tham số float băm %.4f
+     * - 2 tham số TIME băm theo giá trị ĐÃ LÀM TRÒN (đúng bằng giá trị apply vào Configs)
+     *   để 12.31 và 12.49 (cùng round = 12) không sinh 2 trial trùng nhau.
+     * - CONFIG_VERSION làm tiền tố để truy vết.
+     */
+    private static String buildTaskId(HpoDistributedTask task) {
+        return String.format(Locale.US,
+                "%s_%.4f_%.4f_%.4f_%.4f_%.4f_%.4f_%.4f_%.4f_%.4f_%.4f_%.4f_%.4f_%d_%d",
+                CONFIG_VERSION,
+                task.msUpBig, task.msDownBig, task.msSmall,
+                task.aiMaxThres, task.aiMin15M, task.aiMin24H, task.aiRisk4H,
+                task.aiDynMul, task.aiDynMin, task.aiDynMax,
+                task.dcaLossBigDown, task.dcaLossBigUp,
+                Math.round(task.dcaTimeBigDown), Math.round(task.dcaTimeBigUp));
+    }
+
+    private static void printFinalResult(EvolutionResult<DoubleGene, Float> result) {
+        Genotype<DoubleGene> best = result.bestPhenotype().genotype();
+        LOG.info("\n=============================================");
+        LOG.info("=== 👑 KẾT QUẢ VÔ ĐỊCH ({} PARAMS) ===", TOTAL_PARAMS);
+        LOG.info("Fitness: {}", String.format("%.4f", result.bestFitness()));
+        LOG.info("MS_UP_BIG_THRES          = {}f;", String.format(Locale.US, "%.5f", best.get(0).gene().floatValue()));
+        LOG.info("MS_DOWN_BIG_AVG          = {}f;", String.format(Locale.US, "%.5f", best.get(1).gene().floatValue()));
+        LOG.info("MS_DOWN_SMALL_AVG_OR_15M = {}f;", String.format(Locale.US, "%.5f", best.get(2).gene().floatValue()));
+        LOG.info("PREDICT_MAX_THRES        = {}f;", String.format(Locale.US, "%.5f", best.get(3).gene().floatValue()));
+        LOG.info("MIN_MOMENTUM_15M         = {}f;", String.format(Locale.US, "%.5f", best.get(4).gene().floatValue()));
+        LOG.info("MIN_MOMENTUM_24H         = {}f;", String.format(Locale.US, "%.5f", best.get(5).gene().floatValue()));
+        LOG.info("HARD_RISK_LIMIT_4H       = {}f;", String.format(Locale.US, "%.5f", best.get(6).gene().floatValue()));
+        LOG.info("AI_DYNAMIC_MULTIPLIER    = {}f;", String.format(Locale.US, "%.5f", best.get(7).gene().floatValue()));
+        LOG.info("AI_DYNAMIC_MIN           = {}f;", String.format(Locale.US, "%.5f", best.get(8).gene().floatValue()));
+        LOG.info("AI_DYNAMIC_MAX           = {}f;", String.format(Locale.US, "%.5f", best.get(9).gene().floatValue()));
+        LOG.info("DCA_LOSS_BIG_DOWN        = {}f;", String.format(Locale.US, "%.5f", best.get(10).gene().floatValue()));
+        LOG.info("DCA_LOSS_BIG_UP          = {}f;", String.format(Locale.US, "%.5f", best.get(11).gene().floatValue()));
+        LOG.info("DCA_TIME_BIG_DOWN        = {};", Math.round(best.get(12).gene().floatValue()));
+        LOG.info("DCA_TIME_BIG_Up          = {};", Math.round(best.get(13).gene().floatValue()));
+        LOG.info("=============================================");
+    }
+}

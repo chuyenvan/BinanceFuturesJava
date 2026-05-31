@@ -15,7 +15,7 @@ import com.binance.chuyennd.object.MarketLevelChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.tradecore.*;
 import com.binance.chuyennd.trading.OrderTargetStatus;
-import com.binance.chuyennd.utils.Configs;
+import com.binance.chuyennd.tradecore.Configs;
 import com.binance.chuyennd.utils.Storage;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.model.enums.OrderSide;
@@ -130,7 +130,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                             symbol2Ticker, symbolLocked, predict2Symbol));
 
                                     Map<Short, OrderTargetInfoTest> activeOrderMap = getActiveOrderMap();
-                                    List<Short> symbolDcaLevel = DcaProcessor.getDCA(levelChange, time, BudgetManagerSimple.getInstance().getBudget(), activeOrderMap);
+                                    List<Short> symbolDcaLevel = DcaProcessor.getDCA(levelChange, time,
+                                            BudgetManagerSimple.getInstance().getBudget(), activeOrderMap);
 
                                     for (short symbolId : symbol2BUY) {
                                         KlineObjectSimple ticker = symbol2Ticker[symbolId];
@@ -378,7 +379,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         LOG.info("📥 Đang tải dữ liệu vào RAM...");
         time2MarketData = DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
         predictionMap = DataManagerAerospikeFloatSim.getAllMarketAiPredictionsFromAerospike();
-        time2SymbolPred = DataManagerAerospikeFloatSim.getFundingPredictionsPrimitiveByRange(startTime, numberMinutes);
+//        time2SymbolPred = DataManagerAerospikeFloatSim.getFundingPredictionsPrimitiveByRange(startTime, numberMinutes);
+        time2SymbolPred = DataManagerAerospikeFloatSim.getAllFundingPredictionsPrimitiveFromAerospike();
         // 3. CHẠY PRE-CALCULATE (SORT SẴN FUNDING FEE MỘT LẦN DUY NHẤT)
         preprocessFundingData(time2SymbolPred);
         aiRejectFilter = new AIRejectFilter();
@@ -396,21 +398,21 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                 orderMulti.updatePriceByKlineSimple(ticker);
                 if (ticker.maxPrice >= orderMulti.priceEntry * (1 + Configs.RATE_PROFIT_STOP_MARKET)
                         || orderMulti.priceSL != null) {
-                    Float maxChangeIn90M = getMaxRateIn90MForTradingStop(time);
-                    orderMulti.updateStatusNew(maxChangeIn90M, ticker);
+                    Float predReturn15M  = getPredReturn15MForTradingStop(time);
+                    orderMulti.updateStatusNew(predReturn15M , ticker);
                     if (orderMulti.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)
                             || orderMulti.status.equals(OrderTargetStatus.STOP_LOSS_DONE)
                             || orderMulti.status.equals(OrderTargetStatus.STOP_MARKET_DONE)) {
                         closeOrder(symbolId, orderMulti);
                     } else {
-                        orderMulti.updateTPSL(maxChangeIn90M, ticker);
+                        orderMulti.updateTPSL(predReturn15M , ticker);
                     }
                 }
             }
         }
     }
 
-    private Float getMaxRateIn90MForTradingStop(Long time) {
+    private Float getPredReturn15MForTradingStop(Long time) {
         AiPredictionData predict = predictionMap.get(time);
         if (predict == null) {
             return 0f;
@@ -570,29 +572,77 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     }
 
     // 🔥 HÀM PRE-CALCULATE: Sort mảng theo điểm Float đảm bảo logic 100% như cũ
+//    public static void preprocessFundingData(TreeMap<Long, long[]> time2FundingPre) {
+//        LOG.info("⚙️ Bắt đầu Pre-calculate (Sort sẵn) dữ liệu Funding Fee...");
+//        long start = System.currentTimeMillis();
+//        for (long[] preds : time2FundingPre.values()) {
+//            if (preds == null || preds.length == 0) continue;
+//
+//            // Ép sang Object Long để sort bằng Comparator đảm bảo logic không lệch 1 ly
+//            Long[] boxed = new Long[preds.length];
+//            for (int i = 0; i < preds.length; i++) {
+//                boxed[i] = preds[i];
+//            }
+//
+//            Arrays.sort(boxed, (a, b) -> {
+//                float valA = Float.intBitsToFloat(a.intValue());
+//                float valB = Float.intBitsToFloat(b.intValue());
+//                return Float.compare(valA, valB);
+//            });
+//
+//            // Ép ngược lại mảng nguyên thủy
+//            for (int i = 0; i < preds.length; i++) {
+//                preds[i] = boxed[i];
+//            }
+//        }
+//        LOG.info("✅ Pre-calculate hoàn tất trong {} ms.", (System.currentTimeMillis() - start));
+//    }
+
+    // 🔥 PRE-CALCULATE TỐI ƯU HÓA: Dùng Primitive QuickSort & Đa luồng (0 sinh rác Object)
     public static void preprocessFundingData(TreeMap<Long, long[]> time2FundingPre) {
-        LOG.info("⚙️ Bắt đầu Pre-calculate (Sort sẵn) dữ liệu Funding Fee...");
+        LOG.info("⚙️ Bắt đầu Pre-calculate (Sort sẵn) dữ liệu Funding Fee đa luồng...");
         long start = System.currentTimeMillis();
-        for (long[] preds : time2FundingPre.values()) {
-            if (preds == null || preds.length == 0) continue;
 
-            // Ép sang Object Long để sort bằng Comparator đảm bảo logic không lệch 1 ly
-            Long[] boxed = new Long[preds.length];
-            for (int i = 0; i < preds.length; i++) {
-                boxed[i] = preds[i];
-            }
+        // Dùng parallelStream để vắt kiệt 100% các lõi CPU của VPS/Kaggle
+        time2FundingPre.values().parallelStream().forEach(preds -> {
+            if (preds == null || preds.length <= 1) return;
+            // Sort nguyên thủy trực tiếp trên mảng long[]
+            quickSortByFloatPred(preds, 0, preds.length - 1);
+        });
 
-            Arrays.sort(boxed, (a, b) -> {
-                float valA = Float.intBitsToFloat(a.intValue());
-                float valB = Float.intBitsToFloat(b.intValue());
-                return Float.compare(valA, valB);
-            });
+        LOG.info("✅ Pre-calculate hoàn tất trong {} ms.", (System.currentTimeMillis() - start));
+    }
 
-            // Ép ngược lại mảng nguyên thủy
-            for (int i = 0; i < preds.length; i++) {
-                preds[i] = boxed[i];
+    // 🚀 Thuật toán QuickSort nguyên thủy (Extract 32 bit cuối ra so sánh Float)
+    private static void quickSortByFloatPred(long[] arr, int low, int high) {
+        if (low < high) {
+            int pi = partition(arr, low, high);
+            quickSortByFloatPred(arr, low, pi - 1);
+            quickSortByFloatPred(arr, pi + 1, high);
+        }
+    }
+
+    private static int partition(long[] arr, int low, int high) {
+        long pivot = arr[high];
+        // (int) pivot lấy đúng 32 bit cuối cùng (là giá trị float đã nén)
+        float pivotVal = Float.intBitsToFloat((int) pivot);
+        int i = (low - 1);
+
+        for (int j = low; j < high; j++) {
+            float jVal = Float.intBitsToFloat((int) arr[j]);
+            // So sánh float
+            if (Float.compare(jVal, pivotVal) <= 0) {
+                i++;
+                // Swap
+                long temp = arr[i];
+                arr[i] = arr[j];
+                arr[j] = temp;
             }
         }
-        LOG.info("✅ Pre-calculate hoàn tất trong {} ms.", (System.currentTimeMillis() - start));
+        // Swap pivot
+        long temp = arr[i + 1];
+        arr[i + 1] = arr[high];
+        arr[high] = temp;
+        return i + 1;
     }
 }

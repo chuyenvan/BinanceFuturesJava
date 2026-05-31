@@ -29,7 +29,7 @@ import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
 import com.binance.chuyennd.tradecore.TradeUtils;
 import com.binance.chuyennd.trading.monitor.Reporter;
-import com.binance.chuyennd.utils.Configs;
+import com.binance.chuyennd.tradecore.Configs;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
 import com.binance.client.model.enums.OrderSide;
@@ -288,17 +288,17 @@ public class BinanceOrderTradingManager {
                 }
                 List<KlineObjectSimple> tickers = symbol2Tickers.get(symbol);
 
-                Float maxChange60M = 0f;
+                Float predReturn15M  = 0f;
                 AiPredictionData predictData = DataManagerAerospikeFloatSim.getAiPredictionAtTime(System.currentTimeMillis() - Utils.TIME_MINUTE);
                 if (predictData != null) {
 //                    LOG.info("Predict data for SL init: {} {}", Utils.normalizeDateYYYYMMDDHHmm(predictData.timestamp), Utils.toJson(predictData));
-                    maxChange60M = predictData.predReturn15M;
+                    predReturn15M  = predictData.predReturn15M;
                 }
-                Float rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60MForTradingStop(maxChange60M);
+                Float rateMin2MoveSl = TradeUtils.calRateMinWithPredReturn15MForTradingStop(predReturn15M );
                 if (rateLoss > rateMin2MoveSl) {
                     if (orderInfo.priceSL == null) {
                         OrderSide sideSL = OrderSide.SELL;
-                        Float rateStop = TradeUtils.calRateLossDynamicBuy(rateLoss, maxChange60M);
+                        Float rateStop = TradeUtils.calRateLossDynamicBuy(rateLoss, predReturn15M );
                         if (orderInfo.side.equals(OrderSide.SELL)) {
                             sideSL = OrderSide.BUY;
                         }
@@ -403,7 +403,7 @@ public class BinanceOrderTradingManager {
 //                    LOG.info("Predict data for SL DL: {} {}", Utils.normalizeDateYYYYMMDDHHmm(predictData.timestamp), Utils.toJson(predictData));
                     maxChange60M = predictData.predReturn15M;
                 }
-                Float rateMin2MoveSl = Configs.TS_PROFIT_MULTIPLIER * TradeUtils.calRateMinWithMaxChange60MForTradingStop(maxChange60M);
+                Float rateMin2MoveSl = Configs.TS_PROFIT_MULTIPLIER * TradeUtils.calRateMinWithPredReturn15MForTradingStop(maxChange60M);
                 // BUY
                 if (position.getPositionAmt().compareTo(new BigDecimal("0")) > 0) {
                     side2Sl = OrderSide.SELL;

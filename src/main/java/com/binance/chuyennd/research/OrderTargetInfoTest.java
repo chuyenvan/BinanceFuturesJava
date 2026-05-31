@@ -22,7 +22,7 @@ import com.binance.chuyennd.object.MarketLevelChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.tradecore.TradeUtils;
 import com.binance.chuyennd.trading.OrderTargetStatus;
-import com.binance.chuyennd.utils.Configs;
+import com.binance.chuyennd.tradecore.Configs;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.model.enums.OrderSide;
 
@@ -126,12 +126,12 @@ public class OrderTargetInfoTest implements Serializable {
         return quantity * priceEntry / leverage;
     }
 
-    public void updateStatusNew(Float maxChange90M, KlineObjectSimple ticker) {
+    public void updateStatusNew(Float predReturn15M , KlineObjectSimple ticker) {
         if (priceSL == null) {
             Float rateLoss = calRateLossMax(ticker.maxPrice);
-            Float rateMin2MoveSl = TradeUtils.calRateMinWithMaxChange60MForTradingStop(maxChange90M);
+            Float rateMin2MoveSl = TradeUtils.calRateMinWithPredReturn15MForTradingStop(predReturn15M );
             if (rateLoss > rateMin2MoveSl) {
-                Float rateStop = TradeUtils.calRateLossDynamicBuy(rateLoss, maxChange90M);
+                Float rateStop = TradeUtils.calRateLossDynamicBuy(rateLoss, predReturn15M );
                 Float priceSLNew = Utils.calPriceTarget(symbol, priceEntry, OrderSide.SELL, -rateStop);
                 minPrice = lastPrice;
                 this.priceSL = priceSLNew;
@@ -166,7 +166,7 @@ public class OrderTargetInfoTest implements Serializable {
         // move SL
         if (priceSL != null) {
             Float rateLoss = calRateLossMax(ticker.maxPrice);
-            Float rateMin2MoveSl = Configs.TS_PROFIT_MULTIPLIER * TradeUtils.calRateMinWithMaxChange60MForTradingStop(rateChangeMax90M);
+            Float rateMin2MoveSl = Configs.TS_PROFIT_MULTIPLIER * TradeUtils.calRateMinWithPredReturn15MForTradingStop(rateChangeMax90M);
             if (rateLoss >= rateMin2MoveSl) {
                 Float rateSL = TradeUtils.calRateLossDynamicBuy(rateLoss, rateChangeMax90M);
                 OrderSide side2Sl = OrderSide.SELL;

@@ -5,7 +5,6 @@
  */
 package com.binance.chuyennd.redis;
 
-import com.binance.chuyennd.utils.Configs;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;

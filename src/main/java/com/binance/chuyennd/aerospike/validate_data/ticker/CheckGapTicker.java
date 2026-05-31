@@ -4,7 +4,7 @@ import com.aerospike.client.AerospikeClient;
 import com.aerospike.client.Key;
 import com.aerospike.client.policy.BatchPolicy;
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
-import com.binance.chuyennd.utils.Configs;
+import com.binance.chuyennd.tradecore.Configs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

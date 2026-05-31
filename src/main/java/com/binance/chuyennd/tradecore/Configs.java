@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package com.binance.chuyennd.utils;
+package com.binance.chuyennd.tradecore;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -18,6 +18,7 @@ import java.util.Map;
  * Class quản lý toàn bộ cấu hình siêu tham số của hệ thống Bot Trading.
  */
 public class Configs {
+
 
     // =========================================================
     // 1. HỆ THỐNG & KHỞI TẠO (SYSTEM & INIT)
@@ -54,10 +55,44 @@ public class Configs {
     // 3. CẤU HÌNH GIAO DỊCH CƠ BẢN (BASIC TRADING)
     // =========================================================
     public static Integer LEVERAGE_ORDER = 1; // Đòn bẩy
-    public static final Float RATE_FEE = 0.001f; // Phí giao dịch sàn
+    public static final Float RATE_FEE = 0.002f; // Phí giao dịch sàn đã sửa thành 2 chân
     public static Integer NUMBER_ENTRY_EACH_SIGNAL = 2; // Số lệnh vào mỗi khi có tín hiệu
     public static Integer NUMBER_TICKER_CAL_RATE_CHANGE = 15; // Số nến để tính biến động
     public static final Integer NUMBER_THREAD_ORDER_MANAGER = Configs.getInt("NUMBER_THREAD_ORDER_MANAGER");
+
+    // =========================================================
+// NGƯỠNG BÁO ĐỘNG THỊ TRƯỜNG (MARKET SIGNALS)
+// =========================================================
+    public static float MS_UP_BIG_THRES = 0.0176f;
+    public static float MS_DOWN_BIG_AVG = -0.0551f;
+    public static float MS_DOWN_SMALL_AVG_OR_15M = -0.0201f;
+
+    // =========================================================
+// BỘ LỌC TÍN HIỆU AI ONNX ĐỘNG
+// =========================================================
+    public static float PREDICT_SYMBOL_RATE_MAX_THRESHOLD = 0.1973f;
+    public static float MIN_MOMENTUM_15M = 0.0172f;
+    public static float MIN_MOMENTUM_24H = 0.0213f;
+    public static float HARD_RISK_LIMIT_4H = -0.0920f;
+
+    // Bộ bù trừ chéo AI Dynamic
+    public static float AI_DYNAMIC_MULTIPLIER = 1.2876f;
+    public static float AI_DYNAMIC_MIN = 0.2679f;
+    public static float AI_DYNAMIC_MAX = 2.2765f;
+
+    // =========================================================
+// CẤU HÌNH DCA NHỒI LỆNH (Bác mới lai ghép thêm - Quá chuẩn!)
+// =========================================================
+    public static float DCA_LOSS_BIG_UP = -0.2531f;
+    public static float DCA_LOSS_BIG_DOWN = -0.1006f;
+    public static int DCA_TIME_BIG_DOWN = 13;
+    public static int DCA_TIME_BIG_Up = 22;
+
+
+    public static float TS_MAX_GAP            = 0.08f;   // gap trailing tối đa (cũ: 16/200)
+    public static float TS_MAX_GAP_WEAK       = 0.03f;   // gap khi momentum yếu (cũ: 6/200)
+    public static float TS_WEAK_MOMENTUM_THRES = 0.004f; // ngưỡng coi là momentum yếu
+
 
     // =========================================================
     // 4. QUẢN TRỊ VỐN TỰ ĐỘNG (BUDGET MANAGEMENT - HPO)
@@ -92,9 +127,9 @@ public class Configs {
     // Ngưỡng giới hạn cốt lõi của AI
 
     // Bộ bù trừ chéo (Trade-off) giữa AI Funding và AI Entry
-    public static float AI_DYNAMIC_MULTIPLIER = 1.40234f; // Hệ số nhân tỷ lệ (Base scale)
-    public static float AI_DYNAMIC_MIN = 0.14568f;        // Mức nới lỏng tiêu chuẩn tối đa (Hạ chuẩn)
-    public static float AI_DYNAMIC_MAX = 2.24405f;        // Mức siết chặt tiêu chuẩn tối đa (Siết chuẩn)
+//    public static float AI_DYNAMIC_MULTIPLIER = 1.40234f; // Hệ số nhân tỷ lệ (Base scale)
+//    public static float AI_DYNAMIC_MIN = 0.14568f;        // Mức nới lỏng tiêu chuẩn tối đa (Hạ chuẩn)
+//    public static float AI_DYNAMIC_MAX = 2.24405f;        // Mức siết chặt tiêu chuẩn tối đa (Siết chuẩn)
 
     // Các tham số lọc tín hiệu dự đoán chung
     public static float PREDICT_SYMBOL_RATE_DOWN_15M = -0.03234f;
@@ -103,43 +138,35 @@ public class Configs {
 
 
 
-    public static float PREDICT_SYMBOL_RATE_MAX_THRESHOLD = 0.15f; // Tỉ lệ tạch tối đa cho phép
-    public static float HARD_RISK_LIMIT_4H = -0.2f;            // Ngưỡng Drawdown 4H cấm vào lệnh
-    public static float MIN_MOMENTUM_15M = 0.02284f;        // Đà nảy tối thiểu nến 15M
-    public static float MIN_MOMENTUM_24H = 0.01682f;                  // Đà nảy tối thiểu nến 24H
+//    public static float PREDICT_SYMBOL_RATE_MAX_THRESHOLD = 0.15f; // Tỉ lệ tạch tối đa cho phép
+//    public static float HARD_RISK_LIMIT_4H = -0.2f;            // Ngưỡng Drawdown 4H cấm vào lệnh
+//    public static float MIN_MOMENTUM_15M = 0.02284f;        // Đà nảy tối thiểu nến 15M
+//    public static float MIN_MOMENTUM_24H = 0.01682f;                  // Đà nảy tối thiểu nến 24H
 
     // =========================================================
     // 8. NGƯỠNG BÁO ĐỘNG THỊ TRƯỜNG (MARKET STATUS THRESHOLDS - HPO)
     // =========================================================
     // Ngưỡng Bão Lớn (BIG)
-    public static float MS_UP_BIG_THRES = 0.02046f;
-    public static float MS_DOWN_BIG_AVG = -0.03157f;
-
-    // Ngưỡng Bão Vừa (MEDIUM)
-    public static float MS_DOWN_MED_AVG = -0.02069f;
+//    public static float MS_UP_BIG_THRES = 0.02046f;
+//    public static float MS_DOWN_BIG_AVG = -0.03157f;
 
     // Ngưỡng Bão Nhỏ (SMALL)
     public static float MS_UP_SMALL_THRES = 0.00442f;
-    public static float MS_DOWN_15M_SMALL_ONLY = -0.02145f;
+//    public static float MS_DOWN_SMALL_AVG_OR_15M = -0.02069f;
 
-    // =========================================================
-    // THÊM MỚI: THAM SỐ CHUẨN BỊ CHO HPO PHASE 2 (SURVIVAL)
-    // =========================================================
-    // 1. Bắt đáy Altcoin (isDcaAlt)
-    public static float DCA_ALT_DOWN_15M_THRES = -0.035f;
-    public static float DCA_ALT_UP_AVG_THRES = 0.012f;
-    public static float DCA_ALT_DOWN_AVG_THRES = -0.012f;
 
     // 2. Cầu dao chống bão (Circuit Breaker)
     public static float CIRCUIT_DANGER_RATIO = 0.7f;    // 70% lệnh rủi ro
 
     // 3. Cấu hình DCA Nhồi lệnh (DcaUtils)
-    public static int DCA_TIME_BIG_DOWN = 8;
-    public static float DCA_LOSS_BIG_DOWN = -0.15f;
-    public static int DCA_TIME_MED_DOWN = 15;
-    public static float DCA_LOSS_MED_DOWN = -0.25f;
+//    public static int DCA_TIME_BIG_DOWN = 8;
+//    public static float DCA_LOSS_BIG_DOWN = -0.15f;
+//    public static int DCA_TIME_BIG_Up = 15;
+//    public static float DCA_LOSS_BIG_UP = -0.25f;
 
 
+
+    public static final int CIRCUIT_LOOKBACK_MINUTES =4 ;
     // =========================================================
     // 9. KẾT NỐI DỮ LIỆU (STORAGE & AEROSPIKE)
     // =========================================================

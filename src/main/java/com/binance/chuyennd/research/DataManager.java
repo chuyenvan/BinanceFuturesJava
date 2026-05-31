@@ -54,33 +54,20 @@ public class DataManager {
         return cachedAiPredictionData;
     }
 
-    // Hàm trả về Funding Pred (Dùng trong HPO và Simulator)
-    public static TreeMap<Long, long[]> getFundingPredictionData(Long startTime, int numberMinutes) {
-        if (cachedFundingPred == null) {
-            synchronized (lockFunding) {
-                if (cachedFundingPred == null) {
-                    LOG.info("📥 [RAM] Đang nạp Funding Predictions độc quyền cho dải thời gian này...");
-                    cachedFundingPred = DataManagerAerospikeFloatSim.getFundingPredictionsPrimitiveByRange(startTime, numberMinutes);
-                }
-            }
-        }
-        return cachedFundingPred;
-    }
-
-    public static TreeMap<Long, Map<String, KlineObjectSimple>> getTickers1M(Long startTime) {
-
-//        if (!cachedTickers1M.containsKey(startTime)) {
-//            synchronized (cachedTickers1M) {
-//                if (!cachedTickers1M.containsKey(startTime)) {
-//                    LOG.info("📥 [RAM] Đang nạp nến 1M ngày {}...", Utils.normalizeDateYYYYMMDD(startTime));
-        TreeMap<Long, Map<String, KlineObjectSimple>> data = DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime);
-        return data;
-//                    if (data != null) cachedTickers1M.put(startTime, data);
+//    // Hàm trả về Funding Pred (Dùng trong HPO và Simulator)
+//    public static TreeMap<Long, long[]> getFundingPredictionData(Long startTime, int numberMinutes) {
+//        if (cachedFundingPred == null) {
+//            synchronized (lockFunding) {
+//                if (cachedFundingPred == null) {
+//                    LOG.info("📥 [RAM] Đang nạp Funding Predictions độc quyền cho dải thời gian này...");
+//                    cachedFundingPred = DataManagerAerospikeFloatSim.getFundingPredictionsPrimitiveByRange(startTime, numberMinutes);
 //                }
 //            }
 //        }
-//        return cachedTickers1M.get(startTime);
-    }
+//        return cachedFundingPred;
+//    }
+
+
 
     // --- HÀM TIỆN ÍCH ĐỂ ĐỌC/GHI FILE ---
     private static <T> T readObjectFromFile(String filePath) {

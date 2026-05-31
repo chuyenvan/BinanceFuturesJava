@@ -8,7 +8,7 @@ import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.research.BudgetManagerSimple;
 import com.binance.chuyennd.research.SimulatorMarketLevelTicker1MStopLoss;
 import com.binance.chuyennd.tradecore.CoinRankManager;
-import com.binance.chuyennd.utils.Configs;
+import com.binance.chuyennd.tradecore.Configs;
 import com.binance.chuyennd.utils.Utils;
 
 import java.util.TreeMap;
@@ -20,7 +20,7 @@ public class BackTestEngineMarketThresholds {
     // Khởi tạo Engine với 6 tham số thị trường
     public BackTestEngineMarketThresholds(float dSmall, float dMed, float dBig, float uSmall, float uMed, float uBig) {
         // 1. Ép 6 tham số vào Configs hệ thống (Biến Static)
-        Configs.MS_DOWN_MED_AVG = dMed;
+        Configs.MS_DOWN_SMALL_AVG_OR_15M = dMed;
         Configs.MS_DOWN_BIG_AVG = dBig;
 
         Configs.MS_UP_SMALL_THRES = uSmall;

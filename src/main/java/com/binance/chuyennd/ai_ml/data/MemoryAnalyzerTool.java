@@ -1,6 +1,6 @@
 package com.binance.chuyennd.ai_ml.data;
 
-import com.binance.chuyennd.utils.Configs;
+import com.binance.chuyennd.tradecore.Configs;
 import com.binance.chuyennd.utils.Utils;
 
 import java.lang.management.ManagementFactory;

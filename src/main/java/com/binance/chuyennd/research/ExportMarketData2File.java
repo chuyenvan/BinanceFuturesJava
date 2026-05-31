@@ -9,7 +9,7 @@ import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.MarketLevelChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.tradecore.MarketBigChangeDetector;
-import com.binance.chuyennd.utils.Configs;
+import com.binance.chuyennd.tradecore.Configs;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
 import org.slf4j.Logger;

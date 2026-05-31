@@ -1,7 +1,6 @@
 package com.binance.chuyennd.ai_ml.features.export.fundingv2;
 
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
-import com.binance.chuyennd.ai_ml.features.export.HistoryManager;
 import com.binance.chuyennd.ai_ml.features.export.funding.FundingMarketFeatures;
 import com.binance.chuyennd.ai_ml.onnx.funding.FundingOnnxInferenceManager;
 import com.binance.chuyennd.object.MarketDataObject;
@@ -9,7 +8,7 @@ import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
 import com.binance.chuyennd.tradecore.CoinRankManager;
 import com.binance.chuyennd.trading.OrderTargetStatus;
-import com.binance.chuyennd.utils.Configs;
+import com.binance.chuyennd.tradecore.Configs;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.model.enums.OrderSide;
 import org.slf4j.Logger;

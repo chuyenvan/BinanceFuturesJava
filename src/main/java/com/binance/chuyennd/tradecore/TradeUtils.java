@@ -1,7 +1,6 @@
 package com.binance.chuyennd.tradecore;
 
 import com.binance.chuyennd.object.MarketLevelChange;
-import com.binance.chuyennd.utils.Configs;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,28 +18,29 @@ public class TradeUtils {
 //        System.out.println(TradeUtils.calRateMinWithMaxChange60MForTradingStop(0d, null));
     }
 
-    public static Float calRateLossDynamicBuy(Float unProfit, Float maxChange90M) {
-        Float rateLoss = unProfit * 200;
-        Long tradingStopRate;
-        Long maxRateTradingStop = 16l;
-        if (maxChange90M < 0.004) {
-            maxRateTradingStop = 6l;
-        }
-        if (rateLoss < maxRateTradingStop * 2) {
-            tradingStopRate = rateLoss.longValue() / 2;
-        } else {
-            tradingStopRate = maxRateTradingStop;
-        }
-        rateLoss = rateLoss.longValue() - tradingStopRate.floatValue();
-        return rateLoss / 200;
+
+    public static float calRateLossDynamicBuy(float maxProfitRate, Float predReturn15M) {
+        // Khoảng trailing tối đa: siết chặt khi momentum dự đoán yếu
+        float maxGap = (predReturn15M != null && predReturn15M < Configs.TS_WEAK_MOMENTUM_THRES)
+                ? Configs.TS_MAX_GAP_WEAK    // 0.03f  (= 6 đơn vị cũ)
+                : Configs.TS_MAX_GAP;        // 0.08f  (= 16 đơn vị cũ)
+
+        // Nhả lại tối đa nửa lợi nhuận, nhưng không vượt maxGap
+        float gap = Math.min(maxProfitRate * 0.5f, maxGap);
+
+        // Lãi còn lại sau khi trừ gap chính là mức stop mới
+        float rate = maxProfitRate - gap;
+        float step = 0.005f;
+        rate = Math.round(rate / step) * step;
+        return rate;
     }
 
-    public static Float calRateMinWithMaxChange60MForTradingStop(Float maxChange90M) {
+    public static Float calRateMinWithPredReturn15MForTradingStop(Float predReturn15M) {
         Float rateMin2MoveSl = Configs.RATE_PROFIT_STOP_MARKET;
 
         // 🔥 LOGIC MỚI: Dùng hệ số nhân K tuyến tính theo biên độ nến
-        if (maxChange90M != null && maxChange90M > 0) {
-            float dynamicRate = maxChange90M * Configs.TS_DYNAMIC_K;
+        if (predReturn15M != null && predReturn15M > 0) {
+            float dynamicRate = predReturn15M * Configs.TS_DYNAMIC_K;
             if (dynamicRate > rateMin2MoveSl) {
                 rateMin2MoveSl = dynamicRate;
             }
@@ -80,9 +80,9 @@ public class TradeUtils {
         // (Bạn cũng có thể tham số hóa các giá trị chia 2, 3, 4 này
         //  nhưng chúng ta sẽ làm 6 tham số trên trước)
         switch (levelChange) {
-            case MEDIUM_DOWN:
-                budget /= 2;
-                break;
+//            case MEDIUM_DOWN:
+//                budget /= 2;
+//                break;
 
             case DCA_LEVEL1:
             case PREDICT_SYMBOL_TRADE:
