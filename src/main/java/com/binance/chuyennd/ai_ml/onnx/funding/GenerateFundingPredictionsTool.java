@@ -1,8 +1,8 @@
 package com.binance.chuyennd.ai_ml.onnx.funding;
 
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
+import com.binance.chuyennd.ai_ml.features.export.funding.FundingDataCollectionManager;
 import com.binance.chuyennd.ai_ml.features.export.funding.FundingMarketFeatures;
-import com.binance.chuyennd.ai_ml.features.export.fundingv2.FundingFeatureExtractorV2;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
@@ -57,7 +57,7 @@ public class GenerateFundingPredictionsTool {
         final ConcurrentHashMap<String, Short> symbolMap = new ConcurrentHashMap<>(globalMapper);
 
         try (FundingOnnxInferenceManager aiBrain = new FundingOnnxInferenceManager(modelPath)) {
-            FundingFeatureExtractorV2 extractor = new FundingFeatureExtractorV2();
+            FundingDataCollectionManager.FundingFeatureExtractorV2 extractor = new FundingDataCollectionManager.FundingFeatureExtractorV2();
 
             // --- BƯỚC 1: WARMUP 24H ---
             // (Cần thiết để các chỉ số RSI/MA có khởi đầu chính xác)
@@ -80,7 +80,7 @@ public class GenerateFundingPredictionsTool {
                              FundingOnnxInferenceManager aiBrain,
                              ConcurrentHashMap<String, Short> symbolMap,
                              boolean isWarmup,
-                             FundingFeatureExtractorV2 extractor
+                             FundingDataCollectionManager.FundingFeatureExtractorV2 extractor
     ) {
         long currentTime = start;
 

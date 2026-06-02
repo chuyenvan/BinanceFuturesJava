@@ -26,6 +26,10 @@ public class Configs {
     public static volatile Map<String, String> properties = new HashMap<>();
 
     static {
+        // 🕐 Lớp 0: ép timezone mặc định JVM = GMT+7 TRƯỚC mọi xử lý ngày-giờ.
+        // Mọi SimpleDateFormat trần (key Aerospike yyyyMMdd-HHmm) nhờ đó hành xử y hệt trên mọi OS,
+        // chống lệch 7h giữa VPS (Oracle UTC vs cá nhân/live GMT+7) gây hỏng data.
+        TimeZoneGuard.enforceGmt7();
         try {
             File file = new File(Configs.configFile);
             List<String> lines = FileUtils.readLines(file, "UTF-8");
@@ -39,6 +43,8 @@ public class Configs {
             e.printStackTrace();
             System.exit(0);
         }
+        // 🕐 Lớp 2: fail-fast nếu tz vẫn sai (vd JVM bị override) — chặn chạy tiếp với data lệch giờ.
+        TimeZoneGuard.assertGmt7();
     }
 
     // =========================================================
@@ -56,6 +62,19 @@ public class Configs {
     public static Integer NUMBER_ENTRY_EACH_SIGNAL = 2; // Số lệnh vào mỗi khi có tín hiệu
     public static Integer NUMBER_TICKER_CAL_RATE_CHANGE = 15; // Số nến để tính biến động
     public static final Integer NUMBER_THREAD_ORDER_MANAGER = Configs.getInt("NUMBER_THREAD_ORDER_MANAGER");
+    // === BƯỚC 0: SLIPPAGE & LOOK-AHEAD GUARD ===
+    // Trượt giá mô phỏng cho mỗi chân khớp (entry + exit). 0.0005–0.001 là vùng hợp lý
+    // cho coin thanh khoản tốt; coin nhỏ nên cao hơn. Áp cho cả entry và exit.
+    public static float SLIPPAGE_RATE = 0.003f;
+
+    // Công tắc bịt look-ahead nội-nến. MẶC ĐỊNH true (luôn bật khi backtest thật).
+    // Đặt false CHỈ để đo "trước/sau khi bịt" — nếu PnL false >> true thì phần chênh
+    // chính là ảo giác look-ahead, không phải lãi thật.
+    public static boolean BLOCK_INTRABAR_LOOKAHEAD = true;
+
+    // Bật/tắt mô phỏng slippage (để đo tác động riêng của nó).
+    public static boolean APPLY_SLIPPAGE = true;
+
 
     public static float TS_MAX_GAP = 0.08f; // gap trailing tối đa (cũ: 16/200)
     public static float TS_MAX_GAP_WEAK = 0.03f; // gap khi momentum yếu (cũ: 6/200)

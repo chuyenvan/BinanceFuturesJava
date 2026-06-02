@@ -2,6 +2,7 @@ package com.binance.chuyennd.ai_ml.features.export.entry;
 
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.ai_ml.features.export.HistoryManager;
+import com.binance.chuyennd.ai_ml.features.export.MarketDataInlineGenerator;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.utils.Utils;
@@ -12,6 +13,9 @@ import java.util.*;
 
 public class RunFullDataCollection {
     private static final Logger LOG = LoggerFactory.getLogger(RunFullDataCollection.class);
+
+    // Gen MarketDataObject inline + validate (bỏ phụ thuộc set Aerospike precomputed).
+    private final MarketDataInlineGenerator marketGen = new MarketDataInlineGenerator();
 
     public static void main(String[] args) {
         try {
@@ -25,9 +29,7 @@ public class RunFullDataCollection {
         EnhancedTrainingDataCollectionManager dataManager =
                 new EnhancedTrainingDataCollectionManager("storage/training_data_big_sequential");
 
-        LOG.info("🚀 LOADING MARKET RATES...");
-        TreeMap<Long, MarketDataObject> time2Rate = DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
-
+        // MarketDataObject được gen inline qua marketGen (không còn load từ Aerospike).
         long currentTime = Utils.sdfFile.parse("20210101").getTime();
         long endTime = System.currentTimeMillis();
 
@@ -49,13 +51,14 @@ public class RunFullDataCollection {
                 lookupData.putAll(tomorrowData);
 
                 if (!todayData.isEmpty()) {
-                    processDailyData(todayData, lookupData, time2Rate, dataManager);
+                    processDailyData(todayData, lookupData, dataManager);
                 }
 
                 processedDays++;
                 if (processedDays % 5 == 0) {
                     dataManager.exportCollectedData();
-                    LOG.info("✅ Processed {} days. Cumulative Samples: {}", processedDays, dataManager.getCollectedCount());
+                    LOG.info("✅ Processed {} days. Cumulative Samples: {}. {}",
+                            processedDays, dataManager.getCollectedCount(), marketGen.report());
                 }
 
             } catch (Exception e) {
@@ -70,22 +73,27 @@ public class RunFullDataCollection {
 
     private void processDailyData(TreeMap<Long, Map<String, KlineObjectSimple>> todayData,
                                   TreeMap<Long, Map<String, KlineObjectSimple>> lookupData,
-                                  TreeMap<Long, MarketDataObject> rateData,
                                   EnhancedTrainingDataCollectionManager dataManager) {
 
         for (Map.Entry<Long, Map<String, KlineObjectSimple>> entry : todayData.entrySet()) {
             Long timestamp = entry.getKey();
             Map<String, KlineObjectSimple> currentMarketSnapshot = entry.getValue();
-//
-//            List<String> targetBasket = new ArrayList<>(currentMarketSnapshot.keySet());
+
+            // Nuôi ring history MỖI phút (liên tục) trước mọi gate — để indicator/return/volatility
+            // (đếm theo số nến) có cửa sổ đúng. Bỏ bước này = ring thưa = feature sai.
+            dataManager.updateHistory(currentMarketSnapshot);
+
+            // Gen + validate MarketDataObject inline. PHẢI gọi mỗi phút (nuôi buffer trượt).
+            // null => phút này không đáng tin (cửa sổ lạnh/gap/degenerate) => bỏ, không tính nhãn.
+            MarketDataObject rate = marketGen.update(currentMarketSnapshot);
+            if (rate == null) continue;
+
             List<String> targetBasket = HistoryManager.getInstance().findPotentialLosers(timestamp);
 
             // Chỉ tính toán 3 nhãn cần thiết
             float ret15M = calculateBasketMaxPotential(lookupData, timestamp, 15, targetBasket);
             float ret24H = calculateBasketMaxPotential(lookupData, timestamp, 1440, targetBasket);
             float maxDD4H = calculateBasketMaxDrawdown(lookupData, timestamp, 240, targetBasket);
-
-            MarketDataObject rate = (rateData != null) ? rateData.get(timestamp) : null;
 
             // Đưa vào dataManager (Đảm bảo bên trong Manager này gán đúng 3 trường vào MarketFeatures)
             dataManager.processMarketData(timestamp, currentMarketSnapshot, rate,

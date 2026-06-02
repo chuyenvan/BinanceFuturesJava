@@ -126,30 +126,31 @@ public class OrderTargetInfoTest implements Serializable {
         return quantity * priceEntry / leverage;
     }
 
-    public void updateStatusNew(Float predReturn15M , KlineObjectSimple ticker) {
+    public void updateStatusNew(Float predReturn15M, KlineObjectSimple ticker) {
         if (priceSL == null) {
             Float rateLoss = calRateLossMax(ticker.maxPrice);
-            Float rateMin2MoveSl = TradeUtils.calRateMinWithPredReturn15MForTradingStop(predReturn15M );
+            Float rateMin2MoveSl = TradeUtils.calRateMinWithPredReturn15MForTradingStop(predReturn15M);
             if (rateLoss > rateMin2MoveSl) {
-                Float rateStop = TradeUtils.calRateLossDynamicBuy(rateLoss, predReturn15M );
+                Float rateStop = TradeUtils.calRateLossDynamicBuy(rateLoss, predReturn15M);
                 Float priceSLNew = Utils.calPriceTarget(symbol, priceEntry, OrderSide.SELL, -rateStop);
                 minPrice = lastPrice;
                 this.priceSL = priceSLNew;
-//                if (ticker.priceClose <= priceSLNew) {
-//                    LOG.info("SL over last price: {} {} {} {} {} {} {} {}", symbol,
-//                            priceEntry, ticker.maxPrice, Utils.formatPercent(maxChange60M),
-//                            rateMin2MoveSl, priceSLNew, ticker.priceClose);
-//                }
+
+                if (Configs.BLOCK_INTRABAR_LOOKAHEAD) {
+                    // BỊT: chỉ vừa đặt SL trong nến này. Không khớp ngay.
+                    // Nến SAU nếu minPrice <= priceSL sẽ khớp qua nhánh else bên dưới.
+                    // (Nếu giá đã nằm dưới SL ngay lúc đặt thì để nến kế xử lý — bảo thủ.)
+                    return;
+                }
+
+                // HÀNH VI CŨ (look-ahead) — chỉ chạy khi tắt guard để đo đối chứng.
                 if (lastPrice <= priceSLNew) {
-//                    LOG.info("Close now lastPrice under pSL: {} {} {} {} {} {} {} {}", symbol,
-//                            Utils.sdfGoogle.format(new Date(timeStart)),
-//                            priceEntry, ticker.maxPrice, Utils.formatPercent(maxChange60M),
-//                            rateMin2MoveSl, priceSLNew, ticker.priceClose);
                     status = OrderTargetStatus.TAKE_PROFIT_DONE;
                     priceTP = priceSL;
                 }
             }
         } else {
+            // Nhánh này KHÔNG look-ahead: SL đã tồn tại từ nến trước, nến này chạm đáy thì khớp.
             if (minPrice <= priceSL) {
                 if (priceSL > priceEntry) {
                     status = OrderTargetStatus.STOP_MARKET_DONE;
@@ -194,6 +195,13 @@ public class OrderTargetInfoTest implements Serializable {
             tp = orderInfo.quantity * (orderInfo.priceEntry - orderInfo.priceTP)
                     - orderInfo.quantity * orderInfo.priceEntry * Configs.RATE_FEE;
         }
+
+        // 🔥 SLIPPAGE 2 chân
+        if (Configs.APPLY_SLIPPAGE) {
+            float slip = orderInfo.quantity * orderInfo.priceEntry * Configs.SLIPPAGE_RATE * 2f;
+            tp = tp - slip;
+        }
+
         tp = tp - calFundingFee();
         return tp;
     }

@@ -1,6 +1,7 @@
 package com.binance.chuyennd.ai_ml.features.export.funding;
 
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
+import com.binance.chuyennd.ai_ml.features.export.MarketDataInlineGenerator;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
@@ -20,6 +21,9 @@ public class RunFundingDataCollection {
     // Cache data để lookup tương lai
     private final Map<Long, TreeMap<Long, Map<String, KlineObjectSimple>>> dataCache = new HashMap<>();
 
+    // Gen MarketDataObject inline + validate (bỏ phụ thuộc set Aerospike precomputed).
+    private final MarketDataInlineGenerator marketGen = new MarketDataInlineGenerator();
+
 
     public static void main(String[] args) throws Exception {
         // 1. CẤU HÌNH THAM SỐ (Override Configs theo yêu cầu)
@@ -34,10 +38,7 @@ public class RunFundingDataCollection {
         // Folder lưu data
         FundingDataCollectionManager manager = new FundingDataCollectionManager("storage/training_data_funding");
 
-        LOG.info("🚀 Loading Market Rates...");
-        TreeMap<Long, MarketDataObject> time2Rate =  DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
-        LOG.info("🚀 Loading Market Rates Done: {}", time2Rate.size());
-
+        // MarketDataObject được gen inline qua marketGen (không còn load từ Aerospike).
         long startTime = Utils.sdfFile.parse("20210101").getTime();
         long warmUpTime = startTime - Utils.TIME_DAY;
         long endTime = System.currentTimeMillis();
@@ -78,15 +79,15 @@ public class RunFundingDataCollection {
 
                 // 4. Xử lý dữ liệu
                 if (dataDay0 != null) {
-                    processDay(dataDay0, lookupData, time2Rate, manager, currentTime >= startTime);
+                    processDay(dataDay0, lookupData, manager, currentTime >= startTime);
                 }
 
                 // 5. Export
                 if (currentTime >= startTime) {
                     manager.exportData();
-                    LOG.info("✅ Funding Day {} done. Count: {} Labels: {}",
+                    LOG.info("✅ Funding Day {} done. Count: {} Labels: {} | {}",
                             Utils.normalizeDateYYYYMMDD(currentTime),
-                            manager.getCollectedCount(), manager.getLabelReport());
+                            manager.getCollectedCount(), manager.getLabelReport(), marketGen.report());
                 }
 
             } catch (Exception e) {
@@ -99,7 +100,6 @@ public class RunFundingDataCollection {
 
     private void processDay(TreeMap<Long, Map<String, KlineObjectSimple>> dayData,
                             TreeMap<Long, Map<String, KlineObjectSimple>> lookupData,
-                            TreeMap<Long, MarketDataObject> time2Rate,
                             FundingDataCollectionManager manager,
                             boolean isCollecting) {
 
@@ -110,7 +110,8 @@ public class RunFundingDataCollection {
             // Cập nhật lịch sử feature extractor (luôn chạy để đảm bảo tính liên tục của indicator)
             manager.updateHistory(snapshot);
 
-            MarketDataObject marketData = time2Rate.get(timestamp);
+            // Gen + validate MarketDataObject inline. PHẢI gọi mỗi phút (kể cả warm-up) để nuôi buffer trượt.
+            MarketDataObject marketData = marketGen.update(snapshot);
             if (marketData == null) continue;
 
             // --- LOGIC GIỐNG SIMULATOR ---

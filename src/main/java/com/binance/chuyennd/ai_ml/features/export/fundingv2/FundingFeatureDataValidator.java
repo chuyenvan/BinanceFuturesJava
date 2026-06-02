@@ -2,6 +2,7 @@ package com.binance.chuyennd.ai_ml.features.export.fundingv2;
 
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.ai_ml.features.export.HistoryManager;
+import com.binance.chuyennd.ai_ml.features.export.funding.FundingDataCollectionManager;
 import com.binance.chuyennd.ai_ml.features.export.funding.FundingMarketFeatures;
 import com.binance.chuyennd.ai_ml.onnx.funding.FundingOnnxInferenceManager;
 import com.binance.chuyennd.object.MarketDataObject;
@@ -100,7 +101,7 @@ public class FundingFeatureDataValidator {
         HistoryManager.getInstance().resetCache();
 
         try (FundingOnnxInferenceManager aiBrain = new FundingOnnxInferenceManager(MODEL_PATH)) {
-            FundingFeatureExtractorV2 extractor = new FundingFeatureExtractorV2();
+            FundingDataCollectionManager.FundingFeatureExtractorV2 extractor = new FundingDataCollectionManager.FundingFeatureExtractorV2();
             long currentReadTs = globalWarmupTs;
 
             int taskIndex = 0;

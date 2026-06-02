@@ -18,8 +18,8 @@ package com.binance.chuyennd.trading;
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.ai_ml.features.export.entry.ComprehensiveMarketFeatureExtractor;
 import com.binance.chuyennd.ai_ml.features.export.entry.MarketFeatures;
+import com.binance.chuyennd.ai_ml.features.export.funding.FundingDataCollectionManager;
 import com.binance.chuyennd.ai_ml.features.export.funding.FundingMarketFeatures;
-import com.binance.chuyennd.ai_ml.features.export.fundingv2.FundingFeatureExtractorV2;
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.ai_ml.onnx.entry.AIRejectFilter;
 import com.binance.chuyennd.ai_ml.onnx.entry.OnnxInferenceManager;
@@ -69,7 +69,7 @@ public class DetectEntrySignal2TradeNormal {
 
     // --- Biến AI Funding (MỚI) ---
     private FundingOnnxInferenceManager fundingBrain;
-    private FundingFeatureExtractorV2 fundingExtractor;
+    private FundingDataCollectionManager.FundingFeatureExtractorV2 fundingExtractor;
 
 
     public static void main(String[] args) throws InterruptedException, ParseException {
@@ -562,7 +562,7 @@ public class DetectEntrySignal2TradeNormal {
             if (new File(MODEL_FUNDING_PATH).exists()) {
                 LOG.info("🚀 Initializing Funding AI from: {}", MODEL_FUNDING_PATH);
                 this.fundingBrain = new FundingOnnxInferenceManager(MODEL_FUNDING_PATH);
-                this.fundingExtractor = new FundingFeatureExtractorV2();
+                this.fundingExtractor = new FundingDataCollectionManager.FundingFeatureExtractorV2();
 
                 // Đồng bộ history cho Funding Extractor luôn
                 initDataFromTickerMap(time2Tickers);

@@ -35,7 +35,10 @@ public class RunHpoMaster_Distributed {
     // hưởng tới kết quả backtest: RATE_FEE, logic trailing (calRateLossDynamicBuy),
     // budget divider, MAX_CONCURRENT_ORDERS, circuit breaker, hay thêm/bớt gene...
     // =========================================================
-    public static final String CONFIG_VERSION = "v4";
+    // v4 -> v5: Bước 0 thêm slippage 2 chân (SLIPPAGE_RATE/APPLY_SLIPPAGE) và bịt
+    // look-ahead nội-nến (BLOCK_INTRABAR_LOOKAHEAD). Cả hai ảnh hưởng PnL backtest
+    // nhưng không nằm trong genome => phải đổi version để bỏ cache điểm cũ (v4).
+    public static final String CONFIG_VERSION = "v5";
 
     // 🔥 TÁCH 2 SET:
     //  - QUEUE_SET: chỉ chứa task ĐANG active (PENDING/RUNNING). Worker scanAll cái này nên LUÔN NHỎ.

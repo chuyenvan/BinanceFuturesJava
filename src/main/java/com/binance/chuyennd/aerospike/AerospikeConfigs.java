@@ -6,10 +6,16 @@ import com.binance.chuyennd.proto.MinuteDataProto;
 
 import java.text.SimpleDateFormat;
 import java.util.Map;
+import java.util.TimeZone;
 
 public class AerospikeConfigs {
     public static final SimpleDateFormat keyFormat = new SimpleDateFormat("yyyyMMdd-HHmm");
     public static final WritePolicy writePolicy = new WritePolicy();
+
+    // 🕐 Lớp 1: pin tz GMT+7 cho key formatter Aerospike — không phụ thuộc tz mặc định JVM.
+    static {
+        keyFormat.setTimeZone(TimeZone.getTimeZone("GMT+7"));
+    }
 
     public static byte[] convertMapToProtoBytes(Map<String, KlineObjectSimple> javaMap) {
         // ... (Ham nay giu nguyen nhu cu) ...

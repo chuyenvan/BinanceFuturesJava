@@ -98,10 +98,10 @@ public class DataMigrator {
     }
 
     private static void processChunk(List<Long> timestamps) {
-        // --- FIX TIMEZONE: Bắt buộc dùng UTC (hoặc theo Config cũ của bạn) ---
+        // --- FIX TIMEZONE: chuẩn hệ thống là GMT+7 (key Aerospike mã hoá giờ tường GMT+7) ---
         SimpleDateFormat localKeyFormat = new SimpleDateFormat("yyyyMMdd-HHmm");
-        // QUAN TRỌNG: Phải set TimeZone giống hệt AerospikeConfigs gốc
-        localKeyFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+        // QUAN TRỌNG: Phải set TimeZone giống hệt AerospikeConfigs gốc (đã pin GMT+7).
+        localKeyFormat.setTimeZone(TimeZone.getTimeZone("GMT+7"));
         // --------------------------------------------------------------------
         // ------------------------------------------------------------
 

@@ -17,10 +17,8 @@ public class BackTestEngineMaster {
 
     private AIRejectFilter aiRejectFilter;
 
-    // Không cần nhận tham số nữa, AIRejectFilter sẽ đọc trực tiếp từ Configs
     public BackTestEngineMaster() {
         this.aiRejectFilter = new AIRejectFilter();
-        // Không gọi setConfig nữa vì AIRejectFilter tự gọi Configs.xxx
     }
 
     public HPOFitnessCalculatorV3.FitnessReport run(TreeMap<Long, MarketDataObject> time2MarketData,
@@ -28,6 +26,9 @@ public class BackTestEngineMaster {
                                                     TreeMap<Long, long[]> time2FundingPre,
                                                     long offlineEndTime) {
         try {
+            // 🔒 Guard liêm chính được thực thi tập trung trong
+            // SimulatorMarketLevelTicker1MStopLoss.simulatorWithInitEntry() — nút chặn duy nhất
+            // mà MỌI backtest đều đi qua, nên không cần gọi lại ở đây.
             Long startTime = Utils.sdfFile.parse(Configs.TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
             BudgetManagerSimple.resetInstance();
             HistoryManager.getInstance().resetCache();

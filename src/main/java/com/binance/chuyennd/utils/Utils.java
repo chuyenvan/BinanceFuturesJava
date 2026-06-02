@@ -42,6 +42,16 @@ public class Utils {
     public static final SimpleDateFormat sdfFileFull = new SimpleDateFormat("yyyyMMdd HH:mm:ss");
     public static final SimpleDateFormat sdfGoogle = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
+    // 🕐 Lớp 1: pin tz GMT+7 cho các formatter dùng chung — không phụ thuộc tz mặc định JVM.
+    static {
+        TimeZone tzSystem = TimeZone.getTimeZone("GMT+7");
+        sdfFile.setTimeZone(tzSystem);
+        sdfMonth.setTimeZone(tzSystem);
+        sdfFileHour.setTimeZone(tzSystem);
+        sdfFileFull.setTimeZone(tzSystem);
+        sdfGoogle.setTimeZone(tzSystem);
+    }
+
     public static final DecimalFormat df = new DecimalFormat("#.##");
     public static final DecimalFormat dfNew = new DecimalFormat("#");
 

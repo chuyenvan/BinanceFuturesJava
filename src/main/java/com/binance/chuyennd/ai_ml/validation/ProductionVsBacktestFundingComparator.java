@@ -2,8 +2,8 @@ package com.binance.chuyennd.ai_ml.validation;
 
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.ai_ml.features.export.HistoryManager;
+import com.binance.chuyennd.ai_ml.features.export.funding.FundingDataCollectionManager;
 import com.binance.chuyennd.ai_ml.features.export.funding.FundingMarketFeatures;
-import com.binance.chuyennd.ai_ml.features.export.fundingv2.FundingFeatureExtractorV2;
 import com.binance.chuyennd.ai_ml.onnx.funding.FundingOnnxInferenceManager;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
@@ -49,7 +49,7 @@ public class ProductionVsBacktestFundingComparator {
 
         // 🧠 KHỞI TẠO BỘ NÃO AI FUNDING VÀ EXTRACTOR
         FundingOnnxInferenceManager aiBrain = null;
-        FundingFeatureExtractorV2 btExtractor = new FundingFeatureExtractorV2();
+        FundingDataCollectionManager.FundingFeatureExtractorV2 btExtractor = new FundingDataCollectionManager.FundingFeatureExtractorV2();
         try {
             aiBrain = new FundingOnnxInferenceManager(MODEL_PATH);
             LOG.info("✅ Load AI Funding Model thành công!");

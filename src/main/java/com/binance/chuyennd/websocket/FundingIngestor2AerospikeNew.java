@@ -23,6 +23,10 @@ public class FundingIngestor2AerospikeNew {
     // Buffer RAM: Symbol -> (Mốc thời gian kỳ funding -> Tỷ lệ Funding Float)
     private final ConcurrentHashMap<String, Map<Long, Float>> fundingBuffer = new ConcurrentHashMap<>();
 
+    // nextFundingTime kỳ trước của mỗi symbol — để PHÁT HIỆN settlement.
+    // (Interval funding Binance KHÔNG cố định: 1h/4h/8h... đổi theo mã & thời điểm → không suy mốc bằng phép trừ.)
+    private final ConcurrentHashMap<String, Long> lastSeenNextFundingTime = new ConcurrentHashMap<>();
+
     public static void main(String[] args) {
         new FundingIngestor2AerospikeNew().start();
     }
@@ -60,8 +64,16 @@ public class FundingIngestor2AerospikeNew {
                                 float fundingRate = data.getFloat("lastFundingRate");
                                 long nextFundingTime = data.getLong("nextFundingTime");
 
-                                fundingBuffer.computeIfAbsent(symbol, k -> new HashMap<>())
-                                        .put(nextFundingTime, fundingRate);
+                                // PHÁT HIỆN SETTLEMENT (interval-agnostic): khi nextFundingTime nhảy sang mốc mới,
+                                // kỳ vừa settle CHÍNH LÀ nextFundingTime CŨ, và lastFundingRate hiện tại là rate
+                                // đã chốt tại mốc đó. Lưu [oldNextFundingTime]=lastFundingRate → khớp ĐÚNG
+                                // fundingTime thực của HistoricalFundingCrawler, đúng với MỌI interval (1h/4h/8h).
+                                Long prevNext = lastSeenNextFundingTime.get(symbol);
+                                if (prevNext != null && nextFundingTime > prevNext) {
+                                    fundingBuffer.computeIfAbsent(symbol, k -> new HashMap<>())
+                                            .put(prevNext, fundingRate);
+                                }
+                                lastSeenNextFundingTime.put(symbol, nextFundingTime);
                             }
                         }
                     } else if (StringUtils.isNotBlank(response) && response.trim().startsWith("{")) {

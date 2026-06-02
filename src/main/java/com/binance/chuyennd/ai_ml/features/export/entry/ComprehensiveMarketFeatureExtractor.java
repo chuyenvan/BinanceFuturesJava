@@ -126,9 +126,8 @@ public class ComprehensiveMarketFeatureExtractor {
         features.volumeSpike = (avgVol > 0) ? currentVol / avgVol : 1.0f;
 
         Float ma20 = historyManager.getMa(symbol, 20);
-        List<KlineObjectSimple> h = historyManager.getHistory(symbol);
-        if (h != null && !h.isEmpty() && ma20 != null && ma20 > 0) {
-            float close = h.get(h.size() - 1).priceClose;
+        Float close = historyManager.getLatestClose(symbol); // FIX: ring thay getHistory() (đã disable)
+        if (close != null && ma20 != null && ma20 > 0) {
             features.distMA20 = (close - ma20) / ma20;
         } else {
             features.distMA20 = 0.0f;
@@ -203,33 +202,13 @@ public class ComprehensiveMarketFeatureExtractor {
     // --- HELPER METHODS SỬ DỤNG HISTORY LIST TỪ MANAGER ---
 
     private float calculateReturn(String symbol, int minutes) {
-        List<KlineObjectSimple> h = historyManager.getHistory(symbol);
-        if (h == null || h.isEmpty()) return 0.0f;
-
-        KlineObjectSimple current = h.get(h.size() - 1);
-        long pastTime = current.startTime.longValue() - (minutes * 60000L);
-
-        Float pastPrice = historyManager.getPriceAt(symbol, pastTime);
-        if (pastPrice != null && pastPrice > 0) {
-            return (current.priceClose - pastPrice) / pastPrice;
-        }
-        return 0.0f;
+        // FIX: dùng ring O(1) thay getHistory() (đã disable trả rỗng → trước đây LUÔN ra 0).
+        return historyManager.getReturn(symbol, minutes);
     }
 
     private float calculateVolatility(String symbol, int periods) {
-        List<KlineObjectSimple> h = historyManager.getHistory(symbol);
-        if (h == null || h.size() < 5) return 0.0f;
-
-        int start = Math.max(0, h.size() - periods);
-        float sum = 0, sumSq = 0;
-        int count = 0;
-        for (int i = start; i < h.size() - 1; i++) {
-            float r = (h.get(i + 1).priceClose - h.get(i).priceClose) / h.get(i).priceClose;
-            sum += r;
-            sumSq += r * r;
-            count++;
-        }
-        return (count < 2) ? 0.0f : (float) Math.sqrt(Math.max(0, (sumSq - (sum * sum) / count) / (count - 1)));
+        // FIX: dùng ring O(1) thay getHistory() (đã disable trả rỗng → trước đây LUÔN ra 0).
+        return historyManager.getVolatility(symbol, periods);
     }
 
     private void extractBasketFundingFeatures(MarketFeatures features, List<String> basket, long currentTime) {

@@ -3,6 +3,10 @@ package com.binance.chuyennd.ai_ml.features.export.funding;
 import java.io.Serializable;
 
 public class FundingMarketFeatures implements Serializable {
+    // --- TRỤC THỜI GIAN (KHÔNG phải feature train; chỉ để split theo thời gian + purge gap) ---
+    public long timestamp;
+    public String symbol;
+
     // --- GROUP 1: MARKET CONTEXT ---
     public float btcMomentum1H;
     public float btcMomentum4H;

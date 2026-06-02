@@ -3,7 +3,7 @@ package com.binance.chuyennd.ai_ml.onnx.funding;
 import ai.onnxruntime.OrtEnvironment;
 import ai.onnxruntime.OrtSession;
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
-import com.binance.chuyennd.ai_ml.features.export.fundingv2.FundingFeatureExtractorV2;
+import com.binance.chuyennd.ai_ml.features.export.funding.FundingDataCollectionManager;
 import com.binance.chuyennd.ai_ml.features.export.funding.FundingMarketFeatures;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
@@ -68,7 +68,7 @@ public class GenerateFundingPredictionsFromFileTool {
 
         try (FundingOnnxInferenceManager aiBrain = new FundingOnnxInferenceManager(modelPath)) {
             // SỬ DỤNG BẢN V2 SIÊU TỐC
-            FundingFeatureExtractorV2 extractor = new FundingFeatureExtractorV2();
+            FundingDataCollectionManager.FundingFeatureExtractorV2 extractor = new FundingDataCollectionManager.FundingFeatureExtractorV2();
 
             for (int year = 2026; year <= 2026; year++) {
                 for (int q = 1; q <= 4; q++) {

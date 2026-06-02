@@ -2,7 +2,7 @@ package com.binance.chuyennd.aerospike.validate_data.predictsymbol;
 
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.ai_ml.data.SimpleSymbolMapper;
-import com.binance.chuyennd.ai_ml.features.export.fundingv2.FundingFeatureExtractorV2;
+import com.binance.chuyennd.ai_ml.features.export.funding.FundingDataCollectionManager;
 import com.binance.chuyennd.ai_ml.features.export.funding.FundingMarketFeatures;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
@@ -49,7 +49,7 @@ public class CheckLabel6Predictions {
         }
 
         // 4. Initialize the Extractor to generate features (which might contain the logic for the actual label)
-        FundingFeatureExtractorV2 extractor = new FundingFeatureExtractorV2();
+        FundingDataCollectionManager.FundingFeatureExtractorV2 extractor = new FundingDataCollectionManager.FundingFeatureExtractorV2();
         for (Map<String, KlineObjectSimple> snapshot : time2Tickers.values()) {
             extractor.updateMarketHistory(snapshot);
         }

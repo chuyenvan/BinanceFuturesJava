@@ -222,8 +222,24 @@ public class DataManagerAerospikeFloatSim {
         try {
             Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_FUNDINGFEE, symbol);
 
-            // 1. Lấy dữ liệu cũ
+            // 1. Lấy dữ liệu cũ (getFundingMap xử lý cả f_data Snappy lẫn f_map legacy)
             Map<Long, Float> existingMap = getFundingMap(symbol);
+
+            // 🛡️ GUARD CHỐNG MẤT LỊCH SỬ: nếu record TỒN TẠI & có f_data nhưng đọc ra RỖNG
+            // => nghi lỗi đọc tạm thời (Aerospike timeout / parse hỏng). TUYỆT ĐỐI không ghi đè,
+            // vì merge-với-rỗng + ghi đè = xoá sạch lịch sử (chính là lỗi đã từng làm mất data).
+            try {
+                Record raw = getClient242().get(null, key);
+                boolean hasBlob = raw != null && raw.getValue("f_data") != null
+                        && ((byte[]) raw.getValue("f_data")).length > 0;
+                if (hasBlob && existingMap.isEmpty()) {
+                    LOG.error("❌ ABORT writeFundingMap {} — record có f_data nhưng đọc ra RỖNG (nghi lỗi đọc). "
+                            + "Không ghi đè để tránh mất lịch sử funding.", symbol);
+                    return;
+                }
+            } catch (Exception ignore) {
+                // Không kiểm tra được thì theo luồng cũ (vẫn append bên dưới).
+            }
 
             // 2. Gộp dữ liệu (Dùng TreeMap để luôn sắp xếp theo thời gian)
             TreeMap<Long, Float> finalMap = new TreeMap<>();
@@ -259,7 +275,12 @@ public class DataManagerAerospikeFloatSim {
                 if (compressedData != null) {
                     // Giải nén Snappy
                     String json = new String(Snappy.uncompress(compressedData), "UTF-8");
-                    Map<String, Float> rawMap = Utils.gson.fromJson(json, Map.class);
+                    // FIX: phải dùng TypeToken như getAllFundingMap. Nếu để Map.class raw, Gson parse value
+                    // thành Double → forEach ép sang Float ném ClassCastException → rơi vào catch → trả RỖNG.
+                    // Hệ quả cũ: lazy-load trong getNearestFundingFee rỗng (→0), và writeFundingMap merge
+                    // thấy existing rỗng → chạy lại crawler theo từng đợt sẽ GHI ĐÈ mất lịch sử cũ.
+                    java.lang.reflect.Type mapType = new com.google.gson.reflect.TypeToken<Map<String, Float>>() {}.getType();
+                    Map<String, Float> rawMap = Utils.gson.fromJson(json, mapType);
 
                     // Convert Key từ String (JSON) về Long
                     rawMap.forEach((k, v) -> results.put(Long.parseLong(k), v));
@@ -1927,7 +1948,11 @@ public class DataManagerAerospikeFloatSim {
     }
 
     // Dùng ThreadLocal để format ngày tháng an toàn trong môi trường đa luồng của ScanAll
-    private static final ThreadLocal<SimpleDateFormat> tlKeyFormat = ThreadLocal.withInitial(() -> new SimpleDateFormat("yyyyMMdd-HHmm"));
+    private static final ThreadLocal<SimpleDateFormat> tlKeyFormat = ThreadLocal.withInitial(() -> {
+        SimpleDateFormat f = new SimpleDateFormat("yyyyMMdd-HHmm");
+        f.setTimeZone(java.util.TimeZone.getTimeZone("GMT+7")); // 🕐 Lớp 1: pin GMT+7
+        return f;
+    });
 
     /**
      * 🔥 TỐI ƯU RAM/SPEED: Dùng ScanAll để load 5 năm dữ liệu thay vì Batch Get

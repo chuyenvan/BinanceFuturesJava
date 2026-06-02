@@ -286,6 +286,56 @@ public class HistoryManager {
         return validCount == 0 ? 0.0f : totalRange / validCount;
     }
 
+    // % thay đổi giá giữa nến mới nhất và nến cách đây `minutes` phút (thay cho getHistory()+getPriceAt cũ).
+    public float getReturn(String symbol, int minutes)
+    { return getReturn(SimpleSymbolMapper.getInstance().getId(symbol), minutes); }
+
+    public float getReturn(short symbolId, int minutes) {
+        if (symbolId < 0 || symbolId >= MAX_COINS) return 0.0f;
+        int count = Math.min(historyHead[symbolId], RING_SIZE);
+        if (count == 0) return 0.0f;
+        KlineObjectSimple current = historyRing[symbolId][(historyHead[symbolId] - 1) & RING_MASK];
+        if (current == null || current.priceClose <= 0) return 0.0f;
+        long pastTime = current.startTime.longValue() - (minutes * 60000L);
+        Float pastPrice = getPriceAt(symbolId, pastTime);
+        if (pastPrice != null && pastPrice > 0) return (current.priceClose - pastPrice) / pastPrice;
+        return 0.0f;
+    }
+
+    // Độ lệch chuẩn return giữa các nến trong `periods` nến gần nhất (thay cho calculateVolatility cũ).
+    public float getVolatility(String symbol, int periods) { return getVolatility(SimpleSymbolMapper.getInstance().getId(symbol), periods); }
+
+    public float getVolatility(short symbolId, int periods) {
+        if (symbolId < 0 || symbolId >= MAX_COINS) return 0.0f;
+        int count = Math.min(historyHead[symbolId], RING_SIZE);
+        if (count < 5) return 0.0f;
+        int n = Math.min(count, periods);
+        int head = historyHead[symbolId] - 1;
+        float sum = 0, sumSq = 0;
+        int c = 0;
+        for (int i = n - 1; i > 0; i--) {
+            KlineObjectSimple older = historyRing[symbolId][(head - i) & RING_MASK];
+            KlineObjectSimple newer = historyRing[symbolId][(head - i + 1) & RING_MASK];
+            if (older == null || newer == null || older.priceClose <= 0) continue;
+            float r = (newer.priceClose - older.priceClose) / older.priceClose;
+            sum += r;
+            sumSq += r * r;
+            c++;
+        }
+        return (c < 2) ? 0.0f : (float) Math.sqrt(Math.max(0, (sumSq - (sum * sum) / c) / (c - 1)));
+    }
+
+    // Giá đóng cửa nến mới nhất trong ring (null nếu chưa có dữ liệu).
+    public Float getLatestClose(String symbol) { return getLatestClose(SimpleSymbolMapper.getInstance().getId(symbol)); }
+
+    public Float getLatestClose(short symbolId) {
+        if (symbolId < 0 || symbolId >= MAX_COINS) return null;
+        int count = Math.min(historyHead[symbolId], RING_SIZE);
+        if (count == 0) return null;
+        KlineObjectSimple k = historyRing[symbolId][(historyHead[symbolId] - 1) & RING_MASK];
+        return (k == null) ? null : k.priceClose;
+    }
+
     // ========================================================
     // 4. BỘ TÌM KIẾM TIỀM NĂNG (Duyệt Array thay vì EntrySet)
     // ========================================================
@@ -342,12 +392,4 @@ public class HistoryManager {
         symbolsLastUpdateShort.clear();
         lastCleanTime = -1L;
     }
-
-    // Tạm thời Disable hàm trả về List thuần để ép hệ thống dùng Indicator O(1)
-    // Bác có thể tự tạo lại bằng ArrayList nếu chỗ nào khác thực sự cần
-    public List<KlineObjectSimple> getHistory(String symbol) {
-        LOG.warn("getHistory() bị gọi! Cảnh báo tụt hiệu năng.");
-        return new ArrayList<>();
-    }
-    public List<KlineObjectSimple> getHistory(short symbolId) { return new ArrayList<>(); }
 }

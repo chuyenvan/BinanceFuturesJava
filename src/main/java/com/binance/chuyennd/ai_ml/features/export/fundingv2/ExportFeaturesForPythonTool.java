@@ -1,6 +1,7 @@
 package com.binance.chuyennd.ai_ml.features.export.fundingv2;
 
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
+import com.binance.chuyennd.ai_ml.features.export.funding.FundingDataCollectionManager;
 import com.binance.chuyennd.ai_ml.features.export.funding.FundingMarketFeatures;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
@@ -50,7 +51,7 @@ public class ExportFeaturesForPythonTool {
 
         SimpleDateFormat sdfFull = new SimpleDateFormat("yyyyMMdd HH:mm");
         SimpleDateFormat sdfFile = new SimpleDateFormat("yyyyMMdd");
-        FundingFeatureExtractorV2 extractor = new FundingFeatureExtractorV2();
+        FundingDataCollectionManager.FundingFeatureExtractorV2 extractor = new FundingDataCollectionManager.FundingFeatureExtractorV2();
 
         // 1. CÀI ĐẶT CÁC MỐC THỜI GIAN THEO YÊU CẦU
         long targetStartTs = sdfFull.parse("20210101 07:00").getTime();

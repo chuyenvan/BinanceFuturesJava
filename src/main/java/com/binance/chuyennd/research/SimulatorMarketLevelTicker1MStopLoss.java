@@ -6,6 +6,7 @@ import ai.onnxruntime.OrtException;
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.ai_ml.data.SimpleSymbolMapper;
 import com.binance.chuyennd.ai_ml.features.export.HistoryManager;
+import com.binance.chuyennd.ai_ml.hpo.BacktestIntegrityGuard;
 import com.binance.chuyennd.ai_ml.hpo.kaggle.KaggleDataLoader;
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.ai_ml.onnx.entry.AIRejectFilter;
@@ -63,6 +64,11 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     }
 
     public void simulatorWithInitEntry(Long startTime, Long endTime) throws ParseException {
+        // 🔒 NÚT CHẶN LIÊM CHÍNH DUY NHẤT: mọi backtest (HPO master, WFO, 7 engine khác,
+        // hay chạy main() trực tiếp) đều đi qua hàm này. Đặt guard ở đây nên KHÔNG engine
+        // nào bypass được — không cần ai nhớ gọi assert ở từng engine.
+        BacktestIntegrityGuard.assertProductionGrade();
+
         long timeSimulator = System.currentTimeMillis();
         LOG.info("=== 🚀 BẮT ĐẦU SIMULATE TỪ {} ĐẾN {} ===", Utils.normalizeDateYYYYMMDDHHmm(startTime), Utils.normalizeDateYYYYMMDDHHmm(endTime));
 
@@ -352,10 +358,10 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     }
 
     private void logByProcessTime(Long startTimeRun, String msg, Long time) {
-        long duration = (System.currentTimeMillis() - startTimeRun);
-        if (duration > 20) {
-            LOG.info("{} {} {}", Utils.normalizeDateYYYYMMDDHHmm(time), msg, duration);
-        }
+        // Log per-tick (>20ms) đã TẮT: gọi 5 lần/tick × hàng triệu tick + GC spike trong HPO = spam nặng.
+        // Cần profiling thì mở lại dòng dưới (hoặc nâng ngưỡng lên vài giây để chỉ bắt tick treo thật).
+        // long duration = (System.currentTimeMillis() - startTimeRun);
+        // if (duration > 5000) LOG.info("{} {} {}", Utils.normalizeDateYYYYMMDDHHmm(time), msg, duration);
     }
 
     public void updateSymbolDeListed(short symbolId, Long time) {

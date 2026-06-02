@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 public class FundingOnnxInferenceManager implements AutoCloseable {
-    private static final Logger LOG = LoggerFactory.getLogger(EntryDcaOnnxInferenceManager.class);
+    private static final Logger LOG = LoggerFactory.getLogger(FundingOnnxInferenceManager.class);
     private final OrtEnvironment env;
     private OrtSession session;
 

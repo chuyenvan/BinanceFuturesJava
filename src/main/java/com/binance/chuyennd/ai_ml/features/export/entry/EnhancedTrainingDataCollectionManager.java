@@ -18,17 +18,34 @@ public class EnhancedTrainingDataCollectionManager {
     private final ComprehensiveMarketFeatureExtractor featureExtractor;
     private final List<MarketFeatures> collectedFeatures;
     private final String outputPath;
+    private final String outputFile; // 1 file DUY NHẤT (append) để tiện đẩy Kaggle
     private int triggeredCollections = 0;
 
     public EnhancedTrainingDataCollectionManager(String outputPath) {
         this.featureExtractor = new ComprehensiveMarketFeatureExtractor();
         this.collectedFeatures = Collections.synchronizedList(new ArrayList<>());
         this.outputPath = outputPath;
+        this.outputFile = outputPath + "/features_all.csv";
         new File(outputPath).mkdirs();
+
+        // Tạo MỚI file (truncate) + ghi header 1 lần. Mỗi lần chạy lại export là làm sạch file.
+        try (PrintWriter writer = new PrintWriter(new FileWriter(outputFile, false))) {
+            writer.println(new MarketFeatures().toCSVHeader());
+        } catch (Exception e) {
+            LOG.error("Init output file failed", e);
+        }
     }
 
     public void clearBuffer() {
         collectedFeatures.clear();
+    }
+
+    /**
+     * Nuôi ring history (LIÊN TỤC, mỗi phút) — phải gọi cho MỌI phút, KỂ CẢ phút không thu thập,
+     * để RSI/MA/return/volatility (đếm theo SỐ NẾN) có cửa sổ đúng. Không gọi = ring thưa = indicator sai.
+     */
+    public void updateHistory(Map<String, KlineObjectSimple> snapshot) {
+        featureExtractor.updateMarketHistory(snapshot);
     }
 
     /**
@@ -79,15 +96,13 @@ public class EnhancedTrainingDataCollectionManager {
     public void exportCollectedData() {
         if (collectedFeatures.isEmpty()) return;
         try {
-            String filename = outputPath + "/features_" + System.currentTimeMillis() + ".csv";
-            try (PrintWriter writer = new PrintWriter(new FileWriter(filename))) {
-                // Header và Row lúc này chỉ chứa 3 cột label cuối cùng
-                writer.println(collectedFeatures.get(0).toCSVHeader());
+            // APPEND vào 1 file duy nhất (header đã ghi ở constructor).
+            try (PrintWriter writer = new PrintWriter(new FileWriter(outputFile, true))) {
                 for (MarketFeatures f : collectedFeatures) {
                     writer.println(f.toCSVRow());
                 }
             }
-            LOG.info("✅ Exported {} samples.", collectedFeatures.size());
+            LOG.info("✅ Appended {} samples -> {}", collectedFeatures.size(), outputFile);
             collectedFeatures.clear();
         } catch (Exception e) {
             LOG.error("Export failed", e);

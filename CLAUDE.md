@@ -1,0 +1,105 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Ngôn ngữ
+**Luôn luôn trả lời người dùng bằng tiếng Việt.**
+
+---
+
+## ⛔ LUẬT BẤT DI BẤT DỊCH (đọc trước khi sửa bất cứ gì)
+
+Đây là các bài học đã trả giá bằng nhiều vòng phân tích. Vi phạm = sai kết quả backtest một cách âm thầm.
+
+1. **KHÔNG look-ahead nội-nến.** Trong backtest, một nến đã đóng KHÔNG được vừa dùng `maxPrice` (đỉnh) để kích hoạt/đặt SL vừa khớp lệnh theo `minPrice`/`lastPrice` trong cùng nến đó — vì không ai biết đỉnh hay đáy đến trước trong một nến. Quy tắc: **đặt SL ở nến này, chỉ cho khớp ở nến sau.** Guard `Configs.BLOCK_INTRABAR_LOOKAHEAD` mặc định `true`. Đã sửa trong `OrderTargetInfoTest.updateStatusNew` (nhánh `priceSL==null`). Nhánh `priceSL!=null` (SL có từ nến trước, khớp theo `minPrice`) là ĐÚNG, không đụng.
+
+2. **Mọi backtest "thật" phải gọi `BacktestIntegrityGuard.assertProductionGrade()`** ở đầu. Nó chặn chạy nếu look-ahead bật lại, slippage=0, hoặc fee=0. Đã cắm sẵn ở NÚT CHẶN DUY NHẤT `SimulatorMarketLevelTicker1MStopLoss.simulatorWithInitEntry()` — mọi engine (Master/AIMarket/BudgetRatio/Combined/DynamicFilter/TrailingStop/MarketThresholds/BenchmarkSpeed) đều đi qua đây nên không ai bypass được; KHÔNG cần gọi lại ở từng engine. KHÔNG bỏ lời gọi này. Chỉ nới (`assertProductionGrade(true)`) khi CỐ Ý chạy đối chứng look-ahead/slippage.
+
+3. **Mô phỏng chi phí phải luôn bật:** `RATE_FEE` (2 chân phí sàn) + `SLIPPAGE_RATE` (2 chân trượt giá, `APPLY_SLIPPAGE=true`). Tắt = lợi nhuận ảo.
+
+4. **MỘT BỘ NÃO sim/product.** Mọi quyết định vào/ra lệnh phải nằm trong hàm lõi THUẦN dùng chung cho cả backtest và live. Pattern đúng đã có: `DcaUtils.shouldDca`, `MarketBigChangeDetector.evaluateCircuitBreakerCore`. Nếu thấy `xxx` và `xxxProd`/`xxxProduction` lệch nhau về LUẬT quyết định → đó là BUG cần gom về một hàm, không phải tính năng. Hai nhánh hiện còn lệch: `createOrderBUY` (sim) vs `createOrderBuyRequest` (product) — xem ROADMAP bước 5.
+
+5. **Bump `CONFIG_VERSION` trong `RunHpoMaster_Distributed`** mỗi khi đổi BẤT KỲ thứ gì ảnh hưởng kết quả backtest mà KHÔNG nằm trong genome HPO: `RATE_FEE`, `SLIPPAGE_RATE`, logic trailing (`calRateLossDynamicBuy`), budget divider, circuit breaker, look-ahead guard, **đổi model AI**, số/loại gene. Quên bump = cache Aerospike trả điểm cũ tính bằng cấu hình cũ → toàn bộ run vô nghĩa.
+
+6. **`taskId` của HPO phải băm ĐỦ mọi gene trong genome.** Thêm gene mà quên đưa vào `buildTaskId` = các cá thể khác nhau trùng key = HPO vô nghĩa. (Đã từng dính với 4 gene DCA.)
+
+7. **KHÔNG random-split dữ liệu chuỗi thời gian.** Khi train model AI hoặc chia tập, luôn cắt theo MỐC THỜI GIAN, không `train_test_split(shuffle=True)`/`stratify`. Và scaler chỉ `fit` trên TRAIN, không `fit` trên toàn bộ rồi mới chia (leak phân phối test). Hai lỗi này đang tồn tại trong code train Python (xem CẠM BẪY).
+
+8. **Tiền/giá đang dùng `Float`** (rủi ro sai số tích lũy). Nếu refactor sang `double`/`BigDecimal` phải làm ĐỒNG BỘ cả sim lẫn product và bump `CONFIG_VERSION`.
+
+9. **KHÔNG đổi công thức `finalFitness` (`HPOFitnessCalculatorV3`) khi đang có HPO chạy dở.** `profitFactor`/`worstSingleLoss`/`payoffRatio` là guardrail báo cáo, cố ý KHÔNG nằm trong fitness.
+
+10. **Khi đụng logic quyết định, luôn nêu rõ nó tác động SIM và PRODUCT thế nào.** Sửa nhỏ, mỗi thay đổi một mục đích. Không refactor hàng loạt khi chưa hỏi user — codebase ~250 class, nhiều ràng buộc ngầm.
+
+---
+
+## ⚠️ CẠM BẪY ĐÃ BIẾT (đừng "sửa" nhầm, đừng tin nhầm)
+
+- **Tên biến nói dối:** `getMaxRateIn90MForTradingStop` / tham số `maxChange90M` thực ra trả về `predReturn15M` của AI, KHÔNG phải biến động 90M. Đang dần đổi tên cho đúng (`calRateMinWithPredReturn15MForTradingStop`). Đừng suy luận theo tên cũ.
+- **Circuit breaker gần như không kích hoạt:** `CIRCUIT_LOOKBACK_MINUTES=4` quá ngắn so với `MAX_CONCURRENT_ORDERS=40`. Biết rồi, cần bàn trước khi chỉnh.
+- **DCA pro-cyclical:** trong `BIG_DOWN`, DcaUtils bật `isAll=true` → nhồi KHÔNG trần margin đúng lúc thị trường sập mạnh nhất. Rủi ro lớn đã ghi nhận, KHÔNG sửa lặt vặt — xem ROADMAP bước 3.
+- **Sizing không biết equity:** budget tính trên `balanceBasic` cố định, không nén khi drawdown, không có margin call/cháy tài khoản trong sim.
+- **Win rate VÔ NGHĨA với chiến lược này.** Martingale luôn cho win rate ~99% giả tạo. Đo `profitFactor`, `worstSingleLoss`, `payoffRatio`, và đặc biệt chất lượng RIÊNG của leg đầu (xem `EdgeAttributionReport`) — vì một cụm thắng có thể do DCA cứu chứ không do AI vào đúng.
+- **Backtest đẹp KHÔNG chứng minh model AI tốt.** P&L đẹp có thể do: model khớp dữ liệu train, HPO che lỗi model (vặn ngưỡng né vùng model sai), hoặc martingale cõng. Phải đo model ĐỘC LẬP (IC trên holdout chưa train) trước khi tin.
+- **Worker HPO chạy tuần tự 1 task/JVM nên ghi `static Configs` an toàn.** ĐỪNG song song hóa nhiều trial trong cùng JVM mà vẫn dùng static Configs — sẽ giẫm tham số chéo.
+- **Bug perf:** `preprocessFundingData` chạy lại MỖI trial, sort lại cùng mảng đã sort (Lomuto pivot → O(n²) worst case). Nên sort 1 lần lúc load. Spike GC ~270ms/tick trong HPO là do JVM sống lâu + data tĩnh lớn, không phải logic — cấp heap + ZGC/G1 + tách worker khỏi máy master.
+
+---
+
+## SECURITY (xử lý cẩn trọng)
+`config/PrivateConfig.java` và `runAider.bat` chứa **API key/secret LIVE commit thẳng vào repo** (Binance key/secret, Gemini key). Khi đụng các file này: KHÔNG echo secret ra commit/log/chat, và nhắc user rằng các key này đã lộ trong git history, cần xoay (rotate) + chuyển sang config không track.
+
+---
+
+## Project conventions
+- New methods phải có Javadoc đầy đủ (mô tả, params, return).
+- `CONVENTIONS.md` nói Java 21 nhưng `pom.xml` đang pin **Java 11** (`<source>/<target>`, `<java.version>`). Build hiện compile theo Java 11 — xác nhận với user trước khi dùng cú pháp Java 21, và bump `pom.xml` nếu thật sự muốn Java 21.
+
+## Build & run
+Maven (no wrapper). Tên artifact trong README là legacy/upstream — đây là app private, không phải SDK published.
+```bash
+mvn install     # compile + protobuf codegen + shade fat jar
+mvn package     # build shaded jar trong target/ (không install)
+mvn -o package  # offline build (deps đã cache)
+```
+- `maven-shade-plugin` ra một fat jar (launch theo main-class).
+- `protobuf-maven-plugin` gen Java từ `src/main/proto/*.proto` lúc build bằng `protoc` tải về (cần mạng lần đầu). `os-maven-plugin` resolve platform classifier.
+
+### Tests
+**KHÔNG có unit-test suite** (`src/test` không tồn tại; `mvn test` là no-op). "Test" ở đây là các class `main()` đứng riêng dùng làm công cụ/thí nghiệm thủ công (`bigchange/test/*`, `*Validator`, `*Checker`, `*Comparator`, `Benchmark*`). Chạy bằng cách gọi `main` trực tiếp:
+```bash
+java -cp target/binance-java-sdk-1.2.4.jar com.binance.chuyennd.aerospike.validate_data.ticker.CheckGapTicker
+```
+60+ class có `main()` — phần lớn là tool vận hành/validate một lần, KHÔNG phải entry point hệ thống live.
+
+## Runtime config (đọc từ CWD, không phải classpath)
+Ba file config plaintext đọc **từ thư mục làm việc của process** lúc static-init, phải có mặt nơi chạy jar:
+- `config.properties` — `tradecore/Configs.java` load. Aerospike hosts/ports, capital, symbol lists, paths dưới `../storage/`. Thiếu file → `System.exit(0)`.
+- `redis.config` — `redis/RedisConst.java` load. Redis cluster.
+- `config/PrivateConfig.java` — Binance API key/secret + base URL, **hardcode commit trong source** (xem Security).
+
+`tradecore/Configs.java` là bề mặt tinh chỉnh trung tâm: hyper-params giao dịch (leverage, fee, budget divider, circuit breaker, dynamic trailing, AI filter, DCA threshold) là các `static` field, nhiều cái do HPO set. Đọc comment từng section trước khi đổi magic number.
+
+## Process entry points (hệ thống live)
+Hai process sống lâu, mỗi cái một `main()`:
+1. **Data ingestion** — `websocket/BinanceDataIngestor.main()`. Stream funding + ticker từ Binance websocket vào Aerospike. Có watchdog tự restart.
+2. **Trading** — `trading/BinanceOrderTradingManager.main()`. Wire `new DetectEntrySignal2TradeNormal().start()` (signal + AI inference) với order manager.
+   Process tự restart bằng re-`exec` command line qua `Utils.reset(...)`, ghi PID qua `Utils.writePid2File()` (driven bởi env `APP_PID_DIR`/`APP_MAIN_CLASS` từ `daemon.sh` ngoài repo).
+
+## Architecture (bức tranh lớn)
+Toàn bộ app code dưới `com.binance.chuyennd.*`. Package `com.binance.client.*` là Binance REST/websocket client vendored — coi như thư viện, sửa chủ yếu ở `chuyennd`.
+
+Luồng dữ liệu: **Binance → ingestors → Aerospike/Redis → feature extraction → ONNX inference → signal/trade decisions**, kèm vòng offline backtest+HPO tune chính các tham số `Configs` mà live dùng.
+
+- **Storage** — `aerospike/DataManagerAerospikeFloatSim` là kho market-data chính (binary float-packed). `utils/Storage`/`StorageProto`/`StorageSnappy` là kho file (Snappy/protobuf). `redis/` (Jedis cluster) cho order queue live + messaging. Proto schema ở `src/main/proto/`.
+- **AI/ML** (`ai_ml/`) — ONNX qua `onnxruntime` (`ai_ml/onnx/`, entry-signal + funding classifier; model ở `../storage/ai_ml*/...`). `ai_ml/features/` trích feature. `ExportFeaturesForPythonTool` + `python/` cầu nối train Python. `ai_ml/data/` cache data backtest (`HPOSmartCache`, `CompactDayData`).
+- **HPO** (`ai_ml/hpo/`) — Jenetics GA evolve tham số `Configs`. Phân tán master/worker: `hpo/master/RunHpoMaster_Distributed` đẩy population vào Aerospike queue set (`hpo_queue_<CONFIG_VERSION>`), đọc kết quả từ cache set vĩnh viễn (`hpo_results_<CONFIG_VERSION>`); `RunWorkerKaggle` tiêu thụ task. `ai_ml/wfo/` walk-forward.
+- **Trade core** (`tradecore/`) — logic giao dịch thuần dùng chung live + backtest: `MarketBigChangeDetector`, `DcaProcessor`/`DcaUtils`, `CoinRankManager`, `TradeUtils`, `Configs`.
+- **Trading** (`trading/`) — execution live: `DetectEntrySignal2TradeNormal`, `BinanceOrderTradingManager`, `BudgetManager`, `SymbolOrderLockingManager`, `trading/monitor/`.
+- **Data validation** (`aerospike/validate_data/`, `ai_ml/validation/`, `websocket/checkdata/`) — tool đứng riêng phát hiện gap, sửa data, so production-vs-backtest. Dùng khi chẩn đoán chất lượng data.
+
+## Logging
+SLF4J → Logback (`src/main/resources/logback.xml`). Logs ở `logs/` (`full.log`, `error.log`, `archived/`). `logs/`, `storage/`, `target/`, `*.data`/`*.csv`/`*.log` đều git-ignored.
+
+---
+Xem `ROADMAP.md` cho thứ tự ưu tiên công việc kiểm chứng mô hình.
