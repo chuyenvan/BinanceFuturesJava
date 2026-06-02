@@ -63,6 +63,12 @@ public class OrderHelper {
                     Thread.currentThread().interrupt();
                 }
             }
+            // 3. Lỗi -4411: chưa ký TradFi-Perps agreement -> symbol KHÔNG thể trade tới khi ký trên tài khoản.
+            else if (errorMsg != null && errorMsg.contains("-4411")) {
+                LOG.warn("CANNOT TRADE {}: cần KÝ 'TradFi-Perps agreement' trên tài khoản Binance "
+                        + "(hoặc loại symbol khỏi universe). Tạm khóa để không retry spam.", symbol);
+                SymbolOrderLockingManager.getInstance().addLockReduceOnly(symbol);
+            }
             // Các lỗi API khác
             else {
                 LOG.error("Binance API Exception when creating order for {}: {}", symbol, errorMsg);
