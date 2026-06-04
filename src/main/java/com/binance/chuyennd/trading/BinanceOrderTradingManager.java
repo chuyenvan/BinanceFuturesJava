@@ -22,8 +22,6 @@ import com.binance.chuyennd.client.BinanceFuturesClientSingleton;
 import com.binance.chuyennd.client.ClientSingleton;
 import com.binance.chuyennd.helper.OrderHelper;
 import com.binance.chuyennd.helper.PositionHelper;
-import com.binance.chuyennd.helper.TickerFuturesHelper;
-import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
@@ -68,27 +66,6 @@ public class BinanceOrderTradingManager {
         startThreadListenQueueOrder2ManagerNew();
         startThreadManagerOrder();
         startThreadAutoRestartProgram();
-    }
-
-    private void testOrder() {
-        try {
-            Thread.sleep(10000);
-            String symbol = "CYBERUSDT";
-            MarketLevelChange levelChange = MarketLevelChange.SMALL_DOWN_15M;
-            Float budget = 2f;
-            List<KlineObjectNumber> tickers = TickerFuturesHelper.getTicker(symbol, Constants.INTERVAL_1M);
-            KlineObjectNumber ticker = tickers.get(tickers.size() - 1);
-            Float quantity = Utils.calQuantity(budget, Configs.LEVERAGE_ORDER, ticker.priceClose, symbol);
-            OrderTargetInfo orderTrade = new OrderTargetInfo(OrderTargetStatus.REQUEST, ticker.priceClose,
-                    null, quantity, Configs.LEVERAGE_ORDER, symbol, ticker.startTime.longValue(),
-                    ticker.startTime.longValue(), OrderSide.BUY, Constants.TRADING_TYPE_VOLUME_MINI);
-            orderTrade.marketLevel = levelChange;
-            LOG.info("Push redis order: {} {} {} {} {}", Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()),
-                    symbol, levelChange, quantity, ticker.priceClose);
-            RedisHelper.getInstance().get().rpush(RedisConst.REDIS_KEY_BINANCE_TD_ORDER_MANAGER_QUEUE, Utils.toJson(orderTrade));
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
     }
 
 

@@ -6,7 +6,6 @@
 package com.binance.chuyennd.utils;
 
 import com.binance.chuyennd.client.ClientSingleton;
-import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.client.model.enums.OrderSide;
 import com.binance.client.model.trade.PositionRisk;
@@ -421,16 +420,6 @@ public class Utils {
         return results;
     }
 
-    public static KlineObjectNumber convertKlineSimple(KlineObjectSimple ticker) {
-        KlineObjectNumber result = new KlineObjectNumber();
-        result.priceOpen = ticker.priceOpen;
-        result.priceClose = ticker.priceClose;
-        result.minPrice = ticker.minPrice;
-        result.maxPrice = ticker.maxPrice;
-        result.startTime = ticker.startTime;
-        result.totalUsdt = ticker.totalUsdt;
-        return result;
-    }
 
 
     public static void main(String[] args) {
@@ -542,12 +531,6 @@ public class Utils {
     }
 
 
-    public static Float maxPrice(KlineObjectNumber ticker, Float maxPrice) {
-        if (maxPrice == null || maxPrice < ticker.maxPrice) {
-            maxPrice = ticker.maxPrice;
-        }
-        return maxPrice;
-    }
 
     public static Float maxPrice(KlineObjectSimple ticker, Float maxPrice) {
         if (maxPrice == null || maxPrice < ticker.maxPrice) {
@@ -556,12 +539,6 @@ public class Utils {
         return maxPrice;
     }
 
-    public static Float minPrice(KlineObjectNumber ticker, Float minPrice) {
-        if (minPrice == null || minPrice > ticker.minPrice) {
-            minPrice = ticker.minPrice;
-        }
-        return minPrice;
-    }
 
     public static void reset(String resetBySchedule) {
         try {

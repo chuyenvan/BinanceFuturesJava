@@ -64,7 +64,15 @@ public class AIRejectFilter {
     private FilterResult evaluate(float pred15M, float pred24H, float risk4H,
                                   float thres15M, float thres24H, float thresRisk) {
 
-        if (risk4H <= thresRisk) {
+        // ABLATION: bọc nhánh RISK & MOM24 theo FILTER_MODE (chỉ để đo; A=hiện trạng giữ cả 3).
+        // B,D bỏ RISK; C,D bỏ MOM24. MOM15 luôn giữ. EARLY (checkSignalDynamic) không đụng tới đây.
+        String mode = Configs.FILTER_MODE;
+        boolean checkRisk = !("B".equals(mode) || "D".equals(mode));
+        // MOM24 TẮT mặc định ở production (FILTER_USE_MOM24=false) — A=C đã chứng minh nó không kích hoạt.
+        // Vẫn cho ablation bật lại (FILTER_USE_MOM24=true) để đo "full A". Mode C/D luôn tắt MOM24.
+        boolean checkMom24 = Configs.FILTER_USE_MOM24 && !("C".equals(mode) || "D".equals(mode));
+
+        if (checkRisk && risk4H <= thresRisk) {
             return new FilterResult(FilterDecision.REJECT,
                     String.format("DANGER: MaxDD 4H %.2f%% quá cao (Limit %.2f%%)", risk4H * 100, thresRisk * 100));
         }
@@ -72,7 +80,7 @@ public class AIRejectFilter {
             return new FilterResult(FilterDecision.REJECT,
                     String.format("BAD MOMENTUM: 15M chưa nảy mạnh (%.2f%% < %.2f%%)", pred15M * 100, thres15M * 100));
         }
-        if (pred24H < thres24H) {
+        if (checkMom24 && pred24H < thres24H) {
             return new FilterResult(FilterDecision.REJECT,
                     String.format("MACRO DUMP: 24H quá xấu (%.2f%% < %.2f%%)", pred24H * 100, thres24H * 100));
         }

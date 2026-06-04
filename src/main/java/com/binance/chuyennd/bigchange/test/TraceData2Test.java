@@ -22,36 +22,10 @@ public class TraceData2Test {
     public static final Logger LOG = LoggerFactory.getLogger(TraceData2Test.class);
 
     public static void main(String[] args) throws ParseException {
-        // for debug
-//        args = new String[4];
-//        args[0] = "rate_change";
-//        args[3] = "btc";
-//        args[1] = "20210201";
-//        args[2] = "07:05";
-//        showFileAll("OrderTestDone.data-16-0.04");
-//showGrid();
-//        writeData2Diff("20241106", "14:42");
-
-        // end debug
-//        if (args.length > 2) {
-//        traceDataByHand(args);
 
         traceLog("Update");
         showFileAll("OrderTestDone.data");
 
-//        showFileAll("OrderTestDone.data");
-//        } else {
-
-//        String symbol = "TIAUSDT";
-//        traceRateChangeCloseListOnExchange(symbol);
-//        testTrendDetector(symbol);
-//            Long time = Utils.sdfFileHour.parse(Configs.getString("TIME_CHECK")).getTime();
-//        traceDataRateChange(time);
-//            traceDataStatistic(time);
-//        printRateChange1MofBTC();
-//        List<Long> timeBtcCutUp = extractBtcUpReverse();
-//        diffFileCsv();
-//        }
     }
 
 
@@ -288,18 +262,6 @@ public class TraceData2Test {
 
     }
 
-
-    private static Float calRateProfit(List<OrderTargetInfoTest> orders) {
-        Float rate = 0f;
-        Float total = 0f;
-        for (OrderTargetInfoTest order : orders) {
-            total += order.calRateTp();
-        }
-        if (!orders.isEmpty()) {
-            return total / orders.size();
-        }
-        return rate;
-    }
 
     private static void showFileAll(String fileName) {
         fileName = "../simulator/storage/" + fileName;

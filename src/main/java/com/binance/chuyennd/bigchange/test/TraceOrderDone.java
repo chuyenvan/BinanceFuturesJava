@@ -1,34 +1,24 @@
 package com.binance.chuyennd.bigchange.test;
 
-import com.binance.chuyennd.object.KlineObjectNumber;
 import com.binance.chuyennd.object.MarketDataObject;
-import com.binance.chuyennd.object.MarketLevelChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
 import com.binance.chuyennd.trading.OrderTargetInfo;
-import com.binance.chuyennd.trading.OrderTargetStatus;
-import com.binance.chuyennd.utils.Storage;
 import com.binance.chuyennd.utils.StorageSnappy;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.model.enums.OrderSide;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class TraceOrderDone {
     public static final Logger LOG = LoggerFactory.getLogger(TraceOrderDone.class);
 
     public static String FILE_STORAGE_ORDER_DONE = "target/OrderTestDone.data";
-    //    public static String FILE_STORAGE_ORDER_DONE = "target/FundingStatisticResearch.data-5";
-//    public static String FILE_STORAGE_ORDER_DONE = "target/OrderSELLDone.data";
-//    public static String FILE_STORAGE_ORDER_DONE = "target/SellTicker1MStatisticResearch.data-5";
-//    public static String FILE_STORAGE_ORDER_GRID_DONE = "storage/GridTestDone.data";
 
 
     public static void main(String[] args) throws IOException {
@@ -41,16 +31,6 @@ public class TraceOrderDone {
             fileOut = "target/market_level_statistic.csv";
             FILE_STORAGE_ORDER_DONE = "target/OrderStatisticDone.data";
         }
-//        TreeMap<Long, OrderTargetInfoTest> time2Order =
-//                (TreeMap<Long, OrderTargetInfoTest>) Storage.readObjectFromFile(FILE_STORAGE_ORDER_DONE);
-//        printOrderTestDone(fileName, time2Order);
-//        printOrderTestStatistic(fileName);
-//        printOrderRunning("target/202502");
-//        printOrderRunningAll("storage/data/unProfitMin/all-202102");
-
-//        traceOrderGrid();
-//        traceOrderGridAlt();
-//        testGridSide();
         printOrderProduct();
     }
 
@@ -108,14 +88,6 @@ public class TraceOrderDone {
         return builder;
     }
 
-//    private static void testGridSide() {
-//        ConcurrentHashMap<Long, GridObjectTestResearch> allGridDone = (ConcurrentHashMap<Long, GridObjectTestResearch>) Storage.readObjectFromFile(FILE_STORAGE_ORDER_GRID_DONE);
-//        for (GridObjectTestResearch grid: allGridDone.values()){
-//            gridLocal = GridDetector.findRange2RunTest()
-//        }
-//
-//    }
-
     public static void printOrderTestDone(String fileName, TreeMap<Long, OrderTargetInfoTest> time2Order) throws
             IOException {
 
@@ -124,35 +96,14 @@ public class TraceOrderDone {
         List<String> lines = new ArrayList<>();
         lines.add("sym,side,entry,tp,profit,status,start,time_start_format,end,level,maxmin15m,lastentry,volume,quantity,margin," +
                 "pnl,time_order,funding,dow,up,dow15m,pred15m,pred24h,risk4h,symbolPred");
-//                "pnl,time_order,funding,dow,up,dow15m,return15M,return1H,return4H,return24H,predRisk4H, predRisk24H");
-//        List<KlineObjectNumber> tickers = (List<KlineObjectNumber>) Storage.readObjectFromFile(DataManager.FOLDER_TICKER_15M + Constants.SYMBOL_PAIR_BTC);
-        Map<Long, KlineObjectNumber> time2Ticker = new HashMap<>();
-        Map<Long, Integer> time2Index = new HashMap<>();
-//        for (int i = 0; i < tickers.size(); i++) {
-//            KlineObjectNumber ticker = tickers.get(i);
-//            time2Ticker.put(ticker.startTime.longValue(), ticker);
-//            time2Index.put(ticker.startTime.longValue(), i);
-//        }
+
         Map<String, Float> symbol2Profit = new HashMap<>();
         List<Float> pnls = new ArrayList<>();
         List<Float> pnlNotMays = new ArrayList<>();
         List<Float> pnlNot2021 = new ArrayList<>();
         List<Float> pnl2024 = new ArrayList<>();
         Map<Float, String> pnl2Info = new HashMap<>();
-//        Float rateTrend = 0.01;
-//        Integer duration = 360;
-//        String fileNameBtcReverse = "../storage/btc/btcReverse-" + rateTrend + "-" + duration;
-//
-//        TreeMap<Long, Float> timeBtcReverse = null;
-//
-//        if (new File(fileNameBtcReverse).exists()) {
-//            timeBtcReverse = (TreeMap<Long, Float>) Storage.readObjectFromFile(fileNameBtcReverse);
-//        }
         for (OrderTargetInfoTest order : time2Order.values()) {
-//            if (!order.time2FundingFee.isEmpty()) {
-//                LOG.info("{} {} {} {} {}", order.symbol, Utils.normalizeDateYYYYMMDDHHmm(order.timeStart), Utils.normalizeDateYYYYMMDDHHmm(order.timeUpdate),
-//                        order.calFundingFee(), Utils.toJson(order.time2FundingFee));
-//            }
             pnls.add(order.calTp());
             pnl2Info.put(order.calTp(), order.symbol + "-" + Utils.normalizeDateYYYYMMDDHHmm(order.timeStart));
             if (!org.apache.commons.lang.StringUtils.equals(Utils.sdfFile.format(new Date(order.timeStart)), "20210519")) {
@@ -164,11 +115,6 @@ public class TraceOrderDone {
             if (org.apache.commons.lang.StringUtils.startsWith(Utils.sdfFile.format(new Date(order.timeStart)), "2024")) {
                 pnl2024.add(order.calTp());
             }
-            long date = Utils.getDate(order.timeStart);
-            KlineObjectNumber ticker = time2Ticker.get(order.timeStart);
-//            if (StringUtils.equals(order.symbol, "GALAUSDT")) {
-//                System.out.println("Debug");
-//            }
             Float profitOfSymbol = symbol2Profit.get(order.symbol);
             if (profitOfSymbol == null) {
                 profitOfSymbol = 0f;
@@ -225,267 +171,6 @@ public class TraceOrderDone {
             Float values = entry.getValue();
             profit2Symbol.put(values, key);
         }
-//        for (Map.Entry<Float, String> entry : profit2Symbol.entrySet()) {
-//            String key = entry.getValue();
-//            Float values = entry.getKey();
-//            LOG.info("{} {}", values, key);
-//        }
-
-//        LOG.info("\n PnlMin: {} {} \n PnlMinNot20210519:{} {} \n PnlMinNot2021: {} {} \n pnlMin2024: {} {}",
-//                Utils.findMinSubarraySum(pnls.toArray(new Float[0])), pnl2Info.get(Utils.findMinSubarraySumIndex(pnls.toArray(new Float[0]))),
-//                Utils.findMinSubarraySum(pnlNotMays.toArray(new Float[0])), pnl2Info.get(Utils.findMinSubarraySumIndex(pnlNotMays.toArray(new Float[0]))),
-//                Utils.findMinSubarraySum(pnlNot2021.toArray(new Float[0])), pnl2Info.get(Utils.findMinSubarraySumIndex(pnlNot2021.toArray(new Float[0]))),
-//                Utils.findMinSubarraySum(pnl2024.toArray(new Float[0])), pnl2Info.get(Utils.findMinSubarraySumIndex(pnl2024.toArray(new Float[0]))));
         FileUtils.writeLines(new File(fileName), lines);
     }
-
-    public static void printOrderRunningNew(TreeMap<Long, OrderTargetInfoTest> time2Order) throws IOException {
-        List<String> lines = new ArrayList<>();
-        lines.add("sym,side,entry,tp,min,rate,max,rate,profit,status,start,time, end,level,rate60m,rate ticker,volume,quantity,margin,pnl,time,funding,dow,up,dow15m,up15m,btcrate,btcdown15m,btcup15m");
-        Map<Long, KlineObjectNumber> time2Ticker = new HashMap<>();
-        Map<Long, Integer> time2Index = new HashMap<>();
-        Map<String, Float> symbol2Profit = new HashMap<>();
-        List<Float> pnls = new ArrayList<>();
-        List<Float> pnlNotMays = new ArrayList<>();
-        List<Float> pnlNot2021 = new ArrayList<>();
-        List<Float> pnl2024 = new ArrayList<>();
-        Map<Float, String> pnl2Info = new HashMap<>();
-//        Float rateTrend = 0.01;
-//        Integer duration = 360;
-//        String fileNameBtcReverse = "../storage/btc/btcReverse-" + rateTrend + "-" + duration;
-//
-//        TreeMap<Long, Float> timeBtcReverse = null;
-//
-//        if (new File(fileNameBtcReverse).exists()) {
-//            timeBtcReverse = (TreeMap<Long, Float>) Storage.readObjectFromFile(fileNameBtcReverse);
-//        }
-        for (OrderTargetInfoTest order : time2Order.values()) {
-//            if (!order.time2FundingFee.isEmpty()) {
-//                LOG.info("{} {} {} {} {}", order.symbol, Utils.normalizeDateYYYYMMDDHHmm(order.timeStart), Utils.normalizeDateYYYYMMDDHHmm(order.timeUpdate),
-//                        order.calFundingFee(), Utils.toJson(order.time2FundingFee));
-//            }
-            pnls.add(order.calTp());
-            pnl2Info.put(order.calTp(), order.symbol + "-" + Utils.normalizeDateYYYYMMDDHHmm(order.timeStart));
-            if (!org.apache.commons.lang.StringUtils.equals(Utils.sdfFile.format(new Date(order.timeStart)), "20210519")) {
-                pnlNotMays.add(order.calTp());
-            }
-            if (!org.apache.commons.lang.StringUtils.startsWith(Utils.sdfFile.format(new Date(order.timeStart)), "2021")) {
-                pnlNot2021.add(order.calTp());
-            }
-            if (org.apache.commons.lang.StringUtils.startsWith(Utils.sdfFile.format(new Date(order.timeStart)), "2024")) {
-                pnl2024.add(order.calTp());
-            }
-            long date = Utils.getDate(order.timeStart);
-            KlineObjectNumber ticker = time2Ticker.get(order.timeStart);
-//            if (StringUtils.equals(order.symbol, "GALAUSDT")) {
-//                System.out.println("Debug");
-//            }
-            Float profitOfSymbol = symbol2Profit.get(order.symbol);
-            if (profitOfSymbol == null) {
-                profitOfSymbol = 0f;
-            }
-            Float profit = Utils.rateOf2Double(order.priceTP, order.priceEntry);
-            if (order.side.equals(OrderSide.SELL)) {
-                profit = -Utils.rateOf2Double(order.priceTP, order.priceEntry);
-            }
-            profitOfSymbol += profit;
-            symbol2Profit.put(order.symbol, profitOfSymbol);
-            StringBuilder builder = new StringBuilder();
-            builder.append(order.symbol.replace("USDT", "")).append(",");
-            builder.append(order.side).append(",");
-            builder.append(order.priceEntry).append(",");
-            builder.append(order.priceTP).append(",");
-            builder.append(order.minPrice).append(",");
-            builder.append(Utils.rateOf2Double(order.minPrice, order.priceEntry)).append(",");
-            builder.append(profit * 100).append(",");
-            builder.append(order.status.toString()).append(",");
-            builder.append(Utils.normalizeDateYYYYMMDDHHmm(order.timeStart)).append(",'");
-            builder.append(Utils.sdfGoogle.format(new Date(order.timeStart))).append(",");
-//            if (order.timeJoin == null){
-//                order.timeJoin = order.timeStart;
-//            }
-//            builder.append(Utils.normalizeDateYYYYMMDDHHmm(order.timeJoin)).append(",'");
-            builder.append(Utils.normalizeDateYYYYMMDDHHmm(order.timeUpdate)).append(",");
-            builder.append(order.marketLevelChange).append(",");
-            builder.append(order.rateChange).append(",");
-            builder.append(order.lastEntry).append(",");
-//            builder.append(Utils.rateOf2Double(order.tickerOpen.priceClose, order.tickerOpen.priceOpen)).append(",");
-            builder.append(order.tickerOpen.totalUsdt).append(",");
-            builder.append(order.quantity).append(",");
-            builder.append(order.calMargin()).append(",");
-            builder.append(order.calTp()).append(",");
-            builder.append((order.timeUpdate - order.timeStart) / Utils.TIME_HOUR).append(",");
-            if (order.marketData != null) {
-                builder.append(order.marketData.rateDownAvg).append(",");
-                builder.append(order.marketData.rateUpAvg).append(",");
-                builder.append(order.marketData.rateDown15MAvg).append(",");
-            }
-//            builder.append(timeBtcReverse.get(order.timeStart)).append(",");
-            lines.add(builder.toString());
-        }
-        TreeMap<Float, String> profit2Symbol = new TreeMap<>();
-        for (Map.Entry<String, Float> entry : symbol2Profit.entrySet()) {
-            String key = entry.getKey();
-            Float values = entry.getValue();
-            profit2Symbol.put(values, key);
-        }
-//        for (Map.Entry<Float, String> entry : profit2Symbol.entrySet()) {
-//            String key = entry.getValue();
-//            Float values = entry.getKey();
-//            LOG.info("{} {}", values, key);
-//        }
-
-//        LOG.info("\n PnlMin: {} {} \n PnlMinNot20210519:{} {} \n PnlMinNot2021: {} {} \n pnlMin2024: {} {}",
-//                Utils.findMinSubarraySum(pnls.toArray(new Float[0])), pnl2Info.get(Utils.findMinSubarraySumIndex(pnls.toArray(new Float[0]))),
-//                Utils.findMinSubarraySum(pnlNotMays.toArray(new Float[0])), pnl2Info.get(Utils.findMinSubarraySumIndex(pnlNotMays.toArray(new Float[0]))),
-//                Utils.findMinSubarraySum(pnlNot2021.toArray(new Float[0])), pnl2Info.get(Utils.findMinSubarraySumIndex(pnlNot2021.toArray(new Float[0]))),
-//                Utils.findMinSubarraySum(pnl2024.toArray(new Float[0])), pnl2Info.get(Utils.findMinSubarraySumIndex(pnl2024.toArray(new Float[0]))));
-//        FileUtils.writeLines(new File("storage/" + SellTicker1MStatisticResearch.class.getSimpleName() + ".csv"), lines);
-    }
-
-    public static void printOrderRunning(String fileInput) throws IOException {
-        ConcurrentHashMap<String, List<OrderTargetInfoTest>> allOrderDone =
-                (ConcurrentHashMap<String, List<OrderTargetInfoTest>>) Storage.readObjectFromFile(fileInput);
-
-        TreeMap<Long, OrderTargetInfoTest> time2Order = new TreeMap<>();
-        List<String> lines = new ArrayList<>();
-        lines.add("sym,side,entry,tp,tp rate,status,start,time, end,level,rate ticker,quantity,margin,mreal, pnl,time");
-        int counter = 0;
-        for (List<OrderTargetInfoTest> orders : allOrderDone.values()) {
-            for (OrderTargetInfoTest order : orders) {
-                order.priceTP = order.minPrice;
-
-                Float profit = Utils.rateOf2Double(order.priceTP, order.priceEntry);
-                if (order.side.equals(OrderSide.SELL)) {
-                    profit = -Utils.rateOf2Double(order.priceTP, order.priceEntry);
-                }
-                StringBuilder builder = new StringBuilder();
-                builder.append(order.symbol.replace("USDT", "")).append(",");
-                builder.append(order.side).append(",");
-                builder.append(order.priceEntry).append(",");
-                builder.append(order.priceTP).append(",");
-//                builder.append(order.minPrice).append(",");
-//                builder.append(Utils.rateOf2Double(order.minPrice, order.priceEntry)).append(",");
-//                builder.append(order.maxPrice).append(",");
-//                builder.append(Utils.rateOf2Double(order.maxPrice, order.priceEntry)).append(",");
-                builder.append(profit * 100).append(",");
-                builder.append(order.status.toString()).append(",");
-                builder.append(Utils.normalizeDateYYYYMMDDHHmm(order.timeStart)).append(",'");
-                builder.append(Utils.sdfGoogle.format(new Date(order.timeStart))).append(",");
-                builder.append(Utils.normalizeDateYYYYMMDDHHmm(order.timeUpdate)).append(",");
-                builder.append(order.marketLevelChange).append(",");
-                builder.append(Utils.rateOf2Double(order.tickerOpen.priceClose, order.tickerOpen.priceOpen)).append(",");
-                builder.append(order.quantity).append(",");
-
-                builder.append(order.calMargin() - order.calTp()).append(",");
-                builder.append(order.calMargin()).append(",");
-                builder.append(order.calTp()).append(",");
-                builder.append((order.timeUpdate - order.timeStart) / Utils.TIME_MINUTE).append(",");
-                if (order.marketData != null) {
-                    builder.append(order.marketData.rateDownAvg).append(",");
-                    builder.append(order.marketData.rateUpAvg).append(",");
-                    builder.append(order.marketData.rateDown15MAvg).append(",");
-                }
-                lines.add(builder.toString());
-            }
-        }
-
-        FileUtils.writeLines(new File("target/order_running.csv"), lines);
-    }
-
-    public static void printOrderRunningAll(String fileInput) throws IOException {
-        ConcurrentHashMap<String, OrderTargetInfoTest> allOrderDone =
-                (ConcurrentHashMap<String, OrderTargetInfoTest>) Storage.readObjectFromFile(fileInput);
-
-        TreeMap<Long, OrderTargetInfoTest> time2Order = new TreeMap<>();
-        List<String> lines = new ArrayList<>();
-        lines.add("sym,entry,tp,min,rate,max,rate,profit,status,start,time, end,level,rate ticker,volume,quantity,margin,pnl,time,leverage");
-        int counter = 0;
-        for (OrderTargetInfoTest order : allOrderDone.values()) {
-            order.priceTP = order.minPrice;
-            Float profit = Utils.rateOf2Double(order.priceTP, order.priceEntry);
-            if (order.side.equals(OrderSide.SELL)) {
-                profit = -Utils.rateOf2Double(order.priceTP, order.priceEntry);
-            }
-            StringBuilder builder = new StringBuilder();
-            builder.append(order.symbol.replace("USDT", "")).append(",");
-            builder.append(order.priceEntry).append(",");
-            builder.append(order.priceTP).append(",");
-            builder.append(order.minPrice).append(",");
-            builder.append(Utils.rateOf2Double(order.minPrice, order.priceEntry)).append(",");
-            builder.append(profit * 100).append(",");
-            builder.append(order.status.toString()).append(",");
-            builder.append(Utils.normalizeDateYYYYMMDDHHmm(order.timeStart)).append(",'");
-            builder.append(Utils.sdfGoogle.format(new Date(order.timeStart))).append(",");
-            builder.append(Utils.normalizeDateYYYYMMDDHHmm(order.timeUpdate)).append(",");
-            builder.append(order.marketLevelChange).append(",");
-            builder.append(Utils.rateOf2Double(order.tickerOpen.priceClose, order.tickerOpen.priceOpen)).append(",");
-            builder.append(order.tickerOpen.totalUsdt).append(",");
-            builder.append(order.quantity).append(",");
-            builder.append(order.calMargin()).append(",");
-            builder.append(order.calTp()).append(",");
-            builder.append((order.timeUpdate - order.timeStart) / Utils.TIME_MINUTE).append(",");
-            builder.append(order.leverage).append(",");
-            if (order.marketData != null) {
-                builder.append(order.marketData.rateDownAvg).append(",");
-                builder.append(order.marketData.rateUpAvg).append(",");
-                builder.append(order.marketData.rateDown15MAvg).append(",");
-            }
-            lines.add(builder.toString());
-        }
-
-
-        FileUtils.writeLines(new File("target/order_running_all.csv"), lines);
-    }
-
-
-    public static void printOrderTestDone(String fileIn, String fileOut) throws IOException {
-        ConcurrentHashMap<String, OrderTargetInfoTest> allOrderDone =
-                (ConcurrentHashMap<String, OrderTargetInfoTest>) Storage.readObjectFromFile(fileIn);
-        TreeMap<Long, OrderTargetInfoTest> time2Order = new TreeMap<>();
-        int counter = 0;
-        for (OrderTargetInfoTest order : allOrderDone.values()) {
-            counter++;
-            time2Order.put(-order.timeStart + counter, order);
-        }
-        List<String> lines = new ArrayList<>();
-        lines.add("sym,side,entry,tp,sl,min,rate,max,rate,profit,status,start,end,rateBtc15M,rateTicker,rateBtc,volume,quantity,pnl,time");
-        Map<String, Float> symbol2Profit = new HashMap<>();
-        for (OrderTargetInfoTest order : time2Order.values()) {
-            Float profitOfSymbol = symbol2Profit.get(order.symbol);
-            if (profitOfSymbol == null) {
-                profitOfSymbol = 0f;
-            }
-            profitOfSymbol += Utils.rateOf2Double(order.priceTP, order.priceEntry);
-            Float profit = Utils.rateOf2Double(order.priceTP, order.priceEntry);
-            if (order.side.equals(OrderSide.SELL)) {
-                profit = -Utils.rateOf2Double(order.priceTP, order.priceEntry);
-            }
-            symbol2Profit.put(order.symbol, profitOfSymbol);
-            StringBuilder builder = new StringBuilder();
-            builder.append(order.symbol.replace("USDT", "")).append(",");
-            builder.append(order.side).append(",");
-            builder.append(order.priceEntry).append(",");
-            builder.append(order.priceTP).append(",");
-            builder.append(order.priceSL).append(",");
-            builder.append(order.minPrice).append(",");
-            builder.append(Utils.rateOf2Double(order.minPrice, order.priceEntry)).append(",");
-            builder.append(profit).append(",");
-            builder.append(order.status.toString()).append(",");
-            builder.append(Utils.normalizeDateYYYYMMDDHHmm(order.timeStart)).append(",'");
-            builder.append(Utils.sdfGoogle.format(new Date(order.timeStart))).append(",");
-            builder.append(Utils.normalizeDateYYYYMMDDHHmm(order.timeUpdate)).append(",");
-            builder.append(order.rateChange).append(",");
-            builder.append(Utils.rateOf2Double(order.tickerOpen.priceClose, order.tickerOpen.priceOpen)).append(",");
-//            builder.append(Utils.rateOf2Double(order.tickerClose.priceClose, order.tickerClose.priceOpen)).append(",");
-            builder.append(order.tickerOpen.totalUsdt).append(",");
-            builder.append(order.quantity).append(",");
-            builder.append(order.calTp()).append(",");
-            builder.append((order.timeUpdate - order.timeStart) / Utils.TIME_MINUTE).append(",");
-            lines.add(builder.toString());
-        }
-        FileUtils.writeLines(new File(fileOut), lines);
-    }
-
-
 }

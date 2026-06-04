@@ -16,34 +16,18 @@
 package com.binance.chuyennd.bigchange.test;
 
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
-import com.binance.chuyennd.object.MarketDataObject;
-import com.binance.chuyennd.object.MarketLevelChange;
 import com.binance.chuyennd.client.ClientSingleton;
-import com.binance.chuyennd.helper.TickerFuturesHelper;
-import com.binance.chuyennd.object.KlineObjectNumber;
-import com.binance.chuyennd.object.sw.KlineObjectSimple;
+import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
-import com.binance.chuyennd.trading.BinanceOrderTradingManager;
-import com.binance.chuyennd.trading.OrderTargetInfo;
-import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.tradecore.Configs;
-import com.binance.chuyennd.utils.StorageSnappy;
+import com.binance.chuyennd.trading.BinanceOrderTradingManager;
 import com.binance.chuyennd.utils.Utils;
-import com.binance.client.constant.Constants;
-import com.binance.client.model.enums.OrderSide;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.IOException;
-import java.text.ParseException;
-import java.util.*;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 /**
  * @author pc
@@ -129,129 +113,6 @@ public class Test {
 
     }
 
-    private static void testAIDATA() throws ParseException {
-        Long startTime = Utils.sdfFile.parse("20251217").getTime() + 7 * Utils.TIME_HOUR;
-
-
-        TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers;
-        for (int i = 0; i < 10; i++) {
-            time2Tickers = DataManagerAerospikeFloatSim.readDataFromAerospike1M(startTime);
-            LOG.info("{} {} {}", Utils.normalizeDateYYYYMMDDHHmm(startTime), time2Tickers.size(), time2Tickers.firstEntry().getValue().get("BTCDOMUSDT"));
-            startTime += Utils.TIME_DAY;
-        }
-    }
-
-    private static void testWS() {
-        System.out.println(1755820800000L - Utils.TIME_DAY);
-//        String timeLastCheck = RedisHelper.getInstance().get().get(RedisConst.REDIS_KEY_LAST_TIME_CHECK_MARKET);
-//        if (StringUtils.isNotEmpty(timeLastCheck)) {
-//            long time = Long.parseLong(timeLastCheck);
-//            if (System.currentTimeMillis() - time > 15 * Utils.TIME_MINUTE) {
-//                LOG.info("Reset by last check market over 15m: " + Utils.normalizeDateYYYYMMDDHHmm(time));
-//            } else {
-//                LOG.info("Not reset by last check market over 15m: " + Utils.normalizeDateYYYYMMDDHHmm(time));
-//            }
-//        }
-//        SubscriptionClient client = SubscriptionClient.create();
-//        // Giả sử client có phương thức subscribeMarkPriceStreamForAllSymbols
-//// update price
-//        client.subscribeAllTickerEvent(((events) -> {
-//            for (SymbolTickerEvent event : events) {
-//               LOG.info(Utils.toJson(event));
-//            }
-//        }), null);
-    }
-
-    private static void testShuffle() {
-        // 1. Tạo danh sách 100 số từ 1 tới 100
-        List<Integer> numberList = IntStream.rangeClosed(1, 100)
-                .boxed()
-                .collect(Collectors.toList());
-
-        System.out.println("Danh sách gốc (10 số đầu): " + numberList.subList(0, 10));
-        System.out.println("-------------------------------------------------");
-
-        // 2. Chạy lần 1
-        System.out.println("--- CHẠY LẦN 1 ---");
-        Collections.shuffle(numberList); // Xáo trộn
-        List<List<Integer>> sublists1 = Utils.subListPartInput(numberList, 3);
-
-        System.out.println("Danh sách đã xáo trộn (10 số đầu): " + numberList.subList(0, 10));
-        System.out.println("Sublist đầu tiên (Lần 1): " + sublists1.get(0));
-        System.out.println("Sublist thứ hai (Lần 1): " + sublists1.get(1));
-
-        System.out.println("-------------------------------------------------");
-
-        // 3. Chạy lần 2 (xáo trộn lại chính danh sách đó)
-        System.out.println("--- CHẠY LẦN 2 ---");
-        Collections.shuffle(numberList); // Xáo trộn một lần nữa
-        List<List<Integer>> sublists2 = Utils.subListPartInput(numberList, 3);
-
-        System.out.println("Danh sách đã xáo trộn (10 số đầu): " + numberList.subList(0, 10));
-        System.out.println("Sublist đầu tiên (Lần 2): " + sublists2.get(0));
-        System.out.println("Sublist thứ hai (Lần 2): " + sublists2.get(1));
-
-        System.out.println("-------------------------------------------------");
-
-        // 4. Xác minh
-        boolean isDifferent = !sublists1.get(0).equals(sublists2.get(0));
-        System.out.println("So sánh sublist đầu tiên của Lần 1 và Lần 2:");
-        System.out.println("Kết quả có khác nhau không? " + (isDifferent ? "CÓ 👍" : "KHÔNG 👎"));
-    }
-
-
-    private static void checkTickerProduct() {
-        String FILE_TICKER_1M_STORAGE = "storage/tickers/symbol2ticker1Ms";
-        ConcurrentHashMap<String, TreeMap<Long, KlineObjectSimple>> symbo2Tickers = (ConcurrentHashMap<String, TreeMap<Long, KlineObjectSimple>>)
-                StorageSnappy.readObjectFromFile(FILE_TICKER_1M_STORAGE);
-        for (String symbol : symbo2Tickers.keySet()) {
-            TreeMap<Long, KlineObjectSimple> tickers = symbo2Tickers.get(symbol);
-            LOG.info("{} {} {}", symbol, Utils.normalizeDateYYYYMMDDHHmm(tickers.firstKey()),
-                    Utils.normalizeDateYYYYMMDDHHmm(tickers.lastKey()));
-        }
-    }
-
-    private static void checkSellSignal() throws ParseException {
-        long time = Utils.sdfFileHour.parse("20250603 11:00").getTime();
-        String symbol = "NEIROETHUSDT";
-//        Float priceMin2d = Price4hManager.getInstance().getPriceMinIn2D(symbol, time);
-//        Float priceMax2d = Price4hManager.getInstance().getPriceMaxIn2D(symbol, time);
-//        Float priceClose = 0.10107;
-//        if (priceMax2d != null && Utils.rateOf2Double(priceClose, priceMax2d) < 0
-//                && priceMin2d != null && Utils.rateOf2Double(priceClose, priceMin2d) > 0.5) {
-//            LOG.info(" {} {}", Utils.rateOf2Double(priceClose, priceMax2d), Utils.rateOf2Double(priceClose, priceMin2d));
-//        }
-//        LOG.info("{} {}", priceMin2d, priceMax2d);
-
-    }
-
-    private static void removeSLRedis() {
-        String symbol = "SPELLUSDT";
-        String orderJson = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO, symbol);
-        OrderTargetInfo order = Utils.gson.fromJson(orderJson, OrderTargetInfo.class);
-        order.priceTP = null;
-        order.priceSL = null;
-        RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO, symbol, Utils.toJson(order));
-    }
-
-
-    private static void testTimeDetectProduction() throws IOException {
-        List<String> lines = FileUtils.readLines(new File("target/full.log"));
-        for (String line : lines) {
-            if (StringUtils.contains(line, "Check btc revers")) {
-                String timeRun = line.split("INFO")[0].trim();
-                String timeCheck = line.split("Check btc reverse:")[1].substring(1, 15);
-                Integer minuteRun = Integer.parseInt(timeRun.split(":")[1]);
-                Integer minuteCheck = Integer.parseInt(timeCheck.split(":")[1]);
-                if (minuteRun - minuteCheck == 2) {
-                    LOG.info("{} {} {} {}", timeRun, timeCheck, minuteRun, minuteCheck);
-//                    break;
-                }
-            }
-        }
-    }
-
-
     private static void testProduction() {
 
 //        createAOrderTest();
@@ -277,79 +138,7 @@ public class Test {
         test.processDynamicTP_SL();
 
 
-        // delete all order not rung at redis
-//        for (String symbol : RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO)) {
-//            if (!BudgetManager.getInstance().symbol2Pos.containsKey(symbol)){
-//                LOG.info("Delete order at redis of: {}", symbol);
-//                RedisHelper.getInstance().delJsonData(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO, symbol);
-//            }
-//        }
-//        PositionRisk pos = BinanceFuturesClientSingleton.getInstance().getPositionInfo("BTCUSDT");
-//        test.createSL(pos, 0.04);
 
-//        System.out.println(Utils.toJson(test.getOrderInfo("CRVUSDT")));
-////
-//        for (PositionRisk position : positions) {
-//            if (position.getPositionAmt().doubleValue() != 0) {
-//                BudgetManager.getInstance().symbol2Pos.put(position.getSymbol(), position);
-//            }
-//
-//        }
-//        DetectEntrySignal2TradeNormal.getDCA(null);
-////        for (String symbol:Constants.specialSymbol){
-
-//        String fileName = "target/OrderTestDone.data-5";
-////        fileName = "target/" + fileName;
-//        TreeMap<Long, OrderTargetInfoTest> allOrderDone = (TreeMap<Long, OrderTargetInfoTest>) Storage.readObjectFromFile(fileName);
-//        String statisticLog = TraceData2Test.statisticResult(allOrderDone);
-//        LOG.info(statisticLog);
-////            ClientSingleton.getInstance().syncRequestClient.changeInitialLeverage(symbol, 8);
-////        }
-
-//        Set<String> symbols = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS);
-//        System.out.println(symbols.contains("RAREUSDT"));
-
-//        System.out.println(Utils.toJson(order));
-//        for (String symbol : Constants.diedSymbol) {
-//            if (symbols.contains(symbol)) {
-//                RedisHelper.getInstance().delJsonData(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS, symbol);
-//            }
-//        }
-//        LOG.info("{} -> {}", symbols.size(), RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS).size());
-
-
-//        System.out.println(BinanceFuturesClientSingleton.getInstance().getFundingRate("REEFUSDT"));
-//                List<PositionRisk> positions = BinanceFuturesClientSingleton.getInstance().getAllPositionInfos();
-//        testRateBtc24HrByTime("20240801 03:00");
-//        System.out.println(new BinanceOrderTradingManager().getPositionBuyRunning());
-
-//        System.out.println(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS));
-        //        String symbol = "REEFUSDT";
-//
-//        PositionRisk pos = BinanceFuturesClientSingleton.getInstance().getPositionInfo(symbol);
-//        String orderJson = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO, symbol);
-//        OrderTargetInfo order = Utils.gson.fromJson(orderJson, OrderTargetInfo.class);
-//        System.out.println(Utils.formatMoney(order.priceSL));
-
-//        new BinanceOrderTradingManager().createSL(pos, order.priceSL);
-//        testBigDecimal();
-    }
-
-
-    private static void createAOrderTest() {
-        String symbol = "BNBUSDT";
-        MarketLevelChange levelChange = MarketLevelChange.SMALL_DOWN_15M;
-        Float budget = 2f;
-        List<KlineObjectNumber> tickers = TickerFuturesHelper.getTicker(symbol, Constants.INTERVAL_1M);
-        KlineObjectNumber ticker = tickers.get(tickers.size() - 1);
-        Float quantity = Utils.calQuantity(budget, Configs.LEVERAGE_ORDER, ticker.priceClose, symbol);
-        OrderTargetInfo orderTrade = new OrderTargetInfo(OrderTargetStatus.REQUEST, ticker.priceClose,
-                null, quantity, Configs.LEVERAGE_ORDER, symbol, ticker.startTime.longValue(),
-                ticker.startTime.longValue(), OrderSide.BUY, Constants.TRADING_TYPE_VOLUME_MINI);
-        orderTrade.marketLevel = levelChange;
-        LOG.info("Push redis order: {} {} {} {} {}", Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()),
-                symbol, levelChange, quantity, ticker.priceClose);
-        RedisHelper.getInstance().get().rpush(RedisConst.REDIS_KEY_BINANCE_TD_ORDER_MANAGER_QUEUE, Utils.toJson(orderTrade));
     }
 
 

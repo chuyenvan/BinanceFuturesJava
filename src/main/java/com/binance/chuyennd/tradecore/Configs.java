@@ -118,24 +118,35 @@ public class Configs {
     public static float PREDICT_SYMBOL_RATE_UP_AVG = 0.00454f;
     public static float PREDICT_SYMBOL_RATE_DOWN_AVG = -0.00503f;
 
-    public static float PREDICT_SYMBOL_RATE_MAX_THRESHOLD = 0.19727f; // Cũ: 0.15f (Log map: PREDICT_MAX_THRES)
-    public static float HARD_RISK_LIMIT_4H = -0.09200f;               // Cũ: -0.2f
-    public static float MIN_MOMENTUM_15M = 0.01720f;                  // Cũ: 0.02284f
-    public static float MIN_MOMENTUM_24H = 0.02129f;                  // Cũ: 0.01682f
+
+
+    // === ABLATION FILTER (chỉ phục vụ ĐO, mặc định "A" = hiện trạng, KHÔNG ảnh hưởng CONFIG_VERSION) ===
+    // A=full (3 nhánh RISK/MOM15/MOM24)  B=bỏ nhánh RISK(DD4H)  C=bỏ nhánh MOM24
+    // D=bỏ cả RISK+MOM24 (chỉ còn MOM15 + nhánh EARLY 15M+funding).
+    // Nhánh EARLY trong checkSignalDynamic GIỮ NGUYÊN ở mọi mode.
+    public static String FILTER_MODE = "A";
+
+    // PRODUCTION: nhánh MOM24 (predReturn24H) đã TẮT mặc định — ablation chứng minh A=C (MOM24 không
+    // bao giờ kích hoạt). Đặt true để revert/đo lại "full A". predReturn24H VẪN được sim/predict ghi.
+    public static boolean FILTER_USE_MOM24 = false;
 
     // =========================================================
     // 8. NGƯỠNG BÁO ĐỘNG & DCA NHỒI LỆNH (MARKET STATUS - HPO UPDATE)
     // =========================================================
-    public static float MS_UP_BIG_THRES = 0.01757f;                   // Cũ: 0.02046f
-    public static float MS_DOWN_BIG_AVG = -0.05514f;                  // Cũ: -0.03157f
+    public static float PREDICT_SYMBOL_RATE_MAX_THRESHOLD = 0.15f;    // HPO (đã revert về cũ): 0.19727f (Log map: PREDICT_MAX_THRES)
+    public static float HARD_RISK_LIMIT_4H = -0.2f;                   // HPO (đã revert về cũ): -0.09200f
+    public static float MIN_MOMENTUM_15M = 0.02284f;                  // HPO (đã revert về cũ): 0.01720f
+    public static float MIN_MOMENTUM_24H = 0.01682f;                  // HPO (đã revert về cũ): 0.02129f
+    public static float MS_UP_BIG_THRES = 0.02046f;                   // HPO (đã revert về cũ): 0.01757f
+    public static float MS_DOWN_BIG_AVG = -0.03157f;                  // HPO (đã revert về cũ): -0.05514f
 
     public static float MS_UP_SMALL_THRES = 0.00442f;
-    public static float MS_DOWN_SMALL_AVG_OR_15M = -0.02007f;         // Cũ: -0.02069f
+    public static float MS_DOWN_SMALL_AVG_OR_15M = -0.02069f;         // HPO (đã revert về cũ): -0.02007f
 
-    public static int DCA_TIME_BIG_DOWN = 13;                         // Cũ: 8
-    public static float DCA_LOSS_BIG_DOWN = -0.26618f;                // Cũ: -0.15f
-    public static int DCA_TIME_BIG_Up = 22;                           // Cũ: 15
-    public static float DCA_LOSS_BIG_UP = -0.10063f;                  // Cũ: -0.25f
+    public static int DCA_TIME_BIG_DOWN = 8;                          // HPO (đã revert về cũ): 13
+    public static float DCA_LOSS_BIG_DOWN = -0.15f;                   // HPO (đã revert về cũ): -0.26618f
+    public static int DCA_TIME_BIG_Up = 15;                           // HPO (đã revert về cũ): 22
+    public static float DCA_LOSS_BIG_UP = -0.25f;                     // HPO (đã revert về cũ): -0.10063f
 
     // =========================================================
     // 9. KẾT NỐI DỮ LIỆU (STORAGE & AEROSPIKE)

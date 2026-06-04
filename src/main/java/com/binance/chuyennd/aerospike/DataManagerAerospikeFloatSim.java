@@ -45,7 +45,7 @@ public class DataManagerAerospikeFloatSim {
 
     // set name 226
     private static final String AEROSPIKE_SET_NAME_FUNDING_PRED = Configs.AEROSPIKE_SET_NAME_FUNDING_PRED;
-    private static final String AEROSPIKE_SET_NAME_PRED_40 = Configs.AEROSPIKE_SET_NAME_PRED_40;
+
 
     // 1. CẤU HÌNH SET NAME VÀ KEY
     private static final String AEROSPIKE_SET_NAME_MAPPER = "symbol_mapper"; // Set name mới
