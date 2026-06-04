@@ -1,4 +1,4 @@
-package com.binance.chuyennd.ai_ml.validation;
+package com.binance.chuyennd.ai_ml.validation.predict.funding;
 
 import com.aerospike.client.Key;
 import com.aerospike.client.Record;

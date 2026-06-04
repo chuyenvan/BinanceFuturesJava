@@ -41,6 +41,10 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     public AIRejectFilter aiRejectFilter;
     public Boolean is50PercentOrderLoss = null;
 
+    // Đếm số lần circuit breaker kích hoạt (reset theo mỗi instance Simulator). Runner đọc để báo cáo.
+    public long breakerMarginHaltCount = 0;
+    public long breakerDcaCapCount = 0;
+
     // =================================================================
     // 🔥 SỬ DỤNG MẢNG CỐ ĐỊNH O(1) ĐỂ LOẠI BỎ AUTOBOXING RÁC CỦA HASHMAP
     // =================================================================
@@ -497,6 +501,30 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
             if (filterResult.decision == AIRejectFilter.FilterDecision.REJECT) {
                 return;
+            }
+        }
+
+        // 🛑 CIRCUIT BREAKER — chỉ tác động khi BREAKER_MODE != OFF. Tác động tầng DCA/margin,
+        // KHÔNG đụng entry filter, KHÔNG force-close (long-only): chỉ DỪNG MỞ / DỪNG NHỒI.
+        if (!"OFF".equals(Configs.BREAKER_MODE)) {
+            // (a) MARGIN halt: chặn MỌI lệnh mới (entry + DCA) khi tổng margin/vốn >= ngưỡng
+            if ("MARGIN".equals(Configs.BREAKER_MODE) || "BOTH".equals(Configs.BREAKER_MODE)) {
+                float bal = BudgetManagerSimple.getInstance().balanceBasic;
+                if (bal > 0 && BudgetManagerSimple.getInstance().marginRunning / bal >= Configs.BREAKER_MARGIN_HALT) {
+                    breakerMarginHaltCount++;
+                    return;
+                }
+            }
+            // (b) DCA depth cap: symbol ĐÃ có cụm mở và cụm đang lỗ sâu => ngừng NHỒI (giữ cụm)
+            if ("DCA".equals(Configs.BREAKER_MODE) || "BOTH".equals(Configs.BREAKER_MODE)) {
+                OrderTargetInfoTest running = symbol2OrderRunning[symbolId];
+                if (running != null && running.priceEntry != null && running.priceEntry > 0) {
+                    float clusterDd = (ticker.priceClose - running.priceEntry) / running.priceEntry;
+                    if (clusterDd <= Configs.BREAKER_CLUSTER_DD_MAX) {
+                        breakerDcaCapCount++;
+                        return;
+                    }
+                }
             }
         }
 

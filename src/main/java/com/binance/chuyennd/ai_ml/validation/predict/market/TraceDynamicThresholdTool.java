@@ -1,4 +1,4 @@
-package com.binance.chuyennd.ai_ml.validation;
+package com.binance.chuyennd.ai_ml.validation.predict.market;
 
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.object.MarketDataObject;

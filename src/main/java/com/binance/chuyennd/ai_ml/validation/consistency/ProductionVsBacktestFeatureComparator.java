@@ -1,4 +1,4 @@
-package com.binance.chuyennd.ai_ml.validation;
+package com.binance.chuyennd.ai_ml.validation.consistency;
 
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.ai_ml.features.export.entry.ComprehensiveMarketFeatureExtractor;

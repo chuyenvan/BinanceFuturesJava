@@ -1,4 +1,4 @@
-package com.binance.chuyennd.ai_ml.validation;
+package com.binance.chuyennd.ai_ml.validation.data;
 
 import com.binance.chuyennd.ai_ml.features.export.entry.MarketFeatures;
 import com.binance.chuyennd.utils.StorageSnappy;

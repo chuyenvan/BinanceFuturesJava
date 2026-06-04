@@ -1,4 +1,4 @@
-package com.binance.chuyennd.ai_ml.validation;
+package com.binance.chuyennd.ai_ml.validation.data;
 
 import com.aerospike.client.AerospikeClient;
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;

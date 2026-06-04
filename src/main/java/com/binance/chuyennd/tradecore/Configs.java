@@ -125,6 +125,13 @@ public class Configs {
     // Nhánh EARLY trong checkSignalDynamic GIỮ NGUYÊN ở mọi mode.
     public static String FILTER_MODE = "A";
 
+    // === CIRCUIT BREAKER (chống sập tầng DCA/margin — chỉ ĐO, mặc định OFF, KHÔNG ảnh hưởng CONFIG_VERSION) ===
+    // OFF=không phanh | MARGIN=chặn mở mới khi margin/vốn cao | DCA=ngừng nhồi cụm lỗ sâu | BOTH=cả hai.
+    // KHÔNG force-close (long-only): chỉ DỪNG MỞ / DỪNG NHỒI.
+    public static String BREAKER_MODE = "OFF";
+    public static float BREAKER_MARGIN_HALT = 0.70f;     // chặn MỞ MỚI khi marginRunning/balanceBasic >= ngưỡng
+    public static float BREAKER_CLUSTER_DD_MAX = -0.30f; // ngừng NHỒI cụm khi (giá hiện tại - avg entry)/avg entry <= ngưỡng
+
     // =========================================================
     // 8. NGƯỠNG BÁO ĐỘNG & DCA NHỒI LỆNH (MARKET STATUS - HPO UPDATE)
     // =========================================================
