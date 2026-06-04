@@ -121,13 +121,12 @@ public class ValidateBrakeDynamic {
 
     /** Khớp AIRejectFilter.checkSignalDynamic + checkSignal. Trả lý do (PASS/R_*). */
     private int simulateFilter(AiPredictionData p, Float symbolPred) {
-        float pred15 = p.predReturn15M, pred24 = p.predReturn24H, risk = p.predRisk4H;
+        float pred15 = p.predReturn15M, risk = p.predRisk4H;   // MOM24 đã bỏ khỏi hệ
 
         if (symbolPred == null) {
             // fallback checkSignal (ngưỡng cứng)
             if (risk <= Configs.HARD_RISK_LIMIT_4H) return R_RISK;
             if (pred15 < Configs.MIN_MOMENTUM_15M) return R_MOM15;
-            if (pred24 < Configs.MIN_MOMENTUM_24H) return R_MOM24;
             return PASS;
         }
         // chặn sớm
@@ -138,12 +137,10 @@ public class ValidateBrakeDynamic {
         scale = Math.max(Configs.AI_DYNAMIC_MIN, Math.min(scale, Configs.AI_DYNAMIC_MAX));
 
         float dyn15 = Configs.MIN_MOMENTUM_15M * scale;
-        float dyn24 = Configs.MIN_MOMENTUM_24H * scale;
         float dynRisk = Configs.HARD_RISK_LIMIT_4H / scale;
 
         if (risk <= dynRisk) return R_RISK;
         if (pred15 < dyn15) return R_MOM15;
-        if (pred24 < dyn24) return R_MOM24;
         return PASS;
     }
 

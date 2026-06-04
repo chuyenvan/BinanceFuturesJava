@@ -90,14 +90,12 @@ public class RunFullDataCollection {
 
             List<String> targetBasket = HistoryManager.getInstance().findPotentialLosers(timestamp);
 
-            // Chỉ tính toán 3 nhãn cần thiết
+            // Tính 2 nhãn cần thiết (đã bỏ futureReturn24H)
             float ret15M = calculateBasketMaxPotential(lookupData, timestamp, 15, targetBasket);
-            float ret24H = calculateBasketMaxPotential(lookupData, timestamp, 1440, targetBasket);
             float maxDD4H = calculateBasketMaxDrawdown(lookupData, timestamp, 240, targetBasket);
 
-            // Đưa vào dataManager (Đảm bảo bên trong Manager này gán đúng 3 trường vào MarketFeatures)
             dataManager.processMarketData(timestamp, currentMarketSnapshot, rate,
-                    ret15M, ret24H, maxDD4H); //
+                    ret15M, maxDD4H);
         }
     }
     private float calculateBasketMaxPotential(TreeMap<Long, Map<String, KlineObjectSimple>> data, Long currentTs,

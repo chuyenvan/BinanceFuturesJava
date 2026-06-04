@@ -131,7 +131,7 @@ public class ValidateMarketPredictConsistency {
     private int comparePredictions(AiPredictionData oldP, AiPredictionData newP) {
         int errorCount = 0;
         // Danh sách các biến quan trọng cần check
-        String[] fieldsToCheck = {"predReturn15M", "predReturn24H", "riskDrawdown4H"};
+        String[] fieldsToCheck = {"predReturn15M", "predRisk4H"};
 
         for (String fieldName : fieldsToCheck) {
             try {

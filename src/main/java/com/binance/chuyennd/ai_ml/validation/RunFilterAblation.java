@@ -86,9 +86,7 @@ public class RunFilterAblation {
 
         List<Row> rows = new ArrayList<>();
         for (String mode : MODES) {
-            Configs.FILTER_MODE = mode;   // KHÁC BIỆT DUY NHẤT giữa 4 run
-            // A/B = "full A" (bật lại MOM24 để đo trung thực); C/D tắt MOM24 (production default).
-            Configs.FILTER_USE_MOM24 = "A".equals(mode) || "B".equals(mode);
+            Configs.FILTER_MODE = mode;   // KHÁC BIỆT DUY NHẤT giữa 4 run (A/C giữ RISK; B/D bỏ RISK. MOM24 đã bỏ khỏi hệ)
             LOG.info("\n================= ▶️ CHẠY MODE {} (FILTER_MODE={}) =================", mode, mode);
 
             // reset y hệt BackTestEngineMaster.run để mỗi mode bắt đầu sạch

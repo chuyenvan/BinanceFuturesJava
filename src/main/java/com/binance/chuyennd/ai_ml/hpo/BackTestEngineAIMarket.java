@@ -17,7 +17,7 @@ public class BackTestEngineAIMarket {
     public BackTestEngineAIMarket(float risk, float minRet1H, float highRet,
                                   float minMom15M, float minTrend4H, float deadTrend24H) {
         aiRejectFilter = new AIRejectFilter();
-        aiRejectFilter.setConfig(risk,  minMom15M, deadTrend24H);
+        aiRejectFilter.setConfig(risk, minMom15M);
     }
 
     public float run(TreeMap<Long, MarketDataObject> time2MarketData,

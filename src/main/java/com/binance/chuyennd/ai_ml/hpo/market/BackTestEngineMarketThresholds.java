@@ -30,7 +30,7 @@ public class BackTestEngineMarketThresholds {
         // 2. KHÓA CỨNG BỘ LỌC AI (Dùng thông số chuẩn bác đang có để làm nền tảng)
         // Bác có thể tự thay đổi 3 số này theo bộ gen AI tốt nhất bác từng chạy ra
         this.aiRejectFilter = new AIRejectFilter();
-        this.aiRejectFilter.setConfig(-0.1f, 0.015f, 0.02f);
+        this.aiRejectFilter.setConfig(-0.1f, 0.015f);
     }
 
     public HPOFitnessCalculator.FitnessReport run(TreeMap<Long, MarketDataObject> time2MarketData,

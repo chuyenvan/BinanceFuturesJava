@@ -49,32 +49,29 @@ public class EnhancedTrainingDataCollectionManager {
     }
 
     /**
-     * Chỉ nhận và gán 3 nhãn quan trọng: Return 15m, Return 24h và Max Drawdown 4h
+     * Nhận và gán 2 nhãn: Return 15m và Max Drawdown 4h (đã bỏ Return 24h).
      */
     public void processMarketData(long timestamp,
                                   Map<String, KlineObjectSimple> marketData,
                                   MarketDataObject marketRate,
-                                  float ret15M, float ret24H, float maxDD4H) {
+                                  float ret15M, float maxDD4H) {
 
         if (!shouldCollectData(marketRate)) return;
 
         try {
             MarketFeatures features = featureExtractor.extractAllFeatures(timestamp, marketData, marketRate);
 
-            // 🔥 Gán 3 nhãn duy nhất (Khớp với MarketFeatures mới)
+            // Gán 2 nhãn (khớp MarketFeatures mới)
             features.futureReturn15M = ret15M;
-            features.futureReturn24H = ret24H;
             features.maxDrawdownNext4H = maxDD4H;
 
             collectedFeatures.add(features);
             triggeredCollections++;
 
             if (triggeredCollections % 1000 == 0) {
-                // Log thông tin 3 nhãn để bác theo dõi tiến độ
-                LOG.info("Collected {}. Label: 15M: {}% | 24H: {}% | DD4H: {}%",
+                LOG.info("Collected {}. Label: 15M: {}% | DD4H: {}%",
                         triggeredCollections,
                         String.format("%.2f", ret15M * 100),
-                        String.format("%.2f", ret24H * 100),
                         String.format("%.2f", maxDD4H * 100));
             }
 

@@ -71,9 +71,8 @@ FEATURES = [
 #                               False nếu lưu dạng SIGNED âm (âm=tệ).  ⚠️ CHỈNH KHỚP JAVA.
 TARGET_CFG = {
     "futureReturn15M":   dict(kind="return", horizon_ms=15 * 60 * 1000),
-    "futureReturn24H":   dict(kind="return", horizon_ms=24 * 3600 * 1000),
     "maxDrawdownNext4H": dict(kind="risk",   horizon_ms=4 * 3600 * 1000, worse_is_higher=False),
-}
+}  # đã bỏ futureReturn24H (model 24H không còn dùng)
 TARGETS = list(TARGET_CFG.keys())
 
 # Ngưỡng GATE — chung phần ranking, riêng phần kinh tế.

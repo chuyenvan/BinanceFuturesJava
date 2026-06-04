@@ -120,15 +120,10 @@ public class Configs {
 
 
 
-    // === ABLATION FILTER (chỉ phục vụ ĐO, mặc định "A" = hiện trạng, KHÔNG ảnh hưởng CONFIG_VERSION) ===
-    // A=full (3 nhánh RISK/MOM15/MOM24)  B=bỏ nhánh RISK(DD4H)  C=bỏ nhánh MOM24
-    // D=bỏ cả RISK+MOM24 (chỉ còn MOM15 + nhánh EARLY 15M+funding).
+    // === ABLATION FILTER (chỉ phục vụ ĐO, KHÔNG ảnh hưởng CONFIG_VERSION) ===
+    // A=full (giữ RISK+MOM15)  B/D=bỏ nhánh RISK(DD4H) để đo. MOM24/predReturn24H đã BỎ HẲN khỏi hệ.
     // Nhánh EARLY trong checkSignalDynamic GIỮ NGUYÊN ở mọi mode.
     public static String FILTER_MODE = "A";
-
-    // PRODUCTION: nhánh MOM24 (predReturn24H) đã TẮT mặc định — ablation chứng minh A=C (MOM24 không
-    // bao giờ kích hoạt). Đặt true để revert/đo lại "full A". predReturn24H VẪN được sim/predict ghi.
-    public static boolean FILTER_USE_MOM24 = false;
 
     // =========================================================
     // 8. NGƯỠNG BÁO ĐỘNG & DCA NHỒI LỆNH (MARKET STATUS - HPO UPDATE)
@@ -136,7 +131,6 @@ public class Configs {
     public static float PREDICT_SYMBOL_RATE_MAX_THRESHOLD = 0.15f;    // HPO (đã revert về cũ): 0.19727f (Log map: PREDICT_MAX_THRES)
     public static float HARD_RISK_LIMIT_4H = -0.2f;                   // HPO (đã revert về cũ): -0.09200f
     public static float MIN_MOMENTUM_15M = 0.02284f;                  // HPO (đã revert về cũ): 0.01720f
-    public static float MIN_MOMENTUM_24H = 0.01682f;                  // HPO (đã revert về cũ): 0.02129f
     public static float MS_UP_BIG_THRES = 0.02046f;                   // HPO (đã revert về cũ): 0.01757f
     public static float MS_DOWN_BIG_AVG = -0.03157f;                  // HPO (đã revert về cũ): -0.05514f
 

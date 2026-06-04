@@ -44,7 +44,7 @@ public class BackTestEngineCombined {
 
         // 3. Khởi tạo và gán tham số cho AI Reject Filter
         aiRejectFilter = new AIRejectFilter();
-        aiRejectFilter.setConfig(risk,  minMom15M, deadTrend24H);
+        aiRejectFilter.setConfig(risk, minMom15M);
     }
 
     public float run(TreeMap<Long, MarketDataObject> time2MarketData,

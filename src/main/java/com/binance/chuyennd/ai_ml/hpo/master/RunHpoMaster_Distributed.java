@@ -27,7 +27,7 @@ public class RunHpoMaster_Distributed {
     private static final int GENERATIONS = 100;     // Tối đa 100 thế hệ
     private static final int MAX_STEADY_GENERATIONS = 15; // Dừng sớm
 
-    private static final int TOTAL_PARAMS = 14;
+    private static final int TOTAL_PARAMS = 13;
 
     // =========================================================
     // 🔥 VERSION HOÁ CACHE
@@ -38,7 +38,9 @@ public class RunHpoMaster_Distributed {
     // v4 -> v5: Bước 0 thêm slippage 2 chân (SLIPPAGE_RATE/APPLY_SLIPPAGE) và bịt
     // look-ahead nội-nến (BLOCK_INTRABAR_LOOKAHEAD). Cả hai ảnh hưởng PnL backtest
     // nhưng không nằm trong genome => phải đổi version để bỏ cache điểm cũ (v4).
-    public static final String CONFIG_VERSION = "v5";
+    // v5 -> v6: BỎ gene MIN_MOMENTUM_24H khỏi genome (14 -> 13 gene). Đổi layout genome +
+    // buildTaskId => taskId cũ không còn hợp lệ, BẮT BUỘC version mới để bỏ cache v5.
+    public static final String CONFIG_VERSION = "v6";
 
     // 🔥 TÁCH 2 SET:
     //  - QUEUE_SET: chỉ chứa task ĐANG active (PENDING/RUNNING). Worker scanAll cái này nên LUÔN NHỎ.
@@ -59,8 +61,8 @@ public class RunHpoMaster_Distributed {
         // NHÓM 1: Market Signals (3 Tham số)
         public float msUpBig, msDownBig, msSmall;
 
-        // NHÓM 2: AI & ONNX (7 Tham số)
-        public float aiMaxThres, aiMin15M, aiMin24H, aiRisk4H;
+        // NHÓM 2: AI & ONNX (6 Tham số)
+        public float aiMaxThres, aiMin15M, aiRisk4H;
         public float aiDynMul, aiDynMin, aiDynMax;
 
         // NHÓM 3: DCA (4 Tham số)
@@ -76,7 +78,7 @@ public class RunHpoMaster_Distributed {
         LOG.info("👑 MÁY CHỦ ORACLE (MASTER) KHỞI ĐỘNG HỆ THỐNG PHÂN TÁN ({} PARAMS)...", TOTAL_PARAMS);
         LOG.info("⚡ Queue set={} | Result set={}", QUEUE_SET, RESULT_SET);
 
-        // Nhóm 1 (3) + Nhóm 2 (7) + Nhóm 3 DCA (4) = 14 Genes
+        // Nhóm 1 (3) + Nhóm 2 (6) + Nhóm 3 DCA (4) = 13 Genes (đã bỏ MIN_MOMENTUM_24H)
         Genotype<DoubleGene> gtf = Genotype.of(
                 // NHÓM 1
                 DoubleChromosome.of(DoubleRange.of(0.010, 0.040)),   // 0: MS_UP_BIG_THRES
@@ -86,17 +88,16 @@ public class RunHpoMaster_Distributed {
                 // NHÓM 2
                 DoubleChromosome.of(DoubleRange.of(0.10, 0.25)),     // 3: AI_MAX_THRES
                 DoubleChromosome.of(DoubleRange.of(0.010, 0.035)),   // 4: MIN_MOMENTUM_15M
-                DoubleChromosome.of(DoubleRange.of(0.010, 0.080)),   // 5: MIN_MOMENTUM_24H
-                DoubleChromosome.of(DoubleRange.of(-0.25, -0.05)),   // 6: HARD_RISK_LIMIT_4H
-                DoubleChromosome.of(DoubleRange.of(1.0, 2.0)),       // 7: AI_DYN_MULTIPLIER
-                DoubleChromosome.of(DoubleRange.of(0.1, 0.5)),       // 8: AI_DYN_MIN
-                DoubleChromosome.of(DoubleRange.of(1.5, 3.0)),       // 9: AI_DYN_MAX
+                DoubleChromosome.of(DoubleRange.of(-0.25, -0.05)),   // 5: HARD_RISK_LIMIT_4H
+                DoubleChromosome.of(DoubleRange.of(1.0, 2.0)),       // 6: AI_DYN_MULTIPLIER
+                DoubleChromosome.of(DoubleRange.of(0.1, 0.5)),       // 7: AI_DYN_MIN
+                DoubleChromosome.of(DoubleRange.of(1.5, 3.0)),       // 8: AI_DYN_MAX
 
                 // NHÓM 3 - DCA
-                DoubleChromosome.of(DoubleRange.of(-0.30, -0.08)),   // 10: DCA_LOSS_BIG_DOWN
-                DoubleChromosome.of(DoubleRange.of(-0.40, -0.10)),   // 11: DCA_LOSS_BIG_UP
-                DoubleChromosome.of(DoubleRange.of(3, 20)),          // 12: DCA_TIME_BIG_DOWN (phút)
-                DoubleChromosome.of(DoubleRange.of(5, 30))           // 13: DCA_TIME_BIG_Up   (phút)
+                DoubleChromosome.of(DoubleRange.of(-0.30, -0.08)),   // 9: DCA_LOSS_BIG_DOWN
+                DoubleChromosome.of(DoubleRange.of(-0.40, -0.10)),   // 10: DCA_LOSS_BIG_UP
+                DoubleChromosome.of(DoubleRange.of(3, 20)),          // 11: DCA_TIME_BIG_DOWN (phút)
+                DoubleChromosome.of(DoubleRange.of(5, 30))           // 12: DCA_TIME_BIG_Up   (phút)
         );
 
         Engine<DoubleGene, Float> engine = Engine.builder(RunHpoMaster_Distributed::eval, gtf)
@@ -157,15 +158,14 @@ public class RunHpoMaster_Distributed {
         task.msSmall = gt.get(2).gene().floatValue();
         task.aiMaxThres = gt.get(3).gene().floatValue();
         task.aiMin15M = gt.get(4).gene().floatValue();
-        task.aiMin24H = gt.get(5).gene().floatValue();
-        task.aiRisk4H = gt.get(6).gene().floatValue();
-        task.aiDynMul = gt.get(7).gene().floatValue();
-        task.aiDynMin = gt.get(8).gene().floatValue();
-        task.aiDynMax = gt.get(9).gene().floatValue();
-        task.dcaLossBigDown = gt.get(10).gene().floatValue();
-        task.dcaLossBigUp = gt.get(11).gene().floatValue();
-        task.dcaTimeBigDown = gt.get(12).gene().floatValue();
-        task.dcaTimeBigUp = gt.get(13).gene().floatValue();
+        task.aiRisk4H = gt.get(5).gene().floatValue();
+        task.aiDynMul = gt.get(6).gene().floatValue();
+        task.aiDynMin = gt.get(7).gene().floatValue();
+        task.aiDynMax = gt.get(8).gene().floatValue();
+        task.dcaLossBigDown = gt.get(9).gene().floatValue();
+        task.dcaLossBigUp = gt.get(10).gene().floatValue();
+        task.dcaTimeBigDown = gt.get(11).gene().floatValue();
+        task.dcaTimeBigUp = gt.get(12).gene().floatValue();
 
         task.taskId = buildTaskId(task);
 
@@ -214,17 +214,17 @@ public class RunHpoMaster_Distributed {
 
     /**
      * Khóa cache PHẢI phản ánh đúng cấu hình thực sự chạy:
-     * - 12 tham số float băm %.4f
+     * - 11 tham số float băm %.4f (đã bỏ MIN_MOMENTUM_24H)
      * - 2 tham số TIME băm theo giá trị ĐÃ LÀM TRÒN (đúng bằng giá trị apply vào Configs)
      *   để 12.31 và 12.49 (cùng round = 12) không sinh 2 trial trùng nhau.
      * - CONFIG_VERSION làm tiền tố để truy vết.
      */
     private static String buildTaskId(HpoDistributedTask task) {
         return String.format(Locale.US,
-                "%s_%.4f_%.4f_%.4f_%.4f_%.4f_%.4f_%.4f_%.4f_%.4f_%.4f_%.4f_%.4f_%d_%d",
+                "%s_%.4f_%.4f_%.4f_%.4f_%.4f_%.4f_%.4f_%.4f_%.4f_%.4f_%.4f_%d_%d",
                 CONFIG_VERSION,
                 task.msUpBig, task.msDownBig, task.msSmall,
-                task.aiMaxThres, task.aiMin15M, task.aiMin24H, task.aiRisk4H,
+                task.aiMaxThres, task.aiMin15M, task.aiRisk4H,
                 task.aiDynMul, task.aiDynMin, task.aiDynMax,
                 task.dcaLossBigDown, task.dcaLossBigUp,
                 Math.round(task.dcaTimeBigDown), Math.round(task.dcaTimeBigUp));
@@ -240,15 +240,14 @@ public class RunHpoMaster_Distributed {
         LOG.info("MS_DOWN_SMALL_AVG_OR_15M = {}f;", String.format(Locale.US, "%.5f", best.get(2).gene().floatValue()));
         LOG.info("PREDICT_MAX_THRES        = {}f;", String.format(Locale.US, "%.5f", best.get(3).gene().floatValue()));
         LOG.info("MIN_MOMENTUM_15M         = {}f;", String.format(Locale.US, "%.5f", best.get(4).gene().floatValue()));
-        LOG.info("MIN_MOMENTUM_24H         = {}f;", String.format(Locale.US, "%.5f", best.get(5).gene().floatValue()));
-        LOG.info("HARD_RISK_LIMIT_4H       = {}f;", String.format(Locale.US, "%.5f", best.get(6).gene().floatValue()));
-        LOG.info("AI_DYNAMIC_MULTIPLIER    = {}f;", String.format(Locale.US, "%.5f", best.get(7).gene().floatValue()));
-        LOG.info("AI_DYNAMIC_MIN           = {}f;", String.format(Locale.US, "%.5f", best.get(8).gene().floatValue()));
-        LOG.info("AI_DYNAMIC_MAX           = {}f;", String.format(Locale.US, "%.5f", best.get(9).gene().floatValue()));
-        LOG.info("DCA_LOSS_BIG_DOWN        = {}f;", String.format(Locale.US, "%.5f", best.get(10).gene().floatValue()));
-        LOG.info("DCA_LOSS_BIG_UP          = {}f;", String.format(Locale.US, "%.5f", best.get(11).gene().floatValue()));
-        LOG.info("DCA_TIME_BIG_DOWN        = {};", Math.round(best.get(12).gene().floatValue()));
-        LOG.info("DCA_TIME_BIG_Up          = {};", Math.round(best.get(13).gene().floatValue()));
+        LOG.info("HARD_RISK_LIMIT_4H       = {}f;", String.format(Locale.US, "%.5f", best.get(5).gene().floatValue()));
+        LOG.info("AI_DYNAMIC_MULTIPLIER    = {}f;", String.format(Locale.US, "%.5f", best.get(6).gene().floatValue()));
+        LOG.info("AI_DYNAMIC_MIN           = {}f;", String.format(Locale.US, "%.5f", best.get(7).gene().floatValue()));
+        LOG.info("AI_DYNAMIC_MAX           = {}f;", String.format(Locale.US, "%.5f", best.get(8).gene().floatValue()));
+        LOG.info("DCA_LOSS_BIG_DOWN        = {}f;", String.format(Locale.US, "%.5f", best.get(9).gene().floatValue()));
+        LOG.info("DCA_LOSS_BIG_UP          = {}f;", String.format(Locale.US, "%.5f", best.get(10).gene().floatValue()));
+        LOG.info("DCA_TIME_BIG_DOWN        = {};", Math.round(best.get(11).gene().floatValue()));
+        LOG.info("DCA_TIME_BIG_Up          = {};", Math.round(best.get(12).gene().floatValue()));
         LOG.info("=============================================");
     }
 }

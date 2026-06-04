@@ -94,7 +94,7 @@ public class RunGeneratePredictions {
 
                             batchPredictions.put(timestamp, new AiPredictionData(
                                     timestamp,
-                                    res.return15M, res.return24H, res.riskDrawdown4H
+                                    res.return15M, res.riskDrawdown4H
                             ));
                         }
 
@@ -162,7 +162,7 @@ public class RunGeneratePredictions {
             // 4. Đóng gói kết quả
             return new AiPredictionData(
                     timestamp,
-                    res.return15M, res.return24H, res.riskDrawdown4H
+                    res.return15M, res.riskDrawdown4H
             );
         } catch (Exception e) {
             LOG.error("❌ Lỗi khi tính predictSingle tại " + Utils.normalizeDateYYYYMMDDHHmm(timestamp), e);

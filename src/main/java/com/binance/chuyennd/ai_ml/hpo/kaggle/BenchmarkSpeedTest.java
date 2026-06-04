@@ -37,7 +37,7 @@ public class BenchmarkSpeedTest {
             Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD = 0.15f; // Ngưỡng AI Funding
 
             AIRejectFilter aiFilter = new AIRejectFilter();
-            aiFilter.setConfig(-0.16107f, 0.02282f, 0.02513f);
+            aiFilter.setConfig(-0.16107f, 0.02282f);
 
             // 2. Load Dữ liệu
             LOG.info("Đang nạp dữ liệu Kaggle/Aerospike vào RAM...");

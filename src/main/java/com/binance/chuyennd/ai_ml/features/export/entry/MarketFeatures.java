@@ -55,9 +55,8 @@ public class MarketFeatures implements Serializable {
     public int weekOfMonth;
     public int monthOfYear;
 
-    // === LABELS (Đã rút gọn còn 3 nhãn chính) ===
+    // === LABELS (đã BỎ futureReturn24H — model 24H không còn dùng) ===
     public float futureReturn15M;  //
-    public float futureReturn24H;  //
     public float maxDrawdownNext4H; //
 
     public String toCSVHeader() {
@@ -70,7 +69,7 @@ public class MarketFeatures implements Serializable {
                 "basketMomentum15M,basketMomentum1H,basketRsi14,basketVolSpike," +
                 "fundingRateRaw,fundingRateAvg24H,fundingRateTrend," +
                 "hourOfDay,dayOfWeek,weekOfMonth,monthOfYear," +
-                "futureReturn15M,futureReturn24H,maxDrawdownNext4H"; // Đã bỏ các nhãn khác
+                "futureReturn15M,maxDrawdownNext4H"; // đã bỏ futureReturn24H
     }
 
     public String toCSVRow() {
@@ -114,9 +113,8 @@ public class MarketFeatures implements Serializable {
         sb.append(weekOfMonth).append(",");
         sb.append(monthOfYear).append(",");
 
-        // Labels (Chỉ còn 3 cột)
+        // Labels (2 cột: 15M + DD4H)
         sb.append(formatDouble(futureReturn15M)).append(","); //
-        sb.append(formatDouble(futureReturn24H)).append(","); //
         sb.append(formatDouble(maxDrawdownNext4H));           //
 
         return sb.toString();

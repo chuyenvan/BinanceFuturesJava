@@ -130,7 +130,6 @@ public class ProductionVsBacktestFeatureComparator {
         // BƯỚC 1: Check tính nhất quán của Model (Prod Saved vs Prod Fly)
         int diffModel = 0;
         diffModel += checkPred("return15M (Fly)", prodSaved.return15M, prodFly.return15M, epsilon, false);
-        diffModel += checkPred("return24H (Fly)", prodSaved.return24H, prodFly.return24H, epsilon, false);
         diffModel += checkPred("risk4H (Fly)", prodSaved.riskDrawdown4H, prodFly.riskDrawdown4H, epsilon, false);
 
         if (diffModel > 0) {
@@ -140,7 +139,6 @@ public class ProductionVsBacktestFeatureComparator {
         // BƯỚC 2: Check độ lệch môi trường (Prod Saved vs Backtest Fly)
         int diffEnv = 0;
         diffEnv += checkPred("return15M", prodSaved.return15M, bt.return15M, epsilon, true);
-        diffEnv += checkPred("return24H", prodSaved.return24H, bt.return24H, epsilon, true);
         diffEnv += checkPred("riskDrawdown4H", prodSaved.riskDrawdown4H, bt.riskDrawdown4H, epsilon, true);
 
         if (diffEnv == 0) {

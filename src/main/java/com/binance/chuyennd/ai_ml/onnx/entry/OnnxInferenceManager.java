@@ -20,7 +20,7 @@ public class OnnxInferenceManager implements AutoCloseable {
 
     // Các bộ dự đoán
     // P: Profit (Dùng Model V4 Sideway)
-    private final SinglePredictor p15M, p24H;
+    private final SinglePredictor p15M;
     // R: Risk (Dùng Model V3.0 Trend/Full)
     private final SinglePredictor pRisk4H;
 
@@ -35,9 +35,8 @@ public class OnnxInferenceManager implements AutoCloseable {
         // Ví dụ: Model_Regressor_return15M.onnx
         // Nên ta truyền typePrefix là "Regressor" cho tất cả.
 
-        // 1. Load Model Lợi Nhuận
+        // 1. Load Model Lợi Nhuận (đã BỎ model 24H — predReturn24H không còn dùng)
         this.p15M = new SinglePredictor(modelDir, "futureReturn15M", "Regressor");
-        this.p24H = new SinglePredictor(modelDir, "futureReturn24H", "Regressor");
         // 2. Load Model Rủi Ro
         this.pRisk4H = new SinglePredictor(modelDir, "maxDrawdownNext4H", "Regressor");
 
@@ -53,14 +52,12 @@ public class OnnxInferenceManager implements AutoCloseable {
 
             // 2. Dự đoán
             float r15 = p15M.predict(featuresV3);
-            float r24 = p24H.predict(featuresV3);
-
             float risk4 = pRisk4H.predict(featuresV3);
 
-            return new PredictionResult(r15, r24, risk4);
+            return new PredictionResult(r15, risk4);
         } catch (Exception e) {
             LOG.error("❌ Inference Error", e);
-            return new PredictionResult(0, 0, 0);
+            return new PredictionResult(0, 0);
         }
     }
 
@@ -260,27 +257,23 @@ public class OnnxInferenceManager implements AutoCloseable {
     @Override
     public void close() throws Exception {
         if (p15M != null) p15M.close();
-        if (p24H != null) p24H.close();
         if (pRisk4H != null) pRisk4H.close();
         if (env != null) env.close();
     }
 
     public static class PredictionResult implements Serializable {
-        public float return15M, return24H;
+        public float return15M;
         public float riskDrawdown4H;
 
-        // Sửa thứ tự tham số truyền vào cho đúng tên biến
-        public PredictionResult(float return15M, float return24H, float riskDrawdown4H) {
+        public PredictionResult(float return15M, float riskDrawdown4H) {
             this.return15M = return15M;
-            this.return24H = return24H;
             this.riskDrawdown4H = riskDrawdown4H;
         }
 
         @Override
         public String toString() {
-            // Chỉ để 3 format tương ứng với 3 biến
-            return String.format("[15M:%.2f%% 24H:%.2f%% | Risk4H:%.2f%%]",
-                    return15M * 100, return24H * 100, riskDrawdown4H * 100);
+            return String.format("[15M:%.2f%% | Risk4H:%.2f%%]",
+                    return15M * 100, riskDrawdown4H * 100);
         }
     }
 }

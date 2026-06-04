@@ -113,7 +113,6 @@ public class RunWorkerKaggle {
         // NHÓM 2: AI & ONNX
         Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD = task.aiMaxThres;
         Configs.MIN_MOMENTUM_15M = task.aiMin15M;
-        Configs.MIN_MOMENTUM_24H = task.aiMin24H;
         Configs.HARD_RISK_LIMIT_4H = task.aiRisk4H;
         Configs.AI_DYNAMIC_MULTIPLIER = task.aiDynMul;
         Configs.AI_DYNAMIC_MIN = task.aiDynMin;

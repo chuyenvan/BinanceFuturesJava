@@ -35,7 +35,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## ⚠️ CẠM BẪY ĐÃ BIẾT (đừng "sửa" nhầm, đừng tin nhầm)
 
-- **MOM24 đã TẮT trong filter** (`Configs.FILTER_USE_MOM24=false`): ablation A=C chứng minh nhánh `predReturn24H` không bao giờ kích hoạt → bỏ vô hại. `predReturn24H` vẫn được sim/predict ghi, chỉ filter không dùng. Bật lại bằng cờ để revert. Lá chắn chống sập THẬT không nằm ở entry filter (worstLoss/maxDD bất biến qua mọi mode filter) — phải xây ở tầng DCA/margin (xem `RunFilterAblation` mode E*).
+- **`predReturn24H` + MOM24 đã BỎ HẲN khỏi hệ** (ablation A=C: nhánh `predReturn24H` không bao giờ kích hoạt). Đã xoá: field `AiPredictionData.predReturn24H`, model 24H trong `OnnxInferenceManager`, nhánh MOM24 + config `MIN_MOMENTUM_24H`/`FILTER_USE_MOM24`, **gene MIN_MOMENTUM_24H khỏi genome HPO** (14→13 gene, CONFIG_VERSION v5→**v6**), và **label `futureReturn24H`** khỏi export CSV + target python (→ schema export đổi, phải RE-EXPORT market data trước khi train lại). Filter giờ chỉ còn RISK(DD4H)+MOM15+EARLY. Lá chắn chống sập THẬT không nằm ở entry filter (worstLoss/maxDD bất biến qua mọi mode) — phải xây ở tầng DCA/margin.
 - **Tên biến nói dối:** `getMaxRateIn90MForTradingStop` / tham số `maxChange90M` thực ra trả về `predReturn15M` của AI, KHÔNG phải biến động 90M. Đang dần đổi tên cho đúng (`calRateMinWithPredReturn15MForTradingStop`). Đừng suy luận theo tên cũ.
 - **Circuit breaker gần như không kích hoạt:** `CIRCUIT_LOOKBACK_MINUTES=4` quá ngắn so với `MAX_CONCURRENT_ORDERS=40`. Biết rồi, cần bàn trước khi chỉnh.
 - **DCA pro-cyclical:** trong `BIG_DOWN`, DcaUtils bật `isAll=true` → nhồi KHÔNG trần margin đúng lúc thị trường sập mạnh nhất. Rủi ro lớn đã ghi nhận, KHÔNG sửa lặt vặt — xem ROADMAP bước 3.

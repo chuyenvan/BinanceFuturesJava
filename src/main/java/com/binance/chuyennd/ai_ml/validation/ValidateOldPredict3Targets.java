@@ -97,8 +97,8 @@ public class ValidateOldPredict3Targets {
                         float btc24 = HistoryManager.getInstance().getReturn("BTCUSDT", 1440);
                         float reg = btc24 > 0.02f ? UP : (btc24 < -0.02f ? DOWN : SIDE);
 
-                        rows.add(new float[]{ts, pred.predReturn15M, pred.predReturn24H, pred.predRisk4H,
-                                r15, r24, rdd, reg});
+                        rows.add(new float[]{ts, pred.predReturn15M, 0f, pred.predRisk4H,
+                                r15, r24, rdd, reg});  // cột pred24 = 0 (predReturn24H đã bỏ; giữ layout tool)
                     }
                 }
             } catch (Exception ex) {

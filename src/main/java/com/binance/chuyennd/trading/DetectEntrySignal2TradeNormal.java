@@ -214,7 +214,7 @@ public class DetectEntrySignal2TradeNormal {
                     if (predictData != null) {
                         AiPredictionData preData = new AiPredictionData(
                                 timestamp,
-                                predictData.return15M, predictData.return24H, predictData.riskDrawdown4H
+                                predictData.return15M, predictData.riskDrawdown4H
                         );
                         DataManagerAerospikeFloatSim.saveAiPrediction1M(preData);
                     }
@@ -406,7 +406,7 @@ public class DetectEntrySignal2TradeNormal {
         // Nếu là kèo AI Funding -> Dùng Logic Động
         AiPredictionData predict = new AiPredictionData(
                 ticker.startTime,
-                prediction.return15M, prediction.return24H, prediction.riskDrawdown4H
+                prediction.return15M, prediction.riskDrawdown4H
         );
         if (levelChange == MarketLevelChange.PREDICT_SYMBOL_TRADE) {
             if (symbolPred != null) {

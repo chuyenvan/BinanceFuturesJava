@@ -51,9 +51,8 @@ public class RunTailLossDiagnostic {
         Configs.IS_HPO_MODE = false;
         Configs.IS_KAGGLE_MODE = false;
         Configs.TIME_RUN = START_DATE;
-        // Mode C: RISK + MOM15 + EARLY, KHÔNG MOM24. KHÔNG breaker.
+        // Filter: RISK + MOM15 + EARLY (MOM24 đã bỏ khỏi hệ). KHÔNG breaker.
         Configs.FILTER_MODE = "A";
-        Configs.FILTER_USE_MOM24 = false;
 
         LOG.info("🔒 PRE-FLIGHT: BLOCK_INTRABAR_LOOKAHEAD={} APPLY_SLIPPAGE={} SLIPPAGE_RATE={} RATE_FEE={}",
                 Configs.BLOCK_INTRABAR_LOOKAHEAD, Configs.APPLY_SLIPPAGE, Configs.SLIPPAGE_RATE, Configs.RATE_FEE);

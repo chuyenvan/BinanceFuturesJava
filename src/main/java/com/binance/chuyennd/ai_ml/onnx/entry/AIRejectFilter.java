@@ -18,8 +18,8 @@ public class AIRejectFilter {
 
 
     public FilterResult checkSignal(AiPredictionData prediction) {
-        return evaluate(prediction.predReturn15M, prediction.predReturn24H, prediction.predRisk4H,
-                Configs.MIN_MOMENTUM_15M, Configs.MIN_MOMENTUM_24H, Configs.HARD_RISK_LIMIT_4H);
+        return evaluate(prediction.predReturn15M, prediction.predRisk4H,
+                Configs.MIN_MOMENTUM_15M, Configs.HARD_RISK_LIMIT_4H);
     }
 
     // ==============================================================
@@ -44,33 +44,25 @@ public class AIRejectFilter {
         scaleFactor = Math.max(Configs.AI_DYNAMIC_MIN, Math.min(scaleFactor, Configs.AI_DYNAMIC_MAX));
 
         float dynamic_15M = Configs.MIN_MOMENTUM_15M * scaleFactor;
-        float dynamic_24H = Configs.MIN_MOMENTUM_24H * scaleFactor;
         float dynamic_Risk4H = Configs.HARD_RISK_LIMIT_4H / scaleFactor;
 
-        return evaluate(prediction.predReturn15M, prediction.predReturn24H, prediction.predRisk4H,
-                dynamic_15M, dynamic_24H, dynamic_Risk4H);
+        return evaluate(prediction.predReturn15M, prediction.predRisk4H,
+                dynamic_15M, dynamic_Risk4H);
     }
 
-    // 🔥 HÀM MỚI: Chỉ nhận 3 tham số
-    public void setConfig(float risk, float min15m, float min24h) {
+    public void setConfig(float risk, float min15m) {
         Configs.HARD_RISK_LIMIT_4H = risk;
         Configs.MIN_MOMENTUM_15M = min15m;
-        Configs.MIN_MOMENTUM_24H = min24h;
     }
 
     /**
-     * LOGIC ĐÁNH GIÁ LÕI
+     * LOGIC ĐÁNH GIÁ LÕI — chỉ còn 2 nhánh: RISK (DD4H) + MOM15. (MOM24/predReturn24H đã bỏ hẳn.)
+     * FILTER_MODE: B/D bỏ nhánh RISK (để đo); A/C giữ RISK. MOM15 luôn giữ.
+     * EARLY (trong checkSignalDynamic) không đụng tới đây.
      */
-    private FilterResult evaluate(float pred15M, float pred24H, float risk4H,
-                                  float thres15M, float thres24H, float thresRisk) {
-
-        // ABLATION: bọc nhánh RISK & MOM24 theo FILTER_MODE (chỉ để đo; A=hiện trạng giữ cả 3).
-        // B,D bỏ RISK; C,D bỏ MOM24. MOM15 luôn giữ. EARLY (checkSignalDynamic) không đụng tới đây.
+    private FilterResult evaluate(float pred15M, float risk4H, float thres15M, float thresRisk) {
         String mode = Configs.FILTER_MODE;
         boolean checkRisk = !("B".equals(mode) || "D".equals(mode));
-        // MOM24 TẮT mặc định ở production (FILTER_USE_MOM24=false) — A=C đã chứng minh nó không kích hoạt.
-        // Vẫn cho ablation bật lại (FILTER_USE_MOM24=true) để đo "full A". Mode C/D luôn tắt MOM24.
-        boolean checkMom24 = Configs.FILTER_USE_MOM24 && !("C".equals(mode) || "D".equals(mode));
 
         if (checkRisk && risk4H <= thresRisk) {
             return new FilterResult(FilterDecision.REJECT,
@@ -80,12 +72,8 @@ public class AIRejectFilter {
             return new FilterResult(FilterDecision.REJECT,
                     String.format("BAD MOMENTUM: 15M chưa nảy mạnh (%.2f%% < %.2f%%)", pred15M * 100, thres15M * 100));
         }
-        if (checkMom24 && pred24H < thres24H) {
-            return new FilterResult(FilterDecision.REJECT,
-                    String.format("MACRO DUMP: 24H quá xấu (%.2f%% < %.2f%%)", pred24H * 100, thres24H * 100));
-        }
 
         return new FilterResult(FilterDecision.PASS,
-                String.format("PERFECT: 15M(%.2f%%) | 24H(%.2f%%) | DD4H(%.2f%%)", pred15M * 100, pred24H * 100, risk4H * 100));
+                String.format("PERFECT: 15M(%.2f%%) | DD4H(%.2f%%)", pred15M * 100, risk4H * 100));
     }
 }
