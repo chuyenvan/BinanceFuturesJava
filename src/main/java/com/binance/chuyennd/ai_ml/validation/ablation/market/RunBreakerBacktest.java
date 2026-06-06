@@ -18,6 +18,7 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.TreeMap;
 
 /**
@@ -111,8 +112,18 @@ public class RunBreakerBacktest {
 
         BudgetManagerSimple bm = BudgetManagerSimple.getInstance();
         r.maxDrawdown = (bm.balanceIndex.unProfitMin != null) ? bm.balanceIndex.unProfitMin : 0f;
+        r.maxDrawdownTrue = (bm.trueUnrealizedMin != null) ? bm.trueUnrealizedMin : 0f;
         r.capital = (bm.balanceBasic != null && bm.balanceBasic > 0) ? bm.balanceBasic : 1f;
         r.balanceEnd = r.capital + r.totalPnl;
+
+        // maxDD MỚI theo năm (đáy THẬT mỗi tick)
+        r.yearDdTrue.putAll(bm.year2TrueUnrealizedMin);
+        // maxDD CŨ theo năm: gom min của date2ProfitMin theo năm (key = mốc ngày GMT+7)
+        for (Map.Entry<Long, Float> e : bm.balanceIndex.date2ProfitMin.entrySet()) {
+            if (e.getValue() == null) continue;
+            int y = Utils.getYear(e.getKey());
+            r.yearDdOld.merge(y, e.getValue(), Math::min);
+        }
 
         float maxRatio = 0f;
         for (Float marginMax : bm.balanceIndex.date2MarginMax.values()) {
@@ -127,8 +138,10 @@ public class RunBreakerBacktest {
         LOG.info("Trọng tâm: PnL từng năm (sống sót bear 2022 + sập 2025-2026?) + maxDD. So MARGIN vs DCA.");
         for (Row r : rows) {
             LOG.info(String.format(Locale.US,
-                    "─ MODE %-6s | totalPnl=%s | maxDD=%s (%.1f%% vốn) | balEnd=%s | halt=%d dcaCap=%d | maxMargR=%.2f",
-                    r.mode, fmt(r.totalPnl), fmt(r.maxDrawdown), r.maxDrawdown / r.capital * 100f,
+                    "─ MODE %-6s | totalPnl=%s | maxDD_cũ=%s (%.1f%%) maxDD_THẬT=%s (%.1f%%) | balEnd=%s | halt=%d dcaCap=%d | maxMargR=%.2f",
+                    r.mode, fmt(r.totalPnl),
+                    fmt(r.maxDrawdown), r.maxDrawdown / r.capital * 100f,
+                    fmt(r.maxDrawdownTrue), r.maxDrawdownTrue / r.capital * 100f,
                     fmt(r.balanceEnd), r.breakerMarginHalt, r.breakerDcaCap, r.maxMarginRatio));
             StringBuilder yb = new StringBuilder("    PnL/năm: ");
             for (int y : YEARS) {
@@ -136,13 +149,21 @@ public class RunBreakerBacktest {
                 yb.append(y).append("=").append(p != null ? fmt(p) : "0").append("  ");
             }
             LOG.info(yb.toString());
+            StringBuilder db = new StringBuilder("    maxDD/năm (cũ→THẬT): ");
+            for (int y : YEARS) {
+                Float o = r.yearDdOld.get(y), t = r.yearDdTrue.get(y);
+                db.append(y).append("=").append(o != null ? fmt(o) : "0").append("→")
+                        .append(t != null ? fmt(t) : "0").append("  ");
+            }
+            LOG.info(db.toString());
         }
         LOG.info("------------------------------------------------------------------------------------------");
         LOG.info("CÁCH ĐỌC:");
+        LOG.info(" - 🔒 GATE LIÊM CHÍNH: totalPnl PHẢI trùng run trước khi thêm field maeLow/trueUnrealizedMin.");
+        LOG.info("      Nếu totalPnl đổi => đã phá nhầm logic => DỪNG, rollback. (field mới chỉ đo, không quyết định).");
+        LOG.info(" - maxDD_THẬT sâu hơn maxDD_cũ = bằng chứng DD cũ (từ profitMin/minPrice, mẫu theo giờ) từng hụt.");
         LOG.info(" - PnL tổng 5 năm ÂM→DƯƠNG nhờ breaker => DCA-không-giới-hạn ĐÚNG là thủ phạm (bước ngoặt).");
-        LOG.info(" - Breaker giảm maxDD mạnh mà PnL ~giữ => đáng áp.");
-        LOG.info(" - Breaker giảm DD nhưng PnL XẤU đi => vấn đề sâu hơn DCA, KHÔNG sửa bằng phanh.");
-        LOG.info(" - So MARGIN vs DCA để biết cơ chế nào gánh chính.");
+        LOG.info(" - Breaker giảm maxDD mạnh mà PnL ~giữ => đáng áp. So MARGIN vs DCA để biết cơ chế nào gánh chính.");
     }
 
     private static String fmt(float v) {
@@ -152,12 +173,15 @@ public class RunBreakerBacktest {
     private static class Row {
         String mode;
         float totalPnl = 0f;
-        float maxDrawdown = 0f;
+        float maxDrawdown = 0f;        // CŨ: unProfitMin (Σ profitMin, lấy mẫu theo giờ) — nghi hụt
+        float maxDrawdownTrue = 0f;    // MỚI: trueUnrealizedMin (bar.low, mỗi tick) — đáy THẬT
         float capital = 1f;
         float balanceEnd = 0f;
         float maxMarginRatio = 0f;
         long breakerMarginHalt = 0;
         long breakerDcaCap = 0;
         TreeMap<Integer, Float> yearPnl = new TreeMap<>();
+        TreeMap<Integer, Float> yearDdOld = new TreeMap<>();   // maxDD cũ theo năm (gom từ date2ProfitMin)
+        TreeMap<Integer, Float> yearDdTrue = new TreeMap<>();  // maxDD mới theo năm (year2TrueUnrealizedMin)
     }
 }

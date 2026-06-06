@@ -109,6 +109,22 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                         startUpdateOldOrderTrading(time, runningSymbolId, ticker);
                                     }
                                 }
+
+                                // 🔎 maxDD THẬT (ĐO LƯỜNG, KHÔNG quyết định): MỖI TICK tính tổng unrealized
+                                //    danh mục theo bar.low của từng cụm đang chạy rồi theo dõi đáy. Dùng bar.low
+                                //    để bắt đáy trong nến — đây là METRIC nên KHÔNG phải look-ahead. Chạy SONG
+                                //    SONG unProfitMin cũ (xây từ profitMin/minPrice, lấy mẫu theo giờ), không thay thế.
+                                float unrealAtLow = 0f;
+                                for (int i = 0; i < activeRunningCount; i++) {
+                                    short id = activeRunningIds[i];
+                                    OrderTargetInfoTest cluster = symbol2OrderRunning[id];
+                                    KlineObjectSimple tk = symbol2Ticker[id];
+                                    if (cluster != null && cluster.priceEntry != null && cluster.quantity != null
+                                            && tk != null && tk.minPrice > 0) {
+                                        unrealAtLow += cluster.quantity * (tk.minPrice - cluster.priceEntry);
+                                    }
+                                }
+                                BudgetManagerSimple.getInstance().updateTrueUnrealizedMin(unrealAtLow, time);
                             }
 
                             logByProcessTime(startTimeRun, "Done update order", time);
@@ -258,6 +274,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                     orderInfo.lastPrice = symbol2OrderRunning[id].lastPrice;
                     orderInfo.priceTP = orderInfo.lastPrice;
                     orderInfo.minPrice = symbol2OrderRunning[id].minPrice;
+                    orderInfo.maeLow = symbol2OrderRunning[id].maeLow;   // 🔎 đáy THẬT cụm (đo MAE)
                     orderInfo.timeUpdate = symbol2OrderRunning[id].timeUpdate;
                     orderInfo.updateFundingFee();
                     allOrderDone.put(-orderInfo.timeUpdate - allOrderDone.size(), orderInfo);
@@ -439,6 +456,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                 order.status = orderMulti.status;
                 order.priceTP = orderMulti.priceTP;
                 order.minPrice = orderMulti.minPrice;
+                order.maeLow = orderMulti.maeLow;   // 🔎 chép đáy THẬT cụm sang từng leg (đo MAE)
                 order.lastPrice = orderMulti.lastPrice;
 
                 allOrderDone.put(-order.timeUpdate - allOrderDone.size(), order);
@@ -454,7 +472,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         BudgetManagerSimple.getInstance().marginRunning -= orderMulti.calMargin();
     }
 
-    private OrderTargetInfoTest mergeOrder(List<OrderTargetInfoTest> orders, KlineObjectSimple ticker) {
+    private OrderTargetInfoTest mergeOrder(List<OrderTargetInfoTest> orders, KlineObjectSimple ticker,
+                                           OrderTargetInfoTest prevRunning) {
         TreeMap<Long, OrderTargetInfoTest> time2Order = new TreeMap<>();
         float quantity = 0f;
         float margin = 0f;
@@ -469,6 +488,11 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                 time2Order.lastEntry().getValue().symbol, time2Order.lastEntry().getKey(), time2Order.lastEntry().getKey(), orders.get(0).side);
 
         orderResult.minPrice = ticker.priceClose;
+        // 🔎 maeLow: KHÔNG reset-lên khi nhồi. Mang theo đáy THẬT của cụm cũ (nếu có), lần đầu = giá vào
+        //    leg đầu, rồi hạ thêm nếu nến hiện tại thủng sâu hơn. Bảo toàn đáy từ leg đầu để MAE chuẩn.
+        float firstLegEntry = time2Order.firstEntry().getValue().priceEntry;
+        float carriedLow = (prevRunning != null && prevRunning.maeLow != null) ? prevRunning.maeLow : firstLegEntry;
+        orderResult.maeLow = Math.min(carriedLow, ticker.minPrice);
         orderResult.lastPrice = ticker.priceClose;
         orderResult.lastEntry = orders.get(orders.size() - 1).lastEntry;
         orderResult.rateChange = orders.get(orders.size() - 1).rateChange;
@@ -560,6 +584,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                 ticker.startTime, OrderSide.BUY);
 
         order.minPrice = entry;
+        order.maeLow = entry;   // 🔎 đáy THẬT khởi tạo = giá vào leg (đo lường MAE)
         order.lastEntry = entry;
         order.lastPrice = entry;
         order.tickerOpen = ticker;
@@ -580,7 +605,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
         BudgetManagerSimple.getInstance().counterOrderCreated.incrementAndGet();
 
-        symbol2OrderRunning[symbolId] = mergeOrder(orders, ticker);
+        symbol2OrderRunning[symbolId] = mergeOrder(orders, ticker, symbol2OrderRunning[symbolId]);
         addActiveRunningId(symbolId); // Thêm ID vào mảng O(1)
 
         BudgetManagerSimple.getInstance().updateMaxOrderRunning(counterOrderRunning());

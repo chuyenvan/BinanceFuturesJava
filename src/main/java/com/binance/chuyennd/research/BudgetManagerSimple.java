@@ -38,6 +38,13 @@ public class BudgetManagerSimple {
     private static volatile BudgetManagerSimple INSTANCE = null;
     public Float marginRunning = 0f;
 
+    // 🔎 ĐO LƯỜNG ONLY: đáy unrealized danh mục THẬT, lấy MỖI TICK theo bar.low (xem Simulator).
+    //    Chạy SONG SONG với balanceIndex.unProfitMin cũ (xây từ Σ profitMin/minPrice, lấy mẫu theo giờ),
+    //    KHÔNG thay thế — để so old vs new. Không tham gia bất kỳ quyết định giao dịch nào.
+    public Float trueUnrealizedMin = 0f;
+    public Long timeTrueUnrealizedMin;
+    public TreeMap<Integer, Float> year2TrueUnrealizedMin = new TreeMap<>();
+
     private static final ThreadLocal<BudgetManagerSimple> threadLocalInstance = ThreadLocal.withInitial(BudgetManagerSimple::new);
 
     public static BudgetManagerSimple getInstance() {
@@ -46,6 +53,24 @@ public class BudgetManagerSimple {
 
     public static void resetInstance() {
         threadLocalInstance.remove();
+    }
+
+    /**
+     * Cập nhật đáy unrealized THẬT của danh mục (đo lường, không quyết định). Gọi MỖI TICK từ Simulator.
+     *
+     * @param unrealizedAtLow tổng unrealized danh mục tính theo bar.low của từng cụm đang chạy (âm = lỗ)
+     * @param time            mốc phút hiện tại (GMT+7) — để gom đáy theo năm
+     */
+    public void updateTrueUnrealizedMin(float unrealizedAtLow, long time) {
+        if (unrealizedAtLow < trueUnrealizedMin) {
+            trueUnrealizedMin = unrealizedAtLow;
+            timeTrueUnrealizedMin = time;
+        }
+        int year = Utils.getYear(time);
+        Float yMin = year2TrueUnrealizedMin.get(year);
+        if (yMin == null || yMin > unrealizedAtLow) {
+            year2TrueUnrealizedMin.put(year, unrealizedAtLow);
+        }
     }
 
     public void updateBudget() {

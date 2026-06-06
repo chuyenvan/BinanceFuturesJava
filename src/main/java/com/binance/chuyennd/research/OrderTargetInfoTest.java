@@ -52,6 +52,10 @@ public class OrderTargetInfoTest implements Serializable {
 
     //    public Float maxPrice;
     public Float minPrice;
+    // 🔎 ĐO LƯỜNG ONLY: đáy THẬT của cụm kể từ leg đầu — chỉ đi XUỐNG, KHÔNG bao giờ reset-lên như
+    //    minPrice (minPrice là tham chiếu trailing-stop, bị reset lên ở updateStatusNew/updateTPSL/mergeOrder).
+    //    maeLow CHỈ phục vụ tính MAE trong report; TUYỆT ĐỐI không tham gia quyết định vào/ra lệnh/SL.
+    public Float maeLow;
     public Float lastPrice;
 
     public Float rateChange;
@@ -88,6 +92,11 @@ public class OrderTargetInfoTest implements Serializable {
         if (this.minPrice > ticker.minPrice) {
             this.minPrice = ticker.minPrice;
             profitMin = quantity * (minPrice - priceEntry);
+        }
+        // 🔎 maeLow: bám đáy nến, CHỈ đi xuống. Cố ý KHÔNG reset ở updateStatusNew/updateTPSL/mergeOrder
+        //    (khác hẳn minPrice) để giữ đáy THẬT từ leg đầu — phục vụ MAE chuẩn. Không đụng giao dịch.
+        if (this.maeLow == null || this.maeLow > ticker.minPrice) {
+            this.maeLow = ticker.minPrice;
         }
         this.timeUpdate = ticker.startTime.longValue();
     }
