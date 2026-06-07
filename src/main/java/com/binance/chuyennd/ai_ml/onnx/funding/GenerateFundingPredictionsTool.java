@@ -65,6 +65,14 @@ public class GenerateFundingPredictionsTool {
     }
 
     public static void main(String[] args) throws Exception {
+        // Worker phân tán đọc DỮ LIỆU-NGUỒN (ticker/symbol_mapper/funding_data) từ 226 vì 242 khóa
+        // firewall (Kaggle/máy cá nhân không với được 242). Bật cờ để DataManager.getReadClient() -> 226.
+        // Hiếm khi chạy trên máy CÓ 242: đặt env GEN_USE_242=1 để đọc thẳng 242.
+        if (!"1".equals(System.getenv("GEN_USE_242"))) {
+            Configs.IS_KAGGLE_MODE = true;
+            LOG.info("🌐 Đọc dữ liệu-nguồn từ 226 (IS_KAGGLE_MODE=true). Đặt GEN_USE_242=1 nếu muốn đọc 242.");
+        }
+
         int threads = resolveThreads(args);
         // Cấu hình luồng (ForkJoin cho parallelStream + Aerospike IO + ONNX intraOp). Thread count KHÔNG
         // ảnh hưởng output (batchInput giữ encounter-order, kết quả map theo id) — chỉ ảnh hưởng tốc độ.

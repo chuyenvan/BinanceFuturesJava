@@ -49,8 +49,8 @@ public class DataManagerAerospikeFloatSim {
 
     public static final String AEROSPIKE_SET_NAME_AI_PRED_MARKET = "ai_pred_market_full_basket_v2";
     // 1. CẤU HÌNH SET NAME VÀ KEY
-    private static final String AEROSPIKE_SET_NAME_MAPPER = "symbol_mapper"; // Set name mới
-    private static final String MAPPER_KEY_GLOBAL = "global_id_map";         // Key chứa Map
+    public static final String AEROSPIKE_SET_NAME_MAPPER = "symbol_mapper"; // Set name mới
+    public static final String MAPPER_KEY_GLOBAL = "global_id_map";         // Key chứa Map
     private static final String MAPPER_BIN_NAME = "data";                    // Tên Bin chứa Map
     public static final String AEROSPIKE_SET_NAME_AI_PRED_1M = "ai_pred_1m";
     // 🔥 SET NAME MỚI CHO AI PREDICT
@@ -101,7 +101,7 @@ public class DataManagerAerospikeFloatSim {
         Map<String, Short> result = new ConcurrentHashMap<>();
         try {
             Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_MAPPER, MAPPER_KEY_GLOBAL);
-            Record record = getClient242().get(null, key);
+            Record record = getReadClient().get(null, key);   // kaggle/hpo => 226 (bản sao)
 
             if (record != null) {
                 // Lấy dữ liệu Map từ Aerospike
@@ -270,7 +270,7 @@ public class DataManagerAerospikeFloatSim {
         TreeMap<Long, Float> results = new TreeMap<>();
         try {
             Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_FUNDINGFEE, symbol);
-            Record record = getClient242().get(null, key);
+            Record record = getReadClient().get(null, key);   // kaggle/hpo => 226 (bản sao)
             if (record != null) {
                 byte[] compressedData = (byte[]) record.getValue("f_data");
                 if (compressedData != null) {
@@ -292,7 +292,7 @@ public class DataManagerAerospikeFloatSim {
             // Trường hợp dữ liệu cũ vẫn là CDT Map (f_map)
             try {
                 Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_FUNDINGFEE, symbol);
-                Record record = getClient242().get(null, key);
+                Record record = getReadClient().get(null, key);   // kaggle/hpo => 226 (bản sao)
                 if (record != null && record.getMap("f_map") != null) {
                     record.getMap("f_map").forEach((k, v) -> results.put((Long) k, ((Number) v).floatValue()));
                 }
@@ -315,7 +315,7 @@ public class DataManagerAerospikeFloatSim {
             scanPolicy.includeBinData = true;
 
             // Chỉ định rõ bin "f_data" (nén Snappy) và "f_map" (dữ liệu cũ) để tối ưu
-            getClient242().scanAll(scanPolicy, Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_FUNDINGFEE, (key, record) -> {
+            getReadClient().scanAll(scanPolicy, Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_FUNDINGFEE, (key, record) -> {   // kaggle/hpo => 226
                 String symbol = (key.userKey != null) ? key.userKey.toString() : null;
                 if (symbol == null) return;
 
@@ -433,7 +433,7 @@ public class DataManagerAerospikeFloatSim {
                     }
 
                     // Batch Read
-                    Record[] records = getTickerReadClient().get(batchPolicy, chunkKeys);
+                    Record[] records = getReadClient().get(batchPolicy, chunkKeys);
 
                     for (int j = 0; j < records.length; j++) {
                         Record record = records[j];
@@ -514,7 +514,7 @@ public class DataManagerAerospikeFloatSim {
                     }
 
                     // Batch Read
-                    Record[] records = getTickerReadClient().get(batchPolicy, chunkKeys);
+                    Record[] records = getReadClient().get(batchPolicy, chunkKeys);
 
                     for (int j = 0; j < records.length; j++) {
                         Record record = records[j];
@@ -598,7 +598,7 @@ public class DataManagerAerospikeFloatSim {
                     }
 
                     // Batch Read từ Aerospike
-                    Record[] records = getTickerReadClient().get(batchPolicy, chunkKeys);
+                    Record[] records = getReadClient().get(batchPolicy, chunkKeys);
                     // 🔥 LOGIC CHECK LỖI TRẢ VỀ TỪ CLIENT 🔥
                     if (records == null) {
                         LOG.info("❌ [AEROSPIKE ERROR] Client.get() returned NULL for chunk starting at {}",
@@ -682,7 +682,7 @@ public class DataManagerAerospikeFloatSim {
                     }
 
                     // Batch Read tối ưu
-                    Record[] records = getTickerReadClient() .get(batchPolicy, chunkKeys);
+                    Record[] records = getReadClient() .get(batchPolicy, chunkKeys);
 
                     for (int j = 0; j < records.length; j++) {
                         Record record = records[j];
@@ -1900,11 +1900,12 @@ public class DataManagerAerospikeFloatSim {
     }
 
     /**
-     * Client đọc TICKER: mặc định 242 (nguồn gốc). Kaggle/HPO worker không với được 242
-     * (firewall) => đọc bản sao trên 226 (đã copy bằng CopyTicker242To226).
-     * CHỈ áp cho ĐỌC ticker — mọi đường GHI ticker giữ nguyên 242.
+     * Client ĐỌC dữ liệu-nguồn-trên-242 (ticker, symbol_mapper, funding_data): mặc định 242 (gốc).
+     * Kaggle/HPO worker không với được 242 (firewall) => đọc BẢN SAO trên 226 (copy bằng
+     * CopyTicker242To226 + CopyAuxSets242To226). CHỈ áp cho ĐỌC — mọi đường GHI giữ nguyên 242.
+     * (market_data/ai_pred_market/funding_pred dùng getClient226() trực tiếp vì vốn nằm trên 226.)
      */
-    private static AerospikeClient getTickerReadClient() {
+    private static AerospikeClient getReadClient() {
         if (Configs.IS_KAGGLE_MODE || Configs.IS_HPO_MODE) {
             return getClient226();
         }
