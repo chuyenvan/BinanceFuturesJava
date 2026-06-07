@@ -40,7 +40,14 @@ public class RunHpoMaster_Distributed {
     // nhưng không nằm trong genome => phải đổi version để bỏ cache điểm cũ (v4).
     // v5 -> v6: BỎ gene MIN_MOMENTUM_24H khỏi genome (14 -> 13 gene). Đổi layout genome +
     // buildTaskId => taskId cũ không còn hợp lệ, BẮT BUỘC version mới để bỏ cache v5.
-    public static final String CONFIG_VERSION = "v6";
+    // v6 -> v7: maxDD (unProfitMin) đổi nguồn từ Σ profitMin/minPrice (hụt, mẫu theo giờ) sang đáy
+    // unrealized THẬT per-tick (bar.low) trong BudgetManagerSimple.updateTrueUnrealizedMin. unProfitMin
+    // nuôi finalFitness V3 (phạt DD 15/30/40% + kill-switch >40%) => DD thật sâu hơn ~1.1-1.6x làm
+    // finalFitness đổi cho MỌI genome (không nằm trong genome) => BẮT BUỘC version mới bỏ cache v6.
+    // v7 -> v8: BOOKING FIX giá chốt trailing-stop — kẹp priceTP=min(priceSL, ticker.maxPrice) trong
+    // updateStatusNew (gap thủng SL thì không bán được level cũ). Giảm calTp ~6% PnL (toàn STOP_MARKET,
+    // dồn 2025). Đổi PnL backtest mọi genome => BẮT BUỘC version mới bỏ cache v7.
+    public static final String CONFIG_VERSION = "v8";
 
     // 🔥 TÁCH 2 SET:
     //  - QUEUE_SET: chỉ chứa task ĐANG active (PENDING/RUNNING). Worker scanAll cái này nên LUÔN NHỎ.

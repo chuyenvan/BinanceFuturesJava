@@ -15,7 +15,7 @@ public class BalanceIndex implements Serializable {
     public Float profitLossMax;
     public Long timeProfitLossMax;
 
-    public Float unProfitMin;
+    public Float unProfitMin = 0f;
     public Map<Long, Float> date2ProfitMin = new HashMap<>();
     public Map<Long, Float> date2MarginMax = new HashMap<>();
     public Map<String, Float> month2ProfitMin = new HashMap<>();
@@ -66,10 +66,10 @@ public class BalanceIndex implements Serializable {
         }
         month2SLMax.put(Utils.getMonth(timeUpdate), slMax);
 
-        if (this.unProfitMin == null || this.unProfitMin > unrealizedProfitMin) {
-            this.unProfitMin = unrealizedProfitMin;
-            this.timeUnProfitMin = timeUpdate;
-        }
+        // 🔴 unProfitMin (maxDD CHÍNH THỨC) KHÔNG còn tính ở đây nữa. Writer cũ dựa unrealizedProfitMin
+        //    (= Σ profitMin ← minPrice reset-lên, lấy mẫu theo giờ) làm DD HỤT. Nay nguồn DUY NHẤT là
+        //    BudgetManagerSimple.updateTrueUnrealizedMin (per-tick, bar.low). date2/month2ProfitMin dưới
+        //    đây giữ nguyên (chẩn đoán per-day/month legacy, KHÔNG vào fitness).
 
         Float profitMinOfDate = date2ProfitMin.get(Utils.getDate(timeUpdate));
         if (profitMinOfDate == null || profitMinOfDate > unrealizedProfitMin) {

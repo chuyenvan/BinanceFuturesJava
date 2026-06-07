@@ -155,7 +155,7 @@ public class OrderTargetInfoTest implements Serializable {
                 // HÀNH VI CŨ (look-ahead) — chỉ chạy khi tắt guard để đo đối chứng.
                 if (lastPrice <= priceSLNew) {
                     status = OrderTargetStatus.TAKE_PROFIT_DONE;
-                    priceTP = priceSL;
+                    priceTP = Math.min(priceSL, ticker.maxPrice);   // kẹp ≤ high (đồng bộ booking fix; nhánh này bất hoạt khi guard bật)
                 }
             }
         } else {
@@ -166,7 +166,11 @@ public class OrderTargetInfoTest implements Serializable {
                 } else {
                     status = OrderTargetStatus.STOP_LOSS_DONE;
                 }
-                priceTP = priceSL;
+                // 🔴 BOOKING FIX (KHÔNG đụng trigger minPrice<=priceSL): kẹp giá chốt ≤ high nến khớp.
+                //    priceSL là level set ở nến TRƯỚC; khi nến trigger GAP thủng xuống (high<priceSL) thì
+                //    KHÔNG thể bán được priceSL — long-only => sell fill ≤ ticker.maxPrice. Ca thường
+                //    (low≤priceSL≤high) min=priceSL nên KHÔNG đổi; chỉ ca gap mới bị kẹp (sửa PnL thổi).
+                priceTP = Math.min(priceSL, ticker.maxPrice);
             }
         }
     }

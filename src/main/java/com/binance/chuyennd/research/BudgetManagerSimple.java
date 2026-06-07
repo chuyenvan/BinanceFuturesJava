@@ -38,9 +38,9 @@ public class BudgetManagerSimple {
     private static volatile BudgetManagerSimple INSTANCE = null;
     public Float marginRunning = 0f;
 
-    // 🔎 ĐO LƯỜNG ONLY: đáy unrealized danh mục THẬT, lấy MỖI TICK theo bar.low (xem Simulator).
-    //    Chạy SONG SONG với balanceIndex.unProfitMin cũ (xây từ Σ profitMin/minPrice, lấy mẫu theo giờ),
-    //    KHÔNG thay thế — để so old vs new. Không tham gia bất kỳ quyết định giao dịch nào.
+    // 🔴 maxDD CHÍNH THỨC: đáy unrealized danh mục THẬT, lấy MỖI TICK theo bar.low (xem Simulator).
+    //    Ghi thẳng vào balanceIndex.unProfitMin (single source) — THAY cho writer cũ Σ profitMin/minPrice
+    //    (nông + lấy mẫu theo giờ). Fitness HPO V3 đọc unProfitMin nên giờ phạt DD theo đáy THẬT.
     public Float trueUnrealizedMin = 0f;
     public Long timeTrueUnrealizedMin;
     public TreeMap<Integer, Float> year2TrueUnrealizedMin = new TreeMap<>();
@@ -65,6 +65,11 @@ public class BudgetManagerSimple {
         if (unrealizedAtLow < trueUnrealizedMin) {
             trueUnrealizedMin = unrealizedAtLow;
             timeTrueUnrealizedMin = time;
+            // 🔴 maxDD CHÍNH THỨC = đáy unrealized THẬT (per-tick, bar.low). Ghi thẳng vào unProfitMin để
+            //    fitness HPO (HPOFitnessCalculatorV3) + mọi report đọc đúng DD thật. ĐÂY là single source —
+            //    writer cũ (Σ profitMin/minPrice) trong BalanceIndex.updateIndex đã gỡ.
+            balanceIndex.unProfitMin = trueUnrealizedMin;
+            balanceIndex.timeUnProfitMin = time;
         }
         int year = Utils.getYear(time);
         Float yMin = year2TrueUnrealizedMin.get(year);
