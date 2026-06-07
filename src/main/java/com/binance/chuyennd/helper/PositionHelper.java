@@ -43,6 +43,9 @@ public class PositionHelper {
 
     public static Float calRateLoss(PositionRisk pos) {
         try {
+            if (pos == null) {
+                return null;
+            }
             Float rate = Utils.rateOf2Double(pos.getMarkPrice().floatValue(), pos.getEntryPrice().floatValue());
             if (pos.getPositionAmt().compareTo(new BigDecimal("0")) < 0) {
                 rate = -rate;

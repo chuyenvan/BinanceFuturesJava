@@ -50,6 +50,9 @@ public class DcaProcessor {
                 .stream()
                 .filter(entry -> {
                     PositionRisk pos = entry.getValue();
+                    if (pos == null){
+                        return false;
+                    }
                     // "Giải nén" các thuộc tính từ đối tượng 'order' và truyền vào hàm tiện ích
                     return DcaUtils.shouldDca(
                             PositionHelper.callMargin(pos),
