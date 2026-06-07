@@ -17,7 +17,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 /**
@@ -53,6 +53,8 @@ public class GenerateFundingPredictionsTool {
     private static final int CLAIM_RETRY = 3;
     private static final long CLAIM_RETRY_SLEEP_MS = 5000;
     private static final int DEFAULT_THREADS = 4;
+    private static final int WRITE_THREADS = 4;     // ghi 226 song song (giấu latency WAN sau infer)
+    private static final int WRITE_QUEUE = 240;     // backpressure: tối đa ~240 phút chờ ghi (chặn phình RAM)
 
     private static class PrepareData {
         short id;
@@ -171,16 +173,30 @@ public class GenerateFundingPredictionsTool {
         FundingDataCollectionManager.FundingFeatureExtractorV2 extractor =
                 new FundingDataCollectionManager.FundingFeatureExtractorV2();
 
-        // --- BƯỚC 1: WARMUP 24H (giữ nguyên cách gen set v5) ---
-        long warmupStart = startTs - (24 * 60 * 60 * 1000L);
-        LOG.info("🔥 WARMUP 24H: {} -> {}",
-                Utils.normalizeDateYYYYMMDDHHmm(warmupStart), Utils.normalizeDateYYYYMMDDHHmm(startTs));
-        runDataLoop(warmupStart, startTs, time2MarketData, null, symbolMap, true, extractor);
+        // 🔄 Pool GHI BẤT ĐỒNG BỘ: put 226 (WAN ~21% thời gian, core ngồi chờ mạng) đẩy ra nhiều thread
+        //    ghi song song để GIẤU sau infer. Bit-identical: cùng giá trị, key theo phút nên thứ tự ghi vô hại.
+        //    Queue bounded + CallerRuns => backpressure (writer chậm thì main tự ghi, không phình RAM, không mất).
+        ThreadPoolExecutor writerPool = new ThreadPoolExecutor(
+                WRITE_THREADS, WRITE_THREADS, 0L, TimeUnit.MILLISECONDS,
+                new ArrayBlockingQueue<>(WRITE_QUEUE), new ThreadPoolExecutor.CallerRunsPolicy());
 
-        // --- BƯỚC 2: GENERATE ---
-        LOG.info("🚀 GENERATE ALL SYMBOLS: {} -> {}",
-                Utils.normalizeDateYYYYMMDDHHmm(startTs), Utils.normalizeDateYYYYMMDDHHmm(endTs));
-        runDataLoop(startTs, endTs, time2MarketData, aiBrain, symbolMap, false, extractor);
+        try {
+            // --- BƯỚC 1: WARMUP 24H (giữ nguyên cách gen set v5; không ghi) ---
+            long warmupStart = startTs - (24 * 60 * 60 * 1000L);
+            LOG.info("🔥 WARMUP 24H: {} -> {}",
+                    Utils.normalizeDateYYYYMMDDHHmm(warmupStart), Utils.normalizeDateYYYYMMDDHHmm(startTs));
+            runDataLoop(warmupStart, startTs, time2MarketData, null, symbolMap, true, extractor, null);
+
+            // --- BƯỚC 2: GENERATE ---
+            LOG.info("🚀 GENERATE ALL SYMBOLS: {} -> {}",
+                    Utils.normalizeDateYYYYMMDDHHmm(startTs), Utils.normalizeDateYYYYMMDDHHmm(endTs));
+            runDataLoop(startTs, endTs, time2MarketData, aiBrain, symbolMap, false, extractor, writerPool);
+        } finally {
+            // FLUSH hết writes TRƯỚC khi coi task xong (đảm bảo dữ liệu đã ghi, không hụt khi re-queue).
+            writerPool.shutdown();
+            if (!writerPool.awaitTermination(15, TimeUnit.MINUTES))
+                LOG.error("⚠️ Writer pool CHƯA flush hết sau 15' — dữ liệu có thể THIẾU, kiểm tra trước khi tin task này.");
+        }
 
         LOG.info("✅ HOÀN TẤT CHUNK {} -> {}.",
                 Utils.normalizeDateYYYYMMDD(startTs), Utils.normalizeDateYYYYMMDD(endTs));
@@ -191,7 +207,8 @@ public class GenerateFundingPredictionsTool {
                              FundingOnnxInferenceManager aiBrain,
                              ConcurrentHashMap<String, Short> symbolMap,
                              boolean isWarmup,
-                             FundingDataCollectionManager.FundingFeatureExtractorV2 extractor
+                             FundingDataCollectionManager.FundingFeatureExtractorV2 extractor,
+                             ExecutorService writerPool
     ) {
         long currentTime = start;
 
@@ -282,8 +299,11 @@ public class GenerateFundingPredictionsTool {
                 // 4. LƯU KẾT QUẢ
                 if (!finalResults.isEmpty()) {
                     long w0 = System.nanoTime();
-                    DataManagerAerospikeFloatSim.saveFundingPredictions1M(time, finalResults);
-                    ioWriteNs += System.nanoTime() - w0;
+                    final long ft = time;
+                    final Map<Short, float[]> fr = finalResults;
+                    // ASYNC: ghi nền song song (giấu latency 226). CallerRuns => nếu writer nghẽn thì main tự ghi.
+                    writerPool.execute(() -> DataManagerAerospikeFloatSim.saveFundingPredictions1M(ft, fr));
+                    ioWriteNs += System.nanoTime() - w0;   // chỉ còn thời gian SUBMIT (~0); ghi thật chạy nền
                 }
             }
 
