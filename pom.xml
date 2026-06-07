@@ -14,6 +14,9 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <okhttp3.version>4.9.1</okhttp3.version>
         <fastjson.version>1.2.76</fastjson.version>
+        <!-- Build nhanh khi DEV: -DskipShade=true => bỏ đóng fat jar (~tốn nhất). Khi cần jar deploy
+             (Kaggle/VPS) thì build bình thường (skipShade=false mặc định) để có fat jar đủ deps. -->
+        <skipShade>false</skipShade>
     </properties>
 
     <dependencies>
@@ -131,6 +134,7 @@
                             <goal>shade</goal>
                         </goals>
                         <configuration>
+                            <skip>${skipShade}</skip>
                             <filters>
                                 <filter>
                                     <artifact>*:*</artifact>
@@ -162,8 +166,8 @@
                 <executions>
                     <execution>
                         <goals>
+                            <!-- Bỏ test-compile (không có proto test, dư 1 lần chạy protoc mỗi build) -->
                             <goal>compile</goal>
-                            <goal>test-compile</goal>
                         </goals>
                     </execution>
                 </executions>

@@ -44,7 +44,8 @@ public class DataManagerAerospikeFloatSim {
 
 
     // set name 226
-    public static final String AEROSPIKE_SET_NAME_FUNDING_PRED = "funding_pred_1m_20260606";
+//    public static final String AEROSPIKE_SET_NAME_FUNDING_PRED = "funding_pred_1m_20260606";
+    public static final String AEROSPIKE_SET_NAME_FUNDING_PRED = "funding_pred_1m_v5";
 
     public static final String AEROSPIKE_SET_NAME_AI_PRED_MARKET = "ai_pred_market_full_basket_v2";
     // 1. CẤU HÌNH SET NAME VÀ KEY
@@ -1908,5 +1909,40 @@ public class DataManagerAerospikeFloatSim {
             return getClient226();
         }
         return getClient242();
+    }
+
+    /**
+     * Đọc funding pred (giải mã long-packed: symbolId&lt;&lt;32 | floatBits của pred[0]) cho DANH SÁCH
+     * timestamp cụ thể từ SET chỉ định — phục vụ so sánh set (v5 vs v6) / sampling thưa. Tái dùng
+     * decodeFundingMapToPrimitiveArray (cùng bit-layout cho mọi set len=1). Đọc trên 226. READ-ONLY.
+     *
+     * @param setName    tên set (vd funding_pred_1m_v5 / funding_pred_1m_20260606)
+     * @param timestamps các mốc phút cần đọc (ms)
+     * @return TreeMap mốc -&gt; long[] đã đóng gói; phút thiếu record bị bỏ qua
+     */
+    public static TreeMap<Long, long[]> getFundingPredsForTimestamps(String setName, long[] timestamps) {
+        TreeMap<Long, long[]> results = new TreeMap<>();
+        if (timestamps == null || timestamps.length == 0) return results;
+        SimpleDateFormat keyFmt = new SimpleDateFormat("yyyyMMdd-HHmm");
+        Key[] keys = new Key[timestamps.length];
+        for (int i = 0; i < timestamps.length; i++) {
+            keys[i] = new Key(Configs.AEROSPIKE_NAMESPACE, setName, keyFmt.format(new java.util.Date(timestamps[i])));
+        }
+        Record[] records = getClient226().get(batchPolicy, keys);
+        if (records == null) return results;
+        for (int i = 0; i < records.length; i++) {
+            if (records[i] == null) continue;
+            byte[] data = (byte[]) records[i].getValue("data");
+            if (data == null) continue;
+            try {
+                // "data" lưu dạng Snappy(compress(binary)) — phải GIẢI NÉN trước khi decode (mirror scanAll).
+                byte[] raw = org.xerial.snappy.Snappy.uncompress(data);
+                long[] arr = decodeFundingMapToPrimitiveArray(raw);
+                if (arr.length > 0) results.put(timestamps[i], arr);
+            } catch (Exception e) {
+                // record lỗi/format lạ -> bỏ qua (giống scanAll), không làm gãy cả batch
+            }
+        }
+        return results;
     }
 }
