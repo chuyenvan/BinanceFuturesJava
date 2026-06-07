@@ -50,7 +50,7 @@ public class InspectFundingPredRaw {
 
             DataManagerAerospikeFloatSim.getClient226().scanAll(sp,
                     Configs.AEROSPIKE_NAMESPACE,
-                    Configs.AEROSPIKE_SET_NAME_FUNDING_PRED,
+                    DataManagerAerospikeFloatSim.AEROSPIKE_SET_NAME_FUNDING_PRED,
                     (Key key, Record record) -> {
                         if (seen.get() >= SAMPLE_LIMIT) return;
                         try {

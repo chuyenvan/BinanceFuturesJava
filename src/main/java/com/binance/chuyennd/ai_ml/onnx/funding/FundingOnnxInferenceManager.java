@@ -21,12 +21,17 @@ public class FundingOnnxInferenceManager implements AutoCloseable {
     private static final int NUM_FEATURES = 21;
 
     public FundingOnnxInferenceManager(String modelPath) throws OrtException {
-        LOG.info("🧠 Initializing Funding AI (BATCH MODE) from: {}", modelPath);
+        // Default GIỮ NGUYÊN min(4, cores) để output bất biến với bản cũ.
+        this(modelPath, Math.min(4, Runtime.getRuntime().availableProcessors()));
+    }
+
+    public FundingOnnxInferenceManager(String modelPath, int intraOpThreads) throws OrtException {
+        LOG.info("🧠 Initializing Funding AI (BATCH MODE) from: {} | intraOpThreads={}", modelPath, intraOpThreads);
         this.env = OrtEnvironment.getEnvironment();
         OrtSession.SessionOptions opts = new OrtSession.SessionOptions();
 
         opts.addConfigEntry("session.disable_cpu_mem_arena", "1");
-        opts.setIntraOpNumThreads(Math.min(4, Runtime.getRuntime().availableProcessors()));
+        opts.setIntraOpNumThreads(intraOpThreads);
         opts.setInterOpNumThreads(1);
 
         this.session = env.createSession(modelPath, opts);

@@ -23,7 +23,7 @@ public class CleanFutureGarbageData {
         String[] setsToClean = {
                 DataManagerAerospikeFloatSim.AEROSPIKE_SET_NAME_MARKET_DATA,
                 DataManagerAerospikeFloatSim.AEROSPIKE_SET_NAME_AI_PRED_MARKET,
-                Configs.AEROSPIKE_SET_NAME_FUNDING_PRED
+                DataManagerAerospikeFloatSim.AEROSPIKE_SET_NAME_FUNDING_PRED
         };
 
         ScanPolicy scanPolicy = new ScanPolicy();

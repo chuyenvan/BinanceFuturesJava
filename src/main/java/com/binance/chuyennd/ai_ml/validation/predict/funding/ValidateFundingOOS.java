@@ -58,7 +58,7 @@ public class ValidateFundingOOS {
         mapper.init();
         HistoryManager.getInstance().resetCache();
 
-        LOG.info("📥 Nạp funding pred (pred[0]=P-fail) từ 226 (set {})...", Configs.AEROSPIKE_SET_NAME_FUNDING_PRED);
+        LOG.info("📥 Nạp funding pred (pred[0]=P-fail) từ 226 (set {})...", DataManagerAerospikeFloatSim.AEROSPIKE_SET_NAME_FUNDING_PRED);
         TreeMap<Long, long[]> fundingPred = DataManagerAerospikeFloatSim.getAllFundingPredictionsPrimitiveFromAerospike();
         LOG.info("✅ funding pred records={} | OOS từ {} | realized: entry=priceClose, target=+6%%, hit nếu maxPrice>=target trong (t, t+72h]",
                 fundingPred.size(), CUTOFF_DATE);

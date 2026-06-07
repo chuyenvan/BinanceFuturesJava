@@ -44,9 +44,9 @@ public class DataManagerAerospikeFloatSim {
 
 
     // set name 226
-    private static final String AEROSPIKE_SET_NAME_FUNDING_PRED = Configs.AEROSPIKE_SET_NAME_FUNDING_PRED;
+    public static final String AEROSPIKE_SET_NAME_FUNDING_PRED = "funding_pred_1m_20260606";
 
-
+    public static final String AEROSPIKE_SET_NAME_AI_PRED_MARKET = "ai_pred_market_full_basket_v2";
     // 1. CẤU HÌNH SET NAME VÀ KEY
     private static final String AEROSPIKE_SET_NAME_MAPPER = "symbol_mapper"; // Set name mới
     private static final String MAPPER_KEY_GLOBAL = "global_id_map";         // Key chứa Map
@@ -279,7 +279,8 @@ public class DataManagerAerospikeFloatSim {
                     // thành Double → forEach ép sang Float ném ClassCastException → rơi vào catch → trả RỖNG.
                     // Hệ quả cũ: lazy-load trong getNearestFundingFee rỗng (→0), và writeFundingMap merge
                     // thấy existing rỗng → chạy lại crawler theo từng đợt sẽ GHI ĐÈ mất lịch sử cũ.
-                    java.lang.reflect.Type mapType = new com.google.gson.reflect.TypeToken<Map<String, Float>>() {}.getType();
+                    java.lang.reflect.Type mapType = new com.google.gson.reflect.TypeToken<Map<String, Float>>() {
+                    }.getType();
                     Map<String, Float> rawMap = Utils.gson.fromJson(json, mapType);
 
                     // Convert Key từ String (JSON) về Long
@@ -431,7 +432,7 @@ public class DataManagerAerospikeFloatSim {
                     }
 
                     // Batch Read
-                    Record[] records = getClient242().get(batchPolicy, chunkKeys);
+                    Record[] records = getTickerReadClient().get(batchPolicy, chunkKeys);
 
                     for (int j = 0; j < records.length; j++) {
                         Record record = records[j];
@@ -512,7 +513,7 @@ public class DataManagerAerospikeFloatSim {
                     }
 
                     // Batch Read
-                    Record[] records = getClient242().get(batchPolicy, chunkKeys);
+                    Record[] records = getTickerReadClient().get(batchPolicy, chunkKeys);
 
                     for (int j = 0; j < records.length; j++) {
                         Record record = records[j];
@@ -596,7 +597,7 @@ public class DataManagerAerospikeFloatSim {
                     }
 
                     // Batch Read từ Aerospike
-                    Record[] records = getClient242().get(batchPolicy, chunkKeys);
+                    Record[] records = getTickerReadClient().get(batchPolicy, chunkKeys);
                     // 🔥 LOGIC CHECK LỖI TRẢ VỀ TỪ CLIENT 🔥
                     if (records == null) {
                         LOG.info("❌ [AEROSPIKE ERROR] Client.get() returned NULL for chunk starting at {}",
@@ -680,7 +681,7 @@ public class DataManagerAerospikeFloatSim {
                     }
 
                     // Batch Read tối ưu
-                    Record[] records = getClient242().get(batchPolicy, chunkKeys);
+                    Record[] records = getTickerReadClient() .get(batchPolicy, chunkKeys);
 
                     for (int j = 0; j < records.length; j++) {
                         Record record = records[j];
@@ -875,100 +876,6 @@ public class DataManagerAerospikeFloatSim {
         return null;
     }
 
-    /**
-     * 3. LẤY DỮ LIỆU THEO THÁNG (READ MONTH - BATCH READ)
-     * Logic giống hệt readDataFromAerospike1M của Ticker: Tạo key cho từng phút trong tháng -> Batch Read
-     *
-     * @param monthStr format "yyyyMM" (Ví dụ: "202401")
-     */
-    public static TreeMap<Long, AiPredictionData> getAiPredictionsForMonth(String monthStr) {
-        TreeMap<Long, AiPredictionData> results = new TreeMap<>();
-        try {
-            SimpleDateFormat sdfMonth = new SimpleDateFormat("yyyyMM");
-            Date date = sdfMonth.parse(monthStr);
-            Calendar cal = Calendar.getInstance();
-            cal.setTime(date);
-
-            // Xác định thời gian bắt đầu và kết thúc của tháng
-            long startTime = cal.getTimeInMillis();
-            cal.add(Calendar.MONTH, 1);
-            long endTime = cal.getTimeInMillis();
-
-            // Tính tổng số phút (records) trong tháng
-            int totalMinutes = (int) ((endTime - startTime) / (60 * 1000));
-            LOG.info("📥 Reading AI Data for month {} ({} records)...", monthStr, totalMinutes);
-
-            // Tận dụng hàm đọc Batch tùy chỉnh
-            results = readAiBatchCustom(startTime, totalMinutes);
-
-        } catch (Exception e) {
-            LOG.error("❌ Error reading AI Month {}: {}", monthStr, e.getMessage());
-        }
-        return results;
-    }
-
-    /**
-     * Helper: Đọc Batch AI Data theo range thời gian (Đa luồng)
-     */
-    public static TreeMap<Long, AiPredictionData> readAiBatchCustom(long startTime, int totalMinutes) {
-        TreeMap<Long, AiPredictionData> results = new TreeMap<>();
-
-        // 1. Tạo danh sách Timestamps
-        long[] allTimestamps = new long[totalMinutes];
-        for (int i = 0; i < totalMinutes; i++) {
-            allTimestamps[i] = startTime + (i * 60000L);
-        }
-
-        List<Future<Map<Long, AiPredictionData>>> futures = new ArrayList<>();
-        int chunkSize = (totalMinutes + threadCount - 1) / threadCount;
-
-        // 2. Chia đa luồng Batch Read
-        for (int i = 0; i < threadCount; i++) {
-            final int startIdx = i * chunkSize;
-            final int endIdx = Math.min(startIdx + chunkSize, totalMinutes);
-            if (startIdx >= endIdx) break;
-
-            futures.add(executor.submit(() -> {
-                SimpleDateFormat localKeyFormat = new SimpleDateFormat("yyyyMMdd-HHmm");
-                Map<Long, AiPredictionData> chunkResult = new HashMap<>();
-                try {
-                    Key[] chunkKeys = new Key[endIdx - startIdx];
-                    long[] chunkTimestamps = Arrays.copyOfRange(allTimestamps, startIdx, endIdx);
-
-                    for (int k = 0; k < chunkKeys.length; k++) {
-                        String keyString = localKeyFormat.format(new Date(chunkTimestamps[k]));
-                        chunkKeys[k] = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_AI_PRED_1M, keyString);
-                    }
-
-                    // Batch Read
-                    Record[] records = getClient242().get(batchPolicy, chunkKeys);
-
-                    for (int j = 0; j < records.length; j++) {
-                        Record record = records[j];
-                        if (record != null) {
-                            AiPredictionData data = parseAiRecord(record);
-                            if (data != null) {
-                                chunkResult.put(data.timestamp, data);
-                            }
-                        }
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-                return chunkResult;
-            }));
-        }
-
-        // 3. Tổng hợp kết quả
-        for (Future<Map<Long, AiPredictionData>> future : futures) {
-            try {
-                results.putAll(future.get());
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-        return results;
-    }
 
     private static AiPredictionData parseAiRecord(Record record) {
         try {
@@ -1417,8 +1324,6 @@ public class DataManagerAerospikeFloatSim {
     }
 
 
-    public static final String AEROSPIKE_SET_NAME_AI_PRED_MARKET = "ai_pred_market_full_basket_v2";
-
     /**
      * Ghi một Batch (Nhiều phút) kết quả Market AI Prediction vào Aerospike
      */
@@ -1769,7 +1674,7 @@ public class DataManagerAerospikeFloatSim {
                     int limit = Math.min(j + SUB_BATCH_SIZE, chunkTimestamps.length);
                     Key[] subKeys = new Key[limit - j];
                     for (int k = 0; k < subKeys.length; k++) {
-                        subKeys[k] = new Key(Configs.AEROSPIKE_NAMESPACE, Configs.AEROSPIKE_SET_NAME_FUNDING_PRED,
+                        subKeys[k] = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_FUNDING_PRED,
                                 localKeyFormat.format(new java.util.Date(chunkTimestamps[j + k])));
                     }
 
@@ -1966,7 +1871,7 @@ public class DataManagerAerospikeFloatSim {
             ScanPolicy scanPolicy = new ScanPolicy();
             scanPolicy.concurrentNodes = true; // Quét song song đa luồng
 
-            getClient226().scanAll(scanPolicy, Configs.AEROSPIKE_NAMESPACE, Configs.AEROSPIKE_SET_NAME_FUNDING_PRED, (key, record) -> {
+            getClient226().scanAll(scanPolicy, Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_FUNDING_PRED, (key, record) -> {
                 try {
                     byte[] compressed = (byte[]) record.getValue("data");
                     if (compressed != null && key.userKey != null) {
@@ -1991,5 +1896,17 @@ public class DataManagerAerospikeFloatSim {
 
         // Trả về TreeMap thông thường để dùng O(1) ở Simulator
         return new TreeMap<>(concurrentResults);
+    }
+
+    /**
+     * Client đọc TICKER: mặc định 242 (nguồn gốc). Kaggle/HPO worker không với được 242
+     * (firewall) => đọc bản sao trên 226 (đã copy bằng CopyTicker242To226).
+     * CHỈ áp cho ĐỌC ticker — mọi đường GHI ticker giữ nguyên 242.
+     */
+    private static AerospikeClient getTickerReadClient() {
+        if (Configs.IS_KAGGLE_MODE || Configs.IS_HPO_MODE) {
+            return getClient226();
+        }
+        return getClient242();
     }
 }

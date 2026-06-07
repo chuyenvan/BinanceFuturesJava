@@ -18,7 +18,7 @@ public class CheckGapPredictSymbol {
     public static final Logger LOG = LoggerFactory.getLogger(CheckGapPredictSymbol.class);
 
     public static void main(String[] args) {
-        String setName = Configs.AEROSPIKE_SET_NAME_FUNDING_PRED;
+        String setName = DataManagerAerospikeFloatSim.AEROSPIKE_SET_NAME_FUNDING_PRED;
         AerospikeClient client = DataManagerAerospikeFloatSim.getClient226();
         String startDateStr = "20210101";
 

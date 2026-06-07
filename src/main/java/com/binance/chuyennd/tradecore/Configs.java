@@ -161,8 +161,6 @@ public class Configs {
     public static final int AEROSPIKE_PORT_226 = Configs.getInt("AEROSPIKE_PORT_226");
 
     public static final String AEROSPIKE_NAMESPACE = Configs.getString("AEROSPIKE_NAMESPACE");
-    public static final String AEROSPIKE_SET_NAME_FUNDING_PRED = Configs.getString("AEROSPIKE_SET_NAME_FUNDING_PRED");
-    public static final String AEROSPIKE_SET_NAME_PRED_40 = Configs.getString("AEROSPIKE_SET_NAME_PRED_40");
 
     // =========================================================
     // 10. TIỆN ÍCH GETTER

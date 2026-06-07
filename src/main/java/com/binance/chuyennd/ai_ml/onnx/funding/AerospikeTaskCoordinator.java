@@ -15,15 +15,57 @@ public class AerospikeTaskCoordinator {
     private static final Logger LOG = LoggerFactory.getLogger(AerospikeTaskCoordinator.class);
 
     // 🔥 Đổi tên Set để tạo Queue mới hoàn toàn, không dính với Queue tuần cũ
-    private static final String TASK_SET_NAME = "funding_tasks_monthly_v1";
+    private static final String TASK_SET_NAME = "funding_tasks_monthly_v2";
 
+    /**
+     * RE-QUEUE 1 task bị lỗi hoặc dừng giữa chừng.
+     *
+     * @param monthStartStr đầu tháng của task gốc, vd "20260301" (đúng key TASK_yyyyMMdd lúc init).
+     * @param resumeFromStr null = chạy lại CẢ THÁNG;
+     *                      hoặc vd "20260315" = chạy tiếp từ giữa chừng (đọc log
+     *                      "✅ Đã xử lý xong: yyyyMMdd" cuối cùng của worker chết để biết mốc).
+     *                      Ghi đè record là idempotent nên resume chỉ để tiết kiệm thời gian,
+     *                      chạy lại cả tháng cũng KHÔNG sai dữ liệu.
+     */
+    public static void requeueTask(String monthStartStr, String resumeFromStr) {
+        // PHẢI cùng cluster với claimNextTask (226) — không thì worker không bao giờ thấy task
+        AerospikeClient client = DataManagerAerospikeFloatSim.getClient226();
+        try {
+            long monthStart = Utils.sdfFile.parse(monthStartStr).getTime();
+            Calendar cal = Calendar.getInstance();
+            cal.setTimeInMillis(monthStart);
+            cal.add(Calendar.MONTH, 1);
+            long chunkEnd = cal.getTimeInMillis();
+
+            long chunkStart = monthStart;
+            if (resumeFromStr != null) {
+                long resume = Utils.sdfFile.parse(resumeFromStr).getTime();
+                if (resume > monthStart && resume < chunkEnd) {
+                    chunkStart = resume;
+                } else {
+                    LOG.warn("⚠️ resumeFrom {} nằm ngoài tháng {} -> chạy lại cả tháng.", resumeFromStr, monthStartStr);
+                }
+            }
+
+            // Giữ NGUYÊN key gốc TASK_<đầu tháng> kể cả khi resume — tránh sinh task trùng/lệch key;
+            // worker đọc start/end từ bin nên resume vẫn đúng.
+            String keyString = "TASK_" + monthStartStr;
+            Key key = new Key(Configs.AEROSPIKE_NAMESPACE, TASK_SET_NAME, keyString);
+            client.put(null, key, new Bin("start", chunkStart), new Bin("end", chunkEnd));
+
+            LOG.info("✅ Re-queued {}: {} -> {}", keyString,
+                    Utils.normalizeDateYYYYMMDDHHmm(chunkStart), Utils.normalizeDateYYYYMMDDHHmm(chunkEnd));
+        } catch (ParseException e) {
+            LOG.error("❌ Sai định dạng ngày (yyyyMMdd): {} / {}", monthStartStr, resumeFromStr);
+        }
+    }
     /**
      * KHỞI TẠO DANH SÁCH VIỆC (Chỉ chạy 1 lần ở máy Admin hoặc Server đầu tiên)
      * Chia thời gian thành các gói (Chunk) theo THÁNG.
      */
     public static void initTasks(long startTime, long endTime) {
         LOG.info("🛠 Initializing Task Queue in Aerospike (MONTHLY)...");
-        AerospikeClient client = DataManagerAerospikeFloatSim.getClient242();
+        AerospikeClient client = DataManagerAerospikeFloatSim.getClient226();
 
         Calendar cal = Calendar.getInstance();
         cal.setTimeInMillis(startTime);
@@ -58,7 +100,7 @@ public class AerospikeTaskCoordinator {
      * Cơ chế: Scan tìm task -> Atomic Delete -> Nếu xóa được thì nhận.
      */
     public static TaskRange claimNextTask() {
-        AerospikeClient client = DataManagerAerospikeFloatSim.getClient242();
+        AerospikeClient client = DataManagerAerospikeFloatSim.getClient226();
         ScanPolicy policy = new ScanPolicy();
         policy.maxRecords = 50; // Scan lấy mẫu 50 task đầu tiên
 
@@ -150,6 +192,11 @@ public class AerospikeTaskCoordinator {
         long globalStart = Utils.sdfFile.parse(startStr).getTime();
         long globalEnd = System.currentTimeMillis();
         AerospikeTaskCoordinator.initTasks(globalStart, globalEnd);
+
+
+//        AerospikeTaskCoordinator.requeueTask("20241201", null);
+
+
 
 //        // Danh sách các task bạn lọc được từ log là bị lỗi hoặc chạy quá lâu (Phải trúng mốc đầu tháng nếu khởi tạo theo tháng)
 //        List<String> claimedTasks = Arrays.asList(
