@@ -35,7 +35,10 @@ public class Configs {
             List<String> lines = FileUtils.readLines(file, "UTF-8");
             for (String line : lines) {
                 if (StringUtils.contains(line, "=")) {
-                    properties.put(line.split("=")[0].trim(), line.split("=")[1].trim());
+                    // split giới hạn 2 phần: dòng "KEY=" (value rỗng) -> value "" thay vì AIOOBE làm chết clinit;
+                    // dòng value chứa '=' (vd URL ...?a=b) giữ trọn phần sau dấu '=' đầu tiên. KHÔNG đổi parse của value hiện có.
+                    String[] kv = line.split("=", 2);
+                    properties.put(kv[0].trim(), kv[1].trim());
                 }
             }
         } catch (Exception e) {

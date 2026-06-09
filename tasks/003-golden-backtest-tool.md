@@ -71,7 +71,7 @@ FAIL ở B1/B2/B4 (git/io) → retry chính bước đó. Chỉ B3 fail mới c�
 
 ## (Code điền) Quyết định phát sinh
 
-- **Configs `:38`:** user đã xử lý bằng sửa FILE config trên server (bỏ value rỗng) — KHÔNG sửa parser. ⚠️ Bug `split("=")` vẫn TIỀM ẨN: value rỗng (hoặc value chứa `=`) trong tương lai sẽ lại làm app `System.exit(0)`, kể cả LIVE. Khuyến nghị fix tận gốc `split("=", 2)` — chưa làm theo ý user.
+- **Configs `:38` — ĐÃ FIX GỐC** (`split("=", 2)`): value rỗng (`KEY=`) → `""` thay vì AIOOBE; value chứa `=` (URL `a=b`) giữ trọn. Đã xác minh config.properties hiện KHÔNG có value nào chứa `=` thứ hai ⇒ parse mọi key Y HỆT trước ⇒ KHÔNG đổi kết quả backtest ⇒ KHÔNG bump CONFIG_VERSION. ⚠️ Fix nằm trong jar → cần REBUILD + redeploy 226/live để có hiệu lực; baseline golden không đổi.
 - **Baseline FAST — ĐÃ PROMOTE:** `docs/golden/baseline-FAST.json` @ commit **df28a5b** (dirty=**false**, working-tree sạch hẳn). Metric chốt: PnL=**6510.72** (2025=5809.70 / 2026=701.02) · maxDD=**−19613.02** · worstSingleLoss=**−808.87** · numTrades=**14154** · clustersHeld30d=**19** · nearLiq=**0**. Sets: mkt=`market_data_object` · funding=`funding_pred_1m_v5` · ticker=`kline_1m_opt` · readCluster=242 · slip=0.003 fee=0.002 lookahead-block=true filter=A · cfg=v8.
   - Từ giờ: chạy `GoldenBacktest FAST` ở commit sau, stamp KHỚP baseline mà metric đổi → tool BÁO ĐỎ (exit≠0). Đổi stamp (config/set/commit) → tool in diff, exit 0, chờ duyệt re-promote.
   - **Tiền lệ bẩn↔sạch:** fingerprint cũ `55973e3`(dirty) và `f5311bc`(dirty=false code-clean) cho metric Y HỆT df28a5b ⇒ docs-commit không đụng kết quả backtest (đúng kỳ vọng).
