@@ -17,7 +17,7 @@ Thiết lập **golden backtest** 2 tầng, chạy qua `BacktestIntegrityGuard`,
   - **Crash (~2022):** vùng LUNA/FTT/sập sâu — quan trọng nhất cho survivorship/coin chết.
   - **Bull (~2023-2024):** vùng tăng mạnh.
   - **Recent (20251001→20260430):** gần đây, có cả PF cao lẫn maxDD ~−29%.
-  Mốc Crash/Bull xác định bằng SỐ (quý maxDD sâu nhất / return cao nhất), không cảm tính — xem TASK-006.
+  Mốc Crash/Bull xác định bằng SỐ (quý maxDD sâu nhất / return cao nhất), không cảm tính — xem TASK-003.1.
   ⚠️ Fast chỉ là *regression guard*, KHÔNG kết luận chiến lược.
 - **FULL** = `2021 → 2026` (~12'). Chạy trước thay đổi core/param và các mốc lớn (deploy cadence). Đây là đánh giá thật, gắn Cổng gác 2 của PIPELINE.
 

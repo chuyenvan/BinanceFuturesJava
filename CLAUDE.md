@@ -73,6 +73,16 @@ java -cp target/binance-java-sdk-1.2.4.jar com.binance.chuyennd.aerospike.valida
 ```
 60+ class có `main()` — phần lớn là tool vận hành/validate một lần, KHÔNG phải entry point hệ thống live.
 
+## ⚙️ Chạy job java trên 226 — DỌN JOB CŨ CỦA MÌNH TRƯỚC KHI CHẠY
+
+Mỗi lần run java trên 226 (backtest/sim/tool), job nặng (`-Xmx*g`) còn sót từ lần trước sẽ ăn RAM, chạy chồng làm sai/chậm metric, đụng đọc Aerospike, hoặc lẫn log (như vụ TASK-001 grep nhầm log tưởng treo). Quy tắc:
+
+1. **Job nền Code spawn PHẢI ghi PID + log riêng** vào thư mục định danh, ví dụ `~/java/simulator/outputs/.run/<job>.pid` và `<job>.log` (job = tên class, vd `GoldenBacktest`). Chạy `nohup ... & echo $! > .run/<job>.pid`.
+2. **TRƯỚC khi chạy lại cùng job:** đọc `.run/<job>.pid` → nếu PID còn sống (`ps -p`) VÀ `cmdline` đúng là java tool/backtest của mình (khớp main-class) → `kill` → đợi chết → xóa pid-file. Chỉ kill **đúng PID mình đã ghi**.
+3. **Orphan (pid-file mất nhưng job cũ còn chạy):** liệt java process khớp main-class backtest/tool của mình (`GoldenBacktest`, `Simulator*`, `SurvivorshipBac0`, `AerospikeCoverageMap`, `*Validator/*Checker/Benchmark*`). Nếu RÕ là tool của mình → dọn; **nghi ngờ chủ → KHÔNG kill, BÁO user**.
+4. **⛔ TUYỆT ĐỐI KHÔNG kill:** `BinanceOrderTradingManager` (trading live), `BinanceDataIngestor` (ingest live), Aerospike, Redis, và **HPO đang chạy của user** (`RunHpoMaster_Distributed`/`RunWorkerKaggle`). Live ghi PID riêng qua `Utils.writePid2File` (`APP_PID_DIR`) — KHÔNG đụng pid-file đó. Không dùng `pkill java` / `killall java`.
+5. **Trước golden/determinism:** đảm bảo KHÔNG có instance backtest khác của mình chạy song song (chia sẻ tài nguyên → có thể làm chậm/sai). Dọn xong mới chạy.
+
 ## Runtime config (đọc từ CWD, không phải classpath)
 Ba file config plaintext đọc **từ thư mục làm việc của process** lúc static-init, phải có mặt nơi chạy jar:
 - `config.properties` — `tradecore/Configs.java` load. Aerospike hosts/ports, capital, symbol lists, paths dưới `../storage/`. Thiếu file → `System.exit(0)`.
