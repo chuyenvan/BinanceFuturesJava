@@ -32,3 +32,5 @@ python/tool/Binance_Futures_Full_Code.txt
 python/tool/Binance_Futures_Full_Code.txt
 /python/tool
 .aider*
+# golden fingerprint + survivorship CSV = artifact chay, KHONG commit (baseline chot nam o docs/golden/)
+/outputs/

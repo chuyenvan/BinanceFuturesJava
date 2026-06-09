@@ -74,10 +74,10 @@ PASS → đi tiếp.
 ### B6. HPO (bump CONFIG_VERSION!)
 - `CONFIG_VERSION = "vN"` (model đổi = config đổi = cache cũ phải cô lập).
 - `RunHpoMaster_Distributed` + worker (226 + Kaggle) trên HPO window 12 tháng gần D.
-- Genome: cân nhắc giảm gene bằng sensitivity trước (14 → ~8), tối ưu theo nhóm.
+- Genome: cân nhắc giảm gene bằng sensitivity trước (13 → ~8, xem ADR-0003), tối ưu theo nhóm.
 
 ### B7. Backtest verify (BacktestIntegrityGuard luôn bật)
-- `BackTestEngineMaster.run` tự gọi `assertProductionGrade()`: look-ahead OFF, slippage ON, fee ON.
+- `simulatorWithInitEntry` (dòng đầu) tự gọi `assertProductionGrade()`: look-ahead OFF, slippage ON, fee ON. *(xem ADR-0002 — KHÔNG phải `BackTestEngineMaster.run`)*
 - Chạy với bộ tham số HPO tốt nhất.
 - `EdgeAttributionReport`: kiểm AI edge (first-leg MAE/rescueRate vs random), `profitFactor`, `worstSingleLoss`.
 

@@ -1,258 +1,258 @@
-# FINDINGS — Tổng hợp điều tra hệ Bot Trading (nguồn sự thật bền vững)
+# FINDINGS — Tổng hợp điều tra hệ Bot Trading (kết tinh để không mất insight)
 
-> Mọi kết luận đã ĐO ĐƯỢC kèm số thật + lý do. Đọc file này là nắm toàn bộ, không cần đào lại.
-> 🟢 đã chứng minh bằng số | 🟡 bằng chứng một phần | 🔴 vấn đề/rủi ro | ⚠️ cạm bẫy | ✏️ đính chính kết luận sai cũ.
-> Quy tắc vàng: ĐO bằng số trước khi kết luận. Đọc code thật, không đoán. Tách MODEL (Cổng 1) vs CHIẾN LƯỢC (Cổng 2).
+> Mục đích: chốt MỌI kết luận đã ĐO ĐƯỢC kèm số thật + lý do, để dùng làm nguồn sự thật bền vững
+> (không phụ thuộc trí nhớ phiên chat). Đọc file này là nắm được toàn bộ, không cần đào lại.
+> Quy ước đọc: 🟢 = đã chứng minh bằng số | 🟡 = bằng chứng một phần | 🔴 = vấn đề/rủi ro | ⚠️ = cạm bẫy.
 
 ---
 
-## 0. HỆ THỐNG
+## 0. HỆ THỐNG LÀ GÌ (one-paragraph)
 
 Bot futures Binance, **long-only, leverage 1, martingale/DCA** (nhồi trung bình giá khi tụt),
 **KHÔNG hard stop-loss**, thoát bằng **trailing stop chỉ khi đã có lãi**. Hai model AI lọc entry:
-(1) **MARKET model** (regression ONNX, basket-level) → `predReturn15M`, `predRisk4H` (24H đã bỏ);
-(2) **FUNDING model** (classifier 5 lớp theo symbol) → `symbolPred = pred[0] = P(FAIL)`.
-HPO bằng Jenetics phân tán (master + 7 worker). Package `com.binance.chuyennd.*`.
+(1) **MARKET model** (regression, ONNX, basket-level) dự báo `futureReturn15M / futureReturn24H /
+maxDrawdownNext4H`; (2) **FUNDING model** (classifier 5 lớp, theo symbol) cho `symbolPred`.
+HPO bằng Jenetics phân tán. Package gốc `com.binance.chuyennd.*`.
 
 ---
 
-## 1. KẾT LUẬN LỚN NHẤT — ✏️ ĐÃ ĐÍNH CHÍNH
+## 1. KẾT LUẬN LỚN NHẤT CỦA CẢ BUỔI 🔴🟢
 
-**Hệ LÃI thật qua chu kỳ đầy đủ. Entry có edge. DCA GIÚP (không phá). Đây là hệ lành mạnh,
-chỉ cần tối ưu nhỏ — KHÔNG phải hệ hỏng cần làm lại.**
+**Entry CÓ edge thật, nhưng cơ chế DCA không giới hạn + không stop PHÁ HẾT edge đó qua chu kỳ đầy đủ.**
 
-🟢 Bằng chứng (RunBreakerBacktest mode OFF, 2021→2026, slippage 0.003):
-- totalPnl = **+70986** (vốn 35000 → ~106000, gấp đôi qua 5 năm).
-- PnL DƯƠNG **mọi năm**, kể cả bear: 2021=20157, 2022=7658, 2023=9513, 2024=16634, 2025=14956, 2026=2069.
-- maxDD = −35.3% vốn (unrealized).
+Bằng chứng hai vế:
+- 🟢 Entry tốt: `PREDICT_SYMBOL_TRADE` payoff ratio **> 1 mọi năm** (2021:1.05 … 2023:3.13, 2024:1.48,
+  2026:2.63) trong backtest 2021→2026. Market 15M model có **IC live 0.52** trên OOS thật.
+- 🔴 Hệ vẫn LỖ qua chu kỳ: backtest đầy đủ 2021→2026 cho balance-ratio **< 1 mọi năm**, 2026 ≈ 0.12,
+  2025 lỗ nặng (~-2003 đến -6962 tùy bộ tham số), maxDD (UnProfitMin) **-35% đến -39% vốn**.
 
-✏️ HAI lần Claude kết luận SAI trong phiên, đã sửa:
-- "Hệ lỗ qua chu kỳ" — SAI. Nhầm `UnProfitMin` (−35%/−39% = drawdown unrealized TẠM THỜI lúc cụm đang
-  mở) thành lỗ thực hiện. PnL thực hiện DƯƠNG mọi năm. Hệ ôm lệnh tụt sâu chờ hồi rồi thoát có lãi.
-- "DCA phá edge, cần breaker" — SAI. Breaker chứng minh DCA GIÚP (xem mục 6).
-
-🟢 Live thật (242) drawdown từng chạm **40%**, user **CHẤP NHẬN ĐƯỢC**. Backtest −35% KHỚP live → backtest
-realistic (hiếm; nhiều bot backtest đẹp hơn live xa). Hệ ở trạng thái tốt hơn tưởng.
+→ Diễn giải: thắng hàng nghìn lệnh nhỏ, nhưng **vài cụm DCA nhồi vô hạn vào coin sập rồi ôm chết**
+ăn sạch lãi. Đây là bản chất martingale tự hủy. **Đây là vấn đề trọng tâm cần giải, KHÔNG phải entry.**
 
 ---
 
-## 2. MARKET MODEL (3 target)
+## 2. MARKET MODEL — 3 TARGET (đã validate kỹ)
 
-### 2a. predReturn15M 🟢 GIỮ — edge thật, vùng nảy ~1%
-- Train (holdout 12 tháng, đã sửa leak): IC 0.5345, t=117. KHÔNG leak gương: bỏ momentum15M+1M → IC giữ
-  0.5320. Champion đơn biến `momentumAcceleration` IC 0.4432; bỏ nó IC vẫn 0.5287 → edge phân tán.
-- 🟢 OOS THẬT: IC live **0.5175, t=70.5** (set `ai_pred_market_full_basket_v2`, từ 20/12/2025). Edge thật,
-  ổn định mọi regime (~0.50/0.51/0.54). Model > rule-base **x1.21** (giá trị AI khiêm tốn nhưng thật).
-- Bản chất = "đo volatility/biến động". Phân bố realized 15M: p50=0.85%, **%>1%=30.4%, %>2%=0.9%,
-  %>3%=0.1%, %>6%=0.0%**. Edge tập trung **vùng nảy ~1%**. LIFT top-decile: +1% x2.40.
-- 🔴 Hệ quả: +3%/+6% gần như KHÔNG xảy ra ở basket 15p → `RATE_PROFIT_STOP_MARKET` đặt cao chống lại
-  phân bố thực tế (đáng xem lại exit, chưa làm).
+### 2a. futureReturn15M 🟢 GIỮ — edge thật, vùng nảy ~1%
+- Train mới (holdout 12 tháng, đã sửa leak): **IC 0.5345, t=117**.
+- 🟢 KHÔNG phải leak gương: bỏ `momentum15M`+`momentum1M` → IC giữ **0.5320 (x1.00)**. (Claude từng
+  nghi leak gương 15p — ĐÃ BÁC BỎ bằng số.)
+- Champion đơn biến = `momentumAcceleration` IC 0.4432; bỏ nó IC vẫn 0.5287 → edge phân tán, không
+  phụ thuộc 1 feature. Model > rule-base chỉ **x1.21** (giá trị AI khiêm tốn nhưng thật).
+- Bản chất edge = "đo volatility/biến động gần đây" (nhóm momentumAcceleration/volatility* top bảng IC).
+- IC ổn định mọi regime (~0.50 up / 0.51 down / 0.54 side).
+- **Validate OOS THẬT** (predict model cũ trên set `ai_pred_market_full_basket_v2`, từ 20/12/2025 =
+  chưa train, 13609 điểm de-overlap): **IC live 0.5175, t=70.5** — không leak được, edge thật.
+- Phân bố realized 15M: p50=0.85%, **%>1%=30.4%, %>2%=0.9%, %>3%=0.1%, %>6%=0.0%**.
+- LIFT top-decile: +1% → **x2.40** (73% vs 30%); +2% → x5.9; +3% → x4.67 (chỉ 0.5%); +6% → x10 (0.2%).
+- 🔴 INSIGHT QUAN TRỌNG: edge tập trung **vùng nảy ~1%**. Nảy +3%/+6% gần như KHÔNG xảy ra ở mức
+  basket 15 phút. → `RATE_PROFIT_STOP_MARKET` (trailing) đặt cao (3%) là chống lại phân bố thực tế.
+- Drawdown top-decile (điểm model bảo VÀO): p50=-0.5%, p90=-0.25%, worst=-15.6% → phần lớn tụt nông,
+  model tránh được phần lớn cú sâu.
 
-### 2b. predReturn24H ✅ ĐÃ BỎ HẲN khỏi hệ
-- n_dov chỉ 360 (thiếu mẫu). Champion `momentumAcceleration` 136% IC = rule-base thuần, model vô dụng.
-- Realized 24H: %>3%=100%, %>6%=85.5% → LIFT ~x1.0. Filter ablation A=C tuyệt đối → MOM24 chưa bao giờ
-  kích hoạt. ĐÃ bỏ, backtest KHÔNG đổi.
-- 🟢 GIỮ INSIGHT (không phải model): giữ lệnh tới 24h thì +3%/+6% gần như chắc chắn → định hình exit.
+### 2b. futureReturn24H 🔴 BỎ — thiếu mẫu cấu trúc
+- Train mới: IC 0.1636, **n_dov chỉ 360** (label nhìn 24h → 12 tháng chỉ ~360 điểm độc lập). Gate FAIL.
+- Champion `momentumAcceleration` đạt **136% IC của model** → rule-base thuần, model vô dụng.
+- Validate OOS: IC 0.256 nhưng n=145 (quá yếu). Realized 24H: **%>3%=100%, %>6%=85.5%** → LIFT ~x1.0
+  (mọi điểm đều chạm, model không giúp chọn).
+- 🟢 GIỮ INSIGHT (không phải model): **giữ lệnh tới 24h thì +3%/+6% gần như chắc chắn xảy ra.** Đây là
+  lý do hệ DCA chờ-lâu có thể thoát mục tiêu cao — định hình exit, không cần model.
+- ✅ ĐÃ BỎ `predReturn24H` khỏi filter — backtest KHÔNG đổi (xác nhận vô dụng). Ablation A=C tuyệt đối.
 
-### 2c. predRisk4H (dd4h) 🟡 giữ qua nhánh RISK, nhưng chỉ là volatility proxy
-- Train IC 0.149; champion `basketVolSpike` 131% IC → model thực chất LÀ basketVolSpike đội lốt.
-  IC[up]=−0.0155 (âm ở regime tăng). OOS: IC[up]=0.004 (gần 0 đúng lúc cần).
-- Nhánh RISK trong filter: bỏ nó (mode B/D) làm PnL tụt 17699→13488 (+31% nếu giữ) → đang LỌC LỆNH KÉM,
-  GIỮ. NHƯNG KHÔNG cải thiện đuôi (xem mục 4). ⚠️ Đừng thay dd4h bằng basketVolSpike — nó LÀ basketVolSpike.
-
----
-
-## 3. FUNDING MODEL — ✏️ ĐÍNH CHÍNH: CÓ EDGE và ĐƯỢC DÙNG MẠNH (không phải no-op)
-
-### Bản chất
-- Classifier 5 lớp: 0=Fail, 1=72H, 2=24H, 3=4H, 4=15M (tốc độ chạm +6%). `symbolPred = pred[0] = P(FAIL)`
-  = P(72h tới KHÔNG đạt +6%). symbolPred CAO = symbol XẤU. Decode: 16-bit symbolId (bit cao) + 32-bit
-  float pred[0] (bit thấp). Map qua `SimpleSymbolMapper`.
-- ⚠️ Set hiện tại `funding_pred_1m_v5` đang là **model CŨ** (mỗi record len=1). Model 5 lớp mới (train tới
-    20260525) CHƯA gen vào set. Validate dưới đây là cho MODEL CŨ đang chạy live.
-
-### 🟢 Validate OOS (ValidateFundingOOS, model cũ, OOS từ 20251220, n=26006 de-overlap 72h/symbol)
-- **IC(symbolPred, realized_FAIL) = 0.2143, t=35.4** (đối chứng: IC với realized_HIT = −0.2143). Edge THẬT.
-- Mạnh nhất regime **down**: IC=0.2476 (đúng lúc cần phân biệt nhất). up=0.185, side=0.177.
-- Realized khớp ĐÚNG label6 (`FundingDataCollectionManager`): entry=priceClose tại t, target=×1.06,
-  hit nếu maxPrice ≥ target trong (t, t+72h]. Đã verify code thật.
-- Phân bố symbolPred: **p10=0.425, p50=0.55, p90=0.60**. 0.4% dưới 0.197; **~2-5% dưới 0.32**.
-- base-rate FAIL = 55.7%. Nhóm pred<0.5 fail 38% vs pred>0.5 fail 61% → model phân biệt rõ (cách ~23 điểm).
-
-### 🟢 Funding ĐƯỢC DÙNG MẠNH ở PRE-FILTER (chỗ Claude từng bỏ sót → kết luận sai "no-op")
-Trong `SimulatorMarketLevelTicker1MStopLoss` (vòng tạo entry PREDICT_SYMBOL_TRADE):
-```
-maxThres = PREDICT_SYMBOL_RATE_MAX_THRESHOLD(0.15) × AI_DYNAMIC_MAX(2.14135) = 0.321
-for (long enc : symbol2Pred)  // ĐÃ sort tăng dần theo float pred
-    if (symbolPred > maxThres) break;   // chỉ xét symbol pred <= 0.32
-```
-- 🟢 Sort ĐÚNG: `preprocessFundingData` → `quickSortByFloatPred` sort theo `Float.intBitsToFloat`, KHÔNG
-  phải sort long thô. (Đã nghi bug sort, đọc code thật → không bug.)
-- Hệ chỉ trade **~2-5% symbol tốt nhất** mỗi phút (pred ≤ 0.32). ~450 symbol/phút có pred → ~9-22 lọt
-  qua break/phút → đủ cho 18848 lệnh/7 tháng. Khớp quan sát live ("top symbol P-fail 0.2-0.4").
-- Funding cũng tham gia nhánh EARLY (`symbolPred > PREDICT_SYMBOL_RATE_MAX_THRESHOLD`) + scaleFactor động
-  trong `AIRejectFilter.checkSignalDynamic`. Với nhóm trade (pred 0.03-0.32) và ngưỡng 0.15, scaleFactor
-  biến thiên ~0.27-2.14 — KHÔNG bão hòa (Claude từng nói bão hòa = SAI, do dùng nhầm phân bố 0.42-0.60).
-- → **Funding là bộ lọc vũ trụ CHÍNH, dùng rất mạnh.** Kéo fail-rate nhóm trade xuống ~30-35% vs base 55.7%
-  (ước lượng) — giá trị thật, lớn.
-
-### 🔴 Việc dở quan trọng — validate ĐÚNG nhóm hệ dùng
-ValidateFundingOOS đo IC/LIFT trên TOÀN BỘ symbol và theo hướng `pred>ngưỡng` (lọc xấu) — SAI nhóm + SAI
-hướng so với cách hệ dùng (giữ `pred ≤ 0.32`, nhóm tốt). CẦN sửa tool đo:
-1. fail-rate trong nhóm `symbolPred ≤ maxThres(0.32)` vs base 55.7%.
-2. IC nội nhóm ≤0.32 (trong nhóm tốt, pred thấp hơn có fail ít hơn không).
-3. Chia lát (≤0.1, 0.1-0.2, 0.2-0.32) tìm ngưỡng cắt tối ưu.
-   ⚠️ ValidateFundingOOS hardcode EARLY_THRES=0.197 nhưng Configs thật = **0.15** (0.197 là giá trị HPO đã
-   revert bỏ) → sửa về 0.15.
+### 2c. maxDrawdownNext4H (dd4h) 🟡 gần vô dụng — chỉ là basketVolSpike trá hình
+- Train mới: IC 0.149, t=7.0, n=2157. PASS gate NHƯNG champion `basketVolSpike` đạt **131% IC** →
+  model thực chất chỉ là `basketVolSpike` đội lốt. IC[up]=**-0.0155** (âm ở regime tăng), IC[down]=0.21.
+- Validate OOS: IC 0.163, IC[up]=0.004, IC[down]=0.054 (gần 0 ở đúng lúc cần — regime sập).
+- Phanh cứng `HARD_RISK_LIMIT_4H=-0.092`: model **chưa bao giờ** ra predRisk4H ≤ -9.2% → phanh CỨNG
+  reject = 0% mọi regime (nhưng filter live dùng ngưỡng ĐỘNG, xem mục 4).
+- ⚠️ Đừng thay dd4h bằng `basketVolSpike` — vì dd4h CHÍNH LÀ basketVolSpike. Thay = thay chính nó.
 
 ---
 
-## 4. FILTER (AIRejectFilter) — lá chắn entry & ablation
+## 3. FUNDING MODEL (symbolPred) 🟢 chạy đúng chiều
 
-- `checkSignalDynamic(prediction, symbolPred)`: nhánh EARLY (`pred15 < MIN_MOMENTUM_15M && symbolPred >
-  PREDICT_SYMBOL_RATE_MAX_THRESHOLD`) + scaleFactor động + `evaluate` (RISK + MOM15; MOM24 đã bỏ).
-- ValidateBrakeDynamic (12.469.300 quyết định symbol-level, CHƯA de-overlap): PASS 0.1%, REJECT 99.9%.
-  Phân rã: RISK 0.0% | MOM15 3.4% | **EARLY 96.5%**. ⚠️ Giá trị tuyệt đối DD phóng đại (chồng lấn), chỉ
-  đọc tương đối. AI filter KHÔNG chặn được cú sập (cái 0.1% được vào vẫn tụt sâu).
-- ⚠️ Lá chắn EARLY là 15M + funding KẾT HỢP (funding qua pre-filter mục 3 + điều kiện EARLY). Vai trò
-  chính xác của từng vế cần ablation funding đo (chưa làm) — ĐỪNG kết luận "chỉ 15M" hay "chỉ funding".
+- Là classifier **5 lớp** theo tốc độ chạm +6%: `0=Fail, 1=72H, 2=24H, 3=4H, 4=15M`.
+- ⚠️⚠️ **`symbolPred` dùng trong filter = `pred[0]` = P(FAIL)** — xác suất 72h tới KHÔNG đạt +6%.
+  KHÔNG phải P(chạm). Giá trị cao = symbol XẤU (dễ fail). Chiều này ĐÚNG trong filter (xem mục 4).
+- Phân bố lớp (train, 18.5M mẫu): fail~34%, 72H~16%, 24H~29%, 4H~19%, 15M~1.6%.
+- Train mới (label6, holdout 12 tháng): rank-IC 0.2249 t=53.6; LIFT P(fast)≥0.5 → hit 52.4% vs base
+  6.8% = **x7.68**. PASS.
+- ⚠️ NHƯNG: train ĐO trên `pfast = P(lớp 3)+P(lớp 4)` (chạm nhanh), còn filter DÙNG `pred[0]=P(fail)`.
+  Hai đại lượng khác nhau — chưa ai gate riêng cho pred[0]. (Việc dở: nên đo LIFT/calibration của
+  chính pred[0] tại ngưỡng 0.197.)
+- 🟢 Quan sát LIVE thật (user): top 10 symbol P-fail thấp nhất ~0.2–0.4, khi thị trường rung lắc tụt
+  <0.1; top dưới 0.4–0.9. → funding model phân biệt được symbol, nhạy với thị trường. Chạy đúng.
 
-### Filter ablation (backtest 7 tháng 20251001–20260430) — ⚠️ CỬA SỔ NGẮN, THUẬN
-| mode | trades | PnL | PF | maxDD | worstLoss |
-|------|--------|-----|----|-------|-----------|
-| A (full) | 18848 | 17699 | 1.99 | -10115 | -768.6 |
-| B (bỏ RISK) | 18527 | 13488 | 1.75 | -10128 | -768.6 |
-| C (bỏ MOM24) = A tuyệt đối | | | | | |
-| D (bỏ cả) = B | | | | | |
-- A=C → MOM24 vô dụng (đã bỏ). B<A → RISK lọc lệnh kém (+31% PnL), giữ. worstLoss/maxDD **y hệt 4 mode**
-  → filter KHÔNG chạm được đuôi. ⚠️ 7 tháng này LÃI nhưng là cửa sổ thuận — đừng kết luận từ nó.
-
-**Chốt filter: FILTER_MODE=A** (giữ RISK+MOM15+EARLY), MOM24 đã bỏ hẳn.
-
----
-
-## 5. CHẨN ĐOÁN NGUỒN LỖ ĐUÔI (RunTailLossDiagnostic, 7 tháng)
-
-- Quy lỗ theo levelChange: `PREDICT_SYMBOL_TRADE` −10631/8246 leg (−1.3/leg, bình thường);
-  `DCA_LEVEL1` −5293/86 leg (**−61.5/leg**); worstLeg đơn = DYM −768 BIG_UP (cú lẻ, không hệ thống).
-- Cụm tệ nhất: giữ tới **160 ngày** tụt −80%; RAVE/PIPPIN 1 leg tụt −96% (coin rác sập không hồi).
-- maxDD −28.9% lúc **325 cụm mở** ngốn **96.8% vốn** → maxDD do MẬT ĐỘ cụm, không do 1 cú lỗ.
-- Ba nguồn rủi ro khác nhau: (1) mật độ cụm, (2) DCA khuếch đại, (3) coin rác sập-không-hồi (vấn đề
-  CHẤT LƯỢNG ENTRY, không phải phanh). ✏️ Nhưng xem mục 6: chặn (1)(2) bằng breaker làm TỆ HƠN.
+### Cạm bẫy encode/decode funding ⚠️
+- `encodeFundingMapToBinary` lưu TOÀN BỘ vector; `decodeFundingMapToPrimitiveArray` chỉ lấy `pred[0]`,
+  pack 16 bit symbolId + 32 bit float.
+- 🔴 Set funding pred HIỆN TẠI trên Aerospike (`funding_pred_1m_v5`) đang là **data CŨ**: mỗi record
+  `len=1` (1 giá trị ~P-fail, dao động 0.1–0.9). **Model 5 lớp mới CHƯA được gen lại/deploy.**
+  → Khi deploy model 5 lớp mới, pred[0]=P(class0)=P-fail, chiều vẫn nhất quán, nhưng HÀNH VI filter
+  sẽ đổi (giá trị phân bố khác). Phải lường trước khi gen lại.
+- ⚠️ Nếu đổi thứ tự output funding model → `symbolPred` sai âm thầm, không báo lỗi.
 
 ---
 
-## 6. CIRCUIT BREAKER — ✏️ ĐÃ THỬ, SAI HƯỚNG, BỎ
+## 4. FILTER & PHANH ĐỘNG (AIRejectFilter) — lá chắn thật nằm ở đâu
 
-RunBreakerBacktest 2021→2026, 4 mode (MARGIN_HALT=0.70, CLUSTER_DD_MAX=−0.30):
-| mode | totalPnl | maxDD | 2026 |
-|------|----------|-------|------|
-| OFF | **70986** | −35.3% | 2069 |
-| MARGIN | 60805 (−14%) | −37.0% (xấu hơn) | 709 |
-| DCA | 68664 | −33.6% | 1797 |
-| BOTH | 55283 (tệ nhất) | −40.3% (tệ nhất) | **−1813** |
+### Cơ chế
+- `checkSignalDynamic(prediction, symbolPred)` — phần lớn entry đi qua đây (ngưỡng ĐỘNG).
+- `scaleFactor = clamp((symbolPred / PREDICT_SYMBOL_RATE_MAX_THRESHOLD) * AI_DYNAMIC_MULTIPLIER,
+  AI_DYNAMIC_MIN, AI_DYNAMIC_MAX)`. symbolPred=P-fail cao → scale cao → siết chặt (đúng chiều).
+- `dynamic_15M = MIN_MOMENTUM_15M * scale`; `dynamic_Risk4H = HARD_RISK_LIMIT_4H / scale`.
+- Nhánh **EARLY** (chặn sớm): `if (pred15 < MIN_MOMENTUM_15M && symbolPred > PREDICT_SYMBOL_RATE_MAX_THRESHOLD) REJECT`.
+- `evaluate` có 3 nhánh REJECT: RISK (`risk4H ≤ thresRisk`), MOM15 (`pred15 < thres15M`), MOM24 (`pred24 < thres24H`).
 
-🟢 PHÁN QUYẾT: breaker làm TỆ HƠN mọi mặt. Chặn DCA/margin = chặn lãi (đa số DCA cứu lệnh thành công qua
-mean-reversion; mở lệnh lúc margin cao = lúc sập = đúng cơ hội DCA tốt). Vài cú thảm họa hiếm (−80%, 160
-ngày) KHÔNG đại diện DCA nói chung. **DCA là TÍNH NĂNG, không phải bug. Bỏ ý tưởng breaker.** KHÔNG
-force-close. Nếu sau này muốn giảm DD: thử giảm số cụm/size (không chặn DCA), nhưng phải đo — có thể lại
-mất lãi như MARGIN.
+### Kết quả mô phỏng phanh động (ValidateBrakeDynamic, 12.469.300 quyết định mức symbol, CHƯA de-overlap)
+- PASS=**0.1%**, REJECT=99.9%. Phân rã: **RISK=0.0% | MOM15=3.4% | MOM24=0.0% | EARLY=96.5%**.
+- 🟢 PHÁT HIỆN LỚN: **nhánh EARLY (15M + funding bắt tay) gánh 96.5% reject** — đây là lá chắn THẬT,
+  KHÔNG phải nhánh RISK (dd4h gần như không đạp qua ngưỡng động).
+- 🔴 Realized drawdown 4h (thô, chồng lấn → giá trị tuyệt đối PHÓNG ĐẠI): PASS=-8.4% SÂU HƠN
+  REJECT-RISK=-6.1% → log tự kết luận "chặn đúng" là SAI chiều. Cái 0.1% được vào VẪN tụt sâu 8%+.
+  → AI filter KHÔNG chặn được cú sập.
+- ⚠️ Tool này thiếu de-overlap ở phần phanh; giá trị tuyệt đối không tin, chỉ đọc tương đối.
 
----
+### Filter ablation (backtest 7 tháng 20251001–20260430)
+| mode | trades | PnL | PF | maxDD | worstLoss | nearLiq2 |
+|------|--------|-----|----|-------|-----------|----------|
+| A (full) | 18848 | 17699 | 1.99 | -10115 | -768.6 | 12 |
+| B (bỏ RISK) | 18527 | 13488 | 1.75 | -10128 | -768.6 | 12 |
+| C (bỏ MOM24) | =A tuyệt đối | | | | | |
+| D (bỏ cả) | =B | | | | | |
+- 🟢 **A=C tuyệt đối** → MOM24 (24h) CHƯA BAO GIỜ kích hoạt. Bỏ an toàn hoàn toàn.
+- 🟢 Bỏ RISK (B) làm **PnL tụt 17699→13488, PF 1.99→1.75** → nhánh RISK (dd4h) ĐANG lọc lệnh kém
+  (+31% PnL). GIỮ. NHƯNG nó **cải thiện PnL, KHÔNG cải thiện đuôi** (maxDD/worstLoss/nearLiq y hệt 4 mode).
+- 🔴 **worstLoss -768.6 GIỐNG HỆT cả 4 mode** → cú lỗ tệ nhất + maxDD đến từ thứ filter KHÔNG kiểm soát.
+- ⚠️ Ablation 7 tháng này là CỬA SỔ THUẬN (lãi PF 1.99) — backtest đầy đủ 5 năm cho bức tranh NGƯỢC (lỗ).
+  Đừng kết luận từ cửa sổ ngắn.
 
-## 7. 🔴 VẤN ĐỀ PHƯƠNG PHÁP LỚN NHẤT — IN-SAMPLE & WFO
-
-Backtest đầy đủ "lãi mọi năm" phần lớn là IN-SAMPLE → là CẬN TRÊN lạc quan, chưa phải OOS thật.
-- Model cũ (gen predict set) train tới **20251219** → predict 2021–2025 là in-sample.
-- Tham số HPO trên **6 tháng 20251001–20260330** → 2021–~09/2025 là param-OOS (sạch về tham số).
-- Cửa sổ SẠCH CẢ HAI (model + tham số OOS) = **chỉ từ 04/2026 trở đi** (~2 tháng, ngắn).
-- 🟡 Giảm lo: model OOS IC (0.5175) ≈ in-sample IC (0.5345) → model tổng quát hóa tốt, ít overfit →
-  nhiễm model NHỎ. Tham số chỉ in-sample 6 tháng gần. Nên "lãi 2021-2024" (param-OOS) tương đối đáng tin.
-
-### WFO — cách làm đúng (Bước 4 ROADMAP, CHƯA làm)
-- Cuốn chiếu: cửa sổ test 3-6 tháng, mỗi cutoff train model + HPO trên dữ liệu TRƯỚC đó (purge ≥ 72h vì
-  label nhìn 72h), test sau cutoff, ghép các đoạn test = đường cong OOS thật.
-- ⚠️ WFO tạo NHIỀU model mới (mỗi cutoff một cái) — model cũ/mới hiện có KHÔNG dùng được (đã thấy quá nhiều
-  dữ liệu). Model mới (tới 20260525) chỉ để PRODUCTION sau khi WFO xác nhận; validate nó trên 2026 =
-  in-sample, vô nghĩa.
-- ⚠️ WFO phải MIRROR quy trình vận hành thật (train full-history + HPO 6 tháng gần nhất) → chi phí HPO/cửa
-  sổ không phình.
-
-### 🔴 Chi phí thật (từ số user) — đừng lao vào full WFO ngay
-- HPO 1 vòng/4 tháng = 3 phút; full HPO (master+7 worker) > 1 ngày (11 tham số entry+DCA, CHƯA có trailing/
-  quản lý vốn). Train model 6h (không tinh chỉnh) / 2 ngày (tinh chỉnh). Gen predict 5 năm = 2 ngày.
-- Full WFO 3 tháng (~10 cửa sổ) ≈ **15–20 ngày** chạy; 6 tháng (~5 cửa sổ) ≈ 8–10 ngày.
-- ĐỀ XUẤT: ĐO NHIỄM bằng 1 bước trước (train cutoff 20230930, test H1/2024, so với backtest in-sample cùng
-  cửa sổ). Delta nhỏ → backtest hiện tin được, WFO hạ ưu tiên. Delta lớn → full WFO bắt buộc. Bò trước khi chạy.
-- ⚠️ Cần xác nhận: pipeline gen predict chạy được cho RIÊNG 1 cửa sổ ngắn không, hay buộc gen cả 5 năm
-  (nếu buộc 5 năm → mỗi cửa sổ tốn 2 ngày gen → phải sửa tool gen nhận from/to trước).
+**Chốt: FILTER MODE C** (giữ RISK + MOM15 + EARLY, bỏ MOM24). dd4h giữ qua nhánh RISK (lọc lệnh kém)
+dù bản thân model dd4h chỉ là volatility proxy.
 
 ---
 
-## 8. QUYẾT ĐỊNH ĐÃ CHỐT (Configs hiện tại)
+## 5. CHẨN ĐOÁN NGUỒN LỖ ĐUÔI (RunTailLossDiagnostic, mode C)
 
-- ✅ SLIPPAGE_RATE = **0.003** cố định (bi quan-an-toàn; coin rác + nhồi lúc sập). Nên đo slippage thật từ
-  lệnh live 242 sau. RATE_FEE=0.002 (2 chân). APPLY_SLIPPAGE=true, BLOCK_INTRABAR_LOOKAHEAD=true.
-- ✅ MOM24/predReturn24H bỏ hẳn. FILTER_MODE=A. BREAKER_MODE=OFF (bỏ ý tưởng breaker).
-- ✅ Look-ahead đã vá; `BacktestIntegrityGuard.assertProductionGrade()` cắm trong sim.
-- Tham số chính: PREDICT_SYMBOL_RATE_MAX_THRESHOLD=0.15, AI_DYNAMIC_MAX=2.14135 (→ pre-filter cut 0.32),
-  AI_DYNAMIC_MULTIPLIER=1.2876, MIN_MOMENTUM_15M=0.02284, HARD_RISK_LIMIT_4H=-0.2.
-  (Nhiều tham số có comment "HPO đã revert về cũ" — bản đang dùng là bản CŨ revert, không phải bản HPO.)
+### Quy lỗ theo levelChange (theo leg)
+- `PREDICT_SYMBOL_TRADE`: -10631 / **8246 leg** = -1.3/leg (bình thường, chi phí kinh doanh).
+- `DCA_LEVEL1`: -5293 / **86 leg = -61.5/leg** (gấp ~47 lần!) → 🔴 **DCA khuếch đại lỗ**, đúng martingale.
+- worstLeg đơn: DYMUSDT **-768.6 BIG_UP** (cú lẻ, không phải nguồn hệ thống). BIG_DOWN KHÔNG trong top.
 
----
+### Cụm tệ nhất
+- DYM -1233 (4 leg, worstDD **-81%**, giữ **3856h = 160 ngày**); HIPPO -822 (-84.9%); RAVE -266
+  (**1 leg, -96.6%**); PIPPIN (1 leg, -97.5%).
+- Cụm 1 leg tụt -96% = **coin rác sập không hồi** (vào nhầm coin chết) → vấn đề CHẤT LƯỢNG ENTRY, không
+  phải DCA.
 
-## 9. VIỆC TIẾP (ưu tiên)
+### maxDD danh mục — NGUỒN LỚN NHẤT 🔴
+- maxDD = **-10115 (-28.9% vốn) lúc 2026-02-06**, có **~325 cụm mở** ngốn margin ~33886 (**96.8% vốn**),
+  marginMax 99%.
+- → maxDD KHÔNG do 1 cú lỗ, mà do **QUÁ NHIỀU cụm mở cùng lúc** (rủi ro mật độ + tương quan). Hệ "tất
+  tay" 99% vốn đúng lúc thị trường sập.
 
-1. **Sửa ValidateFundingOOS** đo đúng nhóm hệ dùng (pred ≤ 0.32): fail-rate vs base, IC nội nhóm, chia lát
-   tìm ngưỡng tối ưu. Sửa EARLY_THRES 0.197→0.15. → biết funding đóng góp thật bao nhiêu + ngưỡng 0.32 tối ưu chưa.
-2. **Ablation funding**: cố định symbolPred=hằng số, backtest đầy đủ → đo đóng góp funding vào PnL/đuôi.
-3. **Đo nhiễm in-sample** (1 bước WFO: cutoff 20230930, test H1/2024) → quyết có làm full WFO không.
-4. Gen lại funding pred bằng model 5 lớp mới + calibrate ngưỡng theo phân bố model mới.
-5. Bật lại `updateFundingFee` (đang comment → PnL tuyệt đối lạc quan; đuôi ít ảnh hưởng).
-6. Cải thiện entry tránh coin rác sập-không-hồi (nguồn lỗ 3). Xem lại exit (RATE_PROFIT_STOP cao vs nảy ~1%).
-
----
-
-## 10. ROADMAP
-
-(0)look-ahead ✓ | (1)đo IC model ✓ (market + funding đều validate OOS) | (2)ablation ✓ filter, ◐ funding
-(chưa) | (3)mô hình hóa ruin: breaker đã thử SAI HƯỚNG, bỏ; DCA giúp | (4)WFO ◄ vấn đề lớn nhất, đo nhiễm
-trước | (5)hợp nhất sim/product. Bằng chứng dẫn đường, không máy móc.
+### Ba nguồn rủi ro đuôi KHÁC NHAU
+1. **Mật độ (325 cụm, 96.8% margin)** → cần **trần margin danh mục**. LỚN NHẤT.
+2. **DCA khuếch đại (-61/leg)** → cần **giới hạn DCA depth**.
+3. **Coin rác sập không hồi (-96%, 1 leg)** → cần **chất lượng entry** (không phải phanh).
 
 ---
 
-## 11. CẠM BẪY (đừng lặp — Claude đã sai nhiều lần ở các điểm này)
+## 6. BACKTEST — VẤN ĐỀ TÁI LẬP & SỰ THẬT 5 NĂM
 
-- ⚠️ `UnProfitMin` = drawdown unrealized TẠM THỜI, KHÔNG phải lỗ thực hiện. (Claude nhầm → "hệ lỗ" sai.)
-- ⚠️ DCA giúp (mean-reversion), không phá. Vài cú thảm họa hiếm không đại diện. (Claude nhầm → breaker sai.)
-- ⚠️ Funding KHÔNG no-op — nó lọc mạnh ở PRE-FILTER trong Simulator (cut 0.32), không chỉ ở AIRejectFilter.
-  (Claude bỏ sót pre-filter → kết luận no-op sai. Luôn đọc luồng entry đầy đủ, không chỉ filter class.)
-- ⚠️ Cửa sổ ngắn lừa: ablation 7 tháng LÃI, nhưng backtest đầy đủ mới thật. Luôn test qua chu kỳ đầy đủ.
-- ⚠️ In-sample lừa: backtest trên giai đoạn model/HPO đã thấy = cận trên. OOS thật cần WFO.
-- ⚠️ Win-rate VÔ NGHĨA với martingale (dùng profitFactor/worstLoss/maxDD/payoff). R2 SAI cho label tụ hẹp
-  (dùng IC de-overlap + LIFT). IC cao ≠ dùng được.
-- ⚠️ De-overlap theo cửa sổ nhãn (15M/72h) trước khi tính t-stat; KHÔNG thì phóng đại. Với nhãn 72h, tính
-  realized chỉ cho mẫu sống sót sau de-overlap (online), KHÔNG tính cho mọi phút rồi vứt (OOM + chậm ~1000x).
-- ⚠️ decode funding chỉ lấy pred[0]=P(fail), bit thấp; symbolId bit cao. Đổi thứ tự output model = sai âm thầm.
-- ⚠️ Backtest phải tái lập: commit trước, ghi commit+giai đoạn+Configs(slippage)+set. Sim không random.
-- ⚠️ Bump CONFIG_VERSION khi đổi model/predict; KHÔNG bump cho đổi filter/sim/ablation.
-- ⚠️ Phiên chat dài làm context loãng → Claude dễ tính sai cái vừa gửi. Mở chat mới + kéo file này khi cần.
+### Drift (TRACE_backtest_drift.md)
+- Lần "chuẩn 10:57" = `TraceData2Test` ĐỌC FILE `../simulator/storage/OrderTestDone.data` (artifact sim
+  CŨ, **ngoài git, không tái lập được**). Lần "mới" = chạy tươi Aerospike. → so táo với cam.
+- BASE commit `cb50841` (2026-06-01), bộ HPO ĐÃ có sẵn (Configs HPO KHÔNG trôi).
+- 🔴 `SLIPPAGE_RATE` từng trôi **0.0005 ↔ 0.003** trên working-tree → backtest không nhất quán.
+
+### Backtest đầy đủ 2021→2026 (3 lần, 3 bộ tham số → 3 kết quả)
+- balance-ratio cuối 2026: 0.11 / 0.05 / 0.12. maxDD: -39% / -39% / -35%.
+- 🟢 Mẫu XUYÊN SUỐT cả 3 (đáng tin dù số tuyệt đối lệch): **ratio < 1 mọi năm, giảm dần; PnL ròng âm
+  gần như mọi năm; 2025 lỗ nặng.** → hệ lỗ qua chu kỳ.
+- 🟢 PREDICT_SYMBOL_TRADE payoff > 1 mọi năm (edge entry thật, nghịch lý với hệ lỗ → DCA là thủ phạm).
 
 ---
 
-## 12. HẠ TẦNG
+## 7. QUYẾT ĐỊNH ĐÃ CHỐT
 
-- **242** (103.157.218.242): PRODUCT tiền thật + data ticker. Aerospike CE 3222 đã khóa firewall (5 rich-
-  rule: 242, 127.0.0.1, 226, VPN 10.8.0.0/24, Oracle 161.118.206.1). SSH 2222.
+- ✅ `SLIPPAGE_RATE = 0.003` cố định (bi quan-an-toàn; hệ vào coin rác + nhồi lúc sập nên slippage thực
+  cao; thà ước lượng cao còn hơn thấp). Nên đo slippage thật từ lệnh live 242 sau.
+- ✅ `RATE_FEE = 0.002` (2 chân). `APPLY_SLIPPAGE=true`, `BLOCK_INTRABAR_LOOKAHEAD=true`.
+- ✅ Bỏ `predReturn24H` khỏi filter (A=C, vô dụng). Filter dùng **mode C**.
+- ✅ Look-ahead đã vá (Bước 0): nhánh priceSL==null chỉ đặt SL, không khớp nội nến.
+  `BacktestIntegrityGuard.assertProductionGrade()` cắm trong sim, chặn nếu cấu hình ảo.
+- 🟡 dd4h: giữ trong filter (nhánh RISK lọc lệnh kém, +31% PnL) NHƯNG model dd4h chỉ là basketVolSpike
+  proxy, không chặn được đuôi. KHÔNG train lại dd4h (train ra y cũ).
+- 🟡 24h model: bỏ. Giữ insight "giữ lâu → chạm mục tiêu cao".
+
+---
+
+## 8. ĐANG LÀM / VIỆC TIẾP
+
+### Đang chạy: test BREAKER_MODE trên backtest ĐẦY ĐỦ 2021→2026
+- `BREAKER_MARGIN_HALT=0.70` (chặn mở mới khi margin/vốn ≥ 70% — nhắm nguồn 1: mật độ 325 cụm).
+- `BREAKER_CLUSTER_DD_MAX=-0.30` (ngừng nhồi cụm khi tụt ≥30% — nhắm nguồn 2: DCA khuếch đại).
+- KHÔNG force-close (giữ nguyên lý long-only). Phanh chỉ DỪNG MỞ/DỪNG NHỒI.
+- So 4 mode OFF/MARGIN/DCA/BOTH, đọc **PnL tổng 5 năm + từng năm + maxDD**.
+- **Câu hỏi quyết định**: breaker có biến PnL 5 năm từ ÂM → DƯƠNG không?
+    - Có → DCA-không-giới-hạn là thủ phạm, breaker sửa được hệ. Bước ngoặt.
+    - Giảm DD mà PnL giữ → đáng áp (an toàn hơn).
+    - Giảm DD mà PnL xấu đi → vấn đề SÂU HƠN DCA, phải xem lại chiến lược (không sửa bằng phanh).
+
+### Việc dở (chưa làm)
+- Đo LIFT/calibration của chính `pred[0]=P(fail)` tại ngưỡng 0.197 (filter dùng pred[0] nhưng gate đo pfast).
+- Gen lại funding pred bằng model 5 lớp mới + lường đổi hành vi filter.
+- Bật lại `updateFundingFee` (đang comment → PnL tuyệt đối lạc quan; đuôi ít ảnh hưởng).
+- Đo slippage thật từ lệnh live 242.
+- Cải thiện chất lượng entry để tránh coin rác sập-không-hồi (nguồn lỗ 3).
+
+---
+
+## 9. ROADMAP — ĐANG Ở ĐÂU
+
+6 bước: (0)look-ahead ✓ | (1)đo IC model ✓ (vượt: validate OOS thật) | (2)ablation AI ✓ (filter
+ablation) | (3)mô hình hóa ruin ◄ ĐANG Ở ĐÂY (circuit breaker) | (4)WFO 3 tháng | (5)hợp nhất sim/product.
+→ Đang nhảy từ (2) sang (3) sớm vì backtest 5 năm cho thấy RUIN là vấn đề cấp bách nhất. Bằng chứng
+dẫn đường, không làm máy móc.
+
+---
+
+## 10. CẠM BẪY & NGUYÊN TẮC (đừng lặp lại)
+
+- ⚠️ **Win-rate VÔ NGHĨA với martingale.** Đo profitFactor/worstSingleLoss/payoff/maxDD/nearLiq.
+- ⚠️ **R2 SAI cho label tụ hẹp** (15M quanh 1.6%) — thưởng đoán-trung-bình. Dùng IC de-overlap + LIFT.
+- ⚠️ **IC cao ≠ IC thật ≠ dùng được.** 15M IC 0.52 thật nhưng chỉ ở vùng 1%. dd4h IC PASS gate nhưng
+  chỉ là volatility proxy.
+- ⚠️ **Tách 2 tầng**: đo MODEL (IC) vs đo CHIẾN LƯỢC (backtest). Lỗi tầng nào sửa tầng đó.
+- ⚠️ **Cửa sổ ngắn lừa.** Ablation 7 tháng lãi, 5 năm lỗ. Luôn test qua chu kỳ đầy đủ (gồm bear).
+- ⚠️ **Backtest phải tái lập**: commit trước khi chạy, ghi commit+giai đoạn+Configs+slippage. Không
+  chạy working-tree bẩn. Sim không random → cùng input phải ra cùng output.
+- ⚠️ **Mọi backtest qua BacktestIntegrityGuard** (look-ahead off, slippage on, fee 2 chân).
+- ⚠️ **decode funding chỉ lấy pred[0]=P(fail)** — đổi thứ tự output model = sai âm thầm.
+- ⚠️ **Bump CONFIG_VERSION khi đổi model/predict** (vô hiệu cache HPO). KHÔNG bump cho đổi filter/sim.
+- ⚠️ **AI filter KHÔNG chặn được cú sập** — chống sập phải là tầng riêng (breaker theo drawdown thực
+  tế), không dựa model dự báo.
+
+---
+
+## 11. HẠ TẦNG (tóm tắt)
+
+- **242** (103.157.218.242): PRODUCT tiền thật + data ticker. Aerospike CE port 3222 — ĐÃ khóa firewall
+  (5 rich-rule: 242, 127.0.0.1, 226, VPN 10.8.0.0/24, Oracle 161.118.206.1). SSH 2222 giữ nguyên.
 - **226** (103.157.218.226): backtest cá nhân + data predict/market. Aerospike public (Kaggle cần).
-- **Oracle VPS** (egress 161.118.206.1): master HPO. **Kaggle**: train GPU + worker HPO.
-- Set: market predict `ai_pred_market_full_basket_v2`, funding predict `funding_pred_1m_v5` (đang model cũ len=1).
+- **Oracle VPS** (egress 161.118.206.1): master HPO.
+- **Kaggle**: train model GPU + worker HPO.
+- Set Aerospike: market predict `ai_pred_market_full_basket_v2`, funding predict `funding_pred_1m_v5`.
 
 ---
 
-## 13. FILE LIÊN QUAN
+## 12. FILE CODE ĐÃ TẠO (trong /mnt/user-data/outputs + repo)
 
-Tool validate/diag (Java, 226): ValidateOldPredictVsRealized, ValidateBrakeDynamic, InspectFundingPredRaw,
-ValidateFundingOOS, RunFilterAblation, RunTailLossDiagnostic, RunBreakerBacktest.
-Docs: FINDINGS.md (file này), AUDIT_filter_ablation.md (luồng dữ liệu + code), TRACE_backtest_drift.md
-(vì sao từng không tái lập), CLAUDE.md (luật + trỏ tới các file research).
+Tool validate/diag (Java, chạy 226): `ValidateOldPredictVsRealized`, `ValidateOldPredict3Targets`,
+`ValidateBrakeDynamic`, `InspectFundingPredRaw`, `RunFilterAblation`, `RunTailLossDiagnostic`.
+Script Kaggle: `diag_market_rulebase_vs_model.py`, `diag_market_3targets.py`.
+Prompt cho Claude Code: `PROMPT_filter_ablation`, `PROMPT_gom_audit_bundle`, `PROMPT_circuit_breaker`,
+`PROMPT_trace_backtest_drift`, `PROMPT_breaker_full_cycle`.
+Repo docs: `CLAUDE.md` (luật), `ROADMAP.md` (6 bước), `PIPELINE.md` (WFO 3 tháng),
+`TRACE_backtest_drift.md`, `AUDIT_filter_ablation.md`.

@@ -38,6 +38,7 @@
               <goal>shade</goal>
             </goals>
             <configuration>
+              <skip>${skipShade}</skip>
               <filters>
                 <filter>
                   <artifact>*:*</artifact>
@@ -66,7 +67,6 @@
           <execution>
             <goals>
               <goal>compile</goal>
-              <goal>test-compile</goal>
             </goals>
           </execution>
         </executions>
@@ -78,6 +78,7 @@
   </build>
   <properties>
     <java.version>11</java.version>
+    <skipShade>false</skipShade>
     <okhttp3.version>4.9.1</okhttp3.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <fastjson.version>1.2.76</fastjson.version>

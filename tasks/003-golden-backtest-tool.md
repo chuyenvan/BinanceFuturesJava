@@ -1,6 +1,6 @@
 # TASK-003: Dựng tool GoldenBacktest (regression harness)
 
-- **status:** done (FAST) — bước 0 determinism PASS; fingerprint FAST đã ghi (`outputs/golden/FAST-55973e3.json`). Còn chờ user DUYỆT promote baseline (`docs/golden/baseline-FAST.json`) + (tuỳ chọn) profile FULL.
+- **status:** in-progress — tool + determinism + FAST fingerprint XONG; đang **chốt baseline** theo *Luồng chốt baseline* bên dưới (commit sạch → FAST lại → promote). Code tự cập nhật trạng thái từng bước; fail thì retry đúng bước.
 - **Milestone:** Change control cho backtest — hiện thực hóa ADR-0006. Độc lập với chuỗi survivorship (001/002).
 - **Thực thi bởi:** Claude Code (**Java**, chạy trên 226).
 - **Quyết định nền:** ADR-0006 (quy trình) + ADR-0004 (CONFIG_VERSION) + TRACE_backtest_drift (reproducibility).
@@ -32,6 +32,19 @@ Tool Java chạy backtest ở cấu hình cố định (FAST/FULL), xuất finge
 - [ ] Chạy qua `BacktestIntegrityGuard`; KHÔNG sửa engine core.
 - [ ] Java, log SLF4J/Log4j2, KHÔNG `System.out`/`printStackTrace`.
 - [ ] Baseline ghi vào `docs/golden/` (commit được), không phải outputs/.
+
+## LUỒNG CHỐT BASELINE — thực thi tuần tự
+
+> Một luồng duy nhất. Code đánh `[x]` khi bước PASS; nếu FAIL → ghi lý do ngay tại dòng bước đó + DỪNG (không nhảy bước). Retry = chạy lại đúng bước fail.
+
+- [x] **B1 — Sync:** ✅ `git fetch` — `origin/module == HEAD == f5311bc` (3 commit code A/B/C đã trên remote), 0 ahead/behind, 0 conflict. Không cần pull.
+- [x] **B2 — Commit sạch:** ✅ commit docs/tasks/ADR còn lại + `/outputs/` vào `.gitignore` → working-tree sạch hẳn (chỉ còn baseline ghi ở B4).
+- [ ] **B3 — FAST lại trên commit sạch** (`GoldenBacktest FAST` trên 226). PASS: metric KHỚP `PnL=6510.72 · maxDD=−19613.02 · numTrades=14154 · clustersHeld30d=19 · worstSingleLoss=−808.87` VÀ stamp `dirty=false`.
+  • **FAIL (lệch metric):** KHÔNG promote. Ghi metric nào lệch + nghi nhân (config/data/commit đổi giữa bẩn↔sạch) vào *(Code điền)*, DỪNG, báo user. Retry: tìm nguyên nhân → sửa → chạy lại B3.
+- [ ] **B4 — Promote:** `cp outputs/golden/FAST-<sha>.json docs/golden/baseline-FAST.json` → `git add docs/golden/baseline-FAST.json && git commit && git push`. PASS: file có trong `docs/golden/` + đã push.
+- [ ] **B5 — Đóng task:** đổi `status` = `done (baseline FAST promoted)`; ghi `<sha>` + metric baseline vào *(Code điền) Kết quả*.
+
+FAIL ở B1/B2/B4 (git/io) → retry chính bước đó. Chỉ B3 fail mới cần điều tra trước khi retry.
 
 ---
 ## (Code điền) Kết quả
