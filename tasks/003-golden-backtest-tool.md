@@ -1,6 +1,6 @@
 # TASK-003: Dựng tool GoldenBacktest (regression harness)
 
-- **status:** in-progress — tool + determinism + FAST fingerprint XONG; đang **chốt baseline** theo *Luồng chốt baseline* bên dưới (commit sạch → FAST lại → promote). Code tự cập nhật trạng thái từng bước; fail thì retry đúng bước.
+- **status:** done (baseline FAST promoted) — `docs/golden/baseline-FAST.json` @ commit `df28a5b` (dirty=false). Determinism PASS + FAST fingerprint khớp 3 lần liên tiếp.
 - **Milestone:** Change control cho backtest — hiện thực hóa ADR-0006. Độc lập với chuỗi survivorship (001/002).
 - **Thực thi bởi:** Claude Code (**Java**, chạy trên 226).
 - **Quyết định nền:** ADR-0006 (quy trình) + ADR-0004 (CONFIG_VERSION) + TRACE_backtest_drift (reproducibility).
@@ -39,10 +39,10 @@ Tool Java chạy backtest ở cấu hình cố định (FAST/FULL), xuất finge
 
 - [x] **B1 — Sync:** ✅ `git fetch` — `origin/module == HEAD == f5311bc` (3 commit code A/B/C đã trên remote), 0 ahead/behind, 0 conflict. Không cần pull.
 - [x] **B2 — Commit sạch:** ✅ commit docs/tasks/ADR còn lại + `/outputs/` vào `.gitignore` → working-tree sạch hẳn (chỉ còn baseline ghi ở B4).
-- [ ] **B3 — FAST lại trên commit sạch** (`GoldenBacktest FAST` trên 226). PASS: metric KHỚP `PnL=6510.72 · maxDD=−19613.02 · numTrades=14154 · clustersHeld30d=19 · worstSingleLoss=−808.87` VÀ stamp `dirty=false`.
+- [x] **B3 — FAST lại trên commit sạch df28a5b** ✅ (2026-06-09 21:52): metric KHỚP HỆT `PnL=6510.72 · maxDD=−19613.02 · numTrades=14154 · clustersHeld30d=19 · worstSingleLoss=−808.87` VÀ stamp `dirty=false`. (Lần khớp thứ 3: determinism×2 + dirty-run + clean-run.)
   • **FAIL (lệch metric):** KHÔNG promote. Ghi metric nào lệch + nghi nhân (config/data/commit đổi giữa bẩn↔sạch) vào *(Code điền)*, DỪNG, báo user. Retry: tìm nguyên nhân → sửa → chạy lại B3.
-- [ ] **B4 — Promote:** `cp outputs/golden/FAST-<sha>.json docs/golden/baseline-FAST.json` → `git add docs/golden/baseline-FAST.json && git commit && git push`. PASS: file có trong `docs/golden/` + đã push.
-- [ ] **B5 — Đóng task:** đổi `status` = `done (baseline FAST promoted)`; ghi `<sha>` + metric baseline vào *(Code điền) Kết quả*.
+- [x] **B4 — Promote:** ✅ `cp outputs/golden/FAST-df28a5b.json docs/golden/baseline-FAST.json`; commit + push (commit này).
+- [x] **B5 — Đóng task:** ✅ status = `done (baseline FAST promoted)`; baseline = df28a5b (xem Kết quả).
 
 FAIL ở B1/B2/B4 (git/io) → retry chính bước đó. Chỉ B3 fail mới cần điều tra trước khi retry.
 
@@ -72,4 +72,6 @@ FAIL ở B1/B2/B4 (git/io) → retry chính bước đó. Chỉ B3 fail mới c�
 ## (Code điền) Quyết định phát sinh
 
 - **Configs `:38`:** user đã xử lý bằng sửa FILE config trên server (bỏ value rỗng) — KHÔNG sửa parser. ⚠️ Bug `split("=")` vẫn TIỀM ẨN: value rỗng (hoặc value chứa `=`) trong tương lai sẽ lại làm app `System.exit(0)`, kể cả LIVE. Khuyến nghị fix tận gốc `split("=", 2)` — chưa làm theo ý user.
-- **Baseline FAST:** vẫn chưa promote. Fingerprint hiện tại `55973e3` là commit **dirty** (tool GoldenBacktest + docs/tasks chưa commit). Cần: commit sạch → chạy lại FAST → khớp 6510.72 → `cp outputs/golden/FAST-<sha>.json docs/golden/baseline-FAST.json` + commit.
+- **Baseline FAST — ĐÃ PROMOTE:** `docs/golden/baseline-FAST.json` @ commit **df28a5b** (dirty=**false**, working-tree sạch hẳn). Metric chốt: PnL=**6510.72** (2025=5809.70 / 2026=701.02) · maxDD=**−19613.02** · worstSingleLoss=**−808.87** · numTrades=**14154** · clustersHeld30d=**19** · nearLiq=**0**. Sets: mkt=`market_data_object` · funding=`funding_pred_1m_v5` · ticker=`kline_1m_opt` · readCluster=242 · slip=0.003 fee=0.002 lookahead-block=true filter=A · cfg=v8.
+  - Từ giờ: chạy `GoldenBacktest FAST` ở commit sau, stamp KHỚP baseline mà metric đổi → tool BÁO ĐỎ (exit≠0). Đổi stamp (config/set/commit) → tool in diff, exit 0, chờ duyệt re-promote.
+  - **Tiền lệ bẩn↔sạch:** fingerprint cũ `55973e3`(dirty) và `f5311bc`(dirty=false code-clean) cho metric Y HỆT df28a5b ⇒ docs-commit không đụng kết quả backtest (đúng kỳ vọng).
