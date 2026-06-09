@@ -20,18 +20,8 @@ public class AerospikeCheckData {
 
                 String namespace = "ticker";
                 // truncate toàn bộ set
-//                client.truncate(null, namespace, "ai_pred_market_full_basket_15m", null);
-//                client.truncate(null, namespace, "hpo_task_queue", null);
-//                client.truncate(null, namespace, "hpo_task_queue_v3", null);
-//                client.truncate(null, namespace, "hpo_results_v4", null);
-//                client.truncate(null, namespace, "cache_chat_vnsbert", null);
-//                client.truncate(null, namespace, "rag_knowledge_vnsbert_v2", null);
-//                client.truncate(null, namespace, "predict_fundingfee_15m", null);
-//                client.truncate(null, namespace, "market_data_object_15m", null);
-//                client.truncate(null, namespace, "hpo_master_entry_pool_11p", null);
-//                client.truncate(null, namespace, "hpo_node_roles", null);
-//                client.truncate(null, namespace, "hpo_node_roles", null);
-//                client.truncate(null, namespace, "hpo_node_roles", null);
+//                client.truncate(null, namespace, "funding_pred_1m_20260606", null);
+
                 // Lấy thống kê namespace
                 String nsResponse = Info.request(client.getNodes()[0], "namespace/" + namespace);
                 System.out.println("=== Namespace Stats ===");
