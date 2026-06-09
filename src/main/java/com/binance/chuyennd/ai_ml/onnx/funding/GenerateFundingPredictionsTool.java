@@ -107,10 +107,13 @@ public class GenerateFundingPredictionsTool {
                         Utils.normalizeDateYYYYMMDD(task.start), Utils.normalizeDateYYYYMMDD(task.end));
                 try {
                     tool.startGeneration(task.start, task.end, aiBrain, time2MarketData, symbolMap);
+                    AerospikeTaskCoordinator.markDone(task);   // đánh dấu DONE (không bị nhặt lại)
                     done++;
                     LOG.info("✅ XONG TASK {} (tổng đã xong: {})", Utils.normalizeDateYYYYMMDD(task.start), done);
                 } catch (Exception e) {
-                    LOG.error("❌ TASK LỖI {} — cần re-queue thủ công bằng reInitSpecificTasks!",
+                    // Lỗi bắt được => trả task về PENDING để retry NGAY (worker chết cứng thì RUNNING tự stale sau 3h).
+                    AerospikeTaskCoordinator.releaseTask(task);
+                    LOG.error("❌ TASK LỖI {} — đã release về PENDING để retry.",
                             Utils.normalizeDateYYYYMMDD(task.start), e);
                 }
             }
