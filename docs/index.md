@@ -28,7 +28,8 @@
 
 ## Tasks
 - Xem thư mục [../tasks/](../tasks/). **Quy ước số: theo thứ tự LOGIC (phụ thuộc/thực hiện), không theo thứ tự tạo. Chèn giữa = thập phân (vd `003.1`). Xen ngang / lật lại = tạo task số đúng vị trí + update, KHÔNG đánh lại cả dãy.**
-- Trạng thái: `001` (done — 39 coin thiếu) · `002` (done) · `003-golden-backtest-tool` (done — baseline FAST @ `df28a5b`) · `003.1-golden-multirange` (todo — thêm Crash/Bull; Recent = baseline FAST) · `004-backfill-pilot` (todo) · `005` full backfill (sẽ mở).
+- Trạng thái: `001` (done — 39 coin thiếu) · `002` (done) · `003-golden-backtest-tool` (done — baseline FAST @ `df28a5b`) · `003.1-golden-multirange` (done — 3 baseline promote: Recent/Crash/Bull) · `004-backfill-pilot` (closed/deferred — backfill HOÃN [C], xem ADR-0007) · `005` không mở (backfill hoãn) · `006-circuit-breaker` (todo — chạy 4 mode FULL, ROADMAP bước 3).
+- **Next: chạy `006`** — `RunBreakerBacktest` đã có sẵn; chạy 4 mode FULL rồi đọc bảng (breaker lật PnL âm→dương / MARGIN vs DCA gánh chính).
 
 ## Archive (stale, giữ để truy vết)
 - [archive/](archive/) — README lib upstream, ProjectPipeLines fragment.
