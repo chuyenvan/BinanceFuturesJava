@@ -27,9 +27,11 @@ import java.util.*;
  * thu metric + stamp input, ghi fingerprint JSON, so baseline đã duyệt; BÁO ĐỎ (exit≠0) khi STAMP-input
  * KHÔNG đổi mà metric đổi (regression / nondeterminism). KHÔNG sửa engine core, KHÔNG ingest.
  *
- * Mode (arg[0]): verify | FAST | FULL   (mặc định: verify)
+ * Mode (arg[0]): verify | FAST | FULL | FAST_CRASH | FAST_BULL | FAST_RECENT   (mặc định: verify)
  *  - verify: chạy FAST 2 lần cùng commit/config/data → fingerprint phải KHỚP (cổng tiên quyết bước 0).
  *  - FAST  : START=20251001 END=20260430. FULL: START=20210101 END=nay.
+ *  - FAST_CRASH/BULL/RECENT (TASK-003.1): range regime theo mốc đã duyệt; mỗi lần tự chạy determinism
+ *    gate (2x) rồi mới chụp fingerprint. CRASH=20220401–20221231, BULL=20231001–20231231, RECENT=FAST.
  * commit/dirty nhận qua env GOLDEN_COMMIT / GOLDEN_DIRTY (vì 226 không có git repo, chỉ có jar).
  * ⚠️ ĐỌC DATA: chạy trên 226 nên để IS_KAGGLE_MODE=IS_HPO_MODE=FALSE → Simulator đọc AEROSPIKE
  *    (ticker qua getReadClient→242, 226 whitelist được 242; market/pred/funding→226). KHÔNG set true:
@@ -45,6 +47,15 @@ public class GoldenBacktest {
 
     private static final String FAST_START = "20251001", FAST_END = "20260430";
     private static final String FULL_START = "20210101";
+
+    // TASK-003.1 — thư viện range theo regime (mốc ĐÃ user duyệt). Mỗi range = {start, end} yyyyMMdd.
+    // Chạy qua mode tên-profile → runRangeGated: determinism gate (2x) + fingerprint trong 1 launch.
+    private static final Map<String, String[]> RANGES = new LinkedHashMap<>();
+    static {
+        RANGES.put("FAST_CRASH",  new String[]{"20220401", "20221231"}); // 2022 Q2–Q4: LUNA(5/22)+FTT(11/22) — đo survivorship
+        RANGES.put("FAST_BULL",   new String[]{"20231001", "20231231"}); // 2023Q4: uptrend sạch (rổ +142%, DD −14%)
+        RANGES.put("FAST_RECENT", new String[]{"20251001", "20260430"}); // = baseline FAST (regime giảm/choppy)
+    }
     private static final double NEAR_LIQ_DD = -0.90;     // <CẦN XÁC NHẬN định nghĩa nearLiq>
     private static final long HOLD_30D = 30L * Utils.TIME_DAY;
     private static final double EPS = 1e-4;              // dung sai metric tiền (determinism phải ~0)
@@ -87,11 +98,16 @@ public class GoldenBacktest {
 
         if ("verify".equalsIgnoreCase(mode)) {
             verifyDeterminism();
-        } else if ("FAST".equalsIgnoreCase(mode) || "FULL".equalsIgnoreCase(mode)) {
-            runProfile(mode.toUpperCase(Locale.US));
         } else {
-            LOG.error("Mode không hợp lệ: {} (verify|FAST|FULL)", mode);
-            System.exit(3);
+            String p = mode.toUpperCase(Locale.US);
+            if ("FAST".equals(p) || "FULL".equals(p)) {
+                runProfile(p);
+            } else if (RANGES.containsKey(p)) {
+                runRangeGated(p);                       // determinism gate (2x) + fingerprint trong 1 launch
+            } else {
+                LOG.error("Mode không hợp lệ: {} (verify|FAST|FULL|{})", mode, String.join("|", RANGES.keySet()));
+                System.exit(3);
+            }
         }
     }
 
@@ -113,17 +129,38 @@ public class GoldenBacktest {
         }
     }
 
-    /** Chạy 1 profile → fingerprint JSON → so baseline → phán quyết. */
+    /** Chạy 1 profile (FAST/FULL) → fingerprint JSON → so baseline → phán quyết. */
     private void runProfile(String profile) throws Exception {
-        long s, e;
-        if ("FAST".equals(profile)) { s = parse(FAST_START); e = parseEnd(FAST_END); }
-        else { s = parse(FULL_START); e = System.currentTimeMillis(); }
+        long s, e; String start, end;
+        if ("FAST".equals(profile)) { start = FAST_START; end = FAST_END; s = parse(start); e = parseEnd(end); }
+        else { start = FULL_START; e = System.currentTimeMillis(); end = Utils.normalizeDateYYYYMMDD(e); s = parse(start); }
+        emitFingerprint(profile, start, end, runSim(s, e));
+    }
 
-        Metrics m = runSim(s, e);
-        Fingerprint fp = stamp(profile,
-                "FAST".equals(profile) ? FAST_START : FULL_START,
-                "FAST".equals(profile) ? FAST_END : Utils.normalizeDateYYYYMMDD(e), m);
+    /**
+     * TASK-003.1 — 1 launch cho 1 range regime: determinism gate (chạy 2 lần khớp hệt) rồi mới chụp
+     * fingerprint từ run2 + so baseline. Load data 1 lần (CRASH 9 tháng chạy lâu nên không load lặp).
+     */
+    private void runRangeGated(String profile) throws Exception {
+        String[] r = RANGES.get(profile);
+        String start = r[0], end = r[1];
+        long s = parse(start), e = parseEnd(end);
+        LOG.info("\n========= RANGE {} [{}→{}] — DETERMINISM GATE (x2) =========", profile, start, end);
+        Metrics m1 = runSim(s, e);
+        Metrics m2 = runSim(s, e);
+        List<String> diff = m1.diff(m2);
+        if (!diff.isEmpty()) {
+            LOG.error("🔴 DETERMINISM FAIL [{}] — 2 lần LỆCH: {}", profile, diff);
+            LOG.error("   DỪNG: KHÔNG chụp baseline khi range chưa deterministic.");
+            System.exit(2);
+        }
+        LOG.info("✅ DETERMINISM PASS [{}] — 2 lần khớp tuyệt đối. {}", profile, m2.brief());
+        emitFingerprint(profile, start, end, m2);
+    }
 
+    /** Ghi fingerprint JSON (outputs/golden/) + so baseline docs/golden/ (review/regression). */
+    private void emitFingerprint(String profile, String start, String end, Metrics m) throws Exception {
+        Fingerprint fp = stamp(profile, start, end, m);
         new File("outputs/golden").mkdirs();
         String run = "outputs/golden/" + profile + "-" + fp.commit + ".json";
         try (FileWriter w = new FileWriter(run)) { w.write(Utils.gson.toJson(fp)); }
