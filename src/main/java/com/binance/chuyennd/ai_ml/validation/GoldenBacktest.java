@@ -64,6 +64,7 @@ public class GoldenBacktest {
         try {
             String mode = args.length > 0 ? args[0] : "verify";
             new GoldenBacktest().run(mode);
+            System.exit(0);   // batch job: thoát sạch (Aerospike client pool có thread non-daemon giữ JVM sống → treo nếu không exit; CI/script gọi harness phải nhận được exit code)
         } catch (Exception e) {
             LOG.error("❌ GoldenBacktest lỗi", e);
             System.exit(3);
