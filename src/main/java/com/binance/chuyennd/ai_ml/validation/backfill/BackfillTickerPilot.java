@@ -4,6 +4,7 @@ import com.aerospike.client.*;
 import com.aerospike.client.Record;
 import com.aerospike.client.cdt.MapOperation;
 import com.aerospike.client.cdt.MapPolicy;
+import com.aerospike.client.cdt.MapReturnType;
 import com.aerospike.client.policy.RecordExistsAction;
 import com.aerospike.client.policy.WritePolicy;
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
@@ -59,12 +60,16 @@ public class BackfillTickerPilot {
 
     public static void main(String[] args) {
         try {
-            if (args.length < 2) { LOG.error("Dùng: inspect SYMBOL | write SYMBOL 226|242 ID | audit SYMBOL 226|242"); return; }
-            String mode = args[0], symbol = args[1].toUpperCase(Locale.US);
+            if (args.length < 1) { LOG.error("Dùng: diffmapper | inspect SYMBOL | write SYMBOL 226|242 ID | audit SYMBOL 226|242 | remove SYMBOL 226|242"); return; }
+            String mode = args[0];
+            if ("diffmapper".equals(mode)) { diffMapper(); return; }
+            if (args.length < 2) { LOG.error("Mode {} cần SYMBOL.", mode); return; }
+            String symbol = args[1].toUpperCase(Locale.US);
             switch (mode) {
                 case "inspect": inspect(symbol); break;
                 case "write":   write(symbol, args[2], Short.parseShort(args[3])); break;
                 case "audit":   audit(symbol, args[2]); break;
+                case "remove":  remove(symbol, args[2]); break;
                 default: LOG.error("Mode lạ: {}", mode);
             }
         } catch (Exception e) {
@@ -189,6 +194,72 @@ public class BackfillTickerPilot {
         Map<String, Long> mp = readMapper(cluster);
         LOG.info("🔎 AUDIT[{}] {}: present {}/{} mốc, price khớp {}/{} | mapper {} -> {}",
                 cluster, symbol, present, sampleKeys.size(), priceOk, present, symbol, mp.get(symbol));
+    }
+
+    // ===================== DIFFMAPPER (read-only) — audit nguồn lệch 226 vs 242 =====================
+    private static void diffMapper() {
+        Map<String, Long> m226 = readMapper("226"), m242 = readMapper("242");
+        LOG.info("🗺️ tổng: 226={} 242={}", m226.size(), m242.size());
+        List<String> only242 = new ArrayList<>(), only226 = new ArrayList<>(), idMismatch = new ArrayList<>();
+        long lo = Long.MAX_VALUE, hi = Long.MIN_VALUE;
+        for (Map.Entry<String, Long> e : m242.entrySet()) {
+            if (!m226.containsKey(e.getKey())) {
+                only242.add(e.getKey() + "=" + e.getValue());
+                lo = Math.min(lo, e.getValue()); hi = Math.max(hi, e.getValue());
+            } else if (!m226.get(e.getKey()).equals(e.getValue())) {
+                idMismatch.add(e.getKey() + ": 226=" + m226.get(e.getKey()) + " 242=" + e.getValue());
+            }
+        }
+        for (Map.Entry<String, Long> e : m226.entrySet())
+            if (!m242.containsKey(e.getKey())) only226.add(e.getKey() + "=" + e.getValue());
+        LOG.info("🔴 CHỈ trên 242 (226 thiếu) [{}]: {}", only242.size(), only242);
+        LOG.info("🔴 CHỈ trên 226 (242 thiếu) [{}]: {}", only226.size(), only226);
+        LOG.info("🔴 CÙNG symbol KHÁC id [{}]: {}", idMismatch.size(), idMismatch);
+        if (!only242.isEmpty())
+            LOG.info("📊 id của nhóm 'chỉ-242': range [{}..{}] → {}", lo, hi,
+                    lo >= 700 ? "VÙNG CAO (id mới gần đây, 226 chưa sync)" : "VÙNG THẤP/RẢI (lệch sâu)");
+        LOG.info(idMismatch.isEmpty()
+                ? "✅ KHÔNG có symbol nào lệch id giữa 2 cluster → an toàn cấp id mới từ max+1."
+                : "⛔ CÓ symbol lệch id → CẢNH BÁO: cùng id nghĩa khác nhau giữa 2 node.");
+    }
+
+    // ===================== REMOVE (rollback) — gỡ SYMBOL khỏi cluster =====================
+    private static void remove(String symbol, String cluster) throws Exception {
+        AerospikeClient c = client(cluster);
+        List<Bar> bars = loadFullBars(symbol);
+        if (bars.isEmpty()) { LOG.error("⛔ Không có bar {} trên đĩa (cần CSV để biết key cần gỡ).", symbol); return; }
+        LOG.info("🗑️ REMOVE {} khỏi cluster {} | quét {} key phút...", symbol, cluster, bars.size());
+        // snapshot mẫu TRƯỚC để audit coin khác không đổi
+        List<String> sampleKeys = sampleKeys(bars);
+        Map<String, Map<String, KlineObjectOptimized>> before = new LinkedHashMap<>();
+        for (String k : sampleKeys) before.put(k, readRecord(c, k));
+
+        WritePolicy w = wp();
+        long removed = 0, notFound = 0;
+        for (Bar b : bars) {
+            String key = keyOf(b.t);
+            Map<String, KlineObjectOptimized> rec = readRecord(c, key);
+            if (rec == null || !rec.containsKey(symbol)) { notFound++; continue; }
+            rec.remove(symbol);
+            byte[] comp = Snappy.compress(MinuteDataFinal.newBuilder().putAllTickers(rec).build().toByteArray());
+            c.put(w, new Key(NS, SET_TICKER, key), new Bin(BIN, comp));
+            if (++removed % 100000 == 0) LOG.info("   ... gỡ {}", removed);
+        }
+        // mapper: removeByKey
+        c.operate(w, new Key(NS, SET_MAPPER, MAPPER_KEY),
+                MapOperation.removeByKey(BIN, Value.get(symbol), MapReturnType.NONE));
+        LOG.info("✅ Gỡ {} record (không thấy {}). Mapper[{}] removeByKey {}.", removed, notFound, cluster, symbol);
+
+        int ok = 0, bad = 0;
+        for (String k : sampleKeys) {
+            Map<String, KlineObjectOptimized> aft = readRecord(c, k), bef = before.get(k);
+            // sau khi gỡ: SYMBOL phải VẮNG + coin khác bit-nguyên (so bef đã trừ SYMBOL)
+            boolean gone = aft == null || !aft.containsKey(symbol);
+            String diff = compareNonTarget(bef, aft, symbol);
+            if (gone && diff == null) ok++; else { bad++; LOG.error("   🔴 key={} gone={} otherDiff={}", k, gone, diff); }
+        }
+        if (bad == 0) LOG.info("✅ REMOVE[{}] PASS — {} vắng, coin khác bit-nguyên.", cluster, symbol);
+        else LOG.error("🔴 REMOVE[{}] {} mốc lỗi.", cluster, bad);
     }
 
     // ===================== helpers =====================

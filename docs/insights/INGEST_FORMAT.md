@@ -7,7 +7,7 @@
 - **KEY**: `yyyyMMdd-HHmm` (1 record/PHÚT, GMT+7 — ngày bắt đầu 07:00). `writeMinuteBatch` L146-147.
 - **VALUE**: Bin `"data"` = `Snappy.compress(MinuteDataFinal protobuf)`. L153-154.
   - `MinuteDataFinal` = `map<string, KlineObjectOptimized> tickers` (proto `src/main/proto/MinuteDataFloat.proto`).
-  - Map key = **short symbol KHÔNG "USDT"** (vd `"LUNA"`). Khi đọc, `+ "USDT"` nếu thiếu (L533).
+  - Map key = **FULL symbol** (vd `"SUSHIUSDT"`, `"LUNAUSDT"`) — XÁC NHẬN bằng inspect record thật (TASK-005). Read path `readDataFromAerospike1M_ShortKey` L533 chuẩn hoá `endsWith("USDT") ? key : key+"USDT"` nên chấp cả hai, nhưng record HIỆN HÀNH dùng full ⇒ ghi backfill phải dùng full. (Mapper key cũng full.)
   - `KlineObjectOptimized` = 5 float: `priceOpen, maxPrice, minPrice, priceClose, totalUsdt` (KHÔNG có startTime — lấy từ KEY).
 - **READ-MODIFY-WRITE** (giữ coin khác): `writeMinuteBatch` đọc record cũ qua `getExistingTickersMap(key)` → `finalMap.putAll(newTickers)` → ghi đè bin. L150-154. KHÔNG ghi đè trực tiếp.
 - **ĐỌC (sim)**: `readDataFromAerospike1M_ShortKey` (L475+) → `KlineObjectSimple[1000]`, index = `SimpleSymbolMapper.getId(fullSymbol)` (L531-536). ⚠️ Mảng **cố định 1000**; id ≥ 1000 → crash. Hiện nextId=760.
