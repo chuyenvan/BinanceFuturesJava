@@ -29,7 +29,7 @@ import java.util.*;
  *
  * Mode (arg[0]): verify | FAST | FULL | FAST_CRASH | FAST_BULL | FAST_RECENT   (mặc định: verify)
  *  - verify: chạy FAST 2 lần cùng commit/config/data → fingerprint phải KHỚP (cổng tiên quyết bước 0).
- *  - FAST  : START=20251001 END=20260430. FULL: START=20210101 END=nay.
+ *  - FAST  : START=20251001 END=20260430. FULL: START=20210101 END=20260601 (cố định, khớp RunBreakerBacktest).
  *  - FAST_CRASH/BULL/RECENT (TASK-003.1): range regime theo mốc đã duyệt; mỗi lần tự chạy determinism
  *    gate (2x) rồi mới chụp fingerprint. CRASH=20220401–20221231, BULL=20231001–20231231, RECENT=FAST.
  * commit/dirty nhận qua env GOLDEN_COMMIT / GOLDEN_DIRTY (vì 226 không có git repo, chỉ có jar).
@@ -46,7 +46,9 @@ public class GoldenBacktest {
     private static final Logger LOG = LoggerFactory.getLogger(GoldenBacktest.class);
 
     private static final String FAST_START = "20251001", FAST_END = "20260430";
-    private static final String FULL_START = "20210101";
+    // FULL: end CỐ ĐỊNH (KHÔNG dùng now() — baseline phải tái lập). Khớp range RunBreakerBacktest (20210101→20260601)
+    // để gate liêm chính so được totalPnl FULL với breaker mode OFF (TASK-003.2/006).
+    private static final String FULL_START = "20210101", FULL_END = "20260601";
 
     // TASK-003.1 — thư viện range theo regime (mốc ĐÃ user duyệt). Mỗi range = {start, end} yyyyMMdd.
     // Chạy qua mode tên-profile → runRangeGated: determinism gate (2x) + fingerprint trong 1 launch.
@@ -134,7 +136,7 @@ public class GoldenBacktest {
     private void runProfile(String profile) throws Exception {
         long s, e; String start, end;
         if ("FAST".equals(profile)) { start = FAST_START; end = FAST_END; s = parse(start); e = parseEnd(end); }
-        else { start = FULL_START; e = System.currentTimeMillis(); end = Utils.normalizeDateYYYYMMDD(e); s = parse(start); }
+        else { start = FULL_START; end = FULL_END; s = parse(start); e = parseEnd(end); }
         emitFingerprint(profile, start, end, runSim(s, e));
     }
 
