@@ -68,9 +68,13 @@ Nguồn = universe data.vision USDT-perp (730) − coverage dataset (711) = 39 t
 
 ## DUYỆT B1 (Desktop) — chốt hướng thực thi
 
-**1. Phạm vi coin — tách survivorship khỏi data-completeness:**
-- **LÀM đợt này (core survivorship):** Nhóm A (12 near-zero) + các coin Nhóm B **DD sâu / sập mạnh** (ANT −88.5%, DGB −95.7%, GAL −94.8%, BTT −83.7%, TOMO −62.9%, + coin nào DD ≥ ~60%). Đây là phần méo feature top-100-sập + basket nhiều nhất.
-- **HOÃN:** 13 coin `lastDate=2026-06-01` (sống-chưa-track) — chúng KHÔNG về-0 nên KHÔNG phải survivorship; thiếu chúng là data-completeness khác. Không lọt top-100-crashed ⇒ ít ảnh hưởng feature sập. Thêm sau NẾU re-export thấy basket còn lệch. (Lý do: mục tiêu ADR-0009 là sửa survivorship = thiếu coin CHẾT, không phải làm dataset hoàn chỉnh.)
+**1. Phạm vi coin — LỌC theo DD-TỪ-ĐỈNH, không dùng cột `drawdownToBottom`:**
+- ⚠️ Cột `drawdownToBottom` (CSV TASK-001) tính từ **firstOpen** → SAI hệ thống (không chỉ HNT). Dùng **DD-từ-đỉnh = `minClose/maxClose`**. Code VERIFY lại bằng code trước khi chốt.
+- **Tiêu chí core = DD-từ-đỉnh ≥ 60%** (bất kể sống/chết) → ~30 coin. Nhiều coin cột-DD-nông thực ra sập sâu: YFII −84%, BZRX −88%, KEEP −82%, RNDR −93%, GLMR −78%, MDT −77%, STRAX −66%, DOTECO −63%. "Sống-chưa-track" KHÔNG = "không sập" (RAY/FTT/SC/DGB/WAVES vừa sống vừa near-zero).
+- **HOÃN** (DD-từ-đỉnh < ~60%, ít ảnh hưởng top-crashed): 1000BTTC(−30%), BTCST(−32%), MBL(−48%), STPT(−49%), SNT(−51%), COCOS(−57% biên).
+- **Phân tầng thực thi theo RỦI RO GHI ĐÈ (không theo DD):**
+  - **Đợt A — coin CHẾT/delist (lastDate<2026):** 242 không có data gần đây → backfill toàn bộ an toàn. ~19 coin. LÀM TRƯỚC.
+  - **Đợt B — coin VẪN NIÊM YẾT (lastDate=2026):** live có vùng ~2 ngày gần → phải xác định mốc live mỗi coin, **chỉ backfill lịch sử xa, KHÔNG đụng vùng gần**. ~10 coin. Làm sau, cẩn thận hơn.
 
 **2. Thực thi PILOT trước (reversible + verify trước khi scale):**
 - **Pilot = CHỈ LUNA**: B2(tải)→B3(226)→B4(audit coin-khác-KHÔNG-đổi + mapper)→B5(242)→audit. Validate trọn cơ chế ghi + cấp id trên 1 coin. **CHƯA re-export.**
@@ -96,6 +100,13 @@ Với mỗi key phút trong vòng đời LUNA: đọc record → `tickersMap.rem
 
 ### ⚠️ Tác động baseline (theo ADR-0009)
 Pilot ghi LUNA ticker vào 242 — NHƯNG sim chỉ trade theo **prediction** (LUNA chưa có ai_pred_market) ⇒ golden baseline + 006/006.1 **CHƯA bị đổi** bởi pilot này (ticker LUNA trơ với sim). Vô hiệu hóa baseline + bump CONFIG_VERSION xảy ra ở **P3** sau khi re-export + train model trên tập coin mới.
+
+### VERIFY DD-từ-đỉnh (minClose/maxClose) bằng code — chốt core + đợt
+30/36 coin có DD-từ-đỉnh ≥60% (cột `drawdownToBottom` cũ sai vì tính từ firstOpen). Tách theo lastDate:
+- **Đợt A — coin CHẾT (lastDate<2026), 20 coin** (batch ngay, 5/mẻ, id từ 761): LUNA(−100%,đã xong id760), ANC(−100%), SRM(−99%), DODO(−99%), HNT(−98%), AUDIO(−97%), AKRO(−97%), BTS(−96%), GAL(−95%), TOMO(−94%), RNDR(−93%), ANT(−92%), BZRX(−88%), YFII(−84%), BTT(−84%), KEEP(−82%), FOOTBALL(−78%), NU(−68%), BLUEBIRD(−68%), DOTECO(−63%).
+- **Đợt B — CÒN NIÊM YẾT (lastDate=2026), 10 coin [ĐỂ RIÊNG, chưa chạy]:** RAY(−99%), WAVES(−98%), FTT(−97%), DGB(−97%), SC(−95%), GLMR(−78%), MDT(−77%), IDEX(−71%), RAD(−67%), STRAX(−66%).
+- **HOÃN (DD<60%):** COCOS(−57%), SNT(−51%), STPT(−49%), MBL(−48%), BTCST(−32%), 1000BTTC(−31%).
+- ⚠️ id: LUNA=760; mẻ đầu ANC=761, SRM=762, DODO=763, HNT=764, AUDIO=765 (nhất quán 226+242, từ max+1 — diffmapper xác nhận không xung đột).
 
 ## (Code điền) Phát hiện ngoài scope
 
