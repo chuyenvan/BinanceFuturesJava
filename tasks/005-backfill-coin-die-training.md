@@ -108,6 +108,13 @@ Pilot ghi LUNA ticker vào 242 — NHƯNG sim chỉ trade theo **prediction** (L
 - **HOÃN (DD<60%):** COCOS(−57%), SNT(−51%), STPT(−49%), MBL(−48%), BTCST(−32%), 1000BTTC(−31%).
 - ⚠️ id: LUNA=760; mẻ đầu ANC=761, SRM=762, DODO=763, HNT=764, AUDIO=765 (nhất quán 226+242, từ max+1 — diffmapper xác nhận không xung đột).
 
+### Đợt A — MẺ 1 (ANC/SRM/DODO/HNT/AUDIO, id 761-765) — XONG & PASS
+Driver `outputs/batch1_driver.sh` (tải + write 226+242 + audit/coin). 20:36→21:55 (~80'). Tất cả 5 coin:
+- 226 & 242: 0 tạo mới (thuần thêm), AUDIT WRITE 8/8 coin-khác-bit-nguyên, audit đọc-lại giá 8/8 khớp CSV, mapper nhất quán 226↔242.
+- records/cluster: ANC 95 231 · SRM 1 790 351 · DODO 665 058 · HNT 1 790 352 · AUDIO 1 458 948 (~5.8M/cluster).
+- Mapper tới giờ: LUNA760·ANC761·SRM762·DODO763·HNT764·AUDIO765. **id tiếp theo = 766.**
+- Còn Đợt A: AKRO,BTS,GAL,TOMO,RNDR (mẻ2,766-770) · ANT,BZRX,YFII,BTT,KEEP (mẻ3) · FOOTBALL,NU,BLUEBIRD,DOTECO (mẻ4). ⏸️ chờ user soát mẻ1.
+
 ## (Code điền) Phát hiện ngoài scope
 
 - **Mapper 226 sau 242 8 id (751 vs 759)** TRƯỚC pilot — coin die không liên quan, là lệch sync sẵn có. LUNA cấp 760 nhất quán; nhưng BATCH phần còn lại phải cấp id từ `max(226,242)+1` và audit mapper 2 cluster mỗi coin để KHÔNG để id lệch nghĩa giữa 2 node.
