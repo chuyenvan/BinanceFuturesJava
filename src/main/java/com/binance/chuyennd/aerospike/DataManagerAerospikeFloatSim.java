@@ -40,6 +40,7 @@ public class DataManagerAerospikeFloatSim {
     public static final String AEROSPIKE_SET_NAME_TICKER = "kline_1m_opt";
     private static final String AEROSPIKE_SET_NAME_PRICE = "price_realtime";
     public static final String AEROSPIKE_SET_NAME_FUNDINGFEE = "funding_data";
+    public static final String AEROSPIKE_SET_NAME_OPEN_INTEREST = "open_interest";
     public static final String AEROSPIKE_SET_NAME_MARKET_DATA = "market_data_object";
 
 
@@ -212,6 +213,47 @@ public class DataManagerAerospikeFloatSim {
         }
         return results;
     }
+
+    /**
+     * Đọc giá realtime của MỘT symbol từ set {@code price_realtime}.
+     * <p>price_realtime CHỈ được live ghi trên 242 (xem {@link #writePriceRealtime}), nên LUÔN
+     * đọc 242 — KHÔNG dùng {@link #getReadClient()} (bản sao 226 không có set này).
+     *
+     * @param symbol symbol (vd "BTCUSDT"); tự upper-case cho khớp key lúc ghi.
+     * @return giá ({@link Float}) hoặc {@code null} nếu chưa có record / bin price rỗng / lỗi đọc.
+     */
+    public static Float getPriceRealtime(String symbol) {
+        if (symbol == null || symbol.isBlank()) return null;
+        try {
+            Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_PRICE, symbol.toUpperCase());
+            Record record = getClient242().get(null, key);
+            if (record == null || record.getValue("price") == null) return null;
+            return record.getFloat("price");
+        } catch (Exception e) {
+            LOG.error("❌ Error getPriceRealtime {}: {}", symbol, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Đọc mốc thời gian (ms-epoch) lần cập nhật giá gần nhất của symbol (bin {@code ts}) để tính
+     * tuổi dữ liệu. Đọc 242 cùng lý do với {@link #getPriceRealtime}.
+     *
+     * @param symbol symbol (vd "BTCUSDT").
+     * @return ms-epoch hoặc {@code null} nếu chưa có record / bin ts rỗng / lỗi đọc.
+     */
+    public static Long getPriceRealtimeTs(String symbol) {
+        if (symbol == null || symbol.isBlank()) return null;
+        try {
+            Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_PRICE, symbol.toUpperCase());
+            Record record = getClient242().get(null, key);
+            if (record == null || record.getValue("ts") == null) return null;
+            return record.getLong("ts");
+        } catch (Exception e) {
+            LOG.error("❌ Error getPriceRealtimeTs {}: {}", symbol, e.getMessage());
+            return null;
+        }
+    }
     // =========================================================================
     // LOGIC FUNDING (Tối ưu Snappy Compression để lưu 5 năm)
     // =========================================================================
@@ -261,6 +303,77 @@ public class DataManagerAerospikeFloatSim {
         } catch (Exception e) {
             LOG.error("❌ Error writing Funding for {}: {}", symbol, e.getMessage());
         }
+    }
+
+    /**
+     * Ghi Open Interest theo symbol — set {@code open_interest} trên 242. BẮT CHƯỚC
+     * {@link #writeFundingMap}: Snappy nén Map&lt;Long,Float&gt; (ts → sumOpenInterestValue, USD notional),
+     * merge với lịch sử cũ + GUARD chống mất lịch sử (không ghi đè khi đọc cũ ra rỗng nghi lỗi đọc).
+     *
+     * @param symbol  symbol (vd "BTCUSDT").
+     * @param oiByTs  map mốc-thời-gian (ms) → OI notional (USD); rỗng/null → bỏ qua.
+     */
+    public static void writeOpenInterestMap(String symbol, Map<Long, Float> oiByTs) {
+        if (oiByTs == null || oiByTs.isEmpty()) return;
+        try {
+            Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_OPEN_INTEREST, symbol);
+
+            // 1. Lấy dữ liệu cũ.
+            Map<Long, Float> existingMap = getOpenInterestMap(symbol);
+
+            // 🛡️ GUARD CHỐNG MẤT LỊCH SỬ: record có blob nhưng đọc ra RỖNG → nghi lỗi đọc tạm thời,
+            // TUYỆT ĐỐI không ghi đè (merge-với-rỗng + ghi đè = xoá sạch lịch sử).
+            try {
+                Record raw = getClient242().get(null, key);
+                boolean hasBlob = raw != null && raw.getValue("oi_data") != null
+                        && ((byte[]) raw.getValue("oi_data")).length > 0;
+                if (hasBlob && existingMap.isEmpty()) {
+                    LOG.error("❌ ABORT writeOpenInterestMap {} — record có oi_data nhưng đọc ra RỖNG "
+                            + "(nghi lỗi đọc). Không ghi đè để tránh mất lịch sử OI.", symbol);
+                    return;
+                }
+            } catch (Exception ignore) {
+            }
+
+            // 2. Gộp (TreeMap để luôn sắp theo thời gian).
+            TreeMap<Long, Float> finalMap = new TreeMap<>();
+            existingMap.forEach((k, v) -> finalMap.put(k, v.floatValue()));
+            oiByTs.forEach(finalMap::put);
+
+            // 3. Serialize + nén Snappy → bin "oi_data".
+            byte[] rawBytes = Utils.gson.toJson(finalMap).getBytes("UTF-8");
+            byte[] compressedBytes = Snappy.compress(rawBytes);
+            getClient242().put(writePolicy, key, new Bin("oi_data", compressedBytes));
+        } catch (Exception e) {
+            LOG.error("❌ Error writing OpenInterest for {}: {}", symbol, e.getMessage());
+        }
+    }
+
+    /**
+     * Giải nén và đọc Map Open Interest của 1 symbol (ts → notional USD). Đọc 242 (nơi live ghi).
+     *
+     * @param symbol symbol (vd "BTCUSDT").
+     * @return {@link TreeMap} ts→OI; rỗng nếu chưa có / lỗi đọc.
+     */
+    public static TreeMap<Long, Float> getOpenInterestMap(String symbol) {
+        TreeMap<Long, Float> results = new TreeMap<>();
+        try {
+            Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_OPEN_INTEREST, symbol);
+            Record record = getClient242().get(null, key);
+            if (record != null) {
+                byte[] compressedData = (byte[]) record.getValue("oi_data");
+                if (compressedData != null) {
+                    String json = new String(Snappy.uncompress(compressedData), "UTF-8");
+                    java.lang.reflect.Type mapType = new com.google.gson.reflect.TypeToken<Map<String, Float>>() {
+                    }.getType();
+                    Map<String, Float> rawMap = Utils.gson.fromJson(json, mapType);
+                    rawMap.forEach((k, v) -> results.put(Long.parseLong(k), v));
+                }
+            }
+        } catch (Exception e) {
+            LOG.error("❌ Error reading OpenInterest for {}: {}", symbol, e.getMessage());
+        }
+        return results;
     }
 
     /**

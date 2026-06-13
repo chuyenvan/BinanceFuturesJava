@@ -17,6 +17,8 @@ public class BinanceDataIngestor {
         new FundingIngestor2AerospikeNew().start();
 //        new TickerIngestor2Aerospike().start();
         new TickerIngestor2AerospikeNew().start();
+        // OI ingester: thread riêng, per-symbol throttled qua BinanceRestGuard (TASK-007 C).
+        new OpenInterestIngestor2AerospikeNew().start();
 //        startThreadAutoRestartProgram();
     }
 

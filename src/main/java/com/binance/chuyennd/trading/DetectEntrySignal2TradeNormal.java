@@ -247,7 +247,7 @@ public class DetectEntrySignal2TradeNormal {
                     try {
                         KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
                         createOrderBuyRequest(symbol, ticker, levelChange, symbol2Max15m.get(symbol), marketRate,
-                                predictData, getSymbolPred(sortedCandidates, symbol), symbol2LastTickers);
+                                predictData, getSymbolPred(sortedCandidates, symbol), symbol2LastTickers, null);
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
@@ -262,7 +262,7 @@ public class DetectEntrySignal2TradeNormal {
                         if (position != null) {
                             createOrderBuyRequest(symbol, ticker, MarketLevelChange.DCA_LEVEL1,
                                     symbol2Max15m.get(symbol), marketRate, predictData,
-                                    getSymbolPred(sortedCandidates, symbol), symbol2LastTickers);
+                                    getSymbolPred(sortedCandidates, symbol), symbol2LastTickers, null);
                         }
                     }
                 } catch (Exception e) {
@@ -281,7 +281,7 @@ public class DetectEntrySignal2TradeNormal {
                     if (Utils.isTickerAvailable(ticker)) {
                         PositionRisk position = BudgetManager.getInstance().symbol2Pos.get(symbol);
                         if (position != null) {
-                            createOrderBuyRequest(symbol, ticker, MarketLevelChange.DCA_LEVEL1, symbol2Max15m.get(symbol), marketRate, predictData, getSymbolPred(sortedCandidates, symbol), symbol2LastTickers);
+                            createOrderBuyRequest(symbol, ticker, MarketLevelChange.DCA_LEVEL1, symbol2Max15m.get(symbol), marketRate, predictData, getSymbolPred(sortedCandidates, symbol), symbol2LastTickers, null);
 
                         }
                     }
@@ -290,13 +290,24 @@ public class DetectEntrySignal2TradeNormal {
 
 
             // Duyệt qua danh sách đã sắp xếp (con ngon nhất duyệt trước)
+            // Gom REJECT của PREDICT_SYMBOL_TRADE thành 1 dòng/phút (xem createOrderBuyRequest).
+            List<String> predictRejects = new ArrayList<>();
             for (Map.Entry<Float, String> entry : sortedCandidates.entrySet()) {
                 String symbol = entry.getValue();
                 Float symbolPred = entry.getKey();
                 KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
                 if (ticker == null || BudgetManager.getInstance().symbol2Pos.containsKey(symbol)) continue;
                 createOrderBuyRequest(symbol, ticker, MarketLevelChange.PREDICT_SYMBOL_TRADE,
-                        symbol2Max15m.get(symbol), marketRate, predictData, symbolPred, symbol2LastTickers);
+                        symbol2Max15m.get(symbol), marketRate, predictData, symbolPred, symbol2LastTickers, predictRejects);
+            }
+            // market pred GIỐNG NHAU mọi coin → in 1 lần kèm danh sách SYM(symbolPred). (24H đã bỏ khỏi hệ.)
+            if (!predictRejects.isEmpty() && predictData != null) {
+                LOG.info("🔕 [PREDICT fail {}] market[15M:{}% Risk4H:{}%] Min15M:{}% | {}",
+                        predictRejects.size(),
+                        String.format("%.2f", predictData.return15M * 100),
+                        String.format("%.2f", predictData.riskDrawdown4H * 100),
+                        String.format("%.2f", Configs.MIN_MOMENTUM_15M * 100),
+                        String.join(" ", predictRejects));
             }
 
 
@@ -393,7 +404,8 @@ public class DetectEntrySignal2TradeNormal {
 
     public void createOrderBuyRequest(String symbol, KlineObjectSimple ticker, MarketLevelChange levelChange, Float priceMax15M,
                                       MarketDataObject marketRate, OnnxInferenceManager.PredictionResult prediction,
-                                      Float symbolPred, Map<String, List<KlineObjectSimple>> symbol2LastTickers) {
+                                      Float symbolPred, Map<String, List<KlineObjectSimple>> symbol2LastTickers,
+                                      List<String> rejectCollector) {
 
 
         if (prediction == null) {
@@ -416,13 +428,26 @@ public class DetectEntrySignal2TradeNormal {
         if (filterResult == null) {
             filterResult = aiRejectFilter.checkSignal(predict);
         }
-        // Log kết quả AI để debug/monitor
-        LOG.info("AI CHECK [{}] Pred: {} -> Decision: {}", symbol, prediction, filterResult.decision);
+        // Gom log: với vòng PREDICT_SYMBOL_TRADE (hàng trăm coin/phút, market pred GIỐNG NHAU,
+        // chỉ symbolPred khác) → KHÔNG log per-coin REJECT mà gom vào collector để in 1 dòng tổng hợp.
+        // Mọi levelChange khác / collector null → giữ log cũ. Quyết định KHÔNG đổi.
+        boolean gather = (levelChange == MarketLevelChange.PREDICT_SYMBOL_TRADE && rejectCollector != null);
+
+        if (!gather) {
+            // Log kết quả AI để debug/monitor
+            LOG.info("AI CHECK [{}] Pred: {} -> Decision: {}", symbol, prediction, filterResult.decision);
+        }
 
         if (filterResult.decision == AIRejectFilter.FilterDecision.REJECT) {
-            LOG.info("❌ SKIP ORDER [{} {}] due to AI REJECT: {} symbolPred: {}", symbol, levelChange, filterResult.reason, symbolPred);
+            if (gather) {
+                String symShort = symbol.replace("USDT", "");
+                rejectCollector.add(String.format("%s(%.3f)", symShort, symbolPred == null ? 0f : symbolPred));
+            } else {
+                LOG.info("❌ SKIP ORDER [{} {}] due to AI REJECT: {} symbolPred: {}", symbol, levelChange, filterResult.reason, symbolPred);
+            }
             return; // <--- CHẶN LỆNH TẠI ĐÂY
         } else {
+            // PASS (vào lệnh) → LUÔN giữ, ít và quan trọng.
             LOG.info("✅ AI PASS [{}] Reason: {} symbolPred: {}", symbol, filterResult.reason, symbolPred);
         }
 // 🔥 NÂNG CẤP: CHỐT CHẶN CẦU DAO CHO BOT LIVE

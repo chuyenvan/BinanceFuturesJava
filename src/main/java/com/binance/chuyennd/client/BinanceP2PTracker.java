@@ -43,6 +43,70 @@ public class BinanceP2PTracker {
         }, 0, 10, TimeUnit.MINUTES);
     }
 
+    /**
+     * Lấy giá P2P THẤP NHẤT toàn list cho 1 chiều giao dịch (dùng cho Reporter).
+     * <p>Payload/logic Y HỆT {@link #fetchP2PBestPrice} (fiat VND, asset USDT, rows 10, transAmount).
+     * Duyệt HẾT list rồi lấy MIN — KHÔNG dựa thứ tự sort của sàn (BUY sàn sort tăng, SELL sort giảm).
+     *
+     * @param tradeType  "BUY" (mua USDT vào) hoặc "SELL" (bán USDT ra).
+     * @param transAmount số tiền VND cần khớp, vd "5000000".
+     * @return giá thấp nhất ({@link Double}) hoặc {@code null} nếu rỗng/lỗi/HTTP!=200.
+     */
+    public static Double getLowestPrice(String tradeType, String transAmount) {
+        try {
+            JsonObject payload = new JsonObject();
+            payload.addProperty("fiat", "VND");
+            payload.addProperty("page", 1);
+            payload.addProperty("rows", 10);
+            payload.addProperty("tradeType", tradeType);
+            payload.addProperty("asset", "USDT");
+            payload.addProperty("transAmount", transAmount);
+            payload.add("countries", new JsonArray());
+            payload.addProperty("proMerchantAds", false);
+            payload.addProperty("shieldMerchantAds", false);
+            payload.addProperty("publisherType", (String) null);
+
+            JsonArray classifies = new JsonArray();
+            classifies.add("mass");
+            classifies.add("profession");
+            payload.add("classifies", classifies);
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(BINANCE_P2P_URL))
+                    .header("Content-Type", "application/json")
+                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                    .POST(HttpRequest.BodyPublishers.ofString(payload.toString()))
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() != 200) {
+                LOG.error("❌ getLowestPrice {} HTTP code: {}", tradeType, response.statusCode());
+                return null;
+            }
+
+            JsonObject jsonObj = JsonParser.parseString(response.body()).getAsJsonObject();
+            if (!jsonObj.has("code") || !jsonObj.get("code").getAsString().equals("000000")) {
+                LOG.error("❌ getLowestPrice {} Binance lỗi: {}", tradeType, response.body());
+                return null;
+            }
+
+            JsonArray dataArr = jsonObj.getAsJsonArray("data");
+            if (dataArr == null || dataArr.size() == 0) return null;
+
+            Double min = null;
+            for (JsonElement el : dataArr) {
+                JsonObject adv = el.getAsJsonObject().getAsJsonObject("adv");
+                if (adv == null || adv.get("price") == null || adv.get("price").isJsonNull()) continue;
+                double price = Double.parseDouble(adv.get("price").getAsString());
+                if (min == null || price < min) min = price;
+            }
+            return min;
+        } catch (Exception e) {
+            LOG.error("❌ getLowestPrice {} exception: {}", tradeType, e.getMessage());
+            return null;
+        }
+    }
+
     private static void fetchP2PBestPrice(String tradeType, String transAmount) {
         try {
             JsonObject payload = new JsonObject();

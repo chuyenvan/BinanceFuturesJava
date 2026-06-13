@@ -8,6 +8,7 @@ import com.binance.chuyennd.proto.MinuteDataFinalProto.KlineObjectOptimized;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
 import com.binance.chuyennd.tradecore.Configs;
+import com.binance.chuyennd.utils.BinanceRestGuard;
 import com.binance.chuyennd.utils.HttpRequest;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
@@ -22,6 +23,8 @@ import java.util.concurrent.*;
 
 public class TickerIngestor2AerospikeNew {
     public static final Logger LOG = LoggerFactory.getLogger(TickerIngestor2AerospikeNew.class);
+    // 🔒 Chống vòng-lặp-giữ-ban (TASK-007 A): cooldown GLOBAL theo IP nằm ở utils/BinanceRestGuard
+    // (dùng chung với funding/OI ingester — ban theo IP nên KHÔNG để mỗi class một biến).
 
     private final ConcurrentHashMap<Long, ConcurrentHashMap<String, KlineObjectOptimized>> timeBuffer = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Float> priceBuffer = new ConcurrentHashMap<>();
@@ -45,9 +48,21 @@ public class TickerIngestor2AerospikeNew {
         new Thread(() -> {
             Thread.currentThread().setName("Rest-Price-Loop");
             String endpoint = "https://fapi.binance.com/fapi/v1/ticker/price"; // Chỉ tốn 2 weight
+            boolean wasBanned = false;
 
             while (true) {
                 try {
+                    // 🔒 GUARD ban: đang ban thì KHÔNG gọi endpoint (mọi call lúc ban đều GIA HẠN ban).
+                    // Cap 60s/nhịp để thread không kẹt + cho phép tái kiểm khi hết hạn.
+                    if (BinanceRestGuard.awaitIfBanned(60_000L)) {
+                        wasBanned = true;
+                        continue;
+                    }
+                    if (wasBanned) {
+                        LOG.info("✅ Hết cooldown, resume REST");
+                        wasBanned = false;
+                    }
+
                     String response = HttpRequest.getContentFromUrl(endpoint, 5000);
                     List<String> newSymbolsToRepair = new ArrayList<>();
                     long curMin = Utils.getMinute(System.currentTimeMillis());
@@ -113,6 +128,7 @@ public class TickerIngestor2AerospikeNew {
 
                     } else if (StringUtils.isNotBlank(response) && response.trim().startsWith("{")) {
                         LOG.warn("⚠️ API Price báo lỗi (Limit): {}", response);
+                        BinanceRestGuard.reportBan(response); // -1003/banned until => đặt cooldown GLOBAL
                     }
 
                     Thread.sleep(3000);
@@ -134,6 +150,12 @@ public class TickerIngestor2AerospikeNew {
                     long now = System.currentTimeMillis();
                     long curMin = Utils.getMinute(now);
                     long second = (now / 1000) % 60;
+
+                    // 🔒 GUARD ban: burst 554 req/phút là nguồn ban gốc → đang ban thì BỎ QUA cả phút.
+                    if (BinanceRestGuard.isBanned()) {
+                        Thread.sleep(1000);
+                        continue;
+                    }
 
                     // Chỉ kích hoạt lấy Klines vào đúng giây thứ 02 đến 10 của phút mới
                     if (second >= 2 && second <= 10 && curMin > lastProcessedMinute) {
@@ -206,9 +228,15 @@ public class TickerIngestor2AerospikeNew {
             customThreadPool.submit(() ->
                     symbols.parallelStream().forEach(symbol -> {
                         try {
+                            // 🔒 GUARD ban: dính ban giữa chừng → short-circuit, không gọi tiếp coin nào.
+                            if (BinanceRestGuard.isBanned()) return;
+
                             String url = "https://fapi.binance.com/fapi/v1/klines?symbol=" + symbol + "&interval=1m&limit=2";
                             // Giảm timeout xuống 3000ms để luồng không bị kẹt nếu mạng lag
                             String response = HttpRequest.getContentFromUrl(url, 3000);
+
+                            // klines khi ban cũng trả body -1003 => phát hiện & đặt cooldown (trước đây nuốt lỗi).
+                            BinanceRestGuard.reportBan(response);
 
                             if (org.apache.commons.lang.StringUtils.isNotBlank(response) && response.trim().startsWith("[")) {
                                 org.json.JSONArray klines = new org.json.JSONArray(response);
@@ -320,6 +348,8 @@ public class TickerIngestor2AerospikeNew {
     private void repairBatchOptimized(List<String> symbols, long batchStartTime, int limit) {
         for (String s : symbols) {
             try {
+                // 🔒 GUARD ban: repair cũng gọi REST → đang ban thì dừng batch (không gia hạn ban).
+                if (BinanceRestGuard.isBanned()) return;
                 if (StringUtils.isBlank(s) || !s.matches("^[A-Z0-9]+$")) continue;
 
                 List<KlineObjectSimple> candles = TickerFuturesHelper.getTickerSimpleWithStartTimeAndLimit(s, "1m", batchStartTime, limit);
