@@ -22,8 +22,10 @@ public class BinanceRestGuard {
 
     /** Mốc ms-epoch UTC mà REST được phép gọi lại. 0 = không ban. */
     public static final AtomicLong BANNED_UNTIL_MS = new AtomicLong(0);
-    /** Cooldown fallback khi body báo -1003 nhưng KHÔNG kèm số "banned until". */
+    /** Cooldown fallback khi body có chữ "banned until" nhưng KHÔNG parse được số. */
     public static final long DEFAULT_COOLDOWN_MS = 5 * 60_000L;
+    /** TASK-016: -1003 RATE (chưa "banned until") → backoff NGẮN để hạ nhịp NGAY, tránh leo IP-ban. */
+    public static final long RATE_BACKOFF_MS = 8_000L;
     /** Đệm thêm sau mốc ban của sàn cho chắc (lệch đồng hồ / phòng gọi sát giờ). */
     public static final long SAFETY_BUFFER_MS = 10_000L;
     /** Anchor "banned until " để KHÔNG bắt nhầm số trong IP (vd 103.157...). */
@@ -38,17 +40,24 @@ public class BinanceRestGuard {
      */
     public static long parseBanUntilMs(String body) {
         if (body == null || body.isBlank()) return 0;
-        if (body.contains("-1003") || body.contains("banned until")) {
-            Matcher m = BAN_UNTIL_PATTERN.matcher(body);
-            if (m.find()) {
-                try {
-                    return Long.parseLong(m.group(1));
-                } catch (NumberFormatException e) {
-                    return System.currentTimeMillis() + DEFAULT_COOLDOWN_MS;
-                }
+        // 1) BAN THẬT có mốc "banned until <ms>" → cooldown tới đúng mốc đó.
+        Matcher m = BAN_UNTIL_PATTERN.matcher(body);
+        if (m.find()) {
+            try {
+                return Long.parseLong(m.group(1));
+            } catch (NumberFormatException e) {
+                return System.currentTimeMillis() + DEFAULT_COOLDOWN_MS;
             }
+        }
+        // 2) -1003 RATE (chưa banned-until) → backoff NGẮN (hạ nhịp ngay, tránh leo thành IP-ban).
+        if (body.contains("-1003")) {
+            return System.currentTimeMillis() + RATE_BACKOFF_MS;
+        }
+        // 3) có chữ "banned until" nhưng không parse được số → fallback dài cho chắc.
+        if (body.contains("banned until")) {
             return System.currentTimeMillis() + DEFAULT_COOLDOWN_MS;
         }
+        // 4) -1130 (param) / -1121 / -4xxx (delist) / lỗi khác → KHÔNG cooldown.
         return 0;
     }
 

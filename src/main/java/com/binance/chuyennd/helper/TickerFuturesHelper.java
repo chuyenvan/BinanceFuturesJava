@@ -162,21 +162,45 @@ public class TickerFuturesHelper {
      * Đã được bọc thép chống lỗi JSON Crash (Limit Exceeded) từ Binance.
      */
     public static List<KlineObjectSimple> getTickerSimpleWithStartTimeAndLimit(String symbol, String interval, Long startTime, int limit) {
+        List<KlineObjectSimple> results = new ArrayList<>();
+
+        // 🛡️ TASK-016 Phần A: clamp limit [1,1500] (Binance futures klines hợp lệ). ≤0 = vô nghĩa → KHÔNG gọi API (tốn weight).
+        if (limit <= 0) {
+            LOG.debug("Bỏ qua klines {} vì limit={} (≤0, không hợp lệ)", symbol, limit);
+            return results;
+        }
+        if (limit > 1500) {
+            LOG.debug("Clamp limit {}→1500 cho {} (Binance max futures klines)", limit, symbol);
+            limit = 1500;
+        }
+        // 🔒 đang trong cooldown REST (ban/-1003) → KHÔNG gọi (tránh gia hạn ban). Caller nên throttle thêm.
+        if (BinanceRestGuard.isBanned()) {
+            LOG.debug("Skip klines {} — đang cooldown REST", symbol);
+            return results;
+        }
+
         // Tự construct URL chuẩn của Binance có chứa limit để tránh phụ thuộc vào hằng số cũ
         String url = "https://fapi.binance.com/fapi/v1/klines?symbol=" + symbol
                 + "&interval=" + interval
                 + "&startTime=" + startTime
                 + "&limit=" + limit;
 
-        List<KlineObjectSimple> results = new ArrayList<>();
         try {
             String respon = HttpRequest.getContentFromUrl(url);
 
             // 🔥 BỌC THÉP CHỐNG JSON CRASH: Chỉ parse nếu Binance trả về một Mảng (Bắt đầu bằng "[")
-            // Nếu sàn trả về lỗi kiểu Object "{code:-1121, msg: ...}", nó sẽ bỏ qua để không sập luồng
+            // Lỗi Object "{code:-XXXX,...}" → PHÂN BIỆT code (TASK-016 Phần B), KHÔNG gộp chung "Limit/Delist".
             if (StringUtils.isBlank(respon) || respon.trim().startsWith("{")) {
                 if (StringUtils.isNotBlank(respon)) {
-                    LOG.warn("⚠️ API Binance trả về lỗi cho {} (Có thể do Limit/Delist): {}", symbol, respon);
+                    BinanceRestGuard.reportBan(respon);   // -1003/banned-until → cooldown (ngắn/đủ); -1130/khác → no-op
+                    String r = respon.length() > 220 ? respon.substring(0, 220) : respon;
+                    if (respon.contains("-1003")) {
+                        LOG.warn("⏳ RATE-LIMIT (-1003) klines {} → đã đặt backoff qua guard. resp={}", symbol, r);
+                    } else if (respon.contains("-1130")) {
+                        LOG.warn("🐞 -1130 limit invalid {} (limit={}, startTime={}) — KHÔNG cooldown, KIỂM caller. resp={}", symbol, limit, startTime, r);
+                    } else {
+                        LOG.debug("Skip {} (delist/lỗi khác): {}", symbol, r);
+                    }
                 }
                 return results;
             }
