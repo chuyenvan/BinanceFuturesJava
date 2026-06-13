@@ -1,4 +1,4 @@
-# TASK-005: Backfill ticker coin die cho TRAINING (226 → audit → 242 → re-export 100%)
+# TASK-005: Backfill ticker coin die cho TRAINING (226 → audit → 242; export feature MỚI ở P2)
 
 - **status:** in-progress — B1 chốt 36 coin; PILOT LUNA B2-B5 XONG & PASS cả 226+242 (giá khớp CSV, coin khác bit-nguyên, mapper→760 nhất quán). ⏸️ chờ duyệt batch phần core còn lại.
 - **Milestone:** ADR-0009 **P1** — điều kiện cần để train model mới. Mục tiêu THẤP: đủ data, KHÔNG cầu toàn.
@@ -9,7 +9,7 @@
 242 live chỉ dùng ~2 ngày gần nhất; lịch sử xa (coin die 2021-22) live KHÔNG đụng ⇒ ghi 242 vùng lịch sử **không rủi ro**. Vẫn **fill 226 trước → audit → mới đưa 242**.
 
 ## Mục tiêu (1 câu)
-Có đủ ticker coin die trong 242 để **re-export 100% training data** không còn méo survivorship (feature avg top-100-sập + basket phụ thuộc TOÀN tập coin).
+Có đủ ticker coin die trong 242 để **export feature MỚI (P2/H1) trên data đầy đủ** không còn méo survivorship. **KHÔNG re-export feature cũ** — model mới dùng feature mới (ADR-0010), export 1 lần ở H1.
 
 ## Scope
 **Trong:** ticker (giá) coin die; fill 226 → audit → 242; re-export training.
@@ -21,12 +21,12 @@ Có đủ ticker coin die trong 242 để **re-export 100% training data** khôn
 - [ ] **B3 — Fill 226:** ghi ticker vào `kline_1m_opt` cluster **226** theo INGEST_FORMAT (key `yyyyMMdd-HHmm` GMT+7, value Snappy(MinuteDataFinal), **read-modify-write giữ coin khác**). ⚠️ Helper sẵn hardcode `getClient242()` → cần đường ghi **226** riêng (read-modify-write thủ công + **cấp id thủ công**, KHÔNG gọi `getId()` vì nó ghi mapper 242). Mapper id < 1000 (nextId 760).
 - [ ] **B4 — Audit 226:** đọc lại vài mốc mẫu → (a) coin die CÓ mặt đúng giá; (b) **coin khác KHÔNG đổi** (so trước/sau); (c) mapper nhất quán. PASS mới sang B5.
 - [ ] **B5 — Đưa lên 242:** sau audit OK, ghi cùng data lên cluster **242** (sync 226→242 nếu có cơ chế, hoặc chạy lại B3 trỏ 242). Audit 242 như B4.
-- [ ] **B6 — Re-export 100% training data** (`RunFullDataCollection`) — BẮT BUỘC toàn bộ vì feature/label market-level đổi khi tập coin đổi. Xác nhận training data mới gồm coin die.
+- [ ] **B6 — Sample-check survivorship + đóng task.** BỎ re-export feature cũ (model mới dùng feature mới ADR-0010 → export 1 lần ở H1/P2). Chỉ **sample-check**: so feature cũ vài mốc TRƯỚC/SAU backfill → xác nhận survivorship thật sự làm feature đổi (rẻ, không export 100%). Đóng task khi 30 core đủ trong 226+242.
 
 ## Acceptance criteria
 - [ ] Coin die có trong `kline_1m_opt` ở **cả 226 và 242**; audit xác nhận coin khác không đổi.
 - [ ] Chỉ ticker (KHÔNG prediction/funding).
-- [ ] Training data **re-export 100%**, có coin die trong feature/label.
+- [ ] **KHÔNG re-export feature cũ.** Sample-check xác nhận feature cũ đổi sau backfill (survivorship thật). Export feature MỚI thuộc H1/P2 (1 lần sau cụm hạ tầng + code feature mới).
 - [ ] **Rollback ghi sẵn:** cách gỡ coin die khỏi 226/242 (theo id/symbol) nếu phát hiện hỏng.
 - [ ] Java/Python, SLF4J (Java), KHÔNG System.out.
 
@@ -120,6 +120,13 @@ Driver `outputs/batch1_driver.sh` (tải + write 226+242 + audit/coin). 20:36→
 - id: AKRO766·BTS767·GAL768·TOMO769·RNDR770·ANT771·BZRX772·YFII773·BTT774·KEEP775·FOOTBALL776·NU777·BLUEBIRD778·DOTECO779.
 - **ĐỢT A XONG TRỌN 20 coin** (LUNA760 + 19). Mapper 226↔242 nhất quán toàn bộ; nextId=780.
 - Còn lại: **Đợt B (10 coin còn niêm yết 2026)** chưa chạy + **B6 re-export 100%** (sau khi chốt đủ tập coin).
+
+### Đợt B (id 780-789, 10 coin còn niêm yết) — XONG & PASS toàn bộ
+PROBE 242 trước: **cả 10 VẮNG hoàn toàn** trên 242 mọi tháng 2021-01→2026-06 ⇒ phân loại (a) full backfill an toàn (lý do: RAY/FTT/SC/DGB/WAVES… từng trong DIED_SYMBOLS nên live ingester loại → 242 chưa từng có). Không coin nào loại (b), không vùng live để né.
+`outputs/batchB_driver.sh` (stop nếu 🔴/⛔; chạy hết = DONE BATCHB). 10/10 coin 226+242: WRITE PASS coin-khác-bit-nguyên, audit giá **8/8 khớp CSV**, mapper nhất quán 226↔242.
+- id+rec/cluster: RAY780=2.51M·WAVES781=2.84M·FTT782=2.17M·DGB783=2.69M·SC784=2.70M·GLMR785=1.41M·MDT786=1.54M·IDEX787=1.62M·RAD788=1.61M·STRAX789=1.39M (~20.5M/cluster).
+- ✅ **CORE 30 COIN XONG** (LUNA760 + Đợt A 19 + Đợt B 10), id 760-789 nhất quán 226↔242, nextId=790.
+- Còn: **B6 sample-check survivorship + đóng task** (KHÔNG re-export feature cũ — ADR-0010).
 
 ### Re-validate (b) — enumerate universe data.vision vs coverage (XONG)
 `outputs/revalidate.py` (read-only). universe USDT-perp=**728**, coverage=711, missing-total=37, known(CSV)=38.
