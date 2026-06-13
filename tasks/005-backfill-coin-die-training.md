@@ -115,6 +115,18 @@ Driver `outputs/batch1_driver.sh` (tải + write 226+242 + audit/coin). 20:36→
 - Mapper tới giờ: LUNA760·ANC761·SRM762·DODO763·HNT764·AUDIO765. **id tiếp theo = 766.**
 - Còn Đợt A: AKRO,BTS,GAL,TOMO,RNDR (mẻ2,766-770) · ANT,BZRX,YFII,BTT,KEEP (mẻ3) · FOOTBALL,NU,BLUEBIRD,DOTECO (mẻ4). ⏸️ chờ user soát mẻ1.
 
+### Đợt A — MẺ 2-4 (id 766-779, 14 coin) — XONG & PASS toàn bộ
+`outputs/batch234_driver.sh` (stop nếu 🔴/⛔; chạy hết = DONE BATCH234 = không coin lỗi). 14/14 coin: 226+242 đều 0 tạo mới, WRITE PASS coin-khác-bit-nguyên, audit giá 8/8 khớp CSV, mapper nhất quán 226↔242.
+- id: AKRO766·BTS767·GAL768·TOMO769·RNDR770·ANT771·BZRX772·YFII773·BTT774·KEEP775·FOOTBALL776·NU777·BLUEBIRD778·DOTECO779.
+- **ĐỢT A XONG TRỌN 20 coin** (LUNA760 + 19). Mapper 226↔242 nhất quán toàn bộ; nextId=780.
+- Còn lại: **Đợt B (10 coin còn niêm yết 2026)** chưa chạy + **B6 re-export 100%** (sau khi chốt đủ tập coin).
+
+### Re-validate (b) — enumerate universe data.vision vs coverage (XONG)
+`outputs/revalidate.py` (read-only). universe USDT-perp=**728**, coverage=711, missing-total=37, known(CSV)=38.
+- **Missing NGOÀI 36 đã biết: chỉ 1 = `LENDUSDT`** (DD-từ-đỉnh −75%, life 2020-07→2020-11).
+- ⚠️ LENDUSDT sống TRỌN 2020 — TRƯỚC dataset (2021-01) → KHÔNG chồng lấn backtest/training 2021-2026 → **bỏ qua**. (TASK-001 ghi "không klines" là nhầm; có nhưng quá sớm.)
+- ✅ **Kết luận: 36 (30 core) là tập thiếu ĐẦY ĐỦ trong khung 2021-2026; không sót coin ảnh hưởng.**
+
 ## (Code điền) Phát hiện ngoài scope
 
 - **Mapper 226 sau 242 8 id (751 vs 759)** TRƯỚC pilot — coin die không liên quan, là lệch sync sẵn có. LUNA cấp 760 nhất quán; nhưng BATCH phần còn lại phải cấp id từ `max(226,242)+1` và audit mapper 2 cluster mỗi coin để KHÔNG để id lệch nghĩa giữa 2 node.
