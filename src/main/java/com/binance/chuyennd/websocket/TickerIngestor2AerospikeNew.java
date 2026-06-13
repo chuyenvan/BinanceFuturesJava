@@ -370,7 +370,8 @@ public class TickerIngestor2AerospikeNew {
                 Thread.sleep(300);
 
             } catch (Exception e) {
-                // Ignore
+                // bỏ qua 1 coin để tiếp coin khác — NHƯNG vẫn log (CLAUDE.md: không nuốt exception câm)
+                LOG.warn("repair coin {} lỗi, bỏ qua tiếp coin khác: {}", s, e.toString());
             }
         }
     }

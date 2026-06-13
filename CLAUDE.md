@@ -112,5 +112,27 @@ Luồng dữ liệu: **Binance → ingestors → Aerospike/Redis → feature ext
 ## Logging
 SLF4J → Logback (`src/main/resources/logback.xml`). Logs ở `logs/` (`full.log`, `error.log`, `archived/`). `logs/`, `storage/`, `target/`, `*.data`/`*.csv`/`*.log` đều git-ignored.
 
+### ⛔ KHÔNG nuốt exception câm (BẮT BUỘC)
+CẤM `catch` trống hoặc chỉ có comment (`// Ignore`, `// bỏ qua lỗi 1 coin, tiếp coin khác`, …): đó là lỗi data/ingest/backtest **âm thầm không ai biết** (đã trả giá: spam `-1130` ở ingest bị giấu, gap data im lặng). Mọi `catch` PHẢI:
+- `LOG.warn`/`LOG.error` kèm **exception + ngữ cảnh** (symbol/key/timestamp), KHÔNG `printStackTrace`/`System.out`.
+- Cố ý bỏ qua 1 phần tử để tiếp vòng lặp vẫn phải log (LOG.warn, hoặc LOG.debug nếu thật sự nhiễu + có lý do ghi rõ) — **không bao giờ để rỗng/comment-suông**.
+- Nếu lỗi là bất biến cần dừng (config/look-ahead/data nền) → ném tiếp / `System.exit`, đừng nuốt.
+Sửa luôn khi đụng vào file có pattern này.
+
+## 👥 Điều phối nhiều CCD (đọc TRƯỚC khi nhận task)
+Nhiều CCD chạy song song KHÔNG thấy nhau. **`docs/AGENTS.md` là nguồn sự thật về CCD nào đang làm task nào** — đọc trước khi nhận bất kỳ task nào, để không hai CCD đụng một việc và reset máy không mất vết.
+1. **CLAIM:** task trống/STALE → ghi `owner` + `status: DOING` + `updated` vào CẢ `docs/AGENTS.md` VÀ header `tasks/<id>.md` rồi mới làm. Task đã có owner KHÁC + DOING + updated còn mới → KHÔNG đụng, báo user.
+2. **HEARTBEAT:** cập nhật `updated` mỗi commit/đổi bước. DOING mà `updated` quá cũ (≳2h) + nghi reset → STALE, có thể reclaim.
+3. **ĐÓNG:** `DONE` + commit hash; cần user soát → `REVIEW`. Một task = một owner.
+
+## 🗺️ Tài nguyên & nơi chạy task (đọc khi giao/nhận — tránh lệch pha + dồn tải)
+- **Aerospike 242 = LIVE, dữ liệu TẬP TRUNG** (nguồn chính cho live, ưu tiên giữ sạch). **PRIVATE**: chỉ 226 thông tới; máy dev/Kaggle KHÔNG kết nối 242 trực tiếp. ⇒ task **GHI 242 phải chạy TRÊN 226** (226 thông 242) hoặc trên chính 242 — không ghi 242 từ dev/Kaggle.
+- **Aerospike 226 = kho BACKTEST/TRAIN** (lịch sử, feature, dataset). **Open internet** (Kaggle/dev tới được). Job đọc/ghi Aerospike nặng → chạy **trên VPS 226** (gần data).
+- **VPS 226** = nơi chạy job nặng Aerospike + open internet (tải `data.binance.vision` trực tiếp được). Job nền phải ghi PID/log (xem luật dọn job 226).
+- **Kaggle** = CPU + internet, cho: tải/xử data ngoài KHÔNG cần Aerospike (vd khảo sát/parse `data.binance.vision`), train/HPO (RUNBOOK_kaggle).
+- **Chọn nơi chạy:** ghi-242 → 226/242 bắt buộc · Aerospike-226-nặng → 226 · tải-ngoài + CPU không-Aerospike → Kaggle (phân tải khỏi 226) · train/HPO → Kaggle.
+- **Lưu data (CHỐT):** 226 chỉ để **backtest/train**; **242 luôn là live tập trung** (ưu tiên). Job build/backfill ghi 226 (train) là chính; ghi 242 chỉ khi live cần + qua 226. KHÔNG để 226 và 242 "mỗi nơi một kiểu" — schema phải thống nhất (vd OI: TASK-013 chốt schema chung cho cả history + forward).
+- **Tránh dồn:** đừng để nhiều job NẶNG chạy ĐỒNG THỜI trên 226 (đụng RAM/Aerospike/đọc-ghi) — phân: tải-ngoài đẩy Kaggle, Aerospike-nặng trên 226 tuần tự. Hai task KHÔNG cùng đọc/ghi một nguồn cùng lúc. Bản đồ ai-đang-chạy-gì ở `docs/AGENTS.md`.
+
 ---
 Xem `ROADMAP.md` cho thứ tự ưu tiên công việc kiểm chứng mô hình.
