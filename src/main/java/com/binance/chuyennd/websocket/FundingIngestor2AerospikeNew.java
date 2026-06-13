@@ -94,10 +94,23 @@ public class FundingIngestor2AerospikeNew {
     private void startFlushLoop() {
         new Thread(() -> {
             Thread.currentThread().setName("Funding-Sync-Thread");
+            // TASK-019 B: loop CHẠY đúng 60s; trước đây buffer rỗng → continue (KHÔNG log) nên nhìn
+            // log tưởng "treo ~1h". Thực ra funding chỉ settle theo kỳ (1h/4h/8h) nên đa số phút
+            // buffer rỗng = bình thường. Thêm heartbeat idle để thấy loop SỐNG (không đổi nhịp/write).
+            long lastFlushMs = System.currentTimeMillis();
+            int idleCycles = 0;
             while (true) {
                 try {
                     Thread.sleep(60000); // Lưu mỗi phút 1 lần
-                    if (fundingBuffer.isEmpty()) continue;
+                    if (fundingBuffer.isEmpty()) {
+                        idleCycles++;
+                        if (idleCycles % 10 == 0) { // ~10 phút/lần để không spam
+                            LOG.info("💤 Funding flush idle {} phút (chưa có settlement mới) — loop sống, flush gần nhất {} phút trước.",
+                                    idleCycles, (System.currentTimeMillis() - lastFlushMs) / 60000);
+                        }
+                        continue;
+                    }
+                    idleCycles = 0;
 
                     // Lấy bản sao của Buffer hiện tại
                     Map<String, Map<Long, Float>> snapshot = new HashMap<>(fundingBuffer);
@@ -110,6 +123,7 @@ public class FundingIngestor2AerospikeNew {
                         DataManagerAerospikeFloatSim.writeFundingMap(entry.getKey(), entry.getValue());
                     }
 
+                    lastFlushMs = System.currentTimeMillis();
                     LOG.info("✅ Đã đồng bộ Funding Rate cho {} mã vào Aerospike.", snapshot.size());
                 } catch (Exception e) {
                     LOG.error("❌ Lỗi luồng Flush Funding: {}", e.getMessage());

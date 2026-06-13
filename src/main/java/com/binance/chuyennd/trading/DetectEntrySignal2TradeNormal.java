@@ -29,6 +29,7 @@ import com.binance.chuyennd.object.MarketLevelChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
+import com.binance.chuyennd.research.FundingFeeManager;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
 import com.binance.chuyennd.tradecore.CoinRankManager;
 import com.binance.chuyennd.tradecore.DcaProcessor;
@@ -567,6 +568,10 @@ public class DetectEntrySignal2TradeNormal {
     }
 
     private void initData() {
+
+        // TASK-019 A: đây là LIVE init (backtest dùng Simulator, KHÔNG gọi hàm này) → bật production
+        // mode cho FundingFeeManager để refresh funding định kỳ (tránh dùng funding cũ/0 sau 24h).
+        FundingFeeManager.getInstance().setProductionMode(true);
 
         // --- 1. KHỞI TẠO AI ENTRY (CŨ) ---
         try {
