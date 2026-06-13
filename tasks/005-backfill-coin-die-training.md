@@ -1,6 +1,6 @@
 # TASK-005: Backfill ticker coin die cho TRAINING (226 → audit → 242; export feature MỚI ở P2)
 
-- **status:** in-progress — B1 chốt 36 coin; PILOT LUNA B2-B5 XONG & PASS cả 226+242 (giá khớp CSV, coin khác bit-nguyên, mapper→760 nhất quán). ⏸️ chờ duyệt batch phần core còn lại.
+- **status:** DONE — 30 core coin die (id 760-789) trong 226+242, audit PASS (coin khác bit-nguyên, giá khớp CSV, mapper nhất quán). B6 sample-check xác nhận survivorship méo feature (tới −54% rateDownAvg 2021-22). KHÔNG re-export feature cũ (feature mới ở H1/P2). Đợt B + re-validate xong.
 - **Milestone:** ADR-0009 **P1** — điều kiện cần để train model mới. Mục tiêu THẤP: đủ data, KHÔNG cầu toàn.
 - **Thực thi bởi:** Claude Code (**Java/Python**). Ghi Aerospike (226 trước, rồi 242).
 - **Quyết định nền:** ADR-0009 (pivot) · ADR-0007 (39 coin die) · INGEST_FORMAT.md (format ghi) · TASK-001 (danh sách coin thiếu).
@@ -127,6 +127,25 @@ PROBE 242 trước: **cả 10 VẮNG hoàn toàn** trên 242 mọi tháng 2021-0
 - id+rec/cluster: RAY780=2.51M·WAVES781=2.84M·FTT782=2.17M·DGB783=2.69M·SC784=2.70M·GLMR785=1.41M·MDT786=1.54M·IDEX787=1.62M·RAD788=1.61M·STRAX789=1.39M (~20.5M/cluster).
 - ✅ **CORE 30 COIN XONG** (LUNA760 + Đợt A 19 + Đợt B 10), id 760-789 nhất quán 226↔242, nextId=790.
 - Còn: **B6 sample-check survivorship + đóng task** (KHÔNG re-export feature cũ — ADR-0010).
+
+### B6 — sample-check survivorship (XONG) → ĐÓNG TASK
+Tool `ai_ml/validation/data/SurvivorshipFeatureCheck.java` (read-only, TÁI DÙNG `MarketBigChangeDetector.calMarketData`, window 15m, đọc 242). So feature market-level cũ GỒM vs LOẠI 30 core tại 9 mốc. **KHÔNG re-export 100%.**
+
+| Mốc | #core sống | ΔrateDownAvg | ΔrateUpAvg | ΔrateDown15MAvg |
+|---|--:|--:|--:|--:|
+| 2021-06-15 thường | 13 | **−54.1%** | −16.9% | −5.7% |
+| 2022-05-11 LUNA | 16 | −14.4% | +8.7% | −13.3% |
+| 2022-05-12 LUNA | 16 | −3.7% | +9.4% | −5.3% |
+| 2022-06-18 hậu-LUNA | 12 | −6.8% | +1.7% | −11.4% |
+| 2022-11-09 FTT | 14 | −5.4% | +7.2% | −11.7% |
+| 2022-11-10 FTT | 14 | −24.1% | +8.0% | −13.6% |
+| 2023-08-15 thường | 18 | −6.5% | **+47.7%** | −4.4% |
+| 2024-03-15 bull | 20 | −2.0% | +0.3% | −0.4% |
+| 2025-09-15 gần đây | 10 | ~0% | ~0% | ~0% |
+
+**KẾT LUẬN:** survivorship MÉO feature THẬT — lớn nhất giai đoạn **2021-2022 (universe nhỏ + quanh sập LUNA/FTT)**: rateDownAvg lệch tới −54%, rateDown15MAvg −11→−14%; pha loãng khi universe lớn dần (2024 ~−2%, 2025 ~0%). Lưu ý: dump-guard (`rateChange<−0.15 & BTC ổn`) lọc bớt phút sập cực đoan nên Δ phút-LUNA-dốc nhất bị giảm, nhưng rate15M (drawdown 15m) vẫn bắt rõ. ⇒ data train (nhất là 2021-22) đã méo do thiếu coin chết → cần data đầy đủ (đã backfill) cho **feature MỚI export 1 lần ở H1/P2** (ADR-0010); KHÔNG re-export feature cũ.
+
+→ **TASK-005 ĐÓNG**: 30 core coin die đã trong 226+242 (id 760-789, audit PASS), survivorship-méo-feature xác nhận bằng số.
 
 ### Re-validate (b) — enumerate universe data.vision vs coverage (XONG)
 `outputs/revalidate.py` (read-only). universe USDT-perp=**728**, coverage=711, missing-total=37, known(CSV)=38.
