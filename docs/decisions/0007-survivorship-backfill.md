@@ -1,7 +1,7 @@
 # ADR-0007: Survivorship bias nặng — backtest thiếu 39 coin đã delist, phải backfill
 
 - **Ngày:** 2026-06-09
-- **Trạng thái:** đã chấp nhận — ⚠️ CẬP NHẬT 2026-06: phần BACKFILL **HOÃN** (phương án C, xem cuối file)
+- **Trạng thái:** đã chấp nhận — ⚠️ CẬP NHẬT 2026-06-11: backfill từ HOÃN[C] → **LÀM** (TASK-005), nhưng mục tiêu MỚI = **training data đầy đủ** (không phải đo-impact-qua-sim). 242 an toàn vì live chỉ dùng ~2 ngày gần nhất. Xem **ADR-0009** (pivot).
 - **Bối cảnh phát sinh:** TASK-001 + TASK-002 (coverage thật).
 
 ## Vấn đề

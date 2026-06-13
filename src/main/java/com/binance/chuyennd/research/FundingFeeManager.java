@@ -6,6 +6,9 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class FundingFeeManager {
     public static final Logger LOG = LoggerFactory.getLogger(FundingFeeManager.class);
@@ -22,6 +25,12 @@ public class FundingFeeManager {
     // Cờ đánh dấu chế độ Production hay Backtest
     private boolean isProductionMode = false;
 
+    // TASK-019 A: refresh cache funding ở production (live chạy lâu → funding mới phải vào cache,
+    // tránh getNearestFundingFee trả funding cũ/0 sau 24h). N ≤ chu kỳ funding (1h/4h/8h) → 30'.
+    private static final long REFRESH_INTERVAL_MIN = 30;
+    private volatile boolean refreshStarted = false;
+    private ScheduledExecutorService refreshScheduler;
+
     public static FundingFeeManager getInstance() {
         if (INSTANCE == null) {
             synchronized (FundingFeeManager.class) {
@@ -34,9 +43,49 @@ public class FundingFeeManager {
         return INSTANCE;
     }
 
-    // Hàm switch sang chế độ Production (Gọi ở DetectEntrySignal2TradeNormal)
+    // Hàm switch sang chế độ Production (Gọi ở DetectEntrySignal2TradeNormal.initData live)
     public void setProductionMode(boolean isProduction) {
         this.isProductionMode = isProduction;
+        if (isProduction) {
+            startProductionRefresh();
+        }
+    }
+
+    /**
+     * Bật scheduler reload funding định kỳ (CHỈ production). Idempotent — gọi nhiều lần chỉ start 1 lần.
+     * Backtest KHÔNG gọi → không scheduler → load 1 lần như cũ (determinism giữ nguyên).
+     */
+    private synchronized void startProductionRefresh() {
+        if (refreshStarted) return;
+        refreshStarted = true;
+        refreshScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "FundingFee-Refresh");
+            t.setDaemon(true);
+            return t;
+        });
+        refreshScheduler.scheduleAtFixedRate(this::refreshCache,
+                REFRESH_INTERVAL_MIN, REFRESH_INTERVAL_MIN, TimeUnit.MINUTES);
+        LOG.info("🔄 FundingFeeManager: BẬT production refresh (mỗi {} phút).", REFRESH_INTERVAL_MIN);
+    }
+
+    /**
+     * Reload funding cho các symbol ĐANG có trong cache (atomic-swap per symbol). Bỏ qua symbol đọc
+     * ra rỗng (lỗi đọc tạm thời) để KHÔNG xoá cache. Symbol mới vẫn được lazy-load ở getNearestFundingFee.
+     */
+    private void refreshCache() {
+        int updated = 0;
+        try {
+            for (String symbol : new ArrayList<>(symbol2FundingFee.keySet())) {
+                TreeMap<Long, Float> fresh = DataManagerAerospikeFloatSim.getFundingMap(symbol);
+                if (fresh != null && !fresh.isEmpty()) {
+                    symbol2FundingFee.put(symbol, fresh); // swap reference — thread-safe với reader
+                    updated++;
+                }
+            }
+            LOG.info("🔄 FundingFee refresh: cập nhật {} symbol.", updated);
+        } catch (Exception e) {
+            LOG.error("❌ FundingFee refresh lỗi: {}", e.getMessage());
+        }
     }
 
     private void initData() {

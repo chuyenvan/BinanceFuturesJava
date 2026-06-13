@@ -70,6 +70,7 @@ public class BackfillTickerPilot {
                 case "write":   write(symbol, args[2], Short.parseShort(args[3])); break;
                 case "audit":   audit(symbol, args[2]); break;
                 case "remove":  remove(symbol, args[2]); break;
+                case "probe":   probe(symbol, args[2]); break;
                 default: LOG.error("Mode lạ: {}", mode);
             }
         } catch (Exception e) {
@@ -221,6 +222,37 @@ public class BackfillTickerPilot {
         LOG.info(idMismatch.isEmpty()
                 ? "✅ KHÔNG có symbol nào lệch id giữa 2 cluster → an toàn cấp id mới từ max+1."
                 : "⛔ CÓ symbol lệch id → CẢNH BÁO: cùng id nghĩa khác nhau giữa 2 node.");
+    }
+
+    // ===================== PROBE (read-only) — coin có data trên cluster từ mốc THÁNG nào =====================
+    // Quét tháng 2021-01..2026-06, mỗi tháng lấy mẫu 2 mốc (ngày 10 & 20, 12:00 GMT+7), check SYMBOL có trong record.
+    // → phân loại Đợt B: (a) KHÔNG present tháng nào = full backfill; (b) present từ tháng M = chỉ backfill tháng < M.
+    private static void probe(String symbol, String cluster) throws Exception {
+        AerospikeClient c = client(cluster);
+        String firstPresent = null, lastPresent = null;
+        List<String> present = new ArrayList<>();
+        for (int y = 2021; y <= 2026; y++) {
+            for (int m = 1; m <= 12; m++) {
+                if (y == 2026 && m > 6) break;
+                boolean has = false;
+                for (int d : new int[]{10, 20}) {
+                    String key = String.format("%04d%02d%02d-1200", y, m, d);
+                    Map<String, KlineObjectOptimized> rec = readRecord(c, key);
+                    if (rec != null && rec.containsKey(symbol)) { has = true; break; }
+                }
+                if (has) {
+                    String ym = String.format("%04d-%02d", y, m);
+                    present.add(ym);
+                    if (firstPresent == null) firstPresent = ym;
+                    lastPresent = ym;
+                }
+            }
+        }
+        if (firstPresent == null)
+            LOG.info("🔍 PROBE[{}] {}: VẮNG mọi tháng 2021-01..2026-06 → (a) BACKFILL TOÀN BỘ an toàn.", cluster, symbol);
+        else
+            LOG.info("🔍 PROBE[{}] {}: CÓ data {} tháng, từ {} → {} ⇒ (b) chỉ backfill THÁNG < {} (KHÔNG đụng [{},nay]). present={}",
+                    cluster, symbol, present.size(), firstPresent, lastPresent, firstPresent, firstPresent, present);
     }
 
     // ===================== REMOVE (rollback) — gỡ SYMBOL khỏi cluster =====================

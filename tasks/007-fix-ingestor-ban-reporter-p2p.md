@@ -2,7 +2,7 @@
 
 - **status:** TODO (ops/live — ngoài mạch rebuild). Giao CCD.
 - **owner:** _(điền khi claim — đồng bộ `docs/AGENTS.md`)_ · **updated:** _(điền)_
-- **Gộp (theo yêu cầu):** A = fix vòng-lặp-giữ-ban REST (tách guard CHUNG); B = Reporter thêm giá BTC + 2 giá P2P + test in màn hình; C = ingest Open Interest (forward + cào history) tích hợp `BinanceDataIngestor` chạy NGAY; D = gom log `DetectEntrySignal2TradeNormal` còn 1 dòng/phút.
+- **Gộp (theo yêu cầu):** A = fix vòng-lặp-giữ-ban REST (tách guard CHUNG); B = Reporter thêm giá BTC + 2 giá P2P + test in màn hình; C = ingest Open Interest FORWARD (vá T-1→now; history 2020+ = TASK-013) tích hợp `BinanceDataIngestor` chạy NGAY; D = gom log `DetectEntrySignal2TradeNormal` còn 1 dòng/phút.
 
 ## ⚠️ AN TOÀN — đọc trước
 - `TickerIngestor2AerospikeNew` và `Reporter` chạy trên **PRODUCTION 242 (live)**. KHÔNG đổi logic nặn nến / ghi Aerospike / đặt lệnh / gửi Telegram khi test. Chỉ **THÊM** lớp guard (A) và **đọc + thêm field** (B).
@@ -77,18 +77,18 @@ Burst Kline 554 req/phút là nguồn ban gốc; tôn-trọng-ban chỉ chữa v
 
 ---
 
-## PHẦN C — Ingest Open Interest (forward + cào history) → BinanceDataIngestor
+## PHẦN C — Ingest Open Interest FORWARD (history → TASK-013) → BinanceDataIngestor
 
 ### Bối cảnh (đã đọc code)
 - `BinanceDataIngestor.main` start `FundingIngestor2AerospikeNew` + `TickerIngestor2AerospikeNew`. Mẫu Funding: `startPollingLoop` (poll endpoint TOÀN SÀN 30s → buffer `Map<symbol,Map<Long,Float>>`) + `startFlushLoop` (mỗi phút `DataManagerAerospikeFloatSim.writeFundingMap` → set `funding_data`, Snappy Map<Long,Float>, có GUARD chống mất lịch sử: đọc cũ → merge → không ghi đè rỗng).
 - Binance OI API:
   - Current per-symbol: `GET /fapi/v1/openInterest?symbol=` → `{openInterest, time}`.
-  - History per-symbol: `GET /futures/data/openInterestHist?symbol=&period=&limit=&startTime=&endTime=` → list `{sumOpenInterest, sumOpenInterestValue, timestamp}`. **CHỈ ~30 ngày gần** (giới hạn Binance). period ∈ {5m,15m,30m,1h,2h,4h,6h,12h,1d}, limit ≤ 500.
+  - History per-symbol: `GET /futures/data/openInterestHist?...` (≥2d gần, giới hạn Binance). ⚠️ **History sâu (2020+) KHÔNG lấy từ API này** mà từ dump `data.binance.vision/metrics` (**TASK-013**). 007-C chỉ dùng forward.
   - ⚠️ **OI KHÔNG có call toàn sàn** → phải gọi PER-SYMBOL (~554 calls) → **burst** → góp phần ban. BẮT BUỘC throttle + `BinanceRestGuard`.
 
 ### Yêu cầu
 1. Class `websocket/OpenInterestIngestor2AerospikeNew` (khuôn theo FundingIngestor):
-   - **Cào history 1 lần lúc start (nếu có):** mỗi symbol (USDT, bỏ `diedSymbol`) gọi `openInterestHist` period `15m`, loop `startTime/endTime` lùi tối đa ~30 ngày, limit 500/trang. THROTTLE: sleep 200–300ms giữa mỗi symbol/trang + `BinanceRestGuard.awaitIfBanned`.
+   - **History KHÔNG cào ở đây** → đã chuyển **TASK-013** (`data.binance.vision/metrics`, 2020→T-1, đầy đủ + có cả long/short & taker). 007-C CHỈ lo **FORWARD**.
    - **Forward poll:** vòng lặp **mỗi 5 phút** (OI đổi chậm) duyệt symbol gọi `openInterestHist period=5m limit=1` (hoặc `/fapi/v1/openInterest`), buffer → flush. THROTTLE tuần tự (hoặc pool ≤5 + sleep) — **KHÔNG** parallel 30-luồng kiểu kline. Guard ban trước mỗi call + `reportBan(response)`.
 2. Lưu Aerospike: hàm mới `DataManagerAerospikeFloatSim.writeOpenInterestMap(String symbol, Map<Long,Float> oiByTs)` — set mới `open_interest`, Snappy Map<Long,Float> per symbol, **bắt chước `writeFundingMap`** (gồm guard chống mất lịch sử). Value = `sumOpenInterestValue` (USD notional — chuẩn hoá cross-coin tốt hơn contracts). Ghi **242**.
 3. Tích hợp `BinanceDataIngestor.main`: thêm `new OpenInterestIngestor2AerospikeNew().start();` (thread riêng, KHÔNG đụng ticker/funding). Chạy NGAY để tích luỹ forward.
