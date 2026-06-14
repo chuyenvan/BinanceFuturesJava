@@ -1,7 +1,7 @@
 # TASK-017: Export feature gate NHÓM B giá/xu-hướng + funding-breadth (B1–B5, B7) — code mới + validate RIÊNG
 
-- **status:** TODO (H1 — feature gate nhóm B, phần LÀM NGAY). Sau khi 015 (nhóm A) PASS.
-- **owner:** _(điền khi claim — đồng bộ `docs/AGENTS.md`)_ · **updated:** _(điền)_
+- **status:** ✅ DONE — **FILE TRÙNG; bản canonical = `tasks/017-feature-gate-groupB-now.md`** (CCD1, commit `a5295e8`). Giữ file này làm spec gốc §2.2.
+- **owner:** CCD #1 · **updated:** 2026-06-14
 - **Spec:** `docs/H1_GATE_SPEC.md` §2.2 (B1–B5, B7) + §2.4. **Code MỚI.** B6/B8 (OI/LS-market) CHỜ 013 → TASK-018 riêng.
 
 ## Mục tiêu

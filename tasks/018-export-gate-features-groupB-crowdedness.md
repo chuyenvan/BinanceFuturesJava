@@ -1,3 +1,16 @@
+---
+id: 018
+status: TODO
+depends_on: [013]
+touches_live_process: false
+writes_242_data: false
+resource: kaggle
+checkpoint: false
+max_retry: 2
+report: docs/reports/018.md
+require_review: true
+---
+
 # TASK-018: Export feature gate B crowdedness OI/LS-market (B6, B8) — CHỜ 013
 
 - **status:** BLOCKED — chờ **TASK-013** (backfill OI/LS metrics) verify + backfill PASS. KHÔNG bắt đầu trước.

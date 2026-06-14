@@ -1,3 +1,16 @@
+---
+id: 025
+status: TODO
+depends_on: [012, 015, 017, 018]
+touches_live_process: false
+writes_242_data: false
+resource: heavy_226
+checkpoint: false
+max_retry: 2
+report: docs/reports/025.md
+require_review: true
+---
+
 # TASK-025: H1 — Ghép feature + label → export FULL dataset gate + validate chung (§3)
 
 - **status:** BLOCKED — sau khi 015 (A) + 017 (B-now) + 018 (B-crowd) PASS validate RIÊNG. Là bước cuối H1-DATA.

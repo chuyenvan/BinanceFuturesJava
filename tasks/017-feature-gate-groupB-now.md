@@ -1,7 +1,20 @@
+---
+id: 017
+status: REVIEW
+depends_on: []
+touches_live_process: false
+writes_242_data: false
+resource: kaggle
+checkpoint: false
+max_retry: 2
+report: docs/reports/017.md
+require_review: true
+---
+
 # TASK-017: Feature gate nhóm B-now (B1–B5 + B7) — code mới [CCD1]
 
 - **status:** TODO. Giao CCD1 (rảnh sau 034). Code MỚI; làm song song 015 (khác feature, không đụng nhau). Ghép cần A+B nhưng code/validate riêng được ngay.
-- **owner:** CCD #1 · **status:** DOING · **updated:** 2026-06-14
+- **owner:** CCD #1 · **status:** DONE (code + RUN 226 + validate PASS; align 96-row gap→025) · **updated:** 2026-06-14
 - **Spec gốc:** `docs/H1_GATE_SPEC.md` §2.2 (B-giá/xu-hướng B1–B5 + B-crowdedness B7). B6/B8 (OI/LS) = TASK-018 (chờ 013).
 
 ## Nguồn data + nơi chạy
@@ -29,10 +42,18 @@
 - Nếu chạy Kaggle: ghi mục Job-đang-chạy bàn giao (#4) + checkpoint nếu lâu (#5). B-now nhẹ hơn 015 (chỉ BTC/ETH 15m/4h + funding, không quét 1m toàn coin 5 năm) → nhanh.
 
 ## Acceptance
-- [ ] CSV B1–B5 + B7, align gate_return, 2021→nay.
-- [ ] Validate (a–e) PASS mỗi feature, kèm số.
-- [ ] Look-ahead clean; B7 survivorship (không lọc DIED).
-- [ ] Exit sạch (System.exit).
+- [x] CSV B1–B5 + B7 (13 cột), align gate_return, 2021→2026-06-07 → `outputs/gate_features_groupB_now.csv` **190.273 dòng** (trên 226).
+- [x] Validate (a–e) PASS kèm số (xem dưới). recompute b4 4/4 KHỚP.
+- [x] Look-ahead clean (`closedBy=headMap(t−frameMs)`; B7 expanding histogram ts≤t); B7 survivorship KHÔNG lọc DIED (#coin 121→729).
+- [x] Exit sạch (`System.exit(0)`).
 
 ## (Code điền)
-- **Class + commit:** … · **Validate số:** … · **Job Kaggle (nếu có):** …
+- **Class + commit:** `ai_ml/features/export/ExportGateFeaturesGroupB.java` `a5295e8` (javac11 PASS). Đọc 226 kline_15m/4h_btceth + getAllFundingMap; 13 cột; chạy nền 226 PID 92958 ~9' (ghi PID/log `.run/GroupB`).
+- **Validate số (RUN 226 2026-06-14):**
+  - (a) range hợp lý: b1_sma20_15m ±0.02 (p1/p99), b1_sma50_4h ±0.13; b2_alignment ∈{−1,0,1}; b3_distMA200 −0.52..0.85 (p50 +0.048); b5_rollingCorr median **0.863**; b7_pctFundingHigh p50 0.27.
+  - (b) warmup → NULL (KHÔNG fill 0): b3 MA200 null=19196 (~200d×96), b1_sma50_4h null=800 (50×4h), b5_rollingCorr null=97 (W=96). zeros là 0-thật (bearRally/coDown).
+  - (c) recompute b4_ethRet15m: **4/4 KHỚP✅** (mốc đầu warmup).
+  - (d) look-ahead clean (closedBy headMap(t−frameMs,true); B7 chỉ nạp ts≤t — KHÔNG full-sample percentile).
+  - (e) align gate_return: gate 190271 vs feature 190273; **96 gate-t thiếu trong feature (0.05%)** — TASK-009 skip 96 khung 15m thiếu phút mà 012(từ 1m) vẫn có ⇒ KHÔNG leak, khác chính sách gap. **Xử ở 025 (NaN-fill / left-join trên gate t).**
+- **B7 ngưỡng cao:** expanding histogram p80 ([-0.02,0.02], 400 bin), chỉ nạp điểm funding ts≤t (no-leak). pctFundingHigh = %coin > p80; fundingDispersion = std cross-coin. #coin active funding cuối năm: 2021=121 → 2026=729.
+- **Tham số chốt:** SMA 15m-20/4h-50; momShort N=4 nến (1h); MA200 daily; rollingCorr W=96 (24h). Output `outputs/gate_features_groupB_now.csv` ở 226 (cho merge 025).

@@ -395,6 +395,119 @@ public class DataManagerAerospikeFloatSim {
     }
 
     /**
+     * Ghi 1 metric per-symbol vào Aerospike <b>226</b> (kho compute/train) — TASK-013 backfill OI/LS/taker.
+     * GENERIC hoá {@link #writeOpenInterestMap} (set/bin tham số) để 5 set metrics (open_interest,
+     * oi_ls_toptrader_acc/pos, oi_ls_global_acc, oi_taker_vol) dùng CHUNG một mối ghi: Snappy nén
+     * {@code Map<Long,Float>} (ts 5m UTC → giá trị), merge lịch sử cũ + GUARD chống mất lịch sử (record có
+     * blob nhưng đọc ra RỖNG → nghi lỗi đọc, KHÔNG ghi đè). Worker Kaggle chỉ tới 226 nên ghi 226; job
+     * trên 226 đẩy tiếp 226→242 sau (kiến trúc A).
+     *
+     * @param setName tên set Aerospike (vd {@code "open_interest"}).
+     * @param binName tên bin chứa blob Snappy (vd {@code "oi_data"} cho OI, {@code "m_data"} cho LS/taker).
+     * @param symbol  symbol (vd "BTCUSDT"), dùng làm key.
+     * @param byTs    map ts(ms, mốc 5m UTC) → giá trị; rỗng/null → bỏ qua (không đụng record cũ).
+     */
+    public static void writeMetricMap226(String setName, String binName, String symbol, Map<Long, Float> byTs) {
+        writeMetricMapTo(getClient226(), "226", setName, binName, symbol, byTs);
+    }
+
+    /**
+     * Ghi 1 metric per-symbol vào Aerospike <b>242</b> (source) — TASK-013 ĐẨY 226→242 (kiến trúc A) sau
+     * khi backfill xong trên 226. Cùng lõi merge-guard với {@link #writeMetricMap226}, chỉ khác client.
+     */
+    public static void writeMetricMap242(String setName, String binName, String symbol, Map<Long, Float> byTs) {
+        writeMetricMapTo(getClient242(), "242", setName, binName, symbol, byTs);
+    }
+
+    /**
+     * LÕI dùng chung (một mối ghi) cho {@link #writeMetricMap226}/{@link #writeMetricMap242}: Snappy nén
+     * {@code Map<Long,Float>} (ts 5m UTC → giá trị), merge lịch sử cũ trên ĐÚNG client + GUARD chống mất
+     * lịch sử (record có blob nhưng đọc ra RỖNG → nghi lỗi đọc, KHÔNG ghi đè).
+     *
+     * @param client  client đích (226 hoặc 242) — ĐỌC cũ + GHI mới cùng 1 client để guard nhất quán.
+     * @param tag     nhãn host cho log ("226"/"242").
+     * @param setName tên set Aerospike (vd {@code "open_interest"}).
+     * @param binName tên bin chứa blob Snappy ({@code "oi_data"} cho OI, {@code "m_data"} cho LS/taker).
+     * @param symbol  symbol (vd "BTCUSDT"), dùng làm key.
+     * @param byTs    map ts(ms, mốc 5m UTC) → giá trị; rỗng/null → bỏ qua (không đụng record cũ).
+     */
+    private static void writeMetricMapTo(AerospikeClient client, String tag, String setName, String binName,
+                                         String symbol, Map<Long, Float> byTs) {
+        if (byTs == null || byTs.isEmpty()) return;
+        try {
+            Key key = new Key(Configs.AEROSPIKE_NAMESPACE, setName, symbol);
+
+            // 1. Lấy dữ liệu cũ trên CÙNG client.
+            Map<Long, Float> existingMap = getMetricMapFrom(client, setName, binName, symbol);
+
+            // 🛡️ GUARD CHỐNG MẤT LỊCH SỬ: record có blob nhưng đọc ra RỖNG → nghi lỗi đọc tạm thời,
+            // TUYỆT ĐỐI không ghi đè (merge-với-rỗng + ghi đè = xoá sạch lịch sử).
+            try {
+                Record raw = client.get(null, key);
+                boolean hasBlob = raw != null && raw.getValue(binName) != null
+                        && ((byte[]) raw.getValue(binName)).length > 0;
+                if (hasBlob && existingMap.isEmpty()) {
+                    LOG.error("❌ ABORT writeMetricMap@{} set={} bin={} {} — record có blob nhưng đọc ra RỖNG "
+                            + "(nghi lỗi đọc). Không ghi đè để tránh mất lịch sử.", tag, setName, binName, symbol);
+                    return;
+                }
+            } catch (Exception ignore) {
+            }
+
+            // 2. Gộp (TreeMap để luôn sắp theo thời gian; key trùng = dedup tự nhiên).
+            TreeMap<Long, Float> finalMap = new TreeMap<>();
+            existingMap.forEach((k, v) -> finalMap.put(k, v.floatValue()));
+            byTs.forEach(finalMap::put);
+
+            // 3. Serialize + nén Snappy → bin tham số.
+            byte[] rawBytes = Utils.gson.toJson(finalMap).getBytes("UTF-8");
+            byte[] compressedBytes = Snappy.compress(rawBytes);
+            client.put(writePolicy, key, new Bin(binName, compressedBytes));
+        } catch (Exception e) {
+            LOG.error("❌ Error writeMetricMap@{} set={} bin={} {}: {}", tag, setName, binName, symbol, e.getMessage());
+        }
+    }
+
+    /**
+     * Giải nén + đọc 1 metric per-symbol từ Aerospike <b>226</b> (cặp đôi đọc của {@link #writeMetricMap226}).
+     *
+     * @param setName tên set Aerospike.
+     * @param binName tên bin chứa blob Snappy.
+     * @param symbol  symbol (vd "BTCUSDT").
+     * @return {@link TreeMap} ts→giá trị; rỗng nếu chưa có / lỗi đọc.
+     */
+    public static TreeMap<Long, Float> getMetricMap226(String setName, String binName, String symbol) {
+        return getMetricMapFrom(getClient226(), setName, binName, symbol);
+    }
+
+    /** Như {@link #getMetricMap226} nhưng đọc từ <b>242</b> (xác minh sau khi đẩy 226→242). */
+    public static TreeMap<Long, Float> getMetricMap242(String setName, String binName, String symbol) {
+        return getMetricMapFrom(getClient242(), setName, binName, symbol);
+    }
+
+    /** LÕI đọc dùng chung cho {@link #getMetricMap226}/{@link #getMetricMap242}. */
+    private static TreeMap<Long, Float> getMetricMapFrom(AerospikeClient client, String setName, String binName, String symbol) {
+        TreeMap<Long, Float> results = new TreeMap<>();
+        try {
+            Key key = new Key(Configs.AEROSPIKE_NAMESPACE, setName, symbol);
+            Record record = client.get(null, key);
+            if (record != null) {
+                byte[] compressedData = (byte[]) record.getValue(binName);
+                if (compressedData != null) {
+                    String json = new String(Snappy.uncompress(compressedData), "UTF-8");
+                    java.lang.reflect.Type mapType = new com.google.gson.reflect.TypeToken<Map<String, Float>>() {
+                    }.getType();
+                    Map<String, Float> rawMap = Utils.gson.fromJson(json, mapType);
+                    rawMap.forEach((k, v) -> results.put(Long.parseLong(k), v));
+                }
+            }
+        } catch (Exception e) {
+            LOG.error("❌ Error getMetricMap set={} bin={} {}: {}", setName, binName, symbol, e.getMessage());
+        }
+        return results;
+    }
+
+    /**
      * Giải nén và đọc Map Funding
      */
     public static TreeMap<Long, Float> getFundingMap(String symbol) {

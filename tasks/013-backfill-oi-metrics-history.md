@@ -1,7 +1,20 @@
+---
+id: 013
+status: DOING
+depends_on: []
+touches_live_process: false
+writes_242_data: true
+resource: kaggle_distributed
+checkpoint: true
+max_retry: 2
+report: docs/reports/013.md
+require_review: true
+---
+
 # TASK-013: Verify + backfill OI / long-short / taker history từ data.binance.vision/metrics
 
 - **status:** TODO (data — mở khoá chân OI cho funding model). CHẠY ĐƯỢC NGAY (độc lập).
-- **owner:** _(điền khi claim — đồng bộ `docs/AGENTS.md`)_ · **updated:** _(điền)_
+- **owner:** CCD-oi · **status:** DOING (B2 — code master/worker) · **updated:** 2026-06-14
 - **Liên hệ:** ADR-0011 §5.3 (OI/LS/taker — đảo kết luận "không backfill được"). Forward poll cho live = TASK-007 phần C (riêng). Đây là HISTORY cho train.
 
 ## Bối cảnh (user phát hiện 2026-06-13)
@@ -74,7 +87,9 @@ History (013) và forward poll (007-C) **PHẢI ghi CÙNG** set + key + value. C
 
 **B1 — đơn vị metrics vs openInterestHist (007-C):** ✅ **diff = 0.000% tại offset=same** cả 6 mốc (BTC 2026-06-10). `sum_open_interest_value` (metrics) **== `sumOpenInterestValue`** (API), cùng đơn vị USDT-notional, create_time = UTC đọc thẳng, KHÔNG lệch nhãn. ⇒ history (013) + forward (007-C) khớp tuyệt đối, **không bậc thang train/serve**.
 
-### BƯỚC 1.5 — đề xuất SCHEMA CHUNG (chờ user chốt trước BƯỚC 2)
+### BƯỚC 1.5 — SCHEMA CHUNG — ✅ USER CHỐT 2026-06-14 (cả 4 điểm)
+> (1) 5 set như bảng dưới — OK. (2) dedup theo `create_time` + chuẩn mốc 5m — OK. (3) backfill **TOÀN BỘ** (gồm coin delist — survivorship) — OK. (4) ghi **242 (source)** + **replicate sang 226** (tool 034) — OK. Kéo theo: forward 007-C phải mở rộng ghi đủ LS/taker (TASK-035).
+
 Granularity 5m UTC; mỗi metric 1 set, Snappy `Map<Long,Float>` per symbol (như funding), key = symbol UPPER, dedup theo ts. 007-C forward đã dùng `open_interest`/bin `oi_data` cho OI value ⇒ history ghi CÙNG set đó. Đề xuất 4 set còn lại:
 | metric (cột CSV) | set đề xuất | ý nghĩa |
 |---|---|---|
@@ -85,4 +100,28 @@ Granularity 5m UTC; mỗi metric 1 set, Snappy `Map<Long,Float>` per symbol (nh�
 | sum_taker_long_short_vol_ratio | `oi_taker_vol` | taker buy/sell vol ratio |
 ⚠️ 007-C forward hiện CHỈ ghi OI value (chưa LS/taker). Nếu chốt schema này → 007-C cần mở rộng forward ghi đủ 4 metric kia (cùng set/key) để history+forward đồng bộ.
 
-**B2 backfill (set, #record, range, validate):** _(CHƯA làm — chờ user OK GATE + chốt schema 1.5)_
+### BƯỚC 2 — BACKFILL theo MASTER–WORKER phân tán (tái dùng pattern `RunHpoMaster_Distributed` + `RunWorkerKaggle`)
+545k file-ngày tuần tự trên 226 quá lâu. Chia nhỏ **per-symbol** → 1 headless MASTER phát task → **5 Kaggle CPU WORKER** chạy song song (Kaggle tới 226). **Queue Aerospike = checkpoint phân tán** (idempotent, resume tự nhiên — rerun chỉ làm symbol chưa DONE, không lặp từ 0).
+
+**Queue (Aerospike 226, giống HPO):**
+- `oi_backfill_queue` — task PENDING/RUNNING, mỗi task = 1 symbol (~896, gồm delist). Xong → xoá.
+- `oi_backfill_done` — đánh dấu symbol DONE (get by key, KHÔNG scan) → rerun skip.
+
+**MASTER `BackfillOiMaster`** (headless, chạy dev/226 — tới 226): liệt kê universe symbol có metrics (từ B1 `coverage.csv` 896 / lifecycle 010, gồm delist) → symbol chưa DONE thì ném task vào `oi_backfill_queue` (PENDING). Theo dõi đếm DONE, in dashboard; queue rỗng + đủ → `System.exit(0)`.
+
+**WORKER `BackfillOiWorker`** (5 Kaggle CPU, `IS_KAGGLE_MODE=true`): `while(true)` fetchTask race-safe (GenerationPolicy như RunWorkerKaggle) + STALE_RUNNING cướp task chết. Task=1 symbol → tải `metrics/<SYMBOL>/*.zip` 2020→nay → parse 8 cột → **dedup create_time + chuẩn 5m** → ghi **226** 5 set (`open_interest`+`oi_ls_toptrader_acc/pos`+`oi_ls_global_acc`+`oi_taker_vol`) bắt chước `writeFundingMap` (merge guard, không ghi đè rỗng) → mark `oi_backfill_done` + xoá queue. Queue rỗng → `System.exit(0)` (#6). Throttle tải vision/worker.
+
+**ĐẨY 226→242 (source, kiến trúc A):** Kaggle worker chỉ ghi được 226. Sau khi backfill xong (226 đủ), chạy 1 job TRÊN 226 đẩy 5 set 226→242 (bổ sung tool 034 chiều **226→242**, hoặc ghi thẳng 242 từ 226). 242 = source như forward 007-C; 226 đã sẵn cho train.
+
+**resource = `kaggle_distributed`** (master headless + ≤5 Kaggle worker). Queue Aerospike LÀ checkpoint. Validate (require_review): recompute vài mốc (metrics vs API, đã 0% B1); cross-check OI tụt quanh sập; coverage per-coin khớp firstSeen; dedup đúng (không còn create_time trùng).
+
+**B2 kết quả (#record/range/validate):** _(CCD điền khi chạy)_
+
+## Quy trình HEADLESS làm trọn (code → test → GATE → launch → monitor)
+Một worker headless tự chạy trọn, CHỈ dừng đúng 1 gate ở bước ghi data thật (trước khi nhân 5 worker):
+1. **Code:** viết `BackfillOiMaster` + `BackfillOiWorker` (bê khung `RunHpoMaster_Distributed`/`RunWorkerKaggle`, đổi payload task=symbol, đổi phần chạy-engine → tải-vision-ghi-OI) + tool đẩy `226→242`. javac11 PASS.
+2. **TEST NHỎ (bắt buộc):** master ném ~2 symbol (1 sống + 1 delist, vd BTCUSDT + LUNAUSDT) → 1 worker chạy → ghi 226. Verify đưa SỐ vào report: đọc lại 226 đếm record; recompute vài mốc vs API (đã 0% ở B1); dedup đúng (không còn create_time trùng); KHÔNG ghi đè mất data cũ.
+3. **GATE = REVIEW:** DỪNG, RESULT `STATUS=REVIEW` kèm số test. Người soát mẫu (rẻ) — schema/dedup/không-mất-data đúng chưa. **KHÔNG launch full khi chưa soát.**
+4. **LAUNCH FULL (sau review OK):** master ném toàn universe → 5 Kaggle worker. Ghi BÀN GIAO (CLAUDE.md #4): queue set, kernel slugs, cách check (đếm queue/done) — để CCD khác/ phiên khác tiếp quản được.
+5. **MONITOR (poll, KHÔNG giữ session nhiều giờ):** poll queue count định kỳ; worker chết → STALE → worker khác cướp (tự lành). Queue cạn → đẩy `226→242` + validate cuối (cross-check OI tụt quanh sập, coverage firstSeen) → RESULT cuối.
+> Gate bước 3 là bước RẺ + REVERSIBLE chặn "code sai nhân 5 worker" ở lần đầu ghi data thật (kỷ luật §0.3 AGENT_WORKFLOW). Các bước còn lại headless tự làm, không cần người.

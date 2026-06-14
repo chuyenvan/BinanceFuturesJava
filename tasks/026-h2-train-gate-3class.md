@@ -1,3 +1,16 @@
+---
+id: 026
+status: TODO
+depends_on: [025]
+touches_live_process: false
+writes_242_data: false
+resource: kaggle
+checkpoint: true
+max_retry: 2
+report: docs/reports/026.md
+require_review: true
+---
+
 # TASK-026: H2 — Train GATE 3-class (harness riêng, Kaggle) (§4)
 
 - **status:** BLOCKED — sau khi 025 cho ra `gate_dataset_vN` + fingerprint.
