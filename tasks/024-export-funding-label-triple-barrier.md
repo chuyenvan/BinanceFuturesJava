@@ -1,7 +1,13 @@
 # TASK-024: Export funding LABEL per-coin (path thô → triple-barrier ở train) + validate — bước 1 funding model
 
-- **status:** REVIEW — code DONE; RUN+validate **BLOCKED** (builder TASK-010 chưa chạy → set `symbol_lifecycle` rỗng). Bước 1 của funding model.
-- **owner:** CCD-024 · **updated:** 2026-06-14
+- **status:** RAN-DONE — RUN+validate trên KAGGLE OK (47.86M dòng, sạch). Chờ user soát. Bước 1 của funding model.
+- **owner:** CCD-basis · **updated:** 2026-06-14
+
+## ✅ KẾT QUẢ CHẠY (2026-06-14, Kaggle kernel `export-funding-label`)
+- Lifecycle nạp **809 symbol** (TASK-010 đã chạy) → guard qua. Quét 1991 ngày (2021→nay), sample 15m, H={4h,12h,24h,72h}.
+- **Ghi 47,862,484 dòng** `funding_label.csv` | 739 coin universe | `error.log` RỖNG (không lỗi).
+- Validate sạch (không FAIL): (a) phân bố maxFav/maxAdv mỗi H; (b) chạm +6%/72h = **46.05%** (21.68M/47.08M, khớp trực giác label cũ); (c) recompute độc lập 72h đường khác; (d) **look-ahead guard OK** (path chỉ (t,t+H], thiếu-data giữ nBars-thiếu KHÔNG 0 giả → train lọc); (e) top-20 coin bơm; (f) 782930 dòng nBars_72h thiếu (gần data-end 06-07/coin die — đúng thiết kế path-thô).
+- ⚠️ **Output 9.4 GB** → KHÔNG tải về dev (download đứt: connection broken). Đúng kiến trúc train-trên-Kaggle: kernel train sau thêm `chuyendinh/export-funding-label` vào `kernel_sources` → mount `/kaggle/input/.../funding_label.csv` (chaining chuẩn, không cần tải). Lần sau nếu cần tải dev → gzip output. Recipe: [[kaggle-java-run-recipe]].
 - **Liên hệ:** ADR-0011 (funding = SELECTOR per-coin: "coin NÀO sắp bơm"). Label cũ = first-passage maxPrice +6%/72h → thay bằng **triple-barrier**. Đây là H1-DATA của funding (tương đương TASK-012 cho gate).
 
 ## Nguyên tắc (học từ gate 012)
