@@ -54,11 +54,18 @@ public class Aggregate15m4hBtcEth {
 
     public static void main(String[] args) {
         try {
+            // TASK-033 lấp-gap: arg "242" → đọc 1m@242 (LIVE, tươi) cho forward gap-fill (15m/4h@242 dừng 06-07,
+            // mà 1m@226 cũng dừng 06-07 nên KHÔNG lấp được). Mặc định (không arg) → 226 cho backtest historical (TASK-009).
+            // writeSeries vẫn ghi CẢ 226+242. ⚠️ Chỉ THÁNG có nến mới bị overwrite; tháng 242 thiếu 1m → KHÔNG đụng
+            // (byMonth không chứa). Nhưng THÁNG BIÊN (242 có 1m một phần) sẽ ghi đè bằng series một-phần → MẤT phần cũ
+            // của tháng đó. ⇒ chạy 242-mode CHỈ khi 1m@242 đủ sâu (xem runbook TASK-033: verify độ sâu 1m@242 trước).
+            boolean read242 = args.length > 0 && "242".equalsIgnoreCase(args[0]);
             Configs.IS_HPO_MODE = false;
-            Configs.IS_KAGGLE_MODE = true;   // getReadClient → 226 (local, nhanh) cho readDataFromAerospike1M
+            Configs.IS_KAGGLE_MODE = !read242;   // false → getReadClient→242 (gap-fill); true → 226 (backtest historical)
             long start = Utils.sdfFile.parse(START_DATE).getTime() + 7 * Utils.TIME_HOUR;
             long end = System.currentTimeMillis();
-            LOG.info("🧱 Aggregate 15m/4h BTC/ETH từ kline_1m_opt (226) | {} → nay", START_DATE);
+            LOG.info("🧱 Aggregate 15m/4h BTC/ETH từ kline_1m_opt ({}) | {} → nay | ghi 226+242",
+                    read242 ? "242 LIVE — forward gap-fill" : "226 backtest", START_DATE);
 
             // accumulators per symbol per interval
             Map<String, TreeMap<Long, Acc>> acc15 = new HashMap<>(), acc4 = new HashMap<>();
