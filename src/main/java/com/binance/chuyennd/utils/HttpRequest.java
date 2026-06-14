@@ -57,6 +57,26 @@ import org.apache.http.ssl.SSLContextBuilder;
 
 public class HttpRequest {
 
+    // TASK-028 #3: SLF4J để hết "nuốt exception câm" ở các REST call P1 (luật CLAUDE.md).
+    // Dùng FQN tránh đụng java.util.logging.Logger đã import sẵn trong file.
+    private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(HttpRequest.class);
+
+    /**
+     * Phân loại nhanh nguyên nhân lỗi REST để log có ngữ cảnh (timeout vs DNS vs SSL vs parse...).
+     *
+     * @param ex exception bắt được khi gọi/đọc HTTP.
+     * @return nhãn ngắn gọn loại lỗi.
+     */
+    private static String classifyError(Exception ex) {
+        if (ex instanceof java.net.SocketTimeoutException) return "TIMEOUT";
+        if (ex instanceof java.net.UnknownHostException) return "DNS";
+        if (ex instanceof javax.net.ssl.SSLException) return "SSL";
+        if (ex instanceof java.net.ConnectException) return "CONNECT";
+        if (ex instanceof NullPointerException) return "CONN_NULL"; // connect() trả null → NPE ở getContentLength
+        if (ex instanceof java.io.IOException) return "IO";
+        return ex.getClass().getSimpleName();
+    }
+
     private static final String J_CONNECTION = "close";
     // UserAgent
     public static String J_USER_AGENT = " Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:68.0) Gecko/20100101 Firefox/68.0";
@@ -126,7 +146,8 @@ public class HttpRequest {
             conn.connect();
             return conn;
         } catch (Exception e1) {
-//			e1.printStackTrace();
+            // TASK-028 #3: trước trả null câm → downstream chỉ thấy NPE (CONN_NULL), mất cause thật.
+            LOG.debug("HttpRequest.connect lỗi [{}] url={}: {}", classifyError(e1), url_, e1.getMessage());
             return null;
         }
     }
@@ -166,7 +187,8 @@ public class HttpRequest {
             conn.connect();
             return conn;
         } catch (Exception e1) {
-//			e1.printStackTrace();
+            // TASK-028 #3: trước trả null câm → downstream chỉ thấy NPE (CONN_NULL), mất cause thật.
+            LOG.debug("HttpRequest.connect lỗi [{}] url={}: {}", classifyError(e1), url_, e1.getMessage());
             return null;
         }
     }
@@ -216,6 +238,7 @@ public class HttpRequest {
         try {
             return getContentFromUrl(url, new HashMap<>(), timeout);
         } catch (Exception e) {
+            LOG.warn("getContentFromUrl(timeout) lỗi [{}] url={}: {}", classifyError(e), url, e.getMessage());
         }
         return "";
     }
@@ -223,6 +246,7 @@ public class HttpRequest {
         try {
             return getContentFromUrl(url, new HashMap<>());
         } catch (Exception e) {
+            LOG.warn("getContentFromUrl lỗi [{}] url={}: {}", classifyError(e), url, e.getMessage());
         }
         return "";
     }
@@ -325,11 +349,15 @@ public class HttpRequest {
                 }
                 break;
             } catch (Exception ex) {
-//				ex.printStackTrace();
+                // TASK-028 #3: trước đây catch rỗng nuốt DNS/timeout/SSL/parse → loop "chạy nhưng rỗng"
+                // không ai biết. Giữ hành vi trả null ở lần cuối nhưng để LẠI VẾT có phân loại.
                 if (i == NUM_RETRY_CONNECTION - 1) {
+                    LOG.warn("HttpRequest GET fail [{}] url={} sau {} lần thử: {}",
+                            classifyError(ex), url, NUM_RETRY_CONNECTION, ex.getMessage());
                     return null;
                 }
-
+                LOG.debug("HttpRequest GET retry {}/{} [{}] url={}: {}",
+                        i + 1, NUM_RETRY_CONNECTION, classifyError(ex), url, ex.getMessage());
             }
         }
         return content;
@@ -389,11 +417,15 @@ public class HttpRequest {
                 }
                 break;
             } catch (Exception ex) {
-//				ex.printStackTrace();
+                // TASK-028 #3: trước đây catch rỗng nuốt DNS/timeout/SSL/parse → loop "chạy nhưng rỗng"
+                // không ai biết. Giữ hành vi trả null ở lần cuối nhưng để LẠI VẾT có phân loại.
                 if (i == NUM_RETRY_CONNECTION - 1) {
+                    LOG.warn("HttpRequest GET fail [{}] url={} sau {} lần thử: {}",
+                            classifyError(ex), url, NUM_RETRY_CONNECTION, ex.getMessage());
                     return null;
                 }
-
+                LOG.debug("HttpRequest GET retry {}/{} [{}] url={}: {}",
+                        i + 1, NUM_RETRY_CONNECTION, classifyError(ex), url, ex.getMessage());
             }
         }
         return content;

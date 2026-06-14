@@ -1,6 +1,7 @@
 package com.binance.chuyennd.websocket;
 
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
+import com.binance.chuyennd.utils.BinanceRestGuard;
 import com.binance.chuyennd.utils.HttpRequest;
 import com.binance.client.constant.Constants;
 import org.apache.commons.lang.StringUtils;
@@ -43,9 +44,22 @@ public class FundingIngestor2AerospikeNew {
             Thread.currentThread().setName("Funding-Polling-Thread");
             // Endpoint lấy Funding Rate toàn sàn (Tốn đúng 1 Weight)
             String endpoint = "https://fapi.binance.com/fapi/v1/premiumIndex";
+            boolean wasBanned = false;
 
             while (true) {
                 try {
+                    // 🔒 TASK-028 #1: GUARD ban GLOBAL (chung 016/019). Trước đây funding poll KHÔNG qua
+                    // guard → khi sàn ban IP (do luồng khác), call này vẫn bắn 30s/lần → GIA HẠN ban,
+                    // và -1003 của nó không vào cooldown chung. Cap 60s/nhịp như Ticker/OI.
+                    if (BinanceRestGuard.awaitIfBanned(60_000L)) {
+                        wasBanned = true;
+                        continue;
+                    }
+                    if (wasBanned) {
+                        LOG.info("✅ Hết cooldown, resume Funding REST");
+                        wasBanned = false;
+                    }
+
                     String response = HttpRequest.getContentFromUrl(endpoint, 5000);
 
                     // Bọc thép: Đảm bảo JSON là một Mảng hợp lệ
@@ -78,6 +92,7 @@ public class FundingIngestor2AerospikeNew {
                         }
                     } else if (StringUtils.isNotBlank(response) && response.trim().startsWith("{")) {
                         LOG.warn("⚠️ API PremiumIndex trả về lỗi (Có thể do Limit): {}", response);
+                        BinanceRestGuard.reportBan(response); // -1003/banned until => đặt cooldown GLOBAL
                     }
 
                     // Funding Rate thay đổi rất chậm, 30 giây cập nhật 1 lần là quá dư dả và an toàn
