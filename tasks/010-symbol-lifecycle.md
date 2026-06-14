@@ -1,7 +1,14 @@
 # TASK-010: Lifecycle metadata coin (set symbol_lifecycle + SymbolLifecycleManager)
 
-- **status:** CODE-DONE (2 class compile PASS; CHỜ chạy builder trên 226 + validate). prerequisite export feature mới H1.
-- **owner:** CCD · **updated:** 2026-06-13 (implement Builder+Manager, compile PASS)
+- **status:** RAN-DONE (builder đã chạy trên KAGGLE→ghi `symbol_lifecycle` 226: 809 record). CHỜ user soát validate. prerequisite export feature mới H1.
+- **owner:** CCD-basis · **updated:** 2026-06-14 (RUN trên Kaggle: 809 record 226-only)
+
+## ✅ KẾT QUẢ CHẠY (2026-06-14, Kaggle kernel `symbol-lifecycle-builder`)
+- Quét **1991 ngày** (2021-01→nay, 7 rỗng) ~69 phút; ghi **809 record** set `symbol_lifecycle` ns `ticker` **226-ONLY** (242 NoRouteToHost từ Kaggle → skip graceful đúng thiết kế, lifecycle 242 = TODO khi cần, chạy trên 226/242).
+- Phân loại: **LIVE=0 | DATA_INCOMPLETE=629 | DEAD=180**.
+- ⚠️ **LIVE=0 KHÔNG phải bug:** kline trên 226 dừng **2026-06-07** (226 = kho backtest, live ghi 242), so "nay" >2 ngày fresh → mọi coin TRADING (629, = live_set) thành DATA_INCOMPLETE. firstSeen/lastSeen/DEAD đều đúng (sample: RADUSDT DEAD 20230510→20240514; BTC/ETH/SOL DATA_INCOMPLETE …→20260607; coin delist có range). Acceptance "không gán DEAD oan coin TRADING" ✓. Nếu cần status LIVE thật → chạy builder trên 242 (data tươi) hoặc làm tươi 226.
+- **Sửa builder để chạy được off-242/Kaggle:** (a) 242 unreachable → bọc try, 226-only graceful (vẫn dual-write nếu chạy trên 226); (b) **fallback `live_set.txt`** trong CWD (Binance API bị geo-block trên Kaggle "restricted location") — pre-fetch 629 TRADING USDT-perp từ dev rồi bundle vào dataset Kaggle.
+- Hạ tầng Kaggle: dataset `chuyendinh/java-run-lc` (jar **sanitized** không secret + config.properties + live_set.txt), kernel script `enable_internet` reach 226. Recipe: [[kaggle-java-run-recipe]].
 - **Liên hệ:** REBUILD_ROADMAP (mục Lifecycle) + ADR-0011. **Kế thừa TASK-008** (logic exchangeInfo + phân loại sống/chết đã viết). Là nền giải dần cái "vênh config DIED 3 nguồn" mà 008 nêu.
 
 ## Mục tiêu
