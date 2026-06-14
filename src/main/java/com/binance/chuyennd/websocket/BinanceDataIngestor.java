@@ -16,6 +16,8 @@ public class BinanceDataIngestor {
         new TickerIngestor2AerospikeNew().start();
         // OI ingester: thread riêng, per-symbol throttled qua BinanceRestGuard (TASK-007 C).
         new OpenInterestIngestor2AerospikeNew().start();
+        // TASK-031: forward-rolling nến 15m/4h BTC/ETH → 242 (nối 009 historical). Cần trước golive gate.
+        new Kline15m4hForwardRoller().start();
         // TASK-028 #2: bật lại watchdog (trước bị comment → P1 không có giám sát chạy-nhưng-stale).
         startThreadAutoRestartProgram();
     }
