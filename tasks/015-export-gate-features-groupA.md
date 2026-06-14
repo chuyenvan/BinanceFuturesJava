@@ -1,7 +1,7 @@
 # TASK-015: Export feature gate NHÓM A (sẵn-có) + validate RIÊNG từng group
 
-- **status:** TODO (H1 — feature gate bước 1, nhóm sẵn-có). CHẠY sau khi 012 PASS (đã PASS).
-- **owner:** _(điền khi claim — đồng bộ `docs/AGENTS.md`)_ · **updated:** _(điền)_
+- **status:** REVIEW — code DONE (`ExportGateFeaturesGroupA`); RUN+validate trên 226 (job đọc nặng — chưa chạy từ phiên dev). CHẠY sau khi 012 PASS (đã PASS).
+- **owner:** CCD-024 · **updated:** 2026-06-14
 - **Spec:** `docs/H1_GATE_SPEC.md` §2.1 + §2.4. Nhóm A = feature ĐÃ CÓ trong `MarketFeatures`/`ComprehensiveMarketFeatureExtractor` — chỉ export + validate, **KHÔNG code feature mới** (candidate nhóm B để task sau).
 
 ## Mục tiêu
@@ -31,12 +31,14 @@ Export feature nhóm A ra cột, **align `t` với `gate_return.csv`** (sample 1
 - ⚠️ **RỦI RO SURVIVORSHIP QUA FEATURE (bắt buộc kiểm):** breadth/basket tính trên universe — phải GỒM 30 coin die đã backfill (data đầy đủ). Kiểm `ComprehensiveMarketFeatureExtractor` có loại coin qua `Constants.diedSymbol` không. Nếu CÓ → 226 lúc export phải dùng config **DIED HẸP (BTCDOM-only)**, TUYỆT ĐỐI không ăn config prod 129 (sẽ loại 30 core vừa backfill → survivorship hỏng, P1 vô nghĩa). Báo số coin tham gia breadth mỗi năm để xác nhận đủ. (Lifecycle 010 giải triệt để sau; trong lúc chờ phải đảm bảo thủ công.)
 
 ## Acceptance
-- [ ] File feature nhóm A, align `t` với `gate_return.csv`, 2021→nay.
-- [ ] Mỗi group validate (a–e) PASS, kèm số liệu.
-- [ ] volatilityRegime encode + mapping lưu; cột fundingRateRaw → basketFundingAvg.
-- [ ] KHÔNG có TIME / momentum1M-5M / label-cũ trong output.
+- [~] File feature nhóm A, align `t` với `gate_return.csv`, 2021→nay. — **CODE XONG**, chưa chạy (job nặng 226; data 226 hiện dừng ~2026-06-07 per scan 023).
+- [~] Mỗi group validate (a–e) PASS, kèm số liệu. — **CODE XONG** (chạy cùng tool), chưa có số (chưa chạy 226).
+- [x] volatilityRegime encode + mapping lưu; cột fundingRateRaw → basketFundingAvg. — ordinal LOW=0/NORMAL=1/HIGH=2 + sidecar `gate_features_groupA_volatilityRegime_mapping.txt`; cột đổi tên `basketFundingAvg` (giá trị = fundingRateRaw, KHÔNG đổi).
+- [x] KHÔNG có TIME / momentum1M-5M / label-cũ trong output. — chỉ 19 feature §2.1; loại rsi14/distMA20/momentumAcceleration/trendStrengthETH/trendConsistency/volatility1M/TIME/label.
 
-## (Code điền)
-- **Format + #cột + align gate_return:** …
-- **Validate từng group (range/NaN/recompute/look-ahead/align):** …
-- **Encode volatilityRegime (mapping):** …
+## (Code điền) — `ExportGateFeaturesGroupA.java` (commit pending) · compile PASS javac11
+- **Format + #cột + align gate_return:** 1 file `outputs/gate_features_groupA.csv`, key `tEpochMs` (+`tDate`), **19 feature** (4 momentum + 6 volatility[gồm volatilityRegime ordinal] + 5 breadth + 3 funding + 1 basket). Sample 15m, warmup 48h, emit từ 2021-01-01 07:00 GMT+7. Extractor `ComprehensiveMarketFeatureExtractor` stateful, feed CHRONOLOGICAL mỗi phút (idempotent với `extractAllFeatures` do `processKline` overwrite cùng startTime). `momentum15M` lấy từ `MarketDataObject.rateDown15MAvg` (đúng nguồn extractor — tên §2.1 là "BTC" nhưng giá trị giữ nguyên feature sẵn-có). Join 025 theo `t`.
+- **Validate từng group (range/NaN/recompute/look-ahead/align):** lớp `Validate` chạy sau export: (a) min/p1/p50/p99/max mỗi feature; (b) đếm NaN/Inf→0 + 0-count mỗi feature (phân biệt 0-thật vs lỗi); (c) recompute độc lập momentum1H/4H/24H BTC (đọc close trực tiếp t & t−N, đường khác ring); (d) look-ahead inherent (feed ≤t, ring/getReturn + funding ≤t); (e) **align**: đọc `gate_return.csv`, kiểm mọi t của gate có trong feature (feature ⊇ gate vì gate cắt t+24h); (e') **survivorship**: #coin breadth (getTopCoin) theo năm.
+- **Encode volatilityRegime (mapping):** ordinal LOW=0, NORMAL=1, HIGH=2 (theo độ biến động tăng); mapping ghi `outputs/gate_features_groupA_volatilityRegime_mapping.txt` + log.
+- **✅ SURVIVORSHIP (đã kiểm code — quan trọng):** path KHÔNG lọc `Constants.diedSymbol` ở read (`readDataFromAerospike1M` đọc mọi ticker proto) / `HistoryManager.updateHistory` (feed mọi symbol) / `CoinRankManager.updateRanking` (xếp từ `getAllSymbolsShort`) / `extractBreadthFeatures` (dùng getTopCoin xếp theo VOLUME). ⇒ điều kiện "phải dùng DIED hẹp" KHÔNG kích hoạt; coin die tham gia tự nhiên miễn data 1m có trên 226 (TASK-005 backfill 30 core). Validate (e') xác nhận bằng #coin/năm. **Vẫn nên chạy với config backtest/train (không cần ép DIED hẹp), nhưng phải đảm bảo set ticker 226 có 30 core.**
+- **⛔ CHẶN/lưu ý chạy:** job đọc nặng → chạy TRÊN 226, KHÔNG đồng thời 012/010-builder/013 (ghi PID/.run theo luật dọn-job). Scan 023 báo **kline@226 dừng ~2026-06-07** → output tới mốc đó (không phải lỗi). Cần `gate_return.csv` (012) ở `outputs/` để validate align.
