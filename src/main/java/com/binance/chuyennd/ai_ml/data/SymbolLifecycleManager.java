@@ -88,6 +88,18 @@ public class SymbolLifecycleManager {
     }
 
     /**
+     * Số symbol đã nạp từ set {@code symbol_lifecycle} (gọi {@link #init()} nếu chưa). Dùng làm GUARD:
+     * giá trị {@code 0} nghĩa là set chưa dựng (builder TASK-010 chưa chạy) → caller PHẢI dừng,
+     * KHÔNG được fallback đọc {@code DIED_SYMBOLS} âm thầm (xem TASK-024).
+     *
+     * @return kích thước cache vòng đời (0 nếu set rỗng/chưa dựng)
+     */
+    public int loadedCount() {
+        if (!isInitialized) init();
+        return cache.size();
+    }
+
+    /**
      * Coin có data SỐNG tại thời điểm t hay không (dùng lọc zombie ở feature/backtest).
      *
      * @param symbol symbol (sẽ uppercase)

@@ -12,7 +12,7 @@
 | 007 fix ban + Reporter + OI + gom log | CCD #2 | ✅ DONE (commit 106baee) | 2026-06-13 | — | A-D xong; ⚠️ startHistoryCrawl VẪN trong code HEAD (**CHƯA gỡ** — recon 021 đính chính note cũ); gỡ = TODO trước deploy (TASK-023); B/D golive OK |
 | 016 fix ingest live (TickerFuturesHelper -1130/-1003) | CCD #1 | ✅ DONE (commit 3704b6e) | 2026-06-13 | — | clamp [1,1500] + guard -1003-rate 8s; self-test 10/10; ⚠️ CHƯA deploy — **gộp deploy với 019 + gỡ-crawl, 1 lần restart 242** |
 | 019 fix funding live (FundingFeeManager + FundingIngestor flush) | CCD #1 (giao) | 🟣 REVIEW (code DONE; chờ gộp deploy 242) | 2026-06-14 | 242 (live) | A lõi `f589309` + **wiring+B `027830b`** (refresh hết DEAD ở HEAD); B = log-thưa-by-design (heartbeat idle). Chờ gộp deploy 016+gỡ-crawl, verify ts trên 242 |
-| 020 audit production 2-process (rà lỗi ẩn) | CCD-audit | 🔵 DOING | 2026-06-14 | đọc-only (242 qua 226) | rà BinanceDataIngestor + BinanceOrderTradingManager; output docs/PRODUCTION_AUDIT.md; KHÔNG sửa |
+| 020 audit production 2-process (rà lỗi ẩn) | CCD-audit | ✅ DONE | 2026-06-14 | — | OUT docs/PRODUCTION_AUDIT.md (12 Cao); Desktop đã bóc → TASK-027 (entry) / 028 (ingest) / 029 (concurrency) / 030 (parity-config) |
 | 021 dump trạng thái thực (reconcile mất log) | CCD-recon | ✅ DONE | 2026-06-14 | đọc-only (git+Aerospike+fs) | OUT: docs/STATUS_RECON.md. CHỐT: 019 wiring+B chưa commit (refresh DEAD ở HEAD); startHistoryCrawl CHƯA gỡ (note 007 sai); 013-B2/015 chưa code; 010 builder chưa chạy; #record cần scan 226/242 |
 | 023 gỡ-crawl + scan Aerospike + deploy-prep | CCD #1 | 🔵 DOING | 2026-06-14 | 226 (scan) + code | gỡ startHistoryCrawl; điền số Aerospike thật (009/OI/lifecycle/funding ts); runbook deploy gộp 016+019+gỡ-crawl (KHÔNG tự deploy) |
 | 008 audit died-symbols | CCD #3 | ✅ DONE | 2026-06-13 | — | phương án A: gỡ 8 coin, config 129 symbol — đã APPLY live |
@@ -24,10 +24,15 @@
 | 015 feature gate NHÓM A (sẵn-có) | (giao CCD-012) | 🟡 TODO (chạy 226) | 2026-06-13 | 226 (đọc nặng) | momentum/vol/breadth/funding; export + validate riêng từng group (H1_GATE_SPEC §2.1) |
 | 017 feature gate B giá/xu-hướng + funding-breadth | — | ⏸ (sau 015) | — | — | B1-B5 + B7; code mới 15m/4h + funding; LÀM NGAY (không chờ data) |
 | 018 feature gate B crowdedness OI/LS-market | — | ⏸ (sau 013) | — | — | B6 OI-market + B8 LS-market (aggregate=gate); CHỜ 013 backfill |
-| H1 ghép + export full | — | ⏸ (sau A+B) | — | — | validate chung + dataset versioned + fingerprint (§2.5/§3) |
+| 025 H1 ghép + export full dataset gate | — | ⏸ (sau 015+017+018) | — | — | §3: ghép + validate chung (corr/leakage/drift/screen) + dataset versioned + fingerprint → H2 |
+| 026 H2 train gate 3-class | — | ⏸ (sau 025) | — | — | §4: purged K-fold+embargo, threshold grid X/Y, beat rule baseline, OOS đông lạnh; Kaggle |
 | 014 khảo sát data.binance.vision | CCD #3 | ✅ DONE | 2026-06-13 | — | KQ trong task: metrics 2020-09 (OI/LS/taker 5m); premiumIndex/mark/index basis 1m (CAO); **liquidationSnapshot KHÔNG còn**; bookDepth 2023+; bookTicker dừng 2024 |
-| 024 funding LABEL triple-barrier (path thô) | — | 🟡 TODO (làm dần, độc lập gate) | 2026-06-14 | 226 (đọc-only) | bước 1 funding model (ADR-0011); export path thô per-coin → barrier ở train; universe qua lifecycle (cần 010 builder) |
+| 024 funding LABEL triple-barrier (path thô) | CCD-024 | 🟣 REVIEW (code DONE; RUN+validate BLOCKED 010-builder) | 2026-06-14 | 226 (đọc-only) | bước 1 funding model (ADR-0011); `ExportFundingLabel.java` path thô per-coin, nhịp 15m, H={4,12,24,72h}; ⛔ universe qua lifecycle nhưng builder 010 CHƯA chạy → set `symbol_lifecycle` rỗng → tool guard `loadedCount==0` sẽ BLOCK. Chờ builder 010 rồi chạy 226 |
 | 022 verify basis 1m (premiumIndex/mark/index) | CCD-basis | 🟣 REVIEW (B1 verify DONE) | 2026-06-14 | tải vision (đọc-only) | OUT `docs/basis_verify.md`: 1m UTC, 3 loại 12-cột; BTC từ **2020-01** (đính chính 014 ghi 2019-12); đại diện = **premiumIndex.close** (=input funding, corr0.895 với mark−index); bổ trợ funding CAO. CHỜ user chốt dùng+schema→B2 backfill |
+| 027 fix entry correctness (audit #6/7/8) | — | 🟡 TODO **ƯU TIÊN** | 2026-06-14 | live (test riêng) | model V3/V4 (đối chiếu Python TRƯỚC), entry price-realtime, aiBrain fail alert |
+| 028 fix ingest robustness (audit #1/2/3) | — | 🟡 TODO | 2026-06-14 | live (test riêng) | funding guard, watchdog dead, HttpRequest nuốt exception câm |
+| 029 fix concurrency+position (audit #4/5/9) | — | 🟡 TODO | 2026-06-14 | live (test riêng) | race key phút, ForkJoinPool/batch, position lock+clear-then-fill |
+| 030 fix parity+config/host (audit #10/11/12) | — | 🟡 TODO | 2026-06-14 | live+sim | pred-null sim≠live, DIED 30vs129 (XÁC NHẬN config prod), getReadClient fail-fast |
 
 Status: 🟡 TODO · 🔵 DOING · 🟣 REVIEW (chờ user/Desktop soát) · ✅ DONE · ⏸ CHỜ (phụ thuộc task khác).
 
