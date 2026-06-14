@@ -37,3 +37,6 @@ python/tool/Binance_Futures_Full_Code.txt
 
 # scratch build dir (recon/feature compile)
 .recon_build/
+
+# secret live keys - KHÔNG track (TASK security)
+src/main/java/com/binance/chuyennd/config/PrivateConfig.java
