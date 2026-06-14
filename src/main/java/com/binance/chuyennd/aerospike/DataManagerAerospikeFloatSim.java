@@ -1307,13 +1307,22 @@ public class DataManagerAerospikeFloatSim {
     /**
      * Đọc dự báo Funding tại 1 thời điểm cụ thể
      */
+    /**
+     * Đọc funding pred 1 mốc. ⚠️ #12 (TASK-030): set {@code funding_pred} là 226-NATIVE (chỉ sinh trên 226 bởi
+     * tooling/HPO) → CỐ Ý dùng {@code getClient226()}, KHÔNG phải hardcode lạc (getReadClient sẽ trỏ 242 ở live
+     * → đọc rỗng + vỡ validator chạy ở dev). CHỈ dùng trong tool/validator/HPO; TUYỆT ĐỐI KHÔNG gọi từ path
+     * quyết-định LIVE (live infer realtime, không đọc pred-set). Bảo vệ thêm: {@link Configs#assertLiveRuntime()}.
+     *
+     * @param timestamp mốc phút (ms)
+     * @return map symbolId→pred (rỗng nếu thiếu record)
+     */
     public static Map<Short, float[]> getFundingPredictionAtTime(long timestamp) {
         try {
             SimpleDateFormat fmt = new SimpleDateFormat("yyyyMMdd-HHmm");
             String keyString = fmt.format(new Date(timestamp));
             Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_FUNDING_PRED, keyString);
 
-            Record record = getClient226().get(null, key);
+            Record record = getClient226().get(null, key);   // 226-native set (xem Javadoc #12) — KHÔNG đổi getReadClient
             if (record != null) {
                 byte[] compressed = (byte[]) record.getValue("data");
                 if (compressed != null) {
@@ -2060,6 +2069,8 @@ public class DataManagerAerospikeFloatSim {
         for (int i = 0; i < timestamps.length; i++) {
             keys[i] = new Key(Configs.AEROSPIKE_NAMESPACE, setName, keyFmt.format(new java.util.Date(timestamps[i])));
         }
+        // ⚠️ #12 (TASK-030): set funding_pred là 226-NATIVE → CỐ Ý getClient226() (KHÔNG getReadClient: ở live trỏ 242
+        // → rỗng, ở dev validator KHÔNG bật kaggle-mode cũng trỏ 242 → vỡ). Chỉ tool/validator/HPO gọi; KHÔNG từ live.
         Record[] records = getClient226().get(batchPolicy, keys);
         if (records == null) return results;
         for (int i = 0; i < records.length; i++) {

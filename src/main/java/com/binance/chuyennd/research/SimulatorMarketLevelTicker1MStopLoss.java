@@ -515,7 +515,13 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
 
         AiPredictionData predict = predictionMap.get(ticker.startTime);
-        if (predict != null && !levelChange.equals(MarketLevelChange.BIG_DOWN)) {
+        // 🧠 #10 PARITY (TASK-030, một bộ não): LIVE createOrderBuyRequest reject khi prediction==null
+        // (DetectEntrySignal2TradeNormal). TRƯỚC ĐÂY sim bỏ qua filter khi predict==null → VẪN vào lệnh "mù"
+        // → P&L sim≠live ở mốc thiếu pred. Nay sim cũng reject pred==null. (CONFIG_VERSION v8→v9.)
+        if (predict == null) {
+            return;
+        }
+        if (!levelChange.equals(MarketLevelChange.BIG_DOWN)) {
             AIRejectFilter.FilterResult filterResult = null;
             if (levelChange == MarketLevelChange.PREDICT_SYMBOL_TRADE) {
                 filterResult = aiRejectFilter.checkSignalDynamic(predict, symbolPred);

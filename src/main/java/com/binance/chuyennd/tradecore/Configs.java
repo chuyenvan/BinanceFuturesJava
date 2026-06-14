@@ -57,6 +57,22 @@ public class Configs {
     public static boolean IS_KAGGLE_MODE = properties.get("IS_KAGGLE_MODE") != null ? getBoolean("IS_KAGGLE_MODE") : false;
     public static String TIME_RUN = Configs.getString("TIME_RUN");
 
+    /**
+     * Fail-fast cho PROCESS LIVE (gọi NGAY đầu {@code main()} của {@code BinanceOrderTradingManager} +
+     * {@code BinanceDataIngestor}). Nếu lỡ bật {@link #IS_KAGGLE_MODE}/{@link #IS_HPO_MODE} trên box live,
+     * {@code DataManagerAerospikeFloatSim.getReadClient()} sẽ trỏ Aerospike 226 (kho BACKTEST, dữ liệu cũ)
+     * thay 242 → bot ĐỌC/QUYẾT ĐỊNH trên data sai mà KHÔNG báo. Audit #12 (TASK-030). DỪNG ngay nếu sai mode.
+     * KHÔNG gọi trong tool backtest/kaggle/HPO (chúng cố ý bật IS_KAGGLE_MODE).
+     */
+    public static void assertLiveRuntime() {
+        if (IS_KAGGLE_MODE || IS_HPO_MODE) {
+            System.err.println("⛔ FATAL (audit #12): process LIVE khởi động với IS_KAGGLE_MODE=" + IS_KAGGLE_MODE
+                    + " / IS_HPO_MODE=" + IS_HPO_MODE + " → getReadClient() sẽ đọc Aerospike 226 (kho backtest) thay 242. "
+                    + "Tắt IS_KAGGLE_MODE trong config.properties trên box live rồi chạy lại. DỪNG.");
+            System.exit(1);
+        }
+    }
+
     // =========================================================
     // 3. CẤU HÌNH GIAO DỊCH CƠ BẢN (BASIC TRADING)
     // =========================================================
@@ -65,6 +81,11 @@ public class Configs {
     public static Integer NUMBER_ENTRY_EACH_SIGNAL = 2; // Số lệnh vào mỗi khi có tín hiệu
     public static Integer NUMBER_TICKER_CAL_RATE_CHANGE = 15; // Số nến để tính biến động
     public static final Integer NUMBER_THREAD_ORDER_MANAGER = Configs.getInt("NUMBER_THREAD_ORDER_MANAGER");
+    // TASK-027 #7: tuổi TỐI ĐA chấp nhận của giá price_realtime (242) khi tính SIZE lệnh live.
+    // price_realtime ghi ~3s/lần (Rest-Price-Loop); 30s = ~10× nhịp, dư cho jitter. Quá tuổi này →
+    // fallback giá nến đóng + cảnh báo. CHỈ dùng ở path entry LIVE (createOrderBuyRequest) — KHÔNG
+    // ảnh hưởng backtest/sim nên KHÔNG cần bump CONFIG_VERSION.
+    public static long PRICE_REALTIME_MAX_AGE_MS = 30 * 1000L;
     // === BƯỚC 0: SLIPPAGE & LOOK-AHEAD GUARD ===
     // Trượt giá mô phỏng cho mỗi chân khớp (entry + exit). 0.0005–0.001 là vùng hợp lý
     // cho coin thanh khoản tốt; coin nhỏ nên cao hơn. Áp cho cả entry và exit.

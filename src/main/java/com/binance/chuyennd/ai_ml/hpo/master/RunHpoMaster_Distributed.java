@@ -47,7 +47,10 @@ public class RunHpoMaster_Distributed {
     // v7 -> v8: BOOKING FIX giá chốt trailing-stop — kẹp priceTP=min(priceSL, ticker.maxPrice) trong
     // updateStatusNew (gap thủng SL thì không bán được level cũ). Giảm calTp ~6% PnL (toàn STOP_MARKET,
     // dồn 2025). Đổi PnL backtest mọi genome => BẮT BUỘC version mới bỏ cache v7.
-    public static final String CONFIG_VERSION = "v8";
+    // v8 -> v9: PARITY FIX (TASK-030 #10, một bộ não) — SIM createOrderBUY khi predict==null TRƯỚC ĐÂY
+    // BỎ filter → VẪN vào lệnh; LIVE createOrderBuyRequest reject khi prediction==null. Nay SIM cũng reject
+    // pred==null (khớp live) => bớt entry ở mốc thiếu pred => đổi PnL backtest mọi genome => bỏ cache v8.
+    public static final String CONFIG_VERSION = "v9";
 
     // 🔥 TÁCH 2 SET:
     //  - QUEUE_SET: chỉ chứa task ĐANG active (PENDING/RUNNING). Worker scanAll cái này nên LUÔN NHỎ.
