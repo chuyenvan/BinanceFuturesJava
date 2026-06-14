@@ -129,7 +129,12 @@ public class ExportGateFeaturesGroupA {
             v.report(time2Md);
         } catch (Exception e) {
             LOG.error("ExportGateFeaturesGroupA lỗi", e);
+            System.exit(1);
         }
+        // Aerospike client để lại thread NON-DAEMON → JVM KHÔNG tự thoát sau khi main() xong việc
+        // (CSV đã ghi + validate đã in). Ép thoát để Kaggle/wrapper finalize + LƯU outputs/ ngay,
+        // tránh treo tới 12h cutoff (đã dính: run đầu xong validate lúc ~72' nhưng kernel kẹt RUNNING).
+        System.exit(0);
     }
 
     /** Rút 19 feature nhóm A từ MarketFeatures theo đúng thứ tự {@link #COLS}; NaN/Inf→0 (đếm ở Validate). */

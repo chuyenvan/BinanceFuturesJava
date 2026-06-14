@@ -22,7 +22,8 @@
 - Trước khi bật forward: chạy lại `Aggregate15m4hBtcEth` **ĐỌC `kline_1m_opt`@242** (KHÔNG 226 — 1m@226 cũng dừng 06-07) → ghi 15m/4h@242 lấp 06-07→nay. Rồi 031 forward giữ realtime (4h tự lấp vì 200×4h > 7d).
 
 ## Deploy + verify
-- **CCD4 tự làm (qua 226, không cần user):** lấp-gap 15m/4h@242 (Aggregate đọc 1m@242) — job DATA, chạy trên 226.
+- **CCD4 tự làm (KHÔNG cần user):** lấp-gap 15m/4h@242 = **SSH vào 226 rồi chạy `Aggregate15m4hBtcEth 242` TẠI 226** (226 thông 242 — như CCD1 đã scan 242 qua SSH: scp class lên 226 + chạy ở đó). KHÔNG chạy từ máy dev (dev không tới 242 → đó là lý do PHẢI SSH 226, KHÔNG phải lý do bỏ cho user). Lệnh trên 226: `java -cp .../binance-java-sdk-1.2.4.jar com.binance.chuyennd.ai_ml.features.export.Aggregate15m4hBtcEth 242`.
+  - ⚠️ Độ sâu 1m@242: **032 đã xác nhận `kline_1m_opt`@242 liên tục ~2021-01→nay (22.25GB) → full-rebuild AN TOÀN** (không mất data tháng-biên). Khỏi lo.
 - **CHỈ USER tay:** deploy jar mới + restart 2 process live `BinanceDataIngestor` (016/028/029-ingest/031) + `BinanceOrderTradingManager`/`DetectEntry` (027/030/029-trading) theo **pid-file** (KHÔNG killall). CCD4 soạn sẵn lệnh + checklist cho user.
 - **CONFIG_VERSION v9:** nếu đang có HPO chạy → điểm cache cũ thành vô nghĩa. BÁO user trước restart.
 - **Verify sau restart:**
@@ -39,12 +40,12 @@
 
 ## Acceptance
 - [x] Jar gồm đủ 5 fix (soát Configs chung). — `mvn -o package` PASS (94.2MB); xác nhận 7 class chủ chốt trong jar; Configs có assertLiveRuntime(030)+PRICE_REALTIME_MAX_AGE_MS(027), RunHpoMaster v9.
-- [~] Lấp gap 15m/4h@242 xong trước bật 031. — **CHƯA chạy được từ dev** (242 unreachable; job phải chạy TRÊN 226). ĐÃ chuẩn bị: thêm arg `242` cho Aggregate (đọc 1m@242) + runbook + check an toàn độ sâu 1m@242.
+- [x] Lấp gap 15m/4h@242 xong trước bật 031. — ✅ **ĐÃ CHẠY trên 226** (SSH `id_rsa_chuyennd@103.157.218.226:2222`, inject `.task033_classes` + jar, `Aggregate15m4hBtcEth 242`). KQ: BTC/ETH 15m+4h range **20210101→20260614** (lấp gap 06-07→nay), ghi 226+242 (66 record-tháng/series); VALIDATE 4/4 khung khớp (read-back từ **242**, gồm khung cuối ~06-14) + recompute độc lập KHỚP. 1m@242 đủ sâu (TASK-032 xác nhận) → full-rebuild an toàn. Log: `outputs/.run/Aggregate242.log` @226.
 - [x] Checklist verify từng fix sẵn sàng. — `docs/DEPLOY_242_dot2.md §3` (027/028/029/030/031 + chung).
 - [x] KHÔNG tự deploy; chờ user. — runbook để user bấm; CCD chỉ build+chuẩn bị.
 
 ## (Code điền) — TASK-033
 - **Build jar (soát Configs):** `mvn -o package` PASS, `target/binance-java-sdk-1.2.4.jar` (94.2MB, build 13:06). `jar tf` xác nhận đủ: OnnxInferenceManager/DetectEntry (027 working-tree), BinanceOrderTradingManager/TickerIngestor (029), Simulator/Configs/RunHpoMaster-v9 (030), Kline15m4hForwardRoller (031). Configs chung: `assertLiveRuntime`+`PRICE_REALTIME_MAX_AGE_MS`. ⚠️ 027 (OnnxInferenceManager/DetectEntry) CHƯA commit (working tree CCD-audit) — build từ working tree GỒM 027; CCD-audit nên commit trước build chính thức.
-- **Lấp gap Aggregate@242:** Aggregate cũ hardcode `IS_KAGGLE_MODE=true`→đọc 226 (1m@226 dừng 06-07, KHÔNG lấp được). Thêm **arg `242`** → `IS_KAGGLE_MODE=false` → `getReadClient`→242 đọc 1m LIVE; mặc định (không arg) giữ 226 (backtest TASK-009). Lệnh + ⚠️ KIỂM TRA độ sâu 1m@242 trước (tránh ghi đè tháng-biên mất data) ở `docs/DEPLOY_242_dot2.md §1a`. **CHƯA chạy** (dev không tới 242 — phải chạy TRÊN 226).
+- **Lấp gap Aggregate@242 — ✅ ĐÃ CHẠY:** Aggregate cũ hardcode `IS_KAGGLE_MODE=true`→đọc 226 (1m@226 dừng 06-07). Thêm **arg `242`**→`IS_KAGGLE_MODE=false`→`getReadClient`→242 đọc 1m LIVE; mặc định giữ 226 (backtest TASK-009). **Đã SSH 226** (`id_rsa_chuyennd@103.157.218.226:2222`) inject `.task033_classes` (Aggregate.class) + jar cũ, chạy `Aggregate15m4hBtcEth 242` (nohup, PID/log theo luật dọn-job). KQ: 15m/4h BTC&ETH **2021-01→2026-06-14**, ghi 226+242, VALIDATE 4/4+recompute KHỚP. KHÔNG kill job CCD#1 (GroupB). Đã dọn `.task033_classes` sau khi xong (giữ log).
 - **Verify sau restart:** `docs/DEPLOY_242_dot2.md §3` — per-fix (027 size/price_realtime+V4-gỡ+aiBrain; 028 guard/watchdog/HttpRequest; 029 không mất-nến/không-kẹt-lock; 030 #12 fail-fast lên-được; 031 ts 15m/4h tiến) + chung (-1130 hết, refresh N>0, ghi 242, Reporter). + ⚠️ CONFIG_VERSION v9 invalidate cache HPO v8 (báo user nếu HPO chạy).
-- **CHẶN còn lại (giao user/226):** (1) chạy lấp-gap `Aggregate15m4hBtcEth 242` TRÊN 226 (sau khi verify độ sâu 1m@242); (2) deploy jar + restart 2 process live theo runbook (user tay).
+- **CHẶN còn lại (CHỈ user tay):** deploy jar mới + restart 2 process live theo `docs/DEPLOY_242_dot2.md` (+ báo user nếu HPO đang chạy do CONFIG_VERSION v9). Lấp-gap data@242 ĐÃ XONG (CCD làm trên 226). ⚠️ 027 (OnnxInferenceManager/DetectEntry) nên commit trước build deploy chính thức.

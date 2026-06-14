@@ -167,8 +167,16 @@ public class SymbolLifecycleBuilder {
         wp.sendKey = true;
         wp.expiration = 0;
         wp.recordExistsAction = RecordExistsAction.UPDATE;
-        AerospikeClient c242 = DataManagerAerospikeFloatSim.getClient242();
         AerospikeClient c226 = DataManagerAerospikeFloatSim.getClient226();
+        // 242 là PRIVATE: chỉ tới được TỪ 226/242. Khi chạy từ dev/Kaggle (chỉ tới 226) thì
+        // new AerospikeClient(242) NÉM ngay → phải bọc để KHÔNG chết cả builder. Tới được (chạy trên
+        // 226) → vẫn dual-write 242+226 như thiết kế. Tới-không-được → 226-only, log MỘT lần.
+        AerospikeClient c242 = null;
+        try {
+            c242 = DataManagerAerospikeFloatSim.getClient242();
+        } catch (Exception ex) {
+            LOG.warn("⚠️ Không kết nối 242 (private — chỉ tới từ 226/242). Chạy 226-ONLY, bỏ ghi 242: {}", ex.getMessage());
+        }
 
         int nLive = 0, nIncomplete = 0, nDead = 0, written = 0;
         for (String sym : universe) {
@@ -204,11 +212,13 @@ public class SymbolLifecycleBuilder {
             };
             Key key = new Key(Configs.AEROSPIKE_NAMESPACE, SymbolLifecycleManager.SET_NAME, sym);
             boolean ok = false;
-            try {
-                c242.put(wp, key, bins);
-                ok = true;
-            } catch (Exception ex) {
-                LOG.warn("⚠️ ghi 242 {} lỗi: {}", sym, ex.getMessage());
+            if (c242 != null) {
+                try {
+                    c242.put(wp, key, bins);
+                    ok = true;
+                } catch (Exception ex) {
+                    LOG.warn("⚠️ ghi 242 {} lỗi: {}", sym, ex.getMessage());
+                }
             }
             try {
                 c226.put(wp, key, bins);
@@ -219,8 +229,9 @@ public class SymbolLifecycleBuilder {
             if (ok) written++;
         }
 
-        LOG.info("💾 Ghi set '{}' xong: {} record | LIVE={} | DATA_INCOMPLETE={} | DEAD={} | (242+226)",
-                SymbolLifecycleManager.SET_NAME, written, nLive, nIncomplete, nDead);
+        LOG.info("💾 Ghi set '{}' xong: {} record | LIVE={} | DATA_INCOMPLETE={} | DEAD={} | targets={}",
+                SymbolLifecycleManager.SET_NAME, written, nLive, nIncomplete, nDead,
+                (c242 != null ? "242+226" : "226-only"));
 
         // 4) Sample kiểm tay.
         LOG.info("🔬 SAMPLE (kiểm tay): symbol | status | firstSeen | lastSeen");
@@ -239,14 +250,25 @@ public class SymbolLifecycleBuilder {
         LOG.info("🏁 LIFECYCLE BUILDER DONE {}s", (System.currentTimeMillis() - t0) / 1000);
     }
 
+    /** File override LIVE_SET (1 symbol/dòng) đọc từ CWD — dùng khi Binance API bị geo-block (vd Kaggle). */
+    private static final String LIVE_SET_FILE = "live_set.txt";
+
     /**
-     * Lấy tập symbol đang giao dịch (status TRADING, USDT-perp) từ Binance exchangeInfo.
-     * Tái dùng pattern TASK-008/BudgetManager. ExchangeInfoEntry không có contractType nên loại perp
-     * bằng đuôi USDT + không chứa '_' (delivery) + quoteAsset=USDT.
+     * Lấy tập symbol đang giao dịch (status TRADING, USDT-perp).
+     * <p>ƯU TIÊN file {@value #LIVE_SET_FILE} trong CWD (mỗi dòng 1 symbol UPPERCASE) nếu có — phục vụ
+     * môi trường KHÔNG gọi được Binance (Kaggle bị geo-block "restricted location"): list được pre-fetch
+     * sẵn từ máy tới được Binance (vd dev/226) rồi bundle vào dataset. KHÔNG có file → gọi Binance
+     * exchangeInfo như cũ (tái dùng pattern TASK-008/BudgetManager).
      *
-     * @return set symbol UPPERCASE đang TRADING; rỗng nếu lỗi kết nối.
+     * @return set symbol UPPERCASE đang TRADING; rỗng nếu cả file lẫn API đều không cho dữ liệu.
      */
     private Set<String> fetchLiveSet() {
+        Set<String> fromFile = loadLiveSetFile();
+        if (!fromFile.isEmpty()) {
+            LOG.info("🌐 LIVE_SET nạp từ {} = {} symbol (bỏ qua Binance API — môi trường geo-block).",
+                    LIVE_SET_FILE, fromFile.size());
+            return fromFile;
+        }
         Set<String> liveSet = new HashSet<>();
         try {
             List<ExchangeInfoEntry> symbols =
@@ -263,6 +285,28 @@ public class SymbolLifecycleBuilder {
             LOG.error("❌ Lấy exchangeInfo lỗi: {}", e.getMessage());
         }
         return liveSet;
+    }
+
+    /**
+     * Đọc LIVE_SET override từ file {@value #LIVE_SET_FILE} trong CWD nếu tồn tại.
+     * Mỗi dòng 1 symbol; bỏ dòng trống/comment (#); lọc {@link #isUsdtPerp}; upper-case.
+     *
+     * @return set symbol UPPERCASE; rỗng nếu file không có/đọc lỗi/không dòng hợp lệ.
+     */
+    private Set<String> loadLiveSetFile() {
+        Set<String> set = new HashSet<>();
+        java.nio.file.Path p = java.nio.file.Paths.get(LIVE_SET_FILE);
+        if (!java.nio.file.Files.exists(p)) return set;
+        try {
+            for (String line : java.nio.file.Files.readAllLines(p)) {
+                String sym = line == null ? "" : line.trim().toUpperCase();
+                if (sym.isEmpty() || sym.startsWith("#")) continue;
+                if (isUsdtPerp(sym)) set.add(sym);
+            }
+        } catch (Exception e) {
+            LOG.warn("⚠️ đọc {} lỗi: {} — sẽ thử Binance API.", LIVE_SET_FILE, e.getMessage());
+        }
+        return set;
     }
 
     private static int monthOf(long ts) {

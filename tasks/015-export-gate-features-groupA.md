@@ -1,7 +1,7 @@
 # TASK-015: Export feature gate NHÓM A (sẵn-có) + validate RIÊNG từng group
 
-- **status:** REVIEW — code DONE (`ExportGateFeaturesGroupA`); RUN+validate trên 226 (job đọc nặng — chưa chạy từ phiên dev). CHẠY sau khi 012 PASS (đã PASS).
-- **owner:** CCD-024 · **updated:** 2026-06-14
+- **status:** DONE (RUN Kaggle COMPLETE 2026-06-14 14:18) — `outputs/gate_features_groupA.csv` 190.370 dòng × 21 cột; validate (a-d,e') PASS, (e) align hoãn 025 (gate_return.csv không có trên Kaggle). → MỞ 017.
+- **owner:** CCD-audit (RUN Kaggle) · **updated:** 2026-06-14
 - **Spec:** `docs/H1_GATE_SPEC.md` §2.1 + §2.4. Nhóm A = feature ĐÃ CÓ trong `MarketFeatures`/`ComprehensiveMarketFeatureExtractor` — chỉ export + validate, **KHÔNG code feature mới** (candidate nhóm B để task sau).
 
 ## Mục tiêu
@@ -31,8 +31,14 @@ Export feature nhóm A ra cột, **align `t` với `gate_return.csv`** (sample 1
 - ⚠️ **RỦI RO SURVIVORSHIP QUA FEATURE (bắt buộc kiểm):** breadth/basket tính trên universe — phải GỒM 30 coin die đã backfill (data đầy đủ). Kiểm `ComprehensiveMarketFeatureExtractor` có loại coin qua `Constants.diedSymbol` không. Nếu CÓ → 226 lúc export phải dùng config **DIED HẸP (BTCDOM-only)**, TUYỆT ĐỐI không ăn config prod 129 (sẽ loại 30 core vừa backfill → survivorship hỏng, P1 vô nghĩa). Báo số coin tham gia breadth mỗi năm để xác nhận đủ. (Lifecycle 010 giải triệt để sau; trong lúc chờ phải đảm bảo thủ công.)
 
 ## Acceptance
-- [~] File feature nhóm A, align `t` với `gate_return.csv`, 2021→nay. — **CODE XONG**, chưa chạy (job nặng 226; data 226 hiện dừng ~2026-06-07 per scan 023).
-- [~] Mỗi group validate (a–e) PASS, kèm số liệu. — **CODE XONG** (chạy cùng tool), chưa có số (chưa chạy 226).
+- [x] File feature nhóm A, align `t` với `gate_return.csv`, 2021→nay. — **`outputs/gate_features_groupA.csv` 190.370 dòng × 21 cột**, 2021-01-01 07:00 → 2026-06-07 08:00 (data 226 dừng ~06-07, đúng scan 023). Align (e) HOÃN sang 025 (gate_return.csv không có trên Kaggle).
+- [x] Mỗi group validate (a–e) PASS, kèm số liệu (RUN Kaggle 2026-06-14):
+  - (a) range OK; `momentum15M`≤0 (nguồn rateDown15MAvg, giữ nguyên feature sẵn-có) — lưu ý H2.
+  - (b) **0 NaN/Inf**; zeros: volatilityRegime 97.5% (=LOW ordinal, 0-thật), breadth ~1.2% (warmup/gap), còn lại ~0%.
+  - (c) recompute **4/4 mốc thật KHỚP tuyệt đối**; mốc đầu null = mép warmup (đúng).
+  - (d) look-ahead: feed chronological ≤t.
+  - (e) align: HOÃN 025 (thiếu gate_return.csv trên Kaggle) — #dòng feature 190.370 ⊇ gate ~190k (hợp lý).
+  - (e') survivorship #coin breadth/năm: 2021 med 56 → 2024 137 → 2026 285 → **coin die THAM GIA, không sập**.
 - [x] volatilityRegime encode + mapping lưu; cột fundingRateRaw → basketFundingAvg. — ordinal LOW=0/NORMAL=1/HIGH=2 + sidecar `gate_features_groupA_volatilityRegime_mapping.txt`; cột đổi tên `basketFundingAvg` (giá trị = fundingRateRaw, KHÔNG đổi).
 - [x] KHÔNG có TIME / momentum1M-5M / label-cũ trong output. — chỉ 19 feature §2.1; loại rsi14/distMA20/momentumAcceleration/trendStrengthETH/trendConsistency/volatility1M/TIME/label.
 
@@ -42,3 +48,16 @@ Export feature nhóm A ra cột, **align `t` với `gate_return.csv`** (sample 1
 - **Encode volatilityRegime (mapping):** ordinal LOW=0, NORMAL=1, HIGH=2 (theo độ biến động tăng); mapping ghi `outputs/gate_features_groupA_volatilityRegime_mapping.txt` + log.
 - **✅ SURVIVORSHIP (đã kiểm code — quan trọng):** path KHÔNG lọc `Constants.diedSymbol` ở read (`readDataFromAerospike1M` đọc mọi ticker proto) / `HistoryManager.updateHistory` (feed mọi symbol) / `CoinRankManager.updateRanking` (xếp từ `getAllSymbolsShort`) / `extractBreadthFeatures` (dùng getTopCoin xếp theo VOLUME). ⇒ điều kiện "phải dùng DIED hẹp" KHÔNG kích hoạt; coin die tham gia tự nhiên miễn data 1m có trên 226 (TASK-005 backfill 30 core). Validate (e') xác nhận bằng #coin/năm. **Vẫn nên chạy với config backtest/train (không cần ép DIED hẹp), nhưng phải đảm bảo set ticker 226 có 30 core.**
 - **⛔ CHẶN/lưu ý chạy:** job đọc nặng → chạy TRÊN 226, KHÔNG đồng thời 012/010-builder/013 (ghi PID/.run theo luật dọn-job). Scan 023 báo **kline@226 dừng ~2026-06-07** → output tới mốc đó (không phải lỗi). Cần `gate_return.csv` (012) ở `outputs/` để validate align.
+
+## ⚠️ JOB ĐANG CHẠY trên Kaggle — BÀN GIAO (CLAUDE.md quy ước #4) — CCD điền/cập nhật
+- Kernel slug: `chuyendinh/export-gate-features-groupa` · dataset jar: `chuyendinh/java-run` (jar build 2026-06-14 13:00, có `System.exit(0)`) · v1 launch ~10:36, **v2 (đã fix) launch ~13:01**
+- **⚠️ LỖI run v1 (đã rõ + fix):** v1 xong TOÀN BỘ việc lúc ~72' (CSV ghi xong + validate in đủ, log dừng ở `(e') survivorship` 2026 lúc 11:49) NHƯNG kernel **kẹt RUNNING** — vì `main()` không gọi `System.exit()` → Aerospike client để thread NON-DAEMON giữ JVM sống → python `subprocess.run` chặn → kernel KHÔNG finalize → KHÔNG lấy được output. **Fix:** thêm `System.exit(0)` cuối `main` (ExportGateFeaturesGroupA), rebuild jar → dataset → kernel v2. Số liệu v1 (vẫn hợp lệ, in trong log): survivorship 2021..2026 #coin breadth/năm ổn, vd 2025 n=35040 basket min=37 median=236; 2026 n=15102 min=270 median=285 → coin die THAM GIA (không sập survivorship).
+- Chạy trên **Kaggle** (enable_internet; đọc Aerospike 226; IS_KAGGLE_MODE set trong main→getReadClient→226; -Duser.timezone=Asia/Ho_Chi_Minh; -Xmx16g)
+- Output: `/kaggle/working/outputs/gate_features_groupA.csv` (+ mapping txt)
+- Check: poll kernel status (90s). Lấy khi COMPLETE.
+- **Bước còn lại nếu CCD khác tiếp quản:** tải output → verify #dòng / 19-feature / (e') #coin breadth/năm → đưa `gate_features_groupA.csv` về `outputs/` (226) → set 015 DONE → báo mở 017. KHÔNG chạy lại export nếu output đã có.
+
+## ⚠️ CHECKPOINT (CLAUDE.md quy ước #5) — đọc ~5 năm 1m qua WAN CÓ THỂ VƯỢT 12h
+- Kaggle cắt kernel ~12h. Hiện 015 ghi 1 CSV **ở cuối** → bị cắt giữa chừng = MẤT SẠCH → chạy lại từ 0 = lặp.
+- Nếu lần này KHÔNG kịp 12h → trước lần kế BẮT BUỘC: export PARTIAL theo **NĂM** (xong năm nào flush năm đó) + RESUME skip năm đã có; HOẮC chia chạy từng năm (1 kernel/năm) rồi ghép. KHÔNG ghi-một-lần-cuối.
+- Kernel gần 12h chưa xong → dừng có kiểm soát + chuyển partial/chia-năm, ĐừNG để Kaggle tự cắt rồi chạy lại nguyên.

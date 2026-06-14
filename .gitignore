@@ -34,3 +34,6 @@ python/tool/Binance_Futures_Full_Code.txt
 .aider*
 # golden fingerprint + survivorship CSV = artifact chay, KHONG commit (baseline chot nam o docs/golden/)
 /outputs/
+
+# scratch build dir (recon/feature compile)
+.recon_build/

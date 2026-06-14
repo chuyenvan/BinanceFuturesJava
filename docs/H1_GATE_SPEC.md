@@ -104,8 +104,36 @@ Sau khi MỌI feature PASS riêng: ghép 1 bảng (key `t`) → validate chung: 
 3. **Nhóm B crowdedness OI/LS (B6, B8 — CHỜ 013)** — sau khi 013 verify+backfill xong. → TASK-018.
 4. Ghép + full — sau khi A+B PASS (§3).
 
-## §3. EXPORT FULL + VALIDATE CHUNG — (sau §1+§2)
-Dataset versioned + fingerprint; validate 2 tầng (input tái dùng `validate_data` cải tiến + output recompute + cross-audit độc lập); statistical screen. **Chi tiết sau.**
+## §3. GHÉP + EXPORT FULL + VALIDATE CHUNG (sau A+B PASS riêng)
+
+### 3.1 Ghép
+Input: `gate_return.csv` (012, label) + feature A (015) + B-now (017) + B-crowd (018). Key `t` (15m), join trên t có đủ label + mọi feature. **Báo #dòng trước/sau join** (mất bao nhiêu do thiếu feature/label — ví dụ warmup MA200 cắt ~200 ngày đầu, OI chỉ từ ~2021-12).
+
+### 3.2 Validate CHUNG toàn bảng (sau khi từng feature PASS §2.4)
+- (a) **Correlation/dedup:** ma trận corr; cặp |corr|>0.95 → **cờ để quyết drop 1** (crowdedness funding/OI/LS dễ trùng; ETH-mom vs BTC-mom). KHÔNG tự drop — liệt kê.
+- (b) **Leakage toàn bảng:** không feature nào chạm dữ liệu >t (label được phép nhìn t+H — tách rõ cột label vs feature). Kiểm proxy: dịch feature ±1 bước xem tương quan với label có bất thường.
+- (c) **Determinism:** chạy 2 lần → hash khớp.
+- (d) **Align:** mọi cột cùng tập `t`; #dòng = #t hợp lệ; không NaN do join sai.
+- (e) **NaN/Inf + warmup:** warmup (MA200/rollingCorr/OI-thiếu) đánh dấu nhất quán (loại dòng hoặc cờ), KHÔNG lẫn 0-giả vs 0-thật.
+- (f) **Drift theo năm:** phân bố mỗi feature 2021..2026 — đổi **bậc thang** (do nguồn data đổi) → cờ (khác với drift regime tự nhiên).
+- (g) **Statistical screen:** feature hằng/gần-hằng/degenerate (variance≈0, >X% cùng giá trị) → cờ loại.
+
+### 3.3 Export FULL dataset (H1 output → H2)
+- **Versioned:** `gate_dataset_vN_YYYYMMDD` (parquet + csv).
+- **Manifest + fingerprint:** hash nội dung + ghi: #dòng, #cột, range t, danh sách feature (tên+task nguồn), **commit hash** sinh, CONFIG_VERSION, DIED/lifecycle dùng, ngày. → tái lập + truy nguồn.
+- **2 tầng validate:** INPUT (tái dùng `validate_data` cải tiến 011 trên feature nguồn) + OUTPUT (recompute mẫu từ dataset cuối + cross-audit độc lập).
+- **OOS cutoff:** ghi khuyến nghị (vd 12 tháng cuối đông lạnh) vào manifest — KHÔNG split ở đây (H2 lo CV), chỉ đánh dấu để H2 không train lấn.
+
+## §4. H2 — TRAIN GATE (harness riêng, sau §3 dataset) — KHUNG
+*(Chi tiết chốt khi có dataset; đây khung để không lạc hướng.)*
+- **Tách H1:** đọc dataset versioned, **verify fingerprint trước train**. Chạy Kaggle (RUNBOOK).
+- **CV:** purged K-fold + embargo = H (chống leak do overlap label) + sample-weight uniqueness.
+- **3-class hoá:** áp threshold X(H)/Y(H) (§1 C2) lên return thô → **quét grid** (X(24h)∈{−10,−12,−15,−20%}, Y=0.6|X|, H∈{4,12,24h}). KHÔNG re-export.
+- **Imbalance:** lớp GIẢM ~0.92% (012) → class-weight mạnh/focal; metric = **precision/recall lớp GIẢM + lift**, KHÔNG accuracy tổng.
+- **Rule baseline:** "breadth thấp AND funding cao → block" — model phải **BEAT rule** mới giữ.
+- **Importance:** MDA/SHAP → tỉa feature trùng (đã cờ ở §3.2a).
+- **OOS đông lạnh:** 12T cuối — chạm 1 lần cuối, không tune.
+- **Output:** model + report (precision/recall lớp giảm, lift, beat-rule, importance, OOS). Beat-rule + OOS đạt → mới đưa gate vào serve.
 
 ---
 Tham chiếu: ADR-0010 (gate), REBUILD_ROADMAP (H1/H2). Funding: ADR-0011 (chưa chốt — làm sau gate).

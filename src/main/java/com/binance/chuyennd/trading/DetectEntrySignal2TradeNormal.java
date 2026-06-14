@@ -121,6 +121,13 @@ public class DetectEntrySignal2TradeNormal {
             Map<String, List<KlineObjectSimple>> symbol2LastTickers = DataManagerAerospikeFloatSim.readDataForSymbols(
                     System.currentTimeMillis() - 1500 * Utils.TIME_MINUTE, 1500);
             List<KlineObjectSimple> btcTickers = symbol2LastTickers.get(Constants.SYMBOL_PAIR_BTC);
+            // TASK-027: thiếu data BTC → trước đây NPE rơi vào catch in stacktrace (im lặng).
+            // Nay BỎ vòng entry phút này + log rõ (BTC là gốc tính market level, không có thì không quyết được).
+            if (btcTickers == null || btcTickers.isEmpty()) {
+                LOG.error("🚨 [LIVE] Thiếu data BTC ({}) trong window → BỎ vòng entry phút này (không tính được market level).",
+                        Constants.SYMBOL_PAIR_BTC);
+                return;
+            }
             KlineObjectSimple btcTicker = btcTickers.get(btcTickers.size() - 1);
             Float btcRateChange = Utils.rateOf2Double(btcTicker.priceClose, btcTicker.priceOpen).floatValue();
             Float btcMax15M = null;
@@ -492,7 +499,22 @@ public class DetectEntrySignal2TradeNormal {
 
 
         Float priceEntry = ticker.priceClose;
-        Float quantity = Utils.calQuantity(budget, Configs.LEVERAGE_ORDER, priceEntry, symbol);
+        // TASK-027 #7: SIZE (quantity) theo GIÁ TƯƠI price_realtime (242), KHÔNG theo nến đã đóng
+        // (priceClose trễ ~1-2′) → tránh size sai khi coin biến động mạnh trong phút. Quyết định gate
+        // vẫn dựa nến đóng; chỉ quantity dùng giá tươi. Giá tươi thiếu/quá cũ → fallback priceClose + cảnh báo.
+        // Đặt SAU mọi early-return (filter/budget/tier) nên chỉ 1 GET Aerospike cho lệnh thật sự đi tiếp.
+        Float priceForSizing = priceEntry;
+        Float priceRt = DataManagerAerospikeFloatSim.getPriceRealtime(symbol);
+        Long priceRtTs = DataManagerAerospikeFloatSim.getPriceRealtimeTs(symbol);
+        if (priceRt != null && priceRt > 0 && priceRtTs != null
+                && (System.currentTimeMillis() - priceRtTs) <= Configs.PRICE_REALTIME_MAX_AGE_MS) {
+            priceForSizing = priceRt;
+        } else {
+            long ageSec = priceRtTs == null ? -1 : (System.currentTimeMillis() - priceRtTs) / 1000;
+            LOG.warn("⚠️ [{}] price_realtime không dùng được để size (price={}, tuổi={}s) → fallback priceClose nến đóng {}",
+                    symbol, priceRt, ageSec, priceEntry);
+        }
+        Float quantity = Utils.calQuantity(budget, Configs.LEVERAGE_ORDER, priceForSizing, symbol);
         if (StringUtils.equals(symbol, Constants.SYMBOL_PAIR_BTC)) {
             Float minBtcTrade = 0.002f;
             if (quantity < minBtcTrade) {
@@ -603,6 +625,22 @@ public class DetectEntrySignal2TradeNormal {
 
         } catch (Exception e) {
             LOG.error("Failed to initialize AI System", e);
+        }
+
+        // TASK-027 #8: aiBrain là não entry — null nghĩa bot KHÔNG thể ra quyết định vào lệnh.
+        // Trước đây catch ở trên NUỐT lỗi (chỉ LOG.error) → bot chạy CÂM: mọi createOrderBuyRequest
+        // bị chặn ở nhánh prediction==null, KHÔNG vào lệnh, KHÔNG ai biết. Nay: alert Telegram +
+        // fail-fast (ném exception) để daemon restart và người vận hành biết ngay, không chạy câm.
+        if (aiBrain == null) {
+            String msg = "🚨 [LIVE] aiBrain (model entry) INIT THẤT BẠI — bot KHÔNG vào lệnh được. Kiểm tra model: "
+                    + Configs.FILE_AI_ENTRY_PREDICTIONS;
+            LOG.error(msg);
+            try {
+                Utils.sendSms2Telegram(msg);
+            } catch (Exception ex) {
+                LOG.error("Không gửi được Telegram alert aiBrain null", ex);
+            }
+            throw new IllegalStateException("aiBrain init failed - từ chối chạy câm (TASK-027 #8)");
         }
     }
 

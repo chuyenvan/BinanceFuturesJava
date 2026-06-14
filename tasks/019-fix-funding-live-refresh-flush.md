@@ -1,7 +1,7 @@
 # TASK-019: Fix funding LIVE — FundingFeeManager không refresh + FundingIngestor flush chậm [ƯU TIÊN]
 
-- **status:** TODO — **ƯU TIÊN (funding live sai → ảnh hưởng feature gate + funding model + trade).** Giao CCD #1.
-- **owner:** _(điền khi claim — đồng bộ `docs/AGENTS.md`)_ · **updated:** _(điền)_
+- **status:** REVIEW — code DONE & committed (A lõi `f589309` + wiring+B `027830b`, refresh hết DEAD ở HEAD). Chờ gộp deploy 242 (016 + gỡ-crawl) + verify ts trên 242.
+- **owner:** CCD #1 · **updated:** 2026-06-14
 - **File:** `research/FundingFeeManager.java` + `websocket/FundingIngestor2AerospikeNew.java`. Production 242/live.
 
 ## ⚠️ AN TOÀN
@@ -50,11 +50,24 @@
 - Gộp **gỡ-`startHistoryCrawl`** (log xác nhận vẫn chạy 242 = jar 106baee) + **016** + **019** vào MỘT jar → restart 242 một lần (tránh nhiều lần gián đoạn ingest). Backup jar cũ + rollback. User duyệt thời điểm.
 
 ## Acceptance
-- [ ] A: `isProductionMode` được đọc; production refresh; `setProductionMode(true)` gọi đúng; backtest determinism.
-- [ ] B: xác định bug-thật/log-thưa bằng `funding_data` ts; sửa đúng (nhịp hoặc log), không đổi logic ghi.
-- [ ] Verify chuỗi: funding live mới, không cũ/0.
+- [x] A: `isProductionMode` được đọc (qua `setProductionMode`→`startProductionRefresh`); production refresh 30'; `setProductionMode(true)` gọi ở live `initData`; backtest determinism (không gọi → load-once).
+- [x] B: xác định **log-thưa-by-design** (buffer rỗng→continue→im); sửa LOG (heartbeat idle), KHÔNG đổi nhịp 60s/`writeFundingMap`. (ts-check tuyệt đối cần 242.)
+- [~] Verify chuỗi: logic đúng + compile pass; **chạy thật cần TRÊN 242** (máy dev firewall chặn 242).
 
 ## (Code điền)
-- **A cách refresh + setProductionMode usage:** …
-- **B funding_data ts trước/sau + nguyên nhân + sửa gì:** …
-- **Verify chuỗi + backtest determinism:** …
+
+### A — cách refresh + setProductionMode usage (DONE)
+- `FundingFeeManager`: `setProductionMode(true)` → `startProductionRefresh()` (idempotent, `synchronized`, cờ `refreshStarted`) khởi `ScheduledExecutorService` (daemon, tên `FundingFee-Refresh`) chạy `refreshCache()` **mỗi 30'** (N ≤ chu kỳ funding 1h/4h/8h).
+- `refreshCache()`: duyệt symbol ĐANG trong cache → `getFundingMap(symbol)` → **atomic-swap per symbol** (`ConcurrentHashMap.put`, thread-safe với reader); BỎ QUA symbol đọc ra rỗng (không xoá cache khi lỗi đọc tạm thời). Symbol mới vẫn lazy-load ở `getNearestFundingFee`. Chọn cách "reload per-symbol-in-cache" thay vì `getAllFundingMap` (nặng, scan toàn set) — chỉ tốn theo số symbol thực dùng.
+- **Usage:** trước đây `setProductionMode` KHÔNG nơi nào gọi (dead). Thêm `FundingFeeManager.getInstance().setProductionMode(true)` ở đầu `DetectEntrySignal2TradeNormal.initData()`. Đường tới đây DUY NHẤT: `BinanceOrderTradingManager.main()` → `.start()` → `initData()` (live). Backtest dùng Simulator, KHÔNG đụng class này → `isProductionMode=false` → không scheduler → load 1 lần như cũ ⇒ **determinism**.
+- KHÔNG đổi guard 24h trong `getNearestFundingFee` (là staleness-guard hợp lệ; với refresh thì funding luôn tươi nên không còn trả 0).
+
+### B — funding_data ts + nguyên nhân + sửa gì (DONE — log-thưa)
+- **Nguyên nhân (đọc code):** `startFlushLoop` ngủ đúng 60s, nhưng `if (fundingBuffer.isEmpty()) continue;` → KHÔNG log khi rỗng. `fundingBuffer` chỉ đầy khi polling phát hiện **settlement** (`nextFundingTime` nhảy mốc) — funding settle theo kỳ (1h/4h/8h), nên đa số phút buffer rỗng ⇒ im log. 9 phút không log (23:13→23:22) = **log-thưa BÌNH THƯỜNG**, KHÔNG phải ghi-chậm: nhịp 60s đúng (60000ms), không sai đơn vị, thread Flush riêng thread Polling, exception được catch-continue.
+- **Sửa:** thêm **heartbeat idle** — đếm `idleCycles`, mỗi ~10 phút log `💤 Funding flush idle N phút … flush gần nhất X phút trước`. GIỮ NGUYÊN nhịp 60s + `writeFundingMap` (guard chống mất lịch sử). Reset `idleCycles` + cập nhật `lastFlushMs` khi có flush.
+- ⚠️ Xác nhận tuyệt đối (đọc `funding_data.ts` vài symbol so `now`) phải chạy TRÊN 242 — máy dev bị firewall chặn 242:3222 (SocketTimeout). Nếu trên 242 thấy ts mới nhất cách `now` ~ chu kỳ funding → đúng log-thưa (đã sửa); nếu cách >>1 chu kỳ → còn bug-thật cần soi tiếp (loop hụt nhịp/exception).
+
+### Verify chuỗi + backtest determinism
+- **Compile:** `mvn -o compile` PASS toàn bộ.
+- **Determinism backtest:** by construction — `setProductionMode` chỉ gọi ở live entry; backtest `isProductionMode=false` → load-once, không scheduler → kết quả y hệt.
+- **Live (cần chạy trên 242, gộp deploy):** sau A, `getNearestFundingFee` ở production trả funding MỚI (cache refresh 30') thay vì cũ/0 sau 24h; sau B, log funding có heartbeat + dòng flush khi settle. CHƯA chạy thật (firewall).

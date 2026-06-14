@@ -18,14 +18,15 @@ public class OnnxInferenceManager implements AutoCloseable {
     private final OrtEnvironment env;
     private final OrtSession.SessionOptions opts;
 
-    // Các bộ dự đoán
-    // P: Profit (Dùng Model V4 Sideway)
+    // Các bộ dự đoán — CẢ HAI hiện chạy feature set V3 Full (33 feat); xem predictAll().
+    // (Model V4 Sideway/30-feat từng được cân nhắc nhưng KHÔNG dùng — đã gỡ extractFeaturesV4Sideway.)
+    // P: Return15M
     private final SinglePredictor p15M;
-    // R: Risk (Dùng Model V3.0 Trend/Full)
+    // R: Risk (maxDrawdownNext4H)
     private final SinglePredictor pRisk4H;
 
     public OnnxInferenceManager(String modelDir) throws OrtException {
-        LOG.info("🧠 Initializing V4 Experimental AI Brain from: {}", modelDir);
+        LOG.info("🧠 Initializing AI Brain (V3 Full features) from: {}", modelDir);
         this.env = OrtEnvironment.getEnvironment();
         this.opts = new OrtSession.SessionOptions();
         opts.setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT);
@@ -41,16 +42,14 @@ public class OnnxInferenceManager implements AutoCloseable {
         this.pRisk4H = new SinglePredictor(modelDir, "maxDrawdownNext4H", "Regressor");
 
 
-        LOG.info("✅ All V4 Models loaded successfully!");
+        LOG.info("✅ All Models loaded successfully!");
     }
 
     public PredictionResult predictAll(MarketFeatures f) {
         try {
-            // 1. Chuẩn bị 2 bộ dữ liệu khác nhau
-//            float[] featuresV4 = extractFeaturesV4Sideway(f); // Cho Return
-            float[] featuresV3 = extractFeaturesV3Full(f);    // Cho Risk
+            // CẢ return15M lẫn risk4H dùng chung feature set V3 Full (33 feat) — khớp model live đang chạy.
+            float[] featuresV3 = extractFeaturesV3Full(f);
 
-            // 2. Dự đoán
             float r15 = p15M.predict(featuresV3);
             float risk4 = pRisk4H.predict(featuresV3);
 
@@ -62,94 +61,7 @@ public class OnnxInferenceManager implements AutoCloseable {
     }
 
     /**
-     * TRÍCH XUẤT FEATURES CHO MODEL V4 (SIDEWAY)
-     * Logic: Tính toán các chỉ số phái sinh (Bollinger Pos, Compression...) ngay tại đây
-     * Danh sách 22 features (Khớp với code Python V4 Final)
-     */
-    private float[] extractFeaturesV4Sideway(MarketFeatures f) {
-        float epsilon = 1e-6f;
-
-        // 1. Chuẩn bị các biến cơ sở (Cast sang float 1 lần cho gọn)
-        float vol1H = (float) f.volatility1H;
-        float vol24H = (float) f.volatility24H;
-        float mom15M = (float) f.momentum15M;
-        float mom1H = (float) f.momentum1H;
-        float rsi14 = (float) f.rsi14;
-        float momAccel = (float) f.momentumAcceleration;
-        float fundRaw = (float) f.fundingRateRaw;
-        float fundAvg = (float) f.fundingRateAvg24H;
-
-        // 2. TÍNH TOÁN CÁC BIẾN PHÁI SINH (CALCULATED FEATURES)
-        // Logic khớp với hàm preprocess_data trong Python
-
-        // [CORE] Volatility Term Structure
-        float volTermStructure = vol1H / (vol24H + epsilon);
-
-        // [CORE] Interactions: mom15M_vol1H
-        float mom15M_vol1H = mom15M * vol1H;
-
-        // [CORE] Interactions: rsi_accel = (rsi14 - 50) * momentumAcceleration
-        float rsi_accel = (rsi14 - 50f) * momAccel;
-
-        // [V4 NEW] trend_efficiency = abs(momentum1H) / (volatility1H + 1e-6)
-        float trend_efficiency = Math.abs(mom1H) / (vol1H + epsilon);
-
-        // [V4 NEW] funding_shock = fundingRateRaw - fundingRateAvg24H
-        float funding_shock = fundRaw - fundAvg;
-
-        // [V4 NEW] panic_index = volatility1H * (100 - rsi14)
-        float panic_index = vol1H * (100f - rsi14);
-
-        // 3. XÂY DỰNG MẢNG FEATURE (Thứ tự phải khớp tuyệt đối với danh sách feature_columns)
-        return new float[]{
-                // --- Nhóm Tín Hiệu Nhanh ---
-                mom15M,                             // 1. momentum15M
-                mom1H,                              // 2. momentum1H
-                (float) f.momentum4H,               // 3. momentum4H
-                (float) f.momentum24H,              // 4. momentum24H
-                momAccel,                           // 5. momentumAcceleration
-                rsi_accel,                          // 6. rsi_accel (Calculated)
-                mom15M_vol1H,                       // 7. mom15M_vol1H (Calculated)
-
-                // --- Nhóm Môi Trường ---
-                (float) f.volatility15M,            // 8. volatility15M
-                vol1H,                              // 9. volatility1H
-                vol24H,                             // 10. volatility24H
-                (float) f.volatility1M,             // 11. volatility1M
-                volTermStructure,                   // 12. volatilityTermStructure (Calculated)
-
-                // --- Nhóm Trend & Sentiment ---
-                (float) f.trendConsistency,         // 13. trendConsistency
-                (float) f.advanceDeclineRatio,      // 14. advanceDeclineRatio
-                (float) f.percentAboveMA20,         // 15. percentAboveMA20
-                (float) f.marketBreadthStrength,    // 16. marketBreadthStrength
-                (float) f.btcDominance,             // 17. btcDominance
-                (float) f.volumeSpike,              // 18. volumeSpike
-
-                // --- Nhóm Funding ---
-                fundRaw,                            // 19. fundingRateRaw
-                fundAvg,                            // 20. fundingRateAvg24H
-                funding_shock,                      // 21. funding_shock (Calculated)
-
-                // --- Nhóm Time ---
-                (float) f.hourOfDay,                // 22. hourOfDay
-                (float) f.dayOfWeek,                // 23. dayOfWeek
-                (float) f.monthOfYear,              // 24. monthOfYear
-
-                // --- Nhóm Basket ---
-                (float) f.basketMomentum15M,        // 25. basketMomentum15M
-                (float) f.basketMomentum1H,         // 26. basketMomentum1H
-                (float) f.basketRsi14,              // 27. basketRsi14
-                (float) f.basketVolSpike,           // 28. basketVolSpike
-
-                // --- V4 Special ---
-                trend_efficiency,                   // 29. trend_efficiency (Calculated)
-                panic_index                         // 30. panic_index (Calculated)
-        };
-    }
-
-    /**
-     * TRÍCH XUẤT FEATURES CHO MODEL V3 (RISK/TREND)
+     * TRÍCH XUẤT FEATURES CHO MODEL V3 (RISK/TREND/RETURN)
      * Giữ nguyên logic cũ (33 features)
      */
     private float[] extractFeaturesV3Full(MarketFeatures f) {

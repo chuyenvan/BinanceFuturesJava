@@ -165,7 +165,11 @@ public class ExportFundingLabel {
             v.report();
         } catch (Exception e) {
             LOG.error("ExportFundingLabel lỗi", e);
+            System.exit(1);
         }
+        // BẮT BUỘC: DataManagerAerospikeFloatSim giữ ExecutorService non-daemon → main return KHÔNG đủ
+        // để JVM thoát (treo). Trên Kaggle = kernel kẹt tới timeout 12h. System.exit để chấm dứt sạch.
+        System.exit(0);
     }
 
     /**
