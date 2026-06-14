@@ -95,7 +95,11 @@ public class Aggregate15m4hBtcEth {
             LOG.info("✅ TASK-009 aggregate xong.");
         } catch (Exception e) {
             LOG.error("Aggregate15m4hBtcEth lỗi", e);
+            System.exit(1);
         }
+        // BẪY non-daemon thread: AerospikeClient để lại thread sống → JVM KHÔNG tự thoát sau khi main xong việc
+        // (job treo dù log "✅ xong"). Ép thoát (giống TASK-015/recipe Kaggle). Đặt SAU try để chạy mọi đường thành công.
+        System.exit(0);
     }
 
     /** Lọc khung đủ phút → TreeMap<startMs, ohlcv>. Khung thiếu → skip + đếm. */
