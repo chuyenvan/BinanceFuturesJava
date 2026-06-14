@@ -68,10 +68,13 @@ public class ReplicateSet242To226 {
     private static void replicateOne(AerospikeClient src, AerospikeClient dst, String set) {
         long t0 = System.currentTimeMillis();
         AtomicLong copied = new AtomicLong(), skippedNoBin = new AtomicLong(), errors = new AtomicLong();
-        WritePolicy wp = new WritePolicy();
-        wp.expiration = 0;
-        wp.sendKey = true;
-        wp.recordExistsAction = RecordExistsAction.UPDATE;
+        // 2 policy: record có userKey (vd funding/OI key=symbol) → sendKey=true giữ userKey; record KHÔNG
+        // có userKey (vd price_realtime ghi digest-only) → sendKey=false (sendKey=true + userKey null = NPE).
+        // Cả hai ghi THEO digest gốc nên record vẫn nằm đúng chỗ, trung thực với nguồn.
+        WritePolicy wpKey = new WritePolicy();
+        wpKey.expiration = 0; wpKey.sendKey = true; wpKey.recordExistsAction = RecordExistsAction.UPDATE;
+        WritePolicy wpNoKey = new WritePolicy();
+        wpNoKey.expiration = 0; wpNoKey.sendKey = false; wpNoKey.recordExistsAction = RecordExistsAction.UPDATE;
 
         ScanPolicy sp = new ScanPolicy();
         sp.includeBinData = true;
@@ -89,7 +92,7 @@ public class ReplicateSet242To226 {
                     }
                     // Ghi 226 GIỮ NGUYÊN digest + setName + userKey của record gốc 242 (idempotent theo key).
                     Key dstKey = new Key(key.namespace, key.digest, key.setName, key.userKey);
-                    dst.put(wp, dstKey, bins);
+                    dst.put(key.userKey != null ? wpKey : wpNoKey, dstKey, bins);
                     long n = copied.incrementAndGet();
                     if (n % 50_000 == 0) LOG.info("   {} … {} record copied", set, n);
                 } catch (Exception ex) {
