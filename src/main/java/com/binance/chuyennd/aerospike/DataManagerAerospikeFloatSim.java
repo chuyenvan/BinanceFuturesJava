@@ -142,17 +142,35 @@ public class DataManagerAerospikeFloatSim {
         }
     }
 
+    // 🔒 #4 (TASK-029): striped lock chống race lost-update cùng key phút.
+    // Rest-Price-Loop (3s) + Rest-Kline-Loop (chốt phút) cùng gọi writeMinuteBatch(curMin,...) → read(getExistingTickersMap)
+    // → putAll → put KHÔNG atomic → 2 luồng cùng phút có thể mất nến. Khóa theo HASH key-phút (cùng phút = cùng stripe
+    // = tuần tự hoá read-modify-write; phút khác = stripe khác, gần như không chặn nhau). Bounded 64 stripe, không phình.
+    private static final int MINUTE_WRITE_STRIPES = 64;
+    private static final Object[] MINUTE_WRITE_LOCKS = buildMinuteWriteLocks();
+
+    private static Object[] buildMinuteWriteLocks() {
+        Object[] locks = new Object[MINUTE_WRITE_STRIPES];
+        for (int i = 0; i < MINUTE_WRITE_STRIPES; i++) locks[i] = new Object();
+        return locks;
+    }
+
     public static void writeMinuteBatch(long timestamp, Map<String, KlineObjectOptimized> newTickers) {
         try {
             SimpleDateFormat fmt = new SimpleDateFormat("yyyyMMdd-HHmm");
-            Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_TICKER, fmt.format(new Date(timestamp)));
+            String keyString = fmt.format(new Date(timestamp));
+            Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_TICKER, keyString);
 
-            // Gộp dữ liệu cũ (nếu có) để bảo toàn nến của các mã khác
-            Map<String, KlineObjectOptimized> finalMap = getExistingTickersMap(key);
-            finalMap.putAll(newTickers);
+            // Khóa theo stripe của key-phút: read-modify-write của cùng một phút được tuần tự hoá (atomic trong JVM ingest).
+            Object lock = MINUTE_WRITE_LOCKS[(keyString.hashCode() & 0x7fffffff) % MINUTE_WRITE_STRIPES];
+            synchronized (lock) {
+                // Gộp dữ liệu cũ (nếu có) để bảo toàn nến của các mã khác
+                Map<String, KlineObjectOptimized> finalMap = getExistingTickersMap(key);
+                finalMap.putAll(newTickers);
 
-            byte[] compressed = Snappy.compress(MinuteDataFinal.newBuilder().putAllTickers(finalMap).build().toByteArray());
-            getClient242().put(writePolicy, key, new Bin("data", compressed));
+                byte[] compressed = Snappy.compress(MinuteDataFinal.newBuilder().putAllTickers(finalMap).build().toByteArray());
+                getClient242().put(writePolicy, key, new Bin("data", compressed));
+            }
         } catch (Exception e) {
             LOG.error("❌ Error writing batch at {}: {}", timestamp, e.getMessage());
         }

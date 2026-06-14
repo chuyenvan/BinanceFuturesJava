@@ -315,44 +315,57 @@ public class BinanceOrderTradingManager {
             return;
         }
         SymbolOrderLockingManager.getInstance().addLock(lockName);
-        long startTime = System.currentTimeMillis();
-        List<PositionRisk> positions = BinanceFuturesClientSingleton.getInstance().getAllPositionInfos();
-        if (positions == null || positions.isEmpty()) {
-            LOG.info("Error get position from binance! {}", Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()));
-            return;
+        try {
+            long startTime = System.currentTimeMillis();
+            List<PositionRisk> positions = BinanceFuturesClientSingleton.getInstance().getAllPositionInfos();
+            if (positions == null || positions.isEmpty()) {
+                LOG.info("Error get position from binance! {}", Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()));
+                return; // lock được nhả ở finally
+            }
+            // 🔒 #9: BUILD MAP MỚI rồi SWAP — KHÔNG clear-then-fill map đang được luồng khác đọc
+            // (markPrice executor + processDynamicTP_SL đọc symbol2Pos song song → clear giữa chừng = mất position tạm thời).
+            Map<String, PositionRisk> newSymbol2Pos = new HashMap<>();
+            Map<String, Float> newSymbol2Margin = new HashMap<>();
+            Set<String> newMarginBig = new HashSet<>();
+            Set<String> newSymbolBuy = new HashSet<>();
+            Set<String> newSymbolSell = new HashSet<>();
+            float marginTotal = 0f;
+            float budget = BudgetManager.getInstance().getBudget();
+            for (PositionRisk position : positions) {
+                if (position.getPositionAmt().compareTo(BigDecimal.ZERO) == 0) {
+                    continue;
+                }
+                String symbol = position.getSymbol();
+                float margin = PositionHelper.callMargin(position);
+                newSymbol2Pos.put(symbol, position);
+                if (PositionHelper.calRateLoss(position) < 6 * Configs.RATE_PROFIT_STOP_MARKET) {
+                    marginTotal += margin;
+                }
+                newSymbol2Margin.put(symbol, margin);
+                if (margin >= 1.5 * budget) {
+                    newMarginBig.add(symbol);
+                }
+                if (position.getPositionAmt().compareTo(BigDecimal.ZERO) > 0) {
+                    newSymbolBuy.add(symbol);
+                } else {
+                    newSymbolSell.add(symbol);
+                }
+            }
+            // SWAP nguyên tử-tham-chiếu: luồng đọc thấy map CŨ (đầy đủ) cho tới khi gán xong map MỚI — không có cửa sổ rỗng.
+            BudgetManager bm = BudgetManager.getInstance();
+            bm.symbol2Margin = newSymbol2Margin;
+            bm.marginBig = newMarginBig;
+            bm.symbolBuy = newSymbolBuy;
+            bm.symbolSell = newSymbolSell;
+            bm.marginRunning = marginTotal;
+            bm.symbol2Pos = newSymbol2Pos;   // swap CUỐI (map được đọc nhiều nhất)
+            bm.removeSymbolNotPos(newSymbol2Pos.keySet());
+            updateSymbolRunning(newSymbol2Pos.keySet());
+            Long timeProcess = (System.currentTimeMillis() - startTime);
+            LOG.info("Update all position:{} {} ms", bm.symbol2Pos.size(), timeProcess.floatValue());
+        } finally {
+            SymbolOrderLockingManager.getInstance().removeLock(lockName); // nhả lock ở MỌI đường ra (return/exception)
         }
-        Map<String, PositionRisk> symbol2Pos = new HashMap<>();
-        BudgetManager.getInstance().symbol2Margin.clear();
-        BudgetManager.getInstance().marginBig.clear();
-        BudgetManager.getInstance().symbol2Pos.clear();
-        BudgetManager.getInstance().symbolSell.clear();
-        BudgetManager.getInstance().symbolBuy.clear();
-        Float marginTotal = 0f;
-        for (PositionRisk position : positions) {
-
-            if (position.getPositionAmt().compareTo(new BigDecimal("0")) == 0) {
-                continue;
-            }
-            symbol2Pos.put(position.getSymbol(), position);
-            if (PositionHelper.calRateLoss(position) < 6 * Configs.RATE_PROFIT_STOP_MARKET) {
-                marginTotal += PositionHelper.callMargin(position);
-            }
-            BudgetManager.getInstance().symbol2Margin.put(position.getSymbol(), PositionHelper.callMargin(position));
-            if (PositionHelper.callMargin(position) >= 1.5 * BudgetManager.getInstance().getBudget()) {
-                BudgetManager.getInstance().marginBig.add(position.getSymbol());
-            }
-            if (position.getPositionAmt().compareTo(new BigDecimal("0")) > 0) {
-                BudgetManager.getInstance().symbolBuy.add(position.getSymbol());
-            } else {
-                BudgetManager.getInstance().symbolSell.add(position.getSymbol());
-            }
-        }
-        BudgetManager.getInstance().marginRunning = marginTotal;
-        BudgetManager.getInstance().symbol2Pos.putAll(symbol2Pos);
-        BudgetManager.getInstance().removeSymbolNotPos(symbol2Pos.keySet());
-        updateSymbolRunning(symbol2Pos.keySet());
-        Long timeProcess = (System.currentTimeMillis() - startTime);
-        LOG.info("Update all position:{} {} ms", BudgetManager.getInstance().symbol2Pos.size(), timeProcess.floatValue());
     }
 
     public void processDynamicTP_SL() {

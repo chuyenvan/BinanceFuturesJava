@@ -52,6 +52,16 @@ public class SymbolOrderLockingManager {
         symbol2TimeLock.put(symbol, System.currentTimeMillis());
     }
 
+    /**
+     * Nhả lock SỚM (trước khi hết TTL) — dùng trong try/finally để mọi đường ra của một tác vụ đều trả lock,
+     * tránh kẹt tới hết timeout khi return/exception giữa chừng (audit #9 — updatePositionInfo).
+     *
+     * @param symbol khóa logic cần nhả (vd {@code "UpdateAllPos"})
+     */
+    public void removeLock(String symbol) {
+        symbol2TimeLock.remove(symbol);
+    }
+
     public void addLockReduceOnly(String symbol) {
         symbol2TimeLockReduceOnly.put(symbol, System.currentTimeMillis());
     }

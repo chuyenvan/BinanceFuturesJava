@@ -32,6 +32,9 @@ public class TickerIngestor2AerospikeNew {
 
     private final ExecutorService restFetchService = Executors.newFixedThreadPool(15);
     private final ExecutorService repairService = Executors.newSingleThreadExecutor();
+    // 🔧 #5: MỘT pool dùng chung cho fetch kline (trước đây new ForkJoinPool(30) MỖI batch → ~37 pool/phút,
+    // lồng trong restFetchService(15) → đỉnh 15×30=450 luồng). Pool sống suốt vòng đời ingest (P1 long-running).
+    private final java.util.concurrent.ForkJoinPool klineFetchPool = new java.util.concurrent.ForkJoinPool(30);
 
     public void start() {
         LOG.info("🚀 TickerIngestor V8.1 (HYBRID REALTIME - KHẮC PHỤC TRỄ 1 PHÚT) Started!");
@@ -221,11 +224,9 @@ public class TickerIngestor2AerospikeNew {
 //        }
 //    }
     private void fetchKlinesForBatch(List<String> symbols) {
-        // Khởi tạo một ThreadPool riêng để gọi API Binance song song (Khoảng 30 luồng là mượt nhất)
-        java.util.concurrent.ForkJoinPool customThreadPool = new java.util.concurrent.ForkJoinPool(30);
-
+        // #5: dùng pool CHUNG klineFetchPool (không tạo/hủy mỗi batch) → chặn trần 30 luồng cho mọi batch song song.
         try {
-            customThreadPool.submit(() ->
+            klineFetchPool.submit(() ->
                     symbols.parallelStream().forEach(symbol -> {
                         try {
                             // 🔒 GUARD ban: dính ban giữa chừng → short-circuit, không gọi tiếp coin nào.
@@ -271,9 +272,8 @@ public class TickerIngestor2AerospikeNew {
             ).get(); // Đợi tất cả 554 đồng coin tải xong
         } catch (Exception e) {
             LOG.error("Lỗi khi fetch kline đa luồng: ", e);
-        } finally {
-            customThreadPool.shutdown();
         }
+        // KHÔNG shutdown: pool dùng chung, sống suốt vòng đời ingest (#5).
     }
 
     private void flushKlinesToDatabase(long curMin) {
