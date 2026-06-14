@@ -66,6 +66,8 @@ mvn -o package  # offline build (deps đã cache)
 - `maven-shade-plugin` ra một fat jar (launch theo main-class).
 - `protobuf-maven-plugin` gen Java từ `src/main/proto/*.proto` lúc build bằng `protoc` tải về (cần mạng lần đầu). `os-maven-plugin` resolve platform classifier.
 
+> **⚙️ `mvn` trên máy dev này (Windows):** system Maven `D:\java\apache-maven-3.5.2` trong PATH **cài hỏng** (thiếu `bin/mvn`) → terminal mới báo `mvn: command not found`. Đã cắm wrapper `C:\Users\pc\bin\{mvn,mvn.cmd}` (đã thêm vào User PATH, đứng đầu) trỏ Maven **bundled trong IntelliJ** (`...\JetBrains\IntelliJ IDEA Community Edition <ver>\plugins\maven\lib\maven3`, hiện 3.9.9) + `JAVA_HOME=jdk-11.0.17`. **Terminal mới giờ gọi `mvn` chạy luôn** (cả bash lẫn PowerShell). Bản bash tự chọn IntelliJ mới nhất; nếu IntelliJ đổi version mà PowerShell lỗi → sửa path hardcode trong `mvn.cmd`.
+
 ### Tests
 **KHÔNG có unit-test suite** (`src/test` không tồn tại; `mvn test` là no-op). "Test" ở đây là các class `main()` đứng riêng dùng làm công cụ/thí nghiệm thủ công (`bigchange/test/*`, `*Validator`, `*Checker`, `*Comparator`, `Benchmark*`). Chạy bằng cách gọi `main` trực tiếp:
 ```bash
