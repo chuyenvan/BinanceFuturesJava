@@ -108,12 +108,31 @@ public class BackfillOiWorker {
             return;
         }
 
-        // Ghi 5 set lên 226 (merge-guard chống mất lịch sử).
+        // Ghi 5 set lên 226 (chunk-tháng SYMBOL_yyyyMM, merge-guard chống mất lịch sử).
+        int writeFails = 0;
         for (int i = 0; i < OiMetricSets.ALL.length; i++) {
             OiMetricSets.Metric metric = OiMetricSets.ALL[i];
             TreeMap<Long, Float> map = m.maps[i];
             if (map.isEmpty()) continue;
-            DataManagerAerospikeFloatSim.writeMetricMap226(metric.set, metric.bin, symbol, map);
+            writeFails += DataManagerAerospikeFloatSim.writeMetricMap226(metric.set, metric.bin, symbol, map);
+        }
+        if (writeFails > 0) {
+            LOG.error("❌ {} có {} chunk-tháng GHI LỖI → KHÔNG mark DONE (giữ queue để retry).", symbol, writeFails);
+            return;
+        }
+
+        // 🔎 SELF-VERIFY end-to-end: đọc lại OI từ 226, đếm phải ≥ kỳ vọng trước khi mark DONE
+        // (chặn bug 'ghi lỗi âm thầm vẫn mark DONE' — vd Record too big). OI là metric luôn có.
+        int expectedOi = m.maps[0].size();
+        if (expectedOi > 0) {
+            int storedOi = DataManagerAerospikeFloatSim.getMetricMap226(
+                    OiMetricSets.OI.set, OiMetricSets.OI.bin, symbol).size();
+            if (storedOi < expectedOi) {
+                LOG.error("❌ {} SELF-VERIFY thất bại: đọc lại OI={} < kỳ vọng={} → KHÔNG mark DONE (retry).",
+                        symbol, storedOi, expectedOi);
+                return;
+            }
+            LOG.info("🔎 {} self-verify OI 226: stored={} ≥ expected={} ✓", symbol, storedOi, expectedOi);
         }
 
         markDoneAndClear(symbol, queueKey, m, totalTs);

@@ -40,6 +40,19 @@ public class BackfillOiMaster {
         LOG.info("👑 BACKFILL-OI MASTER khởi động | queue={} | done={}", QUEUE_SET, DONE_SET);
         Configs.IS_KAGGLE_MODE = true; // tool offline, KHÔNG phải process live
 
+        // --reset: xoá sạch queue + done (dùng khi re-test hoặc dọn checkpoint cũ). KHÔNG đụng 5 set data.
+        if (args != null && args.length > 0 && "--reset".equalsIgnoreCase(args[0])) {
+            try {
+                DataManagerAerospikeFloatSim.getClient226().truncate(null, Configs.AEROSPIKE_NAMESPACE, QUEUE_SET, null);
+                DataManagerAerospikeFloatSim.getClient226().truncate(null, Configs.AEROSPIKE_NAMESPACE, DONE_SET, null);
+                LOG.info("🧹 Đã truncate {} + {} (checkpoint reset). KHÔNG đụng set data OI/LS/taker.", QUEUE_SET, DONE_SET);
+            } catch (Exception e) {
+                LOG.error("❌ Reset truncate lỗi: ", e);
+                System.exit(1);
+            }
+            System.exit(0);
+        }
+
         try {
             List<String> universe = resolveUniverse(args);
             LOG.info("🌐 Universe = {} symbol cần backfill.", universe.size());

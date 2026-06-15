@@ -72,8 +72,54 @@ public class BackfillOiVerify {
                     m.set, map.size(), sdf.format(map.firstKey()), sdf.format(map.lastKey()), offGrid, samples);
         }
 
-        // RECOMPUTE OI vs API (chỉ symbol còn sống mới có API; delist sẽ rỗng → bỏ qua có log).
+        // RECOMPUTE value-fidelity: re-download file daily THÔ → so giá trị OI vs giá trị đã lưu Aerospike.
+        // (Self-contained, KHÔNG vướng giới hạn cửa-sổ API như recomputeOiVsApi.)
+        recomputeVsRawFile(symbol, oiMap);
+
+        // RECOMPUTE OI vs API (chỉ symbol còn sống + có mốc trùng cửa-sổ API; B1 đã chứng minh 0% đơn vị).
         recomputeOiVsApi(symbol, oiMap);
+    }
+
+    /** So giá trị OI đã lưu 226 vs giá trị THÔ parse trực tiếp từ 1-2 file daily gần nhất (value fidelity). */
+    private static void recomputeVsRawFile(String symbol, TreeMap<Long, Float> oiMap) {
+        if (oiMap == null || oiMap.isEmpty()) {
+            LOG.warn("   RAW-RECOMPUTE: open_interest 226 RỖNG → bỏ qua.");
+            return;
+        }
+        try {
+            VisionMetricsClient vc = new VisionMetricsClient();
+            java.util.List<String> dates = vc.listFileDates(symbol);
+            if (dates.isEmpty()) {
+                LOG.warn("   RAW-RECOMPUTE: không có file vision → bỏ qua.");
+                return;
+            }
+            // Lấy 2 file: gần nhất + 1 file giữa (đại diện cả vùng cũ-doubled lẫn mới).
+            java.util.LinkedHashSet<String> pick = new java.util.LinkedHashSet<>();
+            pick.add(dates.get(dates.size() - 1));
+            pick.add(dates.get(dates.size() / 2));
+            pick.add(dates.get(0));
+            int totalMatched = 0, totalMissing = 0;
+            double maxDiffPct = 0;
+            for (String date : pick) {
+                TreeMap<Long, Float> raw = vc.parseDayMetric(symbol, date, OiMetricSets.OI.col);
+                if (raw == null || raw.isEmpty()) continue;
+                for (Map.Entry<Long, Float> e : raw.entrySet()) {
+                    Float stored = oiMap.get(e.getKey());
+                    if (stored == null) {
+                        totalMissing++;
+                        continue;
+                    }
+                    totalMatched++;
+                    double rawV = e.getValue();
+                    double diff = rawV == 0 ? 0 : Math.abs(stored - rawV) / Math.abs(rawV) * 100.0;
+                    if (diff > maxDiffPct) maxDiffPct = diff;
+                }
+            }
+            LOG.info("   RAW-RECOMPUTE (file {}): matched={} missing={} | maxDiff={}%",
+                    pick, totalMatched, totalMissing, String.format("%.6f", maxDiffPct));
+        } catch (Exception e) {
+            LOG.warn("   RAW-RECOMPUTE lỗi: {}", e.getMessage());
+        }
     }
 
     private static void recomputeOiVsApi(String symbol, TreeMap<Long, Float> oiMap) {

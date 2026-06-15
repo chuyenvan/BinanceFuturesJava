@@ -1,6 +1,6 @@
 ---
 id: 013
-status: DOING
+status: REVIEW
 depends_on: []
 touches_live_process: false
 writes_242_data: true
@@ -14,7 +14,7 @@ require_review: true
 # TASK-013: Verify + backfill OI / long-short / taker history từ data.binance.vision/metrics
 
 - **status:** TODO (data — mở khoá chân OI cho funding model). CHẠY ĐƯỢC NGAY (độc lập).
-- **owner:** CCD-oi · **status:** DOING (B2 — code master/worker) · **updated:** 2026-06-14
+- **owner:** CCD-oi · **status:** REVIEW (B2 code+test DONE, GATE chờ người soát trước LAUNCH FULL) · **updated:** 2026-06-15 · **report:** docs/reports/013.md
 - **Liên hệ:** ADR-0011 §5.3 (OI/LS/taker — đảo kết luận "không backfill được"). Forward poll cho live = TASK-007 phần C (riêng). Đây là HISTORY cho train.
 
 ## Bối cảnh (user phát hiện 2026-06-13)
@@ -115,7 +115,20 @@ Granularity 5m UTC; mỗi metric 1 set, Snappy `Map<Long,Float>` per symbol (nh�
 
 **resource = `kaggle_distributed`** (master headless + ≤5 Kaggle worker). Queue Aerospike LÀ checkpoint. Validate (require_review): recompute vài mốc (metrics vs API, đã 0% B1); cross-check OI tụt quanh sập; coverage per-coin khớp firstSeen; dedup đúng (không còn create_time trùng).
 
-**B2 kết quả (#record/range/validate):** _(CCD điền khi chạy)_
+**B2 kết quả (#record/range/validate):** ✅ CODE+TEST DONE → **REVIEW** (chi tiết: docs/reports/013.md).
+- ⚠️ **SCHEMA SỬA (user chốt):** 1-record/symbol "như funding" KHÔNG vừa Aerospike với OI 5m×6năm
+  (BTC 607,595 điểm → `Record too big`). → **CHIA THÁNG `SYMBOL_yyyyMM`** (GMT+7), ~8.9k điểm/chunk,
+  khớp pattern record-tháng kline/15m/4h. `writeMetricMap226/242`+`getMetricMap226/242` (DataManager) đã
+  đổi sang chunk-tháng. bin: OI=`oi_data` (khớp 007-C), LS/taker=`m_data`.
+- **TEST (dev→226):** BTCUSDT 2,112 file → 682,837 dòng thô → **607,595 mốc 5m** (dedup nhân-đôi file cũ);
+  LUNAUSDT(delist) 46,859. **offGrid5m=0** mọi set. **raw-recompute value maxDiff=0.000000%** (BTC 864 mốc,
+  LUNA 576). worker self-verify đọc-lại-count trước mark DONE. 5 set ghi THẬT @226 cho 2 symbol.
+- **CODE:** `research/oibackfill/{OiMetricSets,VisionMetricsClient,BackfillOiMaster,BackfillOiWorker,
+  BackfillOiVerify,PushOiSetsTo242}` + `BackfillOiMaster --reset` (truncate queue/done).
+- **CÒN LẠI sau review OK:** LAUNCH FULL (master no-args enqueue ~894 còn lại + 5 Kaggle worker) → queue cạn
+  → `PushOiSetsTo242` TRÊN 226 (đẩy 226→242) → validate cuối (OI tụt quanh sập + coverage firstSeen).
+- **❓ REVIEW cần người chốt:** 007-C forward đang ghi OI **1-record/symbol** trên 242 → migrate sang
+  chunk-tháng `SYMBOL_yyyyMM` (TASK-035) để history+forward MỘT schema? (đề xuất: có).
 
 ## Quy trình HEADLESS làm trọn (code → test → GATE → launch → monitor)
 Một worker headless tự chạy trọn, CHỈ dừng đúng 1 gate ở bước ghi data thật (trước khi nhân 5 worker):

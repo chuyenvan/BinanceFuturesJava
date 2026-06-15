@@ -190,6 +190,26 @@ public class VisionMetricsClient {
         return res;
     }
 
+    /**
+     * Tải + parse 1 file daily, trả map ts5m → giá trị của ĐÚNG 1 metric (theo col CSV). Dùng cho VERIFY
+     * recompute value-fidelity (so giá trị thô CSV vs giá trị đã lưu Aerospike). null nếu 404/rỗng.
+     */
+    public TreeMap<Long, Float> parseDayMetric(String symbol, String date, int col) throws IOException {
+        List<long[]> rows = parseDay(symbol, date);
+        if (rows == null) return null;
+        // xác định index trong row tương ứng col CSV.
+        int mIdx = -1;
+        for (int i = 0; i < OiMetricSets.ALL.length; i++) if (OiMetricSets.ALL[i].col == col) mIdx = i;
+        if (mIdx < 0) return null;
+        TreeMap<Long, Float> out = new TreeMap<>();
+        for (long[] row : rows) {
+            long bits = row[1 + mIdx];
+            if (bits == Long.MIN_VALUE) continue;
+            out.put(row[0], Float.intBitsToFloat((int) bits));
+        }
+        return out;
+    }
+
     /** Tải + parse 1 file daily. Trả null nếu 404/rỗng. Mỗi phần tử = [ts5m, bits(col3), bits(col4), col5, col6, col7]. */
     private List<long[]> parseDay(String symbol, String date) throws IOException {
         String url = String.format("%s/%s%s/%s-metrics-%s.zip", FILE_BASE, METRICS_PREFIX, symbol.toUpperCase(),

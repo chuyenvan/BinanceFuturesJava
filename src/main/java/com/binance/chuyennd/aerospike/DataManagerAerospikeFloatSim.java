@@ -407,16 +407,18 @@ public class DataManagerAerospikeFloatSim {
      * @param symbol  symbol (vd "BTCUSDT"), dùng làm key.
      * @param byTs    map ts(ms, mốc 5m UTC) → giá trị; rỗng/null → bỏ qua (không đụng record cũ).
      */
-    public static void writeMetricMap226(String setName, String binName, String symbol, Map<Long, Float> byTs) {
-        writeMetricMapTo(getClient226(), "226", setName, binName, symbol, byTs);
+    public static int writeMetricMap226(String setName, String binName, String symbol, Map<Long, Float> byTs) {
+        return writeMetricMapTo(getClient226(), "226", setName, binName, symbol, byTs);
     }
 
     /**
      * Ghi 1 metric per-symbol vào Aerospike <b>242</b> (source) — TASK-013 ĐẨY 226→242 (kiến trúc A) sau
      * khi backfill xong trên 226. Cùng lõi merge-guard với {@link #writeMetricMap226}, chỉ khác client.
+     *
+     * @return số chunk-tháng GHI LỖI (0 = OK).
      */
-    public static void writeMetricMap242(String setName, String binName, String symbol, Map<Long, Float> byTs) {
-        writeMetricMapTo(getClient242(), "242", setName, binName, symbol, byTs);
+    public static int writeMetricMap242(String setName, String binName, String symbol, Map<Long, Float> byTs) {
+        return writeMetricMapTo(getClient242(), "242", setName, binName, symbol, byTs);
     }
 
     /**
@@ -431,41 +433,112 @@ public class DataManagerAerospikeFloatSim {
      * @param symbol  symbol (vd "BTCUSDT"), dùng làm key.
      * @param byTs    map ts(ms, mốc 5m UTC) → giá trị; rỗng/null → bỏ qua (không đụng record cũ).
      */
-    private static void writeMetricMapTo(AerospikeClient client, String tag, String setName, String binName,
-                                         String symbol, Map<Long, Float> byTs) {
-        if (byTs == null || byTs.isEmpty()) return;
-        try {
-            Key key = new Key(Configs.AEROSPIKE_NAMESPACE, setName, symbol);
+    /**
+     * TZ bucket cho khoá record-tháng metrics — GMT+7, ĐỒNG NHẤT với khoá tháng kline/15m/4h của repo
+     * (chúng dùng {@code SimpleDateFormat} default-TZ = GMT+7) để reader iterate tháng nhất quán.
+     */
+    public static final String OI_METRIC_TZ = "GMT+7";
+    /** Tháng sớm nhất cần quét khi đọc-toàn-bộ (BTC metrics ~2020-09; quét từ 202001 cho rộng). */
+    private static final String OI_METRIC_MONTH_START = "202001";
 
-            // 1. Lấy dữ liệu cũ trên CÙNG client.
-            Map<Long, Float> existingMap = getMetricMapFrom(client, setName, binName, symbol);
+    private static SimpleDateFormat monthFmt() {
+        SimpleDateFormat f = new SimpleDateFormat("yyyyMM");
+        f.setTimeZone(TimeZone.getTimeZone(OI_METRIC_TZ));
+        return f;
+    }
+
+    /** Khoá record-tháng: {@code SYMBOL_yyyyMM} (chia nhỏ để KHÔNG vượt max record size Aerospike). */
+    private static String monthKey(String symbol, String monthStr) {
+        return symbol + "_" + monthStr;
+    }
+
+    /** Danh sách "yyyyMM" từ {@link #OI_METRIC_MONTH_START} đến tháng hiện tại (GMT+7), tăng dần. */
+    private static List<String> allMonthsTillNow() {
+        List<String> months = new ArrayList<>();
+        try {
+            SimpleDateFormat f = monthFmt();
+            Calendar cal = Calendar.getInstance(TimeZone.getTimeZone(OI_METRIC_TZ));
+            cal.setTime(f.parse(OI_METRIC_MONTH_START));
+            Calendar end = Calendar.getInstance(TimeZone.getTimeZone(OI_METRIC_TZ));
+            while (!cal.after(end)) {
+                months.add(f.format(cal.getTime()));
+                cal.add(Calendar.MONTH, 1);
+            }
+        } catch (ParseException e) {
+            LOG.error("❌ allMonthsTillNow parse lỗi: {}", e.getMessage());
+        }
+        return months;
+    }
+
+    /**
+     * LÕI ghi: TÁCH map theo THÁNG (GMT+7) → mỗi tháng 1 record nhỏ ({@code SYMBOL_yyyyMM}, ~8.9k điểm 5m
+     * → vừa max record size, KHÁC funding 1-record/symbol vốn vỡ với data 5m × nhiều năm). Mỗi chunk
+     * read-merge-GUARD-write riêng. Trả số chunk LỖI (0 = OK) để caller biết có nên mark DONE.
+     */
+    private static int writeMetricMapTo(AerospikeClient client, String tag, String setName, String binName,
+                                        String symbol, Map<Long, Float> byTs) {
+        if (byTs == null || byTs.isEmpty()) return 0;
+        SimpleDateFormat f = monthFmt();
+        Map<String, TreeMap<Long, Float>> byMonth = new HashMap<>();
+        for (Map.Entry<Long, Float> e : byTs.entrySet()) {
+            String mon = f.format(new Date(e.getKey()));
+            byMonth.computeIfAbsent(mon, k -> new TreeMap<>()).put(e.getKey(), e.getValue());
+        }
+        int failed = 0;
+        for (Map.Entry<String, TreeMap<Long, Float>> me : byMonth.entrySet()) {
+            if (!writeMonthChunk(client, tag, setName, binName, symbol, me.getKey(), me.getValue())) failed++;
+        }
+        return failed;
+    }
+
+    /** Ghi 1 chunk-tháng (read key tháng → GUARD chống mất lịch sử → merge → Snappy → put). false nếu lỗi. */
+    private static boolean writeMonthChunk(AerospikeClient client, String tag, String setName, String binName,
+                                           String symbol, String monthStr, Map<Long, Float> chunkData) {
+        if (chunkData == null || chunkData.isEmpty()) return true;
+        try {
+            Key key = new Key(Configs.AEROSPIKE_NAMESPACE, setName, monthKey(symbol, monthStr));
+            Record raw = client.get(null, key);
+            TreeMap<Long, Float> existing = decodeMap(raw, binName);
 
             // 🛡️ GUARD CHỐNG MẤT LỊCH SỬ: record có blob nhưng đọc ra RỖNG → nghi lỗi đọc tạm thời,
-            // TUYỆT ĐỐI không ghi đè (merge-với-rỗng + ghi đè = xoá sạch lịch sử).
-            try {
-                Record raw = client.get(null, key);
-                boolean hasBlob = raw != null && raw.getValue(binName) != null
-                        && ((byte[]) raw.getValue(binName)).length > 0;
-                if (hasBlob && existingMap.isEmpty()) {
-                    LOG.error("❌ ABORT writeMetricMap@{} set={} bin={} {} — record có blob nhưng đọc ra RỖNG "
-                            + "(nghi lỗi đọc). Không ghi đè để tránh mất lịch sử.", tag, setName, binName, symbol);
-                    return;
-                }
-            } catch (Exception ignore) {
+            // TUYỆT ĐỐI không ghi đè (merge-với-rỗng + ghi đè = xoá lịch sử).
+            boolean hasBlob = raw != null && raw.getValue(binName) != null
+                    && ((byte[]) raw.getValue(binName)).length > 0;
+            if (hasBlob && existing.isEmpty()) {
+                LOG.error("❌ ABORT writeMonthChunk@{} set={} key={}_{} — record có blob nhưng đọc ra RỖNG "
+                        + "(nghi lỗi đọc). Không ghi đè.", tag, setName, symbol, monthStr);
+                return false;
             }
 
-            // 2. Gộp (TreeMap để luôn sắp theo thời gian; key trùng = dedup tự nhiên).
-            TreeMap<Long, Float> finalMap = new TreeMap<>();
-            existingMap.forEach((k, v) -> finalMap.put(k, v.floatValue()));
-            byTs.forEach(finalMap::put);
-
-            // 3. Serialize + nén Snappy → bin tham số.
+            TreeMap<Long, Float> finalMap = new TreeMap<>(existing);
+            finalMap.putAll(chunkData);
             byte[] rawBytes = Utils.gson.toJson(finalMap).getBytes("UTF-8");
-            byte[] compressedBytes = Snappy.compress(rawBytes);
-            client.put(writePolicy, key, new Bin(binName, compressedBytes));
+            byte[] compressed = Snappy.compress(rawBytes);
+            client.put(writePolicy, key, new Bin(binName, compressed));
+            return true;
         } catch (Exception e) {
-            LOG.error("❌ Error writeMetricMap@{} set={} bin={} {}: {}", tag, setName, binName, symbol, e.getMessage());
+            LOG.error("❌ Error writeMonthChunk@{} set={} {}_{}: {}", tag, setName, symbol, monthStr, e.getMessage());
+            return false;
         }
+    }
+
+    /** Giải mã 1 Record (Snappy JSON Map) → TreeMap (rỗng nếu null/lỗi). */
+    private static TreeMap<Long, Float> decodeMap(Record record, String binName) {
+        TreeMap<Long, Float> results = new TreeMap<>();
+        if (record == null) return results;
+        try {
+            byte[] compressed = (byte[]) record.getValue(binName);
+            if (compressed != null) {
+                String json = new String(Snappy.uncompress(compressed), "UTF-8");
+                java.lang.reflect.Type mapType = new com.google.gson.reflect.TypeToken<Map<String, Float>>() {
+                }.getType();
+                Map<String, Float> rawMap = Utils.gson.fromJson(json, mapType);
+                rawMap.forEach((k, v) -> results.put(Long.parseLong(k), v));
+            }
+        } catch (Exception e) {
+            LOG.error("❌ Error decodeMap bin={}: {}", binName, e.getMessage());
+        }
+        return results;
     }
 
     /**
@@ -485,20 +558,25 @@ public class DataManagerAerospikeFloatSim {
         return getMetricMapFrom(getClient242(), setName, binName, symbol);
     }
 
-    /** LÕI đọc dùng chung cho {@link #getMetricMap226}/{@link #getMetricMap242}. */
+    /**
+     * LÕI đọc dùng chung cho {@link #getMetricMap226}/{@link #getMetricMap242}: gộp TOÀN BỘ chunk-tháng
+     * ({@code SYMBOL_yyyyMM}) của 1 symbol thành 1 TreeMap. Batch-get mọi key tháng [202001..nay] (chunk
+     * theo {@link #BATCH_CHUNK_SIZE}), bỏ qua tháng null.
+     */
     private static TreeMap<Long, Float> getMetricMapFrom(AerospikeClient client, String setName, String binName, String symbol) {
         TreeMap<Long, Float> results = new TreeMap<>();
         try {
-            Key key = new Key(Configs.AEROSPIKE_NAMESPACE, setName, symbol);
-            Record record = client.get(null, key);
-            if (record != null) {
-                byte[] compressedData = (byte[]) record.getValue(binName);
-                if (compressedData != null) {
-                    String json = new String(Snappy.uncompress(compressedData), "UTF-8");
-                    java.lang.reflect.Type mapType = new com.google.gson.reflect.TypeToken<Map<String, Float>>() {
-                    }.getType();
-                    Map<String, Float> rawMap = Utils.gson.fromJson(json, mapType);
-                    rawMap.forEach((k, v) -> results.put(Long.parseLong(k), v));
+            List<String> months = allMonthsTillNow();
+            Key[] keys = new Key[months.size()];
+            for (int i = 0; i < months.size(); i++) {
+                keys[i] = new Key(Configs.AEROSPIKE_NAMESPACE, setName, monthKey(symbol, months.get(i)));
+            }
+            for (int off = 0; off < keys.length; off += BATCH_CHUNK_SIZE) {
+                Key[] sub = Arrays.copyOfRange(keys, off, Math.min(off + BATCH_CHUNK_SIZE, keys.length));
+                Record[] recs = client.get(batchPolicy, sub);
+                if (recs == null) continue;
+                for (Record record : recs) {
+                    results.putAll(decodeMap(record, binName));
                 }
             }
         } catch (Exception e) {
