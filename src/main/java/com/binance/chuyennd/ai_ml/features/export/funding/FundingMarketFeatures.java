@@ -14,9 +14,9 @@ public class FundingMarketFeatures implements Serializable {
     public float btcDominance;
     public float marketBreadthStrength;
 
-    // --- GROUP 2: COIN SPECIFIC ---
-    public float momentum1M;  // ✅ Mới thêm
-    public float momentum15M; // ✅ Lấy từ rateDown15MAvg
+    // --- GROUP 2: MARKET-RATEDOWN + COIN SPECIFIC ---
+    public float rateDownAvg;    // market-MDO rateDownAvg (cũ: momentum1M — nhãn coin SAI, thực là market)
+    public float rateDown15MAvg; // market-MDO rateDown15MAvg (cũ: momentum15M — nhãn coin SAI, thực là market)
     public float momentum1H;
     public float momentum4H;
     public float momentum24H;
@@ -33,7 +33,7 @@ public class FundingMarketFeatures implements Serializable {
 
     // --- GROUP 4: FUNDING FEE ---
     public float coinFundingRate;
-    public float fundingRateRaw;
+    public float basketFundingAvg;
     public float fundingRateAvg24H;
     public float fundingRateTrend;
 

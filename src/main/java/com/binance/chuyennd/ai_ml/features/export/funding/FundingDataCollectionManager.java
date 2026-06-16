@@ -48,11 +48,11 @@ public class FundingDataCollectionManager {
                 // Context
                 "btcMomentum1H,btcMomentum4H,btcMomentum24H,btcDominance,marketBreadthStrength," +
                         // Coin
-                        "momentum1M,momentum15M,momentum1H,momentum4H,momentum24H,rsi1H,distFromLow24H,volatilityShock," +
+                        "rateDownAvg,rateDown15MAvg,momentum1H,momentum4H,momentum24H,rsi1H,distFromLow24H,volatilityShock," +
                         // Basket
                         "basketMomentum15M,basketMomentum1H,basketMomentum24H,basketRsi14,basketVolSpike," +
                         // Funding
-                        "coinFundingRate,fundingRateRaw,fundingRateAvg24H,fundingRateTrend," +
+                        "coinFundingRate,basketFundingAvg,fundingRateAvg24H,fundingRateTrend," +
                         // LABELS (2 columns)
                         "label6,label40";
 
@@ -131,7 +131,7 @@ public class FundingDataCollectionManager {
 
         // Coin
         sb.append(String.format("%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,",
-                f.momentum1M, f.momentum15M, f.momentum1H, f.momentum4H, f.momentum24H, f.rsi1H, f.distFromLow24H, f.volatilityShock));
+                f.rateDownAvg, f.rateDown15MAvg, f.momentum1H, f.momentum4H, f.momentum24H, f.rsi1H, f.distFromLow24H, f.volatilityShock));
 
         // Basket
         sb.append(String.format("%.6f,%.6f,%.6f,%.6f,%.6f,",
@@ -139,7 +139,7 @@ public class FundingDataCollectionManager {
 
         // Funding
         sb.append(String.format("%.8f,%.8f,%.8f,%.8f,",
-                f.coinFundingRate, f.fundingRateRaw, f.fundingRateAvg24H, f.fundingRateTrend));
+                f.coinFundingRate, f.basketFundingAvg, f.fundingRateAvg24H, f.fundingRateTrend));
 
         // Labels
         sb.append(String.format("%d,%d", f.label6, f.label40));
@@ -258,15 +258,15 @@ public class FundingDataCollectionManager {
             f.basketMomentum24H = cachedBasketMom24H;
             f.basketRsi14 = cachedBasketRsi14;
             f.basketVolSpike = cachedBasketVolSpike;
-            f.fundingRateRaw = cachedBasketFundingRaw;
+            f.basketFundingAvg = cachedBasketFundingRaw;
 
             // --- 3. TÍNH TOÁN COIN SPECIFIC (Bắt buộc tính riêng cho từng coin) ---
             if (rate != null) {
-                f.momentum1M = rate.rateDownAvg;
-                f.momentum15M = rate.rateDown15MAvg;
+                f.rateDownAvg = rate.rateDownAvg;
+                f.rateDown15MAvg = rate.rateDown15MAvg;
             } else {
-                f.momentum1M = 0;
-                f.momentum15M = 0;
+                f.rateDownAvg = 0;
+                f.rateDown15MAvg = 0;
             }
 
             f.momentum1H = calculateReturn(order.symbol, 60);

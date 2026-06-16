@@ -111,11 +111,11 @@ public class FundingOnnxInferenceManager implements AutoCloseable {
         return new float[]{
                 (float) f.btcMomentum1H, (float) f.btcMomentum4H, (float) f.btcMomentum24H,
                 (float) f.btcDominance, (float) f.marketBreadthStrength,
-                (float) f.momentum15M, (float) f.momentum1H, (float) f.momentum4H, (float) f.momentum24H,
+                (float) f.rateDown15MAvg, (float) f.momentum1H, (float) f.momentum4H, (float) f.momentum24H,
                 (float) f.rsi1H, (float) f.distFromLow24H, (float) f.volatilityShock,
                 (float) f.basketMomentum15M, (float) f.basketMomentum1H, (float) f.basketMomentum24H,
                 (float) f.basketRsi14, (float) f.basketVolSpike,
-                (float) f.coinFundingRate, (float) f.fundingRateRaw, (float) f.fundingRateAvg24H, (float) f.fundingRateTrend
+                (float) f.coinFundingRate, (float) f.basketFundingAvg, (float) f.fundingRateAvg24H, (float) f.fundingRateTrend
         };
     }
 
