@@ -239,6 +239,27 @@ public class HistoryManager {
         return maxPrice == -Float.MAX_VALUE ? null : maxPrice;
     }
 
+    /**
+     * PERF (TASK-037): 1 LẦN quét trả {@code [low, high]} 24h (≤1440 nến) — gộp getLow24H + getHigh24H
+     * để extractor dùng chung cho distFromLow24H (#11) + distFromHigh24H (#29) + rangePosition24H (#30),
+     * tránh quét cửa sổ 1440 nến 3 lần/record. ≤t no-leak. null nếu chưa có dữ liệu.
+     */
+    public float[] getLowHigh24H(String symbol) { return getLowHigh24H(SimpleSymbolMapper.getInstance().getId(symbol)); }
+    public float[] getLowHigh24H(short symbolId) {
+        if (symbolId < 0 || symbolId >= MAX_COINS) return null;
+        int count = Math.min(historyHead[symbolId], RING_SIZE);
+        if (count == 0) return null;
+        int lookback = Math.min(count, 1440);
+        float lo = Float.MAX_VALUE, hi = -Float.MAX_VALUE;
+        int head = historyHead[symbolId] - 1;
+        for (int i = 0; i < lookback; i++) {
+            KlineObjectSimple k = historyRing[symbolId][(head - i) & RING_MASK];
+            if (k.minPrice < lo) lo = k.minPrice;
+            if (k.maxPrice > hi) hi = k.maxPrice;
+        }
+        return lo == Float.MAX_VALUE ? null : new float[]{lo, hi};
+    }
+
     public Float getMaxRateChange(short symbolId, int minutes) {
         int count = Math.min(historyHead[symbolId], RING_SIZE);
         if (count < 2) return 0.0f;

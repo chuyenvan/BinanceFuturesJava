@@ -1,6 +1,6 @@
 ---
 id: 037
-status: PAUSED
+status: DOING
 owner: CCD-funding
 updated: 2026-06-16
 depends_on: [036]
@@ -83,15 +83,30 @@ require_review: true
 - **BƯỚC TIẾP sau pilot OK:** clone kernel cho **2022/2023/2024/2025/2026** (đổi START/END trong ff37.py + id). ⚠️ năm nhiều coin (2024-2026) có thể >20GB/năm → nếu pilot cho size lớn thì CHIA NỬA NĂM. Mỗi kernel tự validate. Output để LẠI Kaggle cho 039 chain (`kernel_sources`), KHÔNG tải về (BẪY 3).
 - **Khi tất cả năm OK:** điền report 037 (#dòng tổng × 35, phân phối, CS #coin/mốc tăng dần, #null), set REVIEW + commit hash.
 
-### ⏸ PAUSED (2026-06-16) — chờ user điều phối 037/038 + PERF cần fix
-**1. VA CHẠM 037↔038 (cần user chốt định nghĩa .bin.gz):**
-- 037 (commit `8bdd2d1`) định nghĩa export = **35 cột** (#1-35). Pilot Kaggle `chuyendinh/ff37-2021` ĐANG/ĐÃ chạy jar 35 cột này.
-- 038 (commit `f241662`, `c98bae4`) đã ĐÈ `convertFeaturesToArray` ở HEAD → **40 cột** (#1-35 + microstructure #36-40); OI/LS/taker #41-45 ở tool riêng (038 "chốt .bin.gz = #1..#40").
-- ⇒ Pilot 35 cột **lỗi thời** so HEAD. Cần chốt: dataset cuối là 40 cột (1 tool) hay 45 (gộp OI) hay tách? Ai build/chạy? → user điều phối với CCD 038.
+### ▶ RESUME (2026-06-16, sau khi Claude Desktop chốt va-chạm + fix perf) — CCD CHẠY TIẾP ĐƯỢC
 
-**2. PERF — phải fix TRƯỚC khi chạy năm nặng (2024-26) kẻo cutoff 12h:**
-- Hiện `extractFeatures` quét cửa sổ 1440 nến **3 lần/record**: cũ `distFromLow24H`→getLow24H(1440); 037 thêm `getHigh24H(1440)` + `getLow24H(1440)` lần nữa (trong rangePosition). Khi ring đầy (sau warmup) → ~gấp đôi chi phí/record (pilot Q1 2021 = 11.28M rec/816s ≈ 13.8k rec/s; Q2 chậm hơn vì thêm coin + full-ring scan).
-- **Fix:** thêm `HistoryManager.getHighLow24H` (1 lần quét trả [low,high]) + tái dùng cho distFromLow24H/distFromHigh24H/rangePosition24H → về ~1 quét như cũ. 038 thêm microstructure #36-40 (ret15m/rvol15m/volumeZ5m/closePosRange15m/wickRatio15m) cũng tăng chi phí → cân nhắc tối ưu chung.
-- ⚠️ Fix này đụng HistoryManager + extractor — file 038 cũng đụng → phối hợp trước khi commit để tránh va chạm tiếp.
+**1. SỐ CỘT CHỐT — hết va chạm 037↔038:** `.bin.gz` = **40 cột** (#1-21 live + #22-35 funding-deep + #36-40 microstructure-B). OI/LS/taker #41-45 = **TOOL RIÊNG**, KHÔNG nằm trong .bin.gz (quyết định A2 — tránh OOM). ⇒ pilot 35 cột (`chuyendinh/ff37-2021`) **bỏ**, chạy lại 40 cột. Chi tiết: `tasks/038` + `docs/reports/038.md`.
 
-**3. Trạng thái hạ tầng Kaggle (sẵn sàng dùng lại):** dataset `chuyendinh/java-run-lc` (jar sanitized), kernel mẫu `C:\Users\pc\ff37-2021\` (chia năm qua args). Sau khi user chốt định nghĩa + fix perf → rebuild jar (lưu ý kéo theo code 038 ở HEAD) → relaunch theo năm.
+**2. PERF — ĐÃ FIX (commit kèm):** thêm `HistoryManager.getLowHigh24H` (1 quét trả `[low,high]`); `extractFeatures` gọi 1 lần, dùng chung cho distFromLow24H (#11) + distFromHigh24H (#29) + rangePosition24H (#30). Từ **3 lần quét 1440-nến/record → 1**. Microstructure #36-40 chỉ quét 15 nến (nhẹ). `javac --release 11` PASS. ⇒ giảm rủi ro cutoff 12h ở năm nặng.
+
+**3. REBUILD JAR (CCD) từ HEAD** — gồm 037 + 038 (microstructure + tool OI) + perf-fix. Jar cũ commit `8bdd2d1` (35 cột) **LỖI THỜI**, phải rebuild → cập nhật dataset `chuyendinh/java-run-lc`.
+
+**4. CHẠY 2 TOOL trên Kaggle (chia năm qua args, hạ tầng cũ tái dùng):**
+- **Tool 1 — feature .bin.gz (40 cột):** MAIN=`com.binance.chuyennd.ai_ml.features.export.fundingv2.ExportFeaturesForPythonTool`, args `<start> <end>` (yyyyMMdd). Output `features_export_python_v3/*.bin.gz`. Record = 8(ts)+2(id)+40×4 = **170 byte** → validate `(filesize/170)` = #record; #float = `(recordbytes-10)/4` = 40.
+- **Tool 2 — OI per-coin (5 cột):** MAIN=`com.binance.chuyennd.ai_ml.features.export.fundingv2.ExportFundingOiPerCoin`, args `<start> <end> symfile=/tmp/oisyms.txt` (universe GỒM coin chết). Output `features_oi_percoin_v1/oi_percoin_<start>_<end>.bin.gz`. Record = 8+2+5×4 = **30 byte**.
+- Hai tool cùng key **(ts, symId)** → train 039 `merge_asof(by=symId, on=ts, direction=backward)` → 45 feature. Tool 2 mốc 5m, Tool 1 mốc 1m: asof backward gắn OI gần nhất ≤t (no-leak).
+
+**5. VALIDATE trong kernel (numpy, output KHÔNG tải về — BẪY 3):**
+- Tool 1: #record, #null + p1/p50/p99 mỗi feature; cross-sectional #coin/mốc tăng dần (2021~93 .. 2026~621); #36-40 phân phối hợp lý (ret15m quanh 0, closePosRange15m∈[0,1], wickRatio15m∈[0,1]).
+- Tool 2: #coin có OI/năm (tăng dần, survivorship); null-count 5 cột (`oiDelta24h,oiZ,lsGlobal,lsToptrader,takerBuyRatio`); oiZ phân bố quanh 0, takerBuyRatio∈[0,1].
+- Output để LẠI Kaggle cho 039 chain (`kernel_sources`).
+
+**6. NĂM NẶNG (2024-26):** nếu >20GB/năm → chia nửa năm. Perf-fix đã giảm thời gian/record.
+
+**7. Khi tất cả năm OK:** điền report 037 + 038 (#dòng tổng, phân phối, #coin/mốc, #null), set REVIEW + commit hash.
+
+### ⏸ (lịch sử) PAUSED 2026-06-16 — đã giải quyết ở mục RESUME trên
+- Va chạm 037↔038 (35 vs 40 cột): CHỐT 40 cột + OI tool riêng (mục 1).
+- PERF 3-lần-quét: ĐÃ FIX getLowHigh24H (mục 2).
+- Rebuild jar: mục 3.
+

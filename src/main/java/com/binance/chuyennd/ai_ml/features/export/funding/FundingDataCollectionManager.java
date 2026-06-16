@@ -295,7 +295,10 @@ public class FundingDataCollectionManager {
 
             Float rsi = historyManager.getRsi14(order.symbol);
             f.rsi1H = (rsi != null) ? rsi : 0.0f;
-            f.distFromLow24H = calculateDistFromLow24H(order.symbol, kline);
+            // PERF (037): 1 LẦN quét 24h dùng chung cho distFromLow24H (#11) + computePriceStructure (#29/#30)
+            float[] lowHigh24 = historyManager.getLowHigh24H(order.symbol);
+            float low24Shared = (lowHigh24 != null) ? lowHigh24[0] : 0f;
+            f.distFromLow24H = (low24Shared > 0) ? (kline.priceClose - low24Shared) / low24Shared : 0.0f;
             f.volatilityShock = calculateVolatilityShock(order.symbol, kline);
 
             // Funding riêng của coin
@@ -304,7 +307,7 @@ public class FundingDataCollectionManager {
             // === TASK-037 (F3): FEATURE MỚI append-only (#22..#32 per-coin). NaN nếu thiếu data. ===
             computeFundingDeepFeatures(f, order.symbol, currentTimestamp);
             computeVolumeStructureFeatures(f, order.symbol);
-            computePriceStructureFeatures(f, order.symbol, kline, cachedBtcMom24H);
+            computePriceStructureFeatures(f, order.symbol, kline, cachedBtcMom24H, lowHigh24);
             // #33..#35 cross-sectional: tính ở PASS 2 (ExportFeaturesForPythonTool). Mặc định NaN.
             f.fundingRankCS = Float.NaN;
             f.volumeZRankCS = Float.NaN;
@@ -440,13 +443,14 @@ public class FundingDataCollectionManager {
          * @param btcMom24H return 24h của BTC (cache)
          */
         private void computePriceStructureFeatures(FundingMarketFeatures f, String symbol,
-                                                   KlineObjectSimple kline, float btcMom24H) {
-            Float high24 = historyManager.getHigh24H(symbol);
-            Float low24 = historyManager.getLow24H(symbol);
+                                                   KlineObjectSimple kline, float btcMom24H, float[] lowHigh24) {
             float close = kline.priceClose;
+            // PERF (037): dùng lại [low,high] đã quét 1 lần ở extractFeatures (KHÔNG quét getHigh24H/getLow24H lần nữa)
+            float low24 = (lowHigh24 != null) ? lowHigh24[0] : Float.NaN;
+            float high24 = (lowHigh24 != null) ? lowHigh24[1] : Float.NaN;
 
-            f.distFromHigh24H = (high24 != null && high24 > 0) ? (high24 - close) / high24 : Float.NaN;
-            f.rangePosition24H = (high24 != null && low24 != null && high24 > low24)
+            f.distFromHigh24H = (lowHigh24 != null && high24 > 0) ? (high24 - close) / high24 : Float.NaN;
+            f.rangePosition24H = (lowHigh24 != null && high24 > low24)
                     ? (close - low24) / (high24 - low24) : Float.NaN;
 
             float atrShort = historyManager.getAverageRange(symbol, 14);
