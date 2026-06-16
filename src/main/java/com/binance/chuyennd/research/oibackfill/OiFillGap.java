@@ -59,6 +59,18 @@ public class OiFillGap {
             if ("226".equals(a) || "242".equals(a)) target = a;
             else if ("run".equalsIgnoreCase(a)) run = true;
             else if (a.toLowerCase().startsWith("days=")) days = Integer.parseInt(a.substring(5).trim());
+            else if (a.toLowerCase().startsWith("symfile=")) {
+                String p = a.substring(8).trim();
+                try {
+                    for (String line : java.nio.file.Files.readAllLines(java.nio.file.Paths.get(p))) {
+                        String s = line.trim().toUpperCase();
+                        if (s.matches("^[A-Z0-9]+USDT$")) explicit.add(s);
+                    }
+                    LOG.info("Doc {} symbol tu file {}", explicit.size(), p);
+                } catch (Exception e) {
+                    LOG.error("Doc symfile loi: {}", e.getMessage());
+                }
+            }
             else if (a.toUpperCase().matches("^[A-Z0-9]+USDT$")) explicit.add(a.toUpperCase());
         }
         new OiFillGap().run(target, run, explicit, days);
