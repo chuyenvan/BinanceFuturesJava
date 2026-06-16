@@ -75,7 +75,10 @@ require_review: true
 - File sửa: `FundingMarketFeatures` (+14 field cuối), `FundingDataCollectionManager.FundingFeatureExtractorV2` (computeFundingDeep+cache settlementKey / computeVolumeStructure / computePriceStructure), `HistoryManager` (+getHigh24H/+getVolumeZScore), `FundingFeeManager` (+getFundingHistory), `fundingv2/ExportFeaturesForPythonTool` (outputDir v3 + 2-PASS cross-sectional + convertFeaturesToArray append). `mvn -o compile` PASS.
 - KHÔNG đụng `FundingOnnxInferenceManager` (model 21-feat LIVE). Output `features_export_python_v3/` (KHÔNG đè cũ).
 
-### CÒN LẠI — RUN Kaggle + validate (CHỜ)
-- Build fat jar → dataset java-run → kernel enable_internet (đọc Aerospike 226). System.exit(0) đã có cuối main.
-- Validate: recompute ≥3 feature/≥3 mốc · no-leak · cross-sectional #coin/mốc (2021~93…2026~621) · #dòng/coverage vs lifecycle 010 · phân phối+#null mỗi feature · #dòng×35.
-- Điền: #dòng × 35, output path, commit hash.
+### JOB ĐANG CHẠY (handoff — CCD khác tiếp quản được)
+- **Kiến trúc run (user chốt 2026-06-16):** giữ per-minute × all-coin → **CHIA NĂM**, mỗi năm 1 kernel Kaggle (per-minute 5 năm ~40-50GB không vừa /kaggle/working ~20GB). main nhận `args[0]=start args[1]=end` (yyyyMMdd).
+- **Jar:** `chuyendinh/java-run-lc` (dataset) đã update jar sanitized build từ commit `8bdd2d1` (35 cột). Stage dev: `C:\Users\pc\java-run-lc-stage`.
+- **Kernel mẫu:** `C:\Users\pc\ff37-2021\` (kernel-metadata + ff37.py). Script: tìm jar+config → copy config+live_set → `java -Duser.timezone=Asia/Ho_Chi_Minh -Xmx16g -cp jar MAIN_CLASS <start> <end>` → **validate numpy ngay trong kernel** (output quá lớn không tải về: đếm #record, #null + phân phối p1/p50/p99 mỗi feature, cross-sectional #coin/mốc). MAIN_CLASS=`...fundingv2.ExportFeaturesForPythonTool`.
+- **PILOT đang chạy:** kernel slug **`chuyendinh/ff37-2021`** (năm 2021 — nhẹ nhất, validate code trên Kaggle + đo size năm thật). Output `/kaggle/working/features_export_python_v3/*.bin.gz`. Check: `kaggle kernels status chuyendinh/ff37-2021`; log: `kaggle kernels output chuyendinh/ff37-2021 -p <dir>`.
+- **BƯỚC TIẾP sau pilot OK:** clone kernel cho **2022/2023/2024/2025/2026** (đổi START/END trong ff37.py + id). ⚠️ năm nhiều coin (2024-2026) có thể >20GB/năm → nếu pilot cho size lớn thì CHIA NỬA NĂM. Mỗi kernel tự validate. Output để LẠI Kaggle cho 039 chain (`kernel_sources`), KHÔNG tải về (BẪY 3).
+- **Khi tất cả năm OK:** điền report 037 (#dòng tổng × 35, phân phối, CS #coin/mốc tăng dần, #null), set REVIEW + commit hash.
