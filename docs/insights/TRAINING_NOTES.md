@@ -20,3 +20,8 @@
 
 ## 4. Áp cho 039 (funding selector) y hệt
 Kiểm coverage regime của tập funding (đặc biệt crash 2022) + cân nhắc nhãn adaptive + đánh giá per-regime/lift, trước khi kết luận model/feature.
+
+## 5. HORIZON nhãn phải khớp thời gian giữ lệnh (rút thêm từ 026)
+- Horizon NGẮN dễ dự báo hơn (4h: macro-F1 0.353, std giữa fold 0.003) nhưng return spread nhỏ + KHÔNG khớp holding (DCA giữ nhiều ngày).
+- Horizon DÀI (24h) khó hơn (0.318) nhưng spread lớn hơn.
+- Dùng horizon ngắn như **chẩn đoán** (feature có lực không), nhưng chọn horizon **khớp thời gian giữ lệnh thực tế** cho production. 026 chốt **12h**.
