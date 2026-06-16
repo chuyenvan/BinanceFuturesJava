@@ -38,7 +38,6 @@ public class OiFillGap {
     private static final int PAGE_LIMIT = 500;          // max Binance /futures/data/*
     private static final int MAX_PAGES = 30;            // ~30 x 41h, du cho gap rat dai
     private static final long FIVE_MIN = 5 * 60_000L;
-    private static final long DEFAULT_BACKFILL_MS = 3 * 24 * 60 * 60_000L; // neu chua co data: fill 3 ngay
 
     private enum Ep {
         OI(OiMetricSets.OI, "openInterestHist", "sumOpenInterestValue"),
@@ -54,21 +53,24 @@ public class OiFillGap {
     public static void main(String[] args) {
         String target = "242";
         boolean run = false;
+        int days = 3;
         List<String> explicit = new ArrayList<>();
         for (String a : args) {
             if ("226".equals(a) || "242".equals(a)) target = a;
             else if ("run".equalsIgnoreCase(a)) run = true;
+            else if (a.toLowerCase().startsWith("days=")) days = Integer.parseInt(a.substring(5).trim());
             else if (a.toUpperCase().matches("^[A-Z0-9]+USDT$")) explicit.add(a.toUpperCase());
         }
-        new OiFillGap().run(target, run, explicit);
+        new OiFillGap().run(target, run, explicit, days);
         System.exit(0);
     }
 
-    private void run(String target, boolean doRun, List<String> explicit) {
+    private void run(String target, boolean doRun, List<String> explicit, int fillDays) {
         boolean is226 = "226".equals(target);
         List<String> symbols = explicit.isEmpty() ? collectSymbols() : explicit;
-        LOG.info("===== [TASK-035] FILL-GAP target={} mode={} symbols={} =====",
-                target, doRun ? "RUN" : "DRY-RUN", symbols.size());
+        long fillWindowMs = (long) fillDays * 24 * 60 * 60_000L;
+        LOG.info("===== [TASK-035] FILL-GAP target={} mode={} symbols={} cua-so={} ngay =====",
+                target, doRun ? "RUN" : "DRY-RUN", symbols.size(), fillDays);
         long now = System.currentTimeMillis();
         long totalFilled = 0;
         int touched = 0;
@@ -78,14 +80,16 @@ public class OiFillGap {
             for (Ep ep : Ep.values()) {
                 try {
                     if (BinanceRestGuard.awaitIfBanned(60_000L)) { banned = true; break; }
-                    TreeMap<Long, Float> existing = getMetric(is226, ep, symbol);
-                    long startTime = existing.isEmpty() ? now - DEFAULT_BACKFILL_MS : existing.lastKey() + 1;
-                    if (startTime >= now - FIVE_MIN) continue; // khong gap dang ke
+                    // Fill TOAN BO cua so fillDays gan nhat, KHONG tin lastKey: forward co the da ghi diem
+                    // moi nhat nhung van con LO O GIUA (T-1 -> luc forward bat dau). Merge-guard idempotent.
+                    long startTime = now - fillWindowMs;
 
                     TreeMap<Long, Float> gap = new TreeMap<>();
                     int pages = 0;
                     while (startTime < now - FIVE_MIN && pages < MAX_PAGES) {
-                        String url = BASE + ep.path + "?symbol=" + symbol + "&period=5m&limit=" + PAGE_LIMIT + "&startTime=" + startTime;
+                        long endTime = Math.min(startTime + (PAGE_LIMIT - 1) * FIVE_MIN, now);
+                        String url = BASE + ep.path + "?symbol=" + symbol + "&period=5m&limit=" + PAGE_LIMIT
+                                + "&startTime=" + startTime + "&endTime=" + endTime;
                         String resp = HttpRequest.getContentFromUrl(url, 8000);
                         BinanceRestGuard.reportBan(resp);
                         if (BinanceRestGuard.isBanned()) { banned = true; break; }
@@ -115,11 +119,6 @@ public class OiFillGap {
         }
         LOG.info("===== FILL-GAP xong: {} (symbol x metric) co data, tong {} diem (mode={}) =====",
                 touched, totalFilled, doRun ? "RUN" : "DRY-RUN");
-    }
-
-    private TreeMap<Long, Float> getMetric(boolean is226, Ep ep, String symbol) {
-        return is226 ? DataManagerAerospikeFloatSim.getMetricMap226(ep.m.set, ep.m.bin, symbol)
-                     : DataManagerAerospikeFloatSim.getMetricMap242(ep.m.set, ep.m.bin, symbol);
     }
 
     private int writeMetric(boolean is226, Ep ep, String symbol, Map<Long, Float> map) {
