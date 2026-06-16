@@ -7,7 +7,7 @@ supervisor.py — Orchestrator điều phối worker CCD headless (claude -p).
   - touches_live_process=true  -> KHÔNG BAO GIỜ auto (đẩy người).
   - writes_242_data=true       -> auto được, NHƯNG worker phải chạm 242 qua SSH 226 (luật ở CLAUDE.md).
   - Không sửa spec task; chỉ đổi field `status`. Single-writer: file này sở hữu runtime_state.json + STATUS.md + status-transition.
-  - Worker headless không có mắt người -> mỗi run nạp kèm CLAUDE.md + DATA_ARCHITECTURE.md + snapshot AGENTS.md.
+  - Worker headless chạy với cwd=ROOT -> Claude Code tự đọc CLAUDE.md + repo (KHÔNG nhồi qua argv).
 
 Chạy: python supervisor.py            (vòng lặp thật)
       python supervisor.py --dry-run  (poll + in quyết định, KHÔNG spawn)
@@ -22,6 +22,7 @@ import sys
 import json
 import time
 import signal
+import shutil
 import subprocess
 import threading
 from datetime import datetime, timezone
@@ -47,8 +48,8 @@ CAP_RESOURCE = {"local": 4, "heavy_226": 1, "kaggle": 5, "kaggle_distributed": 1
 TIMEOUT_MIN  = {"local": 20, "heavy_226": 240, "kaggle": 720, "kaggle_distributed": 1440}  # kaggle 12h cutoff; distributed master chờ queue cạn
 HEARTBEAT_STALE_MIN = 15   # report mtime đứng quá lâu (process còn sống) -> nghi treo
 
-# Lệnh spawn worker headless. {report} {task_file} thay lúc chạy.
-# Cờ headless chính xác: https://docs.claude.com/en/docs/claude-code/overview
+# Lệnh spawn worker headless. Đặt env CLAUDE_BIN nếu 'claude' không trên PATH.
+# Cờ headless: https://docs.claude.com/en/docs/claude-code/overview
 CLAUDE_BIN = os.environ.get("CLAUDE_BIN", "claude")
 
 # ----------------------------------------------------------------------------
@@ -98,7 +99,7 @@ def scan_tasks():
         fm = parse_front_matter(text)
         if not fm or "id" not in fm:
             continue
-        out.append((str(fm["id"]), p, fm))
+        out.append((str(fm["id"]).zfill(3), p, fm))
     return out
 
 # ---- runtime_state.json (single-writer = supervisor) ------------------------
@@ -159,41 +160,51 @@ def parse_result(report_path):
     return res
 
 # ---- spawn worker headless --------------------------------------------------
+def resolve_claude():
+    """Tìm executable claude. Windows: .cmd/.bat phải chạy qua `cmd /c`. None nếu không có."""
+    p = shutil.which(CLAUDE_BIN)
+    if not p:
+        return None
+    if os.name == "nt" and p.lower().endswith((".cmd", ".bat")):
+        return ["cmd", "/c", p]
+    return [p]
+
 def build_prompt(task_path):
-    claude_md   = (ROOT / "CLAUDE.md")
-    data_arch   = (ROOT / "docs" / "DATA_ARCHITECTURE.md")
-    agents      = (ROOT / "docs" / "AGENTS.md")
-    sysprompt_parts = []
-    for f in (claude_md, data_arch):
-        if f.exists():
-            sysprompt_parts.append(f.read_text(encoding="utf-8", errors="replace"))
-    system_prompt = "\n\n".join(sysprompt_parts)
-    agents_snapshot = agents.read_text(encoding="utf-8", errors="replace") if agents.exists() else ""
-    task_text = task_path.read_text(encoding="utf-8", errors="replace")
+    # Prompt NGẮN: worker chạy với cwd=ROOT nên Claude Code tự đọc CLAUDE.md + repo.
+    # KHÔNG nhồi CLAUDE.md/AGENTS qua argv (vượt giới hạn argv Windows + escape vỡ).
+    task_rel = task_path.relative_to(ROOT).as_posix()
     report_rel = f"docs/reports/{task_path.stem.split('-')[0]}.md"
-    user_prompt = (
-        "Bạn là WORKER HEADLESS thực thi đúng MỘT task. Tuân CLAUDE.md tuyệt đối: "
-        "kill-PID an toàn (không pkill/killall), KHÔNG deploy/restart 2 process live "
-        "(BinanceDataIngestor/BinanceOrderTradingManager) - nếu task hoá ra cần thì DỪNG + RESULT STATUS=NEEDS_HUMAN; "
-        "chạm 242 luôn qua SSH 226; System.exit(0) cuối main tool batch; checkpoint nếu job dài; dọn tài nguyên (off kernel, kill đúng PID) khi xong. "
-        f"Ghi tiến độ (mốc-bước) vào {report_rel}. KẾT THÚC report bằng block RESULT theo §4 AGENT_WORKFLOW "
-        "(STATUS/COMMIT/ARTIFACTS/VERIFY/DECISIONS/QUESTIONS), block là phần cuối cùng. "
-        "Cấm hỏi giữa chừng - gom vào QUESTIONS.\n\n"
-        f"=== AGENTS SNAPSHOT ===\n{agents_snapshot}\n\n"
-        f"=== TASK ===\n{task_text}"
+    return (
+        "Ban la WORKER HEADLESS, thuc thi dung MOT task roi dung. "
+        "DOC va TUAN: CLAUDE.md + docs/AGENT_WORKFLOW.md + docs/DATA_ARCHITECTURE.md (trong repo nay, cwd hien tai). "
+        f"Task can lam: {task_rel} (doc ky, lam dung pham vi). "
+        "Tuan tuyet doi: kill-PID an toan (khong pkill/killall); KHONG deploy/restart 2 process live "
+        "(BinanceDataIngestor/BinanceOrderTradingManager) - neu task hoa ra can thi DUNG; cham 242 qua SSH 226; "
+        "System.exit(0) cuoi main tool batch; checkpoint neu job dai; don tai nguyen khi xong; cam hoi giua chung. "
+        f"Ghi tien do (moc-buoc) vao {report_rel}, va KET THUC file do bang block:\n"
+        "=== RESULT ===\nSTATUS: DONE|REVIEW|NEEDS_HUMAN|FAILED\nCOMMIT: <hash|->\n"
+        "ARTIFACTS: <path|->\nVERIFY: <so doi chieu|->\nDECISIONS: <|->\nQUESTIONS: <|->\n=== END ==="
     )
-    return system_prompt, user_prompt
 
 def spawn_worker(task_id, task_path):
-    system_prompt, user_prompt = build_prompt(task_path)
-    cmd = [
-        CLAUDE_BIN, "-p",
-        "--dangerously-skip-permissions",
-        "--append-system-prompt", system_prompt,
-        user_prompt,
-    ]
+    base = resolve_claude()
+    if base is None:
+        raise FileNotFoundError(
+            f"Khong tim thay '{CLAUDE_BIN}' tren PATH. Cai Claude Code CLI hoac dat env CLAUDE_BIN = duong dan day du."
+        )
+    prompt = build_prompt(task_path)
+    cmd = base + ["-p", "--dangerously-skip-permissions"]
     logf = (REPORTS_DIR / f"{task_id}.worker.log").open("w", encoding="utf-8")
-    proc = subprocess.Popen(cmd, cwd=str(ROOT), stdout=logf, stderr=subprocess.STDOUT)
+    proc = subprocess.Popen(
+        cmd, cwd=str(ROOT),
+        stdin=subprocess.PIPE, stdout=logf, stderr=subprocess.STDOUT,
+        text=True, encoding="utf-8",
+    )
+    try:
+        proc.stdin.write(prompt)
+        proc.stdin.close()
+    except Exception:
+        pass
     log(f"spawned worker task={task_id} pid={proc.pid}")
     return proc
 
@@ -221,7 +232,7 @@ class Supervisor:
 
     def deps_done(self, fm, all_status):
         for d in fm.get("depends_on", []) or []:
-            if all_status.get(str(d)) != "DONE":
+            if all_status.get(str(d).zfill(3)) != "DONE":
                 return False
         return True
 
@@ -244,7 +255,7 @@ class Supervisor:
             res = parse_result(rp)
             tinfo = self.state["tasks"].setdefault(tid, {})
             if res is None:
-                log(f"task={tid} kết thúc nhưng RESULT thiếu/sai -> NEEDS_HUMAN")
+                log(f"task={tid} ket thuc nhung RESULT thieu/sai -> NEEDS_HUMAN")
                 if path: set_task_status(path, "NEEDS_HUMAN")
                 tinfo["last_result_status"] = "NEEDS_HUMAN(parse-fail)"
             else:
@@ -256,7 +267,7 @@ class Supervisor:
                     log(f"task={tid} DONE commit={res.get('COMMIT','-')}")
                 elif st == "REVIEW":
                     if path: set_task_status(path, "REVIEW")
-                    log(f"task={tid} REVIEW -> chờ người")
+                    log(f"task={tid} REVIEW -> cho nguoi")
                 elif st == "NEEDS_HUMAN":
                     if path: set_task_status(path, "NEEDS_HUMAN")
                     log(f"task={tid} NEEDS_HUMAN: {res.get('QUESTIONS','-')}")
@@ -272,7 +283,7 @@ class Supervisor:
         tinfo["retry_count"] = tinfo.get("retry_count", 0) + 1
         maxr = tinfo.get("max_retry", 2)
         if tinfo["retry_count"] > maxr:
-            log(f"task={tid} FAILED quá max_retry -> NEEDS_HUMAN")
+            log(f"task={tid} FAILED qua max_retry -> NEEDS_HUMAN")
             if path: set_task_status(path, "NEEDS_HUMAN")
         else:
             log(f"task={tid} FAILED -> requeue ({tinfo['retry_count']}/{maxr})")
@@ -289,14 +300,19 @@ class Supervisor:
             started = tinfo.get("started_at_epoch", time.time())
             elapsed_min = (time.time() - started) / 60.0
             timeout = TIMEOUT_MIN.get(resource, 60)
-            mtime_min = self.report_mtime_min(tid)
+            # idle = thoi gian tu HOAT DONG GAN NHAT = max(start, mtime report).
+            # Tranh giet oan khi report cu ton tai tu truoc (worker chua kip ghi moi).
+            rp = REPORTS_DIR / f"{tid}.md"
+            last_act = started
+            if rp.exists():
+                last_act = max(started, rp.stat().st_mtime)
+            idle_min = (time.time() - last_act) / 60.0
             stale = False
             reason = ""
             if elapsed_min > timeout:
-                stale, reason = True, f"quá timeout {resource} {timeout}'"
-            elif mtime_min is not None and mtime_min > HEARTBEAT_STALE_MIN and resource != "kaggle":
-                # kaggle: worker block chờ kernel, report có thể im lâu -> bỏ qua mtime
-                stale, reason = True, f"report đứng {mtime_min:.0f}' (nghi treo)"
+                stale, reason = True, f"qua timeout {resource} {timeout}'"
+            elif idle_min > HEARTBEAT_STALE_MIN and resource not in ("kaggle", "kaggle_distributed"):
+                stale, reason = True, f"idle {idle_min:.0f}' tu hoat dong cuoi (nghi treo)"
             if stale:
                 log(f"task={tid} STALE ({reason}) -> kill + requeue")
                 try:
@@ -323,28 +339,40 @@ class Supervisor:
 
         actions = []
         for tid, path, fm in tasks:
-            if tid in self.procs:
-                continue
             status = all_status.get(tid, "TODO")
-            if status != "TODO":
-                continue
-            if fm.get("touches_live_process", False):
-                continue  # KHÔNG auto - đẩy người
-            if not self.deps_done(fm, all_status):
-                continue
             resource = fm.get("resource", "local")
-            if self.slots_used() >= CAP_GLOBAL:
-                continue
-            if self.resource_used(resource) >= CAP_RESOURCE.get(resource, CAP_GLOBAL):
+            reason = None
+            if tid in self.procs:
+                reason = "dang chay (worker nay spawn)"
+            elif status != "TODO":
+                reason = f"status={status} (khong pick)"
+            elif fm.get("touches_live_process", False):
+                reason = "touches_live_process -> nguoi deploy tay"
+            elif not self.deps_done(fm, all_status):
+                reason = f"cho deps {fm.get('depends_on')}"
+            elif self.slots_used() >= CAP_GLOBAL:
+                reason = "het slot toan cuc"
+            elif self.resource_used(resource) >= CAP_RESOURCE.get(resource, CAP_GLOBAL):
+                reason = f"het cap resource {resource}"
+            if reason:
+                if self.dry_run:
+                    log(f"  SKIP {tid}: {reason}")
                 continue
             # đủ điều kiện
             if self.dry_run:
+                log(f"  READY {tid} ({resource}) -> WOULD spawn")
                 actions.append(f"WOULD spawn {tid} ({resource})")
                 continue
             if not claim(tid):
                 continue
             set_task_status(path, "DOING")
-            proc = spawn_worker(tid, path)
+            try:
+                proc = spawn_worker(tid, path)
+            except Exception as e:
+                log(f"spawn FAIL {tid}: {e} -> rollback (status TODO + nha lock)")
+                set_task_status(path, "TODO")
+                release(tid)
+                continue
             self.procs[tid] = proc
             tinfo = self.state["tasks"].setdefault(tid, {})
             tinfo.update({
@@ -368,10 +396,10 @@ class Supervisor:
     # ---- dashboard người-đọc ------------------------------------------------
     def write_status_md(self, tasks, all_status):
         lines = []
-        lines.append("# STATUS — orchestrator dashboard (supervisor ghi, đừng sửa tay)\n")
-        lines.append(f"- supervisor_pid: {os.getpid()} · last_tick: {now_iso()} · last_action: {self.state.get('last_action','-')}")
-        lines.append(f"- slots: {self.slots_used()}/{CAP_GLOBAL}  (heavy_226 {self.resource_used('heavy_226')}/{CAP_RESOURCE['heavy_226']}, kaggle {self.resource_used('kaggle')}/{CAP_RESOURCE['kaggle']})\n")
-        lines.append("## Đang chạy")
+        lines.append("# STATUS - orchestrator dashboard (supervisor ghi, dung sua tay)\n")
+        lines.append(f"- supervisor_pid: {os.getpid()} | last_tick: {now_iso()} | last_action: {self.state.get('last_action','-')}")
+        lines.append(f"- slots: {self.slots_used()}/{CAP_GLOBAL}  (heavy_226 {self.resource_used('heavy_226')}/{CAP_RESOURCE['heavy_226']}, kaggle {self.resource_used('kaggle')}/{CAP_RESOURCE['kaggle']}, kaggle_distributed {self.resource_used('kaggle_distributed')}/{CAP_RESOURCE['kaggle_distributed']})\n")
+        lines.append("## Dang chay")
         run = self.running_ids()
         if run:
             for tid in run:
@@ -379,16 +407,16 @@ class Supervisor:
                 lines.append(f"- {tid}: pid={t.get('owner_pid')} resource={t.get('resource')} started={t.get('started_at')} report_age={t.get('report_age_min')}'")
         else:
             lines.append("- (none)")
-        lines.append("\n## Chờ người (live-process / NEEDS_HUMAN / REVIEW)")
+        lines.append("\n## Cho nguoi (live-process / NEEDS_HUMAN / REVIEW)")
         waiting = []
         for tid, path, fm in tasks:
             st = all_status.get(tid)
             if fm.get("touches_live_process", False) and st == "TODO":
-                waiting.append(f"- {tid}: touches_live_process → người deploy tay")
+                waiting.append(f"- {tid}: touches_live_process -> nguoi deploy tay")
             if st in ("NEEDS_HUMAN", "REVIEW"):
                 waiting.append(f"- {tid}: {st}")
         lines += waiting if waiting else ["- (none)"]
-        lines.append("\n## Queue (TODO sẵn sàng / bị chặn deps)")
+        lines.append("\n## Queue (TODO san sang / bi chan deps)")
         for tid, path, fm in tasks:
             st = all_status.get(tid)
             if st != "TODO" or fm.get("touches_live_process", False):
@@ -400,8 +428,24 @@ class Supervisor:
 
     def run(self, once=False):
         log(f"supervisor start (dry_run={self.dry_run}) ROOT={ROOT}")
+        # dọn lock mồ côi từ lần chạy trước (start = chưa kế thừa proc nào)
+        if not self.dry_run:
+            for d in list(LOCKS_DIR.glob("*")):
+                if d.is_dir():
+                    try:
+                        os.rmdir(d)
+                        log(f"don lock mo coi: {d.name}")
+                    except OSError:
+                        pass
+            # reset task DOING mo coi (instance truoc chet) -> TODO de chay lai (checkpoint tu resume)
+            for tid, path, fm in scan_tasks():
+                txt = path.read_text(encoding="utf-8")
+                m = re.search(r"^status:\s*(\S+)", txt, flags=re.MULTILINE)
+                if m and m.group(1) == "DOING":
+                    set_task_status(path, "TODO")
+                    log(f"reset task mo coi DOING->TODO: {tid}")
         def handle_sigint(sig, frame):
-            log("Ctrl-C: dừng dispatch mới; worker đang chạy để tự xong.")
+            log("Ctrl-C: dung dispatch moi; worker dang chay de tu xong.")
             self.stop = True
         signal.signal(signal.SIGINT, handle_sigint)
         while not self.stop:
@@ -415,11 +459,15 @@ class Supervisor:
                 if self.stop:
                     break
                 time.sleep(1)
-        log("supervisor dừng dispatch. Chờ worker còn lại...")
-        for tid, p in self.procs.items():
-            if p.poll() is None:
-                p.wait()
-        log("supervisor thoát.")
+        running = [t for t, p in self.procs.items() if p.poll() is None]
+        if running:
+            log(f"dung dispatch. Cho {len(running)} worker con lai: {running}")
+            for tid, p in self.procs.items():
+                if p.poll() is None:
+                    p.wait()
+        else:
+            log("dung dispatch. Khong co worker nao dang chay.")
+        log("supervisor thoat.")
 
 # ----------------------------------------------------------------------------
 if __name__ == "__main__":

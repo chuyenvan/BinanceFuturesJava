@@ -1,0 +1,47 @@
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "cmd",
+      "args": [
+        "/c",
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "E:/educa/source/github/20260415/BinanceFuturesJava"
+      ]
+    },
+    "claude-code": {
+      "command": "cmd",
+      "args": [
+        "/c",
+        "claude",
+        "mcp",
+        "serve"
+      ]
+    }
+  },
+  "coworkUserFilesPath": "C:\\Users\\pc\\Claude",
+  "preferences": {
+    "coworkScheduledTasksEnabled": true,
+    "ccdScheduledTasksEnabled": true,
+    "bypassPermissionsGateByAccount": {
+      "96b4632a-1d47-4281-a220-8614f2385f8c": true
+    },
+    "coworkWebSearchEnabled": false,
+    "coworkModelAutoFallbackByAccount": {
+      "96b4632a-1d47-4281-a220-8614f2385f8c": true
+    },
+    "remoteToolsDeviceName": "desktop-619efeo",
+    "epitaxyPrefs": {
+      "starred-local-code-sessions": [],
+      "starred-cowork-spaces": [],
+      "starred-session-groups": [],
+      "dframe-local-slice": {
+        "pinnedOrder": [],
+        "customGroupAssignments": {},
+        "customGroupOrder": {}
+      }
+    },
+    "coworkHipaaRestricted": false
+  }
+}

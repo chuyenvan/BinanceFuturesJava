@@ -14,6 +14,8 @@ public class AerospikeCheckData {
 
 
         for (Map.Entry<String, AerospikeClient> entry : clients.entrySet()) {
+
+
             AerospikeClient client = entry.getValue();
             String host = entry.getKey();
             try {

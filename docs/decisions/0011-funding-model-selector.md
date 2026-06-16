@@ -126,7 +126,7 @@ Selector phải beat rule baseline (vd "funding-percentile cao + volume-z cao + 
 - [x] **Nơi nạp `symbolPred` + RANK hay REJECT** — `time2SymbolPred` (scalar/coin) → `getTopSymbolArray` RANK top-k (selector thật) + `checkSignalDynamic` điều biến + mạch "BƯỚC 3" riêng.
 - [x] **Scalar `symbolPred`** = `pred[0]` = **P(fail)** (FINDINGS §3) → rank ưu tiên P(fail) THẤP. ⚠️ cạm bẫy: đổi thứ tự output ONNX = sai dấu âm thầm → phải khoá thứ tự lớp khi train model mới.
 - [ ] **Đường export nào (fundingv2 getTopCoin vs funding findPotentialLosers) là đường THẬT** cho training data → gỡ mâu thuẫn basket trước khi train.
-- [x] **OI / long-short:** hệ CHƯA ingest; Binance history ~30 ngày (cần xác nhận) → KHÔNG backfill train được → ingest FORWARD từ giờ cho version sau. Volume per-coin: CÓ sẵn (ticker) → dùng được ngay.
+- [x] **OI / long-short / taker:** ĐÃ backfill 2020→T-1 từ `data.binance.vision/metrics` (TASK-013, xong 2026-06-15) lên 226+242 — coin sống coverage tới ~T-1 (cách hiện tại <2 ngày), coin chết tới lúc delist; **KHẢ DỤNG cho train v1** (ĐẢO kết luận cũ "history ~30 ngày, không backfill được" — cái đó chỉ đúng cho API `openInterestHist`, KHÔNG đúng cho dump metrics). Forward (LIVE): OI đang chuyển 1-record/symbol → **chunk-tháng** + bổ sung LS/taker (TASK-035, đang code). ⚠️ **Giới hạn API:** 3 metric này KHÔNG có WebSocket và KHÔNG có endpoint all-symbol → buộc REST `/futures/data/*` **per-symbol** (~5 endpoint × ~554 coin ≈ 11–12'/sweep) → poll chu kỳ **~30'** (selector dùng khung chậm, không cần realtime). Riêng **funding rate** có `!markPrice@arr` (WS) / `premiumIndex` (REST) all-symbol nên tươi & rẻ. Volume per-coin: CÓ sẵn (ticker).
 - [ ] Đối chiếu **nguồn thị trường ngoài** (khi có web) cho cơ chế funding/OI/squeeze.
 
 ---

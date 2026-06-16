@@ -1,7 +1,20 @@
 {
-  "supervisor_pid": 80520,
-  "supervisor_last_tick": "2026-06-14T22:20:22+07:00",
+  "supervisor_pid": 59020,
+  "supervisor_last_tick": "2026-06-15T11:37:03+07:00",
   "last_action": "idle",
-  "slots_used": 0,
-  "tasks": {}
+  "slots_used": 1,
+  "tasks": {
+    "013": {
+      "status": "DOING",
+      "owner_pid": 10828,
+      "resource": "kaggle_distributed",
+      "started_at": "2026-06-15T11:21:01+07:00",
+      "started_at_epoch": 1781497261.7860715,
+      "max_retry": 2,
+      "checkpoint": true,
+      "require_review": true,
+      "report_age_min": 0.3,
+      "retry_count": 1
+    }
+  }
 }

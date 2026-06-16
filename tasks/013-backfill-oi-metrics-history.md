@@ -1,9 +1,9 @@
 ---
 id: 013
-status: REVIEW
+status: DOING
 depends_on: []
 touches_live_process: false
-writes_242_data: true
+writes_242_data: false
 resource: kaggle_distributed
 checkpoint: true
 max_retry: 2
@@ -14,7 +14,7 @@ require_review: true
 # TASK-013: Verify + backfill OI / long-short / taker history từ data.binance.vision/metrics
 
 - **status:** TODO (data — mở khoá chân OI cho funding model). CHẠY ĐƯỢC NGAY (độc lập).
-- **owner:** CCD-oi · **status:** REVIEW (B2 code+test DONE, GATE chờ người soát trước LAUNCH FULL) · **updated:** 2026-06-15 · **report:** docs/reports/013.md
+- **owner:** _(supervisor giao headless)_ · **status:** code+test DONE, gate user DUYỆT → headless LAUNCH FULL · **updated:** 2026-06-15 · **report:** docs/reports/013.md
 - **Liên hệ:** ADR-0011 §5.3 (OI/LS/taker — đảo kết luận "không backfill được"). Forward poll cho live = TASK-007 phần C (riêng). Đây là HISTORY cho train.
 
 ## Bối cảnh (user phát hiện 2026-06-13)
@@ -42,7 +42,7 @@ History (013) và forward poll (007-C) **PHẢI ghi CÙNG** set + key + value. C
 
 ## BƯỚC 2 — BACKFILL (chỉ sau VERIFY PASS + user OK)
 - Tải metrics 2020→nay cho universe USDT-perp (ưu tiên coin trong scope train).
-- Lưu Aerospike: set mới cho OI value (+ set/bins cho LS + taker). Snappy `Map<Long,Float>` per symbol per metric, **bắt chước `writeFundingMap`** (guard chống mất lịch sử). Ghi 226 (train) + 242 (live) — chốt với read-client H1.
+- Lưu Aerospike: set mới cho OI value (+ set/bins cho LS + taker). Snappy `Map<Long,Float>` per symbol per metric, **bắt chước `writeFundingMap`** (guard chống mất lịch sử). Ghi **226** (train) — Kaggle worker chỉ tới được 226. **KHÔNG ghi 242 từ Kaggle** → đẩy 242 tách riêng **TASK-040** (job chạy TRÊN 226 sync Aerospike 226→242 + validate đầy đủ).
 - Dedup theo key 5m; skip+log gap.
 - **Validate:** recompute-compare vài mốc; cross-check OI quanh cú sập (OI tụt mạnh khi sập?); coverage per-coin khớp firstSeen (BƯỚC 1).
 
@@ -131,10 +131,11 @@ Granularity 5m UTC; mỗi metric 1 set, Snappy `Map<Long,Float>` per symbol (nh�
   chunk-tháng `SYMBOL_yyyyMM` (TASK-035) để history+forward MỘT schema? (đề xuất: có).
 
 ## Quy trình HEADLESS làm trọn (code → test → GATE → launch → monitor)
+> **TRẠNG THÁI 2026-06-15 — supervisor giao headless:** bước 1–2 (code `research/oibackfill/*` + test 2 symbol BTC/LUNA dev→226, recompute 0.000000%) **DONE**; gate bước 3 **user DUYỆT**. Headless BẮT ĐẦU TỪ **bước 4** — lưu ý CHƯA TừNG chạy Kaggle lần nào, phải setup distributed Kaggle.
 Một worker headless tự chạy trọn, CHỈ dừng đúng 1 gate ở bước ghi data thật (trước khi nhân 5 worker):
 1. **Code:** viết `BackfillOiMaster` + `BackfillOiWorker` (bê khung `RunHpoMaster_Distributed`/`RunWorkerKaggle`, đổi payload task=symbol, đổi phần chạy-engine → tải-vision-ghi-OI) + tool đẩy `226→242`. javac11 PASS.
 2. **TEST NHỎ (bắt buộc):** master ném ~2 symbol (1 sống + 1 delist, vd BTCUSDT + LUNAUSDT) → 1 worker chạy → ghi 226. Verify đưa SỐ vào report: đọc lại 226 đếm record; recompute vài mốc vs API (đã 0% ở B1); dedup đúng (không còn create_time trùng); KHÔNG ghi đè mất data cũ.
 3. **GATE = REVIEW:** DỪNG, RESULT `STATUS=REVIEW` kèm số test. Người soát mẫu (rẻ) — schema/dedup/không-mất-data đúng chưa. **KHÔNG launch full khi chưa soát.**
-4. **LAUNCH FULL (sau review OK):** master ném toàn universe → 5 Kaggle worker. Ghi BÀN GIAO (CLAUDE.md #4): queue set, kernel slugs, cách check (đếm queue/done) — để CCD khác/ phiên khác tiếp quản được.
+4. **LAUNCH FULL — SETUP KAGGLE DISTRIBUTED (lần đầu):** (a) build jar có `System.exit(0)` → upload Kaggle dataset (như `java-run`); (b) viết kernel chạy `BackfillOiWorker` (IS_KAGGLE_MODE, enable_internet, đọc/ghi 226) theo `docs/RUNBOOK_kaggle_multi_cpu.md`; (c) **TEST 1 kernel Kaggle trước** (rẻ — chưa chạy Kaggle bao giờ): 1 worker lấy vài task từ queue, ghi 226 OK → mới push đủ; (d) `BackfillOiMaster` (no-args) enqueue ~894 symbol vào `oi_backfill_queue`@226; (e) push **5 kernel** worker. Ghi BÀN GIAO #4: dataset slug, 5 kernel slug, cách đếm `oi_backfill_queue`/`oi_backfill_done`. **REPORT THEO CHECKPOINT** vào docs/reports/013.md cho Desktop phân tích: `[jar built][dataset up][1 worker Kaggle test OK][master enqueued N][5 worker running][queue cạn]`. Lỗi bước nào → RESULT `NEEDS_HUMAN` nêu rõ bước + log (đừng nhân lỗi ra 5 kernel).
 5. **MONITOR (poll, KHÔNG giữ session nhiều giờ):** poll queue count định kỳ; worker chết → STALE → worker khác cướp (tự lành). Queue cạn → đẩy `226→242` + validate cuối (cross-check OI tụt quanh sập, coverage firstSeen) → RESULT cuối.
 > Gate bước 3 là bước RẺ + REVERSIBLE chặn "code sai nhân 5 worker" ở lần đầu ghi data thật (kỷ luật §0.3 AGENT_WORKFLOW). Các bước còn lại headless tự làm, không cần người.
