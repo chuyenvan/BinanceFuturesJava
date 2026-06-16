@@ -1,6 +1,6 @@
 ---
 id: 037
-status: DOING
+status: PAUSED
 owner: CCD-funding
 updated: 2026-06-16
 depends_on: [036]
@@ -82,3 +82,16 @@ require_review: true
 - **PILOT đang chạy:** kernel slug **`chuyendinh/ff37-2021`** (năm 2021 — nhẹ nhất, validate code trên Kaggle + đo size năm thật). Output `/kaggle/working/features_export_python_v3/*.bin.gz`. Check: `kaggle kernels status chuyendinh/ff37-2021`; log: `kaggle kernels output chuyendinh/ff37-2021 -p <dir>`.
 - **BƯỚC TIẾP sau pilot OK:** clone kernel cho **2022/2023/2024/2025/2026** (đổi START/END trong ff37.py + id). ⚠️ năm nhiều coin (2024-2026) có thể >20GB/năm → nếu pilot cho size lớn thì CHIA NỬA NĂM. Mỗi kernel tự validate. Output để LẠI Kaggle cho 039 chain (`kernel_sources`), KHÔNG tải về (BẪY 3).
 - **Khi tất cả năm OK:** điền report 037 (#dòng tổng × 35, phân phối, CS #coin/mốc tăng dần, #null), set REVIEW + commit hash.
+
+### ⏸ PAUSED (2026-06-16) — chờ user điều phối 037/038 + PERF cần fix
+**1. VA CHẠM 037↔038 (cần user chốt định nghĩa .bin.gz):**
+- 037 (commit `8bdd2d1`) định nghĩa export = **35 cột** (#1-35). Pilot Kaggle `chuyendinh/ff37-2021` ĐANG/ĐÃ chạy jar 35 cột này.
+- 038 (commit `f241662`, `c98bae4`) đã ĐÈ `convertFeaturesToArray` ở HEAD → **40 cột** (#1-35 + microstructure #36-40); OI/LS/taker #41-45 ở tool riêng (038 "chốt .bin.gz = #1..#40").
+- ⇒ Pilot 35 cột **lỗi thời** so HEAD. Cần chốt: dataset cuối là 40 cột (1 tool) hay 45 (gộp OI) hay tách? Ai build/chạy? → user điều phối với CCD 038.
+
+**2. PERF — phải fix TRƯỚC khi chạy năm nặng (2024-26) kẻo cutoff 12h:**
+- Hiện `extractFeatures` quét cửa sổ 1440 nến **3 lần/record**: cũ `distFromLow24H`→getLow24H(1440); 037 thêm `getHigh24H(1440)` + `getLow24H(1440)` lần nữa (trong rangePosition). Khi ring đầy (sau warmup) → ~gấp đôi chi phí/record (pilot Q1 2021 = 11.28M rec/816s ≈ 13.8k rec/s; Q2 chậm hơn vì thêm coin + full-ring scan).
+- **Fix:** thêm `HistoryManager.getHighLow24H` (1 lần quét trả [low,high]) + tái dùng cho distFromLow24H/distFromHigh24H/rangePosition24H → về ~1 quét như cũ. 038 thêm microstructure #36-40 (ret15m/rvol15m/volumeZ5m/closePosRange15m/wickRatio15m) cũng tăng chi phí → cân nhắc tối ưu chung.
+- ⚠️ Fix này đụng HistoryManager + extractor — file 038 cũng đụng → phối hợp trước khi commit để tránh va chạm tiếp.
+
+**3. Trạng thái hạ tầng Kaggle (sẵn sàng dùng lại):** dataset `chuyendinh/java-run-lc` (jar sanitized), kernel mẫu `C:\Users\pc\ff37-2021\` (chia năm qua args). Sau khi user chốt định nghĩa + fix perf → rebuild jar (lưu ý kéo theo code 038 ở HEAD) → relaunch theo năm.
