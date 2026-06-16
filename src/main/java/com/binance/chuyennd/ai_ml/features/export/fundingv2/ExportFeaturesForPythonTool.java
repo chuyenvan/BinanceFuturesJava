@@ -236,7 +236,11 @@ public class ExportFeaturesForPythonTool {
                 // --- #29..#32: cấu trúc giá per-coin ---
                 f.distFromHigh24H, f.rangePosition24H, f.atrSqueeze, f.relStrengthBtc24H,
                 // --- #33..#35: cross-sectional (cùng mốc t) ---
-                f.fundingRankCS, f.volumeZRankCS, f.momentumRankCS
+                f.fundingRankCS, f.volumeZRankCS, f.momentumRankCS,
+                // --- #36..#40: microstructure 1m per-coin (TASK-038) ---
+                f.ret15m, f.rvol15m, f.volumeZ5m, f.closePosRange15m, f.wickRatio15m,
+                // --- #41..#45: OI/LS/taker per-coin (TASK-038, set ở PASS OI) ---
+                f.oiDelta24hCoin, f.oiZCoin, f.lsGlobalCoin, f.lsToptraderCoin, f.takerBuyRatioCoin
         };
     }
 

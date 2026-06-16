@@ -345,6 +345,60 @@ public class HistoryManager {
         return validCount == 0 ? 0.0f : totalRange / validCount;
     }
 
+    // ===== TASK-038 (microstructure 1m): N-bar high/low + wick ratio. Read-only ring, ≤t no-leak. =====
+
+    /** Giá thấp nhất N nến gần nhất (min minPrice). null nếu chưa có dữ liệu. */
+    public Float getLowN(String symbol, int periods) { return getLowN(SimpleSymbolMapper.getInstance().getId(symbol), periods); }
+    public Float getLowN(short symbolId, int periods) {
+        if (symbolId < 0 || symbolId >= MAX_COINS) return null;
+        int count = Math.min(historyHead[symbolId], RING_SIZE);
+        if (count == 0) return null;
+        int lookback = Math.min(count, periods);
+        float min = Float.MAX_VALUE;
+        int head = historyHead[symbolId] - 1;
+        for (int i = 0; i < lookback; i++) {
+            float p = historyRing[symbolId][(head - i) & RING_MASK].minPrice;
+            if (p < min) min = p;
+        }
+        return min == Float.MAX_VALUE ? null : min;
+    }
+
+    /** Giá cao nhất N nến gần nhất (max maxPrice). null nếu chưa có dữ liệu. */
+    public Float getHighN(String symbol, int periods) { return getHighN(SimpleSymbolMapper.getInstance().getId(symbol), periods); }
+    public Float getHighN(short symbolId, int periods) {
+        if (symbolId < 0 || symbolId >= MAX_COINS) return null;
+        int count = Math.min(historyHead[symbolId], RING_SIZE);
+        if (count == 0) return null;
+        int lookback = Math.min(count, periods);
+        float max = -Float.MAX_VALUE;
+        int head = historyHead[symbolId] - 1;
+        for (int i = 0; i < lookback; i++) {
+            float p = historyRing[symbolId][(head - i) & RING_MASK].maxPrice;
+            if (p > max) max = p;
+        }
+        return max == -Float.MAX_VALUE ? null : max;
+    }
+
+    /** Tỉ lệ bấc trên trung bình N nến gần: mean((maxPrice−max(open,close))/(maxPrice−minPrice)). NaN nếu thiếu. */
+    public float getAvgUpperWickRatio(String symbol, int periods) { return getAvgUpperWickRatio(SimpleSymbolMapper.getInstance().getId(symbol), periods); }
+    public float getAvgUpperWickRatio(short symbolId, int periods) {
+        if (symbolId < 0 || symbolId >= MAX_COINS) return Float.NaN;
+        int count = Math.min(historyHead[symbolId], RING_SIZE);
+        if (count == 0) return Float.NaN;
+        int lookback = Math.min(count, periods);
+        int head = historyHead[symbolId] - 1;
+        float sum = 0; int n = 0;
+        for (int i = 0; i < lookback; i++) {
+            KlineObjectSimple k = historyRing[symbolId][(head - i) & RING_MASK];
+            float range = k.maxPrice - k.minPrice;
+            if (range <= 0) continue;
+            float body = Math.max(k.priceOpen, k.priceClose);
+            sum += (k.maxPrice - body) / range;
+            n++;
+        }
+        return n == 0 ? Float.NaN : sum / n;
+    }
+
     // % thay đổi giá giữa nến mới nhất và nến cách đây `minutes` phút (thay cho getHistory()+getPriceAt cũ).
     public float getReturn(String symbol, int minutes)
     { return getReturn(SimpleSymbolMapper.getInstance().getId(symbol), minutes); }

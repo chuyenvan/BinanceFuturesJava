@@ -310,6 +310,15 @@ public class FundingDataCollectionManager {
             f.volumeZRankCS = Float.NaN;
             f.momentumRankCS = Float.NaN;
 
+            // === TASK-038 (F4): microstructure 1m (#36..#40) — tính ngay từ ring kline ≤t ===
+            computeMicrostructure1m(f, order.symbol, kline);
+            // === TASK-038: OI/LS/taker (#41..#45) — set ở PASS export (ExportFeaturesForPythonTool). Mặc định NaN. ===
+            f.oiDelta24hCoin = Float.NaN;
+            f.oiZCoin = Float.NaN;
+            f.lsGlobalCoin = Float.NaN;
+            f.lsToptraderCoin = Float.NaN;
+            f.takerBuyRatioCoin = Float.NaN;
+
             return f;
         }
 
@@ -445,6 +454,28 @@ public class FundingDataCollectionManager {
             f.atrSqueeze = (atrShort > 0 && atrLong > 0) ? atrShort / atrLong : Float.NaN;
 
             f.relStrengthBtc24H = f.momentum24H - btcMom24H;
+        }
+
+        /**
+         * TASK-038 — Microstructure 1m per-coin (≤t, no-leak): tổng hợp từ ring kline 1m gần.
+         * Thiếu nến → Float.NaN. ret15m dùng getReturn (0-on-missing, đồng nhất feature cũ).
+         *
+         * @param f features để ghi (#36..#40)
+         * @param symbol coin
+         * @param kline nến hiện tại
+         */
+        private void computeMicrostructure1m(FundingMarketFeatures f, String symbol, KlineObjectSimple kline) {
+            f.ret15m = historyManager.getReturn(symbol, 15);
+            f.rvol15m = historyManager.getVolatility(symbol, 15);
+            float sumVol5 = historyManager.getSumVolume(symbol, 5);
+            float avgVol20 = historyManager.getAverageVolume(symbol, 20);
+            f.volumeZ5m = (avgVol20 > 0) ? sumVol5 / (avgVol20 * 5f) : Float.NaN;
+            Float high15 = historyManager.getHighN(symbol, 15);
+            Float low15 = historyManager.getLowN(symbol, 15);
+            float close = kline.priceClose;
+            f.closePosRange15m = (high15 != null && low15 != null && high15 > low15)
+                    ? (close - low15) / (high15 - low15) : Float.NaN;
+            f.wickRatio15m = historyManager.getAvgUpperWickRatio(symbol, 15);
         }
 
         // ================= HELPER METHODS (CHỈ CHẠY 1 LẦN/PHÚT) =================

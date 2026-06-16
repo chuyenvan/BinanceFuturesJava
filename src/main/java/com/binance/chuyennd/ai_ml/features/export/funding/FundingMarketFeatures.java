@@ -61,6 +61,23 @@ public class FundingMarketFeatures implements Serializable {
     public float volumeZRankCS;         // #34 rank-percentile volumeZCoin cross-coin
     public float momentumRankCS;        // #35 rank-percentile momentum24H cross-coin
 
+    // =====================================================================
+    // --- TASK-038 (F4): APPEND-ONLY (#36..#45). Thứ tự KHÓA (xem docs/reports/038.md).
+    //     NaN khi thiếu data (KHÔNG fill-0). KHÔNG đổi #1..#35.
+    // =====================================================================
+    // E. Microstructure 1m per-coin (tổng hợp từ nến 1m ≤t)
+    public float ret15m;            // #36 return 15 phút gần
+    public float rvol15m;           // #37 std của return 1m trong 15 nến gần (sôi động tức thời)
+    public float volumeZ5m;         // #38 volume 5m gần / nền (sumVol5 / (avgVol20*5))
+    public float closePosRange15m;  // #39 (close − low15)/(high15 − low15) ∈ [0,1]
+    public float wickRatio15m;      // #40 bấc trên trung bình 15 nến (rejection)
+    // F. OI/LS/taker per-coin (đọc 5 set metrics 013; set ở PASS export, KHÔNG ở extractor)
+    public float oiDelta24hCoin;    // #41 Δ% OI coin vs t-24h
+    public float oiZCoin;           // #42 z-score OI hiện tại vs lịch sử coin (expanding ≤t)
+    public float lsGlobalCoin;      // #43 long/short global accounts của coin
+    public float lsToptraderCoin;   // #44 long/short top-trader của coin
+    public float takerBuyRatioCoin; // #45 taker buy/(buy+sell) của coin
+
     // --- LABELS (TARGET) ---
     // 0: Fail, 1: 72H, 2: 24H, 3: 4H, 4: 15M
     public int label6;   // Target 6%
