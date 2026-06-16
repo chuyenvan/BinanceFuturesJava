@@ -124,6 +124,28 @@ public class FundingFeeManager {
         return null;
     }
 
+    /**
+     * Trả về toàn bộ lịch sử funding (settlement-time → rate) của 1 coin để tính các feature
+     * funding-sâu expanding (TASK-037): percentile/z/persistence/sum24h. Caller PHẢI tự cắt
+     * {@code headMap(t, true)} để không look-ahead. Lazy-load như {@link #getNearestFundingFee}.
+     *
+     * @param symbol coin cần lấy lịch sử funding
+     * @return {@link TreeMap} settlement-time→rate (có thể rỗng), hoặc null nếu không có/đọc lỗi
+     */
+    public TreeMap<Long, Float> getFundingHistory(String symbol) {
+        TreeMap<Long, Float> map = symbol2FundingFee.get(symbol);
+        if (map == null) {
+            try {
+                map = DataManagerAerospikeFloatSim.getFundingMap(symbol);
+                if (map != null) symbol2FundingFee.put(symbol, map);
+            } catch (Exception e) {
+                LOG.warn("getFundingHistory lỗi đọc funding symbol={}: {}", symbol, e.getMessage());
+                return null;
+            }
+        }
+        return map;
+    }
+
 
 
 }

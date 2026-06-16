@@ -134,10 +134,12 @@ public class HistoryManager {
     public Float getRsi14(String symbol) { return getRsi14(SimpleSymbolMapper.getInstance().getId(symbol)); }
     public Float getMa(String symbol, int period) { return getMa(SimpleSymbolMapper.getInstance().getId(symbol), period); }
     public Float getLow24H(String symbol) { return getLow24H(SimpleSymbolMapper.getInstance().getId(symbol)); }
+    public Float getHigh24H(String symbol) { return getHigh24H(SimpleSymbolMapper.getInstance().getId(symbol)); }
     public Float getMaxRateChange(String symbol, int minutes) { return getMaxRateChange(SimpleSymbolMapper.getInstance().getId(symbol), minutes); }
     public float getSumVolume(String symbol, int minutes) { return getSumVolume(SimpleSymbolMapper.getInstance().getId(symbol), minutes); }
     public float getAverageVolume(String symbol, int periods) { return getAverageVolume(SimpleSymbolMapper.getInstance().getId(symbol), periods); }
     public float getAverageRange(String symbol, int periods) { return getAverageRange(SimpleSymbolMapper.getInstance().getId(symbol), periods); }
+    public float getVolumeZScore(String symbol, int periods) { return getVolumeZScore(SimpleSymbolMapper.getInstance().getId(symbol), periods); }
 
     public Set<String> getAllSymbols() { return symbolsLastUpdate; }
 
@@ -215,6 +217,28 @@ public class HistoryManager {
         return minPrice == Float.MAX_VALUE ? null : minPrice;
     }
 
+    /**
+     * Giá cao nhất 24h (đối xứng {@link #getLow24H(short)}): max của maxPrice trên ≤1440 nến gần nhất.
+     * Chỉ dùng dữ liệu ≤ nến hiện tại trong ring (no-leak).
+     *
+     * @param symbolId id coin
+     * @return giá cao nhất 24h, hoặc null nếu chưa có dữ liệu
+     */
+    public Float getHigh24H(short symbolId) {
+        int count = Math.min(historyHead[symbolId], RING_SIZE);
+        if (count == 0) return null;
+
+        int lookback = Math.min(count, 1440);
+        float maxPrice = -Float.MAX_VALUE;
+        int head = historyHead[symbolId] - 1;
+
+        for (int i = 0; i < lookback; i++) {
+            float price = historyRing[symbolId][(head - i) & RING_MASK].maxPrice;
+            if (price > maxPrice) maxPrice = price;
+        }
+        return maxPrice == -Float.MAX_VALUE ? null : maxPrice;
+    }
+
     public Float getMaxRateChange(short symbolId, int minutes) {
         int count = Math.min(historyHead[symbolId], RING_SIZE);
         if (count < 2) return 0.0f;
@@ -264,6 +288,41 @@ public class HistoryManager {
             }
         }
         return validCount == 0 ? 0.0f : totalVol / validCount;
+    }
+
+    /**
+     * Z-score của volume nến HIỆN TẠI so với phân phối {@code periods} nến TRƯỚC đó (cùng cửa sổ
+     * với {@link #getAverageVolume(short, int)}: bỏ nến hiện tại, nhìn lùi {@code periods} nến).
+     * Chỉ dùng dữ liệu ≤ nến hiện tại (no-leak).
+     *
+     * @param symbolId id coin
+     * @param periods  số nến quá khứ để tính mean/std (vd 20)
+     * @return (volume hiện tại − mean)/std; {@link Float#NaN} nếu thiếu nến hoặc std≤0
+     */
+    public float getVolumeZScore(short symbolId, int periods) {
+        int count = Math.min(historyHead[symbolId], RING_SIZE);
+        if (count < periods + 1) return Float.NaN;
+
+        int head = historyHead[symbolId] - 1;
+        float current = historyRing[symbolId][head & RING_MASK].totalUsdt;
+
+        int startIndex = head - 1; // bỏ nến hiện tại
+        float sum = 0, sumSq = 0;
+        int n = 0;
+        for (int i = 0; i < periods; i++) {
+            int idx = startIndex - i;
+            if (idx < 0) break;
+            float v = historyRing[symbolId][idx & RING_MASK].totalUsdt;
+            sum += v;
+            sumSq += v * v;
+            n++;
+        }
+        if (n < 2) return Float.NaN;
+        float mean = sum / n;
+        float var = (sumSq - (sum * sum) / n) / (n - 1);
+        if (var <= 0) return Float.NaN;
+        float std = (float) Math.sqrt(var);
+        return (current - mean) / std;
     }
 
     public float getAverageRange(short symbolId, int periods) {

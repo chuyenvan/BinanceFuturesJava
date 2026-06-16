@@ -221,6 +221,26 @@ public class FundingDataCollectionManager {
         private float cachedBasketVolSpike;
         private float cachedBasketFundingRaw;
 
+        // --- TASK-037: cache funding-sâu per-coin. Các feature percentile/z/persistence/sum/abs CHỈ đổi
+        //     khi kỳ funding (settlement ≤t) đổi (mỗi ~8h), nên cache theo settlementKey → tránh quét
+        //     lại TOÀN BỘ lịch sử funding mỗi phút (O(n) × #coin × #phút = bất khả thi). ---
+        private final java.util.concurrent.ConcurrentHashMap<String, FundingDeepCache> fundingDeepCache
+                = new java.util.concurrent.ConcurrentHashMap<>();
+
+        private static class FundingDeepCache {
+            final long settlementKey;
+            final float percentile, z, persistence, sum24h, abs;
+
+            FundingDeepCache(long settlementKey, float percentile, float z, float persistence, float sum24h, float abs) {
+                this.settlementKey = settlementKey;
+                this.percentile = percentile;
+                this.z = z;
+                this.persistence = persistence;
+                this.sum24h = sum24h;
+                this.abs = abs;
+            }
+        }
+
         public void updateMarketHistory(Map<String, KlineObjectSimple> snapshot) {
             historyManager.updateHistory(snapshot);
         }
@@ -281,7 +301,150 @@ public class FundingDataCollectionManager {
             // Funding riêng của coin
             extractCoinFundingFeatures(f, order.symbol, currentTimestamp);
 
+            // === TASK-037 (F3): FEATURE MỚI append-only (#22..#32 per-coin). NaN nếu thiếu data. ===
+            computeFundingDeepFeatures(f, order.symbol, currentTimestamp);
+            computeVolumeStructureFeatures(f, order.symbol);
+            computePriceStructureFeatures(f, order.symbol, kline, cachedBtcMom24H);
+            // #33..#35 cross-sectional: tính ở PASS 2 (ExportFeaturesForPythonTool). Mặc định NaN.
+            f.fundingRankCS = Float.NaN;
+            f.volumeZRankCS = Float.NaN;
+            f.momentumRankCS = Float.NaN;
+
             return f;
+        }
+
+        // ================= TASK-037 (F3): FEATURE MỚI PER-COIN =================
+
+        /**
+         * Funding-sâu per-coin (expanding ≤t, no-leak): percentile/z/persistence/sum24h/abs.
+         * Dùng TOÀN BỘ lịch sử funding của coin cắt {@code headMap(t,true)} (chỉ settlement ≤t).
+         * Thiếu data → để Float.NaN.
+         *
+         * @param f  features để ghi (#22..#26)
+         * @param symbol coin
+         * @param t  mốc hiện tại (ms)
+         */
+        private void computeFundingDeepFeatures(FundingMarketFeatures f, String symbol, long t) {
+            f.fundingPercentileCoin = Float.NaN;
+            f.fundingZCoin = Float.NaN;
+            f.fundingPersistence = Float.NaN;
+            f.fundingSum24h = Float.NaN;
+            f.fundingAbs = Float.NaN;
+            try {
+                TreeMap<Long, Float> fh = FundingFeeManager.getInstance().getFundingHistory(symbol);
+                if (fh == null || fh.isEmpty()) return;
+                Long key = fh.floorKey(t); // settlement gần nhất ≤t
+                if (key == null) return;   // chưa có settlement nào ≤t
+
+                // CACHE: các feature này chỉ đổi khi kỳ funding đổi → tái dùng trong cùng kỳ.
+                FundingDeepCache c = fundingDeepCache.get(symbol);
+                if (c == null || c.settlementKey != key) {
+                    c = recomputeFundingDeep(fh, key, t);
+                    fundingDeepCache.put(symbol, c);
+                }
+                f.fundingPercentileCoin = c.percentile;
+                f.fundingZCoin = c.z;
+                f.fundingPersistence = c.persistence;
+                f.fundingSum24h = c.sum24h;
+                f.fundingAbs = c.abs;
+            } catch (Exception e) {
+                LOG.warn("computeFundingDeepFeatures lỗi symbol={} t={}: {}", symbol, t, e.getMessage());
+            }
+        }
+
+        /**
+         * Tính lại các feature funding-sâu cho 1 kỳ funding (settlement {@code key} ≤ t). Quét lịch sử
+         * funding ≤t = {@code headMap(key, true)} (no-leak, deterministic theo key). sum24h piecewise-constant
+         * trên lưới settlement (24h là bội số của chu kỳ funding chuẩn) nên tính 1 lần/kỳ là đủ.
+         */
+        private FundingDeepCache recomputeFundingDeep(TreeMap<Long, Float> fh, long key, long t) {
+            NavigableMap<Long, Float> head = fh.headMap(key, true); // settlements ≤ t (= ≤ key)
+            float current = head.lastEntry().getValue();
+            float abs = Math.abs(current);
+
+            // persistence: số kỳ liên tiếp cùng dấu (gồm kỳ hiện tại)
+            float persistence;
+            int curSign = current > 0 ? 1 : (current < 0 ? -1 : 0);
+            if (curSign == 0) {
+                persistence = 0f;
+            } else {
+                int run = 0;
+                for (Float v : head.descendingMap().values()) {
+                    int s = v > 0 ? 1 : (v < 0 ? -1 : 0);
+                    if (s == curSign) run++;
+                    else break;
+                }
+                persistence = run;
+            }
+
+            // percentile + z trên toàn lịch sử ≤t (cần ≥3 mẫu cho percentile có nghĩa)
+            float percentile = Float.NaN, z = Float.NaN;
+            int n = head.size();
+            if (n >= 3) {
+                int less = 0, equal = 0;
+                double sum = 0, sumSq = 0;
+                for (Float v : head.values()) {
+                    if (v < current) less++;
+                    else if (v.floatValue() == current) equal++;
+                    sum += v;
+                    sumSq += (double) v * v;
+                }
+                percentile = (float) ((less + 0.5 * equal) / n);
+                double mean = sum / n;
+                double var = (sumSq - (sum * sum) / n) / (n - 1);
+                if (var > 0) z = (float) ((current - mean) / Math.sqrt(var));
+            }
+
+            // sum funding các kỳ settle trong (t-24h, t]
+            float sum24h = Float.NaN;
+            NavigableMap<Long, Float> last24 = fh.subMap(t - 24 * 3600_000L, false, t, true);
+            if (!last24.isEmpty()) {
+                float s = 0;
+                for (Float v : last24.values()) s += v;
+                sum24h = s;
+            }
+
+            return new FundingDeepCache(key, percentile, z, persistence, sum24h, abs);
+        }
+
+        /**
+         * Volume per-coin: z-score volume nến hiện tại (vs 20 nến trước) + xu hướng volume (ngắn/dài).
+         * Warmup/thiếu nến → Float.NaN.
+         *
+         * @param f features để ghi (#27..#28)
+         * @param symbol coin
+         */
+        private void computeVolumeStructureFeatures(FundingMarketFeatures f, String symbol) {
+            f.volumeZCoin = historyManager.getVolumeZScore(symbol, 20); // NaN nếu thiếu nến/std≤0
+            float volShort = historyManager.getAverageVolume(symbol, 5);
+            float volLong = historyManager.getAverageVolume(symbol, 60);
+            f.volumeTrend = (volShort > 0 && volLong > 0) ? volShort / volLong : Float.NaN;
+        }
+
+        /**
+         * Cấu trúc giá per-coin (≤t): distFromHigh24H, rangePosition24H, atrSqueeze, relStrengthBtc24H.
+         * Thiếu high/low/ATR → Float.NaN. relStrength dùng getReturn (0-on-missing như feature cũ).
+         *
+         * @param f features để ghi (#29..#32)
+         * @param symbol coin
+         * @param kline nến hiện tại của coin
+         * @param btcMom24H return 24h của BTC (cache)
+         */
+        private void computePriceStructureFeatures(FundingMarketFeatures f, String symbol,
+                                                   KlineObjectSimple kline, float btcMom24H) {
+            Float high24 = historyManager.getHigh24H(symbol);
+            Float low24 = historyManager.getLow24H(symbol);
+            float close = kline.priceClose;
+
+            f.distFromHigh24H = (high24 != null && high24 > 0) ? (high24 - close) / high24 : Float.NaN;
+            f.rangePosition24H = (high24 != null && low24 != null && high24 > low24)
+                    ? (close - low24) / (high24 - low24) : Float.NaN;
+
+            float atrShort = historyManager.getAverageRange(symbol, 14);
+            float atrLong = historyManager.getAverageRange(symbol, 100);
+            f.atrSqueeze = (atrShort > 0 && atrLong > 0) ? atrShort / atrLong : Float.NaN;
+
+            f.relStrengthBtc24H = f.momentum24H - btcMom24H;
         }
 
         // ================= HELPER METHODS (CHỈ CHẠY 1 LẦN/PHÚT) =================

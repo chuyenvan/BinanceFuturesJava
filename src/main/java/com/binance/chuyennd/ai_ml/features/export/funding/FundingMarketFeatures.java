@@ -37,6 +37,30 @@ public class FundingMarketFeatures implements Serializable {
     public float fundingRateAvg24H;
     public float fundingRateTrend;
 
+    // =====================================================================
+    // --- TASK-037 (F3): FEATURE MỚI — APPEND-ONLY (#22..#35) ---
+    // Thứ tự KHÓA (xem docs/reports/037.md): KHÔNG chèn giữa, KHÔNG đổi 21 feature cũ.
+    // Giá trị KHÔNG tính được (warmup/thiếu data) = Float.NaN (KHÔNG fill-0).
+    // =====================================================================
+    // A. Funding sâu per-coin (expanding ≤t từ lịch sử funding riêng coin, no-leak)
+    public float fundingPercentileCoin; // #22 percentile của funding hiện tại trong lịch sử coin (≤t)
+    public float fundingZCoin;          // #23 (funding − mean_lichsu)/std_lichsu (≤t)
+    public float fundingPersistence;    // #24 số kỳ funding liên tiếp CÙNG DẤU (run-length, gồm kỳ hiện tại)
+    public float fundingSum24h;         // #25 tổng funding các kỳ settle trong 24h gần (t-24h, t]
+    public float fundingAbs;            // #26 |funding hiện tại|
+    // B. Volume per-coin
+    public float volumeZCoin;           // #27 (volume nến hiện tại − mean20)/std20
+    public float volumeTrend;           // #28 avgVol ngắn(5) / avgVol dài(60)
+    // C. Cấu trúc giá per-coin (từ kline ≤t)
+    public float distFromHigh24H;       // #29 (high24h − close)/high24h
+    public float rangePosition24H;      // #30 (close − low24h)/(high24h − low24h) ∈ [0,1]
+    public float atrSqueeze;            // #31 ATR ngắn(14)/ATR dài(100); <1 = nén
+    public float relStrengthBtc24H;     // #32 return_coin_24h − return_btc_24h
+    // D. Cross-sectional (so coin CÙNG mốc t — tính ở PASS 2 trong export tool)
+    public float fundingRankCS;         // #33 rank-percentile coinFundingRate cross-coin
+    public float volumeZRankCS;         // #34 rank-percentile volumeZCoin cross-coin
+    public float momentumRankCS;        // #35 rank-percentile momentum24H cross-coin
+
     // --- LABELS (TARGET) ---
     // 0: Fail, 1: 72H, 2: 24H, 3: 4H, 4: 15M
     public int label6;   // Target 6%

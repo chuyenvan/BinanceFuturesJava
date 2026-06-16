@@ -37,7 +37,8 @@ public class ExportFeaturesForPythonTool {
     }
 
     public static void main(String[] args) throws Exception {
-        String outputDir = "features_export_python/";
+        // TASK-037: PHIÊN BẢN MỚI (v3) — KHÔNG đè data model 21-feature cũ (features_export_python/).
+        String outputDir = "features_export_python_v3/";
         new File(outputDir).mkdirs();
 
         new ExportFeaturesForPythonTool().startGeneration(outputDir);
@@ -131,8 +132,8 @@ public class ExportFeaturesForPythonTool {
                             fileRecordCount = 0;
                         }
 
-                        // TRÍCH XUẤT FEATURE BẰNG SINGLE THREAD (stream)
-                        List<PrepareData> minuteData = symbol2Ticker.keySet().parallelStream()
+                        // === PASS 1: per-coin (parallel) — feature #1..#32; cross-sectional (#33..#35) để NaN ===
+                        List<FeatureHolder> rawList = symbol2Ticker.keySet().parallelStream()
                                 .map(symbol -> {
                                     try {
                                         Short symId = symbolMap.get(symbol);
@@ -148,16 +149,20 @@ public class ExportFeaturesForPythonTool {
                                         FundingMarketFeatures features = extractor.extractFeatures(
                                                 time, dummyOrder, symbol2Ticker, time2MarketData.get(time), basket);
 
-                                        if (features != null) {
-                                            return new PrepareData(time, symId, convertFeaturesToArray(features));
-                                        }
-                                    } catch (Exception e) {}
+                                        if (features != null) return new FeatureHolder(symId, features);
+                                    } catch (Exception e) {
+                                        LOG.warn("PASS1 trích feature lỗi symbol={} ts={}: {}", symbol, time, e.toString());
+                                    }
                                     return null;
                                 })
                                 .filter(Objects::nonNull)
                                 .collect(Collectors.toList());
 
-                        batch.addAll(minuteData);
+                        // === PASS 2: cross-sectional rank giữa các coin CÙNG mốc t (single-thread, chỉ coin có data tại t) ===
+                        applyCrossSectional(rawList);
+                        for (FeatureHolder h : rawList) {
+                            batch.add(new PrepareData(time, h.id, convertFeaturesToArray(h.f)));
+                        }
 
                         // FLUSH XUỐNG FILE KHI BATCH ĐẦY ĐỂ TRÁNH TRÀN RAM
                         if (batch.size() >= 100000) {
@@ -199,12 +204,118 @@ public class ExportFeaturesForPythonTool {
         }
     }
 
+    /**
+     * Mảng feature theo thứ tự KHÓA (xem docs/reports/037.md). #1..#21 GIỮ NGUYÊN (khớp model
+     * 21-feature đang LIVE); #22..#35 APPEND-ONLY (TASK-037). 039/inference-v2 phải đọc đúng thứ tự này.
+     */
     private float[] convertFeaturesToArray(FundingMarketFeatures f) {
         return new float[]{
+                // --- #1..#21: GIỮ NGUYÊN (append-only — KHÔNG đổi) ---
                 f.btcMomentum1H, f.btcMomentum4H, f.btcMomentum24H, f.btcDominance, f.marketBreadthStrength,
                 f.rateDown15MAvg, f.momentum1H, f.momentum4H, f.momentum24H, f.rsi1H, f.distFromLow24H, f.volatilityShock,
                 f.basketMomentum15M, f.basketMomentum1H, f.basketMomentum24H, f.basketRsi14, f.basketVolSpike,
-                f.coinFundingRate, f.basketFundingAvg, f.fundingRateAvg24H, f.fundingRateTrend
+                f.coinFundingRate, f.basketFundingAvg, f.fundingRateAvg24H, f.fundingRateTrend,
+                // --- #22..#26: funding sâu per-coin ---
+                f.fundingPercentileCoin, f.fundingZCoin, f.fundingPersistence, f.fundingSum24h, f.fundingAbs,
+                // --- #27..#28: volume per-coin ---
+                f.volumeZCoin, f.volumeTrend,
+                // --- #29..#32: cấu trúc giá per-coin ---
+                f.distFromHigh24H, f.rangePosition24H, f.atrSqueeze, f.relStrengthBtc24H,
+                // --- #33..#35: cross-sectional (cùng mốc t) ---
+                f.fundingRankCS, f.volumeZRankCS, f.momentumRankCS
         };
+    }
+
+    /** Gom (symId, features) sau PASS 1 để PASS 2 tính cross-sectional rank cùng mốc. */
+    private static class FeatureHolder {
+        final short id;
+        final FundingMarketFeatures f;
+
+        FeatureHolder(short id, FundingMarketFeatures f) {
+            this.id = id;
+            this.f = f;
+        }
+    }
+
+    /**
+     * PASS 2 — cross-sectional: với mỗi mốc t, xếp rank-percentile coinFundingRate / volumeZCoin /
+     * momentum24H GIỮA các coin có data tại t (#33..#35). Giá trị NaN (warmup) bị loại khỏi rank và
+     * nhận rank = NaN. KHÔNG look-ahead (chỉ coin cùng mốc, không dùng coin mốc khác).
+     *
+     * @param list danh sách holder của 1 mốc t (đã lọc coin có ticker hợp lệ)
+     */
+    private void applyCrossSectional(List<FeatureHolder> list) {
+        int m = list.size();
+        if (m == 0) return;
+        float[] funding = new float[m];
+        float[] volz = new float[m];
+        float[] mom = new float[m];
+        for (int i = 0; i < m; i++) {
+            FundingMarketFeatures f = list.get(i).f;
+            funding[i] = f.coinFundingRate; // luôn có giá trị (0 nếu thiếu funding) → rank toàn coin
+            volz[i] = f.volumeZCoin;        // NaN khi warmup → loại khỏi rank
+            mom[i] = f.momentum24H;
+        }
+        float[] fundingRank = percentileRanks(funding);
+        float[] volzRank = percentileRanks(volz);
+        float[] momRank = percentileRanks(mom);
+        for (int i = 0; i < m; i++) {
+            FundingMarketFeatures f = list.get(i).f;
+            f.fundingRankCS = fundingRank[i];
+            f.volumeZRankCS = volzRank[i];
+            f.momentumRankCS = momRank[i];
+        }
+    }
+
+    /**
+     * Rank-percentile (midrank) ∈ [0,1] cho từng phần tử so với các phần tử KHÔNG-NaN cùng mảng.
+     * NaN giữ nguyên NaN. Nếu &lt;2 giá trị hợp lệ → tất cả NaN (rank vô nghĩa).
+     */
+    private static float[] percentileRanks(float[] vals) {
+        int m = vals.length;
+        float[] out = new float[m];
+        int validCount = 0;
+        for (float v : vals) if (!Float.isNaN(v)) validCount++;
+        if (validCount <= 1) {
+            Arrays.fill(out, Float.NaN);
+            return out;
+        }
+        float[] sorted = new float[validCount];
+        int k = 0;
+        for (float v : vals) if (!Float.isNaN(v)) sorted[k++] = v;
+        Arrays.sort(sorted);
+        for (int i = 0; i < m; i++) {
+            float v = vals[i];
+            if (Float.isNaN(v)) {
+                out[i] = Float.NaN;
+                continue;
+            }
+            int less = lowerBound(sorted, v);
+            int equal = upperBound(sorted, v) - less;
+            out[i] = (float) ((less + 0.5 * equal) / validCount);
+        }
+        return out;
+    }
+
+    /** Số phần tử &lt; key trong mảng đã sort tăng dần. */
+    private static int lowerBound(float[] a, float key) {
+        int lo = 0, hi = a.length;
+        while (lo < hi) {
+            int mid = (lo + hi) >>> 1;
+            if (a[mid] < key) lo = mid + 1;
+            else hi = mid;
+        }
+        return lo;
+    }
+
+    /** Số phần tử ≤ key trong mảng đã sort tăng dần. */
+    private static int upperBound(float[] a, float key) {
+        int lo = 0, hi = a.length;
+        while (lo < hi) {
+            int mid = (lo + hi) >>> 1;
+            if (a[mid] <= key) lo = mid + 1;
+            else hi = mid;
+        }
+        return lo;
     }
 }

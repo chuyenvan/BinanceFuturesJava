@@ -1,6 +1,8 @@
 ---
 id: 037
-status: TODO
+status: DOING
+owner: CCD-funding
+updated: 2026-06-16
 depends_on: [036]
 touches_live_process: false
 writes_242_data: false
@@ -66,7 +68,14 @@ require_review: true
 - System.exit(0) cuối main (tránh treo JVM — bài học 015).
 
 ## (Code / Kết quả điền)
-- Liệt kê CHÍNH XÁC thứ tự feature mới (#22..#N) — KHÓA cho 039/inference v2.
-- #dòng × #cột .bin.gz v3, đường dẫn output.
-- Kết quả validate (recompute, no-leak, cross-sectional #coin/mốc, phân phối).
-- commit hash.
+
+### CODE DONE + compile PASS (2026-06-16, CCD-funding) — chi tiết: `docs/reports/037.md`
+- **14 feature mới** (taker BỎ → 038 vì KlineObjectSimple không có takerBuyVolume). N = 21 + 14 = **35 float/record**.
+- **Thứ tự KHÓA #22..#35:** fundingPercentileCoin, fundingZCoin, fundingPersistence, fundingSum24h, fundingAbs, volumeZCoin, volumeTrend, distFromHigh24H, rangePosition24H, atrSqueeze, relStrengthBtc24H, fundingRankCS, volumeZRankCS, momentumRankCS. (#1..#21 GIỮ NGUYÊN — append-only.)
+- File sửa: `FundingMarketFeatures` (+14 field cuối), `FundingDataCollectionManager.FundingFeatureExtractorV2` (computeFundingDeep+cache settlementKey / computeVolumeStructure / computePriceStructure), `HistoryManager` (+getHigh24H/+getVolumeZScore), `FundingFeeManager` (+getFundingHistory), `fundingv2/ExportFeaturesForPythonTool` (outputDir v3 + 2-PASS cross-sectional + convertFeaturesToArray append). `mvn -o compile` PASS.
+- KHÔNG đụng `FundingOnnxInferenceManager` (model 21-feat LIVE). Output `features_export_python_v3/` (KHÔNG đè cũ).
+
+### CÒN LẠI — RUN Kaggle + validate (CHỜ)
+- Build fat jar → dataset java-run → kernel enable_internet (đọc Aerospike 226). System.exit(0) đã có cuối main.
+- Validate: recompute ≥3 feature/≥3 mốc · no-leak · cross-sectional #coin/mốc (2021~93…2026~621) · #dòng/coverage vs lifecycle 010 · phân phối+#null mỗi feature · #dòng×35.
+- Điền: #dòng × 35, output path, commit hash.
