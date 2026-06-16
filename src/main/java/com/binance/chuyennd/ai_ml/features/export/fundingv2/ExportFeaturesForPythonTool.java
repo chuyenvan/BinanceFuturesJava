@@ -43,10 +43,23 @@ public class ExportFeaturesForPythonTool {
         String outputDir = "features_export_python_v3/";
         new File(outputDir).mkdirs();
 
-        new ExportFeaturesForPythonTool().startGeneration(outputDir);
+        // CHIA NĂM cho Kaggle (per-minute × all-coin × 5 năm quá lớn cho 1 kernel):
+        //   args[0] = ngày bắt đầu ghi (yyyyMMdd, GMT+7 07:00), args[1] = ngày kết thúc (yyyyMMdd, loại trừ).
+        //   Không truyền → mặc định 2021-01-01 → hiện tại (full).
+        SimpleDateFormat sdfFull = new SimpleDateFormat("yyyyMMdd HH:mm");
+        long targetStartTs = sdfFull.parse("20210101 07:00").getTime();
+        long globalEndTs = System.currentTimeMillis();
+        if (args.length >= 1 && !args[0].isEmpty()) {
+            targetStartTs = sdfFull.parse(args[0] + " 07:00").getTime();
+        }
+        if (args.length >= 2 && !args[1].isEmpty()) {
+            globalEndTs = sdfFull.parse(args[1] + " 07:00").getTime();
+        }
+
+        new ExportFeaturesForPythonTool().startGeneration(outputDir, targetStartTs, globalEndTs);
     }
 
-    public void startGeneration(String outputDir) throws Exception {
+    public void startGeneration(String outputDir, long targetStartTs, long globalEndTs) throws Exception {
         LOG.info("📥 Đang tải Market Data & Symbol Mapper...");
         TreeMap<Long, MarketDataObject> time2MarketData = DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
         Map<String, Short> globalMapper = DataManagerAerospikeFloatSim.loadSymbolMapper();
@@ -56,10 +69,9 @@ public class ExportFeaturesForPythonTool {
         SimpleDateFormat sdfFile = new SimpleDateFormat("yyyyMMdd");
         FundingDataCollectionManager.FundingFeatureExtractorV2 extractor = new FundingDataCollectionManager.FundingFeatureExtractorV2();
 
-        // 1. CÀI ĐẶT CÁC MỐC THỜI GIAN THEO YÊU CẦU
-        long targetStartTs = sdfFull.parse("20210101 07:00").getTime();
+        // 1. CÀI ĐẶT CÁC MỐC THỜI GIAN (truyền từ main; warmup 48h trước mốc ghi — đủ vì mọi
+        //    feature dùng lookback ≤24h, riêng funding-sâu dùng full TreeMap headMap(t) nên đúng từ mọi mốc bắt đầu).
         long warmupStartTs = targetStartTs - (48 * 3600000L); // Warmup 48h
-        long globalEndTs = System.currentTimeMillis(); // Kéo đến hiện tại
 
         LOG.info("======================================================");
         LOG.info("🚀 BẮT ĐẦU XUẤT FEATURES (LIÊN TỤC KHÔNG RESET STATE)");
