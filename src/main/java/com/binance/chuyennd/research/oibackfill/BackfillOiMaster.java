@@ -53,6 +53,40 @@ public class BackfillOiMaster {
             System.exit(0);
         }
 
+        // --reset-stale: reset task RUNNING qua han (kernel bi Kaggle kill) ve PENDING de worker moi cuop lai.
+        // KHONG mat data da ghi. KHONG xoa DONE set. Chi dung khi tat ca kernel da COMPLETE/ERROR ma DONE < universe.
+        if (args != null && args.length > 0 && "--reset-stale".equalsIgnoreCase(args[0])) {
+            long staleMs = 45 * 60_000L;
+            long now = System.currentTimeMillis();
+            int[] counts = {0, 0}; // [reset, skip]
+            try {
+                DataManagerAerospikeFloatSim.getClient226().scanAll(null, Configs.AEROSPIKE_NAMESPACE, QUEUE_SET,
+                        (key, record) -> {
+                            String status = record.getString("status");
+                            long startTime = record.getLong("startTime");
+                            if ("RUNNING".equals(status) && (now - startTime) > staleMs) {
+                                com.aerospike.client.policy.WritePolicy wp = new com.aerospike.client.policy.WritePolicy();
+                                wp.sendKey = true;
+                                try {
+                                    DataManagerAerospikeFloatSim.getClient226().put(wp, key,
+                                            new com.aerospike.client.Bin("status", "PENDING"),
+                                            new com.aerospike.client.Bin("startTime", 0L));
+                                    counts[0]++;
+                                } catch (Exception e) {
+                                    LOG.warn("reset-stale: khong update duoc {}: {}", key, e.getMessage());
+                                }
+                            } else {
+                                counts[1]++;
+                            }
+                        }, "status", "startTime", "symbol");
+                LOG.info("reset-stale XONG: reset={} RUNNING->PENDING, skip={} (PENDING/fresh RUNNING)", counts[0], counts[1]);
+            } catch (Exception e) {
+                LOG.error("reset-stale loi: ", e);
+                System.exit(1);
+            }
+            System.exit(0);
+        }
+
         try {
             List<String> universe = resolveUniverse(args);
             LOG.info("🌐 Universe = {} symbol cần backfill.", universe.size());
