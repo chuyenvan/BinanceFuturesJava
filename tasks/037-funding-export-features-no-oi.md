@@ -152,7 +152,11 @@ Kaggle giới hạn **5 CPU session đồng thời**. Ma trận (id | START | EN
 | 2023 | 38,374,777 | 3.07GB | **0** | **0** ⚠️ | Tool1✅ Tool2 RỖNG |
 | 2024h1 | 66,394,286 | 6.51GB | 13,479,778 | 280 | ✅ |
 | 2024h2 | 76,643,708 | 7.60GB | 15,518,277 | 355 | ✅ |
-| 2025h1/h2x/2026x | (đang re-run streaming) | | | | ⏳ |
+| 2025h1 | 99,246,757 | 10.11GB | 20,144,607 | 458 | ✅ |
+| 2025h2x | export OK (571 coin OI) | | 26,450,321 | 571 | ⏳ re-run v3 lấy COMPLETE+stats |
+| 2026x | export OK (650 coin OI) | | 26,695,648 | 650 | ⏳ re-run v3 lấy COMPLETE+stats |
+
+**LỖI OOM VALIDATE LẦN 2 (2025h2x/2026x):** streaming-block vẫn OOM "Killed" trên file >6GB (2025h1 10GB tổng nhưng file ≤5.3GB → PASS; 2025h2x file 6.1GB, 2026x 7.2GB → Killed). SIGKILL KHÔNG bắt được bằng try/except. **FIX v3:** chạy validate trong **SUBPROCESS riêng** (`_validate.py`, block 100k + gc) → OOM chỉ giết subprocess, kernel cha vẫn exit 0 → COMPLETE → output luôn lưu. Export 2 kernel này ĐÃ thành công 2 lần (output saved), v3 chỉ để lấy COMPLETE + stats sạch cho 039.
 - CS #coin/mốc Tool1 tăng dần đúng: 2021 78→131, 2022 131→142, … (survivorship OK).
 - Phân phối #22-40 + OI sane mọi năm (bounded ∈[0,1], z centered, outlier coin-mới).
 
