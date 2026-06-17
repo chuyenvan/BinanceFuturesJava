@@ -46,6 +46,14 @@ public class ExportFundingOiPerCoin {
             new File(outputDir).mkdirs();
             String outPath = outputDir + "oi_percoin_" + sdfFile.format(new Date(start)) + "_to_" + sdfFile.format(new Date(end)) + ".bin.gz";
             LOG.info("TASK-038/A2 OI per-coin | universe={} | [{} .. {}] -> {}", universe.size(), sdf.format(new Date(start)), sdf.format(new Date(end)), outPath);
+            // TASK-103 fix: ping Aerospike 226 truoc vong loop coin de tranh connection stale tu Tool1
+            // (Tool1 chay ~24 phut lam client idle -> Error -8 Cluster empty -> moi getMetricMap226 tra null -> 0 dong)
+            try {
+                DataManagerAerospikeFloatSim.getMetricMap226(OiMetricSets.OI.set, OiMetricSets.OI.bin, "BTCUSDT");
+                LOG.info("Aerospike 226 ping OK truoc Tool2");
+            } catch (Exception pingEx) {
+                LOG.warn("Aerospike 226 ping loi (se tu reconnect): {}", pingEx.getMessage());
+            }
             DataOutputStream dos = new DataOutputStream(new BufferedOutputStream(new GZIPOutputStream(new FileOutputStream(outPath)), 1024 * 1024));
             long emitted = 0; int done = 0, coinsWithOi = 0; long[] nullCnt = new long[5];
             for (String coin : universe) {
