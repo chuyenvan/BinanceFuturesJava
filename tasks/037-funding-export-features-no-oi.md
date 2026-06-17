@@ -1,6 +1,6 @@
 ---
 id: 037
-status: DOING
+status: PAUSED
 owner: CCD-funding
 updated: 2026-06-17
 depends_on: [036]
@@ -14,6 +14,14 @@ require_review: true
 ---
 
 # TASK-037: Funding F3 — export feature funding KHÔNG cần OI (per-coin sâu + volume + cấu trúc giá + cross-sectional)
+
+## ⏹ STOPPED bởi user 2026-06-17 (PAUSED)
+- **User dừng task.** Lý do 2023 thiếu OI = **lỗi backfill TASK-013** (đã biết, KHÔNG phải bug 037/038). Không backfill OI 2023 trong phạm vi này.
+- **Hiện trạng dữ liệu:** 8/8 kỳ ĐỀU export THÀNH CÔNG trên Kaggle (output `.bin.gz` đã lưu, kể cả kernel ERROR vì Kaggle vẫn lưu /kaggle/working). **6/8 kernel COMPLETE + validate PASS** (2021, 2022, 2023, 2024h1, 2024h2, 2025h1). 2 kernel cuối (ff40-2025h2x J7-12/2025 = 571 coin OI; ff40-2026x = 650 coin OI) export OK nhưng kernel ERROR ở bước validate (đã có fix v3 subprocess đang re-run).
+- **2 Kaggle kernel `ff40-2025h2x` + `ff40-2026x` (v3) VẪN ĐANG CHẠY** lúc dừng — Kaggle CLI KHÔNG có lệnh cancel. Chúng sẽ tự chạy hết (~3h, sẽ COMPLETE nhờ fix subprocess) hoặc **user stop tay trong UI** nếu muốn giải phóng quota ngay. KHÔNG mất data dù dừng (v2 đã lưu output đầy đủ).
+- **Nếu RESUME sau:** chỉ còn (a) chờ/lấy stats 2025h2x+2026x, (b) gộp số vào report 037+038, (c) set REVIEW + commit. KHÔNG cần re-export. Bản dữ liệu sạch (40 cột + OI 5 cột) đã sẵn trên Kaggle cho 039 (`kernel_sources` các kernel `ff40-*`). ⚠️ OI 2023 = NaN (TASK-013 gap).
+
+
 
 - **status:** TODO. `depends_on: [036]` (đã xong: đường export THẬT + tên feature sạch). **Độc lập 013** (KHÔNG dùng OI) → chạy song song nhánh gate.
 - **Nền:** ADR-0011 §5.3 (THÊM, phần không-OI) + cross-sectional. Đọc `docs/reports/036.md` trước.
