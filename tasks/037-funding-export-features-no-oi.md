@@ -2,7 +2,7 @@
 id: 037
 status: DOING
 owner: CCD-funding
-updated: 2026-06-16
+updated: 2026-06-17
 depends_on: [036]
 touches_live_process: false
 writes_242_data: false
@@ -104,6 +104,20 @@ require_review: true
 **6. NĂM NẶNG (2024-26):** nếu >20GB/năm → chia nửa năm. Perf-fix đã giảm thời gian/record.
 
 **7. Khi tất cả năm OK:** điền report 037 + 038 (#dòng tổng, phân phối, #coin/mốc, #null), set REVIEW + commit hash.
+
+### ▶▶ LAUNCHED 2026-06-17 (CCD-funding) — JAR REBUILT + PILOT 40-CỘT ĐANG CHẠY
+
+**Jar rebuild từ HEAD `7bcd6d5`** (Tool1 40-cột + Tool2 OI + perf-fix getLowHigh24H). Đã verify 2 MAIN class trong shaded jar (build 06:00 17/06). Dataset `chuyendinh/java-run-lc` ĐÃ push version mới (jar + `DumpSymbolMapper.class` + config + live_set).
+
+**⚠️ SỬA UNIVERSE Tool 2 (survivorship):** `/tmp/oisyms.txt` tĩnh (622 coin) là universe ĐANG-NIÊM-YẾT — THIẾU hầu hết coin chết backfill task-005 (LUNA/FTT/RAY/SRM/WAVES/DODO/AUDIO/ANC/BTS/SC/AKRO/HNT/BTCST/COCOS/TOMO). Dùng nó cho Tool 2 = **survivorship bias** (vi phạm luật 7 + sai yêu cầu 038 "GỒM coin chết"). ⇒ Kernel B0 chạy `DumpSymbolMapper` sinh universe ĐẦY ĐỦ từ symbol mapper 226 (map bền mọi coin từng có id, KHỚP universe data-driven của Tool 1) → `/tmp/oisyms.txt` trước khi chạy Tool 2. (Helper precompile sẵn trong dataset, kernel chỉ cần `java`.) DumpSymbolMapper LOG `mapper=N usdt-perp=M` — nếu M≈622 thì mapper KHÔNG có coin chết (vấn đề tầng data, ngoài 037); nếu M>622 thì đã gồm coin chết → đúng.
+
+**Kernel mẫu mới:** `C:\Users\pc\ff40-2021\` (`ff40.py` + kernel-metadata). 1 kernel/năm chạy TUẦN TỰ: B0 dump mapper → B1 Tool1 (40 cột) → B2 Tool2 (OI) → validate cả 2 bằng numpy (#record, #null + p1/p50/p99 mỗi cột, cross-sectional #coin/mốc, #coin distinct cho OI). args START/END sửa trong `ff40.py`.
+
+**PILOT đang chạy:** kernel slug **`chuyendinh/ff40-2021`** (năm 2021, START=20210101 END=20220101). Output `/kaggle/working/features_export_python_v3/*.bin.gz` (Tool1) + `features_oi_percoin_v1/*.bin.gz` (Tool2). Check: `kaggle kernels status chuyendinh/ff40-2021`; log validate: `kaggle kernels output chuyendinh/ff40-2021 -p <dir>`. **Kernel cũ 35-cột `ff37-2021` BỎ** (đã COMPLETE, không zombie).
+
+**BƯỚC TIẾP sau pilot 2021 OK:** clone `ff40-2021` → `ff40-2022..2026` (đổi START/END + id trong cả ff40.py lẫn kernel-metadata.json), push + run. ⚠️ Năm nặng 2024-2026 (~600 coin) có thể >20GB Tool1/năm → nếu pilot cho size lớn thì CHIA NỬA NĂM. Output để LẠI Kaggle cho 039 (`kernel_sources`), KHÔNG tải về (BẪY 3).
+
+**Khi tất cả năm OK:** điền report 037 + 038 (#dòng tổng × 40 / × 5, phân phối, CS #coin/mốc tăng dần, #null, mapper-size), set REVIEW + commit hash.
 
 ### ⏸ (lịch sử) PAUSED 2026-06-16 — đã giải quyết ở mục RESUME trên
 - Va chạm 037↔038 (35 vs 40 cột): CHỐT 40 cột + OI tool riêng (mục 1).
