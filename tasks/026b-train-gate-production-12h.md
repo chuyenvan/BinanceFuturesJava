@@ -92,3 +92,16 @@ require_review: true
   -> quyet dinh gate co dang theo duoi tiep (soft-tilt) hay bo. CHUA sang backtest.
 - **Benchmark market model:** chua lam — cho user chi vi tri eval/preds cua market model de do
   cung lang kinh (cung ham IC non-overlap + bootstrap). Ghep sau.
+
+### Ket qua DIAGNOSTIC (kernel v10 COMPLETE, 2026-06-17 GMT+7) — EDGE KHONG GIU
+OOS N=35029, cutoff=2025-06-06. [0 tham khao] IC pooled co-chong-lan=0.0145.
+- **[1]** IC non-overlap (moi 48 bar): mean=**0.0136** std=.0191 min=-.0311 max=.0461 |
+  n_mau/offset~730 | median p=**0.664** | **%offset p<.05 = 0%**.
+- **[2]** block-bootstrap IC: mean=0.0183 CI95=**[-0.0469, 0.0813] -> TRUM 0 (KHONG y nghia)**.
+- **[3]** rank-beta=0.0145 **Newey-West t(lag48)=0.49** (vs t=8.52 ban train -> t cu gan nhu ao).
+- **[4]** decile KHONG don dieu: spread ret dec9-dec0=0.0085; DOWN% dec0=.305 -> dec9=.217
+  nhung len-xuong loan (is_monotonic_decreasing=**False**); UP% cung khong don dieu.
+- **KET LUAN:** edge bieu kien (IC .185 / t 8.52) la artefact label chong lan 48x + IC theo-ngay.
+  Do sach: IC ~.014 trum 0, NW t=0.49, decile khong don dieu -> **gate KHONG co edge that**
+  (khop voi FAIL beat-rule tang 1). Theo pre-registered: KHONG retrain ep pass. CHUA sang backtest.
+  Cho user quyet: bo gate 12h nay / doi thiet ke (feature/horizon khac) / van backtest doi chung.
