@@ -1,6 +1,8 @@
 ---
 id: 101
-status: TODO
+status: DONE
+owner: CCD-101
+updated: 2026-06-17
 touches_live_process: false
 writes_242_data: false
 resource: 226+local
@@ -111,14 +113,21 @@ ssh -i /c/Users/pc/.ssh/id_rsa_chuyennd -p 2222 root@103.157.218.226 \
 
 > Nếu jar trên 226 cũ (thiếu class mới), build + upload jar mới từ HEAD trước.
 
-### Bước 3: Báo lại kết quả (điền vào đây)
+### Bước 3: Kết quả (2026-06-17)
 
-Dán output của DiagnoseOiRange — ví dụ:
+Chạy trên 226 từ `/home/chuyennd/java/simulator/`, jar build từ HEAD `e1d274b`:
+
 ```
-COIN=BTCUSDT total=105120 range=[2021-01-15 .. 2025-12-31] | 2021=8736 2022=17520 2023=17520 2024=17568 2025=43776
+COIN=BTCUSDT total=608211 range=[2020-09-01 .. 2026-06-16] | 2021=104634 2022=105120 2023=105117 2024=105280 2025=105111
+COIN=ETHUSDT total=477398 range=[2021-12-01 .. 2026-06-16] | 2021=8921   2022=105120 2023=105117 2024=105280 2025=105111
+COIN=BNBUSDT total=477397 range=[2021-12-01 .. 2026-06-16] | 2021=8921   2022=105120 2023=105116 2024=105280 2025=105111
+COIN=XRPUSDT total=477394 range=[2021-12-01 .. 2026-06-16] | 2021=8921   2022=105119 2023=105114 2024=105280 2025=105111
+COIN=SOLUSDT total=477381 range=[2021-12-01 .. 2026-06-16] | 2021=8921   2022=105120 2023=105100 2024=105280 2025=105111
 ```
 
-Tôi (CDK) sẽ đọc kết quả và quyết định fix (timezone shift / backfill thiếu / range sai).
+**Kết luận:** Data OI trong Aerospike 226 (`open_interest` set) **có đầy đủ cho 2023** (~105k mốc/năm, granularity 5m = 8760h×12=105120 đúng). BTC từ 2020-09, ETH/BNB/XRP/SOL từ 2021-12 (bình thường — backfill-005 bắt đầu từ khi có dữ liệu).
+
+**→ Nguyên nhân "OI 2023 empty" là phương án (B): data có nhưng bị lọc ra** bởi `ExportFundingOiPerCoin`. Cần kiểm tra logic filter `[start, end)` trong tool đó — khả năng timezone shift hoặc key format bất khớp.
 
 ## An toàn
 - KHÔNG ghi gì vào Aerospike, chỉ đọc.
