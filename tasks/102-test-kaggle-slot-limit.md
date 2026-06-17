@@ -77,12 +77,12 @@ yes | kaggle kernels delete chuyendinh/slot-test-1 2>&1 || true
 rm -rf /tmp/slot-test-1 /tmp/slot-test-out
 ```
 
-## Báo lại (CCD điền)
-- Slot đang dùng khi test: `USED=?`
-- Slot còn trống: `FREE=?`
-- Kernel push OK? `COMPLETE` hay `ERROR`: ?
-- Log có `SLOT_TEST_OK`? Y/N: ?
-- Thời gian kernel COMPLETE (giây): ?
+## Báo lại (CCD điền — 2026-06-17 GMT+7)
+- Slot đang dùng khi test: `USED=0`
+- Slot còn trống: `FREE=5`
+- Kernel push OK? **COMPLETE**
+- Log có `SLOT_TEST_OK`? **Y** (`2026-06-17 15:27:29,666 INFO SLOT_TEST_OK`)
+- Thời gian kernel COMPLETE (giây): **2 s** (push xong poll ngay đã COMPLETE)
 
 ## Sau khi xong — cập nhật KAGGLE_RULES.md
 Thêm vào mục "Lịch sử cập nhật":

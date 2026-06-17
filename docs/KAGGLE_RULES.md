@@ -224,3 +224,4 @@ ssh -i /c/Users/pc/.ssh/id_rsa_chuyennd -p 2222 -o BatchMode=yes root@103.157.21
 | Ngày | Thay đổi |
 |---|---|
 | 2026-06-17 | Tạo mới — tổng hợp từ 013/013b/037 + RUNBOOK_kaggle_multi_cpu.md |
+| 2026-06-17 | TASK-102: xác nhận slot limit = 0/5 đang dùng (test COMPLETE trong 2s, SLOT_TEST_OK) |

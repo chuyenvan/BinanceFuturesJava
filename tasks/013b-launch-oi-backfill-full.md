@@ -20,9 +20,17 @@ TASK-013 đã qua toàn bộ VERIFY + TEST + gate review. Mọi tiền đề Đ�
 - Kernel folder `C:\Users\pc\oi-kaggle\kernels\oi-backfill-worker-{1..5}` ✅
 - Test 1 kernel Kaggle PASS 2 lần độc lập ✅ (System.exit OK, Kaggle→vision+226 OK, queue OK)
 - `oi_backfill_queue` = rỗng, state 226 lành (idempotent — rerun chỉ làm symbol chưa DONE)
+- **Kaggle slot:** TASK-102 xác nhận FREE=5 (USED=0), kernel test COMPLETE trong 2 giây ✅
 
-**Lý do launch:** Tool 2 (`ExportFundingOiPerCoin`) trong TASK-037 đang chạy Kaggle — OI empty
-cho mọi năm vì chỉ có 8 symbol trong Aerospike 226. Cần backfill đủ trước khi merge+train 039.
+**Update 2026-06-17 (TASK-101):** DiagnoseOiRange chạy trên 226 xác nhận data OI **ĐÃ có đầy đủ**
+cho 5 coin lớn: BTC(608k mốc 2020-09→nay), ETH/BNB/XRP/SOL (~477k mốc 2021-12→nay), 2023 = ~105k
+mốc/năm (đúng granularity 5m). Tức là backfill phần lớn đã chạy (có thể từ trước, không qua queue
+hiện tại). Lý do "OI 2023 empty" ở TASK-037 là **phương án B: bug filter `[start,end)` trong
+`ExportFundingOiPerCoin`** — data có trong Aerospike nhưng tool không emit ra file. Bug này cần fix
+riêng (TASK-101 phần tiếp theo). **013b vẫn cần** để đảm bảo coin nhỏ/delist cũng có đủ data.
+
+**Lý do launch:** TASK-037 Tool 2 báo empty do bug filter (không phải thiếu data). Nhưng cần backfill
+coin nhỏ/delist chưa có data trước khi validate cuối + merge 039.
 
 ## Việc (CCD) — theo đúng thứ tự, KHÔNG đảo
 
@@ -136,21 +144,41 @@ ssh -i /c/Users/pc/.ssh/id_rsa_chuyennd -p 2222 root@103.157.218.226 \
 ```
 > Nếu jar trên 226 cũ (thiếu class oibackfill) → scp jar mới lên 226 trước.
 
-### Bước 6: Validate cuối + ghi report
+### Bước 6: Validate DỨT KHOÁT — DU + DUNG — dùng ValidateOiData.java
+
+> **Mục tiêu:** 1 lần chạy dứt khoát, output PASS/FAIL. Nếu PASS toàn bộ → **không cần kiểm lại bao giờ nữa**.
+> Nếu sau này đọc OI ra kết quả bất thường → vấn đề ở code ĐỌC hoặc XỬ LÝ, **không phải data 226**.
+
+Tool: `src/main/java/com/binance/chuyennd/research/oibackfill/ValidateOiData.java` (đã code, compile PASS).
+
 ```bash
-# 1. Coverage: đọc số set records trên 226 (OI 5 set)
-ssh ... 'asinfo -p 3222 -v "sets/ticker/open_interest" | grep n_objects;
-         asinfo -p 3222 -v "sets/ticker/oi_ls_toptrader_acc" | grep n_objects;
-         asinfo -p 3222 -v "sets/ticker/oi_ls_global_acc" | grep n_objects;
-         asinfo -p 3222 -v "sets/ticker/oi_taker_vol" | grep n_objects'
-# 2. Cross-check OI tụt quanh LUNA crash (2022-05): coin LUNAUSDT, tháng 2022-05
-#    → OI phải giảm mạnh (Binance ghi nhận unwind)
-# 3. BackfillOiVerify BTCUSDT ETHUSDT SOLUSDT → recompute vs data gốc
+# Deploy jar mới (có ValidateOiData) lên 226
+# Sau đó chạy FULL validate:
+ssh -i /c/Users/pc/.ssh/id_rsa_chuyennd -p 2222 root@103.157.218.226 \
+  "java -Duser.timezone=Asia/Ho_Chi_Minh -Xmx8g -cp /root/java-run/binance-futures-java.jar \
+   com.binance.chuyennd.research.oibackfill.ValidateOiData 2>&1" \
+  | grep -E "CHECK|PASS|FAIL|WARN|====="
 ```
 
-Ghi số vào `docs/reports/013.md` (thêm mục "LAUNCH FULL"):
-- #symbol DONE, #chunk ghi (per set), thời gian, kết quả cross-check OI crash, verify pass/fail.
-- Set status task 013 → **REVIEW** (hoặc DONE nếu validate sạch).
+**4 checks được kiểm:**
+1. **DU — Coverage:** >= 300 coin có OI trong 2023, phân bố theo năm (phát hiện gap năm).
+2. **DU — Granularity:** BTC 2023 >= 80k mốc, gap lớn nhất < 30 phút (granularity 5m đủ dày).
+3. **DUNG — Giá trị OI:** BTC OI không NaN/Inf/<=0; LUNA OI giảm >50% trong crash 2022-05
+   (cross-check economic signal — đây là check "đúng" quan trọng nhất, dữ liệu phải phản ánh thực tế).
+4. **DUNG — LS + taker:** lsGlobal ∈ [0.05, 20], taker ∈ [0, 50] cho BTC + LUNA.
+
+**Output PASS ví dụ:**
+```
+[PASS-1] coverage ok
+[PASS-2] granularity ok
+[PASS-3a] BTC OI range sanity OK
+[PASS-3b] LUNA crash signal OK (OI giam >50%)
+[PASS-4] LS + taker range sanity OK
+VALIDATE PASS (FULL failures=0) — OI data DU + DUNG, KHONG can kiem lai.
+```
+
+**Ghi số + output vào `docs/reports/013.md`** (mục "VALIDATE FINAL").
+Set task 013 + 013b → **DONE** nếu VALIDATE PASS.
 
 ## An toàn
 - Master chạy dev, chỉ ghi queue@226 (Aerospike). KHÔNG đụng live/ingest.
