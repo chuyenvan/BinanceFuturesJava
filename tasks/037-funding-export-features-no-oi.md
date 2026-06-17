@@ -139,7 +139,27 @@ Kaggle giới hạn **5 CPU session đồng thời**. Ma trận (id | START | EN
 - Output để LẠI Kaggle cho 039 (`kernel_sources`), KHÔNG tải về (BẪY 3).
 - **CCD tiếp quản:** nếu kernel nào ERROR/treo → đọc log, sửa, push lại. Khi cả 8 COMPLETE + validate PASS → gộp số liệu vào report 037+038, set REVIEW + commit.
 
-**Khi tất cả năm OK:** điền report 037 + 038 (#dòng tổng × 40 / × 5, phân phối, CS #coin/mốc tăng dần, #null, mapper-size=781), set REVIEW + commit hash.
+### 🔧 FIX OOM VALIDATE + KẾT QUẢ 6/8 KERNEL (2026-06-17)
+**Lỗi phát hiện:** validate python cũ đọc NGUYÊN file (`fh.read()`+frombuffer+astype) → **OOM "Killed"** trên file >4GB (2025h1 file 4.66GB). Kernel ERROR. **Nhưng Kaggle VẪN lưu /kaggle/working dù ERROR** (tải được logs/full.log từ kernel ERROR). Dù vậy re-run để (a) có stats validate, (b) 039 chain kernel_sources an toàn (ERROR có thể không chọn được).
+**FIX:** ff40.py validate → **STREAMING theo block 0.5M record** (RAM bị chặn) + bọc try/except (lỗi validate KHÔNG fail kernel → output luôn lưu). Template chuẩn: `C:\Users\pc\ff40-tpl\ff40.py`.
+**Slug đổi:** `ff40-2025h2`→**`ff40-2025h2x`**, `ff40-2026`→**`ff40-2026x`** (slug gốc bị "đầu độc" do lần push đầu bị cap-5 chặn → "Notebook not found"; slug mới push OK).
+
+**KẾT QUẢ 6 KERNEL ĐÃ XONG (mapper=781, universe=780 mọi năm):**
+| năm | Tool1 rec | size | Tool2 OI rec | #coin OI | validate |
+|---|---|---|---|---|---|
+| 2021 | 57,625,738 | 4.69GB | 1,286,316 | 137 | ✅ |
+| 2022 | 71,845,615 | 5.77GB | 14,831,185 | 161 | ✅ |
+| 2023 | 38,374,777 | 3.07GB | **0** | **0** ⚠️ | Tool1✅ Tool2 RỖNG |
+| 2024h1 | 66,394,286 | 6.51GB | 13,479,778 | 280 | ✅ |
+| 2024h2 | 76,643,708 | 7.60GB | 15,518,277 | 355 | ✅ |
+| 2025h1/h2x/2026x | (đang re-run streaming) | | | | ⏳ |
+- CS #coin/mốc Tool1 tăng dần đúng: 2021 78→131, 2022 131→142, … (survivorship OK).
+- Phân phối #22-40 + OI sane mọi năm (bounded ∈[0,1], z centered, outlier coin-mới).
+
+### 🚩 RED FLAG — OI 226 THIẾU NĂM 2023 (data, KHÔNG phải bug 037/038)
+Tool2 năm 2023 = **0 record / 0 coin** dù 2022=161, 2024h1=280. ⇒ OI metric trên Aerospike 226 dường như **trống toàn bộ 2023** (gap giữa backfill TASK-013 kết thúc ~2022 và live-OI ~2024). Tool 2 chạy đúng (chỉ emit khi có OI entry). **Ảnh hưởng 039:** OI feature (#41-45) sẽ NaN cho 2023; merge_asof backward sẽ kéo OI 2022 cũ (stale) hoặc NaN. **Cần CCD/User kiểm coverage OI 226 cho 2023** (thuộc TASK-013). Đã báo user.
+
+**Khi 3 kernel nặng xong:** điền số + flag 2023 vào report 037+038, set REVIEW + commit.
 
 ### ⏸ (lịch sử) PAUSED 2026-06-16 — đã giải quyết ở mục RESUME trên
 - Va chạm 037↔038 (35 vs 40 cột): CHỐT 40 cột + OI tool riêng (mục 1).
