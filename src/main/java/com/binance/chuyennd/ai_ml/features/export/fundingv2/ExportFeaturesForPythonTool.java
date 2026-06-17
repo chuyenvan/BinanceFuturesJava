@@ -97,8 +97,10 @@ public class ExportFeaturesForPythonTool {
         try {
             // VÒNG LẶP LIÊN TỤC KHÔNG RESET
             while (currentReadTs <= globalEndTs) {
-                int minutesToRead = 1440;
-                if (currentReadTs + minutesToRead * Utils.TIME_MINUTE > globalEndTs) {
+                // TASK-100 perf: 7 ngay/batch thay vi 1 ngay/batch — giam round-trip Aerospike qua mang
+                // (benchmark Kaggle: bottleneck = network latency, khong phai CPU; ~7x it round-trip)
+                int minutesToRead = 10080;
+                if (currentReadTs + (long) minutesToRead * Utils.TIME_MINUTE > globalEndTs) {
                     minutesToRead = (int) ((globalEndTs - currentReadTs) / Utils.TIME_MINUTE) + 1;
                 }
 
