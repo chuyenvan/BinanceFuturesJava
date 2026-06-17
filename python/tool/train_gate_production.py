@@ -50,7 +50,7 @@ valid = (~np.isnan(sigma)) & (~np.isnan(rr))
 
 # ----- OOS dong lanh 12 thang cuoi -----
 cutoff = dt.max() - pd.DateOffset(months=OOS_MONTHS)
-is_oos = (dt > cutoff).values
+is_oos = np.asarray(dt > cutoff)   # dt la DatetimeIndex -> (dt>cutoff) da la ndarray (khong co .values)
 tr_mask = valid & (~is_oos); oos_mask = valid & is_oos
 print(f"OOS cutoff={cutoff} | n_train={tr_mask.sum()} n_oos={oos_mask.sum()}")
 

@@ -45,7 +45,50 @@ require_review: true
 ## An toan
 - Chi chay Kaggle (KHONG dung 226 process). Doc-thuan v1. SLF4J khong ap dung (Python).
 
-## (CCD dien)
-- **Cac so tu log:** …
-- **PASS/FAIL 3 tieu chi:** …
-- **Output + duong dan:** …
+## Job dang chay (ban giao)
+- **Kaggle kernel slug:** `chuyendinh/gate-train-026` (version 8, push 2026-06-17 GMT+7).
+  - code_file = `train_gate_production.py` (= `python/tool/train_gate_production.py` commit a814887,
+    them 1 dong dau inject `sys.argv=['...','a814887']` vi Kaggle khong truyen argv).
+  - dataset_sources = `chuyendinh/gate-dataset-v1` (gate_dataset_v1.csv). **enable_internet=true**
+    (script pip install onnxmltools de export ONNX — bat buoc, kernel cu de false).
+  - Check trang thai: `kaggle kernels status chuyendinh/gate-train-026`.
+  - Lay log+output: `kaggle kernels output chuyendinh/gate-train-026 -p ./out`.
+- **Buoc con lai:** doc log -> bao so khoi PRE-REGISTERED PASS -> neu output co
+  gate_model_12h.{onnx,json}+gate_features.json+gate_manifest.json thi tai ve `models/gate/`.
+
+## (CCD dien) — chay 2026-06-17 GMT+7, kernel v9 COMPLETE
+> Luu y: script commit a814887 crash ngay line 53 (`(dt>cutoff).values` — dt la DatetimeIndex,
+> so sanh DA la ndarray, khong co `.values`). Da va 1 dong (`np.asarray(dt>cutoff)`) trong
+> `python/tool/train_gate_production.py` — bug crash thuan, KHONG dung nhan/threshold/pre-registered.
+
+- **Cac so tu log:**
+  - n_feat=37 · md5 dataset khop `58d451...` · OOS cutoff=2025-06-06 · n_train=154662 n_oos=35029
+  - dist train (DOWN,FLAT,UP)=[.211,.611,.178] · oos=[.236,.600,.164]
+  - **CV macro-F1=0.3321** (std .0414) · n_est(median best)=**56** · CV decile spread=**0.0042**
+  - **OOS rank-IC(day)=0.1854  t=8.52** (n_day=365)
+  - OOS decile spread=**0.0085** · DOWN base=.2362 prec=.2598 rec=.4170 **lift=1.10**
+  - RULE block precision(DOWN)=**0.3943** rec=.0133 lift=1.67
+  - **BEAT: model precision@k(=279)=0.1756 vs rule 0.3943 -> KHONG BEAT**
+- **PASS/FAIL 3 tieu chi (PRE-REGISTERED):**
+  - [PASS] rank-IC OOS>0 & |t|>=2 : IC=0.1854 t=8.52
+  - [PASS] decile spread giu dau CV : CV=0.0042 OOS=0.0085 (cung duong)
+  - [FAIL] model BEAT rule baseline (precision@k lop DOWN): 0.1756 < 0.3943
+  - **=> ML-GATE FAIL (2/3).** Theo pre-registered: FAIL -> bao user, KHONG tu doi nhan/threshold
+    roi train lai. CHUA sang tang 2 (backtest). Cho user quyet.
+- **Output + duong dan:** ONNX export OK. Tai ve `models/gate/`:
+  `gate_model_12h.onnx` (326 KB), `gate_model_12h.json`, `gate_features.json` (37 feat),
+  `gate_manifest.json`. Con tren Kaggle output kernel `chuyendinh/gate-train-026` v9.
+
+## DIAGNOSTIC overlap-correct (handoff CCD — chay sau khi user duyet)
+> Ly do: t=8.52 cua ban train PHONG DAI vi label ret_12h chong lan 48x (sampling 15m) + cach tinh
+> IC theo-ngay khong sach. Beat-rule test lai do kieu CHAN CUNG, trong khi gate la SOFT size-tilt.
+> Script do lai cho dung, **KHONG retrain de ep pass**. (User da xac nhan cach do.)
+- **Script:** `python/tool/analyze_gate_overlap.py` (refit n_est=56 nhu manifest, do OOS).
+- **Chay Kaggle:** add script vao kernel `chuyendinh/gate-train-026` (input dataset
+  `chuyendinh/gate-dataset-v1`), `python analyze_gate_overlap.py`. enable_internet KHONG can.
+- **Bao lai 4 khoi log:** [1] IC non-overlap (mean/std + %offset p<.05), [2] block-bootstrap CI95
+  (khac 0 hay trum 0), [3] Newey-West t (so voi 8.52), [4] bang decile + DOWN% don dieu.
+- **Doc:** edge co GIU khi bo chong lan khong (1/2/3) + DOWN% co giam don dieu theo sig khong (4).
+  -> quyet dinh gate co dang theo duoi tiep (soft-tilt) hay bo. CHUA sang backtest.
+- **Benchmark market model:** chua lam — cho user chi vi tri eval/preds cua market model de do
+  cung lang kinh (cung ham IC non-overlap + bootstrap). Ghep sau.

@@ -1,0 +1,20 @@
+{
+  "task": "026b",
+  "horizon": "ret_12h",
+  "k_sigma": 0.7,
+  "embargo_h": 12,
+  "src_md5": "58d451c6218043fbadf2471e1d701339",
+  "commit": "a814887",
+  "n_feat": 37,
+  "n_est": 56,
+  "cv_macro_f1": 0.33206231366076805,
+  "cv_spread": 0.004179131657641636,
+  "oos_ic": 0.18535142417644018,
+  "oos_ic_t": 8.51693633788045,
+  "oos_spread": 0.008526845560947755,
+  "down_base": 0.23623283565046105,
+  "oos_cutoff": "2025-06-06 01:00:00",
+  "pass_ic": true,
+  "pass_sign": true,
+  "pass_beat": false
+}
