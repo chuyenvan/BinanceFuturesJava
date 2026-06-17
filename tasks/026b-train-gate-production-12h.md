@@ -1,6 +1,6 @@
 ---
 id: 026b
-status: TODO
+status: PAUSED
 depends_on: [025, 026]
 touches_live_process: false
 writes_242_data: false
@@ -105,3 +105,9 @@ OOS N=35029, cutoff=2025-06-06. [0 tham khao] IC pooled co-chong-lan=0.0145.
   Do sach: IC ~.014 trum 0, NW t=0.49, decile khong don dieu -> **gate KHONG co edge that**
   (khop voi FAIL beat-rule tang 1). Theo pre-registered: KHONG retrain ep pass. CHUA sang backtest.
   Cho user quyet: bo gate 12h nay / doi thiet ke (feature/horizon khac) / van backtest doi chung.
+
+### QUYET DINH (user 2026-06-17): TAM DUNG gate -> quay ve funding
+- Do sach xac nhan gate 12h KHONG co edge that. User chot **tam gac gate**, uu tien funding 037/038/039.
+- Chua lam: do sach 4h/24h + benchmark market model (treo, lam khi quay lai).
+- Khi quay lai gate: **do sach (non-overlap) TRUOC** moi horizon (tranh artefact overlap nhu da gap);
+  va xet lai phuong phap 026 (decile spread tren label chong lan co the cung bi thoi).
