@@ -117,7 +117,29 @@ require_review: true
 
 **BƯỚC TIẾP sau pilot 2021 OK:** clone `ff40-2021` → `ff40-2022..2026` (đổi START/END + id trong cả ff40.py lẫn kernel-metadata.json), push + run. ⚠️ Năm nặng 2024-2026 (~600 coin) có thể >20GB Tool1/năm → nếu pilot cho size lớn thì CHIA NỬA NĂM. Output để LẠI Kaggle cho 039 (`kernel_sources`), KHÔNG tải về (BẪY 3).
 
-**Khi tất cả năm OK:** điền report 037 + 038 (#dòng tổng × 40 / × 5, phân phối, CS #coin/mốc tăng dần, #null, mapper-size), set REVIEW + commit hash.
+### ✅ PILOT 2021 VALIDATE PASS (2026-06-17) — `chuyendinh/ff40-2021` COMPLETE
+- **Universe mapper = 781 symbol (780 USDT-perp)** → GỒM coin chết (vs oisyms tĩnh 622, thiếu ~158). Survivorship FIX xác nhận đúng.
+- **Tool1 (40 cột):** 57,625,738 record | 4.69GB | rec=170B N=40 ✓ format. CS #coin/mốc tăng: 78→103→112→123→131.
+- **Tool2 (OI 5 cột):** 1,286,316 record | rec=30B ✓ | 137/780 coin có OI (OI sử ~2021-12, hợp lý). null-count=[39627,493,55515,55515,55514].
+- **Phân phối SANE:** bounded ∈[0,1] đúng biên (percentile/rank/rangePos/closePosRange/wickRatio/takerBuyRatio); z-score centered p50≈0 (fundZCoin/oiZ); outlier coin-mới (volZCoin 3147, oiDelta 50x) đúng cảnh báo; không cột toàn-NaN; null cao chỉ ở expanding-warmup → nhất quán no-leak. `System.exit(0)` OK (COMPLETE, không treo).
+
+### 🚀 FAN-OUT các năm (2026-06-17) — 8 kernel, mỗi năm chạy cả 2 tool + validate
+Kaggle giới hạn **5 CPU session đồng thời**. Ma trận (id | START | END exclusive | size kỳ vọng):
+| kernel | START | END | ghi chú |
+|---|---|---|---|
+| ff40-2021 | 20210101 | 20220101 | ✅ DONE 4.69GB |
+| ff40-2022 | 20220101 | 20230101 | RUNNING |
+| ff40-2023 | 20230101 | 20240101 | RUNNING |
+| ff40-2024h1 | 20240101 | 20240701 | RUNNING (chia nửa: năm nặng >20GB) |
+| ff40-2024h2 | 20240701 | 20250101 | RUNNING |
+| ff40-2025h1 | 20250101 | 20250701 | RUNNING |
+| ff40-2025h2 | 20250701 | 20260101 | ⏳ PENDING (chờ slot, orchestrator nền tự push) |
+| ff40-2026 | 20260101 | 20260617 | ⏳ PENDING (partial year tới hôm nay) |
+- Mỗi kernel: dir `C:\Users\pc\<slug>\` (ff40.py + kernel-metadata). Check: `kaggle kernels status chuyendinh/<slug>`. Log validate (KHÔNG tải .bin.gz): `kaggle kernels output chuyendinh/<slug> -p <dir> --file-pattern '.*\.log'` rồi parse `<slug>.log` (JSON stdout).
+- Output để LẠI Kaggle cho 039 (`kernel_sources`), KHÔNG tải về (BẪY 3).
+- **CCD tiếp quản:** nếu kernel nào ERROR/treo → đọc log, sửa, push lại. Khi cả 8 COMPLETE + validate PASS → gộp số liệu vào report 037+038, set REVIEW + commit.
+
+**Khi tất cả năm OK:** điền report 037 + 038 (#dòng tổng × 40 / × 5, phân phối, CS #coin/mốc tăng dần, #null, mapper-size=781), set REVIEW + commit hash.
 
 ### ⏸ (lịch sử) PAUSED 2026-06-16 — đã giải quyết ở mục RESUME trên
 - Va chạm 037↔038 (35 vs 40 cột): CHỐT 40 cột + OI tool riêng (mục 1).
