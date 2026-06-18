@@ -121,17 +121,31 @@ public class ValidateOiData {
         LOG.info("[CHECK-3] Dung — gia tri OI: range sanity + LUNA crash 2022-05...");
 
         // 3a. BTC OI range sanity: tat ca record phai > 0, khong NaN/Inf
-        int btcNanInf = 0, btcNeg = 0;
+        int btcNanInf = 0, btcNeg = 0, btcZero = 0;
         if (btcOi != null) {
             for (float v : btcOi.values()) {
                 if (Float.isNaN(v) || Float.isInfinite(v)) btcNanInf++;
-                else if (v <= 0) btcNeg++;
+                else if (v < 0) btcNeg++;
+                else if (v == 0) btcZero++;
             }
         }
-        LOG.info("  BTC OI: total={} NaN/Inf={} <=0={}", btcOi != null ? btcOi.size() : 0, btcNanInf, btcNeg);
+        int btcTotal = btcOi != null ? btcOi.size() : 0;
+        double zeroPct = btcTotal > 0 ? (double) btcZero / btcTotal : 0;
+        LOG.info("  BTC OI: total={} NaN/Inf={} <0={} ==0={} (zero {}%)",
+                btcTotal, btcNanInf, btcNeg, btcZero, String.format("%.3f", zeroPct * 100));
+        // FAIL neu co NaN/Inf hoac gia tri AM (loi tinh toan that), hoac zero qua nhieu (>0.5% = mat doan data).
+        // Zero rai rac < 0.5% = gian doan nguon Binance binh thuong (TASK-103f xac nhan: 510/608211=0.084%,
+        // rai 12 thang, deu =0 khong am) -> coi nhu NaN khi train, KHONG fail.
         if (btcNanInf > 0 || btcNeg > 0) {
-            LOG.error("  [FAIL-3a] BTC OI co gia tri NaN/Inf/<=0 (doc loi hoac data hong)");
+            LOG.error("  [FAIL-3a] BTC OI co NaN/Inf/AM (loi tinh toan/doc that): NaN/Inf={} <0={}", btcNanInf, btcNeg);
             failures++;
+        } else if (zeroPct > 0.005) {
+            LOG.error("  [FAIL-3a] BTC OI co {}% gia tri =0 (>0.5% -> nghi mat doan data, can kiem)", String.format("%.2f", zeroPct * 100));
+            failures++;
+        } else {
+            if (btcZero > 0) LOG.warn("  [WARN-3a] BTC OI co {} moc =0 ({}%) — gian doan nguon rai rac, coi nhu missing khi train (OK)",
+                    btcZero, String.format("%.3f", zeroPct * 100));
+            LOG.info("  [PASS-3a] BTC OI range sanity OK (khong NaN/Inf/am; zero rai rac trong nguong)");
         }
 
         // 3b. LUNA crash 2022-05: OI phai giam >50% tu dinh 2022-04 den day 2022-05
@@ -170,8 +184,6 @@ public class ValidateOiData {
         } else {
             LOG.info("  [PASS-3b] LUNA crash signal OK (OI giam >50%)");
         }
-
-        if (btcNanInf == 0 && btcNeg == 0) LOG.info("  [PASS-3a] BTC OI range sanity OK");
 
         // ============================================================
         // CHECK 4: DUNG — LS + taker co gia tri hop le
