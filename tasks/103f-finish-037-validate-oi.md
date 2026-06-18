@@ -1,7 +1,7 @@
 ---
 id: 103f
-status: TODO
-owner: MOT-CCD-DUY-NHAT
+status: DOING
+owner: CCD-103F
 updated: 2026-06-18
 touches_live_process: false
 writes_242_data: false
@@ -15,11 +15,9 @@ require_review: true
 > Nếu bạn thấy CCD khác đang chạy task 103/103f → DỪNG, báo user, KHÔNG chạy song song.
 > `git pull` (branch module) trước khi bắt đầu. Đọc `docs/KAGGLE_RULES.md`.
 >
-> ⚠️ **Sau mất điện / restart môi trường:** `kaggle` có thể không còn trong PATH
-> (báo `kaggle: command not found`). Dùng full path:
-> `KG="/c/Users/pc/AppData/Local/Programs/Python/Python311/Scripts/kaggle.exe"` rồi `"$KG" kernels ...`.
-> Trạng thái đã verify (2026-06-18 sau mất điện lần 2): 226 DONE=896/QUEUE=0/OI=18498,
+> Trạng thái đã verify (2026-06-18): 226 DONE=896/QUEUE=0/OI=18498,
 > 3 kernel oi-only (2023/2025h2x/2026x) đều COMPLETE — KHÔNG cần chạy lại các phần này.
+> kaggle CLI đã vào PATH ổn định — gọi `kaggle ...` trực tiếp.
 
 ## Trạng thái đã xong (ĐỪNG làm lại)
 - **Nhánh A (013b backfill):** ✅ DONE — `oi_backfill_done=896`, queue rỗng, 5 worker COMPLETE.

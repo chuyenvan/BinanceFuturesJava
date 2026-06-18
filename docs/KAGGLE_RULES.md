@@ -246,4 +246,5 @@ ssh -i /c/Users/pc/.ssh/id_rsa_chuyennd -p 2222 -o BatchMode=yes root@103.157.21
 |---|---|
 | 2026-06-17 | Tạo mới — tổng hợp từ 013/013b/037 + RUNBOOK_kaggle_multi_cpu.md |
 | 2026-06-17 | TASK-102: xác nhận slot limit = 0/5 đang dùng (test COMPLETE trong 2s, SLOT_TEST_OK) |
-| 2026-06-18 | §0 mới: log/output lưu `D:\claudedata`, KHÔNG lưu ổ C (full 2 lần → MCP chết). Sau restart, kaggle có thể mất PATH → dùng full path. |
+| 2026-06-18 | §0 mới: log/output lưu `D:\claudedata`, KHÔNG lưu ổ C (full 2 lần → MCP chết). |
+| 2026-06-18 | kaggle CLI đã cấu hình vào PATH ổn định — gọi `kaggle ...` trực tiếp, không cần full path nữa. |
