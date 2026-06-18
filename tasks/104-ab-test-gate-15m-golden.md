@@ -70,11 +70,22 @@ Compile `--release 11` PASS trước khi chạy.
 Mode chạy: **A, E, F, OFF** (4 mode × 3 range = 12 lần). Mỗi lần in: PnL, maxDD (true),
 worstLoss, numTrades, return/maxDD ratio, #lệnh bị gate-15m reject.
 
+> **CẬP NHẬT 2026-06-18 (sau mất điện lần 3):** Ablation ĐÃ chạy xong 1 lần (log có `ABLATION DONE`)
+> nhưng in ra stdout/terminal, KHÔNG redirect file → máy restart làm **MẤT bảng kết quả**. Phải chạy LẠI.
+> Jar đã build sẵn trên 226 `binance-futures-java.jar` (06:18, có mode E/F/OFF) — KHÔNG build lại, KHÔNG sửa code.
+> **BẮT BUỘC chạy nền + redirect file** để không mất lần nữa:
+
 ```bash
-# Trên 226 (đọc Aerospike, không đụng live). Chỉnh MODES + range trong RunFilterAblation.
-ssh -i /c/Users/pc/.ssh/id_rsa_chuyennd -p 2222 root@103.157.218.226 \
-  "cd /home/chuyennd/java/simulator && java -Duser.timezone=Asia/Ho_Chi_Minh -Xmx24g \
-   -cp <jar> com.binance.chuyennd.ai_ml.validation.RunFilterAblation 2>&1 | tail -40"
+KEY=/c/Users/pc/.ssh/id_rsa_chuyennd
+# Chay nen + ghi file (KHONG giu terminal foreground):
+ssh -i $KEY -p 2222 root@103.157.218.226 \
+  "cd /home/chuyennd/java/simulator && nohup java -Duser.timezone=Asia/Ho_Chi_Minh -Xmx24g \
+   -cp binance-futures-java.jar com.binance.chuyennd.ai_ml.validation.ablation.market.RunFilterAblation \
+   > ablation_104.log 2>&1 &"
+# Poll den khi thay 'ABLATION DONE':
+ssh -i $KEY -p 2222 root@103.157.218.226 "tail -8 /home/chuyennd/java/simulator/ablation_104.log"
+# Khi xong, tai ve doc + ghi report:
+ssh -i $KEY -p 2222 root@103.157.218.226 "cat /home/chuyennd/java/simulator/ablation_104.log" > /tmp/ablation_104.log
 ```
 
 ⚠️ PRE-FLIGHT: RunFilterAblation đã có guard — nếu `BLOCK_INTRABAR_LOOKAHEAD=false`
