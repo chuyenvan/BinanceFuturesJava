@@ -59,6 +59,9 @@ public class DataManagerAerospikeFloatSim {
     private static volatile AerospikeClient client242;
     private static final BatchPolicy batchPolicy = new BatchPolicy();
     private static final int BATCH_CHUNK_SIZE = 2000;
+    // 🔁 Retry cho batch read lỗi transient ("Batch max requests exceeded" khi nhiều tiến trình cùng đọc 226).
+    private static final int BATCH_MAX_RETRY = 4;
+    private static final long BATCH_RETRY_BACKOFF_MS = 500;
     private static final WritePolicy writePolicy = new WritePolicy();
     private static volatile AerospikeClient client226;
 
@@ -909,44 +912,64 @@ public class DataManagerAerospikeFloatSim {
                 SimpleDateFormat localKeyFormat = new SimpleDateFormat("yyyyMMdd-HHmm");
                 Map<Long, Map<String, KlineObjectSimple>> chunkResult = new HashMap<>();
 
+                // Tạo mảng Keys cho chunk này
+                Key[] chunkKeys = new Key[endIdx - startIdx];
+                long[] chunkTimestamps = Arrays.copyOfRange(allTimestamps, startIdx, endIdx);
+                for (int k = 0; k < chunkKeys.length; k++) {
+                    String keyString = localKeyFormat.format(new Date(chunkTimestamps[k]));
+                    chunkKeys[k] = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_TICKER, keyString);
+                }
+
+                // 🔁 RETRY: lỗi "Batch max requests exceeded" là transient (nhiều tiến trình cùng đọc 226).
+                // Retry với backoff thay vì nuốt lỗi + trả chunk rỗng (gây MẤT DATA âm thầm).
+                Record[] records = null;
+                int attempt = 0;
+                while (attempt < BATCH_MAX_RETRY) {
+                    attempt++;
+                    try {
+                        records = getReadClient().get(batchPolicy, chunkKeys);
+                        if (records != null) break;
+                        LOG.warn("⚠️ [AEROSPIKE] get() trả NULL chunk bắt đầu {} (lần {}/{})",
+                                Utils.normalizeDateYYYYMMDDHHmm(chunkTimestamps[0]), attempt, BATCH_MAX_RETRY);
+                    } catch (Exception e) {
+                        // Log CỤ THỂ: loại lỗi + mốc bắt đầu + số key + lần thử (yêu cầu: ghi ngoại lệ cụ thể)
+                        LOG.warn("⚠️ [AEROSPIKE-RETRY] {} | chunk[{}..{}] start={} keys={} lần {}/{}: {}",
+                                e.getClass().getSimpleName(),
+                                startIdx, endIdx,
+                                Utils.normalizeDateYYYYMMDDHHmm(chunkTimestamps[0]),
+                                chunkKeys.length, attempt, BATCH_MAX_RETRY, e.getMessage());
+                    }
+                    try {
+                        Thread.sleep(BATCH_RETRY_BACKOFF_MS * attempt); // backoff tuyến tính: 500,1000,1500...
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                }
+
+                if (records == null) {
+                    // Sau hết retry vẫn fail -> MẤT DATA THẬT, log ERROR rõ ràng để validate phát hiện.
+                    LOG.error("❌ [AEROSPIKE-FAIL] MẤT DATA chunk start={} keys={} sau {} lần retry",
+                            Utils.normalizeDateYYYYMMDDHHmm(chunkTimestamps[0]), chunkKeys.length, BATCH_MAX_RETRY);
+                    return chunkResult;
+                }
+
                 try {
-                    // Tạo mảng Keys cho chunk này
-                    Key[] chunkKeys = new Key[endIdx - startIdx];
-                    long[] chunkTimestamps = Arrays.copyOfRange(allTimestamps, startIdx, endIdx);
-
-                    for (int k = 0; k < chunkKeys.length; k++) {
-                        String keyString = localKeyFormat.format(new Date(chunkTimestamps[k]));
-                        chunkKeys[k] = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_TICKER, keyString);
-                    }
-
-                    // Batch Read từ Aerospike
-                    Record[] records = getReadClient().get(batchPolicy, chunkKeys);
-                    // 🔥 LOGIC CHECK LỖI TRẢ VỀ TỪ CLIENT 🔥
-                    if (records == null) {
-                        LOG.info("❌ [AEROSPIKE ERROR] Client.get() returned NULL for chunk starting at {}",
-                                Utils.normalizeDateYYYYMMDDHHmm(chunkTimestamps[0]));
-                        return chunkResult; // Trả về rỗng
-                    }
-
                     for (int j = 0; j < records.length; j++) {
                         Record record = records[j];
                         if (record == null) continue;
-
                         long minuteTimestamp = chunkTimestamps[j];
                         byte[] snappyCompressedBytes = (byte[]) record.getValue("data");
-
                         if (snappyCompressedBytes != null) {
-                            // Giải nén và parse Proto
                             byte[] protoAsBytes = Snappy.uncompress(snappyCompressedBytes);
                             MinuteDataFinal protoData = MinuteDataFinal.parseFrom(protoAsBytes);
-
-                            // Convert sang Object Java và inject lại timestamp
                             Map<String, KlineObjectSimple> javaMap = convertProtoMapToJavaMap(protoData.getTickersMap(), minuteTimestamp);
                             chunkResult.put(minuteTimestamp, javaMap);
                         }
                     }
                 } catch (Exception e) {
-                    LOG.error("❌ Lỗi trong luồng đọc Batch: {}", e.getMessage());
+                    LOG.error("❌ [AEROSPIKE-PARSE] Lỗi giải nén/parse chunk start={}: {} {}",
+                            Utils.normalizeDateYYYYMMDDHHmm(chunkTimestamps[0]), e.getClass().getSimpleName(), e.getMessage());
                 }
                 return chunkResult;
             }));
