@@ -109,9 +109,9 @@ Hai kernel đã re-run v3 để fix validate OOM. Kiểm status + lấy log:
 kaggle kernels status chuyendinh/ff40-2025h2x
 kaggle kernels status chuyendinh/ff40-2026x
 
-# Neu COMPLETE, lay log validate:
-kaggle kernels output chuyendinh/ff40-2025h2x -p /tmp/ff40-2025h2x-out
-kaggle kernels output chuyendinh/ff40-2026x -p /tmp/ff40-2026x-out
+# Neu COMPLETE, lay log validate (LUU vao D: — KHONG /tmp/ o C, da lam full o C 2 lan):
+kaggle kernels output chuyendinh/ff40-2025h2x -p /d/claudedata/ff40-2025h2x-out
+kaggle kernels output chuyendinh/ff40-2026x -p /d/claudedata/ff40-2026x-out
 # Parse: grep Tool1 rec, Tool2 rec, #coin OI, PASS/FAIL
 ```
 

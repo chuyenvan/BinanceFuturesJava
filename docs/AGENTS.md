@@ -8,7 +8,9 @@
 
 | Task | Owner (CCD) | Status | Cập nhật | Job/PID nền | Ghi chú |
 |------|-------------|--------|----------|-------------|---------|
-| 103 013b+037 song song | CCD-103A | 🔵 DOING | 2026-06-18 | ff40-2025h2x-oi-only + ff40-2026x-oi-only RUNNING | nhánh A ✅ DONE=896 QUEUE=0; B4 2023 ✅ 19.8M rec; Tool2 2025h2x+2026x PUSHED (v2) → chờ COMPLETE → validate --quick |
+| 103 013b+037 song song | CCD-103A | ✅ DONE | 2026-06-18 | — | nhánh A ✅ DONE=896 QUEUE=0; Tool2 2023/2025h2x/2026x COMPLETE; handoff → 103f |
+| 103f finish-037+validate-OI | CCD-103F | 🔵 DOING | 2026-06-18 | — | B1: xác định năm empty; B2: re-run kernel; B3: ValidateOiData; B4: đóng |
+| 105 move data sang D:\claudedata | — | 🟡 TODO | 2026-06-18 | — | QUY TẮC NGHIÊM: cấm ghi ổ C, luôn /d/claudedata hoặc /e. /tmp full ổ C 3 lần, đã dọn 54G + sửa 103/100/KAGGLE_RULES |
 | 005 backfill survivorship | — | ✅ DONE | 2026-06-13 | — | commit d387229; 30 core (id 760-789) |
 | 007 fix ban + Reporter + OI + gom log | CCD #2 | ✅ DONE (commit 106baee) | 2026-06-13 | — | A-D xong; startHistoryCrawl **ĐÃ gỡ** ở TASK-023 (`b231b6d`) — history OI → 013; B/D golive OK |
 | 016 fix ingest live (TickerFuturesHelper -1130/-1003) | CCD #1 | ✅ DONE + DEPLOYED | 2026-06-14 | — | clamp [1,1500] + guard -1003-rate 8s; self-test 10/10; ĐÃ deploy gộp 016+019+gỡ-crawl (live -1130 hết) |

@@ -152,7 +152,7 @@ kaggle kernels push -p oi-backfill-worker-1
 kaggle kernels status chuyendinh/oi-backfill-worker-1
 
 # Khi COMPLETE, lấy log kiểm tra
-kaggle kernels output chuyendinh/oi-backfill-worker-1 -p /tmp/k1-out
+kaggle kernels output chuyendinh/oi-backfill-worker-1 -p /d/claudedata/k1-out
 # Log Kaggle là JSON: parse field "data", KHÔNG parse đầu dòng trực tiếp
 ```
 
@@ -226,7 +226,7 @@ for i in $(seq 1 $N); do kaggle kernels push -p oi-backfill-worker-$i; sleep 2; 
 kaggle kernels list --mine --page-size 20 2>&1 | grep -E "oi-backfill|ff40"
 
 # Lấy log 1 kernel
-kaggle kernels output chuyendinh/oi-backfill-worker-1 -p /tmp/k1-out
+kaggle kernels output chuyendinh/oi-backfill-worker-1 -p /d/claudedata/k1-out
 
 # Reset stale tasks (sau 12h kill)
 java -Duser.timezone=Asia/Ho_Chi_Minh -Xmx4g -cp "C:/Users/pc/oi-fleet/binance-java-sdk-1.2.4-shaded.jar;target/classes" \
