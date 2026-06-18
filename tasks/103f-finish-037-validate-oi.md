@@ -15,6 +15,11 @@ require_review: true
 > Nếu bạn thấy CCD khác đang chạy task 103/103f → DỪNG, báo user, KHÔNG chạy song song.
 > `git pull` (branch module) trước khi bắt đầu. Đọc `docs/KAGGLE_RULES.md`.
 >
+> ⚠️ **2026-06-18: CCD-103f bị DỪNG giữa chừng, reset về TODO.** Việc CÒN LẠI chính:
+> rebuild jar HEAD trên 226 (đã có ValidateOiData nới ngưỡng CHECK-3a, commit aee88af) →
+> chạy lại `ValidateOiData --quick` → giờ PHẢI PASS (510 zero rơi vào WARN, không FAIL) →
+> đóng 037+013b. **CHỜ TASK-106 chạy xong** (106 đang dùng 226+Kaggle) để tránh 2-CCD đụng.
+>
 > Trạng thái đã verify (2026-06-18): 226 DONE=896/QUEUE=0/OI=18498,
 > 3 kernel oi-only (2023/2025h2x/2026x) đều COMPLETE — KHÔNG cần chạy lại các phần này.
 > kaggle CLI đã vào PATH ổn định — gọi `kaggle ...` trực tiếp.
