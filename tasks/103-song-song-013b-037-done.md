@@ -1,6 +1,8 @@
 ---
 id: 103
-status: TODO
+status: DOING
+owner: CCD-103A
+updated: 2026-06-18
 touches_live_process: false
 writes_242_data: false
 resource: kaggle_distributed+226
