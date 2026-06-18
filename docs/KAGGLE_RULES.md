@@ -6,6 +6,27 @@
 
 ---
 
+## 0. LOG/OUTPUT — LƯU VÀO `D:\claude data` (KHÔNG lưu ổ C)
+
+**Quy tắc bắt buộc cho MỌI task (không chỉ Kaggle):** mọi log file, output trung gian, file tải về
+khi xử lý → lưu vào **`D:\claude data`** (Git Bash: `/d/claude data`). **KHÔNG lưu vào ổ C** — ổ C
+là ổ cài Windows, đã bị full 2 lần → MCP chết, máy phải restart, job đang chạy bị kill.
+
+```bash
+# Đường dẫn CÓ DẤU CÁCH → luôn QUOTE:
+LOGDIR="/d/claude data"
+mkdir -p "$LOGDIR"
+# ví dụ: tải kernel output / log ablation / log validate
+... > "$LOGDIR/ablation_104.log" 2>&1
+kaggle kernels output chuyendinh/ff40-2023 -p "$LOGDIR/ff40-2023-out"
+```
+
+- KHÔNG dùng `/tmp`, `C:\Users\...\AppData\...\Temp`, hay `~/` cho file lớn (đều nằm ổ C).
+- File trên 226 thì lưu trên 226 (vd `/home/chuyennd/java/simulator/*.log`) — không kéo về ổ C.
+- Chỉ kéo về `D:\claude data` khi cần đọc/phân tích ở máy local.
+
+---
+
 ## 1. Slot CPU limit
 
 **Giới hạn: 5 kernel CPU chạy đồng thời** trên toàn account `chuyendinh` (tất cả job, không phân biệt mục đích).
@@ -225,3 +246,4 @@ ssh -i /c/Users/pc/.ssh/id_rsa_chuyennd -p 2222 -o BatchMode=yes root@103.157.21
 |---|---|
 | 2026-06-17 | Tạo mới — tổng hợp từ 013/013b/037 + RUNBOOK_kaggle_multi_cpu.md |
 | 2026-06-17 | TASK-102: xác nhận slot limit = 0/5 đang dùng (test COMPLETE trong 2s, SLOT_TEST_OK) |
+| 2026-06-18 | §0 mới: log/output lưu `D:\claude data`, KHÔNG lưu ổ C (full 2 lần → MCP chết). Sau restart, kaggle có thể mất PATH → dùng full path. |
