@@ -84,8 +84,8 @@ ssh -i $KEY -p 2222 root@103.157.218.226 \
    > ablation_104.log 2>&1 &"
 # Poll den khi thay 'ABLATION DONE':
 ssh -i $KEY -p 2222 root@103.157.218.226 "tail -8 /home/chuyennd/java/simulator/ablation_104.log"
-# Khi xong, tai ve doc + ghi report (LUU vao D:\claude data, KHONG o C):
-LOGDIR="/d/claude data"; mkdir -p "$LOGDIR"
+# Khi xong, tai ve doc + ghi report (LUU vao D:\claudedata, KHONG o C):
+LOGDIR="/d/claudedata"; mkdir -p "$LOGDIR"
 ssh -i $KEY -p 2222 root@103.157.218.226 "cat /home/chuyennd/java/simulator/ablation_104.log" > "$LOGDIR/ablation_104.log"
 ```
 

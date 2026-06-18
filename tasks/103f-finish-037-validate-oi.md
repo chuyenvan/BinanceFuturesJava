@@ -34,7 +34,7 @@ Các năm 2021/2022/2024h1/2024h2/2025h1 chạy Tool2 trong kernel GỐC (cùng 
 Vì Tool1 chạy lâu (~24 phút) làm Aerospike stale, Tool2 các năm này CÓ THỂ đã empty
 (đúng bug Error-8 như 2023). Kiểm nhanh — tải Tool2 output từng kernel, đọc dòng "HOAN TAT":
 ```bash
-LOGDIR="/d/claude data"; mkdir -p "$LOGDIR"   # luu o D:, KHONG o C (da full 2 lan)
+LOGDIR="/d/claudedata"; mkdir -p "$LOGDIR"   # luu o D:, KHONG o C (da full 2 lan)
 for k in ff40-2021 ff40-2022 ff40-2024h1 ff40-2024h2 ff40-2025h1; do
   kaggle kernels output chuyendinh/$k -p "$LOGDIR/oi-$k" 2>/dev/null
   echo "=== $k ==="
