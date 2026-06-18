@@ -7,6 +7,32 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ---
 
+## ⛔ TUYỆT ĐỐI KHÔNG ghi file ra ổ C (Windows — áp dụng mọi task, mọi CCD)
+
+**KHÔNG BAO GIỜ ghi file/log/output vào `/tmp`, `~/`, hoặc `C:\...\Temp`.** Trên Windows, tất cả các đường dẫn này đều nằm trên **ổ C** — ổ cài hệ điều hành.
+
+**Lý do đã trả giá:** `/tmp` từng bị tích 55GB (ff40-kernel output), làm MCP crash, phải restart máy, mất job đang chạy — xảy ra **3 lần**. Một file feature cả năm ~5-6GB; 8-10 kernel = 50GB+.
+
+| Loại file | Ghi vào | TUYỆT ĐỐI KHÔNG |
+|---|---|---|
+| Kaggle kernel output | `/d/claudedata/<tên>-out` | `/tmp/...`, `~/...` |
+| Log job (backtest, validate) | `/d/claudedata/<job>.log` hoặc trên 226 | `/tmp`, stdout-only |
+| File trung gian / tải về | `/d/claudedata/` | ổ C bất kỳ đâu |
+| Compile output (`javac -d`) | `/d/claudedata/build/<tên>` | `/tmp/cXXX` |
+| File trên server 226 | giữ trên 226 | KHÔNG kéo về ổ C |
+
+**Mẫu chuẩn (Git Bash trên Windows):**
+```bash
+LOGDIR=/d/claudedata; mkdir -p "$LOGDIR"
+kaggle kernels output chuyendinh/<kernel> -p "$LOGDIR/<ten>-out"
+java ... > "$LOGDIR/<job>.log" 2>&1
+javac --release 11 -cp "$JAR" -d "$LOGDIR/build/<tên>" <file>
+```
+
+> **Ngoại lệ duy nhất:** `/tmp/oisyms.txt` trong một số task — đó là `/tmp` TRÊN SERVER 226 (Linux), không phải ổ C local. KHÔNG đổi những dòng đó.
+
+---
+
 ## ⛔ LUẬT BẤT DI BẤT DỊCH (đọc trước khi sửa bất cứ gì)
 
 Đây là các bài học đã trả giá bằng nhiều vòng phân tích. Vi phạm = sai kết quả backtest một cách âm thầm.

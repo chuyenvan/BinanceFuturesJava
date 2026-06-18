@@ -42,7 +42,7 @@ Tổng hợp từ N nến 1m gần (<=t), KHÔNG nhồi nến thô. Tái dùng h
 - Tính trong `FundingDataCollectionManager.FundingFeatureExtractorV2`: microstructure (#36-40) tính ngay từ ring kline.
 - **CHỐT A2 (xem `docs/reports/038.md`):** `.bin.gz` funding (ExportFeaturesForPythonTool) = **#1..#40** — chỉ append #36..#40 (microstructure-B) vào `convertFeaturesToArray`. ⇒ **037 chạy ra 40 cột là ĐÚNG (KHÔNG phải 45).**
 - **OI/LS/taker (#41..#45, nhóm A) KHÔNG vào .bin.gz** → tool RIÊNG `ExportFundingOiPerCoin` (loop-theo-coin RAM-aware, tránh OOM ~5-8GB khi nhồi vào loop-theo-phút). Output binary riêng, **MERGE ở train 039** bằng merge_asof(by=symId,on=ts,backward). Tổng feature train = 40 + 5 = 45.
-- `javac --release 11 -cp "C:/Users/pc/oi-fleet/binance-java-sdk-1.2.4-shaded.jar" -d /tmp/c038 <file sửa>` PASS.
+- `javac --release 11 -cp "C:/Users/pc/oi-fleet/binance-java-sdk-1.2.4-shaded.jar" -d /d/claudedata/build/c038 <file sửa>` PASS.
 
 ## Validate (require_review) — theo docs/insights/TRAINING_NOTES.md
 - Recompute >=3 feature mới o >=3 mốc khớp.

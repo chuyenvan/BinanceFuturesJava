@@ -98,8 +98,8 @@ public class DiagnoseOiRange {
 # compile (Windows, từ Git Bash)
 JAVAC="/c/Users/pc/.jdks/corretto-17.0.9/bin/javac"
 JAR="C:/Users/pc/oi-fleet/binance-java-sdk-1.2.4-shaded.jar"
-rm -rf /tmp/c101 && mkdir -p /tmp/c101
-"$JAVAC" --release 11 -cp "$JAR" -d /tmp/c101 \
+rm -rf /d/claudedata/build/c101 && mkdir -p /d/claudedata/build/c101
+"$JAVAC" --release 11 -cp "$JAR" -d /d/claudedata/build/c101 \
   src/main/java/com/binance/chuyennd/ai_ml/features/export/fundingv2/DiagnoseOiRange.java
 ```
 

@@ -26,8 +26,8 @@ kaggle kernels list --mine --page-size 20 2>&1
 
 ### Bước 2: Tạo + push 1 kernel test nhỏ (chỉ echo + exit)
 ```bash
-mkdir -p /tmp/slot-test-1
-cat > /tmp/slot-test-1/test.py << 'EOF'
+mkdir -p /d/claudedata/slot-test-1
+cat > /d/claudedata/slot-test-1/test.py << 'EOF'
 import logging, time, os
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger("slot-test")
@@ -35,7 +35,7 @@ log.info("SLOT_TEST_START")
 log.info("SLOT_TEST_OK")
 EOF
 
-cat > /tmp/slot-test-1/kernel-metadata.json << 'EOF'
+cat > /d/claudedata/slot-test-1/kernel-metadata.json << 'EOF'
 {
   "id": "chuyendinh/slot-test-1",
   "title": "slot-test-1",
@@ -50,7 +50,7 @@ cat > /tmp/slot-test-1/kernel-metadata.json << 'EOF'
 }
 EOF
 
-kaggle kernels push -p /tmp/slot-test-1 2>&1
+kaggle kernels push -p /d/claudedata/slot-test-1 2>&1
 ```
 
 ### Bước 3: Poll + verify
@@ -64,8 +64,8 @@ for i in $(seq 1 30); do
 done
 
 # Lấy log
-kaggle kernels output chuyendinh/slot-test-1 -p /tmp/slot-test-out 2>&1
-cat /tmp/slot-test-out/*.json 2>/dev/null | python3 -c "
+kaggle kernels output chuyendinh/slot-test-1 -p /d/claudedata/slot-test-out 2>&1
+cat /d/claudedata/slot-test-out/*.json 2>/dev/null | python3 -c "
 import json, sys
 for item in json.load(sys.stdin): print(item.get('data',''))
 " | grep -E "SLOT_TEST"
@@ -74,7 +74,7 @@ for item in json.load(sys.stdin): print(item.get('data',''))
 ### Bước 4: Dọn dẹp
 ```bash
 yes | kaggle kernels delete chuyendinh/slot-test-1 2>&1 || true
-rm -rf /tmp/slot-test-1 /tmp/slot-test-out
+rm -rf /d/claudedata/slot-test-1 /d/claudedata/slot-test-out
 ```
 
 ## Báo lại (CCD điền — 2026-06-17 GMT+7)

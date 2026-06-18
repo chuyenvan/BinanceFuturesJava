@@ -1,6 +1,6 @@
 ---
 id: 105
-status: TODO
+status: DONE
 owner: MOT-CCD
 updated: 2026-06-18
 touches_live_process: false
@@ -92,6 +92,8 @@ echo "OK" > /d/claudedata/.keep
 - Đây là task local, không đụng 226/242/Kaggle job đang chạy.
 
 ## (CCD điền)
-- Bước 1: /tmp trước = ?GB, sau = ?GB, ổ C free = ?
-- Bước 2: số chỗ /tmp đã sửa = ?
-- Bước 4: commit hash
+- Bước 0: Đã thêm section "⛔ TUYỆT ĐỐI KHÔNG ghi file ra ổ C" vào CLAUDE.md (ngay sau Ngôn ngữ)
+- Bước 1: /tmp = 528MB (chỉ Windows system files, không có rác kaggle — đã dọn từ trước). ổ C free = 74GB. KHÔNG cần dọn thêm.
+- Bước 2: sửa 4 chỗ /tmp trong 3 file: tasks/038 (1), tasks/101 (2), tasks/102 (2 — slot-test-1 và slot-test-out)
+- Bước 3: D:\claudedata đã tồn tại, free = 369GB, .keep ghi OK
+- Bước 4: commit hash → (xem bên dưới)
