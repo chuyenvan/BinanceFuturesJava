@@ -40,17 +40,34 @@ java ... > "$LOGDIR/<job>.log" 2>&1
 javac --release 11 -cp "$JAR" -d "$LOGDIR/build" <file>
 ```
 
-## Việc làm
+## ĐÃ LÀM (Desktop, 2026-06-18 — ĐỪNG làm lại)
+- Dọn /tmp: 55G → 527M (ổ C 21G→75G free).
+- Sửa chỗ ghi LỚN nguy hiểm: task 103 (kernel output 2025h2x/2026x), task 100 (ff40-2022-out),
+  KAGGLE_RULES §10 (k1-out) → `/d/claudedata`.
+- KAGGLE_RULES §0 đã có quy tắc cấm ghi ổ C.
 
-### Bước 1: Dọn /tmp hiện tại (nếu còn rác)
+## VIỆC CÒN LẠI (ít — chủ yếu chống tái diễn tận gốc)
+
+### Bước 0 (QUAN TRỌNG NHẤT): đưa quy tắc vào CLAUDE.md
+CLAUDE.md là file CCD LUÔN đọc đầu phiên. Thêm 1 mục ngắn, nổi bật ở đầu:
+> **CẤM GHI Ổ C.** Mọi log/output/file tải về → `/d/claudedata` hoặc ổ E.
+> KHÔNG `/tmp`, KHÔNG `~/`, KHÔNG AppData/Temp (đều ổ C). Ổ C full 3 lần → MCP chết, restart máy.
+> File trên 226 giữ trên 226. Chi tiết: KAGGLE_RULES §0 + tasks/105.
+Đây là việc giá trị nhất của task — quy tắc chỉ hiệu lực nếu CCD thấy nó mà không cần mở task.
+
+### Bước 1: Đổi nốt vài /tmp NHỎ còn sót (ít hại, làm cho nhất quán)
+- `tasks/038` dòng 45: `javac ... -d /tmp/c038` → `-d /d/claudedata/build/c038`
+- `tasks/102` dòng 30-67: `/tmp/slot-test-*` → `/d/claudedata/slot-test-*`
+(File nhỏ vài KB, KHÔNG gây full ổ — đổi để nhất quán, không gấp.)
+
+### Bước 2 (nếu /tmp lại đầy): dọn rác kernel output
 ```bash
 du -sh /tmp 2>/dev/null
-# Neu > 1GB, xoa rac kernel output (deu tai lai duoc tu Kaggle cloud):
 rm -rf /tmp/ff40-* /tmp/oi-* /tmp/oichk-* /tmp/k1-out /tmp/slot-test-* /tmp/chk-* /tmp/c0* /tmp/c1* 2>/dev/null
-df -h /c | tail -1   # xac nhan o C da thoang
+df -h /c | tail -1
 ```
 
-### Bước 2: Sửa các task/doc còn trỏ /tmp (ghi file LỚN) → /d/claudedata
+### Bước 3: grep soát còn /tmp ghi LỚN nào sót không
 Các chỗ cần sửa (CCD grep lại để chắc, vì task có thể đã sửa 1 phần):
 ```bash
 grep -rn "kaggle kernels output.*-p /tmp\|> /tmp\|-o /tmp" tasks/ docs/ python/
