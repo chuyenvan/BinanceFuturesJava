@@ -30,14 +30,20 @@ public class DiagnoseDropFilter {
         long start = args.length > 0 ? Long.parseLong(args[0]) : 1704067200000L;
         int days = args.length > 1 ? Integer.parseInt(args[1]) : 7;
 
-        long[] volMins = {5000, 10000, 20000};
+        // BIEN DONG 2 CHIEU: |rate(window)| > THR, volume >= 5000. So 3 kieu: chi-roi, chi-tang, 2-chieu (abs).
+        // Bat ca trend tang manh, khong chi coin roi. Window {15,30} x thr {0.01,0.015}.
+        long volMin = 5000;
+        int[] windows = {15, 30};
+        float[] thrs = {0.01f, 0.015f};
         FundingDataCollectionManager manager = new FundingDataCollectionManager("storage/tmp_diag_drop");
 
-        long total = 0;
-        long[] afterVol = new long[volMins.length];
-        long[] afterDrop = new long[volMins.length];
+        long total = 0, afterVol = 0;
+        // [windowIdx][thrIdx] x 3 kieu
+        long[][] down = new long[windows.length][thrs.length];
+        long[][] up = new long[windows.length][thrs.length];
+        long[][] both = new long[windows.length][thrs.length];
 
-        LOG.info("===== DIAGNOSE DROP FILTER (start={} days={}) =====", new Date(start), days);
+        LOG.info("===== DIAGNOSE VOLATILITY FILTER (vol>={}, start={} days={}) =====", volMin, new Date(start), days);
         for (int d = 0; d < days; d++) {
             long dayStart = start + (long) d * Utils.TIME_DAY;
             TreeMap<Long, Map<String, KlineObjectSimple>> data =
@@ -45,19 +51,20 @@ public class DiagnoseDropFilter {
             if (data == null) continue;
             for (Map.Entry<Long, Map<String, KlineObjectSimple>> e : data.entrySet()) {
                 Map<String, KlineObjectSimple> snap = e.getValue();
-                manager.updateHistory(snap); // nuoi history de getReturn(15) dung
+                manager.updateHistory(snap); // nuoi history de getReturn(window) dung
                 for (Map.Entry<String, KlineObjectSimple> se : snap.entrySet()) {
                     String symbol = se.getKey();
                     KlineObjectSimple k = se.getValue();
                     if (k == null || !Utils.isTickerAvailable(k)) continue;
                     total++;
-                    float rate1m = (k.priceClose - k.priceOpen) / k.priceOpen;
-                    float rate15m = manager.getReturn(symbol, 15);
-                    boolean dropping = !(rate1m >= -0.004f && rate15m >= -0.015f);
-                    for (int i = 0; i < volMins.length; i++) {
-                        if (k.totalUsdt >= volMins[i]) {
-                            afterVol[i]++;
-                            if (dropping) afterDrop[i]++;
+                    if (k.totalUsdt < volMin) continue;
+                    afterVol++;
+                    for (int wi = 0; wi < windows.length; wi++) {
+                        float rate = manager.getReturn(symbol, windows[wi]);
+                        for (int ti = 0; ti < thrs.length; ti++) {
+                            if (rate < -thrs[ti]) down[wi][ti]++;
+                            if (rate > thrs[ti]) up[wi][ti]++;
+                            if (Math.abs(rate) > thrs[ti]) both[wi][ti]++;
                         }
                     }
                 }
@@ -66,15 +73,19 @@ public class DiagnoseDropFilter {
         }
 
         LOG.info("===================================================");
-        LOG.info("Tong nen (coin x moc 1m, isTickerAvailable) = {}", total);
-        for (int i = 0; i < volMins.length; i++) {
-            double volPct = total > 0 ? 100.0 * afterVol[i] / total : 0;
-            double dropPct = total > 0 ? 100.0 * afterDrop[i] / total : 0;
-            LOG.info(String.format("  VOL>=%-6d : sau-vol=%d (%.1f%% giu) -> sau-drop=%d (%.2f%% giu | giam %.2f%% so tong)",
-                    volMins[i], afterVol[i], volPct, afterDrop[i], dropPct, 100 - dropPct));
+        LOG.info("Tong nen (coin x moc 1m, isTickerAvailable) = {} | sau vol>={} = {} ({}%)",
+                total, volMin, afterVol, String.format("%.1f", total > 0 ? 100.0 * afterVol / total : 0));
+        for (int wi = 0; wi < windows.length; wi++) {
+            for (int ti = 0; ti < thrs.length; ti++) {
+                double pd = total > 0 ? 100.0 * down[wi][ti] / total : 0;
+                double pu = total > 0 ? 100.0 * up[wi][ti] / total : 0;
+                double pb = total > 0 ? 100.0 * both[wi][ti] / total : 0;
+                LOG.info(String.format("  w%dm thr%.1f%%: roi=%.2f%% | tang=%.2f%% | 2chieu(abs)=%.2f%% (giu) -> giam %.2f%%",
+                        windows[wi], thrs[ti] * 100, pd, pu, pb, 100 - pb));
+            }
         }
         LOG.info("===================================================");
-        LOG.info("=> filter 2-tang (vol + drop) la don bay that. Day la filter CHUNG train/backtest/hpo/wfo/live.");
+        LOG.info("=> 2chieu bat ca trend tang+roi. Chon window+thr cho giu ~5-12%. Filter CHUNG train/backtest/hpo/wfo/live.");
         System.exit(0);
     }
 }
