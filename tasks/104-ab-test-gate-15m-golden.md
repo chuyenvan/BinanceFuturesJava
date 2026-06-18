@@ -31,7 +31,12 @@ MOM15 xuất hiện 2 chỗ:
 
 ## Việc làm
 
-### Bước 1: Thêm mode tách MOM15 vào AIRejectFilter
+> **CẬP NHẬT 2026-06-18:** Bước 1 (code) ĐÃ XONG + commit `a0745d5` (compile PASS, build 315/315 sạch).
+> AIRejectFilter có mode E/F/OFF + `mom15RejectCount`; RunFilterAblation đã wire 4 mode {A,E,F,OFF}
+> × 3 range {CRASH-2022, BULL-2023Q4, RECENT} + bảng so A-vs-E + System.exit(0).
+> **CHỈ CÒN: build jar HEAD → chạy trên 226 → ghi report.** ĐỪNG sửa lại code bước 1/2.
+
+### Bước 1: Thêm mode tách MOM15 vào AIRejectFilter — ✅ DONE (commit a0745d5)
 File: `src/main/java/com/binance/chuyennd/ai_ml/onnx/entry/AIRejectFilter.java`
 
 Thêm flag `checkMom15` điều khiển bởi FILTER_MODE, áp cho CẢ 2 chỗ MOM15:
