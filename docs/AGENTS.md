@@ -9,8 +9,9 @@
 | Task | Owner (CCD) | Status | Cập nhật | Job/PID nền | Ghi chú |
 |------|-------------|--------|----------|-------------|---------|
 | 103 013b+037 song song | CCD-103A | ✅ DONE | 2026-06-18 | — | nhánh A ✅ DONE=896 QUEUE=0; Tool2 2023/2025h2x/2026x COMPLETE; handoff → 103f |
-| 103f finish-037+validate-OI | — | 🟡 TODO (reset sau restart) | 2026-06-18 | — | CCD cũ bị kill do full ổ C; chưa làm bước nào. B1: xác định năm empty; B2: re-run kernel; B3: ValidateOiData; B4: đóng |
-| 105 move data sang D:\claudedata | — | 🟡 TODO | 2026-06-18 | — | QUY TẮC NGHIÊM: cấm ghi ổ C, luôn /d/claudedata hoặc /e. /tmp full ổ C 3 lần, đã dọn 54G + sửa 103/100/KAGGLE_RULES |
+| 103f finish-037+validate-OI | CCD-103f | 🔵 DOING | 2026-06-18 | — | Đang B1: kiểm Tool2 output 5 năm cũ (2021/22/24h1/24h2/25h1) |
+| 105 move data sang D:\claudedata | CCD-105 | ✅ DONE | 2026-06-18 | — | CLAUDE.md có quy tắc cấm ghi ổ C (commit b92964a) |
+| 106 reexport feature + filter | — | 🟡 TODO | 2026-06-18 | — | EntrySignalFilter (vol-avg-30m≥2k + top10% \|rate30m\| cross-sectional) wire vào Tool1 (37e875b). Xuất lại 60G→~5G + validate chặt. Depends 103f |
 | 005 backfill survivorship | — | ✅ DONE | 2026-06-13 | — | commit d387229; 30 core (id 760-789) |
 | 007 fix ban + Reporter + OI + gom log | CCD #2 | ✅ DONE (commit 106baee) | 2026-06-13 | — | A-D xong; startHistoryCrawl **ĐÃ gỡ** ở TASK-023 (`b231b6d`) — history OI → 013; B/D golive OK |
 | 016 fix ingest live (TickerFuturesHelper -1130/-1003) | CCD #1 | ✅ DONE + DEPLOYED | 2026-06-14 | — | clamp [1,1500] + guard -1003-rate 8s; self-test 10/10; ĐÃ deploy gộp 016+019+gỡ-crawl (live -1130 hết) |
