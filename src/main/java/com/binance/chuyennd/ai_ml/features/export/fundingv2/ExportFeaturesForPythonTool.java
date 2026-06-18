@@ -148,8 +148,15 @@ public class ExportFeaturesForPythonTool {
                             fileRecordCount = 0;
                         }
 
+                        // === ENTRY SIGNAL FILTER (TASK filter 2026-06-18): chi xet coin qua filter CHUNG
+                        //     (vol-avg-30m >= 2k + top-10% |rate30m| cross-sectional). Giam ~90% record.
+                        //     History da updateMarketHistory(symbol2Ticker) o tren -> getInstance() la dung instance. ===
+                        java.util.Set<String> passFilter = com.binance.chuyennd.ai_ml.features.export.funding.EntrySignalFilter
+                                .selectCoins(symbol2Ticker, com.binance.chuyennd.ai_ml.features.export.HistoryManager.getInstance());
+                        if (passFilter.isEmpty()) continue; // khong coin nao qua filter tai moc nay
+
                         // === PASS 1: per-coin (parallel) — feature #1..#32; cross-sectional (#33..#35) để NaN ===
-                        List<FeatureHolder> rawList = symbol2Ticker.keySet().parallelStream()
+                        List<FeatureHolder> rawList = passFilter.parallelStream()
                                 .map(symbol -> {
                                     try {
                                         Short symId = symbolMap.get(symbol);
