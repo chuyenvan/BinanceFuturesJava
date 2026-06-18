@@ -9,7 +9,7 @@
 | Task | Owner (CCD) | Status | Cập nhật | Job/PID nền | Ghi chú |
 |------|-------------|--------|----------|-------------|---------|
 | 103 013b+037 song song | CCD-103A | ✅ DONE | 2026-06-18 | — | nhánh A ✅ DONE=896 QUEUE=0; Tool2 2023/2025h2x/2026x COMPLETE; handoff → 103f |
-| 103f finish-037+validate-OI | CCD-103F | 🔵 DOING | 2026-06-18 | — | B1: xác định năm empty; B2: re-run kernel; B3: ValidateOiData; B4: đóng |
+| 103f finish-037+validate-OI | — | 🟡 TODO (reset sau restart) | 2026-06-18 | — | CCD cũ bị kill do full ổ C; chưa làm bước nào. B1: xác định năm empty; B2: re-run kernel; B3: ValidateOiData; B4: đóng |
 | 105 move data sang D:\claudedata | — | 🟡 TODO | 2026-06-18 | — | QUY TẮC NGHIÊM: cấm ghi ổ C, luôn /d/claudedata hoặc /e. /tmp full ổ C 3 lần, đã dọn 54G + sửa 103/100/KAGGLE_RULES |
 | 005 backfill survivorship | — | ✅ DONE | 2026-06-13 | — | commit d387229; 30 core (id 760-789) |
 | 007 fix ban + Reporter + OI + gom log | CCD #2 | ✅ DONE (commit 106baee) | 2026-06-13 | — | A-D xong; startHistoryCrawl **ĐÃ gỡ** ở TASK-023 (`b231b6d`) — history OI → 013; B/D golive OK |

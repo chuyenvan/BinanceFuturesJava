@@ -1,7 +1,7 @@
 ---
 id: 103f
-status: DOING
-owner: CCD-103F
+status: TODO
+owner: —
 updated: 2026-06-18
 touches_live_process: false
 writes_242_data: false
