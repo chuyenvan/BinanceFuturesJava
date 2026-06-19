@@ -97,9 +97,12 @@ public class ExportFeaturesForPythonTool {
         try {
             // VÒNG LẶP LIÊN TỤC KHÔNG RESET
             while (currentReadTs <= globalEndTs) {
-                // TASK-100 perf: 7 ngay/batch thay vi 1 ngay/batch — giam round-trip Aerospike qua mang
-                // (benchmark Kaggle: bottleneck = network latency, khong phai CPU; ~7x it round-trip)
-                int minutesToRead = 10080;
+                // Đọc theo 1 ngày/batch (1440 phút). Trước đây 10080 (7 ngày) để giảm round-trip,
+                // NHƯNG batch quá lớn → khi 226 quá tải ("Batch max requests exceeded") 1 batch lỗi =
+                // mất nguyên 7 ngày (currentReadTs nhảy qua). DataManager đã có retry (commit 1e8c2f2),
+                // batch 1440 nhỏ hơn → ít chạm ngưỡng + nếu lỗi chỉ mất tối đa 1 ngày. (User xác nhận
+                // chạy thủ công luôn dùng 1440 ổn định.)
+                int minutesToRead = 1440;
                 if (currentReadTs + (long) minutesToRead * Utils.TIME_MINUTE > globalEndTs) {
                     minutesToRead = (int) ((globalEndTs - currentReadTs) / Utils.TIME_MINUTE) + 1;
                 }
