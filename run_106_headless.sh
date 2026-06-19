@@ -60,13 +60,15 @@ BUILD_EXIT=$?
 log "Build OK ✅ (exit 0)"
 
 # Verify jar có class cần
-unzip -l "$JAR_FULL" | grep -qE "EntrySignalFilter.class" || die "EntrySignalFilter.class KHÔNG có trong jar"
-unzip -l "$JAR_FULL" | grep -qE "DataManagerAerospikeFloatSim.class" || die "DataManagerAerospikeFloatSim.class KHÔNG có trong jar"
+# NOTE: grep -q + pipefail = SIGPIPE (exit 141) dù match → cache output trước
+JAR_CONTENTS=$(unzip -l "$JAR_FULL" 2>/dev/null || true)
+echo "$JAR_CONTENTS" | grep -q "EntrySignalFilter.class"  || die "EntrySignalFilter.class KHÔNG có trong jar"
+echo "$JAR_CONTENTS" | grep -q "DataManagerAerospikeFloatSim.class" || die "DataManagerAerospikeFloatSim.class KHÔNG có trong jar"
 log "Classes trong jar ✅"
 
 # Verify jar SẠCH (KHÔNG có secret)
-unzip -p "$JAR_FULL" com/binance/chuyennd/config/PrivateConfig.class > "$DATA/pc.class" 2>/dev/null
-grep -qa SANITIZED "$DATA/pc.class" || die "JAR CÓ SECRET THẬT — DỪNG, không upload"
+unzip -p "$JAR_FULL" com/binance/chuyennd/config/PrivateConfig.class > "$DATA/pc.class" 2>/dev/null || true
+grep -a SANITIZED "$DATA/pc.class" > /dev/null || die "JAR CÓ SECRET THẬT — DỪNG, không upload"
 log "JAR SẠCH (sanitized trong class) ✅"
 rm -f "$DATA/pc.class"
 
