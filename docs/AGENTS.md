@@ -11,7 +11,7 @@
 | 103 013b+037 song song | CCD-103A | ✅ DONE | 2026-06-18 | — | nhánh A ✅ DONE=896 QUEUE=0; Tool2 2023/2025h2x/2026x COMPLETE; handoff → 103f |
 | 103f finish-037+validate-OI | CCD-103f | 🔵 DOING | 2026-06-18 | — | Đang B1: kiểm Tool2 output 5 năm cũ (2021/22/24h1/24h2/25h1) |
 | 105 move data sang D:\claudedata | CCD-105 | ✅ DONE | 2026-06-18 | — | CLAUDE.md có quy tắc cấm ghi ổ C (commit b92964a) |
-| 106 reexport feature + filter | — | 🟡 TODO | 2026-06-18 | — | EntrySignalFilter (vol-avg-30m≥2k + top10% \|rate30m\| cross-sectional) wire vào Tool1 (37e875b). Xuất lại 60G→~5G + validate chặt. Depends 103f |
+| 106 reexport feature + filter | — | 🟡 TODO | 2026-06-20 | — | ⚠️ JAR STALE: staged jar Jun 19 20:34 có minutesToRead=10080; commit 532e0b8 (21:24) chốt 1440 → **phải rebuild B1 trước**. PrivateConfig SANITIZED ✅, validate_106.py ✅, kernel folders ✅. Session CCD-106 cũ bị reset giữa chừng. |
 | 005 backfill survivorship | — | ✅ DONE | 2026-06-13 | — | commit d387229; 30 core (id 760-789) |
 | 007 fix ban + Reporter + OI + gom log | CCD #2 | ✅ DONE (commit 106baee) | 2026-06-13 | — | A-D xong; startHistoryCrawl **ĐÃ gỡ** ở TASK-023 (`b231b6d`) — history OI → 013; B/D golive OK |
 | 016 fix ingest live (TickerFuturesHelper -1130/-1003) | CCD #1 | ✅ DONE + DEPLOYED | 2026-06-14 | — | clamp [1,1500] + guard -1003-rate 8s; self-test 10/10; ĐÃ deploy gộp 016+019+gỡ-crawl (live -1130 hết) |
