@@ -97,12 +97,11 @@ public class ExportFeaturesForPythonTool {
         try {
             // VÒNG LẶP LIÊN TỤC KHÔNG RESET
             while (currentReadTs <= globalEndTs) {
-                // 7 ngày/batch: readDataFromAerospikeCustom tự chia chunk + đọc song song nội bộ,
-                // khối lớn tận dụng song song tốt hơn nhiều (1440 = quá nhiều round-trip → chậm gấp nhiều lần,
-                // đo thực tế: 1 nửa-năm >3h với 1440). Bug mất-data 2022 KHÔNG phải do batch lớn mà do
-                // batch lỗi bị nuốt im → đã fix bằng RETRY ở DataManager (commit 1e8c2f2): batch lỗi
-                // transient được thử lại 4 lần, chỉ log [AEROSPIKE-FAIL] khi hết retry (không nhảy qua âm thầm).
-                int minutesToRead = 10080;
+                // 1 ngày/batch (CHUẨN DUY NHẤT). 1440 key/chunk < batch-max-requests=5000 của Aerospike 226
+                // → KHÔNG BAO GIỜ vượt ngưỡng (10080 từng tạo chunk 5040 > 5000 → lỗi "Batch max requests
+                // exceeded" + mất mảng data). Cộng RETRY ở DataManager (commit 1e8c2f2) chống lỗi transient.
+                // Đây là cấu hình ổn định, đã xác nhận: KHÔNG đổi sang giá trị khác.
+                int minutesToRead = 1440;
                 if (currentReadTs + (long) minutesToRead * Utils.TIME_MINUTE > globalEndTs) {
                     minutesToRead = (int) ((globalEndTs - currentReadTs) / Utils.TIME_MINUTE) + 1;
                 }
