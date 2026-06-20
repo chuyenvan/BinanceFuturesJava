@@ -60,10 +60,13 @@ BUILD_EXIT=$?
 log "Build OK ✅ (exit 0)"
 
 # Verify jar có class cần
-# NOTE: grep -q + pipefail = SIGPIPE (exit 141) dù match → cache output trước
-JAR_CONTENTS=$(unzip -l "$JAR_FULL" 2>/dev/null || true)
-echo "$JAR_CONTENTS" | grep -q "EntrySignalFilter.class"  || die "EntrySignalFilter.class KHÔNG có trong jar"
-echo "$JAR_CONTENTS" | grep -q "DataManagerAerospikeFloatSim.class" || die "DataManagerAerospikeFloatSim.class KHÔNG có trong jar"
+# NOTE: pipe + grep -q + pipefail = SIGPIPE 141 ngay cả với echo "$VAR" | grep-q
+# Fix dứt khoát: dump ra file, grep trên file (không dùng pipe với grep -q)
+TMPJAR="$DATA/jar_list.tmp"
+unzip -l "$JAR_FULL" > "$TMPJAR" 2>/dev/null || true
+grep -q "EntrySignalFilter.class"          "$TMPJAR" || die "EntrySignalFilter.class KHÔNG có trong jar"
+grep -q "DataManagerAerospikeFloatSim.class" "$TMPJAR" || die "DataManagerAerospikeFloatSim.class KHÔNG có trong jar"
+rm -f "$TMPJAR"
 log "Classes trong jar ✅"
 
 # Verify jar SẠCH (KHÔNG có secret)
