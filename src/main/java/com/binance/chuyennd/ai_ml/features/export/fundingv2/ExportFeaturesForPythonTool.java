@@ -40,12 +40,9 @@ public class ExportFeaturesForPythonTool {
         // TASK-037: chạy Kaggle/226 đọc-only → getReadClient()→226 (như ExportGateFeatures*). KHÔNG dùng trên box live.
         Configs.IS_KAGGLE_MODE = true;
         // TASK-037: PHIÊN BẢN MỚI (v3) — KHÔNG đè data model 21-feature cũ (features_export_python/).
+        // args[0] = startDate yyyyMMdd, args[1] = endDate yyyyMMdd, args[2] = outputDir (optional).
         String outputDir = "features_export_python_v3/";
-        new File(outputDir).mkdirs();
 
-        // CHIA NĂM cho Kaggle (per-minute × all-coin × 5 năm quá lớn cho 1 kernel):
-        //   args[0] = ngày bắt đầu ghi (yyyyMMdd, GMT+7 07:00), args[1] = ngày kết thúc (yyyyMMdd, loại trừ).
-        //   Không truyền → mặc định 2021-01-01 → hiện tại (full).
         SimpleDateFormat sdfFull = new SimpleDateFormat("yyyyMMdd HH:mm");
         long targetStartTs = sdfFull.parse("20210101 07:00").getTime();
         long globalEndTs = System.currentTimeMillis();
@@ -55,15 +52,39 @@ public class ExportFeaturesForPythonTool {
         if (args.length >= 2 && !args[1].isEmpty()) {
             globalEndTs = sdfFull.parse(args[1] + " 07:00").getTime();
         }
+        if (args.length >= 3 && !args[2].isEmpty()) {
+            outputDir = args[2];
+        }
+        new File(outputDir).mkdirs();
 
         new ExportFeaturesForPythonTool().startGeneration(outputDir, targetStartTs, globalEndTs);
+        System.exit(0);
     }
 
+    /**
+     * Load dữ liệu từ Aerospike rồi gọi overload nhận pre-loaded data.
+     * Dùng khi chạy độc lập (main / test). Worker dùng overload bên dưới để tái dùng data.
+     */
     public void startGeneration(String outputDir, long targetStartTs, long globalEndTs) throws Exception {
         LOG.info("📥 Đang tải Market Data & Symbol Mapper...");
         TreeMap<Long, MarketDataObject> time2MarketData = DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
         Map<String, Short> globalMapper = DataManagerAerospikeFloatSim.loadSymbolMapper();
-        final ConcurrentHashMap<String, Short> symbolMap = new ConcurrentHashMap<>(globalMapper);
+        startGeneration(outputDir, targetStartTs, globalEndTs,
+                time2MarketData, new ConcurrentHashMap<>(globalMapper));
+    }
+
+    /**
+     * Overload nhận data đã load sẵn — dùng bởi {@link ExportTool1Worker} để tái dùng MarketData
+     * giữa các tháng mà không phải load lại từ Aerospike mỗi lần.
+     *
+     * @param preloadedMarketData  kết quả từ {@code DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike()}
+     * @param preloadedSymbolMap   kết quả từ {@code loadSymbolMapper()} bọc trong ConcurrentHashMap
+     */
+    public void startGeneration(String outputDir, long targetStartTs, long globalEndTs,
+            TreeMap<Long, MarketDataObject> preloadedMarketData,
+            ConcurrentHashMap<String, Short> preloadedSymbolMap) throws Exception {
+        final TreeMap<Long, MarketDataObject> time2MarketData = preloadedMarketData;
+        final ConcurrentHashMap<String, Short> symbolMap = preloadedSymbolMap;
 
         SimpleDateFormat sdfFull = new SimpleDateFormat("yyyyMMdd HH:mm");
         SimpleDateFormat sdfFile = new SimpleDateFormat("yyyyMMdd");
@@ -218,7 +239,6 @@ public class ExportFeaturesForPythonTool {
         }
 
         LOG.info("🏁 HOÀN TẤT TOÀN BỘ QUÁ TRÌNH XUẤT FEATURES!");
-        System.exit(0);
     }
 
     private void writeBatch(DataOutputStream dos, List<PrepareData> batch) throws IOException {
