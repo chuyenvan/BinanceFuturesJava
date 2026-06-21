@@ -187,6 +187,14 @@ def run_one(horizon):
                             scale_pos_weight=(1 - pos) / max(pos, 1e-6),
                             eval_metric="auc", n_jobs=-1, tree_method="hist", random_state=SEED)
     clf.fit(Xtr, ytr, eval_set=[(Xva, yva)], verbose=False)
+    if os.environ.get("SAVE_MODEL") == "1":
+        clf.save_model(os.path.join(OUT_DIR, f"model_{HORIZON}.ubj"))
+        json.dump({"horizon": HORIZON, "seed": SEED, "feat": feat,
+                   "params": clf.get_params(),
+                   "win_threshold": WIN, "h_steps": H_STEPS[HORIZON],
+                   "n_train": int(len(tr)), "n_val": int(len(va)), "n_test": int(len(te)),
+                   "ts_train_max": int(tr.ts.max()), "ts_test_min": int(te.ts.min()), "ts_test_max": int(te.ts.max())},
+                  open(os.path.join(OUT_DIR, f"train_meta_{HORIZON}.json"), "w"), indent=2, default=str)
     pwin_te = clf.predict_proba(Xte)[:, 1]          # P(win); P(fail)=[:,0] (khoa convention)
     A = evaluate(f"model_{HORIZON}", pwin_te, yte)
 
