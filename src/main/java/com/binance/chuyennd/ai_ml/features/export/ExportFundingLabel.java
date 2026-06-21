@@ -112,12 +112,16 @@ public class ExportFundingLabel {
             }
             LOG.info("✅ Lifecycle nạp {} symbol (universe qua isAlive — gồm coin đã chết).", nLifecycle);
 
-            long start = Utils.sdfFile.parse(START_DATE).getTime() + 7 * Utils.TIME_HOUR;
-            long end = System.currentTimeMillis();
-            LOG.info("🏷️ TASK-024 export funding LABEL path-thô per-coin | {} → nay | sample 15m | H={4h,12h,24h,72h}", START_DATE);
+            String startStr = args.length > 0 ? args[0] : START_DATE;
+            String endStr   = args.length > 1 ? args[1] : null;
+            String outPath  = args.length > 2 ? args[2] : OUT;
+            long start = Utils.sdfFile.parse(startStr).getTime() + 7 * Utils.TIME_HOUR;
+            long end   = (endStr != null) ? Utils.sdfFile.parse(endStr).getTime() + 7 * Utils.TIME_HOUR
+                                          : System.currentTimeMillis();
+            LOG.info("🏷️ TASK-024 export funding LABEL path-thô per-coin | {} → {} | sample 15m | H={4h,12h,24h,72h}", startStr, (endStr != null ? endStr : "nay"));
 
             Map<String, CoinState> coins = new HashMap<>();
-            FileWriter w = new FileWriter(OUT);
+            FileWriter w = new FileWriter(outPath);
             w.write(header());
 
             Validate v = new Validate();
@@ -160,7 +164,7 @@ public class ExportFundingLabel {
                 cs.active.clear();
             }
             w.close();
-            LOG.info("✅ Ghi {} dòng → {} | range {} → ~nay | {} coin trong universe", emitted[0], OUT, START_DATE, coins.size());
+            LOG.info("✅ Ghi {} dòng → {} | range {} → {} | {} coin trong universe", emitted[0], outPath, startStr, (endStr != null ? endStr : "nay"), coins.size());
 
             v.report();
         } catch (Exception e) {

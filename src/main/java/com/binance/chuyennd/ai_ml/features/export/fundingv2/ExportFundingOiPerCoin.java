@@ -2,6 +2,7 @@ package com.binance.chuyennd.ai_ml.features.export.fundingv2;
 
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.research.oibackfill.OiMetricSets;
+import com.binance.chuyennd.research.oibackfill.VisionMetricsClient;
 import com.binance.chuyennd.tradecore.Configs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,9 +33,14 @@ public class ExportFundingOiPerCoin {
             long start = sdf.parse("20210101 07:00").getTime();
             long end = System.currentTimeMillis();
             String symfile = DEFAULT_SYMFILE;
+            boolean useVision = false;   // source=vision: doc THANG tu data.binance.vision (day du, khong qua Aerospike)
+            int visionThreads = 8;
             List<String> pos = new ArrayList<>();
             for (String a : args) {
-                if (a.toLowerCase().startsWith("symfile=")) symfile = a.substring(8).trim();
+                String al = a.toLowerCase();
+                if (al.startsWith("symfile=")) symfile = a.substring(8).trim();
+                else if (al.equals("source=vision")) useVision = true;
+                else if (al.startsWith("vthreads=")) visionThreads = Integer.parseInt(a.substring(9).trim());
                 else pos.add(a);
             }
             if (pos.size() >= 1 && pos.get(0).length() == 8) start = sdf.parse(pos.get(0) + " 07:00").getTime();
@@ -55,11 +61,24 @@ public class ExportFundingOiPerCoin {
                 LOG.warn("Aerospike 226 ping loi (se tu reconnect): {}", pingEx.getMessage());
             }
             DataOutputStream dos = new DataOutputStream(new BufferedOutputStream(new GZIPOutputStream(new FileOutputStream(outPath)), 1024 * 1024));
+            LOG.info("NGUON OI = {}", useVision ? "VISION (data.binance.vision, toan lich su moi coin)" : "AEROSPIKE 226");
+            VisionMetricsClient vision = useVision ? new VisionMetricsClient() : null;
             long emitted = 0; int done = 0, coinsWithOi = 0; long[] nullCnt = new long[5];
             for (String coin : universe) {
                 Short id = symbolMap.get(coin);
                 if (id == null) continue;
-                long e = writeCoin(dos, coin, id, start, end, nullCnt);
+                TreeMap<Long, Float> oi, lsg, lst, tk;
+                if (useVision) {
+                    // Tai TOAN lich su coin (khong range) de oiZ expanding khong thieu warmup; writeCoin tu loc emit [start,end].
+                    VisionMetricsClient.SymbolMetrics m = vision.fetchSymbol(coin, visionThreads);
+                    oi = m.maps[0]; lst = m.maps[1]; lsg = m.maps[3]; tk = m.maps[4];
+                } else {
+                    oi = DataManagerAerospikeFloatSim.getMetricMap226(OiMetricSets.OI.set, OiMetricSets.OI.bin, coin);
+                    lsg = DataManagerAerospikeFloatSim.getMetricMap226(OiMetricSets.LS_GLOBAL_ACC.set, OiMetricSets.LS_GLOBAL_ACC.bin, coin);
+                    lst = DataManagerAerospikeFloatSim.getMetricMap226(OiMetricSets.LS_TOPTRADER_ACC.set, OiMetricSets.LS_TOPTRADER_ACC.bin, coin);
+                    tk = DataManagerAerospikeFloatSim.getMetricMap226(OiMetricSets.TAKER_VOL.set, OiMetricSets.TAKER_VOL.bin, coin);
+                }
+                long e = writeCoin(dos, coin, id, oi, lsg, lst, tk, start, end, nullCnt);
                 if (e > 0) { coinsWithOi++; emitted += e; }
                 if (++done % 100 == 0) LOG.info("  {}/{} coin (emitted={})", done, universe.size(), emitted);
             }
@@ -73,12 +92,11 @@ public class ExportFundingOiPerCoin {
         System.exit(0);
     }
 
-    private static long writeCoin(DataOutputStream dos, String coin, short id, long start, long end, long[] nullCnt) throws IOException {
-        TreeMap<Long, Float> oi = DataManagerAerospikeFloatSim.getMetricMap226(OiMetricSets.OI.set, OiMetricSets.OI.bin, coin);
+    private static long writeCoin(DataOutputStream dos, String coin, short id,
+                                  TreeMap<Long, Float> oi, TreeMap<Long, Float> lsg,
+                                  TreeMap<Long, Float> lst, TreeMap<Long, Float> tk,
+                                  long start, long end, long[] nullCnt) throws IOException {
         if (oi == null || oi.isEmpty()) return 0;
-        TreeMap<Long, Float> lsg = DataManagerAerospikeFloatSim.getMetricMap226(OiMetricSets.LS_GLOBAL_ACC.set, OiMetricSets.LS_GLOBAL_ACC.bin, coin);
-        TreeMap<Long, Float> lst = DataManagerAerospikeFloatSim.getMetricMap226(OiMetricSets.LS_TOPTRADER_ACC.set, OiMetricSets.LS_TOPTRADER_ACC.bin, coin);
-        TreeMap<Long, Float> tk = DataManagerAerospikeFloatSim.getMetricMap226(OiMetricSets.TAKER_VOL.set, OiMetricSets.TAKER_VOL.bin, coin);
         double sum = 0, sumSq = 0; int n = 0; long emitted = 0;
         for (Map.Entry<Long, Float> en : oi.entrySet()) {
             long t = en.getKey();

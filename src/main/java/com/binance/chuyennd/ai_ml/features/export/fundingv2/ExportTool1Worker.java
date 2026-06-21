@@ -36,7 +36,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * <p>Usage: {@code java ... ExportTool1Worker [workerId]}
  *
- * @param args [0] workerId (default = KAGGLE_KERNEL_RUN_TYPE + "-" + PID)
+ * //@param args[0] workerId (default = KAGGLE_KERNEL_RUN_TYPE + "-" + PID)
  */
 public class ExportTool1Worker {
 
