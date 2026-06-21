@@ -41,6 +41,8 @@ LABEL_CSV = os.environ["LABEL_CSV"]
 MAP_CSV = os.environ["MAP_CSV"]
 OI_TOL_MS = int(os.environ.get("OI_TOL_MS", str(2 * 60 * 60 * 1000)))
 LBL_TOL_MS = int(os.environ.get("LBL_TOL_MS", "0"))
+SEED = int(os.environ.get("SEED", "42"))                       # validate: doi seed xem ket qua co lap lai
+REPORT_QUARTERS = os.environ.get("REPORT_QUARTERS", "0") == "1" # validate: do LIFT/IC theo tung quy (on dinh regime)
 
 TOOL1_DT = np.dtype([("ts", ">i8"), ("sym", ">i2"), ("f", ">f4", 40)])   # itemsize 170
 OI_DT = np.dtype([("ts", ">i8"), ("sym", ">i2"), ("oi", ">f4", 5)])      # itemsize 30
@@ -183,7 +185,7 @@ def run_one(horizon):
     clf = xgb.XGBClassifier(n_estimators=400, max_depth=5, learning_rate=0.05,
                             subsample=0.8, colsample_bytree=0.8, min_child_weight=20,
                             scale_pos_weight=(1 - pos) / max(pos, 1e-6),
-                            eval_metric="auc", n_jobs=-1, tree_method="hist")
+                            eval_metric="auc", n_jobs=-1, tree_method="hist", random_state=SEED)
     clf.fit(Xtr, ytr, eval_set=[(Xva, yva)], verbose=False)
     pwin_te = clf.predict_proba(Xte)[:, 1]          # P(win); P(fail)=[:,0] (khoa convention)
     A = evaluate(f"model_{HORIZON}", pwin_te, yte)
@@ -206,6 +208,17 @@ def run_one(horizon):
     A["PASS_overall"] = bool(A["PASS_ml_gate"] and A["beats_baseline"])
     imp = sorted(zip(feat, clf.feature_importances_), key=lambda x: -x[1])[:15]
     A["top_importance"] = [(c, float(v)) for c, v in imp]
+    if REPORT_QUARTERS:   # on dinh regime: LIFT/rankIC tung quy tren TEST
+        te2 = te.assign(_p=pwin_te, _q=pd.to_datetime(te.ts, unit="ms").dt.to_period("Q").astype(str))
+        pq = {}
+        for q, g in te2.groupby("_q"):
+            if len(g) >= 200:
+                r = evaluate(q, g["_p"].values, g["y"].values)
+                pq[q] = {"N": int(len(g)), "base": round(r["base_rate"], 4),
+                         "LIFT": round(r["LIFT"], 3), "rankIC": round(r["rankIC"], 4)}
+        A["per_quarter"] = pq
+        A["seed"] = SEED
+        log.info("  per_quarter LIFT: %s", {q: v["LIFT"] for q, v in pq.items()})
     json.dump(A, open(os.path.join(OUT_DIR, f"metrics_{HORIZON}.json"), "w"), indent=2)
     log.info("=== KET QUA H=%s ===", HORIZON)
     for kk in ["base_rate", "N_top", "hit_top", "LIFT", "z", "rankIC", "t_IC",
