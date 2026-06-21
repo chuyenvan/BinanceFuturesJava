@@ -1,7 +1,7 @@
 # ADR-0010: Thiết kế lại model market = GATE (label / features / dùng)
 
 - **Ngày:** 2026-06-11
-- **Trạng thái:** ⏳ ĐỀ XUẤT — ngã ba 1+2 đã chốt; còn quét H/X + feature-selection. Train ở P2 sau khi có data đầy đủ (ADR-0009 P1).
+- **Trạng thái:** 🟡 ĐANG TRIỂN KHAI (việc 4) — chốt hướng 2026-06-21 (xem mục cuối). Còn A0 (đo phân bố sập để chốt H/X) + data export + train.
 - **Bối cảnh:** ADR-0009 (pivot). Đã chốt với user: **market = gate** (không chọn coin — funding lo). Sửa lỗi label `max-high`.
 
 ## Nhiệm vụ (1 câu)
@@ -43,3 +43,20 @@ So model vs **rule trần** ("chặn khi breadth thấp VÀ funding cao"). Khôn
 ## OPEN
 - H ∈ {4H,12H,24H}, X ∈ {−15%,−20%} — quét khi train.
 - Feature-selection tỉa nhóm candidate (correlation + importance).
+
+---
+
+## Cập nhật 2026-06-21 — chốt hướng triển khai (việc 4, user duyệt)
+
+Bối cảnh: model market 15m cũ (regression futureReturn15M, IC 0.52 de-overlap thật) đã có code+đã train nhưng KHÔNG dùng (IC ngang model đang chạy → thay vô nghĩa). Quyết định: làm GATE MỚI theo ADR này, mục đích **chặn-sập**. Nếu không hiệu quả → quay lại nâng cấp features model cũ.
+
+**Chốt:**
+1. **Label = 3-lớp chặn-sập** (không phải regression 15m). 15m không bắt được sập (realized %>3%=0.1%, %>6%=0%; edge chỉ vùng nảy ~1% — xem FINDINGS §2a). Gate phải nhìn forward H giờ để thấy chế độ sắp sập.
+2. **"Làm mịn features" = thêm candidate ADR (price-vs-SMA, alignment ngắn-dài, regime MA200, ETH mom, đồng-pha BTC-ETH) rồi feature-selection tỉa** + BỎ nhóm time (4 feat hourOfDay/dayOfWeek/weekOfMonth/monthOfYear — mồi overfit LUNA tháng 5).
+3. **THÊM OI (mới, ngoài bộ candidate gốc của ADR):** OI hiện có per-coin (TASK-039: oi_delta24h, oi_z, ls_global, ls_toptrader, taker_buy). Gate là MARKET-LEVEL nên phải **aggregate per-coin → market**: ví dụ ΔOI% toàn thị trường, taker buy/sell ratio toàn TT, long/short ratio toàn cục (median/mean qua coin). KHÔNG bê thẳng OI per-coin vào gate basket. Đưa vào rồi feature-selection tỉa.
+
+**A0 (đo TRƯỚC khi chốt H/X) — đo không đoán:** với mỗi (H,X) đếm số **cú sập độc lập** (de-overlap theo H) trong 2021–2026. Số mẫu lớp "sập" quyết định cấu hình, không chốt mò. Cần chuỗi giá thị trường (BTC hoặc rổ) — KHÔNG có sẵn (226 không có python-aerospike/file giá), phải viết tool Java `ExportMarketCloseSeries` đọc Aerospike ticker → CSV BTC/market 15m close, rồi Python đếm sập.
+
+**Acceptance (đo lớp sập, KHÔNG chỉ IC):** precision/recall riêng lớp "sập" + đếm cú sập độc lập trong test (đủ mẫu mới tin) + **so rule trần "breadth thấp VÀ funding cao"**. Không vượt rule rõ → bỏ ML gate, quay lại nâng cấp. Train trên TOÀN lịch sử 2021–2026 (đủ nhiều cú sập), không chỉ holdout 12 tháng. Cẩn thận imbalance (lớp sập hiếm) — đây là phần quan trọng nhất.
+
+**Rủi ro đã lường:** horizon dài → ít mẫu de-overlap (futureReturn24H chỉ ~360 điểm/12 tháng — FINDINGS §2b) + lớp sập hiếm dễ overfit vài cú lịch sử (LUNA/FTX). A0 sẽ cho biết (H,X) nào đủ mẫu.
