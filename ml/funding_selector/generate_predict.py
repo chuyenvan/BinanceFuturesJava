@@ -3,8 +3,8 @@
 TASK-039c - Generate funding predict SET (per-thang).
 
 Dung 4 model XGBClassifier (.ubj tu 039a) predict P(cham +6%) cho 4 horizon, cho MOI diem
-Tool1 (15m grid) intersect OI (merge_asof backward) tren toan lich su. KHONG merge label,
-KHONG filter nBars -> phu moi entry kha di.
+Tool1 (mac dinh MOI PHUT cua tap da filter; GRID=1 de ep ve 15m) intersect OI (merge_asof
+backward) tren toan lich su. KHONG merge label, KHONG filter nBars -> phu moi entry kha di.
 
 Output: predict_YYYYMM.bin, record 26B big-endian ">q h 4f"
         = (ts:int64, symId:int16, p4h, p12h, p24h, p72h: float32).  P(win) in [0,1] (NaN neu feat thieu).
@@ -41,6 +41,9 @@ MODEL_DIR = os.environ.get("MODEL_DIR", "/kaggle/input")
 OUT_DIR = os.environ.get("OUT_DIR", "/kaggle/working")
 OI_TOL_MS = int(os.environ.get("OI_TOL_MS", str(2 * 60 * 60 * 1000)))
 RESUME = os.environ.get("RESUME", "1") == "1"
+# GRID=1 ép predict về lưới 15m (bản v1 cũ). GRID=0 (mặc định MỚI) giữ MỖI PHÚT của tập đã
+# filter — Tool1 vốn export per-phút cho coin lọt EntrySignalFilter; không grid = dày 15x.
+GRID = os.environ.get("GRID", "0") == "1"
 os.makedirs(OUT_DIR, exist_ok=True)
 
 
@@ -113,7 +116,7 @@ def main():
             log.info("skip %s (da co, %d dong)", ym, rows)
             continue
 
-        a = _read(fp, TOOL1_DT, 170, grid=True)
+        a = _read(fp, TOOL1_DT, 170, grid=GRID)
         t = pd.DataFrame({"ts": a["ts"].astype(np.int64), "symId": a["sym"].astype(np.int32)})
         F = np.asarray(a["f"], dtype=np.float32)
         for j in range(40):

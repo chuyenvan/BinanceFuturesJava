@@ -424,6 +424,75 @@ public class DataManagerAerospikeFloatSim {
         return writeMetricMapTo(getClient242(), "242", setName, binName, symbol, byTs);
     }
 
+    // ============================================================================================
+    // BIẾN THỂ CHUNK-NGÀY (SYMBOL_yyyyMMdd) — cho dữ liệu cadence DÀY (per-phút). Chunk-tháng
+    // (writeMetricMap226) vỡ "Record too big" với per-phút (~43k điểm/tháng); chunk-ngày ~1440 điểm
+    // /ngày → an toàn. CHUẨN HÓA: mọi dữ liệu per-phút (hoặc dày hơn 5m) PHẢI dùng biến thể ngày này.
+    // Xem docs/DATA_CHUNKING_STANDARD.md.
+    // ============================================================================================
+
+    /** TZ + tháng bắt đầu dùng CHUNG với chunk-tháng (GMT+7) để reader iterate nhất quán. */
+    private static SimpleDateFormat dayFmt() {
+        SimpleDateFormat f = new SimpleDateFormat("yyyyMMdd");
+        f.setTimeZone(TimeZone.getTimeZone(OI_METRIC_TZ));
+        return f;
+    }
+
+    /** Ghi metric per-symbol vào 226 theo chunk-NGÀY (SYMBOL_yyyyMMdd). Trả số chunk lỗi (0 = OK). */
+    public static int writeMetricMapDay226(String setName, String binName, String symbol, Map<Long, Float> byTs) {
+        if (byTs == null || byTs.isEmpty()) return 0;
+        SimpleDateFormat f = dayFmt();
+        Map<String, TreeMap<Long, Float>> byDay = new HashMap<>();
+        for (Map.Entry<Long, Float> e : byTs.entrySet()) {
+            byDay.computeIfAbsent(f.format(new Date(e.getKey())), k -> new TreeMap<>()).put(e.getKey(), e.getValue());
+        }
+        int failed = 0;
+        for (Map.Entry<String, TreeMap<Long, Float>> de : byDay.entrySet()) {
+            // tái dùng writeMonthChunk: monthStr=yyyyMMdd vẫn tạo key SYMBOL_yyyyMMdd đúng, logic merge/guard y hệt
+            if (!writeMonthChunk(getClient226(), "226", setName, binName, symbol, de.getKey(), de.getValue())) failed++;
+        }
+        return failed;
+    }
+
+    /** Đọc metric per-symbol từ 226 theo chunk-NGÀY: gộp toàn bộ key ngày [202001-01..nay]. */
+    public static TreeMap<Long, Float> getMetricMapDay226(String setName, String binName, String symbol) {
+        TreeMap<Long, Float> results = new TreeMap<>();
+        try {
+            List<String> days = allDaysTillNow();
+            Key[] keys = new Key[days.size()];
+            for (int i = 0; i < days.size(); i++) {
+                keys[i] = new Key(Configs.AEROSPIKE_NAMESPACE, setName, symbol + "_" + days.get(i));
+            }
+            for (int off = 0; off < keys.length; off += BATCH_CHUNK_SIZE) {
+                Key[] sub = Arrays.copyOfRange(keys, off, Math.min(off + BATCH_CHUNK_SIZE, keys.length));
+                Record[] recs = getClient226().get(batchPolicy, sub);
+                if (recs == null) continue;
+                for (Record record : recs) results.putAll(decodeMap(record, binName));
+            }
+        } catch (Exception e) {
+            LOG.error("❌ Error getMetricMapDay set={} bin={} {}: {}", setName, binName, symbol, e.getMessage());
+        }
+        return results;
+    }
+
+    /** Danh sách "yyyyMMdd" từ OI_METRIC_MONTH_START đến hôm nay (GMT+7), tăng dần. */
+    private static List<String> allDaysTillNow() {
+        List<String> days = new ArrayList<>();
+        try {
+            SimpleDateFormat f = dayFmt();
+            Calendar cal = Calendar.getInstance(TimeZone.getTimeZone(OI_METRIC_TZ));
+            cal.setTime(monthFmt().parse(OI_METRIC_MONTH_START));
+            Calendar end = Calendar.getInstance(TimeZone.getTimeZone(OI_METRIC_TZ));
+            while (!cal.after(end)) {
+                days.add(f.format(cal.getTime()));
+                cal.add(Calendar.DAY_OF_MONTH, 1);
+            }
+        } catch (ParseException e) {
+            LOG.error("❌ allDaysTillNow parse lỗi: {}", e.getMessage());
+        }
+        return days;
+    }
+
     /**
      * LÕI dùng chung (một mối ghi) cho {@link #writeMetricMap226}/{@link #writeMetricMap242}: Snappy nén
      * {@code Map<Long,Float>} (ts 5m UTC → giá trị), merge lịch sử cũ trên ĐÚNG client + GUARD chống mất
