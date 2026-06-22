@@ -60,3 +60,19 @@ Bối cảnh: model market 15m cũ (regression futureReturn15M, IC 0.52 de-overl
 **Acceptance (đo lớp sập, KHÔNG chỉ IC):** precision/recall riêng lớp "sập" + đếm cú sập độc lập trong test (đủ mẫu mới tin) + **so rule trần "breadth thấp VÀ funding cao"**. Không vượt rule rõ → bỏ ML gate, quay lại nâng cấp. Train trên TOÀN lịch sử 2021–2026 (đủ nhiều cú sập), không chỉ holdout 12 tháng. Cẩn thận imbalance (lớp sập hiếm) — đây là phần quan trọng nhất.
 
 **Rủi ro đã lường:** horizon dài → ít mẫu de-overlap (futureReturn24H chỉ ~360 điểm/12 tháng — FINDINGS §2b) + lớp sập hiếm dễ overfit vài cú lịch sử (LUNA/FTX). A0 sẽ cho biết (H,X) nào đủ mẫu.
+
+---
+
+## A0 KẾT QUẢ + CHỐT H/X (2026-06-22)
+
+Định nghĩa BTC-only ban đầu SAI trọng tâm (mẫu cực hiếm). Định nghĩa đúng = **breadth trên top-50% coin theo vol-1d**: tại mốc t, % coin top giảm ≥X% trong H giờ tới ≥ 50% → "cú sập thị trường". Đo full 2021–2026 (189,792 mốc 15m, tool `ExportMarketBreadthCrash`).
+
+Số đợt sập độc lập (de-overlap):
+
+| H \ X | −10% | −15% | −20% |
+|---|---|---|---|
+| 4h | 68 | 17 | 5 |
+| 12h | 118 | 34 | 15 |
+| 24h | 156 | **49** | 27 |
+
+**CHỐT: H=24h, X=−15%, breadth≥50% top-50%-vol** (49 đợt). Phụ: 12h/−15% (34). Lý do: −10% quá nhạy (2.59% thời gian), −20% mỏng ở H ngắn; −15%/24h là "sập diện rộng thật" đủ mẫu chia regime. Chi tiết: `docs/reports/041.md`.
