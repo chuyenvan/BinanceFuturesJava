@@ -1,7 +1,7 @@
 # ADR-0010: Thiết kế lại model market = GATE (label / features / dùng)
 
 - **Ngày:** 2026-06-11
-- **Trạng thái:** 🟡 ĐANG TRIỂN KHAI (việc 4) — chốt hướng 2026-06-21 (xem mục cuối). Còn A0 (đo phân bố sập để chốt H/X) + data export + train.
+- **Trạng thái:** 🔴 ML GATE — VERDICT ÂM TÍNH (2026-06-22). A0 chốt H/X (24h/−15%, 49 đợt) + train 3-lớp trên gate_dataset_v1 (có OI) đều xong. Purged 5-fold CV: top-1% lift median 0x, fold 2022 (LUNA/FTX, nhiều sập nhất) trượt sạch → ML không generalize, không vượt rule. DỪNG hướng ML gate. Hướng tiếp: breaker phản ứng / nâng cấp features 15m (chờ user chốt). Chi tiết: `docs/reports/041.md` mục D.
 - **Bối cảnh:** ADR-0009 (pivot). Đã chốt với user: **market = gate** (không chọn coin — funding lo). Sửa lỗi label `max-high`.
 
 ## Nhiệm vụ (1 câu)
