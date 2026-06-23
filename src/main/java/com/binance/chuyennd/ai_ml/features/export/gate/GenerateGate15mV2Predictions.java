@@ -113,8 +113,8 @@ public class GenerateGate15mV2Predictions {
                         CoinRankManager.getInstance().getTopCoin(ts);
                         if (ts < fairStart || ts > evalEnd) continue;
 
-                        // chỉ predict tại mốc 15m chuẩn (khớp cách backtest tra theo phút)
-                        if (ts % H15 != 0) continue;
+                        // GENERATE MỌI PHÚT (giống gate cũ): backtest tra predictionMap.get(time) exact-match
+                        // theo phút → nếu chỉ có mốc 15m thì 14/15 phút trả null = bỏ qua entry = lệch độ phủ.
 
                         MarketFeatures f = extractor.extractAllFeatures(ts, snap, time2Rate.get(ts));
                         if (f == null) continue;
