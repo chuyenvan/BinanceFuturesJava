@@ -2,176 +2,24 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Ngôn ngữ
-**Luôn luôn trả lời người dùng bằng tiếng Việt.**
+## ⛔ ĐỌC NGAY — TRƯỚC KHI LÀM BẤT CỨ GÌ
+1. **`docs/CORE.md`** — luật an toàn + toàn vẹn backtest (LUÔN áp, recall bắt buộc).
+2. **`docs/index.md`** — router tri thức: từ đây nạp đúng pack cho loại việc đang làm.
 
----
+> Trả lời người dùng bằng **tiếng Việt**.
+> File này CỐ TÌNH MỎNG (chống phình + chống drift) — luật thật nằm ở `CORE.md` và các pack; KHÔNG chép luật vào đây.
 
-## ⛔ TUYỆT ĐỐI KHÔNG ghi file ra ổ C (Windows — áp dụng mọi task, mọi CCD)
+## Nạp pack theo việc (đường dẫn + 1 dòng mô tả ở `docs/index.md`)
+- Sửa code Java / HPO → `docs/rules/code.md`
+- Chạy/sửa backtest · sim · golden → `docs/rules/backtest.md`
+- Chạy job java trên 226 → `docs/rules/run-226.md`
+- Build Maven / môi trường dev → `docs/rules/build-env.md`
+- Đụng secret / key → `docs/rules/security.md`
+- Chạy Kaggle → `docs/KAGGLE_RULES.md`
+- Đọc/ghi/chọn-nơi-chạy theo data → `docs/db/` (242 source · 226 compute · redis)
+- Điều phối / nhận & chạy task nhiều CCD → `docs/rules/task-workflow.md` + `docs/AGENT_WORKFLOW.md` + `docs/AGENTS.md`
+- Bức tranh lớn codebase → `docs/architecture.md`
+- Lộ trình & mô hình → `docs/ROADMAP.md` · `docs/REBUILD_ROADMAP.md` · `docs/FINDINGS.md`
 
-**KHÔNG BAO GIỜ ghi file/log/output vào `/tmp`, `~/`, hoặc `C:\...\Temp`.** Trên Windows, tất cả các đường dẫn này đều nằm trên **ổ C** — ổ cài hệ điều hành.
-
-**Lý do đã trả giá:** `/tmp` từng bị tích 55GB (ff40-kernel output), làm MCP crash, phải restart máy, mất job đang chạy — xảy ra **3 lần**. Một file feature cả năm ~5-6GB; 8-10 kernel = 50GB+.
-
-| Loại file | Ghi vào | TUYỆT ĐỐI KHÔNG |
-|---|---|---|
-| Kaggle kernel output | `/d/claudedata/<tên>-out` | `/tmp/...`, `~/...` |
-| Log job (backtest, validate) | `/d/claudedata/<job>.log` hoặc trên 226 | `/tmp`, stdout-only |
-| File trung gian / tải về | `/d/claudedata/` | ổ C bất kỳ đâu |
-| Compile output (`javac -d`) | `/d/claudedata/build/<tên>` | `/tmp/cXXX` |
-| File trên server 226 | giữ trên 226 | KHÔNG kéo về ổ C |
-
-**Mẫu chuẩn (Git Bash trên Windows):**
-```bash
-LOGDIR=/d/claudedata; mkdir -p "$LOGDIR"
-kaggle kernels output chuyendinh/<kernel> -p "$LOGDIR/<ten>-out"
-java ... > "$LOGDIR/<job>.log" 2>&1
-javac --release 11 -cp "$JAR" -d "$LOGDIR/build/<tên>" <file>
-```
-
-> **Ngoại lệ duy nhất:** `/tmp/oisyms.txt` trong một số task — đó là `/tmp` TRÊN SERVER 226 (Linux), không phải ổ C local. KHÔNG đổi những dòng đó.
-
----
-
-## ⛔ LUẬT BẤT DI BẤT DỊCH (đọc trước khi sửa bất cứ gì)
-
-Đây là các bài học đã trả giá bằng nhiều vòng phân tích. Vi phạm = sai kết quả backtest một cách âm thầm.
-
-1. **KHÔNG look-ahead nội-nến.** Trong backtest, một nến đã đóng KHÔNG được vừa dùng `maxPrice` (đỉnh) để kích hoạt/đặt SL vừa khớp lệnh theo `minPrice`/`lastPrice` trong cùng nến đó — vì không ai biết đỉnh hay đáy đến trước trong một nến. Quy tắc: **đặt SL ở nến này, chỉ cho khớp ở nến sau.** Guard `Configs.BLOCK_INTRABAR_LOOKAHEAD` mặc định `true`. Đã sửa trong `OrderTargetInfoTest.updateStatusNew` (nhánh `priceSL==null`). Nhánh `priceSL!=null` (SL có từ nến trước, khớp theo `minPrice`) là ĐÚNG, không đụng.
-
-2. **Mọi backtest "thật" phải gọi `BacktestIntegrityGuard.assertProductionGrade()`** ở đầu. Nó chặn chạy nếu look-ahead bật lại, slippage=0, hoặc fee=0. Đã cắm sẵn ở NÚT CHẶN DUY NHẤT `SimulatorMarketLevelTicker1MStopLoss.simulatorWithInitEntry()` — mọi engine (Master/AIMarket/BudgetRatio/Combined/DynamicFilter/TrailingStop/MarketThresholds/BenchmarkSpeed) đều đi qua đây nên không ai bypass được; KHÔNG cần gọi lại ở từng engine. KHÔNG bỏ lời gọi này. Chỉ nới (`assertProductionGrade(true)`) khi CỐ Ý chạy đối chứng look-ahead/slippage.
-
-3. **Mô phỏng chi phí phải luôn bật:** `RATE_FEE` (2 chân phí sàn) + `SLIPPAGE_RATE` (2 chân trượt giá, `APPLY_SLIPPAGE=true`). Tắt = lợi nhuận ảo.
-
-4. **MỘT BỘ NÃO sim/product.** Mọi quyết định vào/ra lệnh phải nằm trong hàm lõi THUẦN dùng chung cho cả backtest và live. Pattern đúng đã có: `DcaUtils.shouldDca`, `MarketBigChangeDetector.evaluateCircuitBreakerCore`. Nếu thấy `xxx` và `xxxProd`/`xxxProduction` lệch nhau về LUẬT quyết định → đó là BUG cần gom về một hàm, không phải tính năng. Hai nhánh hiện còn lệch: `createOrderBUY` (sim) vs `createOrderBuyRequest` (product) — xem ROADMAP bước 5.
-
-5. **Bump `CONFIG_VERSION` trong `RunHpoMaster_Distributed`** mỗi khi đổi BẤT KỲ thứ gì ảnh hưởng kết quả backtest mà KHÔNG nằm trong genome HPO: `RATE_FEE`, `SLIPPAGE_RATE`, logic trailing (`calRateLossDynamicBuy`), budget divider, circuit breaker, look-ahead guard, **đổi model AI**, số/loại gene. Quên bump = cache Aerospike trả điểm cũ tính bằng cấu hình cũ → toàn bộ run vô nghĩa.
-
-6. **`taskId` của HPO phải băm ĐỦ mọi gene trong genome.** Thêm gene mà quên đưa vào `buildTaskId` = các cá thể khác nhau trùng key = HPO vô nghĩa. (Đã từng dính với 4 gene DCA.)
-
-7. **KHÔNG random-split dữ liệu chuỗi thời gian.** Khi train model AI hoặc chia tập, luôn cắt theo MỐC THỜI GIAN, không `train_test_split(shuffle=True)`/`stratify`. Và scaler chỉ `fit` trên TRAIN, không `fit` trên toàn bộ rồi mới chia (leak phân phối test). Hai lỗi này đang tồn tại trong code train Python (xem CẠM BẪY).
-
-8. **Tiền/giá đang dùng `Float`** (rủi ro sai số tích lũy). Nếu refactor sang `double`/`BigDecimal` phải làm ĐỒNG BỘ cả sim lẫn product và bump `CONFIG_VERSION`.
-
-9. **KHÔNG đổi công thức `finalFitness` (`HPOFitnessCalculatorV3`) khi đang có HPO chạy dở.** `profitFactor`/`worstSingleLoss`/`payoffRatio` là guardrail báo cáo, cố ý KHÔNG nằm trong fitness.
-
-10. **Khi đụng logic quyết định, luôn nêu rõ nó tác động SIM và PRODUCT thế nào.** Sửa nhỏ, mỗi thay đổi một mục đích. Không refactor hàng loạt khi chưa hỏi user — codebase ~250 class, nhiều ràng buộc ngầm.
-
----
-
-## ⚠️ CẠM BẪY ĐÃ BIẾT (đừng "sửa" nhầm, đừng tin nhầm)
-
-- **`predReturn24H` + MOM24 đã BỎ HẲN khỏi hệ** (ablation A=C: nhánh `predReturn24H` không bao giờ kích hoạt). Đã xoá: field `AiPredictionData.predReturn24H`, model 24H trong `OnnxInferenceManager`, nhánh MOM24 + config `MIN_MOMENTUM_24H`/`FILTER_USE_MOM24`, **gene MIN_MOMENTUM_24H khỏi genome HPO** (14→13 gene, CONFIG_VERSION v5→**v6**), và **label `futureReturn24H`** khỏi export CSV + target python (→ schema export đổi, phải RE-EXPORT market data trước khi train lại). Filter giờ chỉ còn RISK(DD4H)+MOM15+EARLY. Lá chắn chống sập THẬT không nằm ở entry filter (worstLoss/maxDD bất biến qua mọi mode) — phải xây ở tầng DCA/margin.
-- **Tên biến nói dối:** `getMaxRateIn90MForTradingStop` / tham số `maxChange90M` thực ra trả về `predReturn15M` của AI, KHÔNG phải biến động 90M. Đang dần đổi tên cho đúng (`calRateMinWithPredReturn15MForTradingStop`). Đừng suy luận theo tên cũ.
-- **Circuit breaker gần như không kích hoạt:** `CIRCUIT_LOOKBACK_MINUTES=4` quá ngắn so với `MAX_CONCURRENT_ORDERS=40`. Biết rồi, cần bàn trước khi chỉnh.
-- **DCA pro-cyclical:** trong `BIG_DOWN`, DcaUtils bật `isAll=true` → nhồi KHÔNG trần margin đúng lúc thị trường sập mạnh nhất. Rủi ro lớn đã ghi nhận, KHÔNG sửa lặt vặt — xem ROADMAP bước 3.
-- **Sizing không biết equity:** budget tính trên `balanceBasic` cố định, không nén khi drawdown, không có margin call/cháy tài khoản trong sim.
-- **Win rate VÔ NGHĨA với chiến lược này.** Martingale luôn cho win rate ~99% giả tạo. Đo `profitFactor`, `worstSingleLoss`, `payoffRatio`, và đặc biệt chất lượng RIÊNG của leg đầu (xem `EdgeAttributionReport`) — vì một cụm thắng có thể do DCA cứu chứ không do AI vào đúng.
-- **Backtest đẹp KHÔNG chứng minh model AI tốt.** P&L đẹp có thể do: model khớp dữ liệu train, HPO che lỗi model (vặn ngưỡng né vùng model sai), hoặc martingale cõng. Phải đo model ĐỘC LẬP (IC trên holdout chưa train) trước khi tin.
-- **Worker HPO chạy tuần tự 1 task/JVM nên ghi `static Configs` an toàn.** ĐỪNG song song hóa nhiều trial trong cùng JVM mà vẫn dùng static Configs — sẽ giẫm tham số chéo.
-- **Bug perf:** `preprocessFundingData` chạy lại MỖI trial, sort lại cùng mảng đã sort (Lomuto pivot → O(n²) worst case). Nên sort 1 lần lúc load. Spike GC ~270ms/tick trong HPO là do JVM sống lâu + data tĩnh lớn, không phải logic — cấp heap + ZGC/G1 + tách worker khỏi máy master.
-
----
-
-## SECURITY (xử lý cẩn trọng)
-`config/PrivateConfig.java` và `runAider.bat` chứa **API key/secret LIVE commit thẳng vào repo** (Binance key/secret, Gemini key). Khi đụng các file này: KHÔNG echo secret ra commit/log/chat, và nhắc user rằng các key này đã lộ trong git history, cần xoay (rotate) + chuyển sang config không track.
-
----
-
-## Project conventions
-- New methods phải có Javadoc đầy đủ (mô tả, params, return).
-- `CONVENTIONS.md` nói Java 21 nhưng `pom.xml` đang pin **Java 11** (`<source>/<target>`, `<java.version>`). Build hiện compile theo Java 11 — xác nhận với user trước khi dùng cú pháp Java 21, và bump `pom.xml` nếu thật sự muốn Java 21.
-
-## Build & run
-Maven (no wrapper). Tên artifact trong README là legacy/upstream — đây là app private, không phải SDK published.
-```bash
-mvn install     # compile + protobuf codegen + shade fat jar
-mvn package     # build shaded jar trong target/ (không install)
-mvn -o package  # offline build (deps đã cache)
-```
-- `maven-shade-plugin` ra một fat jar (launch theo main-class).
-- `protobuf-maven-plugin` gen Java từ `src/main/proto/*.proto` lúc build bằng `protoc` tải về (cần mạng lần đầu). `os-maven-plugin` resolve platform classifier.
-
-> **⚙️ `mvn` trên máy dev này (Windows):** system Maven `D:\java\apache-maven-3.5.2` trong PATH **cài hỏng** (thiếu `bin/mvn`) → terminal mới báo `mvn: command not found`. Đã cắm wrapper `C:\Users\pc\bin\{mvn,mvn.cmd}` (đã thêm vào User PATH, đứng đầu) trỏ Maven **bundled trong IntelliJ** (`...\JetBrains\IntelliJ IDEA Community Edition <ver>\plugins\maven\lib\maven3`, hiện 3.9.9) + `JAVA_HOME=jdk-11.0.17`. **Terminal mới giờ gọi `mvn` chạy luôn** (cả bash lẫn PowerShell). Bản bash tự chọn IntelliJ mới nhất; nếu IntelliJ đổi version mà PowerShell lỗi → sửa path hardcode trong `mvn.cmd`.
-
-### Tests
-**KHÔNG có unit-test suite** (`src/test` không tồn tại; `mvn test` là no-op). "Test" ở đây là các class `main()` đứng riêng dùng làm công cụ/thí nghiệm thủ công (`bigchange/test/*`, `*Validator`, `*Checker`, `*Comparator`, `Benchmark*`). Chạy bằng cách gọi `main` trực tiếp:
-```bash
-java -cp target/binance-java-sdk-1.2.4.jar com.binance.chuyennd.aerospike.validate_data.ticker.CheckGapTicker
-```
-60+ class có `main()` — phần lớn là tool vận hành/validate một lần, KHÔNG phải entry point hệ thống live.
-
-## ⚙️ Chạy job java trên 226 — DỌN JOB CŨ CỦA MÌNH TRƯỚC KHI CHẠY
-
-Mỗi lần run java trên 226 (backtest/sim/tool), job nặng (`-Xmx*g`) còn sót từ lần trước sẽ ăn RAM, chạy chồng làm sai/chậm metric, đụng đọc Aerospike, hoặc lẫn log (như vụ TASK-001 grep nhầm log tưởng treo). Quy tắc:
-
-1. **Job nền Code spawn PHẢI ghi PID + log riêng** vào thư mục định danh, ví dụ `~/java/simulator/outputs/.run/<job>.pid` và `<job>.log` (job = tên class, vd `GoldenBacktest`). Chạy `nohup ... & echo $! > .run/<job>.pid`.
-2. **TRƯỚC khi chạy lại cùng job:** đọc `.run/<job>.pid` → nếu PID còn sống (`ps -p`) VÀ `cmdline` đúng là java tool/backtest của mình (khớp main-class) → `kill` → đợi chết → xóa pid-file. Chỉ kill **đúng PID mình đã ghi**.
-3. **Orphan (pid-file mất nhưng job cũ còn chạy):** liệt java process khớp main-class backtest/tool của mình (`GoldenBacktest`, `Simulator*`, `SurvivorshipBac0`, `AerospikeCoverageMap`, `*Validator/*Checker/Benchmark*`). Nếu RÕ là tool của mình → dọn; **nghi ngờ chủ → KHÔNG kill, BÁO user**.
-4. **⛔ TUYỆT ĐỐI KHÔNG kill:** `BinanceOrderTradingManager` (trading live), `BinanceDataIngestor` (ingest live), Aerospike, Redis, và **HPO đang chạy của user** (`RunHpoMaster_Distributed`/`RunWorkerKaggle`). Live ghi PID riêng qua `Utils.writePid2File` (`APP_PID_DIR`) — KHÔNG đụng pid-file đó. Không dùng `pkill java` / `killall java`.
-5. **Trước golden/determinism:** đảm bảo KHÔNG có instance backtest khác của mình chạy song song (chia sẻ tài nguyên → có thể làm chậm/sai). Dọn xong mới chạy.
-
-## Runtime config (đọc từ CWD, không phải classpath)
-Ba file config plaintext đọc **từ thư mục làm việc của process** lúc static-init, phải có mặt nơi chạy jar:
-- `config.properties` — `tradecore/Configs.java` load. Aerospike hosts/ports, capital, symbol lists, paths dưới `../storage/`. Thiếu file → `System.exit(0)`.
-- `redis.config` — `redis/RedisConst.java` load. Redis cluster.
-- `config/PrivateConfig.java` — Binance API key/secret + base URL, **hardcode commit trong source** (xem Security).
-
-`tradecore/Configs.java` là bề mặt tinh chỉnh trung tâm: hyper-params giao dịch (leverage, fee, budget divider, circuit breaker, dynamic trailing, AI filter, DCA threshold) là các `static` field, nhiều cái do HPO set. Đọc comment từng section trước khi đổi magic number.
-
-## Process entry points (hệ thống live)
-Hai process sống lâu, mỗi cái một `main()`:
-1. **Data ingestion** — `websocket/BinanceDataIngestor.main()`. Stream funding + ticker từ Binance websocket vào Aerospike. Có watchdog tự restart.
-2. **Trading** — `trading/BinanceOrderTradingManager.main()`. Wire `new DetectEntrySignal2TradeNormal().start()` (signal + AI inference) với order manager.
-   Process tự restart bằng re-`exec` command line qua `Utils.reset(...)`, ghi PID qua `Utils.writePid2File()` (driven bởi env `APP_PID_DIR`/`APP_MAIN_CLASS` từ `daemon.sh` ngoài repo).
-
-## Architecture (bức tranh lớn)
-Toàn bộ app code dưới `com.binance.chuyennd.*`. Package `com.binance.client.*` là Binance REST/websocket client vendored — coi như thư viện, sửa chủ yếu ở `chuyennd`.
-
-Luồng dữ liệu: **Binance → ingestors → Aerospike/Redis → feature extraction → ONNX inference → signal/trade decisions**, kèm vòng offline backtest+HPO tune chính các tham số `Configs` mà live dùng.
-
-- **Storage** — `aerospike/DataManagerAerospikeFloatSim` là kho market-data chính (binary float-packed). `utils/Storage`/`StorageProto`/`StorageSnappy` là kho file (Snappy/protobuf). `redis/` (Jedis cluster) cho order queue live + messaging. Proto schema ở `src/main/proto/`.
-- **AI/ML** (`ai_ml/`) — ONNX qua `onnxruntime` (`ai_ml/onnx/`, entry-signal + funding classifier; model ở `../storage/ai_ml*/...`). `ai_ml/features/` trích feature. `ExportFeaturesForPythonTool` + `python/` cầu nối train Python. `ai_ml/data/` cache data backtest (`HPOSmartCache`, `CompactDayData`).
-- **HPO** (`ai_ml/hpo/`) — Jenetics GA evolve tham số `Configs`. Phân tán master/worker: `hpo/master/RunHpoMaster_Distributed` đẩy population vào Aerospike queue set (`hpo_queue_<CONFIG_VERSION>`), đọc kết quả từ cache set vĩnh viễn (`hpo_results_<CONFIG_VERSION>`); `RunWorkerKaggle` tiêu thụ task. `ai_ml/wfo/` walk-forward.
-- **Trade core** (`tradecore/`) — logic giao dịch thuần dùng chung live + backtest: `MarketBigChangeDetector`, `DcaProcessor`/`DcaUtils`, `CoinRankManager`, `TradeUtils`, `Configs`.
-- **Trading** (`trading/`) — execution live: `DetectEntrySignal2TradeNormal`, `BinanceOrderTradingManager`, `BudgetManager`, `SymbolOrderLockingManager`, `trading/monitor/`.
-- **Data validation** (`aerospike/validate_data/`, `ai_ml/validation/`, `websocket/checkdata/`) — tool đứng riêng phát hiện gap, sửa data, so production-vs-backtest. Dùng khi chẩn đoán chất lượng data.
-
-## Logging
-SLF4J → Logback (`src/main/resources/logback.xml`). Logs ở `logs/` (`full.log`, `error.log`, `archived/`). `logs/`, `storage/`, `target/`, `*.data`/`*.csv`/`*.log` đều git-ignored.
-
-### ⛔ KHÔNG nuốt exception câm (BẮT BUỘC)
-CẤM `catch` trống hoặc chỉ có comment (`// Ignore`, `// bỏ qua lỗi 1 coin, tiếp coin khác`, …): đó là lỗi data/ingest/backtest **âm thầm không ai biết** (đã trả giá: spam `-1130` ở ingest bị giấu, gap data im lặng). Mọi `catch` PHẢI:
-- `LOG.warn`/`LOG.error` kèm **exception + ngữ cảnh** (symbol/key/timestamp), KHÔNG `printStackTrace`/`System.out`.
-- Cố ý bỏ qua 1 phần tử để tiếp vòng lặp vẫn phải log (LOG.warn, hoặc LOG.debug nếu thật sự nhiễu + có lý do ghi rõ) — **không bao giờ để rỗng/comment-suông**.
-- Nếu lỗi là bất biến cần dừng (config/look-ahead/data nền) → ném tiếp / `System.exit`, đừng nuốt.
-Sửa luôn khi đụng vào file có pattern này.
-
-## 👥 Điều phối nhiều CCD (đọc TRƯỚC khi nhận task)
-Nhiều CCD chạy song song KHÔNG thấy nhau. **`docs/AGENTS.md` là nguồn sự thật về CCD nào đang làm task nào** — đọc trước khi nhận bất kỳ task nào, để không hai CCD đụng một việc và reset máy không mất vết.
-1. **CLAIM:** task trống/STALE → ghi `owner` + `status: DOING` + `updated` vào CẢ `docs/AGENTS.md` VÀ header `tasks/<id>.md` rồi mới làm. Task đã có owner KHÁC + DOING + updated còn mới → KHÔNG đụng, báo user.
-2. **HEARTBEAT:** cập nhật `updated` mỗi commit/đổi bước. DOING mà `updated` quá cũ (≳2h) + nghi reset → STALE, có thể reclaim.
-3. **ĐÓNG:** `DONE` + commit hash; cần user soát → `REVIEW`. Một task = một owner.
-4. **BÀN GIAO job nền (BẮT BUỘC khi spawn job chạy lâu):** ngay khi launch (Kaggle kernel / job nền 226 / bất kỳ long-running), ghi vào `tasks/<id>.md` (mục "Job đang chạy") đủ để CCD KHÁC tiếp quản nếu mình chết — **kernel slug (Kaggle) hoặc PID+host (226)**, lệnh + jar + args + dataset/env, **output path**, cách check trạng thái, và **các bước còn lại** (lấy output → verify gì → bước tiếp, vd "xong → tải gate_features_groupA.csv → verify #dòng/feature/survivorship → báo mở 017"). Mục tiêu: CCD khác đọc task là làm tiếp được, KHÔNG chạy lại từ đầu. Cập nhật lại mỗi mốc (launch / checkpoint / xong).
-5. **CHECKPOINT-RESUME cho job dài (đặc biệt Kaggle ~12h/session):** Kaggle cắt kernel ở ~12h → job lâu hơn mà KHÔNG checkpoint sẽ bị giết rồi chạy lại từ 0 = **lặp vô hạn, không bao giờ xong**. Job đọc nhiều năm / khối lớn PHẢI: (a) ghi tiến độ ra nơi BỀN (set Aerospike checkpoint, hoặc output partial, hoặc file trên 226) theo đơn vị xử lý (tháng/ngày/batch symbol); (b) khi chạy lại **resume = skip phần đã xong**; (c) ghi output TĂNG DẦN (append/partial), không chỉ ghi-một-lần-ở-cuối. Ước job > ~10h → CHIA NHỎ (theo khoảng thời gian hoặc batch symbol) trước khi chạy. Tuyệt đối không để một task cứ "RUNNING" mà kernel liên tục bị cắt ở 12h.
-6. **Tool batch PHẢI `System.exit(0)` cuối `main()` khi xong nghiệp vụ chính.** Nhiều singleton (Aerospike client, scheduler, watchdog, executor pool...) để lại thread **NON-DAEMON** → JVM KHÔNG tự thoát dù main() đã làm xong (ghi file + validate). Hệ quả: process treo → Kaggle kernel / wrapper KHÔNG bao giờ COMPLETE → poller tưởng chưa xong, rồi bị 12h cutoff cắt → **output có thể MẤT dù đã ghi**. Cuối main, sau khi hoàn tất + flush output: gọi `System.exit(0)` (nhánh lỗi `System.exit(1)`). Đã dính TASK-015 (xong validate ~72' nhưng kernel kẹt RUNNING tới cutoff). KHÔNG áp dụng cho 2 process LIVE sống-lâu (Ingestor/TradingManager) — chúng cố ý chạy mãi.
-7. **DỌN TÀI NGUYÊN khi job/task xong (BẮT BUỘC — đừng giữ tài nguyên thừa):** xong việc phải giải phóng ngay:
-   - **Kaggle:** STOP/off kernel đã xong VÀ kernel treo (zombie ăn quota + chiếm slot concurrent). Lấy output xong → stop kernel, đừng để RUNNING vô ích.
-   - **226 (java):** kill ĐÚNG PID job mình spawn (theo luật dọn-job §⚙️ — chỉ PID mình, KHÔNG killall, KHÔNG đụng live/HPO/Aerospike/Redis); xoá file tạm/.run nếu hết cần.
-   - **Python / process tạm:** đóng process, dọn venv/temp nếu lớn.
-   Không để 'job đã xong nhưng vẫn RUNNING / vẫn giữ RAM-quota'. Đã dính: kernel 015 treo không được off → chiếm slot Kaggle dù việc đã xong.
-
-## 🗺️ Tài nguyên & nơi chạy task (đọc khi giao/nhận — tránh lệch pha + dồn tải)
-> **📐 Kiến trúc data CHUẨN: `docs/DATA_ARCHITECTURE.md`** — mọi quyết định ghi/đọc/chạy ở đâu PHẢI theo file đó. Tóm: **242 = SOURCE mọi MARKET data (realtime + lịch sử); 226 = replicate-theo-setname (on-demand) + kho COMPUTE (train/backtest/wfo/hpo)**.
-- **Aerospike 242 = LIVE, dữ liệu TẬP TRUNG** (nguồn chính cho live, ưu tiên giữ sạch). **PRIVATE**: chỉ 226 thông tới; máy dev/Kaggle KHÔNG kết nối 242 trực tiếp.
-- 🔒 **Deploy code mới / restart 2 PROCESS LIVE (`BinanceDataIngestor`, `BinanceOrderTradingManager`) = CHỈ USER tay.** CCD KHÔNG tự deploy/restart 2 process này — chỉ build jar + soạn LỆNH/runbook/checklist để user tự chạy.
-- ✅ **TÁC ĐỘNG DỮ LIỆU 242 (ghi/sửa set/record: lấp gap, aggregate, backfill, replicate, backup) = CCD LÀM ĐƯỢC, chạy TRÊN 226** (226 thông 242). ⚠️ **"Chạy trên 226" = SSH vào 226 rồi chạy java/python TẠI 226** (scp/clone code lên 226 nếu cần, như CCD1 scan 242) — KHÔNG chạy từ máy dev/Kaggle (chúng không tới 242; riêng 226 tới). Đây là job data độc lập, KHÔNG phải deploy → không cần user tay, không đụng 2 process live. (Vẫn theo luật dọn-job 226.)
-- **Aerospike 226 = kho BACKTEST/TRAIN** (lịch sử, feature, dataset). **Open internet** (Kaggle/dev tới được). Job đọc/ghi Aerospike nặng → chạy **trên VPS 226** (gần data).
-- **VPS 226** = nơi chạy job nặng Aerospike + open internet (tải `data.binance.vision` trực tiếp được). Job nền phải ghi PID/log (xem luật dọn job 226).
-- **Kaggle** = CPU + internet, cho: tải/xử data ngoài KHÔNG cần Aerospike (vd khảo sát/parse `data.binance.vision`), train/HPO (RUNBOOK_kaggle).
-- **Chọn nơi chạy:** ghi-242 → 226/242 bắt buộc · Aerospike-226-nặng → 226 · tải-ngoài + CPU không-Aerospike → Kaggle (phân tải khỏi 226) · train/HPO → Kaggle.
-- **Lưu data — theo `docs/DATA_ARCHITECTURE.md`:** **242 = SOURCE OF TRUTH mọi MARKET** (kline_1m/15m/4h, funding, OI, price_realtime, basis — realtime + lịch sử). Dữ liệu TÍNH TOÁN/TRAIN (predict, marketobject, gate_features, funding_label, symbol_lifecycle, gate_return, distributed_task...) ở **226**. Cào lịch sử chạy 226 (internet) nhưng **đích ghi 242**. **226 = replicate 242 theo setname (on-demand) + kho compute** — KHÔNG sync all↔all. Train/backtest (Kaggle/dev) đọc market từ 226 (bản replicate), ghi compute vào 226. ⚠️ **Job Kaggle KHÔNG ghi 242 được** (Kaggle chỉ tới 226) → job cần ghi 242 phải chạy trên 226/242. (Dung lượng 242 chứa historical + cơ chế replicate: xem §6 tài liệu — chờ user chốt.)
-- **Tránh dồn:** đừng để nhiều job NẶNG chạy ĐỒNG THỜI trên 226 (đụng RAM/Aerospike/đọc-ghi) — phân: tải-ngoài đẩy Kaggle, Aerospike-nặng trên 226 tuần tự. Hai task KHÔNG cùng đọc/ghi một nguồn cùng lúc. Bản đồ ai-đang-chạy-gì ở `docs/AGENTS.md`.
-
----
-Xem `ROADMAP.md` cho thứ tự ưu tiên công việc kiểm chứng mô hình.
+> 2 process live: `websocket/BinanceDataIngestor.main()` + `trading/BinanceOrderTradingManager.main()`. ⛔ Deploy/restart = NGƯỜI tay (xem `docs/CORE.md`).
+> Thứ tự ưu tiên công việc kiểm chứng: `docs/ROADMAP.md`.
