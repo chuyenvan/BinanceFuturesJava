@@ -30,6 +30,11 @@
 - Đổi hướng: việc đang dở phải DỪNG sạch (kill ĐÚNG PID mình spawn + ghi trạng thái lại) hoặc chốt task resume được. CẤM bỏ process mồ côi chạy nền.
 - "Done" = có số ĐO (validate dữ liệu), KHÔNG phải "lệnh đã chạy xong".
 
+## Phản biện & tìm giải pháp tốt hơn (user đề cao — áp cho việc CÓ TẦM ẢNH HƯỞNG)
+- User LUÔN đề cao phản biện + câu hỏi "còn giải pháp nào tốt hơn không". **Kể cả khi user ĐÃ CHỐT phương án, hoặc Claude đã chốt** — nếu thấy giải pháp tiềm năng hơn thì PHẢI phân tích sâu hơn (đánh đổi, rủi ro, chi phí đảo ngược) rồi mới quyết, KHÔNG im lặng làm theo.
+- **Ngưỡng áp dụng:** chỉ cho việc có tầm ảnh hưởng (kiến trúc, cách scale, hàm mục tiêu, thay đổi lõi PnL, chọn dọc/ngang...). Việc vặt (đặt tên file/biến, format) thì KHÔNG bới — bới việc vặt là tự tạo bottleneck.
+- Cách làm đúng: nêu phương án thay thế + phân tích đánh đổi NGẮN GỌN → để user quyết. KHÔNG tự đổi hướng đã chốt mà không nói. Cũng KHÔNG phản biện lấy lệ/dài dòng.
+
 ## Khi nhận task
 - Đọc `docs/index.md` → nạp pack theo ngữ cảnh việc đang làm (code / backtest / run-226 / kaggle / db / deploy).
 - Đọc `docs/AGENT_WORKFLOW.md` + `docs/AGENTS.md` TRƯỚC khi claim task (nhiều CCD không thấy nhau; claim để khỏi đụng).
