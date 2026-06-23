@@ -82,7 +82,15 @@ public class GoldenBacktest {
         if (mkt != null) return;
         LOG.info("📥 Nạp data Aerospike (226)...");
         mkt = DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
-        pred = DataManagerAerospikeFloatSim.getAllMarketAiPredictionsFromAerospike();
+        // GATE_SET (env): mặc định set gate cũ (golden chuẩn). Đặt GATE_SET=ai_pred_market_gate_v2 để
+        // backtest gate v2 mới mà KHÔNG đụng set cũ (so A/B). predRisk4H trong set mới đã giữ nguyên từ set cũ.
+        String gateSet = System.getenv("GATE_SET");
+        if (gateSet != null && !gateSet.isBlank()) {
+            LOG.info("🔀 GATE_SET override -> đọc gate từ set: {}", gateSet);
+            pred = DataManagerAerospikeFloatSim.getAllMarketAiPredictionsFromAerospikeSet(gateSet);
+        } else {
+            pred = DataManagerAerospikeFloatSim.getAllMarketAiPredictionsFromAerospike();
+        }
         fund = DataManagerAerospikeFloatSim.getAllFundingPredictionsPrimitiveFromAerospike();
         LOG.info("✅ market={} pred={} funding={}", mkt.size(), pred.size(), fund.size());
     }

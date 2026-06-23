@@ -1752,27 +1752,49 @@ public class DataManagerAerospikeFloatSim {
      * Ghi một Batch (Nhiều phút) kết quả Market AI Prediction vào Aerospike
      */
     public static void saveMarketAiPredictionsBatch(Map<Long, AiPredictionData> predictions) {
+        saveMarketAiPredictionsBatchToSet(AEROSPIKE_SET_NAME_AI_PRED_MARKET, predictions);
+    }
+
+    /** Như saveMarketAiPredictionsBatch nhưng GHI VÀO SET tuỳ chọn (vd ai_pred_market_gate_v2).
+     *  Format y hệt set gốc (key yyyyMMdd-HHmm, bin "data" = Snappy(JSON AiPredictionData), client226)
+     *  để getAllMarketAiPredictionsFromAerospikeSet đọc lại + backtest dùng chung code đọc. */
+    public static void saveMarketAiPredictionsBatchToSet(String setName, Map<Long, AiPredictionData> predictions) {
         if (predictions == null || predictions.isEmpty()) return;
         try {
             SimpleDateFormat fmt = new SimpleDateFormat("yyyyMMdd-HHmm");
             for (Map.Entry<Long, AiPredictionData> entry : predictions.entrySet()) {
-                long timestamp = entry.getKey();
                 AiPredictionData data = entry.getValue();
-
-                String keyString = fmt.format(new Date(timestamp));
-                Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_AI_PRED_MARKET, keyString);
-
-                // Serialize: Object -> JSON -> Bytes -> Snappy
+                String keyString = fmt.format(new Date(entry.getKey()));
+                Key key = new Key(Configs.AEROSPIKE_NAMESPACE, setName, keyString);
                 String json = Utils.gson.toJson(data);
-                byte[] rawBytes = json.getBytes("UTF-8");
-                byte[] compressed = Snappy.compress(rawBytes);
-
-                // Dùng client226 để san tải giống Funding
+                byte[] compressed = Snappy.compress(json.getBytes("UTF-8"));
                 getClient226().put(writePolicy, key, new Bin("data", compressed));
             }
         } catch (Exception e) {
-            LOG.error("❌ Error saving Market AI Pred Batch: {}", e.getMessage());
+            LOG.error("❌ Error saving Market AI Pred Batch -> set {}: {}", setName, e.getMessage());
         }
+    }
+
+    /** Đọc full Market AI Pred từ SET tuỳ chọn (cho verify/backtest set mới). */
+    public static TreeMap<Long, AiPredictionData> getAllMarketAiPredictionsFromAerospikeSet(String setName) {
+        TreeMap<Long, AiPredictionData> results = new TreeMap<>();
+        try {
+            ScanPolicy scanPolicy = new ScanPolicy();
+            scanPolicy.concurrentNodes = true;
+            getClient226().scanAll(scanPolicy, Configs.AEROSPIKE_NAMESPACE, setName, (key, record) -> {
+                try {
+                    byte[] compressed = (byte[]) record.getValue("data");
+                    if (compressed != null) {
+                        String json = new String(Snappy.uncompress(compressed), "UTF-8");
+                        AiPredictionData data = Utils.gson.fromJson(json, AiPredictionData.class);
+                        if (data != null && data.timestamp > 0) results.put(data.timestamp, data);
+                    }
+                } catch (Exception ignored) { }
+            }, "data");
+        } catch (Exception e) {
+            LOG.error("❌ Error reading Market AI Pred set {}: {}", setName, e.getMessage());
+        }
+        return results;
     }
 
 
