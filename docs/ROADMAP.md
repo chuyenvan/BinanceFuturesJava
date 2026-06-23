@@ -23,13 +23,19 @@ Câu hỏi: model AI có tín hiệu thật không, hay chỉ khớp dữ liệu
 - Tiền đề: feature export phải còn TRỤC THỜI GIAN (timestamp hoặc file sắp theo thời gian). Nếu mất → sửa từ bước export, không sửa được ở train.
 
 ## Bước 2 — Ablation: edge đến từ AI hay từ DCA?
-Dùng `EdgeAttributionReport` (đã viết) — nó tách leg đầu (AI) khỏi leg DCA.
+> 🔄 Đang chạy (2026-06-23): `EdgeAttributionReport` cũ KHÔNG tồn tại → dựng mới `AblationStep2Tool`
+> (Configs.ABLATION_MODE A/B/C). So avgMAE/worstMAE/totalPnl/maxDD/Calmar giữa A vs placebo C. FULL nhiều regime.
 - Chạy 3 bản cùng mọi thứ, chỉ khác entry: **A=AI bật (control)**, **B=tắt filter AI (mọi tín hiệu PASS)**, **C=entry ngẫu nhiên cùng số lệnh (placebo)**.
 - So ở mức LEG ĐẦU, không phải cụm: `firstLegWorstMAE`, `firstLegAvgMAE`, `dcaRescueRate`, `firstLegTotalPnl`.
 - **Phán quyết:** AI có edge ⇔ A có MAE nông hơn / rescueRate thấp hơn / first-leg PnL đỡ âm hơn C, ở cùng số vị thế. A≈C (chỉ khác win rate cụm) → AI vô dụng, DCA cõng hết.
 - Chạy trên NHIỀU regime (bot long-only tự đẹp trong uptrend → chạy mỗi 1 cửa sổ sẽ kết luận sai).
 
 ## Bước 3 — Mô hình hóa "cái chết" trong sim + sửa tư thế rủi ro
+> ⏸ **HOÃN (quyết định 2026-06-23):** đụng lõi PnL (funding cost + margin-call/equity thật thay
+> `balanceBasic` cố định + trần DCA) — thay đổi bản chất con số, KHÔNG reversible dễ, cần thiết kế riêng.
+> Tạm nhảy thẳng Bước 4 (WFO) trên engine hiện tại. **GIỚI HẠN phải nhớ khi đọc WFO:** chưa có margin-call
+> thật nên maxDD có thể bị HIỂU NHẸ (tài khoản thật đã cháy ở mức DD đó). Quay lại Bước 3 trước khi bật tiền thật quy mô.
+
 Để backtest ĐƯỢC PHÉP sụp thì fitness mới trung thực.
 - Thêm: margin call / cháy tài khoản (sizing theo equity thật, không phải `balanceBasic` cố định); funding cho lệnh kẹt lâu (`updateFundingFee` đang comment hết); slippage đã có ở Bước 0.
 - Sửa tư thế pro-cyclical: đặt **trần tuyệt đối** cho tổng margin / số lần DCA mỗi symbol, đặc biệt trong `BIG_DOWN` (đang `isAll=true` không trần).
