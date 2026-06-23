@@ -7,7 +7,9 @@ supervisor.py — Orchestrator điều phối worker CCD headless (claude -p).
   - touches_live_process=true  -> KHÔNG BAO GIỜ auto (đẩy người).
   - writes_242_data=true       -> auto được, NHƯNG worker phải chạm 242 qua SSH 226 (luật ở CLAUDE.md).
   - Không sửa spec task; chỉ đổi field `status`. Single-writer: file này sở hữu runtime_state.json + STATUS.md + status-transition.
-  - Worker headless chạy với cwd=ROOT -> Claude Code tự đọc CLAUDE.md + repo (KHÔNG nhồi qua argv).
+  - Worker headless chạy với cwd=ROOT -> Claude Code tự đọc CLAUDE.md (bản mỏng, trỏ docs/CORE.md + docs/index.md).
+    Prompt chỉ-thị đọc CORE + nạp pack theo cờ task; KHÔNG nhồi nội dung file qua argv/--append-system-prompt.
+    Luật thật ở docs/CORE.md + docs/rules|db (progressive disclosure).
 
 Chạy: python supervisor.py            (vòng lặp thật)
       python supervisor.py --dry-run  (poll + in quyết định, KHÔNG spawn)
@@ -169,19 +171,41 @@ def resolve_claude():
         return ["cmd", "/c", p]
     return [p]
 
+def packs_for(fm):
+    """Goi y pack tri thuc theo co front-matter (tang recall cho worker headless).
+    Worker van tu doc docs/index.md de nap them; day chi la goi y chac-chan theo co."""
+    hints = []
+    res = fm.get("resource", "local")
+    if res in ("kaggle", "kaggle_distributed"):
+        hints.append("docs/KAGGLE_RULES.md (BAT BUOC truoc moi Kaggle job: slot=5, 12h-kill, System.exit, o-C)")
+    if res == "heavy_226":
+        hints.append("docs/rules/run-226.md (don job cu + kill dung PID) + docs/db/index.md")
+    if fm.get("writes_242_data", False):
+        hints.append("docs/db/aerospike-242.md + docs/rules/run-226.md (ghi 242 => chay qua SSH 226)")
+    if fm.get("touches_live_process", False):
+        hints.append("docs/deploy/ (NHUNG deploy/restart 2 process live = NGUOI tay -> task nay khong tu lam)")
+    hints.append("docs/rules/code.md + docs/rules/backtest.md (neu cham code/sim/HPO)")
+    hints.append("docs/db/index.md (neu doc/ghi Aerospike)")
+    return hints
+
 def build_prompt(task_path):
-    # Prompt NGẮN: worker chạy với cwd=ROOT nên Claude Code tự đọc CLAUDE.md + repo.
-    # KHÔNG nhồi CLAUDE.md/AGENTS qua argv (vượt giới hạn argv Windows + escape vỡ).
+    # Prompt NGAN: worker chay voi cwd=ROOT -> Claude Code tu doc CLAUDE.md (ban mong, tro CORE+index).
+    # KHONG nhoi noi dung file qua argv/--append-system-prompt (vuot gioi han argv Windows + escape vo).
+    text = task_path.read_text(encoding="utf-8")
+    fm = parse_front_matter(text) or {}
     task_rel = task_path.relative_to(ROOT).as_posix()
     report_rel = f"docs/reports/{task_path.stem.split('-')[0]}.md"
+    pack_lines = "\n".join(f"  - {h}" for h in packs_for(fm))
     return (
         "Ban la WORKER HEADLESS, thuc thi dung MOT task roi dung. "
-        "DOC va TUAN: CLAUDE.md + docs/AGENT_WORKFLOW.md + docs/DATA_ARCHITECTURE.md (trong repo nay, cwd hien tai). "
-        f"Task can lam: {task_rel} (doc ky, lam dung pham vi). "
-        "Tuan tuyet doi: kill-PID an toan (khong pkill/killall); KHONG deploy/restart 2 process live "
-        "(BinanceDataIngestor/BinanceOrderTradingManager) - neu task hoa ra can thi DUNG; cham 242 qua SSH 226; "
-        "System.exit(0) cuoi main tool batch; checkpoint neu job dai; don tai nguyen khi xong; cam hoi giua chung. "
-        f"Ghi tien do (moc-buoc) vao {report_rel}, va KET THUC file do bang block:\n"
+        "DOC TRUOC (BAT BUOC): docs/CORE.md (luat an toan + toan ven backtest) va docs/index.md (router tri thuc). "
+        "CLAUDE.md (cwd) la ban mong tro toi CORE+index; tu index NAP pack theo loai viec.\n"
+        f"Pack lien quan task nay (doc neu cham toi):\n{pack_lines}\n"
+        f"Task can lam: {task_rel} (doc ky, lam dung pham vi).\n"
+        "Tuan tuyet doi (chi tiet docs/CORE.md): khong pkill/killall, chi kill dung PID minh spawn; "
+        "KHONG deploy/restart 2 process live (BinanceDataIngestor/BinanceOrderTradingManager) - task can thi DUNG; "
+        "cham 242 qua SSH 226; System.exit(0) cuoi main tool batch; checkpoint neu job dai; don tai nguyen khi xong; cam hoi giua chung.\n"
+        f"Ghi tien do (moc-buoc) vao {report_rel}, KET THUC bang block:\n"
         "=== RESULT ===\nSTATUS: DONE|REVIEW|NEEDS_HUMAN|FAILED\nCOMMIT: <hash|->\n"
         "ARTIFACTS: <path|->\nVERIFY: <so doi chieu|->\nDECISIONS: <|->\nQUESTIONS: <|->\n=== END ==="
     )
