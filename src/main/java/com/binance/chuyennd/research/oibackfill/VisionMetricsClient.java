@@ -144,8 +144,30 @@ public class VisionMetricsClient {
      * @param threads số luồng tải song song.
      */
     public SymbolMetrics fetchSymbol(String symbol, int threads) throws Exception {
+        return fetchSymbol(symbol, threads, Long.MIN_VALUE, Long.MAX_VALUE);
+    }
+
+    /**
+     * Như {@link #fetchSymbol(String, int)} nhưng CHỈ tải các ngày-file trong [startMs, endMs] (UTC ms).
+     * Dùng cho TASK-013 backfill LẠI một khoảng (vd chỉ 2022) — khỏi tải lại toàn lịch sử symbol.
+     * startMs=Long.MIN_VALUE & endMs=Long.MAX_VALUE → toàn lịch sử (như cũ).
+     */
+    public SymbolMetrics fetchSymbol(String symbol, int threads, long startMs, long endMs) throws Exception {
         SymbolMetrics res = new SymbolMetrics(symbol);
         List<String> dates = listFileDates(symbol);
+        if (startMs != Long.MIN_VALUE || endMs != Long.MAX_VALUE) {
+            SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+            df.setTimeZone(TimeZone.getTimeZone("UTC"));
+            List<String> filtered = new ArrayList<>();
+            for (String d : dates) {
+                try {
+                    long t = df.parse(d).getTime();
+                    if (t >= startMs && t <= endMs) filtered.add(d);
+                } catch (Exception ignore) {
+                }
+            }
+            dates = filtered;
+        }
         if (dates.isEmpty()) {
             LOG.warn("⚠️ {} không có file metrics nào (S3 listing rỗng).", symbol);
             return res;

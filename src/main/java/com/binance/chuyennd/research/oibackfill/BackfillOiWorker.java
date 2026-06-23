@@ -38,14 +38,32 @@ public class BackfillOiWorker {
     private static final int EMPTY_EXIT_CHECKS = 3;
 
     private final VisionMetricsClient vision = new VisionMetricsClient();
+    /** TASK-013 backfill-lai: gioi han ngay-file [startMs,endMs] (env OI_START_DATE/OI_END_DATE yyyyMMdd UTC). */
+    private final long startMs = parseEnvDate("OI_START_DATE", Long.MIN_VALUE);
+    private final long endMs = parseEnvDate("OI_END_DATE", Long.MAX_VALUE);
 
     public static void main(String[] args) {
         Configs.IS_KAGGLE_MODE = true;
         new BackfillOiWorker().run();
     }
 
+    private static long parseEnvDate(String env, long def) {
+        String v = System.getenv(env);
+        if (v == null || v.trim().isEmpty()) return def;
+        try {
+            java.text.SimpleDateFormat df = new java.text.SimpleDateFormat("yyyyMMdd");
+            df.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
+            return df.parse(v.trim()).getTime();
+        } catch (Exception e) {
+            LOG.warn("⚠️ {} khong parse duoc '{}' -> bo qua: {}", env, v, e.getMessage());
+            return def;
+        }
+    }
+
     public void run() {
-        LOG.info("👷 BACKFILL-OI WORKER khởi động | queue={} | done={} | threads={}", QUEUE_SET, DONE_SET, DOWNLOAD_THREADS);
+        LOG.info("👷 BACKFILL-OI WORKER khởi động | queue={} | done={} | threads={} | range=[{}..{}]",
+                QUEUE_SET, DONE_SET, DOWNLOAD_THREADS,
+                startMs == Long.MIN_VALUE ? "ALL" : startMs, endMs == Long.MAX_VALUE ? "ALL" : endMs);
         int emptyChecks = 0;
         while (true) {
             try {
@@ -94,7 +112,7 @@ public class BackfillOiWorker {
         LOG.info("🔨 Backfill {} ...", symbol);
         VisionMetricsClient.SymbolMetrics m;
         try {
-            m = vision.fetchSymbol(symbol, DOWNLOAD_THREADS);
+            m = vision.fetchSymbol(symbol, DOWNLOAD_THREADS, startMs, endMs);
         } catch (Exception e) {
             // Lỗi tải/parse cả symbol: KHÔNG mark done, KHÔNG xoá queue → để task tự về PENDING (stale) cho lần sau.
             LOG.error("❌ {} tải/parse lỗi (giữ task trong queue để retry): {}", symbol, e.getMessage(), e);
@@ -121,19 +139,24 @@ public class BackfillOiWorker {
             return;
         }
 
-        // 🔎 SELF-VERIFY end-to-end: đọc lại OI từ 226, đếm phải ≥ kỳ vọng trước khi mark DONE
-        // (chặn bug 'ghi lỗi âm thầm vẫn mark DONE' — vd Record too big). OI là metric luôn có.
-        int expectedOi = m.maps[0].size();
-        if (expectedOi > 0) {
-            int storedOi = DataManagerAerospikeFloatSim.getMetricMap226(
-                    OiMetricSets.OI.set, OiMetricSets.OI.bin, symbol).size();
-            if (storedOi < expectedOi) {
-                LOG.error("❌ {} SELF-VERIFY thất bại: đọc lại OI={} < kỳ vọng={} → KHÔNG mark DONE (retry).",
-                        symbol, storedOi, expectedOi);
+        // 🔎 SELF-VERIFY end-to-end CẢ 5 SET (không chỉ OI — vá lỗ hổng để sót LS/taker bị bắt ngay):
+        // đọc lại từng set trên 226, đếm trong [startMs,endMs] phải ≥ kỳ vọng trước khi mark DONE.
+        for (int i = 0; i < OiMetricSets.ALL.length; i++) {
+            int expected = m.maps[i].size();
+            if (expected == 0) continue;
+            OiMetricSets.Metric mm = OiMetricSets.ALL[i];
+            java.util.TreeMap<Long, Float> stored =
+                    DataManagerAerospikeFloatSim.getMetricMap226(mm.set, mm.bin, symbol);
+            int storedInRange = (startMs == Long.MIN_VALUE && endMs == Long.MAX_VALUE)
+                    ? stored.size()
+                    : stored.subMap(startMs, true, endMs, true).size();
+            if (storedInRange < expected) {
+                LOG.error("❌ {} SELF-VERIFY {} thất bại: stored(range)={} < kỳ vọng={} → KHÔNG mark DONE (retry).",
+                        symbol, mm.set, storedInRange, expected);
                 return;
             }
-            LOG.info("🔎 {} self-verify OI 226: stored={} ≥ expected={} ✓", symbol, storedOi, expectedOi);
         }
+        LOG.info("🔎 {} self-verify 5 set 226 (range) ✓", symbol);
 
         markDoneAndClear(symbol, queueKey, m, totalTs);
         LOG.info("✅ {} xong trong {}ms | filesOk={} filesEmpty={} rawRows={} | ts(OI)={} | ts-range[{}..{}]",
