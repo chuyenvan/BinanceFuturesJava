@@ -170,6 +170,12 @@ public class GoldenBacktest {
         long s, e; String start, end;
         if ("FAST".equals(profile)) { start = FAST_START; end = FAST_END; s = parse(start); e = parseEnd(end); }
         else { start = FULL_START; end = FULL_END; s = parse(start); e = parseEnd(end); }
+        // BT_START/BT_END (env, yyyyMMdd): override range để so CÙNG range (vd gate WFO chỉ có pred 2023+,
+        // so gate cũ phải cùng 2023-01→2026-06) + chạy per-quý. KHÔNG đổi FAST/FULL mặc định khi env trống.
+        String envS = System.getenv("BT_START"), envE = System.getenv("BT_END");
+        if (envS != null && !envS.isBlank()) { start = envS; s = parse(envS); }
+        if (envE != null && !envE.isBlank()) { end = envE; e = parseEnd(envE); }
+        LOG.info("🗓️ Range backtest: {} → {}", start, end);
         emitFingerprint(profile, start, end, runSim(s, e));
     }
 
