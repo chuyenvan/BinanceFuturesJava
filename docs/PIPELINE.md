@@ -1,5 +1,7 @@
 # PIPELINE.md — Vận hành mô hình theo nhịp Walk-Forward 3 tháng
 
+> **Vận hành định kỳ (cadence)** — bổ trợ `ROADMAP.md` (lộ trình kiểm chứng), KHÔNG thay thế. Lộ trình rebuild model → `REBUILD_ROADMAP.md`.
+
 Tài liệu vận hành chính thức. Claude Code và người vận hành bám theo đây.
 Mục tiêu: mỗi 3 tháng sinh một version model+tham số ĐÃ QUA CỔNG GÁC, không deploy thứ chưa chứng minh edge.
 

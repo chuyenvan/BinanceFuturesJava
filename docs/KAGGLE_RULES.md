@@ -27,6 +27,22 @@ kaggle kernels output chuyendinh/ff40-2023 -p "$LOGDIR/ff40-2023-out"
 
 ---
 
+## 0b. Kaggle CLI TRÊN 226 (upload thẳng, không kéo file lớn về local)
+
+226 CÓ kaggle CLI, nhưng **nằm trong venv** — phải activate trước:
+
+```bash
+source ~/envs/xgb-env/bin/activate   # bật venv mới có lệnh kaggle
+kaggle --version                     # Kaggle API 1.7.4.5
+```
+
+- Credential `~/.kaggle/kaggle.json` (user `chuyendinh`) đã có sẵn trên 226.
+- Dùng để **upload dataset lớn thẳng 226 → Kaggle** (vd label ~9GB), tránh scp về máy local rồi mới upload.
+- Cú pháp tránh lỗi path: `cd <dir> && kaggle datasets create -p . --dir-mode zip` (dùng `-p .` tương đối).
+- **Lưu ý bug path trên LOCAL Windows**: kaggle CLI dựng path tạm lai `D:/...` → `D_/...` làm fail mọi file. Cách sửa ở máy local: `cd /d/claudedata/<dir> && kaggle datasets create -p . --dir-mode zip` (KHÔNG truyền path tuyệt đối `-p D:/...`). Trên 226 (Linux) không dính bug này.
+
+---
+
 ## 1. Slot CPU limit
 
 **Giới hạn: 5 kernel CPU chạy đồng thời** trên toàn account `chuyendinh` (tất cả job, không phân biệt mục đích).

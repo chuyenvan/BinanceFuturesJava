@@ -1,5 +1,7 @@
 # ROADMAP.md — Lộ trình kiểm chứng & cải tiến mô hình
 
+> **Quan hệ:** đây là LỘ TRÌNH CHA (6 bước). Chi tiết rebuild model (bước 1) → `REBUILD_ROADMAP.md`. Vận hành định kỳ → `PIPELINE.md` (cadence 3 tháng). Số đo/kết luận → `FINDINGS.md`.
+
 Mục tiêu xuyên suốt: **chứng minh bằng số liệu rằng mô hình có edge thật và sống sót qua cú sập, TRƯỚC khi tối ưu thêm hoặc bật tiền thật.** Làm đúng thứ tự — mỗi bước gác cổng cho bước sau. Không nhảy cóc.
 
 Bối cảnh chiến lược (để mọi quyết định bám vào): đây là bot **long-only, leverage 1, martingale/DCA, không hard stop-loss**. Lớp AI lọc entry; P&L thực tế bị chi phối bởi động lực hồi phục của DCA. Hệ quả: backtest có thiên hướng tâng bốc loại chiến lược này; win rate luôn cao giả tạo; rủi ro nằm ở ĐUÔI (cú sập hiếm), không ở tần suất thắng.

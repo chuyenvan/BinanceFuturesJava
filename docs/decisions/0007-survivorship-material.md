@@ -1,5 +1,7 @@
 # ADR-0007: Survivorship bias là MATERIAL — phải backfill coin chết trước khi tin backtest
 
+> ⚠️ **SUPERSEDED bởi [`0007-survivorship-backfill.md`](0007-survivorship-backfill.md)** — bản ADR-0007 hiện hành (đầy đủ + cập nhật HOÃN[C] rồi pivot ADR-0009). Giữ file này làm LỊCH SỬ bản gốc, KHÔNG dùng làm nguồn quyết định.
+
 - **Ngày:** 2026-06-09
 - **Trạng thái:** đã chấp nhận
 - **Bối cảnh phát sinh:** TASK-001 (survivorship bậc-0) + TASK-002 (coverage map ticker1m). Đo bằng số, không suy đoán.

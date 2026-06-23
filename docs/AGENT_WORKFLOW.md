@@ -1,7 +1,7 @@
 # AGENT_WORKFLOW (v2) — Điều phối bán tự động: CDK + orchestrator headless + worker CCD
 
 > **v2 (2026-06-14):** sửa lại v1 (do phiên không-MCP soạn) theo hạ tầng THỰC. Khác v1 ở: live-gate TÁCH process/data, topology SSH-226 (không 242), timeout theo resource (không 10' cứng), model Kaggle kernel-độc-lập, giữ REVIEW gate, và **không chép luật — trỏ `CLAUDE.md`**.
-> **Đọc trước khi:** sửa cơ chế điều phối. Phiên CDK mới chỉ cần: file này + `CLAUDE.md` + `docs/AGENTS.md` + `docs/DATA_ARCHITECTURE.md`.
+> **Đọc trước khi:** sửa cơ chế điều phối. Phiên CDK mới chỉ cần: file này + `docs/CORE.md` + `docs/index.md` + `docs/AGENTS.md` (+ `docs/db/` khi đụng data).
 > **Script thật:** `orchestrator/supervisor.py` (§9). **Trạng thái máy:** `orchestrator/runtime_state.json` + `orchestrator/STATUS.md`.
 
 ---
@@ -18,7 +18,7 @@
 2. **Người ở lại mối ghép planning.** *Phân tích kết quả + viết spec* do người+CDK, KHÔNG giao planner headless. Lý do: dự án thắng nhờ *bắt kết luận sai* + *không tin "done" chưa kiểm*; planner headless sẽ tin report worker → tái lập failure-mode.
 3. **Spec sai = hỏng nhân số-worker.** Bù: **pre-register acceptance** + ưu tiên acceptance **kiểm-được-bằng-máy**; task quan trọng giữ **REVIEW** (người soát) thay vì auto-DONE.
 4. **Không đoán khi parse.** Report thiếu/sai format → `NEEDS_HUMAN`, không suy diễn.
-5. **Luật kỹ thuật ở `CLAUDE.md`, KHÔNG chép vào đây** (kill-PID an toàn, SLF4J, bàn giao #4, checkpoint #5, System.exit #6, dọn tài nguyên #7, 242-data-qua-226). Worker mang theo `CLAUDE.md` mỗi run.
+5. **Luật kỹ thuật ở `docs/CORE.md` + pack `docs/rules|db`, KHÔNG chép vào đây** (kill-PID an toàn, SLF4J, System.exit, dọn tài nguyên, 242-data-qua-226). Worker auto-load `CLAUDE.md` (mỏng, trỏ CORE+index) rồi nạp pack theo cờ task.
 
 ---
 
@@ -51,7 +51,7 @@
 [claim atomic os.mkdir(locks/0XX)] → status=DOING, ghi runtime_state.json (started_at, kernel/pid)
         │
         ▼
-[spawn worker headless: claude -p  (prompt = task.md + CLAUDE.md + AGENTS snapshot + DATA_ARCHITECTURE)]
+[spawn worker headless: claude -p (prompt NGẮN qua stdin: đọc CORE+index+pack theo cờ; Claude Code auto-load CLAUDE.md mỏng)]
    ├─ wrapper ghi heartbeat (pid|elapsed) mỗi 30s        → liveness MÁY
    ├─ worker ghi mốc-bước vào docs/reports/0XX.md         → tiến độ NGỮ NGHĨA
    └─ nếu job Kaggle: worker ghi kernel_slug → supervisor poll Kaggle API   → tiến độ KERNEL
@@ -118,7 +118,7 @@ QUESTIONS: <gom 1 lần, chỉ câu thật cần người | ->
 1. **Poll 60s.** Chọn task: `status=TODO` ∧ mọi `depends_on`=DONE ∧ `touches_live_process=false` ∧ còn slot.
 2. **Cap đồng thời:** toàn cục **4**. Cap phụ theo resource: **`heavy_226 ≤ 1`** (226 tài nguyên YẾU — 2 job đọc 5 năm 1m là sập; siết hơn v1) · **`kaggle ≤ 5`** (RUNBOOK; nhưng là kernel cloud nên ít tốn slot worker) · `local` tính vào cap 4.
 3. **Claim atomic:** `os.mkdir(locks/<id>)` — thắng mới chạy. Cấm đọc-rồi-ghi. Set `status=DOING` + ghi `runtime_state.json`.
-4. **Prompt worker = `tasks/0XX.md` + `CLAUDE.md` + snapshot `AGENTS.md` + `DATA_ARCHITECTURE.md`.** Bắt buộc mỗi run — worker headless không có mắt người, phải tự mang luật.
+4. **Prompt worker = chỉ-thị NGẮN (qua stdin):** đọc `docs/CORE.md` + `docs/index.md` → nạp pack theo loại việc (supervisor chèn gợi ý pack theo cờ `resource`/`writes_242_data`/`touches_live_process`) + trỏ `tasks/0XX.md`. Claude Code tự auto-load `CLAUDE.md` (mỏng, trỏ CORE) ở cwd. KHÔNG nhồi nội dung file qua argv (giới hạn argv Windows). CORE = tầng recall bắt buộc.
 5. **Heartbeat 2 lớp + KERNEL:** wrapper `pid+elapsed`/30s (liveness máy); LLM mốc-bước trong report (ngữ nghĩa); job Kaggle → poll **kernel slug** qua API (nguồn sự thật cho job cloud). KHÔNG dùng tiến trình worker làm đồng hồ job Kaggle.
 6. **Timeout THEO resource (KHÁC v1 — không 10' cứng):** `local` 20′ · `heavy_226` mặc định 4h (chỉnh per-task qua `timeout_min`) · `kaggle` 12h (theo cutoff). Stale = pid chết HOẶC quá timeout-resource HOẶC heartbeat-ngữ-nghĩa đứng quá ngưỡng → `FAILED` + nhả lock + requeue; quá `max_retry` → `NEEDS_HUMAN`. **Job `checkpoint=true` requeue thì resume-skip-done, không chạy lại từ 0.**
 7. **`touches_live_process=true` KHÔNG auto** — liệt kê `STATUS.md` mục chờ-người. Lớp 2: luật `CLAUDE.md` buộc worker "task hoá ra phải deploy/restart 2 process → DỪNG + NEEDS_HUMAN".
@@ -169,13 +169,12 @@ QUESTIONS: <gom 1 lần, chỉ câu thật cần người | ->
 
 Script thật đã viết kèm (cùng commit). Tóm thành phần: poll loop 60s · scan `tasks/*.md` parse front-matter · check deps+slot+cap-resource+live-gate · claim lockdir `os.mkdir` · spawn `claude -p` (headless) với prompt §5.4 · wrapper heartbeat 30s · poll kernel Kaggle (nếu có slug) · parse RESULT §4 · stale reaper theo timeout-resource §5.6 · ghi `runtime_state.json`+`STATUS.md` §5.10 · live-gate §5.7.
 
-**Headless — RẤT RÕ (user nhấn):** worker = `claude -p` (print mode, non-interactive). Lệnh mẫu supervisor spawn:
+**Headless — cơ chế THẬT (khớp `build_prompt` trong supervisor.py):** worker = `claude -p` (print mode, non-interactive), spawn với `cwd=ROOT`, prompt gửi qua **stdin** — KHÔNG `--append-system-prompt`, KHÔNG `cat` file (tránh giới hạn argv Windows + escape vỡ). Claude Code tự auto-load `CLAUDE.md` (mỏng, trỏ `docs/CORE.md` + `docs/index.md`) ở cwd. Prompt = chỉ-thị ngắn:
 ```
-claude -p --dangerously-skip-permissions \
-  --append-system-prompt "$(cat CLAUDE.md DATA_ARCHITECTURE.md)" \
-  "Bạn là worker headless. Đọc task sau, thực thi, KẾT THÚC bằng block RESULT (§4 AGENT_WORKFLOW). Tuân CLAUDE.md tuyệt đối (kill-PID an toàn, không deploy/restart 2 process live, 242-data-qua-SSH-226, System.exit cuối main, checkpoint nếu job dài, dọn tài nguyên xong). Ghi tiến độ vào $REPORT.
-=== TASK ===
-$(cat tasks/0XX.md)"
+claude -p --dangerously-skip-permissions      # prompt qua stdin:
+"Ban la worker headless. DOC TRUOC: docs/CORE.md + docs/index.md -> nap pack theo loai viec.
+ Pack goi y theo co task (resource/writes_242_data/touches_live_process). Task: tasks/0XX.md.
+ Tuan CORE tuyet doi. Ghi tien do + KET THUC bang block RESULT (§4) vao docs/reports/0XX.md."
 ```
 - Cờ headless chính xác: xem https://docs.claude.com/en/docs/claude-code/overview (print/-p, output format). Supervisor chỉ điều phối — KHÔNG tự đụng live; live-gate nằm Ở supervisor + trong CLAUDE.md.
 - stdout worker → supervisor đọc; nhưng **nguồn sự thật kết quả = block RESULT trong `docs/reports/0XX.md`**, không phải stdout (stdout có thể nhiễu).

@@ -1,5 +1,7 @@
 # REBUILD ROADMAP — data + 2 model (market gate + funding selector) + hạ tầng
 
+> **CON của `ROADMAP.md`** (cụ thể hoá bước-1: model đang có vấn đề → xé nhỏ rebuild cho dễ kiểm soát). Vận hành định kỳ → `PIPELINE.md`.
+
 > Bản đồ sống cho mạch rebuild (ADR-0009): backfill data, lifecycle/validate/pipeline, **cả hai model** (market gate = ADR-0010, funding selector = ADR-0011), tích hợp. Chi tiết quyết định ở các ADR; file này là tuyến đường + trạng thái.
 
 ## Vì sao rebuild (ADR-0009)
