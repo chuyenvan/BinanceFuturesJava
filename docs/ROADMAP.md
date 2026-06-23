@@ -23,8 +23,13 @@ Câu hỏi: model AI có tín hiệu thật không, hay chỉ khớp dữ liệu
 - Tiền đề: feature export phải còn TRỤC THỜI GIAN (timestamp hoặc file sắp theo thời gian). Nếu mất → sửa từ bước export, không sửa được ở train.
 
 ## Bước 2 — Ablation: edge đến từ AI hay từ DCA?
-> 🔄 Đang chạy (2026-06-23): `EdgeAttributionReport` cũ KHÔNG tồn tại → dựng mới `AblationStep2Tool`
-> (Configs.ABLATION_MODE A/B/C). So avgMAE/worstMAE/totalPnl/maxDD/Calmar giữa A vs placebo C. FULL nhiều regime.
+> ✅ **PASS (2026-06-23, commit a043317):** `EdgeAttributionReport` cũ KHÔNG tồn tại → dựng mới `AblationStep2Tool`
+> (Configs.ABLATION_MODE A/B/C). FULL 2021-2026:
+> - A (AI bật):  trades 70711, PnL **+69217**, maxDD 20383, avgMAE **3.36%**, Calmar **3.40**
+> - B (no-AI):   trades 56416, PnL **−13703**, avgMAE 6.01%, Calmar −0.45
+> - C (placebo): trades 42683, PnL **−10778**, avgMAE 5.10%, Calmar −0.36
+> → A MAE nông hơn + Calmar cao hơn placebo C (cùng passRate) ⇒ **AI CÓ EDGE THẬT**. B/C đều LỖ ⇒ DCA một mình
+> không cõng nổi; lãi đến từ chất lượng chọn lọc của AI. Đủ điều kiện vào Bước 4.
 - Chạy 3 bản cùng mọi thứ, chỉ khác entry: **A=AI bật (control)**, **B=tắt filter AI (mọi tín hiệu PASS)**, **C=entry ngẫu nhiên cùng số lệnh (placebo)**.
 - So ở mức LEG ĐẦU, không phải cụm: `firstLegWorstMAE`, `firstLegAvgMAE`, `dcaRescueRate`, `firstLegTotalPnl`.
 - **Phán quyết:** AI có edge ⇔ A có MAE nông hơn / rescueRate thấp hơn / first-leg PnL đỡ âm hơn C, ở cùng số vị thế. A≈C (chỉ khác win rate cụm) → AI vô dụng, DCA cõng hết.
