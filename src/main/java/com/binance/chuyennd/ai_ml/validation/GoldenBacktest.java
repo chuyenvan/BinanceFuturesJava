@@ -82,10 +82,14 @@ public class GoldenBacktest {
         if (mkt != null) return;
         LOG.info("📥 Nạp data Aerospike (226)...");
         mkt = DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
-        // GATE_SET (env): mặc định set gate cũ (golden chuẩn). Đặt GATE_SET=ai_pred_market_gate_v2 để
-        // backtest gate v2 mới mà KHÔNG đụng set cũ (so A/B). predRisk4H trong set mới đã giữ nguyên từ set cũ.
+        // GATE_FILE (env) ưu tiên cao nhất: đọc gate từ file CSV (ts,predReturn15M,predRisk4H) do WFOGateRunner
+        // ghi — tránh ghi/đọc Aerospike 226 qua mạng (65 rec/s, nghẽn). GATE_SET: đọc set Aerospike. Mặc định: set gate cũ.
+        String gateFile = System.getenv("GATE_FILE");
         String gateSet = System.getenv("GATE_SET");
-        if (gateSet != null && !gateSet.isBlank()) {
+        if (gateFile != null && !gateFile.isBlank()) {
+            LOG.info("🔀 GATE_FILE override -> đọc gate từ file: {}", gateFile);
+            pred = loadGateFromFile(gateFile);
+        } else if (gateSet != null && !gateSet.isBlank()) {
             LOG.info("🔀 GATE_SET override -> đọc gate từ set: {}", gateSet);
             pred = DataManagerAerospikeFloatSim.getAllMarketAiPredictionsFromAerospikeSet(gateSet);
         } else {
@@ -93,6 +97,27 @@ public class GoldenBacktest {
         }
         fund = DataManagerAerospikeFloatSim.getAllFundingPredictionsPrimitiveFromAerospike();
         LOG.info("✅ market={} pred={} funding={}", mkt.size(), pred.size(), fund.size());
+    }
+
+    /** Đọc gate từ file CSV (header: timestamp,predReturn15M,predRisk4H) do WFOGateRunner ghi.
+     *  Tránh ghi/đọc Aerospike 226 qua mạng (nghẽn). Đọc 1 file tuần tự = vài trăm ms cho >1M dòng. */
+    private TreeMap<Long, AiPredictionData> loadGateFromFile(String path) {
+        TreeMap<Long, AiPredictionData> map = new TreeMap<>();
+        try {
+            List<String> lines = Files.readAllLines(new File(path).toPath());
+            for (int i = 1; i < lines.size(); i++) {     // bỏ header dòng 0
+                String[] p = lines.get(i).split(",");
+                if (p.length < 3) continue;
+                long ts = Long.parseLong(p[0].trim());
+                float r15 = Float.parseFloat(p[1].trim());
+                float r4 = Float.parseFloat(p[2].trim());
+                map.put(ts, new AiPredictionData(ts, r15, r4));
+            }
+            LOG.info("   gate file: {} dòng -> {} pred", lines.size() - 1, map.size());
+        } catch (Exception e) {
+            LOG.error("❌ Đọc gate file {} lỗi: {}", path, e.getMessage());
+        }
+        return map;
     }
 
     public void run(String mode) throws Exception {

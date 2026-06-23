@@ -1761,15 +1761,22 @@ public class DataManagerAerospikeFloatSim {
     public static void saveMarketAiPredictionsBatchToSet(String setName, Map<Long, AiPredictionData> predictions) {
         if (predictions == null || predictions.isEmpty()) return;
         try {
-            SimpleDateFormat fmt = new SimpleDateFormat("yyyyMMdd-HHmm");
-            for (Map.Entry<Long, AiPredictionData> entry : predictions.entrySet()) {
-                AiPredictionData data = entry.getValue();
-                String keyString = fmt.format(new Date(entry.getKey()));
-                Key key = new Key(Configs.AEROSPIKE_NAMESPACE, setName, keyString);
-                String json = Utils.gson.toJson(data);
-                byte[] compressed = Snappy.compress(json.getBytes("UTF-8"));
-                getClient226().put(writePolicy, key, new Bin("data", compressed));
-            }
+            // GHI SONG SONG (parallelStream) như saveMarketDataBatch — ghi tuần tự từng record qua mạng
+            // 226 quá chậm (~10 rec/s) làm WFO ghi 1.7M record mất hàng chục giờ. ThreadLocal fmt vì
+            // SimpleDateFormat KHÔNG thread-safe.
+            ThreadLocal<SimpleDateFormat> tlFmt = ThreadLocal.withInitial(() -> new SimpleDateFormat("yyyyMMdd-HHmm"));
+            predictions.entrySet().parallelStream().forEach(entry -> {
+                try {
+                    AiPredictionData data = entry.getValue();
+                    String keyString = tlFmt.get().format(new Date(entry.getKey()));
+                    Key key = new Key(Configs.AEROSPIKE_NAMESPACE, setName, keyString);
+                    String json = Utils.gson.toJson(data);
+                    byte[] compressed = Snappy.compress(json.getBytes("UTF-8"));
+                    getClient226().put(writePolicy, key, new Bin("data", compressed));
+                } catch (Exception e) {
+                    LOG.error("❌ Error saving AI Pred at {} -> set {}: {}", entry.getKey(), setName, e.getMessage());
+                }
+            });
         } catch (Exception e) {
             LOG.error("❌ Error saving Market AI Pred Batch -> set {}: {}", setName, e.getMessage());
         }

@@ -63,9 +63,9 @@ public class WFOGateRunner {
             String home = System.getProperty("user.home");
             String csvStore = args.length > 3 ? args[3] : home + "/claudedata/wfo_feature_store.csv";
             String modelTmpDir = args.length > 4 ? args[4] : home + "/claudedata/wfo_models";
-            String setName = args.length > 5 ? args[5] : DEFAULT_SET;
+            String outFile = args.length > 5 ? args[5] : home + "/claudedata/wfo_gate_pred.csv";
             String pyScript = args.length > 6 ? args[6] : home + "/java/simulator/train_gate_fold.py";
-            new WFOGateRunner().run(start, end, oosMonths, csvStore, modelTmpDir, setName, pyScript);
+            new WFOGateRunner().run(start, end, oosMonths, csvStore, modelTmpDir, outFile, pyScript);
             System.exit(0);
         } catch (Throwable e) {
             LOG.error("❌ WFOGateRunner FAIL", e);
@@ -79,12 +79,12 @@ public class WFOGateRunner {
     private TreeMap<Long, AiPredictionData> oldPred;
 
     void run(String start, String end, int oosMonths, String csvStore, String modelTmpDir,
-             String setName, String pyScript) throws Exception {
+             String outFile, String pyScript) throws Exception {
         long fairStart = Utils.sdfFile.parse(start).getTime();
         long evalEnd = Utils.sdfFile.parse(end).getTime();
         new File(modelTmpDir).mkdirs();
 
-        LOG.info("🚀 WFO GATE | {} -> {} | OOS={}m | csv={} | set={}", start, end, oosMonths, csvStore, setName);
+        LOG.info("🚀 WFO GATE | {} -> {} | OOS={}m | csv={} | out={}", start, end, oosMonths, csvStore, outFile);
 
         // ===== PHA 1: REPLAY 1 LẦN -> featureStore + labelStore + CSV =====
         replayAndBuildStore(fairStart, evalEnd, csvStore);
@@ -107,27 +107,32 @@ public class WFOGateRunner {
         }
 
         long totalWritten = 0;
-        for (int i = 0; i < folds.size(); i++) {
-            long cutoff = folds.get(i)[0];   // train < cutoff ; OOS = [cutoff, oosEnd)
-            long oosEnd = folds.get(i)[1];
-            String cutoffStr = Utils.normalizeDateYYYYMMDD(cutoff).replace("-", "");
-            String modelDir = modelTmpDir + "/fold_" + i;
-            new File(modelDir).mkdirs();
+        // GHI FILE thay Aerospike: ghi 226 qua mạng = 65 rec/s (nghẽn 99% thời gian, đo bằng smoke3).
+        // File local = tức thì. File gate WFO interface cho backtest đọc qua GATE_FILE. 1 writer cho cả chuỗi OOS.
+        try (BufferedWriter gw = new BufferedWriter(new FileWriter(outFile))) {
+            gw.write("timestamp,predReturn15M,predRisk4H"); gw.newLine();
+            for (int i = 0; i < folds.size(); i++) {
+                long cutoff = folds.get(i)[0];   // train < cutoff ; OOS = [cutoff, oosEnd)
+                long oosEnd = folds.get(i)[1];
+                String cutoffStr = Utils.normalizeDateYYYYMMDD(cutoff).replace("-", "");
+                String modelDir = modelTmpDir + "/fold_" + i;
+                new File(modelDir).mkdirs();
 
-            // (a) gọi Python train tới cutoff
-            LOG.info("🔧 fold {} — train Python (cutoff={})...", i, cutoffStr);
-            int rc = runPythonTrain(pyScript, csvStore, cutoffStr, modelDir);
-            if (rc != 0) { LOG.error("⛔ fold {} train rc={} — DỪNG (không bỏ qua, tránh chuỗi WFO thủng).", i, rc); return; }
+                // (a) gọi Python train tới cutoff
+                LOG.info("🔧 fold {} — train Python (cutoff={})...", i, cutoffStr);
+                int rc = runPythonTrain(pyScript, csvStore, cutoffStr, modelDir);
+                if (rc != 0) { LOG.error("⛔ fold {} train rc={} — DỪNG (không bỏ qua, tránh chuỗi WFO thủng).", i, rc); return; }
 
-            // (b) predict đoạn OOS từ featureStore RAM (nhanh) + ghi set
-            long written = predictOOSAndSave(modelDir, cutoff, oosEnd, setName);
-            totalWritten += written;
-            LOG.info("✅ fold {} xong: ghi {} pred OOS [{} -> {})", i, written,
-                    Utils.normalizeDateYYYYMMDD(cutoff), Utils.normalizeDateYYYYMMDD(oosEnd));
+                // (b) predict đoạn OOS từ featureStore RAM (nhanh ~0s) → ghi file (tức thì)
+                long written = predictOOSToFile(modelDir, cutoff, oosEnd, gw);
+                totalWritten += written;
+                LOG.info("✅ fold {} xong: ghi {} pred OOS [{} -> {})", i, written,
+                        Utils.normalizeDateYYYYMMDD(cutoff), Utils.normalizeDateYYYYMMDD(oosEnd));
+            }
         }
 
-        LOG.info("🎯 WFO DONE: {} fold, tổng {} pred OOS -> set {}", folds.size(), totalWritten, setName);
-        LOG.info("   Bước tiếp: GATE_SET={} java ... GoldenBacktest FAST  (chấm bằng HPOFitnessCalculatorV4)", setName);
+        LOG.info("🎯 WFO DONE: {} fold, tổng {} pred OOS -> file {}", folds.size(), totalWritten, outFile);
+        LOG.info("   Bước tiếp: GATE_FILE={} java ... GoldenBacktest FAST  (chấm bằng HPOFitnessCalculatorV4)", outFile);
     }
 
     /** PHA 1: replay mọi phút, lưu feature + label vào RAM, đồng thời xuất CSV mọi-phút cho Python train. */
@@ -238,24 +243,20 @@ public class WFOGateRunner {
         return p.waitFor();
     }
 
-    /** Predict đoạn OOS [cutoff, oosEnd) từ featureStore RAM (KHÔNG replay lại), ghi set WFO. */
-    private long predictOOSAndSave(String modelDir, long cutoff, long oosEnd, String setName) throws Exception {
+    /** Predict đoạn OOS [cutoff, oosEnd) từ featureStore RAM (KHÔNG replay lại), ghi vào file CSV gate.
+     *  predict ~0s (đo smoke3); ghi file local tức thì (thay ghi Aerospike 226 qua mạng = 65 rec/s nghẽn 99%). */
+    private long predictOOSToFile(String modelDir, long cutoff, long oosEnd, BufferedWriter gw) throws Exception {
         long n = 0;
-        Map<Long, AiPredictionData> batch = new HashMap<>();
         try (OnnxInferenceManager brain = new OnnxInferenceManager(modelDir)) {
             for (Map.Entry<Long, MarketFeatures> e : featureStore.subMap(cutoff, true, oosEnd, false).entrySet()) {
                 long ts = e.getKey();
                 float pred15 = brain.predictAll(e.getValue()).return15M;
                 AiPredictionData old = oldPred.get(ts);
                 float risk4 = old != null ? old.predRisk4H : 0f;
-                batch.put(ts, new AiPredictionData(ts, pred15, risk4));
+                gw.write(ts + "," + fmt(pred15) + "," + fmt(risk4));
+                gw.newLine();
                 n++;
-                if (batch.size() >= 5000) {
-                    DataManagerAerospikeFloatSim.saveMarketAiPredictionsBatchToSet(setName, batch);
-                    batch.clear();
-                }
             }
-            if (!batch.isEmpty()) DataManagerAerospikeFloatSim.saveMarketAiPredictionsBatchToSet(setName, batch);
         }
         return n;
     }
