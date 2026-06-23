@@ -129,7 +129,13 @@ public class MetricDistributionTool {
         LOG.info("  → {}/{} năm dương ({}%)", posYears, pnlByYear.size(),
                 f(100.0 * posYears / pnlByYear.size()));
         LOG.info("===========================================================");
-        LOG.info("ĐỀ XUẤT đặt ngưỡng constraint (người chốt): maxDD-cap ~ p? ; holding-cap ~ p90/p99 ; %năm-dương ≥ ?");
+
+        // ===== Verdict fitness V4 trên CHÍNH backtest này (kiểm chứng V4 chạy đúng) =====
+        HPOFitnessCalculatorV4.FitnessReport v4 = HPOFitnessCalculatorV4.evaluateDetailed(done);
+        LOG.info("FITNESS V4: note={} finalFitness={} | calmar={} sortino={} ddPct={}% pctHeld>7d={}% posYear={}%",
+                v4.note, f(v4.finalFitness), f(v4.calmar), f(v4.sortino),
+                f(v4.ddPct * 100), f(v4.pctHeldOver7d * 100), f(v4.posYearRatio * 100));
+        LOG.info("===========================================================");
     }
 
     private static double pct(double[] sorted, double p) {
