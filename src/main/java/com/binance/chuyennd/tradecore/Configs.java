@@ -149,6 +149,13 @@ public class Configs {
     // Nhánh EARLY trong checkSignalDynamic GIỮ NGUYÊN ở mọi mode.
     public static String FILTER_MODE = "A";
 
+    // === ABLATION (Bước 2 roadmap: edge từ AI hay DCA? — chỉ ĐO, mặc định A, KHÔNG ảnh hưởng CONFIG_VERSION) ===
+    // A=control (AI filter bật như thường) | B=no-AI (bỏ qua filter, mọi tín hiệu PASS) | C=placebo
+    // (entry ngẫu nhiên cùng XÁC SUẤT pass như A). So leg-đầu (MAE/rescue/firstLegPnl) giữa A và B/C.
+    // CHỈ tác động tại điểm AI filter trong createOrderBUY, KHÔNG đụng logic DCA/exit/budget.
+    public static String ABLATION_MODE = "A";
+    public static long ABLATION_SEED = 42L;
+
     // === CIRCUIT BREAKER (chống sập tầng DCA/margin — chỉ ĐO, mặc định OFF, KHÔNG ảnh hưởng CONFIG_VERSION) ===
     // OFF=không phanh | MARGIN=chặn mở mới khi margin/vốn cao | DCA=ngừng nhồi cụm lỗ sâu | BOTH=cả hai.
     // KHÔNG force-close (long-only): chỉ DỪNG MỞ / DỪNG NHỒI.

@@ -45,6 +45,12 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     public long breakerMarginHaltCount = 0;
     public long breakerDcaCapCount = 0;
 
+    // === ABLATION (Bước 2) — bộ đếm để báo cáo + tỉ lệ pass cho placebo C ===
+    public long ablationSignalSeen = 0;   // số tín hiệu leg-đầu đi qua cổng filter (A/C)
+    public long ablationPassCount = 0;    // số PASS thực của A (để tính passRate cho C)
+    public long ablationPlaceboPass = 0;  // số PASS ngẫu nhiên của C
+    public float ablationPassRate = 0.5f; // xác suất pass cho C — set TỪ passRate đo ở A
+
     // =================================================================
     // 🔥 SỬ DỤNG MẢNG CỐ ĐỊNH O(1) ĐỂ LOẠI BỎ AUTOBOXING RÁC CỦA HASHMAP
     // =================================================================
@@ -522,15 +528,33 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             return;
         }
         if (!levelChange.equals(MarketLevelChange.BIG_DOWN)) {
-            AIRejectFilter.FilterResult filterResult = null;
-            if (levelChange == MarketLevelChange.PREDICT_SYMBOL_TRADE) {
-                filterResult = aiRejectFilter.checkSignalDynamic(predict, symbolPred);
-            }
-            if (filterResult == null)
-                filterResult = aiRejectFilter.checkSignal(predict);
+            // === ABLATION (Bước 2): A=giữ filter | B=bỏ filter (PASS hết) | C=placebo random ===
+            // CHỈ thay quyết định PASS/REJECT của leg đầu; DCA/exit/budget giữ nguyên để cô lập đóng góp AI.
+            if ("B".equals(Configs.ABLATION_MODE)) {
+                // no-AI: mọi tín hiệu PASS, không gọi filter
+            } else if ("C".equals(Configs.ABLATION_MODE)) {
+                // placebo: PASS ngẫu nhiên cùng XÁC SUẤT pass thực nghiệm của A (ablationPassRate),
+                // deterministic theo seed+timestamp để tái lập.
+                ablationSignalSeen++;
+                java.util.Random r = new java.util.Random(Configs.ABLATION_SEED ^ ticker.startTime);
+                if (r.nextFloat() >= ablationPassRate) {
+                    return; // reject ngẫu nhiên
+                }
+                ablationPlaceboPass++;
+            } else {
+                // A (control): filter AI như thường
+                AIRejectFilter.FilterResult filterResult = null;
+                if (levelChange == MarketLevelChange.PREDICT_SYMBOL_TRADE) {
+                    filterResult = aiRejectFilter.checkSignalDynamic(predict, symbolPred);
+                }
+                if (filterResult == null)
+                    filterResult = aiRejectFilter.checkSignal(predict);
 
-            if (filterResult.decision == AIRejectFilter.FilterDecision.REJECT) {
-                return;
+                ablationSignalSeen++;
+                if (filterResult.decision == AIRejectFilter.FilterDecision.REJECT) {
+                    return;
+                }
+                ablationPassCount++;
             }
         }
 
