@@ -90,16 +90,27 @@ public class GenerateSelectorPredictionsTool {
 
         GenerateSelectorPredictionsTool tool = new GenerateSelectorPredictionsTool();
         SelectorOiProvider oiProvider = new SelectorOiProvider();   // OI cách 1: nạp per-coin lazy, dùng lại xuyên tháng
+        // CONTINUOUS=1 (mặc định): chạy 1 MẠCH start->end, KHÔNG reset per-tháng → History/CoinRank tích lũy
+        //   ĐÚNG như Python sinh ff liên tục (khử khác biệt warmup làm basket #12-16 lệch). reset+warmup 1 LẦN.
+        // CONTINUOUS=0: per-tháng (warmup WARMUP_DAYS mỗi tháng) — chỉ để test nhanh 1 đoạn.
+        boolean continuous = !"0".equals(System.getenv().getOrDefault("CONTINUOUS", "1"));
+        int warmupDays = Integer.parseInt(System.getenv().getOrDefault("WARMUP_DAYS", "1"));
         try (SelectorOnnxInferenceManager brain = new SelectorOnnxInferenceManager(MODEL_DIR, threads)) {
-            // Chạy tuần tự per-tháng (warmup 24h mỗi tháng để history/rank tịnh tiến đúng như set v5).
-            Calendar cal = Calendar.getInstance();
-            cal.setTimeInMillis(start);
-            while (cal.getTimeInMillis() < end) {
-                long mStart = cal.getTimeInMillis();
-                cal.add(Calendar.MONTH, 1);
-                long mEnd = Math.min(cal.getTimeInMillis(), end);
-                LOG.info("▶️ THÁNG {} -> {}", Utils.normalizeDateYYYYMMDD(mStart), Utils.normalizeDateYYYYMMDD(mEnd));
-                tool.startGeneration(mStart, mEnd, brain, oiProvider, time2MarketData, symbolMap);
+            if (continuous) {
+                LOG.info("▶️ CHẠY LIÊN TỤC (1 mạch, warmup {} ngày 1 lần): {} -> {}",
+                        warmupDays, Utils.normalizeDateYYYYMMDD(start), Utils.normalizeDateYYYYMMDD(end));
+                tool.startGeneration(start, end, brain, oiProvider, time2MarketData, symbolMap, warmupDays);
+            } else {
+                Calendar cal = Calendar.getInstance();
+                cal.setTimeInMillis(start);
+                while (cal.getTimeInMillis() < end) {
+                    long mStart = cal.getTimeInMillis();
+                    cal.add(Calendar.MONTH, 1);
+                    long mEnd = Math.min(cal.getTimeInMillis(), end);
+                    LOG.info("▶️ THÁNG {} -> {} (warmup {} ngày)", Utils.normalizeDateYYYYMMDD(mStart),
+                            Utils.normalizeDateYYYYMMDD(mEnd), warmupDays);
+                    tool.startGeneration(mStart, mEnd, brain, oiProvider, time2MarketData, symbolMap, warmupDays);
+                }
             }
         }
         LOG.info("🏁 HOÀN TẤT generate selector [{} -> {}]",
@@ -110,8 +121,8 @@ public class GenerateSelectorPredictionsTool {
     public void startGeneration(long startTs, long endTs, SelectorOnnxInferenceManager brain,
                                 SelectorOiProvider oiProvider,
                                 Map<Long, MarketDataObject> time2MarketData,
-                                ConcurrentHashMap<String, Short> symbolMap) throws Exception {
-        // RESET state tịnh tiến TRƯỚC warmup mỗi tháng (giống GenerateFundingPredictionsTool).
+                                ConcurrentHashMap<String, Short> symbolMap, int warmupDays) throws Exception {
+        // RESET state tịnh tiến TRƯỚC warmup (1 lần đầu nếu chạy liên tục; mỗi tháng nếu per-tháng).
         HistoryManager.getInstance().resetCache();
         CoinRankManager.getInstance().resetCache();
 
@@ -123,8 +134,8 @@ public class GenerateSelectorPredictionsTool {
                 new ArrayBlockingQueue<>(WRITE_QUEUE), new ThreadPoolExecutor.CallerRunsPolicy());
 
         try {
-            long warmupStart = startTs - 24 * 60 * 60 * 1000L;
-            LOG.info("🔥 WARMUP 24H: {} -> {}", Utils.normalizeDateYYYYMMDDHHmm(warmupStart), Utils.normalizeDateYYYYMMDDHHmm(startTs));
+            long warmupStart = startTs - (long) warmupDays * 24 * 60 * 60 * 1000L;
+            LOG.info("🔥 WARMUP {} ngày: {} -> {}", warmupDays, Utils.normalizeDateYYYYMMDDHHmm(warmupStart), Utils.normalizeDateYYYYMMDDHHmm(startTs));
             runDataLoop(warmupStart, startTs, time2MarketData, brain, oiProvider, symbolMap, true, extractor, null);
 
             LOG.info("🚀 GENERATE: {} -> {}", Utils.normalizeDateYYYYMMDDHHmm(startTs), Utils.normalizeDateYYYYMMDDHHmm(endTs));
