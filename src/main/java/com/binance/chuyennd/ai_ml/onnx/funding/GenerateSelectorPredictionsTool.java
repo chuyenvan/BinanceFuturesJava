@@ -43,6 +43,7 @@ public class GenerateSelectorPredictionsTool {
 
     private static final String MODEL_DIR = System.getenv().getOrDefault("SEL_MODEL_DIR", "ml/funding_selector/models_v1");
     private static final String SEL_SET = System.getenv().getOrDefault("SEL_SET", "funding_selector_pred_1m_java");
+    private static final String DUMP_FEATURES = System.getenv("SEL_DUMP_FEATURES");   // null = không dump (validate-only)
     private static final int PREDICT_CHUNK_SIZE = 256;
     private static final int WRITE_THREADS = 4;
     private static final int WRITE_QUEUE = 240;
@@ -162,9 +163,16 @@ public class GenerateSelectorPredictionsTool {
                 final MarketDataObject marketDataAtTime = time2MarketData.get(time);
                 final List<String> basket = CoinRankManager.getInstance().getTopCoin(time);
 
-                // 1) EXTRACT per-coin (40 Tool1; #33-35 và #41-45 còn NaN) — parallel.
+                // ⚠️ KHỚP PYTHON: ExportFeaturesForPythonTool chỉ tính feature cho coin qua EntrySignalFilter,
+                //   và cross-sectional #33-35 rank TRONG tập đã-filter. Nếu Java rank trên MỌI coin → tập khác
+                //   → #33-35 lệch → P(win) lệch (đã đo: diff ~0.02-0.04, tăng theo horizon). PHẢI áp cùng filter.
+                final java.util.Set<String> passFilter = com.binance.chuyennd.ai_ml.features.export.funding.EntrySignalFilter
+                        .selectCoins(symbol2Ticker, HistoryManager.getInstance());
+                if (passFilter.isEmpty()) continue;
+
+                // 1) EXTRACT per-coin (40 Tool1; #33-35 và #41-45 còn NaN) — parallel, CHỈ coin lọt filter.
                 long e0 = System.nanoTime();
-                List<PrepareData> batch = symbol2Ticker.keySet().parallelStream()
+                List<PrepareData> batch = passFilter.parallelStream()
                         .map(symbol -> {
                             try {
                                 Short symId = symbolMap.get(symbol);
@@ -194,6 +202,23 @@ public class GenerateSelectorPredictionsTool {
                 for (PrepareData pd : batch) {
                     float[] oi5 = oiProvider.lookup(pd.symbol, time);
                     featList.add(SelectorOnnxInferenceManager.extractFeatures45(pd.features, oi5));
+                }
+
+                // DEBUG (SEL_DUMP_FEATURES=path): dump 45 feature Java per (ts,symbol) ra CSV để VALIDATE so Python.
+                //   1 dòng = ts,symbol,f0..f44. Python đọc .bin Tool1 + oi_percoin cùng (ts,symbol) so từng feature.
+                if (DUMP_FEATURES != null) {
+                    synchronized (GenerateSelectorPredictionsTool.class) {
+                        try (java.io.FileWriter fw = new java.io.FileWriter(DUMP_FEATURES, true)) {
+                            for (int bi = 0; bi < batch.size(); bi++) {
+                                StringBuilder sb = new StringBuilder();
+                                sb.append(time).append(',').append(batch.get(bi).symbol);
+                                for (float v : featList.get(bi)) sb.append(',').append(v);
+                                fw.write(sb.append('\n').toString());
+                            }
+                        } catch (Exception ex) {
+                            LOG.error("dump feature lỗi: {}", ex.getMessage());
+                        }
+                    }
                 }
 
                 // 4) PREDICT 4 horizon theo chunk → 4 cột P(win).
