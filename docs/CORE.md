@@ -23,6 +23,12 @@
 - CẤM `catch` câm/rỗng/comment-suông. Mọi catch phải `LOG.warn/error` kèm exception + ngữ cảnh (symbol/key/ts). KHÔNG `printStackTrace`/`System.out`.
 - Logging dùng **SLF4J → Logback**. KHÔNG `System.out`.
 
+## Thống nhất ngôn ngữ — Java là nguồn chân lý (chốt 2026-06-24)
+- TOÀN BỘ pipeline **dữ liệu + logic xử lý** PHẢI là **Java** — kể cả **dữ liệu TRAIN** cũng do Java export (vd `ExportFeaturesForPythonTool` sinh ff_*.bin, `ExportFundingOiPerCoin` sinh OI). KHÔNG để Python (hay ngôn ngữ khác) tính/biến đổi feature dùng cho train/inference.
+- **DUY NHẤT** được phép là Python: code **train** model (`ml/**/train_*.py`) và code **validate/test/compare** (đối chiếu, đo lệch). Đây là tiêu thụ dữ liệu Java, KHÔNG sinh/biến đổi dữ liệu.
+- Lý do: 2 ngôn ngữ cùng tính 1 feature = nguồn lệch ngầm (đã dính nhiều lần: cross-sectional population, basket warmup, OI merge). Một nguồn chân lý (Java) loại trừ lớp lỗi này.
+- **Provenance:** model/artifact luôn đi kèm code+data Java đã sinh ra nó. Khi model lệch khỏi Java export hiện tại → **TRAIN LẠI** trên Java export mới (KHÔNG revert code, KHÔNG lệ thuộc artifact cũ mất dấu). Mất code/nguồn của artifact = artifact chỉ còn dùng làm benchmark, không phải chân lý.
+
 ## Tròn việc hoặc thành Task — chống job nửa chừng / chờ mù (chi tiết: rules/task-workflow)
 - Mọi việc khởi động phải kết ở 1 trong 2: **TRÒN** (chạy xong + VERIFY bằng số NGAY trong phiên) hoặc **THÀNH TASK** (`tasks/<id>.md` có checkpoint + acceptance + theo dõi). KHÔNG có trạng thái thứ 3 "lửng lơ".
 - ⛔ KHÔNG spawn job nền nếu thiếu 1 trong 3: (a) cách ĐO tiến độ (queue/done-count/log mốc có timestamp, nơi bền); (b) điều kiện KẾT THÚC + ước lượng thời gian; (c) cách VERIFY khi xong. Thiếu → thành task hoặc không chạy.
