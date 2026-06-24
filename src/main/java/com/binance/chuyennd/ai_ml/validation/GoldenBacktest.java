@@ -176,7 +176,41 @@ public class GoldenBacktest {
         if (envS != null && !envS.isBlank()) { start = envS; s = parse(envS); }
         if (envE != null && !envE.isBlank()) { end = envE; e = parseEnd(envE); }
         LOG.info("🗓️ Range backtest: {} → {}", start, end);
-        emitFingerprint(profile, start, end, runSim(s, e));
+        Metrics m = runSim(s, e);
+        printQuarterlyMarkToMarket();
+        emitFingerprint(profile, start, end, m);
+    }
+
+    /** TASK-110 — Hiệu suất per-quý MARK-TO-MARKET (đúng cách, tránh lệch quý do lệnh xuyên quý).
+     *  equity[q] = balanceBasic + realized + unrealized snapshot tick cuối quý. PnL quý = equity[q]-equity[q-1];
+     *  quý đầu so CAPITAL_START. maxDD quý = equityMin[q]-equity[q-1] (đáy trong quý so điểm đầu quý).
+     *  Đọc thẳng từ BudgetManagerSimple (đã snapshot mỗi tick) — KHÔNG chạy 14 backtest rời rạc (cách cũ sai). */
+    private void printQuarterlyMarkToMarket() {
+        BudgetManagerSimple b = BudgetManagerSimple.getInstance();
+        if (b.quarter2EquityLast.isEmpty()) { LOG.warn("⚠️ Không có dữ liệu per-quý (quarter2EquityLast rỗng)"); return; }
+        float prevEquity = b.balanceBasic;   // điểm xuất phát = vốn ban đầu
+        int posQ = 0, total = 0;
+        LOG.info("================ PER-QUÝ MARK-TO-MARKET (equity = realized+unrealized) ================");
+        LOG.info("quý | equityEnd | PnL_quý | maxDD_quý(đáy-đầuquý) | Calmar_quý");
+        for (Map.Entry<Integer, Float> en : b.quarter2EquityLast.entrySet()) {
+            int qk = en.getKey();
+            float eqEnd = en.getValue();
+            float eqMin = b.quarter2EquityMin.getOrDefault(qk, eqEnd);
+            float pnlQ = eqEnd - prevEquity;            // hiệu suất quý (mark-to-market)
+            float ddQ = eqMin - prevEquity;             // đáy equity trong quý so điểm đầu quý (âm = sụt)
+            float calmarQ = ddQ < 0 ? pnlQ / Math.abs(ddQ) : (pnlQ > 0 ? Float.POSITIVE_INFINITY : 0f);
+            int year = qk / 10, q = qk % 10;
+            LOG.info("{}-Q{} | {} | PnL={} | maxDD={} | Calmar={}",
+                    year, q, Utils.formatLog((long) eqEnd, 6),
+                    String.format(Locale.US, "%+.2f", pnlQ),
+                    String.format(Locale.US, "%.2f", ddQ),
+                    Float.isInfinite(calmarQ) ? "inf" : String.format(Locale.US, "%.2f", calmarQ));
+            if (pnlQ > 0) posQ++;
+            total++;
+            prevEquity = eqEnd;
+        }
+        LOG.info("→ TỔNG {} quý | %quý dương = {}/{} = {}%", total, posQ, total,
+                String.format(Locale.US, "%.0f", 100.0 * posQ / Math.max(1, total)));
     }
 
     /**

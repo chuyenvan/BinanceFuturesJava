@@ -45,6 +45,26 @@ public class BudgetManagerSimple {
     public Long timeTrueUnrealizedMin;
     public TreeMap<Integer, Float> year2TrueUnrealizedMin = new TreeMap<>();
 
+    // 🟢 PER-QUÝ MARK-TO-MARKET (TASK-110): đo hiệu suất từng quý ĐÚNG cách — equity = realized + unrealized
+    //    snapshot mỗi tick theo quý. Tránh sai lệch "lệch quý": lệnh mở Q1 lỗ-tạm rồi chốt-lời Q2, nếu chỉ
+    //    quy PnL theo timeUpdate (đóng) thì Q1 giấu lỗ, Q2 phồng lãi. Mark-to-market: lỗ-tạm hạ equity Q1
+    //    (âm vào Q1), chốt-lời nâng equity Q2 (dương Q2) — đúng "trừ âm cuối quý, cộng khi sang quý".
+    //    quarterKey = year*10 + quarter(1..4). equityLast = equity điểm cuối cùng thấy trong quý;
+    //    equityMin = đáy equity trong quý (cho maxDD per-quý thật). Hiệu suất quý = equityLast[q] - equityLast[q-1].
+    public TreeMap<Integer, Float> quarter2EquityLast = new TreeMap<>();
+    public TreeMap<Integer, Float> quarter2EquityMin = new TreeMap<>();
+    public TreeMap<Integer, Float> quarter2EquityMax = new TreeMap<>();
+    public TreeMap<Integer, Long> quarter2LastTime = new TreeMap<>();
+
+    static int quarterKeyOf(long time) {
+        Calendar cal = Calendar.getInstance();
+        cal.setTimeInMillis(time);
+        int year = cal.get(Calendar.YEAR);
+        int month0 = cal.get(Calendar.MONTH);   // 0-based: 0=Jan .. 11=Dec
+        int q = month0 / 3 + 1;                  // Q1=0..2, Q2=3..5, Q3=6..8, Q4=9..11
+        return year * 10 + q;
+    }
+
     private static final ThreadLocal<BudgetManagerSimple> threadLocalInstance = ThreadLocal.withInitial(BudgetManagerSimple::new);
 
     public static BudgetManagerSimple getInstance() {
@@ -119,6 +139,22 @@ public class BudgetManagerSimple {
 
         unProfit = calUnrealizedProfit(runningList);
         profitLossMax = calProfitLossMax(runningList);
+
+        // 🟢 PER-QUÝ MARK-TO-MARKET (TASK-110): equity = balanceBasic + realized(profit) + unrealized(unProfit).
+        //    Snapshot MỖI TICK (ngoài if isPrintBalance — phải liên tục). equityLast = giá trị tick muộn nhất
+        //    trong quý → hiệu suất quý = equityLast[q] - equityLast[q-1] (tự xử lý lệnh xuyên quý). equityMin/Max
+        //    = đáy/đỉnh equity trong quý → maxDD per-quý thật (đáy trong quý so đầu quý).
+        float equity = balance + unProfit;   // balance đã = balanceBasic + profit
+        int qk = quarterKeyOf(timeUpdate);
+        Long lastT = quarter2LastTime.get(qk);
+        if (lastT == null || timeUpdate >= lastT) {
+            quarter2EquityLast.put(qk, equity);
+            quarter2LastTime.put(qk, timeUpdate);
+        }
+        Float qMin = quarter2EquityMin.get(qk);
+        if (qMin == null || equity < qMin) quarter2EquityMin.put(qk, equity);
+        Float qMax = quarter2EquityMax.get(qk);
+        if (qMax == null || equity > qMax) quarter2EquityMax.put(qk, equity);
 
         Float positionMarginReal = marginRunning;
 
