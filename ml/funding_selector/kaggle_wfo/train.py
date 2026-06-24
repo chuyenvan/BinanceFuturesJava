@@ -19,7 +19,7 @@ os.environ["OUT_DIR"] = "/kaggle/working"
 os.environ.setdefault("OOS_MONTHS", "3")
 os.environ.setdefault("FIRST_OOS", "202301")
 os.environ.setdefault("LAST", "202606")
-os.environ.setdefault("SMOKE", "1")  # SMOKE=1 cho lan push dau (1 fold, kiem luong+merge tren data that); doi 0 cho full
+os.environ.setdefault("SMOKE", "0")  # SMOKE verified fold0 (LIFT 4h=2.648 khop README v1) -> FULL 14 fold
 os.environ.setdefault("SAVE_LAST_MODEL", "1")
 print("TOOL1 files:", len(glob.glob(os.environ["TOOL1_GLOB"], recursive=True)))
 print("OI   :", os.environ["OI_FILE"])
