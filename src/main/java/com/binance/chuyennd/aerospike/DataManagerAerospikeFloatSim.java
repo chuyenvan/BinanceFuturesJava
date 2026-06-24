@@ -1588,6 +1588,24 @@ public class DataManagerAerospikeFloatSim {
     }
 
     /**
+     * TASK-109 — Ghi selector prediction (4 cột P(win) per symbol) vào set TÙY BIẾN (mặc định set Java riêng,
+     * tách khỏi set Python 039d để validate compare). Tái dùng codec float[] linh hoạt (float[4]).
+     * Key = yyyyMMdd-HHmm (khớp định dạng funding). Ghi 226 (native, như funding pred).
+     */
+    public static void saveSelectorPredictions1M(long timestamp, Map<Short, float[]> predictions, String setName) {
+        if (predictions == null || predictions.isEmpty()) return;
+        try {
+            SimpleDateFormat fmt = new SimpleDateFormat("yyyyMMdd-HHmm");
+            String keyString = fmt.format(new Date(timestamp));
+            Key key = new Key(Configs.AEROSPIKE_NAMESPACE, setName, keyString);
+            byte[] compressed = Snappy.compress(encodeFundingMapToBinary(predictions));
+            getClient226().put(writePolicy, key, new Bin("data", compressed));
+        } catch (Exception e) {
+            LOG.error("❌ Error saving Selector Pred at {}: {}", timestamp, e.getMessage());
+        }
+    }
+
+    /**
      * Đọc dự báo Funding tại 1 thời điểm cụ thể
      */
     /**
