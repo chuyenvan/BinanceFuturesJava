@@ -44,6 +44,7 @@ public class GenerateSelectorPredictionsTool {
     private static final String MODEL_DIR = System.getenv().getOrDefault("SEL_MODEL_DIR", "ml/funding_selector/models_v1");
     private static final String SEL_SET = System.getenv().getOrDefault("SEL_SET", "funding_selector_pred_1m_java");
     private static final String DUMP_FEATURES = System.getenv("SEL_DUMP_FEATURES");   // null = không dump (validate-only)
+    private static final long DUMP_BASKET_TS = Long.parseLong(System.getenv().getOrDefault("SEL_DUMP_BASKET_TS", "0"));
     private static final int PREDICT_CHUNK_SIZE = 256;
     private static final int WRITE_THREADS = 4;
     private static final int WRITE_QUEUE = 240;
@@ -173,6 +174,11 @@ public class GenerateSelectorPredictionsTool {
 
                 final MarketDataObject marketDataAtTime = time2MarketData.get(time);
                 final List<String> basket = CoinRankManager.getInstance().getTopCoin(time);
+
+                // DEBUG basket: dump size + danh sách basket tại 1 mốc để so Python (env SEL_DUMP_BASKET_TS).
+                if (DUMP_BASKET_TS > 0 && time == DUMP_BASKET_TS) {
+                    LOG.info("🧺 BASKET @ {} size={} : {}", time, basket.size(), basket);
+                }
 
                 // ⚠️ KHỚP PYTHON: ExportFeaturesForPythonTool chỉ tính feature cho coin qua EntrySignalFilter,
                 //   và cross-sectional #33-35 rank TRONG tập đã-filter. Nếu Java rank trên MỌI coin → tập khác

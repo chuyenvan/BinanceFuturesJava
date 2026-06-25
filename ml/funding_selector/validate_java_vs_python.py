@@ -14,7 +14,7 @@ for j, h in enumerate(HOR):
 # Java CSV ts la epoch ms. Loc py theo cung range ts cua java.
 
 # 2) Java
-jv = pd.read_csv("D:/claudedata/sel_validate_b/sel_java_20240115.csv")
+jv = pd.read_csv("D:/claudedata/sel_validate_b/sel_java2_20240115.csv")
 jv = jv.rename(columns={"p4h": "p4h_jv", "p12h": "p12h_jv", "p24h": "p24h_jv", "p72h": "p72h_jv"})
 tmin, tmax = jv.ts.min(), jv.ts.max()
 print(f"Java: {len(jv)} rows | ts[{tmin}..{tmax}] | {jv.symId.nunique()} symId")
