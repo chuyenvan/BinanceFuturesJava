@@ -2117,6 +2117,72 @@ public class DataManagerAerospikeFloatSim {
     }
 
     /**
+     * SELECTOR: decode map nhị phân lấy ĐÚNG 1 cột horizon (selector ghi 4 float/coin:
+     * idx 0=4h, 1=12h, 2=24h, 3=72h). Đóng gói (symbolId&lt;&lt;32 | floatBits(score)).
+     * ⚠️ ĐẢO DẤU NGỮ NGHĨA: funding cũ "điểm THẤP = ưu tiên vào lệnh" (engine sort tăng dần + cắt khi
+     * vượt maxThres). Selector P(win) thì "CAO = tốt" (ngược). Để engine tái dùng nguyên logic + ngưỡng
+     * mà KHÔNG sửa, ta đóng gói score = (1 - P(win)): P(win) cao → score thấp → engine ưu tiên. Khi đó
+     * ngưỡng maxThres của engine mang nghĩa "score tối đa" = (1 - P(win) tối thiểu).
+     * Coin có arrLen &lt;= horizonIdx (thiếu cột) bị BỎ QUA (không cho vào kết quả).
+     */
+    public static long[] decodeSelectorMapToPrimitiveArray(byte[] data, int horizonIdx) {
+        if (data == null || data.length == 0) return new long[0];
+
+        java.nio.ByteBuffer buffer = java.nio.ByteBuffer.wrap(data);
+        int mapSize = buffer.getInt();
+
+        long[] tmp = new long[mapSize];
+        int n = 0;
+        for (int i = 0; i < mapSize; i++) {
+            short symbolId = buffer.getShort();
+            int arrLen = buffer.getInt();
+            float pred = Float.NaN;
+            for (int j = 0; j < arrLen; j++) {
+                float v = buffer.getFloat();
+                if (j == horizonIdx) pred = v;
+            }
+            if (!Float.isNaN(pred)) {
+                float score = 1.0f - pred;   // ĐẢO DẤU: P(win) cao → score thấp (khớp "thấp=ưu tiên" của engine)
+                tmp[n++] = ((long) symbolId << 32) | (Float.floatToRawIntBits(score) & 0xFFFFFFFFL);
+            }
+        }
+        return n == mapSize ? tmp : java.util.Arrays.copyOf(tmp, n);
+    }
+
+    /**
+     * SELECTOR: scan toàn bộ set selector trên 226, lấy 1 cột horizon -&gt; TreeMap mốc -&gt; long[]
+     * (cùng format funding để engine dùng chung). READ-ONLY trên 226.
+     *
+     * @param setName    set selector (vd funding_selector_pred_1m_v2)
+     * @param horizonIdx 0=4h, 1=12h, 2=24h, 3=72h
+     */
+    public static TreeMap<Long, long[]> getAllSelectorPredictionsPrimitiveFromAerospike(String setName, int horizonIdx) {
+        LOG.info("📥 Đang tải FULL Selector Pred (set={}, horizonIdx={}) bằng ScanAll...", setName, horizonIdx);
+        java.util.concurrent.ConcurrentSkipListMap<Long, long[]> concurrentResults = new java.util.concurrent.ConcurrentSkipListMap<>();
+        try {
+            ScanPolicy scanPolicy = new ScanPolicy();
+            scanPolicy.concurrentNodes = true;
+            getClient226().scanAll(scanPolicy, Configs.AEROSPIKE_NAMESPACE, setName, (key, record) -> {
+                try {
+                    byte[] compressed = (byte[]) record.getValue("data");
+                    if (compressed != null && key.userKey != null) {
+                        long timestamp = tlKeyFormat.get().parse(key.userKey.toString()).getTime();
+                        byte[] rawBytes = org.xerial.snappy.Snappy.uncompress(compressed);
+                        long[] primitives = decodeSelectorMapToPrimitiveArray(rawBytes, horizonIdx);
+                        concurrentResults.put(timestamp, primitives);
+                    }
+                } catch (Exception e) {
+                    LOG.warn("Bỏ qua record selector lỗi: {}", e.getMessage());
+                }
+            }, "data");
+            LOG.info("✅ Đã Scan xong {} records Selector Pred (set={}).", concurrentResults.size(), setName);
+        } catch (Exception e) {
+            LOG.error("❌ Lỗi khi Scan Selector Pred set={}", setName, e);
+        }
+        return new TreeMap<>(concurrentResults);
+    }
+
+    /**
      * DÀNH RIÊNG CHO HPO: Đọc Funding Data và nén thành mảng long[] nguyên thủy
      */
     public static TreeMap<Long, long[]> getFundingPredictionsPrimitiveByRange(long startTime, int totalMinutes) {

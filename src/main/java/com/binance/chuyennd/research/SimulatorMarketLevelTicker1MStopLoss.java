@@ -412,8 +412,20 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         LOG.info("📥 Đang tải dữ liệu vào RAM...");
         time2MarketData = DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
         predictionMap = DataManagerAerospikeFloatSim.getAllMarketAiPredictionsFromAerospike();
-//        time2SymbolPred = DataManagerAerospikeFloatSim.getFundingPredictionsPrimitiveByRange(startTime, numberMinutes);
-        time2SymbolPred = DataManagerAerospikeFloatSim.getAllFundingPredictionsPrimitiveFromAerospike();
+        // A/B SELECTOR: nếu set env SEL_BACKTEST_SET → dùng selector v2 (cột horizon SEL_BACKTEST_HORIZON_IDX:
+        //   0=4h,1=12h,2=24h,3=72h) thay funding cũ. Cùng format long[] nên phần engine còn lại KHÔNG đổi.
+        //   Bỏ trống env → giữ nguyên funding cũ (baseline). Cho phép chạy lần lượt 4 horizon để so A/B.
+        String selSet = System.getenv("SEL_BACKTEST_SET");
+        if (selSet != null && !selSet.isBlank()) {
+            int hIdx = Integer.parseInt(System.getenv().getOrDefault("SEL_BACKTEST_HORIZON_IDX", "1")); // mặc định 12h
+            String[] hName = {"4h", "12h", "24h", "72h"};
+            LOG.info("🔀 A/B SELECTOR: dùng set={} horizonIdx={} ({})", selSet, hIdx,
+                    hIdx >= 0 && hIdx < 4 ? hName[hIdx] : "?");
+            time2SymbolPred = DataManagerAerospikeFloatSim.getAllSelectorPredictionsPrimitiveFromAerospike(selSet, hIdx);
+        } else {
+            LOG.info("🔀 BASELINE: dùng funding cũ (set {}).", DataManagerAerospikeFloatSim.AEROSPIKE_SET_NAME_FUNDING_PRED);
+            time2SymbolPred = DataManagerAerospikeFloatSim.getAllFundingPredictionsPrimitiveFromAerospike();
+        }
         // 3. CHẠY PRE-CALCULATE (SORT SẴN FUNDING FEE MỘT LẦN DUY NHẤT)
         preprocessFundingData(time2SymbolPred);
         aiRejectFilter = new AIRejectFilter();
