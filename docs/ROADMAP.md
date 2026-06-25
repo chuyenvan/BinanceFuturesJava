@@ -53,6 +53,7 @@ Chỉ làm khi Bước 1–2 PASS.
 - **Bước trượt PHẢI bằng độ dài OOS** (các đoạn OOS không chồng lấn) — trượt 1 ngày với OOS dài là ảo giác bằng chứng, không độc lập.
 - Tiêu chí PASS bằng SỐ, chốt TRƯỚC khi nhìn (không chọn bằng cảm quan): **WFE = PnL_OOS/PnL_IS** (≥0.5 tốt, <0.3 overfit), % cửa sổ OOS dương (≥70%), độ ổn định gene qua các cửa sổ, profitFactor OOS, worst OOS drawdown.
 - **Output của WFO KHÔNG phải 1 bộ tham số** mà là PHÁN QUYẾT "pipeline có generalize không". Mỗi cửa sổ ra 1 bộ tham số riêng dùng 1 lần. Nếu PASS → bộ tham số deploy được sinh ở PHA RIÊNG: HPO lần cuối trên dữ liệu gần nhất (đúng độ dài cửa sổ train).
+- ⚡ **Tăng tốc generate cho WFO — [TASK-108](../tasks/108-generate-selector-predict-only.md):** mỗi vòng WFO train lại model → phải generate lại set selector predictions. Generate hiện tại vừa extractFeatures vừa predict (~8h full 2021→2026, extract ~95% thời gian). Vì feature đã export sẵn (ff_*.bin) và đã validate khớp generate 45/45 (TASK-109), nên tách đường **predict-only** (đọc ff + chỉ chạy ONNX, bỏ extract) để generate nhanh hơn nhiều lần. LÀM TRƯỚC khi chạy WFO nhiều vòng. (Kaggle 5-CPU KHÔNG hợp cho generate đọc-226-per-ngày: latency mạng Kaggle→226 ~11x Oracle — đo TASK-109; predict-only đọc ff local mới mở được đường Kaggle nếu cần.)
 
 ## Bước 5 — Hợp nhất một-bộ-não sim/product
 - Rút `EntryDecisionCore.decide(...)` thuần: nhận input đã chuẩn hóa, trả `CREATE/SKIP` + budget. `createOrderBUY` (sim) và `createOrderBuyRequest` (product) chỉ gom input theo môi trường rồi gọi chung hàm này.
