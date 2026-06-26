@@ -1,6 +1,6 @@
 ---
 id: 107
-status: todo
+status: done
 owner: unassigned
 updated: 2026-06-24T06:30
 touches_live_process: false
@@ -94,10 +94,15 @@ bằng chuỗi 14 điểm per-quý, KHÔNG kết luận pass/fail (để ngườ
 ---
 
 ## (Worker điền) Kết quả
-<bảng 14 quý + chỉ số ổn định; commit nào>
+Chạy xong 14/14 quý trên Oracle 2026-06-26. Chi tiết bảng + chỉ số ổn định: `docs/reports/107.md`.
+TÓM TẮT: **14/14 quý PnL dương (100%)**, nearLiq=0 mọi quý, không quý thảm họa. Calmar median ~0.85
+(min 0.139 ở 2025-Q2, max 3.503 ở 2025-Q3). Gate WFO ≈ gate cũ (tổng Calmar 2.07 vs 1.99) → train-lại
+gate theo quý ỔN ĐỊNH, không tệ hơn. KHÔNG kết luận pass/fail (để người quyết).
 
 ## (Worker điền) Phát hiện ngoài scope
-<thấy vấn đề nhưng KHÔNG tự sửa — ghi đây>
+maxDD per-quý cao ở quý giao dịch dày (2025-Q4: -15,742) — liên quan maxDD tổng ~56% thấy ở FAST
+baseline TASK-111. Nên soi chung khi làm hàm mục tiêu (đưa kiểm soát DD vào mục tiêu). KHÔNG tự sửa.
 
 ## (Worker điền) Quyết định phát sinh
-<có cần ADR mới không?>
+Không có ADR mới. Số liệu củng cố hướng hàm mục tiêu: dùng "% quý dương + kiểm soát DD/quý" thay vì
+target lợi nhuận tuyệt đối (vd 5%/quý — đã thống nhất là sai).
