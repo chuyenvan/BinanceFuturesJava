@@ -101,7 +101,11 @@ public class SensitivityTool {
     public static void main(String[] args) {
         try {
             Configs.IS_HPO_MODE = false;
-            Configs.IS_KAGGLE_MODE = false;
+            // Tren Kaggle phai doc node 226 (KHONG 242 - Kaggle khong reach 242). Cho phep bat qua env
+            // SENS_KAGGLE=1 -> ep IS_KAGGLE_MODE=true (getReadClient tra 226). Local Oracle/226 de mac dinh.
+            if ("1".equals(System.getenv("SENS_KAGGLE"))) {
+                Configs.IS_KAGGLE_MODE = true;
+            }
             Configs.ABLATION_MODE = "A";
             Configs.BREAKER_MODE = "OFF";
             String mode = args.length > 0 ? args[0] : "FAST";
