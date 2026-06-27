@@ -46,6 +46,8 @@ public final class DcaUtils {
                 return new DcaConfig(Configs.DCA_TIME_BIG_DOWN, Configs.DCA_LOSS_BIG_DOWN, true);
 //            case MEDIUM_DOWN:
             case BIG_UP:
+                // [OFF-CỨNG] DCA_LOSS_BIG_UP thuộc cụm phẳng → bỏ nhánh DCA BIG_UP (rơi xuống default = null).
+                if (Configs.OFF_FLAT_HARD) return null;
                 return new DcaConfig(Configs.DCA_TIME_BIG_Up, Configs.DCA_LOSS_BIG_UP, false);
             default:
                 return null;

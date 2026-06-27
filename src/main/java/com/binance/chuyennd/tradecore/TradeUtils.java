@@ -61,7 +61,8 @@ public class TradeUtils {
         float marginRatio = marginRunning / balanceBasic;
 
         // === THAY ĐỔI 1: SỬ DỤNG BIẾN CONFIGS ===
-        if (isNormalLevel && marginRatio >= Configs.BUDGET_MARGIN_RATIO_1) {
+        // [OFF-CỨNG] BUDGET_DIVIDER_1 thuộc cụm phẳng → bỏ tầng chia vốn này.
+        if (!Configs.OFF_FLAT_HARD && isNormalLevel && marginRatio >= Configs.BUDGET_MARGIN_RATIO_1) {
             budget /= Configs.BUDGET_DIVIDER_1;
         }
         if (marginRatio >= Configs.BUDGET_MARGIN_RATIO_2) {

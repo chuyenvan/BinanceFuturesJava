@@ -175,7 +175,8 @@ public class MarketBigChangeDetector {
                                                       Float rateDown15MAvg) {
 
         // 1. BIG UP / BIG DOWN
-        if (rateUpAvg > Configs.MS_UP_BIG_THRES) {
+        // [OFF-CỨNG] MS_UP_BIG_THRES thuộc cụm phẳng → bỏ nhánh BIG_UP (kéo theo DCA BIG_UP + DCA_LOSS_BIG_UP chết).
+        if (!Configs.OFF_FLAT_HARD && rateUpAvg > Configs.MS_UP_BIG_THRES) {
             return MarketLevelChange.BIG_UP;
         }
         if (rateDownAvg < Configs.MS_DOWN_BIG_AVG) {
@@ -183,12 +184,14 @@ public class MarketBigChangeDetector {
         }
 
         // 3. SMALL UP / DOWN
-        if (rateUpAvg > Configs.MS_UP_SMALL_THRES) {
+        // [OFF-CỨNG] MS_UP_SMALL_THRES thuộc cụm phẳng → bỏ nhánh SMALL_UP.
+        if (!Configs.OFF_FLAT_HARD && rateUpAvg > Configs.MS_UP_SMALL_THRES) {
             return MarketLevelChange.SMALL_UP;
         }
 
-        if (rateDownAvg < Configs.MS_DOWN_SMALL_AVG_OR_15M
-                || rateDown15MAvg < Configs.MS_DOWN_SMALL_AVG_OR_15M) {
+        // [OFF-CỨNG] MS_DOWN_SMALL_AVG_OR_15M thuộc cụm phẳng → bỏ nhánh SMALL_DOWN_15M.
+        if (!Configs.OFF_FLAT_HARD && (rateDownAvg < Configs.MS_DOWN_SMALL_AVG_OR_15M
+                || rateDown15MAvg < Configs.MS_DOWN_SMALL_AVG_OR_15M)) {
             return MarketLevelChange.SMALL_DOWN_15M;
         }
 

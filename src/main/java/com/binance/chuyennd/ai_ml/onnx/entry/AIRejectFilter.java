@@ -62,7 +62,12 @@ public class AIRejectFilter {
 
         float baselineProb = Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD;
         float scaleFactor = (symbolPred / baselineProb) * Configs.AI_DYNAMIC_MULTIPLIER;
-        scaleFactor = Math.max(Configs.AI_DYNAMIC_MIN, Math.min(scaleFactor, Configs.AI_DYNAMIC_MAX));
+        // [OFF-CỨNG] AI_DYNAMIC_MAX thuộc cụm phẳng → bỏ cận TRÊN clamp (chỉ còn cận dưới AI_DYNAMIC_MIN).
+        if (Configs.OFF_FLAT_HARD) {
+            scaleFactor = Math.max(Configs.AI_DYNAMIC_MIN, scaleFactor);
+        } else {
+            scaleFactor = Math.max(Configs.AI_DYNAMIC_MIN, Math.min(scaleFactor, Configs.AI_DYNAMIC_MAX));
+        }
         float dynamic_15M = Configs.MIN_MOMENTUM_15M * scaleFactor;
         float dynamic_Risk4H = Configs.HARD_RISK_LIMIT_4H / scaleFactor;
         return evaluate(prediction.predReturn15M, prediction.predRisk4H, dynamic_15M, dynamic_Risk4H);

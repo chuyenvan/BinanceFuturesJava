@@ -36,6 +36,10 @@ public class Configs {
     //   9. AI_DYNAMIC_MAX                 (range 0.0531)
     // → Genome HPO/WFO = 18 gene CÒN LẠI (xem WFORunner.GENOME). Chi tiết: docs/insights/SENSITIVITY_TASK111.md
     // =========================================================
+    // [OFF-CỨNG TEST] true = VÔ HIỆU HÓA cơ chế 9 gene cụm phẳng tại điểm dùng engine (bỏ nhánh BIG_UP/
+    // SMALL_UP/SMALL_DOWN_15M, bỏ trần clamp AI_DYNAMIC_MAX, bỏ tầng BUDGET_DIVIDER_1, bỏ 4 dòng set
+    // PREDICT_RATE_* đã chết). false = nguyên trạng. CHỈ để TEST, KHÔNG commit true. Revert = đổi false.
+    public static boolean OFF_FLAT_HARD = true;
 
     // =========================================================
     // 1. HỆ THỐNG & KHỞI TẠO (SYSTEM & INIT)
@@ -187,7 +191,7 @@ public class Configs {
     public static float PREDICT_SYMBOL_RATE_MAX_THRESHOLD = 0.15f;    // HPO (đã revert về cũ): 0.19727f (Log map: PREDICT_MAX_THRES)
     public static float HARD_RISK_LIMIT_4H = -0.2f;                   // HPO (đã revert về cũ): -0.09200f
     public static float MIN_MOMENTUM_15M = 0.02284f;                  // HPO (đã revert về cũ): 0.01720f
-    public static float MS_UP_BIG_THRES = 0.02046f;                   // HPO (đã revert về cũ): 0.01757f
+    public static float MS_UP_BIG_THRES = 0.02046f;                  // HPO (đã revert về cũ): 0.01757f
     public static float MS_DOWN_BIG_AVG = -0.03157f;                  // HPO (đã revert về cũ): -0.05514f
 
     public static float MS_UP_SMALL_THRES = 0.00442f;

@@ -109,8 +109,26 @@ Dữ liệu nói thẳng: **chỉ 9 gene cụm C cắt sạch được**; 5 gene
 **Tầng trailing/exit phải giữ TOÀN BỘ** (4/5 REJECT) — ngược trực giác cắt ban đầu; exit là sống còn
 cho bot không stop-loss. **Cụm PREDICT_RATE_* (3 gene) phẳng tuyệt đối** → MS_* mới là cụm thật.
 
-## KIỂM CHỨNG & HÀNH ĐỘNG (đang chạy)
-- **AblationClusterTool** (off ĐỒNG THỜI cụm C, kiểm tương tác OAT bỏ sót): delta<2% → NGẮT CỨNG
-  (xóa khỏi code); delta≥2% → NGẮT MỀM (constant + comment KHÔNG-HPO). Đang chờ Oracle rảnh.
-- **WFORunner** đã dựng (genome 17 gene cụm A+B, cửa sổ OOS 3 tháng trượt 3 tháng, train 12 tháng,
-  random search). Kim chỉ nam: WFO_OBJECTIVE_RESEARCH.md.
+## KIỂM CHỨNG & HÀNH ĐỘNG
+
+- **AblationClusterTool** (off ĐỒNG THỜI cụm C): fitness 1.5197 → 1.4868 (**delta -2.16%**). OAT đo từng
+  gene phẳng, nhưng off đồng thời cả cụm tụt 2.16% → có tương tác cộng dồn nhẹ.
+- **QUYẾT ĐỊNH (Uni chốt 2026-06-27): OFF CỨNG, KHÔNG off mềm.** Lý do Uni: off mềm = "tự mua xích
+  buộc vào chân" — 9 gene vẫn chạy + vẫn impact 18 gene kia, đóng băng nửa vời, khó dọn sau. 18 gene
+  giữ đều chịu impact lẫn nhau nên đánh giá "bỏ hẳn" phải off cứng (xóa cơ chế khỏi đường chạy), không
+  phải đổi giá trị.
+- **Off cứng = vô hiệu cơ chế tại điểm dùng engine** (giữ biến trong Configs vì 26 file tham chiếu, vỡ
+  build nếu xóa): bỏ nhánh phân loại BIG_UP/SMALL_UP/SMALL_DOWN_15M (MarketBigChangeDetector), bỏ cận
+  trên clamp AI_DYNAMIC_MAX (AIRejectFilter), bỏ nhánh DCA BIG_UP (DcaUtils), bỏ tầng BUDGET_DIVIDER_1
+  (TradeUtils). 3 gene PREDICT_RATE_* đã CHẾT sẵn (set-never-read) → không cần đụng. Cờ `OFF_FLAT_HARD`.
+- **KQ off cứng (GoldenBacktest FULL, Uni đánh giá TỐT HƠN):** equity cuối năm sát baseline cũ
+  (2021:21336→21448, 2022:6845→6179, 2023:10152→11047, 2024:18262→17712, 2025:8723→8586, 2026:4811→4652);
+  ít nhánh rối hơn → Uni chốt off hết code, không lăn tăn nhánh thừa cho 18 gene.
+- **WFORunner** đã dựng (genome **18 gene** A+B, OOS 3 tháng trượt 3 tháng, train 12 tháng, random search).
+  Kim chỉ nam: WFO_OBJECTIVE_RESEARCH.md.
+
+## VIỆC CÒN LẠI (cho Uni duyệt sáng)
+1. **Biến off cứng thành VĨNH VIỄN** (xóa cờ OFF_FLAT_HARD + xóa hẳn các nhánh) — Uni duyệt trước khi
+   commit (xóa code không đảo ngược dễ). Hiện đang để dạng cờ (hành vi = off cứng, đảo ngược dễ).
+2. **Baseline mới cho HPO** = hệ thống SAU off cứng (KHÔNG phải bản cũ 1.5197) — đang đo lại.
+3. **WFO full** sau khi function-test xác nhận thời gian + tỷ lệ REJECT chấp nhận được.
