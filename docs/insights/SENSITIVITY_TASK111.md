@@ -81,14 +81,15 @@ RSS chạm 12GB sát -Xmx11g → thiếu RAM; đã chuyển sang Oracle 23GB ch�
 
 ---
 
-## KẾT QUẢ ĐẦY ĐỦ 26/27 gene (gene 26 BUDGET_DIVIDER_2 đang chạy nốt) — xếp theo range GIẢM DẦN
+## KẾT QUẢ ĐẦY ĐỦ 27/27 gene — xếp theo range GIẢM DẦN
 
-**Nhóm A — REJECT khi vặn sai (range ~10^5) → CỰC QUAN TRỌNG, GIỮ (14 gene):**
+**Nhóm A — REJECT khi vặn sai (range ~10^5) → CỰC QUAN TRỌNG, GIỮ (13 gene):**
 MIN_MOMENTUM_15M, PREDICT_SYMBOL_RATE_MAX_THRESHOLD, AI_DYNAMIC_MULTIPLIER (entry) ·
 DCA_LOSS_BIG_DOWN, DCA_TIME_BIG_DOWN, DCA_TIME_BIG_Up (dca) ·
 RATE_PROFIT_STOP_MARKET, TS_MAX_GAP, TS_DYNAMIC_K, TS_MAX_GAP_WEAK (trail) ·
-BUDGET_MARGIN_RATIO_1, BUDGET_MARGIN_RATIO_2 (budget).
-→ Vặn sai = bot vi phạm constraint (sập). KHÔNG cắt được. *(12 unique + 2 = đếm lại: 12 gene REJECT)*
+BUDGET_MARGIN_RATIO_1, BUDGET_MARGIN_RATIO_2, **BUDGET_DIVIDER_2** (budget).
+→ Vặn sai = bot vi phạm constraint (sập). KHÔNG cắt được.
+⚠️ `BUDGET_DIVIDER_2` range=100035 (1.2→REJECT) — KHÁC DIVIDER_1 (phẳng). Đoán "cùng loại nên cùng phẳng" SAI; đo mới biết.
 
 **Nhóm B — NHẠY VỪA (range 0.07–0.26) → GIỮ (5 gene):**
 HARD_RISK_LIMIT_4H (0.258), AI_DYNAMIC_MIN (0.180), MS_DOWN_BIG_AVG (0.178),
@@ -98,13 +99,12 @@ TS_PROFIT_MULTIPLIER (0.165), TS_WEAK_MOMENTUM_THRES (0.077).
 AI_DYNAMIC_MAX (0.053), MS_UP_BIG_THRES (0.032), DCA_LOSS_BIG_UP (0.009),
 BUDGET_DIVIDER_1 (0.0096), MS_DOWN_SMALL_AVG_OR_15M (0.0044), MS_UP_SMALL_THRES (0.0038),
 PREDICT_SYMBOL_RATE_DOWN_15M (0), PREDICT_SYMBOL_RATE_UP_AVG (0), PREDICT_SYMBOL_RATE_DOWN_AVG (0).
-*(+ BUDGET_DIVIDER_2 nếu phẳng — cùng loại DIVIDER_1, đang chạy nốt.)*
 
-## KẾT LUẬN: genome tối thiểu ~17 gene (A+B), KHÔNG phải 12
+## KẾT LUẬN: genome tối thiểu **18 gene** (A 13 + B 5), KHÔNG phải 12
 
 Dữ liệu nói thẳng: **chỉ 9 gene cụm C cắt sạch được**; 5 gene cụm B có ảnh hưởng thật (không nên cắt);
-12 gene cụm A là xương sống (vặn sai → sập). Ép xuống 12 buộc phải hi sinh cụm B → giảm chất lượng.
-→ Đề xuất: **giữ 17 gene (A+B), ngắt 9–10 gene cụm C.** Số "12" ban đầu quá tham vọng.
+13 gene cụm A là xương sống (vặn sai → sập). Ép xuống 12 buộc phải hi sinh cụm B + 1 gene A → giảm chất lượng.
+→ Chốt: **giữ 18 gene (A+B), ngắt 9 gene cụm C.** Số "12" ban đầu quá tham vọng.
 
 **Tầng trailing/exit phải giữ TOÀN BỘ** (4/5 REJECT) — ngược trực giác cắt ban đầu; exit là sống còn
 cho bot không stop-loss. **Cụm PREDICT_RATE_* (3 gene) phẳng tuyệt đối** → MS_* mới là cụm thật.

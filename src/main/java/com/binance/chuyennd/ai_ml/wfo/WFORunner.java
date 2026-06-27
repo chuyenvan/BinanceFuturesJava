@@ -77,9 +77,10 @@ public class WFORunner {
         put("TS_MAX_GAP", 0.04, 0.06, false);                  // tránh ~0.077 REJECT
         put("TS_MAX_GAP_WEAK", 0.045, 0.060, false);           // tránh <0.043 REJECT
         put("TS_WEAK_MOMENTUM_THRES", 0.004, 0.008, false);
-        // budget (tránh vùng REJECT: RATIO_1 <0.53, RATIO_2 <0.8)
+        // budget (tránh vùng REJECT: RATIO_1 <0.53, RATIO_2 <0.8, DIVIDER_2 <1.6)
         put("BUDGET_MARGIN_RATIO_1", 0.30, 0.50, false);
         put("BUDGET_MARGIN_RATIO_2", 0.60, 0.78, false);
+        put("BUDGET_DIVIDER_2", 1.60, 2.50, false);   // <1.6 -> REJECT (sensitivity gene 26)
     }
     private static void put(String f, double lo, double hi, boolean isInt) { GENOME.put(f, new double[]{lo, hi}); IS_INT.put(f, isInt); }
 

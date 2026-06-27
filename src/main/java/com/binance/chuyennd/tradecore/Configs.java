@@ -20,6 +20,24 @@ import java.util.Map;
 public class Configs {
 
     // =========================================================
+    // ⛔ DANH SÁCH GENE KHÔNG-HPO (NO-HPO) — chốt TASK-111 sensitivity 2026-06-27
+    // =========================================================
+    // 9 gene dưới đây ĐÃ ĐO sensitivity (OAT 4 mức, FAST 2.5 năm) → PHẲNG (range fitness < 0.06).
+    // Ablation off ĐỒNG THỜI cả cụm: fitness 1.5197 → 1.4868 (delta -2.16%) → có tương tác nhẹ nên
+    // KHÔNG xóa cơ chế (ngắt MỀM), nhưng KHÔNG đưa vào HPO/WFO (đóng băng ở giá trị hiện tại):
+    //   1. PREDICT_SYMBOL_RATE_DOWN_15M   (range 0.0000)
+    //   2. PREDICT_SYMBOL_RATE_UP_AVG     (range 0.0000)
+    //   3. PREDICT_SYMBOL_RATE_DOWN_AVG   (range 0.0000)
+    //   4. MS_UP_SMALL_THRES              (range 0.0038)
+    //   5. MS_DOWN_SMALL_AVG_OR_15M       (range 0.0044)
+    //   6. DCA_LOSS_BIG_UP                (range 0.0092)
+    //   7. BUDGET_DIVIDER_1               (range 0.0096)
+    //   8. MS_UP_BIG_THRES                (range 0.0318)
+    //   9. AI_DYNAMIC_MAX                 (range 0.0531)
+    // → Genome HPO/WFO = 18 gene CÒN LẠI (xem WFORunner.GENOME). Chi tiết: docs/insights/SENSITIVITY_TASK111.md
+    // =========================================================
+
+    // =========================================================
     // 1. HỆ THỐNG & KHỞI TẠO (SYSTEM & INIT)
     // =========================================================
     public static String configFile = "config.properties";
