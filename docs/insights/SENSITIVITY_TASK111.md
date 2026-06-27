@@ -18,26 +18,54 @@
 
 ---
 
-## BẢNG SENSITIVITY (điền dần — cập nhật 2026-06-26 23:35, 6/26 gene xong, 2 máy ĐANG CHẠY)
+## BẢNG SENSITIVITY (cập nhật 2026-06-27 06:30, **17/26 gene xong**, batch2 9 gene ĐANG CHẠY)
 
-> Baseline finalFitness = **1.51966**. Cập nhật khi gene mới xong (Oracle ~gene3, 226 ~gene5).
+> Baseline finalFitness = **1.51966**. ⚠️ ĐỌC KỸ cột "chuỗi mức" — cột `range` thô bị THỔI PHỒNG bởi
+> giá trị REJECT (-100033 = vi phạm constraint cứng). Một gene range=10^5 KHÔNG tự động là "quan trọng nhất";
+> phải xem baseline đang nằm ĐÂU so với vùng REJECT.
 
-| Gene | Tầng | range fitness | Nhận định |
+**Đã có (17 gene) — xếp theo bản chất, không chỉ theo range thô:**
+
+| Gene | Tầng | range | Chuỗi mức (min→max value → fitness) | Bản chất |
+|---|---|---|---|---|
+| `MIN_MOMENTUM_15M` | entry | 115895 | 0.005→REJECT, 0.02→REJECT, 0.035→2.31, 0.05→2.13 | **GIỮ.** baseline 0.0228 ở MÉP REJECT — cần cẩn thận khi HPO |
+| `PREDICT_SYMBOL_RATE_MAX_THRESHOLD` | entry | 100035 | 0.05→1.95, 0.13→2.12, 0.22→REJECT, 0.30→REJECT | **GIỮ.** vặn cao quá → sập; baseline 0.15 an toàn |
+| `AI_DYNAMIC_MULTIPLIER` | entry | 100035 | 0.8→REJECT, 1.2→REJECT, 1.6→2.02, 2.0→1.54 | **GIỮ.** vặn thấp → sập; baseline 1.29 ở mép |
+| `DCA_LOSS_BIG_DOWN` | dca | 100035 | -0.30→REJECT, -0.23→1.63, -0.15→1.54, -0.08→1.51 | **GIỮ.** nhồi quá sâu → sập (rủi ro đuôi) |
+| `DCA_TIME_BIG_DOWN` | dca | 100035 | 3→1.52, 8.7→REJECT, 14→REJECT, 20→1.54 | **GIỮ.** nhưng phi tuyến lạ — xem kỹ |
+| `DCA_TIME_BIG_Up` | dca | 100035 | 5→1.52, 13→REJECT, 22→1.53, 30→1.53 | **GIỮ.** phi tuyến |
+| `HARD_RISK_LIMIT_4H` | entry | 0.2577 | -0.35→1.52, -0.25→1.52, -0.15→1.52, -0.05→1.78 | nhạy nhẹ ở biên cao → giữ |
+| `AI_DYNAMIC_MIN` | entry | 0.1799 | 0.1→1.52 ... 0.5→1.70 | nhạy nhẹ |
+| `MS_DOWN_BIG_AVG` | market | 0.1776 | -0.06→1.58, -0.047→1.59, -0.033→1.52, -0.02→1.70 | nhạy vừa → **GIỮ** (ngưỡng BIG_DOWN) |
+| `AI_DYNAMIC_MAX` | entry | 0.0531 | 1.5→1.45 ... 3.0→1.47 | gần phẳng → ứng viên cắt/gộp |
+| `MS_UP_BIG_THRES` | market | 0.0318 | 0.01→1.49 ... 0.04→1.51 | gần phẳng |
+| `DCA_LOSS_BIG_UP` | dca | 0.0092 | -0.4→1.52 ... -0.1→1.53 | **phẳng → CẮT** (nhánh BIG_UP ít tác dụng) |
+| `MS_DOWN_SMALL_AVG_OR_15M` | market | 0.0044 | -0.04→1.52 ... -0.01→1.52 | **phẳng → CẮT** |
+| `MS_UP_SMALL_THRES` | market | 0.0038 | 0.002→1.52 ... 0.01→1.52 | **phẳng → CẮT** |
+| `PREDICT_SYMBOL_RATE_DOWN_15M` | market | 0.0000 | tất cả → 1.520 | **PHẲNG TUYỆT ĐỐI → CẮT** |
+| `PREDICT_SYMBOL_RATE_UP_AVG` | market | 0.0000 | tất cả → 1.520 | **PHẲNG TUYỆT ĐỐI → CẮT** |
+| `PREDICT_SYMBOL_RATE_DOWN_AVG` | market | 0.0000 | tất cả → 1.520 | **PHẲNG TUYỆT ĐỐI → CẮT** |
+
+**Tầng TRAILING (5 gene, batch2 17-21 — XONG 2026-06-27):**
+
+| Gene | Tầng | range | Bản chất |
 |---|---|---|---|
-| `MIN_MOMENTUM_15M` | entry | **115895** | REJECT khi vặn sai → **CỰC QUAN TRỌNG, giữ** |
-| `PREDICT_SYMBOL_RATE_MAX_THRESHOLD` | entry | **100035** | REJECT → **CỰC QUAN TRỌNG, giữ** |
-| `HARD_RISK_LIMIT_4H` | entry | **0.2577** | nhạy vừa → giữ (theo dõi) |
-| `MS_DOWN_SMALL_AVG_OR_15M` | market | **0.0044** | gần phẳng → **ứng viên cắt** |
-| `PREDICT_SYMBOL_RATE_DOWN_15M` | market | **0.0000** | PHẲNG tuyệt đối → **CẮT** |
-| `PREDICT_SYMBOL_RATE_UP_AVG` | market | **0.0000** | PHẲNG → **CẮT** |
-| `PREDICT_SYMBOL_RATE_DOWN_AVG` | market | **0.0000** | PHẲNG → **CẮT** |
-| (20 gene còn lại: DCA, trailing, budget, AI_DYNAMIC, MS_* khác) | | ĐANG CHẠY | chờ |
+| `RATE_PROFIT_STOP_MARKET` | trail | 100036 | **GIỮ.** REJECT khi vặn sai — ngưỡng bắt đầu chốt lời |
+| `TS_DYNAMIC_K` | trail | 100035 | **GIỮ.** REJECT — hệ số bám volatility dời SL |
+| `TS_MAX_GAP` | trail | 100035 | **GIỮ.** REJECT — gap trailing tối đa |
+| `TS_MAX_GAP_WEAK` | trail | 100035 | **GIỮ.** REJECT — gap khi momentum yếu (⚠️ định cắt nhưng KHÔNG nên: vặn sai → sập) |
+| `TS_PROFIT_MULTIPLIER` | trail | 0.1648 | **GIỮ.** nhạy vừa (5.0→...→fitness đổi 0.16) |
 
-### Cách tiếp tục (cho session mới)
-- 2 máy đang chạy nền (xem CONTEXT_HANDOFF bên dưới). Lấy kết quả mới:
-  - Oracle: `grep range= ~/claudedata/sens_oracle.log ~/claudedata/sens_oracle2.log`
-  - 226: `grep range= /tmp/sens_226.log /tmp/sens_226_2.log`
-- Khi đủ 26 gene → xếp range giảm dần → cắt gene range~0 + đối chiếu bảng rà GENE_AUDIT → chốt ~12 gene.
+> ⭐ PHÁT HIỆN QUAN TRỌNG: cả 5 gene trailing đều phải GIỮ — 4/5 vặn sai làm bot SẬP (REJECT).
+> Xác nhận: tầng EXIT là sống còn cho bot long-only KHÔNG stop-loss. Khác phán đoán ban đầu (định cắt
+> TS_MAX_GAP_WEAK/TS_WEAK_MOMENTUM) — dữ liệu nói KHÔNG cắt được.
+
+**Đang chạy (4 gene budget, batch3 22-25 trên Oracle):** NUMBER_ENTRY_EACH_SIGNAL, BUDGET_MARGIN_RATIO_1,
+BUDGET_DIVIDER_1, BUDGET_MARGIN_RATIO_2 (lưu ý: 226 batch2 budget bị `NoClassDefFoundError: Storage` do
+RSS chạm 12GB sát -Xmx11g → thiếu RAM; đã chuyển sang Oracle 23GB chạy nối tiếp sau 17-21).
+
+### Lấy kết quả batch3 (khi xong)
+- Oracle: `grep -E "\] [A-Z_]+ range=" ~/claudedata/sens_oracle3.log`
 
 ---
 
