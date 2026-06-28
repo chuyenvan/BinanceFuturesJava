@@ -36,10 +36,14 @@ Câu hỏi: model AI có tín hiệu thật không, hay chỉ khớp dữ liệu
 - Chạy trên NHIỀU regime (bot long-only tự đẹp trong uptrend → chạy mỗi 1 cửa sổ sẽ kết luận sai).
 
 ## Bước 3 — Mô hình hóa "cái chết" trong sim + sửa tư thế rủi ro
-> ⏸ **HOÃN (quyết định 2026-06-23):** đụng lõi PnL (funding cost + margin-call/equity thật thay
-> `balanceBasic` cố định + trần DCA) — thay đổi bản chất con số, KHÔNG reversible dễ, cần thiết kế riêng.
-> Tạm nhảy thẳng Bước 4 (WFO) trên engine hiện tại. **GIỚI HẠN phải nhớ khi đọc WFO:** chưa có margin-call
-> thật nên maxDD có thể bị HIỂU NHẸ (tài khoản thật đã cháy ở mức DD đó). Quay lại Bước 3 trước khi bật tiền thật quy mô.
+> ▶️ **ĐANG LÀM (quay lại 2026-06-28): GÁC Bước 4 (WFO) + framework master-worker.** Lý do: đổ công vào
+> tầng tối ưu tham số (WFO/HPO/sensitivity) khi nút thắt kết cấu (DCA-không-giới-hạn + concentration) còn hoãn
+> = xếp ghế trên tàu thủng đáy. FINDINGS §5 chẩn đoán thủ phạm rõ ràng ở Bước 3, nên vào thẳng.
+> **Tiến độ:** (1) ADR-0008 chốt cap-vs-avgEntry VÔ HIỆU CẤU TRÚC → định nghĩa lại cap theo MỐC CỐ ĐỊNH.
+> (2) LunaDcaScenario chứng minh (1 coin): maxCap %vốn/cụm cứu ruin 79%→5-10%; cap cũ veto 4927 lần vẫn mất 79%.
+> (3) Gắn `DCA_CAP_MAX_CAPITAL_RATIO` vào engine thật (createOrderBUY), RunDcaCapBacktest đo tác động tổng 5 năm
+> (câu hỏi FINDINGS §8: cap biến PnL ÂM→DƯƠNG?). Còn lại: funding cost + margin-call/equity thật.
+> **GIỚI HẠN khi đọc lại WFO sau này:** chưa có margin-call thật nên maxDD có thể HIỂU NHẸ.
 
 Để backtest ĐƯỢC PHÉP sụp thì fitness mới trung thực.
 - Thêm: margin call / cháy tài khoản (sizing theo equity thật, không phải `balanceBasic` cố định); funding cho lệnh kẹt lâu (`updateFundingFee` đang comment hết); slippage đã có ở Bước 0.

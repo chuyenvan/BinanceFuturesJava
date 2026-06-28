@@ -50,7 +50,11 @@ public class RunHpoMaster_Distributed {
     // v8 -> v9: PARITY FIX (TASK-030 #10, một bộ não) — SIM createOrderBUY khi predict==null TRƯỚC ĐÂY
     // BỎ filter → VẪN vào lệnh; LIVE createOrderBuyRequest reject khi prediction==null. Nay SIM cũng reject
     // pred==null (khớp live) => bớt entry ở mốc thiếu pred => đổi PnL backtest mọi genome => bỏ cache v8.
-    public static final String CONFIG_VERSION = "v9";
+    // v9 -> v10: BƯỚC 3 (ruin) — BẬT CIRCUIT BREAKER MẶC ĐỊNH. BREAKER_MODE=MARGIN, BREAKER_MARGIN_HALT=0.50
+    // (chặn MỞ MỚI khi margin/vốn >= 0.50). Quét ngưỡng 2021→2026: 0.50 cho return/maxDD tốt nhất 4.88
+    // (maxDD -58.6%→-29.5%, maxMargR 0.99→0.51, PnL -27%). Cap %vốn/cụm đã thử & GỠ (veto 0-8 lần, vô dụng
+    // trên danh mục). Breaker đổi PnL/DD mọi genome => bỏ cache v9.
+    public static final String CONFIG_VERSION = "v10";
 
     // 🔥 TÁCH 2 SET:
     //  - QUEUE_SET: chỉ chứa task ĐANG active (PENDING/RUNNING). Worker scanAll cái này nên LUÔN NHỎ.

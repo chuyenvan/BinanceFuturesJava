@@ -178,12 +178,19 @@ public class Configs {
     public static String ABLATION_MODE = "A";
     public static long ABLATION_SEED = 42L;
 
-    // === CIRCUIT BREAKER (chống sập tầng DCA/margin — chỉ ĐO, mặc định OFF, KHÔNG ảnh hưởng CONFIG_VERSION) ===
+    // === CIRCUIT BREAKER (chống sập tầng DCA/margin — BẬT MẶC ĐỊNH từ Bước 3, ĐỔI PnL/DD → bump CONFIG_VERSION v10) ===
     // OFF=không phanh | MARGIN=chặn mở mới khi margin/vốn cao | DCA=ngừng nhồi cụm lỗ sâu | BOTH=cả hai.
     // KHÔNG force-close (long-only): chỉ DỪNG MỞ / DỪNG NHỒI.
-    public static String BREAKER_MODE = "OFF";
-    public static float BREAKER_MARGIN_HALT = 0.70f;     // chặn MỞ MỚI khi marginRunning/balanceBasic >= ngưỡng
-    public static float BREAKER_CLUSTER_DD_MAX = -0.30f; // ngừng NHỒI cụm khi (giá hiện tại - avg entry)/avg entry <= ngưỡng
+    // CHỐT 2026-06-28 (Bước 3 ruin): MARGIN + 0.50. Quét ngưỡng 2021→2026 cho return/maxDD tốt nhất tại 0.50
+    // (4.88; maxDD -58.6%→-29.5%, maxMargR 0.99→0.51, đổi lấy PnL -27%). Lá chắn THẬT là trần margin TỔNG, không
+    // phải cap %vốn/cụm (đã thử & gỡ: veto 0-8 lần trên danh mục vì budget phân tán qua hàng trăm cụm nhỏ).
+    public static String BREAKER_MODE = "MARGIN";
+    public static float BREAKER_MARGIN_HALT = 0.50f;     // chặn MỞ MỚI khi marginRunning/balanceBasic >= ngưỡng.
+    public static float BREAKER_CLUSTER_DD_MAX = -0.30f; // [ADR-0008: VÔ HIỆU CẤU TRÚC - đo DD vs avgEntry trôi theo giá] ngừng NHỒI khi (giá-avgEntry)/avgEntry <= ngưỡng (chỉ dùng khi BREAKER_MODE=DCA/BOTH)
+
+    // [ADR-0008 bước 3 — ĐÃ GỠ cap %vốn/cụm + số leg + DD-vs-first 2026-06-28] LunaDcaScenario (1 coin) cho thấy
+    // cả 3 cứu ruin, NHƯNG backtest 5 năm: cap %vốn/cụm veto 0-8 lần (vô dụng trên danh mục — budget phân tán
+    // qua hàng trăm cụm nhỏ). Lá chắn THẬT là BREAKER_MARGIN_HALT tổng ở trên. Không giữ tham số cap chết.
 
     // =========================================================
     // 8. NGƯỠNG BÁO ĐỘNG & DCA NHỒI LỆNH (MARKET STATUS - HPO UPDATE)

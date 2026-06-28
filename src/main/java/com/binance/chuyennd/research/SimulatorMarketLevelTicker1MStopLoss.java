@@ -594,6 +594,12 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             }
         }
 
+        // [ADR-0008 bước 3 — ĐÃ GỠ cap %vốn/cụm 2026-06-28] Đo trên backtest 5 năm: cap per-cluster veto
+        // 0-8 lần (CAP10 veto 0 → PnL/DD y hệt OFF) vì budget đã phân tán qua hàng trăm cụm nhỏ, không cụm nào
+        // đạt 5-10% tổng vốn. Lá chắn THẬT là BREAKER_MARGIN_HALT tổng (DD -58.6%→-42.5%, maxMargR 0.99→0.71).
+        // Scenario LUNA 1-coin cứu được chỉ vì cô lập (toàn vốn dồn 1 cụm) — KHÔNG đại diện danh mục. Giữ
+        // LunaDcaScenario làm tài liệu vì-sao-vô-dụng. Hướng Bước 3: chốt MARGIN_HALT, tinh chỉnh ngưỡng.
+
         Float entry = ticker.priceClose;
         Integer leverage = Configs.LEVERAGE_ORDER;
 

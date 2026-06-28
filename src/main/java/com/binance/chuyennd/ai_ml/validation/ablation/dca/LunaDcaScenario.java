@@ -10,7 +10,6 @@ import org.slf4j.LoggerFactory;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 
@@ -50,19 +49,41 @@ public class LunaDcaScenario {
             LOG.info("📥 LUNA bars={} | từ close={} (t0) → close={} (cuối). BASE_BUDGET={} vốn={} lev={}",
                     bars.size(), bars.get(0).close, bars.get(bars.size() - 1).close,
                     BASE_BUDGET, BALANCE_BASIC, LEVERAGE);
-            LOG.info("🔒 Cap ON dùng BREAKER_CLUSTER_DD_MAX={} | nhồi BIG_DOWN: DCA_LOSS_BIG_DOWN={} DCA_TIME_BIG_DOWN={}'",
-                    Configs.BREAKER_CLUSTER_DD_MAX, Configs.DCA_LOSS_BIG_DOWN, Configs.DCA_TIME_BIG_DOWN);
 
-            Result off = run(bars, false);
-            Result on = run(bars, true);
-            printTable(off, on);
+            // === ADR-0008 bước 3: so các CAP NEO-CỐ-ĐỊNH (mốc không trôi theo nhồi) vs cap cũ vô hiệu ===
+            // mỗi Policy bật ĐÚNG 1 ràng buộc để cô lập tác động.
+            List<Result> results = new ArrayList<>();
+            results.add(run(bars, Policy.off()));
+            results.add(run(bars, Policy.capAvgEntry(-0.30f)));   // cũ (ADR-0008: vô hiệu cấu trúc)
+            results.add(run(bars, Policy.ddVsFirst(-0.30f)));     // (i) DD vs entry-đầu (mốc cố định)
+            results.add(run(bars, Policy.ddVsFirst(-0.50f)));     // (i) nới hơn
+            results.add(run(bars, Policy.maxLegs(5)));            // (ii) trần 5 leg
+            results.add(run(bars, Policy.maxLegs(10)));           // (ii) trần 10 leg
+            results.add(run(bars, Policy.maxCapital(0.05f)));     // (iii) trần 5% vốn/cụm
+            results.add(run(bars, Policy.maxCapital(0.10f)));     // (iii) trần 10% vốn/cụm
+            printTable(results);
         } catch (Exception e) {
             LOG.error("LunaDcaScenario lỗi", e);
         }
     }
 
-    /** Một run: cap OFF (capOn=false) hoặc ON (capOn=true). */
-    private static Result run(List<Bar> bars, boolean capOn) {
+    /** Mô tả ràng buộc cap để cô lập từng cơ chế. */
+    private static class Policy {
+        String name;
+        boolean capAvgEntry = false; float avgEntryThres = 0f;   // cũ: (close-avgEntry)/avgEntry <= thres
+        boolean ddVsFirst = false;   float firstThres = 0f;      // (i): (close-entryFirst)/entryFirst <= thres
+        boolean maxLegs = false;     int legCap = 0;             // (ii): tổng leg <= legCap
+        boolean maxCapital = false;  float capRatio = 0f;        // (iii): clusterMargin/balance >= ratio => ngừng
+
+        static Policy off() { Policy p = new Policy(); p.name = "OFF"; return p; }
+        static Policy capAvgEntry(float t) { Policy p = new Policy(); p.name = "cũ avgEntry " + t; p.capAvgEntry = true; p.avgEntryThres = t; return p; }
+        static Policy ddVsFirst(float t) { Policy p = new Policy(); p.name = "(i) ddVsFirst " + t; p.ddVsFirst = true; p.firstThres = t; return p; }
+        static Policy maxLegs(int n) { Policy p = new Policy(); p.name = "(ii) maxLegs " + n; p.maxLegs = true; p.legCap = n; return p; }
+        static Policy maxCapital(float r) { Policy p = new Policy(); p.name = "(iii) maxCap " + (int)(r*100) + "%"; p.maxCapital = true; p.capRatio = r; return p; }
+    }
+
+    /** Một run với 1 Policy cap. */
+    private static Result run(List<Bar> bars, Policy pol) {
         List<double[]> legs = new ArrayList<>();   // [entry, qty]
         // leg đầu: ÉP mở BIG_DOWN tại t0 (bỏ entry-signal/gate). budget qua managerBudget (marginRatio=0).
         Bar b0 = bars.get(0);
@@ -95,8 +116,13 @@ public class LunaDcaScenario {
                     MarketLevelChange.BIG_DOWN, bar.t, (float) BASE_BUDGET);
             if (!should) continue;
 
-            // (2) veto CAP (chỉ ON) — sao y createOrderBUY L546-550.
-            if (capOn && ddClose <= Configs.BREAKER_CLUSTER_DD_MAX) { veto++; continue; }
+            // (2) veto CAP theo Policy — cô lập từng cơ chế.
+            double ddFirst = (bar.close - entryFirst) / entryFirst;
+            double capRatioNow = clusterMargin / BALANCE_BASIC;
+            if (pol.capAvgEntry && ddClose <= pol.avgEntryThres) { veto++; continue; }
+            if (pol.ddVsFirst && ddFirst <= pol.firstThres) { veto++; continue; }
+            if (pol.maxLegs && legs.size() >= pol.legCap) { veto++; continue; }
+            if (pol.maxCapital && capRatioNow >= pol.capRatio) { veto++; continue; }
 
             // (3) sizing — TÁI DÙNG managerBudget. null => marginRatio>=0.99 => DỪNG nhồi (giữ cụm).
             Float bud = TradeUtils.managerBudget((float) BASE_BUDGET, (float) clusterMargin,
@@ -111,7 +137,7 @@ public class LunaDcaScenario {
 
         double[] fin = cluster(legs);
         Result r = new Result();
-        r.capOn = capOn;
+        r.name = pol.name;
         r.nhoi = nhoi;
         r.veto = veto;
         r.legs = legs.size();
@@ -156,29 +182,28 @@ public class LunaDcaScenario {
         return bars;
     }
 
-    private static void printTable(Result off, Result on) {
-        LOG.info("\n\n================= 📊 LUNA DCA SCENARIO (cô lập 1 cụm, OFF vs cap ON -0.30) =================");
-        LOG.info(String.format(Locale.US, "%-10s | %5s %4s | %12s | %12s | %12s | %8s | %11s | %11s | %10s",
-                "MODE", "#nhồi", "veto", "tổng vốn cụm", "lỗ cuối", "maxDD cụm", "%vốn mất", "clusterDd-max", "avgEntry-cuối", "entry-đầu"));
-        row(off);
-        row(on);
-        LOG.info("------------------------------------------------------------------------------------------");
+    private static void printTable(List<Result> rs) {
+        LOG.info("\n\n================= 📊 LUNA DCA SCENARIO — so các CAP NEO-CỐ-ĐỊNH (cô lập 1 cụm LUNA→0) =================");
+        LOG.info(String.format(Locale.US, "%-18s | %5s %5s | %12s | %12s | %8s | %12s | %11s",
+                "POLICY", "#nhồi", "veto", "tổng vốn cụm", "lỗ cuối", "%vốn mất", "maxDD cụm", "clusterDd-max"));
+        for (Result r : rs) row(r);
+        LOG.info("----------------------------------------------------------------------------------------------------");
         LOG.info("CÁCH ĐỌC:");
-        LOG.info(" - clusterDd-max = đáy (close-avgEntry)/avgEntry. Nếu KHÔNG bao giờ ≤ -0.30 ⇒ cap (DCA mode) " +
-                "KHÔNG bao giờ veto ⇒ cap vô dụng vì DCA hạ avgEntry bám giá. veto>0 ⇒ cap CÓ chặn.");
-        LOG.info(" - lỗ cuối ~ -tổng vốn cụm (LUNA→0). %vốn mất = phần vốn {} bay theo cú về-0.", (long) BALANCE_BASIC);
-        LOG.info(" - ON vs OFF: cap cắt bớt #nhồi/tổng vốn/lỗ bao nhiêu. ⚠️ 1 coin, KHÔNG phải tác động tổng 5 năm.");
+        LOG.info(" - OFF/cũ avgEntry: chứng cứ ADR-0008 — cap-vs-avgEntry veto nhiều nhưng %vốn mất ~ y hệt OFF (vô hiệu cấu trúc).");
+        LOG.info(" - (i) ddVsFirst / (ii) maxLegs / (iii) maxCap: mốc CỐ ĐỊNH → veto SỚM khi giá còn cao → %vốn mất GIẢM THẬT.");
+        LOG.info(" - So '%vốn mất' giữa các policy: cái nào kéo {}%% (OFF) xuống thấp nhất = cap cứu ruin tốt nhất. ⚠️ 1 coin, KHÔNG phải tác động tổng 5 năm.", "~79");
     }
 
     private static void row(Result r) {
-        LOG.info(String.format(Locale.US, "%-10s | %5d %4d | %12.0f | %12.0f | %12.0f | %7.1f%% | %11.3f | %11.5f | %10.4f%s",
-                r.capOn ? "ON(-0.30)" : "OFF", r.nhoi, r.veto, r.clusterMargin, r.finalLoss, r.maxDdCluster,
-                r.pctCapitalLost, r.clusterDdMax, r.avgEntryLast, r.entryFirst,
-                r.stoppedByMargin ? "  [dừng do margin≥0.99]" : ""));
+        LOG.info(String.format(Locale.US, "%-18s | %5d %5d | %12.0f | %12.0f | %7.1f%% | %12.0f | %11.3f%s",
+                r.name, r.nhoi, r.veto, r.clusterMargin, r.finalLoss,
+                r.pctCapitalLost, r.maxDdCluster, r.clusterDdMax,
+                r.stoppedByMargin ? "  [dừng margin≥0.99]" : ""));
     }
 
     private static class Result {
-        boolean capOn, stoppedByMargin;
+        String name;
+        boolean stoppedByMargin;
         int nhoi, veto, legs;
         double clusterMargin, finalLoss, maxDdCluster, pctCapitalLost, clusterDdMax, avgEntryLast, entryFirst, totalQty;
     }
