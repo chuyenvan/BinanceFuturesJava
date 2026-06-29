@@ -185,36 +185,52 @@ dù bản thân model dd4h chỉ là volatility proxy.
 - 🟡 dd4h: giữ trong filter (nhánh RISK lọc lệnh kém, +31% PnL) NHƯNG model dd4h chỉ là basketVolSpike
   proxy, không chặn được đuôi. KHÔNG train lại dd4h (train ra y cũ).
 - 🟡 24h model: bỏ. Giữ insight "giữ lâu → chạm mục tiêu cao".
+- ✅ **CIRCUIT BREAKER = MARGIN + halt 0.50** (commit `3041257`, CONFIG_VERSION v10). Quét ngưỡng 2021→2026:
+  return/maxDD tăng đơn điệu khi siết, tốt nhất tại 0.50 (maxDD -58.6%→-29.5%, maxMargR 0.99→0.51, đổi
+  lấy PnL -27%). Lá chắn THẬT = trần margin TỔNG, KHÔNG phải cap %vốn/cụm (đã thử & gỡ — veto 0-8 lần trên
+  danh mục vì budget phân tán qua hàng trăm cụm nhỏ). Chi tiết [ADR-0008](decisions/0008-circuit-breaker.md).
+- ✅ **FUNDING FEE = bật code, mặc định OFF** (`APPLY_FUNDING_FEE=false`, tính 1 LƯỢT khi đóng lệnh). 🟢
+  GATE PASS: OFF totalPnl=**50311** trades=**35774** khớp đúng-từng-đồng baseline RunMarginHaltSweep (funding
+  KHÔNG rò vào logic giao dịch sau khi tách `clusterFirstLegTime` khỏi `timeStart`). Σfunding ON = **-918**
+  (hệ ĐƯỢC THƯỞNG ròng ~1.8% PnL — chiến lược mua-đáy long nhận funding âm sau sụp; KHÔNG lỗi dấu).
+  maxDD KHÔNG đổi (-29.5%), Δtrades=0. Perf đo xen kẽ 4 run (OFF/ON/OFF/ON) trên Oracle: nhiễu JVM/GC lớn
+  (OFF#2 22.6' vs ON#2 13.5') → ON không chậm hơn OFF có ý nghĩa (trung bình ON còn -12% — tức funding
+  1-lượt gần như MIỄN PHÍ). Mặc định OFF vẫn giữ vì: (a) user chốt; (b) funding chỉ đụng PnL ~1.8%, KHÔNG
+  đổi maxDD/trades → KHÔNG méo việc HPO chọn genome; (c) bật ở vòng HPO/Golden CUỐI trước go-live là đủ.
 
 ---
 
 ## 8. ĐANG LÀM / VIỆC TIẾP
 
-### Đang chạy: test BREAKER_MODE trên backtest ĐẦY ĐỦ 2021→2026
-- `BREAKER_MARGIN_HALT=0.70` (chặn mở mới khi margin/vốn ≥ 70% — nhắm nguồn 1: mật độ 325 cụm).
-- `BREAKER_CLUSTER_DD_MAX=-0.30` (ngừng nhồi cụm khi tụt ≥30% — nhắm nguồn 2: DCA khuếch đại).
-- KHÔNG force-close (giữ nguyên lý long-only). Phanh chỉ DỪNG MỞ/DỪNG NHỒI.
-- So 4 mode OFF/MARGIN/DCA/BOTH, đọc **PnL tổng 5 năm + từng năm + maxDD**.
-- **Câu hỏi quyết định**: breaker có biến PnL 5 năm từ ÂM → DƯƠNG không?
-    - Có → DCA-không-giới-hạn là thủ phạm, breaker sửa được hệ. Bước ngoặt.
-    - Giảm DD mà PnL giữ → đáng áp (an toàn hơn).
-    - Giảm DD mà PnL xấu đi → vấn đề SÂU HƠN DCA, phải xem lại chiến lược (không sửa bằng phanh).
+### ✅ ĐÃ XONG (2026-06-29) — breaker + funding (chi tiết §7)
+- Breaker MARGIN 0.50 đã quét ngưỡng đầy đủ + chốt + commit `3041257`. Trả lời câu hỏi cũ "breaker biến
+  PnL ÂM→DƯƠNG?": return/maxDD tăng đơn điệu khi siết, 0.50 cho hồ sơ rủi-ro tốt nhất (đổi -27% PnL lấy
+  maxDD -58.6%→-29.5%). Lá chắn THẬT = trần margin TỔNG (cap %vốn/cụm đã thử & gỡ vì vô dụng trên danh mục).
+- Funding fee đã code lại (tính 1 lượt khi đóng) + GATE PASS (OFF=50311) + mặc định OFF. KHÔNG còn "lạc quan
+  vì comment" — giờ đo được: hệ được thưởng ròng -918 (~1.8% PnL), maxDD không đổi.
 
 ### Việc dở (chưa làm)
+- **Margin-call/equity thật** (mảnh CUỐI Bước 3): sizing theo equity thật thay `balanceBasic` cố định +
+  mô phỏng cháy/thanh lý. CHƯA làm (user chốt tạm bỏ qua để chạy WFO song song). ⚠️ Thiếu nó → maxDD trong
+  WFO có thể HIỂU NHẸ.
 - Đo LIFT/calibration của chính `pred[0]=P(fail)` tại ngưỡng 0.197 (filter dùng pred[0] nhưng gate đo pfast).
 - Gen lại funding pred bằng model 5 lớp mới + lường đổi hành vi filter.
-- Bật lại `updateFundingFee` (đang comment → PnL tuyệt đối lạc quan; đuôi ít ảnh hưởng).
 - Đo slippage thật từ lệnh live 242.
 - Cải thiện chất lượng entry để tránh coin rác sập-không-hồi (nguồn lỗ 3).
+
+### Kế tiếp: WFO (Bước 4) — đã duyệt, bắt đầu code
+5 quyết định chốt ở `insights/WFO_FRAMEWORK_DESIGN.md` mục 6 (state→Aerospike 226, worker→ssh trực tiếp,
+verdict WFE≥0.5 + %OOS-dương≥70% + maxDD-OOS≤50%, function-test 5×2 trước, ưu tiên Oracle→226→Kaggle).
 
 ---
 
 ## 9. ROADMAP — ĐANG Ở ĐÂU
 
 6 bước: (0)look-ahead ✓ | (1)đo IC model ✓ (vượt: validate OOS thật) | (2)ablation AI ✓ (filter
-ablation) | (3)mô hình hóa ruin ◄ ĐANG Ở ĐÂY (circuit breaker) | (4)WFO 3 tháng | (5)hợp nhất sim/product.
-→ Đang nhảy từ (2) sang (3) sớm vì backtest 5 năm cho thấy RUIN là vấn đề cấp bách nhất. Bằng chứng
-dẫn đường, không làm máy móc.
+ablation) | (3)mô hình hóa ruin ◄ | (4)WFO ◄ | (5)hợp nhất sim/product.
+→ **(3) và (4) đang chạy SONG SONG** (2026-06-29): Track A = DCA-cap/breaker (Bước 3), Track B = WFO 18 gene
+(Bước 4, sensitivity đã xong → [ADR-0012](decisions/0012-genome-18-gene-off-cung-cum-C.md)). **Con trỏ trạng thái
+DUY NHẤT ở `ROADMAP.md` (Bước 3 đầu)** — đừng sửa trạng thái ở nhiều nơi. Bằng chứng dẫn đường, không máy móc.
 
 ---
 

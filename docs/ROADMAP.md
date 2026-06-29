@@ -36,23 +36,29 @@ Câu hỏi: model AI có tín hiệu thật không, hay chỉ khớp dữ liệu
 - Chạy trên NHIỀU regime (bot long-only tự đẹp trong uptrend → chạy mỗi 1 cửa sổ sẽ kết luận sai).
 
 ## Bước 3 — Mô hình hóa "cái chết" trong sim + sửa tư thế rủi ro
-> ▶️ **ĐANG LÀM (quay lại 2026-06-28): GÁC Bước 4 (WFO) + framework master-worker.** Lý do: đổ công vào
-> tầng tối ưu tham số (WFO/HPO/sensitivity) khi nút thắt kết cấu (DCA-không-giới-hạn + concentration) còn hoãn
-> = xếp ghế trên tàu thủng đáy. FINDINGS §5 chẩn đoán thủ phạm rõ ràng ở Bước 3, nên vào thẳng.
-> **Tiến độ:** (1) ADR-0008 chốt cap-vs-avgEntry VÔ HIỆU CẤU TRÚC → định nghĩa lại cap theo MỐC CỐ ĐỊNH.
-> (2) LunaDcaScenario chứng minh (1 coin): maxCap %vốn/cụm cứu ruin 79%→5-10%; cap cũ veto 4927 lần vẫn mất 79%.
-> (3) Gắn `DCA_CAP_MAX_CAPITAL_RATIO` vào engine thật (createOrderBUY), RunDcaCapBacktest đo tác động tổng 5 năm
-> (câu hỏi FINDINGS §8: cap biến PnL ÂM→DƯƠNG?). Còn lại: funding cost + margin-call/equity thật.
+> ▶️ **TRẠNG THÁI (cập nhật 2026-06-29) — 2 TRACK SONG SONG:**
+> • **Track A — Bước 3 (ruin):** ✅ circuit breaker MARGIN 0.50 CHỐT + COMMIT (`3041257`, CONFIG_VERSION v10).
+>   ✅ funding fee code lại (tính 1 lượt khi đóng) + GATE PASS (OFF totalPnl=50311, trades=35774 khớp baseline)
+>   + mặc định OFF (`APPLY_FUNDING_FEE=false`, bật ở HPO/Golden cuối). ⏳ CÒN LẠI: margin-call/equity thật
+>   (mảnh cuối) — user chốt TẠM BỎ QUA để chạy WFO song song. *(funding code uncommitted, chờ user duyệt commit.)*
+> • **Track B — Bước 4 (WFO):** sensitivity giảm gene XONG ([ADR-0012](decisions/0012-genome-18-gene-off-cung-cum-C.md): 18 gene); WFO framework ĐÃ DUYỆT + 5 quyết định chốt (`insights/WFO_FRAMEWORK_DESIGN.md` mục 6, 2026-06-29) → bắt đầu code.
+> — Hai track KHÔNG tuần tự: WFO không còn "gác" sau Bước 3 (sensitivity là tiền đề đã xong). ⚠️ maxDD trong WFO có thể BỊ HIỂU NHẸ vì chưa có margin-call thật (Bước 3 chưa tròn).
+> — *(Lịch sử: 2026-06-28 từng chốt "gác Bước 4 để vào thẳng Bước 3"; cap %vốn/cụm + RunDcaCapBacktest đã GỠ — vô dụng trên danh mục, lá chắn thật là trần margin tổng.)*
 > **GIỚI HẠN khi đọc lại WFO sau này:** chưa có margin-call thật nên maxDD có thể HIỂU NHẸ.
 
 Để backtest ĐƯỢC PHÉP sụp thì fitness mới trung thực.
-- Thêm: margin call / cháy tài khoản (sizing theo equity thật, không phải `balanceBasic` cố định); funding cho lệnh kẹt lâu (`updateFundingFee` đang comment hết); slippage đã có ở Bước 0.
-- Sửa tư thế pro-cyclical: đặt **trần tuyệt đối** cho tổng margin / số lần DCA mỗi symbol, đặc biệt trong `BIG_DOWN` (đang `isAll=true` không trần).
+- ✅ **Circuit breaker (chống mật độ + DCA khuếch đại):** `BREAKER_MODE=MARGIN`, `BREAKER_MARGIN_HALT=0.50` —
+  chặn MỞ MỚI khi marginRunning/balanceBasic ≥ 0.50. KHÔNG force-close (long-only). Lá chắn = trần margin
+  TỔNG (mốc cố định), KHÔNG per-cluster (cap %vốn/cụm đã thử & gỡ: veto 0-8 lần, vô dụng vì budget phân tán).
+- ✅ **Funding** cho lệnh kẹt lâu: `computeFundingOnClose` tính 1 lượt khi đóng (Σ rate × quantity × avgEntry).
+  Trước đây comment hết → PnL lạc quan; nay đo được (hệ được thưởng ròng -918, ~1.8% PnL, maxDD không đổi).
+- ⏳ **Margin call / cháy tài khoản (CHƯA làm):** sizing theo equity thật thay `balanceBasic` cố định. User
+  tạm bỏ qua để chạy WFO. Đây là mảnh cuối làm fitness trung thực hoàn toàn.
 - Calibrate chi phí từ log product thật khi có (slippage/fee thực) rồi nạp ngược vào sim.
 
 ## Bước 4 — Walk-Forward (WFO) thay cho in-sample tuning
 Chỉ làm khi Bước 1–2 PASS.
-- Trước hết **giảm gene** bằng sensitivity analysis: quét từng gene, fix cứng gene nào fitness phẳng (nghi ngờ: nhóm `AI_DYNAMIC_*`). **13 → ~8** (genome hiện 13 gene, đã bỏ `MIN_MOMENTUM_24H` — xem ADR-0003). Rồi tối ưu THEO NHÓM tuần tự (market-status → AI → DCA), khóa dần.
+- **Giảm gene đã XONG (TASK-111, chốt [ADR-0012](decisions/0012-genome-18-gene-off-cung-cum-C.md)):** sensitivity OAT 26 gene → genome **18 gene** (cụm A 13 + B 5), **OFF cứng 9 gene cụm C** phẳng. KHÔNG phải "13→8" (con số đặt trước khi đo, đã bị số liệu bác). Tầng trailing/budget — trước thiếu trong genome 13 cũ — nay đã được đưa vào. Rồi tối ưu THEO NHÓM tuần tự, khóa dần.
 - WFO rolling: **train = OOS-test = bước trượt = đúng nhịp re-fit thật của bot.** Với 5 năm: 12/2/2 (~24 cửa sổ). Với 1 năm: 6/1/1 (~6 cửa sổ).
 - **Bước trượt PHẢI bằng độ dài OOS** (các đoạn OOS không chồng lấn) — trượt 1 ngày với OOS dài là ảo giác bằng chứng, không độc lập.
 - Tiêu chí PASS bằng SỐ, chốt TRƯỚC khi nhìn (không chọn bằng cảm quan): **WFE = PnL_OOS/PnL_IS** (≥0.5 tốt, <0.3 overfit), % cửa sổ OOS dương (≥70%), độ ổn định gene qua các cửa sổ, profitFactor OOS, worst OOS drawdown.

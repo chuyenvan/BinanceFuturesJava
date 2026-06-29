@@ -1,7 +1,7 @@
 # ADR-0003: Genome HPO gồm 13 gene
 
 - **Ngày:** 2026-06-09
-- **Trạng thái:** đã chấp nhận
+- **Trạng thái:** ⛔ đã thay thế bởi [ADR-0012](0012-genome-18-gene-off-cung-cum-C.md) (genome thật = 18 gene, gồm cả tầng trailing+budget mà ADR này thiếu; OFF cứng 9 gene cụm C). Giữ file để truy vết lịch sử 13-gene; KHÔNG dùng làm genome hiện hành.
 - **Bối cảnh phát sinh:** chốt layout genome để `buildTaskId` băm đủ gene và để bump CONFIG_VERSION đúng lúc. Nguồn xác minh: `src/main/java/com/binance/chuyennd/ai_ml/hpo/master/RunHpoMaster_Distributed.java`.
 
 ## Vấn đề

@@ -1,5 +1,8 @@
 # RÀ GENE THEO BACKTEST THẬT — TASK-111 (rà 2026-06-25 đêm, để Uni duyệt sáng 26)
 
+> 📌BẢN ĐỒ GENE 6 TẦNG (reference). Genome **CHỐT** đã sang [ADR-0012](../decisions/0012-genome-18-gene-off-cung-cum-C.md)
+> (18 gene + OFF cứng 9 gene cụm C). File này giữ làm **bản đồ tra cứu tham số→tầng→vai-trò**; giá trị Configs trích ở đây là SNAPSHOT @2026-06-25 (có thể cũ) — KHÔNG dùng làm nguồn sự thật cho số.
+
 > **Cách rà:** đọc THẲNG engine backtest `SimulatorMarketLevelTicker1MStopLoss` + các lớp nó GỌI THẬT khi
 > chạy (`AIRejectFilter`, `TradeUtils.managerBudget`, `DcaUtils.shouldDca`, `OrderTargetInfoTest.updateTPSL/updateStatusNew`,
 > `MarketBigChangeDetector.getMarketStatus1M`, `CoinRankManager`). KHÔNG rà theo code HPO (Uni xác nhận HPO code
