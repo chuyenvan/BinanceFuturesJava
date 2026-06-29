@@ -60,7 +60,15 @@ public class OrderTargetInfoTest implements Serializable {
 
     public Float rateChange;
     public Float volume;
+    // === FUNDING (Bước 3, code lại 2026-06-28 — tính 1 LƯỢT khi đóng lệnh) ===
+    // Tổng phí funding của cụm, tính DUY NHẤT 1 lần ở closeOrder (KHÔNG streaming mỗi tick → rẻ cho WFO/HPO).
+    // calFundingFee() đọc field này. Giữ tên cũ time2FundingFee cho TraceOrderDone/BudgetManagerSimple tương thích,
+    // nhưng giờ chỉ chứa TỐI ĐA 1 entry (tổng) thay vì mỗi settlement.
     public TreeMap<Long, Float> time2FundingFee = new TreeMap<>();
+    // clusterFirstLegTime: thời điểm leg ĐẦU của cụm — chỉ để computeFundingOnClose quét đủ vòng đời funding.
+    // TÁCH RIÊNG khỏi timeStart (timeStart = leg-cuối, là tham chiếu logic mở/đóng — TUYỆT ĐỐI không đụng,
+    // nếu không funding sẽ rò vào logic giao dịch → đổi số lệnh → vỡ GATE). transient: không serialize.
+    public transient long clusterFirstLegTime = 0L;
     public MarketDataObject marketData;
     public MarketLevelChange marketLevelChange;
     public KlineObjectSimple tickerOpen;
@@ -219,24 +227,34 @@ public class OrderTargetInfoTest implements Serializable {
         return tp;
     }
 
-    public void updateFundingFee() {
-//        TreeMap<Long, Float> fundingFee = FundingFeeManager.getInstance().getFundingFeeByTime(symbol, timeStart, timeUpdate);
-//        if (fundingFee != null) {
-//            for (Long time : fundingFee.keySet()) {
-//                FundingRate fund = fundingFee.get(time);
-//                BigDecimal markPrice = fund.getMarkPrice();
-//                BigDecimal fundingRate = fund.getFundingRate();
-//                if (markPrice.equals(new BigDecimal("0"))) {
-//                    markPrice = markPrice.add(new BigDecimal(lastPrice));
-//                }
-//                BigDecimal funding = fundingRate.multiply(new BigDecimal(quantity));
-//                funding = funding.multiply(markPrice);
-//                if (side.equals(OrderSide.SELL)) {
-//                    time2FundingFee.put(time, -funding.doubleValue());
-//                } else {
-//                    time2FundingFee.put(time, funding.doubleValue());
-//                }
-//            }
-//        }
+    /**
+     * FUNDING tính 1 LƯỢT khi đóng lệnh (Bước 3, code lại 2026-06-28). Gọi DUY NHẤT ở closeOrder/cuối kỳ —
+     * KHÔNG streaming mỗi tick (quá đắt cho WFO/HPO). Quét các mốc settlement THẬT của coin rơi trong
+     * (timeStart, timeUpdate], cộng phí mỗi mốc rồi ghi TỔNG vào time2FundingFee (1 entry).
+     *
+     * <p>Công thức (long-only, lev 1x): phí = Σ rate(settle) × quantity × priceEntry. notional = avgEntry cụm
+     * (priceEntry vol-weighted) — tính 1 lượt nên dùng giá vào trung bình thay vì close-tại-từng-settlement;
+     * sai số nhỏ vì funding rate bé. quantity = quantity-cuối cụm. Dấu: rate>0 long TRẢ → phí DƯƠNG (calTp trừ);
+     * rate<0 long NHẬN → ÂM. KHÔNG look-ahead: chỉ settle ≤ timeUpdate (thời điểm đóng).
+     */
+    public void computeFundingOnClose() {
+        if (!Configs.APPLY_FUNDING_FEE) return;
+        if (priceEntry == null || quantity == null || symbol == null) return;
+        try {
+            TreeMap<Long, Float> fundingMap = FundingFeeManager.getInstance().getFundingHistory(symbol);
+            if (fundingMap == null || fundingMap.isEmpty()) return;
+            // Cận dưới = clusterFirstLegTime (leg ĐẦU); fallback timeStart nếu chưa set. KHÔNG dùng riêng timeStart
+            // vì timeStart = leg-cuối (đổi nó sẽ rò vào logic mở/đóng — đã từng vỡ GATE +69 lệnh).
+            long fromTime = (clusterFirstLegTime > 0L) ? clusterFirstLegTime : timeStart;
+            // các settlement trong (fromTime, timeUpdate] — đúng vòng đời cụm, KHÔNG look-ahead.
+            float notional = quantity * priceEntry;
+            float feeTotal = 0f;
+            for (Float rate : fundingMap.subMap(fromTime, false, timeUpdate, true).values()) {
+                if (rate != null) feeTotal += rate * notional;   // long: rate>0 => trả phí (dương)
+            }
+            if (feeTotal != 0f) time2FundingFee.put(timeUpdate, feeTotal);   // 1 entry tổng
+        } catch (Exception e) {
+            // coin không có funding data / lỗi đọc => phí 0 (an toàn, không chặn backtest)
+        }
     }
 }

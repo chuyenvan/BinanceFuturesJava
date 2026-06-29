@@ -276,13 +276,18 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             short id = activeRunningIds[i];
             List<OrderTargetInfoTest> orderRunningList = symbol2OrdersEntry[id];
             if (orderRunningList != null) {
+                // === FUNDING (Bước 3) — cụm còn mở cuối kỳ: gán phí cụm vào leg đầu (như closeOrder).
+                boolean fundingAssigned = false;
                 for (OrderTargetInfoTest orderInfo : orderRunningList) {
                     orderInfo.lastPrice = symbol2OrderRunning[id].lastPrice;
                     orderInfo.priceTP = orderInfo.lastPrice;
                     orderInfo.minPrice = symbol2OrderRunning[id].minPrice;
                     orderInfo.maeLow = symbol2OrderRunning[id].maeLow;   // 🔎 đáy THẬT cụm (đo MAE)
                     orderInfo.timeUpdate = symbol2OrderRunning[id].timeUpdate;
-                    orderInfo.updateFundingFee();
+                    if (!fundingAssigned) {
+                        orderInfo.time2FundingFee = symbol2OrderRunning[id].time2FundingFee;
+                        fundingAssigned = true;
+                    }
                     allOrderDone.put(-orderInfo.timeUpdate - allOrderDone.size(), orderInfo);
                 }
             }
@@ -469,6 +474,11 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     private void closeOrder(short symbolId, OrderTargetInfoTest orderMulti) {
         List<OrderTargetInfoTest> orders = symbol2OrdersEntry[symbolId];
         if (orders != null) {
+            // === FUNDING (Bước 3) — tính 1 LƯỢT cho cả cụm tại thời điểm đóng (timeStart leg đầu → timeUpdate).
+            //     PnL tính trên TỪNG leg (Σ calTp); funding tích ở CỤM → gán toàn bộ vào DUY NHẤT leg đầu để Σ
+            //     không cộng trùng; các leg khác giữ rỗng.
+            orderMulti.computeFundingOnClose();
+            boolean fundingAssigned = false;
             for (OrderTargetInfoTest order : orders) {
                 order.timeUpdate = orderMulti.timeUpdate;
                 order.status = orderMulti.status;
@@ -476,6 +486,10 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                 order.minPrice = orderMulti.minPrice;
                 order.maeLow = orderMulti.maeLow;   // 🔎 chép đáy THẬT cụm sang từng leg (đo MAE)
                 order.lastPrice = orderMulti.lastPrice;
+                if (!fundingAssigned) {
+                    order.time2FundingFee = orderMulti.time2FundingFee;   // toàn bộ phí cụm vào leg đầu
+                    fundingAssigned = true;
+                }
 
                 allOrderDone.put(-order.timeUpdate - allOrderDone.size(), order);
                 BudgetManagerSimple.getInstance().updatePnl(order);
@@ -516,6 +530,12 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         orderResult.rateChange = orders.get(orders.size() - 1).rateChange;
         orderResult.tickerOpen = time2Order.lastEntry().getValue().tickerOpen;
         orderResult.marketLevelChange = time2Order.lastEntry().getValue().marketLevelChange;
+
+        // === FUNDING (Bước 3) — tính 1 LƯỢT khi đóng, KHÔNG carry state qua merge nữa.
+        // computeFundingOnClose quét settlement trong (clusterFirstLegTime, timeUpdate]. Lưu RIÊNG leg-đầu vào
+        // clusterFirstLegTime — TUYỆT ĐỐI KHÔNG đụng timeStart (=leg-cuối, là tham chiếu logic mở/đóng;
+        // đổi nó làm rò funding vào giao dịch → +69 lệnh, vỡ GATE). timeStart giữ nguyên gốc = leg-cuối.
+        orderResult.clusterFirstLegTime = time2Order.firstEntry().getKey();
 
         return orderResult;
     }
@@ -675,6 +695,9 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         this.time2SymbolPred = time2FundingPre;
         // 3. CHẠY PRE-CALCULATE (SORT SẴN FUNDING FEE MỘT LẦN DUY NHẤT)
         preprocessFundingData(this.time2SymbolPred);
+        // FUNDING (Bước 3): warm-up cache funding_data NGAY (nạp 1 lần vào RAM) để initFunding/updateFundingFee
+        // trong vòng nóng chỉ tra TreeMap, KHÔNG trigger scanAll Aerospike giữa backtest.
+        FundingFeeManager.getInstance();
         this.aiRejectFilter = aiRejectFilter;
     }
 

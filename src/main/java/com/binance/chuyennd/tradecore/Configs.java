@@ -121,6 +121,13 @@ public class Configs {
     // Bật/tắt mô phỏng slippage (để đo tác động riêng của nó).
     public static boolean APPLY_SLIPPAGE = true;
 
+    // === FUNDING FEE (Bước 3, code lại 2026-06-29 — tính 1 LƯỢT khi đóng lệnh) ===
+    // Trừ phí funding cho lệnh long: Σ rate(settlement) × quantity × avgEntry, tính 1 lần ở closeOrder.
+    // MẶC ĐỊNH OFF (Uni chốt 2026-06-29): tác động nhỏ (~0.9% PnL, maxDD không đổi) nhưng làm chậm ~vài %
+    // mỗi lần chạy → KHÔNG đáng gánh trong HPO/WFO (hàng nghìn lần eval). CHỈ bật (=true) ở vòng HPO/Golden
+    // backtest CUỐI trước go-live để đo PnL/DD thật. RunFundingImpact tự bật/tắt để đo đối chứng.
+    public static boolean APPLY_FUNDING_FEE = false;
+
 
     public static float TS_MAX_GAP = 0.08f; // gap trailing tối đa (cũ: 16/200)
     public static float TS_MAX_GAP_WEAK = 0.03f; // gap khi momentum yếu (cũ: 6/200)
