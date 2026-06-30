@@ -38,6 +38,11 @@ public class CoinRankManager {
 
     private long lastIntervalKey = -1L;
 
+    // ===== STATIC RANK (WFO/HPO): tier nạp sẵn theo interval, KHÔNG tính live qua HistoryManager =====
+    // Key = time / (number_minute_update * TIME_MINUTE) (hourly). Value = byte[symbolId]: 1=T1,2=T2,3=T3.
+    // floorEntry: nếu interval chính xác trống thì lấy interval gần nhất ≤ key (giữ tier cũ tới lần update sau).
+    private volatile java.util.NavigableMap<Long, byte[]> staticTierByInterval = null;
+
     private CoinRankManager() {
         Arrays.fill(symbolTiersShort, CoinTier.UNKNOWN);
     }
@@ -121,10 +126,59 @@ public class CoinRankManager {
     // 3. LOGIC CẬP NHẬT XẾP HẠNG (TƯƠNG THÍCH RING BUFFER)
     // ========================================================
     private void checkAndUpdate(long currentTime) {
+        // STATIC MODE: nạp tier interval từ file, KHÔNG đụng HistoryManager.
+        if (Configs.WFO_STATIC_RANK && staticTierByInterval != null) {
+            loadIntervalFromStatic(currentTime);
+            return;
+        }
         long currentIntervalKey = currentTime / (number_minute_update * Utils.TIME_MINUTE);
         if (((currentTime / Utils.TIME_MINUTE) % number_minute_update == 0 && currentIntervalKey > lastIntervalKey) || symbolTiers.isEmpty()) {
             updateRanking(currentIntervalKey);
         }
+    }
+
+    /** Nạp 1 lần map tier tĩnh (intervalKey -> byte[symbolId]) vào singleton. Bật static qua Configs.WFO_STATIC_RANK. */
+    public void loadStaticTier(java.util.NavigableMap<Long, byte[]> data) {
+        this.staticTierByInterval = data;
+        this.lastIntervalKey = -1L;
+        LOG.info("✅ CoinRankManager STATIC tier loaded: {} interval", data == null ? 0 : data.size());
+    }
+
+    public boolean isStaticLoaded() { return staticTierByInterval != null; }
+
+    /** Snapshot mảng tier hiện tại -> byte[symbolId] (1=T1,2=T2,3=T3,0=unknown). Dùng cho ExportCoinTierStatic. */
+    public byte[] exportCurrentTierBytes() {
+        byte[] out = new byte[symbolTiersShort.length];
+        for (int i = 0; i < symbolTiersShort.length; i++) {
+            switch (symbolTiersShort[i]) {
+                case TIER_1_BLUECHIP: out[i] = 1; break;
+                case TIER_2_MIDCAP:   out[i] = 2; break;
+                case TIER_3_SHITCOIN: out[i] = 3; break;
+                default:              out[i] = 0; break;
+            }
+        }
+        return out;
+    }
+
+    /** Đổ tier của interval hiện tại (hoặc gần nhất ≤) từ map tĩnh vào symbolTiersShort. Chỉ khi đổi interval. */
+    private void loadIntervalFromStatic(long currentTime) {
+        long key = currentTime / (number_minute_update * Utils.TIME_MINUTE);
+        if (key == lastIntervalKey) return; // trong cùng giờ -> giữ nguyên
+        java.util.Map.Entry<Long, byte[]> e = staticTierByInterval.floorEntry(key);
+        Arrays.fill(symbolTiersShort, CoinTier.UNKNOWN);
+        if (e != null) {
+            byte[] arr = e.getValue();
+            int n = Math.min(arr.length, symbolTiersShort.length);
+            for (int id = 0; id < n; id++) {
+                switch (arr[id]) {
+                    case 1: symbolTiersShort[id] = CoinTier.TIER_1_BLUECHIP; break;
+                    case 2: symbolTiersShort[id] = CoinTier.TIER_2_MIDCAP;   break;
+                    case 3: symbolTiersShort[id] = CoinTier.TIER_3_SHITCOIN; break;
+                    default: symbolTiersShort[id] = CoinTier.UNKNOWN;        break;
+                }
+            }
+        }
+        lastIntervalKey = key;
     }
 
     private synchronized void updateRanking(long currentIntervalKey) {

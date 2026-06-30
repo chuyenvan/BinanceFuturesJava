@@ -174,6 +174,34 @@ dù bản thân model dd4h chỉ là volatility proxy.
 
 ---
 
+## 6b. COINRANK TĨNH cho WFO — validate (2026-06-30) 🟢
+
+Mục tiêu: bỏ HistoryManager khỏi backtest, CoinRank tier build TĨNH trước (xem
+`docs/insights/WFO_STATIC_DATA_DESIGN.md`). Rà soát: trong sim, HistoryManager CHỈ phục vụ
+CoinRankManager (tier→budgetMultiplier). Tier tính từ sumVol(720m), update 60m, KHÔNG nằm trong 18
+gene → **bất biến qua mọi gene** → ứng viên tĩnh hoàn hảo.
+
+Đo trên w00 (train 20210101→20220101, OOS →20220401), N=1 và N=2 cho **kết quả y hệt** (deterministic):
+| | OOS_fit | WFE | OOS_pnl |
+|---|---|---|---|
+| A = file-mode + CoinRank LIVE (tham chiếu) | 0.6280 | 0.0672 | 1438.876 |
+| B = file-mode + CoinRank STATIC | 0.6274 | 0.0653 | **1455.423** |
+| C = smart-cache + CoinRank STATIC | 0.6274 | 0.0653 | **1455.423** |
+
+- 🟢 **B ≡ C tuyệt đối** → edge `totalUsdt=0` của smart-cache (CompactDayData bỏ volume) tác động lên
+  `isTickerAvailable` = **0** ở window này. Smart-cache + static an toàn.
+- 🟡 **B vs A: pnl +1.15%** (1438.9→1455.4), OOS −0.0006. Lệch nhỏ do static chạy CONTINUOUS (ring ấm)
+  còn live reset ring **cold-start mỗi window/phase** (12h đầu OOS tier méo) + timing update live vướng
+  logic lệnh (#6,#7 trong design doc). Static là hành vi **sạch hơn & gene-invariant** nhưng đổi ~1%.
+- ⚠️ `IS=−100050, reject=N/N` ở MỌI run: train 2021 mọi genome (baseline+random) **cháy tài khoản**
+  (sentinel BURN). KHÔNG liên quan static (A/B/C cùng genome). FLAG cho PHASE 2/3: genome/range hiện
+  tại không sống nổi train 2021 → HPO ít tín hiệu ở window này.
+
+Tier tĩnh sinh bằng đúng code live (`ExportCoinTierStatic`: read raw có totalUsdt → updateHistoryArray
+→ updateRanking → snapshot). Export nhanh (~38s cho 485 ngày; full 5y ~2-3 phút). File: `coin_tier_*.bin`.
+
+---
+
 ## 7. QUYẾT ĐỊNH ĐÃ CHỐT
 
 - ✅ `SLIPPAGE_RATE = 0.003` cố định (bi quan-an-toàn; hệ vào coin rác + nhồi lúc sập nên slippage thực

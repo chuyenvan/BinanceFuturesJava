@@ -82,27 +82,40 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         long timeSimulator = System.currentTimeMillis();
         LOG.info("=== 🚀 BẮT ĐẦU SIMULATE TỪ {} ĐẾN {} ===", Utils.normalizeDateYYYYMMDDHHmm(startTime), Utils.normalizeDateYYYYMMDDHHmm(endTime));
 
+        // [PROFILE] đo tách thời gian ĐỌC kline vs SIMULATE (đo không đoán)
+        long readMs = 0, simMs = 0;
+        int dayCount = 0;
         while (true) {
             TreeMap<Long, KlineObjectSimple[]> time2Tickers;
             try {
-                if (Configs.IS_KAGGLE_MODE) {
+                long _tRead = System.currentTimeMillis();
+                if (Configs.USE_SMART_CACHE) {
+                    // WFO/HPO: cache nén theo ngày trong RAM (N sample cùng window dùng chung, đọc DB 1 lần/ngày)
+                    time2Tickers = com.binance.chuyennd.ai_ml.data.HPOSmartCache.getDataShort(startTime);
+                } else if (Configs.IS_KAGGLE_MODE) {
                     time2Tickers = KaggleDataLoader.loadDailyTickersShort(startTime);
                 } else {
                     time2Tickers = DataManagerAerospikeFloatSim.readDataFromAerospike1M_ShortKey(startTime);
                 }
+                readMs += System.currentTimeMillis() - _tRead;
 
                 if (time2Tickers == null) {
                     LOG.info("File data error or not found for time: {}", Utils.normalizeDateYYYYMMDDHHmm(startTime));
                 }
 
+                long _tSim = System.currentTimeMillis();
                 if (time2Tickers != null && time2Tickers.size() >= 1440) {
+                    dayCount++;
                     for (Map.Entry<Long, KlineObjectSimple[]> entry : time2Tickers.entrySet()) {
                         Long time = entry.getKey();
                         try {
                             long startTimeRun = System.currentTimeMillis();
                             KlineObjectSimple[] symbol2Ticker = entry.getValue();
 
-                            HistoryManager.getInstance().updateHistoryArray(symbol2Ticker);
+                            // STATIC RANK: bỏ HistoryManager (CoinRank đọc tier tĩnh) -> cắt overhead/phút + bỏ phụ thuộc totalUsdt.
+                            if (!Configs.WFO_STATIC_RANK) {
+                                HistoryManager.getInstance().updateHistoryArray(symbol2Ticker);
+                            }
 
                             // --- BƯỚC 2: UPDATE ACTIVE ORDERS THEO ARRAY NGUYÊN THỦY O(1) ---
                             if (activeRunningCount > 0) {
@@ -257,6 +270,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                 } else {
                     LOG.info("Date data error: {}", Utils.normalizeDateYYYYMMDD(startTime));
                 }
+                simMs += System.currentTimeMillis() - _tSim;
                 time2Tickers = null;
             } catch (Exception e) {
                 e.printStackTrace();
@@ -307,6 +321,10 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                 e.printStackTrace();
             }
         }
+        long _tot = readMs + simMs;
+        LOG.info("[PROFILE] days={} readMs={} simMs={} (read={}% sim={}%) totalLoopMs={}",
+                dayCount, readMs, simMs,
+                _tot > 0 ? (100 * readMs / _tot) : 0, _tot > 0 ? (100 * simMs / _tot) : 0, _tot);
         Utils.printMemoryUse(System.currentTimeMillis() - timeSimulator);
     }
 

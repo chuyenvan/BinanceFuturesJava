@@ -77,6 +77,13 @@ public class Configs {
     // =========================================================
     public static boolean IS_HPO_MODE = false; // Bật khi chạy tối ưu hóa Jenetics
     public static boolean IS_KAGGLE_MODE = properties.get("IS_KAGGLE_MODE") != null ? getBoolean("IS_KAGGLE_MODE") : false;
+    // WFO/HPO: bật cache nén kline trong RAM (HPOSmartCache). Default tắt → simulator giữ nguyên đường đọc cũ.
+    // Bật riêng cho worker WFO (env USE_SMART_CACHE=true) để N sample cùng window dùng chung cache, đọc DB 1 lần/ngày.
+    public static boolean USE_SMART_CACHE = properties.get("USE_SMART_CACHE") != null ? getBoolean("USE_SMART_CACHE") : false;
+    // WFO/HPO: bật CoinRank TĨNH (tier nạp sẵn từ file thay vì tính live qua HistoryManager).
+    // Default tắt → giữ nguyên hành vi cũ (live, cold-start ring mỗi window). Bật cho worker WFO để
+    // backtest KHÔNG cần HistoryManager.updateHistoryArray (cắt overhead + cắt phụ thuộc totalUsdt).
+    public static boolean WFO_STATIC_RANK = properties.get("WFO_STATIC_RANK") != null ? getBoolean("WFO_STATIC_RANK") : false;
     public static String TIME_RUN = Configs.getString("TIME_RUN");
 
     /**

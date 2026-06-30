@@ -161,6 +161,66 @@ public class HPOSmartCache {
         return finalResult;
     }
 
+    /**
+     * 🔥 CHO WFO/SIMULATOR: lấy CẢ NGÀY dạng array short-indexed (KlineObjectSimple[1000]/phút),
+     * khớp định dạng SimulatorMarketLevelTicker1MStopLoss dùng. Cache nén theo ngày: lần đầu đọc
+     * Aerospike (local) + nén; các lần sau (N sample cùng window) bung từ RAM nén — KHÔNG đọc lại DB.
+     */
+    public static TreeMap<Long, KlineObjectSimple[]> getDataShort(long dayStart) {
+        Map<Short, CompactDayData> compressedMap = RAM_STORE.get(dayStart);
+        if (compressedMap == null) {
+            TreeMap<Long, Map<String, KlineObjectSimple>> rawData = DataManagerAerospikeFloatSim.readDataFromAerospike1M(dayStart);
+            if (rawData == null || rawData.isEmpty()) return null;
+            compressAndStore(dayStart, rawData);
+            compressedMap = RAM_STORE.get(dayStart);
+        }
+        final Map<Short, CompactDayData> cmap = compressedMap;
+        final List<Short> ids = new ArrayList<>(cmap.keySet());
+
+        TreeMap<Long, KlineObjectSimple[]> result = new TreeMap<>();
+        List<Callable<Map<Long, KlineObjectSimple[]>>> tasks = new ArrayList<>();
+        int chunk = 360; // 1440/4
+        for (int i = 0; i < 4; i++) {
+            final int startMin = i * chunk;
+            final int endMin = (i + 1) * chunk;
+            tasks.add(() -> {
+                Map<Long, KlineObjectSimple[]> chunkResult = new HashMap<>();
+                for (int m = startMin; m < endMin; m++) {
+                    long t = dayStart + m * 60000L;
+                    KlineObjectSimple[] arr = new KlineObjectSimple[1000];
+                    boolean any = false;
+                    for (Short id : ids) {
+                        KlineObjectSimple k = cmap.get(id).get(dayStart, m);
+                        if (k != null) { arr[id] = k; any = true; }
+                    }
+                    if (any) chunkResult.put(t, arr);
+                }
+                return chunkResult;
+            });
+        }
+        try {
+            for (Future<Map<Long, KlineObjectSimple[]>> f : reconstructExecutor.invokeAll(tasks)) result.putAll(f.get());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return result;
+    }
+
+    /** Xóa toàn bộ cache (gọi giữa các window WFO để giải phóng RAM — tránh tích lũy OOM). */
+    public static void clearCache() {
+        RAM_STORE.clear();
+    }
+
+    /** Evict các ngày NGOÀI [keepStart, keepEnd] (giữ đúng cửa sổ đang chạy). */
+    public static void evictOutside(long keepStart, long keepEnd) {
+        RAM_STORE.keySet().removeIf(day -> day < keepStart || day > keepEnd);
+    }
+
+    /** Số ngày đang giữ trong cache (để log/giám sát RAM). */
+    public static int cachedDays() {
+        return RAM_STORE.size();
+    }
+
     // Hàm getKline lẻ
     public static KlineObjectSimple getKline(short symbolId, long time) {
         long dayStart = Utils.getStartOfDayGMT7(time);

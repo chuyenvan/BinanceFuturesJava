@@ -21,14 +21,20 @@ public class ExportHpoDataKaggle {
     public static void main(String[] args) throws Exception {
         new File(EXPORT_DIR).mkdirs();
 
-        // Define export range
-        String startStr = "20251001";
-        String endStr = "20260501"; // 3 months example
+        // Doc qua client 226 (getReadClient khi HPO_MODE) -> tren Oracle config AEROSPIKE_HOST_226=127.0.0.1
+        // => doc Aerospike LOCAL (server 8, batch-get OK), nhanh, khong qua mang VN.
+        com.binance.chuyennd.tradecore.Configs.IS_HPO_MODE = true;
+
+        // Range qua args: arg0=start (yyyyMMdd), arg1=end. arg2="ticker" => chi export ticker (bo core).
+        String startStr = args.length > 0 ? args[0] : "20251001";
+        String endStr = args.length > 1 ? args[1] : "20260501";
+        boolean tickerOnly = args.length > 2 && "ticker".equalsIgnoreCase(args[2]);
 
         long startTs = Utils.sdfFile.parse(startStr).getTime();
         long endTs = Utils.sdfFile.parse(endStr).getTime();
+        LOG.info("Export range {} -> {} (tickerOnly={})", startStr, endStr, tickerOnly);
 
-        exportCoreData(startTs, endTs);
+        if (!tickerOnly) exportCoreData(startTs, endTs);
         exportTickerData(startTs, endTs);
 
         LOG.info("🎉 All data exported to: {}", EXPORT_DIR);
