@@ -45,3 +45,25 @@ KHÔNG để 1 class WfoDataset gánh cả 2 nghĩa. [đã đổi tên trong v1 
 ## L5 — featChecksum chỉ in, chưa CHẶN
 - WFOGateRunner in featChecksum để so 2 lần chạy thủ công. Chưa tự động chặn nếu lệch.
 - FIX đề xuất: ghi featChecksum vào manifest; lần chạy sau so tự động, lệch → fail-fast.
+
+
+---
+## ADDENDUM 2026-07-01 (phien ra dem) — BANG CHUNG DO DUOC cho L0 (funding pred in-sample)
+
+Doi chieu day du o docs/PIPELINE_PROVENANCE.md muc 4. Tom tat do duoc:
+
+- Model funding selector v2 (models_v2/, 2026-06-25) train ONG cach (time-split, no-shuffle, purge=horizon,
+  assert chong leak) NHUNG test = 12 THANG CUOI: train_max ~2024-12-12, test_min ~2025-06-11 (train_meta_*.json).
+- Prediction full-history funding_selector_pred_1m_v2 sinh bang 1 bo model do predict TOAN BO 2021->2026
+  (226 funding-generate-1m.log: "loaded 4 booster" -> predict moi thang). => pred <2025-06 la IN-SAMPLE.
+- Strategy-WFO (loai 1) dung set nay o moi window. Theo L0, dung pred co dinh la HOP LE cho cau hoi hep
+  "tham so chien luoc generalize?". NHUNG con so OOS TUYET DOI o ~13/15 window (<2025-06) bi thoi phong vi
+  tin hieu in-sample lac quan gia -> KHONG dung de ket luan "he thong co edge". Chi ~3 window (>=2025-07) sach.
+
+GAP MOI (chua co trong L0-L5): **funding KHONG co ban per-fold (walk-forward) nhu gate**. Gate co
+train_gate_fold.py -> wfo_models/fold_* (leak-free, expanding cutoff). Funding chi co model DON. De co
+strategy-WFO ma tin hieu cung leak-free (phep thu joint hop le moi window), phai lam funding per-fold
+tuong tu gate. Xem ke hoach PIPELINE_PROVENANCE.md muc 7.
+
+Trang thai L0-L5: L0 (do bo sung tren), L1 (embargo) + L4 (provenance ghep) van CHUA xu; L3 (md5 manifest)
+DA co trong WfoDataset. Khi lam ban leak-free phai xu L1+L4 luon.

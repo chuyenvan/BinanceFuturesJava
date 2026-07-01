@@ -19,6 +19,7 @@
 - [ROADMAP](ROADMAP.md) — lộ trình kiểm chứng 6 bước (**cha**).
 - [REBUILD_ROADMAP](REBUILD_ROADMAP.md) — **con của ROADMAP (bước-1 model)**: rebuild data + 2 model (gate 0010 / funding 0011).
 - [PIPELINE](PIPELINE.md) — vận hành cadence 3 tháng (2 pha, 9 bước, 2 cổng gác).
+- [PIPELINE_PROVENANCE](PIPELINE_PROVENANCE.md) — **vết truy nguyên**: artifact nào từ code/data/model nào + registry + phát hiện leakage funding (in-sample) + quy ước version. (rà 2026-07-01)
 - [FINDINGS](FINDINGS.md) — **NGUỒN SỰ THẬT**: mọi kết luận đã ĐO kèm số + lý do.
 - [H1_GATE_SPEC](H1_GATE_SPEC.md) — spec export gate (label+feature) đang thực thi (012/015/017/018/025/026).
 

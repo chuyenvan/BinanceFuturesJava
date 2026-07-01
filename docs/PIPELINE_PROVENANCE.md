@@ -56,7 +56,11 @@ Model funding train_meta (thuc do): 24h n_train 2,290,880 / n_test 1,051,094 | t
 
 Co che: funding selector v2 train tren du lieu <= 2024-12, nhung prediction sinh cho TOAN BO 2021->2026 bang chinh model do. -> prediction o khoang model da train (2021->~2025-06) la in-sample: model "da thay" tuong lai khi sinh so. Strategy-WFO dung prediction nay lam tin hieu vao lenh o moi window.
 
-Pham vi (map voi window strategy-WFO): model sach tu 2025-06-11. Window OOS >= 2025-07 -> sach (~3 window). Window OOS < 2025-06 -> RO RI (~13/15). 3 window sach van duong (pnl +435, +13348, +3849) nhung mau qua mong de ket luan edge. Ket luan: "88% OOS-duong" phan lon la ro ri, khong phai bang chung OOS hop le.
+Pham vi (map voi window strategy-WFO): model sach tu 2025-06-11. Window OOS >= 2025-07 -> sach (~3 window). Window OOS < 2025-06 -> in-sample (~13/15). 3 window sach van duong (pnl +435, +13348, +3849) nhung mau qua mong de ket luan edge.
+
+SAC THAI DUNG (doi chieu insights/WFO_LEAKS_TODO.md muc L0 — Uni da neu 2026-06-28): Strategy-WFO la "loai 1" (model DUNG YEN, chi van 18 gene). Theo doctrine L0, pred co dinh la INPUT BAT BIEN HOP LE cho cau hoi HEP "tham so chien luoc co generalize qua window khong" — va o nghia do dataset hien tai la DUNG. DONG GOP MOI cua audit nay (do duoc, bo sung L0): vi pred co dinh do duoc sinh IN-SAMPLE (model train<=2024-12 predict ca history), CHAT LUONG tin hieu o giai doan <2025-06 la lac quan gia -> con so OOS TUYET DOI (pnl, %duong, calmar) o ~13/15 window bi THOI PHONG, KHONG dai dien live. Ket luan chinh xac: (a) claim "tham so chien luoc generalize" van song; (b) claim "he thong CO EDGE that" thi KHONG — chi ~3 window sach (2025-07+) la phep thu joint (model+chien luoc) hop le, mau qua mong.
+
+LIEN QUAN cac leak da ghi: L1 (embargo quanh cutoff = label look-ahead, funding horizon toi 72h) va L4 (provenance predRisk4H ghep tu set cu) — deu can xu ly khi lam ban leak-free.
 
 Bang chung: models_v2/train_meta_*.json (moc split) + funding-generate-1m.log @226 ("loaded 4 booster" -> predict moi thang) + WfoDataset.SET_FUNDING.
 
@@ -103,5 +107,11 @@ Diem can Uni quyet (KHONG tu quyet - PnL/phuong phap):
 - Co chap nhan verdict leak-free lam chuan thay ban ro ri khong.
 - Purge/embargo giua IS<->OOS moi fold = horizon dai nhat (72h) mac dinh an toan, nhung xac nhan.
 
-## 8. Lich su tai lieu
-- 2026-07-01: tao moi (phien ra dem). Nguon: audit code + artifact server. Doi chieu/don cac mo ta pipeline rai rac o Phase C (PIPELINE.md cu).
+## 8. Quan he voi tai lieu khac (KHONG trung lap)
+- PIPELINE.md = doc CADENCE VAN HANH 3 thang (9 buoc + 2 cong gac) -- BO TRO, khong bi thay the. Doc nay (PIPELINE_PROVENANCE) tra loi "artifact nao tu code/data nao"; PIPELINE.md tra loi "quy trinh dinh ky lam gi".
+- insights/WFO_LEAKS_TODO.md = danh sach leak L0-L5 (ghi 2026-06-28). Doc nay bo sung BANG CHUNG DO DUOC cho L0/L1/L4 (xem muc 4 + addendum trong file do).
+- insights/WFO_FRAMEWORK_DESIGN.md = thiet ke framework + phan biet WFO loai 1/loai 2 (doc cung muc 7).
+- ROADMAP.md / REBUILD_ROADMAP.md = lo trinh; FINDINGS.md = nguon su that ket luan da do.
+
+## 9. Lich su tai lieu
+- 2026-07-01: tao moi (phien ra dem autonomous). Nguon: audit code + artifact server (do khong doan).
