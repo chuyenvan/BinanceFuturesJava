@@ -109,7 +109,13 @@ public class HPOFitnessCalculatorV4 {
         if (r.pctHeldOver7d > MAX_PCT_HELD_OVER_7D) {
             r.finalFitness = REJECT_BASE - r.pctHeldOver7d * 100; r.note = "TOO_MUCH_CAPITAL_LOCK"; return r;
         }
-        if (pnlByYear.size() >= MIN_YEARS_FOR_RATIO && r.posYearRatio < MIN_POS_YEAR_RATIO) {
+        // CHỈ áp %năm-dương khi backtest đủ DÀI theo SPAN THỰC (≥ MIN_YEARS_FOR_RATIO năm), KHÔNG dựa
+        // pnlByYear.size(). Cửa sổ WFO 12 tháng (~365 ngày) có thể chạm 2 NĂM LỊCH do tràn biên (lệch
+        // GMT+7 + lệnh mở cuối năm đóng sang đầu năm sau) → size()=2 nhưng không phải 2 năm thực →
+        // trước đây loại oan genome tốt (UNSTABLE giả). Ổn định qua nhiều năm là việc của vế OOS-qua-
+        // window của WFO, không phải IS 1 năm. Ràng buộc này chỉ còn hiệu lực cho backtest full đa năm.
+        double spanYears = windowDays / 365.0;
+        if (spanYears >= MIN_YEARS_FOR_RATIO && r.posYearRatio < MIN_POS_YEAR_RATIO) {
             r.finalFitness = REJECT_BASE - (1 - r.posYearRatio) * 100; r.note = "UNSTABLE_ACROSS_YEARS"; return r;
         }
 

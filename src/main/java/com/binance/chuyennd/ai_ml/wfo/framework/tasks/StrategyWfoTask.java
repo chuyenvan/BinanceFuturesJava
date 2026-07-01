@@ -219,7 +219,12 @@ public class StrategyWfoTask implements WfoTask {
         SimulatorMarketLevelTicker1MStopLoss sim = new SimulatorMarketLevelTicker1MStopLoss();
         sim.initDataReady(ctx.dataset.market, ctx.dataset.pred, ctx.dataset.funding, new AIRejectFilter());
         sim.simulatorWithInitEntry(start, end);
-        return HPOFitnessCalculatorV4.evaluateDetailed(sim.allOrderDone);
+        HPOFitnessCalculatorV4.FitnessReport rep = HPOFitnessCalculatorV4.evaluateDetailed(sim.allOrderDone);
+        LOG.info("[BT {}..{}] note={} trades={} pnl={} ddPct={} maxDD={} held>7d={} posYr={} fit={}",
+                Utils.normalizeDateYYYYMMDD(start), Utils.normalizeDateYYYYMMDD(end),
+                rep.note, rep.tradeCount, round4(rep.totalProfit), round4(rep.ddPct),
+                round4(rep.maxDrawdown), round4(rep.pctHeldOver7d), round4(rep.posYearRatio), round4(rep.finalFitness));
+        return rep;
     }
 
     // ======================= aggregate + VERDICT =======================
