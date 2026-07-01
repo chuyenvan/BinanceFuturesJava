@@ -12,10 +12,13 @@
 - Script INFERENCE sinh predict_*.bin (Python) KHONG co trong git -> phai viet lai buoc export prediction.
 - => can code moi + Uni xac nhan vai diem phuong phap (muc 5). Do do de o dang runbook.
 
-## 1. Tien quyet - du lieu (regenerate neu thieu)
-Chay tren Oracle (ml/training/gen_train_data.sh): sinh ff (Tool1 40 feat) + OI + funding_label.csv
-range 2021-01 -> nay. ~vai gio (ff 5 nam nang). Output: ~/claudedata/train_ff/, oi, train_label.csv.
-Kiem: ff phu 2021-2026, label co cot maxFav_{H}/nBars_{H}, map symId->symbol day du.
+## 1. Tien quyet - du lieu: DA DU, KHONG can export lai (kiem 2026-07-01)
+Feature/label/OI train full-history DA co san tren Oracle (export 1 lan, dung roadmap "export 1 lan dung chung"):
+- ~/claudedata/train_ff/ : 22 file quy ff (2021-01 -> ~2026, Tool1 40 feat).
+- ~/claudedata/train_label.csv : 9.37 GB (cot maxFav_{H}/nBars_{H} moi horizon).
+- ~/claudedata/feat/oi_percoin_full.bin : 3.4 GB OI + symbol_map.csv.
+=> TAI DUNG nguyen, KHONG chay lai gen_train_data.sh. (Chi regen neu file bi xoa/thieu - hien KHONG thieu.)
+LEAK KHONG o feature; no o cho 1 model predict ca history. Feature giu nguyen; chi doi PREDICTION.
 
 ## 2. Funding per-fold (BU GAP CHINH) - can VIET code
 Sua ml/training/train_funding_selector.py -> them che do per-fold:
@@ -45,10 +48,10 @@ leak-free ghep (WFOGateRunner da co logic per-fold predict OOS). Kiem embargo qu
 3. Co dung set gate leak-free (v3wf) thay full_basket_v2 trong strategy-WFO khong (nen: CO, de joint sach).
 4. Chap nhan verdict leak-free lam CHUAN thay ban ro ri (ky vong: WFE/pnl thap hon vi tin hieu that te hon).
 
-## 6. Uoc luong cong
-- B1 data regen: ~vai gio (Java export, detached tren Oracle).
+## 6. Uoc luong cong (da bo B1 - data da du)
+- B1 data regen: KHONG can (data feature/label/OI da du - kiem 2026-07-01).
 - B2 viet code per-fold + export bin: ~1-2h code + smoke 1 fold.
-- B2 chay 56 fit: ~vai gio (detached).
-- B3 gate: reuse, ~1h.
-- B4 ghep+nap+export+WFO: ~3h.
-=> tong ~1-2 phien. Nen lam tuan tu, smoke moi buoc truoc khi full (nguyen tac Uni).
+- B2 chay 56 fit (14 fold x 4 horizon): ~vai gio (detached).
+- B3 gate: reuse wfo_models/fold_*, ~1h.
+- B4 rebuild dataset (chi doi pred/funding, market giu nguyen) + nap + chay WFO: ~3h.
+=> tong ~1 phien. Smoke moi buoc truoc khi full (nguyen tac Uni).

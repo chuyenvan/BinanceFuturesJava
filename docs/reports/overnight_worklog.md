@@ -27,3 +27,7 @@ Tai san sach ton tai nhung CHUA noi vao strategy-WFO: gate per-fold (wfo_models/
 ## Quyet dinh tu xu ly (ghi de Uni review)
 - Viet doc ASCII thuan (ky tu box-drawing lam hong Write transport).
 - KHONG tu chay rebuild leak-free WFO tu dau neu smoke khong sach 100% - de tranh tao artifact "sach gia" (dung tinh than do khong doan). Uu tien A-D chac chan + chuan bi san E.
+
+## UPDATE 2026-07-02 (Uni day, review)
+- Uni DUYET ca 4 diem RUNBOOK muc 5 (tham so per-fold=single; purge 72h; dung gate leak-free; chap nhan verdict leak-free lam chuan). => rebuild leak-free da duoc greenlight ve phuong phap.
+- Uni hoi "sao phai export lai data": DO LAI -> data feature/label/OI train full-history CON DU tren Oracle (train_ff 22 quy + train_label 9.4GB + oi_percoin_full 3.4GB). => KHONG can export lai feature (dung roadmap "1 lan dung chung"). Chi regenerate PREDICTION (per-fold) + rebuild WFO dataset (chi doi pred/funding, market giu nguyen). Da sua RUNBOOK muc 1 + 6.
