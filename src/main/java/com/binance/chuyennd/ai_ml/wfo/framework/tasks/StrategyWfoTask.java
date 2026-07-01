@@ -39,8 +39,8 @@ public class StrategyWfoTask implements WfoTask {
     // ===== cấu hình cửa sổ (khớp WFORunner) =====
     private static final String DATA_START = "20210101";
     private static final String DATA_END = "20260601";
-    private static final int TRAIN_MONTHS = 12;
-    private static final int OOS_MONTHS = 3;
+    private static final int TRAIN_MONTHS = envInt("WFO_TRAIN_MONTHS", 12);
+    private static final int OOS_MONTHS = envInt("WFO_OOS_MONTHS", 3);
     private static final int DEFAULT_N_SAMPLES = 30;
     private static final long SEED_BASE = 42L;
 
@@ -104,6 +104,12 @@ public class StrategyWfoTask implements WfoTask {
         LOG.info("buildJobs: {} cua so (train {}m, OOS {}m, truot {}m), N={}",
                 jobs.size(), TRAIN_MONTHS, OOS_MONTHS, OOS_MONTHS, nSamples);
         return jobs;
+    }
+
+    private static int envInt(String name, int def) {
+        String v = System.getenv(name);
+        try { return (v != null && !v.isEmpty()) ? Integer.parseInt(v.trim()) : def; }
+        catch (NumberFormatException e) { return def; }
     }
 
     private List<long[]> buildWindows() {
