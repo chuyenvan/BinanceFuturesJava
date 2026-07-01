@@ -50,6 +50,12 @@ public class WfoDataset {
     public TreeMap<Long, AiPredictionData> pred;
     public TreeMap<Long, long[]> funding;
 
+    /** Provenance stamping: doc env, default an toan neu chua set. Xem docs/PIPELINE_PROVENANCE.md muc 6. */
+    private static String envOr(String name, String def) {
+        String v = System.getenv(name);
+        return (v != null && !v.isEmpty()) ? v : def;
+    }
+
     // ======================= EXPORT (chạy 1 lần trên node có Aerospike) =======================
     /** Scan 3 khối từ Aerospike 226 → ghi file binary + manifest vào outDir. Chỉ chạy khi data nguồn đổi. */
     public static void export(String outDir) throws Exception {
@@ -72,6 +78,11 @@ public class WfoDataset {
         mani.append("sourceMarketSet=").append(SET_MARKET).append("\n");
         mani.append("sourcePredSet=").append(SET_PRED).append("\n");
         mani.append("sourceFundingSet=").append(SET_FUNDING).append("\n");
+        // Provenance (env-sourced; xem docs/PIPELINE_PROVENANCE.md muc 6): truy nguyen code+model+leak-free.
+        mani.append("codeGitSha=").append(envOr("WFO_CODE_SHA", "unknown")).append("\n");
+        mani.append("predSetProvenance=").append(envOr("WFO_PROV_PRED", "unknown-see-docs/PIPELINE_PROVENANCE.md")).append("\n");
+        mani.append("fundingSetProvenance=").append(envOr("WFO_PROV_FUNDING", "unknown-see-docs/PIPELINE_PROVENANCE.md")).append("\n");
+        mani.append("leakFreeFrom=").append(envOr("WFO_LEAKFREE_FROM", "unknown")).append("\n");
         mani.append("marketCount=").append(mkt.size()).append("\n");
         mani.append("predCount=").append(prd.size()).append("\n");
         mani.append("fundingCount=").append(fnd.size()).append("\n");
