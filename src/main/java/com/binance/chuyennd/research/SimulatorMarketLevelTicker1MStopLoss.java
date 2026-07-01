@@ -746,8 +746,13 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 //        LOG.info("✅ Pre-calculate hoàn tất trong {} ms.", (System.currentTimeMillis() - start));
 //    }
 
+    // Map funding da sort (theo reference). WFO/HPO dung CHUNG 1 map qua moi sample -> chi sort 1 lan.
+    // Tranh re-sort mang DA sort: quicksort pivot=high suy bien O(n^2) (~19s lan dau -> ~147s moi lan sau).
+    private static TreeMap<Long, long[]> fundingPreSorted = null;
+
     // 🔥 PRE-CALCULATE TỐI ƯU HÓA: Dùng Primitive QuickSort & Đa luồng (0 sinh rác Object)
     public static void preprocessFundingData(TreeMap<Long, long[]> time2FundingPre) {
+        if (time2FundingPre == null || time2FundingPre == fundingPreSorted) return; // idempotent, ket qua khong doi
         LOG.info("⚙️ Bắt đầu Pre-calculate (Sort sẵn) dữ liệu Funding Fee đa luồng...");
         long start = System.currentTimeMillis();
 
@@ -757,6 +762,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             // Sort nguyên thủy trực tiếp trên mảng long[]
             quickSortByFloatPred(preds, 0, preds.length - 1);
         });
+        fundingPreSorted = time2FundingPre; // danh dau map nay da sort -> cac sample sau bo qua
 
         LOG.info("✅ Pre-calculate hoàn tất trong {} ms.", (System.currentTimeMillis() - start));
     }
