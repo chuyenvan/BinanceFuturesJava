@@ -175,3 +175,7 @@ Quy trình (SAU khi run verdict trên Oracle xong — xem Ràng buộc #1):
 2. **Env `GEN_USE_242` (GenerateFundingPredictionsTool / GenerateSelectorPredictionsTool) bỏ luôn** — không có trong bảng rà nhưng cùng bản chất flag-chọn-cluster; nay theo `AEROSPIKE_READ_CLUSTER`.
 3. `getReadClient()` private → **public** (để SymbolLifecycleManager + tool khác gom 1 mối).
 4. Thêm overload `readDataFromAerospike1M(long, AerospikeClient)` cho case #9 (tool biết rõ cluster theo arg).
+
+## GATE Oracle — KẾT QUẢ (master chạy 2026-07-03 04:51-05:1x, jobstore TÁCH BIỆT 226 thật)
+- Run 1 FAIL đúng nghĩa vụ: jar cũ zero-trades vì thiếu WFO_KAGGLE=1 (env chỉ jar cũ đọc — xác minh git e6899aa~1). Bài học: determinism check phải dùng ĐÚNG env đời jar.
+- Run 2: determinism jar cũ = baseline ft2 khớp 100% (4/4 [WIN]) → PASS. Jar task112 (env mới, config tường minh TICKER_SOURCE=aerospike): khớp 100% baseline → **GATE-112 PASS**. Log ~/claudedata/gate_chain.log, gate_old/t112_win.txt trên Oracle.

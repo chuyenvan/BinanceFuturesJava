@@ -88,3 +88,8 @@ KẾT QUẢ: 5/5 PASS
 
 ## (Code điền) Quyết định phát sinh
 - Restore `BackTestEngineMarketThresholds.java` vào commit cụm V4.1 để build sạch (ngoài scope nhưng cần cho build clean).
+
+## GATE tầng 2 — KẾT QUẢ (master, 2026-07-03 05:1x, jobstore 226 riêng, 4 window N=3)
+- IS fitness + pnl + WFE: khớp 100% cả 4 window với jar112 ✓ (fix #1 bất biến giữ).
+- WIN 0/1 OOS khớp 100% ✓. WIN 2/3 OOS chuyển sentinel TOO_FEW: −99988 (12 lệnh), −99980 (20 lệnh) — đúng chính xác công thức minTrades=max(5, 90×0.33)=29 với windowDays OOS THẬT = fix #2 pre-registered (V4 cũ suy từ span lệnh nên cho qua). Đây là khác biệt THIẾT KẾ duy nhất javadoc đã tuyên bố.
+- **Phán quyết: GATE-113 PASS theo tiêu chí thiết kế** (tiêu chí  trong script gate ban đầu là quá chặt — đã ghi nhận). Jar V4.1 md5 38b503dd đã deploy Oracle binance-futures-task113.jar.
