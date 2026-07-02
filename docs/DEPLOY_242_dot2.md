@@ -33,7 +33,7 @@
 
 ```bash
 # TRÊN 226 (226 thông 242). Ghi PID/log theo luật dọn-job 226.
-cd <run_dir_226>   # CWD có config.properties (IS_KAGGLE_MODE KHÔNG quan trọng — arg "242" tự ép đọc 242)
+cd <run_dir_226>   # CWD có config.properties (TASK-112: arg "242" tự ép đọc 242, không phụ thuộc AEROSPIKE_READ_CLUSTER)
 mkdir -p outputs/.run
 nohup java -cp <run_dir_226>/binance-java-sdk-1.2.4.jar \
   com.binance.chuyennd.ai_ml.features.export.Aggregate15m4hBtcEth 242 \
@@ -55,7 +55,7 @@ nohup java -cp <run_dir_226>/binance-java-sdk-1.2.4.jar \
 ## 3. VERIFY sau restart (đọc log 242 ~10–15') — theo TỪNG fix
 **Chung / còn-đúng từ đợt 1:** `-1130` vẫn hết; `FundingFee-Refresh` log "cập nhật N symbol" mỗi 30' (N>0); `price_realtime`/`open_interest`/`kline_1m`/`funding_data`@242 vẫn ghi; Reporter/Telegram sống; không exception lặp trong `error.log`.
 
-- [ ] **030 #12 (fail-fast):** 2 process LÊN ĐƯỢC (không exit ngay) → xác nhận `IS_KAGGLE_MODE=false` trên box live. Nếu thấy log `⛔ FATAL (audit #12) ... DỪNG` → config.properties@242 đang bật IS_KAGGLE_MODE → SỬA về false rồi restart lại.
+- [ ] **030 #12 (fail-fast):** 2 process LÊN ĐƯỢC (không exit ngay) → xác nhận `AEROSPIKE_READ_CLUSTER=242` trong config.properties@242 (TASK-112). Nếu thấy log `⛔ FATAL (audit #12 / TASK-112) ... DỪNG` → config thiếu/sai key này → thêm `AEROSPIKE_READ_CLUSTER=242` rồi restart lại.
 - [ ] **031 (forward kline):** sau lấp-gap, `kline_15m@242` ts TIẾN qua mỗi biên 15m (log `Kline15m4hForwardRoller` ~60s; record-tháng 202606 cập nhật). `kline_4h` tiến mỗi 4h (catch-up 200×4h tự lấp).
 - [ ] **028 #1 (funding guard):** funding-poll qua `BinanceRestGuard` (đang ban → bỏ qua, không spam); **#2 watchdog:** thread `ThreadAutoRestartProgram` sống, counterMinutes tiến (không còn DEAD); **#3 HttpRequest:** lỗi REST log WARN có phân loại (TIMEOUT/DNS/SSL) thay vì câm.
 - [ ] **029 (concurrency):** ingest — `Rest-Kline-Loop` chốt phút đủ ~554 symbol (không mất nến do race #4); không bùng luồng (ForkJoinPool chung #5). Trading — log `Update all position:{n} {ms}ms` đều, không kẹt lock 3s (#9); position/trailing không "mất sạch tạm thời".

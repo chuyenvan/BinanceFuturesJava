@@ -1,6 +1,8 @@
 # TASK-112: Bỏ IS_KAGGLE_MODE / IS_HPO_MODE — nguồn dữ liệu tường minh per-box + fail-fast
 
-- **status:** todo
+- **status:** DOING
+- **owner:** CCD-112
+- **updated:** 2026-07-02
 - **Milestone:** hạ tầng backtest/WFO — [docs/insights/WFO_ROADMAP.md](../docs/insights/WFO_ROADMAP.md)
 - **Ưu tiên:** cao — 2 flag này đã gây hỏng 2 lần chạy; lần gần nhất làm VÔ HIỆU cả full WFO 17 window (2026-07-02).
 - **require_review:** true
@@ -120,12 +122,56 @@ Quy trình (SAU khi run verdict trên Oracle xong — xem Ràng buộc #1):
 
 ## (Code điền) Kết quả
 
-<tóm tắt, commit list, số GATE determinism + trước/sau>
+**Trạng thái 2026-07-02 (CCD-112): PHẦN CODE + LOCAL-TEST XONG — GATE trên Oracle CHỜ run verdict `strategy_window` xong (Ràng buộc #1).**
+
+### Đã làm (bảng rà #1-#11 — đủ)
+- **#1** `getReadClient()` đọc `AEROSPIKE_READ_CLUSTER` (226|242), thiếu/sai → `IllegalStateException` message hướng dẫn; đổi `private`→`public`.
+- **#2** `SymbolLifecycleManager.readClient()` → delegate `getReadClient()` (hết bản sao if).
+- **#3** Sim đọc ticker theo `TICKER_SOURCE` (aerospike|file) đúng pseudo-code; fail-fast null/empty; check mâu thuẫn SMART_CACHE+file. ⚠️ Khối đọc+fail-fast đặt **NGOÀI** try-catch nuốt-lỗi của loop (trước đây exception bị `printStackTrace` rồi CHẠY TIẾP — chính là cơ chế ZERO_TRADES âm thầm). Semantics size>=1440 GIỮ NGUYÊN (chỉ nâng LOG.warn kèm số phút).
+- **#4** Xóa nhánh `IS_HPO_MODE` (~240) — hợp nhất về nhánh else cũ (nhánh WFO/HPO worker vốn chạy vì set IS_HPO_MODE=false) → GATE không đổi số.
+- **#5** `WRITE_SIM_STORAGE` default **false** (migration note bên dưới).
+- **#6** `assertLiveRuntime()` fail nếu `AEROSPIKE_READ_CLUSTER` thiếu HOẶC != 242 → exit(1).
+- **#7** `GoldenBacktest` metadata `f.readCluster = Configs.AEROSPIKE_READ_CLUSTER`.
+- **#8** Xóa toàn bộ set tay flag ở **~45 file** (nhiều hơn ~25 ước tính: cả oibackfill/diagnose/fundingv2/ablation); env `WFO_KAGGLE`/`SENS_KAGGLE` xóa cả đoạn đọc.
+- **#9** `Aggregate15m4hBtcEth` gọi thẳng `getClient226()/getClient242()` theo arg `read242` qua overload MỚI `readDataFromAerospike1M(startTime, client)`.
+- **#10** Xóa 2 field khỏi `Configs.java`; grep `IS_KAGGLE_MODE|IS_HPO_MODE` src = **0** (chỉ còn 3 comment lịch sử về env đã bỏ: SENS_KAGGLE/GEN_USE_242).
+- **#11** Đường file Kaggle GIỮ (`TICKER_SOURCE=file` trong config dataset Kaggle).
+- Bump `CONFIG_VERSION` **v10 → v11** (kèm chú thích lý do trong RunHpoMaster_Distributed).
+- Docs: `docs/db/aerospike-226.md`, `docs/rules/run-226.md`, `docs/insights/WFO_ROADMAP.md` §4, `docs/DEPLOY_242_dot2.md` (2 dòng runbook).
+
+### Verify local (Windows dev, jar shaded build PASS)
+- Build: `mvn -q -DskipTests package` PASS (jar 99MB).
+- TEST-A: config thiếu `AEROSPIKE_READ_CLUSTER` → `getReadClient()` throw IllegalStateException đúng message ✅
+- TEST-C: `assertLiveRuntime()` config thiếu key → exit 1 ✅; `=226` → exit 1 ✅; `=242` → chạy qua (exit 0) ✅
+- (test bằng `scripts_tmp/task112_test/Task112SmokeTest.java` — thư mục không commit)
+
+### CHỜ (blocked bởi run verdict Oracle — làm khi `pgrep -f WfoWorker` rỗng + DONE=17)
+- [ ] GATE bước 1: determinism jar CŨ (4 dòng [WIN] khớp baseline trong đề bài)
+- [ ] GATE bước 2: deploy `binance-futures-task112.jar` (TÊN MỚI, md5 verify) + thêm 2 key vào config Oracle → 4 dòng [WIN] khớp 100%
+- [ ] Test sim fail-fast ngày thiếu data trên Oracle (`TICKER_SOURCE=file` + ngày 2023-01-01)
+- [ ] Ghi số GATE thực tế vào đây
+
+### Migration checklist per-box (Uni áp; Code chỉ áp Oracle sau GATE)
+| Box | Việc |
+|---|---|
+| **Dev Windows (repo)** | ✅ ĐÃ áp: `AEROSPIKE_READ_CLUSTER=226` + `TICKER_SOURCE=aerospike` (config.properties commit) |
+| **Oracle** | thêm `AEROSPIKE_READ_CLUSTER=226` + `TICKER_SOURCE=aerospike` vào `~/java/simulator/config.properties` — làm ở bước GATE, SAU khi run verdict xong |
+| **226** | thêm `AEROSPIKE_READ_CLUSTER=226` + `TICKER_SOURCE=aerospike` |
+| **242 (live)** | thêm `AEROSPIKE_READ_CLUSTER=242` + `TICKER_SOURCE=aerospike` — **Uni tự áp khi deploy live, KHÔNG trong task này**; thiếu key → 2 process live exit(1) ngay lúc start (cố ý) |
+| **Kaggle dataset** | config.properties trong dataset: `TICKER_SOURCE=file`, KHÔNG cần AEROSPIKE_READ_CLUSTER |
+| Mọi box | xóa dòng `IS_KAGGLE_MODE=...` cũ nếu có (dòng chết, không hại nhưng dọn) |
+| Chạy sim muốn ghi `storage/*.data` + printDone.csv | thêm `WRITE_SIM_STORAGE=true` (⚠️ default MỚI là false — trước đây local mặc định GHI) |
+| Env cũ | `WFO_KAGGLE=1` / `SENS_KAGGLE=1` / `GEN_USE_242=1` CHẾT — bỏ khỏi mọi script/lệnh; `WFO_SMART_CACHE=1` GIỮ |
 
 ## (Code điền) Phát hiện ngoài scope
 
-<thấy vấn đề nhưng KHÔNG tự sửa>
+1. **GoldenBacktest trên 226 đổi nguồn ticker:** comment cũ ghi rõ ticker đi `getReadClient→242` (226 whitelist được 242) khi cả 2 flag false. Sau refactor + migration `AEROSPIKE_READ_CLUSTER=226` trên box 226 → golden sẽ đọc ticker **226** thay 242. Task #7 coi là cosmetic nhưng đây là ĐỔI NGUỒN DATA thật của golden → fingerprint/determinism golden cũ có thể không so được với run mới. Uni cân nhắc: hoặc chấp nhận (226 là bản sync của 242), hoặc box 226 dùng `AEROSPIKE_READ_CLUSTER=242` khi chạy golden. KHÔNG tự sửa.
+2. Số điểm set flag thực tế ~45 file (đề bài ước ~25) — đã xóa hết, không sót (grep=0).
+3. `docs/reference/PRODUCTION_AUDIT.md` + `docs/reference/AUDIT_filter_ablation.md` + `docs/archive/**` còn nhắc flag cũ — tài liệu lịch sử/snapshot, KHÔNG sửa.
 
 ## (Code điền) Quyết định phát sinh
 
-<ADR mới nếu có>
+1. **Fail-fast sim đặt ngoài try-catch nuốt-lỗi** → hệ quả: exception khi ĐỌC ticker (vd Aerospike hiccup) giờ cũng DỪNG sim thay vì skip-ngày-chạy-tiếp. Đúng tinh thần task (thiếu data = dừng); run khỏe không ảnh hưởng (GATE vẫn so được).
+2. **Env `GEN_USE_242` (GenerateFundingPredictionsTool / GenerateSelectorPredictionsTool) bỏ luôn** — không có trong bảng rà nhưng cùng bản chất flag-chọn-cluster; nay theo `AEROSPIKE_READ_CLUSTER`.
+3. `getReadClient()` private → **public** (để SymbolLifecycleManager + tool khác gom 1 mối).
+4. Thêm overload `readDataFromAerospike1M(long, AerospikeClient)` cho case #9 (tool biết rõ cluster theo arg).

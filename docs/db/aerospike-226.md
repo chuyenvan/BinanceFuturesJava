@@ -14,5 +14,6 @@
 - Market historical (kline_1m 2020+) hiện đang có sẵn ở 226 (cào cũ) → job train/Kaggle chạy bình thường, không gián đoạn.
 
 ## Lưu ý
+- **TASK-112:** tool/job đọc qua `getReadClient` (ticker/mapper/funding_data) cần `config.properties` của box có `AEROSPIKE_READ_CLUSTER=226`; chạy sim/backtest cần thêm `TICKER_SOURCE=aerospike`. Thiếu/sai key → fail-fast `IllegalStateException` ngay tại điểm dùng (không còn flag IS_KAGGLE_MODE/IS_HPO_MODE cũ).
 - Open internet → tải `data.binance.vision` trực tiếp được. Tài nguyên YẾU → job nặng chạy tuần tự (xem [run-226](../rules/run-226.md)).
 - `marketobject` = COMPUTE → 226 (TASK-032 xác nhận chỉ sống ở 226).

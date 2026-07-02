@@ -61,5 +61,5 @@ PASS cần CẢ 3: `WFE_median ≥ 0.5` · `%OOS-dương ≥ 70%` · `worst OOS 
 - 1 lệnh: `WfoCoordinator init|reset|status|report strategy_window` (JobStore = Aerospike **LOCAL Oracle** ns=test qua getClient226,
   host=127.0.0.1). ⇒ **Kaggle worker KHÔNG poll được jobstore này**; nếu sau này chạy WFO đa-node có Kaggle thì phải
   set `WFO_STATE_HOST` về 226 thật (Kaggle tới được 226) — và nhớ 2 vế 1 phép so sánh phải cùng 1 nguồn dữ liệu (đã đo file≠aerospike).
-  Worker: `WfoWorker` (env **BẮT BUỘC đủ 3**: `WFO_KAGGLE=1 WFO_SMART_CACHE=1 WFO_DATA_DIR=<dataset>` — thiếu SMART_CACHE → đọc ticker FILE → zero-trade âm thầm, xem sự cố 2026-07-02; TASK-112 sẽ diệt tận gốc). Function-test: `WFO_MAX_WINDOWS`, `WFO_N_SAMPLES`.
+  Worker: `WfoWorker` — TASK-112: env chỉ còn `WFO_SMART_CACHE=1 WFO_DATA_DIR=<dataset>` (`WFO_KAGGLE` ĐÃ BỎ); nguồn dữ liệu theo `config.properties` của box: `AEROSPIKE_READ_CLUSTER=226` + `TICKER_SOURCE=aerospike` — thiếu/sai key → fail-fast NGAY (hết zero-trade âm thầm kiểu sự cố 2026-07-02). ⚠️ jar CŨ `binance-futures-wfo-lf.jar` (trước TASK-112) vẫn cần env 3 cái cũ. Function-test: `WFO_MAX_WINDOWS`, `WFO_N_SAMPLES`.
 - Dataset build funding.bin: `~/claudedata/build_funding_bin.py` (HZ_IDX=2=24h, forward-fill 15p→phút) + patch manifest md5.
