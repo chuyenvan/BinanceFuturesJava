@@ -31,3 +31,11 @@ Tai san sach ton tai nhung CHUA noi vao strategy-WFO: gate per-fold (wfo_models/
 ## UPDATE 2026-07-02 (Uni day, review)
 - Uni DUYET ca 4 diem RUNBOOK muc 5 (tham so per-fold=single; purge 72h; dung gate leak-free; chap nhan verdict leak-free lam chuan). => rebuild leak-free da duoc greenlight ve phuong phap.
 - Uni hoi "sao phai export lai data": DO LAI -> data feature/label/OI train full-history CON DU tren Oracle (train_ff 22 quy + train_label 9.4GB + oi_percoin_full 3.4GB). => KHONG can export lai feature (dung roadmap "1 lan dung chung"). Chi regenerate PREDICTION (per-fold) + rebuild WFO dataset (chi doi pred/funding, market giu nguyen). Da sua RUNBOOK muc 1 + 6.
+
+## UPDATE 2026-07-02 (BUOC 1-2 leak-free: SMOKE PASS + full run launched)
+- BUOC 1: viet ml/training/gen_funding_wf_predictions.py (walk-forward per-fold, assert chong leak, xuat 26B).
+- OOM lan 1: OI 113M dong (cadence 5m) lam OOM SIGKILL (do exit 137). Fix: grid-filter OI ve 15m (lossless
+  cho merge tai moc 15m) cat 113M->38M. Fix 1 dong.
+- SMOKE 1 fold PASS: exit 0, features 3.9M merge OK, CUTOFFS=17 (khop WFO train-12), fold 0 train ts_max
+  2021-12-28<cutoff 2022-01-01 (purge 72h giu), bin 26.0B/rec dung, prob in [0,1] nan%=0 endianness dung.
+- BUOC 2: launch full 17-fold detached (OUT_DIR=wf_pred). Uoc ~1-1.5h. Cho xong roi BUOC 3 (gate) + 4 (dataset+WFO).
