@@ -252,3 +252,16 @@ Sau lần dựng đầu, mỗi lần chạy WFO chỉ là bước 2→5 (bước
 - **Funding mặc định OFF** trong HPO/WFO (`Configs.APPLY_FUNDING_FEE=false`); CHỈ bật ở vòng HPO/Golden
   backtest CUỐI trước go-live. Lý do: tác động funding nhỏ (~**1.8%** PnL theo FINDINGS Σfunding=-918 — số 0.9% cũ ghi nhầm, sửa 2026-07-02; maxDD không đổi) nhưng làm chậm
   vòng chạy → không đáng gánh trong hàng nghìn lần eval. Đo: RunFundingImpact (tính-1-lượt-khi-đóng).
+
+### Fitness V4.1 — thay đổi semantics (TASK-113, pre-registered 2026-07-02)
+Thay đổi **`HPOFitnessCalculatorV4.evaluateDetailed`** so V4 (ngưỡng verdict §6 điểm 3 GIỮ NGUYÊN):
+- **Signature mới:** `evaluateDetailed(allOrderDone, windowDaysActual)` — caller truyền độ dài THẬT của
+  range backtest; bỏ suy `windowDays` từ span lệnh (logic cũ cho kết quả ngược đời khi lệnh dồn cục).
+- **Reorder thống kê trước constraint:** `totalProfit/ddPct/pctHeldOver7d/calmar/sortino` tính TRƯỚC chuỗi
+  TOO_FEW→BURN→OVER_MAXDD→… → nhánh bị loại sớm vẫn có số thật trong `FitnessReport`.
+- **6 caller đã cập nhật** (TASK-113): `WFORunner`, `StrategyWfoTask`, `AblationClusterTool`, `FitnessBaselineTool`,
+  `MetricDistributionTool`, `SensitivityTool` — mỗi chỗ truyền `windowDays = max(1,(end−start)/TIME_DAY)`.
+- **`StrategyWfoTask.aggregate`**: đếm `%OOS-dương` khi `oosNote=SUCCESS && oosPnl>0` (tường minh); bảng
+  report thêm cột `oosNote`. V3/HPOFitnessCalculator cũ KHÔNG đổi.
+- **Unit GATE A-E local PASS** (TestFitnessV41.java, 2026-07-02): SUCCESS calmar=3.0 ✓; TOO_FEW pnl=160≠0 ✓;
+  10lệnh/3d window90d→TOO_FEW(V4 PASS ngược đời→fix) ✓; BURN ddPct>0 ✓; CAPITAL_LOCK pnl=150≠0 ✓.

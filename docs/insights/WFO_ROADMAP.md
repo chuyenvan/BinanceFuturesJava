@@ -44,6 +44,18 @@ PASS cần CẢ 3: `WFE_median ≥ 0.5` · `%OOS-dương ≥ 70%` · `worst OOS 
 - **Loại WFO đang chạy = "loại 1" (pred cố định):** hợp lệ cho câu hỏi hẹp "tham số có generalize không";
   số OOS tuyệt đối các window <2025-06 bị tâng vì pred sinh in-sample (khung này giữ trong mọi kết luận WFO).
 
+### V4.1 — Fitness thay đổi ngữ nghĩa (TASK-113, pre-registered 2026-07-02)
+Ngưỡng verdict GIỮ NGUYÊN (WFE_median≥0.5 · %dương≥70% · worst ddPct≤50%). Ba thay đổi so V4:
+1. **WFE median trung thực:** window LOW_TRADES (vd WIN7-8 lệnh OOS) nay đóng góp WFE thật thay vì 0 do
+   pnl bị che (V4 return-sớm trước khối thống kê). Median sẽ khác — đây là **chủ đích**, không phải số drift.
+2. **%OOS-dương tường minh theo note:** chỉ đếm `oosNote=SUCCESS && oosPnl>0` (kết quả đếm KHÔNG đổi
+   với data cũ — window sentinel có pnl thật nhưng note≠SUCCESS nên không được đếm).
+3. **Min-trade theo window THẬT:** caller truyền `windowDaysActual` từ range backtest thực; bỏ suy từ
+   span lệnh (V4 cũ: 10 lệnh dồn 3 ngày / window 90 ngày → span=3 → minTrades=5 → PASS ngược đời).
+
+**Mốc V4 cũ (leak-free v2: FAIL, WFE 0.098, 76.5%, 30.7%) giữ làm LịCH SỬ** — KHÔNG so trực tiếp
+số-với-số với V4.1 (thay đổi semantics nên con số KHÔNG tương đương).
+
 ## 3. KIẾN TRÚC TỔNG + LỘ TRÌNH RA WFO HOÀN CHỈNH (master rà 2026-07-02 tối)
 
 ### 3a. Kiến trúc 6 lớp (trạng thái đo thật)

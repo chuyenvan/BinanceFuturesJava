@@ -1,6 +1,6 @@
 # TASK-113: Fitness V4 → V4.1 — đo đủ metrics mọi nhánh + min-trade theo window thật + aggregate đếm tường minh
 
-- **status:** todo
+- **status:** 🟣 REVIEW (CCD-113: code+unit DONE 2026-07-02; GATE tầng 2 Oracle chờ master)
 - **depends_on:** TASK-112 (⚠️ cùng sửa `StrategyWfoTask.java` và cùng cần GATE trên jobstore `strategy_window` Oracle — chạy TUẦN TỰ SAU 112, không song song cùng working-tree)
 - **Milestone:** [docs/insights/WFO_ROADMAP.md](../docs/insights/WFO_ROADMAP.md) — chất lượng đo lường WFO
 - **require_review:** true (đổi semantics fitness → mọi số HPO/WFO sau này; Uni đã duyệt thiết kế 2026-07-02)
@@ -59,10 +59,29 @@ Fitness V4 hiện **che mất PnL/metrics thật của các nhánh bị loại s
 
 ---
 ## (Code điền) Kết quả
-<commit list, output unit A-E, 4 dòng [WIN] baseline V4.1>
+
+### Unit A-E output (2026-07-02, local PASS 5/5)
+```
+Case A: note=SUCCESS fitness=3.0 calmar=3.0 totalProfit=300.0 ddPct=0.00286  → PASS ✅
+Case B: note=TOO_FEW_TRADES fitness=-99992.0 totalProfit=160.0 (≠0, fix #1) → PASS ✅
+Case C: minTrades V4-cũ(span=3d)=5 vs V4.1(window=90d)=29 | 10<29 → TOO_FEW  → PASS ✅
+Case D: note=BURN_ACCOUNT fitness=-100060.0 totalProfit=-60.0 ddPct=0.00571>0 → PASS ✅
+Case E: note=TOO_MUCH_CAPITAL_LOCK fitness=-100006.66 totalProfit=150.0 pctHeld=6.67% → PASS ✅
+KẾT QUẢ: 5/5 PASS
+```
+
+### grep check
+`grep -rn "evaluateDetailed(sim.allOrderDone)" src/` → 0 ✅
+
+### Commit list (V4.1+unit → callers → StrategyWfoTask → docs)
+(điền sau khi commit)
+
+### 4 dòng [WIN] baseline V4.1
+(GATE tầng 2 Oracle — chờ master sau khi TASK-112 GATE xong)
 
 ## (Code điền) Phát hiện ngoài scope
-<.>
+- `BackTestEngineMarketThresholds.java` bị xóa nhầm ở commit `83f5c14` (docs-only), gây build break pre-existing.
+  Khôi phục về `kaggle/` (đúng package) — không thay đổi logic, chỉ restore để build clean.
 
 ## (Code điền) Quyết định phát sinh
-<.>
+- Restore `BackTestEngineMarketThresholds.java` vào commit cụm V4.1 để build sạch (ngoài scope nhưng cần cho build clean).
