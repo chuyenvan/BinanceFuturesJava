@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kiến trúc Toàn Hệ Thống — BinanceFuturesJava</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0f172a;
+    color: #e2e8f0;
+    min-height: 100vh;
+    padding: 24px 16px 60px;
+  }
+  .container { max-width: 1100px; margin: 0 auto; }
+  h1 { font-size: 1.55rem; font-weight: 700; color: #f1f5f9; margin-bottom: 4px; }
+  h2 { font-size: 1rem; font-weight: 600; color: #94a3b8; margin: 36px 0 14px; text-transform: uppercase; letter-spacing: .07em; }
+  .subtitle { color: #64748b; font-size: .85rem; margin-bottom: 22px; }
+
+  /* Legend */
+  .legend {
+    display: flex; gap: 16px; flex-wrap: wrap;
+    background: #1e293b; border: 1px solid #334155;
+    border-radius: 8px; padding: 11px 16px; margin-bottom: 28px;
+    font-size: .78rem; align-items: center;
+  }
+  .legend-title { color: #94a3b8; font-weight: 600; }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .lbadge {
+    width: 28px; height: 10px; border-radius: 3px;
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .dot-done  { background: #22c55e; }
+  .dot-wip   { background: #f59e0b; }
+  .dot-todo  { background: #ef4444; }
+
+  /* Node grid */
+  .node-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+    gap: 14px;
+  }
+  .node {
+    border-radius: 12px; padding: 18px;
+    background: #1e293b;
+    border: 2px solid #334155;
+    cursor: default;
+  }
+  .node-242  { border-color: #dc2626; }
+  .node-226  { border-color: #2563eb; }
+  .node-oracle { border-color: #7c3aed; }
+  .node-kaggle { border-color: #d97706; }
+  .node-local  { border-color: #334155; }
+
+  .node-header { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px; }
+  .node-icon {
+    width: 36px; height: 36px; border-radius: 8px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem;
+  }
+  .icon-242    { background: #450a0a; }
+  .icon-226    { background: #1e3a5f; }
+  .icon-oracle { background: #2d1b69; }
+  .icon-kaggle { background: #451a03; }
+  .icon-local  { background: #1e293b; border: 1px solid #334155; }
+
+  .node-title { font-size: 1rem; font-weight: 700; color: #f1f5f9; }
+  .node-role  { font-size: .75rem; color: #64748b; margin-top: 3px; line-height: 1.4; }
+  .node-ip    { font-size: .72rem; font-family: monospace; color: #4ade80; margin-top: 4px; }
+
+  .node-warning {
+    margin-bottom: 10px; padding: 6px 10px;
+    background: #450a0a; border: 1px solid #dc262644; border-radius: 6px;
+    font-size: .73rem; color: #f87171;
+  }
+
+  /* Component list inside node */
+  .comp-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+  .comp-item {
+    display: flex; align-items: flex-start; gap: 8px;
+    padding: 7px 10px; border-radius: 7px;
+    background: #0f172a; border: 1px solid #1e293b;
+    cursor: pointer; transition: border-color .15s;
+    font-size: .8rem;
+  }
+  .comp-item:hover { border-color: #475569; }
+  .comp-item[data-status="done"]  .dot { background: #22c55e; box-shadow: 0 0 5px #22c55e55; }
+  .comp-item[data-status="wip"]   .dot { background: #f59e0b; box-shadow: 0 0 5px #f59e0b55; }
+  .comp-item[data-status="todo"]  .dot { background: #ef4444; box-shadow: 0 0 5px #ef444455; }
+  .comp-item[data-status="info"]  .dot { background: #64748b; }
+  .comp-dot { margin-top: 3px; flex-shrink: 0; }
+  .comp-name  { font-weight: 600; color: #e2e8f0; }
+  .comp-sub   { font-size: .72rem; color: #64748b; margin-top: 2px; }
+  .comp-text  { flex: 1; }
+
+  /* Section: data flow */
+  .flow-table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+  .flow-table th {
+    background: #1e293b; color: #94a3b8; font-weight: 600;
+    padding: 9px 14px; text-align: left; border-bottom: 1px solid #334155;
+  }
+  .flow-table td { padding: 9px 14px; border-bottom: 1px solid #1e293b; color: #cbd5e1; vertical-align: top; }
+  .flow-table tr:last-child td { border-bottom: none; }
+  .flow-table tr:hover td { background: #1e29391a; }
+  .flow-from { color: #93c5fd; font-weight: 600; }
+  .flow-to   { color: #86efac; font-weight: 600; }
+  .flow-arrow { color: #475569; padding: 0 6px; }
+  .flow-method { font-family: monospace; font-size: .75rem; color: #a78bfa; }
+  .flow-note { color: #64748b; font-size: .75rem; margin-top: 3px; }
+
+  /* Section: WFO pipeline */
+  .pipeline {
+    display: flex; align-items: stretch;
+    gap: 0; overflow-x: auto;
+    padding-bottom: 8px;
+  }
+  .pipe-step {
+    background: #1e293b; border: 1px solid #334155; border-radius: 10px;
+    padding: 14px 16px; min-width: 160px; flex-shrink: 0;
+    cursor: pointer; transition: border-color .15s;
+    position: relative;
+  }
+  .pipe-step:hover { border-color: #475569; }
+  .pipe-step + .pipe-step { margin-left: 32px; }
+  .pipe-arrow {
+    position: absolute; right: -26px; top: 50%;
+    transform: translateY(-50%);
+    color: #475569; font-size: 1.1rem; z-index: 1;
+  }
+  .pipe-num { font-size: .65rem; font-weight: 700; color: #475569; margin-bottom: 5px; }
+  .pipe-name { font-size: .82rem; font-weight: 700; color: #e2e8f0; margin-bottom: 4px; }
+  .pipe-detail { font-size: .72rem; color: #64748b; line-height: 1.5; }
+  .pipe-node { display: inline-block; font-size: .65rem; padding: 2px 7px; border-radius: 10px; margin-top: 6px; }
+  .pn-242    { background: #450a0a; color: #fca5a5; }
+  .pn-226    { background: #1e3a5f; color: #93c5fd; }
+  .pn-oracle { background: #2d1b69; color: #c4b5fd; }
+  .pn-kaggle { background: #451a03; color: #fcd34d; }
+  .pn-local  { background: #1e293b; color: #94a3b8; border: 1px solid #334155; }
+
+  /* Model pipeline */
+  .artifact-chain { display: flex; flex-direction: column; gap: 8px; }
+  .artifact-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 14px; background: #1e293b; border: 1px solid #334155;
+    border-radius: 8px; font-size: .8rem; cursor: pointer;
+    transition: border-color .15s;
+  }
+  .artifact-row:hover { border-color: #475569; }
+  .artifact-type {
+    font-size: .68rem; font-weight: 700; padding: 2px 8px; border-radius: 10px;
+    flex-shrink: 0; min-width: 60px; text-align: center;
+  }
+  .at-data  { background: #1e3a5f; color: #93c5fd; }
+  .at-feat  { background: #14532d; color: #4ade80; }
+  .at-model { background: #2d1b69; color: #c4b5fd; }
+  .at-pred  { background: #451a03; color: #fcd34d; }
+  .at-set   { background: #1c1917; color: #a8a29e; border: 1px solid #44403c; }
+  .at-ds    { background: #0c4a6e; color: #7dd3fc; }
+  .artifact-name { font-weight: 600; color: #e2e8f0; flex: 1; }
+  .artifact-sub  { font-size: .72rem; color: #64748b; }
+  .artifact-loc  { font-size: .7rem; font-family: monospace; color: #64748b; flex-shrink: 0; }
+  .leak-badge {
+    font-size: .65rem; padding: 2px 7px; border-radius: 10px; flex-shrink: 0;
+  }
+  .lb-ok     { background: #14532d; color: #4ade80; }
+  .lb-leaked { background: #450a0a; color: #f87171; }
+  .lb-partial { background: #451a03; color: #fbbf24; }
+
+  /* Tooltip overlay */
+  .tooltip-overlay {
+    display: none; position: fixed; inset: 0;
+    background: #00000099; z-index: 200;
+    align-items: center; justify-content: center; padding: 24px;
+  }
+  .tooltip-overlay.active { display: flex; }
+  .tooltip-box {
+    background: #1e293b; border: 1px solid #475569; border-radius: 12px;
+    padding: 24px; max-width: 560px; width: 100%; position: relative;
+    max-height: 80vh; overflow-y: auto;
+  }
+  .tooltip-close {
+    position: absolute; top: 12px; right: 14px;
+    background: none; border: none; color: #94a3b8;
+    font-size: 1.3rem; cursor: pointer; line-height: 1;
+  }
+  .tooltip-title { font-size: 1rem; font-weight: 700; color: #f1f5f9; margin-bottom: 12px; }
+  .tooltip-body { font-size: .82rem; color: #94a3b8; line-height: 1.7; }
+  .tooltip-body strong { color: #e2e8f0; }
+  .tooltip-src {
+    margin-top: 14px; padding: 8px 12px; background: #0f172a;
+    border-radius: 6px; font-size: .73rem; color: #64748b; font-family: monospace;
+  }
+
+  /* Network access badge */
+  .net-ok   { color: #4ade80; font-size: .7rem; }
+  .net-no   { color: #f87171; font-size: .7rem; }
+
+  /* Footer */
+  .footer {
+    margin-top: 44px; padding: 16px 18px;
+    background: #1e293b; border: 1px solid #334155; border-radius: 10px;
+    font-size: .78rem; color: #64748b; line-height: 1.7;
+  }
+  .footer strong { color: #94a3b8; }
+  .footer code { background: #0f172a; padding: 1px 6px; border-radius: 4px; font-family: monospace; }
+
+  @media (max-width: 700px) {
+    .node-grid { grid-template-columns: 1fr; }
+    .pipeline { flex-direction: column; }
+    .pipe-step + .pipe-step { margin-left: 0; margin-top: 24px; }
+    .pipe-step .pipe-arrow { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <h1>Kiến trúc Toàn Hệ Thống BinanceFuturesJava</h1>
+  <p class="subtitle">4 node + local dev · Luồng live→Aerospike→WFO dataset→workers→verdict · Cập nhật 2026-07-03 (TASK-120)</p>
+
+  <!-- Legend -->
+  <div class="legend">
+    <span class="legend-title">Node:</span>
+    <div class="legend-item"><div class="lbadge" style="background:#dc2626;opacity:.7"></div> 242 Live (write-protected)</div>
+    <div class="legend-item"><div class="lbadge" style="background:#2563eb;opacity:.7"></div> 226 Storage/Compute</div>
+    <div class="legend-item"><div class="lbadge" style="background:#7c3aed;opacity:.7"></div> Oracle Main Compute</div>
+    <div class="legend-item"><div class="lbadge" style="background:#d97706;opacity:.7"></div> Kaggle Scale</div>
+    <span style="margin-left:16px;color:#64748b">|</span>
+    <span class="legend-title" style="margin-left:4px">Trạng thái:</span>
+    <div class="legend-item"><div class="dot dot-done"></div> Xong</div>
+    <div class="legend-item"><div class="dot dot-wip"></div> Đang làm</div>
+    <div class="legend-item"><div class="dot dot-todo"></div> Chưa làm</div>
+    <span style="color:#64748b;margin-left:auto;font-size:.73rem">Click component → chi tiết</span>
+  </div>
+
+  <!-- Node cards -->
+  <h2>Bản đồ Node</h2>
+  <div class="node-grid">
+
+    <!-- 242 Live -->
+    <div class="node node-242">
+      <div class="node-header">
+        <div class="node-icon icon-242">🔴</div>
+        <div>
+          <div class="node-title">Server 242 — Live Production</div>
+          <div class="node-role">Ingest dữ liệu thời gian thực + thực thi lệnh. GMT+7. WRITE-PROTECTED.</div>
+          <div class="node-ip">⛔ Không accessible từ Kaggle</div>
+        </div>
+      </div>
+      <div class="node-warning">⛔ Deploy/restart = NGƯỜI tay. Không SSH/kill từ CCD. Không đụng từ Kaggle.</div>
+      <ul class="comp-list">
+        <li class="comp-item" data-status="done"
+            data-title="BinanceDataIngestor — WebSocket live ingest"
+            data-body="Stream WebSocket từ Binance (funding rate + ticker kline 1m) → ghi vào Aerospike 242 real-time. Có watchdog tự restart. Process sống lâu — TUYỆT ĐỐI không restart từ CCD."
+            data-src="websocket/BinanceDataIngestor.java | docs/architecture.md">
+          <div class="comp-dot"><div class="dot"></div></div>
+          <div class="comp-text">
+            <div class="comp-name">BinanceDataIngestor</div>
+            <div class="comp-sub">WebSocket stream Binance → Aerospike 242 · có watchdog</div>
+          </div>
+        </li>
+        <li class="comp-item" data-status="done"
+            data-title="BinanceOrderTradingManager — Thực thi lệnh live"
+            data-body="Wire DetectEntrySignal2TradeNormal + order manager. Tự re-exec qua Utils.reset(...), ghi PID qua Utils.writePid2File(). Process sống lâu — TUYỆT ĐỐI không restart từ CCD."
+            data-src="trading/BinanceOrderTradingManager.java | docs/architecture.md">
+          <div class="comp-dot"><div class="dot"></div></div>
+          <div class="comp-text">
+            <div class="comp-name">BinanceOrderTradingManager</div>
+            <div class="comp-sub">execution live · DetectEntrySignal2TradeNormal · tự re-exec</div>
+          </div>
+        </li>
+        <li class="comp-item" data-status="done"
+            data-title="Aerospike 242 — Live data storage"
+            data-body="Lưu ticker 1m, funding rate, order state live. Aerospike instance trên server 242. KHÔNG ghi trực tiếp từ bên ngoài. Chỉ accessible từ 226 (internal network) — 242→226 dùng ReplicateSet242To226 chạy TRÊN 226."
+            data-src="docs/db/aerospike-226.md | aerospike/DataManagerAerospikeFloatSim.java">
+          <div class="comp-dot"><div class="dot"></div></div>
+          <div class="comp-text">
+            <div class="comp-name">Aerospike 242</div>
+            <div class="comp-sub">ticker live · funding live · repl=1 · chỉ 226 tới được</div>
+          </div>
+        </li>
+        <li class="comp-item" data-status="done"
+            data-title="Redis — Order queue live"
+            data-body="Jedis cluster làm order queue live + messaging giữa các component. Không liên quan WFO/Kaggle."
+            data-src="redis/ | docs/architecture.md">
+          <div class="comp-dot"><div class="dot"></div></div>
+          <div class="comp-text">
+            <div class="comp-name">Redis</div>
+            <div class="comp-sub">order queue live · Jedis cluster · không liên quan WFO</div>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <!-- 226 -->
+    <div class="node node-226">
+      <div class="node-header">
+        <div class="node-icon icon-226">🔵</div>
+        <div>
+          <div class="node-title">Server 226 — Aerospike Replicate + Compute</div>
+          <div class="node-role">Kho lịch sử market data + feature sets. Tài nguyên YẾU → job nặng tuần tự.</div>
+          <div class="node-ip">103.157.218.226 · port 3222 · accessible từ Kaggle ✅</div>
+        </div>
+      </div>
+      <ul class="comp-list">
+        <li class="comp-item" data-status="done"
+            data-title="kline_1m_opt — Market data historical 2021→2026"
+            data-body="Toàn bộ kline 1m từ 2021 đến 2026, đang có sẵn ở 226 (cào cũ). Job train/Kaggle đọc từ đây. Aerospike ns=ticker."
+            data-src="docs/db/aerospike-226.md | PIPELINE_PROVENANCE.md §2">
+          <div class="comp-dot"><div class="dot"></div></div>
+          <div class="comp-text">
+            <div class="comp-name">kline_1m_opt (Aerospike 226)</div>
+            <div class="comp-sub">historical 2021→2026 · ns=ticker · Kaggle/train đọc ở đây</div>
+          </div>
+        </li>
+        <li class="comp-item" data-status="wip"
+            data-title="funding_selector_pred_1m_v2 — Funding predictions (LEAKED trước 2025-06)"
+            data-body="Set funding predictions trên Aerospike 226. Sinh từ: ExportSelectorPred1mToAerospike.java ← predict_1m/*.bin ← models_v2 (train≤2024-12, predict TOÀN BỘ 2021→2026). RÒ RỈ: prediction trước ~2025-06 là in-sample (model đã thấy tương lai khi sinh số). Bản leak-free thay thế: dùng gen_funding_wf_predictions.py (funding.bin trong wfo_dataset_wf)."
+            data-src="docs/PIPELINE_PROVENANCE.md §3 | ExportSelectorPred1mToAerospike.java">
+          <div class="comp-dot"><div class="dot"></div></div>
+          <div class="comp-text">
+            <div class="comp-name">funding_selector_pred_1m_v2 (Aerospike 226)</div>
+            <div class="comp-sub">⚠️ LEAKED trước ~2025-06 · cần thay bằng v3wf (GĐ2)</div>
+          </div>
+        </li>
+        <li class="comp-item" data-status="todo"
+            data-title="ai_pred_market_full_basket_v2 — Market pred (provenance CHƯA XÁC LẬP)"
+            data-body="Set market/gate predictions dùng bởi strategy-WFO hiện tại. Provenance: CHƯA XÁC LẬP — nhiều khả năng full-history single model → rò rỉ in-sample. Cần xác lập provenance và chuyển sang ai_pred_market_gate_v3wf (GĐ2)."
+            data-src="docs/PIPELINE_PROVENANCE.md §3,§5 | DataManagerAerospikeFloatSim.java">
+          <div class="comp-dot"><div class="dot"></div></div>
+          <div class="comp-text">
+            <div class="comp-name">ai_pred_market_full_basket_v2 (Aerospike 226)</div>
+            <div class="comp-sub">❌ Provenance CHƯA XÁC LẬP · strategy-WFO đang dùng · GĐ2 thay</div>
+          </div>
+        </li>
+        <li class="comp-item" data-status="done"
+            data-title="ai_pred_market_gate_v2 — Gate pred leak-free từ 2025-06"
+            data-body="Sinh từ GenerateGate15mV2Predictions.java ← gate_model_v2 (default 2025-06→2026-06). Sạch từ 2025-06. Strategy-WFO KHÔNG dùng set này — vẫn dùng full_basket_v2 cũ."
+            data-src="docs/PIPELINE_PROVENANCE.md §3 | GenerateGate15mV2Predictions.java">
+          <div class="comp-dot"><div class="dot"></div></div>
+          <div class="comp-text">
+            <div class="comp-name">ai_pred_market_gate_v2 (Aerospike 226)</div>
+            <div class="comp-sub">leak-free từ 2025-06 · strategy-WFO chưa dùng (vẫn dùng full_basket_v2)</div>
+          </div>
+        </li>
+        <li class="comp-item" data-status="done"
+            data-title="distributed_task / hpo_queue / hpo_results — HPO coordination"
+            data-body="AerospikeTaskCoordinator dùng distributed_task set. HPO queue/results theo CONFIG_VERSION. Kaggle worker đọc hpo_queue, ghi hpo_results. Job nặng chạy tuần tự vì 226 tài nguyên yếu."
+            data-src="docs/db/aerospike-226.md | ai_ml/hpo/master/RunHpoMaster_Distributed.java">
+          <div class="comp-dot"><div class="dot"></div></div>
+          <div class="comp-text">
+            <div class="comp-name">distributed_task / hpo_queue_v8 / hpo_results_v8</div>
+            <div class="comp-sub">HPO coordination · CONFIG_VERSION v8 · Kaggle/226 worker</div>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Oracle -->
+    <div class="node node-oracle">
+      <div class="node-header">
+        <div class="node-icon icon-oracle">🟣</div>
+        <div>
+          <div class="node-title">Oracle — Compute chính</div>
+          <div class="node-role">Training Python · WFO coordinator/worker · Aerospike LOCAL ns=test (WFO jobstore). 23GB RAM. Accessible từ local qua SSH.</div>
+          <div class="node-ip">Aerospike LOCAL: 127.0.0.1:3222 ns=test · ⛔ Kaggle KHÔNG tới được jobstore này</div>
+        </div>
+      </div>
+      <ul class="comp-list">
+        <li class="comp-item" data-status="done"
+            data-title="Aerospike Oracle-local (ns=test) — WFO Jobstore + WFO Data"
+            data-body="Aerospike chạy LOCAL trên Oracle (127.0.0.1:3222, ns=test). Dùng cho: (1) strategy_window = WFO jobstore (CAS+lease, tài nguyên độc quyền), (2) replicate market_data/funding/pred cho WFO worker. getClient226() config AEROSPIKE_HOST_226=127.0.0.1. ⚠️ Kaggle KHÔNG poll được — nếu dùng Kaggle làm WFO worker đa-node phải WFO_STATE_HOST=226 thật."
+            data-src="docs/insights/WFO_ROADMAP.md §1,§4 | ai_ml/wfo/framework/WfoJobStore.java">
+          <div class="comp-dot"><div class="dot"></div></div>
+          <div class="comp-text">
+            <div class="comp-name">Aerospike LOCAL (ns=test) — WFO jobstore</div>
+            <div class="comp-sub">strategy_window · 127.0.0.1:3222 · CAS+lease · độc quyền Oracle</div>
+          </div>
+        </li>
+        <li class="comp-item" data-status="done"
+            data-title="Python Training — train_funding_selector.py, train_gate_fold.py"
+            data-body="train_funding_selector.py: time-split, no-shuffle, purge=horizon, assert chống leak. TEST=12 tháng cuối. Output: models_v2/model_{4h,12h,24h,72h}.ubj+.onnx + train_meta_*.json. train_gate_fold.py: expanding cutoff per-fold, gọi bởi WFOGateRunner. Output: wfo_models/fold_0..13/Model_Regressor_Return15M.onnx."
+            data-src="docs/PIPELINE_PROVENANCE.md §2,§3 | ~/claudedata/train_funding_selector.py">
+          <div class="comp-dot"><div class="dot"></div></div>
+          <div class="comp-text">
+            <div class="comp-name">Python Training (~/claudedata/)</div>
+            <div class="comp-sub">train_funding_selector.py · train_gate_fold.py · models_v2/ + wfo_models/</div>
+          </div>
+        </li>
+        <li class="comp-item" data-status="done"
+            data-title="WfoCoordinator — Điều phối WFO"
+            data-body="WfoCoordinator init|reset|status|report strategy_window. Là entry point quản lý vòng WFO. Dùng Aerospike LOCAL làm jobstore. Chạy bằng lệnh shell trên Oracle. 1 lệnh: WfoCoordinator init|reset|status|report strategy_window."
+            data-src="docs/insights/WFO_ROADMAP.md §4 | ai_ml/wfo/framework/WfoCoordinator.java">
+          <div class="comp-dot"><div class="dot"></div></div>
+          <div class="comp-text">
+            <div class="comp-name">WfoCoordinator</div>
+            <div class="comp-sub">init|reset|status|report strategy_window · quản lý vòng WFO</div>
+          </div>
+        </li>
+        <li class="comp-item" data-status="done"
+            data-title="WfoWorker Oracle — Chạy backtest per-window"
+            data-body="WfoWorker chạy trên Oracle, đọc dataset offline (WFO_DATA_DIR=wfo_dataset_wf/), poll jobstore Oracle-local. Sau TASK-112: env rõ ràng WFO_SMART_CACHE=1 + WFO_DATA_DIR; thiếu key → fail-fast. Fitness V4.1 (TASK-113, GATE PASS 2026-07-03). Jar: ~/java/simulator/binance-futures-wfo-lf.jar."
+            data-src="docs/insights/WFO_ROADMAP.md §4 | ai_ml/wfo/framework/WfoWorker.java | TASK-112,113">
+          <div class="comp-dot"><div class="dot"></div></div>
+          <div class="comp-text">
+            <div class="comp-name">WfoWorker Oracle</div>
+            <div class="comp-sub">fitness V4.1 ✅ · WFO_SMART_CACHE=1 · fail-fast TASK-112 · binance-futures-wfo-lf.jar</div>
+          </div>
+        </li>
+        <li class="comp-item" data-status="done"
+            data-title="wfo_dataset_wf/ — Dataset offline WFO (leak-free funding)"
+            data-body="Dataset offline: market.bin + pred.bin + funding.bin + manifest.txt (md5 cả 3 bin). Funding.bin dựng từ gen_funding_wf_predictions.py (17-fold WF, horizon 24h, forward-fill 15p→phút). WfoDataset.load() verify md5 trước khi dùng. Đã upload lên Kaggle: chuyendinh/wfo-dataset-wf-leakfree."
+            data-src="docs/PIPELINE_PROVENANCE.md §2 | ai_ml/wfo/framework/ExportWfoDataset.java | WFO_ROADMAP.md §1">
+          <div class="comp-dot"><div class="dot"></div></div>
+          <div class="comp-text">
+            <div class="comp-name">wfo_dataset_wf/ (offline)</div>
+            <div class="comp-sub">market.bin + pred.bin + funding.bin(WF) · md5 verify · 2,758,365 funding entries</div>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Kaggle -->
+    <div class="node node-kaggle">
+      <div class="node-header">
+        <div class="node-icon icon-kaggle">🟡</div>
+        <div>
+          <div class="node-title">Kaggle — Scale Compute</div>
+          <div class="node-role">5 slot CPU đồng thời. OI backfill · Feature export · WFO worker tương lai. Có internet, tới được 226.</div>
+          <div class="node-ip">Java 17 · 31GB/4CPU/20GB · 12h kill · ⛔ KHÔNG tới 242, KHÔNG tới Oracle-local Aerospike</div>
+        </div>
+      </div>
+      <ul class="comp-list">
+        <li class="comp-item" data-status="done"
+            data-title="WfoWorker Kaggle — Smoke PASS 2026-07-02"
+            data-body="WfoWorker chạy trên Kaggle CPU. Đọc dataset từ Kaggle Dataset chuyendinh/wfo-dataset-wf-leakfree (glob recursive /kaggle/input/**/manifest.txt). Smoke PASS 2026-07-02 (ENV_TEST_PASS). ⚠️ KHÔNG poll được jobstore Oracle-local (127.0.0.1:3222) — chỉ chạy được nếu standalone hoặc WFO_STATE_HOST=226 thật cho multi-node. Quy tắc CỨNG: 1 experiment = 1 loại node (Kaggle ticker đọc 226 ≠ Oracle-local, đã đo file≠aerospike lệch số)."
+            data-src="docs/KAGGLE_RULES.md §3b,3c | docs/insights/WFO_ROADMAP.md §3b GĐ3">
+          <div class="comp-dot"><div class="dot"></div></div>
+          <div class="comp-text">
+            <div class="comp-name">WfoWorker Kaggle</div>
+            <div class="comp-sub">smoke PASS 2026-07-02 · cần WFO_STATE_HOST=226 cho multi-node · 1 experiment=1 loại node</div>
+          </div>
+        </li>
+        <li class="comp-item" data-status="done"
+            data-title="BackfillOiWorker — OI backfill từ data.binance.vision"
+            data-body="Download OI data từ data.binance.vision → ghi vào Aerospike 226 (set oi_backfill_done / queue). Worker tự cướp task stale sau 45 phút (STALE_RUNNING_MS=45'). Cần System.exit(0) cuối main. Slot limit: 5 đồng thời. Sau 12h Kaggle kill kernel → reset-stale + push lại."
+            data-src="docs/KAGGLE_RULES.md §2,4 | research/oibackfill/BackfillOiWorker.java">
+          <div class="comp-dot"><div class="dot"></div></div>
+          <div class="comp-text">
+            <div class="comp-name">BackfillOiWorker (OI backfill)</div>
+            <div class="comp-sub">data.binance.vision → 226 · 5 slot · 12h kill · System.exit(0)</div>
+          </div>
+        </li>
+        <li class="comp-item" data-status="done"
+            data-title="ExportFeaturesForPythonTool — Export feature từ 226"
+            data-body="Đọc kline từ Aerospike 226 (TCP 103.157.218.226:3222 OK từ Kaggle) → tính features → ghi ff_*.bin lên 226. Cần System.exit(0). enable_internet=true trong kernel-metadata.json."
+            data-src="docs/KAGGLE_RULES.md §3 | ai_ml/features/export/fundingv2/ExportFeaturesForPythonTool.java">
+          <div class="comp-dot"><div class="dot"></div></div>
+          <div class="comp-text">
+            <div class="comp-name">ExportFeaturesForPythonTool</div>
+            <div class="comp-sub">đọc kline 226 → features → ghi 226 · enable_internet=true</div>
+          </div>
+        </li>
+        <li class="comp-item" data-status="info"
+            data-title="Constraints Kaggle — Bắt buộc nhớ"
+            data-body="(1) 5 slot đồng thời (toàn account). (2) 12h kill — worker tự hồi phục nếu còn worker sống. (3) System.exit(0) bắt buộc cuối main() — thiếu → kernel treo 12h (non-daemon thread). (4) Mount path mới: /kaggle/input/datasets/&lt;user&gt;/&lt;slug&gt;/ — dùng glob recursive. (5) Log format JSON — parse field 'data', không split đầu dòng. (6) Jar trên chuyendinh/java-run-lc là snapshot cố định — rebuild + upload khi HEAD thay đổi."
+            data-src="docs/KAGGLE_RULES.md §1,2,4,3b,5">
+          <div class="comp-dot"><div class="dot"></div></div>
+          <div class="comp-text">
+            <div class="comp-name">Constraints Kaggle</div>
+            <div class="comp-sub">5 slot · 12h kill · System.exit(0) · glob path · jar snapshot · log JSON</div>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Local Windows -->
+    <div class="node node-local">
+      <div class="node-header">
+        <div class="node-icon icon-local">💻</div>
+        <div>
+          <div class="node-title">Local Windows — Dev / Coordination</div>
+          <div class="node-role">Build Maven · Claude Code (CCD) · điều phối Kaggle · git branch module. KHÔNG chạy WFO/HPO trực tiếp.</div>
+          <div class="node-ip">E:\educa\source\github\20260415\BinanceFuturesJava · /d/claudedata (output)</div>
+        </div>
+      </div>
+      <ul class="comp-list">
+        <li class="comp-item" data-status="done"
+            data-title="Maven Build + Claude Code (CCD)"
+            data-body="Build: JAVA_HOME=/c/Users/pc/.jdks/corretto-17.0.9 /c/Users/pc/bin/mvn -q -DskipTests package. Output jar dùng cho Oracle deploy. Sau build: sanitize (PrivateConfig → placeholder, bỏ secret) → upload Kaggle dataset chuyendinh/java-run-lc. CCD = Claude Code agent nhận task từ user, thực hiện code/docs/run."
+            data-src="docs/rules/build-env.md | docs/KAGGLE_RULES.md §5">
+          <div class="comp-dot"><div class="dot"></div></div>
+          <div class="comp-text">
+            <div class="comp-name">Maven Build + CCD</div>
+            <div class="comp-sub">corretto-17 · build → sanitize → Kaggle upload · git branch: module</div>
+          </div>
+        </li>
+        <li class="comp-item" data-status="done"
+            data-title="Kaggle CLI — Push / monitor kernels"
+            data-body="kaggle kernels push -p &lt;folder&gt;. Monitor: kaggle kernels status / kernels list --mine. Log: kaggle kernels output -p /d/claudedata/. Output lưu /d/claudedata (KHÔNG lưu ổ C — đã full 2 lần). Credential: ~/.kaggle/kaggle.json (user chuyendinh)."
+            data-src="docs/KAGGLE_RULES.md §0,6,10">
+          <div class="comp-dot"><div class="dot"></div></div>
+          <div class="comp-text">
+            <div class="comp-name">Kaggle CLI</div>
+            <div class="comp-sub">push/monitor kernels · output → /d/claudedata · user chuyendinh</div>
+          </div>
+        </li>
+        <li class="comp-item" data-status="done"
+            data-title="Git — branch module"
+            data-body="Nhánh làm việc chính: module. Main branch: master. Commit quy ước: feat/fix/refactor/docs/task theo scope (ví dụ: docs(120): ...). KHÔNG git add -A. KHÔNG git add . Thêm từng file cụ thể."
+            data-src="CLAUDE.md | CORE.md">
+          <div class="comp-dot"><div class="dot"></div></div>
+          <div class="comp-text">
+            <div class="comp-name">Git</div>
+            <div class="comp-sub">branch: module · commit rõ scope · KHÔNG git add .</div>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+  </div><!-- /node-grid -->
+
+  <!-- Data flows -->
+  <h2>Luồng dữ liệu chính</h2>
+  <div style="overflow-x:auto">
+  <table class="flow-table">
+    <thead>
+      <tr>
+        <th>Từ</th><th></th><th>Đến</th>
+        <th>Phương thức / Tool</th>
+        <th>Ghi chú</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="flow-from">Binance Exchange</span></td>
+        <td><span class="flow-arrow">→</span></td>
+        <td><span class="flow-to">242</span></td>
+        <td><span class="flow-method">WebSocket</span></td>
+        <td>Funding rate + ticker 1m, real-time</td>
+      </tr>
+      <tr>
+        <td><span class="flow-from">242</span></td>
+        <td><span class="flow-arrow">→</span></td>
+        <td><span class="flow-to">226</span></td>
+        <td><span class="flow-method">ReplicateSet242To226</span></td>
+        <td>On-demand (trước train). Chạy TRÊN 226, không từ Kaggle/local</td>
+      </tr>
+      <tr>
+        <td><span class="flow-from">226 kline</span></td>
+        <td><span class="flow-arrow">→</span></td>
+        <td><span class="flow-to">Kaggle</span></td>
+        <td><span class="flow-method">Aerospike TCP 3222</span></td>
+        <td>Kaggle đọc trực tiếp 226:3222 (enable_internet=true). OK đo thực tế</td>
+      </tr>
+      <tr>
+        <td><span class="flow-from">Kaggle</span></td>
+        <td><span class="flow-arrow">→</span></td>
+        <td><span class="flow-to">226</span></td>
+        <td><span class="flow-method">Aerospike write</span></td>
+        <td>BackfillOiWorker (OI data), ExportFeaturesForPythonTool (ff_*.bin)</td>
+      </tr>
+      <tr>
+        <td><span class="flow-from">226</span></td>
+        <td><span class="flow-arrow">→</span></td>
+        <td><span class="flow-to">Oracle</span></td>
+        <td><span class="flow-method">SSH/scp hoặc ExportWfoDataset</span></td>
+        <td>Replicate market data + features cho Oracle; export WFO dataset offline</td>
+      </tr>
+      <tr>
+        <td><span class="flow-from">Oracle</span></td>
+        <td><span class="flow-arrow">→</span></td>
+        <td><span class="flow-to">Kaggle Dataset</span></td>
+        <td><span class="flow-method">kaggle datasets version</span></td>
+        <td>Upload wfo_dataset_wf/ → chuyendinh/wfo-dataset-wf-leakfree</td>
+      </tr>
+      <tr>
+        <td><span class="flow-from">Kaggle</span></td>
+        <td><span class="flow-arrow">→</span></td>
+        <td><span class="flow-to">Kaggle Dataset</span></td>
+        <td><span class="flow-method">read-only mount</span></td>
+        <td>/kaggle/input/datasets/chuyendinh/wfo-dataset-wf-leakfree/ (glob recursive)</td>
+      </tr>
+      <tr>
+        <td><span class="flow-from">Oracle Python</span></td>
+        <td><span class="flow-arrow">→</span></td>
+        <td><span class="flow-to">Oracle models</span></td>
+        <td><span class="flow-method">train_funding_selector.py</span></td>
+        <td>→ models_v2/*.ubj+.onnx + train_meta_*.json</td>
+      </tr>
+      <tr>
+        <td><span class="flow-from">Oracle models</span></td>
+        <td><span class="flow-arrow">→</span></td>
+        <td><span class="flow-to">wf_pred/*.bin</span></td>
+        <td><span class="flow-method">gen_funding_wf_predictions.py</span></td>
+        <td>17-fold WF, per-fold leak-assert, horizon 24h → funding.bin</td>
+      </tr>
+      <tr>
+        <td><span class="flow-from">Local</span></td>
+        <td><span class="flow-arrow">→</span></td>
+        <td><span class="flow-to">Oracle</span></td>
+        <td><span class="flow-method">SSH deploy JAR</span></td>
+        <td>Build local → sanitize → deploy ~/java/simulator/*.jar trên Oracle</td>
+      </tr>
+      <tr>
+        <td><span class="flow-from">Local</span></td>
+        <td><span class="flow-arrow">→</span></td>
+        <td><span class="flow-to">Kaggle</span></td>
+        <td><span class="flow-method">kaggle kernels push</span></td>
+        <td>Push kernel scripts → Kaggle chạy; monitor qua kaggle kernels status</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <!-- WFO pipeline steps -->
+  <h2>Pipeline WFO end-to-end</h2>
+  <div class="pipeline">
+
+    <div class="pipe-step" data-status="done"
+         onclick="showTip('Bước 1 — Dữ liệu gốc','<strong>Kline 1m</strong> (2021→2026) lưu trên Aerospike 226 (cào cũ). OI data backfill từ data.binance.vision qua Kaggle BackfillOiWorker → 226. Funding rate từ 242 (live) + replicate on-demand.','docs/PIPELINE_PROVENANCE.md §2 | docs/db/aerospike-226.md')">
+      <div class="pipe-num">1</div>
+      <div class="pipe-name">Dữ liệu gốc</div>
+      <div class="pipe-detail">kline_1m_opt · OI · funding rate</div>
+      <span class="pipe-node pn-226">226</span>
+      <div class="pipe-arrow">→</div>
+    </div>
+
+    <div class="pipe-step" data-status="done"
+         onclick="showTip('Bước 2 — Feature Export','ExportFeaturesForPythonTool.java (Java @226 hoặc Kaggle): đọc kline+OI → tính features → ff_*.bin. ExportGate15mV2.java + WFOGateRunner: features gate per-fold CSV. ExportFundingLabel.java: funding labels. Đã đo 2026-06-24.','docs/PIPELINE_PROVENANCE.md §2,§3 | ExportFeaturesForPythonTool.java')">
+      <div class="pipe-num">2</div>
+      <div class="pipe-name">Feature Export</div>
+      <div class="pipe-detail">ff_*.bin · gate15m_v2_full.csv · funding_label.csv</div>
+      <span class="pipe-node pn-226">226</span>&nbsp;<span class="pipe-node pn-kaggle">Kaggle</span>
+      <div class="pipe-arrow">→</div>
+    </div>
+
+    <div class="pipe-step" data-status="done"
+         onclick="showTip('Bước 3 — Train Model','train_funding_selector.py: time-split, purge=horizon, assert leak. Output: models_v2/{4h,12h,24h,72h}.ubj+.onnx + train_meta_*.json. train_gate_fold.py: expanding cutoff per-fold (WFOGateRunner) → wfo_models/fold_0..13. Đo: 24h LIFT 1.54 rankIC 0.29 PASS.','docs/PIPELINE_PROVENANCE.md §2,§3 | train_funding_selector.py | train_gate_fold.py')">
+      <div class="pipe-num">3</div>
+      <div class="pipe-name">Train Model</div>
+      <div class="pipe-detail">funding: models_v2/ (single, 2024-12) · gate: wfo_models/fold_0..13 (per-fold)</div>
+      <span class="pipe-node pn-oracle">Oracle</span>
+      <div class="pipe-arrow">→</div>
+    </div>
+
+    <div class="pipe-step" data-status="done"
+         onclick="showTip('Bước 4 — Sinh Prediction (Funding WF)','gen_funding_wf_predictions.py: 17-fold walk-forward, per-fold train &lt;cutoff→predict OOS, leak-assert giữ mọi fold. Output: ~/claudedata/wf_pred/*.bin (3,718,490 rec, 26B/rec). Horizon 24h. Score = 1−P(win) khớp engine. Forward-fill 15p→phút (2,758,365 entry funding.bin).','docs/insights/WFO_ROADMAP.md §1 | commit 57ddb49')">
+      <div class="pipe-num">4</div>
+      <div class="pipe-name">Prediction (WF)</div>
+      <div class="pipe-detail">gen_funding_wf_predictions.py · 17-fold · 3.7M rec</div>
+      <span class="pipe-node pn-oracle">Oracle</span>
+      <div class="pipe-arrow">→</div>
+    </div>
+
+    <div class="pipe-step" data-status="done"
+         onclick="showTip('Bước 5 — Export WFO Dataset','ExportWfoDataset.java → WfoDataset.export(): đọc 3 set (market_data + ai_pred_market_full_basket_v2 + wf_pred/funding.bin) → wfo_dataset_wf/{market.bin, pred.bin, funding.bin, manifest.txt}. md5 verify mỗi file. Upload lên Kaggle: chuyendinh/wfo-dataset-wf-leakfree. build_funding_bin.py patch manifest.','docs/PIPELINE_PROVENANCE.md §2 | ai_ml/wfo/framework/ExportWfoDataset.java')">
+      <div class="pipe-num">5</div>
+      <div class="pipe-name">Export Dataset</div>
+      <div class="pipe-detail">wfo_dataset_wf/ · manifest.txt md5 · Kaggle upload</div>
+      <span class="pipe-node pn-oracle">Oracle</span>&nbsp;<span class="pipe-node pn-kaggle">Kaggle</span>
+      <div class="pipe-arrow">→</div>
+    </div>
+
+    <div class="pipe-step" data-status="done"
+         onclick="showTip('Bước 6 — WFO Workers','WfoWorker Oracle: poll Oracle-local jobstore (strategy_window), chạy backtest 17 window × N=30, fitness V4.1. WfoWorker Kaggle: đọc Kaggle Dataset (standalone, không có shared jobstore). WfoCoordinator điều phối init/status/report.','docs/insights/WFO_ROADMAP.md §4 | ai_ml/wfo/framework/WfoWorker.java')">
+      <div class="pipe-num">6</div>
+      <div class="pipe-name">WFO Workers</div>
+      <div class="pipe-detail">17 window × N=30 · fitness V4.1 · CAS+lease</div>
+      <span class="pipe-node pn-oracle">Oracle</span>&nbsp;<span class="pipe-node pn-kaggle">Kaggle</span>
+      <div class="pipe-arrow">→</div>
+    </div>
+
+    <div class="pipe-step" data-status="wip"
+         onclick="showTip('Bước 7 — Verdict Pre-registered','3 tiêu chí (WFE_median≥0.5 · %OOS+≥70% · worstDD≤50%). Kết quả gần nhất (leak-free v2, V4): FAIL — WFE=0.098, %OOS+=76.5%, worstDD=30.7%. Leaked re-run (V4) đang chạy. Cặp so V4.1 chính thức chờ sau GĐ0. Xem report: docs/reports/wfo_leakfree_funding_v2_report.md.','docs/insights/WFO_ROADMAP.md §2 | docs/reports/wfo_leakfree_funding_v2_report.md')">
+      <div class="pipe-num">7</div>
+      <div class="pipe-name">Verdict</div>
+      <div class="pipe-detail">🔄 Cặp so V4.1 chính thức chờ GĐ1 · gần nhất: FAIL WFE=0.098</div>
+      <span class="pipe-node pn-oracle">Oracle</span>
+    </div>
+
+  </div><!-- /pipeline -->
+
+  <!-- Model artifact chain -->
+  <h2>Chuỗi Artifact — Model Pipeline (trạng thái hiện tại)</h2>
+  <div class="artifact-chain">
+
+    <div class="artifact-row" onclick="showTip('kline_1m_opt — Market data 2021→2026','Aerospike 226, ns=ticker. Nguồn gốc: cào từ Binance (cũ) + replicate từ 242. Đã đo sẵn ở 226. Kaggle/Oracle đọc trực tiếp qua TCP.','docs/db/aerospike-226.md | docs/PIPELINE_PROVENANCE.md §2')">
+      <span class="artifact-type at-data">DATA</span>
+      <div class="comp-text">
+        <div class="comp-name">kline_1m_opt <span class="artifact-loc">Aerospike 226</span></div>
+        <div class="artifact-sub">Market data lịch sử 2021→2026 · Aerospike 226 ns=ticker</div>
+      </div>
+      <span class="leak-badge lb-ok">SẠCH</span>
+    </div>
+
+    <div class="artifact-row" onclick="showTip('ff_m1/ — Features funding','ExportFeaturesForPythonTool.java → ff_*.bin (Oracle/226, 2026-06-24). Input cho train_funding_selector.py.','docs/PIPELINE_PROVENANCE.md §3')">
+      <span class="artifact-type at-feat">FEATURE</span>
+      <div class="comp-text">
+        <div class="comp-name">ff_m1/ (ff_*.bin) <span class="artifact-loc">Oracle/226</span></div>
+        <div class="artifact-sub">2026-06-24 · ExportFeaturesForPythonTool.java</div>
+      </div>
+      <span class="leak-badge lb-ok">SẠCH</span>
+    </div>
+
+    <div class="artifact-row" onclick="showTip('models_v2/ — Funding selector models','train_funding_selector.py: time-split no-shuffle purge=horizon assert-leak. train_max=2024-12-12, test_min=2025-06-11. 4 horizon: 4h/12h/24h/72h. ONNX + .ubj + train_meta_*.json. Đo 24h: LIFT 1.54 rankIC 0.29 PASS.','docs/PIPELINE_PROVENANCE.md §2,§3')">
+      <span class="artifact-type at-model">MODEL</span>
+      <div class="comp-text">
+        <div class="comp-name">models_v2/ (funding 4h/12h/24h/72h) <span class="artifact-loc">Oracle</span></div>
+        <div class="artifact-sub">train_max=2024-12-12 · test=2025-06-11→2026-06-06 · 24h LIFT 1.54 PASS</div>
+      </div>
+      <span class="leak-badge lb-partial">SINGLE-MODEL</span>
+    </div>
+
+    <div class="artifact-row" onclick="showTip('wfo_models/fold_0..13 — Gate model per-fold','train_gate_fold.py: expanding cutoff per-fold, gọi bởi WFOGateRunner. Mỗi fold: Model_Regressor_Return15M.onnx. LEAK-FREE. Tuy nhiên strategy-WFO CHƯA dùng — vẫn dùng ai_pred_market_full_basket_v2 cũ.','docs/PIPELINE_PROVENANCE.md §2,§5')">
+      <span class="artifact-type at-model">MODEL</span>
+      <div class="comp-text">
+        <div class="comp-name">wfo_models/fold_0..13 (gate per-fold) <span class="artifact-loc">Oracle</span></div>
+        <div class="artifact-sub">train_gate_fold.py · expanding cutoff · LEAK-FREE · chưa nối vào strategy-WFO</div>
+      </div>
+      <span class="leak-badge lb-ok">LEAK-FREE</span>
+    </div>
+
+    <div class="artifact-row" onclick="showTip('wf_pred/*.bin — Funding predictions WF 17-fold','gen_funding_wf_predictions.py: 17-fold walk-forward, per-fold train &lt;cutoff→predict OOS, leak-assert. 3,718,490 rec, 26B/rec. Horizon 24h. Score=1−P(win). ~/claudedata/wf_pred/.','docs/insights/WFO_ROADMAP.md §1 | commit 57ddb49')">
+      <span class="artifact-type at-pred">PRED</span>
+      <div class="comp-text">
+        <div class="comp-name">wf_pred/*.bin (funding WF) <span class="artifact-loc">Oracle ~/claudedata/</span></div>
+        <div class="artifact-sub">17-fold leak-assert · 3,718,490 rec · horizon 24h · score=1−P(win)</div>
+      </div>
+      <span class="leak-badge lb-ok">LEAK-FREE</span>
+    </div>
+
+    <div class="artifact-row" onclick="showTip('funding_selector_pred_1m_v2 — Aerospike 226 (LEAKED)','Sinh từ ExportSelectorPred1mToAerospike.java ← predict_1m/*.bin ← models_v2 (train≤2024-12, predict TOÀN BỘ 2021→2026). RÒ RỈ: trước ~2025-06 là in-sample. Set WFO cũ dùng cái này. Bản mới thay bằng funding.bin WF (trong wfo_dataset_wf) — đã làm ở iteration-1.','docs/PIPELINE_PROVENANCE.md §3,§4')">
+      <span class="artifact-type at-set">SET</span>
+      <div class="comp-text">
+        <div class="comp-name">funding_selector_pred_1m_v2 <span class="artifact-loc">Aerospike 226</span></div>
+        <div class="artifact-sub">ExportSelectorPred1mToAerospike.java · 2026-06-22</div>
+      </div>
+      <span class="leak-badge lb-leaked">LEAKED &lt;2025-06</span>
+    </div>
+
+    <div class="artifact-row" onclick="showTip('ai_pred_market_full_basket_v2 — Provenance CHƯA XÁC LẬP','Set market pred dùng bởi strategy-WFO. Provenance: CHƯA XÁC LẬP — nhiều khả năng full-history single model → rò rỉ in-sample. Strategy-WFO hardcode đọc set này trong DataManagerAerospikeFloatSim. Cần xác lập + chuyển sang gate per-fold (GĐ2).','docs/PIPELINE_PROVENANCE.md §3,§5')">
+      <span class="artifact-type at-set">SET</span>
+      <div class="comp-text">
+        <div class="comp-name">ai_pred_market_full_basket_v2 <span class="artifact-loc">Aerospike 226</span></div>
+        <div class="artifact-sub">strategy-WFO đang dùng · provenance CHƯA XÁC LẬP</div>
+      </div>
+      <span class="leak-badge lb-leaked">CHƯA XÁC LẬP</span>
+    </div>
+
+    <div class="artifact-row" onclick="showTip('wfo_dataset_wf/ — WFO Dataset offline (leak-free funding)','ExportWfoDataset.java: market.bin + pred.bin + funding.bin(WF) + manifest.txt. md5 verify. build_funding_bin.py patch manifest. Đã upload: chuyendinh/wfo-dataset-wf-leakfree. md5 MATCH trên Kaggle (kernel wfo-env-test PASS 2026-07-02). funding.bin từ wf_pred/*.bin (17-fold WF, sạch); pred.bin vẫn từ full_basket_v2 (không sạch); market.bin sạch.','docs/PIPELINE_PROVENANCE.md §2 | WFO_ROADMAP.md §1')">
+      <span class="artifact-type at-ds">DATASET</span>
+      <div class="comp-text">
+        <div class="comp-name">wfo_dataset_wf/ <span class="artifact-loc">Oracle + Kaggle Dataset</span></div>
+        <div class="artifact-sub">market.bin ✅ · pred.bin ⚠️ (full_basket_v2) · funding.bin ✅ (17-fold WF) · md5 PASS</div>
+      </div>
+      <span class="leak-badge lb-partial">FUNDING-LEAKFREE</span>
+    </div>
+
+  </div><!-- /artifact-chain -->
+
+  <!-- Network access summary -->
+  <h2>Mạng & Quyền truy cập</h2>
+  <div style="overflow-x:auto">
+  <table class="flow-table">
+    <thead>
+      <tr><th>Từ \ Đến</th><th>242</th><th>226 :3222</th><th>Oracle-local Aerospike</th><th>data.binance.vision</th><th>Binance API</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Local Windows</strong></td>
+        <td><span class="net-no">✕ (cần qua 226)</span></td>
+        <td><span class="net-ok">✓ SSH</span></td>
+        <td><span class="net-ok">✓ SSH tunnel</span></td>
+        <td><span class="net-ok">✓</span></td>
+        <td><span class="net-ok">✓</span></td>
+      </tr>
+      <tr>
+        <td><strong>226</strong></td>
+        <td><span class="net-ok">✓ internal</span></td>
+        <td>—</td>
+        <td><span class="net-no">✕ (khác mạng)</span></td>
+        <td><span class="net-ok">✓</span></td>
+        <td><span class="net-ok">✓</span></td>
+      </tr>
+      <tr>
+        <td><strong>Oracle</strong></td>
+        <td><span class="net-no">✕</span></td>
+        <td><span class="net-ok">✓ TCP</span></td>
+        <td><span class="net-ok">✓ 127.0.0.1</span></td>
+        <td><span class="net-ok">✓</span></td>
+        <td><span class="net-ok">✓</span></td>
+      </tr>
+      <tr>
+        <td><strong>Kaggle</strong></td>
+        <td><span class="net-no">✕ TUYỆT ĐỐI</span></td>
+        <td><span class="net-ok">✓ TCP :3222</span></td>
+        <td><span class="net-no">✕ (Oracle-local)</span></td>
+        <td><span class="net-ok">✓</span></td>
+        <td><span class="net-ok">✓</span></td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <strong>Cách cập nhật trạng thái:</strong>
+    Sửa <code>data-status="done|wip|todo|info"</code> trên <code>&lt;li class="comp-item"&gt;</code>.
+    Sửa <code>data-body</code> và <code>data-src</code> khi nội dung thay đổi.
+    Thêm node mới: copy template <code>&lt;div class="node"&gt;</code> + thêm màu border tương ứng vào CSS.
+    <br><br>
+    <strong>Nguồn sự thật:</strong>
+    <code>docs/PIPELINE_PROVENANCE.md</code> (artifact chain) ·
+    <code>docs/db/aerospike-226.md</code> (cấu trúc 226) ·
+    <code>docs/KAGGLE_RULES.md</code> (constraints Kaggle) ·
+    <code>docs/insights/WFO_ROADMAP.md</code> (trạng thái WFO) ·
+    <code>docs/architecture.md</code> (bản đồ package)
+    <br><br>
+    <strong>Cập nhật lần cuối:</strong> 2026-07-03 (TASK-120) · GATE-112 PASS · GATE-113 PASS · Fitness V4.1 deploy Oracle md5=38b503dd · wfo-dataset-wf-leakfree PASS Kaggle
+  </div>
+
+</div><!-- /container -->
+
+<!-- Tooltip overlay -->
+<div class="tooltip-overlay" id="overlay" onclick="closeOverlay(event)">
+  <div class="tooltip-box">
+    <button class="tooltip-close" onclick="document.getElementById('overlay').classList.remove('active')">✕</button>
+    <div class="tooltip-title" id="tip-title"></div>
+    <div class="tooltip-body" id="tip-body"></div>
+    <div class="tooltip-src" id="tip-src"></div>
+  </div>
+</div>
+
+<script>
+  document.querySelectorAll('.comp-item').forEach(el => {
+    el.addEventListener('click', () => {
+      showTip(
+        el.dataset.title || el.querySelector('.comp-name').textContent,
+        el.dataset.body  || '',
+        el.dataset.src   || ''
+      );
+    });
+  });
+
+  function showTip(title, body, src) {
+    document.getElementById('tip-title').textContent = title;
+    document.getElementById('tip-body').innerHTML = body;
+    document.getElementById('tip-src').textContent = src ? '📄 ' + src : '';
+    document.getElementById('overlay').classList.add('active');
+  }
+
+  function closeOverlay(e) {
+    if (e.target === document.getElementById('overlay')) {
+      document.getElementById('overlay').classList.remove('active');
+    }
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') document.getElementById('overlay').classList.remove('active');
+  });
+</script>
+</body>
+</html>

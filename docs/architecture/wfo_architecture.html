@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kiến trúc WFO 6 Lớp — BinanceFuturesJava</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0f172a;
+    color: #e2e8f0;
+    min-height: 100vh;
+    padding: 24px 16px 48px;
+  }
+  h1 { font-size: 1.6rem; font-weight: 700; color: #f1f5f9; margin-bottom: 4px; }
+  h2 { font-size: 1.1rem; font-weight: 600; color: #94a3b8; margin: 32px 0 14px; text-transform: uppercase; letter-spacing: .06em; }
+  h3 { font-size: .95rem; font-weight: 600; }
+  .subtitle { color: #64748b; font-size: .875rem; margin-bottom: 20px; }
+  .container { max-width: 960px; margin: 0 auto; }
+
+  /* Legend */
+  .legend {
+    display: flex; gap: 20px; flex-wrap: wrap;
+    background: #1e293b; border: 1px solid #334155;
+    border-radius: 8px; padding: 12px 16px; margin-bottom: 28px;
+    font-size: .8rem; align-items: center;
+  }
+  .legend-title { color: #94a3b8; font-weight: 600; margin-right: 4px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .dot-done  { background: #22c55e; }
+  .dot-wip   { background: #f59e0b; }
+  .dot-todo  { background: #ef4444; }
+
+  /* Layer cards */
+  .layers { display: flex; flex-direction: column; gap: 12px; }
+  .layer {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .layer-header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 18px;
+    cursor: pointer;
+    user-select: none;
+    transition: background .15s;
+  }
+  .layer-header:hover { background: #263348; }
+  .layer-num {
+    font-size: .7rem; font-weight: 700; color: #475569;
+    background: #0f172a; border-radius: 4px;
+    padding: 2px 7px; flex-shrink: 0; letter-spacing: .05em;
+  }
+  .layer-name { font-size: 1rem; font-weight: 600; color: #e2e8f0; flex: 1; }
+  .layer-badge {
+    font-size: .72rem; font-weight: 700; padding: 3px 10px; border-radius: 20px;
+  }
+  .badge-done  { background: #14532d; color: #4ade80; border: 1px solid #22c55e44; }
+  .badge-wip   { background: #451a03; color: #fbbf24; border: 1px solid #f59e0b44; }
+  .badge-todo  { background: #450a0a; color: #f87171; border: 1px solid #ef444444; }
+  .badge-partial { background: #1c1917; color: #a78bfa; border: 1px solid #8b5cf644; }
+
+  .layer-body { padding: 0 18px 16px; }
+
+  /* Components */
+  .comp-list { list-style: none; display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+  .comp-item {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 8px 12px; border-radius: 8px;
+    background: #0f172a; border: 1px solid #1e293b;
+    cursor: pointer; transition: border-color .15s, background .15s;
+  }
+  .comp-item:hover { border-color: #475569; background: #16213a; }
+  .comp-item[data-status="done"]  .dot { background: #22c55e; box-shadow: 0 0 6px #22c55e66; }
+  .comp-item[data-status="wip"]   .dot { background: #f59e0b; box-shadow: 0 0 6px #f59e0b66; }
+  .comp-item[data-status="todo"]  .dot { background: #ef4444; box-shadow: 0 0 6px #ef444466; }
+  .comp-dot { margin-top: 3px; }
+  .comp-text { flex: 1; }
+  .comp-name { font-size: .875rem; font-weight: 600; color: #e2e8f0; }
+  .comp-detail { font-size: .775rem; color: #64748b; margin-top: 2px; }
+
+  /* Tooltip overlay */
+  .tooltip-overlay {
+    display: none; position: fixed; inset: 0;
+    background: #00000099; z-index: 100;
+    align-items: center; justify-content: center;
+    padding: 24px;
+  }
+  .tooltip-overlay.active { display: flex; }
+  .tooltip-box {
+    background: #1e293b; border: 1px solid #475569;
+    border-radius: 12px; padding: 24px; max-width: 540px; width: 100%;
+    position: relative;
+  }
+  .tooltip-close {
+    position: absolute; top: 12px; right: 14px;
+    background: none; border: none; color: #94a3b8;
+    font-size: 1.3rem; cursor: pointer; line-height: 1;
+  }
+  .tooltip-title { font-size: 1rem; font-weight: 700; color: #f1f5f9; margin-bottom: 12px; }
+  .tooltip-body { font-size: .82rem; color: #94a3b8; line-height: 1.6; }
+  .tooltip-body strong { color: #e2e8f0; }
+  .tooltip-src {
+    margin-top: 14px; padding: 8px 12px;
+    background: #0f172a; border-radius: 6px;
+    font-size: .75rem; color: #64748b; font-family: monospace;
+  }
+
+  /* Status badge inline */
+  .sts {
+    display: inline-block; font-size: .65rem; font-weight: 700;
+    padding: 1px 7px; border-radius: 20px; vertical-align: middle;
+    margin-left: 6px;
+  }
+  .sts-done { background: #14532d; color: #4ade80; }
+  .sts-wip  { background: #451a03; color: #fbbf24; }
+  .sts-todo { background: #450a0a; color: #f87171; }
+
+  /* Phases */
+  .phases { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+  .phase {
+    background: #1e293b; border: 1px solid #334155; border-radius: 10px;
+    padding: 14px 16px; cursor: pointer; transition: border-color .15s;
+  }
+  .phase:hover { border-color: #475569; }
+  .phase-num { font-size: .7rem; font-weight: 700; color: #475569; margin-bottom: 6px; }
+  .phase-name { font-size: .875rem; font-weight: 700; margin-bottom: 6px; }
+  .phase-desc { font-size: .75rem; color: #64748b; line-height: 1.5; }
+  .phase[data-status="wip"]  { border-left: 3px solid #f59e0b; }
+  .phase[data-status="next"] { border-left: 3px solid #3b82f6; }
+  .phase[data-status="todo"] { border-left: 3px solid #ef4444; }
+  .phase[data-status="done"] { border-left: 3px solid #22c55e; }
+
+  /* Verdict table */
+  .verdict-table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+  .verdict-table th {
+    background: #1e293b; color: #94a3b8; font-weight: 600;
+    padding: 8px 12px; text-align: left; border-bottom: 1px solid #334155;
+  }
+  .verdict-table td { padding: 8px 12px; border-bottom: 1px solid #1e293b; color: #cbd5e1; }
+  .verdict-table tr:last-child td { border-bottom: none; }
+  .verdict-table tr:hover td { background: #1e293b22; }
+
+  /* Run status */
+  .run-box {
+    background: #1e293b; border: 1px solid #334155; border-radius: 10px;
+    padding: 16px 18px; margin-top: 10px;
+  }
+  .run-item { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 10px; font-size: .82rem; }
+  .run-item:last-child { margin-bottom: 0; }
+
+  /* Footer */
+  .footer {
+    margin-top: 40px; padding: 16px 18px;
+    background: #1e293b; border: 1px solid #334155; border-radius: 10px;
+    font-size: .78rem; color: #64748b; line-height: 1.7;
+  }
+  .footer strong { color: #94a3b8; }
+  .footer code { background: #0f172a; padding: 1px 6px; border-radius: 4px; font-family: monospace; }
+
+  @media (max-width: 600px) {
+    h1 { font-size: 1.25rem; }
+    .phases { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <h1>Kiến trúc WFO 6 Lớp</h1>
+  <p class="subtitle">Walk-Forward Optimization — BinanceFuturesJava &nbsp;|&nbsp; Nguồn: <code style="font-size:.75rem;color:#94a3b8">docs/insights/WFO_ROADMAP.md §3a</code></p>
+
+  <!-- Legend -->
+  <div class="legend">
+    <span class="legend-title">Trạng thái:</span>
+    <div class="legend-item"><div class="dot dot-done"></div> Xong / PASS</div>
+    <div class="legend-item"><div class="dot dot-wip"></div> Đang làm / Đang chạy</div>
+    <div class="legend-item"><div class="dot dot-todo"></div> Chưa làm</div>
+    <span style="color:#64748b;margin-left:auto;font-size:.75rem">Click vào component để xem chi tiết</span>
+  </div>
+
+  <!-- 6 Layers -->
+  <h2>6 Lớp kiến trúc</h2>
+  <div class="layers">
+
+    <!-- L1 -->
+    <div class="layer">
+      <div class="layer-header">
+        <span class="layer-num">L1</span>
+        <span class="layer-name">DỮ LIỆU GỐC</span>
+        <span class="layer-badge badge-partial">Một phần ✅</span>
+      </div>
+      <div class="layer-body">
+        <ul class="comp-list">
+          <li class="comp-item" data-status="done"
+              data-title="Aerospike Oracle-local kline/funding/OI 2021→2026"
+              data-body="Toàn bộ dữ liệu thị trường (kline 1m), funding rate, Open Interest từ 2021 đến 2026 lưu trên Aerospike LOCAL của Oracle (127.0.0.1:3222, ns=test). Đã đo scanAll: market=2,804,363 + pred=2,819,841 sạch. Client nâng 5.1.6→6.1.11 (partition-query) để tương thích Aerospike 8."
+              data-src="docs/insights/WFO_ROADMAP.md §1 | commit f43a1aa">
+            <div class="comp-dot"><div class="dot"></div></div>
+            <div class="comp-text">
+              <div class="comp-name">Aerospike Oracle-local — kline/funding/OI 2021→2026</div>
+              <div class="comp-detail">scanAll PASS · client 6.1.11 · commit f43a1aa</div>
+            </div>
+          </li>
+          <li class="comp-item" data-status="todo"
+              data-title="Universe / Survivorship Bias"
+              data-body="Hiện tại chưa xử lý sống-sót bias (survivorship bias): tập coin trong WFO chỉ gồm các coin đang tồn tại, KHÔNG bao gồm coin đã bị delisted. Điều này làm kết quả WFO lạc quan hơn thực tế. Kế hoạch: SurvivorshipScanTool + crawler data.binance.vision (GĐ2)."
+              data-src="docs/insights/WFO_ROADMAP.md §3b GĐ2">
+            <div class="comp-dot"><div class="dot"></div></div>
+            <div class="comp-text">
+              <div class="comp-name">Universe / Survivorship Bias</div>
+              <div class="comp-detail">❌ Chưa làm — sống sót bias (GĐ2) · SurvivorshipScanTool + crawler data.binance.vision</div>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- L2 -->
+    <div class="layer">
+      <div class="layer-header">
+        <span class="layer-num">L2</span>
+        <span class="layer-name">MODEL PER-FOLD</span>
+        <span class="layer-badge badge-partial">Một phần ✅</span>
+      </div>
+      <div class="layer-body">
+        <ul class="comp-list">
+          <li class="comp-item" data-status="done"
+              data-title="Funding WF — 17-fold walk-forward, leak-assert"
+              data-body="gen_funding_wf_predictions.py sinh prediction walk-forward 17 fold: mỗi fold train dữ liệu &lt;cutoff, predict OOS, leak-assert giữ mọi fold. Output: ~/claudedata/wf_pred/*.bin (26B/rec, 3,718,490 rec). Horizon chốt = 24h. Đây là funding.bin dùng trong wfo_dataset_wf."
+              data-src="docs/insights/WFO_ROADMAP.md §1 | commit 57ddb49">
+            <div class="comp-dot"><div class="dot"></div></div>
+            <div class="comp-text">
+              <div class="comp-name">Funding WF — 17-fold leak-assert</div>
+              <div class="comp-detail">gen_funding_wf_predictions.py · 3,718,490 rec · horizon 24h · commit 57ddb49</div>
+            </div>
+          </li>
+          <li class="comp-item" data-status="todo"
+              data-title="Gate/Market WF — Per-fold predictions (CHƯA NẠP)"
+              data-body="wfo_gate_pred.csv đã có (wfo_models/fold_0..13 train_gate_fold.py, LEAK-FREE). Tuy nhiên CHƯA nạp prediction per-fold vào Aerospike / dataset. Strategy-WFO vẫn đang dùng set CŨ ai_pred_market_full_basket_v2 (provenance chưa xác lập, khả năng cao ro rỉ in-sample với window &lt;2025-06). Cần làm ở GĐ2: sinh prediction gate leak-free ghép → set mới ai_pred_market_gate_v3wf."
+              data-src="docs/PIPELINE_PROVENANCE.md §5 + docs/insights/WFO_ROADMAP.md §3b GĐ2">
+            <div class="comp-dot"><div class="dot"></div></div>
+            <div class="comp-text">
+              <div class="comp-name">Gate/Market WF — Per-fold predictions</div>
+              <div class="comp-detail">❌ Chưa nạp — wfo_gate_pred.csv có sẵn nhưng vẫn dùng ai_pred_market_full_basket_v2 (LEAKED) · GĐ2</div>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- L3 -->
+    <div class="layer">
+      <div class="layer-header">
+        <span class="layer-num">L3</span>
+        <span class="layer-name">DATASET OFFLINE</span>
+        <span class="layer-badge badge-done">Xong ✅</span>
+      </div>
+      <div class="layer-body">
+        <ul class="comp-list">
+          <li class="comp-item" data-status="done"
+              data-title="WfoDataset — market.bin / pred.bin / funding.bin + manifest md5"
+              data-body="WfoDataset.load() đọc 3 file binary (market, pred, funding) và verify md5 trước khi dùng. Funding.bin dựng từ predict_wf: forward-fill 15p→phút, score=1−P(win), 2,758,365 entry. Đã verify align 100% với market timestamps."
+              data-src="docs/insights/WFO_ROADMAP.md §1 | ai_ml/wfo/framework/ExportWfoDataset.java">
+            <div class="comp-dot"><div class="dot"></div></div>
+            <div class="comp-text">
+              <div class="comp-name">WfoDataset — market.bin / pred.bin / funding.bin + manifest md5</div>
+              <div class="comp-detail">2,758,365 entry funding · md5 verify PASS · WfoDataset.load()</div>
+            </div>
+          </li>
+          <li class="comp-item" data-status="done"
+              data-title="Kaggle Dataset — chuyendinh/wfo-dataset-wf-leakfree"
+              data-body="Dataset WFO leak-free đã upload lên Kaggle: chuyendinh/wfo-dataset-wf-leakfree (market+pred+funding+manifest). md5 cả 3 bin MATCH manifest trên Kaggle — verify bằng kernel wfo-env-test (ENV_TEST_PASS 2026-07-02). Mount path mới: /kaggle/input/datasets/&lt;user&gt;/&lt;slug&gt;/ (không hardcode path tuyệt đối)."
+              data-src="docs/KAGGLE_RULES.md §3c | WFO_ROADMAP.md §1">
+            <div class="comp-dot"><div class="dot"></div></div>
+            <div class="comp-text">
+              <div class="comp-name">Kaggle Dataset — chuyendinh/wfo-dataset-wf-leakfree</div>
+              <div class="comp-detail">md5 MATCH manifest · kernel wfo-env-test ENV_TEST_PASS 2026-07-02</div>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- L4 -->
+    <div class="layer">
+      <div class="layer-header">
+        <span class="layer-num">L4</span>
+        <span class="layer-name">THỰC THI</span>
+        <span class="layer-badge badge-done">Xong ✅</span>
+      </div>
+      <div class="layer-body">
+        <ul class="comp-list">
+          <li class="comp-item" data-status="done"
+              data-title="JobStore CAS+lease — Aerospike Oracle-local strategy_window"
+              data-body="WfoJobStore dùng Aerospike LOCAL Oracle (127.0.0.1:3222, ns=test, set=strategy_window) làm hàng đợi jobs với CAS (Compare-And-Swap) + lease để tránh race condition giữa nhiều worker. Là tài nguyên ĐỘC QUYỀN — mọi GATE/run xếp hàng. ⚠️ Kaggle worker KHÔNG poll được jobstore này (chỉ Oracle-local); nếu dùng Kaggle làm WFO worker cần WFO_STATE_HOST=226."
+              data-src="docs/insights/WFO_ROADMAP.md §4 | ai_ml/wfo/framework/WfoJobStore.java">
+            <div class="comp-dot"><div class="dot"></div></div>
+            <div class="comp-text">
+              <div class="comp-name">JobStore CAS+lease — Aerospike Oracle-local (strategy_window)</div>
+              <div class="comp-detail">WfoJobStore · Aerospike 127.0.0.1:3222 ns=test · độc quyền Oracle</div>
+            </div>
+          </li>
+          <li class="comp-item" data-status="done"
+              data-title="WfoWorker Oracle — chạy trực tiếp trên Oracle server"
+              data-body="WfoWorker chạy trên Oracle, đọc dataset offline từ file (WFO_DATA_DIR), dùng Aerospike LOCAL làm jobstore. Sau TASK-112: env chỉ còn WFO_SMART_CACHE=1 + WFO_DATA_DIR=&lt;dataset&gt;; thiếu/sai key → fail-fast IllegalStateException ngay (không còn zero-trade âm thầm). Jar: ~/java/simulator/binance-futures-wfo-lf.jar."
+              data-src="docs/insights/WFO_ROADMAP.md §4 | ai_ml/wfo/framework/WfoWorker.java | TASK-112">
+            <div class="comp-dot"><div class="dot"></div></div>
+            <div class="comp-text">
+              <div class="comp-name">WfoWorker Oracle</div>
+              <div class="comp-detail">binance-futures-wfo-lf.jar · WFO_SMART_CACHE=1 · fail-fast (TASK-112)</div>
+            </div>
+          </li>
+          <li class="comp-item" data-status="done"
+              data-title="WfoWorker Kaggle — 5 slot CPU, đọc Kaggle Dataset"
+              data-body="WfoWorker chạy trên Kaggle CPU (OpenJDK 17, 31GB/4CPU/20GB). Đọc dataset từ Kaggle Dataset (glob recursive /kaggle/input/**/manifest.txt). Smoke test PASS 2026-07-02. ⚠️ Kaggle KHÔNG poll được jobstore Oracle-local — khi dùng Kaggle làm WFO worker cho multi-node phải dùng WFO_STATE_HOST=226 (real Aerospike 226 Kaggle tới được)."
+              data-src="docs/KAGGLE_RULES.md §3b,3c | WFO_ROADMAP.md §3b GĐ3">
+            <div class="comp-dot"><div class="dot"></div></div>
+            <div class="comp-text">
+              <div class="comp-name">WfoWorker Kaggle — 5 slot CPU</div>
+              <div class="comp-detail">smoke PASS 2026-07-02 · Java 17 · 31GB RAM · cần WFO_STATE_HOST=226 nếu multi-node</div>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- L5 -->
+    <div class="layer">
+      <div class="layer-header">
+        <span class="layer-num">L5</span>
+        <span class="layer-name">ĐO LƯỜNG</span>
+        <span class="layer-badge badge-partial">Một phần ✅</span>
+      </div>
+      <div class="layer-body">
+        <ul class="comp-list">
+          <li class="comp-item" data-status="done"
+              data-title="Fitness V4.1 — GATE Oracle PASS 2026-07-03 (TASK-113)"
+              data-body="V4.1 sửa 3 vấn đề của V4: (1) Tính đủ metrics mọi nhánh — LOW_TRADES/TOO_FEW không còn che PnL thật (fix return-sớm trước khối thống kê). (2) Min-trade theo windowDaysActual (tham số thật từ caller), không suy từ span lệnh ngược đời. (3) %OOS-dương tường minh: chỉ đếm oosNote=SUCCESS &amp;&amp; oosPnl&gt;0. Unit A–E PASS 5/5. GATE Oracle PASS 2026-07-03 (khớp thiết kế pre-registered)."
+              data-src="tasks/113-fitness-v41.md | ai_ml/hpo/HPOFitnessCalculatorV4.java | GATE-113 PASS">
+            <div class="comp-dot"><div class="dot"></div></div>
+            <div class="comp-text">
+              <div class="comp-name">Fitness V4.1 (TASK-113)</div>
+              <div class="comp-detail">Unit 5/5 PASS · GATE Oracle PASS 2026-07-03 · md5 38b503dd</div>
+            </div>
+          </li>
+          <li class="comp-item" data-status="todo"
+              data-title="maxDD margin-call thật — Chưa làm (GĐ3)"
+              data-body="Hiện tại maxDD tính theo đáy-thật per-tick (commit 4d7dd3a, CONFIG_VERSION v8) nhưng KHÔNG phải margin-call thật. Margin-call thật = khi account bị thanh lý hoàn toàn, cần mô phỏng sát hơn logic broker. Kế hoạch: GĐ3, cần GATE riêng, không song song với exit clamp vì cùng sửa sim logic."
+              data-src="docs/insights/WFO_ROADMAP.md §3b GĐ3">
+            <div class="comp-dot"><div class="dot"></div></div>
+            <div class="comp-text">
+              <div class="comp-name">maxDD margin-call thật</div>
+              <div class="comp-detail">❌ Chưa làm (GĐ3) — đã duyệt chưa áp · GATE riêng cần đặt lịch</div>
+            </div>
+          </li>
+          <li class="comp-item" data-status="todo"
+              data-title="Exit clamp bar.open — Chưa áp (GĐ3)"
+              data-body="Chốt lệnh theo bar.open (giá mở cửa nến tiếp theo) thay vì kẹp vào tick thoát ảo. Đã duyệt thiết kế nhưng chưa áp vào sim. Kế hoạch: GATE riêng sau TASK-113, không đụng V3/HPOFitnessCalculator cũ."
+              data-src="docs/insights/WFO_ROADMAP.md §3b GĐ3 | docs/insights/WFO_ROADMAP.md §3c">
+            <div class="comp-dot"><div class="dot"></div></div>
+            <div class="comp-text">
+              <div class="comp-name">Exit clamp bar.open</div>
+              <div class="comp-detail">❌ Duyệt chưa áp (GĐ3) · GATE riêng</div>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- L6 -->
+    <div class="layer">
+      <div class="layer-header">
+        <span class="layer-num">L6</span>
+        <span class="layer-name">VERDICT</span>
+        <span class="layer-badge badge-wip">Đang làm 🔄</span>
+      </div>
+      <div class="layer-body">
+        <ul class="comp-list">
+          <li class="comp-item" data-status="done"
+              data-title="3 tiêu chí pre-registered — Đã đăng ký trước"
+              data-body="PASS cần CẢ 3: (1) WFE_median ≥ 0.5, (2) %OOS-dương ≥ 70%, (3) worst OOS maxDD ≤ 50% (tỷ lệ, KHÔNG abs USD). Ngưỡng GIỮ NGUYÊN cho V4.1 (chỉ thay đổi semantics fitness, không thay đổi ngưỡng). Mốc so sánh bản rò rỉ (commit cb0032b): WFE 0.205, 88.2%, 48.1% — khác điều kiện, chờ leaked-rerun."
+              data-src="docs/insights/WFO_ROADMAP.md §2 | docs/insights/WFO_FRAMEWORK_DESIGN.md §6">
+            <div class="comp-dot"><div class="dot"></div></div>
+            <div class="comp-text">
+              <div class="comp-name">3 tiêu chí pre-registered</div>
+              <div class="comp-detail">WFE_median≥0.5 · %OOS+≥70% · worstDD≤50% · đã ghi docs trước khi chạy</div>
+            </div>
+          </li>
+          <li class="comp-item" data-status="wip"
+              data-title="Cặp so leaked / leak-free — Đang chạy"
+              data-body="Phép so sánh CHÍNH THỨC iteration-1: cùng jar/seed/ticker-aerospike/fitness, 2 vế khác nhau chỉ ở funding (leaked vs leak-free). Vế leak-free v2 (V4): FAIL — WFE 0.098, 76.5%, 30.7%. Vế leaked (V4 tham khảo): đang chạy (launch 18:22 2026-07-02). Sau GATE-113, cần chạy lại CẶP V4.1 = phép so CHÍNH THỨC (hai vế cùng Oracle, cùng nguồn, cùng fitness V4.1)."
+              data-src="docs/insights/WFO_ROADMAP.md §1 | docs/reports/wfo_leakfree_funding_v2_report.md">
+            <div class="comp-dot"><div class="dot"></div></div>
+            <div class="comp-text">
+              <div class="comp-name">Cặp so leaked / leak-free (iteration-1)</div>
+              <div class="comp-detail">🔄 V4 tham khảo đang chạy · cặp V4.1 chính thức chờ sau GĐ0 · leak-free v2: FAIL WFE=0.098</div>
+            </div>
+          </li>
+        </ul>
+
+        <!-- Verdict thresholds quick-view -->
+        <div style="margin-top:14px;padding:12px 14px;background:#0f172a;border-radius:8px;font-size:.8rem;">
+          <div style="color:#64748b;margin-bottom:8px;font-weight:600;">Ngưỡng verdict (pre-registered, GIỮ NGUYÊN cho V4.1):</div>
+          <div style="display:flex;gap:16px;flex-wrap:wrap;">
+            <span><span style="color:#94a3b8">WFE_median</span> <span style="color:#4ade80">≥ 0.5</span></span>
+            <span><span style="color:#94a3b8">%OOS-dương</span> <span style="color:#4ade80">≥ 70%</span></span>
+            <span><span style="color:#94a3b8">worst maxDD</span> <span style="color:#4ade80">≤ 50%</span></span>
+          </div>
+          <div style="margin-top:8px;color:#64748b;font-size:.75rem;">
+            Kết quả gần nhất (leak-free v2, V4): WFE=<span style="color:#f87171">0.098 ❌</span> · %OOS+=<span style="color:#4ade80">76.5% ✅</span> · worstDD=<span style="color:#4ade80">30.7% ✅</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /layers -->
+
+  <!-- Caveat thống kê -->
+  <div style="margin-top:14px;padding:14px 16px;background:#1c1917;border:1px solid #44403c;border-radius:10px;font-size:.8rem;color:#78716c;line-height:1.7;">
+    <strong style="color:#a8a29e">⚠️ Caveat giữ vĩnh viễn:</strong> IS 12m trượt 3m → IS chồng lấn 9/12 tháng → 17 window KHÔNG độc lập.
+    N=30 mẫu / 18 gene mỏng → WFE thấp có thể là selection-noise (đòn bẩy chính: tăng N bằng Kaggle fleet).
+    Funding leak-free v2: coverage ~20 coin/tick (chỉ coin đủ feature+label 24h) vs bản rò rỉ ~72–150 → verdict phản ánh CẢ bỏ-leak LẪN giảm-coverage.
+  </div>
+
+  <!-- Phases GĐ0–GĐ4 -->
+  <h2>Lộ trình GĐ0 → GĐ4</h2>
+  <div class="phases">
+    <div class="phase" data-status="wip"
+         onclick="showTip('GĐ0 — Đang chạy','<strong>Mục tiêu:</strong> cặp so V4 (leaked re-run) + GATE-112 ✅ + GATE-113 ✅.<br><br>GATE-112 PASS: config tường minh, bỏ 2 mode IS_KAGGLE_MODE / IS_HPO_MODE, fail-fast khi thiếu key.<br>GATE-113 PASS (2026-07-03): fitness V4.1 — tính đủ metrics mọi nhánh, min-trade theo window thật, aggregate tường minh.<br>Leaked re-run đang chạy (launch 18:22 2026-07-02) để so sánh với leak-free v2.','docs/insights/WFO_ROADMAP.md §3b GĐ0')">
+      <div class="phase-num">GĐ0</div>
+      <div class="phase-name" style="color:#fbbf24">🔄 Đang chạy</div>
+      <div class="phase-desc">Cặp so V4 (leaked re-run) · GATE-112 ✅ · GATE-113 ✅</div>
+    </div>
+    <div class="phase" data-status="next"
+         onclick="showTip('GĐ1 — Đo lường sạch (tiếp theo)','<strong>Mục tiêu:</strong> Fitness V4.1 ✅ → chạy CẶP SO V4.1 = phép so CHÍNH THỨC iteration-1 (bỏ funding-leak mất bao nhiêu edge).<br><br>2 vế cùng Oracle/cùng nguồn/cùng fitness V4.1. Kết quả này là verdict chính thức cho vòng lặp iteration-1 (funding leak-free).<br><br>Phụ thuộc: GĐ0 xong (leaked re-run xong, giải phóng RAM Oracle).','docs/insights/WFO_ROADMAP.md §3b GĐ1')">
+      <div class="phase-num">GĐ1</div>
+      <div class="phase-name" style="color:#60a5fa">⏳ Tiếp theo</div>
+      <div class="phase-desc">Cặp so V4.1 chính thức · phép so iteration-1</div>
+    </div>
+    <div class="phase" data-status="todo"
+         onclick="showTip('GĐ2 — Input sạch hoàn toàn','<strong>Mục tiêu:</strong> Nạp wfo_gate_pred.csv → Aerospike Oracle-local → export dataset v3 (funding WF + gate WF) → run fully-leak-free.<br><br>Song song: (i) coverage audit theo quý (giải thích 4 window gần-zero: regime hay thiếu data), (ii) survivorship audit (SurvivorshipScanTool + crawler data.binance.vision), (iii) read-set env-configurable (hết provenance rot).','docs/insights/WFO_ROADMAP.md §3b GĐ2')">
+      <div class="phase-num">GĐ2</div>
+      <div class="phase-name" style="color:#f87171">❌ Chưa</div>
+      <div class="phase-desc">Gate WF + survivorship + provenance · fully-leak-free</div>
+    </div>
+    <div class="phase" data-status="todo"
+         onclick="showTip('GĐ3 — Sim & thống kê vững','<strong>Mục tiêu:</strong> Sim đo lường sát thực tế hơn:<br>• maxDD margin-call thật (Bước 3 mảnh cuối)<br>• Exit clamp bar.open (GATE riêng từng cái)<br>• Scale N bằng Kaggle fleet (WFO_STATE_HOST=226 thật, 1 experiment = 1 loại node).<br><br>Quy tắc CỨNG: Kaggle ticker đọc 226 ≠ Oracle-local (đã đo file≠aerospike lệch số) → 1 experiment = 1 loại node.','docs/insights/WFO_ROADMAP.md §3b GĐ3')">
+      <div class="phase-num">GĐ3</div>
+      <div class="phase-name" style="color:#f87171">❌ Chưa</div>
+      <div class="phase-desc">maxDD margin-call · exit clamp · scale N Kaggle</div>
+    </div>
+    <div class="phase" data-status="todo"
+         onclick="showTip('GĐ4 — WFO chuẩn cuối + Verdict','<strong>Mục tiêu:</strong> Full run fully-leak-free + universe đúng + metrics thật + N đủ → verdict pre-registered quyết định:<br><br>PASS (WFE≥0.5, %OOS+≥70%, worstDD≤50%) → Golden backtest (funding ON) → go-live nhỏ.<br>FAIL → quay lại câu hỏi edge (economic rationale: ai bị ép trade bất lợi và vì sao).','docs/insights/WFO_ROADMAP.md §3b GĐ4')">
+      <div class="phase-num">GĐ4</div>
+      <div class="phase-name" style="color:#f87171">❌ Chưa</div>
+      <div class="phase-desc">Full fully-leak-free · verdict pre-registered · go/no-go</div>
+    </div>
+  </div>
+
+  <!-- Footer / Update instructions -->
+  <div class="footer">
+    <strong>Cách cập nhật trạng thái:</strong>
+    Tìm component cần cập nhật bằng <code>Ctrl+F</code> → sửa <code>data-status="done|wip|todo"</code> trên thẻ <code>&lt;li class="comp-item"&gt;</code>.
+    Sửa <code>data-body</code> và <code>data-src</code> khi nội dung thay đổi.
+    Cập nhật dòng ngày dưới đây, commit theo quy ước project (<code>docs(120): ...</code>).
+    <br><br>
+    <strong>Nguồn sự thật:</strong>
+    <code>docs/insights/WFO_ROADMAP.md</code> (trạng thái live) ·
+    <code>docs/PIPELINE_PROVENANCE.md</code> (luồng artifact) ·
+    <code>tasks/112..119</code> (GATE kết quả) ·
+    <code>docs/insights/WFO_FRAMEWORK_DESIGN.md §6</code> (pre-register verdict)
+    <br><br>
+    <strong>Cập nhật lần cuối:</strong> 2026-07-03 (TASK-120) · GATE-112 PASS · GATE-113 PASS · V4.1 deploy Oracle md5=38b503dd
+  </div>
+
+</div><!-- /container -->
+
+<!-- Tooltip overlay -->
+<div class="tooltip-overlay" id="overlay" onclick="closeOverlay(event)">
+  <div class="tooltip-box">
+    <button class="tooltip-close" onclick="document.getElementById('overlay').classList.remove('active')">✕</button>
+    <div class="tooltip-title" id="tip-title"></div>
+    <div class="tooltip-body" id="tip-body"></div>
+    <div class="tooltip-src" id="tip-src"></div>
+  </div>
+</div>
+
+<script>
+  // Attach click on comp-items
+  document.querySelectorAll('.comp-item').forEach(el => {
+    el.addEventListener('click', () => {
+      showTip(
+        el.dataset.title || el.querySelector('.comp-name').textContent,
+        el.dataset.body  || '',
+        el.dataset.src   || ''
+      );
+    });
+  });
+
+  function showTip(title, body, src) {
+    document.getElementById('tip-title').textContent = title;
+    document.getElementById('tip-body').innerHTML = body;
+    document.getElementById('tip-src').textContent = src ? '📄 ' + src : '';
+    document.getElementById('overlay').classList.add('active');
+  }
+
+  function closeOverlay(e) {
+    if (e.target === document.getElementById('overlay')) {
+      document.getElementById('overlay').classList.remove('active');
+    }
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') document.getElementById('overlay').classList.remove('active');
+  });
+</script>
+</body>
+</html>

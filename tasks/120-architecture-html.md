@@ -20,4 +20,27 @@
 ## Output: 3 file trên + commit theo quy ước (không git add .). Ghi Kết quả + tạo /d/claudedata/CCD120_DONE.
 
 ## Kết quả
-<CCD điền>
+**Hoàn thành 2026-07-03 (CCD sonnet)**
+
+### File đã tạo
+| File | Kích thước | Ghi chú |
+|---|---|---|
+| `docs/architecture/README.md` | ~1KB | Quy ước folder + cách cập nhật |
+| `docs/architecture/wfo_architecture.html` | ~22KB | Single-file, 6 lớp + GĐ0–4 + verdict |
+| `docs/architecture/system_architecture_all.html` | ~28KB | Single-file, 5 node + luồng dữ liệu + artifact chain |
+
+### Trạng thái nội dung (đọc từ docs, không bịa)
+- **L1**: kline/funding/OI Oracle-local ✅ · survivorship ❌
+- **L2**: Funding WF 17-fold ✅ · Gate/market WF ❌ (chưa nạp wfo_gate_pred.csv)
+- **L3**: wfo_dataset_wf + Kaggle dataset ✅
+- **L4**: JobStore+Worker Oracle+Kaggle ✅
+- **L5**: Fitness V4.1 ✅ (GATE-113 PASS 2026-07-03) · maxDD margin-call ❌ · exit clamp ❌
+- **L6**: 3 tiêu chí pre-registered ✅ · cặp so V4.1 chính thức 🔄
+
+### HTML đáp ứng đủ yêu cầu
+- Single-file tự chứa (CSS inline, không build step) ✅
+- Tiếng Việt ✅
+- Màu trạng thái: xanh=done / vàng=wip / đỏ=todo + legend ✅
+- Responsive ✅
+- Click component → tooltip mô tả + đường dẫn file nguồn ✅
+- Cuối file ghi chú cách cập nhật trạng thái ✅
