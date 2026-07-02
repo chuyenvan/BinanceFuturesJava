@@ -4,6 +4,14 @@
 
 Ngưỡng pre-registered: WFE_median ≥ 0.5, %cửa-sổ-OOS-dương ≥ 70%, maxDD-OOS xấu nhất ≤ 50% vốn
 
+## Provenance (run 2026-07-02, xong 18:20)
+- Dataset: `~/claudedata/wfo_dataset_wf` (Oracle) — manifest exportedAt 2026-07-02 11:02, funding LEAKFREE-perfold-24h
+  score=1−P(win), md5_market=65ac483d… · md5_pred=44061d68… · md5_funding=d714390a… (WfoDataset.load verify PASS)
+- Jar: `binance-futures-wfo-lf.jar` (Oracle, aerospike-client 6.1.11) · fitness **V4** · funding fee **OFF** (mặc định HPO/WFO)
+- Env worker: `WFO_KAGGLE=1 WFO_SMART_CACHE=1 WFO_DATA_DIR=…/wfo_dataset_wf` — ticker từ Aerospike Oracle-local
+- 17 window × N=30 mẫu (18 gene) · budget 35000 · jobstore Aerospike Oracle-local ns=test
+- Khung diễn giải: WFO **loại 1** (pred cố định) — số OOS tuyệt đối window <2025-06 bị tâng (pred sinh in-sample)
+
 ## Tổng hợp
 - Số cửa sổ DONE: 17
 - % cửa sổ OOS dương: 76.5% (13/17)
@@ -30,6 +38,14 @@ Ngưỡng pre-registered: WFE_median ≥ 0.5, %cửa-sổ-OOS-dương ≥ 70%, m
 | 14 | 20250701..20251001 | 5.0744 | -99996 | 0 | 0 | 0 | 0 | 4 | 5/30 |
 | 15 | 20251001..20260101 | 1.8662 | 1.4695 | 8.8737 | 15775.2725 | 10735.2178 | 1.4695 | 1441 | 11/30 |
 | 16 | 20260101..20260401 | 2.175 | 1.5245 | 0.0145 | 215.8205 | 141.5657 | 1.5245 | 12 | 0/30 |
+
+**Chú giải bảng (fitness V4 — sentinel encoding, sẽ hết cần sau TASK-113/V4.1):**
+- `OOS_fit = -100000` → ZERO_TRADES; `-100000+n` → TOO_FEW_TRADES với n lệnh (win 7: −99992 = 8 lệnh; win 14: −99996 = 4 lệnh)
+  — các window này `OOS_pnl/maxDD/WFE` bị V4 ghi 0 dù có lệnh thật (bug che số, fix ở [TASK-113](../../tasks/113-fitness-v41-do-du-metrics-mintrade-window-that.md)).
+- `-100000−x` → TOO_MUCH_CAPITAL_LOCK với pctHeldOver7d=x% vượt cap 2.00% (win 3: 2.02% · win 6: 3.23%) — nhánh này
+  chạy SAU khối thống kê nên pnl/maxDD trong bảng là số THẬT.
+- `OOS_maxDD` trong bảng = USD tuyệt đối; % vốn = /35000 (verdict dùng %: worst = win 15, 10735/35000 = 30.7%).
+- WFE = OOS_pnl / best_IS_pnl (win 15 WFE=8.87: OOS Q4-2025 nổ +15,775 trên IS 12 tháng ~+1,778 — 1 window kéo, đọc thận trọng).
 
 ## Độ ổn định gene qua cửa sổ (min..max best value)
 - MIN_MOMENTUM_15M: 0.0228 .. 0.0494

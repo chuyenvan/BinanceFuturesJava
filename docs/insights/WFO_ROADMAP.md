@@ -4,7 +4,7 @@
 > mọi chi tiết + trạng thái live nằm ở đây để KHÔNG phình context tổng.
 > **Hub file WFO:** kiến trúc → [WFO_FRAMEWORK_DESIGN](WFO_FRAMEWORK_DESIGN.md) · leak L0–L5 → [WFO_LEAKS_TODO](WFO_LEAKS_TODO.md)
 > · hàm mục tiêu/ngưỡng → [WFO_OBJECTIVE_RESEARCH](WFO_OBJECTIVE_RESEARCH.md) · runbook thao tác → [reports/LEAKFREE_WFO_RUNBOOK](../reports/LEAKFREE_WFO_RUNBOOK.md)
-> · verdict báo cáo → [reports/wfo_strategy_window.md](../reports/wfo_strategy_window.md) · nhật ký phiên → [reports/overnight_worklog](../reports/overnight_worklog.md).
+> · verdict báo cáo → [reports/wfo_leakfree_funding_v2_report.md](../reports/wfo_leakfree_funding_v2_report.md) *(coordinator sinh `wfo_strategy_window.md` trên Oracle; bản repo đổi tên theo vòng chạy)* · nhật ký phiên → [reports/overnight_worklog](../reports/overnight_worklog.md).
 
 ## 1. HIỆN TRẠNG LIVE (cập nhật 2026-07-02) — vòng lặp "leak-free WFO iteration-1 (funding)"
 
@@ -45,9 +45,12 @@ PASS cần CẢ 3: `WFE_median ≥ 0.5` · `%OOS-dương ≥ 70%` · `worst OOS 
   số OOS tuyệt đối các window <2025-06 bị tâng vì pred sinh in-sample (khung này giữ trong mọi kết luận WFO).
 
 ## 3. SUB-ROADMAP (thứ tự việc còn lại)
-1. 🔄 **Đọc verdict vòng funding-leak-free** (đang chạy) → ghi `reports/wfo_strategy_window.md` + FINDINGS, so cb0032b.
+1. ✅ **Verdict vòng funding-leak-free ĐÃ ra** (FAIL/REVIEW — xem §1). 🔄 Đang chạy **leaked re-run** (cùng điều kiện, fitness V4)
+   → khi xong: so cặp V4-vs-V4 (thay mốc cb0032b khập khiễng). Caveat: cả 2 vế đều dính V4 che số LOW_TRADES → so **tham khảo**.
+1b. ⏭ **TASK-112 → TASK-113 (fitness V4.1)** → pre-register lại → chạy **cặp so sánh V4.1** (leaked vs leak-free) = phép so CHÍNH THỨC trả lời iteration-1.
 2. ⏭ **Vòng fully-leak-free:** thêm gate/market leak-free (`ai_pred_market_gate_wfo` — hiện chỉ có bản `_smoke`;
-   full ở `wfo_gate_pred.csv`, cần nạp đúng format/loader). Khi đó mới trả lời "pipeline có edge thật không".
+   full ở `wfo_gate_pred.csv`, cần nạp đúng format/loader — đích nạp = Aerospike **Oracle-local** (65G trống);
+   blocker cũ "226 disk 97%" KHÔNG áp dụng cho pipeline WFO nữa, xem topology §1). Khi đó mới trả lời "pipeline có edge thật không".
 3. ⏭ **Làm read-set env-configurable thật** (`AEROSPIKE_SET_NAME_FUNDING_PRED`... trong DataManager) để export
    đọc đúng set leak-free, thay vì dựng bin tay — hết provenance rot.
 4. ⏭ **Survivorship audit** (SurvivorshipScanTool + crawler data.binance.vision) — universe đúng, hết sống-sót-bias.
@@ -55,6 +58,8 @@ PASS cần CẢ 3: `WFE_median ≥ 0.5` · `%OOS-dương ≥ 70%` · `worst OOS 
 
 ## 4. HẠ TẦNG CHẠY (tóm tắt — chi tiết ở LEAKFREE_WFO_RUNBOOK)
 - jar export/worker leak-free: `~/java/simulator/binance-futures-wfo-lf.jar` trên Oracle (client 6.1.11, MD5-verify khi deploy).
-- 1 lệnh: `WfoCoordinator init|reset|status|report strategy_window` (JobStore = Aerospike local qua getClient226).
+- 1 lệnh: `WfoCoordinator init|reset|status|report strategy_window` (JobStore = Aerospike **LOCAL Oracle** ns=test qua getClient226,
+  host=127.0.0.1). ⇒ **Kaggle worker KHÔNG poll được jobstore này**; nếu sau này chạy WFO đa-node có Kaggle thì phải
+  set `WFO_STATE_HOST` về 226 thật (Kaggle tới được 226) — và nhớ 2 vế 1 phép so sánh phải cùng 1 nguồn dữ liệu (đã đo file≠aerospike).
   Worker: `WfoWorker` (env **BẮT BUỘC đủ 3**: `WFO_KAGGLE=1 WFO_SMART_CACHE=1 WFO_DATA_DIR=<dataset>` — thiếu SMART_CACHE → đọc ticker FILE → zero-trade âm thầm, xem sự cố 2026-07-02; TASK-112 sẽ diệt tận gốc). Function-test: `WFO_MAX_WINDOWS`, `WFO_N_SAMPLES`.
 - Dataset build funding.bin: `~/claudedata/build_funding_bin.py` (HZ_IDX=2=24h, forward-fill 15p→phút) + patch manifest md5.

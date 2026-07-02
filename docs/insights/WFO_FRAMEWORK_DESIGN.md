@@ -234,6 +234,8 @@ Sau lần dựng đầu, mỗi lần chạy WFO chỉ là bước 2→5 (bước
 
 1. **State store:** ✅ Aerospike 226 cho STATE nhỏ (jobs: state/owner/lease_until/result) + file offline cho
    DATA lớn (market/pred/funding). Đúng tách lớn-bất-biến↔nhỏ-hay-đổi.
+   *(Annotation 2026-07-02, không đổi quyết định: triển khai THỰC TẾ dùng Aerospike **LOCAL Oracle** ns=test —
+   `getClient226()` với `AEROSPIKE_HOST_226=127.0.0.1` — thay vì server 226; nguyên tắc tách state-nhỏ↔data-lớn giữ nguyên.)*
 2. **Khởi động worker:** ✅ ssh trực tiếp (KHÔNG qua supervisor.py vòng đầu — đơn giản, dễ debug).
 3. **Verdict ngưỡng — PRE-REGISTERED, chốt TRƯỚC khi chạy/xem kết quả:**
    - WFE trung vị ≥ **0.5** (OOS giữ ≥ nửa hiệu năng in-sample)
@@ -248,5 +250,5 @@ Sau lần dựng đầu, mỗi lần chạy WFO chỉ là bước 2→5 (bước
 
 ### Ghi chú liên quan (chốt cùng ngày, ngoài 5 câu trên)
 - **Funding mặc định OFF** trong HPO/WFO (`Configs.APPLY_FUNDING_FEE=false`); CHỈ bật ở vòng HPO/Golden
-  backtest CUỐI trước go-live. Lý do: tác động funding nhỏ (~0.9% PnL, maxDD không đổi) nhưng làm chậm
+  backtest CUỐI trước go-live. Lý do: tác động funding nhỏ (~**1.8%** PnL theo FINDINGS Σfunding=-918 — số 0.9% cũ ghi nhầm, sửa 2026-07-02; maxDD không đổi) nhưng làm chậm
   vòng chạy → không đáng gánh trong hàng nghìn lần eval. Đo: RunFundingImpact (tính-1-lượt-khi-đóng).
