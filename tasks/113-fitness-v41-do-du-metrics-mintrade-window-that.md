@@ -74,7 +74,10 @@ KẾT QUẢ: 5/5 PASS
 `grep -rn "evaluateDetailed(sim.allOrderDone)" src/` → 0 ✅
 
 ### Commit list (V4.1+unit → callers → StrategyWfoTask → docs)
-(điền sau khi commit)
+- `13ee4eb` feat(113): fitness V4.1 + TestFitnessV41 5/5 PASS + restore BackTestEngineMarketThresholds
+- `92a9173` refactor(113): 5 caller V4→V4.1 (WFORunner, Ablation, Baseline, Metric, Sensitivity)
+- `fab9ee2` refactor(113): StrategyWfoTask oosNote/isNote + aggregate đếm SUCCESS tường minh
+- `ce632c8` docs(113): pre-register WFO_ROADMAP §2 + WFO_FRAMEWORK_DESIGN §6 + AGENTS + task
 
 ### 4 dòng [WIN] baseline V4.1
 (GATE tầng 2 Oracle — chờ master sau khi TASK-112 GATE xong)
