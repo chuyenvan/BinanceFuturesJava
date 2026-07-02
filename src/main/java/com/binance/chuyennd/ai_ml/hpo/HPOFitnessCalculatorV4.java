@@ -55,26 +55,37 @@ public class HPOFitnessCalculatorV4 {
         public String note = "";
     }
 
-    public static FitnessReport evaluateDetailed(TreeMap<Long, OrderTargetInfoTest> allOrderDone) {
+    /**
+     * TASK-113 — V4.1: đo ĐỦ metrics mọi nhánh + min-trade theo window THẬT.
+     *
+     * <p>Khác V4 (2 fix, công thức fitness GIỮ NGUYÊN từng nhánh):
+     * <ul>
+     *   <li><b>Reorder:</b> khối thống kê (totalProfit, pctHeldOver7d, ddPct/maxDrawdown, posYearRatio,
+     *       calmar, sortino) tính TRƯỚC chuỗi constraint → nhánh bị loại sớm (TOO_FEW/BURN/...) vẫn có
+     *       số thật trong report, không còn PnL bị che thành 0.</li>
+     *   <li><b>Min-trade theo window thật:</b> caller truyền {@code windowDaysActual} từ range backtest
+     *       của CHÍNH NÓ; bỏ hoàn toàn suy-windowDays-từ-span-lệnh (V4 cũ: genome dồn 10 lệnh trong 3
+     *       ngày của window 90 ngày → span=3 → minTrades=5 → PASS ngược đời).</li>
+     * </ul>
+     * Bất biến: với cùng input + cùng windowDays, {@code finalFitness} V4.1 ≡ V4 (chỉ FitnessReport có
+     * thêm số thật ở nhánh sentinel). Khác duy nhất: case min-trade khi windowDaysActual ≠ span-lệnh.
+     *
+     * @param allOrderDone     lệnh đã đóng của backtest (key = ts đóng lệnh)
+     * @param windowDaysActual độ dài THẬT của range backtest (ngày) = max(1,(end−start)/TIME_DAY),
+     *                         KHÔNG phải span lệnh
+     * @return FitnessReport đủ metrics mọi nhánh (trừ ZERO_TRADES — không có lệnh để đo)
+     */
+    public static FitnessReport evaluateDetailed(TreeMap<Long, OrderTargetInfoTest> allOrderDone, int windowDaysActual) {
         FitnessReport r = new FitnessReport();
         if (allOrderDone == null || allOrderDone.isEmpty()) {
             r.finalFitness = REJECT_BASE; r.note = "ZERO_TRADES"; return r;
         }
         Collection<OrderTargetInfoTest> orders = allOrderDone.values();
         r.tradeCount = orders.size();
-
-        // min-trade (giữ logic V3): cần đủ mật độ lệnh để metric đáng tin
-        int windowDays = 90;
-        if (r.tradeCount >= 2) {
-            long span = (allOrderDone.lastKey() - allOrderDone.firstKey()) / Utils.TIME_DAY;
-            windowDays = (int) Math.max(1, span);
-        }
+        int windowDays = Math.max(1, windowDaysActual);
         int minTrades = Math.max(5, (int) (windowDays * 0.33f));
-        if (r.tradeCount < minTrades) {
-            r.finalFitness = REJECT_BASE + r.tradeCount; r.note = "TOO_FEW_TRADES"; return r;
-        }
 
-        // ===== gom thống kê 1 lượt =====
+        // ===== gom thống kê 1 lượt — TRƯỚC chuỗi constraint (V4.1): nhánh loại sớm vẫn có số thật =====
         long heldTooLong = 0;
         TreeMap<Integer, Double> pnlByYear = new TreeMap<>();
         TreeMap<Long, Double> pnlByDay = new TreeMap<>();
@@ -103,13 +114,16 @@ public class HPOFitnessCalculatorV4 {
         r.calmar = r.netScore / absDD;
         r.sortino = computeSortino(pnlByDay);
 
-        // ===== CONSTRAINT CỨNG (vi phạm = loại, KHÔNG cộng-trừ) =====
+        // ===== CONSTRAINT CỨNG (vi phạm = loại, KHÔNG cộng-trừ) — thứ tự + công thức GIỮ NGUYÊN V4 =====
+        if (r.tradeCount < minTrades) {
+            r.finalFitness = REJECT_BASE + r.tradeCount; r.note = "TOO_FEW_TRADES"; return r;
+        }
         if (r.totalProfit <= 0) { r.finalFitness = REJECT_BASE + r.totalProfit; r.note = "BURN_ACCOUNT"; return r; }
         if (r.ddPct > MAX_DD_PCT) { r.finalFitness = REJECT_BASE - r.ddPct * 100; r.note = "OVER_MAXDD"; return r; }
         if (r.pctHeldOver7d > MAX_PCT_HELD_OVER_7D) {
             r.finalFitness = REJECT_BASE - r.pctHeldOver7d * 100; r.note = "TOO_MUCH_CAPITAL_LOCK"; return r;
         }
-        // CHỈ áp %năm-dương khi backtest đủ DÀI theo SPAN THỰC (≥ MIN_YEARS_FOR_RATIO năm), KHÔNG dựa
+        // CHỈ áp %năm-dương khi backtest đủ DÀI theo RANGE THẬT (≥ MIN_YEARS_FOR_RATIO năm), KHÔNG dựa
         // pnlByYear.size(). Cửa sổ WFO 12 tháng (~365 ngày) có thể chạm 2 NĂM LỊCH do tràn biên (lệch
         // GMT+7 + lệnh mở cuối năm đóng sang đầu năm sau) → size()=2 nhưng không phải 2 năm thực →
         // trước đây loại oan genome tốt (UNSTABLE giả). Ổn định qua nhiều năm là việc của vế OOS-qua-
