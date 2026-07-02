@@ -1,6 +1,6 @@
 # TASK-117: Dọn disk server 226 (97% → mục tiêu ≤85%) — HEADLESS, master giám sát
 
-- **status:** doing (headless CCD, launch bởi master 2026-07-02 tối)
+- **status:** done 2026-07-02 23:15 (headless dọn 97→93, master hoàn tất 3 mục lớn → 79%)
 - **resource:** SSH 226 (`ssh -i /c/Users/pc/.ssh/id_rsa_chuyennd -p 2222 root@103.157.218.226`)
 - **touches_live_process:** KHÔNG ĐƯỢC PHÉP (Aerospike 226 là nguồn dữ liệu backtest đang dùng)
 
@@ -25,4 +25,6 @@
 - Phần Kết quả file này: bảng top-du trước/sau, danh sách đã xoá/nén (path+size), df cuối, trạng thái asinfo.
 
 ## Kết quả
-<headless điền>
+- Headless (sonnet default, chết vì session limit 22:50) dọn: journal vacuum, cache, log cũ → 97%→93%.
+- Master hoàn tất (Uni duyệt cả 3): (a) aerospike.log 6.5GB → backup tail 50MB /root/aerospike_log_tail_20260702.log + truncate + logrotate 200M×3 (/etc/logrotate.d/aerospike); asinfo status=ok sau thao tác. (b) /opt/gcc-9.3.0 6.1GB xoá (gcc hệ thống 4.8.5 vẫn ở /usr/bin). (c) ds-label 8.8GB nén nền → ds-label_20260702.tar.gz (reversible), log /root/ds_label_compress.log.
+- Kết quả: 97% (3.3GB trống) → **79% (20GB trống)**. Log: /d/claudedata/task117_don226.log
