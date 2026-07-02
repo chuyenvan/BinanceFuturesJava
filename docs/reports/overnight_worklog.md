@@ -51,3 +51,37 @@ Tai san sach ton tai nhung CHUA noi vao strategy-WFO: gate per-fold (wfo_models/
      decodeFundingMapToPrimitiveArray (KHAC 26B predict bin) -> rui ro sai format cao. Chua an toan unattended.
 - => DUNG thuc thi BUOC 3-4. Cho Uni quyet: (a) giai phong dia 226 de di Path A, HOAC (b) duyet dau tu lam
   Option B chac chan (co verify md5 vs funding.bin cu), HOAC (c) scope window (khuyen 2024+). Xem RUNBOOK.
+
+## UPDATE 2026-07-02 (DINH CHINH: blocker 226 SAI - Aerospike o Oracle-local)
+- Uni chi ra: pipeline dung Aerospike LOCAL tren Oracle, KHONG phai 226. Do lai: config active
+  ~/java/simulator/config.properties co AEROSPIKE_HOST_226=127.0.0.1:3222, AEROSPIKE_NAMESPACE=test
+  -> getClient226() tren Oracle = local. asd chay tren Oracle (port 3222). Oracle disk 65G trong (56%).
+  => "blocker 226 disk 97%" cua minh SAI (kiem nham server 226). BUOC 3-4 lam het tren Oracle, khong ket dia.
+- BUOC 2 validate: 17/17 bin, tat ca mod26=0, phu 2022-01..2026-01. EXIT_CODE=0.
+- BUOC 3a: load funding -> Aerospike Oracle set funding_selector_pred_1m_v3wf. Smoke 1 file PASS (511k rec,
+  0 loi, connect 127.0.0.1). Full 17 file dang chay (pid 89894).
+- Plan iteration 1: funding-leak-free (giu market pred hien tai) -> rebuild dataset -> WFO 17 window ->
+  so verdict vs ban ro ri (cb0032b). Co lap tac dong fix funding. Gate leak-free = iteration sau.
+
+## UPDATE 2026-07-02 (BUOC 4 chan boi scanAll + phat hien provenance rot)
+DA XONG: BUOC 1-2 (funding leak-free 17 fold, validate). BUOC 3a: nap v3wf -> Oracle-local 127.0.0.1 ns=test
+(3.72M rec, 0 loi) - NHUNG co the nham asd/ns (xem duoi).
+
+CHAN o BUOC 4 (export dataset) + PHAT HIEN QUAN TRONG (do duoc, dung tinh than provenance):
+1. ExportWfoDataset scanAll -> "Unsupported Server Feature" tren asd Oracle 127.0.0.1:3222. JAR CU CUNG LOI
+   (market=0 pred=0 funding=0) -> khong phai build cua Claude; la tinh trang asd/client hien tai. Can Uni:
+   asd Oracle co ho tro scanAll khong? Dataset cu (2026-06-29) export o dau (226? asd khac?)?
+2. Set DOC THAT la HANG SO hardcode trong DataManagerAerospikeFloatSim, KHAC nhan manifest:
+   - funding: AEROSPIKE_SET_NAME_FUNDING_PRED = "funding_pred_1m_v5" (dong 49) - KHONG phai
+     funding_selector_pred_1m_v2 (nhan manifest) hay v3wf. => env WFO_SET_FUNDING cua Claude CHI doi nhan
+     manifest, KHONG doi set doc that. Muon doc v3wf phai sua hang so nay (env-configurable) + rebuild.
+   - market: AEROSPIKE_SET_NAME_MARKET_DATA = "market_data_object" (nhan manifest ghi "market_data").
+   => PROVENANCE ROT that: manifest dataset cu GHI SAI nguon so voi code doc. (Dung van de goc Uni lo.)
+3. Set nguon (market_data_object, ai_pred_market_full_basket_v2, funding_pred_1m_v5) thay tren 226 ns=ticker;
+   Oracle config ns=test -> co the v3wf nap nham cho. Can Uni xac nhan topology: asd/ns nao giu set nguon.
+
+CAN UNI QUYET/CHI DAN:
+- Topology: export doc tu asd nao (Oracle-local hay 226), ns gi? Vi sao scanAll loi tren Oracle asd?
+- Neu dong y: Claude sua AEROSPIKE_SET_NAME_FUNDING_PRED (+ market/pred) thanh env-configurable that su
+  (khong chi manifest), nap v3wf dung asd/ns, va giai quyet scanAll (co the export tren 226 neu asd do scan duoc).
+- Funding leak-free bins (~/claudedata/wf_pred, 17 file) + set v3wf da san sang, chi cho thong topology.
