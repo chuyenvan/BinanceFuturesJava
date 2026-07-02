@@ -25,15 +25,21 @@ import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.chuyennd.tradecore.Configs;
 import com.binance.chuyennd.utils.Utils;
 import com.binance.client.model.enums.OrderSide;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
 import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * @author pc
  */
 public class OrderTargetInfoTest implements Serializable {
     private static final long serialVersionUID = 6529685098267757691L;
+    private static final Logger LOG = LoggerFactory.getLogger(OrderTargetInfoTest.class);
+    /** Đếm tổng lệnh bị clamp về bar.open do gap trong phiên JVM — đọc từ bên ngoài để báo cáo. */
+    public static final AtomicLong CLAMP_TOTAL = new AtomicLong(0);
 
     public OrderTargetStatus status;
     public OrderSide side;
@@ -163,7 +169,7 @@ public class OrderTargetInfoTest implements Serializable {
                 // HÀNH VI CŨ (look-ahead) — chỉ chạy khi tắt guard để đo đối chứng.
                 if (lastPrice <= priceSLNew) {
                     status = OrderTargetStatus.TAKE_PROFIT_DONE;
-                    priceTP = Math.min(priceSL, ticker.maxPrice);   // kẹp ≤ high (đồng bộ booking fix; nhánh này bất hoạt khi guard bật)
+                    priceTP = Math.min(priceSL, ticker.priceOpen);  // TASK-118: clamp → bar.open (đồng bộ nhánh chính; bất hoạt khi guard bật)
                 }
             }
         } else {
@@ -174,11 +180,17 @@ public class OrderTargetInfoTest implements Serializable {
                 } else {
                     status = OrderTargetStatus.STOP_LOSS_DONE;
                 }
-                // 🔴 BOOKING FIX (KHÔNG đụng trigger minPrice<=priceSL): kẹp giá chốt ≤ high nến khớp.
-                //    priceSL là level set ở nến TRƯỚC; khi nến trigger GAP thủng xuống (high<priceSL) thì
-                //    KHÔNG thể bán được priceSL — long-only => sell fill ≤ ticker.maxPrice. Ca thường
-                //    (low≤priceSL≤high) min=priceSL nên KHÔNG đổi; chỉ ca gap mới bị kẹp (sửa PnL thổi).
-                priceTP = Math.min(priceSL, ticker.maxPrice);
+                // 🔴 BOOKING FIX (TASK-118): clamp giá chốt về min(priceSL, bar.open).
+                //    Ca thường (open≥priceSL): priceTP=priceSL (fill đúng stop, không đổi).
+                //    Ca gap-down (open<priceSL): priceTP=open (haircut thực — không thể bán trên open).
+                //    Cũ: min(priceSL, ticker.maxPrice) — maxPrice trong nến có thể cao hơn open nội nến,
+                //    overshoot trên gap. bar.open là giá thực thi đầu tiên → chuẩn hơn.
+                if (ticker.priceOpen < priceSL) {
+                    long cnt = CLAMP_TOTAL.incrementAndGet();
+                    LOG.info("[EXIT-CLAMP-118] #{} sym={} sl={} open={}→fill={}",
+                            cnt, symbol, priceSL, ticker.priceOpen, ticker.priceOpen);
+                }
+                priceTP = Math.min(priceSL, ticker.priceOpen);
             }
         }
     }

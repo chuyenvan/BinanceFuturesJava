@@ -58,7 +58,10 @@ public class RunHpoMaster_Distributed {
     // (AEROSPIKE_READ_CLUSTER + TICKER_SOURCE trong config.properties) + fail-fast thiếu data.
     // Logic sim/PnL KHÔNG đổi (GATE khớp 100%), nhưng wiring nguồn data đổi → version mới để
     // cache HPO cũ không trộn kết quả chạy dưới cơ chế mode cũ (đã 2 lần chạy hỏng vì quên set mode).
-    public static final String CONFIG_VERSION = "v11";
+    // v11 -> v12: TASK-118 — exit clamp từ min(priceSL, bar.high) → min(priceSL, bar.open).
+    // Ca gap-down: bar.open là giá thực thi đầu tiên (haircut thực), bar.high có thể cao hơn open nội nến
+    // → old formula overshoot PnL khi gap. Fix giảm PnL backtest (~4k toàn range, đúng hướng). Bỏ cache v11.
+    public static final String CONFIG_VERSION = "v12";
 
     // 🔥 TÁCH 2 SET:
     //  - QUEUE_SET: chỉ chứa task ĐANG active (PENDING/RUNNING). Worker scanAll cái này nên LUÔN NHỎ.
