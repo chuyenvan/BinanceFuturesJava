@@ -39,3 +39,15 @@ Tai san sach ton tai nhung CHUA noi vao strategy-WFO: gate per-fold (wfo_models/
 - SMOKE 1 fold PASS: exit 0, features 3.9M merge OK, CUTOFFS=17 (khop WFO train-12), fold 0 train ts_max
   2021-12-28<cutoff 2022-01-01 (purge 72h giu), bin 26.0B/rec dung, prob in [0,1] nan%=0 endianness dung.
 - BUOC 2: launch full 17-fold detached (OUT_DIR=wf_pred). Uoc ~1-1.5h. Cho xong roi BUOC 3 (gate) + 4 (dataset+WFO).
+
+## UPDATE 2026-07-02 (BUOC 2 xong, BUOC 3-4 CHAN - can Uni quyet infra)
+- BUOC 2 funding leak-free: 17 fold chay xong tren Oracle -> predict_wf_*.bin (~104MB, phu 2022-01..2026-03),
+  leak-assert giu moi fold. Deliverable core HOAN TAT + validate.
+- BUOC 3-4 CHAN boi infra (do duoc, khong the tu quyet an toan):
+  1. 226 disk 97% day (3.3G trong) -> nap set v3wf + export dataset rui ro lap dia; giai phong = xoa data (pha huy).
+  2. gate leak-free set ai_pred_market_gate_wfo CHUA nap Aerospike (chi _smoke); full o wfo_gate_pred.csv.
+  3. Option B (bypass Aerospike, dung tren Oracle): pred.bin tu wfo_gate_pred.csv = TAM THUONG (khop format
+     [ts][predReturn15M][predRisk4H]). NHUNG funding.bin doi tai tao serialization Snappy "data" blob +
+     decodeFundingMapToPrimitiveArray (KHAC 26B predict bin) -> rui ro sai format cao. Chua an toan unattended.
+- => DUNG thuc thi BUOC 3-4. Cho Uni quyet: (a) giai phong dia 226 de di Path A, HOAC (b) duyet dau tu lam
+  Option B chac chan (co verify md5 vs funding.bin cu), HOAC (c) scope window (khuyen 2024+). Xem RUNBOOK.
