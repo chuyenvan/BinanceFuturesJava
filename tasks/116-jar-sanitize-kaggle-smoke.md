@@ -1,6 +1,6 @@
 # TASK-116: Jar sanitize → version java-run-lc → smoke WfoWorker 1 kernel Kaggle
 
-- **status:** todo (chờ TASK-114 xong — tree sạch mới build jar Kaggle)
+- **status:** done 2026-07-02 21:16
 - **depends_on:** TASK-114 · **resource:** local build + Kaggle · **touches_live_process:** không
 
 ## Việc làm
@@ -17,4 +17,7 @@
 - Version dataset + kernel status ghi vào Kết quả.
 
 ## Kết quả
-<master điền>
+- PrivateConfig on-disk sẵn placeholder → jar build TASK-114 đã sạch; verify grep -a SANITIZED trong PrivateConfig.class = 1 (log /d/claudedata/task116_sanitize_grep.log). Không cần vòng swap/restore.
+- Jar md5 eaa4d9c38754870a017be027f1d46db4 (local = Oracle khớp) → dataset chuyendinh/java-run-lc version mới (msg: TASK-112 refactor HEAD 26f3a1a) + config thêm AEROSPIKE_READ_CLUSTER=226, TICKER_SOURCE=file. Status: ready.
+- Smoke kernel wfo-worker-smoke: COMPLETE, SMOKE_PASS — jobstore 226 thật ns=ticker connect OK, LOAD offline OK market=2804363 pred=2819841 funding=2758365 (md5 verified), idle 3 vòng → exit 0. Log: /d/claudedata/task116_kernel.log.
+- Kaggle giờ đủ điều kiện làm WFO worker node khi cần: jar mới + dataset wf + WFO_STATE_HOST trỏ store chung.
