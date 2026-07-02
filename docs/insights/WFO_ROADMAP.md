@@ -21,7 +21,9 @@ nghi "226 disk 97% chặn" là SAI — nhầm server; Oracle disk 65G trống.)*
 | Funding leak-free (predictions) | ✅ `gen_funding_wf_predictions.py` (commit 57ddb49) — 17 fold walk-forward, per-fold train<cutoff→predict OOS, leak-assert giữ mọi fold. Output `~/claudedata/wf_pred/*.bin` (26B/rec, 3,718,490 rec). Horizon Uni chốt = **24h**. |
 | Dataset leak-free `wfo_dataset_wf` (Oracle) | ✅ market.bin+pred.bin từ scanAll (client 6.1.11, giữ nguyên set cũ); **funding.bin tự dựng** từ predict_wf: 24h, `score=1−P(win)` (khớp `decodeSelectorMapToPrimitiveArray` + engine "điểm thấp=ưu tiên"), forward-fill 15-phút→**per-phút** (khớp sim tra `time2SymbolPred.get(time)` exact per-phút). 2,758,365 entry. `WfoDataset.load()` verify md5 PASS. |
 | Function-test 2 window × N=3 | ✅ sim chạy sạch với funding leak-free (WIN0 WFE=0.024 pnl=+340; WIN1 WFE=−0.005 pnl=−53). Sơ bộ, chưa kết luận. |
-| Full WFO 17 window × N=30 | 🔄 ĐANG CHẠY (2 worker Oracle, train-12/oos-3). **Verdict PENDING.** |
+| ⚠️ Full run #1 (17w, 2026-07-02 sáng) | ❌ **VÔ HIỆU** — 13/17 window ZERO_TRADES âm thầm. Root-cause (Uni soi ra từ log): thiếu env `WFO_SMART_CACHE=1` → sim rơi nhánh `IS_KAGGLE_MODE` đọc ticker FILE `kaggle_data_hpo/` (chỉ có 2021-01→2022-06). KHÔNG phải lỗi funding.bin (đã verify align 100% market ts + p24h khoẻ mọi fold). Đã đo: **Aerospike Oracle-local CÓ kline đầy đủ 2021→2026** (sample 5 mốc) → không cần sinh/sync ticker file. Diệt tận gốc → [TASK-112](../../tasks/112-bo-mode-kaggle-hpo-config-tuong-minh.md) (bỏ 2 mode, config tường minh + fail-fast, Uni duyệt). |
+| Function-test v2 (4w × N=3, `WFO_SMART_CACHE=1`) | ✅ PASS — WIN 2 (OOS=0.57 pnl=+54.6) + WIN 3 (OOS=3.15 pnl=+251.6) từng zero-trade giờ có lệnh; 0 ZERO_TRADES; RAM ổn. |
+| Full WFO v2: 17 window × N=30 | 🔄 ĐANG CHẠY (2 worker Oracle, `WFO_SMART_CACHE=1`, ticker từ Aerospike). **Verdict PENDING.** |
 
 **Caveat phải giữ khi đọc verdict vòng này:**
 - **Coverage funding khác:** leak-free ~20 coin/tick (chỉ coin đủ feature+label 24h) vs set v5 cũ ~72–150/tick.
@@ -53,5 +55,5 @@ PASS cần CẢ 3: `WFE_median ≥ 0.5` · `%OOS-dương ≥ 70%` · `worst OOS 
 ## 4. HẠ TẦNG CHẠY (tóm tắt — chi tiết ở LEAKFREE_WFO_RUNBOOK)
 - jar export/worker leak-free: `~/java/simulator/binance-futures-wfo-lf.jar` trên Oracle (client 6.1.11, MD5-verify khi deploy).
 - 1 lệnh: `WfoCoordinator init|reset|status|report strategy_window` (JobStore = Aerospike local qua getClient226).
-  Worker: `WfoWorker` (env `WFO_KAGGLE=1 WFO_DATA_DIR=<dataset>`). Function-test: `WFO_MAX_WINDOWS`, `WFO_N_SAMPLES`.
+  Worker: `WfoWorker` (env **BẮT BUỘC đủ 3**: `WFO_KAGGLE=1 WFO_SMART_CACHE=1 WFO_DATA_DIR=<dataset>` — thiếu SMART_CACHE → đọc ticker FILE → zero-trade âm thầm, xem sự cố 2026-07-02; TASK-112 sẽ diệt tận gốc). Function-test: `WFO_MAX_WINDOWS`, `WFO_N_SAMPLES`.
 - Dataset build funding.bin: `~/claudedata/build_funding_bin.py` (HZ_IDX=2=24h, forward-fill 15p→phút) + patch manifest md5.
