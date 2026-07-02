@@ -48,8 +48,6 @@ public class RunWorkerKaggle {
 
     public static void main(String[] args) {
         LOG.info("👷 WORKER KHỞI ĐỘNG - queue={} | result={}", QUEUE_SET, RESULT_SET);
-        Configs.IS_HPO_MODE = true;
-        Configs.IS_KAGGLE_MODE = true;
         Configs.TIME_RUN = "20260101"; // Khớp với Data Export
 
         loadKaggleData();

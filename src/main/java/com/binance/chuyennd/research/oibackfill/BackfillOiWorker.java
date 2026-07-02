@@ -43,7 +43,6 @@ public class BackfillOiWorker {
     private final long endMs = parseEnvDate("OI_END_DATE", Long.MAX_VALUE);
 
     public static void main(String[] args) {
-        Configs.IS_KAGGLE_MODE = true;
         new BackfillOiWorker().run();
     }
 

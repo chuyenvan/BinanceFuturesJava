@@ -59,11 +59,8 @@ public class GenerateSelectorPredictionsTool {
     }
 
     public static void main(String[] args) throws Exception {
-        // Đọc dữ liệu-nguồn từ 226 (như funding) trừ khi GEN_USE_242=1.
-        if (!"1".equals(System.getenv("GEN_USE_242"))) {
-            Configs.IS_KAGGLE_MODE = true;
-            LOG.info("🌐 Đọc dữ liệu-nguồn từ 226 (IS_KAGGLE_MODE=true).");
-        }
+        // TASK-112: nguồn dữ liệu theo config per-box AEROSPIKE_READ_CLUSTER (env GEN_USE_242 cũ đã bỏ).
+        LOG.info("🌐 Đọc dữ liệu-nguồn theo AEROSPIKE_READ_CLUSTER={}", Configs.AEROSPIKE_READ_CLUSTER);
         int threads = Math.max(1, Integer.parseInt(System.getenv().getOrDefault("GEN_THREADS", "4")));
         System.setProperty("java.util.concurrent.ForkJoinPool.common.parallelism", String.valueOf(threads));
         DataManagerAerospikeFloatSim.setThreadCount(threads);

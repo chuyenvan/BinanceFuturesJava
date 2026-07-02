@@ -61,8 +61,6 @@ public class ExportGateFeaturesGroupBCrowd {
 
     public static void main(String[] args) {
         try {
-            Configs.IS_HPO_MODE = false;
-            Configs.IS_KAGGLE_MODE = true; // đọc 226 local
 
             String symfile = DEFAULT_SYMFILE;
             for (String a : args) if (a.toLowerCase().startsWith("symfile=")) symfile = a.substring(8).trim();

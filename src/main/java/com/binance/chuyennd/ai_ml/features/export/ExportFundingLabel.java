@@ -43,7 +43,7 @@ import java.util.*;
  * triple-barrier timing, nhẹ ~15× so với nhịp-1m của export feature cũ). Path bar cũng 15m: gộp 1m→15m
  * (high=max maxPrice, low=min minPrice, close=close nến 1m cuối bucket). Train có thể subsample thêm nếu cần.
  *
- * <p>Nguồn: ticker {@code kline_1m_opt} (226, đọc-only; {@code IS_KAGGLE_MODE=true}). Output {@link #OUT}.
+ * <p>Nguồn: ticker {@code kline_1m_opt} (226, đọc-only; box cần {@code AEROSPIKE_READ_CLUSTER=226}). Output {@link #OUT}.
  */
 public class ExportFundingLabel {
 
@@ -100,8 +100,6 @@ public class ExportFundingLabel {
 
     public static void main(String[] args) {
         try {
-            Configs.IS_HPO_MODE = false;
-            Configs.IS_KAGGLE_MODE = true;   // đọc 226 local
 
             // ===== GUARD universe: builder TASK-010 phải đã chạy =====
             int nLifecycle = LIFECYCLE.loadedCount();

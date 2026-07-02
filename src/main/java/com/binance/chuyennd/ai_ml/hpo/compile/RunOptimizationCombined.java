@@ -35,7 +35,6 @@ public class RunOptimizationCombined {
     public static void main(String[] args) {
         LOG.info("=== BẮT ĐẦU HPO COMBINED (12 PARAMETERS) ===");
         try {
-            Configs.IS_HPO_MODE = true;
             Configs.TIME_RUN = "20251101"; // Setup thời gian chạy tại đây
             loadDataReady();
         } catch (Exception e) {

@@ -48,8 +48,6 @@ public class RunTailLossDiagnostic {
     }
 
     public void run() throws Exception {
-        Configs.IS_HPO_MODE = false;
-        Configs.IS_KAGGLE_MODE = false;
         Configs.TIME_RUN = START_DATE;
         // Filter: RISK + MOM15 + EARLY (MOM24 đã bỏ khỏi hệ). KHÔNG breaker.
         Configs.FILTER_MODE = "A";

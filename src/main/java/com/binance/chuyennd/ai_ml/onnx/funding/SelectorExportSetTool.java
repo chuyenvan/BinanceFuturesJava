@@ -23,7 +23,6 @@ public class SelectorExportSetTool {
     private static final Logger LOG = LoggerFactory.getLogger(SelectorExportSetTool.class);
 
     public static void main(String[] args) throws Exception {
-        Configs.IS_KAGGLE_MODE = true;   // đọc 226
         String setName = args[0];
         long start = Utils.sdfFile.parse(args[1]).getTime() + 7 * Utils.TIME_HOUR;
         long end = Utils.sdfFile.parse(args[2]).getTime() + 7 * Utils.TIME_HOUR;

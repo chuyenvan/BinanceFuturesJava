@@ -26,8 +26,6 @@ public class DiagnoseFilterEmpty {
     private static final Logger LOG = LoggerFactory.getLogger(DiagnoseFilterEmpty.class);
 
     public static void main(String[] args) {
-        Configs.IS_HPO_MODE = false;
-        Configs.IS_KAGGLE_MODE = true;
         long start = args.length > 0 ? Long.parseLong(args[0]) : 1652313600000L;
         int minutes = args.length > 1 ? Integer.parseInt(args[1]) : 720;
 

@@ -40,7 +40,7 @@ import java.util.TreeMap;
  * <p><b>Compute:</b> random search N mẫu/cửa sổ × số cửa sổ. Chia nhiều máy qua arg WIN_FROM:WIN_TO.
  * Data nạp 1 lần, chạy mọi cửa sổ in-memory.
  *
- * <p>Arg: [N_SAMPLES=30] [WIN_FROM:WIN_TO] [SEED=42]. Read-only Aerospike (đọc 226 khi IS_KAGGLE_MODE).
+ * <p>Arg: [N_SAMPLES=30] [WIN_FROM:WIN_TO] [SEED=42]. Read-only Aerospike (cluster theo config AEROSPIKE_READ_CLUSTER).
  */
 public class WFORunner {
 
@@ -90,10 +90,8 @@ public class WFORunner {
 
     public static void main(String[] args) {
         try {
-            Configs.IS_HPO_MODE = false;
             Configs.ABLATION_MODE = "A";
             Configs.BREAKER_MODE = "OFF";
-            if ("1".equals(System.getenv("WFO_KAGGLE"))) Configs.IS_KAGGLE_MODE = true;
             int nSamples = args.length > 0 ? Integer.parseInt(args[0]) : 30;
             int winFrom = 0, winTo = Integer.MAX_VALUE;
             if (args.length > 1 && args[1].contains(":")) {

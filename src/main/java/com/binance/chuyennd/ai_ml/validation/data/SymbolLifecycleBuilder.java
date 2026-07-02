@@ -82,10 +82,9 @@ public class SymbolLifecycleBuilder {
 
     public void run() throws Exception {
         // Đọc bản ticker đã sync trên 226 (chạy local trên 226 cho nhanh). Phần market data: ĐỌC-ONLY.
-        Configs.IS_KAGGLE_MODE = true;
         long t0 = System.currentTimeMillis();
-        LOG.info("🧬 LIFECYCLE BUILDER | đọc ticker 226 (IS_KAGGLE_MODE=true) | từ {} → nay | freshLIVE≤{}d",
-                START_DATE, LIVE_FRESH_DAYS);
+        LOG.info("🧬 LIFECYCLE BUILDER | đọc ticker 226 (AEROSPIKE_READ_CLUSTER={}) | từ {} → nay | freshLIVE≤{}d",
+                Configs.AEROSPIKE_READ_CLUSTER, START_DATE, LIVE_FRESH_DAYS);
 
         // 1) Universe đang TRADING từ exchangeInfo (tái dùng logic TASK-008: USDT-perp + status TRADING).
         Set<String> liveSet = fetchLiveSet();

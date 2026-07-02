@@ -11,7 +11,7 @@
 //
 //    public static void main(String[] args) throws Exception {
 //        LOG.info("=== 🚀 KHỞI ĐỘNG HỆ THỐNG WFO CHẾ ĐỘ TUẦN TỰ ===");
-//        Configs.IS_HPO_MODE = true;
+
 //
 //        // ÉP NẠP DỮ LIỆU TẠI LUỒNG MAIN TRƯỚC
 //        LOG.info("Step 1: Nạp Market Data...");
@@ -23,7 +23,7 @@
 //        // Xác định dải thời gian
 //        long startTs = Utils.sdfFile.parse("20240101").getTime();
 //
-//        if (Configs.IS_KAGGLE_MODE) {
+//        if (false) { // (TASK-112: flag kaggle-mode cũ đã xóa)
 //            LOG.info("Step 3: Nạp Tickers 1M...");
 //            long current = startTs;
 //            while (current < System.currentTimeMillis()) {

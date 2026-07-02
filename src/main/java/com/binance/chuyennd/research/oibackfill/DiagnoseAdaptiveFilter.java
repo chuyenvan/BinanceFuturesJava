@@ -40,8 +40,6 @@ public class DiagnoseAdaptiveFilter {
     };
 
     public static void main(String[] args) throws Exception {
-        Configs.IS_HPO_MODE = false;
-        Configs.IS_KAGGLE_MODE = true;
         long volMin = args.length > 0 ? Long.parseLong(args[0]) : 2000;
         double pct = args.length > 1 ? Double.parseDouble(args[1]) : 0.10; // top 10%
         int window = 30; // rate30m

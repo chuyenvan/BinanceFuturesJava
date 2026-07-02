@@ -20,7 +20,7 @@ import java.util.*;
  *
  * Streaming: 4/12/24h là bội 15m → mọi mốc nằm trên lưới 15m. Giữ RING close-map 97 bước gần nhất;
  * tại bước i tính ret cho t=i−Hsteps (dùng ring[t] & ring[i]); emit dòng t khi i=t+96 (đủ cả 3 H).
- * Đọc-only 226 (IS_KAGGLE_MODE=true → getReadClient→226).
+ * Đọc-only 226 (box cần AEROSPIKE_READ_CLUSTER=226 → getReadClient→226).
  */
 public class ExportGateReturn {
 
@@ -38,8 +38,6 @@ public class ExportGateReturn {
 
     public static void main(String[] args) {
         try {
-            Configs.IS_HPO_MODE = false;
-            Configs.IS_KAGGLE_MODE = true;   // đọc 226 local
             long start = Utils.sdfFile.parse(START_DATE).getTime() + 7 * Utils.TIME_HOUR;
             long end = System.currentTimeMillis();
             LOG.info("🏷️ TASK-012 export gate label retMktMedian | {} → nay | sample 15m | H={4h,12h,24h}", START_DATE);

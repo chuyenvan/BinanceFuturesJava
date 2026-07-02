@@ -49,8 +49,6 @@ public class RunHpoPhase1_MarketThresholds {
     public static void main(String[] args) {
         LOG.info("=== BẮT ĐẦU VÒNG 1: TỐI ƯU HÓA NHẬN DIỆN THỊ TRƯỜNG (6 THAM SỐ) ===");
         try {
-            Configs.IS_HPO_MODE = true;
-            Configs.IS_KAGGLE_MODE = true;
             Configs.TIME_RUN = "20251001";
             offlineEndTime = Utils.sdfFile.parse("20260430").getTime() + (24 * Utils.TIME_HOUR) - Utils.TIME_MINUTE;
             loadKaggleData();

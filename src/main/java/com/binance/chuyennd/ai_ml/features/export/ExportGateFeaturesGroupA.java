@@ -44,7 +44,7 @@ import java.util.*;
  * {@code extractBreadthFeatures} dùng {@code getTopCoin} (xếp theo VOLUME). ⇒ coin die THAM GIA breadth/basket
  * tự nhiên miễn data 1m của chúng có trên 226 (TASK-005 backfill). Validate (e') báo #coin breadth/năm để xác nhận.
  *
- * <p>Đọc-only market data 226 ({@code IS_KAGGLE_MODE=true}); ghi {@link #OUT}. Chạy TRÊN 226 (đọc nặng) —
+ * <p>Đọc-only market data 226 (box cần {@code AEROSPIKE_READ_CLUSTER=226}); ghi {@link #OUT}. Chạy TRÊN 226 (đọc nặng) —
  * KHÔNG đồng thời với 012/builder-010/013 trên 226.
  */
 public class ExportGateFeaturesGroupA {
@@ -74,8 +74,6 @@ public class ExportGateFeaturesGroupA {
 
     public static void main(String[] args) {
         try {
-            Configs.IS_HPO_MODE = false;
-            Configs.IS_KAGGLE_MODE = true;   // đọc 226 local
 
             long start = Utils.sdfFile.parse(START_DATE).getTime() + 7 * Utils.TIME_HOUR; // 2021-01-01 07:00 GMT+7
             long warmupStart = start - 2 * 24L * Utils.TIME_HOUR;                          // 48h warmup

@@ -60,8 +60,6 @@ public class ExportGateFeaturesGroupB {
 
     public static void main(String[] args) {
         try {
-            Configs.IS_HPO_MODE = false;
-            Configs.IS_KAGGLE_MODE = true; // đọc 226 local
 
             long start = Utils.sdfFile.parse(START_DATE).getTime() + 7 * Utils.TIME_HOUR;
             long end = System.currentTimeMillis();

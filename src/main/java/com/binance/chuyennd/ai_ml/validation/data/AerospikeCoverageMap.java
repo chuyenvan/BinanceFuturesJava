@@ -25,7 +25,7 @@ import java.util.*;
  *   gapMonths = tháng TRONG [firstMonth,lastMonth] nhưng KHÔNG có data (lỗ nội bộ); coin chết (không data
  *   SAU lastMonth) KHÔNG tính là gap.
  *
- * Chỉ USDT-perp (đuôi USDT, không '_'). Đọc 226 (IS_KAGGLE_MODE=true → getReadClient→226, bản đã sync).
+ * Chỉ USDT-perp (đuôi USDT, không '_'). Đọc 226 (box cần AEROSPIKE_READ_CLUSTER=226 → getReadClient→226, bản đã sync).
  * Chạy trên 226. Log SLF4J, KHÔNG System.out/printStackTrace.
  */
 public class AerospikeCoverageMap {
@@ -63,8 +63,7 @@ public class AerospikeCoverageMap {
 
     public void run() throws Exception {
         // Đọc bản ticker đã sync trên 226 (chạy local trên 226 cho nhanh). KHÔNG ghi gì.
-        Configs.IS_KAGGLE_MODE = true;
-        LOG.info("🗺 COVERAGE MAP ticker1m | đọc 226 (IS_KAGGLE_MODE=true) | từ {} → nay", START_DATE);
+        LOG.info("🗺 COVERAGE MAP ticker1m | AEROSPIKE_READ_CLUSTER={} | từ {} → nay", Configs.AEROSPIKE_READ_CLUSTER, START_DATE);
 
         SimpleSymbolMapper mapper = SimpleSymbolMapper.getInstance();
         mapper.init();

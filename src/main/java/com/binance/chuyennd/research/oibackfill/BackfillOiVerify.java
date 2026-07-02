@@ -27,7 +27,6 @@ public class BackfillOiVerify {
     private static final String OI_HIST = "https://fapi.binance.com/futures/data/openInterestHist";
 
     public static void main(String[] args) {
-        Configs.IS_KAGGLE_MODE = true;
         String[] symbols = (args != null && args.length > 0)
                 ? String.join(",", args).split("[,\\s]+")
                 : new String[]{"BTCUSDT", "LUNAUSDT"};

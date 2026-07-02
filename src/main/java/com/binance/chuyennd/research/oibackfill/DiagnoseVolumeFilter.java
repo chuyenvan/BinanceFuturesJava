@@ -20,8 +20,6 @@ public class DiagnoseVolumeFilter {
     private static final Logger LOG = LoggerFactory.getLogger(DiagnoseVolumeFilter.class);
 
     public static void main(String[] args) {
-        Configs.IS_HPO_MODE = false;
-        Configs.IS_KAGGLE_MODE = true;
         long start = args.length > 0 ? Long.parseLong(args[0]) : 1704067200000L; // 2024-01-01
         int days = args.length > 1 ? Integer.parseInt(args[1]) : 7;
         long[] thresholds = {1000, 5000, 10000, 20000, 50000};

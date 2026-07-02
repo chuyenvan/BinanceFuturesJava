@@ -26,7 +26,6 @@ public class PushOiSetsTo242 {
     private static final Logger LOG = LoggerFactory.getLogger(PushOiSetsTo242.class);
 
     public static void main(String[] args) {
-        Configs.IS_KAGGLE_MODE = true;
         try {
             List<String> symbols = resolveSymbols(args);
             LOG.info("📤 ĐẨY 226→242: {} symbol × {} set.", symbols.size(), OiMetricSets.ALL.length);

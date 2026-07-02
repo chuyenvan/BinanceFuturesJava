@@ -53,8 +53,6 @@ public class RunFundingMonotonicity {
     }
 
     public void run() throws Exception {
-        Configs.IS_HPO_MODE = false;
-        Configs.IS_KAGGLE_MODE = false;
         Configs.TIME_RUN = START_DATE;
         Configs.BREAKER_MODE = "OFF";
 

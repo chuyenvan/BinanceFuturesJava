@@ -38,7 +38,6 @@ public class BackfillOiMaster {
 
     public static void main(String[] args) {
         LOG.info("👑 BACKFILL-OI MASTER khởi động | queue={} | done={}", QUEUE_SET, DONE_SET);
-        Configs.IS_KAGGLE_MODE = true; // tool offline, KHÔNG phải process live
 
         // --reset: xoá sạch queue + done (dùng khi re-test hoặc dọn checkpoint cũ). KHÔNG đụng 5 set data.
         if (args != null && args.length > 0 && "--reset".equalsIgnoreCase(args[0])) {

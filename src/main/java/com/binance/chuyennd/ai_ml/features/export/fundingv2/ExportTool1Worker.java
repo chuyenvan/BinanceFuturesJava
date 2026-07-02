@@ -48,7 +48,6 @@ public class ExportTool1Worker {
     private static String workerId;
 
     public static void main(String[] args) throws Exception {
-        Configs.IS_KAGGLE_MODE = true;
         workerId = args.length > 0 ? args[0]
                 : (System.getenv().getOrDefault("KAGGLE_KERNEL_RUN_TYPE", "local")
                    + "-" + ProcessHandle.current().pid());

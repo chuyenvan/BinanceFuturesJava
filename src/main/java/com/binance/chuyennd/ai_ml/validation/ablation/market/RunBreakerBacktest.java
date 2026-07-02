@@ -50,8 +50,6 @@ public class RunBreakerBacktest {
     }
 
     public void run() throws Exception {
-        Configs.IS_HPO_MODE = false;
-        Configs.IS_KAGGLE_MODE = false;
         Configs.TIME_RUN = START_DATE;
 
         // PRE-FLIGHT (tái lập): cấu hình nền + ngưỡng breaker.

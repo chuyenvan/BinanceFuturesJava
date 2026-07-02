@@ -38,8 +38,6 @@ public class MetricDistributionTool {
 
     public static void main(String[] args) {
         try {
-            Configs.IS_HPO_MODE = false;
-            Configs.IS_KAGGLE_MODE = false;
             Configs.BREAKER_MODE = "OFF";
             String mode = args.length > 0 ? args[0] : "FAST";
             new MetricDistributionTool().run(mode);

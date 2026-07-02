@@ -60,8 +60,6 @@ public class RunFundingImpact {
     }
 
     public void run() throws Exception {
-        Configs.IS_HPO_MODE = false;
-        Configs.IS_KAGGLE_MODE = false;
         Configs.TIME_RUN = START_DATE;
 
         LOG.info("🔒 PRE-FLIGHT: lookahead_block={} slippage_apply={} RATE_FEE={} BREAKER_MODE={} MARGIN_HALT={}",

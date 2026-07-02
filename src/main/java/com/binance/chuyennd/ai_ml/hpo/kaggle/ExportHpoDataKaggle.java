@@ -23,7 +23,6 @@ public class ExportHpoDataKaggle {
 
         // Doc qua client 226 (getReadClient khi HPO_MODE) -> tren Oracle config AEROSPIKE_HOST_226=127.0.0.1
         // => doc Aerospike LOCAL (server 8, batch-get OK), nhanh, khong qua mang VN.
-        com.binance.chuyennd.tradecore.Configs.IS_HPO_MODE = true;
 
         // Range qua args: arg0=start (yyyyMMdd), arg1=end. arg2="ticker" => chi export ticker (bo core).
         String startStr = args.length > 0 ? args[0] : "20251001";

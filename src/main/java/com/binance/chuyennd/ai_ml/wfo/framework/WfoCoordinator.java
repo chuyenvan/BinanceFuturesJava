@@ -36,7 +36,6 @@ public class WfoCoordinator {
             }
             String cmd = args[0];
             String type = args.length > 1 ? args[1] : "strategy_window";
-            if ("1".equals(System.getenv("WFO_KAGGLE"))) com.binance.chuyennd.tradecore.Configs.IS_KAGGLE_MODE = true;
             new WfoCoordinator().dispatch(cmd, type);
             System.exit(0);
         } catch (Throwable e) {

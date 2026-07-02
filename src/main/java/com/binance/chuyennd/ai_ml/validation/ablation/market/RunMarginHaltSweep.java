@@ -61,8 +61,6 @@ public class RunMarginHaltSweep {
     }
 
     public void run() throws Exception {
-        Configs.IS_HPO_MODE = false;
-        Configs.IS_KAGGLE_MODE = false;
         Configs.TIME_RUN = START_DATE;
 
         // Quét ngưỡng: OFF (neo) + 5 mức HALT từ chặt→lỏng. 0.70 là điểm đã đo (để đối chiếu lại).

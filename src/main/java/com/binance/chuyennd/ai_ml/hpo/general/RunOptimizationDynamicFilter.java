@@ -91,7 +91,6 @@ public class RunOptimizationDynamicFilter {
     public static void main(String[] args) throws Exception {
         LOG.info("=== BẮT ĐẦU TỐI ƯU AI DYNAMIC FILTER (3 PARAMS) ===");
 
-        Configs.IS_HPO_MODE = false;
         Configs.TIME_RUN = "20251001";
 
         loadAndWarmUpData();

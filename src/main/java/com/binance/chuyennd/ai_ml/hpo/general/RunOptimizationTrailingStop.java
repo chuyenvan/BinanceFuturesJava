@@ -84,7 +84,6 @@ public class RunOptimizationTrailingStop {
         LOG.info("=== BẮT ĐẦU TỐI ƯU TRAILING STOP ĐỘNG (3 PARAMS) ===");
 
         // TẮT ĐỂ GIỮ LỊCH SỬ LỆNH CHO CALCULATOR ĐẾM TRADES
-        Configs.IS_HPO_MODE = false;
         Configs.TIME_RUN = "20251001";
 
         loadAndWarmUpData();

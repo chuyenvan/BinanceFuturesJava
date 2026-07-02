@@ -37,8 +37,7 @@ public class ExportFeaturesForPythonTool {
     }
 
     public static void main(String[] args) throws Exception {
-        // TASK-037: chạy Kaggle/226 đọc-only → getReadClient()→226 (như ExportGateFeatures*). KHÔNG dùng trên box live.
-        Configs.IS_KAGGLE_MODE = true;
+        // TASK-037: chạy Kaggle/226 đọc-only (box cần AEROSPIKE_READ_CLUSTER=226, như ExportGateFeatures*). KHÔNG dùng trên box live.
         // TASK-037: PHIÊN BẢN MỚI (v3) — KHÔNG đè data model 21-feature cũ (features_export_python/).
         // args[0] = startDate yyyyMMdd, args[1] = endDate yyyyMMdd, args[2] = outputDir (optional).
         String outputDir = "features_export_python_v3/";

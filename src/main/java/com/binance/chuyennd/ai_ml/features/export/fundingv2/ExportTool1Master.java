@@ -42,7 +42,6 @@ public class ExportTool1Master {
     public static final String STATUS_FAILED  = "FAILED";
 
     public static void main(String[] args) throws Exception {
-        Configs.IS_KAGGLE_MODE = true;
         String startMonth = args.length > 0 ? args[0] : "2021-01";
         String endMonth   = args.length > 1 ? args[1] : "2026-06";
         boolean reset     = args.length > 2 && "reset".equalsIgnoreCase(args[2]);

@@ -11,15 +11,13 @@ import java.util.*;
 
 /**
  * TASK-101: Chan doan range OI trong Aerospike - 5 coin dai dien, dem record theo nam.
- * Chay tren 226 (IS_KAGGLE_MODE=true), KHONG ghi gi.
+ * Chay tren 226 (box can AEROSPIKE_READ_CLUSTER=226), KHONG ghi gi.
  * Usage: java DiagnoseOiRange [BTCUSDT ETHUSDT ...]
  */
 public class DiagnoseOiRange {
     private static final Logger LOG = LoggerFactory.getLogger(DiagnoseOiRange.class);
 
     public static void main(String[] args) throws Exception {
-        Configs.IS_HPO_MODE = false;
-        Configs.IS_KAGGLE_MODE = true;
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
         sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
 

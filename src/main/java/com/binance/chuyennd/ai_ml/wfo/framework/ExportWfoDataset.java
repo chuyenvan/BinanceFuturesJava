@@ -15,9 +15,8 @@ public class ExportWfoDataset {
 
     public static void main(String[] args) {
         try {
-            // export ĐỌC từ 226 (market/pred/funding là 226-native qua getClient226) → không cần kaggle-mode,
-            // nhưng set cho an toàn nếu chạy ở node chỉ với được 226.
-            com.binance.chuyennd.tradecore.Configs.IS_KAGGLE_MODE = true;
+            // export ĐỌC từ 226 (market/pred/funding là 226-native qua getClient226) → KHÔNG cần AEROSPIKE_READ_CLUSTER
+            // (TASK-112: getReadClient không được đụng tới trong đường export này).
             String home = System.getProperty("user.home");
             String outDir = args.length > 0 ? args[0] : home + "/claudedata/wfo_dataset";
             WfoDataset.export(outDir);

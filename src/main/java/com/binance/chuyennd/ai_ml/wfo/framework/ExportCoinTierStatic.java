@@ -44,9 +44,8 @@ public class ExportCoinTierStatic {
             LOG.error("Usage: ExportCoinTierStatic <startYYYYMMDD> <endYYYYMMDD> <outFile>");
             System.exit(2);
         }
-        // LIVE ranking để sinh data: tắt static, bật HPO_MODE để getReadClient() trỏ 226-local (Oracle).
+        // LIVE ranking để sinh data: tắt static. Cluster đọc theo config box AEROSPIKE_READ_CLUSTER=226 (Oracle local).
         Configs.WFO_STATIC_RANK = false;
-        Configs.IS_HPO_MODE = true;
 
         long startTs = Utils.sdfFile.parse(args[0]).getTime();
         long endTs = Utils.sdfFile.parse(args[1]).getTime();

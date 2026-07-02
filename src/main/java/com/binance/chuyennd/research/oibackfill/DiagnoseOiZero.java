@@ -17,8 +17,6 @@ public class DiagnoseOiZero {
     private static final Logger LOG = LoggerFactory.getLogger(DiagnoseOiZero.class);
 
     public static void main(String[] args) {
-        Configs.IS_HPO_MODE = false;
-        Configs.IS_KAGGLE_MODE = true;
         String coin = args.length > 0 ? args[0] : "BTCUSDT";
         LOG.info("===== DIAGNOSE OI <=0 cho {} =====", coin);
 

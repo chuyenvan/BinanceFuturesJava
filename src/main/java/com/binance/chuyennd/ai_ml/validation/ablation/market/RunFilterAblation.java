@@ -61,8 +61,6 @@ public class RunFilterAblation {
     }
 
     public void run() throws Exception {
-        Configs.IS_HPO_MODE = false;
-        Configs.IS_KAGGLE_MODE = false;
 
         // ----- PRE-FLIGHT -----
         LOG.info("INTEGRITY PRE-FLIGHT: BLOCK_INTRABAR_LOOKAHEAD={} APPLY_SLIPPAGE={} SLIPPAGE_RATE={} RATE_FEE={}",

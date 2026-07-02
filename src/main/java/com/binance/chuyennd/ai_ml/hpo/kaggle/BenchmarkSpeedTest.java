@@ -23,8 +23,6 @@ public class BenchmarkSpeedTest {
             LOG.info("=== BẮT ĐẦU BENCHMARK THUẦN (KIỂM TRA LOGIC & TỐC ĐỘ) ===");
 
             // 1. Cấu hình chạy thuần (Tắt HPO để in log Balance mỗi ngày)
-            Configs.IS_HPO_MODE = false; // 🔥 QUAN TRỌNG: Để false mới in log chi tiết
-            Configs.IS_KAGGLE_MODE = true;
             Configs.TIME_RUN = "20251001";
             long offlineEndTime = Utils.sdfFile.parse("20260430").getTime() + (24 * Utils.TIME_HOUR) - Utils.TIME_MINUTE;
 

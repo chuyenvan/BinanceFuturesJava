@@ -25,7 +25,7 @@ import java.util.concurrent.TimeUnit;
  * PENDING, node khác steal.
  *
  * <p>Env: WFO_DATA_DIR (bắt buộc cho phân tán; thiếu → fallback Aerospike, chỉ test đơn máy).
- *        WFO_LEASE_MIN (mặc định 30), WFO_MAX_IDLE_LOOPS (mặc định 3), WFO_KAGGLE=1 (đọc 226).
+ *        WFO_LEASE_MIN (mặc định 30), WFO_MAX_IDLE_LOOPS (mặc định 3). Cluster đọc theo config AEROSPIKE_READ_CLUSTER (TASK-112).
  *        WFO_N_SAMPLES (truyền xuống task qua buildJobs — chỉ coordinator dùng).
  * Arg: [type=strategy_window]
  */
@@ -35,12 +35,10 @@ public class WfoWorker {
 
     public static void main(String[] args) {
         try {
-            Configs.IS_HPO_MODE = false;
             Configs.ABLATION_MODE = "A";
             Configs.BREAKER_MODE = "OFF";
-            if ("1".equals(System.getenv("WFO_KAGGLE"))) Configs.IS_KAGGLE_MODE = true;
             // WFO_SMART_CACHE=1 → bật cache nén kline RAM (HPOSmartCache.getDataShort) trong simulator.
-            // Cần kèm WFO_KAGGLE=1 để getReadClient() trỏ Aerospike 226-local (config AEROSPIKE_HOST_226=127.0.0.1).
+            // Cluster đọc theo config box AEROSPIKE_READ_CLUSTER=226 (Oracle: AEROSPIKE_HOST_226=127.0.0.1 local).
             if ("1".equals(System.getenv("WFO_SMART_CACHE"))) Configs.USE_SMART_CACHE = true;
             // WFO_STATIC_RANK=1 → CoinRank đọc tier TĨNH từ file (env WFO_COINTIER_FILE), backtest KHÔNG bật
             // HistoryManager. Nạp 1 lần vào singleton trước khi chạy job.

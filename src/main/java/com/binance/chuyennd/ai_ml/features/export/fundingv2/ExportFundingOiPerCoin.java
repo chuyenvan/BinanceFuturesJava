@@ -26,8 +26,6 @@ public class ExportFundingOiPerCoin {
 
     public static void main(String[] args) {
         try {
-            Configs.IS_HPO_MODE = false;
-            Configs.IS_KAGGLE_MODE = true;
             SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd HH:mm");
             SimpleDateFormat sdfFile = new SimpleDateFormat("yyyyMMdd");
             long start = sdf.parse("20210101 07:00").getTime();

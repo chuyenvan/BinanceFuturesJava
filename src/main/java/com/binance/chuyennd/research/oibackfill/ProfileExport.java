@@ -27,8 +27,6 @@ public class ProfileExport {
     private static final Logger LOG = LoggerFactory.getLogger(ProfileExport.class);
 
     public static void main(String[] args) {
-        Configs.IS_HPO_MODE = false;
-        Configs.IS_KAGGLE_MODE = true;
         long start = args.length > 0 ? Long.parseLong(args[0]) : 1640995200000L; // 2022-01-01
         int days = args.length > 1 ? Integer.parseInt(args[1]) : 3;
 

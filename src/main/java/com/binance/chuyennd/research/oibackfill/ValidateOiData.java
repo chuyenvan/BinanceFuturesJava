@@ -42,8 +42,6 @@ public class ValidateOiData {
     private static final int MIN_OI_RECORDS_PER_YEAR = 80_000; // >= 80k moc/nam cho coin chinh
 
     public static void main(String[] args) throws Exception {
-        Configs.IS_HPO_MODE = false;
-        Configs.IS_KAGGLE_MODE = true;
         boolean quick = args.length > 0 && "--quick".equalsIgnoreCase(args[0]);
         LOG.info("===== VALIDATE OI DATA 226 (mode={}) =====", quick ? "QUICK" : "FULL");
 

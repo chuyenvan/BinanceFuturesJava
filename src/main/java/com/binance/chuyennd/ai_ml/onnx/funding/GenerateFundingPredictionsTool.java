@@ -67,13 +67,10 @@ public class GenerateFundingPredictionsTool {
     }
 
     public static void main(String[] args) throws Exception {
-        // Worker phân tán đọc DỮ LIỆU-NGUỒN (ticker/symbol_mapper/funding_data) từ 226 vì 242 khóa
-        // firewall (Kaggle/máy cá nhân không với được 242). Bật cờ để DataManager.getReadClient() -> 226.
-        // Hiếm khi chạy trên máy CÓ 242: đặt env GEN_USE_242=1 để đọc thẳng 242.
-        if (!"1".equals(System.getenv("GEN_USE_242"))) {
-            Configs.IS_KAGGLE_MODE = true;
-            LOG.info("🌐 Đọc dữ liệu-nguồn từ 226 (IS_KAGGLE_MODE=true). Đặt GEN_USE_242=1 nếu muốn đọc 242.");
-        }
+        // TASK-112: nguồn dữ liệu (ticker/symbol_mapper/funding_data) theo config per-box
+        // AEROSPIKE_READ_CLUSTER trong config.properties (226 cho worker phân tán/Kaggle; 242 chỉ khi
+        // chạy trên máy với được 242). Env GEN_USE_242 cũ đã bỏ.
+        LOG.info("🌐 Đọc dữ liệu-nguồn theo AEROSPIKE_READ_CLUSTER={}", Configs.AEROSPIKE_READ_CLUSTER);
 
         int threads = resolveThreads(args);
         // Cấu hình luồng (ForkJoin cho parallelStream + Aerospike IO + ONNX intraOp). Thread count KHÔNG

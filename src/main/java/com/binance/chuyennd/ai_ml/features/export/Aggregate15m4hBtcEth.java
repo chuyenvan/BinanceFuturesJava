@@ -26,7 +26,7 @@ import java.util.*;
  * Khung THIẾU phút (<15 / <240) → skip + đếm (không tạo nến nửa vời).
  *
  * Lưu: set kline_15m_btceth / kline_4h_btceth, key=symbol, bin "data"=Snappy(gson(TreeMap&lt;startMs,float[o,h,l,c,v]&gt;)).
- * Ghi CẢ 226 (train) + 242 (live). Đọc-only kline_1m_opt (từ 226 local: đặt IS_KAGGLE_MODE=true cho getReadClient→226).
+ * Ghi CẢ 226 (train) + 242 (live). Đọc-only kline_1m_opt — cluster chọn THẲNG theo arg (TASK-112 #9: mặc định 226, arg "242" → 242).
  */
 public class Aggregate15m4hBtcEth {
 
@@ -60,8 +60,11 @@ public class Aggregate15m4hBtcEth {
             // (byMonth không chứa). Nhưng THÁNG BIÊN (242 có 1m một phần) sẽ ghi đè bằng series một-phần → MẤT phần cũ
             // của tháng đó. ⇒ chạy 242-mode CHỈ khi 1m@242 đủ sâu (xem runbook TASK-033: verify độ sâu 1m@242 trước).
             boolean read242 = args.length > 0 && "242".equalsIgnoreCase(args[0]);
-            Configs.IS_HPO_MODE = false;
-            Configs.IS_KAGGLE_MODE = !read242;   // false → getReadClient→242 (gap-fill); true → 226 (backtest historical)
+            // TASK-112 #9: tool chọn cluster ĐỘNG theo arg runtime (không phải per-box) → gọi THẲNG
+            // getClient226/242, KHÔNG đi qua getReadClient()/AEROSPIKE_READ_CLUSTER.
+            com.aerospike.client.AerospikeClient readClient = read242
+                    ? DataManagerAerospikeFloatSim.getClient242()
+                    : DataManagerAerospikeFloatSim.getClient226();
             long start = Utils.sdfFile.parse(START_DATE).getTime() + 7 * Utils.TIME_HOUR;
             long end = System.currentTimeMillis();
             LOG.info("🧱 Aggregate 15m/4h BTC/ETH từ kline_1m_opt ({}) | {} → nay | ghi 226+242",
@@ -73,7 +76,7 @@ public class Aggregate15m4hBtcEth {
 
             int days = 0;
             for (long day = start; day < end; day += 24L * Utils.TIME_HOUR) {
-                TreeMap<Long, Map<String, KlineObjectSimple>> oneDay = DataManagerAerospikeFloatSim.readDataFromAerospike1M(day);
+                TreeMap<Long, Map<String, KlineObjectSimple>> oneDay = DataManagerAerospikeFloatSim.readDataFromAerospike1M(day, readClient);
                 for (Map.Entry<Long, Map<String, KlineObjectSimple>> e : oneDay.entrySet()) {
                     long epoch = e.getKey();
                     Map<String, KlineObjectSimple> m = e.getValue();

@@ -93,7 +93,6 @@ public class RunOptimizationBudgetRatio {
 
     public static void main(String[] args) throws Exception {
 
-        Configs.IS_HPO_MODE = true;
         loadAndWarmUpData();
 
         long startTime = System.currentTimeMillis();
