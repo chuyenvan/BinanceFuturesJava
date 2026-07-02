@@ -41,10 +41,10 @@ public class WfoDataset {
     public static final String F_FUNDING = "funding.bin";
     public static final String F_MANIFEST = "manifest.txt";
 
-    // Tên set nguồn trên Aerospike 226 (provenance)
-    static final String SET_MARKET = "market_data";
-    static final String SET_PRED = "ai_pred_market_full_basket_v2";
-    static final String SET_FUNDING = "funding_selector_pred_1m_v2";
+    // Ten set nguon tren Aerospike 226 (provenance) - doc tu env de tro dataset vao set leak-free (v3wf) khong hardcode
+    static final String SET_MARKET = envOr("WFO_SET_MARKET", "market_data");
+    static final String SET_PRED = envOr("WFO_SET_PRED", "ai_pred_market_full_basket_v2");
+    static final String SET_FUNDING = envOr("WFO_SET_FUNDING", "funding_selector_pred_1m_v2");
 
     public TreeMap<Long, MarketDataObject> market;
     public TreeMap<Long, AiPredictionData> pred;
