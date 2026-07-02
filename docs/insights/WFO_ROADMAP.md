@@ -44,17 +44,50 @@ PASS cần CẢ 3: `WFE_median ≥ 0.5` · `%OOS-dương ≥ 70%` · `worst OOS 
 - **Loại WFO đang chạy = "loại 1" (pred cố định):** hợp lệ cho câu hỏi hẹp "tham số có generalize không";
   số OOS tuyệt đối các window <2025-06 bị tâng vì pred sinh in-sample (khung này giữ trong mọi kết luận WFO).
 
-## 3. SUB-ROADMAP (thứ tự việc còn lại)
-1. ✅ **Verdict vòng funding-leak-free ĐÃ ra** (FAIL/REVIEW — xem §1). 🔄 Đang chạy **leaked re-run** (cùng điều kiện, fitness V4)
-   → khi xong: so cặp V4-vs-V4 (thay mốc cb0032b khập khiễng). Caveat: cả 2 vế đều dính V4 che số LOW_TRADES → so **tham khảo**.
-1b. ⏭ **TASK-112 → TASK-113 (fitness V4.1)** → pre-register lại → chạy **cặp so sánh V4.1** (leaked vs leak-free) = phép so CHÍNH THỨC trả lời iteration-1.
-2. ⏭ **Vòng fully-leak-free:** thêm gate/market leak-free (`ai_pred_market_gate_wfo` — hiện chỉ có bản `_smoke`;
-   full ở `wfo_gate_pred.csv`, cần nạp đúng format/loader — đích nạp = Aerospike **Oracle-local** (65G trống);
-   blocker cũ "226 disk 97%" KHÔNG áp dụng cho pipeline WFO nữa, xem topology §1). Khi đó mới trả lời "pipeline có edge thật không".
-3. ⏭ **Làm read-set env-configurable thật** (`AEROSPIKE_SET_NAME_FUNDING_PRED`... trong DataManager) để export
-   đọc đúng set leak-free, thay vì dựng bin tay — hết provenance rot.
-4. ⏭ **Survivorship audit** (SurvivorshipScanTool + crawler data.binance.vision) — universe đúng, hết sống-sót-bias.
-5. ⏭ **maxDD trung thực:** margin-call/equity thật (ROADMAP Bước 3 mảnh cuối) rồi đọc lại maxDD WFO.
+## 3. KIẾN TRÚC TỔNG + LỘ TRÌNH RA WFO HOÀN CHỈNH (master rà 2026-07-02 tối)
+
+### 3a. Kiến trúc 6 lớp (trạng thái đo thật)
+```
+L1 DỮ LIỆU GỐC    : Aerospike Oracle-local kline/funding/OI 2021→26 ✅ · universe/survivorship ❌ (sống-sót bias)
+L2 MODEL PER-FOLD : funding WF 17-fold leak-assert ✅ · gate/market WF ❌ (wfo_gate_pred.csv chưa nạp — vẫn LEAKED)
+L3 DATASET OFFLINE: WfoDataset market/pred/funding.bin + manifest md5 ✅ (đã lên cả Kaggle, md5 verify PASS)
+L4 THỰC THI       : JobStore CAS+lease ✅ · worker Oracle ✅ · worker Kaggle ✅ (smoke PASS 2026-07-02)
+L5 ĐO LƯỜNG       : fitness V4.1 🔄 (TASK-113) · maxDD margin-call ❌ · exit clamp bar.open ❌ (duyệt chưa áp)
+L6 VERDICT        : 3 tiêu chí pre-registered ✅ · cặp so leaked/leak-free 🔄 (V4 tham khảo → V4.1 chính thức)
+```
+Ghi chú phương pháp (đã rà code): window IS/OOS chặn cứng theo range, KHÔNG cần embargo tầng strategy
+(embargo thật nằm ở tầng model per-fold — gen_funding_wf leak-assert đã giữ; cần xác nhận horizon-gap trong script).
+Caveat thống kê giữ vĩnh viễn: IS 12m trượt 3m → IS chồng lấn 9/12 tháng → 17 window KHÔNG độc lập;
+N=30 mẫu/18 gene mỏng → WFE thấp có thể là selection-noise. Tăng N là đòn bẩy chính (Kaggle).
+
+### 3b. 5 giai đoạn (tuần tự theo phụ thuộc; trong mỗi GĐ có việc song song — xem 3c)
+- **GĐ0 (đang chạy):** cặp so V4 (leaked re-run) + GATE-112 → jar chuẩn config-tường-minh. [TASK-115]
+- **GĐ1 — Đo lường sạch:** TASK-113 → fitness V4.1 + pre-register lại → chạy **cặp so V4.1 = phép so CHÍNH THỨC**
+  trả lời iteration-1 ("bỏ funding-leak mất bao nhiêu edge"). 2 vế cùng Oracle/cùng nguồn.
+- **GĐ2 — Input sạch hoàn toàn:** nạp `wfo_gate_pred.csv` → Aerospike Oracle-local → export dataset v3
+  (funding WF + gate WF) → run **fully-leak-free**. Song song: coverage audit theo quý (giải thích 4 window
+  gần-zero: regime hay thiếu data — thấy cả "Date data error 2025xx" trong log leaked) + survivorship audit
+  (SurvivorshipScanTool + crawler data.binance.vision) + read-set env-configurable (hết provenance rot).
+- **GĐ3 — Sim & thống kê vững:** maxDD margin-call thật (Bước 3 mảnh cuối) + exit clamp `bar.open` (GATE riêng
+  từng cái) + scale N bằng Kaggle fleet (state chung = 226 thật qua WFO_STATE_HOST; quy tắc CỨNG:
+  **1 experiment = 1 loại node** vì ticker Kaggle đọc 226 ≠ Oracle-local, đã đo file≠aerospike lệch số).
+- **GĐ4 — WFO chuẩn cuối:** full run fully-leak-free + universe đúng + metrics thật + N đủ → verdict
+  pre-registered quyết: PASS → Golden backtest (funding ON) → go-live nhỏ; FAIL → quay lại câu hỏi edge
+  (economic rationale — ai bị ép trade bất lợi và vì sao).
+
+### 3c. Ma trận song song (việc × tài nguyên × phụ thuộc)
+| Việc | Node | Phụ thuộc | Đụng jobstore? |
+|---|---|---|---|
+| TASK-113 code + unit (CCD) | local | 112 merged ✅ | KHÔNG (gate mới đụng) |
+| GATE-112 rồi GATE-113 (tuần tự) | Oracle | leaked run xong | CÓ → xếp lịch độc quyền |
+| Nạp gate csv + export dataset v3 | Oracle | leaked run xong (RAM) | KHÔNG |
+| Coverage audit theo quý (script đọc bin) | local/Kaggle | không | KHÔNG — chạy NGAY |
+| Survivorship crawler binance.vision | Kaggle | không | KHÔNG — chạy NGAY |
+| Exit clamp + margin-call code (CCD 2) | local | không (khác file 113) | gate xếp sau 113 |
+| Kernel folders wfo-worker-{1..5} | local/Oracle | jar ✅ dataset ✅ | KHÔNG — chạy NGAY |
+
+Nguyên tắc điều phối: jobstore `strategy_window` Oracle là tài nguyên ĐỘC QUYỀN — mọi GATE/run xếp hàng;
+mọi việc không đụng nó đẩy song song tối đa.
 
 ## 4. HẠ TẦNG CHẠY (tóm tắt — chi tiết ở LEAKFREE_WFO_RUNBOOK)
 - jar export/worker leak-free: `~/java/simulator/binance-futures-wfo-lf.jar` trên Oracle (client 6.1.11, MD5-verify khi deploy).
