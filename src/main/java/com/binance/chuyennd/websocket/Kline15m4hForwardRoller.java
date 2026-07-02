@@ -35,7 +35,7 @@ import java.util.TreeMap;
  * liền mạch historical + forward.
  *
  * <p><b>Read/Write 242:</b> đọc 1m qua {@link DataManagerAerospikeFloatSim#readDataFromAerospikeCustom}
- * — ở live {@code IS_KAGGLE_MODE=false} nên {@code getReadClient()} = 242. Ghi {@code getClient242()}
+ * — ở live {@code AEROSPIKE_READ_CLUSTER=242} nên {@code getReadClient()} = 242. Ghi {@code getClient242()}
  * (append: đọc record-tháng → thêm khung → ghi lại). Chỉ MỘT thread forward nên read-modify-write
  * không race với chính nó.
  *

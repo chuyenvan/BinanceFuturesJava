@@ -65,7 +65,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
     public static void main(String[] args) throws ParseException, IOException, InterruptedException {
         Long startTime = Utils.sdfFile.parse(Configs.TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
-        LOG.info("Start with kaggle mode: {} ", Configs.IS_KAGGLE_MODE);
+        LOG.info("Start with TICKER_SOURCE: {} | AEROSPIKE_READ_CLUSTER: {}", Configs.TICKER_SOURCE, Configs.AEROSPIKE_READ_CLUSTER);
         SimulatorMarketLevelTicker1MStopLoss test = new SimulatorMarketLevelTicker1MStopLoss();
         test.initData();
         test.simulatorWithInitEntry(startTime, System.currentTimeMillis());
@@ -87,24 +87,33 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         int dayCount = 0;
         while (true) {
             TreeMap<Long, KlineObjectSimple[]> time2Tickers;
-            try {
-                long _tRead = System.currentTimeMillis();
+            // TASK-112: nguồn ticker TƯỜNG MINH theo config per-box TICKER_SOURCE (aerospike|file) + fail-fast.
+            // Khối này CỐ Ý nằm NGOÀI try-catch nuốt-lỗi phía dưới: thiếu config / thiếu data phải DỪNG NGAY,
+            // không được in lỗi rồi chạy tiếp (nguồn ZERO_TRADES âm thầm đã vô hiệu full WFO 17 window 2026-07-02).
+            long _tRead = System.currentTimeMillis();
+            if ("aerospike".equals(Configs.TICKER_SOURCE)) {
+                time2Tickers = Configs.USE_SMART_CACHE
+                        // WFO/HPO: cache nén theo ngày trong RAM (N sample cùng window dùng chung, đọc DB 1 lần/ngày)
+                        ? com.binance.chuyennd.ai_ml.data.HPOSmartCache.getDataShort(startTime)
+                        : DataManagerAerospikeFloatSim.readDataFromAerospike1M_ShortKey(startTime);
+            } else if ("file".equals(Configs.TICKER_SOURCE)) {
                 if (Configs.USE_SMART_CACHE) {
-                    // WFO/HPO: cache nén theo ngày trong RAM (N sample cùng window dùng chung, đọc DB 1 lần/ngày)
-                    time2Tickers = com.binance.chuyennd.ai_ml.data.HPOSmartCache.getDataShort(startTime);
-                } else if (Configs.IS_KAGGLE_MODE) {
-                    time2Tickers = KaggleDataLoader.loadDailyTickersShort(startTime);
-                } else {
-                    time2Tickers = DataManagerAerospikeFloatSim.readDataFromAerospike1M_ShortKey(startTime);
+                    throw new IllegalStateException("USE_SMART_CACHE chi hop le voi TICKER_SOURCE=aerospike (dang la file)");
                 }
-                readMs += System.currentTimeMillis() - _tRead;
+                time2Tickers = KaggleDataLoader.loadDailyTickersShort(startTime);
+            } else {
+                throw new IllegalStateException("Thieu/sai TICKER_SOURCE trong config.properties (hien tai: "
+                        + Configs.TICKER_SOURCE + ") — them dong: TICKER_SOURCE=aerospike (doc Aerospike) hoac TICKER_SOURCE=file (Kaggle).");
+            }
+            if (time2Tickers == null || time2Tickers.isEmpty()) {
+                throw new RuntimeException("FAIL-FAST: khong co ticker ngay " + Utils.normalizeDateYYYYMMDD(startTime)
+                        + " tu nguon " + Configs.TICKER_SOURCE + " — DUNG NGAY, khong chay tiep (tranh ZERO_TRADES am tham).");
+            }
+            readMs += System.currentTimeMillis() - _tRead;
 
-                if (time2Tickers == null) {
-                    LOG.info("File data error or not found for time: {}", Utils.normalizeDateYYYYMMDDHHmm(startTime));
-                }
-
-                long _tSim = System.currentTimeMillis();
-                if (time2Tickers != null && time2Tickers.size() >= 1440) {
+            long _tSim = System.currentTimeMillis();
+            try {
+                if (time2Tickers.size() >= 1440) {
                     dayCount++;
                     for (Map.Entry<Long, KlineObjectSimple[]> entry : time2Tickers.entrySet()) {
                         Long time = entry.getKey();
@@ -237,18 +246,12 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                             startTimeRun = System.currentTimeMillis();
 
                             if (time % Utils.TIME_DAY == 0) {
-                                if (Configs.IS_HPO_MODE) {
-                                    if (Utils.isMidnightFirstDay(time)) {
-                                        BudgetManagerSimple.getInstance().updateBalance(time, allOrderDone, getActiveIdSet(), symbol2OrderRunning, symbol2OrdersEntry, true);
-                                    } else {
-                                        BudgetManagerSimple.getInstance().updateBalance(time, allOrderDone, getActiveIdSet(), symbol2OrderRunning, symbol2OrdersEntry, false);
-                                    }
-                                } else {
-                                    if (Utils.isFirstDayOfYear(time)) {
-                                        System.gc();
-                                    }
-                                    BudgetManagerSimple.getInstance().updateBalance(time, allOrderDone, getActiveIdSet(), symbol2OrderRunning, symbol2OrdersEntry, true);
+                                // TASK-112: bỏ nhánh HPO-mode cũ (chỉ khác isPrintBalance=log + System.gc, KHÔNG đổi PnL)
+                                // — hợp nhất về nhánh thường (log mỗi nửa đêm) mà WFO/HPO worker vốn chạy → GATE không đổi số.
+                                if (Utils.isFirstDayOfYear(time)) {
+                                    System.gc();
                                 }
+                                BudgetManagerSimple.getInstance().updateBalance(time, allOrderDone, getActiveIdSet(), symbol2OrderRunning, symbol2OrdersEntry, true);
                             } else {
                                 if (time % (60 * Utils.TIME_MINUTE) == 0) {
                                     short[] currentIds = Arrays.copyOf(activeRunningIds, activeRunningCount);
@@ -268,13 +271,14 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                         is50PercentOrderLoss = null;
                     }
                 } else {
-                    LOG.info("Date data error: {}", Utils.normalizeDateYYYYMMDD(startTime));
+                    // Ngày thiếu phút (<1440) SKIP lặng — semantics CŨ giữ nguyên (đổi sẽ phá GATE), chỉ warn rõ hơn.
+                    LOG.warn("Date data error: {} — chi co {} phut (<1440), SKIP ngay nay", Utils.normalizeDateYYYYMMDD(startTime), time2Tickers.size());
                 }
-                simMs += System.currentTimeMillis() - _tSim;
-                time2Tickers = null;
             } catch (Exception e) {
                 e.printStackTrace();
             }
+            simMs += System.currentTimeMillis() - _tSim;
+            time2Tickers = null;
 
             Long finalStartTime1 = startTime;
             startTime += Utils.TIME_DAY;
@@ -312,7 +316,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         int finalYear = cal.get(Calendar.YEAR);
         BudgetManagerSimple.getInstance().balanceIndex.year2UnrealizedPnl.put(finalYear, 0f);
 
-        if (!Configs.IS_KAGGLE_MODE) {
+        // TASK-112: ghi storage theo config tường minh WRITE_SIM_STORAGE (default FALSE — trước đây box local mặc định GHI).
+        if (Configs.WRITE_SIM_STORAGE) {
             try {
                 Storage.writeObject2File(FILE_STORAGE_ORDER_DONE, allOrderDone);
                 Storage.writeObject2File("storage/BalanceIndex.data", BudgetManagerSimple.getInstance().balanceIndex);

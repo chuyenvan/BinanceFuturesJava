@@ -783,9 +783,22 @@ public class DataManagerAerospikeFloatSim {
 
 
     /**
-     * Đọc dữ liệu toàn bộ thị trường trong 1 ngày (1440 phút)
+     * Đọc dữ liệu toàn bộ thị trường trong 1 ngày (1440 phút) — client theo config {@link #getReadClient()}.
      */
     public static TreeMap<Long, Map<String, KlineObjectSimple>> readDataFromAerospike1M(long startTime) {
+        return readDataFromAerospike1M(startTime, getReadClient());
+    }
+
+    /**
+     * Đọc dữ liệu toàn bộ thị trường trong 1 ngày (1440 phút) với client TƯỜNG MINH — cho tool tự biết
+     * nó muốn đọc cluster nào theo arg runtime (TASK-112 #9: {@code Aggregate15m4hBtcEth} chọn 226/242
+     * theo arg, KHÔNG đi qua config per-box).
+     *
+     * @param startTime mốc đầu ngày (ms)
+     * @param client    client Aerospike đích ({@link #getClient226()} / {@link #getClient242()})
+     * @return map phút → (symbol → kline); phút thiếu record bị bỏ qua
+     */
+    public static TreeMap<Long, Map<String, KlineObjectSimple>> readDataFromAerospike1M(long startTime, AerospikeClient client) {
         TreeMap<Long, Map<String, KlineObjectSimple>> results = new TreeMap<>();
         int totalRecords = 1440;
 
@@ -827,7 +840,7 @@ public class DataManagerAerospikeFloatSim {
                     }
 
                     // Batch Read
-                    Record[] records = getReadClient().get(batchPolicy, chunkKeys);
+                    Record[] records = client.get(batchPolicy, chunkKeys);
 
                     for (int j = 0; j < records.length; j++) {
                         Record record = records[j];
@@ -2436,16 +2449,26 @@ public class DataManagerAerospikeFloatSim {
     }
 
     /**
-     * Client ĐỌC dữ liệu-nguồn-trên-242 (ticker, symbol_mapper, funding_data): mặc định 242 (gốc).
-     * Kaggle/HPO worker không với được 242 (firewall) => đọc BẢN SAO trên 226 (copy bằng
-     * CopyTicker242To226 + CopyAuxSets242To226). CHỈ áp cho ĐỌC — mọi đường GHI giữ nguyên 242.
+     * Client ĐỌC dữ liệu-nguồn-trên-242 (ticker, symbol_mapper, funding_data). TASK-112: chọn cluster
+     * TƯỜNG MINH theo config per-box {@code AEROSPIKE_READ_CLUSTER} (226=box backtest/Oracle đọc bản sao,
+     * 242=live đọc gốc) — không còn flag runtime mode cũ (kaggle/HPO). Thiếu key / giá trị lạ →
+     * fail-fast NGAY tại đây (lazy — box thuần file như Kaggle không cần khai key này).
+     * CHỈ áp cho ĐỌC — mọi đường GHI giữ nguyên 242.
      * (market_data/ai_pred_market/funding_pred dùng getClient226() trực tiếp vì vốn nằm trên 226.)
+     *
+     * @return client Aerospike theo {@code AEROSPIKE_READ_CLUSTER}
+     * @throws IllegalStateException nếu config thiếu hoặc khác 226/242
      */
-    private static AerospikeClient getReadClient() {
-        if (Configs.IS_KAGGLE_MODE || Configs.IS_HPO_MODE) {
+    public static AerospikeClient getReadClient() {
+        String cluster = Configs.AEROSPIKE_READ_CLUSTER;
+        if ("226".equals(cluster)) {
             return getClient226();
         }
-        return getClient242();
+        if ("242".equals(cluster)) {
+            return getClient242();
+        }
+        throw new IllegalStateException("Thieu/sai AEROSPIKE_READ_CLUSTER trong config.properties (hien tai: " + cluster
+                + ") — them dong: AEROSPIKE_READ_CLUSTER=226 (box backtest/Oracle) hoac AEROSPIKE_READ_CLUSTER=242 (live).");
     }
 
     /**

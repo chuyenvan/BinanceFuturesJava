@@ -52,12 +52,9 @@ public class SymbolLifecycleManager {
         return Holder.INSTANCE;
     }
 
-    /** Read client theo quy ước DataManager.getReadClient (private nên replicate ở đây). */
+    /** Read client dùng chung {@link DataManagerAerospikeFloatSim#getReadClient()} (TASK-112: gom 1 chỗ, hết bản sao if). */
     private static AerospikeClient readClient() {
-        if (Configs.IS_KAGGLE_MODE || Configs.IS_HPO_MODE) {
-            return DataManagerAerospikeFloatSim.getClient226();
-        }
-        return DataManagerAerospikeFloatSim.getClient242();
+        return DataManagerAerospikeFloatSim.getReadClient();
     }
 
     /** Nạp toàn bộ set {@code symbol_lifecycle} vào cache (1 lần). Idempotent. */

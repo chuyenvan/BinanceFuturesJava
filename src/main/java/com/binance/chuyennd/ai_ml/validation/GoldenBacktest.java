@@ -33,7 +33,7 @@ import java.util.*;
  *  - FAST_CRASH/BULL/RECENT (TASK-003.1): range regime theo mốc đã duyệt; mỗi lần tự chạy determinism
  *    gate (2x) rồi mới chụp fingerprint. CRASH=20220401–20221231, BULL=20231001–20231231, RECENT=FAST.
  * commit/dirty nhận qua env GOLDEN_COMMIT / GOLDEN_DIRTY (vì 226 không có git repo, chỉ có jar).
- * ⚠️ ĐỌC DATA: chạy trên 226 nên để IS_KAGGLE_MODE=IS_HPO_MODE=FALSE → Simulator đọc AEROSPIKE
+ * ⚠️ ĐỌC DATA: box chạy cần TICKER_SOURCE=aerospike + AEROSPIKE_READ_CLUSTER (TASK-112) → Simulator đọc AEROSPIKE
  *    (ticker qua getReadClient→242, 226 whitelist được 242; market/pred/funding→226). KHÔNG set true:
  *    true = Simulator đọc FILE LOCAL qua KaggleDataLoader (không tồn tại trên 226 → sai/rỗng).
  * maxDD = balanceIndex.unProfitMin (nay = đáy per-tick thật, ADR-0001).
@@ -121,11 +121,9 @@ public class GoldenBacktest {
     }
 
     public void run(String mode) throws Exception {
-        // Chạy trên 226: cả hai FALSE để Simulator đọc AEROSPIKE (KHÔNG đọc file local KaggleDataLoader).
-        //   ticker → getReadClient → 242 (226 whitelist được 242); market/pred/funding → 226.
+        // TASK-112: nguồn ticker/cluster theo config per-box (TICKER_SOURCE=aerospike + AEROSPIKE_READ_CLUSTER
+        // trong config.properties của box chạy) — không còn set flag runtime ở đây.
         // BREAKER OFF = chiến lược nền (golden chuẩn).
-        Configs.IS_HPO_MODE = false;
-        Configs.IS_KAGGLE_MODE = false;
         Configs.BREAKER_MODE = "OFF";
         LOG.info("🟡 PRE-FLIGHT: lookahead_block={} slippage_apply={} SLIPPAGE_RATE={} RATE_FEE={} FILTER_MODE={} CONFIG_VERSION={}",
                 Configs.BLOCK_INTRABAR_LOOKAHEAD, Configs.APPLY_SLIPPAGE, Configs.SLIPPAGE_RATE,
@@ -339,7 +337,7 @@ public class GoldenBacktest {
         f.setMarket = DataManagerAerospikeFloatSim.AEROSPIKE_SET_NAME_MARKET_DATA;
         f.setFunding = DataManagerAerospikeFloatSim.AEROSPIKE_SET_NAME_FUNDING_PRED;
         f.setTicker = DataManagerAerospikeFloatSim.AEROSPIKE_SET_NAME_TICKER;
-        f.readCluster = (Configs.IS_KAGGLE_MODE || Configs.IS_HPO_MODE) ? "226" : "242";
+        f.readCluster = Configs.AEROSPIKE_READ_CLUSTER;   // TASK-112: config tường minh per-box
         f.slippageRate = Configs.SLIPPAGE_RATE;
         f.rateFee = Configs.RATE_FEE;
         f.applySlippage = Configs.APPLY_SLIPPAGE;
