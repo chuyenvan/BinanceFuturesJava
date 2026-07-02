@@ -1,6 +1,6 @@
 # TASK-114: Hoàn tất commit TASK-112 (cụm tools #8-#9 + docs) sau compile-check
 
-- **status:** doing (master = Claude chat 2026-07-02 tối)
+- **status:** done 2026-07-02 21:1x
 - **depends_on:** TASK-112 code (đã vào 89c3585 + e6899aa; 59 file cụm cuối chưa commit)
 - **resource:** local Windows · **touches_live_process:** không
 
@@ -15,4 +15,7 @@
 - 2 commit sha + `git status --short` sạch → paste vào Kết quả.
 
 ## Kết quả
-<master điền>
+- Build: BUILD_OK (/d/claudedata/task114_build.log)
+- Commit cụm tools: e7960d0 (53 file, +316/-401) · cụm docs+task: 26f3a1a (6 file)
+- Tree sạch: chỉ còn ?? luna_csv/ scripts/ scripts_tmp/ (đúng quy ước không commit)
+- Ghi chú: PrivateConfig.java on-disk đang ở trạng thái placeholder SANITIZED_* → jar build ra đã sạch secret sẵn cho TASK-116
