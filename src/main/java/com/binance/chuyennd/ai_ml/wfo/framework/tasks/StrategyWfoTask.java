@@ -22,8 +22,10 @@ import java.util.*;
  * WFO TASK loại 1 — STRATEGY WFO (tối ưu 18 gene chiến lược, off-cứng 9 gene phẳng đã loại).
  *
  * <p>Mỗi JOB = 1 cửa sổ: train 12 tháng + OOS 3 tháng (trượt = OOS, không chồng lấn). runJob:
- * random-search N mẫu genome trên TRAIN → best theo fitness V4 → đo OOS → WFE. result JSON gồm
- * {winIdx, label, isFit, oosFit, wfe, oosPnl, oosMaxDD, oosCalmar, bestGenome}.
+ * random-search N mẫu genome trên TRAIN → best theo fitness V4.1 → đo OOS → WFE. result JSON gồm
+ * {winIdx, label, isFit, oosFit, wfe, oosPnl, oosMaxDD, oosCalmar, oosNote, isNote, bestGenome}.
+ * V4.1 (TASK-113): oosPnl/oosDdPct/oosCalmar là số THẬT kể cả nhánh sentinel (TOO_FEW/BURN/...);
+ * %OOS-dương đếm tường minh theo oosNote=SUCCESS (semantics đếm giữ nguyên V4).
  *
  * <p>Dữ liệu lấy từ {@link WfoContext#dataset} (offline, load 1 lần/JVM) — KHÔNG scanAll Aerospike.
  *
@@ -157,6 +159,7 @@ public class StrategyWfoTask implements WfoTask {
         double[] bestGenome = baseVals.clone();
         float bestIsFit = -Float.MAX_VALUE;
         float bestIsPnl = 0f;     // PnL_IS của bestGenome (cho WFE = PnL_OOS/PnL_IS, pre-reg)
+        String bestIsNote = "";   // note V4.1 của bestGenome (chẩn đoán — window sentinel IS lộ rõ)
         int rejectCount = 0;
         for (int s = 0; s < nSamples; s++) {
             double[] cand;
@@ -173,7 +176,7 @@ public class StrategyWfoTask implements WfoTask {
             HPOFitnessCalculatorV4.FitnessReport isRep = backtest(ctx, trainStart, trainEnd);
             float isFit = isRep.finalFitness;
             if (isFit < -50000f) rejectCount++;
-            if (isFit > bestIsFit) { bestIsFit = isFit; bestIsPnl = isRep.totalProfit; bestGenome = cand.clone(); }
+            if (isFit > bestIsFit) { bestIsFit = isFit; bestIsPnl = isRep.totalProfit; bestIsNote = isRep.note; bestGenome = cand.clone(); }
         }
 
         // ===== OOS =====
@@ -198,6 +201,10 @@ public class StrategyWfoTask implements WfoTask {
         res.put("oosDdPct", round4(oos.ddPct));   // TỶ LỆ maxDD/vốn — dùng cho VERDICT (pre-reg ≤50%)
         res.put("oosCalmar", round4(oos.calmar));
         res.put("oosTrades", oos.tradeCount);
+        // V4.1 (TASK-113): note tường minh — aggregate đếm %OOS-dương CHỈ khi oosNote=SUCCESS (giữ semantics
+        // đếm hiện tại: window sentinel giờ có pnl thật nhưng KHÔNG bao giờ được tính là cửa-sổ-thành-công)
+        res.put("oosNote", oos.note);
+        res.put("isNote", bestIsNote);
         res.put("rejectSamples", rejectCount);
         res.put("nSamples", nSamples);
         JSONObject g = new JSONObject();
@@ -225,7 +232,9 @@ public class StrategyWfoTask implements WfoTask {
         SimulatorMarketLevelTicker1MStopLoss sim = new SimulatorMarketLevelTicker1MStopLoss();
         sim.initDataReady(ctx.dataset.market, ctx.dataset.pred, ctx.dataset.funding, new AIRejectFilter());
         sim.simulatorWithInitEntry(start, end);
-        HPOFitnessCalculatorV4.FitnessReport rep = HPOFitnessCalculatorV4.evaluateDetailed(sim.allOrderDone);
+        // V4.1 (TASK-113): windowDays = range backtest THẬT của chính window này, KHÔNG suy từ span lệnh
+        int windowDays = (int) Math.max(1, (end - start) / Utils.TIME_DAY);
+        HPOFitnessCalculatorV4.FitnessReport rep = HPOFitnessCalculatorV4.evaluateDetailed(sim.allOrderDone, windowDays);
         LOG.info("[BT {}..{}] note={} trades={} pnl={} ddPct={} maxDD={} held>7d={} posYr={} fit={}",
                 Utils.normalizeDateYYYYMMDD(start), Utils.normalizeDateYYYYMMDD(end),
                 rep.note, rep.tradeCount, round4(rep.totalProfit), round4(rep.ddPct),
@@ -250,7 +259,10 @@ public class StrategyWfoTask implements WfoTask {
         double worstDdPct = 0;     // TỶ LỆ — dùng cho VERDICT
         for (JSONObject r : rows) {
             double oosPnl = r.getDouble("oosPnl");
-            if (oosPnl > 0) posCount++;
+            // V4.1 (TASK-113): đếm cửa-sổ-thành-công TƯỜNG MINH theo note — chỉ SUCCESS && pnl>0.
+            // optString default "SUCCESS" để tương thích result cũ (chưa có oosNote). Semantics đếm GIỮ
+            // NGUYÊN V4: window sentinel (TOO_FEW/BURN/...) giờ hiện pnl thật nhưng KHÔNG được đếm dương.
+            if ("SUCCESS".equals(r.optString("oosNote", "SUCCESS")) && oosPnl > 0) posCount++;
             wfes.add(r.getDouble("wfe"));
             worstMaxDD = Math.max(worstMaxDD, r.getDouble("oosMaxDD"));
             worstDdPct = Math.max(worstDdPct, r.optDouble("oosDdPct", 0));
@@ -277,8 +289,8 @@ public class StrategyWfoTask implements WfoTask {
         md.append("- maxDD OOS xấu nhất: ").append(String.format(Locale.US, "%.1f%% vốn", worstDdPct * 100))
           .append(" (abs ").append(String.format(Locale.US, "%.0f", worstMaxDD)).append(")\n\n");
         md.append("## Bảng cửa sổ\n");
-        md.append("| win | OOS | IS_fit | OOS_fit | WFE | OOS_pnl | OOS_maxDD | OOS_calmar | trades | reject |\n");
-        md.append("|---|---|---|---|---|---|---|---|---|---|\n");
+        md.append("| win | OOS | IS_fit | OOS_fit | WFE | OOS_pnl | OOS_maxDD | OOS_calmar | trades | oosNote | reject |\n");
+        md.append("|---|---|---|---|---|---|---|---|---|---|---|\n");
         for (JSONObject r : rows) {
             md.append("| ").append(r.getInt("winIdx"))
               .append(" | ").append(r.getString("label"))
@@ -289,6 +301,7 @@ public class StrategyWfoTask implements WfoTask {
               .append(" | ").append(r.get("oosMaxDD"))
               .append(" | ").append(r.get("oosCalmar"))
               .append(" | ").append(r.optInt("oosTrades", -1))
+              .append(" | ").append(r.optString("oosNote", "SUCCESS"))
               .append(" | ").append(r.optInt("rejectSamples", -1)).append("/").append(r.optInt("nSamples", -1))
               .append(" |\n");
         }
