@@ -210,7 +210,9 @@ public class WFORunner {
         SimulatorMarketLevelTicker1MStopLoss sim = new SimulatorMarketLevelTicker1MStopLoss();
         sim.initDataReady(mkt, pred, fund, new AIRejectFilter());
         sim.simulatorWithInitEntry(start, end);
-        return HPOFitnessCalculatorV4.evaluateDetailed(sim.allOrderDone);
+        // V4.1 (TASK-113): windowDays = range backtest THẬT của chính lần chạy này, KHÔNG suy từ span lệnh
+        int windowDays = (int) Math.max(1, (end - start) / Utils.TIME_DAY);
+        return HPOFitnessCalculatorV4.evaluateDetailed(sim.allOrderDone, windowDays);
     }
 
     private static String f4(double v) { return String.format(Locale.US, "%.4f", v); }

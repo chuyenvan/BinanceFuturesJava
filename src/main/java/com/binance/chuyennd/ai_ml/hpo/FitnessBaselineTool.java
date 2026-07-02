@@ -122,7 +122,9 @@ public class FitnessBaselineTool {
 
         Eval ev = new Eval();
         ev.mode = mode;
-        ev.report = HPOFitnessCalculatorV4.evaluateDetailed(sim.allOrderDone);
+        // V4.1 (TASK-113): windowDays = range backtest THẬT của chính lần chạy này, KHÔNG suy từ span lệnh
+        int windowDays = (int) Math.max(1, (e - s) / Utils.TIME_DAY);
+        ev.report = HPOFitnessCalculatorV4.evaluateDetailed(sim.allOrderDone, windowDays);
         // passRate do tu sim (de cap cho C)
         long seen = sim.ablationSignalSeen;
         long passed = "C".equals(mode) ? sim.ablationPlaceboPass : sim.ablationPassCount;

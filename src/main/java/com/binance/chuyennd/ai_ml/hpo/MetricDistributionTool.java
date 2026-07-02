@@ -70,10 +70,17 @@ public class MetricDistributionTool {
         sim.initDataReady(mkt, pred, fund, new AIRejectFilter());
         sim.simulatorWithInitEntry(s, e);
 
-        analyze(sim.allOrderDone);
+        // V4.1 (TASK-113): windowDays = range backtest THẬT của chính lần chạy này, KHÔNG suy từ span lệnh
+        analyze(sim.allOrderDone, (int) Math.max(1, (e - s) / Utils.TIME_DAY));
     }
 
-    private void analyze(TreeMap<Long, OrderTargetInfoTest> done) {
+    /**
+     * In phân phối metric + verdict fitness V4.1 trên backtest vừa chạy.
+     *
+     * @param done             lệnh đã đóng của backtest
+     * @param windowDaysActual độ dài THẬT của range backtest (ngày) — truyền cho V4.1 tính min-trade
+     */
+    private void analyze(TreeMap<Long, OrderTargetInfoTest> done, int windowDaysActual) {
         if (done == null || done.isEmpty()) { LOG.error("⛔ 0 order — không đo được."); return; }
         Collection<OrderTargetInfoTest> orders = done.values();
         int n = orders.size();
@@ -129,7 +136,7 @@ public class MetricDistributionTool {
         LOG.info("===========================================================");
 
         // ===== Verdict fitness V4 trên CHÍNH backtest này (kiểm chứng V4 chạy đúng) =====
-        HPOFitnessCalculatorV4.FitnessReport v4 = HPOFitnessCalculatorV4.evaluateDetailed(done);
+        HPOFitnessCalculatorV4.FitnessReport v4 = HPOFitnessCalculatorV4.evaluateDetailed(done, windowDaysActual);
         LOG.info("FITNESS V4: note={} finalFitness={} | calmar={} sortino={} ddPct={}% pctHeld>7d={}% posYear={}%",
                 v4.note, f(v4.finalFitness), f(v4.calmar), f(v4.sortino),
                 f(v4.ddPct * 100), f(v4.pctHeldOver7d * 100), f(v4.posYearRatio * 100));

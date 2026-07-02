@@ -179,7 +179,9 @@ public class SensitivityTool {
         SimulatorMarketLevelTicker1MStopLoss sim = new SimulatorMarketLevelTicker1MStopLoss();
         sim.initDataReady(mkt, pred, fund, new AIRejectFilter());
         sim.simulatorWithInitEntry(simStart, simEnd);
-        return HPOFitnessCalculatorV4.evaluateDetailed(sim.allOrderDone).finalFitness;
+        // V4.1 (TASK-113): windowDays = range backtest THẬT của chính lần chạy này, KHÔNG suy từ span lệnh
+        int windowDays = (int) Math.max(1, (simEnd - simStart) / Utils.TIME_DAY);
+        return HPOFitnessCalculatorV4.evaluateDetailed(sim.allOrderDone, windowDays).finalFitness;
     }
 
     private double getField(String name) throws Exception {
