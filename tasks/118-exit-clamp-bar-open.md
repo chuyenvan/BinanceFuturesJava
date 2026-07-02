@@ -1,6 +1,6 @@
 # TASK-118: Exit booking clamp về min(priceSL, bar.open) — fix đã duyệt, chưa áp
 
-- **status:** todo (chờ TASK-113 code xong để tránh 2 CCD cùng tree; khác file với 113)
+- **status:** doing (CCD từ 2026-07-03 sáng — 113 đã xong)
 - **depends_on:** TASK-113 phần code (tree không tranh chấp) · GATE xếp lịch Oracle sau GATE-113
 - **touches_live_process:** không
 
