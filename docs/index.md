@@ -26,7 +26,7 @@
 ## Insights (kiến thức nền)
 - [insights/DATA_CADENCE](insights/DATA_CADENCE.md) · [insights/INGEST_FORMAT](insights/INGEST_FORMAT.md) · [insights/TRAINING_NOTES](insights/TRAINING_NOTES.md)
 - [insights/GATE_REDESIGN_IDEAS](insights/GATE_REDESIGN_IDEAS.md) — ⏸ PARKED (gate chốt-nhanh-không-DCA, sau 039).
-- **WFO (3 file bổ sung nhau):** [WFO_FRAMEWORK_DESIGN](insights/WFO_FRAMEWORK_DESIGN.md) (kiến trúc + 5 quyết định chốt 2026-06-29) · [WFO_LEAKS_TODO](insights/WFO_LEAKS_TODO.md) (5 leak L0–L5 chưa xử) · [WFO_OBJECTIVE_RESEARCH](insights/WFO_OBJECTIVE_RESEARCH.md) (hàm mục tiêu).
+- **WFO — hub = [WFO_ROADMAP](insights/WFO_ROADMAP.md)** (sub-roadmap Bước 4 + TRẠNG THÁI LIVE + pointer). Chi tiết: [WFO_FRAMEWORK_DESIGN](insights/WFO_FRAMEWORK_DESIGN.md) (kiến trúc + 5 quyết định chốt 2026-06-29) · [WFO_LEAKS_TODO](insights/WFO_LEAKS_TODO.md) (5 leak L0–L5 chưa xử) · [WFO_OBJECTIVE_RESEARCH](insights/WFO_OBJECTIVE_RESEARCH.md) (hàm mục tiêu).
 
 ## Quyết định (ADR — chốt, chống sửa-ngược)
 - [decisions/](decisions/) — 0001..0012. `0003` (genome 13) **đã thay bởi 0012** (genome 18 + OFF cứng cụm C). `0007` = `backfill` (hiện hành); `material` đã đánh dấu SUPERSEDED. Kết luận-chốt còn rải ở FINDINGS/TRACE nên tách thêm ADR (SLIPPAGE=0.003, filter mode C, dd4h ở RISK, AI-filter-không-chặn-sập, funding pred[0]=P(fail)).
