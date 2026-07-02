@@ -53,8 +53,12 @@ public class RunHpoMaster_Distributed {
     // v9 -> v10: BƯỚC 3 (ruin) — BẬT CIRCUIT BREAKER MẶC ĐỊNH. BREAKER_MODE=MARGIN, BREAKER_MARGIN_HALT=0.50
     // (chặn MỞ MỚI khi margin/vốn >= 0.50). Quét ngưỡng 2021→2026: 0.50 cho return/maxDD tốt nhất 4.88
     // (maxDD -58.6%→-29.5%, maxMargR 0.99→0.51, PnL -27%). Cap %vốn/cụm đã thử & GỠ (veto 0-8 lần, vô dụng
-    // trên danh mục). Breaker đổi PnL/DD mọi genome => bỏ cache v9.
-    public static final String CONFIG_VERSION = "v10";
+    // trên danh mục). Breaker đổi PnL/DD mọi genome => bỏ cache v10.
+    // v10 -> v11: TASK-112 — bỏ 2 flag runtime kaggle/HPO-mode, nguồn dữ liệu tường minh per-box
+    // (AEROSPIKE_READ_CLUSTER + TICKER_SOURCE trong config.properties) + fail-fast thiếu data.
+    // Logic sim/PnL KHÔNG đổi (GATE khớp 100%), nhưng wiring nguồn data đổi → version mới để
+    // cache HPO cũ không trộn kết quả chạy dưới cơ chế mode cũ (đã 2 lần chạy hỏng vì quên set mode).
+    public static final String CONFIG_VERSION = "v11";
 
     // 🔥 TÁCH 2 SET:
     //  - QUEUE_SET: chỉ chứa task ĐANG active (PENDING/RUNNING). Worker scanAll cái này nên LUÔN NHỎ.

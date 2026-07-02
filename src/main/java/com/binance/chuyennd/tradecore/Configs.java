@@ -75,8 +75,18 @@ public class Configs {
     // =========================================================
     // 2. CHẾ ĐỘ CHẠY (RUNNING MODES)
     // =========================================================
-    public static boolean IS_HPO_MODE = false; // Bật khi chạy tối ưu hóa Jenetics
-    public static boolean IS_KAGGLE_MODE = properties.get("IS_KAGGLE_MODE") != null ? getBoolean("IS_KAGGLE_MODE") : false;
+    // TASK-112: nguồn dữ liệu TƯỜNG MINH per-box, thay 2 flag runtime mode cũ (kaggle/HPO)
+    // (2 flag trộn 3 quyết định độc lập + ~25 tool set tay ở main() → quên set = âm thầm đọc sai nguồn,
+    // đã vô hiệu 2 lần chạy, gần nhất full WFO 17 window 2026-07-02).
+    // KHÔNG default ngầm, KHÔNG validate ở static-init — validate LAZY tại điểm dùng:
+    //   AEROSPIKE_READ_CLUSTER (226|242) → DataManagerAerospikeFloatSim.getReadClient() throw nếu thiếu/sai;
+    //   TICKER_SOURCE (aerospike|file)  → SimulatorMarketLevelTicker1MStopLoss throw nếu thiếu/sai.
+    // Lý do lazy: box Kaggle thuần file không cần AEROSPIKE_READ_CLUSTER; tool không chạy sim không cần TICKER_SOURCE.
+    public static String AEROSPIKE_READ_CLUSTER = properties.get("AEROSPIKE_READ_CLUSTER");
+    public static String TICKER_SOURCE = properties.get("TICKER_SOURCE");
+    // TASK-112: sim ghi storage/*.data + printDone.csv sau khi chạy xong. Default FALSE — ⚠️ ĐỔI DEFAULT:
+    // trước đây box local (không bật kaggle-mode) mặc định GHI; box nào muốn giữ hành vi cũ thêm WRITE_SIM_STORAGE=true.
+    public static boolean WRITE_SIM_STORAGE = properties.get("WRITE_SIM_STORAGE") != null ? getBoolean("WRITE_SIM_STORAGE") : false;
     // WFO/HPO: bật cache nén kline trong RAM (HPOSmartCache). Default tắt → simulator giữ nguyên đường đọc cũ.
     // Bật riêng cho worker WFO (env USE_SMART_CACHE=true) để N sample cùng window dùng chung cache, đọc DB 1 lần/ngày.
     public static boolean USE_SMART_CACHE = properties.get("USE_SMART_CACHE") != null ? getBoolean("USE_SMART_CACHE") : false;
@@ -88,16 +98,16 @@ public class Configs {
 
     /**
      * Fail-fast cho PROCESS LIVE (gọi NGAY đầu {@code main()} của {@code BinanceOrderTradingManager} +
-     * {@code BinanceDataIngestor}). Nếu lỡ bật {@link #IS_KAGGLE_MODE}/{@link #IS_HPO_MODE} trên box live,
-     * {@code DataManagerAerospikeFloatSim.getReadClient()} sẽ trỏ Aerospike 226 (kho BACKTEST, dữ liệu cũ)
-     * thay 242 → bot ĐỌC/QUYẾT ĐỊNH trên data sai mà KHÔNG báo. Audit #12 (TASK-030). DỪNG ngay nếu sai mode.
-     * KHÔNG gọi trong tool backtest/kaggle/HPO (chúng cố ý bật IS_KAGGLE_MODE).
+     * {@code BinanceDataIngestor}). Live BẮT BUỘC {@code AEROSPIKE_READ_CLUSTER=242} trong config.properties —
+     * thiếu key hoặc giá trị khác 242 → {@code getReadClient()} sẽ throw/đọc 226 (kho BACKTEST, dữ liệu cũ)
+     * → bot ĐỌC/QUYẾT ĐỊNH trên data sai mà KHÔNG báo. Audit #12 (TASK-030); TASK-112 chuyển sang check config
+     * tường minh. DỪNG ngay ({@code System.exit(1)}) nếu sai. KHÔNG gọi trong tool backtest/kaggle/HPO.
      */
     public static void assertLiveRuntime() {
-        if (IS_KAGGLE_MODE || IS_HPO_MODE) {
-            System.err.println("⛔ FATAL (audit #12): process LIVE khởi động với IS_KAGGLE_MODE=" + IS_KAGGLE_MODE
-                    + " / IS_HPO_MODE=" + IS_HPO_MODE + " → getReadClient() sẽ đọc Aerospike 226 (kho backtest) thay 242. "
-                    + "Tắt IS_KAGGLE_MODE trong config.properties trên box live rồi chạy lại. DỪNG.");
+        if (!"242".equals(AEROSPIKE_READ_CLUSTER)) {
+            System.err.println("⛔ FATAL (audit #12 / TASK-112): process LIVE yêu cầu AEROSPIKE_READ_CLUSTER=242 trong "
+                    + "config.properties (hiện tại: " + AEROSPIKE_READ_CLUSTER + "). Thiếu/sai → getReadClient() đọc nhầm "
+                    + "Aerospike 226 (kho backtest) thay 242. Thêm dòng AEROSPIKE_READ_CLUSTER=242 rồi chạy lại. DỪNG.");
             System.exit(1);
         }
     }

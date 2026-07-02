@@ -56,7 +56,7 @@ public class BinanceOrderTradingManager {
     private final Map<String, List<KlineObjectSimple>> symbol2Tickers = new HashMap<>();
 
     public static void main(String[] args) throws InterruptedException, ParseException {
-        Configs.assertLiveRuntime();   // #12 (TASK-030): fail-fast nếu IS_KAGGLE_MODE/HPO bật → tránh đọc 226 (backtest) trên live
+        Configs.assertLiveRuntime();   // #12 (TASK-030/112): fail-fast nếu AEROSPIKE_READ_CLUSTER thiếu/khác 242 → tránh đọc 226 (backtest) trên live
         Utils.writePid2File();
         new DetectEntrySignal2TradeNormal().start();
         new BinanceOrderTradingManager().start();

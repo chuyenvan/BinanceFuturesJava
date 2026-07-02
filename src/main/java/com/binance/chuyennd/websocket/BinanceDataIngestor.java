@@ -10,7 +10,7 @@ public class BinanceDataIngestor {
     public static final Logger LOG = LoggerFactory.getLogger(BinanceDataIngestor.class);
 
     public static void main(String[] args) {
-        Configs.assertLiveRuntime();   // #12 (TASK-030): fail-fast nếu IS_KAGGLE_MODE/HPO bật → tránh đọc/ghi nhầm 226 trên live
+        Configs.assertLiveRuntime();   // #12 (TASK-030/112): fail-fast nếu AEROSPIKE_READ_CLUSTER thiếu/khác 242 → tránh đọc/ghi nhầm 226 trên live
         Utils.writePid2File();
 //        new FundingIngestor2Aerospike().start();
         new FundingIngestor2AerospikeNew().start();
