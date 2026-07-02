@@ -112,6 +112,28 @@ for i in $(seq 1 $FREE); do kaggle kernels push -p oi-backfill-worker-$i; sleep 
 
 ---
 
+## 3b. Mount layout MỚI (đo 2026-07-02, kernel `wfo-env-test`)
+
+Dataset KHÔNG còn mount thẳng `/kaggle/input/<slug>` mà ở **`/kaggle/input/datasets/<user>/<slug>/`**.
+Script kernel PHẢI tìm file bằng glob recursive (pattern worker 013 đã đúng sẵn):
+
+```python
+manis = glob.glob("/kaggle/input/**/manifest.txt", recursive=True)
+jars  = glob.glob("/kaggle/input/**/*.jar", recursive=True)
+```
+
+KHÔNG hardcode path tuyệt đối theo slug — layout đã đổi 1 lần, có thể đổi tiếp.
+
+## 3c. Môi trường Kaggle CPU (đo 2026-07-02)
+
+- Java: **OpenJDK 17.0.18** có sẵn trong image (jar build `--release 11` chạy thẳng, không cần cài).
+- RAM 31GB · 4 CPU · `/kaggle/working` 20GB.
+- Dataset WFO leak-free đã lên: `chuyendinh/wfo-dataset-wf-leakfree` (market+pred+funding+manifest,
+  **md5 cả 3 bin MATCH manifest trên Kaggle** — verify bằng kernel `wfo-env-test` ENV_TEST_PASS).
+- TCP 103.157.218.226:3222 từ kernel: OK (tái xác nhận).
+- ⚠️ Jobstore WFO hiện tại là Aerospike **LOCAL Oracle** → Kaggle KHÔNG poll được; muốn Kaggle làm WFO worker
+  phải set `WFO_STATE_HOST` về 226 thật (xem WFO_ROADMAP §4).
+
 ## 4. System.exit(0) — Bắt buộc
 
 Kaggle kernel **KHÔNG tự thoát** khi `main()` kết thúc nếu có non-daemon thread còn sống.
@@ -264,3 +286,4 @@ ssh -i /c/Users/pc/.ssh/id_rsa_chuyennd -p 2222 -o BatchMode=yes root@103.157.21
 | 2026-06-17 | TASK-102: xác nhận slot limit = 0/5 đang dùng (test COMPLETE trong 2s, SLOT_TEST_OK) |
 | 2026-06-18 | §0 mới: log/output lưu `D:\claudedata`, KHÔNG lưu ổ C (full 2 lần → MCP chết). |
 | 2026-06-18 | kaggle CLI đã cấu hình vào PATH ổn định — gọi `kaggle ...` trực tiếp, không cần full path nữa. |
+| 2026-07-02 | §3b mount layout mới `/kaggle/input/datasets/<user>/<slug>` + §3c môi trường đo thật (Java 17 sẵn, 31GB/4CPU) — kernel `wfo-env-test` PASS. Kaggle CLI trên Oracle: key trùng 226, auth OK. |
