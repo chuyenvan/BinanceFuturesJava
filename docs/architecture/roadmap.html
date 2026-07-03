@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lộ trình Kiểm chứng 6 Bước — BinanceFuturesJava</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0f172a;
+    color: #e2e8f0;
+    min-height: 100vh;
+    padding: 24px 16px 48px;
+  }
+  h1 { font-size: 1.6rem; font-weight: 700; color: #f1f5f9; margin-bottom: 4px; }
+  h2 { font-size: 1.1rem; font-weight: 600; color: #94a3b8; margin: 32px 0 14px; text-transform: uppercase; letter-spacing: .06em; }
+  .subtitle { color: #64748b; font-size: .875rem; margin-bottom: 20px; }
+  .container { max-width: 960px; margin: 0 auto; }
+
+  /* Legend */
+  .legend {
+    display: flex; gap: 20px; flex-wrap: wrap;
+    background: #1e293b; border: 1px solid #334155;
+    border-radius: 8px; padding: 12px 16px; margin-bottom: 28px;
+    font-size: .8rem; align-items: center;
+  }
+  .legend-title { color: #94a3b8; font-weight: 600; margin-right: 4px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .dot-done  { background: #22c55e; }
+  .dot-wip   { background: #f59e0b; }
+  .dot-todo  { background: #ef4444; }
+
+  /* Strategy context banner */
+  .strategy-banner {
+    background: #1c1917; border: 1px solid #44403c; border-radius: 10px;
+    padding: 14px 18px; margin-bottom: 28px;
+    font-size: .82rem; color: #a8a29e; line-height: 1.75;
+  }
+  .strategy-banner strong { color: #e2e8f0; }
+  .strategy-label {
+    font-size: .68rem; font-weight: 700; color: #78716c;
+    text-transform: uppercase; letter-spacing: .07em; margin-bottom: 6px;
+  }
+
+  /* Layer cards */
+  .layers { display: flex; flex-direction: column; gap: 12px; }
+  .layer {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .layer-header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 18px;
+    cursor: pointer;
+    user-select: none;
+    transition: background .15s;
+  }
+  .layer-header:hover { background: #263348; }
+  .layer-num {
+    font-size: .7rem; font-weight: 700; color: #475569;
+    background: #0f172a; border-radius: 4px;
+    padding: 2px 7px; flex-shrink: 0; letter-spacing: .05em;
+    font-family: monospace;
+  }
+  .layer-name { font-size: 1rem; font-weight: 600; color: #e2e8f0; flex: 1; }
+  .layer-badge {
+    font-size: .72rem; font-weight: 700; padding: 3px 10px; border-radius: 20px;
+  }
+  .badge-done    { background: #14532d; color: #4ade80; border: 1px solid #22c55e44; }
+  .badge-wip     { background: #451a03; color: #fbbf24; border: 1px solid #f59e0b44; }
+  .badge-todo    { background: #450a0a; color: #f87171; border: 1px solid #ef444444; }
+  .badge-partial { background: #1c1917; color: #a78bfa; border: 1px solid #8b5cf644; }
+
+  .layer-body { padding: 0 18px 16px; }
+
+  /* Components */
+  .comp-list { list-style: none; display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+  .comp-item {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 8px 12px; border-radius: 8px;
+    background: #0f172a; border: 1px solid #1e293b;
+    cursor: pointer; transition: border-color .15s, background .15s;
+  }
+  .comp-item:hover { border-color: #475569; background: #16213a; }
+  .comp-item[data-status="done"] .dot { background: #22c55e; box-shadow: 0 0 6px #22c55e66; }
+  .comp-item[data-status="wip"]  .dot { background: #f59e0b; box-shadow: 0 0 6px #f59e0b66; }
+  .comp-item[data-status="todo"] .dot { background: #ef4444; box-shadow: 0 0 6px #ef444466; }
+  .comp-item[data-status="info"] .dot { background: #64748b; }
+  .comp-dot { margin-top: 3px; flex-shrink: 0; }
+  .comp-text { flex: 1; }
+  .comp-name   { font-size: .875rem; font-weight: 600; color: #e2e8f0; }
+  .comp-detail { font-size: .775rem; color: #64748b; margin-top: 2px; line-height: 1.5; }
+
+  /* Verbatim status block (Bước 3 — nguyên văn ROADMAP.md) */
+  .verbatim-block {
+    margin-top: 12px; padding: 14px 16px;
+    background: #0f172a; border-left: 3px solid #f59e0b;
+    border-radius: 0 8px 8px 0;
+    font-size: .8rem; color: #94a3b8; line-height: 1.8;
+  }
+  .verbatim-block strong { color: #e2e8f0; }
+  .verbatim-block em { color: #78716c; font-style: italic; }
+  .verbatim-block code {
+    font-family: monospace; font-size: .75rem;
+    background: #1e293b; padding: 1px 5px; border-radius: 3px; color: #a78bfa;
+  }
+  .verbatim-label {
+    display: block; font-size: .65rem; font-weight: 700; color: #f59e0b;
+    text-transform: uppercase; letter-spacing: .07em; margin-bottom: 10px;
+  }
+  .verbatim-para { margin-top: 8px; }
+
+  /* Ablation results table */
+  .ablation-table { width: 100%; border-collapse: collapse; font-size: .8rem; margin-top: 12px; }
+  .ablation-table th {
+    background: #0f172a; color: #94a3b8; font-weight: 600;
+    padding: 7px 10px; text-align: left; border-bottom: 1px solid #334155;
+  }
+  .ablation-table td { padding: 7px 10px; border-bottom: 1px solid #1e293b; }
+  .ablation-table tr:last-child td { border-bottom: none; }
+  .ablation-table .row-a td { color: #4ade80; }
+  .ablation-table .row-b td { color: #f87171; }
+  .ablation-table .row-c td { color: #f87171; }
+
+  /* Quick info box */
+  .info-box {
+    margin-top: 12px; padding: 12px 14px;
+    background: #0f172a; border-radius: 8px; font-size: .8rem;
+  }
+  .info-box-label { color: #64748b; font-weight: 600; margin-bottom: 8px; }
+  .info-chips { display: flex; gap: 16px; flex-wrap: wrap; }
+  .info-chips span { color: #94a3b8; }
+  .info-chips .val { color: #4ade80; margin-left: 4px; }
+  .info-note { margin-top: 8px; color: #64748b; font-size: .75rem; line-height: 1.5; }
+
+  /* Principles */
+  .principles { display: flex; flex-direction: column; gap: 8px; }
+  .principle {
+    background: #1e293b; border: 1px solid #334155; border-radius: 8px;
+    padding: 10px 14px; font-size: .82rem; color: #94a3b8; line-height: 1.6;
+  }
+  .principle strong { color: #e2e8f0; }
+  .principle-num {
+    display: inline-block; font-size: .68rem; font-weight: 700; font-family: monospace;
+    background: #0f172a; color: #475569; padding: 1px 6px; border-radius: 3px;
+    margin-right: 8px; vertical-align: middle;
+  }
+
+  /* Tooltip overlay */
+  .tooltip-overlay {
+    display: none; position: fixed; inset: 0;
+    background: #00000099; z-index: 100;
+    align-items: center; justify-content: center;
+    padding: 24px;
+  }
+  .tooltip-overlay.active { display: flex; }
+  .tooltip-box {
+    background: #1e293b; border: 1px solid #475569;
+    border-radius: 12px; padding: 24px; max-width: 540px; width: 100%;
+    position: relative; max-height: 80vh; overflow-y: auto;
+  }
+  .tooltip-close {
+    position: absolute; top: 12px; right: 14px;
+    background: none; border: none; color: #94a3b8;
+    font-size: 1.3rem; cursor: pointer; line-height: 1;
+  }
+  .tooltip-title { font-size: 1rem; font-weight: 700; color: #f1f5f9; margin-bottom: 12px; }
+  .tooltip-body { font-size: .82rem; color: #94a3b8; line-height: 1.7; }
+  .tooltip-body strong { color: #e2e8f0; }
+  .tooltip-body code {
+    font-family: monospace; font-size: .75rem;
+    background: #0f172a; padding: 1px 5px; border-radius: 3px; color: #a78bfa;
+  }
+  .tooltip-src {
+    margin-top: 14px; padding: 8px 12px;
+    background: #0f172a; border-radius: 6px;
+    font-size: .75rem; color: #64748b; font-family: monospace;
+  }
+
+  /* Footer */
+  .footer {
+    margin-top: 44px; padding: 16px 18px;
+    background: #1e293b; border: 1px solid #334155; border-radius: 10px;
+    font-size: .78rem; color: #64748b; line-height: 1.7;
+  }
+  .footer strong { color: #94a3b8; }
+  .footer code { background: #0f172a; padding: 1px 6px; border-radius: 4px; font-family: monospace; }
+
+  @media (max-width: 600px) {
+    h1 { font-size: 1.25rem; }
+    .ablation-table { font-size: .72rem; }
+    .info-chips { flex-direction: column; gap: 6px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <h1>Lộ trình Kiểm chứng &amp; Cải tiến Mô hình</h1>
+  <p class="subtitle">6 bước gác cổng tuần tự · BinanceFuturesJava &nbsp;|&nbsp; Nguồn: <code style="font-size:.75rem;color:#94a3b8">docs/ROADMAP.md</code></p>
+
+  <!-- Bối cảnh chiến lược -->
+  <div class="strategy-banner">
+    <div class="strategy-label">Bối cảnh chiến lược — bất biến</div>
+    Bot <strong>long-only, leverage 1, martingale/DCA, không hard stop-loss</strong>.
+    Lớp AI lọc entry; P&amp;L thực tế bị chi phối bởi động lực hồi phục của DCA.
+    Hệ quả: backtest có thiên hướng tâng bốc loại chiến lược này; win rate luôn cao giả tạo;
+    <strong>rủi ro nằm ở ĐUÔI</strong> (cú sập hiếm), không ở tần suất thắng.
+    <br>Mục tiêu: <strong>chứng minh bằng số liệu rằng mô hình có edge thật và sống sót qua cú sập,
+    TRƯỚC khi tối ưu thêm hoặc bật tiền thật.</strong>
+    Làm đúng thứ tự — mỗi bước gác cổng cho bước sau. Không nhảy cóc.
+  </div>
+
+  <!-- Legend -->
+  <div class="legend">
+    <span class="legend-title">Trạng thái:</span>
+    <div class="legend-item"><div class="dot dot-done"></div> Xong / PASS</div>
+    <div class="legend-item"><div class="dot dot-wip"></div> Đang làm</div>
+    <div class="legend-item"><div class="dot dot-todo"></div> Chưa làm</div>
+    <span style="color:#64748b;margin-left:auto;font-size:.75rem">Click component → chi tiết</span>
+  </div>
+
+  <!-- 6 Bước -->
+  <h2>6 Bước kiểm chứng</h2>
+  <div class="layers">
+
+    <!-- Bước 0 -->
+    <div class="layer">
+      <div class="layer-header">
+        <span class="layer-num">B0</span>
+        <span class="layer-name">Bịt Look-ahead &amp; Slippage</span>
+        <span class="layer-badge badge-partial">Áp xong ✅ · đo đối chứng ⏳</span>
+      </div>
+      <div class="layer-body">
+        <ul class="comp-list">
+          <li class="comp-item" data-status="done"
+              data-title="Guard + Slippage đã áp (rule hiện hành)"
+              data-body="<strong>OrderTargetInfoTest.updateStatusNew:</strong> tách đặt-SL khỏi khớp-lệnh, cấm khớp nội-nến (<code>BLOCK_INTRABAR_LOOKAHEAD</code>).<br><br><strong>calTp:</strong> trừ slippage 2 chân (<code>SLIPPAGE_RATE</code>, <code>APPLY_SLIPPAGE</code>).<br><br><strong>BacktestIntegrityGuard.assertProductionGrade()</strong> cắm ở <strong>dòng đầu <code>simulatorWithInitEntry</code></strong> (xác minh qua AUDIT/ADR-0002 — KHÔNG phải <code>BackTestEngineMaster.run</code>) — tự chặn nếu chạy backtest với look-ahead/slippage/fee tắt."
+              data-src="docs/ROADMAP.md §Bước 0 | AUDIT/ADR-0002">
+            <div class="comp-dot"><div class="dot"></div></div>
+            <div class="comp-text">
+              <div class="comp-name">BLOCK_INTRABAR_LOOKAHEAD + slippage + BacktestIntegrityGuard</div>
+              <div class="comp-detail">Guard @ simulatorWithInitEntry · SLIPPAGE_RATE · APPLY_SLIPPAGE · ADR-0002</div>
+            </div>
+          </li>
+          <li class="comp-item" data-status="todo"
+              data-title="Đo đối chứng: guard bật vs tắt — Chưa làm"
+              data-body="<strong>Việc còn lại:</strong> chạy đối chứng (guard bật vs tắt) để đo &ldquo;ảo giác look-ahead&rdquo;.<br><br>Nếu PnL sụp khi bật guard → cấu hình cũ chưa từng có lãi thật → <strong>mọi tham số HPO cũ phải bỏ, chạy lại từ đầu.</strong> Bump <code>CONFIG_VERSION</code>."
+              data-src="docs/ROADMAP.md §Bước 0">
+            <div class="comp-dot"><div class="dot"></div></div>
+            <div class="comp-text">
+              <div class="comp-name">Chạy đối chứng guard bật / tắt</div>
+              <div class="comp-detail">❌ Chưa làm · đo "ảo giác look-ahead" · nếu PnL sụp → bỏ HPO cũ + Bump CONFIG_VERSION</div>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Bước 1 -->
+    <div class="layer">
+      <div class="layer-header">
+        <span class="layer-num">B1</span>
+        <span class="layer-name">Đo Chất lượng MODEL Độc lập (rẻ nhất, gác cổng mọi thứ)</span>
+        <span class="layer-badge badge-todo">Chưa làm ❌</span>
+      </div>
+      <div class="layer-body">
+        <ul class="comp-list">
+          <li class="comp-item" data-status="todo"
+              data-title="Re-train đúng cách — time-split, scaler fit chỉ trên train"
+              data-body="<strong>Chặn trước:</strong> model hiện train trên CẢ 5 năm + có 2 lỗi leak:<br>(1) scaler fit toàn bộ dữ liệu;<br>(2) funding model dùng <code>train_test_split</code> random/stratify.<br>⇒ không có dữ liệu out-of-sample để đo trung thực.<br><br><strong>Phải làm:</strong> re-train ĐÚNG CÁCH — cắt theo thời gian, scaler fit chỉ trên train, giữ lại đoạn cuối (6–12 tháng) model <strong>TUYỆT ĐỐI không thấy</strong> làm holdout.<br><br><strong>Tiền đề:</strong> feature export phải còn TRỤC THỜI GIAN (timestamp hoặc file sắp theo thời gian). Nếu mất → sửa từ bước export, không sửa được ở train."
+              data-src="docs/ROADMAP.md §Bước 1">
+            <div class="comp-dot"><div class="dot"></div></div>
+            <div class="comp-text">
+              <div class="comp-name">Re-train đúng cách (time-split · scaler chỉ trên train · holdout 6–12 tháng)</div>
+              <div class="comp-detail">❌ Chưa · 2 lỗi leak hiện tại · feature export phải có trục thời gian</div>
+            </div>
+          </li>
+          <li class="comp-item" data-status="todo"
+              data-title="Đo IC (Spearman) + hit-rate có điều kiện trên holdout"
+              data-body="Ghép <code>(predicted_15m/24h, realized)</code> theo <code>(symbol, time)</code>, điểm cách nhau ≥ horizon để độc lập, chỉ lấy điểm SAU cutoff train.<br><br>Tính:<br>• <strong>IC (Spearman predicted-vs-realized)</strong><br>• <strong>Hit-rate có điều kiện</strong> (trong các lần predicted vượt ngưỡng PASS, % realized cùng dấu)<br>• Cả hai TÁCH THEO REGIME (tăng / sập / đi ngang).<br><br><strong>Phán quyết:</strong><br>IC dương &amp; ổn định theo tuần → model có edge, đi tiếp.<br>IC ~ 0 → model rỗng, dừng và build lại model (đổi feature/target/label) — mọi HPO phía sau vô nghĩa."
+              data-src="docs/ROADMAP.md §Bước 1">
+            <div class="comp-dot"><div class="dot"></div></div>
+            <div class="comp-text">
+              <div class="comp-name">Đo IC (Spearman) + hit-rate theo regime trên holdout</div>
+              <div class="comp-detail">❌ Chưa · phán quyết: IC dương ổn định → PASS tiếp; IC≈0 → build lại model (HPO phía sau vô nghĩa)</div>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Bước 2 -->
+    <div class="layer">
+      <div class="layer-header">
+        <span class="layer-num">B2</span>
+        <span class="layer-name">Ablation — Edge từ AI hay từ DCA?</span>
+        <span class="layer-badge badge-done">PASS ✅ 2026-06-23</span>
+      </div>
+      <div class="layer-body">
+        <ul class="comp-list">
+          <li class="comp-item" data-status="done"
+              data-title="AblationStep2Tool — 3 mode A/B/C, FULL 2021–2026"
+              data-body="<strong>EdgeAttributionReport cũ KHÔNG tồn tại</strong> → dựng mới <code>AblationStep2Tool</code> (Configs.ABLATION_MODE A/B/C). FULL 2021–2026.<br><br>Kết quả:<br>• <strong>A (AI bật):</strong> trades 70711, PnL <strong>+69217</strong>, maxDD 20383, avgMAE <strong>3.36%</strong>, Calmar <strong>3.40</strong><br>• <strong>B (no-AI):</strong> trades 56416, PnL <strong>−13703</strong>, avgMAE 6.01%, Calmar −0.45<br>• <strong>C (placebo):</strong> trades 42683, PnL <strong>−10778</strong>, avgMAE 5.10%, Calmar −0.36<br><br><strong>Verdict:</strong> A MAE nông hơn + Calmar cao hơn placebo C (cùng passRate) ⇒ <strong>AI CÓ EDGE THẬT</strong>. B/C đều LỖ ⇒ DCA một mình không cõng nổi; lãi đến từ chất lượng chọn lọc của AI. <strong>Đủ điều kiện vào Bước 4.</strong>"
+              data-src="docs/ROADMAP.md §Bước 2 | commit a043317">
+            <div class="comp-dot"><div class="dot"></div></div>
+            <div class="comp-text">
+              <div class="comp-name">AblationStep2Tool — A/B/C (commit a043317)</div>
+              <div class="comp-detail">A: PnL +69217 · Calmar 3.40 · B/C: LỖ → AI CÓ EDGE THẬT · Đủ điều kiện vào B4</div>
+            </div>
+          </li>
+        </ul>
+
+        <!-- Ablation results table -->
+        <table class="ablation-table">
+          <thead>
+            <tr>
+              <th>Mode</th>
+              <th>Trades</th>
+              <th>PnL</th>
+              <th>maxDD</th>
+              <th>avgMAE</th>
+              <th>Calmar</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="row-a">
+              <td><strong>A — AI bật</strong></td>
+              <td>70,711</td>
+              <td>+69,217</td>
+              <td>20,383</td>
+              <td>3.36%</td>
+              <td>3.40</td>
+            </tr>
+            <tr class="row-b">
+              <td><strong>B — no-AI</strong></td>
+              <td>56,416</td>
+              <td>−13,703</td>
+              <td>—</td>
+              <td>6.01%</td>
+              <td>−0.45</td>
+            </tr>
+            <tr class="row-c">
+              <td><strong>C — placebo</strong></td>
+              <td>42,683</td>
+              <td>−10,778</td>
+              <td>—</td>
+              <td>5.10%</td>
+              <td>−0.36</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Bước 3 -->
+    <div class="layer">
+      <div class="layer-header">
+        <span class="layer-num">B3</span>
+        <span class="layer-name">Mô hình hoá "Cái Chết" trong Sim + Sửa Tư thế Rủi ro</span>
+        <span class="layer-badge badge-wip">▶️ 2 Track Song song</span>
+      </div>
+      <div class="layer-body">
+
+        <!-- VERBATIM STATUS — nguyên văn từ docs/ROADMAP.md §Bước 3, KHÔNG suy diễn -->
+        <div class="verbatim-block">
+          <span class="verbatim-label">Trạng thái CHỐT — nguyên văn docs/ROADMAP.md §Bước 3 (cập nhật 2026-06-29)</span>
+          <p>▶️ <strong>TRẠNG THÁI (cập nhật 2026-06-29) — 2 TRACK SONG SONG:</strong></p>
+          <p class="verbatim-para">
+            • <strong>Track A — Bước 3 (ruin):</strong> ✅ circuit breaker MARGIN 0.50 CHỐT + COMMIT (<code>3041257</code>, CONFIG_VERSION v10).<br>
+            ✅ funding fee code lại (tính 1 lượt khi đóng) + GATE PASS (OFF totalPnl=50311, trades=35774 khớp baseline)<br>
+            + mặc định OFF (<code>APPLY_FUNDING_FEE=false</code>, bật ở HPO/Golden cuối). ⏳ CÒN LẠI: margin-call/equity thật<br>
+            (mảnh cuối) — user chốt TẠM BỎ QUA để chạy WFO song song. <em>(funding code uncommitted, chờ user duyệt commit.)</em>
+          </p>
+          <p class="verbatim-para">
+            • <strong>Track B — Bước 4 (WFO):</strong> sensitivity giảm gene XONG (ADR-0012: 18 gene); WFO framework ĐÃ DUYỆT + 5 quyết định chốt (<code>insights/WFO_FRAMEWORK_DESIGN.md</code> mục 6, 2026-06-29) → bắt đầu code.
+          </p>
+          <p class="verbatim-para">
+            — Hai track KHÔNG tuần tự: WFO không còn "gác" sau Bước 3 (sensitivity là tiền đề đã xong). ⚠️ maxDD trong WFO có thể <strong>BỊ HIỂU NHẸ</strong> vì chưa có margin-call thật (Bước 3 chưa tròn).
+          </p>
+          <p class="verbatim-para">
+            — <em>(Lịch sử: 2026-06-28 từng chốt "gác Bước 4 để vào thẳng Bước 3"; cap %vốn/cụm + RunDcaCapBacktest đã GỠ — vô dụng trên danh mục, lá chắn thật là trần margin tổng.)</em>
+          </p>
+          <p class="verbatim-para"><strong>GIỚI HẠN khi đọc lại WFO sau này:</strong> chưa có margin-call thật nên maxDD có thể HIỂU NHẸ.</p>
+        </div>
+
+        <!-- Component checklist -->
+        <ul class="comp-list" style="margin-top:12px">
+          <li class="comp-item" data-status="done"
+              data-title="Circuit breaker MARGIN 0.50 — CHỐT + commit 3041257 (CV v10)"
+              data-body="<code>BREAKER_MODE=MARGIN</code>, <code>BREAKER_MARGIN_HALT=0.50</code> — chặn MỞ MỚI khi marginRunning/balanceBasic ≥ 0.50. KHÔNG force-close (long-only).<br><br>Lá chắn = trần margin TỔNG (mốc cố định), KHÔNG per-cluster — cap %vốn/cụm đã thử &amp; gỡ: veto 0–8 lần, vô dụng vì budget phân tán.<br><br>CONFIG_VERSION v10."
+              data-src="docs/ROADMAP.md §Bước 3 | commit 3041257">
+            <div class="comp-dot"><div class="dot"></div></div>
+            <div class="comp-text">
+              <div class="comp-name">Circuit breaker MARGIN 0.50</div>
+              <div class="comp-detail">BREAKER_MODE=MARGIN · halt khi margin≥0.50 · KHÔNG force-close · commit 3041257 · CV v10</div>
+            </div>
+          </li>
+          <li class="comp-item" data-status="done"
+              data-title="Funding fee computeFundingOnClose — GATE PASS (OFF=baseline)"
+              data-body="<code>computeFundingOnClose</code> tính 1 lượt khi đóng (Σ rate × quantity × avgEntry). Trước đây comment hết → PnL lạc quan.<br><br>Đo được: hệ được thưởng ròng −918, ~1.8% PnL, maxDD không đổi.<br><br>Mặc định OFF (<code>APPLY_FUNDING_FEE=false</code>), bật ở HPO/Golden cuối.<br>GATE PASS: OFF totalPnl=50311, trades=35774 khớp baseline."
+              data-src="docs/ROADMAP.md §Bước 3">
+            <div class="comp-dot"><div class="dot"></div></div>
+            <div class="comp-text">
+              <div class="comp-name">Funding fee computeFundingOnClose</div>
+              <div class="comp-detail">GATE PASS · OFF=baseline OK · ròng −918 (~1.8% PnL) · APPLY_FUNDING_FEE=false mặc định</div>
+            </div>
+          </li>
+          <li class="comp-item" data-status="todo"
+              data-title="Margin call / cháy tài khoản — TẠM BỎ QUA (mảnh cuối)"
+              data-body="Sizing theo equity thật thay <code>balanceBasic</code> cố định. User tạm bỏ qua để chạy WFO song song.<br><br>Đây là mảnh cuối làm fitness trung thực hoàn toàn.<br><br>⚠️ <strong>Hệ quả:</strong> maxDD trong WFO có thể BỊ HIỂU NHẸ khi Bước 3 chưa tròn (xem GIỚI HẠN ở trên)."
+              data-src="docs/ROADMAP.md §Bước 3">
+            <div class="comp-dot"><div class="dot"></div></div>
+            <div class="comp-text">
+              <div class="comp-name">Margin call / equity thật (mảnh cuối)</div>
+              <div class="comp-detail">⏳ TẠM BỎ QUA · user chốt để chạy WFO · maxDD WFO có thể hiểu nhẹ</div>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Bước 4 -->
+    <div class="layer">
+      <div class="layer-header">
+        <span class="layer-num">B4</span>
+        <span class="layer-name">Walk-Forward (WFO) — Thay cho In-sample Tuning</span>
+        <span class="layer-badge badge-wip">Đang chạy 🔄</span>
+      </div>
+      <div class="layer-body">
+        <ul class="comp-list">
+          <li class="comp-item" data-status="done"
+              data-title="Tiền đề đã xong: genome 18 gene (ADR-0012) + predict-only (TASK-108)"
+              data-body="<strong>ADR-0012:</strong> genome giảm xuống 18 gene (sensitivity giảm — tiền đề sensitivity đã xong).<br><strong>TASK-108:</strong> generate predict-only — không cần re-train khi chạy WFO.<br><br>Hai tiền đề này đã xong → WFO không còn bị gác bởi Bước 3 chưa tròn."
+              data-src="docs/ROADMAP.md §Bước 4 | docs/decisions/0012-genome-18-gene-off-cung-cum-C.md | tasks/108-generate-selector-predict-only.md">
+            <div class="comp-dot"><div class="dot"></div></div>
+            <div class="comp-text">
+              <div class="comp-name">Genome 18 gene (ADR-0012) + predict-only (TASK-108)</div>
+              <div class="comp-detail">Cả hai DONE · WFO không còn bị gác</div>
+            </div>
+          </li>
+          <li class="comp-item" data-status="wip"
+              data-title="WFO đang chạy — leaked V4 (16/17 DONE, w16 OOM)"
+              data-body="Kết quả gần nhất (leaked V4, 16/17 DONE, w16 OOM):<br>• <strong>WFE_median = 0.239</strong> (ngưỡng ≥0.5 → chưa PASS)<br>• <strong>%OOS-dương = 75%</strong> (ngưỡng ≥70% → PASS)<br>• <strong>worst maxDD = 16.6%</strong> (ngưỡng ≤50% → PASS)<br><br>⚠️ Đây là bản leaked (funding leak chưa tháo đủ). Phép so CHÍNH THỨC = cặp V4.1 (leaked re-run vs leak-free v3) — chờ sau GĐ0.<br><br>Chi tiết + trạng thái live: <code>docs/insights/WFO_ROADMAP.md</code>"
+              data-src="docs/insights/WFO_ROADMAP.md | docs/reports/wfo_leakfree_funding_v2_report.md">
+            <div class="comp-dot"><div class="dot"></div></div>
+            <div class="comp-text">
+              <div class="comp-name">WFO chạy — leaked V4 (16/17 DONE)</div>
+              <div class="comp-detail">🔄 WFE=0.239 · %OOS+=75% · worstDD=16.6% · w16 OOM · bản leaked · cặp chính thức chờ sau GĐ0</div>
+            </div>
+          </li>
+        </ul>
+
+        <!-- Pre-registered thresholds -->
+        <div class="info-box">
+          <div class="info-box-label">Ngưỡng verdict pre-registered (KHÔNG thay đổi sau khi chạy):</div>
+          <div class="info-chips">
+            <span>WFE_median <span class="val">≥ 0.5</span></span>
+            <span>%OOS-dương <span class="val">≥ 70%</span></span>
+            <span>worst OOS maxDD <span class="val">≤ 50%</span></span>
+          </div>
+          <div class="info-note">
+            ⚠️ maxDD HIỂU NHẸ khi Bước 3 (margin-call) chưa tròn.
+            Chi tiết + sub-roadmap live → <code style="color:#94a3b8">docs/insights/WFO_ROADMAP.md</code>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bước 5 -->
+    <div class="layer">
+      <div class="layer-header">
+        <span class="layer-num">B5</span>
+        <span class="layer-name">Hợp nhất Một-bộ-não Sim / Product</span>
+        <span class="layer-badge badge-todo">Chưa làm ❌</span>
+      </div>
+      <div class="layer-body">
+        <ul class="comp-list">
+          <li class="comp-item" data-status="todo"
+              data-title="EntryDecisionCore.decide(…) — tách thuần"
+              data-body="Rút <code>EntryDecisionCore.decide(...)</code> thuần: nhận input đã chuẩn hóa, trả CREATE/SKIP + budget.<br><br><code>createOrderBUY</code> (sim) và <code>createOrderBuyRequest</code> (product) chỉ gom input theo môi trường rồi gọi chung hàm này."
+              data-src="docs/ROADMAP.md §Bước 5">
+            <div class="comp-dot"><div class="dot"></div></div>
+            <div class="comp-text">
+              <div class="comp-name">EntryDecisionCore.decide(…) — tách thuần</div>
+              <div class="comp-detail">❌ Chưa · sim + product gọi chung 1 hàm · nhận input chuẩn hóa, trả CREATE/SKIP</div>
+            </div>
+          </li>
+          <li class="comp-item" data-status="todo"
+              data-title="4 điểm lệch sim/product phải thống nhất"
+              data-body="(a) Thứ tự cổng AI vs circuit.<br>(b) Sim bỏ qua AI trong BIG_DOWN còn product không.<br>(c) Ngưỡng budget tối thiểu (<code>&lt;5</code> ở product, không có ở sim) → đưa thành <code>Configs.MIN_BUDGET_PER_ORDER</code> dùng chung.<br>(d) Nguồn predict (sim đọc map vs product ONNX realtime) → đảm bảo cùng giá trị qua cổng consistency.<br><br><strong>Golden test:</strong> cùng chuỗi input → cả hai đường ra cùng quyết định."
+              data-src="docs/ROADMAP.md §Bước 5">
+            <div class="comp-dot"><div class="dot"></div></div>
+            <div class="comp-text">
+              <div class="comp-name">4 điểm lệch sim / product</div>
+              <div class="comp-detail">❌ Chưa · a: thứ tự gate · b: BIG_DOWN · c: MIN_BUDGET · d: predict source → golden test</div>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+  </div><!-- /layers -->
+
+  <!-- Nguyên tắc nền -->
+  <h2>Nguyên tắc nền</h2>
+  <div class="principles">
+    <div class="principle">
+      <span class="principle-num">1</span>
+      Đo <strong>ĐUÔI rủi ro</strong> (profitFactor, worstSingleLoss, payoff, MAE leg đầu). <strong>KHÔNG tin win rate.</strong>
+    </div>
+    <div class="principle">
+      <span class="principle-num">2</span>
+      Mọi tập dùng để <strong>ĐÁNH GIÁ</strong> phải là tập KHÔNG tham gia quyết định nào — kể cả quyết định bằng mắt người. Nhìn một tập nhiều lần để chọn = đã overfit lên nó.
+    </div>
+    <div class="principle">
+      <span class="principle-num">3</span>
+      Tách bạch: đo <strong>MODEL</strong> (Bước 1) ≠ đo <strong>CHIẾN LƯỢC</strong> (Bước 2–4). Lẫn hai cái là gốc mọi nhầm lẫn.
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <strong>Cách cập nhật trạng thái:</strong>
+    Tìm bước cần sửa bằng <code>Ctrl+F</code> → sửa <code>data-status="done|wip|todo"</code> trên thẻ <code>&lt;li class="comp-item"&gt;</code>
+    hoặc <code>class="layer-badge badge-..."</code> trên header.
+    Sửa <code>data-body</code> và <code>data-src</code> khi nội dung thay đổi.
+    Commit theo quy ước project (<code>docs(122): ...</code>).
+    <br><br>
+    <strong>Nguồn sự thật:</strong>
+    <code>docs/ROADMAP.md</code> (lộ trình tổng — nội dung gốc trang này) ·
+    <code>docs/insights/WFO_ROADMAP.md</code> (Bước 4 chi tiết + trạng thái live) ·
+    <code>docs/FINDINGS.md</code> (kết luận đo lường) ·
+    <code>tasks/107..122</code> (GATE kết quả từng bước)
+    <br><br>
+    <strong>Cập nhật lần cuối:</strong> 2026-07-04 (TASK-122)
+  </div>
+
+</div><!-- /container -->
+
+<!-- Tooltip overlay -->
+<div class="tooltip-overlay" id="overlay" onclick="closeOverlay(event)">
+  <div class="tooltip-box">
+    <button class="tooltip-close" onclick="document.getElementById('overlay').classList.remove('active')">✕</button>
+    <div class="tooltip-title" id="tip-title"></div>
+    <div class="tooltip-body" id="tip-body"></div>
+    <div class="tooltip-src" id="tip-src"></div>
+  </div>
+</div>
+
+<script>
+  document.querySelectorAll('.comp-item').forEach(el => {
+    el.addEventListener('click', () => {
+      showTip(
+        el.dataset.title || el.querySelector('.comp-name').textContent,
+        el.dataset.body  || '',
+        el.dataset.src   || ''
+      );
+    });
+  });
+
+  function showTip(title, body, src) {
+    document.getElementById('tip-title').textContent = title;
+    document.getElementById('tip-body').innerHTML = body;
+    document.getElementById('tip-src').textContent = src ? '\u{1F4C4} ' + src : '';
+    document.getElementById('overlay').classList.add('active');
+  }
+
+  function closeOverlay(e) {
+    if (e.target === document.getElementById('overlay')) {
+      document.getElementById('overlay').classList.remove('active');
+    }
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') document.getElementById('overlay').classList.remove('active');
+  });
+</script>
+</body>
+</html>
