@@ -1,7 +1,7 @@
 {
-  "id": "chuyendinh/model-quality-full",
-  "title": "model-quality-full",
-  "code_file": "model-quality-full.py",
+  "id": "chuyendinh/model-quality-t128full",
+  "title": "model-quality-t128full",
+  "code_file": "model-quality-t128full.py",
   "language": "python",
   "kernel_type": "script",
   "is_private": true,
