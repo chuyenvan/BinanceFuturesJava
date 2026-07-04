@@ -579,11 +579,6 @@ public class FundingDataCollectionManager {
             return historyManager.getReturn(symbol, minutes);
         }
 
-        private float calculateDistFromLow24H(String symbol, KlineObjectSimple kline) {
-            Float low24 = historyManager.getLow24H(symbol);
-            return (low24 != null && low24 > 0) ? (kline.priceClose - low24) / low24 : 0.0f;
-        }
-
         private float calculateVolatilityShock(String symbol, KlineObjectSimple kline) {
             float avgRange = historyManager.getAverageRange(symbol, 20);
             float currentRange = kline.maxPrice - kline.minPrice;

@@ -78,8 +78,6 @@ public class BackfillTickerPilot {
         }
     }
 
-    private static String shortOf(String full) { return full.endsWith("USDT") ? full.substring(0, full.length() - 4) : full; }
-
     // ===================== INSPECT (read-only) =====================
     private static void inspect(String symbol) throws Exception {
         List<long[]> bars = loadBars(symbol);   // [timeMs] only needed for sample key

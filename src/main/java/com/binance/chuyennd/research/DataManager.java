@@ -69,24 +69,4 @@ public class DataManager {
 
 
 
-    // --- HÀM TIỆN ÍCH ĐỂ ĐỌC/GHI FILE ---
-    private static <T> T readObjectFromFile(String filePath) {
-        File file = new File(filePath);
-        if (!file.exists()) return null;
-        try (ObjectInputStream ois = new ObjectInputStream(new BufferedInputStream(new FileInputStream(file)))) {
-            return (T) ois.readObject();
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    private static void writeObjectToFile(String filePath, Object obj) {
-        if (DATA_DIR.startsWith("/kaggle/input")) return;
-        try (ObjectOutputStream oos = new ObjectOutputStream(new BufferedOutputStream(new FileOutputStream(filePath)))) {
-            oos.writeObject(obj);
-            LOG.info("💾 Đã dump dữ liệu ra file: {}", filePath);
-        } catch (Exception e) {
-            LOG.error("❌ Lỗi ghi file: {}", filePath);
-        }
-    }
 }
