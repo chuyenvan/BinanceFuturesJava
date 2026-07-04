@@ -134,6 +134,14 @@ KHÔNG hardcode path tuyệt đối theo slug — layout đã đổi 1 lần, c�
 - ⚠️ Jobstore WFO hiện tại là Aerospike **LOCAL Oracle** → Kaggle KHÔNG poll được; muốn Kaggle làm WFO worker
   phải set `WFO_STATE_HOST` về 226 thật (xem WFO_ROADMAP §4).
 
+## 3d. GIỚI HẠN concurrency đọc ticker 226 từ Kaggle (đo 2026-07-04)
+
+5 worker SMART_CACHE đồng thời → 226 (15GB RAM) drop connection: AerospikeException Connection Error -8 / EOFException
+→ 9/17 job FAIL. 1 worker: OK (test-1, 744s/window). **Quy tắc: tối đa 2 worker Kaggle đọc ticker 226 đồng thời**
+(2 đang kiểm chứng thực nghiệm 2026-07-04; nếu 2 cũng lỗi → hạ 1). Muốn >2 phải chuyển ticker vào dataset file.
+Ghi chú thêm: Binance API bị chặn địa lý từ IP Kaggle (restricted location) — exchange-info fetch lỗi nhưng
+KHÔNG chặn job (đã có 8 job DONE vượt qua); không được thêm bước nào phụ thuộc Binance API trong kernel.
+
 ## 4. System.exit(0) — Bắt buộc
 
 Kaggle kernel **KHÔNG tự thoát** khi `main()` kết thúc nếu có non-daemon thread còn sống.
