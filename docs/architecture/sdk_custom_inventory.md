@@ -31,3 +31,7 @@ bất kỳ ai định "thay lib chuẩn" hay "xoá code SDK".
    deserialize không thấy bằng grep tĩnh). Phương án 0-rủi-ro: giữ nguyên cả nhánh — code nằm im không tốn gì.
 3. Mọi thay đổi vùng này (nếu có) phải: branch riêng + review Uni + KHÔNG deploy 242 cho tới khi test huỷ-lệnh
    + stop-loss trên testnet/small-capital.
+
+## QUYẾT ĐỊNH (Uni, 2026-07-04 đêm)
+GIỮ SDK vendored nguyên trạng — KHÔNG thay lib chuẩn, KHÔNG xoá nhánh chết (kể cả RestApiRequestImpl/enum).
+Lý do: 3 fix sống còn + hành vi đã tôi luyện qua sự cố tiền thật; mọi thay đổi tương lai theo mục 3 ở trên.
