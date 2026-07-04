@@ -29,3 +29,10 @@ jobstore 226 ns=ticker) — chỉ khác đúng 1 biến: **N=30** vs **N=100**. 
 - KHÔNG so số tuyệt đối với các run Oracle (khác nguồn ticker — quy tắc 1-experiment-1-node).
 **Caveat ghi trước:** run N=30-Kaggle cũng cho phép đối chiếu THÔ với vế A N=30-Oracle để lượng hoá độ lệch nguồn ticker
 (chỉ báo cáo Δ, không kết luận).
+
+## PHỤ LỤC (ghi 2026-07-04 06:3x — TRƯỚC khi có số Kaggle): replication trên Kaggle
+- Chạy lại trọn bộ thí nghiệm (bắt đầu vế A) trên fleet Kaggle: cùng jar V4.1, cùng dataset file (md5 verify),
+  jobstore = 226 thật, ticker = Aerospike 226 (KHÁC nguồn Oracle-local — đã đo file≠aerospike lệch số).
+- Quy tắc đọc: chỉ so Δ NỘI BỘ mỗi node-type (Kaggle-A vs Kaggle-B...); KHÔNG so số tuyệt đối chéo node.
+  Giá trị: nếu hướng và bậc của Δ trùng giữa 2 node-type → kết luận robust hơn với nguồn ticker.
+- Test-1-kernel đo tốc độ trước khi fleet (KAGGLE_RULES §6).
