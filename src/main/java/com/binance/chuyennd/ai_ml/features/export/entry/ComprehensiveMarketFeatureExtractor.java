@@ -260,11 +260,4 @@ public class ComprehensiveMarketFeatureExtractor {
         features.weekOfMonth = c.get(Calendar.WEEK_OF_MONTH);
         features.monthOfYear = c.get(Calendar.MONTH) + 1;
     }
-
-    private void validateAndCleanFeatures(MarketFeatures f) {
-        if (Float.isNaN(f.momentum1M)) f.momentum1M = 0.0f;
-        if (Float.isNaN(f.rsi14)) f.rsi14 = 50.0f;
-        if (Float.isInfinite(f.advanceDeclineRatio)) f.advanceDeclineRatio = 10.0f;
-        if (Float.isNaN(f.fundingRateRaw)) f.fundingRateRaw = 0.0f;
-    }
 }
