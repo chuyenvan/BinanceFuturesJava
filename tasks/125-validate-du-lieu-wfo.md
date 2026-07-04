@@ -20,4 +20,17 @@
 - Phát hiện bất thường → mục "⚠ CẦN XỬ LÝ" đầu report. Commit report + Kết quả vào task + marker /d/claudedata/CCD125_DONE.
 
 ## Kết quả
-<CCD điền>
+
+**HOÀN TẤT cả 5 mục (2026-07-04, CCD opus lượt 2).** Report đầy đủ: `docs/reports/wfo_data_validation_20260704.md`. Tất cả READ-ONLY, tool `nice -n 15 -Xmx2g`, file tạm chỉ `~/claudedata/validate125/`.
+
+| Mục | Trạng thái | Tóm tắt |
+|---|---|---|
+| 1. Coverage ticker Aerospike | **PASS** | 1886 ngày; 0 ngày mất; 1 partial (`20210101`=1020 phút, đúng boundary GMT+7); `20251231`+`2025Q2` sạch 1440 phút; symbol/phút min/median/max = 75/195/1131 |
+| 2. 3 bộ WfoDataset (md5/count/range/funding-quý) | **PASS** (2 WARN) | 9/9 md5 khớp manifest; count khớp; funding-quý trùng audit; WARN: lệch cửa-sổ range funding giữa 3 bộ |
+| 3. Gate `ai_pred_market_gate_wfo` | **PASS** | count=1,795,680 khớp CSV; range khớp; mẫu 1001 record decode: mismatch=0 missing=0 NaN=0 |
+| 4. Ticker file `kaggle_data_hpo/` | **PASS** | export bù ĐÃ XONG trong phiên (🎉 1886 file, 11G); liên tục 0 gap vs day-list mục 1; gunzip 1886/1886 bad=0; 3 spot-check (2021/2023/2025) DIFF-0 khớp Aerospike bit-count |
+| 5. Symbol consistency | **PASS** (1 WARN) | funding wf: 669 symbolId → 669 tên (0 orphan); WARN: 4 ghost cặp-USDC (`…USDCUSDT`) do lỗi normalize `endsWith("USDT")` |
+
+**Không phát hiện mất/hỏng dữ liệu.** 2 WARN (4 ghost USDC-pair; lệch range funding) đã ghi mục "⚠ CẦN XỬ LÝ" đầu report — tác động nhỏ, cần quyết định normalize symbol / xác nhận cố ý. Mục 3 & 5 đã re-run độc lập lượt 2 → tái lập chính xác số liệu lượt 1.
+
+Ghi chú: process export JVM (pid 467639) vẫn treo pgrep sau khi in 🎉 (lỗi non-daemon-thread thiếu `System.exit(0)` đã biết) — DATA hoàn chỉnh & bất biến nên đo mục 4 an toàn. KHÔNG kill (ngoài hàng rào READ-ONLY/không-đụng-process).
