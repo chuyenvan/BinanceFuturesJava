@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lộ trình kiểm chứng 6 Bước — BinanceFuturesJava</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0f172a;
+    color: #e2e8f0;
+    min-height: 100vh;
+    padding: 24px 16px 48px;
+  }
+  h1 { font-size: 1.6rem; font-weight: 700; color: #f1f5f9; margin-bottom: 4px; }
+  h2 { font-size: 1.1rem; font-weight: 600; color: #94a3b8; margin: 32px 0 14px; text-transform: uppercase; letter-spacing: .06em; }
+  .subtitle { color: #64748b; font-size: .875rem; margin-bottom: 20px; }
+  .container { max-width: 960px; margin: 0 auto; }
+
+  .legend {
+    display: flex; gap: 20px; flex-wrap: wrap;
+    background: #1e293b; border: 1px solid #334155;
+    border-radius: 8px; padding: 12px 16px; margin-bottom: 28px;
+    font-size: .8rem; align-items: center;
+  }
+  .legend-title { color: #94a3b8; font-weight: 600; margin-right: 4px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .dot-done    { background: #22c55e; }
+  .dot-wip     { background: #f59e0b; }
+  .dot-todo    { background: #ef4444; }
+  .dot-partial { background: #a78bfa; }
+
+  .steps { display: flex; flex-direction: column; gap: 14px; }
+  .step {
+    background: #1e293b; border: 1px solid #334155; border-radius: 10px; overflow: hidden;
+  }
+  .step[data-status="done"]    { border-left: 4px solid #22c55e; }
+  .step[data-status="wip"]     { border-left: 4px solid #f59e0b; }
+  .step[data-status="todo"]    { border-left: 4px solid #ef4444; }
+  .step[data-status="partial"] { border-left: 4px solid #a78bfa; }
+
+  .step-header {
+    display: flex; align-items: center; gap: 14px;
+    padding: 15px 18px; cursor: pointer; user-select: none; transition: background .15s;
+  }
+  .step-header:hover { background: #263348; }
+  .step-num {
+    font-size: .7rem; font-weight: 700; color: #475569;
+    background: #0f172a; border-radius: 4px; padding: 3px 10px; flex-shrink: 0; letter-spacing: .05em;
+  }
+  .step-name { font-size: .95rem; font-weight: 600; color: #e2e8f0; flex: 1; }
+  .step-badge { font-size: .72rem; font-weight: 700; padding: 3px 10px; border-radius: 20px; white-space: nowrap; }
+  .badge-done    { background: #14532d; color: #4ade80; border: 1px solid #22c55e44; }
+  .badge-wip     { background: #451a03; color: #fbbf24; border: 1px solid #f59e0b44; }
+  .badge-todo    { background: #450a0a; color: #f87171; border: 1px solid #ef444444; }
+  .badge-partial { background: #1c1917; color: #a78bfa; border: 1px solid #8b5cf644; }
+  .chevron { color: #475569; font-size: .8rem; margin-left: 6px; transition: transform .2s; }
+  .chevron.open { transform: rotate(180deg); }
+
+  .step-body { padding: 0 18px 16px; }
+  .step-desc { font-size: .84rem; color: #94a3b8; line-height: 1.7; margin-bottom: 10px; }
+  .step-desc code { background: #0f172a; padding: 1px 5px; border-radius: 3px; font-family: monospace; font-size: .8rem; color: #93c5fd; }
+
+  .metrics { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0; }
+  .metric {
+    background: #0f172a; border: 1px solid #334155; border-radius: 8px;
+    padding: 8px 14px; text-align: center; min-width: 120px; flex: 1;
+  }
+  .metric-label { font-size: .68rem; color: #64748b; margin-bottom: 2px; }
+  .metric-value { font-size: .95rem; font-weight: 700; }
+
+  .verdict-box {
+    border-radius: 8px; padding: 12px 14px; margin: 10px 0; font-size: .82rem; line-height: 1.6;
+  }
+  .verdict-pass { background: #14532d22; border: 1px solid #22c55e44; }
+  .verdict-pass .v-title { color: #4ade80; font-weight: 700; margin-bottom: 4px; }
+  .verdict-wip  { background: #451a0322; border: 1px solid #f59e0b44; }
+  .verdict-wip  .v-title { color: #fbbf24; font-weight: 700; margin-bottom: 4px; }
+  .v-detail { color: #94a3b8; }
+
+  .verbatim {
+    background: #0a0f1a; border: 1px solid #1e3a5f; border-left: 3px solid #3b82f6;
+    border-radius: 8px; padding: 14px 16px; margin: 10px 0;
+    font-size: .79rem; color: #94a3b8; line-height: 1.8;
+    white-space: pre-wrap; font-family: 'Segoe UI', system-ui, sans-serif;
+  }
+  .verbatim strong { color: #e2e8f0; }
+  .verbatim code { background: #0f172a; padding: 1px 4px; border-radius: 3px; font-family: monospace; color: #93c5fd; }
+
+  .warn-note {
+    background: #451a0322; border: 1px solid #f59e0b44;
+    border-radius: 6px; padding: 8px 12px; margin-top: 8px;
+    font-size: .78rem; color: #fbbf24; line-height: 1.6;
+  }
+
+  .cross-link {
+    display: inline-block; margin-top: 10px; font-size: .8rem;
+    color: #60a5fa; text-decoration: none; padding: 4px 10px;
+    background: #0f172a; border: 1px solid #1e3a5f; border-radius: 6px;
+  }
+  .cross-link:hover { border-color: #3b82f6; }
+
+  .footer {
+    margin-top: 40px; padding: 16px 18px;
+    background: #1e293b; border: 1px solid #334155; border-radius: 10px;
+    font-size: .78rem; color: #64748b; line-height: 1.8;
+  }
+  .footer strong { color: #94a3b8; }
+  .footer code { background: #0f172a; padding: 1px 6px; border-radius: 4px; font-family: monospace; }
+  .footer a { color: #60a5fa; text-decoration: none; }
+  .footer a:hover { text-decoration: underline; }
+
+  @media (max-width: 600px) {
+    h1 { font-size: 1.25rem; }
+    .step-name { font-size: .85rem; }
+    .metrics { flex-direction: column; }
+    .step-badge { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <h1>Lộ trình kiểm chứng 6 Bước</h1>
+  <p class="subtitle">BinanceFuturesJava &nbsp;|&nbsp; Nguồn: <code style="font-size:.75rem;color:#94a3b8">docs/ROADMAP.md</code> &nbsp;|&nbsp; Cập nhật: <strong style="color:#e2e8f0">2026-07-04</strong></p>
+
+  <div class="legend">
+    <span class="legend-title">Trạng thái:</span>
+    <div class="legend-item"><div class="dot dot-done"></div> Xong / PASS</div>
+    <div class="legend-item"><div class="dot dot-wip"></div> Đang làm / Đang chạy</div>
+    <div class="legend-item"><div class="dot dot-todo"></div> Chưa làm</div>
+    <div class="legend-item"><div class="dot dot-partial"></div> Một phần / Song song</div>
+    <span style="color:#64748b;margin-left:auto;font-size:.75rem">Click tiêu đề để mở / đóng</span>
+  </div>
+
+  <h2>Mục tiêu xuyên suốt</h2>
+  <div style="background:#1e293b;border:1px solid #334155;border-radius:8px;padding:14px 18px;font-size:.84rem;color:#94a3b8;line-height:1.7;margin-bottom:8px">
+    <strong style="color:#e2e8f0">Chứng minh bằng số liệu rằng mô hình có edge thật và sống sót qua cú sập,
+    TRƯỚC khi tối ưu thêm hoặc bật tiền thật.</strong><br>
+    Làm đúng thứ tự — mỗi bước gác cổng cho bước sau. Không nhảy cóc.<br>
+    <span style="color:#64748b;font-size:.78rem">
+      Bối cảnh: bot long-only · leverage 1 · martingale/DCA · không hard stop-loss.
+      Rủi ro nằm ở ĐUÔI (cú sập hiếm), win rate luôn cao giả tạo — đo MAE leg đầu, profitFactor, Calmar.
+    </span>
+  </div>
+
+  <h2>6 Bước</h2>
+  <div class="steps">
+
+    <!-- ── Bước 0 ── -->
+    <div class="step" data-status="partial">
+      <div class="step-header" onclick="toggle(this)">
+        <span class="step-num">BƯỚC 0</span>
+        <span class="step-name">Bịt look-ahead &amp; slippage</span>
+        <span class="step-badge badge-partial">✅ Áp xong · ⏳ Đo đối chứng chưa</span>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="step-body" style="display:none">
+        <p class="step-desc">
+          Cấm khớp nội-nến (<code>BLOCK_INTRABAR_LOOKAHEAD</code>) · trừ slippage 2 chân
+          (<code>SLIPPAGE_RATE</code>, <code>APPLY_SLIPPAGE</code>) ·
+          <code>BacktestIntegrityGuard.assertProductionGrade()</code> cắm ở dòng đầu
+          <code>simulatorWithInitEntry</code> — tự chặn nếu chạy backtest với look-ahead/slippage/fee tắt
+          (xác minh qua AUDIT/ADR-0002).
+        </p>
+        <div class="warn-note">
+          ⏳ <strong>Còn lại:</strong> chạy đối chứng (guard bật vs tắt) để đo "ảo giác look-ahead".
+          Nếu PnL sụp khi bật guard → cấu hình cũ chưa từng có lãi thật → mọi tham số HPO cũ phải bỏ,
+          chạy lại từ đầu, bump <code>CONFIG_VERSION</code>.
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Bước 1 ── -->
+    <div class="step" data-status="todo">
+      <div class="step-header" onclick="toggle(this)">
+        <span class="step-num">BƯỚC 1</span>
+        <span class="step-name">Đo chất lượng MODEL độc lập (rẻ nhất, gác cổng mọi thứ)</span>
+        <span class="step-badge badge-todo">Chưa làm</span>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="step-body" style="display:none">
+        <p class="step-desc">
+          <strong style="color:#e2e8f0">Câu hỏi:</strong> model AI có tín hiệu thật không, hay chỉ khớp dữ liệu train?<br><br>
+          <strong style="color:#f87171">Chặn trước:</strong> model hiện train trên CẢ 5 năm + 2 lỗi leak
+          (scaler fit toàn bộ; funding model dùng <code>train_test_split</code> random/stratify)
+          → không có dữ liệu out-of-sample trung thực.<br><br>
+          <strong style="color:#e2e8f0">Phải làm:</strong> re-train ĐÚNG CÁCH — cắt theo thời gian,
+          scaler fit chỉ trên train, giữ 6–12 tháng holdout model TUYỆT ĐỐI không thấy.
+          Đo <strong style="color:#e2e8f0">IC (Spearman predicted-vs-realized)</strong> và
+          <strong style="color:#e2e8f0">hit-rate có điều kiện</strong>, tách theo regime (tăng/sập/đi ngang).
+        </p>
+        <div class="verdict-wip verdict-box">
+          <div class="v-title">Phán quyết</div>
+          <div class="v-detail">
+            IC dương &amp; ổn định theo tuần → model có edge, đi tiếp.<br>
+            IC ~0 → model rỗng, dừng và build lại (đổi feature/target/label) — mọi HPO phía sau vô nghĩa.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Bước 2 ── -->
+    <div class="step" data-status="done">
+      <div class="step-header" onclick="toggle(this)">
+        <span class="step-num">BƯỚC 2</span>
+        <span class="step-name">Ablation: edge đến từ AI hay từ DCA?</span>
+        <span class="step-badge badge-done">✅ PASS 2026-06-23</span>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="step-body" style="display:none">
+        <div class="verdict-pass verdict-box">
+          <div class="v-title">✅ PASS — commit a043317 · AblationStep2Tool · FULL 2021–2026</div>
+          <div class="v-detail">3 chế độ A (AI bật) · B (tắt AI) · C (placebo cùng số lệnh). So ở mức LEG ĐẦU.</div>
+        </div>
+        <div class="metrics">
+          <div class="metric">
+            <div class="metric-label">A — AI bật (control)</div>
+            <div class="metric-value" style="color:#4ade80">+69,217</div>
+            <div class="metric-label" style="margin-top:3px">avgMAE 3.36% · Calmar 3.40</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">B — No-AI (all pass)</div>
+            <div class="metric-value" style="color:#f87171">−13,703</div>
+            <div class="metric-label" style="margin-top:3px">avgMAE 6.01% · Calmar −0.45</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">C — Placebo</div>
+            <div class="metric-value" style="color:#f87171">−10,778</div>
+            <div class="metric-label" style="margin-top:3px">avgMAE 5.10% · Calmar −0.36</div>
+          </div>
+        </div>
+        <p class="step-desc" style="margin-top:12px">
+          A có MAE nông hơn B/C + Calmar cao hơn placebo C (cùng passRate) →
+          <strong style="color:#4ade80">AI CÓ EDGE THẬT</strong>.
+          B/C đều LỖ → DCA một mình không cõng nổi; lãi đến từ chất lượng chọn lọc của AI.
+          <strong style="color:#4ade80">Đủ điều kiện vào Bước 4.</strong>
+        </p>
+      </div>
+    </div>
+
+    <!-- ── Bước 3 ── -->
+    <div class="step" data-status="wip">
+      <div class="step-header" onclick="toggle(this)">
+        <span class="step-num">BƯỚC 3</span>
+        <span class="step-name">Mô hình hóa "cái chết" trong sim + sửa tư thế rủi ro</span>
+        <span class="step-badge badge-wip">🔄 2 Track song song</span>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="step-body" style="display:none">
+        <p class="step-desc">
+          Để backtest ĐƯỢC PHÉP sụp thì fitness mới trung thực. Circuit breaker MARGIN chặn mở mới khi
+          margin tổng ≥ 50%. Funding fee tính 1 lượt khi đóng. Margin-call/cháy tài khoản (mảnh cuối, tạm bỏ qua).
+        </p>
+        <!-- Verbatim status block from ROADMAP.md §Bước 3 -->
+        <div class="verbatim"><strong>▶️ TRẠNG THÁI (cập nhật 2026-06-29) — 2 TRACK SONG SONG:</strong>
+• <strong>Track A — Bước 3 (ruin):</strong> ✅ circuit breaker MARGIN 0.50 CHỐT + COMMIT (<code>3041257</code>, CONFIG_VERSION v10).
+  ✅ funding fee code lại (tính 1 lượt khi đóng) + GATE PASS (OFF totalPnl=50311, trades=35774 khớp baseline)
+  + mặc định OFF (<code>APPLY_FUNDING_FEE=false</code>, bật ở HPO/Golden cuối). ⏳ CÒN LẠI: margin-call/equity thật
+  (mảnh cuối) — user chốt TẠM BỎ QUA để chạy WFO song song. <em>(funding code uncommitted, chờ user duyệt commit.)</em>
+• <strong>Track B — Bước 4 (WFO):</strong> sensitivity giảm gene XONG ([ADR-0012]: 18 gene); WFO framework ĐÃ DUYỆT + 5 quyết định chốt
+  (<code>insights/WFO_FRAMEWORK_DESIGN.md</code> mục 6, 2026-06-29) → bắt đầu code.
+— Hai track KHÔNG tuần tự: WFO không còn "gác" sau Bước 3 (sensitivity là tiền đề đã xong).
+⚠️ maxDD trong WFO có thể BỊ HIỂU NHẸ vì chưa có margin-call thật (Bước 3 chưa tròn).
+— <em>(Lịch sử: 2026-06-28 từng chốt "gác Bước 4 để vào thẳng Bước 3"; cap %vốn/cụm + RunDcaCapBacktest đã GỠ
+   — vô dụng trên danh mục, lá chắn thật là trần margin tổng.)</em>
+<strong>GIỚI HẠN khi đọc lại WFO sau này:</strong> chưa có margin-call thật nên maxDD có thể HIỂU NHẸ.</div>
+        <div class="metrics" style="margin-top:12px">
+          <div class="metric">
+            <div class="metric-label">Circuit Breaker</div>
+            <div class="metric-value" style="color:#4ade80;font-size:.9rem">MARGIN 0.50</div>
+            <div class="metric-label" style="margin-top:3px">commit 3041257 ✅</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Funding Fee</div>
+            <div class="metric-value" style="color:#4ade80;font-size:.9rem">GATE PASS</div>
+            <div class="metric-label" style="margin-top:3px">OFF mặc định ✅</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Margin-Call / Equity</div>
+            <div class="metric-value" style="color:#f87171;font-size:.9rem">Tạm bỏ qua</div>
+            <div class="metric-label" style="margin-top:3px">⏳ Mảnh cuối</div>
+          </div>
+        </div>
+        <div class="warn-note">
+          ⚠️ Chưa có margin-call thật (sizing theo equity) → maxDD WFO hiện tại có thể HIỂU NHẸ.
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Bước 4 ── -->
+    <div class="step" data-status="wip">
+      <div class="step-header" onclick="toggle(this)">
+        <span class="step-num">BƯỚC 4</span>
+        <span class="step-name">Walk-Forward (WFO) — thay cho in-sample tuning</span>
+        <span class="step-badge badge-wip">🔄 Đang chạy</span>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="step-body" style="display:none">
+        <p class="step-desc">
+          WFO rolling: <strong style="color:#e2e8f0">train = OOS = bước trượt</strong>, OOS không chồng lấn.
+          Output là <strong style="color:#e2e8f0">PHÁN QUYẾT "pipeline có generalize không"</strong>,
+          KHÔNG phải 1 bộ tham số. Bộ deploy sinh ở pha HPO-cuối riêng nếu PASS.
+        </p>
+        <div class="verdict-wip verdict-box">
+          <div class="v-title">Pre-registered verdict (chốt TRƯỚC khi nhìn)</div>
+          <div class="v-detail">
+            <strong style="color:#e2e8f0">WFE_median ≥ 0.5</strong> &nbsp;·&nbsp;
+            <strong style="color:#e2e8f0">%OOS-dương ≥ 70%</strong> &nbsp;·&nbsp;
+            <strong style="color:#e2e8f0">worst OOS maxDD ≤ 50%</strong> (tỷ lệ vốn)
+          </div>
+        </div>
+        <div class="metrics" style="margin-top:10px">
+          <div class="metric">
+            <div class="metric-label">Vế A — V4.1 leak-free</div>
+            <div class="metric-value" style="color:#f87171;font-size:.85rem">FAIL/REVIEW</div>
+            <div class="metric-label" style="margin-top:3px">WFE 0.227 · %+ 47.1% · DD 30.7%</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Vế B — V4.1 restricted</div>
+            <div class="metric-value" style="color:#fbbf24;font-size:.85rem">Đang chạy</div>
+            <div class="metric-label" style="margin-top:3px">Oracle · từ 09:49 2026-07-04</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Vế C — re-run w16</div>
+            <div class="metric-value" style="color:#94a3b8;font-size:.85rem">Chờ lượt</div>
+            <div class="metric-label" style="margin-top:3px">Sau vế B (RAM giải phóng)</div>
+          </div>
+        </div>
+        <a class="cross-link" href="roadmap_wfo.html">→ Chi tiết WFO: roadmap_wfo.html</a>
+        <div class="warn-note" style="margin-top:10px">
+          ⚠️ maxDD HIỂU NHẸ khi Bước 3 (margin-call) chưa tròn. Số OOS các window &lt;2025-06 bị tâng vì pred sinh in-sample.
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Bước 5 ── -->
+    <div class="step" data-status="todo">
+      <div class="step-header" onclick="toggle(this)">
+        <span class="step-num">BƯỚC 5</span>
+        <span class="step-name">Hợp nhất một-bộ-não sim/product</span>
+        <span class="step-badge badge-todo">Chưa làm</span>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="step-body" style="display:none">
+        <p class="step-desc">
+          Rút <code>EntryDecisionCore.decide(...)</code> thuần: nhận input đã chuẩn hóa, trả <code>CREATE/SKIP</code> + budget.
+          <code>createOrderBUY</code> (sim) và <code>createOrderBuyRequest</code> (product) chỉ gom input rồi gọi chung hàm này.
+        </p>
+        <p class="step-desc">
+          <strong style="color:#e2e8f0">4 điểm lệch phải thống nhất:</strong><br>
+          (a) thứ tự cổng AI vs circuit breaker<br>
+          (b) sim bỏ qua AI trong BIG_DOWN còn product không<br>
+          (c) ngưỡng budget tối thiểu (<code>&lt;5</code> ở product → <code>Configs.MIN_BUDGET_PER_ORDER</code>)<br>
+          (d) nguồn predict: sim đọc map vs product ONNX realtime → consistency gate.
+        </p>
+        <div class="verdict-wip verdict-box">
+          <div class="v-title">Golden test</div>
+          <div class="v-detail">Cùng chuỗi input → cả hai đường (sim + product) ra cùng quyết định.</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /steps -->
+
+  <h2>Vận hành về sau</h2>
+  <div style="background:#1e293b;border:1px solid #334155;border-radius:8px;padding:14px 18px;font-size:.82rem;color:#94a3b8;line-height:1.8">
+    <strong style="color:#e2e8f0">Tham số HPO:</strong> re-fit định kỳ theo nhịp WFO đã chứng minh (vd mỗi 2 tháng).<br>
+    <strong style="color:#e2e8f0">Model AI:</strong> cập nhật theo TRIGGER drift (IC/hit-rate tụt dưới ngưỡng) + lịch nền (vd mỗi quý).
+    Mỗi lần đổi model BẮT BUỘC: re-train → export predict → HPO/WFO → bump CONFIG_VERSION → deploy.<br>
+    <strong style="color:#e2e8f0">Validate product vs backtest:</strong> định kỳ so PnL/số lệnh/DD; lệch quá ngưỡng → cảnh báo.
+  </div>
+
+  <div class="footer">
+    <strong>Nguồn:</strong> <code>docs/ROADMAP.md</code><br>
+    <strong>Chi tiết Bước 4 (WFO):</strong> <a href="roadmap_wfo.html">roadmap_wfo.html</a> · <code>docs/insights/WFO_ROADMAP.md</code><br>
+    <strong>Kiến trúc WFO 6 lớp:</strong> <a href="wfo_architecture.html">wfo_architecture.html</a><br>
+    <strong>Kiến trúc toàn hệ thống:</strong> <a href="system_architecture_all.html">system_architecture_all.html</a><br>
+    <strong>Nguyên tắc:</strong> đo ĐUÔI rủi ro (profitFactor · worstSingleLoss · payoff · MAE leg đầu), KHÔNG tin win rate.<br>
+    Mọi tập dùng để ĐÁNH GIÁ phải là tập KHÔNG tham gia quyết định nào — nhìn nhiều lần = đã overfit lên nó.
+  </div>
+
+</div><!-- /container -->
+
+<script>
+function toggle(header) {
+  const body = header.nextElementSibling;
+  const chevron = header.querySelector('.chevron');
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'block';
+  if (chevron) chevron.classList.toggle('open', !open);
+}
+</script>
+</body>
+</html>

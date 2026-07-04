@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lộ trình WFO chi tiết — BinanceFuturesJava</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0f172a;
+    color: #e2e8f0;
+    min-height: 100vh;
+    padding: 24px 16px 48px;
+  }
+  h1 { font-size: 1.6rem; font-weight: 700; color: #f1f5f9; margin-bottom: 4px; }
+  h2 { font-size: 1.1rem; font-weight: 600; color: #94a3b8; margin: 32px 0 14px; text-transform: uppercase; letter-spacing: .06em; }
+  h3 { font-size: .9rem; font-weight: 600; color: #cbd5e1; margin-bottom: 8px; }
+  .subtitle { color: #64748b; font-size: .875rem; margin-bottom: 20px; }
+  .container { max-width: 960px; margin: 0 auto; }
+
+  /* Legend */
+  .legend {
+    display: flex; gap: 20px; flex-wrap: wrap;
+    background: #1e293b; border: 1px solid #334155;
+    border-radius: 8px; padding: 12px 16px; margin-bottom: 28px;
+    font-size: .8rem; align-items: center;
+  }
+  .legend-title { color: #94a3b8; font-weight: 600; margin-right: 4px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+  .dot-done  { background: #22c55e; }
+  .dot-wip   { background: #f59e0b; }
+  .dot-todo  { background: #ef4444; }
+  .dot-wait  { background: #64748b; }
+
+  /* Status badge */
+  .badge {
+    display: inline-block; font-size: .68rem; font-weight: 700;
+    padding: 2px 8px; border-radius: 20px; white-space: nowrap;
+  }
+  .badge-done  { background: #14532d; color: #4ade80; border: 1px solid #22c55e44; }
+  .badge-wip   { background: #451a03; color: #fbbf24; border: 1px solid #f59e0b44; }
+  .badge-todo  { background: #450a0a; color: #f87171; border: 1px solid #ef444444; }
+  .badge-wait  { background: #1e293b; color: #94a3b8; border: 1px solid #33415544; }
+  .badge-fail  { background: #450a0a; color: #fca5a5; border: 1px solid #ef444466; }
+
+  /* ── TRẠNG THÁI CHỐT box ── */
+  .status-chot {
+    background: #0a1628; border: 1px solid #1e3a5f; border-left: 4px solid #3b82f6;
+    border-radius: 10px; padding: 16px 18px; margin-bottom: 8px;
+  }
+  .status-chot .chot-header {
+    font-size: .8rem; font-weight: 700; color: #93c5fd; margin-bottom: 12px; letter-spacing: .04em;
+  }
+  .status-row { display: flex; gap: 8px; margin-bottom: 8px; font-size: .82rem; line-height: 1.65; flex-wrap: wrap; }
+  .status-icon { flex-shrink: 0; width: 20px; font-size: .9rem; }
+  .status-text { flex: 1; min-width: 0; color: #94a3b8; }
+  .status-text strong { color: #e2e8f0; }
+  .status-text em { color: #fbbf24; font-style: normal; font-weight: 600; }
+
+  /* ── Timeline phases ── */
+  .phases-wrap { display: flex; flex-direction: column; gap: 0; }
+  .phase-row { display: flex; gap: 0; position: relative; }
+  .phase-line {
+    width: 3px; background: #334155; flex-shrink: 0; margin: 0 18px;
+    border-radius: 2px; position: relative;
+  }
+  .phase-line::before {
+    content: ''; position: absolute; top: 18px; left: 50%; transform: translateX(-50%);
+    width: 14px; height: 14px; border-radius: 50%; border: 2px solid #334155;
+    background: #0f172a; z-index: 1;
+  }
+  .phase-line.done::before { background: #22c55e; border-color: #22c55e; box-shadow: 0 0 8px #22c55e66; }
+  .phase-line.wip::before  { background: #f59e0b; border-color: #f59e0b; box-shadow: 0 0 8px #f59e0b66; }
+  .phase-line.todo::before { background: #334155; border-color: #334155; }
+
+  .phase-card {
+    background: #1e293b; border: 1px solid #334155; border-radius: 10px;
+    padding: 14px 16px; margin-bottom: 12px; flex: 1; cursor: pointer; transition: border-color .15s;
+  }
+  .phase-card:hover { border-color: #475569; }
+  .phase-card[data-status="done"] { border-left: 3px solid #22c55e; }
+  .phase-card[data-status="wip"]  { border-left: 3px solid #f59e0b; }
+  .phase-card[data-status="todo"] { border-left: 3px solid #ef4444; }
+  .phase-card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .phase-id { font-size: .68rem; font-weight: 700; color: #475569; background: #0f172a; border-radius: 3px; padding: 2px 8px; }
+  .phase-title { font-size: .9rem; font-weight: 700; color: #e2e8f0; flex: 1; }
+  .phase-desc { font-size: .79rem; color: #64748b; line-height: 1.65; }
+  .phase-desc strong { color: #94a3b8; }
+  .phase-desc code { background: #0f172a; padding: 1px 4px; border-radius: 3px; font-family: monospace; font-size: .75rem; color: #93c5fd; }
+  .phase-body { display: none; margin-top: 10px; border-top: 1px solid #334155; padding-top: 10px; }
+
+  .phase-tasks { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .task-chip {
+    display: flex; align-items: center; gap: 5px;
+    background: #0f172a; border: 1px solid #334155; border-radius: 6px;
+    padding: 4px 10px; font-size: .75rem; cursor: pointer; transition: border-color .15s;
+  }
+  .task-chip:hover { border-color: #475569; }
+  .task-chip .tdot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .task-chip[data-s="done"] .tdot { background: #22c55e; }
+  .task-chip[data-s="wip"]  .tdot { background: #f59e0b; }
+  .task-chip[data-s="todo"] .tdot { background: #ef4444; }
+  .task-chip[data-s="wait"] .tdot { background: #64748b; }
+  .task-chip .tname { color: #94a3b8; }
+  .task-chip[data-s="done"] .tname { color: #4ade80; }
+  .task-chip[data-s="wip"]  .tname { color: #fbbf24; }
+  .task-chip[data-s="todo"] .tname { color: #f87171; }
+
+  /* ── All tasks table ── */
+  .task-table { width: 100%; border-collapse: collapse; font-size: .81rem; }
+  .task-table th {
+    background: #1e293b; color: #94a3b8; font-weight: 600;
+    padding: 8px 12px; text-align: left; border-bottom: 1px solid #334155;
+  }
+  .task-table td { padding: 8px 12px; border-bottom: 1px solid #1e293b; color: #cbd5e1; vertical-align: top; }
+  .task-table tr:last-child td { border-bottom: none; }
+  .task-table tr:hover td { background: #1e293b22; }
+  .task-table code { background: #0f172a; padding: 1px 4px; border-radius: 3px; font-family: monospace; font-size: .75rem; color: #93c5fd; }
+
+  /* ── 3 vế block ── */
+  .three-way { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 12px; }
+  .side-card {
+    background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 14px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .side-card[data-v="A"] { border-top: 3px solid #f87171; }
+  .side-card[data-v="B"] { border-top: 3px solid #fbbf24; }
+  .side-card[data-v="C"] { border-top: 3px solid #94a3b8; }
+  .side-label { font-size: .75rem; font-weight: 700; letter-spacing: .06em; }
+  .side-card[data-v="A"] .side-label { color: #f87171; }
+  .side-card[data-v="B"] .side-label { color: #fbbf24; }
+  .side-card[data-v="C"] .side-label { color: #94a3b8; }
+  .side-name { font-size: .82rem; font-weight: 600; color: #e2e8f0; }
+  .side-desc { font-size: .77rem; color: #64748b; line-height: 1.6; }
+  .side-metrics { display: flex; flex-direction: column; gap: 4px; }
+  .side-metric { display: flex; justify-content: space-between; font-size: .75rem; }
+  .side-metric .sm-label { color: #64748b; }
+  .side-metric .sm-val { font-weight: 700; }
+  .sm-val.fail { color: #f87171; }
+  .sm-val.pass { color: #4ade80; }
+  .sm-val.wip  { color: #fbbf24; }
+  .sm-val.wait { color: #94a3b8; }
+
+  .kaggle-box {
+    background: #1e293b; border: 1px solid #334155; border-top: 3px solid #a78bfa;
+    border-radius: 10px; padding: 14px 16px; font-size: .82rem; color: #94a3b8; line-height: 1.65;
+  }
+  .kaggle-box strong { color: #e2e8f0; }
+  .kaggle-box code { background: #0f172a; padding: 1px 4px; border-radius: 3px; font-family: monospace; font-size: .75rem; color: #93c5fd; }
+
+  /* Pre-register thresholds */
+  .prereg-box {
+    background: #0a1628; border: 1px solid #1e3a5f; border-radius: 8px;
+    padding: 12px 16px; margin-bottom: 14px; font-size: .82rem; color: #94a3b8; line-height: 1.7;
+  }
+  .prereg-box strong { color: #e2e8f0; }
+  .threshold { display: inline-flex; align-items: center; gap: 6px; margin-right: 16px; }
+  .thr-name { color: #64748b; }
+  .thr-val  { font-weight: 700; color: #93c5fd; }
+
+  /* ── Critical path ── */
+  .cp-wrap { display: flex; align-items: flex-start; gap: 0; flex-wrap: wrap; margin-bottom: 8px; }
+  .cp-node {
+    background: #1e293b; border: 1px solid #334155; border-radius: 8px;
+    padding: 8px 12px; font-size: .76rem; text-align: center; min-width: 90px;
+  }
+  .cp-node.done { border-color: #22c55e; color: #4ade80; }
+  .cp-node.wip  { border-color: #f59e0b; color: #fbbf24; }
+  .cp-node.wait { border-color: #334155; color: #94a3b8; }
+  .cp-node.todo { border-color: #ef4444; color: #f87171; }
+  .cp-node .cp-id { font-size: .65rem; font-weight: 700; opacity: .7; display: block; margin-bottom: 2px; }
+  .cp-arrow { align-self: center; color: #475569; font-size: 1rem; padding: 0 4px; flex-shrink: 0; }
+  .cp-group { display: flex; flex-direction: column; gap: 4px; }
+  .cp-par-label { font-size: .65rem; color: #475569; text-align: center; margin-bottom: 2px; }
+
+  .caveat-box {
+    background: #1c1917; border: 1px solid #44403c; border-radius: 8px;
+    padding: 12px 14px; font-size: .79rem; color: #a8a29e; line-height: 1.7; margin-top: 8px;
+  }
+  .caveat-box strong { color: #d6d3d1; }
+
+  .footer {
+    margin-top: 40px; padding: 16px 18px;
+    background: #1e293b; border: 1px solid #334155; border-radius: 10px;
+    font-size: .78rem; color: #64748b; line-height: 1.8;
+  }
+  .footer strong { color: #94a3b8; }
+  .footer code { background: #0f172a; padding: 1px 6px; border-radius: 4px; font-family: monospace; }
+  .footer a { color: #60a5fa; text-decoration: none; }
+  .footer a:hover { text-decoration: underline; }
+
+  /* Tooltip */
+  .tip-overlay {
+    display: none; position: fixed; inset: 0; background: #00000099;
+    z-index: 100; align-items: center; justify-content: center; padding: 24px;
+  }
+  .tip-overlay.active { display: flex; }
+  .tip-box {
+    background: #1e293b; border: 1px solid #475569; border-radius: 12px;
+    padding: 24px; max-width: 560px; width: 100%; position: relative; max-height: 80vh; overflow-y: auto;
+  }
+  .tip-close {
+    position: absolute; top: 12px; right: 14px;
+    background: none; border: none; color: #94a3b8; font-size: 1.3rem; cursor: pointer;
+  }
+  .tip-title { font-size: 1rem; font-weight: 700; color: #f1f5f9; margin-bottom: 10px; }
+  .tip-body { font-size: .82rem; color: #94a3b8; line-height: 1.65; }
+  .tip-body strong { color: #e2e8f0; }
+  .tip-src { margin-top: 12px; padding: 7px 10px; background: #0f172a; border-radius: 5px; font-size: .73rem; color: #64748b; font-family: monospace; }
+
+  @media (max-width: 680px) {
+    .three-way { grid-template-columns: 1fr; }
+    .cp-wrap { flex-direction: column; align-items: flex-start; }
+    .cp-arrow { transform: rotate(90deg); }
+  }
+  @media (max-width: 500px) {
+    h1 { font-size: 1.25rem; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <h1>Lộ trình WFO chi tiết — Bước 4</h1>
+  <p class="subtitle">Walk-Forward Optimization &nbsp;|&nbsp; Nguồn: <code style="font-size:.75rem;color:#94a3b8">docs/insights/WFO_ROADMAP.md</code> &nbsp;|&nbsp; Cập nhật: <strong style="color:#e2e8f0">2026-07-04 09:55</strong></p>
+
+  <div class="legend">
+    <span class="legend-title">Trạng thái:</span>
+    <div class="legend-item"><div class="dot dot-done"></div> Xong / PASS</div>
+    <div class="legend-item"><div class="dot dot-wip"></div> Đang chạy</div>
+    <div class="legend-item"><div class="dot dot-todo"></div> Chưa làm</div>
+    <div class="legend-item"><div class="dot dot-wait"></div> Chờ lượt</div>
+    <span style="color:#64748b;margin-left:auto;font-size:.75rem">Click phase / task để xem chi tiết</span>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════
+       TRẠNG THÁI CHỐT MỚI — 2026-07-04 09:55
+  ══════════════════════════════════════════════════ -->
+  <h2>Trạng thái chốt (2026-07-04 09:55)</h2>
+  <div class="status-chot">
+    <div class="chot-header">▶ TRẠNG THÁI CHỐT MỚI — 2026-07-04 09:55</div>
+
+    <div class="status-row">
+      <div class="status-icon">✅</div>
+      <div class="status-text">
+        <strong>xong:</strong> TASK-112,113,114,116,117,120,121-code · GATE-112/113 PASS · coverage audit (gap 8-16x) ·
+        bin restricted verify PASS · universe 886/83-delist · nạp gate WF full 1.795.680 record vào <em>ai_pred_market_gate_wfo</em> ·
+        report leaked V4 16/17 (w16 OOM; 0.239/75%/16.6%) · report leak-free V4 (0.098/76.5%/30.7%) ·
+        <strong>VẾ A V4.1 XONG 17/17: FAIL/REVIEW (WFE_med 0.227 · %+ 47.1% · maxDD 30.7%)</strong>
+      </div>
+    </div>
+    <div class="status-row">
+      <div class="status-icon">🔄</div>
+      <div class="status-text">
+        <strong>đang chạy:</strong> <em>VẾ B V4.1 leaked-restricted (Oracle, từ 09:49)</em> · kernel Kaggle test-1 (đo tốc độ 1 window, ticker 226)
+      </div>
+    </div>
+    <div class="status-row">
+      <div class="status-icon">⏳</div>
+      <div class="status-text">
+        <strong>chờ lượt:</strong> export dataset v3 gate-WF (sau vế B — RAM) · vế C + re-run w16 (Xmx cao hơn) · TASK-118 đo Δ
+      </div>
+    </div>
+    <div class="status-row">
+      <div class="status-icon">⏭</div>
+      <div class="status-text">
+        <strong>chưa:</strong> run fully-leak-free (GĐ2) · survivorship tool chuẩn · TASK-119 (chờ thiết kế) · read-set env · fleet Kaggle (chờ số test-1)
+      </div>
+    </div>
+    <div class="status-row" style="margin-bottom:0">
+      <div class="status-icon">⬜</div>
+      <div class="status-text">
+        <strong>chờ Uni quyết:</strong> fleet 5 slot Kaggle · thiết kế TASK-119
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════
+       5 GIAI ĐOẠN TIMELINE
+  ══════════════════════════════════════════════════ -->
+  <h2>5 Giai đoạn (tuần tự theo phụ thuộc)</h2>
+  <div class="phases-wrap">
+
+    <!-- GĐ0 -->
+    <div class="phase-row">
+      <div style="display:flex;flex-direction:column;align-items:center;width:3px;margin:0 18px">
+        <div style="width:3px;flex:1;background:#22c55e;border-radius:2px;position:relative">
+          <div style="position:absolute;top:18px;left:50%;transform:translateX(-50%);width:14px;height:14px;border-radius:50%;background:#22c55e;box-shadow:0 0 8px #22c55e66;z-index:1"></div>
+        </div>
+      </div>
+      <div class="phase-card" data-status="done" onclick="togglePhase(this)">
+        <div class="phase-card-head">
+          <span class="phase-id">GĐ0</span>
+          <span class="phase-title">Đang chạy → Xong: Jar chuẩn + Cặp so V4</span>
+          <span class="badge badge-done">✅ Xong</span>
+        </div>
+        <div class="phase-desc">
+          <strong>Mục tiêu:</strong> jar chuẩn config-tường-minh (TASK-112) + chạy cặp so leaked V4 → GATE-112/113 PASS.<br>
+          <strong>Kết quả:</strong> report leaked V4 16/17 (w16 OOM) · WFE 0.239/75%/16.6% · GATE-112/113 PASS.
+        </div>
+        <div class="phase-body">
+          <div class="phase-tasks">
+            <div class="task-chip" data-s="done" onclick="showTask('TASK-112','Bỏ mode KAGGLE/HPO · config tường minh + fail-fast','Xoá IS_KAGGLE_MODE + IS_HPO_MODE, dùng AEROSPIKE_READ_CLUSTER + TICKER_SOURCE, thiếu/sai key → fail-fast NGAY. Diệt root-cause zero-trade âm thầm (sự cố 2026-07-02).','tasks/112-bo-mode-kaggle-hpo-config-tuong-minh.md',event)">
+              <div class="tdot"></div><span class="tname">TASK-112 ✅</span>
+            </div>
+            <div class="task-chip" data-s="done" onclick="showTask('TASK-114','Hoàn tất commit 112','Commit các file còn thiếu của TASK-112 vào branch.','tasks/114-hoan-tat-commit-112.md',event)">
+              <div class="tdot"></div><span class="tname">TASK-114 ✅</span>
+            </div>
+            <div class="task-chip" data-s="done" onclick="showTask('TASK-115','Leaked report + GATE-112/113 Oracle','Chạy leaked re-run V4 (cặp so) trên Oracle, lưu report, chạy GATE-112 rồi GATE-113 tuần tự. Kết quả: 16/17 windows (w16 OOM), WFE 0.239/75%/16.6%. GATE-112/113 PASS.','tasks/115-leaked-report-va-gate-112-oracle.md',event)">
+              <div class="tdot"></div><span class="tname">TASK-115 ✅</span>
+            </div>
+            <div class="task-chip" data-s="done" onclick="showTask('TASK-116','Jar sanitize + Kaggle smoke','Build jar sạch (commit TASK-112), smoke test trên Kaggle kernel. PASS.','tasks/116-jar-sanitize-kaggle-smoke.md',event)">
+              <div class="tdot"></div><span class="tname">TASK-116 ✅</span>
+            </div>
+            <div class="task-chip" data-s="done" onclick="showTask('TASK-117','Don disk 226','Dọn dẹp disk server 226 để đủ chỗ cho các job tiếp theo.','tasks/117-don-disk-226.md',event)">
+              <div class="tdot"></div><span class="tname">TASK-117 ✅</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- GĐ1 -->
+    <div class="phase-row">
+      <div style="display:flex;flex-direction:column;align-items:center;width:3px;margin:0 18px">
+        <div style="width:3px;flex:1;background:#f59e0b;border-radius:2px;position:relative">
+          <div style="position:absolute;top:18px;left:50%;transform:translateX(-50%);width:14px;height:14px;border-radius:50%;background:#f59e0b;box-shadow:0 0 8px #f59e0b66;z-index:1"></div>
+        </div>
+      </div>
+      <div class="phase-card" data-status="wip" onclick="togglePhase(this)">
+        <div class="phase-card-head">
+          <span class="phase-id">GĐ1</span>
+          <span class="phase-title">Đo lường sạch: Fitness V4.1 + Phép so chính thức</span>
+          <span class="badge badge-wip">🔄 Đang chạy</span>
+        </div>
+        <div class="phase-desc">
+          <strong>Mục tiêu:</strong> fitness V4.1 (TASK-113) + pre-register lại → chạy <strong>cặp so V4.1</strong> = phép so CHÍNH THỨC.
+          Trả lời iteration-1: "bỏ funding-leak mất bao nhiêu edge?"<br>
+          <strong>Đang:</strong> Vế A XONG (FAIL/REVIEW) · Vế B đang chạy (Oracle, 09:49) · Vế C chờ RAM.
+        </div>
+        <div class="phase-body">
+          <div class="phase-tasks">
+            <div class="task-chip" data-s="done" onclick="showTask('TASK-113','Fitness V4.1 — đo đủ metrics + minTrade window thật','3 thay đổi vs V4: (1) window LOW_TRADES đóng góp WFE thật thay vì 0 do return-sớm; (2) %OOS-dương theo oosNote=SUCCESS && oosPnl&gt;0; (3) min-trade theo windowDaysActual (bỏ suy từ span lệnh). Ngưỡng verdict GIỮ NGUYÊN.','tasks/113-fitness-v41-do-du-metrics-mintrade-window-that.md',event)">
+              <div class="tdot"></div><span class="tname">TASK-113 ✅</span>
+            </div>
+            <div class="task-chip" data-s="done" onclick="showTask('TASK-121-code','Load gate WF prediction tool (code done)','Công cụ nạp wfo_gate_pred.csv vào Aerospike Oracle-local. Code XONG. Đã nạp 1.795.680 record vào ai_pred_market_gate_wfo.','tasks/121-load-gate-pred-tool.md',event)">
+              <div class="tdot"></div><span class="tname">TASK-121 code ✅</span>
+            </div>
+          </div>
+          <div style="margin-top:10px;font-size:.78rem;color:#64748b">
+            Phép so V4.1 (3 vế) → xem mục "3 Vế so sánh" bên dưới.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- GĐ2 -->
+    <div class="phase-row">
+      <div style="display:flex;flex-direction:column;align-items:center;width:3px;margin:0 18px">
+        <div style="width:3px;flex:1;background:#334155;border-radius:2px;position:relative">
+          <div style="position:absolute;top:18px;left:50%;transform:translateX(-50%);width:14px;height:14px;border-radius:50%;background:#334155;z-index:1"></div>
+        </div>
+      </div>
+      <div class="phase-card" data-status="todo" onclick="togglePhase(this)">
+        <div class="phase-card-head">
+          <span class="phase-id">GĐ2</span>
+          <span class="phase-title">Input sạch hoàn toàn: Gate WF + Dataset v3 + Fully-leak-free</span>
+          <span class="badge badge-wait">⏳ Chờ GĐ1 xong</span>
+        </div>
+        <div class="phase-desc">
+          <strong>Mục tiêu:</strong> nạp <code>wfo_gate_pred.csv</code> → Aerospike → export dataset v3 (funding WF + gate WF) → run <strong>fully-leak-free</strong>.<br>
+          <strong>Song song (có thể chạy ngay):</strong> coverage audit theo quý · survivorship crawler binance.vision · read-set env-configurable.
+        </div>
+        <div class="phase-body">
+          <div style="font-size:.78rem;color:#94a3b8;line-height:1.7">
+            <strong style="color:#e2e8f0">Tiền đề:</strong> gate pred đã nạp (TASK-121 data done) · dataset v3 export chờ RAM sau vế B.<br>
+            <strong style="color:#e2e8f0">Caveat:</strong> vòng này fix cả funding leak LẪN gate leak → fully-leak-free thật sự.<br>
+            <strong style="color:#e2e8f0">Song song không blocking:</strong> coverage audit · survivorship audit · read-set env.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- GĐ3 -->
+    <div class="phase-row">
+      <div style="display:flex;flex-direction:column;align-items:center;width:3px;margin:0 18px">
+        <div style="width:3px;flex:1;background:#334155;border-radius:2px;position:relative">
+          <div style="position:absolute;top:18px;left:50%;transform:translateX(-50%);width:14px;height:14px;border-radius:50%;background:#334155;z-index:1"></div>
+        </div>
+      </div>
+      <div class="phase-card" data-status="todo" onclick="togglePhase(this)">
+        <div class="phase-card-head">
+          <span class="phase-id">GĐ3</span>
+          <span class="phase-title">Sim &amp; thống kê vững: Margin-call + Exit clamp + Scale N</span>
+          <span class="badge badge-todo">❌ Chưa làm</span>
+        </div>
+        <div class="phase-desc">
+          <strong>Mục tiêu:</strong> maxDD margin-call thật (Bước 3 mảnh cuối) + exit clamp <code>bar.open</code> (mỗi GATE riêng) + scale N bằng Kaggle fleet.<br>
+          <strong>Quy tắc fleet:</strong> 1 experiment = 1 loại node (ticker Kaggle đọc 226 ≠ Oracle-local — đã đo file≠aerospike lệch số).
+        </div>
+        <div class="phase-body">
+          <div class="phase-tasks">
+            <div class="task-chip" data-s="wait" onclick="showTask('TASK-118','Exit clamp bar.open — đo Δ','Áp exit clamp (giá đóng = bar.open nến tiếp theo) vào sim, đo Δ PnL/maxDD so baseline. Chờ lượt sau GĐ1.','tasks/118-exit-clamp-bar-open.md',event)">
+              <div class="tdot"></div><span class="tname">TASK-118 ⏳</span>
+            </div>
+            <div class="task-chip" data-s="todo" onclick="showTask('TASK-119','maxDD margin-call thật','Sizing theo equity thật thay balanceBasic cố định. Làm Bước 3 mảnh cuối trung thực. Chờ thiết kế (Uni quyết).','tasks/119-maxdd-margin-call.md',event)">
+              <div class="tdot"></div><span class="tname">TASK-119 ❌</span>
+            </div>
+          </div>
+          <div style="margin-top:8px;font-size:.77rem;color:#64748b">
+            Fleet Kaggle (5 slot): chờ số test-1 (tốc độ 1 window) → Uni quyết.
+            State chung qua WFO_STATE_HOST=226 thật (Kaggle tới được 226).
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- GĐ4 -->
+    <div class="phase-row">
+      <div style="display:flex;flex-direction:column;align-items:center;width:3px;margin:0 18px">
+        <div style="width:3px;flex:1;background:#334155;border-radius:2px;position:relative;min-height:40px">
+          <div style="position:absolute;top:18px;left:50%;transform:translateX(-50%);width:14px;height:14px;border-radius:50%;background:#334155;z-index:1"></div>
+        </div>
+      </div>
+      <div class="phase-card" data-status="todo" onclick="togglePhase(this)">
+        <div class="phase-card-head">
+          <span class="phase-id">GĐ4</span>
+          <span class="phase-title">WFO chuẩn cuối: Fully-leak-free + Universe đúng + Verdict</span>
+          <span class="badge badge-todo">❌ Chưa làm</span>
+        </div>
+        <div class="phase-desc">
+          <strong>Mục tiêu:</strong> full run fully-leak-free + universe đúng (survivorship fix) + metrics thật (margin-call) + N đủ (Kaggle fleet)
+          → <strong>verdict pre-registered</strong> quyết định go/no-go.<br>
+          <strong>PASS →</strong> Golden backtest (funding ON) → go-live nhỏ.<br>
+          <strong>FAIL →</strong> quay lại câu hỏi edge (economic rationale — ai bị ép trade bất lợi và vì sao).
+        </div>
+        <div class="phase-body">
+          <div class="phase-tasks">
+            <div class="task-chip" data-s="todo">
+              <div class="tdot"></div><span class="tname">Full WFO run (fully-leak-free)</span>
+            </div>
+            <div class="task-chip" data-s="todo">
+              <div class="tdot"></div><span class="tname">Golden backtest (funding ON)</span>
+            </div>
+            <div class="task-chip" data-s="todo">
+              <div class="tdot"></div><span class="tname">Verdict pre-registered</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /phases-wrap -->
+
+  <!-- ══════════════════════════════════════════════════
+       TẤT CẢ TASK 112–122
+  ══════════════════════════════════════════════════ -->
+  <h2>Task 112–122 — trạng thái</h2>
+  <div style="background:#1e293b;border:1px solid #334155;border-radius:10px;overflow:hidden">
+    <table class="task-table">
+      <thead>
+        <tr>
+          <th style="width:90px">Task</th>
+          <th style="width:80px">Trạng thái</th>
+          <th>Mô tả</th>
+          <th style="width:70px">Giai đoạn</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>TASK-112</strong></td>
+          <td><span class="badge badge-done">✅ Xong</span></td>
+          <td>Bỏ mode KAGGLE/HPO · config tường minh (<code>AEROSPIKE_READ_CLUSTER</code>, <code>TICKER_SOURCE</code>) + fail-fast</td>
+          <td style="color:#64748b">GĐ0</td>
+        </tr>
+        <tr>
+          <td><strong>TASK-113</strong></td>
+          <td><span class="badge badge-done">✅ Xong</span></td>
+          <td>Fitness V4.1: window LOW_TRADES WFE thật · <code>oosNote=SUCCESS</code> · <code>windowDaysActual</code> từ range thật</td>
+          <td style="color:#64748b">GĐ1</td>
+        </tr>
+        <tr>
+          <td><strong>TASK-114</strong></td>
+          <td><span class="badge badge-done">✅ Xong</span></td>
+          <td>Hoàn tất commit TASK-112 (các file còn thiếu)</td>
+          <td style="color:#64748b">GĐ0</td>
+        </tr>
+        <tr>
+          <td><strong>TASK-115</strong></td>
+          <td><span class="badge badge-done">✅ Xong</span></td>
+          <td>Lưu report leaked run V4 + GATE-112 rồi GATE-113 Oracle (tuần tự). Kết quả: 16/17 · w16 OOM · GATE PASS</td>
+          <td style="color:#64748b">GĐ0/GĐ1</td>
+        </tr>
+        <tr>
+          <td><strong>TASK-116</strong></td>
+          <td><span class="badge badge-done">✅ Xong</span></td>
+          <td>Jar sanitize (commit 112) + Kaggle smoke test · PASS</td>
+          <td style="color:#64748b">GĐ0</td>
+        </tr>
+        <tr>
+          <td><strong>TASK-117</strong></td>
+          <td><span class="badge badge-done">✅ Xong</span></td>
+          <td>Dọn disk server 226 để đủ chỗ job tiếp theo</td>
+          <td style="color:#64748b">GĐ0</td>
+        </tr>
+        <tr>
+          <td><strong>TASK-118</strong></td>
+          <td><span class="badge badge-wait">⏳ Chờ lượt</span></td>
+          <td>Exit clamp <code>bar.open</code>: áp vào sim, đo Δ PnL/maxDD vs baseline (sau GĐ1 xong)</td>
+          <td style="color:#64748b">GĐ3</td>
+        </tr>
+        <tr>
+          <td><strong>TASK-119</strong></td>
+          <td><span class="badge badge-todo">❌ Chưa</span></td>
+          <td>maxDD margin-call thật: sizing theo equity thật thay <code>balanceBasic</code> cố định · chờ thiết kế</td>
+          <td style="color:#64748b">GĐ3</td>
+        </tr>
+        <tr>
+          <td><strong>TASK-120</strong></td>
+          <td><span class="badge badge-done">✅ Xong</span></td>
+          <td>Architecture HTML — <code>wfo_architecture.html</code> + <code>system_architecture_all.html</code></td>
+          <td style="color:#64748b">Infra/Docs</td>
+        </tr>
+        <tr>
+          <td><strong>TASK-121</strong></td>
+          <td><span class="badge badge-done">✅ Code xong</span></td>
+          <td>Load gate WF pred tool — đã nạp <strong>1.795.680 record</strong> vào <code>ai_pred_market_gate_wfo</code></td>
+          <td style="color:#64748b">GĐ2</td>
+        </tr>
+        <tr>
+          <td><strong>TASK-122</strong></td>
+          <td><span class="badge badge-done">✅ Xong</span></td>
+          <td>Roadmap HTML lần 2: <code>roadmap_tong.html</code> + <code>roadmap_wfo.html</code> (2 file tên chính xác)</td>
+          <td style="color:#64748b">Infra/Docs</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════
+       3 VẾ SO SÁNH (PREREG_3WAY)
+  ══════════════════════════════════════════════════ -->
+  <h2>3 Vế so sánh (PREREG_3WAY) + Pre-registered verdict</h2>
+
+  <div class="prereg-box">
+    <strong>Pre-registered verdict (chốt TRƯỚC khi nhìn — WFO_FRAMEWORK_DESIGN.md §6):</strong>
+    PASS cần CẢ 3:<br>
+    <span class="threshold"><span class="thr-name">WFE_median</span> <span class="thr-val">≥ 0.5</span></span>
+    <span class="threshold"><span class="thr-name">%OOS-dương</span> <span class="thr-val">≥ 70%</span></span>
+    <span class="threshold"><span class="thr-name">worst OOS maxDD</span> <span class="thr-val">≤ 50%</span></span>
+    (theo tỷ lệ vốn, KHÔNG abs USD)
+  </div>
+
+  <div class="three-way">
+
+    <!-- Vế A -->
+    <div class="side-card" data-v="A">
+      <div class="side-label">VẾ A — LEAK-FREE</div>
+      <div class="side-name">V4.1 funding-leak-free</div>
+      <span class="badge badge-fail">✅ XONG — FAIL/REVIEW</span>
+      <div class="side-desc">
+        Funding WF 17-fold (funding.bin dựng từ predict_wf, forward-fill 15p→phút).
+        Gate/market vẫn là bản cũ (leaked). Dataset: <code>wfo_dataset_wf</code>.
+        Chạy Oracle. 17/17 windows hoàn thành.
+      </div>
+      <div class="side-metrics">
+        <div class="side-metric"><span class="sm-label">WFE_median</span><span class="sm-val fail">0.227 ✗ (&lt;0.5)</span></div>
+        <div class="side-metric"><span class="sm-label">%OOS-dương</span><span class="sm-val fail">47.1% ✗ (&lt;70%)</span></div>
+        <div class="side-metric"><span class="sm-label">worst maxDD</span><span class="sm-val pass">30.7% ✓ (≤50%)</span></div>
+        <div class="side-metric"><span class="sm-label">Windows</span><span class="sm-val" style="color:#e2e8f0">17/17</span></div>
+      </div>
+    </div>
+
+    <!-- Vế B -->
+    <div class="side-card" data-v="B">
+      <div class="side-label">VẾ B — LEAKED-RESTRICTED</div>
+      <div class="side-name">V4.1 leaked-restricted (Oracle)</div>
+      <span class="badge badge-wip">🔄 Đang chạy (từ 09:49)</span>
+      <div class="side-desc">
+        Dataset cũ <code>wfo_dataset</code> (funding LEAKED). Cùng jar/seed/fitness-V4.1 với Vế A.
+        Mục đích: phép so <em>leaked vs leak-free</em> cùng điều kiện — đo edge bị mất khi bỏ funding leak.
+        Chạy Oracle (solo, độc quyền jobstore).
+      </div>
+      <div class="side-metrics">
+        <div class="side-metric"><span class="sm-label">WFE_median</span><span class="sm-val wip">Đang chạy…</span></div>
+        <div class="side-metric"><span class="sm-label">%OOS-dương</span><span class="sm-val wip">—</span></div>
+        <div class="side-metric"><span class="sm-label">worst maxDD</span><span class="sm-val wip">—</span></div>
+        <div class="side-metric"><span class="sm-label">Windows</span><span class="sm-val wip">…/17</span></div>
+      </div>
+    </div>
+
+    <!-- Vế C -->
+    <div class="side-card" data-v="C">
+      <div class="side-label">VẾ C — RE-RUN W16</div>
+      <div class="side-name">Re-run w16 (Xmx cao hơn)</div>
+      <span class="badge badge-wait">⏳ Chờ RAM (sau vế B)</span>
+      <div class="side-desc">
+        Vế A window 16 bị OOM (w16 OOM) → re-run riêng với Xmx cao hơn.
+        Chờ vế B giải phóng RAM trên Oracle.
+        Kết quả để ghép vào bộ 17/17 hoàn chỉnh.
+      </div>
+      <div class="side-metrics">
+        <div class="side-metric"><span class="sm-label">WFE_median (partial)</span><span class="sm-val" style="color:#e2e8f0">0.227 (16/17)</span></div>
+        <div class="side-metric"><span class="sm-label">%OOS-dương</span><span class="sm-val" style="color:#e2e8f0">47.1% (16/17)</span></div>
+        <div class="side-metric"><span class="sm-label">Window 16</span><span class="sm-val wait">OOM — chờ re-run</span></div>
+      </div>
+    </div>
+
+  </div><!-- /three-way -->
+
+  <!-- Phụ lục: Kaggle replication -->
+  <div class="kaggle-box">
+    <strong style="color:#a78bfa">Phụ lục — Replication Kaggle (đo tốc độ + scale)</strong><br>
+    <strong>kernel test-1</strong> 🔄 đang chạy: đo tốc độ 1 window với ticker Kaggle đọc từ 226 (không phải file).
+    Mục đích: calibrate thời gian/window → tính số slot Kaggle cần cho fleet full 17 window × N mẫu.<br>
+    <strong>Quy tắc cứng:</strong> 1 experiment = 1 loại node (ticker Kaggle ≠ Oracle-local — đã đo file≠aerospike lệch số;
+    không trộn kết quả 2 nguồn vào cùng phép so).<br>
+    <strong>Fleet 5 slot:</strong> ⬜ chờ Uni quyết (sau số test-1). State chung: <code>WFO_STATE_HOST=226</code> thật (Kaggle tới được).
+  </div>
+
+  <!-- ══════════════════════════════════════════════════
+       CRITICAL PATH
+  ══════════════════════════════════════════════════ -->
+  <h2>Critical path</h2>
+  <div style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:16px 18px;margin-bottom:8px">
+    <h3 style="margin-bottom:12px;font-size:.82rem;color:#64748b;text-transform:uppercase;letter-spacing:.04em">Đường chặn (quyết định timeline tổng)</h3>
+    <div class="cp-wrap">
+      <div class="cp-node done"><span class="cp-id">GĐ0</span>Jar + Gate PASS</div>
+      <div class="cp-arrow">→</div>
+      <div class="cp-node done"><span class="cp-id">GĐ1 V4.1</span>Vế A XONG</div>
+      <div class="cp-arrow">→</div>
+      <div class="cp-node wip"><span class="cp-id">GĐ1 V4.1</span>Vế B hoàn thành</div>
+      <div class="cp-arrow">→</div>
+      <div class="cp-node wait"><span class="cp-id">GĐ1 V4.1</span>Vế C (re-run w16)</div>
+      <div class="cp-arrow">→</div>
+      <div class="cp-node wait"><span class="cp-id">GĐ2</span>Export dataset v3</div>
+      <div class="cp-arrow">→</div>
+      <div class="cp-node todo"><span class="cp-id">GĐ2</span>Fully-leak-free run</div>
+      <div class="cp-arrow">→</div>
+      <div class="cp-node todo"><span class="cp-id">GĐ3</span>Margin-call + Exit clamp + N scale</div>
+      <div class="cp-arrow">→</div>
+      <div class="cp-node todo"><span class="cp-id">GĐ4</span>Full run + Verdict</div>
+    </div>
+
+    <h3 style="margin-top:18px;margin-bottom:10px;font-size:.82rem;color:#64748b;text-transform:uppercase;letter-spacing:.04em">Song song không blocking (chạy ngay, không chặn critical path)</h3>
+    <div class="cp-wrap" style="gap:8px">
+      <div class="cp-node wip" style="font-size:.72rem"><span class="cp-id">GĐ2 parallel</span>Kaggle test-1 (tốc độ)</div>
+      <div class="cp-node todo" style="font-size:.72rem"><span class="cp-id">GĐ2 parallel</span>Coverage audit theo quý</div>
+      <div class="cp-node todo" style="font-size:.72rem"><span class="cp-id">GĐ2 parallel</span>Survivorship crawler</div>
+      <div class="cp-node todo" style="font-size:.72rem"><span class="cp-id">GĐ2 parallel</span>Read-set env-configurable</div>
+    </div>
+  </div>
+
+  <div class="caveat-box">
+    <strong>Caveat thống kê (giữ vĩnh viễn khi đọc WFO verdict):</strong><br>
+    • IS 12m trượt 3m → IS chồng lấn 9/12 tháng → 17 window KHÔNG độc lập về thống kê.<br>
+    • N=30 mẫu / 18 gene mỏng → WFE thấp có thể là selection-noise; tăng N là đòn bẩy chính (Kaggle fleet).<br>
+    • maxDD HIỂU NHẸ khi Bước 3 (margin-call thật) chưa tròn.<br>
+    • Số OOS các window &lt;2025-06 bị tâng vì pred sinh in-sample (WFO "loại 1" — pred cố định).
+  </div>
+
+  <div class="footer">
+    <strong>Nguồn:</strong> <code>docs/insights/WFO_ROADMAP.md</code> · <code>docs/ROADMAP.md §Bước 4</code><br>
+    <strong>Lộ trình tổng (6 Bước):</strong> <a href="roadmap_tong.html">roadmap_tong.html</a><br>
+    <strong>Kiến trúc WFO 6 lớp:</strong> <a href="wfo_architecture.html">wfo_architecture.html</a><br>
+    <strong>Kiến trúc toàn hệ thống:</strong> <a href="system_architecture_all.html">system_architecture_all.html</a><br>
+    <strong>Cập nhật lần cuối:</strong> 2026-07-04 · CCD TASK-122 lần 2
+  </div>
+
+</div><!-- /container -->
+
+<!-- Tooltip overlay -->
+<div class="tip-overlay" id="tipOverlay">
+  <div class="tip-box">
+    <button class="tip-close" onclick="closeTip()">✕</button>
+    <div class="tip-title" id="tipTitle"></div>
+    <div class="tip-body" id="tipBody"></div>
+    <div class="tip-src" id="tipSrc"></div>
+  </div>
+</div>
+
+<script>
+function togglePhase(card) {
+  const body = card.querySelector('.phase-body');
+  if (!body) return;
+  body.style.display = body.style.display === 'block' ? 'none' : 'block';
+}
+
+function showTask(id, name, body, src, ev) {
+  ev.stopPropagation();
+  document.getElementById('tipTitle').textContent = id + ' — ' + name;
+  document.getElementById('tipBody').innerHTML = body;
+  document.getElementById('tipSrc').textContent = src;
+  document.getElementById('tipOverlay').classList.add('active');
+}
+
+function closeTip() {
+  document.getElementById('tipOverlay').classList.remove('active');
+}
+
+document.getElementById('tipOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closeTip();
+});
+</script>
+</body>
+</html>

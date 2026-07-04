@@ -6,6 +6,8 @@ Folder chứa **mọi tài liệu kiến trúc** của hệ thống BinanceFutur
 
 | File | Mô tả | Nguồn sự thật |
 |---|---|---|
+| `roadmap_tong.html` | Lộ trình kiểm chứng 6 Bước tổng quan (Bước 0–5) + trạng thái | `docs/ROADMAP.md` |
+| `roadmap_wfo.html` | Lộ trình WFO chi tiết: 5 giai đoạn GĐ0–GĐ4 · TASK 112–122 · 3 vế so sánh · critical path | `docs/insights/WFO_ROADMAP.md` |
 | `wfo_architecture.html` | Kiến trúc WFO 6 lớp + lộ trình GĐ0–GĐ4 | `docs/insights/WFO_ROADMAP.md` §3a |
 | `system_architecture_all.html` | Toàn hệ thống: 4 node + luồng dữ liệu live→WFO | `docs/PIPELINE_PROVENANCE.md`, `docs/db/aerospike-226.md`, `docs/KAGGLE_RULES.md`, `docs/insights/WFO_ROADMAP.md` |
 
