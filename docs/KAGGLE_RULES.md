@@ -124,6 +124,15 @@ jars  = glob.glob("/kaggle/input/**/*.jar", recursive=True)
 
 KHÔNG hardcode path tuyệt đối theo slug — layout đã đổi 1 lần, có thể đổi tiếp.
 
+## 3b-bis. Bổ sung mount (đo 2026-07-04, kernel ticker-file-smoke)
+- Kaggle dùng SONG SONG 2 layout: dataset cũ ở `/kaggle/input/datasets/<user>/<slug>/`, dataset MỚI TẠO ở
+  `/kaggle/input/<slug>/` — TUYỆT ĐỐI không assume prefix, luôn glob recursive từ `/kaggle/input`.
+- File `.gz` trong dataset bị **auto-unzip** khi mount → glob phải dùng đuôi `.bin*`; KaggleDataLoader đã
+  lường sẵn (ưu tiên .bin rồi .bin.gz).
+- Dataset mới tạo: `status ready` + `files` hiện ≠ mount được ngay — có độ trễ vài phút, kernel push sớm sẽ thiếu mount.
+- Mọi kernel chạy class Java: PHẢI copy `config.properties` vào CWD trước (Configs static-init đọc CWD, thiếu = NoSuchFileException).
+- Loader ticker-file đọc relative `kaggle_data_hpo/` trong CWD → kernel symlink: `os.symlink(<dir mount>, "/kaggle/working/kaggle_data_hpo")` — đã smoke PASS (1440 phút, 1000 symbols).
+
 ## 3c. Môi trường Kaggle CPU (đo 2026-07-02)
 
 - Java: **OpenJDK 17.0.18** có sẵn trong image (jar build `--release 11` chạy thẳng, không cần cài).
