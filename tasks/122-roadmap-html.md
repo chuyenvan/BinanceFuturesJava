@@ -27,4 +27,14 @@ YÊU CẦU CỨNG lần 2:
    ⬜ chờ Uni quyết: fleet 5 slot Kaggle · thiết kế TASK-119
 
 ## Kết quả lần 2
-<CCD điền>
+
+**CCD 2026-07-04 — commit dcb4d6d (branch module)**
+
+✅ Tạo đúng 2 file tên chính xác:
+- `docs/architecture/roadmap_tong.html` — lộ trình 6 Bước tổng quan, click mở/đóng, Bước 3 verbatim status từ ROADMAP.md, Bước 4 link sang roadmap_wfo.html
+- `docs/architecture/roadmap_wfo.html` — WFO chi tiết: 5 giai đoạn GĐ0→GĐ4 timeline, TASK 112–122 table, 3 vế A/B/C (vế A XONG FAIL · vế B đang chạy · vế C chờ) + phụ lục Kaggle replication, critical path 2 mức (blocking + song song), trạng thái chốt 2026-07-04 09:55 nguyên văn
+
+✅ `git rm docs/architecture/roadmap.html` (file lần 1 sai spec)
+✅ README.md cập nhật bảng 2 file mới
+✅ Style dark-theme khớp wfo_architecture.html (background #0f172a, card #1e293b, badge done/wip/todo, tooltip overlay, font Segoe UI)
+✅ Trạng thái chốt mới dùng nguyên văn mục 3 (không diễn giải lại)
