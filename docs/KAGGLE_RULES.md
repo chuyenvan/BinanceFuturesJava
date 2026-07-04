@@ -138,7 +138,12 @@ KHÔNG hardcode path tuyệt đối theo slug — layout đã đổi 1 lần, c�
 
 5 worker SMART_CACHE đồng thời → 226 (15GB RAM) drop connection: AerospikeException Connection Error -8 / EOFException
 → 9/17 job FAIL. 1 worker: OK (test-1, 744s/window). **Quy tắc: tối đa 2 worker Kaggle đọc ticker 226 đồng thời**
-(2 đang kiểm chứng thực nghiệm 2026-07-04; nếu 2 cũng lỗi → hạ 1). Muốn >2 phải chuyển ticker vào dataset file.
+(2 đã kiểm chứng OK: DONE 315s/window). Muốn >2 phải chuyển ticker vào dataset file.
+**QUAN TRỌNG (đo 2026-07-04): ticker 226 chỉ phủ tới ~2024-04-01** — window cần dữ liệu muộn hơn sẽ
+FAIL-FAST "khong co ticker ngay X" (cơ chế TASK-112, đúng thiết kế — thay vì ZERO_TRADES âm thầm).
+Đính chính chẩn đoán đợt fleet-5: FAIL gồm CẢ 2 nguyên nhân (quá tải connection + thiếu ticker muộn).
+Replication WFO trên Kaggle vì vậy giới hạn w00–w08 (WFO_MAX_WINDOWS=9) chừng nào ticker chưa vào dataset.
+Worker hiện xay job FAIL 3s/lần khi thiếu ticker (claim→fail→claim) — cần code: FAIL-FAST thì worker exit (ghi TASK).
 Ghi chú thêm: Binance API bị chặn địa lý từ IP Kaggle (restricted location) — exchange-info fetch lỗi nhưng
 KHÔNG chặn job (đã có 8 job DONE vượt qua); không được thêm bước nào phụ thuộc Binance API trong kernel.
 
