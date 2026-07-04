@@ -1,6 +1,6 @@
 # TASK-128: Đo chất lượng model đang dùng trong WFO (CCD opus, Kaggle CPU kernel)
 
-- **status:** doing (giao CCD 2026-07-04 đêm)
+- **status:** DOING/BLOCKED — **owner:** CCD-opus · **updated:** 2026-07-04 (semantics+tool+jar+kernel XONG; BLOCKED slot Kaggle 5/5=wfo-worker + Oracle bận WFO vế-C; số chờ slot — xem Kết quả)
 - **Bối cảnh giá trị:** funding IC CHƯA TỪNG được đo đúng (validator cũ đo SAI CHIỀU nhóm + threshold hardcode sai
   — đã xác nhận hỏng). Gate/market model có 1.79M pred leak-free per-fold nhưng chưa có IC/AUC chính thức.
 - **Tài nguyên:** code local (repo, branch module) + SSH Oracle (rào bên dưới) + Kaggle kernel CPU.
@@ -32,5 +32,17 @@
 - Kernel + scripts commit vào scripts/model_quality/ (branch module). Marker /d/claudedata/CCD128_DONE.
 - Mơ hồ về semantics → NEEDS_HUMAN, KHÔNG đoán chiều.
 
-## Kết quả
-<CCD điền>
+## Kết quả (CCD-opus 2026-07-04)
+
+**Semantics + pipeline XONG; số CHƯA có — BLOCKED slot compute (job WFO khác đang chiếm, không tranh).**
+
+- ĐỊNH NGHĨA PRE-REGISTERED (chốt chiều/threshold từ code) + ĐÍNH CHÍNH provenance: `docs/reports/model_quality_wfo_20260704.md`.
+  - Death-trap gỡ: funding `pred[0]=score=1−P(win@24h)` (manifest `fundingSetProvenance=...score1minusPwin`), engine chọn **score THẤP = P(win) cao**; horizon 24h target +6% (`maxFav_24h≥0.06 & nBars≥96`).
+  - ⚠️ `pred.bin` = `ai_pred_market_full_basket_v2` **UNCHANGED, KHÔNG leak-free** (khác giả định đề) → IC market <2025-12 là in-sample.
+- Tool: `src/.../ai_ml/validation/Task128ModelQuality.java` (compile OK, tái dùng đúng code nhãn). Jar fat sanitize → Kaggle dataset `chuyendinh/t128-model-quality-jar`.
+- Kernel `model-quality-1` (2024Q1 validate) + `model-quality-full` + `analyze.py` (test synthetic PASS): `scripts/model_quality/`.
+
+### JOB ĐANG CHỜ (bàn giao — CCD khác/next tiếp quản)
+- **BLOCKER:** Kaggle 5/5 slot = `wfo-worker-1..5` RUNNING (12h-kill ~01:04 04/07). Oracle ~20/23g WFO vế-C. KHÔNG đụng cả hai.
+- **Khi có ≥1 slot:** `cd scripts/model_quality/kernel_validate && kaggle kernels push -p .`; poll `kaggle kernels status chuyendinh/model-quality-1`; `kaggle kernels output ... -p /d/claudedata/mq1-out`; `python scripts/model_quality/analyze.py /d/claudedata/mq1-out/t128_out`. Validate PASS (IC dương, hit_SEL>UNI>REJ) → push `model-quality-full` → điền Bảng 1-3 report.
+- Marker: `/d/claudedata/CCD128_BLOCKED` (chưa DONE — chưa có số).
