@@ -76,3 +76,17 @@ Status: 🟡 TODO · 🔵 DOING · 🟣 REVIEW (chờ user/Desktop soát) · ✅
 - Bằng chứng: (1) `TaskOutput` treo 4 phút không trả về dù `claude-code:Bash` vẫn phản hồi ngay; (2) Monitor poll `~/oi-fleet/.run/master-full.log`, điều kiện `grep 'Queue rỗng'` ĐÚNG (log có dòng, master exit sạch `DONE=896/896`) nhưng notification KHÔNG đẩy về client → orchestrator không nhận tín hiệu queue cạn; user phải tự phát hiện qua `oi_backfill_done` objects=896.
 - Nguyên nhân: khâu đẩy event/notification NGƯỢC về client lỗi, KHÔNG phải logic job (master/worker/Monitor-loop đều đúng). Chiều ra-lệnh (Bash) thì ổn định.
 - **QUY TẮC:** KHÔNG phụ thuộc trigger/Monitor/TaskOutput để biết job nền xong. Job nền PHẢI ghi state ra nơi poll được (log file + Aerospike set count). Orchestrator CHỦ ĐỘNG poll bằng `claude-code:Bash` mới mỗi khi cần. Khuyến nghị: job tự ghi sentinel khi xong (vd `.run/DONE.flag`) để poll 1 lệnh `test -f`.
+
+## Quy tắc RAM-budget & phân tải (bài học 2026-07-04 — Oracle treo vì nhồi nhét)
+
+Sự cố: master launch 2 worker Xmx9g (peak RSS ~20-22GB) song song upload 11GB trên Oracle 23GB
+→ cạn RAM/page-cache → userspace tê liệt (SSH banner timeout), trong khi Kaggle 5 slot và 226 (13GB avail) RẢNH.
+
+Quy tắc CỨNG từ nay (áp cho master lẫn CCD):
+1. TRƯỚC MỌI LAUNCH process nặng: cộng RAM-budget = tổng Xmx các java sống + ~1.5GB/JVM native
+   + nhu cầu page-cache của job I/O đang chạy; phải chừa ≥3GB available. Không đạt → KHÔNG launch.
+2. Việc dồn được sang máy rảnh thì dồn (upload/nén/crawl → 226 hoặc Kaggle); Oracle ưu tiên cho job
+   bắt buộc-Oracle (đọc Aerospike local, jobstore local).
+3. Hai job I/O-nặng (upload/export/nén) không chạy đồng thời với ≥2 JVM lớn — tuần tự hoá; run qua đêm
+   thì thứ tự nào cũng xong, tuần tự là nhanh THẬT.
+4. Sau launch: verify free -g còn ≥3GB; không đạt → kill ngay con vừa launch.
