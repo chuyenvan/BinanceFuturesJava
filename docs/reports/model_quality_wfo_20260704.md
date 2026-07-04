@@ -89,3 +89,23 @@ Ticker file = **Java-serialized object** (`KaggleDataLoader.java:30`) → chỉ 
 
 ## LỆNH TÁI LẬP
 Xem `scripts/model_quality/README.md`. Mỗi số Bảng 1-3 sẽ kèm lệnh kernel + cell `analyze.py` khi điền.
+
+---
+# SỐ CHÍNH THỨC (điền 2026-07-05 sáng, kernel model-quality-t128a validate + t128full toàn kỳ)
+
+## FUNDING SELECTOR (leak-free per-fold, score=1−P(win@24h), maxThres=0.3212) — n=882,108 (98.8% complete)
+| chỉ số | toàn kỳ | biên độ theo quý (21 quý 2021Q1–2026Q1) |
+|---|---|---|
+| rankIC | **0.3441** | 0.202 (2022Q3) … 0.446 (2021Q2) — KHÔNG quý nào âm |
+| hit_SEL | **65.8%** | 42.3% (2022Q3) … 85.7% (2021Q2) |
+| hit_UNI | 39.9% | — |
+| hit_REJ | 35.4% | — |
+| mf_SEL vs mf_UNI | 0.162 vs 0.080 | gấp ~2× |
+**Thứ tự SEL > UNI > REJ đúng ở 21/21 quý.** Quý tệ nhất 2022Q3 (bear đáy): hit tuyệt đối 42% nhưng vẫn +13.4đ so universe.
+⇒ **Funding selector có tín hiệu THẬT, bền qua 5 năm mọi regime.** (Bảng quý đầy đủ: /d/claudedata/mqfull_analyze.txt + t128_out CSV.)
+
+## MARKET MODEL (pred.bin = ai_pred_market_full_basket_v2 — KHÔNG leak-free ⇒ TRẦN TRÊN in-sample)
+IC_ret15 ALL = 0.6043, IC_risk4H = 0.3996; theo quý 0.31–0.52, không quý nào gãy. KHÔNG dùng làm IC OOS.
+Việc kế: đo lại với pred leak-free per-fold (set ai_pred_market_gate_wfo, 1.79M — chờ export dataset v3).
+
+## Đối chiếu WFO 3 vế: WFE ~0.23–0.26 cả 3 vế trong khi funding IC ổn ⇒ nút thắt ở tầng selection/chuyển tín hiệu→PnL.
