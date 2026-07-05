@@ -43,6 +43,9 @@ OI_TOL_MS = int(os.environ.get("OI_TOL_MS", str(2 * 60 * 60 * 1000)))
 LBL_TOL_MS = int(os.environ.get("LBL_TOL_MS", "0"))
 SEED = int(os.environ.get("SEED", "42"))                       # validate: doi seed xem ket qua co lap lai
 REPORT_QUARTERS = os.environ.get("REPORT_QUARTERS", "0") == "1" # validate: do LIFT/IC theo tung quy (on dinh regime)
+# TASK-130: knob GPU + so cay. Mac dinh cpu/400 = HANH VI CU KHONG DOI (additive). XGB_DEVICE=cuda -> train tren GPU.
+XGB_DEVICE = os.environ.get("XGB_DEVICE", "cpu")               # cpu | cuda | cuda:0 ... (xgboost>=2 device=; xgboost<2 fallback gpu_hist)
+N_ESTIMATORS = int(os.environ.get("N_ESTIMATORS", "400"))      # smoke ha thap (vd 60) de chay nhanh; full giu 400
 
 TOOL1_DT = np.dtype([("ts", ">i8"), ("sym", ">i2"), ("f", ">f4", 40)])   # itemsize 170
 OI_DT = np.dtype([("ts", ">i8"), ("sym", ">i2"), ("oi", ">f4", 5)])      # itemsize 30
@@ -182,10 +185,22 @@ def run_one(horizon):
     Xva, yva = va[feat], va.y
     Xte, yte = te[feat], te.y
     pos = ytr.mean()
-    clf = xgb.XGBClassifier(n_estimators=400, max_depth=5, learning_rate=0.05,
-                            subsample=0.8, colsample_bytree=0.8, min_child_weight=20,
-                            scale_pos_weight=(1 - pos) / max(pos, 1e-6),
-                            eval_metric="auc", n_jobs=-1, tree_method="hist", random_state=SEED)
+    # TASK-130: dung device (xgboost>=2) hoac gpu_hist (xgboost<2) khi XGB_DEVICE=cuda; CPU giu tree_method=hist nhu cu.
+    params = dict(n_estimators=N_ESTIMATORS, max_depth=5, learning_rate=0.05,
+                  subsample=0.8, colsample_bytree=0.8, min_child_weight=20,
+                  scale_pos_weight=(1 - pos) / max(pos, 1e-6),
+                  eval_metric="auc", n_jobs=-1, random_state=SEED)
+    xgb_major = int(xgb.__version__.split(".")[0])
+    if XGB_DEVICE.startswith("cuda"):
+        if xgb_major >= 2:
+            params.update(tree_method="hist", device=XGB_DEVICE)
+        else:
+            params.update(tree_method="gpu_hist")   # xgboost<2 API cu
+    else:
+        params.update(tree_method="hist")
+    log.info("XGBoost %s | device=%s | n_estimators=%d | params tree_method=%s",
+             xgb.__version__, XGB_DEVICE, N_ESTIMATORS, params.get("tree_method"))
+    clf = xgb.XGBClassifier(**params)
     clf.fit(Xtr, ytr, eval_set=[(Xva, yva)], verbose=False)
     if os.environ.get("SAVE_MODEL") == "1":
         clf.save_model(os.path.join(OUT_DIR, f"model_{HORIZON}.ubj"))

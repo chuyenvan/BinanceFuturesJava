@@ -52,6 +52,7 @@
 | 118 exit clamp bar.open (sim) | CCD-118 | ✅ DONE | 2026-07-03 | — | commit c817843: min(priceSL,bar.open) + CLAMP_TOTAL + ExitClampTest118 (2 case); CONFIG_VERSION v11→v12; mục 3 đo Δ do master chạy sau (lệnh đo ở task) |
 | 038 funding F4 feature OI/LS/taker | — | 🟡 TODO | 2026-06-15 | kaggle | depends [013, 037]. OI level/ΔOI/divergence + LS + taker; đọc 5 set OI 226 chunk-tháng |
 | 039 funding F5 ghép + train SELECTOR | — | 🟡 TODO | 2026-06-15 | kaggle | depends [037, 038, 024]. Ghép+train, de-overlap, beat-rule OOS, khoá thứ tự lớp (pred[0]=P(fail)). ❗chốt target +6%/+40% |
+| 130 retrain funding selector GPU (dựng+smoke pipeline, provenance) | CCD-130 opus | 🔵 DOING | 2026-07-05 | kaggle GPU (funding-train-v1) | Thiết kế chốt: bản đúng=`ml/training/train_funding_selector.py` (66341cd); 3 nguồn Java-export đã có trên Kaggle (funding-tool1-features/oi-percoin/label-full). Smoke Q1-2021 GPU, KHÔNG thay model prod. Train FULL clean-provenance = PENDING (Oracle bận vế D) |
 
 Status: 🟡 TODO · 🔵 DOING · 🟣 REVIEW (chờ user/Desktop soát) · ✅ DONE · ⏸ CHỜ (phụ thuộc task khác).
 
