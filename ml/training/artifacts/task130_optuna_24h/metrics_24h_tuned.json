@@ -1,0 +1,48 @@
+{
+  "name": "model_24h_tuned_ens3",
+  "base_rate": 0.4835460821747787,
+  "N_top": 46408,
+  "hit_top": 0.746940182727116,
+  "LIFT": 1.544713544917386,
+  "z": 113.54493005792524,
+  "rankIC": 0.29971451176433084,
+  "t_IC": 214.01469082244938,
+  "per_quarter": {
+    "2025Q4": {
+      "N": 56741,
+      "LIFT": 1.517,
+      "rankIC": 0.31
+    },
+    "2026Q1": {
+      "N": 230375,
+      "LIFT": 1.556,
+      "rankIC": 0.2886
+    },
+    "2026Q2": {
+      "N": 176968,
+      "LIFT": 1.541,
+      "rankIC": 0.3132
+    }
+  },
+  "single_seed_rankIC": [
+    0.2985,
+    0.2997,
+    0.2989
+  ],
+  "best_params": {
+    "max_depth": 9,
+    "learning_rate": 0.011522932326335892,
+    "subsample": 0.6082711795022981,
+    "colsample_bytree": 0.5023215589753468,
+    "min_child_weight": 25.670064144686005,
+    "reg_alpha": 0.0001276332154676552,
+    "reg_lambda": 9.855514275376441
+  },
+  "best_iteration": 293,
+  "val_rankIC_best": 0.2950841391615623,
+  "baseline_untuned_e205bb0": {
+    "rankIC": 0.2918,
+    "LIFT": 1.527
+  },
+  "n_trials": 50
+}

@@ -109,3 +109,25 @@ IC_ret15 ALL = 0.6043, IC_risk4H = 0.3996; theo quý 0.31–0.52, không quý n�
 Việc kế: đo lại với pred leak-free per-fold (set ai_pred_market_gate_wfo, 1.79M — chờ export dataset v3).
 
 ## Đối chiếu WFO 3 vế: WFE ~0.23–0.26 cả 3 vế trong khi funding IC ổn ⇒ nút thắt ở tầng selection/chuyển tín hiệu→PnL.
+
+---
+# BỔ SUNG 05/07 chiều — MARKET IC LEAK-FREE (kernel model-quality-v3pred, pred WF v3, load pred=1,795,680 verify)
+| quý | IC_ret15 in-sample (static) | IC_ret15 WALK-FORWARD OOS | gap |
+|---|---|---|---|
+| 2023Q1 | 0.4434 | 0.4217 | −0.022 |
+| 2023Q3 | 0.3698 | 0.3282 | −0.042 |
+| 2023Q4 | 0.5014 | 0.4730 | −0.028 |
+| 2024Q1 | 0.4772 | 0.4463 | −0.031 |
+| 2025Q4 | (xem file) | 0.4993 | ~ |
+**Kết luận: gate model 15m có tín hiệu OOS THẬT rất mạnh (0.30–0.50/quý), gap in-sample→OOS chỉ 0.02–0.04
+(không overfit nặng).** ALL 0.64 vs 0.60 không so được (khác coverage: WF từ 2023). Caveat: cột IC_risk4H trùng
+tuyệt đối giữa 2 bảng → nghi predRisk4H trong csv gate chưa per-fold (chỉ predReturn15M per-fold) — cần xác minh
+WFOGateRunner writer nếu risk4H được dùng cho quyết định.
+
+# BỔ SUNG — OPTUNA (kernel funding-train-optuna-24h, 50 trials, TEST chạm 1 lần qua ensemble 3 seeds)
+Tuned ens3: rankIC 0.2997 | LIFT 1.545 (vs untuned 0.2918/1.527) → tầng-1 (HP+ensemble) chỉ còn **+0.008 IC**.
+Best: depth9/lr0.0115/sub0.61/col0.50/mcw25.7/regL9.86, 293 cây. Single seeds 0.2985-0.2997 (ensemble gain ≈ 0).
+⇒ 45 features hiện tại đã vắt gần kiệt bằng model tĩnh; bước có kỳ vọng = walk-forward chain (tầng 2a).
+
+# BỨC TRANH HỘI TỤ: gate IC OOS 0.30-0.50 ✓ mạnh · funding IC OOS 0.344 ✓ mạnh · WFE 0.24 cả 3 vế ✗
+⇒ nghi phạm còn lại duy nhất: TẦNG CHUYỂN TÍN HIỆU → TRADE (selection/strategy/sim). Chờ N-noise + mổ per-window.
