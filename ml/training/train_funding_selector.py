@@ -149,9 +149,12 @@ def evaluate(name, score, y):
 
 def time_split(ds):
     MO = 30 * 24 * 3600 * 1000
+    # TASK-130: cho phep smoke tren lat nho (mac dinh 12/6 = FULL nhu cu). Full run KHONG set env -> giu nguyen.
+    test_months = int(os.environ.get("TEST_MONTHS", "12"))
+    val_months = int(os.environ.get("VAL_MONTHS", "6"))
     tmax = ds.ts.max()
-    test_start = tmax - 12 * MO
-    val_start = test_start - 6 * MO
+    test_start = tmax - test_months * MO
+    val_start = test_start - val_months * MO
     purge = H_STEPS[HORIZON] * GRID_MS
     tr = ds[ds.ts < val_start - purge]
     va = ds[(ds.ts >= val_start) & (ds.ts < test_start - purge)]
