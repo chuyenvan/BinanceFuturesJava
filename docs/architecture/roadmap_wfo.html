@@ -221,6 +221,27 @@
 </style>
 </head>
 <body>
+<!-- KQ_20260705 -->
+<div style="max-width:1100px;margin:18px auto 6px;padding:16px 20px;border:2px solid #34d399;border-radius:12px;background:#052e1f;color:#d1fae5;font-family:inherit">
+  <div style="font-weight:800;font-size:1.05rem;color:#34d399;margin-bottom:8px">✅ KẾT QUẢ CHỐT 05/07/2026 — THÍ NGHIỆM 3 VẾ HOÀN TẤT + IC ĐẦU TIÊN</div>
+  <table style="border-collapse:collapse;width:100%;font-size:.9rem;margin-bottom:10px">
+    <tr style="color:#6ee7b7"><th style="text-align:left;padding:4px 8px">Vế</th><th>WFE_med</th><th>%OOS+</th><th>worst maxDD</th><th>Verdict</th></tr>
+    <tr><td style="padding:3px 8px">A leak-free</td><td align="center">0.227</td><td align="center">47.1%</td><td align="center">30.7%</td><td align="center">❌ FAIL/REVIEW</td></tr>
+    <tr><td style="padding:3px 8px">B leaked-restricted</td><td align="center">0.240</td><td align="center">70.6%</td><td align="center">32.7%</td><td align="center">❌ FAIL/REVIEW</td></tr>
+    <tr><td style="padding:3px 8px">C leaked full</td><td align="center">0.259</td><td align="center">76.5%</td><td align="center">44.0%</td><td align="center">❌ FAIL/REVIEW</td></tr>
+  </table>
+  <div style="line-height:1.55">
+    <b>Phân rã:</b> leak thuần (B−A) = <b>+23.5đ %OOS</b> (~80% độ đẹp giả của run leaked) · coverage thuần (C−B) = +5.9đ (~20%) ·
+    <b>WFE ~0.23–0.26 ở CẢ 3 vế</b> ⇒ bệnh nằm ở tầng selection (N=30/minTrades/strategy), không phải leak/coverage.<br>
+    <b>IC đầu tiên (TASK-128, leak-free per-fold):</b> funding selector rankIC <b>0.344</b>, hit_SEL <b>65.8%</b> vs UNI 39.9% vs REJ 35.4%,
+    đúng thứ tự <b>21/21 quý</b> 2021→2026 ⇒ tín hiệu THẬT — nút thắt là chuyển tín hiệu→PnL OOS, không phải model.
+    Market IC 0.60 = trần trên in-sample (pred chưa leak-free; đo lại bằng dataset v3).<br>
+    <b>Replication kaggle-file N=30:</b> 14/17 window đạt (2 FAIL = geo-block exchange_info → TASK-129 · w16 = trần 12h Kaggle).<br>
+    <b>Đang chạy 05/07:</b> N-noise N=100 (5 kernel Kaggle) · chuẩn bị GĐ2 fully-leak-free (dataset v3, Oracle).
+    <i>Report: docs/reports/wfo_v41_veC_and_3way_report.md · model_quality_wfo_20260704.md · wfo_replication_kagglefile_n30.md</i>
+  </div>
+</div>
+
 <div class="container">
 
   <h1>Lộ trình WFO chi tiết — Bước 4</h1>
@@ -254,7 +275,7 @@
     <div class="status-row">
       <div class="status-icon">🔄</div>
       <div class="status-text">
-        <strong>đang chạy:</strong> <em>VẾ B V4.1 leaked-restricted (Oracle, từ 09:49)</em> · kernel Kaggle test-1 (đo tốc độ 1 window, ticker 226)
+        <strong>CHỐT 05/07:</strong> <em>cả 3 vế XONG (bảng đầu trang)</em> · Kaggle mở khoá ticker-file · N-noise N=100 đang bay
       </div>
     </div>
     <div class="status-row">
