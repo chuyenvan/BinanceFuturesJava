@@ -44,7 +44,7 @@ public class StrategyWfoTask implements WfoTask {
     private static final int TRAIN_MONTHS = envInt("WFO_TRAIN_MONTHS", 12);
     private static final int OOS_MONTHS = envInt("WFO_OOS_MONTHS", 3);
     private static final int DEFAULT_N_SAMPLES = 30;
-    private static final long SEED_BASE = 42L;
+    private static final long SEED_BASE = envLong("WFO_SEED_BASE", 42L);  // TASK-133: env-configurable de do selection noise (multi-seed)
 
     // ===== ngưỡng VERDICT pre-registered (chốt TRƯỚC khi chạy — WFO_OBJECTIVE_RESEARCH.md) =====
     public static final float PASS_WFE = 0.5f;        // WFE = PnL_OOS/PnL_IS; ≥0.5 tốt, <0.3 overfit
@@ -111,6 +111,12 @@ public class StrategyWfoTask implements WfoTask {
     private static int envInt(String name, int def) {
         String v = System.getenv(name);
         try { return (v != null && !v.isEmpty()) ? Integer.parseInt(v.trim()) : def; }
+        catch (NumberFormatException e) { return def; }
+    }
+
+    private static long envLong(String name, long def) {
+        String v = System.getenv(name);
+        try { return (v != null && !v.isEmpty()) ? Long.parseLong(v.trim()) : def; }
         catch (NumberFormatException e) { return def; }
     }
 
