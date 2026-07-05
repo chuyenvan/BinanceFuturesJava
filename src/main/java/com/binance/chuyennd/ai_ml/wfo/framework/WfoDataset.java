@@ -64,7 +64,7 @@ public class WfoDataset {
 
         LOG.info("EXPORT WFO dataset -> {}", outDir);
         TreeMap<Long, MarketDataObject> mkt = DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
-        TreeMap<Long, AiPredictionData> prd = DataManagerAerospikeFloatSim.getAllMarketAiPredictionsFromAerospike();
+        TreeMap<Long, AiPredictionData> prd = DataManagerAerospikeFloatSim.getAllMarketAiPredictionsFromAerospikeSet(SET_PRED); // FIX 05/07: manifest tung noi doi (stamp env nhung scan hardcode) - MD5 v3==v2 bat duoc
         TreeMap<Long, long[]> fnd = DataManagerAerospikeFloatSim.getAllFundingPredictionsPrimitiveFromAerospike();
         LOG.info("scan xong: market={} pred={} funding={}", mkt.size(), prd.size(), fnd.size());
 
