@@ -223,29 +223,29 @@
 <body>
 <!-- KQ_20260705 -->
 <div style="max-width:1100px;margin:18px auto 6px;padding:16px 20px;border:2px solid #34d399;border-radius:12px;background:#052e1f;color:#d1fae5;font-family:inherit">
-  <div style="font-weight:800;font-size:1.05rem;color:#34d399;margin-bottom:8px">✅ KẾT QUẢ CHỐT 05/07/2026 — THÍ NGHIỆM 3 VẾ HOÀN TẤT + IC ĐẦU TIÊN</div>
+  <div style="font-weight:800;font-size:1.05rem;color:#34d399;margin-bottom:8px">✅ KẾT QUẢ CHỐT 05/07/2026 — 4 VẾ WFO HOÀN TẤT + IC LEAK-FREE + MODEL RETRAIN</div>
   <table style="border-collapse:collapse;width:100%;font-size:.9rem;margin-bottom:10px">
     <tr style="color:#6ee7b7"><th style="text-align:left;padding:4px 8px">Vế</th><th>WFE_med</th><th>%OOS+</th><th>worst maxDD</th><th>Verdict</th></tr>
     <tr><td style="padding:3px 8px">A leak-free</td><td align="center">0.227</td><td align="center">47.1%</td><td align="center">30.7%</td><td align="center">❌ FAIL/REVIEW</td></tr>
     <tr><td style="padding:3px 8px">B leaked-restricted</td><td align="center">0.240</td><td align="center">70.6%</td><td align="center">32.7%</td><td align="center">❌ FAIL/REVIEW</td></tr>
     <tr><td style="padding:3px 8px">C leaked full</td><td align="center">0.259</td><td align="center">76.5%</td><td align="center">44.0%</td><td align="center">❌ FAIL/REVIEW</td></tr>
+    <tr><td style="padding:3px 8px">D fully-leak-free</td><td align="center">0.142*</td><td align="center">35.3%*</td><td align="center">29.4%</td><td align="center">❌ FAIL/REVIEW</td></tr>
   </table>
   <div style="line-height:1.55">
     <b>Phân rã:</b> leak thuần (B−A) = <b>+23.5đ %OOS</b> (~80% độ đẹp giả của run leaked) · coverage thuần (C−B) = +5.9đ (~20%) ·
     <b>WFE ~0.23–0.26 ở CẢ 3 vế</b> ⇒ bệnh nằm ở tầng selection (N=30/minTrades/strategy), không phải leak/coverage.<br>
-    <b>IC đầu tiên (TASK-128, leak-free per-fold):</b> funding selector rankIC <b>0.344</b>, hit_SEL <b>65.8%</b> vs UNI 39.9% vs REJ 35.4%,
-    đúng thứ tự <b>21/21 quý</b> 2021→2026 ⇒ tín hiệu THẬT — nút thắt là chuyển tín hiệu→PnL OOS, không phải model.
-    Market IC 0.60 = trần trên in-sample (pred chưa leak-free; đo lại bằng dataset v3).<br>
-    <b>Replication kaggle-file N=30:</b> 14/17 window đạt (2 FAIL = geo-block exchange_info → TASK-129 · w16 = trần 12h Kaggle).<br>
-    <b>Đang chạy 05/07:</b> N-noise N=100 (5 kernel Kaggle) · chuẩn bị GĐ2 fully-leak-free (dataset v3, Oracle).
-    <i>Report: docs/reports/wfo_v41_veC_and_3way_report.md · model_quality_wfo_20260704.md · wfo_replication_kagglefile_n30.md</i>
+    <b>*Vế D:</b> pred gate-WF chỉ có từ 2023 → w0–w3 ZERO cấu trúc. Vùng chung w4–16: <b>A ≈ D</b> (pnl 22.5k vs 22.3k) ⇒ <b>pred model leaked đóng góp ≈ 0</b>.<br>
+    <b>Phân rã 4 vế:</b> leak funding/universe (B−A) = <b>+23.5đ %OOS</b> · coverage (C−B) +5.9đ · pred-model leak ≈ 0 (D≈A) · <b>WFE ~0.14–0.26 ở MỌI cấu hình</b>.<br>
+    <b>IC leak-free:</b> funding rankIC <b>0.344</b> (hit 65.8% vs 40%, đúng thứ tự 21/21 quý) · gate 15m OOS <b>0.30–0.50/quý</b> (gap in-sample chỉ 0.02–0.04) ⇒ <b style="color:#4ade80">cả 2 model tốt thật</b>.<br>
+    <b>Model retrain (GPU, 1.6MB):</b> tuned ≈ ngang production, chưa hơn; tầng-1 (tuning/calib) đã cạn.<br>
+    <b>⇒ Nút thắt = tầng chuyển tín hiệu→PnL (selection/strategy), KHÔNG phải model/leak/data.</b> Đang chạy: N-noise N=100 (13/17).
   </div>
 </div>
 
 <div class="container">
 
   <h1>Lộ trình WFO chi tiết — Bước 4</h1>
-  <p class="subtitle">Walk-Forward Optimization &nbsp;|&nbsp; Nguồn: <code style="font-size:.75rem;color:#94a3b8">docs/insights/WFO_ROADMAP.md</code> &nbsp;|&nbsp; Cập nhật: <strong style="color:#e2e8f0">2026-07-04 09:55</strong></p>
+  <p class="subtitle">Walk-Forward Optimization &nbsp;|&nbsp; Nguồn: <code style="font-size:.75rem;color:#94a3b8">docs/insights/WFO_ROADMAP.md</code> &nbsp;|&nbsp; Cập nhật: <strong style="color:#e2e8f0">2026-07-05 18:40</strong></p>
 
   <div class="legend">
     <span class="legend-title">Trạng thái:</span>
@@ -259,43 +259,26 @@
   <!-- ══════════════════════════════════════════════════
        TRẠNG THÁI CHỐT MỚI — 2026-07-04 09:55
   ══════════════════════════════════════════════════ -->
-  <h2>Trạng thái chốt (2026-07-04 09:55)</h2>
-  <div class="status-chot">
-    <div class="chot-header">▶ TRẠNG THÁI CHỐT MỚI — 2026-07-04 09:55</div>
+  <h2>Chẩn đoán chốt — nút thắt đã khoanh vùng</h2>
+  <div class="status-chot" style="border-left-color:#a78bfa">
+    <div class="chot-header" style="color:#c4b5fd">▶ SAU 4 VẾ + IC LEAK-FREE — HỘI TỤ VỀ 1 NGHI PHẠM</div>
+    <div class="status-row"><div class="status-icon">✅</div><div class="status-text"><strong>Data sạch</strong> — leak đã tách định lượng (+23.5đ %OOS giả, đã loại ở A/D).</div></div>
+    <div class="status-row"><div class="status-icon">✅</div><div class="status-text"><strong>Funding model tốt</strong> — rankIC 0.344, hit_SEL 65.8% vs universe 40%, đúng thứ tự 21/21 quý.</div></div>
+    <div class="status-row"><div class="status-icon">✅</div><div class="status-text"><strong>Gate model tốt</strong> — IC OOS 0.30–0.50/quý, gap in-sample→OOS chỉ 0.02–0.04 (không overfit).</div></div>
+    <div class="status-row"><div class="status-icon">✅</div><div class="status-text"><strong>Model tĩnh cạn tuning</strong> — Optuna 50 trials +0.004, calibration xong; model mới 1.6MB ≈ 262MB cũ.</div></div>
+    <div class="status-row" style="margin-bottom:0"><div class="status-icon">❌</div><div class="status-text"><strong style="color:#f87171">Tầng selection/strategy → PnL OOS</strong> — WFE 0.14–0.26 ở MỌI cấu hình dù model & data đều tốt. <em>Ca mổ đầu: w13 (OOS 2025Q2) ZERO_TRADES cả A lẫn D.</em></div></div>
+  </div>
 
-    <div class="status-row">
-      <div class="status-icon">✅</div>
-      <div class="status-text">
-        <strong>xong:</strong> TASK-112,113,114,116,117,120,121-code · GATE-112/113 PASS · coverage audit (gap 8-16x) ·
-        bin restricted verify PASS · universe 886/83-delist · nạp gate WF full 1.795.680 record vào <em>ai_pred_market_gate_wfo</em> ·
-        report leaked V4 16/17 (w16 OOM; 0.239/75%/16.6%) · report leak-free V4 (0.098/76.5%/30.7%) ·
-        <strong>VẾ A V4.1 XONG 17/17: FAIL/REVIEW (WFE_med 0.227 · %+ 47.1% · maxDD 30.7%)</strong>
-      </div>
-    </div>
-    <div class="status-row">
-      <div class="status-icon">🔄</div>
-      <div class="status-text">
-        <strong>CHỐT 05/07:</strong> <em>cả 3 vế XONG (bảng đầu trang)</em> · Kaggle mở khoá ticker-file · N-noise N=100 đang bay
-      </div>
-    </div>
-    <div class="status-row">
-      <div class="status-icon">⏳</div>
-      <div class="status-text">
-        <strong>chờ lượt:</strong> export dataset v3 gate-WF (sau vế B — RAM) · vế C + re-run w16 (Xmx cao hơn) · TASK-118 đo Δ
-      </div>
-    </div>
-    <div class="status-row">
-      <div class="status-icon">⏭</div>
-      <div class="status-text">
-        <strong>chưa:</strong> run fully-leak-free (GĐ2) · survivorship tool chuẩn · TASK-119 (chờ thiết kế) · read-set env · fleet Kaggle (chờ số test-1)
-      </div>
-    </div>
-    <div class="status-row" style="margin-bottom:0">
-      <div class="status-icon">⬜</div>
-      <div class="status-text">
-        <strong>chờ Uni quyết:</strong> fleet 5 slot Kaggle · thiết kế TASK-119
-      </div>
-    </div>
+  <h2>Trạng thái chốt (2026-07-05 18:40)</h2>
+  <div class="status-chot">
+    <div class="chot-header">▶ TỔNG KẾT 2 NGÀY (04–05/07)</div>
+    <div class="status-row"><div class="status-icon">✅</div><div class="status-text"><strong>4 vế WFO A/B/C/D XONG 17/17</strong> — tất cả FAIL/REVIEW, phân rã đầy đủ (bảng đầu trang).</div></div>
+    <div class="status-row"><div class="status-icon">✅</div><div class="status-text"><strong>IC leak-free lần đầu:</strong> funding rankIC 0.344 · gate 15m OOS 0.30–0.50/quý (TASK-128).</div></div>
+    <div class="status-row"><div class="status-icon">✅</div><div class="status-text"><strong>Kaggle mở khoá:</strong> ticker-file (daily.zip 10GB) → WFO chạy không cần 226 · GPU dùng train/IC.</div></div>
+    <div class="status-row"><div class="status-icon">✅</div><div class="status-text"><strong>Model retrain GPU (provenance sạch):</strong> train full 287s → 1.6MB · Optuna · calibration — <em>tầng-1 đóng sổ</em> (TASK-130). Chưa thay production.</div></div>
+    <div class="status-row"><div class="status-icon">✅</div><div class="status-text"><strong>Dọn dẹp:</strong> cleanup −711 LOC merged (TASK-127) · SDK inventory (giữ nguyên) · maxDD_mtm metric (TASK-119 code).</div></div>
+    <div class="status-row"><div class="status-icon">🔄</div><div class="status-text"><strong>đang chạy:</strong> <em>N-noise N=100 (13/17, Kaggle)</em> — mũi khoan selection layer đầu tiên.</div></div>
+    <div class="status-row" style="margin-bottom:0"><div class="status-icon">⏭</div><div class="status-text"><strong>kế tiếp:</strong> report N-noise · mổ w13 · economic rationale · (Uni quyết) walk-forward chain (tầng-2a) · survivorship · funding-fee Golden.</div></div>
   </div>
 
   <!-- ══════════════════════════════════════════════════
@@ -350,16 +333,16 @@
           <div style="position:absolute;top:18px;left:50%;transform:translateX(-50%);width:14px;height:14px;border-radius:50%;background:#f59e0b;box-shadow:0 0 8px #f59e0b66;z-index:1"></div>
         </div>
       </div>
-      <div class="phase-card" data-status="wip" onclick="togglePhase(this)">
+      <div class="phase-card" data-status="done" onclick="togglePhase(this)">
         <div class="phase-card-head">
           <span class="phase-id">GĐ1</span>
-          <span class="phase-title">Đo lường sạch: Fitness V4.1 + Phép so chính thức</span>
-          <span class="badge badge-wip">🔄 Đang chạy</span>
+          <span class="phase-title">Đo lường sạch: Fitness V4.1 + 4 vế A/B/C/D</span>
+          <span class="badge badge-done">✅ Xong</span>
         </div>
         <div class="phase-desc">
           <strong>Mục tiêu:</strong> fitness V4.1 (TASK-113) + pre-register lại → chạy <strong>cặp so V4.1</strong> = phép so CHÍNH THỨC.
           Trả lời iteration-1: "bỏ funding-leak mất bao nhiêu edge?"<br>
-          <strong>Đang:</strong> Vế A XONG (FAIL/REVIEW) · Vế B đang chạy (Oracle, 09:49) · Vế C chờ RAM.
+          <strong>Kết quả:</strong> 4 vế A/B/C/D XONG 17/17, phân rã leak/coverage/pred-model. Data & model KHÔNG phải nút thắt.
         </div>
         <div class="phase-body">
           <div class="phase-tasks">
@@ -384,11 +367,11 @@
           <div style="position:absolute;top:18px;left:50%;transform:translateX(-50%);width:14px;height:14px;border-radius:50%;background:#334155;z-index:1"></div>
         </div>
       </div>
-      <div class="phase-card" data-status="todo" onclick="togglePhase(this)">
+      <div class="phase-card" data-status="done" onclick="togglePhase(this)">
         <div class="phase-card-head">
           <span class="phase-id">GĐ2</span>
-          <span class="phase-title">Input sạch hoàn toàn: Gate WF + Dataset v3 + Fully-leak-free</span>
-          <span class="badge badge-wait">⏳ Chờ GĐ1 xong</span>
+          <span class="phase-title">Input sạch: Dataset v3 + Fully-leak-free (vế D) + IC leak-free</span>
+          <span class="badge badge-done">✅ Xong</span>
         </div>
         <div class="phase-desc">
           <strong>Mục tiêu:</strong> nạp <code>wfo_gate_pred.csv</code> → Aerospike → export dataset v3 (funding WF + gate WF) → run <strong>fully-leak-free</strong>.<br>
@@ -411,28 +394,21 @@
           <div style="position:absolute;top:18px;left:50%;transform:translateX(-50%);width:14px;height:14px;border-radius:50%;background:#334155;z-index:1"></div>
         </div>
       </div>
-      <div class="phase-card" data-status="todo" onclick="togglePhase(this)">
+      <div class="phase-card" data-status="wip" onclick="togglePhase(this)">
         <div class="phase-card-head">
           <span class="phase-id">GĐ3</span>
-          <span class="phase-title">Sim &amp; thống kê vững: Margin-call + Exit clamp + Scale N</span>
-          <span class="badge badge-todo">❌ Chưa làm</span>
+          <span class="phase-title">Chẩn đoán selection: N-noise + maxDD_mtm + mổ w13</span>
+          <span class="badge badge-wip">🔄 Đang chạy</span>
         </div>
         <div class="phase-desc">
           <strong>Mục tiêu:</strong> maxDD margin-call thật (Bước 3 mảnh cuối) + exit clamp <code>bar.open</code> (mỗi GATE riêng) + scale N bằng Kaggle fleet.<br>
           <strong>Quy tắc fleet:</strong> 1 experiment = 1 loại node (ticker Kaggle đọc 226 ≠ Oracle-local — đã đo file≠aerospike lệch số).
         </div>
         <div class="phase-body">
-          <div class="phase-tasks">
-            <div class="task-chip" data-s="wait" onclick="showTask('TASK-118','Exit clamp bar.open — đo Δ','Áp exit clamp (giá đóng = bar.open nến tiếp theo) vào sim, đo Δ PnL/maxDD so baseline. Chờ lượt sau GĐ1.','tasks/118-exit-clamp-bar-open.md',event)">
-              <div class="tdot"></div><span class="tname">TASK-118 ⏳</span>
-            </div>
-            <div class="task-chip" data-s="todo" onclick="showTask('TASK-119','maxDD margin-call thật','Sizing theo equity thật thay balanceBasic cố định. Làm Bước 3 mảnh cuối trung thực. Chờ thiết kế (Uni quyết).','tasks/119-maxdd-margin-call.md',event)">
-              <div class="tdot"></div><span class="tname">TASK-119 ❌</span>
-            </div>
-          </div>
-          <div style="margin-top:8px;font-size:.77rem;color:#64748b">
-            Fleet Kaggle (5 slot): chờ số test-1 (tốc độ 1 window) → Uni quyết.
-            State chung qua WFO_STATE_HOST=226 thật (Kaggle tới được 226).
+          <div style="font-size:.78rem;color:#94a3b8;line-height:1.7">
+            <strong style="color:#e2e8f0">Đang chạy:</strong> N-noise N=100 (13/17) — kiểm WFE 0.24 là selection-noise (N mỏng) hay bệnh thật.<br>
+            <strong style="color:#e2e8f0">Xong:</strong> maxDD_mtm metric (TASK-119, w0 leaked: ddPct 4.0%→mtm 4.7%) · exit-clamp áp dụng (TASK-118).<br>
+            <strong style="color:#e2e8f0">Kế:</strong> mổ w13 (ZERO_TRADES cả A lẫn D) — ca lâm sàng selection layer đầu tiên.
           </div>
         </div>
       </div>
@@ -448,7 +424,7 @@
       <div class="phase-card" data-status="todo" onclick="togglePhase(this)">
         <div class="phase-card-head">
           <span class="phase-id">GĐ4</span>
-          <span class="phase-title">WFO chuẩn cuối: Fully-leak-free + Universe đúng + Verdict</span>
+          <span class="phase-title">Economic rationale + Verdict lại + (nếu cần) tầng-2a chain</span>
           <span class="badge badge-todo">❌ Chưa làm</span>
         </div>
         <div class="phase-desc">
@@ -563,7 +539,7 @@
   <!-- ══════════════════════════════════════════════════
        3 VẾ SO SÁNH (PREREG_3WAY)
   ══════════════════════════════════════════════════ -->
-  <h2>3 Vế so sánh (PREREG_3WAY) + Pre-registered verdict</h2>
+  <h2>4 Vế so sánh (A/B/C/D) + Pre-registered verdict</h2>
 
   <div class="prereg-box">
     <strong>Pre-registered verdict (chốt TRƯỚC khi nhìn — WFO_FRAMEWORK_DESIGN.md §6):</strong>
@@ -574,71 +550,56 @@
     (theo tỷ lệ vốn, KHÔNG abs USD)
   </div>
 
-  <div class="three-way">
-
-    <!-- Vế A -->
+  <div class="three-way" style="grid-template-columns:repeat(4,1fr)">
     <div class="side-card" data-v="A">
-      <div class="side-label">VẾ A — LEAK-FREE</div>
-      <div class="side-name">V4.1 funding-leak-free</div>
-      <span class="badge badge-fail">✅ XONG — FAIL/REVIEW</span>
-      <div class="side-desc">
-        Funding WF 17-fold (funding.bin dựng từ predict_wf, forward-fill 15p→phút).
-        Gate/market vẫn là bản cũ (leaked). Dataset: <code>wfo_dataset_wf</code>.
-        Chạy Oracle. 17/17 windows hoàn thành.
-      </div>
+      <div class="side-label" style="color:#f87171">VẾ A — LEAK-FREE</div>
+      <span class="badge badge-fail">❌ FAIL 17/17</span>
+      <div class="side-desc">Universe hẹp · pred model cũ · funding per-fold.</div>
       <div class="side-metrics">
-        <div class="side-metric"><span class="sm-label">WFE_median</span><span class="sm-val fail">0.227 ✗ (&lt;0.5)</span></div>
-        <div class="side-metric"><span class="sm-label">%OOS-dương</span><span class="sm-val fail">47.1% ✗ (&lt;70%)</span></div>
-        <div class="side-metric"><span class="sm-label">worst maxDD</span><span class="sm-val pass">30.7% ✓ (≤50%)</span></div>
-        <div class="side-metric"><span class="sm-label">Windows</span><span class="sm-val" style="color:#e2e8f0">17/17</span></div>
+        <div class="side-metric"><span class="sm-label">WFE_med</span><span class="sm-val fail">0.227</span></div>
+        <div class="side-metric"><span class="sm-label">%OOS+</span><span class="sm-val fail">47.1%</span></div>
+        <div class="side-metric"><span class="sm-label">maxDD</span><span class="sm-val pass">30.7%</span></div>
       </div>
     </div>
-
-    <!-- Vế B -->
     <div class="side-card" data-v="B">
-      <div class="side-label">VẾ B — LEAKED-RESTRICTED</div>
-      <div class="side-name">V4.1 leaked-restricted (Oracle)</div>
-      <span class="badge badge-wip">🔄 Đang chạy (từ 09:49)</span>
-      <div class="side-desc">
-        Dataset cũ <code>wfo_dataset</code> (funding LEAKED). Cùng jar/seed/fitness-V4.1 với Vế A.
-        Mục đích: phép so <em>leaked vs leak-free</em> cùng điều kiện — đo edge bị mất khi bỏ funding leak.
-        Chạy Oracle (solo, độc quyền jobstore).
-      </div>
+      <div class="side-label" style="color:#fbbf24">VẾ B — LEAKED-RESTR</div>
+      <span class="badge badge-fail">❌ FAIL 17/17</span>
+      <div class="side-desc">= A + funding LEAKED. Đo leak thuần: B−A = +23.5đ %OOS.</div>
       <div class="side-metrics">
-        <div class="side-metric"><span class="sm-label">WFE_median</span><span class="sm-val wip">Đang chạy…</span></div>
-        <div class="side-metric"><span class="sm-label">%OOS-dương</span><span class="sm-val wip">—</span></div>
-        <div class="side-metric"><span class="sm-label">worst maxDD</span><span class="sm-val wip">—</span></div>
-        <div class="side-metric"><span class="sm-label">Windows</span><span class="sm-val wip">…/17</span></div>
+        <div class="side-metric"><span class="sm-label">WFE_med</span><span class="sm-val fail">0.240</span></div>
+        <div class="side-metric"><span class="sm-label">%OOS+</span><span class="sm-val fail">70.6%</span></div>
+        <div class="side-metric"><span class="sm-label">maxDD</span><span class="sm-val pass">32.7%</span></div>
       </div>
     </div>
-
-    <!-- Vế C -->
     <div class="side-card" data-v="C">
-      <div class="side-label">VẾ C — RE-RUN W16</div>
-      <div class="side-name">Re-run w16 (Xmx cao hơn)</div>
-      <span class="badge badge-wait">⏳ Chờ RAM (sau vế B)</span>
-      <div class="side-desc">
-        Vế A window 16 bị OOM (w16 OOM) → re-run riêng với Xmx cao hơn.
-        Chờ vế B giải phóng RAM trên Oracle.
-        Kết quả để ghép vào bộ 17/17 hoàn chỉnh.
-      </div>
+      <div class="side-label" style="color:#94a3b8">VẾ C — LEAKED FULL</div>
+      <span class="badge badge-fail">❌ FAIL 17/17</span>
+      <div class="side-desc">Universe full + leaked. Coverage thuần: C−B = +5.9đ.</div>
       <div class="side-metrics">
-        <div class="side-metric"><span class="sm-label">WFE_median (partial)</span><span class="sm-val" style="color:#e2e8f0">0.227 (16/17)</span></div>
-        <div class="side-metric"><span class="sm-label">%OOS-dương</span><span class="sm-val" style="color:#e2e8f0">47.1% (16/17)</span></div>
-        <div class="side-metric"><span class="sm-label">Window 16</span><span class="sm-val wait">OOM — chờ re-run</span></div>
+        <div class="side-metric"><span class="sm-label">WFE_med</span><span class="sm-val fail">0.259</span></div>
+        <div class="side-metric"><span class="sm-label">%OOS+</span><span class="sm-val fail">76.5%</span></div>
+        <div class="side-metric"><span class="sm-label">maxDD</span><span class="sm-val fail">44.0%</span></div>
       </div>
     </div>
-
+    <div class="side-card" data-v="D" style="border-top:3px solid #4ade80">
+      <div class="side-label" style="color:#4ade80">VẾ D — FULLY-LF</div>
+      <span class="badge badge-fail">❌ FAIL 17/17</span>
+      <div class="side-desc">Sạch hoàn toàn (pred gate-WF). Vùng chung ≈ A ⇒ pred-model leak ≈ 0.</div>
+      <div class="side-metrics">
+        <div class="side-metric"><span class="sm-label">WFE_med*</span><span class="sm-val fail">0.142</span></div>
+        <div class="side-metric"><span class="sm-label">%OOS+*</span><span class="sm-val fail">35.3%</span></div>
+        <div class="side-metric"><span class="sm-label">maxDD</span><span class="sm-val pass">29.4%</span></div>
+      </div>
+    </div>
   </div><!-- /three-way -->
 
-  <!-- Phụ lục: Kaggle replication -->
+  <!-- Phụ lục: Model quality + Kaggle -->
   <div class="kaggle-box">
-    <strong style="color:#a78bfa">Phụ lục — Replication Kaggle (đo tốc độ + scale)</strong><br>
-    <strong>kernel test-1</strong> 🔄 đang chạy: đo tốc độ 1 window với ticker Kaggle đọc từ 226 (không phải file).
-    Mục đích: calibrate thời gian/window → tính số slot Kaggle cần cho fleet full 17 window × N mẫu.<br>
-    <strong>Quy tắc cứng:</strong> 1 experiment = 1 loại node (ticker Kaggle ≠ Oracle-local — đã đo file≠aerospike lệch số;
-    không trộn kết quả 2 nguồn vào cùng phép so).<br>
-    <strong>Fleet 5 slot:</strong> ⬜ chờ Uni quyết (sau số test-1). State chung: <code>WFO_STATE_HOST=226</code> thật (Kaggle tới được).
+    <strong style="color:#a78bfa">Model quality (leak-free per-fold) — TASK-128/130</strong><br>
+    <strong>Funding selector</strong> (production 262MB, set <code>funding_selector_pred_1m_v2</code>): rankIC <strong>0.344</strong>, hit_SEL 65.8% vs UNI 39.9% vs REJ 35.4%, đúng thứ tự <strong>21/21 quý</strong>.<br>
+    <strong>Gate 15m</strong> (pred gate-WF): IC OOS <strong>0.30–0.50/quý</strong>, gap in-sample→OOS chỉ 0.02–0.04.<br>
+    <strong>Model retrain mới</strong> (1.6MB provenance sạch, GPU 287s): tuned rankIC 0.30, ngưỡng prod đạt hit 69.3% — <strong>≈ ngang production</strong>, chưa hơn. Tầng-1 (tuning/ensemble/calib) cạn (+0.004). <strong>Chưa thay production.</strong><br>
+    <strong>Kaggle:</strong> ticker-file mở khoá (daily.zip 10GB); replication N=30 14/17; N-noise N=100 đang chạy (13/17). <strong>Quy tắc:</strong> 1 experiment = 1 loại node (file ≠ aerospike ≠ Oracle-local).
   </div>
 
   <!-- ══════════════════════════════════════════════════
@@ -648,29 +609,26 @@
   <div style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:16px 18px;margin-bottom:8px">
     <h3 style="margin-bottom:12px;font-size:.82rem;color:#64748b;text-transform:uppercase;letter-spacing:.04em">Đường chặn (quyết định timeline tổng)</h3>
     <div class="cp-wrap">
-      <div class="cp-node done"><span class="cp-id">GĐ0</span>Jar + Gate PASS</div>
+      <div class="cp-node done"><span class="cp-id">GĐ0-1</span>4 vế A/B/C/D</div>
       <div class="cp-arrow">→</div>
-      <div class="cp-node done"><span class="cp-id">GĐ1 V4.1</span>Vế A XONG</div>
+      <div class="cp-node done"><span class="cp-id">GĐ2</span>IC leak-free (model tốt)</div>
       <div class="cp-arrow">→</div>
-      <div class="cp-node wip"><span class="cp-id">GĐ1 V4.1</span>Vế B hoàn thành</div>
+      <div class="cp-node wip"><span class="cp-id">GĐ3</span>N-noise + mổ w13</div>
       <div class="cp-arrow">→</div>
-      <div class="cp-node wait"><span class="cp-id">GĐ1 V4.1</span>Vế C (re-run w16)</div>
+      <div class="cp-node todo"><span class="cp-id">GĐ3</span>Economic rationale</div>
       <div class="cp-arrow">→</div>
-      <div class="cp-node wait"><span class="cp-id">GĐ2</span>Export dataset v3</div>
+      <div class="cp-node todo"><span class="cp-id">GĐ4</span>Verdict lại / tầng-2a chain</div>
       <div class="cp-arrow">→</div>
-      <div class="cp-node todo"><span class="cp-id">GĐ2</span>Fully-leak-free run</div>
-      <div class="cp-arrow">→</div>
-      <div class="cp-node todo"><span class="cp-id">GĐ3</span>Margin-call + Exit clamp + N scale</div>
-      <div class="cp-arrow">→</div>
-      <div class="cp-node todo"><span class="cp-id">GĐ4</span>Full run + Verdict</div>
+      <div class="cp-node todo"><span class="cp-id">GĐ4</span>Golden + live nhỏ</div>
+    </div>
     </div>
 
     <h3 style="margin-top:18px;margin-bottom:10px;font-size:.82rem;color:#64748b;text-transform:uppercase;letter-spacing:.04em">Song song không blocking (chạy ngay, không chặn critical path)</h3>
     <div class="cp-wrap" style="gap:8px">
-      <div class="cp-node wip" style="font-size:.72rem"><span class="cp-id">GĐ2 parallel</span>Kaggle test-1 (tốc độ)</div>
-      <div class="cp-node todo" style="font-size:.72rem"><span class="cp-id">GĐ2 parallel</span>Coverage audit theo quý</div>
-      <div class="cp-node todo" style="font-size:.72rem"><span class="cp-id">GĐ2 parallel</span>Survivorship crawler</div>
-      <div class="cp-node todo" style="font-size:.72rem"><span class="cp-id">GĐ2 parallel</span>Read-set env-configurable</div>
+      <div class="cp-node todo" style="font-size:.72rem"><span class="cp-id">nợ</span>Survivorship crawler</div>
+      <div class="cp-node todo" style="font-size:.72rem"><span class="cp-id">nợ</span>Funding-fee trong Golden</div>
+      <div class="cp-node wait" style="font-size:.72rem"><span class="cp-id">TASK-129</span>Fix exchange_info Kaggle</div>
+      <div class="cp-node wait" style="font-size:.72rem"><span class="cp-id">Uni quyết</span>Thay model production?</div>
     </div>
   </div>
 
@@ -687,10 +645,8 @@
     <strong>Lộ trình tổng (6 Bước):</strong> <a href="roadmap_tong.html">roadmap_tong.html</a><br>
     <strong>Kiến trúc WFO 6 lớp:</strong> <a href="wfo_architecture.html">wfo_architecture.html</a><br>
     <strong>Kiến trúc toàn hệ thống:</strong> <a href="system_architecture_all.html">system_architecture_all.html</a><br>
-    <strong>Cập nhật lần cuối:</strong> 2026-07-04 · CCD TASK-122 lần 2
+    <strong>Cập nhật lần cuối:</strong> 2026-07-05 18:40 · master orchestrator (4 vế + IC + model retrain)
   </div>
-
-</div><!-- /container -->
 
 <!-- Tooltip overlay -->
 <div class="tip-overlay" id="tipOverlay">

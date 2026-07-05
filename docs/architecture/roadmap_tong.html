@@ -121,9 +121,9 @@
 </style>
 </head>
 <body><!-- KQ_20260705 --><div style="max-width:1100px;margin:16px auto 4px;padding:12px 18px;border:2px solid #34d399;border-radius:10px;background:#052e1f;color:#d1fae5">
-<b style="color:#34d399">CẬP NHẬT 05/07/2026:</b> Thí nghiệm 3 vế WFO V4.1 hoàn tất — cả 3 FAIL/REVIEW vì WFE ~0.24 (leak thuần +23.5đ %OOS, coverage +5.9đ).
-IC đầu tiên: funding selector leak-free rankIC 0.344, hit 65.8% vs 39.9%, đúng thứ tự 21/21 quý ⇒ model KHÔNG phải vấn đề; nút thắt = tầng selection.
-Chi tiết: roadmap_wfo.html + docs/reports/.</div>
+<b style="color:#34d399">CẬP NHẬT 05/07/2026:</b> 4 vế WFO (A/B/C/D) hoàn tất — tất cả FAIL/REVIEW, WFE 0.14–0.26 ở MỌI cấu hình.
+Phân rã: leak funding/universe +23.5đ %OOS · coverage +5.9đ · pred-model leak ≈ 0 (D≈A). IC leak-free: funding rankIC 0.344 (hit 65.8% vs 40%, 21/21 quý), gate 15m OOS 0.30–0.50/quý — <b>cả 2 model tốt thật</b>.
+Model retrain GPU (1.6MB provenance sạch) ≈ ngang production. <b>⇒ nút thắt = tầng selection/strategy→PnL, không phải model/leak/data.</b> Chi tiết: roadmap_wfo.html + docs/reports/.</div>
 <div class="container">
 
   <h1>Lộ trình kiểm chứng 6 Bước</h1>
@@ -323,13 +323,13 @@ Chi tiết: roadmap_wfo.html + docs/reports/.</div>
           </div>
           <div class="metric">
             <div class="metric-label">Vế B — V4.1 restricted</div>
-            <div class="metric-value" style="color:#fbbf24;font-size:.85rem">Đang chạy</div>
-            <div class="metric-label" style="margin-top:3px">Oracle · từ 09:49 2026-07-04</div>
+            <div class="metric-value" style="color:#f87171;font-size:.85rem">FAIL 0.240</div>
+            <div class="metric-label" style="margin-top:3px">70.6% OOS+ · XONG 17/17</div>
           </div>
           <div class="metric">
-            <div class="metric-label">Vế C — re-run w16</div>
-            <div class="metric-value" style="color:#94a3b8;font-size:.85rem">Chờ lượt</div>
-            <div class="metric-label" style="margin-top:3px">Sau vế B (RAM giải phóng)</div>
+            <div class="metric-label">Vế C — leaked full + D</div>
+            <div class="metric-value" style="color:#f87171;font-size:.85rem">FAIL 0.259/0.142</div>
+            <div class="metric-label" style="margin-top:3px">C+D XONG · 4 vế đủ</div>
           </div>
         </div>
         <a class="cross-link" href="roadmap_wfo.html">→ Chi tiết WFO: roadmap_wfo.html</a>
