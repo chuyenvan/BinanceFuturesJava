@@ -1,0 +1,19 @@
+{
+  "id": "chuyendinh/funding-train-full-24h",
+  "title": "funding-train-full-24h",
+  "code_file": "funding-train-full-24h.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_tpu": false,
+  "enable_internet": false,
+  "dataset_sources": [
+    "chuyendinh/funding-train-code",
+    "chuyendinh/funding-tool1-features",
+    "chuyendinh/funding-oi-percoin",
+    "chuyendinh/funding-label-full"
+  ],
+  "competition_sources": [],
+  "kernel_sources": []
+}
