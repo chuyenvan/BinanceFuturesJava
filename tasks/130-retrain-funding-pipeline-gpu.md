@@ -86,5 +86,14 @@
 <!-- Kết quả bên dưới -->
 &nbsp;
 
-## Kết quả
-<CCD điền>
+## Kết quả (CCD dựng + master thu hoạch 05/07 trưa)
+- CCD-130 hoàn thành khảo sát + thiết kế + 4 dataset TRAIN Java-export + kernel smoke, nhưng process chết khi
+  ngồi chờ kernel (bài học `-p` không chờ được tái diễn — marker không kịp cắm). Master thu hoạch.
+- **SMOKE GPU PASS TRỌN** (kernel funding-train-v1 COMPLETE): nvidia-smi OK, XGBoost 3.2.0 **device=cuda**,
+  lát H1-2021: 173,436 rows × 45 feat × 111 sym; label H=24h nBars≥96 (khớp định nghĩa TASK-128);
+  metrics: hit_top 72.9% vs base 48.7% (LIFT 1.50, z=38.9), rankIC 0.148, beats_baseline f28+, PASS 2 gate;
+  output model_24h.ubj 143KB + provenance.json đầy đủ md5.
+- **TRAIN FULL đã push** (funding-train-full-24h, GPU, 600 trees, time-split TEST 6 + VAL 6 tháng cuối) —
+  provenance data = bản export sẵn có, ghi rõ trong provenance.json; re-gen HEAD trên Oracle vẫn PENDING
+  trước khi cân nhắc production. So baseline TASK-128 chỉ THAM KHẢO (nền đo khác: holdout vs per-fold).
+- Marker: /d/claudedata/CCD130_DONE (master cắm thay).
