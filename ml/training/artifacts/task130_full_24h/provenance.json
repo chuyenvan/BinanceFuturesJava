@@ -1,0 +1,19 @@
+{
+  "task": "TASK-130 FULL funding-train-full-24h (GPU)",
+  "train_script_md5": "45e5736b4211961a9005c81ab5499a9c",
+  "provenance_txt": "TASK-130 funding selector train code (provenance-stamped)\nrepo:   BinanceFuturesJava (branch module)\ncommit: 86d89687a61875a2c158385fcadf8afa5c9fc4e3\npath:   ml/training/train_funding_selector.py\nmd5:    45e5736b4211961a9005c81ab5499a9c\nnote:   Canonical train script (== ml/funding_selector/ copy pre-TASK-130).\n        TASK-130 added additive env knobs: XGB_DEVICE, N_ESTIMATORS, TEST_MONTHS, VAL_MONTHS.\n        Data-source rule (CORE): TRAIN data DUY NHAT tu Java export (ExportFeaturesForPythonTool/ExportFundingOiPerCoin/ExportFundingLabel).\n",
+  "data_note": "data = ban Java-export san co (pre-TASK130 stamp); re-gen HEAD = PENDING truoc khi can nhac production",
+  "ff_files": 66,
+  "hyperparams_env": {
+    "HORIZON": "24h",
+    "XGB_DEVICE": "cuda",
+    "N_ESTIMATORS": "600",
+    "TEST_MONTHS": "6",
+    "VAL_MONTHS": "6"
+  },
+  "baseline_TASK128": {
+    "rankIC": 0.344,
+    "hit_SEL": 0.658,
+    "note": "per-fold toan ky \u2014 so tham khao, nen do khac holdout"
+  }
+}
