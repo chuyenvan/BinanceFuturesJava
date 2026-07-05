@@ -143,6 +143,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                 //    để bắt đáy trong nến — đây là METRIC nên KHÔNG phải look-ahead. Chạy SONG
                                 //    SONG unProfitMin cũ (xây từ profitMin/minPrice, lấy mẫu theo giờ), không thay thế.
                                 float unrealAtLow = 0f;
+                                float notionalAtLow = 0f;   // TASK-119: Σ qty·bar.low (maintenance margin, report-only)
                                 for (int i = 0; i < activeRunningCount; i++) {
                                     short id = activeRunningIds[i];
                                     OrderTargetInfoTest cluster = symbol2OrderRunning[id];
@@ -150,9 +151,12 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                     if (cluster != null && cluster.priceEntry != null && cluster.quantity != null
                                             && tk != null && tk.minPrice > 0) {
                                         unrealAtLow += cluster.quantity * (tk.minPrice - cluster.priceEntry);
+                                        notionalAtLow += cluster.quantity * tk.minPrice;
                                     }
                                 }
                                 BudgetManagerSimple.getInstance().updateTrueUnrealizedMin(unrealAtLow, time);
+                                // 🟡 TASK-119 (REPORT-ONLY): maxDD_mtm + MARGIN_CALL song song — KHÔNG đổi hành vi cũ.
+                                BudgetManagerSimple.getInstance().updateEquityMtm(unrealAtLow, notionalAtLow, time);
                             }
 
                             logByProcessTime(startTimeRun, "Done update order", time);

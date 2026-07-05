@@ -155,7 +155,8 @@ public class WFORunner {
         for (int i = 0; i < geneNames.length; i++) baseVals[i] = getField(geneNames[i]);
 
         List<String> summary = new ArrayList<>();
-        summary.add("winIdx | OOS_label | IS_fit | OOS_fit | WFE | OOS_pnl | OOS_maxDD | OOS_calmar | best_genome");
+        // 🟡 TASK-119: 2 cột report-only cuối (ddPct% cũ | ddPct_mtm% | marginCall) — verdict KHÔNG đọc.
+        summary.add("winIdx | OOS_label | IS_fit | OOS_fit | WFE | OOS_pnl | OOS_maxDD | OOS_calmar | ddPct% | ddPct_mtm% | marginCall | best_genome");
 
         for (int wi = winFrom; wi < winTo; wi++) {
             Window w = wins.get(wi);
@@ -185,11 +186,13 @@ public class WFORunner {
 
             StringBuilder gp = new StringBuilder();
             for (int gi = 0; gi < geneNames.length; gi++) gp.append(geneNames[gi]).append("=").append(f4(bestGenome[gi])).append(" ");
-            String line = String.format(Locale.US, "%d | %s | %.3f | %.3f | %.3f | %.1f | %.1f | %.3f | %s",
-                    w.idx, w.label, bestIsFit, oos.finalFitness, wfe, oos.totalProfit, oos.maxDrawdown, oos.calmar, gp.toString().trim());
+            String line = String.format(Locale.US, "%d | %s | %.3f | %.3f | %.3f | %.1f | %.1f | %.3f | %.1f | %.1f | %s | %s",
+                    w.idx, w.label, bestIsFit, oos.finalFitness, wfe, oos.totalProfit, oos.maxDrawdown, oos.calmar,
+                    oos.ddPct * 100, oos.ddPctMtm * 100, oos.marginCallHit ? "YES" : "no", gp.toString().trim());
             summary.add(line);
-            LOG.info("[WIN {}] {} IS={} OOS={} WFE={} OOS_pnl={} OOS_calmar={}",
-                    w.idx, w.label, f4(bestIsFit), f4(oos.finalFitness), f4(wfe), f4(oos.totalProfit), f4(oos.calmar));
+            LOG.info("[WIN {}] {} IS={} OOS={} WFE={} OOS_pnl={} OOS_calmar={} | [119] ddPct={}% ddPct_mtm={}% marginCall={}",
+                    w.idx, w.label, f4(bestIsFit), f4(oos.finalFitness), f4(wfe), f4(oos.totalProfit), f4(oos.calmar),
+                    f4(oos.ddPct * 100), f4(oos.ddPctMtm * 100), oos.marginCallHit);
             // khôi phục baseline trước cửa sổ sau
             applyGenome(geneNames, baseVals);
         }

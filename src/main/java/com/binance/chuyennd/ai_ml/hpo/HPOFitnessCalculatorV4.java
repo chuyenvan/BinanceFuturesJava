@@ -53,6 +53,12 @@ public class HPOFitnessCalculatorV4 {
         public float posYearRatio = 0f;
         public float finalFitness = 0f;
         public String note = "";
+
+        // 🟡 TASK-119 (REPORT-ONLY) — maxDD mark-to-market + MARGIN_CALL, đo SONG SONG, KHÔNG vào fitness/verdict.
+        public float maxDDMtm = 0f;          // abs USD (drawdown equity_mtm từ đỉnh)
+        public float ddPctMtm = 0f;          // maxDDMtm / vốn (so trực tiếp với ddPct cũ)
+        public boolean marginCallHit = false;
+        public float minEquityMtmPct = 1f;   // minEquity_mtm / vốn (1.0 = chưa từng có vị thế mở)
     }
 
     /**
@@ -105,6 +111,14 @@ public class HPOFitnessCalculatorV4 {
         float absDD = Math.max(1f, r.maxDrawdown);
         float capital = BudgetManagerSimple.getInstance().balanceBasic;
         r.ddPct = capital > 0 ? r.maxDrawdown / capital : 0f;
+
+        // 🟡 TASK-119 (REPORT-ONLY): copy maxDD_mtm + MARGIN_CALL từ BudgetManagerSimple — CHỈ điền report,
+        //    KHÔNG dùng cho constraint/fitness bên dưới (verdict giữ đọc ddPct cũ).
+        BudgetManagerSimple bm = BudgetManagerSimple.getInstance();
+        r.maxDDMtm = bm.maxDDMtm != null ? bm.maxDDMtm : 0f;
+        r.ddPctMtm = capital > 0 ? r.maxDDMtm / capital : 0f;
+        r.marginCallHit = bm.marginCallHit;
+        r.minEquityMtmPct = (bm.minEquityMtm != null && capital > 0) ? bm.minEquityMtm / capital : 1f;
 
         // %năm-dương
         long posYears = pnlByYear.values().stream().filter(x -> x > 0).count();

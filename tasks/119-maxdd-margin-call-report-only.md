@@ -93,5 +93,51 @@ maxDD_mtm_pct   = maxDD_mtm / balanceBasic                       // chia VỐN �
   `marginCallHit`, `minEquityMtmPct` vào JSON res + log. `aggregate()` thêm CỘT thông tin vào bảng md
   (verdict + worstDdPct GIỮ NGUYÊN đọc ddPct cũ).
 
-## Kết quả
-<CCD điền>
+## Kết quả (CCD điền pha 2 — 2026-07-05)
+
+### Code (thuần additive, report-only — xoá là về cũ y hệt)
+| File | Thay đổi |
+|---|---|
+| `research/BudgetManagerSimple.java` | +6 field mới (`equityPeakMtm/maxDDMtm/timeMaxDDMtm/minEquityMtm/marginCallHit/timeMarginCall`) + const `MAINT_MARGIN_RATE=0.005` + method `updateEquityMtm(unrealAtLow, notionalAtLow, time)`. KHÔNG đụng `updateTrueUnrealizedMin`/`unProfitMin`. |
+| `research/SimulatorMarketLevelTicker1MStopLoss.java` | +1 accumulator `notionalAtLow` trong vòng lặp cụm ĐÃ có + 1 call `updateEquityMtm`. `unrealAtLow`/maxDD cũ không đổi. |
+| `hpo/HPOFitnessCalculatorV4.java` | +4 field report vào `FitnessReport` + copy từ BudgetManagerSimple (đặt CẠNH chỗ đọc `unProfitMin`, KHÔNG vào constraint/fitness). |
+| `wfo/framework/tasks/StrategyWfoTask.java` | +4 key JSON + log + 4 cột bảng md + dòng tổng hợp. Verdict/`worstDdPct` GIỮ NGUYÊN đọc ddPct cũ. |
+| `wfo/WFORunner.java` | +2 cột summary + log (ddPct cũ, ddPct_mtm, marginCall). |
+| `ai_ml/validation/MaxDDMtmChecker.java` | MỚI — unit test main() (repo không JUnit). |
+
+**Chứng minh report-only:** không field/nhánh quyết định nào (fitness, note, verdict, hành vi lệnh, `PASS_MAXDD_OOS`,
+`worstDdPct`) bị đổi. Metric mới CHỈ được ĐỌC bởi log/JSON/bảng report. Xoá `updateEquityMtm` + accumulator +
+field ⇒ bytecode hành vi cũ y hệt. KHÔNG bump CONFIG_VERSION (không đổi PnL/trade/genome/fee/slippage).
+
+### Gate + VERIFY bằng số (in-session)
+- `mvn -o package`: OK (fat jar dựng, exit 0).
+- `MaxDDMtmChecker` (chạy trên jar, exit 0) — **2/2 PASS**:
+
+| Case | maxDD cũ (\|unProfitMin\|) | maxDD_mtm | marginCall | Kết luận |
+|---|---|---|---|---|
+| A (2 vị thế mở + giá rơi + realized give-back) | 100 | **300** | no | maxDD_mtm > maxDD cũ (bắt thêm 200 realized bị nuốt) ✅ |
+| B (lỗ realized ăn hết vốn, còn vị thế mở) | — | — | **YES** (t=11, minEq=-5) | cờ MARGIN_CALL bật đúng ✅ |
+
+Case A chính là minh hoạ "maxDD cũ hiểu nhẹ": neo tại 0 unrealized nên bỏ lãi realized đã trả lại;
+maxDD_mtm đo từ đỉnh equity → sâu hơn.
+
+### Số đo trên window THẬT — **PENDING** (đúng ràng buộc task điểm 4)
+- **Lý do hoãn:** `WFORunner` nạp TOÀN BỘ dataset 2021–2026 vào RAM 1 lần (dòng 144–146, KHÔNG smart-cache)
+  trước khi chạy bất kỳ window nào → không có "window nhỏ" nhẹ; cần nhiều GB + tải mạng từ Aerospike 226.
+  Local hiện chỉ ~7.6GB RAM trống (Xmx≤6g theo task) → biên OOM + job mạng nhiều phút. Theo CORE (không
+  spawn job nền mù khi thiếu đo/kết/verify) → KHÔNG chạy mù. Oracle bận export v3 (task cấm đụng).
+- **Metric đã VERIFY đúng bằng unit test trên chính code path Simulator dùng** (arithmetic khớp), nên số
+  window thật chỉ để quan sát mức thực (vế C 44% cũ → ddPct_mtm bao nhiêu, có dính margin-call không).
+- **Lệnh tái lập khi máy rảnh** (leaked w0, N=5, seed 42), chạy trên 226 hoặc local khi đủ RAM:
+  ```bash
+  java -Xmx6g -cp target/binance-java-sdk-1.2.4-shaded.jar \
+       com.binance.chuyennd.ai_ml.wfo.WFORunner 5 0:1 42
+  # đọc dòng "[WIN 0] ... | [119] ddPct=..% ddPct_mtm=..% marginCall=.." + bảng SUMMARY
+  ```
+  (Nếu chạy nền: redirect log ra `/d/claudedata/119_wfo_w0.log`, KHÔNG ghi ổ C.)
+
+### Bảng so maxDD cũ vs maxDD_mtm (điền khi PENDING chạy xong)
+| nguồn | maxDD cũ % | maxDD_mtm % | marginCall |
+|---|---|---|---|
+| unit Case A | 10.0 (100/1000) | 30.0 (300/1000) | no |
+| WFO w0 leaked N=5 | _PENDING_ | _PENDING_ | _PENDING_ |

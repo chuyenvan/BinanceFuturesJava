@@ -45,6 +45,20 @@ public class BudgetManagerSimple {
     public Long timeTrueUnrealizedMin;
     public TreeMap<Integer, Float> year2TrueUnrealizedMin = new TreeMap<>();
 
+    // 🟡 TASK-119 — maxDD MARK-TO-MARKET + MARGIN_CALL (REPORT-ONLY, chạy SONG SONG, KHÔNG vào fitness/verdict).
+    //    Khác maxDD cũ (unProfitMin neo 0 unrealized): equity_mtm = vốn + realized(net) + unrealized@bar.low,
+    //    maxDD_mtm đo drawdown TỪ ĐỈNH chạy → bắt phần realized đã tích luỹ rồi trả lại (martingale gom lãi
+    //    nhỏ rồi crash). MARGIN_CALL theo Binance USDⓈ-M cross: thanh lý khi marginBalance(=equity_mtm) ≤
+    //    maintenanceMargin. Giả định proxy v1: MMR phẳng 0.5% (bậc thấp alt), maintAmount=0, notional@bar.low.
+    //    Xoá cụm này ⇒ hành vi cũ y hệt (không nhánh quyết định nào đọc). Xem tasks/119.
+    public static final float MAINT_MARGIN_RATE = 0.005f;  // proxy MMR Binance cross 1x (giả định, ghi ở task)
+    public Float equityPeakMtm = null;   // đỉnh equity_mtm chạy (null tới tick đầu có vị thế)
+    public Float maxDDMtm = 0f;          // max drawdown equity_mtm (abs USD, ≥0)
+    public Long timeMaxDDMtm;
+    public Float minEquityMtm = null;    // equity_mtm thấp nhất từng thấy (abs USD)
+    public boolean marginCallHit = false;
+    public Long timeMarginCall;
+
     // 🟢 PER-QUÝ MARK-TO-MARKET (TASK-110): đo hiệu suất từng quý ĐÚNG cách — equity = realized + unrealized
     //    snapshot mỗi tick theo quý. Tránh sai lệch "lệch quý": lệnh mở Q1 lỗ-tạm rồi chốt-lời Q2, nếu chỉ
     //    quy PnL theo timeUpdate (đóng) thì Q1 giấu lỗ, Q2 phồng lãi. Mark-to-market: lỗ-tạm hạ equity Q1
@@ -95,6 +109,37 @@ public class BudgetManagerSimple {
         Float yMin = year2TrueUnrealizedMin.get(year);
         if (yMin == null || yMin > unrealizedAtLow) {
             year2TrueUnrealizedMin.put(year, unrealizedAtLow);
+        }
+    }
+
+    /**
+     * TASK-119 (REPORT-ONLY) — cập nhật maxDD mark-to-market + cờ MARGIN_CALL. Gọi MỖI TICK từ Simulator
+     * NGAY SAU {@link #updateTrueUnrealizedMin} (cùng cadence + cùng mark bar.low). KHÔNG vào fitness/verdict.
+     *
+     * @param unrealizedAtLow tổng unrealized danh mục @bar.low (âm=lỗ) — CHÍNH số truyền cho maxDD cũ
+     * @param notionalAtLow   tổng notional @bar.low = Σ qty·bar.minPrice (cho maintenance margin)
+     * @param time            mốc phút (GMT+7)
+     */
+    public void updateEquityMtm(float unrealizedAtLow, float notionalAtLow, long time) {
+        float equity = balanceBasic + profit + unrealizedAtLow;   // realized NET (profit) + unrealized@low
+
+        if (equityPeakMtm == null || equity > equityPeakMtm) {
+            equityPeakMtm = equity;
+        }
+        float dd = equityPeakMtm - equity;   // ≥0
+        if (dd > maxDDMtm) {
+            maxDDMtm = dd;
+            timeMaxDDMtm = time;
+        }
+        if (minEquityMtm == null || equity < minEquityMtm) {
+            minEquityMtm = equity;
+        }
+        // MARGIN_CALL (Binance cross): equity_mtm ≤ maintenanceMargin ≈ MMR·notional (maintAmount=0, bậc thấp).
+        if (equity <= MAINT_MARGIN_RATE * notionalAtLow) {
+            if (!marginCallHit) {
+                marginCallHit = true;
+                timeMarginCall = time;
+            }
         }
     }
 

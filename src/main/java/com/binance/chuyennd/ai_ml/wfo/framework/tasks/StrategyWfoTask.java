@@ -199,6 +199,11 @@ public class StrategyWfoTask implements WfoTask {
         res.put("oosPnl", round4(oos.totalProfit));
         res.put("oosMaxDD", round4(oos.maxDrawdown));
         res.put("oosDdPct", round4(oos.ddPct));   // TỶ LỆ maxDD/vốn — dùng cho VERDICT (pre-reg ≤50%)
+        // 🟡 TASK-119 (REPORT-ONLY): maxDD mark-to-market + MARGIN_CALL, ghi SONG SONG. Verdict KHÔNG đọc.
+        res.put("oosMaxDD_mtm", round4(oos.maxDDMtm));
+        res.put("oosDdPct_mtm", round4(oos.ddPctMtm));
+        res.put("oosMarginCall", oos.marginCallHit);
+        res.put("oosMinEqPct_mtm", round4(oos.minEquityMtmPct));
         res.put("oosCalmar", round4(oos.calmar));
         res.put("oosTrades", oos.tradeCount);
         // V4.1 (TASK-113): note tường minh — aggregate đếm %OOS-dương CHỈ khi oosNote=SUCCESS (giữ semantics
@@ -235,10 +240,12 @@ public class StrategyWfoTask implements WfoTask {
         // V4.1 (TASK-113): windowDays = range backtest THẬT của chính window này, KHÔNG suy từ span lệnh
         int windowDays = (int) Math.max(1, (end - start) / Utils.TIME_DAY);
         HPOFitnessCalculatorV4.FitnessReport rep = HPOFitnessCalculatorV4.evaluateDetailed(sim.allOrderDone, windowDays);
-        LOG.info("[BT {}..{}] note={} trades={} pnl={} ddPct={} maxDD={} held>7d={} posYr={} fit={}",
+        LOG.info("[BT {}..{}] note={} trades={} pnl={} ddPct={} maxDD={} held>7d={} posYr={} fit={} " +
+                        "| [119 report-only] ddPct_mtm={} maxDD_mtm={} marginCall={} minEqPct_mtm={}",
                 Utils.normalizeDateYYYYMMDD(start), Utils.normalizeDateYYYYMMDD(end),
                 rep.note, rep.tradeCount, round4(rep.totalProfit), round4(rep.ddPct),
-                round4(rep.maxDrawdown), round4(rep.pctHeldOver7d), round4(rep.posYearRatio), round4(rep.finalFitness));
+                round4(rep.maxDrawdown), round4(rep.pctHeldOver7d), round4(rep.posYearRatio), round4(rep.finalFitness),
+                round4(rep.ddPctMtm), round4(rep.maxDDMtm), rep.marginCallHit, round4(rep.minEquityMtmPct));
         return rep;
     }
 
@@ -257,6 +264,8 @@ public class StrategyWfoTask implements WfoTask {
         List<Double> wfes = new ArrayList<>();
         double worstMaxDD = 0;     // abs USD (tham khảo)
         double worstDdPct = 0;     // TỶ LỆ — dùng cho VERDICT
+        double worstDdPctMtm = 0;  // 🟡 TASK-119 report-only — KHÔNG vào verdict
+        int marginCallCount = 0;   // 🟡 TASK-119 report-only
         for (JSONObject r : rows) {
             double oosPnl = r.getDouble("oosPnl");
             // V4.1 (TASK-113): đếm cửa-sổ-thành-công TƯỜNG MINH theo note — chỉ SUCCESS && pnl>0.
@@ -266,6 +275,8 @@ public class StrategyWfoTask implements WfoTask {
             wfes.add(r.getDouble("wfe"));
             worstMaxDD = Math.max(worstMaxDD, r.getDouble("oosMaxDD"));
             worstDdPct = Math.max(worstDdPct, r.optDouble("oosDdPct", 0));
+            worstDdPctMtm = Math.max(worstDdPctMtm, r.optDouble("oosDdPct_mtm", 0));   // report-only
+            if (r.optBoolean("oosMarginCall", false)) marginCallCount++;               // report-only
         }
         double posRatio = n > 0 ? (double) posCount / n : 0;
         double wfeMedian = median(wfes);
@@ -288,9 +299,14 @@ public class StrategyWfoTask implements WfoTask {
         md.append("- WFE trung vị: ").append(String.format(Locale.US, "%.3f", wfeMedian)).append("\n");
         md.append("- maxDD OOS xấu nhất: ").append(String.format(Locale.US, "%.1f%% vốn", worstDdPct * 100))
           .append(" (abs ").append(String.format(Locale.US, "%.0f", worstMaxDD)).append(")\n\n");
+        // 🟡 TASK-119 (REPORT-ONLY): số đo song song — KHÔNG dùng cho VERDICT ở trên.
+        md.append("- **[119 report-only]** maxDD_mtm OOS xấu nhất: ")
+          .append(String.format(Locale.US, "%.1f%% vốn", worstDdPctMtm * 100))
+          .append(" | cửa sổ dính MARGIN_CALL: ").append(marginCallCount).append("/").append(n)
+          .append(" _(maxDD_mtm = drawdown equity mark-to-market từ đỉnh, gồm realized; margin-call = equity ≤ 0.5% notional, proxy Binance cross 1x — chỉ báo cáo, verdict vẫn đọc maxDD cũ)_\n\n");
         md.append("## Bảng cửa sổ\n");
-        md.append("| win | OOS | IS_fit | OOS_fit | WFE | OOS_pnl | OOS_maxDD | OOS_calmar | trades | oosNote | reject |\n");
-        md.append("|---|---|---|---|---|---|---|---|---|---|---|\n");
+        md.append("| win | OOS | IS_fit | OOS_fit | WFE | OOS_pnl | OOS_maxDD | OOS_calmar | trades | oosNote | reject | ddPct% | ddPct_mtm% | marginCall | minEq_mtm% |\n");
+        md.append("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|\n");
         for (JSONObject r : rows) {
             md.append("| ").append(r.getInt("winIdx"))
               .append(" | ").append(r.getString("label"))
@@ -303,6 +319,11 @@ public class StrategyWfoTask implements WfoTask {
               .append(" | ").append(r.optInt("oosTrades", -1))
               .append(" | ").append(r.optString("oosNote", "SUCCESS"))
               .append(" | ").append(r.optInt("rejectSamples", -1)).append("/").append(r.optInt("nSamples", -1))
+              // 🟡 TASK-119 report-only cols
+              .append(" | ").append(String.format(Locale.US, "%.1f", r.optDouble("oosDdPct", 0) * 100))
+              .append(" | ").append(String.format(Locale.US, "%.1f", r.optDouble("oosDdPct_mtm", 0) * 100))
+              .append(" | ").append(r.optBoolean("oosMarginCall", false) ? "⚠️YES" : "no")
+              .append(" | ").append(String.format(Locale.US, "%.1f", r.optDouble("oosMinEqPct_mtm", 1) * 100))
               .append(" |\n");
         }
         md.append("\n## Độ ổn định gene qua cửa sổ (min..max best value)\n");
