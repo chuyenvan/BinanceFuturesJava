@@ -131,3 +131,16 @@ Best: depth9/lr0.0115/sub0.61/col0.50/mcw25.7/regL9.86, 293 cây. Single seeds 0
 
 # BỨC TRANH HỘI TỤ: gate IC OOS 0.30-0.50 ✓ mạnh · funding IC OOS 0.344 ✓ mạnh · WFE 0.24 cả 3 vế ✗
 ⇒ nghi phạm còn lại duy nhất: TẦNG CHUYỂN TÍN HIỆU → TRADE (selection/strategy/sim). Chờ N-noise + mổ per-window.
+
+---
+# ĐÓNG SỔ TẦNG-1 (05/07 chiều — kernel funding-thres-calib-24h, TEST base 48.4%)
+| chế độ (chọn trên VAL) | thres | coverage TEST | hit_SEL TEST |
+|---|---|---|---|
+| same-coverage (~prod) | 0.38 | 41.2% | 63.7% |
+| **nguyên ngưỡng production** | 0.3212 | 23.8% | **69.3%** |
+| max-hit (tinh nhuệ) | 0.28 | 13.2% | 73.3% |
+Production cùng kỳ (per-fold TASK-128): hit 66.4%/65.0% @ cov 39.6%/30.2%.
+**Đọc frontier:** model mới TĨNH ưu ở vùng coverage thấp (69-73% hit), hụt nhẹ ~2đ ở coverage cao — tổng thể
+≈ tương đương production dù CHƯA per-fold. KẾT LUẬN TẦNG-1: Optuna hội tụ (+0.004 VAL là hết nước), bagging ≈ 0,
+calibration xong — model tĩnh 1.6MB provenance sạch đã NGANG model 262MB mồ côi. Phần thưởng còn lại nằm ở
+TẦNG-2a walk-forward chain (per-fold từng cho +0.03-0.05 IC). Tầng-1 CHÍNH THỨC ĐÓNG.
