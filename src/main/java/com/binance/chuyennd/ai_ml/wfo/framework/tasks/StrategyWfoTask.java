@@ -55,7 +55,7 @@ public class StrategyWfoTask implements WfoTask {
     static final LinkedHashMap<String, double[]> GENOME = new LinkedHashMap<>();
     static final LinkedHashMap<String, Boolean> IS_INT = new LinkedHashMap<>();
     static {
-        put("MIN_MOMENTUM_15M", 0.030, 0.050, false);
+        put("MIN_MOMENTUM_15M", 0.020, 0.045, false);  // TASK-137: mo range xuong (cu [0.030,0.050]) - sweep cho thay 0.050 la diem te nhat toan ky (calmar 0.92), vung tot 0.015-0.0228 bi loai ngoai; can duoi 0.020 (khong 0.015) de tranh mep vach chay 0.010-0.015
         put("PREDICT_SYMBOL_RATE_MAX_THRESHOLD", 0.05, 0.20, false);
         put("AI_DYNAMIC_MULTIPLIER", 1.5, 2.0, false);
         put("AI_DYNAMIC_MIN", 0.10, 0.50, false);
