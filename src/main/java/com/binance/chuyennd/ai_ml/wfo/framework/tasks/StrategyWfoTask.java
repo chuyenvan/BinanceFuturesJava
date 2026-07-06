@@ -55,7 +55,7 @@ public class StrategyWfoTask implements WfoTask {
     static final LinkedHashMap<String, double[]> GENOME = new LinkedHashMap<>();
     static final LinkedHashMap<String, Boolean> IS_INT = new LinkedHashMap<>();
     static {
-        put("MIN_MOMENTUM_15M", 0.020, 0.045, false);  // TASK-137: mo range xuong (cu [0.030,0.050]) - sweep cho thay 0.050 la diem te nhat toan ky (calmar 0.92), vung tot 0.015-0.0228 bi loai ngoai; can duoi 0.020 (khong 0.015) de tranh mep vach chay 0.010-0.015
+        put("MIN_MOMENTUM_15M", 0.020, 0.045, false);  // TASK-137: [0.020,0.045] - range B [0.015,0.045] cho WFE 0.104 (te hon), 0.020 tranh mep vach chay: mo range xuong (cu [0.030,0.050]) - sweep cho thay 0.050 la diem te nhat toan ky (calmar 0.92), vung tot 0.015-0.0228 bi loai ngoai; can duoi 0.020 (khong 0.015) de tranh mep vach chay 0.010-0.015
         put("PREDICT_SYMBOL_RATE_MAX_THRESHOLD", 0.05, 0.20, false);
         put("AI_DYNAMIC_MULTIPLIER", 1.5, 2.0, false);
         put("AI_DYNAMIC_MIN", 0.10, 0.50, false);
@@ -64,7 +64,7 @@ public class StrategyWfoTask implements WfoTask {
         put("DCA_LOSS_BIG_DOWN", -0.22, -0.08, false);
         put("DCA_TIME_BIG_DOWN", 3, 7, true);
         put("DCA_TIME_BIG_Up", 21, 30, true);
-        put("RATE_PROFIT_STOP_MARKET", 0.012, 0.025, false);
+        put("RATE_PROFIT_STOP_MARKET", 0.020, 0.050, false);  // TASK-139: PHAT HIEN LON - cu [0.012,0.025] ep WFO tune trong vung CAT NON. Sweep: 0.03-0.05 cho PnL 2.4x + calmar 2.3x, maxDD khong doi. Day la nut that that (khong phai MIN_MOM15)
         put("TS_PROFIT_MULTIPLIER", 4.0, 8.0, false);
         put("TS_DYNAMIC_K", 0.10, 0.25, false);
         put("TS_MAX_GAP", 0.04, 0.06, false);
