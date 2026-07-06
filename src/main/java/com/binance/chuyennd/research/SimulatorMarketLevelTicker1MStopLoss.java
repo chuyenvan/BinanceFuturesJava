@@ -51,6 +51,13 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     public long ablationPlaceboPass = 0;  // số PASS ngẫu nhiên của C
     public float ablationPassRate = 0.5f; // xác suất pass cho C — set TỪ passRate đo ở A
 
+    // === TASK-134 PROBE (thuần đếm, KHÔNG đổi PnL): phân loại entry theo NGUỒN để đo đóng góp funding-selector ===
+    public long entryBigDown = 0;        // leg đầu từ BIG_DOWN (market-signal bắt-đáy)
+    public long entryPredictSymbol = 0;  // leg đầu từ PREDICT_SYMBOL_TRADE (funding-selector)
+    public long entryDcaLevel = 0;       // DCA nhồi
+    public long entryOther = 0;          // còn lại (SMALL_* nếu bật)
+    public long predictSymbolRejectedGate = 0; // coin funding-selector bị gate REJECT (không vào lệnh)
+
     // =================================================================
     // 🔥 SỬ DỤNG MẢNG CỐ ĐỊNH O(1) ĐỂ LOẠI BỎ AUTOBOXING RÁC CỦA HASHMAP
     // =================================================================
@@ -611,6 +618,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
                 ablationSignalSeen++;
                 if (filterResult.decision == AIRejectFilter.FilterDecision.REJECT) {
+                    if (levelChange == MarketLevelChange.PREDICT_SYMBOL_TRADE) predictSymbolRejectedGate++; // TASK-134
                     return;
                 }
                 ablationPassCount++;
@@ -646,6 +654,12 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         // đạt 5-10% tổng vốn. Lá chắn THẬT là BREAKER_MARGIN_HALT tổng (DD -58.6%→-42.5%, maxMargR 0.99→0.71).
         // Scenario LUNA 1-coin cứu được chỉ vì cô lập (toàn vốn dồn 1 cụm) — KHÔNG đại diện danh mục. Giữ
         // LunaDcaScenario làm tài liệu vì-sao-vô-dụng. Hướng Bước 3: chốt MARGIN_HALT, tinh chỉnh ngưỡng.
+
+        // TASK-134 PROBE: phân loại nguồn leg vừa PASS mọi cổng (thuần đếm)
+        if (levelChange == MarketLevelChange.BIG_DOWN) entryBigDown++;
+        else if (levelChange == MarketLevelChange.PREDICT_SYMBOL_TRADE) entryPredictSymbol++;
+        else if (levelChange == MarketLevelChange.DCA_LEVEL1) entryDcaLevel++;
+        else entryOther++;
 
         Float entry = ticker.priceClose;
         Integer leverage = Configs.LEVERAGE_ORDER;
