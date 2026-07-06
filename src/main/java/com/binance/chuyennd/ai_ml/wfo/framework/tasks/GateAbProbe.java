@@ -44,7 +44,7 @@ public class GateAbProbe {
             {"2025Q2_phang", "20250401", "20250701"},
             {"toan_ky", "20210101", "20260501"},
         };
-        String[] modes = {"A", "E", "OFF"};
+        String[] modes = {"A", "F", "E", "OFF"};  // TASK-138: them F (chi MOM15, bo RISK) do tac dong gate RISK (predRisk4H leak?)
 
         // header
         LOG.info(String.format("%-14s %-4s %8s %10s %8s %8s %8s %7s %7s %8s %8s",
