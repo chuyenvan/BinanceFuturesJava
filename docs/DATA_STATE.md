@@ -12,8 +12,8 @@
 | Tầng | Vị trí | Trạng thái (đo) | Ghi chú |
 |---|---|---|---|
 | **Ticker FILE** | Oracle `kaggle_data_hpo/daily/ticker_YYYYMMDD.bin.gz` | ✅ **ĐẦY ĐỦ** 1886 file (2021-01-01→2026-03-01), 11GB | Có đủ 38 coin delist + ĐUÔI SẬP. Nguồn đầy đủ nhất hiện có. |
-| **Ticker Aerospike** | Oracle ns=`test` set `kline_1m_opt` | ❌ **GẦN RỖNG** — chỉ 17690 phút (2022-05-01→05-13) | Tàn dư thí nghiệm + pilot LUNA 2026-07-07. KHÔNG phải 1886 ngày. |
-| **symbol_lifecycle** | Oracle ns=`test` set `symbol_lifecycle` | ❌ **CHƯA DỰNG** (0 record) | Cần chạy `SymbolLifecycleBuilder`. Nguồn sự thật vòng đời coin. |
+| **Ticker Aerospike** | Oracle ns=`test` set `kline_1m_opt` | ✅ **ĐẦY ĐỦ (2026-07-07)** — 2,703,650 record phút, 1886 ngày (2021-01-01→2026-03-01) | Nạp từ file bằng IngestTickerFileToAerospike. 698 symbol, gồm 62 coin DEAD. |
+| **symbol_lifecycle** | Oracle ns=`test` set `symbol_lifecycle` | ✅ **DỰNG XONG (2026-07-07)** — 698 symbol (636 LIVE, 62 DEAD) | SymbolLifecycleBuilderLocal. LUNA/ANC=DEAD đúng. ⚠️ trạng thái suy TỪ DATA (last vs maxTicker), không từ exchangeInfo — FTT=LIVE vì có data tới cuối. |
 | **market.bin / wfo_dataset** | Oracle | ❌ **KHÔNG THẤY** trên Oracle | features_oi_percoin_v1 có (3GB). market/wfo cần export lại. |
 
 **Hệ quả then chốt:** survivorship (38 coin delist) ĐÃ được TASK-005 xử lý — nhưng ở **tầng FILE**, KHÔNG phải Aerospike.
@@ -59,4 +59,7 @@ Hướng: file ticker đã đầy đủ → đạt mục tiêu "Aerospike nguồ
 5. Provenance: mọi artifact ghi manifest (code SHA + nguồn + ngày). Dữ liệu Oracle ns=test = TEST-ONLY, tách 242-source.
 
 ## 6. LỊCH SỬ
-- 2026-07-07: tạo mới sau phiên đo dứt điểm. Phát hiện: ticker đầy đủ ở FILE không phải Aerospike; ns=test gần rỗng; lifecycle chưa dựng. Sửa hiểu lầm "Oracle ns=test có 1886 ngày ticker".
+- 2026-07-07 (phiên chiều): NẠP XONG ticker file→Aerospike (1886 ngày, 2.7M record, 0 thiếu) + DỰNG lifecycle (698 sym: 636 LIVE/62 DEAD). Aerospike Oracle giờ = nguồn chuẩn đầy đủ. Verify LUNA/ANC DEAD đúng.
+  → 4 tầng: ticker file ✅ + ticker Aerospike ✅ + lifecycle ✅ + dataset ❌ (chờ re-export).
+  ⚠️ ĐỊNH VỊ ROADMAP: P1 backfill vốn ĐÃ ĐÓNG (TASK-005 d387229) — việc nạp hôm nay là KHÔI PHỤC ticker Aerospike bị reset về trạng thái P1. Bước kế = re-export feature/train (P2/H1) — CẦN đối chiếu H1/P2 đã tới đâu trước khi chạy (roadmap viết trước khi Aerospike reset).
+- 2026-07-07 (phiên sáng): tạo mới sau phiên đo dứt điểm. Phát hiện: ticker đầy đủ ở FILE không phải Aerospike; ns=test gần rỗng; lifecycle chưa dựng. Sửa hiểu lầm "Oracle ns=test có 1886 ngày ticker".
