@@ -9,7 +9,10 @@
 4. **226 internet mở** (Kaggle/dev tới); tài nguyên YẾU → tránh dồn job nặng.
 5. **Kaggle nhiều CPU nhưng chỉ tới 226** → việc chỉ-đụng-226 đẩy Kaggle; việc cần-242 bắt buộc 226.
 
-> Nhớ nhanh: **dữ liệu THỊ TRƯỜNG → 242 gốc; dữ liệu TÍNH TOÁN/TRAIN → 226.**
+
+6. **Oracle VPS (161.118.212.3)** = node COMPUTE chính (heavy: train/export/WFO) + Aerospike LOCAL (127.0.0.1:3222 ns=test) làm kho DATA-TEST. Config Oracle trỏ AEROSPIKE_HOST_226=127.0.0.1 → "226" trong code = Aerospike local Oracle. Ticker đầy đủ 1886 ngày sống ở FILE kaggle_data_hpo/daily/ + (2026-07-07) nạp vào Aerospike local. ⚠️ Oracle TỚI ĐƯỢC 242:3222 → tool ghi phải trỏ localhost tường minh, KHÔNG dùng getClient242. Trạng thái dữ liệu chi tiết: [../DATA_STATE](../DATA_STATE.md).
+
+> Nhớ nhanh: **dữ liệu THỊ TRƯỜNG → 242 gốc; TÍNH TOÁN/TRAIN → 226; COMPUTE nặng + DATA-TEST (WFO/backtest) → Oracle (Aerospike local + file).**
 
 ## Chi tiết theo loại
 - [aerospike-242](aerospike-242.md) — source market, private, backup repl=1.
