@@ -1,5 +1,11 @@
 # INGEST_FORMAT — format ghi ticker / funding / mapper (TASK-004 bước 0,0a)
 
+> ⚠️ **RÀ 2026-07-07:** File này mô tả FORMAT BYTE ghi/đọc (vẫn đúng). NHƯNG các nhận định về TRẠNG THÁI
+> (namespace, ghi 242, "backfill không đo được survivorship") là bối cảnh 2026-06-10 (pilot 226/242) — ĐÃ THAY ĐỔI.
+> Trạng thái dữ liệu HIỆN TẠI + hướng đi: xem **[DATA_STATE.md](../DATA_STATE.md)** (nguồn sự thật). Tóm tắt cập nhật:
+> Oracle ns=**test** (không phải ticker); backfill ghi qua tool ĐỘC LẬP trỏ Oracle local (BackfillDelistCoin/
+> IngestTickerFileToAerospike), KHÔNG qua writeMinuteBatch-242; ticker file .bin.gz ĐÃ đủ 38 coin delist.
+
 > Đọc từ CODE THẬT (file:line). Phục vụ backfill coin chết an toàn. Cập nhật 2026-06-10.
 
 ## 1. TICKER 1m (giá) — set `kline_1m_opt`
