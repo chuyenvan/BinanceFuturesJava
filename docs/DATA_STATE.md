@@ -59,6 +59,14 @@ Hướng: file ticker đã đầy đủ → đạt mục tiêu "Aerospike nguồ
 4. **Export market → features → generate prediction → wfo_dataset** từ Aerospike (pipeline chuẩn); hoặc backtest/WFO đọc thẳng file để đối chứng nhanh.
 5. Provenance: mọi artifact ghi manifest (code SHA + nguồn + ngày). Dữ liệu Oracle ns=test = TEST-ONLY, tách 242-source.
 
+## 5a. OI FEATURE (chốt 2026-07-07): DÙNG LẠI bản 226 đã validate
+- File `features_oi_percoin_v1/oi_percoin_20210101_to_20260624.bin.gz` (3.1GB, 138M record, nguồn Aerospike 226 backfill từ vision TASK-013).
+- **Validate đủ+đúng (2026-07-07):** coin delist có OI bao trùm sập — LUNA 46859 rec (2021-12..2023-05), ANC 19016 (bao 2022-06), FTT 61396 (bao 2022-11), AUDIO 258k (..2024-05), BTC 573k (..2026-06). → DÙNG LẠI, không export lại.
+- ⚠️ Đã THỬ export lại từ vision (source=vision) nhưng BỎ: quá chậm (~6-10 phút/coin do fetchSymbol tải toàn lịch sử S3, 780 coin = hàng chục giờ). Bản 226 nhanh + đã đủ. Bài học: vision-per-coin chỉ hợp cho vài coul lẻ, không cho full universe.
+
+## 5b. VẤN ĐỀ SẠCH SẼ (ưu tiên thấp, không chặn luồng)
+- **38 ghost `...USDCUSDT`** trong symbol_mapper (781 entry): cặp USDC-margin (BTCUSDC→"BTCUSDCUSDT") bị normalize sai (endsWith USDT). Đã đo (2026-07-07): KHÔNG có ticker/OI thật → mọi bước đọc data bỏ qua tự nhiên → VÔ HẠI về đúng đắn, chỉ phình mapper/universe + WARN khi export OI vision. Xử khi tiện: lọc `USDCUSDT$` khỏi symbol_mapper + universe. Universe thật ~742 coin (780 − 38 ghost).
+
 ## 6. LỊCH SỬ
 - 2026-07-07 (phiên chiều): NẠP XONG ticker file→Aerospike (1886 ngày, 2.7M record, 0 thiếu) + DỰNG lifecycle (698 sym: 636 LIVE/62 DEAD). Aerospike Oracle giờ = nguồn chuẩn đầy đủ. Verify LUNA/ANC DEAD đúng.
   → 4 tầng: ticker file ✅ + ticker Aerospike ✅ + lifecycle ✅ + dataset ❌ (chờ re-export).
