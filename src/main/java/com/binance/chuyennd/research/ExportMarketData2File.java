@@ -32,6 +32,7 @@ public class ExportMarketData2File {
 //        test.exportBtcTrendReverse();
         test.exportMarketEntries(null);
 //        test.exportFundingFeeBuy();
+        System.exit(0); // TASK-141: JVM treo do executor non-daemon trong DataManager -> zombie giu RAM. Exit tuong minh.
     }
 
 
