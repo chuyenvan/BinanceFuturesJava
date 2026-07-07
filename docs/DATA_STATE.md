@@ -13,8 +13,8 @@
 |---|---|---|---|
 | **Ticker FILE** | Oracle `kaggle_data_hpo/daily/ticker_YYYYMMDD.bin.gz` | ✅ **ĐẦY ĐỦ** 1886 file (2021-01-01→2026-03-01), 11GB | Có đủ 38 coin delist + ĐUÔI SẬP. Nguồn đầy đủ nhất hiện có. |
 | **Ticker Aerospike** | Oracle ns=`test` set `kline_1m_opt` | ✅ **ĐẦY ĐỦ (2026-07-07)** — 2,703,650 record phút, 1886 ngày (2021-01-01→2026-03-01) | Nạp từ file bằng IngestTickerFileToAerospike. 698 symbol, gồm 62 coin DEAD. |
-| **symbol_lifecycle** | Oracle ns=`test` set `symbol_lifecycle` | ✅ **DỰNG XONG (2026-07-07)** — 698 symbol (636 LIVE, 62 DEAD) | SymbolLifecycleBuilderLocal. LUNA/ANC=DEAD đúng. ⚠️ trạng thái suy TỪ DATA (last vs maxTicker), không từ exchangeInfo — FTT=LIVE vì có data tới cuối. |
-| **market_data_object (Aerospike)** | Oracle ns=`test` | ✅ **GEN XONG (2026-07-07)** từ ticker đầy đủ → set market_data_object. Verify LUNA sập: rateDown15MAvg=-0.029 ngày 12/5 (phản ánh sập đúng). | ExportMarketData2File, đọc/ghi local Oracle (client226=127.0.0.1). |
+| **symbol_lifecycle** | Oracle ns=`test` set `symbol_lifecycle` | ✅ **REBUILD sau clean (2026-07-07 tối)** — 661 symbol (589 LIVE, 72 DEAD) | Ticker sạch → FTT/RAY/SC... giờ DEAD ĐÚNG mốc delist (FTT last 2022-11-14, không còn giả LIVE). LUNA/ANC DEAD đúng. Bức tranh survivorship đầy đủ 2 chiều. |
+| **market_data_object (Aerospike)** | Oracle ns=`test` | ✅ **REGEN sau clean (2026-07-07 tối)** từ ticker SẠCH. LUNA sập rateDown15MAvg=-0.029 (giữ); 2026-01/02 hết méo do ghost (rateDown ~-0.008 bình thường). | ExportMarketData2File, client226=127.0.0.1 local. |
 | **OI feature** | Oracle `features_oi_percoin_v1/oi_percoin_20210101_to_20260624.bin.gz` | ✅ **DÙNG LẠI (validate 2026-07-07)** — 3.1GB, coin delist có OI bao sập (LUNA/ANC/FTT/AUDIO). Xem mục 5a. | Nguồn 226 (backfill vision TASK-013). |
 | **Gate feature (ff_*.bin)** | Oracle `claudedata/feat/` | ❌ **CHỈ 1 THÁNG cũ** (ff_202401.bin) → export lại toàn bộ từ market_data_object mới | — |
 | **Funding feature + selector pred** | Oracle set/bin | ⏳ Chưa kiểm session này. Model selector v2 có (train 06-25). | — |
@@ -70,8 +70,11 @@ Provenance: mọi artifact ghi manifest (code SHA + nguồn + ngày). Dữ liệ
 - **Validate đủ+đúng (2026-07-07):** coin delist có OI bao trùm sập — LUNA 46859 rec (2021-12..2023-05), ANC 19016 (bao 2022-06), FTT 61396 (bao 2022-11), AUDIO 258k (..2024-05), BTC 573k (..2026-06). → DÙNG LẠI, không export lại.
 - ⚠️ Đã THỬ export lại từ vision (source=vision) nhưng BỎ: quá chậm (~6-10 phút/coin do fetchSymbol tải toàn lịch sử S3, 780 coin = hàng chục giờ). Bản 226 nhanh + đã đủ. Bài học: vision-per-coin chỉ hợp cho vài coul lẻ, không cho full universe.
 
-## 5b. VẤN ĐỀ SẠCH SẼ (ưu tiên thấp, không chặn luồng)
-- **38 ghost `...USDCUSDT`** trong symbol_mapper (781 entry): cặp USDC-margin (BTCUSDC→"BTCUSDCUSDT") bị normalize sai (endsWith USDT). Đã đo (2026-07-07): KHÔNG có ticker/OI thật → mọi bước đọc data bỏ qua tự nhiên → VÔ HẠI về đúng đắn, chỉ phình mapper/universe + WARN khi export OI vision. Xử khi tiện: lọc `USDCUSDT$` khỏi symbol_mapper + universe. Universe thật ~742 coin (780 − 38 ghost).
+## 5b. GHOST + ĐUÔI ĐƠN — ĐÃ XỬ (2026-07-07 tối, task 133 phát hiện)
+⚠️ **SỬA kết luận cũ "ghost vô hại":** SAI sau khi nạp ticker file. Đo lại: 38 ghost `...USDCUSDT` CÓ ticker thật 2026-01→02 (BTCUSDC-margin) → méo market basket 2 tháng cuối. VÀ 10 coin delist-futures (FTT/RAY/SC/STRAX/DGB/RAD/GLMR/IDEX/MDT/WAVES) có ĐUÔI ĐƠN: giá phẳng vol=0 kéo dài 628-1353 ngày sau delist (FTT kẹt $1.59 từ 2022-11 tới 2026) = data rác, lifecycle gắn nhầm LIVE.
+- **ĐÃ CLEAN (CleanTickerGhostAndTail):** xóa 7400 ghost entry + 12.089.576 đuôi-đơn entry khỏi ticker Aerospike. Verify: FTT sau delist KHÔNG còn, trước delist CÒN. Mốc delist per-coin = volume>0 cuối cùng (MeasureDelistPoint).
+- **Hệ quả:** market_data_object + lifecycle gen TRƯỚC clean giờ SAI → phải REGEN cả 2 từ ticker sạch (đang làm).
+- symbol_mapper vẫn còn 38 ghost entry (chỉ id-map, không data) — vô hại vì ticker đã sạch; lọc khi tiện.
 
 ## 6. LỊCH SỬ
 - 2026-07-07 (phiên chiều): NẠP XONG ticker file→Aerospike (1886 ngày, 2.7M record, 0 thiếu) + DỰNG lifecycle (698 sym: 636 LIVE/62 DEAD). Aerospike Oracle giờ = nguồn chuẩn đầy đủ. Verify LUNA/ANC DEAD đúng.
