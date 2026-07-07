@@ -15,6 +15,9 @@
 | **Ticker Aerospike** | Oracle ns=`test` set `kline_1m_opt` | ✅ **ĐẦY ĐỦ (2026-07-07)** — 2,703,650 record phút, 1886 ngày (2021-01-01→2026-03-01) | Nạp từ file bằng IngestTickerFileToAerospike. 698 symbol, gồm 62 coin DEAD. |
 | **symbol_lifecycle** | Oracle ns=`test` set `symbol_lifecycle` | ✅ **DỰNG XONG (2026-07-07)** — 698 symbol (636 LIVE, 62 DEAD) | SymbolLifecycleBuilderLocal. LUNA/ANC=DEAD đúng. ⚠️ trạng thái suy TỪ DATA (last vs maxTicker), không từ exchangeInfo — FTT=LIVE vì có data tới cuối. |
 | **market_data_object (Aerospike)** | Oracle ns=`test` | ✅ **GEN XONG (2026-07-07)** từ ticker đầy đủ → set market_data_object. Verify LUNA sập: rateDown15MAvg=-0.029 ngày 12/5 (phản ánh sập đúng). | ExportMarketData2File, đọc/ghi local Oracle (client226=127.0.0.1). |
+| **OI feature** | Oracle `features_oi_percoin_v1/oi_percoin_20210101_to_20260624.bin.gz` | ✅ **DÙNG LẠI (validate 2026-07-07)** — 3.1GB, coin delist có OI bao sập (LUNA/ANC/FTT/AUDIO). Xem mục 5a. | Nguồn 226 (backfill vision TASK-013). |
+| **Gate feature (ff_*.bin)** | Oracle `claudedata/feat/` | ❌ **CHỈ 1 THÁNG cũ** (ff_202401.bin) → export lại toàn bộ từ market_data_object mới | — |
+| **Funding feature + selector pred** | Oracle set/bin | ⏳ Chưa kiểm session này. Model selector v2 có (train 06-25). | — |
 | **wfo_dataset .bin** | Oracle claudedata/ | ⏳ Chờ export lại từ market_data_object mới (+ features + pred) | wf_v3 cũ market=unchanged (thiếu coin delist). |
 
 **Hệ quả then chốt:** survivorship (38 coin delist) ĐÃ được TASK-005 xử lý — nhưng ở **tầng FILE**, KHÔNG phải Aerospike.
@@ -36,7 +39,7 @@ Codebase có 2 đường đọc ticker, chọn bằng config `TICKER_SOURCE`:
 
 Đã VERIFY trong file ticker (PeekTickerFileV2), giá đuôi khớp CSV:
 - LUNA: lastSeen 2022-05-13 13:49, close **$0.008** (sập từ ~$80). ANC: close $0.055. FTT: 2022-11 đủ. AUDIO/ANT/TOMO/SRM/BTS: 2024-05-28 đủ.
-- 36 coin "thật" (bỏ 2 tên rác tiếng Trung ở CSV: 我踏马来了USDT, 龙虾USDT).
+- 36 coin "thật" (bỏ 2 tên rác tiếng Trung ở CSV: 我踏马来了USDT, 龙虾USDT). ⚠️ **Phân biệt 2 con số:** CSV survivorship gốc = 38 coin (danh sách thủ công TASK-005); symbol_lifecycle đo TỪ DATA = **62 DEAD** (rộng hơn, gồm coin rename như MATIC→POL, và coin ít giao dịch chết lặng). 62 DEAD là bức tranh đầy đủ hơn, dùng cho lọc zombie trong backtest.
 - Đặc trưng: drawdown TB −60.9%, 12/38 died-near-zero. Đây là đuôi trái mà chiến lược no-SL+DCA cần thấy.
 
 ## 4. CẠM BẪY GHI AEROSPIKE (đã xác nhận qua code)
@@ -50,14 +53,17 @@ Codebase có 2 đường đọc ticker, chọn bằng config `TICKER_SOURCE`:
 - Format ticker Aerospike: key `yyyyMMdd-HHmm` GMT+7, bin `data`=Snappy(MinuteDataFinal), symbol FULL ("LUNAUSDT").
   Format file KHÁC: ObjectInputStream serialize `TreeMap<Long,Map<String,KlineObjectSimple>>`.
 
-## 5. VIỆC CÒN LẠI ĐỂ "ĐỦ + ĐÚNG THEO PIPELINE" (chốt 2026-07-07)
+## 5. VIỆC CÒN LẠI ĐỂ "ĐỦ + ĐÚNG THEO PIPELINE" (cập nhật 2026-07-07 chiều)
 
-Hướng: file ticker đã đầy đủ → đạt mục tiêu "Aerospike nguồn chuẩn" + export .bin:
-1. **Xóa 13 ngày rác** ns=test (tàn dư + pilot LUNA) → nạp sạch.
-2. **Nạp 1886 file ticker → Aerospike Oracle ns=test** (coin delist tự theo, vì file đã chứa). Master-worker chia ngày.
-3. **Dựng set symbol_lifecycle** (SymbolLifecycleBuilder) trên Oracle.
-4. **Export market → features → generate prediction → wfo_dataset** từ Aerospike (pipeline chuẩn); hoặc backtest/WFO đọc thẳng file để đối chứng nhanh.
-5. Provenance: mọi artifact ghi manifest (code SHA + nguồn + ngày). Dữ liệu Oracle ns=test = TEST-ONLY, tách 242-source.
+ĐÃ XONG: ticker Aerospike ✅, lifecycle ✅, market_data_object ✅, OI feature ✅ (dùng lại, validate đủ).
+CÒN LẠI (theo thứ tự):
+1. **Gate feature (ff_*.bin)**: export lại TOÀN BỘ từ market_data_object mới (hiện chỉ có ff_202401 1 tháng). Tool: ExportGateFeaturesGroupA/B hoặc RunFullDataCollection. → validate có coin delist + không NaN/leak.
+2. **Funding feature + selector pred**: kiểm bản hiện có (model v2 train 06-25) validate đủ/đúng với ticker mới thì dùng, không thì gen lại. Selector pred cần generate lại nếu feature đổi.
+3. **Export wfo_dataset .bin**: từ market_data_object mới + gate pred + funding/selector pred + OI. Tool ExportWfoDataset. Ghi manifest provenance đầy đủ (code SHA + nguồn + ngày).
+4. **Validate lại** toàn bộ với market object mới (Uni dặn: "đương nhiên validate lại với market object mới").
+5. **WFO baseline mới** trên dữ liệu sạch, ngưỡng pre-reg (WFE≥0.5, %OOS+≥70%, maxDD≤50%). Kết quả WFO CŨ chỉ THAM KHẢO (baseline cũ trên data không sạch = vô nghĩa — Uni chốt).
+
+Provenance: mọi artifact ghi manifest (code SHA + nguồn + ngày). Dữ liệu Oracle ns=test = TEST-ONLY, tách 242-source (lên live phải backfill 242 đường chính thức).
 
 ## 5a. OI FEATURE (chốt 2026-07-07): DÙNG LẠI bản 226 đã validate
 - File `features_oi_percoin_v1/oi_percoin_20210101_to_20260624.bin.gz` (3.1GB, 138M record, nguồn Aerospike 226 backfill từ vision TASK-013).

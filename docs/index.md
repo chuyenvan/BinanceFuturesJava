@@ -12,6 +12,7 @@
 - [rules/security](rules/security.md) — secret/key live đã lộ → rotate, không echo.
 - [KAGGLE_RULES](KAGGLE_RULES.md) — bắt buộc trước mọi Kaggle job: slot=5, 12h-kill, System.exit, ổ-C, network.
 - [db/](db/index.md) — data nào ở đâu, ghi/đọc/chạy đâu (242 source · 226 compute · redis). (`DATA_ARCHITECTURE.md` = pointer cũ.)
+- [**SESSION_START**](SESSION_START.md) — 🔴 **ĐỌC ĐẦU TIÊN mỗi session mới**: mục tiêu, topology, trạng thái 4 tầng dữ liệu, việc kế tiếp, quyết định đã chốt. (2026-07-07)
 - [DATA_STATE](DATA_STATE.md) — **TRẠNG THÁI dữ liệu THẬT (đo)**: 4 tầng (ticker file/aerospike, lifecycle, dataset), 2 đường đọc ticker, survivorship 38 coin. Nguồn sự thật "dữ liệu đủ chưa, ở đâu". (rà 2026-07-07)
 - [runbooks/BACKFILL_SURVIVORSHIP](runbooks/BACKFILL_SURVIVORSHIP.md) — quy trình 7 bước backfill/re-export coin delist + checkpoint.
 - [architecture](architecture.md) — bức tranh lớn codebase + bản đồ package + 2 process live.
