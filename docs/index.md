@@ -12,6 +12,8 @@
 - [rules/security](rules/security.md) — secret/key live đã lộ → rotate, không echo.
 - [KAGGLE_RULES](KAGGLE_RULES.md) — bắt buộc trước mọi Kaggle job: slot=5, 12h-kill, System.exit, ổ-C, network.
 - [db/](db/index.md) — data nào ở đâu, ghi/đọc/chạy đâu (242 source · 226 compute · redis). (`DATA_ARCHITECTURE.md` = pointer cũ.)
+- [DATA_STATE](DATA_STATE.md) — **TRẠNG THÁI dữ liệu THẬT (đo)**: 4 tầng (ticker file/aerospike, lifecycle, dataset), 2 đường đọc ticker, survivorship 38 coin. Nguồn sự thật "dữ liệu đủ chưa, ở đâu". (rà 2026-07-07)
+- [runbooks/BACKFILL_SURVIVORSHIP](runbooks/BACKFILL_SURVIVORSHIP.md) — quy trình 7 bước backfill/re-export coin delist + checkpoint.
 - [architecture](architecture.md) — bức tranh lớn codebase + bản đồ package + 2 process live.
 - [rules/task-workflow](rules/task-workflow.md) — luật khi nhận & chạy task (claim theo cách chạy, bàn-giao job nền, checkpoint, dọn, RESULT). · [AGENT_WORKFLOW](AGENT_WORKFLOW.md) — cơ chế điều phối đầy đủ. · [AGENTS](AGENTS.md) — bản đồ CCD đang làm gì. ⚠️ có thể lệch — đối chiếu trạng thái thật ở ROADMAP (con trỏ 2-track).
 
