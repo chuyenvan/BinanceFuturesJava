@@ -14,7 +14,8 @@
 | **Ticker FILE** | Oracle `kaggle_data_hpo/daily/ticker_YYYYMMDD.bin.gz` | ✅ **ĐẦY ĐỦ** 1886 file (2021-01-01→2026-03-01), 11GB | Có đủ 38 coin delist + ĐUÔI SẬP. Nguồn đầy đủ nhất hiện có. |
 | **Ticker Aerospike** | Oracle ns=`test` set `kline_1m_opt` | ✅ **ĐẦY ĐỦ (2026-07-07)** — 2,703,650 record phút, 1886 ngày (2021-01-01→2026-03-01) | Nạp từ file bằng IngestTickerFileToAerospike. 698 symbol, gồm 62 coin DEAD. |
 | **symbol_lifecycle** | Oracle ns=`test` set `symbol_lifecycle` | ✅ **DỰNG XONG (2026-07-07)** — 698 symbol (636 LIVE, 62 DEAD) | SymbolLifecycleBuilderLocal. LUNA/ANC=DEAD đúng. ⚠️ trạng thái suy TỪ DATA (last vs maxTicker), không từ exchangeInfo — FTT=LIVE vì có data tới cuối. |
-| **market.bin / wfo_dataset** | Oracle | ❌ **KHÔNG THẤY** trên Oracle | features_oi_percoin_v1 có (3GB). market/wfo cần export lại. |
+| **market_data_object (Aerospike)** | Oracle ns=`test` | ✅ **GEN XONG (2026-07-07)** từ ticker đầy đủ → set market_data_object. Verify LUNA sập: rateDown15MAvg=-0.029 ngày 12/5 (phản ánh sập đúng). | ExportMarketData2File, đọc/ghi local Oracle (client226=127.0.0.1). |
+| **wfo_dataset .bin** | Oracle claudedata/ | ⏳ Chờ export lại từ market_data_object mới (+ features + pred) | wf_v3 cũ market=unchanged (thiếu coin delist). |
 
 **Hệ quả then chốt:** survivorship (38 coin delist) ĐÃ được TASK-005 xử lý — nhưng ở **tầng FILE**, KHÔNG phải Aerospike.
 Câu "backfill xong chưa" = ticker file XONG; Aerospike + lifecycle + dataset thì CHƯA.
