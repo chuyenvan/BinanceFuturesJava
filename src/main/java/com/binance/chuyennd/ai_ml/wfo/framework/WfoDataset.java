@@ -65,7 +65,19 @@ public class WfoDataset {
         LOG.info("EXPORT WFO dataset -> {}", outDir);
         TreeMap<Long, MarketDataObject> mkt = DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
         TreeMap<Long, AiPredictionData> prd = DataManagerAerospikeFloatSim.getAllMarketAiPredictionsFromAerospikeSet(SET_PRED); // FIX 05/07: manifest tung noi doi (stamp env nhung scan hardcode) - MD5 v3==v2 bat duoc
-        TreeMap<Long, long[]> fnd = DataManagerAerospikeFloatSim.getAllFundingPredictionsPrimitiveFromAerospike();
+        // FUNDING (selector pred): Uni chot 2026-07-08 -- BO Aerospike, doc THANG tu file Kaggle predict_wf_*.bin
+        // (26B >q h 4f: ts, symId, p4h/p12h/p24h/p72h). Chon 1 horizon qua WFO_SEL_HORIZON_IDX (0=4h,1=12h,2=24h,3=72h;
+        // mac dinh 1). Encode long[] = (symId<<32)|floatBits(1-P(win)) -- DAO DAU khop decodeSelectorMapToPrimitiveArray
+        // (engine chon score THAP = P(win) CAO). WFO_FUNDING_PRED_DIR rong -> fallback Aerospike (luong cu).
+        String fundingPredDir = envOr("WFO_FUNDING_PRED_DIR", "");
+        TreeMap<Long, long[]> fnd;
+        if (!fundingPredDir.isEmpty()) {
+            int horizonIdx = Integer.parseInt(envOr("WFO_SEL_HORIZON_IDX", "1"));
+            fnd = buildFundingFromWfFiles(fundingPredDir, horizonIdx);
+        } else {
+            LOG.warn("WFO_FUNDING_PRED_DIR khong set -> fallback Aerospike (luong cu).");
+            fnd = DataManagerAerospikeFloatSim.getAllFundingPredictionsPrimitiveFromAerospike();
+        }
         LOG.info("scan xong: market={} pred={} funding={}", mkt.size(), prd.size(), fnd.size());
 
         writeMarket(new File(dir, F_MARKET), mkt);
@@ -96,8 +108,61 @@ public class WfoDataset {
         LOG.info("EXPORT xong. manifest:\n{}", mani);
     }
 
+    // ======================= FUNDING tu file Kaggle (BO Aerospike, Uni chot 2026-07-08) =======================
+    /**
+     * Doc 16 file predict_wf_*.bin (26B big-endian: long ts, short symId, float p4h,p12h,p24h,p72h),
+     * gom theo ts -> TreeMap<ts, long[]> cung format engine (funding.bin). Moi long =
+     * (symId<<32) | floatBits(score), score = 1 - P(win)[horizonIdx] (DAO DAU: P(win) cao -> score thap ->
+     * engine uu tien; khop decodeSelectorMapToPrimitiveArray). Bo entry P(win)=NaN. Sort tang theo score
+     * KHONG bat buoc o day (engine preprocessFundingData tu sort truoc khi chay).
+     *
+     * @param predDir    thu muc chua predict_wf_*.bin
+     * @param horizonIdx 0=4h,1=12h,2=24h,3=72h
+     */
+    static TreeMap<Long, long[]> buildFundingFromWfFiles(String predDir, int horizonIdx) throws IOException {
+        File d = new File(predDir);
+        File[] files = d.listFiles((dir, name) -> name.startsWith("predict_wf_") && name.endsWith(".bin"));
+        if (files == null || files.length == 0)
+            throw new IOException("Khong thay predict_wf_*.bin trong " + predDir);
+        java.util.Arrays.sort(files);
+        // gom theo ts -> list encoded long
+        java.util.HashMap<Long, java.util.ArrayList<Long>> byTs = new java.util.HashMap<>(4_000_000);
+        final int REC = 26;
+        long totalRec = 0, kept = 0;
+        for (File f : files) {
+            byte[] all = java.nio.file.Files.readAllBytes(f.toPath());
+            if (all.length % REC != 0)
+                throw new IOException(f.getName() + ": " + all.length + " khong chia het " + REC);
+            java.nio.ByteBuffer buf = java.nio.ByteBuffer.wrap(all); // big-endian mac dinh
+            int nrec = all.length / REC;
+            for (int i = 0; i < nrec; i++) {
+                long ts = buf.getLong();
+                short symId = buf.getShort();
+                float p4 = buf.getFloat(), p12 = buf.getFloat(), p24 = buf.getFloat(), p72 = buf.getFloat();
+                float pwin = horizonIdx == 0 ? p4 : horizonIdx == 1 ? p12 : horizonIdx == 2 ? p24 : p72;
+                totalRec++;
+                if (Float.isNaN(pwin)) continue;
+                float score = 1.0f - pwin; // DAO DAU
+                long encoded = ((long) symId << 32) | (Float.floatToRawIntBits(score) & 0xFFFFFFFFL);
+                byTs.computeIfAbsent(ts, k -> new java.util.ArrayList<>()).add(encoded);
+                kept++;
+            }
+            LOG.info("  doc {}: {} rec (tong kept={})", f.getName(), nrec, kept);
+        }
+        TreeMap<Long, long[]> out = new TreeMap<>();
+        for (Map.Entry<Long, java.util.ArrayList<Long>> e : byTs.entrySet()) {
+            java.util.ArrayList<Long> lst = e.getValue();
+            long[] arr = new long[lst.size()];
+            for (int i = 0; i < arr.length; i++) arr[i] = lst.get(i);
+            out.put(e.getKey(), arr);
+        }
+        String[] hName = {"4h", "12h", "24h", "72h"};
+        LOG.info("buildFundingFromWfFiles: horizon={} | {} file | {} rec doc, {} kept (bo NaN) | {} moc ts",
+                hName[horizonIdx], files.length, totalRec, kept, out.size());
+        return out;
+    }
+
     // ======================= LOAD (mọi worker, đọc file cục bộ) =======================
-    /** Load 3 khối từ file trong dataDir. KIỂM md5 theo manifest (fail-fast nếu lệch — chống data drift L3). */
     public static WfoDataset load(String dataDir) throws Exception {
         File dir = new File(dataDir);
         Map<String, String> mani = readManifest(new File(dir, F_MANIFEST));
