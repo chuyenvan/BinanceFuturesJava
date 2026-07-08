@@ -122,7 +122,9 @@ public class ExportFundingLabel {
             FileWriter w = new FileWriter(outPath);
             w.write(header());
 
-            Validate v = new Validate();
+            boolean noValidate = "1".equals(System.getenv("NO_VALIDATE"));
+            Validate v = new Validate(noValidate);
+            if (noValidate) LOG.info("NO_VALIDATE=1 -> bo gom validate (tranh OOM 20M dong).");
             long[] emitted = {0};
             long days = 0;
 
@@ -301,7 +303,10 @@ public class ExportFundingLabel {
             return a;
         }
 
+        final boolean disabled;
+        Validate(boolean disabled) { this.disabled = disabled; }
         void collect(String sym, long tEpoch, Anchor a) {
+            if (disabled) return;
             for (int h = 0; h < H_STEPS.length; h++) {
                 if (a.maxFavH[h] != -Float.MAX_VALUE) favAll[h].add(a.maxFavH[h]);
                 if (a.maxAdvH[h] != Float.MAX_VALUE) advAll[h].add(a.maxAdvH[h]);
@@ -332,6 +337,7 @@ public class ExportFundingLabel {
         }
 
         void report() throws Exception {
+            if (disabled) return;
             LOG.info("=== (a) PHÂN BỐ maxFav/maxAdv mỗi H (p1/p5/p50/p95/p99) ===");
             for (int h = 0; h < H_STEPS.length; h++) {
                 List<Float> fv = favAll[h], ad = advAll[h];
