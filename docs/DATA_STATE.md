@@ -76,6 +76,11 @@ Provenance: mọi artifact ghi manifest (code SHA + nguồn + ngày). Dữ liệ
 - **Hệ quả:** market_data_object + lifecycle gen TRƯỚC clean giờ SAI → phải REGEN cả 2 từ ticker sạch (đang làm).
 - symbol_mapper vẫn còn 38 ghost entry (chỉ id-map, không data) — vô hại vì ticker đã sạch; lọc khi tiện.
 
+## 5c. FUNDING DATA (2026-07-08): set funding_data RỖNG -> crawl lại
+- Phát hiện: set `funding_data` trống trên Oracle (bị reset như market/OI cũ). Hệ quả: gate feature A (3 cột funding), gate B (b7_pctFundingHigh/Dispersion), selector ff (~10 cột funding #17-27) đều gen ra RỖNG → phải gen lại sau khi có funding.
+- Nguồn: crawl fapi.binance.com (HistoricalFundingCrawlerLocal, symbol từ universe 780 gồm coin delist, ghi Oracle local bin f_data). fapi reachable từ Oracle, ~10-20 phút. KHÔNG copy 242 (242 ns khác `test` → replicate lỗi).
+- ⚠️ Bài học: sau reset Aerospike, MỌI set phụ (market/OI/funding/lifecycle/15m-4h) đều mất — phải khôi phục hết trước khi gen feature. Kiểm set rỗng TRƯỚC khi gen (tránh gen ra feature thiếu cột).
+
 ## 6. LỊCH SỬ
 - 2026-07-07 (phiên chiều): NẠP XONG ticker file→Aerospike (1886 ngày, 2.7M record, 0 thiếu) + DỰNG lifecycle (698 sym: 636 LIVE/62 DEAD). Aerospike Oracle giờ = nguồn chuẩn đầy đủ. Verify LUNA/ANC DEAD đúng.
   → 4 tầng: ticker file ✅ + ticker Aerospike ✅ + lifecycle ✅ + dataset ❌ (chờ re-export).
