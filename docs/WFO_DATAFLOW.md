@@ -91,3 +91,35 @@ Lenh export:
 - ml/funding_selector/kaggle_kernel_train_selector.py; ml/training/gen_funding_wf_predictions.py
 - /tmp/TruncateSets.java (xoa set rac); /tmp/ListSets.java (liet ke set)
 - Git trailer: Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+
+## 9. GHOST USDC — REVIEW LAI (do truc tiep Oracle 2026-07-08, khong doan)
+Boi canh: report 133 (chay 2026-07-07) canh bao 38 ghost *USDCUSDT co ticker that [2026-01-03->02-27],
+market lat 2 thang duoi bi meo. DO LAI tren data HIEN TAI (sau khi CleanTickerGhostAndTail da chay):
+
+| Noi | 133 (07-07) | Do hien tai (07-08) | Danh gia |
+|---|---|---|---|
+| Ghost *USDCUSDT trong TICKER goc | co, [2026-01-03->02-27] | 0 (scan FULL 2,855,553 rec; chi con 1 symbol USDCUSDT 244 rec thua) | SACH |
+| Basket market lat 2026-01/02 | "meo do 38 ban sao" | 587 coin, 1 USDC (moc 02-27), 0 USDC (01-15, 02-01) | KHONG phong |
+| Market feature 2026-01/02 | meo nhe | rateDown/Up/Down15 binh thuong, cung thang cac thang khac | KHONG lech |
+| Ghost trong MAPPER (symbol_mapper) | 38 | 38 (con) | VO HAI — xem duoi |
+
+KET LUAN: report 133 KHONG sai, nhung no chay TRUOC khi CleanTickerGhostAndTail xoa ghost khoi ticker.
+Ticker goc hien tai da SACH 38 ghost USDC-margin -> market_data_object regen tu ticker sach cung sach.
+- 38 ghost con trong MAPPER = symId lich su (mapper chi tich luy, khong xoa). VO HAI vi: (a) mapper khong
+  xoa duoc nhung 38 symId nay KHONG co ticker -> khong vao basket market; (b) market la aggregate theo phut
+  tu ticker sach; (c) symbol khong ticker -> khong co label/feature -> khong vao train/pred.
+- Con 1 symbol USDCUSDT (244 rec thua, range 2023-04->2026-02-27) trong ticker: tac dong cross-sectional
+  len basket 587 coin khong dang ke; neu muon tuyet doi sach chi can them 1 filter USDCUSDT$.
+
+CO CHE BUG (van con trong code, tiem an): DataManagerAerospikeFloatSim.java:940 (readDataFromAerospike1M...)
+normalize `endsWith("USDT") ? sym : sym+"USDT"` -> neu ticker goc co key *USDC se noi thanh *USDCUSDT ghost.
+Ticker gio sach nen KHONG kich hoat, nhung neu nap lai ticker co USDC-margin thi ghost tai tao (dung nhu
+133 canh bao "dumping ha nguon se tai phat").
+
+VIEC NEN LAM (re, va tai nguon — KHONG scrub):
+1. Loc `USDCUSDT$` khi export ff feature (1 filter) — chan ca USDCUSDT that lan moi ghost tuong lai.
+2. Va bug normalize dong 940 de ghost khong tai tao moi lan doc (du ticker gio sach, bug van tiem an).
+CHUA LAM 2 viec tren (cho Uni chot). WFO dang chay tren market/ticker da sach ghost (an toan).
+
+Tools do (Oracle /tmp, read-only): CheckGhost.java (mapper), ScanGhostFull.java (scan full ticker),
+CheckUsdcReal.java (range USDCUSDT), CountBasket.java (dem coin+USDC theo moc), CheckMarket.java (market lat).
