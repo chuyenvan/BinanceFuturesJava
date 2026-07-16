@@ -53,6 +53,7 @@
 | 038 funding F4 feature OI/LS/taker | — | 🟡 TODO | 2026-06-15 | kaggle | depends [013, 037]. OI level/ΔOI/divergence + LS + taker; đọc 5 set OI 226 chunk-tháng |
 | 039 funding F5 ghép + train SELECTOR | — | 🟡 TODO | 2026-06-15 | kaggle | depends [037, 038, 024]. Ghép+train, de-overlap, beat-rule OOS, khoá thứ tự lớp (pred[0]=P(fail)). ❗chốt target +6%/+40% |
 | 130 retrain funding selector GPU (dựng+smoke pipeline, provenance) | CCD-130 opus | 🔵 DOING | 2026-07-05 | kaggle GPU (funding-train-v1) | Thiết kế chốt: bản đúng=`ml/training/train_funding_selector.py` (66341cd); 3 nguồn Java-export đã có trên Kaggle (funding-tool1-features/oi-percoin/label-full). Smoke Q1-2021 GPU, KHÔNG thay model prod. Train FULL clean-provenance = PENDING (Oracle bận vế D) |
+| 156 gate coverage 2021-2022 + re-run WFO v6 | CCD-156B | 🟣 REVIEW | 2026-07-16 | — (job Oracle đã xong 07-12, đã verify log) | Gate v6: 2,717,280 pred phủ 2021-04→2026-05 (2021=396k/2022=525k, cũ 0/420) đã nạp set + pred.bin + WFO final 07-13 (dataset _ff, metric sạch): maxFav3 FAIL 50.0% OOS+ (8/16, WFE 0.596, maxDD 31.8%) — trượt duy nhất posRatio≥70%; ret2wf FAIL 43.8%. Gate hết là biến nhiễu. Chờ user duyệt verdict Phase 0. Report: docs/reports/156.md |
 
 Status: 🟡 TODO · 🔵 DOING · 🟣 REVIEW (chờ user/Desktop soát) · ✅ DONE · ⏸ CHỜ (phụ thuộc task khác).
 

@@ -1,6 +1,8 @@
 ---
 id: 156
-status: NEEDS_HUMAN
+status: REVIEW
+owner: CCD-156B
+updated: 2026-07-16 17:30 +07
 depends_on: []
 touches_live_process: false
 writes_242_data: false
@@ -66,5 +68,20 @@ Sinh gate prediction (predReturn15M, predRisk4H) phủ 2021-01 → 2022-12 leak-
 
 ---
 ## (Code điền) Kết quả
+Đầy đủ tại `docs/reports/156.md` (kèm RESULT block). Tóm tắt:
+- Gốc rễ = CUTOFF `FIRST_OOS=20230101` → sửa `WFOGateRunner` minTrainMonths=3; gate pred v6: 21 fold,
+  2,717,280 pred OOS phủ 2021-04-01 → 2026-05 (2021=396,420 · 2022=525,600 dòng; cũ 0/420). Leak-free expanding.
+- Đã nạp set `ai_pred_market_gate_wfo` (2,717,280 rec) + rebuild pred.bin + WFO chạy lại (07-12/07-13).
+- **Verdict mới (metric sạch, dataset _ff):** maxFav3 **FAIL** — %OOS+ 50.0% (8/16) vs 29% cũ, WFE_med 0.596 (đạt),
+  maxDD 31.8% (đạt) → trượt DUY NHẤT posRatio ≥70%. ret2wf FAIL 43.8%. Gate hết là biến nhiễu; FAIL còn lại do
+  posRatio/regime → thuộc campaign strategy, ngoài scope 156.
+
 ## (Code điền) Phát hiện ngoài scope
+- `predRisk4H` 2021-2022 = 0.0 fallback, KHÔNG phục hồi được (model `ai_models_reg_v3` mất — chi tiết report).
+- BUG 4 funding.bin mất forward-fill 15m→phút + BUG 1 WFE-median nhiễm + orphan jobs → `docs/reports/BUGHUNT_WFO_20260713.md`
+  (phát hiện & fix bởi phiên overnight 07-12/07-13, ảnh hưởng trực tiếp cách đọc verdict 156).
+
 ## (Code điền) Quyết định phát sinh
+- minTrainMonths=3 (khớp bước OOS, reversible).
+- 2026-07-16: đóng hồ sơ bằng verify-log (job đã xong + các bước còn lại đã được phiên overnight chạy trọn),
+  KHÔNG re-run WFO (BUGHUNT cấm vòng mới khi metric chưa sạch; verdict final đã trên metric sạch).
