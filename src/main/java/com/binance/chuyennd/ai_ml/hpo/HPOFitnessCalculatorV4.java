@@ -38,6 +38,14 @@ public class HPOFitnessCalculatorV4 {
     public static int MIN_YEARS_FOR_RATIO = 2;         // chỉ áp %năm-dương khi backtest ≥2 năm
     public static long HELD_TOO_LONG = 7L * Utils.TIME_DAY;
 
+    // ===== V4.2 (TASK-3a) — THƯỞNG TẦN-SUẤT-LỆNH (chỉ tác động TRAIN-selection) =====
+    // Lý do: Calmar là TỈ SỐ (bất biến số lệnh) → HPO chọn genome ít-lệnh sát mép sàn →
+    // OOS regime khác thì tụt < sàn → TOO_FEW. Các hằng này CHỈ đổi finalFitness (genome
+    // nào được chọn), KHÔNG đổi note/totalProfit/calmar → %OOS, WFE, verdict pre-registered
+    // GIỮ NGUYÊN NGỮ NGHĨA. Chỉnh tập trung tại đây; đặt =off bằng FREQ_TARGET_MULT<=0.
+    public static float FREQ_TARGET_MULT = 2.0f;  // mốc "đủ biên" = 2× sàn min-trade
+    public static float FREQ_FLOOR       = 0.5f;  // genome ngay sàn → còn 0.5×calmar (0..1)
+
     // điểm loại (rất âm, phân biệt lý do để debug; KHÔNG phải penalty mềm — chỉ để xếp đáy)
     private static final float REJECT_BASE = -100000f;
 
@@ -130,7 +138,11 @@ public class HPOFitnessCalculatorV4 {
 
         // ===== CONSTRAINT CỨNG (vi phạm = loại, KHÔNG cộng-trừ) — thứ tự + công thức GIỮ NGUYÊN V4 =====
         if (r.tradeCount < minTrades) {
-            r.finalFitness = REJECT_BASE + r.tradeCount; r.note = "TOO_FEW_TRADES"; return r;
+            // V4.2: ramp tỉ lệ (mượn V1) — tạo GRADIENT để random-search leo RA khỏi vùng ít-lệnh.
+            // Vẫn < 0 tuyệt đối (SUCCESS luôn > 0) → không bao giờ vượt 1 window SUCCESS.
+            // 0 lệnh → REJECT_BASE; sát sàn → tiến về 0⁻. note GIỮ NGUYÊN → %OOS không đổi ngữ nghĩa.
+            r.finalFitness = REJECT_BASE * (1f - (float) r.tradeCount / minTrades);
+            r.note = "TOO_FEW_TRADES"; return r;
         }
         if (r.totalProfit <= 0) { r.finalFitness = REJECT_BASE + r.totalProfit; r.note = "BURN_ACCOUNT"; return r; }
         if (r.ddPct > MAX_DD_PCT) { r.finalFitness = REJECT_BASE - r.ddPct * 100; r.note = "OVER_MAXDD"; return r; }
@@ -147,8 +159,18 @@ public class HPOFitnessCalculatorV4 {
             r.finalFitness = REJECT_BASE - (1 - r.posYearRatio) * 100; r.note = "UNSTABLE_ACROSS_YEARS"; return r;
         }
 
-        // ===== QUA HẾT CONSTRAINT → fitness = Calmar thuần (1 số sạch) =====
-        r.finalFitness = r.calmar;
+        // ===== QUA HẾT CONSTRAINT → mục tiêu = Calmar × thưởng-tần-suất (V4.2) =====
+        // r.calmar (report/oosCalmar) GIỮ NGUYÊN Calmar thuần — KHÔNG bị nhân.
+        // finalFitness (điểm CHỌN genome) = calmar × factor; factor ramp 0.5..1.0, bão hòa tại
+        // FREQ_TARGET_MULT × sàn. Genome trade nhiều (có biên) được ưu tiên → chống OOS TOO_FEW.
+        // Bất biến ordering: SUCCESS = calmar×[0.5..1] > 0 > mọi reject → không đảo bậc.
+        float factor = 1f;
+        if (FREQ_TARGET_MULT > 0f) {
+            float freqTarget = Math.max(1f, minTrades * FREQ_TARGET_MULT);
+            float freqFactor = Math.min(1f, r.tradeCount / freqTarget);   // 0..1
+            factor = FREQ_FLOOR + (1f - FREQ_FLOOR) * freqFactor;
+        }
+        r.finalFitness = r.calmar * factor;
         r.note = "SUCCESS";
         return r;
     }

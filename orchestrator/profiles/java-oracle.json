@@ -1,0 +1,15 @@
+{
+  "name": "java-oracle",
+  "description": "Chay job Java WFO tren VPS Oracle (compute chinh). CO DINH: jar preflight-v42, worker cwd, XMX 8g, state Aerospike 226 (ns=ticker), ticker doc tu file, MAX_OOS 20260101. DUOC PHEP DOI (khai bao o pipeline L5): dataset, so cua so N, workers, seed, tag. Cach chay khong doi -> WFO A/B da chay sach 2026-07-16.",
+  "verified": "2026-07-16",
+  "params": {
+    "JAR": "/home/ubuntu/java/simulator/preflight-v42.jar",
+    "WORKER_CWD": "/home/ubuntu/claudedata/.run/oracle_worker_cwd",
+    "XMX": "8g",
+    "STATE_HOST": "103.157.218.226",
+    "STATE_PORT": "3222",
+    "STATE_NS": "ticker",
+    "MAX_OOS": "20260101",
+    "TICKER_SOURCE": "file"
+  }
+}

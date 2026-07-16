@@ -1,0 +1,16 @@
+{
+  "name": "java-226",
+  "description": "Chay job Java NGAY TREN may 226 (LAN, cho merge/copy data). CO DINH: chay local qua HOST_226=127.0.0.1 (khong di WAN), jar /root/preflight226.jar, state Aerospike (ns=ticker), ticker doc tu file. DUOC PHEP DOI (o pipeline L5): dataset nguon/dich, tag job. note: merge/copy data jobs — verified 2026-07-14 (merge226).",
+  "verified": "2026-07-14",
+  "params": {
+    "JAR": "/root/preflight226.jar",
+    "WORKER_CWD": "/home/ubuntu/claudedata/.run/oracle_worker_cwd",
+    "XMX": "8g",
+    "HOST_226": "127.0.0.1",
+    "STATE_HOST": "103.157.218.226",
+    "STATE_PORT": "3222",
+    "STATE_NS": "ticker",
+    "MAX_OOS": "20260101",
+    "TICKER_SOURCE": "file"
+  }
+}

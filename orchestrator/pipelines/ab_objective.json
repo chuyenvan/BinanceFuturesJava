@@ -1,0 +1,68 @@
+{
+  "name": "ab_objective",
+  "params": {
+    "DS": "/home/ubuntu/claudedata/wfo_ds_maxfav3_4h_ff",
+    "JAR": "/home/ubuntu/java/simulator/preflight-226.jar",
+    "N": "30",
+    "WORKERS": "2",
+    "TAG_A": "V41",
+    "TAG_B": "V42"
+  },
+  "steps": [
+    {
+      "id": "wfo_a",
+      "type": "tool",
+      "tool": "wfo_run",
+      "args": {"ds": "${DS}", "jar": "${JAR}", "n": "${N}", "workers": "${WORKERS}", "tag": "${TAG_A}"},
+      "on_fail": "abort",
+      "retry": 1
+    },
+    {
+      "id": "wait_a",
+      "type": "wait",
+      "tool": "wfo_status",
+      "until": {"path": "counts.RUNNING", "equals": 0, "and_path": "counts.PENDING", "and_equals": 0},
+      "interval_sec": 120,
+      "timeout_sec": 18000
+    },
+    {
+      "id": "rep_a",
+      "type": "tool",
+      "tool": "wfo_report",
+      "args": {"tag": "${TAG_A}"}
+    },
+    {
+      "id": "wfo_b",
+      "type": "tool",
+      "tool": "wfo_run",
+      "args": {"ds": "${DS}", "jar": "${JAR}", "n": "${N}", "workers": "${WORKERS}", "tag": "${TAG_B}"},
+      "on_fail": "abort",
+      "retry": 1
+    },
+    {
+      "id": "wait_b",
+      "type": "wait",
+      "tool": "wfo_status",
+      "until": {"path": "counts.RUNNING", "equals": 0, "and_path": "counts.PENDING", "and_equals": 0},
+      "interval_sec": 120,
+      "timeout_sec": 18000
+    },
+    {
+      "id": "rep_b",
+      "type": "tool",
+      "tool": "wfo_report",
+      "args": {"tag": "${TAG_B}"}
+    },
+    {
+      "id": "ab_merge",
+      "type": "shell",
+      "cmd": "R=${CE_RUN_DIR:-/home/ubuntu/claudedata/.run}; { echo '=== ${TAG_A} ==='; grep -iE 'VERDICT|OOS|WFE|maxDD' \"$R/wfo_report_${TAG_A}.md\"; echo; echo '=== ${TAG_B} ==='; grep -iE 'VERDICT|OOS|WFE|maxDD' \"$R/wfo_report_${TAG_B}.md\"; } > \"$R/ab_summary.txt\"; cat \"$R/ab_summary.txt\""
+    },
+    {
+      "id": "decide",
+      "type": "llm_gate",
+      "question": "${TAG_B} co tot hon ${TAG_A} khong? Chot baseline nao?",
+      "context_files": ["wfo_report_${TAG_A}.md", "wfo_report_${TAG_B}.md", "ab_summary.txt"]
+    }
+  ]
+}

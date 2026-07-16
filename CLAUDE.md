@@ -13,6 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Sửa code Java / HPO → `docs/rules/code.md`
 - Chạy/sửa backtest · sim · golden → `docs/rules/backtest.md`
 - Chạy job java trên 226 → `docs/rules/run-226.md`
+- Chạy/giám sát job dài · pipeline · nút bấm CE → `docs/rules/ce-buttons.md` (⛔ cấm bash driver ad-hoc khi nút/pipeline có sẵn)
 - Build Maven / môi trường dev → `docs/rules/build-env.md`
 - Đụng secret / key → `docs/rules/security.md`
 - Chạy Kaggle → `docs/KAGGLE_RULES.md`

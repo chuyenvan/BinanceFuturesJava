@@ -1,0 +1,42 @@
+{
+  "name": "selftest_pipe",
+  "params": {
+    "GREETING": "start"
+  },
+  "steps": [
+    {
+      "id": "s_start",
+      "type": "shell",
+      "cmd": "echo ${GREETING}"
+    },
+    {
+      "id": "t_list",
+      "type": "tool",
+      "tool": "bg_list"
+    },
+    {
+      "id": "s_sleep",
+      "type": "shell",
+      "cmd": "sleep 3 && echo slept"
+    },
+    {
+      "id": "w_ready",
+      "type": "wait",
+      "tool": "bg_list",
+      "until": {"path": "status", "equals": "success"},
+      "interval_sec": 2,
+      "timeout_sec": 30
+    },
+    {
+      "id": "g_decide",
+      "type": "llm_gate",
+      "question": "SELFTEST: xac nhan luong pipeline chay dung? (tra loi bat ky de tiep tuc)",
+      "context_files": []
+    },
+    {
+      "id": "s_done",
+      "type": "shell",
+      "cmd": "echo done"
+    }
+  ]
+}

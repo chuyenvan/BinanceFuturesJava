@@ -1,0 +1,14 @@
+{
+  "name": "java-kaggle",
+  "description": "Chay job Java qua Kaggle kernel (free tier). CO DINH cach chay: kernel template + slots cap 5 + XMX 20g + ticker lay tu Aerospike-226. DUOC PHEP DOI: doi JAR/CONFIG = bump version cua dataset java-run-lc (JAR_DATASET); doi DATA = bump version cua ff dataset (FF_DATASET); notebook nguon nam o KERNELS_DIR. Nguyen tac: doi cai gi thi bump version dataset tuong ung, KHONG sua cach chay. verified 2026-07-14 (test-226-w10 rc=0).",
+  "verified": "2026-07-14",
+  "params": {
+    "JAR_DATASET": "chuyendinh/java-run-lc",
+    "FF_DATASET": "chuyendinh/wfo-ds-ret2-4h-ff",
+    "TICKER_MODE": "aerospike-226",
+    "KERNEL_TEMPLATE": "/home/ubuntu/claudedata/.run/kernel_run_worker.py",
+    "KERNELS_DIR": "/home/ubuntu/claudedata/.run/kernels",
+    "SLOTS_CAP": "5",
+    "XMX": "20g"
+  }
+}

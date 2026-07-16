@@ -1,0 +1,37 @@
+{
+  "name": "watch_v42",
+  "params": {},
+  "steps": [
+    {
+      "id": "wait_v42_done",
+      "type": "wait",
+      "tool": "wfo_status",
+      "until": {
+        "conditions": [
+          {"path": "counts.DONE", "gte": 16},
+          {"path": "counts.RUNNING", "equals": 0}
+        ]
+      },
+      "interval_sec": 120,
+      "timeout_sec": 14400
+    },
+    {
+      "id": "report_v42",
+      "type": "tool",
+      "tool": "wfo_report",
+      "args": {"tag": "V42_pipe"}
+    },
+    {
+      "id": "merge_summary",
+      "type": "shell",
+      "cmd": "R=/home/ubuntu/claudedata/.run; { echo '=== V41 ==='; grep -E 'VERDICT|OOS d|WFE trung|maxDD OOS' $R/wfo_report_ab_V41.md 2>/dev/null; echo '=== V42 ==='; grep -E 'VERDICT|OOS d|WFE trung|maxDD OOS' $R/mcp_ce/wfo_report_V42_pipe.md $R/wfo_report_V42_pipe.md 2>/dev/null | head -8; } > $R/ab_final_summary.txt; cat $R/ab_final_summary.txt",
+      "on_fail": "continue"
+    },
+    {
+      "id": "gate_baseline",
+      "type": "llm_gate",
+      "question": "A/B xong: V4.2 co giam TOO_FEW/tang %OOS so voi V4.1? Neu co -> chot V4.2 lam baseline, commit code. Doc context de quyet.",
+      "context_files": ["ab_final_summary.txt"]
+    }
+  ]
+}

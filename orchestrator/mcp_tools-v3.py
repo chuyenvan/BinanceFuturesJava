@@ -38,6 +38,7 @@ import signal
 import re
 import logging
 import traceback
+import shutil
 
 # ----------------------------------------------------------------------------
 # CAU HINH
@@ -50,13 +51,51 @@ LOCKS_DIR = os.environ.get(
 )
 TOOL_LOG = os.path.join(RUN_DIR, "mcp_tools.log")
 
+# Thu muc chua file pipeline (.json) khai bao kich ban. Doi kich ban = sua FILE,
+# khong sua code. State/checkpoint cua moi lan chay pipeline nam trong RUN_DIR.
+CE_PIPES_DIR = os.environ.get(
+    "CE_PIPES_DIR", "/home/ubuntu/claudedata/.run/pipelines")
+
+# Thu muc chua EXECUTION PROFILE (.json) — "cach chay co dinh theo moi truong x
+# cong nghe". Pipeline nghiep vu (L5) chi khai bao "profile":"<ten>" de nap
+# san params ha tang (JAR/HOST/XMX/dataset...) da verified, khong lap lai chi
+# tiet env trong tung pipeline. Doi profile = sua FILE, khong sua code.
+CE_PROFILES_DIR = os.environ.get(
+    "CE_PROFILES_DIR", "/home/ubuntu/claudedata/.run/profiles")
+
 # So slot Kaggle toi da (chinh qua env neu chinh sach doi).
 KAGGLE_MAX_SLOTS = int(os.environ.get("CE_KAGGLE_MAX_SLOTS", "5"))
+# Cach goi kaggle CLI (venv rieng tren VPS). Chay qua bash -c "<bin> <subcmd>".
+# Default: source venv roi goi kaggle (thuc dung tu van hanh thuc te).
+CE_KAGGLE_BIN = os.environ.get(
+    "CE_KAGGLE_BIN",
+    "source /home/ubuntu/kaggle_latest_venv/bin/activate && kaggle")
 # Dem RAM he thong (GB) cong them vao ram_limit truoc khi cho phep chay.
 RAM_SAFETY_BUFFER_GB = float(os.environ.get("CE_RAM_BUFFER_GB", "3.0"))
 # Tien trinh LIVE cot loi: TUYET DOI khong duoc kill.
 PROTECTED_PROCS = ["BinanceDataIngestor", "BinanceOrderTradingManager",
                    "Aerospike", "Redis"]
+
+# ----------------------------------------------------------------------------
+# CAU HINH WFO (Walk-Forward Optimization) — tham so hoa qua env, default hop ly.
+# Duc tu script van hanh ~/claudedata/.run/optimize_maxfav3.sh (python tu lam).
+# ----------------------------------------------------------------------------
+JAVA_BIN = os.environ.get("CE_JAVA_BIN", "java")
+WFO_JAR_DEFAULT = os.environ.get(
+    "CE_WFO_JAR", "/home/ubuntu/java/simulator/preflight-v42.jar")
+WFO_WORKER_CWD = os.environ.get(
+    "CE_WFO_WORKER_CWD", "/home/ubuntu/claudedata/.run/oracle_worker_cwd")
+WFO_COORD_CLASS = os.environ.get("CE_WFO_COORD_CLASS", "com.binance.chuyennd.ai_ml.wfo.framework.WfoCoordinator")
+WFO_WORKER_CLASS = os.environ.get("CE_WFO_WORKER_CLASS", "com.binance.chuyennd.ai_ml.wfo.framework.WfoWorker")
+WFO_VERIFY_CLASS = os.environ.get("CE_WFO_VERIFY_CLASS", "com.binance.chuyennd.ai_ml.wfo.VerifyOneWindow")
+WFO_COPYTICKER_CLASS = os.environ.get("CE_COPYTICKER_CLASS", "com.binance.chuyennd.aerospike.tools.CopyTicker242To226")
+WFO_STRATEGY = os.environ.get("CE_WFO_STRATEGY", "strategy_window")
+WFO_REPORT_NAME = os.environ.get("CE_WFO_REPORT_NAME", "wfo_strategy_window.md")
+WFO_MAX_OOS_DATE = os.environ.get("CE_WFO_MAX_OOS_DATE", "20260101")
+WFO_STATE_HOST = os.environ.get("CE_WFO_STATE_HOST", "103.157.218.226")
+WFO_STATE_PORT = os.environ.get("CE_WFO_STATE_PORT", "3222")
+WFO_STATE_NS = os.environ.get("CE_WFO_STATE_NS", "ticker")
+WFO_WORKER_RAM_GB = float(os.environ.get("CE_WFO_WORKER_RAM_GB", "3.0"))
 
 os.makedirs(RUN_DIR, exist_ok=True)
 os.makedirs(LOCKS_DIR, exist_ok=True)
@@ -450,7 +489,7 @@ def _read_json(path):
     if not os.path.exists(path):
         return None
     try:
-        with open(path, "r", errors="ignore") as f:
+        with open(path, "r", encoding="utf-8-sig", errors="ignore") as f:
             return json.load(f)
     except Exception:
         logger.exception("Khong parse duoc JSON: %s", path)
@@ -770,18 +809,32 @@ def cmd_remote_ssh(args):
         emit({"status": "error", "summary": f"Ket noi SSH that bai: {e}"})
 
 
+def _kaggle(subcmd, timeout=300):
+    """Goi kaggle CLI qua `bash -c "<CE_KAGGLE_BIN> <subcmd>"`. Tra (rc, out, err).
+
+    CE_KAGGLE_BIN mac dinh 'source <venv>/bin/activate && kaggle' — dung venv
+    rieng tren VPS. Chay qua bash de source venv duoc trong cung shell.
+    """
+    return _sh_bash("%s %s" % (CE_KAGGLE_BIN, subcmd), timeout=timeout)
+
+
+def _kaggle_ref_slug(ref):
+    """Bien kernel_ref (vd 'chuyendinh/java-run-lc') thanh slug an toan cho ten thu muc."""
+    return re.sub(r"[^A-Za-z0-9_.-]+", "__", str(ref)).strip("_") or "kernel"
+
+
 def _count_kaggle_slots():
     """Dem slot Kaggle dang dung (running + queued). Tra (used, running, queued) hoac None neu loi."""
-    p = subprocess.run("kaggle kernels list --mine", shell=True,
-                       capture_output=True, text=True)
-    if p.returncode != 0:
-        logger.error("Loi truy van Kaggle kernels: %s", p.stderr.strip())
+    rc, out, err = _kaggle("kernels list --mine")
+    if rc != 0:
+        logger.error("Loi truy van Kaggle kernels: %s", (err or "").strip())
         return None
     running = queued = 0
-    for line in p.stdout.strip().splitlines():
-        if "running" in line:
+    for line in (out or "").strip().splitlines():
+        low = line.lower()
+        if "running" in low:
             running += 1
-        elif "queued" in line:
+        elif "queued" in low:
             queued += 1
     return running + queued, running, queued
 
@@ -801,19 +854,24 @@ def cmd_kaggle_slots(args):
               "summary": f"Kaggle: {running} running, {queued} queued. "
                          f"Slot kha dung: {available}/{KAGGLE_MAX_SLOTS}",
               "data": {"running": running, "queued": queued,
-                       "slots_used": used, "slots_available": available}})
+                       "slots_used": used, "slots_available": available,
+                       "used": used, "free": available,
+                       "cap": KAGGLE_MAX_SLOTS}})
     except Exception as e:
         logger.exception("Loi kiem tra Kaggle slots.")
         emit({"status": "error", "summary": f"Loi kiem tra Kaggle slots: {e}"})
 
 
 def cmd_kaggle_push(args):
-    """NUT KAGGLE PUSH. Tu gac cong slot roi push kernel len Kaggle.
+    """NUT KAGGLE PUSH. Gac cong slot roi push kernel len Kaggle.
 
-    Cu phap: kaggle_push <kernel_folder_path>
+    Cu phap: kaggle_push <kernel_dir>
+    Chay `kaggle kernels push -p <dir>` qua CE_KAGGLE_BIN. Parse chuoi
+    "successfully pushed" trong stdout de xac nhan (pushed=true/false) + boc
+    kernel_ref neu Kaggle in ra.
     """
     if not args:
-        return emit({"status": "error", "summary": "Cu phap: kaggle_push <kernel_folder_path>"})
+        return emit({"status": "error", "summary": "Cu phap: kaggle_push <kernel_dir>"})
     folder = args[0]
     try:
         counts = _count_kaggle_slots()
@@ -823,13 +881,20 @@ def cmd_kaggle_push(args):
             return emit({"status": "error",
                          "summary": f"CHAN AN TOAN: da dat gioi han {KAGGLE_MAX_SLOTS} slot "
                                     f"({used} dang dung). Khong push them."})
-        p = subprocess.run(f"cd {folder} && kaggle kernels push -p .",
-                           shell=True, capture_output=True, text=True)
-        ok = p.returncode == 0
-        (logger.info if ok else logger.error)("kaggle_push rc=%s", p.returncode)
+        rc, out, err = _kaggle("kernels push -p %s" % folder)
+        out, err = (out or "").strip(), (err or "").strip()
+        pushed = "successfully pushed" in out.lower()
+        # Kaggle in dong dang: '... url: https://www.kaggle.com/code/<ref>'
+        m = re.search(r"kaggle\.com/(?:code/)?([\w-]+/[\w-]+)", out)
+        kernel_ref = m.group(1) if m else None
+        ok = rc == 0 and pushed
+        (logger.info if ok else logger.error)("kaggle_push rc=%s pushed=%s", rc, pushed)
         emit({"status": "success" if ok else "error",
-              "summary": "Da push kernel len Kaggle." if ok else f"Loi push kernel: {p.returncode}",
-              "stdout": p.stdout.strip(), "stderr": p.stderr.strip()})
+              "pushed": pushed, "kernel_ref": kernel_ref, "rc": rc,
+              "summary": ("Da push kernel len Kaggle."
+                          + (f" ref={kernel_ref}" if kernel_ref else ""))
+              if ok else f"Push kernel that bai (rc={rc}, pushed={pushed}).",
+              "stdout": out, "stderr": err})
     except Exception as e:
         logger.exception("Loi push Kaggle.")
         emit({"status": "error", "summary": f"Loi push Kaggle: {e}"})
@@ -838,42 +903,90 @@ def cmd_kaggle_push(args):
 def cmd_kaggle_status(args):
     """NUT KAGGLE STATUS. Trang thai 1 kernel.
 
-    Cu phap: kaggle_status <kernel_slug>
+    Cu phap: kaggle_status <kernel_ref>
+    Parse output Kaggle (vd '... has status "complete"') -> kernel_state
+    chuan hoa: RUNNING | COMPLETE | ERROR | QUEUED | UNKNOWN.
     """
     if not args:
-        return emit({"status": "error", "summary": "Cu phap: kaggle_status <kernel_slug>"})
-    slug = args[0]
+        return emit({"status": "error", "summary": "Cu phap: kaggle_status <kernel_ref>"})
+    ref = args[0]
     try:
-        p = subprocess.run(f"kaggle kernels status {slug}", shell=True,
-                           capture_output=True, text=True)
-        ok = p.returncode == 0
+        rc, out, err = _kaggle("kernels status %s" % ref)
+        out, err = (out or "").strip(), (err or "").strip()
+        low = out.lower()
+        if "running" in low:
+            kstate = "RUNNING"
+        elif "complete" in low:
+            kstate = "COMPLETE"
+        elif "error" in low or "fail" in low:
+            kstate = "ERROR"
+        elif "queue" in low:
+            kstate = "QUEUED"
+        else:
+            kstate = "UNKNOWN"
+        ok = rc == 0
         emit({"status": "success" if ok else "error",
-              "summary": p.stdout.strip() if ok else f"Khong lay duoc trang thai {slug}",
-              "stderr": p.stderr.strip()})
+              "kernel_ref": ref, "kernel_state": kstate,
+              "summary": out if ok else f"Khong lay duoc trang thai {ref} (rc={rc})",
+              "stdout": out, "stderr": err})
     except Exception as e:
         logger.exception("Loi Kaggle status.")
         emit({"status": "error", "summary": f"Loi ket noi Kaggle API: {e}"})
 
 
 def cmd_kaggle_output(args):
-    """NUT KAGGLE OUTPUT. Tai tep ket qua kernel ve thu muc dich.
+    """NUT KAGGLE OUTPUT. Keo output kernel ve va grep loi thuong gap.
 
-    Cu phap: kaggle_output <kernel_slug> <target_download_dir>
+    Cu phap: kaggle_output <kernel_ref> [target_dir]
+    - Khong co target_dir -> mac dinh CE_RUN_DIR/kaggle_out/<ref-slug>/.
+    - Sau khi tai, grep cac pattern loi (Exception, FAIL-FAST, rc=) trong cac
+      tep .log/.txt/.json tai ve.
+    Tra JSON {log_path, errors_found[], tail}.
     """
-    if len(args) < 2:
+    if not args:
         return emit({"status": "error",
-                     "summary": "Cu phap: kaggle_output <kernel_slug> <target_download_dir>"})
-    slug, target_dir = args[0], args[1]
+                     "summary": "Cu phap: kaggle_output <kernel_ref> [target_dir]"})
+    ref = args[0]
+    if len(args) >= 2 and args[1]:
+        target_dir = args[1]
+    else:
+        target_dir = os.path.join(RUN_DIR, "kaggle_out", _kaggle_ref_slug(ref))
     os.makedirs(target_dir, exist_ok=True)
     try:
-        p = subprocess.run(f"kaggle kernels output {slug} -p {target_dir}",
-                           shell=True, capture_output=True, text=True)
-        ok = p.returncode == 0
-        (logger.info if ok else logger.error)("kaggle_output rc=%s", p.returncode)
+        rc, out, err = _kaggle("kernels output %s -p %s" % (ref, target_dir))
+        out, err = (out or "").strip(), (err or "").strip()
+        ok = rc == 0
+        (logger.info if ok else logger.error)("kaggle_output rc=%s", rc)
+        # Grep loi trong cac tep text tai ve.
+        patterns = ("Exception", "FAIL-FAST", "rc=")
+        errors_found, log_path, last_lines = [], None, []
+        try:
+            for fn in sorted(os.listdir(target_dir)):
+                fp = os.path.join(target_dir, fn)
+                if not os.path.isfile(fp):
+                    continue
+                if not (fn.endswith(".log") or fn.endswith(".txt")
+                        or fn.endswith(".json")):
+                    continue
+                with open(fp, "r", errors="ignore") as f:
+                    lines = f.read().splitlines()
+                if fn.endswith(".log") or log_path is None:
+                    log_path = fp
+                for ln in lines:
+                    if any(pat in ln for pat in patterns):
+                        errors_found.append(ln.strip()[:300])
+                last_lines = lines
+        except Exception:
+            logger.exception("Loi doc tep output Kaggle o %s", target_dir)
+        tail = [l.strip() for l in last_lines[-30:]]
         emit({"status": "success" if ok else "error",
-              "summary": f"Tai ket qua tu {slug} ve {target_dir}." if ok
-              else f"Loi tai ket qua: {p.returncode}",
-              "stdout": p.stdout.strip(), "stderr": p.stderr.strip()})
+              "kernel_ref": ref, "target_dir": target_dir, "rc": rc,
+              "log_path": log_path,
+              "errors_found": errors_found[:50], "tail": tail,
+              "summary": (f"Tai output {ref} ve {target_dir}. "
+                          f"errors_found={len(errors_found)}.") if ok
+              else f"Loi tai output (rc={rc}).",
+              "stdout": out, "stderr": err})
     except Exception as e:
         logger.exception("Loi Kaggle output.")
         emit({"status": "error", "summary": f"Loi ket noi Kaggle API: {e}"})
@@ -908,6 +1021,1209 @@ def cmd_kaggle_parse_logs(args):
 
 
 # ============================================================================
+# TIEN ICH BO SUNG cho nhom nut bg_selftest / wfo_* / sys_*.
+# ============================================================================
+def _sh(cmd, timeout=60):
+    """Chay 1 lenh shell, tra (rc, stdout, stderr). Khong nem ngoai le ra ngoai."""
+    try:
+        p = subprocess.run(cmd, shell=True, capture_output=True, text=True,
+                           timeout=timeout)
+        return p.returncode, p.stdout, p.stderr
+    except subprocess.TimeoutExpired as e:
+        logger.error("Lenh qua han (%ss): %s", timeout, cmd)
+        return 124, (e.stdout or ""), (e.stderr or "") + "\n[TIMEOUT]"
+    except Exception as e:
+        logger.exception("Loi chay lenh shell: %s", cmd)
+        return 1, "", str(e)
+
+
+def _run_self(button_args, timeout=60):
+    """Goi lai chinh script nay nhu mot NUT con (phuc vu bg_selftest).
+
+    Chay THAT SU qua dispatch de tu-test dung duong ma CDK se di.
+    Tra (dict_json | None, raw_stdout).
+    """
+    argv = [sys.executable, os.path.abspath(__file__)] + list(button_args)
+    try:
+        p = subprocess.run(argv, capture_output=True, text=True, timeout=timeout)
+        raw = (p.stdout or "").strip()
+        try:
+            return json.loads(raw), raw
+        except Exception:
+            return None, raw
+    except Exception as e:
+        logger.exception("_run_self loi voi args=%s", button_args)
+        return None, str(e)
+
+
+def cmd_bg_selftest(args):
+    """NUT TU-TEST. Chay tron chuoi bg_* bang job sleep don gian de biet he con lanh.
+
+    Cu phap: bg_selftest
+    Trinh tu tuan tu: bg_run job 'selftest_<ts>' cmd 'sleep 20 && echo SELFTEST_OK'
+    -> poll bg_status toi RUNNING -> bg_report -> bg_stop -> bg_cleanup --all ->
+    bg_list (xac nhan sach). Buoc nao loi thi pass=false + detail, VAN chay tiep
+    cac buoc con lai (co gang don duoc thi don). Day la nut CDK bam sau moi lan
+    sua kich ban de biet he thong con lanh.
+    Emit: {status, job_id, steps:[{step,pass,detail}...], overall: PASS|FAIL}.
+    """
+    job_id = "selftest_%d" % int(time.time())
+    cmd = "sleep 20 && echo SELFTEST_OK"
+    # Job selftest chi la sleep, khong can 3GB mac dinh -> ram_gb=0.2 de guard RAM
+    # khong chan tren VPS RAM thap.
+    ram_gb = "0.2"
+    steps = []
+
+    def _step(name, ok, detail):
+        steps.append({"step": name, "pass": bool(ok), "detail": str(detail)[:300]})
+
+    # 1) bg_run (ram_gb=0.2: job sleep khong can RAM, tranh guard chan tren VPS)
+    r, raw = _run_self(["bg_run", job_id, cmd, ram_gb])
+    started = bool(r and r.get("status") == "started")
+    _step("bg_run", started, (r or {}).get("summary", raw))
+
+    # 2) poll bg_status toi RUNNING (toi da ~50s, noi nhe cho VPS spawn cham)
+    running = False
+    detail = "Khong dat trang thai RUNNING trong thoi gian cho."
+    if started:
+        deadline = time.time() + 50
+        while time.time() < deadline:
+            time.sleep(2)
+            rs, _ = _run_self(["bg_status", job_id, "5"])
+            st = (rs or {}).get("state") or {}
+            cur = st.get("status")
+            if cur == "RUNNING":
+                running = True
+                detail = "state.status=RUNNING child_pid=%s" % st.get("child_pid")
+                break
+            if cur in ("FAILED", "KILLED", "BLOCKED"):
+                detail = "state.status=%s (khong len duoc RUNNING)" % cur
+                break
+    _step("bg_status_running", running, detail)
+
+    # 3) bg_report
+    rr, raw = _run_self(["bg_report", job_id])
+    rep_ok = bool(rr and rr.get("status") == "success")
+    _step("bg_report", rep_ok,
+          ("job_status=%s" % (rr or {}).get("job_status")) if rep_ok else raw)
+
+    # 4) bg_stop
+    rstop, raw = _run_self(["bg_stop", job_id])
+    stop_ok = bool(rstop and rstop.get("status") == "stopped")
+    _step("bg_stop", stop_ok, (rstop or {}).get("summary", raw))
+
+    # Cho controller kip ghi result KILLED + don state truoc khi cleanup (tranh race).
+    time.sleep(2)
+
+    # 5) bg_cleanup --all
+    rc, raw = _run_self(["bg_cleanup", job_id, "--all"])
+    clean_ok = bool(rc and rc.get("status") == "success")
+    _step("bg_cleanup", clean_ok, (rc or {}).get("summary", raw))
+
+    # 6) bg_list xac nhan sach (job da bien mat)
+    rl, raw = _run_self(["bg_list"])
+    remaining = [j for j in (rl or {}).get("jobs", []) if j.get("job_id") == job_id]
+    list_ok = bool(rl and rl.get("status") == "success" and not remaining)
+    _step("bg_list_clean", list_ok,
+          "Job da bien mat khoi danh sach." if list_ok
+          else ("Van con dau vet job: %s" % remaining))
+
+    overall = "PASS" if all(s["pass"] for s in steps) else "FAIL"
+    passed = sum(1 for s in steps if s["pass"])
+    logger.info("bg_selftest job=%s overall=%s (%d/%d)", job_id, overall,
+                passed, len(steps))
+    emit({"status": "success", "job_id": job_id, "steps": steps,
+          "overall": overall,
+          "summary": "Tu-test chuoi bg_*: %s (%d/%d buoc dat)."
+          % (overall, passed, len(steps))})
+
+
+# ---- Nhom WFO -------------------------------------------------------------
+def _wfo_coord_cmd(subcmd, jar=None, extra_env=""):
+    """Dung chuoi shell chay WfoCoordinator tai WFO_WORKER_CWD.
+
+    subcmd vd: "reset strategy_window" / "status strategy_window" / "report".
+    """
+    jar = jar or WFO_JAR_DEFAULT
+    env = (extra_env + " ") if extra_env else ""
+    return (f"cd {WFO_WORKER_CWD} && {env}{JAVA_BIN} -cp {jar} "
+            f"{WFO_COORD_CLASS} {subcmd}")
+
+
+def cmd_wfo_run(args):
+    """NUT WFO RUN. Kill worker cu -> reset coordinator -> spawn N WfoWorker nen.
+
+    Cu phap: wfo_run <ds> [jar] [n] [seed] [workers] [tag]
+      ds        : path dataset _ff (BAT BUOC) -> WFO_DATA_DIR
+      jar       : jar simulator (default preflight-v42.jar)
+      n=30      : so mau -> WFO_N_SAMPLES
+      seed=42   : WFO_SEED_BASE
+      workers=2 : so tien trinh WfoWorker spawn nen
+      tag=opt   : nhan job (job_id = wfo_<tag>_w<i>)
+    Hanh vi: kill WfoWorker cu -> `WfoCoordinator reset strategy_window`
+    (env WFO_N_SAMPLES) -> spawn <workers> java WfoWorker DETACHED (env
+    WFO_N_SAMPLES/WFO_DATA_DIR/WFO_SMART_CACHE=1/WFO_SEED_BASE/WFO_MAX_OOS_DATE/
+    WFO_STATE_HOST/PORT/NS) CWD=oracle_worker_cwd, log ve RUN_DIR, moi con giao
+    1 RobustJobController (bg_run infra) giam sat. KHONG block cho xong.
+    """
+    if not args:
+        return emit({"status": "error",
+                     "summary": "Cu phap: wfo_run <ds> [jar] [n] [seed] [workers] [tag]"})
+    ds = args[0]
+    jar = args[1] if len(args) > 1 and args[1] else WFO_JAR_DEFAULT
+    n = args[2] if len(args) > 2 else "30"
+    seed = args[3] if len(args) > 3 else "42"
+    try:
+        workers = int(args[4]) if len(args) > 4 else 2
+    except ValueError:
+        return emit({"status": "error", "summary": "workers phai la so nguyen."})
+    tag = args[5] if len(args) > 5 else "opt"
+
+    # 1) Kill WfoWorker cu (tranh 2 the he cung ghi state store).
+    krc, _, _ = _sh(f"pkill -f {WFO_WORKER_CLASS}")
+    logger.info("wfo_run: pkill %s rc=%s", WFO_WORKER_CLASS, krc)
+
+    # 2) Reset coordinator (dong bo, nhanh). WFO_N_SAMPLES quyet dinh so cua so.
+    reset_cmd = _wfo_coord_cmd(f"reset {WFO_STRATEGY}", jar=jar,
+                               extra_env=f"WFO_N_SAMPLES={n}")
+    rrc, rout, rerr = _sh(reset_cmd, timeout=120)
+    if rrc != 0:
+        logger.error("wfo_run: reset coordinator that bai rc=%s", rrc)
+        return emit({"status": "error", "phase": "reset", "rc": rrc,
+                     "summary": "Reset WfoCoordinator that bai.",
+                     "stdout": rout.strip()[-2000:], "stderr": rerr.strip()[-2000:]})
+
+    # 3) Spawn <workers> WfoWorker nen, moi con boc trong 1 RobustJobController.
+    env_prefix = (
+        f"WFO_N_SAMPLES={n} WFO_DATA_DIR={ds} WFO_SMART_CACHE=1 "
+        f"WFO_SEED_BASE={seed} WFO_MAX_OOS_DATE={WFO_MAX_OOS_DATE} "
+        f"WFO_STATE_HOST={WFO_STATE_HOST} WFO_STATE_PORT={WFO_STATE_PORT} "
+        f"WFO_STATE_NS={WFO_STATE_NS}"
+    )
+    spawned, errors = [], []
+    for i in range(workers):
+        job_id = f"wfo_{tag}_w{i}"
+        live = _live_job_state(job_id)
+        if live:
+            errors.append({"job_id": job_id, "reason": "ALIVE_DO_NOT_RESTART"})
+            continue
+        worker_cmd = (f"cd {WFO_WORKER_CWD} && {env_prefix} {JAVA_BIN} -cp {jar} "
+                      f"{WFO_WORKER_CLASS} {WFO_STRATEGY}")
+        try:
+            pid = _spawn_detached_supervisor(job_id, worker_cmd, WFO_WORKER_RAM_GB)
+            spawned.append({"job_id": job_id, "controller_pid": pid})
+            logger.info("wfo_run: spawn worker %s controller_pid=%s", job_id, pid)
+        except Exception as e:
+            logger.exception("wfo_run: spawn worker %s that bai", job_id)
+            errors.append({"job_id": job_id, "reason": str(e)})
+
+    emit({"status": "started" if spawned else "error",
+          "tag": tag, "dataset": ds, "jar": jar,
+          "n_samples": n, "seed_base": seed, "workers_requested": workers,
+          "reset_ok": True, "spawned": spawned, "errors": errors,
+          "summary": (f"Reset xong, da spawn {len(spawned)}/{workers} WfoWorker nen. "
+                      f"Dung wfo_status/bg_status de theo doi.")
+          if spawned else "Khong spawn duoc worker nao (xem 'errors')."})
+
+
+def cmd_wfo_status(args):
+    """NUT WFO STATUS. Chay WfoCoordinator status, parse tong hop + cua so FAILED.
+
+    Cu phap: wfo_status
+    Parse total/PENDING/RUNNING/DONE/FAILED + liet ke per-window FAILED + err.
+    """
+    cmd = _wfo_coord_cmd(f"status {WFO_STRATEGY}")
+    rc, out, err = _sh(cmd, timeout=120)
+    if rc != 0:
+        logger.error("wfo_status rc=%s", rc)
+        return emit({"status": "error", "rc": rc,
+                     "summary": "WfoCoordinator status that bai.",
+                     "stdout": out.strip()[-2000:], "stderr": err.strip()[-2000:]})
+    counts = {}
+    for kw in ("total", "PENDING", "RUNNING", "DONE", "FAILED"):
+        m = re.search(r"%s\s*[:=]\s*(\d+)" % kw, out, re.IGNORECASE)
+        if m:
+            counts[kw] = int(m.group(1))
+        elif kw == "total":
+            counts[kw] = None
+        else:
+            # Fallback: dem so dong chua token trang thai.
+            counts[kw] = sum(1 for ln in out.splitlines()
+                             if re.search(r"\b%s\b" % kw, ln))
+    failed_windows = [ln.strip()[:200] for ln in out.splitlines()
+                      if re.search(r"\bFAILED\b", ln)]
+    emit({"status": "success", "strategy": WFO_STRATEGY,
+          "counts": counts, "failed_windows": failed_windows,
+          "summary": ("WFO status: total=%s PENDING=%s RUNNING=%s DONE=%s FAILED=%s"
+                      % (counts.get("total"), counts.get("PENDING"),
+                         counts.get("RUNNING"), counts.get("DONE"),
+                         counts.get("FAILED"))),
+          "raw_tail": out.strip().splitlines()[-30:]})
+
+
+def cmd_wfo_report(args):
+    """NUT WFO REPORT. Chay WfoCoordinator report, cp report md ve RUN_DIR, parse chi so.
+
+    Cu phap: wfo_report [tag]
+    Cp CWD/docs/reports/wfo_strategy_window.md -> RUN_DIR/wfo_report_<tag>.md.
+    Parse: VERDICT / %OOS / WFE / maxDD + note-breakdown
+    (dem SUCCESS / TOO_FEW_TRADES / ZERO_TRADES / TOO_MUCH_CAPITAL_LOCK).
+    """
+    tag = args[0] if args else "opt"
+    cmd = _wfo_coord_cmd("report")
+    rc, out, err = _sh(cmd, timeout=180)
+    if rc != 0:
+        logger.error("wfo_report rc=%s", rc)
+        return emit({"status": "error", "rc": rc,
+                     "summary": "WfoCoordinator report that bai.",
+                     "stdout": out.strip()[-2000:], "stderr": err.strip()[-2000:]})
+    src = os.path.join(WFO_WORKER_CWD, "docs", "reports", WFO_REPORT_NAME)
+    dst = os.path.join(RUN_DIR, f"wfo_report_{tag}.md")
+    copied, md = False, ""
+    if os.path.exists(src):
+        try:
+            shutil.copyfile(src, dst)
+            copied = True
+            with open(dst, "r", errors="ignore") as f:
+                md = f.read()
+        except Exception:
+            logger.exception("wfo_report: khong cp/doc duoc report md %s", src)
+    else:
+        logger.warning("wfo_report: khong tim thay report md %s", src)
+
+    def _find(pat):
+        m = re.search(pat, md, re.IGNORECASE)
+        return m.group(1).strip() if m else None
+
+    metrics = {
+        "VERDICT": _find(r"VERDICT\s*[:=]?\s*([A-Za-z_\-]+)"),
+        "OOS_pct": _find(r"%?\s*OOS[^\d\-]*([-\d.]+)\s*%"),
+        "WFE": _find(r"WFE\s*[:=]?\s*([-\d.]+)\s*%?"),
+        "maxDD": _find(r"max\s*DD[^\d\-]*([-\d.]+)\s*%?"),
+    }
+    note_breakdown = {note: len(re.findall(r"\b%s\b" % note, md))
+                      for note in ("SUCCESS", "TOO_FEW_TRADES",
+                                   "ZERO_TRADES", "TOO_MUCH_CAPITAL_LOCK")}
+    emit({"status": "success", "tag": tag,
+          "report_copied": copied, "report_path": dst if copied else None,
+          "report_src": src, "metrics": metrics, "note_breakdown": note_breakdown,
+          "summary": ("WFO report tag=%s VERDICT=%s OOS=%s WFE=%s maxDD=%s"
+                      % (tag, metrics["VERDICT"], metrics["OOS_pct"],
+                         metrics["WFE"], metrics["maxDD"]))})
+
+
+def cmd_wfo_stop(args):
+    """NUT WFO STOP. pkill WfoWorker (va VerifyOneWindow), bao so proc bi kill.
+
+    Cu phap: wfo_stop
+    """
+    killed = {}
+    for pat in (WFO_WORKER_CLASS, WFO_VERIFY_CLASS):
+        _, cout, _ = _sh(f"pgrep -fc {pat}")
+        try:
+            before = int((cout or "0").strip() or "0")
+        except ValueError:
+            before = 0
+        _sh(f"pkill -f {pat}")
+        killed[pat] = before
+    total = sum(killed.values())
+    logger.info("wfo_stop killed=%s", killed)
+    emit({"status": "success", "killed": killed, "total_killed": total,
+          "summary": f"Da pkill {total} tien trinh WFO ({killed})."})
+
+
+# ---- Nhom SYS -------------------------------------------------------------
+def _short_main(cmdline):
+    """Rut gon main class / jar tu dong lenh java (best-effort)."""
+    toks = cmdline.split()
+    for i, t in enumerate(toks):
+        if t == "-jar" and i + 1 < len(toks):
+            return os.path.basename(toks[i + 1])
+    skip_next = False
+    for t in toks:
+        if skip_next:
+            skip_next = False
+            continue
+        if t in ("-cp", "-classpath", "--class-path"):
+            skip_next = True
+            continue
+        if t.startswith("-") or t.endswith("java"):
+            continue
+        if re.match(r"^[\w.$]+$", t) and not t.endswith(".jar"):
+            return t.split(".")[-1]
+    return cmdline[:60]
+
+
+def _java_procs():
+    """Liet ke tien trinh java: [{pid, etime, main}] (main = class/jar rut gon)."""
+    procs = []
+    rc, out, _ = _sh("ps -eo pid=,etime=,args=")
+    if rc != 0:
+        return procs
+    for ln in out.splitlines():
+        ln = ln.strip()
+        if not ln:
+            continue
+        parts = ln.split(None, 2)
+        if len(parts) < 3:
+            continue
+        pid, etime, cmdline = parts
+        if "java" not in cmdline:
+            continue
+        procs.append({"pid": pid, "etime": etime, "main": _short_main(cmdline)})
+    return procs
+
+
+def cmd_sys_health(args):
+    """NUT SYS HEALTH. disk(df /), RAM(free/meminfo), load, danh sach java proc -> JSON.
+
+    Cu phap: sys_health
+    """
+    disk = {}
+    rc, out, _ = _sh("df -P /")
+    if rc == 0:
+        lines = out.strip().splitlines()
+        if len(lines) >= 2:
+            f = lines[1].split()
+            if len(f) >= 6:
+                disk = {"filesystem": f[0], "size": f[1], "used": f[2],
+                        "avail": f[3], "use_pct": f[4], "mount": f[5]}
+    ram = {}
+    try:
+        mi = {}
+        with open("/proc/meminfo", "r") as fh:
+            for line in fh:
+                kv = line.split(":")
+                if len(kv) == 2:
+                    mi[kv[0].strip()] = kv[1].strip()
+
+        def _gb(key):
+            v = mi.get(key, "0").split()
+            try:
+                return round(float(v[0]) / (1024.0 * 1024.0), 2)
+            except Exception:
+                return None
+        ram = {"total_gb": _gb("MemTotal"), "available_gb": _gb("MemAvailable"),
+               "free_gb": _gb("MemFree")}
+    except Exception:
+        logger.exception("sys_health: khong doc duoc /proc/meminfo.")
+    load = None
+    try:
+        load = list(os.getloadavg())
+    except Exception:
+        rc2, lo, _ = _sh("cat /proc/loadavg")
+        if rc2 == 0:
+            load = lo.split()[:3]
+    jvms = _java_procs()
+    emit({"status": "success", "disk": disk, "ram": ram, "load": load,
+          "java_procs": jvms,
+          "summary": ("Disk /=%s dung (con %s); RAM avail=%s/%sGB; load=%s; "
+                      "java_procs=%d"
+                      % (disk.get("use_pct"), disk.get("avail"),
+                         ram.get("available_gb"), ram.get("total_gb"),
+                         load, len(jvms)))})
+
+
+def cmd_sys_zombies(args):
+    """NUT SYS ZOMBIES. Liet ke WfoWorker/VerifyOneWindow/CopyTicker dang chay.
+
+    Cu phap: sys_zombies [kill=true]
+      kill=true -> kill cac tien trinh tim thay va bao so luong.
+    """
+    patterns = [WFO_WORKER_CLASS, WFO_VERIFY_CLASS, WFO_COPYTICKER_CLASS]
+    do_kill = any(a in ("kill=true", "--kill", "kill", "true") for a in args)
+    report = {}
+    for pat in patterns:
+        _, out, _ = _sh(f"pgrep -af {pat}")
+        found = []
+        for ln in out.splitlines():
+            ln = ln.strip()
+            if not ln:
+                continue
+            p = ln.split(" ", 1)
+            found.append({"pid": int(p[0]) if p[0].isdigit() else p[0],
+                          "cmd": (p[1] if len(p) > 1 else "")[:160]})
+        entry = {"count": len(found), "procs": found}
+        if do_kill and found:
+            krc, _, _ = _sh(f"pkill -f {pat}")
+            entry["killed"] = True
+            entry["kill_rc"] = krc
+            logger.info("sys_zombies: pkill %s rc=%s (%d proc)", pat, krc, len(found))
+        report[pat] = entry
+    total = sum(v["count"] for v in report.values())
+    emit({"status": "success", "kill_requested": do_kill,
+          "report": report, "total_found": total,
+          "summary": ("Tim thay %d tien trinh zombie tiem nang%s."
+                      % (total, " — da kill" if do_kill else ""))})
+
+
+def cmd_sys_logtail(args):
+    """NUT SYS LOGTAIL. Tra n dong cuoi cua 1 tep trong RUN_DIR (chan path-traversal).
+
+    Cu phap: sys_logtail <file> [n]
+      file: ten tep trong RUN_DIR. Tu choi neu chua '..' hoac la duong dan tuyet
+            doi / thoat ra ngoai RUN_DIR.
+    """
+    if not args:
+        return emit({"status": "error", "summary": "Cu phap: sys_logtail <file> [n]"})
+    fname = args[0]
+    try:
+        n = int(args[1]) if len(args) > 1 else 50
+    except ValueError:
+        return emit({"status": "error", "summary": "n phai la so nguyen."})
+    # Chan path-traversal (den truoc: cu phap ten tep).
+    if (not fname) or (".." in fname) or fname.startswith("/") \
+       or fname.startswith("\\") or os.path.isabs(fname):
+        logger.warning("sys_logtail: chan ten tep bat hop le '%s'", fname)
+        return emit({"status": "error",
+                     "summary": "Ten tep khong hop le (chan path-traversal)."})
+    run_real = os.path.realpath(RUN_DIR)
+    full = os.path.realpath(os.path.join(run_real, fname))
+    # Chan chot chan: sau khi resolve phai van nam trong RUN_DIR.
+    try:
+        inside = os.path.commonpath([full, run_real]) == run_real
+    except ValueError:
+        inside = False
+    if not inside:
+        logger.warning("sys_logtail: chan tep ngoai RUN_DIR '%s'", fname)
+        return emit({"status": "error",
+                     "summary": "Tep nam ngoai RUN_DIR (chan path-traversal)."})
+    if not os.path.exists(full):
+        return emit({"status": "error", "summary": f"Khong tim thay tep: {fname}"})
+    lines = _tail(full, n)
+    emit({"status": "success", "file": fname, "path": full, "n": n,
+          "lines": lines,
+          "summary": f"Doc {len(lines)} dong cuoi cua {fname}."})
+
+
+# ============================================================================
+# PIPELINE ENGINE (declarative) — MAY LAM HET, LLM CHI GAC O DIEM CAN TU DUY.
+# ----------------------------------------------------------------------------
+# Triet ly: viec CHAN TAY (chay lenh, cho, poll, retry, so file) may tu lam
+# TRON CHUOI. LLM CHI duoc goi o buoc `llm_gate` (dung-va-cho). Doi kich ban =
+# sua FILE pipeline .json, KHONG sua code.
+#
+# Schema pipeline (.json): {"name","params":{...},"steps":[{step},...]}
+# Moi step:
+#   id       : ten buoc (bat buoc, dinh danh trong state)
+#   type     : tool | shell | wait | llm_gate
+#   on_fail  : abort (mac dinh) | continue
+#   retry    : so lan thu lai (mac dinh 0, delay 30s)
+#   type=tool : tool=<ten nut>, args={named}|[positional]
+#   type=shell: cmd="<bash -c>"
+#   type=wait : tool, args, interval_sec, timeout_sec, until={path,equals
+#               [,and_path,and_equals]} hoac until={conditions:[{path,op:value}]}
+#   type=llm_gate: question, context_files=[...]
+# ${param}: thay trong moi chuoi tu params (merge override CLI K=V) truoc khi chay.
+# State/checkpoint: RUN_DIR/pipe_<id>_state.json ghi SAU MOI step.
+#   status: RUNNING | WAITING_LLM | DONE | FAILED | STOPPED
+# llm_gate: runner ghi RUN_DIR/pipe_<id>_NEED_LLM.json {question,context_files,
+#   step_id}, set WAITING_LLM, exit sach. Co RUN_DIR/pipe_<id>_LLM_ANSWER.json
+#   {answer:"..."} thi pipe_resume tieu thu answer va di tiep. KHONG tu goi LLM.
+# ============================================================================
+_STEP_TYPES = ("tool", "shell", "wait", "llm_gate")
+
+# Anh xa dict named-args -> list positional cho tung nut (kem default).
+# default=None nghia la BAT BUOC. Nut ngoai bang chi nhan args dang list.
+TOOL_ARG_ORDER = {
+    "wfo_run": [("ds", None), ("jar", ""), ("n", "30"), ("seed", "42"),
+                ("workers", "2"), ("tag", "opt")],
+    "wfo_status": [],
+    "wfo_report": [("tag", "opt")],
+    "wfo_stop": [],
+    "bg_run": [("job_id", None), ("cmd", None), ("ram", "3.0")],
+    "bg_status": [("job_id", None), ("tail", "50")],
+    "bg_report": [("job_id", None)],
+    "bg_stop": [("job_id", None)],
+    "bg_list": [],
+    "sys_health": [],
+    "sys_zombies": [("kill", "")],
+    "kaggle_slots": [],
+    "kaggle_push": [("dir", None)],
+    "kaggle_status": [("ref", None)],
+    "kaggle_output": [("ref", None), ("dir", "")],
+    "profile_list": [],
+}
+
+
+def _pipe_paths(pipe_id):
+    """Tra ve (state_file, need_llm_file, llm_answer_file) cho 1 pipeline run."""
+    return (
+        os.path.join(RUN_DIR, f"pipe_{pipe_id}_state.json"),
+        os.path.join(RUN_DIR, f"pipe_{pipe_id}_NEED_LLM.json"),
+        os.path.join(RUN_DIR, f"pipe_{pipe_id}_LLM_ANSWER.json"),
+    )
+
+
+def _write_json(path, obj):
+    """Ghi JSON nguyen tu (tmp + rename) — checkpoint an toan khi crash."""
+    tmp = path + ".tmp"
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(obj, f, ensure_ascii=False, indent=2)
+        os.replace(tmp, path)
+        return True
+    except Exception:
+        logger.exception("Khong ghi duoc JSON: %s", path)
+        return False
+
+
+def _subst(obj, params):
+    """Thay ${key} bang params[key] trong moi chuoi (de quy qua dict/list)."""
+    if isinstance(obj, str):
+        out = obj
+        for k, v in params.items():
+            out = out.replace("${%s}" % k, str(v))
+        return out
+    if isinstance(obj, dict):
+        return {k: _subst(v, params) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_subst(v, params) for v in obj]
+    return obj
+
+
+def _dot_get(obj, path):
+    """Lay gia tri theo dot-path 'a.b.c' (ho tro index list). None neu thieu."""
+    cur = obj
+    for part in str(path).split("."):
+        if isinstance(cur, dict):
+            cur = cur.get(part)
+        elif isinstance(cur, list):
+            try:
+                cur = cur[int(part)]
+            except (ValueError, IndexError):
+                return None
+        else:
+            return None
+    return cur
+
+
+def _cmp(actual, op, expected):
+    """So sanh mem: uu tien so hoc neu ep duoc ve float, nguoc lai so chuoi."""
+    fa = fe = None
+    try:
+        fa, fe = float(actual), float(expected)
+    except (TypeError, ValueError):
+        pass
+    if fa is not None and fe is not None:
+        a, e = fa, fe
+    else:
+        a, e = actual, expected
+    if op == "equals":
+        return a == e
+    if op == "gt":
+        return a is not None and a > e
+    if op == "lt":
+        return a is not None and a < e
+    if op == "gte":
+        return a is not None and a >= e
+    if op == "lte":
+        return a is not None and a <= e
+    return False
+
+
+def _until_conditions(until):
+    """Chuan hoa khoi `until` ve list dieu kien [{path,op,value}] (AND)."""
+    conds = []
+    if not isinstance(until, dict):
+        return conds
+    if isinstance(until.get("conditions"), list):
+        for c in until["conditions"]:
+            for op in ("equals", "gt", "lt", "gte", "lte"):
+                if op in c:
+                    conds.append({"path": c.get("path"), "op": op, "value": c[op]})
+                    break
+        return conds
+    # Dang gon: path/equals (+ and_path/and_equals nhu vi du).
+    if "path" in until:
+        conds.append({"path": until["path"], "op": "equals",
+                      "value": until.get("equals")})
+    if "and_path" in until:
+        conds.append({"path": until["and_path"], "op": "equals",
+                      "value": until.get("and_equals")})
+    return conds
+
+
+def _eval_until(until, result):
+    """Tra (ok, chi_tiet). ok=True neu MOI dieu kien until dung tren result."""
+    conds = _until_conditions(until)
+    if not conds:
+        return False, "until rong/khong hop le"
+    details, ok_all = [], True
+    for c in conds:
+        actual = _dot_get(result, c["path"])
+        ok = _cmp(actual, c["op"], c["value"])
+        ok_all = ok_all and ok
+        details.append("%s(%s)%s%s->%s" % (c["path"], actual, c["op"],
+                                           c["value"], "OK" if ok else "x"))
+    return ok_all, "; ".join(details)
+
+
+def _call_tool_capture(tool, arg_list):
+    """Goi NOI BO 1 nut cung process, bat khoi JSON emit() -> (dict|None, raw).
+
+    Khong subprocess de quy: chi tam doi sys.stdout de bat JSON tra ra.
+    """
+    handler = COMMANDS.get(tool)
+    if handler is None:
+        return {"status": "error", "summary": f"tool '{tool}' khong ton tai"}, ""
+    import io
+    buf = io.StringIO()
+    old = sys.stdout
+    sys.stdout = buf
+    try:
+        handler(list(arg_list))
+    except SystemExit:
+        pass
+    except Exception as e:
+        sys.stdout = old
+        logger.exception("pipeline: loi goi tool %s", tool)
+        return {"status": "error", "summary": f"exception: {e}"}, ""
+    finally:
+        sys.stdout = old
+    raw = buf.getvalue().strip()
+    try:
+        return json.loads(raw), raw
+    except Exception:
+        return None, raw
+
+
+def _tool_args_list(tool, args):
+    """Chuan hoa args (dict named | list positional) -> list str positional."""
+    if args is None:
+        return []
+    if isinstance(args, list):
+        return [str(a) for a in args]
+    if isinstance(args, dict):
+        order = TOOL_ARG_ORDER.get(tool)
+        if order is None:
+            return [str(v) for v in args.values()]  # best-effort
+        out = []
+        for key, default in order:
+            if key in args:
+                out.append(str(args[key]))
+            elif default is None:
+                raise ValueError(f"tool '{tool}' thieu tham so bat buoc '{key}'")
+            else:
+                out.append(str(default))
+        while out and out[-1] == "":  # bo duoi default rong -> nut tu ap default
+            out.pop()
+        return out
+    return [str(args)]
+
+
+def _sh_bash(cmd, timeout=600):
+    """Chay `bash -c cmd` (ho tro process substitution). Tra (rc, out, err)."""
+    try:
+        p = subprocess.run(["bash", "-c", cmd], capture_output=True,
+                           text=True, timeout=timeout)
+        return p.returncode, p.stdout, p.stderr
+    except subprocess.TimeoutExpired as e:
+        logger.error("shell qua han (%ss): %s", timeout, cmd)
+        return 124, (e.stdout or ""), (e.stderr or "") + "\n[TIMEOUT]"
+    except Exception as e:
+        logger.exception("Loi chay bash: %s", cmd)
+        return 1, "", str(e)
+
+
+def _validate_pipeline(pipe):
+    """Kiem tra schema pipeline. Tra list loi (rong = hop le)."""
+    errs = []
+    if not isinstance(pipe, dict):
+        return ["pipeline khong phai JSON object"]
+    if not pipe.get("name"):
+        errs.append("thieu 'name'")
+    steps = pipe.get("steps")
+    if not isinstance(steps, list) or not steps:
+        errs.append("'steps' phai la list khong rong")
+        return errs
+    seen = set()
+    for i, s in enumerate(steps):
+        if not isinstance(s, dict):
+            errs.append(f"step[{i}] khong phai object")
+            continue
+        sid = s.get("id")
+        if not sid:
+            errs.append(f"step[{i}] thieu 'id'")
+        elif sid in seen:
+            errs.append(f"step id trung: '{sid}'")
+        else:
+            seen.add(sid)
+        st = s.get("type")
+        if st not in _STEP_TYPES:
+            errs.append(f"step '{sid}' type '{st}' khong hop le {_STEP_TYPES}")
+            continue
+        if st == "tool" and not s.get("tool"):
+            errs.append(f"step '{sid}' (tool) thieu 'tool'")
+        if st == "shell" and not s.get("cmd"):
+            errs.append(f"step '{sid}' (shell) thieu 'cmd'")
+        if st == "wait":
+            if not s.get("tool"):
+                errs.append(f"step '{sid}' (wait) thieu 'tool'")
+            if not s.get("until"):
+                errs.append(f"step '{sid}' (wait) thieu 'until'")
+        if st == "llm_gate" and not s.get("question"):
+            errs.append(f"step '{sid}' (llm_gate) thieu 'question'")
+        if s.get("on_fail", "abort") not in ("abort", "continue"):
+            errs.append(f"step '{sid}' on_fail phai la abort|continue")
+    return errs
+
+
+def _resolve_pipe_file(arg):
+    """Tim file pipeline: path truc tiep -> CE_PIPES_DIR -> them .json. Tra abspath|None."""
+    if os.path.exists(arg):
+        return os.path.abspath(arg)
+    cand = os.path.join(CE_PIPES_DIR, arg)
+    if os.path.exists(cand):
+        return os.path.abspath(cand)
+    if not arg.endswith(".json"):
+        return _resolve_pipe_file(arg + ".json")
+    return None
+
+
+# ----------------------------------------------------------------------------
+# EXECUTION PROFILE — tang L4: "cach chay co dinh theo moi truong x cong nghe".
+# Profile file schema: {"name","description","verified":"YYYY-MM-DD"|null,
+#   "params":{...}}. Pipeline L5 khai bao "profile":"<ten>" (hoac list) de nap
+# san params ha tang. Thu tu uu tien khi merge: CLI override > pipeline params
+# > profile params (profile la NEN, nghiep vu de len tren, CLI cao nhat).
+# ----------------------------------------------------------------------------
+def _resolve_profile_file(name):
+    """Tim file profile: path truc tiep -> CE_PROFILES_DIR -> them .json. Tra abspath|None."""
+    if os.path.exists(name):
+        return os.path.abspath(name)
+    cand = os.path.join(CE_PROFILES_DIR, name)
+    if os.path.exists(cand):
+        return os.path.abspath(cand)
+    if not str(name).endswith(".json"):
+        return _resolve_profile_file(name + ".json")
+    return None
+
+
+def _load_profile(name):
+    """Nap 1 profile theo ten. Tra (dict|None, error_str|None).
+
+    Thieu file -> loi ro rang (nem ten + CE_PROFILES_DIR). Thieu 'params' ->
+    loi schema. Khong nuot loi am tham.
+    """
+    pf = _resolve_profile_file(name)
+    if not pf:
+        return None, ("Khong tim thay profile '%s' (da thu ./%s va %s)"
+                      % (name, name, CE_PROFILES_DIR))
+    data = _read_json(pf)
+    if data is None:
+        return None, f"Khong parse duoc profile JSON: {pf}"
+    if not isinstance(data.get("params"), dict):
+        return None, f"Profile '{name}' thieu 'params' (phai la object)"
+    return data, None
+
+
+def _resolve_params(pipe, kv_args):
+    """Gop params cho 1 lan chay pipeline theo thu tu uu tien.
+
+    Thu tu (thap -> cao): profile params < pipeline params < CLI K=V.
+    Tra (params_dict, profiles_used[], errors[]). profiles_used moi phan tu:
+    {name, verified, description}. errors rong = OK.
+    """
+    params, profiles_used, errors = {}, [], []
+    prof_field = pipe.get("profile")
+    if isinstance(prof_field, str):
+        names = [prof_field]
+    elif isinstance(prof_field, list):
+        names = [str(x) for x in prof_field]
+    elif prof_field is None:
+        names = []
+    else:
+        return {}, [], ["'profile' phai la string hoac list string"]
+    for pname in names:
+        prof, err = _load_profile(pname)
+        if err:
+            errors.append(err)
+            continue
+        params.update(prof.get("params", {}) or {})
+        profiles_used.append({"name": prof.get("name", pname),
+                              "verified": prof.get("verified"),
+                              "description": prof.get("description")})
+    params.update(pipe.get("params", {}) or {})
+    for kv in kv_args:
+        if "=" in kv:
+            k, v = kv.split("=", 1)
+            params[k] = v
+    return params, profiles_used, errors
+
+
+def _record_step(state, idx, sid, stype, ok, result):
+    """Ghi/ghi de ket qua 1 step vao state.step_results (theo index)."""
+    entry = {"index": idx, "id": sid, "type": stype,
+             "status": "success" if ok else "failed",
+             "result": result, "ts": time.time()}
+    srs = state.setdefault("step_results", [])
+    for j, e in enumerate(srs):
+        if e.get("index") == idx:
+            srs[j] = entry
+            return
+    srs.append(entry)
+
+
+def _run_wait(step):
+    """Poll tool moi interval_sec, danh gia until, toi khi dat hoac het timeout."""
+    tool = step["tool"]
+    arg_list = _tool_args_list(tool, step.get("args"))
+    interval = int(step.get("interval_sec", 60))
+    timeout = int(step.get("timeout_sec", 3600))
+    until = step.get("until", {})
+    deadline = time.time() + timeout
+    polls, last_detail = 0, ""
+    while True:
+        polls += 1
+        res, _ = _call_tool_capture(tool, arg_list)
+        if res is not None:
+            ok, last_detail = _eval_until(until, res)
+            if ok:
+                return True, {"status": "success", "polls": polls,
+                              "detail": last_detail, "last_result": res}
+        else:
+            last_detail = "tool khong tra JSON"
+        if time.time() >= deadline:
+            return False, {"status": "error", "reason": "timeout",
+                           "polls": polls, "detail": last_detail}
+        time.sleep(interval)
+
+
+def _run_step(step):
+    """Chay 1 step (tru llm_gate). Tra (ok, result_dict) — result luon co 'status'."""
+    st = step.get("type")
+    if st == "tool":
+        arg_list = _tool_args_list(step["tool"], step.get("args"))
+        res, raw = _call_tool_capture(step["tool"], arg_list)
+        if res is None:
+            return False, {"status": "error", "summary": "tool khong tra JSON",
+                           "raw": raw[:1000]}
+        return (res.get("status") != "error"), res
+    if st == "shell":
+        rc, out, err = _sh_bash(step["cmd"],
+                                timeout=int(step.get("timeout_sec", 600)))
+        return rc == 0, {"status": "success" if rc == 0 else "error", "rc": rc,
+                         "stdout_tail": (out or "").strip().splitlines()[-20:],
+                         "stderr_tail": (err or "").strip().splitlines()[-10:]}
+    if st == "wait":
+        return _run_wait(step)
+    return False, {"status": "error", "summary": f"type '{st}' khong ho tro"}
+
+
+def _pipe_execute(pipe_id):
+    """RUNNER (noi bo, chay detached). Doc state -> chay tiep tu current_step.
+
+    Checkpoint SAU MOI step. Gap llm_gate -> ghi NEED_LLM, set WAITING_LLM, dung.
+    """
+    state_file, need_llm_file, answer_file = _pipe_paths(pipe_id)
+    state = _read_json(state_file)
+    if not state:
+        logger.error("pipe_execute: khong doc duoc state %s", pipe_id)
+        return
+    steps = state["pipeline"]["steps"]
+    state["status"] = "RUNNING"
+    state["runner_pid"] = os.getpid()
+    state["updated_at"] = time.time()
+    _write_json(state_file, state)
+
+    i = state.get("current_step", 0)
+    while i < len(steps):
+        step = steps[i]
+        sid = step.get("id", "step%d" % i)
+        stype = step.get("type")
+        logger.info("pipe %s: step[%d] %s (%s)", pipe_id, i, sid, stype)
+
+        if stype == "llm_gate":
+            ans = _read_json(answer_file)
+            if ans and "answer" in ans:  # da co answer -> tieu thu, di tiep
+                _record_step(state, i, sid, stype, True,
+                             {"status": "answered", "answer": ans["answer"],
+                              "question": step.get("question")})
+                state["llm_answer"] = ans["answer"]
+                for f in (answer_file, need_llm_file):
+                    try:
+                        os.remove(f)
+                    except OSError:
+                        pass
+                i += 1
+                state["current_step"] = i
+                state.pop("need_llm", None)
+                _write_json(state_file, state)
+                continue
+            need = {"pipe_id": pipe_id, "step_id": sid,
+                    "question": step.get("question"),
+                    "context_files": step.get("context_files", [])}
+            _write_json(need_llm_file, need)
+            state["status"] = "WAITING_LLM"
+            state["current_step"] = i
+            state["need_llm"] = need
+            state["updated_at"] = time.time()
+            _write_json(state_file, state)
+            logger.info("pipe %s: WAITING_LLM tai step '%s'", pipe_id, sid)
+            return  # exit sach, cho pipe_resume
+
+        retry = int(step.get("retry", 0))
+        on_fail = step.get("on_fail", "abort")
+        ok, result, attempt = False, {}, 0
+        while attempt <= retry:
+            attempt += 1
+            ok, result = _run_step(step)
+            if ok:
+                break
+            if attempt <= retry:
+                logger.warning("pipe %s: step '%s' fail lan %d, thu lai sau 30s",
+                               pipe_id, sid, attempt)
+                time.sleep(30)
+        result["attempts"] = attempt
+        _record_step(state, i, sid, stype, ok, result)
+
+        if not ok and on_fail == "abort":
+            state["status"] = "FAILED"
+            state["current_step"] = i  # dung o step loi de sua & resume
+            state["updated_at"] = time.time()
+            _write_json(state_file, state)
+            logger.error("pipe %s: FAILED tai step '%s' (on_fail=abort)",
+                         pipe_id, sid)
+            return
+
+        i += 1
+        state["current_step"] = i
+        _write_json(state_file, state)
+
+    state["status"] = "DONE"
+    state["updated_at"] = time.time()
+    _write_json(state_file, state)
+    logger.info("pipe %s: DONE (%d step)", pipe_id, len(steps))
+
+
+def _spawn_detached_pipe(pipe_id):
+    """Spawn runner pipeline o tien trinh nen detached, tra ve PID."""
+    devnull = open(os.devnull, "w")
+    proc = subprocess.Popen(
+        [sys.executable, os.path.abspath(__file__), "_pipe_exec", pipe_id],
+        stdout=devnull, stderr=devnull, stdin=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+    return proc.pid
+
+
+def _pipe_progress(state):
+    """Tom tat tien do step (dung cho pipe_status/pipe_list)."""
+    steps = (state.get("pipeline") or {}).get("steps", [])
+    done = sum(1 for e in state.get("step_results", [])
+               if e.get("status") == "success")
+    return {"n_steps": len(steps), "done": done,
+            "current_step": state.get("current_step", 0)}
+
+
+def cmd_pipe_run(args):
+    """NUT PIPE RUN. Validate schema -> spawn runner nen -> tra ve tuc thi + pipe_id.
+
+    Cu phap: pipe_run <file.json> [K=V ...]
+    """
+    if not args:
+        return emit({"status": "error",
+                     "summary": "Cu phap: pipe_run <file.json> [K=V ...]"})
+    pfile = _resolve_pipe_file(args[0])
+    if not pfile:
+        return emit({"status": "error",
+                     "summary": f"Khong tim thay pipeline: {args[0]} "
+                                f"(da thu ./{args[0]} va {CE_PIPES_DIR})"})
+    pipe = _read_json(pfile)
+    if pipe is None:
+        return emit({"status": "error", "summary": f"Khong parse duoc JSON: {pfile}"})
+    errs = _validate_pipeline(pipe)
+    if errs:
+        return emit({"status": "error", "summary": "Pipeline sai schema.",
+                     "errors": errs})
+    params, profiles_used, perrs = _resolve_params(pipe, args[1:])
+    if perrs:
+        return emit({"status": "error",
+                     "summary": "Loi nap execution profile.", "errors": perrs})
+    resolved = _subst(pipe, params)
+    pipe_id = "%s_%d" % (re.sub(r"[^A-Za-z0-9_]+", "_",
+                                str(pipe.get("name", "pipe"))), int(time.time()))
+    state_file, _, _ = _pipe_paths(pipe_id)
+    state = {"pipe_id": pipe_id, "name": pipe.get("name"), "pipe_file": pfile,
+             "params": params, "profiles": profiles_used, "pipeline": resolved,
+             "status": "RUNNING",
+             "current_step": 0, "step_results": [],
+             "created_at": time.time(), "updated_at": time.time()}
+    _write_json(state_file, state)
+    try:
+        pid = _spawn_detached_pipe(pipe_id)
+        state["runner_pid"] = pid
+        _write_json(state_file, state)
+        logger.info("pipe_run %s -> runner PID %s (%d step)", pipe_id, pid,
+                    len(resolved["steps"]))
+        emit({"status": "started", "pipe_id": pipe_id, "runner_pid": pid,
+              "name": pipe.get("name"), "n_steps": len(resolved["steps"]),
+              "profiles": profiles_used, "state_file": state_file,
+              "summary": f"Da khoi chay pipeline '{pipe.get('name')}' "
+                         f"(id={pipe_id}) o nen. Dung pipe_status {pipe_id}."})
+    except Exception as e:
+        logger.exception("pipe_run spawn that bai.")
+        state["status"] = "FAILED"
+        _write_json(state_file, state)
+        emit({"status": "error", "pipe_id": pipe_id,
+              "summary": f"Khong spawn duoc runner: {e}"})
+
+
+def cmd_pipe_exec(args):
+    """NUT NOI BO (khong danh cho CDK). Chay runner blocking."""
+    if not args:
+        logger.error("_pipe_exec thieu pipe_id")
+        sys.exit(1)
+    _pipe_execute(args[0])
+
+
+def cmd_pipe_status(args):
+    """NUT PIPE STATUS. Doc state file -> tien do tung step.
+
+    Cu phap: pipe_status [pipe_id]   (khong co pipe_id -> tom tat tat ca)
+    """
+    if not args:
+        return cmd_pipe_list(args)
+    pipe_id = args[0]
+    state_file, _, _ = _pipe_paths(pipe_id)
+    state = _read_json(state_file)
+    if not state:
+        return emit({"status": "unknown", "pipe_id": pipe_id,
+                     "summary": "Khong co state (chua chay hoac da xoa)."})
+    results = {e["index"]: e for e in state.get("step_results", [])}
+    steps_view = []
+    for i, s in enumerate((state.get("pipeline") or {}).get("steps", [])):
+        r = results.get(i)
+        steps_view.append({
+            "index": i, "id": s.get("id"), "type": s.get("type"),
+            "status": (r or {}).get("status", "pending"),
+            "summary": ((r or {}).get("result") or {}).get("summary")})
+    prog = _pipe_progress(state)
+    emit({"status": "success", "pipe_id": pipe_id,
+          "pipe_status": state.get("status"), "progress": prog,
+          "profiles": state.get("profiles"),
+          "need_llm": state.get("need_llm")
+          if state.get("status") == "WAITING_LLM" else None,
+          "llm_answer": state.get("llm_answer"), "steps": steps_view,
+          "summary": "Pipeline %s: %s (%d/%d step)"
+          % (pipe_id, state.get("status"), prog["done"], prog["n_steps"])})
+
+
+def cmd_pipe_resume(args):
+    """NUT PIPE RESUME. Chay tiep tu step do (sau crash / sau khi co LLM answer).
+
+    Cu phap: pipe_resume <pipe_id>
+    Neu WAITING_LLM: can co pipe_<id>_LLM_ANSWER.json {answer:"..."} truoc.
+    """
+    if not args:
+        return emit({"status": "error", "summary": "Cu phap: pipe_resume <pipe_id>"})
+    pipe_id = args[0]
+    state_file, _, answer_file = _pipe_paths(pipe_id)
+    state = _read_json(state_file)
+    if not state:
+        return emit({"status": "error", "pipe_id": pipe_id,
+                     "summary": "Khong co state de resume."})
+    if state.get("status") == "DONE":
+        return emit({"status": "error", "pipe_id": pipe_id,
+                     "summary": "Pipeline da DONE, khong can resume."})
+    if state.get("status") == "WAITING_LLM":
+        ans = _read_json(answer_file)
+        if not ans or "answer" not in ans:
+            return emit({"status": "waiting_llm", "pipe_id": pipe_id,
+                         "need_llm": state.get("need_llm"),
+                         "summary": "Dang cho LLM. Hay ghi %s {answer:\"...\"} "
+                                    "roi resume lai." % answer_file})
+    probe = RobustJobController("_pipe_probe")
+    if probe.check_process_alive(state.get("runner_pid", -1)):
+        return emit({"status": "error", "pipe_id": pipe_id, "state": "ALIVE",
+                     "runner_pid": state.get("runner_pid"),
+                     "summary": "Runner cu con song. Dung pipe_stop truoc khi resume."})
+    try:
+        pid = _spawn_detached_pipe(pipe_id)
+        logger.info("pipe_resume %s -> runner PID %s (tu step %s)",
+                    pipe_id, pid, state.get("current_step"))
+        emit({"status": "resumed", "pipe_id": pipe_id, "runner_pid": pid,
+              "from_step": state.get("current_step"),
+              "summary": f"Da chay tiep pipeline {pipe_id} tu step "
+                         f"{state.get('current_step')}."})
+    except Exception as e:
+        logger.exception("pipe_resume spawn that bai.")
+        emit({"status": "error", "pipe_id": pipe_id,
+              "summary": f"Khong spawn duoc runner: {e}"})
+
+
+def cmd_pipe_stop(args):
+    """NUT PIPE STOP. Kill runner + danh dau STOPPED trong state.
+
+    Cu phap: pipe_stop <pipe_id>
+    """
+    if not args:
+        return emit({"status": "error", "summary": "Cu phap: pipe_stop <pipe_id>"})
+    pipe_id = args[0]
+    state_file, _, _ = _pipe_paths(pipe_id)
+    state = _read_json(state_file)
+    if not state:
+        return emit({"status": "unknown", "pipe_id": pipe_id,
+                     "summary": "Khong co state."})
+    killed, pid = None, state.get("runner_pid", -1)
+    try:
+        if pid and pid > 0:
+            os.kill(pid, signal.SIGTERM)
+            killed = pid
+    except (OSError, ProcessLookupError):
+        pass
+    state["status"] = "STOPPED"
+    state["updated_at"] = time.time()
+    _write_json(state_file, state)
+    logger.info("pipe_stop %s killed=%s", pipe_id, killed)
+    emit({"status": "success", "pipe_id": pipe_id, "killed_pid": killed,
+          "summary": f"Da dung pipeline {pipe_id}"
+                     + (f" (kill runner {killed})." if killed
+                        else " (runner khong con song).")})
+
+
+def cmd_pipe_list(args):
+    """NUT PIPE LIST. Liet ke moi pipeline run trong RUN_DIR.
+
+    Cu phap: pipe_list
+    """
+    pipes = []
+    for fn in sorted(os.listdir(RUN_DIR)):
+        if fn.startswith("pipe_") and fn.endswith("_state.json"):
+            st = _read_json(os.path.join(RUN_DIR, fn)) or {}
+            pipes.append({"pipe_id": st.get("pipe_id"), "name": st.get("name"),
+                          "status": st.get("status"),
+                          "progress": _pipe_progress(st),
+                          "updated_at": st.get("updated_at")})
+    emit({"status": "success", "summary": f"Tim thay {len(pipes)} pipeline.",
+          "pipelines": pipes})
+
+
+def cmd_profile_list(args):
+    """NUT PROFILE LIST. Liet ke cac execution profile + verified date.
+
+    Cu phap: profile_list
+    Doc moi <ten>.json trong CE_PROFILES_DIR, tra name/verified/description +
+    danh sach key params (khong dump het gia tri de gon).
+    """
+    profs = []
+    if os.path.isdir(CE_PROFILES_DIR):
+        for fn in sorted(os.listdir(CE_PROFILES_DIR)):
+            if not fn.endswith(".json"):
+                continue
+            d = _read_json(os.path.join(CE_PROFILES_DIR, fn)) or {}
+            profs.append({"name": d.get("name", fn[:-5]),
+                          "verified": d.get("verified"),
+                          "description": d.get("description"),
+                          "params_keys": sorted((d.get("params") or {}).keys()),
+                          "file": fn})
+    emit({"status": "success", "profiles_dir": CE_PROFILES_DIR,
+          "summary": f"Tim thay {len(profs)} execution profile.",
+          "profiles": profs})
+
+
+# ============================================================================
 # DISPATCH — bang anh xa ten NUT -> handler.
 # ============================================================================
 COMMANDS = {
@@ -920,6 +2236,16 @@ COMMANDS = {
     "bg_stop": cmd_bg_stop,
     "bg_cleanup": cmd_bg_cleanup,
     "bg_list": cmd_bg_list,
+    "bg_selftest": cmd_bg_selftest,
+    # WFO (Walk-Forward Optimization) fleet:
+    "wfo_run": cmd_wfo_run,
+    "wfo_status": cmd_wfo_status,
+    "wfo_report": cmd_wfo_report,
+    "wfo_stop": cmd_wfo_stop,
+    # He thong / suc khoe VPS:
+    "sys_health": cmd_sys_health,
+    "sys_zombies": cmd_sys_zombies,
+    "sys_logtail": cmd_sys_logtail,
     # Tien ich ha tang:
     "manage_jvm": cmd_manage_jvm,
     "remote_ssh": cmd_remote_ssh,
@@ -929,8 +2255,17 @@ COMMANDS = {
     "kaggle_status": cmd_kaggle_status,
     "kaggle_output": cmd_kaggle_output,
     "kaggle_parse_logs": cmd_kaggle_parse_logs,
+    # Pipeline engine (declarative, may-lam-het + LLM-gate):
+    "pipe_run": cmd_pipe_run,
+    "pipe_status": cmd_pipe_status,
+    "pipe_resume": cmd_pipe_resume,
+    "pipe_stop": cmd_pipe_stop,
+    "pipe_list": cmd_pipe_list,
+    # Execution profile (L4 — cach chay co dinh theo moi truong x cong nghe):
+    "profile_list": cmd_profile_list,
     # Noi bo (KHONG danh cho CDK):
     "_supervise": cmd_supervise,
+    "_pipe_exec": cmd_pipe_exec,
 }
 
 USAGE = """Su dung: python3 mcp_tools-v3.py <nut> [args...]
@@ -943,6 +2278,19 @@ VONG DOI JOB NANG (CDK chi bam nut, Python tu lo):
   bg_stop <job_id>                          STOP: dung job + don lock.
   bg_cleanup <job_id> [--all]               CLEANUP: xoa state/lock (--all: ca result/log).
   bg_list                                   LIST: liet ke moi job da biet.
+  bg_selftest                               TU-TEST tron chuoi bg_* bang job sleep.
+
+WFO (WALK-FORWARD OPTIMIZATION):
+  wfo_run <ds> [jar] [n] [seed] [workers] [tag]
+                                            Kill worker cu -> reset coordinator -> spawn N WfoWorker nen.
+  wfo_status                                Parse total/PENDING/RUNNING/DONE/FAILED + cua so FAILED.
+  wfo_report [tag]                          Chay report, cp md ve RUN_DIR, parse VERDICT/%OOS/WFE/maxDD.
+  wfo_stop                                  pkill WfoWorker + VerifyOneWindow, bao so proc bi kill.
+
+HE THONG (VPS):
+  sys_health                                disk(df /) + RAM + load + danh sach java proc.
+  sys_zombies [kill=true]                   Liet ke WfoWorker/VerifyOneWindow/CopyTicker (kill=true de kill).
+  sys_logtail <file> [n]                    n dong cuoi 1 tep trong RUN_DIR (chan path-traversal).
 
 HA TANG:
   manage_jvm list | kill <pid>              Liet ke / dung JVM (chan proc LIVE cot loi).
@@ -954,6 +2302,18 @@ KAGGLE FLEET:
   kaggle_status <slug>                      Trang thai kernel.
   kaggle_output <slug> <dir>                Tai ket qua kernel.
   kaggle_parse_logs <log_file>              Giai ma JSON log + boc block RESULT.
+
+PIPELINE ENGINE (may lam het TRON CHUOI, LLM chi gac o llm_gate):
+  pipe_run <file.json> [K=V ...]            Validate + spawn runner nen -> pipe_id.
+  pipe_status [pipe_id]                      Tien do tung step (bo trong: tom tat het).
+  pipe_resume <pipe_id>                      Chay tiep sau crash / sau khi co LLM answer.
+  pipe_stop <pipe_id>                        Kill runner + danh dau STOPPED.
+  pipe_list                                  Liet ke moi pipeline run.
+
+EXECUTION PROFILE (L4 — cach chay co dinh theo moi truong x cong nghe):
+  profile_list                               Liet ke profiles + verified date.
+  (Pipeline khai bao "profile":"<ten>" -> tu nap params ha tang. Uu tien merge:
+   CLI K=V > pipeline params > profile params.)
 """
 
 

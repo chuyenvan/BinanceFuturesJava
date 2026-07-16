@@ -17,7 +17,7 @@ import java.util.TreeMap;
  * <p>5 case (A-E) dùng lệnh tổng hợp (symbol=null tránh SimpleSymbolMapper → Aerospike):
  * <ul>
  *   <li><b>A</b>: 60 lệnh rải 90 ngày, profit dương, DD nhỏ → SUCCESS, fitness = calmar (so tính tay ±1e-3).</li>
- *   <li><b>B</b>: 8 lệnh window 90d → TOO_FEW, fitness=−99992, <b>totalProfit thật ≠ 0</b> (fix #1 reorder).</li>
+ *   <li><b>B</b>: 8 lệnh window 90d → TOO_FEW, fitness=ramp V4.2 REJECT_BASE·(1−8/29)≈−72413.79, <b>totalProfit thật ≠ 0</b> (fix #1 reorder).</li>
  *   <li><b>C</b>: 10 lệnh dồn 3 ngày, windowDaysActual=90 → V4 cũ (span) PASS; V4.1 (window thật) TOO_FEW (fix #2).</li>
  *   <li><b>D</b>: profit ≤ 0 → BURN_ACCOUNT, <b>ddPct được điền thật</b> (fix #1 reorder), fitness=REJECT+profit.</li>
  *   <li><b>E</b>: pctHeld>2% profit dương → CAPITAL_LOCK, <b>totalProfit thật ≠ 0</b> (fix #1 reorder).</li>
@@ -99,10 +99,13 @@ public class TestFitnessV41 {
         setBudget(0f, 35000f);
         HPOFitnessCalculatorV4.FitnessReport r = HPOFitnessCalculatorV4.evaluateDetailed(orders, windowDays);
 
-        float expectedFitness      = REJECT_BASE + nOrders;            // -99992
-        float expectedTotalProfit  = nOrders * profitPerOrder;         // 160
-        LOG.info("  note={} fitness={} totalProfit={} (expected totalProfit≠0, was 0 ở V4)",
-                r.note, r.finalFitness, r.totalProfit);
+        // V4.2: TOO_FEW cliff → ramp tỉ lệ REJECT_BASE·(1 − tradeCount/minTrades).
+        // minTrades=max(5,(int)(90*0.33))=29 → REJECT_BASE·(1 − 8/29) ≈ -72413.79 (cũ V4.1: -99992).
+        int minTrades             = Math.max(5, (int) (windowDays * 0.33f));  // 29
+        float expectedFitness     = REJECT_BASE * (1f - (float) nOrders / minTrades);  // ≈ -72413.79
+        float expectedTotalProfit = nOrders * profitPerOrder;         // 160
+        LOG.info("  note={} fitness={} (expected ramp {}) totalProfit={} (expected totalProfit≠0)",
+                r.note, r.finalFitness, expectedFitness, r.totalProfit);
 
         // totalProfit phải là số thật (≠ 0) — đây là điểm fix #1
         boolean ok = "TOO_FEW_TRADES".equals(r.note)

@@ -1,0 +1,12 @@
+{
+  "name": "python-kaggle",
+  "description": "Chay job Python thuan qua Kaggle kernel. CO DINH cach chay: kernel type=script, bat internet, slots cap 5, session toi da 12h, venv chuan. DUOC PHEP DOI (o pipeline L5): source notebook/script + dataset input. CHUA verified (verified=null) — chua co job python thuan chay qua CE; de trong cho job dau chot lai.",
+  "verified": null,
+  "params": {
+    "KERNEL_TYPE": "script",
+    "INTERNET": "true",
+    "SLOTS_CAP": "5",
+    "SESSION_CAP_H": "12",
+    "VENV": "/home/ubuntu/kaggle_latest_venv"
+  }
+}

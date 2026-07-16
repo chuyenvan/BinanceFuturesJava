@@ -40,6 +40,7 @@
 - Việc > ~vài phút / distributed / ghi data thật / không chắc xong trong phiên → MẶC ĐỊNH là task (file + queue), KHÔNG ad-hoc nền.
 - Đổi hướng: việc đang dở phải DỪNG sạch (kill ĐÚNG PID mình spawn + ghi trạng thái lại) hoặc chốt task resume được. CẤM bỏ process mồ côi chạy nền.
 - "Done" = có số ĐO (validate dữ liệu), KHÔNG phải "lệnh đã chạy xong".
+- **Job vận hành dài/lặp/nhiều bước → BẮT BUỘC qua CE** (nút + pipeline, `docs/rules/ce-buttons.md`): máy làm trọn chuỗi chân tay, LLM chỉ ở `llm_gate`. ⛔ CẤM viết bash driver/vòng poll ad-hoc khi nút/pipeline có sẵn.
 
 ## Phản biện & tìm giải pháp tốt hơn (user đề cao — áp cho việc CÓ TẦM ẢNH HƯỞNG)
 - User LUÔN đề cao phản biện + câu hỏi "còn giải pháp nào tốt hơn không". **Kể cả khi user ĐÃ CHỐT phương án, hoặc Claude đã chốt** — nếu thấy giải pháp tiềm năng hơn thì PHẢI phân tích sâu hơn (đánh đổi, rủi ro, chi phí đảo ngược) rồi mới quyết, KHÔNG im lặng làm theo.
