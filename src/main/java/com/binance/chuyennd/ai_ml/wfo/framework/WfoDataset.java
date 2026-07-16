@@ -71,14 +71,28 @@ public class WfoDataset {
         // (engine chon score THAP = P(win) CAO). WFO_FUNDING_PRED_DIR rong -> fallback Aerospike (luong cu).
         String fundingPredDir = envOr("WFO_FUNDING_PRED_DIR", "");
         TreeMap<Long, long[]> fnd;
+        long fndRaw15mCount = -1;   // so moc 15m truoc forward-fill (trace vao manifest)
         if (!fundingPredDir.isEmpty()) {
             int horizonIdx = Integer.parseInt(envOr("WFO_SEL_HORIZON_IDX", "1"));
-            fnd = buildFundingFromWfFiles(fundingPredDir, horizonIdx);
+            TreeMap<Long, long[]> fnd15 = buildFundingFromWfFiles(fundingPredDir, horizonIdx);
+            fndRaw15mCount = fnd15.size();
+            // 🔥 BUG-FIX 2026-07-13: predict_wf_*.bin la luoi 15m; engine tra selector bang .get(time) KHOP
+            // CHINH XAC phut -> thieu forward-fill = 93% phut khong co selector -> tan suat + BIG_DOWN sap.
+            // Khoi phuc thiet ke da-verify (gen_funding_wf_predictions.py: forward-fill 15p->phut, align 100%
+            // market). Carry-forward moc 15m ra moi phut market cho toi moc ke, chan staleness <=STALE_MS.
+            // WFO_FUNDING_FILL=0 de tat (giu 15m cu, chi de so sanh/debug).
+            if (!"0".equals(envOr("WFO_FUNDING_FILL", "1"))) {
+                long staleMs = Long.parseLong(envOr("WFO_FUNDING_FILL_STALE_MS", String.valueOf(15L * 60_000L)));
+                fnd = forwardFillToGrid(fnd15, mkt.navigableKeySet(), staleMs);
+            } else {
+                LOG.warn("WFO_FUNDING_FILL=0 -> GIU luoi 15m (KHONG forward-fill) - chi debug, KHONG dung cho WFO that");
+                fnd = fnd15;
+            }
         } else {
             LOG.warn("WFO_FUNDING_PRED_DIR khong set -> fallback Aerospike (luong cu).");
             fnd = DataManagerAerospikeFloatSim.getAllFundingPredictionsPrimitiveFromAerospike();
         }
-        LOG.info("scan xong: market={} pred={} funding={}", mkt.size(), prd.size(), fnd.size());
+        LOG.info("scan xong: market={} pred={} funding={} (raw15m={})", mkt.size(), prd.size(), fnd.size(), fndRaw15mCount);
 
         writeMarket(new File(dir, F_MARKET), mkt);
         writePred(new File(dir, F_PRED), prd);
@@ -98,6 +112,7 @@ public class WfoDataset {
         mani.append("marketCount=").append(mkt.size()).append("\n");
         mani.append("predCount=").append(prd.size()).append("\n");
         mani.append("fundingCount=").append(fnd.size()).append("\n");
+        if (fndRaw15mCount >= 0) mani.append("fundingRaw15mCount=").append(fndRaw15mCount).append("\n");
         if (!mkt.isEmpty()) mani.append("marketRange=").append(mkt.firstKey()).append("..").append(mkt.lastKey()).append("\n");
         mani.append("md5_market=").append(md5(new File(dir, F_MARKET))).append("\n");
         mani.append("md5_pred=").append(md5(new File(dir, F_PRED))).append("\n");
@@ -157,8 +172,33 @@ public class WfoDataset {
             out.put(e.getKey(), arr);
         }
         String[] hName = {"4h", "12h", "24h", "72h"};
-        LOG.info("buildFundingFromWfFiles: horizon={} | {} file | {} rec doc, {} kept (bo NaN) | {} moc ts",
+        LOG.info("buildFundingFromWfFiles: horizon={} | {} file | {} rec doc, {} kept (bo NaN) | {} moc 15m",
                 hName[horizonIdx], files.length, totalRec, kept, out.size());
+        return out;
+    }
+
+    /**
+     * FORWARD-FILL luoi 15m -> moi phut market (khoi phuc thiet ke gen_funding_wf_predictions.py).
+     * Voi moi ts trong {@code grid} (khoa market, ~1 phut), lay {@code src15m.floorEntry(ts)} (moc selector
+     * gan nhat <= ts) va carry-forward, MIEN LA khong qua han (ts - floorKey <= {@code staleMs}). Chia se
+     * THAM CHIEU mang (nhieu phut lien tiep tro cung 1 long[]) -> RAM ~ so moc 15m, khong nhan 15x.
+     *
+     * <p>Vi sao chan staleMs: neu selector THIEU 1 moc 15m (gap >15m), khong carry stale qua lau -> de trong
+     * (dung: khong bia tin hieu selector cu). Grid deu 15m => moi phut deu co floor <=15m => phu ~100%.
+     */
+    static TreeMap<Long, long[]> forwardFillToGrid(TreeMap<Long, long[]> src15m,
+                                                   java.util.NavigableSet<Long> grid, long staleMs) {
+        TreeMap<Long, long[]> out = new TreeMap<>();
+        long filled = 0, beforeFirst = 0, skippedStale = 0;
+        for (Long t : grid) {
+            Map.Entry<Long, long[]> e = src15m.floorEntry(t);
+            if (e == null) { beforeFirst++; continue; }          // truoc moc selector dau tien
+            if (t - e.getKey() > staleMs) { skippedStale++; continue; } // qua han -> de trong
+            out.put(t, e.getValue());                             // reference-share
+            filled++;
+        }
+        LOG.info("forwardFillToGrid: grid={} filled={} beforeFirst={} skippedStale(>{}m)={} | src15m={} -> out={}",
+                grid.size(), filled, beforeFirst, staleMs / 60000, src15m.size(), out.size());
         return out;
     }
 

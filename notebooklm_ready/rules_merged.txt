@@ -1,0 +1,181 @@
+
+
+============================================================
+SOURCE FILE: rules\backtest.md
+============================================================
+
+# rules/backtest — Toàn vẹn & tái lập backtest (nạp khi chạy/sửa sim/HPO/golden)
+
+> Đọc cùng [CORE](../CORE.md) (look-ahead, IntegrityGuard, fee/slippage, CONFIG_VERSION đã ở đó). Đây là chi tiết + cạm bẫy.
+
+## Look-ahead (chi tiết)
+- Nến đã đóng KHÔNG được vừa dùng `maxPrice` để kích hoạt/đặt SL vừa khớp theo `minPrice`/`lastPrice` cùng nến (không ai biết đỉnh/đáy đến trước). Đặt SL nến này, khớp nến sau.
+- Đã sửa ở `OrderTargetInfoTest.updateStatusNew` (nhánh `priceSL==null`). Nhánh `priceSL!=null` (SL có từ nến trước, khớp `minPrice`) là ĐÚNG — KHÔNG đụng.
+
+## Nút chặn duy nhất
+- `BacktestIntegrityGuard.assertProductionGrade()` cắm ở `SimulatorMarketLevelTicker1MStopLoss.simulatorWithInitEntry()` — MỌI engine (Master/AIMarket/BudgetRatio/Combined/DynamicFilter/TrailingStop/MarketThresholds/BenchmarkSpeed) đi qua đây → không ai bypass; KHÔNG cần gọi lại ở từng engine.
+
+## Tái lập / chống drift (ADR-0006 golden regression, TRACE)
+- Commit TRƯỚC khi chạy; KHÔNG chạy working-tree bẩn. Ghi: commit + giai đoạn + Configs + set Aerospike + slippage.
+- `SLIPPAGE_RATE` từng trôi `0.0005 ↔ 0.003` trên working-tree → backtest không nhất quán. Chốt `0.003` (FINDINGS §7).
+- Sim KHÔNG random → cùng input phải ra cùng output (golden fingerprint).
+- ⚠️ Đừng so "artifact sim cũ ngoài git" (`OrderTestDone.data`) với "chạy tươi Aerospike" — táo vs cam (TRACE).
+
+## Cạm bẫy đọc kết quả
+- **Win rate VÔ NGHĨA với martingale** (~99% giả). Đo `profitFactor` / `worstSingleLoss` / `payoffRatio` / maxDD / nearLiq + chất lượng leg ĐẦU (`EdgeAttributionReport`).
+- **Backtest đẹp ≠ model tốt** (có thể HPO che lỗi model / martingale cõng). Đo model ĐỘC LẬP (IC holdout chưa-train) trước khi tin.
+- **Cửa sổ ngắn lừa:** ablation 7 tháng lãi, 5 năm lỗ. Luôn test qua chu kỳ đầy đủ (gồm bear).
+- `predReturn24H` + MOM24 **đã bỏ hẳn** (A=C). Tên `getMaxRateIn90MForTradingStop`/`maxChange90M` thực trả `predReturn15M`, KHÔNG phải biến động 90M — đừng suy theo tên cũ.
+
+## Tests
+- KHÔNG có unit-test suite (`src/test` trống, `mvn test` no-op). "Test" = class `main()` thủ công (`*Validator`/`*Checker`/`Benchmark*`...), gọi `main` trực tiếp.
+
+
+============================================================
+SOURCE FILE: rules\build-env.md
+============================================================
+
+# rules/build-env — Build Maven & môi trường dev (nạp khi build/đóng jar)
+
+> Đọc cùng [CORE](../CORE.md).
+
+## Maven (no wrapper)
+```bash
+mvn install     # compile + protobuf codegen + shade fat jar
+mvn package     # build shaded jar trong target/ (không install)
+mvn -o package  # offline (deps đã cache)
+```
+- `maven-shade-plugin` → một fat jar (launch theo main-class). Tên artifact (`binance-java-sdk-1.2.4`) là legacy/upstream — đây là app PRIVATE, không phải SDK published.
+- `protobuf-maven-plugin` gen Java từ `src/main/proto/*.proto` lúc build bằng `protoc` tải về (cần mạng lần đầu). `os-maven-plugin` resolve platform classifier.
+
+## ⚙️ mvn trên máy dev (Windows) — wrapper đã cắm
+- System Maven `D:\java\apache-maven-3.5.2` trong PATH **cài hỏng** (thiếu `bin/mvn`) → terminal mới báo `mvn: command not found`.
+- Đã cắm wrapper `C:\Users\pc\bin\{mvn,mvn.cmd}` (User PATH, đứng đầu) trỏ Maven bundled trong IntelliJ (`...\plugins\maven\lib\maven3`, hiện 3.9.9) + `JAVA_HOME=jdk-11.0.17`. **Terminal mới gọi `mvn` chạy luôn** (bash + PowerShell).
+- Bash tự chọn IntelliJ mới nhất; nếu IntelliJ đổi version mà PowerShell lỗi → sửa path hardcode trong `mvn.cmd`.
+
+
+============================================================
+SOURCE FILE: rules\code.md
+============================================================
+
+# rules/code — Quy ước & luật code (nạp khi sửa code Java/HPO)
+
+> Đọc cùng [CORE](../CORE.md). Phần catch-câm + SLF4J + bump CONFIG_VERSION đã ở CORE — không lặp ở đây.
+
+## Quy ước
+- **Java 11** (pom.xml pin `source/target` 11). `CONVENTIONS.md` ghi Java 21 nhưng build thật là 11 → xác nhận user TRƯỚC khi dùng cú pháp Java 21 (và bump pom nếu thật sự muốn).
+- Method mới phải có **Javadoc** đầy đủ (mô tả, params, return).
+- Sửa NHỎ, mỗi thay đổi một mục đích. KHÔNG refactor hàng loạt khi chưa hỏi user (codebase ~250 class, nhiều ràng buộc ngầm).
+
+## Luật quyết định / HPO (quên = run vô nghĩa, sai âm thầm)
+- **MỘT BỘ NÃO sim/product:** mọi quyết định vào/ra lệnh nằm trong hàm lõi THUẦN dùng chung. Mẫu đúng: `DcaUtils.shouldDca`, `MarketBigChangeDetector.evaluateCircuitBreakerCore`. Thấy `xxx` vs `xxxProd`/`xxxProduction` lệch về LUẬT = BUG cần gom, không phải tính năng. Còn lệch: `createOrderBUY` (sim) vs `createOrderBuyRequest` (product) — ROADMAP bước 5.
+- **`taskId` HPO phải băm ĐỦ mọi gene** (`buildTaskId`). Thêm gene mà quên → cá thể khác trùng key → HPO vô nghĩa. (Đã dính 4 gene DCA.)
+- **KHÔNG random-split chuỗi thời gian:** cắt theo MỐC THỜI GIAN, không `train_test_split(shuffle/stratify)`. Scaler chỉ `fit` trên TRAIN (fit toàn bộ rồi chia = leak phân phối test).
+- **Tiền/giá đang `Float`** (rủi ro sai số tích lũy). Refactor sang `double`/`BigDecimal` phải đồng bộ sim+product + bump `CONFIG_VERSION`.
+- **KHÔNG đổi `finalFitness` (`HPOFitnessCalculatorV3`) khi HPO đang chạy dở.** `profitFactor`/`worstSingleLoss`/`payoffRatio` là guardrail báo cáo, cố ý KHÔNG nằm trong fitness.
+- **Worker HPO tuần tự 1 task/JVM** nên ghi `static Configs` an toàn. ĐỪNG song song nhiều trial trong cùng JVM với static Configs (giẫm tham số chéo).
+
+## Runtime config (đọc từ CWD, không phải classpath)
+- `config.properties` (`tradecore/Configs.java` load: hosts/ports, capital, symbol lists, paths `../storage/`; thiếu → `System.exit(0)`), `redis.config` (`redis/RedisConst.java`), `config/PrivateConfig.java` (key live — xem [security](security.md)).
+- `tradecore/Configs.java` = bề mặt tinh chỉnh trung tâm (leverage/fee/budget/breaker/trailing/AI-filter/DCA — `static`, nhiều cái HPO set). Đọc comment từng section trước khi đổi magic number.
+
+
+============================================================
+SOURCE FILE: rules\run-226.md
+============================================================
+
+# rules/run-226 — Chạy job java trên 226 (nạp khi spawn job nền/backtest/tool trên 226)
+
+> Đọc cùng [CORE](../CORE.md) (không pkill/killall, không đụng live·HPO·Aerospike·Redis đã ở đó). Đây là quy trình.
+
+## Dọn job cũ TRƯỚC khi chạy (tránh job sót ăn RAM / chạy chồng / lẫn log)
+1. Job nền Code spawn PHẢI ghi PID + log riêng: `~/java/simulator/outputs/.run/<job>.pid` + `<job>.log` (`<job>` = tên class, vd `GoldenBacktest`). Chạy `nohup ... & echo $! > .run/<job>.pid`.
+2. Trước khi chạy lại cùng job: đọc `.run/<job>.pid` → nếu PID còn sống (`ps -p`) VÀ `cmdline` đúng main-class của mình → `kill` → đợi chết → xoá pid-file. Chỉ kill ĐÚNG PID mình ghi.
+3. Orphan (mất pid-file nhưng job cũ còn chạy): liệt java process khớp main-class tool của mình (`GoldenBacktest`, `Simulator*`, `SurvivorshipBac0`, `AerospikeCoverageMap`, `*Validator/*Checker/Benchmark*`). RÕ là của mình → dọn; **nghi ngờ chủ → KHÔNG kill, BÁO user**.
+
+## SSH & nơi chạy
+- **TASK-112:** `config.properties` tại CWD của job phải có `AEROSPIKE_READ_CLUSTER=226` (+ `TICKER_SOURCE=aerospike` nếu chạy sim/backtest). Không còn `IS_KAGGLE_MODE`/`IS_HPO_MODE`; thiếu key → tool fail-fast ngay (cố ý, chống đọc sai nguồn âm thầm).
+- "Chạy trên 226" = SSH vào 226 (port `2222`) rồi chạy java/python TẠI 226 (scp/clone code lên nếu cần) — KHÔNG chạy từ máy dev/Kaggle (chúng không tới 242; chỉ 226 tới). Job tác động DỮ LIỆU 242 (lấp gap/aggregate/backfill/replicate/backup) chạy ở đây — job data, KHÔNG phải deploy, không cần user tay.
+- 226 internet mở (tải `data.binance.vision` trực tiếp). 226 tài nguyên YẾU → KHÔNG để nhiều job nặng đồng thời (đụng RAM/Aerospike). Hai task không cùng đọc/ghi một nguồn cùng lúc.
+
+## Dọn tài nguyên khi xong (BẮT BUỘC)
+- Kill ĐÚNG PID job mình spawn; xoá file tạm/`.run` nếu hết cần. Đừng để "job đã xong nhưng vẫn RUNNING / vẫn giữ RAM".
+- Trước golden/determinism: đảm bảo KHÔNG có instance backtest khác của mình chạy song song.
+
+## Monitor job nền PHẢI bắt cả exception/OOM — không chỉ regex tiến độ (bài học TASK-039)
+- Monitor chỉ grep dòng tiến độ (vd `... N ngày, emitted=`) sẽ KHÔNG báo khi job OOM/Exception → job **thoi thóp im lặng**. Thực tế TASK-039: `ExportFundingLabel` OOM ở thread `tend` (Aerospike cluster monitor), `main` GC-thrashing vẫn tiếp tục GHI file (data sau OOM rơi coin, không tin được), monitor đợi mãi dòng `coin trong universe` không bao giờ tới → mất ~3h không phát hiện.
+- Monitor `until`-loop PHẢI thoát theo **3 điều kiện**: (a) XONG (regex dòng kết thúc), (b) LỖI (`grep -E "OutOfMemory|Exception in thread|<Class> lỗi"`), (c) PROCESS CHẾT (`pgrep` rỗng). Cái nào tới trước → notify ngay.
+
+## OOM khi đọc Aerospike 1m full-universe (bài học TASK-039)
+- `DataManagerAerospikeFloatSim.readDataFromAerospike1M(day)` nạp CẢ 1 ngày × toàn bộ coin (1440 phút × ~600 coin `KlineObjectSimple`, parse proto song song) vào RAM. Năm 2024+ (~600 coin) → 1 ngày vượt 8g heap → OOM. Năm 2021 (~80 coin) thì 8g đủ → job chạy trơn nhiều giờ rồi mới chết ở năm đông coin (dễ tưởng nhầm gần xong).
+- 226 RAM tổng **15GB** nhưng Aerospike chỉ ăn **~0.74GB** (storage-engine = file trên disk 40GB, không in-memory) → available ~13GB → job đọc-nặng full-universe nên chạy `-Xmx11g` (chừa ~2g cho OS). Kiểm bằng `free -g` + `asinfo -p 3222 -v "namespace/ticker" | tr ';' '\n' | grep memory_used`.
+- Nếu `-Xmx11g` vẫn OOM → fix kiến trúc: stream xử từng phút (không giữ cả ngày trong `results`) thay vì tăng heap thêm (15GB là trần cứng).
+
+
+============================================================
+SOURCE FILE: rules\security.md
+============================================================
+
+# rules/security — Xử lý secret (nạp khi đụng PrivateConfig/key/deploy)
+
+> Đọc cùng [CORE](../CORE.md) (secret không echo đã ở đó). Đây là chi tiết + hành động.
+
+- `config/PrivateConfig.java` và `runAider.bat` chứa **API key/secret LIVE commit thẳng vào repo** (Binance key/secret, Gemini key).
+- Các key này ĐÃ LỘ trong git history → cần **rotate (xoay)** + chuyển sang config KHÔNG track.
+- Khi đụng các file này: KHÔNG echo secret ra commit / log / chat. Nhắc user rotate nếu chưa làm.
+
+
+============================================================
+SOURCE FILE: rules\task-workflow.md
+============================================================
+
+# rules/task-workflow — Luật khi nhận & chạy task (nhiều CCD)
+
+> Đọc cùng [CORE](../CORE.md). Cơ chế điều phối đầy đủ: [AGENT_WORKFLOW](../AGENT_WORKFLOW.md). Bản đồ CCD đang làm gì: [AGENTS](../AGENTS.md).
+
+## Ai claim / đóng task — KHÁC nhau theo cách chạy
+- **QUA supervisor (headless):** supervisor claim atomic (`os.mkdir locks/<id>`) + set `status: DOING/DONE/...` + sở hữu `runtime_state.json`. **Worker KHÔNG ghi `AGENTS.md`, KHÔNG tự set `status`** (AGENT_WORKFLOW §6 — giảm race). Worker chỉ: làm task + ghi report + block RESULT.
+- **Chạy TAY (CCD/CDK thủ công):** tự claim — ghi `owner` + `status: DOING` + `updated` vào header `tasks/<id>.md` (CDK cập nhật `AGENTS.md`) RỒI mới làm. Task đã có owner KHÁC + DOING + `updated` còn mới → KHÔNG đụng, báo user. Heartbeat: cập nhật `updated` mỗi commit/đổi bước; DOING mà `updated` quá cũ (≳2h) + nghi reset → STALE, reclaim được. Đóng: `DONE` + commit hash; cần soát → `REVIEW`. Một task = một owner.
+
+## Tròn việc hoặc thành Task — chống job nửa chừng / chờ mù (đọc cùng [CORE](../CORE.md))
+Pain thực tế: job nền không biết xong chưa → hỏi "chạy tới đâu" nhiều lần, chờ vô dụng, mất time; hoặc bỏ dở giữa chừng khi đổi hướng → process mồ côi. Luật chặn:
+
+**Hai trạng thái kết thúc hợp lệ — không có trạng thái thứ 3:**
+1. **TRÒN ngay trong phiên:** việc đủ ngắn để chạy xong + **VERIFY bằng số** (đo dữ liệu, không phải "lệnh chạy xong"). Vd: re-export 1 tháng → đếm NaN/records ngay.
+2. **THÀNH TASK:** việc dài/không chắc xong → tạo `tasks/<id>.md` front-matter đủ (`id/status/depends_on/checkpoint/max_retry/report`) + mục "Job đang chạy" (bàn giao) + acceptance (verify gì, ngưỡng PASS pre-register). Đưa vào supervisor/queue để theo dõi.
+
+**BẮT BUỘC thành task (không được ad-hoc nền) khi:** việc > ~vài phút, HOẶC distributed (Kaggle/queue), HOẶC ghi data thật (Aerospike/242/bộ file lớn), HOẶC không chắc xong trong phiên.
+
+**Trước khi spawn job nền — checklist 3 điểm (thiếu 1 → KHÔNG chạy, chuyển thành task):**
+- [ ] **Đo tiến độ:** có cách biết đang tới đâu (queue status / done-count / log mốc-bước có timestamp, ghi nơi bền). KHÔNG dựa "đoán đang chạy".
+- [ ] **Kết thúc:** điều kiện dừng rõ + ước lượng thời gian + (Kaggle) checkpoint-resume.
+- [ ] **Verify:** định trước đo gì để biết ĐÚNG khi xong (pre-register acceptance, tránh hợp-lý-hóa hậu kỳ).
+
+**Đổi hướng giữa chừng:** việc đang dở phải DỪNG sạch — kill đúng PID mình spawn ([run-226](run-226.md)) + ghi trạng thái lại (task/report) — hoặc chốt thành task resume được. CẤM để process mồ côi chạy nền không ai theo dõi (ăn tài nguyên + nhiễu + sau này không biết tin output hay không).
+
+**"Done" = bằng chứng đo**, không phải "đã chạy xong lệnh" (validate dữ liệu là cổng).
+
+## BÀN GIAO job nền (BẮT BUỘC — mọi cách chạy, ngay khi spawn job lâu)
+Ghi vào `tasks/<id>.md` mục "Job đang chạy" đủ để CCD KHÁC tiếp quản nếu mình chết:
+- **kernel slug (Kaggle)** hoặc **PID + host (226)**; lệnh + jar + args + dataset/env; **output path**; cách check trạng thái; **các bước còn lại** (lấy output → verify gì → bước tiếp).
+- Mục tiêu: CCD khác đọc task là làm tiếp được, KHÔNG chạy lại từ 0. Cập nhật mỗi mốc (launch / checkpoint / xong).
+
+## CHECKPOINT-RESUME job dài (đặc biệt Kaggle ~12h)
+Kaggle cắt kernel ~12h → job lâu hơn mà không checkpoint = bị giết rồi chạy lại từ 0 (lặp vô hạn, không bao giờ xong). Job đọc nhiều năm / khối lớn PHẢI: (a) ghi tiến độ nơi BỀN (set Aerospike checkpoint / output partial / file 226) theo đơn vị (tháng/ngày/batch symbol); (b) chạy lại = resume-skip-done; (c) output tăng dần (append/partial). Ước job >~10h → CHIA NHỎ trước khi chạy.
+
+## System.exit + dọn tài nguyên (chi tiết: CORE · run-226 · KAGGLE_RULES)
+- Tool batch: `System.exit(0)` cuối main (xem [CORE](../CORE.md)) — thiếu → kernel treo tới 12h, mất output.
+- Xong việc dọn NGAY: Kaggle stop kernel đã xong + kernel treo (zombie ăn quota + chiếm slot); 226 kill ĐÚNG PID mình spawn ([run-226](run-226.md)); python đóng process/temp.
+
+## Output contract (worker kết thúc report bằng block này — AGENT_WORKFLOW §4)
+```
+=== RESULT ===
+STATUS: DONE | REVIEW | NEEDS_HUMAN | FAILED
+COMMIT: <hash | ->
+ARTIFACTS: <path | ->
+VERIFY: <số đối chiếu acceptance | ->
+DECISIONS: <quyết-định reversible đã tự ra | ->
+QUESTIONS: <gom 1 lần, chỉ câu thật cần người | ->
+=== END ===
+```
+Thiếu/sai format → `NEEDS_HUMAN` (không đoán). Cấm hỏi giữa chừng — gom cuối.

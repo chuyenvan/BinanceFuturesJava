@@ -1,6 +1,6 @@
 ---
 id: 103
-status: DOING
+status: CANCELLED
 owner: CCD-103A
 updated: 2026-06-18
 touches_live_process: false

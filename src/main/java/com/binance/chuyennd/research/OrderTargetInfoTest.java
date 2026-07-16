@@ -62,6 +62,9 @@ public class OrderTargetInfoTest implements Serializable {
     //    minPrice (minPrice là tham chiếu trailing-stop, bị reset lên ở updateStatusNew/updateTPSL/mergeOrder).
     //    maeLow CHỈ phục vụ tính MAE trong report; TUYỆT ĐỐI không tham gia quyết định vào/ra lệnh/SL.
     public Float maeLow;
+    // 🔎 ĐO LƯỜNG ONLY (TASK-151): đỉnh giá THẬT đạt được kể từ leg đầu — chỉ đi LÊN, không tham gia
+    //    quyết định SL/TP (đối xứng với maeLow). Phục vụ đo "% đỉnh giữ được" khi đóng lệnh thắng.
+    public Float maePeak;
     public Float lastPrice;
 
     public Float rateChange;
@@ -112,6 +115,9 @@ public class OrderTargetInfoTest implements Serializable {
         if (this.maeLow == null || this.maeLow > ticker.minPrice) {
             this.maeLow = ticker.minPrice;
         }
+        if (this.maePeak == null || this.maePeak < ticker.maxPrice) {
+            this.maePeak = ticker.maxPrice;
+        }
         this.timeUpdate = ticker.startTime.longValue();
     }
 
@@ -151,6 +157,30 @@ public class OrderTargetInfoTest implements Serializable {
 
     public void updateStatusNew(Float predReturn15M, KlineObjectSimple ticker) {
         if (priceSL == null) {
+            // TASK (2026-07-09): SL cung cho lenh CHUA tung cham nguong lai de arm trailing ("nuoi lo").
+            // Chi active khi Configs.HARD_STOP_LOSS_RATE > 0 (mac dinh 0 = tat, hanh vi cu y nguyen).
+            // CHON LOC theo level: test A/B blanket (moi level) cho thay net AM - DCA_LEVEL1 mat loi nhuan
+            // vi bi cat som luc dang lo tam thoi (se hoi). Chi ap dung cho PREDICT_SYMBOL_TRADE (dung
+            // level dang lo bat thuong: rate% duong nhung $ am - xem TraceData2Test 2025).
+            if (Configs.HARD_STOP_LOSS_RATE > 0f
+                    && marketLevelChange == com.binance.chuyennd.object.MarketLevelChange.PREDICT_SYMBOL_TRADE) {
+                Float rateLossNow = calRateLoss(); // (lastPrice - priceEntry) / priceEntry, am neu dang lo
+                if (rateLossNow != null && rateLossNow <= -Configs.HARD_STOP_LOSS_RATE) {
+                    status = OrderTargetStatus.STOP_LOSS_DONE;
+                    priceTP = Math.min(ticker.priceOpen, lastPrice); // haircut nhu nhanh gap-down ben duoi, khong look-ahead them
+                    return;
+                }
+            }
+            // TASK (2026-07-10): time-stop thesis-expiry — lenh CHUA arm trailing qua TIME_STOP_HOURS
+            // (do tu leg DAU cum, khong bi DCA reset) thi thoat. 0 = tat.
+            if (Configs.TIME_STOP_HOURS > 0) {
+                long anchor = clusterFirstLegTime > 0L ? clusterFirstLegTime : timeStart;
+                if (ticker.startTime.longValue() - anchor > Configs.TIME_STOP_HOURS * 3600000L) {
+                    status = OrderTargetStatus.STOP_LOSS_DONE;
+                    priceTP = Math.min(ticker.priceOpen, lastPrice);
+                    return;
+                }
+            }
             Float rateLoss = calRateLossMax(ticker.maxPrice);
             Float rateMin2MoveSl = TradeUtils.calRateMinWithPredReturn15MForTradingStop(predReturn15M);
             if (rateLoss > rateMin2MoveSl) {

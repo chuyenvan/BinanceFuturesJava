@@ -1,0 +1,103 @@
+2026-07-12 18:38:34.114 INFO  [main] c.b.c.b.t.TraceData2Test:  20210101 07:00 => b:35000 pD:   0	m:   0	max:    0	    0	unP:    0	unPMin:    0	    0	    0	0%	done:0/0/0 run:0/0 f:0
+ 20210201 07:00 => b:35000 pD:   0	m:   0	max:    0	    0	unP:    0	unPMin:    0	    0	    0	0%	done:0/0/0 run:0/0 f:0
+ 20210301 07:00 => b:35000 pD:   0	m:   0	max:    0	    0	unP:    0	unPMin:    0	    0	    0	0%	done:0/0/0 run:0/0 f:0
+ 20210401 07:00 => b:35000 pD:   0	m:   0	max:    0	    0	unP:    0	unPMin:    0	    0	    0	0%	done:0/0/0 run:0/0 f:0
+ 20210501 07:00 => b:35000 pD:   0	m:   0	max:    0	    0	unP:    0	unPMin:    0	    0	    0	0%	done:0/0/0 run:0/0 f:0
+ 20210601 07:00 => b:35000 pD:   0	m:   0	max:    0	    0	unP:    0	unPMin:    0	    0	    0	0%	done:0/0/0 run:0/0 f:0
+ 20210701 07:00 => b:35000 pD:   0	m:   0	max:    0	    0	unP:    0	unPMin:    0	    0	    0	0%	done:0/0/0 run:0/0 f:0
+ 20210801 07:00 => b:35000 pD:   0	m:   0	max:    0	    0	unP:    0	unPMin:    0	    0	    0	0%	done:0/0/0 run:0/0 f:0
+ 20210901 07:00 => b:35000 pD:   0	m:   0	max:    0	    0	unP:    0	unPMin:    0	    0	    0	0%	done:0/0/0 run:0/0 f:0
+ 20211001 07:00 => b:35000 pD:   0	m:   0	max:    0	    0	unP:    0	unPMin:    0	    0	    0	0%	done:0/0/0 run:0/0 f:0
+ 20211101 07:00 => b:35000 pD:   0	m:   0	max:    0	    0	unP:    0	unPMin:    0	    0	    0	0%	done:0/0/0 run:0/0 f:0
+ 20211201 07:00 => b:35000 pD:   0	m:   0	max:    0	    0	unP:    0	unPMin:    0	    0	    0	0%	done:0/0/0 run:0/0 f:0
+ 20220101 07:00 => b:35000 pD:   0	m:   0	max:    0	    0	unP:    0	unPMin:    0	    0	    0	0%	done:0/0/0 run:0/0 f:0
+ 20220201 07:00 => b:35000 pD:   0	m:   0	max:    0	    0	unP:    0	unPMin:    0	    0	    0	0%	done:0/0/0 run:0/0 f:0
+ 20220301 07:00 => b:35000 pD:   0	m:   0	max:    0	    0	unP:    0	unPMin:    0	    0	    0	0%	done:0/0/0 run:0/0 f:0
+ 20220401 07:00 => b:35000 pD:   0	m:   0	max:    0	    0	unP:    0	unPMin:    0	    0	    0	0%	done:0/0/0 run:0/0 f:0
+ 20220501 07:00 => b:35000 pD:   0	m:   0	max:    0	    0	unP:    0	unPMin:    0	    0	    0	0%	done:0/0/0 run:0/0 f:0
+ 20220601 07:00 => b:35000 pD:   0	m:   0	max:    0	    0	unP:    0	unPMin:    0	    0	    0	0%	done:0/0/0 run:0/0 f:0
+ 20220701 07:00 => b:35000 pD:   0	m:   0	max:    0	    0	unP:    0	unPMin:    0	    0	    0	0%	done:0/0/0 run:0/0 f:0
+ 20220801 07:00 => b:35000 pD:   0	m:   0	max:    0	    0	unP:    0	unPMin:    0	    0	    0	0%	done:0/0/0 run:0/0 f:0
+ 20220901 07:00 => b:35000 pD:   0	m:   0	max:    0	    0	unP:    0	unPMin:    0	    0	    0	0%	done:0/0/0 run:0/0 f:0
+ 20221001 07:00 => b:35000 pD:   0	m:   0	max:    0	    0	unP:    0	unPMin:    0	    0	    0	0%	done:0/0/0 run:0/0 f:0
+ 20221101 07:00 => b:35000 pD:   0	m:   0	max:    0	    0	unP:    0	unPMin:    0	    0	    0	0%	done:0/0/0 run:0/0 f:0
+ 20221201 07:00 => b:35000 pD:   0	m:   0	max:    0	    0	unP:    0	unPMin:    0	    0	    0	0%	done:0/0/0 run:0/0 f:0
+ 20230101 07:00 => b:35000 pD:   0	m:   0	max:    0	    0	unP:    0	unPMin:    0	    0	    0	0%	done:0/0/0 run:0/0 f:0
+ 20230201 07:00 => b:35000 pD:   0	m:   0	max:    0	    0	unP:    0	unPMin:    0	    0	    0	0%	done:0/0/0 run:0/0 f:0
+ 20230301 07:00 => b:35000 pD:   0	m:   0	max:    0	    0	unP:    0	unPMin:    0	    0	    0	0%	done:0/0/0 run:0/0 f:0
+ 20230401 07:00 => b:35000 pD:   0	m:   0	max:    0	    0	unP:    0	unPMin:    0	    0	    0	0%	done:0/0/0 run:0/0 f:0
+ 20230501 07:00 => b:35000 pD:   0	m:   0	max:    0	    0	unP:    0	unPMin:    0	    0	    0	0%	done:0/0/0 run:0/0 f:0
+ 20230601 07:00 => b:35000 pD:   0	m:   0	max:    0	    0	unP:    0	unPMin:    0	    0	    0	0%	done:0/0/0 run:0/0 f:0
+ 20230701 07:00 => b:35118 pD:   0	m:   0	max:    0	 1399	unP:    0	unPMin:  -24	    0	    0	-0%	done:0/2/2 run:0/2 f:0
+ 20230801 07:00 => b:35118 pD:   0	m:   0	max:    0	    0	unP:    0	unPMin:  -24	    0	    0	-0%	done:0/2/2 run:0/2 f:0
+ 20230901 07:00 => b:35599 pD:   0	m:   0	max:    0	 5760	unP:    0	unPMin:  -24	    0	    0	-0%	done:8/30/30 run:0/26 f:0
+ 20231001 07:00 => b:35599 pD:   0	m:   0	max:    0	    0	unP:    0	unPMin:  -24	    0	    0	-0%	done:8/30/30 run:0/26 f:0
+ 20231101 07:00 => b:35599 pD:   0	m:   0	max:    0	    0	unP:    0	unPMin:  -24	    0	    0	-0%	done:8/30/30 run:0/26 f:0
+ 20231201 07:00 => b:35599 pD:   0	m:   0	max:    0	    0	unP:    0	unPMin:  -24	    0	    0	-0%	done:8/30/30 run:0/26 f:0
+ 20240101 07:00 => b:35599 pD:   0	m:   0	max:    0	    0	unP:    0	unPMin:  -24	    0	    0	-0%	done:8/30/30 run:0/26 f:0
+ 20240201 07:00 => b:35643 pD:   0	m:   0	max:    0	 4215	unP:    0	unPMin:  -40	    0	    0	-0%	done:36/67/67 run:0/27 f:0
+ 20240301 07:00 => b:35639 pD:   0	m:   0	max:    0	  349	unP:    0	unPMin:  -40	    0	    0	-0%	done:40/71/71 run:0/27 f:0
+ 20240401 07:00 => b:35744 pD:   0	m:   0	max:    0	 6120	unP:    0	unPMin:  -40	    0	    0	-0%	done:81/119/119 run:0/27 f:0
+ 20240501 07:00 => b:36005 pD:   0	m:   0	max:    0	 8232	unP:    0	unPMin: -207	    0	 -187	-1%	done:188/247/247 run:0/47 f:0
+ 20240601 07:00 => b:36005 pD:   0	m:   0	max:    0	    0	unP:    0	unPMin: -207	    0	    0	-1%	done:188/247/247 run:0/47 f:0
+ 20240701 07:00 => b:35993 pD:   0	m:   0	max:    0	 1399	unP:    0	unPMin: -207	    0	    0	-1%	done:190/249/249 run:0/47 f:0
+ 20240801 07:00 => b:35993 pD:   0	m:   0	max:    0	    0	unP:    0	unPMin: -207	    0	    0	-1%	done:190/249/249 run:0/47 f:0
+ 20240901 07:00 => b:36423 pD:   0	m:   0	max:    0	 7816	unP:    0	unPMin: -207	    0	 -176	-1%	done:326/425/425 run:0/47 f:0
+ 20241001 07:00 => b:36423 pD:   0	m:   0	max:    0	    0	unP:    0	unPMin: -207	    0	    0	-1%	done:326/425/425 run:0/47 f:0
+ 20241101 07:00 => b:36423 pD:   0	m:   0	max:    0	    0	unP:    0	unPMin: -207	    0	    0	-1%	done:326/425/425 run:0/47 f:0
+ 20241201 07:00 => b:36423 pD:   0	m:   0	max:    0	    0	unP:    0	unPMin: -207	    0	    0	-1%	done:326/425/425 run:0/47 f:0
+ 20250101 07:00 => b:36508 pD:   0	m:   0	max:    0	 1492	unP:    0	unPMin: -207	    0	    0	-1%	done:330/431/431 run:0/47 f:0
+ 20250201 07:00 => b:36508 pD:   0	m:   0	max:    0	    0	unP:    0	unPMin: -207	    0	    0	-1%	done:330/431/431 run:0/47 f:0
+ 20250301 07:00 => b:37052 pD:   0	m:   0	max:    0	 9818	unP:    0	unPMin:-1357	    0	 -721	-4%	done:419/554/554 run:0/61 f:0
+ 20250401 07:00 => b:36999 pD:   0	m:   0	max:    0	 3800	unP:    0	unPMin:-1357	    0	    0	-4%	done:448/583/583 run:0/61 f:0
+ 20250501 07:00 => b:36999 pD:   0	m:   0	max:    0	    0	unP:    0	unPMin:-1357	    0	    0	-4%	done:448/583/583 run:0/61 f:0
+ 20250601 07:00 => b:36999 pD:   0	m:   0	max:    0	    0	unP:    0	unPMin:-1357	    0	    0	-4%	done:448/583/583 run:0/61 f:0
+ 20250701 07:00 => b:36999 pD:   0	m:   0	max:    0	    0	unP:    0	unPMin:-1357	    0	    0	-4%	done:448/583/583 run:0/61 f:0
+ 20250801 07:00 => b:36999 pD:   0	m:   0	max:    0	    0	unP:    0	unPMin:-1357	    0	    0	-4%	done:448/583/583 run:0/61 f:0
+ 20250901 07:00 => b:36999 pD:   0	m:   0	max:    0	    0	unP:    0	unPMin:-1357	    0	    0	-4%	done:448/583/583 run:0/61 f:0
+ 20251001 07:00 => b:36999 pD:   0	m:   0	max:    0	    0	unP:    0	unPMin:-1357	    0	    0	-4%	done:448/583/583 run:0/61 f:0
+ 20251101 07:00 => b:40621 pD:   0	m: 233	max:  233	14790	unP:  -75	unPMin:-6561	  -84	 -543	-19%	done:721/1039/1040 run:1/81 f:0
+ 20251201 07:00 => b:40588 pD:   0	m:   0	max:    0	 1166	unP:    0	unPMin:-6561	    0	 -117	-19%	done:724/1043/1043 run:0/81 f:0
+ 20260101 07:00 => b:40588 pD:   0	m:   0	max:    0	    0	unP:    0	unPMin:-6561	    0	    0	-19%	done:724/1043/1043 run:0/81 f:0
+ 20260201 07:00 => b:40552 pD:   0	m:   0	max:    0	 1399	unP:    0	unPMin:-6561	    0	    0	-19%	done:726/1045/1045 run:0/81 f:0
+ 20260301 07:00 => b:41531 pD:   0	m:   0	max:    0	 7114	unP:    0	unPMin:-6561	    0	    0	-19%	done:786/1137/1137 run:0/81 f:0
+ 20260401 07:00 => b:41531 pD:   0	m:   0	max:    0	    0	unP:    0	unPMin:-6561	    0	    0	-19%	done:786/1137/1137 run:0/81 f:0
+ 20260501 07:00 => b:41531 pD:   0	m:   0	max:    0	    0	unP:    0	unPMin:-6561	    0	    0	-19%	done:786/1137/1137 run:0/81 f:0
+
+2026-07-12 18:38:34.302 INFO  [main] c.b.c.b.t.TraceData2Test: 2021 0.0 0.0 2296.5955-> 2296.5955
+2026-07-12 18:38:34.306 INFO  [main] c.b.c.b.t.TraceData2Test: 2022 0.0 0.0 356.68167-> 356.68167
+2026-07-12 18:38:34.306 INFO  [main] c.b.c.b.t.TraceData2Test: 2023 0.0 0.0 218.14839-> 218.14839
+2026-07-12 18:38:34.307 INFO  [main] c.b.c.b.t.TraceData2Test: 2024 0.0 0.0 268.0961-> 268.0961
+2026-07-12 18:38:34.307 INFO  [main] c.b.c.b.t.TraceData2Test: 2025 0.0 0.0 3394.4695-> 3394.4695
+2026-07-12 18:38:34.323 INFO  [main] c.b.c.b.t.TraceData2Test: 
+20210519	-158
+20250304	-21
+20221109	-18
+20210509	-12
+20241124	-5
+20220913	-5
+20210608	-4
+20240608	-2
+20210621	-1
+20251103	0
+20251012	0
+2021	Margin: 9472	UnProfitMin: -1958	ProfitMin:  -382	Big:   0/  0	Big_False:   0	Slow_Big_Buy:   0/  1	UnPnl: 0	2296	0.07
+2022	Margin: 1653	UnProfitMin: -82	ProfitMin:   -42	Big:   0/  0	Big_False:   0	Slow_Big_Buy:   0/  0	UnPnl: 0	356	0.01
+2023	Margin: 3753	UnProfitMin: 0	ProfitMin:    -1	Big:   0/  0	Big_False:   0	Slow_Big_Buy:   0/  0	UnPnl: 0	218	0.01
+2024	Margin: 7393	UnProfitMin: -980	ProfitMin:  -384	Big:   0/  0	Big_False:   0	Slow_Big_Buy:   0/  1	UnPnl: 0	268	0.01
+2025	Margin: 15442	UnProfitMin: -648	ProfitMin:  -749	Big:   0/  0	Big_False:   0	Slow_Big_Buy:   0/  0	UnPnl: 0	3394	0.1
+20210520	-24
+20210519	149
+20210521	270
+20210513	327
+20210522	330
+20210509	340
+20210507	342
+20210523	419
+20210518	430
+20210517	430
+20210524	683
+DCA_LEVEL1          	 => All: 15.291	  117	 4186	2021:  7.739	   52	  836 $	2024: 27.152	    6	  368 $	2025:  20.74	   59	 2981 $	
+PREDICT_SYMBOL_TRADE	 => All: 1.723	 1788	 2688	2021:  1.678	  838	 1455 $	2022:  2.206	  102	  275 $	2023:  5.663	   28	  173 $	2024:  1.305	  241	  254 $	2025:  1.685	  579	  530 $	
+BIG_DOWN            	 => All: -1.982	   18	 -341	2021:  1.075	    4	    4 $	2022:  3.153	    4	   81 $	2023:   7.25	    2	   45 $	2024: -24.587	    2	 -355 $	2025: -2.984	    6	 -116 $	
+

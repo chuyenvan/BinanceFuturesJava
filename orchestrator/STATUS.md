@@ -1,20 +1,21 @@
 # STATUS - orchestrator dashboard (supervisor ghi, dung sua tay)
 
-- supervisor_pid: 59020 | last_tick: 2026-06-15T11:37:03+07:00 | last_action: idle
-- slots: 1/4  (heavy_226 0/1, kaggle 0/5, kaggle_distributed 1/1)
+- supervisor_pid: 11304 | last_tick: 2026-07-11T20:47:11+07:00 | last_action: idle
+- slots: 0/6  (heavy_226 0/1, kaggle 0/5, kaggle_distributed 0/1)
 
 ## Dang chay
-- 013: pid=10828 resource=kaggle_distributed started=2026-06-15T11:21:01+07:00 report_age=0.3'
+- (none)
 
 ## Cho nguoi (live-process / NEEDS_HUMAN / REVIEW)
 - 017: REVIEW
-- 035: touches_live_process -> nguoi deploy tay
+- 038: REVIEW
+- 104: REVIEW
+- 146: REVIEW
+- 150: NEEDS_HUMAN
+- 151: REVIEW
+- 152: NEEDS_HUMAN
+- 153: REVIEW
+- 154: NEEDS_HUMAN
+- 156: NEEDS_HUMAN
 
 ## Queue (TODO san sang / bi chan deps)
-- 018 (kaggle): BLOCKED deps['013']
-- 025 (heavy_226): BLOCKED deps['012', '015', '017', '018']
-- 026 (kaggle): BLOCKED deps['025']
-- 037 (kaggle): BLOCKED deps['036']
-- 038 (kaggle): BLOCKED deps['013', '037']
-- 039 (kaggle): BLOCKED deps['037', '038', '024']
-- 040 (heavy_226): BLOCKED deps['013']

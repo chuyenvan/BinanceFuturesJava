@@ -40,8 +40,8 @@ public class CopyTicker242To226 {
     private static final Logger LOG = LoggerFactory.getLogger(CopyTicker242To226.class);
 
     // ⚙️ CẤU HÌNH
-    private static final String START_DATE = "20210101";
-    private static final String END_DATE = null;            // null = tới hôm nay
+    private static String START_DATE = "20210101";          // override qua args[0] yyyyMMdd
+    private static String END_DATE = null;                   // null = tới hôm nay; override qua args[1] yyyyMMdd (loại trừ)
     private static final boolean FORCE_OVERWRITE = false;   // true = chép đè kể cả key đã có trên 226
     private static final int PUT_THREADS = 4;                // luồng ghi song song vào 226
     private static final int VERIFY_SAMPLES = 200;           // số key lấy mẫu so bytes cuối cùng
@@ -67,6 +67,9 @@ public class CopyTicker242To226 {
 
     public static void main(String[] args) {
         try {
+            if (args.length >= 1 && args[0] != null && !args[0].isBlank()) START_DATE = args[0].trim();
+            if (args.length >= 2 && args[1] != null && !args[1].isBlank()) END_DATE = args[1].trim();
+            LOG.info("ARGS range: START_DATE={} END_DATE={}", START_DATE, END_DATE);
             new CopyTicker242To226().run();
         } catch (Exception e) {
             LOG.error("CopyTicker error", e);

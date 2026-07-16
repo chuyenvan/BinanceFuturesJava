@@ -19,7 +19,7 @@ import java.lang.reflect.Field;
 import java.util.*;
 
 /**
- * WFO TASK loại 1 — STRATEGY WFO (tối ưu 18 gene chiến lược, off-cứng 9 gene phẳng đã loại).
+ * WFO TASK loại 1 — STRATEGY WFO (tối ưu 17 gene chiến lược, off-cứng 9 gene phẳng đã loại + bỏ DCA_TIME_BIG_Up chết).
  *
  * <p>Mỗi JOB = 1 cửa sổ: train 12 tháng + OOS 3 tháng (trượt = OOS, không chồng lấn). runJob:
  * random-search N mẫu genome trên TRAIN → best theo fitness V4.1 → đo OOS → WFE. result JSON gồm
@@ -51,11 +51,13 @@ public class StrategyWfoTask implements WfoTask {
     public static final float PASS_POS_RATIO = 0.70f; // ≥70% cửa sổ OOS dương
     public static final float PASS_MAXDD_OOS = 0.50f; // maxDD-OOS xấu nhất theo TỶ LỆ vốn (≤50%, pre-registered). Dùng ddPct, KHÔNG abs USD.
 
-    // ===== GENOME 18 gene (cụm A REJECT + B nhạy vừa). Range vùng AN TOÀN tránh REJECT. =====
+    // ===== GENOME 17 gene (cụm A REJECT + B nhạy vừa). Range vùng AN TOÀN tránh REJECT. =====
+    // 2026-07-13 Uni: BỎ DCA_TIME_BIG_Up (18→17) — gene CHẾT dưới OFF_FLAT_HARD: chỉ dùng ở nhánh BIG_UP
+    // (DcaUtils:51) mà BIG_UP off-cứng → không tác động sleeve nào đang bật → phí 1 chiều search HPO.
     static final LinkedHashMap<String, double[]> GENOME = new LinkedHashMap<>();
     static final LinkedHashMap<String, Boolean> IS_INT = new LinkedHashMap<>();
     static {
-        put("MIN_MOMENTUM_15M", 0.020, 0.045, false);  // TASK-137: [0.020,0.045] - range B [0.015,0.045] cho WFE 0.104 (te hon), 0.020 tranh mep vach chay: mo range xuong (cu [0.030,0.050]) - sweep cho thay 0.050 la diem te nhat toan ky (calmar 0.92), vung tot 0.015-0.0228 bi loai ngoai; can duoi 0.020 (khong 0.015) de tranh mep vach chay 0.010-0.015
+        put("MIN_MOMENTUM_15M", 0.010, 0.045, false);  // 2026-07-12 Uni: NOI xuong 0.010 (cu 0.020) de HPO tu do chon vung tan-suat-cao (team ghi vung tot 0.010-0.020 bi loai) - test tan suat. TASK-137: [0.020,0.045] - range B [0.015,0.045] cho WFE 0.104 (te hon), 0.020 tranh mep vach chay: mo range xuong (cu [0.030,0.050]) - sweep cho thay 0.050 la diem te nhat toan ky (calmar 0.92), vung tot 0.015-0.0228 bi loai ngoai; can duoi 0.020 (khong 0.015) de tranh mep vach chay 0.010-0.015
         put("PREDICT_SYMBOL_RATE_MAX_THRESHOLD", 0.05, 0.20, false);
         put("AI_DYNAMIC_MULTIPLIER", 1.5, 2.0, false);
         put("AI_DYNAMIC_MIN", 0.10, 0.50, false);
@@ -63,7 +65,6 @@ public class StrategyWfoTask implements WfoTask {
         put("MS_DOWN_BIG_AVG", -0.055, -0.020, false);
         put("DCA_LOSS_BIG_DOWN", -0.22, -0.08, false);
         put("DCA_TIME_BIG_DOWN", 3, 7, true);
-        put("DCA_TIME_BIG_Up", 21, 30, true);
         put("RATE_PROFIT_STOP_MARKET", 0.020, 0.050, false);  // TASK-139: PHAT HIEN LON - cu [0.012,0.025] ep WFO tune trong vung CAT NON. Sweep: 0.03-0.05 cho PnL 2.4x + calmar 2.3x, maxDD khong doi. Day la nut that that (khong phai MIN_MOM15)
         put("TS_PROFIT_MULTIPLIER", 4.0, 8.0, false);
         put("TS_DYNAMIC_K", 0.10, 0.25, false);
@@ -91,9 +92,18 @@ public class StrategyWfoTask implements WfoTask {
         // WFO_MAX_WINDOWS: giới hạn số cửa sổ (chỉ để TEST kín luồng nhanh; full không set).
         String envMaxW = System.getenv("WFO_MAX_WINDOWS");
         int maxW = (envMaxW != null && !envMaxW.isEmpty()) ? Integer.parseInt(envMaxW) : wins.size();
+        // GIỚI HẠN 3 (2026-07-13): loại OOS window vượt tầm dữ liệu selector (funding tới 2025-12).
+        // WFO_MAX_OOS_DATE=yyyyMMdd → KHÔNG tạo window có oosEnd vượt mốc đó (rỗng = giữ nguyên).
+        long maxOosMs = parseMaxOosDateMs(System.getenv("WFO_MAX_OOS_DATE"));
         List<WfoJob> jobs = new ArrayList<>();
         for (int i = 0; i < wins.size() && i < maxW; i++) {
             long[] w = wins.get(i);
+            long oosEndReal = w[3] + Utils.TIME_MINUTE;   // w[3] = oosEnd - 1 phut; khoi phuc mep phai thuc
+            if (oosEndReal > maxOosMs) {
+                LOG.info("buildJobs: LOAI window w{} (OOS {}..{}) vi oosEnd vuot WFO_MAX_OOS_DATE",
+                        i, Utils.normalizeDateYYYYMMDD(w[2]), Utils.normalizeDateYYYYMMDD(oosEndReal));
+                continue;
+            }
             JSONObject p = new JSONObject();
             p.put("winIdx", i);
             p.put("trainStart", w[0]); p.put("trainEnd", w[1]);
@@ -186,6 +196,15 @@ public class StrategyWfoTask implements WfoTask {
         }
 
         // ===== OOS =====
+        // TASK-142 (RAM): cache ticker-file cua vong TRAIN KHONG tai dung o OOS (khac dai ngay) → xoa truoc OOS
+        // de gioi han RAM ~1 cua so train thay vi train+OOS. Vo hai voi aerospike (FILE_STORE rong). Khong doi so.
+        if (Configs.USE_SMART_CACHE) {
+            int fd = com.binance.chuyennd.ai_ml.data.HPOSmartCache.fileCachedDays();
+            if (fd > 0) {
+                com.binance.chuyennd.ai_ml.data.HPOSmartCache.clearFileCache();
+                LOG.info("[CACHE] clear ticker-file cache truoc OOS: giai phong {} ngay khoi RAM", fd);
+            }
+        }
         applyGenome(names, bestGenome);
         HPOFitnessCalculatorV4.FitnessReport oos = backtest(ctx, oosStart, oosEnd);
         // WFE pre-registered = PnL_OOS / PnL_IS (KHONG dung calmar). bestGenome luon co PnL_IS>0
@@ -267,7 +286,6 @@ public class StrategyWfoTask implements WfoTask {
 
         int n = rows.size();
         int posCount = 0;
-        List<Double> wfes = new ArrayList<>();
         double worstMaxDD = 0;     // abs USD (tham khảo)
         double worstDdPct = 0;     // TỶ LỆ — dùng cho VERDICT
         double worstDdPctMtm = 0;  // 🟡 TASK-119 report-only — KHÔNG vào verdict
@@ -278,14 +296,19 @@ public class StrategyWfoTask implements WfoTask {
             // optString default "SUCCESS" để tương thích result cũ (chưa có oosNote). Semantics đếm GIỮ
             // NGUYÊN V4: window sentinel (TOO_FEW/BURN/...) giờ hiện pnl thật nhưng KHÔNG được đếm dương.
             if ("SUCCESS".equals(r.optString("oosNote", "SUCCESS")) && oosPnl > 0) posCount++;
-            wfes.add(r.getDouble("wfe"));
             worstMaxDD = Math.max(worstMaxDD, r.getDouble("oosMaxDD"));
             worstDdPct = Math.max(worstDdPct, r.optDouble("oosDdPct", 0));
             worstDdPctMtm = Math.max(worstDdPctMtm, r.optDouble("oosDdPct_mtm", 0));   // report-only
             if (r.optBoolean("oosMarginCall", false)) marginCallCount++;               // report-only
         }
         double posRatio = n > 0 ? (double) posCount / n : 0;
-        double wfeMedian = median(wfes);
+        // BUG 1 (2026-07-13): WFE median CHỈ tính trên window SUCCESS (đồng bộ semantics posCount).
+        // Trước đây gom MỌI window (ZERO_TRADES/TOO_FEW/BURN/CAPITAL_LOCK) làm median luôn kẹt ~0.010,
+        // che khuất WFE thật của các window SUCCESS. Nếu KHÔNG có window SUCCESS nào → median=0 → giữ FAIL.
+        List<Double> wfesSuccess = collectSuccessWfe(rows);
+        double wfeMedian = median(wfesSuccess);
+        LOG.info("aggregate: WFE median tinh tren {}/{} window SUCCESS (loai {} window sentinel/disqualify)",
+                wfesSuccess.size(), n, n - wfesSuccess.size());
 
         boolean pass = n > 0
                 && wfeMedian >= PASS_WFE
@@ -357,7 +380,33 @@ public class StrategyWfoTask implements WfoTask {
     }
 
     // ======================= helpers =======================
-    private static double median(List<Double> xs) {
+    /**
+     * BUG 1 (2026-07-13): gom WFE CHỈ của window SUCCESS (bỏ ZERO_TRADES/TOO_FEW/BURN/CAPITAL_LOCK...).
+     * optString default "SUCCESS" để tương thích result cũ (chưa có field oosNote). Package-private để test.
+     */
+    static List<Double> collectSuccessWfe(List<JSONObject> rows) {
+        List<Double> out = new ArrayList<>();
+        for (JSONObject r : rows) {
+            if ("SUCCESS".equals(r.optString("oosNote", "SUCCESS"))) out.add(r.getDouble("wfe"));
+        }
+        return out;
+    }
+
+    /**
+     * GIỚI HẠN 3 (2026-07-13): parse env WFO_MAX_OOS_DATE (yyyyMMdd) → millis mốc chặn oosEnd cuối.
+     * Rỗng/null/sai định dạng → {@link Long#MAX_VALUE} (giữ nguyên hành vi, không cap). Package-private để test.
+     */
+    static long parseMaxOosDateMs(String env) {
+        if (env == null || env.trim().isEmpty()) return Long.MAX_VALUE;
+        try {
+            return Utils.sdfFile.parse(env.trim()).getTime() + 7 * Utils.TIME_HOUR;
+        } catch (Exception e) {
+            LOG.warn("WFO_MAX_OOS_DATE='{}' sai dinh dang yyyyMMdd -> bo qua cap: {}", env, e.getMessage());
+            return Long.MAX_VALUE;
+        }
+    }
+
+    static double median(List<Double> xs) {   // package-private: cho unit test (StrategyWfoTaskMetricTest)
         if (xs.isEmpty()) return 0;
         List<Double> s = new ArrayList<>(xs);
         Collections.sort(s);

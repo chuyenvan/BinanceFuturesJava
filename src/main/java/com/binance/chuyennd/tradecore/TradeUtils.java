@@ -25,8 +25,9 @@ public class TradeUtils {
                 ? Configs.TS_MAX_GAP_WEAK    // 0.03f  (= 6 đơn vị cũ)
                 : Configs.TS_MAX_GAP;        // 0.08f  (= 16 đơn vị cũ)
 
-        // Nhả lại tối đa nửa lợi nhuận, nhưng không vượt maxGap
-        float gap = Math.min(maxProfitRate * 0.5f, maxGap);
+        // Nhả lại tối đa TS_GIVEBACK_RATIO phần lợi nhuận (mặc định 0.5 = hành vi cũ), nhưng không vượt maxGap
+        // TASK (2026-07-10): nghi phạm "cắt lãi non" — sweep trực tiếp tỉ lệ này (0.3 chặt / 0.7 lỏng-nuôi-trend)
+        float gap = Math.min(maxProfitRate * Configs.TS_GIVEBACK_RATIO, maxGap);
 
         // Lãi còn lại sau khi trừ gap chính là mức stop mới
         float rate = maxProfitRate - gap;

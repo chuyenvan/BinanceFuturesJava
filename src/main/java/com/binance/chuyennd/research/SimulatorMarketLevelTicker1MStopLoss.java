@@ -75,7 +75,17 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         LOG.info("Start with TICKER_SOURCE: {} | AEROSPIKE_READ_CLUSTER: {}", Configs.TICKER_SOURCE, Configs.AEROSPIKE_READ_CLUSTER);
         SimulatorMarketLevelTicker1MStopLoss test = new SimulatorMarketLevelTicker1MStopLoss();
         test.initData();
-        test.simulatorWithInitEntry(startTime, System.currentTimeMillis());
+        // TASK (2026-07-09): mac dinh chay toi "bay gio" (system time) se FAIL-FAST neu ticker
+        // live chua ingest kip (data lag binh thuong cua feed song, vai ngay gan nhat thieu).
+        // Cho phep override qua SIM_END_DATE (yyyyMMdd) de chay toi moc data da biet TOT, khong
+        // tat guard FAIL-FAST. Bo trong env -> giu nguyen hanh vi cu (System.currentTimeMillis()).
+        Long endTime = System.currentTimeMillis();
+        String simEndDate = System.getenv("SIM_END_DATE");
+        if (simEndDate != null && !simEndDate.isBlank()) {
+            endTime = Utils.sdfFile.parse(simEndDate).getTime();
+            LOG.info("🔀 SIM_END_DATE override: chay toi {}", simEndDate);
+        }
+        test.simulatorWithInitEntry(startTime, endTime);
         Thread.sleep(5000);
         System.exit(1);
     }
@@ -104,10 +114,13 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                         ? com.binance.chuyennd.ai_ml.data.HPOSmartCache.getDataShort(startTime)
                         : DataManagerAerospikeFloatSim.readDataFromAerospike1M_ShortKey(startTime);
             } else if ("file".equals(Configs.TICKER_SOURCE)) {
-                if (Configs.USE_SMART_CACHE) {
-                    throw new IllegalStateException("USE_SMART_CACHE chi hop le voi TICKER_SOURCE=aerospike (dang la file)");
-                }
-                time2Tickers = KaggleDataLoader.loadDailyTickersShort(startTime);
+                // TASK-142 (rework compact-lossless): file-ticker ho tro RAM-cache theo ngay. USE_SMART_CACHE=true
+                // → nen ngay sang CompactFileDay (GIU totalUsdt + startTime=key, ~5-6GB/window thay vi exact-object
+                // 16-24GB → tranh OOM Oracle 23GB), N sample cung window dung chung: doc+gunzip 1 lan/ngay/window,
+                // cac lan sau dung lai tu nen. Ket qua Y HET duong doc thang. USE_SMART_CACHE=false → doc thang (mac dinh).
+                time2Tickers = Configs.USE_SMART_CACHE
+                        ? com.binance.chuyennd.ai_ml.data.HPOSmartCache.getDataShortFromFile(startTime)
+                        : KaggleDataLoader.loadDailyTickersShort(startTime);
             } else {
                 throw new IllegalStateException("Thieu/sai TICKER_SOURCE trong config.properties (hien tai: "
                         + Configs.TICKER_SOURCE + ") — them dong: TICKER_SOURCE=aerospike (doc Aerospike) hoac TICKER_SOURCE=file (Kaggle).");
@@ -230,7 +243,9 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                 }
 
                                 // 🔥 BƯỚC 3: FUNDING FEE SIÊU TỐC (ĐÃ PRE-CALCULATE SORT SẴN) 🔥
-                                long[] symbol2Pred = time2SymbolPred.get(time);
+                                // TASK (2026-07-11) §2 DCA-primary: cho phep TAT sleeve PREDICT_SYMBOL_TRADE de do
+                                // rieng sleeve mean-reversion (DCA_LEVEL1 + BIG_DOWN). Mac dinh false = hanh vi cu.
+                                long[] symbol2Pred = Configs.DISABLE_PREDICT_SYMBOL ? null : time2SymbolPred.get(time);
                                 if (symbol2Pred != null) {
                                     float maxThres = Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD * Configs.AI_DYNAMIC_MAX;
 
@@ -449,21 +464,39 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         int numberMinutes = System.currentTimeMillis() - startTime > 0 ? (int) ((System.currentTimeMillis() - startTime) / Utils.TIME_MINUTE) : 0;
 
         LOG.info("📥 Đang tải dữ liệu vào RAM...");
-        time2MarketData = DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
-        predictionMap = DataManagerAerospikeFloatSim.getAllMarketAiPredictionsFromAerospike();
-        // A/B SELECTOR: nếu set env SEL_BACKTEST_SET → dùng selector v2 (cột horizon SEL_BACKTEST_HORIZON_IDX:
-        //   0=4h,1=12h,2=24h,3=72h) thay funding cũ. Cùng format long[] nên phần engine còn lại KHÔNG đổi.
-        //   Bỏ trống env → giữ nguyên funding cũ (baseline). Cho phép chạy lần lượt 4 horizon để so A/B.
-        String selSet = System.getenv("SEL_BACKTEST_SET");
-        if (selSet != null && !selSet.isBlank()) {
-            int hIdx = Integer.parseInt(System.getenv().getOrDefault("SEL_BACKTEST_HORIZON_IDX", "1")); // mặc định 12h
-            String[] hName = {"4h", "12h", "24h", "72h"};
-            LOG.info("🔀 A/B SELECTOR: dùng set={} horizonIdx={} ({})", selSet, hIdx,
-                    hIdx >= 0 && hIdx < 4 ? hName[hIdx] : "?");
-            time2SymbolPred = DataManagerAerospikeFloatSim.getAllSelectorPredictionsPrimitiveFromAerospike(selSet, hIdx);
+        // TASK (2026-07-09): doc offline bin (WfoDataset) neu WFO_DATA_DIR set -> khop dung dataset
+        // da va (funding leak-free predict_wf_*.bin) dang dung cho WFO, thay vi scan Aerospike song
+        // (co the lech set/thoi diem). Bo trong env -> giu nguyen hanh vi Aerospike cu (khong doi
+        // behavior mac dinh, khong anh huong cac lan chay truoc).
+        String wfoDataDir = System.getenv("WFO_DATA_DIR");
+        if (wfoDataDir != null && !wfoDataDir.isBlank()) {
+            LOG.info("🔀 OFFLINE BIN: doc market/pred/funding tu WfoDataset tai {}", wfoDataDir);
+            try {
+                com.binance.chuyennd.ai_ml.wfo.framework.WfoDataset ds =
+                        com.binance.chuyennd.ai_ml.wfo.framework.WfoDataset.load(wfoDataDir);
+                time2MarketData = ds.market;
+                predictionMap = ds.pred;
+                time2SymbolPred = ds.funding;
+            } catch (Exception e) {
+                throw new RuntimeException("Doc WfoDataset tu WFO_DATA_DIR=" + wfoDataDir + " FAIL", e);
+            }
         } else {
-            LOG.info("🔀 BASELINE: dùng funding cũ (set {}).", DataManagerAerospikeFloatSim.AEROSPIKE_SET_NAME_FUNDING_PRED);
-            time2SymbolPred = DataManagerAerospikeFloatSim.getAllFundingPredictionsPrimitiveFromAerospike();
+            time2MarketData = DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
+            predictionMap = DataManagerAerospikeFloatSim.getAllMarketAiPredictionsFromAerospike();
+            // A/B SELECTOR: nếu set env SEL_BACKTEST_SET → dùng selector v2 (cột horizon SEL_BACKTEST_HORIZON_IDX:
+            //   0=4h,1=12h,2=24h,3=72h) thay funding cũ. Cùng format long[] nên phần engine còn lại KHÔNG đổi.
+            //   Bỏ trống env → giữ nguyên funding cũ (baseline). Cho phép chạy lần lượt 4 horizon để so A/B.
+            String selSet = System.getenv("SEL_BACKTEST_SET");
+            if (selSet != null && !selSet.isBlank()) {
+                int hIdx = Integer.parseInt(System.getenv().getOrDefault("SEL_BACKTEST_HORIZON_IDX", "1")); // mặc định 12h
+                String[] hName = {"4h", "12h", "24h", "72h"};
+                LOG.info("🔀 A/B SELECTOR: dùng set={} horizonIdx={} ({})", selSet, hIdx,
+                        hIdx >= 0 && hIdx < 4 ? hName[hIdx] : "?");
+                time2SymbolPred = DataManagerAerospikeFloatSim.getAllSelectorPredictionsPrimitiveFromAerospike(selSet, hIdx);
+            } else {
+                LOG.info("🔀 BASELINE: dùng funding cũ (set {}).", DataManagerAerospikeFloatSim.AEROSPIKE_SET_NAME_FUNDING_PRED);
+                time2SymbolPred = DataManagerAerospikeFloatSim.getAllFundingPredictionsPrimitiveFromAerospike();
+            }
         }
         // 3. CHẠY PRE-CALCULATE (SORT SẴN FUNDING FEE MỘT LẦN DUY NHẤT)
         preprocessFundingData(time2SymbolPred);

@@ -4,6 +4,27 @@
 > việc kế tiếp, để không miss/lệch. Chi tiết dữ liệu → [DATA_STATE.md](DATA_STATE.md). Topology → [db/index.md](db/index.md).
 > Quy trình backfill → [runbooks/BACKFILL_SURVIVORSHIP.md](runbooks/BACKFILL_SURVIVORSHIP.md).
 
+## 0.5 TRẠNG THÁI CHIẾN DỊCH (cập nhật 2026-07-11 tối — đọc trước)
+**Đang ở:** tìm cấu hình ≥20%/năm. Entry maxFav3%@4h là hướng sáng nhất (thắng ret2 ở sim full: quý-trade
+9→11, PST dương). Chi tiết: reports/155.md, STRATEGY_ROADMAP_3PART.md, SOLUTION_FRAMEWORK_20260711.md.
+
+**PHÁT HIỆN GỐC RỄ (2026-07-11):** WFO luôn FAIL (~29% OOS-dương) cả ret2 lẫn maxFav3 KHÔNG phải do chiến
+lược — mà do **gate model pred chỉ phủ 2023-2025** (2021=0, 2022=420 rec). Entry đòi `predict!=null` →
+2021-2022 chặn cứng → 8/17 cửa sổ ZERO_TRADES → FAIL giả. Feature 2021-2022 CÓ (chỉ thiếu vì cutoff train
+bắt đầu 2023). → task 156 sinh gate 2021-2022 → WFO lại (đang TODO). maxFav3 CHƯA bị bác.
+
+**ĐANG CHẠY (nền, độc lập session):** supervisor detached (orchestrator/supervisor.py, model=sonnet) →
+task 156 (gate coverage). Task khác: 146(REVIEW dọn doc), 150/151/152(team Entry/Success/Fail),
+153(precision), 154(path-truth fail-recovery), 155(baseline model). Xem orchestrator/STATUS.md.
+
+**QUYẾT ĐỊNH UNI CHỐT:** (1) short = ưu tiên SAU, BẮT BUỘC có SL (crypto x100). (2) cần Data Preflight
+Gate chặn lỗi im lặng trước HPO/WFO — spec ở DATA_VALIDATION_FRAMEWORK.md, chờ Uni chốt ngưỡng BLOCK/WARN
++ N sample trước khi implement.
+
+**CƠ CHẾ hiện tại (đọc code xác nhận):** nuôi lãi = trailing động (arm ~5.4% hoặc ~1%, gap=min(đỉnh×
+giveback,8%), giveback=1.0 tối ưu). DCA = BIG_DOWN + độ sâu lỗ (phanh theo margin ratio −15..−99%). Cơ chế
++3%→SL cứng+1% của Uni là THIẾT KẾ MỚI cho tầng 2, chưa implement (nuôi lãi hiện vẫn cơ chế cũ).
+
 ## 0. MỤC TIÊU ĐANG THEO (Uni chốt)
 Xây bộ dữ liệu CHUẨN đi theo pipeline CHUẨN cho hệ WFO tốt nhất — **ưu tiên chất lượng, không vội**.
 Chuỗi: **ticker gốc → market object trên Aerospike Oracle → export .bin cho master-worker mọi tài nguyên.**

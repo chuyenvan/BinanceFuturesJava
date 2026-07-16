@@ -14,6 +14,7 @@
 - [db/](db/index.md) — data nào ở đâu, ghi/đọc/chạy đâu (242 source · 226 compute · redis). (`DATA_ARCHITECTURE.md` = pointer cũ.)
 - [**SESSION_START**](SESSION_START.md) — 🔴 **ĐỌC ĐẦU TIÊN mỗi session mới**: mục tiêu, topology, trạng thái 4 tầng dữ liệu, việc kế tiếp, quyết định đã chốt. (2026-07-07)
 - [DATA_STATE](DATA_STATE.md) — **TRẠNG THÁI dữ liệu THẬT (đo)**: 4 tầng (ticker file/aerospike, lifecycle, dataset), 2 đường đọc ticker, survivorship 38 coin. Nguồn sự thật "dữ liệu đủ chưa, ở đâu". (rà 2026-07-07)
+- [**DATA_VALIDATION_FRAMEWORK**](DATA_VALIDATION_FRAMEWORK.md) — 🔴 **ĐỌC TRƯỚC MỌI HPO/WFO**: Preflight Gate chặn lỗi im lặng (19 loại, 6 nhóm), quy trình fail-fast, + danh mục 10 lỗi đã xảy ra làm đảo verdict (gate coverage 2021-2022, leakage, MAE, ghost USDC...). (2026-07-11)
 - [runbooks/BACKFILL_SURVIVORSHIP](runbooks/BACKFILL_SURVIVORSHIP.md) — quy trình 7 bước backfill/re-export coin delist + checkpoint.
 - [architecture](architecture.md) — bức tranh lớn codebase + bản đồ package + 2 process live.
 - [rules/task-workflow](rules/task-workflow.md) — luật khi nhận & chạy task (claim theo cách chạy, bàn-giao job nền, checkpoint, dọn, RESULT). · [AGENT_WORKFLOW](AGENT_WORKFLOW.md) — cơ chế điều phối đầy đủ. · [AGENTS](AGENTS.md) — bản đồ CCD đang làm gì. ⚠️ có thể lệch — đối chiếu trạng thái thật ở ROADMAP (con trỏ 2-track).
@@ -25,6 +26,14 @@
 - [PIPELINE_PROVENANCE](PIPELINE_PROVENANCE.md) — **vết truy nguyên**: artifact nào từ code/data/model nào + registry + phát hiện leakage funding (in-sample) + quy ước version. (rà 2026-07-01)
 - [FINDINGS](FINDINGS.md) — **NGUỒN SỰ THẬT**: mọi kết luận đã ĐO kèm số + lý do.
 - [H1_GATE_SPEC](H1_GATE_SPEC.md) — spec export gate (label+feature) đang thực thi (012/015/017/018/025/026).
+
+## Chiến lược (campaign 2026-07-10/11 — tìm cấu hình 20%/năm)
+- [SOLUTION_FRAMEWORK_20260711](SOLUTION_FRAMEWORK_20260711.md) — **mới nhất**: cây nhánh chiến lược +
+  test rẻ + điểm dừng pre-register. Vị trí hiện tại: CHƯA đạt 20%/năm (~5%/năm).
+- [STRATEGY_ROADMAP_3PART](STRATEGY_ROADMAP_3PART.md) — phân rã Entry/Success/Fail, mỗi phần 1 bộ WFO
+  riêng (bổ sung `REBUILD_ROADMAP.md`, đi SÂU trong 1 kiến trúc — không mâu thuẫn framework trên).
+- [STRATEGY_CONSOLIDATED](STRATEGY_CONSOLIDATED.md) — hợp nhất phiên nghiên cứu 2026-07-10 (bằng chứng đo
+  được: giveback/ret2/DCA) + spec chiến dịch điều phối task 140–144.
 
 ## Insights (kiến thức nền)
 - [insights/DATA_CADENCE](insights/DATA_CADENCE.md) · [insights/INGEST_FORMAT](insights/INGEST_FORMAT.md) · [insights/TRAINING_NOTES](insights/TRAINING_NOTES.md)
@@ -45,6 +54,9 @@
 - [PRODUCTION_AUDIT](reference/PRODUCTION_AUDIT.md) · [STATUS_RECON](reference/STATUS_RECON.md) · [_reconcile-report](reference/_reconcile-report.md)
 - [aerospike_242_inventory](reference/aerospike_242_inventory.md) · [basis_verify](reference/basis_verify.md) · [RUNBOOK_kaggle_multi_cpu](reference/RUNBOOK_kaggle_multi_cpu.md) (đã hấp thụ vào KAGGLE_RULES §1)
 - [GENE_AUDIT_TASK111](reference/GENE_AUDIT_TASK111.md) — bản đồ gene 6 tầng (tham số→tầng→vai-trò). Genome chốt = [ADR-0012](decisions/0012-genome-18-gene-off-cung-cum-C.md).
+- [ARCHITECTURE_STATE_SNAPSHOT_20260707](reference/ARCHITECTURE_STATE_SNAPSHOT_20260707.md) — bản tổng
+  hợp kiến trúc+trạng thái viết lại, trùng nội dung `architecture.md`+`DATA_STATE.md`+`SESSION_START.md`
+  (nguồn sống hơn). Giữ vì có sơ đồ ASCII gọn.
 
 ## Khác
 - [../tasks/](../tasks/) — task theo thứ tự LOGIC. · [reports/](reports/) — log worker. · [golden/](golden/) — baseline JSON. · [archive/](archive/) — stale, truy vết.

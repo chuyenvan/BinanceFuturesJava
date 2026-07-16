@@ -11,6 +11,7 @@ import com.aerospike.client.policy.WritePolicy;
 import com.aerospike.client.cdt.ListOperation;
 import com.aerospike.client.cdt.ListOrder;
 import com.aerospike.client.cdt.ListPolicy;
+import com.aerospike.client.cdt.ListReturnType;
 import com.aerospike.client.cdt.ListWriteFlags;
 import com.aerospike.client.Value;
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
@@ -73,6 +74,31 @@ public class WfoJobStore {
         } catch (Exception e) {
             LOG.warn("addToIndex {} fail: {}", id, e.getMessage());
         }
+    }
+
+    /** Go job-id khoi record chi muc (removeByValue + NO_FAIL: khong loi neu id khong co trong list). */
+    private void removeFromIndex(String id) {
+        try {
+            client.operate(null, key(INDEX_KEY),
+                    ListOperation.removeByValue("ids", Value.get(id), ListReturnType.NONE));
+        } catch (Exception e) {
+            LOG.warn("removeFromIndex {} fail: {}", id, e.getMessage());
+        }
+    }
+
+    /**
+     * BUG 2 (2026-07-13): xoa han 1 job — xoa record + go id khoi record chi muc {@link #INDEX_KEY}.
+     * Dung khi reset de purge orphan (job tu cau hinh cu khong con thuoc buildJobs hien tai).
+     * removeByValue tren server la thao tac 1-record atomic nen KHONG can CAS/generation.
+     */
+    public void deleteJob(String id) {
+        try {
+            client.delete(null, key(id));
+        } catch (Exception e) {
+            LOG.warn("deleteJob record {} fail: {}", id, e.getMessage());
+        }
+        removeFromIndex(id);
+        LOG.info("deleteJob {} : xoa record + go khoi index", id);
     }
 
     // ---------- ghi mới (init) ----------

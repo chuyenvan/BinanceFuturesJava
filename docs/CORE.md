@@ -29,6 +29,11 @@
 - Lý do: 2 ngôn ngữ cùng tính 1 feature = nguồn lệch ngầm (đã dính nhiều lần: cross-sectional population, basket warmup, OI merge). Một nguồn chân lý (Java) loại trừ lớp lỗi này.
 - **Provenance:** model/artifact luôn đi kèm code+data Java đã sinh ra nó. Khi model lệch khỏi Java export hiện tại → **TRAIN LẠI** trên Java export mới (KHÔNG revert code, KHÔNG lệ thuộc artifact cũ mất dấu). Mất code/nguồn của artifact = artifact chỉ còn dùng làm benchmark, không phải chân lý.
 
+## Nguồn gốc dữ liệu & validate-theo-nơi-chạy (chốt 2026-07-11)
+- **Oracle = NGUỒN GỐC dataset.** Mọi WFO/HPO/train tiêu thụ dataset ĐI TỪ Oracle (bin + Aerospike ns=test tại đó). KHÔNG lấy dataset từ nơi khác làm gốc.
+- **Validate chạy TẠI NƠI DATA Ở** (data-locality), KHÔNG kéo về máy dev: WFO-dataset (bin) → validate trên Oracle; source Aerospike (raw kline/funding/OI) → validate nơi Aerospike đó (242/226). Máy dev chỉ build jar + unit-test framework.
+- **Sync sang env khác (Oracle→Kaggle/226) ⇒ RE-VALIDATE theo baseline (fingerprint) của env đó.** KHÔNG tin stamp env gốc cho env mới. Cơ chế: `ValidationStamp` khoá theo (fingerprint md5, env) — chi tiết `DATA_VALIDATION_FRAMEWORK §4b`.
+
 ## Tròn việc hoặc thành Task — chống job nửa chừng / chờ mù (chi tiết: rules/task-workflow)
 - Mọi việc khởi động phải kết ở 1 trong 2: **TRÒN** (chạy xong + VERIFY bằng số NGAY trong phiên) hoặc **THÀNH TASK** (`tasks/<id>.md` có checkpoint + acceptance + theo dõi). KHÔNG có trạng thái thứ 3 "lửng lơ".
 - ⛔ KHÔNG spawn job nền nếu thiếu 1 trong 3: (a) cách ĐO tiến độ (queue/done-count/log mốc có timestamp, nơi bền); (b) điều kiện KẾT THÚC + ước lượng thời gian; (c) cách VERIFY khi xong. Thiếu → thành task hoặc không chạy.

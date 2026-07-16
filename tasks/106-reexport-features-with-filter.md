@@ -1,6 +1,6 @@
 ---
 id: 106
-status: DOING
+status: CANCELLED
 owner: CCD-headless-20260620
 updated: 2026-06-20
 touches_live_process: false

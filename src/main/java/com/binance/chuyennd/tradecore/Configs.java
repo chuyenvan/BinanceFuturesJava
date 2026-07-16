@@ -153,7 +153,10 @@ public class Configs {
     // =========================================================
     // 4. QUẢN TRỊ VỐN TỰ ĐỘNG (BUDGET MANAGEMENT)
     // =========================================================
-    public static Integer number_order_budget = 50; // Tổng số phần chia vốn
+    // TASK (2026-07-10): cho phep override qua config de SWEEP SIZING (khong rebuild moi lan). Mac dinh 50 = cu.
+    // BASE_BUDGET = BALANCE_BASIC / number_order_budget. Giam so nay = size/lenh lon hon = trien khai nhieu von hon.
+    public static Integer number_order_budget = properties.get("NUMBER_ORDER_BUDGET") != null
+            ? Integer.parseInt(properties.get("NUMBER_ORDER_BUDGET")) : 50; // Tổng số phần chia vốn
 
     // Ngưỡng bóp vốn 1 & 2
     public static float BUDGET_MARGIN_RATIO_1 = 0.4820f;
@@ -174,6 +177,22 @@ public class Configs {
     // 6. TRAILING STOP ĐỘNG (DYNAMIC TRAILING)
     // =========================================================
     public static float RATE_PROFIT_STOP_MARKET = 0.01032f; // Khoảng dời SL tối thiểu (Base rate)
+    // TASK (2026-07-09, theo yêu cầu Uni): SL cứng cho lệnh CHƯA từng chạm ngưỡng lãi để arm trailing.
+    // Vấn đề đo được: neu peak-profit khong bao gio vuot RATE_PROFIT_STOP_MARKET, priceSL mai la null
+    // -> khong co exit nao, chi con DCA nap them ("nuoi lo"). Bien nay CHỈ chặn đúng lỗ hổng đó, KHÔNG
+    // đụng cơ chế trailing-khi-lãi. 0f = tắt (mặc định, hành vi cũ y nguyên). ví dụ 0.10f = cắt khi lỗ 10%.
+    public static float HARD_STOP_LOSS_RATE = properties.get("HARD_STOP_LOSS_RATE") != null
+            ? Float.parseFloat(properties.get("HARD_STOP_LOSS_RATE")) : 0f;
+    // TASK (2026-07-10): time-stop "thesis-expiry" cho lenh CHUA arm trailing (priceSL null).
+    // Khac HARD_STOP_LOSS_RATE (cat theo DO SAU lo): cai nay cat lenh I THEO THOI GIAN — tin hieu
+    // (pump 12h / hoi capitulation) het han ma khong no thi thoat, giai phong margin, tranh nuoi vo han.
+    // Do tu leg DAU cua cum (clusterFirstLegTime, fallback timeStart) — neu do tu leg cuoi thi moi lan
+    // DCA lai reset dong ho, lenh nuoi lo se KHONG BAO GIO bi time-stop. 0 = tat (mac dinh, hanh vi cu).
+    public static int TIME_STOP_HOURS = properties.get("TIME_STOP_HOURS") != null
+            ? Integer.parseInt(properties.get("TIME_STOP_HOURS")) : 0;
+    // TASK (2026-07-10): ti le nha lai dinh cua trailing (cu hardcode 0.5). 0.3 = giu chat, 0.7 = long nuoi trend.
+    public static float TS_GIVEBACK_RATIO = properties.get("TS_GIVEBACK_RATIO") != null
+            ? Float.parseFloat(properties.get("TS_GIVEBACK_RATIO")) : 0.5f;
     public static float TS_DYNAMIC_K = 0.29774f;            // Hệ số nhân Volatility để dời SL
     public static float TS_PROFIT_MULTIPLIER = 5.21847f;    // Hệ số kích hoạt Trailing
 
@@ -193,13 +212,19 @@ public class Configs {
     // === ABLATION FILTER (chỉ phục vụ ĐO, KHÔNG ảnh hưởng CONFIG_VERSION) ===
     // A=full (giữ RISK+MOM15)  B/D=bỏ nhánh RISK(DD4H) để đo. MOM24/predReturn24H đã BỎ HẲN khỏi hệ.
     // Nhánh EARLY trong checkSignalDynamic GIỮ NGUYÊN ở mọi mode.
+    // TASK (2026-07-11) §2 DCA-primary: TAT sleeve PREDICT_SYMBOL_TRADE (pump selector) de do rieng
+    // sleeve mean-reversion. true = chi chay DCA_LEVEL1 + BIG_DOWN. Mac dinh false = hanh vi cu.
+    public static boolean DISABLE_PREDICT_SYMBOL = "true".equalsIgnoreCase(properties.get("DISABLE_PREDICT_SYMBOL"));
+
     public static String FILTER_MODE = "A";
 
     // === ABLATION (Bước 2 roadmap: edge từ AI hay DCA? — chỉ ĐO, mặc định A, KHÔNG ảnh hưởng CONFIG_VERSION) ===
     // A=control (AI filter bật như thường) | B=no-AI (bỏ qua filter, mọi tín hiệu PASS) | C=placebo
     // (entry ngẫu nhiên cùng XÁC SUẤT pass như A). So leg-đầu (MAE/rescue/firstLegPnl) giữa A và B/C.
     // CHỈ tác động tại điểm AI filter trong createOrderBUY, KHÔNG đụng logic DCA/exit/budget.
-    public static String ABLATION_MODE = "A";
+    // TASK (2026-07-11) doc tu env de test gate-off (mode B) khong can sua WfoWorker; van mac dinh A.
+    public static String ABLATION_MODE = System.getenv("ABLATION_MODE") != null
+            ? System.getenv("ABLATION_MODE") : "A";
     public static long ABLATION_SEED = 42L;
 
     // === CIRCUIT BREAKER (chống sập tầng DCA/margin — BẬT MẶC ĐỊNH từ Bước 3, ĐỔI PnL/DD → bump CONFIG_VERSION v10) ===
@@ -263,6 +288,23 @@ public class Configs {
 
     public static float getDouble(String configName) {
         return Float.parseFloat(properties.get(configName));
+    }
+
+    // SIM ABLATION: override entry-knob qua env (chi cho backtest so cau hinh; env rong -> giu default).
+    static {
+        try {
+            String v;
+            if ((v = System.getenv("SIM_OFF_FLAT_HARD")) != null) OFF_FLAT_HARD = Boolean.parseBoolean(v);
+            if ((v = System.getenv("SIM_MIN_MOMENTUM_15M")) != null) MIN_MOMENTUM_15M = Float.parseFloat(v);
+            if ((v = System.getenv("SIM_AI_DYNAMIC_MIN")) != null) AI_DYNAMIC_MIN = Float.parseFloat(v);
+            if ((v = System.getenv("SIM_PREDICT_SYMBOL_RATE_MAX")) != null) PREDICT_SYMBOL_RATE_MAX_THRESHOLD = Float.parseFloat(v);
+            if ((v = System.getenv("SIM_RATE_PROFIT_STOP_MARKET")) != null) RATE_PROFIT_STOP_MARKET = Float.parseFloat(v);
+            if ((v = System.getenv("SIM_BREAKER_MODE")) != null) BREAKER_MODE = v;
+            if ((v = System.getenv("SIM_BREAKER_MARGIN_HALT")) != null) BREAKER_MARGIN_HALT = Float.parseFloat(v);
+            if ((v = System.getenv("SIM_MS_DOWN_BIG_AVG")) != null) MS_DOWN_BIG_AVG = Float.parseFloat(v);
+        } catch (Exception e) {
+            System.err.println("SIM env override parse error: " + e);
+        }
     }
 
     public static void main(String[] args) {

@@ -1,6 +1,6 @@
 ---
 id: 042
-status: TODO
+status: CANCELLED
 owner: CCD
 touches_live_process: true   # phan B sua firewalld 242 (production)
 writes_242_data: false       # chi MO READ Aerospike cho IP moi, khong ghi

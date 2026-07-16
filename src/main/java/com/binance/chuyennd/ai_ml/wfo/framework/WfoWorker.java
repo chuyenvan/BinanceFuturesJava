@@ -35,7 +35,9 @@ public class WfoWorker {
 
     public static void main(String[] args) {
         try {
-            Configs.ABLATION_MODE = "A";
+            // TASK (2026-07-11): mac dinh A, cho phep env ABLATION_MODE override de test gate-off (B).
+            if (System.getenv("ABLATION_MODE") != null) Configs.ABLATION_MODE = System.getenv("ABLATION_MODE");
+            else Configs.ABLATION_MODE = "A";
             Configs.BREAKER_MODE = "OFF";
             // WFO_SMART_CACHE=1 → bật cache nén kline RAM (HPOSmartCache.getDataShort) trong simulator.
             // Cluster đọc theo config box AEROSPIKE_READ_CLUSTER=226 (Oracle: AEROSPIKE_HOST_226=127.0.0.1 local).

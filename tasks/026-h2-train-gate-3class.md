@@ -1,6 +1,6 @@
 ---
 id: 026
-status: TODO
+status: CANCELLED
 depends_on: [025]
 touches_live_process: false
 writes_242_data: false

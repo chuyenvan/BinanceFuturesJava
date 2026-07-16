@@ -5,10 +5,11 @@ import java.util.Arrays;
 
 public class CompactDayData {
 
-    // TỐI ƯU 1: Gộp 4 mảng thành 1 mảng duy nhất để tăng tốc độ truy cập CPU Cache
-    // Cấu trúc: [Open0, High0, Low0, Close0, Open1, High1, Low1, Close1, ...]
-    // Size: 1440 * 4 = 5760 phần tử
-    private final float[] data = new float[5760];
+    // TASK-142 (lossless): 5 field/phút — GIỮ totalUsdt (trước đây bỏ → CompactDayData LOSSY, làm sai
+    // Utils.isTickerAvailable ở phút minPrice==maxPrice có volume). Cấu trúc:
+    // [Open0,High0,Low0,Close0,Vol0, Open1,High1,Low1,Close1,Vol1, ...]. Size: 1440 * 5 = 7200 phần tử.
+    private static final int F = 5;
+    private final float[] data = new float[1440 * F];
 
     public CompactDayData() {
         // Khởi tạo giá trị mặc định là NaN để biết là chưa có dữ liệu
@@ -18,12 +19,13 @@ public class CompactDayData {
     public void set(long dayStart, long time, KlineObjectSimple kline) {
         int index = (int) ((time - dayStart) / 60000L);
         if (index >= 0 && index < 1440) {
-            int base = index << 2; // Tương đương index * 4 nhưng nhanh hơn (Bit shift)
+            int base = index * F;
 
             data[base]     = kline.priceOpen;
             data[base + 1] = kline.maxPrice;
             data[base + 2] = kline.minPrice;
             data[base + 3] = kline.priceClose;
+            data[base + 4] = kline.totalUsdt;   // GIỮ volume (lossless)
         }
     }
 
@@ -31,7 +33,7 @@ public class CompactDayData {
     // Thay vì: KlineObjectSimple k = getData(...)
     // Dùng: compactData.fillData(..., klineReuse);
     public boolean get(long dayStart, int index, KlineObjectSimple output) {
-        int base = index << 2; // index * 4
+        int base = index * F;
 
         // Kiểm tra nhanh: Nếu Open là NaN nghĩa là phút này không có dữ liệu
         if (Float.isNaN(data[base])) {
@@ -39,11 +41,11 @@ public class CompactDayData {
         }
 
         output.startTime =  (dayStart + index * 60000L);
-        output.priceOpen = (float) data[base];
-        output.maxPrice  = (float) data[base + 1];
-        output.minPrice  = (float) data[base + 2];
-        output.priceClose= (float) data[base + 3];
-        output.totalUsdt = 0.0f;
+        output.priceOpen = data[base];
+        output.maxPrice  = data[base + 1];
+        output.minPrice  = data[base + 2];
+        output.priceClose= data[base + 3];
+        output.totalUsdt = data[base + 4];   // GIỮ volume (lossless) — trước đây = 0 gây sai isTickerAvailable
 
         return true; // Có dữ liệu
     }

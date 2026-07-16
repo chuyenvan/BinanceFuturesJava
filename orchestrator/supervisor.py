@@ -45,10 +45,16 @@ RUNTIME     = ORCH_DIR / "runtime_state.json"
 STATUS_MD   = ORCH_DIR / "STATUS.md"
 
 POLL_SEC = 60
-CAP_GLOBAL = 4
-CAP_RESOURCE = {"local": 4, "heavy_226": 1, "kaggle": 5, "kaggle_distributed": 1}  # 226 yếu->1; distributed=1 chiến dịch/lúc
-TIMEOUT_MIN  = {"local": 20, "heavy_226": 240, "kaggle": 720, "kaggle_distributed": 1440}  # kaggle 12h cutoff; distributed master chờ queue cạn
-HEARTBEAT_STALE_MIN = 15   # report mtime đứng quá lâu (process còn sống) -> nghi treo
+CAP_GLOBAL = 6
+# resource: local=may dieu phoi (CHI dispatch nhe, KHONG job nang), oracle=VPS compute chinh (sim/export/train),
+#           heavy_226=benchmark only, kaggle=5 slot CPU, kaggle_distributed=1 chien dich/luc.
+CAP_RESOURCE = {"local": 1, "oracle": 4, "heavy_226": 1, "kaggle": 5, "kaggle_distributed": 1}
+TIMEOUT_MIN  = {"local": 20, "oracle": 360, "heavy_226": 240, "kaggle": 720, "kaggle_distributed": 1440}
+HEARTBEAT_STALE_MIN = 20   # report mtime dung qua lau (process con song) -> nghi treo
+
+# Model worker: TUYET DOI KHONG dung Fable (Uni chot 2026-07-10). Opus/Sonnet/Haiku deu duoc.
+# Doi qua env WORKER_MODEL; mac dinh Sonnet (can bang toc do/chat luong cho task co-hoc).
+WORKER_MODEL = os.environ.get("WORKER_MODEL", "claude-sonnet-4-6")
 
 # Lệnh spawn worker headless. Đặt env CLAUDE_BIN nếu 'claude' không trên PATH.
 # Cờ headless: https://docs.claude.com/en/docs/claude-code/overview
@@ -217,7 +223,8 @@ def spawn_worker(task_id, task_path):
             f"Khong tim thay '{CLAUDE_BIN}' tren PATH. Cai Claude Code CLI hoac dat env CLAUDE_BIN = duong dan day du."
         )
     prompt = build_prompt(task_path)
-    cmd = base + ["-p", "--dangerously-skip-permissions"]
+    # --model: pin worker (Opus/Sonnet/Haiku). TUYET DOI KHONG Fable (Uni chot). Mac dinh WORKER_MODEL.
+    cmd = base + ["-p", "--dangerously-skip-permissions", "--model", WORKER_MODEL]
     logf = (REPORTS_DIR / f"{task_id}.worker.log").open("w", encoding="utf-8")
     proc = subprocess.Popen(
         cmd, cwd=str(ROOT),

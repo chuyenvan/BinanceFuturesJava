@@ -65,8 +65,17 @@ public class WfoCoordinator {
 
     private void reset(WfoTask task, WfoJobStore store) {
         List<WfoJob> jobs = task.buildJobs();
-        for (WfoJob j : jobs) store.putForce(j);  // ghi đè PENDING
-        LOG.warn("RESET {} : ghi de {} job ve PENDING.", task.type(), jobs.size());
+        java.util.Set<String> newIds = new java.util.LinkedHashSet<>();
+        for (WfoJob j : jobs) { store.putForce(j); newIds.add(j.id); }  // ghi đè PENDING
+        // BUG 2 (2026-07-13): purge orphan — job cùng type KHÔNG thuộc set buildJobs hiện tại
+        // (vd cấu hình 19-window cũ để lại w17/w18) → xóa hẳn khỏi record + index, tránh report
+        // tính sai mẫu số / lẫn kết quả cũ. Chỉ đụng job đúng type; type khác giữ nguyên.
+        int orphan = 0;
+        for (WfoJob existing : filterType(store, task.type())) {
+            if (!newIds.contains(existing.id)) { store.deleteJob(existing.id); orphan++; }
+        }
+        LOG.warn("RESET {} : ghi de {} job ve PENDING, xoa {} orphan (job cu ngoai set).",
+                task.type(), jobs.size(), orphan);
         status(task, store);
     }
 

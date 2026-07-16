@@ -1,8 +1,8 @@
 {
-  "supervisor_pid": 59020,
-  "supervisor_last_tick": "2026-06-15T11:37:03+07:00",
+  "supervisor_pid": 11304,
+  "supervisor_last_tick": "2026-07-11T20:47:11+07:00",
   "last_action": "idle",
-  "slots_used": 1,
+  "slots_used": 0,
   "tasks": {
     "013": {
       "status": "DOING",
@@ -15,6 +15,112 @@
       "require_review": true,
       "report_age_min": 0.3,
       "retry_count": 1
+    },
+    "133": {
+      "status": "DOING",
+      "owner_pid": 1628,
+      "resource": "heavy_226",
+      "started_at": "2026-07-07T20:52:33+07:00",
+      "started_at_epoch": 1783432353.4414911,
+      "max_retry": 1,
+      "checkpoint": false,
+      "require_review": true,
+      "report_age_min": null
+    },
+    "146": {
+      "status": "DOING",
+      "owner_pid": 26828,
+      "resource": "oracle",
+      "started_at": "2026-07-11T10:30:14+07:00",
+      "started_at_epoch": 1783740614.9908602,
+      "max_retry": 1,
+      "checkpoint": false,
+      "require_review": true,
+      "report_age_min": 0.2,
+      "last_result_status": "REVIEW",
+      "last_commit": "-",
+      "last_finished_at": "2026-07-11T10:38:26+07:00"
+    },
+    "150": {
+      "status": "DOING",
+      "owner_pid": 28544,
+      "resource": "oracle",
+      "started_at": "2026-07-11T10:30:15+07:00",
+      "started_at_epoch": 1783740615.1558611,
+      "max_retry": 2,
+      "checkpoint": true,
+      "require_review": true,
+      "report_age_min": null,
+      "last_result_status": "NEEDS_HUMAN(parse-fail)",
+      "last_finished_at": "2026-07-11T10:50:30+07:00"
+    },
+    "151": {
+      "status": "DOING",
+      "owner_pid": 25016,
+      "resource": "oracle",
+      "started_at": "2026-07-11T10:30:15+07:00",
+      "started_at_epoch": 1783740615.2768657,
+      "max_retry": 2,
+      "checkpoint": true,
+      "require_review": true,
+      "report_age_min": 1.9,
+      "last_result_status": "NEEDS_HUMAN(parse-fail)",
+      "last_finished_at": "2026-07-11T10:44:29+07:00"
+    },
+    "152": {
+      "status": "DOING",
+      "owner_pid": 13732,
+      "resource": "oracle",
+      "started_at": "2026-07-11T10:30:15+07:00",
+      "started_at_epoch": 1783740615.3978624,
+      "max_retry": 2,
+      "checkpoint": true,
+      "require_review": true,
+      "report_age_min": 1.7,
+      "last_result_status": "(ĐIỀN CUỐI)",
+      "last_commit": "-",
+      "last_finished_at": "2026-07-11T10:50:30+07:00"
+    },
+    "153": {
+      "status": "DOING",
+      "owner_pid": 16844,
+      "resource": "kaggle",
+      "started_at": "2026-07-11T11:01:31+07:00",
+      "started_at_epoch": 1783742491.5070336,
+      "max_retry": 2,
+      "checkpoint": false,
+      "require_review": true,
+      "report_age_min": 6.4,
+      "last_result_status": "REVIEW",
+      "last_commit": "-",
+      "last_finished_at": "2026-07-11T11:23:38+07:00"
+    },
+    "154": {
+      "status": "DOING",
+      "owner_pid": 12384,
+      "resource": "oracle",
+      "started_at": "2026-07-11T13:53:05+07:00",
+      "started_at_epoch": 1783752785.0148168,
+      "max_retry": 2,
+      "checkpoint": true,
+      "require_review": true,
+      "report_age_min": 0.9,
+      "retry_count": 1,
+      "last_result_status": "NEEDS_HUMAN(parse-fail)",
+      "last_finished_at": "2026-07-11T14:11:13+07:00"
+    },
+    "156": {
+      "status": "DOING",
+      "owner_pid": 22776,
+      "resource": "oracle",
+      "started_at": "2026-07-11T18:52:48+07:00",
+      "started_at_epoch": 1783770768.9870465,
+      "max_retry": 2,
+      "checkpoint": true,
+      "require_review": true,
+      "report_age_min": 0.4,
+      "last_result_status": "NEEDS_HUMAN(parse-fail)",
+      "last_finished_at": "2026-07-11T19:13:00+07:00"
     }
   }
 }

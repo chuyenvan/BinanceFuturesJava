@@ -22,7 +22,9 @@ public class AerospikeCheckData {
 
                 String namespace = "ticker";
                 // truncate toàn bộ set
-//                client.truncate(null, namespace, "funding_pred_1m_20260606", null);
+//                client.truncate(null, namespace, "kline_1m_opt", null);
+//                client.truncate(null, namespace, "funding_pred_1m_v5", null);
+
 
                 // Lấy thống kê namespace
                 String nsResponse = Info.request(client.getNodes()[0], "namespace/" + namespace);

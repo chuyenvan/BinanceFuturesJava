@@ -1,0 +1,103 @@
+
+
+============================================================
+SOURCE FILE: db\aerospike-226.md
+============================================================
+
+# db/aerospike-226 — REPLICATE + COMPUTE (open internet)
+
+> Đọc cùng [db/index](index.md). 226 = bản replicate market (on-demand) + kho tính toán/huấn luyện. Kaggle/dev tới được.
+
+## Set COMPUTE (chỉ ở 226, KHÔNG ghi 242)
+- `ai_pred_market` / predict · `predictionSymbol`
+- `marketobject` (MarketDataObject dẫn xuất) · `symbol_lifecycle`
+- `gate_return` (label) · `gate_features` (A/B) · `funding_label`
+- `distributed_task` (AerospikeTaskCoordinator), kết quả wfo/hpo · `hpo_queue_<CONFIG_VERSION>` / `hpo_results_<CONFIG_VERSION>`
+
+## Vai trò
+- **Replicate-theo-setname (on-demand):** trước khi train/backtest, dùng `ReplicateSet242To226` (TASK-034, chạy TRÊN 226, đọc-only 242 → ghi 226) copy đúng set MARKET cần (vì Kaggle/dev chỉ đọc 226). Vừa phục vụ train vừa làm backup repl=1.
+- **Compute:** train/backtest/wfo/hpo đọc MARKET (đã replicate) + COMPUTE từ 226, ghi COMPUTE vào 226.
+- Market historical (kline_1m 2020+) hiện đang có sẵn ở 226 (cào cũ) → job train/Kaggle chạy bình thường, không gián đoạn.
+
+## Lưu ý
+- **TASK-112:** tool/job đọc qua `getReadClient` (ticker/mapper/funding_data) cần `config.properties` của box có `AEROSPIKE_READ_CLUSTER=226`; chạy sim/backtest cần thêm `TICKER_SOURCE=aerospike`. Thiếu/sai key → fail-fast `IllegalStateException` ngay tại điểm dùng (không còn flag IS_KAGGLE_MODE/IS_HPO_MODE cũ).
+- Open internet → tải `data.binance.vision` trực tiếp được. Tài nguyên YẾU → job nặng chạy tuần tự (xem [run-226](../rules/run-226.md)).
+- `marketobject` = COMPUTE → 226 (TASK-032 xác nhận chỉ sống ở 226).
+
+
+============================================================
+SOURCE FILE: db\aerospike-242.md
+============================================================
+
+# db/aerospike-242 — SOURCE market (private)
+
+> Đọc cùng [db/index](index.md). 242 = nguồn chính mọi market data; chỉ 226 tới được.
+
+## Set MARKET (source ở 242, replicate sang 226 khi train cần)
+- `kline_1m_opt` (realtime + historical) · `kline_15m_btceth` · `kline_4h_btceth`
+- `funding_data` · `open_interest` (+ long/short, taker khi có) · `price_realtime` · `basis`/`premiumIndex` (nếu chốt dùng)
+
+## Ghi 242
+- LIVE: `BinanceDataIngestor` + `BinanceOrderTradingManager` chạy TRÊN 242, ghi realtime (`kline_1m_opt`, `funding_data`, `open_interest`, `price_realtime`). Forward `kline_15m/4h` (TASK-031).
+- Cào lịch sử: job cào chạy TRÊN 226 (226 có internet + nối 242), **đích ghi = 242**. Tải nặng → Kaggle tải → 226 tạm → 226 đẩy 242 (Kaggle KHÔNG ghi 242 trực tiếp).
+
+## Đã chốt (2026-06-14)
+- **PHƯƠNG ÁN A: 242 giữ TẤT CẢ market kể cả historical sâu.** `kline_1m_opt`@242 = 22.25GB từ ~2021-01 → nay; disk 55% free, RAM 82% free → 242 ôm full historical, còn nửa ổ. KHÔNG tách historical sang 226.
+- ⚠️ **Backup (repl=1):** 242 replication-factor=1, KHÔNG bản sao → set chỉ-sống-242 (`open_interest`/`price_realtime`/`funding_data`) MẤT nếu hỏng ổ. → 226 replicate làm BACKUP (TASK-034 DONE, tool `ReplicateSet242To226` `cc927e8` đã đẩy 3 set → 226).
+- `funding_data_new` = MỒ CÔI (không code ghi/đọc) → có thể xoá khỏi 242 sau (user tay).
+
+## Ranh giới
+- ✅ Tác động DỮ LIỆU 242 (lấp gap/aggregate/backfill/replicate/backup) = CCD làm, chạy TRÊN 226 — job data, KHÔNG cần user tay.
+- 🔒 Deploy code / restart 2 process live = CHỈ user tay (xem [CORE](../CORE.md)).
+
+
+============================================================
+SOURCE FILE: db\index.md
+============================================================
+
+# db/index — Kiến trúc dữ liệu (router) — nguồn sự thật "data nào ở đâu, ghi/đọc/chạy đâu"
+
+> Mọi task mới + refactor PHẢI theo nhánh này. Mâu thuẫn file khác → nhánh này thắng (trừ khi user đổi). Chốt 2026-06-14.
+
+## Nguyên lý cốt lõi
+1. **242 = SOURCE OF TRUTH mọi MARKET data** (realtime + lịch sử). Không market data "chính chủ" nào sống ngoài 242.
+2. **242 PRIVATE** — chỉ **226** tới được. Kaggle/dev KHÔNG tới 242.
+3. **226** = (a) replicate 242 theo SETNAME, ON-DEMAND + (b) kho COMPUTE (backtest/train/wfo/hpo). KHÔNG sync all↔all.
+4. **226 internet mở** (Kaggle/dev tới); tài nguyên YẾU → tránh dồn job nặng.
+5. **Kaggle nhiều CPU nhưng chỉ tới 226** → việc chỉ-đụng-226 đẩy Kaggle; việc cần-242 bắt buộc 226.
+
+
+6. **Oracle VPS (161.118.212.3)** = node COMPUTE chính (heavy: train/export/WFO) + Aerospike LOCAL (127.0.0.1:3222 ns=test) làm kho DATA-TEST. Config Oracle trỏ AEROSPIKE_HOST_226=127.0.0.1 → "226" trong code = Aerospike local Oracle. Ticker đầy đủ 1886 ngày sống ở FILE kaggle_data_hpo/daily/ + (2026-07-07) nạp vào Aerospike local. ⚠️ Oracle TỚI ĐƯỢC 242:3222 → tool ghi phải trỏ localhost tường minh, KHÔNG dùng getClient242. Trạng thái dữ liệu chi tiết: [../DATA_STATE](../DATA_STATE.md).
+
+> Nhớ nhanh: **dữ liệu THỊ TRƯỜNG → 242 gốc; TÍNH TOÁN/TRAIN → 226; COMPUTE nặng + DATA-TEST (WFO/backtest) → Oracle (Aerospike local + file).**
+
+## Chi tiết theo loại
+- [aerospike-242](aerospike-242.md) — source market, private, backup repl=1.
+- [aerospike-226](aerospike-226.md) — replicate + compute, open internet.
+- [redis](redis.md) — order queue live + messaging.
+
+## Nơi chạy job (suy ra từ kết nối)
+| Job đụng tới | Chạy ở đâu |
+|---|---|
+| GHI 242 (realtime / historical market) | **226** (hoặc 242). KHÔNG Kaggle |
+| Chỉ ĐỌC/GHI 226 (train/backtest/compute) | **Kaggle** (ưu tiên, nhiều CPU) hoặc dev/226 |
+| Tải internet nặng | **Kaggle** → 226 (→ đẩy 242 nếu là market) |
+| Sửa code thuần | máy nào cũng được |
+
+> ⚠️ **Bẫy chí mạng:** job chạy Kaggle mà code lỡ `getClient242()` → lỗi/treo (Kaggle không tới 242). Trước khi launch Kaggle phải chắc job chỉ touch 226.
+
+## Luồng
+LIVE→242 (ingest/trading ghi realtime thẳng 242) · CÀO LỊCH SỬ→242 (job cào chạy TRÊN 226, đích 242; tải nặng thì Kaggle→226→đẩy 242) · REPLICATE 242→226 theo setname on-demand (tool `ReplicateSet242To226`, TASK-034, chạy 226 đọc-242 ghi-226) · TRAIN/BACKTEST đọc market (replicate) + compute từ 226, ghi compute vào 226.
+
+
+============================================================
+SOURCE FILE: db\redis.md
+============================================================
+
+# db/redis — Order queue live + messaging
+
+> Đọc cùng [db/index](index.md).
+
+- `redis/` (Jedis cluster) = order queue live + messaging. Config đọc từ `redis.config` ở CWD (`redis/RedisConst.java`, static-init).
+- Chỉ liên quan LIVE/trading. Kaggle KHÔNG đụng Redis.
+- ⛔ KHÔNG kill Redis (xem [CORE](../CORE.md)).

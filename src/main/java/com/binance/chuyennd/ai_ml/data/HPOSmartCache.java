@@ -16,6 +16,32 @@ public class HPOSmartCache {
     // KHO CHỨA DỮ LIỆU NÉN (Dùng RAM ít nhất có thể)
     private static final ConcurrentHashMap<Long, Map<Short, CompactDayData>> RAM_STORE = new ConcurrentHashMap<>();
 
+    // =====================================================================================
+    // 🔥 CACHE TICKER-FILE THEO NGÀY (TASK-142, rework compact-lossless): tránh ĐỌC + GUNZIP + DESERIALIZE
+    // LẠI mỗi sample trong 1 window. Với TICKER_SOURCE=file, mỗi window WFO chạy N=30 sample × mỗi sample
+    // lặp toàn bộ ngày → loadDailyTickersShort() đọc+gunzip+deserialize LẠI cùng file ngày ~30 lần (~77'/window).
+    //
+    // TRƯỚC ĐÂY cache exact-object (giữ nguyên TreeMap<Long,KlineObjectSimple[1000]>): 0 IO khi hit NHƯNG
+    // ~16-24GB/window (2024 nhiều coin) → OOM trên Oracle 23GB. NAY nén sang CompactFileDay (per-coin
+    // float[P*5] gồm open/high/low/close/totalUsdt) → ~5-6GB/window. Hit = dựng lại object từ nén (rẻ hơn
+    // deserialize nhiều), KHÔNG đọc đĩa. GIỮ totalUsdt + startTime=key ⇒ kết quả Y HỆT đường đọc thẳng
+    // (xem CompactFileDay). Clear trước OOS + cuối window (StrategyWfoTask) để giữ đỉnh RAM ~1 window.
+    private static final ConcurrentHashMap<Long, CompactFileDay> FILE_STORE = new ConcurrentHashMap<>();
+
+    /** Seam để test: mặc định đọc file qua KaggleDataLoader; test có thể tráo loader giả (không cần file thật). */
+    @FunctionalInterface
+    public interface DayTickerLoader {
+        TreeMap<Long, KlineObjectSimple[]> load(long dayTs);
+    }
+    private static volatile DayTickerLoader fileLoader =
+            com.binance.chuyennd.ai_ml.hpo.kaggle.KaggleDataLoader::loadDailyTickersShort;
+
+    /** CHỈ dùng cho unit test: tráo loader + xóa cache. Sản xuất KHÔNG gọi. */
+    public static void setFileLoaderForTest(DayTickerLoader loader) {
+        fileLoader = (loader != null) ? loader : com.binance.chuyennd.ai_ml.hpo.kaggle.KaggleDataLoader::loadDailyTickersShort;
+        FILE_STORE.clear();
+    }
+
     // Executor riêng để bung nén (Dùng 4 luồng là đủ nhanh xé gió rồi)
     private static final ExecutorService reconstructExecutor = Executors.newFixedThreadPool(3);
 
@@ -206,9 +232,39 @@ public class HPOSmartCache {
         return result;
     }
 
+    /**
+     * 🔥 CHO WFO TICKER-FILE (TASK-142, rework compact-lossless): lấy CẢ NGÀY dạng short-array
+     * (KlineObjectSimple[]/phút). Lần đầu/ngày/window: đọc+gunzip file 1 LẦN qua loader → NÉN sang
+     * {@link CompactFileDay} lưu RAM. Các lần sau (N sample cùng window): dựng lại từ nén → KHÔNG đọc đĩa.
+     *
+     * <p>Dựng lại luôn trả object MỚI nhưng giá trị Y HỆT (5 field + startTime=key) — kể cả lần đầu cũng
+     * đi qua nén→dựng lại để MỌI sample nhất quán tuyệt đối. Trả null/empty KHÔNG cache (giữ FAIL-FAST
+     * đường cũ khi thiếu ngày). Xem CompactFileDay để hiểu vì sao lossless + gọn RAM.
+     */
+    public static TreeMap<Long, KlineObjectSimple[]> getDataShortFromFile(long dayStart) {
+        CompactFileDay cached = FILE_STORE.get(dayStart);
+        if (cached != null) return cached.reconstruct();
+        TreeMap<Long, KlineObjectSimple[]> loaded = fileLoader.load(dayStart);
+        if (loaded == null || loaded.isEmpty()) return loaded; // KHÔNG cache miss → giữ FAIL-FAST đường cũ
+        CompactFileDay compact = CompactFileDay.compress(loaded);
+        FILE_STORE.put(dayStart, compact);
+        return compact.reconstruct();
+    }
+
     /** Xóa toàn bộ cache (gọi giữa các window WFO để giải phóng RAM — tránh tích lũy OOM). */
     public static void clearCache() {
         RAM_STORE.clear();
+        FILE_STORE.clear();
+    }
+
+    /** Xóa RIÊNG cache ticker-file (TASK-142): gọi sau vòng TRAIN (trước OOS) — ngày train KHÔNG tái dùng ở OOS. */
+    public static void clearFileCache() {
+        FILE_STORE.clear();
+    }
+
+    /** Số ngày ticker-file đang giữ trong RAM (để log/giám sát RAM). */
+    public static int fileCachedDays() {
+        return FILE_STORE.size();
     }
 
     /** Evict các ngày NGOÀI [keepStart, keepEnd] (giữ đúng cửa sổ đang chạy). */

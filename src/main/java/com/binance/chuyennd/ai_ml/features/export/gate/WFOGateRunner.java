@@ -39,7 +39,7 @@ import java.util.*;
  * OnnxInferenceManager đã verify Java↔Python 0.000000). Python CHỈ train thuần XGBoost→ONNX, không có nhánh
  * logic feature/backtest nào. predRisk4H giữ từ set cũ (isolate biến = predReturn15M).
  *
- * <p>Chạy ORACLE. Args: [start=20210101] [end=20260601] [oosMonths=3] [csvStore] [modelTmpDir] [setName] [pythonScript]
+ * <p>Chạy ORACLE. Args: [start=20210101] [end=20260601] [oosMonths=3] [csvStore] [modelTmpDir] [setName] [pythonScript] [minTrainMonths=3]
  */
 public class WFOGateRunner {
 
@@ -51,7 +51,10 @@ public class WFOGateRunner {
 
     // expanding: train luôn bắt đầu từ TRAIN_ANCHOR; OOS đầu tiên bắt đầu khi đã đủ tối thiểu lịch sử
     static final String TRAIN_ANCHOR = "20210101";
-    static final String FIRST_OOS = "20230101"; // 2 năm lịch sử tối thiểu trước fold OOS đầu
+    // TASK-156: mặc định giảm 24 -> 3 tháng (khớp bước OOS) để fold OOS đầu phủ được 2021-2022 (gốc rễ
+    // WFO FAIL 8/17 cửa sổ ZERO_TRADES do gate pred cũ chỉ phủ 2023+ — KHÔNG do thiếu feature data, feature
+    // store (wfo_feature_store.csv) đã có sẵn từ TRAIN_ANCHOR 2021-01-01, đo được trước khi sửa).
+    static final int DEFAULT_MIN_TRAIN_MONTHS = 3;
 
     public static void main(String[] args) {
         try {
@@ -65,7 +68,8 @@ public class WFOGateRunner {
             String modelTmpDir = args.length > 4 ? args[4] : home + "/claudedata/wfo_models";
             String outFile = args.length > 5 ? args[5] : home + "/claudedata/wfo_gate_pred.csv";
             String pyScript = args.length > 6 ? args[6] : home + "/java/simulator/train_gate_fold.py";
-            new WFOGateRunner().run(start, end, oosMonths, csvStore, modelTmpDir, outFile, pyScript);
+            int minTrainMonths = args.length > 7 ? Integer.parseInt(args[7]) : DEFAULT_MIN_TRAIN_MONTHS;
+            new WFOGateRunner().run(start, end, oosMonths, csvStore, modelTmpDir, outFile, pyScript, minTrainMonths);
             System.exit(0);
         } catch (Throwable e) {
             LOG.error("❌ WFOGateRunner FAIL", e);
@@ -79,7 +83,7 @@ public class WFOGateRunner {
     private TreeMap<Long, AiPredictionData> oldPred;
 
     void run(String start, String end, int oosMonths, String csvStore, String modelTmpDir,
-             String outFile, String pyScript) throws Exception {
+             String outFile, String pyScript, int minTrainMonths) throws Exception {
         long fairStart = Utils.sdfFile.parse(start).getTime();
         long evalEnd = Utils.sdfFile.parse(end).getTime();
         new File(modelTmpDir).mkdirs();
@@ -97,7 +101,11 @@ public class WFOGateRunner {
         LOG.info("   predRisk4H từ set cũ: {} mốc", oldPred.size());
 
         // ===== PHA 2: WFO LOOP expanding =====
-        long firstOos = Utils.sdfFile.parse(FIRST_OOS).getTime();
+        Calendar firstOosCal = Calendar.getInstance();
+        firstOosCal.setTimeInMillis(fairStart);
+        firstOosCal.add(Calendar.MONTH, minTrainMonths);
+        long firstOos = firstOosCal.getTimeInMillis();
+        LOG.info("   minTrainMonths={} -> fold OOS đầu bắt đầu {}", minTrainMonths, Utils.normalizeDateYYYYMMDD(firstOos));
         List<long[]> folds = buildExpandingFolds(firstOos, evalEnd, oosMonths);
         LOG.info("📐 {} fold expanding (OOS={}m): ", folds.size(), oosMonths);
         for (int i = 0; i < folds.size(); i++) {
