@@ -34,3 +34,25 @@
 ## SAU KHI +TR CÓ VERDICT
 - PASS → code LADDER_FORCE_TIMESTOP → thêm stage REF/B0 → decompose ladder (quy công entry vs trailing).
 - FAIL → cả hướng nuôi-lâu chết capital-constrained → xem lại entry (edge mỏng +0.72, decay 2026).
+
+
+## 🌙 CHẠY ĐÊM 17→18 (Uni ngủ; master orchestrate, dùng agents cho việc nặng)
+- **Tự chạy (0 token):** `ladder_1784297380` — tr24 (11/16 lúc ghi) → tr72 → DỪNG ở gate `decide_tr`.
+  Sáng đọc `wfo_report_ev2_tr24.md` + `_tr72.md`, chấm pass-criteria, so proxy +14.8. KHÔNG tự trả gate
+  (verdict = việc Uni).
+- **Agent chuẩn bị (KHÔNG deploy/chạy):** thêm config `TRAIL_PEAK_MODE=high|close` (high=mặc định=hành vi cũ;
+  close=anchor trailing theo priceClose thay maxPrice — chống wick/giật) + metric premature-stop-rate.
+  Build jar local verify compile. Commit để Uni review sáng. KHÔNG đụng WFO đang chạy, KHÔNG deploy Oracle.
+- **KHÔNG parallel được** high-vs-close với kill-test: chung jobstore-226 → phải chạy SAU tr72 (hoặc sau verdict).
+
+## ☀️ AGENDA SÁNG (bàn với Uni)
+1. Verdict +TR (tr24 vs tr72 vs pass-criteria + proxy). Sống → decompose (code LADDER_FORCE_TIMESTOP → REF/B0).
+   Chết → nút thắt = entry (edge +0.72 mỏng), quay lại selector.
+2. Review diff TRAIL_PEAK_MODE của agent → nếu +TR sống: deploy jar + chạy ladder high-vs-close (nối sau).
+3. Chốt thứ tự: (a) decompose entry/trailing, (b) high-vs-close, (c) trailing sweep (arm/giveback/horizon).
+
+## ON-THE-HORIZON (đừng rơi)
+- TRAIL_PEAK_MODE high|close + premature-stop metric (agent đang prep).
+- 2s/tick study: **BỎ** (không đủ độ phủ, Uni chốt 2026-07-17).
+- Long-term entry features (SMA200 slope/regime) → chỉ nếu +TR chết & quay lại entry-veto (KHÔNG cho SL).
+- Kaggle-WFO kernel bake env (nếu ladder chạy lặp nhiều) → lấy lại 5 node tăng tốc.
