@@ -104,3 +104,24 @@ LUẬT (áp cho MỌI phiên CDK/CDC trên repo này):
 - Việc mới nhiều bước: "làm X rồi Y rồi so Z" → LLM viết 1 pipeline JSON (1 lần) → chạy → từ đó thành nút bấm.
 - Check tình hình: "đang chạy gì" → `pipe_list`/`wfo_status`, trả lời từ JSON.
 - Cần quyết định giữa chừng: pipeline tự dừng ở gate — LLM/Uni đọc NEED_LLM + context rồi trả lời, KHÔNG canh.
+
+
+## 🔒 2 QUY TẮC VẬN HÀNH BẮT BUỘC (Uni chốt 2026-07-17) — đọc mỗi session
+
+### R1. CE-FIRST (config động → viết nút, đừng chạy cơm lặp lại)
+- Việc **config-động-hóa được HOẶC sẽ chạy ≥2 lần** → PHẢI thành nút/pipeline CE (mcp_tools/pipelines).
+  Thiếu nút/param (vd `wfo_run` thiếu `extra_env`, `TIME_STOP_HOURS` chỉ đọc properties) → **bổ sung** rồi
+  dùng, KHÔNG lách bằng SSH tay.
+- Chỉ **one-off đặc thù thật** (chạy đúng 1 lần, không lặp) mới bằng cơm — NHƯNG vẫn **track script vào repo**
+  (vd `orchestrator/tools/*.py`) để reproduce, không gõ ad-hoc rồi mất.
+- **Guardrail:** đừng để việc dựng nút CHẶN phép đo đang cần. Gấp → chạy tay xong → productize ngay sau.
+  Không block science để xây infra; nhưng xong là phải wrap lại.
+
+### R2. HANDOFF-LUÔN (history nhỏ = rẻ; đừng bê cả mớ context)
+- Sau **mỗi milestone** (chốt số / đổi hướng / job dài dispatch) → cập nhật `NEXT_SESSION_TODO_*.md`
+  = single-source-of-truth: **đang ở đâu / đang chạy gì (pipe_id, cách resume) / bước kế / rủi ro treo**.
+- Handoff phải **live + concise + TRIM** (xoá mục đã xong). Handoff cũ/phình còn hại hơn không có.
+  Chi tiết đo → docs/insights (không nhét vào handoff). Handoff chỉ trỏ.
+- Mục tiêu: turn/session sau chỉ cần đọc handoff + ce-buttons là đủ ngữ cảnh — KHÔNG kéo full history
+  (đo thực: cache-vỡ = ×10-20 token; history nhỏ là đòn bẩy rẻ nhất).
+- Turn dài nhiều bước → chốt bằng cập nhật handoff TRƯỚC khi nghỉ.
