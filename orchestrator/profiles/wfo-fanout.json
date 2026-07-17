@@ -1,0 +1,23 @@
+{
+  "name": "wfo-fanout",
+  "description": "MAC DINH cho WFO full-16-window: fan-out 6 node = 2 Oracle worker + 5 Kaggle kernel, CUNG jobstore Aerospike-226 (ns=ticker). Merge tri thuc java-oracle (jar/CWD/XMX/state 226/MAX_OOS) + java-kaggle (KERNELS_DIR, slots cap 5, ff/jar dataset, ticker aerospike-226). Node coi nhu nhau, tu can tai qua CAS claim tren jobstore chung. DUOC PHEP DOI o pipeline L5: dataset (DS/FF_DATASET), N, seed, tag, oracle_workers, kaggle_kernels, extra_env. wfo_run Oracle-only CHI dung debug/verify-1-window. verified null (cho run dau sau retry-fix).",
+  "verified": null,
+  "params": {
+    "JAR": "/home/ubuntu/java/simulator/preflight-v42.jar",
+    "WORKER_CWD": "/home/ubuntu/claudedata/.run/oracle_worker_cwd",
+    "XMX": "8g",
+    "STATE_HOST": "103.157.218.226",
+    "STATE_PORT": "3222",
+    "STATE_NS": "ticker",
+    "MAX_OOS": "20260101",
+    "TICKER_SOURCE": "file",
+    "ORACLE_WORKERS": "2",
+    "KAGGLE_KERNELS": "5",
+    "KERNELS_DIR": "/home/ubuntu/claudedata/.run/kernels",
+    "SLOTS_CAP": "5",
+    "KAGGLE_XMX": "20g",
+    "TICKER_MODE": "aerospike-226",
+    "JAR_DATASET": "chuyendinh/java-run-lc",
+    "FF_DATASET": "chuyendinh/wfo-ds-ret2-4h-ff"
+  }
+}

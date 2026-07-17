@@ -1,0 +1,82 @@
+{
+  "name": "edge_dca_hard",
+  "profile": "wfo-fanout",
+  "params": {
+    "DS": "/home/ubuntu/claudedata/wfo_ds_maxfav3_4h_ff",
+    "N": "30",
+    "SEED": "42",
+    "TAG_A": "edge_A_dcahard",
+    "TAG_C": "edge_C_dcahard"
+  },
+  "steps": [
+    {
+      "id": "gate_setup",
+      "type": "llm_gate",
+      "question": "Do EDGE model khi DCA CUNG (tat). ABLATION_MODE LA env worker doc that (WfoWorker.main doc getenv ABLATION_MODE -> Configs.ABLATION_MODE; A=control, C=placebo entry ngau nhien cung xac suat pass) -> extra_env ap cho ORACLE worker OK. NHUNG (1) DCA-off can Configs.WFO_DISABLE_DCA + guard DcaProcessor.getDCA (CHUA co trong Java) -> xem docs/insights/dca_off_ablation_plan.md; (2) Kaggle kernel KHONG doc extra_env (env baked trong notebook) -> muon fan-out dong bo ABLATION_MODE+WFO_DISABLE_DCA phai bump kernel dataset, NEU KHONG -> set kaggle_kernels=0 (Oracle-only) de khong nhiem ban jobstore. DA ap diff Java + rebuild jar + xu ly kaggle chua? Tra loi 'yes kaggle=<0|5>' hoac 'stop'.",
+      "context_files": ["../insights/dca_off_ablation_plan.md"]
+    },
+    {
+      "id": "run_A",
+      "type": "tool",
+      "tool": "wfo_fanout",
+      "args": {"ds": "${DS}", "jar": "${JAR}", "n": "${N}", "seed": "${SEED}", "oracle_workers": "${ORACLE_WORKERS}", "kaggle_kernels": "${KAGGLE_KERNELS}", "tag": "${TAG_A}", "extra_env": "ABLATION_MODE=A,WFO_DISABLE_DCA=1"},
+      "on_fail": "abort",
+      "retry": 1
+    },
+    {
+      "id": "wait_A",
+      "type": "wait",
+      "tool": "wfo_status",
+      "until": {"conditions": [
+        {"path": "counts.DONE", "gte": 16},
+        {"path": "counts.RUNNING", "equals": 0},
+        {"path": "counts.PENDING", "equals": 0}
+      ]},
+      "interval_sec": 120,
+      "timeout_sec": 21600
+    },
+    {
+      "id": "rep_A",
+      "type": "tool",
+      "tool": "wfo_report",
+      "args": {"tag": "${TAG_A}"}
+    },
+    {
+      "id": "run_C",
+      "type": "tool",
+      "tool": "wfo_fanout",
+      "args": {"ds": "${DS}", "jar": "${JAR}", "n": "${N}", "seed": "${SEED}", "oracle_workers": "${ORACLE_WORKERS}", "kaggle_kernels": "${KAGGLE_KERNELS}", "tag": "${TAG_C}", "extra_env": "ABLATION_MODE=C,WFO_DISABLE_DCA=1"},
+      "on_fail": "abort",
+      "retry": 1
+    },
+    {
+      "id": "wait_C",
+      "type": "wait",
+      "tool": "wfo_status",
+      "until": {"conditions": [
+        {"path": "counts.DONE", "gte": 16},
+        {"path": "counts.RUNNING", "equals": 0},
+        {"path": "counts.PENDING", "equals": 0}
+      ]},
+      "interval_sec": 120,
+      "timeout_sec": 21600
+    },
+    {
+      "id": "rep_C",
+      "type": "tool",
+      "tool": "wfo_report",
+      "args": {"tag": "${TAG_C}"}
+    },
+    {
+      "id": "edge_merge",
+      "type": "shell",
+      "cmd": "R=${CE_RUN_DIR:-/home/ubuntu/claudedata/.run/mcp_ce}; { echo '=== A control (${TAG_A}) ==='; grep -iE 'VERDICT|OOS|WFE|maxDD' \"$R/wfo_report_${TAG_A}.md\"; echo; echo '=== C placebo (${TAG_C}) ==='; grep -iE 'VERDICT|OOS|WFE|maxDD' \"$R/wfo_report_${TAG_C}.md\"; } > \"$R/edge_dca_hard_summary.txt\"; cat \"$R/edge_dca_hard_summary.txt\""
+    },
+    {
+      "id": "decide_edge",
+      "type": "llm_gate",
+      "question": "Khi DCA tat cung, edge model con that khong? So A (control, AI filter that) vs C (placebo, entry ngau nhien cung xac suat pass): delta %OOS/WFE. A >> C -> edge tu AI la that; A ~ C -> edge chi la beta thi truong. Ket luan?",
+      "context_files": ["wfo_report_${TAG_A}.md", "wfo_report_${TAG_C}.md", "edge_dca_hard_summary.txt"]
+    }
+  ]
+}

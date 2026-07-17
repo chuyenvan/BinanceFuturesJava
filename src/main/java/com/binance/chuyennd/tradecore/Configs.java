@@ -226,6 +226,9 @@ public class Configs {
     public static String ABLATION_MODE = System.getenv("ABLATION_MODE") != null
             ? System.getenv("ABLATION_MODE") : "A";
     public static long ABLATION_SEED = 42L;
+    // ABLATION DCA-OFF (2026-07-16): env WFO_DISABLE_DCA=1 -> DcaProcessor.getDCA tra rong (tat nhoi lenh
+    // hoan toan) de do dong gop DCA. Mac dinh false = hanh vi cu NGUYEN VEN.
+    public static final boolean WFO_DISABLE_DCA = "1".equals(System.getenv("WFO_DISABLE_DCA"));
 
     // === CIRCUIT BREAKER (chống sập tầng DCA/margin — BẬT MẶC ĐỊNH từ Bước 3, ĐỔI PnL/DD → bump CONFIG_VERSION v10) ===
     // OFF=không phanh | MARGIN=chặn mở mới khi margin/vốn cao | DCA=ngừng nhồi cụm lỗ sâu | BOTH=cả hai.

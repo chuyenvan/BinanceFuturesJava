@@ -96,6 +96,10 @@ WFO_STATE_HOST = os.environ.get("CE_WFO_STATE_HOST", "103.157.218.226")
 WFO_STATE_PORT = os.environ.get("CE_WFO_STATE_PORT", "3222")
 WFO_STATE_NS = os.environ.get("CE_WFO_STATE_NS", "ticker")
 WFO_WORKER_RAM_GB = float(os.environ.get("CE_WFO_WORKER_RAM_GB", "3.0"))
+# Thu muc chua cac kernel dir Kaggle (moi kernel = 1 subdir co kernel-metadata.json).
+# Dung cho wfo_fanout push fleet Kaggle. Trung voi profile java-kaggle (KERNELS_DIR).
+WFO_KERNELS_DIR = os.environ.get(
+    "CE_WFO_KERNELS_DIR", "/home/ubuntu/claudedata/.run/kernels")
 
 os.makedirs(RUN_DIR, exist_ok=True)
 os.makedirs(LOCKS_DIR, exist_ok=True)
@@ -1145,8 +1149,12 @@ def _wfo_coord_cmd(subcmd, jar=None, extra_env=""):
     subcmd vd: "reset strategy_window" / "status strategy_window" / "report".
     """
     jar = jar or WFO_JAR_DEFAULT
-    env = (extra_env + " ") if extra_env else ""
-    return (f"cd {WFO_WORKER_CWD} && {env}{JAVA_BIN} -cp {jar} "
+    # FIX 2026-07-17: LUON gan env WFO_STATE_* (truoc day thieu -> WfoJobStore roi ve config CWD
+    # ns=test -> doc NHAM jobstore -> pipeline wait khong bao gio thoa). extra_env de sau de override duoc.
+    state_env = (f"WFO_STATE_HOST={WFO_STATE_HOST} WFO_STATE_PORT={WFO_STATE_PORT} "
+                 f"WFO_STATE_NS={WFO_STATE_NS} WFO_MAX_OOS_DATE={WFO_MAX_OOS_DATE}")
+    env = state_env + ((" " + extra_env) if extra_env else "")
+    return (f"cd {WFO_WORKER_CWD} && {env} {JAVA_BIN} -cp {jar} "
             f"{WFO_COORD_CLASS} {subcmd}")
 
 
@@ -1224,6 +1232,192 @@ def cmd_wfo_run(args):
           "summary": (f"Reset xong, da spawn {len(spawned)}/{workers} WfoWorker nen. "
                       f"Dung wfo_status/bg_status de theo doi.")
           if spawned else "Khong spawn duoc worker nao (xem 'errors')."})
+
+
+def _parse_extra_env(spec):
+    """Chuan hoa extra_env -> dict[str,str]. Chap nhan:
+      - dict (khi goi noi bo)
+      - JSON object string:  '{"ABLATION_MODE":"C"}'
+      - Python-dict-repr:    "{'ABLATION_MODE': 'C'}" (khi pipeline dict bi str())
+      - dang K=V phan tach boi ',' hoac khoang trang: 'ABLATION_MODE=C,WFO_DISABLE_DCA=1'
+    Tra {} neu rong/khong parse duoc (khong nem loi).
+    """
+    if not spec:
+        return {}
+    if isinstance(spec, dict):
+        return {str(k): str(v) for k, v in spec.items()}
+    s = str(spec).strip()
+    if not s or s in ("{}", "None"):
+        return {}
+    if s.startswith("{"):
+        try:
+            d = json.loads(s)
+            if isinstance(d, dict):
+                return {str(k): str(v) for k, v in d.items()}
+        except Exception:
+            pass
+        try:
+            import ast
+            d = ast.literal_eval(s)
+            if isinstance(d, dict):
+                return {str(k): str(v) for k, v in d.items()}
+        except Exception:
+            logger.warning("extra_env khong parse duoc: %s", s[:200])
+            return {}
+    out = {}
+    for tok in re.split(r"[,\s]+", s):
+        if "=" in tok:
+            k, v = tok.split("=", 1)
+            if k.strip():
+                out[k.strip()] = v.strip()
+    return out
+
+
+def _kaggle_kernel_dirs(root):
+    """Liet ke cac kernel dir push duoc duoi `root`.
+
+    - Neu root co san kernel-metadata.json -> [root] (1 kernel).
+    - Nguoc lai: moi subdir co kernel-metadata.json la 1 kernel (sap xep ten).
+    """
+    if not os.path.isdir(root):
+        return []
+    if os.path.exists(os.path.join(root, "kernel-metadata.json")):
+        return [root]
+    dirs = []
+    for name in sorted(os.listdir(root)):
+        sub = os.path.join(root, name)
+        if os.path.isdir(sub) and os.path.exists(
+                os.path.join(sub, "kernel-metadata.json")):
+            dirs.append(sub)
+    return dirs
+
+
+def cmd_wfo_fanout(args):
+    """NUT WFO FANOUT — MAC DINH cho WFO full-16-window (6 node).
+
+    Cu phap: wfo_fanout <ds> [jar] [n] [seed] [oracle_workers] [kaggle_kernels]
+                        [tag] [extra_env]
+      ds             : path dataset _ff (BAT BUOC) -> WFO_DATA_DIR (Oracle worker)
+      jar            : jar simulator Oracle (default preflight-v42.jar)
+      n=30           : so mau -> WFO_N_SAMPLES
+      seed=42        : WFO_SEED_BASE
+      oracle_workers=2 : so WfoWorker spawn nen tren Oracle
+      kaggle_kernels=5 : so kernel Kaggle MUON push (bi cap boi free-slot + so kernel dir)
+      tag=opt        : nhan job (Oracle job_id = wfo_<tag>_w<i>)
+      extra_env      : env bo sung cho WORKER Oracle (vd 'ABLATION_MODE=C,WFO_DISABLE_DCA=1'
+                       hoac JSON). LUU Y: chi ap cho Oracle worker; Kaggle kernel dung env
+                       baked trong notebook/dataset (xem docstring + ce-buttons.md).
+
+    Hanh vi: nhu wfo_run (kill worker cu -> reset coordinator -> spawn Oracle worker
+    detached) NHUNG THEM: kiem slot Kaggle, push toi da min(free_slot, kaggle_kernels,
+    so_kernel_dir) kernel tu WFO_KERNELS_DIR (cung jobstore 226). KHONG block.
+    Ca 2 tang cung an vao WfoJobStore 226 (ns=ticker) -> tu can tai qua CAS claim.
+    """
+    if not args:
+        return emit({"status": "error",
+                     "summary": "Cu phap: wfo_fanout <ds> [jar] [n] [seed] "
+                                "[oracle_workers] [kaggle_kernels] [tag] [extra_env]"})
+    ds = args[0]
+    jar = args[1] if len(args) > 1 and args[1] else WFO_JAR_DEFAULT
+    n = args[2] if len(args) > 2 and args[2] else "30"
+    seed = args[3] if len(args) > 3 and args[3] else "42"
+    try:
+        oracle_workers = int(args[4]) if len(args) > 4 and args[4] else 2
+    except ValueError:
+        return emit({"status": "error", "summary": "oracle_workers phai la so nguyen."})
+    try:
+        kaggle_kernels = int(args[5]) if len(args) > 5 and args[5] else 5
+    except ValueError:
+        return emit({"status": "error", "summary": "kaggle_kernels phai la so nguyen."})
+    tag = args[6] if len(args) > 6 and args[6] else "opt"
+    extra_env = _parse_extra_env(args[7]) if len(args) > 7 else {}
+
+    # 1) Kill WfoWorker cu (tranh 2 the he cung ghi state store).
+    krc, _, _ = _sh(f"pkill -f {WFO_WORKER_CLASS}")
+    logger.info("wfo_fanout: pkill %s rc=%s", WFO_WORKER_CLASS, krc)
+
+    # 2) Reset coordinator (dong bo). WFO_N_SAMPLES quyet dinh so cua so.
+    reset_cmd = _wfo_coord_cmd(f"reset {WFO_STRATEGY}", jar=jar,
+                               extra_env=f"WFO_N_SAMPLES={n}")
+    rrc, rout, rerr = _sh(reset_cmd, timeout=120)
+    if rrc != 0:
+        logger.error("wfo_fanout: reset coordinator that bai rc=%s", rrc)
+        return emit({"status": "error", "phase": "reset", "rc": rrc,
+                     "summary": "Reset WfoCoordinator that bai.",
+                     "stdout": rout.strip()[-2000:], "stderr": rerr.strip()[-2000:]})
+
+    # 3) Spawn Oracle worker nen (co the kem extra_env).
+    extra_prefix = " ".join(f"{k}={v}" for k, v in extra_env.items())
+    env_prefix = (
+        f"WFO_N_SAMPLES={n} WFO_DATA_DIR={ds} WFO_SMART_CACHE=1 "
+        f"WFO_SEED_BASE={seed} WFO_MAX_OOS_DATE={WFO_MAX_OOS_DATE} "
+        f"WFO_STATE_HOST={WFO_STATE_HOST} WFO_STATE_PORT={WFO_STATE_PORT} "
+        f"WFO_STATE_NS={WFO_STATE_NS}"
+    )
+    if extra_prefix:
+        env_prefix = f"{extra_prefix} {env_prefix}"
+    spawned, errors = [], []
+    for i in range(oracle_workers):
+        job_id = f"wfo_{tag}_w{i}"
+        live = _live_job_state(job_id)
+        if live:
+            errors.append({"job_id": job_id, "reason": "ALIVE_DO_NOT_RESTART"})
+            continue
+        worker_cmd = (f"cd {WFO_WORKER_CWD} && {env_prefix} {JAVA_BIN} -cp {jar} "
+                      f"{WFO_WORKER_CLASS} {WFO_STRATEGY}")
+        try:
+            pid = _spawn_detached_supervisor(job_id, worker_cmd, WFO_WORKER_RAM_GB)
+            spawned.append({"job_id": job_id, "controller_pid": pid})
+            logger.info("wfo_fanout: spawn Oracle worker %s pid=%s", job_id, pid)
+        except Exception as e:
+            logger.exception("wfo_fanout: spawn Oracle worker %s that bai", job_id)
+            errors.append({"job_id": job_id, "reason": str(e)})
+
+    # 4) Push fleet Kaggle: kiem slot -> push min(free, kaggle_kernels, #kernel_dir).
+    kaggle = {"requested": kaggle_kernels, "pushed": [], "skipped": [],
+              "kernels_dir": WFO_KERNELS_DIR}
+    if kaggle_kernels > 0:
+        counts = _count_kaggle_slots()
+        if counts is None:
+            kaggle["error"] = "Khong truy van duoc Kaggle slots (bo qua push Kaggle)."
+            logger.error("wfo_fanout: %s", kaggle["error"])
+        else:
+            used = counts[0]
+            free = max(0, KAGGLE_MAX_SLOTS - used)
+            kaggle["slots_used"], kaggle["slots_free"] = used, free
+            kdirs = _kaggle_kernel_dirs(WFO_KERNELS_DIR)
+            kaggle["kernel_dirs_found"] = len(kdirs)
+            n_push = min(kaggle_kernels, free, len(kdirs))
+            if extra_env:
+                kaggle["note_extra_env"] = (
+                    "extra_env KHONG ap cho Kaggle kernel (env baked trong notebook); "
+                    "muon dong bo -> bump kernel dataset.")
+            for d in kdirs[:n_push]:
+                rc, out, err = _kaggle("kernels push -p %s" % d)
+                out = (out or "").strip()
+                pushed = rc == 0 and "successfully pushed" in out.lower()
+                m = re.search(r"kaggle\.com/(?:code/)?([\w-]+/[\w-]+)", out)
+                kref = m.group(1) if m else None
+                (kaggle["pushed"] if pushed else kaggle["skipped"]).append(
+                    {"dir": d, "rc": rc, "pushed": pushed, "kernel_ref": kref})
+                logger.info("wfo_fanout: kaggle push %s rc=%s pushed=%s", d, rc, pushed)
+            for d in kdirs[n_push:kaggle_kernels]:
+                kaggle["skipped"].append({"dir": d, "reason": "no_free_slot"})
+
+    n_oracle = len(spawned)
+    n_kaggle = len(kaggle["pushed"])
+    total_nodes = n_oracle + n_kaggle
+    emit({"status": "started" if total_nodes else "error",
+          "tag": tag, "dataset": ds, "jar": jar,
+          "n_samples": n, "seed_base": seed,
+          "oracle_workers_requested": oracle_workers,
+          "kaggle_kernels_requested": kaggle_kernels,
+          "extra_env": extra_env,
+          "reset_ok": True, "oracle_spawned": spawned, "oracle_errors": errors,
+          "kaggle": kaggle, "nodes": total_nodes,
+          "summary": (f"FANOUT khoi chay: {n_oracle} Oracle worker + {n_kaggle} Kaggle kernel "
+                      f"= {total_nodes} node (cung jobstore 226). Dung wfo_status theo doi.")
+          if total_nodes else "Khong khoi chay duoc node nao (xem oracle_errors/kaggle)."})
 
 
 def cmd_wfo_status(args):
@@ -1528,6 +1722,9 @@ _STEP_TYPES = ("tool", "shell", "wait", "llm_gate")
 TOOL_ARG_ORDER = {
     "wfo_run": [("ds", None), ("jar", ""), ("n", "30"), ("seed", "42"),
                 ("workers", "2"), ("tag", "opt")],
+    "wfo_fanout": [("ds", None), ("jar", ""), ("n", "30"), ("seed", "42"),
+                   ("oracle_workers", "2"), ("kaggle_kernels", "5"),
+                   ("tag", "opt"), ("extra_env", "")],
     "wfo_status": [],
     "wfo_report": [("tag", "opt")],
     "wfo_stop": [],
@@ -2239,6 +2436,7 @@ COMMANDS = {
     "bg_selftest": cmd_bg_selftest,
     # WFO (Walk-Forward Optimization) fleet:
     "wfo_run": cmd_wfo_run,
+    "wfo_fanout": cmd_wfo_fanout,
     "wfo_status": cmd_wfo_status,
     "wfo_report": cmd_wfo_report,
     "wfo_stop": cmd_wfo_stop,
@@ -2281,8 +2479,11 @@ VONG DOI JOB NANG (CDK chi bam nut, Python tu lo):
   bg_selftest                               TU-TEST tron chuoi bg_* bang job sleep.
 
 WFO (WALK-FORWARD OPTIMIZATION):
+  wfo_fanout <ds> [jar] [n] [seed] [oracle_workers] [kaggle_kernels] [tag] [extra_env]
+                                            MAC DINH cho WFO full-16-window: reset + 2 Oracle worker
+                                            + push 5 Kaggle kernel (cung jobstore 226 = 6 node).
   wfo_run <ds> [jar] [n] [seed] [workers] [tag]
-                                            Kill worker cu -> reset coordinator -> spawn N WfoWorker nen.
+                                            Oracle-only (reset + spawn N WfoWorker). CHI dung debug/1-window.
   wfo_status                                Parse total/PENDING/RUNNING/DONE/FAILED + cua so FAILED.
   wfo_report [tag]                          Chay report, cp md ve RUN_DIR, parse VERDICT/%OOS/WFE/maxDD.
   wfo_stop                                  pkill WfoWorker + VerifyOneWindow, bao so proc bi kill.

@@ -1,0 +1,18 @@
+{
+  "name": "sl4h_watch_n3",
+  "params": {},
+  "steps": [
+    {"id": "wait_n3", "type": "wait", "tool": "kaggle_status",
+     "args": {"kernel_ref": "chuyendinh/sl4h-train-n3"},
+     "until": {"conditions": [{"path": "kernel_state", "equals": "COMPLETE"}]},
+     "interval_sec": 300, "timeout_sec": 28800},
+    {"id": "out_n3", "type": "tool", "tool": "kaggle_output",
+     "args": {"kernel_ref": "chuyendinh/sl4h-train-n3"}, "on_fail": "continue"},
+    {"id": "append_summary", "type": "shell",
+     "cmd": "M=/home/ubuntu/claudedata/.run/mcp_ce; { echo '=== sl4h n=3 (doi chung CDC-157) ==='; grep -h 'SL4H_RESULT' $M/kaggle_out/sl4h-train-n3/*.log 2>/dev/null | tail -1; } >> $M/sl4h_summary.txt; tail -4 $M/sl4h_summary.txt",
+     "on_fail": "continue"},
+    {"id": "gate_n3", "type": "llm_gate",
+     "question": "Doi chung n=3 (code doc lap) vs verdict FAIL cua CDC task-157: precision sap? utility khiem ton? break-even ~+3.67%? Neu 2 nguon KHOP -> CDC do dung, chot FAIL cho label reward-penalty don le. Neu LECH -> soi code CDC.",
+     "context_files": ["sl4h_summary.txt"]}
+  ]
+}

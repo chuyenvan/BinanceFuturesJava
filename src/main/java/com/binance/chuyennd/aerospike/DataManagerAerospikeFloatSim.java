@@ -829,19 +829,53 @@ public class DataManagerAerospikeFloatSim {
                 SimpleDateFormat localKeyFormat = new SimpleDateFormat("yyyyMMdd-HHmm");
 
                 Map<Long, Map<String, KlineObjectSimple>> chunkResult = new HashMap<>();
-                try {
-                    // Tạo Keys cho chunk này
-                    Key[] chunkKeys = new Key[endIdx - startIdx];
-                    long[] chunkTimestamps = Arrays.copyOfRange(allTimestamps, startIdx, endIdx);
+                // Tạo Keys cho chunk này
+                Key[] chunkKeys = new Key[endIdx - startIdx];
+                long[] chunkTimestamps = Arrays.copyOfRange(allTimestamps, startIdx, endIdx);
+                for (int k = 0; k < chunkKeys.length; k++) {
+                    String keyString = localKeyFormat.format(new Date(chunkTimestamps[k]));
+                    chunkKeys[k] = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_TICKER, keyString);
+                }
 
-                    for (int k = 0; k < chunkKeys.length; k++) {
-                        String keyString = localKeyFormat.format(new Date(chunkTimestamps[k]));
-                        chunkKeys[k] = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_TICKER, keyString);
+                // 🔁 RETRY batch read: lỗi Connection/EOFException khi đọc ticker 226 qua WAN là transient.
+                // KHÔNG nuốt lỗi như trước (printStackTrace -> chunk rỗng -> FAIL-FAST "khong co ticker" OAN).
+                // Hết BATCH_MAX_RETRY vẫn lỗi -> THROW để tầng trên báo đúng nguyên nhân.
+                Record[] records = null;
+                Exception lastError = null;
+                int attempt = 0;
+                while (attempt < BATCH_MAX_RETRY) {
+                    attempt++;
+                    try {
+                        records = client.get(batchPolicy, chunkKeys);
+                        if (records != null) break;
+                        LOG.warn("⚠️ [AEROSPIKE] get() trả NULL chunk start={} (lần {}/{})",
+                                Utils.normalizeDateYYYYMMDDHHmm(chunkTimestamps[0]), attempt, BATCH_MAX_RETRY);
+                    } catch (Exception e) {
+                        // Bắt AerospikeException (Connection/EOF) và mọi Exception khác của batch read.
+                        lastError = e;
+                        LOG.warn("⚠️ [AEROSPIKE-RETRY] {} | chunk[{}..{}] start={} keys={} lần {}/{}: {}",
+                                e.getClass().getSimpleName(), startIdx, endIdx,
+                                Utils.normalizeDateYYYYMMDDHHmm(chunkTimestamps[0]),
+                                chunkKeys.length, attempt, BATCH_MAX_RETRY, e.getMessage());
                     }
+                    if (attempt < BATCH_MAX_RETRY) {
+                        try {
+                            Thread.sleep(BATCH_RETRY_BACKOFF_MS * attempt); // backoff tuyến tính: 500,1000,1500...
+                        } catch (InterruptedException ie) {
+                            Thread.currentThread().interrupt();
+                            break;
+                        }
+                    }
+                }
 
-                    // Batch Read
-                    Record[] records = client.get(batchPolicy, chunkKeys);
+                if (records == null) {
+                    throw new RuntimeException(String.format(
+                            "batch read failed after %d retries: chunk start=%s keys=%d cause=%s",
+                            BATCH_MAX_RETRY, Utils.normalizeDateYYYYMMDDHHmm(chunkTimestamps[0]),
+                            chunkKeys.length, lastError == null ? "get() trả NULL" : lastError.toString()), lastError);
+                }
 
+                try {
                     for (int j = 0; j < records.length; j++) {
                         Record record = records[j];
                         if (record == null) continue;
@@ -862,18 +896,25 @@ public class DataManagerAerospikeFloatSim {
                         }
                     }
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    LOG.error("❌ [AEROSPIKE-PARSE] Lỗi giải nén/parse chunk start={}: {} {}",
+                            Utils.normalizeDateYYYYMMDDHHmm(chunkTimestamps[0]), e.getClass().getSimpleName(), e.getMessage());
+                    throw new RuntimeException("parse failed for chunk start="
+                            + Utils.normalizeDateYYYYMMDDHHmm(chunkTimestamps[0]) + ": " + e.getMessage(), e);
                 }
                 return chunkResult;
             }));
         }
 
-        // Tổng hợp kết quả
+        // Tổng hợp kết quả — future.get() ném ExecutionException nếu chunk task THROW.
+        // KHÔNG nuốt (trước đây printStackTrace) -> rethrow để FAIL-FAST báo đúng nguyên nhân batch read.
         for (Future<Map<Long, Map<String, KlineObjectSimple>>> future : futures) {
             try {
                 results.putAll(future.get());
             } catch (Exception e) {
-                e.printStackTrace();
+                Throwable cause = e.getCause() != null ? e.getCause() : e;
+                LOG.error("❌ [AEROSPIKE-READ] readDataFromAerospike1M lỗi ngày {}: {}",
+                        Utils.normalizeDateYYYYMMDDHHmm(startTime), cause.getMessage());
+                throw new RuntimeException("readDataFromAerospike1M failed: " + cause.getMessage(), cause);
             }
         }
         return results;
@@ -910,19 +951,53 @@ public class DataManagerAerospikeFloatSim {
                 SimpleDateFormat localKeyFormat = new SimpleDateFormat("yyyyMMdd-HHmm");
 
                 Map<Long, KlineObjectSimple[]> chunkResult = new HashMap<>();
-                try {
-                    // Tạo Keys cho chunk này
-                    Key[] chunkKeys = new Key[endIdx - startIdx];
-                    long[] chunkTimestamps = Arrays.copyOfRange(allTimestamps, startIdx, endIdx);
+                // Tạo Keys cho chunk này
+                Key[] chunkKeys = new Key[endIdx - startIdx];
+                long[] chunkTimestamps = Arrays.copyOfRange(allTimestamps, startIdx, endIdx);
+                for (int k = 0; k < chunkKeys.length; k++) {
+                    String keyString = localKeyFormat.format(new Date(chunkTimestamps[k]));
+                    chunkKeys[k] = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_TICKER, keyString);
+                }
 
-                    for (int k = 0; k < chunkKeys.length; k++) {
-                        String keyString = localKeyFormat.format(new Date(chunkTimestamps[k]));
-                        chunkKeys[k] = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_TICKER, keyString);
+                // 🔁 RETRY batch read: lỗi Connection/EOFException khi đọc ticker 226 qua WAN là transient.
+                // KHÔNG nuốt lỗi như trước (printStackTrace -> chunk rỗng -> FAIL-FAST "khong co ticker" OAN).
+                // Hết BATCH_MAX_RETRY vẫn lỗi -> THROW để tầng trên báo đúng nguyên nhân.
+                Record[] records = null;
+                Exception lastError = null;
+                int attempt = 0;
+                while (attempt < BATCH_MAX_RETRY) {
+                    attempt++;
+                    try {
+                        records = getReadClient().get(batchPolicy, chunkKeys);
+                        if (records != null) break;
+                        LOG.warn("⚠️ [AEROSPIKE] get() trả NULL chunk start={} (lần {}/{})",
+                                Utils.normalizeDateYYYYMMDDHHmm(chunkTimestamps[0]), attempt, BATCH_MAX_RETRY);
+                    } catch (Exception e) {
+                        // Bắt AerospikeException (Connection/EOF) và mọi Exception khác của batch read.
+                        lastError = e;
+                        LOG.warn("⚠️ [AEROSPIKE-RETRY] {} | chunk[{}..{}] start={} keys={} lần {}/{}: {}",
+                                e.getClass().getSimpleName(), startIdx, endIdx,
+                                Utils.normalizeDateYYYYMMDDHHmm(chunkTimestamps[0]),
+                                chunkKeys.length, attempt, BATCH_MAX_RETRY, e.getMessage());
                     }
+                    if (attempt < BATCH_MAX_RETRY) {
+                        try {
+                            Thread.sleep(BATCH_RETRY_BACKOFF_MS * attempt); // backoff tuyến tính: 500,1000,1500...
+                        } catch (InterruptedException ie) {
+                            Thread.currentThread().interrupt();
+                            break;
+                        }
+                    }
+                }
 
-                    // Batch Read
-                    Record[] records = getReadClient().get(batchPolicy, chunkKeys);
+                if (records == null) {
+                    throw new RuntimeException(String.format(
+                            "batch read failed after %d retries: chunk start=%s keys=%d cause=%s",
+                            BATCH_MAX_RETRY, Utils.normalizeDateYYYYMMDDHHmm(chunkTimestamps[0]),
+                            chunkKeys.length, lastError == null ? "get() trả NULL" : lastError.toString()), lastError);
+                }
 
+                try {
                     for (int j = 0; j < records.length; j++) {
                         Record record = records[j];
                         if (record == null) continue;
@@ -946,18 +1021,25 @@ public class DataManagerAerospikeFloatSim {
                         }
                     }
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    LOG.error("❌ [AEROSPIKE-PARSE] Lỗi giải nén/parse chunk start={}: {} {}",
+                            Utils.normalizeDateYYYYMMDDHHmm(chunkTimestamps[0]), e.getClass().getSimpleName(), e.getMessage());
+                    throw new RuntimeException("parse failed for chunk start="
+                            + Utils.normalizeDateYYYYMMDDHHmm(chunkTimestamps[0]) + ": " + e.getMessage(), e);
                 }
                 return chunkResult;
             }));
         }
 
-        // Tổng hợp kết quả
+        // Tổng hợp kết quả — future.get() ném ExecutionException nếu chunk task THROW.
+        // KHÔNG nuốt (trước đây printStackTrace) -> rethrow để FAIL-FAST báo đúng nguyên nhân batch read.
         for (Future<Map<Long, KlineObjectSimple[]>> future : futures) {
             try {
                 results.putAll(future.get());
             } catch (Exception e) {
-                e.printStackTrace();
+                Throwable cause = e.getCause() != null ? e.getCause() : e;
+                LOG.error("❌ [AEROSPIKE-READ] readDataFromAerospike1M_ShortKey lỗi ngày {}: {}",
+                        Utils.normalizeDateYYYYMMDDHHmm(startTime), cause.getMessage());
+                throw new RuntimeException("readDataFromAerospike1M_ShortKey failed: " + cause.getMessage(), cause);
             }
         }
         return results;

@@ -1,0 +1,82 @@
+{
+  "name": "dca_ablation",
+  "profile": "wfo-fanout",
+  "params": {
+    "DS": "/home/ubuntu/claudedata/wfo_ds_maxfav3_4h_ff",
+    "N": "30",
+    "SEED": "42",
+    "TAG_OFF": "dca_off",
+    "TAG_ON": "dca_on"
+  },
+  "steps": [
+    {
+      "id": "gate_java",
+      "type": "llm_gate",
+      "question": "DCA-off KHONG ep duoc qua env hien tai: genome StrategyWfoTask (DCA_LOSS_BIG_DOWN[-0.22,-0.08], DCA_TIME_BIG_DOWN[3,7]) LUON co trigger DCA; Configs khong co SIM_DCA_*/WFO_DISABLE_DCA. Can master ap diff Java nho (them Configs.WFO_DISABLE_DCA + guard o DcaProcessor.getDCA return empty) roi rebuild jar. Xem docs/insights/dca_off_ablation_plan.md. DA ap diff + rebuild jar (JAR co doc WFO_DISABLE_DCA=1) chua? Neu ROI -> tra loi 'yes <jar_path>' de chay; neu CHUA -> tra loi 'stop'.",
+      "context_files": ["../insights/dca_off_ablation_plan.md"]
+    },
+    {
+      "id": "run_dca_off",
+      "type": "tool",
+      "tool": "wfo_fanout",
+      "args": {"ds": "${DS}", "jar": "${JAR}", "n": "${N}", "seed": "${SEED}", "oracle_workers": "${ORACLE_WORKERS}", "kaggle_kernels": "${KAGGLE_KERNELS}", "tag": "${TAG_OFF}", "extra_env": "WFO_DISABLE_DCA=1"},
+      "on_fail": "abort",
+      "retry": 1
+    },
+    {
+      "id": "wait_dca_off",
+      "type": "wait",
+      "tool": "wfo_status",
+      "until": {"conditions": [
+        {"path": "counts.DONE", "gte": 16},
+        {"path": "counts.RUNNING", "equals": 0},
+        {"path": "counts.PENDING", "equals": 0}
+      ]},
+      "interval_sec": 120,
+      "timeout_sec": 21600
+    },
+    {
+      "id": "rep_dca_off",
+      "type": "tool",
+      "tool": "wfo_report",
+      "args": {"tag": "${TAG_OFF}"}
+    },
+    {
+      "id": "run_dca_on",
+      "type": "tool",
+      "tool": "wfo_fanout",
+      "args": {"ds": "${DS}", "jar": "${JAR}", "n": "${N}", "seed": "${SEED}", "oracle_workers": "${ORACLE_WORKERS}", "kaggle_kernels": "${KAGGLE_KERNELS}", "tag": "${TAG_ON}"},
+      "on_fail": "abort",
+      "retry": 1
+    },
+    {
+      "id": "wait_dca_on",
+      "type": "wait",
+      "tool": "wfo_status",
+      "until": {"conditions": [
+        {"path": "counts.DONE", "gte": 16},
+        {"path": "counts.RUNNING", "equals": 0},
+        {"path": "counts.PENDING", "equals": 0}
+      ]},
+      "interval_sec": 120,
+      "timeout_sec": 21600
+    },
+    {
+      "id": "rep_dca_on",
+      "type": "tool",
+      "tool": "wfo_report",
+      "args": {"tag": "${TAG_ON}"}
+    },
+    {
+      "id": "dca_merge",
+      "type": "shell",
+      "cmd": "R=${CE_RUN_DIR:-/home/ubuntu/claudedata/.run/mcp_ce}; { echo '=== DCA OFF (${TAG_OFF}) ==='; grep -iE 'VERDICT|OOS|WFE|maxDD' \"$R/wfo_report_${TAG_OFF}.md\"; echo; echo '=== DCA ON baseline (${TAG_ON}) ==='; grep -iE 'VERDICT|OOS|WFE|maxDD' \"$R/wfo_report_${TAG_ON}.md\"; } > \"$R/dca_ablation_summary.txt\"; cat \"$R/dca_ablation_summary.txt\""
+    },
+    {
+      "id": "decide_dca",
+      "type": "llm_gate",
+      "question": "DCA dong gop bao nhieu? So ${TAG_ON} (co DCA) vs ${TAG_OFF} (tat DCA): delta %OOS / WFE / maxDD. DCA co lam tot hon khong hay chi tang maxDD?",
+      "context_files": ["wfo_report_${TAG_OFF}.md", "wfo_report_${TAG_ON}.md", "dca_ablation_summary.txt"]
+    }
+  ]
+}

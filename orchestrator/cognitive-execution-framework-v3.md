@@ -143,7 +143,8 @@ backtest/Aerospike). Dùng `check_or_restart` để `diagnose_and_cleanup()` x�
 | **CLEANUP** | `bg_cleanup <job_id> [--all]` | Xoá state/lock (— `--all`: xoá cả result/log) |
 | **LIST** | `bg_list` | Liệt kê mọi job đã biết + trạng thái sống/chết |
 | **SELF-TEST** | `bg_selftest` | Tự chạy trọn chuỗi bg_* bằng job sleep → `overall: PASS/FAIL` (bấm sau mỗi lần sửa kịch bản) |
-| WFO run | `wfo_run <ds> [jar] [n] [seed] [workers] [tag]` | Kill worker cũ → `WfoCoordinator reset` → spawn N `WfoWorker` nền (bg_run infra), KHÔNG block |
+| **WFO fanout (MẶC ĐỊNH full-16-window)** | `wfo_fanout <ds> [jar] [n] [seed] [oracle_workers] [kaggle_kernels] [tag] [extra_env]` | Như `wfo_run` (reset + spawn Oracle worker) NHƯNG THÊM push tối đa 5 Kaggle kernel từ `KERNELS_DIR` (cùng jobstore 226) → 6-node fan-out. `extra_env` (vd `ABLATION_MODE=C,WFO_DISABLE_DCA=1`) chỉ áp Oracle worker; Kaggle dùng env baked. KHÔNG block |
+| WFO run (Oracle-only, CHỈ debug/verify-1-window) | `wfo_run <ds> [jar] [n] [seed] [workers] [tag]` | Kill worker cũ → `WfoCoordinator reset` → spawn N `WfoWorker` nền (bg_run infra), KHÔNG block. Full-window → dùng `wfo_fanout` |
 | WFO status | `wfo_status` | Parse total/PENDING/RUNNING/DONE/FAILED + list per-window FAILED |
 | WFO report | `wfo_report [tag]` | Chạy `WfoCoordinator report`, cp md về `RUN_DIR/wfo_report_<tag>.md`, parse VERDICT/%OOS/WFE/maxDD + note-breakdown |
 | WFO stop | `wfo_stop` | `pkill WfoWorker` + `VerifyOneWindow`, báo số proc bị kill |
@@ -182,7 +183,10 @@ mcp_tools-v3.py <nút>
 │   └── bg_selftest                              SELF-TEST trọn chuỗi bg_* bằng job sleep
 │                                                → {steps[], overall: PASS/FAIL}
 ├── wfo_*  — Walk-Forward Optimization (đúc từ optimize_maxfav3.sh)
-│   ├── wfo_run <ds> [jar] [n] [seed] [workers] [tag]
+│   ├── wfo_fanout <ds> [jar] [n] [seed] [oracle_workers] [kaggle_kernels] [tag] [extra_env]
+│   │        MẶC ĐỊNH full-16-window: reset → 2 Oracle worker + push ≤5 Kaggle kernel
+│   │        (cùng jobstore 226) = 6-node fan-out. extra_env chỉ áp Oracle worker. KHÔNG block
+│   ├── wfo_run <ds> [jar] [n] [seed] [workers] [tag]   (Oracle-only, CHỈ debug/verify-1-window)
 │   │        kill WfoWorker cũ → WfoCoordinator reset (env WFO_N_SAMPLES)
 │   │        → spawn <workers> WfoWorker nền (bg_run infra), KHÔNG block
 │   ├── wfo_status                               parse total/PENDING/RUNNING/DONE/FAILED
@@ -294,8 +298,8 @@ L5  BUSINESS PIPELINES   pipelines/*.json — CHỈ bước nghiệp vụ (chạ
       ▲ dùng
 L4  EXECUTION PROFILES   profiles/*.json — CÁCH CHẠY cố định (env × công nghệ):
     (verified, tái dùng)   {name, description, verified, params{JAR/HOST/XMX/dataset…}}.
-      ▲ nạp params          java-oracle · java-226 · java-kaggle · python-kaggle.
-L3  ATOMIC BUTTONS       nút cmd_* trong mcp_tools-v3.py: wfo_run/wfo_status/kaggle_push/…
+      ▲ nạp params          java-oracle · java-226 · java-kaggle · python-kaggle · wfo-fanout(MẶC ĐỊNH WFO full).
+L3  ATOMIC BUTTONS       nút cmd_* trong mcp_tools-v3.py: wfo_fanout/wfo_run/wfo_status/kaggle_push/…
     (selftest-verified)    1 nút = 1 việc nguyên tử, trả JSON máy-đọc.
       ▲ gọi
 L2  TRANSPORT            bash -c / subprocess / remote_ssh / _kaggle(venv) / _sh_bash.

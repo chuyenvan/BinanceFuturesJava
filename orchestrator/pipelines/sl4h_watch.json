@@ -1,0 +1,30 @@
+{
+  "name": "sl4h_watch",
+  "params": {},
+  "steps": [
+    {"id": "wait_n6", "type": "wait", "tool": "kaggle_status",
+     "args": {"kernel_ref": "chuyendinh/sl4h-train-n6"},
+     "until": {"conditions": [{"path": "kernel_state", "equals": "COMPLETE"}]},
+     "interval_sec": 300, "timeout_sec": 28800},
+    {"id": "out_n6", "type": "tool", "tool": "kaggle_output",
+     "args": {"kernel_ref": "chuyendinh/sl4h-train-n6"}, "on_fail": "continue"},
+    {"id": "wait_n9", "type": "wait", "tool": "kaggle_status",
+     "args": {"kernel_ref": "chuyendinh/sl4h-train-n9"},
+     "until": {"conditions": [{"path": "kernel_state", "equals": "COMPLETE"}]},
+     "interval_sec": 300, "timeout_sec": 28800},
+    {"id": "out_n9", "type": "tool", "tool": "kaggle_output",
+     "args": {"kernel_ref": "chuyendinh/sl4h-train-n9"}, "on_fail": "continue"},
+    {"id": "wait_n15", "type": "wait", "tool": "kaggle_status",
+     "args": {"kernel_ref": "chuyendinh/sl4h-train-n15"},
+     "until": {"conditions": [{"path": "kernel_state", "equals": "COMPLETE"}]},
+     "interval_sec": 300, "timeout_sec": 28800},
+    {"id": "out_n15", "type": "tool", "tool": "kaggle_output",
+     "args": {"kernel_ref": "chuyendinh/sl4h-train-n15"}, "on_fail": "continue"},
+    {"id": "merge", "type": "shell",
+     "cmd": "M=/home/ubuntu/claudedata/.run/mcp_ce; { for n in 6 9 15; do echo \"=== sl4h n=$n ===\"; grep -h 'SL4H_RESULT' $M/kaggle_out/sl4h-train-n$n/*.log 2>/dev/null | tail -1; done; } > $M/sl4h_summary.txt; cat $M/sl4h_summary.txt",
+     "on_fail": "continue"},
+    {"id": "gate_edge", "type": "llm_gate",
+     "question": "3 model sl4h (n=6/9/15) da train + do edge xong. Doc SL4H_RESULT: LIFT@32/64 vs random, IC, %fold positive. n nao co edge tot nhat? Du manh lam nen selector cho kien truc SL-cung-4h khong? (so them voi n=3 cua task-157 neu co so).",
+     "context_files": ["sl4h_summary.txt"]}
+  ]
+}

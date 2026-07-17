@@ -20,6 +20,11 @@ public class DcaProcessor {
     // Thêm <K> đại diện cho Key (có thể là String hoặc Short)
     public static <K> List<K> getDCA(MarketLevelChange levelChange, Long time, Float budget,
                                      Map<K, OrderTargetInfoTest> symbol2OrderRunning) {
+        // ABLATION DCA-OFF (2026-07-16): env WFO_DISABLE_DCA=1 -> tat hoan toan nhoi lenh (do dong gop DCA).
+        // Mac dinh (env vang) hanh vi cu NGUYEN VEN. Chi duong sim/backtest dung ham nay.
+        if (Configs.WFO_DISABLE_DCA) {
+            return java.util.Collections.emptyList();
+        }
         return symbol2OrderRunning.entrySet()
                 .stream()
                 .filter(entry -> {

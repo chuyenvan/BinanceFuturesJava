@@ -1,0 +1,65 @@
+{
+  "name": "chain_dca_edge",
+  "params": {
+    "DS": "/home/ubuntu/claudedata/wfo_ds_maxfav3_4h_ff",
+    "JAR": "/home/ubuntu/java/simulator/preflight-v42.jar"
+  },
+  "steps": [
+    {
+      "id": "wait_dca_off_done",
+      "type": "wait",
+      "tool": "wfo_status",
+      "until": {"conditions": [
+        {"path": "counts.DONE", "gte": 16},
+        {"path": "counts.RUNNING", "equals": 0},
+        {"path": "counts.PENDING", "equals": 0}
+      ]},
+      "interval_sec": 300,
+      "timeout_sec": 28800
+    },
+    {
+      "id": "report_dca_off",
+      "type": "tool",
+      "tool": "wfo_report",
+      "args": {"tag": "dca_off_A"}
+    },
+    {
+      "id": "run_edge_C",
+      "type": "tool",
+      "tool": "wfo_fanout",
+      "args": {"ds": "${DS}", "jar": "${JAR}", "n": "30", "seed": "42",
+               "oracle_workers": "2", "kaggle_kernels": "0", "tag": "edge_C",
+               "extra_env": "ABLATION_MODE=C,WFO_DISABLE_DCA=1"}
+    },
+    {
+      "id": "wait_edge_C_done",
+      "type": "wait",
+      "tool": "wfo_status",
+      "until": {"conditions": [
+        {"path": "counts.DONE", "gte": 16},
+        {"path": "counts.RUNNING", "equals": 0},
+        {"path": "counts.PENDING", "equals": 0}
+      ]},
+      "interval_sec": 300,
+      "timeout_sec": 28800
+    },
+    {
+      "id": "report_edge_C",
+      "type": "tool",
+      "tool": "wfo_report",
+      "args": {"tag": "edge_C"}
+    },
+    {
+      "id": "merge_summary",
+      "type": "shell",
+      "cmd": "R=/home/ubuntu/claudedata/.run; M=$R/mcp_ce; { echo '=== BASELINE V42 (DCA-ON, A) 43.8%/0.999 ==='; echo '=== DCA-OFF + A (model that) ==='; grep -E 'VERDICT|OOS d|WFE trung|maxDD OOS|SUCCESS|TOO_FEW|ZERO|CAPITAL' $M/wfo_report_dca_off_A.md 2>/dev/null | head -8; echo '=== DCA-OFF + C (placebo) ==='; grep -E 'VERDICT|OOS d|WFE trung|maxDD OOS|SUCCESS|TOO_FEW|ZERO|CAPITAL' $M/wfo_report_edge_C.md 2>/dev/null | head -8; } > $M/dca_edge_summary.txt; cat $M/dca_edge_summary.txt",
+      "on_fail": "continue"
+    },
+    {
+      "id": "gate_decide",
+      "type": "llm_gate",
+      "question": "So 3 so: (1) baseline DCA-on 43.8%/WFE0.999/maxDD38.5%; (2) DCA-OFF+A; (3) DCA-OFF+C placebo. Ket luan: DCA dong gop + hay -? Model con edge khi DCA cung (A>C)? Co nen bo DCA (di huong kien truc moi)?",
+      "context_files": ["dca_edge_summary.txt"]
+    }
+  ]
+}

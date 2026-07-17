@@ -1,0 +1,18 @@
+{
+  "name": "exitlab_watch",
+  "params": {},
+  "steps": [
+    {"id": "wait_done", "type": "wait", "tool": "kaggle_status",
+     "args": {"kernel_ref": "chuyendinh/exit-lab-4h"},
+     "until": {"conditions": [{"path": "kernel_state", "equals": "COMPLETE"}]},
+     "interval_sec": 300, "timeout_sec": 28800},
+    {"id": "out", "type": "tool", "tool": "kaggle_output",
+     "args": {"kernel_ref": "chuyendinh/exit-lab-4h"}, "on_fail": "continue"},
+    {"id": "extract", "type": "shell",
+     "cmd": "M=/home/ubuntu/claudedata/.run/mcp_ce; { echo '=== EXIT-LAB (nuoi lai vs cat cung) ==='; grep -h 'EXITLAB_RESULT' $M/kaggle_out/exit-lab-4h/*.log 2>/dev/null | tail -1; grep -h 'PLACEBO_RESULT' $M/kaggle_out/exit-lab-4h/*.log 2>/dev/null | tail -1; } > $M/exitlab_summary.txt; cat $M/exitlab_summary.txt",
+     "on_fail": "continue"},
+    {"id": "gate", "type": "llm_gate",
+     "question": "EXIT-LAB xong: variant nao thang? E3/E4 (nuoi lai) co vuot +1.74%/keo cua E2 TP-cung khong? Placebo sach khong? Chot exit-design cho he SL-cung + buoc sim Java.",
+     "context_files": ["exitlab_summary.txt"]}
+  ]
+}

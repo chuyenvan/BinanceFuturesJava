@@ -40,3 +40,5 @@ python/tool/Binance_Futures_Full_Code.txt
 
 # secret live keys - KHÔNG track (TASK security)
 src/main/java/com/binance/chuyennd/config/PrivateConfig.java
+
+__pycache__/

@@ -1,5 +1,30 @@
 # CE-BUTTONS — luật vận hành job qua nút & pipeline (chống đốt token vào việc chân tay)
 
+## ⚡ VỆ SINH CACHE & HÌNH DẠNG TURN (đo thực 2026-07-17 — QUAN TRỌNG NHẤT về token)
+> Đo 5 turn cùng phiên dài: turn cache-SỐNG = **1%** quota; turn cache-VỠ = **12–26%** (cùng số lần gọi LLM).
+> Cơ chế: context phiên được prompt-cache theo PREFIX; **danh sách tool đổi giữa turn (MCP disconnect/reconnect)
+> → vỡ cache → mọi inference sau trả GIÁ ĐẦY toàn bộ history (×10–20)**. Session dài chỉ là hệ số;
+> cache-vỡ là multiplier. Disconnect thường xảy ra sau KHOẢNG NGHỈ dài giữa 2 tool call (agent/job chạy lâu).
+
+LUẬT (áp cho MỌI phiên CDK/CDC trên repo này):
+1. **GOM tool call liền mạch** trong turn — không xen khoảng chờ dài giữa các call.
+2. **Dispatch agent / job dài = hành động CUỐI turn.** Kết quả xử lý ở turn SAU, không làm tiếp trong cùng turn.
+3. Load tool **1 lần đầu turn** (1 ToolSearch gom đủ danh sách); tránh ToolSearch giữa turn.
+4. **Chẻ việc lớn thành nhiều turn ngắn liền mạch** — rẻ hơn 1 turn dài dù tổng số call bằng nhau
+   (turn dài nhiều call = nhiều cửa sổ cho disconnect = nhiều lần vỡ).
+5. Output tool vào chat ≤10 dòng (grep/head); log lớn → agent đọc (context riêng).
+6. Turn đắt bất thường → kiểm marker "tools available again/no longer available" GIỮA turn
+   trước khi đổ lỗi nguyên nhân khác.
+7. Master-thread ≤3–5 inference/turn cho vận hành; chẩn đoán/sửa >2 bước → agent.
+8. CẤM SSH inline quote phức tạp (PowerShell nuốt quote/`$` → retry = inference lãng phí):
+   dùng `ce.cmd <nút>` hoặc viết script → scp → chạy.
+9. **CACHE CÓ TTL — biến số LỚN NHẤT (đo 8 turn, chốt 2026-07-17):** nghỉ giữa 2 turn vài PHÚT = turn 1%;
+   nghỉ ≥2h = turn ~26% (cache chết → inference đầu trả FULL history). Chi phí "quay lại sau nghỉ" =
+   kích thước history × 1 lần, KHÔNG tránh được bằng hành vi → chỉ giảm bằng HISTORY NHỎ:
+   **session làm việc theo phiên-ngắn + handoff file (NEXT_SESSION) + đổi session sau mỗi đợt nghỉ dài
+   khi history đã phình.** Turn đầu sau nghỉ: GỘP tối đa việc vào 1 turn (đã trả full thì tận dụng).
+   (Ghi chú thêm: agent NGẮN <5' giữa turn không phá cache; agent DÀI đặt cuối turn.)
+
 > Triết lý (Uni chốt): **việc chân tay (chạy lệnh, chờ, poll, retry) máy làm TRỌN CHUỖI — LLM chỉ được
 > gọi ở điểm cần TƯ DUY** (quyết định, thiết kế, code mới). Đổi kịch bản = sửa file JSON, không sửa code.
 
@@ -14,10 +39,17 @@
 4. **Sau khi sửa mcp_tools-v3.py** → `ce --sync bg_selftest` phải PASS 6/6 rồi mới dùng.
 5. **Vào phiên mới, muốn biết gì đang chạy**: `ce pipe_list` + `ce bg_list` + `ce wfo_status` —
    KHÔNG ssh mò log tay khi nút trả lời được.
+6. **WFO full-16-window → MẶC ĐỊNH `wfo_fanout`** (6-node = 2 Oracle worker + 5 Kaggle kernel,
+   cùng jobstore 226). Master phê 2026-07-16: KHÔNG bỏ phí 5 Kaggle node. `wfo_run` (Oracle-only,
+   2-worker) CHỈ dùng debug / verify-1-window. Đảo mặc định: full-window = `wfo_fanout`.
 
 ## Nút hiện có (tầng nguyên tử — mcp_tools-v3.py trên Oracle, gọi qua ce.cmd)
 - `bg_run/bg_status/bg_report/bg_stop/bg_cleanup/bg_list/bg_selftest` — vòng đời job nền (selftest-verified).
-- `wfo_run <ds> [jar n seed workers tag]` / `wfo_status` / `wfo_report [tag]` / `wfo_stop` — WFO trọn gói.
+- `wfo_fanout <ds> [jar n seed oracle_workers kaggle_kernels tag extra_env]` — **MẶC ĐỊNH WFO full-16-window**:
+  reset jobstore → 2 Oracle worker + push tối đa 5 Kaggle kernel (cùng jobstore 226). `extra_env`
+  (`ABLATION_MODE=C,WFO_DISABLE_DCA=1` hoặc JSON) chỉ áp cho Oracle worker; Kaggle dùng env baked.
+- `wfo_run <ds> [jar n seed workers tag]` / `wfo_status` / `wfo_report [tag]` / `wfo_stop` — WFO Oracle-only,
+  CHỈ debug/verify-1-window (KHÔNG dùng cho full-window — dùng `wfo_fanout`).
 - `sys_health` / `sys_zombies [kill=true]` / `sys_logtail <file> [n]` — sức khoẻ/vận hành.
 - `pipe_run <file.json> [K=V…]` / `pipe_status` / `pipe_resume <id>` / `pipe_stop` / `pipe_list` — pipeline engine.
 - `kaggle_slots` / `kaggle_push <dir>` / `kaggle_status <ref>` / `kaggle_output <ref> [dir]` / `kaggle_parse_logs <log>` — Kaggle fleet (qua venv `CE_KAGGLE_BIN`).
@@ -35,6 +67,16 @@
   `CE_PROFILES_DIR/<tên>.json` merge params hạ tầng. Ưu tiên: **CLI `K=V` > pipeline params >
   profile params**. Pipeline nghiệp vụ KHÔNG lặp lại `JAR/HOST/XMX/dataset…`.
 
+## Pipeline nghiệp vụ có sẵn (`orchestrator/pipelines/`)
+- `ab_objective.json` — A/B 2 baseline (V41 vs V42), profile mặc định cũ (Oracle-only 2-worker).
+- `dca_ablation.json` — đo đóng góp DCA: run `dca_off` (extra_env WFO_DISABLE_DCA=1) vs `dca_on`,
+  profile **wfo-fanout**, chạy TUẦN TỰ (cùng jobstore). Gate đầu chờ master áp diff Java (xem dưới).
+- `edge_dca_hard.json` — đo edge model khi DCA cứng: run A (ABLATION_MODE=A) vs C (placebo),
+  cả hai WFO_DISABLE_DCA=1, profile **wfo-fanout**, tuần tự.
+- ⚠️ 2 pipeline ablation CHỜ master áp `Configs.WFO_DISABLE_DCA` + guard `DcaProcessor.getDCA`
+  (chưa có trong Java) — chi tiết diff ở `docs/insights/dca_off_ablation_plan.md`. Kaggle kernel
+  KHÔNG nhận extra_env → muốn fan-out đồng bộ phải bump kernel dataset, hoặc chạy `KAGGLE_KERNELS=0`.
+
 ## Profiles (L4 — cách chạy CỐ ĐỊNH theo môi trường × công nghệ)
 > Kiến trúc 5 tầng: **L1 infra → L2 transport → L3 nút nguyên tử → L4 profiles → L5 pipeline nghiệp vụ.**
 > **LUẬT: job mới CHỈ viết + test L5 (pipeline JSON); L4 đã `verified` thì KHÔNG test lại — chỉ tái dùng.**
@@ -43,10 +85,11 @@
 - File ở `orchestrator/profiles/*.json`, schema `{name, description, verified, params{…}}`.
   `verified: null` = chưa có job thật chạy qua CE (chờ job đầu chốt).
 - `ce profile_list` — liệt kê profile + `verified` + key params. `pipe_status` in profile đã dùng.
-- 4 profile chuẩn: **java-oracle** (WFO Oracle, verified 2026-07-16) · **java-226** (chạy LAN
+- 5 profile chuẩn: **java-oracle** (WFO Oracle, verified 2026-07-16) · **java-226** (chạy LAN
   trên 226, merge/copy data, 2026-07-14) · **java-kaggle** (Java qua Kaggle kernel, 2026-07-14;
   đổi jar/config = bump version dataset, đổi data = bump ff dataset) · **python-kaggle** (Python
-  thuần qua Kaggle, *chưa verified*).
+  thuần qua Kaggle, *chưa verified*) · **wfo-fanout** (MẶC ĐỊNH WFO full-window: merge java-oracle
+  + java-kaggle, 6-node cùng jobstore 226; *verified null* — chờ run đầu sau retry-fix).
 - Dùng: pipeline chỉ cần `"profile":"java-oracle"` + params nghiệp vụ (DS/tag/N) → `JAR/XMX/STATE_*`
   tự đến từ profile đã verified.
 
