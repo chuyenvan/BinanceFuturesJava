@@ -360,3 +360,40 @@ KHONG ≈ real E4 (+8.8). Tieu chi pre-register (placebo≫random=ao) -> **PASS:
 - **sl4h-trail-cond** (chan trailing): nuoi DIEU KIEN theo P9 conviction (hi->nuoi24, mid->12, lo->dong4)
   vs E4 co dinh. Marker `TRAILCOND_RESULT`. Doc: COND pnl_med + worst_fold vs E4_fixed (+8.8 proxy).
 - Ca 2 la PROXY label (rank, khong tin level). Winner -> Java sim path that.
+
+
+---
+
+## 13. 3-CHAN KET QUA (2026-07-17) — SL price KHONG giup, NUOI-24h la don bay
+
+### Chan SL (sl4h-tail-sl): price-based disaster-SL KHONG giup, con HAI
+- Calibration q90 PASS: calib_cov=0.897 (~0.9), pinball 0.556 < base 0.665 → tail model CO tin hieu.
+- SL variants (pnl_med / worst_fold / stop_rate):
+  - none: +1.74 / -0.32 / 0%
+  - fix5: **-0.59 / -3.14 / 25%** ← SL -5% noise-stop 25% keo, GIET ca pnl LAN worst-fold
+  - fix8: +0.18 / -2.78 / 13% ← van hai
+  - adaptive q90: +1.61 / -0.45 / 0.24% ← ≈ none (hau nhu khong trigger)
+- **KET LUAN: khong co diem ngot cho price-SL.** Dip sau cua loser vuong voi dip cua winner (cung
+  dan momentum) → cat som = giet winner. Tail 2026 KHONG chua duoc bang price-SL. Chi con: entry-veto
+  (bo keo du-doan-dip-cao) hoac chap nhan. → tru SL gan nhu DONG (am): REF giu no-SL la DUNG.
+- Feature q90 y het entry: f36 ret15m 0.30, f10 rsi1H 0.15.
+
+### Chan Trailing (sl4h-trail-cond): NUOI-24h unconditional thang, dieu-kien-hoa HAI
+- E1 dong4h: +2.12 / worst -1.35
+- E4 nuoi12h: +8.82 / +4.34
+- **E5 nuoi24h: +14.81 / +6.11** ← BEST, gap doi E4
+- COND (theo P9): +7.79 / +3.49 ← TE hon ca E4/E5
+- tiers: hi_nuoi24 +15.3, mid_nuoi12 +9.1, lo_dong4 +1.06
+- **KET LUAN: nuoi CANG LAU cang tot; dieu-kien-hoa theo conviction LAM HAI** (cat keo low-P9 xuong
+  dong-4h vut mat upside cua chinh chung). Winner chay bat ke P9 → nuoi HET, dung loc. Xac nhan thesis
+  "let winner run". → THU 72h tiep. CANH BAO: proxy retEnd_24h lac quan + BO QUA capital-lock 24h +
+  funding + duoi trai giu lau → +14.8 chac chan bi thoi phong; Java sim capital-constrained bat buoc.
+
+### Export (sl4h-ev2-export): SAN SANG cho Java sim
+ev2_preds_n6.csv.gz = 3.0M rows, 14 window, 697 symbol, 6435 entry p6>=0.7. ts 2023-01..2026-06.
+
+### HE QUA cho ladder (cap nhat)
+- **Tru SL: bo price-SL** (REF=no-SL dung; +SL nac co the bo hoac chi test entry-veto). Tiet kiem 1 model.
+- **Tru Trailing: don bay chinh** = nuoi-lau-co-san. Ladder +TR = E5 nuoi24h (them bien the 72h).
+  Nhung phai do Java capital-constrained — proxy +14.8 gan nhu chac se tut manh khi tinh slot/funding/tail.
+- Ladder rut gon: B0 → REF(no-SL,dong4h) → +TR(nuoi24/72h) → (entry-veto neu can). +SL price BO.
