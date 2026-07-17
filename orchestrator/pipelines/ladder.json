@@ -1,0 +1,84 @@
+{
+  "name": "ladder",
+  "profile": "wfo-fanout",
+  "params": {
+    "DS": "/home/ubuntu/claudedata/wfo_ds_ev2",
+    "N": "30",
+    "SEED": "42",
+    "ORACLE_WORKERS": "2",
+    "KAGGLE_KERNELS": "0",
+    "TAG_TR24": "ev2_tr24",
+    "TAG_TR72": "ev2_tr72"
+  },
+  "steps": [
+    {
+      "id": "gate_setup",
+      "type": "llm_gate",
+      "question": "KILL-TEST +TR (nuoi let-winner-run, bo DCA, bo gate). Verify TRUOC khi chay: (1) JAR ${JAR} co doc env WFO_DISABLE_DCA + ABLATION_MODE + TIME_STOP_HOURS trong WfoWorker.main (ABLATION_MODE da verify o edge_dca_hard; can confirm TIME_STOP_HOURS wired tu env, neu chua thi extra_env TIME_STOP vo hieu -> horizon nuoi khong doi). (2) Dataset ${DS}=wfo_ds_ev2 (EV2 funding, symId gate-check PASS). (3) ABLATION_MODE=B = PASS het filter = entry thuan EV2 selector (bo gate). (4) KAGGLE_KERNELS=0 vi Kaggle khong nhan extra_env. Da verify het -> 'yes ${JAR}'; chua -> 'stop'.",
+      "context_files": ["../insights/slhard_sim_ladder_DESIGN.md"]
+    },
+    {
+      "id": "run_tr24",
+      "type": "tool",
+      "tool": "wfo_fanout",
+      "args": {"ds": "${DS}", "jar": "${JAR}", "n": "${N}", "seed": "${SEED}", "oracle_workers": "${ORACLE_WORKERS}", "kaggle_kernels": "${KAGGLE_KERNELS}", "tag": "${TAG_TR24}", "extra_env": "ABLATION_MODE=B,WFO_DISABLE_DCA=1,TIME_STOP_HOURS=24"},
+      "on_fail": "abort",
+      "retry": 1
+    },
+    {
+      "id": "wait_tr24",
+      "type": "wait",
+      "tool": "wfo_status",
+      "until": {"conditions": [
+        {"path": "counts.DONE", "gte": 16},
+        {"path": "counts.RUNNING", "equals": 0},
+        {"path": "counts.PENDING", "equals": 0}
+      ]},
+      "interval_sec": 120,
+      "timeout_sec": 21600
+    },
+    {
+      "id": "rep_tr24",
+      "type": "tool",
+      "tool": "wfo_report",
+      "args": {"tag": "${TAG_TR24}"}
+    },
+    {
+      "id": "run_tr72",
+      "type": "tool",
+      "tool": "wfo_fanout",
+      "args": {"ds": "${DS}", "jar": "${JAR}", "n": "${N}", "seed": "${SEED}", "oracle_workers": "${ORACLE_WORKERS}", "kaggle_kernels": "${KAGGLE_KERNELS}", "tag": "${TAG_TR72}", "extra_env": "ABLATION_MODE=B,WFO_DISABLE_DCA=1,TIME_STOP_HOURS=72"},
+      "on_fail": "abort",
+      "retry": 1
+    },
+    {
+      "id": "wait_tr72",
+      "type": "wait",
+      "tool": "wfo_status",
+      "until": {"conditions": [
+        {"path": "counts.DONE", "gte": 16},
+        {"path": "counts.RUNNING", "equals": 0},
+        {"path": "counts.PENDING", "equals": 0}
+      ]},
+      "interval_sec": 120,
+      "timeout_sec": 21600
+    },
+    {
+      "id": "rep_tr72",
+      "type": "tool",
+      "tool": "wfo_report",
+      "args": {"tag": "${TAG_TR72}"}
+    },
+    {
+      "id": "ladder_merge",
+      "type": "shell",
+      "cmd": "R=${CE_RUN_DIR:-/home/ubuntu/claudedata/.run/mcp_ce}; { echo '=== +TR nuoi24 (${TAG_TR24}) ==='; grep -iE 'VERDICT|OOS|WFE|maxDD' \"$R/wfo_report_${TAG_TR24}.md\"; echo; echo '=== +TR nuoi72 (${TAG_TR72}) ==='; grep -iE 'VERDICT|OOS|WFE|maxDD' \"$R/wfo_report_${TAG_TR72}.md\"; } > \"$R/ladder_tr_summary.txt\"; cat \"$R/ladder_tr_summary.txt\""
+    },
+    {
+      "id": "decide_tr",
+      "type": "llm_gate",
+      "question": "KILL-TEST +TR verdict. So tr24 vs tr72 capital-constrained WFO vs pass-criteria (70% OOS-duong / WFE median>=0.5 / worst maxDD<=50%). +TR co SONG capital-constrained khong (proxy +14.8/keo co giu duoc khi tinh capital-lock/funding)? PASS -> them stage REF (can code LADDER_FORCE_TIMESTOP) de decompose ladder. FAIL -> ca huong nuoi-lau chet, xem lai entry.",
+      "context_files": ["wfo_report_${TAG_TR24}.md", "wfo_report_${TAG_TR72}.md", "ladder_tr_summary.txt"]
+    }
+  ]
+}

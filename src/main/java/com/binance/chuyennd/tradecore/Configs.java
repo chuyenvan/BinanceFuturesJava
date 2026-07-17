@@ -188,8 +188,12 @@ public class Configs {
     // (pump 12h / hoi capitulation) het han ma khong no thi thoat, giai phong margin, tranh nuoi vo han.
     // Do tu leg DAU cua cum (clusterFirstLegTime, fallback timeStart) — neu do tu leg cuoi thi moi lan
     // DCA lai reset dong ho, lenh nuoi lo se KHONG BAO GIO bi time-stop. 0 = tat (mac dinh, hanh vi cu).
-    public static int TIME_STOP_HOURS = properties.get("TIME_STOP_HOURS") != null
-            ? Integer.parseInt(properties.get("TIME_STOP_HOURS")) : 0;
+    // TASK (2026-07-17): env TIME_STOP_HOURS override (config-driven cho ladder WFO) > properties > 0.
+    //   env unset -> fallback properties -> 0 = hanh vi cu NGUYEN VEN.
+    public static int TIME_STOP_HOURS = System.getenv("TIME_STOP_HOURS") != null
+            ? Integer.parseInt(System.getenv("TIME_STOP_HOURS").trim())
+            : (properties.get("TIME_STOP_HOURS") != null
+                ? Integer.parseInt(properties.get("TIME_STOP_HOURS")) : 0);
     // TASK (2026-07-10): ti le nha lai dinh cua trailing (cu hardcode 0.5). 0.3 = giu chat, 0.7 = long nuoi trend.
     public static float TS_GIVEBACK_RATIO = properties.get("TS_GIVEBACK_RATIO") != null
             ? Float.parseFloat(properties.get("TS_GIVEBACK_RATIO")) : 0.5f;
