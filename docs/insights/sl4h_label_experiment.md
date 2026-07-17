@@ -304,3 +304,21 @@ còn ~+0.3%**. Feature tập trung: f36 = 0.403 + f10 = 0.162 (57% importance �
    trọn retEnd): +8.8/+9.3 KHÔNG phải as-traded → phải xác nhận bằng sim Java 3-state + WFO (mục 1+3).
 3. Việc phải làm trước khi tin edge: (a) fix + chạy lại placebo; (b) mổ per-fold 2025-2026;
    (c) tra nghĩa f36/f10.
+
+
+### 11b. Mổ per-fold + nghĩa feature (đo 2026-07-17, log edge-anatomy)
+
+Per-fold (gate p6≥0.7, kế toán EV2): median 14 fold = ĐÚNG +1.74 (khớp EV2 — cùng kế toán).
+2025: +2.21 (n=512), +0.12 (195), +0.58 (620), +0.84 (3100); 2026: **−0.32 (845), +0.04 (867)**.
+→ 2026 flat/âm là THẬT (không phải lỗi đo). **Trade-weighted toàn kỳ = +0.72%/kèo** (Σn·pnl/Σn
+= 4648/6435), sau phí 0.2% còn ~+0.5% — thấp hơn nhiều median +1.74 vì fold ít-kèo (2023) kéo median.
+Chú ý: hit6 2026 vẫn 72-76% nhưng PnL ≈ 0 → suy ra miss trung bình 2026 rất sâu (~−17%/miss theo
+kế toán hit→+6): coin gate chọn 2026 là pump-candidate nhưng khi trượt thì trượt nặng. Cần feature/
+gate chặn đuôi miss (regLoss, mục dual-gate) hoặc chấp nhận sizing nhỏ regime này.
+
+Feature mapping (FundingMarketFeatures.java, # = 0-based = f index):
+- **f36 = ret15m** (return 15 phút gần, microstructure TASK-038) — importance 0.403
+- **f10 = rsi1H** — importance 0.162
+→ 57% edge từ momentum-ngắn + RSI: model bắt pump ĐANG diễn ra. Rủi ro: (a) decay khi cấu trúc
+thị trường đổi (đúng pattern 2026?); (b) nhạy slippage/latency — vào lệnh khi coin đã chạy 15';
+sim Java phải mô phỏng entry trễ 1 nến để khỏi lạc quan.
