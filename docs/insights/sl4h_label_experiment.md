@@ -322,3 +322,41 @@ Feature mapping (FundingMarketFeatures.java, # = 0-based = f index):
 → 57% edge từ momentum-ngắn + RSI: model bắt pump ĐANG diễn ra. Rủi ro: (a) decay khi cấu trúc
 thị trường đổi (đúng pattern 2026?); (b) nhạy slippage/latency — vào lệnh khi coin đã chạy 15';
 sim Java phải mô phỏng entry trễ 1 nến để khỏi lạc quan.
+
+
+---
+
+## 12. CHON-N DAY DU + TRADE-WEIGHTED + PLACEBO PASS (2026-07-17)
+
+### Chon-n (EV2, best threshold, median-qua-fold)
+| n | AUC | 4h pnl/keo | 4h keo/quy | 12h pnl/keo | 12h keo/quy |
+|---|---|---|---|---|---|
+| n3 | 0.69 | +0.22 (P0.7) | 3095 | +0.19 | 23026 |
+| n6 | 0.74 | +1.74 (P0.7) | 78 | +1.46 | 1152 |
+| n9 | 0.78 | +1.19 (P0.6) | 72 | — | — |
+| n15 | 0.82 | +1.02 (P0.4) | 45 | +3.55 (P0.6) | 82 |
+- AUC tang don dieu theo n (target lon de phan loai). Nhung pnl/keo 4h dinh o n6.
+- **CHOT n6**: 4h bien/keo tot nhat; 12h dung n6 (1152 keo/quy, +1.46 dang tin hon n15 82-keo).
+- n3 loai (bien ~0 sau phi, du 3095 keo). n15 loai (thua + median-inflated: +3.55 chi 82 keo KHONG tin).
+
+### Trade-weighted n6 (tinh local tu per_fold JSON — con so TRUNG THUC)
+| nguong | trade-weighted | median | total trades |
+|---|---|---|---|
+| P*=0.7 | **+0.72** | 2.21 | 6435 |
+| P*=0.6 | +0.33 | 0.68 | 27196 |
+| P*=0.5 | +0.24 | 0.32 | 78809 |
+- Median THOI PHONG (2.21 vs TW 0.72) — do fold it-keo 2023-2024 (n=5..97, pnl 2.6-6.0) keo len.
+  Fold nhieu keo 2025-2026 (n=512-3100) chi 0.04-0.84. Edge THAT ~+0.72/keo P0.7, sau phi ~+0.5.
+- Frontier tan-suat↔bien lap lai TRONG n6: ha nguong = nhieu keo, bien mong di.
+
+### Placebo (exit-lab-4h v2, FIX top-N_real) — PASS
+`PLACEBO_RESULT {pnl:-0.4879, random:+0.0552}`. Shuffle label -> gate chon keo TE hon random,
+KHONG ≈ real E4 (+8.8). Tieu chi pre-register (placebo≫random=ao) -> **PASS: E4 KHONG overfit/leak label.**
+
+### 3-chan dang chay (Kaggle, push 2026-07-17)
+- **sl4h-tail-sl** (chan SL): tail predictor q90 dip=|maxAdv_4h| -> adaptive disaster-SL vs fixed 5/8/none.
+  Marker `TAIL_SL_RESULT`. Doc: calib_cov≈0.9? pinball<base? adaptive co nang worst_fold (cat duoi)
+  ma giu pnl/keo khong? stop_rate hop ly?
+- **sl4h-trail-cond** (chan trailing): nuoi DIEU KIEN theo P9 conviction (hi->nuoi24, mid->12, lo->dong4)
+  vs E4 co dinh. Marker `TRAILCOND_RESULT`. Doc: COND pnl_med + worst_fold vs E4_fixed (+8.8 proxy).
+- Ca 2 la PROXY label (rank, khong tin level). Winner -> Java sim path that.
