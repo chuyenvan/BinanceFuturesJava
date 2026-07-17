@@ -331,7 +331,10 @@ def run():
         trp = tr.copy()
         trp["hit6"] = rng.permutation(trp["hit6"].values)
         pp6, _ = safe_fit_clf(xgb, trp, te, "hit6")
-        selp = np.where(pp6 >= 0.7)[0]
+        # FIX 2026-07-17: shuffle-label clf hiem dat p>=0.7 -> selp rong -> placebo null.
+        # top-N_real (N_real=so keo gate THAT p6>=0.7 fold nay) -> cung so keo, so fair.
+        n_real = int((p6 >= 0.7).sum())
+        selp = np.argsort(-pp6)[:n_real] if n_real > 0 else np.where(pp6 >= 0.7)[0]
         if len(selp) > 0:
             e1 = compute_pnl(te, "E1")
             plac_pnl.append(float(e1[selp].mean()))
