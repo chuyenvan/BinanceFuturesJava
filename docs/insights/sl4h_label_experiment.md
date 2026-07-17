@@ -267,3 +267,40 @@ gom regime thô `2023H1 / 2023H2 / 2024 / 2025 / 2026` → trung bình nhóm; XG
 > Tổng: 4 phép đo trả lời độc lập 4 câu — cửa sổ quyết định (12h?), calibration (đáng khi N cao?),
 > gate-kép+sizing (cắt đuôi & phân bổ vốn?), độ bền edge (regime & feature). Đọc xong mới quyết
 > nhánh nào lên production sizing; bất kỳ dấu hiệu edge dồn 1 regime hoặc placebo ≫ random ⇒ dừng.
+
+
+---
+
+## 11. VÒNG 3 + 3b — KẾT QUẢ (đọc tay 2026-07-17; 2 watcher runner chết, đã pipe_stop)
+
+### exit-lab-4h — NUÔI-CÓ-SÀN THẮNG TP CỨNG (proxy)
+AUC p3/p6/p9 = 0.694/0.743/0.786. Best: **E4×G6 P*=0.7 → +8.82%/kèo, 78 kèo/quý, hit3 87%,
+worst-fold +4.34 (không fold âm)**. Thứ tự đúng giả thuyết: E4 (+8.82) > E3 (+3.11) > E1 (+2.12),
+mốc E2/EV2 = +1.74. ⚠️ PLACEBO_RESULT = null (không chạy được) — sanity chính CHƯA có.
+
+### exit-lab-12h — cửa sổ 12h tương đương/hơn, tần suất ×15
+Best: E4×G6 P*=0.8 → +9.30%/kèo, 142 kèo/quý, worst +3.17; P*=0.7 → +8.58%/kèo, **1152 kèo/quý**,
+worst +2.25. AUC p6(12h)=0.690. ⚠️ Placebo cũng null.
+
+### ev2-n9-cal — n=9 KÉM n=6; calibration không giúp
+AUC 0.783 nhưng best_raw P*=0.6 chỉ +1.19%/kèo (n=72.5, hit 50%); best_cal +0.88 < raw.
+→ CHỐT n=6, bỏ isotonic.
+
+### dual-gate-sizing — gate kép KHÔNG đáng
+Best kép P*=0.6 & L*=-3: +2.07%/kèo nhưng n giảm 78→43.5 và worst-fold TỆ hơn (-2.00 vs -0.32
+của single P*=0.7). Sizing: ev_weighted_total 111.2 vs equal 42.7/quý — NHƯNG per_trade_med 2 cột
+trùng nhau 1.7428 → nghi bug tính, verify code trước khi tin.
+
+### edge-anatomy — CỜ ĐỎ LỚN NHẤT: edge decay theo thời gian
+14 fold, chỉ 1 fold âm (2026-01, -0.32) NHƯNG PnL/kèo theo regime: 2023H1 +5.31 (5.5 kèo/fold),
+2023H2 +2.01 (19), 2024 +2.87 (58), 2025 +0.71 (566), **2026 -0.14 (856)**. n kèo tăng ngược chiều
+edge → median-fold +1.74 bị chi phối bởi fold ít kèo; **trade-weighted ≈ +0.51%/kèo, sau phí 0.2%
+còn ~+0.3%**. Feature tập trung: f36 = 0.403 + f10 = 0.162 (57% importance ở 2 feature).
+⚠️ 2026: hit6_mean 0.741 mà pnl_mean -0.14 → mâu thuẫn nội bộ, cần mổ per-fold trước khi tin số 2026.
+
+### KẾT LUẬN VÒNG 3/3b
+1. Exit "nuôi có sàn +1%" (E4) >> TP cứng — đúng hướng; 12h giải TOO_FEW_TRADES.
+2. E4 là PROXY floor lạc quan (max(1.0, retEnd_12h) cho mọi kèo hit3 — trailing thật không ăn
+   trọn retEnd): +8.8/+9.3 KHÔNG phải as-traded → phải xác nhận bằng sim Java 3-state + WFO (mục 1+3).
+3. Việc phải làm trước khi tin edge: (a) fix + chạy lại placebo; (b) mổ per-fold 2025-2026;
+   (c) tra nghĩa f36/f10.
