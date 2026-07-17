@@ -49,3 +49,17 @@ cam SSH inline quote phuc tap. Con lai: nut --brief + pipe_doctor (chua lam); Ka
 ## HA TANG VERIFIED
 CE 5 tang OK (bg_selftest 6/6; fix _wfo_coord_cmd LUON gan WFO_STATE_* — bug ns=test da vá).
 226 = ticker central 2.9M rec. Jar 6ff3f562 deploy Oracle + Kaggle java-run-lc. Push gan nhat: 0bd65a1.
+
+## DANG CHAY KAGGLE (push 2026-07-17, doc khi quay lai) — 3 kernel, 5/5 slot ban dau
+Doc ket qua khi COMPLETE:
+  ce kaggle_status chuyendinh/<kernel>            # cho COMPLETE
+  ce kaggle_output chuyendinh/<kernel> /home/ubuntu/claudedata/.run/mcp_ce/kout/<kernel>
+  ssh ... "grep -hE '<MARKER>' kout/<kernel>/*.log"
+- **sl4h-ev2-n3** + **sl4h-ev2-n15**: dong ho so CHON-N dung kien truc EV2 (n6 da +1.74/keo).
+  Marker `SL4H_EV2_RESULT`. Doc: pnl_per_trade / best_threshold / auc_med. So voi n6(+1.74) + n9(+1.19)
+  → chon n theo pnl-per-keo * tan suat. Ky vong: n3 tan suat cao base_rate cao; n15 hiem/AUC cao.
+- **exit-lab-4h v2**: RERUN co FIX PLACEBO (top-N_real thay p>=0.7 → khong con null). Marker
+  `PLACEBO_RESULT` + `EXITLAB_RESULT`. Doc: placebo.pnl vs placebo.random — neu ~= nhau => gate E4
+  KHONG overfit label (xac nhan +8.8/keo dang tin); neu placebo >> random => tin hieu ao, DUNG nhanh E4.
+- Con lai (mục 1 Java sim SL-cung + WFO): CHUA lam — chan cho design khi Uni ve (entry tre 1 nen vi
+  edge = f36 ret15m + f10 rsi1H = momentum ngan, nhay slippage).
