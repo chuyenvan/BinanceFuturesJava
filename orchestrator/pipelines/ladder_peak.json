@@ -1,0 +1,86 @@
+{
+  "name": "ladder_peak",
+  "profile": "wfo-fanout",
+  "params": {
+    "DS": "/home/ubuntu/claudedata/wfo_ds_ev2",
+    "N": "30",
+    "SEED": "42",
+    "ORACLE_WORKERS": "2",
+    "KAGGLE_KERNELS": "0",
+    "TAG_TR24_CLOSE": "ev2_tr24_close",
+    "TAG_TR72_CLOSE": "ev2_tr72_close",
+    "TAG_TR24_HIGH": "ev2_tr24",
+    "TAG_TR72_HIGH": "ev2_tr72"
+  },
+  "steps": [
+    {
+      "id": "gate_setup",
+      "type": "llm_gate",
+      "question": "TRAIL_PEAK_MODE close-vs-high (chong wick tren dinh trailing). Verify TRUOC khi chay: (1) JAR ${JAR} co doc env TRAIL_PEAK_MODE trong Configs (high=maxPrice=mac dinh=hanh vi cu byte-identical; close=priceClose). Chi doi diem ARM/RATCHET trailing, KHONG dung minPrice/MAE/disaster/time-stop. (2) JAR cung wire WFO_DISABLE_DCA + ABLATION_MODE + TIME_STOP_HOURS trong WfoWorker.main (da verify o ladder kill-test). (3) Dataset ${DS}=wfo_ds_ev2 (EV2 funding, symId gate-check PASS). (4) ABLATION_MODE=B = PASS het filter = entry thuan EV2 selector. (5) KAGGLE_KERNELS=0 vi Kaggle khong nhan extra_env. (6) Report high (kill-test cu) ${TAG_TR24_HIGH}/${TAG_TR72_HIGH} da ton tai de so sanh (neu chua -> chay ladder truoc). Da verify het -> 'yes ${JAR}'; chua -> 'stop'.",
+      "context_files": ["../insights/slhard_sim_ladder_DESIGN.md"]
+    },
+    {
+      "id": "run_tr24_close",
+      "type": "tool",
+      "tool": "wfo_fanout",
+      "args": {"ds": "${DS}", "jar": "${JAR}", "n": "${N}", "seed": "${SEED}", "oracle_workers": "${ORACLE_WORKERS}", "kaggle_kernels": "${KAGGLE_KERNELS}", "tag": "${TAG_TR24_CLOSE}", "extra_env": "ABLATION_MODE=B,WFO_DISABLE_DCA=1,TIME_STOP_HOURS=24,TRAIL_PEAK_MODE=close"},
+      "on_fail": "abort",
+      "retry": 1
+    },
+    {
+      "id": "wait_tr24_close",
+      "type": "wait",
+      "tool": "wfo_status",
+      "until": {"conditions": [
+        {"path": "counts.DONE", "gte": 16},
+        {"path": "counts.RUNNING", "equals": 0},
+        {"path": "counts.PENDING", "equals": 0}
+      ]},
+      "interval_sec": 120,
+      "timeout_sec": 21600
+    },
+    {
+      "id": "rep_tr24_close",
+      "type": "tool",
+      "tool": "wfo_report",
+      "args": {"tag": "${TAG_TR24_CLOSE}"}
+    },
+    {
+      "id": "run_tr72_close",
+      "type": "tool",
+      "tool": "wfo_fanout",
+      "args": {"ds": "${DS}", "jar": "${JAR}", "n": "${N}", "seed": "${SEED}", "oracle_workers": "${ORACLE_WORKERS}", "kaggle_kernels": "${KAGGLE_KERNELS}", "tag": "${TAG_TR72_CLOSE}", "extra_env": "ABLATION_MODE=B,WFO_DISABLE_DCA=1,TIME_STOP_HOURS=72,TRAIL_PEAK_MODE=close"},
+      "on_fail": "abort",
+      "retry": 1
+    },
+    {
+      "id": "wait_tr72_close",
+      "type": "wait",
+      "tool": "wfo_status",
+      "until": {"conditions": [
+        {"path": "counts.DONE", "gte": 16},
+        {"path": "counts.RUNNING", "equals": 0},
+        {"path": "counts.PENDING", "equals": 0}
+      ]},
+      "interval_sec": 120,
+      "timeout_sec": 21600
+    },
+    {
+      "id": "rep_tr72_close",
+      "type": "tool",
+      "tool": "wfo_report",
+      "args": {"tag": "${TAG_TR72_CLOSE}"}
+    },
+    {
+      "id": "ladder_peak_merge",
+      "type": "shell",
+      "cmd": "R=${CE_RUN_DIR:-/home/ubuntu/claudedata/.run/mcp_ce}; { echo '=== HIGH nuoi24 (${TAG_TR24_HIGH}) ==='; grep -iE 'VERDICT|OOS|WFE|maxDD' \"$R/wfo_report_${TAG_TR24_HIGH}.md\"; echo; echo '=== CLOSE nuoi24 (${TAG_TR24_CLOSE}) ==='; grep -iE 'VERDICT|OOS|WFE|maxDD' \"$R/wfo_report_${TAG_TR24_CLOSE}.md\"; echo; echo '=== HIGH nuoi72 (${TAG_TR72_HIGH}) ==='; grep -iE 'VERDICT|OOS|WFE|maxDD' \"$R/wfo_report_${TAG_TR72_HIGH}.md\"; echo; echo '=== CLOSE nuoi72 (${TAG_TR72_CLOSE}) ==='; grep -iE 'VERDICT|OOS|WFE|maxDD' \"$R/wfo_report_${TAG_TR72_CLOSE}.md\"; } > \"$R/ladder_peak_summary.txt\"; cat \"$R/ladder_peak_summary.txt\""
+    },
+    {
+      "id": "decide_peak",
+      "type": "llm_gate",
+      "question": "TRAIL_PEAK_MODE verdict: close (priceClose chong wick) vs high (maxPrice kill-test cu). So tr24_close vs tr24_high va tr72_close vs tr72_high tren OOS-duong% / WFE median / worst maxDD. Close co CAI THIEN (giam maxDD/it giat SL) ma KHONG hy sinh qua nhieu upside khong? Neu close >= high tren cac chi tieu chinh -> de xuat default close cho horizon tuong ung. Neu close kem hon -> giu high (mac dinh), close chi la option chong wick khi can.",
+      "context_files": ["wfo_report_${TAG_TR24_HIGH}.md", "wfo_report_${TAG_TR24_CLOSE}.md", "wfo_report_${TAG_TR72_HIGH}.md", "wfo_report_${TAG_TR72_CLOSE}.md", "ladder_peak_summary.txt"]
+    }
+  ]
+}

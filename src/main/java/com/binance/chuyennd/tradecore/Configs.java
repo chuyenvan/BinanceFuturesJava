@@ -194,6 +194,12 @@ public class Configs {
             ? Integer.parseInt(System.getenv("TIME_STOP_HOURS").trim())
             : (properties.get("TIME_STOP_HOURS") != null
                 ? Integer.parseInt(properties.get("TIME_STOP_HOURS")) : 0);
+    // TASK (2026-07-17): che do chon DINH cho trailing-stop (arm + ratchet SL). env-driven, config-driven.
+    //   high  = maxPrice (HIGH cua nen 1m) = MAC DINH = HANH VI CU (byte-identical, backward-compatible).
+    //   close = priceClose (dong nen) de chong wick/giat. Chi doi diem ARM/RATCHET trailing, KHONG dung
+    //           cho minPrice/maeLow (day, trigger cat + MAE), maePeak, disaster-SL, time-stop.
+    public static final String TRAIL_PEAK_MODE = System.getenv("TRAIL_PEAK_MODE") != null
+            ? System.getenv("TRAIL_PEAK_MODE").trim().toLowerCase() : "high";
     // TASK (2026-07-10): ti le nha lai dinh cua trailing (cu hardcode 0.5). 0.3 = giu chat, 0.7 = long nuoi trend.
     public static float TS_GIVEBACK_RATIO = properties.get("TS_GIVEBACK_RATIO") != null
             ? Float.parseFloat(properties.get("TS_GIVEBACK_RATIO")) : 0.5f;

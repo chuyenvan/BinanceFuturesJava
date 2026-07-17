@@ -181,7 +181,10 @@ public class OrderTargetInfoTest implements Serializable {
                     return;
                 }
             }
-            Float rateLoss = calRateLossMax(ticker.maxPrice);
+            // TASK (2026-07-17): TRAIL_PEAK_MODE — dinh de ARM trailing. high=maxPrice (mac dinh, hanh vi cu),
+            // close=priceClose (chong wick). Chi doi peak arm/ratchet, KHONG dung minPrice/MAE/disaster/time-stop.
+            float trailPeak = "close".equals(Configs.TRAIL_PEAK_MODE) ? ticker.priceClose : ticker.maxPrice;
+            Float rateLoss = calRateLossMax(trailPeak);
             Float rateMin2MoveSl = TradeUtils.calRateMinWithPredReturn15MForTradingStop(predReturn15M);
             if (rateLoss > rateMin2MoveSl) {
                 Float rateStop = TradeUtils.calRateLossDynamicBuy(rateLoss, predReturn15M);
@@ -229,7 +232,10 @@ public class OrderTargetInfoTest implements Serializable {
     public void updateTPSL(Float rateChangeMax90M, KlineObjectSimple ticker) {
         // move SL
         if (priceSL != null) {
-            Float rateLoss = calRateLossMax(ticker.maxPrice);
+            // TASK (2026-07-17): TRAIL_PEAK_MODE — dinh de RATCHET SL. high=maxPrice (mac dinh, hanh vi cu),
+            // close=priceClose (chong wick). Chi doi peak arm/ratchet, KHONG dung minPrice/MAE/disaster/time-stop.
+            float trailPeak = "close".equals(Configs.TRAIL_PEAK_MODE) ? ticker.priceClose : ticker.maxPrice;
+            Float rateLoss = calRateLossMax(trailPeak);
             Float rateMin2MoveSl = Configs.TS_PROFIT_MULTIPLIER * TradeUtils.calRateMinWithPredReturn15MForTradingStop(rateChangeMax90M);
             if (rateLoss >= rateMin2MoveSl) {
                 Float rateSL = TradeUtils.calRateLossDynamicBuy(rateLoss, rateChangeMax90M);
