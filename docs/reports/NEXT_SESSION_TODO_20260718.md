@@ -56,3 +56,25 @@
 - 2s/tick study: **BỎ** (không đủ độ phủ, Uni chốt 2026-07-17).
 - Long-term entry features (SMA200 slope/regime) → chỉ nếu +TR chết & quay lại entry-veto (KHÔNG cho SL).
 - Kaggle-WFO kernel bake env (nếu ladder chạy lặp nhiều) → lấy lại 5 node tăng tốc.
+
+
+## ⚑ VERDICT +TR (2026-07-18) — FAIL, hệ ≈ BREAKEVEN capital-constrained
+Kill-test `ladder_1784297380` (parked ở decide_tr, KHÔNG trả — để tham chiếu). tr24 & tr72 đều FAIL:
+WFE median 0.20, SUCCESS 4-5/16, BURN 5-6/16, ZERO 4 (2022 = EV2 pred chỉ có 2023+, artifact).
+- **Execution SẠCH (C pass):** lỗ BURN cực nhỏ (−0.02%..−0.52% vốn/window), maxDD worst 9%, 0 margin-call.
+  → KHÔNG over-leverage/bug sizing. Net toàn kỳ ≈ **+0.6% ~2.5 năm = FLAT**.
+- **Kết luận:** proxy +14.8/kèo là ẢO; edge selector +0.72 gross bị phí 0.2%×nghìn-lệnh + fill ăn sạch → breakeven.
+  **Nút thắt = ENTRY edge quá mỏng.** Trailing/SL không phải thủ phạm.
+- Lưu ý: kill-test gate-OFF (ABLATION_MODE=B). Chưa loại trừ gate-ON tip breakeven→dương.
+
+## ĐANG CHẠY / HƯỚNG
+- **Gate-ON confirm** (rẻ, 1 WFO): `wfo_fanout wfo_ds_ev2 ... ABLATION_MODE=A,WFO_DISABLE_DCA=1,TIME_STOP_HOURS=24`
+  tag `ev2_gateon`. So vs tr24 (gate-off). Đọc `wfo_report_ev2_gateon.md`.
+- **Kiến trúc entry:** gate=KHI-NÀO (market timing, pred.bin, fail standalone 43.8%); selector=COIN-NÀO (EV2 per-coin, edge mỏng).
+  2 trục vuông góc. Redesign B: (1) selector + feature dài hạn, (2) gate timing, (3) **HỢP NHẤT 1 model** (market+coin+long-term
+  → P(coin lời NGAY) — học tương tác "pump trong downtrend dễ về 0"). Nghiêng (3) hoặc (1).
+- **B chặn:** feature dài hạn (SMA200 slope, trend-vs-BTC, dist-from-SMA200) CHƯA export trong ff (dài nhất hiện là 24H)
+  → cần sửa Java exporter + re-export ff + retrain. Không phải Kaggle-1-lệnh.
+
+## ĐÃ DỌN
+- close-run (ladder_peak) STOP (moot vì +TR high đã fail). Jar deployed hiện = TRAIL_PEAK_MODE (md5 ba2fbda9, default high).
