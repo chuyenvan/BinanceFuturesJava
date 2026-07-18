@@ -745,6 +745,11 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         }
         orders.add(order);
 
+        // ENTRY-MATCH PROBE (env WFO_LOG_ENTRIES=1). Default off = byte-identical.
+        if (Configs.WFO_LOG_ENTRIES) {
+            LOG.info("ENTRY_DUMP {} {} {}", symbolStr, ticker.startTime, levelChange);
+        }
+
         BudgetManagerSimple.getInstance().counterOrderCreated.incrementAndGet();
 
         symbol2OrderRunning[symbolId] = mergeOrder(orders, ticker, symbol2OrderRunning[symbolId]);

@@ -240,6 +240,10 @@ public class Configs {
     // hoan toan) de do dong gop DCA. Mac dinh false = hanh vi cu NGUYEN VEN.
     public static final boolean WFO_DISABLE_DCA = "1".equals(System.getenv("WFO_DISABLE_DCA"));
 
+    // ENTRY-MATCH PROBE (2026-07-18): env WFO_LOG_ENTRIES=1 -> log 1 dong ENTRY_DUMP moi khi 1 leg vao lenh
+    // that su (sau khi qua het cong). Mac dinh false = KHONG log = hanh vi cu byte-identical.
+    public static final boolean WFO_LOG_ENTRIES = "1".equals(System.getenv("WFO_LOG_ENTRIES"));
+
     // === CIRCUIT BREAKER (chống sập tầng DCA/margin — BẬT MẶC ĐỊNH từ Bước 3, ĐỔI PnL/DD → bump CONFIG_VERSION v10) ===
     // OFF=không phanh | MARGIN=chặn mở mới khi margin/vốn cao | DCA=ngừng nhồi cụm lỗ sâu | BOTH=cả hai.
     // KHÔNG force-close (long-only): chỉ DỪNG MỞ / DỪNG NHỒI.
