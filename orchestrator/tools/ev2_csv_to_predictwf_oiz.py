@@ -4,8 +4,9 @@
 #
 # KHAC ev2_csv_to_predictwf.py: THEM buoc LOC entry theo oi_z (tang DU LIEU, KHONG dung sim code):
 #   1. mask70 = rows co p6 >= P6_MIN (mac dinh 0.7) = tap "tradable" (candidate long).
-#   2. oiz_q50 = quantile(OIZ_Q) cua oi_z TREN tap mask70 (mac dinh Q=0.5).
-#   3. CHI GIU rows: p6>=P6_MIN AND oi_z<=oiz_q50 (giu 50% oi_z THAP nhat -> edge_spread am proxy).
+#   2. oiz_q = quantile(OIZ_Q) cua oi_z TREN tap mask70 (mac dinh Q=0.75 — NOI HON Q0.5 de khoi phuc tan suat).
+#   3. CHI GIU rows: p6>=P6_MIN AND oi_z<=oiz_q (giu OIZ_Q% oi_z THAP nhat -> edge_spread am proxy).
+#   LICH SU: Q0.5 cho WFE1.49/BURN2 nhung 9/16 window doi lenh -> FAIL %OOS; Q0.75 giu nhieu entry hon.
 #   NaN oi_z bi loai (oi_z<=q50 False cho NaN). Cam p6 vao CA 4 horizon slot nhu cu ->
 #   buildFundingFromWfFiles DAO DAU score=1-p6, forward-fill 15m->phut, engine chon score thap.
 # symId LAY TU symbol_map.csv (symId,symbol) — PHAI la map SIM dung (khop predict_wf cu).
@@ -16,7 +17,7 @@ import pandas as pd
 def main():
     preds_csv, map_csv, out_dir = sys.argv[1], sys.argv[2], sys.argv[3]
     p6_min = float(sys.argv[4]) if len(sys.argv) > 4 else 0.7
-    oiz_q  = float(sys.argv[5]) if len(sys.argv) > 5 else 0.5
+    oiz_q  = float(sys.argv[5]) if len(sys.argv) > 5 else 0.75
     os.makedirs(out_dir, exist_ok=True)
     mp = pd.read_csv(map_csv)                       # cols: symId, symbol
     sym2id = dict(zip(mp["symbol"], mp["symId"].astype(int)))
