@@ -11,11 +11,12 @@
 #   rise =  maxFav_H*100  (do TANG, BAT LOI cho short — cham dinh = hard-SL)
 #   HIT_short_t = (drop >= t) & (nBars_H du)          <- target train classifier P(HIT_short_t), 1 clf / target.
 #
-# KE TOAN SL-CUNG short (moi (t, s)) — path-aware STOP, KHONG funding (funding OFF theo Uni chot):
+# KE TOAN SL-CUNG short LET-RUN (moi (t, s)) — path-aware STOP, KHONG funding (funding OFF theo Uni chot):
+#   let-dump-run: KHONG chot co dinh — ride toi horizon hoac stop (bo nhanh chot +t cu, cap winner sai thiet ke Uni).
+#   t CHI con vai tro LABEL train classifier P(drop>=t) — KHONG con vai tro chot trong ke toan.
 #   stopped = (rise >= s) & (tHitFav_H < tHitAdv_H)   (cham dinh +s TRUOC khi cham day -> stopped)
 #     stopped              -> pnl = -s
-#   elif HIT (drop >= t)   -> pnl = +t                (dat target chot loi short)
-#   else                   -> pnl = -retEnd_H*100     (dong cua so: gia giam=retEnd<0=>+; gia tang=>-)
+#   else                   -> pnl = -retEnd_H*100     (ride het horizon: gia giam=retEnd<0=>+; gia tang=>-)
 #   net = mean(pnl) - 0.2% (phi 2 chan). *** KHONG tru funding (OFF) ***
 #
 # SELECTION (chong DOI LENH vi ps short thap): DUNG CA HAI —
@@ -159,16 +160,15 @@ def build_folds():
 
 
 def pnl_short(dd, s, t):
-    """Ke toan SL-cung short (path-aware), vector hoa, cho (target t, stop s):
-       stopped=(rise>=s)&(tfav<tadv) -> -s ; elif drop>=t -> +t ; else -> -retpct."""
+    """Ke toan SL-cung short LET-RUN (path-aware), vector hoa, cho (stop s; t chi con la LABEL, KHONG dung de chot):
+       let-dump-run: khong chot co dinh o +t — ride toi horizon hoac stop.
+       stopped=(rise>=s)&(tfav<tadv) -> -s ; else -> -retpct (ride het horizon)."""
     rise = dd["rise"].values
-    dropp = dd["dropp"].values
     tfav = dd["tfav"].values
     tadv = dd["tadv"].values
     retpct = dd["retpct"].values
     stopped = (rise >= float(s)) & (tfav < tadv)
-    hit = dropp >= float(t)
-    pnl = np.where(stopped, -float(s), np.where(hit, float(t), -retpct))
+    pnl = np.where(stopped, -float(s), -retpct)
     return pnl.astype(np.float64)
 
 
@@ -335,12 +335,14 @@ def run():
 
     full = {"label": "short-grid", "horizon": HORIZON, "target_grid": TARGET_GRID,
             "stop_grid": STOP_GRID, "pstar_grid": PSTAR_GRID, "topk_grid": TOPK_GRID,
-            "fee_pct": FEE_PCT, "funding": "OFF", "first_oos": FIRST_OOS, "last": LAST,
+            "fee_pct": FEE_PCT, "funding": "OFF", "acct": "let-run",
+            "first_oos": FIRST_OOS, "last": LAST,
             "oos_months": OOS_MONTHS, "seed": SEED, "regime_cut": str(REGIME_CUT.date()),
             "metric_note": "chon theo NET PnL + winrate + tpq (KHONG chi AUC). "
-                           "win_rate=%(pnl>0); hit_rate=%(drop>=t); tpq=median trades/quy; "
-                           "net=mean(pnl)-0.2%% (funding OFF); ke toan: stopped(rise>=s & tfav<tadv)->-s, "
-                           "elif drop>=t->+t, else->-retEnd*100.",
+                           "win_rate=%(pnl>0); hit_rate=%(drop>=t, t la LABEL train, KHONG dung de chot); "
+                           "tpq=median trades/quy; net=mean(pnl)-0.2%% (funding OFF); "
+                           "ke toan LET-RUN (let-dump-run, khong chot co dinh +t): "
+                           "stopped(rise>=s & tfav<tadv)->-s, else->-retEnd*100 (ride het horizon).",
             "targets": {}}
     best_pts = []
     for t in TARGET_GRID:
@@ -366,13 +368,13 @@ def run():
     json.dump(full, open(out_path, "w"), indent=2)
 
     # Dong RESULT <2KB: diem tot nhat MOI target theo net (kem winrate/tpq/regime/auc).
-    line = json.dumps({"h": HORIZON, "fee": FEE_PCT, "funding": "OFF",
+    line = json.dumps({"h": HORIZON, "fee": FEE_PCT, "funding": "OFF", "acct": "let-run",
                        "sel_space": {"pstar": [PSTAR_GRID[0], PSTAR_GRID[-1]], "topk": TOPK_GRID},
                        "best_per_target": best_pts}, separators=(",", ":"))
     if len(line) > 2000:      # cat gon neu qua 2KB (giu net/win/tpq)
         slim = [{"t": b["t"], "sel": b["sel"], "s": b["s"], "net": b["net"], "win": b["win"],
                  "hit": b["hit"], "tpq": b["tpq"], "nb": b["nb"], "nc": b["nc"]} for b in best_pts]
-        line = json.dumps({"h": HORIZON, "best_per_target": slim}, separators=(",", ":"))
+        line = json.dumps({"h": HORIZON, "acct": "let-run", "best_per_target": slim}, separators=(",", ":"))
     print(f"SHORTGRID_{HORIZON.upper()}_RESULT " + line)
     log.info("XONG -> %s (RESULT line len=%d)", out_path, len(line))
 
