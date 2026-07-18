@@ -1,0 +1,71 @@
+{
+  "name": "wfo_from_preds",
+  "profile": "wfo-fanout",
+  "params": {
+    "csv": "/home/ubuntu/claudedata/ev2_preds_n6.csv.gz",
+    "mode": "long",
+    "param": "",
+    "pred_dir": "/home/ubuntu/claudedata/predict_wf_ev2long",
+    "out_ds": "/home/ubuntu/claudedata/wfo_ds_ev2long",
+    "build_job": "buildds_wfo_ds_ev2long",
+    "tag": "ev2long",
+    "extra_env": "",
+    "N": "30",
+    "SEED": "42",
+    "_note_build_job": "build_job PHAI = 'buildds_' + basename(out_ds) (non-alnum -> '_'). Doi out_ds qua CLI K=V thi doi build_job kem theo."
+  },
+  "steps": [
+    {
+      "id": "convert",
+      "type": "tool",
+      "tool": "pred_convert",
+      "args": {"csv_path": "${csv}", "out_dir": "${pred_dir}", "mode": "${mode}", "param": "${param}"},
+      "on_fail": "abort",
+      "retry": 1
+    },
+    {
+      "id": "build_ds",
+      "type": "tool",
+      "tool": "wfo_build_ds",
+      "args": {"predict_wf_dir": "${pred_dir}", "out_ds": "${out_ds}", "jar": "${JAR}"},
+      "on_fail": "abort"
+    },
+    {
+      "id": "wait_build",
+      "type": "wait",
+      "tool": "bg_report",
+      "args": {"job_id": "${build_job}"},
+      "until": {"conditions": [
+        {"path": "job_status", "equals": "SUCCESS"}
+      ]},
+      "interval_sec": 60,
+      "timeout_sec": 7200
+    },
+    {
+      "id": "fanout",
+      "type": "tool",
+      "tool": "wfo_fanout",
+      "args": {"ds": "${out_ds}", "jar": "${JAR}", "n": "${N}", "seed": "${SEED}", "oracle_workers": "${ORACLE_WORKERS}", "kaggle_kernels": "${KAGGLE_KERNELS}", "tag": "${tag}", "extra_env": "${extra_env}"},
+      "on_fail": "abort",
+      "retry": 1
+    },
+    {
+      "id": "wait_fanout",
+      "type": "wait",
+      "tool": "wfo_status",
+      "until": {"conditions": [
+        {"path": "counts.DONE", "gte": 16},
+        {"path": "counts.RUNNING", "equals": 0},
+        {"path": "counts.PENDING", "equals": 0}
+      ]},
+      "interval_sec": 120,
+      "timeout_sec": 21600
+    },
+    {
+      "id": "report",
+      "type": "tool",
+      "tool": "wfo_report",
+      "args": {"tag": "${tag}"}
+    }
+  ]
+}

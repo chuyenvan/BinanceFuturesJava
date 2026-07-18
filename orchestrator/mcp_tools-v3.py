@@ -101,6 +101,46 @@ WFO_WORKER_RAM_GB = float(os.environ.get("CE_WFO_WORKER_RAM_GB", "3.0"))
 WFO_KERNELS_DIR = os.environ.get(
     "CE_WFO_KERNELS_DIR", "/home/ubuntu/claudedata/.run/kernels")
 
+# ----------------------------------------------------------------------------
+# CAU HINH CHUOI WFO-FROM-PREDS (R1) — 3 nut nguyen tu: pred_convert / wfo_build_ds
+# / wfo_verify. Duc tu orchestrator/tools/{ev2_csv_to_predictwf*.py,
+# short_csv_to_predictwf.py, _export_oiz75.sh, run_short_wfo_verify.sh}. Tham so
+# hoa qua env (default = thuc te van hanh Oracle). KHONG hardcode secret.
+# ----------------------------------------------------------------------------
+# Python venv XGB tren Oracle (chay converter CSV->predict_wf).
+CE_XGB_PY = os.environ.get("CE_XGB_PY", "/home/ubuntu/xgb-env/bin/python")
+# Snapshot symbol_map.csv (symId,symbol) DUNG cho SIM — PHAI khop predict_wf cu.
+CE_SYMBOL_MAP = os.environ.get(
+    "CE_SYMBOL_MAP", "/home/ubuntu/claudedata/feat/symbol_map.csv")
+# Thu muc chua 3 converter .py tren Oracle (deploy kem mcp_tools; xem docstring).
+CE_PRED_TOOLS_DIR = os.environ.get(
+    "CE_PRED_TOOLS_DIR", "/home/ubuntu/claudedata/.run/tools")
+# CWD chuan chay java simulator (co kaggle_data_hpo/ ticker file + cac jar).
+CE_SIM_CWD = os.environ.get("CE_SIM_CWD", "/home/ubuntu/java/simulator")
+# Class + set-pred cho ExportWfoDataset (build dataset offline tu funding pred dir).
+WFO_EXPORT_CLASS = os.environ.get(
+    "CE_WFO_EXPORT_CLASS",
+    "com.binance.chuyennd.ai_ml.wfo.framework.ExportWfoDataset")
+WFO_SET_PRED = os.environ.get("CE_WFO_SET_PRED", "ai_pred_market_gate_wfo")
+# Heap + RAM guard cho ExportWfoDataset (scan Aerospike 226 -> ~12g).
+CE_BUILDDS_XMX = os.environ.get("CE_BUILDDS_XMX", "12g")
+CE_BUILDDS_RAM_GB = float(os.environ.get("CE_BUILDDS_RAM_GB", "12.0"))
+# Heap + timeout cho VerifyOneWindow (1 window, jobstore-free).
+CE_VERIFY_XMX = os.environ.get("CE_VERIFY_XMX", "8g")
+CE_VERIFY_TIMEOUT = int(os.environ.get("CE_VERIFY_TIMEOUT", "1800"))
+CE_VERIFY_JAR = os.environ.get("CE_VERIFY_JAR", WFO_JAR_DEFAULT)
+# Timeout chay converter python (doc CSV lon ~78MB/3M row).
+CE_PRED_CONVERT_TIMEOUT = int(os.environ.get("CE_PRED_CONVERT_TIMEOUT", "1800"))
+# Optional: ep TICKER_DIR cho verify (default: de trong -> code dung mac dinh
+# kaggle_data_hpo relative CWD, dung recipe run_short_wfo_verify.sh da verify).
+CE_TICKER_DIR = os.environ.get("CE_TICKER_DIR", "")
+# Anh xa mode -> (ten script converter, co nhan tham so quantile khong).
+PRED_CONVERT_SCRIPTS = {
+    "long": ("ev2_csv_to_predictwf.py", False),
+    "oiz": ("ev2_csv_to_predictwf_oiz.py", True),
+    "short": ("short_csv_to_predictwf.py", False),
+}
+
 os.makedirs(RUN_DIR, exist_ok=True)
 os.makedirs(LOCKS_DIR, exist_ok=True)
 
@@ -1526,6 +1566,192 @@ def cmd_wfo_stop(args):
           "summary": f"Da pkill {total} tien trinh WFO ({killed})."})
 
 
+# ---- Nhom WFO-FROM-PREDS (R1: chuoi CSV preds -> predict_wf -> dataset -> verify) ----
+def _read_manifest_funding(out_ds):
+    """Doc fundingCount tu <out_ds>/manifest.txt. Tra (int|None, manifest_path)."""
+    manifest = os.path.join(out_ds, "manifest.txt")
+    if not os.path.exists(manifest):
+        return None, manifest
+    try:
+        with open(manifest, "r", errors="ignore") as f:
+            for line in f:
+                m = re.match(r"\s*fundingCount\s*=\s*(\d+)", line)
+                if m:
+                    return int(m.group(1)), manifest
+    except Exception:
+        logger.exception("Khong doc duoc manifest %s", manifest)
+    return None, manifest
+
+
+def cmd_pred_convert(args):
+    """NUT PRED_CONVERT. CSV preds -> predict_wf_<win>.bin (chay converter python venv XGB).
+
+    Cu phap: pred_convert <csv_path> <out_dir> <mode> [param]
+      mode=long  : ev2_csv_to_predictwf.py — cam p6 vao ca 4 horizon slot.
+      mode=oiz   : ev2_csv_to_predictwf_oiz.py — loc entry oi_z<=quantile[param]
+                   (param=OIZ_Q, default 0.75; P6_MIN co dinh 0.7).
+      mode=short : short_csv_to_predictwf.py — doc cot ps, score=1-ps (dao trong Java).
+    Chay `{CE_XGB_PY} <script> <csv> <CE_SYMBOL_MAP> <out_dir> [params]` tren Oracle,
+    parse dong "XONG: N rec, W window, S symId". Tra {rows, symIds, windows, out_dir}.
+    Converter .py phai co san o CE_PRED_TOOLS_DIR (deploy kem mcp_tools).
+    """
+    if len(args) < 3:
+        return emit({"status": "error",
+                     "summary": "Cu phap: pred_convert <csv_path> <out_dir> <mode> [param]"})
+    csv_path, out_dir, mode = args[0], args[1], args[2]
+    param = args[3] if len(args) > 3 and args[3] else None
+    mode = mode.lower()
+    if mode not in PRED_CONVERT_SCRIPTS:
+        return emit({"status": "error", "mode": mode,
+                     "summary": "mode phai la long | oiz | short."})
+    script_name, takes_q = PRED_CONVERT_SCRIPTS[mode]
+    script = os.path.join(CE_PRED_TOOLS_DIR, script_name)
+    if not os.path.exists(script):
+        return emit({"status": "error", "mode": mode, "script": script,
+                     "summary": f"Khong tim thay converter {script}. "
+                                f"Deploy cac .py trong orchestrator/tools/ len "
+                                f"CE_PRED_TOOLS_DIR ({CE_PRED_TOOLS_DIR})."})
+    if not os.path.exists(csv_path):
+        return emit({"status": "error", "csv_path": csv_path,
+                     "summary": f"Khong tim thay CSV preds: {csv_path}"})
+    if not os.path.exists(CE_SYMBOL_MAP):
+        return emit({"status": "error", "symbol_map": CE_SYMBOL_MAP,
+                     "summary": f"Khong tim thay symbol_map: {CE_SYMBOL_MAP}"})
+    tail = ""
+    if takes_q and param:
+        # oiz converter nhan [P6_MIN] [OIZ_Q]; giu P6_MIN=0.7 chuan, ep OIZ_Q=param.
+        tail = " 0.7 %s" % param
+    cmd = "%s %s %s %s %s%s" % (CE_XGB_PY, script, csv_path, CE_SYMBOL_MAP,
+                                out_dir, tail)
+    logger.info("pred_convert mode=%s cmd=%s", mode, cmd)
+    rc, out, err = _sh(cmd, timeout=CE_PRED_CONVERT_TIMEOUT)
+    out, err = (out or "").strip(), (err or "").strip()
+    m = re.search(r"XONG:\s*(\d+)\s*rec,\s*(\d+)\s*window,\s*(\d+)\s*symId", out)
+    rows = int(m.group(1)) if m else None
+    windows = int(m.group(2)) if m else None
+    sym_ids = int(m.group(3)) if m else None
+    ok = rc == 0 and m is not None
+    (logger.info if ok else logger.error)("pred_convert rc=%s rows=%s", rc, rows)
+    emit({"status": "success" if ok else "error", "mode": mode,
+          "csv_path": csv_path, "out_dir": out_dir, "param": param,
+          "rows": rows, "windows": windows, "symIds": sym_ids, "rc": rc,
+          "summary": (f"pred_convert[{mode}]: {rows} rec, {windows} window, "
+                      f"{sym_ids} symId -> {out_dir}") if ok
+          else f"pred_convert[{mode}] that bai (rc={rc}). Xem stdout/stderr.",
+          "stdout_tail": out.splitlines()[-15:],
+          "stderr_tail": err.splitlines()[-15:]})
+
+
+def cmd_wfo_build_ds(args):
+    """NUT WFO_BUILD_DS. Chay ExportWfoDataset -> dataset offline tu funding pred dir.
+
+    Cu phap: wfo_build_ds <predict_wf_dir> <out_ds> [jar]
+      predict_wf_dir : thu muc predict_wf_<win>.bin -> WFO_FUNDING_PRED_DIR.
+      out_ds         : thu muc dataset dich (arg cua ExportWfoDataset).
+      jar            : jar simulator (default preflight-v42.jar).
+    Env: WFO_SET_PRED=ai_pred_market_gate_wfo WFO_FUNDING_PRED_DIR=<dir>
+         WFO_SEL_HORIZON_IDX=0, cwd=CE_SIM_CWD, -Xmx12g. Scan Aerospike 226 nen
+         CHAY DETACHED (bg infra: RobustJobController) -> tra job handle tuc thi.
+    Neu <out_ds>/manifest.txt DA co (job truoc xong) va khong con job song ->
+    tra thang {fundingCount} tu manifest (status=done, idempotent).
+    """
+    if len(args) < 2:
+        return emit({"status": "error",
+                     "summary": "Cu phap: wfo_build_ds <predict_wf_dir> <out_ds> [jar]"})
+    pred_dir, out_ds = args[0], args[1]
+    jar = args[2] if len(args) > 2 and args[2] else WFO_JAR_DEFAULT
+    job_id = "buildds_" + re.sub(r"[^A-Za-z0-9_.-]+", "_", os.path.basename(
+        out_ds.rstrip("/")) or "ds")
+
+    # Idempotent: dataset da build xong (manifest co) va khong con job song -> tra luon.
+    live = _live_job_state(job_id)
+    if not live:
+        funding, manifest = _read_manifest_funding(out_ds)
+        if funding is not None:
+            return emit({"status": "done", "job_id": job_id, "out_ds": out_ds,
+                         "manifest": manifest, "fundingCount": funding,
+                         "summary": f"Dataset da san: {out_ds} (fundingCount={funding})."})
+    if live:
+        return emit({"status": "error", "job_id": job_id,
+                     "state": "ALIVE_DO_NOT_RESTART", "live_state": live,
+                     "summary": "Job build_ds dang chay. Dung bg_status theo doi."})
+
+    cmd = (f"cd {CE_SIM_CWD} && WFO_SET_PRED={WFO_SET_PRED} "
+           f"WFO_FUNDING_PRED_DIR={pred_dir} WFO_SEL_HORIZON_IDX=0 "
+           f"{JAVA_BIN} -Xmx{CE_BUILDDS_XMX} -cp {jar} {WFO_EXPORT_CLASS} {out_ds}")
+    logger.info("wfo_build_ds job=%s cmd=%s", job_id, cmd)
+    try:
+        pid = _spawn_detached_supervisor(job_id, cmd, CE_BUILDDS_RAM_GB)
+        _, _, manifest = (None, None, os.path.join(out_ds, "manifest.txt"))
+        emit({"status": "started", "job_id": job_id, "controller_pid": pid,
+              "out_ds": out_ds, "pred_dir": pred_dir, "jar": jar,
+              "manifest": manifest,
+              "summary": (f"Da khoi chay ExportWfoDataset '{job_id}' o nen. Theo doi "
+                          f"bg_status {job_id}; xong -> goi lai wfo_build_ds de lay fundingCount."),
+              "state_file": _paths(job_id)[0], "result_file": _paths(job_id)[1]})
+    except Exception as e:
+        logger.exception("wfo_build_ds spawn that bai.")
+        emit({"status": "error", "job_id": job_id,
+              "summary": f"Khong khoi chay duoc ExportWfoDataset: {e}"})
+
+
+def cmd_wfo_verify(args):
+    """NUT WFO_VERIFY. Chay VerifyOneWindow 1 cua so (jobstore-free) -> RESULT_JSON.
+
+    Cu phap: wfo_verify <ds> <winIdx> [extra_env]
+      ds       : WfoDataset offline -> WFO_DATA_DIR.
+      winIdx   : chi so window (arg cua VerifyOneWindow).
+      extra_env: env bo sung (K=V,... hoac JSON). 2 key DAC BIET duoc boc ra
+                 khoi env va ap vao lenh java: WFO_JAR=<jar> (default preflight-v42.jar),
+                 WFO_XMX=<heap> (default 8g). Vi du short-verify:
+                 'WFO_JAR=/home/ubuntu/java/simulator/preflight-v42-short.jar,ENABLE_SHORT=1,WFO_DISABLE_DCA=1'.
+    Env co dinh: TICKER_SOURCE=file (+ TICKER_DIR neu CE_TICKER_DIR set), cwd=CE_SIM_CWD.
+    KHONG dung coordinator/jobstore (khong reset). Chay DONG BO, parse dong
+    'RESULT_JSON {...}' -> {oosPnl, wfe, oosTrades, oosNote}.
+    """
+    if len(args) < 2:
+        return emit({"status": "error",
+                     "summary": "Cu phap: wfo_verify <ds> <winIdx> [extra_env]"})
+    ds, win_idx = args[0], args[1]
+    extra = _parse_extra_env(args[2]) if len(args) > 2 else {}
+    # Boc 2 key dac biet ra khoi env (ap vao lenh java, khong phai env).
+    jar = extra.pop("WFO_JAR", None) or CE_VERIFY_JAR
+    xmx = extra.pop("WFO_XMX", None) or CE_VERIFY_XMX
+    env_parts = ["WFO_DATA_DIR=%s" % ds, "TICKER_SOURCE=file"]
+    if CE_TICKER_DIR:
+        env_parts.append("TICKER_DIR=%s" % CE_TICKER_DIR)
+    for k, v in extra.items():
+        env_parts.append("%s=%s" % (k, v))
+    env_str = " ".join(env_parts)
+    cmd = (f"cd {CE_SIM_CWD} && {env_str} {JAVA_BIN} -Xmx{xmx} -cp {jar} "
+           f"{WFO_VERIFY_CLASS} {win_idx}")
+    logger.info("wfo_verify ds=%s win=%s cmd=%s", ds, win_idx, cmd)
+    rc, out, err = _sh(cmd, timeout=CE_VERIFY_TIMEOUT)
+    out, err = (out or "").strip(), (err or "").strip()
+    # RESULT_JSON co the o stdout hoac stderr (log slf4j -> stderr).
+    blob = out + "\n" + err
+    m = re.search(r"RESULT_JSON\s+(\{.*\})", blob)
+    result_json, parsed = None, {}
+    if m:
+        result_json = m.group(1)
+        try:
+            parsed = json.loads(result_json)
+        except Exception:
+            logger.exception("wfo_verify: khong parse duoc RESULT_JSON")
+    ok = rc == 0 and bool(m)
+    metrics = {k: parsed.get(k) for k in ("oosPnl", "wfe", "oosTrades", "oosNote")}
+    (logger.info if ok else logger.error)("wfo_verify rc=%s win=%s ok=%s", rc, win_idx, ok)
+    emit({"status": "success" if ok else "error",
+          "ds": ds, "winIdx": win_idx, "jar": jar, "extra_env": extra, "rc": rc,
+          "result_json": result_json, "metrics": metrics,
+          "summary": (f"wfo_verify w{win_idx}: oosPnl={metrics['oosPnl']} "
+                      f"wfe={metrics['wfe']} oosTrades={metrics['oosTrades']} "
+                      f"oosNote={metrics['oosNote']}") if ok
+          else f"wfo_verify w{win_idx} that bai (rc={rc}, RESULT_JSON={'co' if m else 'khong'}).",
+          "stdout_tail": out.splitlines()[-15:],
+          "stderr_tail": err.splitlines()[-15:]})
+
+
 # ---- Nhom SYS -------------------------------------------------------------
 def _short_main(cmdline):
     """Rut gon main class / jar tu dong lenh java (best-effort)."""
@@ -1728,6 +1954,10 @@ TOOL_ARG_ORDER = {
     "wfo_status": [],
     "wfo_report": [("tag", "opt")],
     "wfo_stop": [],
+    "pred_convert": [("csv_path", None), ("out_dir", None), ("mode", None),
+                     ("param", "")],
+    "wfo_build_ds": [("predict_wf_dir", None), ("out_ds", None), ("jar", "")],
+    "wfo_verify": [("ds", None), ("winIdx", None), ("extra_env", "")],
     "bg_run": [("job_id", None), ("cmd", None), ("ram", "3.0")],
     "bg_status": [("job_id", None), ("tail", "50")],
     "bg_report": [("job_id", None)],
@@ -2440,6 +2670,10 @@ COMMANDS = {
     "wfo_status": cmd_wfo_status,
     "wfo_report": cmd_wfo_report,
     "wfo_stop": cmd_wfo_stop,
+    # WFO-from-preds (R1: CSV preds -> predict_wf -> dataset -> verify 1 window):
+    "pred_convert": cmd_pred_convert,
+    "wfo_build_ds": cmd_wfo_build_ds,
+    "wfo_verify": cmd_wfo_verify,
     # He thong / suc khoe VPS:
     "sys_health": cmd_sys_health,
     "sys_zombies": cmd_sys_zombies,
@@ -2487,6 +2721,17 @@ WFO (WALK-FORWARD OPTIMIZATION):
   wfo_status                                Parse total/PENDING/RUNNING/DONE/FAILED + cua so FAILED.
   wfo_report [tag]                          Chay report, cp md ve RUN_DIR, parse VERDICT/%OOS/WFE/maxDD.
   wfo_stop                                  pkill WfoWorker + VerifyOneWindow, bao so proc bi kill.
+
+WFO-FROM-PREDS (chuoi R1: CSV preds -> predict_wf -> dataset -> verify 1 window):
+  pred_convert <csv> <out_dir> <mode> [param]
+                                            CSV preds -> predict_wf_<win>.bin (venv XGB).
+                                            mode=long|oiz|short (oiz: param=OIZ_Q quantile).
+  wfo_build_ds <predict_wf_dir> <out_ds> [jar]
+                                            ExportWfoDataset DETACHED -> dataset offline.
+                                            Goi lai khi xong -> fundingCount tu manifest.
+  wfo_verify <ds> <winIdx> [extra_env]      VerifyOneWindow 1 window (jobstore-free) ->
+                                            RESULT_JSON {oosPnl,wfe,oosTrades,oosNote}.
+                                            extra_env ho tro WFO_JAR=/WFO_XMX= (short-verify).
 
 HE THONG (VPS):
   sys_health                                disk(df /) + RAM + load + danh sach java proc.
