@@ -12,15 +12,21 @@
 #             retEnd_H, nBars_H ; luu y tHit* la PHUT, retEnd co the rong=gap):
 #   drop = -maxAdv_H*100  (do SAU giam, DUONG — short LOI khi gia giam)
 #   rise =  maxFav_H*100  (do TANG, BAT LOI cho short — cham day la hard-SL)
-#   N_PCT=6: short THANG khi gia giam N%. Hard-SL short = X_SL% (tang X% -> cat lo). Sweep X_SL {5,8,10}.
-#   HIT_short (path-aware) = cham -N% TRUOC khi cham +X_SL%:
+#   N_PCT=6 CHI con dung lam NGUONG LABEL train classifier HIT_short (xem duoi) — KHONG con la
+#     target chot loi trong ke toan (da bo, xem ly do duoi).
+#   HIT_short (path-aware, GIU NGUYEN — target train classifier, KHONG doi):
 #       (maxAdv_H <= -N/100) AND (tHitAdv_H < tHitFav_H OR tHitFav_H <= 0)   [nBars du]
-#     -> KHONG phu thuoc X_SL => classifier target HIT_short train MOT LAN, ke toan quet X_SL sau.
-#   Ke toan SL-cung SHORT moi keo (path-aware):
-#     * neu cham +X_SL truoc (rise>=X_SL va tHitFav<tHitAdv) -> -X_SL   (stopped, hard-SL cung)
-#     * elif HIT_short                                       -> +N      (chot loi khi giam N%)
-#     * else                                                -> -retEnd_H*100 (short pnl = AM cua bien dong)
-#     * tru phi 0.2% + FUNDING: net = pnl_gross - 0.2 - FUNDING_BPS
+#     -> KHONG phu thuoc SL => classifier target HIT_short train MOT LAN, ke toan quet SL sau.
+#   *** KE TOAN SHORT MOI (2026-07-18) — SUA vi ke toan cu SL CHAT {5,8,10} + chot co dinh +6%
+#       la risk-reward NGUOC (SL 30 ma chot 6 thi can win-rate 83% moi hoa von). Thay bang
+#       hard-SL RONG + LET-RUN toi het horizon (KHONG target co dinh): ***
+#     Voi moi horizon H va moi muc hard-SL S (sweep X_SL_GRID = {8,15,20,30}):
+#     * neu rise_H (=maxFav_H*100) >= S  -> stopped: pnl = -S   (check TRUOC TIEN, hard-SL cung
+#                                             chan squeeze; khong con phu thuoc thu tu tHitFav/tHitAdv
+#                                             vi KHONG con nhanh chot-loi-som canh tranh voi SL)
+#     * else                            -> pnl = -retEnd_H*100 (let-dump-run: gia giam toi het
+#                                             cua so H -> duong cho short; KHONG chot loi som)
+#     * net = pnl - 0.2% (phi) - FUNDING_BPS
 #   ⚠️ FUNDING la XAP XI: funding_rate KHONG co trong label -> dung env FUNDING_BPS_PER_TRADE
 #      (default 0.3 = 0.3%/keo, xap xi short TRA funding qua vai ky 8h). Funding THAT do o Java WFO
 #      sau (APPLY_FUNDING_FEE=true — BAT BUOC cho short).
@@ -31,9 +37,10 @@ import numpy as np
 import pandas as pd
 
 # ===== HANG SO (pre-register — KHONG doi sau khi nhin so) =====
-N_PCT = int(os.environ.get("N_PCT", "6"))          # target % giam de short thang (n6)
-X_SL_GRID = [int(x) for x in os.environ.get("X_SL_GRID", "5,8,10").split(",")]  # hard-SL sweep
-X_SL_DEFAULT = int(os.environ.get("X_SL", "8"))    # X_SL dai dien cho dong compact
+N_PCT = int(os.environ.get("N_PCT", "6"))          # nguong label HIT_short (train classifier), KHONG con la target chot loi
+X_SL_GRID = [int(x) for x in os.environ.get("X_SL_GRID", "8,15,20,30").split(",")]  # hard-SL RONG sweep (let-run, khong target co dinh)
+X_SL_DEFAULT = int(os.environ.get("X_SL", "15"))   # SL dai dien cho log per-fold (khong dung cho dong RESULT — dong RESULT quet het grid)
+P_REPR = [0.5, 0.6, 0.7]                            # P* dai dien cho dong SHORT_SELECTOR_RESULT compact
 FUNDING_BPS = float(os.environ.get("FUNDING_BPS_PER_TRADE", "0.3"))  # xap xi short tra funding
 FEE_PCT = 0.2                                       # phi 2 chan 0.1%*2
 NEED_BARS = {"4h": 16, "12h": 48, "24h": 96}        # nBars_H du (luoi 15m)
@@ -164,15 +171,16 @@ def build_folds():
     return folds
 
 
-def pnl_gross_short(te, x_sl):
-    """Ke toan SL-cung SHORT vector: stopped -> -X_SL ; HIT_short -> +N ; else -> -retpct."""
+def pnl_gross_short(te, s_sl):
+    """Ke toan SHORT moi (let-dump-run, KHONG target co dinh), vector hoa:
+    * rise_H (=maxFav_H*100) >= S -> stopped: pnl = -S (hard-SL cung, check TRUOC)
+    * else                        -> pnl = -retEnd_H*100 (de dump chay toi het horizon)
+    Khong con phu thuoc tHitFav/tHitAdv/hit_short — khong con nhanh chot-loi-som canh tranh SL.
+    """
     rise = te["rise"].values
-    tfav = te["tfav"].values
-    tadv = te["tadv"].values
-    hit = te["hit_short"].values.astype(bool)
     retpct = te["retpct"].values
-    stopped = (rise >= float(x_sl)) & (tfav < tadv)            # cham hard-SL TRUOC
-    pnl = np.select([stopped, hit], [-float(x_sl), float(N_PCT)], default=-retpct)
+    stopped = rise >= float(s_sl)
+    pnl = np.where(stopped, -float(s_sl), -retpct)
     return pnl.astype(np.float64)
 
 
@@ -280,14 +288,18 @@ def eval_horizon(xgb, feats, horizon, folds):
     return per_fold
 
 
-def compact_points(horizon, agg):
-    """5 diem dai dien (P* cao) tai X_SL_DEFAULT cho dong SHORT_SELECTOR_RESULT (<2KB)."""
+def compact_points(horizon, agg, x_sl_list=None, p_list=None):
+    """Diem dai dien (H, S, P*) cho dong SHORT_SELECTOR_RESULT. Mac dinh quet CA X_SL_GRID x
+    P_REPR {0.5,0.6,0.7} — day du hon compact cu (chi 1 X_SL). auc/base ghi 1 lan/horizon
+    (khong lap lai theo S/P* vi khong doi theo 2 truc do) de tiet kiem cho gioi han <2KB."""
+    x_sl_list = x_sl_list if x_sl_list is not None else X_SL_GRID
+    p_list = p_list if p_list is not None else P_REPR
     pts = []
-    for ps in [0.5, 0.6, 0.7, 0.8, 0.9]:
-        a = agg["xsl"][str(X_SL_DEFAULT)][str(ps)]
-        pts.append({"h": horizon, "xsl": X_SL_DEFAULT, "p": ps, "tpq": a["tpq"],
-                    "net": a["net"], "nb": a["net_bull"], "nc": a["net_chop"],
-                    "hr": a["hit_rate"], "auc": agg["auc_med"]})
+    for x_sl in x_sl_list:
+        for ps in p_list:
+            a = agg["xsl"][str(x_sl)][str(ps)]
+            pts.append({"h": horizon, "s": x_sl, "p": ps, "tpq": a["tpq"], "net": a["net"],
+                        "nb": a["net_bull"], "nc": a["net_chop"], "hr": a["hit_rate"]})
     return pts
 
 
@@ -297,7 +309,11 @@ def run():
     if all(c in cols for c in ["maxFav_12h", "maxAdv_12h", "tHitFav_12h", "tHitAdv_12h", "retEnd_12h", "nBars_12h"]):
         horizons.append("12h")
     else:
-        log.info("NO_12H — thieu cot 12h, chi chay 4h.")
+        log.info("NO_12H — thieu cot 12h.")
+    if all(c in cols for c in ["maxFav_24h", "maxAdv_24h", "tHitFav_24h", "tHitAdv_24h", "retEnd_24h", "nBars_24h"]):
+        horizons.append("24h")
+    else:
+        log.info("NO_24H — thieu cot 24h.")
 
     feats = build_features()
     import xgboost as xgb
@@ -311,9 +327,12 @@ def run():
     full = {"label": "short-selector", "n_pct": N_PCT, "x_sl_grid": X_SL_GRID,
             "funding_bps": FUNDING_BPS, "fee_pct": FEE_PCT, "first_oos": FIRST_OOS, "last": LAST,
             "oos_months": OOS_MONTHS, "seed": SEED, "regime_cut": str(REGIME_CUT.date()),
-            "note": "funding la XAP XI (FUNDING_BPS/keo); funding THAT do o Java WFO APPLY_FUNDING_FEE=true",
+            "note": "ke toan let-dump-run (khong target co dinh): rise_H>=S -> -S (stopped),"
+                    " else -> -retEnd_H*100. funding la XAP XI (FUNDING_BPS/keo);"
+                    " funding THAT do o Java WFO APPLY_FUNDING_FEE=true",
             "horizons": {}}
-    compact = []
+    aucs = {}
+    compact_by_h = {}
     for h in horizons:
         pf = eval_horizon(xgb, feats, h, folds)
         if not pf:
@@ -322,18 +341,44 @@ def run():
         agg = aggregate(pf)
         print_table(h, agg)
         full["horizons"][h] = {"aggregate": agg, "per_fold": pf}
-        compact.extend(compact_points(h, agg))
+        aucs[h] = agg["auc_med"]
+        compact_by_h[h] = compact_points(h, agg)          # H x X_SL_GRID x P_REPR — day du
 
     if not full["horizons"]:
         raise SystemExit("Khong horizon nao co fold hop le — kiem alignment ts/symbol.")
 
     json.dump(full, open(os.path.join(OUT_DIR, "short_selector_results.json"), "w"), indent=2)
-    line = json.dumps({"n_pct": N_PCT, "x_sl_default": X_SL_DEFAULT, "funding_bps": FUNDING_BPS,
-                       "pts": compact})
-    if len(line) > 2000:                          # dam bao <2KB
-        line = json.dumps({"n_pct": N_PCT, "x_sl_default": X_SL_DEFAULT, "pts": compact[:5]})
+
+    # Dong SHORT_SELECTOR_RESULT phai <2KB — chon diem dai dien, KHONG in het grid (full grid
+    # da nam day du trong short_selector_results.json). Giam dan chi tiet (tier) toi khi vua khit.
+    hz = list(compact_by_h.keys())
+
+    def _line(pts, p_set):
+        pts_f = [p for p in pts if p["p"] in p_set]
+        return json.dumps({"n_pct": N_PCT, "sl_grid": X_SL_GRID, "funding_bps": FUNDING_BPS,
+                           "auc": aucs, "pts": pts_f}, separators=(",", ":"))
+
+    all_pts = [p for h in hz for p in compact_by_h[h]]
+    tiers = [
+        set(P_REPR),                      # tier0: full H x S x {0.5,0.6,0.7}
+        {0.6},                            # tier1: chi P*=0.6, van du 4 S x N horizon
+    ]
+    line = None
+    for p_set in tiers:
+        cand = _line(all_pts, p_set)
+        if len(cand) <= 2000:
+            line = cand
+            break
+    if line is None:
+        # tier2: S hep nhat (SL rong nhat vs chat nhat) tai P*=0.6 — vua canh tranh vua gon
+        narrow_pts = [p for p in all_pts if p["p"] == 0.6 and p["s"] in (min(X_SL_GRID), max(X_SL_GRID))]
+        line = _line(narrow_pts, {0.6})
+        if len(line) > 2000:
+            # tier3: cuoi cung — cat bot theo so luong, dam bao TUYET DOI <2KB
+            line = json.dumps({"n_pct": N_PCT, "sl_grid": X_SL_GRID, "auc": aucs,
+                               "pts": narrow_pts[:len(hz)]}, separators=(",", ":"))
     print("SHORT_SELECTOR_RESULT " + line)
-    log.info("XONG -> %s/short_selector_results.json", OUT_DIR)
+    log.info("XONG -> %s/short_selector_results.json (RESULT line len=%d)", OUT_DIR, len(line))
 
 
 if __name__ == "__main__":

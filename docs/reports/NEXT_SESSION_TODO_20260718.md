@@ -78,3 +78,29 @@ WFE median 0.20, SUCCESS 4-5/16, BURN 5-6/16, ZERO 4 (2022 = EV2 pred chỉ có 
 
 ## ĐÃ DỌN
 - close-run (ladder_peak) STOP (moot vì +TR high đã fail). Jar deployed hiện = TRAIL_PEAK_MODE (md5 ba2fbda9, default high).
+
+
+## ⭐ BREAKTHROUGH + FAITHFULNESS PASS (2026-07-18 chiều)
+
+### Faithfulness tích hợp EV2→WFO = PASS (gỡ nỗi lo "test sai do code")
+- Entry-match winIdx=8 (2024Q1): **100% (97/97) entry truy vết về pred EV2**, đúng coin/ts, p6 median 0.71. Không entry lạ.
+- 3 lớp nhất quán: placebo PASS + (proxy +0.72 − ma sát 0.8% ≈ WFO breakeven) + entry-match 100%.
+- → **Verdict regime-timing là THẬT, không phải bug.** Log-flag `WFO_LOG_ENTRIES` env-gated commit ebad0c5.
+- Lưu ý: sim gate = score threshold 0.15 (nới hơn p6≥0.7) → nhận vài pick [0.66,0.70). Không bug, có thể siết.
+
+### oiz-veto = ĐÒN BẨY SỐ 1 (chưa cần short/feature mới)
+Lọc entry theo oi_z (giữ 30% tốt nhất): net **0.52→1.95/kèo (4×)**, **CHOP 0→+1.88**, tpq 460→121.
+Sau slippage 0.6%: net +1.35, chop +1.28 — **dương CẢ 2 regime**. f8/f14/f22 tương tự (cùng họ OI/vol).
+→ **Fix regime-timing.** CAVEAT: Q chọn post-hoc → **cần WFO xác nhận real-path** + slippage thật. ĐÂY LÀ ƯU TIÊN 1.
+
+### short = ĐÒN BẨY SỐ 2, alpha CÓ THẬT
+Classifier dự dump **AUC 0.85 (4h)** > long 0.74. Accounting v1 (SL chặt 8 + target +6 cố định) tệ =
+RR ngược. **Đã sửa v2** (kernel short-selector v2 đang chạy): SL rộng {8,15,20,30} + let-dump-run (−retEnd_H,
+stop nếu rise≥S), horizon 4h/12h/24h. Chờ kết quả v2 để xem short net_chop dương ở SL/horizon nào.
+
+### ĐANG CHẠY / NEXT
+- short-selector v2 (Kaggle) — chờ.
+- **ƯU TIÊN 1: đưa oi_z veto vào WFO real-path** (entry gate = p6 AND oi_z≤Q) → xác nhận +1.9 net + chop dương
+  có sống capital-constrained không. Đây là con đường ngắn nhất tới hệ có lời.
+- slippage: HOÃN (làm sensitivity 0.1/0.3/0.6 khi ráp; đo thật để sát go-live).
+- short: nếu v2 net_chop dương → theo short_strategy_roadmap.md (hard-SL + funding ON + sim riêng).
