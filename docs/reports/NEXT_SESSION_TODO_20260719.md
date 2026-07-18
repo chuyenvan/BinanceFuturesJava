@@ -44,3 +44,36 @@ thật CHƯA đo (hoãn; bot 242 không lưu giá khớp → cần userTrades AP
 4. Long frequency: thử 12h horizon + 2022 coverage.
 5. **Validate 2 tầng khi bật short thật:** real-data 1 tháng → Excel → recompute code khác đối chiếu (Uni dặn).
 6. Slippage thật (sát go-live). Funding: bật lại + dấu SHORT-nhận-khi-funding+ (Uni: tính tổng rồi trừ, nhỏ, tạm bỏ).
+
+---
+
+## ĐÊM 18→19 TIẾN ĐỘ (orchestrator tự chạy, ~23:00 tối 18)
+
+### Trạng thái lúc vào ca (poll thật qua CE)
+- Oracle `oiz_gateon` WFO: **12/16 DONE**, 2 RUNNING (w12/w13, lease ~27-30′), 2 PENDING (w14/w15). CHƯA xong → jobstore + 12G RAM còn bận.
+- Kaggle (poll `kaggle_status`, KHÔNG tin `kaggle_slots` — nó chỉ đếm slot session này):
+  - `short-grid-72h` **COMPLETE** ✓ · `short-grid-24h`/`12h`/`4h` **RUNNING** (chưa đủ 4 để chọn winner).
+  - `ev2-export-2022` (GPU) **COMPLETE** ✓ → đã `kaggle_output` về `/home/ubuntu/claudedata/kout/ev2-export-2022/ev2_preds_n6_2022.csv.gz` (18 win, 3.485M row, cột p6/p9/oi_z/oi_delta24h, first_oos=202201, n_p6≥0.7=6888).
+  - `ev2-export-12h` (GPU) **RUNNING** (cho bước LONG-12h sau).
+- Pipeline cũ treo (KHÔNG phải việc đêm, để nguyên): `ladder_1784297380` = WAITING_LLM (8/9). `ladder_peak` STOPPED 2/9.
+
+### Bước 1+2 — ĐÃ DISPATCH tự động (pipeline chuỗi, an toàn drain-gate)
+- Tạo + sync pipeline mới **`orchestrator/pipelines/wfo_long_full.json`** → `pipe_run` →
+  **pipe_id = `wfo_long_full_1784390404`** (runner_pid 3147030, RUNNING, đang ở step0 `wait_oiz_drain`).
+- Chuỗi 8 step tự chạy: `wait_oiz_drain` (chờ oiz_gateon RUNNING=0&PENDING=0&DONE≥16 → KHÔNG đụng 12G RAM khi WFO còn chạy) → `report_oiz` (CHỤP verdict bước 1 TRƯỚC khi fanout reset jobstore) → `pred_convert oiz 0.75` → `wfo_build_ds wfo_ds_oiz2022_75` → `wait_build` → `wfo_fanout` (Oracle-only 2 worker, KAGGLE_KERNELS=0 vì extra_env ABLATION_MODE không tới Kaggle) → `wait_fanout` → `wfo_report long_full`.
+- Config LONG full: preds ev2-2022 (gỡ 2022 coverage + oi_z), veto oi_z Q0.75, gate-ON, `extra_env=ABLATION_MODE=A,WFO_DISABLE_DCA=1,TIME_STOP_HOURS=24`, N=30 seed=42, tag=**long_full**. Đây là ứng viên PASS long #1.
+- **SÁNG UNI ĐỌC:** `ce pipe_status wfo_long_full_1784390404`. Report bước1 (oiz_gateon) + bước2 (long_full) nằm trong step summary + `ce wfo_report oiz_gateon` / `ce wfo_report long_full`. So pass-criteria: %OOS-dương≥70% · WFE median≥0.5 · maxDD≤50%. Nếu long_full vẫn FAIL do TOO_FEW/ZERO → xác nhận **frequency là wall**.
+- Nếu pipeline abort giữa chừng: `ce pipe_status <id>` xem step fail → `ce pipe_resume <id>` (checkpoint từng step, không làm lại).
+
+### Bước 3 — LONG 12h (CHỜ ev2-export-12h xong)
+- Khi `ce kaggle_status chuyendinh/ev2-export-12h` = COMPLETE → `ce kaggle_output chuyendinh/ev2-export-12h /home/ubuntu/claudedata/kout/ev2-export-12h` → copy `wfo_long_full.json` sửa csv=…/ev2_preds_n6_12h.csv.gz, out_ds=wfo_ds_oiz12h_75, build_job=buildds_wfo_ds_oiz12h_75, tag=long_12h, extra_env=…,TIME_STOP_HOURS=12 → `pipe_run`. (CHỈ 1 WFO/lúc — chờ long_full DONE trước.)
+
+### Bước 4 — SHORT winner (CHỜ đủ 4 grid; cần LLM chọn — KHÔNG tự động được)
+- Refs: `chuyendinh/short-grid-{4h,12h,24h,72h}`. Poll `ce kaggle_status <ref>` tới COMPLETE cả 4.
+- Fetch: `ce kaggle_output chuyendinh/short-grid-<H> /home/ubuntu/claudedata/kout/short-grid-<H>` cho từng H → đọc file `SHORTGRID_<H>_RESULT` (acct=**let-run**, grid v2 đã bỏ chốt +t cap winner — commit 8b63fcd).
+- CHỌN winner: **max net_chop (let-run) với tpq≥30 và winrate hợp lý** → ghi (target t, horizon H, stop s). (Kaggle giữ output bền, không mất — defer an toàn.)
+- Rồi bước 5 (SHORT-only WFO): converter short dùng RANK/top-K (ps thấp, base-rate 1.3%) → predict_wf_short → wfo_ds_short_win → `wfo_fanout` jar **preflight-v42-short.jar** env `ENABLE_SHORT=1,WFO_DISABLE_DCA=1,SHORT_SL_PCT=<s/100>,SHORT_TIME_STOP_HOURS=<H>`.
+
+### CHƯA làm (hết ưu tiên/tài nguyên tuần tự — 1 WFO/lúc)
+- Bước 6 (short-gate classifier) · Bước 7 (multi-sleeve dual-channel Java — CODE MỚI PnL-critical, chỉ DRAFT+flag, KHÔNG trust khi chưa cross-check 2 tầng).
+- Blocker cứng: **Oracle 1 WFO/lúc + wfo_build_ds 12G RAM** ⇒ long_full → long_12h → short_win chạy TUẦN TỰ, mỗi cái ~2.5h. Đêm chỉ đủ 1-2 WFO. Short winner + long_12h phụ thuộc Kaggle export xong.

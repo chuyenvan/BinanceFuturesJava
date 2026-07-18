@@ -1,0 +1,95 @@
+{
+  "name": "wfo_long_full",
+  "profile": "wfo-fanout",
+  "_doc": "DEM 18->19: buoc 1+2. Cho oiz_gateon WFO drain (KHONG dung wfo_build_ds 12G khi con WFO chay), chup report oiz_gateon, roi build+fanout LONG full-coverage (ev2-2022 preds, oiz Q0.75, gate-ON, DCA-off, time-stop 24h). Oracle-only 2 worker (KAGGLE_KERNELS=0 vi extra_env ABLATION_MODE khong toi Kaggle kernel).",
+  "params": {
+    "csv": "/home/ubuntu/claudedata/kout/ev2-export-2022/ev2_preds_n6_2022.csv.gz",
+    "mode": "oiz",
+    "param": "0.75",
+    "pred_dir": "/home/ubuntu/claudedata/predict_wf_oiz2022_75",
+    "out_ds": "/home/ubuntu/claudedata/wfo_ds_oiz2022_75",
+    "build_job": "buildds_wfo_ds_oiz2022_75",
+    "tag": "long_full",
+    "extra_env": "ABLATION_MODE=A,WFO_DISABLE_DCA=1,TIME_STOP_HOURS=24",
+    "N": "30",
+    "SEED": "42",
+    "ORACLE_WORKERS": "2",
+    "KAGGLE_KERNELS": "0"
+  },
+  "steps": [
+    {
+      "id": "wait_oiz_drain",
+      "type": "wait",
+      "tool": "wfo_status",
+      "until": {"conditions": [
+        {"path": "counts.RUNNING", "equals": 0},
+        {"path": "counts.PENDING", "equals": 0},
+        {"path": "counts.DONE", "gte": 16}
+      ]},
+      "interval_sec": 120,
+      "timeout_sec": 9000,
+      "on_fail": "abort"
+    },
+    {
+      "id": "report_oiz",
+      "type": "tool",
+      "tool": "wfo_report",
+      "args": {"tag": "oiz_gateon"},
+      "on_fail": "continue"
+    },
+    {
+      "id": "convert",
+      "type": "tool",
+      "tool": "pred_convert",
+      "args": {"csv_path": "${csv}", "out_dir": "${pred_dir}", "mode": "${mode}", "param": "${param}"},
+      "on_fail": "abort",
+      "retry": 1
+    },
+    {
+      "id": "build_ds",
+      "type": "tool",
+      "tool": "wfo_build_ds",
+      "args": {"predict_wf_dir": "${pred_dir}", "out_ds": "${out_ds}", "jar": "${JAR}"},
+      "on_fail": "abort"
+    },
+    {
+      "id": "wait_build",
+      "type": "wait",
+      "tool": "bg_report",
+      "args": {"job_id": "${build_job}"},
+      "until": {"conditions": [
+        {"path": "job_status", "equals": "SUCCESS"}
+      ]},
+      "interval_sec": 60,
+      "timeout_sec": 7200,
+      "on_fail": "abort"
+    },
+    {
+      "id": "fanout",
+      "type": "tool",
+      "tool": "wfo_fanout",
+      "args": {"ds": "${out_ds}", "jar": "${JAR}", "n": "${N}", "seed": "${SEED}", "oracle_workers": "${ORACLE_WORKERS}", "kaggle_kernels": "${KAGGLE_KERNELS}", "tag": "${tag}", "extra_env": "${extra_env}"},
+      "on_fail": "abort",
+      "retry": 1
+    },
+    {
+      "id": "wait_fanout",
+      "type": "wait",
+      "tool": "wfo_status",
+      "until": {"conditions": [
+        {"path": "counts.DONE", "gte": 16},
+        {"path": "counts.RUNNING", "equals": 0},
+        {"path": "counts.PENDING", "equals": 0}
+      ]},
+      "interval_sec": 120,
+      "timeout_sec": 21600,
+      "on_fail": "abort"
+    },
+    {
+      "id": "report",
+      "type": "tool",
+      "tool": "wfo_report",
+      "args": {"tag": "${tag}"}
+    }
+  ]
+}
