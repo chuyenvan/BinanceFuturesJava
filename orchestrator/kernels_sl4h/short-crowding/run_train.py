@@ -281,33 +281,54 @@ def aggregate(per_fold):
 
 
 def _pack(target, sk, s, m, agg):
-    return {"t": target, "sel": sk, "s": int(s), "net": m["net"], "tpq": m["tpq"],
-            "win": m["win_rate"], "hit": m["hit_rate"], "nb": m["net_bull"], "nc": m["net_chop"],
-            "auc": agg["auc_med"]}
+    return {"t": target, "sel": sk, "s": int(s), "net": m.get("net"), "tpq": m.get("tpq"),
+            "win": m.get("win_rate"), "hit": m.get("hit_rate"), "nb": m.get("net_bull"),
+            "nc": m.get("net_chop"), "auc": agg["auc_med"]}
+
+
+def _valid_num(x):
+    """True neu x la so thuc hop le (khong None, khong NaN) — dung de guard truoc khi so sanh."""
+    if x is None:
+        return False
+    try:
+        return not np.isnan(x)
+    except TypeError:
+        return True  # so nguyen/khac khong ap dung isnan van coi la hop le
 
 
 def best_overall(target, agg):
-    """Diem tot nhat theo NET TONG (rang buoc tpq>=MIN_TPQ de tranh doi lenh degenerate)."""
-    best = None
+    """Diem tot nhat theo NET TONG (rang buoc tpq>=MIN_TPQ de tranh doi lenh degenerate).
+       Guard: bo qua combo co net None/NaN (vd regime/fold rong khong sinh du lieu)."""
+    best, best_val = None, None
     for sk, byS in agg["sel"].items():
         for s, m in byS.items():
-            if m["net"] is None or m["tpq"] is None or m["tpq"] < MIN_TPQ:
+            net = m.get("net")
+            tpq = m.get("tpq")
+            if not _valid_num(net) or not _valid_num(tpq) or tpq < MIN_TPQ:
                 continue
-            if best is None or m["net"] > best["net"]:
+            if best is None or net > best_val:
                 best = _pack(target, sk, s, m, agg)
+                best_val = net
     return best
 
 
 def best_chop(target, agg):
     """CAU HOI CHINH: diem tot nhat theo NET_CHOP (rang buoc tpq>=CHOP_TPQ_MIN=30 — du thanh khoan
-       de goi la short-hedge THAT, khong phai vai trade may man)."""
-    best = None
+       de goi la short-hedge THAT, khong phai vai trade may man).
+       Guard: bo qua combo co net_chop None/NaN (combo khong co chop-trade / regime chop rong).
+       LUU Y: so sanh dung best_val rieng (KHONG doc best["net_chop"]) vi _pack() luu gia tri nay
+       duoi ten "nc" — day chinh la nguyen nhan KeyError cu (best["net_chop"] khong ton tai sau
+       khi best da duoc _pack())."""
+    best, best_val = None, None
     for sk, byS in agg["sel"].items():
         for s, m in byS.items():
-            if m["net_chop"] is None or m["tpq"] is None or m["tpq"] < CHOP_TPQ_MIN:
+            nc = m.get("net_chop")
+            tpq = m.get("tpq")
+            if not _valid_num(nc) or not _valid_num(tpq) or tpq < CHOP_TPQ_MIN:
                 continue
-            if best is None or m["net_chop"] > best["net_chop"]:
+            if best is None or nc > best_val:
                 best = _pack(target, sk, s, m, agg)
+                best_val = nc
     return best
 
 
@@ -344,7 +365,8 @@ def print_table(horizon, target, agg):
         for s in STOP_GRID:
             m = agg["sel"][sk][str(s)]
             cells.append("s%d:net=%s nc=%s win=%s hit=%s tpq=%s" %
-                         (s, m["net"], m["net_chop"], m["win_rate"], m["hit_rate"], m["tpq"]))
+                         (s, m.get("net"), m.get("net_chop"), m.get("win_rate"), m.get("hit_rate"),
+                          m.get("tpq")))
         print("  %-32s | %s" % (sk, "  ".join(cells)))
 
 
@@ -434,11 +456,16 @@ def run():
     top_overall = max(global_overall, key=lambda b: b["net"]) if global_overall else None
     top_chop = max(global_chop, key=lambda b: b["nc"]) if global_chop else None
 
-    if top_chop:
+    if top_chop and top_chop.get("nc") is not None and top_chop["nc"] > 0:
         log.info("BEST-CHOP COMBO (net_chop DUONG, tpq>=%.0f) -> %s", CHOP_TPQ_MIN, top_chop)
+    elif top_chop:
+        log.warning("Co combo tpq>=%.0f nhung KHONG combo nao net_chop DUONG (best nc=%s) -> "
+                    "no positive-chop combo -> cau hoi chinh: KHONG tim thay short-hedge that o CHOP.",
+                    CHOP_TPQ_MIN, top_chop.get("nc"))
     else:
-        log.warning("KHONG combo nao dat net_chop voi tpq>=%.0f -> cau hoi chinh: KHONG tim thay "
-                    "short-hedge that o CHOP voi crowding-gate nay.", CHOP_TPQ_MIN)
+        log.warning("KHONG combo nao dat tpq>=%.0f voi net_chop hop le (None/NaN het) -> "
+                    "no positive-chop combo -> cau hoi chinh: KHONG tim thay short-hedge that o CHOP "
+                    "voi crowding-gate nay.", CHOP_TPQ_MIN)
 
     line = json.dumps({"qcrowd_grid": QCROWD_GRID, "ls_feats": LS_FEATS, "stop_grid": STOP_GRID,
                        "target_grid": TARGET_GRID, "chop_tpq_min": CHOP_TPQ_MIN,
