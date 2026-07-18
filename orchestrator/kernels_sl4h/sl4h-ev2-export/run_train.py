@@ -134,7 +134,12 @@ def run():
         c6 = mk(); c6.fit(tr[FEAT], tr["hit6"]); p6 = c6.predict_proba(te[FEAT])[:, 1]
         c9 = mk(); c9.fit(tr[FEAT], tr["hit9"]); p9 = c9.predict_proba(te[FEAT])[:, 1]
         out = pd.DataFrame({"win": fi, "ts": te["ts"].values, "symbol": te["symbol"].values,
-                            "p6": np.round(p6, 5), "p9": np.round(p9, 5)})
+                            "p6": np.round(p6, 5), "p9": np.round(p9, 5),
+                            "oi_z": np.round(te["oi_z"].values, 5),
+                            "oi_delta24h": np.round(te["oi_delta24h"].values, 5),
+                            "f8": np.round(te["f8"].values, 5),
+                            "f14": np.round(te["f14"].values, 5),
+                            "f22": np.round(te["f22"].values, 5)})
         parts.append(out)
         log.info("win %d [%s..%s] OOS=%d rows | p6>=0.7: %d",
                  fi, str(pd.to_datetime(cut, unit="ms").date()),
@@ -148,7 +153,8 @@ def run():
     meta = {"n_pct": N_PCT, "rows": int(len(allpred)), "windows": int(allpred.win.nunique()),
             "symbols": int(allpred.symbol.nunique()),
             "ts_min": int(allpred.ts.min()), "ts_max": int(allpred.ts.max()),
-            "n_p6_ge_0.7": int((allpred.p6 >= 0.7).sum()), "file": os.path.basename(fp)}
+            "n_p6_ge_0.7": int((allpred.p6 >= 0.7).sum()), "file": os.path.basename(fp),
+            "columns": list(allpred.columns)}
     json.dump(meta, open(os.path.join(OUT_DIR, "ev2_export_meta.json"), "w"), indent=2)
     print("EV2_EXPORT_RESULT " + json.dumps(meta))
     log.info("XONG -> %s (%d rows)", fp, len(allpred))
