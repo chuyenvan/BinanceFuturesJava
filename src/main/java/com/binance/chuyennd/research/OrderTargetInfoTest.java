@@ -253,6 +253,48 @@ public class OrderTargetInfoTest implements Serializable {
     }
 
 
+    /**
+     * SHORT exit (DRAFT 2026-07-18, flag-gated). Mirror updateStatusNew nhung DAO CHIEU cho lenh SELL:
+     * short lai khi gia GIAM, lo khi gia TANG. Chi goi khi Configs.ENABLE_SHORT && side==SELL (xem
+     * SimulatorMarketLevelTicker1MStopLoss.startUpdateOldOrderTrading). MAC DINH ENABLE_SHORT=false ->
+     * KHONG BAO GIO chay -> long-only byte-identical.
+     *
+     * <p>Da lam trong draft nay:
+     * <ul>
+     *   <li><b>Hard-SL CUNG (bat buoc)</b>: gia TANG cham nguong entry*(1+SHORT_SL_PCT) -> STOP_LOSS_DONE,
+     *       chot tai nguong do (clamp intrabar mirror booking-fix long: gap-up open>nguong thi fill=open,
+     *       khong mua lai duoi open duoc). Nguong CO DINH tu luc vao -> resting-stop, KHONG look-ahead.</li>
+     *   <li><b>Time-stop</b>: qua SHORT_TIME_STOP_HOURS ke tu leg dau cum -> thoat tai gia (buy-back) bao thu
+     *       = max(open, close). Do tu clusterFirstLegTime (fallback timeStart) giong long.</li>
+     * </ul>
+     * <p>TODO (chua lam trong draft): TRAILING-SHORT (let-dump-run — arm trailing-stop TREN gia khi da lai,
+     *    ratchet XUONG theo day, cat khi gia bat len cham stop). Mirror updateStatusNew/updateTPSL dao chieu.
+     *    De rieng vi rui ro cao; hard-SL + time-stop du de function-test co che + chay WFO draft.
+     */
+    public void updateStatusShort(KlineObjectSimple ticker) {
+        // 1) HARD-SL cung: rise >= SHORT_SL_PCT. Nguong biet tu luc vao (khong look-ahead).
+        float slTrigger = priceEntry * (1f + Configs.SHORT_SL_PCT);
+        if (ticker.maxPrice >= slTrigger) {
+            status = OrderTargetStatus.STOP_LOSS_DONE;
+            // BOOKING-FIX mirror: short dong = MUA lai. Fill = max(slTrigger, bar.open).
+            //   Ca thuong (open<=slTrigger): fill=slTrigger (khop dung stop).
+            //   Ca gap-up (open>slTrigger): fill=open (khong the mua lai duoi open — haircut that).
+            priceTP = Math.max(slTrigger, ticker.priceOpen);
+            return;
+        }
+        // 2) TIME-STOP: het han thesis -> thoat.
+        if (Configs.SHORT_TIME_STOP_HOURS > 0) {
+            long anchor = clusterFirstLegTime > 0L ? clusterFirstLegTime : timeStart;
+            if (ticker.startTime.longValue() - anchor > Configs.SHORT_TIME_STOP_HOURS * 3600000L) {
+                status = OrderTargetStatus.STOP_LOSS_DONE;
+                // buy-back bao thu (khong loi-gia): max(open, close).
+                priceTP = Math.max(ticker.priceOpen, ticker.priceClose);
+                return;
+            }
+        }
+        // TODO trailing-short (xem javadoc). Chua thoat -> giu status REQUEST.
+    }
+
     public Float calTp() {
         OrderTargetInfoTest orderInfo = this;
         if (orderInfo.priceTP == null) {
@@ -300,6 +342,13 @@ public class OrderTargetInfoTest implements Serializable {
             for (Float rate : fundingMap.subMap(fromTime, false, timeUpdate, true).values()) {
                 if (rate != null) feeTotal += rate * notional;   // long: rate>0 => trả phí (dương)
             }
+            // === SHORT funding (DRAFT 2026-07-18) ===
+            // Theo spec task: "short TRA khi funding duong" -> feeTotal DUONG khi rate>0 (giong long),
+            // calTp(SELL) van tru calFundingFee() -> short BI TRU khi funding duong (mo hinh BAO THU/pessimistic).
+            // Vay CONG THUC KHONG doi theo side (feeTotal=rate*notional dung cho ca long lan short).
+            // ⚠️ REVIEW-POINT: funding THUC te cua Binance = SHORT NHAN khi funding duong (long tra short).
+            //   Draft nay co y mo hinh short-funding nhu CHI PHI (khong thoi phong alpha) dung acceptance-test (c).
+            //   Neu product quyet ghi CO cho short khi funding duong -> DAO DAU feeTotal cho side==SELL tai day.
             if (feeTotal != 0f) time2FundingFee.put(timeUpdate, feeTotal);   // 1 entry tổng
         } catch (Exception e) {
             // coin không có funding data / lỗi đọc => phí 0 (an toàn, không chặn backtest)

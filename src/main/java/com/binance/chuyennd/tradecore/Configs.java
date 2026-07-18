@@ -207,6 +207,22 @@ public class Configs {
     public static float TS_PROFIT_MULTIPLIER = 5.21847f;    // Hệ số kích hoạt Trailing
 
     // =========================================================
+    // 6b. SHORT-SIDE (DRAFT 2026-07-18, flag-gated — MAC DINH OFF = long-only byte-identical)
+    // =========================================================
+    // Them order-side SHORT (OrderSide.SELL) vao sim de sau chay WFO short (proxy Kaggle xac nhan alpha).
+    // MAC DINH ENABLE_SHORT=false -> KHONG tao/quan ly lenh SELL nao -> engine byte-identical long-only.
+    // Chi bat (=true) de chay backtest short SAU khi review. env-driven (khong can rebuild).
+    public static final boolean ENABLE_SHORT = "true".equalsIgnoreCase(System.getenv("ENABLE_SHORT"));
+    // Hard-SL CUNG BAT BUOC cho short: gia TANG (rise) >= SHORT_SL_PCT so voi entry -> cat lo tai -SHORT_SL_PCT.
+    // Mac dinh 0.25 = 25% (chot tu proxy). env SHORT_SL_PCT override.
+    public static float SHORT_SL_PCT = System.getenv("SHORT_SL_PCT") != null
+            ? Float.parseFloat(System.getenv("SHORT_SL_PCT").trim()) : 0.25f;
+    // Time-stop cho short (let-dump-run toi han): thoat sau SHORT_TIME_STOP_HOURS ke tu leg dau cum. 0 = tat.
+    // Mac dinh 24h (chot tu proxy: chop duong 12-24h). env SHORT_TIME_STOP_HOURS override.
+    public static int SHORT_TIME_STOP_HOURS = System.getenv("SHORT_TIME_STOP_HOURS") != null
+            ? Integer.parseInt(System.getenv("SHORT_TIME_STOP_HOURS").trim()) : 24;
+
+    // =========================================================
     // 7. AI & BỘ LỌC TÍN HIỆU ĐỘNG (AI DYNAMIC FILTER - HPO UPDATE)
     // =========================================================
     public static float AI_DYNAMIC_MULTIPLIER = 1.28760f; // Cũ: 1.40234f

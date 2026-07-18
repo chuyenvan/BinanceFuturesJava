@@ -513,6 +513,17 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         if (orderMulti != null) {
             if (orderMulti.timeStart <= ticker.startTime) {
                 orderMulti.updatePriceByKlineSimple(ticker);
+                // === SHORT (DRAFT, flag-gated) — MAC DINH ENABLE_SHORT=false -> nhanh nay KHONG chay ->
+                //     long path byte-identical. Chi lenh SELL di vao nhanh short (hard-SL + time-stop).
+                if (Configs.ENABLE_SHORT && OrderSide.SELL.equals(orderMulti.side)) {
+                    orderMulti.updateStatusShort(ticker);
+                    if (orderMulti.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)
+                            || orderMulti.status.equals(OrderTargetStatus.STOP_LOSS_DONE)
+                            || orderMulti.status.equals(OrderTargetStatus.STOP_MARKET_DONE)) {
+                        closeOrder(symbolId, orderMulti);
+                    }
+                    return;
+                }
                 if (ticker.maxPrice >= orderMulti.priceEntry * (1 + Configs.RATE_PROFIT_STOP_MARKET)
                         || orderMulti.priceSL != null) {
                     Float predReturn15M  = getPredReturn15MForTradingStop(time);
