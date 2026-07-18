@@ -1,0 +1,1 @@
+{"id":"chuyendinh/short-featscreen","title":"short-featscreen","code_file":"run_train.py","language":"python","kernel_type":"script","is_private":true,"enable_gpu":false,"enable_internet":true,"dataset_sources":["chuyendinh/funding-tool1-features","chuyendinh/funding-oi-percoin","chuyendinh/funding-label-full"],"competition_sources":[],"kernel_sources":[]}
