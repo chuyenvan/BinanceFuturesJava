@@ -217,10 +217,15 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                             createOrderBUY(symbolId, ticker, levelChange, time2MarketData.get(time), null);
                                         }
                                     }
-                                    for (short symbolId : symbolDcaLevel) {
-                                        KlineObjectSimple ticker = symbol2Ticker[symbolId];
-                                        if (Utils.isTickerAvailable(ticker)) {
-                                            createOrderBUY(symbolId, ticker, MarketLevelChange.DCA_LEVEL1, time2MarketData.get(time), null);
+                                    // SHORT cam martingale: ENABLE_SHORT bat -> TAT DCA (nhoi lenh). Cluster short
+                                    // side=SELL, chen leg BUY DCA se lam hong side/quantity cua cum. Mac dinh
+                                    // ENABLE_SHORT=false -> DCA chay nhu cu -> byte-identical.
+                                    if (!Configs.ENABLE_SHORT) {
+                                        for (short symbolId : symbolDcaLevel) {
+                                            KlineObjectSimple ticker = symbol2Ticker[symbolId];
+                                            if (Utils.isTickerAvailable(ticker)) {
+                                                createOrderBUY(symbolId, ticker, MarketLevelChange.DCA_LEVEL1, time2MarketData.get(time), null);
+                                            }
                                         }
                                     }
                                 }
@@ -230,7 +235,9 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                             startTimeRun = System.currentTimeMillis();
 
                             if (marketData != null) {
-                                if (MarketBigChangeDetector.isDcaAlt(marketData.rateDown15MAvg, marketData.rateDownAvg, marketData.rateUpAvg)) {
+                                if (!Configs.ENABLE_SHORT && MarketBigChangeDetector.isDcaAlt(marketData.rateDown15MAvg, marketData.rateDownAvg, marketData.rateUpAvg)) {
+                                    // SHORT cam martingale: ENABLE_SHORT bat -> khong nhoi DCA-loss-big.
+                                    // Default OFF -> nhanh chay nhu cu (byte-identical).
                                     List<Short> symbolDcaLossBig = DcaProcessor.getDCA(null, time, BudgetManagerSimple.getInstance().getBudget(), getActiveOrderMap());
                                     for (short symbolId : symbolDcaLossBig) {
                                         KlineObjectSimple ticker = symbol2Ticker[symbolId];
@@ -261,7 +268,14 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                         if (!isSymbolRunning(targetId)) {
                                             KlineObjectSimple ticker = symbol2Ticker[targetId];
                                             if (Utils.isTickerAvailable(ticker)) {
-                                                createOrderBUY(targetId, ticker, MarketLevelChange.PREDICT_SYMBOL_TRADE, marketData, symbolPred);
+                                                // ENTRY short (DRAFT, flag-gated): ENABLE_SHORT bat -> DAO CHIEU tin hieu
+                                                // selector nay thanh SELL. Moi gate/filter/budget GIU NGUYEN, chi doi chieu.
+                                                // Mac dinh ENABLE_SHORT=false -> van createOrderBUY -> byte-identical.
+                                                if (Configs.ENABLE_SHORT) {
+                                                    createOrderSELL(targetId, ticker, MarketLevelChange.PREDICT_SYMBOL_TRADE, marketData, symbolPred);
+                                                } else {
+                                                    createOrderBUY(targetId, ticker, MarketLevelChange.PREDICT_SYMBOL_TRADE, marketData, symbolPred);
+                                                }
                                             }
                                         }
                                     }
@@ -620,6 +634,38 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
     public void createOrderBUY(short symbolId, KlineObjectSimple ticker, MarketLevelChange levelChange,
                                MarketDataObject marketData, Float symbolPred) {
+        // Long entry — delegate vao loi chung createOrder(BUY,...). Giu nguyen chu ky de moi call-site
+        // khong doi. BUY -> hanh vi CU byte-identical (chi them 1 stack-frame, khong doi output).
+        createOrder(OrderSide.BUY, symbolId, ticker, levelChange, marketData, symbolPred);
+    }
+
+    /**
+     * ENTRY short (SELL) — DRAFT 2026-07-18, flag-gated. Nhan ban logic createOrderBUY nhung DAO CHIEU
+     * lenh: side=SELL, priceEntry=gia close (giong long). Chi duoc goi khi {@link Configs#ENABLE_SHORT}
+     * bat, tai diem selector PREDICT_SYMBOL_TRADE (xem vong lap simulate). Moi gate/filter/breaker/budget/tier
+     * GIU NGUYEN — chi doi CHIEU lenh. Order ket qua co side=SELL nen exit-side updateStatusShort chay.
+     * Mac dinh ENABLE_SHORT=false -> khong bao gio goi -> engine long-only byte-identical.
+     *
+     * @param symbolId    id coin
+     * @param ticker      kline hien tai (priceClose = gia vao)
+     * @param levelChange nguon tin hieu (thuc te chi PREDICT_SYMBOL_TRADE cho short draft)
+     * @param marketData  snapshot thi truong tai thoi diem vao (co the null)
+     * @param symbolPred  diem selector (dung cho AI filter dynamic)
+     */
+    public void createOrderSELL(short symbolId, KlineObjectSimple ticker, MarketLevelChange levelChange,
+                                MarketDataObject marketData, Float symbolPred) {
+        createOrder(OrderSide.SELL, symbolId, ticker, levelChange, marketData, symbolPred);
+    }
+
+    /**
+     * Loi tao lenh dung chung cho ca 2 CHIEU (mot bo nao — tranh drift long/short). Toan bo
+     * gate/filter/breaker/budget/tier GIU NGUYEN; chi field {@code side} cua OrderTargetInfoTest phu thuoc
+     * tham so {@code side}. Goi voi OrderSide.BUY -> hanh vi cu byte-identical.
+     *
+     * @param side chieu lenh (BUY long / SELL short)
+     */
+    private void createOrder(OrderSide side, short symbolId, KlineObjectSimple ticker, MarketLevelChange levelChange,
+                             MarketDataObject marketData, Float symbolPred) {
 
         if (levelChange != MarketLevelChange.DCA_LEVEL1) {
             if (is50PercentOrderLoss == null)
@@ -734,7 +780,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
         OrderTargetInfoTest order = new OrderTargetInfoTest(OrderTargetStatus.REQUEST, entry,
                 null, quantity, leverage, symbolStr, ticker.startTime,
-                ticker.startTime, OrderSide.BUY);
+                ticker.startTime, side);
 
         order.minPrice = entry;
         order.maeLow = entry;   // 🔎 đáy THẬT khởi tạo = giá vào leg (đo lường MAE)
