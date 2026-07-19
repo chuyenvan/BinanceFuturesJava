@@ -255,6 +255,9 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                 long[] symbol2Pred = Configs.DISABLE_PREDICT_SYMBOL ? null : time2SymbolPred.get(time);
                                 if (symbol2Pred != null) {
                                     float maxThres = Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD * Configs.AI_DYNAMIC_MAX;
+                                    // MAX-DEPLOYMENT: SELECTOR_SCORE_MAX>=0 ep TRUC TIEP tran score (admit p6 thap hon).
+                                    // Default -1f (OFF) -> giu maxThres cu -> byte-identical.
+                                    if (Configs.SELECTOR_SCORE_MAX >= 0f) maxThres = Configs.SELECTOR_SCORE_MAX;
 
                                     for (long encodedData : symbol2Pred) {
                                         float symbolPred = Float.intBitsToFloat((int) encodedData);

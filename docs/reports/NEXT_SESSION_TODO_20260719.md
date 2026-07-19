@@ -74,6 +74,27 @@ thật CHƯA đo (hoãn; bot 242 không lưu giá khớp → cần userTrades AP
 - CHỌN winner: **max net_chop (let-run) với tpq≥30 và winrate hợp lý** → ghi (target t, horizon H, stop s). (Kaggle giữ output bền, không mất — defer an toàn.)
 - Rồi bước 5 (SHORT-only WFO): converter short dùng RANK/top-K (ps thấp, base-rate 1.3%) → predict_wf_short → wfo_ds_short_win → `wfo_fanout` jar **preflight-v42-short.jar** env `ENABLE_SHORT=1,WFO_DISABLE_DCA=1,SHORT_SL_PCT=<s/100>,SHORT_TIME_STOP_HOURS=<H>`.
 
+---
+
+## MAX-DEPLOYMENT (long) — code XONG, CHỜ build+run (07-19)
+> Câu hỏi: hạ ngưỡng entry (p6 0.68→0.5) + GIỮ oi_z veto + 2022 coverage → annual return có scale ~20% không, hay edge pha loãng? Trực diện đánh FREQUENCY wall.
+
+### ĐÃ SỬA (default OFF = byte-identical; CHƯA build/commit — sandbox thiếu mvn+SSH Oracle)
+1. `orchestrator/tools/ev2_csv_to_predictwf_oiz.py`: P6_MIN = **ENV P6_MIN > argv[4] > 0.7**. ENV thắng nên
+   nút pred_convert (ép positional 0.7) vẫn hạ 0.5 mà KHÔNG sửa button: chạy `P6_MIN=0.5` trước lệnh.
+2. `Configs.java` (sau PREDICT_SYMBOL_RATE_MAX_THRESHOLD): thêm `SELECTOR_SCORE_MAX` (env, default **-1f=OFF**).
+3. `SimulatorMarketLevelTicker1MStopLoss.java` (~L258): nếu `SELECTOR_SCORE_MAX>=0` → ép trực tiếp `maxThres`.
+   - Gate cũ: `maxThres = 0.15 * AI_DYNAMIC_MAX(2.14135) = 0.3212`; symbolPred=1-p6, admit khi ≤maxThres →
+     admit p6≥**0.6788**. Set `SELECTOR_SCORE_MAX=0.5` → admit p6≥**0.5** (KHÔNG dính AI_DYNAMIC_MAX genome-coupled).
+
+### RUNBOOK (chạy trên máy Uni + Oracle — 1 WFO/lúc, chờ jobstore FREE)
+1. Build: `mvn -q -DskipTests package` → backup Oracle jar (`.bak_*`) → scp jar mới tên **`preflight-v42-maxdep.jar`** → md5 verify (KHÔNG đè jar WFO khác đang chạy — kiểm `ce wfo_status` trước).
+2. Convert (P6_MIN=0.5, OIZ_Q=0.75): trên Oracle `P6_MIN=0.5 python3 <CE_PRED_TOOLS_DIR>/ev2_csv_to_predictwf_oiz.py /home/ubuntu/claudedata/kout/ev2-export-2022/ev2_preds_n6_2022.csv.gz <symbol_map> <out=predict_wf_maxdep> 0.7 0.75` → `ce wfo_build_ds predict_wf_maxdep wfo_ds_maxdep <jar-maxdep>`.
+   - (Tùy chọn productize: thêm param P6_MIN cho nút pred_convert — R4 bắt `ce --sync bg_selftest` 6/6, chưa test được ở sandbox nên để nút nguyên, dùng env one-off.)
+3. `ce wfo_fanout wfo_ds_maxdep preflight-v42-maxdep.jar 30 42 2 0 long_maxdep "ABLATION_MODE=A,WFO_DISABLE_DCA=1,TIME_STOP_HOURS=24,SELECTOR_SCORE_MAX=0.5"` → poll `ce wfo_status` DONE≥16 (300s).
+   - ⚠️ Task template ghi `ABLATION_MODE=B` — long_full dùng **A**. Để so apples-to-apples (chỉ đổi tần suất) NÊN giữ **A**. Xác nhận trước khi chạy.
+4. `ce wfo_report long_maxdep` → tính full-cycle per-year (2022/23/24/25) → total%/CAGR/năm-dương so long_full (CAGR +2.2%, 4/4 dương). Đo tần suất tăng (tpq/SUCCESS windows). Verdict: scale ~20% hay edge pha loãng?
+
 ### CHƯA làm (hết ưu tiên/tài nguyên tuần tự — 1 WFO/lúc)
 - Bước 6 (short-gate classifier) · Bước 7 (multi-sleeve dual-channel Java — CODE MỚI PnL-critical, chỉ DRAFT+flag, KHÔNG trust khi chưa cross-check 2 tầng).
 - Blocker cứng: **Oracle 1 WFO/lúc + wfo_build_ds 12G RAM** ⇒ long_full → long_12h → short_win chạy TUẦN TỰ, mỗi cái ~2.5h. Đêm chỉ đủ 1-2 WFO. Short winner + long_12h phụ thuộc Kaggle export xong.

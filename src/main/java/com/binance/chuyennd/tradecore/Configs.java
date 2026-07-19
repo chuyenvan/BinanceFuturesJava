@@ -278,6 +278,13 @@ public class Configs {
     // 8. NGƯỠNG BÁO ĐỘNG & DCA NHỒI LỆNH (MARKET STATUS - HPO UPDATE)
     // =========================================================
     public static float PREDICT_SYMBOL_RATE_MAX_THRESHOLD = 0.15f;    // HPO (đã revert về cũ): 0.19727f (Log map: PREDICT_MAX_THRES)
+
+    // MAX-DEPLOYMENT (ablation tan-suat): override TRUC TIEP tran score cua selector-gate (final cutoff
+    //   tren symbolPred = 1 - p6). Selector cu: maxThres = PREDICT_SYMBOL_RATE_MAX_THRESHOLD * AI_DYNAMIC_MAX
+    //   = 0.15*2.14135 = 0.3212 -> admit p6 >= 0.679. Set SELECTOR_SCORE_MAX=0.5 -> admit p6 >= 0.5
+    //   (nhieu lenh hon) MA KHONG dinh AI_DYNAMIC_MAX (genome-coupled). Default -1f = OFF = byte-identical.
+    public static final float SELECTOR_SCORE_MAX = System.getenv("SELECTOR_SCORE_MAX") != null
+            ? Float.parseFloat(System.getenv("SELECTOR_SCORE_MAX").trim()) : -1f;
     public static float HARD_RISK_LIMIT_4H = -0.2f;                   // HPO (đã revert về cũ): -0.09200f
     public static float MIN_MOMENTUM_15M = 0.02284f;                  // HPO (đã revert về cũ): 0.01720f
     public static float MS_UP_BIG_THRES = 0.02046f;                  // HPO (đã revert về cũ): 0.01757f

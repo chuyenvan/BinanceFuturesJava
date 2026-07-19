@@ -16,7 +16,16 @@ import pandas as pd
 
 def main():
     preds_csv, map_csv, out_dir = sys.argv[1], sys.argv[2], sys.argv[3]
-    p6_min = float(sys.argv[4]) if len(sys.argv) > 4 else 0.7
+    # P6_MIN: ENV P6_MIN > positional argv[4] > default 0.7. ENV thang de nut CE pred_convert
+    #   (ep positional 0.7) van ha duoc nguong xuong 0.5 ma KHONG sua button: `P6_MIN=0.5 pred_convert ...`.
+    #   Default 0.7 giu HANH VI CU byte-identical khi khong set env va button truyen 0.7.
+    _p6_env = os.environ.get("P6_MIN")
+    if _p6_env is not None and _p6_env.strip() != "":
+        p6_min = float(_p6_env)
+    elif len(sys.argv) > 4:
+        p6_min = float(sys.argv[4])
+    else:
+        p6_min = 0.7
     oiz_q  = float(sys.argv[5]) if len(sys.argv) > 5 else 0.75
     os.makedirs(out_dir, exist_ok=True)
     mp = pd.read_csv(map_csv)                       # cols: symId, symbol
