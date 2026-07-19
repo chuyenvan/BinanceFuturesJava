@@ -99,6 +99,12 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         long timeSimulator = System.currentTimeMillis();
         LOG.info("=== 🚀 BẮT ĐẦU SIMULATE TỪ {} ĐẾN {} ===", Utils.normalizeDateYYYYMMDDHHmm(startTime), Utils.normalizeDateYYYYMMDDHHmm(endTime));
 
+        // LEVER-B: log knob sizing khi khac default (chi log 1 lan dau run — KHONG trong hot loop).
+        if (Configs.SIZE_MULT != 1.0f || Configs.MAX_CONCURRENT_ORDERS != 40) {
+            LOG.info("⚙️ LEVER-B sizing ACTIVE: SIZE_MULT={} MAX_CONCURRENT_ORDERS={} (default 1.0/40)",
+                    Configs.SIZE_MULT, Configs.MAX_CONCURRENT_ORDERS);
+        }
+
         // [PROFILE] đo tách thời gian ĐỌC kline vs SIMULATE (đo không đoán)
         long readMs = 0, simMs = 0;
         int dayCount = 0;
@@ -777,6 +783,15 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
         float tierMultiplier = CoinRankManager.getInstance().getBudgetMultiplier(symbolId);
         budget *= tierMultiplier;
+
+        // === LEVER-B SIZE (env SIZE_MULT, default 1.0 = byte-identical) — nhan budget-per-order SAU khi da
+        //     qua HET guard o tren (managerBudget throttle marginRatio + BREAKER_MARGIN_HALT + tier). Guard
+        //     chong-am-von GIU NGUYEN: marginRunning phinh nhanh hon -> cham BREAKER_MARGIN_HALT + tran 0.99
+        //     SOM hon (chan mo moi), KHONG bypass. Chi scale SIZE trong khuon budget. Nhanh chi chay khi
+        //     SIZE_MULT!=1 -> default byte-identical (khong cham budget).
+        if (Configs.SIZE_MULT != 1.0f) {
+            budget *= Configs.SIZE_MULT;
+        }
 
         String symbolStr = SimpleSymbolMapper.getInstance().getSymbol(symbolId);
         Float quantity = Utils.calQuantityTest(budget, leverage, entry, symbolStr);

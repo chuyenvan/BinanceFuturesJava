@@ -164,10 +164,26 @@ public class Configs {
     public static float BUDGET_MARGIN_RATIO_2 = 0.7475f;
     public static float BUDGET_DIVIDER_2 = 1.5984f;
 
+    // === LEVER-B SIZE (TASK 2026-07-19, env-gated — MAC DINH 1.0 = byte-identical) ===
+    // He dang deploy QUA IT von (log: margin ~0.7%, minEq_mtm 99-100% = von idle). Edge Calmar~1 nen noi
+    // size = nang return. SIZE_MULT nhan TRUC TIEP budget-per-order tai createOrder SAU khi da qua HET guard
+    // (managerBudget throttle theo marginRatio + tierMultiplier). >1 -> moi lenh deploy nhieu von hon
+    // (quantity + margin scale TUYEN TINH). KHONG pha guard chong-am-von: managerBudget van return null khi
+    // marginRatio>=0.99, BREAKER_MARGIN_HALT van chan mo moi (voi size lon marginRunning phinh nhanh hon ->
+    // cham tran SOM hon). Chi scale SIZE trong khuon budget. Clamp >=0. env unset -> 1.0f -> budget khong doi
+    // -> byte-identical. env SIZE_MULT (vd 10) de deploy nhieu hon khi chay WFO sizing.
+    public static final float SIZE_MULT = System.getenv("SIZE_MULT") != null
+            ? Math.max(0f, Float.parseFloat(System.getenv("SIZE_MULT").trim())) : 1.0f;
+
     // =========================================================
     // 5. CẦU DAO & MẬT ĐỘ LỆNH (CIRCUIT BREAKER)
     // =========================================================
-    public static int MAX_CONCURRENT_ORDERS = 40; // Số lệnh tối đa cùng chạy
+    // TASK LEVER-B (2026-07-19): env MAX_CONCURRENT override (default 40 = giu nguyen). Day la BASE cua
+    // density-burst limiter (is50PercentOrderLoss -> evaluateCircuitBreakerCore) + tuyen phong lop-2 storm.
+    // KHONG phai hard-cap so lenh dong thoi (mang activeRunningIds cap 1000, KHONG that co). Nang so nay ->
+    // cho phep nhieu lenh mo trong cua so 4' hon truoc khi phanh mat-do. env unset -> 40 -> byte-identical.
+    public static int MAX_CONCURRENT_ORDERS = System.getenv("MAX_CONCURRENT") != null
+            ? Integer.parseInt(System.getenv("MAX_CONCURRENT").trim()) : 40; // Số lệnh tối đa cùng chạy
     public static float DENSITY_SUSTAIN = 10.0f;  // Sức chịu đựng mật độ mở lệnh
     public static float DENSITY_ALPHA = 0.6f;     // Độ cong của hàm kiểm soát mật độ
     public static final int CIRCUIT_LOOKBACK_MINUTES = 4;
