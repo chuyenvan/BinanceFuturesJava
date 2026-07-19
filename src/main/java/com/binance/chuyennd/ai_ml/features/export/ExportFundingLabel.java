@@ -25,10 +25,12 @@ import java.util.*;
  *   <li>{@code maxAdv_H}  = min( low(τ)/close(t)  − 1 )  — biên bất lợi cực đại (đáy) trong cửa sổ.</li>
  *   <li>{@code tHitFav_H} / {@code tHitAdv_H} = OFFSET (phút) từ t tới lúc chạm đỉnh / đáy đó.</li>
  *   <li>{@code retEnd_H}  = close(t+H)/close(t) − 1 — return close-to-close cuối cửa sổ.</li>
- *   <li>{@code nBars_H}   = số nến 15m THỰC CÓ trong (t, t+H] (đủ = H/15m: 16/48/96/288). Thiếu ⇒ data gap/coin chết.</li>
+ *   <li>{@code nBars_H}   = số nến 15m THỰC CÓ trong (t, t+H] (đủ = H/15m: 16/48/96/288/672/1344/2880). Thiếu ⇒ data gap/coin chết (hoặc anchor gần cuối chuỗi dữ liệu — bình thường với H dài như 7d/14d/30d).</li>
  * </ul>
- * Lưu tại nhiều mốc H = {4h,12h,24h,72h} (= {16,48,96,288} bước 15m) để train suy được nhiều horizon mà
- * KHÔNG cần re-export. Triple-barrier ở train: chạm +X% trước (tHitFav &lt; tHitAdv) / chạm −Y% trước / hết H.
+ * Lưu tại nhiều mốc H = {4h,12h,24h,72h,7d,14d,30d} (= {16,48,96,288,672,1344,2880} bước 15m) để train suy được
+ * nhiều horizon mà KHÔNG cần re-export. 3 mốc {7d,14d,30d} (TASK bleed-thesis long-horizon) là ADDITIVE — APPEND
+ * cuối, KHÔNG đổi 4 mốc gốc {4h,12h,24h,72h} (thứ tự cột + giá trị cột cũ giữ nguyên, dataset Kaggle cũ vẫn dùng
+ * được). Triple-barrier ở train: chạm +X% trước (tHitFav &lt; tHitAdv) / chạm −Y% trước / hết H.
  *
  * <p><b>Look-ahead (ĐÚNG ranh giới H1):</b> LABEL ĐƯỢC nhìn tương lai — path chỉ dùng nến τ &gt; t tới t+H.
  * close(t) lấy từ nến tại t (đã biết tại t). FEATURE (task sau) mới phải ≤ t. Vì là LABEL nên KHÔNG dính
@@ -51,10 +53,15 @@ public class ExportFundingLabel {
 
     /** Nhịp sample anchor + độ rộng 1 nến path (15m). */
     private static final long SAMPLE_STEP_MS = 15L * 60_000L;
-    /** Mốc H (bước-15m): 4h,12h,24h,72h. H_MAX = 288 bước. */
-    private static final int[] H_STEPS = {16, 48, 96, 288};
-    private static final String[] H_NAME = {"4h", "12h", "24h", "72h"};
-    private static final int H_MAX = 288;
+    /** Mốc H (bước-15m): 4h,12h,24h,72h,7d,14d,30d. H_MAX = 2880 bước.
+     *  3 mốc cuối {7d,14d,30d} = ADDITIVE (bleed-thesis long-horizon) — APPEND sau 72h, KHÔNG chèn giữa/đổi thứ tự
+     *  4 mốc gốc. H_MAX lớn hơn ⇒ cuối chuỗi dữ liệu (coin sống tới "nay" hoặc coin chết) sẽ có nhiều anchor
+     *  KHÔNG đủ nến forward cho 7d/14d/30d hơn trước (bình thường) — cơ chế biên GIỮ NGUYÊN: {@link #emit}
+     *  snapshot(h, NaN) cho mốc chưa chạm (nBars_H thiếu, retEnd_H rỗng), KHÔNG bao giờ dùng nến tương lai
+     *  không tồn tại (không wrap). */
+    private static final int[] H_STEPS = {16, 48, 96, 288, 672, 1344, 2880};
+    private static final String[] H_NAME = {"4h", "12h", "24h", "72h", "7d", "14d", "30d"};
+    private static final int H_MAX = 2880;
     private static final String START_DATE = "20210101";
     private static final String OUT = "outputs/funding_label.csv";
 
@@ -116,7 +123,7 @@ public class ExportFundingLabel {
             long start = Utils.sdfFile.parse(startStr).getTime() + 7 * Utils.TIME_HOUR;
             long end   = (endStr != null) ? Utils.sdfFile.parse(endStr).getTime() + 7 * Utils.TIME_HOUR
                                           : System.currentTimeMillis();
-            LOG.info("🏷️ TASK-024 export funding LABEL path-thô per-coin | {} → {} | sample 15m | H={4h,12h,24h,72h}", startStr, (endStr != null ? endStr : "nay"));
+            LOG.info("🏷️ TASK-024 export funding LABEL path-thô per-coin | {} → {} | sample 15m | H={4h,12h,24h,72h,7d,14d,30d}", startStr, (endStr != null ? endStr : "nay"));
 
             Map<String, CoinState> coins = new HashMap<>();
             FileWriter w = new FileWriter(outPath);
@@ -278,7 +285,10 @@ public class ExportFundingLabel {
      * (d) look-ahead inherent (chỉ nến trong (t,t+H]); (e) bắt coin bơm lịch sử (top maxFav_72h); (f) coin die.
      */
     private static final class Validate {
-        final int H72 = H_STEPS.length - 1;    // index mốc 72h
+        // ⚠️ FIX khi thêm horizon: H72 PHẢI trỏ đúng "72h" theo TÊN, KHÔNG suy từ length-1
+        // (length-1 giờ là mốc dài nhất = 30d sau khi thêm 7d/14d/30d — nếu để length-1 thì
+        // toàn bộ validate (b)/(c)/(e)/(f) sẽ âm thầm đổi sang đo 30d thay vì 72h).
+        final int H72 = indexOfHorizon("72h");
         // (a) phân bố
         final List<Float>[] favAll = lists();
         final List<Float>[] advAll = lists();
@@ -392,7 +402,8 @@ public class ExportFundingLabel {
          */
         private float[] recompute72(String sym, long tEpoch) throws Exception {
             long tBucket = tEpoch / SAMPLE_STEP_MS;
-            int minutes = (H_MAX + 1) * 15 + 5;   // đủ bucket t + 288 bucket sau
+            int h72Steps = H_STEPS[H72];           // = 288 (72h) — KHÔNG dùng H_MAX (giờ = 2880 sau khi thêm 7d/14d/30d)
+            int minutes = (h72Steps + 1) * 15 + 5;   // đủ bucket t + 288 bucket sau
             TreeMap<Long, Map<String, KlineObjectSimple>> win =
                     DataManagerAerospikeFloatSim.readDataFromAerospikeCustom(tEpoch, minutes);
             if (win == null || win.isEmpty()) return null;
@@ -401,7 +412,7 @@ public class ExportFundingLabel {
             for (Map.Entry<Long, Map<String, KlineObjectSimple>> e : win.entrySet()) {
                 long ep = e.getKey();
                 long idx = ep / SAMPLE_STEP_MS;
-                if (idx < tBucket || idx > tBucket + H_MAX) continue;
+                if (idx < tBucket || idx > tBucket + h72Steps) continue;
                 KlineObjectSimple k = e.getValue().get(sym);
                 if (k == null || !Utils.isTickerAvailable(k)) continue;
                 float[] b = bucket.computeIfAbsent(idx, x -> new float[]{-Float.MAX_VALUE, Float.MAX_VALUE, 0f, -1f});
@@ -422,6 +433,13 @@ public class ExportFundingLabel {
             }
             return new float[]{maxFav, maxAdv};
         }
+    }
+
+    /** Tìm index của mốc H theo TÊN (vd "72h") trong {@link #H_NAME} — tránh giả định vị trí (length-1 đổi
+     *  nghĩa mỗi khi thêm horizon mới ở cuối mảng). */
+    private static int indexOfHorizon(String name) {
+        for (int i = 0; i < H_NAME.length; i++) if (H_NAME[i].equals(name)) return i;
+        throw new IllegalStateException("Không tìm thấy horizon '" + name + "' trong H_NAME");
     }
 
     private static String pc(List<Float> sorted, int p) {
