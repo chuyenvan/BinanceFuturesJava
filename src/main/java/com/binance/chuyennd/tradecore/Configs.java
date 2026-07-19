@@ -175,6 +175,40 @@ public class Configs {
     public static final float SIZE_MULT = System.getenv("SIZE_MULT") != null
             ? Math.max(0f, Float.parseFloat(System.getenv("SIZE_MULT").trim())) : 1.0f;
 
+    // === SIZE-BY-CONFIDENCE / soft-gate (TASK 2026-07-19, env-gated, DEFAULT OFF = byte-identical) ===
+    // LY DO (data long-conf-headroom): trong nhom admit (p6>=0.68), top-2 decile p6 an +3.40/+2.38/keo
+    // (winrate 52-56%) NHUNG decile giua (p6~0.68) LO -1.3/-1.2. Gate nhi phan vut info nay. -> size TO cho
+    // p6 cao, size NHO cho p6 marginal, GIU tan suat (khong doi admit gate). Nhan CUNG voi SIZE_MULT, SAU
+    // guard chong-am-von (managerBudget + BREAKER_MARGIN_HALT + tier) -> guard GIU NGUYEN.
+    //   CONF_SIZE_MODE: 0=off (default) -> confFactor khong duoc ap -> byte-identical. 1=on.
+    //   confFactor(p6) = clamp( FMIN + (FMAX-FMIN)*(p6-LO)/(HI-LO), FMIN, FMAX ).
+    //     p6<=LO -> FMIN ; p6>=HI -> FMAX ; tuyen tinh o giua. (p6 = 1 - symbolPred, tinh per-order.)
+    public static final int CONF_SIZE_MODE = System.getenv("CONF_SIZE_MODE") != null
+            ? Integer.parseInt(System.getenv("CONF_SIZE_MODE").trim()) : 0;   // 0=OFF (byte-identical)
+    public static final float CONF_SIZE_LO = System.getenv("CONF_SIZE_LO") != null
+            ? Float.parseFloat(System.getenv("CONF_SIZE_LO").trim()) : 0.68f; // = admit threshold p6
+    public static final float CONF_SIZE_HI = System.getenv("CONF_SIZE_HI") != null
+            ? Float.parseFloat(System.getenv("CONF_SIZE_HI").trim()) : 0.95f;
+    public static final float CONF_SIZE_FMIN = System.getenv("CONF_SIZE_FMIN") != null
+            ? Float.parseFloat(System.getenv("CONF_SIZE_FMIN").trim()) : 0.3f;
+    public static final float CONF_SIZE_FMAX = System.getenv("CONF_SIZE_FMAX") != null
+            ? Float.parseFloat(System.getenv("CONF_SIZE_FMAX").trim()) : 3.0f;
+
+    /**
+     * Soft-gate size multiplier theo do tin cay p6 (=1-symbolPred). Pure/static -> function-test khong can
+     * Aerospike. Tuyen tinh giua [LO,HI] roi clamp ve [FMIN,FMAX]. HI<=LO (cau hinh xau) -> tra FMAX (>=LO)
+     * / FMIN (<LO) de tranh chia 0.
+     */
+    public static float confFactor(float p6) {
+        if (p6 <= CONF_SIZE_LO) return CONF_SIZE_FMIN;
+        if (p6 >= CONF_SIZE_HI) return CONF_SIZE_FMAX;
+        float f = CONF_SIZE_FMIN + (CONF_SIZE_FMAX - CONF_SIZE_FMIN) * (p6 - CONF_SIZE_LO) / (CONF_SIZE_HI - CONF_SIZE_LO);
+        // clamp phong ve so hoc (FMIN co the > FMAX neu cau hinh nguoc)
+        float lo = Math.min(CONF_SIZE_FMIN, CONF_SIZE_FMAX);
+        float hi = Math.max(CONF_SIZE_FMIN, CONF_SIZE_FMAX);
+        return Math.max(lo, Math.min(hi, f));
+    }
+
     // =========================================================
     // 5. CẦU DAO & MẬT ĐỘ LỆNH (CIRCUIT BREAKER)
     // =========================================================

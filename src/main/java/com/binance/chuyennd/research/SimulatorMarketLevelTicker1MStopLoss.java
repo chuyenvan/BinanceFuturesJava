@@ -793,6 +793,16 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             budget *= Configs.SIZE_MULT;
         }
 
+        // === SIZE-BY-CONFIDENCE soft-gate (env CONF_SIZE_MODE, default 0=OFF -> byte-identical) ===
+        //   Nhan CUNG voi SIZE_MULT, SAU khi da qua HET guard chong-am-von (managerBudget + tier +
+        //   BREAKER_MARGIN_HALT). Guard GIU NGUYEN: chi scale SIZE trong khuon budget. p6 = 1-symbolPred
+        //   tinh PER-ORDER (symbolPred truyen tuoi tu selector loop, KHONG stale). symbolPred==null (cac
+        //   call-site khong-selector, vd BIG_DOWN/DCA) -> BO QUA -> byte-identical cho cac leg do.
+        if (Configs.CONF_SIZE_MODE == 1 && symbolPred != null) {
+            float p6 = 1f - symbolPred;
+            budget *= Configs.confFactor(p6);
+        }
+
         String symbolStr = SimpleSymbolMapper.getInstance().getSymbol(symbolId);
         Float quantity = Utils.calQuantityTest(budget, leverage, entry, symbolStr);
 
