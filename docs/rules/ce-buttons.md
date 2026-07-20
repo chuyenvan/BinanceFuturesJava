@@ -39,6 +39,11 @@ LUẬT (áp cho MỌI phiên CDK/CDC trên repo này):
 4. **Sau khi sửa mcp_tools-v3.py** → `ce --sync bg_selftest` phải PASS 6/6 rồi mới dùng.
 5. **Vào phiên mới, muốn biết gì đang chạy**: `ce pipe_list` + `ce bg_list` + `ce wfo_status` —
    KHÔNG ssh mò log tay khi nút trả lời được.
+5b. **Việc VERBOSE (đọc log dài, bảng WFO, grep repo lớn, dump ssh) → delegate agent `oracle-runner`;
+   master-thread KHÔNG tự chạy.** Agent xử lý trong context riêng, chỉ trả về ≤10 dòng chưng cất.
+   Agent con BẮT BUỘC chạm Oracle CHỈ qua `orchestrator/ce.cmd <nút>` — CẤM `ssh … cat`/bash driver ad-hoc
+   (luật này ĐÃ nhúng sẵn trong `.claude/agents/oracle-runner.md`, không dựa vào trí nhớ; backstop cơ học =
+   hook `.claude/hooks/block-raw-ssh.sh`, xem README cùng thư mục để bật).
 6. **WFO full-16-window → MẶC ĐỊNH `wfo_fanout`** (6-node = 2 Oracle worker + 5 Kaggle kernel,
    cùng jobstore 226). Master phê 2026-07-16: KHÔNG bỏ phí 5 Kaggle node. `wfo_run` (Oracle-only,
    2-worker) CHỈ dùng debug / verify-1-window. Đảo mặc định: full-window = `wfo_fanout`.
