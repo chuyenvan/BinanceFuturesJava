@@ -2,6 +2,7 @@ package com.binance.chuyennd.ai_ml.hpo;
 
 import com.binance.chuyennd.research.BudgetManagerSimple;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
+import com.binance.chuyennd.tradecore.Configs;
 import com.binance.chuyennd.utils.Utils;
 
 import java.util.Collection;
@@ -67,6 +68,14 @@ public class HPOFitnessCalculatorV4 {
         public float ddPctMtm = 0f;          // maxDDMtm / vốn (so trực tiếp với ddPct cũ)
         public boolean marginCallHit = false;
         public float minEquityMtmPct = 1f;   // minEquity_mtm / vốn (1.0 = chưa từng có vị thế mở)
+
+        // === METRIC SURFACE (additive, REPORT-ONLY — chan doan R-vs-M). KHONG vao fitness/verdict. ===
+        public float winRate = 0f;          // % lenh co calTp()>0 (0..1)
+        public float avgWin = 0f;           // trung binh calTp cua lenh thang (>0)
+        public float avgLoss = 0f;          // trung binh calTp cua lenh thua (<0)
+        public float profitFactor = 0f;     // Sigma win / |Sigma loss|; 9999 = khong co lenh thua
+        public float medianTradePnl = 0f;   // trung vi calTp toan bo lenh
+        public float costPerTrade = 0f;     // (fee + slippage + funding) trung binh / lenh
     }
 
     /**
@@ -103,15 +112,39 @@ public class HPOFitnessCalculatorV4 {
         long heldTooLong = 0;
         TreeMap<Integer, Double> pnlByYear = new TreeMap<>();
         TreeMap<Long, Double> pnlByDay = new TreeMap<>();
+        // METRIC SURFACE accumulators (additive, report-only — KHONG dung cho fitness/constraint)
+        double[] tradePnls = new double[orders.size()];
+        int tpi = 0;
+        double sumWin = 0, sumLoss = 0, sumCost = 0;
+        int nWin = 0, nLoss = 0;
         for (OrderTargetInfoTest o : orders) {
             double tp = o.calTp();
             r.totalProfit += tp;
+            tradePnls[tpi++] = tp;
+            if (tp > 0) { sumWin += tp; nWin++; } else if (tp < 0) { sumLoss += tp; nLoss++; }
+            if (o.quantity != null && o.priceEntry != null) {
+                double notional = (double) o.quantity * o.priceEntry;
+                double fee = notional * Configs.RATE_FEE;
+                double slip = Configs.APPLY_SLIPPAGE ? notional * Configs.SLIPPAGE_RATE * 2.0 : 0.0;
+                double fund = o.calFundingFee();   // 0 khi APPLY_FUNDING_FEE off (time2FundingFee rong)
+                sumCost += fee + slip + fund;
+            }
             if (o.timeUpdate - o.timeStart > HELD_TOO_LONG) heldTooLong++;
             pnlByYear.merge(Utils.getYear(o.timeUpdate), tp, Double::sum);
             pnlByDay.merge(o.timeUpdate / Utils.TIME_DAY, tp, Double::sum);
         }
         r.netScore = r.totalProfit;
         r.pctHeldOver7d = (float) heldTooLong / r.tradeCount;
+        // METRIC SURFACE finalize (additive; KHONG dung cho constraint/fitness — finalFitness bat bien)
+        r.winRate = r.tradeCount > 0 ? (float) nWin / r.tradeCount : 0f;
+        r.avgWin = nWin > 0 ? (float) (sumWin / nWin) : 0f;
+        r.avgLoss = nLoss > 0 ? (float) (sumLoss / nLoss) : 0f;
+        r.profitFactor = sumLoss < 0 ? (float) (sumWin / Math.abs(sumLoss)) : (sumWin > 0 ? 9999f : 0f);
+        java.util.Arrays.sort(tradePnls);
+        int mid = tradePnls.length / 2;
+        r.medianTradePnl = tradePnls.length == 0 ? 0f
+                : (float) (tradePnls.length % 2 == 1 ? tradePnls[mid] : (tradePnls[mid - 1] + tradePnls[mid]) / 2.0);
+        r.costPerTrade = r.tradeCount > 0 ? (float) (sumCost / r.tradeCount) : 0f;
 
         // maxDD toàn danh mục (số âm → abs)
         Float ddRaw = BudgetManagerSimple.getInstance().balanceIndex.unProfitMin;

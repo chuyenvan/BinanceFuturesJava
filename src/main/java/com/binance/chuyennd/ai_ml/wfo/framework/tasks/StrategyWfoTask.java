@@ -38,6 +38,9 @@ public class StrategyWfoTask implements WfoTask {
     private static final Logger LOG = LoggerFactory.getLogger(StrategyWfoTask.class);
     public static final String TYPE = "strategy_window";
 
+    // count-only frequency probe: counters cua sim OOS gan nhat (chi dung khi Configs.GATE_COUNT_ONLY)
+    private long lastGateSeen = 0, lastGatePass = 0;
+
     // ===== cấu hình cửa sổ (khớp WFORunner) =====
     private static final String DATA_START = "20210101";
     private static final String DATA_END = "20260601";
@@ -57,7 +60,13 @@ public class StrategyWfoTask implements WfoTask {
     static final LinkedHashMap<String, double[]> GENOME = new LinkedHashMap<>();
     static final LinkedHashMap<String, Boolean> IS_INT = new LinkedHashMap<>();
     static {
-        put("MIN_MOMENTUM_15M", 0.010, 0.045, false);  // 2026-07-12 Uni: NOI xuong 0.010 (cu 0.020) de HPO tu do chon vung tan-suat-cao (team ghi vung tot 0.010-0.020 bi loai) - test tan suat. TASK-137: [0.020,0.045] - range B [0.015,0.045] cho WFE 0.104 (te hon), 0.020 tranh mep vach chay: mo range xuong (cu [0.030,0.050]) - sweep cho thay 0.050 la diem te nhat toan ky (calmar 0.92), vung tot 0.015-0.0228 bi loai ngoai; can duoi 0.020 (khong 0.015) de tranh mep vach chay 0.010-0.015
+        // 2026-07-27 (gate-DOF regularize confirm): bounds cua MIN_MOMENTUM_15M gio ENV-CONFIGURABLE
+        // (WFO_MOM15_LO / WFO_MOM15_HI, default giu nguyen [0.010,0.045] -> backward-compatible).
+        // Giả thuyết: HPO thưởng IS-fit -> tu day gate len 0.045 -> giet OOS frequency/robustness (WFE artifact 0.24).
+        // Cap ceiling (WFO_MOM15_HI<0.045) va/hoac ha san (WFO_MOM15_LO<0.010) de test apples-to-apples voi baseline.
+        double mom15Lo = envDouble("WFO_MOM15_LO", 0.010);
+        double mom15Hi = envDouble("WFO_MOM15_HI", 0.045);
+        put("MIN_MOMENTUM_15M", mom15Lo, mom15Hi, false);  // 2026-07-12 Uni: NOI xuong 0.010 (cu 0.020) de HPO tu do chon vung tan-suat-cao (team ghi vung tot 0.010-0.020 bi loai) - test tan suat. TASK-137: [0.020,0.045] - range B [0.015,0.045] cho WFE 0.104 (te hon), 0.020 tranh mep vach chay: mo range xuong (cu [0.030,0.050]) - sweep cho thay 0.050 la diem te nhat toan ky (calmar 0.92), vung tot 0.015-0.0228 bi loai ngoai; can duoi 0.020 (khong 0.015) de tranh mep vach chay 0.010-0.015
         put("PREDICT_SYMBOL_RATE_MAX_THRESHOLD", 0.05, 0.20, false);
         put("AI_DYNAMIC_MULTIPLIER", 1.5, 2.0, false);
         put("AI_DYNAMIC_MIN", 0.10, 0.50, false);
@@ -130,6 +139,12 @@ public class StrategyWfoTask implements WfoTask {
         catch (NumberFormatException e) { return def; }
     }
 
+    private static double envDouble(String name, double def) {
+        String v = System.getenv(name);
+        try { return (v != null && !v.isEmpty()) ? Double.parseDouble(v.trim()) : def; }
+        catch (NumberFormatException e) { return def; }
+    }
+
     private List<long[]> buildWindows() {
         try {
             long dataStart = Utils.sdfFile.parse(DATA_START).getTime() + 7 * Utils.TIME_HOUR;
@@ -169,6 +184,21 @@ public class StrategyWfoTask implements WfoTask {
         String[] names = GENOME.keySet().toArray(new String[0]);
         double[] baseVals = new double[names.length];
         for (int i = 0; i < names.length; i++) baseVals[i] = getField(names[i]);
+
+        // TASK (frozen leakage-free genome): env WFO_FROZEN_GENOME set -> dung vector co dinh lam sample-0
+        //   + ep N=1 (bo random samples). Ap qua setField cho ca 17 gene moi window. Default (env rong)
+        //   -> frozen=null -> giu hanh vi cu byte-identical (golden/parity-safe).
+        double[] frozen = loadFrozenGenome(names);
+        if (frozen != null) {
+            baseVals = frozen;
+            nSamples = 1;
+            StringBuilder gs = new StringBuilder();
+            for (int i = 0; i < names.length; i++) {
+                gs.append(names[i]).append('=').append(round4(frozen[i]));
+                if (i < names.length - 1) gs.append(", ");
+            }
+            LOG.info("[FROZEN] win{} genome nap tu WFO_FROZEN_GENOME, ep N=1 | {}", winIdx, gs);
+        }
 
         // ===== TRAIN: random search N mẫu, mẫu 0 = baseline =====
         Random rnd = new Random(seed);
@@ -231,6 +261,21 @@ public class StrategyWfoTask implements WfoTask {
         res.put("oosMinEqPct_mtm", round4(oos.minEquityMtmPct));
         res.put("oosCalmar", round4(oos.calmar));
         res.put("oosTrades", oos.tradeCount);
+        // METRIC SURFACE (additive, report-only — R-vs-M diagnosis). KHONG vao fitness/verdict.
+        //   return% KHONG code o day = oosPnl/CAPITAL_START (35000), tinh luc report.
+        //   oosCostPerTrade = (fee + slippage + funding) trung binh/lenh (funding=0 khi APPLY_FUNDING_FEE off).
+        res.put("oosWinRate", round4(oos.winRate));
+        res.put("oosAvgWin", round4(oos.avgWin));
+        res.put("oosAvgLoss", round4(oos.avgLoss));
+        res.put("oosProfitFactor", round4(oos.profitFactor));
+        res.put("oosMedianTradePnl", round4(oos.medianTradePnl));
+        res.put("oosCostPerTrade", round4(oos.costPerTrade));
+        if (Configs.GATE_COUNT_ONLY) {
+            // count-only: khong tao order -> oos.tradeCount=0. Surface so gate-pass per-window.
+            res.put("gateSeen", lastGateSeen);
+            res.put("gatePass", lastGatePass);
+            res.put("oosTrades", lastGatePass);   // dung lai plumbing oosTrades cho frequency probe
+        }
         // V4.1 (TASK-113): note tường minh — aggregate đếm %OOS-dương CHỈ khi oosNote=SUCCESS (giữ semantics
         // đếm hiện tại: window sentinel giờ có pnl thật nhưng KHÔNG bao giờ được tính là cửa-sổ-thành-công)
         res.put("oosNote", oos.note);
@@ -262,6 +307,9 @@ public class StrategyWfoTask implements WfoTask {
         SimulatorMarketLevelTicker1MStopLoss sim = new SimulatorMarketLevelTicker1MStopLoss();
         sim.initDataReady(ctx.dataset.market, ctx.dataset.pred, ctx.dataset.funding, new AIRejectFilter());
         sim.simulatorWithInitEntry(start, end);
+        // count-only frequency probe: giu counter cua lan backtest nay (OOS la lan cuoi -> field mang gia tri OOS)
+        this.lastGateSeen = sim.ablationSignalSeen;
+        this.lastGatePass = sim.ablationPassCount;
         // V4.1 (TASK-113): windowDays = range backtest THẬT của chính window này, KHÔNG suy từ span lệnh
         int windowDays = (int) Math.max(1, (end - start) / Utils.TIME_DAY);
         HPOFitnessCalculatorV4.FitnessReport rep = HPOFitnessCalculatorV4.evaluateDetailed(sim.allOrderDone, windowDays);
@@ -404,6 +452,33 @@ public class StrategyWfoTask implements WfoTask {
             LOG.warn("WFO_MAX_OOS_DATE='{}' sai dinh dang yyyyMMdd -> bo qua cap: {}", env, e.getMessage());
             return Long.MAX_VALUE;
         }
+    }
+
+    /**
+     * TASK (frozen leakage-free genome): nap genome co dinh tu env WFO_FROZEN_GENOME.
+     * Gia tri env = duong dan FILE chua 17 so CSV (dung thu tu names[] cua GENOME) HOAC CSV inline.
+     * Tra null neu env rong -> giu hanh vi cu (sample-0 = baseVals default, byte-identical).
+     * So phan tu PHAI = names.length; sai -> RuntimeException (fail-fast, chong chay nham genome).
+     * Package-private de test.
+     */
+    static double[] loadFrozenGenome(String[] names) throws Exception {
+        String env = System.getenv("WFO_FROZEN_GENOME");
+        if (env == null || env.trim().isEmpty()) return null;
+        String raw = env.trim();
+        java.io.File f = new java.io.File(raw);
+        if (f.isFile()) {
+            raw = new String(java.nio.file.Files.readAllBytes(f.toPath())).trim();
+        }
+        String[] parts = raw.split("[,\\s]+");
+        List<Double> vals = new ArrayList<>();
+        for (String p : parts) { if (!p.trim().isEmpty()) vals.add(Double.parseDouble(p.trim())); }
+        if (vals.size() != names.length) {
+            throw new RuntimeException("WFO_FROZEN_GENOME co " + vals.size() + " so, can dung " + names.length
+                    + " (thu tu names[]=" + Arrays.toString(names) + ")");
+        }
+        double[] out = new double[names.length];
+        for (int i = 0; i < names.length; i++) out[i] = vals.get(i);
+        return out;
     }
 
     static double median(List<Double> xs) {   // package-private: cho unit test (StrategyWfoTaskMetricTest)

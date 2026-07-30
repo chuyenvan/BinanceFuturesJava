@@ -31,10 +31,16 @@ public class AIRejectFilter {
 
     /** Đếm số REJECT do gate MOM15 trong một ablation run. Reset bằng resetCounters() trước mỗi run. */
     public static final AtomicInteger mom15RejectCount = new AtomicInteger(0);
+    /** Tách nhánh: REJECT do early-hard-gate (pred15M<MIN & symbolPred>RATE_MAX). */
+    public static final AtomicInteger earlyHardGateReject = new AtomicInteger(0);
+    /** Tách nhánh: REJECT do risk 4H (risk4H<=thresRisk). */
+    public static final AtomicInteger riskReject = new AtomicInteger(0);
 
     /** Reset counter trước mỗi ablation run. */
     public static void resetCounters() {
         mom15RejectCount.set(0);
+        earlyHardGateReject.set(0);
+        riskReject.set(0);
     }
 
     public FilterResult checkSignal(AiPredictionData prediction) {
@@ -55,6 +61,7 @@ public class AIRejectFilter {
                 && prediction.predReturn15M < Configs.MIN_MOMENTUM_15M
                 && symbolPred > Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD) {
             mom15RejectCount.incrementAndGet();
+            earlyHardGateReject.incrementAndGet();
             return new FilterResult(FilterDecision.REJECT,
                     String.format("DANGER: pred 15m %.2f%% thap (Min %.2f%%)",
                             prediction.predReturn15M * 100, Configs.MIN_MOMENTUM_15M * 100));
@@ -90,6 +97,7 @@ public class AIRejectFilter {
         boolean checkMom15 = resolveCheckMom15(mode);
 
         if (checkRisk && risk4H <= thresRisk) {
+            riskReject.incrementAndGet();
             return new FilterResult(FilterDecision.REJECT,
                     String.format("DANGER: MaxDD 4H %.2f%% quá cao (Limit %.2f%%)", risk4H * 100, thresRisk * 100));
         }
