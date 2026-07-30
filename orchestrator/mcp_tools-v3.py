@@ -619,6 +619,114 @@ def cmd_bg_run(args):
         emit({"status": "error", "job_id": job_id, "summary": f"Khong khoi chay duoc: {e}"})
 
 
+def cmd_gate_count(args):
+    """NUT GATE-COUNT (count-only). Chay GatePassCountProbe: dem candidate PASS gate
+    o cac nguong cung MIN_MOMENTUM_15M, KHONG PnL/order (SIM_GATE_COUNT_ONLY=1).
+
+    Cu phap: gate_count [jar] [data_dir] [ram_gb]
+      jar      = /home/ubuntu/java/simulator/gatecount.jar
+      data_dir = /home/ubuntu/claudedata/wfo_dataset  -> WFO_DATA_DIR
+      ram_gb   = 10
+    Boc RobustJobController (bg_run infra), CWD=oracle_worker_cwd (co config.properties),
+    log ve RUN_DIR. Thu ket qua: bg_report gate_count.
+    """
+    jar = args[0] if len(args) > 0 and args[0] else "/home/ubuntu/java/simulator/gatecount.jar"
+    data_dir = args[1] if len(args) > 1 and args[1] else "/home/ubuntu/claudedata/wfo_dataset"
+    try:
+        ram = float(args[2]) if len(args) > 2 and args[2] else 10.0
+    except ValueError:
+        return emit({"status": "error", "summary": "ram_gb phai la so."})
+    job_id = "gate_count"
+    live = _live_job_state(job_id)
+    if live:
+        return emit({"status": "error", "job_id": job_id, "state": "ALIVE_DO_NOT_RESTART",
+                     "summary": "Job dang chay tich cuc. bg_stop truoc neu can.", "live_state": live})
+    probe_cls = "com.binance.chuyennd.ai_ml.wfo.framework.tasks.GatePassCountProbe"
+    cmd = (f"cd {WFO_WORKER_CWD} && SIM_GATE_COUNT_ONLY=1 WFO_DATA_DIR={data_dir} "
+           f"{JAVA_BIN} -Xmx9g -cp {jar} {probe_cls}")
+    try:
+        pid = _spawn_detached_supervisor(job_id, cmd, ram)
+        logger.info("gate_count: spawn controller_pid=%s jar=%s", pid, jar)
+        emit({"status": "started", "job_id": job_id, "controller_pid": pid,
+              "jar": jar, "data_dir": data_dir,
+              "summary": "Da khoi chay gate_count o nen. bg_status/bg_report gate_count de theo doi."})
+    except Exception as e:
+        logger.exception("gate_count that bai.")
+        emit({"status": "error", "job_id": job_id, "summary": f"Khong khoi chay duoc: {e}"})
+
+
+def cmd_hard_sl_sweep(args):
+    """NUT HARD-SL SWEEP (full PnL). Chay HardSlSweepProbe: sweep hard stop-loss %
+    tren GIA ENTRY DAU TIEN {0,0.20,0.30,0.40}, do PnL/maxDD/calmar/sortino qua nhieu period.
+
+    Cu phap: hard_sl_sweep [jar] [data_dir] [ram_gb]
+      jar      = /home/ubuntu/java/simulator/gatecount.jar
+      data_dir = /home/ubuntu/claudedata/wfo_dataset  -> WFO_DATA_DIR
+      ram_gb   = 10
+    Boc RobustJobController (bg_run infra), CWD=oracle_worker_cwd (co config.properties),
+    log ve RUN_DIR. Thu ket qua: bg_report hard_sl_sweep.
+    """
+    jar = args[0] if len(args) > 0 and args[0] else "/home/ubuntu/java/simulator/gatecount.jar"
+    data_dir = args[1] if len(args) > 1 and args[1] else "/home/ubuntu/claudedata/wfo_dataset"
+    try:
+        ram = float(args[2]) if len(args) > 2 and args[2] else 10.0
+    except ValueError:
+        return emit({"status": "error", "summary": "ram_gb phai la so."})
+    job_id = "hard_sl_sweep"
+    live = _live_job_state(job_id)
+    if live:
+        return emit({"status": "error", "job_id": job_id, "state": "ALIVE_DO_NOT_RESTART",
+                     "summary": "Job dang chay tich cuc. bg_stop truoc neu can.", "live_state": live})
+    probe_cls = "com.binance.chuyennd.ai_ml.wfo.framework.tasks.HardSlSweepProbe"
+    cmd = (f"cd {WFO_WORKER_CWD} && WFO_DATA_DIR={data_dir} "
+           f"{JAVA_BIN} -Xmx9g -cp {jar} {probe_cls}")
+    try:
+        pid = _spawn_detached_supervisor(job_id, cmd, ram)
+        logger.info("hard_sl_sweep: spawn controller_pid=%s jar=%s", pid, jar)
+        emit({"status": "started", "job_id": job_id, "controller_pid": pid,
+              "jar": jar, "data_dir": data_dir,
+              "summary": "Da khoi chay hard_sl_sweep o nen. bg_status/bg_report hard_sl_sweep de theo doi."})
+    except Exception as e:
+        logger.exception("hard_sl_sweep that bai.")
+        emit({"status": "error", "job_id": job_id, "summary": f"Khong khoi chay duoc: {e}"})
+
+
+def cmd_invsel_run(args):
+    """NUT INVERTED-SELECTOR (standalone backtest, doc Aerospike). Chay
+    SimulatorMarketLevelInvertedSelector voi SELECTOR_INVERT=1 (mua Worst-N).
+
+    Cu phap: invsel_run [jar] [sim_end_date] [ram_gb]
+      jar          = /home/ubuntu/java/simulator/gatecount.jar
+      sim_end_date = 20251231  -> SIM_END_DATE (tranh thieu ticker 2026)
+      ram_gb       = 10
+    CWD=oracle_worker_cwd (config.properties: TIME_RUN, AEROSPIKE_READ_CLUSTER).
+    LUU Y: doc Aerospike runtime, KHONG phai WFO OOS. Thu ket qua: bg_report invsel_run.
+    """
+    jar = args[0] if len(args) > 0 and args[0] else "/home/ubuntu/java/simulator/gatecount.jar"
+    sim_end = args[1] if len(args) > 1 and args[1] else "20251231"
+    try:
+        ram = float(args[2]) if len(args) > 2 and args[2] else 10.0
+    except ValueError:
+        return emit({"status": "error", "summary": "ram_gb phai la so."})
+    job_id = "invsel_run"
+    live = _live_job_state(job_id)
+    if live:
+        return emit({"status": "error", "job_id": job_id, "state": "ALIVE_DO_NOT_RESTART",
+                     "summary": "Job dang chay tich cuc. bg_stop truoc neu can.", "live_state": live})
+    cls = "com.binance.chuyennd.research.SimulatorMarketLevelInvertedSelector"
+    cmd = (f"cd {WFO_WORKER_CWD} && SELECTOR_INVERT=1 SIM_END_DATE={sim_end} "
+           f"{JAVA_BIN} -Xmx9g -cp {jar} {cls}")
+    try:
+        pid = _spawn_detached_supervisor(job_id, cmd, ram)
+        logger.info("invsel_run: spawn controller_pid=%s jar=%s end=%s", pid, jar, sim_end)
+        emit({"status": "started", "job_id": job_id, "controller_pid": pid,
+              "jar": jar, "sim_end_date": sim_end,
+              "summary": "Da khoi chay invsel_run o nen. bg_status/bg_report invsel_run de theo doi."})
+    except Exception as e:
+        logger.exception("invsel_run that bai.")
+        emit({"status": "error", "job_id": job_id, "summary": f"Khong khoi chay duoc: {e}"})
+
+
 def cmd_supervise(args):
     """NUT NOI BO (khong danh cho CDK). Chay blocking RobustJobController.run().
 
@@ -1959,6 +2067,9 @@ TOOL_ARG_ORDER = {
     "wfo_build_ds": [("predict_wf_dir", None), ("out_ds", None), ("jar", "")],
     "wfo_verify": [("ds", None), ("winIdx", None), ("extra_env", "")],
     "bg_run": [("job_id", None), ("cmd", None), ("ram", "3.0")],
+    "gate_count": [("jar", ""), ("data_dir", ""), ("ram", "10")],
+    "hard_sl_sweep": [("jar", ""), ("data_dir", ""), ("ram", "10")],
+    "invsel_run": [("jar", ""), ("sim_end_date", ""), ("ram", "10")],
     "bg_status": [("job_id", None), ("tail", "50")],
     "bg_report": [("job_id", None)],
     "bg_stop": [("job_id", None)],
@@ -2664,6 +2775,9 @@ COMMANDS = {
     "bg_cleanup": cmd_bg_cleanup,
     "bg_list": cmd_bg_list,
     "bg_selftest": cmd_bg_selftest,
+    "gate_count": cmd_gate_count,
+    "hard_sl_sweep": cmd_hard_sl_sweep,
+    "invsel_run": cmd_invsel_run,
     # WFO (Walk-Forward Optimization) fleet:
     "wfo_run": cmd_wfo_run,
     "wfo_fanout": cmd_wfo_fanout,
