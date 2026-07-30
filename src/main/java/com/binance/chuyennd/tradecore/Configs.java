@@ -261,6 +261,15 @@ public class Configs {
             ? Float.parseFloat(properties.get("TS_GIVEBACK_RATIO")) : 0.5f;
     public static float TS_DYNAMIC_K = 0.29774f;            // Hệ số nhân Volatility để dời SL
     public static float TS_PROFIT_MULTIPLIER = 5.21847f;    // Hệ số kích hoạt Trailing
+    // TASK (2026-07-30, theo yeu cau Uni): "dead zone" giua ARM va RATCHET — sau khi arm (updateStatusNew,
+    // dung predReturn15M), SL dong bang tai gia tri arm cho toi khi rateLoss vuot THEM 1 nguong cao hon
+    // TS_PROFIT_MULTIPLIER lan (updateTPSL, dung rateChangeMax90M) - vd TS_PROFIT_MULTIPLIER=5.21847 =>
+    // SL khong nhuc nhich cho toi khi lai gap ~5.2x diem arm, giu ca gia leo them ma khong siet SL theo.
+    // false (MAC DINH) = HANH VI CU nguyen ven (updateTPSL nhan Configs.TS_PROFIT_MULTIPLIER, byte-identical).
+    // true = bo he so nhan o updateTPSL — ratchet kich hoat NGAY khi rateLoss vuot threshold(rateChangeMax90M),
+    // khong cho doi mot khoang trong. CHi doi diem RATCHET (updateTPSL); KHONG doi diem ARM (updateStatusNew)
+    // va KHONG doi input rateChangeMax90M vs predReturn15M (van la 2 bien khac nhau, van la viec rieng).
+    public static final boolean TS_RATCHET_DECOUPLED = "true".equalsIgnoreCase(System.getenv("TS_RATCHET_DECOUPLED"));
 
     // =========================================================
     // 6b. SHORT-SIDE (DRAFT 2026-07-18, flag-gated — MAC DINH OFF = long-only byte-identical)

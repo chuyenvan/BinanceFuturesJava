@@ -252,7 +252,11 @@ public class OrderTargetInfoTest implements Serializable {
             // close=priceClose (chong wick). Chi doi peak arm/ratchet, KHONG dung minPrice/MAE/disaster/time-stop.
             float trailPeak = "close".equals(Configs.TRAIL_PEAK_MODE) ? ticker.priceClose : ticker.maxPrice;
             Float rateLoss = calRateLossMax(trailPeak);
-            Float rateMin2MoveSl = Configs.TS_PROFIT_MULTIPLIER * TradeUtils.calRateMinWithPredReturn15MForTradingStop(rateChangeMax90M);
+            // TASK (2026-07-30, theo yeu cau Uni): TS_RATCHET_DECOUPLED=false (mac dinh) = HANH VI CU
+            // nguyen ven (nhan Configs.TS_PROFIT_MULTIPLIER -> "dead zone" giua arm va ratchet). true =
+            // bo he so nhan, ratchet kich hoat ngay khi vuot threshold(rateChangeMax90M) - xem Configs.java.
+            Float ratchetBase = TradeUtils.calRateMinWithPredReturn15MForTradingStop(rateChangeMax90M);
+            Float rateMin2MoveSl = Configs.TS_RATCHET_DECOUPLED ? ratchetBase : Configs.TS_PROFIT_MULTIPLIER * ratchetBase;
             if (rateLoss >= rateMin2MoveSl) {
                 Float rateSL = TradeUtils.calRateLossDynamicBuy(rateLoss, rateChangeMax90M);
                 OrderSide side2Sl = OrderSide.SELL;
