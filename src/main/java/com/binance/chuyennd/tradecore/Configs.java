@@ -371,6 +371,13 @@ public class Configs {
     // COUNT-ONLY: đếm gate admission rồi short-circuit trước khi tạo order (đo tần suất qua gate).
     // Default false = byte-identical. Bật bằng env SIM_GATE_COUNT_ONLY=1.
     public static final boolean GATE_COUNT_ONLY = "1".equals(System.getenv("SIM_GATE_COUNT_ONLY"));
+    // ENTRY-UNIVERSE DUMP (E0, 2026-07-30): khi CHAY CUNG GATE_COUNT_ONLY, ghi lai TUNG admission
+    //  (ts, symbolId, score, price, levelChange) vao list RAM thay vi chi tang counter. Muc dich: dung
+    //  dung duong admission THAT (gate ∩ rank-K) de dem so VI THE DOC LAP sau dedup, phuc vu nghien cuu
+    //  exit tren tap entry dong bang (docs/reports/EXIT_MACHINE_20260730_stop_schedule.md, buoc E0).
+    //  Vi GATE_COUNT_ONLY khong bao gio tao order -> isSymbolRunning luon false -> tu dong BO filter von,
+    //  dung y muon C1. Default false = OFF = khong ton RAM, byte-identical.
+    public static final boolean ENTRY_UNIVERSE_DUMP = "1".equals(System.getenv("SIM_ENTRY_UNIVERSE_DUMP"));
     public static float HARD_RISK_LIMIT_4H = -0.2f;                   // HPO (đã revert về cũ): -0.09200f
     public static float MIN_MOMENTUM_15M = 0.02284f;                  // HPO (đã revert về cũ): 0.01720f
     public static float MS_UP_BIG_THRES = 0.02046f;                  // HPO (đã revert về cũ): 0.01757f

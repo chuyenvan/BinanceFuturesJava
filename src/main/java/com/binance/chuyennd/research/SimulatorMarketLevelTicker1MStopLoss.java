@@ -48,6 +48,13 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     // === ABLATION (Bước 2) — bộ đếm để báo cáo + tỉ lệ pass cho placebo C ===
     public long ablationSignalSeen = 0;   // số tín hiệu leg-đầu đi qua cổng filter (A/C)
     public long ablationPassCount = 0;    // số PASS thực của A (để tính passRate cho C)
+    /**
+     * E0 (2026-07-30) ENTRY-UNIVERSE: moi admission qua gate ∩ rank-K, CHI populate khi
+     * {@link Configs#ENTRY_UNIVERSE_DUMP} bat (di kem {@link Configs#GATE_COUNT_ONLY}).
+     * Moi phan tu = {@code {ts, symbolId, floatBits(score), floatBits(priceClose), levelChangeOrdinal}}.
+     * Mac dinh list rong, khong ai doc -> khong anh huong PnL/parity.
+     */
+    public final java.util.List<long[]> entryUniverse = new java.util.ArrayList<>();
     public long ablationPlaceboPass = 0;  // số PASS ngẫu nhiên của C
     public float ablationPassRate = 0.5f; // xác suất pass cho C — set TỪ passRate đo ở A
 
@@ -797,7 +804,22 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             }
         }
 
-        if (Configs.GATE_COUNT_ONLY) return; // count-only: da dem gate admission, KHONG tao order
+        if (Configs.GATE_COUNT_ONLY) {
+            // E0 (2026-07-30) ENTRY-UNIVERSE DUMP: ghi lai admission da qua gate ∩ rank-K.
+            //  Diem nay la SAU filter AI (ablationPassCount++) va TRUOC breaker/budget/createOrder
+            //  -> dung tap "tin hieu he thong CHAP NHAN neu von khong gioi han".
+            //  Chi chay khi ENTRY_UNIVERSE_DUMP=1 (mac dinh OFF -> khong ton RAM, hanh vi khong doi).
+            if (Configs.ENTRY_UNIVERSE_DUMP) {
+                entryUniverse.add(new long[]{
+                        ticker.startTime,
+                        symbolId,
+                        Float.floatToIntBits(symbolPred != null ? symbolPred : Float.NaN),
+                        Float.floatToIntBits(ticker.priceClose),   // primitive float, khong can null-check
+                        levelChange != null ? levelChange.ordinal() : -1
+                });
+            }
+            return; // count-only: da dem gate admission, KHONG tao order
+        }
 
         // 🛑 CIRCUIT BREAKER — chỉ tác động khi BREAKER_MODE != OFF. Tác động tầng DCA/margin,
         // KHÔNG đụng entry filter, KHÔNG force-close (long-only): chỉ DỪNG MỞ / DỪNG NHỒI.
