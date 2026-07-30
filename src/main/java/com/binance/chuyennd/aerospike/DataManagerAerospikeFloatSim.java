@@ -804,7 +804,7 @@ public class DataManagerAerospikeFloatSim {
 
         // Tạo Key và Timestamp
         long[] allTimestamps = new long[totalRecords];
-        Calendar cal = Calendar.getInstance();
+        Calendar cal = Calendar.getInstance(java.util.TimeZone.getTimeZone("GMT+7")); // HARDEN 2026-07-23: pin GMT+7 (khong phu thuoc TZ mac dinh node) - khop quy uoc key da ghi
         cal.setTimeInMillis(startTime);
         cal.set(Calendar.HOUR_OF_DAY, 7);
         cal.set(Calendar.MINUTE, 0);
@@ -827,6 +827,7 @@ public class DataManagerAerospikeFloatSim {
             futures.add(executor.submit(() -> {
                 // --- FIX THREAD SAFETY: Tạo SimpleDateFormat riêng cho từng luồng ---
                 SimpleDateFormat localKeyFormat = new SimpleDateFormat("yyyyMMdd-HHmm");
+                localKeyFormat.setTimeZone(java.util.TimeZone.getTimeZone("GMT+7")); // HARDEN 2026-07-23: pin GMT+7 doc key deterministic
 
                 Map<Long, Map<String, KlineObjectSimple>> chunkResult = new HashMap<>();
                 // Tạo Keys cho chunk này
@@ -926,7 +927,7 @@ public class DataManagerAerospikeFloatSim {
 
         // Tạo Key và Timestamp
         long[] allTimestamps = new long[totalRecords];
-        Calendar cal = Calendar.getInstance();
+        Calendar cal = Calendar.getInstance(java.util.TimeZone.getTimeZone("GMT+7")); // HARDEN 2026-07-23: pin GMT+7 (khong phu thuoc TZ mac dinh node) - khop quy uoc key da ghi
         cal.setTimeInMillis(startTime);
         cal.set(Calendar.HOUR_OF_DAY, 7);
         cal.set(Calendar.MINUTE, 0);
@@ -949,6 +950,7 @@ public class DataManagerAerospikeFloatSim {
             futures.add(executor.submit(() -> {
                 // --- FIX THREAD SAFETY: Tạo SimpleDateFormat riêng cho từng luồng ---
                 SimpleDateFormat localKeyFormat = new SimpleDateFormat("yyyyMMdd-HHmm");
+                localKeyFormat.setTimeZone(java.util.TimeZone.getTimeZone("GMT+7")); // HARDEN 2026-07-23: pin GMT+7 doc key deterministic
 
                 Map<Long, KlineObjectSimple[]> chunkResult = new HashMap<>();
                 // Tạo Keys cho chunk này
@@ -1074,6 +1076,7 @@ public class DataManagerAerospikeFloatSim {
             futures.add(executor.submit(() -> {
                 // Đảm bảo thread-safety cho format ngày
                 SimpleDateFormat localKeyFormat = new SimpleDateFormat("yyyyMMdd-HHmm");
+                localKeyFormat.setTimeZone(java.util.TimeZone.getTimeZone("GMT+7")); // HARDEN 2026-07-23: pin GMT+7 doc key deterministic
                 Map<Long, Map<String, KlineObjectSimple>> chunkResult = new HashMap<>();
 
                 // Tạo mảng Keys cho chunk này
@@ -1179,6 +1182,7 @@ public class DataManagerAerospikeFloatSim {
 
             futures.add(executor.submit(() -> {
                 SimpleDateFormat localKeyFormat = new SimpleDateFormat("yyyyMMdd-HHmm");
+                localKeyFormat.setTimeZone(java.util.TimeZone.getTimeZone("GMT+7")); // HARDEN 2026-07-23: pin GMT+7 doc key deterministic
                 Map<Long, Map<String, KlineObjectSimple>> chunkResult = new HashMap<>();
 
                 try {
@@ -1506,6 +1510,7 @@ public class DataManagerAerospikeFloatSim {
 
             futures.add(executor.submit(() -> {
                 SimpleDateFormat localKeyFormat = new SimpleDateFormat("yyyyMMdd-HHmm");
+                localKeyFormat.setTimeZone(java.util.TimeZone.getTimeZone("GMT+7")); // HARDEN 2026-07-23: pin GMT+7 doc key deterministic
                 Map<Long, Map<Short, float[]>> chunkResult = new HashMap<>();
                 try {
                     Key[] chunkKeys = new Key[endIdx - startIdx];
@@ -1811,6 +1816,7 @@ public class DataManagerAerospikeFloatSim {
 
             futures.add(executor.submit(() -> {
                 SimpleDateFormat localKeyFormat = new SimpleDateFormat("yyyyMMdd-HHmm");
+                localKeyFormat.setTimeZone(java.util.TimeZone.getTimeZone("GMT+7")); // HARDEN 2026-07-23: pin GMT+7 doc key deterministic
                 Map<Long, Map<Short, float[]>> chunkResult = new HashMap<>();
                 try {
                     Key[] chunkKeys = new Key[endIdx - startIdx];
@@ -2299,6 +2305,7 @@ public class DataManagerAerospikeFloatSim {
 
             futures.add(executor.submit(() -> {
                 SimpleDateFormat localKeyFormat = new SimpleDateFormat("yyyyMMdd-HHmm");
+                localKeyFormat.setTimeZone(java.util.TimeZone.getTimeZone("GMT+7")); // HARDEN 2026-07-23: pin GMT+7 doc key deterministic
                 Map<Long, long[]> chunkResult = new HashMap<>();
                 long[] chunkTimestamps = Arrays.copyOfRange(allTimestamps, startIdx, endIdx);
 
@@ -2367,6 +2374,7 @@ public class DataManagerAerospikeFloatSim {
 
             futures.add(executor.submit(() -> {
                 SimpleDateFormat localKeyFormat = new SimpleDateFormat("yyyyMMdd-HHmm");
+                localKeyFormat.setTimeZone(java.util.TimeZone.getTimeZone("GMT+7")); // HARDEN 2026-07-23: pin GMT+7 doc key deterministic
                 Map<Long, MarketDataObject> chunkResult = new HashMap<>();
                 long[] chunkTimestamps = Arrays.copyOfRange(allTimestamps, startIdx, endIdx);
 
@@ -2436,6 +2444,7 @@ public class DataManagerAerospikeFloatSim {
 
             futures.add(executor.submit(() -> {
                 SimpleDateFormat localKeyFormat = new SimpleDateFormat("yyyyMMdd-HHmm");
+                localKeyFormat.setTimeZone(java.util.TimeZone.getTimeZone("GMT+7")); // HARDEN 2026-07-23: pin GMT+7 doc key deterministic
                 Map<Long, AiPredictionData> chunkResult = new HashMap<>();
                 long[] chunkTimestamps = Arrays.copyOfRange(allTimestamps, startIdx, endIdx);
 
