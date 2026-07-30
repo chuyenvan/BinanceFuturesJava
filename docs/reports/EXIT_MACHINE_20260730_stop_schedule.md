@@ -253,3 +253,91 @@ không cần harness, trả lời trực tiếp câu hỏi gốc của Uni ("nu�
 
 Chạy E0 trước hay gộp E0+E1; horizon export zigzag (30d? tới delist?); và có commit khối uncommitted
 trước khi thêm code mới hay không.
+
+---
+
+# KET QUA E0 (2026-07-30, DA CHAY) — **C1 BỊ BÁC. GATE STOP KÍCH HOẠT.**
+
+Run: `EntryUniverseCountProbe`, jar `binance-e0-20260730.jar`, Oracle, log
+`/home/ubuntu/claudedata/.run/e0_entry_universe.log`, CSV
+`/home/ubuntu/claudedata/entry_universe_e0.csv` (64 522 dòng).
+Env: `SIM_GATE_COUNT_ONLY=1 SIM_ENTRY_UNIVERSE_DUMP=1 SELECTOR_RANK_TOPK=8
+SIM_MIN_MOMENTUM_15M=0.010 WFO_DATA_DIR=wfo_ds_ret2wf_4h_ff`, range **20210101..20260301**.
+Ticker = Aerospike local (env `TICKER_SOURCE` là no-op — xem INFRA_FACTS).
+
+- `gateSeen = 19 419 806`, `gatePass = 64 222`, raw admission = **64 522**
+  (chênh 300 = leg `BIG_DOWN` bỏ qua khối filter, `levelChangeOrdinal=3`; selector `ord=5` = 64 222).
+
+## Đối chiếu CÙNG CỬA SỔ w4–w14 (20230101..20251001) — nơi có 996 trade thật
+
+| H (giờ) | vị thế (tất cả) | chỉ selector | **vs 996 trade thật** |
+|---:|---:|---:|---:|
+| 0 (raw signal-minute) | 11 573 | 11 441 | 11.62× |
+| 1 | 1 299 | 1 262 | **1.30×** |
+| 4 | 1 138 | 1 101 | 1.14× |
+| 12 | 1 042 | 1 005 | 1.05× |
+| 24 | **997** | 960 | **1.00×** |
+| 72 | 952 | 919 | 0.96× |
+| 168 | 912 | 880 | 0.92× |
+
+## KẾT LUẬN: C1 KHÔNG cho thêm sample. Con số 26.5× là ARTIFACT.
+
+Ở mọi H khớp horizon exit thực tế (≥12h), **số vị thế độc lập ≈ số trade đã thực sự vào**
+(997 vs 996 = 1.00×). Nghĩa là **filter vốn gần như KHÔNG hề binding** — hệ thống đã vào gần hết
+những gì nó được phép vào. "26.5×" trong §PHAN 2 sinh ra 100% do đếm **signal-minute**; hệ số dedup
+thực = **~23×**, ăn trọn toàn bộ khoảng lợi tưởng có.
+
+> **Đây là bác bỏ khuyến nghị của chính báo cáo này.** §PHAN 2 viết "C1 thắng tuyệt đối, 26.5×
+> sample, bias 0" — **SAI**. Caveat ⚠️#1 (gatePass đếm signal-minute) hoá ra không phải hiệu chỉnh
+> nhỏ mà là toàn bộ vấn đề. Phần lập luận **hạ gate gây sample-selection bias vẫn ĐÚNG** và không bị
+> ảnh hưởng; chỉ có "C1 là nguồn sample thay thế" bị bác.
+
+## GATE STOP (đã pre-register ở §E0) ĐÃ KÍCH HOẠT
+
+Ngưỡng pre-register: "< ~3000 vị thế ở H hợp lý → DỪNG, xét lại C2/C3 thay vì export zigzag E1".
+
+| phạm vi | H=24h | H=72h | H=168h |
+|---|---:|---:|---:|
+| w4–w14 | 997 | 952 | 912 |
+| toàn kỳ 20210101..20260301 | **2 834** | 2 485 | 2 236 |
+
+Toàn kỳ ở H=24h = 2 834 < 3 000 ⇒ **FAIL ngưỡng, dù sát**. ⇒ **KHÔNG chạy E1.**
+
+⚠️ Ngưỡng 3 000 là **số tôi (Claude) tự đặt** trong doc này, KHÔNG phải Uni pre-register. Uni có
+quyền sửa — nhưng sửa **sau khi đã nhìn kết quả** chính là vi phạm luật "pre-register trước khi
+xem" (memory: Uni đã bắt Claude vi phạm 2 lần). Nếu đổi ngưỡng thì phải ghi tường minh là đổi
+sau-khi-nhìn, kèm lý do độc lập với con số vừa thấy.
+
+## Chỗ sample THẬT SỰ nằm: 2021–2022, không phải filter vốn
+
+Phân bố raw admission theo năm:
+
+| năm | raw admission |
+|---|---:|
+| 2021 | **29 277** |
+| 2022 | 15 611 |
+| 2023 | **880** |
+| 2024 | 7 377 |
+| 2025 | 11 377 |
+
+Toàn kỳ H=24h (2 834) − w4–w14 H=24h (997) ⇒ **~1 837 vị thế độc lập nằm ngoài vùng verdict**, chủ
+yếu 2021–2022. ⇒ **C2 (nạp 2021/2022 vào tập DERIVE) là đường DUY NHẤT còn sống**, và nó gấp ~2.8×
+tập w4–w14 — trái với §PHAN 2 đã viết "C2/C3 không cần nữa" (**cũng SAI, cần đảo lại**).
+
+Ràng buộc phương pháp khi dùng C2: 2022 là vùng **derive genome frozen** (w0/w1) và 2021 là
+**train-only, chưa bao giờ OOS**. Dùng cho **hình học path** thì được; nhưng w2–w14 PHẢI giữ nguyên
+làm validation chưa chạm, và mọi schedule fit trên 2021–2022 phải validate forward.
+
+⚠️ 2023 chỉ 880 raw (so 2021: 29 277) — chênh 33×. Đây là bằng chứng độc lập cho "frequency = trần
+ràng buộc": cùng gate 0.010, số tín hiệu qua gate phụ thuộc regime cực mạnh. CHƯA giải thích, cần đo.
+
+## Lỗi nhỏ trong probe (cần sửa nếu chạy lại)
+
+Cột `symbolDuyNhat` = 483 ở MỌI cooldown — vì nó đếm số symbol từng được admit, bất biến theo
+cooldown. Vô dụng như đang trình bày; nên đổi thành "số vị thế / symbol" hoặc bỏ.
+
+## Uni quyết
+
+(a) Giữ gate stop → dừng nhánh exit-on-frozen-set, quay về P0–P5 (sửa harness); hoặc
+(b) Đổi sang C2 (nạp 2021–2022, ~2 834 vị thế) và ghi rõ việc hạ ngưỡng là sau-khi-nhìn; hoặc
+(c) Điều tra trước cái chênh 33× giữa 2021 và 2023 — nó có thể quan trọng hơn cả nghiên cứu exit.
