@@ -1,5 +1,49 @@
 # SESSION_START — Điểm bắt đầu session mới (chốt 2026-07-07 chiều)
 
+## 0.0 MỚI NHẤT (2026-07-30) — ĐỌC TRƯỚC §0.1
+> **Bước 1 của verdict M ĐÃ XONG (read-only audit).** Hai doc mới, đọc trước khi làm gì:
+> `reports/AUDIT_20260730_wfo_constraint_harness.md` — 6 lỗ hổng harness (L1–L6) + 7 đề xuất (P0–P6).
+> `reports/EXIT_MACHINE_20260730_stop_schedule.md` — algebra exit + kế hoạch E0–E4.
+>
+> **3 phát hiện chốt:**
+> 1. **L1 ordering inversion (BUG):** ramp `TOO_FEW_TRADES` ∈ (−100000, 0) **cao hơn** mọi reject khác
+>    (CAPITAL_LOCK ≈ −100002) → genome 1 lệnh thắng genome đang lãi. HPO ưu tiên không-trade.
+> 2. **L2:** khi CAPITAL_LOCK bind hết sample, argmax = min pctHeldOver7d → Calmar bị loại khỏi bài
+>    toán → **harness CHỦ ĐỘNG chọn genome đánh lướt** (6/17 gene là exit param). "Pump nhưng lướt"
+>    không chỉ do label 6% — bị fitness cưỡng chế. ⇒ KHÔNG tune exit trước khi sửa harness.
+> 3. **Exit machine vỡ 2 chỗ:** dead zone 1.03%→5.39% (SL đóng băng ở +0.5%, ratchet lệch arm 5.2×,
+>    có **bước nhảy siết chặt 41% NGAY tại 5.39%**); và `gap = min(p×g, TS_MAX_GAP)` **đảo dấu** →
+>    tỉ lệ nhả teo dần `maxGap/p` (27% ở p=30%, 8% ở p=100%) → cắt mất đuôi x2/x3.
+>    Cần `max(p×g, minGap)` thay vì `min(..., maxGap)`.
+>
+> **Định lượng:** 8/13 window non-w15 bị CAPITAL_LOCK loại, Σ net **+9 176.68 DƯƠNG TOÀN BỘ**.
+> Pre-register: sửa CAPITAL_LOCK một mình → 9/13 = 69.2% (**thiếu đúng 1 window**); + hạ sàn
+> min-trade → 10/13 = **76.9%**. WFE_median và worstDdPct chưa biết ⇒ CHƯA được nói PASS.
+>
+> **Sample cho nghiên cứu exit — KHÔNG hạ gate.** Đã đo (`freq_probe_table.md`): gate 0.010 cho
+> **26 394 gate-pass** w4–w14 vs 996 trade thật = **26.5×** nếu bỏ filter vốn (C1), cùng phân phối
+> momentum, bias 0. Gate 0.008 chỉ thêm 1.64× và kèm sample-selection bias. C1 thắng tuyệt đối.
+> ⚠️ Phải dedup (gatePass đếm signal-minute) và giao với rank-K8 trước khi tin số 26k → đó là E0.
+>
+> **Chưa làm gì cả** — mới audit. Uni chốt: P0+P5+P6 trước, hay gộp P1+P3; E0 riêng hay E0+E1.
+
+## 0.1 (2026-07-29) — verdict M
+> **VERDICT M (2026-07-29): entry-alpha KHÔNG đóng. Edge selector THẬT + TRẢI RỘNG (không chỉ w15). Bottleneck = WFO/HPO HARNESS, KHÔNG phải gate/selector/regime.** Đọc `reports/HANDOFF_20260729_entry_alpha_harness.md` TRƯỚC (bản nối-mạch 30s).
+> Bằng chứng: step-2 frozen leakage-free → 11/13 window OOS non-w15 winRate>50% + net dương sau phí; net/trade non-w15 8.59 ≥ w15 7.97; A(frozen) thắng B(production) 2.34× → breadth KHÔNG leakage. Window fail = TOO_MUCH_CAPITAL_LOCK/TOO_FEW_TRADES → harness loại nhầm window đang lãi.
+> **NEXT (KHÔNG build gate/model mới):** (1) audit+nới constraint TOO_MUCH_CAPITAL_LOCK/TOO_FEW_TRADES [đọc code trước]; (2) fix fitness mismatch (Calmar-chọn vs raw-PnL-chấm); (3) bỏ HPO argmax → genome regularized (nếu 1+2 chưa đủ); (4) N=30 confirm sau mỗi bước (số M hiện tại là N=1). Đã GIẾT: oi_z, offset, hard-SL, short, gate<0.010, HPO-argmax(overfit w15). Config tốt nhất: MOM15=0.010 + rank-K8 + trailing + funding-fee ON.
+> Code rank-K/offset/frozen + jar `binance-lf-frozen-1.0.0.jar` = **UNCOMMITTED** (cần review+commit). Chuỗi đầy đủ: `reports/gate_freq_ablation_20260727.md §A–§O`.
+> ---
+> **CẬP NHẬT gate/frequency ablation — entry-alpha KHÔNG đóng nhánh, hồi sinh về near-PASS.** Nguồn: `reports/gate_freq_ablation_20260727.md` (+ `HANDOFF_20260727_entry_alpha.md`).
+> **Đã-đo (07-27 tối):** FREQUENCY = trần ràng buộc (XÁC NHẬN). Hạ gate `MIN_MOMENTUM_15M` baseline(0.02284)→0.010: %OOS-SUCCESS 46%→69% (75% ex-w16), net-EV +51%, PnL dàn khỏi w15 (68%→46%), **WFE median 0.68 (≥0.5 PASS), maxDD 26%**. Non-monotonic: nới gate về 0/off = PHÁ HUỶ (BURN, maxDD 59%, −55k) → KHÔNG bỏ gate, chỉ hạ về sweet-spot. **WFE 0.24 cũ = artifact HPO over-tightening** (fixed-genome cho 0.68–0.75), cần N=30 confirm. Kaggle fanout đã self-contained (`java-run-lc` config `TICKER_SOURCE=file`, parity w6 khớp 437/1.21/56). Close-branch condition NEXT#5 KHÔNG kích hoạt.
+> **NEXT (chờ Uni quyết, heavy):** (1) oi_z THAY gate — build predict_wf dataset (nên chạy Kaggle, né disk Oracle 89%); (2) rebuild jar hạ sàn genome MOM15 <0.010 + fix-gate/regularize DOF → N=30 HPO đối chứng baseline 0.24; (3) đóng window thoái hoá w14 BURN / w9 CAPITAL_LOCK tại sweet-spot.
+> ---
+> **Đã VERIFY edge entry-alpha — ĐỪNG hỏi lại "verify edge trước".** Nguồn đầy đủ: `reports/HANDOFF_20260727_entry_alpha.md`.
+>
+> **Đã-đo:** selectability THẬT (xsecIC 18/18 quý, dedup) nhưng KHÔNG monetize. Hard-SL/TP first-touch = âm hết; short bottom-decile NOT_VIABLE; oi_z-veto CHỒNG = frequency wall. **Trailing (DCA off, funding on) = hướng DƯƠNG duy nhất nhưng WEAK**: WFE median ≈0.24 (<0.5 overfit), PnL dồn 1 window (w15 +7469), 7/13 window ZERO/TOO_FEW.
+> → Theo rule "edge không robust nếu WFE med ≤0 hoặc dương nhờ 1–2 window": **edge NỖ/borderline, trần thật = FREQUENCY/gate** (không phải exit).
+> **NEXT (KHÔNG lặp lại verify):** (1) gate/frequency — Task156 coverage + MOM15 cùn (7/13 window bị bóp); (2) chống overfit HPO (giảm DOF genome, đừng tin outlier w15); (3) **tách 2 chiến lược** — label 6% bản chất là scalp; "nuôi lãi / SL chặn" cần label+exit KHÁC, đừng nhồi 1 model; (4) wire Kaggle `TICKER_SOURCE=file` (hpo-ticker-daily 1m) — kernel hiện đọc aerospike226, fanout FAILED 9/16.
+> **ĐỒNG BỘ:** verify trên ghi ở **repo docs/** (STRATEGY_ENTRY_ALPHA §9, reports/*), KHÔNG tự vào `memory.md` → session chỉ nạp memory (không đọc repo) sẽ lệch → phải đọc handoff này hoặc chạy consolidate-memory.
+
 > **ĐỌC FILE NÀY ĐẦU TIÊN khi mở session mới.** Nó tóm tắt CHÍNH XÁC những gì đã chốt + trạng thái thật +
 > việc kế tiếp, để không miss/lệch. Chi tiết dữ liệu → [DATA_STATE.md](DATA_STATE.md). Topology → [db/index.md](db/index.md).
 > Quy trình backfill → [runbooks/BACKFILL_SURVIVORSHIP.md](runbooks/BACKFILL_SURVIVORSHIP.md).
@@ -24,6 +68,11 @@ Gate chặn lỗi im lặng trước HPO/WFO — spec ở DATA_VALIDATION_FRAMEW
 **CƠ CHẾ hiện tại (đọc code xác nhận):** nuôi lãi = trailing động (arm ~5.4% hoặc ~1%, gap=min(đỉnh×
 giveback,8%), giveback=1.0 tối ưu). DCA = BIG_DOWN + độ sâu lỗ (phanh theo margin ratio −15..−99%). Cơ chế
 +3%→SL cứng+1% của Uni là THIẾT KẾ MỚI cho tầng 2, chưa implement (nuôi lãi hiện vẫn cơ chế cũ).
+
+**TO-DO NÓNG (cập nhật mới nhất):**
+1. **Kiểm chứng `SELECTOR_INVERT=1`** — nghịch đảo dấu selector cho Long: mua worst-N "ít pump nhất" để tránh bẫy pump-and-dump. In-sample biến 2025Q2 từ lỗ thảm → lãi ròng. → **cần chạy WFO OOS xác nhận** (chưa OOS = chưa kết luận).
+2. **Chạy WFO kịch bản Soft-Gating dồn vốn (`CONF_SIZE_MODE=1`)** để khắc phục vốn idle 14/16 quý.
+3. **Vận hành qua CE pipeline tự động (`wfo_from_preds.json`)**, KHÔNG gõ lệnh cơm.
 
 ## 0. MỤC TIÊU ĐANG THEO (Uni chốt)
 Xây bộ dữ liệu CHUẨN đi theo pipeline CHUẨN cho hệ WFO tốt nhất — **ưu tiên chất lượng, không vội**.

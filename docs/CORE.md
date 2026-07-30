@@ -9,6 +9,7 @@
 ## An toàn vận hành (KHÔNG đảo ngược được)
 - ⛔ KHÔNG ghi file/log/output ra **ổ C** (`/tmp`, `~/`, `C:\...\Temp`). Dùng `/d/claudedata` (local) hoặc trên 226. Đã crash MCP 3 lần. → `KAGGLE_RULES.md §0`.
 - ⛔ KHÔNG `pkill`/`killall java`. Chỉ kill ĐÚNG PID job mình spawn. TUYỆT ĐỐI không kill: `BinanceDataIngestor`, `BinanceOrderTradingManager` (2 process live), Aerospike, Redis, HPO của user. → luật dọn-job 226.
+- ⛔ TỐI ĐA **3 job java chạy đồng thời trên Oracle** (`wfo_fanout` oracle_workers ≤3). Sự cố 2026-07-24: 4 WFO worker bão hoà Oracle → SSH/CE đơ → phải REBOOT (mất cả run). KHÔNG bao giờ >3.
 - 🔒 Deploy code / restart 2 process live = **CHỈ user tay**. CCD chỉ build jar + soạn runbook. (Tác động DỮ LIỆU 242 qua 226 thì CCD làm được — job data, không phải deploy.)
 - 🔒 `config/PrivateConfig.java` / `runAider.bat` chứa key live đã lộ trong git — KHÔNG echo secret ra log/commit/chat; nhắc user rotate.
 - Tool batch chạy Kaggle/nền: cuối `main()` phải `System.exit(0)` (lỗi `1`). Thiếu → kernel treo tới 12h, MẤT output. KHÔNG áp cho 2 process live (chúng cố ý chạy mãi).
@@ -41,6 +42,14 @@
 - Đổi hướng: việc đang dở phải DỪNG sạch (kill ĐÚNG PID mình spawn + ghi trạng thái lại) hoặc chốt task resume được. CẤM bỏ process mồ côi chạy nền.
 - "Done" = có số ĐO (validate dữ liệu), KHÔNG phải "lệnh đã chạy xong".
 - **Job vận hành dài/lặp/nhiều bước → BẮT BUỘC qua CE** (nút + pipeline, `docs/rules/ce-buttons.md`): máy làm trọn chuỗi chân tay, LLM chỉ ở `llm_gate`. ⛔ CẤM viết bash driver/vòng poll ad-hoc khi nút/pipeline có sẵn.
+
+## Bảo vệ Prompt Cache (CE V3)
+- **Gom tool call liền mạch trong 1 turn** — tránh giãn cách dài giữa các call: MCP dễ disconnect giữa chừng → vỡ prompt-cache.
+- **Chẻ việc lớn thành nhiều turn ngắn + handoff file** (`NEXT_SESSION`); tránh 1 turn dài làm vỡ prompt-cache (đo thực: đắt gấp **10–20 lần**).
+- **Output tool ra chat ≤10 dòng** (grep/head); log chi tiết ghi FILE cho agent `oracle-runner` tự đọc.
+
+## Genome 18-gene (chuẩn hiện hành)
+- Bộ genome chuẩn hiện hành = **18-gene** (ADR-0012). 9 gene **cụm C đã OFF CỨNG** hoàn toàn khỏi luồng engine (chặn BIG_UP, bóp vốn=1, v.v.). Chi tiết: `decisions/0012-genome-18-gene-off-cung-cum-C.md`.
 
 ## Phản biện & tìm giải pháp tốt hơn (user đề cao — áp cho việc CÓ TẦM ẢNH HƯỞNG)
 - User LUÔN đề cao phản biện + câu hỏi "còn giải pháp nào tốt hơn không". **Kể cả khi user ĐÃ CHỐT phương án, hoặc Claude đã chốt** — nếu thấy giải pháp tiềm năng hơn thì PHẢI phân tích sâu hơn (đánh đổi, rủi ro, chi phí đảo ngược) rồi mới quyết, KHÔNG im lặng làm theo.

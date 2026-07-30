@@ -76,6 +76,10 @@ Provenance: mọi artifact ghi manifest (code SHA + nguồn + ngày). Dữ liệ
 - **Hệ quả:** market_data_object + lifecycle gen TRƯỚC clean giờ SAI → phải REGEN cả 2 từ ticker sạch (đang làm).
 - symbol_mapper vẫn còn 38 ghost entry (chỉ id-map, không data) — vô hại vì ticker đã sạch; lọc khi tiện.
 
+**Cập nhật trạng thái sau dọn (2026-07-07):**
+- Ticker Aerospike đã **SẠCH** sau `CleanTickerGhostAndTail`: xoá **7400 ghost** USDC-margin + **>12 triệu dòng đuôi đứng yên** của 10 coin delist.
+- `symbol_lifecycle` **rebuild thành công từ data sạch: 698 symbol (636 LIVE / 62 DEAD)**. ⚠️ LỆCH SỐ cần đối chiếu: bảng §1 hiện ghi lần REGEN 07-07 tối = 661 (589 LIVE/72 DEAD). Xác nhận lần rebuild nào là số cuối trước khi dùng.
+
 ## 5c. FUNDING DATA (2026-07-08): set funding_data RỖNG -> crawl lại
 - Phát hiện: set `funding_data` trống trên Oracle (bị reset như market/OI cũ). Hệ quả: gate feature A (3 cột funding), gate B (b7_pctFundingHigh/Dispersion), selector ff (~10 cột funding #17-27) đều gen ra RỖNG → phải gen lại sau khi có funding.
 - Nguồn: crawl fapi.binance.com (HistoricalFundingCrawlerLocal, symbol từ universe 780 gồm coin delist, ghi Oracle local bin f_data). fapi reachable từ Oracle, ~10-20 phút. KHÔNG copy 242 (242 ns khác `test` → replicate lỗi).

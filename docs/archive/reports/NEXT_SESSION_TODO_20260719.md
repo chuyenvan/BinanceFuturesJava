@@ -98,3 +98,43 @@ thật CHƯA đo (hoãn; bot 242 không lưu giá khớp → cần userTrades AP
 ### CHƯA làm (hết ưu tiên/tài nguyên tuần tự — 1 WFO/lúc)
 - Bước 6 (short-gate classifier) · Bước 7 (multi-sleeve dual-channel Java — CODE MỚI PnL-critical, chỉ DRAFT+flag, KHÔNG trust khi chưa cross-check 2 tầng).
 - Blocker cứng: **Oracle 1 WFO/lúc + wfo_build_ds 12G RAM** ⇒ long_full → long_12h → short_win chạy TUẦN TỰ, mỗi cái ~2.5h. Đêm chỉ đủ 1-2 WFO. Short winner + long_12h phụ thuộc Kaggle export xong.
+
+---
+
+## 07-19 CHIỀU — CHẨN ĐOÁN CAPITAL-UTILIZATION + 2 LEVER MỚI (Uni chỉ trọng tâm)
+> Uni hỏi đúng chỗ: maxDD? max margin? vốn idle? gate quá thô? → soi minEq_mtm.
+
+### CHẨN ĐOÁN (data long_full, cột minEq_mtm% = mức vốn thấp nhất; 100 = KHÔNG mở vị thế)
+- **Idle KÉP, cực đoan:** 14/16 quý minEq_mtm 99-100% (vốn nằm im). maxDD worst 15.4% (chỉ 2025Q4/win15), 0% hầu hết. **Max margin thật ~0.7%** (log `m:232` trên balance 35k, `run 1/8`). → under-deploy CẢ tần suất LẪN kích thước.
+- **Calmar khi active ~1** (win15 1.18, win12 1.39) → 20%/năm cần ~20% DD = chấp nhận (fallback Uni). **Edge KHÔNG yếu — deploy quá ít.** Đường tới 20% = tăng deployment (size × freq × concurrency), KHÔNG cần alpha mới.
+- Gate = công tắc nhị phân (p6≥0.68 in/out) + size cố định tí hon = **thô thật** → nên size-theo-confidence, luôn giữ vài vị thế.
+
+### LEVER B — LONG SIZING (commit `71b51cc`, module) ✓ CODE XONG
+- Phát hiện: **KHÔNG có cap cứng ~8**; "1/8" là do budget-throttle (`BudgetManagerSimple.getBudget`=balance/number_order_budget → `TradeUtils.managerBudget` null khi marginRatio≥0.99). Cap thật `MAX_CONCURRENT_ORDERS=40` (density-breaker base). → lever chính = **SIZE_MULT**.
+- Thêm 2 env (Configs default byte-identical): `SIZE_MULT`(float,1.0 — nhân budget SAU guard trong `createOrder`), `MAX_CONCURRENT`(int,40 — override). Guard chống-âm-vốn GIỮ NGUYÊN (nới size chạm BREAKER sớm hơn, không bypass). Function-test `SizeMultSizingTest` 2/2 PASS (SIZE_MULT=10 → quantity/margin ×10.0). Build SUCCESS. **CHƯA deploy/WFO.**
+- **RUNBOOK (khi jobstore rảnh):** build+scp jar → `ce wfo_fanout wfo_ds_maxdep <jar-sizing> 30 42 2 0 long_sizeN "ABLATION_MODE=A,WFO_DISABLE_DCA=1,TIME_STOP_HOURS=24,SIZE_MULT=<N>"` sweep N∈{2,4,10}; đọc full-cycle return/Calmar/maxDD_mtm vs long_full. Kỳ vọng minEq_mtm rời 99-100%; canh BREAKER_MARGIN_HALT=0.50.
+
+### SHORT — CROWDING BREAKTHROUGH (short-crowding kernel COMPLETE) ✓
+- **net_chop DƯƠNG lần đầu:** best = t9, horizon **24h**, stop **30%**, gate **ls_toptrader top-10% (q0.90)+p0.60** → net **+2.91/kèo, tpq 283/quý, winrate 62%, net_bull +2.16, net_chop +3.47** (chop>bull!). AUC 0.68. → short-CÓ-ĐIỀU-KIỆN-crowding = **hedge chop uncorrelated** (short naive thua chop vì short tất; conditioning crowding chỉ short coin over-crowded → dump cả chop). Caveat: proxy, chưa WFO; funding OFF (short crowded EARN funding → thật có thể tốt hơn).
+- **ĐANG CHẠY:** Kaggle GPU `chuyendinh/short-crowd-export` (kernel mới, CHƯA commit git) → xuất per-window preds `short_crowd_preds.csv.gz` (cột win/ts/symbol/ps/ls_toptrader/ls_global/oi_z) để WFO real-path. Guard `NO_24H_COLUMNS` nếu thiếu 24h.
+
+### ĐANG CHẠY / NEXT (07-19 chiều)
+- Oracle: **`long_maxdep` WFO** (p6≥0.5 + oiz Q0.75 + gate-off B + SELECTOR_SCORE_MAX=0.5, jar preflight-v42-maxdep md5 a06acd94) — poll `ce wfo_status`. Kaggle: `short-crowd-export` (GPU).
+- **Thứ tự khi jobstore rảnh (1 WFO/lúc):** (1) đọc long_maxdep full-cycle. (2) deploy jar-sizing → long_sizeN sweep (lever B). (3) short-crowd-export xong → convert (lọc ls_toptrader top-10% + rank ps) → short-crowding WFO real-path. (4) nếu (2)+(3) OK → multi-sleeve long+short (PnL-critical, cross-check 2 tầng Excel).
+
+---
+
+## 07-19 TỐI — LOẠT VERDICT DỨT KHOÁT (nhất quán, đổi hướng chiến lược)
+### long_maxdep (hạ ngưỡng p6→0.5) = ❌ BÁC
+- **BURN_ACCOUNT 8/16 window** (OOS equity về âm), maxDD win15 55.6% (>trần 50%), chỉ 2 SUCCESS. → **KHÔNG mua được frequency bằng hạ chất lượng** — kèo p6 thấp âm nặng → cháy. Lever A chết.
+### long-conf-headroom = ✅ SOFT-GATE ĐÁNG LÀM
+- Trong admit (p6≥0.68): top-2 decile p6 = **+3.40/+2.38/kèo** (win 52-56%); decile giữa (p6~0.68) = **-1.35/-1.21** (win 42%). ic_admit +0.065. → gate nhị phân vứt info ranking mạnh. Fix = **size-by-confidence** (dồn p6 cao, rút marginal), KHÔNG hạ ngưỡng.
+### short robustness (short-crowd-robust) = edge THẬT nhưng NHỎ + year-variable
+- Recompute sạch net_chop = **+0.90** (KHÔNG phải +3.47 — số cũ thổi ~4× do period 2023-25). Per-year: 2022 +2.76(n147) · 2023 **+0.00** · 2024 +0.99 · 2025 +2.24 · **2026 -1.12**. Placebo shuffle = **-1.55** (✅ gate thật). q-sweep monotonic (q0.8→0.06, q0.95→**1.88**). → **sau ma sát 0.8%: q0.90 hòa vốn, q0.95 +1.08%/kèo (khiêm tốn)**. 2026 âm = sát live đáng lo. → short = **hedge biên, dùng q0.95**, KHÔNG ưu tiên slot Oracle.
+### short widestop = "30% quá nhỏ" ĐÚNG
+- 24h: net_chop s30 +3.47 → **s70 +4.53**, pct_stopped=0, pct_rise>100%=0 (không cháy 1x rổ crowded). Coin pump-ngược 30-70% rồi mới dump → giữ rộng thì ăn. → short config: **s60-70 + 24h + q0.95**. (72h tpq cao nhưng net/kèo thấp → 24h tốt hơn.) Số tùy period (widestop 2023-25 lạc quan vs robust incl-2026).
+
+### ĐANG CHẠY: `long_softgate` WFO (Oracle, ~2.5h)
+- jar `preflight-v42-softgate.jar` (md5 411d4011, commit 207b359 = SIZE_MULT+soft-gate) trên `wfo_ds_oiz2022_75` (baseline long_full), env `ABLATION_MODE=A,WFO_DISABLE_DCA=1,TIME_STOP_HOURS=24,CONF_SIZE_MODE=1` (LO0.68/HI0.95/FMIN0.3/FMAX3.0). Apples-to-apples vs long_full (+2.2% CAGR). Câu hỏi: dồn vốn p6 cao có nâng return/Calmar không.
+- **NEXT khi xong:** full-cycle long_softgate vs long_full. Nếu ↑ → thêm SIZE_MULT sweep (scale kèo tốt) → có thể tới 20%. Nếu ~ngang → soft-gate không đủ, cần alpha/frequency-chất khác. Short: chốt hedge biên q0.95/s60-70, chỉ ghép multi-sleeve nếu long đạt.
+- long-horizon export (commit 77d31e8) CHỜ chạy Oracle (bleed thesis) — ưu tiên sau soft-gate.

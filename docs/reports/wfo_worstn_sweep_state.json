@@ -1,0 +1,42 @@
+{
+  "campaign": "huong_A_meanrev_20260725",
+  "dataset": "/home/ubuntu/claudedata/wfo_ds_oiz2022_75",
+  "jar": "/home/ubuntu/java/simulator/preflight-v42.jar",
+  "total_windows": 16,
+  "oracle_workers": 1,
+  "incident": "2026-07-25: 4 worker lam Oracle OOM-crash + reboot (23GB RAM, SWAP=0). Ha xuong 1 worker (used 6GB/23, available 16GB - an toan). LUAT MOI: Oracle chi 1-2 worker toi da, KHONG 4. Fix goc: them swap cho Oracle.",
+  "kaggle_kernels": 0,
+  "current_running_tag": "A_meanrev",
+  "monitor_only": true,
+  "phase": "huong_A",
+  "config": "HUONG A pure mean-reversion: SELECTOR_INVERT=1, SELECTOR_TOPN=5, SELECTOR_ONLY_ENTRY=1 (tat luong best-N market-signal), WFO_DISABLE_DCA=1 (bo DCA), ABLATION_MODE=B (bo filter), SIM_HARD_SL_PCT=0.15 (cat lo). Trailing 'de nay chay' do HPO search.",
+  "compare_baselines": {
+    "sl15_worstN_notonly": "37.5% OOS+, WFE 0.285, BURN 4, maxDD_mtm 6.4% (worst-N + hard-SL nhung CON luong best-N)",
+    "prod_bestN": "18.8% OOS+, 7 ZERO_TRADES, edge don win15",
+    "pre_reg": "WFE>=0.5, %OOS+>=70%, maxDD<=50%"
+  },
+  "huong_A_question": "Mean-reversion THUAN (chi selector oversold, cat lo nhanh, bo DCA) co edge OOS khong? So voi sl15 (con best-N): SELECTOR_ONLY_ENTRY=1 loai best-N -> tot hon (best-N pha loang) hay te hon (best-N gánh loi)?",
+  "next_after": "Neu A cai thien ro (OOS+ tang, WFE>0.3) -> tinh chinh trailing/TP + coi la huong chinh. Neu A khong hon sl15 -> mean-reversion cung khong robust -> chuyen huong B (tin hieu moi).",
+  "note": "MONITOR-ONLY: khi DONE=16 & RUNNING=0 -> wfo_report A_meanrev -> doc bang window -> BAO verdict + so voi sl15 & prod_bestN. Dac biet xem so window trade duoc (SELECTOR_ONLY co starve khong) + edge con don win15 khong. KHONG tu fanout them.",
+  "prod_wfo_result": {
+    "tag": "A_meanrev",
+    "run_done": "2026-07-25",
+    "verdict": "FAIL",
+    "windows_done": 16,
+    "oos_pos_pct": 12.5,
+    "oos_pos_count": "2/16",
+    "wfe_median": -106.569,
+    "maxdd_oos_worst_pct": 2.2,
+    "maxdd_oos_worst_abs": 753,
+    "maxdd_mtm_worst_pct": 4.1,
+    "margin_call": "0/16",
+    "note_breakdown": { "SUCCESS": 2, "BURN_ACCOUNT": 4, "TOO_FEW_TRADES": 10, "ZERO_TRADES": 0, "CAPITAL_LOCK": 0 },
+    "success_windows": [0, 15],
+    "burn_windows": [1, 11, 12, 14],
+    "vs_pre_reg": "FAIL het: WFE median -106.57 << 0.5; %OOS+ 12.5% << 70%; maxDD 2.2% <= 50% (chi tieu nay dat nhung vo nghia vi ko co edge)",
+    "vs_sl15": "TE HON: OOS+ 12.5% < 37.5%, WFE -106.57 << 0.285. Bo best-N (SELECTOR_ONLY_ENTRY=1) lam xau di -> best-N GANH LOI chu khong pha loang.",
+    "vs_prod_bestN": "OOS+ 12.5% < 18.8%. Khac: prod_bestN 7 ZERO_TRADES; A_meanrev 0 ZERO nhung 10 TOO_FEW_TRADES (selector-only starve).",
+    "conclusion": "Mean-reversion THUAN khong co edge OOS. IS_fit ~ -100000 gan het window -> HPO khong tim duoc cau hinh IS co lai -> khong co edge de fit. 10/16 window starve (TOO_FEW); noi trade nhieu (win1/12/14) thi BURN_ACCOUNT. 2 SUCCESS mong manh (win0 WFE=0, win15 WFE=-213).",
+    "next_suggest": "Theo next_after: A KHONG hon sl15 -> mean-reversion khong robust -> chuyen HUONG B (tin hieu moi). Cho user quyet, KHONG tu fanout."
+  }
+}

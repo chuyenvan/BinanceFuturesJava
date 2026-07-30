@@ -199,6 +199,20 @@ kaggle datasets files chuyendinh/java-run-lc 2>&1
 
 ---
 
+## 5b. Upload dataset LỚN — 2 đòn bẩy (đo thực)
+
+**(1) Đóng gói TAR 1-file** thay vì upload hàng nghìn `.bin.gz`:
+- Upload rời hàng nghìn file → lỗi `finalize 502` + rất chậm.
+- Cách làm: nén CẢ thư mục thành **1 file `.tar`** (vd `ticker_all.tar` ~10GB) rồi push lên Kaggle.
+- Kaggle **tự giải nén** `.tar` thành **1826 file `.bin` uncompressed (~31GB)** trong vài phút.
+
+**(2) Bịt lỗi `'type'` của kaggle CLI 1.7.4.5:**
+- CLI `1.7.4.5` dùng blob-upload mới → lỗi `'type'` khi upload.
+- Cách sửa: tạo **venv riêng SẠCH** với **`kaggle==1.6.17`** (REST-upload cũ, triệt lỗi blob upload).
+- ⚠️ **KHÔNG dùng chung `xgb-env`** — tạo venv riêng để không đụng version gói khác.
+
+---
+
 ## 6. Test 1 kernel TRƯỚC khi push fleet
 
 **Bắt buộc** khi lần đầu chạy một loại job mới trên Kaggle (hoặc sau thay đổi lớn).
