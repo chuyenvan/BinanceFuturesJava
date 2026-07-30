@@ -44,6 +44,10 @@ public class OrderTargetInfoTest implements Serializable {
     public OrderTargetStatus status;
     public OrderSide side;
     public Float priceEntry;
+    // HARD-SL (env SIM_HARD_SL_PCT): GIA ENTRY DAU TIEN cua cum — BAT BIEN qua DCA. Set 1 lan luc mo leg
+    //   dau (createOrder) va mang theo qua mergeOrder (KHONG averaged nhu priceEntry). Chi dung cho blanket
+    //   hard-SL; null cho cac duong khong set -> byte-identical khi HARD_SL_PCT=0.
+    public Float firstEntryPrice;
     public Float lastEntry;
 
     public Float priceTP;
@@ -220,8 +224,20 @@ public class OrderTargetInfoTest implements Serializable {
                 //    overshoot trên gap. bar.open là giá thực thi đầu tiên → chuẩn hơn.
                 if (ticker.priceOpen < priceSL) {
                     long cnt = CLAMP_TOTAL.incrementAndGet();
-                    LOG.info("[EXIT-CLAMP-118] #{} sym={} sl={} open={}→fill={}",
-                            cnt, symbol, priceSL, ticker.priceOpen, ticker.priceOpen);
+                    LOG.info("[EXIT-CLAMP-118] #{} sym={} | Time: start={} -> trigger={} | Entry: {} | Target SL: {} | Candle: [O={} H={} L={} C={}] | Final PriceTP: {} | Qty: {}",
+                            cnt,   // index cua CHINH event nay (CLAMP_TOTAL.get() bi race khi WFO chay song song)
+                            symbol,
+                            com.binance.chuyennd.utils.Utils.normalizeDateYYYYMMDDHHmm(timeStart),
+                            com.binance.chuyennd.utils.Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime),
+                            priceEntry,
+                            priceSL,
+                            ticker.priceOpen,
+                            ticker.maxPrice,
+                            ticker.minPrice,
+                            ticker.priceClose,
+                            priceTP, // Giá chốt thực tế sau khi kẹp (Math.min(priceSL, ticker.maxPrice))
+                            quantity
+                    );
                 }
                 priceTP = Math.min(priceSL, ticker.priceOpen);
             }

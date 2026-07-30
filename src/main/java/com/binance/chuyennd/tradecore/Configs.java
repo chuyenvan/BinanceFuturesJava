@@ -335,6 +335,42 @@ public class Configs {
     //   (nhieu lenh hon) MA KHONG dinh AI_DYNAMIC_MAX (genome-coupled). Default -1f = OFF = byte-identical.
     public static final float SELECTOR_SCORE_MAX = System.getenv("SELECTOR_SCORE_MAX") != null
             ? Float.parseFloat(System.getenv("SELECTOR_SCORE_MAX").trim()) : -1f;
+    // ALPHA-TEST (placebo selector): dao thu hang selector -> chon coin TE-nhat-truoc thay vi TOT-nhat.
+    // Cung gate/nguong/so-lenh, chi doi uu tien budget. So PnL INVERT=0 vs =1 => selector co alpha that khong.
+    // Default false = byte-identical (khong dao).
+    public static final boolean SELECTOR_INVERT = "1".equals(System.getenv("SELECTOR_INVERT"));
+    // WORST-N BREADTH CAP (2026-07-22): cap so candidate selector-path mo dong thoi tai MOI moc tin hieu.
+    // Selector cu chon TAT CA nPass candidate qua gate; SELECTOR_TOPN>0 -> chi lay N candidate dau tien theo
+    // uu tien hien hanh (INVERT=1 -> N coin TE-nhat/oversold; INVERT=0 -> N coin TOT-nhat). Dung cho sweep
+    // Worst-3/5/8: tap trung von, giam capital-lock. Default -1 = OFF = uncapped = byte-identical.
+    public static final int SELECTOR_TOPN = System.getenv("SELECTOR_TOPN") != null
+            ? Integer.parseInt(System.getenv("SELECTOR_TOPN").trim()) : -1;
+    // SELECTOR OFFSET (2026-07-24, offset-sweep): bo qua [SELECTOR_OFFSET] candidate o cuc bien TRUOC khi lay N.
+    //  INVERT=1 (Worst-N): bo qua N coin TE-nhat (tail cuoi mang = dead-coin/rac cua truoc) roi lay TOPN coin
+    //    tiep theo (oversold that, con luc nay). INVERT=0 (Best-N): bo qua N coin TOT-nhat dau mang.
+    //  Clamp theo do dai mang (WORST) / nPass (BEST) de tranh IndexOutOfBounds. Default 0 = OFF = byte-identical.
+    public static final int SELECTOR_OFFSET = System.getenv("SELECTOR_OFFSET") != null
+            ? Integer.parseInt(System.getenv("SELECTOR_OFFSET").trim()) : 0;
+    // RANK-BASED TOP-K (2026-07-28, Probe A go/no-go): thay leg selector tu ABSOLUTE threshold
+    //  (nPass = so coin co score <= maxThres) sang RANK top-K per timestamp. Khi SELECTOR_RANK_TOPK=k (k>0)
+    //  -> BO QUA maxThres/nPass, chon K coin score THAP nhat (symbol2Pred da sort tang -> lay k phan tu dau).
+    //  Muc dich: tu-chuan-hoa theo regime (khong starve luc yeu, khong flood luc manh) thay vi absolute cutoff.
+    //  Doc lap SELECTOR_TOPN (cai do van bi cap boi nPass). Default -1 = OFF = giu absolute = byte-identical.
+    public static final int SELECTOR_RANK_TOPK = System.getenv("SELECTOR_RANK_TOPK") != null
+            ? Integer.parseInt(System.getenv("SELECTOR_RANK_TOPK").trim()) : -1;
+    // RANK OFFSET (2026-07-28, offset-sweep tren rank top-K): bo qua [SELECTOR_RANK_OFFSET] coin score
+    //  THAP nhat (top dau) TRUOC khi lay K -> lay symbol2Pred[off .. off+K). Gia thuyet: top dau lan
+    //  fake-pump sap dump; bo vai coin dau lay K tiep theo giam nhiem. RIENG voi SELECTOR_OFFSET (dung cho
+    //  branch INVERT/best-N). Clamp theo poolSize. Default 0 = OFF = lay [0..K) = hanh vi cu byte-identical.
+    public static final int SELECTOR_RANK_OFFSET = System.getenv("SELECTOR_RANK_OFFSET") != null
+            ? Integer.parseInt(System.getenv("SELECTOR_RANK_OFFSET").trim()) : 0;
+    // SELECTOR-ONLY ENTRY (2026-07-23): SELECTOR_ONLY_ENTRY=1 -> TAT leg entry theo market-signal
+    // (levelChange getTopSymbolArray Best-N = luong FOMO), CHI giu luong selector PREDICT_SYMBOL_TRADE.
+    // Dung de co lap 100% edge inverted-selector (khop proxy Kaggle). Default false = byte-identical.
+    public static final boolean SELECTOR_ONLY_ENTRY = "1".equals(System.getenv("SELECTOR_ONLY_ENTRY"));
+    // COUNT-ONLY: đếm gate admission rồi short-circuit trước khi tạo order (đo tần suất qua gate).
+    // Default false = byte-identical. Bật bằng env SIM_GATE_COUNT_ONLY=1.
+    public static final boolean GATE_COUNT_ONLY = "1".equals(System.getenv("SIM_GATE_COUNT_ONLY"));
     public static float HARD_RISK_LIMIT_4H = -0.2f;                   // HPO (đã revert về cũ): -0.09200f
     public static float MIN_MOMENTUM_15M = 0.02284f;                  // HPO (đã revert về cũ): 0.01720f
     public static float MS_UP_BIG_THRES = 0.02046f;                  // HPO (đã revert về cũ): 0.01757f
@@ -347,6 +383,10 @@ public class Configs {
     public static float DCA_LOSS_BIG_DOWN = -0.15f;                   // HPO (đã revert về cũ): -0.26618f
     public static int DCA_TIME_BIG_Up = 15;                           // HPO (đã revert về cũ): 22
     public static float DCA_LOSS_BIG_UP = -0.25f;                     // HPO (đã revert về cũ): -0.10063f
+    // HARD-SL BLANKET (env SIM_HARD_SL_PCT) — hard stop-loss tinh tren GIA ENTRY DAU TIEN
+    //   (firstEntryPrice, bat bien qua DCA — KHONG dung averaged priceEntry). Default 0f = OFF =
+    //   byte-identical. Doc env o static SIM block ben duoi (Float.parseFloat).
+    public static float HARD_SL_PCT = 0f;
 
     // =========================================================
     // 9. KẾT NỐI DỮ LIỆU (STORAGE & AEROSPIKE)
@@ -392,6 +432,12 @@ public class Configs {
             if ((v = System.getenv("SIM_BREAKER_MODE")) != null) BREAKER_MODE = v;
             if ((v = System.getenv("SIM_BREAKER_MARGIN_HALT")) != null) BREAKER_MARGIN_HALT = Float.parseFloat(v);
             if ((v = System.getenv("SIM_MS_DOWN_BIG_AVG")) != null) MS_DOWN_BIG_AVG = Float.parseFloat(v);
+            if ((v = System.getenv("SIM_HARD_SL_PCT")) != null) HARD_SL_PCT = Float.parseFloat(v);
+            // TASK (frozen leakage-free genome, Buoc 0): funding.bin trong WFO_DATA_DIR/-ff CHI tu-ap cho
+            //   funding-SELECTOR (ds.funding), KHONG tu-ap thanh FEE. Fee van gate boi APPLY_FUNDING_FEE
+            //   (default false). SIM_APPLY_FUNDING=true -> bat funding fee cho vong WFO/HPO nay (funding-on).
+            //   Default (env rong) -> giu false = byte-identical.
+            if ((v = System.getenv("SIM_APPLY_FUNDING")) != null) APPLY_FUNDING_FEE = Boolean.parseBoolean(v);
         } catch (Exception e) {
             System.err.println("SIM env override parse error: " + e);
         }

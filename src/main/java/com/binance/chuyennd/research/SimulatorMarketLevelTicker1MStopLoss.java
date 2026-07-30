@@ -75,6 +75,9 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         LOG.info("Start with TICKER_SOURCE: {} | AEROSPIKE_READ_CLUSTER: {}", Configs.TICKER_SOURCE, Configs.AEROSPIKE_READ_CLUSTER);
         SimulatorMarketLevelTicker1MStopLoss test = new SimulatorMarketLevelTicker1MStopLoss();
         test.initData();
+        // TASK-112: WRITE_SIM_STORAGE default FALSE. Box nao muon ghi storage/OrderTestDone.data thi
+        //   dat WRITE_SIM_STORAGE=true trong config.properties — KHONG hardcode o day (override cung
+        //   cho MOI box, khong revert duoc bang config).
         // TASK (2026-07-09): mac dinh chay toi "bay gio" (system time) se FAIL-FAST neu ticker
         // live chua ingest kip (data lag binh thuong cua feed song, vai ngay gan nhat thieu).
         // Cho phep override qua SIM_END_DATE (yyyyMMdd) de chay toi moc data da biet TOT, khong
@@ -98,6 +101,10 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
         long timeSimulator = System.currentTimeMillis();
         LOG.info("=== 🚀 BẮT ĐẦU SIMULATE TỪ {} ĐẾN {} ===", Utils.normalizeDateYYYYMMDDHHmm(startTime), Utils.normalizeDateYYYYMMDDHHmm(endTime));
+        LOG.info("[SELECTOR-CFG] INVERT={} TOPN={} SCORE_MAX={} SELECTOR_ONLY_ENTRY={} (TOPN=-1 => uncapped/byte-identical)",
+                Configs.SELECTOR_INVERT, Configs.SELECTOR_TOPN, Configs.SELECTOR_SCORE_MAX, Configs.SELECTOR_ONLY_ENTRY);
+        LOG.info("[RANK-CFG] SELECTOR_RANK_TOPK={} SELECTOR_RANK_OFFSET={} (TOPK<=0 => rank OFF/absolute; OFFSET=0 => [0..K) byte-identical)",
+                Configs.SELECTOR_RANK_TOPK, Configs.SELECTOR_RANK_OFFSET);
 
         // LEVER-B: log knob sizing khi khac default (chi log 1 lan dau run — KHONG trong hot loop).
         if (Configs.SIZE_MULT != 1.0f || Configs.MAX_CONCURRENT_ORDERS != 40) {
@@ -217,10 +224,14 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                     List<Short> symbolDcaLevel = DcaProcessor.getDCA(levelChange, time,
                                             BudgetManagerSimple.getInstance().getBudget(), activeOrderMap);
 
-                                    for (short symbolId : symbol2BUY) {
-                                        KlineObjectSimple ticker = symbol2Ticker[symbolId];
-                                        if (Utils.isTickerAvailable(ticker)) {
-                                            createOrderBUY(symbolId, ticker, levelChange, time2MarketData.get(time), null);
+                                    // SELECTOR_ONLY_ENTRY=1 -> bo qua leg market-signal Best-N (FOMO), co lap selector.
+                                    // Default false -> chay leg nay -> byte-identical.
+                                    if (!Configs.SELECTOR_ONLY_ENTRY) {
+                                        for (short symbolId : symbol2BUY) {
+                                            KlineObjectSimple ticker = symbol2Ticker[symbolId];
+                                            if (Utils.isTickerAvailable(ticker)) {
+                                                createOrderBUY(symbolId, ticker, levelChange, time2MarketData.get(time), null);
+                                            }
                                         }
                                     }
                                     // SHORT cam martingale: ENABLE_SHORT bat -> TAT DCA (nhoi lenh). Cluster short
@@ -265,13 +276,55 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                     // Default -1f (OFF) -> giu maxThres cu -> byte-identical.
                                     if (Configs.SELECTOR_SCORE_MAX >= 0f) maxThres = Configs.SELECTOR_SCORE_MAX;
 
-                                    for (long encodedData : symbol2Pred) {
+                                    // ALPHA-TEST (fix): so best-N vs worst-N, CUNG SO LUONG N, cung gate.
+                                    // mang sort thap->cao, symbolPred=1-p6 (thap=tot). N = so coin qua nguong.
+                                    // INVERT=false -> BEST-N (N dau) = HANH VI CU byte-identical.
+                                    // INVERT=true  -> WORST-N (N cuoi = symbolPred cao nhat = te nhat), cung N.
+                                    int nPass = 0;
+                                    for (long e : symbol2Pred) {
+                                        if (Float.intBitsToFloat((int) e) > maxThres) break;
+                                        nPass++;
+                                    }
+                                    // WORST-N / BEST-N CAP (2026-07-22): SELECTOR_TOPN>0 -> chi mo N candidate.
+                                    //  INVERT=1 (Worst-N): lay N coin TE-nhat = tail toan mang, KHONG gate boi nPass
+                                    //    -> khop proxy Kaggle (bottom-N moi nen, khong good-gate) de N-sweep 3/5/8 co y nghia
+                                    //    (gate maxThres siet chat -> nPass thuong nho, neu cap boi nPass thi N vo hieu).
+                                    //  INVERT=0 (Best-N): lay N coin TOT-nhat trong so nPass qua gate.
+                                    //  Default SELECTOR_TOPN=-1 (OFF) -> nSel=nPass -> BYTE-IDENTICAL voi ban cu.
+                                    java.util.List<Long> chosenCands = new java.util.ArrayList<>();
+                                    // SELECTOR_OFFSET (2026-07-24): bo qua [off] candidate o cuc bien truoc khi lay N.
+                                    //  Default SELECTOR_OFFSET=0 -> off=0 -> index nhu ban cu -> BYTE-IDENTICAL.
+                                    int selOffset = Configs.SELECTOR_OFFSET;
+                                    if (Configs.SELECTOR_RANK_TOPK > 0) {
+                                        // RANK-BASED TOP-K (2026-07-28, Probe A go/no-go): BO QUA absolute maxThres/nPass,
+                                        //  chon K coin score THAP nhat per timestamp (symbol2Pred sort tang -> k phan tu dau).
+                                        //  Tu-chuan-hoa theo regime: khong starve luc yeu (nPass=0 van admit K), khong flood
+                                        //  luc manh. selOffset ap dung tren mang day du (bo qua off coin tot nhat truoc khi lay K).
+                                        int nSel = Math.min(Configs.SELECTOR_RANK_TOPK, symbol2Pred.length);
+                                        // OFFSET-SWEEP (2026-07-28): bo qua SELECTOR_RANK_OFFSET coin TOT nhat (top dau, score
+                                        //  thap nhat) truoc khi lay K -> symbol2Pred[off .. off+K). Default 0 -> [0..K) byte-identical.
+                                        //  Clamp: off <= poolSize - nSel de tranh IndexOutOfBounds khi pool mong.
+                                        int off = Math.min(Configs.SELECTOR_RANK_OFFSET, Math.max(0, symbol2Pred.length - nSel));
+                                        for (int i = 0; i < nSel; i++) chosenCands.add(symbol2Pred[off + i]);
+                                        if (LOG.isDebugEnabled()) {
+                                            LOG.debug("SELECTOR_RANK_TOPK k={} nSel={} poolSize={} nPassAbs={} maxThres={} off={} rankOffsetCfg={}",
+                                                    Configs.SELECTOR_RANK_TOPK, nSel, symbol2Pred.length, nPass, maxThres, off, Configs.SELECTOR_RANK_OFFSET);
+                                        }
+                                    } else if (Configs.SELECTOR_INVERT) {
+                                        int nSel = (Configs.SELECTOR_TOPN > 0)
+                                                ? Math.min(Configs.SELECTOR_TOPN, symbol2Pred.length) : nPass;
+                                        // clamp: index thap nhat dung = length-1-off-(nSel-1) >= 0
+                                        int off = Math.min(selOffset, Math.max(0, symbol2Pred.length - nSel));
+                                        for (int i = 0; i < nSel; i++) chosenCands.add(symbol2Pred[symbol2Pred.length - 1 - off - i]);
+                                    } else {
+                                        int nSel = (Configs.SELECTOR_TOPN > 0)
+                                                ? Math.min(nPass, Configs.SELECTOR_TOPN) : nPass;
+                                        // clamp: index cao nhat dung = off+(nSel-1) < nPass -> off <= nPass-nSel
+                                        int off = Math.min(selOffset, Math.max(0, nPass - nSel));
+                                        for (int i = 0; i < nSel; i++) chosenCands.add(symbol2Pred[off + i]);
+                                    }
+                                    for (long encodedData : chosenCands) {
                                         float symbolPred = Float.intBitsToFloat((int) encodedData);
-
-                                        // 🚀 ĐIỂM ĂN TIỀN: Vì mảng đã được sort chuẩn từ thấp đến cao lúc load file.
-                                        // Gặp thằng vượt ngưỡng là CẮT LUÔN VÒNG LẶP, không cần kiểm tra phần sau!
-                                        if (symbolPred > maxThres) break;
-
                                         short targetId = (short) (encodedData >> 32);
 
                                         if (!isSymbolRunning(targetId)) {
@@ -547,6 +600,22 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                     }
                     return;
                 }
+                // === HARD-SL BLANKET (env SIM_HARD_SL_PCT) — SL tren GIA ENTRY DAU TIEN (firstEntryPrice,
+                //     bat bien qua DCA — KHONG averaged). Chay TRUOC cong profit-arm + TRUOC nhanh DCA nap
+                //     them: du lenh dang lo thuan (priceSL==null) van bi cat. Chi long (short da return o tren).
+                //     Default HARD_SL_PCT=0 => nhanh KHONG chay => byte-identical.
+                if (Configs.HARD_SL_PCT > 0f && orderMulti.firstEntryPrice != null
+                        && ticker.minPrice <= orderMulti.firstEntryPrice * (1f - Configs.HARD_SL_PCT)) {
+                    float slTrigger = orderMulti.firstEntryPrice * (1f - Configs.HARD_SL_PCT);
+                    orderMulti.status = OrderTargetStatus.STOP_LOSS_DONE;
+                    // BOOKING-FIX mirror (nhu updateStatusNew/updateStatusShort): resting-stop. Ca gap-down
+                    //   (open<trigger) fill=open (khong ban tren open); neu da co priceSL sau hon thi lay min.
+                    float fill = Math.min(slTrigger, ticker.priceOpen);
+                    if (orderMulti.priceSL != null) fill = Math.min(fill, orderMulti.priceSL);
+                    orderMulti.priceTP = fill;
+                    closeOrder(symbolId, orderMulti);
+                    return;
+                }
                 if (ticker.maxPrice >= orderMulti.priceEntry * (1 + Configs.RATE_PROFIT_STOP_MARKET)
                         || orderMulti.priceSL != null) {
                     Float predReturn15M  = getPredReturn15MForTradingStop(time);
@@ -621,6 +690,10 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                 time2Order.lastEntry().getValue().symbol, time2Order.lastEntry().getKey(), time2Order.lastEntry().getKey(), orders.get(0).side);
 
         orderResult.minPrice = ticker.priceClose;
+        // HARD-SL: mang theo GIA ENTRY DAU TIEN cua cum (leg dau) — BAT BIEN qua DCA, KHONG averaged.
+        //   Lay tu leg dau (firstEntryPrice da set luc mo); fallback priceEntry leg dau neu chua set.
+        OrderTargetInfoTest firstLeg = time2Order.firstEntry().getValue();
+        orderResult.firstEntryPrice = (firstLeg.firstEntryPrice != null) ? firstLeg.firstEntryPrice : firstLeg.priceEntry;
         // 🔎 maeLow: KHÔNG reset-lên khi nhồi. Mang theo đáy THẬT của cụm cũ (nếu có), lần đầu = giá vào
         //    leg đầu, rồi hạ thêm nếu nến hiện tại thủng sâu hơn. Bảo toàn đáy từ leg đầu để MAE chuẩn.
         float firstLegEntry = time2Order.firstEntry().getValue().priceEntry;
@@ -724,6 +797,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             }
         }
 
+        if (Configs.GATE_COUNT_ONLY) return; // count-only: da dem gate admission, KHONG tao order
+
         // 🛑 CIRCUIT BREAKER — chỉ tác động khi BREAKER_MODE != OFF. Tác động tầng DCA/margin,
         // KHÔNG đụng entry filter, KHÔNG force-close (long-only): chỉ DỪNG MỞ / DỪNG NHỒI.
         if (!"OFF".equals(Configs.BREAKER_MODE)) {
@@ -814,6 +889,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         order.maeLow = entry;   // 🔎 đáy THẬT khởi tạo = giá vào leg (đo lường MAE)
         order.lastEntry = entry;
         order.lastPrice = entry;
+        order.firstEntryPrice = entry;   // HARD-SL: gia entry THAT cua leg nay; leg dau => gia entry dau cum (bat bien qua DCA)
         order.tickerOpen = ticker;
         order.marketLevelChange = levelChange;
 
