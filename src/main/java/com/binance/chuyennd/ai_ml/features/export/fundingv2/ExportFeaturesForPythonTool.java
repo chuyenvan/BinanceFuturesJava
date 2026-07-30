@@ -85,6 +85,13 @@ public class ExportFeaturesForPythonTool {
         final TreeMap<Long, MarketDataObject> time2MarketData = preloadedMarketData;
         final ConcurrentHashMap<String, Short> symbolMap = preloadedSymbolMap;
 
+        // === RE-EXPORT UNFILTERED (opt-in, TASK unfiltered): mac dinh GIU nguyen hanh vi production.
+        //     Bat qua env FF_UNFILTERED=1 -> bo EntrySignalFilter, xuat MOI alt tren luoi 15m (khop funding_label.csv),
+        //     co the sub-sample deterministic qua FF_SAMPLE_RATE (0,1]. KHONG doi output production. ===
+        final boolean unfiltered = "1".equals(System.getenv("FF_UNFILTERED"));
+        final double sampleRate = parseRate(System.getenv("FF_SAMPLE_RATE"));
+        final long GRID_15M_MS = 15L * 60_000L;
+
         SimpleDateFormat sdfFull = new SimpleDateFormat("yyyyMMdd HH:mm");
         SimpleDateFormat sdfFile = new SimpleDateFormat("yyyyMMdd");
         FundingDataCollectionManager.FundingFeatureExtractorV2 extractor = new FundingDataCollectionManager.FundingFeatureExtractorV2();
@@ -173,9 +180,22 @@ public class ExportFeaturesForPythonTool {
                         // === ENTRY SIGNAL FILTER (TASK filter 2026-06-18): chi xet coin qua filter CHUNG
                         //     (vol-avg-30m >= 2k + top-10% |rate30m| cross-sectional). Giam ~90% record.
                         //     History da updateMarketHistory(symbol2Ticker) o tren -> getInstance() la dung instance. ===
-                        java.util.Set<String> passFilter = com.binance.chuyennd.ai_ml.features.export.funding.EntrySignalFilter
-                                .selectCoins(symbol2Ticker, com.binance.chuyennd.ai_ml.features.export.HistoryManager.getInstance());
-                        if (passFilter.isEmpty()) continue; // khong coin nao qua filter tai moc nay
+                        java.util.Set<String> passFilter;
+                        if (unfiltered) {
+                            if (time % GRID_15M_MS != 0L) continue;            // luoi 15m khop funding_label.csv
+                            passFilter = new java.util.HashSet<>();
+                            for (java.util.Map.Entry<String, KlineObjectSimple> te : symbol2Ticker.entrySet()) {
+                                String sym = te.getKey(); if (!isAlt(sym)) continue;
+                                KlineObjectSimple k = te.getValue(); if (k == null || !Utils.isTickerAvailable(k)) continue;
+                                Short sid = symbolMap.get(sym); if (sid == null) continue;
+                                if (sampleRate < 1.0 && !sampleKeep(sid, time, sampleRate)) continue;
+                                passFilter.add(sym);
+                            }
+                        } else {
+                            passFilter = com.binance.chuyennd.ai_ml.features.export.funding.EntrySignalFilter
+                                    .selectCoins(symbol2Ticker, com.binance.chuyennd.ai_ml.features.export.HistoryManager.getInstance());
+                        }
+                        if (passFilter.isEmpty()) continue; // khong coin nao qua filter/sample tai moc nay
 
                         // === PASS 1: per-coin (parallel) — feature #1..#32; cross-sectional (#33..#35) để NaN ===
                         List<FeatureHolder> rawList = passFilter.parallelStream()
@@ -365,5 +385,35 @@ public class ExportFeaturesForPythonTool {
             else hi = mid;
         }
         return lo;
+    }
+
+    // === Helpers cho che do UNFILTERED (opt-in). Chi dung khi FF_UNFILTERED=1. ===
+
+    /** Alt-USDT hop le: loai BTC/ETH/BTCDOM, cap _ (index), USDC. Khop dinh nghia rank/basket alt. */
+    private static boolean isAlt(String s) {
+        return s.endsWith("USDT") && !s.equals("BTCUSDT") && !s.equals("ETHUSDT")
+                && !s.contains("_") && !s.contains("USDC") && !s.equals("BTCDOMUSDT");
+    }
+
+    /** Parse FF_SAMPLE_RATE -> (0,1]; rong/loi/ngoai khoang => 1.0 (giu tat ca). */
+    private static double parseRate(String v) {
+        if (v == null || v.isEmpty()) return 1.0;
+        try {
+            double r = Double.parseDouble(v);
+            return (r > 0 && r <= 1) ? r : 1.0;
+        } catch (Exception e) {
+            return 1.0;
+        }
+    }
+
+    /** Sub-sample deterministic theo (symId, mocGrid15m): hash -> uniform [0,1) < rate thi giu.
+     *  On dinh giua cac lan chay (khong phu thuoc thu tu/seed) -> tai lap duoc. */
+    private static boolean sampleKeep(short id, long t, double rate) {
+        long h = (id & 0xffffL) * 1000003L + (t / (15L * 60_000L));
+        h ^= (h >>> 33);
+        h *= 0xff51afd7ed558ccdL;
+        h ^= (h >>> 33);
+        double u = (h >>> 11) * 0x1.0p-53;
+        return u < rate;
     }
 }
