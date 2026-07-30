@@ -341,3 +341,66 @@ cooldown. Vô dụng như đang trình bày; nên đổi thành "số vị thế
 (a) Giữ gate stop → dừng nhánh exit-on-frozen-set, quay về P0–P5 (sửa harness); hoặc
 (b) Đổi sang C2 (nạp 2021–2022, ~2 834 vị thế) và ghi rõ việc hạ ngưỡng là sau-khi-nhìn; hoặc
 (c) Điều tra trước cái chênh 33× giữa 2021 và 2023 — nó có thể quan trọng hơn cả nghiên cứu exit.
+
+## PHẦN 3 — Đã tìm thấy: câu hỏi min-rate ĐÃ được đo trước đây (TASK-139, 2026-07-07)
+
+Trước khi làm sweep mới theo yêu cầu Uni (2026-07-30, "min ít nhất 0.03"), phát hiện repo đã có sẵn
+`src/main/java/com/binance/chuyennd/ai_ml/wfo/framework/tasks/TrailingStopSweepProbe.java` (commit
+`73f8c77`, 2026-07-06) và báo cáo kết quả `docs/reports/trailing_stop_sweep_139.md` (2026-07-07) —
+**đúng giả thuyết Uni đang nêu lại hôm nay, đã được xác nhận 3 tuần trước, chưa từng được áp vào
+Configs.java production default.**
+
+### Kết quả sweep cũ (giữ nguyên formula trailing hiện tại, chỉ đổi RATE_PROFIT_STOP_MARKET)
+
+| rateTS | Toàn kỳ PnL / calmar / maxDD | holdMed | %hold>60p |
+|---|---|---|---|
+| 0.01032 (baseline cũ) | 17 804 / 1.65 / 30.9% | 7 phút | 16.1% |
+| 0.02032 | 27 747 / 2.55 / 31.0% | 21 phút | 33.0% |
+| **0.03032 (Uni chọn)** | 34 442 / 3.06 / 32.1% | 52 phút | 47.6% |
+| 0.04032 | 38 346 / 3.41 / 32.1% | 110 phút | 59.2% |
+| 0.05032 | 42 405 / 3.78 / 32.0% | 197 phút | 67.0% |
+
+Kết luận cũ: **PnL 2.4×, calmar 2.3×, maxDD gần như không đổi** khi nâng 0.01032→0.03032. 0.03-0.04
+là "vùng robust" (2025Q2 — quý phẳng — calmar đỉnh 16.6 tại 0.03, tụt còn 7.5 tại 0.05 ⇒ 0.05 hơi over
+ở regime phẳng dù PnL/calmar toàn kỳ cao nhất).
+
+⚠️ Giới hạn của sweep cũ: KHÔNG đổi `TS_PROFIT_MULTIPLIER`/ratchet — nghĩa là toàn bộ cải thiện
+holdMed 7→52 phút chỉ đến từ dời điểm arm, cơ chế ratchet-siết 41% và giveback min()-co-lại (đã ghi ở
+PHẦN 1) **vẫn y nguyên, chưa được đo cùng lúc**. Việc tách ratchet khỏi arm (đề xuất ở cuối PHẦN 2 hôm
+qua) vẫn là việc CHƯA làm, độc lập với thay đổi này.
+
+### Đã áp dụng hôm nay (2026-07-30)
+
+1. `Configs.java` — `RATE_PROFIT_STOP_MARKET`: `0.01032f` → `0.03f` (production default, đường
+   KHÔNG qua HPO). Trước đây biến này chỉ đổi qua gene HPO trong WFO, còn đường live/production đọc
+   thẳng field này vẫn kẹt ở giá trị cũ suốt từ 2026-07-06 đến nay — tức khuyến nghị của chính báo cáo
+   TASK-139 ("HƯỚNG KẾ" mục 1) **chưa từng được thực thi cho production**, chỉ tồn tại trong report.
+2. `StrategyWfoTask.java:77` — gene range `RATE_PROFIT_STOP_MARKET`: sàn `0.020` → `0.03` (trần giữ
+   `0.050`, đúng vùng TASK-139 xác nhận tốt, loại hẳn vùng cắt-non `[0.020,0.030)` khỏi không gian HPO
+   dò).
+3. Lý do độc lập củng cố thêm (không chỉ dựa vào sweep cũ): chi phí round-trip = `RATE_FEE`(2 chân,
+   0.002) + `SLIPPAGE_RATE`(2 chân, 0.003) = **0.008**. Với giveback 0.5, arm phải > ~0.016 chỉ để hoà
+   vốn sau chi phí ở điểm SL đóng băng đầu tiên — 0.03 có biên an toàn ~2×, 0.01032 thì SL đóng băng ở
+   +0.5% là lỗ chắc chắn sau phí.
+
+### Phát hiện phụ — 2 bản genome khác vẫn còn range cũ (KHÔNG sửa, vì không nằm trên đường production)
+
+Grep cho thấy 2 file khác định nghĩa lại genome độc lập với `StrategyWfoTask.java` và **không** được
+`orchestrator/pipelines/*.json` gọi tới (chỉ `StrategyWfoTask` được `dca_ablation.json` tham chiếu):
+
+- `ai_ml/wfo/WFORunner.java:74` — `RATE_PROFIT_STOP_MARKET` range vẫn `[0.012, 0.025]` (đúng vùng
+  cắt-non mà comment TASK-139 gọi là bug).
+- `ai_ml/hpo/SensitivityTool.java:82` — range `[0.005, 0.025]` (công cụ đo độ nhạy OAT, còn thấp hơn).
+
+Hai file này là TASK-111/TASK-111(B), có vẻ là runner/tool cũ hoặc chẩn đoán, chưa xác nhận được có ai
+còn dùng không. Nếu Uni còn chạy trực tiếp 2 class này, chúng sẽ dò vào đúng vùng đã biết là xấu — cần
+Uni xác nhận có cần dọn (đồng bộ hoặc xoá) hay để nguyên vì không ai gọi.
+
+### Việc CHƯA làm (khác với đã làm ở trên — để tránh lẫn)
+
+- Tách ratchet khỏi arm (`ratchet = arm`, bỏ phụ thuộc `TS_PROFIT_MULTIPLIER` vào arm) — đề xuất ở
+  PHẦN 2, CHƯA thực hiện, cần Uni chốt riêng.
+- Sửa `gap = min(p×g, maxGap)` → `max(p×g, minGap)` (giveback không co lại với lệnh lãi lớn) — CHƯA
+  thực hiện.
+- Chạy lại N=13 window confirm với default mới để đo tác động thật trên verdict M (khác baseline sweep
+  cũ, vốn không qua constraint harness V4 đầy đủ theo window) — CHƯA chạy.

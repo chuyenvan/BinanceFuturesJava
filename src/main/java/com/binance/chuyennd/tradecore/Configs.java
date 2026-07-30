@@ -226,7 +226,13 @@ public class Configs {
     // =========================================================
     // 6. TRAILING STOP ĐỘNG (DYNAMIC TRAILING)
     // =========================================================
-    public static float RATE_PROFIT_STOP_MARKET = 0.01032f; // Khoảng dời SL tối thiểu (Base rate)
+    // TASK (2026-07-30, theo yeu cau Uni): nang tu 0.01032 -> 0.03. Ly do: round-trip cost
+    // (RATE_FEE 2 chan 0.002 + SLIPPAGE_RATE 2 chan 0.003 = 0.008) an het loi nhuan cua bat ky
+    // lenh nao thoat duoi ~0.016 profit; arm cu (0.01032) + giveback 0.5 -> SL dong bang o +0.5%,
+    // sau chi phi la LO CHAC CHAN. Khop voi TASK-139 (sweep 0.03-0.05 -> PnL 2.4x, calmar 2.3x,
+    // maxDD khong doi). Truoc ban sua nay, gia tri nay CHI dung cho duong live/production
+    // (khong qua HPO) nen bi lech so voi bestGenome cua WFO (~0.0385) - ban sua dong bo lai.
+    public static float RATE_PROFIT_STOP_MARKET = 0.03f; // Khoảng dời SL tối thiểu (Base rate)
     // TASK (2026-07-09, theo yêu cầu Uni): SL cứng cho lệnh CHƯA từng chạm ngưỡng lãi để arm trailing.
     // Vấn đề đo được: neu peak-profit khong bao gio vuot RATE_PROFIT_STOP_MARKET, priceSL mai la null
     // -> khong co exit nao, chi con DCA nap them ("nuoi lo"). Bien nay CHỈ chặn đúng lỗ hổng đó, KHÔNG

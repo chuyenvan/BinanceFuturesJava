@@ -74,7 +74,7 @@ public class StrategyWfoTask implements WfoTask {
         put("MS_DOWN_BIG_AVG", -0.055, -0.020, false);
         put("DCA_LOSS_BIG_DOWN", -0.22, -0.08, false);
         put("DCA_TIME_BIG_DOWN", 3, 7, true);
-        put("RATE_PROFIT_STOP_MARKET", 0.020, 0.050, false);  // TASK-139: PHAT HIEN LON - cu [0.012,0.025] ep WFO tune trong vung CAT NON. Sweep: 0.03-0.05 cho PnL 2.4x + calmar 2.3x, maxDD khong doi. Day la nut that that (khong phai MIN_MOM15)
+        put("RATE_PROFIT_STOP_MARKET", 0.03, 0.05, false);  // TASK-139: PHAT HIEN LON - cu [0.012,0.025] ep WFO tune trong vung CAT NON. Sweep: 0.03-0.05 cho PnL 2.4x + calmar 2.3x, maxDD khong doi. Day la nut that that (khong phai MIN_MOM15). 2026-07-30: nang san 0.020->0.03 (khop chinh xac vung sweep da xac nhan, khong con test duoi san chi phi 0.016)
         put("TS_PROFIT_MULTIPLIER", 4.0, 8.0, false);
         put("TS_DYNAMIC_K", 0.10, 0.25, false);
         put("TS_MAX_GAP", 0.04, 0.06, false);
