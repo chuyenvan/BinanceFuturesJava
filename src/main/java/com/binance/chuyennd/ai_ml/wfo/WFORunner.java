@@ -71,7 +71,11 @@ public class WFORunner {
         put("DCA_TIME_BIG_DOWN", 3, 7, true);
         put("DCA_TIME_BIG_Up", 21, 30, true);
         // trailing (vùng an toàn quanh baseline; tránh REJECT)
-        put("RATE_PROFIT_STOP_MARKET", 0.012, 0.025, false);   // tránh ~0.018 REJECT? thực ra 0.025 ok, 0.0183 REJECT -> dùng >=0.020
+        // 2026-07-30: dong bo voi StrategyWfoTask (TASK-139: [0.012,0.025] la vung CAT NON da xac nhan
+        // xau qua sweep + report docs/reports/trailing_stop_sweep_139.md). File nay la runner cu/tham
+        // chieu lich su (khong nam tren duong production orchestrator/pipelines), sua de khong con la
+        // vi du sai neu ai doc/chay lai.
+        put("RATE_PROFIT_STOP_MARKET", 0.03, 0.05, false);
         put("TS_PROFIT_MULTIPLIER", 4.0, 8.0, false);
         put("TS_DYNAMIC_K", 0.10, 0.25, false);                // tránh ~0.27 REJECT
         put("TS_MAX_GAP", 0.04, 0.06, false);                  // tránh ~0.077 REJECT

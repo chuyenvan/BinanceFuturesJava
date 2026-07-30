@@ -79,7 +79,9 @@ public class SensitivityTool {
         g.add(new Gene("dca", "DCA_TIME_BIG_Up", 5, 30, true));
         g.add(new Gene("dca", "DCA_LOSS_BIG_UP", -0.40, -0.10, false));
         // Tầng 4 — trailing exit
-        g.add(new Gene("trail", "RATE_PROFIT_STOP_MARKET", 0.005, 0.025, false));
+        // 2026-07-30: dong bo voi StrategyWfoTask (TASK-139 xac nhan [0.005,0.025] la vung CAT NON).
+        // Tool OAT lich su (khong nam tren duong production), sua de khong con la vi du sai.
+        g.add(new Gene("trail", "RATE_PROFIT_STOP_MARKET", 0.03, 0.05, false));
         g.add(new Gene("trail", "TS_PROFIT_MULTIPLIER", 2.0, 8.0, false));
         g.add(new Gene("trail", "TS_DYNAMIC_K", 0.10, 0.60, false));
         g.add(new Gene("trail", "TS_MAX_GAP", 0.04, 0.15, false));
