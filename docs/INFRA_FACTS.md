@@ -10,12 +10,35 @@
 - Disk **89% (~17.6GB free)** — self-gate trước job ghi nhiều (N=30 HPO, build dataset).
 - **LUẬT throughput:** KHÔNG chạy 2 WFO nặng cùng lúc trên 1 box (đã tái hiện fail: fanout `trailfan` 9/16 FAILED, zombie JVM). Compute nặng → đẩy Kaggle fleet.
 
+## ⚠️ SỬA FACT SAI (2026-07-30) — `TICKER_SOURCE` env là NO-OP
+- `Configs.java:86`: `public static String TICKER_SOURCE = properties.get("TICKER_SOURCE");`
+  → **CHỈ đọc `config.properties`, KHÔNG đọc env.** Truyền `TICKER_SOURCE=file` qua env = **bị bỏ qua**.
+- Hệ quả provenance: `stage2_frozen_ab.sh` (sinh verdict M) ghi header "TICKER_SOURCE=file" và set nó
+  trong `$COMMON` → **không có hiệu lực**. `config.properties` trên Oracle có `TICKER_SOURCE=aerospike`
+  ⇒ **mọi số step-2 / verdict M đọc ticker từ Aerospike LOCAL Oracle (127.0.0.1:3222), KHÔNG từ file.**
+  Không làm sai verdict (cùng data), nhưng ĐỪNG tin dòng "TICKER_SOURCE=file" trong log/script.
+- Gotcha #5 cũ ("`TICKER_SOURCE=file` nhanh + né hard-timeout 1800s") **chỉ đúng trên Kaggle**, nơi
+  `config.properties` của dataset `java-run-lc` đặt sẵn `TICKER_SOURCE=file`. Trên Oracle muốn đổi
+  PHẢI sửa `/home/ubuntu/java/simulator/config.properties`.
+- Ticker file trên Oracle nằm ở `java/simulator/kaggle_data_hpo/**daily**/` (1886 file
+  `ticker_20210101..20260301.bin.gz`, 11G) NHƯNG `KaggleDataLoader.java:19`
+  `IMPORT_DIR = "kaggle_data_hpo/"` (root, relative cwd) — root **KHÔNG có** file ticker nào
+  ⇒ nếu thực sự bật `TICKER_SOURCE=file` trên Oracle sẽ KHÔNG tìm thấy file. Cần symlink hoặc env-hoá `IMPORT_DIR`.
+
+## Aerospike local Oracle — cách kiểm tra ĐÚNG
+- **KHÔNG phải systemd unit.** `systemctl status aerospike` → "Unit could not be found" = **vô nghĩa**,
+  đừng kết luận "aerospike chết". Kiểm tra đúng: `pgrep -af asd` (thấy `asd --foreground`) +
+  `ss -ltnp | grep 3222`. Data: `/home/ubuntu/aerospike-data/test.dat` (~90GB sparse, 48G thực).
+- Disk Oracle 89% (17G free). Chiếm nhiều nhất: `aerospike-data` 48G, `java` 37G (~40 jar × 99MB
+  trong `java/simulator/` + 11G ticker), `claudedata` 33G. Dọn jar cũ = chỗ rẻ nhất nếu cần chỗ.
+
 ## 5 gotchas ce/Oracle (đã cắn)
 1. interact cap ~180s → job dài PHẢI `bg_run` / `setsid ... </dev/null >log 2>&1 &` detached.
 2. dataset PHẢI symlink vào cwd jar `~/java/simulator/<ds>`.
 3. extra_env **PHẨY-phân tách** (space → chỉ nhận key đầu).
 4. remote grep KHÔNG dùng `|` alternation (PowerShell tách) → `grep -e` / pattern đơn.
-5. `TICKER_SOURCE=file` (dataset có market.bin) nhanh + né hard-timeout 1800s của wrapper.
+5. ~~`TICKER_SOURCE=file` (dataset có market.bin) nhanh + né hard-timeout 1800s của wrapper.~~
+   **SAI/hết hiệu lực trên Oracle — xem §"SỬA FACT SAI 2026-07-30": env TICKER_SOURCE là NO-OP.**
 
 ## Kaggle (fleet, ĐÃ self-contained)
 - CLI: venv sạch `D:\claudedata\kaggle-clean-env` (`kaggle==1.6.17`). CLI 2.2.2 mặc định lỗi `KaggleObject.from_dict()...'token'` khi tạo version (KAGGLE_RULES §5b).
