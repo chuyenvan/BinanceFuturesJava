@@ -31,12 +31,12 @@ public class Mom15SweepProbe {
         LOG.info("LOAD OK market={} pred={} funding={}", ds.market.size(), ds.pred.size(), ds.funding.size());
         LOG.info("baseline MIN_MOMENTUM_15M={}", Configs.MIN_MOMENTUM_15M);
 
-        float[] sweep = {0.010f, 0.0150f, 0.0228f, 0.030f, 0.040f, 0.050f, 0.070f};
+        float[] sweep = {0.005f, 0.007f, 0.010f};
         String[][] periods = {
-            {"2023_hoi_phuc", "20230101", "20231231"},
-            {"2024_bull", "20240101", "20241231"},
-            {"2025Q2_phang", "20250401", "20250701"},
-            {"toan_ky", "20210101", "20260501"},
+            {"2023Q4_zero", "20231001", "20240101"},
+            {"2024Q1_zero", "20240101", "20240401"},
+            {"2025Q2_zero", "20250401", "20250701"},
+            {"2025Q4_succ", "20251001", "20260101"},
         };
 
         float saved = Configs.MIN_MOMENTUM_15M;
