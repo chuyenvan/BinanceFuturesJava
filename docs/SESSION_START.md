@@ -1,6 +1,16 @@
 # SESSION_START — Điểm bắt đầu session mới (chốt 2026-07-07 chiều)
 
-## 0.0 MỚI NHẤT (2026-07-30) — ĐỌC TRƯỚC §0.1
+## 0.-1 MỚI NHẤT (2026-07-30 tối) — ĐỌC FILE NÀY TRƯỚC, TRƯỚC CẢ §0.0
+> **Rẽ nhánh sang exit-formula theo yêu cầu Uni (min-rate SL 0.01032→0.03 + ratchet).** Đọc
+> `reports/HANDOFF_20260730_exit_min_ratchet.md` — 3 việc đã làm (commit `3e66898`/`ccc05dc`/
+> `b203a78`), và **1 việc đang bị chặn**: N=13 confirm chưa bắn được vì job store Aerospike fanout
+> (103.157.218.226:3222) đang có 9/16 window FAILED, chưa rõ nguồn gốc — đã hỏi Uni cách xử lý,
+> **CHƯA có câu trả lời khi phiên trước kết thúc**. ĐỌC câu trả lời đó trước (nếu có) rồi mới bắn
+> job. Đừng tự ý fanout 6-node khi chưa rõ trạng thái backend.
+> Việc lớn từ §0.0 (fix fitness mismatch, bỏ HPO argmax) **vẫn treo, chưa quay lại** — phiên tối
+> 07-30 rẽ hẳn sang exit, không đụng harness nữa.
+
+## 0.0 (2026-07-30 sáng) — ĐỌC TRƯỚC §0.1
 > **Bước 1 của verdict M ĐÃ XONG (read-only audit).** Hai doc mới, đọc trước khi làm gì:
 > `reports/AUDIT_20260730_wfo_constraint_harness.md` — 6 lỗ hổng harness (L1–L6) + 7 đề xuất (P0–P6).
 > `reports/EXIT_MACHINE_20260730_stop_schedule.md` — algebra exit + kế hoạch E0–E4.
