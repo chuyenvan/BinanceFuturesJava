@@ -38,7 +38,8 @@
 > **Chưa làm gì cả** — mới audit. Uni chốt: P0+P5+P6 trước, hay gộp P1+P3; E0 riêng hay E0+E1.
 
 ## 0.1 (2026-07-29) — verdict M
-> **VERDICT M (2026-07-29): entry-alpha KHÔNG đóng. Edge selector THẬT + TRẢI RỘNG (không chỉ w15). Bottleneck = WFO/HPO HARNESS, KHÔNG phải gate/selector/regime.** Đọc `reports/HANDOFF_20260729_entry_alpha_harness.md` TRƯỚC (bản nối-mạch 30s).
+> **VERDICT M (2026-07-29): entry-alpha KHÔNG đóng. Edge selector THẬT + TRẢI RỘNG (không chỉ w15). Bottleneck = WFO/HPO HARNESS, KHÔNG phải gate/selector/regime.**
+> ĐỌC ĐẦU TIÊN: `reports/ENTRY_ALPHA_STATE_AND_PLAYBOOK.md` (hành trình lý luận §2 + mental models §5 + đang-ở-đâu §3 + làm-gì §6 — hiểu MẠCH, không chỉ facts). Bản ngắn: `reports/HANDOFF_20260729_entry_alpha_harness.md`.
 > Bằng chứng: step-2 frozen leakage-free → 11/13 window OOS non-w15 winRate>50% + net dương sau phí; net/trade non-w15 8.59 ≥ w15 7.97; A(frozen) thắng B(production) 2.34× → breadth KHÔNG leakage. Window fail = TOO_MUCH_CAPITAL_LOCK/TOO_FEW_TRADES → harness loại nhầm window đang lãi.
 > **NEXT (KHÔNG build gate/model mới):** (1) audit+nới constraint TOO_MUCH_CAPITAL_LOCK/TOO_FEW_TRADES [đọc code trước]; (2) fix fitness mismatch (Calmar-chọn vs raw-PnL-chấm); (3) bỏ HPO argmax → genome regularized (nếu 1+2 chưa đủ); (4) N=30 confirm sau mỗi bước (số M hiện tại là N=1). Đã GIẾT: oi_z, offset, hard-SL, short, gate<0.010, HPO-argmax(overfit w15). Config tốt nhất: MOM15=0.010 + rank-K8 + trailing + funding-fee ON.
 > Code rank-K/offset/frozen + jar `binance-lf-frozen-1.0.0.jar` = **UNCOMMITTED** (cần review+commit). Chuỗi đầy đủ: `reports/gate_freq_ablation_20260727.md §A–§O`.
