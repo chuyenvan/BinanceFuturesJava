@@ -257,8 +257,11 @@ public class Configs {
     public static final String TRAIL_PEAK_MODE = System.getenv("TRAIL_PEAK_MODE") != null
             ? System.getenv("TRAIL_PEAK_MODE").trim().toLowerCase() : "high";
     // TASK (2026-07-10): ti le nha lai dinh cua trailing (cu hardcode 0.5). 0.3 = giu chat, 0.7 = long nuoi trend.
-    public static float TS_GIVEBACK_RATIO = properties.get("TS_GIVEBACK_RATIO") != null
-            ? Float.parseFloat(properties.get("TS_GIVEBACK_RATIO")) : 0.5f;
+    // 2026-08-02: them env-fallback (khop pattern TS_MIN_GAP) de sweep duoc TS_GIVEBACK_RATIO qua env.
+    //   env > properties > 0.5f. env unset -> byte-identical hanh vi cu.
+    public static float TS_GIVEBACK_RATIO = System.getenv("TS_GIVEBACK_RATIO") != null
+            ? Float.parseFloat(System.getenv("TS_GIVEBACK_RATIO").trim())
+            : (properties.get("TS_GIVEBACK_RATIO") != null ? Float.parseFloat(properties.get("TS_GIVEBACK_RATIO")) : 0.5f);
     public static float TS_DYNAMIC_K = 0.29774f;            // Hệ số nhân Volatility để dời SL
     public static float TS_PROFIT_MULTIPLIER = 5.21847f;    // Hệ số kích hoạt Trailing
     // TASK (2026-07-30, theo yeu cau Uni): "dead zone" giua ARM va RATCHET — sau khi arm (updateStatusNew,
