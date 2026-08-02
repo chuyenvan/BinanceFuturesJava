@@ -269,7 +269,195 @@ public class Configs {
     // true = bo he so nhan o updateTPSL — ratchet kich hoat NGAY khi rateLoss vuot threshold(rateChangeMax90M),
     // khong cho doi mot khoang trong. CHi doi diem RATCHET (updateTPSL); KHONG doi diem ARM (updateStatusNew)
     // va KHONG doi input rateChangeMax90M vs predReturn15M (van la 2 bien khac nhau, van la viec rieng).
-    public static final boolean TS_RATCHET_DECOUPLED = "true".equalsIgnoreCase(System.getenv("TS_RATCHET_DECOUPLED"));
+    // ===== DCA GRID (2026-08-01) — thay DCA phan xa bang GRID CO KE HOACH =====
+    // VAN DE cua DCA cu: nguong nhoi do bang calRateLoss() tren avgEntry, ma avgEntry tut sau moi lan
+    // nhoi => muc lo "reset" => KHOANG CACH NHOI CO LAI DAN (15% -> 8% -> 5.5% -> 4.4%). Cang lo sau
+    // cang nhoi day = chay het dan dung luc can tiet kiem nhat. Khong co tran so leg. BIG_DOWN con
+    // tat ca thang chan margin (isAll=true).
+    // GRID MOI: moc do tren firstEntryPrice (BAT BIEN qua DCA) => khoang cach GIAN dung nhu thiet ke.
+    // So do tu du lieu that (171k entry, phan phoi MAE p50=-56%, xem EXIT_SWEEP + SurvivalProbe):
+    //   -50/-75/-90 ti trong 1:1:3:8 -> chi 0.34% cum dung het dan, %hoi 78.3%, p95 lo -76.4%.
+    //   Nhieu leg hon (5-6) do ra TE HON: %hoi tut con 43-62% vi moc -88/-90% hiem khi hoi.
+    // Tong von moi coin GIU NGUYEN = getBudget(): leg_i = getBudget() * w[i]/sum(w).
+    public static boolean DCA_GRID_ENABLED = "true".equalsIgnoreCase(System.getenv("DCA_GRID_ENABLED"));
+    public static float[] DCA_GRID_LEVELS = parseFloats(
+            System.getenv("DCA_GRID_LEVELS") != null ? System.getenv("DCA_GRID_LEVELS") : "-0.50,-0.75,-0.90");
+    public static float[] DCA_GRID_WEIGHTS = parseFloats(
+            System.getenv("DCA_GRID_WEIGHTS") != null ? System.getenv("DCA_GRID_WEIGHTS") : "1,1,3,8");
+
+    // =========================================================
+    // DCA GRID — DANG SCALAR (2026-08-01, de HPO tune duoc)
+    // =========================================================
+    // VAN DE: StrategyWfoTask ap gene bang reflection len FIELD SCALAR cua Configs
+    // (setField -> Field.setFloat/setInt). Ba tham so grid o tren la MANG float[] => HPO
+    // KHONG cham toi duoc => "chay HPO cho DCA" la bat kha thi voi dang mang.
+    // GIAI PHAP: mo ta cung mot luoi bang 4 so vo huong, sinh mang khi can:
+    //   levels[i] = clamp(DCA_GRID_L1 - DCA_GRID_STEP * i,  -0.99 .. -0.01),  i = 0..LEGS-1
+    //   weights[0] = 1;  weights[i] = DCA_GRID_W_RATIO^i,                      i = 1..LEGS
+    // Vi du DCA_GRID_L1=-0.50, STEP=0.20, LEGS=3, W_RATIO=2.0
+    //   -> levels -0.50/-0.70/-0.90, weights 1/2/4/8 (xap xi 1:1:3:8 da do duoc).
+    //
+    // ⚠️ DCA_GRID_SCALAR MAC DINH FALSE = duong scalar TAT HAN, moi thu doc thang tu mang nhu cu
+    //    => byte-identical voi ban chot tam (DCA_GRID_LEVELS=-0.50,-0.75,-0.90 / WEIGHTS=1,1,3,8).
+    //    Chi bat =true khi chay HPO. Khi =true thi mang tren bi BO QUA hoan toan (khong con nguon
+    //    su that kep — tranh dung tinh huong "set env mang nhung HPO tune scalar, khong biet cai nao thang").
+    public static boolean DCA_GRID_SCALAR = "true".equalsIgnoreCase(System.getenv("DCA_GRID_SCALAR"));
+    /** Muc lo kich hoat lan nhoi DAU TIEN, do tren firstEntryPrice (am). Gene HPO. */
+    public static float DCA_GRID_L1 = envFloat("DCA_GRID_L1", -0.50f);
+    /** Khoang GIAN giua hai bac lien tiep (duong). Gene HPO. */
+    public static float DCA_GRID_STEP = envFloat("DCA_GRID_STEP", 0.20f);
+    /** So bac nhoi (KHONG tinh leg dau). Gene HPO (int). */
+    public static int DCA_GRID_LEGS = envInt("DCA_GRID_LEGS", 3);
+    /** Ti le nhan ti trong giua hai leg lien tiep (>1 = nang dan ve day). Gene HPO. */
+    public static float DCA_GRID_W_RATIO = envFloat("DCA_GRID_W_RATIO", 2.0f);
+
+    /** So bac grid dang hieu luc (mang neu SCALAR=false, DCA_GRID_LEGS neu true). */
+    public static int dcaGridLegs() {
+        return DCA_GRID_SCALAR ? Math.max(1, DCA_GRID_LEGS) : DCA_GRID_LEVELS.length;
+    }
+
+    /**
+     * Muc lo kich hoat bac thu (legIdx+1), legIdx 0-based. Tra ve so AM.
+     * Tra 0f khi legIdx vuot so bac => caller hieu la "het bac, khong nhoi nua".
+     */
+    public static float dcaGridLevel(int legIdx) {
+        if (legIdx < 0 || legIdx >= dcaGridLegs()) return 0f;
+        if (!DCA_GRID_SCALAR) return DCA_GRID_LEVELS[legIdx];
+        float lv = DCA_GRID_L1 - Math.abs(DCA_GRID_STEP) * legIdx;
+        // clamp: khong vuot -99% (gia ve 0 la delist, khong con lenh de nhoi) va khong nong hon -1%
+        if (lv < -0.99f) lv = -0.99f;
+        if (lv > -0.01f) lv = -0.01f;
+        return lv;
+    }
+
+    /** Ti trong THO cua leg thu legIdx (0 = leg dau). 0f khi vuot so leg. */
+    public static float dcaGridWeight(int legIdx) {
+        if (legIdx < 0 || legIdx > dcaGridLegs()) return 0f;
+        if (!DCA_GRID_SCALAR) {
+            return legIdx < DCA_GRID_WEIGHTS.length ? DCA_GRID_WEIGHTS[legIdx] : 0f;
+        }
+        if (legIdx == 0) return 1f;
+        float r = Math.max(1f, DCA_GRID_W_RATIO);
+        return (float) Math.pow(r, legIdx);
+    }
+
+    // === TRAN MARGIN THEO BAC DO SAU (2026-08-01) — giai bai toan "sap lien tiep con von de DCA" ===
+    // VAN DE cua BREAKER_MARGIN_HALT: no la VACH DUNG o 50%. Duoi 50% nhoi vo han, cham 50% dung het.
+    //   => Dot sap 1: hang tram coin cung nhoi leg2 -> margin vot len 50% -> KHOA.
+    //      Dot sap 2 (gia re hon nhieu): KHONG nhoi duoc gi, ke ca leg -90%.
+    //   Tuc no chan dung nhung leg CO GIA TRI CAO NHAT. SurvivalProbe: 76.4% cum xuong -80% van hoi va
+    //   thoat co lai — nhom ti le thang cao nhat lai bi chan, con leg1 (chua lo gi) duoc tieu von truoc.
+    // GIAI PHAP: moi BAC grid mot tran rieng, bac cang sau tran cang cao. Khi margin da 45% thi lenh MOI
+    //   bi chan nhung leg 3-4 VAN nhoi duoc => von khong the bi lenh nong tieu het => luon con dan cho
+    //   vung sau, va dan do CHI tieu duoc o vung sau.
+    // Do dai mang = so bac (leg1..legN). Mac dinh OFF (dung tran phang cu) de byte-identical.
+    public static boolean DCA_TIER_MARGIN_ENABLED = "true".equalsIgnoreCase(System.getenv("DCA_TIER_MARGIN_ENABLED"));
+    public static float[] DCA_TIER_MARGIN_CAPS = parseFloats(
+            System.getenv("DCA_TIER_MARGIN_CAPS") != null ? System.getenv("DCA_TIER_MARGIN_CAPS") : "0.25,0.40,0.60,0.80");
+
+    // Dang SCALAR cua tran bac (cung ly do voi DCA_GRID_SCALAR: mang float[] thi HPO khong tune duoc):
+    //   cap[i] = clamp(DCA_TIER_CAP_BASE + DCA_TIER_CAP_STEP * i, 0.05 .. 0.98)
+    // BASE=0.50 giu dung vach production BREAKER_MARGIN_HALT cho leg dau; STEP noi dan cho leg sau.
+    // Chi co hieu luc khi DCA_GRID_SCALAR=true (dung 1 cong tac cho ca cum, khong de rai rac nhieu co).
+    /** Tran margin cho leg DAU (legIdx=0). Gene HPO. */
+    public static float DCA_TIER_CAP_BASE = envFloat("DCA_TIER_CAP_BASE", 0.50f);
+    /** Moi bac sau noi them bao nhieu. 0 = tran phang. Gene HPO. */
+    public static float DCA_TIER_CAP_STEP = envFloat("DCA_TIER_CAP_STEP", 0.10f);
+
+    /** Tran margin cho phep khi sap mo leg thu (legIdx+1). legIdx 0-based. */
+    public static float tierMarginCap(int legIdx) {
+        int i = Math.max(0, legIdx);
+        if (DCA_GRID_SCALAR) {
+            float cap = DCA_TIER_CAP_BASE + DCA_TIER_CAP_STEP * i;
+            if (cap < 0.05f) cap = 0.05f;
+            if (cap > 0.98f) cap = 0.98f;
+            return cap;
+        }
+        float[] c = DCA_TIER_MARGIN_CAPS;
+        if (c.length == 0) return BREAKER_MARGIN_HALT;
+        return c[Math.min(i, c.length - 1)];
+    }
+
+    // DCA_GRID_SCALE (2026-08-01): he so nhan CA THANG. Ly do can no: chia budget theo ti trong
+    //   1:1:3:8 lam leg dau chi con 1/13 budget, ma do do sau -50/-75/-90 nen chi 0.34% cum cham day
+    //   => 99.66% thoi gian von NAM KHONG => WFO dcagrid1 ra PnL tut 11 lan (maxDD cung tut 20 lan).
+    //   scale bu lai phan du tru khong dung. scale=6 => leg dau ~46% budget, tong khi cham day = 6x budget
+    //   (chi xay ra 0.34%). Dinh von dong thoi phai kiem bang CapacityProbe truoc khi tang.
+    public static float DCA_GRID_SCALE = System.getenv("DCA_GRID_SCALE") != null
+            ? Float.parseFloat(System.getenv("DCA_GRID_SCALE").trim()) : 1.0f;
+
+    private static float[] parseFloats(String csv) {
+        String[] p = csv.split(",");
+        float[] r = new float[p.length];
+        for (int i = 0; i < p.length; i++) r[i] = Float.parseFloat(p[i].trim());
+        return r;
+    }
+
+    /** env -> float, rong/sai dinh dang -> def (khong nem, khong giet clinit). */
+    private static float envFloat(String name, float def) {
+        String v = System.getenv(name);
+        try { return (v != null && !v.trim().isEmpty()) ? Float.parseFloat(v.trim()) : def; }
+        catch (NumberFormatException e) { return def; }
+    }
+
+    /** env -> int, rong/sai dinh dang -> def. */
+    private static int envInt(String name, int def) {
+        String v = System.getenv(name);
+        try { return (v != null && !v.trim().isEmpty()) ? Integer.parseInt(v.trim()) : def; }
+        catch (NumberFormatException e) { return def; }
+    }
+
+    /**
+     * Tong ti trong — de quy doi leg_i = budget * w[i]/totalWeight (tong von/coin KHONG doi).
+     * SCALAR=false: cong het mang (hanh vi cu, byte-identical).
+     * SCALAR=true : cong w(0..LEGS) sinh tu DCA_GRID_W_RATIO — PHAI tinh lai moi lan goi vi HPO
+     *               doi W_RATIO/LEGS giua cac sample trong cung mot JVM (khong duoc cache static).
+     */
+    public static float dcaGridTotalWeight() {
+        if (!DCA_GRID_SCALAR) {
+            float s = 0; for (float x : DCA_GRID_WEIGHTS) s += x; return s;
+        }
+        float s = 0;
+        int n = dcaGridLegs();
+        for (int i = 0; i <= n; i++) s += dcaGridWeight(i);
+        return s > 0 ? s : 1f;
+    }
+
+    // ===== FIX AUDIT 2026-08-01 — 3 co, MAC DINH FALSE = HANH VI CU BYTE-IDENTICAL =====
+    // F7: mergeOrder (DCA nhoi them leg) tao object cum MOI va KHONG carry priceSL => cum da arm SL
+    //     o +2.5% ma bi nhoi 1 leg la MAT SACH bao ve, phai arm lai tu avgEntry moi. true = mang SL cu
+    //     sang cum moi, NHUNG chi khi SL cu van > avgEntry moi (neu khong se thanh cat-lo-ngay).
+    public static boolean TS_CARRY_SL_ON_DCA = "true".equalsIgnoreCase(System.getenv("TS_CARRY_SL_ON_DCA"));
+    // F10: coin delist/dong bang co the phat nen phang volume=0 thay vi null => isTickerAvailable van
+    //      true => timeUpdate lien tuc moi => updateSymbolDeListed KHONG BAO GIO kich hoat => cum song
+    //      mai va cuoi ky duoc mark-to-market o GIA DONG BANG thay vi ghi giam ve ~0 (thien lech duong).
+    //      true = coi nen volume 0 nhu ticker khong kha dung.
+    public static boolean SIM_TREAT_ZERO_VOL_AS_DELIST = "true".equalsIgnoreCase(System.getenv("SIM_TREAT_ZERO_VOL_AS_DELIST"));
+    // F9: mac dinh backtest NUOT exception trong vong lap phut/ngay (chi printStackTrace) va SKIP
+    //     nguyen ngay neu <1440 phut => ngay do khong kiem SL, khong cap nhat maxDD (thien lech duong)
+    //     ma van bao "chay thanh cong". true = nem loi ngay, khong cho ket qua ban ra ngoai.
+    public static boolean SIM_FAIL_FAST_ON_DATA_ERROR = "true".equalsIgnoreCase(System.getenv("SIM_FAIL_FAST_ON_DATA_ERROR"));
+
+    // KHONG final (2026-07-31): can gan lai runtime trong RatchetDecoupleSweepProbe (so sanh
+    // true/false truc tiep, khong qua WFO/HPO). Gia tri khoi tao van tu env nhu cu, khong doi hanh vi
+    // production/WfoWorker (chi doi khi co code khac chu dong gan lai, khong ai lam vay ngoai probe).
+    public static boolean TS_RATCHET_DECOUPLED = "true".equalsIgnoreCase(System.getenv("TS_RATCHET_DECOUPLED"));
+
+    // TASK (2026-07-31, EXIT_MACHINE PHAN 1/2, hang muc P6 "giveback fix"): gap = min(peak*g, maxGap)
+    // khien ti le nha lai TEO DAN khi p lon (maxGap/p -> 0) - cat mat duoi x2/x3 (xem doc PHAN 1
+    // "PHAT HIEN 2"). Y tuong sua: gap = max(peak*g, minGap) - nha theo ti le, co SAN tuyet doi de
+    // nhieu khong giet luc p nho, KHONG co TRAN nen lai lon duoc nuoi dung ti le thay vi bi siet.
+    // false (MAC DINH) = HANH VI CU nguyen ven (calRateLossDynamicBuy dung Math.min(...,maxGap),
+    // byte-identical). true = doi sang Math.max(...,TS_MIN_GAP). Ca ARM (updateStatusNew) va RATCHET
+    // (updateTPSL) deu goi chung TradeUtils.calRateLossDynamicBuy -> flag nay anh huong CA HAI diem,
+    // dung nhu maxGap/g hien tai dang anh huong ca hai.
+    // KHONG final: ExitParamSweepProbe can gan lai runtime de sweep. Mac dinh van doc tu env nhu cu.
+    public static boolean TS_GIVEBACK_FLOOR = "true".equalsIgnoreCase(System.getenv("TS_GIVEBACK_FLOOR"));
+    // San tuyet doi cho gap khi TS_GIVEBACK_FLOOR=true. CHUA CO CAN CU CHON GIA TRI - can Uni chot
+    // (grid E3 trong EXIT_MACHINE PHAN 2) truoc khi tin so ra tu default nay. env > properties > 0.01f.
+    public static float TS_MIN_GAP = System.getenv("TS_MIN_GAP") != null
+            ? Float.parseFloat(System.getenv("TS_MIN_GAP").trim())
+            : (properties.get("TS_MIN_GAP") != null ? Float.parseFloat(properties.get("TS_MIN_GAP")) : 0.01f);
 
     // =========================================================
     // 6b. SHORT-SIDE (DRAFT 2026-07-18, flag-gated — MAC DINH OFF = long-only byte-identical)

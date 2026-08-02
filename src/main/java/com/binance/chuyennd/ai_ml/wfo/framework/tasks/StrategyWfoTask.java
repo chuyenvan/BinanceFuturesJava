@@ -72,17 +72,63 @@ public class StrategyWfoTask implements WfoTask {
         put("AI_DYNAMIC_MIN", 0.10, 0.50, false);
         put("HARD_RISK_LIMIT_4H", -0.30, -0.05, false);
         put("MS_DOWN_BIG_AVG", -0.055, -0.020, false);
-        put("DCA_LOSS_BIG_DOWN", -0.22, -0.08, false);
-        put("DCA_TIME_BIG_DOWN", 3, 7, true);
+
+        // ---- cum DCA: HOAN DOI theo co, KHONG cong don (2026-08-01) ----------------------------
+        // DCA_LOSS_BIG_DOWN + DCA_TIME_BIG_DOWN CHI duoc doc trong DcaUtils.getDcaConfig(BIG_DOWN).
+        // Khi DCA_GRID_ENABLED=true, DcaProcessor.getDCA re sang shouldDcaGrid() va KHONG BAO GIO goi
+        // shouldDca() nua => 2 gene nay thanh GENE CHET (HPO van quay chung, ton chieu search, va te
+        // hon: geneStability report ra range 'on dinh' gia). => bo hai gene, thay bang 4 gene mo ta
+        // luoi + 1 gene scale. Net +3 chieu (17 -> 20 khi bat grid).
+        if (Configs.DCA_GRID_ENABLED && Configs.DCA_GRID_SCALAR) {
+            put("DCA_GRID_L1", -0.60, -0.30, false);      // moc nhoi dau, do tren firstEntryPrice
+            put("DCA_GRID_STEP", 0.10, 0.30, false);      // do GIAN giua 2 bac
+            put("DCA_GRID_LEGS", 2, 5, true);             // so bac nhoi (SurvivalProbe: >5 bac do ra te hon)
+            put("DCA_GRID_W_RATIO", 1.0, 3.0, false);     // 1.0 = ti trong phang; >1 = don von ve day
+            put("DCA_GRID_SCALE", 4.0, 16.0, false);      // bu phan du tru hiem dung; >16 phai kiem CapacityProbe truoc
+        } else {
+            put("DCA_LOSS_BIG_DOWN", -0.22, -0.08, false);
+            put("DCA_TIME_BIG_DOWN", 3, 7, true);
+        }
+        // Tran margin theo bac: chi co nghia khi co bat. Do dang mang -> scalar (BASE/STEP) o Configs.
+        if (Configs.DCA_TIER_MARGIN_ENABLED && Configs.DCA_GRID_SCALAR) {
+            put("DCA_TIER_CAP_BASE", 0.40, 0.60, false);  // 0.50 = dung vach BREAKER_MARGIN_HALT production
+            put("DCA_TIER_CAP_STEP", 0.00, 0.15, false);  // 0.00 = tran phang (bao gom ca truong hop cu)
+        }
+
         put("RATE_PROFIT_STOP_MARKET", 0.03, 0.05, false);  // TASK-139: PHAT HIEN LON - cu [0.012,0.025] ep WFO tune trong vung CAT NON. Sweep: 0.03-0.05 cho PnL 2.4x + calmar 2.3x, maxDD khong doi. Day la nut that that (khong phai MIN_MOM15). 2026-07-30: nang san 0.020->0.03 (khop chinh xac vung sweep da xac nhan, khong con test duoi san chi phi 0.016)
-        put("TS_PROFIT_MULTIPLIER", 4.0, 8.0, false);
+        // 2026-08-01 (Uni chot): TS_PROFIT_MULTIPLIER=1.0 CHINH LA TS_RATCHET_DECOUPLED=true
+        //   (updateTPSL: rateMin2MoveSl = DECOUPLED ? base : MULT*base). Thay vi 1 co boolean 2 trang
+        //   thai ma HPO khong cham duoc, mo SAN range xuong 1.0 => HPO tu do tim diem giua thay vi
+        //   phai sweep tay 2 nhanh. San MO chi khi nhanh exit moi bat (TS_GIVEBACK_FLOOR) hoac khi
+        //   ep bang env; mac dinh van [4.0,8.0] de baseline cu byte-identical.
+        double tsMultLo = envDouble("WFO_TSMULT_LO", Configs.TS_GIVEBACK_FLOOR ? 1.0 : 4.0);
+        double tsMultHi = envDouble("WFO_TSMULT_HI", 8.0);
+        put("TS_PROFIT_MULTIPLIER", tsMultLo, tsMultHi, false);
         put("TS_DYNAMIC_K", 0.10, 0.25, false);
-        put("TS_MAX_GAP", 0.04, 0.06, false);
-        put("TS_MAX_GAP_WEAK", 0.045, 0.060, false);
-        put("TS_WEAK_MOMENTUM_THRES", 0.004, 0.008, false);
+
+        // ---- cum EXIT giveback: HOAN DOI, net -1 chieu ----------------------------------------
+        // TradeUtils.calRateLossDynamicBuy:
+        //   FLOOR=false -> gap = min(peak*RATIO, maxGap)   <- maxGap = TS_MAX_GAP / TS_MAX_GAP_WEAK,
+        //                                                     chon boi TS_WEAK_MOMENTUM_THRES
+        //   FLOOR=true  -> gap = max(peak*RATIO, TS_MIN_GAP) <- maxGap KHONG duoc dung o dau ca
+        // => bat FLOOR thi 3 gene TS_MAX_GAP/TS_MAX_GAP_WEAK/TS_WEAK_MOMENTUM_THRES la NHIEU THUAN.
+        // Thay bang 2 gene that su dieu khien hinh dang: san TS_MIN_GAP + ti le nha TS_GIVEBACK_RATIO.
+        if (Configs.TS_GIVEBACK_FLOOR) {
+            put("TS_MIN_GAP", 0.005, 0.030, false);       // san tuyet doi; <0.008 la duoi chi phi round-trip
+            put("TS_GIVEBACK_RATIO", 0.30, 0.70, false);  // 0.3 giu chat / 0.7 nuoi trend
+        } else {
+            put("TS_MAX_GAP", 0.04, 0.06, false);
+            put("TS_MAX_GAP_WEAK", 0.045, 0.060, false);
+            put("TS_WEAK_MOMENTUM_THRES", 0.004, 0.008, false);
+        }
+
         put("BUDGET_MARGIN_RATIO_1", 0.30, 0.50, false);
         put("BUDGET_MARGIN_RATIO_2", 0.60, 0.78, false);
         put("BUDGET_DIVIDER_2", 1.60, 2.50, false);
+        LOG.info("GENOME: {} gene | dcaGrid={} scalar={} tierMargin={} givebackFloor={} tsMult=[{},{}] | {}",
+                GENOME.size(), Configs.DCA_GRID_ENABLED, Configs.DCA_GRID_SCALAR,
+                Configs.DCA_TIER_MARGIN_ENABLED, Configs.TS_GIVEBACK_FLOOR, tsMultLo, tsMultHi,
+                GENOME.keySet());
     }
     private static void put(String f, double lo, double hi, boolean isInt) {
         GENOME.put(f, new double[]{lo, hi}); IS_INT.put(f, isInt);

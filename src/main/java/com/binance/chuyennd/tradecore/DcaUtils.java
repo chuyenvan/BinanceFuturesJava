@@ -12,6 +12,48 @@ public final class DcaUtils {
     }
 
     /**
+     * DCA GRID (2026-08-01) — thay logic phan xa bang GRID CO KE HOACH.
+     *
+     * <p>Khac DCA cu o 3 diem, moi diem sua mot loi da do duoc:
+     * <ol>
+     *   <li>Do muc lo tren {@code firstEntryPrice} (BAT BIEN qua DCA) thay vi {@code avgEntry}.
+     *       Cu: avgEntry tut sau moi lan nhoi => muc lo reset => khoang cach nhoi CO LAI DAN
+     *       (15% -> 8.1% -> 5.5% -> 4.4%), tuc cang lo sau cang nhoi day. Moi: khoang cach GIAN
+     *       dung nhu thiet ke.</li>
+     *   <li>TRAN so leg = do dai grid. Cu khong co tran nao.</li>
+     *   <li>KHONG phu thuoc market level => bo duoc {@code isAll=true} cua BIG_DOWN (cai tat thang
+     *       chan margin dung luc thi truong sap manh nhat).</li>
+     * </ol>
+     *
+     * @param firstEntryPrice gia vao leg DAU cua cum (khong phai avgEntry)
+     * @param lastPrice       gia hien tai
+     * @param legCount        so leg da khop (1 = chua nhoi)
+     */
+    public static boolean shouldDcaGrid(Float firstEntryPrice, Float lastPrice, int legCount) {
+        if (firstEntryPrice == null || lastPrice == null || firstEntryPrice <= 0) return false;
+        // 2026-08-01 (HPO-ready): doc qua Configs.dcaGridLevel()/dcaGridLegs() thay vi cham thang mang
+        // DCA_GRID_LEVELS. Ly do: HPO/WFO ap gene bang reflection len FIELD SCALAR — neu ham nay doc
+        // mang thi gene DCA_GRID_L1/STEP/LEGS set xong KHONG co tac dung nao (loi im lang, rat kho thay).
+        // Khi DCA_GRID_SCALAR=false, accessor tra dung phan tu mang cu => byte-identical.
+        if (legCount < 1 || legCount > Configs.dcaGridLegs()) return false;   // het bac grid -> khong nhoi nua
+        float level = Configs.dcaGridLevel(legCount - 1);
+        if (level >= 0f) return false;                                  // 0f = het bac (guard kep)
+        float drop = lastPrice / firstEntryPrice - 1f;                  // am khi lo
+        return drop <= level;
+    }
+
+    /** Ti trong cho leg sap khop (0-based theo legCount hien tai), quy ve ti le tren TONG, x SCALE.
+     *  SCALE bu lai phan du tru hiem khi dung (chi 0.34% cum cham day) — xem Configs.DCA_GRID_SCALE. */
+    public static float gridLegWeightRatio(int legCount) {
+        if (legCount < 0 || legCount > Configs.dcaGridLegs()) return 0f;
+        float w = Configs.dcaGridWeight(legCount);
+        if (w <= 0f) return 0f;
+        float total = Configs.dcaGridTotalWeight();
+        if (total <= 0f) return 0f;
+        return (w / total) * Configs.DCA_GRID_SCALE;
+    }
+
+    /**
      * Phương thức chính, chỉ nhận vào các tham số đơn để kiểm tra.
      * Đây là hàm duy nhất bạn cần gọi từ bên ngoài.
      */

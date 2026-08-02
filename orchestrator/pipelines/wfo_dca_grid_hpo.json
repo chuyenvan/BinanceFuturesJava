@@ -1,0 +1,76 @@
+{
+  "name": "wfo_dca_grid_hpo",
+  "profile": "wfo-fanout",
+  "_doc": "HPO cho DCA grid + exit giveback (2026-08-01). Mo DCA_GRID_SCALAR=true => Configs sinh luoi tu 4 so vo huong va StrategyWfoTask HOAN DOI genome 17 -> 21 gene (bo DCA_LOSS/TIME_BIG_DOWN va TS_MAX_GAP/WEAK/WEAK_THRES vi chung CHET duoi 2 co nay; them 5 gene grid + 2 gene tran bac + TS_MIN_GAP/TS_GIVEBACK_RATIO). Nguon cau hinh: configs/exit_dca_20260801_hpo.env. CHU Y: step verify_stage la GATE BAT BUOC — jar stale da lam mat 2 vong do trong phien 2026-08-01, ca 2 lan deu im lang. RAM: 2 Oracle worker x 3G = 6G, box 23G => an toan; KHONG nang oracle_workers ma khong do free -g truoc.",
+  "params": {
+    "ds": "/home/ubuntu/claudedata/wfo_ds_oiz75",
+    "tag": "dcagrid_hpo",
+    "extra_env": "DCA_GRID_SCALAR=true,DCA_GRID_ENABLED=true,DCA_TIER_MARGIN_ENABLED=true,TS_GIVEBACK_FLOOR=true,SIM_BREAKER_MODE=OFF,SIM_APPLY_FUNDING=true,DCA_GRID_L1=-0.50,DCA_GRID_STEP=0.20,DCA_GRID_LEGS=3,DCA_GRID_W_RATIO=2.0,DCA_GRID_SCALE=8,DCA_TIER_CAP_BASE=0.50,DCA_TIER_CAP_STEP=0.10,RATE_PROFIT_STOP_MARKET=0.05,TS_MIN_GAP=0.01,TS_GIVEBACK_RATIO=0.5",
+    "N": "30",
+    "SEED": "42",
+    "ORACLE_WORKERS": "2",
+    "KAGGLE_KERNELS": "0"
+  },
+  "steps": [
+    {
+      "id": "verify_stage",
+      "type": "tool",
+      "tool": "remote_ssh",
+      "args": {
+        "host": "localhost",
+        "cmd": "python3 /home/ubuntu/claudedata/.run/verify_stage.py ${JAR} --profile dca_grid --profile exit"
+      },
+      "_doc": "GATE: jar da stage phai chua DU token scalar. Thieu => HPO quay gene ma khong doi gi => ket qua GIA. Chay 'ce.sh verify_stage' truoc de day script len /home/ubuntu/claudedata/.run/.",
+      "on_fail": "abort"
+    },
+    {
+      "id": "wait_drain",
+      "type": "wait",
+      "tool": "wfo_status",
+      "_doc": "KHONG launch batch moi khi batch cu chua ALL_DONE (luat rut ra tu su co treo box 2026-08-01: 3 batch chong nhau = 12 JVM x 3G = 36G > RAM).",
+      "until": {"conditions": [
+        {"path": "counts.RUNNING", "equals": 0},
+        {"path": "counts.PENDING", "equals": 0}
+      ]},
+      "interval_sec": 60,
+      "timeout_sec": 7200,
+      "on_fail": "abort"
+    },
+    {
+      "id": "fanout",
+      "type": "tool",
+      "tool": "wfo_fanout",
+      "args": {
+        "ds": "${ds}",
+        "jar": "${JAR}",
+        "n": "${N}",
+        "seed": "${SEED}",
+        "oracle_workers": "${ORACLE_WORKERS}",
+        "kaggle_kernels": "${KAGGLE_KERNELS}",
+        "tag": "${tag}",
+        "extra_env": "${extra_env}"
+      },
+      "on_fail": "abort",
+      "retry": 1
+    },
+    {
+      "id": "wait_fanout",
+      "type": "wait",
+      "tool": "wfo_status",
+      "until": {"conditions": [
+        {"path": "counts.DONE", "gte": 16},
+        {"path": "counts.RUNNING", "equals": 0},
+        {"path": "counts.PENDING", "equals": 0}
+      ]},
+      "interval_sec": 120,
+      "timeout_sec": 28800,
+      "on_fail": "abort"
+    },
+    {
+      "id": "report",
+      "type": "tool",
+      "tool": "wfo_report",
+      "args": {"tag": "${tag}"}
+    }
+  ]
+}

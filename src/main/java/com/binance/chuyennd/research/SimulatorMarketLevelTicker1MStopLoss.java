@@ -35,6 +35,44 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     public static final Logger LOG = LoggerFactory.getLogger(SimulatorMarketLevelTicker1MStopLoss.class);
     public static final String FILE_STORAGE_ORDER_DONE = "storage/OrderTestDone.data";
     public TreeMap<Long, OrderTargetInfoTest> allOrderDone;
+
+    // ===== FIX AUDIT 2026-08-01 — F8 + F9: dem su co, KHONG cho im lang =====
+    /** F8: so lan key allOrderDone bi dung do (truoc day = so lenh BI GHI DE, mat khoi bao cao). */
+    public static int orderKeyCollisions = 0;
+    /** F9: so ngay bi SKIP vi <1440 phut (ngay do KHONG kiem SL, KHONG cap nhat maxDD). */
+    public static int dayDataErrors = 0;
+    /** F9: so exception bi nuot trong vong lap phut/ngay. */
+    public static int swallowedExceptions = 0;
+    /** TRAN MARGIN THEO BAC: so lan chan (de biet co che co that su kich hoat khong). */
+    public int tierMarginBlockCount = 0;
+
+    public static void resetAuditCounters() {
+        orderKeyCollisions = 0; dayDataErrors = 0; swallowedExceptions = 0;
+    }
+    public static String auditCountersSummary() {
+        return String.format("keyCollisions=%d dayDataErrors=%d swallowedExceptions=%d",
+                orderKeyCollisions, dayDataErrors, swallowedExceptions);
+    }
+
+    /**
+     * F8 FIX — dat lenh vao allOrderDone KHONG BAO GIO ghi de.
+     *
+     * <p>Cu: {@code put(-timeUpdate - size(), order)}. Neu 2 lenh co {@code t2-t1 == n1-n2} thi key
+     * TRUNG => TreeMap.put GHI DE => 1 lenh bien mat khoi allOrderDone (mat ca khoi totalProfit lan
+     * tradeCount). Voi timeUpdate tren luoi phut (boi 60000) va size() len toi ~70k, dieu kien
+     * {@code n1-n2 = 60000k} la KHA THI.
+     *
+     * <p>Moi: giu nguyen thu tu sap xep (theo -timeUpdate) nhung do xuong khe trong gan nhat khi dung
+     * do. Neu KHONG co dung do => hanh vi y het cu (byte-identical).
+     */
+    private void putOrderDone(OrderTargetInfoTest order) {
+        long key = -order.timeUpdate - allOrderDone.size();
+        while (allOrderDone.containsKey(key)) {
+            key--;
+            orderKeyCollisions++;
+        }
+        allOrderDone.put(key, order);
+    }
     public TreeMap<Long, MarketDataObject> time2MarketData;
     public TreeMap<Long, AiPredictionData> predictionMap;
     public TreeMap<Long, long[]> time2SymbolPred;
@@ -366,7 +404,13 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                     short[] currentIds = Arrays.copyOf(activeRunningIds, activeRunningCount);
                                     for (Short symbolId : currentIds) {
                                         KlineObjectSimple ticker = symbol2Ticker[symbolId];
-                                        if (!Utils.isTickerAvailable(ticker)) {
+                                        // F10 FIX (flag-gated): coin delist/dong bang co the phat nen PHANG
+                                        // volume=0 thay vi null => isTickerAvailable van true => timeUpdate
+                                        // lien tuc moi => KHONG BAO GIO bi coi la delist => cum song mai,
+                                        // cuoi ky MTM o gia dong bang thay vi ghi giam ve ~0 (thien lech duong).
+                                        boolean zeroVol = Configs.SIM_TREAT_ZERO_VOL_AS_DELIST
+                                                && ticker != null && ticker.totalUsdt <= 0f;
+                                        if (!Utils.isTickerAvailable(ticker) || zeroVol) {
                                             updateSymbolDeListed(symbolId, time);
                                         }
                                     }
@@ -375,16 +419,39 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                             }
                             logByProcessTime(startTimeRun, "Done budget data", time);
                         } catch (Exception e) {
-                            e.printStackTrace();
+                            // F9 FIX: dem lai, khong cho im lang. Cu chi printStackTrace => phut do bi bo qua
+                            // (khong kiem SL, khong cap nhat maxDD) ma backtest van bao "thanh cong".
+                            swallowedExceptions++;
+                            LOG.error("Nuot exception tai phut {} (lan thu {})",
+                                    Utils.normalizeDateYYYYMMDDHHmm(time), swallowedExceptions, e);
+                            if (Configs.SIM_FAIL_FAST_ON_DATA_ERROR) {
+                                throw new RuntimeException("SIM_FAIL_FAST: exception tai phut " + time, e);
+                            }
                         }
                         is50PercentOrderLoss = null;
                     }
                 } else {
                     // Ngày thiếu phút (<1440) SKIP lặng — semantics CŨ giữ nguyên (đổi sẽ phá GATE), chỉ warn rõ hơn.
-                    LOG.warn("Date data error: {} — chi co {} phut (<1440), SKIP ngay nay", Utils.normalizeDateYYYYMMDD(startTime), time2Tickers.size());
+                    // F9 FIX: dem lai. Ngay bi SKIP = khong tick nao kiem SL + khong cap nhat maxDD
+                    // => neu trung ngay sap manh thi vua bo lo stop-out vua bo lo day DD (thien lech duong).
+                    dayDataErrors++;
+                    LOG.warn("Date data error: {} — chi co {} phut (<1440), SKIP ngay nay (lan thu {})",
+                            Utils.normalizeDateYYYYMMDD(startTime), time2Tickers.size(), dayDataErrors);
+                    if (Configs.SIM_FAIL_FAST_ON_DATA_ERROR) {
+                        throw new RuntimeException("SIM_FAIL_FAST: ngay thieu du lieu " + startTime);
+                    }
                 }
             } catch (Exception e) {
-                e.printStackTrace();
+                if (Configs.SIM_FAIL_FAST_ON_DATA_ERROR && e instanceof RuntimeException
+                        && String.valueOf(e.getMessage()).startsWith("SIM_FAIL_FAST")) {
+                    throw e;   // khong nuot lai chinh cai minh vua nem
+                }
+                swallowedExceptions++;
+                LOG.error("Nuot exception tai ngay {} (lan thu {})",
+                        Utils.normalizeDateYYYYMMDD(startTime), swallowedExceptions, e);
+                if (Configs.SIM_FAIL_FAST_ON_DATA_ERROR) {
+                    throw new RuntimeException("SIM_FAIL_FAST: exception tai ngay " + startTime, e);
+                }
             }
             simMs += System.currentTimeMillis() - _tSim;
             time2Tickers = null;
@@ -404,6 +471,14 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             List<OrderTargetInfoTest> orderRunningList = symbol2OrdersEntry[id];
             if (orderRunningList != null) {
                 // === FUNDING (Bước 3) — cụm còn mở cuối kỳ: gán phí cụm vào leg đầu (như closeOrder).
+                // 🔴 FIX (2026-07-31, audit F3): TRUOC DAY chi CHEP time2FundingFee tu cum ma KHONG BAO GIO
+                //    goi computeFundingOnClose() cho cum con mo (no chi duoc goi trong closeOrder).
+                //    Hau qua: dung nhom lenh GIU LAU NHAT (no funding nhieu nhat) lai duoc MIEN PHI hoan toan
+                //    => thien lech co he thong UNG HO cau hinh giu-lau (vd nang RATE_PROFIT_STOP_MARKET).
+                //    computeFundingOnClose() tu return ngay neu APPLY_FUNDING_FEE=false => mac dinh
+                //    KHONG doi hanh vi cu (byte-identical khi tat funding).
+                OrderTargetInfoTest clusterOpen = symbol2OrderRunning[id];
+                if (clusterOpen != null) clusterOpen.computeFundingOnClose();
                 boolean fundingAssigned = false;
                 for (OrderTargetInfoTest orderInfo : orderRunningList) {
                     orderInfo.lastPrice = symbol2OrderRunning[id].lastPrice;
@@ -415,7 +490,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                         orderInfo.time2FundingFee = symbol2OrderRunning[id].time2FundingFee;
                         fundingAssigned = true;
                     }
-                    allOrderDone.put(-orderInfo.timeUpdate - allOrderDone.size(), orderInfo);
+                    putOrderDone(orderInfo);   // F8 FIX: khong ghi de khi key dung do
                 }
             }
         }
@@ -439,6 +514,21 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         LOG.info("[PROFILE] days={} readMs={} simMs={} (read={}% sim={}%) totalLoopMs={}",
                 dayCount, readMs, simMs,
                 _tot > 0 ? (100 * readMs / _tot) : 0, _tot > 0 ? (100 * simMs / _tot) : 0, _tot);
+        // HANDOFF 2026-08-01 muc E: tierMarginBlockCount co tang nhung KHONG BAO GIO duoc log ra
+        //  => phien truoc khong phan biet duoc "co che chet" vs "tran khong bao gio cham", phai dung
+        //  canary tran phi ly (0.02/0.03/...) de suy ra. Log thang o day de doc duoc ngay tu log run.
+        //  blockCount=0 CO NGHIA: tran chua he can tren dai du lieu nay (bao hiem mien phi), KHONG phai loi.
+        if (Configs.DCA_TIER_MARGIN_ENABLED) {
+            StringBuilder caps = new StringBuilder();
+            int nTier = Configs.dcaGridLegs() + 1;
+            for (int i = 0; i < nTier; i++) {
+                if (i > 0) caps.append('/');
+                caps.append(String.format(Locale.US, "%.2f", Configs.tierMarginCap(i)));
+            }
+            LOG.info("[TIER-MARGIN] blockCount={} caps=[{}] scalar={} (blockCount=0 => tran chua tung cham, "
+                            + "co che van song — xem canary test o HANDOFF_20260801)",
+                    tierMarginBlockCount, caps, Configs.DCA_GRID_SCALAR);
+        }
         Utils.printMemoryUse(System.currentTimeMillis() - timeSimulator);
     }
 
@@ -668,7 +758,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                     fundingAssigned = true;
                 }
 
-                allOrderDone.put(-order.timeUpdate - allOrderDone.size(), order);
+                putOrderDone(order);   // F8 FIX: khong ghi de khi key dung do
                 BudgetManagerSimple.getInstance().updatePnl(order);
             }
         }
@@ -717,6 +807,19 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         // clusterFirstLegTime — TUYỆT ĐỐI KHÔNG đụng timeStart (=leg-cuối, là tham chiếu logic mở/đóng;
         // đổi nó làm rò funding vào giao dịch → +69 lệnh, vỡ GATE). timeStart giữ nguyên gốc = leg-cuối.
         orderResult.clusterFirstLegTime = time2Order.firstEntry().getKey();
+        orderResult.legCount = orders.size();   // DCA GRID: cum dang o bac nao
+
+        // F7 FIX (flag-gated, mac dinh OFF = hanh vi cu byte-identical): mergeOrder tao object cum MOI
+        // va KHONG carry priceSL => cum da arm SL (vd +2.5%) ma bi DCA nhoi them 1 leg la MAT SACH bao
+        // ve, phai arm lai tu dau tren avgEntry moi. Voi rate-min cao thi cang kho re-arm => lenh troi
+        // tu do sau moi lan DCA.
+        // DIEU KIEN AN TOAN: chi mang SL cu sang neu no VAN NAM TREN avgEntry moi. Neu khong (DCA keo
+        // avgEntry len tren SL cu) thi giu null — mang sang se thanh lenh cat-lo-ngay-lap-tuc, sai y nghia.
+        if (Configs.TS_CARRY_SL_ON_DCA && prevRunning != null && prevRunning.priceSL != null
+                && prevRunning.priceSL > entry) {
+            orderResult.priceSL = prevRunning.priceSL;
+            orderResult.minPrice = ticker.priceClose;
+        }
 
         return orderResult;
     }
@@ -821,6 +924,23 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             return; // count-only: da dem gate admission, KHONG tao order
         }
 
+        // 🛑 TRAN MARGIN THEO BAC DO SAU (2026-08-01) — chay TRUOC breaker phang, doc lap BREAKER_MODE.
+        //   Vach dung 50% cua BREAKER_MARGIN_HALT chan dung leg SAU (ti le thang cao nhat: 76.4% cum
+        //   xuong -80% van hoi) vi leg NONG da tieu het von truoc. Tran theo bac sua dung hinh dang do:
+        //   leg cang sau tran cang cao => lenh nong cham tran som => tu dong chua dan cho dot sap sau.
+        if (Configs.DCA_TIER_MARGIN_ENABLED) {
+            float bal = BudgetManagerSimple.getInstance().balanceBasic;
+            if (bal > 0) {
+                List<OrderTargetInfoTest> curLegs = symbol2OrdersEntry[symbolId];
+                int legIdx = (curLegs == null) ? 0 : curLegs.size();   // 0 = dang mo leg dau
+                float ratio = BudgetManagerSimple.getInstance().marginRunning / bal;
+                if (ratio >= Configs.tierMarginCap(legIdx)) {
+                    tierMarginBlockCount++;
+                    return;
+                }
+            }
+        }
+
         // 🛑 CIRCUIT BREAKER — chỉ tác động khi BREAKER_MODE != OFF. Tác động tầng DCA/margin,
         // KHÔNG đụng entry filter, KHÔNG force-close (long-only): chỉ DỪNG MỞ / DỪNG NHỒI.
         if (!"OFF".equals(Configs.BREAKER_MODE)) {
@@ -898,6 +1018,18 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         if (Configs.CONF_SIZE_MODE == 1 && symbolPred != null) {
             float p6 = 1f - symbolPred;
             budget *= Configs.confFactor(p6);
+        }
+
+        // === DCA GRID sizing (2026-08-01) — TONG von moi coin GIU NGUYEN = budget ===
+        //   leg_i = budget * w[i] / sum(w). Vi du 1:1:3:8 -> leg1 chi 1/13 budget, leg cuoi 8/13.
+        //   Nho vay nang ti trong duoi KHONG lam phinh tong exposure moi coin (van dung 1 suat budget),
+        //   chi doi CACH RAI von theo do sau. Mac dinh DCA_GRID_ENABLED=false -> byte-identical.
+        if (Configs.DCA_GRID_ENABLED) {
+            List<OrderTargetInfoTest> cur = symbol2OrdersEntry[symbolId];
+            int legIdx = (cur == null) ? 0 : cur.size();     // 0 = leg dau
+            float ratio = DcaUtils.gridLegWeightRatio(legIdx);
+            if (ratio <= 0f) return;                          // het bac grid -> khong mo them leg
+            budget *= ratio;
         }
 
         String symbolStr = SimpleSymbolMapper.getInstance().getSymbol(symbolId);
