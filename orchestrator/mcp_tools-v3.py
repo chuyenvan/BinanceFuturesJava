@@ -1309,6 +1309,38 @@ def _wfo_coord_cmd(subcmd, jar=None, extra_env=""):
             f"{WFO_COORD_CLASS} {subcmd}")
 
 
+def _autosnap_prev_report(new_tag, jar=None):
+    """GUARD (2026-08-02) chong mat verdict: truoc khi reset coordinator cho fanout
+    moi, snapshot report cua run TRUOC (state hien tai) neu con window DONE. Ly do:
+    fanout dung CHUNG job-group `strategy_window` + 1 index tren jobstore 226, reset
+    ghi de -> run truoc chua kip luu report se mat aggregate (vd confirm_n30 bi dcaoff
+    reset de). Non-fatal: moi loi chi log, KHONG chan fanout."""
+    try:
+        # dung `report <group>` (khong phai `report` tran) de recompute LIVE tu jobstore
+        # + passthrough WFO_HARNESS_FIX -> ra ban P1 lenient dung, khong phai md cache cu.
+        _sh(_wfo_coord_cmd(f"report {WFO_STRATEGY}", jar=jar), timeout=180)
+        src = os.path.join(WFO_WORKER_CWD, "docs", "reports", WFO_REPORT_NAME)
+        if not os.path.exists(src):
+            logger.info("autosnap: khong co report md truoc (state rong) -> bo qua")
+            return None
+        with open(src, "r", errors="ignore") as f:
+            md = f.read()
+        m = re.search(r"DONE:\s*(\d+)", md)
+        done = int(m.group(1)) if m else 0
+        if done <= 0:
+            logger.info("autosnap: state khong co window DONE -> khong snapshot")
+            return None
+        ts = time.strftime("%Y%m%d_%H%M%S")
+        dst = os.path.join(RUN_DIR, f"wfo_report_autosnap_{ts}.md")
+        shutil.copyfile(src, dst)
+        logger.warning("autosnap: SAP reset de %d window DONE cua run truoc -> da luu "
+                       "snapshot %s (tag moi=%s)", done, dst, new_tag)
+        return dst
+    except Exception:
+        logger.exception("autosnap: loi (bo qua, khong chan fanout)")
+        return None
+
+
 def cmd_wfo_run(args):
     """NUT WFO RUN. Kill worker cu -> reset coordinator -> spawn N WfoWorker nen.
 
@@ -1492,6 +1524,10 @@ def cmd_wfo_fanout(args):
         return emit({"status": "error", "summary": "kaggle_kernels phai la so nguyen."})
     tag = args[6] if len(args) > 6 and args[6] else "opt"
     extra_env = _parse_extra_env(args[7]) if len(args) > 7 else {}
+
+    # 0) GUARD (2026-08-02): snapshot report cua run TRUOC truoc khi reset -> tranh mat
+    #    verdict khi fanout moi de len state cu (jobstore serial, chung group).
+    _autosnap_prev_report(tag, jar=jar)
 
     # 1) Kill WfoWorker cu (tranh 2 the he cung ghi state store).
     krc, _, _ = _sh(f"pkill -f {WFO_WORKER_CLASS}")
