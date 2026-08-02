@@ -485,6 +485,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                     orderInfo.priceTP = orderInfo.lastPrice;
                     orderInfo.minPrice = symbol2OrderRunning[id].minPrice;
                     orderInfo.maeLow = symbol2OrderRunning[id].maeLow;   // 🔎 đáy THẬT cụm (đo MAE)
+                    orderInfo.maePeak = symbol2OrderRunning[id].maePeak;   // 🔎 2026-08-02: đỉnh THẬT cụm (fix maePeak null)
                     orderInfo.timeUpdate = symbol2OrderRunning[id].timeUpdate;
                     if (!fundingAssigned) {
                         orderInfo.time2FundingFee = symbol2OrderRunning[id].time2FundingFee;
@@ -752,6 +753,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                 order.priceTP = orderMulti.priceTP;
                 order.minPrice = orderMulti.minPrice;
                 order.maeLow = orderMulti.maeLow;   // 🔎 chép đáy THẬT cụm sang từng leg (đo MAE)
+                order.maePeak = orderMulti.maePeak;   // 🔎 2026-08-02: chép ĐỈNH THẬT (fix maePeak null tren done-order)
                 order.lastPrice = orderMulti.lastPrice;
                 if (!fundingAssigned) {
                     order.time2FundingFee = orderMulti.time2FundingFee;   // toàn bộ phí cụm vào leg đầu
@@ -796,6 +798,9 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         float firstLegEntry = time2Order.firstEntry().getValue().priceEntry;
         float carriedLow = (prevRunning != null && prevRunning.maeLow != null) ? prevRunning.maeLow : firstLegEntry;
         orderResult.maeLow = Math.min(carriedLow, ticker.minPrice);
+        // 🔎 2026-08-02: maePeak carry qua DCA (doi xung maeLow) — dinh THAT tu leg dau, chi di LEN.
+        float carriedPeak = (prevRunning != null && prevRunning.maePeak != null) ? prevRunning.maePeak : firstLegEntry;
+        orderResult.maePeak = Math.max(carriedPeak, ticker.maxPrice);
         orderResult.lastPrice = ticker.priceClose;
         orderResult.lastEntry = orders.get(orders.size() - 1).lastEntry;
         orderResult.rateChange = orders.get(orders.size() - 1).rateChange;

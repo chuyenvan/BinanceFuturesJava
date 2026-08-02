@@ -81,6 +81,12 @@ public class HPOFitnessCalculatorV4 {
         public float profitFactor = 0f;     // Sigma win / |Sigma loss|; 9999 = khong co lenh thua
         public float medianTradePnl = 0f;   // trung vi calTp toan bo lenh
         public float costPerTrade = 0f;     // (fee + slippage + funding) trung binh / lenh
+        public float avgHoldHours = 0f;     // 2026-08-02: trung binh (timeUpdate-timeStart)/lenh, GIO — report-only (do tac dong DCA len holding-time)
+        // 2026-08-02: MFE/give-back cua lenh THANG (tp>0) — report-only, do "room nuoi lai" (dinh dat vs dinh giu).
+        public int nWinMfe = 0;
+        public float mfeWinP50 = 0f, mfeWinP75 = 0f, mfeWinP90 = 0f;  // percentile dinh-lai (maePeak/entry-1) cua lenh thang
+        public float keepRatioMean = 0f;    // trung binh exitRate/peakRate cua lenh thang (% dinh giu duoc)
+        public float gvbackWinMean = 0f;    // trung binh (peakRate-exitRate) cua lenh thang (lai bo lai tren ban)
     }
 
     /**
@@ -122,11 +128,25 @@ public class HPOFitnessCalculatorV4 {
         int tpi = 0;
         double sumWin = 0, sumLoss = 0, sumCost = 0;
         int nWin = 0, nLoss = 0;
+        long sumHoldMs = 0;   // 2026-08-02: tong (timeUpdate-timeStart) — report-only avgHoldHours
+        java.util.ArrayList<Float> mfeWins = new java.util.ArrayList<>();   // dinh-lai lenh thang (peakRate)
+        double sumKeep = 0, sumGvback = 0;   // % dinh giu duoc + lai bo lai (lenh thang)
         for (OrderTargetInfoTest o : orders) {
             double tp = o.calTp();
             r.totalProfit += tp;
             tradePnls[tpi++] = tp;
             if (tp > 0) { sumWin += tp; nWin++; } else if (tp < 0) { sumLoss += tp; nLoss++; }
+            // 2026-08-02 MFE/give-back lenh THANG: dinh dat (maePeak) vs dinh giu (calRateTp). Report-only.
+            if (tp > 0 && o.maePeak != null && o.priceEntry != null && o.priceEntry > 0) {
+                float peakRate = Utils.rateOf2Double(o.maePeak, o.priceEntry);
+                Float exitRateF = o.calRateTp();
+                float exitRate = exitRateF != null ? exitRateF : 0f;
+                if (peakRate > 0) {
+                    mfeWins.add(peakRate);
+                    sumKeep += exitRate / peakRate;
+                    sumGvback += (peakRate - exitRate);
+                }
+            }
             if (o.quantity != null && o.priceEntry != null) {
                 double notional = (double) o.quantity * o.priceEntry;
                 double fee = notional * Configs.RATE_FEE;
@@ -135,6 +155,7 @@ public class HPOFitnessCalculatorV4 {
                 sumCost += fee + slip + fund;
             }
             if (o.timeUpdate - o.timeStart > HELD_TOO_LONG) heldTooLong++;
+            sumHoldMs += Math.max(0L, o.timeUpdate - o.timeStart);   // report-only holding-time
             pnlByYear.merge(Utils.getYear(o.timeUpdate), tp, Double::sum);
             pnlByDay.merge(o.timeUpdate / Utils.TIME_DAY, tp, Double::sum);
         }
@@ -150,6 +171,18 @@ public class HPOFitnessCalculatorV4 {
         r.medianTradePnl = tradePnls.length == 0 ? 0f
                 : (float) (tradePnls.length % 2 == 1 ? tradePnls[mid] : (tradePnls[mid - 1] + tradePnls[mid]) / 2.0);
         r.costPerTrade = r.tradeCount > 0 ? (float) (sumCost / r.tradeCount) : 0f;
+        r.avgHoldHours = r.tradeCount > 0 ? (float) ((double) sumHoldMs / r.tradeCount / 3600000.0) : 0f;
+        if (!mfeWins.isEmpty()) {
+            float[] mfeArr = new float[mfeWins.size()];
+            for (int i = 0; i < mfeArr.length; i++) mfeArr[i] = mfeWins.get(i);
+            java.util.Arrays.sort(mfeArr);
+            r.nWinMfe = mfeArr.length;
+            r.mfeWinP50 = mfeArr[Math.min(mfeArr.length - 1, (int) (mfeArr.length * 0.50))];
+            r.mfeWinP75 = mfeArr[Math.min(mfeArr.length - 1, (int) (mfeArr.length * 0.75))];
+            r.mfeWinP90 = mfeArr[Math.min(mfeArr.length - 1, (int) (mfeArr.length * 0.90))];
+            r.keepRatioMean = (float) (sumKeep / mfeArr.length);
+            r.gvbackWinMean = (float) (sumGvback / mfeArr.length);
+        }
 
         // maxDD toàn danh mục (số âm → abs)
         Float ddRaw = BudgetManagerSimple.getInstance().balanceIndex.unProfitMin;

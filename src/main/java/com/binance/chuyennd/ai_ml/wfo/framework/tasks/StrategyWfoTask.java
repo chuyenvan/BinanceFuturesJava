@@ -316,6 +316,13 @@ public class StrategyWfoTask implements WfoTask {
         res.put("oosProfitFactor", round4(oos.profitFactor));
         res.put("oosMedianTradePnl", round4(oos.medianTradePnl));
         res.put("oosCostPerTrade", round4(oos.costPerTrade));
+        res.put("oosAvgHoldHours", round4(oos.avgHoldHours));   // 2026-08-02: holding-time report-only
+        LOG.info("[METRIC-HOLD] win{} oosAvgHoldH={} winRate={} pf={} avgWin={} avgLoss={} trades={}",
+                winIdx, round4(oos.avgHoldHours), round4(oos.winRate), round4(oos.profitFactor),
+                round4(oos.avgWin), round4(oos.avgLoss), oos.tradeCount);
+        LOG.info("[METRIC-MFE] win{} nWin={} mfeP50={} mfeP75={} mfeP90={} keepRatio={} gvbackMean={}",
+                winIdx, oos.nWinMfe, round4(oos.mfeWinP50), round4(oos.mfeWinP75),
+                round4(oos.mfeWinP90), round4(oos.keepRatioMean), round4(oos.gvbackWinMean));
         if (Configs.GATE_COUNT_ONLY) {
             // count-only: khong tao order -> oos.tradeCount=0. Surface so gate-pass per-window.
             res.put("gateSeen", lastGateSeen);
