@@ -379,30 +379,37 @@ public class StrategyWfoTask implements WfoTask {
         rows.sort(Comparator.comparingInt(o -> o.getInt("winIdx")));
 
         int n = rows.size();
-        int posCount = 0;
+        int posCount = 0;          // STRICT (cũ): chỉ note=SUCCESS && pnl>0
+        int posCountLenient = 0;   // P1: pnl>0 && note KHÔNG thuộc nhóm disqualify thật
         double worstMaxDD = 0;     // abs USD (tham khảo)
         double worstDdPct = 0;     // TỶ LỆ — dùng cho VERDICT
         double worstDdPctMtm = 0;  // 🟡 TASK-119 report-only — KHÔNG vào verdict
         int marginCallCount = 0;   // 🟡 TASK-119 report-only
         for (JSONObject r : rows) {
             double oosPnl = r.getDouble("oosPnl");
+            String note = r.optString("oosNote", "SUCCESS");
             // V4.1 (TASK-113): đếm cửa-sổ-thành-công TƯỜNG MINH theo note — chỉ SUCCESS && pnl>0.
-            // optString default "SUCCESS" để tương thích result cũ (chưa có oosNote). Semantics đếm GIỮ
-            // NGUYÊN V4: window sentinel (TOO_FEW/BURN/...) giờ hiện pnl thật nhưng KHÔNG được đếm dương.
-            if ("SUCCESS".equals(r.optString("oosNote", "SUCCESS")) && oosPnl > 0) posCount++;
+            if ("SUCCESS".equals(note) && oosPnl > 0) posCount++;
+            // P1 (AUDIT_20260730): trên OOS, CAPITAL_LOCK/TOO_FEW/UNSTABLE là RÀNG BUỘC IS bị áp nhầm
+            //   sang OOS → loại nhầm window ĐANG LÃI (đo được: 9/12 window loose_k8 pnl>0 nhưng
+            //   CAPITAL_LOCK). Chỉ ZERO_TRADES/BURN_ACCOUNT/OVER_MAXDD mới thật sự disqualify OOS.
+            if (oosPnl > 0 && !oosDisqualified(note)) posCountLenient++;
             worstMaxDD = Math.max(worstMaxDD, r.getDouble("oosMaxDD"));
             worstDdPct = Math.max(worstDdPct, r.optDouble("oosDdPct", 0));
             worstDdPctMtm = Math.max(worstDdPctMtm, r.optDouble("oosDdPct_mtm", 0));   // report-only
             if (r.optBoolean("oosMarginCall", false)) marginCallCount++;               // report-only
         }
-        double posRatio = n > 0 ? (double) posCount / n : 0;
+        // WFO_HARNESS_FIX=true → verdict dùng semantics P1 (lenient); default OFF = strict (byte-identical).
+        double posRatioStrict = n > 0 ? (double) posCount / n : 0;
+        double posRatioLenient = n > 0 ? (double) posCountLenient / n : 0;
+        double posRatio = HPOFitnessCalculatorV4.HARNESS_FIX ? posRatioLenient : posRatioStrict;
         // BUG 1 (2026-07-13): WFE median CHỈ tính trên window SUCCESS (đồng bộ semantics posCount).
-        // Trước đây gom MỌI window (ZERO_TRADES/TOO_FEW/BURN/CAPITAL_LOCK) làm median luôn kẹt ~0.010,
-        // che khuất WFE thật của các window SUCCESS. Nếu KHÔNG có window SUCCESS nào → median=0 → giữ FAIL.
-        List<Double> wfesSuccess = collectSuccessWfe(rows);
+        // P1: khi HARNESS_FIX, gom WFE trên tập LENIENT (mọi window pnl>0 không-disqualify) cho đồng bộ.
+        List<Double> wfesSuccess = collectSuccessWfe(rows, HPOFitnessCalculatorV4.HARNESS_FIX);
         double wfeMedian = median(wfesSuccess);
-        LOG.info("aggregate: WFE median tinh tren {}/{} window SUCCESS (loai {} window sentinel/disqualify)",
-                wfesSuccess.size(), n, n - wfesSuccess.size());
+        LOG.info("aggregate[HARNESS_FIX={}]: posRatio strict={}% lenient={}% | WFE median tren {}/{} window",
+                HPOFitnessCalculatorV4.HARNESS_FIX, Math.round(posRatioStrict * 100),
+                Math.round(posRatioLenient * 100), wfesSuccess.size(), n);
 
         boolean pass = n > 0
                 && wfeMedian >= PASS_WFE
@@ -417,8 +424,12 @@ public class StrategyWfoTask implements WfoTask {
           .append(", maxDD-OOS xấu nhất ≤ ").append((int) (PASS_MAXDD_OOS * 100)).append("% vốn").append("\n\n");
         md.append("## Tổng hợp\n");
         md.append("- Số cửa sổ DONE: ").append(n).append("\n");
+        int posShown = HPOFitnessCalculatorV4.HARNESS_FIX ? posCountLenient : posCount;
         md.append("- % cửa sổ OOS dương: ").append(String.format(Locale.US, "%.1f%%", posRatio * 100))
-          .append(" (").append(posCount).append("/").append(n).append(")\n");
+          .append(" (").append(posShown).append("/").append(n).append(")")
+          .append(HPOFitnessCalculatorV4.HARNESS_FIX
+                  ? String.format(Locale.US, "  _[P1 lenient; strict=%.1f%%]_", posRatioStrict * 100) : "")
+          .append("\n");
         md.append("- WFE trung vị: ").append(String.format(Locale.US, "%.3f", wfeMedian)).append("\n");
         md.append("- maxDD OOS xấu nhất: ").append(String.format(Locale.US, "%.1f%% vốn", worstDdPct * 100))
           .append(" (abs ").append(String.format(Locale.US, "%.0f", worstMaxDD)).append(")\n\n");
@@ -478,12 +489,27 @@ public class StrategyWfoTask implements WfoTask {
      * BUG 1 (2026-07-13): gom WFE CHỈ của window SUCCESS (bỏ ZERO_TRADES/TOO_FEW/BURN/CAPITAL_LOCK...).
      * optString default "SUCCESS" để tương thích result cũ (chưa có field oosNote). Package-private để test.
      */
-    static List<Double> collectSuccessWfe(List<JSONObject> rows) {
+    static List<Double> collectSuccessWfe(List<JSONObject> rows) {   // overload strict (test cũ + byte-identical)
+        return collectSuccessWfe(rows, false);
+    }
+
+    static List<Double> collectSuccessWfe(List<JSONObject> rows, boolean lenient) {
         List<Double> out = new ArrayList<>();
         for (JSONObject r : rows) {
-            if ("SUCCESS".equals(r.optString("oosNote", "SUCCESS"))) out.add(r.getDouble("wfe"));
+            String note = r.optString("oosNote", "SUCCESS");
+            boolean keep = lenient ? (!oosDisqualified(note) && r.optDouble("oosPnl", 0) > 0)
+                                   : "SUCCESS".equals(note);
+            if (keep) out.add(r.getDouble("wfe"));
         }
         return out;
+    }
+
+    /**
+     * P1 (AUDIT_20260730): note THẬT SỰ loại OOS = {ZERO_TRADES, BURN_ACCOUNT, OVER_MAXDD} — lỗ / cháy /
+     * vỡ trần rủi ro. CAPITAL_LOCK/TOO_FEW/UNSTABLE là ràng buộc IS bị áp nhầm sang OOS → report-only.
+     */
+    static boolean oosDisqualified(String note) {
+        return "ZERO_TRADES".equals(note) || "BURN_ACCOUNT".equals(note) || "OVER_MAXDD".equals(note);
     }
 
     /**

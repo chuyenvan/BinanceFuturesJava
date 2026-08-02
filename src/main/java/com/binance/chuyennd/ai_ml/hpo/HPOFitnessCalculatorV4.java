@@ -50,6 +50,11 @@ public class HPOFitnessCalculatorV4 {
     // điểm loại (rất âm, phân biệt lý do để debug; KHÔNG phải penalty mềm — chỉ để xếp đáy)
     private static final float REJECT_BASE = -100000f;
 
+    // AUDIT_20260730 P0/P1 — sửa constraint harness (loại nhầm window đang lãi). Default OFF =
+    //   byte-identical. Bật (WFO_HARNESS_FIX=true): (P0) ramp TOO_FEW xuống dưới mọi reject; (P1) verdict
+    //   OOS coi CAPITAL_LOCK/TOO_FEW/UNSTABLE là report-only (xem StrategyWfoTask.aggregate).
+    public static final boolean HARNESS_FIX = "true".equalsIgnoreCase(System.getenv("WFO_HARNESS_FIX"));
+
     public static class FitnessReport {
         public int tradeCount = 0;
         public float totalProfit = 0f;
@@ -174,7 +179,13 @@ public class HPOFitnessCalculatorV4 {
             // V4.2: ramp tỉ lệ (mượn V1) — tạo GRADIENT để random-search leo RA khỏi vùng ít-lệnh.
             // Vẫn < 0 tuyệt đối (SUCCESS luôn > 0) → không bao giờ vượt 1 window SUCCESS.
             // 0 lệnh → REJECT_BASE; sát sàn → tiến về 0⁻. note GIỮ NGUYÊN → %OOS không đổi ngữ nghĩa.
-            r.finalFitness = REJECT_BASE * (1f - (float) r.tradeCount / minTrades);
+            // P0 (AUDIT_20260730, WFO_HARNESS_FIX): ramp cũ ∈ (REJECT_BASE, 0) → NẰM TRÊN mọi reject
+            //   khác (BURN/CAPITAL_LOCK ≈ REJECT_BASE) → giữa 2 genome bị reject, HPO chọn genome 1-lệnh
+            //   thay vì genome đang lãi nhiều lệnh (ordering inversion). Fix: đẩy ramp xuống DƯỚI mọi
+            //   reject khác (REJECT_BASE + ramp → luôn < REJECT_BASE). Default OFF = byte-identical.
+            r.finalFitness = HARNESS_FIX
+                    ? REJECT_BASE + REJECT_BASE * (1f - (float) r.tradeCount / minTrades)
+                    : REJECT_BASE * (1f - (float) r.tradeCount / minTrades);
             r.note = "TOO_FEW_TRADES"; return r;
         }
         if (r.totalProfit <= 0) { r.finalFitness = REJECT_BASE + r.totalProfit; r.note = "BURN_ACCOUNT"; return r; }
