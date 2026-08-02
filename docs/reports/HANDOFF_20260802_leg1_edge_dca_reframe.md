@@ -74,3 +74,40 @@ B0(DCA cũ) PnL/maxDD=0.90 · Doff=0.91 · Dgrid(grid+trần)=**1.46**. DCA cũ 
   27 cột maxFav/maxAdv/tHit/retEnd/nBars×{4h,12h,24h,72h}). Ticker thô: `kaggle_data_hpo/daily/ticker_*.bin.gz`
   (1886 file) — symlink lên root để SurvivalProbe (KaggleDataLoader) đọc.
 - Kaggle: kernel Python chạy được (`funding-label-full` có sẵn). `reprobe-unfiltered` KẸT vì dataset chưa tạo.
+
+---
+
+## 6. NỐI THÊM (2026-08-02 chiều) — harness fix XONG + gate mở giải quyết no-trades
+
+### Gate mở (rank-K8) giải quyết no-trades — mọi window có lệnh, đều LÃI
+Fanout `loose_k8_full` (ret2wf, `SELECTOR_RANK_TOPK=8` + `SIM_MIN_MOMENTUM_15M=0.008` + trailing-floor
++ DCA nông + phao, 7 node Oracle+Kaggle): **12/16 window pnl DƯƠNG** (3 SUCCESS + 9 CAPITAL_LOCK),
+4 ZERO_TRADES. PnL dàn đều (12k/11.7k/4.6k/4.5k/3k/2.2k...), HẾT dồn w15. maxDD thật ≤ ~20%.
+→ **Nút thắt chuyển từ entry-frequency (đã gỡ bằng rank-K8) sang harness-constraint.**
+
+### Harness fix P0+P1 (commit sau `dab4d48`) — verdict lật
+`WFO_HARNESS_FIX=true` (default OFF byte-identical, test 13/13):
+- **P0** (HPOFitnessCalculatorV4): ramp TOO_FEW xuống dưới mọi reject (hết ordering inversion).
+- **P1** (StrategyWfoTask.aggregate): OOS coi CAPITAL_LOCK/TOO_FEW/UNSTABLE là report-only; chỉ
+  ZERO_TRADES/BURN_ACCOUNT/OVER_MAXDD disqualify.
+- Coordinator report loose_k8_full: **posRatio strict=6% → lenient=88%** (14/16). %OOS + maxDD QUA
+  ngưỡng. VERDICT vẫn FAIL do **WFE** (N=1 frozen → IS=sentinel → WFE vô nghĩa) → cần N=30.
+- CE tool `mcp_tools-v3.py._wfo_coord_cmd`: patch passthrough `WFO_HARNESS_FIX` vào JVM (báo cáo cũ
+  đọc md cache jar cũ). Đã sync về `orchestrator/mcp_tools-v3.py`.
+
+### ĐANG CHẠY: N=30 confirm (jar mới + HARNESS_FIX, 7 node)
+`confirm_n30` trên ret2wf, config loose_k8. Đọc: `WFO_HARNESS_FIX=true ... WfoCoordinator report
+strategy_window` (KHÔNG qua wfo_report cache) hoặc `ce wfo_report confirm_n30` sau khi patch tool.
+Kỳ vọng: WFE thật (IS dương), %OOS-dương ~cao → verdict sạch.
+
+## 7. STEP 2 (kế tiếp) — rà + cải tiến exit/DCA trên harness ĐÚNG
+Chỉ chạy SAU khi N=30 baseline `confirm_n30` có số (jobstore serial, không chạy 2 fanout cùng lúc).
+Sweep so với baseline (mỗi lần đổi 1 cụm, đọc raw PnL + posRatio lenient + maxDD):
+- **Trailing:** `TS_GIVEBACK_RATIO` {0.3, 0.5, 0.7} × `TS_MIN_GAP` {0.005, 0.01, 0.02}.
+- **DCA:** grid nông {−30/−50/−70} vs {−20/−40/−60}; W_RATIO {1.0, 1.5}; và **DCA off** (vì DCA hiếm
+  99% leg1 — kiểm nó có cộng gì ròng không). Phao `F` sweep {−0.65, −0.70, −0.75} (đã đo cliff ~−70).
+- Metric: PnL/R + PnL-vượt-beta + posRatio(lenient) + ddPctMtm + sign-test fold. Giữ holdout 2024H2+.
+
+## 8. STEP 3 — làm mịn rank-K8 entry (sau step 2)
+Sweep `SELECTOR_RANK_TOPK` {5,8,12} × `SELECTOR_RANK_OFFSET` {0,1,2}; cân tần suất vs chất lượng
+(rankIC theo K). Mục tiêu: %OOS-dương + PnL/R tốt nhất mà không phình maxDD.

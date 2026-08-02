@@ -1302,6 +1302,9 @@ def _wfo_coord_cmd(subcmd, jar=None, extra_env=""):
     state_env = (f"WFO_STATE_HOST={WFO_STATE_HOST} WFO_STATE_PORT={WFO_STATE_PORT} "
                  f"WFO_STATE_NS={WFO_STATE_NS} WFO_MAX_OOS_DATE={WFO_MAX_OOS_DATE}")
     env = state_env + ((" " + extra_env) if extra_env else "")
+    # passthrough WFO_HARNESS_FIX (AUDIT P0/P1) tu env python vao JVM coordinator/worker
+    if os.environ.get("WFO_HARNESS_FIX") and "WFO_HARNESS_FIX" not in env:
+        env = env + " WFO_HARNESS_FIX=" + os.environ["WFO_HARNESS_FIX"]
     return (f"cd {WFO_WORKER_CWD} && {env} {JAVA_BIN} -cp {jar} "
             f"{WFO_COORD_CLASS} {subcmd}")
 
@@ -1421,18 +1424,28 @@ def _parse_extra_env(spec):
     return out
 
 
-def _kaggle_kernel_dirs(root):
+def _kaggle_kernel_dirs(root, prefix=None):
     """Liet ke cac kernel dir push duoc duoi `root`.
 
     - Neu root co san kernel-metadata.json -> [root] (1 kernel).
     - Nguoc lai: moi subdir co kernel-metadata.json la 1 kernel (sap xep ten).
+    - `prefix` (mac dinh env CE_WFO_KERNEL_PREFIX, fallback "wfo-worker"): CHI lay
+      subdir ten bat dau bang prefix nay. Ly do: `.run/kernels/` con chua kernel
+      KHONG lien quan (vd `test226`) dung cho viec khac, dung sort() alphabet se
+      dua no len truoc `wfo-worker-1` -> wfo_fanout push NHAM kernel khi
+      kaggle_kernels < so_kernel_dir (da an TASK exit003 2026-07-30). Truyen
+      prefix="" de tat filter (lay tat ca, hanh vi cu).
     """
     if not os.path.isdir(root):
         return []
     if os.path.exists(os.path.join(root, "kernel-metadata.json")):
         return [root]
+    if prefix is None:
+        prefix = os.environ.get("CE_WFO_KERNEL_PREFIX", "wfo-worker")
     dirs = []
     for name in sorted(os.listdir(root)):
+        if prefix and not name.startswith(prefix):
+            continue
         sub = os.path.join(root, name)
         if os.path.isdir(sub) and os.path.exists(
                 os.path.join(sub, "kernel-metadata.json")):
