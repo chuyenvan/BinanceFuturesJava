@@ -144,14 +144,22 @@ public class WfoDataset {
         java.util.HashMap<Long, java.util.ArrayList<Long>> byTs = new java.util.HashMap<>(4_000_000);
         final int REC = 26;
         long totalRec = 0, kept = 0;
+        // 2026-08-03 GUARD chong-leak: per-fold predict_wf phai co ts-range ROI NHAU (moi fold = 1 OOS block).
+        //   File single-cutoff full-history (leak: block_lo=ts_min phu ca 2021-2026) se OVERLAP moi file khac
+        //   -> throw fail-safe. Data sach (disjoint) -> qua binh thuong (byte-identical).
+        java.util.List<long[]> fileRanges = new java.util.ArrayList<>();   // [minTs, maxTs]
+        java.util.List<String> fileNames = new java.util.ArrayList<>();
         for (File f : files) {
             byte[] all = java.nio.file.Files.readAllBytes(f.toPath());
             if (all.length % REC != 0)
                 throw new IOException(f.getName() + ": " + all.length + " khong chia het " + REC);
             java.nio.ByteBuffer buf = java.nio.ByteBuffer.wrap(all); // big-endian mac dinh
             int nrec = all.length / REC;
+            long fMin = Long.MAX_VALUE, fMax = Long.MIN_VALUE;
             for (int i = 0; i < nrec; i++) {
                 long ts = buf.getLong();
+                if (ts < fMin) fMin = ts;
+                if (ts > fMax) fMax = ts;
                 short symId = buf.getShort();
                 float p4 = buf.getFloat(), p12 = buf.getFloat(), p24 = buf.getFloat(), p72 = buf.getFloat();
                 float pwin = horizonIdx == 0 ? p4 : horizonIdx == 1 ? p12 : horizonIdx == 2 ? p24 : p72;
@@ -162,6 +170,17 @@ public class WfoDataset {
                 byTs.computeIfAbsent(ts, k -> new java.util.ArrayList<>()).add(encoded);
                 kept++;
             }
+            // GUARD: kiem overlap ts-range voi file da doc (per-fold phai disjoint). Overlap = leak signature.
+            for (int ri = 0; ri < fileRanges.size(); ri++) {
+                long[] r = fileRanges.get(ri);
+                if (fMin <= r[1] && r[0] <= fMax) {
+                    throw new IOException("LEAK-SUSPECT predict_wf: '" + f.getName() + "' [" + fMin + ".." + fMax
+                            + "] OVERLAP '" + fileNames.get(ri) + "' [" + r[0] + ".." + r[1] + "] -- per-fold WF phai"
+                            + " ROI NHAU. File single-cutoff full-history = LEAK. Quarantine file leaked truoc khi build.");
+                }
+            }
+            fileRanges.add(new long[]{fMin, fMax});
+            fileNames.add(f.getName());
             LOG.info("  doc {}: {} rec (tong kept={})", f.getName(), nrec, kept);
         }
         TreeMap<Long, long[]> out = new TreeMap<>();

@@ -1,5 +1,15 @@
 # CHIẾN LƯỢC — HỢP NHẤT (phiên nghiên cứu + chiến dịch 2026-07-10)
 
+# ⚠️ CẢNH BÁO LEAK (2026-08-03) — HƯỚNG DẪN DATA BÊN DƯỚI ĐÃ DEPRECATED
+
+Doc này viết 2026-07-10, TRƯỚC khi phát hiện leak (2026-07-12). Các chỉ dẫn data sau ĐÃ SAI — KHÔNG dùng:
+- ❌ `WFO_FUNDING_PRED_DIR=/home/ubuntu/claudedata/wf_pred_ret2` — dir chứa file leak `predict_wf_20260101.bin` (single-cutoff full-history 2021→2026). Đã quarantine.
+- ❌ `wfo_dataset_v4` "chuẩn" — CONTAMINATED (build từ wf_pred_ret2 gồm file leak, exportedAt 07-10 13:37 đọc file leak mtime 13:36). Đã quarantine.
+
+✅ **DATASET CHUẨN HIỆN TẠI (leak-free WFO):** `wfo_ds_ret2wf_4h_ff` (build từ `wf_pred_ret2wf/` — 16 file per-fold sạch, horizon 4h). Xem `docs/reports/START_HERE_20260802.md` + `HANDOFF_20260803_giveback03_frozen.md`. Guard chống tái-nhiễm đã thêm ở `WfoDataset.buildFundingFromWfFiles` (throw khi predict_wf overlap range).
+
+---
+
 > Gộp từ `STRATEGY_FINDINGS_20260710.md` (nghiên cứu chi tiết, bằng chứng đo được) +
 > `MASTER_STRATEGY_CAMPAIGN.md` (spec chiến dịch điều phối task `tasks/140-144`). Giữ nguyên mọi số liệu +
 > kết luận của cả hai, chỉ gộp trùng phần mục tiêu (giống hệt nhau ở cả 2 bản gốc). Không đổi nội dung kỹ

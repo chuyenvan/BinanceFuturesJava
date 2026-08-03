@@ -315,6 +315,12 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                 // TASK (2026-07-11) §2 DCA-primary: cho phep TAT sleeve PREDICT_SYMBOL_TRADE de do
                                 // rieng sleeve mean-reversion (DCA_LEVEL1 + BIG_DOWN). Mac dinh false = hanh vi cu.
                                 long[] symbol2Pred = Configs.DISABLE_PREDICT_SYMBOL ? null : time2SymbolPred.get(time);
+                                // 2026-08-03 GRID-ALIGN: bo selector entry ngoai N phut dau snapshot 15m (snapshot
+                                //   doi tai time%900000==0). Align gia entry voi moc model du doan. -1 -> OFF byte-identical.
+                                if (symbol2Pred != null && Configs.SIM_SELECTOR_MAX_STALE_MIN >= 0
+                                        && (time % 900000L) / 60000L > Configs.SIM_SELECTOR_MAX_STALE_MIN) {
+                                    symbol2Pred = null;
+                                }
                                 if (symbol2Pred != null) {
                                     float maxThres = Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD * Configs.AI_DYNAMIC_MAX;
                                     // MAX-DEPLOYMENT: SELECTOR_SCORE_MAX>=0 ep TRUC TIEP tran score (admit p6 thap hon).

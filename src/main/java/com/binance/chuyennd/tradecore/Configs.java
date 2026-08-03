@@ -601,6 +601,14 @@ public class Configs {
     //   byte-identical. Doc env o static SIM block ben duoi (Float.parseFloat).
     public static float HARD_SL_PCT = 0f;
 
+    // 2026-08-03 GRID-ALIGN ENTRY: model selector du doan TAI moc 15m (ts%900000==0), label maxFav do tu
+    //   gia moc 15m. Forward-fill 15m->1m cho vao giua cua so -> vao o gia DA CHAY != reference model hoc.
+    //   Co nay chi cho selector entry (PREDICT_SYMBOL_TRADE) fire khi offset-trong-snapshot <= N phut.
+    //   N=0 -> chi mat moc 15m (align chuan). N=-1 (default) -> OFF, khong gioi han = byte-identical.
+    public static final int SIM_SELECTOR_MAX_STALE_MIN =
+            System.getenv("SIM_SELECTOR_MAX_STALE_MIN") != null
+            ? Integer.parseInt(System.getenv("SIM_SELECTOR_MAX_STALE_MIN").trim()) : -1;
+
     // =========================================================
     // 9. KẾT NỐI DỮ LIỆU (STORAGE & AEROSPIKE)
     // =========================================================
