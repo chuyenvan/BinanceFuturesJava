@@ -24,7 +24,7 @@ public class OiCountKeys {
 
     public static void main(String[] args) {
         try {
-            AerospikeClient c226 = DataManagerAerospikeFloatSim.getClient226();
+            AerospikeClient c226 = DataManagerAerospikeFloatSim.getClientOracle();
             AerospikeClient c242 = DataManagerAerospikeFloatSim.getClient242();
             boolean pass = true;
             for (OiMetricSets.Metric m : OiMetricSets.ALL) {

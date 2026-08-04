@@ -21,7 +21,7 @@ public class ExportHpoDataKaggle {
     public static void main(String[] args) throws Exception {
         new File(EXPORT_DIR).mkdirs();
 
-        // Doc qua client 226 (getReadClient khi HPO_MODE) -> tren Oracle config AEROSPIKE_HOST_226=127.0.0.1
+        // Doc qua client 226 (getReadClient khi HPO_MODE) -> tren Oracle config AEROSPIKE_HOST_ORACLE=127.0.0.1
         // => doc Aerospike LOCAL (server 8, batch-get OK), nhanh, khong qua mang VN.
 
         // Range qua args: arg0=start (yyyyMMdd), arg1=end. arg2="ticker" => chi export ticker (bo core).

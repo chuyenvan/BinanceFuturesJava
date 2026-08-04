@@ -37,7 +37,7 @@ public class OiCleanForwardLs {
     public static void main(String[] args) {
         boolean doDelete = args.length > 0 && "delete".equalsIgnoreCase(args[0]);
         try {
-            AerospikeClient c226 = DataManagerAerospikeFloatSim.getClient226();
+            AerospikeClient c226 = DataManagerAerospikeFloatSim.getClientOracle();
 
             // 1) Thu thap record forward (key=SYMBOL) tren 4 set LS/taker @226.
             List<Key> targets = new ArrayList<>();

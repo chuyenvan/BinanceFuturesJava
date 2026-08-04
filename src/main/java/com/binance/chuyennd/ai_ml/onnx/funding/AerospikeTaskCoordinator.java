@@ -49,7 +49,7 @@ public class AerospikeTaskCoordinator {
         return host + "-" + Long.toHexString(System.nanoTime() & 0xFFFFFFL);
     }
 
-    private static AerospikeClient client() { return DataManagerAerospikeFloatSim.getClient226(); }
+    private static AerospikeClient client() { return DataManagerAerospikeFloatSim.getClientOracle(); }
 
     // =========================================================================
     // WORKER API: claim / done / release

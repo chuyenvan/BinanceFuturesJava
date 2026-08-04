@@ -19,7 +19,7 @@ public class CheckGapPredictSymbol {
 
     public static void main(String[] args) {
         String setName = DataManagerAerospikeFloatSim.AEROSPIKE_SET_NAME_FUNDING_PRED;
-        AerospikeClient client = DataManagerAerospikeFloatSim.getClient226();
+        AerospikeClient client = DataManagerAerospikeFloatSim.getClientOracle();
         String startDateStr = "20210101";
 
         scanMissingData(client, setName, startDateStr);

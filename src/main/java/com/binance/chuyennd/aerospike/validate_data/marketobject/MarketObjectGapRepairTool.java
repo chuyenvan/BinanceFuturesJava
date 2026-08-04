@@ -111,7 +111,7 @@ public class MarketObjectGapRepairTool {
                     keys.add(new Key(Configs.AEROSPIKE_NAMESPACE, SET_NAME, fmt.format(new Date(t))));
                     times.add(t);
                 }
-                boolean[] exists = DataManagerAerospikeFloatSim.getClient226().exists(bp, keys.toArray(new Key[0]));
+                boolean[] exists = DataManagerAerospikeFloatSim.getClientOracle().exists(bp, keys.toArray(new Key[0]));
                 for (int i = 0; i < exists.length; i++) if (!exists[i]) missing.add(times.get(i));
             }
         } catch (Exception e) {}

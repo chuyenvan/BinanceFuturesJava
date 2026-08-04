@@ -41,7 +41,7 @@ public class ExportMarketCloseSeries {
 
         AerospikeClient client = inst.equals("242")
                 ? DataManagerAerospikeFloatSim.getClient242()
-                : DataManagerAerospikeFloatSim.getClient226();
+                : DataManagerAerospikeFloatSim.getClientOracle();
         SimpleDateFormat fmt = new SimpleDateFormat("yyyyMMdd-HHmm");
         LOG.info("Export BTC/ETH 15m close [{} .. {}] inst={} -> {}",
                 fmt.format(new Date(start)), fmt.format(new Date(end)), inst, out);

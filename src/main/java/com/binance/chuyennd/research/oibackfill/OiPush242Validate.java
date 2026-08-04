@@ -34,7 +34,7 @@ public class OiPush242Validate {
     public static void main(String[] args) {
         boolean allPass = true;
         try {
-            AerospikeClient c226 = DataManagerAerospikeFloatSim.getClient226();
+            AerospikeClient c226 = DataManagerAerospikeFloatSim.getClientOracle();
             AerospikeClient c242 = DataManagerAerospikeFloatSim.getClient242();
 
             List<String> symbols = listDoneSymbols(c226);

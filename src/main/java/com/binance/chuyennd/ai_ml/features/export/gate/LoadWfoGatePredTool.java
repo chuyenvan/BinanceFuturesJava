@@ -20,7 +20,7 @@ import java.util.Map;
  * {@link DataManagerAerospikeFloatSim#getAllMarketAiPredictionsFromAerospikeSet(String)} — scanAll bin
  * {@code "data"} → Snappy.uncompress → gson→{@link AiPredictionData} → key = {@code data.timestamp}.
  * <ul>
- *   <li><b>Client/box:</b> {@code getClient226()} (trên Oracle = Aerospike local theo config box).</li>
+ *   <li><b>Client/box:</b> {@code getClientOracle()} (trên Oracle = Aerospike local theo config box).</li>
  *   <li><b>Namespace:</b> {@code Configs.AEROSPIKE_NAMESPACE} (config.properties = {@code ticker}).</li>
  *   <li><b>Set:</b> {@code ai_pred_market_gate_wfo} (override qua arg[1] hoặc env {@code WFO_SET_PRED}).</li>
  *   <li><b>Key (per-tick / per-phút, KHÔNG chunk-tháng):</b> {@code yyyyMMdd-HHmm} format từ epoch-ms
@@ -77,7 +77,7 @@ public class LoadWfoGatePredTool {
                     ? args[1]
                     : envOr("WFO_SET_PRED", DEFAULT_SET);
 
-            LOG.info("🚀 TASK-121 nạp gate pred: csv={} → set={} (client226, chunk={})",
+            LOG.info("🚀 TASK-121 nạp gate pred: csv={} → set={} (clientOracle, chunk={})",
                     csv.getAbsolutePath(), setName, CHUNK);
             long total = load(csv, setName, CHUNK, AEROSPIKE_SINK);
             LOG.info("🎯 DONE: nạp {} record → set {} (idempotent: chạy lại ghi đè cùng key)", total, setName);

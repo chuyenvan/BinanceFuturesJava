@@ -40,7 +40,7 @@ public class WfoWorker {
             else Configs.ABLATION_MODE = "A";
             Configs.BREAKER_MODE = "OFF";
             // WFO_SMART_CACHE=1 → bật cache nén kline RAM (HPOSmartCache.getDataShort) trong simulator.
-            // Cluster đọc theo config box AEROSPIKE_READ_CLUSTER=226 (Oracle: AEROSPIKE_HOST_226=127.0.0.1 local).
+            // Cluster đọc theo config box AEROSPIKE_READ_CLUSTER=226 (Oracle: AEROSPIKE_HOST_ORACLE=127.0.0.1 local).
             if ("1".equals(System.getenv("WFO_SMART_CACHE"))) Configs.USE_SMART_CACHE = true;
             // WFO_STATIC_RANK=1 → CoinRank đọc tier TĨNH từ file (env WFO_COINTIER_FILE), backtest KHÔNG bật
             // HistoryManager. Nạp 1 lần vào singleton trước khi chạy job.

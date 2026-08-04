@@ -67,7 +67,7 @@ public class AerospikeStateScan {
     /** Lấy client; bọc try/catch để lỗi kết nối 1 host không chặn host kia. */
     private static AerospikeClient safeClient(boolean is242) {
         try {
-            return is242 ? DataManagerAerospikeFloatSim.getClient242() : DataManagerAerospikeFloatSim.getClient226();
+            return is242 ? DataManagerAerospikeFloatSim.getClient242() : DataManagerAerospikeFloatSim.getClientOracle();
         } catch (Exception e) {
             LOG.error("❌ Không tạo được client {}: {}", is242 ? "242" : "226", e.getMessage());
             return null;

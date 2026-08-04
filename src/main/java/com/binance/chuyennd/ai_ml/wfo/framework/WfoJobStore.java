@@ -56,7 +56,7 @@ public class WfoJobStore {
             this.ns = System.getenv().getOrDefault("WFO_STATE_NS", "test");
             LOG.info("WfoJobStore: state Aerospike RIENG {}:{} ns={}", host, port, ns);
         } else {
-            this.client = DataManagerAerospikeFloatSim.getClient226();
+            this.client = DataManagerAerospikeFloatSim.getClientOracle();
             this.ns = Configs.AEROSPIKE_NAMESPACE;
             LOG.info("WfoJobStore: state Aerospike 226 ns={}", ns);
         }

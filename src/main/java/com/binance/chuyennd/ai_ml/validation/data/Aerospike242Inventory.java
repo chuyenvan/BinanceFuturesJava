@@ -71,7 +71,7 @@ public class Aerospike242Inventory {
 
     private static AerospikeClient safe(boolean is242) {
         try {
-            return is242 ? DataManagerAerospikeFloatSim.getClient242() : DataManagerAerospikeFloatSim.getClient226();
+            return is242 ? DataManagerAerospikeFloatSim.getClient242() : DataManagerAerospikeFloatSim.getClientOracle();
         } catch (Exception e) {
             System.out.println("❌ client " + (is242 ? "242" : "226") + " lỗi: " + e.getMessage());
             return null;

@@ -55,7 +55,7 @@ public class ExportMarketBreadthCrash {
         String out = args.length > 2 ? args[2] : "/home/chuyennd/java/simulator/breadth_crash.csv";
         String inst = args.length > 3 ? args[3] : "226";
         AerospikeClient client = inst.equals("242")
-                ? DataManagerAerospikeFloatSim.getClient242() : DataManagerAerospikeFloatSim.getClient226();
+                ? DataManagerAerospikeFloatSim.getClient242() : DataManagerAerospikeFloatSim.getClientOracle();
         SimpleDateFormat fmt = new SimpleDateFormat("yyyyMMdd-HHmm");
 
         // close theo (ts -> (coin -> close)); luu chuoi 15m

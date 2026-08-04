@@ -195,7 +195,7 @@ public class RunHpoMaster_Distributed {
 
         try {
             // 1. Tra cache kết quả (point get, không scan)
-            Record done = DataManagerAerospikeFloatSim.getClient226().get(null, resultKey);
+            Record done = DataManagerAerospikeFloatSim.getClientOracle().get(null, resultKey);
             if (done != null) {
                 return done.getFloat("score"); // 0.001 giây trả điểm, cứu hàng tiếng CPU
             }
@@ -204,7 +204,7 @@ public class RunHpoMaster_Distributed {
             WritePolicy wp = new WritePolicy();
             wp.recordExistsAction = RecordExistsAction.CREATE_ONLY;
             try {
-                DataManagerAerospikeFloatSim.getClient226().put(wp, queueKey,
+                DataManagerAerospikeFloatSim.getClientOracle().put(wp, queueKey,
                         new com.aerospike.client.Bin("status", "PENDING"),
                         new com.aerospike.client.Bin("startTime", 0L),
                         new com.aerospike.client.Bin("data", Utils.gson.toJson(task))
@@ -218,7 +218,7 @@ public class RunHpoMaster_Distributed {
             while (true) {
                 Thread.sleep(5000);
 
-                Record checkRec = DataManagerAerospikeFloatSim.getClient226().get(null, resultKey);
+                Record checkRec = DataManagerAerospikeFloatSim.getClientOracle().get(null, resultKey);
                 if (checkRec != null) {
                     float finalScore = checkRec.getFloat("score");
                     String dataJson = checkRec.getString("data");

@@ -63,7 +63,7 @@ public class DataManagerAerospikeFloatSim {
     private static final int BATCH_MAX_RETRY = 4;
     private static final long BATCH_RETRY_BACKOFF_MS = 500;
     private static final WritePolicy writePolicy = new WritePolicy();
-    private static volatile AerospikeClient client226;
+    private static volatile AerospikeClient clientOracle;
 
     // Cấu hình đa luồng
     public static int threadCount = 2;
@@ -87,15 +87,15 @@ public class DataManagerAerospikeFloatSim {
         return client242;
     }
 
-    public static AerospikeClient getClient226() {
-        if (client226 == null) {
+    public static AerospikeClient getClientOracle() {
+        if (clientOracle == null) {
             synchronized (DataManagerAerospikeFloatSim.class) {
-                if (client226 == null) {
-                    client226 = new AerospikeClient(Configs.AEROSPIKE_HOST_226, Configs.AEROSPIKE_PORT_226);
+                if (clientOracle == null) {
+                    clientOracle = new AerospikeClient(Configs.AEROSPIKE_HOST_ORACLE, Configs.AEROSPIKE_PORT_ORACLE);
                 }
             }
         }
-        return client226;
+        return clientOracle;
     }
 
     /**
@@ -411,7 +411,7 @@ public class DataManagerAerospikeFloatSim {
      * @param byTs    map ts(ms, mốc 5m UTC) → giá trị; rỗng/null → bỏ qua (không đụng record cũ).
      */
     public static int writeMetricMap226(String setName, String binName, String symbol, Map<Long, Float> byTs) {
-        return writeMetricMapTo(getClient226(), "226", setName, binName, symbol, byTs);
+        return writeMetricMapTo(getClientOracle(), "226", setName, binName, symbol, byTs);
     }
 
     /**
@@ -449,7 +449,7 @@ public class DataManagerAerospikeFloatSim {
         int failed = 0;
         for (Map.Entry<String, TreeMap<Long, Float>> de : byDay.entrySet()) {
             // tái dùng writeMonthChunk: monthStr=yyyyMMdd vẫn tạo key SYMBOL_yyyyMMdd đúng, logic merge/guard y hệt
-            if (!writeMonthChunk(getClient226(), "226", setName, binName, symbol, de.getKey(), de.getValue())) failed++;
+            if (!writeMonthChunk(getClientOracle(), "226", setName, binName, symbol, de.getKey(), de.getValue())) failed++;
         }
         return failed;
     }
@@ -465,7 +465,7 @@ public class DataManagerAerospikeFloatSim {
             }
             for (int off = 0; off < keys.length; off += BATCH_CHUNK_SIZE) {
                 Key[] sub = Arrays.copyOfRange(keys, off, Math.min(off + BATCH_CHUNK_SIZE, keys.length));
-                Record[] recs = getClient226().get(batchPolicy, sub);
+                Record[] recs = getClientOracle().get(batchPolicy, sub);
                 if (recs == null) continue;
                 for (Record record : recs) results.putAll(decodeMap(record, binName));
             }
@@ -622,7 +622,7 @@ public class DataManagerAerospikeFloatSim {
      * @return {@link TreeMap} ts→giá trị; rỗng nếu chưa có / lỗi đọc.
      */
     public static TreeMap<Long, Float> getMetricMap226(String setName, String binName, String symbol) {
-        return getMetricMapFrom(getClient226(), setName, binName, symbol);
+        return getMetricMapFrom(getClientOracle(), setName, binName, symbol);
     }
 
     /** Như {@link #getMetricMap226} nhưng đọc từ <b>242</b> (xác minh sau khi đẩy 226→242). */
@@ -795,7 +795,7 @@ public class DataManagerAerospikeFloatSim {
      * theo arg, KHÔNG đi qua config per-box).
      *
      * @param startTime mốc đầu ngày (ms)
-     * @param client    client Aerospike đích ({@link #getClient226()} / {@link #getClient242()})
+     * @param client    client Aerospike đích ({@link #getClientOracle()} / {@link #getClient242()})
      * @return map phút → (symbol → kline); phút thiếu record bị bỏ qua
      */
     public static TreeMap<Long, Map<String, KlineObjectSimple>> readDataFromAerospike1M(long startTime, AerospikeClient client) {
@@ -1354,8 +1354,8 @@ public class DataManagerAerospikeFloatSim {
             // Lấy từ Set AEROSPIKE_SET_NAME_AI_PRED_MARKET (Set dùng cho HPO)
             Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_AI_PRED_MARKET, keyString);
 
-            // Dùng client226 vì dữ liệu HPO lưu ở đây
-            Record record = getClient226().get(null, key);
+            // Dùng clientOracle vì dữ liệu HPO lưu ở đây
+            Record record = getClientOracle().get(null, key);
 
             if (record != null) {
                 byte[] compressed = (byte[]) record.getValue("data");
@@ -1681,7 +1681,7 @@ public class DataManagerAerospikeFloatSim {
             byte[] rawBytes = encodeFundingMapToBinary(predictions);
             byte[] compressed = Snappy.compress(rawBytes);
 
-            getClient226().put(writePolicy, key, new Bin("data", compressed));
+            getClientOracle().put(writePolicy, key, new Bin("data", compressed));
         } catch (Exception e) {
             LOG.error("❌ Error saving Funding Pred at {}: {}", timestamp, e.getMessage());
         }
@@ -1699,7 +1699,7 @@ public class DataManagerAerospikeFloatSim {
             String keyString = fmt.format(new Date(timestamp));
             Key key = new Key(Configs.AEROSPIKE_NAMESPACE, setName, keyString);
             byte[] compressed = Snappy.compress(encodeFundingMapToBinary(predictions));
-            getClient226().put(writePolicy, key, new Bin("data", compressed));
+            getClientOracle().put(writePolicy, key, new Bin("data", compressed));
         } catch (Exception e) {
             LOG.error("❌ Error saving Selector Pred at {}: {}", timestamp, e.getMessage());
         }
@@ -1710,7 +1710,7 @@ public class DataManagerAerospikeFloatSim {
      */
     /**
      * Đọc funding pred 1 mốc. ⚠️ #12 (TASK-030): set {@code funding_pred} là 226-NATIVE (chỉ sinh trên 226 bởi
-     * tooling/HPO) → CỐ Ý dùng {@code getClient226()}, KHÔNG phải hardcode lạc (getReadClient sẽ trỏ 242 ở live
+     * tooling/HPO) → CỐ Ý dùng {@code getClientOracle()}, KHÔNG phải hardcode lạc (getReadClient sẽ trỏ 242 ở live
      * → đọc rỗng + vỡ validator chạy ở dev). CHỈ dùng trong tool/validator/HPO; TUYỆT ĐỐI KHÔNG gọi từ path
      * quyết-định LIVE (live infer realtime, không đọc pred-set). Bảo vệ thêm: {@link Configs#assertLiveRuntime()}.
      *
@@ -1723,7 +1723,7 @@ public class DataManagerAerospikeFloatSim {
             String keyString = fmt.format(new Date(timestamp));
             Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_FUNDING_PRED, keyString);
 
-            Record record = getClient226().get(null, key);   // 226-native set (xem Javadoc #12) — KHÔNG đổi getReadClient
+            Record record = getClientOracle().get(null, key);   // 226-native set (xem Javadoc #12) — KHÔNG đổi getReadClient
             if (record != null) {
                 byte[] compressed = (byte[]) record.getValue("data");
                 if (compressed != null) {
@@ -1756,7 +1756,7 @@ public class DataManagerAerospikeFloatSim {
             }
 
             // Batch Exists: Chỉ kiểm tra metadata
-            boolean[] existsArray = getClient226().exists(batchPolicy, keys);
+            boolean[] existsArray = getClientOracle().exists(batchPolicy, keys);
 
             for (int i = 0; i < existsArray.length; i++) {
                 if (existsArray[i]) {
@@ -1827,7 +1827,7 @@ public class DataManagerAerospikeFloatSim {
                         chunkKeys[k] = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_FUNDING_PRED, keyString);
                     }
 
-                    Record[] records = getClient226().get(batchPolicy, chunkKeys);
+                    Record[] records = getClientOracle().get(batchPolicy, chunkKeys);
 
                     for (int j = 0; j < records.length; j++) {
                         Record record = records[j];
@@ -1875,7 +1875,7 @@ public class DataManagerAerospikeFloatSim {
     }
 
     /** Như saveMarketAiPredictionsBatch nhưng GHI VÀO SET tuỳ chọn (vd ai_pred_market_gate_v2).
-     *  Format y hệt set gốc (key yyyyMMdd-HHmm, bin "data" = Snappy(JSON AiPredictionData), client226)
+     *  Format y hệt set gốc (key yyyyMMdd-HHmm, bin "data" = Snappy(JSON AiPredictionData), clientOracle)
      *  để getAllMarketAiPredictionsFromAerospikeSet đọc lại + backtest dùng chung code đọc. */
     public static void saveMarketAiPredictionsBatchToSet(String setName, Map<Long, AiPredictionData> predictions) {
         if (predictions == null || predictions.isEmpty()) return;
@@ -1891,7 +1891,7 @@ public class DataManagerAerospikeFloatSim {
                     Key key = new Key(Configs.AEROSPIKE_NAMESPACE, setName, keyString);
                     String json = Utils.gson.toJson(data);
                     byte[] compressed = Snappy.compress(json.getBytes("UTF-8"));
-                    getClient226().put(writePolicy, key, new Bin("data", compressed));
+                    getClientOracle().put(writePolicy, key, new Bin("data", compressed));
                 } catch (Exception e) {
                     LOG.error("❌ Error saving AI Pred at {} -> set {}: {}", entry.getKey(), setName, e.getMessage());
                 }
@@ -1907,7 +1907,7 @@ public class DataManagerAerospikeFloatSim {
         try {
             ScanPolicy scanPolicy = new ScanPolicy();
             scanPolicy.concurrentNodes = true;
-            getClient226().scanAll(scanPolicy, Configs.AEROSPIKE_NAMESPACE, setName, (key, record) -> {
+            getClientOracle().scanAll(scanPolicy, Configs.AEROSPIKE_NAMESPACE, setName, (key, record) -> {
                 try {
                     byte[] compressed = (byte[]) record.getValue("data");
                     if (compressed != null) {
@@ -1936,8 +1936,8 @@ public class DataManagerAerospikeFloatSim {
             ScanPolicy scanPolicy = new ScanPolicy();
             scanPolicy.concurrentNodes = true; // Quét song song đa luồng từ các node
 
-            // Dùng client226 vì lúc save chúng ta đã lưu vào client226
-            getClient226().scanAll(scanPolicy, Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_AI_PRED_MARKET, (key, record) -> {
+            // Dùng clientOracle vì lúc save chúng ta đã lưu vào clientOracle
+            getClientOracle().scanAll(scanPolicy, Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_AI_PRED_MARKET, (key, record) -> {
                 try {
                     byte[] compressed = (byte[]) record.getValue("data");
                     if (compressed != null) {
@@ -1978,7 +1978,7 @@ public class DataManagerAerospikeFloatSim {
                     Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_MARKET_DATA, keyString);
                     byte[] compressed = data.endCode();
 
-                    getClient226().put(writePolicy, key,
+                    getClientOracle().put(writePolicy, key,
                             new Bin("data", compressed),
                             new Bin("time", timestamp) // Lưu time để sau scanAll lấy lại làm Key
                     );
@@ -2008,7 +2008,7 @@ public class DataManagerAerospikeFloatSim {
             ScanPolicy scanPolicy = new ScanPolicy();
             scanPolicy.concurrentNodes = true; // Quét song song đa luồng từ các node AS
 
-            getClient226().scanAll(scanPolicy, Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_MARKET_DATA, (key, record) -> {
+            getClientOracle().scanAll(scanPolicy, Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_MARKET_DATA, (key, record) -> {
                 try {
                     Long timestamp = record.getLong("time");
                     byte[] compressed = (byte[]) record.getValue("data");
@@ -2046,8 +2046,8 @@ public class DataManagerAerospikeFloatSim {
             String keyString = fmt.format(new Date(timestamp));
             Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_MARKET_DATA, keyString);
 
-            // Dùng client226 vì set market_data đang lưu ở đây
-            Record record = getClient226().get(null, key);
+            // Dùng clientOracle vì set market_data đang lưu ở đây
+            Record record = getClientOracle().get(null, key);
 
             if (record != null) {
                 // Lấy dữ liệu từ bin "data" (bỏ qua bin "time" vì ta đã có sẵn timestamp rồi)
@@ -2072,7 +2072,7 @@ public class DataManagerAerospikeFloatSim {
             // 🔥 ĐIỂM QUAN TRỌNG NHẤT: Bỏ qua Data, chỉ kéo Metadata (Key) về
             scanPolicy.includeBinData = false;
 
-            getClient226().scanAll(scanPolicy, Configs.AEROSPIKE_NAMESPACE, setName, (key, record) -> {
+            getClientOracle().scanAll(scanPolicy, Configs.AEROSPIKE_NAMESPACE, setName, (key, record) -> {
                 if (key.userKey != null) {
                     try {
                         String keyStr = key.userKey.toString();
@@ -2166,8 +2166,8 @@ public class DataManagerAerospikeFloatSim {
             String keyString = fmt.format(new Date(timestamp));
             Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_AI_PRED_MARKET, keyString);
 
-            // Dùng client226 vì set ai_pred_market đang lưu ở đây
-            Record record = getClient226().get(null, key);
+            // Dùng clientOracle vì set ai_pred_market đang lưu ở đây
+            Record record = getClientOracle().get(null, key);
 
             if (record != null) {
                 byte[] compressed = (byte[]) record.getValue("data");
@@ -2263,7 +2263,7 @@ public class DataManagerAerospikeFloatSim {
         try {
             ScanPolicy scanPolicy = new ScanPolicy();
             scanPolicy.concurrentNodes = true;
-            getClient226().scanAll(scanPolicy, Configs.AEROSPIKE_NAMESPACE, setName, (key, record) -> {
+            getClientOracle().scanAll(scanPolicy, Configs.AEROSPIKE_NAMESPACE, setName, (key, record) -> {
                 try {
                     byte[] compressed = (byte[]) record.getValue("data");
                     if (compressed != null && key.userKey != null) {
@@ -2318,7 +2318,7 @@ public class DataManagerAerospikeFloatSim {
                     }
 
                     try {
-                        Record[] records = getClient226().get(batchPolicy, subKeys);
+                        Record[] records = getClientOracle().get(batchPolicy, subKeys);
                         if (records != null) {
                             for (int r = 0; r < records.length; r++) {
                                 if (records[r] != null) {
@@ -2387,7 +2387,7 @@ public class DataManagerAerospikeFloatSim {
                     }
 
                     try {
-                        Record[] records = getClient226().get(batchPolicy, subKeys);
+                        Record[] records = getClientOracle().get(batchPolicy, subKeys);
                         if (records != null) {
                             for (int r = 0; r < records.length; r++) {
                                 if (records[r] != null) {
@@ -2457,7 +2457,7 @@ public class DataManagerAerospikeFloatSim {
                     }
 
                     try {
-                        Record[] records = getClient226().get(batchPolicy, subKeys);
+                        Record[] records = getClientOracle().get(batchPolicy, subKeys);
                         if (records != null) {
                             for (int r = 0; r < records.length; r++) {
                                 if (records[r] != null) {
@@ -2512,7 +2512,7 @@ public class DataManagerAerospikeFloatSim {
             ScanPolicy scanPolicy = new ScanPolicy();
             scanPolicy.concurrentNodes = true; // Quét song song đa luồng
 
-            getClient226().scanAll(scanPolicy, Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_FUNDING_PRED, (key, record) -> {
+            getClientOracle().scanAll(scanPolicy, Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_FUNDING_PRED, (key, record) -> {
                 try {
                     byte[] compressed = (byte[]) record.getValue("data");
                     if (compressed != null && key.userKey != null) {
@@ -2545,7 +2545,7 @@ public class DataManagerAerospikeFloatSim {
      * 242=live đọc gốc) — không còn flag runtime mode cũ (kaggle/HPO). Thiếu key / giá trị lạ →
      * fail-fast NGAY tại đây (lazy — box thuần file như Kaggle không cần khai key này).
      * CHỈ áp cho ĐỌC — mọi đường GHI giữ nguyên 242.
-     * (market_data/ai_pred_market/funding_pred dùng getClient226() trực tiếp vì vốn nằm trên 226.)
+     * (market_data/ai_pred_market/funding_pred dùng getClientOracle() trực tiếp vì vốn nằm trên 226.)
      *
      * @return client Aerospike theo {@code AEROSPIKE_READ_CLUSTER}
      * @throws IllegalStateException nếu config thiếu hoặc khác 226/242
@@ -2553,7 +2553,7 @@ public class DataManagerAerospikeFloatSim {
     public static AerospikeClient getReadClient() {
         String cluster = Configs.AEROSPIKE_READ_CLUSTER;
         if ("226".equals(cluster)) {
-            return getClient226();
+            return getClientOracle();
         }
         if ("242".equals(cluster)) {
             return getClient242();
@@ -2579,9 +2579,9 @@ public class DataManagerAerospikeFloatSim {
         for (int i = 0; i < timestamps.length; i++) {
             keys[i] = new Key(Configs.AEROSPIKE_NAMESPACE, setName, keyFmt.format(new java.util.Date(timestamps[i])));
         }
-        // ⚠️ #12 (TASK-030): set funding_pred là 226-NATIVE → CỐ Ý getClient226() (KHÔNG getReadClient: ở live trỏ 242
+        // ⚠️ #12 (TASK-030): set funding_pred là 226-NATIVE → CỐ Ý getClientOracle() (KHÔNG getReadClient: ở live trỏ 242
         // → rỗng, ở dev validator KHÔNG bật kaggle-mode cũng trỏ 242 → vỡ). Chỉ tool/validator/HPO gọi; KHÔNG từ live.
-        Record[] records = getClient226().get(batchPolicy, keys);
+        Record[] records = getClientOracle().get(batchPolicy, keys);
         if (records == null) return results;
         for (int i = 0; i < records.length; i++) {
             if (records[i] == null) continue;

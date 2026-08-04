@@ -50,7 +50,7 @@ public class ReplicateSet242To226 {
         }
 
         AerospikeClient src = DataManagerAerospikeFloatSim.getClient242(); // ĐỌC-ONLY
-        AerospikeClient dst = DataManagerAerospikeFloatSim.getClient226(); // GHI
+        AerospikeClient dst = DataManagerAerospikeFloatSim.getClientOracle(); // GHI
         LOG.info("🔁 REPLICATE 242→226 | sets={} | allowLarge={}", sets, allowLarge);
 
         for (String set : sets) {

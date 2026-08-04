@@ -166,7 +166,7 @@ public class SymbolLifecycleBuilder {
         wp.sendKey = true;
         wp.expiration = 0;
         wp.recordExistsAction = RecordExistsAction.UPDATE;
-        AerospikeClient c226 = DataManagerAerospikeFloatSim.getClient226();
+        AerospikeClient c226 = DataManagerAerospikeFloatSim.getClientOracle();
         // 242 là PRIVATE: chỉ tới được TỪ 226/242. Khi chạy từ dev/Kaggle (chỉ tới 226) thì
         // new AerospikeClient(242) NÉM ngay → phải bọc để KHÔNG chết cả builder. Tới được (chạy trên
         // 226) → vẫn dual-write 242+226 như thiết kế. Tới-không-được → 226-only, log MỘT lần.

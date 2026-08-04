@@ -172,7 +172,7 @@ public class BackfillOiWorker {
         wp.expiration = 0;
         Key doneKey = new Key(Configs.AEROSPIKE_NAMESPACE, DONE_SET, symbol);
         try {
-            DataManagerAerospikeFloatSim.getClient226().put(wp, doneKey,
+            DataManagerAerospikeFloatSim.getClientOracle().put(wp, doneKey,
                     new Bin("symbol", symbol),
                     new Bin("totalTs", totalTs),
                     new Bin("oiTs", m.maps[0].size()),
@@ -188,7 +188,7 @@ public class BackfillOiWorker {
 
     private boolean isDone(String symbol) {
         Key doneKey = new Key(Configs.AEROSPIKE_NAMESPACE, DONE_SET, symbol);
-        Record r = DataManagerAerospikeFloatSim.getClient226().get(null, doneKey);
+        Record r = DataManagerAerospikeFloatSim.getClientOracle().get(null, doneKey);
         return r != null;
     }
 
@@ -199,7 +199,7 @@ public class BackfillOiWorker {
     private String fetchTask() {
         final String[] found = {null};
         try {
-            DataManagerAerospikeFloatSim.getClient226().scanAll(null, Configs.AEROSPIKE_NAMESPACE, QUEUE_SET,
+            DataManagerAerospikeFloatSim.getClientOracle().scanAll(null, Configs.AEROSPIKE_NAMESPACE, QUEUE_SET,
                     (key, record) -> {
                         if (found[0] != null) return;
                         String status = record.getString("status");
@@ -214,7 +214,7 @@ public class BackfillOiWorker {
                         lockPolicy.generationPolicy = GenerationPolicy.EXPECT_GEN_EQUAL;
                         lockPolicy.generation = record.generation;
                         try {
-                            DataManagerAerospikeFloatSim.getClient226().put(lockPolicy, key,
+                            DataManagerAerospikeFloatSim.getClientOracle().put(lockPolicy, key,
                                     new Bin("status", "RUNNING"),
                                     new Bin("startTime", System.currentTimeMillis()));
                             found[0] = record.getString("symbol");
@@ -233,7 +233,7 @@ public class BackfillOiWorker {
     private boolean queueIsEmpty() {
         AtomicInteger c = new AtomicInteger();
         try {
-            DataManagerAerospikeFloatSim.getClient226().scanAll(null, Configs.AEROSPIKE_NAMESPACE, QUEUE_SET,
+            DataManagerAerospikeFloatSim.getClientOracle().scanAll(null, Configs.AEROSPIKE_NAMESPACE, QUEUE_SET,
                     (key, record) -> c.incrementAndGet(), "status");
         } catch (Exception e) {
             LOG.warn("⚠️ scan queue (check rỗng) lỗi → coi như KHÔNG rỗng: {}", e.getMessage());
@@ -244,7 +244,7 @@ public class BackfillOiWorker {
 
     private void safeDelete(Key queueKey) {
         try {
-            DataManagerAerospikeFloatSim.getClient226().delete(new WritePolicy(), queueKey);
+            DataManagerAerospikeFloatSim.getClientOracle().delete(new WritePolicy(), queueKey);
         } catch (Exception e) {
             LOG.warn("⚠️ Không xoá được task khỏi queue {}: {}", queueKey, e.getMessage());
         }

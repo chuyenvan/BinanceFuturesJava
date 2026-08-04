@@ -49,7 +49,7 @@ public class ExportTool1Master {
         List<String> months = generateMonths(startMonth, endMonth);
         LOG.info("Master: {} tasks ({} → {}) reset={}", months.size(), startMonth, endMonth, reset);
 
-        var client = DataManagerAerospikeFloatSim.getClient226();
+        var client = DataManagerAerospikeFloatSim.getClientOracle();
         WritePolicy wp = new WritePolicy();
         wp.recordExistsAction = RecordExistsAction.UPDATE;
 

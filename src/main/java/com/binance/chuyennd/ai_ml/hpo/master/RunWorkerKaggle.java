@@ -67,7 +67,7 @@ public class RunWorkerKaggle {
 
                 // Phòng race: nếu task này đã có điểm trong RESULT_SET rồi (worker khác vừa xong)
                 // thì chỉ dọn queue và bỏ qua, không cày lại 7 phút vô ích.
-                Record already = DataManagerAerospikeFloatSim.getClient226().get(null, resultKey);
+                Record already = DataManagerAerospikeFloatSim.getClientOracle().get(null, resultKey);
                 if (already != null) {
                     safeDelete(queueKey);
                     continue;
@@ -130,7 +130,7 @@ public class RunWorkerKaggle {
     private static RunHpoMaster_Distributed.HpoDistributedTask fetchTaskFromAerospike() {
         final RunHpoMaster_Distributed.HpoDistributedTask[] foundTask = {null};
         try {
-            DataManagerAerospikeFloatSim.getClient226().scanAll(null, Configs.AEROSPIKE_NAMESPACE, QUEUE_SET, (key, record) -> {
+            DataManagerAerospikeFloatSim.getClientOracle().scanAll(null, Configs.AEROSPIKE_NAMESPACE, QUEUE_SET, (key, record) -> {
                 if (foundTask[0] != null) return; // đã chiếm được 1 task, bỏ qua phần còn lại
 
                 String status = record.getString("status");
@@ -145,7 +145,7 @@ public class RunWorkerKaggle {
                 lockPolicy.generation = record.generation;
 
                 try {
-                    DataManagerAerospikeFloatSim.getClient226().put(lockPolicy, key,
+                    DataManagerAerospikeFloatSim.getClientOracle().put(lockPolicy, key,
                             new com.aerospike.client.Bin("status", "RUNNING"),
                             new com.aerospike.client.Bin("startTime", System.currentTimeMillis())
                     );
@@ -165,7 +165,7 @@ public class RunWorkerKaggle {
 
     private static void submitResultToAerospike(RunHpoMaster_Distributed.HpoDistributedTask task, Key resultKey) {
         WritePolicy wp = new WritePolicy();
-        DataManagerAerospikeFloatSim.getClient226().put(wp, resultKey,
+        DataManagerAerospikeFloatSim.getClientOracle().put(wp, resultKey,
                 new com.aerospike.client.Bin("score", task.fitnessScore),
                 new com.aerospike.client.Bin("data", Utils.gson.toJson(task))
         );
@@ -173,7 +173,7 @@ public class RunWorkerKaggle {
 
     private static void safeDelete(Key queueKey) {
         try {
-            DataManagerAerospikeFloatSim.getClient226().delete(new WritePolicy(), queueKey);
+            DataManagerAerospikeFloatSim.getClientOracle().delete(new WritePolicy(), queueKey);
         } catch (Exception e) {
             LOG.warn("⚠️ Không xoá được task khỏi queue (sẽ tự hết hạn): {}", queueKey, e);
             e.printStackTrace();

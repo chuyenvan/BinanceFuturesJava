@@ -83,7 +83,7 @@ public class CopyTicker242To226 {
                 : System.currentTimeMillis();
 
         AerospikeClient src = DataManagerAerospikeFloatSim.getClient242();
-        AerospikeClient dst = DataManagerAerospikeFloatSim.getClient226();
+        AerospikeClient dst = DataManagerAerospikeFloatSim.getClientOracle();
 
         LOG.info("🚚 COPY TICKER 242 -> 226 | set={} | {} -> {} | force={}",
                 SET_TICKER, START_DATE, Utils.normalizeDateYYYYMMDD(end), FORCE_OVERWRITE);

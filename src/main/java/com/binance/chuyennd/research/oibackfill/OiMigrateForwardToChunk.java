@@ -48,7 +48,7 @@ public class OiMigrateForwardToChunk {
         }
         final boolean is226 = "226".equals(target);
         try {
-            AerospikeClient client = is226 ? DataManagerAerospikeFloatSim.getClient226()
+            AerospikeClient client = is226 ? DataManagerAerospikeFloatSim.getClientOracle()
                                            : DataManagerAerospikeFloatSim.getClient242();
             LOG.info("################ MIGRATE forward->chunk | target={} | mode={} ################",
                     target, doMigrate ? "MIGRATE" : "DRY-RUN");

@@ -237,7 +237,7 @@ public class ExportGateFeaturesGroupB {
     /** Đọc series month-key SYMBOL-YYYYMM (202101..tháng hiện tại) → TreeMap<startMs, float[ohlcv]>. */
     private static TreeMap<Long, float[]> readSeries(String set, String symbol) throws Exception {
         TreeMap<Long, float[]> all = new TreeMap<>();
-        AerospikeClient c = DataManagerAerospikeFloatSim.getClient226();
+        AerospikeClient c = DataManagerAerospikeFloatSim.getClientOracle();
         int curYm = Integer.parseInt(YM.get().format(new Date(System.currentTimeMillis())));
         for (int y = 2021; y <= curYm / 100; y++) {
             for (int mo = 1; mo <= 12; mo++) {

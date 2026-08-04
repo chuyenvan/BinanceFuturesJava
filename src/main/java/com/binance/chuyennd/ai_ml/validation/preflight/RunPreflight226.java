@@ -36,7 +36,7 @@ public final class RunPreflight226 {
     public static void main(String[] args) {
         String reportPath = args.length > 0 ? args[0] : "docs/reports/preflight_226_light.md";
         try {
-            AerospikeClient client = DataManagerAerospikeFloatSim.getClient226();
+            AerospikeClient client = DataManagerAerospikeFloatSim.getClientOracle();
             Node[] nodes = client.getNodes();
             LOG.info("Kết nối 226: {} node, ns mặc định = {}", nodes.length, Configs.AEROSPIKE_NAMESPACE);
             if (nodes.length > 0) {

@@ -617,8 +617,10 @@ public class Configs {
     public static final String AEROSPIKE_HOST_242 = Configs.getString("AEROSPIKE_HOST");
     public static final int AEROSPIKE_PORT_242 = Configs.getInt("AEROSPIKE_PORT");
 
-    public static final String AEROSPIKE_HOST_226 = Configs.getString("AEROSPIKE_HOST_226");
-    public static final int AEROSPIKE_PORT_226 = Configs.getInt("AEROSPIKE_PORT_226");
+    // Tên hằng đổi 226→ORACLE (2026-08-04, retire 226). GIỮ config-key "AEROSPIKE_HOST_226" để
+    // tương thích config.properties đã deploy (Oracle/Kaggle/dev) — đổi key là bước migration riêng.
+    public static final String AEROSPIKE_HOST_ORACLE = Configs.getString("AEROSPIKE_HOST_226");
+    public static final int AEROSPIKE_PORT_ORACLE = Configs.getInt("AEROSPIKE_PORT_226");
 
     public static final String AEROSPIKE_NAMESPACE = Configs.getString("AEROSPIKE_NAMESPACE");
 

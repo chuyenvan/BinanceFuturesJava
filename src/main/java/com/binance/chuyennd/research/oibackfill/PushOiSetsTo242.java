@@ -68,7 +68,7 @@ public class PushOiSetsTo242 {
         }
         // rỗng → mọi symbol đã DONE (scan done set).
         try {
-            DataManagerAerospikeFloatSim.getClient226().scanAll(null, Configs.AEROSPIKE_NAMESPACE, OiMetricSets.DONE_SET,
+            DataManagerAerospikeFloatSim.getClientOracle().scanAll(null, Configs.AEROSPIKE_NAMESPACE, OiMetricSets.DONE_SET,
                     (key, record) -> {
                         String sym = record.getString("symbol");
                         if (sym == null && key.userKey != null) sym = key.userKey.toString();

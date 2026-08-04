@@ -48,7 +48,7 @@ public class InspectFundingPredRaw {
             ScanPolicy sp = new ScanPolicy();
             sp.concurrentNodes = true;
 
-            DataManagerAerospikeFloatSim.getClient226().scanAll(sp,
+            DataManagerAerospikeFloatSim.getClientOracle().scanAll(sp,
                     Configs.AEROSPIKE_NAMESPACE,
                     DataManagerAerospikeFloatSim.AEROSPIKE_SET_NAME_FUNDING_PRED,
                     (Key key, Record record) -> {

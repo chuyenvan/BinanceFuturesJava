@@ -35,7 +35,7 @@ public class SelectorExportSetTool {
             for (long t = start; t < end; t += Utils.TIME_MINUTE) {
                 String keyStr = fmt.format(new Date(t));
                 Key key = new Key(Configs.AEROSPIKE_NAMESPACE, setName, keyStr);
-                Record rec = DataManagerAerospikeFloatSim.getClient226().get(null, key);
+                Record rec = DataManagerAerospikeFloatSim.getClientOracle().get(null, key);
                 if (rec == null) continue;
                 byte[] compressed = (byte[]) rec.getValue("data");
                 if (compressed == null) continue;

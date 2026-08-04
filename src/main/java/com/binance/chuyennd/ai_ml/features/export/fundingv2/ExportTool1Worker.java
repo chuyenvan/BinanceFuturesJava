@@ -118,7 +118,7 @@ public class ExportTool1Worker {
     private static String claimNextTask() {
         String[] found = {null};
         try {
-            DataManagerAerospikeFloatSim.getClient226().scanAll(
+            DataManagerAerospikeFloatSim.getClientOracle().scanAll(
                     null, Configs.AEROSPIKE_NAMESPACE, ExportTool1Master.TASK_SET,
                     (key, record) -> {
                         if (found[0] != null) return; // đã claim được 1, bỏ qua phần còn lại
@@ -134,7 +134,7 @@ public class ExportTool1Worker {
                         wp.generationPolicy = GenerationPolicy.EXPECT_GEN_EQUAL;
                         wp.generation = record.generation;
                         try {
-                            DataManagerAerospikeFloatSim.getClient226().put(wp, key,
+                            DataManagerAerospikeFloatSim.getClientOracle().put(wp, key,
                                     new Bin("status",    ExportTool1Master.STATUS_RUNNING),
                                     new Bin("worker_id", workerId),
                                     new Bin("ts_start",  System.currentTimeMillis())
@@ -162,7 +162,7 @@ public class ExportTool1Worker {
      */
     private static void markDone(Key key, String month, long elapsedMs, long fileSize, String slug) {
         try {
-            DataManagerAerospikeFloatSim.getClient226().put(new WritePolicy(), key,
+            DataManagerAerospikeFloatSim.getClientOracle().put(new WritePolicy(), key,
                     new Bin("status",      ExportTool1Master.STATUS_DONE),
                     new Bin("ts_done",     System.currentTimeMillis()),
                     new Bin("elapsed_ms",  elapsedMs),
@@ -179,7 +179,7 @@ public class ExportTool1Worker {
             String msg = errorMsg != null
                     ? errorMsg.substring(0, Math.min(errorMsg.length(), 500))
                     : "";
-            DataManagerAerospikeFloatSim.getClient226().put(new WritePolicy(), key,
+            DataManagerAerospikeFloatSim.getClientOracle().put(new WritePolicy(), key,
                     new Bin("status",  ExportTool1Master.STATUS_FAILED),
                     new Bin("error",   msg),
                     new Bin("ts_done", System.currentTimeMillis())

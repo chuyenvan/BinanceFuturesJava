@@ -19,7 +19,7 @@ public class CheckGapMarketObject {
 
     public static void main(String[] args) {
 
-        AerospikeClient client = DataManagerAerospikeFloatSim.getClient226();
+        AerospikeClient client = DataManagerAerospikeFloatSim.getClientOracle();
         String startDateStr = "20210101";
 
         scanMissingData(client, DataManagerAerospikeFloatSim.AEROSPIKE_SET_NAME_MARKET_DATA, startDateStr);

@@ -157,7 +157,7 @@ public class RunHpoPhase1_MarketThresholds {
     private static ISeq<Phenotype<DoubleGene, Float>> loadInitialPopulationFromAerospike(Genotype<DoubleGene> gtf) {
         try {
             Key key = new Key(Configs.AEROSPIKE_NAMESPACE, "hpo_market_thres_pool", Configs.TIME_RUN);
-            Record record = DataManagerAerospikeFloatSim.getClient226().get(null, key);
+            Record record = DataManagerAerospikeFloatSim.getClientOracle().get(null, key);
             if (record == null || record.getString("pool") == null) return null;
 
             List<GeneRecord> pool = Utils.gson.fromJson(record.getString("pool"), new TypeToken<List<GeneRecord>>(){}.getType());
@@ -199,7 +199,7 @@ public class RunHpoPhase1_MarketThresholds {
 
             int maxRetries = 3;
             for (int attempt = 0; attempt < maxRetries; attempt++) {
-                Record record = DataManagerAerospikeFloatSim.getClient226().get(null, key);
+                Record record = DataManagerAerospikeFloatSim.getClientOracle().get(null, key);
                 int currentGen = 0;
 
                 if (record != null && record.getString("pool") != null) {
@@ -231,7 +231,7 @@ public class RunHpoPhase1_MarketThresholds {
                 if (record != null) { wp.generationPolicy = com.aerospike.client.policy.GenerationPolicy.EXPECT_GEN_EQUAL; wp.generation = currentGen; }
 
                 try {
-                    DataManagerAerospikeFloatSim.getClient226().put(wp, key, new com.aerospike.client.Bin("pool", Utils.gson.toJson(globalPool)));
+                    DataManagerAerospikeFloatSim.getClientOracle().put(wp, key, new com.aerospike.client.Bin("pool", Utils.gson.toJson(globalPool)));
                     break;
                 } catch (com.aerospike.client.AerospikeException e) {
                     if (e.getResultCode() == com.aerospike.client.ResultCode.GENERATION_ERROR) continue;

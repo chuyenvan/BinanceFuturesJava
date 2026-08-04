@@ -42,8 +42,8 @@ public class BackfillOiMaster {
         // --reset: xoá sạch queue + done (dùng khi re-test hoặc dọn checkpoint cũ). KHÔNG đụng 5 set data.
         if (args != null && args.length > 0 && "--reset".equalsIgnoreCase(args[0])) {
             try {
-                DataManagerAerospikeFloatSim.getClient226().truncate(null, Configs.AEROSPIKE_NAMESPACE, QUEUE_SET, null);
-                DataManagerAerospikeFloatSim.getClient226().truncate(null, Configs.AEROSPIKE_NAMESPACE, DONE_SET, null);
+                DataManagerAerospikeFloatSim.getClientOracle().truncate(null, Configs.AEROSPIKE_NAMESPACE, QUEUE_SET, null);
+                DataManagerAerospikeFloatSim.getClientOracle().truncate(null, Configs.AEROSPIKE_NAMESPACE, DONE_SET, null);
                 LOG.info("🧹 Đã truncate {} + {} (checkpoint reset). KHÔNG đụng set data OI/LS/taker.", QUEUE_SET, DONE_SET);
             } catch (Exception e) {
                 LOG.error("❌ Reset truncate lỗi: ", e);
@@ -59,7 +59,7 @@ public class BackfillOiMaster {
             long now = System.currentTimeMillis();
             int[] counts = {0, 0}; // [reset, skip]
             try {
-                DataManagerAerospikeFloatSim.getClient226().scanAll(null, Configs.AEROSPIKE_NAMESPACE, QUEUE_SET,
+                DataManagerAerospikeFloatSim.getClientOracle().scanAll(null, Configs.AEROSPIKE_NAMESPACE, QUEUE_SET,
                         (key, record) -> {
                             String status = record.getString("status");
                             long startTime = record.getLong("startTime");
@@ -67,7 +67,7 @@ public class BackfillOiMaster {
                                 com.aerospike.client.policy.WritePolicy wp = new com.aerospike.client.policy.WritePolicy();
                                 wp.sendKey = true;
                                 try {
-                                    DataManagerAerospikeFloatSim.getClient226().put(wp, key,
+                                    DataManagerAerospikeFloatSim.getClientOracle().put(wp, key,
                                             new com.aerospike.client.Bin("status", "PENDING"),
                                             new com.aerospike.client.Bin("startTime", 0L));
                                     counts[0]++;
@@ -141,7 +141,7 @@ public class BackfillOiMaster {
 
     private static boolean isDone(String symbol) {
         Key doneKey = new Key(Configs.AEROSPIKE_NAMESPACE, DONE_SET, symbol);
-        Record r = DataManagerAerospikeFloatSim.getClient226().get(null, doneKey);
+        Record r = DataManagerAerospikeFloatSim.getClientOracle().get(null, doneKey);
         return r != null;
     }
 
@@ -153,7 +153,7 @@ public class BackfillOiMaster {
         wp.expiration = 0;
         wp.recordExistsAction = RecordExistsAction.CREATE_ONLY;
         try {
-            DataManagerAerospikeFloatSim.getClient226().put(wp, queueKey,
+            DataManagerAerospikeFloatSim.getClientOracle().put(wp, queueKey,
                     new com.aerospike.client.Bin("symbol", symbol),
                     new com.aerospike.client.Bin("status", "PENDING"),
                     new com.aerospike.client.Bin("startTime", 0L));
@@ -193,7 +193,7 @@ public class BackfillOiMaster {
         AtomicInteger pending = new AtomicInteger();
         AtomicInteger running = new AtomicInteger();
         try {
-            DataManagerAerospikeFloatSim.getClient226().scanAll(null, Configs.AEROSPIKE_NAMESPACE, QUEUE_SET,
+            DataManagerAerospikeFloatSim.getClientOracle().scanAll(null, Configs.AEROSPIKE_NAMESPACE, QUEUE_SET,
                     (key, record) -> {
                         String st = record.getString("status");
                         if ("RUNNING".equals(st)) running.incrementAndGet();
@@ -210,7 +210,7 @@ public class BackfillOiMaster {
     private static int doneCount() {
         AtomicInteger c = new AtomicInteger();
         try {
-            DataManagerAerospikeFloatSim.getClient226().scanAll(null, Configs.AEROSPIKE_NAMESPACE, DONE_SET,
+            DataManagerAerospikeFloatSim.getClientOracle().scanAll(null, Configs.AEROSPIKE_NAMESPACE, DONE_SET,
                     (key, record) -> c.incrementAndGet());
         } catch (Exception e) {
             LOG.warn("⚠️ scan done lỗi: {}", e.getMessage());

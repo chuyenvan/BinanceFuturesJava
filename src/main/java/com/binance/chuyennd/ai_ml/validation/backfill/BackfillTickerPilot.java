@@ -55,7 +55,7 @@ public class BackfillTickerPilot {
 
     private static AerospikeClient client(String cluster) {
         return "242".equals(cluster) ? DataManagerAerospikeFloatSim.getClient242()
-                : DataManagerAerospikeFloatSim.getClient226();
+                : DataManagerAerospikeFloatSim.getClientOracle();
     }
 
     public static void main(String[] args) {

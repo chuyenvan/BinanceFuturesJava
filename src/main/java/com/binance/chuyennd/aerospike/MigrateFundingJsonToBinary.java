@@ -35,7 +35,7 @@ public class MigrateFundingJsonToBinary {
             writePolicy.sendKey = true; // Bắt buộc giữ key gốc
 
             // Quét đa luồng toàn bộ Set Cũ
-            DataManagerAerospikeFloatSim.getClient226().scanAll(scanPolicy, Configs.AEROSPIKE_NAMESPACE, OLD_SET_NAME, (key, record) -> {
+            DataManagerAerospikeFloatSim.getClientOracle().scanAll(scanPolicy, Configs.AEROSPIKE_NAMESPACE, OLD_SET_NAME, (key, record) -> {
                 try {
                     if (key.userKey == null) return;
                     String keyStr = key.userKey.toString();
@@ -56,7 +56,7 @@ public class MigrateFundingJsonToBinary {
 
                         // 3. GHI VÀO SET MỚI
                         Key newKey = new Key(Configs.AEROSPIKE_NAMESPACE, NEW_SET_NAME, keyStr);
-                        DataManagerAerospikeFloatSim.getClient226().put(writePolicy, newKey, new Bin("data", newCompressed));
+                        DataManagerAerospikeFloatSim.getClientOracle().put(writePolicy, newKey, new Bin("data", newCompressed));
 
                         // Đếm tiến độ
                         int currentCount = countSuccess.incrementAndGet();

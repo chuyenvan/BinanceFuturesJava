@@ -61,10 +61,10 @@ public class Aggregate15m4hBtcEth {
             // của tháng đó. ⇒ chạy 242-mode CHỈ khi 1m@242 đủ sâu (xem runbook TASK-033: verify độ sâu 1m@242 trước).
             boolean read242 = args.length > 0 && "242".equalsIgnoreCase(args[0]);
             // TASK-112 #9: tool chọn cluster ĐỘNG theo arg runtime (không phải per-box) → gọi THẲNG
-            // getClient226/242, KHÔNG đi qua getReadClient()/AEROSPIKE_READ_CLUSTER.
+            // getClientOracle/242, KHÔNG đi qua getReadClient()/AEROSPIKE_READ_CLUSTER.
             com.aerospike.client.AerospikeClient readClient = read242
                     ? DataManagerAerospikeFloatSim.getClient242()
-                    : DataManagerAerospikeFloatSim.getClient226();
+                    : DataManagerAerospikeFloatSim.getClientOracle();
             long start = Utils.sdfFile.parse(START_DATE).getTime() + 7 * Utils.TIME_HOUR;
             long end = System.currentTimeMillis();
             LOG.info("🧱 Aggregate 15m/4h BTC/ETH từ kline_1m_opt ({}) | {} → nay | ghi 226+242",
@@ -134,7 +134,7 @@ public class Aggregate15m4hBtcEth {
         for (Map.Entry<String, TreeMap<Long, float[]>> e : byMonth.entrySet()) {
             byte[] comp = Snappy.compress(Utils.gson.toJson(e.getValue()).getBytes("UTF-8"));
             maxBytes = Math.max(maxBytes, comp.length);
-            for (AerospikeClient c : new AerospikeClient[]{DataManagerAerospikeFloatSim.getClient226(), DataManagerAerospikeFloatSim.getClient242()}) {
+            for (AerospikeClient c : new AerospikeClient[]{DataManagerAerospikeFloatSim.getClientOracle(), DataManagerAerospikeFloatSim.getClient242()}) {
                 c.put(w, new Key(Configs.AEROSPIKE_NAMESPACE, set, symbol + "-" + e.getKey()), new Bin("data", comp));
             }
             recs++;

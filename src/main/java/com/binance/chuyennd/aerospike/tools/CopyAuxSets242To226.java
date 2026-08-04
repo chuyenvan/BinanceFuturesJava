@@ -62,7 +62,7 @@ public class CopyAuxSets242To226 {
 
     public void run() {
         AerospikeClient src = DataManagerAerospikeFloatSim.getClient242();
-        AerospikeClient dst = DataManagerAerospikeFloatSim.getClient226();
+        AerospikeClient dst = DataManagerAerospikeFloatSim.getClientOracle();
 
         LOG.info("🚚 COPY AUX 242 -> 226 | sets: {} (idempotent, force={}) + {} (overwrite) | namespace={}",
                 SET_FUNDINGFEE, FORCE_OVERWRITE, SET_MAPPER, NS);

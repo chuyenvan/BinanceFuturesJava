@@ -35,7 +35,7 @@ public class CleanFutureGarbageData {
             LOG.info("🔍 Đang kiểm tra Set: {}", setName);
 
             try {
-                DataManagerAerospikeFloatSim.getClient226().scanAll(scanPolicy, Configs.AEROSPIKE_NAMESPACE, setName, (key, record) -> {
+                DataManagerAerospikeFloatSim.getClientOracle().scanAll(scanPolicy, Configs.AEROSPIKE_NAMESPACE, setName, (key, record) -> {
                     if (key.userKey != null) {
                         try {
                             String keyStr = key.userKey.toString();
@@ -43,7 +43,7 @@ public class CleanFutureGarbageData {
 
                             // NẾU THỜI GIAN CỦA KEY LỚN HƠN THỜI GIAN THỰC TẾ -> XÓA!
                             if (recordTime > currentRealTime) {
-                                DataManagerAerospikeFloatSim.getClient226().delete(null, key);
+                                DataManagerAerospikeFloatSim.getClientOracle().delete(null, key);
                                 int count = totalDeleted.incrementAndGet();
                                 LOG.info("🗑️ Đã xóa bản ghi ảo tương lai: {} (Tổng: {})", keyStr, count);
                             }

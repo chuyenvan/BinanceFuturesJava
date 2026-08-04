@@ -67,7 +67,7 @@ public class Validatetickercopy226 {
         long start = Utils.sdfFile.parse(START_DATE).getTime();
         long end = System.currentTimeMillis();
         AerospikeClient src = DataManagerAerospikeFloatSim.getClient242();
-        AerospikeClient dst = DataManagerAerospikeFloatSim.getClient226();
+        AerospikeClient dst = DataManagerAerospikeFloatSim.getClientOracle();
 
         LOG.info("🔎 VALIDATE TICKER 226 vs 242 | {} -> nay | tầng A: {} phút/tháng | tầng B: {} ngày exists-scan",
                 START_DATE, MINUTES_PER_MONTH, DAYS_RANDOM);
