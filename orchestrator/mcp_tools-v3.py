@@ -39,6 +39,7 @@ import re
 import logging
 import traceback
 import shutil
+from datetime import datetime
 
 # ----------------------------------------------------------------------------
 # CAU HINH
@@ -727,6 +728,161 @@ def cmd_invsel_run(args):
         emit({"status": "error", "job_id": job_id, "summary": f"Khong khoi chay duoc: {e}"})
 
 
+# [2026-08-08] Jar mac dinh RIENG cho label_export. KHONG dung chung "gatecount.jar" nua:
+# ban gatecount.jar tren Oracle (build 06/08) THIEU ban va race merge quy (mergeAllQuarters/
+# countRowsInPb) -> chay lai 13h ra data hong lan nua ma log van in "Xong toan bo" + EXIT=0.
+# Da xay ra that: run 07/08 14:24 -> 08/08 03:12 mat nguyen quy 2026Q1 (file 0 byte).
+LABEL_JAR_DEFAULT = "/home/ubuntu/java/simulator/gatecount_gate_20260808.jar"
+
+# 2 method CHI co trong ban va race merge. Dung lam dau van tay de tu choi jar cu.
+LABEL_FIX_MARKERS = ("mergeAllQuarters", "countRowsInPb")
+LABEL_CLS = "com.binance.chuyennd.ai_ml.features.export.ExportFundingLabel"
+
+
+def _label_jar_has_merge_fix(jar):
+    """Tra (ok, detail). Soi jar bang javap xem co ban va race merge quy khong.
+
+    Ly do phai chan o TANG NUT: job nay chay 12-13h, neu dung jar cu thi sau nua ngay
+    moi biet, va bieu hien la 'thanh cong' (EXIT=0 + log 'Xong toan bo') chu khong phai loi.
+    Chan truoc khi spawn re hon nhieu lan phat hien sau.
+    """
+    if not os.path.isfile(jar):
+        return False, f"Khong thay jar: {jar}"
+    try:
+        p = subprocess.run(["javap", "-p", "-cp", jar, LABEL_CLS],
+                           capture_output=True, text=True, timeout=60)
+    except Exception as e:  # javap thieu / treo -> KHONG doan bua, bao ro
+        return False, f"Khong chay duoc javap de kiem jar ({e})"
+    if p.returncode != 0:
+        return False, f"javap loi rc={p.returncode}: {(p.stderr or '').strip()[:200]}"
+    missing = [m for m in LABEL_FIX_MARKERS if m not in p.stdout]
+    if missing:
+        return False, ("Jar THIEU ban va race merge quy (khong thay: "
+                       + ", ".join(missing) + "). Dung jar nay se lap lai loi mat data "
+                       "AM THAM sau 12-13h. Chon jar khac hoac build lai.")
+    return True, "OK: jar co du " + ", ".join(LABEL_FIX_MARKERS)
+
+
+def cmd_label_export(args):
+    """NUT LABEL_EXPORT. Chay ExportFundingLabel -> funding_label.csv (+ .meta.json).
+
+    Cu phap: label_export <out_csv> [step_min] [start] [end] [jar] [ram_gb] [threads]
+      out_csv   : duong dan output (bat buoc), vd
+                  /home/ubuntu/claudedata/funding_label_1m.csv
+      step_min  : "1" (canonical 1 phut) | "15" (hanh vi cu, mac dinh khi rong)
+      start     : YYYYMMDD, mac dinh "20210101" (khop TRAIN_ANCHOR)
+      end       : YYYYMMDD, mac dinh = hom nay (LUON resolve so, KHONG truyen
+                  chuoi rong cho Java — ExportFundingLabel parse endStr theo
+                  != null, KHONG theo isEmpty(), truyen "" se crash parse).
+      jar       : mac dinh LABEL_JAR_DEFAULT (jar co ban va race merge quy).
+                  Nut TU SOI jar bang javap va TU CHOI chay neu thieu ban va.
+      ram_gb    : 12.0 (scan Aerospike 1m nhieu nam, can RAM du)
+      threads   : LABEL_THREADS, mac dinh "1". Oracle 4-core: dung "4" (do thuc:
+                  4 luong = 12.8h cho 20210101->20260701 step 1m; 1 luong ~4x lau hon).
+                  [2026-08-08] Bo sung param nay: truoc do nut HARDCODE 1 luong nen job
+                  9-13h bi keo thanh ~50h ma khong ai thay (khong co bao gi trong summary).
+    Env: LABEL_STEP_MIN=<step_min> LABEL_THREADS=<threads>. Boc RobustJobController (bg_run infra),
+    CWD=WFO_WORKER_CWD. Ket qua: bg_report <job_id> (job_id in trong summary).
+    [2026-08-04] Them cho canonical 1-phut — xem docs/WFO_DATA_PIPELINE_MASTER.md tang 4.
+    """
+    if not args:
+        return emit({"status": "error",
+                     "summary": "Cu phap: label_export <out_csv> [step_min] [start] [end] [jar] [ram_gb] [threads]"})
+    out_csv = args[0]
+    step_min = args[1] if len(args) > 1 and args[1] else "15"
+    start = args[2] if len(args) > 2 and args[2] else "20210101"
+    end = args[3] if len(args) > 3 and args[3] else datetime.now().strftime("%Y%m%d")
+    jar = args[4] if len(args) > 4 and args[4] else LABEL_JAR_DEFAULT
+    try:
+        ram = float(args[5]) if len(args) > 5 and args[5] else 12.0
+    except ValueError:
+        return emit({"status": "error", "summary": "ram_gb phai la so."})
+    threads = args[6] if len(args) > 6 and args[6] else "1"
+    if not str(threads).isdigit() or int(threads) < 1:
+        return emit({"status": "error", "summary": "threads phai la so nguyen >= 1."})
+    job_id = "label_export_" + re.sub(r"[^A-Za-z0-9_.-]+", "_",
+                                      os.path.basename(out_csv) or "csv")
+    live = _live_job_state(job_id)
+    if live:
+        return emit({"status": "error", "job_id": job_id, "state": "ALIVE_DO_NOT_RESTART",
+                     "summary": "Job label_export dang chay. Dung bg_status theo doi.",
+                     "live_state": live})
+    ok, detail = _label_jar_has_merge_fix(jar)
+    if not ok:
+        return emit({"status": "error", "job_id": job_id, "jar": jar,
+                     "summary": "TU CHOI chay label_export: " + detail})
+    cls = LABEL_CLS
+    cmd = (f"cd {WFO_WORKER_CWD} && LABEL_STEP_MIN={step_min} LABEL_THREADS={threads} "
+           f"{JAVA_BIN} -Xmx{int(ram)}g -cp {jar} {cls} {start} {end} {out_csv}")
+    try:
+        pid = _spawn_detached_supervisor(job_id, cmd, ram)
+        logger.info("label_export: spawn controller_pid=%s step_min=%s threads=%s jar=%s out=%s",
+                    pid, step_min, threads, jar, out_csv)
+        emit({"status": "started", "job_id": job_id, "controller_pid": pid,
+              "out_csv": out_csv, "step_min": step_min, "threads": threads, "jar": jar,
+              "summary": (f"Da khoi chay label_export (LABEL_STEP_MIN={step_min} "
+                          f"LABEL_THREADS={threads} jar={os.path.basename(jar)}) o nen. "
+                          f"bg_status/bg_report {job_id} de theo doi. Xong se co sidecar "
+                          f"{out_csv}.meta.json.")})
+    except Exception as e:
+        logger.exception("label_export that bai.")
+        emit({"status": "error", "job_id": job_id, "summary": f"Khong khoi chay duoc: {e}"})
+
+
+def cmd_tool1_export(args):
+    """NUT TOOL1_EXPORT. Chay ExportFeaturesForPythonTool (FF_UNFILTERED=1) -> Tool1
+    features_*.bin.gz DUNG CHO TRAIN selector (KHONG phai mode production/EntrySignalFilter).
+
+    Cu phap: tool1_export <out_dir> [grid_min] [start] [end] [jar] [ram_gb]
+      out_dir   : thu muc output (bat buoc), vd
+                  /home/ubuntu/claudedata/features_export_python_v3_1m/
+      grid_min  : "1" (canonical 1 phut) | "15" (hanh vi cu, mac dinh khi rong)
+      start/end : YYYYMMDD, rong -> tool tu dung default (20210101 -> nay);
+                  KHAC ExportFundingLabel, tool nay AN TOAN voi chuoi rong
+                  (check !isEmpty(), khong parse chuoi rong).
+      jar       : /home/ubuntu/java/simulator/gatecount.jar (mac dinh)
+      ram_gb    : 12.0
+    Env: FF_UNFILTERED=1 FF_GRID_MIN=<grid_min>. PHAI khop LABEL_STEP_MIN cua
+    label_export CUNG DOT (lech lam mat ~93% du lieu AM THAM khi join — xem
+    canh bao #1 docs/WFO_DATA_PIPELINE_MASTER.md). Boc RobustJobController.
+    Ket qua: bg_report <job_id> (job_id in trong summary).
+    [2026-08-04] Them cho canonical 1-phut.
+    """
+    if not args:
+        return emit({"status": "error",
+                     "summary": "Cu phap: tool1_export <out_dir> [grid_min] [start] [end] [jar] [ram_gb]"})
+    out_dir = args[0]
+    grid_min = args[1] if len(args) > 1 and args[1] else "15"
+    start = args[2] if len(args) > 2 and args[2] else ""
+    end = args[3] if len(args) > 3 and args[3] else ""
+    jar = args[4] if len(args) > 4 and args[4] else "/home/ubuntu/java/simulator/gatecount.jar"
+    try:
+        ram = float(args[5]) if len(args) > 5 and args[5] else 12.0
+    except ValueError:
+        return emit({"status": "error", "summary": "ram_gb phai la so."})
+    job_id = "tool1_export_" + re.sub(r"[^A-Za-z0-9_.-]+", "_",
+                                      os.path.basename(out_dir.rstrip("/")) or "dir")
+    live = _live_job_state(job_id)
+    if live:
+        return emit({"status": "error", "job_id": job_id, "state": "ALIVE_DO_NOT_RESTART",
+                     "summary": "Job tool1_export dang chay. Dung bg_status theo doi.",
+                     "live_state": live})
+    cls = "com.binance.chuyennd.ai_ml.features.export.fundingv2.ExportFeaturesForPythonTool"
+    cmd = (f"cd {WFO_WORKER_CWD} && FF_UNFILTERED=1 FF_GRID_MIN={grid_min} "
+           f"{JAVA_BIN} -Xmx{int(ram)}g -cp {jar} {cls} {start} {end} {out_dir}")
+    try:
+        pid = _spawn_detached_supervisor(job_id, cmd, ram)
+        logger.info("tool1_export: spawn controller_pid=%s grid_min=%s out=%s",
+                    pid, grid_min, out_dir)
+        emit({"status": "started", "job_id": job_id, "controller_pid": pid,
+              "out_dir": out_dir, "grid_min": grid_min,
+              "summary": (f"Da khoi chay tool1_export (FF_UNFILTERED=1 FF_GRID_MIN={grid_min}) "
+                          f"o nen. bg_status/bg_report {job_id} de theo doi.")})
+    except Exception as e:
+        logger.exception("tool1_export that bai.")
+        emit({"status": "error", "job_id": job_id, "summary": f"Khong khoi chay duoc: {e}"})
+
+
 def cmd_supervise(args):
     """NUT NOI BO (khong danh cho CDK). Chay blocking RobustJobController.run().
 
@@ -1083,6 +1239,109 @@ def cmd_kaggle_status(args):
               "stdout": out, "stderr": err})
     except Exception as e:
         logger.exception("Loi Kaggle status.")
+        emit({"status": "error", "summary": f"Loi ket noi Kaggle API: {e}"})
+
+
+def cmd_kaggle_dataset_push(args):
+    """NUT KAGGLE DATASET PUSH. Tao MOI (lan dau) hoac version MOI (cac lan sau)
+    1 Kaggle dataset tu 1 thu muc local — thay the buoc SSH tay `kaggle datasets
+    create|version` (xem run_106_headless.sh B2 — pattern that da chay thuc te).
+
+    Cu phap: kaggle_dataset_push <local_dir> <slug> <message> [license]
+      local_dir : thu muc CHUA du lieu can upload (khong phai kernel dir).
+      slug      : vd chuyendinh/funding-tool1-features-1m (owner/dataset-slug).
+      message   : changelog cho lan version nay (BAT BUOC, du dataset moi tao
+                  khong dung -m — vao dataset-metadata.json de sau con biet
+                  lich su). Bo dau nhay kep " trong message se bi escape.
+      license   : chi dung khi TAO MOI (default "CC0-1.0"), bo qua khi version.
+
+    Phat hien TAO MOI vs VERSION bang su ton tai cua <local_dir>/dataset-metadata.json:
+      - CHUA CO  -> tu sinh dataset-metadata.json (title/id/licenses) roi
+                    `kaggle datasets create -p <local_dir>`.
+      - DA CO    -> `kaggle datasets version -p <local_dir> -m "<message>"`
+                    (dung cho MOI lan sau, dataset-metadata.json da nam san
+                    trong local_dir tu lan tao dau).
+    Dataset xu ly BAT DONG BO tren Kaggle (~vai phut toi ~20 phut quan sat thuc
+    te) — goi ke `kaggle_dataset_status <slug>` (wait step) truoc khi push
+    kernel dung dataset nay, DUNG cho la "push xong = du lieu san sang".
+    [2026-08-04] Them theo yeu cau Uni ("co kaggle cli ban lam di") — lap GAP
+    da flag trong ce-buttons.md/WFO_DATA_PIPELINE_MASTER.md.
+    """
+    if len(args) < 3:
+        return emit({"status": "error",
+                     "summary": "Cu phap: kaggle_dataset_push <local_dir> <slug> <message> [license]"})
+    local_dir, slug, message = args[0], args[1], args[2]
+    license_name = args[3] if len(args) > 3 and args[3] else "CC0-1.0"
+    if not os.path.isdir(local_dir):
+        return emit({"status": "error", "local_dir": local_dir,
+                     "summary": f"Khong tim thay thu muc: {local_dir}"})
+    if "/" not in slug:
+        return emit({"status": "error", "slug": slug,
+                     "summary": "slug phai dang owner/dataset-slug (vd chuyendinh/ten-dataset)."})
+    meta_path = os.path.join(local_dir, "dataset-metadata.json")
+    first_time = not os.path.exists(meta_path)
+    try:
+        if first_time:
+            title = slug.split("/", 1)[1]
+            meta = {"title": title, "id": slug,
+                    "licenses": [{"name": license_name}]}
+            with open(meta_path, "w", encoding="utf-8") as f:
+                json.dump(meta, f, indent=2)
+            logger.info("kaggle_dataset_push: TAO MOI %s (viet %s)", slug, meta_path)
+            rc, out, err = _kaggle('datasets create -p %s' % local_dir)
+        else:
+            msg_escaped = message.replace('"', '\\"')
+            logger.info("kaggle_dataset_push: VERSION %s (msg=%s)", slug, message)
+            rc, out, err = _kaggle('datasets version -p %s -m "%s"' % (local_dir, msg_escaped))
+        out, err = (out or "").strip(), (err or "").strip()
+        ok = rc == 0
+        m = re.search(r"kaggle\.com/(?:datasets/)?([\w-]+/[\w-]+)", out)
+        dataset_ref = m.group(1) if m else slug
+        (logger.info if ok else logger.error)(
+            "kaggle_dataset_push rc=%s first_time=%s slug=%s", rc, first_time, slug)
+        emit({"status": "success" if ok else "error",
+              "slug": slug, "dataset_ref": dataset_ref, "first_time": first_time,
+              "local_dir": local_dir, "rc": rc,
+              "summary": (f"Da {'TAO MOI' if first_time else 'version moi'} dataset {slug}. "
+                          f"Goi kaggle_dataset_status {slug} de cho READY truoc khi dung.")
+              if ok else f"kaggle_dataset_push that bai (rc={rc}, first_time={first_time}).",
+              "stdout": out, "stderr": err})
+    except Exception as e:
+        logger.exception("Loi kaggle_dataset_push.")
+        emit({"status": "error", "summary": f"Loi kaggle_dataset_push: {e}"})
+
+
+def cmd_kaggle_dataset_status(args):
+    """NUT KAGGLE DATASET STATUS. Trang thai xu ly 1 dataset (sau create/version).
+
+    Cu phap: kaggle_dataset_status <slug>
+    Parse `kaggle datasets status <slug>` -> dataset_state chuan hoa:
+    READY | RUNNING | ERROR | UNKNOWN. Dung cho step `wait` trong pipeline
+    (until {"path":"dataset_state","equals":"READY"}) truoc kaggle_push kernel
+    can dataset nay — quan sat thuc te (run_106_headless.sh) toi ~20 phut.
+    """
+    if not args:
+        return emit({"status": "error", "summary": "Cu phap: kaggle_dataset_status <slug>"})
+    slug = args[0]
+    try:
+        rc, out, err = _kaggle("datasets status %s" % slug)
+        out, err = (out or "").strip(), (err or "").strip()
+        low = out.lower()
+        if "ready" in low:
+            dstate = "READY"
+        elif "error" in low or "fail" in low:
+            dstate = "ERROR"
+        elif "running" in low or "process" in low:
+            dstate = "RUNNING"
+        else:
+            dstate = "UNKNOWN"
+        ok = rc == 0
+        emit({"status": "success" if ok else "error",
+              "slug": slug, "dataset_state": dstate,
+              "summary": out if ok else f"Khong lay duoc trang thai dataset {slug} (rc={rc})",
+              "stdout": out, "stderr": err})
+    except Exception as e:
+        logger.exception("Loi kaggle_dataset_status.")
         emit({"status": "error", "summary": f"Loi ket noi Kaggle API: {e}"})
 
 
@@ -1802,21 +2061,30 @@ def cmd_pred_convert(args):
 def cmd_wfo_build_ds(args):
     """NUT WFO_BUILD_DS. Chay ExportWfoDataset -> dataset offline tu funding pred dir.
 
-    Cu phap: wfo_build_ds <predict_wf_dir> <out_ds> [jar]
+    Cu phap: wfo_build_ds <predict_wf_dir> <out_ds> [jar] [code_sha]
       predict_wf_dir : thu muc predict_wf_<win>.bin -> WFO_FUNDING_PRED_DIR.
       out_ds         : thu muc dataset dich (arg cua ExportWfoDataset).
       jar            : jar simulator (default preflight-v42.jar).
+      code_sha       : (optional) git SHA explicit stamp vao manifest. Rong ->
+                       tu resolve `git -C {CE_SIM_CWD} rev-parse HEAD` luc chay;
+                       khong phai git checkout -> "unknown".
     Env: WFO_SET_PRED=ai_pred_market_gate_wfo WFO_FUNDING_PRED_DIR=<dir>
-         WFO_SEL_HORIZON_IDX=0, cwd=CE_SIM_CWD, -Xmx12g. Scan Aerospike 226 nen
-         CHAY DETACHED (bg infra: RobustJobController) -> tra job handle tuc thi.
+         WFO_SEL_HORIZON_IDX=0 WFO_CODE_SHA=<resolved>, cwd=CE_SIM_CWD, -Xmx12g.
+         Scan Aerospike 226 nen CHAY DETACHED (bg infra: RobustJobController) ->
+         tra job handle tuc thi.
+    [2026-08-04] BAT BUOC co WFO_CODE_SHA: WfoDataset.export() moi (canonical
+    self-validate) THROW "unknown" khi WFO_FUNDING_PRED_DIR khong rong ma
+    codeGitSha="unknown" -> atom nay se FAIL nếu Oracle chua deploy fix nay va
+    CE_SIM_CWD khong la git checkout (dung code_sha override).
     Neu <out_ds>/manifest.txt DA co (job truoc xong) va khong con job song ->
     tra thang {fundingCount} tu manifest (status=done, idempotent).
     """
     if len(args) < 2:
         return emit({"status": "error",
-                     "summary": "Cu phap: wfo_build_ds <predict_wf_dir> <out_ds> [jar]"})
+                     "summary": "Cu phap: wfo_build_ds <predict_wf_dir> <out_ds> [jar] [code_sha]"})
     pred_dir, out_ds = args[0], args[1]
     jar = args[2] if len(args) > 2 and args[2] else WFO_JAR_DEFAULT
+    code_sha_override = args[3] if len(args) > 3 and args[3] else ""
     job_id = "buildds_" + re.sub(r"[^A-Za-z0-9_.-]+", "_", os.path.basename(
         out_ds.rstrip("/")) or "ds")
 
@@ -1833,8 +2101,11 @@ def cmd_wfo_build_ds(args):
                      "state": "ALIVE_DO_NOT_RESTART", "live_state": live,
                      "summary": "Job build_ds dang chay. Dung bg_status theo doi."})
 
+    sha_expr = code_sha_override if code_sha_override else (
+        f"$(git -C {CE_SIM_CWD} rev-parse HEAD 2>/dev/null || echo unknown)")
     cmd = (f"cd {CE_SIM_CWD} && WFO_SET_PRED={WFO_SET_PRED} "
            f"WFO_FUNDING_PRED_DIR={pred_dir} WFO_SEL_HORIZON_IDX=0 "
+           f"WFO_CODE_SHA={sha_expr} "
            f"{JAVA_BIN} -Xmx{CE_BUILDDS_XMX} -cp {jar} {WFO_EXPORT_CLASS} {out_ds}")
     logger.info("wfo_build_ds job=%s cmd=%s", job_id, cmd)
     try:
@@ -1850,6 +2121,70 @@ def cmd_wfo_build_ds(args):
         logger.exception("wfo_build_ds spawn that bai.")
         emit({"status": "error", "job_id": job_id,
               "summary": f"Khong khoi chay duoc ExportWfoDataset: {e}"})
+
+
+def cmd_wfo_validate(args):
+    """NUT WFO_VALIDATE. Chay scripts/model_quality/validate_canonical_wfo.py (dong bo)
+    -> <ds_dir>/validation_report.txt (result=PASS|FAIL), chi SIGN khi PASS toan bo.
+
+    Cu phap: wfo_validate <lf_dir> <ds_dir> <expect_leakfree> [horizon_idx] [sign]
+      lf_dir          : thu muc predict_wf_<win>.bin -> env LF_DIR cua script.
+      ds_dir          : dataset output cua wfo_build_ds -> env DS_DIR (doc
+                        market.bin/pred.bin/funding.bin/manifest.txt).
+      expect_leakfree : YYYY-MM-DD, moc OOS phai >= (vd 2023-01-01) -> EXPECT_LEAKFREE.
+      horizon_idx     : 0=4h(default) 1=12h 2=24h 3=72h -> HORIZON_IDX.
+      sign            : "1" -> SIGN=1, script tu ky VALIDATED_BY vao manifest NEU
+                        khong FAIL nao. Rong/"0" -> chi bao cao, KHONG ky (an toan
+                        de re-run nhieu lan).
+    Script doc THANG binary (khong qua Java) — doc lap voi WfoDataset.export().
+    Fail-closed thuc su nam trong CHINH script (exit 1 khi co FAIL, khong ky);
+    atom nay CHI doc lai <ds_dir>/validation_report.txt de bao cao co cau truc,
+    KHONG parse log text (log co the o stderr qua logging module).
+    Script phai co san o CE_PRED_TOOLS_DIR (deploy kem cac converter khac).
+    [2026-08-04] Them cho canonical 1-phut, buoc E cua runbook
+    (docs/WFO_DATA_PIPELINE_MASTER.md).
+    """
+    if len(args) < 3:
+        return emit({"status": "error",
+                     "summary": "Cu phap: wfo_validate <lf_dir> <ds_dir> <expect_leakfree> [horizon_idx] [sign]"})
+    lf_dir, ds_dir, expect_lf = args[0], args[1], args[2]
+    horizon_idx = args[3] if len(args) > 3 and args[3] else "0"
+    sign = args[4] if len(args) > 4 and args[4] else "0"
+    script = os.path.join(CE_PRED_TOOLS_DIR, "validate_canonical_wfo.py")
+    if not os.path.exists(script):
+        return emit({"status": "error", "script": script,
+                     "summary": f"Khong tim thay {script}. Deploy "
+                                f"scripts/model_quality/validate_canonical_wfo.py len "
+                                f"CE_PRED_TOOLS_DIR ({CE_PRED_TOOLS_DIR})."})
+    cmd = (f"LF_DIR={lf_dir} DS_DIR={ds_dir} EXPECT_LEAKFREE={expect_lf} "
+           f"HORIZON_IDX={horizon_idx} SIGN={sign} {CE_XGB_PY} {script}")
+    logger.info("wfo_validate cmd=%s", cmd)
+    rc, out, err = _sh(cmd, timeout=CE_PRED_CONVERT_TIMEOUT)
+    out, err = (out or "").strip(), (err or "").strip()
+    report_path = os.path.join(ds_dir, "validation_report.txt")
+    report = {}
+    if os.path.exists(report_path):
+        try:
+            with open(report_path, "r", errors="ignore") as f:
+                for line in f:
+                    m = re.match(r"^(result|warn_count|fail_count)=(.*)$", line.strip())
+                    if m:
+                        report[m.group(1)] = m.group(2)
+        except Exception:
+            logger.exception("Khong doc duoc %s", report_path)
+    passed = rc == 0 and report.get("result") == "PASS"
+    (logger.info if passed else logger.error)(
+        "wfo_validate rc=%s report=%s ds=%s", rc, report, ds_dir)
+    emit({"status": "success" if passed else "error",
+          "ds_dir": ds_dir, "lf_dir": lf_dir, "expect_leakfree": expect_lf,
+          "rc": rc, "report": report, "report_path": report_path,
+          "signed": passed and sign == "1",
+          "summary": (f"wfo_validate PASS (warn={report.get('warn_count','?')}, "
+                      f"sign={sign}) -> {ds_dir}" if passed
+                      else f"wfo_validate FAIL/loi (rc={rc}, report={report or 'khong doc duoc'}). "
+                           f"Xem {report_path}, KHONG duoc dung dataset nay cho train."),
+          "stdout_tail": out.splitlines()[-15:],
+          "stderr_tail": err.splitlines()[-30:]})
 
 
 def cmd_wfo_verify(args):
@@ -2113,8 +2448,15 @@ TOOL_ARG_ORDER = {
     "wfo_stop": [],
     "pred_convert": [("csv_path", None), ("out_dir", None), ("mode", None),
                      ("param", "")],
-    "wfo_build_ds": [("predict_wf_dir", None), ("out_ds", None), ("jar", "")],
+    "wfo_build_ds": [("predict_wf_dir", None), ("out_ds", None), ("jar", ""),
+                     ("code_sha", "")],
+    "wfo_validate": [("lf_dir", None), ("ds_dir", None), ("expect_leakfree", None),
+                     ("horizon_idx", "0"), ("sign", "0")],
     "wfo_verify": [("ds", None), ("winIdx", None), ("extra_env", "")],
+    "label_export": [("out_csv", None), ("step_min", "15"), ("start", ""),
+                     ("end", ""), ("jar", ""), ("ram_gb", "12"), ("threads", "1")],
+    "tool1_export": [("out_dir", None), ("grid_min", "15"), ("start", ""),
+                     ("end", ""), ("jar", ""), ("ram_gb", "12")],
     "bg_run": [("job_id", None), ("cmd", None), ("ram", "3.0")],
     "gate_count": [("jar", ""), ("data_dir", ""), ("ram", "10")],
     "hard_sl_sweep": [("jar", ""), ("data_dir", ""), ("ram", "10")],
@@ -2129,6 +2471,9 @@ TOOL_ARG_ORDER = {
     "kaggle_push": [("dir", None)],
     "kaggle_status": [("ref", None)],
     "kaggle_output": [("ref", None), ("dir", "")],
+    "kaggle_dataset_push": [("local_dir", None), ("slug", None), ("message", None),
+                            ("license", "")],
+    "kaggle_dataset_status": [("slug", None)],
     "profile_list": [],
 }
 
@@ -2827,6 +3172,8 @@ COMMANDS = {
     "gate_count": cmd_gate_count,
     "hard_sl_sweep": cmd_hard_sl_sweep,
     "invsel_run": cmd_invsel_run,
+    "label_export": cmd_label_export,
+    "tool1_export": cmd_tool1_export,
     # WFO (Walk-Forward Optimization) fleet:
     "wfo_run": cmd_wfo_run,
     "wfo_fanout": cmd_wfo_fanout,
@@ -2836,6 +3183,7 @@ COMMANDS = {
     # WFO-from-preds (R1: CSV preds -> predict_wf -> dataset -> verify 1 window):
     "pred_convert": cmd_pred_convert,
     "wfo_build_ds": cmd_wfo_build_ds,
+    "wfo_validate": cmd_wfo_validate,
     "wfo_verify": cmd_wfo_verify,
     # He thong / suc khoe VPS:
     "sys_health": cmd_sys_health,
@@ -2850,6 +3198,8 @@ COMMANDS = {
     "kaggle_status": cmd_kaggle_status,
     "kaggle_output": cmd_kaggle_output,
     "kaggle_parse_logs": cmd_kaggle_parse_logs,
+    "kaggle_dataset_push": cmd_kaggle_dataset_push,
+    "kaggle_dataset_status": cmd_kaggle_dataset_status,
     # Pipeline engine (declarative, may-lam-het + LLM-gate):
     "pipe_run": cmd_pipe_run,
     "pipe_status": cmd_pipe_status,
@@ -2875,6 +3225,14 @@ VONG DOI JOB NANG (CDK chi bam nut, Python tu lo):
   bg_list                                   LIST: liet ke moi job da biet.
   bg_selftest                               TU-TEST tron chuoi bg_* bang job sleep.
 
+CANONICAL 1-PHUT (Buoc A/B cua WFO_DATA_PIPELINE_MASTER.md, DETACHED):
+  label_export <out_csv> [step_min] [start] [end] [jar] [ram_gb]
+                                            ExportFundingLabel -> label CSV + .meta.json.
+                                            step_min=1 (canonical) | 15 (cu, default).
+  tool1_export <out_dir> [grid_min] [start] [end] [jar] [ram_gb]
+                                            ExportFeaturesForPythonTool (FF_UNFILTERED=1) ->
+                                            Tool1 features. grid_min PHAI KHOP step_min tren.
+
 WFO (WALK-FORWARD OPTIMIZATION):
   wfo_fanout <ds> [jar] [n] [seed] [oracle_workers] [kaggle_kernels] [tag] [extra_env]
                                             MAC DINH cho WFO full-16-window: reset + 2 Oracle worker
@@ -2889,9 +3247,15 @@ WFO-FROM-PREDS (chuoi R1: CSV preds -> predict_wf -> dataset -> verify 1 window)
   pred_convert <csv> <out_dir> <mode> [param]
                                             CSV preds -> predict_wf_<win>.bin (venv XGB).
                                             mode=long|oiz|short (oiz: param=OIZ_Q quantile).
-  wfo_build_ds <predict_wf_dir> <out_ds> [jar]
+  wfo_build_ds <predict_wf_dir> <out_ds> [jar] [code_sha]
                                             ExportWfoDataset DETACHED -> dataset offline.
                                             Goi lai khi xong -> fundingCount tu manifest.
+                                            code_sha rong -> tu resolve git HEAD; khong git -> "unknown"
+                                            (Java THROW neu "unknown" tren canonical path).
+  wfo_validate <lf_dir> <ds_dir> <expect_leakfree> [horizon_idx] [sign]
+                                            validate_canonical_wfo.py DONG BO, doc lap voi Java ->
+                                            <ds_dir>/validation_report.txt (PASS/FAIL). sign=1 -> ky
+                                            VALIDATED_BY neu PASS toan bo (Buoc E cua runbook).
   wfo_verify <ds> <winIdx> [extra_env]      VerifyOneWindow 1 window (jobstore-free) ->
                                             RESULT_JSON {oosPnl,wfe,oosTrades,oosNote}.
                                             extra_env ho tro WFO_JAR=/WFO_XMX= (short-verify).
@@ -2910,6 +3274,11 @@ KAGGLE FLEET:
   kaggle_push <folder>                      Gac cong slot roi push kernel.
   kaggle_status <slug>                      Trang thai kernel.
   kaggle_output <slug> <dir>                Tai ket qua kernel.
+  kaggle_dataset_push <local_dir> <slug> <message> [license]
+                                            Tao MOI (dataset-metadata.json chua co) hoac VERSION MOI
+                                            (da co) 1 dataset tu thu muc local. Xu ly bat dong bo tren
+                                            Kaggle -> goi ke kaggle_dataset_status de cho READY.
+  kaggle_dataset_status <slug>              Trang thai xu ly dataset: READY|RUNNING|ERROR|UNKNOWN.
   kaggle_parse_logs <log_file>              Giai ma JSON log + boc block RESULT.
 
 PIPELINE ENGINE (may lam het TRON CHUOI, LLM chi gac o llm_gate):

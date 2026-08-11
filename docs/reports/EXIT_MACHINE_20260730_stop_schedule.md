@@ -403,4 +403,237 @@ Uni xác nhận có cần dọn (đồng bộ hoặc xoá) hay để nguyên vì
 - Sửa `gap = min(p×g, maxGap)` → `max(p×g, minGap)` (giveback không co lại với lệnh lãi lớn) — CHƯA
   thực hiện.
 - Chạy lại N=13 window confirm với default mới để đo tác động thật trên verdict M (khác baseline sweep
-  cũ, vốn không qua constraint harness V4 đầy đủ theo window) — CHƯA chạy.
+  cũ, vốn không qua constraint harness V4 đầy đủ theo window) — ✅ ĐÃ CHẠY, xem PHẦN 4.
+
+---
+
+# PHẦN 4 — N=30 × 16-window confirm CHO min-rate 0.03 (chạy 2026-07-30 tối, DONE 16/16)
+
+Jar `binance-exit003-20260730.jar` (md5 Oracle `f89c5a449de96a4f377e95dae2de936f`, md5 Kaggle
+`4145806f1686ec6426c22954a373019a`, cùng HEAD `b203a78`, lệch do PrivateConfig placeholder).
+Chạy Kaggle-only 5-node (Oracle 0 — ticker file Oracle đã bị dọn, không dùng được), tag `exit003`,
+`WFO_N_SAMPLES=30 WFO_SEED_BASE=42 WFO_MAX_OOS_DATE=20260101`, dataset `wfo_ds_ret2wf_4h_ff`.
+`TS_RATCHET_DECOUPLED` KHÔNG bật (mặc định `false`) — run này CHỈ đo tác động của đổi sàn
+`RATE_PROFIT_STOP_MARKET` (gene range `[0.012,0.025]` → `[0.03,0.05]`), không confound với ratchet.
+
+## VERDICT: ❌ FAIL/REVIEW (vẫn fail, như verdict M gốc)
+
+| tiêu chí (pre-registered) | ngưỡng PASS | verdict M gốc (0.012-0.025) | exit003 (0.03-0.05) | đổi |
+|---|---|---|---|---|
+| WFE trung vị | ≥ 0.50 | 0.307 (FAIL) | **0.442** (FAIL) | +44% nhưng vẫn dưới ngưỡng |
+| % cửa sổ OOS dương | ≥ 70% | 43.8% (7/16) (FAIL) | **37.5% (6/16)** (FAIL) | **XẤU ĐI** |
+| maxDD OOS xấu nhất | ≤ 50% | 32.4% (PASS) | **34.3%** (PASS, abs 12021) | xấu đi nhẹ, vẫn qua |
+
+`note` 16 window: SUCCESS=6 (w3,8,9,10,12,15), TOO_FEW_TRADES=5 (w1,5,7,11,14),
+ZERO_TRADES=4 (w0,2,4,13), TOO_MUCH_CAPITAL_LOCK=1 (w6).
+
+## ⚠️ Phát hiện quan trọng — cải thiện WFE là ẢO, đến từ ĐÚNG 1 window
+
+Tổng OOS PnL 16 window ≈ **17 906**. Window 15 (2025-10→2026-01) một mình đóng góp **11 611
+(64.8% tổng PnL)**, và CŨNG là window có maxDD-OOS **tệ nhất** (34.3% vốn / 35.2% mark-to-market,
+minEquity chạm 64.9%) — tức đúng mẫu Uni nêu ra đầu phiên: *"coin pump nhưng đánh lướt → đuôi lớn
+(maxDD) mà ăn thì ít"* ở các window khác, và ở đây window ăn nhiều nhất cũng là window rủi ro đuôi
+lớn nhất. WFE trung vị nhích lên (0.307→0.442) không phải vì các window khác khá hơn đều — %OOS-dương
+thực ra TỆ HƠN (43.8%→37.5%) — mà vì 1 window ăn đậm kéo trung vị/PnL tổng lên. Đây là dấu hiệu
+concentration/overfit-1-window, không phải cải thiện breadth thật.
+
+Không có window nào dính margin-call (proxy cross 1x, ngưỡng equity≤0.5%): 0/16 — nhưng minEquity
+window 15 xuống 64.9%, biên margin-call không còn xa như các window khác (đa số 96-100%).
+
+## Việc CÒN CHƯA làm (không đổi so trước, nhắc lại để khỏi quên)
+
+- Tách ratchet khỏi arm (PHẦN 2), sửa `gap = min(p×g,maxGap)` → `max(p×g,minGap)` — CHƯA làm.
+- Confirm RIÊNG `TS_RATCHET_DECOUPLED=true` (không gộp 2 biến 1 lần đo) — CHƯA chạy.
+
+## Quyết định thuộc Uni (đọc cùng phát hiện ở trên trước khi chọn)
+
+(a) Vẫn coi 0.03-0.05 là cải thiện đủ để tiếp tục nhánh exit (bật thử ratchet-decouple, sửa giveback)
+    — nhưng nên biết cải thiện phần lớn đến từ 1 window, chưa chắc generalize; hoặc
+(b) Dừng nhánh exit ở đây (2/3 tiêu chí vẫn FAIL, 1 tiêu chí xấu đi) → quay lại NHÁNH A (fix fitness
+    mismatch Calmar-vs-WFE, bỏ HPO argmax) — đây là việc audit 07-30 sáng đã chỉ ra là bottleneck gốc,
+    tách biệt khỏi exit-formula; hoặc
+(c) Điều tra riêng window 15 (regime gì khiến 1149 trades trong 1 window, gấp nhiều lần window khác)
+    trước khi quyết — có thể là artifact dataset/regime đặc biệt (2025Q4-2026Q1), không phải do exit
+    mới hoạt động tốt hơn.
+
+---
+
+# PHẦN 5 — Confirm THẬT `TS_RATCHET_DECOUPLED=true` (2026-07-31) — **❌ FAIL, và ⚠️ hủy bỏ "ratchet1"**
+
+## ⚠️ Trước tiên: run fanout "ratchet1" trước đó (WfoWorker/JobStore) là **INVALID — bỏ, không dùng**
+
+Sau khi Uni chọn tiếp nhánh (a) và bật `TS_RATCHET_DECOUPLED=true` chạy fanout 16-window qua
+`WfoWorker`/`JobStore` như bình thường (tag `ratchet1`), kết quả PnL/wfe ra **byte-identical** với
+`exit003` (tức `false`) — nghi vấn cờ không hoạt động. Chẩn đoán theo loại trừ:
+
+1. Push code lên Kaggle đúng — verify bằng `kaggle kernels pull` + diff, không lệch.
+2. Jar đúng — verify bằng đọc bytecode `.class` trong jar (cả Oracle lẫn Kaggle), string
+   `TS_RATCHET_DECOUPLED` có mặt ở cả hai.
+3. **A/B cô lập bằng `VerifyOneWindow`** (không qua `WfoJobStore`, gọi thẳng `task.runJob()`) trên
+   cùng window 15: `true` → 1185 trades / oosPnl 11440.58 / wfe 5.7328; `false` → 1149 trades / oosPnl
+   11611.40 / wfe 3.7387 (số `false` này khớp hệt số fanout `ratchet1`/`exit003` cũ). **Cờ CÓ hoạt
+   động** khi không đi qua `WfoWorker`/`JobStore`.
+
+**Kết luận: bug nằm trong đường `WfoWorker`/`WfoJobStore`, khiến nó bỏ qua env `TS_RATCHET_DECOUPLED`
+(hoặc mọi override qua env tương tự) khi chạy multi-window fanout.** Root cause bên trong
+`WfoWorker`/`WfoJobStore` **CHƯA tìm ra** (đã soát `reset()`/`putForce()`, chưa thấy cache bug rõ ràng)
+— đây là rủi ro hạ tầng còn mở, cần ghi vào `INFRA_FACTS.md`: **mọi confirm fanout dựa vào env-flag
+qua `WfoWorker` từ nay về trước có thể đã SAI**, không riêng gì `TS_RATCHET_DECOUPLED`. Số liệu
+"ratchet1" (fanout) bị coi là **INVALID, không dùng để kết luận**.
+
+## Phương pháp thay thế: bypass `WfoWorker`, dùng `VerifyOneWindow` trực tiếp (không qua JobStore)
+
+Vì `VerifyOneWindow` đã chứng minh phản ánh đúng cờ, chạy lại đủ N=30×16-window bằng đường này, chia
+tải:
+
+- **Oracle** (ticker Aerospike local, `AEROSPIKE_HOST_226=127.0.0.1`) — 10 window nhẹ: 0,1,2,4,5,6,7,
+  11,13,14. Launch trực tiếp qua `nohup ... & disown` (KHÔNG dùng `bg_run` — xem ghi chú bug bên
+  dưới), song song 3 tiến trình/lần (`xargs -P3`, máy 4 core, `-Xmx4g`/process).
+- **Kaggle** — 6 window còn lại qua 4 kernel riêng, mỗi kernel cũng gọi `VerifyOneWindow` trực tiếp:
+  `kv-w15`(w15), `kv-w9-12`(w9,w12), `kv-w10-3`(w10,w3), `kv-w8`(w8).
+
+⚠️ **Bug phụ phát hiện trong lúc làm — CE `bg_run` báo SUCCESS giả cho job Oracle đầu tiên**: launch
+qua `bg_run` trả về `exit_code=0` gần như tức thời kèm log rỗng (0 byte) — trong khi chạy đúng lệnh đó
+thủ công qua SSH trực tiếp thì Java chạy thật, ra log đầy đủ, tốc độ khớp Kaggle (~15-20 phút/window).
+Vậy `bg_run` (không phải Java/Aerospike/dữ liệu) có lỗi launch/detect với script này — nguyên nhân sâu
+CHƯA tìm, workaround là chạy `nohup` trực tiếp thay `bg_run`. Cần thêm vào danh sách lỗi hạ tầng đã
+biết của CE.
+
+## Kết quả 16/16 window (`TS_RATCHET_DECOUPLED=true`, N=30, seed_base=42)
+
+| win | label | nguồn | wfe | oosPnl | oosDdPct | oosTrades | note |
+|---:|---|---|---:|---:|---:|---:|---|
+| 0 | 20220101..20220401 | Oracle | 0 | 0 | 0% | 0 | ZERO_TRADES |
+| 1 | 20220401..20220701 | Oracle | 0.061 | 296.3 | 0.28% | 4 | TOO_FEW_TRADES |
+| 2 | 20220701..20221001 | Oracle | 0 | 0 | 0% | 0 | ZERO_TRADES |
+| 3 | 20221001..20230101 | Kaggle | 0.226 | 638.5 | 0.64% | 64 | SUCCESS |
+| 4 | 20230101..20230401 | Oracle | 0 | 0 | 0% | 0 | ZERO_TRADES |
+| 5 | 20230401..20230701 | Oracle | 0.119 | 176.1 | 1.74% | 8 | TOO_FEW_TRADES |
+| 6 | 20230701..20231001 | Oracle | 0.956 | 738.3 | 0.80% | 41 | TOO_MUCH_CAPITAL_LOCK |
+| 7 | 20231001..20240101 | Oracle | 0.137 | 160.3 | 0.15% | 8 | TOO_FEW_TRADES |
+| 8 | 20240101..20240401 | Kaggle | 0.333 | 644.0 | 1.63% | 36 | SUCCESS |
+| 9 | 20240401..20240701 | Kaggle | 0.242 | 424.6 | 1.87% | 89 | TOO_MUCH_CAPITAL_LOCK |
+| 10 | 20240701..20241001 | Kaggle | 0.412 | 967.0 | 2.96% | 106 | SUCCESS |
+| 11 | 20241001..20250101 | Oracle | -0.047 | -102.2 | 1.30% | 7 | TOO_FEW_TRADES |
+| 12 | 20250101..20250401 | Kaggle | 0.442 | 716.7 | 3.78% | 82 | SUCCESS |
+| 13 | 20250401..20250701 | Oracle | 0 | 0 | 0% | 0 | ZERO_TRADES |
+| 14 | 20250701..20251001 | Oracle | 0.048 | 119.5 | 0.14% | 27 | TOO_FEW_TRADES |
+| 15 | 20251001..20260101 | Kaggle | **5.737** | **11 422.9** | **34.34%** | 1185 | SUCCESS |
+
+`note` tổng hợp: SUCCESS=5 (w3,8,10,12,15), TOO_FEW_TRADES=5 (w1,5,7,11,14), ZERO_TRADES=4
+(w0,2,4,13), TOO_MUCH_CAPITAL_LOCK=2 (w6,w9).
+
+## VERDICT: ❌ FAIL (rõ ràng hơn cả verdict M gốc và exit003)
+
+| tiêu chí (pre-registered) | ngưỡng PASS | verdict M gốc | exit003 (false) | **ratchet_true** |
+|---|---|---|---|---|
+| WFE trung vị | ≥ 0.50 | 0.307 (FAIL) | 0.442 (FAIL) | **0.128 (FAIL, TỆ HƠN CẢ HAI)** |
+| % cửa sổ OOS dương | ≥ 70% | 43.8% (FAIL) | 37.5% (FAIL) | **68.75% (11/16) (FAIL, sát ngưỡng, tốt hơn cả hai)** |
+| maxDD OOS xấu nhất | ≤ 50% | 32.4% (PASS) | 34.3% (PASS) | **34.34% (PASS, ~bằng exit003)** |
+
+`TS_RATCHET_DECOUPLED=true` **không cải thiện WFE** — median tụt mạnh xuống 0.128 (thấp hơn cả
+baseline gốc 0.307), dù %OOS-dương nhích lên gần ngưỡng 70%. WFE trung vị bị kéo xuống vì nhiều
+window OOS chỉ đạt vài trade (wfe gần 0) trong khi window 15 kéo giá trị trung bình lên rất cao —
+median không "thấy" được điều đó, phản ánh đúng là phần lớn window KHÔNG cải thiện thực chất.
+
+## ⚠️ Concentration window 15 — TỆ HƠN exit003, không phải cải thiện
+
+Tổng OOS PnL 16 window ≈ **16 202**. Window 15 một mình đóng góp **11 423 (70.5% tổng PnL)** — CAO
+HƠN mức 64.8% đã cảnh báo ở PHẦN 4 cho exit003 — và vẫn là window có maxDD-OOS **tệ nhất tuyệt đối**
+(34.3%, gấp ~9× window kế tiếp là w12 với 3.78%). Bật `TS_RATCHET_DECOUPLED=true` **không xóa vấn đề
+concentration đã nêu ở PHẦN 4 — nó làm nặng thêm**. Đây tiếp tục là dấu hiệu overfit-1-window
+(2025Q4-2026Q1), không phải cơ chế ratchet-decouple hoạt động tốt hơn nói chung.
+
+## Điều tra window 15 (2026-07-31) — **KẾT LUẬN: black-swan 1-ngày, KHÔNG phải regime hay edge**
+
+Uni yêu cầu điều tra riêng trước khi kết luận (thay vì đoán). Phương pháp: dùng lại
+`entry_universe_e0.csv` (64 522 dòng, raw admission với gate **CỐ ĐỊNH** 0.010 — độc lập hoàn toàn với
+genome HPO chọn cho từng window) để tách bạch "dữ liệu/regime có thật nhiều tín hiệu hơn" khỏi
+"HPO chọn genome quá lỏng cho riêng window 15".
+
+**Bước 1 — raw admission theo window (gate cố định 0.010, không liên quan genome):**
+
+| win | rows | symbols | | win | rows | symbols |
+|---:|---:|---:|---|---:|---:|---:|
+| 0 | 1 732 | 77 | | 8 | 1 601 | 109 |
+| 1 | 9 267 | 120 | | 9 | 1 300 | 77 |
+| 2 | 74 | 28 | | 10 | 3 577 | 108 |
+| 3 | 4 538 | 95 | | 11 | 899 | 82 |
+| 4 | 18 | 13 | | 12 | 2 991 | 122 |
+| 5 | 297 | 45 | | 13 | 163 | 41 |
+| 6 | 281 | 34 | | 14 | 162 | 26 |
+| 7 | 284 | 47 | | **15** | **8 061** | **192** |
+
+Window 15 đứng thứ 2 về raw admission (sau w1: 9 267) nhưng **dẫn đầu tuyệt đối về số symbol** (192,
+kế tiếp là w12 với 122) — bất thường. Nhưng: w1 cũng raw-admission cao tương đương (9 267) mà OOS thực
+tế chỉ ra 4 trade / PnL 296 (bảng PHẦN 5 trên) — nghĩa là **raw admission cao không tự nó giải thích
+được** vì sao riêng w15 nổ ra 1185 trade / PnL 11 423. Phải đào tiếp bên trong w15.
+
+**Bước 2 — bóc theo tháng trong quý w15 (Oct 2025 → Jan 2026):**
+
+| tháng | rows |
+|---|---:|
+| 2025-10 | **7 604** (94.3% của cả window) |
+| 2025-11 | 453 |
+| 2025-12 | 4 |
+
+**Bước 3 — bóc theo ngày trong tháng 10/2025:** `2025-10-11` một ngày duy nhất chiếm **6 639/7 604
+(87.3% của cả tháng, 82.4% của cả window 15)**, trải trên **149 symbol khác nhau CÙNG NGÀY** — không
+phải một vài coin lẻ tẻ mà gần như toàn thị trường cùng lúc.
+
+**Đối chiếu sự kiện thật:** ngày 10-11/10/2025 là sự kiện **crash/thanh lý hàng loạt lớn nhất lịch sử
+crypto derivatives** — tổng thanh lý toàn thị trường **>19 tỷ USD** (~1.6 triệu tài khoản), BTC giảm
+~14.5% trong vài giờ, ETH ~12-16%, nhiều altcoin sập **50-90%**, khởi phát từ tin thuế quan 100% của Mỹ
+với Trung Quốc và bị khuếch đại bởi lỗi định giá tài sản thế chấp trên Binance + đòn bẩy quá mức. Đây
+KHÔNG phải regime bình thường hay lỗi dữ liệu — là một sự kiện thị trường có thật, cực đoan, một-lần
+(nguồn: CryptoRank, CoinGecko, FTI Consulting — xem link cuối báo cáo).
+
+**Kết luận:** đóng góp 70.5% tổng PnL của window 15 KHÔNG đến từ "regime altseason kéo dài" hay từ cơ
+chế `TS_RATCHET_DECOUPLED` hoạt động tốt hơn — nó đến gần như hoàn toàn từ việc chiến lược **vô tình
+bắt được biến động cực đoan trong ĐÚNG MỘT NGÀY** (10/10-11/10/2025), một sự kiện black-swan không lặp
+lại theo lịch sử ổn định. Đây cũng giải thích tại sao window 15 vừa là window PnL cao nhất **vừa** là
+window maxDD tệ nhất (34.3%) — biến động cực đoan tạo cả cơ hội lẫn rủi ro đuôi cùng lúc, đúng loại
+"đuôi lớn (maxDD) mà ăn thì ít" Uni nêu ra đầu phiên, chỉ có điều ở đây "ăn" lại rất nhiều vì mô phỏng
+tình cờ đứng đúng phía có lợi trong 1 ngày.
+
+**Thêm 1 bằng chứng phụ đã có sẵn từ A/B cô lập trước đó:** `TS_RATCHET_DECOUPLED=true` cho w15 ra
+oosPnl 11 423, còn `false` ra 11 611 — **chênh chưa tới 1.6%**. Nghĩa là dù bật hay tắt cờ đang test,
+kết quả window 15 gần như không đổi. ⇒ Ngay cả nếu chấp nhận đóng góp của w15, nó **không phải nhờ**
+cơ chế ratchet-decouple — cờ này không có tác động đáng kể tới đúng window đang chiếm áp đảo PnL.
+
+⇒ **Verdict FAIL ở PHẦN 5 giữ nguyên, và độ tin cậy của nó còn THẤP HƠN con số cho thấy**: loại bỏ
+window 15 (vì lý do black-swan 1-ngày, không phải edge lặp lại được), 15 window còn lại gần như chắc
+chắn cho WFE trung vị thấp và %OOS-dương cũng chỉ quanh mức đã tính (median tính trên 15 window không
+đổi nhiều vì thứ hạng window 15 vẫn ở cuối dù loại bỏ, do nó vốn đã là outlier).
+
+## Việc còn treo (chưa làm, ghi lại để không quên)
+
+- Root cause bug `WfoWorker`/`WfoJobStore` bỏ qua env override — **chưa tìm ra**, cần ghi vào
+  `INFRA_FACTS.md` như rủi ro hạ tầng đang mở (ảnh hưởng mọi confirm dùng cờ qua env trong `WfoWorker`
+  fanout, không riêng flag này).
+- Root cause bug `bg_run` báo SUCCESS giả — chưa tìm ra, đã workaround bằng `nohup` trực tiếp.
+- Sửa `gap = min(peak×giveback, TS_MAX_GAP)` → `max(peak×giveback, minGap)` (PHẦN 2/PHẦN 4) — vẫn
+  CHƯA làm.
+- ✅ Điều tra window 15 — ĐÃ XONG (mục trên): black-swan 1-ngày (10/10-11/10/2025), không phải regime
+  hay genome edge.
+- Đề xuất phương pháp mới rút ra từ vụ này: **pre-register một ngưỡng "max %PnL từ 1 window" (vd
+  <30-40%) cho mọi confirm 16-window tương lai** — đây là lần thứ 2 liên tiếp (PHẦN 4 rồi PHẦN 5) một
+  window chiếm >60% PnL kéo verdict lên giả tạo; nên chặn tự động thay vì phải đào tay mỗi lần.
+
+## Quyết định thuộc Uni
+
+(a) `TS_RATCHET_DECOUPLED=true` **KHÔNG đạt**, và window 15 đã xác nhận là black-swan không lặp lại
+    được — dừng thử biến này, quay lại sửa `min→max` giveback (mục còn lại của nhánh exit) hoặc chuyển
+    hẳn sang NHÁNH A (fix harness); hoặc
+(b) Thêm ngưỡng pre-register "max %PnL/1-window" vào quy trình confirm, rồi chạy lại các thử nghiệm
+    exit trước đó (bao gồm cả verdict M gốc và exit003) qua lăng kính này để xem chúng có cùng vấn đề
+    không; hoặc
+(c) Ưu tiên vá bug `WfoWorker`/`JobStore` trước (ảnh hưởng độ tin cậy của MỌI confirm fanout tương lai
+    dùng cờ qua env), rồi mới chạy tiếp các thử nghiệm exit khác.
+
+---
+
+**Nguồn tham khảo sự kiện 10/10-11/10/2025:**
+- [The October 11, 2025 Crypto Market Crash: Situation Overview — CryptoRank.io](https://cryptorank.io/insights/analytics/crypto-market-crash-2025-10-11-overview)
+- [What Is October 10th? Crypto's 10/10 Mass Market Liquidation Event — CoinGecko](https://www.coingecko.com/learn/october-10-crypto-crash-explained)
+- [Crypto Crash Oct 2025: Leverage Meets Liquidity — FTI Consulting](https://www.fticonsulting.com/insights/articles/crypto-crash-october-2025-leverage-met-liquidity)

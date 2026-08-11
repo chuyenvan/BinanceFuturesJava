@@ -36,7 +36,12 @@ public class CopyAuxSets242To226 {
     private static final boolean FORCE_OVERWRITE = false;  // true = chép đè funding_data đã có (làm tươi)
     private static final int VERIFY_SAMPLES = 50;
 
-    private static final String NS = Configs.AEROSPIKE_NAMESPACE;
+    private static final String NS = Configs.AEROSPIKE_NAMESPACE;          // Oracle/226 (đích)
+    // [TASK-251, 2026-08-05] 242 (nguồn, đọc-only) dùng namespace THẬT "ticker" (đo trực tiếp),
+    // KHÁC NS ở trên (Oracle="test"). Trước đây dùng CHUNG NS cho cả đọc-242 và đọc/ghi-Oracle
+    // => mọi src.get()/src.scanAll() luôn fail AerospikeException$InvalidNamespace. Chỉ dùng
+    // NS_242 khi gọi trên client `src`; dst (Oracle) vẫn dùng NS như cũ, KHÔNG đổi.
+    private static final String NS_242 = Configs.AEROSPIKE_NAMESPACE_242;
     private static final String SET_FUNDINGFEE = DataManagerAerospikeFloatSim.AEROSPIKE_SET_NAME_FUNDINGFEE; // funding_data
     private static final String SET_MAPPER = DataManagerAerospikeFloatSim.AEROSPIKE_SET_NAME_MAPPER;         // symbol_mapper
     private static final String MAPPER_KEY = DataManagerAerospikeFloatSim.MAPPER_KEY_GLOBAL;                 // global_id_map
@@ -75,7 +80,7 @@ public class CopyAuxSets242To226 {
     /** symbol_mapper: 1 record (key cố định global_id_map) — đọc thẳng, ghi đè 226 lấy bản mới nhất. */
     private void copyMapper(AerospikeClient src, AerospikeClient dst) {
         try {
-            Key k = new Key(NS, SET_MAPPER, MAPPER_KEY);
+            Key k = new Key(NS_242, SET_MAPPER, MAPPER_KEY);
             Record rec = src.get(null, k);
             if (rec == null || rec.bins == null || rec.bins.isEmpty()) {
                 LOG.error("⛔ symbol_mapper trên 242 RỖNG/không có — DỪNG (mọi job cần mapper). Kiểm tra 242.");
@@ -94,7 +99,7 @@ public class CopyAuxSets242To226 {
         sp.concurrentNodes = true;
         sp.includeBinData = true;
         try {
-            src.scanAll(sp, NS, SET_FUNDINGFEE, (key, rec) -> {
+            src.scanAll(sp, NS_242, SET_FUNDINGFEE, (key, rec) -> {
                 if (key.userKey == null) { noKey.incrementAndGet(); return; }  // không có userKey => không copy được
                 String symbol = key.userKey.toString();
                 Key k226 = new Key(NS, SET_FUNDINGFEE, symbol);
@@ -122,7 +127,7 @@ public class CopyAuxSets242To226 {
     private void verify(AerospikeClient src, AerospikeClient dst) {
         // mapper
         try {
-            Record a = src.get(null, new Key(NS, SET_MAPPER, MAPPER_KEY));
+            Record a = src.get(null, new Key(NS_242, SET_MAPPER, MAPPER_KEY));
             Record b = dst.get(null, new Key(NS, SET_MAPPER, MAPPER_KEY));
             LOG.info("🔎 VERIFY mapper: 242 size={} | 226 size={} | {}",
                     mapSizeOf(a), mapSizeOf(b),
@@ -135,9 +140,10 @@ public class CopyAuxSets242To226 {
         List<String> keys = new ArrayList<>(sampleSymbols);
         int ok = 0, mismatch = 0, missing226 = 0;
         for (String sym : keys) {
-            Key k = new Key(NS, SET_FUNDINGFEE, sym);
-            Record a = src.get(null, k);
-            Record b = dst.get(null, k);
+            Key k242 = new Key(NS_242, SET_FUNDINGFEE, sym);
+            Key kOracle = new Key(NS, SET_FUNDINGFEE, sym);
+            Record a = src.get(null, k242);
+            Record b = dst.get(null, kOracle);
             byte[] ba = (a != null) ? (byte[]) a.getValue("f_data") : null;
             byte[] bb = (b != null) ? (byte[]) b.getValue("f_data") : null;
             if (bb == null && a != null) { missing226++; continue; }

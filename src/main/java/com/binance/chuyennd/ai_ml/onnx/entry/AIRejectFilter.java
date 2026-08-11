@@ -7,14 +7,16 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Lọc tín hiệu entry dựa trên AI prediction.
- * Mode (Configs.FILTER_MODE):
- *   A   = full (RISK + MOM15) — baseline live
- *   B   = bỏ RISK (backward-compat ablation cũ)
- *   C   = giữ RISK, MOM24 đã bỏ (backward-compat, tương đương A)
- *   D   = bỏ RISK (backward-compat ablation cũ)
- *   E   = tắt MOM15, giữ RISK — đo riêng tác dụng gate 15m
- *   F   = chỉ MOM15, bỏ RISK — gate 15m standalone
- *   OFF = tắt hết filter — sàn tuyệt đối
+ *
+ * <p>TASK (2026-08-08): đã bỏ hẳn nhánh RISK/DD4H dựa trên {@code predRisk4H} — cột này không
+ * còn model nào đứng sau (chỉ là carry-forward từ gate cũ, không phải dự đoán mới), giữ lại làm
+ * lá chắn live là rủi ro giả. Filter bây giờ CHỈ còn gate MOM15. {@code Configs.FILTER_MODE} và
+ * {@code Configs.HARD_RISK_LIMIT_4H} vẫn còn tồn tại (dùng bởi HPO/genome ở nơi khác, xoá sẽ lệch
+ * index gene) nhưng KHÔNG còn ảnh hưởng quyết định PASS/REJECT ở đây nữa.
+ *
+ * Mode (Configs.FILTER_MODE) — chỉ còn tác dụng lên MOM15:
+ *   E, OFF = tắt MOM15 (= tắt hết filter, vì RISK đã bỏ)
+ *   mọi mode khác (A/B/C/D/F...) = bật MOM15 (RISK không còn phân biệt được các mode này nữa)
  */
 public class AIRejectFilter {
     public enum FilterDecision {PASS, REJECT}
@@ -33,19 +35,15 @@ public class AIRejectFilter {
     public static final AtomicInteger mom15RejectCount = new AtomicInteger(0);
     /** Tách nhánh: REJECT do early-hard-gate (pred15M<MIN & symbolPred>RATE_MAX). */
     public static final AtomicInteger earlyHardGateReject = new AtomicInteger(0);
-    /** Tách nhánh: REJECT do risk 4H (risk4H<=thresRisk). */
-    public static final AtomicInteger riskReject = new AtomicInteger(0);
 
     /** Reset counter trước mỗi ablation run. */
     public static void resetCounters() {
         mom15RejectCount.set(0);
         earlyHardGateReject.set(0);
-        riskReject.set(0);
     }
 
     public FilterResult checkSignal(AiPredictionData prediction) {
-        return evaluate(prediction.predReturn15M, prediction.predRisk4H,
-                Configs.MIN_MOMENTUM_15M, Configs.HARD_RISK_LIMIT_4H);
+        return evaluate(prediction.predReturn15M, Configs.MIN_MOMENTUM_15M);
     }
 
     // ==============================================================
@@ -76,46 +74,33 @@ public class AIRejectFilter {
             scaleFactor = Math.max(Configs.AI_DYNAMIC_MIN, Math.min(scaleFactor, Configs.AI_DYNAMIC_MAX));
         }
         float dynamic_15M = Configs.MIN_MOMENTUM_15M * scaleFactor;
-        float dynamic_Risk4H = Configs.HARD_RISK_LIMIT_4H / scaleFactor;
-        return evaluate(prediction.predReturn15M, prediction.predRisk4H, dynamic_15M, dynamic_Risk4H);
+        return evaluate(prediction.predReturn15M, dynamic_15M);
     }
 
+    /** Giữ signature cũ để không vỡ caller (BackTestEngineCombined/MarketThresholds/BenchmarkSpeedTest) —
+     *  {@code risk} chỉ còn ghi vào Configs.HARD_RISK_LIMIT_4H cho log/HPO đọc, KHÔNG còn dùng để lọc. */
     public void setConfig(float risk, float min15m) {
         Configs.HARD_RISK_LIMIT_4H = risk;
         Configs.MIN_MOMENTUM_15M = min15m;
     }
 
     /**
-     * LOGIC ĐÁNH GIÁ LÕI — 2 nhánh: RISK (DD4H) + MOM15. MOM24 đã bỏ hẳn khỏi hệ.
-     * Mode A/C: checkRisk=true checkMom15=true.
-     * Mode B/D: checkRisk=false (backward-compat). Mode E: checkMom15=false.
-     * Mode F: chỉ MOM15 (checkRisk=false). Mode OFF: tắt hết.
+     * LOGIC ĐÁNH GIÁ LÕI — chỉ còn nhánh MOM15. Nhánh RISK (DD4H/predRisk4H) đã bỏ hẳn 2026-08-08:
+     * predRisk4H không còn model đứng sau (carry-forward từ gate cũ), dùng làm lá chắn live là rủi ro giả.
      */
-    private FilterResult evaluate(float pred15M, float risk4H, float thres15M, float thresRisk) {
-        String mode = Configs.FILTER_MODE;
-        boolean checkRisk  = resolveCheckRisk(mode);
-        boolean checkMom15 = resolveCheckMom15(mode);
+    private FilterResult evaluate(float pred15M, float thres15M) {
+        boolean checkMom15 = resolveCheckMom15(Configs.FILTER_MODE);
 
-        if (checkRisk && risk4H <= thresRisk) {
-            riskReject.incrementAndGet();
-            return new FilterResult(FilterDecision.REJECT,
-                    String.format("DANGER: MaxDD 4H %.2f%% quá cao (Limit %.2f%%)", risk4H * 100, thresRisk * 100));
-        }
         if (checkMom15 && pred15M < thres15M) {
             mom15RejectCount.incrementAndGet();
             return new FilterResult(FilterDecision.REJECT,
                     String.format("BAD MOMENTUM: 15M chưa nảy mạnh (%.2f%% < %.2f%%)", pred15M * 100, thres15M * 100));
         }
         return new FilterResult(FilterDecision.PASS,
-                String.format("PERFECT: 15M(%.2f%%) | DD4H(%.2f%%)", pred15M * 100, risk4H * 100));
+                String.format("PERFECT: 15M(%.2f%%)", pred15M * 100));
     }
 
-    /** RISK bật cho mode A, C; tắt cho B, D, F, OFF. E: giữ RISK (tắt MOM15). */
-    static boolean resolveCheckRisk(String mode) {
-        return !("B".equals(mode) || "D".equals(mode) || "F".equals(mode) || "OFF".equals(mode));
-    }
-
-    /** MOM15 tắt cho mode E, OFF; bật cho tất cả còn lại (kể cả F = chỉ MOM15). */
+    /** MOM15 tắt cho mode E, OFF; bật cho tất cả còn lại (kể cả F). RISK đã bỏ nên không còn resolveCheckRisk. */
     static boolean resolveCheckMom15(String mode) {
         return !("E".equals(mode) || "OFF".equals(mode));
     }

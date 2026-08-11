@@ -9,7 +9,7 @@ import java.util.Map;
 public class AerospikeCheckData {
     public static void main(String[] args) {
         Map<String, AerospikeClient> clients = new HashMap<>();
-        clients.put("226", new AerospikeClient("103.157.218.226", 3222));
+        clients.put("oracle", new AerospikeClient("161.118.212.3", 3222));
 //        clients.put("242", new AerospikeClient("103.157.218.242", 3222));
 
 

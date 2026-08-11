@@ -12,6 +12,7 @@
 - [rules/security](rules/security.md) — secret/key live đã lộ → rotate, không echo.
 - [KAGGLE_RULES](KAGGLE_RULES.md) — bắt buộc trước mọi Kaggle job: slot=5, 12h-kill, System.exit, ổ-C, network.
 - [db/](db/index.md) — data nào ở đâu, ghi/đọc/chạy đâu (242 source · 226 compute · redis).
+- [**REDESIGN_INFRA_20260804**](REDESIGN_INFRA_20260804.md) — 🔴 **TOPOLOGY MỚI (chốt 2026-08-04)**: retire 226 · Oracle hub public 3222 · Kaggle file-fleet · 242 SoT. THẮNG `SESSION_START §1`+`db/index` khi mâu thuẫn.
 - [**SESSION_START**](SESSION_START.md) — 🔴 **ĐỌC ĐẦU TIÊN mỗi session mới**: mục tiêu, topology, trạng thái 4 tầng dữ liệu, việc kế tiếp, quyết định đã chốt. (2026-07-07)
 - [DATA_STATE](DATA_STATE.md) — **TRẠNG THÁI dữ liệu THẬT (đo)**: 4 tầng (ticker file/aerospike, lifecycle, dataset), 2 đường đọc ticker, survivorship 38 coin. Nguồn sự thật "dữ liệu đủ chưa, ở đâu". (rà 2026-07-07)
 - [**DATA_VALIDATION_FRAMEWORK**](DATA_VALIDATION_FRAMEWORK.md) — 🔴 **ĐỌC TRƯỚC MỌI HPO/WFO**: Preflight Gate chặn lỗi im lặng (19 loại, 6 nhóm), quy trình fail-fast, + danh mục 10 lỗi đã xảy ra làm đảo verdict (gate coverage 2021-2022, leakage, MAE, ghost USDC...). (2026-07-11)
@@ -25,6 +26,7 @@
 - [REBUILD_ROADMAP](REBUILD_ROADMAP.md) — **con của ROADMAP (bước-1 model)**: rebuild data + 2 model (gate 0010 / funding 0011).
 - [PIPELINE](PIPELINE.md) — vận hành cadence 3 tháng (2 pha, 9 bước, 2 cổng gác).
 - [PIPELINE_PROVENANCE](PIPELINE_PROVENANCE.md) — **vết truy nguyên**: artifact nào từ code/data/model nào + registry + phát hiện leakage funding (in-sample) + quy ước version. (rà 2026-07-01)
+- [WFO_DATA_PIPELINE_MASTER](WFO_DATA_PIPELINE_MASTER.md) — **nguồn sự thật SỐNG** toàn trình dữ liệu WFO (ticker→market→OI→label→Tool1→selector→gate→export→validate), có version + env var + runbook + bug đã biết. Cập nhật mỗi khi đổi hành vi dữ liệu.
 - [FINDINGS](FINDINGS.md) — **NGUỒN SỰ THẬT**: mọi kết luận đã ĐO kèm số + lý do.
 
 ## Chiến lược (campaign 2026-07-10/11 — tìm cấu hình 20%/năm)

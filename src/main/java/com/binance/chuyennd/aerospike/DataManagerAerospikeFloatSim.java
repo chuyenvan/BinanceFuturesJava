@@ -74,6 +74,36 @@ public class DataManagerAerospikeFloatSim {
         writePolicy.sendKey = true; // Thêm dòng này
         writePolicy.expiration = 0;
         writePolicy.recordExistsAction = RecordExistsAction.UPDATE;
+
+        // [2026-08-08 TASK-251] BatchPolicy mac dinh cua Aerospike java client co
+        // totalTimeout = 1000ms cho CA batch. 1 chunk ticker = 720 key whole-market
+        // (~5MB nen) -> do THUC TE: tu VN mat ~900ms (sat nut), tu box Kaggle (RTT xa hon)
+        // VUOT 1000ms -> client dong socket giua chung -> server van dang ghi ->
+        // java.io.EOFException => AerospikeException$Connection "Error -8" => het 4 retry =>
+        // ExportFundingLabel chet ngay ngay dau. Doc localhost tren Oracle khong bao gio dung
+        // vao gioi han nay nen bug chi lo ra khi doc QUA INTERNET.
+        // Cho phep noi rong qua env, MAC DINH GIU NGUYEN hanh vi cu (1000ms) de khong dong
+        // toi duong live/latency-nhay-cam; chi job doc qua WAN (Kaggle) moi set env.
+        int batchTotalTimeout = envInt("AEROSPIKE_BATCH_TOTAL_TIMEOUT_MS", batchPolicy.totalTimeout);
+        int batchSocketTimeout = envInt("AEROSPIKE_BATCH_SOCKET_TIMEOUT_MS", batchPolicy.socketTimeout);
+        if (batchTotalTimeout != batchPolicy.totalTimeout || batchSocketTimeout != batchPolicy.socketTimeout) {
+            LOG.info("⚙️ [AEROSPIKE] batchPolicy timeout doi theo env: totalTimeout {}→{}ms, socketTimeout {}→{}ms",
+                    batchPolicy.totalTimeout, batchTotalTimeout, batchPolicy.socketTimeout, batchSocketTimeout);
+            batchPolicy.totalTimeout = batchTotalTimeout;
+            batchPolicy.socketTimeout = batchSocketTimeout;
+        }
+    }
+
+    /** Doc env int; thieu/rong/sai dinh dang -> tra {@code def} (KHONG throw, KHONG doi hanh vi mac dinh). */
+    private static int envInt(String name, int def) {
+        String v = System.getenv(name);
+        if (v == null || v.trim().isEmpty()) return def;
+        try {
+            return Integer.parseInt(v.trim());
+        } catch (NumberFormatException e) {
+            LOG.warn("⚠️ env {}='{}' khong phai so -> giu mac dinh {}", name, v, def);
+            return def;
+        }
     }
 
     public static AerospikeClient getClient242() {

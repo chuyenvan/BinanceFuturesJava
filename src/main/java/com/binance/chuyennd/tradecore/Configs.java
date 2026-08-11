@@ -624,6 +624,17 @@ public class Configs {
 
     public static final String AEROSPIKE_NAMESPACE = Configs.getString("AEROSPIKE_NAMESPACE");
 
+    // [TASK-251, 2026-08-05] Namespace THẬT trên cụm 242 là "ticker" (đo trực tiếp bằng
+    // client.info_all('namespaces'), KHÔNG phải "test" như AEROSPIKE_NAMESPACE ở trên — hằng số
+    // đó chỉ đúng cho Oracle-local). Trước đây CopyTicker242To226/CopyAuxSets242To226 dùng CHUNG
+    // AEROSPIKE_NAMESPACE cho cả đọc-242 và đọc/ghi-Oracle => đọc 242 luôn fail
+    // (AerospikeException$InvalidNamespace). Hằng số riêng này CHỈ dùng cho 2 tool copy đó khi
+    // đọc từ 242 — KHÔNG đổi AEROSPIKE_NAMESPACE ở trên (đang đúng cho Oracle, nhiều nơi khác
+    // đang dùng đúng). Nếu properties thiếu key này (config.properties cũ chưa cập nhật), giá trị
+    // sẽ là null — 2 tool copy sẽ fail rõ ràng ngay ở bước đọc (Key namespace null), KHÔNG âm thầm
+    // dùng nhầm "test". Deploy config.properties mới lên Oracle TRƯỚC khi chạy lại 2 tool này.
+    public static final String AEROSPIKE_NAMESPACE_242 = Configs.getString("AEROSPIKE_NAMESPACE_242");
+
     // =========================================================
     // 10. TIỆN ÍCH GETTER
     // =========================================================

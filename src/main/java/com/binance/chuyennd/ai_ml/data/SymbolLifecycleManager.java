@@ -4,10 +4,13 @@ import com.aerospike.client.AerospikeClient;
 import com.aerospike.client.AerospikeException;
 import com.aerospike.client.policy.ScanPolicy;
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
+import com.binance.chuyennd.ai_ml.hpo.kaggle.KaggleDataLoader;
 import com.binance.chuyennd.tradecore.Configs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Serializable;
+import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -27,7 +30,8 @@ public class SymbolLifecycleManager {
     public static final String SET_NAME = "symbol_lifecycle";
 
     /** Bản ghi vòng đời 1 coin. */
-    public static class Lifecycle {
+    public static class Lifecycle implements Serializable {
+        private static final long serialVersionUID = 1L;
         public final long firstSeen;
         public final long lastSeen;
         public final String status;
@@ -57,26 +61,48 @@ public class SymbolLifecycleManager {
         return DataManagerAerospikeFloatSim.getReadClient();
     }
 
-    /** Nạp toàn bộ set {@code symbol_lifecycle} vào cache (1 lần). Idempotent. */
+    /**
+     * Nạp toàn bộ vòng đời coin vào cache (1 lần). Idempotent.
+     * [2026-08-04] TASK-112c: nhánh theo {@code Configs.TICKER_SOURCE} (CÙNG 1 flag với ticker/market-data/
+     * symbol-mapper — KHÔNG thêm config riêng, tránh nhập nhằng như TICKER_SOURCE-qua-env đã từng gặp).
+     * file  -> doc snapshot "core_symbol_lifecycle" tu KaggleDataLoader (Kaggle, khong co Aerospike).
+     * aerospike (hoac gia tri khac/rong, mac dinh giu hanh vi cu) -> scan Aerospike nhu truoc.
+     */
     public synchronized void init() {
         if (isInitialized) return;
-        LOG.info("🔄 Nạp SymbolLifecycleManager từ Aerospike set '{}'...", SET_NAME);
-        try {
-            ScanPolicy policy = new ScanPolicy();
-            policy.concurrentNodes = true;
-            readClient().scanAll(policy, Configs.AEROSPIKE_NAMESPACE, SET_NAME, (key, rec) -> {
-                String sym = rec.getString("sym");
-                if (sym == null && key.userKey != null) sym = key.userKey.toString();
-                if (sym == null) return;
-                cache.put(sym, new Lifecycle(
-                        rec.getLong("first"), rec.getLong("last"),
-                        rec.getString("status"), rec.getLong("delist")));
-            }, "sym", "first", "last", "status", "delist");
-        } catch (AerospikeException e) {
-            LOG.warn("⚠️ scan set '{}' lỗi (set chưa dựng?): {}", SET_NAME, e.getMessage());
+        if ("file".equals(Configs.TICKER_SOURCE)) {
+            LOG.info("🔄 Nạp SymbolLifecycleManager từ file snapshot (TICKER_SOURCE=file)...");
+            Map<String, Lifecycle> loaded = KaggleDataLoader.loadSymbolLifecycle();
+            if (loaded != null) cache.putAll(loaded);
+            else LOG.warn("⚠️ Khong tim thay snapshot core_symbol_lifecycle - cache rong.");
+        } else {
+            LOG.info("🔄 Nạp SymbolLifecycleManager từ Aerospike set '{}'...", SET_NAME);
+            try {
+                ScanPolicy policy = new ScanPolicy();
+                policy.concurrentNodes = true;
+                readClient().scanAll(policy, Configs.AEROSPIKE_NAMESPACE, SET_NAME, (key, rec) -> {
+                    String sym = rec.getString("sym");
+                    if (sym == null && key.userKey != null) sym = key.userKey.toString();
+                    if (sym == null) return;
+                    cache.put(sym, new Lifecycle(
+                            rec.getLong("first"), rec.getLong("last"),
+                            rec.getString("status"), rec.getLong("delist")));
+                }, "sym", "first", "last", "status", "delist");
+            } catch (AerospikeException e) {
+                LOG.warn("⚠️ scan set '{}' lỗi (set chưa dựng?): {}", SET_NAME, e.getMessage());
+            }
         }
         isInitialized = true;
         LOG.info("✅ SymbolLifecycleManager nạp {} symbol.", cache.size());
+    }
+
+    /**
+     * [2026-08-04] Dump toan bo cache (goi init() truoc neu chua nap) - dung boi tool export
+     * snapshot len Kaggle (ExportKaggleBootstrapSnapshots). KHONG dung trong luong runtime binh thuong.
+     */
+    public Map<String, Lifecycle> getAllForExport() {
+        if (!isInitialized) init();
+        return Collections.unmodifiableMap(cache);
     }
 
     private Lifecycle get(String symbol) {

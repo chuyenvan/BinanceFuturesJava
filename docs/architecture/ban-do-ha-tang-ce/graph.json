@@ -1,0 +1,1706 @@
+{
+  "meta": {
+    "title": "Bản đồ toàn trình: Dữ liệu → Mô hình → CE",
+    "version": "1.0",
+    "rebuilt_on": "2026-08-04",
+    "purpose": "Sơ đồ máy-đọc + người-đọc: định vị dữ liệu trong code, luồng WFO end-to-end, và hạ tầng nút CE. Thay thế bản NotebookLM ban-do-ha-tang-ce.md.",
+    "source_of_truth": [
+      "docs/WFO_DATA_PIPELINE_MASTER.md",
+      "docs/DATA_STATE.md",
+      "docs/REDESIGN_INFRA_20260804.md",
+      "orchestrator/mcp_tools-v3.py",
+      "docs/rules/ce-buttons.md",
+      "docs/CORE.md",
+      "docs/DATA_VALIDATION_FRAMEWORK.md"
+    ],
+    "edge_kinds": [
+      "produces",
+      "reads",
+      "flows_to",
+      "runs_on",
+      "validates",
+      "consumes",
+      "overrides"
+    ],
+    "html_anchor_convention": "Mỗi node.id trùng anchor id trong file html tương ứng (vd dt-ticker-file -> block1-data.html#dt-ticker-file)."
+  },
+  "stats": {
+    "nodes": 107,
+    "edges": 88,
+    "by_type": {
+      "infra_node": 5,
+      "data_tier": 10,
+      "wfo_layer": 10,
+      "model": 2,
+      "leak": 7,
+      "ce_layer": 5,
+      "ce_node": 40,
+      "pipeline": 9,
+      "profile": 5,
+      "principle": 14
+    }
+  },
+  "nodes": [
+    {
+      "id": "node-242",
+      "type": "infra_node",
+      "block": 1,
+      "name": "Node 242 — Source of Truth",
+      "html": "block1-data.html#node-242",
+      "ip": "103.157.218.242",
+      "ports": {
+        "ssh": 2222,
+        "aerospike": 3222
+      },
+      "role": "SoT gốc mọi market data (live+lịch sử)",
+      "status": "off-limits",
+      "constraints": [
+        "Kaggle/dev không chạm",
+        "chỉ Oracle sync từ 242",
+        "replication-factor=1 (mất node=mất data)"
+      ],
+      "evidence": "docs/db/aerospike-242.md:11,16"
+    },
+    {
+      "id": "node-oracle",
+      "type": "infra_node",
+      "block": 1,
+      "name": "Oracle VPS — HUB",
+      "html": "block1-data.html#node-oracle",
+      "ip": "161.118.212.3",
+      "ports": {
+        "aerospike": 3222
+      },
+      "namespace": "test",
+      "spec": "4-core/24GB",
+      "role": "hub duy nhất: bridge 242->local, Aerospike public 3222, compute nặng, scheduler+dataset builder",
+      "constraints": [
+        "disk 89% ~17GB free",
+        "1 job nặng/lần",
+        "3222 public không auth -> disposable",
+        "tool ghi phải trỏ 127.0.0.1"
+      ],
+      "evidence": "docs/REDESIGN_INFRA_20260804.md:14,22,61"
+    },
+    {
+      "id": "node-kaggle",
+      "type": "infra_node",
+      "block": 1,
+      "name": "Kaggle Fleet",
+      "html": "block1-data.html#node-kaggle",
+      "account": "chuyendinh",
+      "role": "batch fleet file-mode",
+      "constraints": [
+        "5 kernel CPU",
+        "12h hard-kill",
+        "env không inject động - hardcode vào run_worker.py",
+        "<=2 kernel chạm Oracle:3222"
+      ],
+      "evidence": "docs/REDESIGN_INFRA_20260804.md:23,62"
+    },
+    {
+      "id": "node-226",
+      "type": "infra_node",
+      "block": 1,
+      "name": "Node 226 — RETIRE",
+      "html": "block1-data.html#node-226",
+      "ip": "103.157.218.226",
+      "namespace": "ticker (jobstore)",
+      "status": "đang khai tử (chốt 2026-08-04)",
+      "note": "config-key AEROSPIKE_HOST_226 giữ tên cũ nhưng trỏ Oracle; jobstore WFO vẫn ghi 226 tới khi migration xanh",
+      "evidence": "Configs.java:621-624 · REDESIGN_INFRA_20260804.md:11,24"
+    },
+    {
+      "id": "node-redis",
+      "type": "infra_node",
+      "block": 1,
+      "name": "Redis",
+      "html": "block1-data.html#topology",
+      "role": "order queue + messaging LIVE (không liên quan data pipeline)",
+      "status": "⛔ không kill",
+      "evidence": "docs/db/redis.md:6-8"
+    },
+    {
+      "id": "dt-ticker-file",
+      "type": "data_tier",
+      "block": 1,
+      "name": "Ticker FILE",
+      "html": "block1-data.html#dt-ticker-file",
+      "location": "kaggle_data_hpo/daily/ticker_YYYYMMDD.bin.gz (1886 file)",
+      "format": "gzip ObjectInputStream TreeMap<Long,Map<String,KlineObjectSimple>>",
+      "produced_by": "IngestTickerFileToAerospike (nạp)",
+      "read_by": "KaggleDataLoader.loadDailyTickersShort()",
+      "status": "đầy đủ",
+      "note": "2021-01-01..2026-03-01, 11GB, có 38 coin delist",
+      "evidence": "DATA_STATE.md:15"
+    },
+    {
+      "id": "dt-ticker-aero",
+      "type": "data_tier",
+      "block": 1,
+      "name": "Ticker Aerospike",
+      "html": "block1-data.html#dt-ticker-aero",
+      "location": "Oracle ns=test set kline_1m_opt",
+      "format": "key yyyyMMdd-HHmm GMT+7, bin data=Snappy(proto MinuteDataFinal)",
+      "produced_by": "IngestTickerFileToAerospike; live writeMinuteBatch(242)",
+      "read_by": "DataManagerAerospikeFloatSim.readDataFromAerospike*",
+      "status": "đầy đủ",
+      "note": "2.7M record, 698 symbol, đã clean ghost+đuôi-đơn",
+      "evidence": "DATA_STATE.md:16,80"
+    },
+    {
+      "id": "dt-lifecycle",
+      "type": "data_tier",
+      "block": 1,
+      "name": "symbol_lifecycle",
+      "html": "block1-data.html#dt-lifecycle",
+      "location": "Oracle ns=test set symbol_lifecycle",
+      "format": "bins sym,first,last,status,delist",
+      "produced_by": "SymbolLifecycleBuilder(Local)",
+      "read_by": "SymbolLifecycleManager.init()",
+      "status": "lệch số",
+      "note": "rebuild 698(636/62) vs bảng 661(589/72) - chưa chốt",
+      "evidence": "DATA_STATE.md:17,82"
+    },
+    {
+      "id": "dt-mapper",
+      "type": "data_tier",
+      "block": 1,
+      "name": "symbol_mapper",
+      "html": "block1-data.html#dt-mapper",
+      "location": "Oracle ns=test set symbol_mapper key global_id_map",
+      "format": "CDT Map<String,Long>",
+      "produced_by": "saveSymbolMapping(242)",
+      "read_by": "loadSymbolMapper()/loadSymbolMapperFile()",
+      "status": "ok",
+      "note": "781 sym, còn 38 ghost id-map vô hại",
+      "evidence": "DATA_STATE.md:78"
+    },
+    {
+      "id": "dt-market",
+      "type": "data_tier",
+      "block": 1,
+      "name": "market_data_object",
+      "html": "block1-data.html#dt-market",
+      "location": "Oracle ns=test set market_data_object",
+      "format": "key yyyyMMdd-HHmm, bin data=MarketDataObject.endCode()",
+      "produced_by": "ExportMarketData2File.saveMarketDataBatch",
+      "read_by": "scan getClientOracle()",
+      "status": "regen",
+      "note": "sau clean 07-07; LUNA rateDown15MAvg=-0.029 đúng",
+      "evidence": "DATA_STATE.md:18"
+    },
+    {
+      "id": "dt-oi",
+      "type": "data_tier",
+      "block": 1,
+      "name": "OI feature",
+      "html": "block1-data.html#dt-oi",
+      "location": "features_oi_percoin_v1/oi_percoin_20210101_to_20260624.bin.gz",
+      "format": "record 30 byte (ts:long,symId:short,5xfloat)",
+      "produced_by": "ExportFundingOiPerCoin (226 backfill vision)",
+      "read_by": "getMetricMap226/getMetricMapFrom",
+      "status": "dùng lại",
+      "note": "3.1GB, 138M rec, coin delist bao sập",
+      "evidence": "DATA_STATE.md:70"
+    },
+    {
+      "id": "dt-funding",
+      "type": "data_tier",
+      "block": 1,
+      "name": "funding_data",
+      "html": "block1-data.html#dt-funding",
+      "location": "Oracle ns=test set funding_data key=symbol bin f_data",
+      "format": "Snappy(JSON Map<Long,Float>)",
+      "produced_by": "HistoricalFundingCrawlerLocal; live writeFundingMap(242)",
+      "read_by": "getFundingMap/getAllFundingMap",
+      "status": "rỗng",
+      "note": "mất do reset Aerospike (07-08) -> crawl lại",
+      "evidence": "DATA_STATE.md:84"
+    },
+    {
+      "id": "dt-gate-ff",
+      "type": "data_tier",
+      "block": 1,
+      "name": "Gate feature ff_*.bin",
+      "html": "block1-data.html#dt-gate-ff",
+      "location": "Oracle claudedata/feat/",
+      "format": ".bin",
+      "produced_by": "ExportGateFeaturesGroupA/B/BCrowd",
+      "read_by": "(reader chưa xác nhận)",
+      "status": "thiếu",
+      "note": "chỉ ff_202401.bin 1 tháng -> export lại",
+      "evidence": "DATA_STATE.md:20"
+    },
+    {
+      "id": "dt-sel-pred",
+      "type": "data_tier",
+      "block": 1,
+      "name": "Funding feat + selector pred",
+      "html": "block1-data.html#dt-sel-pred",
+      "location": "Oracle set/bin",
+      "format": "-",
+      "produced_by": "GenerateSelectorPredictionsTool",
+      "read_by": "sim qua funding_pred_1m_v5",
+      "status": "chưa kiểm",
+      "note": "model selector v2 train 06-25 có sẵn",
+      "evidence": "DATA_STATE.md:21"
+    },
+    {
+      "id": "dt-wfo-ds",
+      "type": "data_tier",
+      "block": 1,
+      "name": "wfo_dataset .bin",
+      "html": "block1-data.html#dt-wfo-ds",
+      "location": "Oracle ~/claudedata/wfo_dataset",
+      "format": "market.bin/pred.bin/funding.bin/manifest.txt",
+      "produced_by": "ExportWfoDataset->WfoDataset.export()",
+      "read_by": "WfoDataset.load()->WfoWorker",
+      "status": "chờ export lại",
+      "note": "từ market mới + gate/selector pred + OI",
+      "evidence": "DATA_STATE.md:22"
+    },
+    {
+      "id": "l1",
+      "type": "wfo_layer",
+      "block": 2,
+      "name": "Ticker",
+      "html": "block2-wfo.html#l1",
+      "code": "(đọc-only)",
+      "output": "kline_1m_opt",
+      "input": "-",
+      "cadence": "-",
+      "leak_guard": "bất biến: pipeline không ghi set này",
+      "evidence": "MASTER:46"
+    },
+    {
+      "id": "l2",
+      "type": "wfo_layer",
+      "block": 2,
+      "name": "Market layer",
+      "html": "block2-wfo.html#l2",
+      "code": "DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike()",
+      "output": "market_data",
+      "input": "per-minute rateDownAvg/rateUpAvg/rateDown15MAvg",
+      "cadence": "per-minute (master clock)",
+      "leak_guard": "-",
+      "evidence": "MASTER:61"
+    },
+    {
+      "id": "l3",
+      "type": "wfo_layer",
+      "block": 2,
+      "name": "OI layer",
+      "html": "block2-wfo.html#l3",
+      "code": "ExportFundingOiPerCoin.java",
+      "output": "oi_percoin_*.bin.gz (30B)",
+      "input": "OI/LS/taker per-coin",
+      "cadence": "5 phút",
+      "leak_guard": "floorStale()<=t; oiZ expanding; OI_TOL_MS=2h",
+      "evidence": "ExportFundingOiPerCoin.java:62"
+    },
+    {
+      "id": "l4",
+      "type": "wfo_layer",
+      "block": 2,
+      "name": "Funding LABEL",
+      "html": "block2-wfo.html#l4",
+      "code": "ExportFundingLabel.java",
+      "output": "funding_label.csv + .meta.json",
+      "input": "kline_1m_opt + universe lifecycle",
+      "cadence": "LABEL_STEP_MIN (canonical 1)",
+      "leak_guard": "path chỉ dùng (t,t+H]; H_STEPS chia step; BLOCK nếu lifecycle rỗng",
+      "evidence": "ExportFundingLabel.java"
+    },
+    {
+      "id": "l5",
+      "type": "wfo_layer",
+      "block": 2,
+      "name": "Tool1 feature",
+      "html": "block2-wfo.html#l5",
+      "code": "ExportFeaturesForPythonTool.java",
+      "output": "features_*.bin.gz (170B, f0-f39)",
+      "input": "kline_1m_opt + universe",
+      "cadence": "FF_GRID_MIN (canonical 1, PHẢI khớp LABEL_STEP_MIN)",
+      "leak_guard": "FF_UNFILTERED=1 cho train; default filtered=không train",
+      "evidence": "MASTER cảnh báo #1"
+    },
+    {
+      "id": "l6",
+      "type": "wfo_layer",
+      "block": 2,
+      "name": "Selector (Kaggle)",
+      "html": "block2-wfo.html#l6",
+      "code": "ml/training/gen_funding_wf_predictions.py",
+      "output": "predict_wf_<cutoff>.bin (26B)",
+      "input": "Tool1 + OI + label + map",
+      "cadence": "SELECTOR_GRID_MIN=1; FIRST_CUTOFF=20230101",
+      "leak_guard": "expanding train<cutoff; purge=H_STEPS[72h]*GRID; assert tr.ts.max()<cutoff",
+      "evidence": "MASTER l6"
+    },
+    {
+      "id": "l7",
+      "type": "wfo_layer",
+      "block": 2,
+      "name": "Gate (độc lập)",
+      "html": "block2-wfo.html#l7",
+      "code": "WFOGateRunner.java + train_gate_fold.py",
+      "output": "ai_pred_market_gate_wfo",
+      "input": "market features V3FULL(33)",
+      "cadence": "per fold",
+      "leak_guard": "expanding train<cutoff; predRisk4H giữ từ set cũ (L4)",
+      "evidence": "MASTER l7"
+    },
+    {
+      "id": "l8",
+      "type": "wfo_layer",
+      "block": 2,
+      "name": "WFO dataset export",
+      "html": "block2-wfo.html#l8",
+      "code": "ExportWfoDataset.java -> WfoDataset.export()",
+      "output": "market.bin/pred.bin/funding.bin/manifest.txt",
+      "input": "market_data + gate set + predict_wf files",
+      "cadence": "forward-fill 15m->1m",
+      "leak_guard": "score=1-P(win); throw nếu overlap/span>100d/codeGitSha=unknown",
+      "evidence": "WfoDataset.java:226"
+    },
+    {
+      "id": "l9",
+      "type": "wfo_layer",
+      "block": 2,
+      "name": "Validate độc lập",
+      "html": "block2-wfo.html#l9",
+      "code": "scripts/model_quality/validate_canonical_wfo.py",
+      "output": "validation_report.txt (+ ký manifest)",
+      "input": "market/pred/funding.bin + manifest",
+      "cadence": "-",
+      "leak_guard": "6 nhóm boundary test; fail-closed; ký chỉ khi PASS & SIGN=1",
+      "evidence": "validate_canonical_wfo.py"
+    },
+    {
+      "id": "l10",
+      "type": "wfo_layer",
+      "block": 2,
+      "name": "Java HPO tiêu thụ",
+      "html": "block2-wfo.html#l10",
+      "code": "WfoDataset.load() -> WfoWorker/StrategyWfoTask/HPOFitnessCalculatorV4",
+      "output": "(RAM)",
+      "input": "3 bin đã ký",
+      "cadence": "-",
+      "leak_guard": "verify md5 trước load; loadAuto() 1 lần/JVM",
+      "evidence": "WfoWorker.java:80"
+    },
+    {
+      "id": "model-selector",
+      "type": "model",
+      "block": 2,
+      "name": "Selector (funding)",
+      "html": "block2-wfo.html#selector-gate",
+      "algo": "XGBClassifier",
+      "trains_on": "node-kaggle",
+      "label": "P(win)=P(maxFav>=6%)",
+      "output": "predict_wf_*.bin",
+      "evidence": "gen_funding_wf_predictions.py:249"
+    },
+    {
+      "id": "model-gate",
+      "type": "model",
+      "block": 2,
+      "name": "Gate",
+      "html": "block2-wfo.html#selector-gate",
+      "algo": "XGBRegressor->ONNX",
+      "trains_on": "node-oracle",
+      "label": "predReturn15M",
+      "output": "ai_pred_market_gate_wfo",
+      "evidence": "WFOGateRunner.java"
+    },
+    {
+      "id": "leak-L0",
+      "type": "leak",
+      "block": 2,
+      "name": "Ranh giới dataset theo loại WFO",
+      "html": "block2-wfo.html#leaks",
+      "status": "lưu ý",
+      "evidence": "WFO_LEAKS_TODO.md / PIPELINE_PROVENANCE.md"
+    },
+    {
+      "id": "leak-L1",
+      "type": "leak",
+      "block": 2,
+      "name": "Embargo quanh cutoff (label chạm OOS)",
+      "html": "block2-wfo.html#leaks",
+      "status": "chưa xử",
+      "evidence": "WFO_LEAKS_TODO.md / PIPELINE_PROVENANCE.md"
+    },
+    {
+      "id": "leak-L2",
+      "type": "leak",
+      "block": 2,
+      "name": "Feature order drift V3FULL 2 nơi",
+      "html": "block2-wfo.html#leaks",
+      "status": "rủi ro",
+      "evidence": "WFO_LEAKS_TODO.md / PIPELINE_PROVENANCE.md"
+    },
+    {
+      "id": "leak-L3",
+      "type": "leak",
+      "block": 2,
+      "name": "Snapshot lệch (md5 fail-fast)",
+      "html": "block2-wfo.html#leaks",
+      "status": "đã fix",
+      "evidence": "WFO_LEAKS_TODO.md / PIPELINE_PROVENANCE.md"
+    },
+    {
+      "id": "leak-L4",
+      "type": "leak",
+      "block": 2,
+      "name": "Provenance pred ghép predRisk4H",
+      "html": "block2-wfo.html#leaks",
+      "status": "chưa đủ",
+      "evidence": "WFO_LEAKS_TODO.md / PIPELINE_PROVENANCE.md"
+    },
+    {
+      "id": "leak-L5",
+      "type": "leak",
+      "block": 2,
+      "name": "featChecksum chỉ in chưa chặn",
+      "html": "block2-wfo.html#leaks",
+      "status": "chưa xử",
+      "evidence": "WFO_LEAKS_TODO.md / PIPELINE_PROVENANCE.md"
+    },
+    {
+      "id": "leak-funding-insample",
+      "type": "leak",
+      "block": 2,
+      "name": "Funding model in-sample -> baseline WFO cũ vô nghĩa",
+      "html": "block2-wfo.html#leaks",
+      "status": "đã chuyển canonical",
+      "evidence": "WFO_LEAKS_TODO.md / PIPELINE_PROVENANCE.md"
+    },
+    {
+      "id": "l1-infra",
+      "type": "ce_layer",
+      "block": 3,
+      "name": "L1 INFRA",
+      "html": "block3-ce.html#5-tang",
+      "desc": "Oracle/226/Aerospike/Kaggle"
+    },
+    {
+      "id": "l2-transport",
+      "type": "ce_layer",
+      "block": 3,
+      "name": "L2 TRANSPORT",
+      "html": "block3-ce.html#5-tang",
+      "desc": "bash/subprocess/remote_ssh/_kaggle"
+    },
+    {
+      "id": "l3-atom",
+      "type": "ce_layer",
+      "block": 3,
+      "name": "L3 NÚT NGUYÊN TỬ",
+      "html": "block3-ce.html#5-tang",
+      "desc": "cmd_* trả JSON qua emit()"
+    },
+    {
+      "id": "l4-profile",
+      "type": "ce_layer",
+      "block": 3,
+      "name": "L4 PROFILES",
+      "html": "block3-ce.html#5-tang",
+      "desc": "JAR/HOST/XMX cố định, verified"
+    },
+    {
+      "id": "l5-pipe",
+      "type": "ce_layer",
+      "block": 3,
+      "name": "L5 PIPELINES",
+      "html": "block3-ce.html#5-tang",
+      "desc": "JSON nghiệp vụ; merge profile<pipeline<CLI"
+    },
+    {
+      "id": "ce-bg_run",
+      "type": "ce_node",
+      "block": 3,
+      "name": "bg_run",
+      "html": "block3-ce.html#nut",
+      "signature": "bg_run <job_id> \"<cmd>\" [ram_gb=3.0]",
+      "function": "spawn job nền detached",
+      "runs_on": "oracle",
+      "group": "bg",
+      "evidence": "orchestrator/mcp_tools-v3.py"
+    },
+    {
+      "id": "ce-bg_status",
+      "type": "ce_node",
+      "block": 3,
+      "name": "bg_status",
+      "html": "block3-ce.html#nut",
+      "signature": "bg_status <job_id> [tail=50]",
+      "function": "state+log realtime",
+      "runs_on": "oracle",
+      "group": "bg",
+      "evidence": "orchestrator/mcp_tools-v3.py"
+    },
+    {
+      "id": "ce-bg_report",
+      "type": "ce_node",
+      "block": 3,
+      "name": "bg_report",
+      "html": "block3-ce.html#nut",
+      "signature": "bg_report <job_id>",
+      "function": "Result Contract gọn",
+      "runs_on": "oracle",
+      "group": "bg",
+      "evidence": "orchestrator/mcp_tools-v3.py"
+    },
+    {
+      "id": "ce-check_or_restart",
+      "type": "ce_node",
+      "block": 3,
+      "name": "check_or_restart",
+      "html": "block3-ce.html#nut",
+      "signature": "check_or_restart <job_id> \"<cmd>\" [ram_gb]",
+      "function": "chẩn 4 kịch bản->chạy lại",
+      "runs_on": "oracle",
+      "group": "bg",
+      "evidence": "orchestrator/mcp_tools-v3.py"
+    },
+    {
+      "id": "ce-bg_stop",
+      "type": "ce_node",
+      "block": 3,
+      "name": "bg_stop",
+      "html": "block3-ce.html#nut",
+      "signature": "bg_stop <job_id>",
+      "function": "kill an toàn",
+      "runs_on": "oracle",
+      "group": "bg",
+      "evidence": "orchestrator/mcp_tools-v3.py"
+    },
+    {
+      "id": "ce-bg_cleanup",
+      "type": "ce_node",
+      "block": 3,
+      "name": "bg_cleanup",
+      "html": "block3-ce.html#nut",
+      "signature": "bg_cleanup <job_id> [--all]",
+      "function": "xoá state/lock",
+      "runs_on": "oracle",
+      "group": "bg",
+      "evidence": "orchestrator/mcp_tools-v3.py"
+    },
+    {
+      "id": "ce-bg_list",
+      "type": "ce_node",
+      "block": 3,
+      "name": "bg_list",
+      "html": "block3-ce.html#nut",
+      "signature": "bg_list",
+      "function": "liệt kê job",
+      "runs_on": "oracle",
+      "group": "bg",
+      "evidence": "orchestrator/mcp_tools-v3.py"
+    },
+    {
+      "id": "ce-bg_selftest",
+      "type": "ce_node",
+      "block": 3,
+      "name": "bg_selftest",
+      "html": "block3-ce.html#nut",
+      "signature": "bg_selftest",
+      "function": "selftest chuỗi bg_*",
+      "runs_on": "oracle",
+      "group": "bg",
+      "evidence": "orchestrator/mcp_tools-v3.py"
+    },
+    {
+      "id": "ce-wfo_run",
+      "type": "ce_node",
+      "block": 3,
+      "name": "wfo_run",
+      "html": "block3-ce.html#nut",
+      "signature": "wfo_run <ds> [jar n seed workers tag]",
+      "function": "Oracle-only debug/verify-1-window",
+      "runs_on": "oracle",
+      "group": "wfo",
+      "evidence": "orchestrator/mcp_tools-v3.py"
+    },
+    {
+      "id": "ce-wfo_fanout",
+      "type": "ce_node",
+      "block": 3,
+      "name": "wfo_fanout",
+      "html": "block3-ce.html#nut",
+      "signature": "wfo_fanout <ds> [jar n seed oracle_workers kaggle_kernels tag extra_env]",
+      "function": "MẶC ĐỊNH full-16-window 6-node",
+      "runs_on": "oracle+kaggle",
+      "group": "wfo",
+      "evidence": "orchestrator/mcp_tools-v3.py"
+    },
+    {
+      "id": "ce-wfo_status",
+      "type": "ce_node",
+      "block": 3,
+      "name": "wfo_status",
+      "html": "block3-ce.html#nut",
+      "signature": "wfo_status",
+      "function": "tổng hợp trạng thái window",
+      "runs_on": "oracle",
+      "group": "wfo",
+      "evidence": "orchestrator/mcp_tools-v3.py"
+    },
+    {
+      "id": "ce-wfo_report",
+      "type": "ce_node",
+      "block": 3,
+      "name": "wfo_report",
+      "html": "block3-ce.html#nut",
+      "signature": "wfo_report [tag]",
+      "function": "VERDICT/%OOS/WFE/maxDD",
+      "runs_on": "oracle",
+      "group": "wfo",
+      "evidence": "orchestrator/mcp_tools-v3.py"
+    },
+    {
+      "id": "ce-wfo_stop",
+      "type": "ce_node",
+      "block": 3,
+      "name": "wfo_stop",
+      "html": "block3-ce.html#nut",
+      "signature": "wfo_stop",
+      "function": "pkill WfoWorker/VerifyOneWindow",
+      "runs_on": "oracle",
+      "group": "wfo",
+      "evidence": "orchestrator/mcp_tools-v3.py"
+    },
+    {
+      "id": "ce-wfo_verify",
+      "type": "ce_node",
+      "block": 3,
+      "name": "wfo_verify",
+      "html": "block3-ce.html#nut",
+      "signature": "wfo_verify <ds> <winIdx> [extra_env]",
+      "function": "VerifyOneWindow 1 window đồng bộ",
+      "runs_on": "oracle",
+      "group": "wfo",
+      "evidence": "orchestrator/mcp_tools-v3.py"
+    },
+    {
+      "id": "ce-label_export",
+      "type": "ce_node",
+      "block": 3,
+      "name": "label_export",
+      "html": "block3-ce.html#nut",
+      "signature": "label_export <out_csv> [step_min=15 start end jar ram=12]",
+      "function": "ExportFundingLabel detached (tầng 4)",
+      "runs_on": "oracle",
+      "group": "data",
+      "evidence": "orchestrator/mcp_tools-v3.py"
+    },
+    {
+      "id": "ce-tool1_export",
+      "type": "ce_node",
+      "block": 3,
+      "name": "tool1_export",
+      "html": "block3-ce.html#nut",
+      "signature": "tool1_export <out_dir> [grid_min=15 ...]",
+      "function": "ExportFeaturesForPythonTool FF_UNFILTERED (tầng 5)",
+      "runs_on": "oracle",
+      "group": "data",
+      "evidence": "orchestrator/mcp_tools-v3.py"
+    },
+    {
+      "id": "ce-pred_convert",
+      "type": "ce_node",
+      "block": 3,
+      "name": "pred_convert",
+      "html": "block3-ce.html#nut",
+      "signature": "pred_convert <csv> <out_dir> <mode:long|oiz|short> [param]",
+      "function": "CSV preds->predict_wf_*.bin",
+      "runs_on": "oracle",
+      "group": "data",
+      "evidence": "orchestrator/mcp_tools-v3.py"
+    },
+    {
+      "id": "ce-wfo_build_ds",
+      "type": "ce_node",
+      "block": 3,
+      "name": "wfo_build_ds",
+      "html": "block3-ce.html#nut",
+      "signature": "wfo_build_ds <predict_wf_dir> <out_ds> [jar code_sha]",
+      "function": "ExportWfoDataset (tầng 8); bắt buộc WFO_CODE_SHA",
+      "runs_on": "oracle",
+      "group": "data",
+      "evidence": "orchestrator/mcp_tools-v3.py"
+    },
+    {
+      "id": "ce-wfo_validate",
+      "type": "ce_node",
+      "block": 3,
+      "name": "wfo_validate",
+      "html": "block3-ce.html#nut",
+      "signature": "wfo_validate <lf_dir> <ds_dir> <expect_lf> [horizon=0 sign=0]",
+      "function": "validate_canonical_wfo.py (tầng 9)",
+      "runs_on": "oracle",
+      "group": "data",
+      "evidence": "orchestrator/mcp_tools-v3.py"
+    },
+    {
+      "id": "ce-gate_count",
+      "type": "ce_node",
+      "block": 3,
+      "name": "gate_count",
+      "html": "block3-ce.html#nut",
+      "signature": "gate_count [jar data_dir ram]",
+      "function": "đếm gate PASS không PnL",
+      "runs_on": "oracle",
+      "group": "exp",
+      "evidence": "orchestrator/mcp_tools-v3.py"
+    },
+    {
+      "id": "ce-hard_sl_sweep",
+      "type": "ce_node",
+      "block": 3,
+      "name": "hard_sl_sweep",
+      "html": "block3-ce.html#nut",
+      "signature": "hard_sl_sweep [jar data_dir ram]",
+      "function": "sweep hard-SL%",
+      "runs_on": "oracle",
+      "group": "exp",
+      "evidence": "orchestrator/mcp_tools-v3.py"
+    },
+    {
+      "id": "ce-invsel_run",
+      "type": "ce_node",
+      "block": 3,
+      "name": "invsel_run",
+      "html": "block3-ce.html#nut",
+      "signature": "invsel_run [jar sim_end ram]",
+      "function": "inverted selector (mua Worst-N)",
+      "runs_on": "oracle",
+      "group": "exp",
+      "evidence": "orchestrator/mcp_tools-v3.py"
+    },
+    {
+      "id": "ce-sys_health",
+      "type": "ce_node",
+      "block": 3,
+      "name": "sys_health",
+      "html": "block3-ce.html#nut",
+      "signature": "sys_health",
+      "function": "disk/RAM/load/Java proc",
+      "runs_on": "oracle",
+      "group": "sys",
+      "evidence": "orchestrator/mcp_tools-v3.py"
+    },
+    {
+      "id": "ce-sys_zombies",
+      "type": "ce_node",
+      "block": 3,
+      "name": "sys_zombies",
+      "html": "block3-ce.html#nut",
+      "signature": "sys_zombies [kill=true]",
+      "function": "kill proc mồ côi",
+      "runs_on": "oracle",
+      "group": "sys",
+      "evidence": "orchestrator/mcp_tools-v3.py"
+    },
+    {
+      "id": "ce-sys_logtail",
+      "type": "ce_node",
+      "block": 3,
+      "name": "sys_logtail",
+      "html": "block3-ce.html#nut",
+      "signature": "sys_logtail <file> [n]",
+      "function": "tail file (chặn path-traversal)",
+      "runs_on": "oracle",
+      "group": "sys",
+      "evidence": "orchestrator/mcp_tools-v3.py"
+    },
+    {
+      "id": "ce-manage_jvm",
+      "type": "ce_node",
+      "block": 3,
+      "name": "manage_jvm",
+      "html": "block3-ce.html#nut",
+      "signature": "manage_jvm list|kill <pid>",
+      "function": "kill pid (CHẶN process LIVE)",
+      "runs_on": "oracle",
+      "group": "infra",
+      "evidence": "orchestrator/mcp_tools-v3.py"
+    },
+    {
+      "id": "ce-remote_ssh",
+      "type": "ce_node",
+      "block": 3,
+      "name": "remote_ssh",
+      "html": "block3-ce.html#nut",
+      "signature": "remote_ssh <host> \"<cmd>\"",
+      "function": "ssh tự chọn port/user",
+      "runs_on": "any",
+      "group": "infra",
+      "evidence": "orchestrator/mcp_tools-v3.py"
+    },
+    {
+      "id": "ce-kaggle_slots",
+      "type": "ce_node",
+      "block": 3,
+      "name": "kaggle_slots",
+      "html": "block3-ce.html#nut",
+      "signature": "kaggle_slots",
+      "function": "slot dùng/trống (cap 5)",
+      "runs_on": "kaggle",
+      "group": "kaggle",
+      "evidence": "orchestrator/mcp_tools-v3.py"
+    },
+    {
+      "id": "ce-kaggle_push",
+      "type": "ce_node",
+      "block": 3,
+      "name": "kaggle_push",
+      "html": "block3-ce.html#nut",
+      "signature": "kaggle_push <dir>",
+      "function": "push kernel",
+      "runs_on": "kaggle",
+      "group": "kaggle",
+      "evidence": "orchestrator/mcp_tools-v3.py"
+    },
+    {
+      "id": "ce-kaggle_status",
+      "type": "ce_node",
+      "block": 3,
+      "name": "kaggle_status",
+      "html": "block3-ce.html#nut",
+      "signature": "kaggle_status <ref>",
+      "function": "trạng thái kernel",
+      "runs_on": "kaggle",
+      "group": "kaggle",
+      "evidence": "orchestrator/mcp_tools-v3.py"
+    },
+    {
+      "id": "ce-kaggle_dataset_push",
+      "type": "ce_node",
+      "block": 3,
+      "name": "kaggle_dataset_push",
+      "html": "block3-ce.html#nut",
+      "signature": "kaggle_dataset_push <dir> <slug> <msg> [license]",
+      "function": "create/version dataset",
+      "runs_on": "kaggle",
+      "group": "kaggle",
+      "evidence": "orchestrator/mcp_tools-v3.py"
+    },
+    {
+      "id": "ce-kaggle_dataset_status",
+      "type": "ce_node",
+      "block": 3,
+      "name": "kaggle_dataset_status",
+      "html": "block3-ce.html#nut",
+      "signature": "kaggle_dataset_status <slug>",
+      "function": "poll READY/RUNNING/ERROR",
+      "runs_on": "kaggle",
+      "group": "kaggle",
+      "evidence": "orchestrator/mcp_tools-v3.py"
+    },
+    {
+      "id": "ce-kaggle_output",
+      "type": "ce_node",
+      "block": 3,
+      "name": "kaggle_output",
+      "html": "block3-ce.html#nut",
+      "signature": "kaggle_output <ref> [dir]",
+      "function": "tải output + grep lỗi",
+      "runs_on": "kaggle",
+      "group": "kaggle",
+      "evidence": "orchestrator/mcp_tools-v3.py"
+    },
+    {
+      "id": "ce-kaggle_parse_logs",
+      "type": "ce_node",
+      "block": 3,
+      "name": "kaggle_parse_logs",
+      "html": "block3-ce.html#nut",
+      "signature": "kaggle_parse_logs <log>",
+      "function": "50 dòng cuối + RESULT",
+      "runs_on": "oracle",
+      "group": "kaggle",
+      "evidence": "orchestrator/mcp_tools-v3.py"
+    },
+    {
+      "id": "ce-pipe_run",
+      "type": "ce_node",
+      "block": 3,
+      "name": "pipe_run",
+      "html": "block3-ce.html#nut",
+      "signature": "pipe_run <file.json> [K=V]",
+      "function": "chạy pipeline -> pipe_id",
+      "runs_on": "oracle",
+      "group": "pipe",
+      "evidence": "orchestrator/mcp_tools-v3.py"
+    },
+    {
+      "id": "ce-pipe_status",
+      "type": "ce_node",
+      "block": 3,
+      "name": "pipe_status",
+      "html": "block3-ce.html#nut",
+      "signature": "pipe_status [pipe_id]",
+      "function": "tiến độ step",
+      "runs_on": "oracle",
+      "group": "pipe",
+      "evidence": "orchestrator/mcp_tools-v3.py"
+    },
+    {
+      "id": "ce-pipe_resume",
+      "type": "ce_node",
+      "block": 3,
+      "name": "pipe_resume",
+      "html": "block3-ce.html#nut",
+      "signature": "pipe_resume <pipe_id>",
+      "function": "chạy tiếp sau crash/gate",
+      "runs_on": "oracle",
+      "group": "pipe",
+      "evidence": "orchestrator/mcp_tools-v3.py"
+    },
+    {
+      "id": "ce-pipe_stop",
+      "type": "ce_node",
+      "block": 3,
+      "name": "pipe_stop",
+      "html": "block3-ce.html#nut",
+      "signature": "pipe_stop <pipe_id>",
+      "function": "kill runner",
+      "runs_on": "oracle",
+      "group": "pipe",
+      "evidence": "orchestrator/mcp_tools-v3.py"
+    },
+    {
+      "id": "ce-pipe_list",
+      "type": "ce_node",
+      "block": 3,
+      "name": "pipe_list",
+      "html": "block3-ce.html#nut",
+      "signature": "pipe_list",
+      "function": "liệt kê pipeline run",
+      "runs_on": "oracle",
+      "group": "pipe",
+      "evidence": "orchestrator/mcp_tools-v3.py"
+    },
+    {
+      "id": "ce-profile_list",
+      "type": "ce_node",
+      "block": 3,
+      "name": "profile_list",
+      "html": "block3-ce.html#nut",
+      "signature": "profile_list",
+      "function": "liệt kê profile+verified",
+      "runs_on": "oracle",
+      "group": "profile",
+      "evidence": "orchestrator/mcp_tools-v3.py"
+    },
+    {
+      "id": "pipe-wfo_canonical_1m",
+      "type": "pipeline",
+      "block": 3,
+      "name": "wfo_canonical_1m.json",
+      "html": "block3-ce.html#pipeline",
+      "file": "wfo_canonical_1m.json",
+      "purpose": "Canonical WFO 1-phút end-to-end, 18 step, 1 llm_gate",
+      "profile": null,
+      "evidence": "orchestrator/pipelines/wfo_canonical_1m.json",
+      "steps": 18,
+      "llm_gates": 1
+    },
+    {
+      "id": "pipe-wfo_from_preds",
+      "type": "pipeline",
+      "block": 3,
+      "name": "wfo_from_preds.json",
+      "html": "block3-ce.html#pipeline",
+      "file": "wfo_from_preds.json",
+      "purpose": "CSV preds->convert->build->fanout->report",
+      "profile": "wfo-fanout",
+      "evidence": "orchestrator/pipelines/wfo_from_preds.json"
+    },
+    {
+      "id": "pipe-wfo_dca_grid_hpo",
+      "type": "pipeline",
+      "block": 3,
+      "name": "wfo_dca_grid_hpo.json",
+      "html": "block3-ce.html#pipeline",
+      "file": "wfo_dca_grid_hpo.json",
+      "purpose": "HPO DCA grid + verify_stage chống jar stale",
+      "profile": "wfo-fanout",
+      "evidence": "orchestrator/pipelines/wfo_dca_grid_hpo.json"
+    },
+    {
+      "id": "pipe-wfo_long_full",
+      "type": "pipeline",
+      "block": 3,
+      "name": "wfo_long_full.json",
+      "html": "block3-ce.html#pipeline",
+      "file": "wfo_long_full.json",
+      "purpose": "build LONG full-coverage -> fanout",
+      "profile": "wfo-fanout",
+      "evidence": "orchestrator/pipelines/wfo_long_full.json"
+    },
+    {
+      "id": "pipe-dca_ablation",
+      "type": "pipeline",
+      "block": 3,
+      "name": "dca_ablation.json",
+      "html": "block3-ce.html#pipeline",
+      "file": "dca_ablation.json",
+      "purpose": "dca_off vs dca_on",
+      "profile": "wfo-fanout",
+      "evidence": "orchestrator/pipelines/dca_ablation.json"
+    },
+    {
+      "id": "pipe-edge_dca_hard",
+      "type": "pipeline",
+      "block": 3,
+      "name": "edge_dca_hard.json",
+      "html": "block3-ce.html#pipeline",
+      "file": "edge_dca_hard.json",
+      "purpose": "A vs C placebo",
+      "profile": "wfo-fanout",
+      "evidence": "orchestrator/pipelines/edge_dca_hard.json"
+    },
+    {
+      "id": "pipe-ladder",
+      "type": "pipeline",
+      "block": 3,
+      "name": "ladder.json",
+      "html": "block3-ce.html#pipeline",
+      "file": "ladder.json",
+      "purpose": "kill-test +TR",
+      "profile": "wfo-fanout",
+      "evidence": "orchestrator/pipelines/ladder.json"
+    },
+    {
+      "id": "pipe-ladder_peak",
+      "type": "pipeline",
+      "block": 3,
+      "name": "ladder_peak.json",
+      "html": "block3-ce.html#pipeline",
+      "file": "ladder_peak.json",
+      "purpose": "close vs high trail peak",
+      "profile": "wfo-fanout",
+      "evidence": "orchestrator/pipelines/ladder_peak.json"
+    },
+    {
+      "id": "pipe-ab_objective",
+      "type": "pipeline",
+      "block": 3,
+      "name": "ab_objective.json",
+      "html": "block3-ce.html#pipeline",
+      "file": "ab_objective.json",
+      "purpose": "A/B V41 vs V42",
+      "profile": "-",
+      "evidence": "orchestrator/pipelines/ab_objective.json"
+    },
+    {
+      "id": "profile-java-oracle",
+      "type": "profile",
+      "block": 3,
+      "name": "java-oracle",
+      "html": "block3-ce.html#profile",
+      "verified": "2026-07-16",
+      "note": "WFO Oracle",
+      "evidence": "orchestrator/profiles/java-oracle.json"
+    },
+    {
+      "id": "profile-java-226",
+      "type": "profile",
+      "block": 3,
+      "name": "java-226",
+      "html": "block3-ce.html#profile",
+      "verified": "2026-07-14",
+      "note": "LAN 226 merge/copy",
+      "evidence": "orchestrator/profiles/java-226.json"
+    },
+    {
+      "id": "profile-java-kaggle",
+      "type": "profile",
+      "block": 3,
+      "name": "java-kaggle",
+      "html": "block3-ce.html#profile",
+      "verified": "2026-07-14",
+      "note": "Java qua Kaggle kernel",
+      "evidence": "orchestrator/profiles/java-kaggle.json"
+    },
+    {
+      "id": "profile-python-kaggle",
+      "type": "profile",
+      "block": 3,
+      "name": "python-kaggle",
+      "html": "block3-ce.html#profile",
+      "verified": null,
+      "note": "Python thuần Kaggle - chưa verified",
+      "evidence": "orchestrator/profiles/python-kaggle.json"
+    },
+    {
+      "id": "profile-wfo-fanout",
+      "type": "profile",
+      "block": 3,
+      "name": "wfo-fanout",
+      "html": "block3-ce.html#profile",
+      "verified": null,
+      "note": "MẶC ĐỊNH full-window 6-node - verified null",
+      "evidence": "orchestrator/profiles/wfo-fanout.json"
+    },
+    {
+      "id": "pr-1",
+      "type": "principle",
+      "block": 0,
+      "name": "Chỉ WFO khi có validation (Preflight Gate 21 lỗi)",
+      "html": "integrity.html#14",
+      "evidence": "CORE.md/ce-buttons.md/task-workflow.md"
+    },
+    {
+      "id": "pr-2",
+      "type": "principle",
+      "block": 0,
+      "name": "CE-FIRST (R1)",
+      "html": "integrity.html#14",
+      "evidence": "CORE.md/ce-buttons.md/task-workflow.md"
+    },
+    {
+      "id": "pr-3",
+      "type": "principle",
+      "block": 0,
+      "name": "HANDOFF-LUÔN (R2)",
+      "html": "integrity.html#14",
+      "evidence": "CORE.md/ce-buttons.md/task-workflow.md"
+    },
+    {
+      "id": "pr-4",
+      "type": "principle",
+      "block": 0,
+      "name": "Một thực nghiệm - một loại node; tối đa 3 job Java/Oracle",
+      "html": "integrity.html#14",
+      "evidence": "CORE.md/ce-buttons.md/task-workflow.md"
+    },
+    {
+      "id": "pr-5",
+      "type": "principle",
+      "block": 0,
+      "name": "Result Contract JSON là duy nhất",
+      "html": "integrity.html#14",
+      "evidence": "CORE.md/ce-buttons.md/task-workflow.md"
+    },
+    {
+      "id": "pr-6",
+      "type": "principle",
+      "block": 0,
+      "name": "Commit sạch + Git SHA bắt buộc",
+      "html": "integrity.html#14",
+      "evidence": "CORE.md/ce-buttons.md/task-workflow.md"
+    },
+    {
+      "id": "pr-7",
+      "type": "principle",
+      "block": 0,
+      "name": "CONFIG_VERSION bump",
+      "html": "integrity.html#14",
+      "evidence": "CORE.md/ce-buttons.md/task-workflow.md"
+    },
+    {
+      "id": "pr-8",
+      "type": "principle",
+      "block": 0,
+      "name": "Cache/turn hygiene",
+      "html": "integrity.html#14",
+      "evidence": "CORE.md/ce-buttons.md/task-workflow.md"
+    },
+    {
+      "id": "pr-9",
+      "type": "principle",
+      "block": 0,
+      "name": "An toàn không đảo ngược (không kill process LIVE)",
+      "html": "integrity.html#14",
+      "evidence": "CORE.md/ce-buttons.md/task-workflow.md"
+    },
+    {
+      "id": "pr-10",
+      "type": "principle",
+      "block": 0,
+      "name": "Toàn vẹn backtest (no intrabar look-ahead)",
+      "html": "integrity.html#14",
+      "evidence": "CORE.md/ce-buttons.md/task-workflow.md"
+    },
+    {
+      "id": "pr-11",
+      "type": "principle",
+      "block": 0,
+      "name": "Tròn hoặc thành Task",
+      "html": "integrity.html#14",
+      "evidence": "CORE.md/ce-buttons.md/task-workflow.md"
+    },
+    {
+      "id": "pr-12",
+      "type": "principle",
+      "block": 0,
+      "name": "Single-writer state",
+      "html": "integrity.html#14",
+      "evidence": "CORE.md/ce-buttons.md/task-workflow.md"
+    },
+    {
+      "id": "pr-13",
+      "type": "principle",
+      "block": 0,
+      "name": "Data-locality validate",
+      "html": "integrity.html#14",
+      "evidence": "CORE.md/ce-buttons.md/task-workflow.md"
+    },
+    {
+      "id": "pr-14",
+      "type": "principle",
+      "block": 0,
+      "name": "System.exit(0) cuối main tool",
+      "html": "integrity.html#14",
+      "evidence": "CORE.md/ce-buttons.md/task-workflow.md"
+    }
+  ],
+  "edges": [
+    {
+      "from": "node-oracle",
+      "to": "node-242",
+      "kind": "reads"
+    },
+    {
+      "from": "node-kaggle",
+      "to": "node-oracle",
+      "kind": "reads"
+    },
+    {
+      "from": "node-226",
+      "to": "node-oracle",
+      "kind": "overrides"
+    },
+    {
+      "from": "dt-ticker-file",
+      "to": "node-oracle",
+      "kind": "runs_on"
+    },
+    {
+      "from": "dt-ticker-aero",
+      "to": "node-oracle",
+      "kind": "runs_on"
+    },
+    {
+      "from": "dt-lifecycle",
+      "to": "node-oracle",
+      "kind": "runs_on"
+    },
+    {
+      "from": "dt-mapper",
+      "to": "node-oracle",
+      "kind": "runs_on"
+    },
+    {
+      "from": "dt-market",
+      "to": "node-oracle",
+      "kind": "runs_on"
+    },
+    {
+      "from": "dt-oi",
+      "to": "node-oracle",
+      "kind": "runs_on"
+    },
+    {
+      "from": "dt-funding",
+      "to": "node-oracle",
+      "kind": "runs_on"
+    },
+    {
+      "from": "dt-gate-ff",
+      "to": "node-oracle",
+      "kind": "runs_on"
+    },
+    {
+      "from": "dt-sel-pred",
+      "to": "node-oracle",
+      "kind": "runs_on"
+    },
+    {
+      "from": "dt-wfo-ds",
+      "to": "node-oracle",
+      "kind": "runs_on"
+    },
+    {
+      "from": "dt-ticker-file",
+      "to": "dt-ticker-aero",
+      "kind": "flows_to"
+    },
+    {
+      "from": "l1",
+      "to": "l2",
+      "kind": "flows_to"
+    },
+    {
+      "from": "l2",
+      "to": "l3",
+      "kind": "flows_to"
+    },
+    {
+      "from": "l3",
+      "to": "l4",
+      "kind": "flows_to"
+    },
+    {
+      "from": "l4",
+      "to": "l5",
+      "kind": "flows_to"
+    },
+    {
+      "from": "l5",
+      "to": "l6",
+      "kind": "flows_to"
+    },
+    {
+      "from": "l6",
+      "to": "l8",
+      "kind": "flows_to"
+    },
+    {
+      "from": "l8",
+      "to": "l9",
+      "kind": "flows_to"
+    },
+    {
+      "from": "l9",
+      "to": "l10",
+      "kind": "flows_to"
+    },
+    {
+      "from": "l4",
+      "to": "l6",
+      "kind": "flows_to"
+    },
+    {
+      "from": "l5",
+      "to": "l6",
+      "kind": "flows_to"
+    },
+    {
+      "from": "l3",
+      "to": "l6",
+      "kind": "flows_to"
+    },
+    {
+      "from": "l7",
+      "to": "l8",
+      "kind": "flows_to"
+    },
+    {
+      "from": "l6",
+      "to": "l8",
+      "kind": "flows_to"
+    },
+    {
+      "from": "l2",
+      "to": "l8",
+      "kind": "flows_to"
+    },
+    {
+      "from": "l1",
+      "to": "dt-ticker-aero",
+      "kind": "reads"
+    },
+    {
+      "from": "l2",
+      "to": "dt-market",
+      "kind": "reads"
+    },
+    {
+      "from": "l3",
+      "to": "dt-oi",
+      "kind": "produces"
+    },
+    {
+      "from": "l8",
+      "to": "dt-wfo-ds",
+      "kind": "produces"
+    },
+    {
+      "from": "l10",
+      "to": "dt-wfo-ds",
+      "kind": "consumes"
+    },
+    {
+      "from": "model-selector",
+      "to": "l6",
+      "kind": "produces"
+    },
+    {
+      "from": "model-selector",
+      "to": "node-kaggle",
+      "kind": "runs_on"
+    },
+    {
+      "from": "model-gate",
+      "to": "l7",
+      "kind": "produces"
+    },
+    {
+      "from": "model-gate",
+      "to": "node-oracle",
+      "kind": "runs_on"
+    },
+    {
+      "from": "l9",
+      "to": "l8",
+      "kind": "validates"
+    },
+    {
+      "from": "ce-label_export",
+      "to": "l4",
+      "kind": "produces"
+    },
+    {
+      "from": "ce-tool1_export",
+      "to": "l5",
+      "kind": "produces"
+    },
+    {
+      "from": "ce-pred_convert",
+      "to": "l6",
+      "kind": "produces"
+    },
+    {
+      "from": "ce-wfo_build_ds",
+      "to": "l8",
+      "kind": "produces"
+    },
+    {
+      "from": "ce-wfo_validate",
+      "to": "l9",
+      "kind": "produces"
+    },
+    {
+      "from": "ce-wfo_fanout",
+      "to": "l10",
+      "kind": "consumes"
+    },
+    {
+      "from": "ce-wfo_verify",
+      "to": "l10",
+      "kind": "consumes"
+    },
+    {
+      "from": "ce-bg_run",
+      "to": "node-oracle",
+      "kind": "runs_on"
+    },
+    {
+      "from": "ce-bg_status",
+      "to": "node-oracle",
+      "kind": "runs_on"
+    },
+    {
+      "from": "ce-bg_report",
+      "to": "node-oracle",
+      "kind": "runs_on"
+    },
+    {
+      "from": "ce-check_or_restart",
+      "to": "node-oracle",
+      "kind": "runs_on"
+    },
+    {
+      "from": "ce-bg_stop",
+      "to": "node-oracle",
+      "kind": "runs_on"
+    },
+    {
+      "from": "ce-bg_cleanup",
+      "to": "node-oracle",
+      "kind": "runs_on"
+    },
+    {
+      "from": "ce-bg_list",
+      "to": "node-oracle",
+      "kind": "runs_on"
+    },
+    {
+      "from": "ce-bg_selftest",
+      "to": "node-oracle",
+      "kind": "runs_on"
+    },
+    {
+      "from": "ce-wfo_run",
+      "to": "node-oracle",
+      "kind": "runs_on"
+    },
+    {
+      "from": "ce-wfo_status",
+      "to": "node-oracle",
+      "kind": "runs_on"
+    },
+    {
+      "from": "ce-wfo_report",
+      "to": "node-oracle",
+      "kind": "runs_on"
+    },
+    {
+      "from": "ce-wfo_stop",
+      "to": "node-oracle",
+      "kind": "runs_on"
+    },
+    {
+      "from": "ce-wfo_verify",
+      "to": "node-oracle",
+      "kind": "runs_on"
+    },
+    {
+      "from": "ce-label_export",
+      "to": "node-oracle",
+      "kind": "runs_on"
+    },
+    {
+      "from": "ce-tool1_export",
+      "to": "node-oracle",
+      "kind": "runs_on"
+    },
+    {
+      "from": "ce-pred_convert",
+      "to": "node-oracle",
+      "kind": "runs_on"
+    },
+    {
+      "from": "ce-wfo_build_ds",
+      "to": "node-oracle",
+      "kind": "runs_on"
+    },
+    {
+      "from": "ce-wfo_validate",
+      "to": "node-oracle",
+      "kind": "runs_on"
+    },
+    {
+      "from": "ce-gate_count",
+      "to": "node-oracle",
+      "kind": "runs_on"
+    },
+    {
+      "from": "ce-hard_sl_sweep",
+      "to": "node-oracle",
+      "kind": "runs_on"
+    },
+    {
+      "from": "ce-invsel_run",
+      "to": "node-oracle",
+      "kind": "runs_on"
+    },
+    {
+      "from": "ce-sys_health",
+      "to": "node-oracle",
+      "kind": "runs_on"
+    },
+    {
+      "from": "ce-sys_zombies",
+      "to": "node-oracle",
+      "kind": "runs_on"
+    },
+    {
+      "from": "ce-sys_logtail",
+      "to": "node-oracle",
+      "kind": "runs_on"
+    },
+    {
+      "from": "ce-manage_jvm",
+      "to": "node-oracle",
+      "kind": "runs_on"
+    },
+    {
+      "from": "ce-kaggle_slots",
+      "to": "node-kaggle",
+      "kind": "runs_on"
+    },
+    {
+      "from": "ce-kaggle_push",
+      "to": "node-kaggle",
+      "kind": "runs_on"
+    },
+    {
+      "from": "ce-kaggle_status",
+      "to": "node-kaggle",
+      "kind": "runs_on"
+    },
+    {
+      "from": "ce-kaggle_dataset_push",
+      "to": "node-kaggle",
+      "kind": "runs_on"
+    },
+    {
+      "from": "ce-kaggle_dataset_status",
+      "to": "node-kaggle",
+      "kind": "runs_on"
+    },
+    {
+      "from": "ce-kaggle_output",
+      "to": "node-kaggle",
+      "kind": "runs_on"
+    },
+    {
+      "from": "ce-kaggle_parse_logs",
+      "to": "node-oracle",
+      "kind": "runs_on"
+    },
+    {
+      "from": "ce-pipe_run",
+      "to": "node-oracle",
+      "kind": "runs_on"
+    },
+    {
+      "from": "ce-pipe_status",
+      "to": "node-oracle",
+      "kind": "runs_on"
+    },
+    {
+      "from": "ce-pipe_resume",
+      "to": "node-oracle",
+      "kind": "runs_on"
+    },
+    {
+      "from": "ce-pipe_stop",
+      "to": "node-oracle",
+      "kind": "runs_on"
+    },
+    {
+      "from": "ce-pipe_list",
+      "to": "node-oracle",
+      "kind": "runs_on"
+    },
+    {
+      "from": "ce-profile_list",
+      "to": "node-oracle",
+      "kind": "runs_on"
+    },
+    {
+      "from": "pipe-wfo_canonical_1m",
+      "to": "ce-label_export",
+      "kind": "consumes"
+    },
+    {
+      "from": "pipe-wfo_canonical_1m",
+      "to": "ce-tool1_export",
+      "kind": "consumes"
+    },
+    {
+      "from": "pipe-wfo_canonical_1m",
+      "to": "ce-kaggle_push",
+      "kind": "consumes"
+    },
+    {
+      "from": "pipe-wfo_canonical_1m",
+      "to": "ce-wfo_build_ds",
+      "kind": "consumes"
+    },
+    {
+      "from": "pipe-wfo_canonical_1m",
+      "to": "ce-wfo_validate",
+      "kind": "consumes"
+    }
+  ]
+}

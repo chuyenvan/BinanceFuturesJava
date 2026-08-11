@@ -75,7 +75,7 @@ public class ExportTool1Worker {
 
             try {
                 long[] range = monthToRange(month);
-                // Export vào temp dir riêng, sau đó rename thành ff_YYYYMM.bin.gz ở root dir.
+                // Export vào temp dir riêng, sau đó rename thành ff_YYYYMM.t1c.gz ở root dir.
                 // Tránh để nhiều tháng ghi trùng file trong cùng session.
                 String rootDir = "features_export_python_v3/";
                 String tmpDir  = rootDir + ".tmp_" + month + "/";
@@ -84,12 +84,13 @@ public class ExportTool1Worker {
                 new ExportFeaturesForPythonTool().startGeneration(
                         tmpDir, range[0], range[1], marketData, symbolMap);
 
-                // Tìm file .bin.gz được tạo trong tmp dir và đổi tên thành ff_YYYYMM.bin.gz
+                // [2026-08-07 TASK-251] Tool1 đổi sang định dạng T1C1 (.t1c.gz) — xem Tool1ColSink.
+                // Tìm file .t1c.gz được tạo trong tmp dir và đổi tên thành ff_YYYYMM.t1c.gz
                 String monthCompact = month.replace("-", ""); // "2021-01" -> "202101"
-                String destPath = rootDir + "ff_" + monthCompact + ".bin.gz";
-                File[] generated = new File(tmpDir).listFiles(f -> f.getName().endsWith(".bin.gz"));
+                String destPath = rootDir + "ff_" + monthCompact + ".t1c.gz";
+                File[] generated = new File(tmpDir).listFiles(f -> f.getName().endsWith(".t1c.gz"));
                 if (generated == null || generated.length == 0) {
-                    throw new IllegalStateException("Không tìm thấy .bin.gz trong tmpDir=" + tmpDir);
+                    throw new IllegalStateException("Không tìm thấy .t1c.gz trong tmpDir=" + tmpDir);
                 }
                 Files.move(generated[0].toPath(), Paths.get(destPath), StandardCopyOption.REPLACE_EXISTING);
                 new File(tmpDir).delete(); // xóa tmp dir (nếu rỗng)

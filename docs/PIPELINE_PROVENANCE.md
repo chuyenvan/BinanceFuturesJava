@@ -1,5 +1,7 @@
 # PIPELINE PROVENANCE - Luong du lieu & mo hinh, vet truy nguyen
 
+> ⚠️ SNAPSHOT 2026-07-01, đã CŨ (trước canonical fold-0-fix + lưới 1-phút 2026-08-03/04). Xem [WFO_DATA_PIPELINE_MASTER](WFO_DATA_PIPELINE_MASTER.md) cho trạng thái pipeline SỐNG hiện tại.
+
 > Muc dich: mot nguon su that ve luong end-to-end: du lieu tho -> feature -> label -> train model -> sinh prediction -> nap Aerospike -> export WFO dataset -> chay WFO/HPO. Ghi ro CODE nao sinh ARTIFACT nao, tu INPUT nao, NGAY nao, provenance co sach khong. Viet 2026-07-01 (phien ra soat dem) dua tren bang chung doc code + artifact thuc tren server (do khong doan). Cho nao chua xac lap du -> ghi "CHUA XAC LAP".
 
 > CANH BAO TOI QUAN TRONG: STRATEGY WFO hien tai (StrategyWfoTask) dang tieu thu prediction RO RI (in-sample) cho hau het window OOS. Xem muc 4. Moi con so WFO truoc ~2025-06 KHONG phai OOS hop le. Day la ly do ton tai tai lieu nay.

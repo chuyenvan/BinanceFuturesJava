@@ -30,6 +30,13 @@ public class DcaProcessor {
                 .filter(entry -> {
                     OrderTargetInfoTest order = entry.getValue();
                     try {
+                        // DCA GRID (2026-08-01): grid co ke hoach, do tren firstEntryPrice + tran so leg.
+                        // Mac dinh DCA_GRID_ENABLED=false -> chay logic cu NGUYEN VEN (byte-identical).
+                        if (Configs.DCA_GRID_ENABLED) {
+                            return DcaUtils.shouldDcaGrid(
+                                    order.firstEntryPrice != null ? order.firstEntryPrice : order.priceEntry,
+                                    order.lastPrice, order.legCount);
+                        }
                         // Logic lõi giữ nguyên 100%
                         return DcaUtils.shouldDca(
                                 order.calMargin(), order.calRateLoss(), order.marketLevelChange,

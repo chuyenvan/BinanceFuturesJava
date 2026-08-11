@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bản đồ toàn trình — Dữ liệu → Mô hình → CE</title>
+<link rel="stylesheet" href="assets/style.css">
+<meta name="ai-readable" content="graph.json chứa nodes/edges của toàn bộ bản đồ này (machine-readable manifest).">
+</head>
+<body>
+<header class="topbar"><div class="row">
+  <a class="brand" href="index.html">🗺️ Bản đồ hạ tầng CE</a>
+  <nav>
+    <a href="index.html" class="active">Tổng quan</a>
+    <a href="block1-data.html" class="b1">1 · Dữ liệu</a>
+    <a href="block2-wfo.html" class="b2">2 · Luồng WFO</a>
+    <a href="block3-ce.html" class="b3">3 · CE &amp; nút</a>
+    <a href="integrity.html">Liêm chính</a>
+    <a href="glossary.html">Từ điển</a>
+    <a href="graph.json">graph.json</a>
+  </nav>
+</div></header>
+
+<div class="wrap">
+<h1>Bản đồ toàn trình: Dữ liệu → Mô hình → CE triển khai</h1>
+<p class="lead">Một sơ đồ đọc được cho <b>cả người và AI</b>: dữ liệu nào đang có &amp; nằm ở đâu trong code, luồng Walk-Forward (WFO) chảy qua những tầng nào, và mỗi task thì dùng nút CE nào, chạm dữ liệu nào, chạy trên node nào. Mục tiêu: chấm dứt tình trạng <b>dùng sai dữ liệu, test không rõ chạy trên data nào, nghiên cứu lòng vòng không tới đích</b>.</p>
+
+<div class="note ok"><span class="h">✔ Bản đồ này rebuild từ code + docs thật, không phải từ bản NotebookLM</span>
+Mọi khẳng định neo vào file nguồn (đường dẫn + số dòng). 3 điểm cốt lõi đã đối chiếu trực tiếp code: <code>Configs.java:87</code> (env <code>TICKER_SOURCE</code> là NO-OP), <code>WfoDataset.java:226</code> (<code>score = 1 − P(win)</code>), <code>wfo_canonical_1m.json</code> (18 step, đúng 1 <code>llm_gate</code>).</div>
+
+<div class="note bad"><span class="h">⚠ Vì sao bản NotebookLM cũ nguy hiểm nếu tin theo</span>
+Các số trong ngoặc <code>[184, 186]</code>… của bản cũ là citation nội bộ NotebookLM, <b>không phải reference thật</b>. Bản cũ còn bỏ sót: topology mới đã <b>retire node 226</b> (chốt 2026-08-04), sự thật <code>TICKER_SOURCE</code> env vô hiệu, 5 SIMULATOR facts (không có đường thoát lỗ, <code>ddPct</code> không phải maxDD…), và Preflight Gate 21 loại lỗi. Xem chi tiết ở từng block.</div>
+
+<h2 class="anchor-h" id="ba-khoi">Ba khối, đọc theo thứ tự này</h2>
+<div class="grid c3">
+  <a class="blockcard b1" href="block1-data.html">
+    <div class="n">01</div><span class="tag b1">Dữ liệu</span>
+    <h3>Bản đồ dữ liệu &amp; Topology</h3>
+    <p>4 node hạ tầng (242 SoT · Oracle hub · 226 retire · Kaggle fleet) + <b>10 tầng/artifact dữ liệu</b>: mỗi tầng ghi rõ vị trí lưu, format byte, code sinh ra nó, code đọc nó, trạng thái đo. Hai đường đọc ticker &amp; bẫy <code>TICKER_SOURCE</code>.</p>
+    <small>→ "Dữ liệu ở đâu, đọc bằng gì, còn đủ không"</small>
+  </a>
+  <a class="blockcard b2" href="block2-wfo.html">
+    <div class="n">02</div><span class="tag b2">Luồng WFO</span>
+    <h3>10 tầng end-to-end</h3>
+    <p>Ticker → Market → OI → Label → Tool1 → Selector → Gate → Export dataset → Validate → Java HPO. Mỗi tầng: file sinh, input, artifact output, grid/cadence, leak-guard, env var. Selector vs Gate. 6 leak L0–L5.</p>
+    <small>→ "Dữ liệu biến thành dataset train/backtest như thế nào"</small>
+  </a>
+  <a class="blockcard b3" href="block3-ce.html">
+    <div class="n">03</div><span class="tag b3">CE &amp; nút</span>
+    <h3>Hạ tầng chiến dịch &amp; nút nguyên tử</h3>
+    <p>Kiến trúc 5 tầng (L1 infra → L5 pipeline), <b>catalog 40 nút <code>ce.cmd</code></b> (args + node chạy + data chạm), 16 pipeline, 5 profile, và pipeline canonical 18 step với 1 cổng duyệt LLM.</p>
+    <small>→ "Task nào bấm nút gì, chạy ở đâu, ai duyệt"</small>
+  </a>
+</div>
+
+<h2 class="anchor-h" id="so-do">Sơ đồ tổng — 3 khối nối nhau</h2>
+<div class="card">
+<svg viewBox="0 0 980 320" width="100%" role="img" aria-label="Sơ đồ 3 khối">
+  <defs>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#768390"/></marker>
+  </defs>
+  <!-- Block 1 -->
+  <rect x="20" y="30" width="280" height="260" rx="12" fill="#12233d" stroke="#4c9aff"/>
+  <text x="36" y="56" fill="#4c9aff" font-size="13" font-weight="700">BLOCK 1 · DỮ LIỆU</text>
+  <text x="36" y="82" fill="#e6edf3" font-size="12">242 (SoT) → Oracle hub :3222</text>
+  <text x="36" y="102" fill="#adbac7" font-size="11">ticker file / kline_1m_opt</text>
+  <text x="36" y="120" fill="#adbac7" font-size="11">market_data_object · OI · funding</text>
+  <text x="36" y="138" fill="#adbac7" font-size="11">lifecycle · mapper</text>
+  <text x="36" y="168" fill="#768390" font-size="11">Kaggle fleet (file-mode, 5 kernel)</text>
+  <!-- Block 2 -->
+  <rect x="350" y="30" width="280" height="260" rx="12" fill="#2a2140" stroke="#c792ea"/>
+  <text x="366" y="56" fill="#c792ea" font-size="13" font-weight="700">BLOCK 2 · LUỒNG WFO</text>
+  <text x="366" y="82" fill="#e6edf3" font-size="12">Label → Tool1 → Selector</text>
+  <text x="366" y="102" fill="#e6edf3" font-size="12">Gate (song song)</text>
+  <text x="366" y="128" fill="#adbac7" font-size="11">→ market.bin / pred.bin / funding.bin</text>
+  <text x="366" y="150" fill="#adbac7" font-size="11">→ manifest.txt (Git SHA)</text>
+  <text x="366" y="180" fill="#adbac7" font-size="11">→ validate độc lập → ký</text>
+  <text x="366" y="210" fill="#c792ea" font-size="11">→ Java HPO / WfoWorker</text>
+  <!-- Block 3 -->
+  <rect x="680" y="30" width="280" height="260" rx="12" fill="#0f2e20" stroke="#57d38c"/>
+  <text x="696" y="56" fill="#57d38c" font-size="13" font-weight="700">BLOCK 3 · CE</text>
+  <text x="696" y="82" fill="#e6edf3" font-size="12">L1 infra … L5 pipeline</text>
+  <text x="696" y="104" fill="#adbac7" font-size="11">38 nút nguyên tử ce.cmd</text>
+  <text x="696" y="126" fill="#adbac7" font-size="11">wfo_canonical_1m (18 step)</text>
+  <text x="696" y="152" fill="#adbac7" font-size="11">máy chạy trọn chuỗi chân tay</text>
+  <text x="696" y="174" fill="#f0b429" font-size="11">LLM chỉ ở llm_gate (duyệt)</text>
+  <line x1="300" y1="160" x2="348" y2="160" stroke="#768390" stroke-width="2" marker-end="url(#ar)"/>
+  <line x1="630" y1="160" x2="678" y2="160" stroke="#768390" stroke-width="2" marker-end="url(#ar)"/>
+  <text x="700" y="250" fill="#768390" font-size="10.5">CE điều phối &amp; tự động hoá cả Block 1 + Block 2</text>
+  <path d="M820,262 C820,300 200,300 160,296" fill="none" stroke="#57d38c" stroke-dasharray="4 4" marker-end="url(#ar)"/>
+</svg>
+<p class="small">Block 3 (CE) không nằm "sau" Block 1–2 mà <b>bao quanh &amp; điều phối</b> chúng: mọi việc chân tay (xuất label, build dataset, đẩy Kaggle, validate) đều là nút CE; con người/AI chỉ quyết định ở cổng <code>llm_gate</code>.</p>
+</div>
+
+<h2 class="anchor-h" id="doc-cho-ai">Dành cho AI/agent đọc bản đồ này</h2>
+<div class="card b3">
+<p>File <a href="graph.json"><code>graph.json</code></a> là bản máy-đọc song song: mọi <b>node</b> (data-tier, ce-node, pipeline, model, layer) và <b>edge</b> (<code>produces</code>, <code>reads</code>, <code>flows_to</code>, <code>runs_on</code>, <code>validates</code>, <code>consumes</code>) đều có <code>id</code> ổn định trùng với anchor trong HTML. Quy tắc cho agent:</p>
+<ul class="tight">
+  <li>Trước khi chạy bất kỳ test/experiment: xác định <b>đang dùng data-tier id nào</b> (Block 1) và <b>đang ở layer nào</b> (Block 2) — ghi vào RESULT để test không "vô danh data".</li>
+  <li>Trước khi viết script vận hành: tra <b>ce-node</b> hoặc <b>pipeline</b> có sẵn (Block 3) — luật CE-FIRST cấm viết bash driver ad-hoc cho việc nút đã làm được.</li>
+  <li>Mọi khẳng định trong bản đồ có trường <code>evidence</code> (file:line). Nếu sửa hành vi code → cập nhật cả <code>graph.json</code> lẫn HTML.</li>
+</ul>
+</div>
+
+<h2 class="anchor-h" id="4-nguyen-tac">4 nguyên tắc liêm chính (tóm tắt)</h2>
+<p>Đây là bản rút gọn để chống lại đúng vấn đề bạn nêu (dùng sai data, test nhiễu, lòng vòng). Bản đầy đủ 14 nguyên tắc + Preflight Gate 21 loại lỗi ở trang <a href="integrity.html">Liêm chính</a>.</p>
+<div class="grid c2">
+  <div class="card"><b>1 · Chỉ WFO khi có validation đã ký.</b> Preflight Gate chặn 21 loại lỗi (6 nhóm A–F) TRƯỚC mọi HPO/WFO. Manifest chưa ký / lệch MD5 → hệ tự dừng fail-closed. <span class="path">DATA_VALIDATION_FRAMEWORK.md · validate_canonical_wfo.py</span></div>
+  <div class="card"><b>2 · Một thực nghiệm — một loại node.</b> Không so tuyệt đối kết quả chạy Aerospike (Oracle) với chạy file tĩnh (Kaggle); phải cùng fingerprint data. <span class="path">CORE.md · INFRA_FACTS.md</span></div>
+  <div class="card"><b>3 · Commit sạch + Git SHA trước khi đo.</b> <code>wfo_build_ds</code> bắt buộc <code>WFO_CODE_SHA</code>; "unknown" → Java THROW. Mọi artifact ghi manifest (SHA + nguồn + ngày). <span class="path">mcp_tools-v3.py:2028 · WfoDataset.java:137</span></div>
+  <div class="card"><b>4 · Result Contract JSON là duy nhất.</b> Không ngồi canh terminal; mọi trạng thái ghi ra <code>&lt;job&gt;_result.json</code> / block <code>=== RESULT ===</code>. <span class="path">CE v3 · task-workflow.md</span></div>
+</div>
+
+<footer class="foot">
+Rebuild 2026-08-04 từ 5 dump (443 Java · 164 docs · 121 orchestrator · 56 ML · 18 scripts). Nguồn sự thật sống: <code>docs/WFO_DATA_PIPELINE_MASTER.md</code>, <code>docs/DATA_STATE.md</code>, <code>orchestrator/mcp_tools-v3.py</code>. Trang này thay thế bản NotebookLM <code>ban-do-ha-tang-ce.md</code>.
+</footer>
+</div>
+</body>
+</html>

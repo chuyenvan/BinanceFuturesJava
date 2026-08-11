@@ -11,8 +11,7 @@
 - **Guard code** (commit bac70fa): `WfoDataset.buildFundingFromWfFiles` throw khi predict_wf overlap ts-range.
 - **Doc** `STRATEGY_CONSOLIDATED.md`: banner deprecate nguồn leaked.
 - CHƯA đụng: `wfo_ds_maxfav3_*`, `wfo_ds_ret2wf_4h(_ff)` (SẠCH, đang dùng), `wfo_dataset_wf` (554M, tự-khai
-  leakfree-2022+, chưa verify), `oiz/ev2/maxdep` (generator khác, chưa audit), Kaggle `chuyendinh/wf-pred-ret2`
-  (còn leak, Uni gỡ tay).
+  leakfree-2022+, chưa verify), `oiz/ev2/maxdep` (generator khác, chưa audit).
 
 ## 2 lỗ hổng gốc đã xác định (phải sửa TRƯỚC khi re-gen)
 1. **`gen_funding_wf_predictions.py` fold-0 `block_lo=ts_min`**: file predict_wf fold ĐẦU (vd 20220101) phủ cả

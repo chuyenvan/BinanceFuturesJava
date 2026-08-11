@@ -94,32 +94,40 @@ public class CopyTicker242To226 {
 
         while (day < end) {
             try {
-                // 1. Dựng 1440 key của ngày
-                Key[] srcKeys = new Key[1440];
+                // 1. Dựng 1440 key của ngày — 2 bộ RIÊNG vì namespace THẬT khác nhau giữa 2 cụm:
+                //    242 (nguồn, đọc) = Configs.AEROSPIKE_NAMESPACE_242 ("ticker", đo trực tiếp
+                //    2026-08-05, xem comment tại Configs.java); Oracle/226 (đích, exists+ghi) =
+                //    Configs.AEROSPIKE_NAMESPACE ("test", KHÔNG đổi — nhiều nơi khác đang dùng
+                //    đúng). [TASK-251] Trước đây dùng CHUNG 1 bộ key cho cả 2 => đọc 242 luôn
+                //    fail AerospikeException$InvalidNamespace vì gửi "test" sang cụm chỉ có "ticker".
+                Key[] keys242 = new Key[1440];
+                Key[] keysOracle = new Key[1440];
                 String[] keyStrings = new String[1440];
                 for (int m = 0; m < 1440; m++) {
                     keyStrings[m] = keyFmt.format(new Date(day + m * Utils.TIME_MINUTE));
-                    srcKeys[m] = new Key(Configs.AEROSPIKE_NAMESPACE, SET_TICKER, keyStrings[m]);
+                    keys242[m] = new Key(Configs.AEROSPIKE_NAMESPACE_242, SET_TICKER, keyStrings[m]);
+                    keysOracle[m] = new Key(Configs.AEROSPIKE_NAMESPACE, SET_TICKER, keyStrings[m]);
                 }
 
-                // 2. Xác định key cần copy (resume: bỏ qua key đã có trên 226)
+                // 2. Xác định key cần copy (resume: bỏ qua key đã có trên 226) — exists-check PHẢI
+                //    dùng keysOracle (đích), không phải keys242.
                 boolean[] need = new boolean[1440];
                 if (FORCE_OVERWRITE) {
                     Arrays.fill(need, true);
                 } else {
-                    boolean[] existsOn226 = dst.exists(batchPolicy, srcKeys);
+                    boolean[] existsOn226 = dst.exists(batchPolicy, keysOracle);
                     for (int m = 0; m < 1440; m++) {
                         need[m] = !existsOn226[m];
                         if (existsOn226[m]) skippedExisting.incrementAndGet();
                     }
                 }
 
-                // 3. Batch read từ 242 cho các key cần
+                // 3. Batch read từ 242 cho các key cần — PHẢI dùng keys242 (namespace "ticker").
                 List<Integer> idxNeed = new ArrayList<>();
                 for (int m = 0; m < 1440; m++) if (need[m]) idxNeed.add(m);
                 if (!idxNeed.isEmpty()) {
                     Key[] readKeys = new Key[idxNeed.size()];
-                    for (int i = 0; i < idxNeed.size(); i++) readKeys[i] = srcKeys[idxNeed.get(i)];
+                    for (int i = 0; i < idxNeed.size(); i++) readKeys[i] = keys242[idxNeed.get(i)];
                     Record[] records = src.get(batchPolicy, readKeys);
 
                     // 4. Ghi song song vào 226 — chép NGUYÊN bytes
@@ -176,9 +184,11 @@ public class CopyTicker242To226 {
 
         int ok = 0, mismatch = 0, bothMissing = 0, onlySrc = 0;
         for (String ks : keys) {
-            Key key = new Key(Configs.AEROSPIKE_NAMESPACE, SET_TICKER, ks);
-            Record a = src.get(null, key);
-            Record b = dst.get(null, key);
+            // [TASK-251] src (242) và dst (Oracle) namespace khác nhau — PHẢI 2 Key riêng.
+            Key key242 = new Key(Configs.AEROSPIKE_NAMESPACE_242, SET_TICKER, ks);
+            Key keyOracle = new Key(Configs.AEROSPIKE_NAMESPACE, SET_TICKER, ks);
+            Record a = src.get(null, key242);
+            Record b = dst.get(null, keyOracle);
             byte[] ba = a != null ? (byte[]) a.getValue(BIN_DATA) : null;
             byte[] bb = b != null ? (byte[]) b.getValue(BIN_DATA) : null;
             if (ba == null && bb == null) { bothMissing++; continue; }

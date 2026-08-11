@@ -58,6 +58,22 @@ LUẬT (áp cho MỌI phiên CDK/CDC trên repo này):
 - `sys_health` / `sys_zombies [kill=true]` / `sys_logtail <file> [n]` — sức khoẻ/vận hành.
 - `pipe_run <file.json> [K=V…]` / `pipe_status` / `pipe_resume <id>` / `pipe_stop` / `pipe_list` — pipeline engine.
 - `kaggle_slots` / `kaggle_push <dir>` / `kaggle_status <ref>` / `kaggle_output <ref> [dir]` / `kaggle_parse_logs <log>` — Kaggle fleet (qua venv `CE_KAGGLE_BIN`).
+- `pred_convert <csv> <out_dir> <mode> [param]` / `wfo_build_ds <predict_wf_dir> <out_ds> [jar] [code_sha]` /
+  `wfo_validate <lf_dir> <ds_dir> <expect_leakfree> [horizon_idx] [sign]` / `wfo_verify <ds> <winIdx> [extra_env]`
+  — chuỗi R1 CSV/predict_wf → dataset → validate → verify-1-window.
+- **[2026-08-04] `label_export <out_csv> [step_min] [start] [end] [jar] [ram_gb]`** — ExportFundingLabel
+  (detached). `tool1_export <out_dir> [grid_min] [start] [end] [jar] [ram_gb]` — ExportFeaturesForPythonTool
+  FF_UNFILTERED=1 (detached). Thêm cho canonical WFO 1-phút (buộc A/B) theo R1 — trước đó phải SSH tay.
+  `grid_min` PHẢI khớp `step_min` cùng đợt (lệch → mất data âm thầm khi join, xem cảnh báo #1
+  `WFO_DATA_PIPELINE_MASTER.md`). `wfo_build_ds` đã vá thêm `code_sha` (optional) vì `WfoDataset.export()`
+  bản mới throw khi `codeGitSha=unknown` trên canonical path.
+- **[2026-08-04] `kaggle_dataset_push <local_dir> <slug> <message> [license]`** — tạo MỚI
+  (chưa có `dataset-metadata.json` trong `local_dir` → tự sinh + `kaggle datasets create`) hoặc
+  **version** (đã có → `kaggle datasets version -p <dir> -m "<msg>"`, pattern lấy nguyên từ
+  `run_106_headless.sh` B2 — đã chạy thật trong repo, không phải suy đoán). `kaggle_dataset_status <slug>`
+  — poll `READY|RUNNING|ERROR|UNKNOWN` (dùng trong step `wait`). GAP upload dataset (từng flag) đã
+  **hết** — `wfo_canonical_1m.json` giờ tự push+chờ ready cả 2 dataset Tool1/label 1-phút, không còn
+  `llm_gate` thủ công ở bước này.
 - `profile_list` — liệt kê execution profile (L4) + `verified` (xem mục Profiles).
 - Đợt 2 (chưa build — cần thì đề xuất Uni duyệt): `data_*` (copy226/backfill/validate), `wfo_ab`, `deploy_verify`.
 
@@ -73,6 +89,24 @@ LUẬT (áp cho MỌI phiên CDK/CDC trên repo này):
   profile params**. Pipeline nghiệp vụ KHÔNG lặp lại `JAR/HOST/XMX/dataset…`.
 
 ## Pipeline nghiệp vụ có sẵn (`orchestrator/pipelines/`)
+- **`wfo_canonical_1m.json` [2026-08-04, 18 step]** — canonical WFO 1-phút end-to-end (bước A-E của
+  `WFO_DATA_PIPELINE_MASTER.md`), TOÀN BỘ tự động, không còn `llm_gate` nào ở khâu vận hành thường:
+  `mkdir_label_dir`→`label_export`/`wait_label`→`tool1_export`/`wait_tool1`→`sync_kernel` (cp file
+  train mới nhất vào kernel dir)→`push_tool1_dataset`/`wait_tool1_dataset`→`push_label_dataset`/
+  `wait_label_dataset`→`kaggle_push`/`wait_kaggle`→`kaggle_output`→`build_ds`/`wait_build`→
+  `validate_report_only` (SIGN=0)→**`gate_sign` (llm_gate — CHỦ Ý giữ lại, đây là điểm ký duyệt cuối,
+  không phải GAP)**→`sign_manifest` (SIGN=1).
+  ⚠️ `gate_sign`: engine `llm_gate` KHÔNG rẽ nhánh theo nội dung answer — `pipe_resume` bằng BẤT KỲ
+  answer nào sẽ đi tới bước ký kế tiếp (bước ký tự fail-closed dựa trên `report.result`, không dựa
+  gate). Chưa muốn ký → `pipe_stop`, đừng `pipe_resume`. Chưa chạy qua Oracle thật (SSH session này
+  hỏng) — viết theo đúng schema + validate bằng `_validate_pipeline()`/`_subst()` cục bộ (kể cả
+  `kaggle_dataset_push` — smoke-test tạo `dataset-metadata.json` cục bộ, xác nhận đúng nhánh
+  create/version), nhưng **CHƯA test end-to-end trên Oracle+Kaggle thật**. Bắt buộc `ce --sync
+  bg_selftest` PASS rồi mới tin 5 atom mới (`label_export`/`tool1_export`/`wfo_validate`/
+  `kaggle_dataset_push`/`kaggle_dataset_status`).
+  ⚠️ **Lưu ý `_subst` KHÔNG resolve tham chiếu lồng giữa params** (chỉ 1 pass) — mọi giá trị
+  param phải viết LITERAL, không được để 1 param trỏ `${param_khac}` (đã tự bắt lỗi này lúc viết
+  `label_csv`/`label_dataset_dir` — xem `_note_no_nested_subst` trong file JSON).
 - `ab_objective.json` — A/B 2 baseline (V41 vs V42), profile mặc định cũ (Oracle-only 2-worker).
 - `dca_ablation.json` — đo đóng góp DCA: run `dca_off` (extra_env WFO_DISABLE_DCA=1) vs `dca_on`,
   profile **wfo-fanout**, chạy TUẦN TỰ (cùng jobstore). Gate đầu chờ master áp diff Java (xem dưới).

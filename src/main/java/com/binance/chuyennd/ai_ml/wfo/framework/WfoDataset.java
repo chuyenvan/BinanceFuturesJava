@@ -72,10 +72,34 @@ public class WfoDataset {
         String fundingPredDir = envOr("WFO_FUNDING_PRED_DIR", "");
         TreeMap<Long, long[]> fnd;
         long fndRaw15mCount = -1;   // so moc 15m truoc forward-fill (trace vao manifest)
+        // Step 4 (2026-08-03) manifest TRUNG THUC + tu-validate: meta THAT tu file predict_wf nguon (khong env-guess).
+        java.util.List<WfFileMeta> wfMeta = new java.util.ArrayList<>();
+        int fundingHorizonIdx = -1;
+        String leakFreeFromComputed = "unknown";
+        long maxFoldSpanDays = -1;
         if (!fundingPredDir.isEmpty()) {
-            int horizonIdx = Integer.parseInt(envOr("WFO_SEL_HORIZON_IDX", "1"));
-            TreeMap<Long, long[]> fnd15 = buildFundingFromWfFiles(fundingPredDir, horizonIdx);
+            fundingHorizonIdx = Integer.parseInt(envOr("WFO_SEL_HORIZON_IDX", "1"));
+            int horizonIdx = fundingHorizonIdx;
+            TreeMap<Long, long[]> fnd15 = buildFundingFromWfFiles(fundingPredDir, horizonIdx, wfMeta);
             fndRaw15mCount = fnd15.size();
+            // TU-VALIDATE nguon: moi fold span <= 100 ngay (block ~90d); leakFreeFrom = OOS som nhat (min ts, GMT+7).
+            long minOosTs = Long.MAX_VALUE;
+            for (WfFileMeta wm : wfMeta) {
+                minOosTs = Math.min(minOosTs, wm.minTs);
+                maxFoldSpanDays = Math.max(maxFoldSpanDays, wm.spanDays());
+                if (wm.spanDays() > 100)
+                    throw new IOException("SELF-VALIDATE FAIL: predict_wf '" + wm.name + "' span=" + wm.spanDays()
+                            + "d > 100d -> khong phai 1 OOS block (nghi leak full-history). DUNG export canonical.");
+            }
+            if (!wfMeta.isEmpty()) {
+                java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd");
+                sdf.setTimeZone(java.util.TimeZone.getTimeZone("GMT+7"));
+                leakFreeFromComputed = sdf.format(new java.util.Date(minOosTs));
+            }
+            String envLF = System.getenv("WFO_LEAKFREE_FROM");
+            if (envLF != null && !envLF.isEmpty() && !envLF.startsWith(leakFreeFromComputed))
+                LOG.warn("WFO_LEAKFREE_FROM env='{}' LECH voi tinh-tu-data='{}' -> dung DATA (env bi bo qua).",
+                        envLF, leakFreeFromComputed);
             // 🔥 BUG-FIX 2026-07-13: predict_wf_*.bin la luoi 15m; engine tra selector bang .get(time) KHOP
             // CHINH XAC phut -> thieu forward-fill = 93% phut khong co selector -> tan suat + BIG_DOWN sap.
             // Khoi phuc thiet ke da-verify (gen_funding_wf_predictions.py: forward-fill 15p->phut, align 100%
@@ -105,10 +129,28 @@ public class WfoDataset {
         mani.append("sourcePredSet=").append(SET_PRED).append("\n");
         mani.append("sourceFundingSet=").append(SET_FUNDING).append("\n");
         // Provenance (env-sourced; xem docs/PIPELINE_PROVENANCE.md muc 6): truy nguyen code+model+leak-free.
-        mani.append("codeGitSha=").append(envOr("WFO_CODE_SHA", "unknown")).append("\n");
+        // Step 4: provenance TRUNG THUC. Canonical (co WFO_FUNDING_PRED_DIR) doi codeGitSha THAT (khong "unknown")
+        // + leakFreeFrom/horizon/fold-span tinh TU DATA. VALIDATED_BY=PENDING -> step 5 (validator doc lap) ky PASS.
+        String codeGitSha = resolveCodeGitSha();
+        boolean canonicalPath = !fundingPredDir.isEmpty();
+        if (canonicalPath && "unknown".equals(codeGitSha))
+            throw new IOException("Canonical export doi codeGitSha THAT. Set env WFO_CODE_SHA=<git rev-parse HEAD> "
+                    + "(build local) roi chay lai. Khong stamp 'unknown' cho dataset LF.");
+        if (canonicalPath && "unknown".equals(leakFreeFromComputed))
+            throw new IOException("Canonical export: khong tinh duoc leakFreeFrom tu predict_wf. Kiem WFO_FUNDING_PRED_DIR.");
+        mani.append("codeGitSha=").append(codeGitSha).append("\n");
         mani.append("predSetProvenance=").append(envOr("WFO_PROV_PRED", "unknown-see-docs/PIPELINE_PROVENANCE.md")).append("\n");
         mani.append("fundingSetProvenance=").append(envOr("WFO_PROV_FUNDING", "unknown-see-docs/PIPELINE_PROVENANCE.md")).append("\n");
-        mani.append("leakFreeFrom=").append(envOr("WFO_LEAKFREE_FROM", "unknown")).append("\n");
+        mani.append("leakFreeFrom=").append(leakFreeFromComputed).append("\n");
+        mani.append("fundingPredDir=").append(canonicalPath ? fundingPredDir : "aerospike-fallback").append("\n");
+        mani.append("horizonIdx=").append(fundingHorizonIdx).append("\n");
+        mani.append("foldCount=").append(wfMeta.size()).append("\n");
+        mani.append("maxFoldSpanDays=").append(maxFoldSpanDays).append("\n");
+        mani.append("VALIDATED_BY=").append(envOr("WFO_VALIDATED_BY", "PENDING")).append("\n");
+        for (WfFileMeta wm : wfMeta)
+            mani.append("predictWf.").append(wm.name).append("=md5:").append(wm.md5)
+                .append(";ts:").append(wm.minTs).append("..").append(wm.maxTs)
+                .append(";span:").append(wm.spanDays()).append("d;rec:").append(wm.nrec).append("\n");
         mani.append("marketCount=").append(mkt.size()).append("\n");
         mani.append("predCount=").append(prd.size()).append("\n");
         mani.append("fundingCount=").append(fnd.size()).append("\n");
@@ -134,7 +176,22 @@ public class WfoDataset {
      * @param predDir    thu muc chua predict_wf_*.bin
      * @param horizonIdx 0=4h,1=12h,2=24h,3=72h
      */
+    /** Metadata 1 file predict_wf nguon (manifest trung thuc + tu-validate step 4). */
+    static final class WfFileMeta {
+        final String name, md5; final long minTs, maxTs; final int nrec;
+        WfFileMeta(String name, String md5, long minTs, long maxTs, int nrec) {
+            this.name = name; this.md5 = md5; this.minTs = minTs; this.maxTs = maxTs; this.nrec = nrec;
+        }
+        long spanDays() { return (maxTs - minTs) / 86_400_000L; }
+    }
+
     static TreeMap<Long, long[]> buildFundingFromWfFiles(String predDir, int horizonIdx) throws IOException {
+        return buildFundingFromWfFiles(predDir, horizonIdx, null);
+    }
+
+    /** Ban co outMeta: thu thap md5 + ts-range tung file predict_wf de export stamp manifest THAT (khong env-guess). */
+    static TreeMap<Long, long[]> buildFundingFromWfFiles(String predDir, int horizonIdx,
+                                                         java.util.List<WfFileMeta> outMeta) throws IOException {
         File d = new File(predDir);
         File[] files = d.listFiles((dir, name) -> name.startsWith("predict_wf_") && name.endsWith(".bin"));
         if (files == null || files.length == 0)
@@ -181,6 +238,7 @@ public class WfoDataset {
             }
             fileRanges.add(new long[]{fMin, fMax});
             fileNames.add(f.getName());
+            if (outMeta != null) outMeta.add(new WfFileMeta(f.getName(), md5Bytes(all), fMin, fMax, nrec));
             LOG.info("  doc {}: {} rec (tong kept={})", f.getName(), nrec, kept);
         }
         TreeMap<Long, long[]> out = new TreeMap<>();
@@ -356,5 +414,31 @@ public class WfoDataset {
         StringBuilder sb = new StringBuilder();
         for (byte b : md.digest()) sb.append(String.format("%02x", b));
         return sb.toString();
+    }
+
+    /** codeGitSha THAT: uu tien env WFO_CODE_SHA; trong -> thu `git rev-parse HEAD`; that bai -> "unknown". */
+    private static String resolveCodeGitSha() {
+        String env = System.getenv("WFO_CODE_SHA");
+        if (env != null && !env.isEmpty()) return env.trim();
+        try {
+            Process p = new ProcessBuilder("git", "rev-parse", "HEAD").redirectErrorStream(true).start();
+            String line;
+            try (BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8))) {
+                line = r.readLine();
+            }
+            p.waitFor();
+            if (p.exitValue() == 0 && line != null && line.trim().matches("[0-9a-f]{7,40}")) return line.trim();
+        } catch (Exception ignore) { /* khong phai git checkout */ }
+        return "unknown";
+    }
+
+    /** md5 hex tu byte[] da doc san (tranh doc file 2 lan cho predict_wf nguon). */
+    private static String md5Bytes(byte[] b) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            StringBuilder sb = new StringBuilder();
+            for (byte x : md.digest(b)) sb.append(String.format("%02x", x));
+            return sb.toString();
+        } catch (Exception e) { return "md5-error"; }
     }
 }

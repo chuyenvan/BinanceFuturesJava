@@ -36,40 +36,22 @@ lúc (tránh overfit) — entry đã đóng băng, phiên này CHỈ động và
 Tài liệu: toàn bộ 3 việc trên đã ghi chi tiết ở `docs/reports/EXIT_MACHINE_20260730_stop_schedule.md`
 PHẦN 3 (bảng số sweep cũ, lý do, giới hạn).
 
-## Việc CHƯA xong — bị chặn, cần xử lý đầu tiên ở session mới
+## ✅ N=30×16-window confirm ĐÃ XONG (2026-07-30 tối) — chi tiết đầy đủ ở EXIT_MACHINE PHẦN 4
 
-**N=13 window confirm** (đo tác động thật của thay đổi #1 trên verdict M, qua constraint harness V4
-đầy đủ — khác sweep cũ TASK-139 vốn không qua harness này):
+Kết quả: **vẫn VERDICT FAIL/REVIEW.** WFE trung vị 0.307→0.442 (vẫn <0.5), %OOS-dương 43.8%→**37.5%
+(XẤU ĐI)**, maxDD 32.4%→34.3% (xấu nhẹ, vẫn qua ngưỡng 50%). ⚠️ Cải thiện WFE chủ yếu từ **1 window
+(w15) chiếm 64.8% tổng PnL VÀ là window maxDD tệ nhất** — nghi concentration/overfit-1-window, không
+phải breadth cải thiện thật. Đọc PHẦN 4 (`EXIT_MACHINE_20260730_stop_schedule.md`) trước khi quyết
+bước kế — có 3 hướng (a) tiếp ratchet-decouple biết rủi ro, (b) dừng quay lại NHÁNH A (fitness
+mismatch/HPO argmax), (c) điều tra riêng window 15 trước. **CHƯA có câu trả lời của Uni cho 3 hướng
+này — hỏi trước khi làm tiếp, đừng tự chọn.**
 
-- Jar đã build (local `target/binance-java-sdk-1.2.4.jar`, md5 `f89c5a449de96a4f377e95dae2de936f`)
-  và deploy lên Oracle tại `/home/ubuntu/java/simulator/binance-exit003-20260730.jar` (md5 verify
-  OK, KHÔNG đè lên `binance-lf-frozen-1.0.0.jar` cũ của verdict M).
-- **CHƯA bắn job.** Lý do dừng: `ce wfo_status` cho thấy job store "strategy_window" hiện tại có
-  `DONE=7 FAILED=9 / total=16`, tất cả FAILED đều là
-  `readDataFromAerospike1M ... EOFException` tới `STATE_HOST 103.157.218.226:3222` (server jobstore
-  Aerospike dùng bởi hệ fanout `ce`/`mcp_tools-v3.py` — **KHÁC** với Aerospike Oracle local mà
-  `asd --foreground` chạy trên box 161.118.212.3). Đã test: host 103.157.218.226:3222 TCP
-  **reachable** (không sập cứng), nhưng:
-  1. Chưa rõ 9 window FAILED này từ đâu (job cũ để lại, hay đang lỗi thật lúc này).
-  2. Job store của `strategy_window` **dùng CHUNG cho mọi lần chạy, không cô lập theo `tag` ở tầng
-     Aerospike** (chỉ cô lập id tiến trình phía orchestrator Python) — bắn job mới CÓ THỂ đụng lại
-     đúng 9 window đang FAILED, chưa chắc coordinator retry sạch.
-- **Đã hỏi Uni, CHƯA có câu trả lời** (câu hỏi cuối phiên trước): (a) cứ bắn fanout luôn xem sao,
-  (b) điều tra thêm nguồn gốc 9 window FAILED trước, hay (c) Uni tự check/restart node Aerospike đó.
-
-**Việc kế tiếp của session mới, THEO THỨ TỰ:**
-1. Đọc câu trả lời của Uni cho câu hỏi trên (nếu có ghi ở đâu đó); nếu chưa, hỏi lại — ĐỪNG tự bắn
-   fanout 6-node (2 Oracle + 5 Kaggle) khi chưa rõ trạng thái backend, tốn quota thật.
-2. Cách an toàn hơn để thăm dò trước khi fanout full: dùng `wfo_run` (Oracle-only, 1 window, đúng
-   mục đích "debug/verify" theo mô tả `orchestrator/profiles/wfo-fanout.json`) với jar
-   `binance-exit003-20260730.jar`, xem 1 window chạy sạch chưa rồi mới quyết fanout thật.
-   Cú pháp (qua `ce`, xem `mcp_tools-v3.py` dòng ~1309 `cmd_wfo_run`):
-   `wfo_run <ds> [jar] [n] [seed] [workers] [tag]` — ds mặc định dùng
-   `/home/ubuntu/claudedata/wfo_ds_ret2wf_4h_ff` hoặc dataset verdict M đã dùng, N nên = 30 (KHÔNG
-   phải 1 — xem mục "Nhắc lại" bên dưới).
-3. Sau khi N=30/13-window confirm chạy xong: so PnL/calmar/%OOS-dương với verdict M gốc (đã ghi ở
-   `AUDIT_20260730_wfo_constraint_harness.md`), viết vào `EXIT_MACHINE...md` PHẦN 4, rồi mới tính
-   tới việc bật thử `TS_RATCHET_DECOUPLED=true` làm 1 confirm RIÊNG (đừng gộp 2 biến 1 lần đo).
+Hạ tầng đã dùng (fix xong, giữ cho lần sau): `ce.sh` (bash, thay `ce.cmd` bị lỗi parse trên host này),
+`ce.sh kaggle_jar_bump "<msg>"` (nút mới: sanitize PrivateConfig + gate secret + auto-fix
+`TICKER_SOURCE`/`AEROSPIKE_READ_CLUSTER` trong config.properties trước khi bump dataset Kaggle
+`java-run-lc`), `_kaggle_kernel_dirs` đã filter prefix `wfo-worker` (tránh push nhầm dir rác
+`test226`). Run thật = **Kaggle-only 5 node, KHÔNG Oracle** (ticker file Oracle đã bị dọn để lấy chỗ
+disk, không phục hồi trong phiên này).
 
 ## ⚠️ Nhắc lại — tránh lặp lỗi N=1
 

@@ -1,0 +1,175 @@
+{
+  "name": "wfo_canonical_1m",
+  "_doc": "Canonical WFO 1-phut end-to-end (buoc A-E cua docs/WFO_DATA_PIPELINE_MASTER.md). Them 2026-08-04 theo yeu cau CE-buttons R1 (job config-driven >=2 lan chay = phai co nut, khong SSH tay).",
+  "_resolved_2026_08_04": "gate_dataset_upload (llm_gate) da thay bang 4 step tool/wait thuc (kaggle_dataset_push/kaggle_dataset_status, xem cmd_kaggle_dataset_push trong mcp_tools-v3.py) — het GAP thu cong. OI dataset (chuyendinh/funding-oi-percoin) va symbol_map.csv KHONG doi (van san co, khong can push lai).",
+  "params": {
+    "repo_root": "/home/ubuntu/BinanceFuturesJava",
+    "label_dataset_dir": "/home/ubuntu/claudedata/wfo1m/label_ds_1m",
+    "label_csv": "/home/ubuntu/claudedata/wfo1m/label_ds_1m/funding_label_1m.csv",
+    "label_job": "label_export_funding_label_1m.csv",
+    "tool1_dir": "/home/ubuntu/claudedata/wfo1m/features_export_python_v3_1m",
+    "tool1_job": "tool1_export_features_export_python_v3_1m",
+    "tool1_dataset_slug": "chuyendinh/funding-tool1-features-1m",
+    "label_dataset_slug": "chuyendinh/funding-label-full-1m",
+    "dataset_message": "canonical 1-phut export 20260804",
+    "kernel_dir": "/home/ubuntu/BinanceFuturesJava/orchestrator/kernels_wfo1m/selector-predict-1m",
+    "kernel_ref": "chuyendinh/selector-predict-1m",
+    "pred_dir": "/home/ubuntu/claudedata/wfo1m/predict_wf_1m",
+    "out_ds": "/home/ubuntu/claudedata/wfo1m/wfo_ds_LF_1m_20260804_h4h_v1",
+    "build_job": "buildds_wfo_ds_LF_1m_20260804_h4h_v1",
+    "expect_leakfree": "2023-01-01",
+    "horizon_idx": "0",
+    "jar": "",
+    "ram_gb": "12",
+    "_note_jobid": "label_job/tool1_job/build_job PHAI khop cong thuc trong cmd_*_export/cmd_wfo_build_ds (basename cua out_csv/out_dir/out_ds, non-alnum->'_'). Doi duong dan thi doi *_job kem theo.",
+    "_note_label_dir": "label_csv nam TRONG label_dataset_dir rieng (KHONG chung voi tool1_dir/out_ds/pred_dir) de kaggle_dataset_push chi upload dung 2 file (csv + .meta.json sidecar), khong keo theo file khac.",
+    "_note_no_nested_subst": "label_csv viet LITERAL (khong dung ${label_dataset_dir} long trong) vi engine _subst chi thay THE 1 LAN, KHONG resolve tham chieu long nhau giua params. Doi label_dataset_dir qua CLI K=V thi PHAI doi label_csv kem theo (2 gia tri doc lap, khong tu dong khop)."
+  },
+  "steps": [
+    {
+      "id": "mkdir_label_dir",
+      "type": "shell",
+      "cmd": "mkdir -p ${label_dataset_dir} && echo OK",
+      "on_fail": "abort",
+      "_note": "ExportFundingLabel (FileOutputStream) KHONG tu tao thu muc cha — phai mkdir truoc."
+    },
+    {
+      "id": "label_export",
+      "type": "tool",
+      "tool": "label_export",
+      "args": {"out_csv": "${label_csv}", "step_min": "1", "start": "20210101",
+               "end": "20260701", "jar": "${jar}", "ram_gb": "${ram_gb}"},
+      "on_fail": "abort"
+    },
+    {
+      "id": "wait_label",
+      "type": "wait",
+      "tool": "bg_report",
+      "args": {"job_id": "${label_job}"},
+      "until": {"conditions": [{"path": "job_status", "equals": "SUCCESS"}]},
+      "interval_sec": 60,
+      "timeout_sec": 21600
+    },
+    {
+      "id": "tool1_export",
+      "type": "tool",
+      "tool": "tool1_export",
+      "args": {"out_dir": "${tool1_dir}", "grid_min": "1", "start": "20210101",
+               "end": "20260701", "jar": "${jar}", "ram_gb": "${ram_gb}"},
+      "on_fail": "abort"
+    },
+    {
+      "id": "wait_tool1",
+      "type": "wait",
+      "tool": "bg_report",
+      "args": {"job_id": "${tool1_job}"},
+      "until": {"conditions": [{"path": "job_status", "equals": "SUCCESS"}]},
+      "interval_sec": 60,
+      "timeout_sec": 21600
+    },
+    {
+      "id": "sync_kernel",
+      "type": "shell",
+      "cmd": "cp ${repo_root}/ml/training/gen_funding_wf_predictions.py ${kernel_dir}/_gen_funding_wf_predictions.py && cp ${repo_root}/ml/lib/funding_label_pb.py ${repo_root}/ml/lib/funding_label_pb2.py ${repo_root}/ml/lib/tool1_col.py ${kernel_dir}/ && echo SYNCED",
+      "on_fail": "abort",
+      "_note": "Copy 1-chieu tu ml/training + ml/lib (nguon that duy nhat) vao kernel dir. KHONG bao gio sua tay cac file _gen_*.py / funding_label_pb*.py / tool1_col.py trong kernel_dir. [2026-08-07 TASK-251] PHAI copy CA 2 file decoder protobuf (funding_label_pb.py + binding funding_label_pb2.py sinh tu src/main/proto/funding_label.proto): label gio la protobuf columnar, thieu decoder thi kernel Kaggle chet ngay o buoc import. CUNG NGAY DO: PHAI copy tool1_col.py (reader Tool1 dinh dang T1C1 .t1c.gz, sinh boi Tool1ColSink.java) — thieu no thi buoc build_features() chet ngay o import."
+    },
+    {
+      "id": "push_tool1_dataset",
+      "type": "tool",
+      "tool": "kaggle_dataset_push",
+      "args": {"local_dir": "${tool1_dir}", "slug": "${tool1_dataset_slug}",
+               "message": "${dataset_message}", "license": ""},
+      "on_fail": "abort"
+    },
+    {
+      "id": "wait_tool1_dataset",
+      "type": "wait",
+      "tool": "kaggle_dataset_status",
+      "args": {"slug": "${tool1_dataset_slug}"},
+      "until": {"conditions": [{"path": "dataset_state", "equals": "READY"}]},
+      "interval_sec": 30,
+      "timeout_sec": 2400
+    },
+    {
+      "id": "push_label_dataset",
+      "type": "tool",
+      "tool": "kaggle_dataset_push",
+      "args": {"local_dir": "${label_dataset_dir}", "slug": "${label_dataset_slug}",
+               "message": "${dataset_message}", "license": ""},
+      "on_fail": "abort"
+    },
+    {
+      "id": "wait_label_dataset",
+      "type": "wait",
+      "tool": "kaggle_dataset_status",
+      "args": {"slug": "${label_dataset_slug}"},
+      "until": {"conditions": [{"path": "dataset_state", "equals": "READY"}]},
+      "interval_sec": 30,
+      "timeout_sec": 2400
+    },
+    {
+      "id": "kaggle_push",
+      "type": "tool",
+      "tool": "kaggle_push",
+      "args": {"dir": "${kernel_dir}"},
+      "on_fail": "abort"
+    },
+    {
+      "id": "wait_kaggle",
+      "type": "wait",
+      "tool": "kaggle_status",
+      "args": {"ref": "${kernel_ref}"},
+      "until": {"conditions": [{"path": "kernel_state", "equals": "COMPLETE"}]},
+      "interval_sec": 120,
+      "timeout_sec": 28800
+    },
+    {
+      "id": "kaggle_output",
+      "type": "tool",
+      "tool": "kaggle_output",
+      "args": {"ref": "${kernel_ref}", "dir": "${pred_dir}"},
+      "on_fail": "abort"
+    },
+    {
+      "id": "build_ds",
+      "type": "tool",
+      "tool": "wfo_build_ds",
+      "args": {"predict_wf_dir": "${pred_dir}", "out_ds": "${out_ds}", "jar": "${jar}"},
+      "on_fail": "abort"
+    },
+    {
+      "id": "wait_build",
+      "type": "wait",
+      "tool": "bg_report",
+      "args": {"job_id": "${build_job}"},
+      "until": {"conditions": [{"path": "job_status", "equals": "SUCCESS"}]},
+      "interval_sec": 60,
+      "timeout_sec": 7200
+    },
+    {
+      "id": "validate_report_only",
+      "type": "tool",
+      "tool": "wfo_validate",
+      "args": {"lf_dir": "${pred_dir}", "ds_dir": "${out_ds}",
+               "expect_leakfree": "${expect_leakfree}", "horizon_idx": "${horizon_idx}",
+               "sign": "0"},
+      "on_fail": "abort"
+    },
+    {
+      "id": "gate_sign",
+      "type": "llm_gate",
+      "question": "validate_report_only vua chay xong -> xem ${out_ds}/validation_report.txt. CANH BAO: pipe_resume voi BAT KY answer nao (llm_gate KHONG re nhanh theo noi dung tra loi) se DI TIEP toi step sign_manifest, va sign_manifest se TU KY VALIDATED_BY NEU report.result=PASS luc do (fail-closed nam trong chinh wfo_validate, khong nam trong gate nay). Neu CHUA muon ky (can xem lai thu cong): dung pipe_stop <pipe_id> tai step nay, KHONG goi pipe_resume. Chi pipe_resume khi da xem report va dong y ky.",
+      "context_files": []
+    },
+    {
+      "id": "sign_manifest",
+      "type": "tool",
+      "tool": "wfo_validate",
+      "args": {"lf_dir": "${pred_dir}", "ds_dir": "${out_ds}",
+               "expect_leakfree": "${expect_leakfree}", "horizon_idx": "${horizon_idx}",
+               "sign": "1"},
+      "on_fail": "abort"
+    }
+  ]
+}

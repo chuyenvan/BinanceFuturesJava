@@ -1,0 +1,22 @@
+{
+  "n_pct": 6,
+  "rows": 3009583,
+  "windows": 14,
+  "symbols": 697,
+  "ts_min": 1672531200000,
+  "ts_max": 1780271100000,
+  "n_p6_ge_0.7": 6435,
+  "file": "ev2_preds_n6.csv.gz",
+  "columns": [
+    "win",
+    "ts",
+    "symbol",
+    "p6",
+    "p9",
+    "oi_z",
+    "oi_delta24h",
+    "f8",
+    "f14",
+    "f22"
+  ]
+}

@@ -27,7 +27,12 @@ public class TradeUtils {
 
         // Nhả lại tối đa TS_GIVEBACK_RATIO phần lợi nhuận (mặc định 0.5 = hành vi cũ), nhưng không vượt maxGap
         // TASK (2026-07-10): nghi phạm "cắt lãi non" — sweep trực tiếp tỉ lệ này (0.3 chặt / 0.7 lỏng-nuôi-trend)
-        float gap = Math.min(maxProfitRate * Configs.TS_GIVEBACK_RATIO, maxGap);
+        // TASK (2026-07-31, giveback fix P6): mac dinh (TS_GIVEBACK_FLOOR=false) HANH VI CU nguyen ven
+        // (Math.min voi tran maxGap). Khi true: doi thanh Math.max voi SAN TS_MIN_GAP - nha theo ti le
+        // KHONG bi teo dan khi lai lon (xem Configs.TS_GIVEBACK_FLOOR javadoc + EXIT_MACHINE PHAN 1).
+        float gap = Configs.TS_GIVEBACK_FLOOR
+                ? Math.max(maxProfitRate * Configs.TS_GIVEBACK_RATIO, Configs.TS_MIN_GAP)
+                : Math.min(maxProfitRate * Configs.TS_GIVEBACK_RATIO, maxGap);
 
         // Lãi còn lại sau khi trừ gap chính là mức stop mới
         float rate = maxProfitRate - gap;

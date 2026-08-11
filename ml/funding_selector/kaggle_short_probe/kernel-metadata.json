@@ -1,0 +1,1 @@
+{"id":"chuyendinh/short-probe-bottom-decile","title":"short-probe-bottom-decile","code_file":"short_probe.py","language":"python","kernel_type":"script","is_private":true,"enable_gpu":false,"enable_internet":false,"dataset_sources":["chuyendinh/funding-tool1-features-unfiltered","chuyendinh/funding-label-full"],"competition_sources":[],"kernel_sources":[]}

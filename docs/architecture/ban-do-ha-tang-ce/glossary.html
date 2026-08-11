@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Từ điển &amp; index artifact</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header class="topbar"><div class="row">
+  <a class="brand" href="index.html">🗺️ Bản đồ hạ tầng CE</a>
+  <nav>
+    <a href="index.html">Tổng quan</a>
+    <a href="block1-data.html" class="b1">1 · Dữ liệu</a>
+    <a href="block2-wfo.html" class="b2">2 · Luồng WFO</a>
+    <a href="block3-ce.html" class="b3">3 · CE &amp; nút</a>
+    <a href="integrity.html">Liêm chính</a>
+    <a href="glossary.html" class="active">Từ điển</a>
+    <a href="graph.json">graph.json</a>
+  </nav>
+</div></header>
+
+<div class="wrap">
+<p class="crumb"><a href="index.html">Tổng quan</a> › Từ điển</p>
+<h1>Từ điển thuật ngữ &amp; index artifact</h1>
+<p class="lead">Tra nhanh: một artifact/tên set là gì, sinh ở tầng nào, dùng nút CE nào, xem chi tiết ở đâu.</p>
+
+<h2 class="anchor-h" id="artifact">Index artifact → tầng → nút CE</h2>
+<table>
+<thead><tr><th>Artifact / set</th><th>Là gì</th><th>Tầng (Block 2)</th><th>Nút CE (Block 3)</th></tr></thead>
+<tbody>
+<tr><td><code>kline_1m_opt</code></td><td>Ticker 1-phút Aerospike (nguồn)</td><td><a href="block2-wfo.html#l1">1</a></td><td>(đọc-only)</td></tr>
+<tr><td><code>market_data_object</code></td><td>Chỉ báo vĩ mô per-phút (master clock)</td><td><a href="block2-wfo.html#l2">2</a></td><td>ExportMarketData2File</td></tr>
+<tr><td><code>oi_percoin_*.bin.gz</code></td><td>OI/LS/taker per-coin, record 30B</td><td><a href="block2-wfo.html#l3">3</a></td><td>—</td></tr>
+<tr><td><code>funding_label.csv</code> + <code>.meta.json</code></td><td>Nhãn thô rổ altcoin (maxFav/maxAdv…)</td><td><a href="block2-wfo.html#l4">4</a></td><td><code>label_export</code></td></tr>
+<tr><td><code>features_*.bin.gz</code> (Tool1)</td><td>40 feature f0–f39, record 170B</td><td><a href="block2-wfo.html#l5">5</a></td><td><code>tool1_export</code></td></tr>
+<tr><td><code>predict_wf_&lt;cutoff&gt;.bin</code></td><td>Selector pred per-fold, record 26B</td><td><a href="block2-wfo.html#l6">6</a></td><td><code>pred_convert</code></td></tr>
+<tr><td><code>ai_pred_market_gate_wfo</code></td><td>Set gate pred (predReturn15M)</td><td><a href="block2-wfo.html#l7">7</a></td><td>LoadWfoGatePredTool</td></tr>
+<tr><td><code>market.bin / pred.bin / funding.bin / manifest.txt</code></td><td>WFO dataset đóng gói (score=1−P(win))</td><td><a href="block2-wfo.html#l8">8</a></td><td><code>wfo_build_ds</code></td></tr>
+<tr><td><code>validation_report.txt</code></td><td>Kết quả 6-nhóm boundary test + ký</td><td><a href="block2-wfo.html#l9">9</a></td><td><code>wfo_validate</code></td></tr>
+<tr><td><code>&lt;job&gt;_result.json</code></td><td>Result Contract của job nền</td><td>—</td><td><code>bg_report</code></td></tr>
+</tbody>
+</table>
+
+<h2 class="anchor-h" id="terms">Thuật ngữ</h2>
+<div class="grid c2">
+<div class="card"><b>SoT (Source of Truth)</b> — kho gốc duy nhất mọi market data = node 242. Off-limits với dev/Kaggle.</div>
+<div class="card"><b>WFO (Walk-Forward Optimization)</b> — tối ưu &amp; đánh giá theo cửa sổ tiến dần: train IS → chấm OOS → trượt tới.</div>
+<div class="card"><b>Selector</b> — model XGBoost chọn COIN NÀO (P(pump ≥6% trong H)). Output P(win). <a href="block2-wfo.html#selector-gate">chi tiết</a></div>
+<div class="card"><b>Gate</b> — model lọc tín hiệu market tổng hợp (predReturn15M), độc lập selector.</div>
+<div class="card"><b>score = 1 − P(win)</b> — engine chọn score THẤP; đảo dấu ở tầng 8 (<code>WfoDataset.java:226</code>).</div>
+<div class="card"><b>expanding walk-forward</b> — train trên toàn lịch sử ≤cutoff (không windowed), OOS block sau cutoff.</div>
+<div class="card"><b>purge / embargo</b> — cắt khoảng quanh cutoff để label tương lai không rò sang OOS (L1 chưa xử đủ).</div>
+<div class="card"><b>merge_asof backward</b> — ghép giá trị gần nhất ≤t (không lấy tương lai) → chống leak khi join OI/funding.</div>
+<div class="card"><b>ce.cmd &lt;nút&gt;</b> — nút nguyên tử L3, việc chân tay máy làm trọn chuỗi, trả JSON.</div>
+<div class="card"><b>llm_gate</b> — step pipeline dừng sạch chờ con người/AI duyệt (điểm TƯ DUY duy nhất).</div>
+<div class="card"><b>Result Contract</b> — block <code>=== RESULT ===</code> chuẩn hoá đầu ra job (STATUS/COMMIT/ARTIFACTS/VERIFY…).</div>
+<div class="card"><b>fanout</b> — chạy song song 6-node (2 Oracle + ≤5 Kaggle) cùng jobstore cho full-16-window.</div>
+<div class="card"><b>manifest.txt</b> — provenance dataset: leakFreeFrom, codeGitSha, horizonIdx, md5+ts-range mỗi file nguồn.</div>
+<div class="card"><b>TICKER_SOURCE</b> — <code>file</code> | <code>aerospike</code>, CHỈ đọc từ <code>config.properties</code> (env NO-OP). <a href="block1-data.html#hai-duong">chi tiết</a></div>
+</div>
+
+<h2 class="anchor-h" id="sources">Nguồn sự thật (đọc thẳng khi nghi ngờ)</h2>
+<ul class="tight">
+<li><b>Dữ liệu:</b> <code>docs/DATA_STATE.md</code> · <code>docs/db/index.md</code> · <code>docs/REDESIGN_INFRA_20260804.md</code> · <code>insights/INGEST_FORMAT.md</code></li>
+<li><b>Luồng WFO:</b> <code>docs/WFO_DATA_PIPELINE_MASTER.md</code> (sống) · <code>PIPELINE_PROVENANCE.md</code> (lịch sử) · <code>insights/WFO_LEAKS_TODO.md</code></li>
+<li><b>CE:</b> <code>orchestrator/cognitive-execution-framework-v3.md</code> · <code>orchestrator/mcp_tools-v3.py</code> · <code>docs/rules/ce-buttons.md</code> · <code>docs/INFRA_FACTS.md</code></li>
+<li><b>Liêm chính:</b> <code>docs/CORE.md</code> · <code>docs/DATA_VALIDATION_FRAMEWORK.md</code> · <code>docs/rules/task-workflow.md</code></li>
+</ul>
+
+<footer class="foot">Về đầu: <a href="index.html">Tổng quan</a> · Bản máy-đọc: <a href="graph.json">graph.json</a></footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,86 @@
+syntax = "proto3";
+
+package funding;
+
+option java_package = "com.binance.chuyennd.ai_ml.features.export.pb";
+option java_outer_classname = "FundingLabelProto";
+
+// ============================================================================
+// TASK-251 — format LABEL mới thay CSV (quota Kaggle).
+//
+// LÝ DO ĐỔI (đo thật, không suy đoán — xem tasks/251-...md Phần 35):
+//   Kaggle tính quota private dataset theo BẢN NÉN NỘI BỘ của nó (≈ gzip), KHÔNG
+//   theo size file thô. Đo trên 3M dòng label thật:
+//     CSV thô 601MB  -> quota 161.8MB (26.9%)
+//     protobuf row-based       -> quota 163.2MB  (KHÔNG giảm gì — nén xong bằng CSV)
+//     protobuf columnar        -> quota 108.0MB  (1.50x)
+//     + delta giữa horizon     -> quota  60.3MB  (2.68x, lossless 1e-6)
+//     + scale 1e-5             -> quota  46.5MB  (3.48x)  <-- CHỌN CÁI NÀY
+//   Push thật lên Kaggle verify: 46,481,933 B (lệch 0.15% so với gzip ước lượng).
+//
+// 3 KỸ THUẬT tạo ra khác biệt (bản thân protobuf KHÔNG giúp gì nếu thiếu chúng):
+//   1. COLUMNAR: gom N dòng thành 1 chunk, mỗi cột là 1 mảng packed -> cùng kiểu dữ
+//      liệu nằm liền nhau -> nén tốt hơn hẳn row-based.
+//   2. DELTA GIỮA HORIZON: maxFav là running max nên maxFav_12h thường == maxFav_4h
+//      (horizon dài chứa horizon ngắn). Lưu h0 rồi (h1-h0), (h2-h1), (h3-h2) -> phần
+//      lớn = 0 -> nén cực tốt. Tương tự maxAdv/tHitFav/tHitAdv/retEnd.
+//      nBars lưu chênh lệch so với giá trị kỳ vọng (H_MINUTES/STEP_MIN) -> phần lớn = 0.
+//   3. SORT TRONG CHUNK theo (symbol, t): đo thật sort-trong-chunk 3.50x > sort toàn
+//      cục 3.49x > không sort 2.96x. Chỉ cần buffer 1 chunk (~20MB RAM), KHÔNG phải
+//      buffer cả quý.
+//
+// PRECISION: Uni chốt scale = 100000 (1e-5) sau khi xem số liệu tác động thật:
+//   sai số ≤ 0.05 basis point (fee taker Binance = 4 bps -> nhỏ hơn fee 80 lần);
+//   tỉ lệ giá trị nằm sát ngưỡng triple-barrier đủ để đổi phía: 0.014% ở ngưỡng 2%,
+//   0.005% ở ngưỡng 6% (~1/20.000) — nhiễu đối xứng, không tạo bias hệ thống.
+//   Trường `scale` được ghi THẲNG vào từng chunk để reader không phải đoán.
+//
+// LAYOUT FILE: chuỗi LabelChunk nối tiếp, mỗi cái ghi bằng writeDelimitedTo()
+//   (varint length prefix + payload). KHÔNG có header riêng ở đầu file — mỗi chunk
+//   TỰ CHỨA dictionary symbol của nó. Nhờ vậy merge nhiều file part = nối byte thuần
+//   (cat), KHÔNG cần remap sym_id — giữ nguyên được kiến trúc partition+merge hiện có.
+// ============================================================================
+
+// Các cột của MỘT mốc horizon, đã delta-hoá so với horizon liền trước.
+// Với horizon đầu tiên (index 0) thì đây là giá trị GỐC (không delta).
+message HorizonCols {
+  // maxFav / maxAdv / retEnd: ratio đã nhân `scale` rồi làm tròn về số nguyên.
+  // Dùng sint32 (zigzag) vì delta có thể âm — maxAdv là running min nên delta ≤ 0.
+  repeated sint32 max_fav  = 1 [packed = true];
+  repeated sint32 max_adv  = 2 [packed = true];
+  // tHitFav / tHitAdv: offset PHÚT THẬT từ t. Delta giữa horizon luôn ≥ 0 (running
+  // max/min chỉ dịch về sau) nhưng vẫn để sint32 cho an toàn khi có sentinel.
+  repeated sint32 thit_fav = 3 [packed = true];
+  repeated sint32 thit_adv = 4 [packed = true];
+  repeated sint32 ret_end  = 5 [packed = true];
+  // nBars: lưu (kỳ vọng − thực tế). Kỳ vọng = H_MINUTES[h] / STEP_MIN. Đủ nến ⇒ 0.
+  repeated sint32 n_bars_deficit = 6 [packed = true];
+}
+
+// Một khối ~200k dòng label, đã sort theo (symbol, t) để delta hiệu quả.
+message LabelChunk {
+  // Dictionary CỤC BỘ của chunk này: sym_id là index vào mảng này.
+  repeated string symbols = 1;
+
+  // Mốc epoch-ms để quy chiếu t_idx. t_thật = base_ms + t_idx * step_min * 60000.
+  uint64 base_ms  = 2;
+  uint32 step_min = 3;   // LABEL_STEP_MIN (1 cho canonical WFO 1m)
+  uint32 scale    = 4;   // hệ số nhân ratio (100000 = 1e-5)
+  uint32 row_count = 5;
+
+  // Tên các mốc horizon theo đúng thứ tự mảng `h` bên dưới: ["4h","12h","24h","72h"]
+  // (hoặc 7 mốc nếu LABEL_HORIZON_SET=full). Reader KHÔNG được hardcode 4.
+  repeated string horizons = 6;
+
+  // sym_id / t_idx: delta so với dòng liền trước trong chunk (sau khi đã sort).
+  repeated sint32 sym_id = 7 [packed = true];
+  repeated sint32 t_idx  = 8 [packed = true];
+
+  // Bitmask đánh dấu ô RỖNG (CSV cũ ghi chuỗi rỗng = NaN). Mỗi horizon chiếm 3 bit:
+  //   bit (h*3+0) = max_fav rỗng, (h*3+1) = max_adv rỗng, (h*3+2) = ret_end rỗng.
+  // tHitFav/tHitAdv/nBars không bao giờ rỗng nên không cần bit.
+  repeated uint32 null_mask = 9 [packed = true];
+
+  // Cùng độ dài với `horizons`.
+  repeated HorizonCols h = 10;
+}

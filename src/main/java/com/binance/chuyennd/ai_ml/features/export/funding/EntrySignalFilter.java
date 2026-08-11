@@ -98,6 +98,31 @@ public final class EntrySignalFilter {
         return result;
     }
 
+    /**
+     * DEM N_t = so ung vien qua Tang 1 (volume>=VOL_AVG_MIN_USDT) + |rate(WINDOW)m|>0, TRUOC khi cat top-pct.
+     * = cands.size() trong {@link #selectCoins} (KHONG phu thuoc TOP_PCT). Dung de do dung luong:
+     * features_count(pct) = sum_t ceil(N_t * pct). Logic PHAI khop selectCoins tuyet doi.
+     */
+    public static int countCandidates(Map<String, KlineObjectSimple> snapshot, HistoryManager history) {
+        if (snapshot == null || snapshot.isEmpty() || history == null) return 0;
+        int n = 0;
+        for (Map.Entry<String, KlineObjectSimple> e : snapshot.entrySet()) {
+            String symbol = e.getKey();
+            KlineObjectSimple k = e.getValue();
+            if (k == null || !Utils.isTickerAvailable(k)) continue;
+            short symId = com.binance.chuyennd.ai_ml.data.SimpleSymbolMapper.getInstance().getId(symbol);
+            if (symId < 0) continue;
+            float volAvg = history.getAverageVolume(symId, VOL_AVG_WINDOW_MIN);
+            if (volAvg <= 0f) volAvg = k.totalUsdt;
+            if (volAvg < VOL_AVG_MIN_USDT) continue;
+            float rate = history.getReturn(symbol, RATE_WINDOW_MIN);
+            float absRate = Math.abs(rate);
+            if (absRate <= 0f) continue;
+            n++;
+        }
+        return n;
+    }
+
     /** Ung vien xep hang cross-sectional. */
     private static final class Cand {
         final String symbol;

@@ -48,6 +48,9 @@ public class OrderTargetInfoTest implements Serializable {
     //   dau (createOrder) va mang theo qua mergeOrder (KHONG averaged nhu priceEntry). Chi dung cho blanket
     //   hard-SL; null cho cac duong khong set -> byte-identical khi HARD_SL_PCT=0.
     public Float firstEntryPrice;
+    /** DCA GRID (2026-08-01): so leg da khop cua CUM. Set trong mergeOrder. 1 = chua nhoi lan nao.
+     *  Dung de biet dang o bac nao cua grid -> lay dung moc va ti trong tiep theo. */
+    public int legCount = 1;
     public Float lastEntry;
 
     public Float priceTP;

@@ -1,6 +1,7 @@
 package com.binance.chuyennd.ai_ml.features.export.fundingv2;
 
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
+import com.binance.chuyennd.ai_ml.hpo.kaggle.KaggleDataLoader;
 import com.binance.chuyennd.ai_ml.features.export.funding.FundingDataCollectionManager;
 import com.binance.chuyennd.ai_ml.features.export.funding.FundingMarketFeatures;
 import com.binance.chuyennd.object.MarketDataObject;
@@ -19,7 +20,6 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
-import java.util.zip.GZIPOutputStream;
 
 public class ExportFeaturesForPythonTool {
     private static final Logger LOG = LoggerFactory.getLogger(ExportFeaturesForPythonTool.class);
@@ -65,9 +65,24 @@ public class ExportFeaturesForPythonTool {
      * Dùng khi chạy độc lập (main / test). Worker dùng overload bên dưới để tái dùng data.
      */
     public void startGeneration(String outputDir, long targetStartTs, long globalEndTs) throws Exception {
-        LOG.info("📥 Đang tải Market Data & Symbol Mapper...");
-        TreeMap<Long, MarketDataObject> time2MarketData = DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
-        Map<String, Short> globalMapper = DataManagerAerospikeFloatSim.loadSymbolMapper();
+        // [2026-08-04] TASK-112c: nhanh theo Configs.TICKER_SOURCE (CUNG 1 flag voi ticker/lifecycle,
+        // khong them config rieng) — file: doc snapshot core_market_data/core_symbol_mapper tu
+        // KaggleDataLoader (Kaggle, khong co Aerospike); aerospike (mac dinh): giu hanh vi cu.
+        TreeMap<Long, MarketDataObject> time2MarketData;
+        Map<String, Short> globalMapper;
+        if ("file".equals(Configs.TICKER_SOURCE)) {
+            LOG.info("📥 Đang tải Market Data & Symbol Mapper từ file snapshot (TICKER_SOURCE=file)...");
+            time2MarketData = KaggleDataLoader.loadMarketData();
+            globalMapper = KaggleDataLoader.loadSymbolMapperFile();
+            if (time2MarketData == null || globalMapper == null) {
+                throw new IllegalStateException("TICKER_SOURCE=file nhung thieu snapshot "
+                        + "core_market_data/core_symbol_mapper trong kaggle_data_hpo/ - day len Kaggle truoc.");
+            }
+        } else {
+            LOG.info("📥 Đang tải Market Data & Symbol Mapper...");
+            time2MarketData = DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
+            globalMapper = DataManagerAerospikeFloatSim.loadSymbolMapper();
+        }
         startGeneration(outputDir, targetStartTs, globalEndTs,
                 time2MarketData, new ConcurrentHashMap<>(globalMapper));
     }
@@ -89,8 +104,26 @@ public class ExportFeaturesForPythonTool {
         //     Bat qua env FF_UNFILTERED=1 -> bo EntrySignalFilter, xuat MOI alt tren luoi 15m (khop funding_label.csv),
         //     co the sub-sample deterministic qua FF_SAMPLE_RATE (0,1]. KHONG doi output production. ===
         final boolean unfiltered = "1".equals(System.getenv("FF_UNFILTERED"));
+        // === COUNT-ONLY (TASK do TOP_PCT 2026-08-09): FF_COUNT_ONLY=1 -> chi dem N_t/phut qua nhanh
+        //     filtered (bo extractFeatures + KHONG ghi .t1c.gz). Mac dinh tat -> path production khong doi. ===
+        final boolean countOnly = "1".equals(System.getenv("FF_COUNT_ONLY"));
+        final long[] ntHist = new long[2048];
+        long ntTimestamps = 0L;
+        long ntCandTotal = 0L;
+        // === KEYDUMP (TASK label-filter 2026-08-09): FF_KEYDUMP=1 -> ghi binary key (symId<<32|minuteIdx)
+        //     cho moi coin qua selectCoins (khop TUYET DOI voi features vi cung selectCoins + cung warmup). ===
+        final boolean keyDump = "1".equals(System.getenv("FF_KEYDUMP"));
+        java.io.DataOutputStream keyOut = null;
+        long keyDumpCount = 0L;
+        if (keyDump) {
+            keyOut = new java.io.DataOutputStream(new java.io.BufferedOutputStream(
+                    new java.io.FileOutputStream(outputDir + (outputDir.endsWith("/") ? "" : "/") + "keys.bin"), 1 << 20));
+        }
         final double sampleRate = parseRate(System.getenv("FF_SAMPLE_RATE"));
-        final long GRID_15M_MS = 15L * 60_000L;
+        // [2026-08-04 CANONICAL 1m] Luoi grid unfiltered: env FF_GRID_MIN (mac dinh 15, khop hanh vi cu).
+        // Dat =1 de xuat Tool1 luoi 1 phut THAT (khop LABEL_STEP_MIN=1 cua ExportFundingLabel) — bat buoc
+        // dong bo 2 gia tri nay (Tool1 grid == label step) neu khong join (symbol,ts) exact se rot ~het du lieu.
+        final long GRID_15M_MS = Long.parseLong(envOr("FF_GRID_MIN", "15")) * 60_000L;
 
         SimpleDateFormat sdfFull = new SimpleDateFormat("yyyyMMdd HH:mm");
         SimpleDateFormat sdfFile = new SimpleDateFormat("yyyyMMdd");
@@ -116,7 +149,10 @@ public class ExportFeaturesForPythonTool {
         cal.add(Calendar.MONTH, 3);
         long chunkEndTs = cal.getTimeInMillis();
 
-        DataOutputStream dos = null;
+        // [2026-08-07 TASK-251] Sink T1C1 (columnar + quantize int16 + byte-split + delta) thay cho
+        // DataOutputStream row-major float32. Đo thật quý 2024Q2 (1.176.470 record): 105.96 → 27.97
+        // B/record sau gzip = giảm 3.79 lần quota Kaggle, sai số xấu nhất 0.0038 IQR. Xem Tool1ColSink.
+        Tool1ColSink sink = null;
         String currentFilePath = "";
         int fileRecordCount = 0;
         List<PrepareData> batch = new ArrayList<>();
@@ -135,8 +171,33 @@ public class ExportFeaturesForPythonTool {
 
                 if (minutesToRead <= 0) break;
 
-                TreeMap<Long, Map<String, KlineObjectSimple>> dailyData =
-                        DataManagerAerospikeFloatSim.readDataFromAerospikeCustom(currentReadTs, minutesToRead);
+                // [2026-08-04] TASK-112 pattern (giong ExportFundingLabel): TICKER_SOURCE=file cho phep
+                // chay TREN KAGGLE doc ticker_*.bin (dataset hpo-ticker-daily), khong can Aerospike/Oracle.
+                // minutesToRead <=1440 luon (chi rut ngan o chunk cuoi) va currentReadTs LUON day-aligned
+                // (targetStartTs/warmup/+1440p moi buoc deu giu alignment) -> moi lan doc CHI cham 1 file
+                // ticker_YYYYMMDD.bin, subMap() cat dung cua so (khop chinh xac hanh vi readDataFromAerospikeCustom).
+                TreeMap<Long, Map<String, KlineObjectSimple>> dailyData;
+                if ("aerospike".equals(Configs.TICKER_SOURCE)) {
+                    dailyData = DataManagerAerospikeFloatSim.readDataFromAerospikeCustom(currentReadTs, minutesToRead);
+                } else if ("file".equals(Configs.TICKER_SOURCE)) {
+                    TreeMap<Long, Map<String, KlineObjectSimple>> fileDay =
+                            KaggleDataLoader.loadDailyTickersStringKey(currentReadTs);
+                    if (fileDay == null) {
+                        dailyData = new TreeMap<>();
+                    } else {
+                        if (!fileDay.isEmpty() && fileDay.firstKey() > currentReadTs) {
+                            LOG.warn("TICKER_SOURCE=file: currentReadTs={} khong day-aligned voi file ngay "
+                                    + "(firstKey={}) - co the mat data dau cua so. Kiem tra targetStartTs.",
+                                    currentReadTs, fileDay.firstKey());
+                        }
+                        long rangeEndExclusive = currentReadTs + (long) minutesToRead * Utils.TIME_MINUTE;
+                        dailyData = new TreeMap<>(fileDay.subMap(currentReadTs, rangeEndExclusive));
+                    }
+                } else {
+                    throw new IllegalStateException("Thieu/sai TICKER_SOURCE trong config.properties (hien tai: "
+                            + Configs.TICKER_SOURCE + ") - them dong: TICKER_SOURCE=aerospike (doc Aerospike) "
+                            + "hoac TICKER_SOURCE=file (doc ticker_*.bin tu Kaggle dataset, khong can Oracle).");
+                }
 
                 if (dailyData != null && !dailyData.isEmpty()) {
                     for (Map.Entry<Long, Map<String, KlineObjectSimple>> timeEntry : dailyData.entrySet()) {
@@ -150,13 +211,40 @@ public class ExportFeaturesForPythonTool {
                         // Bỏ qua nếu vẫn đang trong giai đoạn Warmup
                         if (time < targetStartTs) continue;
 
+                        // === COUNT-ONLY: dem N_t = ung vien qua tier1(vol>=2000)+|rate30m|>0 tai phut nay,
+                        //     KHONG extract/ghi. History da updateMarketHistory o tren -> getInstance() dung. ===
+                        if (countOnly) {
+                            int nt = com.binance.chuyennd.ai_ml.features.export.funding.EntrySignalFilter
+                                    .countCandidates(symbol2Ticker, com.binance.chuyennd.ai_ml.features.export.HistoryManager.getInstance());
+                            if (nt < 0) nt = 0;
+                            if (nt >= ntHist.length) nt = ntHist.length - 1;
+                            ntHist[nt]++;
+                            ntTimestamps++;
+                            ntCandTotal += nt;
+                            continue;
+                        }
+
+                        // === KEYDUMP: ghi key (symId,minute) cho moi coin qua selectCoins, bo extraction. ===
+                        if (keyDump) {
+                            java.util.Set<String> pfK = com.binance.chuyennd.ai_ml.features.export.funding.EntrySignalFilter
+                                    .selectCoins(symbol2Ticker, com.binance.chuyennd.ai_ml.features.export.HistoryManager.getInstance());
+                            long minuteIdx = time / 60000L;
+                            for (String symK : pfK) {
+                                short sidK = com.binance.chuyennd.ai_ml.data.SimpleSymbolMapper.getInstance().getId(symK);
+                                if (sidK < 0) continue; // dung CUNG mapper voi label (khop symId tuyet doi)
+                                keyOut.writeLong(((long) (sidK & 0xFFFF) << 32) | (minuteIdx & 0xFFFFFFFFL));
+                                keyDumpCount++;
+                            }
+                            continue;
+                        }
+
                         // KIỂM TRA MỐC CẮT FILE (3 THÁNG)
                         if (time >= chunkEndTs) {
-                            if (dos != null) {
-                                writeBatch(dos, batch);
+                            if (sink != null) {
+                                writeBatch(sink, batch);
                                 fileRecordCount += batch.size();
                                 batch.clear();
-                                dos.close();
+                                sink.close();
                                 LOG.info("\n🎉 Đã đóng file: {} (Tổng: {} records)", currentFilePath, fileRecordCount);
                             }
 
@@ -165,15 +253,20 @@ public class ExportFeaturesForPythonTool {
                             cal.setTimeInMillis(chunkStartTs);
                             cal.add(Calendar.MONTH, 3);
                             chunkEndTs = cal.getTimeInMillis();
-                            dos = null; // Kích hoạt tạo file mới ở dưới
+                            sink = null; // Kích hoạt tạo file mới ở dưới
                         }
 
                         // MỞ FILE MỚI NẾU CẦN
-                        if (dos == null) {
+                        if (sink == null) {
+                            // ĐUÔI MỚI .t1c.gz (KHÔNG dùng lại .bin.gz): định dạng khác hẳn nên phải phân
+                            // biệt được từ tên file — reader Python (ml/lib/tool1_col.py) chọn decoder theo
+                            // đuôi, và các job/glob cũ trỏ *.bin.gz sẽ KHÔNG vô tình đọc nhầm file mới.
                             currentFilePath = outputDir + "features_" + sdfFile.format(new Date(chunkStartTs))
-                                    + "_to_" + sdfFile.format(new Date(chunkEndTs)) + ".bin.gz";
+                                    + "_to_" + sdfFile.format(new Date(chunkEndTs)) + ".t1c.gz";
                             LOG.info("📂 Đang tạo file mới: {}", currentFilePath);
-                            dos = new DataOutputStream(new BufferedOutputStream(new GZIPOutputStream(new FileOutputStream(currentFilePath)), 1024 * 1024));
+                            // stepMin = 1: tIdx mã hoá theo PHÚT thật (bất biến, không phụ thuộc FF_GRID_MIN).
+                            // Lưới xuất thưa hơn (vd 15m) vẫn đúng vì tIdx chỉ là số phút kể từ baseMs.
+                            sink = new Tool1ColSink(currentFilePath, 1);
                             fileRecordCount = 0;
                         }
 
@@ -231,7 +324,7 @@ public class ExportFeaturesForPythonTool {
 
                         // FLUSH XUỐNG FILE KHI BATCH ĐẦY ĐỂ TRÁNH TRÀN RAM
                         if (batch.size() >= 100000) {
-                            writeBatch(dos, batch);
+                            writeBatch(sink, batch);
                             fileRecordCount += batch.size();
                             batch.clear();
                         }
@@ -243,13 +336,13 @@ public class ExportFeaturesForPythonTool {
             }
 
             // DỌN DẸP CUỐI CÙNG (Đóng file cuối cùng đang ghi dở)
-            if (dos != null) {
+            if (sink != null) {
                 if (!batch.isEmpty()) {
-                    writeBatch(dos, batch);
+                    writeBatch(sink, batch);
                     fileRecordCount += batch.size();
                     batch.clear();
                 }
-                dos.close();
+                sink.close();
                 LOG.info("\n🎉 Đã đóng file cuối: {} (Tổng: {} records)", currentFilePath, fileRecordCount);
             }
 
@@ -257,14 +350,53 @@ public class ExportFeaturesForPythonTool {
             LOG.error("❌ Lỗi trong quá trình xuất feature", e);
         }
 
+        if (keyDump && keyOut != null) {
+            try { keyOut.flush(); keyOut.close();
+                LOG.info("KEYDUMP: da ghi {} keys -> {}keys.bin", keyDumpCount,
+                        outputDir.endsWith("/") ? outputDir : outputDir + "/");
+            } catch (java.io.IOException ioe) { LOG.error("KEYDUMP: dong keys.bin loi", ioe); }
+        }
+
+        if (countOnly) {
+            StringBuilder sb = new StringBuilder();
+            sb.append("# FF_COUNT_ONLY N_t histogram (Nt = ung vien qua tier1+|rate30m|>0, TRUOC cat top-pct)\n");
+            sb.append("# ntTimestamps=").append(ntTimestamps).append(" ntCandTotal=").append(ntCandTotal).append("\n");
+            sb.append("Nt,freq\n");
+            for (int i = 0; i < ntHist.length; i++) {
+                if (ntHist[i] > 0) sb.append(i).append(",").append(ntHist[i]).append("\n");
+            }
+            String histPath = outputDir + (outputDir.endsWith("/") ? "" : "/") + "nt_histogram.csv";
+            try (java.io.Writer w = new java.io.FileWriter(histPath)) {
+                w.write(sb.toString());
+                LOG.info("COUNT-ONLY: da ghi histogram -> {}", histPath);
+            } catch (java.io.IOException ioe) {
+                LOG.error("COUNT-ONLY: ghi histogram loi: {}", histPath, ioe);
+            }
+            double[] pcts = {0.10, 0.15, 0.20, 0.25, 0.30};
+            StringBuilder rep = new StringBuilder("\n===== TOP_PCT: features_count = sum_t ceil(N_t*pct) =====\n");
+            rep.append(String.format("ntTimestamps=%d ntCandTotal=%d%n", ntTimestamps, ntCandTotal));
+            for (double p : pcts) {
+                long total = 0L;
+                for (int i = 0; i < ntHist.length; i++) {
+                    if (ntHist[i] == 0) continue;
+                    total += (long) Math.ceil(i * p) * ntHist[i];
+                }
+                rep.append(String.format("TOP_PCT=%.2f -> %d records%n", p, total));
+            }
+            LOG.info(rep.toString());
+            System.out.println(rep);
+        }
+
         LOG.info("🏁 HOÀN TẤT TOÀN BỘ QUÁ TRÌNH XUẤT FEATURES!");
     }
 
-    private void writeBatch(DataOutputStream dos, List<PrepareData> batch) throws IOException {
+    /**
+     * [2026-08-07 TASK-251] Đẩy batch vào {@link Tool1ColSink}. Sink tự gom đủ CHUNK_ROWS rồi sort
+     * (symId, tIdx) + quantize + delta + byte-split — phía gọi KHÔNG cần đổi thứ tự/gom gì thêm.
+     */
+    private void writeBatch(Tool1ColSink sink, List<PrepareData> batch) throws IOException {
         for (PrepareData pd : batch) {
-            dos.writeLong(pd.time);
-            dos.writeShort(pd.id);
-            for (float f : pd.features) dos.writeFloat(f);
+            sink.add(pd.time, pd.id, pd.features);
         }
     }
 
@@ -290,7 +422,7 @@ public class ExportFeaturesForPythonTool {
                 // --- #36..#40: microstructure 1m per-coin (TASK-038 phần B) ---
                 f.ret15m, f.rvol15m, f.volumeZ5m, f.closePosRange15m, f.wickRatio15m
                 // #41..#45 OI/LS/taker per-coin: TASK-038 phần A — xuất TOOL RIÊNG ExportFundingOiPerCoin
-                //   (loop-theo-coin RAM-aware), MERGE ở train 039 theo (ts,coin). KHÔNG nằm trong .bin.gz này.
+                //   (loop-theo-coin RAM-aware), MERGE ở train 039 theo (ts,coin). KHÔNG nằm trong .t1c.gz này.
         };
     }
 
@@ -393,6 +525,12 @@ public class ExportFeaturesForPythonTool {
     private static boolean isAlt(String s) {
         return s.endsWith("USDT") && !s.equals("BTCUSDT") && !s.equals("ETHUSDT")
                 && !s.contains("_") && !s.contains("USDC") && !s.equals("BTCDOMUSDT");
+    }
+
+    /** [2026-08-04] env getter voi default, dung cho FF_GRID_MIN (khong co helper chung trong class nay). */
+    private static String envOr(String name, String def) {
+        String v = System.getenv(name);
+        return (v != null && !v.isEmpty()) ? v : def;
     }
 
     /** Parse FF_SAMPLE_RATE -> (0,1]; rong/loi/ngoai khoang => 1.0 (giu tat ca). */

@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Block 1 — Bản đồ dữ liệu &amp; Topology</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header class="topbar"><div class="row">
+  <a class="brand" href="index.html">🗺️ Bản đồ hạ tầng CE</a>
+  <nav>
+    <a href="index.html">Tổng quan</a>
+    <a href="block1-data.html" class="b1 active">1 · Dữ liệu</a>
+    <a href="block2-wfo.html" class="b2">2 · Luồng WFO</a>
+    <a href="block3-ce.html" class="b3">3 · CE &amp; nút</a>
+    <a href="integrity.html">Liêm chính</a>
+    <a href="glossary.html">Từ điển</a>
+    <a href="graph.json">graph.json</a>
+  </nav>
+</div></header>
+
+<div class="wrap">
+<p class="crumb"><a href="index.html">Tổng quan</a> › Block 1</p>
+<h1><span class="tag b1">Block 1</span> Bản đồ dữ liệu &amp; Topology hạ tầng</h1>
+<p class="lead">Định vị chính xác: dữ liệu nào đang có, nằm ở node/set/file nào, format ra sao, code nào SINH ra nó, code nào ĐỌC nó, và trạng thái đo mới nhất. Đây là nơi tra "đang dùng đúng nguồn chưa" trước khi chạy bất kỳ test nào.</p>
+
+<div class="legend">
+  <span>🔴 <b>SoT</b> = Source of Truth (off-limits)</span>
+  <span>🔵 <b>Hub</b> = compute/data-test</span>
+  <span>🟢 <b>Fleet</b> = batch worker</span>
+  <span>⚪ <b>Retire</b> = đang khai tử</span>
+</div>
+
+<h2 class="anchor-h" id="topology">1. Topology các node</h2>
+<p class="small">Chốt topology MỚI 2026-08-04 (<span class="path">docs/REDESIGN_INFRA_20260804.md</span>) — thắng các mô tả cũ trong <span class="path">db/index.md</span> / <span class="path">SESSION_START.md</span> khi mâu thuẫn.</p>
+<div class="topo">
+  <div class="node sot" id="node-242">
+    <div class="ip">103.157.218.242 · ssh :2222 · aerospike :3222</div>
+    <div class="role">🔴 Node 242 — Source of Truth</div>
+    <p class="kv">Kho gốc DUY NHẤT mọi market data (live + lịch sử). Chạy 2 process tiền thật: <code>BinanceDataIngestor</code>, <code>BinanceOrderTradingManager</code>.</p>
+    <div class="note bad" style="margin:8px 0 0"><span class="h">OFF-LIMITS</span>Kaggle/dev KHÔNG bao giờ chạm. Chỉ Oracle được sync TỪ 242. <code>replication-factor=1</code> → mất node = mất data. <span class="path">db/aerospike-242.md:11,16</span></div>
+  </div>
+  <div class="node hub" id="node-oracle">
+    <div class="ip">ubuntu@161.118.212.3 · aerospike 127.0.0.1:3222 (ns=test) · 4-core/24GB</div>
+    <div class="role">🔵 Oracle VPS — HUB duy nhất</div>
+    <p class="kv">(a) Bridge 242→local; (b) Aerospike ns=<code>test</code> <b>mở public 3222</b> làm kho compute/data-test cho Kaggle; (c) compute nặng WFO/HPO/export (1 job nặng/lần); (d) scheduler + dataset builder.</p>
+    <div class="note warn" style="margin:8px 0 0"><span class="h">Ràng buộc</span>Disk <b>89% (~17GB free)</b> — dọn jar cũ trước job ghi nhiều. Public 3222 = Aerospike KHÔNG auth → Oracle coi là <b>disposable</b> (DR = reset sạch + resync 242). Tool ghi Oracle phải trỏ <code>127.0.0.1</code> tường minh. <span class="path">REDESIGN_INFRA_20260804.md:14,22,61</span></div>
+  </div>
+  <div class="node fleet" id="node-kaggle">
+    <div class="ip">account chuyendinh · 5 kernel CPU · 12h hard-kill</div>
+    <div class="role">🟢 Kaggle Fleet — batch</div>
+    <p class="kv">Mặc định <b>file-self-contained</b> (đọc Kaggle dataset đóng băng), parity đã verify. Chỉ chạm Oracle:3222 cho data nhỏ/live, ≤2 kernel đồng thời.</p>
+    <div class="note warn" style="margin:8px 0 0"><span class="h">Env-flag tax</span>Không inject env động — mọi flag mới PHẢI hardcode vào <code>run_worker.py</code> trước khi push (đã cắn vụ <code>TS_RATCHET_DECOUPLED</code>). <span class="path">REDESIGN_INFRA_20260804.md:23,62</span></div>
+  </div>
+  <div class="node dead" id="node-226">
+    <div class="ip">103.157.218.226 · aerospike ns=ticker (jobstore)</div>
+    <div class="role">⚪ Node 226 — ĐANG RETIRE</div>
+    <p class="kv">Chốt khai tử 2026-08-04. Oracle thay TRỌN vai 226. Kế hoạch 6 bước, bước cuối "decommission chỉ sau khi 5 bước xanh" — <b>chưa xác nhận đã xanh</b>.</p>
+    <div class="note warn" style="margin:8px 0 0"><span class="h">Nợ kỹ thuật</span>Hằng <code>AEROSPIKE_HOST_226</code>/<code>getClient226()</code> GIỮ TÊN CŨ nhưng nay trỏ Oracle. <code>AEROSPIKE_HOST_ORACLE = getString("AEROSPIKE_HOST_226")</code>. WFO jobstore hiện vẫn ghi "226" (ns=ticker). <span class="path">Configs.java:621-624</span></div>
+  </div>
+</div>
+<p class="small">Ngoài ra: <b>Redis</b> (<code>redis/</code>, Jedis cluster) = order queue + messaging của mặt trading LIVE, <b>KHÔNG liên quan data pipeline</b>, ⛔ không kill. <span class="path">db/redis.md:6-8</span></p>
+
+<div class="note bad"><span class="h">MÂU THUẪN tài liệu (cần chốt)</span>
+<code>SESSION_START.md:97</code> (2026-07-07) ghi "226 = jobstore/benchmark còn sống"; <code>db/index.md</code> (2026-06-14) vẫn mô tả 226 như node sống. <code>REDESIGN_INFRA_20260804.md</code> (mới hơn, tự nhận thắng) ghi "226 ❌ RETIRE". → Dùng REDESIGN làm chuẩn, nhưng jobstore WFO thực tế vẫn trỏ 226 cho tới khi migration xanh.</div>
+
+<h2 class="anchor-h" id="tang-du-lieu">2. Inventory 10 tầng/artifact dữ liệu</h2>
+<p>Không chỉ "4 tầng" như bản cũ. Mỗi hàng: vị trí lưu · format · code SINH · code ĐỌC · trạng thái đo (2026-07-07/08).</p>
+<table>
+<thead><tr><th>Tầng / artifact</th><th>Vị trí lưu</th><th>Format</th><th>Code SINH</th><th>Code ĐỌC</th><th>Trạng thái</th></tr></thead>
+<tbody>
+<tr id="dt-ticker-file"><td><b>Ticker FILE</b></td><td><code>kaggle_data_hpo/daily/ticker_YYYYMMDD.bin.gz</code> (1886 file)</td><td>gzip · <code>ObjectInputStream</code> serialize <code>TreeMap&lt;Long,Map&lt;String,KlineObjectSimple&gt;&gt;</code></td><td>script cào lịch sử; nạp Aerospike bằng <code>IngestTickerFileToAerospike</code></td><td><code>KaggleDataLoader.loadDailyTickersShort()</code> <span class="path">:101</span></td><td><span class="pill ok">ĐẦY ĐỦ</span> 2021-01-01→2026-03-01, 11GB, có 38 coin delist+đuôi sập</td></tr>
+<tr id="dt-ticker-aero"><td><b>Ticker Aerospike</b></td><td>Oracle ns=<code>test</code> set <code>kline_1m_opt</code></td><td>key <code>yyyyMMdd-HHmm</code> GMT+7 · bin <code>data</code>=Snappy(proto <code>MinuteDataFinal</code>)</td><td><code>IngestTickerFileToAerospike</code>; live <code>writeMinuteBatch</code> (hardcode 242)</td><td><code>DataManagerAerospikeFloatSim.readDataFromAerospike*</code> <span class="path">:925,1059</span></td><td><span class="pill ok">ĐẦY ĐỦ</span> 2.7M record, 698 symbol, đã CLEAN ghost+đuôi-đơn</td></tr>
+<tr id="dt-lifecycle"><td><b>symbol_lifecycle</b></td><td>Oracle ns=<code>test</code> set <code>symbol_lifecycle</code></td><td>bins <code>sym,first,last,status,delist</code> (scan)</td><td><code>SymbolLifecycleBuilder(Local)</code></td><td><code>SymbolLifecycleManager.init()</code> <span class="path">:79</span></td><td><span class="pill warn">LỆCH SỐ</span> rebuild 698 (636/62) vs bảng 661 (589/72) — chưa chốt số cuối</td></tr>
+<tr id="dt-mapper"><td><b>symbol_mapper</b></td><td>Oracle ns=<code>test</code> set <code>symbol_mapper</code> key <code>global_id_map</code></td><td>CDT <code>Map&lt;String,Long&gt;</code></td><td><code>saveSymbolMapping</code> (hardcode 242)</td><td><code>loadSymbolMapper()</code> <span class="path">:105</span>; file <code>loadSymbolMapperFile()</code></td><td><span class="pill ok">781 sym</span> còn 38 ghost id-map (vô hại)</td></tr>
+<tr id="dt-market"><td><b>market_data_object</b></td><td>Oracle ns=<code>test</code> set <code>market_data_object</code></td><td>key <code>yyyyMMdd-HHmm</code> · bin <code>data</code>=<code>MarketDataObject.endCode()</code> blob</td><td><code>ExportMarketData2File</code> → <code>saveMarketDataBatch</code> <span class="path">:1969</span></td><td>scan qua <code>getClientOracle()</code></td><td><span class="pill ok">REGEN</span> sau clean 07-07; LUNA rateDown15MAvg=-0.029 đúng</td></tr>
+<tr id="dt-oi"><td><b>OI feature</b></td><td><code>features_oi_percoin_v1/oi_percoin_20210101_to_20260624.bin.gz</code></td><td>record 30 byte (<code>ts:long,symId:short,5×float</code>)</td><td><code>ExportFundingOiPerCoin</code> (226 backfill từ vision)</td><td><code>getMetricMap226 / getMetricMapFrom</code> <span class="path">:459,625</span></td><td><span class="pill ok">DÙNG LẠI</span> 3.1GB, 138M rec; coin delist bao sập (LUNA 46859…)</td></tr>
+<tr id="dt-funding"><td><b>funding_data</b></td><td>Oracle ns=<code>test</code> set <code>funding_data</code> key=symbol bin <code>f_data</code></td><td>Snappy(JSON <code>Map&lt;Long,Float&gt;</code>)</td><td><code>HistoricalFundingCrawlerLocal</code> (crawl fapi); live <code>writeFundingMap</code> (242)</td><td><code>getFundingMap / getAllFundingMap</code> <span class="path">:664</span></td><td><span class="pill bad">RỖNG→crawl lại</span> mất do reset Aerospike (07-08)</td></tr>
+<tr id="dt-gate-ff"><td><b>Gate feature (ff_*.bin)</b></td><td>Oracle <code>claudedata/feat/</code></td><td><code>.bin</code></td><td><code>ExportGateFeaturesGroupA/B/BCrowd</code></td><td>(reader riêng — chưa xác nhận trong scope)</td><td><span class="pill bad">CHỈ 1 THÁNG</span> chỉ có <code>ff_202401.bin</code> → export lại toàn bộ</td></tr>
+<tr id="dt-sel-pred"><td><b>Funding feat + selector pred</b></td><td>Oracle set/bin (tên cụ thể chưa nêu)</td><td>—</td><td><code>GenerateSelectorPredictionsTool</code></td><td>sim qua <code>funding_pred_1m_v5</code>…</td><td><span class="pill idle">CHƯA KIỂM</span> model selector v2 (train 06-25) có sẵn</td></tr>
+<tr id="dt-wfo-ds"><td><b>wfo_dataset (.bin)</b></td><td>Oracle <code>~/claudedata/wfo_dataset</code> (arg <code>outDir</code>)</td><td><code>market.bin · pred.bin · funding.bin · manifest.txt</code></td><td><code>ExportWfoDataset</code> → <code>WfoDataset.export()</code></td><td><code>WfoDataset.load()</code> → WfoWorker/HPO</td><td><span class="pill bad">CHỜ EXPORT LẠI</span> từ market mới + gate/selector pred + OI</td></tr>
+</tbody>
+</table>
+<p class="small">Đầy đủ dòng-bằng-chứng ở <span class="path">docs/DATA_STATE.md</span> (nguồn sự thật đo) + <span class="path">DataManagerAerospikeFloatSim.java</span>, <span class="path">KaggleDataLoader.java</span>, <span class="path">insights/INGEST_FORMAT.md</span>.</p>
+
+<h2 class="anchor-h" id="hai-duong">3. Hai đường đọc ticker + bẫy <code>TICKER_SOURCE</code></h2>
+<div class="grid c2">
+  <div class="card b1"><h4>Đường FILE</h4>
+    <p><code>KaggleDataLoader.loadDailyTickersShort(dayTs)</code> <span class="path">:101-124</span></p>
+    <p>Đọc <code>.bin.gz</code> trong <code>IMPORT_DIR="kaggle_data_hpo/"</code> (relative CWD, hardcode). Dùng cho backtest/WFO khi <code>TICKER_SOURCE=file</code> (Kaggle self-contained).</p></div>
+  <div class="card b1"><h4>Đường AEROSPIKE</h4>
+    <p><code>DataManagerAerospikeFloatSim.readDataFromAerospikeCustom(startTime,totalMinutes)</code> <span class="path">:1059-1154</span></p>
+    <p>Đọc set <code>kline_1m_opt</code> qua <code>getReadClient()</code> (chọn theo <code>AEROSPIKE_READ_CLUSTER</code>). Dùng cho export feature/market, và sim khi <code>TICKER_SOURCE=aerospike</code>.</p></div>
+</div>
+<div class="note bad"><span class="h">⚠ SỰ THẬT quan trọng — bản NotebookLM SAI ở đây</span>
+<code>Configs.java:87</code>: <code>public static String TICKER_SOURCE = properties.get("TICKER_SOURCE");</code> — <b>CHỈ đọc <code>config.properties</code>, KHÔNG có fallback <code>System.getenv</code></b>. ⇒ Truyền <code>TICKER_SOURCE=file</code> qua env khi launch job (Kaggle/HPO/Oracle) <b>bị bỏ qua hoàn toàn</b>. Muốn đổi phải sửa đúng <code>config.properties</code> của box. (Đã xác nhận: <code>stage2_frozen_ab.sh</code> ghi header "TICKER_SOURCE=file" nhưng thực tế đọc Aerospike vì config Oracle là <code>aerospike</code>.)</div>
+<div class="note warn"><span class="h">Gotcha IMPORT_DIR</span>
+<code>KaggleDataLoader.IMPORT_DIR = "kaggle_data_hpo/"</code> (root, relative CWD) — nhưng file ticker thật nằm ở <code>kaggle_data_hpo/<b>daily</b>/</code>. Nếu thực sự bật <code>TICKER_SOURCE=file</code> trên Oracle sẽ KHÔNG tìm thấy file (loader trả <code>null</code>, tầng trên fail-fast "khong co ticker → DUNG NGAY"). Cần symlink hoặc env-hoá <code>IMPORT_DIR</code>. <span class="path">INFRA_FACTS.md:24-27</span></div>
+
+<h2 class="anchor-h" id="cam-bay">4. Cạm bẫy dữ liệu đã ghi nhận</h2>
+<table>
+<thead><tr><th>Bẫy</th><th>Hậu quả / xử lý</th><th>Nguồn</th></tr></thead>
+<tbody>
+<tr><td>Ghost <code>...USDCUSDT</code> (38 entry)</td><td>Có ticker thật 2026-01→02 (BTCUSDC-margin) làm méo market basket 2 tháng cuối → đã CLEAN bằng <code>CleanTickerGhostAndTail</code></td><td class="path">DATA_STATE.md:75</td></tr>
+<tr><td>Đuôi-đơn delist (FTT/RAY/SC…)</td><td>Giá phẳng vol=0 kéo 628–1353 ngày sau delist, lifecycle gắn nhầm LIVE → xoá &gt;12 triệu dòng</td><td class="path">DATA_STATE.md:75,81</td></tr>
+<tr><td>Hardcode <code>getClient242()</code> trong writer</td><td><code>writeMinuteBatch/writeFundingMap/…</code> luôn ghi 242 → tool ghi Oracle PHẢI tự tạo <code>AerospikeClient("127.0.0.1",3222)</code></td><td class="path">DataManagerAerospikeFloatSim.java:80-89</td></tr>
+<tr><td>Reset Aerospike mất set phụ</td><td>market/OI/funding/lifecycle/15m-4h đều mất — kiểm set RỖNG trước khi gen feature (tránh feature thiếu cột im lặng)</td><td class="path">DATA_STATE.md:86</td></tr>
+<tr><td>Chunk-tháng vỡ với data ≤5 phút</td><td>"Record too big" (16k chunk lỗi thật) — data 1-phút PHẢI dùng chunk-NGÀY <code>writeMetricMapDay226</code></td><td class="path">DATA_CHUNKING_STANDARD.md:19</td></tr>
+<tr><td>Config Oracle vs Windows lệch <code>AEROSPIKE_HOST_226</code></td><td>Oracle=<code>127.0.0.1</code>, Windows repo=<code>103.157.218.226</code> → tool backfill KHÔNG đọc <code>Configs.AEROSPIKE_HOST_*</code>, phải nhận host qua arg</td><td class="path">DATA_STATE.md:51</td></tr>
+<tr><td>Mảng ticker cố định 1000 phần tử</td><td><code>KlineObjectSimple[1000]</code>, index=<code>getId</code>; id≥1000 crash (nextId hiện 760)</td><td class="path">INGEST_FORMAT.md:20</td></tr>
+<tr><td>funding fee KHÔNG dùng trong backtest</td><td><code>updateFundingFee()</code> bị comment → backfill funding rate vô nghĩa với PnL sim (chỉ giá ticker ảnh hưởng)</td><td class="path">INGEST_FORMAT.md:25</td></tr>
+</tbody>
+</table>
+
+<footer class="foot">
+Tiếp: <a href="block2-wfo.html">Block 2 — 10 tầng luồng WFO →</a> · Bản máy-đọc: <a href="graph.json">graph.json</a> (node id <code>dt-*</code>, <code>node-*</code>).
+</footer>
+</div>
+</body>
+</html>

@@ -1,14 +1,9 @@
 package com.binance.chuyennd.ai_ml.features.export.gate;
 
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
-import com.binance.chuyennd.ai_ml.features.export.HistoryManager;
-import com.binance.chuyennd.ai_ml.features.export.entry.ComprehensiveMarketFeatureExtractor;
 import com.binance.chuyennd.ai_ml.features.export.entry.MarketFeatures;
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.ai_ml.onnx.entry.OnnxInferenceManager;
-import com.binance.chuyennd.object.MarketDataObject;
-import com.binance.chuyennd.object.sw.KlineObjectSimple;
-import com.binance.chuyennd.tradecore.CoinRankManager;
 import com.binance.chuyennd.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,8 +39,6 @@ import java.util.*;
 public class WFOGateRunner {
 
     static final Logger LOG = LoggerFactory.getLogger(WFOGateRunner.class);
-    static final long H15 = 15 * 60_000L;
-    static final int WARMUP_HOURS = 48;
     static final String DEFAULT_SET = "ai_pred_market_gate_wfo";
     static final String OLD_SET = "ai_pred_market_full_basket_v2"; // nguồn predRisk4H
 
@@ -91,8 +84,17 @@ public class WFOGateRunner {
         LOG.info("🚀 WFO GATE | {} -> {} | OOS={}m | csv={} | out={}", start, end, oosMonths, csvStore, outFile);
 
         // ===== PHA 1: REPLAY 1 LẦN -> featureStore + labelStore + CSV =====
-        replayAndBuildStore(fairStart, evalEnd, csvStore);
+        // Logic replay/label nằm ở ExportGateDataset (nguồn sự thật DUY NHẤT) — tránh 2 bản logic label lệch nhau.
+        // ExportGateDataset còn chạy được ĐỘC LẬP (không train) để xuất dataset đẩy Kaggle.
+        long emitted = ExportGateDataset.replayToCsv(fairStart, evalEnd, csvStore, (ts, f, label) -> {
+            featureStore.put(ts, f);
+            labelStore.put(ts, label);
+        });
         if (featureStore.isEmpty()) { LOG.error("⛔ featureStore rỗng — dừng."); return; }
+        if (emitted != featureStore.size()) {
+            LOG.error("⛔ LỆCH: CSV emit {} dòng nhưng featureStore {} phút — dừng.", emitted, featureStore.size());
+            return;
+        }
         LOG.info("✅ PHA 1 xong: featureStore={} phút | label={} | range {} .. {}",
                 featureStore.size(), labelStore.size(),
                 Utils.normalizeDateYYYYMMDD(featureStore.firstKey()), Utils.normalizeDateYYYYMMDD(featureStore.lastKey()));
@@ -141,77 +143,6 @@ public class WFOGateRunner {
 
         LOG.info("🎯 WFO DONE: {} fold, tổng {} pred OOS -> file {}", folds.size(), totalWritten, outFile);
         LOG.info("   Bước tiếp: GATE_FILE={} java ... GoldenBacktest FAST  (chấm bằng HPOFitnessCalculatorV4)", outFile);
-    }
-
-    /** PHA 1: replay mọi phút, lưu feature + label vào RAM, đồng thời xuất CSV mọi-phút cho Python train. */
-    private void replayAndBuildStore(long fairStart, long evalEnd, String csvStore) throws Exception {
-        long warmupStart = fairStart - WARMUP_HOURS * Utils.TIME_HOUR;
-        TreeMap<Long, MarketDataObject> time2Rate = DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
-        HistoryManager.getInstance().resetCache();
-        CoinRankManager.getInstance().resetCache();
-        ComprehensiveMarketFeatureExtractor extractor = new ComprehensiveMarketFeatureExtractor();
-        double featChecksum = 0;
-        long nRows = 0;
-
-        try (BufferedWriter w = new BufferedWriter(new FileWriter(csvStore))) {
-            // header: toCSVHeader ĐÃ gồm "timestamp,...,futureReturn15M,maxDrawdownNext4H".
-            // Cắt 2 cột label cũ, thay bằng label_oldbasket. (toCSVRow khớp header này — cùng class, đồng bộ.)
-            String base = new MarketFeatures().toCSVHeader();
-            int cut = base.indexOf(",futureReturn15M");
-            if (cut > 0) base = base.substring(0, cut);
-            w.write(base + ",label_oldbasket");
-            w.newLine();
-
-            long day = Utils.getDate(warmupStart);
-            long lastDay = Utils.getDate(evalEnd);
-            int dayCount = 0;
-            while (day <= lastDay) {
-                try {
-                    TreeMap<Long, Map<String, KlineObjectSimple>> today =
-                            DataManagerAerospikeFloatSim.readDataFromAerospike1M(day);
-                    TreeMap<Long, Map<String, KlineObjectSimple>> tomorrow =
-                            DataManagerAerospikeFloatSim.readDataFromAerospike1M(day + Utils.TIME_DAY);
-                    TreeMap<Long, Map<String, KlineObjectSimple>> lookup = new TreeMap<>();
-                    if (today != null) lookup.putAll(today);
-                    if (tomorrow != null) lookup.putAll(tomorrow);
-                    if (today == null) { day += Utils.TIME_DAY; continue; }
-
-                    for (Map.Entry<Long, Map<String, KlineObjectSimple>> e : today.entrySet()) {
-                        long ts = e.getKey();
-                        Map<String, KlineObjectSimple> snap = e.getValue();
-                        HistoryManager.getInstance().updateHistory(snap);
-                        CoinRankManager.getInstance().getTopCoin(ts);
-                        if (ts < fairStart || ts > evalEnd) continue;
-
-                        // MỌI PHÚT (không de-overlap — WFO cần predict mọi phút để backtest đủ độ phủ)
-                        MarketFeatures f = extractor.extractAllFeatures(ts, snap, time2Rate.get(ts));
-                        if (f == null) continue;
-
-                        List<String> basketOld = HistoryManager.getInstance().findPotentialLosers(ts);
-                        float labOld = basketMaxGain(lookup, ts, basketOld);
-
-                        featureStore.put(ts, f);
-                        labelStore.put(ts, labOld);
-                        featChecksum += f.momentum15M + f.volatility15M + f.basketVolSpike;
-
-                        // CSV: toCSVRow ĐÃ bắt đầu bằng timestamp + kết thúc bằng 2 cột label cũ → cắt 2 cột cuối,
-                        // thêm label_oldbasket. KHỚP header (base + label_oldbasket). KHÔNG thêm ts thừa.
-                        String row = f.toCSVRow();
-                        int idx = nthLastComma(row, 2);
-                        if (idx > 0) row = row.substring(0, idx);
-                        w.write(row + "," + fmt(labOld));
-                        w.newLine();
-                        nRows++;
-                    }
-                } catch (Exception ex) {
-                    LOG.warn("⚠️ Lỗi ngày {}: {}", Utils.normalizeDateYYYYMMDD(day), ex.getMessage());
-                }
-                day += Utils.TIME_DAY;
-                if (++dayCount % 30 == 0) LOG.info("... replay {} ngày | rows={} | day={}",
-                        dayCount, nRows, Utils.normalizeDateYYYYMMDD(day));
-            }
-        }
-        LOG.info("   featChecksum={} (so 2 lần chạy để check determinism)", String.format("%.6f", featChecksum));
     }
 
     /** Sinh fold expanding: mỗi fold OOS = [cutoff, cutoff+oosMonths), bước trượt = oosMonths (không chồng lấn). */
@@ -269,36 +200,6 @@ public class WFOGateRunner {
         return n;
     }
 
-    // ===== helper copy từ ExportGate15mV2 (giữ đồng bộ logic label) =====
-    private float basketMaxGain(TreeMap<Long, Map<String, KlineObjectSimple>> data, long ts, List<String> basket) {
-        if (basket == null || basket.isEmpty()) return 0f;
-        NavigableMap<Long, Map<String, KlineObjectSimple>> future = data.subMap(ts, false, ts + H15, true);
-        if (future.isEmpty()) return 0f;
-        Map<String, KlineObjectSimple> atT = data.get(ts);
-        if (atT == null) return 0f;
-        float sum = 0; int cnt = 0;
-        for (String sym : basket) {
-            KlineObjectSimple k0 = atT.get(sym);
-            if (k0 == null || k0.priceClose <= 0) continue;
-            float entry = (float) k0.priceClose;
-            float maxGain = 0;
-            for (Map<String, KlineObjectSimple> snap : future.values()) {
-                KlineObjectSimple k = snap.get(sym);
-                if (k != null && k.maxPrice > 0) {
-                    float g = (float) ((k.maxPrice - entry) / entry);
-                    if (g > maxGain) maxGain = g;
-                }
-            }
-            sum += maxGain; cnt++;
-        }
-        return cnt > 0 ? sum / cnt : 0f;
-    }
-
-    private static int nthLastComma(String s, int n) {
-        int count = 0;
-        for (int i = s.length() - 1; i >= 0; i--) if (s.charAt(i) == ',') { if (++count == n) return i; }
-        return -1;
-    }
     private static String fmt(float v) {
         if (Float.isNaN(v) || Float.isInfinite(v)) return "0.000000";
         return String.format(Locale.US, "%.8f", v);

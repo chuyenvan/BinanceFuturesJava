@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nguyên tắc liêm chính vận hành</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header class="topbar"><div class="row">
+  <a class="brand" href="index.html">🗺️ Bản đồ hạ tầng CE</a>
+  <nav>
+    <a href="index.html">Tổng quan</a>
+    <a href="block1-data.html" class="b1">1 · Dữ liệu</a>
+    <a href="block2-wfo.html" class="b2">2 · Luồng WFO</a>
+    <a href="block3-ce.html" class="b3">3 · CE &amp; nút</a>
+    <a href="integrity.html" class="active">Liêm chính</a>
+    <a href="glossary.html">Từ điển</a>
+    <a href="graph.json">graph.json</a>
+  </nav>
+</div></header>
+
+<div class="wrap">
+<p class="crumb"><a href="index.html">Tổng quan</a> › Liêm chính</p>
+<h1>🛡️ Nguyên tắc liêm chính vận hành</h1>
+<p class="lead">Đây chính là lớp chống lại vấn đề bạn nêu: dùng sai dữ liệu, test chạy trên data không rõ, nghiên cứu lòng vòng. Ba trụ: (1) <b>Preflight Gate</b> chặn 21 loại lỗi trước khi chạy; (2) <b>14 nguyên tắc vận hành</b>; (3) <b>5 SIMULATOR facts</b> phải biết trước khi tin bất kỳ số PnL nào.</p>
+
+<h2 class="anchor-h" id="preflight">1. Preflight Gate — 21 loại lỗi, 6 nhóm</h2>
+<p>Fail-fast TRƯỚC mọi HPO/WFO (gắn ở <code>WfoCoordinator.reset()</code> + đầu mỗi HPO run). Nguồn: <span class="path">docs/DATA_VALIDATION_FRAMEWORK.md</span>. Ban đầu 19, Q3 thêm A5 (Survivorship) + B4 (Cross-sectional/population leak).</p>
+<table>
+<thead><tr><th>Nhóm</th><th>Loại lỗi</th><th>Mức</th></tr></thead>
+<tbody>
+<tr><td><b>A · Coverage</b></td><td>A1 thiếu window/ngày · A2 gap coin · A3 thưa · A4 universe lệch · <b>A5 Survivorship</b></td><td><span class="pill bad">BLOCK</span></td></tr>
+<tr><td><b>B · Leakage</b></td><td>B1 look-ahead feature · B2 (WARN) · B3 label chạm OOS · <b>B4 cross-sectional/population leak</b></td><td><span class="pill bad">BLOCK</span> (B2 <span class="pill warn">WARN</span>)</td></tr>
+<tr><td><b>C · Giá trị</b></td><td>C1 NaN/inf · C2 ngoài range · C3 hằng số/degenerate · C4 (WARN)</td><td><span class="pill bad">BLOCK</span> (C4 <span class="pill warn">WARN</span>)</td></tr>
+<tr><td><b>D · Thời gian</b></td><td>D1/D2 (WARN, D2 escalate→BLOCK nếu chạm BTC/ETH hoặc kéo 1 window dưới A1) · D3 lệch lưới ts</td><td>D3 <span class="pill bad">BLOCK</span></td></tr>
+<tr><td><b>E · Provenance</b></td><td>E1 thiếu SHA · E2 thiếu nguồn · E3 manifest chưa ký</td><td><span class="pill bad">BLOCK</span></td></tr>
+<tr><td><b>F · Cấu hình</b></td><td>F1 config sai · F2 CONFIG_VERSION không bump (cache HPO trả điểm cũ)</td><td><span class="pill bad">BLOCK</span></td></tr>
+</tbody>
+</table>
+
+<h2 class="anchor-h" id="14">2. 14 nguyên tắc vận hành</h2>
+<div class="grid c2">
+<div class="card"><b>1 · Chỉ WFO khi có validation.</b> Preflight Gate (mục 1) chặn trước mọi HPO/WFO; manifest chưa ký/lệch MD5 → dừng fail-closed. <span class="path">validate_canonical_wfo.py</span></div>
+<div class="card"><b>2 · CE-FIRST (R1).</b> Việc config-động-hoá được HOẶC chạy ≥2 lần → PHẢI thành nút/pipeline CE. Cấm bash driver ad-hoc cho việc nút đã làm được. <span class="path">ce-buttons.md:151</span></div>
+<div class="card"><b>3 · HANDOFF-LUÔN (R2).</b> Sau mỗi milestone cập nhật <code>NEXT_SESSION_TODO_*.md</code> (đang ở đâu/chạy gì/bước kế/rủi ro treo), TRIM mục đã xong. <span class="path">ce-buttons.md:160</span></div>
+<div class="card"><b>4 · Một thực nghiệm — một loại node.</b> Không so tuyệt đối Aerospike (Oracle) với file tĩnh (Kaggle); tối đa 3 job Java/Oracle. <span class="path">CORE.md:13</span></div>
+<div class="card"><b>5 · Result Contract JSON là duy nhất.</b> Dù SUCCESS/FAILED/KILLED, <code>&lt;job&gt;_result.json</code> luôn ghi trước khi thoát; CDK không "chờ mù". <span class="path">CE-v3:90</span></div>
+<div class="card"><b>6 · Commit sạch + Git SHA.</b> <code>wfo_build_ds</code> bắt buộc <code>WFO_CODE_SHA</code>; "unknown" → Java THROW. <span class="path">mcp_tools-v3.py:2028</span></div>
+<div class="card"><b>7 · CONFIG_VERSION.</b> Bump khi đổi gì ảnh hưởng backtest ngoài genome (fee/slippage/model/gene); quên = cache HPO trả điểm cũ = run vô nghĩa. <span class="path">CORE.md:22</span></div>
+<div class="card"><b>8 · Cache/turn hygiene.</b> Turn cache-sống 1% quota vs cache-vỡ 12–26%. Gom tool call; dispatch job dài = cuối turn; output ≤10 dòng. <span class="path">ce-buttons.md:4</span></div>
+<div class="card"><b>9 · An toàn không đảo ngược.</b> Không ghi ổ C/tmp; không <code>pkill java</code> trần; CHẶN CỨNG kill <code>BinanceDataIngestor/OrderTradingManager/Aerospike/Redis</code>; deploy live = CHỈ user tay. <span class="path">CORE.md:10 · PROTECTED_PROCS</span></div>
+<div class="card"><b>10 · Toàn vẹn backtest.</b> <code>BLOCK_INTRABAR_LOOKAHEAD=true</code>; mọi backtest qua <code>BacktestIntegrityGuard.assertProductionGrade()</code>; fee+slippage 2 chân LUÔN bật. <span class="path">CORE.md:18</span></div>
+<div class="card"><b>11 · Tròn hoặc thành Task.</b> Việc phải kết ở TRÒN (xong+verify bằng số) hoặc THÀNH TASK. Trước job nền: checklist (a) đo tiến độ (b) điều kiện kết thúc (c) cách verify. <span class="path">task-workflow.md:11</span></div>
+<div class="card"><b>12 · Single-writer state.</b> Chỉ <code>supervisor.py</code> ghi <code>runtime_state.json</code>/status; worker headless KHÔNG tự set status. <span class="path">supervisor.py:10</span></div>
+<div class="card"><b>13 · Data-locality validate.</b> Validate TẠI nơi data ở; sync sang env khác (Oracle→Kaggle) BẮT BUỘC re-validate theo baseline env đó. <span class="path">CORE.md:34</span></div>
+<div class="card"><b>14 · <code>System.exit(0)</code> cuối main tool.</b> Thiếu → kernel Kaggle treo tới 12h mất output. Không áp cho 2 process live. <span class="path">CORE.md:16</span></div>
+</div>
+
+<h2 class="anchor-h" id="sim-facts">3. 5 SIMULATOR facts — biết trước khi tin bất kỳ số PnL nào</h2>
+<p class="small">Audit 2026-07-31 (<span class="path">INFRA_FACTS.md:117-164</span>). Bản NotebookLM bỏ sạch phần này — đây là gốc của nhiều "test nhiễu không giá trị".</p>
+<div class="note bad"><span class="h">F0 · KHÔNG CÓ ĐƯỜNG THOÁT LỖ</span><code>HARD_STOP_LOSS_RATE / TIME_STOP_HOURS / HARD_SL_PCT</code> đều default 0. Sau khi arm, SL luôn TRÊN giá vào ⇒ <b>lệnh thua không có cách nào bị cắt</b>, nằm tới hết kỳ rồi mark-to-market. Mọi tham số làm "khó arm hơn" tự động đẩy hệ về buy-and-hold ăn beta 2021–2026.</div>
+<div class="note bad"><span class="h">F1 · <code>ddPct</code> KHÔNG PHẢI maxDrawdown</span>Nó = đáy Σ-unrealized của cụm ĐANG MỞ, bỏ lãi/lỗ đã thực hiện, mẫu số = vốn ban đầu cố định (không lãi kép) ⇒ gần như mù với tham số exit. <b>Luôn dùng <code>ddPctMtm</code></b>. Kéo theo <code>calmar=pnl/ddPct</code> ≈ pnl/hằng số ⇒ xếp hạng theo calmar ≡ theo pnl, vô nghĩa.</div>
+<div class="note warn"><span class="h">F2/F3 · Funding mặc định TẮT</span><code>APPLY_FUNDING_FEE</code> default false; bật bằng <code>SIM_APPLY_FUNDING=true</code>. Funding là chi phí DUY NHẤT tỉ lệ thời gian giữ ⇒ tắt = thiên lệch ủng hộ cấu hình giữ-lâu. F3 (lệnh còn mở không trả funding) đã vá 07-31.</div>
+<div class="note warn"><span class="h">F5 · PnL trộn realized với mark-to-market</span><code>totalProfit=Σ calTp</code> gồm cả cụm còn mở cuối kỳ. <b>Luôn tách <code>pnlClosed</code> vs <code>pnlMtm</code></b> (phân biệt bằng <code>status==REQUEST</code>) trước khi kết luận.</div>
+<div class="note warn"><span class="h">Guard "pass" ≠ số sạch</span><code>BacktestIntegrityGuard</code> chỉ kiểm 4 thứ (intrabar look-ahead, slippage on, slippage rate&gt;0, fee&gt;0) — KHÔNG kiểm funding, KHÔNG kiểm %MTM.</div>
+<div class="note ok"><span class="h">✔ Đã xác nhận SẠCH (đừng soi lại)</span>Kế toán PnL/phí/slippage với DCA đúng đồng nhất thức <code>Σqᵢ(tp−eᵢ)=Q(tp−avgEntry)</code>; funding chỉ gán leg đầu; không leg đóng 2 lần; không look-ahead nội-nến làm lợi. F7/F8/F9/F10 đã vá 08-01, đo ra TRƠ trên dataset hiện tại. Kiểm <code>auditCountersSummary()</code>: counter ≠ 0 ⇒ run đó KHÔNG so sánh được.</div>
+
+<h2 class="anchor-h" id="chua-kiem">Còn treo (chưa kiểm được từ code)</h2>
+<ul class="tight">
+<li>Quy ước nhãn thời gian của <code>pred.bin</code>: nếu <code>pred[ts]</code> nhìn tới <code>ts+15m</code> thì là leak nặng. Thuộc pipeline Python sinh dataset, cần audit riêng. <span class="path">INFRA_FACTS.md:163</span></li>
+<li>F12: probe sweep không set <code>WFO_STATIC_RANK</code>/<code>BREAKER_MODE=OFF</code> như VerifyOneWindow ⇒ khó chuyển kết luận sang harness WFO.</li>
+<li>Gate coverage 2023+ CHƯA đo lại trong phiên canonical 1-phút (không ký <code>SIGN=1</code> khi chưa đo).</li>
+</ul>
+
+<footer class="foot">
+Về đầu: <a href="index.html">Tổng quan</a> · <a href="glossary.html">Từ điển thuật ngữ &amp; index artifact →</a>
+</footer>
+</div>
+</body>
+</html>

@@ -63,6 +63,37 @@ public class KaggleDataLoader {
     }
 
     /**
+     * [2026-08-04] TASK-112c: symbol_lifecycle snapshot (map String->Lifecycle, xem
+     * {@link com.binance.chuyennd.ai_ml.data.SymbolLifecycleManager.Lifecycle}) — thay Aerospike set
+     * 'symbol_lifecycle' khi TICKER_SOURCE=file (Kaggle khong co Aerospike). Sinh boi
+     * ExportKaggleBootstrapSnapshots tren Oracle (Aerospike thuc), push kem jar/ticker.
+     */
+    public static Map<String, com.binance.chuyennd.ai_ml.data.SymbolLifecycleManager.Lifecycle> loadSymbolLifecycle() {
+        return loadObject("core_symbol_lifecycle");
+    }
+
+    /**
+     * [2026-08-04] TASK-112c: symbol_mapper snapshot (String->Short) — thay
+     * DataManagerAerospikeFloatSim.loadSymbolMapper() khi TICKER_SOURCE=file.
+     */
+    public static Map<String, Short> loadSymbolMapperFile() {
+        return loadObject("core_symbol_mapper");
+    }
+
+    /**
+     * [2026-08-04] Tải ticker 1 ngày GIỮ NGUYÊN String-key (không convert sang short[] như
+     * {@link #loadDailyTickersShort}) — dùng cho các tool export (ExportFundingLabel,
+     * ExportFeaturesForPythonTool) vốn tiêu thụ {@code TreeMap<Long, Map<String, KlineObjectSimple>>}
+     * y hệt định dạng đọc từ Aerospike (readDataFromAerospike1M), để 2 nguồn hoán đổi được qua
+     * TICKER_SOURCE=aerospike|file (TASK-112 pattern) mà KHÔNG phải viết lại logic export.
+     * Trả null nếu thiếu file ngày đó (caller tự quyết bỏ qua ngày hay fail-fast).
+     */
+    public static TreeMap<Long, Map<String, KlineObjectSimple>> loadDailyTickersStringKey(long dayTs) {
+        String baseName = "ticker_" + Utils.sdfFile.format(new java.util.Date(dayTs));
+        return loadObject(baseName);
+    }
+
+    /**
      * Hàm tải dữ liệu Ticker từ File (String) và Convert nóng sang Short trong RAM.
      * Giải pháp này giúp không phải Export lại cục data Kaggle khổng lồ.
      */

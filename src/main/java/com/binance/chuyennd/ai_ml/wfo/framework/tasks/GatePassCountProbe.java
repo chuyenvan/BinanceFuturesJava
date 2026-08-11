@@ -37,8 +37,8 @@ public class GatePassCountProbe {
 
         float[] sweep = {0.03f, 0.0228f, 0.01f, 0.005f, 0.003f};
         float saved = Configs.MIN_MOMENTUM_15M;
-        LOG.info(String.format("%-8s %12s %12s %9s %12s %12s %12s %12s",
-                "min15m", "seen", "pass", "passPct", "mom15Rej", "earlyRej", "riskRej", "psRej"));
+        LOG.info(String.format("%-8s %12s %12s %9s %12s %12s %12s",
+                "min15m", "seen", "pass", "passPct", "mom15Rej", "earlyRej", "psRej"));
         for (float m15 : sweep) {
             Configs.MIN_MOMENTUM_15M = m15;
             BudgetManagerSimple.resetInstance();
@@ -51,11 +51,10 @@ public class GatePassCountProbe {
             long seen = sim.ablationSignalSeen;
             long pass = sim.ablationPassCount;
             double passPct = seen > 0 ? 100.0 * pass / seen : 0.0;
-            LOG.info(String.format("%-8.4f %12d %12d %8.3f%% %12d %12d %12d %12d",
+            LOG.info(String.format("%-8.4f %12d %12d %8.3f%% %12d %12d %12d",
                     m15, seen, pass, passPct,
                     AIRejectFilter.mom15RejectCount.get(),
                     AIRejectFilter.earlyHardGateReject.get(),
-                    AIRejectFilter.riskReject.get(),
                     sim.predictSymbolRejectedGate));
         }
         Configs.MIN_MOMENTUM_15M = saved;

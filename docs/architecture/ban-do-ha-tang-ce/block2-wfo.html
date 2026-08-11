@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Block 2 — Luồng WFO end-to-end</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header class="topbar"><div class="row">
+  <a class="brand" href="index.html">🗺️ Bản đồ hạ tầng CE</a>
+  <nav>
+    <a href="index.html">Tổng quan</a>
+    <a href="block1-data.html" class="b1">1 · Dữ liệu</a>
+    <a href="block2-wfo.html" class="b2 active">2 · Luồng WFO</a>
+    <a href="block3-ce.html" class="b3">3 · CE &amp; nút</a>
+    <a href="integrity.html">Liêm chính</a>
+    <a href="glossary.html">Từ điển</a>
+    <a href="graph.json">graph.json</a>
+  </nav>
+</div></header>
+
+<div class="wrap">
+<p class="crumb"><a href="index.html">Tổng quan</a> › Block 2</p>
+<h1><span class="tag b2">Block 2</span> Luồng Walk-Forward (WFO) — 10 tầng end-to-end</h1>
+<p class="lead">Dòng chảy dữ liệu từ ticker thô đến khi Java HPO/WfoWorker tiêu thụ. Mỗi tầng ghi rõ: code sinh, input, artifact output (tên file thật), grid/cadence, leak-guard, env var, chạy ở node nào. Nguồn sự thật sống: <span class="path">docs/WFO_DATA_PIPELINE_MASTER.md</span> (v1.1.1, 2026-08-04).</p>
+
+<div class="note ok"><span class="h">✔ NotebookLM đúng "10 tầng" — nhưng thiếu leak-guard &amp; 2 bẫy operator chí mạng</span>
+Bản này bổ sung: <code>score = 1 − P(win)</code> (đảo dấu ở tầng 8), <b>2 default nguy hiểm</b> phải override thủ công (<code>WFO_SEL_HORIZON_IDX</code>, <code>WFO_SET_PRED</code>), và bẫy <code>FF_GRID_MIN ≠ LABEL_STEP_MIN</code> làm <b>mất ~93% data khi join mà không báo lỗi</b>.</div>
+
+<h2 class="anchor-h" id="so-do">Sơ đồ luồng (thứ tự thật)</h2>
+<div class="flow">
+  <div class="step b2"><div class="k">1</div><div class="t">Ticker</div><div class="f">kline_1m_opt</div></div>
+  <div class="arrow">→</div>
+  <div class="step b2"><div class="k">2</div><div class="t">Market layer</div><div class="f">market_data</div></div>
+  <div class="arrow">→</div>
+  <div class="step b2"><div class="k">3</div><div class="t">OI layer</div><div class="f">oi_percoin.bin.gz</div></div>
+  <div class="arrow">→</div>
+  <div class="step b2"><div class="k">4</div><div class="t">Funding LABEL</div><div class="f">funding_label.csv</div></div>
+</div>
+<div class="flow">
+  <div class="step b2"><div class="k">5</div><div class="t">Tool1 feature</div><div class="f">features_*.bin.gz</div></div>
+  <div class="arrow">→</div>
+  <div class="step b2"><div class="k">6</div><div class="t">Selector (Kaggle)</div><div class="f">predict_wf_*.bin</div></div>
+  <div class="arrow">∥</div>
+  <div class="step b2"><div class="k">7</div><div class="t">Gate (độc lập)</div><div class="f">ai_pred_market_gate_wfo</div></div>
+  <div class="arrow">→</div>
+  <div class="step b2"><div class="k">8</div><div class="t">WFO export</div><div class="f">market/pred/funding.bin</div></div>
+</div>
+<div class="flow">
+  <div class="step b2"><div class="k">9</div><div class="t">Validate độc lập</div><div class="f">validate_canonical_wfo.py</div></div>
+  <div class="arrow">→</div>
+  <div class="step b2"><div class="k">10</div><div class="t">Java HPO tiêu thụ</div><div class="f">WfoDataset.load → WfoWorker</div></div>
+</div>
+<p class="small">Tầng <b>6 (Selector)</b> và <b>7 (Gate)</b> là 2 nhánh SONG SONG (ký hiệu ∥), cả hai đều là input cho tầng 8 — không phụ thuộc tuần tự nhau.</p>
+
+<h2 class="anchor-h" id="chi-tiet">Chi tiết từng tầng</h2>
+
+<div class="card b2" id="l1"><h3>1️⃣ Ticker (nguồn gốc, đọc-only)</h3>
+<p class="kv"><b>Set:</b> <code>kline_1m_opt</code> (OHLCV per-symbol per-phút). <b>Bất biến:</b> không script nào trong pipeline được ghi vào set này. <span class="path">WFO_DATA_PIPELINE_MASTER.md:46-58</span></p></div>
+
+<div class="card b2" id="l2"><h3>2️⃣ Market layer</h3>
+<p class="kv"><b>Code:</b> <code>DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike()</code> · <b>Input:</b> set <code>market_data</code> · <b>Output:</b> per-minute <code>rateDownAvg / rateUpAvg / rateDown15MAvg</code>. Đây là <b>lưới thời gian "master clock"</b> mà tầng 8 forward-fill mọi nguồn khác lên. <span class="path">MASTER:61-70</span></p></div>
+
+<div class="card b2" id="l3"><h3>3️⃣ OI layer</h3>
+<p class="kv"><b>Code:</b> <code>ExportFundingOiPerCoin.java</code> · <b>Input:</b> OI/long-short/taker-buy per-coin (KHÔNG qua <code>kline_1m_opt</code>) qua <code>getMetricMap226</code> hoặc <code>source=vision</code> · <b>Output:</b> <code>oi_percoin_&lt;start&gt;_to_&lt;end&gt;.bin.gz</code>, record 30 byte.</p>
+<p class="kv"><b>Cadence:</b> giữ 5 phút nguyên bản (không phình). <b>Env:</b> <code>OI_TOL_MS</code> default 2h. <b>Leak-guard:</b> <code>floorStale()</code> chỉ nhận điểm ≤t &amp; trong tolerance (không lấy tương lai); <code>oiZ</code> tính EXPANDING. <span class="path">ExportFundingOiPerCoin.java:62-140</span></p></div>
+
+<div class="card b2" id="l4"><h3>4️⃣ Funding LABEL layer</h3>
+<p class="kv"><b>Code:</b> <code>ExportFundingLabel.java</code> · <b>Input:</b> <code>kline_1m_opt</code> + universe alt qua <code>SymbolLifecycleManager</code> (gồm coin chết — chống survivorship; BLOCKED nếu lifecycle rỗng) · <b>Output:</b> <code>funding_label.csv</code> (<code>maxFav/maxAdv/tHitFav/tHitAdv/retEnd/nBars</code> cho H∈{4h,12h,24h,72h,7d,14d,30d}) + sidecar <code>.meta.json</code>.</p>
+<p class="kv"><b>Grid:</b> <code>LABEL_STEP_MIN</code> default 15, <mark>canonical = 1</mark>. <code>H_STEPS={240,720,1440,4320,10080,20160,43200}</code> chia <code>LABEL_STEP_MIN</code>. <b>Leak-guard:</b> path chỉ dùng nến trong <code>(t, t+H]</code> — look-ahead ở label là CHỦ Ý (đúng thiết kế H1).</p></div>
+
+<div class="card b2" id="l5"><h3>5️⃣ Tool1 feature layer</h3>
+<p class="kv"><b>Code:</b> <code>ExportFeaturesForPythonTool.java</code> · <b>Output:</b> <code>features_export_python_v3/features_*.bin.gz</code>, record 170 byte (<code>ts:long, symId:short, f[40]:float</code>).</p>
+<p class="kv"><b>2 chế độ:</b> (a) mặc định = production đã qua <code>EntrySignalFilter</code> → <b>KHÔNG dùng train</b> (selection bias); (b) <code>FF_UNFILTERED=1</code> → mọi alt coin, dùng cho TRAIN selector. <b>Grid (b):</b> <code>FF_GRID_MIN</code> default 15, <mark>canonical 1</mark>.</p>
+<div class="note bad" style="margin:8px 0 0"><span class="h">⚠ Bẫy nguy hiểm #1 (im lặng)</span><code>FF_GRID_MIN</code> PHẢI khớp <code>LABEL_STEP_MIN</code> của tầng 4 cùng đợt. Lệch → mất <b>~93% data</b> khi join <code>(symbol,ts)</code>, KHÔNG lỗi KHÔNG crash. <span class="path">MASTER cảnh báo #1</span></div></div>
+
+<div class="card b2" id="l6"><h3>6️⃣ Selector — train + predict (walk-forward, Kaggle)</h3>
+<p class="kv"><b>Code canonical:</b> <code>ml/training/gen_funding_wf_predictions.py</code> (chạy Kaggle — OI merge nặng từng OOM Oracle). <b>Input:</b> <code>TOOL1_GLOB, OI_FILE, LABEL_CSV, MAP_CSV</code>.</p>
+<p class="kv"><b>Train:</b> XGBoost mỗi (fold, horizon) trên toàn lịch sử <b>expanding</b> từ <code>2021-01-01</code>, predict OOS block <code>[cutoff, cutoff+OOS_MONTHS)</code>. <b>Cutoff canonical</b> <code>FIRST_CUTOFF=20230101</code>. <b>Output:</b> <code>predict_wf_&lt;cutoff&gt;.bin</code>, record 26 byte (<code>&gt;q h 4f</code>: ts, symId, p_4h, p_12h, p_24h, p_72h).</p>
+<p class="kv"><b>Leak-guard:</b> <code>assert tr.ts.max() &lt; cutoff_ms</code>; purge = <code>H_STEPS["72h"]×GRID_MS</code> (tự tính, không hardcode). <code>CHUNK_YEARS=1</code> = RAM-bounded (byte-identical với full build).</p>
+<p class="kv small"><b>Lưu ý:</b> <code>train_funding_selector_wfo.py</code> chỉ đo IC/LIFT ổn định per-fold — <b>KHÔNG</b> sinh <code>predict_wf_*.bin</code> cho tầng 8.</p></div>
+
+<div class="card b2" id="l7"><h3>7️⃣ Gate layer (ĐỘC LẬP với tầng 4/5/6)</h3>
+<p class="kv"><b>Code:</b> <code>WFOGateRunner.java</code> (điều phối, replay 1 lần → featureStore RAM) + <code>ml/training/train_gate_fold.py</code> (train Python→ONNX per fold) + <code>LoadWfoGatePredTool.java</code> (nạp CSV vào Aerospike).</p>
+<p class="kv"><b>Feature:</b> 33 feature <code>V3FULL</code> khoá cứng ở <code>OnnxInferenceManager</code>, Python COPY tay (assert thiếu cột). <b>Output:</b> <code>wfo_gate_pred.csv</code> (<code>timestamp,predReturn15M,predRisk4H</code>) → nạp set <code>ai_pred_market_gate_wfo</code>.</p>
+<div class="note warn" style="margin:8px 0 0"><span class="h">L4 provenance ghép</span><code>predRisk4H</code> GIỮ từ set CŨ <code>ai_pred_market_full_basket_v2</code>; chỉ <code>predReturn15M</code> là mới → pred OOS = {15M mới + risk4H cũ}, cần ghi provenance từng cột.</div></div>
+
+<div class="card b2" id="l8"><h3>8️⃣ WFO dataset export (tầng ráp 3 nguồn)</h3>
+<p class="kv"><b>Code:</b> <code>ExportWfoDataset.java</code> → <code>WfoDataset.export(outDir)</code>. <b>Input 3 nguồn:</b> <code>market_data</code> (tầng 2, Aerospike) + set gate <code>ai_pred_market_gate_wfo</code> (env <code>WFO_SET_PRED</code>) + selector <code>predict_wf_*.bin</code> (env <code>WFO_FUNDING_PRED_DIR</code>, đọc THẲNG file — bỏ Aerospike cho funding, Uni chốt 2026-07-08).</p>
+<p class="kv"><b>Output:</b> <code>market.bin · pred.bin · funding.bin · manifest.txt</code>. <b>Encode:</b> <code>score = 1 − P(win)</code> (đảo dấu — engine chọn score THẤP = P(win) CAO, xác nhận <code>WfoDataset.java:226</code>). <b>forward-fill</b> score 15m→per-minute, staleness cap <code>WFO_FUNDING_FILL_STALE_MS</code> default 15'.</p>
+<p class="kv"><b>Leak-guard:</b> throw nếu 2 file <code>predict_wf</code> overlap ts, hoặc span &gt; 100 ngày. Manifest stamp <code>leakFreeFrom, codeGitSha</code> (throw nếu "unknown"), <code>horizonIdx</code>, md5+ts-range mỗi file nguồn, <code>VALIDATED_BY=PENDING</code>.</p>
+<div class="note bad" style="margin:8px 0 0"><span class="h">⚠ Bẫy nguy hiểm #2 (2 default sai cho canonical)</span>Default trong code: <code>WFO_SEL_HORIZON_IDX=1</code> (12h) &amp; <code>WFO_SET_PRED=ai_pred_market_full_basket_v2</code> (set CŨ). Canonical PHẢI override <code>WFO_SEL_HORIZON_IDX=0</code> (4h) &amp; <code>WFO_SET_PRED=ai_pred_market_gate_wfo</code>. Quên override = lỗi dễ mắc nhất.</div></div>
+
+<div class="card b2" id="l9"><h3>9️⃣ Validate độc lập</h3>
+<p class="kv"><b>Code:</b> <code>scripts/model_quality/validate_canonical_wfo.py</code> — đọc THẲNG bytes, KHÔNG tái dùng code exporter (tránh bug chung). Kiểm 6 nhóm:</p>
+<ul class="tight small">
+<li><b>(a)</b> mỗi fold span ≤ <code>MAX_FOLD_SPAN_DAYS</code> (100) &amp; &gt;0 · <b>(b)</b> OOS sớm nhất ≥ <code>EXPECT_LEAKFREE</code> (fail nếu nhỏ hơn)</li>
+<li><b>(c)</b> ts-align: 3 file đều <code>ts%60000==0</code> · <b>(d)</b> gate coverage: warn nếu <code>ts&lt;leakFreeFrom</code> trong pred</li>
+<li><b>(e)</b> NaN horizon đã chọn &gt;50% → warn · <b>(f)</b> không fold nào overlap ts</li>
+<li>Cross-check manifest: md5 3 file khớp; <code>foldCount</code> khớp; <b>fail</b> nếu <code>leakFreeFrom</code>/<code>codeGitSha</code>="unknown"</li>
+</ul>
+<div class="note ok" style="margin:8px 0 0"><span class="h">Ký fail-closed</span>Bất kỳ FAIL → ghi <code>validation_report.txt</code> + <code>sys.exit(1)</code>, KHÔNG ký. Chỉ khi TẤT CẢ PASS <b>và</b> <code>SIGN=1</code> mới ghi <code>VALIDATED_BY=python-validator@&lt;ts&gt;-PASS</code>.</div></div>
+
+<div class="card b2" id="l10"><h3>🔟 Java HPO tiêu thụ</h3>
+<p class="kv"><b>Code:</b> <code>WfoDataset.load()</code> — verify md5 3 file theo manifest TRƯỚC khi vào RAM (throw nếu lệch). Gọi từ <code>WfoWorker.java:80</code> (<code>loadAuto()</code>, load 1 lần/JVM). Dùng ở <code>StrategyWfoTask</code> (tối ưu 17 gene chiến lược) cho backtest/HPO qua <code>HPOFitnessCalculatorV4</code>. <span class="path">WfoDataset.java:284-407</span></p></div>
+
+<h2 class="anchor-h" id="selector-gate">Selector vs Gate — 2 model, đừng lẫn</h2>
+<table>
+<thead><tr><th></th><th>Selector (funding)</th><th>Gate</th></tr></thead>
+<tbody>
+<tr><td><b>Mục tiêu</b></td><td>P(coin pump ≥6% trong H∈{4h,12h,24h,72h}) — chọn <b>COIN NÀO</b></td><td><code>predReturn15M</code> (tín hiệu market tổng hợp, KHÔNG per-coin)</td></tr>
+<tr><td><b>Code sinh</b></td><td><code>gen_funding_wf_predictions.py</code> (canonical)</td><td><code>WFOGateRunner.java</code> + <code>train_gate_fold.py</code></td></tr>
+<tr><td><b>Model</b></td><td>XGBClassifier</td><td>XGBRegressor → ONNX</td></tr>
+<tr><td><b>Train ở</b></td><td>Kaggle (OI merge nặng)</td><td>Oracle (Java replay + Python train/fold ~3s)</td></tr>
+<tr><td><b>Output pred</b></td><td><code>predict_wf_*.bin</code> → nạp tầng 8 qua FILE</td><td><code>wfo_gate_pred.csv</code> → set <code>ai_pred_market_gate_wfo</code></td></tr>
+<tr><td><b>Quy ước nhãn</b></td><td>output = <b>P(win)</b>; tầng 8 <b>đảo dấu</b> <code>score=1−P(win)</code></td><td>output = <code>predReturn15M</code> (regressor, không đảo dấu)</td></tr>
+</tbody>
+</table>
+
+<h2 class="anchor-h" id="leaks">Leak &amp; bug đã biết liên quan luồng dữ liệu</h2>
+<table>
+<thead><tr><th>ID</th><th>Mô tả</th><th>Trạng thái</th><th>Nguồn</th></tr></thead>
+<tbody>
+<tr><td><b>L0</b></td><td>Ranh giới dataset theo loại WFO: <code>WfoDataset</code> (3 khối) chỉ hợp lệ cho Strategy-WFO (model đứng yên); dùng cho Model-WFO = mất ý nghĩa walk-forward</td><td><span class="pill warn">lưu ý</span></td><td class="path">WFO_LEAKS_TODO.md:7</td></tr>
+<tr><td><b>L1</b></td><td>Embargo quanh cutoff: <code>train&lt;cutoff</code> nhưng label nhìn tương lai (15m gate / tới 72h funding) → phút cuối train chạm OOS. Fix đề xuất chưa làm</td><td><span class="pill bad">CHƯA XỬ</span></td><td class="path">WFO_LEAKS_TODO.md:22</td></tr>
+<tr><td><b>L2</b></td><td>Feature order drift: V3FULL 33 feature khoá 2 nơi (Java + Python copy tay); sửa 1 quên 1 → model học sai map</td><td><span class="pill warn">rủi ro</span></td><td class="path">WFO_LEAKS_TODO.md:30</td></tr>
+<tr><td><b>L3</b></td><td>Snapshot nguồn lệch giữa máy/lần → ĐÃ có fix (manifest md5 + fail-fast <code>verifyMd5</code>)</td><td><span class="pill ok">ĐÃ FIX</span></td><td class="path">WFO_LEAKS_TODO.md:35</td></tr>
+<tr><td><b>L4</b></td><td>Provenance pred ghép (<code>predRisk4H</code> từ set cũ) — cần ghi provenance từng cột trong manifest</td><td><span class="pill warn">CHƯA ĐỦ</span></td><td class="path">WFO_LEAKS_TODO.md:40</td></tr>
+<tr><td><b>L5</b></td><td><code>featChecksum</code> chỉ in, CHƯA chặn tự động khi lệch giữa 2 lần chạy</td><td><span class="pill warn">CHƯA XỬ</span></td><td class="path">WFO_LEAKS_TODO.md:46</td></tr>
+<tr><td><b>Funding in-sample</b></td><td>Model funding <code>models_v2</code> train ≤2024-12 nhưng predict full 2021→2026 bằng chính nó → pred &lt;2025-06 IN-SAMPLE; Strategy-WFO cũ ~13/15 window bị thổi phồng. Là động lực chuyển sang <code>gen_funding_wf_predictions.py</code></td><td><span class="pill bad">baseline cũ VÔ NGHĨA</span></td><td class="path">PIPELINE_PROVENANCE.md:8,58</td></tr>
+<tr><td>fold-0 leak</td><td><code>block_lo=ts_min</code> cũ phủ vùng IS → sửa <code>block_lo=cutoff</code></td><td><span class="pill ok">FIX 08-03</span></td><td class="path">MASTER:35,171</td></tr>
+<tr><td>PURGE grid-relative</td><td>default cũ "288" chỉ đúng 72h ở lưới 15' — ở 1' = 4.8h → rút ngắn purge âm thầm. Sửa: tự tính từ <code>H_STEPS</code></td><td><span class="pill ok">FIX 08-04</span></td><td class="path">MASTER:37,174</td></tr>
+</tbody>
+</table>
+
+<div class="note warn"><span class="h">Snapshot cũ vs sống — đừng lẫn 2 tài liệu</span>
+<code>PIPELINE_PROVENANCE.md</code> (2026-07-01) mô tả luồng CŨ (<code>predict_1m/predict_YYYYMM.bin</code> full-history → Aerospike <code>funding_selector_pred_1m_v2</code>). <code>WFO_DATA_PIPELINE_MASTER.md</code> (2026-08-04, SỐNG) mô tả luồng MỚI (<code>gen_funding_wf_predictions.py</code> per-fold, đọc thẳng file, bỏ Aerospike). Không mâu thuẫn — là 2 snapshot khác thời điểm; MASTER là hiện tại.</div>
+
+<footer class="foot">
+Tiếp: <a href="block3-ce.html">Block 3 — CE &amp; nút nguyên tử →</a> · Node id máy-đọc: <code>l1…l10</code> trong <a href="graph.json">graph.json</a>.
+</footer>
+</div>
+</body>
+</html>
