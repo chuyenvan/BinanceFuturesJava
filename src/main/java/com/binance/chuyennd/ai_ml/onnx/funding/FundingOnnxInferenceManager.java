@@ -18,7 +18,7 @@ public class FundingOnnxInferenceManager implements AutoCloseable {
     private OrtSession session;
 
     private String inputNodeName = "X";
-    private static final int NUM_FEATURES = 21;
+    private static final int NUM_FEATURES = 45;  // WFO selector: 40 Tool1 + 5 OI (dong bo extractFeaturesToArray + model 45-input)
 
     public FundingOnnxInferenceManager(String modelPath) throws OrtException {
         // Default GIỮ NGUYÊN min(4, cores) để output bất biến với bản cũ.
@@ -115,7 +115,15 @@ public class FundingOnnxInferenceManager implements AutoCloseable {
                 (float) f.rsi1H, (float) f.distFromLow24H, (float) f.volatilityShock,
                 (float) f.basketMomentum15M, (float) f.basketMomentum1H, (float) f.basketMomentum24H,
                 (float) f.basketRsi14, (float) f.basketVolSpike,
-                (float) f.coinFundingRate, (float) f.basketFundingAvg, (float) f.fundingRateAvg24H, (float) f.fundingRateTrend
+                (float) f.coinFundingRate, (float) f.basketFundingAvg, (float) f.fundingRateAvg24H, (float) f.fundingRateTrend,
+                // --- #22..#45: khop selector WFO 45-feature (ExportFeaturesForPythonTool.convertFeaturesToArray + 5 OI).
+                //     Thu tu KHOA, KHONG chen giua. YEU CAU model 45-input (Funding_Classifier_Final.onnx phai la ban WFO selector).
+                (float) f.fundingPercentileCoin, (float) f.fundingZCoin, (float) f.fundingPersistence, (float) f.fundingSum24h, (float) f.fundingAbs,
+                (float) f.volumeZCoin, (float) f.volumeTrend,
+                (float) f.distFromHigh24H, (float) f.rangePosition24H, (float) f.atrSqueeze, (float) f.relStrengthBtc24H,
+                (float) f.fundingRankCS, (float) f.volumeZRankCS, (float) f.momentumRankCS,
+                (float) f.ret15m, (float) f.rvol15m, (float) f.volumeZ5m, (float) f.closePosRange15m, (float) f.wickRatio15m,
+                (float) f.oiDelta24hCoin, (float) f.oiZCoin, (float) f.lsGlobalCoin, (float) f.lsToptraderCoin, (float) f.takerBuyRatioCoin
         };
     }
 
