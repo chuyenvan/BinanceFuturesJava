@@ -162,7 +162,12 @@ public class OpenInterestIngestor2AerospikeNew {
         JSONArray arr = new JSONArray(resp);
         for (int i = 0; i < arr.length(); i++) {
             JSONObject o = arr.getJSONObject(i);
-            out.put(o.getLong("timestamp"), (float) o.getDouble(field));
+            float v = (float) o.getDouble(field);
+            // Bo diem rac: symbol thanh khoan thap (short≈0) -> longShortRatio = Infinity/NaN,
+            // Aerospike reject "Infinity is not a valid double" lam hong CA writeMonthChunk.
+            // Skip diem loi de phan con lai cua chunk van ghi duoc (gap nho hon la mat ca chunk).
+            if (Float.isNaN(v) || Float.isInfinite(v)) continue;
+            out.put(o.getLong("timestamp"), v);
         }
         return out;
     }
