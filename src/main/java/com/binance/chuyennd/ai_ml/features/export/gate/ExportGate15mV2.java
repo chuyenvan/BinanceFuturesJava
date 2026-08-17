@@ -128,11 +128,15 @@ public class ExportGate15mV2 {
                         // Label look-ahead sạch: chỉ (t, t+15m] (subMap exclusive-t bên dưới)
                         float labOld = basketMaxGain(lookup, ts, basketOld);
                         float labSel = basketMaxGain(lookup, ts, new ArrayList<>(basketSel));
+                        // Track 2 Phase 1: label NET (anti-lướt) — retEnd close-to-close trên CÙNG rổ basketOld
+                        //   để so trực tiếp với maxGain. ret15m = net 15m; ret60m = net 60m (sustain/nuôi).
+                        float labRet15 = basketRetEnd(lookup, ts, basketOld, H15);
+                        float labRet60 = basketRetEnd(lookup, ts, basketOld, 4 * H15);
 
                         // checksum vài feature để determinism-check
                         featChecksum += f.momentum15M + f.volatility15M + f.basketVolSpike;
 
-                        w.write(rowWithDualLabels(f, labOld, labSel,
+                        w.write(rowWithDualLabels(f, labOld, labSel, labRet15, labRet60,
                                 basketOld == null ? 0 : basketOld.size(), basketSel.size()));
                         w.newLine();
                         nRows++;
@@ -160,15 +164,17 @@ public class ExportGate15mV2 {
         // bỏ đuôi ",futureReturn15M,maxDrawdownNext4H" của MarketFeatures, thay bằng nhãn mới
         int cut = base.indexOf(",futureReturn15M");
         if (cut > 0) base = base.substring(0, cut);
-        return base + ",label_oldbasket,label_selector,nBasketOld,nBasketSel";
+        return base + ",label_oldbasket,label_selector,label_ret15m,label_ret60m,nBasketOld,nBasketSel";
     }
 
-    private String rowWithDualLabels(MarketFeatures f, float labOld, float labSel, int nOld, int nSel) {
+    private String rowWithDualLabels(MarketFeatures f, float labOld, float labSel,
+                                     float labRet15, float labRet60, int nOld, int nSel) {
         String base = f.toCSVRow();
         // toCSVRow kết thúc bằng "...,<futureReturn15M>,<maxDrawdownNext4H>" — cắt 2 cột cuối
         int idx = nthLastComma(base, 2);
         if (idx > 0) base = base.substring(0, idx);
-        return base + "," + fmt(labOld) + "," + fmt(labSel) + "," + nOld + "," + nSel;
+        return base + "," + fmt(labOld) + "," + fmt(labSel) + "," + fmt(labRet15) + "," + fmt(labRet60)
+                + "," + nOld + "," + nSel;
     }
 
     private static int nthLastComma(String s, int n) {
@@ -207,6 +213,35 @@ public class ExportGate15mV2 {
         }
         float sum = 0; int c = 0;
         for (String s : entry.keySet()) { float r = maxRet.get(s); if (r != -999f) { sum += r; c++; } }
+        return c > 0 ? sum / c : 0f;
+    }
+
+    /**
+     * basketRetEnd: TB NET return close-to-close của basket qua horizon. entry=priceClose@t;
+     * exit=priceClose nến CUỐI trong (t, t+horizon] mỗi coin. Anti-lướt: pump-rồi-dump → maxGain cao
+     * nhưng retEnd thấp/âm. Look-ahead sạch (subMap exclusive-t) giống basketMaxGain.
+     */
+    private float basketRetEnd(TreeMap<Long, Map<String, KlineObjectSimple>> data, long ts, List<String> basket, long horizon) {
+        if (basket == null || basket.isEmpty()) return 0f;
+        long end = ts + horizon;
+        Map<String, KlineObjectSimple> cur = data.get(ts);
+        if (cur == null) return 0f;
+        Map<String, Float> entry = new HashMap<>();
+        for (String s : basket) if (cur.containsKey(s) && cur.get(s).priceClose > 0) entry.put(s, cur.get(s).priceClose);
+        if (entry.isEmpty()) return 0f;
+        NavigableMap<Long, Map<String, KlineObjectSimple>> fut = data.subMap(ts, false, end, true);
+        Map<String, Float> lastClose = new HashMap<>();
+        for (Map<String, KlineObjectSimple> m : fut.values()) {   // subMap tăng dần -> giữ close cuối cùng ≤ end
+            for (String s : entry.keySet()) {
+                KlineObjectSimple k = m.get(s);
+                if (k != null && k.priceClose > 0) lastClose.put(s, k.priceClose);
+            }
+        }
+        float sum = 0; int c = 0;
+        for (String s : entry.keySet()) {
+            Float lc = lastClose.get(s);
+            if (lc != null) { sum += (lc - entry.get(s)) / entry.get(s); c++; }
+        }
         return c > 0 ? sum / c : 0f;
     }
 }
