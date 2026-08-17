@@ -18,6 +18,9 @@ package com.binance.chuyennd.trading;
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.ai_ml.features.export.entry.ComprehensiveMarketFeatureExtractor;
 import com.binance.chuyennd.ai_ml.features.export.entry.MarketFeatures;
+import com.binance.chuyennd.ai_ml.features.export.HistoryManager;
+import com.binance.chuyennd.ai_ml.features.export.funding.EntrySignalFilter;
+import com.binance.chuyennd.ai_ml.features.export.funding.FundingCrossSectional;
 import com.binance.chuyennd.ai_ml.features.export.funding.FundingDataCollectionManager;
 import com.binance.chuyennd.ai_ml.features.export.funding.FundingMarketFeatures;
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
@@ -376,6 +379,21 @@ public class DetectEntrySignal2TradeNormal {
                     symbol2FundingFeatures.put(symbol, feats);
                 }
             }
+        }
+
+        // === PASS-2 cross-sectional rank (#33..#35) — PARITY TRAIN (fix reconcile 2026-08-17).
+        // Live trước đây bỏ PASS-2 -> fundingRankCS/volumeZRankCS/momentumRankCS luôn NaN (selector
+        // ăn 37/45 feature). Population PHẢI = EntrySignalFilter (giống export/train) chứ không rank
+        // trên toàn bộ candidate, nếu không rank lệch phân bố. Mutate feature IN-PLACE trước predictBatch.
+        try {
+            Set<String> csPop = EntrySignalFilter.selectCoins(symbol2FinalTicker, HistoryManager.getInstance());
+            List<FundingMarketFeatures> csList = new ArrayList<>();
+            for (String sym : aiCandidates) {
+                if (csPop.contains(sym)) csList.add(symbol2FundingFeatures.get(sym));
+            }
+            FundingCrossSectional.apply(csList);
+        } catch (Exception e) {
+            LOG.warn("PASS-2 cross-sectional rank lỗi (giữ NaN #33..35): {}", e.toString());
         }
 
         if (fundingBrain != null && !aiFeaturesList.isEmpty()) {
