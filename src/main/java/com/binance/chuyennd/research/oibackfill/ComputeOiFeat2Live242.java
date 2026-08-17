@@ -44,17 +44,19 @@ public class ComputeOiFeat2Live242 {
                 TreeMap<Long, float[]> recent = new TreeMap<>(series.tailMap(cutoff, true));
                 if (recent.isEmpty()) { empty++; continue; }
 
-                // Tách 5 map (giu CA NaN de 5 set cung tap ts -> lookup 1 moc ref nhat quan).
+                // Tách 5 map. BỎ NaN (writeMetricMap242 serialize Gson -> NaN khong hop le JSON).
+                // Lookup van dung: feature NaN tai ts nao -> khong luu -> lookup tra NaN dung cho do.
+                // Data recent hau het non-NaN nen 5 set van cung tap ts (aligned) o vung lookup thuc te.
                 TreeMap<Long, Float> mDelta = new TreeMap<>(), mZ = new TreeMap<>(),
                         mLsg = new TreeMap<>(), mLst = new TreeMap<>(), mTk = new TreeMap<>();
                 for (Map.Entry<Long, float[]> e : recent.entrySet()) {
                     long t = e.getKey();
                     float[] v = e.getValue();
-                    mDelta.put(t, v[0]);
-                    mZ.put(t, v[1]);
-                    mLsg.put(t, v[2]);
-                    mLst.put(t, v[3]);
-                    mTk.put(t, v[4]);
+                    if (!Float.isNaN(v[0])) mDelta.put(t, v[0]);
+                    if (!Float.isNaN(v[1])) mZ.put(t, v[1]);
+                    if (!Float.isNaN(v[2])) mLsg.put(t, v[2]);
+                    if (!Float.isNaN(v[3])) mLst.put(t, v[3]);
+                    if (!Float.isNaN(v[4])) mTk.put(t, v[4]);
                 }
 
                 if (dry) {
