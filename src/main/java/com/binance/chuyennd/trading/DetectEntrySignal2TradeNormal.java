@@ -27,6 +27,7 @@ import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.ai_ml.onnx.entry.AIRejectFilter;
 import com.binance.chuyennd.ai_ml.onnx.entry.OnnxInferenceManager;
 import com.binance.chuyennd.ai_ml.onnx.funding.FundingOnnxInferenceManager;
+import com.binance.chuyennd.ai_ml.onnx.funding.LiveOiFeatProvider;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.MarketLevelChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
@@ -74,6 +75,8 @@ public class DetectEntrySignal2TradeNormal {
     // --- Biến AI Funding (MỚI) ---
     private FundingOnnxInferenceManager fundingBrain;
     private FundingDataCollectionManager.FundingFeatureExtractorV2 fundingExtractor;
+    // OI feature (#41..#45) đã tính sẵn trên Oracle, live chỉ lookup từ 242 (fix reconcile 2026-08-17).
+    private final LiveOiFeatProvider liveOiProvider = new LiveOiFeatProvider();
 
 
     public static void main(String[] args) throws InterruptedException, ParseException {
@@ -358,6 +361,7 @@ public class DetectEntrySignal2TradeNormal {
         Map<String, FundingMarketFeatures> symbol2FundingFeatures = new HashMap<>();
         Map<String, Float> symbol2FundingPred = new HashMap<>();
         final List<String> basket = CoinRankManager.getInstance().getTopCoin(time);
+        liveOiProvider.clear(); // đọc lại OI feature Oracle vừa push (tránh stale) mỗi tick
         for (String symbol : allSymbols) {
             KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
             if (!Utils.isTickerAvailable(ticker)) continue;
@@ -374,6 +378,14 @@ public class DetectEntrySignal2TradeNormal {
                         time, dummyOrder, symbol2FinalTicker, marketData,
                         basket);
                 if (feats != null) {
+                    // #41..#45 OI/LS/taker: lookup feature ĐÃ TÍNH SẴN trên Oracle từ 242 (fix reconcile
+                    // 2026-08-17). Live không tính expanding oiZ (tránh OOM). NaN nếu chưa có OI ≤ t trong 2h.
+                    float[] oi = liveOiProvider.lookup(symbol, time);
+                    feats.oiDelta24hCoin = oi[0];
+                    feats.oiZCoin = oi[1];
+                    feats.lsGlobalCoin = oi[2];
+                    feats.lsToptraderCoin = oi[3];
+                    feats.takerBuyRatioCoin = oi[4];
                     aiCandidates.add(symbol);
                     aiFeaturesList.add(feats);
                     symbol2FundingFeatures.put(symbol, feats);
