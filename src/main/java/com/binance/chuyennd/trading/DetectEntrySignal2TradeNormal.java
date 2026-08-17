@@ -575,6 +575,25 @@ public class DetectEntrySignal2TradeNormal {
 
     private long lastProcessedMinute = 0; // Biến đánh dấu phút đã quét
 
+    // v1 parity WFO G015: entry CHỈ tại mốc lưới 15m (khớp grid selector/label backtest).
+    // Env LIVE_ENTRY_GRID_MIN đổi được không cần rebuild (=1 => quay lại cadence 1 phút cũ).
+    private static final long ENTRY_GRID_MIN = resolveEntryGridMin();
+
+    private static long resolveEntryGridMin() {
+        String v = System.getenv("LIVE_ENTRY_GRID_MIN");
+        if (v != null) {
+            try {
+                long g = Long.parseLong(v.trim());
+                if (g >= 1) {
+                    return g;
+                }
+            } catch (NumberFormatException ignored) {
+                // env rác -> giữ default 15
+            }
+        }
+        return 15;
+    }
+
     public boolean isTimeProcessData() {
         long time = System.currentTimeMillis();
         long second = (time / Utils.TIME_SECOND) % 60;
@@ -582,7 +601,8 @@ public class DetectEntrySignal2TradeNormal {
 
         // Mở rộng cửa sổ thời gian từ giây 03 đến giây 10 (rộng 7 giây).
         // Cờ lastProcessedMinute đảm bảo trong 7 giây này nó chỉ được phép trả về TRUE đúng 1 lần.
-        if (second >= 6 && second <= 10 && curMin > lastProcessedMinute) {
+        // curMin % ENTRY_GRID_MIN == 0 => chỉ chạy tại mốc lưới (mặc định 15m: :00/:15/:30/:45 UTC).
+        if (second >= 6 && second <= 10 && curMin % ENTRY_GRID_MIN == 0 && curMin > lastProcessedMinute) {
             lastProcessedMinute = curMin;
             return true;
         }
