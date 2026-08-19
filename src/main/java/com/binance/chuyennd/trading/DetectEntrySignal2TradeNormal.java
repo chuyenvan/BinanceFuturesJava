@@ -306,13 +306,16 @@ public class DetectEntrySignal2TradeNormal {
             // Duyệt qua danh sách đã sắp xếp (con ngon nhất duyệt trước)
             // Gom REJECT của PREDICT_SYMBOL_TRADE thành 1 dòng/phút (xem createOrderBuyRequest).
             List<String> predictRejects = new ArrayList<>();
+            int selCount = 0; // TOPK cap: chi vao top-K coin/tick nhu backtest (SELECTOR_RANK_TOPK)
             for (Map.Entry<Float, String> entry : sortedCandidates.entrySet()) {
                 String symbol = entry.getValue();
                 Float symbolPred = entry.getKey();
                 KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
                 if (ticker == null || BudgetManager.getInstance().symbol2Pos.containsKey(symbol)) continue;
+                if (Configs.SELECTOR_RANK_TOPK > 0 && selCount >= Configs.SELECTOR_RANK_TOPK) break;
                 createOrderBuyRequest(symbol, ticker, MarketLevelChange.PREDICT_SYMBOL_TRADE,
                         symbol2Max15m.get(symbol), marketRate, predictData, symbolPred, symbol2LastTickers, predictRejects);
+                selCount++;
             }
             // market pred GIỐNG NHAU mọi coin → in 1 lần kèm danh sách SYM(symbolPred). (24H đã bỏ khỏi hệ.)
             if (!predictRejects.isEmpty() && predictData != null) {

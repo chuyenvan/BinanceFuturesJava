@@ -157,6 +157,13 @@ public class BinanceOrderTradingManager {
                 LOG.info("Symbol {} is locking ReduceOnly !", order.symbol);
                 return;
             } else {
+                if ("true".equalsIgnoreCase(System.getenv("SHADOW_NO_PUSH"))) {
+                    LOG.info("[SHADOW] would-BUY {} {} entry: {} quantity: {} time:{} market level: {}",
+                            order.side, order.symbol, order.priceEntry, order.quantity,
+                            Utils.normalizeDateYYYYMMDDHHmm(order.timeStart), order.marketLevel);
+                    symbol2Processing.remove(order.symbol);
+                    return;
+                }
                 Order orderInfo = OrderHelper.newOrderMarket(order.symbol, order.side, order.quantity);
                 if (orderInfo == null) {
                     return;
