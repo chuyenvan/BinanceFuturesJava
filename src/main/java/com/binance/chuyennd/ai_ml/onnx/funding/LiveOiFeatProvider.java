@@ -51,6 +51,21 @@ public class LiveOiFeatProvider {
         cache.clear();
     }
 
+    /**
+     * [OI-GUARD-2] Tuoi pipeline oi_feat: ts moi nhat (lastKey OI_Z) cua coin tham chieu (BTC/ETH) tren 242.
+     * BTC/ETH luon co oi_feat khi compute khoe -> lastKey ~ lan compute thanh cong gan nhat.
+     * Tra 0 neu ca hai deu chua co (cold-start truoc lan compute dau) -> caller KHONG gate luc do.
+     */
+    public long pipelineFreshTs() {
+        long best = 0L;
+        for (String c : new String[]{"BTCUSDT", "ETHUSDT"}) {
+            TreeMap<Long, Float> z = DataManagerAerospikeFloatSim.getMetricMap242(
+                    OiFeatLiveSets.OI_Z, OiFeatLiveSets.BIN, c);
+            if (z != null && !z.isEmpty()) best = Math.max(best, z.lastKey());
+        }
+        return best;
+    }
+
     private static Long floorKeyTol(TreeMap<Long, Float> m, long t) {
         if (m == null || m.isEmpty()) return null;
         Long k = m.floorKey(t);

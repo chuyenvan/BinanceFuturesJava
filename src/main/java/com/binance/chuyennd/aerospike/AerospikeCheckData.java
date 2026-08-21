@@ -20,7 +20,7 @@ public class AerospikeCheckData {
             String host = entry.getKey();
             try {
 
-                String namespace = "ticker";
+                String namespace = "test";
                 // truncate toàn bộ set
 //                client.truncate(null, namespace, "kline_1m_opt", null);
 //                client.truncate(null, namespace, "funding_pred_1m_v5", null);
@@ -30,9 +30,9 @@ public class AerospikeCheckData {
                 String nsResponse = Info.request(client.getNodes()[0], "namespace/" + namespace);
                 System.out.println("=== Namespace Stats ===");
                 printStatInMB(nsResponse, "memory-size");
-                printStatInMB(nsResponse, "memory_used_bytes");
-                printStatInMB(nsResponse, "device_total_bytes");
-                printStatInMB(nsResponse, "device_used_bytes");
+                printStatInMB(nsResponse, "index_used_bytes");
+                printStatInMB(nsResponse, "data_total_bytes");
+                printStatInMB(nsResponse, "data_used_bytes");
 
                 System.out.println("=== Set Stats (MB/GB) ===");
                 String setsResponse = Info.request(client.getNodes()[0], "sets/" + namespace);
@@ -51,9 +51,9 @@ public class AerospikeCheckData {
                             if (f.startsWith("set=")) setName = f.split("=")[1];
                             if (f.startsWith("objects=")) objects = Long.parseLong(f.split("=")[1]);
                             if (f.startsWith("memory_data_bytes=")) memBytes = Long.parseLong(f.split("=")[1]);
-                            if (f.startsWith("device_data_bytes=")) devBytes = Long.parseLong(f.split("=")[1]);
+                            if (f.startsWith("data_used_bytes=")) devBytes = Long.parseLong(f.split("=")[1]);
                         }
-                        if (objects == 0) continue;
+                        if (objects == 0 ) continue;
 
                         System.out.printf("Set: %s %s%n", host, setName);
                         System.out.printf("  Objects: %d%n", objects);
@@ -70,7 +70,7 @@ public class AerospikeCheckData {
 
     // Hàm tiện ích để parse và in dung lượng theo MB/GB
     private static void printStatInMB(String response, String key) {
-        for (String stat : response.split(";")) {
+        for (String stat : response.split(";"))     {
             if (stat.startsWith(key)) {
                 String[] kv = stat.split("=");
                 if (kv.length == 2) {

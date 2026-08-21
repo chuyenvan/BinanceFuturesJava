@@ -21,6 +21,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -124,7 +125,8 @@ public class ExportGateDataset {
         if (cut > 0) {
             base = base.substring(0, cut);
         }
-        return base + ",label_oldbasket";
+        // A/B gate: net label trên rổ losers (ret15m/60m) + net ALL-MARKET (retall15m/60m) cạnh label_oldbasket.
+        return base + ",label_oldbasket,label_ret15m,label_ret60m,label_retall15m,label_retall60m,label_max24h,label_retall24h";
     }
 
     /**
@@ -191,9 +193,19 @@ public class ExportGateDataset {
 
                         List<String> basketOld = HistoryManager.getInstance().findPotentialLosers(ts);
                         float label = basketMaxGain(lookup, ts, basketOld);
+                        // A/B net label (anti-lướt): retEnd close-to-close 15m + 60m trên CÙNG rổ basketOld.
+                        float labRet15 = basketRetEnd(lookup, ts, basketOld, LABEL_HORIZON_MS);
+                        float labRet60 = basketRetEnd(lookup, ts, basketOld, 4 * LABEL_HORIZON_MS);
+                        // NET ALL-MARKET: retEnd close-to-close TB TẤT CẢ coin trong snapshot@t (regime toàn thị trường).
+                        List<String> allMkt = new ArrayList<>(snap.keySet());
+                        float labRetAll15 = basketRetEnd(lookup, ts, allMkt, LABEL_HORIZON_MS);
+                        float labRetAll60 = basketRetEnd(lookup, ts, allMkt, 4 * LABEL_HORIZON_MS);
+                        // 24h horizon (96 x 15m): max-gain rổ losers + net all-market. Test gate label dài.
+                        float labMax24 = basketMaxGain(lookup, ts, basketOld, 96 * LABEL_HORIZON_MS);
+                        float labRetAll24 = basketRetEnd(lookup, ts, allMkt, 96 * LABEL_HORIZON_MS);
 
                         // toCSVRow bắt đầu bằng timestamp + kết thúc bằng 2 cột label cũ → cắt 2 cột cuối,
-                        // thêm label_oldbasket. KHỚP csvHeader(). KHÔNG thêm ts thừa.
+                        // thêm 5 label gate. KHỚP csvHeader(). KHÔNG thêm ts thừa.
                         String row = f.toCSVRow();
                         int idx = nthLastComma(row, 2);
                         if (idx > 0) {
@@ -202,6 +214,18 @@ public class ExportGateDataset {
                         w.write(row);
                         w.write(',');
                         w.write(fmt(label));
+                        w.write(',');
+                        w.write(fmt(labRet15));
+                        w.write(',');
+                        w.write(fmt(labRet60));
+                        w.write(',');
+                        w.write(fmt(labRetAll15));
+                        w.write(',');
+                        w.write(fmt(labRetAll60));
+                        w.write(',');
+                        w.write(fmt(labMax24));
+                        w.write(',');
+                        w.write(fmt(labRetAll24));
                         w.newLine();
 
                         nRows++;
@@ -260,16 +284,28 @@ public class ExportGateDataset {
 
     /** Label gate: max gain trung bình trong 15 phút tới của rổ coin. Nguồn sự thật duy nhất. */
     static float basketMaxGain(TreeMap<Long, Map<String, KlineObjectSimple>> data, long ts, List<String> basket) {
+        return basketMaxGain(data, ts, basket, LABEL_HORIZON_MS);
+    }
+
+    /** Overload: max gain trung bình qua horizon tuỳ ý (dùng cho label 24h). */
+    static float basketMaxGain(TreeMap<Long, Map<String, KlineObjectSimple>> data, long ts, List<String> basket, long horizonMs) {
         if (basket == null || basket.isEmpty()) {
             return 0f;
         }
-        NavigableMap<Long, Map<String, KlineObjectSimple>> future = data.subMap(ts, false, ts + LABEL_HORIZON_MS, true);
+        NavigableMap<Long, Map<String, KlineObjectSimple>> future = data.subMap(ts, false, ts + horizonMs, true);
         if (future.isEmpty()) {
             return 0f;
         }
         Map<String, KlineObjectSimple> atT = data.get(ts);
         if (atT == null) {
             return 0f;
+        }
+        // Sample snapshot MỘT LẦN (traversal future O(n) chỉ 1 lần cho cả rổ, KHÔNG × basketSize). step theo horizon (không gọi size()).
+        int stepMin = Math.max(1, (int) (horizonMs / 60_000L / 150));
+        List<Map<String, KlineObjectSimple>> samples = new ArrayList<>();
+        int si = 0;
+        for (Map<String, KlineObjectSimple> snap : future.values()) {
+            if ((si++ % stepMin) == 0) samples.add(snap);
         }
         float sum = 0;
         int cnt = 0;
@@ -280,7 +316,7 @@ public class ExportGateDataset {
             }
             float entry = (float) k0.priceClose;
             float maxGain = 0;
-            for (Map<String, KlineObjectSimple> snap : future.values()) {
+            for (Map<String, KlineObjectSimple> snap : samples) {
                 KlineObjectSimple k = snap.get(sym);
                 if (k != null && k.maxPrice > 0) {
                     float g = (float) ((k.maxPrice - entry) / entry);
@@ -291,6 +327,52 @@ public class ExportGateDataset {
             }
             sum += maxGain;
             cnt++;
+        }
+        return cnt > 0 ? sum / cnt : 0f;
+    }
+
+    /**
+     * basketRetEnd: TB NET return close-to-close của rổ qua horizon (anti-lướt). entry=priceClose@t;
+     * exit=priceClose nến CUỐI trong (t, t+horizon] mỗi coin. Copy y ExportGate15mV2 (giữ label nhất quán).
+     */
+    static float basketRetEnd(TreeMap<Long, Map<String, KlineObjectSimple>> data, long ts, List<String> basket, long horizonMs) {
+        if (basket == null || basket.isEmpty()) {
+            return 0f;
+        }
+        NavigableMap<Long, Map<String, KlineObjectSimple>> future = data.subMap(ts, false, ts + horizonMs, true);
+        if (future.isEmpty()) {
+            return 0f;
+        }
+        Map<String, KlineObjectSimple> atT = data.get(ts);
+        if (atT == null) {
+            return 0f;
+        }
+        // Sample snapshot MỘT LẦN (traversal future O(n) 1 lần, KHÔNG × basketSize). retEnd chỉ cần close gần cuối.
+        int stepMin = Math.max(1, (int) (horizonMs / 60_000L / 150));
+        List<Map<String, KlineObjectSimple>> samples = new ArrayList<>();
+        int si = 0;
+        for (Map<String, KlineObjectSimple> snap : future.values()) {
+            if ((si++ % stepMin) == 0) samples.add(snap);
+        }
+        float sum = 0;
+        int cnt = 0;
+        for (String sym : basket) {
+            KlineObjectSimple k0 = atT.get(sym);
+            if (k0 == null || k0.priceClose <= 0) {
+                continue;
+            }
+            float entry = (float) k0.priceClose;
+            float lastClose = -1f;
+            for (Map<String, KlineObjectSimple> snap : samples) {   // sample tăng dần -> giữ close cuối ≤ end
+                KlineObjectSimple k = snap.get(sym);
+                if (k != null && k.priceClose > 0) {
+                    lastClose = (float) k.priceClose;
+                }
+            }
+            if (lastClose > 0) {
+                sum += (lastClose - entry) / entry;
+                cnt++;
+            }
         }
         return cnt > 0 ? sum / cnt : 0f;
     }

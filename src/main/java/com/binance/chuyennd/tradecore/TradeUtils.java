@@ -41,6 +41,25 @@ public class TradeUtils {
         return rate;
     }
 
+    /**
+     * [PRED-GAP] Gap trailing quyet dinh theo SELECTOR per-coin P(no-pump) (=1-sel) thay market gate pred.
+     * Dau da xac minh (provenance): live symbol2FundingPred=prob[0]=P(no-pump). Coin KHO pump (pNoPump CAO)
+     * -> siet gap (weak 0.03, chot som); coin DE chay (pNoPump thap) -> gap long (nuoi). weak khi pNoPump>thres.
+     * Cong thuc gap giong het calRateLossDynamicBuy (chi doi tieu chi weak/strong). Fallback: pNoPump null.
+     */
+    public static float calRateLossDynamicBuyPNoPump(float maxProfitRate, Float pNoPump, float pNoPumpWeakThres) {
+        float maxGap = (pNoPump != null && pNoPump > pNoPumpWeakThres)
+                ? Configs.TS_MAX_GAP_WEAK
+                : Configs.TS_MAX_GAP;
+        float gap = Configs.TS_GIVEBACK_FLOOR
+                ? Math.max(maxProfitRate * Configs.TS_GIVEBACK_RATIO, Configs.TS_MIN_GAP)
+                : Math.min(maxProfitRate * Configs.TS_GIVEBACK_RATIO, maxGap);
+        float rate = maxProfitRate - gap;
+        float step = 0.005f;
+        rate = Math.round(rate / step) * step;
+        return rate;
+    }
+
     public static Float calRateMinWithPredReturn15MForTradingStop(Float predReturn15M) {
         Float rateMin2MoveSl = Configs.RATE_PROFIT_STOP_MARKET;
 

@@ -27,4 +27,9 @@ public final class OiFeatLiveSets {
 
     /** merge_asof BACKWARD tolerance 2h — KHỚP ExportFundingOiPerCoin/SelectorOiProvider. */
     public static final long MERGE_TOL_MS = 2L * 60L * 60_000L;
+
+    /** [C1] Set + bin luu accumulator expanding (per-coin) tren 242 de compute incremental (bo doc Oracle).
+     *  Record nho: JSON double[]{lastTs, sum, sumSq, n} Snappy. Key = symbol UPPER. */
+    public static final String ACCUM_SET = "oi_feat_accum";
+    public static final String ACCUM_BIN = "a_data";
 }

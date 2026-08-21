@@ -28,6 +28,7 @@ import com.binance.chuyennd.ai_ml.onnx.entry.AIRejectFilter;
 import com.binance.chuyennd.ai_ml.onnx.entry.OnnxInferenceManager;
 import com.binance.chuyennd.ai_ml.onnx.funding.FundingOnnxInferenceManager;
 import com.binance.chuyennd.ai_ml.onnx.funding.LiveOiFeatProvider;
+import com.binance.chuyennd.research.oibackfill.OiFeatLiveSets;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.MarketLevelChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
@@ -77,6 +78,13 @@ public class DetectEntrySignal2TradeNormal {
     private FundingDataCollectionManager.FundingFeatureExtractorV2 fundingExtractor;
     // OI feature (#41..#45) đã tính sẵn trên Oracle, live chỉ lookup từ 242 (fix reconcile 2026-08-17).
     private final LiveOiFeatProvider liveOiProvider = new LiveOiFeatProvider();
+
+    // [PRED-GAP] Latest per-coin selector output = prob[0] = P(no-pump) = 1 - sel (P(maxFav>=6%)).
+    // Cap nhat moi tick entry (15m, duyet MOI symbol) -> SL-loop (BinanceOrderTradingManager) doc de
+    // quyet dinh gap weak/strong theo pred per-coin (thay market gate pred). Fallback gate neu thieu.
+    public static final java.util.concurrent.ConcurrentHashMap<String, Float> LATEST_SEL_PNOPUMP =
+            new java.util.concurrent.ConcurrentHashMap<>();
+    public static volatile long LATEST_SEL_TS = 0L;
 
 
     public static void main(String[] args) throws InterruptedException, ParseException {
@@ -365,6 +373,22 @@ public class DetectEntrySignal2TradeNormal {
         Map<String, Float> symbol2FundingPred = new HashMap<>();
         final List<String> basket = CoinRankManager.getInstance().getTopCoin(time);
         liveOiProvider.clear(); // đọc lại OI feature Oracle vừa push (tránh stale) mỗi tick
+
+        // [OI-GUARD-2] Neu pipeline oi_feat qua han (Oracle/compute down) -> KHONG feed model feature NaN
+        // (off-distribution) -> gate toan bo entry tick nay. Chi trigger khi TUNG co data (freshTs>0) roi cu di
+        // -> tranh deadlock cold-start. Nguong = env OI_STALE_HALT_MS (default 2h = MERGE_TOL). Tat qua OI_STALE_HALT=0.
+        if (!"0".equals(System.getenv("OI_STALE_HALT"))) {
+            long oiFreshTs = liveOiProvider.pipelineFreshTs();
+            long haltMs = OiFeatLiveSets.MERGE_TOL_MS;
+            String hs = System.getenv("OI_STALE_HALT_MS");
+            if (hs != null) { try { haltMs = Long.parseLong(hs.trim()); } catch (Exception ignore) { } }
+            if (oiFreshTs > 0 && (time - oiFreshTs) > haltMs) {
+                LOG.warn("[OI-GUARD-2] oi_feat pipeline STALE age={}m > {}m (Oracle/compute down?) "
+                        + "-> GATE entries tick {}", (time - oiFreshTs) / 60000, haltMs / 60000, time);
+                return sortedCandidates; // rong -> khong tao entry moi vong nay
+            }
+        }
+
         for (String symbol : allSymbols) {
             KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
             if (!Utils.isTickerAvailable(ticker)) continue;
@@ -422,6 +446,7 @@ public class DetectEntrySignal2TradeNormal {
                 String sym = aiCandidates.get(i);
                 float[] preds = results.get(i);
                 symbol2FundingPred.put(sym, preds[0]);
+                LATEST_SEL_PNOPUMP.put(sym, preds[0]); // [PRED-GAP] P(no-pump) per-coin cho SL-loop
                 // 🔥 FILTER: Reject nếu Fail Prob > 0.3
                 if (preds[0] > maxThres) {
 //                    LOG.info("❌ [FILTER AI SYMBOL] {}: Prediction FAIL too high ({})", sym, probs[0]);

@@ -72,7 +72,7 @@ public class LogMonitor {
             long expectedLastDataMinute = currentMinute - 120000;
 
             StringBuilder alert = new StringBuilder();
-            if (expectedLastDataMinute > lastMinuteInLog) {
+            if (expectedLastDataMinute - lastMinuteInLog > 15 * 60000L) {
                 long deadMinutes = (expectedLastDataMinute - lastMinuteInLog) / 60000;
                 alert.append("🚨 DEAD ").append(deadMinutes).append("m! ");
             }
@@ -81,7 +81,7 @@ public class LogMonitor {
             int failCount = 0;
             List<String> failedDetails = new ArrayList<>(); // 🔥 Thêm List để lưu các phút bị lỗi
 
-            for (long min = firstMinuteInLog; min <= expectedLastDataMinute; min += 60000) {
+            for (long min = firstMinuteInLog; min <= expectedLastDataMinute; min += 15 * 60000L) {
                 Boolean isSuccess = checkResults.get(min);
                 if (isSuccess == null || !isSuccess) {
                     failCount++;

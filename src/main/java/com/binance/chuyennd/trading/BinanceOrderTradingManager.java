@@ -283,7 +283,7 @@ public class BinanceOrderTradingManager {
                 if (rateLoss > rateMin2MoveSl) {
                     if (orderInfo.priceSL == null) {
                         OrderSide sideSL = OrderSide.SELL;
-                        Float rateStop = TradeUtils.calRateLossDynamicBuy(rateLoss, predReturn15M );
+                        Float rateStop = tsGap(rateLoss, predReturn15M, symbol);
                         if (orderInfo.side.equals(OrderSide.SELL)) {
                             sideSL = OrderSide.BUY;
                         }
@@ -376,6 +376,24 @@ public class BinanceOrderTradingManager {
         }
     }
 
+    /**
+     * [PRED-GAP] Chon gap trailing: neu env TS_PRED_GAP=1 va co selector per-coin P(no-pump) (tuoi tu tick
+     * entry 15m) -> dung gap theo pred per-coin (weak khi P(no-pump)>TS_PNOPUMP_WEAK_THR, default 0.29).
+     * Nguoc lai (flag off / thieu pred) -> gap cu theo market gate pred (byte-identical hanh vi cu).
+     */
+    private static float tsGap(float rateLoss, Float gatePred, String symbol) {
+        if ("1".equals(System.getenv("TS_PRED_GAP"))) {
+            Float pnp = DetectEntrySignal2TradeNormal.LATEST_SEL_PNOPUMP.get(symbol);
+            if (pnp != null) {
+                float thr = 0.29f;
+                String v = System.getenv("TS_PNOPUMP_WEAK_THR");
+                if (v != null) { try { thr = Float.parseFloat(v.trim()); } catch (Exception ignore) { } }
+                return TradeUtils.calRateLossDynamicBuyPNoPump(rateLoss, pnp, thr);
+            }
+        }
+        return TradeUtils.calRateLossDynamicBuy(rateLoss, gatePred);
+    }
+
     public void processDynamicTP_SL() {
         Set<PositionRisk> positions = new HashSet<>();
         positions.addAll(BudgetManager.getInstance().symbol2Pos.values());
@@ -411,7 +429,7 @@ public class BinanceOrderTradingManager {
                 if (orderInfo.priceSL != null && rateLoss > rateMin2MoveSl) {
                     // move SL
                     Float priceSL = orderInfo.priceSL;
-                    Float rateSL = TradeUtils.calRateLossDynamicBuy(rateLoss, maxChange60M);
+                    Float rateSL = tsGap(rateLoss, maxChange60M, symbol);
                     Float priceSLNew = Utils.calPriceTarget(symbol, priceEntry, side2Sl, -rateSL);
                     float priceSLChange = priceSLNew - priceSL;
                     if (position.getPositionAmt().compareTo(new BigDecimal("0")) < 0) {

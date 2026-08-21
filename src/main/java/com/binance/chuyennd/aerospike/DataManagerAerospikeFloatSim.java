@@ -660,6 +660,38 @@ public class DataManagerAerospikeFloatSim {
         return getMetricMapFrom(getClient242(), setName, binName, symbol);
     }
 
+    /** [C1] Ghi accumulator expanding (per-coin) vao 242: JSON double[]{lastTs,sum,sumSq,n} Snappy 1 bin. */
+    public static void writeAccum242(String setName, String binName, String symbol,
+                                     long lastTs, double sum, double sumSq, long n) {
+        try {
+            Key key = new Key(Configs.AEROSPIKE_NAMESPACE, setName, symbol);
+            double[] arr = new double[]{(double) lastTs, sum, sumSq, (double) n};
+            byte[] raw = Utils.gson.toJson(arr).getBytes("UTF-8");
+            byte[] compressed = Snappy.compress(raw);
+            getClient242().put(writePolicy, key, new Bin(binName, compressed));
+        } catch (Exception e) {
+            LOG.error("❌ Error writeAccum242 set={} {}: {}", setName, symbol, e.getMessage());
+        }
+    }
+
+    /** [C1] Doc accumulator expanding tu 242. Tra double[]{lastTs,sum,sumSq,n} hoac null neu chua co/loi. */
+    public static double[] readAccum242(String setName, String binName, String symbol) {
+        try {
+            Key key = new Key(Configs.AEROSPIKE_NAMESPACE, setName, symbol);
+            Record record = getClient242().get(null, key);
+            if (record == null) return null;
+            byte[] compressed = (byte[]) record.getValue(binName);
+            if (compressed == null) return null;
+            String json = new String(Snappy.uncompress(compressed), "UTF-8");
+            double[] arr = Utils.gson.fromJson(json, double[].class);
+            if (arr == null || arr.length < 4) return null;
+            return arr;
+        } catch (Exception e) {
+            LOG.error("❌ Error readAccum242 set={} {}: {}", setName, symbol, e.getMessage());
+            return null;
+        }
+    }
+
     /**
      * LÕI đọc dùng chung cho {@link #getMetricMap226}/{@link #getMetricMap242}: gộp TOÀN BỘ chunk-tháng
      * ({@code SYMBOL_yyyyMM}) của 1 symbol thành 1 TreeMap. Batch-get mọi key tháng [202001..nay] (chunk

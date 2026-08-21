@@ -663,6 +663,7 @@ public class Configs {
             if ((v = System.getenv("SIM_AI_DYNAMIC_MIN")) != null) AI_DYNAMIC_MIN = Float.parseFloat(v);
             if ((v = System.getenv("SIM_PREDICT_SYMBOL_RATE_MAX")) != null) PREDICT_SYMBOL_RATE_MAX_THRESHOLD = Float.parseFloat(v);
             if ((v = System.getenv("SIM_RATE_PROFIT_STOP_MARKET")) != null) RATE_PROFIT_STOP_MARKET = Float.parseFloat(v);
+            if ((v = System.getenv("SIM_TS_PROFIT_MULTIPLIER")) != null) TS_PROFIT_MULTIPLIER = Float.parseFloat(v);
             if ((v = System.getenv("SIM_BREAKER_MODE")) != null) BREAKER_MODE = v;
             if ((v = System.getenv("SIM_BREAKER_MARGIN_HALT")) != null) BREAKER_MARGIN_HALT = Float.parseFloat(v);
             if ((v = System.getenv("SIM_MS_DOWN_BIG_AVG")) != null) MS_DOWN_BIG_AVG = Float.parseFloat(v);

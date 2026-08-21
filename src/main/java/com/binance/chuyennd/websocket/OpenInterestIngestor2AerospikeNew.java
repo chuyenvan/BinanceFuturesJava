@@ -72,6 +72,50 @@ public class OpenInterestIngestor2AerospikeNew {
         LOG.info("===== [TASK-035] OI/LS/taker forward ingest | 5 endpoint (OI+LS+taker) | chunk-thang 242 | chu ky {}' | limit {} | ghi tu giay {} | qua BinanceRestGuard =====",
                 FORWARD_INTERVAL_MS / 60000, SWEEP_LIMIT, WRITE_START_SEC);
         startForwardLoop();
+        startOiFeatComputeLoop();
+    }
+
+    /**
+     * [OI-FEAT] Tính oi_feat_* (5 feature selector: oiDelta24h, oiZ, lsGlobal, lsToptrader, takerBuy) NGAY TRÊN 242
+     * mỗi {@link #FORWARD_INTERVAL_MS} (30'), đọc 226-full ∪ 242-fresh (242→226:3222 open) → giữ oi_feat_* tươi cho
+     * {@code LiveOiFeatProvider} (bỏ phụ thuộc job Oracle thủ công). Logic EXACT = {@code ComputeOiFeat2Live242.runOnce}
+     * (per-coin 1 lúc → không OOM box live). Rolling push {@code OI_FEAT_ROLL_DAYS} ngày (default 2, đủ tươi cho tol 2h).
+     * Delay đầu {@code OI_FEAT_INIT_DELAY_MS} (default 5') để forward sweep ghi raw OI trước.
+     */
+    private void startOiFeatComputeLoop() {
+        final int rollDays = envInt("OI_FEAT_ROLL_DAYS", 2);
+        final long initDelay = envLong("OI_FEAT_INIT_DELAY_MS", 5 * 60_000L);
+        // Cadence 60' (đo dry-run: ~29'/881 coin đọc 226-full). 60' << tol 2h của LiveOiFeatProvider → luôn tươi,
+        // giảm nửa tải mạng 242→226 so với 30'. Tune qua env OI_FEAT_INTERVAL_MS nếu cần.
+        final long intervalMs = envLong("OI_FEAT_INTERVAL_MS", 60 * 60_000L);
+        new Thread(() -> {
+            Thread.currentThread().setName("OI-Feat-Compute-Loop");
+            LOG.info("===== [OI-FEAT] compute oi_feat_* tren 242 | chu ky {}' | rolling {}d | delay dau {}s =====",
+                    intervalMs / 60000, rollDays, initDelay / 1000);
+            try { Thread.sleep(initDelay); } catch (InterruptedException ignored) { }
+            while (true) {
+                long t0 = System.currentTimeMillis();
+                try {
+                    com.binance.chuyennd.research.oibackfill.ComputeOiFeat2Live242.runOnce(rollDays, false);
+                    LOG.info("[OI-FEAT] compute xong trong {}ms", System.currentTimeMillis() - t0);
+                } catch (Throwable e) {
+                    LOG.error("[OI-FEAT] compute loi (bo qua vong nay): {}", e.getMessage(), e);
+                }
+                long sleep = intervalMs - (System.currentTimeMillis() - t0);
+                if (sleep < 60_000L) sleep = 60_000L;
+                try { Thread.sleep(sleep); } catch (InterruptedException ignored) { }
+            }
+        }).start();
+    }
+
+    private static int envInt(String k, int d) {
+        String v = System.getenv(k);
+        try { return v == null ? d : Integer.parseInt(v.trim()); } catch (Exception e) { return d; }
+    }
+
+    private static long envLong(String k, long d) {
+        String v = System.getenv(k);
+        try { return v == null ? d : Long.parseLong(v.trim()); } catch (Exception e) { return d; }
     }
 
     private List<String> collectSymbols() {

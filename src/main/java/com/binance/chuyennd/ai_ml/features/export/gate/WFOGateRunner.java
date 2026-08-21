@@ -116,33 +116,47 @@ public class WFOGateRunner {
                     Utils.normalizeDateYYYYMMDD(folds.get(i)[0]), Utils.normalizeDateYYYYMMDD(folds.get(i)[1]));
         }
 
-        long totalWritten = 0;
-        // GHI FILE thay Aerospike: ghi 226 qua mạng = 65 rec/s (nghẽn 99% thời gian, đo bằng smoke3).
-        // File local = tức thì. File gate WFO interface cho backtest đọc qua GATE_FILE. 1 writer cho cả chuỗi OOS.
-        try (BufferedWriter gw = new BufferedWriter(new FileWriter(outFile))) {
-            gw.write("timestamp,predReturn15M,predRisk4H"); gw.newLine();
-            for (int i = 0; i < folds.size(); i++) {
-                long cutoff = folds.get(i)[0];   // train < cutoff ; OOS = [cutoff, oosEnd)
-                long oosEnd = folds.get(i)[1];
-                String cutoffStr = Utils.normalizeDateYYYYMMDD(cutoff).replace("-", "");
-                String modelDir = modelTmpDir + "/fold_" + i;
-                new File(modelDir).mkdirs();
+        // A/B GATE: replay 1 LẦN (Pha1 ở trên) rồi loop nhiều label — mỗi label train per-fold riêng, ghi file riêng.
+        //   GATE_AB_LABELS mặc định "label_oldbasket" = HÀNH VI CŨ (1 label, outFile không đổi).
+        //   A/B: GATE_AB_LABELS="label_oldbasket,label_ret15m,label_ret60m" → outFile_<label>.csv mỗi label.
+        String labelsEnv = System.getenv().getOrDefault("GATE_AB_LABELS", "label_oldbasket");
+        String[] labels = labelsEnv.split(",");
+        LOG.info("🏷️  GATE_AB_LABELS = {} ({} label)", labelsEnv, labels.length);
 
-                // (a) gọi Python train tới cutoff
-                LOG.info("🔧 fold {} — train Python (cutoff={})...", i, cutoffStr);
-                int rc = runPythonTrain(pyScript, csvStore, cutoffStr, modelDir);
-                if (rc != 0) { LOG.error("⛔ fold {} train rc={} — DỪNG (không bỏ qua, tránh chuỗi WFO thủng).", i, rc); return; }
+        for (String rawLabel : labels) {
+            String label = rawLabel.trim();
+            if (label.isEmpty()) continue;
+            String labelOut = labelOutFile(outFile, label, labels.length);
+            String labelModelBase = modelTmpDir + "/" + label;
+            new File(labelModelBase).mkdirs();
+            LOG.info("===== 🏷️  LABEL {} -> {} =====", label, labelOut);
 
-                // (b) predict đoạn OOS từ featureStore RAM (nhanh ~0s) → ghi file (tức thì)
-                long written = predictOOSToFile(modelDir, cutoff, oosEnd, gw);
-                totalWritten += written;
-                LOG.info("✅ fold {} xong: ghi {} pred OOS [{} -> {})", i, written,
-                        Utils.normalizeDateYYYYMMDD(cutoff), Utils.normalizeDateYYYYMMDD(oosEnd));
+            long totalWritten = 0;
+            // GHI FILE thay Aerospike: ghi 226 qua mạng = 65 rec/s (nghẽn 99%). File local = tức thì. 1 writer / chuỗi OOS.
+            try (BufferedWriter gw = new BufferedWriter(new FileWriter(labelOut))) {
+                gw.write("timestamp,predReturn15M,predRisk4H"); gw.newLine();
+                for (int i = 0; i < folds.size(); i++) {
+                    long cutoff = folds.get(i)[0];   // train < cutoff ; OOS = [cutoff, oosEnd)
+                    long oosEnd = folds.get(i)[1];
+                    String cutoffStr = Utils.normalizeDateYYYYMMDD(cutoff).replace("-", "");
+                    String modelDir = labelModelBase + "/fold_" + i;
+                    new File(modelDir).mkdirs();
+
+                    // (a) gọi Python train tới cutoff, chọn cột label qua GATE_LABEL
+                    LOG.info("🔧 [{}] fold {} — train Python (cutoff={})...", label, i, cutoffStr);
+                    int rc = runPythonTrain(pyScript, csvStore, cutoffStr, modelDir, label);
+                    if (rc != 0) { LOG.error("⛔ [{}] fold {} train rc={} — DỪNG (tránh chuỗi WFO thủng).", label, i, rc); return; }
+
+                    // (b) predict đoạn OOS từ featureStore RAM (nhanh ~0s) → ghi file (tức thì)
+                    long written = predictOOSToFile(modelDir, cutoff, oosEnd, gw);
+                    totalWritten += written;
+                    LOG.info("✅ [{}] fold {} xong: ghi {} pred OOS [{} -> {})", label, i, written,
+                            Utils.normalizeDateYYYYMMDD(cutoff), Utils.normalizeDateYYYYMMDD(oosEnd));
+                }
             }
+            LOG.info("🎯 [{}] WFO DONE: {} fold, tổng {} pred OOS -> file {}", label, folds.size(), totalWritten, labelOut);
         }
-
-        LOG.info("🎯 WFO DONE: {} fold, tổng {} pred OOS -> file {}", folds.size(), totalWritten, outFile);
-        LOG.info("   Bước tiếp: GATE_FILE={} java ... GoldenBacktest FAST  (chấm bằng HPOFitnessCalculatorV4)", outFile);
+        LOG.info("   Bước tiếp: LoadWfoGatePredTool nạp mỗi file -> set riêng; build_ds; fanout A/B.");
     }
 
     /** Sinh fold expanding: mỗi fold OOS = [cutoff, cutoff+oosMonths), bước trượt = oosMonths (không chồng lấn). */
@@ -161,15 +175,30 @@ public class WFOGateRunner {
         return folds;
     }
 
-    /** Gọi Python train_gate_fold.py (train < cutoff -> ONNX trong modelDir). Trả exit code. */
-    private int runPythonTrain(String pyScript, String csv, String cutoffStr, String modelDir) throws Exception {
-        // dùng venv python; train_gate_fold.py nhận env DATA/CUTOFF/OUT_DIR (giống train_gate15m_v2_final.py)
+    /** Suy ra tên file out theo label: 1 label = giữ nguyên (backward-compat); nhiều label = chèn _<label> trước đuôi. */
+    private static String labelOutFile(String outFile, String label, int nLabels) {
+        if (nLabels <= 1) return outFile;
+        int slash = Math.max(outFile.lastIndexOf('/'), outFile.lastIndexOf('\\'));
+        int dot = outFile.lastIndexOf('.');
+        if (dot > slash) return outFile.substring(0, dot) + "_" + label + outFile.substring(dot);
+        return outFile + "_" + label;
+    }
+
+    /** Gọi Python train_gate_fold.py (train < cutoff -> ONNX trong modelDir), chọn cột label qua GATE_LABEL. Trả exit code. */
+    private int runPythonTrain(String pyScript, String csv, String cutoffStr, String modelDir, String gateLabel) throws Exception {
+        // dùng venv python; train_gate_fold.py nhận env DATA/CUTOFF/OUT_DIR/GATE_LABEL
         String home = System.getProperty("user.home");
         String py = home + "/envs/xgb-env/bin/python";
         ProcessBuilder pb = new ProcessBuilder(py, pyScript);
         pb.environment().put("DATA", csv);
         pb.environment().put("CUTOFF", cutoffStr);
         pb.environment().put("OUT_DIR", modelDir);
+        pb.environment().put("GATE_LABEL", gateLabel);
+        // Purge theo horizon label: label 24h nhìn xa 24h -> phải cắt 24h train tail để không leak vào OOS.
+        long purgeMs = gateLabel.contains("24h") ? 24L * 60 * 60_000L
+                : gateLabel.contains("60") ? 60L * 60_000L
+                : 15L * 60_000L;
+        pb.environment().put("GATE_PURGE_MS", String.valueOf(purgeMs));
         pb.redirectErrorStream(true);
         Process p = pb.start();
         try (Scanner sc = new Scanner(p.getInputStream())) {

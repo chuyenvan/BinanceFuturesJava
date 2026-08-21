@@ -127,7 +127,7 @@ public class Utils {
         //Add chatId (given chatId is fake)
         String chatId = "6548680563";
 
-        urlString = String.format(urlString, apiToken, chatId, URLEncoder.encode(text));
+        urlString = String.format(urlString, apiToken, chatId, URLEncoder.encode(text, java.nio.charset.StandardCharsets.UTF_8));
 
         try {
             LOG.info("Telegram respon: {}", HttpRequest.getContentFromUrl(urlString));
