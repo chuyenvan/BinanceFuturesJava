@@ -314,16 +314,22 @@ public class DetectEntrySignal2TradeNormal {
             // Duyệt qua danh sách đã sắp xếp (con ngon nhất duyệt trước)
             // Gom REJECT của PREDICT_SYMBOL_TRADE thành 1 dòng/phút (xem createOrderBuyRequest).
             List<String> predictRejects = new ArrayList<>();
-            int selCount = 0; // TOPK cap: chi vao top-K coin/tick nhu backtest (SELECTOR_RANK_TOPK)
-            for (Map.Entry<Float, String> entry : sortedCandidates.entrySet()) {
+            // [PARITY] KHOP BACKTEST RANK-TOPK (fix K5 lech live<->backtest):
+            //  - rank-mode (TOPK>0): duyet pool DAY DU (selectorRankPool, khong loc maxThres) => khop backtest
+            //    bo nguong per-symbol; cap-then-skip: dem rank tren TOAN pool (ke ca coin dang giu) roi break tai K,
+            //    skip coin dang giu SAU khi dem => chi xet top-K rank, khong dao sau qua rank K nhu truoc.
+            //  - TOPK<=0: giu hanh vi cu (pool da loc + skip-held, khong cap) byte-identical.
+            TreeMap<Float, String> selPool = (Configs.SELECTOR_RANK_TOPK > 0) ? selectorRankPool : sortedCandidates;
+            int rank = 0;
+            for (Map.Entry<Float, String> entry : selPool.entrySet()) {
                 String symbol = entry.getValue();
                 Float symbolPred = entry.getKey();
+                if (Configs.SELECTOR_RANK_TOPK > 0 && rank >= Configs.SELECTOR_RANK_TOPK) break;
+                rank++;
                 KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
                 if (ticker == null || BudgetManager.getInstance().symbol2Pos.containsKey(symbol)) continue;
-                if (Configs.SELECTOR_RANK_TOPK > 0 && selCount >= Configs.SELECTOR_RANK_TOPK) break;
                 createOrderBuyRequest(symbol, ticker, MarketLevelChange.PREDICT_SYMBOL_TRADE,
                         symbol2Max15m.get(symbol), marketRate, predictData, symbolPred, symbol2LastTickers, predictRejects);
-                selCount++;
             }
             // market pred GIỐNG NHAU mọi coin → in 1 lần kèm danh sách SYM(symbolPred). (24H đã bỏ khỏi hệ.)
             if (!predictRejects.isEmpty() && predictData != null) {
@@ -344,6 +350,9 @@ public class DetectEntrySignal2TradeNormal {
         }
         LOG.info("Finish check level change of market 2 trade: {}", new Date());
     }
+
+    // [PARITY] Pool DAY DU (khong loc maxThres) cho selector rank-mode -> khop backtest RANK-TOPK.
+    private final TreeMap<Float, String> selectorRankPool = new TreeMap<>();
 
     private Float getSymbolPred(TreeMap<Float, String> sortedCandidates, String symbol) {
 
@@ -366,6 +375,7 @@ public class DetectEntrySignal2TradeNormal {
     private TreeMap<Float, String> predictAllCandidates(Set<String> allSymbols, Map<String,
             KlineObjectSimple> symbol2FinalTicker, Float rateDownAvg, Float rateUpAvg, Float rateDown15MAvg, long time) {
         TreeMap<Float, String> sortedCandidates = new TreeMap<>();
+        selectorRankPool.clear(); // [PARITY] reset pool day du moi tick
         // 2. Chuẩn bị AI Input
         List<String> aiCandidates = new ArrayList<>();
         List<FundingMarketFeatures> aiFeaturesList = new ArrayList<>();
@@ -447,6 +457,7 @@ public class DetectEntrySignal2TradeNormal {
                 float[] preds = results.get(i);
                 symbol2FundingPred.put(sym, preds[0]);
                 LATEST_SEL_PNOPUMP.put(sym, preds[0]); // [PRED-GAP] P(no-pump) per-coin cho SL-loop
+                selectorRankPool.put(preds[0], sym); // [PARITY] pool day du (truoc loc maxThres) cho rank-mode
                 // 🔥 FILTER: Reject nếu Fail Prob > 0.3
                 if (preds[0] > maxThres) {
 //                    LOG.info("❌ [FILTER AI SYMBOL] {}: Prediction FAIL too high ({})", sym, probs[0]);
@@ -487,7 +498,10 @@ public class DetectEntrySignal2TradeNormal {
                 prediction.return15M, prediction.riskDrawdown4H
         );
         if (levelChange == MarketLevelChange.PREDICT_SYMBOL_TRADE) {
-            if (symbolPred != null) {
+            // [PARITY] rank-mode (SELECTOR_RANK_TOPK>0): backtest RANK-TOPK BO nguong per-symbol,
+            //   chi dung market gate => KHONG goi checkSignalDynamic, de roi xuong checkSignal (market-only).
+            //   TOPK<=0: giu checkSignalDynamic cu (byte-identical).
+            if (symbolPred != null && Configs.SELECTOR_RANK_TOPK <= 0) {
                 filterResult = aiRejectFilter.checkSignalDynamic(predict, symbolPred);
             }
         }
