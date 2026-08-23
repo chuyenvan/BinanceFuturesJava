@@ -60,15 +60,17 @@ public class ClientSingleton implements Serializable {
     }
 
     public void initClient() {
-        File localFile = new File(EXCHANGE_INFO_PATH);
+        String exPath = System.getenv("EXCHANGE_INFO_PATH");
+        if (exPath == null || exPath.isEmpty()) exPath = System.getProperty("EXCHANGE_INFO_PATH", EXCHANGE_INFO_PATH);
+        File localFile = new File(exPath);
         List<ExchangeInfoEntry> symbols = null;
         Gson gson = new Gson();
 
         // 1. CỐ GẮNG LOAD TỪ FILE LOCAL (Dùng cho Kaggle)
         if (localFile.exists() && !localFile.isDirectory()) {
-            LOG.info("Found local file {}. Loading Exchange Information from file (Offline Mode)...", EXCHANGE_INFO_PATH);
+            LOG.info("Found local file {}. Loading Exchange Information from file (Offline Mode)...", exPath);
             try {
-                String jsonContent = new String(Files.readAllBytes(Paths.get(EXCHANGE_INFO_PATH)));
+                String jsonContent = new String(Files.readAllBytes(Paths.get(exPath)));
                 ExchangeInformation exchangeInfo = gson.fromJson(jsonContent, ExchangeInformation.class);
                 symbols = exchangeInfo.getSymbols();
                 LOG.info("Successfully loaded {} symbols from local file.", symbols.size());
