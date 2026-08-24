@@ -32,6 +32,13 @@ H_LIST = ["4h", "12h", "24h", "72h"]
 # ExportFundingLabel.java (Java) — 2 nguon PHAI dung cung base-minutes nay, khong tu suy doan lai.
 H_BASE_MIN = {"4h": 240, "12h": 720, "24h": 1440, "72h": 4320}
 WIN = 0.06
+# [2-sided triple-barrier] maxFav DUONG (dinh), maxAdv AM (day=min low/close-1);
+# adv_hit khi maxAdv <= -SEL_ADV_PCT. Param qua env, default giu TP=6%.
+SEL_FAV_PCT = float(os.environ.get("SEL_FAV_PCT", "0.06"))  # TP
+SEL_ADV_PCT = float(os.environ.get("SEL_ADV_PCT", "0.03"))  # SL placeholder
+# [nonoverlap] Downsample CHI tap TRAIN ve luoi khong chong lap (giu OOS predict DAY + purge nguyen).
+SEL_SAMPLE_MODE = os.environ.get("SEL_SAMPLE_MODE", "grid")   # "grid" (hien tai) | "nonoverlap"
+SEL_TIMEOUT_H = int(os.environ.get("SEL_TIMEOUT_H", "4"))     # horizon(h) dat luoi nonoverlap cho TRAIN
 GRID_MIN = int(os.environ.get("SELECTOR_GRID_MIN", "15"))
 GRID_MS = GRID_MIN * 60 * 1000
 for _h, _m in H_BASE_MIN.items():
@@ -272,7 +279,7 @@ def load_labels():
                  _m["step_min"], _m["scale"], _m["horizons"], len(_lbl_files))
         return _load_labels_from(_read_label_any(
             LABEL_CSV,
-            ["tEpochMs", "symbol"] + [f"maxFav_{h}" for h in H_LIST] + [f"nBars_{h}" for h in H_LIST]))
+            ["tEpochMs", "symbol"] + [f"maxFav_{h}" for h in H_LIST] + [f"maxAdv_{h}" for h in H_LIST] + [f"tHitFav_{h}" for h in H_LIST] + [f"tHitAdv_{h}" for h in H_LIST] + [f"nBars_{h}" for h in H_LIST]))
 
     meta_path = LABEL_CSV + ".meta.json"
     if os.path.exists(meta_path):
@@ -289,21 +296,35 @@ def load_labels():
         log.warning("KHONG thay %s (label cu truoc ban co sidecar meta) -> KHONG tu-validate duoc step. "
                      "Neu day la canonical GRID_MIN=%d, PHAI tu xac nhan LABEL_CSV sinh cung step (LABEL_STEP_MIN=%d) "
                      "truoc khi tin ket qua train.", meta_path, GRID_MIN, GRID_MIN)
-    cols = ["tEpochMs", "symbol"] + [f"maxFav_{h}" for h in H_LIST] + [f"nBars_{h}" for h in H_LIST]
+    cols = ["tEpochMs", "symbol"] + [f"maxFav_{h}" for h in H_LIST] + [f"maxAdv_{h}" for h in H_LIST] + [f"tHitFav_{h}" for h in H_LIST] + [f"tHitAdv_{h}" for h in H_LIST] + [f"nBars_{h}" for h in H_LIST]
     return _load_labels_from(_read_label_any(LABEL_CSV, cols))
 
 
 def _load_labels_from(df):
-    """Tach rieng phan bien df -> nhan y cho tung horizon, de ca 2 nhanh (protobuf / CSV) dung chung."""
+    """[2-SIDED triple-barrier] Tach df -> y cho tung horizon (SL vs TP song song), dung chung 2 nhanh.
+    fav_hit=maxFav>=SEL_FAV_PCT (TP); adv_hit=maxAdv<=-SEL_ADV_PCT (SL, maxAdv ratio AM).
+    y=1: fav_hit & (not adv_hit OR tHitFav<tHitAdv). lose/timeout -> y=0. tHit* cung don vi (phut)."""
     out = {}
     for h in H_LIST:
         need = H_STEPS[h]
-        d = df[["tEpochMs", "symbol", f"maxFav_{h}", f"nBars_{h}"]].rename(
-            columns={"tEpochMs": "ts", f"maxFav_{h}": "maxFav", f"nBars_{h}": "nBars"})
-        d = d[(d["nBars"] >= need) & d["maxFav"].notna()].copy()
-        d["y"] = (d["maxFav"] >= WIN).astype(np.int8)
+        d = df[["tEpochMs", "symbol", f"maxFav_{h}", f"maxAdv_{h}",
+                f"tHitFav_{h}", f"tHitAdv_{h}", f"nBars_{h}"]].rename(
+            columns={"tEpochMs": "ts", f"maxFav_{h}": "maxFav", f"maxAdv_{h}": "maxAdv",
+                     f"tHitFav_{h}": "tHitFav", f"tHitAdv_{h}": "tHitAdv", f"nBars_{h}": "nBars"})
+        d = d[(d["nBars"] >= need) & d["maxFav"].notna() & d["maxAdv"].notna()].copy()
+        fav_hit = d["maxFav"] >= SEL_FAV_PCT
+        adv_hit = d["maxAdv"] <= -SEL_ADV_PCT
+        fav_first = d["tHitFav"] < d["tHitAdv"]
+        win = fav_hit & (~adv_hit | fav_first)
+        d["y"] = win.astype(np.int8)
         out[h] = d[["ts", "symbol", "y"]]
-        log.info("Label %s: %d rows | base=%.4f", h, len(d), d["y"].mean())
+        n = len(d)
+        if n:
+            lose = float((adv_hit & (~fav_hit | ~fav_first)).mean())
+            timeout = float(((~fav_hit) & (~adv_hit)).mean())
+            log.info("Label %s [2sided fav=%.3f adv=%.3f]: %d rows | base_new=%.4f (old_1sided=%.4f) | "
+                     "lose=%.4f timeout=%.4f", h, SEL_FAV_PCT, SEL_ADV_PCT, n, d["y"].mean(),
+                     float(fav_hit.mean()), lose, timeout)
     return out
 
 
@@ -345,8 +366,16 @@ def train_predict_fold(feat_df, labels, cutoff_ms, block_lo, block_hi, fidx):
     preds = {h: np.full(len(oos), np.nan, dtype=np.float32) for h in H_LIST}
     tr_cut = cutoff_ms - PURGE_MS
     tr_feat = feat_df[feat_df.ts < tr_cut]
+    nonov_ms = SEL_TIMEOUT_H * 3600 * 1000   # luoi nonoverlap TRAIN (global grid: ts tuyet doi -> moi symbol cach >= SEL_TIMEOUT_H)
     for h in H_LIST:
         tr = tr_feat.merge(labels[h], on=["symbol", "ts"], how="inner")
+        if SEL_SAMPLE_MODE == "nonoverlap":
+            n0 = len(tr)
+            base0 = float(tr.y.mean()) if n0 else float("nan")
+            tr = tr[(tr.ts % nonov_ms) == 0]   # CHI train; OOS predict giu day; PURGE_MS khong doi
+            base1 = float(tr.y.mean()) if len(tr) else float("nan")
+            log.info("fold %d %s [nonoverlap %dh TRAIN]: rows %d -> %d | base y=1 %.4f -> %.4f",
+                     fidx, h, SEL_TIMEOUT_H, n0, len(tr), base0, base1)
         if len(tr) < 5000 or tr.y.nunique() < 2:
             log.warning("fold %d %s: train it (%d) -> bo", fidx, h, len(tr))
             continue

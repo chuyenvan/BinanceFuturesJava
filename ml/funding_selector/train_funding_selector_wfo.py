@@ -32,8 +32,23 @@ log = logging.getLogger("wfo_sel")
 H_STEPS = {"4h": 16, "12h": 48, "24h": 96, "72h": 288}   # số bước-15m mỗi horizon
 HORIZONS = ["4h", "12h", "24h", "72h"]
 WIN = 0.06
-GRID_MS = 15 * 60 * 1000
+# [2-sided triple-barrier] SL/TP song song, param qua env. maxFav/maxAdv la RATIO;
+# maxFav DUONG (dinh), maxAdv AM (day = min low/close-1) -> adv_hit khi maxAdv <= -SEL_ADV_PCT.
+SEL_FAV_PCT = float(os.environ.get("SEL_FAV_PCT", "0.06"))  # TP
+SEL_ADV_PCT = float(os.environ.get("SEL_ADV_PCT", "0.03"))  # SL placeholder, user chot sau
+SELECTOR_GRID_MIN = int(os.environ.get("SELECTOR_GRID_MIN", "15"))
+SEL_SAMPLE_MODE = os.environ.get("SEL_SAMPLE_MODE", "grid")   # "grid" (loc ts%GRID_MS==0) | "nonoverlap"
+SEL_TIMEOUT_H = int(os.environ.get("SEL_TIMEOUT_H", "4"))     # horizon (h) dat luoi khi nonoverlap
+# purge=horizon wall-clock DOC LAP voi luoi lay mau (H_STEPS o 15m). Neu buoc luoi doi (nonoverlap),
+# purge KHONG duoc scale theo -> dung PURGE_STEP_MS=15m (khop don vi H_STEPS). Default: gia tri y het cu.
+PURGE_STEP_MS = 15 * 60 * 1000
+if SEL_SAMPLE_MODE == "nonoverlap":
+    GRID_MS = SEL_TIMEOUT_H * 3600 * 1000   # luoi lay mau = horizon -> mau KHONG chong lap
+else:
+    GRID_MS = SELECTOR_GRID_MIN * 60 * 1000
 MO_MS = 30 * 24 * 3600 * 1000
+log.info("SAMPLE_MODE=%s SELECTOR_GRID_MIN=%d GRID_MS=%dms SEL_TIMEOUT_H=%dh (purge dung PURGE_STEP_MS=15m doc lap)",
+         SEL_SAMPLE_MODE, SELECTOR_GRID_MIN, GRID_MS, SEL_TIMEOUT_H)
 OI_NAMES = ["oi_delta24h", "oi_z", "ls_global", "ls_toptrader", "taker_buy"]
 FEAT = [f"f{j}" for j in range(40)] + OI_NAMES   # 45 feat — KHỚP train_meta
 
@@ -95,16 +110,37 @@ def load_oi():
 
 
 def load_labels():
-    """Đọc label đủ 4 horizon 1 lần: cột y_<H> = (maxFav_<H>>=6%) & nBars_<H>>=steps."""
-    cols = ["tEpochMs", "symbol"] + [f"maxFav_{H}" for H in HORIZONS] + [f"nBars_{H}" for H in HORIZONS]
+    """[2-SIDED triple-barrier] y_<H> theo SL vs TP song song (thay label 1-chieu maxFav>=6%).
+    fav_hit = maxFav_H >= SEL_FAV_PCT (TP);  adv_hit = maxAdv_H <= -SEL_ADV_PCT (SL, maxAdv la ratio AM).
+    y=1 (win): fav_hit & (not adv_hit OR tHitFav < tHitAdv)   -> cham TP truoc.
+    y=0 (lose): adv_hit & (not fav_hit OR tHitAdv <= tHitFav) -> cham SL truoc (tie -> SL).
+    y=0 (timeout): khong cham barrier nao trong H.
+    Chi tinh tren nBars_H du + maxFav/maxAdv notna. tHit* cung don vi (phut)."""
+    cols = (["tEpochMs", "symbol"]
+            + [f"maxFav_{H}" for H in HORIZONS] + [f"maxAdv_{H}" for H in HORIZONS]
+            + [f"tHitFav_{H}" for H in HORIZONS] + [f"tHitAdv_{H}" for H in HORIZONS]
+            + [f"nBars_{H}" for H in HORIZONS])
     df = pd.read_csv(LABEL_CSV, usecols=cols, on_bad_lines="skip")
     df = df.rename(columns={"tEpochMs": "ts"})
     for H in HORIZONS:
         need = H_STEPS[H]
-        ok = (df[f"nBars_{H}"] >= need) & df[f"maxFav_{H}"].notna()
-        df[f"y_{H}"] = np.where(ok, (df[f"maxFav_{H}"] >= WIN).astype(np.float32), np.nan)
-        log.info("Label %s: %d hop le | base_rate=%.4f", H, int(ok.sum()),
-                 df.loc[ok, f"y_{H}"].mean())
+        valid = (df[f"nBars_{H}"] >= need) & df[f"maxFav_{H}"].notna() & df[f"maxAdv_{H}"].notna()
+        fav_hit = df[f"maxFav_{H}"] >= SEL_FAV_PCT
+        adv_hit = df[f"maxAdv_{H}"] <= -SEL_ADV_PCT
+        fav_first = df[f"tHitFav_{H}"] < df[f"tHitAdv_{H}"]
+        win = fav_hit & (~adv_hit | fav_first)
+        lose = adv_hit & (~fav_hit | ~fav_first)
+        timeout = (~fav_hit) & (~adv_hit)
+        df[f"y_{H}"] = np.where(valid, win.astype(np.float32), np.nan)
+        v = int(valid.sum())
+        if v > 0:
+            log.info("Label %s [2sided fav=%.3f adv=%.3f]: valid=%d base_new(y=1)=%.4f "
+                     "(old_1sided=%.4f) | win=%.4f lose=%.4f timeout=%.4f", H, SEL_FAV_PCT, SEL_ADV_PCT,
+                     v, float(np.nanmean(df.loc[valid, f"y_{H}"])), float((fav_hit & valid).sum()) / v,
+                     float((win & valid).sum()) / v, float((lose & valid).sum()) / v,
+                     float((timeout & valid).sum()) / v)
+        else:
+            log.warning("Label %s: 0 dong hop le", H)
     keep = ["ts", "symbol"] + [f"y_{H}" for H in HORIZONS]
     return df[keep]
 
@@ -169,7 +205,7 @@ def run():
     results = {H: [] for H in HORIZONS}
     last_models = {}
     for fi, (cut, oos_end) in enumerate(folds):
-        purge = {H: H_STEPS[H] * GRID_MS for H in HORIZONS}
+        purge = {H: H_STEPS[H] * PURGE_STEP_MS for H in HORIZONS}   # wall-clock horizon, doc lap luoi lay mau
         oos = ds[(ds.ts >= cut) & (ds.ts < oos_end)]
         if len(oos) < 500:
             log.warning("fold %d OOS quá ít (%d) — bỏ", fi, len(oos))
