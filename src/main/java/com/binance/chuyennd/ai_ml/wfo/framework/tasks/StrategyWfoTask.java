@@ -66,12 +66,12 @@ public class StrategyWfoTask implements WfoTask {
         // Cap ceiling (WFO_MOM15_HI<0.045) va/hoac ha san (WFO_MOM15_LO<0.010) de test apples-to-apples voi baseline.
         double mom15Lo = envDouble("WFO_MOM15_LO", 0.010);
         double mom15Hi = envDouble("WFO_MOM15_HI", 0.045);
-        put("MIN_MOMENTUM_15M", mom15Lo, mom15Hi, false);  // 2026-07-12 Uni: NOI xuong 0.010 (cu 0.020) de HPO tu do chon vung tan-suat-cao (team ghi vung tot 0.010-0.020 bi loai) - test tan suat. TASK-137: [0.020,0.045] - range B [0.015,0.045] cho WFE 0.104 (te hon), 0.020 tranh mep vach chay: mo range xuong (cu [0.030,0.050]) - sweep cho thay 0.050 la diem te nhat toan ky (calmar 0.92), vung tot 0.015-0.0228 bi loai ngoai; can duoi 0.020 (khong 0.015) de tranh mep vach chay 0.010-0.015
-        put("PREDICT_SYMBOL_RATE_MAX_THRESHOLD", 0.05, 0.20, false);
-        put("AI_DYNAMIC_MULTIPLIER", 1.5, 2.0, false);
-        put("AI_DYNAMIC_MIN", 0.10, 0.50, false);
-        put("HARD_RISK_LIMIT_4H", -0.30, -0.05, false);
-        put("MS_DOWN_BIG_AVG", -0.055, -0.020, false);
+        put("MIN_MOMENTUM_15M", 0.005, 0.020, false);  // FROZEN v1 (Uni xác nhận 0.0168→0.008 là leak, nới rộng lại). // 2026-07-12 Uni: NOI xuong 0.010 (cu 0.020) de HPO tu do chon vung tan-suat-cao (team ghi vung tot 0.010-0.020 bi loai) - test tan suat. TASK-137: [0.020,0.045] - range B [0.015,0.045] cho WFE 0.104 (te hon), 0.020 tranh mep vach chay: mo range xuong (cu [0.030,0.050]) - sweep cho thay 0.050 la diem te nhat toan ky (calmar 0.92), vung tot 0.015-0.0228 bi loai ngoai; can duoi 0.020 (khong 0.015) de tranh mep vach chay 0.010-0.015
+        put("PREDICT_SYMBOL_RATE_MAX_THRESHOLD", 0.10, 0.30, false);
+        put("AI_DYNAMIC_MULTIPLIER", 1.0, 3.0, false);
+        put("AI_DYNAMIC_MIN", 0.10, 1.0, false);
+        // FROZEN v1: HARD_RISK_LIMIT_4H bỏ (gene chết — AIRejectFilter đã gỡ nhánh risk4h).
+        put("MS_DOWN_BIG_AVG", -0.060, -0.025, false);
 
         // ---- cum DCA: HOAN DOI theo co, KHONG cong don (2026-08-01) ----------------------------
         // DCA_LOSS_BIG_DOWN + DCA_TIME_BIG_DOWN CHI duoc doc trong DcaUtils.getDcaConfig(BIG_DOWN).
@@ -79,56 +79,25 @@ public class StrategyWfoTask implements WfoTask {
         // shouldDca() nua => 2 gene nay thanh GENE CHET (HPO van quay chung, ton chieu search, va te
         // hon: geneStability report ra range 'on dinh' gia). => bo hai gene, thay bang 4 gene mo ta
         // luoi + 1 gene scale. Net +3 chieu (17 -> 20 khi bat grid).
-        if (Configs.DCA_GRID_ENABLED && Configs.DCA_GRID_SCALAR) {
-            put("DCA_GRID_L1", -0.60, -0.30, false);      // moc nhoi dau, do tren firstEntryPrice
-            put("DCA_GRID_STEP", 0.10, 0.30, false);      // do GIAN giua 2 bac
-            put("DCA_GRID_LEGS", 2, 5, true);             // so bac nhoi (SurvivalProbe: >5 bac do ra te hon)
-            put("DCA_GRID_W_RATIO", 1.0, 3.0, false);     // 1.0 = ti trong phang; >1 = don von ve day
-            put("DCA_GRID_SCALE", 4.0, 16.0, false);      // bu phan du tru hiem dung; >16 phai kiem CapacityProbe truoc
-        } else {
-            put("DCA_LOSS_BIG_DOWN", -0.22, -0.08, false);
-            put("DCA_TIME_BIG_DOWN", 3, 7, true);
-        }
-        // Tran margin theo bac: chi co nghia khi co bat. Do dang mang -> scalar (BASE/STEP) o Configs.
-        if (Configs.DCA_TIER_MARGIN_ENABLED && Configs.DCA_GRID_SCALAR) {
-            put("DCA_TIER_CAP_BASE", 0.40, 0.60, false);  // 0.50 = dung vach BREAKER_MARGIN_HALT production
-            put("DCA_TIER_CAP_STEP", 0.00, 0.15, false);  // 0.00 = tran phang (bao gom ca truong hop cu)
-        }
+        // FROZEN v1: DCA grid ON (runner set cờ). DCA_GRID_SCALE cố định 1.0 (không search). Bỏ cụm DCA_TIER.
+        put("DCA_GRID_L1", -0.75, -0.25, false);
+        put("DCA_GRID_STEP", 0.10, 0.30, false);
+        put("DCA_GRID_LEGS", 2, 4, true);
+        put("DCA_GRID_W_RATIO", 1.0, 3.0, false);
 
-        put("RATE_PROFIT_STOP_MARKET", 0.03, 0.05, false);  // TASK-139: PHAT HIEN LON - cu [0.012,0.025] ep WFO tune trong vung CAT NON. Sweep: 0.03-0.05 cho PnL 2.4x + calmar 2.3x, maxDD khong doi. Day la nut that that (khong phai MIN_MOM15). 2026-07-30: nang san 0.020->0.03 (khop chinh xac vung sweep da xac nhan, khong con test duoi san chi phi 0.016)
+        put("RATE_PROFIT_STOP_MARKET", 0.05, 0.08, false);  // TASK-139: PHAT HIEN LON - cu [0.012,0.025] ep WFO tune trong vung CAT NON. Sweep: 0.03-0.05 cho PnL 2.4x + calmar 2.3x, maxDD khong doi. Day la nut that that (khong phai MIN_MOM15). 2026-07-30: nang san 0.020->0.03 (khop chinh xac vung sweep da xac nhan, khong con test duoi san chi phi 0.016)
         // 2026-08-01 (Uni chot): TS_PROFIT_MULTIPLIER=1.0 CHINH LA TS_RATCHET_DECOUPLED=true
         //   (updateTPSL: rateMin2MoveSl = DECOUPLED ? base : MULT*base). Thay vi 1 co boolean 2 trang
         //   thai ma HPO khong cham duoc, mo SAN range xuong 1.0 => HPO tu do tim diem giua thay vi
         //   phai sweep tay 2 nhanh. San MO chi khi nhanh exit moi bat (TS_GIVEBACK_FLOOR) hoac khi
         //   ep bang env; mac dinh van [4.0,8.0] de baseline cu byte-identical.
-        double tsMultLo = envDouble("WFO_TSMULT_LO", Configs.TS_GIVEBACK_FLOOR ? 1.0 : 4.0);
-        double tsMultHi = envDouble("WFO_TSMULT_HI", 8.0);
-        put("TS_PROFIT_MULTIPLIER", tsMultLo, tsMultHi, false);
-        put("TS_DYNAMIC_K", 0.10, 0.25, false);
-
-        // ---- cum EXIT giveback: HOAN DOI, net -1 chieu ----------------------------------------
-        // TradeUtils.calRateLossDynamicBuy:
-        //   FLOOR=false -> gap = min(peak*RATIO, maxGap)   <- maxGap = TS_MAX_GAP / TS_MAX_GAP_WEAK,
-        //                                                     chon boi TS_WEAK_MOMENTUM_THRES
-        //   FLOOR=true  -> gap = max(peak*RATIO, TS_MIN_GAP) <- maxGap KHONG duoc dung o dau ca
-        // => bat FLOOR thi 3 gene TS_MAX_GAP/TS_MAX_GAP_WEAK/TS_WEAK_MOMENTUM_THRES la NHIEU THUAN.
-        // Thay bang 2 gene that su dieu khien hinh dang: san TS_MIN_GAP + ti le nha TS_GIVEBACK_RATIO.
-        if (Configs.TS_GIVEBACK_FLOOR) {
-            put("TS_MIN_GAP", 0.005, 0.030, false);       // san tuyet doi; <0.008 la duoi chi phi round-trip
-            put("TS_GIVEBACK_RATIO", 0.30, 0.70, false);  // 0.3 giu chat / 0.7 nuoi trend
-        } else {
-            put("TS_MAX_GAP", 0.04, 0.06, false);
-            put("TS_MAX_GAP_WEAK", 0.045, 0.060, false);
-            put("TS_WEAK_MOMENTUM_THRES", 0.004, 0.008, false);
-        }
-
-        put("BUDGET_MARGIN_RATIO_1", 0.30, 0.50, false);
-        put("BUDGET_MARGIN_RATIO_2", 0.60, 0.78, false);
-        put("BUDGET_DIVIDER_2", 1.60, 2.50, false);
-        LOG.info("GENOME: {} gene | dcaGrid={} scalar={} tierMargin={} givebackFloor={} tsMult=[{},{}] | {}",
-                GENOME.size(), Configs.DCA_GRID_ENABLED, Configs.DCA_GRID_SCALAR,
-                Configs.DCA_TIER_MARGIN_ENABLED, Configs.TS_GIVEBACK_FLOOR, tsMultLo, tsMultHi,
-                GENOME.keySet());
+        put("TS_PROFIT_MULTIPLIER", 2.0, 5.0, false);
+        // FROZEN v1: trailing per-coin liên tục → chỉ còn TS_MAX_GAP (bỏ TS_DYNAMIC_K + weak/floor/min_gap/ratio).
+        put("TS_MAX_GAP", 0.05, 0.20, false);
+        // FROZEN v1: budget mới throttle liên tục — 2 gene F_BASE + U_MAX (bỏ BUDGET_MARGIN_RATIO_1/2 + DIVIDER).
+        put("F_BASE", 0.01, 0.05, false);
+        put("U_MAX", 0.40, 0.80, false);
+        LOG.info("GENOME v1 FROZEN: {} gene | {}", GENOME.size(), GENOME.keySet());
     }
     private static void put(String f, double lo, double hi, boolean isInt) {
         GENOME.put(f, new double[]{lo, hi}); IS_INT.put(f, isInt);
@@ -365,7 +334,7 @@ public class StrategyWfoTask implements WfoTask {
         this.lastGatePass = sim.ablationPassCount;
         // V4.1 (TASK-113): windowDays = range backtest THẬT của chính window này, KHÔNG suy từ span lệnh
         int windowDays = (int) Math.max(1, (end - start) / Utils.TIME_DAY);
-        HPOFitnessCalculatorV4.FitnessReport rep = HPOFitnessCalculatorV4.evaluateDetailed(sim.allOrderDone, windowDays);
+        HPOFitnessCalculatorV4.FitnessReport rep = HPOFitnessCalculatorV4.evaluateDetailedV2(sim.allOrderDone, windowDays);
         LOG.info("[BT {}..{}] note={} trades={} pnl={} ddPct={} maxDD={} held>7d={} posYr={} fit={} " +
                         "| [119 report-only] ddPct_mtm={} maxDD_mtm={} marginCall={} minEqPct_mtm={}",
                 Utils.normalizeDateYYYYMMDD(start), Utils.normalizeDateYYYYMMDD(end),
@@ -577,5 +546,23 @@ public class StrategyWfoTask implements WfoTask {
     private void setField(String name, double val, boolean isInt) throws Exception {
         Field f = Configs.class.getField(name);
         if (isInt) f.setInt(null, (int) Math.round(val)); else f.setFloat(null, (float) val);
+    }
+
+    // ===== HỖ TRỢ CpcvBatchRunner (FROZEN v1) — chạy 1 genome trên 1 range, tái dùng đúng đường sim =====
+    /** Tên 14 gene theo thứ tự GENOME. */
+    public static String[] geneNames() { return GENOME.keySet().toArray(new String[0]); }
+    /** Gene có phải int (LEGS). */
+    public static boolean isIntGene(String name) { return Boolean.TRUE.equals(IS_INT.get(name)); }
+    /** Áp 1 genome (map tên→giá trị) lên Configs qua reflection. */
+    public static void applyGenomeByName(java.util.Map<String, Double> knobs) throws Exception {
+        for (java.util.Map.Entry<String, Double> e : knobs.entrySet()) {
+            Field f = Configs.class.getField(e.getKey());
+            if (Boolean.TRUE.equals(IS_INT.get(e.getKey()))) f.setInt(null, (int) Math.round(e.getValue()));
+            else f.setFloat(null, e.getValue().floatValue());
+        }
+    }
+    /** Chạy sim + fitness v2 trên [start,end) với genome ĐÃ áp. Trả FitnessReport (calmar = Calmar_mtm). */
+    public static HPOFitnessCalculatorV4.FitnessReport backtestRange(WfoContext ctx, long start, long end) throws Exception {
+        return new StrategyWfoTask().backtest(ctx, start, end);
     }
 }

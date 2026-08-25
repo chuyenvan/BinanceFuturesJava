@@ -52,9 +52,15 @@ public class WfoJobStore {
         if (host != null && !host.isEmpty()) {
             // State-store RIENG cho WFO (vd Aerospike local tren Oracle) — tach khoi 226 (226 stop_writes do index-mem day)
             int port = Integer.parseInt(System.getenv().getOrDefault("WFO_STATE_PORT", "3000"));
-            this.client = new AerospikeClient(host, port);
+            // Ket noi qua internet (Kaggle worker) KHONG ben -> tang timeout + retry read/batch/write.
+            com.aerospike.client.policy.ClientPolicy cp = new com.aerospike.client.policy.ClientPolicy();
+            cp.timeout = 10000;
+            cp.readPolicyDefault.socketTimeout = 8000; cp.readPolicyDefault.totalTimeout = 40000; cp.readPolicyDefault.maxRetries = 6;
+            cp.batchPolicyDefault.socketTimeout = 8000; cp.batchPolicyDefault.totalTimeout = 60000; cp.batchPolicyDefault.maxRetries = 6;
+            cp.writePolicyDefault.socketTimeout = 8000; cp.writePolicyDefault.totalTimeout = 40000; cp.writePolicyDefault.maxRetries = 4;
+            this.client = new AerospikeClient(cp, host, port);
             this.ns = System.getenv().getOrDefault("WFO_STATE_NS", "test");
-            LOG.info("WfoJobStore: state Aerospike RIENG {}:{} ns={}", host, port, ns);
+            LOG.info("WfoJobStore: state Aerospike RIENG {}:{} ns={} (policy timeout/retry cho internet)", host, port, ns);
         } else {
             this.client = DataManagerAerospikeFloatSim.getClientOracle();
             this.ns = Configs.AEROSPIKE_NAMESPACE;
@@ -139,6 +145,37 @@ public class WfoJobStore {
         };
     }
 
+    /** Ghi CAS voi retry tren loi transient server-side (8=SERVER_MEM,9=TIMEOUT,18=DEVICE_OVERLOAD).
+     * KHONG retry GENERATION_ERROR (3) — do la worker khac thang, phai bo. Chiu spike RAM khi nhieu node ghi. */
+    private void putRetry(WritePolicy wp, Key k, Bin[] bins) {
+        int attempts = 0;
+        while (true) {
+            try { client.put(wp, k, bins); return; }
+            catch (com.aerospike.client.AerospikeException ae) {
+                int rc = ae.getResultCode();
+                boolean transientErr = (rc == 8 || rc == 9 || rc == 18);
+                if (!transientErr || ++attempts >= 5) throw ae;
+                LOG.warn("putRetry {} rc={} attempt={}/5 -> backoff", k.userKey, rc, attempts);
+                try { Thread.sleep(250L * attempts); }
+                catch (InterruptedException ie) { Thread.currentThread().interrupt(); throw ae; }
+            }
+        }
+    }
+
+    /** Batch-get voi retry app-level: ket noi Kaggle->Oracle qua internet co the EOF giua chung. */
+    private Record[] getBatchRetry(Key[] keys) {
+        int attempts = 0;
+        while (true) {
+            try { return client.get(null, keys); }
+            catch (com.aerospike.client.AerospikeException ae) {
+                if (++attempts >= 4) throw ae;
+                LOG.warn("listAll batch-get fail (attempt {}/4): {} -> retry", attempts, ae.getMessage());
+                try { Thread.sleep(400L * attempts); }
+                catch (InterruptedException ie) { Thread.currentThread().interrupt(); throw ae; }
+            }
+        }
+    }
+
     private WfoJob fromRecord(String id, Record r) {
         if (r == null) return null;
         WfoJob j = new WfoJob();
@@ -176,7 +213,7 @@ public class WfoJobStore {
         Key[] keys = new Key[uniq.size()];
         int i = 0;
         for (String id : uniq) keys[i++] = key(id);
-        Record[] recs = client.get(new BatchPolicy(), keys);   // batch-get thay scanAll (server 8 OK)
+        Record[] recs = getBatchRetry(keys);   // batch-get co retry (Kaggle qua internet co the EOF)
         i = 0;
         for (String id : uniq) {
             WfoJob j = fromRecord(id, recs[i++]);
@@ -212,10 +249,11 @@ public class WfoJobStore {
             j.lastError = "stolen (lease expired from " + j.owner + ")";
         }
         try {
-            client.put(wp, key(id), bins(j));
+            putRetry(wp, key(id), bins(j));
             if (wasSteal) LOG.info("STEAL job {} (lease het) -> owner {}", id, owner);
             return j;
         } catch (Exception e) {
+            LOG.warn("tryClaim {} : CAS PUT FAIL gen={} -> {}", id, r.generation, e.toString());
             return null; // generation đổi → worker khác thắng
         }
     }
@@ -231,7 +269,7 @@ public class WfoJobStore {
         wp.generation = r.generation;
         j.leaseUntil = System.currentTimeMillis() + leaseMs;
         j.updatedAt = System.currentTimeMillis();
-        try { client.put(wp, key(id), bins(j)); return true; }
+        try { putRetry(wp, key(id), bins(j)); return true; }
         catch (Exception e) { return false; }
     }
 
@@ -260,9 +298,9 @@ public class WfoJobStore {
 
     private boolean finish(String id, String owner, WfoJob.State st, String result, String err) {
         Record r = client.get(null, key(id));
-        if (r == null) return false;
+        if (r == null) { LOG.warn("finish {} : record NULL", id); return false; }
         WfoJob j = fromRecord(id, r);
-        if (!owner.equals(j.owner)) return false;
+        if (!owner.equals(j.owner)) { LOG.warn("finish {} : OWNER MISMATCH expect={} actual={} state={} gen={}", id, owner, j.owner, j.state, r.generation); return false; }
         WritePolicy wp = new WritePolicy();
         wp.generationPolicy = GenerationPolicy.EXPECT_GEN_EQUAL;
         wp.generation = r.generation;
@@ -272,7 +310,7 @@ public class WfoJobStore {
         j.owner = "";
         j.leaseUntil = 0;
         j.updatedAt = System.currentTimeMillis();
-        try { client.put(wp, key(id), bins(j)); return true; }
-        catch (Exception e) { return false; }
+        try { putRetry(wp, key(id), bins(j)); return true; }
+        catch (Exception e) { LOG.warn("finish {} : CAS PUT FAIL gen={} -> {}", id, r.generation, e.toString()); return false; }
     }
 }

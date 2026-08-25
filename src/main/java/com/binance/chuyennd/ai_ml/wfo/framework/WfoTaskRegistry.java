@@ -1,5 +1,6 @@
 package com.binance.chuyennd.ai_ml.wfo.framework;
 
+import com.binance.chuyennd.ai_ml.wfo.framework.tasks.CpcvCellTask;
 import com.binance.chuyennd.ai_ml.wfo.framework.tasks.StrategyWfoTask;
 
 import java.util.HashMap;
@@ -15,6 +16,7 @@ public final class WfoTaskRegistry {
 
     static {
         register(new StrategyWfoTask());
+        register(new CpcvCellTask());   // CPCV recipe v1 — 1 job = 1 cell, jobstore Aerospike master-worker
         // register(new ModelWfoTask());  // sẽ thêm khi chuẩn hóa WFOGateRunner thành task
     }
 

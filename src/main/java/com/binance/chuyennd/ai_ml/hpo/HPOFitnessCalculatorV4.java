@@ -39,6 +39,11 @@ public class HPOFitnessCalculatorV4 {
     public static int MIN_YEARS_FOR_RATIO = 2;         // chỉ áp %năm-dương khi backtest ≥2 năm
     public static long HELD_TOO_LONG = 7L * Utils.TIME_DAY;
 
+    // ===== FITNESS v2 (recipe FROZEN 2026-08-24, khung chống-leak v1) =====
+    // Calmar dùng maxDD MARK-TO-MARKET (honest, tính cả DCA treo âm). Cap 1x nới rộng.
+    public static float MAX_DD_PCT_MTM = 0.85f;   // ddPct_mtm > 85% vốn → OVER_MAXDD (1x sống tới ~100%)
+    public static int   MIN_TRADES_SOFT = 5;      // fold < 5 lệnh → Calmar=0 (low-confidence), KHÔNG reject cứng
+
     // ===== V4.2 (TASK-3a) — THƯỞNG TẦN-SUẤT-LỆNH (chỉ tác động TRAIN-selection) =====
     // Lý do: Calmar là TỈ SỐ (bất biến số lệnh) → HPO chọn genome ít-lệnh sát mép sàn →
     // OOS regime khác thì tụt < sàn → TOO_FEW. Các hằng này CHỈ đổi finalFitness (genome
@@ -82,6 +87,9 @@ public class HPOFitnessCalculatorV4 {
         public float medianTradePnl = 0f;   // trung vi calTp toan bo lenh
         public float costPerTrade = 0f;     // (fee + slippage + funding) trung binh / lenh
         public float avgHoldHours = 0f;     // 2026-08-02: trung binh (timeUpdate-timeStart)/lenh, GIO — report-only (do tac dong DCA len holding-time)
+        public float maxHoldHours = 0f;     // 2026-08-25: max holding period (GIO) — leak-check vs purge gap 14d
+        public int heldOver14d = 0;         // 2026-08-25: so lenh giu > 14 ngay — label-horizon vuot purge gap?
+        public double holdPenaltyRaw = 0.0; // 2026-08-25: fitness v3 — Sigma max(0, THETA*holdDays - roi); THETA=0.0005/day. Nhan k_hold o python.
         // 2026-08-02: MFE/give-back cua lenh THANG (tp>0) — report-only, do "room nuoi lai" (dinh dat vs dinh giu).
         public int nWinMfe = 0;
         public float mfeWinP50 = 0f, mfeWinP75 = 0f, mfeWinP90 = 0f;  // percentile dinh-lai (maePeak/entry-1) cua lenh thang
@@ -121,6 +129,8 @@ public class HPOFitnessCalculatorV4 {
 
         // ===== gom thống kê 1 lượt — TRƯỚC chuỗi constraint (V4.1): nhánh loại sớm vẫn có số thật =====
         long heldTooLong = 0;
+        long maxHoldMs = 0;   // 2026-08-25: max holding — leak-check vs purge gap
+        double holdRawSum = 0.0;   // 2026-08-25: fitness v3 hold-penalty raw (THETA-frozen)
         TreeMap<Integer, Double> pnlByYear = new TreeMap<>();
         TreeMap<Long, Double> pnlByDay = new TreeMap<>();
         // METRIC SURFACE accumulators (additive, report-only — KHONG dung cho fitness/constraint)
@@ -155,7 +165,15 @@ public class HPOFitnessCalculatorV4 {
                 sumCost += fee + slip + fund;
             }
             if (o.timeUpdate - o.timeStart > HELD_TOO_LONG) heldTooLong++;
-            sumHoldMs += Math.max(0L, o.timeUpdate - o.timeStart);   // report-only holding-time
+            long heldMs = Math.max(0L, o.timeUpdate - o.timeStart);
+            sumHoldMs += heldMs;   // report-only holding-time
+            if (heldMs > maxHoldMs) maxHoldMs = heldMs;
+            if (heldMs > 14L * 86_400_000L) r.heldOver14d++;   // 2026-08-25 leak-check
+            // 2026-08-25 fitness v3 hold-penalty: phat giu-lau-vo-ich, tha giu-lau-hot-pump
+            double holdDays = heldMs / 86_400_000.0;
+            double notionH = (o.quantity != null && o.priceEntry != null) ? (double) o.quantity * o.priceEntry : 0.0;
+            double roiH = notionH > 0 ? tp / notionH : 0.0;   // return fraction cua lenh
+            holdRawSum += Math.max(0.0, 0.0005 * holdDays - roiH);   // THETA=0.0005/day (~20%/nam san)
             pnlByYear.merge(Utils.getYear(o.timeUpdate), tp, Double::sum);
             pnlByDay.merge(o.timeUpdate / Utils.TIME_DAY, tp, Double::sum);
         }
@@ -172,6 +190,8 @@ public class HPOFitnessCalculatorV4 {
                 : (float) (tradePnls.length % 2 == 1 ? tradePnls[mid] : (tradePnls[mid - 1] + tradePnls[mid]) / 2.0);
         r.costPerTrade = r.tradeCount > 0 ? (float) (sumCost / r.tradeCount) : 0f;
         r.avgHoldHours = r.tradeCount > 0 ? (float) ((double) sumHoldMs / r.tradeCount / 3600000.0) : 0f;
+        r.maxHoldHours = (float) (maxHoldMs / 3600000.0);   // 2026-08-25 leak-check vs purge gap 14d=336h
+        r.holdPenaltyRaw = holdRawSum;   // 2026-08-25 fitness v3 hold-penalty raw
         if (!mfeWins.isEmpty()) {
             float[] mfeArr = new float[mfeWins.size()];
             for (int i = 0; i < mfeArr.length; i++) mfeArr[i] = mfeWins.get(i);
@@ -248,6 +268,29 @@ public class HPOFitnessCalculatorV4 {
             factor = FREQ_FLOOR + (1f - FREQ_FLOOR) * freqFactor;
         }
         r.finalFitness = r.calmar * factor;
+        r.note = "SUCCESS";
+        return r;
+    }
+
+    /**
+     * FITNESS v2 (recipe FROZEN 2026-08-24) — dùng cho khung chống-leak v1.
+     * Khác V4.1: (1) Calmar = netPnl / maxDD_MARK-TO-MARKET (honest, tính cả DCA treo âm);
+     * (2) chỉ 3 chốt sinh-tử ZERO_TRADES / BURN_ACCOUNT / OVER_MAXDD(ddPct_mtm>MAX_DD_PCT_MTM);
+     * (3) BỎ 3 phạt kiểu-IS (TOO_FEW/CAPITAL_LOCK/UNSTABLE) + ramp freq — độ ổn định do O + CPCV/DSR/PBO lo;
+     * (4) guard MỀM: fold < MIN_TRADES_SOFT lệnh → Calmar=0 (LOW_CONFIDENCE), KHÔNG reject cứng.
+     * r.calmar (= oosCalmar mà StrategyWfoTask đọc để tính O) MANG Calmar_mtm.
+     * Tái dùng evaluateDetailed để gom đủ metric (kể cả ddPctMtm, maxDDMtm) rồi RE-QUYẾT finalFitness/note.
+     */
+    public static FitnessReport evaluateDetailedV2(TreeMap<Long, OrderTargetInfoTest> allOrderDone, int windowDaysActual) {
+        FitnessReport r = evaluateDetailed(allOrderDone, windowDaysActual);
+        if (r.tradeCount == 0) return r;                       // ZERO_TRADES giữ nguyên (REJECT_BASE)
+        float absDDMtm = Math.max(1f, r.maxDDMtm);
+        float calmarMtm = r.netScore / absDDMtm;
+        r.calmar = calmarMtm;                                  // O = median-0.5std của Calmar_mtm
+        if (r.totalProfit <= 0f) { r.finalFitness = REJECT_BASE + r.totalProfit; r.note = "BURN_ACCOUNT"; return r; }
+        if (r.ddPctMtm > MAX_DD_PCT_MTM) { r.finalFitness = REJECT_BASE - r.ddPctMtm * 100f; r.note = "OVER_MAXDD"; return r; }
+        if (r.tradeCount < MIN_TRADES_SOFT) { r.calmar = 0f; r.finalFitness = 0f; r.note = "LOW_CONFIDENCE"; return r; }
+        r.finalFitness = calmarMtm;
         r.note = "SUCCESS";
         return r;
     }
