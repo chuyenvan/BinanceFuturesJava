@@ -1,0 +1,45 @@
+{
+  "_doc": "NGUỒN CHÂN LÝ mốc 3 tầng data — luật docs/DATA_GOVERNANCE_PROTOCOL.md. Chốt 2026-08-24. Sửa file này = pre-register mới (ghi ngày+lý do vào doc).",
+  "frozen_at": "2026-08-24",
+  "timezone": "UTC+7",
+  "tiers": {
+    "DEV": {
+      "start": "2021-01-01",
+      "end": "2024-06-30",
+      "who_may_see": "human_free",
+      "note": "leak được phép; nơi vẽ giả thuyết + search space"
+    },
+    "GAP_1": {
+      "start": "2024-07-01",
+      "end": "2024-07-14",
+      "who_may_see": "none",
+      "note": "purge+embargo giữa DEV/VALIDATION, vứt"
+    },
+    "VALIDATION": {
+      "start": "2024-07-15",
+      "end": "2025-12-31",
+      "who_may_see": "machine_only",
+      "note": "CPCV+ledger+DSR/PBO; ĐÃ bị nhìn quá khứ -> DSR là CẬN TRÊN"
+    },
+    "HOLDOUT": {
+      "start": "2026-01-01",
+      "end": "2026-08-13",
+      "who_may_see": "none_until_pass_phase2",
+      "note": "trinh trắng; sealed-by-declaration; chạm 1 lần sau PASS Pha 2"
+    }
+  },
+  "gap_days_between_tiers": 14,
+  "gap_rule": "gap >= max(label_horizon, MAX_HOLD); hiện = max(4h, 240h=10 ngày) -> dùng 14 ngày cho biên rộng",
+  "holdout_status": "SEALED-BY-DECLARATION",
+  "holdout_sha256": null,
+  "selector_train_cutoff_max": {
+    "for_VALIDATION": "2024-07-15",
+    "for_HOLDOUT": "2025-12-31"
+  },
+  "phase1_recipe": {
+    "file": "docs/PHASE1_RECIPE_FROZEN_v1.md",
+    "frozen": "2026-08-24",
+    "author": "chuyennd",
+    "sha256": "738772ff3b494e6066dd9784acc923b74028af25f69c6de6d9fae158c920ebf3"
+  }
+}

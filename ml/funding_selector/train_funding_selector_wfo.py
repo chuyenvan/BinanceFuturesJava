@@ -36,6 +36,8 @@ WIN = 0.06
 # maxFav DUONG (dinh), maxAdv AM (day = min low/close-1) -> adv_hit khi maxAdv <= -SEL_ADV_PCT.
 SEL_FAV_PCT = float(os.environ.get("SEL_FAV_PCT", "0.06"))  # TP
 SEL_ADV_PCT = float(os.environ.get("SEL_ADV_PCT", "0.03"))  # SL placeholder, user chot sau
+SEL_LABEL_MODE = os.environ.get("SEL_LABEL_MODE", "tb")     # "tb"=2-sided triple-barrier (default, byte-identical) | "net"=net close-to-close >= thr
+SEL_NET_THR = float(os.environ.get("SEL_NET_THR", "0.015")) # net_H >= 1.5% => y=1 (EXPLORE A/B 2026-08-26; retEnd_H co san, khong re-export)
 SELECTOR_GRID_MIN = int(os.environ.get("SELECTOR_GRID_MIN", "15"))
 SEL_SAMPLE_MODE = os.environ.get("SEL_SAMPLE_MODE", "grid")   # "grid" (loc ts%GRID_MS==0) | "nonoverlap"
 SEL_TIMEOUT_H = int(os.environ.get("SEL_TIMEOUT_H", "4"))     # horizon (h) dat luoi khi nonoverlap
@@ -109,6 +111,30 @@ def load_oi():
     return df.sort_values("ts").reset_index(drop=True)
 
 
+def _load_labels_net():
+    """[NET close-to-close] y_<H> = (retEnd_H >= SEL_NET_THR). 1-chieu: net da tu tinh downside
+    (dump -> retEnd am -> y=0), sua loi label maxFav>=6% chi thuong 'co luc cham' (pump-roi-dump).
+    EXPLORE A/B 2026-08-26. retEnd_H = close(t+H)/close(t)-1, co san trong LABEL_CSV (khong re-export)."""
+    cols = (["tEpochMs", "symbol"]
+            + [f"retEnd_{H}" for H in HORIZONS] + [f"nBars_{H}" for H in HORIZONS])
+    df = pd.read_csv(LABEL_CSV, usecols=cols, on_bad_lines="skip")
+    df = df.rename(columns={"tEpochMs": "ts"})
+    for H in HORIZONS:
+        need = H_STEPS[H]
+        valid = (df[f"nBars_{H}"] >= need) & df[f"retEnd_{H}"].notna()
+        y = df[f"retEnd_{H}"] >= SEL_NET_THR
+        df[f"y_{H}"] = np.where(valid, y.astype(np.float32), np.nan)
+        v = int(valid.sum())
+        if v > 0:
+            log.info("Label %s [NET thr=%.4f]: valid=%d base(y=1)=%.4f | mean_retEnd=%.5f",
+                     H, SEL_NET_THR, v, float(np.nanmean(df.loc[valid, f"y_{H}"])),
+                     float(df.loc[valid, f"retEnd_{H}"].mean()))
+        else:
+            log.warning("Label %s: 0 dong hop le", H)
+    keep = ["ts", "symbol"] + [f"y_{H}" for H in HORIZONS]
+    return df[keep]
+
+
 def load_labels():
     """[2-SIDED triple-barrier] y_<H> theo SL vs TP song song (thay label 1-chieu maxFav>=6%).
     fav_hit = maxFav_H >= SEL_FAV_PCT (TP);  adv_hit = maxAdv_H <= -SEL_ADV_PCT (SL, maxAdv la ratio AM).
@@ -116,6 +142,8 @@ def load_labels():
     y=0 (lose): adv_hit & (not fav_hit OR tHitAdv <= tHitFav) -> cham SL truoc (tie -> SL).
     y=0 (timeout): khong cham barrier nao trong H.
     Chi tinh tren nBars_H du + maxFav/maxAdv notna. tHit* cung don vi (phut)."""
+    if SEL_LABEL_MODE == "net":
+        return _load_labels_net()
     cols = (["tEpochMs", "symbol"]
             + [f"maxFav_{H}" for H in HORIZONS] + [f"maxAdv_{H}" for H in HORIZONS]
             + [f"tHitFav_{H}" for H in HORIZONS] + [f"tHitAdv_{H}" for H in HORIZONS]
