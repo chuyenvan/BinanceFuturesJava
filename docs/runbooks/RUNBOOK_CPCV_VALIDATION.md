@@ -136,3 +136,50 @@ CHƯA vào pipeline. Muốn chạy v2, làm THEO THỨ TỰ:
 - Kaggle user chuyendinh, ticker sẵn: wfo-ticker-2024h1/h2/2025h1/h2.
 - Bẫy PowerShell→ssh: KHÔNG `&&`/`|` (cắt/nuốt lệnh) → dùng `;` + redirect file.
 - Bẫy `pkill -f CpcvBatchRunner` tự giết shell → dùng regex bracket `pkill -9 -f 'CpcvBatchRunne[r]'`, launch lệnh khác.
+
+
+---
+
+## 10. KAGGLE 5-NODE FIXED-SHARD FANOUT (đóng B2 — chạy thật cho v3, 2026-08-28)
+
+**Mục tiêu:** chạy 3200 cell NHANH + DETERMINISTIC. Mỗi kernel Kaggle nhận 1 shard CỐ ĐỊNH và chạy
+`CpcvBatchRunner` (KHÔNG jobstore/WfoWorker — cái đó non-deterministic). Kaggle mỗi node ~31GB RAM →
+hết OOM (v3 `funding.bin`=2.2GB, cần >6g heap; Oracle 24g chỉ chạy nổi 1 JVM `-Xmx16g`).
+
+**Vì sao Oracle-only không đủ:** 1 JVM serial ~36h; 2 JVM song song = RAM thrash (mất sshd, phải reboot).
+Song song thật chỉ có trên Kaggle. Đây là lý do B2.
+
+### 10.1 Tiền đề (bắt buộc)
+- `cpcv.jar` PHẢI có `CpcvBatchRunner` → upload thành dataset `chuyendinh/cpcv-jar` (jar Kaggle cũ
+  `binance-java-sdk-*-shaded.jar` chỉ có WfoWorker, KHÔNG có CpcvBatchRunner).
+- dataset VAL: market.bin/pred.bin/funding.bin/manifest.txt + `config.properties` đã SỬA
+  `AEROSPIKE_HOST_226=161.118.212.3` (để kernel Kaggle reach Aerospike Oracle lấy symbol-map qua internet)
+  + 5 shard cố định + 1 shard_smoke → dataset `chuyendinh/wfo-ds-val-vX`.
+- ticker có sẵn: `chuyendinh/wfo-ticker-2024h1|2024h2|2025h1|2025h2|2026pf`.
+- kaggle CLI trên Oracle: `/home/ubuntu/kaggle_latest_venv/bin/kaggle`.
+
+### 10.2 Các bước (script mẫu: build_kag_v3.sh / mk_smoke.sh / mk_fanout.sh / collect_v3.sh)
+1. **Split shard:** `split -n l/5 -d --additional-suffix=.shard shard_all shard_vX_` ;
+   `head -8 shard_all > shard_smoke.shard`.
+2. **Upload** 2 dataset (jar + ds): `kaggle datasets create -p . -r skip` (hoặc `version -m .. -r skip`).
+3. **SMOKE 1 kernel** (shard_smoke, 8 cell). run.py: glob jar/ds/config/shard + ticker→symlink vào
+   `/kaggle/working/kaggle_data_hpo`; `chdir /kaggle/working`; env `WFO_DATA_DIR=<ds> WFO_SMART_CACHE=1
+   SELECTOR_RANK_TOPK=8 CPCV_CELLS=<shard> CPCV_OUT=/kaggle/working/out.jsonl`; chạy
+   `java -Duser.timezone=Asia/Ho_Chi_Minh -Xmx20g -cp <jar> ...CpcvBatchRunner`. metadata:
+   `enable_internet=true` (BẮT BUỘC — cần Aerospike symbol-map), `dataset_sources=[cpcv-jar, ds, 5 ticker]`.
+   → **PARITY GATE:** 8 cell smoke PHẢI khớp Oracle cùng (seq,block). v3 đạt 8/8. Không khớp = DỪNG.
+4. **FANOUT 5 kernel** `chuyendinh/cpcv-vX-{0..4}`: copy smoke run.py, đổi `CPCV_CELLS=shard_vX_0i.shard`
+   + `CPCV_OUT=out_vX_0i.jsonl`. push cả 5. Thực tế ~40–60 phút/kernel (cell nặng dồn ở đầu shard nên
+   smoke ~53s/cell ước SAI thành 9h — đừng tin ước từ smoke).
+5. **COLLECT:** `kaggle kernels output` từng kernel → gộp `out_vX_0*.jsonl` → kiểm `uniq(seq,block)=3200`,
+   8 block b00..b07, seq 0..399. Thiếu (kernel timeout 12h) → bù từ bản Oracle serial.
+6. **VERDICT:** như Mục 5.
+
+### 10.3 Bẫy + luật (đã trả giá)
+- **Cross-machine FP:** Kaggle vs Oracle lệch ~0.2–0.7% ở ~40% cell (KHÁC bug jobstore lệch ~50% cả dấu).
+  Không đổi kết luận định tính. Cần khớp-byte với baseline (chạy Oracle) → chạy thêm 1 JVM Oracle
+  `-Xmx16g` serial làm confirm.
+- **RAM Oracle 24g/4cpu:** CHỈ 1 JVM `-Xmx16g`. KHÔNG 2 JVM heap-lớn song song → thrash → reboot.
+- **Bridge PowerShell→ssh:** hay rớt DÒNG ĐẦU output → thêm `echo S;` mồi trước lệnh.
+- **ĐỪNG `cat`/`tail` log Kaggle thô** (progress bar `%|` ngốn hàng chục nghìn token) → `grep -avE '%\|'`.
+- B2 ĐÃ ĐÓNG. B1 (parity_check.py) thay bằng smoke-parity 8 cell ở bước 3. B3: commit `_wfotmp/` vẫn treo.
