@@ -194,7 +194,10 @@ public class OrderTargetInfoTest implements Serializable {
             Float rateLoss = calRateLossMax(trailPeak);
             Float rateMin2MoveSl = TradeUtils.calRateMinWithPredReturn15MForTradingStop(predReturn15M);
             if (rateLoss > rateMin2MoveSl) {
-                Float rateStop = TradeUtils.calRateLossDynamicBuy(rateLoss, predReturn15M);
+                // [2026-08-29 DEV pivot] TRAIL_PER_SYMBOL: arm-SL gap theo selector CUA CHINH COIN
+                // (this.symbolPred=pNoPump), khop updateTPSL. false = hanh vi cu (market predReturn15M).
+                Float rateStop = TradeUtils.calRateLossDynamicBuy(rateLoss,
+                        Configs.TRAIL_PER_SYMBOL ? this.symbolPred : predReturn15M);
                 Float priceSLNew = Utils.calPriceTarget(symbol, priceEntry, OrderSide.SELL, -rateStop);
                 minPrice = lastPrice;
                 this.priceSL = priceSLNew;
@@ -261,7 +264,8 @@ public class OrderTargetInfoTest implements Serializable {
             Float ratchetBase = TradeUtils.calRateMinWithPredReturn15MForTradingStop(rateChangeMax90M);
             Float rateMin2MoveSl = Configs.TS_RATCHET_DECOUPLED ? ratchetBase : Configs.TS_PROFIT_MULTIPLIER * ratchetBase;
             if (rateLoss >= rateMin2MoveSl) {
-                Float rateSL = TradeUtils.calRateLossDynamicBuy(rateLoss, rateChangeMax90M);
+                // FROZEN v1: gap trailing theo selector CỦA CHÍNH COIN (symbolPred=pNoPump), không theo gate pred.
+                Float rateSL = TradeUtils.calRateLossDynamicBuy(rateLoss, this.symbolPred);
                 OrderSide side2Sl = OrderSide.SELL;
                 Float priceSLNew = Utils.calPriceTarget(symbol, priceEntry, side2Sl, -rateSL);
                 float priceSLChange = priceSLNew - priceSL;

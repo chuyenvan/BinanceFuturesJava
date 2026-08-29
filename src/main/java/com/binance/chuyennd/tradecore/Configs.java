@@ -162,6 +162,9 @@ public class Configs {
     public static float BUDGET_MARGIN_RATIO_1 = 0.4820f;
     public static float BUDGET_DIVIDER_1 = 1.5578f;
     public static float BUDGET_MARGIN_RATIO_2 = 0.7475f;
+    // ===== BUDGET v1 (FROZEN 2026-08-24) — throttle liên tục thay logic vách rời rạc =====
+    public static float F_BASE = 0.03f;   // % equity mỗi lệnh gốc (gene search [0.01, 0.05])
+    public static float U_MAX  = 0.60f;   // trần tổng margin/equity, U≥U_MAX → chặn (gene search [0.40, 0.80])
     public static float BUDGET_DIVIDER_2 = 1.5984f;
 
     // === LEVER-B SIZE (TASK 2026-07-19, env-gated — MAC DINH 1.0 = byte-identical) ===
@@ -499,6 +502,11 @@ public class Configs {
     public static boolean DISABLE_PREDICT_SYMBOL = "true".equalsIgnoreCase(properties.get("DISABLE_PREDICT_SYMBOL"));
 
     public static String FILTER_MODE = "A";
+    // [2026-08-29 DEV pivot] AI lai TRAILING per-symbol: arm-SL gap dung symbolPred cua chinh coin
+    // (khop updateTPSL). false = hanh vi cu (arm dung market predReturn15M). Env SIM_TRAIL_PER_SYMBOL.
+    public static boolean TRAIL_PER_SYMBOL = false;
+    // [2026-08-29 DEV pivot] Tat market gate MOM15 (bo entry-gate muc thi truong). Env SIM_GATE_MARKET_OFF.
+    public static boolean GATE_MARKET_OFF = false;
 
     // === ABLATION (Bước 2 roadmap: edge từ AI hay DCA? — chỉ ĐO, mặc định A, KHÔNG ảnh hưởng CONFIG_VERSION) ===
     // A=control (AI filter bật như thường) | B=no-AI (bỏ qua filter, mọi tín hiệu PASS) | C=placebo
@@ -660,6 +668,8 @@ public class Configs {
             String v;
             if ((v = System.getenv("SIM_OFF_FLAT_HARD")) != null) OFF_FLAT_HARD = Boolean.parseBoolean(v);
             if ((v = System.getenv("SIM_MIN_MOMENTUM_15M")) != null) MIN_MOMENTUM_15M = Float.parseFloat(v);
+            if ((v = System.getenv("SIM_TRAIL_PER_SYMBOL")) != null) TRAIL_PER_SYMBOL = Boolean.parseBoolean(v);
+            if ((v = System.getenv("SIM_GATE_MARKET_OFF")) != null) GATE_MARKET_OFF = Boolean.parseBoolean(v);
             if ((v = System.getenv("SIM_AI_DYNAMIC_MIN")) != null) AI_DYNAMIC_MIN = Float.parseFloat(v);
             if ((v = System.getenv("SIM_PREDICT_SYMBOL_RATE_MAX")) != null) PREDICT_SYMBOL_RATE_MAX_THRESHOLD = Float.parseFloat(v);
             if ((v = System.getenv("SIM_RATE_PROFIT_STOP_MARKET")) != null) RATE_PROFIT_STOP_MARKET = Float.parseFloat(v);

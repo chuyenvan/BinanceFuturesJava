@@ -42,3 +42,15 @@ python/tool/Binance_Futures_Full_Code.txt
 src/main/java/com/binance/chuyennd/config/PrivateConfig.java
 
 __pycache__/
+
+# scratch/build artifacts (2026-08-29 cleanup)
+*.bak*
+_wfotmp/
+_to_delete/
+build_done.flag
+build_ab.cmd
+build_fontfix.bat
+ship_jar.sh
+ship_and_run.sh
+prepare/
+orchestrator/*_LLM_ANSWER.json

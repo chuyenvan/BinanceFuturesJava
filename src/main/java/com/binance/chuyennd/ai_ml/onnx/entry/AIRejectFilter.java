@@ -55,7 +55,8 @@ public class AIRejectFilter {
         }
 
         // EARLY check — chỉ chạy khi gate MOM15 bật
-        if (resolveCheckMom15(Configs.FILTER_MODE)
+        if (!Configs.GATE_MARKET_OFF   // [2026-08-29 DEV pivot] tat gate MOM15 muc thi truong
+                && resolveCheckMom15(Configs.FILTER_MODE)
                 && prediction.predReturn15M < Configs.MIN_MOMENTUM_15M
                 && symbolPred > Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD) {
             mom15RejectCount.incrementAndGet();

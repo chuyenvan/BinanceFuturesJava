@@ -140,6 +140,11 @@ CHƯA vào pipeline. Muốn chạy v2, làm THEO THỨ TỰ:
 
 ---
 
+## TÀI NGUYÊN KAGGLE — GIỚI HẠN CONCURRENCY (chốt 2026-08-29, Uni)
+- **CPU: tối đa 5 kernel chạy đồng thời** → fanout CPCV = **5-node** khớp đúng giới hạn này (mỗi node 1 shard).
+- **GPU: tối đa 2 kernel chạy đồng thời** → job GPU (vd train selector) phải chia đợt: 4 threshold = **2 đợt × 2 kernel**.
+- Hệ quả: sim/CPCV → CPU 5-node fanout; train (xgboost) → GPU (nhanh hơn CPU nhiều lần) nhưng chỉ 2 song song.
+
 ## 10. KAGGLE 5-NODE FIXED-SHARD FANOUT (đóng B2 — chạy thật cho v3, 2026-08-28)
 
 **Mục tiêu:** chạy 3200 cell NHANH + DETERMINISTIC. Mỗi kernel Kaggle nhận 1 shard CỐ ĐỊNH và chạy
