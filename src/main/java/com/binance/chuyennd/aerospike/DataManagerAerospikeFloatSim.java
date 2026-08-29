@@ -1224,75 +1224,26 @@ public class DataManagerAerospikeFloatSim {
      * @param minutesToRead Số lượng phút muốn đọc (ví dụ: 1440 cho 1 ngày)
      * @return Map<Symbol, List < KlineObjectSimple>>
      */
+    /**
+     * Đọc dữ liệu nến 1m từ Aerospike và trả về Map theo Symbol.
+     * Đã được tối ưu chống OOM và tích hợp Retry Batch.
+     *
+     * @param startTime Mốc thời gian bắt đầu (ms)
+     * @param minutesToRead Số lượng phút muốn đọc (ví dụ: 1440 cho 1 ngày)
+     * @return Map<Symbol, List<KlineObjectSimple>>
+     */
     public static Map<String, List<KlineObjectSimple>> readDataForSymbols(long startTime, int minutesToRead) {
-        // 1. Chuẩn bị danh sách Timestamps từ startTime chính xác
-        long[] allTimestamps = new long[minutesToRead];
-        for (int i = 0; i < minutesToRead; i++) {
-            allTimestamps[i] = startTime + (i * 60000L);
-        }
         LOG.info("Read ticker from Aerospike: startTime={} | minutes={}", Utils.normalizeDateYYYYMMDDHHmm(startTime), minutesToRead);
-        // Kết quả trung gian (Thời gian -> Map các Symbol)
-        TreeMap<Long, Map<String, KlineObjectSimple>> timeToTickers = new TreeMap<>();
-        List<Future<Map<Long, Map<String, KlineObjectSimple>>>> futures = new ArrayList<>();
-        int chunkSize = (minutesToRead + threadCount - 1) / threadCount;
 
-        // 2. Chia đa luồng để đọc Batch từ Aerospike
-        for (int i = 0; i < threadCount; i++) {
-            final int startIdx = i * chunkSize;
-            final int endIdx = Math.min(startIdx + chunkSize, minutesToRead);
-            if (startIdx >= endIdx) break;
+        // 1. Kế thừa readDataFromAerospikeCustom để tận dụng logic BATCH_MAX_RETRY chống EOFException
+        TreeMap<Long, Map<String, KlineObjectSimple>> timeToTickers = readDataFromAerospikeCustom(startTime, minutesToRead);
 
-            futures.add(executor.submit(() -> {
-                SimpleDateFormat localKeyFormat = new SimpleDateFormat("yyyyMMdd-HHmm");
-                localKeyFormat.setTimeZone(java.util.TimeZone.getTimeZone("GMT+7")); // HARDEN 2026-07-23: pin GMT+7 doc key deterministic
-                Map<Long, Map<String, KlineObjectSimple>> chunkResult = new HashMap<>();
-
-                try {
-                    Key[] chunkKeys = new Key[endIdx - startIdx];
-                    long[] chunkTimestamps = Arrays.copyOfRange(allTimestamps, startIdx, endIdx);
-
-                    for (int k = 0; k < chunkKeys.length; k++) {
-                        String keyString = localKeyFormat.format(new Date(chunkTimestamps[k]));
-                        chunkKeys[k] = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_TICKER, keyString);
-                    }
-
-                    // Batch Read tối ưu
-                    Record[] records = getReadClient() .get(batchPolicy, chunkKeys);
-
-                    for (int j = 0; j < records.length; j++) {
-                        Record record = records[j];
-                        if (record == null) continue;
-
-                        long minuteTimestamp = chunkTimestamps[j];
-                        byte[] snappyCompressedBytes = (byte[]) record.getValue("data");
-
-                        if (snappyCompressedBytes != null) {
-                            byte[] protoAsBytes = Snappy.uncompress(snappyCompressedBytes);
-                            MinuteDataFinal protoData = MinuteDataFinal.parseFrom(protoAsBytes);
-
-                            // Sử dụng hàm convert hiện tại của bạn
-                            Map<String, KlineObjectSimple> javaMap = convertProtoMapToJavaMap(protoData.getTickersMap(), minuteTimestamp);
-                            chunkResult.put(minuteTimestamp, javaMap);
-                        }
-                    }
-                } catch (Exception e) {
-                    LOG.error("❌ Error in Batch Read Thread: {}", e.getMessage());
-                }
-                return chunkResult;
-            }));
-        }
-
-        // 3. Tổng hợp kết quả từ các Thread
-        for (Future<Map<Long, Map<String, KlineObjectSimple>>> future : futures) {
-            try {
-                timeToTickers.putAll(future.get());
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-
-        // 4. CHUYỂN ĐỔI CẤU TRÚC: Time-Major -> Symbol-Major
+        // 2. CHUYỂN ĐỔI CẤU TRÚC: Time-Major -> Symbol-Major
         Map<String, List<KlineObjectSimple>> symbolToKlines = new HashMap<>();
+
+        if (timeToTickers == null || timeToTickers.isEmpty()) {
+            return symbolToKlines;
+        }
 
         for (Map.Entry<Long, Map<String, KlineObjectSimple>> entry : timeToTickers.entrySet()) {
             Map<String, KlineObjectSimple> tickersAtTime = entry.getValue();
@@ -1300,11 +1251,13 @@ public class DataManagerAerospikeFloatSim {
             for (Map.Entry<String, KlineObjectSimple> tickerEntry : tickersAtTime.entrySet()) {
                 String symbolInDb = tickerEntry.getKey();
 
-                // 🔥 Bổ sung lại "USDT" nếu symbol trong DB đang bị cắt đuôi (ví dụ "BTC" -> "BTCUSDT")
+                // Bổ sung lại "USDT" nếu symbol trong DB đang bị cắt đuôi (Dự phòng an toàn)
                 String fullSymbol = symbolInDb.endsWith("USDT") ? symbolInDb : symbolInDb + "USDT";
 
-                KlineObjectSimple kline = tickerEntry.getValue();
-                symbolToKlines.computeIfAbsent(fullSymbol, k -> new ArrayList<>()).add(kline);
+                // 🔥 TỐI ƯU RAM CHỐNG OOM: Khởi tạo ArrayList với capacity cố định = minutesToRead
+                // Tránh việc ArrayList phải resize liên tục gây tràn Heap Space
+                symbolToKlines.computeIfAbsent(fullSymbol, k -> new ArrayList<>(minutesToRead))
+                        .add(tickerEntry.getValue());
             }
         }
 
@@ -1921,11 +1874,55 @@ public class DataManagerAerospikeFloatSim {
         return results;
     }
 
-    public static void main(String[] args) throws ParseException {
-//        System.out.println(checkAndComparePriceDiff());
-        Long startTime = Utils.sdfFile.parse("20210203").getTime() + 7 * Utils.TIME_HOUR;
-        System.out.println(Utils.toJson(readFundingBatchCustom(startTime, 1440)));
+    public static void main(String[] args) throws java.text.ParseException {
+        // 1. Thiết lập mốc thời gian test (Giả sử lấy ngày 03/02/2021 như code cũ của bạn)
+        long startTime = Utils.sdfFile.parse("20260826").getTime() + 7 * Utils.TIME_HOUR;
+        int minutesToRead = 10; // Đọc thử 10 phút để chạy nhanh và dễ nhìn log
 
+        System.out.println("🚀 BẮT ĐẦU TEST HÀM readDataForSymbols TỐI ƯU...");
+        long t1 = System.currentTimeMillis();
+
+        // 2. Gọi hàm đã được tối ưu (Đảm bảo bạn đã thay code hàm này như trao đổi ở trên)
+        Map<String, List<KlineObjectSimple>> result = readDataForSymbols(startTime, minutesToRead);
+
+        long t2 = System.currentTimeMillis();
+
+        // 3. In kết quả tổng quan
+        System.out.println("\n==============================================");
+        System.out.println("✅ TỔNG KẾT TEST (Đọc " + minutesToRead + " phút):");
+        System.out.println("   - Thời gian xử lý: " + (t2 - t1) + " ms");
+        System.out.println("   - Tổng số mã Coin (Symbol) lấy được: " + result.size());
+        System.out.println("==============================================\n");
+
+        // 4. Kiểm tra chéo chi tiết 1 symbol quen thuộc (VD: BTCUSDT)
+        String testSymbol = "BTCUSDT";
+        if (result.containsKey(testSymbol)) {
+            List<KlineObjectSimple> klines = result.get(testSymbol);
+            System.out.println("🔍 CHI TIẾT MÃ " + testSymbol + ":");
+            System.out.println("   - Số nến lấy được: " + klines.size() + " (Kỳ vọng chuẩn: " + minutesToRead + ")");
+
+            if (!klines.isEmpty()) {
+                KlineObjectSimple firstKline = klines.get(0);
+                KlineObjectSimple lastKline = klines.get(klines.size() - 1);
+
+                System.out.println("   - Nến ĐẦU TIÊN:");
+                System.out.println("     + Time : " + Utils.normalizeDateYYYYMMDDHHmm(firstKline.startTime));
+                System.out.println("     + Open : " + firstKline.priceOpen);
+                System.out.println("     + Close: " + firstKline.priceClose);
+                System.out.println("     + Vol  : " + firstKline.totalUsdt);
+
+                System.out.println("   - Nến CUỐI CÙNG:");
+                System.out.println("     + Time : " + Utils.normalizeDateYYYYMMDDHHmm(lastKline.startTime));
+                System.out.println("     + Open : " + lastKline.priceOpen);
+                System.out.println("     + Close: " + lastKline.priceClose);
+            }
+        } else {
+            System.out.println("⚠️ Không tìm thấy mã " + testSymbol + " trong DB tại mốc thời gian này!");
+        }
+
+        // Đóng client Aerospike và thoát để JVM không bị treo bởi non-daemon threads
+        closeConnection();
+        System.exit(0);
     }
 
 

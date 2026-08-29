@@ -22,8 +22,8 @@ public class AerospikeCheckData {
 
                 String namespace = "test";
                 // truncate toàn bộ set
-//                client.truncate(null, namespace, "kline_1m_opt", null);
 //                client.truncate(null, namespace, "funding_pred_1m_v5", null);
+//                client.truncate(null, namespace, "ai_pred_market_full_basket_v2", null);
 
 
                 // Lấy thống kê namespace

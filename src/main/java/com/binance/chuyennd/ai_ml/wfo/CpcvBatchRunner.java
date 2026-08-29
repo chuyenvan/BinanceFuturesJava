@@ -86,6 +86,11 @@ public class CpcvBatchRunner {
                 m.put("note", rep.note);
                 m.put("hold_raw", round4(rep.holdPenaltyRaw));   // fitness v3 hold-penalty raw
                 m.put("maxhold_h", round4(rep.maxHoldHours));    // fitness v3 / leak-check
+                m.put("daily_n", rep.dailyN);                    // DSR proper-T: daily-PnL moments
+                m.put("daily_mean", round4(rep.dailyMean));
+                m.put("daily_std", round4(rep.dailyStd));
+                m.put("daily_skew", round4(rep.dailySkew));
+                m.put("daily_kurt", round4(rep.dailyKurt));
                 JSONObject res = new JSONObject();
                 res.put("seq", seq); res.put("block", block); res.put("knobs", k); res.put("metrics", m);
                 bw.write(res.toString()); bw.newLine(); bw.flush();

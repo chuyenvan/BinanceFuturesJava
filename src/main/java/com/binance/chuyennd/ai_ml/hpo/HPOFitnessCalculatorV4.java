@@ -90,6 +90,8 @@ public class HPOFitnessCalculatorV4 {
         public float maxHoldHours = 0f;     // 2026-08-25: max holding period (GIO) — leak-check vs purge gap 14d
         public int heldOver14d = 0;         // 2026-08-25: so lenh giu > 14 ngay — label-horizon vuot purge gap?
         public double holdPenaltyRaw = 0.0; // 2026-08-25: fitness v3 — Sigma max(0, THETA*holdDays - roi); THETA=0.0005/day. Nhan k_hold o python.
+        // 2026-08-25: daily-PnL moments (fill 0 cho ngay khong dong lenh) — cho DSR dung T~windowDays thay vi 8 block.
+        public int dailyN = 0; public double dailyMean = 0, dailyStd = 0, dailySkew = 0, dailyKurt = 0;
         // 2026-08-02: MFE/give-back cua lenh THANG (tp>0) — report-only, do "room nuoi lai" (dinh dat vs dinh giu).
         public int nWinMfe = 0;
         public float mfeWinP50 = 0f, mfeWinP75 = 0f, mfeWinP90 = 0f;  // percentile dinh-lai (maePeak/entry-1) cua lenh thang
@@ -226,6 +228,24 @@ public class HPOFitnessCalculatorV4 {
         // Calmar (mục tiêu) + Sortino (kiểm chứng)
         r.calmar = r.netScore / absDD;
         r.sortino = computeSortino(pnlByDay);
+
+        // 2026-08-25 daily-PnL moments (fill 0 cho ngay khong dong lenh) — de DSR dung T~windowDays thay 8 block.
+        {
+            int nD = Math.max(windowDays, pnlByDay.size());
+            double meanD = nD > 0 ? r.totalProfit / nD : 0.0;
+            int nz = pnlByDay.size();
+            double s2 = 0, s3 = 0, s4 = 0;
+            for (double x : pnlByDay.values()) { double d = x - meanD; s2 += d * d; s3 += d * d * d; s4 += d * d * d * d; }
+            long zeros = (long) nD - nz; double dz = -meanD;
+            s2 += zeros * dz * dz; s3 += zeros * dz * dz * dz; s4 += zeros * dz * dz * dz * dz;
+            double var = nD > 1 ? s2 / (nD - 1) : 0.0; double sd = Math.sqrt(Math.max(0.0, var));
+            r.dailyN = nD; r.dailyMean = meanD; r.dailyStd = sd;
+            if (sd > 0 && nD > 0) {
+                double sdp = Math.sqrt(s2 / nD);
+                r.dailySkew = (s3 / nD) / Math.pow(sdp, 3);
+                r.dailyKurt = (s4 / nD) / Math.pow(sdp, 4);   // kurtosis tho (chuan=3)
+            }
+        }
 
         // ===== CONSTRAINT CỨNG (vi phạm = loại, KHÔNG cộng-trừ) — thứ tự + công thức GIỮ NGUYÊN V4 =====
         if (r.tradeCount < minTrades) {

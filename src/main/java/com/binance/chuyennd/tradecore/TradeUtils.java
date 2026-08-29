@@ -19,22 +19,16 @@ public class TradeUtils {
     }
 
 
-    public static float calRateLossDynamicBuy(float maxProfitRate, Float predReturn15M) {
-        // Khoảng trailing tối đa: siết chặt khi momentum dự đoán yếu
-        float maxGap = (predReturn15M != null && predReturn15M < Configs.TS_WEAK_MOMENTUM_THRES)
-                ? Configs.TS_MAX_GAP_WEAK    // 0.03f  (= 6 đơn vị cũ)
-                : Configs.TS_MAX_GAP;        // 0.08f  (= 16 đơn vị cũ)
+    public static float calRateLossDynamicBuy(float maxProfitRate, Float selectorPNoPump) {
+        // FROZEN v1 (2026-08-24): gap LIÊN TỤC theo selector CỦA CHÍNH COIN, thay nhánh weak/strong + floor.
+        //   selectorPNoPump = P(coin xấu) = symbolPred (thấp = tốt). pGood = 1 − pNoPump.
+        //   gap = pGood × TS_MAX_GAP: coin tốt (pGood cao) → gap RỘNG (nuôi winner); coin xấu → gap HẸP
+        //   (chốt sớm). Fallback null → pNoPump 0.5 (trung tính). Bỏ TS_MAX_GAP_WEAK/WEAK_THRES/FLOOR/MIN_GAP/RATIO.
+        float pNoPump = (selectorPNoPump != null) ? selectorPNoPump : 0.5f;
+        if (pNoPump < 0f) pNoPump = 0f; else if (pNoPump > 1f) pNoPump = 1f;
+        float pGood = 1f - pNoPump;
+        float gap = pGood * Configs.TS_MAX_GAP;
 
-        // Nhả lại tối đa TS_GIVEBACK_RATIO phần lợi nhuận (mặc định 0.5 = hành vi cũ), nhưng không vượt maxGap
-        // TASK (2026-07-10): nghi phạm "cắt lãi non" — sweep trực tiếp tỉ lệ này (0.3 chặt / 0.7 lỏng-nuôi-trend)
-        // TASK (2026-07-31, giveback fix P6): mac dinh (TS_GIVEBACK_FLOOR=false) HANH VI CU nguyen ven
-        // (Math.min voi tran maxGap). Khi true: doi thanh Math.max voi SAN TS_MIN_GAP - nha theo ti le
-        // KHONG bi teo dan khi lai lon (xem Configs.TS_GIVEBACK_FLOOR javadoc + EXIT_MACHINE PHAN 1).
-        float gap = Configs.TS_GIVEBACK_FLOOR
-                ? Math.max(maxProfitRate * Configs.TS_GIVEBACK_RATIO, Configs.TS_MIN_GAP)
-                : Math.min(maxProfitRate * Configs.TS_GIVEBACK_RATIO, maxGap);
-
-        // Lãi còn lại sau khi trừ gap chính là mức stop mới
         float rate = maxProfitRate - gap;
         float step = 0.005f;
         rate = Math.round(rate / step) * step;
@@ -61,66 +55,28 @@ public class TradeUtils {
     }
 
     public static Float calRateMinWithPredReturn15MForTradingStop(Float predReturn15M) {
-        Float rateMin2MoveSl = Configs.RATE_PROFIT_STOP_MARKET;
-
-        // 🔥 LOGIC MỚI: Dùng hệ số nhân K tuyến tính theo biên độ nến
-        if (predReturn15M != null && predReturn15M > 0) {
-            float dynamicRate = predReturn15M * Configs.TS_DYNAMIC_K;
-            if (dynamicRate > rateMin2MoveSl) {
-                rateMin2MoveSl = dynamicRate;
-            }
-        }
-        return rateMin2MoveSl;
+        // FROZEN v1 (2026-08-24): BỎ TS_DYNAMIC_K — ngưỡng arm = RATE_PROFIT_STOP_MARKET thuần.
+        // (giữ tham số để không vỡ chữ ký caller; giá trị predReturn15M không còn tác động.)
+        return Configs.RATE_PROFIT_STOP_MARKET;
     }
 
     public static Float managerBudget(Float budget, Float marginRunning, Float balanceBasic,
                                       MarketLevelChange levelChange) {
 
 
-        final Set<MarketLevelChange> dcaOrBigLevels = Set.of(
-                MarketLevelChange.DCA_LEVEL1
-        );
-        boolean isNormalLevel = !dcaOrBigLevels.contains(levelChange)
-                && !StringUtils.containsIgnoreCase(levelChange.toString(), "big")
-                && !StringUtils.containsIgnoreCase(levelChange.toString(), "medium");
-        float marginRatio = marginRunning / balanceBasic;
-
-        // === THAY ĐỔI 1: SỬ DỤNG BIẾN CONFIGS ===
-        // [OFF-CỨNG] BUDGET_DIVIDER_1 thuộc cụm phẳng → bỏ tầng chia vốn này.
-        if (!Configs.OFF_FLAT_HARD && isNormalLevel && marginRatio >= Configs.BUDGET_MARGIN_RATIO_1) {
-            budget /= Configs.BUDGET_DIVIDER_1;
-        }
-        if (marginRatio >= Configs.BUDGET_MARGIN_RATIO_2) {
-            budget /= Configs.BUDGET_DIVIDER_2;
-        }
-
-        // (Tôi giữ lại các logic cũ của bạn)
-        if (marginRatio >= 0.9) {
-            budget /= 4;
-        }
-        if (marginRatio >= 0.99) {
-            return null;
-        }
-
-        // ... (Switch case của bạn giữ nguyên) ...
-        // (Bạn cũng có thể tham số hóa các giá trị chia 2, 3, 4 này
-        //  nhưng chúng ta sẽ làm 6 tham số trên trước)
-        switch (levelChange) {
-//            case MEDIUM_DOWN:
-//                budget /= 2;
-//                break;
-
-            case DCA_LEVEL1:
-            case PREDICT_SYMBOL_TRADE:
-            case SMALL_UP:
-            case SMALL_DOWN_15M:
-                budget /= 3;
-                break;
-
-//                budget /= 4;
-//                break;
-        }
-
-        return budget;
+        // FROZEN v1 (2026-08-24): thay logic vách rời rạc (/3 /4 + ratio-tier = overfit) bằng
+        //   THROTTLE LIÊN TỤC + trần margin cứng. 2 gene: F_BASE (% equity/lệnh) + U_MAX (trần margin).
+        //     U = margin đang dùng / equity; U ≥ U_MAX → chặn lệnh mới (null).
+        //     throttle = clamp(1 − U/U_MAX, 0, 1)  (càng gần trần càng nhỏ, KHÔNG vách).
+        //     budget = equity × F_BASE × throttle / dcaGridTotalWeight()  (chừa chỗ đủ ladder DCA).
+        if (balanceBasic == null || balanceBasic <= 0f) return null;
+        float used = marginRunning != null ? marginRunning : 0f;
+        float u = used / balanceBasic;
+        if (u >= Configs.U_MAX) return null;
+        float throttle = 1f - u / Configs.U_MAX;
+        if (throttle < 0f) throttle = 0f; else if (throttle > 1f) throttle = 1f;
+        float ladder = Configs.dcaGridTotalWeight();
+        if (ladder <= 0f) ladder = 1f;
+        return balanceBasic * Configs.F_BASE * throttle / ladder;
     }
 }
