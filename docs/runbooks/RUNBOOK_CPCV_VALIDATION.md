@@ -183,3 +183,55 @@ Song song thật chỉ có trên Kaggle. Đây là lý do B2.
 - **Bridge PowerShell→ssh:** hay rớt DÒNG ĐẦU output → thêm `echo S;` mồi trước lệnh.
 - **ĐỪNG `cat`/`tail` log Kaggle thô** (progress bar `%|` ngốn hàng chục nghìn token) → `grep -avE '%\|'`.
 - B2 ĐÃ ĐÓNG. B1 (parity_check.py) thay bằng smoke-parity 8 cell ở bước 3. B3: commit `_wfotmp/` vẫn treo.
+
+
+---
+
+## 11. ĐỔI LABEL 2 MODEL (SELECTOR / GATE) — pipeline A/B (v3, v4, v5…)
+
+Hệ có **2 model**, đổi label cái nào thì theo nhánh đó, phần còn giữ nguyên. Fitness v4.1 tính ở tầng
+verdict (KHÔNG rebuild jar). CPCV luôn 8 block × 400 config = 3200 cell.
+
+### 11.1 SELECTOR (funding, chọn symbol) — vd v3: maxFav6% → retEnd close-close 1.5%
+- Label sinh WF trên **Kaggle** (kernel funding-sel-wfo emit predict_wf leak-free). Net-label preds đã có:
+  `/home/ubuntu/claudedata/predwf_G015` (predict_wf_YYYYMMDD.bin theo fold).
+- Build dataset: `ExportWfoDataset` với `WFO_FUNDING_PRED_DIR=val_pred_net015` (6 fold VAL trỏ predwf_G015),
+  `WFO_SET_PRED=ai_pred_market_full_basket_v2` (gate cũ) → funding.bin đổi, market/pred giữ. PARITY: pred.bin
+  byte-khớp baseline, funding.bin khác. (market.bin có thể khác ở đuôi 2026 ngoài VAL — vô hại.)
+- Rồi §10 (Kaggle fanout) + Mục 5 (verdict).
+
+### 11.2 GATE (AIRejectFilter = return15m thị trường) — vd v4=ret15m, v5=ret60m
+Gate là XGBRegressor dự đoán 1 giá trị return (ÂM ĐƯỢC). Ngưỡng gate = gene **MIN_MOMENTUM_15M**.
+LABEL trong `gate15m_v2_full.csv`: label_oldbasket(max basket=cũ) | label_ret15m | label_ret60m.
+
+**B1 train gate sạch (WFOGateRunner, WF leak-free, ~4-5h vì replay feature):**
+```
+cd /home/ubuntu/java/simulator
+GATE_AB_LABELS=label_ret15m,label_ret60m \
+java -Xmx16g -cp /home/ubuntu/java/cpcv.jar \
+  com.binance.chuyennd.ai_ml.features.export.gate.WFOGateRunner \
+  20210101 20260601 3 <feature_store.csv> <models_dir> <out_gate_pred.csv> \
+  /home/ubuntu/java/simulator/train_gate_fold.py 3
+```
+WFOGateRunner: replay ExportGateDataset dựng feature (2021→2026, chậm nhất), train WF per fold
+(train ts<cutoff-purge, leak-free), predict → out CSV + nạp Aerospike set `ai_pred_market_gate_ab_<lab>`.
+**TỐI ƯU:** feature store là ONE-TIME — lần sau đổi label chỉ cần train Python WF trên feature có sẵn (vài phút),
+KHÔNG replay lại. VALIDATE: phủ VAL 2024-07→2025-12, 0 NaN, cột prediction, WF leak-free.
+
+**B3 phân vị PREDICTION THẬT (KHÔNG lấy label/file cũ):** chỉ VAL window. Gate market-avg NHỎ hơn hẳn
+max-basket (mean~0, ±0.001-0.006, âm được) → range 0.005-0.02 SAI (chặn ~99%). Đặt lại range MIN_MOMENTUM_15M
+quanh p50→p95 của prediction (gồm vùng âm). Ghi range + lý do (pre-register = recipe v4/v5).
+
+**B4 regenerate 400 genome:** CHỈ đổi range MIN_MOMENTUM_15M, 13 gene FROZEN = v3. Validate diff chỉ khác cột đó.
+Bộ sinh: `frozen_genome_pre2023.csv` / `StrategyWfoTask.GENOME`.
+
+**B5 build dataset:** `ExportWfoDataset` `WFO_SET_PRED=<gate set mới>` `WFO_FUNDING_PRED_DIR=val_pred_net015`
+(funding net như v3). PARITY: funding==v3, pred.bin KHÁC baseline & v3, predCount>0, leakFreeFrom=2024-07-01.
+
+**B6-B7:** §10 SMOKE 8 cell (VALIDATE không suy biến — không 8/8 ZERO_TRADES do range sai) → fanout 5 → verdict.
+
+### 11.3 verdict_v41 (mọi biến thể) — /home/ubuntu/cpcv/verdict_v41.py
+obj = tổng PnL 8 block; **ruin gate = note!=BURN_ACCOUNT & maxdd_pct<=0.40 mỗi block** (maxdd_pct KHÔNG
+tự bắt BURN — phải chặn bằng note, bài học baseline); universe=eligible; 28 path inner-argmax; %path+;
+pbo_cscv(eligible); DSR series=best-config 8 block pnl, std=std per-config Sharpe(eligible), báo @400 & @ledger.
+PASS ⇔ PBO<0.20 & DSR>0.95 & %path+>=0.80.

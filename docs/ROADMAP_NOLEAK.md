@@ -69,3 +69,27 @@
 - Pha 1 → 2: Phụ lục A đủ + sha256 + Claude soi sạch (1.4).
 - Pha 2 → 3: verdict PASS (DSR>ngưỡng, PBO<ngưỡng) trên VALIDATION.
 - Pha 3 → xong: 1 số HOLDOUT, đóng sổ.
+
+
+---
+
+## CẬP NHẬT SESSION 2026-08-28/29 — Pha 2 A/B label (baseline/v3 xong, v4/v5 chạy)
+
+**2 model:** SELECTOR (funding, chọn symbol) + GATE (AIRejectFilter = return15m thị trường). Đổi label cái nào
+theo nhánh đó (runbook §11). Fitness v4.1 = obj totalPnL + ruin gate (note!=BURN_ACCOUNT & maxdd<=40%) ở tầng verdict.
+
+**Kết quả (fitness v4.1):**
+- baseline (maxFav6% + gate max-basket): eligible 26/400, %path+1.000, PBO0.000, DSR 0.950@400/0.932@1000 → FAIL(DSR). best#338 totPnL7640 maxDD15.2%.
+- v3 (selector net close-close 1.5%, gate cũ): eligible 137/400 (BURN 871→416, an toàn hơn hẳn), %path+0.964, PBO0.000, DSR 0.936@400/0.912@1400 → FAIL(DSR). best#338 totPnL5313 maxDD8.8%.
+- v4 (gate ret15m) + v5 (gate ret60m): đang chạy overnight.
+- Nhận định: cả baseline & v3 FAIL ở DSR ledger → edge mỏng, PnL/rủi ro ~ thua gửi bank. FAIL/PASS độc lập với label; label = đánh đổi safety↔PnL.
+
+**Hạ tầng mới dựng (đóng blocker B2):** Kaggle 5-node fixed-shard fanout — deterministic + song song, né OOM
+(v3 funding.bin 2.2GB cần >6g heap; Oracle 24g chỉ chạy nổi 1 JVM). Chi tiết runbook §10. Smoke-parity 8 cell thay B1.
+Lưu ý cross-machine FP Kaggle vs Oracle lệch ~0.2-0.7% (KHÁC bug jobstore ~50%) — không đổi kết luận định tính.
+
+**LỖ HỔNG đã chốt:** `maxdd_pct` KHÔNG phản ánh cháy tài khoản (871 cell BURN_ACCOUNT ở baseline có maxdd<=0.27)
+→ ruin gate PHẢI chặn bằng `note!=BURN_ACCOUNT`, không chỉ maxdd<=40%.
+
+**Việc còn:** chờ v4/v5 xong; DỌN DẸP docs (bẩn, dính leak cũ — user yêu cầu) sau v4/v5. Tối ưu: feature store gate one-time,
+v6+ train lại vài phút (Python WF, không replay).
