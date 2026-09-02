@@ -116,7 +116,9 @@ public class Configs {
     // 3. CẤU HÌNH GIAO DỊCH CƠ BẢN (BASIC TRADING)
     // =========================================================
     public static Integer LEVERAGE_ORDER = 1; // Đòn bẩy
-    public static final Float RATE_FEE = 0.002f; // Phí giao dịch sàn đã sửa thành 2 chân
+    public static Float RATE_FEE = 0.002f; // Phí giao dịch sàn đã sửa thành 2 chân (env SIM_RATE_FEE chi cho stress test)
+    // [2026-09-02 STRESS] he so nhan funding accrual (mark mode). 1.0 = hanh vi cu. env SIM_FUNDING_SCALE.
+    public static float FUNDING_SCALE = 1.0f;
     public static Integer NUMBER_ENTRY_EACH_SIGNAL = 2; // Số lệnh vào mỗi khi có tín hiệu
     public static Integer NUMBER_TICKER_CAL_RATE_CHANGE = 15; // Số nến để tính biến động
     public static final Integer NUMBER_THREAD_ORDER_MANAGER = Configs.getInt("NUMBER_THREAD_ORDER_MANAGER");
@@ -704,6 +706,10 @@ public class Configs {
             //   Default (env rong) -> giu false = byte-identical.
             if ((v = System.getenv("SIM_APPLY_FUNDING")) != null) APPLY_FUNDING_FEE = Boolean.parseBoolean(v);
             if ((v = System.getenv("SIM_FUNDING_MARK")) != null) FUNDING_MARK_NOTIONAL = Boolean.parseBoolean(v);
+            // [2026-09-02 STRESS] chi phi: fee/slippage/funding scale cho bai robustness. Default = gia tri cu -> byte-identical.
+            if ((v = System.getenv("SIM_RATE_FEE")) != null) RATE_FEE = Float.parseFloat(v.trim());
+            if ((v = System.getenv("SIM_SLIPPAGE_RATE")) != null) SLIPPAGE_RATE = Float.parseFloat(v.trim());
+            if ((v = System.getenv("SIM_FUNDING_SCALE")) != null) FUNDING_SCALE = Float.parseFloat(v.trim());
         } catch (Exception e) {
             System.err.println("SIM env override parse error: " + e);
         }

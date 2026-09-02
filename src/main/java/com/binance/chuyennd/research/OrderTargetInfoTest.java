@@ -416,7 +416,7 @@ public class OrderTargetInfoTest implements Serializable {
             Long k = fundingMap.higherKey(from);
             while (k != null && k <= time) {
                 Float rate = fundingMap.get(k);
-                if (rate != null) fundingAccrued += rate * quantity * price;
+                if (rate != null) fundingAccrued += rate * quantity * price * Configs.FUNDING_SCALE;   // FUNDING_SCALE=1 mac dinh (stress test)
                 fundingLastSettle = k;
                 k = fundingMap.higherKey(k);
             }
