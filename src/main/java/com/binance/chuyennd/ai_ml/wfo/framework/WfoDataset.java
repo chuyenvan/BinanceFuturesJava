@@ -116,6 +116,10 @@ public class WfoDataset {
             LOG.warn("WFO_FUNDING_PRED_DIR khong set -> fallback Aerospike (luong cu).");
             fnd = DataManagerAerospikeFloatSim.getAllFundingPredictionsPrimitiveFromAerospike();
         }
+        // [2026-09-02] NIEM PHONG 2026: cat moi ban ghi >= 2026-01-01 khoi dataset (market/pred/funding).
+        com.binance.chuyennd.tradecore.HoldoutSeal.trimMap(mkt, "WfoDataset.market");
+        com.binance.chuyennd.tradecore.HoldoutSeal.trimMap(prd, "WfoDataset.pred");
+        com.binance.chuyennd.tradecore.HoldoutSeal.trimMap(fnd, "WfoDataset.funding");
         LOG.info("scan xong: market={} pred={} funding={} (raw15m={})", mkt.size(), prd.size(), fnd.size(), fndRaw15mCount);
 
         writeMarket(new File(dir, F_MARKET), mkt);

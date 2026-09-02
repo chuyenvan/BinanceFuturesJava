@@ -144,6 +144,11 @@ public class Configs {
     // mỗi lần chạy → KHÔNG đáng gánh trong HPO/WFO (hàng nghìn lần eval). CHỈ bật (=true) ở vòng HPO/Golden
     // backtest CUỐI trước go-live để đo PnL/DD thật. RunFundingImpact tự bật/tắt để đo đối chứng.
     public static boolean APPLY_FUNDING_FEE = false;
+    // [2026-09-02] FUNDING theo notional MARK: tich luy tai MOI ky settle voi qty dang mo x gia hien tai (thay cho
+    //   qty_cuoi_cum x avgEntry co dinh trong computeFundingOnClose). Ly do: coin roi -90% giu 900 ngay (AXS DEV)
+    //   bi thoi funding nhan ~10x (sim -130.7 vs mark -35.1). env SIM_FUNDING_MARK=true. Default false = byte-identical.
+    //   Chi la KE TOAN o closeOrder — KHONG tham gia quyet dinh mo/dong lenh (khong doi so lenh).
+    public static boolean FUNDING_MARK_NOTIONAL = false;
 
 
     public static float TS_MAX_GAP = 0.08f; // gap trailing tối đa (cũ: 16/200)
@@ -608,6 +613,11 @@ public class Configs {
     //   (firstEntryPrice, bat bien qua DCA — KHONG dung averaged priceEntry). Default 0f = OFF =
     //   byte-identical. Doc env o static SIM block ben duoi (Float.parseFloat).
     public static float HARD_SL_PCT = 0f;
+    // [2026-09-02] LOSER TIME-STOP (env SIM_LOSER_TIME_STOP_HOURS, 0=tat): cum CHUA arm trailing (priceSL==null) qua N gio
+    //   ke tu leg DAU thi dong tai min(open, close). Khac TIME_STOP_HOURS (nam TRONG updateStatusNew, chi duoc goi khi
+    //   maxPrice >= entry*(1+RATE_PROFIT_STOP_MARKET) => KHONG BAO GIO cham cum thua lo thuan — dead cho zombie).
+    //   Dat TRUOC cong profit-arm nhu HARD_SL_PCT. Default 0 = byte-identical.
+    public static int LOSER_TIME_STOP_HOURS = 0;
 
     // 2026-08-03 GRID-ALIGN ENTRY: model selector du doan TAI moc 15m (ts%900000==0), label maxFav do tu
     //   gia moc 15m. Forward-fill 15m->1m cho vao giua cua so -> vao o gia DA CHAY != reference model hoc.
@@ -678,11 +688,13 @@ public class Configs {
             if ((v = System.getenv("SIM_BREAKER_MARGIN_HALT")) != null) BREAKER_MARGIN_HALT = Float.parseFloat(v);
             if ((v = System.getenv("SIM_MS_DOWN_BIG_AVG")) != null) MS_DOWN_BIG_AVG = Float.parseFloat(v);
             if ((v = System.getenv("SIM_HARD_SL_PCT")) != null) HARD_SL_PCT = Float.parseFloat(v);
+            if ((v = System.getenv("SIM_LOSER_TIME_STOP_HOURS")) != null) LOSER_TIME_STOP_HOURS = Integer.parseInt(v.trim());
             // TASK (frozen leakage-free genome, Buoc 0): funding.bin trong WFO_DATA_DIR/-ff CHI tu-ap cho
             //   funding-SELECTOR (ds.funding), KHONG tu-ap thanh FEE. Fee van gate boi APPLY_FUNDING_FEE
             //   (default false). SIM_APPLY_FUNDING=true -> bat funding fee cho vong WFO/HPO nay (funding-on).
             //   Default (env rong) -> giu false = byte-identical.
             if ((v = System.getenv("SIM_APPLY_FUNDING")) != null) APPLY_FUNDING_FEE = Boolean.parseBoolean(v);
+            if ((v = System.getenv("SIM_FUNDING_MARK")) != null) FUNDING_MARK_NOTIONAL = Boolean.parseBoolean(v);
         } catch (Exception e) {
             System.err.println("SIM env override parse error: " + e);
         }

@@ -85,6 +85,12 @@ public class OrderTargetInfoTest implements Serializable {
     // TÁCH RIÊNG khỏi timeStart (timeStart = leg-cuối, là tham chiếu logic mở/đóng — TUYỆT ĐỐI không đụng,
     // nếu không funding sẽ rò vào logic giao dịch → đổi số lệnh → vỡ GATE). transient: không serialize.
     public transient long clusterFirstLegTime = 0L;
+    // [2026-09-02] FUNDING notional MARK (Configs.FUNDING_MARK_NOTIONAL): tich luy streaming tren object CUM
+    //   (symbol2OrderRunning) tai moi tick: moi settle trong (fundingLastSettle, tick] cong rate x quantity_cum x priceClose.
+    //   mergeOrder carry 2 field nay sang cum moi. computeFundingOnClose doc fundingAccrued thay cho quet lai.
+    //   transient: khong serialize; time2FundingFee van la noi luu TONG (tuong thich TraceOrderDone/BudgetManager).
+    public transient float fundingAccrued = 0f;
+    public transient long fundingLastSettle = 0L;
     public MarketDataObject marketData;
     public MarketLevelChange marketLevelChange;
     public KlineObjectSimple tickerOpen;
@@ -113,6 +119,7 @@ public class OrderTargetInfoTest implements Serializable {
 
     public void updatePriceByKlineSimple(KlineObjectSimple ticker) {
         this.lastPrice = ticker.priceClose;
+        if (Configs.FUNDING_MARK_NOTIONAL) accrueFundingMark(ticker.startTime.longValue(), ticker.priceClose);
         if (this.minPrice > ticker.minPrice) {
             this.minPrice = ticker.minPrice;
             profitMin = quantity * (minPrice - priceEntry);
@@ -357,6 +364,13 @@ public class OrderTargetInfoTest implements Serializable {
     public void computeFundingOnClose() {
         if (!Configs.APPLY_FUNDING_FEE) return;
         if (priceEntry == null || quantity == null || symbol == null) return;
+        if (Configs.FUNDING_MARK_NOTIONAL) {
+            // notional MARK: don not settle con sot tu tick cuoi den timeUpdate (gia = lastPrice, fallback priceTP/priceEntry)
+            Float px = lastPrice != null ? lastPrice : (priceTP != null ? priceTP : priceEntry);
+            accrueFundingMark(timeUpdate, px);
+            if (fundingAccrued != 0f) time2FundingFee.put(timeUpdate, fundingAccrued);
+            return;
+        }
         try {
             TreeMap<Long, Float> fundingMap = FundingFeeManager.getInstance().getFundingHistory(symbol);
             if (fundingMap == null || fundingMap.isEmpty()) return;
@@ -379,6 +393,32 @@ public class OrderTargetInfoTest implements Serializable {
             if (feeTotal != 0f) time2FundingFee.put(timeUpdate, feeTotal);   // 1 entry tổng
         } catch (Exception e) {
             // coin không có funding data / lỗi đọc => phí 0 (an toàn, không chặn backtest)
+        }
+    }
+
+    /**
+     * [2026-09-02] Tich luy funding theo notional MARK. Quet cac moc settle THAT cua coin trong
+     * (from, time] voi from = fundingLastSettle (hoac clusterFirstLegTime/timeStart lan dau); phi moi moc =
+     * rate x quantity (cum dang mo) x price (close tick hien tai). Dau giong computeFundingOnClose: rate>0 long TRA.
+     * KHONG look-ahead (chi settle <= time). Chi goi khi Configs.FUNDING_MARK_NOTIONAL.
+     */
+    public void accrueFundingMark(long time, Float price) {
+        if (!Configs.APPLY_FUNDING_FEE || quantity == null || symbol == null || price == null) return;
+        long from = fundingLastSettle > 0L ? fundingLastSettle
+                : (clusterFirstLegTime > 0L ? clusterFirstLegTime : timeStart);
+        if (time <= from) return;
+        try {
+            TreeMap<Long, Float> fundingMap = FundingFeeManager.getInstance().getFundingHistory(symbol);
+            if (fundingMap == null || fundingMap.isEmpty()) return;
+            Long k = fundingMap.higherKey(from);
+            while (k != null && k <= time) {
+                Float rate = fundingMap.get(k);
+                if (rate != null) fundingAccrued += rate * quantity * price;
+                fundingLastSettle = k;
+                k = fundingMap.higherKey(k);
+            }
+        } catch (Exception e) {
+            // khong co funding data => bo qua (giong computeFundingOnClose)
         }
     }
 }

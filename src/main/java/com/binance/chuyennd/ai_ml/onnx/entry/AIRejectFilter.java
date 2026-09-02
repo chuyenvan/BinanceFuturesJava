@@ -42,8 +42,13 @@ public class AIRejectFilter {
         earlyHardGateReject.set(0);
     }
 
+    /** Nguong MOM15 tai thoi diem cua prediction: truot theo phan vi neu GateRollingThreshold bat, khong thi cu. */
+    static float thres15M(AiPredictionData prediction) {
+        return GateRollingThreshold.isOn() ? GateRollingThreshold.threshold(prediction.timestamp) : Configs.MIN_MOMENTUM_15M;
+    }
+
     public FilterResult checkSignal(AiPredictionData prediction) {
-        return evaluate(prediction.predReturn15M, Configs.MIN_MOMENTUM_15M);
+        return evaluate(prediction.predReturn15M, thres15M(prediction));
     }
 
     // ==============================================================
@@ -57,13 +62,13 @@ public class AIRejectFilter {
         // EARLY check — chỉ chạy khi gate MOM15 bật
         if (!Configs.GATE_MARKET_OFF   // [2026-08-29 DEV pivot] tat gate MOM15 muc thi truong
                 && resolveCheckMom15(Configs.FILTER_MODE)
-                && prediction.predReturn15M < Configs.MIN_MOMENTUM_15M
+                && prediction.predReturn15M < thres15M(prediction)
                 && symbolPred > Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD) {
             mom15RejectCount.incrementAndGet();
             earlyHardGateReject.incrementAndGet();
             return new FilterResult(FilterDecision.REJECT,
                     String.format("DANGER: pred 15m %.2f%% thap (Min %.2f%%)",
-                            prediction.predReturn15M * 100, Configs.MIN_MOMENTUM_15M * 100));
+                            prediction.predReturn15M * 100, thres15M(prediction) * 100));
         }
 
         float baselineProb = Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD;
@@ -74,7 +79,7 @@ public class AIRejectFilter {
         } else {
             scaleFactor = Math.max(Configs.AI_DYNAMIC_MIN, Math.min(scaleFactor, Configs.AI_DYNAMIC_MAX));
         }
-        float dynamic_15M = Configs.MIN_MOMENTUM_15M * scaleFactor;
+        float dynamic_15M = thres15M(prediction) * scaleFactor;
         return evaluate(prediction.predReturn15M, dynamic_15M);
     }
 

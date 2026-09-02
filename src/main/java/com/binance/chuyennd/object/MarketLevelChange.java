@@ -32,7 +32,11 @@ public enum MarketLevelChange {
 
     PREDICT_SYMBOL_TRADE("PREDICT_SYMBOL_TRADE"),
     SMALL_DOWN_15M("SMALL_DOWN_15M"),
-    ORDER_PROFIT("ORDER_PROFIT");
+    ORDER_PROFIT("ORDER_PROFIT"),
+
+    // 2026-08-31: entry forced-seller reversion (SimulatorForcedSeller). Them CUOI enum de
+    // khong doi ordinal cac hang cu -> khong vo du lieu da serialize.
+    FORCED_SELLER("FORCED_SELLER");
 
     private final String code;
 

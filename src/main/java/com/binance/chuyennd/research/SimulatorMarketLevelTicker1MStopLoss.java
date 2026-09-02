@@ -133,6 +133,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             endTime = Utils.sdfFile.parse(simEndDate).getTime();
             LOG.info("🔀 SIM_END_DATE override: chay toi {}", simEndDate);
         }
+        endTime = com.binance.chuyennd.tradecore.HoldoutSeal.clampEnd(endTime, "SimulatorMarketLevelTicker1MStopLoss.main");
         test.simulatorWithInitEntry(startTime, endTime);
         Thread.sleep(5000);
         System.exit(1);
@@ -678,6 +679,9 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                 time2SymbolPred = DataManagerAerospikeFloatSim.getAllFundingPredictionsPrimitiveFromAerospike();
             }
         }
+        // [2026-09-02] gate nguong truot theo phan vi (SIM_GATE_ROLLING_PCT). Tat -> no-op, byte-identical.
+        //   Dat o DAY (initData = duong main()) — KHONG chi o initDataReady (duong WFO/HPO).
+        com.binance.chuyennd.ai_ml.onnx.entry.GateRollingThreshold.init(predictionMap);
         // 3. CHẠY PRE-CALCULATE (SORT SẴN FUNDING FEE MỘT LẦN DUY NHẤT)
         preprocessFundingData(time2SymbolPred);
         aiRejectFilter = new AIRejectFilter();
@@ -719,6 +723,18 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                     orderMulti.priceTP = fill;
                     closeOrder(symbolId, orderMulti);
                     return;
+                }
+                // [2026-09-02] LOSER TIME-STOP (env SIM_LOSER_TIME_STOP_HOURS): cum chua arm SL qua N gio tu leg dau
+                //     -> dong tai min(open, close) (khong look-ahead, haircut nhu HARD_SL). TRUOC cong profit-arm.
+                //     Default 0 => nhanh khong chay => byte-identical.
+                if (Configs.LOSER_TIME_STOP_HOURS > 0 && orderMulti.priceSL == null) {
+                    long anchor = orderMulti.clusterFirstLegTime > 0L ? orderMulti.clusterFirstLegTime : orderMulti.timeStart;
+                    if (time - anchor > Configs.LOSER_TIME_STOP_HOURS * 3600000L) {
+                        orderMulti.status = OrderTargetStatus.STOP_LOSS_DONE;
+                        orderMulti.priceTP = Math.min(ticker.priceOpen, ticker.priceClose);
+                        closeOrder(symbolId, orderMulti);
+                        return;
+                    }
                 }
                 if (ticker.maxPrice >= orderMulti.priceEntry * (1 + Configs.RATE_PROFIT_STOP_MARKET)
                         || orderMulti.priceSL != null) {
@@ -819,6 +835,11 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         // đổi nó làm rò funding vào giao dịch → +69 lệnh, vỡ GATE). timeStart giữ nguyên gốc = leg-cuối.
         orderResult.clusterFirstLegTime = time2Order.firstEntry().getKey();
         orderResult.legCount = orders.size();   // DCA GRID: cum dang o bac nao
+        // [2026-09-02] FUNDING notional MARK: carry phan da tich + moc settle cuoi sang cum moi (khong tinh trung/khong mat).
+        if (Configs.FUNDING_MARK_NOTIONAL && prevRunning != null) {
+            orderResult.fundingAccrued = prevRunning.fundingAccrued;
+            orderResult.fundingLastSettle = prevRunning.fundingLastSettle;
+        }
 
         // F7 FIX (flag-gated, mac dinh OFF = hanh vi cu byte-identical): mergeOrder tao object cum MOI
         // va KHONG carry priceSL => cum da arm SL (vd +2.5%) ma bi DCA nhoi them 1 leg la MAT SACH bao
@@ -1097,6 +1118,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
         this.time2MarketData = time2MarketData;
         this.predictionMap = predictionMap;
+        // [2026-09-02] gate nguong truot theo phan vi (SIM_GATE_ROLLING_PCT). Tat -> no-op, byte-identical.
+        com.binance.chuyennd.ai_ml.onnx.entry.GateRollingThreshold.init(predictionMap);
         this.time2SymbolPred = time2FundingPre;
         // 3. CHẠY PRE-CALCULATE (SORT SẴN FUNDING FEE MỘT LẦN DUY NHẤT)
         preprocessFundingData(this.time2SymbolPred);

@@ -133,7 +133,7 @@ public class DetectEntrySignal2TradeNormal {
             Map<String, Float> symbol2Max15m = new HashMap<>();
 
             Map<String, List<KlineObjectSimple>> symbol2LastTickers = DataManagerAerospikeFloatSim.readDataForSymbols(
-                    System.currentTimeMillis() - 1500 * Utils.TIME_MINUTE, 1500);
+                    System.currentTimeMillis() - 1000 * Utils.TIME_MINUTE, 1000);
             List<KlineObjectSimple> btcTickers = symbol2LastTickers.get(Constants.SYMBOL_PAIR_BTC);
             // TASK-027: thiếu data BTC → trước đây NPE rơi vào catch in stacktrace (im lặng).
             // Nay BỎ vòng entry phút này + log rõ (BTC là gốc tính market level, không có thì không quyết được).
