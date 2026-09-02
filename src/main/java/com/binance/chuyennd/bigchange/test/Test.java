@@ -22,6 +22,7 @@ import com.binance.chuyennd.redis.RedisConst;
 import com.binance.chuyennd.redis.RedisHelper;
 import com.binance.chuyennd.tradecore.Configs;
 import com.binance.chuyennd.trading.BinanceOrderTradingManager;
+import com.binance.chuyennd.trading.OrderTargetInfo;
 import com.binance.chuyennd.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,14 +43,13 @@ public class Test {
     public static void main(String[] args) throws Exception {
 //        testProduction();
 //        testAIDATA();
-        long startTime = Utils.sdfFileHour.parse("20250410 22:32").getTime();
+//        long startTime = Utils.sdfFileHour.parse("20250410 22:32").getTime();
 
 //        TreeMap<Long, MarketDataObject> time2MarketData =  DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
-        MarketDataObject marketData = DataManagerAerospikeFloatSim.getMarketDataAtTime(startTime);
-        System.out.println(Utils.toJson(marketData));
-        Float minRate15Min60M = -0.005f;
-        System.out.println(Utils.toJson(DataManagerAerospikeFloatSim.getFundingPredictionAtTime(startTime)));
-
+//        MarketDataObject marketData = DataManagerAerospikeFloatSim.getMarketDataAtTime(startTime);
+//        System.out.println(Utils.toJson(marketData));
+//        Float minRate15Min60M = -0.005f;
+//        System.out.println(Utils.toJson(DataManagerAerospikeFloatSim.getFundingPredictionAtTime(startTime)));
 
 
 //        TreeMap<Long, MarketDataObject> time2MarketData = (TreeMap<Long, MarketDataObject>)
@@ -65,7 +65,17 @@ public class Test {
 //        checkTickerProduct();
 //                removeSLRedis();
 //        difProductionWithTest();
-//        System.out.println(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO).size());
+
+        for (String symbol : RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO)) {
+            String orderJson = RedisHelper.getInstance().readJsonData(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO, symbol);
+            OrderTargetInfo order = Utils.gson.fromJson(orderJson, OrderTargetInfo.class);
+            if (order.priceSL != null) {
+                order.priceSL = null;
+                RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO, symbol, Utils.toJson(order));
+                LOG.info("{} --> {}", order.symbol, Utils.toJson(order));
+            }
+        }
+
 
 //        testsublist();
 //        try (AerospikeClient client = new AerospikeClient("103.157.218.242", 3222)) {
@@ -92,7 +102,7 @@ public class Test {
 //        findsymbolErrorStreming();
 //        testShuffle();
 //        System.out.println(RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS).size());
-        //        difTestBetween2File();
+    //        difTestBetween2File();
 //
 //        TreeMap<Long, OrderTargetInfoTest> allOrderDone = (TreeMap<Long, OrderTargetInfoTest>) Storage.readObjectFromFile("target/OrderTestDone.data");
 //        int counter = 0;
@@ -111,9 +121,9 @@ public class Test {
 //        new TickerManager().updateFundingFeeBySymbol("HIPPOUSDT", timeStart);
 
 
-    }
+}
 
-    private static void testProduction() {
+private static void testProduction() {
 
 //        createAOrderTest();
 //        System.out.println(FuturesRules.getInstance().getSymsLocked());
@@ -132,35 +142,34 @@ public class Test {
 //        System.out.println(FundingFeeManagerProduction.getInstance().fundingBuy.size());
 
 //
-        BinanceOrderTradingManager test = new BinanceOrderTradingManager();
-        test.updatePositionInfo();
-//        test.initSLFirst();
-        test.processDynamicTP_SL();
+    BinanceOrderTradingManager test = new BinanceOrderTradingManager();
+    test.updatePositionInfo();
+        test.initSLFirst();
+//    test.processDynamicTP_SL();
 
 
+}
 
-    }
 
-
-    private static void changeLeverage() {
-        Set<String> allSymbols = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS);
-        Integer counter = 0;
-        int leverage = Configs.LEVERAGE_ORDER;
-        for (String symbol : allSymbols) {
-            try {
+private static void changeLeverage() {
+    Set<String> allSymbols = RedisHelper.getInstance().readAllId(RedisConst.REDIS_KEY_BINANCE_ALL_SYMBOLS);
+    Integer counter = 0;
+    int leverage = Configs.LEVERAGE_ORDER;
+    for (String symbol : allSymbols) {
+        try {
 //                if (StringUtils.equals(symbol, "AKTUSDT")) {
 //                    counter = 0;
 //                }
-                if (counter != null) {
-                    counter++;
-                    LOG.info("Set leverage {} {} {}", symbol, leverage, counter);
-                    ClientSingleton.getInstance().syncRequestClient.changeInitialLeverage(symbol, leverage);
-                    Thread.sleep(300);
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
+            if (counter != null) {
+                counter++;
+                LOG.info("Set leverage {} {} {}", symbol, leverage, counter);
+                ClientSingleton.getInstance().syncRequestClient.changeInitialLeverage(symbol, leverage);
+                Thread.sleep(300);
             }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
+}
 
 }
