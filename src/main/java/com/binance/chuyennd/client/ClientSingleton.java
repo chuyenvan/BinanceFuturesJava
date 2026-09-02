@@ -43,7 +43,10 @@ public class ClientSingleton implements Serializable {
 
     // ĐƯỜNG DẪN FILE ĐỂ ĐỌC/GHI LOCAL
     // Đổi đường dẫn này thành "/kaggle/input/ten-dataset-cua-ban/exchange_info.json" khi chạy trên Kaggle
-    public static final String EXCHANGE_INFO_PATH = "/kaggle/input/datasets/chuyendinh/java-run/exchange_info.data";
+    // [2026-09-02 PIN] env EXCHANGE_INFO_PATH ghi de duong dan file (pin exchangeInfo cho backtest tai lap; live khong set -> API nhu cu).
+    public static final String EXCHANGE_INFO_PATH = System.getenv("EXCHANGE_INFO_PATH") != null
+            ? System.getenv("EXCHANGE_INFO_PATH").trim()
+            : "/kaggle/input/datasets/chuyendinh/java-run/exchange_info.data";
     public SyncRequestClient syncRequestClient;
     public Map<String, Float> symbol2UnitQuantity = new HashMap<>();
     public Map<String, Float> symbol2UnitTrade = new HashMap<>();

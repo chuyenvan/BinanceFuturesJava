@@ -398,6 +398,11 @@ public class BinanceOrderTradingManager {
     //        (2) invariant live: da arm (rateLoss > nguong) thi SL KHONG BAO GIO duoi entry (san TS_LIVE_MIN_LOCK, mac dinh 0.5%).
     private static final float TS_LIVE_MIN_LOCK = System.getenv("TS_LIVE_MIN_LOCK") != null
             ? Float.parseFloat(System.getenv("TS_LIVE_MIN_LOCK").trim()) : 0.005f;
+    // [2026-09-02 LOSER-TS] gio toi da cho lenh CHUA arm (sim G1 = 168). 0/unset = OFF. Buffer duoi mark de dat STOP_MARKET thoat.
+    private static final long LIVE_LOSER_TIME_STOP_HOURS = System.getenv("LIVE_LOSER_TIME_STOP_HOURS") != null
+            ? Long.parseLong(System.getenv("LIVE_LOSER_TIME_STOP_HOURS").trim()) : 0L;
+    private static final float LIVE_LOSER_TS_BUFFER = System.getenv("LIVE_LOSER_TS_BUFFER") != null
+            ? Float.parseFloat(System.getenv("LIVE_LOSER_TS_BUFFER").trim()) : 0.003f;
 
     private static float tsGap(float rateLoss, Float gatePred, String symbol) {
         float rate;
@@ -438,6 +443,28 @@ public class BinanceOrderTradingManager {
                 }
                 if (orderInfo.priceEntry != priceEntry) {
                     orderInfo.priceEntry = priceEntry;
+                }
+                // [2026-09-02 LOSER-TS] Dong bo voi sim G1 (SIM_LOSER_TIME_STOP_HOURS=168): lenh BUY CHUA arm (priceSL null)
+                //   qua LIVE_LOSER_TIME_STOP_HOURS gio -> dat STOP_MARKET ngay duoi mark (LIVE_LOSER_TS_BUFFER, mac dinh 0.3%)
+                //   de thoat o tick ke tiep (tai dung createSL, khong them duong dat lenh moi). env unset/0 -> OFF (byte-identical).
+                if (LIVE_LOSER_TIME_STOP_HOURS > 0 && orderInfo.priceSL == null
+                        && position.getPositionAmt().compareTo(new BigDecimal("0")) > 0
+                        && orderInfo.timeStart > 0
+                        && System.currentTimeMillis() - orderInfo.timeStart > LIVE_LOSER_TIME_STOP_HOURS * Utils.TIME_HOUR) {
+                    if (position.getMarkPrice() == null) {
+                        continue;
+                    }
+                    float mark = position.getMarkPrice().floatValue();
+                    // calPriceTarget(SELL, +r) = mark - r*mark -> STOP_MARKET ngay DUOI mark.
+                    Float priceStop = Utils.calPriceTarget(symbol, mark, OrderSide.SELL, LIVE_LOSER_TS_BUFFER);
+                    LOG.info("[LOSER-TS] {} chua arm sau {}h (start {}) rateLoss={} mark={} -> SL {} de thoat",
+                            symbol, LIVE_LOSER_TIME_STOP_HOURS, Utils.normalizeDateYYYYMMDDHHmm(orderInfo.timeStart),
+                            rateLoss, mark, priceStop);
+                    if (createSL(position, priceStop)) {
+                        orderInfo.priceSL = priceStop;
+                        RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO, symbol, Utils.toJson(orderInfo));
+                    }
+                    continue;
                 }
                 OrderSide side2Sl;
                 Float maxChange60M = 0f;
