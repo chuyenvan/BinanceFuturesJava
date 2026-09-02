@@ -95,7 +95,7 @@ public class TraceOrderDone {
 
         List<String> lines = new ArrayList<>();
         lines.add("sym,side,entry,tp,profit,status,start,time_start_format,end,level,maxmin15m,lastentry,volume,quantity,margin," +
-                "pnl,time_order,funding,dow,up,dow15m,pred15m,pred24h,risk4h,symbolPred");
+                "pnl,time_order,funding,dow,up,dow15m,pred15m,risk4h,symbolPred,");   // [FIX 2026-09-02] (dau , cuoi khop dau , cuoi moi dong) header khop 3 gia tri ghi (pred24h khong duoc ghi -> cot lech)
 
         Map<String, Float> symbol2Profit = new HashMap<>();
         List<Float> pnls = new ArrayList<>();

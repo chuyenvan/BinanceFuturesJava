@@ -114,6 +114,7 @@ public class CoinRankManager {
 
     // Hàm tiện ích nội bộ dùng chung
     private float getMultiplierByTier(CoinTier tier) {
+        if (Configs.TIER_FLAT) return 1.00f;   // [ABLATION 2026-09-02] bo tier sizing
         switch (tier) {
             case TIER_1_BLUECHIP: return 1.20f;
             case TIER_2_MIDCAP:   return 1.00f;

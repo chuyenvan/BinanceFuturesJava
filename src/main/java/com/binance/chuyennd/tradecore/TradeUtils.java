@@ -28,6 +28,10 @@ public class TradeUtils {
         if (pNoPump < 0f) pNoPump = 0f; else if (pNoPump > 1f) pNoPump = 1f;
         float pGood = 1f - pNoPump;
         float gap = pGood * Configs.TS_MAX_GAP;
+        // [ABLATION 2026-09-02] TS_GAP_CONST=1 -> gap HANG SO = TS_MAX_GAP, bo phu thuoc pNoPump/predReturn15M.
+        //   Ly do: duong sim mac dinh (TRAIL_PER_SYMBOL=false) truyen predReturn15M (~0.01) vao tham so pNoPump
+        //   -> pGood ~0.99 -> gap ~0.99*TS_MAX_GAP: thuc te DA la hang so nhung qua duong vong. Default off = byte-identical.
+        if (Configs.TS_GAP_CONST) gap = Configs.TS_MAX_GAP;
 
         float rate = maxProfitRate - gap;
         float step = 0.005f;

@@ -618,6 +618,10 @@ public class Configs {
     //   maxPrice >= entry*(1+RATE_PROFIT_STOP_MARKET) => KHONG BAO GIO cham cum thua lo thuan — dead cho zombie).
     //   Dat TRUOC cong profit-arm nhu HARD_SL_PCT. Default 0 = byte-identical.
     public static int LOSER_TIME_STOP_HOURS = 0;
+    // [ABLATION 2026-09-02] env TS_GAP_CONST=1: gap trailing = TS_MAX_GAP hang so (xem TradeUtils.calRateLossDynamicBuy). Default off.
+    public static final boolean TS_GAP_CONST = "1".equals(System.getenv("TS_GAP_CONST"));
+    // [ABLATION 2026-09-02] env TIER_FLAT=1: bo he so budget theo tier (1.2/1.0/0.5 -> 1.0). Default off = byte-identical.
+    public static final boolean TIER_FLAT = "1".equals(System.getenv("TIER_FLAT"));
 
     // 2026-08-03 GRID-ALIGN ENTRY: model selector du doan TAI moc 15m (ts%900000==0), label maxFav do tu
     //   gia moc 15m. Forward-fill 15m->1m cho vao giua cua so -> vao o gia DA CHAY != reference model hoc.
