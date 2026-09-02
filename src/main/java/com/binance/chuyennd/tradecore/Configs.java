@@ -620,6 +620,11 @@ public class Configs {
     public static int LOSER_TIME_STOP_HOURS = 0;
     // [ABLATION 2026-09-02] env TS_GAP_CONST=1: gap trailing = TS_MAX_GAP hang so (xem TradeUtils.calRateLossDynamicBuy). Default off.
     public static final boolean TS_GAP_CONST = "1".equals(System.getenv("TS_GAP_CONST"));
+    // [2026-09-02] SIM_TS_GIVEBACK=1: trailing theo THIET KE (arm RATE_PROFIT_STOP_MARKET, SL = profit - min(profit*TS_GIVEBACK_RATIO, maxGap
+    //   weak 3% / strong 8% theo pNoPump > TS_PNOPUMP_WEAK_THR), ratchet lien tuc). Default off = byte-identical. Xem OrderTargetInfoTest.trailRate.
+    public static final boolean TS_GIVEBACK_MODE = "1".equals(System.getenv("SIM_TS_GIVEBACK"));
+    public static final float TS_PNOPUMP_WEAK_THR = System.getenv("TS_PNOPUMP_WEAK_THR") != null
+            ? Float.parseFloat(System.getenv("TS_PNOPUMP_WEAK_THR").trim()) : 0.29f;
     // [ABLATION 2026-09-02] env TIER_FLAT=1: bo he so budget theo tier (1.2/1.0/0.5 -> 1.0). Default off = byte-identical.
     public static final boolean TIER_FLAT = "1".equals(System.getenv("TIER_FLAT"));
 

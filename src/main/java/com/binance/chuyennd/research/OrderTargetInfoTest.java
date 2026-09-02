@@ -203,8 +203,7 @@ public class OrderTargetInfoTest implements Serializable {
             if (rateLoss > rateMin2MoveSl) {
                 // [2026-08-29 DEV pivot] TRAIL_PER_SYMBOL: arm-SL gap theo selector CUA CHINH COIN
                 // (this.symbolPred=pNoPump), khop updateTPSL. false = hanh vi cu (market predReturn15M).
-                Float rateStop = TradeUtils.calRateLossDynamicBuy(rateLoss,
-                        Configs.TRAIL_PER_SYMBOL ? this.symbolPred : predReturn15M);
+                Float rateStop = trailRate(rateLoss, predReturn15M);
                 Float priceSLNew = Utils.calPriceTarget(symbol, priceEntry, OrderSide.SELL, -rateStop);
                 minPrice = lastPrice;
                 this.priceSL = priceSLNew;
@@ -269,10 +268,14 @@ public class OrderTargetInfoTest implements Serializable {
             // nguyen ven (nhan Configs.TS_PROFIT_MULTIPLIER -> "dead zone" giua arm va ratchet). true =
             // bo he so nhan, ratchet kich hoat ngay khi vuot threshold(rateChangeMax90M) - xem Configs.java.
             Float ratchetBase = TradeUtils.calRateMinWithPredReturn15MForTradingStop(rateChangeMax90M);
-            Float rateMin2MoveSl = Configs.TS_RATCHET_DECOUPLED ? ratchetBase : Configs.TS_PROFIT_MULTIPLIER * ratchetBase;
+            // [2026-09-02 SIM_TS_GIVEBACK] ratchet LIEN TUC (bo dead-zone x TS_PROFIT_MULTIPLIER) — theo thiet ke Uni:
+            //   "ROI 5% -> arm SL 2.5%, sau do dich len theo cung cong thuc".
+            Float rateMin2MoveSl = (Configs.TS_RATCHET_DECOUPLED || Configs.TS_GIVEBACK_MODE)
+                    ? ratchetBase : Configs.TS_PROFIT_MULTIPLIER * ratchetBase;
             if (rateLoss >= rateMin2MoveSl) {
                 // FROZEN v1: gap trailing theo selector CỦA CHÍNH COIN (symbolPred=pNoPump), không theo gate pred.
-                Float rateSL = TradeUtils.calRateLossDynamicBuy(rateLoss, this.symbolPred);
+                Float rateSL = Configs.TS_GIVEBACK_MODE ? trailRate(rateLoss, rateChangeMax90M)
+                        : TradeUtils.calRateLossDynamicBuy(rateLoss, this.symbolPred);
                 OrderSide side2Sl = OrderSide.SELL;
                 Float priceSLNew = Utils.calPriceTarget(symbol, priceEntry, side2Sl, -rateSL);
                 float priceSLChange = priceSLNew - priceSL;
@@ -420,5 +423,20 @@ public class OrderTargetInfoTest implements Serializable {
         } catch (Exception e) {
             // khong co funding data => bo qua (giong computeFundingOnClose)
         }
+    }
+
+    /**
+     * [2026-09-02] Gap trailing theo THIET KE (Uni): SIM_TS_GIVEBACK=1 -> rate = maxProfit - min(maxProfit x TS_GIVEBACK_RATIO(0.5),
+     * maxGap), maxGap = TS_MAX_GAP_WEAK (3%) neu pNoPump > TS_PNOPUMP_WEAK_THR (0.29) hoac chua co pNoPump, nguoc lai TS_MAX_GAP (8%).
+     * Vi du arm 5% -> SL +2.5%; 10% -> +7% (weak) / +5% (strong). LUON duong => SL khong bao gio duoi entry (khop live tsGap sau fix).
+     * Default (env tat) = hanh vi cu: calRateLossDynamicBuy(rateLoss, TRAIL_PER_SYMBOL ? symbolPred : predReturn15M)
+     * (duong mac dinh truyen predReturn15M ~0.01 vao tham so pNoPump -> gap ~0.99*TS_MAX_GAP -> SL DUOI entry khi arm 3%).
+     */
+    float trailRate(float maxProfitRate, Float predReturn15M) {
+        if (Configs.TS_GIVEBACK_MODE) {
+            Float pnp = (this.symbolPred != null) ? this.symbolPred : 1f;   // chua co selector -> coi nhu yeu (bao thu)
+            return TradeUtils.calRateLossDynamicBuyPNoPump(maxProfitRate, pnp, Configs.TS_PNOPUMP_WEAK_THR);
+        }
+        return TradeUtils.calRateLossDynamicBuy(maxProfitRate, Configs.TRAIL_PER_SYMBOL ? this.symbolPred : predReturn15M);
     }
 }
