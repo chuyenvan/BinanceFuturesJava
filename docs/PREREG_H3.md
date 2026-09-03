@@ -1,7 +1,7 @@
 # PRE-REG H3 — ĐẦU TỰ TIN TUYỆT ĐỐI (viết TRƯỚC khi chạy, 2026-09-03)
 
 ## Vì sao
-Gate dùng **giá trị tuyệt đối** của score selector: `dyn_thr = 0.008 × clamp(score/0.15 × 1.2876, 0.26787, 2.14135)`.
+Gate dùng **giá trị tuyệt đối** của score selector: `dyn_thr = 0.008 * max(0.26787, score/0.15 * 1.2876)` — **chi co can duoi, KHONG co tran** (0.214% .. 2.206%).
 Vì thế mọi model mới đều phải bị quantile-map về phân phối của G015 để gate cư xử y hệt ⇒ **không cải thiện được phần tuyệt đối**.
 
 Đo trên ledger v3 (15,442,092 dòng / 86,971 tick, DEV 2021-04→2024-06):
@@ -18,6 +18,14 @@ Vì thế mọi model mới đều phải bị quantile-map về phân phối c�
 - Trần lý thuyết: gate với score thật admit 0.3116% ở g1lite +0.0910; gate với score ORACLE admit 7.8855% ở +0.2115.
 
 Nới ngưỡng cho **mọi** coin đã thử và fail (H1a `MIN_MOMENTUM_15M` 0.008→0.006: DD −21→−44; H1b `PREDICT_SYMBOL_RATE_MAX` 0.15→0.30: 3678 lệnh, fail) vì lệnh thêm vào **dồn cụm theo thời gian** trong regime xấu. Một đầu tuyệt đối **tốt hơn** thì nới có chọn lọc và tự từ chối trong regime xấu ⇒ không mắc lỗi đó.
+
+> **DINH CHINH 2026-09-03 (loi ghi chep, khong phai doi code).** Ban pre-reg dau tien cua muc nay
+> viet `dyn_thr = 0.008 x clamp(score/0.15 x 1.2876, 0.26787, 2.14135)`, tuc co TRAN 1.713%. SAI:
+> `AIRejectFilter` chi co can duoi (`Math.max(AI_DYNAMIC_MIN, scale)`), nguong tang don dieu tan 2.206%.
+> `AI_DYNAMIC_MAX` la tran UNG VIEN o tang 1 selector, khong phai tran cua nguong; tang 1 con bi
+> bo qua khi `SELECTOR_RANK_TOPK>0` (C2b: 8). `ledger.py`/`ledger3.py` tinh `dyn_thr` bang cong thuc
+> co tran nen **danh gia THAP nguong that trong dai score (0.2494, 0.3212]**; cac so admit/g1lite
+> duoi day da duoc DO LAI bang cong thuc dung (xem muc "Do lai" o cuoi file).
 
 ## Giả thuyết
 Một model xác suất **có hiệu chuẩn** thay `p_g015` sẽ (a) phân biệt tốt hơn và (b) khi cắm vào đúng công thức gate cũ, cho **nhiều lệnh hơn ở chất lượng không kém**.

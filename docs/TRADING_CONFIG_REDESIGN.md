@@ -61,7 +61,7 @@ Env chết (code có đọc nhưng không script nào set): `ABLATION_MODE`, `SW
 ⇒ Đúng ba đòn bẩy "sizing theo rank" đã đề xuất — không cần code mới, chỉ cần pre-reg và chạy.
 
 ## 6. LỘ TRÌNH (mỗi bước có parity gate byte-identical)
-- **B1 (đã làm hôm nay)**: `DumpConfig` — in cấu hình hiệu dụng + giá trị dẫn xuất + `CONFIG_HASH`. Không đổi hành vi. Kết quả cho C2b: `CONFIG_HASH=42d651b45acd0e5e`; `gate_thr` chạm trần từ `score ≥ 0.30` (0.01713), `score 0.15 → 0.01030`, `score 0.05 → 0.00343`; `cost_roundtrip = 0.01000`; `arm 0.07 → SL khóa 0.0350`; ratchet LIÊN TỤC.
+- **B1 (đã làm hôm nay)**: `DumpConfig` — in cấu hình hiệu dụng + giá trị dẫn xuất + `CONFIG_HASH`. Không đổi hành vi. Kết quả cho C2b: `CONFIG_HASH=42d651b45acd0e5e`; `gate_thr` **KHONG co tran** (dinh chinh 2026-09-03, xem muc 8): `score 0.05 -> 0.00343`, `score 0.15 -> 0.01030`, `score 0.2494 -> 0.01713`, `score 0.3212 (tran ung vien) -> 0.02206`; `cost_roundtrip = 0.01000`; `arm 0.07 → SL khóa 0.0350`; ratchet LIÊN TỤC.
 - **B2**: sinh `profiles/base.properties` từ chính dump này (đảm bảo trung thành) + `TradingProfile.load/validate/dump`; `Configs` đọc từ profile. Parity: printDone byte-identical.
 - **B3**: xóa 18 key chết + 2 mồi giả khỏi mọi `config.properties`; bật fail-fast key lạ. Parity.
 - **B4**: gỡ 64 `getenv` ngoài `Configs` (từng file, parity sau mỗi file); chuyển field sang `final`; sweep probe dùng bản sao profile.
@@ -221,3 +221,25 @@ Xoa file khong lam key an toan tro lai.
   `BUDGET_MARGIN_RATIO_1=0.4820`...) chua co can cu — can quyet dinh giu hay do lai.
 - Chua dung: `CONF_SIZE_MODE/LO/HI/FMIN/FMAX` (sizing theo confidence), `SIZE_MULT`, `MAX_CONCURRENT`
   — da code day du, default OFF, chua chay lan nao.
+
+---
+
+## 8. DINH CHINH GHI CHEP (2026-09-03) — cong thuc gate KHONG co tran
+
+**Loi cu (da lan ra 9 file):** "`dyn_thr = MIN_MOMENTUM_15M * clamp(score/0.15*1.28760, 0.26787, 2.14135)`,
+score >= 0.30 cham TRAN nen nguong la HANG SO 1.713%".
+
+**Dung:** `AIRejectFilter.checkSignalDynamic` (dong 66-71) chi co CAN DUOI —
+`scaleFactor = Math.max(AI_DYNAMIC_MIN, score/PREDICT_SYMBOL_RATE_MAX_THRESHOLD * AI_DYNAMIC_MULTIPLIER)`,
+`dyn_thr = MIN_MOMENTUM_15M * scaleFactor`. Nguong TANG DON DIEU theo score:
+voi C2b (`MIN_MOMENTUM_15M=0.008`) la **0.214% (san) -> 2.206%** tai tran ung vien 0.3212.
+
+`AI_DYNAMIC_MAX` khong dung lam tran clamp o dau ca. No xuat hien o
+`SimulatorMarketLevelTicker1MStopLoss` nhu **tran ung vien tang 1**
+(`maxThres = PREDICT_SYMBOL_RATE_MAX_THRESHOLD * AI_DYNAMIC_MAX = 0.32120`) —
+va tang 1 nay **bi bo qua** khi `SELECTOR_RANK_TOPK > 0` (C2b: 8 -> lay rank top-8, khong dung cutoff tuyet doi).
+
+Ghi chu de nguoi sau khong hieu nham: **day la loi GHI CHEP, khong phai hai phien ban code khac nhau.**
+Co `OFF_FLAT_HARD` truoc kia bao boc cau `Math.min(..., AI_DYNAMIC_MAX)`; cau do da bi
+**xoa han khoi code** ngay 2026-09-03 nen doc code hom nay se khong thay ca clamp lan co.
+Ban ghi sai co truoc thoi diem xoa va van mo ta sai ngay ca voi code luc do (vi `OFF_FLAT_HARD=true`).

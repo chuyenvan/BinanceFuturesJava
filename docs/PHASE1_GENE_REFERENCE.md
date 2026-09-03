@@ -26,7 +26,7 @@
 | MIN_MOMENTUM_15M | 0.02284 | ✅ | REJECT entry nếu predReturn15M < ngưỡng. Worker WFO override 0.008. ⚠️range nhiễm |
 | PREDICT_SYMBOL_RATE_MAX_THRESHOLD | 0.15 | ✅ (nhánh dynamic) | baseline prob để scale gate + early-hard-gate. ⚠️ |
 | AI_DYNAMIC_MULTIPLIER | 1.2876 | ✅ (dynamic) | scale = (symbolPred/baseline)×MULT. ⚠️ |
-| AI_DYNAMIC_MIN | 0.26787 | ✅ (dynamic) | cận DƯỚI clamp của scale (cận trên bỏ vì OFF_FLAT_HARD). ⚠️ |
+| AI_DYNAMIC_MIN | 0.26787 | ✅ (dynamic) | cận DƯỚI clamp của scale (can TREN da bi XOA KHOI CODE 2026-09-03 cung voi co OFF_FLAT_HARD; nguong gate khong co tran). ⚠️ |
 | HARD_RISK_LIMIT_4H | -0.2 | ❌ CHẾT | (xem trên) |
 
 ### Cụm MARKET regime
