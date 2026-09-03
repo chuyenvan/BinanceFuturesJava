@@ -4,6 +4,19 @@ Ngay: 2026-09-03. Script do: `/home/ubuntu/oifix/{v1,v3,v5,v6,v8,v9,v10}.py`, lo
 ket qua JSON `v1.json v3.json v5.json v6.json v9.json v10.json`.
 Bang: `/home/ubuntu/oifix/{pooled_table,persym_table,sharp_table,accept_detail}.md`.
 
+> ## CANH BAO VAN HANH (them 2026-09-03) — KHONG REBUILD FILE OI BANG CODE HIEN TAI
+>
+> `/home/ubuntu/claudedata/oi/oi_percoin_full.bin` (sha256 `e3887f63...b305ec`) **dang sach** vi ban
+> build cu **da ap phep dich `+5m`**, va ban build do **khong** di qua duong code cua repo.
+> `VisionMetricsClient.parseDay` trong repo lay `create_time` **nguyen xi** => chay
+> `ExportFundingOiPerCoin source=vision` **hom nay** se sinh ra file **CO leak 5 phut**.
+>
+> Ai rebuild **phai**, theo thu tu: **(1)** ap patch **phat hien quy uoc theo tung (symbol, ngay)**
+> o **muc 5** — **cam** hardcode `ts >= 2024-03-04` (3.4% symbol van dung quy uoc CU; dich chung se
+> tao leak MOI o cho dang sach); **(2)** kiem lai bang `python3 /home/ubuntu/oifix/v3.py` (phai
+> 18/18 o pooled = `PRE`) va `v6.py` (phai `taker_causal = 150/150` moi ngay, `trung_lap = 0`);
+> **(3)** so sha256 va so dong tung symbol voi file cu. Chua lam duoc (1)+(2) thi **giu file cu**.
+
 Job nay duoc giao voi tien de "file OI bi nhiem 71.30% dong / 100% VALIDATION, hay ap phep dich
 `+5m`". Yeu cau kem theo la **tu xac minh lai tung menh de bang du lieu**. Da xac minh. Ket qua:
 tien de ve *nguon* dung, tien de ve *file trien khai* **SAI**. Do do khong ap phep dich.

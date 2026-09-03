@@ -5,6 +5,64 @@ Script do: `/home/ubuntu/oiprobe/{m1,m2,m3,m4s,m5,m6,m7,m8}.py`, log `.log` cung
 
 ---
 
+## DINH CHINH 2026-09-03 — doc TRUOC moi muc ben duoi
+
+> Nguon: `docs/OI_FIX_LOG.md` (cung ngay, phep do doc lap **tren chinh file** `.bin`).
+> Day la **MOT lan dinh chinh**, **khong** phai hai phien ban du lieu: file OI **khong he doi**
+> (sha256 `e3887f63...b305ec`, 140,924,110 dong; khong file moi nao duoc tao). Chi **ket luan** doi.
+
+**Phai tach BA thu — bao cao goc gop chung lam mot, do la goc cua sai sot:**
+
+| thu | trang thai | anh huong den ai |
+|---|---|---|
+| **(1) NGUON Vision tho** (`daily/metrics`) | **CO doi nghia `create_time`** tai 2024-03-04 o **da so** symbol — phan nay bao cao goc **DUNG, giu nguyen** | ai doc Vision tho |
+| **(2) CODE trong repo** (`VisionMetricsClient.parseDay`) | **SE tao leak**: lay `create_time` nguyen xi, khong co phep dich nao (`grep -rn 1709510400000` = 0 dong) | **moi lan rebuild file OI bang code hien tai** |
+| **(3) FILE OI dang trien khai** (`claudedata/oi/oi_percoin_full.bin`) | **SACH — da nhan qua san.** Phep dich `+5m` **da duoc ap khi build** (ban Kaggle `chuyendinh/funding-oi-percoin`, **khong** di qua duong code repo) | DEV / VAL / C2b / G015 — **khong ai bi** |
+
+**Phat bieu SAI trong file nay** (sai o pham vi (3); KHONG sai o (1)/(2)):
+
+- **KET LUAN dong 3** — "ca 5 feature OI chua 5 phut tuong lai tren **100% VALIDATION**" va
+  "ty le dong bi anh huong ... **71.30%**": **SAI ve file trien khai**.
+- **Muc 2.1** "VALIDATION: BI, 100%": **SAI** — VALIDATION **khong nhiem**.
+- **Muc 2.2** — con so dem dong (100,475,431 = 71.30%) **dung**, nhung nhan "**bi dich**" **SAI**:
+  do la nhung dong **da duoc dich san** khi build.
+- **Muc 2.3** — suy dien "neu holdout 2026 dung lai nguon nay thi cung bi": **SAI** cho phan 2026
+  co trong file `.bin` (do 2026-05-15: taker nhan qua 150/150 symbol).
+- **CAU 4 toan bo** — train lai G015, convert lai ONNX, "moi so DEV/VAL cua C2b phai do lai", va
+  cau "phai sua `FEAT40_LOOKAHEAD` thanh 5/45 feature + 71.30% + 100% VAL": **RUT LAI.**
+  **Khong train lai, khong doi nguong, moi so DEV/VAL/C2b giu nguyen.**
+- **CHUA PHAN GIAI #3**: **DA PHAN GIAI** — file build tu **Vision** (do phu khop dung gioi han
+  2021-12-01 cua Vision metrics, `docs/DATA_EXTENT_SURVEY.md` muc 1), va build **voi phep dich
+  dung**; khong phai tu Aerospike 226.
+
+**Sai o dau (de khong lap lai):** file nay tu khai bao o muc PHAM VI — *"khong doc gia tri feature
+nao trong file nay, chi doc cot thoi gian"*. Ty le 71.30% va "100% VALIDATION" la **suy dien tu ngu
+nghia cot `ts`**, cong voi gia thiet (ghi ngay o CHUA PHAN GIAI #3) rang file duoc build bang duong
+code hien tai. Gia thiet do **sai**.
+
+**Do lai bang cach nao** (`docs/OI_FIX_LOG.md` muc 2; script `/home/ubuntu/oifix/{v5,v6,v10}.py`):
+
+1. **Do GIA TRI, khong do nhan.** `taker_buy` cua file nghich dao duoc (`r = tb/(1-tb)`) roi so
+   **chinh xac** voi `tb/(vol-tb)` cua nen 5m => biet ban ghi mo ta cua so nao. Ket qua:
+   **450/450 mau (150 symbol x 3 ngay) khop cua so DA DONG `[t-5m, t)`**, bien do 1,000x-4,000x,
+   **0 ban ghi mo ta cua so tuong lai**. Mau trai 2021-03 .. 2026-05, **gom ca VAL va 2026**.
+2. **Dau vet vat ly tai diem noi**, quet toan file, 259 symbol co du lieu quanh 2024-03-04:
+   **0/259 symbol** co ts `2024-03-04 00:00` (moc nay khong ton tai), dung **mot** buoc
+   `600000 ms`, **0** ts trung lap, `ts % 300000 != 0` o **0 / 140,924,110** dong. Do la dau vet
+   vat ly cua phep dich `+5m` **da ap khi build** — neu chua dich thi phai co ts `00:00`.
+
+**Va: quy tac sua o CAU 3 (phuong an A) SAI MOT PHAN.** "Dich `+5m` cho moi ban ghi
+`create_time >= 2024-03-04`" **lam hong** cac symbol van dung quy uoc CU sau moc: do duoc
+**6/176 symbol (3.4%)** tai 2024-03-05 va **2/281** tai 2026-05-15 (CTKUSDT, CVXUSDT, LITUSDT,
+SXPUSDT, MAVIAUSDT, AERGOUSDT, BDXNUSDT). 2024-03-04 la moc cua **da so** symbol, **khong** phai
+moc toan cuc. Quy tac dung phai **phat hien quy uoc theo tung (symbol, ngay)** —
+`docs/OI_FIX_LOG.md` muc 5.
+
+**CON NGUYEN sau dinh chinh:** (a) rui ro (2) — **bat ky lan rebuild file OI bang code hien tai
+se dua leak vao du lieu**; (b) diem noi backfill/forward trong Aerospike 226/242 **chua do**.
+
+---
+
 ## KET LUAN (5 dong)
 
 1. Moc doi nghia anh huong **CA 6 COT DU LIEU** cua file metrics, khong rieng `taker_buy`:
@@ -15,6 +73,9 @@ Script do: `/home/ubuntu/oiprobe/{m1,m2,m3,m4s,m5,m6,m7,m8}.py`, log `.log` cung
 3. => **CA 5 feature OI** (`oi_delta24h`, `oi_z`, `ls_global`, `ls_toptrader`, `taker_buy`)
    chua 5 phut tuong lai tren **100% VALIDATION** va tren toan bo phan 2026 cua file OI dang dung.
    Ty le dong bi anh huong trong file OI trien khai: **71.30%** (100,475,431 / 140,924,110).
+   > **[SAI — DINH CHINH 2026-09-03]** Dung ve *nguon Vision tho* va *code repo*; **SAI ve file
+   > trien khai**: file `.bin` da nhan qua (taker khop cua so **da dong** o 450/450 mau).
+   > VALIDATION **khong** nhiem. 71.30% la ty le dong **da duoc dich san**, khong phai "bi dich".
 4. Bang chung manh nhat KHONG phai tuong quan ma la **dong nhat so hoc**: `vision(t) == api(t+5m)`
    voi `med_err = 0.000e+00` cho `sum_open_interest` va `sum_open_interest_value`; va cot 7 khop
    **chinh xac** ty le taker tinh tu kline (`med_err ~1e-4` o moc dung vs `~0.3-0.5` o moc sai).
@@ -128,13 +189,23 @@ ty le NaN cua feature.
 
 ## CAU 2 — VALIDATION, HOLDOUT, va duong LIVE
 
-### 2.1 VALIDATION (2024-07-15 .. 2025-12-31): BI, 100%, da do TRUC TIEP
+### 2.1 VALIDATION (2024-07-15 .. 2025-12-31): BI, 100%, da do TRUC TIEP — **[SAI, xem DINH CHINH dau file]**
+
+> **DINH CHINH 2026-09-03:** cai da do truc tiep o day la **quy uoc cua NGUON Vision** (NEW o 9
+> moc) — dung. Ket luan "**file OI o VAL bi nhiem 100%**" thi **SAI**: do gia tri trong chinh file
+> `.bin` tai 2025-06-11 cho **taker nhan qua 150/150 symbol**, va `ls_global` khop nhan `t-5m`
+> (= trang thai tai `t`) o 148/150. **VALIDATION khong nhiem.**
 Khong phai suy ra. Da do va xac nhan NEW o ca 2 phep do tai:
 2024-07-15, 2024-10-15, 2024-12-15, 2025-01-15, 2025-04-15, 2025-06-15,
 2025-07-15, 2025-10-15, 2025-12-15 (m2.log, m8.log).
 Trong file OI trien khai: **61,050,217 dong = 43.32%** thuoc VAL.
 
-### 2.2 Phan bo dong cua file OI trien khai (`m7.log`)
+### 2.2 Phan bo dong cua file OI trien khai (`m7.log`) — **[nhan "bi dich" SAI]**
+
+> **DINH CHINH 2026-09-03:** so dem dong **dung** (chi doc cot `ts`, khong the sai). Nhan cua hang
+> cuoi — "TONG ts >= 2024-03-04 (**bi dich**)" — **SAI**: 100,475,431 dong do **da duoc dich `+5m`
+> san** khi build nen chung **nhan qua**. Doc dung: day la ty le dong **thuoc quy uoc moi cua
+> nguon**, khong phai ty le dong ro ri (ty le ro ri = **0**).
 `/home/ubuntu/claudedata/oi/oi_percoin_full.bin`, 140,924,110 dong,
 ts 2021-01-01 00:00 .. 2026-06-30 23:55:
 
@@ -151,7 +222,11 @@ Trong rieng DEV: 9,011,190 / 49,459,869 = **18.22%** (khop moc 18.55% cua bao ca
 So voi bao cao cu: pham vi feature tu **1/45** len **5/45**; pham vi dong tu
 "18.55% DEV" len "18.2% DEV + 100% VAL + 100% phan 2026 co trong file".
 
-### 2.3 HOLDOUT 2026
+### 2.3 HOLDOUT 2026 — **[suy dien "cung bi" SAI]**
+
+> **DINH CHINH 2026-09-03:** phan 2026 **co trong file `.bin`** da duoc do truc tiep (2026-05-15):
+> taker nhan qua **150/150** symbol => **khong bi**. Noi dung holdout (label/score/ket qua) van
+> **khong doc** (niem phong) — dieu do khong doi.
 Noi dung holdout (label/score/ket qua): **khong doc** (niem phong). Chi biet
 (a) file OI van con 29.35M dong 2026, (b) quy uoc `create_time` cua nguon van la NEW
 tai 2026-08-28 (do 1 ngay, 3 symbol). Suy ra: neu holdout 2026 duoc dung lai tu nguon nay
@@ -199,6 +274,14 @@ Do tren API live (2026-09-03, `m5.log` PART 3):
 ## CAU 3 — PHUONG AN SUA
 
 ### Danh gia cach da duoc neu (dich `+5m` cho ts >= 2024-03-04)
+
+> **DINH CHINH 2026-09-03 — muc nay SAI HAI cho:** (a) **khong duoc ap len file OI dang dung**:
+> no da nhan qua san, ap `+5m` nua se lam moi feature OI **tre 5 phut** (tao train/serve skew moi);
+> (b) dieu kien "`create_time >= 2024-03-04`" **sai voi 3.4% symbol** van dung quy uoc CU (CTKUSDT,
+> CVXUSDT, LITUSDT, SXPUSDT, MAVIAUSDT, AERGOUSDT, BDXNUSDT) — dich chung se tao leak **MOI** o cho
+> dang sach. Quy tac dung: **phat hien quy uoc theo tung (symbol, ngay)**, `docs/OI_FIX_LOG.md`
+> muc 5. Con **dung**: khi da xac dinh mot (symbol, ngay) la quy uoc MOI thi phep dich phai ap cho
+> **ca 6 cot**, va forward `takerlongshortRatio` phai dich `+5m`.
 
 **DUNG.** Va **phai ap dung cho CA 6 cot, ke ca cot snapshot** — day la cau tra loi cho
 cau hoi phu "co can dich cot snapshot hay chi cot flow".
@@ -256,7 +339,15 @@ vector, khong nam o ranh gioi train/test — purge 72h khong chan duoc (bao cao 
 
 ---
 
-## CAU 4 — LIET KE (khong lam)
+## CAU 4 — LIET KE (khong lam) — **[RUT LAI TOAN BO, xem DINH CHINH dau file]**
+
+> **DINH CHINH 2026-09-03:** vi file OI **khong doi** va **khong nhiem**, **khong co gi** trong muc
+> nay phai lam: G015 **khong** train lai, ONNX **khong** convert lai, `dyn_thr` **khong** doi;
+> `LEAK_L1_REPORT` rho 0.1675, `CI_REAUDIT` #8/#9, `PHASE1_DECISION_SURFACE` B5/B6, `PREREG_CI`,
+> `PREREG_GS` va **moi so DEV/VAL cua C2b**: **giu nguyen**. Cau cuoi cua muc nay ("phai sua
+> FEAT40 thanh 5/45 feature / 71.30% / 100% VAL") cung **sai** — xem khoi dinh chinh dau
+> `docs/FEAT40_LOOKAHEAD.md`. Nguyen van ben duoi **giu lai** de thay day la **mot** lan dinh
+> chinh, khong phai hai phien ban du lieu.
 
 ### Model phai train lai
 - **G015 selector** — 28 artifact `.json` trong `/home/ubuntu/sel_models_net015`
@@ -295,7 +386,8 @@ Tat ca thu nam duoi `score_g015` -> `dyn_thr` -> nguong vao lenh C2b:
 2. **Diem noi backfill-Vision / forward-API trong Aerospike 226/242**: **chua xac dinh**.
    Quan trong vi buoc nhay 5 phut nam dung o do. Can log van hanh cua TASK-035
    (ngay bat dau forward sweep) hoac mot lan doc 226/242 doi chieu voi Vision.
-3. **File `oi_percoin_full.bin` duoc build tu `--vision` hay tu 226**: chi **suy ra** tu do phu
+3. **[DA PHAN GIAI 2026-09-03: build tu Vision, VA da ap phep dich dung khi build — xem DINH
+   CHINH dau file.]** ~~File `oi_percoin_full.bin` duoc build tu `--vision` hay tu 226~~: chi **suy ra** tu do phu
    2021-01-01..2026-06-30 va tu ten `oi_percoin_20210101_to_20260624.bin.gz`; log tai xuong
    (`claudedata/oi/oi_dl.log`) cho thay file duoc tai tu Kaggle, khong co log build.
    Neu build tu 226 thi phan duoi (sau khi forward ingest chay) co the **da nhan qua**,

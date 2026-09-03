@@ -1,9 +1,35 @@
 # FEAT40 LOOKAHEAD — soat ro ri tuong lai o tang FEATURE cua G015
 
-> **DINH CHINH 2026-09-03 (docs/OI_SCOPE_REPORT.md):** pham vi trong file nay bi UOC LUONG THAP.
-> Khong phai 1/45 feature va 18.55% DEV. Thuc te ca 6/6 cot du lieu deu bi dich moc
-> (toan bo BAN GHI dich, khong phai mot cot) => **5/5 feature OI ro ri 5 phut**, 71.30% dong
-> file OI trien khai, va **100% VALIDATION**. Ngoai ra co train/serve skew tren duong LIVE.
+> **DINH CHINH #1 — 2026-09-03 (`docs/OI_SCOPE_REPORT.md`) — GIU NGUYEN VAN, DA BI RUT MOT PHAN:**
+> *"pham vi trong file nay bi UOC LUONG THAP. Khong phai 1/45 feature va 18.55% DEV. Thuc te ca 6/6
+> cot du lieu deu bi dich moc (toan bo BAN GHI dich, khong phai mot cot) => 5/5 feature OI ro ri 5
+> phut, 71.30% dong file OI trien khai, va 100% VALIDATION. Ngoai ra co train/serve skew tren duong
+> LIVE."*
+>
+> **DINH CHINH #2 — 2026-09-03 (`docs/OI_FIX_LOG.md`) — BAN DANG CO HIEU LUC.** Do lai bang phep do
+> **GIA TRI** tren chinh file `.bin` (khong suy dien tu cot `ts`). Phai tach **BA** thu:
+>
+> - **(1) NGUON Vision tho:** `create_time` **CO** doi nghia tai 2024-03-04 (cuoi -> dau cua so),
+>   xac minh doc lap 15/15 symbol + **18/18 o pooled** (n = 64,800 cap/o). **Phan nay DUNG.**
+> - **(2) CODE repo:** `VisionMetricsClient.parseDay` lay `create_time` **nguyen xi**, khong co phep
+>   dich nao => **moi lan rebuild file OI bang code hien tai SE dua leak 5 phut vao du lieu.**
+>   **Rui ro nay CON NGUYEN.** Patch bat buoc: `docs/OI_FIX_LOG.md` muc 5 — **phat hien quy uoc theo
+>   tung (symbol, ngay)**, **cam** hardcode `ts >= 2024-03-04` (3.4% symbol van dung quy uoc CU).
+> - **(3) FILE OI dang dung** (`claudedata/oi/oi_percoin_full.bin`): **SACH.** Phep dich `+5m` da
+>   duoc ap **khi build**. `taker_buy` khop cua so **DA DONG** `[t-5m, t)` o **450/450** mau
+>   (150 symbol x 3 ngay, trai 2021-03..2026-05, gom ca VAL va 2026); dau vet vat ly: **0/259**
+>   symbol co ts `2024-03-04 00:00`, dung **mot** buoc `600000 ms`, 0 ts trung lap,
+>   `ts % 300000 != 0` o **0 / 140,924,110** dong.
+>
+> => **RUT LAI tu #1:** "5/5 feature OI ro ri", "71.30% dong bi nhiem", "100% VALIDATION nhiem",
+> "phai train lai G015", "moi so DEV/VAL ke ca C2b phai do lai".
+> **VALIDATION khong nhiem. C2b giu nguyen. Khong can train lai.**
+> Doc dung ve pham vi: o *nguon tho* thi 4 cot ma feature dung deu doi nghia sau moc;
+> o *file trien khai* thi **0 feature OI ro ri**.
+> Con dung tu #1: duong **LIVE** co train/serve skew (API nhan qua vs Vision-moi) => neu bat
+> forward ingest thi phai dich `+5m` **chi cho** `takerlongshortRatio`.
+>
+> **Phan 40/40 feature Tool1 (f0..f39) SACH ben duoi khong lien quan den moc OI — giu nguyen.**
 
 
 Ngay do: 2026-09-03. Pham vi du lieu: **CHI DEV** (2022-01-01 .. 2024-07-01, va cac file quy

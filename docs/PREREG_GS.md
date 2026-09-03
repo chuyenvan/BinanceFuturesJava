@@ -298,3 +298,5 @@ Bottleneck **khong o tham so** va **khong o thong ke**. No o hai cho:
    quyet dinh tung tick cho tung run — **khong phai cho them nam du lieu**.
 
 Quet them tham so (wave 2, N=512, range hep hon) la **huong sai** cho toi khi hai cho tren duoc xu ly.
+
+> **DINH CHINH 2026-09-03 (chi THEM — khong doi luat nao o §4/§9/§10/§11/§12.1-12.3):** muc 1 ("tinh dung cua du lieu") van dung nhung **thu hep** — **file OI dang dung** (`claudedata/oi/oi_percoin_full.bin`) da duoc do lai bang gia tri va **KHONG ro ri** (taker nhan qua **450/450** mau; **0/259** symbol co ts `2024-03-04 00:00`), nen `docs/OI_SCOPE_REPORT.md` / `docs/FEAT40_LOOKAHEAD.md` ban cu doc **SAI** cho pham vi nay va moi so trong file nay **khong doi**; rui ro con lai la **rebuild file OI bang code hien tai** (`VisionMetricsClient.parseDay`) se tao leak — xem `docs/OI_FIX_LOG.md`.
