@@ -320,6 +320,13 @@ public class Configs {
     // that su (sau khi qua het cong). Mac dinh false = KHONG log = hanh vi cu byte-identical.
     public static final boolean WFO_LOG_ENTRIES = "1".equals(Cfg.get("WFO_LOG_ENTRIES"));
 
+    // BINS SELECTOR (2026-09-03): thu muc predict_wf_*.bin cua selector dang dung.
+    // Doc o day de MOI process (sim va export) deu KHAI BAO bins nao va de duong dan bins
+    // vao CONFIG_HASH - truoc day doi selector ma CONFIG_HASH/PROFILE_HASH khong he doi
+    // (docs/AUDIT_APPLIED.md 3.3a). Gia tri hash noi dung bins: xem BinsProvenance/DumpConfig.
+    // KHONG dat default: thieu = fail cung o WfoDataset.export.
+    public static final String WFO_FUNDING_PRED_DIR = Cfg.getOr("WFO_FUNDING_PRED_DIR", "");
+
 
     // =========================================================
     // 8. NGƯỠNG BÁO ĐỘNG & DCA NHỒI LỆNH (MARKET STATUS - HPO UPDATE)

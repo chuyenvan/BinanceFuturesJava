@@ -37,7 +37,8 @@ public final class RunPreflightFull {
         String host = envOr("PREFLIGHT_AS_HOST", "127.0.0.1");
         int port = Integer.parseInt(envOr("PREFLIGHT_AS_PORT", "3222"));
         String wfoDataDir = System.getenv("WFO_DATA_DIR");
-        String fundingPredDir = System.getenv("WFO_FUNDING_PRED_DIR");
+        // 2026-09-03: bins da roi INFRA_KEYS -> phai doc qua cong Cfg (profile thang env).
+        String fundingPredDir = com.binance.chuyennd.tradecore.Cfg.get("WFO_FUNDING_PRED_DIR");
         String envTag = envOr("PREFLIGHT_ENV", "oracle");
         String fingerprint = envOr("PREFLIGHT_FINGERPRINT", "unknown");
         String stampPath = envOr("PREFLIGHT_STAMP",

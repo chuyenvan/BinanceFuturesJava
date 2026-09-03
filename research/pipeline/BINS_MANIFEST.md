@@ -8,9 +8,9 @@ KHONG the tai lap va toan bo edge S1 mat. File nay + ban sao Kaggle la luoi an t
 
 | Duong dan | Byte | Nguoi doc thay |
 |---|---|---|
-| `/home/ubuntu/predwf_map_s1a2/` (10 file `.bin`) | **403,945,010** | 386 MiB / 394 MB |
+| `/home/ubuntu/predwf_map_s1a2/` (10 file `.bin`) | **403,940,914** (tong 10 file; `du -sb` = 403,945,010 vi cong 4096 B inode thu muc) | 386 MiB / 394 MB |
 | `/home/ubuntu/ledger/pred_s1a2.parquet` | **7,401,294** | 7.1 MiB / 7.4 MB |
-| **Tong** | **411,346,304** | **~392 MiB / 411 MB** |
+| **Tong** | **411,342,208** | **~392 MiB / 411 MB** |
 
 Duoi nguong 20 GB => duoc phep upload (khong phai dung de bao so).
 
@@ -32,13 +32,56 @@ Ngay sinh: **2026-09-02 22:50:32..37 (+0700)**.
 | predict_wf_20231001.bin | 49,736,934 | 1,912,959 | `48d51834bb718cac1b4b089a33ebd953bbce2bb83348c7a2f62fb083f5e55005` | `2b766454030610e148f38fc951d73a70` | 1696093200000..1704041100000 | 91d |
 | predict_wf_20240101.bin | 55,665,792 | 2,140,992 | `ac1fadf2c90836a8b6f13f470910785504de111e3d7449e9a3990ac60a148f08` | `53e100a0edac33701795f638fa1590c5` | 1704042000000..1711903500000 | 90d |
 | predict_wf_20240401.bin | 58,669,104 | 2,256,504 | `82d1b979cabda8aa3a5ee94ccdec95a00483150d93657a33189ceaa9f733e6ae` | `1a717a07615d37a777356d87c412ef68` | 1711904400000..1719765900000 | 90d |
-| **TONG** | **403,945,010** | **15,536,189** | — | — | 1640970000000..1719765900000 | 10 fold |
+| **TONG** | **403,940,914** | **15,536,189** | — | — | 1640970000000..1719765900000 | 10 fold |
 
 - Cot `md5` doc tu `devrun/logs/build_min.out` (manifest ma `WfoDataset.export` da tu stamp) —
   bang chung doc lap rang bins tren dia dung la bins ma dataset C2b duoc build tu do.
 - 10 fold **ROI NHAU** (disjoint), fold dai nhat 91 ngay < nguong 100 ngay =>
   `buildFundingFromWfFiles` khong bao `LEAK-SUSPECT`.
 - KHONG co fold `20240701` / `20241001` => bins nay khong the cham VALIDATION.
+
+## 2b. sha256 GOP cua ca bo bins (dau vet ma moi run tu khai)
+
+    bins.sha256 = 0f8721558fbd87ef0bca8d2507b6eb0ed394efd746f59d4bc024e68b461d86ec
+    bins.sha256_16 = 0f8721558fbd87ef
+    bins.files = 10   bins.bytes = 403940914
+
+Cach tinh: sha256 tren noi dung NOI TIEP cua moi `predict_wf_*.bin` sort theo ten
+(`com.binance.chuyennd.tradecore.BinsProvenance.sha256`). Tu 2026-09-03:
+
+- `DumpConfig` in dong `bins.dir= bins.files= bins.bytes= bins.sha256_16= bins.sha256=`
+- `WfoDataset.export` stamp `binsSha256=` vao `manifest.txt` cua dataset
+  (bang chung: `devrun/logs/build_C2b_PIN.out` -> `binsSha256=0f8721558fbd87ef0bca...`)
+- `CONFIG_HASH` **doi** khi doi bins-dir: co bins = `6f5ba81442f7e80c`,
+  khong khai bao bins = `202118d9d1623cb0`. Truoc 2026-09-03 doi selector ma CONFIG_HASH
+  KHONG he doi.
+- Ban than `bins.sha256` **KHONG** nam trong `CONFIG_HASH` (co y): node Kaggle chi nhan
+  dataset da build, khong co bins tren dia => neu cho vao thi CONFIG_HASH cua CUNG mot
+  cau hinh se khac nhau giua Oracle va Kaggle.
+
+## 2c. CONG NGHIEM THU BYTE-IDENTITY (2026-09-03)
+
+Sau khi pin bins vao profile + bo fallback Aerospike, chay LAI C2b tren DEV:
+
+    bash tools/run_c2b_dev.sh            # profile=profiles/c2b.properties, tag=C2b_PIN
+    cmp -s <(tail -n +2 devrun/C2b_PIN/storage/printDone.csv) \
+           <(tail -n +2 devrun/C2b/storage/printDone.csv)
+
+| | |
+|---|---|
+| Ket qua | **PASS — BYTE-IDENTICAL** |
+| equity cuoi `C2b_PIN` | **b:60390**  `done:147/970/970` |
+| equity cuoi baseline `C2b` | **b:60390**  `done:147/970/970` |
+| md5 `printDone.csv` (ca hai) | `8f7afdfb27b15f5b6d4c886700def93c` |
+| `md5_funding` cua dataset | `7b9ba20f7a5b49ec3d5aaafed60d45be` — **giong y** ban build cu (`build_min.out`) |
+| PROFILE_HASH `c2b` | `1bc17b5075511263` -> **`7fd2895a1e7fefe0`** (22 -> 23 key) |
+| PROFILE_HASH `c2b_min` | `531b4ae7b4b64885` -> **`a2f859b2463108fe`** (15 -> 16 key) |
+| CONFIG_HASH | `28f7c17882b0b339` -> **`6f5ba81442f7e80c`** |
+| jar | md5 `99d96825428f` |
+
+Kiem fail cung (`ExportWfoDataset` khong co bins): **rc=1**, thong bao
+`java.io.IOException: THIEU BINS SELECTOR: WFO_FUNDING_PRED_DIR khong duoc khai bao...`
+(truoc day: `LOG.warn` roi fallback Aerospike, rc=0, so KHAC ma khong bao loi).
 
 ## 3. `pred_s1a2.parquet` (dau vao cua build_map)
 
@@ -93,7 +136,7 @@ Ngay sinh: **2026-09-02 22:50:32..37 (+0700)**.
 | Ngay upload | 2026-09-03 11:18 UTC |
 | Account | `chuyendinh` |
 | So file | 11 (10 bins + `pred_s1a2.parquet`) |
-| Tong byte theo Kaggle | 411,346,304 — **khop tung file voi bang muc 2 va 3** |
+| Tong byte theo Kaggle | 411,342,208 — **khop tung file voi bang muc 2 va 3** |
 
 Lenh da chay:
 

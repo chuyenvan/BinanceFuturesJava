@@ -68,8 +68,10 @@ public class WfoDataset {
         // FUNDING (selector pred): Uni chot 2026-07-08 -- BO Aerospike, doc THANG tu file Kaggle predict_wf_*.bin
         // (26B >q h 4f: ts, symId, p4h/p12h/p24h/p72h). Chon 1 horizon qua WFO_SEL_HORIZON_IDX (0=4h,1=12h,2=24h,3=72h;
         // mac dinh 1). Encode long[] = (symId<<32)|floatBits(1-P(win)) -- DAO DAU khop decodeSelectorMapToPrimitiveArray
-        // (engine chon score THAP = P(win) CAO). WFO_FUNDING_PRED_DIR rong -> fallback Aerospike (luong cu).
-        String fundingPredDir = envOr("WFO_FUNDING_PRED_DIR", "");
+        // (engine chon score THAP = P(win) CAO).
+        // 2026-09-03: doc qua CONG Cfg (bins da roi INFRA_KEYS -> la tham so giao dich, pin
+        // trong profile). KHONG con fallback Aerospike - xem khoi kiem ngay duoi.
+        String fundingPredDir = com.binance.chuyennd.tradecore.Cfg.getOr("WFO_FUNDING_PRED_DIR", "");
         TreeMap<Long, long[]> fnd;
         long fndRaw15mCount = -1;   // so moc 15m truoc forward-fill (trace vao manifest)
         // Step 4 (2026-08-03) manifest TRUNG THUC + tu-validate: meta THAT tu file predict_wf nguon (khong env-guess).
@@ -77,7 +79,25 @@ public class WfoDataset {
         int fundingHorizonIdx = -1;
         String leakFreeFromComputed = "unknown";
         long maxFoldSpanDays = -1;
-        if (!fundingPredDir.isEmpty()) {
+        // ================== FAIL CUNG KHI THIEU BINS (2026-09-03) ==================
+        // TRUOC DAY: fundingPredDir rong -> chi LOG.warn roi doc funding-pred tu Aerospike.
+        // Hau qua: dataset duoc build tu MOT bo selector KHAC, backtest ra so KHAC, khong
+        // mot dong loi nao. Day la bay im lang nguy hiem nhat cua tang du lieu
+        // (docs/AUDIT_APPLIED.md muc 3.3a). Nay: thieu / tro sai / khong co file -> THROW.
+        if (fundingPredDir.isEmpty())
+            throw new IOException("THIEU BINS SELECTOR: WFO_FUNDING_PRED_DIR khong duoc khai bao."
+                    + " Khai bao trong profile giao dich, vi du profiles/c2b.properties:"
+                    + " WFO_FUNDING_PRED_DIR=/home/ubuntu/predwf_map_s1a2 (roi chay lai voi"
+                    + " TRADING_PROFILE=<profile>). KHONG con fallback Aerospike: bins sai/thieu"
+                    + " truoc day cho ra so khac ma khong bao loi.");
+        if (!new File(fundingPredDir).isDirectory())
+            throw new IOException("THIEU BINS SELECTOR: WFO_FUNDING_PRED_DIR='" + fundingPredDir
+                    + "' khong ton tai (hoac khong phai thu muc). Lay lai tu Kaggle dataset"
+                    + " chuyendinh/predwf-map-s1a2-bins roi doi chieu sha256 theo"
+                    + " research/pipeline/BINS_MANIFEST.md.");
+        String binsSha256 = com.binance.chuyennd.tradecore.BinsProvenance.sha256(fundingPredDir);
+        com.binance.chuyennd.tradecore.BinsProvenance.logDeclaration(fundingPredDir);
+        {
             fundingHorizonIdx = Integer.parseInt(envOr("WFO_SEL_HORIZON_IDX", "1"));
             int horizonIdx = fundingHorizonIdx;
             TreeMap<Long, long[]> fnd15 = buildFundingFromWfFiles(fundingPredDir, horizonIdx, wfMeta);
@@ -112,9 +132,6 @@ public class WfoDataset {
                 LOG.warn("WFO_FUNDING_FILL=0 -> GIU luoi 15m (KHONG forward-fill) - chi debug, KHONG dung cho WFO that");
                 fnd = fnd15;
             }
-        } else {
-            LOG.warn("WFO_FUNDING_PRED_DIR khong set -> fallback Aerospike (luong cu).");
-            fnd = DataManagerAerospikeFloatSim.getAllFundingPredictionsPrimitiveFromAerospike();
         }
         // [2026-09-02] NIEM PHONG 2026: cat moi ban ghi >= 2026-01-01 khoi dataset (market/pred/funding).
         com.binance.chuyennd.tradecore.HoldoutSeal.trimMap(mkt, "WfoDataset.market");
@@ -136,7 +153,7 @@ public class WfoDataset {
         // Step 4: provenance TRUNG THUC. Canonical (co WFO_FUNDING_PRED_DIR) doi codeGitSha THAT (khong "unknown")
         // + leakFreeFrom/horizon/fold-span tinh TU DATA. VALIDATED_BY=PENDING -> step 5 (validator doc lap) ky PASS.
         String codeGitSha = resolveCodeGitSha();
-        boolean canonicalPath = !fundingPredDir.isEmpty();
+        boolean canonicalPath = true;   // 2026-09-03: khong con duong non-canonical (fallback da bo)
         if (canonicalPath && "unknown".equals(codeGitSha))
             throw new IOException("Canonical export doi codeGitSha THAT. Set env WFO_CODE_SHA=<git rev-parse HEAD> "
                     + "(build local) roi chay lai. Khong stamp 'unknown' cho dataset LF.");
@@ -146,7 +163,9 @@ public class WfoDataset {
         mani.append("predSetProvenance=").append(envOr("WFO_PROV_PRED", "unknown-see-docs/PIPELINE_PROVENANCE.md")).append("\n");
         mani.append("fundingSetProvenance=").append(envOr("WFO_PROV_FUNDING", "unknown-see-docs/PIPELINE_PROVENANCE.md")).append("\n");
         mani.append("leakFreeFrom=").append(leakFreeFromComputed).append("\n");
-        mani.append("fundingPredDir=").append(canonicalPath ? fundingPredDir : "aerospike-fallback").append("\n");
+        mani.append("fundingPredDir=").append(fundingPredDir).append("\n");
+        // 2026-09-03: dong nay lam dataset TU MANG theo dau vet bins sinh ra no.
+        mani.append("binsSha256=").append(binsSha256).append("\n");
         mani.append("horizonIdx=").append(fundingHorizonIdx).append("\n");
         mani.append("foldCount=").append(wfMeta.size()).append("\n");
         mani.append("maxFoldSpanDays=").append(maxFoldSpanDays).append("\n");

@@ -21,7 +21,8 @@ echo "=== check_cfg_gateway ==="
 bash $R/tools/check_cfg_gateway.sh || { echo "PARITY_ABORT: cfg gateway FAIL"; exit 1; }
 
 cd $B
-export WFO_SET_PRED=ai_pred_market_gate_wfo WFO_FUNDING_PRED_DIR=/home/ubuntu/predwf_map_s1a2 WFO_CODE_SHA=clean
+# 2026-09-03: bins khai trong profile (xem tools/run_c2b_dev.sh); env bins + profile = Cfg exit 2.
+export WFO_SET_PRED=ai_pred_market_gate_wfo WFO_CODE_SHA=clean
 if [ ! -f $DS/market.bin ]; then
   echo "=== build dataset $DS (1 lan) ==="
   cp -f $CFGF $B/config.properties

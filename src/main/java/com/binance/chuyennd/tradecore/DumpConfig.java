@@ -98,6 +98,10 @@ public class DumpConfig {
         System.out.printf("derived.live_path_base_budget=%.2f (CAPITAL_START %.0f / NUMBER_ORDER_BUDGET %d — duong BudgetManager, KHONG phai sim)%n",
                 cap / Configs.number_order_budget, cap, Configs.number_order_budget);
 
+        // BINS SELECTOR: moi run tu khai dung bo bins nao (docs/AUDIT_APPLIED.md 3.3a).
+        // Log qua SLF4J trong BinsProvenance (khong dung System.out).
+        BinsProvenance.logDeclaration(Configs.WFO_FUNDING_PRED_DIR);
+
         MessageDigest md = MessageDigest.getInstance("SHA-256");
         byte[] h = md.digest(sb.toString().getBytes("UTF-8"));
         StringBuilder hex = new StringBuilder();

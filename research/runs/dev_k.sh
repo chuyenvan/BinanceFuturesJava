@@ -20,10 +20,14 @@ printf '\n# K2: tran lenh dong thoi chat hon\nMAX_CONCURRENT=20\n' >> $P/k2.prop
 for v in k0 k1 k2; do echo "--- $v ---"; grep -E 'MIN_MOMENTUM|MAX_CONCURRENT' $P/$v.properties; done
 
 cd $B
-export WFO_SET_PRED=ai_pred_market_gate_wfo WFO_FUNDING_PRED_DIR=/home/ubuntu/predwf_map_s1a2 WFO_CODE_SHA=prereg-K
+# 2026-09-03: bins selector KHONG con cap qua env. No khai trong profile va di qua cong
+# Cfg; dat CA HAI (env + profile) => Cfg fail-fast exit 2. Buoc build dataset la noi DOC
+# bins nen cung phai co TRADING_PROFILE. Xem tools/run_c2b_dev.sh.
 cp -f $CFGF $B/config.properties
-WFO_SEL_HORIZON_IDX=0 java -Duser.timezone=Asia/Ho_Chi_Minh -Xmx14g -cp $JAR \
-  com.binance.chuyennd.ai_ml.wfo.framework.ExportWfoDataset $DS > logs/build_k.out 2>&1
+env WFO_SET_PRED=ai_pred_market_gate_wfo WFO_CODE_SHA=prereg-K WFO_SEL_HORIZON_IDX=0 \
+    TRADING_PROFILE=$P/k0.properties \
+    java -Duser.timezone=Asia/Ho_Chi_Minh -Xmx14g -cp $JAR \
+    com.binance.chuyennd.ai_ml.wfo.framework.ExportWfoDataset $DS > logs/build_k.out 2>&1
 echo "dataset rc=$?"
 
 runp() { local TAG=$1; local PROF=$2; local D=$B/$TAG

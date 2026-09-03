@@ -46,7 +46,9 @@ public final class F1RequiredEnvValidator implements DataValidator {
         List<String> missing = new ArrayList<>();
         Map<String, Object> metrics = new LinkedHashMap<>();
         for (String key : REQUIRED_ENV) {
-            String val = ctx.env(key);
+            // 2026-09-03: WFO_FUNDING_PRED_DIR nay khai trong TRADING_PROFILE chu khong con
+            // trong env => coi profile la nguon hop le, khong bao MISSING oan.
+            String val = com.binance.chuyennd.tradecore.Cfg.getOr(key, ctx.env(key));
             boolean present = val != null && !val.trim().isEmpty();
             metrics.put(key, present ? "set" : "MISSING");
             if (!present) {

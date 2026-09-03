@@ -43,7 +43,7 @@ public final class Cfg {
 
     /** Bien env thuoc nhom "ha tang"/kill-switch — khong phai tham so giao dich, van cho phep dat qua env. */
     private static final List<String> INFRA_KEYS = Arrays.asList(
-            "WFO_DATA_DIR", "WFO_SMART_CACHE", "WFO_FUNDING_PRED_DIR", "WFO_CODE_SHA", "WFO_SET_PRED",
+            "WFO_DATA_DIR", "WFO_SMART_CACHE", "WFO_CODE_SHA", "WFO_SET_PRED",
             "WFO_SEL_HORIZON_IDX", "WFO_STATIC_RANK", "WFO_COINTIER_FILE", "WFO_STATE_HOST", "WFO_LEAKFREE_FROM",
             "WFO_MAX_OOS_DATE", "WFO_MAX_WINDOWS", "WFO_N_SAMPLES", "WFO_LOG_ENTRIES", "WFO_HARNESS_FIX",
             "WFO_DISABLE_DCA", "WFO_FROZEN_GENOME", "EXCHANGE_INFO_PATH", "HOLDOUT_UNSEAL", "TRADING_PROFILE",
@@ -58,7 +58,13 @@ public final class Cfg {
     /** Tham so giao dich co ten KHONG khop tien to nao o tren — phai liet ke dich danh. */
     private static final List<String> TRADING_KEYS = Arrays.asList(
             "NUMBER_ORDER_BUDGET", "HARD_STOP_LOSS_RATE", "DISABLE_PREDICT_SYMBOL", "CAPITAL_START",
-            "SEL_BACKTEST_SET", "SEL_BACKTEST_HORIZON_IDX");
+            "SEL_BACKTEST_SET", "SEL_BACKTEST_HORIZON_IDX",
+            // 2026-09-03: WFO_FUNDING_PRED_DIR ROI khoi INFRA_KEYS sang day. Ly do: no la BIEN
+            // QUYET DINH cua selector S1 (+7.35pp CAGR / maxDD -13.12 vs -20.82 so voi G015 o
+            // cung thang exit C2b), khong phai duong dan ha tang. Truoc day no o INFRA_KEYS nen
+            // dat tuy y qua env, khong duoc pin trong profile, va CONFIG_HASH/PROFILE_HASH khong
+            // he doi khi doi selector => khong truy nguyen duoc. Xem docs/AUDIT_APPLIED.md 3.3(a).
+            "WFO_FUNDING_PRED_DIR");
 
     private static final Map<String, String> PROFILE;   // null neu khong dung profile
     private static final String PROFILE_PATH;
