@@ -57,3 +57,59 @@ Nền C2b: equity **60,390** · CAGR **24.48%** · maxDD **−13.12%** · quý d
 - DEV only (`SIM_END_DATE=20240630`). Không chạm VALIDATION.
 - Mỗi run in `PROFILE_HASH` để về sau không phải đoán config.
 - Oracle chạy một job java tại một thời điểm.
+
+---
+
+## ĐÍNH CHÍNH 2026-09-03 (viết SAU khi có kết quả — đọc kỹ phần nào là kết quả, phần nào là đính chính)
+
+### 1. Bảng "Còn sống — đúng 3 hằng số" mô tả SAI vai trò của `AI_DYNAMIC_MAX`
+
+Dòng "**trần ứng viên**: `0.15 × 2.14135 = 0.32120`; coin score cao hơn không bao giờ là ứng viên" là **SAI**.
+Nguồn: `docs/C2B_SPEC.md` mục 0 + `docs/FEAT40_LOOKAHEAD.md`.
+
+- Tầng 1 (trần ứng viên `maxThres`) **bị bỏ qua hoàn toàn** khi `SELECTOR_RANK_TOPK=8` — nhánh rank
+  top-K không đi qua nó (`SimulatorMarketLevelTicker1MStopLoss` ~dòng 307-322 chỉ còn ghi log debug).
+  Đường live y hệt (`DetectEntrySignal2TradeNormal:322-327`).
+- Tầng 2 **không có cận trên**: code chỉ có `Math.max(AI_DYNAMIC_MIN, scaleFactor)`, nhánh
+  `Math.min(..., AI_DYNAMIC_MAX)` đã bị xoá. Ngưỡng **tăng đơn điệu** theo score: 0.214% → 2.206%.
+  Không có chuyện "score ≥ 0.30 chạm trần rồi hằng 1.713%".
+- Đo được: **0.017%** số hàng có score > 0.32120 **vẫn vượt** tầng 2 (2,551 dòng, `g1lite` chỉ +0.0521).
+
+**Hệ quả cho chính thí nghiệm này:** RND2 đổi `AI_DYNAMIC_MAX` 2.14135 → 2.0, nhưng với
+`SELECTOR_RANK_TOPK=8` thì hằng số đó **gần như trơ**. Vậy RND2 kiểm được **ÍT HƠN** ý định ban đầu:
+nó chủ yếu kiểm `MULTIPLIER` và `MIN`, không kiểm `MAX`. Kết luận PASS của RND2 vẫn đứng, nhưng
+phạm vi của nó hẹp hơn phần "Vì sao phải thử" tuyên bố.
+
+### 2. Lời phê "'không mất gì' là SAI" — chính lời phê đó mới sai
+
+`docs/AUDIT_APPLIED.md` Bảng 2 mục 3 từng viết: *"RND1 −387 / RND2 −544 USDT ⇒ mất thật 0.4-0.5pp
+CAGR; pre-reg viết 'không mất gì' là sai"*. Đo lại bằng block-bootstrap ghép cặp
+(`docs/PREREG_CI.md` → `docs/CI_REAUDIT.md`):
+
+| cặp | hiệu CAGR | CI95 của hiệu | phán quyết |
+|---|---|---|---|
+| C2b vs RND1 (2 chữ số) | +0.32pp | **[−0.08, +0.81]** | không phân biệt được |
+| C2b vs RND2 (số tròn) | +0.45pp | **[−0.63, +1.46]** | không phân biệt được |
+| RND1 vs RND2 | +0.13pp | trong nhiễu | không phân biệt được |
+
+387 và 544 USDT nằm **hoàn toàn trong nhiễu**. sd(hiệu CAGR) cho thay đổi kiểu này là 2.57pp —
+lớn hơn "mất mát" quan sát được 5-8 lần. Vậy:
+
+- Kết luận gốc của PRE-REG RND (**hằng số nhiều chữ số KHÔNG load-bearing**) **đứng vững**.
+- **Không có 0.4-0.5pp nào phải đánh đổi.** Việc thay 3 hằng số bằng số tròn là **miễn phí** theo
+  mọi phép đo hiện có, và nên làm — đúng như Uni yêu cầu.
+
+### 3. Cách thi hành đã chọn: qua PROFILE, không sửa default trong `Configs.java`
+
+Tạo `profiles/c2c_round.properties` = `c2b_min` + 3 hằng số tròn. Lý do **không** sửa
+`Configs.java:307-309`:
+
+1. Cổng nghiệm thu của mọi refactor là **byte-identity của `printDone.csv`** so với baseline C2b.
+   Đổi default trong code sẽ phá mốc đó và phải dựng lại baseline — mất công cụ kiểm tốt nhất đang có.
+2. Thiết kế cổng `Cfg` + `TRADING_PROFILE` vừa dựng nói rõ: tham số giao dịch thuộc **profile**,
+   không thuộc default hardcode. Sửa default là đi ngược chính thiết kế đó.
+3. GS wave-1 đang quét cả 3 chiều này với range rộng (`research/kaggle/gsearch/gen_params.py`) ⇒
+   tâm vùng phẳng nó tìm ra sẽ **thay thế** việc làm tròn bằng tay. Chốt default bây giờ là chốt sớm.
+
+Quyết định chuyển baseline mặc định sang `c2c_round` (hay sang một điểm plateau của wave-1) để
+**sau khi wave-1 kết thúc**. Ghi trong `docs/RUNS_DEV.md`.
