@@ -157,6 +157,22 @@ public class BinanceOrderTradingManager {
                 LOG.info("Symbol {} is locking ReduceOnly !", order.symbol);
                 return;
             } else {
+                // ============================================================================
+                // KILL-SWITCH AN TOAN - KHONG XOA. Chan day lenh THAT len san.
+                // Live 242 dang chay SHADOW mode NHO CO NAY: SHADOW_NO_PUSH=true -> chi log
+                // "would-BUY" roi return, KHONG goi OrderHelper.newOrderMarket.
+                // Doc qua Cfg.get: key nam trong Cfg.INFRA_KEYS nen VAN doc duoc tu env ke ca
+                // khi da dat TRADING_PROFILE (khong bi fail-fast "hai nguon su that").
+                // (2026-09-03: da tung bi xoa trong dot refactor "xoa tham so tro" - SAI. Day
+                //  khong phai tham so chien luoc ma la lop chan cuoi truoc tien that. Da khoi phuc.)
+                // ============================================================================
+                if ("true".equalsIgnoreCase(com.binance.chuyennd.tradecore.Cfg.get("SHADOW_NO_PUSH"))) {
+                    LOG.info("[SHADOW] would-BUY {} {} entry: {} quantity: {} time:{} market level: {}",
+                            order.side, order.symbol, order.priceEntry, order.quantity,
+                            Utils.normalizeDateYYYYMMDDHHmm(order.timeStart), order.marketLevel);
+                    symbol2Processing.remove(order.symbol);
+                    return;
+                }
                 Order orderInfo = OrderHelper.newOrderMarket(order.symbol, order.side, order.quantity);
                 if (orderInfo == null) {
                     return;
@@ -388,14 +404,41 @@ public class BinanceOrderTradingManager {
      * chung Configs.tsPnoPumpWeakThr()), va san khoa-SL-tren-entry. San khong con can: cong thuc con lai
      * cho gap = min(peak*TS_GIVEBACK_RATIO, maxGap) <= peak/2 nen rate = peak - gap >= peak/2 > 0 LUON.
      */
+    /**
+     * GUARD - KHONG XOA. Invariant live: lenh DA ARM trailing thi SL KHONG BAO GIO duoc nam duoi
+     * gia entry. Su co 2026-09-02 (CLOUSDT entry 0.14956 -> SL 0.14806 = -1%) den tu dung cho nay.
+     * Voi cong thuc gap hien tai san nay KHONG THE kich hoat (gap <= peak/2 => rate >= peak/2),
+     * nhung giu lai lam chot chan cho moi lan sua cong thuc gap ve sau; neu log WARN duoi day no
+     * ra thi tuc la cong thuc gap da bi pha. La HANG SO trong code, KHONG con la tham so cau hinh.
+     */
+    private static final float SL_MIN_LOCK_ABOVE_ENTRY = 0.005f;
+
+    /**
+     * He so "dead-zone" giua diem ARM va diem RATCHET cua trailing o duong LIVE: SL chi bat dau
+     * dich len khi lai vuot he so nay lan nguong arm. Truoc 2026-09-03 doc tu
+     * Configs.TS_PROFIT_MULTIPLIER; field do da xoa vi TRO voi cau hinh sim dang chay, nen gia tri
+     * LIVE dang chay duoc dong bang tai day (khong doi hanh vi live).
+     *
+     * <p>SIM VA LIVE DANG LECH O DAY: sim (SIM_TS_GIVEBACK=1) ratchet LIEN TUC, khong co dead-zone;
+     * live van con dead-zone x5.21847. CHO CHOT HUONG - KHONG tu dong bo mot ben.
+     */
+    private static final float LIVE_RATCHET_DEADZONE_MULT = 5.21847f;
+
     private static float tsGap(float rateLoss, String symbol) {
         Float pnp = DetectEntrySignal2TradeNormal.LATEST_SEL_PNOPUMP.get(symbol);
         if (pnp == null) {
             LOG.info("[TS-GAP] {} chua co pNoPump (sau restart/chua qua tick selector) -> dung nhanh WEAK gap<={}",
                     symbol, Configs.TS_MAX_GAP_WEAK);
         }
-        return TradeUtils.calRateLossDynamicBuyPNoPump(rateLoss, pnp != null ? pnp : 1f,
+        float rate = TradeUtils.calRateLossDynamicBuyPNoPump(rateLoss, pnp != null ? pnp : 1f,
                 Configs.tsPnoPumpWeakThr());
+        if (rate < SL_MIN_LOCK_ABOVE_ENTRY) {
+            LOG.warn("[TS-GAP] {} rateStop {} < san {} (rateLoss={}) -> ep SL len tren entry."
+                    + " CANH BAO: san nay le ra KHONG THE kich hoat - kiem lai cong thuc gap!",
+                    symbol, rate, SL_MIN_LOCK_ABOVE_ENTRY, rateLoss);
+            rate = SL_MIN_LOCK_ABOVE_ENTRY;
+        }
+        return rate;
     }
 
     public void processDynamicTP_SL() {
@@ -423,7 +466,8 @@ public class BinanceOrderTradingManager {
 //                    LOG.info("Predict data for SL DL: {} {}", Utils.normalizeDateYYYYMMDDHHmm(predictData.timestamp), Utils.toJson(predictData));
                     maxChange60M = predictData.predReturn15M;
                 }
-                Float rateMin2MoveSl = 5.21847f * TradeUtils.calRateMinWithPredReturn15MForTradingStop(maxChange60M);
+                Float rateMin2MoveSl = LIVE_RATCHET_DEADZONE_MULT
+                        * TradeUtils.calRateMinWithPredReturn15MForTradingStop(maxChange60M);
                 // BUY
                 if (position.getPositionAmt().compareTo(new BigDecimal("0")) > 0) {
                     side2Sl = OrderSide.SELL;

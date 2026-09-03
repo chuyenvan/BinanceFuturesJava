@@ -190,7 +190,118 @@ public class MarketBigChangeDetector {
                 || rateDownAvg < Configs.MS_DOWN_BIG_AVG / 3;
     }
 
+    // ================================================================================
+    // KILL-SWITCH AN TOAN - KHONG XOA. Breaker MAT DO mo lenh (chong bao / order storm).
+    // Chay o duong LIVE (DetectEntrySignal2TradeNormal.createOrderBuyRequest), DOC LAP voi
+    // BREAKER_MODE - tuc no VAN BAT ke ca khi BREAKER_MODE=OFF.
+    // (2026-09-03: da tung bi xoa ca sim lan live trong dot refactor "xoa tham so tro". C2B_SPEC
+    //  muc 7 noi MAX_CONCURRENT=40 "TRO" - dieu do chi duoc chung minh cho SIM tren dataset DEV
+    //  (doi 40->25 cho printDone giong het tung byte), KHONG chung minh gi cho live. Da khoi phuc
+    //  nhanh live. Ba nguong duoi day gio la HANG SO trong code, khong con la tham so cau hinh.)
+    // ================================================================================
+    /** BASE cua density-burst limiter: so lenh cho phep mo trong cua so LOOKBACK truoc khi phanh. */
+    private static final int BURST_BASE = 40;
+    /** Suc chiu dung mat do mo lenh (he so cua duong cong luy thua). */
+    private static final float DENSITY_SUSTAIN = 10.0f;
+    /** Do cong cua ham kiem soat mat do. */
+    private static final float DENSITY_ALPHA = 0.6f;
+    /** Ti le lenh "nguy hiem" toi da truoc khi cat cau dao lop 2. */
+    private static final float CIRCUIT_DANGER_RATIO = 0.7f;
+    /** Cua so nhin lai (phut) de dem mat do mo lenh. */
+    private static final int CIRCUIT_LOOKBACK_MINUTES = 4;
 
+    /** Object sieu nhe chua chung du lieu cho ca Test va Prod. */
+    public static class CircuitOrder {
+        public long timeStart;
+        public OrderTargetStatus status;
+        public boolean hasPriceSL;
+        public boolean isProfitable;
+
+        public CircuitOrder(long timeStart, OrderTargetStatus status, boolean hasPriceSL, boolean isProfitable) {
+            this.timeStart = timeStart;
+            this.status = status;
+            this.hasPriceSL = hasPriceSL;
+            this.isProfitable = isProfitable;
+        }
+    }
+
+    /** Ham VO danh rieng cho MOI TRUONG PRODUCTION (real trade). */
+    public static boolean is50PercentOrderLossProd(
+            Collection<OrderTargetInfo> runningOrders,
+            long currentTime) {
+
+        List<CircuitOrder> recentOrders = new ArrayList<>();
+        long lookbackMillis = CIRCUIT_LOOKBACK_MINUTES * 60000L;
+
+        if (runningOrders != null) {
+            for (OrderTargetInfo o : runningOrders) {
+                if (currentTime - o.timeStart <= lookbackMillis) {
+                    boolean isProfitable = false;
+                    // Lenh Prod khong co calTp(), nham tinh lai dua vao Entry va TP/gia hien tai
+                    if (o.priceTP != null && o.priceEntry != null) {
+                        isProfitable = (o.side == OrderSide.BUY) ? (o.priceTP > o.priceEntry) : (o.priceEntry > o.priceTP);
+                    }
+                    recentOrders.add(new CircuitOrder(o.timeStart, o.status, o.priceSL != null, isProfitable));
+                }
+            }
+        }
+
+        return evaluateCircuitBreakerCore(recentOrders, currentTime);
+    }
+
+    /** LOI cua breaker mat do. */
+    private static boolean evaluateCircuitBreakerCore(List<CircuitOrder> recentOrders, long currentTime) {
+        if (recentOrders.isEmpty()) return false;
+
+        // Sap xep tu moi nhat -> cu nhat theo timeStart
+        recentOrders.sort((o1, o2) -> Long.compare(o2.timeStart, o1.timeStart));
+
+        // ---- LOP 1: mat do theo duong cong luy thua (power law) ----
+        int baseBurst = BURST_BASE;
+        float sustain = DENSITY_SUSTAIN;
+        float alpha = DENSITY_ALPHA;
+
+        int orderCount = 1; // tinh luon lenh dang cho duyet
+
+        for (CircuitOrder order : recentOrders) {
+            long diffMillis = currentTime - order.timeStart;
+            if (diffMillis < 0) continue;
+
+            int diffMins = (int) (diffMillis / 60000L);
+            int checkMins = Math.max(1, diffMins);
+
+            int allowedOrders = (int) (baseBurst + sustain * Math.pow(checkMins, alpha));
+            orderCount++;
+
+            if (orderCount > allowedOrders) {
+                return true; // vuot mat do -> chan
+            }
+        }
+
+        // ---- LOP 2: cau dao chong bao (danh gia lai ti le lo thuc su) ----
+        int totalOrders = recentOrders.size();
+
+        // Vung mien tru: van cho xa mot luong dan nhat dinh luc bao moi toi
+        if (totalOrders < (baseBurst / 2.0)) {
+            return false;
+        }
+
+        int safeOrders = 0;
+        for (CircuitOrder info : recentOrders) {
+            // Lenh DA DONG: an toan neu chot loi duong
+            boolean isDoneAndProfitable = (info.status == OrderTargetStatus.TAKE_PROFIT_DONE)
+                    || (info.status == OrderTargetStatus.STOP_MARKET_DONE && info.isProfitable);
+
+            // Lenh DANG CHAY: an toan neu da doi stop-loss duong
+            boolean isRunningAndSafe = (info.status != OrderTargetStatus.TAKE_PROFIT_DONE
+                    && info.status != OrderTargetStatus.STOP_LOSS_DONE
+                    && info.hasPriceSL);
+
+            if (isDoneAndProfitable || isRunningAndSafe) {
+                safeOrders++;
+            }
+        }
+
+        return (totalOrders - safeOrders > BURST_BASE * CIRCUIT_DANGER_RATIO);
+    }
 }
-
-

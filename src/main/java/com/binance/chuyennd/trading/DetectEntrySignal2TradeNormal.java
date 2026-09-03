@@ -384,6 +384,28 @@ public class DetectEntrySignal2TradeNormal {
         final List<String> basket = CoinRankManager.getInstance().getTopCoin(time);
         liveOiProvider.clear(); // đọc lại OI feature Oracle vừa push (tránh stale) mỗi tick
 
+        // ============================================================================
+        // KILL-SWITCH AN TOAN - KHONG XOA. [OI-GUARD-2] Neu pipeline oi_feat qua han
+        // (Oracle/compute down) -> feature vao model thanh NaN/off-distribution -> gate TOAN BO
+        // entry cua tick nay thay vi quyet dinh tren rac. Chi trigger khi TUNG co data
+        // (freshTs>0) roi cu di -> tranh deadlock cold-start.
+        // Nguong = OI_STALE_HALT_MS (default 2h = MERGE_TOL). Tat han bang OI_STALE_HALT=0.
+        // Doc qua Cfg.get: ca hai key nam trong Cfg.INFRA_KEYS nen VAN doc duoc tu env ke ca khi
+        // da dat TRADING_PROFILE.
+        // (2026-09-03: da tung bi xoa trong dot refactor "xoa tham so tro" - SAI, day la guard
+        //  chat luong du lieu chu khong phai tham so chien luoc. Da khoi phuc.)
+        // ============================================================================
+        if (!"0".equals(com.binance.chuyennd.tradecore.Cfg.get("OI_STALE_HALT"))) {
+            long oiFreshTs = liveOiProvider.pipelineFreshTs();
+            long haltMs = OiFeatLiveSets.MERGE_TOL_MS;
+            String hs = com.binance.chuyennd.tradecore.Cfg.get("OI_STALE_HALT_MS");
+            if (hs != null) { try { haltMs = Long.parseLong(hs.trim()); } catch (Exception ignore) { } }
+            if (oiFreshTs > 0 && (time - oiFreshTs) > haltMs) {
+                LOG.warn("[OI-GUARD-2] oi_feat pipeline STALE age={}m > {}m (Oracle/compute down?) "
+                        + "-> GATE entries tick {}", (time - oiFreshTs) / 60000, haltMs / 60000, time);
+                return sortedCandidates; // rong -> khong tao entry moi vong nay
+            }
+        }
 
         for (String symbol : allSymbols) {
             KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
@@ -515,6 +537,16 @@ public class DetectEntrySignal2TradeNormal {
         } else {
             // PASS (vào lệnh) → LUÔN giữ, ít và quan trọng.
             LOG.info("✅ AI PASS [{}] Reason: {} symbolPred: {}", symbol, filterResult.reason, symbolPred);
+        }
+
+        // KILL-SWITCH AN TOAN - KHONG XOA: cau dao MAT DO mo lenh cho bot LIVE (chong bao lenh
+        // that). Doc lap voi BREAKER_MODE - van bat ke ca khi BREAKER_MODE=OFF.
+        // Xem MarketBigChangeDetector.evaluateCircuitBreakerCore.
+        if (levelChange != MarketLevelChange.DCA_LEVEL1) {
+            if (MarketBigChangeDetector.is50PercentOrderLossProd(getAllOrderRunning(), ticker.startTime)) {
+                LOG.info("CAU DAO BAT: Tu choi mo lenh [{}] do da so lenh moi vao gan day deu chet hoac gong lo!", symbol);
+                return;
+            }
         }
 
         Float marginRunning = BudgetManager.getInstance().marginRunning;
