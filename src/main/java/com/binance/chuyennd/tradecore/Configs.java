@@ -440,6 +440,10 @@ public class Configs {
             if ((v = Cfg.get("SIM_AI_DYNAMIC_MULTIPLIER")) != null) AI_DYNAMIC_MULTIPLIER = Float.parseFloat(v.trim());
             if ((v = Cfg.get("SIM_AI_DYNAMIC_MAX")) != null) AI_DYNAMIC_MAX = Float.parseFloat(v.trim());
             if ((v = Cfg.get("SIM_TS_PNOPUMP_WEAK_THR")) != null) TS_PNOPUMP_WEAK_THR_OVR = Float.parseFloat(v.trim());
+            // [2026-09-03 GS] gap trailing: TRUOC DAY hardcode-only (0.08 / 0.03) => profile khong dieu khien duoc.
+            //   Mo override de tim kiem toan cuc. Default (khong khai bao) = gia tri cu => byte-identical.
+            if ((v = Cfg.get("SIM_TS_MAX_GAP")) != null) TS_MAX_GAP = Float.parseFloat(v.trim());
+            if ((v = Cfg.get("SIM_TS_MAX_GAP_WEAK")) != null) TS_MAX_GAP_WEAK = Float.parseFloat(v.trim());
             if ((v = Cfg.get("SIM_F_BASE")) != null) F_BASE = Float.parseFloat(v.trim());
             if ((v = Cfg.get("SIM_U_MAX")) != null) U_MAX = Float.parseFloat(v.trim());
             if ((v = Cfg.get("SIM_PREDICT_SYMBOL_RATE_MAX")) != null) PREDICT_SYMBOL_RATE_MAX_THRESHOLD = Float.parseFloat(v);
