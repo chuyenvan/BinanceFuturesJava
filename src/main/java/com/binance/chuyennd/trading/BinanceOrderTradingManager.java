@@ -396,20 +396,20 @@ public class BinanceOrderTradingManager {
     //   -> pGood 0.99 -> gap = 0.99*TS_MAX_GAP ~ 7.9% -> rate = rateLoss(5-7%) - 7.9% < 0 -> SL DUOI entry.
     //   Sua: (1) pnp null -> coi nhu coin YEU (nhanh weak, maxGap TS_MAX_GAP_WEAK 3%) thay vi truyen gatePred sai nghia;
     //        (2) invariant live: da arm (rateLoss > nguong) thi SL KHONG BAO GIO duoi entry (san TS_LIVE_MIN_LOCK, mac dinh 0.5%).
-    private static final float TS_LIVE_MIN_LOCK = System.getenv("TS_LIVE_MIN_LOCK") != null
-            ? Float.parseFloat(System.getenv("TS_LIVE_MIN_LOCK").trim()) : 0.005f;
+    private static final float TS_LIVE_MIN_LOCK = com.binance.chuyennd.tradecore.Cfg.get("TS_LIVE_MIN_LOCK") != null
+            ? Float.parseFloat(com.binance.chuyennd.tradecore.Cfg.get("TS_LIVE_MIN_LOCK").trim()) : 0.005f;
     // [2026-09-02 LOSER-TS] gio toi da cho lenh CHUA arm (sim G1 = 168). 0/unset = OFF. Buffer duoi mark de dat STOP_MARKET thoat.
-    private static final long LIVE_LOSER_TIME_STOP_HOURS = System.getenv("LIVE_LOSER_TIME_STOP_HOURS") != null
-            ? Long.parseLong(System.getenv("LIVE_LOSER_TIME_STOP_HOURS").trim()) : 0L;
-    private static final float LIVE_LOSER_TS_BUFFER = System.getenv("LIVE_LOSER_TS_BUFFER") != null
-            ? Float.parseFloat(System.getenv("LIVE_LOSER_TS_BUFFER").trim()) : 0.003f;
+    private static final long LIVE_LOSER_TIME_STOP_HOURS = com.binance.chuyennd.tradecore.Cfg.get("LIVE_LOSER_TIME_STOP_HOURS") != null
+            ? Long.parseLong(com.binance.chuyennd.tradecore.Cfg.get("LIVE_LOSER_TIME_STOP_HOURS").trim()) : 0L;
+    private static final float LIVE_LOSER_TS_BUFFER = com.binance.chuyennd.tradecore.Cfg.get("LIVE_LOSER_TS_BUFFER") != null
+            ? Float.parseFloat(com.binance.chuyennd.tradecore.Cfg.get("LIVE_LOSER_TS_BUFFER").trim()) : 0.003f;
 
     private static float tsGap(float rateLoss, Float gatePred, String symbol) {
         float rate;
-        if ("1".equals(System.getenv("TS_PRED_GAP"))) {
+        if ("1".equals(com.binance.chuyennd.tradecore.Cfg.get("TS_PRED_GAP"))) {
             Float pnp = DetectEntrySignal2TradeNormal.LATEST_SEL_PNOPUMP.get(symbol);
             float thr = 0.29f;
-            String v = System.getenv("TS_PNOPUMP_WEAK_THR");
+            String v = com.binance.chuyennd.tradecore.Cfg.get("TS_PNOPUMP_WEAK_THR");
             if (v != null) { try { thr = Float.parseFloat(v.trim()); } catch (Exception ignore) { } }
             if (pnp == null) {
                 LOG.info("[TS-GAP] {} chua co pNoPump (sau restart/chua qua tick selector) -> dung nhanh WEAK gap<={}",

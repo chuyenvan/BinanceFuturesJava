@@ -119,7 +119,7 @@ public class WFOGateRunner {
         // A/B GATE: replay 1 LẦN (Pha1 ở trên) rồi loop nhiều label — mỗi label train per-fold riêng, ghi file riêng.
         //   GATE_AB_LABELS mặc định "label_oldbasket" = HÀNH VI CŨ (1 label, outFile không đổi).
         //   A/B: GATE_AB_LABELS="label_oldbasket,label_ret15m,label_ret60m" → outFile_<label>.csv mỗi label.
-        String labelsEnv = System.getenv().getOrDefault("GATE_AB_LABELS", "label_oldbasket");
+        String labelsEnv = com.binance.chuyennd.tradecore.Cfg.getOr("GATE_AB_LABELS", "label_oldbasket");
         String[] labels = labelsEnv.split(",");
         LOG.info("🏷️  GATE_AB_LABELS = {} ({} label)", labelsEnv, labels.length);
 

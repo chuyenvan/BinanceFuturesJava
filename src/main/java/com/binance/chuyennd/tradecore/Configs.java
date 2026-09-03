@@ -56,6 +56,10 @@ public class Configs {
             File file = new File(Configs.configFile);
             List<String> lines = FileUtils.readLines(file, "UTF-8");
             for (String line : lines) {
+                // 2026-09-03 (B3): bo qua dong trong va dong COMMENT. Truoc day chi kiem tra co dau '='
+                // nen comment kieu "# ... (Oracle = backtest)" bien thanh mot key rac.
+                String trimmed = line == null ? "" : line.trim();
+                if (trimmed.isEmpty() || trimmed.startsWith("#")) continue;
                 if (StringUtils.contains(line, "=")) {
                     // split giới hạn 2 phần: dòng "KEY=" (value rỗng) -> value "" thay vì AIOOBE làm chết clinit;
                     // dòng value chứa '=' (vd URL ...?a=b) giữ trọn phần sau dấu '=' đầu tiên. KHÔNG đổi parse của value hiện có.
@@ -162,8 +166,11 @@ public class Configs {
     // =========================================================
     // TASK (2026-07-10): cho phep override qua config de SWEEP SIZING (khong rebuild moi lan). Mac dinh 50 = cu.
     // BASE_BUDGET = BALANCE_BASIC / number_order_budget. Giam so nay = size/lenh lon hon = trien khai nhieu von hon.
-    public static Integer number_order_budget = properties.get("NUMBER_ORDER_BUDGET") != null
-            ? Integer.parseInt(properties.get("NUMBER_ORDER_BUDGET")) : 50; // Tổng số phần chia vốn
+    // 2026-09-03 (B3): env/profile > properties > 50. Truoc day CHI doc properties => profile khong kiem soat duoc.
+    public static Integer number_order_budget = Cfg.get("NUMBER_ORDER_BUDGET") != null
+            ? Integer.parseInt(Cfg.get("NUMBER_ORDER_BUDGET").trim())
+            : (properties.get("NUMBER_ORDER_BUDGET") != null
+                ? Integer.parseInt(properties.get("NUMBER_ORDER_BUDGET")) : 50); // Tổng số phần chia vốn
 
     // Ngưỡng bóp vốn 1 & 2
     public static float BUDGET_MARGIN_RATIO_1 = 0.4820f;
@@ -247,8 +254,11 @@ public class Configs {
     // Vấn đề đo được: neu peak-profit khong bao gio vuot RATE_PROFIT_STOP_MARKET, priceSL mai la null
     // -> khong co exit nao, chi con DCA nap them ("nuoi lo"). Bien nay CHỈ chặn đúng lỗ hổng đó, KHÔNG
     // đụng cơ chế trailing-khi-lãi. 0f = tắt (mặc định, hành vi cũ y nguyên). ví dụ 0.10f = cắt khi lỗ 10%.
-    public static float HARD_STOP_LOSS_RATE = properties.get("HARD_STOP_LOSS_RATE") != null
-            ? Float.parseFloat(properties.get("HARD_STOP_LOSS_RATE")) : 0f;
+    // 2026-09-03 (B3): env/profile > properties > 0f.
+    public static float HARD_STOP_LOSS_RATE = Cfg.get("HARD_STOP_LOSS_RATE") != null
+            ? Float.parseFloat(Cfg.get("HARD_STOP_LOSS_RATE").trim())
+            : (properties.get("HARD_STOP_LOSS_RATE") != null
+                ? Float.parseFloat(properties.get("HARD_STOP_LOSS_RATE")) : 0f);
     // TASK (2026-07-10): time-stop "thesis-expiry" cho lenh CHUA arm trailing (priceSL null).
     // Khac HARD_STOP_LOSS_RATE (cat theo DO SAU lo): cai nay cat lenh I THEO THOI GIAN — tin hieu
     // (pump 12h / hoi capitulation) het han ma khong no thi thoat, giai phong margin, tranh nuoi vo han.
@@ -506,7 +516,10 @@ public class Configs {
     // Nhánh EARLY trong checkSignalDynamic GIỮ NGUYÊN ở mọi mode.
     // TASK (2026-07-11) §2 DCA-primary: TAT sleeve PREDICT_SYMBOL_TRADE (pump selector) de do rieng
     // sleeve mean-reversion. true = chi chay DCA_LEVEL1 + BIG_DOWN. Mac dinh false = hanh vi cu.
-    public static boolean DISABLE_PREDICT_SYMBOL = "true".equalsIgnoreCase(properties.get("DISABLE_PREDICT_SYMBOL"));
+    // 2026-09-03 (B3): env/profile > properties. Cong tac TAT CA sleeve selector — phai tuong minh o 1 noi.
+    public static boolean DISABLE_PREDICT_SYMBOL = "true".equalsIgnoreCase(
+            Cfg.get("DISABLE_PREDICT_SYMBOL") != null ? Cfg.get("DISABLE_PREDICT_SYMBOL").trim()
+                    : properties.get("DISABLE_PREDICT_SYMBOL"));
 
     public static String FILTER_MODE = "A";
     // [2026-08-29 DEV pivot] AI lai TRAILING per-symbol: arm-SL gap dung symbolPred cua chinh coin
@@ -664,6 +677,16 @@ public class Configs {
     // dùng nhầm "test". Deploy config.properties mới lên Oracle TRƯỚC khi chạy lại 2 tool này.
     public static final String AEROSPIKE_NAMESPACE_242 = Configs.getString("AEROSPIKE_NAMESPACE_242");
 
+    // 2026-09-03 (B3): goc tinh size lenh (BASE_BUDGET = CAPITAL_START / number_order_budget).
+    // Truoc day 2 cho (BudgetManager, BudgetManagerSimple) doc truc tiep properties => khong ai thay o dau.
+    // env/profile > properties. LAZY (khong phai field static) de tool nao khong dung von thi khong bat
+    // buoc phai co key nay trong config.properties — giu nguyen pham vi anh huong nhu truoc.
+    public static float capitalStart() {
+        String v = Cfg.get("CAPITAL_START");
+        if (v != null && !v.trim().isEmpty()) return Float.parseFloat(v.trim());
+        return Float.parseFloat(properties.get("CAPITAL_START").trim());
+    }
+
     // =========================================================
     // 10. TIỆN ÍCH GETTER
     // =========================================================
@@ -712,6 +735,33 @@ public class Configs {
             if ((v = Cfg.get("SIM_FUNDING_SCALE")) != null) FUNDING_SCALE = Float.parseFloat(v.trim());
         } catch (Exception e) {
             System.err.println("SIM env override parse error: " + e);
+        }
+    }
+
+    /**
+     * 2026-09-03 (B3): danh sach TAT CA key ma code THUC SU doc tu config.properties.
+     * Key nao co trong file ma khong co trong day = dead/decoy: doc gia tri trong file la SAI SU THAT
+     * (vd RATE_FEE=0.001 trong file nhung code dung 0.002; RATE_PROFIT_STOP_MARKET=0.1 vs code 0.03).
+     */
+    private static final java.util.List<String> KNOWN_PROPS = java.util.Arrays.asList(
+            "AEROSPIKE_HOST", "AEROSPIKE_HOST_226", "AEROSPIKE_NAMESPACE", "AEROSPIKE_NAMESPACE_242",
+            "AEROSPIKE_PORT", "AEROSPIKE_PORT_226", "AEROSPIKE_READ_CLUSTER", "CAPITAL_START",
+            "DIED_SYMBOLS", "DISABLE_PREDICT_SYMBOL", "FILE_AI_PREDICTIONS", "HARD_STOP_LOSS_RATE",
+            "NUMBER_ORDER_BUDGET", "NUMBER_THREAD_ORDER_MANAGER", "SPECIAL_SYMBOLS", "TICKER_SOURCE",
+            "TIME_RUN", "TIME_STOP_HOURS", "TS_GIVEBACK_RATIO", "TS_MIN_GAP", "USE_SMART_CACHE",
+            "WFO_STATIC_RANK", "WRITE_SIM_STORAGE");
+
+    static {
+        java.util.List<String> unknown = new java.util.ArrayList<>();
+        for (String k : properties.keySet()) if (!KNOWN_PROPS.contains(k)) unknown.add(k);
+        java.util.Collections.sort(unknown);
+        if (!unknown.isEmpty()) {
+            System.err.println("[CFG] CANH BAO: config.properties co " + unknown.size()
+                    + " key KHONG AI DOC (gia tri trong file la SAI SU THAT): " + unknown);
+            if ("1".equals(Cfg.get("CONFIG_STRICT"))) {
+                System.err.println("[CFG] CONFIG_STRICT=1 -> DUNG. Xoa cac key tren khoi config.properties.");
+                System.exit(2);
+            }
         }
     }
 

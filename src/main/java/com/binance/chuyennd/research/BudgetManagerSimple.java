@@ -26,7 +26,7 @@ public class BudgetManagerSimple {
     public Float profitLossMax = 0f;
     public Float totalFee = 0f;
     public Float totalFundingFee = 0f;
-    public Float balanceBasic = Configs.getDouble("CAPITAL_START");
+    public Float balanceBasic = Configs.capitalStart();
     public Float balanceCurrent = balanceBasic;
     public AtomicInteger counterOrderCreated = new AtomicInteger(0);
 

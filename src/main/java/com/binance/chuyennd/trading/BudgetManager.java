@@ -30,7 +30,7 @@ public class BudgetManager {
 
     public static final Logger LOG = LoggerFactory.getLogger(BudgetManager.class);
     private static volatile BudgetManager INSTANCE = null;
-    public static Float balanceBasic = Configs.getDouble("CAPITAL_START");
+    public static Float balanceBasic = Configs.capitalStart();
 
 
     public Float BUDGET_PER_ORDER = 0f;

@@ -57,10 +57,16 @@ public class DumpConfig {
         System.out.printf("derived.ratchet_gate=%s%n", Configs.TS_GIVEBACK_MODE || Configs.TS_RATCHET_DECOUPLED
                 ? "LIEN TUC (giveback/decoupled)" : "DEAD-ZONE x" + Configs.TS_PROFIT_MULTIPLIER);
 
+        System.out.printf("derived.capital_start=%.1f | order_budget=%d | base_budget_per_leg=%.2f%n",
+                Configs.capitalStart(), Configs.number_order_budget,
+                Configs.capitalStart() / Configs.number_order_budget);
+
         MessageDigest md = MessageDigest.getInstance("SHA-256");
         byte[] h = md.digest(sb.toString().getBytes("UTF-8"));
         StringBuilder hex = new StringBuilder();
         for (int i = 0; i < 8; i++) hex.append(String.format("%02x", h[i]));
         System.out.println("# CONFIG_HASH=" + hex);
+        // Bat key khai bao trong profile ma khong ai doc (go sai ten key -> am tham roi ve default).
+        Cfg.auditProfile();
     }
 }

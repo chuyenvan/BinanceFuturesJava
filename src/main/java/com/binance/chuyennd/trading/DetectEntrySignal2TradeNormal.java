@@ -652,7 +652,7 @@ public class DetectEntrySignal2TradeNormal {
     private static final long ENTRY_GRID_MIN = resolveEntryGridMin();
 
     private static long resolveEntryGridMin() {
-        String v = System.getenv("LIVE_ENTRY_GRID_MIN");
+        String v = com.binance.chuyennd.tradecore.Cfg.get("LIVE_ENTRY_GRID_MIN");
         if (v != null) {
             try {
                 long g = Long.parseLong(v.trim());

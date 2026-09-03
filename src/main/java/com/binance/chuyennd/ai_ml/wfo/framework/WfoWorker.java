@@ -36,7 +36,7 @@ public class WfoWorker {
     public static void main(String[] args) {
         try {
             // TASK (2026-07-11): mac dinh A, cho phep env ABLATION_MODE override de test gate-off (B).
-            if (System.getenv("ABLATION_MODE") != null) Configs.ABLATION_MODE = System.getenv("ABLATION_MODE");
+            if (com.binance.chuyennd.tradecore.Cfg.get("ABLATION_MODE") != null) Configs.ABLATION_MODE = com.binance.chuyennd.tradecore.Cfg.get("ABLATION_MODE");
             else Configs.ABLATION_MODE = "A";
             Configs.BREAKER_MODE = "OFF";
             // WFO_SMART_CACHE=1 → bật cache nén kline RAM (HPOSmartCache.getDataShort) trong simulator.

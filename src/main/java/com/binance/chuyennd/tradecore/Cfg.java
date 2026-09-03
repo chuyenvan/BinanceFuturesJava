@@ -9,7 +9,9 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 /**
  * CONG DUY NHAT de doc cau hinh runtime (2026-09-03).
@@ -25,30 +27,44 @@ import java.util.TreeMap;
  * Khi TRADING_PROFILE duoc dat: profile la NGUON SU THAT DUY NHAT.
  * <ul>
  *   <li>{@link #get(String)} tra ve gia tri trong profile (null neu khong khai bao) — KHONG doc env nua.</li>
- *   <li>Neu con bien env "tham so giao dich" (prefix trong {@link #TRADING_PREFIXES}) => DUNG NGAY (fail-fast),
- *       tranh canh hai nguon cung ton tai.</li>
- *   <li>Bien ha tang ({@link #INFRA_KEYS}: duong dan du lieu, dataset...) van doc tu env nhu cu.</li>
+ *   <li>Neu con bien env "tham so giao dich" ({@link #TRADING_PREFIXES} / {@link #TRADING_KEYS}) => DUNG NGAY
+ *       (fail-fast), tranh canh hai nguon cung ton tai.</li>
+ *   <li>Bien ha tang ({@link #INFRA_KEYS}: duong dan du lieu, dataset, kill-switch...) van doc tu env nhu cu.</li>
+ *   <li>{@link #auditProfile()} bao key khai bao trong profile ma KHONG AI DOC (bat loi go sai ten key —
+ *       truoc day mot key go sai chi am tham roi ve default, khong ai biet).</li>
  * </ul>
  * Khi KHONG dat TRADING_PROFILE: hanh vi y het truoc day (doc env) => tuong thich nguoc, parity byte-identical.
+ *
+ * <p>QUY TAC BAT BUOC: moi tham so GIAO DICH phai doc qua {@code Cfg.get}/{@code Cfg.getOr}, KHONG duoc
+ * goi {@code System.getenv} truc tiep — neu khong, profile khong kiem soat duoc no va ta lai co cau hinh "an".
+ * Script {@code tools/check_cfg_gateway.sh} kiem dieu nay va fail build khi bi vi pham.
  */
 public final class Cfg {
 
-    /** Bien env thuoc nhom "ha tang" — khong phai tham so giao dich, van cho phep dat qua env. */
+    /** Bien env thuoc nhom "ha tang"/kill-switch — khong phai tham so giao dich, van cho phep dat qua env. */
     private static final List<String> INFRA_KEYS = Arrays.asList(
             "WFO_DATA_DIR", "WFO_SMART_CACHE", "WFO_FUNDING_PRED_DIR", "WFO_CODE_SHA", "WFO_SET_PRED",
             "WFO_SEL_HORIZON_IDX", "WFO_STATIC_RANK", "WFO_COINTIER_FILE", "WFO_STATE_HOST", "WFO_LEAKFREE_FROM",
             "WFO_MAX_OOS_DATE", "WFO_MAX_WINDOWS", "WFO_N_SAMPLES", "WFO_LOG_ENTRIES", "WFO_HARNESS_FIX",
             "WFO_DISABLE_DCA", "WFO_FROZEN_GENOME", "EXCHANGE_INFO_PATH", "HOLDOUT_UNSEAL", "TRADING_PROFILE",
-            "SIM_END_DATE", "HOME", "APP_PID_DIR", "APP_MAIN_CLASS", "GEN_THREADS", "NO_VALIDATE");
+            "SIM_END_DATE", "HOME", "APP_PID_DIR", "APP_MAIN_CLASS", "GEN_THREADS", "NO_VALIDATE",
+            "CONFIG_STRICT", "SHADOW_NO_PUSH", "OI_STALE_HALT", "OI_STALE_HALT_MS");
 
     /** Tien to cua bien env DUOC COI LA THAM SO GIAO DICH — cam dat khi da co profile. */
     private static final List<String> TRADING_PREFIXES = Arrays.asList(
             "SIM_", "DCA_", "TS_", "SELECTOR_", "TIER_", "CONF_SIZE_", "TRAIL_", "GATE_", "LIVE_",
             "SIZE_MULT", "MAX_CONCURRENT", "TIME_STOP_HOURS", "ENABLE_SHORT", "ABLATION_MODE", "SHORT_");
 
+    /** Tham so giao dich co ten KHONG khop tien to nao o tren — phai liet ke dich danh. */
+    private static final List<String> TRADING_KEYS = Arrays.asList(
+            "NUMBER_ORDER_BUDGET", "HARD_STOP_LOSS_RATE", "DISABLE_PREDICT_SYMBOL", "CAPITAL_START",
+            "SEL_BACKTEST_SET", "SEL_BACKTEST_HORIZON_IDX");
+
     private static final Map<String, String> PROFILE;   // null neu khong dung profile
     private static final String PROFILE_PATH;
     private static final String PROFILE_HASH;
+    /** Cac key da tung duoc code hoi — dung de bat key khai bao nhung khong ai doc. */
+    private static final Set<String> ASKED = Collections.synchronizedSet(new TreeSet<String>());
 
     static {
         String p = System.getenv("TRADING_PROFILE");
@@ -78,6 +94,7 @@ public final class Cfg {
             List<String> conflicts = new ArrayList<>();
             for (String k : System.getenv().keySet()) {
                 if (INFRA_KEYS.contains(k)) continue;
+                if (TRADING_KEYS.contains(k)) { conflicts.add(k); continue; }
                 for (String pre : TRADING_PREFIXES) {
                     if (k.startsWith(pre)) { conflicts.add(k); break; }
                 }
@@ -99,11 +116,18 @@ public final class Cfg {
 
     /** Doc 1 tham so. Co profile -> chi lay tu profile (null neu khong khai bao). Khong co -> doc env (hanh vi cu). */
     public static String get(String key) {
+        ASKED.add(key);
         if (PROFILE != null) {
             if (INFRA_KEYS.contains(key)) return System.getenv(key);
             return PROFILE.get(key);
         }
         return System.getenv(key);
+    }
+
+    /** Nhu {@link #get(String)} nhung tra {@code def} khi khong khai bao (thay System.getenv().getOrDefault). */
+    public static String getOr(String key, String def) {
+        String v = get(key);
+        return (v == null || v.isEmpty()) ? def : v;
     }
 
     public static boolean usingProfile() { return PROFILE != null; }
@@ -112,9 +136,37 @@ public final class Cfg {
 
     public static String profileHash() { return PROFILE_HASH; }
 
-    /** Cac key co trong profile — de kiem "khai bao nhung khong ai doc". */
+    /** Cac key co trong profile. */
     public static Map<String, String> all() {
         return PROFILE == null ? Collections.emptyMap() : Collections.unmodifiableMap(PROFILE);
+    }
+
+    /** Cac key ma code da tung hoi (sau khi Configs da nap xong = toan bo key he doc). */
+    public static Set<String> asked() {
+        return Collections.unmodifiableSet(new TreeSet<>(ASKED));
+    }
+
+    /**
+     * Bao key khai bao trong profile ma KHONG AI DOC — gan nhu chac chan la GO SAI TEN KEY
+     * (truoc day loi nay am tham: key sai ten -> code roi ve default -> run "thanh cong" voi cau hinh khac y).
+     * Tra ve so key mo. CONFIG_STRICT=1 -> exit 2.
+     */
+    public static int auditProfile() {
+        if (PROFILE == null) return 0;
+        List<String> unread = new ArrayList<>();
+        for (String k : PROFILE.keySet()) if (!ASKED.contains(k)) unread.add(k);
+        Collections.sort(unread);
+        if (!unread.isEmpty()) {
+            System.err.println("[CFG] CANH BAO: profile khai bao " + unread.size()
+                    + " key KHONG AI DOC (go sai ten?): " + unread);
+            if ("1".equals(System.getenv("CONFIG_STRICT"))) {
+                System.err.println("[CFG] CONFIG_STRICT=1 -> DUNG.");
+                System.exit(2);
+            }
+        } else {
+            System.out.println("[CFG] audit profile: OK, ca " + PROFILE.size() + " key deu duoc doc.");
+        }
+        return unread.size();
     }
 
     private static String sha8(String s) {

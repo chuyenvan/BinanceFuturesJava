@@ -40,11 +40,11 @@ public final class GateRollingThreshold {
 
     /** Doc env va tinh san bang nguong theo gio. Goi 1 lan sau khi co predictionMap. Khong bat -> no-op. */
     public static synchronized void init(TreeMap<Long, AiPredictionData> predictionMap) {
-        String v = System.getenv("SIM_GATE_ROLLING_PCT");
+        String v = com.binance.chuyennd.tradecore.Cfg.get("SIM_GATE_ROLLING_PCT");
         if (v == null || v.isBlank()) { hour2thr = null; return; }
         pct = Float.parseFloat(v.trim());
         if (pct <= 0f || pct >= 1f) { hour2thr = null; LOG.warn("[GATE-ROLL] SIM_GATE_ROLLING_PCT={} ngoai (0,1) -> TAT", pct); return; }
-        String d = System.getenv("SIM_GATE_ROLLING_DAYS");
+        String d = com.binance.chuyennd.tradecore.Cfg.get("SIM_GATE_ROLLING_DAYS");
         if (d != null && !d.isBlank()) days = Integer.parseInt(d.trim());
         if (predictionMap == null || predictionMap.isEmpty()) { hour2thr = null; LOG.warn("[GATE-ROLL] predictionMap rong -> TAT"); return; }
 
