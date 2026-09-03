@@ -1,6 +1,6 @@
 # BAN KIEM KE CAU HINH — sinh tu ma nguon boi tools/gen_config_inventory.sh
 
-Sinh luc: 2026-09-03 03:08 UTC · commit `cb073af`
+Sinh luc: 2026-09-03 11:43 UTC · commit `19b976d`
 
 > KHONG go tay file nay. Chay lai script sau moi lan doi cau hinh.
 
@@ -8,29 +8,25 @@ Sinh luc: 2026-09-03 03:08 UTC · commit `cb073af`
 
 | key | doc o dau |
 |---|---|
-| `AEROSPIKE_HOST` | chuyennd/tradecore/Configs.java:659:    public static final String AEROSPIKE_HOST_242 = Co |
-| `AEROSPIKE_HOST_226` | chuyennd/tradecore/Configs.java:662:    // Tên hằng đổi 226→ORACLE (2026-08-04, re |
-| `AEROSPIKE_NAMESPACE` | chuyennd/tradecore/Configs.java:667:    public static final String AEROSPIKE_NAMESPACE = C |
-| `AEROSPIKE_NAMESPACE_242` | chuyennd/tradecore/Configs.java:678:    public static final String AEROSPIKE_NAMESPACE_242 |
-| `AEROSPIKE_PORT` | chuyennd/tradecore/Configs.java:660:    public static final int AEROSPIKE_PORT_242 = Confi |
-| `AEROSPIKE_PORT_226` | chuyennd/tradecore/Configs.java:665:    public static final int AEROSPIKE_PORT_ORACLE = Co |
-| `AEROSPIKE_READ_CLUSTER` | chuyennd/tradecore/Configs.java:89:    public static String AEROSPIKE_READ_CLUSTER = prope |
-| `CAPITAL_START` | chuyennd/tradecore/Configs.java:685:        String v = Cfg.get("CAPITAL_START"); |
+| `AEROSPIKE_HOST` | chuyennd/tradecore/Configs.java:387:    public static final String AEROSPIKE_HOST_242 = Co |
+| `AEROSPIKE_HOST_226` | chuyennd/tradecore/Configs.java:390:    // Tên hằng đổi 226→ORACLE (2026-08-04, re |
+| `AEROSPIKE_NAMESPACE` | chuyennd/tradecore/Configs.java:395:    public static final String AEROSPIKE_NAMESPACE = C |
+| `AEROSPIKE_NAMESPACE_242` | chuyennd/tradecore/Configs.java:406:    public static final String AEROSPIKE_NAMESPACE_242 |
+| `AEROSPIKE_PORT` | chuyennd/tradecore/Configs.java:388:    public static final int AEROSPIKE_PORT_242 = Confi |
+| `AEROSPIKE_PORT_226` | chuyennd/tradecore/Configs.java:393:    public static final int AEROSPIKE_PORT_ORACLE = Co |
+| `AEROSPIKE_READ_CLUSTER` | chuyennd/tradecore/Configs.java:69:    public static String AEROSPIKE_READ_CLUSTER = prope |
+| `CAPITAL_START` | chuyennd/tradecore/Configs.java:413:        String v = Cfg.get("CAPITAL_START"); |
 | `DIED_SYMBOLS` | client/constant/Constants.java:59:        String symbols = Configs.getString("DIED_SYMBOLS |
-| `DISABLE_PREDICT_SYMBOL` | chuyennd/tradecore/Configs.java:521:            Cfg.get("DISABLE_PREDICT_SYMBOL") != null  |
-| `FILE_AI_PREDICTIONS` | chuyennd/tradecore/Configs.java:657:    public static final String FILE_AI_ENTRY_PREDICTIO |
-| `HARD_STOP_LOSS_RATE` | chuyennd/tradecore/Configs.java:258:    public static float HARD_STOP_LOSS_RATE = Cfg.get( |
-| `NUMBER_ORDER_BUDGET` | chuyennd/tradecore/Configs.java:170:    public static Integer number_order_budget = Cfg.ge |
-| `NUMBER_THREAD_ORDER_MANAGER` | chuyennd/tradecore/Configs.java:128:    public static final Integer NUMBER_THREAD_ORDER_MA |
+| `FILE_AI_PREDICTIONS` | chuyennd/tradecore/Configs.java:385:    public static final String FILE_AI_ENTRY_PREDICTIO |
+| `NUMBER_ORDER_BUDGET` | chuyennd/tradecore/Configs.java:149:    public static Integer number_order_budget = Cfg.ge |
+| `NUMBER_THREAD_ORDER_MANAGER` | chuyennd/tradecore/Configs.java:108:    public static final Integer NUMBER_THREAD_ORDER_MA |
 | `SPECIAL_SYMBOLS` | client/constant/Constants.java:66:        symbols = Configs.getString("SPECIAL_SYMBOLS"); |
-| `TICKER_SOURCE` | chuyennd/tradecore/Configs.java:90:    public static String TICKER_SOURCE = properties.get |
-| `TIME_RUN` | chuyennd/tradecore/Configs.java:101:    public static String TIME_RUN = Configs.getString( |
-| `TIME_STOP_HOURS` | chuyennd/tradecore/Configs.java:269:    public static int TIME_STOP_HOURS = Cfg.get("TIME_ |
-| `TS_GIVEBACK_RATIO` | chuyennd/tradecore/Configs.java:282:    public static float TS_GIVEBACK_RATIO = Cfg.get("T |
-| `TS_MIN_GAP` | chuyennd/tradecore/Configs.java:481:    public static float TS_MIN_GAP = Cfg.get("TS_MIN_G |
-| `USE_SMART_CACHE` | chuyennd/tradecore/Configs.java:96:    public static boolean USE_SMART_CACHE = properties. |
-| `WFO_STATIC_RANK` | chuyennd/tradecore/Configs.java:100:    public static boolean WFO_STATIC_RANK = properties |
-| `WRITE_SIM_STORAGE` | chuyennd/tradecore/Configs.java:93:    public static boolean WRITE_SIM_STORAGE = propertie |
+| `TICKER_SOURCE` | chuyennd/tradecore/Configs.java:70:    public static String TICKER_SOURCE = properties.get |
+| `TIME_RUN` | chuyennd/tradecore/Configs.java:81:    public static String TIME_RUN = Configs.getString(" |
+| `TS_GIVEBACK_RATIO` | chuyennd/tradecore/Configs.java:173:    public static float TS_GIVEBACK_RATIO = Cfg.get("T |
+| `USE_SMART_CACHE` | chuyennd/tradecore/Configs.java:76:    public static boolean USE_SMART_CACHE = properties. |
+| `WFO_STATIC_RANK` | chuyennd/tradecore/Configs.java:80:    public static boolean WFO_STATIC_RANK = properties. |
+| `WRITE_SIM_STORAGE` | chuyennd/tradecore/Configs.java:73:    public static boolean WRITE_SIM_STORAGE = propertie |
 
 ## 2. `config.properties` — doi chieu
 
@@ -53,12 +49,8 @@ Sinh luc: 2026-09-03 03:08 UTC · commit `cb073af`
 
 Key code doc nhung file nay KHONG khai bao (chay bang default hardcode):
 
-- `DISABLE_PREDICT_SYMBOL`
-- `HARD_STOP_LOSS_RATE`
 - `NUMBER_ORDER_BUDGET`
-- `TIME_STOP_HOURS`
 - `TS_GIVEBACK_RATIO`
-- `TS_MIN_GAP`
 - `USE_SMART_CACHE`
 - `WFO_STATIC_RANK`
 - `WRITE_SIM_STORAGE`
@@ -85,92 +77,57 @@ Key code doc nhung file nay KHONG khai bao (chay bang default hardcode):
 
 Key code doc nhung file nay KHONG khai bao (chay bang default hardcode):
 
-- `DISABLE_PREDICT_SYMBOL`
-- `HARD_STOP_LOSS_RATE`
 - `NUMBER_ORDER_BUDGET`
-- `TIME_STOP_HOURS`
 - `TS_GIVEBACK_RATIO`
-- `TS_MIN_GAP`
 - `USE_SMART_CACHE`
 - `WFO_STATIC_RANK`
 
 ## 3. Tham so giao dich doc qua cong Cfg (env hoac TRADING_PROFILE)
 
-- `ABLATION_MODE`
 - `CAPITAL_START`
 - `CONFIG_STRICT`
-- `CONF_SIZE_FMAX`
-- `CONF_SIZE_FMIN`
-- `CONF_SIZE_HI`
-- `CONF_SIZE_LO`
-- `CONF_SIZE_MODE`
 - `DCA_GRID_ENABLED`
 - `DCA_GRID_LEVELS`
 - `DCA_GRID_SCALAR`
 - `DCA_GRID_SCALE`
 - `DCA_GRID_WEIGHTS`
-- `DCA_TIER_MARGIN_CAPS`
-- `DCA_TIER_MARGIN_ENABLED`
-- `DISABLE_PREDICT_SYMBOL`
-- `ENABLE_SHORT`
 - `GATE_AB_LABELS`
-- `HARD_STOP_LOSS_RATE`
-- `LIVE_ENTRY_GRID_MIN`
-- `LIVE_LOSER_TIME_STOP_HOURS`
-- `LIVE_LOSER_TS_BUFFER`
-- `MAX_CONCURRENT`
 - `NUMBER_ORDER_BUDGET`
-- `SELECTOR_INVERT`
-- `SELECTOR_OFFSET`
+- `OI_STALE_HALT`
+- `OI_STALE_HALT_MS`
 - `SELECTOR_ONLY_ENTRY`
-- `SELECTOR_RANK_OFFSET`
 - `SELECTOR_RANK_TOPK`
-- `SELECTOR_SCORE_MAX`
-- `SELECTOR_TOPN`
 - `SEL_BACKTEST_HORIZON_IDX`
 - `SEL_BACKTEST_SET`
-- `SHORT_SL_PCT`
-- `SHORT_TIME_STOP_HOURS`
+- `SHADOW_NO_PUSH`
+- `SIM_AI_DYNAMIC_MAX`
 - `SIM_AI_DYNAMIC_MIN`
+- `SIM_AI_DYNAMIC_MULTIPLIER`
 - `SIM_APPLY_FUNDING`
-- `SIM_BREAKER_MARGIN_HALT`
 - `SIM_BREAKER_MODE`
 - `SIM_ENTRY_UNIVERSE_DUMP`
 - `SIM_FAIL_FAST_ON_DATA_ERROR`
 - `SIM_FUNDING_MARK`
 - `SIM_FUNDING_SCALE`
+- `SIM_F_BASE`
 - `SIM_GATE_COUNT_ONLY`
-- `SIM_GATE_MARKET_OFF`
-- `SIM_GATE_ROLLING_DAYS`
-- `SIM_GATE_ROLLING_PCT`
-- `SIM_HARD_SL_PCT`
 - `SIM_LOSER_TIME_STOP_HOURS`
 - `SIM_MIN_MOMENTUM_15M`
 - `SIM_MS_DOWN_BIG_AVG`
-- `SIM_OFF_FLAT_HARD`
 - `SIM_PREDICT_SYMBOL_RATE_MAX`
 - `SIM_RATE_FEE`
 - `SIM_RATE_PROFIT_STOP_MARKET`
-- `SIM_SELECTOR_MAX_STALE_MIN`
 - `SIM_SLIPPAGE_RATE`
-- `SIM_TRAIL_PER_SYMBOL`
-- `SIM_TREAT_ZERO_VOL_AS_DELIST`
 - `SIM_TS_GIVEBACK`
-- `SIM_TS_PROFIT_MULTIPLIER`
-- `SIZE_MULT`
+- `SIM_TS_MAX_GAP`
+- `SIM_TS_MAX_GAP_WEAK`
+- `SIM_TS_PNOPUMP_WEAK_THR`
+- `SIM_U_MAX`
 - `TIER_FLAT`
-- `TIME_STOP_HOURS`
-- `TRAIL_PEAK_MODE`
-- `TS_CARRY_SL_ON_DCA`
-- `TS_GAP_CONST`
-- `TS_GIVEBACK_FLOOR`
 - `TS_GIVEBACK_RATIO`
-- `TS_LIVE_MIN_LOCK`
-- `TS_MIN_GAP`
 - `TS_PNOPUMP_WEAK_THR`
-- `TS_PRED_GAP`
-- `TS_RATCHET_DECOUPLED`
 - `WFO_DISABLE_DCA`
+- `WFO_FUNDING_PRED_DIR`
 - `WFO_LOG_ENTRIES`
 
 ## 4. Kiem tra cong Cfg

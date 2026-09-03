@@ -1,64 +1,111 @@
-# Index — Bản đồ tri thức (router)
+# Index — router tri thuc `docs/`
 
-> Mỗi mục = pointer + 1 dòng. KHÔNG nhồi nội dung. Phình → tách file, để lại pointer.
-> **Luôn đọc [CORE](CORE.md)** (luật an toàn + toàn vẹn backtest) + (các) pack liên quan việc đang làm.
+> **VIET LAI 2026-09-03 (M6).** Ban cu tro tuong minh toi **37 duong dan KHONG TON TAI**, trong
+> do 6 file no goi la bat buoc doc: `CORE.md` ("Luon doc CORE"), `FINDINGS.md` ("NGUON SU THAT"),
+> `SESSION_START.md` ("DOC DAU TIEN moi session"), `DATA_STATE.md`, `architecture.md`,
+> `PIPELINE.md`. Ca 6 da bi don sang `archive/_cleanup_20260829` o commit `c446f0a`. Mot agent
+> moi doc router cu se di tim 6 file khong co roi bo qua `ROADMAP_NOLEAK.md` va `RUNS_DEV.md` —
+> hai file that su song.
+>
+> **KHONG tao file rong cho du danh sach.** Router chi tro vao file CO THAT. Cai da archive thi
+> ghi ro la archive.
+>
+> Luat giu router nay dung: moi lan xoa/di chuyen file trong `docs/`, chay lai kiem link truoc
+> khi commit. Router hong = agent doc sai su that.
 
-## Pack theo việc (nạp đúng cái đang chạm)
-- [CORE](CORE.md) — hạt nhân an toàn, mọi agent mang theo.
-- [rules/code](rules/code.md) — quy ước + luật code Java/HPO (một-bộ-não, taskId, no-random-split, Float, runtime-config).
-- [rules/backtest](rules/backtest.md) — toàn vẹn & tái lập backtest/sim/golden + cạm bẫy đọc kết quả.
-- [rules/run-226](rules/run-226.md) — chạy job java trên 226: dọn job cũ, kill đúng PID, SSH.
-- [rules/build-env](rules/build-env.md) — Maven + mvn wrapper Windows + protobuf.
-- [rules/security](rules/security.md) — secret/key live đã lộ → rotate, không echo.
-- [KAGGLE_RULES](KAGGLE_RULES.md) — bắt buộc trước mọi Kaggle job: slot=5, 12h-kill, System.exit, ổ-C, network.
-- [db/](db/index.md) — data nào ở đâu, ghi/đọc/chạy đâu (242 source · 226 compute · redis).
-- [**REDESIGN_INFRA_20260804**](REDESIGN_INFRA_20260804.md) — 🔴 **TOPOLOGY MỚI (chốt 2026-08-04)**: retire 226 · Oracle hub public 3222 · Kaggle file-fleet · 242 SoT. THẮNG `SESSION_START §1`+`db/index` khi mâu thuẫn.
-- [**SESSION_START**](SESSION_START.md) — 🔴 **ĐỌC ĐẦU TIÊN mỗi session mới**: mục tiêu, topology, trạng thái 4 tầng dữ liệu, việc kế tiếp, quyết định đã chốt. (2026-07-07)
-- [DATA_STATE](DATA_STATE.md) — **TRẠNG THÁI dữ liệu THẬT (đo)**: 4 tầng (ticker file/aerospike, lifecycle, dataset), 2 đường đọc ticker, survivorship 38 coin. Nguồn sự thật "dữ liệu đủ chưa, ở đâu". (rà 2026-07-07)
-- [**DATA_VALIDATION_FRAMEWORK**](DATA_VALIDATION_FRAMEWORK.md) — 🔴 **ĐỌC TRƯỚC MỌI HPO/WFO**: Preflight Gate chặn lỗi im lặng (19 loại, 6 nhóm), quy trình fail-fast, + danh mục 10 lỗi đã xảy ra làm đảo verdict (gate coverage 2021-2022, leakage, MAE, ghost USDC...). (2026-07-11)
-- [runbooks/BACKFILL_SURVIVORSHIP](runbooks/BACKFILL_SURVIVORSHIP.md) — quy trình 7 bước backfill/re-export coin delist + checkpoint.
-- [architecture](architecture.md) — bức tranh lớn codebase + bản đồ package + 2 process live.
-- [rules/task-workflow](rules/task-workflow.md) — luật khi nhận & chạy task (claim theo cách chạy, bàn-giao job nền, checkpoint, dọn, RESULT). · [AGENT_WORKFLOW](AGENT_WORKFLOW.md) — cơ chế điều phối đầy đủ. · [AGENTS](AGENTS.md) — bản đồ CCD đang làm gì. ⚠️ có thể lệch — đối chiếu trạng thái thật ở ROADMAP (con trỏ 2-track).
-- [**CE V3 — Cognitive Execution Framework**](../orchestrator/cognitive-execution-framework-v3.md) — canonical: máy chạy trọn chuỗi chân tay, LLM chỉ ở `llm_gate` (nút + pipeline; xem `rules/ce-buttons.md`).
+## 1. DOC DAU TIEN (theo thu tu)
 
-## Mô hình & lộ trình (sống)
-- [ROADMAP](ROADMAP.md) — lộ trình kiểm chứng 6 bước (**cha**).
-- [REBUILD_ROADMAP](REBUILD_ROADMAP.md) — **con của ROADMAP (bước-1 model)**: rebuild data + 2 model (gate 0010 / funding 0011).
-- [PIPELINE](PIPELINE.md) — vận hành cadence 3 tháng (2 pha, 9 bước, 2 cổng gác).
-- [PIPELINE_PROVENANCE](PIPELINE_PROVENANCE.md) — **vết truy nguyên**: artifact nào từ code/data/model nào + registry + phát hiện leakage funding (in-sample) + quy ước version. (rà 2026-07-01)
-- [WFO_DATA_PIPELINE_MASTER](WFO_DATA_PIPELINE_MASTER.md) — **nguồn sự thật SỐNG** toàn trình dữ liệu WFO (ticker→market→OI→label→Tool1→selector→gate→export→validate), có version + env var + runbook + bug đã biết. Cập nhật mỗi khi đổi hành vi dữ liệu.
-- [FINDINGS](FINDINGS.md) — **NGUỒN SỰ THẬT**: mọi kết luận đã ĐO kèm số + lý do.
+1. [AUDIT_APPLIED](AUDIT_APPLIED.md) — **trang thai THAT hom nay**: 57 muc da danh gia, muc nao
+   da apply / chua / VOID, doi chieu truc tiep voi `profiles/` va `src/main`. Kem 13 mau thuan
+   docs-vs-code (M1..M13). Docs noi da apply ma code khong co thi **code thang**.
+2. [C2B_SPEC](C2B_SPEC.md) — dac ta cau hinh dang la ung vien freeze (C2b, DEV equity **60390**):
+   gate 2 tang, selector, exit, sizing, param TRO, cach tai lap.
+3. [RUNS_DEV](RUNS_DEV.md) — bang moi run DEV da chay + so do duoc. **Nguon su that ve "da do gi".**
+4. [ROADMAP_NOLEAK](ROADMAP_NOLEAK.md) — hang doi con lai + gi da dong.
 
-## Chiến lược (campaign 2026-07-10/11 — tìm cấu hình 20%/năm)
-- [SOLUTION_FRAMEWORK_20260711](SOLUTION_FRAMEWORK_20260711.md) — **mới nhất**: cây nhánh chiến lược +
-  test rẻ + điểm dừng pre-register. Vị trí hiện tại: CHƯA đạt 20%/năm (~5%/năm).
-- [STRATEGY_ROADMAP_3PART](STRATEGY_ROADMAP_3PART.md) — phân rã Entry/Success/Fail, mỗi phần 1 bộ WFO
-  riêng (bổ sung `REBUILD_ROADMAP.md`, đi SÂU trong 1 kiến trúc — không mâu thuẫn framework trên).
-- [STRATEGY_CONSOLIDATED](STRATEGY_CONSOLIDATED.md) — hợp nhất phiên nghiên cứu 2026-07-10 (bằng chứng đo
-  được: giveback/ret2/DCA) + spec chiến dịch điều phối task 140–144.
+## 2. CAU HINH (he `TRADING_PROFILE`, chot 2026-09-03)
 
-## Insights (kiến thức nền)
-- [insights/DATA_CADENCE](insights/DATA_CADENCE.md) · [insights/INGEST_FORMAT](insights/INGEST_FORMAT.md) · [insights/TRAINING_NOTES](insights/TRAINING_NOTES.md)
-- [insights/GATE_REDESIGN_IDEAS](insights/GATE_REDESIGN_IDEAS.md) — ⏸ PARKED (gate chốt-nhanh-không-DCA, sau 039).
-- **WFO — hub = [WFO_ROADMAP](insights/WFO_ROADMAP.md)** (sub-roadmap Bước 4 + TRẠNG THÁI LIVE + pointer). Chi tiết: [WFO_FRAMEWORK_DESIGN](insights/WFO_FRAMEWORK_DESIGN.md) (kiến trúc + 5 quyết định chốt 2026-06-29) · [WFO_LEAKS_TODO](insights/WFO_LEAKS_TODO.md) (5 leak L0–L5 chưa xử) · [WFO_OBJECTIVE_RESEARCH](insights/WFO_OBJECTIVE_RESEARCH.md) (hàm mục tiêu).
+- [TRADING_CONFIG_REDESIGN](TRADING_CONFIG_REDESIGN.md) — thiet ke cong cau hinh B1..B5, cai da
+  xong / con lai, va cac dinh chinh ghi chep (muc 5 = M1, muc 8 = cong thuc gate).
+- [CONFIG_FIELD_MAP](CONFIG_FIELD_MAP.md) — ban do field sinh tu ma nguon (**khong go tay**,
+  chay lai `tools/gen_config_field_map.py`).
+- [CONFIG_INVENTORY](CONFIG_INVENTORY.md) — kiem ke key sinh tu ma nguon (**khong go tay**,
+  chay lai `tools/gen_config_inventory.sh`).
+- `profiles/c2b.properties` (23 key) va `profiles/c2b_min.properties` (16 key, da chung minh
+  byte-identical) — **nguon su that duy nhat cho tham so giao dich**, ke ca bins selector.
+- Guard: `tools/check_cfg_gateway.sh` (tham so giao dich cam doc `System.getenv` truc tiep).
 
-## Quyết định (ADR — chốt, chống sửa-ngược)
-- [decisions/](decisions/) — 0001..0012. `0003` (genome 13) **đã thay bởi 0012** (genome 18 + OFF cứng cụm C). `0007` = `backfill` (hiện hành); `material` đã đánh dấu SUPERSEDED. Kết luận-chốt còn rải ở FINDINGS/TRACE nên tách thêm ADR (SLIPPAGE=0.003, filter mode C, dd4h ở RISK, AI-filter-không-chặn-sập, funding pred[0]=P(fail)).
+## 3. PIPELINE DU LIEU + MO HINH
 
-## Nợ kỹ thuật
-- [DEFERRED](DEFERRED.md) — hoãn tới khi có CI/CD. · [LIB_BINANCE_OLD](LIB_BINANCE_OLD.md) — dual-connector, migration dở, chưa quyết.
+- [**research/pipeline/README**](../research/pipeline/README.md) — **pipeline sinh bins selector
+  S1** (nguon edge duy nhat da chung minh): thu tu chay raw -> `feat_v2.parquet` ->
+  `cand_dev.parquet` -> `pred_s1a2.parquet` -> `predwf_map_s1a2` -> dataset WFO -> sim, kem
+  lenh cu the, thoi gian, moi truong va hyperparameter that cua `s1_rank.py`.
+- [**research/pipeline/BINS_MANIFEST**](../research/pipeline/BINS_MANIFEST.md) — sha256 tung file
+  bins + ban sao luu Kaggle PRIVATE. **Doc truoc khi tin bat ky so C2b nao.**
+- [WFO_DATAFLOW](WFO_DATAFLOW.md) — luong du lieu WFO + env cua `ExportWfoDataset`.
+- [insights/WFO_ROADMAP](insights/WFO_ROADMAP.md) — hub WFO.
+- [DATA_GOVERNANCE_PROTOCOL](DATA_GOVERNANCE_PROTOCOL.md) · [DATA_CHUNKING_STANDARD](DATA_CHUNKING_STANDARD.md)
+- `tools/run_c2b_dev.sh` — ban chuan chay lai C2b tren DEV + cong byte-identity tu dong.
 
-## Deploy
-- [DEPLOY_242 đợt 1](archive/deploy/DEPLOY_242-dot1.md) — 📸 ĐÃ deploy → archive. · Đợt 2 (027-031, **CHỜ user duyệt**) đã archive → [archive/DEPLOY_242_dot2.md](archive/DEPLOY_242_dot2.md).
+## 4. LUAT (nap dung cai dang cham)
 
-## Reference — 📸 SNAPSHOT @thời-điểm-viết, KHÔNG phải nguồn sự thật (số/Configs có thể cũ)
-- [AUDIT_filter_ablation](reference/AUDIT_filter_ablation.md) · [BO_CODE_DIGEST](reference/BO_CODE_DIGEST.md) · [TRACE_backtest_drift](reference/TRACE_backtest_drift.md)
-- [PRODUCTION_AUDIT](reference/PRODUCTION_AUDIT.md) · [STATUS_RECON](reference/STATUS_RECON.md) · [_reconcile-report](reference/_reconcile-report.md)
-- [aerospike_242_inventory](reference/aerospike_242_inventory.md) · [basis_verify](reference/basis_verify.md) · [RUNBOOK_kaggle_multi_cpu](reference/RUNBOOK_kaggle_multi_cpu.md) (đã hấp thụ vào KAGGLE_RULES §1)
-- [GENE_AUDIT_TASK111](reference/GENE_AUDIT_TASK111.md) — bản đồ gene 6 tầng (tham số→tầng→vai-trò). Genome chốt = [ADR-0012](decisions/0012-genome-18-gene-off-cung-cum-C.md).
-- [ARCHITECTURE_STATE_SNAPSHOT_20260707](reference/ARCHITECTURE_STATE_SNAPSHOT_20260707.md) — bản tổng
-  hợp kiến trúc+trạng thái viết lại, trùng nội dung `architecture.md`+`DATA_STATE.md`+`SESSION_START.md`
-  (nguồn sống hơn). Giữ vì có sơ đồ ASCII gọn.
+- [rules/backtest](rules/backtest.md) — toan ven va tai lap backtest/sim/golden + cam bay doc ket qua.
+- [rules/code](rules/code.md) — quy uoc code Java/HPO.
+- [rules/security](rules/security.md) — secret/key lo thi rotate, khong echo.
+- [rules/build-env](rules/build-env.md) — Maven + protobuf.
+- [rules/run-226](rules/run-226.md) — chay job java tren 226 (**LICH SU**: topology da chuyen sang
+  Oracle hub; giu de truy vet).
+- [rules/task-workflow](rules/task-workflow.md) · [rules/ce-buttons](rules/ce-buttons.md)
+- [KAGGLE_RULES](KAGGLE_RULES.md) — bat buoc truoc moi Kaggle job (slot=5, 12h-kill, System.exit).
 
-## Khác
-- [../tasks/](../tasks/) — task theo thứ tự LOGIC. · [reports/](reports/) — log worker. · [golden/](golden/) — baseline JSON. · [archive/](archive/) — stale, truy vết.
+## 5. PRE-REGISTRATION (khong sua noi dung da chot — chi them phu luc dinh chinh)
+
+- [preregistration_frame_v1_2026-08-23](preregistration_frame_v1_2026-08-23.md) — khung chung.
+- [PREREG_GS](PREREG_GS.md) — grid-search wave 1 (**dang chay, KHONG SUA**).
+- [PREREG_H3](PREREG_H3.md) FAIL 4/5 · [PREREG_K](PREREG_K.md) VO HIEU ·
+  [PREREG_BR](PREREG_BR.md) khong cai thien · [PREREG_RND](PREREG_RND.md) PASS chua bam nut.
+- [PHASE1_DECISION_SURFACE](PHASE1_DECISION_SURFACE.md) — **7 quyet dinh Pha 1 cot "QUYET" con
+  TRONG HOAN TOAN**; 2 muc con nguy hiem (A2c label SL 0.03 placeholder, A2e grid 15m overlap
+  horizon 4h = nghi leak L1) nam ngay tren duong gate cua C2b. Xem AUDIT M13.
+- [PHASE1_RECIPE_FROZEN_v1](PHASE1_RECIPE_FROZEN_v1.md) · [PHASE1_RECIPE_DRAFT](PHASE1_RECIPE_DRAFT.md) ·
+  [PHASE1_GENE_REFERENCE](PHASE1_GENE_REFERENCE.md)
+- [GS_BASELINE_NOTE](GS_BASELINE_NOTE.md) — hai diem neo **60390** (aerospike) va **60395** (file):
+  lech 1 lenh / 970 = 0.008%. Moi so sanh Oracle<->Kaggle chi tin toi ~0.01%.
+
+## 6. QUYET DINH (ADR)
+
+- [decisions/](decisions/) — `0000`..`0012`. `0003` (genome 13) **da thay boi `0012`** (genome 18).
+  `0007-survivorship-backfill` hien hanh, `0007-survivorship-material` SUPERSEDED.
+  `0008-circuit-breaker` — **doc kem M2: co che nay da bi xoa khoi SIM 2026-09-03**.
+
+## 7. RUNBOOK VAN HANH
+
+- [runbooks/runbook_live_242_2026-08-19](runbooks/runbook_live_242_2026-08-19.md) — live 242
+  (muc 12: bang venh live<->sim, live chay `K=5` con sim `K=8` — venh CHUA dong, xem AUDIT M10).
+- [runbooks/runbook_shadow_off_trade_2026-08-23](runbooks/runbook_shadow_off_trade_2026-08-23.md)
+  — **kill-switch `SHADOW_NO_PUSH`. KHONG duoc xoa/sua.**
+- [runbooks/wfo_ops_runbook_2026-08-13](runbooks/wfo_ops_runbook_2026-08-13.md) ·
+  [runbooks/RUNBOOK_CPCV_VALIDATION](runbooks/RUNBOOK_CPCV_VALIDATION.md) (nhanh CPCV da FAIL DSR, dong)
+
+## 8. KHAC
+
+- [AGENTS](AGENTS.md) — ban do agent dang lam gi (⚠️ co the lech, doi chieu `RUNS_DEV.md`).
+- [HANDOFF-24-8-2026-B](HANDOFF-24-8-2026-B.md) — ban giao 2026-08-24.
+- [architecture/README](architecture/README.md) — so do kien truc (co 2 file HTML kem theo).
+- [../orchestrator/cognitive-execution-framework-v3.md](../orchestrator/cognitive-execution-framework-v3.md) — CE V3.
+- [../tasks/](../tasks/) — task theo thu tu logic.
+
+## 9. DA ARCHIVE — KHONG con o `docs/` (dung tro toi nhu file song)
+
+`CORE.md`, `FINDINGS.md`, `SESSION_START.md`, `DATA_STATE.md`, `architecture.md`, `PIPELINE.md`,
+`PIPELINE_PROVENANCE.md`, `WFO_DATA_PIPELINE_MASTER.md`, `DATA_VALIDATION_FRAMEWORK.md`,
+`REDESIGN_INFRA_20260804.md`, `REBUILD_ROADMAP.md`, `AGENT_WORKFLOW.md`, `DEFERRED.md`,
+`LIB_BINANCE_OLD.md`, `SOLUTION_FRAMEWORK_20260711.md`, `STRATEGY_ROADMAP_3PART.md`,
+`STRATEGY_CONSOLIDATED.md`, `db/index.md`, `reference/*`, `insights/*` (tru `WFO_ROADMAP.md`),
+`runbooks/BACKFILL_SURVIVORSHIP.md`.
+
+Tim chung o [archive/](archive/) (chu yeu `archive/_cleanup_20260829/`, commit `c446f0a`).
+Chung la **SNAPSHOT lich su**: so lieu trong do co the da bi thoi (nhat la moi thu truoc ban fix
+funding `49fde3b` va truoc `5f40a90`). Muon dung lai mot file thi phai doi chieu lai voi
+`src/main` roi moi keo ra khoi archive.

@@ -172,10 +172,10 @@ circuit breaker **theo MAT DO mo lenh, DOC LAP voi `BREAKER_MODE`** — no **VAN
 | `SELECTOR_RANK_TOPK=8` | tran ung vien tang 1 (`PREDICT_SYMBOL_RATE_MAX_THRESHOLD * AI_DYNAMIC_MAX`) |
 | off cung nhanh phang (co `OFF_FLAT_HARD` da **xoa** 2026-09-03) | nhanh BIG_UP / SMALL_UP / SMALL_DOWN, tang `BUDGET_DIVIDER_1` |
 | `DCA_GRID_WEIGHTS=1,0,0,0` | `DCA_GRID_LEVELS/L1/STEP/LEGS/W_RATIO/SCALAR`, `DCA_TIER_*`, `TS_CARRY_SL_ON_DCA` |
-| `BREAKER_MODE=OFF` (chi trong SIM — xem muc 7) | `MAX_CONCURRENT_ORDERS`, `DENSITY_*`, `CIRCUIT_*`, `BREAKER_MARGIN_HALT`, `BREAKER_CLUSTER_DD_MAX` |
+| `BREAKER_MODE=OFF` (chi trong SIM — xem muc 7) — **M2 (2026-09-03): co che breaker trong SIM DA BI XOA (`5f40a90`), `Configs.java:509-512` chi ho tro gia tri `OFF`. Cac param ben phai khong "tro" ma la KHONG CON CONSUMER trong sim.** | `MAX_CONCURRENT_ORDERS`, `DENSITY_*`, `CIRCUIT_*`, `BREAKER_MARGIN_HALT`, `BREAKER_CLUSTER_DD_MAX` |
 | `TS_GIVEBACK_MODE=1` | `TS_PROFIT_MULTIPLIER` (5.21847), **va `TS_GAP_CONST`** |
 | `TS_GIVEBACK_FLOOR=false` | `TS_MIN_GAP` |
-| `ENABLE_SHORT=false` / `CONF_SIZE_MODE=0` / `SIZE_MULT=1.0` | `SHORT_*`, `CONF_SIZE_*` |
+| ~~`ENABLE_SHORT=false` / `CONF_SIZE_MODE=0` / `SIZE_MULT=1.0`~~ **M3 (2026-09-03): ca ba KEY NAY KHONG CON TON TAI trong `src/main`** (`5f40a90` xoa `research/SimulatorMarketLevelInvertedSelector.java` 555 dong + `ShortEntryLifecycleTest` 129 + `ShortOrderMechanismTest` 101 + toan bo `CONF_SIZE_*`/`SIZE_MULT`). Chung khong "bi tat" — chung da bi xoa. `SHORT_*` va `CONF_SIZE_*` gio la ten khong co consumer. | ~~`SHORT_*`, `CONF_SIZE_*`~~ |
 
 Luu y: `AI_DYNAMIC_MAX` **khong** phai tran clamp cua nguong gate (xem muc 0). Voi TOPK=8 no tro
 trong duong chon ung vien, nhung van con y nghia neu ai do dat `SELECTOR_RANK_TOPK<=0`.

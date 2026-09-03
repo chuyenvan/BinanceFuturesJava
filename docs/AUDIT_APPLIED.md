@@ -402,3 +402,67 @@ Moi muc: docs/memory noi gi -> code/config thuc te noi gi -> dung ve phia nao.
    THUA C2b** (H1, K, BR, RG, RND, N1-N4, regime, H3) — tuc he da can du dia voi bo tham so va bo
    feature hien tai, dung nhu `9aceed5` ket luan. Do khong phai loi "khong apply", do la
    **het duong o tang tham so**.
+
+---
+
+# MUC 5 — DA XU LY (2026-09-03, sau audit)
+
+Job nay khac job audit: **duoc sua code + commit**. Khong cham VALIDATION/HOLDOUT, khong cham
+kill-switch, khong `git push`.
+
+## 5.1 Bang 2 #1 — pipeline S1 vao git + pin bins (XONG)
+
+| Viec | Trang thai | Bang chung |
+|---|---|---|
+| 9 script pipeline vao `research/pipeline/` | XONG | commit `ada57e0` |
+| `research/pipeline/README.md` (thu tu chay, lenh, I/O, thoi gian, moi truong, hyperparam that cua `s1_rank.py`) | XONG | cung commit |
+| `research/pipeline/BINS_MANIFEST.md` (sha256 + md5 tung file bins, so ban ghi, ngay sinh, commit sinh ra) | XONG | cung commit |
+| Sao luu ngoai may | XONG | Kaggle dataset **PRIVATE** `chuyendinh/predwf-map-s1a2-bins` version **1**, status `ready`, 11 file / 411,342,208 B |
+| Secret trong script | **KHONG co** | quet `api_key\|secret\|passwd\|password\|token\|Bearer\|AKIA\|-----BEGIN` tren ca 9 file = 0 hit |
+| Pin bins vao profile | XONG | `profiles/c2b.properties:23`, `profiles/c2b_min.properties:23` |
+| Bo `WFO_FUNDING_PRED_DIR` khoi `INFRA_KEYS` | XONG | `Cfg.java` — chuyen sang `TRADING_KEYS` (dat ca env + profile = fail-fast exit 2) |
+| Bo fallback Aerospike im lang | XONG | `WfoDataset.export` nay THROW `IOException("THIEU BINS SELECTOR: ...")`; kiem thuc te: rc=**1** |
+| Bins hash vao `DumpConfig` | XONG | `BinsProvenance` (SLF4J) — `bins.sha256_16=0f8721558fbd87ef`; `binsSha256` cung vao `manifest.txt` cua dataset |
+| CONFIG_HASH nay CO phan anh selector | XONG | co bins `6f5ba81442f7e80c` vs khong khai bao bins `202118d9d1623cb0` |
+| **Cong byte-identity** | **PASS** | `C2b_PIN` **b:60390 done:147/970/970**; `cmp -s <(tail -n +2 C2b_PIN/printDone.csv) <(tail -n +2 C2b/printDone.csv)` = **IDENTICAL**; md5 ca hai `8f7afdfb27b15f5b6d4c886700def93c` |
+
+Chi phi: `PROFILE_HASH` doi (`c2b` `1bc17b5075511263` -> `7fd2895a1e7fefe0`; `c2b_min`
+`531b4ae7b4b64885` -> `a2f859b2463108fe`), `CONFIG_HASH` doi
+(`28f7c17882b0b339` -> `6f5ba81442f7e80c`). Moi so cu van hop le, chi doi ten hash.
+
+**Pha vo tuong thich (co y):** cac script chay CU vua dat `TRADING_PROFILE` vua
+`export WFO_FUNDING_PRED_DIR=...` gio se **exit 2**. Da sua trong repo:
+`research/runs/dev_br.sh`, `research/runs/dev_k.sh`, `tools/parity_clean.sh`, va ban chuan moi
+`tools/run_c2b_dev.sh`. **Chua sua** (nam ngoai git, tren dia Oracle): `dev_min.sh`,
+`dev_rnd.sh`, `parity2.sh`, `parity3.sh`, `parity_profile.sh`, `verify_inert.sh` — ai chay lai
+chung phai bo dong export va them `TRADING_PROFILE` vao buoc build dataset.
+
+## 5.2 M1..M8 — da don the nao
+
+| ID | Da lam | O dau |
+|---|---|---|
+| **M1** | Viet lai `docs/TRADING_CONFIG_REDESIGN.md` muc 5 thanh "**DA BI XOA KHOI CODE**": ghi ro commit `5f40a90` (2026-09-03 15:47 +0700, 50 file, -3582 dong) xoa ca `CONF_SIZE_*`, `SIZE_MULT`, `MAX_CONCURRENT` + 2 file test; muon dung lai **phai viet lai code**. Kem bang trang thai tung don bay (EV + ha tang). Sua ca dong "Chua dung: ..." o muc "Con lai (B4/B5)" | `docs/TRADING_CONFIG_REDESIGN.md` |
+| **M2** | `docs/ROADMAP.md` doi dau ✅ -> ❌ cho circuit breaker, ghi ro co che DA BI XOA khoi SIM (`Configs.java:509-512` chi ho tro `OFF`), BR1/BR2/BR3 khong the chay lai, **va** phan CON DUNG: breaker VAN bat tren duong LIVE (kill-switch `637513c`). `docs/C2B_SPEC.md` muc 8 sua dong `BREAKER_MODE=OFF` | `docs/ROADMAP.md`, `docs/C2B_SPEC.md` |
+| **M3** | `docs/C2B_SPEC.md` muc 8: dong `ENABLE_SHORT=false / CONF_SIZE_MODE=0 / SIZE_MULT=1.0` sua thanh "**ba key nay KHONG CON TON TAI trong src/main**" (`5f40a90` xoa `SimulatorMarketLevelInvertedSelector.java` 555 dong + 2 test). H7 = viet code moi hoan toan | `docs/C2B_SPEC.md` |
+| **M4** | `docs/TRADING_CONFIG_REDESIGN.md` B3.4: `GateRollingThreshold` -> ghi **BAT KHA THI** (file 97 dong da xoa, `git grep` = 0 hit), khong phai "khong bat buoc"; kem so do RG95 56683 / RG97 52045 / RG95w180 59120 < C2b 60390 => EV am | `docs/TRADING_CONFIG_REDESIGN.md` |
+| **M5** | Da giai quyet TRUOC job nay: `profiles/c2b_min.properties` da vao repo o commit `9425a08` | `profiles/` |
+| **M6** | **Viet lai `docs/index.md`.** Router cu tro 37 duong dan khong ton tai (khong phai 6 — do la con so cua rieng nhom "bat buoc doc"). Ban moi chi tro file CO THAT (da kiem lai bang script: 0 link chet), them muc 9 liet ke ro cai da archive. **Khong tao file rong nao** | `docs/index.md` |
+| **M7** | Kiem lai: `docs/C2B_SPEC.md` CO THAT va `## 8.` CO THAT (dong 165) => tro dan trong `CONFIG_FIELD_MAP.md:17` la **hop le**. Khong phai sua gi | — |
+| **M8** | Chay lai `tools/gen_config_inventory.sh` + `tools/gen_config_field_map.py`. Inventory nay stamp `commit 19b976d` (truoc do `cb073af`, cu hon 2 commit refactor). **9 key da chet bien mat khoi kiem ke**: `CONF_SIZE_{MODE,LO,HI,FMIN,FMAX}`, `SIZE_MULT`, `MAX_CONCURRENT`, `ENABLE_SHORT`, `SIM_GATE_ROLLING_{PCT,DAYS}`. Field map: 65 -> 66 field (them `WFO_FUNDING_PRED_DIR`) | `docs/CONFIG_INVENTORY.md`, `docs/CONFIG_FIELD_MAP.md` |
+
+M9..M13 **chua xu ly** (khong nam trong job nay): M9 can Uni chot doi 0.4-0.5pp CAGR;
+M10 cho ket qua GS wave-1; M11/M12 la ghi chu doi chieu (da co trong file nay);
+M13 (7 quyet dinh Pha 1, nhat la A2c label SL 0.03 va A2e grid-overlap = nghi leak L1)
+**van la no nghiem trong nhat con lai** — router moi da tro tuong minh vao no.
+
+## 5.3 Cho bao cao goc SAI so voi code
+
+| Bao cao noi | Code that |
+|---|---|
+| "`WfoDataset.java` khoang dong 116: thieu bins -> `LOG.warn` roi fallback" | **Dung, nhung o `export()`** — tuc luc **build dataset** (`ExportWfoDataset`), KHONG phai luc chay sim. Sim doc `WFO_DATA_DIR` (dataset da build). Bay im lang van that: dataset sai selector -> moi sim sau do sai theo, va `md5_funding` la dau hieu duy nhat |
+| "`docs/index.md` tro toi 6 file MISSING" | **37 duong dan chet**, khong phai 6. 6 la so file trong nhom "bat buoc doc" |
+| "`pred_s1a2.parquet` do `s1_rank.py` sinh" (mac dinh) | Dung, nhung phai goi **`s1_rank.py 2`** — doi so la HAU TO ten output (`run("s1a"+SUF)`). Chay khong doi so ra `pred_s1a.parquet` (ban ledger cu, DA bi thay the) |
+| "`ledger.py`, `ledger3.py`, `admit_rate.py` khoang `/home/ubuntu/featv2/` va lan can" | Ca 9 script deu o `/home/ubuntu/featv2/` (khong o `/home/ubuntu/ledger/` — thu muc do chi chua **du lieu**) |
+| "script nao co key/secret nhung thi thay bang doc env" | Khong file nao co secret. Nhung 6/9 file vi pham luat **cam `print`** -> da doi sang `logging` |
+| ledger/pred la file trung gian tai lap duoc | `ledger/cand_dev.parquet` **da bi build lai 2026-09-03 17:53** (sau khi `pred_s1a2.parquet` sinh luc 2026-09-02 22:49). Chay lai buoc 2+3 hom nay **khong dam bao** ra dung tung bit `pred_s1a2.parquet` cu => artifact co tham quyen la `pred_s1a2.parquet` + bins, khong phai file trung gian |
+| Dung luong bins | `du -sb` = 403,945,010 nhung **tong 10 file = 403,940,914** (chenh 4096 = inode thu muc). Cong `pred_s1a2.parquet` = **411,342,208 B**, xa duoi nguong 20 GB |

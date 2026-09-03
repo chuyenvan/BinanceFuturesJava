@@ -26,7 +26,7 @@ chi song khi `BREAKER_MODE != OFF`). Xem `docs/C2B_SPEC.md` muc 8.
 | `TOOL_ONLY` / `TOOL+SELF` | chi doc trong `ai_ml/**` tool (HPO/WFO/validation/probe) — khong anh huong engine |
 | `DEAD` | khong tim thay cho doc nao |
 
-Tong 65 field. Phan bo: {'OTHER': 6, 'ENGINE_SIM': 18, 'SIM+LIVE': 7, 'ENGINE_SHARED': 16, 'SELF_ONLY': 10, 'TOOL+SELF': 1, 'ENGINE_LIVE': 4, 'TOOL_ONLY': 3}
+Tong 66 field. Phan bo: {'OTHER': 7, 'ENGINE_SIM': 18, 'SIM+LIVE': 7, 'ENGINE_SHARED': 16, 'SELF_ONLY': 10, 'TOOL+SELF': 1, 'ENGINE_LIVE': 4, 'TOOL_ONLY': 3}
 
 ## SELF_ONLY (10)
 
@@ -116,13 +116,13 @@ Tong 65 field. Phan bo: {'OTHER': 6, 'ENGINE_SIM': 18, 'SIM+LIVE': 7, 'ENGINE_SH
 | `MS_DOWN_BIG_AVG` | `tradecore/MarketBigChangeDetector.java`, `ai_ml/wfo/framework/tasks/W13Diagnose.java`, `ai_ml/hpo/kaggle/BenchmarkSpeedTest.java` +2 | 1 |
 | `TIER_FLAT` | `tradecore/CoinRankManager.java` | 1 |
 | `TS_GIVEBACK_RATIO` | `tradecore/TradeUtils.java` | 4 |
-| `TS_MAX_GAP` | `tradecore/TradeUtils.java`, `ai_ml/wfo/framework/tasks/TrailingStopSweepProbe.java` | 0 |
-| `TS_MAX_GAP_WEAK` | `tradecore/TradeUtils.java`, `ai_ml/wfo/framework/tasks/TrailingStopSweepProbe.java`, `trading/BinanceOrderTradingManager.java` | 0 |
+| `TS_MAX_GAP` | `tradecore/TradeUtils.java`, `ai_ml/wfo/framework/tasks/TrailingStopSweepProbe.java` | 1 |
+| `TS_MAX_GAP_WEAK` | `tradecore/TradeUtils.java`, `ai_ml/wfo/framework/tasks/TrailingStopSweepProbe.java`, `trading/BinanceOrderTradingManager.java` | 1 |
 | `U_MAX` | `tradecore/TradeUtils.java` | 2 |
 | `WFO_DISABLE_DCA` | `tradecore/DcaProcessor.java`, `ai_ml/wfo/framework/tasks/MaeDistributionProbe.java` | 1 |
 | `WFO_STATIC_RANK` | `tradecore/CoinRankManager.java`, `ai_ml/wfo/framework/ExportCoinTierStatic.java`, `ai_ml/wfo/framework/WfoWorker.java` +2 | 1 |
 
-## OTHER (6)
+## OTHER (7)
 
 | field | doc o dau | dung tran trong Configs |
 |---|---|---|
@@ -132,3 +132,4 @@ Tong 65 field. Phan bo: {'OTHER': 6, 'ENGINE_SIM': 18, 'SIM+LIVE': 7, 'ENGINE_SH
 | `AEROSPIKE_NAMESPACE_242` | `aerospike/tools/DiagnoseTickerMismatch242VsOracle.java`, `aerospike/tools/CopyAuxSets242To226.java`, `aerospike/tools/CopyTicker242To226.java` | 1 |
 | `AEROSPIKE_PORT_242` | `aerospike/DataMigrator.java`, `aerospike/DataManagerAerospikeFloatSim.java` | 0 |
 | `AEROSPIKE_PORT_ORACLE` | `aerospike/DataManagerAerospikeFloatSim.java` | 0 |
+| `WFO_FUNDING_PRED_DIR` | `tradecore/BinsProvenance.java` | 0 |

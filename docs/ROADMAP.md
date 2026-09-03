@@ -47,9 +47,19 @@ Câu hỏi: model AI có tín hiệu thật không, hay chỉ khớp dữ liệu
 > **GIỚI HẠN khi đọc lại WFO sau này:** chưa có margin-call thật nên maxDD có thể HIỂU NHẸ.
 
 Để backtest ĐƯỢC PHÉP sụp thì fitness mới trung thực.
-- ✅ **Circuit breaker (chống mật độ + DCA khuếch đại):** `BREAKER_MODE=MARGIN`, `BREAKER_MARGIN_HALT=0.50` —
-  chặn MỞ MỚI khi marginRunning/balanceBasic ≥ 0.50. KHÔNG force-close (long-only). Lá chắn = trần margin
-  TỔNG (mốc cố định), KHÔNG per-cluster (cap %vốn/cụm đã thử & gỡ: veto 0-8 lần, vô dụng vì budget phân tán).
+- ❌ **Circuit breaker — CO CHE DA BI XOA KHOI SIM (dinh chinh 2026-09-03, M2).**
+  Ban cu cua dong nay ghi "✅ `BREAKER_MODE=MARGIN`, `BREAKER_MARGIN_HALT=0.50` chan MO MOI khi
+  marginRunning/balanceBasic >= 0.50" — **khong con dung cho duong SIM**. Commit `5f40a90`
+  (2026-09-03) xoa `RunBreakerBacktest.java` (185 dong) + `RunMarginHaltSweep.java` (195 dong)
+  va -136 dong o `MarketBigChangeDetector.java`; `Configs.java:509-512` ghi ro **"co che
+  circuit-breaker DA BI XOA 2026-09-03. Chi ho tro SIM_BREAKER_MODE=OFF"**. Gia tri `MARGIN` /
+  `DCA` / `BOTH` khong con chay duoc. BR1/BR2/BR3 khong the chay lai ma khong viet lai code.
+  EV cung da bi phu dinh doc lap: `BR1_margin` 60,272 · `BR2_both` 60,272 (giong het BR1) ·
+  `BR3_mg006` 59,542 DD -20.9 — **khong cai thien gi** so voi C2b 60,390 / K0 DD -21.0.
+  Co che maxDD la "gia chay nguoc tren lenh DA MO", khong phai "mo qua nhieu lenh".
+  **CON DUNG:** `evaluateCircuitBreakerCore` VAN ton tai va VAN bat tren duong **LIVE**
+  (`MarketBigChangeDetector.java:196`, `DetectEntrySignal2TradeNormal.java:543-544`) — la 1
+  trong 4 kill-switch da khoi phuc o `637513c`. Tuc: **live co breaker cung, sim thi khong.**
 - ✅ **Funding** cho lệnh kẹt lâu: `computeFundingOnClose` tính 1 lượt khi đóng (Σ rate × quantity × avgEntry).
   Trước đây comment hết → PnL lạc quan; nay đo được (hệ được thưởng ròng -918, ~1.8% PnL, maxDD không đổi).
 - ⏳ **Margin call / cháy tài khoản (CHƯA làm):** sizing theo equity thật thay `balanceBasic` cố định. User

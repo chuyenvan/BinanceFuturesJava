@@ -54,11 +54,31 @@ Configs (façade tạm) -> đọc từ TradingProfile, giữ chữ ký cũ để
 Cộng: `RATE_FEE`, `RATE_PROFIT_STOP_MARKET` trong properties = **mồi giả**, phải xóa khỏi file (giá trị thật ở code/env).
 Env chết (code có đọc nhưng không script nào set): `ABLATION_MODE`, `SWEEP_*`, `SHORT_*`, `FS_*`, `FF_*`, `CPCV_*`, `BT_*`, `DCA_GRID_SCALAR`, `DCA_TIER_MARGIN_CAPS`, `WFO_FROZEN_GENOME`… → hoặc xóa, hoặc đưa vào profile tường minh.
 
-## 5. ĐÒN BẨY ĐÃ CÓ SẴN TRONG CODE MÀ CHƯA BẬT (phát hiện khi rà)
-- `CONF_SIZE_MODE/LO/HI/FMIN/FMAX` — **sizing theo độ tự tin selector** đã code đầy đủ (nội suy tuyến tính p6 → hệ số size `FMIN 0.3 … FMAX 3.0`, mốc `LO 0.68 / HI 0.95`), mặc định `MODE=0` (tắt), **chưa từng chạy thử**.
-- `SIZE_MULT` — nhân trực tiếp budget mỗi lệnh.
-- `MAX_CONCURRENT` — trần vị thế đồng thời.
-⇒ Đúng ba đòn bẩy "sizing theo rank" đã đề xuất — không cần code mới, chỉ cần pre-reg và chạy.
+## 5. ~~ĐÒN BẨY ĐÃ CÓ SẴN TRONG CODE MÀ CHƯA BẬT~~ — DA BI XOA KHOI CODE (dinh chinh 2026-09-03)
+
+> **M1 — SUA GHI CHEP SAI.** Muc nay truoc day viet: ba don bay `CONF_SIZE_*` / `SIZE_MULT` /
+> `MAX_CONCURRENT` "da code day du, khong can code moi, chi can pre-reg va chay". **Cau do
+> KHONG con dung.** Commit **`5f40a90`** (2026-09-03 15:47 +0700, "xoa 40 co che TRO",
+> 50 file, **-3582 dong**) da **XOA CA BA** cung 2 file test (`ConfSizeSizingTest.java` 131
+> dong, `SizeMultSizingTest.java` 113 dong).
+>
+> Bang chung: `git grep -n "CONF_SIZE_MODE" HEAD -- src/main` = **0 hit**
+> (o `5f40a90^` co 5 hit: `Configs.java:194-198`,
+> `SimulatorMarketLevelTicker1MStopLoss.java:1045-1050`). `SIZE_MULT` chi con 1 hit trong
+> danh sach tien to fail-fast o `Cfg.java`, **khong phai co che**.
+> `MAX_CONCURRENT_ORDERS` chi con 1 comment o `RunHpoMaster_Distributed.java:36`.
+>
+> **Muon dung lai thi phai VIET LAI CODE**, khong phai "chi can pre-reg".
+
+Trang thai that cua tung don bay:
+
+| Don bay | Code | EV do duoc | Ket luan |
+|---|---|---|---|
+| `CONF_SIZE_MODE/LO/HI/FMIN/FMAX` | **DA XOA** (`5f40a90`) | spearman(p6, ROI/lenh) = **-0.019, p = 0.55** (`research/analysis/p6_analyze.py`); moi cau hinh confFactor cho ROI-co-trong-so THAP HON baseline | Het EV **va** het ha tang. Khong nen viet lai (range restriction: selector da loc top-8 bang chinh diem do) |
+| `SIZE_MULT` | **DA XOA** (`5f40a90`) | **chua tung do** | Viet lai = code moi + pre-reg moi |
+| `MAX_CONCURRENT` | **DA XOA** (`5f40a90`) | `K1_conc25` va `K2_conc20` = **59,580 giong het K0 tung byte** => **VO HIEU** khi `BREAKER_MODE=OFF` (sim khong he co tran cung lenh dong thoi) | Nut tro. Phep do vo nghia. Xem `docs/PREREG_K.md`, `docs/RUNS_DEV.md` |
+
+Danh sach don bay THAT su con lai (chua bat, con code): **khong con muc nao trong ba muc tren**.
 
 ## 6. LỘ TRÌNH (mỗi bước có parity gate byte-identical)
 - **B1 (đã làm hôm nay)**: `DumpConfig` — in cấu hình hiệu dụng + giá trị dẫn xuất + `CONFIG_HASH`. Không đổi hành vi. Kết quả cho C2b: `CONFIG_HASH=42d651b45acd0e5e`; `gate_thr` **KHONG co tran** (dinh chinh 2026-09-03, xem muc 8): `score 0.05 -> 0.00343`, `score 0.15 -> 0.01030`, `score 0.2494 -> 0.01713`, `score 0.3212 (tran ung vien) -> 0.02206`; `cost_roundtrip = 0.01000`; `arm 0.07 → SL khóa 0.0350`; ratchet LIÊN TỤC.
@@ -164,7 +184,7 @@ bi bo qua, dat qua env thi bi fail-fast tu choi => **khong con duong nao dat duo
 
 | File | Key |
 |---|---|
-| `GateRollingThreshold` | `SIM_GATE_ROLLING_PCT`, `SIM_GATE_ROLLING_DAYS` (dung cho RG95/RG97) |
+| ~~`GateRollingThreshold`~~ | ~~`SIM_GATE_ROLLING_PCT`, `SIM_GATE_ROLLING_DAYS`~~ **M4 (2026-09-03): file `ai_ml/onnx/entry/GateRollingThreshold.java` (97 dong) DA BI XOA o `5f40a90`; `git grep "GATE_ROLLING_PCT\|GateRollingThreshold" HEAD -- src/main` = 0 hit. RG95/RG97/RG95w180 gio la BAT KHA THI (khong chi la "khong bat buoc") — chay lai phai viet lai ~100 dong + pre-reg moi. So do khi con code: RG95 56683 / RG97 52045 / RG95w180 59120, ca ba < C2b 60390 => EV am, KHONG nen viet lai.** |
 | `WfoWorker`, `VerifyOneWindow` | `ABLATION_MODE` |
 | `SimulatorMarketLevelTicker1MStopLoss` | `SEL_BACKTEST_SET`, `SEL_BACKTEST_HORIZON_IDX` |
 | `WFOGateRunner` | `GATE_AB_LABELS` |
@@ -219,8 +239,9 @@ Xoa file khong lam key an toan tro lai.
   ket qua tu mang theo cau hinh sinh ra no.
 - Cau hoi mo: 13 hang so HPO 5 chu so thap phan (`TS_DYNAMIC_K=0.29774`, `TS_PROFIT_MULTIPLIER=5.21847`,
   `BUDGET_MARGIN_RATIO_1=0.4820`...) chua co can cu — can quyet dinh giu hay do lai.
-- Chua dung: `CONF_SIZE_MODE/LO/HI/FMIN/FMAX` (sizing theo confidence), `SIZE_MULT`, `MAX_CONCURRENT`
-  — da code day du, default OFF, chua chay lan nao.
+- ~~Chua dung: `CONF_SIZE_*`, `SIZE_MULT`, `MAX_CONCURRENT` — da code day du, default OFF~~
+  **SAI (dinh chinh 2026-09-03, M1)**: ca ba **DA BI XOA** o commit `5f40a90`. Khong con code.
+  Xem muc 5.
 
 ---
 
