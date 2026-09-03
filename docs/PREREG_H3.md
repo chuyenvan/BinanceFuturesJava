@@ -8,14 +8,14 @@ Vì thế mọi model mới đều phải bị quantile-map về phân phối c�
 
 | score G015 (thấp = tự tin) | n | g1lite TB | >5% | admit |
 |---|---|---|---|---|
-| <0.10 | 1,171 | +9.18% | 67.2% | 99.7% |
-| 0.10–0.20 | 28,288 | +8.54% | 56.2% | 54.9% |
-| **0.20–0.30** | **181,925** | **+6.33%** | **48.9%** | **6.7%** |
-| ≥0.30 | 15,230,708 | +1.33% | 23.4% | 0.1% |
+| <0.10 | 1,171 | +9.18% | 67.2% | 99.66% |
+| 0.10–0.20 | 28,288 | +8.54% | 56.2% | 54.86% |
+| **0.20–0.30** | **181,925** | **+6.33%** | **48.9%** | **5.85%** |
+| ≥0.30 | 15,230,708 | +1.33% | 23.4% | 0.023% |
 
-- 60.19% số dòng được admit đến từ nhóm `score<0.30` = 1.37% pool.
+- **88.55%** số dòng được admit đến từ nhóm `score<0.30` = 1.37% pool (số cũ 60.19% tính bằng công thức gate SAI).
 - Hiệu chuẩn G015 **đơn điệu hoàn hảo** (20/20 bucket tăng) nhưng **spearman(p_g015, g1lite) = 0.1675** — xếp đúng chiều, phân biệt yếu.
-- Trần lý thuyết: gate với score thật admit 0.3116% ở g1lite +0.0910; gate với score ORACLE admit 7.8855% ở +0.2115.
+- Trần lý thuyết: gate với score thật admit **0.1998%** ở g1lite **+0.1066**; gate với score ORACLE admit **7.7348%** ở **+0.2149**.
 
 Nới ngưỡng cho **mọi** coin đã thử và fail (H1a `MIN_MOMENTUM_15M` 0.008→0.006: DD −21→−44; H1b `PREDICT_SYMBOL_RATE_MAX` 0.15→0.30: 3678 lệnh, fail) vì lệnh thêm vào **dồn cụm theo thời gian** trong regime xấu. Một đầu tuyệt đối **tốt hơn** thì nới có chọn lọc và tự từ chối trong regime xấu ⇒ không mắc lỗi đó.
 
@@ -45,7 +45,7 @@ Một model xác suất **có hiệu chuẩn** thay `p_g015` sẽ (a) phân bi�
 **Cổng 1 — offline, phải đạt HẾT thì mới được chạy sim:**
 1. Phân biệt: `spearman(pred, g1lite)` OOS ≥ **0.2175** (= 0.1675 của G015 + 0.05).
 2. Hiệu chuẩn: Brier score OOS **thấp hơn** Brier của `p_g015`; và trên 20 bucket, `max|pred_TB − observed|` ≤ **0.05**.
-3. Gate offline (cắm score mới vào ĐÚNG công thức `dyn_thr` cũ): so với G015 (admit 0.3116%, g1lite admit +0.0910), phải đạt **cả hai**: admit ≥ 0.3116% **và** g1lite của hàng admit ≥ +0.0910. (Nhiều hơn mà chất lượng không kém.)
+3. Gate offline (cắm score mới vào ĐÚNG công thức `dyn_thr`): so với G015 (**admit 0.1998%, g1lite admit +0.1066** — mốc ĐO LẠI 2026-09-03, xem cuối file), phải đạt **cả hai**: admit ≥ 0.1998% **và** g1lite của hàng admit ≥ +0.1066. (Nhiều hơn mà chất lượng không kém.)
 4. Shuffle-label: spearman ≤ 0.02 và g1lite của hàng admit ≈ trung bình pool (±0.01). Nếu shuffle cũng "thắng" ⇒ có leak, DỪNG.
 5. Dương ở **cả 3 năm** 2022, 2023, 2024 cho tiêu chí 1.
 
@@ -63,3 +63,34 @@ Không đạt ⇒ ĐÓNG nhánh H3, ghi lại, không dò tham số thêm.
 - `/kaggle/working/pred_h3a.parquet`, `pred_h3b.parquet` — cột `ts, sym, p_abs` (OOS 10 fold).
 - `/kaggle/working/h3_metrics.json` — toàn bộ số của Cổng 1.
 - Kéo về Oracle: `kaggle kernels output chuyendinh/h3-abs-head-gpu -p /home/ubuntu/ledger/h3`
+
+---
+
+## Do lai (2026-09-03) — vi sao moc cua Cong 1 muc 3 doi
+
+Moi so "admit" trong ban pre-reg dau tien duoc tinh bang cong thuc gate SAI
+(`clamp(..., 0.26787, 2.14135)` => nguong tran 1.713%). Cong thuc that chi co can duoi nen
+nguong o dai score (0.2494, 0.3212] cao hon nhieu (tan 2.206%) => admit THAP hon, va chat luong
+hang admit CAO hon. Da do lai tren cung `cand_dev3.parquet` (15,442,092 dong), cung script
+(`research/analysis/calib_check.py`, nay dung `gate_cfg.py`):
+
+| dai luong | so CU (cong thuc sai) | so MOI (cong thuc dung) |
+|---|---|---|
+| admit (chi tang 2) | 0.3116% | **0.1998%** |
+| g1lite cua hang admit | +0.0910 | **+0.1066** |
+| % hang admit co score < 0.30 | 60.19% | **88.55%** |
+| oracle: admit / g1lite | 7.8855% / +0.2115 | **7.7348% / +0.2149** |
+| admit neu ap CA tran ung vien tang 1 (chi dung khi `SELECTOR_RANK_TOPK<=0`) | — | 0.1833% / +0.1115 |
+| hieu chuan G015: spearman, don dieu 20 bucket | 0.1675 / 20-20 | **KHONG DOI** (0.1675 / 20-20) |
+
+Moc cua Cong 1 muc 3 vi the doi theo: **de hon o phan luong** (0.3116% -> 0.1998%) va
+**kho hon o phan chat** (+0.0910 -> +0.1066). Day la **sua sai so do**, khong phai noi tieu chi
+sau khi thay ket qua: ca hai con so moi deu duoc do TRUOC khi co bat ky ket qua H3 nao, bang
+cung mot script tren cung du lieu, va so cu duoc giu nguyen o cot ben canh de kiem tra.
+
+Cac tieu chi 1, 2, 4, 5 va toan bo Cong 2 **khong doi** — chung khong dung cong thuc gate.
+
+⚠️ **Con phai lam truoc khi cham diem H3:** kernel H3 (`/home/ubuntu/h3/run_h3.py`,
+`k_full/run.py`, `k_smoke/run.py`) da duoc sua cong thuc tai cho nhung **chua push lai len
+Kaggle**; dataset `s1_ledger_v3` cung **chua upload lai** (2 cot `dyn_thr`/`gate_dyn_ok` trong
+ban da upload van la ban cu). Ket qua H3 nao chay truoc hai viec do deu dung moc sai.
