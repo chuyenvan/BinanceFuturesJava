@@ -1,0 +1,126 @@
+{
+ "/home/ubuntu/ds_feat15m/features_20210101_to_20210401.t1c.gz": {
+  "sha256": "49f90fc2da56f45cdde25ab1367cfaa8358f3d1b54ae2b61da0c774ee818ae20",
+  "bytes": 24974845
+ },
+ "/home/ubuntu/ds_feat15m/features_20210401_to_20210701.t1c.gz": {
+  "sha256": "1f0b60f94b7b0dd584add6099877e2260f149eacf18670b6cc6f540db782f427",
+  "bytes": 31550260
+ },
+ "/home/ubuntu/ds_feat15m/features_20210701_to_20211001.t1c.gz": {
+  "sha256": "67467de8a7bb3859def8c26ec91ba94b4926ba8cbabe63685f0ca4738292fc69",
+  "bytes": 32919888
+ },
+ "/home/ubuntu/ds_feat15m/features_20211001_to_20220101.t1c.gz": {
+  "sha256": "45070278e0ef71542edb033f95f08dbcf0445b793f4cc4983e0a6350cdfc2f78",
+  "bytes": 36654619
+ },
+ "/home/ubuntu/ds_feat15m/features_20220101_to_20220401.t1c.gz": {
+  "sha256": "7d7a0fe8fa0c0b946a1e9a085a305ed8263f4b8653ddad076a98f06ccb1b5de3",
+  "bytes": 38087931
+ },
+ "/home/ubuntu/ds_feat15m/features_20220401_to_20220701.t1c.gz": {
+  "sha256": "dc069af12582a03d88cbb527df88019f6f8519b67ad5f377491c195015b4174a",
+  "bytes": 39300787
+ },
+ "/home/ubuntu/ds_feat15m/features_20220701_to_20221001.t1c.gz": {
+  "sha256": "94499bbc6e1aae37e2b3fe805dcaf76174d8810628aaac1bd9a17423a7449e10",
+  "bytes": 39592600
+ },
+ "/home/ubuntu/ds_feat15m/features_20221001_to_20230101.t1c.gz": {
+  "sha256": "d1231896b8f0664cd7d673dec1973bb9aa51d3d69fd9a1a9834f503c4efda32d",
+  "bytes": 40482692
+ },
+ "/home/ubuntu/ds_feat15m/features_20230101_to_20230401.t1c.gz": {
+  "sha256": "e6e14939f6cd4703e3ef5e909480969fb63e6dea0625976374e295847ee17f32",
+  "bytes": 43508372
+ },
+ "/home/ubuntu/ds_feat15m/features_20230401_to_20230701.t1c.gz": {
+  "sha256": "54d7ebc53e76af1e7e5a19adc449c2bc5d50eedab28fe486e318ff01ebd178d1",
+  "bytes": 51539222
+ },
+ "/home/ubuntu/ds_feat15m/features_20230701_to_20231001.t1c.gz": {
+  "sha256": "ef927e203ddfc0747d254cc282d3d7513aaf77e738030cc50eda5deb6c3bf12e",
+  "bytes": 57000418
+ },
+ "/home/ubuntu/ds_feat15m/features_20231001_to_20240101.t1c.gz": {
+  "sha256": "292f63a5573beccbefc1e50b5d092af04f37a03fd5535ac17126d9320c55372d",
+  "bytes": 67765873
+ },
+ "/home/ubuntu/ds_feat15m/features_20240101_to_20240401.t1c.gz": {
+  "sha256": "f941d0db26dad3a6945d30727cdb5394b0f5c6613c4e487b0e9a65e3e95fc14a",
+  "bytes": 73719756
+ },
+ "/home/ubuntu/ds_feat15m/features_20240401_to_20240701.t1c.gz": {
+  "sha256": "4f4ae647aa7946ab7393de0523edf491923deecc73769d5eca3e318d15db7dc8",
+  "bytes": 77698948
+ },
+ "/home/ubuntu/label_15m/funding_label_20210101_to_20210401.pb": {
+  "sha256": "f70bef2219e65ef681d411fb9539cf16b75d775a3d9c0d9cb6757061fabdd6e1",
+  "bytes": 30952712
+ },
+ "/home/ubuntu/label_15m/funding_label_20210401_to_20210701.pb": {
+  "sha256": "aedf5ed691f3fb0fcb303a16a2b94d989e3580e4fd2177f1656d0f1e6d9196c9",
+  "bytes": 39433441
+ },
+ "/home/ubuntu/label_15m/funding_label_20210701_to_20211001.pb": {
+  "sha256": "d66c9e9523b4c9e2242566cf7f0c4c7e5dc137da3c1e4fcda650a9c72f000452",
+  "bytes": 41586781
+ },
+ "/home/ubuntu/label_15m/funding_label_20211001_to_20220101.pb": {
+  "sha256": "777423c2d86d5c423ce4b866dac9cd60b4164607ce1008157094f5f6ec77f981",
+  "bytes": 45703306
+ },
+ "/home/ubuntu/label_15m/funding_label_20220101_to_20220401.pb": {
+  "sha256": "49facc73e7ba6b97172fec80bb1cbed07b704e2a0108e64404c3d510e8532176",
+  "bytes": 46605642
+ },
+ "/home/ubuntu/label_15m/funding_label_20220401_to_20220701.pb": {
+  "sha256": "bbd517a44c73687aea983d4e1ad92609db0638926e5e775b6593c533a1324b67",
+  "bytes": 48698799
+ },
+ "/home/ubuntu/label_15m/funding_label_20220701_to_20221001.pb": {
+  "sha256": "19a2240658f442e3a20f826ccf2170ecd1be32c6a5c58e9fd6ecff8b43df531a",
+  "bytes": 48846486
+ },
+ "/home/ubuntu/label_15m/funding_label_20221001_to_20230101.pb": {
+  "sha256": "1a20bc7b76e36cd1df75934265065f3da446730c08bf6d5a7ec1fd657b639f6e",
+  "bytes": 50665570
+ },
+ "/home/ubuntu/label_15m/funding_label_20230101_to_20230401.pb": {
+  "sha256": "90bdaf3f5122d70bc7354992300c18bee2a900be0415fe37d92b4915d761f927",
+  "bytes": 53673429
+ },
+ "/home/ubuntu/label_15m/funding_label_20230401_to_20230701.pb": {
+  "sha256": "cad92e56352d75e4ffcc794d708b22891c6a435fdeea2ee4fe787d8bb201d487",
+  "bytes": 62174622
+ },
+ "/home/ubuntu/label_15m/funding_label_20230701_to_20231001.pb": {
+  "sha256": "c1a72cbc585b9648e852c5e6920bf7fe6acf01517846a418f7d74d418e6ff8a2",
+  "bytes": 67851472
+ },
+ "/home/ubuntu/label_15m/funding_label_20231001_to_20240101.pb": {
+  "sha256": "f6e4f45c686328fe9061544a2c25cee658b2ecdf410f4f0f3a317bf4192c5032",
+  "bytes": 78552120
+ },
+ "/home/ubuntu/label_15m/funding_label_20240101_to_20240401.pb": {
+  "sha256": "52008d90ddb29e89810aaa98ec5c2f079f996ef3029d91de53b684fd60fa274c",
+  "bytes": 88802825
+ },
+ "/home/ubuntu/label_15m/funding_label_20240401_to_20240701.pb": {
+  "sha256": "bc2e83a758cd08c90161c235c044e51b8518b028c8f212e2a3da1a7116ebd53a",
+  "bytes": 92995056
+ },
+ "/home/ubuntu/claudedata/oi/oi_percoin_full.bin": {
+  "sha256": "e3887f63097299655213f8382ca7e473e126ee4d7ddf69a39658942651b305ec",
+  "bytes": 4227723300
+ },
+ "/home/ubuntu/claudedata/oi/symbol_map.csv": {
+  "sha256": "3f8175512f385d83619f85793e4f3edef4fcb9989d0e87c471976fbfcc104eaa",
+  "bytes": 11232
+ },
+ "/home/ubuntu/g015/pool/pool_dev.parquet": {
+  "sha256": "713460fc926e1fc1a2a2664c70068c6ba966f81e9f913b36d8b5fb2827599262",
+  "bytes": 131401565
+ }
+}
