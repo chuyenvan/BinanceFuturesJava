@@ -36,13 +36,19 @@ public class AIRejectFilter {
         earlyHardGateReject.set(0);
     }
 
-    /** Nguong MOM15 = HANG SO Configs.MIN_MOMENTUM_15M (gate truot theo phan vi da bi go 2026-09-03). */
-    static float thres15M() {
-        return Configs.MIN_MOMENTUM_15M;
+    /**
+     * Nguong CO SO cua gate MOM15. Nhanh B4 (docs/PREREG_B4.md, commit a0c7ad6): neu
+     * {@link GateRollingThreshold} bat thi lay nguong TRUOT theo phan vi tai thoi diem cua
+     * prediction; khong bat thi HANG SO Configs.MIN_MOMENTUM_15M => byte-identical voi C2b.
+     */
+    static float thres15M(AiPredictionData prediction) {
+        return GateRollingThreshold.isOn()
+                ? GateRollingThreshold.threshold(prediction.timestamp)
+                : Configs.MIN_MOMENTUM_15M;
     }
 
     public FilterResult checkSignal(AiPredictionData prediction) {
-        return evaluate(prediction.predReturn15M, thres15M());
+        return evaluate(prediction.predReturn15M, thres15M(prediction));
     }
 
     // ==============================================================
@@ -54,13 +60,13 @@ public class AIRejectFilter {
         }
 
         // EARLY check — chỉ chạy khi gate MOM15 bật
-        if (prediction.predReturn15M < thres15M()
+        if (prediction.predReturn15M < thres15M(prediction)
                 && symbolPred > Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD) {
             mom15RejectCount.incrementAndGet();
             earlyHardGateReject.incrementAndGet();
             return new FilterResult(FilterDecision.REJECT,
                     String.format("DANGER: pred 15m %.2f%% thap (Min %.2f%%)",
-                            prediction.predReturn15M * 100, thres15M() * 100));
+                            prediction.predReturn15M * 100, thres15M(prediction) * 100));
         }
 
         float baselineProb = Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD;
@@ -68,7 +74,7 @@ public class AIRejectFilter {
         // AI_DYNAMIC_MAX KHONG phai tran clamp o day: no la TRAN UNG VIEN o tang 1 cua selector
         // (SimulatorMarketLevelTicker1MStopLoss). Gate chi con CAN DUOI. Xem docs/C2B_SPEC.md muc 0.
         scaleFactor = Math.max(Configs.AI_DYNAMIC_MIN, scaleFactor);
-        float dynamic_15M = thres15M() * scaleFactor;
+        float dynamic_15M = thres15M(prediction) * scaleFactor;
         return evaluate(prediction.predReturn15M, dynamic_15M);
     }
 
