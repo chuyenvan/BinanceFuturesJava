@@ -300,3 +300,58 @@ Bottleneck **khong o tham so** va **khong o thong ke**. No o hai cho:
 Quet them tham so (wave 2, N=512, range hep hon) la **huong sai** cho toi khi hai cho tren duoc xu ly.
 
 > **DINH CHINH 2026-09-03 (chi THEM — khong doi luat nao o §4/§9/§10/§11/§12.1-12.3):** muc 1 ("tinh dung cua du lieu") van dung nhung **thu hep** — **file OI dang dung** (`claudedata/oi/oi_percoin_full.bin`) da duoc do lai bang gia tri va **KHONG ro ri** (taker nhan qua **450/450** mau; **0/259** symbol co ts `2024-03-04 00:00`), nen `docs/OI_SCOPE_REPORT.md` / `docs/FEAT40_LOOKAHEAD.md` ban cu doc **SAI** cho pham vi nay va moi so trong file nay **khong doi**; rui ro con lai la **rebuild file OI bang code hien tai** (`VisionMetricsClient.parseDay`) se tao leak — xem `docs/OI_FIX_LOG.md`.
+
+## 13. SUA DOI 5 — 2026-09-03 18:45 UTC, TRUOC khi doc ket qua: DEV-B KHONG CO SUC PHAN BIET
+
+**Trang thai luc sua:** 5/5 kernel `gs-w1-*` = COMPLETE nhung `/home/ubuntu/gs/out/` **con rong** —
+chua gom, chua doc mot dong ket qua nao. Day la lan sua cuoi truoc khi gom.
+
+### 13.1 Do duoc (khong phai suy dien)
+
+Nguon: `docs/FS_RESULT.md` (commit `c14107a`, `3257d75`), do doc lap tren 2 moi truong CPU.
+
+Tap xac nhan **2024H1** — dung khoang cua DEV-B o §2 — chi co **n_eff = 51 khoi 72h**. Tren tap do,
+**doi chung seed** (train lai CUNG mot model chi doi seed = KHONG co thong tin moi) cho
+`d = -0.0028`, **vuot nguong va CI loai 0 o ca 3 do dai khoi**.
+
+Nghia la: tren cua so nay, mot phep so **khong chua thong tin gi** van ra ket qua "co y nghia".
+Do la tinh chat cua CUA SO, khong phai cua thu duoc do. Moi thiet ke dung ~51 khoi 72h lam tap
+xac nhan cho phep so **train lai** se cho rac.
+
+### 13.2 Hau qua cho §4 buoc 6 (xac nhan tren DEV-B)
+
+Buoc 6 nhu da viet **khong con la mot phep xac nhan co hieu luc**. Nhung theo dung nguyen tac cua
+doc nay, **KHONG duoc bo hay noi dieu kien sau khi ket qua da san sang**. Vi vay:
+
+- **Buoc 6 GIU NGUYEN, van phai chay va van phai bao cao** dung nhu da chot (nguong 0.6 va -20%).
+- **Nhung ket qua cua no khong duoc doc nhu bang chung.** Bat buoc in kem canh moi ket luan
+  CONFIRMED/khong-CONFIRMED cau sau: *"tap xac nhan nay co n_eff = 51 khoi; doi chung seed khong
+  chua thong tin cung vuot nguong tren chinh tap nay, nen ket qua buoc 6 khong phan biet duoc
+  giua tin hieu that va tinh chat cua cua so."*
+- Mot finalist **KHONG duoc** goi la CONFIRMED ma khong kem cau tren.
+- Ket qua (a) o §4 buoc 7 doi hoi CA §11.2 (nguong `2.35*sd_boot` + thang o tang ghep cap) VA
+  buoc 6. Vi buoc 6 mat hieu luc, (a) tren thuc te **khong the tuyen bo** trong wave nay. Doc theo
+  (b)/(c), va ket luan chinh la **"khong the phan biet bang du lieu DEV hien co"**.
+
+### 13.3 Hai quy tac ha tang, ap dung tu day
+
+1. **Moi phep do rankIC/rho phai chay tren CPU, khong duoc chay GPU.** Do duoc
+   (`FS_RESULT.md` muc 6): `XGBRanker(device="cuda")` KHONG tai lap CPU (spearman 0.9855 < 0.999)
+   va nhieu rank-IC theo tick cua no la **0.0184** — lon hon moi hieu ung dang tim VA lon hon ca
+   hai khoi tin hieu that ma `feataudit` tim ra. Tren duong GPU co **2 ung vien vuot nguong GIA**;
+   tren CPU khong ung vien nao vuot. Cong parity tien-dang-ky da bat duoc loi nay.
+2. **Kaggle CPU khong bit-identical voi Oracle CPU** (cung xgboost 3.2.0): `keep9` rank-IC
+   `g1lite` 0.17040 vs 0.1723. Moi phep so ghep cap phai nam trong **cung mot** moi truong.
+
+### 13.4 Ghi them: hai don ra khoi bai toan power da bi do va deu that bai
+
+- **Them du lieu**: `docs/DATA_EXTENT_SURVEY.md` — metrics chi co tu 2021-12-01; toi da moi byte
+  (2020-01..2025-12, 6 nam) cho MDE80 **4.64pp** (exit) / 8.04pp (selector). Khong dat 3pp.
+- **Log quyet dinh tung tick**: `docs/TICKLOG_RESULT.md` — ha tang chay dung (ca 2 cong
+  byte-identity PASS) nhung MDE80 **khong cai thien** (E1/E0b = 0.845; tang tan so lay mau 96 lan,
+  911 -> 87,456 quan sat, MDE80 gan nhu khong doi). Nut co la **so khoi doc lap (304 khoi 72h)**,
+  khong phai tan so lay mau.
+
+=> §12.4 muc 2 phai doc lai: trong hai duong "tang so cuoc doc lap" va "xuat log tung tick",
+duong thu hai **da bi do va da chet**. Chi con duong thu nhat, va no khong co nghia la them nam
+du lieu — no co nghia la **them cuoc doc lap** (them symbol, giu lenh ngan hon, hoac thi truong khac).
