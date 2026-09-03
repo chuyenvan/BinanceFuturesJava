@@ -1,5 +1,11 @@
 # FEAT40 LOOKAHEAD — soat ro ri tuong lai o tang FEATURE cua G015
 
+> **DINH CHINH 2026-09-03 (docs/OI_SCOPE_REPORT.md):** pham vi trong file nay bi UOC LUONG THAP.
+> Khong phai 1/45 feature va 18.55% DEV. Thuc te ca 6/6 cot du lieu deu bi dich moc
+> (toan bo BAN GHI dich, khong phai mot cot) => **5/5 feature OI ro ri 5 phut**, 71.30% dong
+> file OI trien khai, va **100% VALIDATION**. Ngoai ra co train/serve skew tren duong LIVE.
+
+
 Ngay do: 2026-09-03. Pham vi du lieu: **CHI DEV** (2022-01-01 .. 2024-07-01, va cac file quy
 2021Q4..2024Q1). KHONG doc VALIDATION (2024-07-15..2025-12-31), KHONG doc HOLDOUT 2026.
 Khong chay java, khong backtest, khong train. Khong sua file trong repo.

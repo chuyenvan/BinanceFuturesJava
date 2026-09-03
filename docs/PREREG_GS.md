@@ -248,3 +248,53 @@ wave 1 tu gio la §6 (chieu nao that su lam doi ket qua) va viec tim vung phang 
 diem tot nhat. Cung ly do do, moi de xuat chon N4_a8s175 (61148) hay H1a_mom006 (60953) vi "equity
 cao hon 60390" deu la chon tren nhieu: hieu lan luot -0.62pp CI [-5.55,+4.32] va -0.46pp CI
 [-12.98,+11.96].
+
+## 12. SUA DOI 4 — 2026-09-03: dieu kien §11.2 KHONG THUC HIEN DUOC cho phan lon gene
+
+Nguon: `docs/PREREG_PAIRED.md` (commit `c96ddb3`, tien dang ky truoc khi do) va
+`docs/PAIRED_CALIB.md` (commit `43467b1`, ket qua hieu chuan).
+
+### 12.1 Do duoc: tang tung lenh KHONG nhay hon tang equity
+
+| cap so sanh | MDE80 tang equity | MDE80 tang tung lenh | ty le |
+|---|---|---|---|
+| C2b vs C2_g015 (doi selector) | 12.471pp | 11.837 %/nam | 0.95 |
+| C2b vs RND1_2dp (lam tron) | 0.627pp | 0.755 %/nam | 1.20 (te hon) |
+| R5_arm7 vs R6_arm8 (doi exit) | 3.607pp | 3.282 %/nam | 0.91 |
+| A6_ts96 vs A6_ts336 (time-stop 3.5x) | 6.437pp | 7.158 %/nam | 1.11 (te hon) |
+
+Ty le trung vi **0.95** — tuc la khong loi gi. Ly do: so khoi 72h CO lenh chi la **89-128**, so voi
+44 khoi o tang equity => 2-3 lan, khong phai 100 lan. 854-1717 lenh tren 2.45 nam la it.
+Doi chung am PASS tuyet doi (4 cap byte-identical: d=0, CI=[0,0], sd=0 o ca 3 do dai khoi).
+
+Nam DEV can de phan biet 3pp/nam o 80% power: **2.9 (mot buoc arm) / 14.0 (time-stop) / 38.3
+(selector) / 67.8 (doi ho cau hinh)** — khong khac §11.1.
+
+### 12.2 Va: khong co tang nao du power cho phan lon gene
+
+Khong ton tai log quyet dinh theo tick cho TUNG run: `sim.out` chi co 911 dong `Update` theo ngay,
+con pool tick o `/home/ubuntu/ledger/` doc lap voi config (hai run chi khac exit/sizing/concurrency
+se cho rank-IC y hệt). => ghep cap theo tick chi lam duoc cho gene **selector/gate**. Moi gene khac
+khong co tang nao du suc phan biet.
+
+### 12.3 Sua
+
+- §11.2 **GIU NGUYEN** la dieu kien bat buoc. Nhung ghi ro: voi gene khong phai selector/gate,
+  dieu kien nay **KHONG THE thoa bang du lieu hien co** => ket qua (a) tren cac gene do la
+  **khong the tuyen bo**, phai doc theo (b)/(c). Day khong phai loi cua wave 1; day la gioi han
+  thong tin cua du lieu.
+- **Khong duoc doi statistic sau khi thay ket qua.** `PREREG_PAIRED.md` chot `roisum` lam chinh;
+  hieu chuan cho thay `roisum` MU voi doi selector (t=0.12) nhung lai bao THANG cho phep lam tron
+  hang so (p=0.041, CI loai 0 o ca 3 do dai khoi) — mot duong positive GIA. Chi co nguong
+  `2.35*sd` o §11.2 chan duoc no. Ghi lai nguyen trang. Muon dung `pnlsum` thi phai co PRE-REG moi.
+- **Rang buoc maxDD phai giu o tang equity, doc lap.** Khong mot dai luong tung lenh nao ghi nhan
+  duoc khoang cach maxDD C2b -13.12% vs C2_g015 -20.82%.
+
+### 12.4 Ket luan ke hoach (thay doi huong)
+
+Bottleneck **khong o tham so** va **khong o thong ke**. No o hai cho:
+1. **Tinh dung cua du lieu** — xem `docs/FEAT40_LOOKAHEAD.md` va `docs/OI_SCOPE_REPORT.md`.
+2. **So cuoc doc lap.** Muon tang power phai tang so cuoc doc lap, hoac lam simulator xuat log
+   quyet dinh tung tick cho tung run — **khong phai cho them nam du lieu**.
+
+Quet them tham so (wave 2, N=512, range hep hon) la **huong sai** cho toi khi hai cho tren duoc xu ly.
