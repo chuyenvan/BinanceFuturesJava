@@ -115,3 +115,46 @@ Wave 1 chi quet 15 tham so cua may giao dich hien co. No khong noi gi ve: featur
 15m), label lien tuc (H5), exit theo vol (H6), sleeve short thuc su (H7). Neu ket qua la (b) hoac
 (c) thi ket luan hop ly nhat la **bottleneck o feature/du lieu, khong o tham so** — dung lan
 feature, khong quet tiep tham so.
+
+## 9. SUA DOI 1 — 2026-09-03, TRUOC khi co ket qua
+
+**Trang thai luc sua (kiem chung duoc):** 5/5 kernel `gs-w1-*` con RUNNING, `/home/ubuntu/gs/out/`
+con rong. Chua doc mot so ket qua nao. Doc goc yeu cau ghi ro delta + ly do — day la delta.
+
+### 9.1 DEV-B khong con la holdout theo DU LIEU
+
+Phat hien khi cai `analyze_wave1.py`: ha tang `gs-w1-*/run.py` tinh CA devA VA devB trong CUNG
+mot pass JVM cho MOI 256 diem (cat lat tu cung mot chuoi equity 2022-01-01 -> 2024-06-29). Vi vay
+§2 ("DEV-B chi chay cho <=5 finalist") KHONG thuc hien duoc: so devB cua ca 256 diem da ton tai
+san trong file ket qua. Bang chung: `/home/ubuntu/gs/smoke/out_gs_smoke.jsonl` — moi diem deu co
+san khoi `devB`.
+
+**Sua:** DEV-B chuyen tu holdout-theo-du-lieu thanh **holdout theo THU TUC**, niem phong bang
+THU TU COMMIT:
+
+1. `analyze_wave1.py` chi doc truong `devA`. CAM doc `devB` (tru buoc 8, chi in goi y lenh).
+   Script phai duoc commit TRUOC khi co ket qua — dieu kien nay da thoa.
+2. Khi ket qua ve: chay `analyze_wave1.py` -> xuat `finalists.json` (id + tham so + NS + CAGR devA)
+   -> **COMMIT file do NGAY**, truoc khi bat ky ai (nguoi hay agent) doc bat ky so devB nao.
+3. Chi SAU khi `finalists.json` da commit moi duoc doc devB, va chi doc devB cua dung cac finalist
+   trong file do. Doc devB cua diem khong phai finalist = VI PHAM, phai bao cao.
+4. Bang chung kiem tra duoc: timestamp commit `finalists.json` phai TRUOC moi log/analysis chua
+   so devB.
+
+**Ghi thang mat mat:** thu tuc nay YEU HON holdout that. Neu wave 1 ra ket qua (a) thi muc tin cay
+la "da tien-cam-ket luat chon", KHONG phai "da xac nhan tren du lieu chua tung chay". Bat buoc ghi
+gioi han nay khi bao cao ket qua. Nguong 0.6 va -20% o §4 buoc 6 giu nguyen.
+
+### 9.2 Chot cach doc §4 buoc 5 (finalist)
+
+"Top 5 theo NS, loc trung >= 0.15" cai theo **greedy**: di tu tren xuong theo NS giam dan, bo qua
+diem cach mot finalist da chon < 0.15, dung khi du 5. Script phai in ca `raw top-5` de doi chieu.
+
+### 9.3 Hai cho ghi mot 60390 loi thoi (khong anh huong ket qua)
+
+- Kernel dang chay co hang `ANCHOR_EQUITY = 60390`, chi dung cho dong log `ANCHOR_CHECK`
+  => log Kaggle se in MISMATCH cho diem neo DU KET QUA DUNG. Khong anh huong `equity_final`.
+- Docstring dau `gen_params.py` cung ghi 60390.
+
+Moc dung van la **60395** (§5 + `BASELINE_NOTE.md`). Kiem neo phai lam bang `analyze_wave1.py`,
+KHONG tin dong log ANCHOR_CHECK cua kernel.
