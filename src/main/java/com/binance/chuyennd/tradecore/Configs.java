@@ -354,6 +354,16 @@ public class Configs {
     //  Vi GATE_COUNT_ONLY khong bao gio tao order -> isSymbolRunning luon false -> tu dong BO filter von,
     //  dung y muon C1. Default false = OFF = khong ton RAM, byte-identical.
     public static final boolean ENTRY_UNIVERSE_DUMP = "1".equals(Cfg.get("SIM_ENTRY_UNIVERSE_DUMP"));
+    // [TICKLOG 2026-09-03] LOG QUYET DINH TUNG TICK CHO TUNG RUN (docs/PREREG_TICKLOG.md).
+    //  Ly do: khong ton tai log quyet dinh theo tick cho tung run => ghep cap theo tick chi lam
+    //  duoc cho gene selector/gate (docs/PREREG_GS.md muc 12.2). Doc qua cong Cfg, khai trong
+    //  profile. Mac dinh khong khai bao => OFF => moi diem chen la if(false) => byte-identical.
+    public static final boolean TICKLOG = "1".equals(Cfg.get("SIM_TICKLOG"));
+    public static final boolean TICKLOG_POOL = "1".equals(Cfg.getOr("SIM_TICKLOG_POOL", "0"));
+    public static final String TICKLOG_DIR = Cfg.getOr("SIM_TICKLOG_DIR", "/home/ubuntu/tick");
+    public static final String TICKLOG_TAG = Cfg.getOr("SIM_TICKLOG_TAG", "run");
+    public static final int TICKLOG_POS_EVERY_MIN =
+            Integer.parseInt(Cfg.getOr("SIM_TICKLOG_POS_EVERY_MIN", "1").trim());
     public static float MIN_MOMENTUM_15M = 0.02284f;                  // HPO (đã revert về cũ): 0.01720f
     public static float MS_UP_BIG_THRES = 0.02046f;                  // HPO (đã revert về cũ): 0.01757f
     public static float MS_DOWN_BIG_AVG = -0.03157f;                  // HPO (đã revert về cũ): -0.05514f

@@ -144,6 +144,11 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         LOG.info("[SELECTOR-CFG] SELECTOR_RANK_TOPK={} SELECTOR_ONLY_ENTRY={} (TOPK<=0 => cutoff tuyet doi)",
                 Configs.SELECTOR_RANK_TOPK, Configs.SELECTOR_ONLY_ENTRY);
 
+                // [TICKLOG 2026-09-03] docs/PREREG_TICKLOG.md — mac dinh OFF, byte-identical.
+                if (TickDecisionLog.ON) {
+                    TickDecisionLog.open();
+                }
+
 
         // [PROFILE] đo tách thời gian ĐỌC kline vs SIMULATE (đo không đoán)
         long readMs = 0, simMs = 0;
@@ -201,6 +206,10 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                     KlineObjectSimple ticker = symbol2Ticker[runningSymbolId];
                                     if (ticker != null) {
                                         startUpdateOldOrderTrading(time, runningSymbolId, ticker);
+                                        // [TICKLOG] read-only: trang thai exit sau khi engine da cap nhat phut nay.
+                                        if (TickDecisionLog.ON) {
+                                            TickDecisionLog.pos(time, runningSymbolId, symbol2OrderRunning[runningSymbolId], ticker);
+                                        }
                                     }
                                 }
 
@@ -319,14 +328,26 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                         // TOPK<=0 -> cutoff TUYET DOI: moi coin qua tran ung vien (nPass dau mang).
                                         for (int i = 0; i < nPass; i++) chosenCands.add(symbol2Pred[i]);
                                     }
+                                    // [TICKLOG] read-only: ngu canh tick (pool/nPass/nCand) + pool bi top-K loai.
+                                    int _tlRank = -1;
+                                    if (TickDecisionLog.ON) {
+                                        TickDecisionLog.selCtx(symbol2Pred.length, nPass, chosenCands.size());
+                                        if (TickDecisionLog.POOL) TickDecisionLog.poolCut(time, symbol2Pred, chosenCands.size());
+                                    }
                                     for (long encodedData : chosenCands) {
+                                        if (TickDecisionLog.ON) TickDecisionLog.ctxRank = (short) (++_tlRank);
                                         float symbolPred = Float.intBitsToFloat((int) encodedData);
                                         short targetId = (short) (encodedData >> 32);
 
+                                        if (TickDecisionLog.ON && isSymbolRunning(targetId)) {
+                                            TickDecisionLog.candAlreadyOpen(time, targetId, MarketLevelChange.PREDICT_SYMBOL_TRADE, symbolPred);
+                                        }
                                         if (!isSymbolRunning(targetId)) {
                                             KlineObjectSimple ticker = symbol2Ticker[targetId];
                                             if (Utils.isTickerAvailable(ticker)) {
                                                 createOrderBUY(targetId, ticker, MarketLevelChange.PREDICT_SYMBOL_TRADE, marketData, symbolPred);
+                                            } else if (TickDecisionLog.ON) {
+                                                TickDecisionLog.candNoTicker(time, targetId, MarketLevelChange.PREDICT_SYMBOL_TRADE, symbolPred);
                                             }
                                         }
                                     }
@@ -356,6 +377,12 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                 }
                             }
                             logByProcessTime(startTimeRun, "Done budget data", time);
+                            // [TICKLOG] read-only: tong hop moc 15 phut (equity mark-to-market + pool).
+                            if (TickDecisionLog.ON) {
+                                TickDecisionLog.ctxRank = -1;
+                                TickDecisionLog.tickIfDue(time, activeRunningIds, activeRunningCount,
+                                        symbol2OrderRunning, symbol2Ticker);
+                            }
                         } catch (Exception e) {
                             // F9 FIX: dem lai, khong cho im lang. Cu chi printStackTrace => phut do bi bo qua
                             // (khong kiem SL, khong cap nhat maxDD) ma backtest van bao "thanh cong".
@@ -416,6 +443,9 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                 //    KHONG doi hanh vi cu (byte-identical khi tat funding).
                 OrderTargetInfoTest clusterOpen = symbol2OrderRunning[id];
                 if (clusterOpen != null) clusterOpen.computeFundingOnClose();
+                if (TickDecisionLog.ON && clusterOpen != null) {
+                    TickDecisionLog.posOpenAtEnd(clusterOpen.timeUpdate, id, clusterOpen);
+                }
                 boolean fundingAssigned = false;
                 for (OrderTargetInfoTest orderInfo : orderRunningList) {
                     orderInfo.lastPrice = symbol2OrderRunning[id].lastPrice;
@@ -447,6 +477,9 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             } catch (Exception e) {
                 e.printStackTrace();
             }
+        }
+        if (TickDecisionLog.ON) {
+            TickDecisionLog.close();
         }
         long _tot = readMs + simMs;
         LOG.info("[PROFILE] days={} readMs={} simMs={} (read={}% sim={}%) totalLoopMs={}",
@@ -648,6 +681,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             // === FUNDING (Bước 3) — tính 1 LƯỢT cho cả cụm tại thời điểm đóng (timeStart leg đầu → timeUpdate).
             //     PnL tính trên TỪNG leg (Σ calTp); funding tích ở CỤM → gán toàn bộ vào DUY NHẤT leg đầu để Σ
             //     không cộng trùng; các leg khác giữ rỗng.
+            if (TickDecisionLog.ON) TickDecisionLog.posClose(orderMulti.timeUpdate, symbolId, orderMulti);
             orderMulti.computeFundingOnClose();
             boolean fundingAssigned = false;
             for (OrderTargetInfoTest order : orders) {
@@ -726,6 +760,17 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         return orderResult;
     }
 
+    /**
+     * [TICKLOG 2026-09-03] read-only: ghi MOT dong quyet dinh ung vien vao cand.bin.
+     * Chi duoc goi khi {@link TickDecisionLog#ON}. Khong doi mot bien trang thai nao.
+     */
+    private void tlCand(byte decision, short symbolId, KlineObjectSimple ticker,
+                        MarketLevelChange levelChange, Float symbolPred, AiPredictionData predict) {
+        List<OrderTargetInfoTest> cur = symbol2OrdersEntry[symbolId];
+        TickDecisionLog.cand(ticker.startTime, symbolId, decision, levelChange,
+                cur == null ? 0 : cur.size(), symbolPred, predict, ticker.priceClose);
+    }
+
     public void createOrderBUY(short symbolId, KlineObjectSimple ticker, MarketLevelChange levelChange,
                                MarketDataObject marketData, Float symbolPred) {
         // Long entry — delegate vao loi chung createOrder(BUY,...). Giu nguyen chu ky de moi call-site
@@ -751,6 +796,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         // (DetectEntrySignal2TradeNormal). TRƯỚC ĐÂY sim bỏ qua filter khi predict==null → VẪN vào lệnh "mù"
         // → P&L sim≠live ở mốc thiếu pred. Nay sim cũng reject pred==null. (CONFIG_VERSION v8→v9.)
         if (predict == null) {
+            if (TickDecisionLog.ON) tlCand(TickDecisionLog.D_NO_PRED, symbolId, ticker, levelChange, symbolPred, null);
             return;
         }
         if (!levelChange.equals(MarketLevelChange.BIG_DOWN)) {
@@ -763,6 +809,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
                 ablationSignalSeen++;
                 if (filterResult.decision == AIRejectFilter.FilterDecision.REJECT) {
+                    if (TickDecisionLog.ON) tlCand(TickDecisionLog.D_GATE_REJECT, symbolId, ticker, levelChange, symbolPred, predict);
                     if (levelChange == MarketLevelChange.PREDICT_SYMBOL_TRADE) predictSymbolRejectedGate++; // TASK-134
                     return;
                 }
@@ -802,6 +849,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         CoinRankManager.CoinTier myTier = CoinRankManager.getInstance().getCoinTier(symbolId, currentTs);
         if (myTier == CoinRankManager.CoinTier.TIER_3_SHITCOIN) {
             if (levelChange == MarketLevelChange.DCA_LEVEL1) {
+                if (TickDecisionLog.ON) tlCand(TickDecisionLog.D_TIER3_DCA, symbolId, ticker, levelChange, symbolPred, predict);
                 return;
             }
         }
@@ -813,6 +861,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         budget = TradeUtils.managerBudget(budget, marginRunning, balanceBasic, levelChange);
 
         if (budget == null) {
+            if (TickDecisionLog.ON) tlCand(TickDecisionLog.D_NO_BUDGET, symbolId, ticker, levelChange, symbolPred, predict);
             return;
         }
 
@@ -829,7 +878,10 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             List<OrderTargetInfoTest> cur = symbol2OrdersEntry[symbolId];
             int legIdx = (cur == null) ? 0 : cur.size();     // 0 = leg dau
             float ratio = DcaUtils.gridLegWeightRatio(legIdx);
-            if (ratio <= 0f) return;                          // het bac grid -> khong mo them leg
+            if (ratio <= 0f) {
+                if (TickDecisionLog.ON) tlCand(TickDecisionLog.D_GRID_EXHAUSTED, symbolId, ticker, levelChange, symbolPred, predict);
+                return;                          // het bac grid -> khong mo them leg
+            }
             budget *= ratio;
         }
 
@@ -860,6 +912,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             symbol2OrdersEntry[symbolId] = orders;
         }
         orders.add(order);
+        if (TickDecisionLog.ON) tlCand(TickDecisionLog.D_ENTERED, symbolId, ticker, levelChange, symbolPred, predict);
 
         // ENTRY-MATCH PROBE (env WFO_LOG_ENTRIES=1). Default off = byte-identical.
         if (Configs.WFO_LOG_ENTRIES) {

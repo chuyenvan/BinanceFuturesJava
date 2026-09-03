@@ -47,6 +47,19 @@ public class AIRejectFilter {
                 : Configs.MIN_MOMENTUM_15M;
     }
 
+    /**
+     * [TICKLOG 2026-09-03] NGUONG DONG tang 2 cua gate MOM15, tinh lai THUAN (khong dung counter,
+     * khong doi state) de ghi vao log quyet dinh tung tick. Cong thuc y het checkSignalDynamic:
+     * thres15M(prediction) * max(AI_DYNAMIC_MIN, symbolPred/RATE_MAX * AI_DYNAMIC_MULTIPLIER).
+     * symbolPred == null => nguong CO SO (nhanh checkSignal). READ-ONLY, khong anh huong quyet dinh.
+     */
+    public static float dynThreshold(AiPredictionData prediction, Float symbolPred) {
+        float base = thres15M(prediction);
+        if (symbolPred == null) return base;
+        float scale = (symbolPred / Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD) * Configs.AI_DYNAMIC_MULTIPLIER;
+        return base * Math.max(Configs.AI_DYNAMIC_MIN, scale);
+    }
+
     public FilterResult checkSignal(AiPredictionData prediction) {
         return evaluate(prediction.predReturn15M, thres15M(prediction));
     }
