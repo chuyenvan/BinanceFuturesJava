@@ -156,6 +156,48 @@ Worker hiện xay job FAIL 3s/lần khi thiếu ticker (claim→fail→claim) �
 Ghi chú thêm: Binance API bị chặn địa lý từ IP Kaggle (restricted location) — exchange-info fetch lỗi nhưng
 KHÔNG chặn job (đã có 8 job DONE vượt qua); không được thêm bước nào phụ thuộc Binance API trong kernel.
 
+---
+
+## 3e. HAI DUONG DOC TICKER KHONG BIT-EXACT (do 2026-09-03, GS wave-1)
+
+`TICKER_SOURCE=aerospike` (Oracle doc Aerospike local) va `TICKER_SOURCE=file` (Kaggle doc
+`kaggle_data_hpo/ticker_YYYYMMDD.bin*`) **KHONG cho ket qua giong tung byte**, du comment trong
+`SimulatorMarketLevelTicker1MStopLoss` ghi "Ket qua Y HET duong doc thang". Da do truc tiep, cung
+jar (`f51fd17`), cung profile, cung dataset `wfo_ds_clean`, cung `predwf_map_s1a2`:
+
+| moi truong | TICKER_SOURCE | equity cuoi (C2b, DEV 2022-01..2024-06) |
+|---|---|---|
+| Oracle | aerospike | **60390** |
+| Oracle | file | **60395** |
+| Kaggle | file | **60395** |
+
+**Oracle+file == Kaggle+file** (printDone.csv giong het tung dong, PROFILE_HASH `7081c357ca12bdd6`)
+=> chenh lech den TU DUONG DOC TICKER, **moi truong Kaggle (JVM/OS/float) VO CAN**.
+
+### Lech bao nhieu va o dau
+- **970/970 lenh khop tuyet doi** ve so luong; **dung 1 lenh** khac nhau.
+- Lenh do: `FTT BUY` vao `2022-11-09 01:00` (dot FTX sup, data ticker rach nhat).
+  Duong aerospike cham SL luc `2022-11-14 11:00` (giu 130h). Duong file KHONG cham nen lenh song tiep
+  den loser-time-stop 168h, dong `2022-11-16 01:01`. PnL `-1084.85` vs `-1080.39`.
+- Sai lech day len cuoi ky: **+5 USDT / 60390 = 0.008%**. 8/10 quy khop tro 2 chu so thap phan;
+  2 quy lech 0.01pp (2022Q4: -3.73 vs -3.72; 2024Q2: -1.42 vs -1.41). maxDD -13.1% va underwater
+  93 ngay khong doi.
+
+### Quy tac rut ra — BAT BUOC
+1. **Moi so sanh so hoc giua run Oracle va run Kaggle chi tin duoc toi ~0.01%.** Chenh lech nho hon
+   nguong nay KHONG duoc coi la tin hieu (khong ket luan "cau hinh A tot hon B" o muc do do).
+2. **Muon so byte-identity thi hai run PHAI cung `TICKER_SOURCE`.** Cong `tools/parity_clean.sh` chay
+   tren Oracle voi `aerospike` — dung no de so voi run Oracle, KHONG dung de so voi run Kaggle.
+3. **Diem neo cua mot vong Kaggle phai duoc do TREN KAGGLE**, khong lay lai so cua Oracle. Vd GS
+   wave-1: neo la `id=-1` = **60395**, khong phai 60390.
+4. Khi mot fleet Kaggle ra so "lech nhe" so voi Oracle, **kiem gia thuyet ticker-path TRUOC** (chay
+   lai tren Oracle voi `TICKER_SOURCE=file`, ticker local o
+   `/home/ubuntu/java/simulator/kaggle_data_hpo/daily/`) truoc khi nghi ha tang sai. Phep thu nay
+   ton 1 sim ~6 phut.
+
+Bang chung: `/home/ubuntu/java/logs/gs_filetest.log`, `devrun/GS_FILE15/`, `devrun/GS_FILE24/`,
+`devrun/C2b/`, kernel `chuyendinh/gs-w1-smoke`.
+
 ## 4. System.exit(0) — Bắt buộc
 
 Kaggle kernel **KHÔNG tự thoát** khi `main()` kết thúc nếu có non-daemon thread còn sống.
@@ -323,3 +365,4 @@ ssh -i /c/Users/pc/.ssh/id_rsa_chuyennd -p 2222 -o BatchMode=yes root@103.157.21
 | 2026-06-18 | §0 mới: log/output lưu `D:\claudedata`, KHÔNG lưu ổ C (full 2 lần → MCP chết). |
 | 2026-06-18 | kaggle CLI đã cấu hình vào PATH ổn định — gọi `kaggle ...` trực tiếp, không cần full path nữa. |
 | 2026-07-02 | §3b mount layout mới `/kaggle/input/datasets/<user>/<slug>` + §3c môi trường đo thật (Java 17 sẵn, 31GB/4CPU) — kernel `wfo-env-test` PASS. Kaggle CLI trên Oracle: key trùng 226, auth OK. |
+| 2026-09-03 | §3e moi: `TICKER_SOURCE` aerospike vs file KHONG bit-exact (60390 vs 60395, 1/970 lenh) — do bang GS wave-1; nguong tin cay so sanh Oracle-vs-Kaggle ~0.01%. |
