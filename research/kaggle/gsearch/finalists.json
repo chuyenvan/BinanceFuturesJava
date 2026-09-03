@@ -1,0 +1,178 @@
+{
+  "prereg": "docs/PREREG_GS.md muc 4 (buoc 1-5) + muc 9.1/9.2",
+  "input_jsonl": "/home/ubuntu/gs/out/gs_wave1_all.jsonl",
+  "n_lines_input": 257,
+  "anchor": {
+    "id": -1,
+    "equity_final": 60395,
+    "cagr_pct_devA": 27.49,
+    "maxdd_pct_devA": -13.12,
+    "n_trades_devA": 655,
+    "void": false,
+    "note": "equity_final = 60395 DUNG BANG moc tien-dang-ky (PREREG muc 5). Wave khong VOID."
+  },
+  "n_sobol_total": 256,
+  "n_valid": 115,
+  "exclude_reasons": {
+    "khong_hoan_tat": 20,
+    "n_trades_devA<300": 65,
+    "maxDD<-25%": 56,
+    "NaN": 0
+  },
+  "chosen_ns_id": 149,
+  "chosen_cagr_id": 127,
+  "raw_top5_ns_ids": [
+    149,
+    0,
+    181,
+    156,
+    172
+  ],
+  "finalist_ids": [
+    149,
+    0,
+    181,
+    156,
+    172
+  ],
+  "anchor_percentile": {
+    "anchor_cagr": 27.49,
+    "anchor_ns": 21.078181818181818,
+    "pct_cagr": 85.21739130434783,
+    "pct_ns": 74.78260869565217,
+    "n_pop": 115
+  },
+  "finalists": [
+    {
+      "rank": 1,
+      "id": 149,
+      "NS_devA": 27.5791,
+      "cagr_pct_devA": 21.13,
+      "maxdd_pct_devA": -6.81,
+      "n_trades_devA": 327,
+      "equity_end_devA": 51315,
+      "params": {
+        "SIM_MIN_MOMENTUM_15M": 0.009011,
+        "SIM_AI_DYNAMIC_MULTIPLIER": 1.736295,
+        "SIM_AI_DYNAMIC_MIN": 0.630854,
+        "SIM_AI_DYNAMIC_MAX": 4.239618,
+        "SIM_PREDICT_SYMBOL_RATE_MAX": 0.060659,
+        "SIM_RATE_PROFIT_STOP_MARKET": 0.039455,
+        "TS_GIVEBACK_RATIO": 0.226152,
+        "SIM_TS_MAX_GAP": 0.061984,
+        "SIM_TS_MAX_GAP_WEAK": 0.086605,
+        "SIM_TS_PNOPUMP_WEAK_THR": 0.489685,
+        "SIM_LOSER_TIME_STOP_HOURS": 49,
+        "SELECTOR_RANK_TOPK": 18,
+        "DCA_GRID_SCALE": 2.447532,
+        "SIM_F_BASE": 0.050348,
+        "SIM_U_MAX": 0.844568
+      }
+    },
+    {
+      "rank": 2,
+      "id": 0,
+      "NS_devA": 27.4682,
+      "cagr_pct_devA": 20.08,
+      "maxdd_pct_devA": -9.48,
+      "n_trades_devA": 300,
+      "equity_end_devA": 50426,
+      "params": {
+        "SIM_MIN_MOMENTUM_15M": 0.006426,
+        "SIM_AI_DYNAMIC_MULTIPLIER": 2.53592,
+        "SIM_AI_DYNAMIC_MIN": 0.559934,
+        "SIM_AI_DYNAMIC_MAX": 1.213827,
+        "SIM_PREDICT_SYMBOL_RATE_MAX": 0.099291,
+        "SIM_RATE_PROFIT_STOP_MARKET": 0.138327,
+        "TS_GIVEBACK_RATIO": 0.688443,
+        "SIM_TS_MAX_GAP": 0.080351,
+        "SIM_TS_MAX_GAP_WEAK": 0.088756,
+        "SIM_TS_PNOPUMP_WEAK_THR": 0.113062,
+        "SIM_LOSER_TIME_STOP_HOURS": 145,
+        "SELECTOR_RANK_TOPK": 21,
+        "DCA_GRID_SCALE": 1.45265,
+        "SIM_F_BASE": 0.034393,
+        "SIM_U_MAX": 0.574977
+      }
+    },
+    {
+      "rank": 3,
+      "id": 181,
+      "NS_devA": 26.3418,
+      "cagr_pct_devA": 23.06,
+      "maxdd_pct_devA": -12.07,
+      "n_trades_devA": 505,
+      "equity_end_devA": 52962,
+      "params": {
+        "SIM_MIN_MOMENTUM_15M": 0.008101,
+        "SIM_AI_DYNAMIC_MULTIPLIER": 0.526856,
+        "SIM_AI_DYNAMIC_MIN": 0.105176,
+        "SIM_AI_DYNAMIC_MAX": 2.586323,
+        "SIM_PREDICT_SYMBOL_RATE_MAX": 0.084953,
+        "SIM_RATE_PROFIT_STOP_MARKET": 0.118638,
+        "TS_GIVEBACK_RATIO": 0.760148,
+        "SIM_TS_MAX_GAP": 0.10489,
+        "SIM_TS_MAX_GAP_WEAK": 0.015137,
+        "SIM_TS_PNOPUMP_WEAK_THR": 0.471259,
+        "SIM_LOSER_TIME_STOP_HOURS": 99,
+        "SELECTOR_RANK_TOPK": 3,
+        "DCA_GRID_SCALE": 2.343652,
+        "SIM_F_BASE": 0.024426,
+        "SIM_U_MAX": 0.461036
+      }
+    },
+    {
+      "rank": 4,
+      "id": 156,
+      "NS_devA": 25.4891,
+      "cagr_pct_devA": 35.3,
+      "maxdd_pct_devA": -22.17,
+      "n_trades_devA": 519,
+      "equity_end_devA": 63991,
+      "params": {
+        "SIM_MIN_MOMENTUM_15M": 0.002099,
+        "SIM_AI_DYNAMIC_MULTIPLIER": 2.484417,
+        "SIM_AI_DYNAMIC_MIN": 0.429077,
+        "SIM_AI_DYNAMIC_MAX": 1.063693,
+        "SIM_PREDICT_SYMBOL_RATE_MAX": 0.052011,
+        "SIM_RATE_PROFIT_STOP_MARKET": 0.177509,
+        "TS_GIVEBACK_RATIO": 0.856439,
+        "SIM_TS_MAX_GAP": 0.033305,
+        "SIM_TS_MAX_GAP_WEAK": 0.064323,
+        "SIM_TS_PNOPUMP_WEAK_THR": 0.088968,
+        "SIM_LOSER_TIME_STOP_HOURS": 25,
+        "SELECTOR_RANK_TOPK": 14,
+        "DCA_GRID_SCALE": 2.327574,
+        "SIM_F_BASE": 0.031185,
+        "SIM_U_MAX": 0.683993
+      }
+    },
+    {
+      "rank": 5,
+      "id": 172,
+      "NS_devA": 25.1164,
+      "cagr_pct_devA": 42.37,
+      "maxdd_pct_devA": -23.08,
+      "n_trades_devA": 2246,
+      "equity_end_devA": 70841,
+      "params": {
+        "SIM_MIN_MOMENTUM_15M": 0.00245,
+        "SIM_AI_DYNAMIC_MULTIPLIER": 2.724844,
+        "SIM_AI_DYNAMIC_MIN": 0.095909,
+        "SIM_AI_DYNAMIC_MAX": 1.956049,
+        "SIM_PREDICT_SYMBOL_RATE_MAX": 0.142708,
+        "SIM_RATE_PROFIT_STOP_MARKET": 0.17295,
+        "TS_GIVEBACK_RATIO": 0.690344,
+        "SIM_TS_MAX_GAP": 0.058911,
+        "SIM_TS_MAX_GAP_WEAK": 0.015519,
+        "SIM_TS_PNOPUMP_WEAK_THR": 0.121063,
+        "SIM_LOSER_TIME_STOP_HOURS": 56,
+        "SELECTOR_RANK_TOPK": 19,
+        "DCA_GRID_SCALE": 1.279693,
+        "SIM_F_BASE": 0.070722,
+        "SIM_U_MAX": 0.427727
+      }
+    }
+  ],
+  "seal": "File nay duoc COMMIT TRUOC khi doc bat ky so devB nao (PREREG muc 9.1 buoc 2-4). Moi so trong file chi tu devA (2022-01-01..2023-12-31)."
+}
