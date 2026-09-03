@@ -10,6 +10,30 @@ khong co -> ghi MAU THUAN va dung ve phia config/code.
 
 ## TRA LOI NGAN CHO CAU HOI CUA CHU DU AN
 
+> **CAP NHAT 2026-09-03 - DOC CUNG `docs/CI_REAUDIT.md`.** Moi verdict trong Bang 1 duoc chot
+> bang kieu "so nay lon hon so kia" da duoc do lai voi **CI THAT** (block-bootstrap; n hieu
+> dung = **302 khoi 72h** cho pool tick va **44 khoi 21-ngay** cho chuoi equity, thay vi
+> 15.44M dong / 911 ngay). Phuong phap chot truoc o `docs/PREREG_CI.md` (commit `2493eca`).
+> Bon muc phai doc lai:
+>
+> - **A1 / A6** ("S1 dong gop **+7.35pp CAGR**") => **KHONG PHAN BIET DUOC**: CI cua hieu
+>   **[-1.72, +15.61]pp**. Edge cua S1 chi con **SONG o tang xep hang**: rank-IC S1 - G015 =
+>   **+0.0973**, CI **[+0.0711, +0.1152]**, va top8 vs random8 = **+0.0182**, CI
+>   **[+0.0085, +0.0227]**. Cap goc "16.21 vs 13.85" cung **khong phan biet duoc**
+>   (+2.36pp, CI [-3.33, +7.71]).
+> - **A10** (H3 `rho` 0.1667 vs G015) => **KHONG PHAN BIET DUOC** (-0.0047 = **-0.34 sd**),
+>   **KHONG** phai "H3 thua". H3 van dong, nhung vi 4 tieu chi KHAC (hieu chuan 0.215 > 0.05;
+>   doi chung shuffle vuot model that). Va: `rho(G015)` tren **dung pool cua H3** la **0.17137**,
+>   khong phai 0.1675 - phep so cu la so **hai pool khac nhau**.
+> - **B4** (rolling-pct gate "THUA tren nen C2b") => ca 3 hieu **nam trong CI**
+>   (+3.12 / +7.20 / +1.06 pp) va **maxDD cua ca 3 KHONG te hon C2b** (-12.88 / -12.33 / -13.12
+>   vs -13.12). Cau "EV am tren nen C2b => khong nen" **khong duoc du lieu ho tro**.
+> - **E5 / Bang 2 #3** => ket luan "hang so KHONG load-bearing" **van dung**; nhung loi phe
+>   "**Mat that 544 USDT equity = ~-0.5pp CAGR** ... pre-reg viet 'khong mat gi' - cau do khong
+>   dung" la **SAI va phai rut**: 544 USDT = +0.45pp, CI **[-0.63, +1.46]pp** => nam hoan toan
+>   trong nhieu. Khong co 0.5pp nao de danh doi.
+
+
 Cam giac "danh gia thang nhieu ma khong apply duoc gi" **khong dung voi phan lon cac muc**:
 gan het cac muc THANG da nam san trong C2b (arm 7%, sizing 1.5x, TS_GIVEBACK, loser-time-stop 168h,
 funding-mark, M1, va **selector S1**). Cai thuc su "thang ma chua apply" chi con **5 muc**, va
@@ -109,7 +133,7 @@ C2b = **b:60390** (CAGR 24.48 / maxDD -13.12 / 8-10 quy duong / Sharpe(q) 0.95 /
 | F2 | Audit du lieu VAL | 2026-09-03 | (a) `feat_v2_val` == `feat_v2` tren doan chung: nan_mismatch 0, max diff <=4.7e-7 => PASS. (b) NaN `ls_global`/`rk_oi_delta24h`: 1.0-1.8% (2024) -> **8.1-8.2% (2025Q4)**. (c) universe **155 -> 265 -> 563 coin/gio**, coin unique 171 -> 591 | (a) PASS, (b)(c) RUI RO | KHONG (khong co gi apply) | `featv2/audit.py`, `featv2/AUDIT.out`, `featv2/admit_rate.py` | (b) la rui ro pipeline OI/LS cho live. (c) khong tham so nao phan anh => xem B9 |
 | F3 | **GS wave-1 — Sobol 15 chieu, 256 diem** | 2026-09-03 | **CHUA CO KET QUA**: 5 kernel `chuyendinh/gs-w1-0..4` push luc 10:22 UTC (`/home/ubuntu/gs/push5.log`), `/home/ubuntu/gs/out/` **chua ton tai** luc audit 10:45 UTC | dang chay | **KHONG (chua the)** | pre-reg `docs/PREREG_GS.md` (chot 10:35 UTC); khong gian `research/kaggle/gsearch/gen_params.py` `SPEC` 15 chieu (commit `f51fd17`); diem neo `id=-1` phai tai lap **60395** neu khong => **WAVE VOID** | Luat doc ket qua da chot cung (§4 buoc 1-7). Chia du lieu: DEV-A 2022-2023 (chon), DEV-B 2024H1 (xac nhan <=5 finalist), **VALIDATION khong bi cham** |
 | F4 | Override SIM_* cho hang so HPO con song | 2026-09-03 | 4 key moi mo: `SIM_AI_DYNAMIC_MULTIPLIER/MAX`, `SIM_TS_MAX_GAP`, `SIM_TS_MAX_GAP_WEAK`, `SIM_F_BASE`, `SIM_U_MAX`; default = gia tri cu => byte-identical | XONG (ha tang cho GS) | **CO** | commit `f2ada23` + `f51fd17`; `Configs.java:435-448` | Khong key nao trong `profiles/c2b.properties` => tat ca chay default |
-| F5 | **PHASE1_DECISION_SURFACE — 7 muc "phai quyet lai co y thuc"** | (tu Pha 1) | **cot "QUYET (1.2)" TRONG HOAN TOAN** — khong muc nao duoc quyet | **CHUA QUYET** | **KHONG** | `docs/PHASE1_DECISION_SURFACE.md` — bang A/B/C, cot cuoi rong; muc "Tong ket cai CHUA/DA-NHIEM" liet ke 7 muc | Trong do **2 muc con song va nguy hiem**: **A2c** label SL = 0.03 "placeholder, user chot sau" CHUA TUNG CHOT; **A2e** lay mau grid 15m **overlap voi horizon 4h = L1 leak**, co mode nonoverlap nhung default la grid. Ca hai thuoc model **G015** — model dang cap `score` cho GATE (S1 chi dao thu hang, quantile-map giu nguyen phan phoi P(win) cua G015) => **leak L1 tiem an o tang gate CHUA dong** |
+| F5 | **PHASE1_DECISION_SURFACE — 7 muc "phai quyet lai co y thuc"** | (tu Pha 1) | **cot "QUYET (1.2)" TRONG HOAN TOAN** — khong muc nao duoc quyet | **CHUA QUYET** | **KHONG** | `docs/PHASE1_DECISION_SURFACE.md` — bang A/B/C, cot cuoi rong; muc "Tong ket cai CHUA/DA-NHIEM" liet ke 7 muc | **DA DINH CHINH 2026-09-03** (`docs/LEAK_L1_REPORT.md`): (a) **A2c HET HIEU LUC** — G015 deployed **khong dung stop-loss nao**, `SEL_ADV_PCT=0.03` chi nam o 2 script chua tung sinh bins dang chay; (b) **A2e KHONG phai L1 leak** — overlap cua so nhan chi la **tuong quan chuoi**; purge that 72h vs horizon 4h => du ra 68.25h o **16/16 vong**. He qua duy nhat la **CI bi hep gia** (n hieu dung = 302 khoi 72h) — da do lai o `docs/PREREG_CI.md` + `docs/CI_REAUDIT.md`. Muc THAT chua quyet la **A2f MOI**: nhan G015 1-chieu `maxFav_4h>=0.06` khong co SL, **lech khoi cach strategy that exit** (arm/giveback). Cot "QUYET (1.2)" da duoc dien 2026-09-03 cho 16 o (CHOT DE-FACTO / DINH CHINH / CHUA QUYET+cai dang chan); 4 o can danh doi gia tri (A2f, B7, C9, C12) van de CHUA QUYET cho chu du an |
 | F6 | Bug funding `computeFundingOnClose` | 2026-09-02 | notional co dinh = qty x avgEntry => funding ao 4-10x | BUG, da fix | **CO** | commit `49fde3b` -> `SIM_FUNDING_MARK=true` (xem C5) | Moi ket qua truoc fix (sweep, CPCV Pha 2) **bi thoi** |
 | F7 | Pha 2 CPCV gate market-return tren VAL | (truoc 2026-09-02) | FAIL DSR (DSR 0.936@400 / 0.912@1400 vs nguong 0.95), 4 lan cham VAL | **FAIL, dong** | KHONG | `docs/ROADMAP_NOLEAK.md:83`; memory `cpcv_*.md` (11 file archive) | Dong |
 | F8 | Forced-seller / carry-funding / trend-holdout | (truoc 2026-09-02) | KILLED | FAIL | KHONG | memory `forced-seller-verdict.md`, `carry-funding-verdict.md`, `trend-holdout-verdict.md` | Dong |
@@ -221,8 +245,11 @@ Chuoi bang chung, tung mat khop:
 - (d) **Gate van chay bang G015.** Quantile-map giu **nguyen** phan phoi P(win) cua G015 trong tung
   tick; S1 chi doi *coin nao nhan gia tri nao*. Nghia la `score` dung cho gate (`dyn_thr`), cho
   strong/weak trailing (`TS_PNOPUMP_WEAK_THR=0.29`) va cho tran ung vien (0.32120) **van la cua
-  G015**. => moi no cua G015 (F5: label SL 0.03 placeholder chua chot, grid 15m overlap = L1 leak)
-  **van con nguyen trong C2b**.
+  G015**. => moi no cua G015 **van con nguyen trong C2b**, nhung noi dung cua no **DA DUOC
+  DINH CHINH** (`docs/LEAK_L1_REPORT.md`): **KHONG** phai "label SL 0.03 chua chot"
+  (0.03 vo hieu luc) va **KHONG** phai "grid 15m overlap = L1 leak" (purge 72h du o 16/16
+  vong). No THAT la **A2f**: nhan 1-chieu `maxFav_4h>=0.06` khong SL, lech khoi exit that;
+  cong voi **CI bi hep gia** o moi phep so dua tren pool nay — xem `docs/CI_REAUDIT.md`.
 
 ## 3.4 Vay 16.21 vs 13.85 dang so cai gi, va tai sao C2b la 24.48?
 
@@ -377,13 +404,25 @@ Moi muc: docs/memory noi gi -> code/config thuc te noi gi -> dung ve phia nao.
 
 - `docs/PHASE1_DECISION_SURFACE.md`: cot "QUYET (1.2)" **trong hoan toan** o ca 3 bang A/B/C.
 - Hai muc con song va nam **ngay tren duong gate cua C2b** (vi gate dung score G015, xem §3.3d):
-  - **A2c** — label SL (adv) = **0.03**, ghi ro trong chinh doc la "SL placeholder, user chot sau
-    — **CHUA TUNG CHOT**".
-  - **A2e** — lay mau grid 15 phut, **overlap voi horizon 4h = L1 leak**; co mode nonoverlap nhung
-    default la grid.
+  - ~~**A2c** — label SL (adv) = **0.03** "SL placeholder, user chot sau"~~ => **DONG
+    2026-09-03: 0.03 VO HIEU LUC.** G015 deployed khong doc `maxAdv` bao gio; 0.03 chi nam o
+    2 script chua tung sinh bins (`LEAK_L1_REPORT` muc 4.1-4.2). Khong con gi phai chot o A2c.
+  - ~~**A2e** — lay mau grid 15 phut, **overlap voi horizon 4h = L1 leak**~~ => **DONG
+    2026-09-03: KHONG PHAI L1 LEAK.** Purge that = 72h wall-clock vs horizon nhan 4h => du ra
+    **68.25h o 16/16 vong**, con `assert tr.ts.max() < cutoff` chay that moi fold
+    (`LEAK_L1_REPORT` Cau 2 b3). Overlap chi la **tuong quan chuoi**: no lam **CI hep gia**
+    (n hieu dung = 302 khoi 72h thay vi 15.44M dong), **khong** lam lech diem uoc luong
+    (spearman mau khong chong lap 0.1718 vs moc 0.1675).
+  - **A2f (MUC MOI, thay cho A2c)** — nhan G015 deployed la **1 CHIEU** `maxFav_4h >= 0.06`,
+    **KHONG co stop-loss** nao. No bo qua hoan toan viec truoc do co sut -X% hay khong =>
+    **lech khoi cach strategy that exit** (arm 7% -> giveback min(50%, cap 8%) -> ratchet,
+    loser-time-stop 168h). Day la quyet dinh nhan **chua bao gio duoc ghi vao bang quyet dinh**.
+    Chi phi doi: train lai G015 16 fold => doi phan phoi P(win) => doi `dyn_thr` =>
+    **moi so DEV/VAL cua C2b phai chay lai** (`LEAK_L1_REPORT` muc 4.4).
 - => Trong khi moi cong suc 2026-09-02/03 do vao selector S1 va exit, **model cap score cho gate
-  van la G015 voi 2 quyet dinh nhan chua bao gio duoc chot va 1 nghi van leak L1**. Day la no ghi
-  chep nghiem trong nhat sau M1.
+  van la G015**. No THAT SU la **A2f** (nhan 1-chieu khong SL, lech khoi exit that) cong voi
+  **CI bi hep gia o moi phep so** (`docs/CI_REAUDIT.md`) — **khong** phai leak L1. Day van la
+  no ghi chep nghiem trong nhat sau M1.
 
 ---
 
@@ -452,7 +491,7 @@ chung phai bo dong export va them `TRADING_PROFILE` vao buoc build dataset.
 
 M9..M13 **chua xu ly** (khong nam trong job nay): M9 can Uni chot doi 0.4-0.5pp CAGR;
 M10 cho ket qua GS wave-1; M11/M12 la ghi chu doi chieu (da co trong file nay);
-M13 (7 quyet dinh Pha 1, nhat la A2c label SL 0.03 va A2e grid-overlap = nghi leak L1)
+M13 (7 quyet dinh Pha 1; **A2c va A2e DA DONG 2026-09-03** — 0.03 vo hieu luc, grid-overlap KHONG phai leak; no con lai la **A2f**: nhan 1-chieu khong SL, lech khoi exit that)
 **van la no nghiem trong nhat con lai** — router moi da tro tuong minh vao no.
 
 ## 5.3 Cho bao cao goc SAI so voi code
