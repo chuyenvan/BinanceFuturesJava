@@ -7,8 +7,7 @@ khong backtest, khong ghi de artifact nao.
 
 Script: `/home/ubuntu/fs/{fs_dl,fs_build2,fs_pack,fs_env,fs_run_cpu,fs_boot2}.py`;
 kernel Kaggle `fs-cand-gpu` (GPU, **bi loai** — xem muc 0.2) va `fs-cand-cpu` (CPU, ban sao doc
-lap tren moi truong float khac; **con dang chay luc commit nay**, se bo sung o muc 8 khi xong —
-ket luan cua bao cao **khong** phu thuoc vao no).
+lap tren moi truong float khac; ket qua o **muc 8**).
 So thô: `/home/ubuntu/fs/fs_boot_oracle_cpu.csv`, `fs_verdict_oracle_cpu.csv`,
 `out/fs_results_cpu.jsonl`, `out/fs_ticks_cpu.parquet`, log `RUNCPU.out`, `BOOT_ORACLE.out`.
 
@@ -326,3 +325,82 @@ DEV ve 2020-01**. Ba dieu con lai van dung va van co gia tri:
 | `out/fs_results_cpu.jsonl` | 1 dong/nhanh, `fsync` ngay (luat 12h Kaggle) |
 | `fs_boot_gpu_disq.csv` + `BOOT_GPU.out` | pipeline GPU **da bi loai** — chi luu lam vi du nhieu backend |
 | `feat_fs.parquet` + `feat_fs.meta.json` | bang 16 ung vien, 4,944,054 dong |
+
+---
+
+## 8. BAN SAO DOC LAP TREN MOI TRUONG THU HAI (Kaggle CPU) — bo sung sau commit `c14107a`
+
+Chay lai **toan bo 19 nhanh** bang script y het (`fs-cand-cpu`, `xgboost 3.2.0`, 4 vCPU,
+`device` mac dinh = CPU). Day **khong** phai moi truong bit-identical voi Oracle (xem muc 5.4),
+nen no la mot **phep kiem do ben doi voi nhieu backend** — dung loai nhieu da lam GPU bi loai.
+So tho: `/home/ubuntu/fs/fs_boot_kaggle_cpu.csv`, `fs_verdict_kaggle_cpu.csv`,
+`outk/fs_results_cpu.jsonl`, log `BOOT_KAGGLE.out`.
+
+### 8.1 Hai cong doi chung — dat o ca hai moi truong
+
+| doi chung | `Delta` `g1_replay` SELECT (Oracle) | (Kaggle) | vuot nguong? |
+|---|---|---|---|
+| `fs_noise` (nhieu thuan) | -0.00071 | -0.00328 | **khong** o ca hai |
+| `ctrl_seed1` (ZERO thong tin) | +0.00008 | +0.00038 | khong |
+| `ctrl_seed7` (ZERO thong tin) | +0.00022 | +0.00192 | khong |
+
+### 8.2 Ket luan chinh — **giong nhau**: 0 ung vien CONFIRMED
+
+**Khong ung vien nao `CONFIRMED` o moi truong nao.** Mot khac biet o **buoc man loc SELECT**:
+
+| | Oracle CPU (**chinh thuc**, tai lap `pred_s1a2` spearman 1.000000) | Kaggle CPU |
+|---|---|---|
+| `fs_wick_up_7d` | `Delta` +0.00433, sd72 0.00403, **nguong 0.00950** => **khong vuot** | `Delta` +0.00567, sd72 0.00232, **nguong 0.00546** => **VUOT** (T1+T2+T3) |
+| `fs_wick_up_7d` o CONFIRM | -0.00272 (dau doi) | -0.00036 (dau doi) | 
+| => `CONFIRMED` | **khong** | **khong** (that bai o CONFIRM) |
+
+Doc dung: hai moi truong **dong y ve diem uoc luong** (+0.0043 vs +0.0057, cung dau, cung do lon)
+nhung **khong dong y ve viec no co vuot nguong hay khong**, vi `sd_boot` khac nhau **1.7 lan**
+(0.00403 vs 0.00232). Theo pre-reg, moi truong quyet dinh la **Oracle** (moi truong duy nhat
+tai lap duoc model dang chay), va o do no **khong vuot**. Va o **ca hai** moi truong no
+**khong xac nhan duoc** tren 2024H1. => ket luan **(c)** khong doi.
+
+### 8.3 Bang do ben cua DAU giua hai moi truong (`Delta` `g1_replay` SELECT)
+
+Day la thong tin ma mot moi truong khong the cho, va no noi ro dau la "hieu ung nho nhung on
+dinh" va dau la "nhieu thuan":
+
+| ung vien | Oracle | Kaggle | dau on dinh? |
+|---|---|---|---|
+| `fs_wick_up_7d` | +0.00433 | +0.00567 | **duong, on dinh** — manh nhat, **van khong dat nguong o Oracle** |
+| `fs_dvol_7d` | +0.00261 | +0.00631 | **duong, on dinh** |
+| `fs_dvol_ratio` | +0.00235 | +0.00185 | duong, on dinh |
+| `fs_trdsize_7d` | +0.00101 | +0.00408 | duong, on dinh |
+| `fs_fund_slope` | +0.00098 | +0.00383 | duong, on dinh |
+| `fs_dd_speed` | +0.00282 | -0.00289 | **DOI DAU** => nhieu |
+| `fs_close_vwap_7d` | +0.00150 | -0.00295 | **DOI DAU** => nhieu |
+| `fs_dd_term` | -0.00055 | +0.00154 | **DOI DAU** => nhieu |
+| `fs_amihud_7d` | -0.00090 | -0.00295 | am, on dinh |
+| `fs_pos_7d` | -0.00061 | -0.00370 | am, on dinh |
+| `fs_up_streak` | -0.00223 | -0.00309 | am, on dinh |
+| `fs_fund_sum_7d` | -0.00333 | -0.00616 | am, on dinh |
+| `fs_fund_persist` | -0.00513 | -0.00579 | am, on dinh |
+| `fs_body_ratio_7d` | -0.00580 | -0.00179 | am, on dinh |
+| `fs_taker_buy_7d` | **-0.00731** | **-0.01017** | **am, on dinh, LON NHAT** |
+| *`fs_noise`* | *-0.00071* | *-0.00328* | *am (nhieu)* |
+
+### 8.4 Hai khang dinh duoc CUNG CO them
+
+1. **`fs_taker_buy_7d` lam hai — tai lap tren ca hai moi truong.** `g1_replay` SELECT
+   -0.0073 / -0.0102 (Kaggle: vuot nguong + loai 0 ca 3 block); `g1lite` SELECT
+   -0.0164 / -0.0195 (vuot nguong o ca hai). Day la ket qua **duong**, khong phai null: ti le
+   taker-buy 7 ngay tu kline **khong** chi la vo dung ma **lam xau** kha nang xep hang cua S1.
+2. **Ung vien co trien vong nhat la `fs_wick_up_7d` (ti le rau tren), va no CHUA du.**
+   Diem uoc luong duong on dinh o ca hai moi truong (+0.0043 / +0.0057) — cung huong voi gia
+   thuyet "nguon cung hap thu cac cu bat". Nhung: khong dat nguong hieu chinh o moi truong
+   chinh, va **doi dau o 2024H1 o ca hai moi truong**. Neu ai muon theo dam nay thi phai la mot
+   **pre-reg moi voi N = 1** (nguong `1.96*sd` thay vi `2.3548*sd`) va mot **tap xac nhan co
+   suc phan biet that** (khong phai 51 khoi 72h — xem muc 2.3), cong voi **trung binh nhieu
+   seed** o ca hai nhanh de triet san nhieu huan luyen. Chi phi do la that; **job nay khong
+   duoc phep tu lam dieu do** vi se la leak L2 (chon dam sau khi xem so).
+
+### 8.5 Ghi chu ve file so tho
+
+`.gitignore:7` cua repo bo qua `*.csv`, nen `fs_boot_*.csv` / `fs_verdict_*.csv` **khong** vao
+git (giong `feataudit/*.csv`). Chung nam o `/home/ubuntu/fs/`; moi con so trong bao cao nay da
+duoc dan nguyen van tu chung.
