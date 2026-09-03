@@ -435,7 +435,7 @@ public class OrderTargetInfoTest implements Serializable {
     float trailRate(float maxProfitRate, Float predReturn15M) {
         if (Configs.TS_GIVEBACK_MODE) {
             Float pnp = (this.symbolPred != null) ? this.symbolPred : 1f;   // chua co selector -> coi nhu yeu (bao thu)
-            return TradeUtils.calRateLossDynamicBuyPNoPump(maxProfitRate, pnp, Configs.TS_PNOPUMP_WEAK_THR);
+            return TradeUtils.calRateLossDynamicBuyPNoPump(maxProfitRate, pnp, Configs.tsPnoPumpWeakThr());
         }
         return TradeUtils.calRateLossDynamicBuy(maxProfitRate, Configs.TRAIL_PER_SYMBOL ? this.symbolPred : predReturn15M);
     }
