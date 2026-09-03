@@ -197,3 +197,54 @@ chenh **0.04 sd** => khong co suc phan biet. Nhieu verdict cu co the dang nam tr
 Ngoai pham vi wave nay, nhung phai lam truoc khi freeze bat cu thu gi: do lai CI block-72h cho
 S1 rank-IC (+0.150) vs G015 (+0.055), va soat lai cac verdict THUA (H1, K, BR, RG, RND, N1-N4,
 regime, H3) xem cai nao thuc su thua va cai nao chi nam trong nhieu.
+
+## 11. SUA DOI 3 — 2026-09-03, TRUOC khi co ket qua: nguong 3pp VO HIEU
+
+**Trang thai luc sua:** `/home/ubuntu/gs/out/` con rong, kernel con RUNNING.
+Nguon: `docs/CI_REAUDIT.md` (commit `a396797`), phuong phap chot truoc o `docs/PREREG_CI.md`
+(commit `2493eca`).
+
+### 11.1 Do duoc: nhieu lon hon nguong
+
+sd cua HIEU CAGR tren DEV (911 ngay, block-bootstrap 21 ngay, 2000 rep):
+
+| loai thay doi | sd(hieu CAGR) | can bao nhieu nam de thay 3pp o 80% power |
+|---|---|---|
+| chi doi tham so exit | 2.57pp | 14.3 nam |
+| doi selector | 4.45pp | 43.1 nam |
+| noi gate | 6.34pp | 87.4 nam |
+
+Voi N phep thu thuan nhieu, ky vong cua GIA TRI LON NHAT la `sd * sqrt(2 ln N)`.
+N=256 => `sqrt(2 ln 256) = 2.35` => **E[max] = +6.0pp (sd 2.57) den +14.9pp (sd 6.34)**,
+diem giua **+10.5pp** cho thay doi kieu selector.
+
+=> Nguong "neo + 3pp" o §4 buoc 7 **nho hon muc nhieu ky vong**. Neu giu nguyen, ket qua (a) gan
+nhu CHAC CHAN se duoc tuyen bo NGAY CA KHI toan bo 256 diem chi la nhieu. Nguong do vo hieu.
+
+### 11.2 Sua
+
+- **§4 buoc 1-6 GIU NGUYEN HOAN TOAN.** Khong doi k=10, khong doi N=256, khong doi bo loc,
+  khong doi luat argmax NS, khong doi luat finalist.
+- **§4 buoc 7, dieu kien cua (a) doi:** thay `> neo + 3pp` bang
+  `> neo + 2.35 * sd_boot`, voi `sd_boot` = do lech chuan block-bootstrap cua HIEU CAGR giua diem
+  do va neo tren DEV-A, tinh theo `PREREG_CI.md` (block 21 ngay, 2000 rep, seed 20260903).
+  He so 2.35 = `sqrt(2 ln 256)` = hieu chinh so sanh boi. Nguong moi CAO HON 3pp trong moi
+  truong hop da do => day la SIET LAI, khong phai noi ra.
+- **Them dieu kien BAT BUOC moi cho (a):** finalist phai thang neo o **tang TUNG LENH / TUNG TICK
+  theo thong ke ghep cap (paired)**, CI cua hieu khong chua 0. Ly do: do la tang duy nhat co n
+  hieu dung dung duoc — chinh o do da phat hien duoc rank-IC S1-G015 (+0.0973, CI
+  [+0.0711,+0.1152], n_eff 39 khoi) va gate edge (+0.0182, CI [+0.0085,+0.0227], n_eff 52 khoi),
+  trong khi tang equity DEV can 14-43 nam moi phan biet duoc 3pp.
+- **(b) va (c) giu nguyen cach doc.** Neu khong finalist nao qua nguong moi thi ket luan chinh la
+  **"khong the phan biet bang du lieu DEV hien co"**, KHONG phai "C2b la tot nhat".
+
+### 11.3 Ghi thang
+
+Sua doi nay lam **KHO HON** de tuyen bo thanh cong. No khong the duoc dung de bien ket qua xau
+thanh tot. Do la ly do no duoc phep ghi vao luc nay.
+
+Hau qua ke hoach: **du wave 1 ra gi, KHONG re-baseline dua tren hieu CAGR DEV.** Gia tri chinh cua
+wave 1 tu gio la §6 (chieu nao that su lam doi ket qua) va viec tim vung phang — khong phai tim
+diem tot nhat. Cung ly do do, moi de xuat chon N4_a8s175 (61148) hay H1a_mom006 (60953) vi "equity
+cao hon 60390" deu la chon tren nhieu: hieu lan luot -0.62pp CI [-5.55,+4.32] va -0.46pp CI
+[-12.98,+11.96].
