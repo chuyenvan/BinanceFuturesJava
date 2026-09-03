@@ -134,9 +134,6 @@ public class RunOptimizationCombined {
         LOG.info("Fitness tốt nhất: {}", String.format("%.4f", result.bestFitness()));
         LOG.info("------------------------------------------------------------");
         LOG.info("--- 1. FUNDING FEE & ENTRY CONFIGS ---");
-        LOG.info("Configs.PREDICT_SYMBOL_RATE_DOWN_15M      = {}f;", String.format("%.5f", best.get(0).gene().floatValue()));
-        LOG.info("Configs.PREDICT_SYMBOL_RATE_UP_AVG        = {}f;", String.format("%.5f", best.get(1).gene().floatValue()));
-        LOG.info("Configs.PREDICT_SYMBOL_RATE_DOWN_AVG      = {}f;", String.format("%.5f", best.get(2).gene().floatValue()));
         LOG.info("Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD = {}f;", String.format("%.5f", best.get(3).gene().floatValue()));
 
         LOG.info("--- 2. AI REJECT FILTER CONFIGS ---");

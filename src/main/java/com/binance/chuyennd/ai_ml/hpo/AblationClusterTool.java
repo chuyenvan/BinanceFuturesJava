@@ -49,16 +49,11 @@ public class AblationClusterTool {
     // (Giá trị giữa = (min+max)/2, là giá trị "off" khác baseline để kiểm tương tác.)
     static final Map<String, double[]> FLAT_CLUSTER = new LinkedHashMap<>();
     static {
-        FLAT_CLUSTER.put("PREDICT_SYMBOL_RATE_DOWN_15M", new double[]{-0.05, -0.015});   // range 0.0000
-        FLAT_CLUSTER.put("PREDICT_SYMBOL_RATE_UP_AVG", new double[]{0.002, 0.010});       // range 0.0000
-        FLAT_CLUSTER.put("PREDICT_SYMBOL_RATE_DOWN_AVG", new double[]{-0.010, -0.002});   // range 0.0000
         FLAT_CLUSTER.put("MS_UP_SMALL_THRES", new double[]{0.002, 0.010});                 // range 0.0038
         FLAT_CLUSTER.put("MS_DOWN_SMALL_AVG_OR_15M", new double[]{-0.040, -0.010});        // range 0.0044
         FLAT_CLUSTER.put("DCA_LOSS_BIG_UP", new double[]{-0.40, -0.10});                   // range 0.0092
-        FLAT_CLUSTER.put("BUDGET_DIVIDER_1", new double[]{1.2, 2.5});                      // range 0.0096
         FLAT_CLUSTER.put("MS_UP_BIG_THRES", new double[]{0.010, 0.040});                   // range 0.0318
         FLAT_CLUSTER.put("AI_DYNAMIC_MAX", new double[]{1.5, 3.0});                        // range 0.0531
-        // BUDGET_DIVIDER_2 sẽ thêm sau khi gene 26 chạy xong nếu phẳng (cùng loại DIVIDER_1)
     }
 
     static TreeMap<Long, MarketDataObject> mkt;

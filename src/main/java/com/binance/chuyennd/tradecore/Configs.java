@@ -159,7 +159,6 @@ public class Configs {
 
     public static float TS_MAX_GAP = 0.08f; // gap trailing tối đa (cũ: 16/200)
     public static float TS_MAX_GAP_WEAK = 0.03f; // gap khi momentum yếu (cũ: 6/200)
-    public static float TS_WEAK_MOMENTUM_THRES = 0.004f; // ngưỡng coi là momentum yếu
 
     // =========================================================
     // 4. QUẢN TRỊ VỐN TỰ ĐỘNG (BUDGET MANAGEMENT)
@@ -172,14 +171,9 @@ public class Configs {
             : (properties.get("NUMBER_ORDER_BUDGET") != null
                 ? Integer.parseInt(properties.get("NUMBER_ORDER_BUDGET")) : 50); // Tổng số phần chia vốn
 
-    // Ngưỡng bóp vốn 1 & 2
-    public static float BUDGET_MARGIN_RATIO_1 = 0.4820f;
-    public static float BUDGET_DIVIDER_1 = 1.5578f;
-    public static float BUDGET_MARGIN_RATIO_2 = 0.7475f;
     // ===== BUDGET v1 (FROZEN 2026-08-24) — throttle liên tục thay logic vách rời rạc =====
     public static float F_BASE = 0.03f;   // % equity mỗi lệnh gốc (gene search [0.01, 0.05])
     public static float U_MAX  = 0.60f;   // trần tổng margin/equity, U≥U_MAX → chặn (gene search [0.40, 0.80])
-    public static float BUDGET_DIVIDER_2 = 1.5984f;
 
     // === LEVER-B SIZE (TASK 2026-07-19, env-gated — MAC DINH 1.0 = byte-identical) ===
     // He dang deploy QUA IT von (log: margin ~0.7%, minEq_mtm 99-100% = von idle). Edge Calmar~1 nen noi
@@ -282,7 +276,6 @@ public class Configs {
     public static float TS_GIVEBACK_RATIO = Cfg.get("TS_GIVEBACK_RATIO") != null
             ? Float.parseFloat(Cfg.get("TS_GIVEBACK_RATIO").trim())
             : (properties.get("TS_GIVEBACK_RATIO") != null ? Float.parseFloat(properties.get("TS_GIVEBACK_RATIO")) : 0.5f);
-    public static float TS_DYNAMIC_K = 0.29774f;            // Hệ số nhân Volatility để dời SL
     public static float TS_PROFIT_MULTIPLIER = 5.21847f;    // Hệ số kích hoạt Trailing
     // TASK (2026-07-30, theo yeu cau Uni): "dead zone" giua ARM va RATCHET — sau khi arm (updateStatusNew,
     // dung predReturn15M), SL dong bang tai gia tri arm cho toi khi rateLoss vuot THEM 1 nguong cao hon
@@ -505,9 +498,6 @@ public class Configs {
     public static float AI_DYNAMIC_MIN = 0.26787f;        // Cũ: 0.14568f
     public static float AI_DYNAMIC_MAX = 2.14135f;        // Cũ: 2.24405f
 
-    public static float PREDICT_SYMBOL_RATE_DOWN_15M = -0.03234f;
-    public static float PREDICT_SYMBOL_RATE_UP_AVG = 0.00454f;
-    public static float PREDICT_SYMBOL_RATE_DOWN_AVG = -0.00503f;
 
 
 
@@ -638,6 +628,11 @@ public class Configs {
     // [2026-09-02] SIM_TS_GIVEBACK=1: trailing theo THIET KE (arm RATE_PROFIT_STOP_MARKET, SL = profit - min(profit*TS_GIVEBACK_RATIO, maxGap
     //   weak 3% / strong 8% theo pNoPump > TS_PNOPUMP_WEAK_THR), ratchet lien tuc). Default off = byte-identical. Xem OrderTargetInfoTest.trailRate.
     public static final boolean TS_GIVEBACK_MODE = "1".equals(Cfg.get("SIM_TS_GIVEBACK"));
+    /** [2026-09-03] ban MUTABLE de test do nhay; doc qua tsPnoPumpWeakThr(). */
+    public static Float TS_PNOPUMP_WEAK_THR_OVR = null;
+    public static float tsPnoPumpWeakThr() {
+        return TS_PNOPUMP_WEAK_THR_OVR != null ? TS_PNOPUMP_WEAK_THR_OVR : TS_PNOPUMP_WEAK_THR;
+    }
     public static final float TS_PNOPUMP_WEAK_THR = Cfg.get("TS_PNOPUMP_WEAK_THR") != null
             ? Float.parseFloat(Cfg.get("TS_PNOPUMP_WEAK_THR").trim()) : 0.29f;
     // [ABLATION 2026-09-02] env TIER_FLAT=1: bo he so budget theo tier (1.2/1.0/0.5 -> 1.0). Default off = byte-identical.
@@ -715,6 +710,15 @@ public class Configs {
             if ((v = Cfg.get("SIM_TRAIL_PER_SYMBOL")) != null) TRAIL_PER_SYMBOL = Boolean.parseBoolean(v);
             if ((v = Cfg.get("SIM_GATE_MARKET_OFF")) != null) GATE_MARKET_OFF = Boolean.parseBoolean(v);
             if ((v = Cfg.get("SIM_AI_DYNAMIC_MIN")) != null) AI_DYNAMIC_MIN = Float.parseFloat(v);
+            // [2026-09-03] mo override cho cac hang so HPO CON SONG, de test do nhay (lam tron).
+            //   MULTIPLIER = do doc duong nguong gate; MAX = TRAN UNG VIEN (rate_max * MAX);
+            //   PNOPUMP_WEAK_THR = ranh gioi strong/weak cua gap trailing; F_BASE/U_MAX = throttle von.
+            // Default (env rong) = gia tri cu => byte-identical.
+            if ((v = Cfg.get("SIM_AI_DYNAMIC_MULTIPLIER")) != null) AI_DYNAMIC_MULTIPLIER = Float.parseFloat(v.trim());
+            if ((v = Cfg.get("SIM_AI_DYNAMIC_MAX")) != null) AI_DYNAMIC_MAX = Float.parseFloat(v.trim());
+            if ((v = Cfg.get("SIM_TS_PNOPUMP_WEAK_THR")) != null) TS_PNOPUMP_WEAK_THR_OVR = Float.parseFloat(v.trim());
+            if ((v = Cfg.get("SIM_F_BASE")) != null) F_BASE = Float.parseFloat(v.trim());
+            if ((v = Cfg.get("SIM_U_MAX")) != null) U_MAX = Float.parseFloat(v.trim());
             if ((v = Cfg.get("SIM_PREDICT_SYMBOL_RATE_MAX")) != null) PREDICT_SYMBOL_RATE_MAX_THRESHOLD = Float.parseFloat(v);
             if ((v = Cfg.get("SIM_RATE_PROFIT_STOP_MARKET")) != null) RATE_PROFIT_STOP_MARKET = Float.parseFloat(v);
             if ((v = Cfg.get("SIM_TS_PROFIT_MULTIPLIER")) != null) TS_PROFIT_MULTIPLIER = Float.parseFloat(v);

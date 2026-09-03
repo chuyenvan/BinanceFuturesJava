@@ -148,7 +148,7 @@ public class RunFilterAblation {
             if (marginMax == null) continue;
             float ratio = marginMax / capital;
             if (ratio > maxRatio) maxRatio = ratio;
-            if (ratio >= Configs.BUDGET_MARGIN_RATIO_2) nearLiq++;
+            if (ratio >= 0.7475f) nearLiq++;   // cu: Configs.BUDGET_MARGIN_RATIO_2 (field da xoa, gia tri giu nguyen)
         }
         r.nearLiqDays = nearLiq;
         r.maxMarginRatio = maxRatio;

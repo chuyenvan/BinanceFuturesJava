@@ -70,9 +70,6 @@ public class SensitivityTool {
         g.add(new Gene("market", "MS_DOWN_BIG_AVG", -0.060, -0.020, false));
         g.add(new Gene("market", "MS_UP_SMALL_THRES", 0.002, 0.010, false));
         g.add(new Gene("market", "MS_DOWN_SMALL_AVG_OR_15M", -0.040, -0.010, false));
-        g.add(new Gene("market", "PREDICT_SYMBOL_RATE_DOWN_15M", -0.05, -0.015, false));
-        g.add(new Gene("market", "PREDICT_SYMBOL_RATE_UP_AVG", 0.002, 0.010, false));
-        g.add(new Gene("market", "PREDICT_SYMBOL_RATE_DOWN_AVG", -0.010, -0.002, false));
         // Tầng 3 — DCA
         g.add(new Gene("dca", "DCA_TIME_BIG_DOWN", 3, 20, true));
         g.add(new Gene("dca", "DCA_LOSS_BIG_DOWN", -0.30, -0.08, false));
@@ -83,15 +80,8 @@ public class SensitivityTool {
         // Tool OAT lich su (khong nam tren duong production), sua de khong con la vi du sai.
         g.add(new Gene("trail", "RATE_PROFIT_STOP_MARKET", 0.03, 0.05, false));
         g.add(new Gene("trail", "TS_PROFIT_MULTIPLIER", 2.0, 8.0, false));
-        g.add(new Gene("trail", "TS_DYNAMIC_K", 0.10, 0.60, false));
         g.add(new Gene("trail", "TS_MAX_GAP", 0.04, 0.15, false));
         g.add(new Gene("trail", "TS_MAX_GAP_WEAK", 0.01, 0.06, false));
-        g.add(new Gene("trail", "TS_WEAK_MOMENTUM_THRES", 0.002, 0.008, false));
-        // Tầng 5 — budget
-        g.add(new Gene("budget", "BUDGET_MARGIN_RATIO_1", 0.30, 0.65, false));
-        g.add(new Gene("budget", "BUDGET_DIVIDER_1", 1.2, 2.5, false));
-        g.add(new Gene("budget", "BUDGET_MARGIN_RATIO_2", 0.60, 0.90, false));
-        g.add(new Gene("budget", "BUDGET_DIVIDER_2", 1.2, 2.5, false));
         return g;
     }
 

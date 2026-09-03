@@ -35,9 +35,6 @@ public class BackTestEngineCombined {
             float dynKUp) {
 
         // 1. Gán tham số Tín hiệu vào Configs
-        Configs.PREDICT_SYMBOL_RATE_DOWN_15M = rateMin2Trade;
-        Configs.PREDICT_SYMBOL_RATE_UP_AVG = rateUpAvg;
-        Configs.PREDICT_SYMBOL_RATE_DOWN_AVG = rateDownAvg;
         Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD = fundingPredMaxThreshold;
 
         // 2. Gán 2 tham số Dynamic Market mới vào Configs
