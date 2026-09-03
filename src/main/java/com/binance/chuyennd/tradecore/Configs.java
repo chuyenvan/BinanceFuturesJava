@@ -20,26 +20,6 @@ import java.util.Map;
 public class Configs {
 
     // =========================================================
-    // ⛔ DANH SÁCH GENE KHÔNG-HPO (NO-HPO) — chốt TASK-111 sensitivity 2026-06-27
-    // =========================================================
-    // 9 gene dưới đây ĐÃ ĐO sensitivity (OAT 4 mức, FAST 2.5 năm) → PHẲNG (range fitness < 0.06).
-    // Ablation off ĐỒNG THỜI cả cụm: fitness 1.5197 → 1.4868 (delta -2.16%) → có tương tác nhẹ nên
-    // KHÔNG xóa cơ chế (ngắt MỀM), nhưng KHÔNG đưa vào HPO/WFO (đóng băng ở giá trị hiện tại):
-    //   1. PREDICT_SYMBOL_RATE_DOWN_15M   (range 0.0000)
-    //   2. PREDICT_SYMBOL_RATE_UP_AVG     (range 0.0000)
-    //   3. PREDICT_SYMBOL_RATE_DOWN_AVG   (range 0.0000)
-    //   4. MS_UP_SMALL_THRES              (range 0.0038)
-    //   5. MS_DOWN_SMALL_AVG_OR_15M       (range 0.0044)
-    //   6. DCA_LOSS_BIG_UP                (range 0.0092)
-    //   7. BUDGET_DIVIDER_1               (range 0.0096)
-    //   8. MS_UP_BIG_THRES                (range 0.0318)
-    //   9. AI_DYNAMIC_MAX                 (range 0.0531)
-    // → Genome HPO/WFO = 18 gene CÒN LẠI (xem WFORunner.GENOME). Chi tiết: docs/insights/SENSITIVITY_TASK111.md
-    // =========================================================
-    // [OFF-CỨNG TEST] true = VÔ HIỆU HÓA cơ chế 9 gene cụm phẳng tại điểm dùng engine (bỏ nhánh BIG_UP/
-    // SMALL_UP/SMALL_DOWN_15M, bỏ trần clamp AI_DYNAMIC_MAX, bỏ tầng BUDGET_DIVIDER_1, bỏ 4 dòng set
-    // PREDICT_RATE_* đã chết). false = nguyên trạng. CHỈ để TEST, KHÔNG commit true. Revert = đổi false.
-    public static boolean OFF_FLAT_HARD = true;
 
     // =========================================================
     // 1. HỆ THỐNG & KHỞI TẠO (SYSTEM & INIT)
@@ -175,64 +155,7 @@ public class Configs {
     public static float F_BASE = 0.03f;   // % equity mỗi lệnh gốc (gene search [0.01, 0.05])
     public static float U_MAX  = 0.60f;   // trần tổng margin/equity, U≥U_MAX → chặn (gene search [0.40, 0.80])
 
-    // === LEVER-B SIZE (TASK 2026-07-19, env-gated — MAC DINH 1.0 = byte-identical) ===
-    // He dang deploy QUA IT von (log: margin ~0.7%, minEq_mtm 99-100% = von idle). Edge Calmar~1 nen noi
-    // size = nang return. SIZE_MULT nhan TRUC TIEP budget-per-order tai createOrder SAU khi da qua HET guard
-    // (managerBudget throttle theo marginRatio + tierMultiplier). >1 -> moi lenh deploy nhieu von hon
-    // (quantity + margin scale TUYEN TINH). KHONG pha guard chong-am-von: managerBudget van return null khi
-    // marginRatio>=0.99, BREAKER_MARGIN_HALT van chan mo moi (voi size lon marginRunning phinh nhanh hon ->
-    // cham tran SOM hon). Chi scale SIZE trong khuon budget. Clamp >=0. env unset -> 1.0f -> budget khong doi
-    // -> byte-identical. env SIZE_MULT (vd 10) de deploy nhieu hon khi chay WFO sizing.
-    public static final float SIZE_MULT = Cfg.get("SIZE_MULT") != null
-            ? Math.max(0f, Float.parseFloat(Cfg.get("SIZE_MULT").trim())) : 1.0f;
 
-    // === SIZE-BY-CONFIDENCE / soft-gate (TASK 2026-07-19, env-gated, DEFAULT OFF = byte-identical) ===
-    // LY DO (data long-conf-headroom): trong nhom admit (p6>=0.68), top-2 decile p6 an +3.40/+2.38/keo
-    // (winrate 52-56%) NHUNG decile giua (p6~0.68) LO -1.3/-1.2. Gate nhi phan vut info nay. -> size TO cho
-    // p6 cao, size NHO cho p6 marginal, GIU tan suat (khong doi admit gate). Nhan CUNG voi SIZE_MULT, SAU
-    // guard chong-am-von (managerBudget + BREAKER_MARGIN_HALT + tier) -> guard GIU NGUYEN.
-    //   CONF_SIZE_MODE: 0=off (default) -> confFactor khong duoc ap -> byte-identical. 1=on.
-    //   confFactor(p6) = clamp( FMIN + (FMAX-FMIN)*(p6-LO)/(HI-LO), FMIN, FMAX ).
-    //     p6<=LO -> FMIN ; p6>=HI -> FMAX ; tuyen tinh o giua. (p6 = 1 - symbolPred, tinh per-order.)
-    public static final int CONF_SIZE_MODE = Cfg.get("CONF_SIZE_MODE") != null
-            ? Integer.parseInt(Cfg.get("CONF_SIZE_MODE").trim()) : 0;   // 0=OFF (byte-identical)
-    public static final float CONF_SIZE_LO = Cfg.get("CONF_SIZE_LO") != null
-            ? Float.parseFloat(Cfg.get("CONF_SIZE_LO").trim()) : 0.68f; // = admit threshold p6
-    public static final float CONF_SIZE_HI = Cfg.get("CONF_SIZE_HI") != null
-            ? Float.parseFloat(Cfg.get("CONF_SIZE_HI").trim()) : 0.95f;
-    public static final float CONF_SIZE_FMIN = Cfg.get("CONF_SIZE_FMIN") != null
-            ? Float.parseFloat(Cfg.get("CONF_SIZE_FMIN").trim()) : 0.3f;
-    public static final float CONF_SIZE_FMAX = Cfg.get("CONF_SIZE_FMAX") != null
-            ? Float.parseFloat(Cfg.get("CONF_SIZE_FMAX").trim()) : 3.0f;
-
-    /**
-     * Soft-gate size multiplier theo do tin cay p6 (=1-symbolPred). Pure/static -> function-test khong can
-     * Aerospike. Tuyen tinh giua [LO,HI] roi clamp ve [FMIN,FMAX]. HI<=LO (cau hinh xau) -> tra FMAX (>=LO)
-     * / FMIN (<LO) de tranh chia 0.
-     */
-    public static float confFactor(float p6) {
-        if (p6 <= CONF_SIZE_LO) return CONF_SIZE_FMIN;
-        if (p6 >= CONF_SIZE_HI) return CONF_SIZE_FMAX;
-        float f = CONF_SIZE_FMIN + (CONF_SIZE_FMAX - CONF_SIZE_FMIN) * (p6 - CONF_SIZE_LO) / (CONF_SIZE_HI - CONF_SIZE_LO);
-        // clamp phong ve so hoc (FMIN co the > FMAX neu cau hinh nguoc)
-        float lo = Math.min(CONF_SIZE_FMIN, CONF_SIZE_FMAX);
-        float hi = Math.max(CONF_SIZE_FMIN, CONF_SIZE_FMAX);
-        return Math.max(lo, Math.min(hi, f));
-    }
-
-    // =========================================================
-    // 5. CẦU DAO & MẬT ĐỘ LỆNH (CIRCUIT BREAKER)
-    // =========================================================
-    // TASK LEVER-B (2026-07-19): env MAX_CONCURRENT override (default 40 = giu nguyen). Day la BASE cua
-    // density-burst limiter (is50PercentOrderLoss -> evaluateCircuitBreakerCore) + tuyen phong lop-2 storm.
-    // KHONG phai hard-cap so lenh dong thoi (mang activeRunningIds cap 1000, KHONG that co). Nang so nay ->
-    // cho phep nhieu lenh mo trong cua so 4' hon truoc khi phanh mat-do. env unset -> 40 -> byte-identical.
-    public static int MAX_CONCURRENT_ORDERS = Cfg.get("MAX_CONCURRENT") != null
-            ? Integer.parseInt(Cfg.get("MAX_CONCURRENT").trim()) : 40; // Số lệnh tối đa cùng chạy
-    public static float DENSITY_SUSTAIN = 10.0f;  // Sức chịu đựng mật độ mở lệnh
-    public static float DENSITY_ALPHA = 0.6f;     // Độ cong của hàm kiểm soát mật độ
-    public static final int CIRCUIT_LOOKBACK_MINUTES = 4;
-    public static float CIRCUIT_DANGER_RATIO = 0.7f; // 70% lệnh rủi ro
 
     // =========================================================
     // 6. TRAILING STOP ĐỘNG (DYNAMIC TRAILING)
@@ -244,47 +167,12 @@ public class Configs {
     // maxDD khong doi). Truoc ban sua nay, gia tri nay CHI dung cho duong live/production
     // (khong qua HPO) nen bi lech so voi bestGenome cua WFO (~0.0385) - ban sua dong bo lai.
     public static float RATE_PROFIT_STOP_MARKET = 0.03f; // Khoảng dời SL tối thiểu (Base rate)
-    // TASK (2026-07-09, theo yêu cầu Uni): SL cứng cho lệnh CHƯA từng chạm ngưỡng lãi để arm trailing.
-    // Vấn đề đo được: neu peak-profit khong bao gio vuot RATE_PROFIT_STOP_MARKET, priceSL mai la null
-    // -> khong co exit nao, chi con DCA nap them ("nuoi lo"). Bien nay CHỈ chặn đúng lỗ hổng đó, KHÔNG
-    // đụng cơ chế trailing-khi-lãi. 0f = tắt (mặc định, hành vi cũ y nguyên). ví dụ 0.10f = cắt khi lỗ 10%.
-    // 2026-09-03 (B3): env/profile > properties > 0f.
-    public static float HARD_STOP_LOSS_RATE = Cfg.get("HARD_STOP_LOSS_RATE") != null
-            ? Float.parseFloat(Cfg.get("HARD_STOP_LOSS_RATE").trim())
-            : (properties.get("HARD_STOP_LOSS_RATE") != null
-                ? Float.parseFloat(properties.get("HARD_STOP_LOSS_RATE")) : 0f);
-    // TASK (2026-07-10): time-stop "thesis-expiry" cho lenh CHUA arm trailing (priceSL null).
-    // Khac HARD_STOP_LOSS_RATE (cat theo DO SAU lo): cai nay cat lenh I THEO THOI GIAN — tin hieu
-    // (pump 12h / hoi capitulation) het han ma khong no thi thoat, giai phong margin, tranh nuoi vo han.
-    // Do tu leg DAU cua cum (clusterFirstLegTime, fallback timeStart) — neu do tu leg cuoi thi moi lan
-    // DCA lai reset dong ho, lenh nuoi lo se KHONG BAO GIO bi time-stop. 0 = tat (mac dinh, hanh vi cu).
-    // TASK (2026-07-17): env TIME_STOP_HOURS override (config-driven cho ladder WFO) > properties > 0.
-    //   env unset -> fallback properties -> 0 = hanh vi cu NGUYEN VEN.
-    public static int TIME_STOP_HOURS = Cfg.get("TIME_STOP_HOURS") != null
-            ? Integer.parseInt(Cfg.get("TIME_STOP_HOURS").trim())
-            : (properties.get("TIME_STOP_HOURS") != null
-                ? Integer.parseInt(properties.get("TIME_STOP_HOURS")) : 0);
-    // TASK (2026-07-17): che do chon DINH cho trailing-stop (arm + ratchet SL). env-driven, config-driven.
-    //   high  = maxPrice (HIGH cua nen 1m) = MAC DINH = HANH VI CU (byte-identical, backward-compatible).
-    //   close = priceClose (dong nen) de chong wick/giat. Chi doi diem ARM/RATCHET trailing, KHONG dung
-    //           cho minPrice/maeLow (day, trigger cat + MAE), maePeak, disaster-SL, time-stop.
-    public static final String TRAIL_PEAK_MODE = Cfg.get("TRAIL_PEAK_MODE") != null
-            ? Cfg.get("TRAIL_PEAK_MODE").trim().toLowerCase() : "high";
     // TASK (2026-07-10): ti le nha lai dinh cua trailing (cu hardcode 0.5). 0.3 = giu chat, 0.7 = long nuoi trend.
     // 2026-08-02: them env-fallback (khop pattern TS_MIN_GAP) de sweep duoc TS_GIVEBACK_RATIO qua env.
     //   env > properties > 0.5f. env unset -> byte-identical hanh vi cu.
     public static float TS_GIVEBACK_RATIO = Cfg.get("TS_GIVEBACK_RATIO") != null
             ? Float.parseFloat(Cfg.get("TS_GIVEBACK_RATIO").trim())
             : (properties.get("TS_GIVEBACK_RATIO") != null ? Float.parseFloat(properties.get("TS_GIVEBACK_RATIO")) : 0.5f);
-    public static float TS_PROFIT_MULTIPLIER = 5.21847f;    // Hệ số kích hoạt Trailing
-    // TASK (2026-07-30, theo yeu cau Uni): "dead zone" giua ARM va RATCHET — sau khi arm (updateStatusNew,
-    // dung predReturn15M), SL dong bang tai gia tri arm cho toi khi rateLoss vuot THEM 1 nguong cao hon
-    // TS_PROFIT_MULTIPLIER lan (updateTPSL, dung rateChangeMax90M) - vd TS_PROFIT_MULTIPLIER=5.21847 =>
-    // SL khong nhuc nhich cho toi khi lai gap ~5.2x diem arm, giu ca gia leo them ma khong siet SL theo.
-    // false (MAC DINH) = HANH VI CU nguyen ven (updateTPSL nhan Configs.TS_PROFIT_MULTIPLIER, byte-identical).
-    // true = bo he so nhan o updateTPSL — ratchet kich hoat NGAY khi rateLoss vuot threshold(rateChangeMax90M),
-    // khong cho doi mot khoang trong. CHi doi diem RATCHET (updateTPSL); KHONG doi diem ARM (updateStatusNew)
-    // va KHONG doi input rateChangeMax90M vs predReturn15M (van la 2 bien khac nhau, van la viec rieng).
     // ===== DCA GRID (2026-08-01) — thay DCA phan xa bang GRID CO KE HOACH =====
     // VAN DE cua DCA cu: nguong nhoi do bang calRateLoss() tren avgEntry, ma avgEntry tut sau moi lan
     // nhoi => muc lo "reset" => KHOANG CACH NHOI CO LAI DAN (15% -> 8% -> 5.5% -> 4.4%). Cang lo sau
@@ -357,42 +245,6 @@ public class Configs {
         return (float) Math.pow(r, legIdx);
     }
 
-    // === TRAN MARGIN THEO BAC DO SAU (2026-08-01) — giai bai toan "sap lien tiep con von de DCA" ===
-    // VAN DE cua BREAKER_MARGIN_HALT: no la VACH DUNG o 50%. Duoi 50% nhoi vo han, cham 50% dung het.
-    //   => Dot sap 1: hang tram coin cung nhoi leg2 -> margin vot len 50% -> KHOA.
-    //      Dot sap 2 (gia re hon nhieu): KHONG nhoi duoc gi, ke ca leg -90%.
-    //   Tuc no chan dung nhung leg CO GIA TRI CAO NHAT. SurvivalProbe: 76.4% cum xuong -80% van hoi va
-    //   thoat co lai — nhom ti le thang cao nhat lai bi chan, con leg1 (chua lo gi) duoc tieu von truoc.
-    // GIAI PHAP: moi BAC grid mot tran rieng, bac cang sau tran cang cao. Khi margin da 45% thi lenh MOI
-    //   bi chan nhung leg 3-4 VAN nhoi duoc => von khong the bi lenh nong tieu het => luon con dan cho
-    //   vung sau, va dan do CHI tieu duoc o vung sau.
-    // Do dai mang = so bac (leg1..legN). Mac dinh OFF (dung tran phang cu) de byte-identical.
-    public static boolean DCA_TIER_MARGIN_ENABLED = "true".equalsIgnoreCase(Cfg.get("DCA_TIER_MARGIN_ENABLED"));
-    public static float[] DCA_TIER_MARGIN_CAPS = parseFloats(
-            Cfg.get("DCA_TIER_MARGIN_CAPS") != null ? Cfg.get("DCA_TIER_MARGIN_CAPS") : "0.25,0.40,0.60,0.80");
-
-    // Dang SCALAR cua tran bac (cung ly do voi DCA_GRID_SCALAR: mang float[] thi HPO khong tune duoc):
-    //   cap[i] = clamp(DCA_TIER_CAP_BASE + DCA_TIER_CAP_STEP * i, 0.05 .. 0.98)
-    // BASE=0.50 giu dung vach production BREAKER_MARGIN_HALT cho leg dau; STEP noi dan cho leg sau.
-    // Chi co hieu luc khi DCA_GRID_SCALAR=true (dung 1 cong tac cho ca cum, khong de rai rac nhieu co).
-    /** Tran margin cho leg DAU (legIdx=0). Gene HPO. */
-    public static float DCA_TIER_CAP_BASE = envFloat("DCA_TIER_CAP_BASE", 0.50f);
-    /** Moi bac sau noi them bao nhieu. 0 = tran phang. Gene HPO. */
-    public static float DCA_TIER_CAP_STEP = envFloat("DCA_TIER_CAP_STEP", 0.10f);
-
-    /** Tran margin cho phep khi sap mo leg thu (legIdx+1). legIdx 0-based. */
-    public static float tierMarginCap(int legIdx) {
-        int i = Math.max(0, legIdx);
-        if (DCA_GRID_SCALAR) {
-            float cap = DCA_TIER_CAP_BASE + DCA_TIER_CAP_STEP * i;
-            if (cap < 0.05f) cap = 0.05f;
-            if (cap > 0.98f) cap = 0.98f;
-            return cap;
-        }
-        float[] c = DCA_TIER_MARGIN_CAPS;
-        if (c.length == 0) return BREAKER_MARGIN_HALT;
-        return c[Math.min(i, c.length - 1)];
-    }
 
     // DCA_GRID_SCALE (2026-08-01): he so nhan CA THANG. Ly do can no: chia budget theo ti trong
     //   1:1:3:8 lam leg dau chi con 1/13 budget, ma do do sau -50/-75/-90 nen chi 0.34% cum cham day
@@ -440,56 +292,14 @@ public class Configs {
     }
 
     // ===== FIX AUDIT 2026-08-01 — 3 co, MAC DINH FALSE = HANH VI CU BYTE-IDENTICAL =====
-    // F7: mergeOrder (DCA nhoi them leg) tao object cum MOI va KHONG carry priceSL => cum da arm SL
-    //     o +2.5% ma bi nhoi 1 leg la MAT SACH bao ve, phai arm lai tu avgEntry moi. true = mang SL cu
-    //     sang cum moi, NHUNG chi khi SL cu van > avgEntry moi (neu khong se thanh cat-lo-ngay).
-    public static boolean TS_CARRY_SL_ON_DCA = "true".equalsIgnoreCase(Cfg.get("TS_CARRY_SL_ON_DCA"));
-    // F10: coin delist/dong bang co the phat nen phang volume=0 thay vi null => isTickerAvailable van
-    //      true => timeUpdate lien tuc moi => updateSymbolDeListed KHONG BAO GIO kich hoat => cum song
-    //      mai va cuoi ky duoc mark-to-market o GIA DONG BANG thay vi ghi giam ve ~0 (thien lech duong).
-    //      true = coi nen volume 0 nhu ticker khong kha dung.
-    public static boolean SIM_TREAT_ZERO_VOL_AS_DELIST = "true".equalsIgnoreCase(Cfg.get("SIM_TREAT_ZERO_VOL_AS_DELIST"));
     // F9: mac dinh backtest NUOT exception trong vong lap phut/ngay (chi printStackTrace) va SKIP
     //     nguyen ngay neu <1440 phut => ngay do khong kiem SL, khong cap nhat maxDD (thien lech duong)
     //     ma van bao "chay thanh cong". true = nem loi ngay, khong cho ket qua ban ra ngoai.
     public static boolean SIM_FAIL_FAST_ON_DATA_ERROR = "true".equalsIgnoreCase(Cfg.get("SIM_FAIL_FAST_ON_DATA_ERROR"));
 
-    // KHONG final (2026-07-31): can gan lai runtime trong RatchetDecoupleSweepProbe (so sanh
-    // true/false truc tiep, khong qua WFO/HPO). Gia tri khoi tao van tu env nhu cu, khong doi hanh vi
-    // production/WfoWorker (chi doi khi co code khac chu dong gan lai, khong ai lam vay ngoai probe).
-    public static boolean TS_RATCHET_DECOUPLED = "true".equalsIgnoreCase(Cfg.get("TS_RATCHET_DECOUPLED"));
 
-    // TASK (2026-07-31, EXIT_MACHINE PHAN 1/2, hang muc P6 "giveback fix"): gap = min(peak*g, maxGap)
-    // khien ti le nha lai TEO DAN khi p lon (maxGap/p -> 0) - cat mat duoi x2/x3 (xem doc PHAN 1
-    // "PHAT HIEN 2"). Y tuong sua: gap = max(peak*g, minGap) - nha theo ti le, co SAN tuyet doi de
-    // nhieu khong giet luc p nho, KHONG co TRAN nen lai lon duoc nuoi dung ti le thay vi bi siet.
-    // false (MAC DINH) = HANH VI CU nguyen ven (calRateLossDynamicBuy dung Math.min(...,maxGap),
-    // byte-identical). true = doi sang Math.max(...,TS_MIN_GAP). Ca ARM (updateStatusNew) va RATCHET
-    // (updateTPSL) deu goi chung TradeUtils.calRateLossDynamicBuy -> flag nay anh huong CA HAI diem,
-    // dung nhu maxGap/g hien tai dang anh huong ca hai.
-    // KHONG final: ExitParamSweepProbe can gan lai runtime de sweep. Mac dinh van doc tu env nhu cu.
-    public static boolean TS_GIVEBACK_FLOOR = "true".equalsIgnoreCase(Cfg.get("TS_GIVEBACK_FLOOR"));
-    // San tuyet doi cho gap khi TS_GIVEBACK_FLOOR=true. CHUA CO CAN CU CHON GIA TRI - can Uni chot
-    // (grid E3 trong EXIT_MACHINE PHAN 2) truoc khi tin so ra tu default nay. env > properties > 0.01f.
-    public static float TS_MIN_GAP = Cfg.get("TS_MIN_GAP") != null
-            ? Float.parseFloat(Cfg.get("TS_MIN_GAP").trim())
-            : (properties.get("TS_MIN_GAP") != null ? Float.parseFloat(properties.get("TS_MIN_GAP")) : 0.01f);
 
     // =========================================================
-    // 6b. SHORT-SIDE (DRAFT 2026-07-18, flag-gated — MAC DINH OFF = long-only byte-identical)
-    // =========================================================
-    // Them order-side SHORT (OrderSide.SELL) vao sim de sau chay WFO short (proxy Kaggle xac nhan alpha).
-    // MAC DINH ENABLE_SHORT=false -> KHONG tao/quan ly lenh SELL nao -> engine byte-identical long-only.
-    // Chi bat (=true) de chay backtest short SAU khi review. env-driven (khong can rebuild).
-    public static final boolean ENABLE_SHORT = "true".equalsIgnoreCase(Cfg.get("ENABLE_SHORT"));
-    // Hard-SL CUNG BAT BUOC cho short: gia TANG (rise) >= SHORT_SL_PCT so voi entry -> cat lo tai -SHORT_SL_PCT.
-    // Mac dinh 0.25 = 25% (chot tu proxy). env SHORT_SL_PCT override.
-    public static float SHORT_SL_PCT = Cfg.get("SHORT_SL_PCT") != null
-            ? Float.parseFloat(Cfg.get("SHORT_SL_PCT").trim()) : 0.25f;
-    // Time-stop cho short (let-dump-run toi han): thoat sau SHORT_TIME_STOP_HOURS ke tu leg dau cum. 0 = tat.
-    // Mac dinh 24h (chot tu proxy: chop duong 12-24h). env SHORT_TIME_STOP_HOURS override.
-    public static int SHORT_TIME_STOP_HOURS = Cfg.get("SHORT_TIME_STOP_HOURS") != null
-            ? Integer.parseInt(Cfg.get("SHORT_TIME_STOP_HOURS").trim()) : 24;
 
     // =========================================================
     // 7. AI & BỘ LỌC TÍN HIỆU ĐỘNG (AI DYNAMIC FILTER - HPO UPDATE)
@@ -501,31 +311,7 @@ public class Configs {
 
 
 
-    // === ABLATION FILTER (chỉ phục vụ ĐO, KHÔNG ảnh hưởng CONFIG_VERSION) ===
-    // A=full (giữ RISK+MOM15)  B/D=bỏ nhánh RISK(DD4H) để đo. MOM24/predReturn24H đã BỎ HẲN khỏi hệ.
-    // Nhánh EARLY trong checkSignalDynamic GIỮ NGUYÊN ở mọi mode.
-    // TASK (2026-07-11) §2 DCA-primary: TAT sleeve PREDICT_SYMBOL_TRADE (pump selector) de do rieng
-    // sleeve mean-reversion. true = chi chay DCA_LEVEL1 + BIG_DOWN. Mac dinh false = hanh vi cu.
-    // 2026-09-03 (B3): env/profile > properties. Cong tac TAT CA sleeve selector — phai tuong minh o 1 noi.
-    public static boolean DISABLE_PREDICT_SYMBOL = "true".equalsIgnoreCase(
-            Cfg.get("DISABLE_PREDICT_SYMBOL") != null ? Cfg.get("DISABLE_PREDICT_SYMBOL").trim()
-                    : properties.get("DISABLE_PREDICT_SYMBOL"));
 
-    public static String FILTER_MODE = "A";
-    // [2026-08-29 DEV pivot] AI lai TRAILING per-symbol: arm-SL gap dung symbolPred cua chinh coin
-    // (khop updateTPSL). false = hanh vi cu (arm dung market predReturn15M). Env SIM_TRAIL_PER_SYMBOL.
-    public static boolean TRAIL_PER_SYMBOL = false;
-    // [2026-08-29 DEV pivot] Tat market gate MOM15 (bo entry-gate muc thi truong). Env SIM_GATE_MARKET_OFF.
-    public static boolean GATE_MARKET_OFF = false;
-
-    // === ABLATION (Bước 2 roadmap: edge từ AI hay DCA? — chỉ ĐO, mặc định A, KHÔNG ảnh hưởng CONFIG_VERSION) ===
-    // A=control (AI filter bật như thường) | B=no-AI (bỏ qua filter, mọi tín hiệu PASS) | C=placebo
-    // (entry ngẫu nhiên cùng XÁC SUẤT pass như A). So leg-đầu (MAE/rescue/firstLegPnl) giữa A và B/C.
-    // CHỈ tác động tại điểm AI filter trong createOrderBUY, KHÔNG đụng logic DCA/exit/budget.
-    // TASK (2026-07-11) doc tu env de test gate-off (mode B) khong can sua WfoWorker; van mac dinh A.
-    public static String ABLATION_MODE = Cfg.get("ABLATION_MODE") != null
-            ? Cfg.get("ABLATION_MODE") : "A";
-    public static long ABLATION_SEED = 42L;
     // ABLATION DCA-OFF (2026-07-16): env WFO_DISABLE_DCA=1 -> DcaProcessor.getDCA tra rong (tat nhoi lenh
     // hoan toan) de do dong gop DCA. Mac dinh false = hanh vi cu NGUYEN VEN.
     public static final boolean WFO_DISABLE_DCA = "1".equals(Cfg.get("WFO_DISABLE_DCA"));
@@ -534,47 +320,12 @@ public class Configs {
     // that su (sau khi qua het cong). Mac dinh false = KHONG log = hanh vi cu byte-identical.
     public static final boolean WFO_LOG_ENTRIES = "1".equals(Cfg.get("WFO_LOG_ENTRIES"));
 
-    // === CIRCUIT BREAKER (chống sập tầng DCA/margin — BẬT MẶC ĐỊNH từ Bước 3, ĐỔI PnL/DD → bump CONFIG_VERSION v10) ===
-    // OFF=không phanh | MARGIN=chặn mở mới khi margin/vốn cao | DCA=ngừng nhồi cụm lỗ sâu | BOTH=cả hai.
-    // KHÔNG force-close (long-only): chỉ DỪNG MỞ / DỪNG NHỒI.
-    // CHỐT 2026-06-28 (Bước 3 ruin): MARGIN + 0.50. Quét ngưỡng 2021→2026 cho return/maxDD tốt nhất tại 0.50
-    // (4.88; maxDD -58.6%→-29.5%, maxMargR 0.99→0.51, đổi lấy PnL -27%). Lá chắn THẬT là trần margin TỔNG, không
-    // phải cap %vốn/cụm (đã thử & gỡ: veto 0-8 lần trên danh mục vì budget phân tán qua hàng trăm cụm nhỏ).
-    public static String BREAKER_MODE = "MARGIN";
-    public static float BREAKER_MARGIN_HALT = 0.50f;     // chặn MỞ MỚI khi marginRunning/balanceBasic >= ngưỡng.
-    public static float BREAKER_CLUSTER_DD_MAX = -0.30f; // [ADR-0008: VÔ HIỆU CẤU TRÚC - đo DD vs avgEntry trôi theo giá] ngừng NHỒI khi (giá-avgEntry)/avgEntry <= ngưỡng (chỉ dùng khi BREAKER_MODE=DCA/BOTH)
-
-    // [ADR-0008 bước 3 — ĐÃ GỠ cap %vốn/cụm + số leg + DD-vs-first 2026-06-28] LunaDcaScenario (1 coin) cho thấy
-    // cả 3 cứu ruin, NHƯNG backtest 5 năm: cap %vốn/cụm veto 0-8 lần (vô dụng trên danh mục — budget phân tán
-    // qua hàng trăm cụm nhỏ). Lá chắn THẬT là BREAKER_MARGIN_HALT tổng ở trên. Không giữ tham số cap chết.
 
     // =========================================================
     // 8. NGƯỠNG BÁO ĐỘNG & DCA NHỒI LỆNH (MARKET STATUS - HPO UPDATE)
     // =========================================================
     public static float PREDICT_SYMBOL_RATE_MAX_THRESHOLD = 0.15f;    // HPO (đã revert về cũ): 0.19727f (Log map: PREDICT_MAX_THRES)
 
-    // MAX-DEPLOYMENT (ablation tan-suat): override TRUC TIEP tran score cua selector-gate (final cutoff
-    //   tren symbolPred = 1 - p6). Selector cu: maxThres = PREDICT_SYMBOL_RATE_MAX_THRESHOLD * AI_DYNAMIC_MAX
-    //   = 0.15*2.14135 = 0.3212 -> admit p6 >= 0.679. Set SELECTOR_SCORE_MAX=0.5 -> admit p6 >= 0.5
-    //   (nhieu lenh hon) MA KHONG dinh AI_DYNAMIC_MAX (genome-coupled). Default -1f = OFF = byte-identical.
-    public static final float SELECTOR_SCORE_MAX = Cfg.get("SELECTOR_SCORE_MAX") != null
-            ? Float.parseFloat(Cfg.get("SELECTOR_SCORE_MAX").trim()) : -1f;
-    // ALPHA-TEST (placebo selector): dao thu hang selector -> chon coin TE-nhat-truoc thay vi TOT-nhat.
-    // Cung gate/nguong/so-lenh, chi doi uu tien budget. So PnL INVERT=0 vs =1 => selector co alpha that khong.
-    // Default false = byte-identical (khong dao).
-    public static final boolean SELECTOR_INVERT = "1".equals(Cfg.get("SELECTOR_INVERT"));
-    // WORST-N BREADTH CAP (2026-07-22): cap so candidate selector-path mo dong thoi tai MOI moc tin hieu.
-    // Selector cu chon TAT CA nPass candidate qua gate; SELECTOR_TOPN>0 -> chi lay N candidate dau tien theo
-    // uu tien hien hanh (INVERT=1 -> N coin TE-nhat/oversold; INVERT=0 -> N coin TOT-nhat). Dung cho sweep
-    // Worst-3/5/8: tap trung von, giam capital-lock. Default -1 = OFF = uncapped = byte-identical.
-    public static final int SELECTOR_TOPN = Cfg.get("SELECTOR_TOPN") != null
-            ? Integer.parseInt(Cfg.get("SELECTOR_TOPN").trim()) : -1;
-    // SELECTOR OFFSET (2026-07-24, offset-sweep): bo qua [SELECTOR_OFFSET] candidate o cuc bien TRUOC khi lay N.
-    //  INVERT=1 (Worst-N): bo qua N coin TE-nhat (tail cuoi mang = dead-coin/rac cua truoc) roi lay TOPN coin
-    //    tiep theo (oversold that, con luc nay). INVERT=0 (Best-N): bo qua N coin TOT-nhat dau mang.
-    //  Clamp theo do dai mang (WORST) / nPass (BEST) de tranh IndexOutOfBounds. Default 0 = OFF = byte-identical.
-    public static final int SELECTOR_OFFSET = Cfg.get("SELECTOR_OFFSET") != null
-            ? Integer.parseInt(Cfg.get("SELECTOR_OFFSET").trim()) : 0;
     // RANK-BASED TOP-K (2026-07-28, Probe A go/no-go): thay leg selector tu ABSOLUTE threshold
     //  (nPass = so coin co score <= maxThres) sang RANK top-K per timestamp. Khi SELECTOR_RANK_TOPK=k (k>0)
     //  -> BO QUA maxThres/nPass, chon K coin score THAP nhat (symbol2Pred da sort tang -> lay k phan tu dau).
@@ -582,12 +333,6 @@ public class Configs {
     //  Doc lap SELECTOR_TOPN (cai do van bi cap boi nPass). Default -1 = OFF = giu absolute = byte-identical.
     public static final int SELECTOR_RANK_TOPK = Cfg.get("SELECTOR_RANK_TOPK") != null
             ? Integer.parseInt(Cfg.get("SELECTOR_RANK_TOPK").trim()) : -1;
-    // RANK OFFSET (2026-07-28, offset-sweep tren rank top-K): bo qua [SELECTOR_RANK_OFFSET] coin score
-    //  THAP nhat (top dau) TRUOC khi lay K -> lay symbol2Pred[off .. off+K). Gia thuyet: top dau lan
-    //  fake-pump sap dump; bo vai coin dau lay K tiep theo giam nhiem. RIENG voi SELECTOR_OFFSET (dung cho
-    //  branch INVERT/best-N). Clamp theo poolSize. Default 0 = OFF = lay [0..K) = hanh vi cu byte-identical.
-    public static final int SELECTOR_RANK_OFFSET = Cfg.get("SELECTOR_RANK_OFFSET") != null
-            ? Integer.parseInt(Cfg.get("SELECTOR_RANK_OFFSET").trim()) : 0;
     // SELECTOR-ONLY ENTRY (2026-07-23): SELECTOR_ONLY_ENTRY=1 -> TAT leg entry theo market-signal
     // (levelChange getTopSymbolArray Best-N = luong FOMO), CHI giu luong selector PREDICT_SYMBOL_TRADE.
     // Dung de co lap 100% edge inverted-selector (khop proxy Kaggle). Default false = byte-identical.
@@ -602,7 +347,6 @@ public class Configs {
     //  Vi GATE_COUNT_ONLY khong bao gio tao order -> isSymbolRunning luon false -> tu dong BO filter von,
     //  dung y muon C1. Default false = OFF = khong ton RAM, byte-identical.
     public static final boolean ENTRY_UNIVERSE_DUMP = "1".equals(Cfg.get("SIM_ENTRY_UNIVERSE_DUMP"));
-    public static float HARD_RISK_LIMIT_4H = -0.2f;                   // HPO (đã revert về cũ): -0.09200f
     public static float MIN_MOMENTUM_15M = 0.02284f;                  // HPO (đã revert về cũ): 0.01720f
     public static float MS_UP_BIG_THRES = 0.02046f;                  // HPO (đã revert về cũ): 0.01757f
     public static float MS_DOWN_BIG_AVG = -0.03157f;                  // HPO (đã revert về cũ): -0.05514f
@@ -612,22 +356,11 @@ public class Configs {
 
     public static int DCA_TIME_BIG_DOWN = 8;                          // HPO (đã revert về cũ): 13
     public static float DCA_LOSS_BIG_DOWN = -0.15f;                   // HPO (đã revert về cũ): -0.26618f
-    public static int DCA_TIME_BIG_Up = 15;                           // HPO (đã revert về cũ): 22
-    public static float DCA_LOSS_BIG_UP = -0.25f;                     // HPO (đã revert về cũ): -0.10063f
-    // HARD-SL BLANKET (env SIM_HARD_SL_PCT) — hard stop-loss tinh tren GIA ENTRY DAU TIEN
-    //   (firstEntryPrice, bat bien qua DCA — KHONG dung averaged priceEntry). Default 0f = OFF =
-    //   byte-identical. Doc env o static SIM block ben duoi (Float.parseFloat).
-    public static float HARD_SL_PCT = 0f;
     // [2026-09-02] LOSER TIME-STOP (env SIM_LOSER_TIME_STOP_HOURS, 0=tat): cum CHUA arm trailing (priceSL==null) qua N gio
     //   ke tu leg DAU thi dong tai min(open, close). Khac TIME_STOP_HOURS (nam TRONG updateStatusNew, chi duoc goi khi
     //   maxPrice >= entry*(1+RATE_PROFIT_STOP_MARKET) => KHONG BAO GIO cham cum thua lo thuan — dead cho zombie).
     //   Dat TRUOC cong profit-arm nhu HARD_SL_PCT. Default 0 = byte-identical.
     public static int LOSER_TIME_STOP_HOURS = 0;
-    // [ABLATION 2026-09-02] env TS_GAP_CONST=1: gap trailing = TS_MAX_GAP hang so (xem TradeUtils.calRateLossDynamicBuy). Default off.
-    public static final boolean TS_GAP_CONST = "1".equals(Cfg.get("TS_GAP_CONST"));
-    // [2026-09-02] SIM_TS_GIVEBACK=1: trailing theo THIET KE (arm RATE_PROFIT_STOP_MARKET, SL = profit - min(profit*TS_GIVEBACK_RATIO, maxGap
-    //   weak 3% / strong 8% theo pNoPump > TS_PNOPUMP_WEAK_THR), ratchet lien tuc). Default off = byte-identical. Xem OrderTargetInfoTest.trailRate.
-    public static final boolean TS_GIVEBACK_MODE = "1".equals(Cfg.get("SIM_TS_GIVEBACK"));
     /** [2026-09-03] ban MUTABLE de test do nhay; doc qua tsPnoPumpWeakThr(). */
     public static Float TS_PNOPUMP_WEAK_THR_OVR = null;
     public static float tsPnoPumpWeakThr() {
@@ -638,13 +371,6 @@ public class Configs {
     // [ABLATION 2026-09-02] env TIER_FLAT=1: bo he so budget theo tier (1.2/1.0/0.5 -> 1.0). Default off = byte-identical.
     public static final boolean TIER_FLAT = "1".equals(Cfg.get("TIER_FLAT"));
 
-    // 2026-08-03 GRID-ALIGN ENTRY: model selector du doan TAI moc 15m (ts%900000==0), label maxFav do tu
-    //   gia moc 15m. Forward-fill 15m->1m cho vao giua cua so -> vao o gia DA CHAY != reference model hoc.
-    //   Co nay chi cho selector entry (PREDICT_SYMBOL_TRADE) fire khi offset-trong-snapshot <= N phut.
-    //   N=0 -> chi mat moc 15m (align chuan). N=-1 (default) -> OFF, khong gioi han = byte-identical.
-    public static final int SIM_SELECTOR_MAX_STALE_MIN =
-            Cfg.get("SIM_SELECTOR_MAX_STALE_MIN") != null
-            ? Integer.parseInt(Cfg.get("SIM_SELECTOR_MAX_STALE_MIN").trim()) : -1;
 
     // =========================================================
     // 9. KẾT NỐI DỮ LIỆU (STORAGE & AEROSPIKE)
@@ -705,10 +431,7 @@ public class Configs {
     static {
         try {
             String v;
-            if ((v = Cfg.get("SIM_OFF_FLAT_HARD")) != null) OFF_FLAT_HARD = Boolean.parseBoolean(v);
             if ((v = Cfg.get("SIM_MIN_MOMENTUM_15M")) != null) MIN_MOMENTUM_15M = Float.parseFloat(v);
-            if ((v = Cfg.get("SIM_TRAIL_PER_SYMBOL")) != null) TRAIL_PER_SYMBOL = Boolean.parseBoolean(v);
-            if ((v = Cfg.get("SIM_GATE_MARKET_OFF")) != null) GATE_MARKET_OFF = Boolean.parseBoolean(v);
             if ((v = Cfg.get("SIM_AI_DYNAMIC_MIN")) != null) AI_DYNAMIC_MIN = Float.parseFloat(v);
             // [2026-09-03] mo override cho cac hang so HPO CON SONG, de test do nhay (lam tron).
             //   MULTIPLIER = do doc duong nguong gate; MAX = TRAN UNG VIEN (rate_max * MAX);
@@ -721,11 +444,7 @@ public class Configs {
             if ((v = Cfg.get("SIM_U_MAX")) != null) U_MAX = Float.parseFloat(v.trim());
             if ((v = Cfg.get("SIM_PREDICT_SYMBOL_RATE_MAX")) != null) PREDICT_SYMBOL_RATE_MAX_THRESHOLD = Float.parseFloat(v);
             if ((v = Cfg.get("SIM_RATE_PROFIT_STOP_MARKET")) != null) RATE_PROFIT_STOP_MARKET = Float.parseFloat(v);
-            if ((v = Cfg.get("SIM_TS_PROFIT_MULTIPLIER")) != null) TS_PROFIT_MULTIPLIER = Float.parseFloat(v);
-            if ((v = Cfg.get("SIM_BREAKER_MODE")) != null) BREAKER_MODE = v;
-            if ((v = Cfg.get("SIM_BREAKER_MARGIN_HALT")) != null) BREAKER_MARGIN_HALT = Float.parseFloat(v);
             if ((v = Cfg.get("SIM_MS_DOWN_BIG_AVG")) != null) MS_DOWN_BIG_AVG = Float.parseFloat(v);
-            if ((v = Cfg.get("SIM_HARD_SL_PCT")) != null) HARD_SL_PCT = Float.parseFloat(v);
             if ((v = Cfg.get("SIM_LOSER_TIME_STOP_HOURS")) != null) LOSER_TIME_STOP_HOURS = Integer.parseInt(v.trim());
             // TASK (frozen leakage-free genome, Buoc 0): funding.bin trong WFO_DATA_DIR/-ff CHI tu-ap cho
             //   funding-SELECTOR (ds.funding), KHONG tu-ap thanh FEE. Fee van gate boi APPLY_FUNDING_FEE
@@ -750,9 +469,9 @@ public class Configs {
     private static final java.util.List<String> KNOWN_PROPS = java.util.Arrays.asList(
             "AEROSPIKE_HOST", "AEROSPIKE_HOST_226", "AEROSPIKE_NAMESPACE", "AEROSPIKE_NAMESPACE_242",
             "AEROSPIKE_PORT", "AEROSPIKE_PORT_226", "AEROSPIKE_READ_CLUSTER", "CAPITAL_START",
-            "DIED_SYMBOLS", "DISABLE_PREDICT_SYMBOL", "FILE_AI_PREDICTIONS", "HARD_STOP_LOSS_RATE",
+            "DIED_SYMBOLS", "FILE_AI_PREDICTIONS",
             "NUMBER_ORDER_BUDGET", "NUMBER_THREAD_ORDER_MANAGER", "SPECIAL_SYMBOLS", "TICKER_SOURCE",
-            "TIME_RUN", "TIME_STOP_HOURS", "TS_GIVEBACK_RATIO", "TS_MIN_GAP", "USE_SMART_CACHE",
+            "TIME_RUN", "TS_GIVEBACK_RATIO", "USE_SMART_CACHE",
             "WFO_STATIC_RANK", "WRITE_SIM_STORAGE");
 
     static {
@@ -766,6 +485,28 @@ public class Configs {
                 System.err.println("[CFG] CONFIG_STRICT=1 -> DUNG. Xoa cac key tren khoi config.properties.");
                 System.exit(2);
             }
+        }
+    }
+
+    /**
+     * 2026-09-03 (CLEAN): hai co duoi day DA BI GO khoi engine — chi con MOT duong duy nhat.
+     * Key van PHAI khai bao trong profile (SIM_TS_GIVEBACK=1, SIM_BREAKER_MODE=OFF): (a) Cfg.auditProfile()
+     * khong bao "key khong ai doc", (b) nguoi doc profile thay ro trailing chay che do nao va breaker tat.
+     * Dat gia tri KHAC => DUNG NGAY, khong am tham chay duong da bi xoa.
+     * env rong (tool WFO/HPO khong dat) => bo qua, giu tuong thich nguoc.
+     */
+    static {
+        String gb = Cfg.get("SIM_TS_GIVEBACK");
+        if (gb != null && !"1".equals(gb.trim())) {
+            System.err.println("[CFG] DUNG: SIM_TS_GIVEBACK=" + gb + " nhung duong trailing cu"
+                    + " (calRateLossDynamicBuy) DA BI XOA 2026-09-03. Chi ho tro SIM_TS_GIVEBACK=1.");
+            System.exit(2);
+        }
+        String bm = Cfg.get("SIM_BREAKER_MODE");
+        if (bm != null && !"OFF".equals(bm.trim())) {
+            System.err.println("[CFG] DUNG: SIM_BREAKER_MODE=" + bm + " nhung co che circuit-breaker"
+                    + " DA BI XOA 2026-09-03. Chi ho tro SIM_BREAKER_MODE=OFF.");
+            System.exit(2);
         }
     }
 

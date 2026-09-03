@@ -64,7 +64,7 @@ public class RunFundingImpact {
 
         LOG.info("🔒 PRE-FLIGHT: lookahead_block={} slippage_apply={} RATE_FEE={} BREAKER_MODE={} MARGIN_HALT={}",
                 Configs.BLOCK_INTRABAR_LOOKAHEAD, Configs.APPLY_SLIPPAGE, Configs.RATE_FEE,
-                Configs.BREAKER_MODE, Configs.BREAKER_MARGIN_HALT);
+                "OFF", 0.50f);
         if (!Configs.BLOCK_INTRABAR_LOOKAHEAD || !Configs.APPLY_SLIPPAGE || Configs.RATE_FEE <= 0f) {
             LOG.error("⛔ Cấu hình ảo (look-ahead/slippage/fee tắt) — DỪNG.");
             return;

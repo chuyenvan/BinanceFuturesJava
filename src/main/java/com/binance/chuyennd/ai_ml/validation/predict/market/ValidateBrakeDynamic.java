@@ -125,7 +125,7 @@ public class ValidateBrakeDynamic {
 
         if (symbolPred == null) {
             // fallback checkSignal (ngưỡng cứng)
-            if (risk <= Configs.HARD_RISK_LIMIT_4H) return R_RISK;
+            if (risk <= -0.2f) return R_RISK;
             if (pred15 < Configs.MIN_MOMENTUM_15M) return R_MOM15;
             return PASS;
         }
@@ -137,7 +137,7 @@ public class ValidateBrakeDynamic {
         scale = Math.max(Configs.AI_DYNAMIC_MIN, Math.min(scale, Configs.AI_DYNAMIC_MAX));
 
         float dyn15 = Configs.MIN_MOMENTUM_15M * scale;
-        float dynRisk = Configs.HARD_RISK_LIMIT_4H / scale;
+        float dynRisk = -0.2f / scale;
 
         if (risk <= dynRisk) return R_RISK;
         if (pred15 < dyn15) return R_MOM15;

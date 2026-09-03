@@ -47,11 +47,11 @@ public class DumpConfig {
         System.out.printf("derived.candidate_score_max=%.5f (= rate_max %.5f x AI_DYNAMIC_MAX %.5f)%n"
                 + "derived.candidate_note=coin co score > tran nay KHONG BAO GIO la ung vien, du nguong bao nhieu%n",
                 candMax, rmax, hi);
-        // TANG 2 — NGUONG DONG (AIRejectFilter.checkSignalDynamic). OFF_FLAT_HARD=true => BO TRAN, chi con SAN.
-        boolean noCap = Configs.OFF_FLAT_HARD;
-        System.out.printf("derived.OFF_FLAT_HARD=%s => gate_formula=%s%n", noCap,
-                noCap ? "min_mom * max(AI_DYNAMIC_MIN, score/rate_max*mult)   [KHONG CO TRAN]"
-                      : "min_mom * clamp(score/rate_max*mult, min, max)");
+        // TANG 2 — NGUONG DONG (AIRejectFilter.checkSignalDynamic): CHI con can duoi AI_DYNAMIC_MIN.
+        //   Co OFF_FLAT_HARD da go 2026-09-03 => tran clamp KHONG con ton tai trong code.
+        boolean noCap = true;
+        System.out.printf("derived.gate_formula=%s%n",
+                "min_mom * max(AI_DYNAMIC_MIN, score/rate_max*mult)   [KHONG CO TRAN]");
         for (float sc : new float[]{0.05f, 0.15f, 0.2494f, 0.30f, candMax}) {
             float raw = sc / rmax * mult;
             float cl = noCap ? Math.max(lo, raw) : Math.max(lo, Math.min(raw, hi));
@@ -64,35 +64,26 @@ public class DumpConfig {
         System.out.printf("derived.cost_roundtrip=%.5f (fee %.5f x2 + slip %.5f x2)%n",
                 2 * Configs.RATE_FEE + 2 * Configs.SLIPPAGE_RATE, Configs.RATE_FEE, Configs.SLIPPAGE_RATE);
         float arm = Configs.RATE_PROFIT_STOP_MARKET;
-        // TS_GIVEBACK_MODE=true => trailRate() di nhanh calRateLossDynamicBuyPNoPump:
-        //   maxGap = (symbolPred > TS_PNOPUMP_WEAK_THR) ? TS_MAX_GAP_WEAK : TS_MAX_GAP
-        //   gap = TS_GIVEBACK_FLOOR ? max(peak*RATIO, TS_MIN_GAP) : min(peak*RATIO, maxGap)
-        //   SL  = round((peak - gap)/0.005)*0.005
-        // => TS_GAP_CONST (chi doc trong calRateLossDynamicBuy) KHONG duoc dung o nhanh nay.
-        float rat = Configs.TS_GIVEBACK_RATIO;
-        float gStrong = Configs.TS_GIVEBACK_FLOOR ? Math.max(arm * rat, Configs.TS_MIN_GAP)
-                : Math.min(arm * rat, Configs.TS_MAX_GAP);
-        float gWeak = Configs.TS_GIVEBACK_FLOOR ? Math.max(arm * rat, Configs.TS_MIN_GAP)
-                : Math.min(arm * rat, Configs.TS_MAX_GAP_WEAK);
-        System.out.printf("derived.arm_roi=%.4f | sl_at_arm STRONG(score<=%.2f)=%.4f | WEAK(score>%.2f)=%.4f%n"
-                + "derived.trail_path=%s | giveback_ratio=%.2f cap_strong=%.3f cap_weak=%.3f floor=%s%n"
-                + "derived.TS_GAP_CONST_active=%s (chi co tac dung khi TS_GIVEBACK_MODE=false)%n",
-                arm, Configs.TS_PNOPUMP_WEAK_THR, arm - gStrong,
-                Configs.TS_PNOPUMP_WEAK_THR, arm - gWeak,
-                Configs.TS_GIVEBACK_MODE ? "calRateLossDynamicBuyPNoPump (TS_GIVEBACK_MODE=true)"
-                        : "calRateLossDynamicBuy",
-                rat, Configs.TS_MAX_GAP, Configs.TS_MAX_GAP_WEAK, Configs.TS_GIVEBACK_FLOOR,
-                (!Configs.TS_GIVEBACK_MODE) && Configs.TS_GAP_CONST);
-        System.out.printf("derived.pre_arm_stop=%s%n",
-                (Configs.HARD_SL_PCT > 0f || Configs.HARD_STOP_LOSS_RATE > 0f)
-                        ? "co SL cung truoc khi arm"
-                        : (Configs.LOSER_TIME_STOP_HOURS > 0
-                            ? "KHONG co SL truoc khi arm — loi ra duy nhat la time-stop "
-                              + Configs.LOSER_TIME_STOP_HOURS + "h"
-                            : "KHONG co SL va KHONG co time-stop truoc khi arm (!)"));
-        System.out.printf("derived.ratchet_gate=%s%n", Configs.TS_GIVEBACK_MODE || Configs.TS_RATCHET_DECOUPLED
-                ? "LIEN TUC (giveback/decoupled)" : "DEAD-ZONE x" + Configs.TS_PROFIT_MULTIPLIER);
 
+        // Trailing: duong DUY NHAT la TradeUtils.calRateLossDynamicBuyPNoPump
+        //   maxGap = (symbolPred > TS_PNOPUMP_WEAK_THR) ? TS_MAX_GAP_WEAK : TS_MAX_GAP
+        //   gap    = min(peak * TS_GIVEBACK_RATIO, maxGap)      [co TS_GIVEBACK_FLOOR/TS_MIN_GAP da go]
+        //   SL     = round((peak - gap)/0.005)*0.005
+        float rat = Configs.TS_GIVEBACK_RATIO;
+        float gStrong = Math.min(arm * rat, Configs.TS_MAX_GAP);
+        float gWeak = Math.min(arm * rat, Configs.TS_MAX_GAP_WEAK);
+        System.out.printf("derived.arm_roi=%.4f | sl_at_arm STRONG(score<=%.2f)=%.4f | WEAK(score>%.2f)=%.4f%n"
+                + "derived.trail_path=calRateLossDynamicBuyPNoPump (duy nhat) | giveback_ratio=%.2f"
+                + " cap_strong=%.3f cap_weak=%.3f%n"
+                + "derived.ratchet_gate=LIEN TUC (dead-zone x TS_PROFIT_MULTIPLIER da go)%n",
+                arm, Configs.tsPnoPumpWeakThr(), arm - gStrong,
+                Configs.tsPnoPumpWeakThr(), arm - gWeak,
+                rat, Configs.TS_MAX_GAP, Configs.TS_MAX_GAP_WEAK);
+        System.out.printf("derived.pre_arm_stop=%s%n",
+                Configs.LOSER_TIME_STOP_HOURS > 0
+                        ? "KHONG co SL cung truoc khi arm - loi ra duy nhat la time-stop "
+                          + Configs.LOSER_TIME_STOP_HOURS + "h"
+                        : "KHONG co SL va KHONG co time-stop truoc khi arm (!)");
         // SIM dung TradeUtils.managerBudget: THROTTLE LIEN TUC theo F_BASE/U_MAX (FROZEN v1 2026-08-24,
         //   thay logic vach roi rac BUDGET_MARGIN_RATIO_*/BUDGET_DIVIDER_* = overfit, nay DA CHET trong engine).
         //   budget = equity * F_BASE * clamp(1 - U/U_MAX,0,1) / dcaGridTotalWeight(), roi * DCA_GRID_SCALE * tier.

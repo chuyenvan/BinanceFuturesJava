@@ -50,7 +50,6 @@ public class RunTailLossDiagnostic {
     public void run() throws Exception {
         Configs.TIME_RUN = START_DATE;
         // Filter: RISK + MOM15 + EARLY (MOM24 đã bỏ khỏi hệ). KHÔNG breaker.
-        Configs.FILTER_MODE = "A";
 
         LOG.info("🔒 PRE-FLIGHT: BLOCK_INTRABAR_LOOKAHEAD={} APPLY_SLIPPAGE={} SLIPPAGE_RATE={} RATE_FEE={}",
                 Configs.BLOCK_INTRABAR_LOOKAHEAD, Configs.APPLY_SLIPPAGE, Configs.SLIPPAGE_RATE, Configs.RATE_FEE);

@@ -31,8 +31,6 @@ public class DcaGridScalarTest {
     private final int legs0 = Configs.DCA_GRID_LEGS;
     private final float wr0 = Configs.DCA_GRID_W_RATIO;
     private final float scale0 = Configs.DCA_GRID_SCALE;
-    private final float capBase0 = Configs.DCA_TIER_CAP_BASE;
-    private final float capStep0 = Configs.DCA_TIER_CAP_STEP;
 
     @After
     public void restore() {
@@ -42,8 +40,6 @@ public class DcaGridScalarTest {
         Configs.DCA_GRID_LEGS = legs0;
         Configs.DCA_GRID_W_RATIO = wr0;
         Configs.DCA_GRID_SCALE = scale0;
-        Configs.DCA_TIER_CAP_BASE = capBase0;
-        Configs.DCA_TIER_CAP_STEP = capStep0;
     }
 
     /** PARITY: SCALAR=false -> accessor tra dung phan tu mang, KHONG dung cong thuc scalar. */
@@ -146,31 +142,5 @@ public class DcaGridScalarTest {
     }
 
     /** Tran margin theo bac dang scalar: BASE + STEP*i, clamp <=0.98; STEP=0 => tran phang. */
-    @Test
-    public void tierCapScalarShape() {
-        Configs.DCA_GRID_SCALAR = true;
-        Configs.DCA_TIER_CAP_BASE = 0.50f;
-        Configs.DCA_TIER_CAP_STEP = 0.10f;
-        assertEquals(0.50f, Configs.tierMarginCap(0), EPS);
-        assertEquals(0.60f, Configs.tierMarginCap(1), EPS);
-        assertEquals(0.80f, Configs.tierMarginCap(3), EPS);
-        assertEquals("clamp tran tren", 0.98f, Configs.tierMarginCap(20), EPS);
 
-        Configs.DCA_TIER_CAP_STEP = 0f;
-        assertEquals(0.50f, Configs.tierMarginCap(0), EPS);
-        assertEquals("STEP=0 => tran phang = BREAKER_MARGIN_HALT cu", 0.50f, Configs.tierMarginCap(5), EPS);
-    }
-
-    /** SCALAR=false -> tierMarginCap van doc mang cu (parity voi ban chot tam). */
-    @Test
-    public void tierCapArrayModeUnchanged() {
-        Configs.DCA_GRID_SCALAR = false;
-        Configs.DCA_TIER_CAP_BASE = 0.99f;   // co tinh dat sai
-        Configs.DCA_TIER_CAP_STEP = 0.99f;
-        float[] c = Configs.DCA_TIER_MARGIN_CAPS;
-        for (int i = 0; i < c.length; i++) {
-            assertEquals("cap[" + i + "] phai lay tu mang", c[i], Configs.tierMarginCap(i), EPS);
-        }
-        assertEquals("vuot mang -> giu phan tu cuoi", c[c.length - 1], Configs.tierMarginCap(c.length + 5), EPS);
-    }
 }

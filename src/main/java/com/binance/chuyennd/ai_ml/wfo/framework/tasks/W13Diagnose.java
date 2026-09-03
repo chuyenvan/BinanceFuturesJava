@@ -34,7 +34,7 @@ public class W13Diagnose {
         WfoDataset ds = WfoDataset.load(dataDir);
         LOG.info("LOAD OK: market={} pred={} funding={}", ds.market.size(), ds.pred.size(), ds.funding.size());
         LOG.info("OFF_FLAT_HARD={} MS_DOWN_BIG_AVG default={} (gene range -0.055..-0.020)",
-                Configs.OFF_FLAT_HARD, Configs.MS_DOWN_BIG_AVG);
+                true, Configs.MS_DOWN_BIG_AVG);
 
         // Ngưỡng quét: cận gene, giữa, default, cận kia
         float[] thresholds = {-0.020f, -0.03157f, -0.045f, -0.055f};

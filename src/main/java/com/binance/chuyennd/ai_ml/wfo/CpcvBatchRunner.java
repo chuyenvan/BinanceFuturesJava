@@ -32,10 +32,6 @@ public class CpcvBatchRunner {
         // Cờ FROZEN v1 (set cứng để genome grid có tác dụng, không phụ thuộc env)
         Configs.DCA_GRID_ENABLED = true;
         Configs.DCA_GRID_SCALAR = true;
-        Configs.OFF_FLAT_HARD = true;
-        Configs.FILTER_MODE = "A";
-        Configs.ABLATION_MODE = "A";
-        Configs.BREAKER_MODE = "OFF";
         Configs.APPLY_FUNDING_FEE = true;
         if ("1".equals(System.getenv("WFO_SMART_CACHE"))) Configs.USE_SMART_CACHE = true;
 

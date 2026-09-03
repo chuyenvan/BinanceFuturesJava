@@ -24,7 +24,7 @@ public class EntrySourceProbe {
         WfoDataset ds = WfoDataset.load(dataDir);
         LOG.info("LOAD OK market={} pred={} funding={}", ds.market.size(), ds.pred.size(), ds.funding.size());
         LOG.info("CONFIG: MIN_MOM15M={} PRED_MAX_THRES={} FILTER_MODE={} OFF_FLAT_HARD={}",
-                Configs.MIN_MOMENTUM_15M, Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD, Configs.FILTER_MODE, Configs.OFF_FLAT_HARD);
+                Configs.MIN_MOMENTUM_15M, Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD, "A", true);
 
         // các khoảng: [nhãn, từ, đến]
         String[][] periods = {

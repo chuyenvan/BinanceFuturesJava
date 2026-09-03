@@ -72,7 +72,7 @@ public class TrailingStopSweepProbe {
         float saved = Configs.RATE_PROFIT_STOP_MARKET;
 
         LOG.info("APPLY_FUNDING_FEE={} TIME_STOP_HOURS={} HARD_SL_PCT={} BLOCK_INTRABAR_LOOKAHEAD={}",
-                Configs.APPLY_FUNDING_FEE, Configs.TIME_STOP_HOURS, Configs.HARD_SL_PCT,
+                Configs.APPLY_FUNDING_FEE, 0, 0f,
                 Configs.BLOCK_INTRABAR_LOOKAHEAD);
         LOG.info("period | rateTS trades pnlTOTAL | closed nClosed pnlClosed | mtm %MTM pnlMtm | dd ddPct ddPctMtm MC | hold med %>60p %>7d");
         for (String[] pr : periods) {

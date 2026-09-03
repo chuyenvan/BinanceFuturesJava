@@ -157,13 +157,6 @@ public class BinanceOrderTradingManager {
                 LOG.info("Symbol {} is locking ReduceOnly !", order.symbol);
                 return;
             } else {
-                if ("true".equalsIgnoreCase(System.getenv("SHADOW_NO_PUSH"))) {
-                    LOG.info("[SHADOW] would-BUY {} {} entry: {} quantity: {} time:{} market level: {}",
-                            order.side, order.symbol, order.priceEntry, order.quantity,
-                            Utils.normalizeDateYYYYMMDDHHmm(order.timeStart), order.marketLevel);
-                    symbol2Processing.remove(order.symbol);
-                    return;
-                }
                 Order orderInfo = OrderHelper.newOrderMarket(order.symbol, order.side, order.quantity);
                 if (orderInfo == null) {
                     return;
@@ -291,7 +284,7 @@ public class BinanceOrderTradingManager {
                     }
                     if (orderInfo.priceSL == null || slBelowEntry) {
                         OrderSide sideSL = OrderSide.SELL;
-                        Float rateStop = tsGap(rateLoss, predReturn15M, symbol);
+                        Float rateStop = tsGap(rateLoss, symbol);
                         if (orderInfo.side.equals(OrderSide.SELL)) {
                             sideSL = OrderSide.BUY;
                         }
@@ -385,45 +378,24 @@ public class BinanceOrderTradingManager {
     }
 
     /**
-     * [PRED-GAP] Chon gap trailing: neu env TS_PRED_GAP=1 va co selector per-coin P(no-pump) (tuoi tu tick
-     * entry 15m) -> dung gap theo pred per-coin (weak khi P(no-pump)>TS_PNOPUMP_WEAK_THR, default 0.29).
-     * Nguoc lai (flag off / thieu pred) -> gap cu theo market gate pred (byte-identical hanh vi cu).
-     */
-    // [FIX LIVE 2026-09-02] SL duoi entry sau khi arm (CLOUSDT: entry 0.14956 -> SL 0.14806 = -1%).
-    //   Nguyen nhan: initSLFirst chay NGAY SAU restart (auto-restart ~4h), TRUOC tick selector dau tien
-    //   -> LATEST_SEL_PNOPUMP rong -> fallback calRateLossDynamicBuy(rateLoss, gatePred). Tu FROZEN v1 (2026-08-24)
-    //   tham so 2 cua ham do la pNoPump (0..1), gatePred=predReturn15M ~0.01 bi hieu la pNoPump=0.01
-    //   -> pGood 0.99 -> gap = 0.99*TS_MAX_GAP ~ 7.9% -> rate = rateLoss(5-7%) - 7.9% < 0 -> SL DUOI entry.
-    //   Sua: (1) pnp null -> coi nhu coin YEU (nhanh weak, maxGap TS_MAX_GAP_WEAK 3%) thay vi truyen gatePred sai nghia;
-    //        (2) invariant live: da arm (rateLoss > nguong) thi SL KHONG BAO GIO duoi entry (san TS_LIVE_MIN_LOCK, mac dinh 0.5%).
-    private static final float TS_LIVE_MIN_LOCK = com.binance.chuyennd.tradecore.Cfg.get("TS_LIVE_MIN_LOCK") != null
-            ? Float.parseFloat(com.binance.chuyennd.tradecore.Cfg.get("TS_LIVE_MIN_LOCK").trim()) : 0.005f;
-    // [2026-09-02 LOSER-TS] gio toi da cho lenh CHUA arm (sim G1 = 168). 0/unset = OFF. Buffer duoi mark de dat STOP_MARKET thoat.
-    private static final long LIVE_LOSER_TIME_STOP_HOURS = com.binance.chuyennd.tradecore.Cfg.get("LIVE_LOSER_TIME_STOP_HOURS") != null
-            ? Long.parseLong(com.binance.chuyennd.tradecore.Cfg.get("LIVE_LOSER_TIME_STOP_HOURS").trim()) : 0L;
-    private static final float LIVE_LOSER_TS_BUFFER = com.binance.chuyennd.tradecore.Cfg.get("LIVE_LOSER_TS_BUFFER") != null
-            ? Float.parseFloat(com.binance.chuyennd.tradecore.Cfg.get("LIVE_LOSER_TS_BUFFER").trim()) : 0.003f;
 
-    private static float tsGap(float rateLoss, Float gatePred, String symbol) {
-        float rate;
-        if ("1".equals(com.binance.chuyennd.tradecore.Cfg.get("TS_PRED_GAP"))) {
-            Float pnp = DetectEntrySignal2TradeNormal.LATEST_SEL_PNOPUMP.get(symbol);
-            float thr = 0.29f;
-            String v = com.binance.chuyennd.tradecore.Cfg.get("TS_PNOPUMP_WEAK_THR");
-            if (v != null) { try { thr = Float.parseFloat(v.trim()); } catch (Exception ignore) { } }
-            if (pnp == null) {
-                LOG.info("[TS-GAP] {} chua co pNoPump (sau restart/chua qua tick selector) -> dung nhanh WEAK gap<={}",
-                        symbol, Configs.TS_MAX_GAP_WEAK);
-            }
-            rate = TradeUtils.calRateLossDynamicBuyPNoPump(rateLoss, pnp != null ? pnp : 1f, thr);
-        } else {
-            rate = TradeUtils.calRateLossDynamicBuy(rateLoss, gatePred);
+    /**
+     * Gap trailing LIVE = CUNG MOT cong thuc voi sim: calRateLossDynamicBuyPNoPump theo selector per-coin
+     * P(no-pump). Thieu pnp (vd ngay sau restart, chua qua tick selector dau tien) -> coi nhu coin YEU
+     * (maxGap = TS_MAX_GAP_WEAK), bao thu.
+     *
+     * <p>2026-09-03 da go: co bat/tat nhanh nay (env cu), override nguong weak rieng cho live (nay doc
+     * chung Configs.tsPnoPumpWeakThr()), va san khoa-SL-tren-entry. San khong con can: cong thuc con lai
+     * cho gap = min(peak*TS_GIVEBACK_RATIO, maxGap) <= peak/2 nen rate = peak - gap >= peak/2 > 0 LUON.
+     */
+    private static float tsGap(float rateLoss, String symbol) {
+        Float pnp = DetectEntrySignal2TradeNormal.LATEST_SEL_PNOPUMP.get(symbol);
+        if (pnp == null) {
+            LOG.info("[TS-GAP] {} chua co pNoPump (sau restart/chua qua tick selector) -> dung nhanh WEAK gap<={}",
+                    symbol, Configs.TS_MAX_GAP_WEAK);
         }
-        if (rate < TS_LIVE_MIN_LOCK) {
-            LOG.warn("[TS-GAP] {} rateStop {} < san {} (rateLoss={}) -> ep SL len tren entry", symbol, rate, TS_LIVE_MIN_LOCK, rateLoss);
-            rate = TS_LIVE_MIN_LOCK;
-        }
-        return rate;
+        return TradeUtils.calRateLossDynamicBuyPNoPump(rateLoss, pnp != null ? pnp : 1f,
+                Configs.tsPnoPumpWeakThr());
     }
 
     public void processDynamicTP_SL() {
@@ -444,28 +416,6 @@ public class BinanceOrderTradingManager {
                 if (orderInfo.priceEntry != priceEntry) {
                     orderInfo.priceEntry = priceEntry;
                 }
-                // [2026-09-02 LOSER-TS] Dong bo voi sim G1 (SIM_LOSER_TIME_STOP_HOURS=168): lenh BUY CHUA arm (priceSL null)
-                //   qua LIVE_LOSER_TIME_STOP_HOURS gio -> dat STOP_MARKET ngay duoi mark (LIVE_LOSER_TS_BUFFER, mac dinh 0.3%)
-                //   de thoat o tick ke tiep (tai dung createSL, khong them duong dat lenh moi). env unset/0 -> OFF (byte-identical).
-                if (LIVE_LOSER_TIME_STOP_HOURS > 0 && orderInfo.priceSL == null
-                        && position.getPositionAmt().compareTo(new BigDecimal("0")) > 0
-                        && orderInfo.timeStart > 0
-                        && System.currentTimeMillis() - orderInfo.timeStart > LIVE_LOSER_TIME_STOP_HOURS * Utils.TIME_HOUR) {
-                    if (position.getMarkPrice() == null) {
-                        continue;
-                    }
-                    float mark = position.getMarkPrice().floatValue();
-                    // calPriceTarget(SELL, +r) = mark - r*mark -> STOP_MARKET ngay DUOI mark.
-                    Float priceStop = Utils.calPriceTarget(symbol, mark, OrderSide.SELL, LIVE_LOSER_TS_BUFFER);
-                    LOG.info("[LOSER-TS] {} chua arm sau {}h (start {}) rateLoss={} mark={} -> SL {} de thoat",
-                            symbol, LIVE_LOSER_TIME_STOP_HOURS, Utils.normalizeDateYYYYMMDDHHmm(orderInfo.timeStart),
-                            rateLoss, mark, priceStop);
-                    if (createSL(position, priceStop)) {
-                        orderInfo.priceSL = priceStop;
-                        RedisHelper.getInstance().writeJsonData(RedisConst.REDIS_KEY_SYMBOL_2_ORDER_INFO, symbol, Utils.toJson(orderInfo));
-                    }
-                    continue;
-                }
                 OrderSide side2Sl;
                 Float maxChange60M = 0f;
                 AiPredictionData predictData = DataManagerAerospikeFloatSim.getAiPredictionAtTime(System.currentTimeMillis() - Utils.TIME_MINUTE);
@@ -473,7 +423,7 @@ public class BinanceOrderTradingManager {
 //                    LOG.info("Predict data for SL DL: {} {}", Utils.normalizeDateYYYYMMDDHHmm(predictData.timestamp), Utils.toJson(predictData));
                     maxChange60M = predictData.predReturn15M;
                 }
-                Float rateMin2MoveSl = Configs.TS_PROFIT_MULTIPLIER * TradeUtils.calRateMinWithPredReturn15MForTradingStop(maxChange60M);
+                Float rateMin2MoveSl = 5.21847f * TradeUtils.calRateMinWithPredReturn15MForTradingStop(maxChange60M);
                 // BUY
                 if (position.getPositionAmt().compareTo(new BigDecimal("0")) > 0) {
                     side2Sl = OrderSide.SELL;
@@ -483,7 +433,7 @@ public class BinanceOrderTradingManager {
                 if (orderInfo.priceSL != null && rateLoss > rateMin2MoveSl) {
                     // move SL
                     Float priceSL = orderInfo.priceSL;
-                    Float rateSL = tsGap(rateLoss, maxChange60M, symbol);
+                    Float rateSL = tsGap(rateLoss, symbol);
                     Float priceSLNew = Utils.calPriceTarget(symbol, priceEntry, side2Sl, -rateSL);
                     float priceSLChange = priceSLNew - priceSL;
                     if (position.getPositionAmt().compareTo(new BigDecimal("0")) < 0) {

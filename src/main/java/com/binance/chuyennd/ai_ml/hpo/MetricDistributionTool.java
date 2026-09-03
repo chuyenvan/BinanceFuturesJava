@@ -38,7 +38,6 @@ public class MetricDistributionTool {
 
     public static void main(String[] args) {
         try {
-            Configs.BREAKER_MODE = "OFF";
             String mode = args.length > 0 ? args[0] : "FAST";
             new MetricDistributionTool().run(mode);
             System.exit(0);

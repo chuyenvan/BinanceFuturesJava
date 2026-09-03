@@ -91,7 +91,6 @@ public class StrategyWfoTask implements WfoTask {
         //   thai ma HPO khong cham duoc, mo SAN range xuong 1.0 => HPO tu do tim diem giua thay vi
         //   phai sweep tay 2 nhanh. San MO chi khi nhanh exit moi bat (TS_GIVEBACK_FLOOR) hoac khi
         //   ep bang env; mac dinh van [4.0,8.0] de baseline cu byte-identical.
-        put("TS_PROFIT_MULTIPLIER", 2.0, 5.0, false);
         // FROZEN v1: trailing per-coin liên tục → chỉ còn TS_MAX_GAP (bỏ TS_DYNAMIC_K + weak/floor/min_gap/ratio).
         put("TS_MAX_GAP", 0.05, 0.20, false);
         // FROZEN v1: budget mới throttle liên tục — 2 gene F_BASE + U_MAX (bỏ BUDGET_MARGIN_RATIO_1/2 + DIVIDER).

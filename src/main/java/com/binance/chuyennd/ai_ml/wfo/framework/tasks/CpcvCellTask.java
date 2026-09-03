@@ -76,10 +76,6 @@ public class CpcvCellTask implements WfoTask {
         // Co FROZEN v1 (khop CpcvBatchRunner.main) — set moi job, idempotent, chong lech recipe.
         Configs.DCA_GRID_ENABLED = true;
         Configs.DCA_GRID_SCALAR = true;
-        Configs.OFF_FLAT_HARD = true;
-        Configs.FILTER_MODE = "A";
-        Configs.ABLATION_MODE = "A";
-        Configs.BREAKER_MODE = "OFF";
         Configs.APPLY_FUNDING_FEE = true;
 
         JSONObject c = new JSONObject(job.payload);

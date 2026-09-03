@@ -124,10 +124,9 @@ public class GoldenBacktest {
         // TASK-112: nguồn ticker/cluster theo config per-box (TICKER_SOURCE=aerospike + AEROSPIKE_READ_CLUSTER
         // trong config.properties của box chạy) — không còn set flag runtime ở đây.
         // BREAKER OFF = chiến lược nền (golden chuẩn).
-        Configs.BREAKER_MODE = "OFF";
         LOG.info("🟡 PRE-FLIGHT: lookahead_block={} slippage_apply={} SLIPPAGE_RATE={} RATE_FEE={} FILTER_MODE={} CONFIG_VERSION={}",
                 Configs.BLOCK_INTRABAR_LOOKAHEAD, Configs.APPLY_SLIPPAGE, Configs.SLIPPAGE_RATE,
-                Configs.RATE_FEE, Configs.FILTER_MODE, RunHpoMaster_Distributed.CONFIG_VERSION);
+                Configs.RATE_FEE, "A", RunHpoMaster_Distributed.CONFIG_VERSION);
         loadData();
 
         if ("verify".equalsIgnoreCase(mode)) {
@@ -342,7 +341,7 @@ public class GoldenBacktest {
         f.rateFee = Configs.RATE_FEE;
         f.applySlippage = Configs.APPLY_SLIPPAGE;
         f.blockLookahead = Configs.BLOCK_INTRABAR_LOOKAHEAD;
-        f.filterMode = String.valueOf(Configs.FILTER_MODE);
+        f.filterMode = String.valueOf("A");
         f.metrics = m;
         if ("unknown".equals(f.commit) || "true".equals(f.dirty))
             LOG.warn("⚠️ commit/dirty không xác định (env GOLDEN_COMMIT/GOLDEN_DIRTY) hoặc working-tree BẨN → fingerprint không gắn chắc với 1 commit. So baseline sẽ coi là STAMP-khác.");

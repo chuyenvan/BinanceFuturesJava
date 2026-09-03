@@ -60,7 +60,6 @@ public class SensitivityTool {
         List<Gene> g = new ArrayList<>();
         // Tầng 1 — entry filter
         g.add(new Gene("entry", "MIN_MOMENTUM_15M", 0.005, 0.05, false));
-        g.add(new Gene("entry", "HARD_RISK_LIMIT_4H", -0.35, -0.05, false));
         g.add(new Gene("entry", "PREDICT_SYMBOL_RATE_MAX_THRESHOLD", 0.05, 0.30, false));
         g.add(new Gene("entry", "AI_DYNAMIC_MULTIPLIER", 0.8, 2.0, false));
         g.add(new Gene("entry", "AI_DYNAMIC_MIN", 0.1, 0.5, false));
@@ -73,13 +72,10 @@ public class SensitivityTool {
         // Tầng 3 — DCA
         g.add(new Gene("dca", "DCA_TIME_BIG_DOWN", 3, 20, true));
         g.add(new Gene("dca", "DCA_LOSS_BIG_DOWN", -0.30, -0.08, false));
-        g.add(new Gene("dca", "DCA_TIME_BIG_Up", 5, 30, true));
-        g.add(new Gene("dca", "DCA_LOSS_BIG_UP", -0.40, -0.10, false));
         // Tầng 4 — trailing exit
         // 2026-07-30: dong bo voi StrategyWfoTask (TASK-139 xac nhan [0.005,0.025] la vung CAT NON).
         // Tool OAT lich su (khong nam tren duong production), sua de khong con la vi du sai.
         g.add(new Gene("trail", "RATE_PROFIT_STOP_MARKET", 0.03, 0.05, false));
-        g.add(new Gene("trail", "TS_PROFIT_MULTIPLIER", 2.0, 8.0, false));
         g.add(new Gene("trail", "TS_MAX_GAP", 0.04, 0.15, false));
         g.add(new Gene("trail", "TS_MAX_GAP_WEAK", 0.01, 0.06, false));
         return g;
@@ -93,8 +89,6 @@ public class SensitivityTool {
     public static void main(String[] args) {
         try {
             // TASK-112: cluster doc theo config per-box AEROSPIKE_READ_CLUSTER (env SENS_KAGGLE cu da bo).
-            Configs.ABLATION_MODE = "A";
-            Configs.BREAKER_MODE = "OFF";
             String mode = args.length > 0 ? args[0] : "FAST";
             int levels = args.length > 1 ? Integer.parseInt(args[1]) : 4;
             // arg[2] = "from:to" chia gene cho tung may (vd "0:9" chay gene 0..8). Mac dinh ca bo.

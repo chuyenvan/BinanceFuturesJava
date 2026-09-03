@@ -111,16 +111,13 @@ public class RunWorkerKaggle {
         // NHÓM 2: AI & ONNX
         Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD = task.aiMaxThres;
         Configs.MIN_MOMENTUM_15M = task.aiMin15M;
-        Configs.HARD_RISK_LIMIT_4H = task.aiRisk4H;
         Configs.AI_DYNAMIC_MULTIPLIER = task.aiDynMul;
         Configs.AI_DYNAMIC_MIN = task.aiDynMin;
         Configs.AI_DYNAMIC_MAX = task.aiDynMax;
 
         // NHÓM 3: DCA (time làm tròn về int đúng như khóa cache đã băm bên Master)
         Configs.DCA_LOSS_BIG_DOWN = task.dcaLossBigDown;
-        Configs.DCA_LOSS_BIG_UP   = task.dcaLossBigUp;
         Configs.DCA_TIME_BIG_DOWN = Math.round(task.dcaTimeBigDown);
-        Configs.DCA_TIME_BIG_Up   = Math.round(task.dcaTimeBigUp);
     }
 
     /**

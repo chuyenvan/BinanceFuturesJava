@@ -38,9 +38,6 @@ public class VerifyOneWindow {
             int winIdx = args.length > 0 ? Integer.parseInt(args[0].trim()) : 10;
 
             // ==== cấu hình khớp WfoWorker (để BEFORE/AFTER chỉ khác đúng cache) ====
-            if (com.binance.chuyennd.tradecore.Cfg.get("ABLATION_MODE") != null) Configs.ABLATION_MODE = com.binance.chuyennd.tradecore.Cfg.get("ABLATION_MODE");
-            else Configs.ABLATION_MODE = "A";
-            Configs.BREAKER_MODE = "OFF";
             if ("1".equals(System.getenv("WFO_SMART_CACHE"))) Configs.USE_SMART_CACHE = true;
             if ("1".equals(System.getenv("WFO_STATIC_RANK"))) {
                 Configs.WFO_STATIC_RANK = true;

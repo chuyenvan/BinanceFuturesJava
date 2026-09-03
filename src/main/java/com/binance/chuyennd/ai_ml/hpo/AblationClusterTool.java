@@ -63,8 +63,6 @@ public class AblationClusterTool {
 
     public static void main(String[] args) {
         try {
-            Configs.ABLATION_MODE = "A";
-            Configs.BREAKER_MODE = "OFF";
             String mode = args.length > 0 ? args[0] : "FAST";
             new AblationClusterTool().run(mode);
             System.exit(0);

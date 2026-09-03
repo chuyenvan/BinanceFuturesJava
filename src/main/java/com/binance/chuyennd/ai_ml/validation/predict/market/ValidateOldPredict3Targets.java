@@ -34,7 +34,7 @@ public class ValidateOldPredict3Targets {
 
     private static final String CUTOFF_DATE = "20251220";
     private static final int WARMUP_DAYS = 2;
-    private static final float DANGER_THRESHOLD = -0.092f;       // = Configs.HARD_RISK_LIMIT_4H
+    private static final float DANGER_THRESHOLD = -0.092f;       // = -0.2f
     private static final float[] GAIN_THRESHOLDS = {0.01f, 0.02f, 0.03f, 0.06f};
     private static final double TOP_QUANTILE = 0.10;
 

@@ -54,12 +54,11 @@ public class RunFundingMonotonicity {
 
     public void run() throws Exception {
         Configs.TIME_RUN = START_DATE;
-        Configs.BREAKER_MODE = "OFF";
 
         float maxThres = Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD * Configs.AI_DYNAMIC_MAX;
         LOG.info("🔒 PRE-FLIGHT: lookahead_block={} slippage_apply={} SLIPPAGE_RATE={} RATE_FEE={} | FILTER_MODE={} | maxThres={}",
                 Configs.BLOCK_INTRABAR_LOOKAHEAD, Configs.APPLY_SLIPPAGE, Configs.SLIPPAGE_RATE,
-                Configs.RATE_FEE, Configs.FILTER_MODE, String.format(Locale.US, "%.4f", maxThres));
+                Configs.RATE_FEE, "A", String.format(Locale.US, "%.4f", maxThres));
         if (!Configs.BLOCK_INTRABAR_LOOKAHEAD || !Configs.APPLY_SLIPPAGE || Configs.RATE_FEE <= 0f) {
             LOG.error("⛔ Cấu hình ảo — DỪNG."); return;
         }

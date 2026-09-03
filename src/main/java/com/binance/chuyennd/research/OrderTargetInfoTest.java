@@ -171,39 +171,11 @@ public class OrderTargetInfoTest implements Serializable {
 
     public void updateStatusNew(Float predReturn15M, KlineObjectSimple ticker) {
         if (priceSL == null) {
-            // TASK (2026-07-09): SL cung cho lenh CHUA tung cham nguong lai de arm trailing ("nuoi lo").
-            // Chi active khi Configs.HARD_STOP_LOSS_RATE > 0 (mac dinh 0 = tat, hanh vi cu y nguyen).
-            // CHON LOC theo level: test A/B blanket (moi level) cho thay net AM - DCA_LEVEL1 mat loi nhuan
-            // vi bi cat som luc dang lo tam thoi (se hoi). Chi ap dung cho PREDICT_SYMBOL_TRADE (dung
-            // level dang lo bat thuong: rate% duong nhung $ am - xem TraceData2Test 2025).
-            if (Configs.HARD_STOP_LOSS_RATE > 0f
-                    && marketLevelChange == com.binance.chuyennd.object.MarketLevelChange.PREDICT_SYMBOL_TRADE) {
-                Float rateLossNow = calRateLoss(); // (lastPrice - priceEntry) / priceEntry, am neu dang lo
-                if (rateLossNow != null && rateLossNow <= -Configs.HARD_STOP_LOSS_RATE) {
-                    status = OrderTargetStatus.STOP_LOSS_DONE;
-                    priceTP = Math.min(ticker.priceOpen, lastPrice); // haircut nhu nhanh gap-down ben duoi, khong look-ahead them
-                    return;
-                }
-            }
-            // TASK (2026-07-10): time-stop thesis-expiry — lenh CHUA arm trailing qua TIME_STOP_HOURS
-            // (do tu leg DAU cum, khong bi DCA reset) thi thoat. 0 = tat.
-            if (Configs.TIME_STOP_HOURS > 0) {
-                long anchor = clusterFirstLegTime > 0L ? clusterFirstLegTime : timeStart;
-                if (ticker.startTime.longValue() - anchor > Configs.TIME_STOP_HOURS * 3600000L) {
-                    status = OrderTargetStatus.STOP_LOSS_DONE;
-                    priceTP = Math.min(ticker.priceOpen, lastPrice);
-                    return;
-                }
-            }
-            // TASK (2026-07-17): TRAIL_PEAK_MODE — dinh de ARM trailing. high=maxPrice (mac dinh, hanh vi cu),
-            // close=priceClose (chong wick). Chi doi peak arm/ratchet, KHONG dung minPrice/MAE/disaster/time-stop.
-            float trailPeak = "close".equals(Configs.TRAIL_PEAK_MODE) ? ticker.priceClose : ticker.maxPrice;
-            Float rateLoss = calRateLossMax(trailPeak);
+            // dinh trailing = HIGH cua nen 1m (co TRAIL_PEAK_MODE da go 2026-09-03, chi con che do "high").
+            Float rateLoss = calRateLossMax(ticker.maxPrice);
             Float rateMin2MoveSl = TradeUtils.calRateMinWithPredReturn15MForTradingStop(predReturn15M);
             if (rateLoss > rateMin2MoveSl) {
-                // [2026-08-29 DEV pivot] TRAIL_PER_SYMBOL: arm-SL gap theo selector CUA CHINH COIN
-                // (this.symbolPred=pNoPump), khop updateTPSL. false = hanh vi cu (market predReturn15M).
-                Float rateStop = trailRate(rateLoss, predReturn15M);
+                Float rateStop = trailRate(rateLoss);
                 Float priceSLNew = Utils.calPriceTarget(symbol, priceEntry, OrderSide.SELL, -rateStop);
                 minPrice = lastPrice;
                 this.priceSL = priceSLNew;
@@ -260,22 +232,15 @@ public class OrderTargetInfoTest implements Serializable {
     public void updateTPSL(Float rateChangeMax90M, KlineObjectSimple ticker) {
         // move SL
         if (priceSL != null) {
-            // TASK (2026-07-17): TRAIL_PEAK_MODE — dinh de RATCHET SL. high=maxPrice (mac dinh, hanh vi cu),
-            // close=priceClose (chong wick). Chi doi peak arm/ratchet, KHONG dung minPrice/MAE/disaster/time-stop.
-            float trailPeak = "close".equals(Configs.TRAIL_PEAK_MODE) ? ticker.priceClose : ticker.maxPrice;
-            Float rateLoss = calRateLossMax(trailPeak);
-            // TASK (2026-07-30, theo yeu cau Uni): TS_RATCHET_DECOUPLED=false (mac dinh) = HANH VI CU
-            // nguyen ven (nhan Configs.TS_PROFIT_MULTIPLIER -> "dead zone" giua arm va ratchet). true =
-            // bo he so nhan, ratchet kich hoat ngay khi vuot threshold(rateChangeMax90M) - xem Configs.java.
-            Float ratchetBase = TradeUtils.calRateMinWithPredReturn15MForTradingStop(rateChangeMax90M);
-            // [2026-09-02 SIM_TS_GIVEBACK] ratchet LIEN TUC (bo dead-zone x TS_PROFIT_MULTIPLIER) — theo thiet ke Uni:
-            //   "ROI 5% -> arm SL 2.5%, sau do dich len theo cung cong thuc".
-            Float rateMin2MoveSl = (Configs.TS_RATCHET_DECOUPLED || Configs.TS_GIVEBACK_MODE)
-                    ? ratchetBase : Configs.TS_PROFIT_MULTIPLIER * ratchetBase;
+            // dinh trailing = HIGH cua nen 1m (co TRAIL_PEAK_MODE da go 2026-09-03, chi con che do "high").
+            Float rateLoss = calRateLossMax(ticker.maxPrice);
+            // Ratchet LIEN TUC (SIM_TS_GIVEBACK=1 la duong DUY NHAT con lai): nguong dich SL = base,
+            //   khong con dead-zone x TS_PROFIT_MULTIPLIER. Thiet ke Uni: ROI 5% -> arm SL 2.5%, sau do
+            //   dich len theo cung cong thuc.
+            Float rateMin2MoveSl = TradeUtils.calRateMinWithPredReturn15MForTradingStop(rateChangeMax90M);
             if (rateLoss >= rateMin2MoveSl) {
                 // FROZEN v1: gap trailing theo selector CỦA CHÍNH COIN (symbolPred=pNoPump), không theo gate pred.
-                Float rateSL = Configs.TS_GIVEBACK_MODE ? trailRate(rateLoss, rateChangeMax90M)
-                        : TradeUtils.calRateLossDynamicBuy(rateLoss, this.symbolPred);
+                Float rateSL = trailRate(rateLoss);
                 OrderSide side2Sl = OrderSide.SELL;
                 Float priceSLNew = Utils.calPriceTarget(symbol, priceEntry, side2Sl, -rateSL);
                 float priceSLChange = priceSLNew - priceSL;
@@ -290,47 +255,6 @@ public class OrderTargetInfoTest implements Serializable {
     }
 
 
-    /**
-     * SHORT exit (DRAFT 2026-07-18, flag-gated). Mirror updateStatusNew nhung DAO CHIEU cho lenh SELL:
-     * short lai khi gia GIAM, lo khi gia TANG. Chi goi khi Configs.ENABLE_SHORT && side==SELL (xem
-     * SimulatorMarketLevelTicker1MStopLoss.startUpdateOldOrderTrading). MAC DINH ENABLE_SHORT=false ->
-     * KHONG BAO GIO chay -> long-only byte-identical.
-     *
-     * <p>Da lam trong draft nay:
-     * <ul>
-     *   <li><b>Hard-SL CUNG (bat buoc)</b>: gia TANG cham nguong entry*(1+SHORT_SL_PCT) -> STOP_LOSS_DONE,
-     *       chot tai nguong do (clamp intrabar mirror booking-fix long: gap-up open>nguong thi fill=open,
-     *       khong mua lai duoi open duoc). Nguong CO DINH tu luc vao -> resting-stop, KHONG look-ahead.</li>
-     *   <li><b>Time-stop</b>: qua SHORT_TIME_STOP_HOURS ke tu leg dau cum -> thoat tai gia (buy-back) bao thu
-     *       = max(open, close). Do tu clusterFirstLegTime (fallback timeStart) giong long.</li>
-     * </ul>
-     * <p>TODO (chua lam trong draft): TRAILING-SHORT (let-dump-run — arm trailing-stop TREN gia khi da lai,
-     *    ratchet XUONG theo day, cat khi gia bat len cham stop). Mirror updateStatusNew/updateTPSL dao chieu.
-     *    De rieng vi rui ro cao; hard-SL + time-stop du de function-test co che + chay WFO draft.
-     */
-    public void updateStatusShort(KlineObjectSimple ticker) {
-        // 1) HARD-SL cung: rise >= SHORT_SL_PCT. Nguong biet tu luc vao (khong look-ahead).
-        float slTrigger = priceEntry * (1f + Configs.SHORT_SL_PCT);
-        if (ticker.maxPrice >= slTrigger) {
-            status = OrderTargetStatus.STOP_LOSS_DONE;
-            // BOOKING-FIX mirror: short dong = MUA lai. Fill = max(slTrigger, bar.open).
-            //   Ca thuong (open<=slTrigger): fill=slTrigger (khop dung stop).
-            //   Ca gap-up (open>slTrigger): fill=open (khong the mua lai duoi open — haircut that).
-            priceTP = Math.max(slTrigger, ticker.priceOpen);
-            return;
-        }
-        // 2) TIME-STOP: het han thesis -> thoat.
-        if (Configs.SHORT_TIME_STOP_HOURS > 0) {
-            long anchor = clusterFirstLegTime > 0L ? clusterFirstLegTime : timeStart;
-            if (ticker.startTime.longValue() - anchor > Configs.SHORT_TIME_STOP_HOURS * 3600000L) {
-                status = OrderTargetStatus.STOP_LOSS_DONE;
-                // buy-back bao thu (khong loi-gia): max(open, close).
-                priceTP = Math.max(ticker.priceOpen, ticker.priceClose);
-                return;
-            }
-        }
-        // TODO trailing-short (xem javadoc). Chua thoat -> giu status REQUEST.
-    }
 
     public Float calTp() {
         OrderTargetInfoTest orderInfo = this;
@@ -429,14 +353,9 @@ public class OrderTargetInfoTest implements Serializable {
      * [2026-09-02] Gap trailing theo THIET KE (Uni): SIM_TS_GIVEBACK=1 -> rate = maxProfit - min(maxProfit x TS_GIVEBACK_RATIO(0.5),
      * maxGap), maxGap = TS_MAX_GAP_WEAK (3%) neu pNoPump > TS_PNOPUMP_WEAK_THR (0.29) hoac chua co pNoPump, nguoc lai TS_MAX_GAP (8%).
      * Vi du arm 5% -> SL +2.5%; 10% -> +7% (weak) / +5% (strong). LUON duong => SL khong bao gio duoi entry (khop live tsGap sau fix).
-     * Default (env tat) = hanh vi cu: calRateLossDynamicBuy(rateLoss, TRAIL_PER_SYMBOL ? symbolPred : predReturn15M)
-     * (duong mac dinh truyen predReturn15M ~0.01 vao tham so pNoPump -> gap ~0.99*TS_MAX_GAP -> SL DUOI entry khi arm 3%).
      */
-    float trailRate(float maxProfitRate, Float predReturn15M) {
-        if (Configs.TS_GIVEBACK_MODE) {
-            Float pnp = (this.symbolPred != null) ? this.symbolPred : 1f;   // chua co selector -> coi nhu yeu (bao thu)
-            return TradeUtils.calRateLossDynamicBuyPNoPump(maxProfitRate, pnp, Configs.tsPnoPumpWeakThr());
-        }
-        return TradeUtils.calRateLossDynamicBuy(maxProfitRate, Configs.TRAIL_PER_SYMBOL ? this.symbolPred : predReturn15M);
+    float trailRate(float maxProfitRate) {
+        Float pnp = (this.symbolPred != null) ? this.symbolPred : 1f;   // chua co selector -> coi nhu yeu (bao thu)
+        return TradeUtils.calRateLossDynamicBuyPNoPump(maxProfitRate, pnp, Configs.tsPnoPumpWeakThr());
     }
 }

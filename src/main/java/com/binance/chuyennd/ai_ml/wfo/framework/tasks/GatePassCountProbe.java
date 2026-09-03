@@ -28,7 +28,7 @@ public class GatePassCountProbe {
         WfoDataset ds = WfoDataset.load(dataDir);
         LOG.info("LOAD OK market={} pred={} funding={} GATE_COUNT_ONLY={} FILTER_MODE={}",
                 ds.market.size(), ds.pred.size(), ds.funding.size(),
-                Configs.GATE_COUNT_ONLY, Configs.FILTER_MODE);
+                Configs.GATE_COUNT_ONLY, "A");
 
         long from = Utils.sdfFile.parse("20210101").getTime() + 7 * Utils.TIME_HOUR;
         // Option A: bound end tai 2025-12-31 — thieu ticker kaggle_data_hpo/ticker_20260101.bin(.gz)

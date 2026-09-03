@@ -45,7 +45,6 @@ public class FitnessBaselineTool {
 
     public static void main(String[] args) {
         try {
-            Configs.BREAKER_MODE = "OFF";
             String mode = args.length > 0 ? args[0] : "FAST";
             new FitnessBaselineTool().run(mode);
             System.exit(0);
@@ -110,7 +109,6 @@ public class FitnessBaselineTool {
 
     private Eval runOne(String mode, TreeMap<Long, MarketDataObject> mkt, TreeMap<Long, AiPredictionData> pred,
                         TreeMap<Long, long[]> fund, long s, long e, float passRate) throws Exception {
-        Configs.ABLATION_MODE = mode;
         BudgetManagerSimple.resetInstance();
         HistoryManager.getInstance().resetCache();
         CoinRankManager.getInstance().resetCache();

@@ -60,9 +60,8 @@ public class VerifyMinPriceMae {
 
     public void run() throws Exception {
         Configs.TIME_RUN = START_DATE;
-        Configs.BREAKER_MODE = "OFF";
         LOG.info("🔒 PRE-FLIGHT: slippage={} lookahead_block={} FILTER_MODE={}",
-                Configs.SLIPPAGE_RATE, Configs.BLOCK_INTRABAR_LOOKAHEAD, Configs.FILTER_MODE);
+                Configs.SLIPPAGE_RATE, Configs.BLOCK_INTRABAR_LOOKAHEAD, "A");
 
         long startTime = Utils.sdfFile.parse(START_DATE).getTime() + 7 * Utils.TIME_HOUR;
         long endTime = Utils.sdfFile.parse(END_DATE).getTime() + (24 * Utils.TIME_HOUR) - Utils.TIME_MINUTE;

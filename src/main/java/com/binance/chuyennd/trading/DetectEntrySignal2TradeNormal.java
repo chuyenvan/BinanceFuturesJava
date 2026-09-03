@@ -384,20 +384,6 @@ public class DetectEntrySignal2TradeNormal {
         final List<String> basket = CoinRankManager.getInstance().getTopCoin(time);
         liveOiProvider.clear(); // đọc lại OI feature Oracle vừa push (tránh stale) mỗi tick
 
-        // [OI-GUARD-2] Neu pipeline oi_feat qua han (Oracle/compute down) -> KHONG feed model feature NaN
-        // (off-distribution) -> gate toan bo entry tick nay. Chi trigger khi TUNG co data (freshTs>0) roi cu di
-        // -> tranh deadlock cold-start. Nguong = env OI_STALE_HALT_MS (default 2h = MERGE_TOL). Tat qua OI_STALE_HALT=0.
-        if (!"0".equals(System.getenv("OI_STALE_HALT"))) {
-            long oiFreshTs = liveOiProvider.pipelineFreshTs();
-            long haltMs = OiFeatLiveSets.MERGE_TOL_MS;
-            String hs = System.getenv("OI_STALE_HALT_MS");
-            if (hs != null) { try { haltMs = Long.parseLong(hs.trim()); } catch (Exception ignore) { } }
-            if (oiFreshTs > 0 && (time - oiFreshTs) > haltMs) {
-                LOG.warn("[OI-GUARD-2] oi_feat pipeline STALE age={}m > {}m (Oracle/compute down?) "
-                        + "-> GATE entries tick {}", (time - oiFreshTs) / 60000, haltMs / 60000, time);
-                return sortedCandidates; // rong -> khong tao entry moi vong nay
-            }
-        }
 
         for (String symbol : allSymbols) {
             KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
@@ -530,13 +516,6 @@ public class DetectEntrySignal2TradeNormal {
             // PASS (vào lệnh) → LUÔN giữ, ít và quan trọng.
             LOG.info("✅ AI PASS [{}] Reason: {} symbolPred: {}", symbol, filterResult.reason, symbolPred);
         }
-// 🔥 NÂNG CẤP: CHỐT CHẶN CẦU DAO CHO BOT LIVE
-        if (levelChange != MarketLevelChange.DCA_LEVEL1) {
-            if (MarketBigChangeDetector.is50PercentOrderLossProd(getAllOrderRunning(), ticker.startTime)) {
-                LOG.info("⚠️ CẦU DAO BẬT: Từ chối mở lệnh [{}] do đa số các lệnh mới vào gần đây đều chết hoặc gồng lỗ!", symbol);
-                return;
-            }
-        }
 
         Float marginRunning = BudgetManager.getInstance().marginRunning;
         Float balanceBasic = BudgetManager.getInstance().balanceBasic;
@@ -648,23 +627,9 @@ public class DetectEntrySignal2TradeNormal {
     private long lastProcessedMinute = 0; // Biến đánh dấu phút đã quét
 
     // v1 parity WFO G015: entry CHỈ tại mốc lưới 15m (khớp grid selector/label backtest).
-    // Env LIVE_ENTRY_GRID_MIN đổi được không cần rebuild (=1 => quay lại cadence 1 phút cũ).
-    private static final long ENTRY_GRID_MIN = resolveEntryGridMin();
+    // 2026-09-03: da go env doi cadence - entry chay o HANG SO 15 phut.
+    private static final long ENTRY_GRID_MIN = 15L;
 
-    private static long resolveEntryGridMin() {
-        String v = com.binance.chuyennd.tradecore.Cfg.get("LIVE_ENTRY_GRID_MIN");
-        if (v != null) {
-            try {
-                long g = Long.parseLong(v.trim());
-                if (g >= 1) {
-                    return g;
-                }
-            } catch (NumberFormatException ignored) {
-                // env rác -> giữ default 15
-            }
-        }
-        return 15;
-    }
 
     public boolean isTimeProcessData() {
         long time = System.currentTimeMillis();

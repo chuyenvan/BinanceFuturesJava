@@ -63,20 +63,17 @@ public class WFORunner {
         put("PREDICT_SYMBOL_RATE_MAX_THRESHOLD", 0.05, 0.20, false); // >0.21 -> REJECT
         put("AI_DYNAMIC_MULTIPLIER", 1.5, 2.0, false);         // <1.5 -> REJECT
         put("AI_DYNAMIC_MIN", 0.10, 0.50, false);
-        put("HARD_RISK_LIMIT_4H", -0.30, -0.05, false);
         // market
         put("MS_DOWN_BIG_AVG", -0.055, -0.020, false);
         // dca (tránh vùng REJECT: DCA_LOSS không sâu hơn -0.23; DCA_TIME tránh 8-14)
         put("DCA_LOSS_BIG_DOWN", -0.22, -0.08, false);
         put("DCA_TIME_BIG_DOWN", 3, 7, true);
-        put("DCA_TIME_BIG_Up", 21, 30, true);
         // trailing (vùng an toàn quanh baseline; tránh REJECT)
         // 2026-07-30: dong bo voi StrategyWfoTask (TASK-139: [0.012,0.025] la vung CAT NON da xac nhan
         // xau qua sweep + report docs/reports/trailing_stop_sweep_139.md). File nay la runner cu/tham
         // chieu lich su (khong nam tren duong production orchestrator/pipelines), sua de khong con la
         // vi du sai neu ai doc/chay lai.
         put("RATE_PROFIT_STOP_MARKET", 0.03, 0.05, false);
-        put("TS_PROFIT_MULTIPLIER", 4.0, 8.0, false);
         put("TS_MAX_GAP", 0.04, 0.06, false);                  // tránh ~0.077 REJECT
         put("TS_MAX_GAP_WEAK", 0.045, 0.060, false);           // tránh <0.043 REJECT
     }
@@ -88,8 +85,6 @@ public class WFORunner {
 
     public static void main(String[] args) {
         try {
-            Configs.ABLATION_MODE = "A";
-            Configs.BREAKER_MODE = "OFF";
             int nSamples = args.length > 0 ? Integer.parseInt(args[0]) : 30;
             int winFrom = 0, winTo = Integer.MAX_VALUE;
             if (args.length > 1 && args[1].contains(":")) {

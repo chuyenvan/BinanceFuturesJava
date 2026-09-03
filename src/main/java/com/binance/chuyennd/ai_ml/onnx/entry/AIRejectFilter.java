@@ -8,16 +8,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Lọc tín hiệu entry dựa trên AI prediction.
  *
- * <p>TASK (2026-08-08): đã bỏ hẳn nhánh RISK/DD4H dựa trên {@code predRisk4H} — cột này không
- * còn model nào đứng sau (chỉ là carry-forward từ gate cũ, không phải dự đoán mới), giữ lại làm
- * lá chắn live là rủi ro giả. Filter bây giờ CHỈ còn gate MOM15. {@code Configs.FILTER_MODE} và
- * {@code Configs.HARD_RISK_LIMIT_4H} vẫn còn tồn tại (dùng bởi HPO/genome ở nơi khác, xoá sẽ lệch
- * index gene) nhưng KHÔNG còn ảnh hưởng quyết định PASS/REJECT ở đây nữa.
  *
- * Mode (Configs.FILTER_MODE) — chỉ còn tác dụng lên MOM15:
- *   E, OFF = tắt MOM15 (= tắt hết filter, vì RISK đã bỏ)
- *   mọi mode khác (A/B/C/D/F...) = bật MOM15 (RISK không còn phân biệt được các mode này nữa)
  */
+// 2026-09-03: filter chi con MOT cong duy nhat = MOM15 (nguong dong theo score selector).
+//   Nhanh RISK/DD4H bo 2026-08-08; cac co FILTER_MODE / gate-market-off / gate-rolling xoa 2026-09-03.
 public class AIRejectFilter {
     public enum FilterDecision {PASS, REJECT}
 
@@ -42,13 +36,13 @@ public class AIRejectFilter {
         earlyHardGateReject.set(0);
     }
 
-    /** Nguong MOM15 tai thoi diem cua prediction: truot theo phan vi neu GateRollingThreshold bat, khong thi cu. */
-    static float thres15M(AiPredictionData prediction) {
-        return GateRollingThreshold.isOn() ? GateRollingThreshold.threshold(prediction.timestamp) : Configs.MIN_MOMENTUM_15M;
+    /** Nguong MOM15 = HANG SO Configs.MIN_MOMENTUM_15M (gate truot theo phan vi da bi go 2026-09-03). */
+    static float thres15M() {
+        return Configs.MIN_MOMENTUM_15M;
     }
 
     public FilterResult checkSignal(AiPredictionData prediction) {
-        return evaluate(prediction.predReturn15M, thres15M(prediction));
+        return evaluate(prediction.predReturn15M, thres15M());
     }
 
     // ==============================================================
@@ -60,33 +54,29 @@ public class AIRejectFilter {
         }
 
         // EARLY check — chỉ chạy khi gate MOM15 bật
-        if (!Configs.GATE_MARKET_OFF   // [2026-08-29 DEV pivot] tat gate MOM15 muc thi truong
-                && resolveCheckMom15(Configs.FILTER_MODE)
-                && prediction.predReturn15M < thres15M(prediction)
+        if (prediction.predReturn15M < thres15M()
                 && symbolPred > Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD) {
             mom15RejectCount.incrementAndGet();
             earlyHardGateReject.incrementAndGet();
             return new FilterResult(FilterDecision.REJECT,
                     String.format("DANGER: pred 15m %.2f%% thap (Min %.2f%%)",
-                            prediction.predReturn15M * 100, thres15M(prediction) * 100));
+                            prediction.predReturn15M * 100, thres15M() * 100));
         }
 
         float baselineProb = Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD;
         float scaleFactor = (symbolPred / baselineProb) * Configs.AI_DYNAMIC_MULTIPLIER;
-        // [OFF-CỨNG] AI_DYNAMIC_MAX thuộc cụm phẳng → bỏ cận TRÊN clamp (chỉ còn cận dưới AI_DYNAMIC_MIN).
-        if (Configs.OFF_FLAT_HARD) {
-            scaleFactor = Math.max(Configs.AI_DYNAMIC_MIN, scaleFactor);
-        } else {
-            scaleFactor = Math.max(Configs.AI_DYNAMIC_MIN, Math.min(scaleFactor, Configs.AI_DYNAMIC_MAX));
-        }
-        float dynamic_15M = thres15M(prediction) * scaleFactor;
+        // AI_DYNAMIC_MAX KHONG phai tran clamp o day: no la TRAN UNG VIEN o tang 1 cua selector
+        // (SimulatorMarketLevelTicker1MStopLoss). Gate chi con CAN DUOI. Xem docs/C2B_SPEC.md muc 0.
+        scaleFactor = Math.max(Configs.AI_DYNAMIC_MIN, scaleFactor);
+        float dynamic_15M = thres15M() * scaleFactor;
         return evaluate(prediction.predReturn15M, dynamic_15M);
     }
 
     /** Giữ signature cũ để không vỡ caller (BackTestEngineCombined/MarketThresholds/BenchmarkSpeedTest) —
-     *  {@code risk} chỉ còn ghi vào Configs.HARD_RISK_LIMIT_4H cho log/HPO đọc, KHÔNG còn dùng để lọc. */
+     *  {@code risk} chỉ còn ghi vào HARD_RISK_LIMIT_4H (field da xoa) cho log/HPO đọc, KHÔNG còn dùng để lọc. */
     public void setConfig(float risk, float min15m) {
-        Configs.HARD_RISK_LIMIT_4H = risk;
+        // `risk` KHONG con duoc dung o dau ca (nhanh RISK/DD4H bo 2026-08-08, field xoa 2026-09-03);
+        // giu tham so de khong phai sua 3 call-site HPO.
         Configs.MIN_MOMENTUM_15M = min15m;
     }
 
@@ -95,9 +85,7 @@ public class AIRejectFilter {
      * predRisk4H không còn model đứng sau (carry-forward từ gate cũ), dùng làm lá chắn live là rủi ro giả.
      */
     private FilterResult evaluate(float pred15M, float thres15M) {
-        boolean checkMom15 = resolveCheckMom15(Configs.FILTER_MODE);
-
-        if (checkMom15 && pred15M < thres15M) {
+        if (pred15M < thres15M) {
             mom15RejectCount.incrementAndGet();
             return new FilterResult(FilterDecision.REJECT,
                     String.format("BAD MOMENTUM: 15M chưa nảy mạnh (%.2f%% < %.2f%%)", pred15M * 100, thres15M * 100));
@@ -106,8 +94,4 @@ public class AIRejectFilter {
                 String.format("PERFECT: 15M(%.2f%%)", pred15M * 100));
     }
 
-    /** MOM15 tắt cho mode E, OFF; bật cho tất cả còn lại (kể cả F). RISK đã bỏ nên không còn resolveCheckRisk. */
-    static boolean resolveCheckMom15(String mode) {
-        return !("E".equals(mode) || "OFF".equals(mode));
-    }
 }
