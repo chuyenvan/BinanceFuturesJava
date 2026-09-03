@@ -158,3 +158,42 @@ diem cach mot finalist da chon < 0.15, dung khi du 5. Script phai in ca `raw top
 
 Moc dung van la **60395** (§5 + `BASELINE_NOTE.md`). Kiem neo phai lam bang `analyze_wave1.py`,
 KHONG tin dong log ANCHOR_CHECK cua kernel.
+
+## 10. SUA DOI 2 — 2026-09-03, TRUOC khi co ket qua
+
+**Trang thai luc sua:** `/home/ubuntu/gs/out/` con rong, 5/5 kernel con RUNNING.
+
+### 10.1 Phat hien: moi so sanh truoc gio dung do chinh xac GIA
+
+Nguon: `/home/ubuntu/leakprobe/LEAK_L1_REPORT.md` (do ngay 2026-09-03).
+
+Mau lay theo grid 15 phut nhung horizon nhan la 4h, va nhan `g1lite` co tam 72h => cac mau chia
+nhau cung tuong lai. **n hieu dung = 302 khoi 72h, KHONG phai 15,442,092 dong.**
+
+| dai luong | CI naive | CI that (block-bootstrap 400 rep, khoi 72h) |
+|---|---|---|
+| spearman G015 vs outcome | 0.1675 +/- 0.00050 | 0.1675, CI [0.1260, 0.2005] |
+
+=> CI that **rong hon 74 lan**. Diem uoc luong khong doi (do lai tren mau khong chong lan: 4h ->
+0.1676, 24h -> 0.1676, 72h -> 0.1718 — khop trong nhieu). Cai sai la **thanh do tin cay**, khong
+phai con so.
+
+Hau qua truc tiep: phep so "H3 rho 0.1667 vs G015 0.1675" tung duoc dung de dong nhanh H3 chi
+chenh **0.04 sd** => khong co suc phan biet. Nhieu verdict cu co the dang nam trong nhieu.
+
+### 10.2 Sua: THEM chan doan bat buoc, KHONG doi luat quyet dinh
+
+- Truoc khi bao cao ket qua chon, phai tinh **CI block-bootstrap cho CAGR cua diem neo tren
+  DEV-A**, block >= 3 ngay (72h), tren chuoi loi nhuan ngay lay tu `sim.out` mark-to-market.
+- Bao cao (a)/(b)/(c) o §4 buoc 7 **phai in CI nay canh khoang cach 3pp**.
+- Neu 3pp nam TRONG CI cua neo: ket qua (a) van duoc tuyen bo **dung theo luat** (cam doi luat sau
+  khi thay so), NHUNG bat buoc ghi kem cau: "khoang cach nay khong phan biet duoc voi nhieu o muc
+  CI da do", va buoc tiep theo KHONG duoc re-baseline ngay — phai xac nhan them.
+- **Nguong 0.6 / -20% / 3pp / k=10 / N=256 GIU NGUYEN.** Sua doi nay chi them thong tin cho nguoi
+  doc, khong doi dieu kien chon hay dieu kien CONFIRMED.
+
+### 10.3 Ghi no: phai do lai CI cho cac verdict cu
+
+Ngoai pham vi wave nay, nhung phai lam truoc khi freeze bat cu thu gi: do lai CI block-72h cho
+S1 rank-IC (+0.150) vs G015 (+0.055), va soat lai cac verdict THUA (H1, K, BR, RG, RND, N1-N4,
+regime, H3) xem cai nao thuc su thua va cai nao chi nam trong nhieu.
