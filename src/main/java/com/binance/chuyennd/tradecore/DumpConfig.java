@@ -21,7 +21,14 @@ public class DumpConfig {
             if (f.getName().equals("properties") || f.getName().equals("LOG")) continue;
             f.setAccessible(true);
             Object v = f.get(null);
-            String s = (v == null) ? "null" : String.valueOf(v);
+            String s;
+            if (v == null) s = "null";
+            else if (v instanceof float[]) s = java.util.Arrays.toString((float[]) v);
+            else if (v instanceof int[]) s = java.util.Arrays.toString((int[]) v);
+            else if (v instanceof double[]) s = java.util.Arrays.toString((double[]) v);
+            else if (v instanceof long[]) s = java.util.Arrays.toString((long[]) v);
+            else if (v instanceof Object[]) s = java.util.Arrays.deepToString((Object[]) v);
+            else s = String.valueOf(v);
             if (s.length() > 60) s = s.substring(0, 60) + "...";
             rows.add(String.format("%s=%s|%s|%s", f.getName(), s,
                     Modifier.isFinal(f.getModifiers()) ? "final" : "MUTABLE", f.getType().getSimpleName()));

@@ -182,8 +182,8 @@ public class Configs {
     // marginRatio>=0.99, BREAKER_MARGIN_HALT van chan mo moi (voi size lon marginRunning phinh nhanh hon ->
     // cham tran SOM hon). Chi scale SIZE trong khuon budget. Clamp >=0. env unset -> 1.0f -> budget khong doi
     // -> byte-identical. env SIZE_MULT (vd 10) de deploy nhieu hon khi chay WFO sizing.
-    public static final float SIZE_MULT = System.getenv("SIZE_MULT") != null
-            ? Math.max(0f, Float.parseFloat(System.getenv("SIZE_MULT").trim())) : 1.0f;
+    public static final float SIZE_MULT = Cfg.get("SIZE_MULT") != null
+            ? Math.max(0f, Float.parseFloat(Cfg.get("SIZE_MULT").trim())) : 1.0f;
 
     // === SIZE-BY-CONFIDENCE / soft-gate (TASK 2026-07-19, env-gated, DEFAULT OFF = byte-identical) ===
     // LY DO (data long-conf-headroom): trong nhom admit (p6>=0.68), top-2 decile p6 an +3.40/+2.38/keo
@@ -193,16 +193,16 @@ public class Configs {
     //   CONF_SIZE_MODE: 0=off (default) -> confFactor khong duoc ap -> byte-identical. 1=on.
     //   confFactor(p6) = clamp( FMIN + (FMAX-FMIN)*(p6-LO)/(HI-LO), FMIN, FMAX ).
     //     p6<=LO -> FMIN ; p6>=HI -> FMAX ; tuyen tinh o giua. (p6 = 1 - symbolPred, tinh per-order.)
-    public static final int CONF_SIZE_MODE = System.getenv("CONF_SIZE_MODE") != null
-            ? Integer.parseInt(System.getenv("CONF_SIZE_MODE").trim()) : 0;   // 0=OFF (byte-identical)
-    public static final float CONF_SIZE_LO = System.getenv("CONF_SIZE_LO") != null
-            ? Float.parseFloat(System.getenv("CONF_SIZE_LO").trim()) : 0.68f; // = admit threshold p6
-    public static final float CONF_SIZE_HI = System.getenv("CONF_SIZE_HI") != null
-            ? Float.parseFloat(System.getenv("CONF_SIZE_HI").trim()) : 0.95f;
-    public static final float CONF_SIZE_FMIN = System.getenv("CONF_SIZE_FMIN") != null
-            ? Float.parseFloat(System.getenv("CONF_SIZE_FMIN").trim()) : 0.3f;
-    public static final float CONF_SIZE_FMAX = System.getenv("CONF_SIZE_FMAX") != null
-            ? Float.parseFloat(System.getenv("CONF_SIZE_FMAX").trim()) : 3.0f;
+    public static final int CONF_SIZE_MODE = Cfg.get("CONF_SIZE_MODE") != null
+            ? Integer.parseInt(Cfg.get("CONF_SIZE_MODE").trim()) : 0;   // 0=OFF (byte-identical)
+    public static final float CONF_SIZE_LO = Cfg.get("CONF_SIZE_LO") != null
+            ? Float.parseFloat(Cfg.get("CONF_SIZE_LO").trim()) : 0.68f; // = admit threshold p6
+    public static final float CONF_SIZE_HI = Cfg.get("CONF_SIZE_HI") != null
+            ? Float.parseFloat(Cfg.get("CONF_SIZE_HI").trim()) : 0.95f;
+    public static final float CONF_SIZE_FMIN = Cfg.get("CONF_SIZE_FMIN") != null
+            ? Float.parseFloat(Cfg.get("CONF_SIZE_FMIN").trim()) : 0.3f;
+    public static final float CONF_SIZE_FMAX = Cfg.get("CONF_SIZE_FMAX") != null
+            ? Float.parseFloat(Cfg.get("CONF_SIZE_FMAX").trim()) : 3.0f;
 
     /**
      * Soft-gate size multiplier theo do tin cay p6 (=1-symbolPred). Pure/static -> function-test khong can
@@ -226,8 +226,8 @@ public class Configs {
     // density-burst limiter (is50PercentOrderLoss -> evaluateCircuitBreakerCore) + tuyen phong lop-2 storm.
     // KHONG phai hard-cap so lenh dong thoi (mang activeRunningIds cap 1000, KHONG that co). Nang so nay ->
     // cho phep nhieu lenh mo trong cua so 4' hon truoc khi phanh mat-do. env unset -> 40 -> byte-identical.
-    public static int MAX_CONCURRENT_ORDERS = System.getenv("MAX_CONCURRENT") != null
-            ? Integer.parseInt(System.getenv("MAX_CONCURRENT").trim()) : 40; // Số lệnh tối đa cùng chạy
+    public static int MAX_CONCURRENT_ORDERS = Cfg.get("MAX_CONCURRENT") != null
+            ? Integer.parseInt(Cfg.get("MAX_CONCURRENT").trim()) : 40; // Số lệnh tối đa cùng chạy
     public static float DENSITY_SUSTAIN = 10.0f;  // Sức chịu đựng mật độ mở lệnh
     public static float DENSITY_ALPHA = 0.6f;     // Độ cong của hàm kiểm soát mật độ
     public static final int CIRCUIT_LOOKBACK_MINUTES = 4;
@@ -256,21 +256,21 @@ public class Configs {
     // DCA lai reset dong ho, lenh nuoi lo se KHONG BAO GIO bi time-stop. 0 = tat (mac dinh, hanh vi cu).
     // TASK (2026-07-17): env TIME_STOP_HOURS override (config-driven cho ladder WFO) > properties > 0.
     //   env unset -> fallback properties -> 0 = hanh vi cu NGUYEN VEN.
-    public static int TIME_STOP_HOURS = System.getenv("TIME_STOP_HOURS") != null
-            ? Integer.parseInt(System.getenv("TIME_STOP_HOURS").trim())
+    public static int TIME_STOP_HOURS = Cfg.get("TIME_STOP_HOURS") != null
+            ? Integer.parseInt(Cfg.get("TIME_STOP_HOURS").trim())
             : (properties.get("TIME_STOP_HOURS") != null
                 ? Integer.parseInt(properties.get("TIME_STOP_HOURS")) : 0);
     // TASK (2026-07-17): che do chon DINH cho trailing-stop (arm + ratchet SL). env-driven, config-driven.
     //   high  = maxPrice (HIGH cua nen 1m) = MAC DINH = HANH VI CU (byte-identical, backward-compatible).
     //   close = priceClose (dong nen) de chong wick/giat. Chi doi diem ARM/RATCHET trailing, KHONG dung
     //           cho minPrice/maeLow (day, trigger cat + MAE), maePeak, disaster-SL, time-stop.
-    public static final String TRAIL_PEAK_MODE = System.getenv("TRAIL_PEAK_MODE") != null
-            ? System.getenv("TRAIL_PEAK_MODE").trim().toLowerCase() : "high";
+    public static final String TRAIL_PEAK_MODE = Cfg.get("TRAIL_PEAK_MODE") != null
+            ? Cfg.get("TRAIL_PEAK_MODE").trim().toLowerCase() : "high";
     // TASK (2026-07-10): ti le nha lai dinh cua trailing (cu hardcode 0.5). 0.3 = giu chat, 0.7 = long nuoi trend.
     // 2026-08-02: them env-fallback (khop pattern TS_MIN_GAP) de sweep duoc TS_GIVEBACK_RATIO qua env.
     //   env > properties > 0.5f. env unset -> byte-identical hanh vi cu.
-    public static float TS_GIVEBACK_RATIO = System.getenv("TS_GIVEBACK_RATIO") != null
-            ? Float.parseFloat(System.getenv("TS_GIVEBACK_RATIO").trim())
+    public static float TS_GIVEBACK_RATIO = Cfg.get("TS_GIVEBACK_RATIO") != null
+            ? Float.parseFloat(Cfg.get("TS_GIVEBACK_RATIO").trim())
             : (properties.get("TS_GIVEBACK_RATIO") != null ? Float.parseFloat(properties.get("TS_GIVEBACK_RATIO")) : 0.5f);
     public static float TS_DYNAMIC_K = 0.29774f;            // Hệ số nhân Volatility để dời SL
     public static float TS_PROFIT_MULTIPLIER = 5.21847f;    // Hệ số kích hoạt Trailing
@@ -292,11 +292,11 @@ public class Configs {
     //   -50/-75/-90 ti trong 1:1:3:8 -> chi 0.34% cum dung het dan, %hoi 78.3%, p95 lo -76.4%.
     //   Nhieu leg hon (5-6) do ra TE HON: %hoi tut con 43-62% vi moc -88/-90% hiem khi hoi.
     // Tong von moi coin GIU NGUYEN = getBudget(): leg_i = getBudget() * w[i]/sum(w).
-    public static boolean DCA_GRID_ENABLED = "true".equalsIgnoreCase(System.getenv("DCA_GRID_ENABLED"));
+    public static boolean DCA_GRID_ENABLED = "true".equalsIgnoreCase(Cfg.get("DCA_GRID_ENABLED"));
     public static float[] DCA_GRID_LEVELS = parseFloats(
-            System.getenv("DCA_GRID_LEVELS") != null ? System.getenv("DCA_GRID_LEVELS") : "-0.50,-0.75,-0.90");
+            Cfg.get("DCA_GRID_LEVELS") != null ? Cfg.get("DCA_GRID_LEVELS") : "-0.50,-0.75,-0.90");
     public static float[] DCA_GRID_WEIGHTS = parseFloats(
-            System.getenv("DCA_GRID_WEIGHTS") != null ? System.getenv("DCA_GRID_WEIGHTS") : "1,1,3,8");
+            Cfg.get("DCA_GRID_WEIGHTS") != null ? Cfg.get("DCA_GRID_WEIGHTS") : "1,1,3,8");
 
     // =========================================================
     // DCA GRID — DANG SCALAR (2026-08-01, de HPO tune duoc)
@@ -314,7 +314,7 @@ public class Configs {
     //    => byte-identical voi ban chot tam (DCA_GRID_LEVELS=-0.50,-0.75,-0.90 / WEIGHTS=1,1,3,8).
     //    Chi bat =true khi chay HPO. Khi =true thi mang tren bi BO QUA hoan toan (khong con nguon
     //    su that kep — tranh dung tinh huong "set env mang nhung HPO tune scalar, khong biet cai nao thang").
-    public static boolean DCA_GRID_SCALAR = "true".equalsIgnoreCase(System.getenv("DCA_GRID_SCALAR"));
+    public static boolean DCA_GRID_SCALAR = "true".equalsIgnoreCase(Cfg.get("DCA_GRID_SCALAR"));
     /** Muc lo kich hoat lan nhoi DAU TIEN, do tren firstEntryPrice (am). Gene HPO. */
     public static float DCA_GRID_L1 = envFloat("DCA_GRID_L1", -0.50f);
     /** Khoang GIAN giua hai bac lien tiep (duong). Gene HPO. */
@@ -364,9 +364,9 @@ public class Configs {
     //   bi chan nhung leg 3-4 VAN nhoi duoc => von khong the bi lenh nong tieu het => luon con dan cho
     //   vung sau, va dan do CHI tieu duoc o vung sau.
     // Do dai mang = so bac (leg1..legN). Mac dinh OFF (dung tran phang cu) de byte-identical.
-    public static boolean DCA_TIER_MARGIN_ENABLED = "true".equalsIgnoreCase(System.getenv("DCA_TIER_MARGIN_ENABLED"));
+    public static boolean DCA_TIER_MARGIN_ENABLED = "true".equalsIgnoreCase(Cfg.get("DCA_TIER_MARGIN_ENABLED"));
     public static float[] DCA_TIER_MARGIN_CAPS = parseFloats(
-            System.getenv("DCA_TIER_MARGIN_CAPS") != null ? System.getenv("DCA_TIER_MARGIN_CAPS") : "0.25,0.40,0.60,0.80");
+            Cfg.get("DCA_TIER_MARGIN_CAPS") != null ? Cfg.get("DCA_TIER_MARGIN_CAPS") : "0.25,0.40,0.60,0.80");
 
     // Dang SCALAR cua tran bac (cung ly do voi DCA_GRID_SCALAR: mang float[] thi HPO khong tune duoc):
     //   cap[i] = clamp(DCA_TIER_CAP_BASE + DCA_TIER_CAP_STEP * i, 0.05 .. 0.98)
@@ -396,8 +396,8 @@ public class Configs {
     //   => 99.66% thoi gian von NAM KHONG => WFO dcagrid1 ra PnL tut 11 lan (maxDD cung tut 20 lan).
     //   scale bu lai phan du tru khong dung. scale=6 => leg dau ~46% budget, tong khi cham day = 6x budget
     //   (chi xay ra 0.34%). Dinh von dong thoi phai kiem bang CapacityProbe truoc khi tang.
-    public static float DCA_GRID_SCALE = System.getenv("DCA_GRID_SCALE") != null
-            ? Float.parseFloat(System.getenv("DCA_GRID_SCALE").trim()) : 1.0f;
+    public static float DCA_GRID_SCALE = Cfg.get("DCA_GRID_SCALE") != null
+            ? Float.parseFloat(Cfg.get("DCA_GRID_SCALE").trim()) : 1.0f;
 
     private static float[] parseFloats(String csv) {
         String[] p = csv.split(",");
@@ -408,14 +408,14 @@ public class Configs {
 
     /** env -> float, rong/sai dinh dang -> def (khong nem, khong giet clinit). */
     private static float envFloat(String name, float def) {
-        String v = System.getenv(name);
+        String v = Cfg.get(name);
         try { return (v != null && !v.trim().isEmpty()) ? Float.parseFloat(v.trim()) : def; }
         catch (NumberFormatException e) { return def; }
     }
 
     /** env -> int, rong/sai dinh dang -> def. */
     private static int envInt(String name, int def) {
-        String v = System.getenv(name);
+        String v = Cfg.get(name);
         try { return (v != null && !v.trim().isEmpty()) ? Integer.parseInt(v.trim()) : def; }
         catch (NumberFormatException e) { return def; }
     }
@@ -440,21 +440,21 @@ public class Configs {
     // F7: mergeOrder (DCA nhoi them leg) tao object cum MOI va KHONG carry priceSL => cum da arm SL
     //     o +2.5% ma bi nhoi 1 leg la MAT SACH bao ve, phai arm lai tu avgEntry moi. true = mang SL cu
     //     sang cum moi, NHUNG chi khi SL cu van > avgEntry moi (neu khong se thanh cat-lo-ngay).
-    public static boolean TS_CARRY_SL_ON_DCA = "true".equalsIgnoreCase(System.getenv("TS_CARRY_SL_ON_DCA"));
+    public static boolean TS_CARRY_SL_ON_DCA = "true".equalsIgnoreCase(Cfg.get("TS_CARRY_SL_ON_DCA"));
     // F10: coin delist/dong bang co the phat nen phang volume=0 thay vi null => isTickerAvailable van
     //      true => timeUpdate lien tuc moi => updateSymbolDeListed KHONG BAO GIO kich hoat => cum song
     //      mai va cuoi ky duoc mark-to-market o GIA DONG BANG thay vi ghi giam ve ~0 (thien lech duong).
     //      true = coi nen volume 0 nhu ticker khong kha dung.
-    public static boolean SIM_TREAT_ZERO_VOL_AS_DELIST = "true".equalsIgnoreCase(System.getenv("SIM_TREAT_ZERO_VOL_AS_DELIST"));
+    public static boolean SIM_TREAT_ZERO_VOL_AS_DELIST = "true".equalsIgnoreCase(Cfg.get("SIM_TREAT_ZERO_VOL_AS_DELIST"));
     // F9: mac dinh backtest NUOT exception trong vong lap phut/ngay (chi printStackTrace) va SKIP
     //     nguyen ngay neu <1440 phut => ngay do khong kiem SL, khong cap nhat maxDD (thien lech duong)
     //     ma van bao "chay thanh cong". true = nem loi ngay, khong cho ket qua ban ra ngoai.
-    public static boolean SIM_FAIL_FAST_ON_DATA_ERROR = "true".equalsIgnoreCase(System.getenv("SIM_FAIL_FAST_ON_DATA_ERROR"));
+    public static boolean SIM_FAIL_FAST_ON_DATA_ERROR = "true".equalsIgnoreCase(Cfg.get("SIM_FAIL_FAST_ON_DATA_ERROR"));
 
     // KHONG final (2026-07-31): can gan lai runtime trong RatchetDecoupleSweepProbe (so sanh
     // true/false truc tiep, khong qua WFO/HPO). Gia tri khoi tao van tu env nhu cu, khong doi hanh vi
     // production/WfoWorker (chi doi khi co code khac chu dong gan lai, khong ai lam vay ngoai probe).
-    public static boolean TS_RATCHET_DECOUPLED = "true".equalsIgnoreCase(System.getenv("TS_RATCHET_DECOUPLED"));
+    public static boolean TS_RATCHET_DECOUPLED = "true".equalsIgnoreCase(Cfg.get("TS_RATCHET_DECOUPLED"));
 
     // TASK (2026-07-31, EXIT_MACHINE PHAN 1/2, hang muc P6 "giveback fix"): gap = min(peak*g, maxGap)
     // khien ti le nha lai TEO DAN khi p lon (maxGap/p -> 0) - cat mat duoi x2/x3 (xem doc PHAN 1
@@ -465,11 +465,11 @@ public class Configs {
     // (updateTPSL) deu goi chung TradeUtils.calRateLossDynamicBuy -> flag nay anh huong CA HAI diem,
     // dung nhu maxGap/g hien tai dang anh huong ca hai.
     // KHONG final: ExitParamSweepProbe can gan lai runtime de sweep. Mac dinh van doc tu env nhu cu.
-    public static boolean TS_GIVEBACK_FLOOR = "true".equalsIgnoreCase(System.getenv("TS_GIVEBACK_FLOOR"));
+    public static boolean TS_GIVEBACK_FLOOR = "true".equalsIgnoreCase(Cfg.get("TS_GIVEBACK_FLOOR"));
     // San tuyet doi cho gap khi TS_GIVEBACK_FLOOR=true. CHUA CO CAN CU CHON GIA TRI - can Uni chot
     // (grid E3 trong EXIT_MACHINE PHAN 2) truoc khi tin so ra tu default nay. env > properties > 0.01f.
-    public static float TS_MIN_GAP = System.getenv("TS_MIN_GAP") != null
-            ? Float.parseFloat(System.getenv("TS_MIN_GAP").trim())
+    public static float TS_MIN_GAP = Cfg.get("TS_MIN_GAP") != null
+            ? Float.parseFloat(Cfg.get("TS_MIN_GAP").trim())
             : (properties.get("TS_MIN_GAP") != null ? Float.parseFloat(properties.get("TS_MIN_GAP")) : 0.01f);
 
     // =========================================================
@@ -478,15 +478,15 @@ public class Configs {
     // Them order-side SHORT (OrderSide.SELL) vao sim de sau chay WFO short (proxy Kaggle xac nhan alpha).
     // MAC DINH ENABLE_SHORT=false -> KHONG tao/quan ly lenh SELL nao -> engine byte-identical long-only.
     // Chi bat (=true) de chay backtest short SAU khi review. env-driven (khong can rebuild).
-    public static final boolean ENABLE_SHORT = "true".equalsIgnoreCase(System.getenv("ENABLE_SHORT"));
+    public static final boolean ENABLE_SHORT = "true".equalsIgnoreCase(Cfg.get("ENABLE_SHORT"));
     // Hard-SL CUNG BAT BUOC cho short: gia TANG (rise) >= SHORT_SL_PCT so voi entry -> cat lo tai -SHORT_SL_PCT.
     // Mac dinh 0.25 = 25% (chot tu proxy). env SHORT_SL_PCT override.
-    public static float SHORT_SL_PCT = System.getenv("SHORT_SL_PCT") != null
-            ? Float.parseFloat(System.getenv("SHORT_SL_PCT").trim()) : 0.25f;
+    public static float SHORT_SL_PCT = Cfg.get("SHORT_SL_PCT") != null
+            ? Float.parseFloat(Cfg.get("SHORT_SL_PCT").trim()) : 0.25f;
     // Time-stop cho short (let-dump-run toi han): thoat sau SHORT_TIME_STOP_HOURS ke tu leg dau cum. 0 = tat.
     // Mac dinh 24h (chot tu proxy: chop duong 12-24h). env SHORT_TIME_STOP_HOURS override.
-    public static int SHORT_TIME_STOP_HOURS = System.getenv("SHORT_TIME_STOP_HOURS") != null
-            ? Integer.parseInt(System.getenv("SHORT_TIME_STOP_HOURS").trim()) : 24;
+    public static int SHORT_TIME_STOP_HOURS = Cfg.get("SHORT_TIME_STOP_HOURS") != null
+            ? Integer.parseInt(Cfg.get("SHORT_TIME_STOP_HOURS").trim()) : 24;
 
     // =========================================================
     // 7. AI & BỘ LỌC TÍN HIỆU ĐỘNG (AI DYNAMIC FILTER - HPO UPDATE)
@@ -520,16 +520,16 @@ public class Configs {
     // (entry ngẫu nhiên cùng XÁC SUẤT pass như A). So leg-đầu (MAE/rescue/firstLegPnl) giữa A và B/C.
     // CHỈ tác động tại điểm AI filter trong createOrderBUY, KHÔNG đụng logic DCA/exit/budget.
     // TASK (2026-07-11) doc tu env de test gate-off (mode B) khong can sua WfoWorker; van mac dinh A.
-    public static String ABLATION_MODE = System.getenv("ABLATION_MODE") != null
-            ? System.getenv("ABLATION_MODE") : "A";
+    public static String ABLATION_MODE = Cfg.get("ABLATION_MODE") != null
+            ? Cfg.get("ABLATION_MODE") : "A";
     public static long ABLATION_SEED = 42L;
     // ABLATION DCA-OFF (2026-07-16): env WFO_DISABLE_DCA=1 -> DcaProcessor.getDCA tra rong (tat nhoi lenh
     // hoan toan) de do dong gop DCA. Mac dinh false = hanh vi cu NGUYEN VEN.
-    public static final boolean WFO_DISABLE_DCA = "1".equals(System.getenv("WFO_DISABLE_DCA"));
+    public static final boolean WFO_DISABLE_DCA = "1".equals(Cfg.get("WFO_DISABLE_DCA"));
 
     // ENTRY-MATCH PROBE (2026-07-18): env WFO_LOG_ENTRIES=1 -> log 1 dong ENTRY_DUMP moi khi 1 leg vao lenh
     // that su (sau khi qua het cong). Mac dinh false = KHONG log = hanh vi cu byte-identical.
-    public static final boolean WFO_LOG_ENTRIES = "1".equals(System.getenv("WFO_LOG_ENTRIES"));
+    public static final boolean WFO_LOG_ENTRIES = "1".equals(Cfg.get("WFO_LOG_ENTRIES"));
 
     // === CIRCUIT BREAKER (chống sập tầng DCA/margin — BẬT MẶC ĐỊNH từ Bước 3, ĐỔI PnL/DD → bump CONFIG_VERSION v10) ===
     // OFF=không phanh | MARGIN=chặn mở mới khi margin/vốn cao | DCA=ngừng nhồi cụm lỗ sâu | BOTH=cả hai.
@@ -554,51 +554,51 @@ public class Configs {
     //   tren symbolPred = 1 - p6). Selector cu: maxThres = PREDICT_SYMBOL_RATE_MAX_THRESHOLD * AI_DYNAMIC_MAX
     //   = 0.15*2.14135 = 0.3212 -> admit p6 >= 0.679. Set SELECTOR_SCORE_MAX=0.5 -> admit p6 >= 0.5
     //   (nhieu lenh hon) MA KHONG dinh AI_DYNAMIC_MAX (genome-coupled). Default -1f = OFF = byte-identical.
-    public static final float SELECTOR_SCORE_MAX = System.getenv("SELECTOR_SCORE_MAX") != null
-            ? Float.parseFloat(System.getenv("SELECTOR_SCORE_MAX").trim()) : -1f;
+    public static final float SELECTOR_SCORE_MAX = Cfg.get("SELECTOR_SCORE_MAX") != null
+            ? Float.parseFloat(Cfg.get("SELECTOR_SCORE_MAX").trim()) : -1f;
     // ALPHA-TEST (placebo selector): dao thu hang selector -> chon coin TE-nhat-truoc thay vi TOT-nhat.
     // Cung gate/nguong/so-lenh, chi doi uu tien budget. So PnL INVERT=0 vs =1 => selector co alpha that khong.
     // Default false = byte-identical (khong dao).
-    public static final boolean SELECTOR_INVERT = "1".equals(System.getenv("SELECTOR_INVERT"));
+    public static final boolean SELECTOR_INVERT = "1".equals(Cfg.get("SELECTOR_INVERT"));
     // WORST-N BREADTH CAP (2026-07-22): cap so candidate selector-path mo dong thoi tai MOI moc tin hieu.
     // Selector cu chon TAT CA nPass candidate qua gate; SELECTOR_TOPN>0 -> chi lay N candidate dau tien theo
     // uu tien hien hanh (INVERT=1 -> N coin TE-nhat/oversold; INVERT=0 -> N coin TOT-nhat). Dung cho sweep
     // Worst-3/5/8: tap trung von, giam capital-lock. Default -1 = OFF = uncapped = byte-identical.
-    public static final int SELECTOR_TOPN = System.getenv("SELECTOR_TOPN") != null
-            ? Integer.parseInt(System.getenv("SELECTOR_TOPN").trim()) : -1;
+    public static final int SELECTOR_TOPN = Cfg.get("SELECTOR_TOPN") != null
+            ? Integer.parseInt(Cfg.get("SELECTOR_TOPN").trim()) : -1;
     // SELECTOR OFFSET (2026-07-24, offset-sweep): bo qua [SELECTOR_OFFSET] candidate o cuc bien TRUOC khi lay N.
     //  INVERT=1 (Worst-N): bo qua N coin TE-nhat (tail cuoi mang = dead-coin/rac cua truoc) roi lay TOPN coin
     //    tiep theo (oversold that, con luc nay). INVERT=0 (Best-N): bo qua N coin TOT-nhat dau mang.
     //  Clamp theo do dai mang (WORST) / nPass (BEST) de tranh IndexOutOfBounds. Default 0 = OFF = byte-identical.
-    public static final int SELECTOR_OFFSET = System.getenv("SELECTOR_OFFSET") != null
-            ? Integer.parseInt(System.getenv("SELECTOR_OFFSET").trim()) : 0;
+    public static final int SELECTOR_OFFSET = Cfg.get("SELECTOR_OFFSET") != null
+            ? Integer.parseInt(Cfg.get("SELECTOR_OFFSET").trim()) : 0;
     // RANK-BASED TOP-K (2026-07-28, Probe A go/no-go): thay leg selector tu ABSOLUTE threshold
     //  (nPass = so coin co score <= maxThres) sang RANK top-K per timestamp. Khi SELECTOR_RANK_TOPK=k (k>0)
     //  -> BO QUA maxThres/nPass, chon K coin score THAP nhat (symbol2Pred da sort tang -> lay k phan tu dau).
     //  Muc dich: tu-chuan-hoa theo regime (khong starve luc yeu, khong flood luc manh) thay vi absolute cutoff.
     //  Doc lap SELECTOR_TOPN (cai do van bi cap boi nPass). Default -1 = OFF = giu absolute = byte-identical.
-    public static final int SELECTOR_RANK_TOPK = System.getenv("SELECTOR_RANK_TOPK") != null
-            ? Integer.parseInt(System.getenv("SELECTOR_RANK_TOPK").trim()) : -1;
+    public static final int SELECTOR_RANK_TOPK = Cfg.get("SELECTOR_RANK_TOPK") != null
+            ? Integer.parseInt(Cfg.get("SELECTOR_RANK_TOPK").trim()) : -1;
     // RANK OFFSET (2026-07-28, offset-sweep tren rank top-K): bo qua [SELECTOR_RANK_OFFSET] coin score
     //  THAP nhat (top dau) TRUOC khi lay K -> lay symbol2Pred[off .. off+K). Gia thuyet: top dau lan
     //  fake-pump sap dump; bo vai coin dau lay K tiep theo giam nhiem. RIENG voi SELECTOR_OFFSET (dung cho
     //  branch INVERT/best-N). Clamp theo poolSize. Default 0 = OFF = lay [0..K) = hanh vi cu byte-identical.
-    public static final int SELECTOR_RANK_OFFSET = System.getenv("SELECTOR_RANK_OFFSET") != null
-            ? Integer.parseInt(System.getenv("SELECTOR_RANK_OFFSET").trim()) : 0;
+    public static final int SELECTOR_RANK_OFFSET = Cfg.get("SELECTOR_RANK_OFFSET") != null
+            ? Integer.parseInt(Cfg.get("SELECTOR_RANK_OFFSET").trim()) : 0;
     // SELECTOR-ONLY ENTRY (2026-07-23): SELECTOR_ONLY_ENTRY=1 -> TAT leg entry theo market-signal
     // (levelChange getTopSymbolArray Best-N = luong FOMO), CHI giu luong selector PREDICT_SYMBOL_TRADE.
     // Dung de co lap 100% edge inverted-selector (khop proxy Kaggle). Default false = byte-identical.
-    public static final boolean SELECTOR_ONLY_ENTRY = "1".equals(System.getenv("SELECTOR_ONLY_ENTRY"));
+    public static final boolean SELECTOR_ONLY_ENTRY = "1".equals(Cfg.get("SELECTOR_ONLY_ENTRY"));
     // COUNT-ONLY: đếm gate admission rồi short-circuit trước khi tạo order (đo tần suất qua gate).
     // Default false = byte-identical. Bật bằng env SIM_GATE_COUNT_ONLY=1.
-    public static final boolean GATE_COUNT_ONLY = "1".equals(System.getenv("SIM_GATE_COUNT_ONLY"));
+    public static final boolean GATE_COUNT_ONLY = "1".equals(Cfg.get("SIM_GATE_COUNT_ONLY"));
     // ENTRY-UNIVERSE DUMP (E0, 2026-07-30): khi CHAY CUNG GATE_COUNT_ONLY, ghi lai TUNG admission
     //  (ts, symbolId, score, price, levelChange) vao list RAM thay vi chi tang counter. Muc dich: dung
     //  dung duong admission THAT (gate ∩ rank-K) de dem so VI THE DOC LAP sau dedup, phuc vu nghien cuu
     //  exit tren tap entry dong bang (docs/reports/EXIT_MACHINE_20260730_stop_schedule.md, buoc E0).
     //  Vi GATE_COUNT_ONLY khong bao gio tao order -> isSymbolRunning luon false -> tu dong BO filter von,
     //  dung y muon C1. Default false = OFF = khong ton RAM, byte-identical.
-    public static final boolean ENTRY_UNIVERSE_DUMP = "1".equals(System.getenv("SIM_ENTRY_UNIVERSE_DUMP"));
+    public static final boolean ENTRY_UNIVERSE_DUMP = "1".equals(Cfg.get("SIM_ENTRY_UNIVERSE_DUMP"));
     public static float HARD_RISK_LIMIT_4H = -0.2f;                   // HPO (đã revert về cũ): -0.09200f
     public static float MIN_MOMENTUM_15M = 0.02284f;                  // HPO (đã revert về cũ): 0.01720f
     public static float MS_UP_BIG_THRES = 0.02046f;                  // HPO (đã revert về cũ): 0.01757f
@@ -621,22 +621,22 @@ public class Configs {
     //   Dat TRUOC cong profit-arm nhu HARD_SL_PCT. Default 0 = byte-identical.
     public static int LOSER_TIME_STOP_HOURS = 0;
     // [ABLATION 2026-09-02] env TS_GAP_CONST=1: gap trailing = TS_MAX_GAP hang so (xem TradeUtils.calRateLossDynamicBuy). Default off.
-    public static final boolean TS_GAP_CONST = "1".equals(System.getenv("TS_GAP_CONST"));
+    public static final boolean TS_GAP_CONST = "1".equals(Cfg.get("TS_GAP_CONST"));
     // [2026-09-02] SIM_TS_GIVEBACK=1: trailing theo THIET KE (arm RATE_PROFIT_STOP_MARKET, SL = profit - min(profit*TS_GIVEBACK_RATIO, maxGap
     //   weak 3% / strong 8% theo pNoPump > TS_PNOPUMP_WEAK_THR), ratchet lien tuc). Default off = byte-identical. Xem OrderTargetInfoTest.trailRate.
-    public static final boolean TS_GIVEBACK_MODE = "1".equals(System.getenv("SIM_TS_GIVEBACK"));
-    public static final float TS_PNOPUMP_WEAK_THR = System.getenv("TS_PNOPUMP_WEAK_THR") != null
-            ? Float.parseFloat(System.getenv("TS_PNOPUMP_WEAK_THR").trim()) : 0.29f;
+    public static final boolean TS_GIVEBACK_MODE = "1".equals(Cfg.get("SIM_TS_GIVEBACK"));
+    public static final float TS_PNOPUMP_WEAK_THR = Cfg.get("TS_PNOPUMP_WEAK_THR") != null
+            ? Float.parseFloat(Cfg.get("TS_PNOPUMP_WEAK_THR").trim()) : 0.29f;
     // [ABLATION 2026-09-02] env TIER_FLAT=1: bo he so budget theo tier (1.2/1.0/0.5 -> 1.0). Default off = byte-identical.
-    public static final boolean TIER_FLAT = "1".equals(System.getenv("TIER_FLAT"));
+    public static final boolean TIER_FLAT = "1".equals(Cfg.get("TIER_FLAT"));
 
     // 2026-08-03 GRID-ALIGN ENTRY: model selector du doan TAI moc 15m (ts%900000==0), label maxFav do tu
     //   gia moc 15m. Forward-fill 15m->1m cho vao giua cua so -> vao o gia DA CHAY != reference model hoc.
     //   Co nay chi cho selector entry (PREDICT_SYMBOL_TRADE) fire khi offset-trong-snapshot <= N phut.
     //   N=0 -> chi mat moc 15m (align chuan). N=-1 (default) -> OFF, khong gioi han = byte-identical.
     public static final int SIM_SELECTOR_MAX_STALE_MIN =
-            System.getenv("SIM_SELECTOR_MAX_STALE_MIN") != null
-            ? Integer.parseInt(System.getenv("SIM_SELECTOR_MAX_STALE_MIN").trim()) : -1;
+            Cfg.get("SIM_SELECTOR_MAX_STALE_MIN") != null
+            ? Integer.parseInt(Cfg.get("SIM_SELECTOR_MAX_STALE_MIN").trim()) : -1;
 
     // =========================================================
     // 9. KẾT NỐI DỮ LIỆU (STORAGE & AEROSPIKE)
@@ -687,29 +687,29 @@ public class Configs {
     static {
         try {
             String v;
-            if ((v = System.getenv("SIM_OFF_FLAT_HARD")) != null) OFF_FLAT_HARD = Boolean.parseBoolean(v);
-            if ((v = System.getenv("SIM_MIN_MOMENTUM_15M")) != null) MIN_MOMENTUM_15M = Float.parseFloat(v);
-            if ((v = System.getenv("SIM_TRAIL_PER_SYMBOL")) != null) TRAIL_PER_SYMBOL = Boolean.parseBoolean(v);
-            if ((v = System.getenv("SIM_GATE_MARKET_OFF")) != null) GATE_MARKET_OFF = Boolean.parseBoolean(v);
-            if ((v = System.getenv("SIM_AI_DYNAMIC_MIN")) != null) AI_DYNAMIC_MIN = Float.parseFloat(v);
-            if ((v = System.getenv("SIM_PREDICT_SYMBOL_RATE_MAX")) != null) PREDICT_SYMBOL_RATE_MAX_THRESHOLD = Float.parseFloat(v);
-            if ((v = System.getenv("SIM_RATE_PROFIT_STOP_MARKET")) != null) RATE_PROFIT_STOP_MARKET = Float.parseFloat(v);
-            if ((v = System.getenv("SIM_TS_PROFIT_MULTIPLIER")) != null) TS_PROFIT_MULTIPLIER = Float.parseFloat(v);
-            if ((v = System.getenv("SIM_BREAKER_MODE")) != null) BREAKER_MODE = v;
-            if ((v = System.getenv("SIM_BREAKER_MARGIN_HALT")) != null) BREAKER_MARGIN_HALT = Float.parseFloat(v);
-            if ((v = System.getenv("SIM_MS_DOWN_BIG_AVG")) != null) MS_DOWN_BIG_AVG = Float.parseFloat(v);
-            if ((v = System.getenv("SIM_HARD_SL_PCT")) != null) HARD_SL_PCT = Float.parseFloat(v);
-            if ((v = System.getenv("SIM_LOSER_TIME_STOP_HOURS")) != null) LOSER_TIME_STOP_HOURS = Integer.parseInt(v.trim());
+            if ((v = Cfg.get("SIM_OFF_FLAT_HARD")) != null) OFF_FLAT_HARD = Boolean.parseBoolean(v);
+            if ((v = Cfg.get("SIM_MIN_MOMENTUM_15M")) != null) MIN_MOMENTUM_15M = Float.parseFloat(v);
+            if ((v = Cfg.get("SIM_TRAIL_PER_SYMBOL")) != null) TRAIL_PER_SYMBOL = Boolean.parseBoolean(v);
+            if ((v = Cfg.get("SIM_GATE_MARKET_OFF")) != null) GATE_MARKET_OFF = Boolean.parseBoolean(v);
+            if ((v = Cfg.get("SIM_AI_DYNAMIC_MIN")) != null) AI_DYNAMIC_MIN = Float.parseFloat(v);
+            if ((v = Cfg.get("SIM_PREDICT_SYMBOL_RATE_MAX")) != null) PREDICT_SYMBOL_RATE_MAX_THRESHOLD = Float.parseFloat(v);
+            if ((v = Cfg.get("SIM_RATE_PROFIT_STOP_MARKET")) != null) RATE_PROFIT_STOP_MARKET = Float.parseFloat(v);
+            if ((v = Cfg.get("SIM_TS_PROFIT_MULTIPLIER")) != null) TS_PROFIT_MULTIPLIER = Float.parseFloat(v);
+            if ((v = Cfg.get("SIM_BREAKER_MODE")) != null) BREAKER_MODE = v;
+            if ((v = Cfg.get("SIM_BREAKER_MARGIN_HALT")) != null) BREAKER_MARGIN_HALT = Float.parseFloat(v);
+            if ((v = Cfg.get("SIM_MS_DOWN_BIG_AVG")) != null) MS_DOWN_BIG_AVG = Float.parseFloat(v);
+            if ((v = Cfg.get("SIM_HARD_SL_PCT")) != null) HARD_SL_PCT = Float.parseFloat(v);
+            if ((v = Cfg.get("SIM_LOSER_TIME_STOP_HOURS")) != null) LOSER_TIME_STOP_HOURS = Integer.parseInt(v.trim());
             // TASK (frozen leakage-free genome, Buoc 0): funding.bin trong WFO_DATA_DIR/-ff CHI tu-ap cho
             //   funding-SELECTOR (ds.funding), KHONG tu-ap thanh FEE. Fee van gate boi APPLY_FUNDING_FEE
             //   (default false). SIM_APPLY_FUNDING=true -> bat funding fee cho vong WFO/HPO nay (funding-on).
             //   Default (env rong) -> giu false = byte-identical.
-            if ((v = System.getenv("SIM_APPLY_FUNDING")) != null) APPLY_FUNDING_FEE = Boolean.parseBoolean(v);
-            if ((v = System.getenv("SIM_FUNDING_MARK")) != null) FUNDING_MARK_NOTIONAL = Boolean.parseBoolean(v);
+            if ((v = Cfg.get("SIM_APPLY_FUNDING")) != null) APPLY_FUNDING_FEE = Boolean.parseBoolean(v);
+            if ((v = Cfg.get("SIM_FUNDING_MARK")) != null) FUNDING_MARK_NOTIONAL = Boolean.parseBoolean(v);
             // [2026-09-02 STRESS] chi phi: fee/slippage/funding scale cho bai robustness. Default = gia tri cu -> byte-identical.
-            if ((v = System.getenv("SIM_RATE_FEE")) != null) RATE_FEE = Float.parseFloat(v.trim());
-            if ((v = System.getenv("SIM_SLIPPAGE_RATE")) != null) SLIPPAGE_RATE = Float.parseFloat(v.trim());
-            if ((v = System.getenv("SIM_FUNDING_SCALE")) != null) FUNDING_SCALE = Float.parseFloat(v.trim());
+            if ((v = Cfg.get("SIM_RATE_FEE")) != null) RATE_FEE = Float.parseFloat(v.trim());
+            if ((v = Cfg.get("SIM_SLIPPAGE_RATE")) != null) SLIPPAGE_RATE = Float.parseFloat(v.trim());
+            if ((v = Cfg.get("SIM_FUNDING_SCALE")) != null) FUNDING_SCALE = Float.parseFloat(v.trim());
         } catch (Exception e) {
             System.err.println("SIM env override parse error: " + e);
         }
