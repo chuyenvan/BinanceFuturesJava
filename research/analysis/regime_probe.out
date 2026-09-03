@@ -1,0 +1,47 @@
+ledger v3: (15442092, 5) ticks 86971
+ticks dung duoc: 86971 | y TB theo nam: {2021: 0.08760000020265579, 2022: 0.03620000183582306, 2023: 0.06840000301599503, 2024: 0.07819999754428864}
+dai luong gop: (29929, 24)
+sau join: (86971, 30) | do phu dai luong gop: 1.000
+
+=== 1. Tuong quan tung dai luong voi y_tick (top8 g1lite), TOAN BO va TUNG NAM ===
+bien                        all     2022     2023     2024  dau nhat quan?
+std_vol_7d              +0.2184  +0.1224  +0.1741  +0.3253  CO
+std_ret_3d              +0.2051  +0.1562  +0.1246  +0.3455  CO
+n_coin                  +0.2046  -0.0226  +0.1729  -0.0679  khong
+std_ret_7d              +0.1920  +0.1167  +0.1365  +0.3252  CO
+std_rs_btc_7d           +0.1920  +0.1167  +0.1365  +0.3252  CO
+std_vol_ratio           +0.1851  +0.0487  +0.0599  +0.3087  CO
+med_vol_ratio           +0.1326  +0.1068  +0.0980  +0.2698  CO
+std_ls_global           -0.1007  -0.2229  -0.1347  +0.1493  khong
+p15                     +0.0988  +0.1599  +0.0788  +0.2582  CO
+std_taker_buy           -0.0855  -0.1696  +0.0057  -0.1875  khong
+std_dd_7d               +0.0844  +0.0814  +0.0754  -0.0578  khong
+med_ls_global           -0.0751  -0.2203  -0.1437  +0.1448  khong
+med_ret_7d              +0.0725  -0.0463  +0.0885  +0.1556  khong
+breadth_ret7            +0.0709  -0.0375  +0.0893  +0.1420  khong
+med_vol_7d              +0.0683  +0.1250  +0.0524  +0.1944  CO
+med_fund_last           +0.0650  -0.1887  +0.0325  +0.2140  khong
+med_ret_3d              +0.0626  +0.0156  +0.0613  +0.1114  CO
+med_dd_7d               +0.0321  -0.0836  +0.0505  +0.0841  khong
+med_rs_btc_7d           +0.0225  +0.0093  +0.0361  +0.0600  CO
+med_taker_buy           +0.0155  +0.0165  +0.0114  -0.0142  khong
+std_oi_delta24h         +0.0118  +0.0919  -0.0934  +0.1703  khong
+std_fund_last           -0.0096  +0.0728  -0.0460  +0.0855  khong
+breadth_dd7             +0.0069  -0.0741  +0.0069  +0.0616  khong
+med_oi_delta24h         -0.0020  -0.0155  +0.0163  -0.0126  khong
+
+=== 2. CAU HOI CHINH: gop them co du bao duoc gi NGOAI p15 khong? (OOS theo nam) ===
+   CHI p15                      test 2023  rho_OOS=+0.0656  n=35039
+   CHI p15                      test 2024  rho_OOS=+0.0407  n=17444
+   p15 + dai luong gop          test 2023  rho_OOS=-0.1112  n=35039
+   p15 + dai luong gop          test 2024  rho_OOS=-0.1822  n=17444
+   => rho_OOS trung binh: chi p15 = +0.0532 | them gop = -0.1467 | CHENH = -0.1999
+   (chenh <= 0.02 => du lieu hien co HET DAT cho tin hieu regime)
+
+=== 3. 2022 co that su khac biet o cac dai luong nay khong ===
+         p15  med_vol_7d  breadth_ret7  med_rs_btc_7d  med_fund_last       y
+yr                                                                          
+2021  0.0064      0.0100        0.1221         0.0044         0.0001  0.0947
+2022  0.0053      0.0102        0.3034        -0.0159         0.0001  0.0266
+2023  0.0041      0.0084        0.5103        -0.0150         0.0001  0.0539
+2024  0.0054      0.0100        0.4510        -0.0288         0.0001  0.0682
