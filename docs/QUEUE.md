@@ -128,7 +128,7 @@ Pre-reg `576e6c2`, chi tiết `docs/F1_FLOW_RESULT.md`.
 
 ---
 
-## F2 — Conditional exit: cắt lệnh KHÔNG CHẠY tại giờ H  [DONE `PLACEHOLDER`]
+## F2 — Conditional exit: cắt lệnh KHÔNG CHẠY tại giờ H  [DONE `7d0eb38`]
 
 **Kết luận:** NULL — luật "chưa arm + giữ > 72h + đỉnh đạt được < 5%/4% ⇒ đóng market"
 cắt TRÚNG nhóm chết (`mean(profit|STOP_LOSS_DONE)` −18.90 → −13.95%, `mean(profit|
