@@ -141,3 +141,21 @@ sau F1 một hướng chết vì kênh tái triển khai vốn yếu hơn giả 
 Đo offline `docs/F2_COND_EXIT_MEASURE.md` (join nhãn 100%, dự báo số lệnh bị cắt 146 vs
 thực tế 148 — công cụ dùng được). Pre-reg `a4b3b05`, chi tiết `docs/F2_RESULT.md`.
 Param `SIM_COND_EXIT_HOURS` / `SIM_COND_EXIT_MIN_FAV` giữ trong code, mặc định 0 = TẮT.
+
+---
+
+## F3 — Nguồn cung hay tầng quyết định?  [DONE `5a32d0e`]
+
+**Kết luận:** hệ bị giới hạn bởi **CUNG**, nhưng trục khan hiếm là **THỜI GIAN gate thị
+trường mở** (`p15` là scalar mức-tick, `sd` trong tick = 0; `spearman(npass,p15)`=+0.454 vs
+`spearman(npass,U)`=+0.021) — **không phải universe**: mục A không khử được confound
+(`spearman(U,tháng)`=+0.995, mọi spec khử confound MDE80 ≥ 1.09 ⇒ **không kết luận được**),
+và A7 cho thấy U to hơn cải thiện ĐIỂM của top-8 (t=−4.9) nhưng KHÔNG cải thiện kết quả
+thực (`g1lite` +0.03 CI[−0.16,+0.22]) ⇒ **đóng hướng mở universe**. 86.6 coin good/giờ-gate-mở
+nhưng chỉ 2.90 qua gate và **94.85% giờ-gate-mở có 0 cơ hội**; vị thế đang giữ = **6.275**
+trong giờ-gate-mở (1.894 trên mọi giờ) ⇒ vốn KHÔNG nằm không lúc có cơ hội — lý do E1/F1/F2
+đều null. B bác lại cách đọc "medP bất biến": `P(good)` 0.699→0.565 và `mean(g1lite|good)`
+0.1778→0.1070 theo độ sâu rank (t=24.8); median là đại lượng trơ. D: hạ K=8→5 mất **33.54%**
+nguồn cung good qua gate và **32.0%** khối lượng `g1lite` ⇒ khe K=8/K=5 là lỗ hổng
+**fidelity** (`Q6.4`), không phải nguồn alpha. Chi tiết `docs/F3_SUPPLY.md`, script
+`research/analysis/f3_supply.py`. **Không pre-reg** (đo offline thuần, không chạy sim).
