@@ -113,3 +113,15 @@ Mo lai chi khi user noi ro muc rui ro muc tieu (vd "chap nhan maxDD 20% de doi C
 5. Giai phong dia: an toan cao ~9.5 GiB, can xac nhan ~30 GiB (`docs/D1_DATA_AUDIT.md`
    muc D). **2 bay:** `up5/*.zip` va `up_zip/*` cung inode (nlink=2) => xoa 1 ben
    duoc 0 byte; truncate set Aerospike KHONG shrink `.dat`.
+
+---
+
+## F1 — Nới dòng cơ hội ở tổng exposure không đổi  [DONE `d6935ef`]
+
+**Kết luận:** NULL — `SELECTOR_RANK_TOPK` 8→16/24/32 (bù `SIM_F_BASE` giữ
+`K × F_BASE = 0.24`, C1 lệch chỉ +4%) làm `sd(daily)` giảm đúng dự đoán
+(0.008098→0.006913) nhưng `mean` giảm gấp 3 lần thế, Sharpe 1.491→0.980, và cả 3
+biến thể LOẠI ở ràng buộc cứng (underwater 195/227/254d vs 93d) ⇒ **giữ K=8, đóng
+hướng**. Cơ chế: `medP`=5.50 không đổi nhưng `TSloss%` tăng đơn điệu 15.2→21.7%
+trên 970→2,779 lệnh — rank sâu chết bằng time-stop nhiều hơn, không phải thắng ít hơn.
+Pre-reg `576e6c2`, chi tiết `docs/F1_FLOW_RESULT.md`.
