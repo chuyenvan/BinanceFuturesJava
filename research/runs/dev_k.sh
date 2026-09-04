@@ -7,7 +7,8 @@ R=/home/ubuntu/src/BinanceFuturesJava
 JAR=$R/target/binance-java-sdk-1.2.4.jar
 CFGF=$R/configs/sim_dev.properties
 B=/home/ubuntu/java/devrun
-P=/home/ubuntu/java/profiles
+P=/home/ubuntu/src/BinanceFuturesJava/profiles
+grep -q '^WFO_FUNDING_PRED_DIR=' $P/c2b.properties || { echo "*** DUNG: $P/c2b.properties thieu WFO_FUNDING_PRED_DIR (bins pin) ***"; exit 4; }
 DS=/home/ubuntu/wfo_ds_k
 
 # --- sinh 3 profile tu c2b ---

@@ -9,7 +9,8 @@ export PATH=/home/ubuntu/tools/apache-maven-3.9.9/bin:$PATH
 R=/home/ubuntu/src/BinanceFuturesJava
 JAR=$R/target/binance-java-sdk-1.2.4.jar
 CFGF=$R/configs/sim_dev.properties
-B=/home/ubuntu/java/devrun; P=/home/ubuntu/java/profiles; DS=/home/ubuntu/wfo_ds_clean
+B=/home/ubuntu/java/devrun; P=/home/ubuntu/src/BinanceFuturesJava/profiles; DS=/home/ubuntu/wfo_ds_clean
+grep -q '^WFO_FUNDING_PRED_DIR=' $P/c2b.properties || { echo "*** DUNG: $P/c2b.properties thieu WFO_FUNDING_PRED_DIR (bins pin) ***"; exit 4; }
 
 echo "=== build jar ==="
 cd $R && mvn -q -DskipTests package 2>&1 | tail -20
