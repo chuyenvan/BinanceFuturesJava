@@ -162,7 +162,7 @@ nguồn cung good qua gate và **32.0%** khối lượng `g1lite` ⇒ khe K=8/K=
 
 ---
 
-## F4 — Tầng timing có phải nơi chứa alpha?  [DONE `<COMMIT>`]
+## F4 — Tầng timing có phải nơi chứa alpha?  [DONE `0c649e0`]
 
 **Kết luận:** NULL — nhưng là **null KHÔNG CÓ POWER**, và đó mới là kết quả chính. Dựng lưới tick
 mở rộng **86,971 tick** DEV (từ `wfo_gate_pred.csv` + `predwf_G015x26` + `label_15m`, vì
