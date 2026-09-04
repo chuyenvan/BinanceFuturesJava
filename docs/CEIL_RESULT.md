@@ -32,6 +32,15 @@ tren no, -0.0210 YYY). Tran tren **`g1_replay`** (nhan sat tien that) **CHUA TUN
 | `retEnd_72h` | -0.46% | [-2.49, +1.37] | [-2.88, +1.96] | chua 0 |
 | `maxFav_72h` | -1.17% | [-3.56, +0.98] | [-3.91, +1.56] | chua 0 |
 
+
+> 🔴 **DINH CHINH 2026-09-04 (sau `docs/LABEL_ROI2_RESULT.md`): muc 2.1 duoi day PHAI RUT.**
+> Tien de "`g1_replay` la nhan gan tien nhat" **SAI**. Do truc tiep voi ROI that cua 970 lenh
+> C2b: `g1lite` 72h **+0.474** (AUC 0.928) > `g1_replay` **+0.437** (AUC 0.873).
+> => Nhan tot nhat lam proxy cho tien la **`g1lite` 72h**, dung la nhan S1 **dang** dung; tren no
+> S1 bat **17.5%** [13.1,22.1], `vol_7d` tho bat 20.0% => khoang trong **~82%, khong phai ~95%**.
+> Phan van DUNG cua bao cao nay: `%bat` bien thien **hon 5 lan** tuy nhan, nen moi phat bieu
+> "con Y% du dia" vo nghia neu khong ghi ro nhan.
+
 ## 2. BA KET LUAN
 
 1. **Con so "17.8% tran" la tren nhan SAI.** Tren `g1_replay` — nhan gan tien nhat — S1 chi bat
