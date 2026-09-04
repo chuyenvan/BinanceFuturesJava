@@ -1,0 +1,138 @@
+{
+ "cand_dev.parquet": {
+  "bytes": 30494120,
+  "path": "/home/ubuntu/ledger/cand_dev.parquet",
+  "sha256": "31876176cd60205c85a525dc8172594751f772ed3c8b05220f8090c2de4b45f0"
+ },
+ "feat_v2.meta.json": {
+  "bytes": 816,
+  "path": "/home/ubuntu/featv2/feat_v2.meta.json",
+  "sha256": "eb8643c17de225e1ec6ff92bd4ec5f28769813a2e41ed5fbdf2ca19f85804f6d"
+ },
+ "feat_v2.parquet": {
+  "bytes": 955376251,
+  "path": "/home/ubuntu/featv2/feat_v2.parquet",
+  "sha256": "29d2c1e09c1b320e2622ff0584bf6178c06c304bfd84dce0fa38c9b7c34bd2a4"
+ },
+ "label_15m_DEV": {
+  "funding_label_20210101_to_20210401.pb": {
+   "bytes": 30952712,
+   "sha256": "f70bef2219e65ef681d411fb9539cf16b75d775a3d9c0d9cb6757061fabdd6e1"
+  },
+  "funding_label_20210401_to_20210701.pb": {
+   "bytes": 39433441,
+   "sha256": "aedf5ed691f3fb0fcb303a16a2b94d989e3580e4fd2177f1656d0f1e6d9196c9"
+  },
+  "funding_label_20210701_to_20211001.pb": {
+   "bytes": 41586781,
+   "sha256": "d66c9e9523b4c9e2242566cf7f0c4c7e5dc137da3c1e4fcda650a9c72f000452"
+  },
+  "funding_label_20211001_to_20220101.pb": {
+   "bytes": 45703306,
+   "sha256": "777423c2d86d5c423ce4b866dac9cd60b4164607ce1008157094f5f6ec77f981"
+  },
+  "funding_label_20220101_to_20220401.pb": {
+   "bytes": 46605642,
+   "sha256": "49facc73e7ba6b97172fec80bb1cbed07b704e2a0108e64404c3d510e8532176"
+  },
+  "funding_label_20220401_to_20220701.pb": {
+   "bytes": 48698799,
+   "sha256": "bbd517a44c73687aea983d4e1ad92609db0638926e5e775b6593c533a1324b67"
+  },
+  "funding_label_20220701_to_20221001.pb": {
+   "bytes": 48846486,
+   "sha256": "19a2240658f442e3a20f826ccf2170ecd1be32c6a5c58e9fd6ecff8b43df531a"
+  },
+  "funding_label_20221001_to_20230101.pb": {
+   "bytes": 50665570,
+   "sha256": "1a20bc7b76e36cd1df75934265065f3da446730c08bf6d5a7ec1fd657b639f6e"
+  },
+  "funding_label_20230101_to_20230401.pb": {
+   "bytes": 53673429,
+   "sha256": "90bdaf3f5122d70bc7354992300c18bee2a900be0415fe37d92b4915d761f927"
+  },
+  "funding_label_20230401_to_20230701.pb": {
+   "bytes": 62174622,
+   "sha256": "cad92e56352d75e4ffcc794d708b22891c6a435fdeea2ee4fe787d8bb201d487"
+  },
+  "funding_label_20230701_to_20231001.pb": {
+   "bytes": 67851472,
+   "sha256": "c1a72cbc585b9648e852c5e6920bf7fe6acf01517846a418f7d74d418e6ff8a2"
+  },
+  "funding_label_20231001_to_20240101.pb": {
+   "bytes": 78552120,
+   "sha256": "f6e4f45c686328fe9061544a2c25cee658b2ecdf410f4f0f3a317bf4192c5032"
+  },
+  "funding_label_20240101_to_20240401.pb": {
+   "bytes": 88802825,
+   "sha256": "52008d90ddb29e89810aaa98ec5c2f079f996ef3029d91de53b684fd60fa274c"
+  },
+  "funding_label_20240401_to_20240701.pb": {
+   "bytes": 92995056,
+   "sha256": "bc2e83a758cd08c90161c235c044e51b8518b028c8f212e2a3da1a7116ebd53a"
+  }
+ },
+ "oi_percoin_full.bin": {
+  "bytes": 4227723300,
+  "note": "SACH, KHONG rebuild; sha dung lai tu G015_PROVENANCE (da doi chieu prefix)",
+  "path": "/home/ubuntu/claudedata/oi/oi_percoin_full.bin",
+  "sha256": "e3887f63097299655213f8382ca7e473e126ee4d7ddf69a39658942651b305ec"
+ },
+ "predwf_G015x26": {
+  "predict_wf_20220101": {
+   "bytes": 29220204,
+   "sha256": "199ad42e6682dc257e1754737944823ca271a3e16b7e67deb1452827e88acc5a"
+  },
+  "predict_wf_20220401": {
+   "bytes": 30472260,
+   "sha256": "5f89f6dcb2fd40852916133b5559a0d3367f7bec46b6e49c0227d16be470b255"
+  },
+  "predict_wf_20220701": {
+   "bytes": 30898868,
+   "sha256": "998d5b0c37aafdf6131079bdc99ce2367c45df06bb9635ead4cabdf078958bbf"
+  },
+  "predict_wf_20221001": {
+   "bytes": 32308276,
+   "sha256": "efd240f6261b2548e6f57988202f5f56b41dde35b18937f31aecb4223450bea6"
+  },
+  "predict_wf_20230101": {
+   "bytes": 33867782,
+   "sha256": "8534693f77ddca2c74d235583f38d245b5eaa0067471c578998892b4b0613ff8"
+  },
+  "predict_wf_20230401": {
+   "bytes": 39639730,
+   "sha256": "36939bfce9e33d67ea41730608e67c6019736ab20cfa931c9aa6208ffc4ecbb8"
+  },
+  "predict_wf_20230701": {
+   "bytes": 43461964,
+   "sha256": "a389367dc34cfb8afef5c0c8a5b86ae5ab67862f0d44d50c1df68c6005cf49cd"
+  },
+  "predict_wf_20231001": {
+   "bytes": 49736934,
+   "sha256": "2fcd7b95e1887effc401359889695e770ba02841f3eb67ca23d5f3386d43329f"
+  },
+  "predict_wf_20240101": {
+   "bytes": 55665792,
+   "sha256": "e5a684f4132996ea47cc2341960cf0fd3a5dc0262c65368bac5cf63a4117f131"
+  },
+  "predict_wf_20240401": {
+   "bytes": 58669104,
+   "sha256": "d76d5f929df9571af8c1674a4b27f771c74d5c800e15088b735334cff11d60ad"
+  }
+ },
+ "symbol_map_oi.csv": {
+  "bytes": 11232,
+  "path": "/home/ubuntu/claudedata/oi/symbol_map.csv",
+  "sha256": "3f8175512f385d83619f85793e4f3edef4fcb9989d0e87c471976fbfcc104eaa"
+ },
+ "symbol_map_selpred.csv": {
+  "bytes": 10964,
+  "path": "/home/ubuntu/selector_pred_out/symbol_map.csv",
+  "sha256": "41ee8f1b96b8a01cd3425242fa7bcccbf015c27f9c8fd348604f20ff1bdedd7b"
+ },
+ "wfo_gate_pred.csv": {
+  "bytes": 92509649,
+  "path": "/home/ubuntu/claudedata/wfo_gate_pred.csv",
+  "sha256": "ac5f6365dee520ec41267b6e311af4bf512538164e8a4246b10adb3dcfaaa7ae"
+ }
+}
