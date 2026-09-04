@@ -159,3 +159,30 @@ trong giờ-gate-mở (1.894 trên mọi giờ) ⇒ vốn KHÔNG nằm không l�
 nguồn cung good qua gate và **32.0%** khối lượng `g1lite` ⇒ khe K=8/K=5 là lỗ hổng
 **fidelity** (`Q6.4`), không phải nguồn alpha. Chi tiết `docs/F3_SUPPLY.md`, script
 `research/analysis/f3_supply.py`. **Không pre-reg** (đo offline thuần, không chạy sim).
+
+---
+
+## F4 — Tầng timing có phải nơi chứa alpha?  [DONE `<COMMIT>`]
+
+**Kết luận:** NULL — nhưng là **null KHÔNG CÓ POWER**, và đó mới là kết quả chính. Dựng lưới tick
+mở rộng **86,971 tick** DEV (từ `wfo_gate_pred.csv` + `predwf_G015x26` + `label_15m`, vì
+`cand_dev.parquet` chỉ có 4,639/87,552 tick) rồi đo rank-IC với `Y_tick` = `mean(g1lite)` top-8:
+`p15` **+0.1000**, `br_lag3` +0.1553, `p15_ma24h` +0.1088, `mkt_vol7` +0.0901, `mkt_dd7` +0.0186
+(dấu LỆCH). **Không ứng viên nào đạt ngưỡng** (CI của hiệu, block 72h × 2000 rep × f=1.21, đều
+chứa 0) ⇒ `p15` giữ nguyên. Lý do thật: `sd_boot = 0.033` ⇒ **`n_eff ≈ 908`, KHÔNG phải 86,615**
+(hệ số phóng đại 95×) ⇒ **MDE80 của hiệu ≈ 0.13 > chính rank-IC của incumbent (0.100)** — cuộc thi
+gần như không thể thắng. **Giả thuyết "chuyển sang mức tick sẽ phá tường power" là SAI**; `n_eff`
+tỷ lệ với số khối 72h (tức độ dài lịch sử), không với tần suất lấy mẫu. Ứng viên khá nhất
+`br_lag3` mất **38%** rank-IC khi bịt rò rỉ ~1 ngày (`br_lag4` +0.0973, 2022 sụt +0.138→+0.031)
+và khi đó **thấp hơn** `p15`. Model tổ hợp 5-biến (XGB CPU, WFO quý, purge 72h) **THUA biến đơn**:
++0.0866 vs +0.1297 OOS. `mkt_dd7` bị loại dứt khoát (CI hiệu trên `Y2` nằm trọn dưới 0).
+**False negative (cả 2 định nghĩa gate):** gate CÓ chọn lọc thật — `q = P(Y|ĐÓNG > median(Y|MỞ))`
+= **0.3534** (Gate-A `p15>=0.008`) và **0.2277** (Gate-B `gate_dyn_ok`), giảm đơn điệu từ 0.5;
+`mean(Y|MỞ)−mean(Y|ĐÓNG)` = +0.0224 / +0.0727; `P(good)` 0.669/0.544 và 0.782/0.549. NHƯNG khối
+lượng tick trên-trung-vị ngoài gate = **29,115** (12.67× so mốc) / **19,694** (83.98×) vì tập ĐÓNG
+lớn gấp 18×/184× ⇒ đây là bài toán **đặt ngưỡng**, không phải **chọn biến**. Cảnh báo: đếm TICK
+chứ không phải cơ hội độc lập (~101 đợt sau khi khử chồng lấn 72h), `Y_tick` là danh mục KHÔNG
+giao dịch được, không có xác nhận P&L. Hướng mở duy nhất: **sweep ngưỡng `p15`** trên lưới đã dựng
+`/home/ubuntu/ledger/f4_ticks.parquet` — chi phí ~0, nhưng chỉ chạy nếu viết được công thức đánh
+đổi precision/coverage TRƯỚC. Pre-reg `1fa042d`, chi tiết `docs/F4_TIMING.md`, script
+`research/analysis/f4_timing.py`.
