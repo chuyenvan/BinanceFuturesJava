@@ -125,3 +125,19 @@ biến thể LOẠI ở ràng buộc cứng (underwater 195/227/254d vs 93d) ⇒
 hướng**. Cơ chế: `medP`=5.50 không đổi nhưng `TSloss%` tăng đơn điệu 15.2→21.7%
 trên 970→2,779 lệnh — rank sâu chết bằng time-stop nhiều hơn, không phải thắng ít hơn.
 Pre-reg `576e6c2`, chi tiết `docs/F1_FLOW_RESULT.md`.
+
+---
+
+## F2 — Conditional exit: cắt lệnh KHÔNG CHẠY tại giờ H  [DONE `PLACEHOLDER`]
+
+**Kết luận:** NULL — luật "chưa arm + giữ > 72h + đỉnh đạt được < 5%/4% ⇒ đóng market"
+cắt TRÚNG nhóm chết (`mean(profit|STOP_LOSS_DONE)` −18.90 → −13.95%, `mean(profit|
+STOP_MARKET_DONE)` chỉ −0.034pp) nhưng **FAIL 2/3 PRIMARY** (`TSloss%` 15.15→19.04,
+`win%` 85.26→81.66) và **FAIL ràng buộc cứng** (underwater 93→156 ngày, cùng con số của
+E1 `X72`) ⇒ **đóng hướng**. Cơ chế hỏng ở đường truyền: margin giải phóng sớm KHÔNG quay
+vòng đủ (tổng lệnh chỉ 970→1,003, +3.4%) nên không pha loãng được mẫu số — lần thứ hai
+sau F1 một hướng chết vì kênh tái triển khai vốn yếu hơn giả định. Equity cao hơn
+(60,390→61,851/62,317) nhưng đi NGƯỢC phán quyết và nằm trong nhiễu 2.57pp ⇒ không dùng.
+Đo offline `docs/F2_COND_EXIT_MEASURE.md` (join nhãn 100%, dự báo số lệnh bị cắt 146 vs
+thực tế 148 — công cụ dùng được). Pre-reg `a4b3b05`, chi tiết `docs/F2_RESULT.md`.
+Param `SIM_COND_EXIT_HOURS` / `SIM_COND_EXIT_MIN_FAV` giữ trong code, mặc định 0 = TẮT.

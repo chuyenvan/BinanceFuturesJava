@@ -378,6 +378,12 @@ public class Configs {
     //   maxPrice >= entry*(1+RATE_PROFIT_STOP_MARKET) => KHONG BAO GIO cham cum thua lo thuan — dead cho zombie).
     //   Dat TRUOC cong profit-arm nhu HARD_SL_PCT. Default 0 = byte-identical.
     public static int LOSER_TIME_STOP_HOURS = 0;
+    // [2026-09-04 F2] CONDITIONAL EXIT (SIM_COND_EXIT_HOURS=0 -> tat; SIM_COND_EXIT_MIN_FAV): cum CHUA arm
+    //   (priceSL==null) da giu qua N gio ke tu leg DAU MA dinh THAT dat duoc tinh tu entry < MIN_FAV thi dong
+    //   tai min(open, close). Khac LOSER_TIME_STOP_HOURS (cat PHANG theo gio): day cat CO DIEU KIEN nen giu lai
+    //   nhung lenh dang chay. Default 0 => nhanh khong chay => byte-identical. Xem docs/PREREG_F2.md.
+    public static int COND_EXIT_HOURS = 0;
+    public static float COND_EXIT_MIN_FAV = 0f;
     /** [2026-09-03] ban MUTABLE de test do nhay; doc qua tsPnoPumpWeakThr(). */
     public static Float TS_PNOPUMP_WEAK_THR_OVR = null;
     public static float tsPnoPumpWeakThr() {
@@ -467,6 +473,8 @@ public class Configs {
             if ((v = Cfg.get("SIM_RATE_PROFIT_STOP_MARKET")) != null) RATE_PROFIT_STOP_MARKET = Float.parseFloat(v);
             if ((v = Cfg.get("SIM_MS_DOWN_BIG_AVG")) != null) MS_DOWN_BIG_AVG = Float.parseFloat(v);
             if ((v = Cfg.get("SIM_LOSER_TIME_STOP_HOURS")) != null) LOSER_TIME_STOP_HOURS = Integer.parseInt(v.trim());
+            if ((v = Cfg.get("SIM_COND_EXIT_HOURS")) != null) COND_EXIT_HOURS = Integer.parseInt(v.trim());
+            if ((v = Cfg.get("SIM_COND_EXIT_MIN_FAV")) != null) COND_EXIT_MIN_FAV = Float.parseFloat(v.trim());
             // TASK (frozen leakage-free genome, Buoc 0): funding.bin trong WFO_DATA_DIR/-ff CHI tu-ap cho
             //   funding-SELECTOR (ds.funding), KHONG tu-ap thanh FEE. Fee van gate boi APPLY_FUNDING_FEE
             //   (default false). SIM_APPLY_FUNDING=true -> bat funding fee cho vong WFO/HPO nay (funding-on).

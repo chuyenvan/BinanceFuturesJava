@@ -650,6 +650,23 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                         return;
                     }
                 }
+                // [2026-09-04 F2] CONDITIONAL EXIT (SIM_COND_EXIT_HOURS / SIM_COND_EXIT_MIN_FAV): cum CHUA arm,
+                //     da giu qua N gio ke tu leg dau, MA dinh THAT dat duoc tinh tu entry < MIN_FAV -> coi nhu
+                //     khong bao gio chay, dong tai min(open, close) (khong look-ahead, haircut nhu LOSER_TIME_STOP).
+                //     maePeak = dinh cum simulator DA theo doi san (chi di len, khong reset qua merge) => tai dung,
+                //     KHONG them state. Truoc F2 maePeak la do-luong-only; tu F2 no tham gia quyet dinh CHI khi
+                //     cond-exit bat. Default HOURS=0 => nhanh khong chay => byte-identical.
+                if (Configs.COND_EXIT_HOURS > 0 && orderMulti.priceSL == null
+                        && orderMulti.maePeak != null && orderMulti.priceEntry != null) {
+                    long anchorCe = orderMulti.clusterFirstLegTime > 0L ? orderMulti.clusterFirstLegTime : orderMulti.timeStart;
+                    if (time - anchorCe > Configs.COND_EXIT_HOURS * 3600000L
+                            && (orderMulti.maePeak - orderMulti.priceEntry) / orderMulti.priceEntry < Configs.COND_EXIT_MIN_FAV) {
+                        orderMulti.status = OrderTargetStatus.STOP_LOSS_DONE;
+                        orderMulti.priceTP = Math.min(ticker.priceOpen, ticker.priceClose);
+                        closeOrder(symbolId, orderMulti);
+                        return;
+                    }
+                }
                 if (ticker.maxPrice >= orderMulti.priceEntry * (1 + Configs.RATE_PROFIT_STOP_MARKET)
                         || orderMulti.priceSL != null) {
                     Float predReturn15M  = getPredReturn15MForTradingStop(time);

@@ -71,6 +71,9 @@ public class OrderTargetInfoTest implements Serializable {
     public Float maeLow;
     // 🔎 ĐO LƯỜNG ONLY (TASK-151): đỉnh giá THẬT đạt được kể từ leg đầu — chỉ đi LÊN, không tham gia
     //    quyết định SL/TP (đối xứng với maeLow). Phục vụ đo "% đỉnh giữ được" khi đóng lệnh thắng.
+    //    [2026-09-04 F2] NGOẠI LỆ DUY NHẤT: khi Configs.COND_EXIT_HOURS > 0 (mặc định 0 = tắt) thì
+    //    SimulatorMarketLevelTicker1MStopLoss dùng maePeak làm "maxFav tới giờ H" cho conditional exit.
+    //    Tắt => không đường nào đọc nó cho quyết định => byte-identical. Xem docs/PREREG_F2.md.
     public Float maePeak;
     public Float lastPrice;
 
