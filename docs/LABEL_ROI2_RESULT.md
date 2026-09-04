@@ -33,6 +33,15 @@ S1/C2b — vi script do khong tinh no. Khong co no thi khong tra loi duoc "nhan 
 ⇒ **Chan troi dai hon TOT HON, don dieu.** 4h -> 72h **gan gap doi** tuong quan
 (+0.258 -> +0.474). Day khong phai chuyen "xap xi nhau" — day la hieu ung lon va sach.
 
+
+> 🔴 **DINH CHINH 2026-09-04 (`docs/LABEL_ROI3_RESULT.md`): muc 2 duoi day PHAI RUT.**
+> Phep so CHAN TROI bi **CHONG LAN CUA SO**: ROI hien thuc hoa trong toi 168h, nen nhan 72h
+> quan sat nhieu hon cua chinh duong gia do so voi nhan 4h => tuong quan cao hon gan nhu
+> tautology, KHONG phai "muc tieu tot hon". Mau don dieu 4h->24h->72h dung la thu chong lan
+> thuan se tao ra. CI da do (72h-4h = +0.215 [+0.148,+0.282], loai tru 0) **khong** giai duoc
+> confound nay. Phan KHONG bi confound va van dung: so CONG THUC o cung 72h — g1lite/maxFav/
+> pathq **khong phan biet duoc nhau** (+0.003 [-0.005,+0.011] va +0.023 [-0.008,+0.057]).
+
 ## 3. TACH CONG THUC (cung chan troi 72h) — GAN NHU PHANG
 
 `maxFav_72h` +0.472 · `g1lite` +0.474 · `g1lite` ARM7 **+0.476** · `pathq` +0.452 —
