@@ -29,11 +29,32 @@ public class TradeUtils {
         float maxGap = (pNoPump != null && pNoPump > pNoPumpWeakThres)
                 ? Configs.TS_MAX_GAP_WEAK
                 : Configs.TS_MAX_GAP;
+        return trailFromCap(maxProfitRate, maxGap);
+    }
+
+    /**
+     * [X3 2026-09-06] LOI CHUNG cua trailing: tach nguyen van ra khoi
+     * {@link #calRateLossDynamicBuyPNoPump} (KHONG doi mot phep tinh nao) de nhanh rank dung lai
+     * dung cong thuc + dung buoc lam tron => khi TS_CAP_STRONG_RANK = 0 ket qua byte-identical.
+     */
+    static float trailFromCap(float maxProfitRate, float maxGap) {
         float gap = Math.min(maxProfitRate * Configs.TS_GIVEBACK_RATIO, maxGap);
         float rate = maxProfitRate - gap;
         float step = 0.005f;
         rate = Math.round(rate / step) * step;
         return rate;
+    }
+
+    /**
+     * [X3 2026-09-06] Gap trailing theo RANK cua coin trong tick (khong theo gia tri pNoPump).
+     *
+     * <p>{@code selRank} 1-based, do {@code SELECTOR_RANK_TOPK} sinh ra tai diem chon top-K.
+     * {@code selRank <= capStrongRank} -> STRONG ({@code TS_MAX_GAP}); sau hon hoac null -> WEAK
+     * ({@code TS_MAX_GAP_WEAK}). Ban le {@code TS_PNOPUMP_WEAK_THR} KHONG tham gia.
+     */
+    public static float calRateLossDynamicBuyRank(float maxProfitRate, Integer selRank, int capStrongRank) {
+        boolean strong = (selRank != null && selRank <= capStrongRank);
+        return trailFromCap(maxProfitRate, strong ? Configs.TS_MAX_GAP : Configs.TS_MAX_GAP_WEAK);
     }
 
     public static Float calRateMinWithPredReturn15MForTradingStop(Float predReturn15M) {

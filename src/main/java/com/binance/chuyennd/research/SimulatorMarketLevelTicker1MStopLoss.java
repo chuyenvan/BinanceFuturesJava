@@ -334,8 +334,16 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                         TickDecisionLog.selCtx(symbol2Pred.length, nPass, chosenCands.size());
                                         if (TickDecisionLog.POOL) TickDecisionLog.poolCut(time, symbol2Pred, chosenCands.size());
                                     }
+                                    // [X3 2026-09-06] RANK trong tick, 1-based, dem tren TOAN pool da chon
+                                    //   (ke ca coin dang giu se bi skip ben duoi) — dung quy uoc "cap-then-skip"
+                                    //   ma duong LIVE dang dung (DetectEntrySignal2TradeNormal:322-327).
+                                    //   rank-mode: chosenCands = K phan tu DAU cua symbol2Pred (da sort TANG theo
+                                    //   pNoPump) => rank 1 = pNoPump thap nhat cua tick. Rank co san o DAY, khong
+                                    //   phai suy lai tu gia tri symbolPred.
+                                    int selRank = 0;
                                     for (long encodedData : chosenCands) {
                                         if (TickDecisionLog.ON) TickDecisionLog.ctxRank = (short) (++_tlRank);
+                                        selRank++;
                                         float symbolPred = Float.intBitsToFloat((int) encodedData);
                                         short targetId = (short) (encodedData >> 32);
 
@@ -345,7 +353,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                         if (!isSymbolRunning(targetId)) {
                                             KlineObjectSimple ticker = symbol2Ticker[targetId];
                                             if (Utils.isTickerAvailable(ticker)) {
-                                                createOrderBUY(targetId, ticker, MarketLevelChange.PREDICT_SYMBOL_TRADE, marketData, symbolPred);
+                                                createOrderBUY(targetId, ticker, MarketLevelChange.PREDICT_SYMBOL_TRADE, marketData, symbolPred, selRank);
                                             } else if (TickDecisionLog.ON) {
                                                 TickDecisionLog.candNoTicker(time, targetId, MarketLevelChange.PREDICT_SYMBOL_TRADE, symbolPred);
                                             }
@@ -760,6 +768,20 @@ public class SimulatorMarketLevelTicker1MStopLoss {
      *
      * @param legsByTimeAsc cac leg cua cum, DA sap xep tang dan theo timeStart
      */
+    /**
+     * [X3 2026-09-06] Doi xung {@link #clusterSymbolPred}: RANK cua cum = rank cua leg KHONG-NULL
+     * DAU TIEN theo thoi gian (leg mo cum, di qua selector). Leg DCA_LEVEL1 / BIG_DOWN co
+     * {@code selRank == null} nen khong xoa mat rank cua cum — day dung la manh ghep ma bug B1
+     * da quen doi voi {@code symbolPred}.
+     */
+    static Integer clusterSelRank(java.util.Collection<OrderTargetInfoTest> legsByTimeAsc) {
+        if (legsByTimeAsc == null) return null;
+        for (OrderTargetInfoTest lg : legsByTimeAsc) {
+            if (lg != null && lg.selRank != null) return lg.selRank;
+        }
+        return null;
+    }
+
     static Float clusterSymbolPred(java.util.Collection<OrderTargetInfoTest> legsByTimeAsc) {
         if (legsByTimeAsc == null) return null;
         for (OrderTargetInfoTest lg : legsByTimeAsc) {
@@ -826,6 +848,11 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         if (Configs.FIX_B1) {
             orderResult.symbolPred = clusterSymbolPred(time2Order.values());
         }
+        // [X3 2026-09-06] selRank phai di CUNG DUONG voi symbolPred — quen buoc nay chinh la bug B1.
+        //   KHONG dat sau co FIX_B1 va KHONG dat sau co TS_CAP_STRONG_RANK: day la field MOI, khong
+        //   duong nao doc no khi TS_CAP_STRONG_RANK = 0, nen gan vo dieu kien van byte-identical
+        //   ma lai khong tao them mot nhanh trang thai thu hai.
+        orderResult.selRank = clusterSelRank(time2Order.values());
 
 
         return orderResult;
@@ -846,7 +873,13 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                MarketDataObject marketData, Float symbolPred) {
         // Long entry — delegate vao loi chung createOrder(BUY,...). Giu nguyen chu ky de moi call-site
         // khong doi. BUY -> hanh vi CU byte-identical (chi them 1 stack-frame, khong doi output).
-        createOrder(OrderSide.BUY, symbolId, ticker, levelChange, marketData, symbolPred);
+        createOrderBUY(symbolId, ticker, levelChange, marketData, symbolPred, null);
+    }
+
+    /** [X3] Ban co RANK selector cua tick (1-based). null = leg khong di qua selector (DCA/BIG_DOWN). */
+    public void createOrderBUY(short symbolId, KlineObjectSimple ticker, MarketLevelChange levelChange,
+                               MarketDataObject marketData, Float symbolPred, Integer selRank) {
+        createOrder(OrderSide.BUY, symbolId, ticker, levelChange, marketData, symbolPred, selRank);
     }
 
 
@@ -859,6 +892,12 @@ public class SimulatorMarketLevelTicker1MStopLoss {
      */
     private void createOrder(OrderSide side, short symbolId, KlineObjectSimple ticker, MarketLevelChange levelChange,
                              MarketDataObject marketData, Float symbolPred) {
+        createOrder(side, symbolId, ticker, levelChange, marketData, symbolPred, null);
+    }
+
+    /** [X3] Nhu tren, co them RANK selector cua tick (null = khong di qua selector). */
+    private void createOrder(OrderSide side, short symbolId, KlineObjectSimple ticker, MarketLevelChange levelChange,
+                             MarketDataObject marketData, Float symbolPred, Integer selRank) {
 
 
 
@@ -983,6 +1022,14 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         }
         order.predict = predict;
         order.symbolPred = symbolPred;
+        // [X3 2026-09-06] RANK trong tick. Ghi mot dong SLF4J de cham diem ghep lai theo (sym, start)
+        //   — KHONG them cot vao printDone.csv (se pha cong hoi quy byte-identical), dung tinh than
+        //   dong PREARM_SL cua X2. tOpen in dung dinh dang cot `start` cua printDone.
+        order.selRank = selRank;
+        if (selRank != null) {
+            LOG.info("SELRANK sym={} tOpen={} tMs={} rank={} pred={}", symbolStr,
+                    Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime), ticker.startTime, selRank, symbolPred);
+        }
 
         List<OrderTargetInfoTest> orders = symbol2OrdersEntry[symbolId];
         if (orders == null) {

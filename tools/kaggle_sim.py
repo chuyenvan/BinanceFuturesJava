@@ -30,7 +30,16 @@ LOG = logging.getLogger(__name__)
 
 USER = "chuyendinh"
 BUNDLE_DS = USER + "/sim-c2b-bundle"
-TICKER_DS = [USER + "/wfo-ticker-2022", USER + "/wfo-ticker-2023", USER + "/wfo-ticker-2024h1"]
+# [X3 2026-09-06] tra no X2 muc 10: cua so DEV la 48 thang (2022-01-01..2025-12-31 = 1,461 ngay).
+#   Ba dataset 2024h2/2025h1/2025h2 DA co san tren Kaggle; truoc day danh sach nay dung o
+#   2024h1 nen kernel chi thay 912 ngay => X1/X2 phai chay tuan tu tren Oracle.
+TICKER_DS = [USER + "/wfo-ticker-2022", USER + "/wfo-ticker-2023",
+             USER + "/wfo-ticker-2024h1", USER + "/wfo-ticker-2024h2",
+             USER + "/wfo-ticker-2025h1", USER + "/wfo-ticker-2025h2"]
+# So ngay ticker TOI THIEU kernel phai thay truoc khi chay (guard chong thieu ngay am tham).
+#   1,461 = 2022-01-01..2025-12-31 (2024 nhuan). Day qua CFG["ticker_min_days"] vao kernel;
+#   run cua so ngan hon truyen submit(..., ticker_min_days=912).
+TICKER_MIN_DAYS = 1461
 DATASETS = [BUNDLE_DS] + TICKER_DS
 
 MAX_CONCURRENT = 5          # slot CPU toan account (docs/KAGGLE_RULES.md muc 1)
@@ -147,8 +156,9 @@ for t in tk:
     if not os.path.lexists(dst):
         os.symlink(t, dst)
 LOG.info("jar=%s ds=%s predwf=%s ticker=%d", jar, DS, PREDWF, len(tk))
-if len(tk) < 912:
-    LOG.error("chi thay %d file ticker, can >= 912 cho 2022-01-01..2024-06-30", len(tk))
+if len(tk) < CFG["ticker_min_days"]:
+    LOG.error("chi thay %d file ticker, can >= %d (cua so do cua run nay)",
+              len(tk), CFG["ticker_min_days"])
     sys.exit(1)
 
 os.makedirs(WORK + "/storage", exist_ok=True)
@@ -262,7 +272,7 @@ sys.exit(0)
 
 
 def submit(tag, profile, overrides=None, *, bins_ds=None, code_sha="head",
-           sim_end_date=DEFAULT_SIM_END,
+           sim_end_date=DEFAULT_SIM_END, ticker_min_days=TICKER_MIN_DAYS,
            xmx=DEFAULT_XMX, timeout_s=DEFAULT_TIMEOUT_S, enable_internet=True,
            push=True) -> str:
     """Day 1 sim len Kaggle. Tra ve kernel ref (`chuyendinh/sim-<tag>`).
@@ -275,7 +285,8 @@ def submit(tag, profile, overrides=None, *, bins_ds=None, code_sha="head",
     os.makedirs(folder, exist_ok=True)
     cfg = {"tag": str(tag), "profile": profile, "overrides": dict(overrides or {}),
            "sim_end_date": sim_end_date, "xmx": xmx, "timeout_s": timeout_s,
-           "code_sha": code_sha, "bins_ds": bins_ds or ""}
+           "code_sha": code_sha, "bins_ds": bins_ds or "",
+           "ticker_min_days": int(ticker_min_days)}
     code = KERNEL_TEMPLATE.replace("__CFG_JSON__", repr(json.dumps(cfg)))
     with open(os.path.join(folder, "run.py"), "w") as f:
         f.write(code)

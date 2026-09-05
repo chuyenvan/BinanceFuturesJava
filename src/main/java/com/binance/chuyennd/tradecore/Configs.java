@@ -398,6 +398,19 @@ public class Configs {
     }
     public static final float TS_PNOPUMP_WEAK_THR = Cfg.get("TS_PNOPUMP_WEAK_THR") != null
             ? Float.parseFloat(Cfg.get("TS_PNOPUMP_WEAK_THR").trim()) : 0.29f;
+    // [2026-09-06 X3] TRAILING CAP THEO RANK SELECTOR (TS_CAP_STRONG_RANK, 0 = TAT = mac dinh).
+    //   HIEN TRANG truoc X3: trailRate() chon cap theo GIA TRI symbolPred so voi ban le TUYET DOI
+    //   TS_PNOPUMP_WEAK_THR = 0.29. Ban le do nam NGOAI tick => tick "nong" ca K coin deu STRONG,
+    //   tick "lanh" ca K coin deu WEAK (do thuc tren C3: 71.5% lenh di nhanh STRONG). Do KHONG phai
+    //   "trailing theo selector" ma la "trailing theo thang do G015x26 da bi build_map gan lai".
+    //   Khi TS_CAP_STRONG_RANK = N > 0: cap STRONG (TS_MAX_GAP) khi selRank <= N, cap WEAK
+    //   (TS_MAX_GAP_WEAK) khi sau hon; ban le 0.29 BI BO QUA hoan toan.
+    //   selRank == null (leg DCA_LEVEL1 / BIG_DOWN, khong di qua selector) -> WEAK, dung quy uoc
+    //   bao thu giong nhanh pNoPump == null.
+    //   Default 0 => trailRate di NGUYEN duong cu => byte-identical. Xem docs/PREREG_X3.md.
+    //   KHONG final: unit test lat truc tiep.
+    public static int TS_CAP_STRONG_RANK = Cfg.get("TS_CAP_STRONG_RANK") != null
+            ? Integer.parseInt(Cfg.get("TS_CAP_STRONG_RANK").trim()) : 0;
     // [ABLATION 2026-09-02] env TIER_FLAT=1: bo he so budget theo tier (1.2/1.0/0.5 -> 1.0). Default off = byte-identical.
     public static final boolean TIER_FLAT = "1".equals(Cfg.get("TIER_FLAT"));
 

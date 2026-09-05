@@ -99,6 +99,11 @@ public class OrderTargetInfoTest implements Serializable {
     public KlineObjectSimple tickerOpen;
     public AiPredictionData predict;
     public Float symbolPred;
+    // [X3 2026-09-06] RANK cua coin trong tick luc SELECTOR_RANK_TOPK chon no (1-based, 1 = pNoPump
+    //   thap nhat tick do). null = leg khong di qua selector (DCA_LEVEL1 / BIG_DOWN) hoac chua set.
+    //   Set luc createOrder tren object LEG, va chep sang object CUM o mergeOrder qua clusterSelRank
+    //   — dung duong ma bug B1 da quen doi voi symbolPred. Chi duoc doc khi TS_CAP_STRONG_RANK > 0.
+    public Integer selRank;
 
 
     public OrderTargetInfoTest(OrderTargetStatus status, Float priceEntry,
@@ -358,6 +363,12 @@ public class OrderTargetInfoTest implements Serializable {
      * Vi du arm 5% -> SL +2.5%; 10% -> +7% (weak) / +5% (strong). LUON duong => SL khong bao gio duoi entry (khop live tsGap sau fix).
      */
     float trailRate(float maxProfitRate) {
+        // [X3 2026-09-06] TS_CAP_STRONG_RANK > 0 -> chon cap theo RANK trong tick, BO QUA ban le
+        //   TUYET DOI TS_PNOPUMP_WEAK_THR. Default 0 -> roi xuong duong cu, byte-identical.
+        if (Configs.TS_CAP_STRONG_RANK > 0) {
+            return TradeUtils.calRateLossDynamicBuyRank(maxProfitRate, this.selRank,
+                    Configs.TS_CAP_STRONG_RANK);
+        }
         Float pnp = (this.symbolPred != null) ? this.symbolPred : 1f;   // chua co selector -> coi nhu yeu (bao thu)
         return TradeUtils.calRateLossDynamicBuyPNoPump(maxProfitRate, pnp, Configs.tsPnoPumpWeakThr());
     }
