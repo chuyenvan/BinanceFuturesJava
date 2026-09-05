@@ -149,24 +149,189 @@ chi doi 4 dong + them `DCA_GRID_LEVELS` => **khong key chet nao**. `DCA_GRID_LEV
 
 ## 2. PARITY
 
-*(dien sau khi chay)*
+| tag | md5 `printDone.csv` | b | n |
+|---|---|---|---|
+| neo `C2b` (RUNBOOK muc 3) | `8f7afdfb27b15f5b6d4c886700def93c` | 60390 | 970 |
+| **`T2_c2b_ref`** | **`8f7afdfb27b15f5b6d4c886700def93c`** | **60390** | **970** |
 
-## 3. BANG RATE + PHAN BO STATUS
+**PARITY OK — byte-identical.** Moi run `rc=1` (bay #1, khong phai fail): deu co `done:` + `b:`
+va `printDone.csv` co dong.
 
-*(dien sau khi chay)*
+md5 cac chan con lai (de tai lap / doi chieu):
+`T2_full_c2b` `99dfd5c5791f922d4bd070cffee24408` · `T2_full_c2b_noDCA` `e67df5fca12b9b94600cc850d45ed229`
+· `T2_full_old` `d01d2530d6508befebd685ae3c9722c2`.
 
-## 4. RANG BUOC CUNG
+Dataset: `wfo_ds_clean` (`fundingPredDir=/home/ubuntu/predwf_map_s1a2`) cho 3 chan dau;
+`wfo_ds_t2old` build rieng (`fundingPredDir=/home/ubuntu/predwf_G015_v2`,
+`md5_funding=f6f088f02e360964783d66e32b488399`) cho `T2_full_old`, **da `rm -rf` sau khi chay**
+(dia ve 14G free). `HOLDOUT SEAL` cat 312,322 ban ghi >= 2026-01-01 nhu moi lan build.
 
-*(dien sau khi chay)*
+---
+
+## 3. BANG RATE PRIMARY
+
+| | `T2_c2b_ref` | `T2_full_c2b_noDCA` | **`T2_full_c2b`** | **`T2_full_old`** |
+|---|---|---|---|---|
+| big_down | tat | **bat** | **bat** | **bat** |
+| DCA | tat | tat | **bat (1,1,3,8)** | **bat (1,1,3,8)** |
+| selector | S1 (`map_s1a2`) | S1 | S1 | **G015_v2** |
+| **n lenh** | 970 | 1025 | 1076 | **2709** |
+| **TSloss%** | 15.155 | 15.122 | 14.777 | **19.232** |
+| **win%** | 85.258 | 85.756 | 85.223 | **80.657** |
+| **mean(profit\|STOP_MARKET_DONE)** | 7.476 | 7.457 | 7.141 | 6.820 |
+| **mean(profit\|STOP_LOSS_DONE)** | -18.896 | -18.318 | -16.033 | -19.898 |
+| mean(profit) toan bo | 3.479 | 3.559 | 3.716 | 1.671 |
+| median(profit) | 5.499 | 5.499 | 5.500 | 5.496 |
+| **mean(margin)** | 971.05 | 956.58 | **9.21** | **9.23** |
+| **total margin deployed** | 941,920 | 980,493 | **9,908** | **25,015** |
+
+### 3.1 Phan bo status (day du, khong gia dinh truoc)
+
+| tag | `STOP_MARKET_DONE` | `STOP_LOSS_DONE` (= time-stop 168h) | khac |
+|---|---|---|---|
+| `T2_c2b_ref` | 823 (84.85%) | 147 (15.15%) | — |
+| `T2_full_c2b_noDCA` | 870 (84.88%) | 155 (15.12%) | — |
+| `T2_full_c2b` | 917 (85.22%) | 159 (14.78%) | — |
+| `T2_full_old` | 2187 (80.73%) | 521 (19.23%) | **`REQUEST` 1 (0.04%)** |
+
+Luong day du **khong sinh status exit moi**. Ngoai le duy nhat: `T2_full_old` co **1 dong
+`REQUEST`** — lenh chua bao gio duoc khop/dong tinh den `SIM_END_DATE`. 1/2709, khong doi rate nao.
+
+### 3.2 Phan bo NGUON leg entry (`level`) — do truc tiep dong gop cua big_down/DCA
+
+| tag | `PREDICT_SYMBOL_TRADE` | `BIG_DOWN` | `DCA_LEVEL1` |
+|---|---|---|---|
+| `T2_c2b_ref` | 970 (100.00%) | 0 | 0 |
+| `T2_full_c2b_noDCA` | 905 (88.29%) | **120 (11.71%)** | 0 |
+| `T2_full_c2b` | 935 (86.90%) | **120 (11.15%)** | 21 (1.95%) |
+| `T2_full_old` | 2542 (93.84%) | **120 (4.43%)** | 47 (1.73%) |
+
+**`BIG_DOWN` = dung 120 leg o CA BA chan** — dung nhu co hoc: tin hieu BIG_DOWN sinh tu
+`marketData.rateDownAvg` (toan thi truong), **khong phu thuoc selector**, va so tick BIG_DOWN
+trong DEV la co dinh. 120 leg / 2.5 nam = **~48 leg/nam**. DCA thuc te chi khop 21-47 leg —
+grid `-50/-75/-90%` rat it khi cham (khop con so 0.34% cua `Configs.java:180`).
+
+### 3.3 CI 95% block-bootstrap 72h x1.21 — **cau hoi cua user**: `T2_full_c2b` - `T2_full_old`
+
+| rate | hieu | CI | ket qua |
+|---|---|---|---|
+| `TSloss%` | -4.455 | [-9.119, +0.279] | trong CI |
+| `win%` | +4.566 | [-0.335, +9.526] | trong CI |
+| `mean(profit\|SM)` | +0.321 | [-0.893, +1.773] | trong CI |
+| `mean(profit\|SL)` | +3.865 | [-1.238, +8.864] | trong CI |
+| `mean(profit)` | +2.045 | **[+0.061, +4.011]** | **KHAC** |
+| `mean(margin)` | -0.026 | [-0.441, +0.376] | trong CI |
+
+**1/6 rate ngoai CI.** Quy tac pre-reg doi **>= 2 rate cung huong ngoai CI** => **KHONG PHAN
+BIET DUOC**. Ghi nhan: bon rate deu nghieng ve C2b (TSloss thap hon 4.5pp, win% cao hon 4.6pp)
+va hai cai do **cham bien CI** — huong nhat quan nhung chua du bang chung theo cong da dang ky.
+
+### 3.4 CI 95% block-72h x1.21 — `T2_c2b_ref` - `T2_full_c2b_noDCA` (bat rieng big_down)
+
+| rate | hieu | CI | ket qua |
+|---|---|---|---|
+| `TSloss%` | +0.033 | [-6.157, +6.389] | trong CI |
+| `win%` | -0.498 | [-6.781, +5.719] | trong CI |
+| `mean(profit\|SM)` | +0.019 | [-1.639, +1.672] | trong CI |
+| `mean(profit\|SL)` | -0.579 | [-8.008, +7.029] | trong CI |
+| `mean(profit)` | -0.080 | [-2.846, +2.663] | trong CI |
+| `mean(margin)` | +14.47 | [-126.8, +156.7] | trong CI |
+
+**0/6 rate ngoai CI** => bat big_down mot minh **KHONG PHAN BIET DUOC voi c2b_min**.
+
+---
+
+## 4. RANG BUOC CUNG (maxDD <= 15% · UW <= 120 ngay · khong nam am · khong quy < -5% · n >= 600)
+
+| tag | maxDD% | UW (ngay) | nam am | quy min | n | ket qua |
+|---|---|---|---|---|---|---|
+| `T2_c2b_ref` | -13.1 | 93 | khong | -3.7 (2022Q4) | 970 | **PASS** |
+| `T2_full_c2b_noDCA` | -12.9 | 93 | khong | -2.9 (2022Q4) | 1025 | **PASS** |
+| `T2_full_c2b` | -0.1 | 58 | khong | 0.0 | 1076 | PASS *(rong — xem 4.1)* |
+| `T2_full_old` | -0.4 | **147** | khong | -0.1 | 2709 | **FAIL** (UW 147 > 120) |
+
+### 4.1 Canh bao doc so: hai chan co DCA PASS mot cach RONG
+
+`T2_full_c2b` PASS moi rang buoc **vi no gan nhu khong giao dich bang tien**: `mean(margin)`
+9.21 vs 971 = **1.05%** von trien khai cua `c2b_min`; equity 35,000 -> 35,314 (**+0.9% trong 2.5
+nam**, CAGR **0.36%**). maxDD -0.1% khong phai "an toan hon", no la **khong co gi de mat**.
+Rang buoc cung khong co san mot muc loi nhuan toi thieu nen chung khong bat duoc truong hop nay.
+`T2_full_old` cung vay (CAGR **0.32%**) va van FAIL underwater.
+
+---
 
 ## 5. PHAN QUYET
 
-*(dien sau khi chay)*
+**Cau hoi user (`T2_full_c2b` vs `T2_full_old`, cung luong, chi khac selector):
+KHONG PHAN BIET DUOC** — 1/6 rate PRIMARY ngoai CI (can >= 2). Nhung phep so nay duoc thuc
+hien **o mot diem van hanh gan nhu vo hieu** (ca hai chan trien khai ~1% von), nen no **khong**
+tra loi duoc cau hoi "selector nao tot hon trong luong day du" — no chi noi rang o diem do,
+hai selector khong tach nhau tren rate.
 
-## 6. EQUITY — KHONG PHAI TIEU CHI
+**Cai T2 tra loi duoc, ro rang:**
 
-*(dien sau khi chay)*
+1. **`big_down` bat lai mot minh = vo hai va cung gan nhu vo ich.** `T2_full_c2b_noDCA` them
+   **120 leg BIG_DOWN** (11.7% so lenh) ma **0/6 rate ngoai CI**, maxDD -12.9 vs -13.1,
+   underwater 93 = 93, equity 61,287 vs 60,390. Dieu nay dang chu y vi leg BIG_DOWN **bo qua
+   gate AI** (muc 1.1) — vay ma khong lam hong gi. Gia thiet don gian nhat: 120 leg / 2.5 nam
+   qua it de doi bat ky rate nao.
+2. **DCA voi luoi thiet ke `1,1,3,8` la thu pha luong**, va **pha bang SIZING chu khong bang
+   chat luong lenh**: tong trong so 13 nen leg dau chi con `1/13` suat budget, `DCA_GRID_SCALE`
+   van de o **1.5** (khong bu) => `mean(margin)` **971 -> 9.21 (105 lan nho hon)**,
+   `total margin deployed` 941,920 -> 9,908. Chat luong tung lenh **khong xau di**
+   (`mean(profit)` 3.48 -> 3.72, `mean(profit|SL)` -18.90 -> -16.03); chi co **quy mo** bien mat.
+3. **Khong de cu ung vien baseline moi** (dung pre-reg muc 0.6). `T2_full_c2b_noDCA` khong phan
+   biet duoc voi `c2b_min` nen khong co ly do doi.
 
-## 7. CONFOUND SIZING
+**The mo (can pre-reg rieng, KHONG lam trong T2):** chay lai luong day du voi
+`DCA_GRID_SCALE` **duoc bu** de `mean(margin)` giu nguyen ~971 (voi `1,1,3,8` thi can
+`scale ~ 1.5 x 13 = 19.5`, phai kiem `CapacityProbe` truoc vi dinh von dong thoi se x13 o cac
+tick cham day). Day dung la the ma `W1_SWEEP muc 10` da mo va van chua ai dong.
 
-*(dien sau khi chay)*
+---
+
+## 6. EQUITY — **KHONG PHAI TIEU CHI**
+
+Dan nhan ro: `E[max nhieu]` voi N=4 = `2.57 x sqrt(2 ln 4)` = **4.28pp CAGR**. Khoang cach giua
+`T2_c2b_ref` va `T2_full_c2b_noDCA` (0.7pp) nam **hoan toan trong** mien nhieu do.
+**Khong duoc chon chan nao theo cot nay.**
+
+| tag | equity cuoi | CAGR (2.496 nam) | vs `T2_c2b_ref` |
+|---|---|---|---|
+| `T2_full_c2b_noDCA` | 61,287 | ~25.2% | +897 |
+| `T2_c2b_ref` | 60,390 | 24.48% | 0 |
+| `T2_full_c2b` | 35,314 | **0.36%** | -25,076 |
+| `T2_full_old` | 35,283 | **0.32%** | -25,107 |
+
+Loi nhuan theo nam: `T2_c2b_ref` 11.6 / 45.4 / 6.3 · `noDCA` 12.1 / 45.4 / 7.4 ·
+`full_c2b` 0.3 / 0.4 / 0.2 · `full_old` 0.2 / 0.4 / 0.2. Khong chan nao co nam am.
+
+---
+
+## 7. CONFOUND SIZING — bao truoc, do thuc
+
+Pre-reg muc 0.4 canh bao "DCA doi `mean(margin)` nen cai thien maxDD/UW co the chi la size nho
+hon". Do thuc **manh hon canh bao**: khong phai "co the", ma la **toan bo** hieu ung.
+
+| | `c2b_ref` | `full_c2b` | ti le |
+|---|---|---|---|
+| `mean(margin)` | 971.05 | 9.21 | **0.95%** |
+| `total margin deployed` | 941,920 | 9,908 | **1.05%** |
+| maxDD | -13.1% | -0.1% | — |
+| CAGR | 24.48% | 0.36% | — |
+
+maxDD va underwater cua hai chan co DCA **khong duoc doc nhu cai thien rui ro**. Theo
+`RUNBOOK muc 4`, sizing **khong do duoc tren DEV**; moi so o cot `full_c2b`/`full_old` lien quan
+den bien do (maxDD, UW, equity, CAGR) **chi la ham cua size**, khong phai bang chung ve co che.
+Cac rate PER-TRADE (`TSloss%`, `win%`, `mean(profit|status)`) **khong** bi confound nay va la
+phan duy nhat cua muc 3 duoc dung de ket luan.
+
+### 7.1 Sai lech so voi pre-reg (ghi de minh bach)
+
+- Dung **4/4 run** da dang ky, khong them chan nao sau khi thay so.
+- `T2_full_old` khac `T2_full_c2b` o **2 bien** (bins + gate calib 0.014052) — da ghi truoc o
+  pre-reg muc 0.3, khong phai phat sinh.
+- CI dung block-bootstrap 72h **hai mau doc lap** (khong ghep cap theo lenh — hai chan co so
+  lenh khac nhau 1076 vs 2709 nen khong the ghep cap), 4000 lan lay mau,
+  noi rong nua-do-rong x1.21. Script: `research/analysis/t2_rates.py`.
+- Khong chay VAL. Khong push.

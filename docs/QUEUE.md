@@ -314,3 +314,45 @@ o 168h chi con 1/4). `L_f4q` (ngu phan vi 4h = ban `LABELH`) va `L_f72` (`1{maxF
    (CI chua 0) nhung o sim thi khac that.
 
 Cau hoi goc cua `CEIL_RESULT §3` (nhan **168h**) van nguyen — T1 chi kiem 4h va 72h.
+
+---
+
+## T2 — ghep selector C2b vao LUONG DAY DU (big_down + DCA)  [DONE]
+
+Cau hoi user: "ghep c2b vao luong sim hien tai... thay c2b voi selector cu".
+Pre-reg `8aa20e3`, chi tiet `docs/T2_FULLFLOW.md`. 4 run, Oracle, 2 dataset build.
+
+**Kham pha (muc 1)** — `big_down` KHONG phai key config: no la `MarketLevelChange.BIG_DOWN`
+(`rateDownAvg < MS_DOWN_BIG_AVG = -0.03157`), bat/tat bang **`SELECTOR_ONLY_ENTRY`**
+(`Simulator...:271`). Leg BIG_DOWN **BO QUA gate AI** (`Simulator...:817`). DCA tat bang
+**`DCA_GRID_WEIGHTS=1,0,0,0`** (cong `gridLegWeightRatio<=0` chan moi leg >= 2). **Hai co doc
+lap** — dinh chinh `C2B_SPEC:73` (dong do ghi `SELECTOR_ONLY_ENTRY` tat ca BIG_DOWN lan DCA_LEVEL1).
+"Luong day du" duoc **dinh nghia lai** = `c2b_min` tru 2 cong nghien cuu (delta 2 key), KHONG
+dung `D0_full`/`G1_giveback5` lich su (khac jar, dataset da xoa — bay da dinh o `N4_a8s175`).
+"Selector cu" = **`predwf_G015_v2`** (ban `G015x26` goc KHONG tai lap duoc), kem hieu chuan gate
+`SIM_MIN_MOMENTUM_15M=0.014052` cua `c3.properties`.
+
+**Parity PASS**: `T2_c2b_ref` byte-identical `C2b` (b:60390, 970, md5 `8f7afdfb…`).
+
+**Phan quyet cau hoi user (`T2_full_c2b` vs `T2_full_old`): KHONG PHAN BIET DUOC** — 1/6 rate
+PRIMARY ngoai CI (`mean(profit)` +2.05, CI [+0.06,+4.01]); can >= 2. `TSloss%` -4.46 va `win%`
++4.57 nghieng ve C2b nhung cham bien CI.
+
+**Nhung phep so do duoc thuc hien o diem van hanh gan nhu vo hieu:** luoi DCA thiet ke `1,1,3,8`
+lam leg dau chi con `1/13` suat budget ma `DCA_GRID_SCALE` van 1.5 (khong bu) =>
+**`mean(margin)` 971 -> 9.21 (105 lan nho hon)**, `total margin deployed` 941,920 -> 9,908,
+**CAGR 24.48% -> 0.36%** (`full_old` 0.32%). maxDD -0.1% cua chung **khong phai an toan** —
+la khong co gi de mat. `T2_full_old` van **FAIL** rang buoc cung (underwater **147** > 120).
+
+**Ket qua sach nhat cua batch — `T2_full_c2b_noDCA` (big_down BAT, DCA TAT):**
+**0/6 rate ngoai CI** so voi `c2b_min`. 120 leg BIG_DOWN (11.7% so lenh, y het 120 o ca 3 chan
+vi tin hieu market-level khong phu thuoc selector), maxDD -12.9 vs -13.1, underwater 93 = 93,
+equity 61,287 vs 60,390 (trong mien nhieu 4.28pp cua N=4). => **bat big_down mot minh vo hai
+va gan nhu vo ich** — dang chu y vi no bo qua gate.
+
+Status moi duy nhat cua luong day du: **`REQUEST` 1/2709** o `T2_full_old` (lenh chua dong toi
+`SIM_END_DATE`). Khong co status exit moi nao khac.
+
+**Khong de cu ung vien baseline moi.** The mo: chay lai luong day du voi `DCA_GRID_SCALE` **duoc
+bu** (~19.5 cho luoi 1,1,3,8) de giu `mean(margin)` ~971, kiem `CapacityProbe` truoc — dung the
+ma `W1_SWEEP muc 10` da mo.
