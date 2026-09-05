@@ -12,7 +12,8 @@ log = logging.getLogger(__name__)
 
 B = "/home/ubuntu/java/devrun"
 QS = ['2022Q1', '2022Q2', '2022Q3', '2022Q4', '2023Q1',
-      '2023Q2', '2023Q3', '2023Q4', '2024Q1', '2024Q2']
+      '2023Q2', '2023Q3', '2023Q4', '2024Q1', '2024Q2',
+      '2024Q3', '2024Q4', '2025Q1', '2025Q2', '2025Q3', '2025Q4']
 DEFAULT = ["v2_g1", "v3_g1", "map_vol7d_g1", "G1_giveback5", "map_s1a_g1",
            "map_s1a2_g1", "C3", "C2_g015", "C2a", "C2b"]
 RX = re.compile(r"Update (\d{8}) \d\d:\d\d => b:(-?\d+).*?unP:\s*(-?\d+)")

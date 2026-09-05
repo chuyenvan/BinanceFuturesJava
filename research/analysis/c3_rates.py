@@ -25,7 +25,8 @@ log = logging.getLogger(__name__)
 B = "/home/ubuntu/java/devrun"
 RX = re.compile(r"Update (\d{8}) \d\d:\d\d => b:(-?\d+).*?unP:\s*(-?\d+)")
 QS = ['2022Q1', '2022Q2', '2022Q3', '2022Q4', '2023Q1',
-      '2023Q2', '2023Q3', '2023Q4', '2024Q1', '2024Q2']
+      '2023Q2', '2023Q3', '2023Q4', '2024Q1', '2024Q2',
+      '2024Q3', '2024Q4', '2025Q1', '2025Q2', '2025Q3', '2025Q4']
 WEAK_THR = 0.29          # Configs.TS_PNOPUMP_WEAK_THR; <= thr => STRONG (cap 0.08)
 BLOCK_H = 72
 NREP = 2000
