@@ -6,6 +6,24 @@ Sau khi xong: doi status thanh `DONE <commit>`, ghi ket qua vao doc rieng, commi
 
 ---
 
+## Q0 — X2 exit 48 thang  [DONE c633861 / `docs/X2_EXIT48.md`]
+
+Hai truc exit (time-stop T, pre-arm hard SL S), 6 run one-at-a-time tren nen `C3` / 48 thang.
+**CA HAI TRUC NULL** theo quy tac da chot: `win%` giam ngoai CI o 5/5 muc va **0/5 muc PASS
+rang buoc cung**. Cong hoi quy byte-identical PASS (`X2_PARITY` = `X1_C3`, md5 `d39da294...`).
+Da them vao engine: `SIM_PRE_ARM_SL` (mac dinh 0 = TAT). **Khong de cu baseline moi.**
+
+Ba viec DE LAI, deu can pre-reg rieng, **KHONG duoc tu chay**:
+- 🔴 **Nguong UW can user quyet lai.** X2 dung R4 TUONG DOI (<= 1.2x UW parity cung nam)
+  vi nguong tuyet doi 120 khong con dat duoc (`X1_EXTEND` muc 7). Voi R4 tuong doi: parity PASS,
+  moi arm FAIL. Rang buoc nay **chua tung duoc user duyet**. `T120` la ung vien neu user chap
+  nhan danh doi "UW 2025 302 -> 137, doi lay UW 2022 64 -> 99".
+- **SL PHU THUOC TRANG THAI** (`SIM_COND_EXIT_HOURS` / `SIM_COND_EXIT_MIN_FAV`, co san tu F2,
+  **chua bao gio quet tren 48 thang**) — huong con lai sau khi SL TINH da bi bac bo.
+- Sua `tools/kaggle_sim.py` cho cua so 48 thang (xem `X2_EXIT48` muc 10).
+
+---
+
 ## Q1 — Chot horizon time-stop  [BLOCKED: can user duyet mo lai quota] — LUU Y: F2/T1/W1 deu thay cat som keo UW len 150-190d; mo lai chi khi rang buoc UW<=120 duoc chap nhan la tieu chi
 
 E1 da dung het quota 4/4 (`docs/PREREG_EXIT.md`) va ra phan quyet TS_H=72.

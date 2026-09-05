@@ -214,6 +214,28 @@ maxDD/UW tu **chuoi equity** (`qret.py`).
 - **Time-stop 168h la kenh mat tien lon nhat**, va `mean(profit|SL_DONE)` giam don
   dieu khi rut ngan: 168h −18.90% / 120h −16.15% / 96h −13.99% / 72h −12.31%.
   Xem `docs/E1_EXIT_RESULT.md`.
+- 🔴 **X2 (48 thang, 2026-09-05): CA HAI truc exit deu NULL — `docs/X2_EXIT48.md`.**
+  Co che cua `E1` TAI LAP DUOC tren engine da sua va tren 48 thang (`mP|SL` −21.85 ->
+  −18.70 -> −16.73 -> **−14.58**, `p10 loser` −46.89 -> **−30.86**, `mP|SM` khong doi),
+  **nhung `win%` giam NGOAI CI o ca 5 muc** va **0/5 muc PASS rang buoc cung**.
+  **Cat lo som KHONG giam underwater, no DOI CHO underwater**: `T72` doi 113 ngay UW cua
+  2025 (302 -> 189) lay 95 ngay UW cua 2022 (64 -> **159**). Do la cai `E1` muc 5.3 thay
+  ma khong tach duoc theo nam. **DUNG chay lai truc time-stop.**
+- 🔴 **PRE-ARM HARD SL DA CO TRONG ENGINE** (`SIM_PRE_ARM_SL`, 0 = tat = mac dinh,
+  `tradecore/PreArmSlUtils.java`, 5 unit test). Key cu `SIM_HARD_SL_PCT` da chet; day la ban
+  VIET LAI: nguong do tren `firstEntryPrice` (bat bien qua DCA), chi khi `priceSL==null`, gia
+  dong `min(stopLevel, min(open,close))`. Cong hoi quy: key tat -> `X1_C3` byte-identical.
+  **Ket qua do duoc: mot nguong SL TINH la cong cu SAI.** No **dun** phan bo lenh thua thanh
+  mot cot tai dung muc cat (`medloser` = −20.00 o `S20`, −30.00 o `S30`, vs −18.11 parity):
+  duoi dai duoc keo len (`p10 loser` −46.89 -> −21.55) nhung THAN bi keo xuong, nen `mP|SL`
+  cua muc −30% **xau hon parity** (−22.78 vs −21.85). `S20` con lam **2025 thanh NAM AM**
+  (−1.91%). **KHONG dat `SIM_PRE_ARM_SL` khac 0 trong bat ky baseline nao.**
+- **Chi phi that cua SL do duoc** (ghep `(sym,start)` voi parity): ty le lenh bi cat ma parity
+  ket thuc `STOP_MARKET_DONE` = 10.1% (`T120`) / 16.6% (`T96`) / 22.9% (`T72`) / 10.0% (`S30`),
+  tang don dieu theo do cat ngan. `S20` KHONG do duoc (ty le ghep 77.1% < 80%).
+- ⚠️ **`tools/kaggle_sim.py` CHUA chay duoc cua so 48 thang**: `TICKER_DS` thieu
+  `wfo-ticker-2024h2` / `-2025h1` / `-2025h2` (ba dataset nay **DA co** tren Kaggle) va guard
+  `len(tk) < 912` phai thanh 1,461. X1 va X2 deu phai chay tuan tu tren Oracle vi cho nay.
 - Nhom bi time-stop chet vi **khong bao gio chay**: 66.6% chua tung vuot +3%,
   maxFav median 1.83% dat o gio thu 4. Ha nguong arm KHONG cuu duoc. `docs/E0_EXIT_CF.md`.
 - **DCA cua `C3_FULL` KHONG phai "an FTX mot lan"** (X1, 48 thang): leg 2+ duong o
