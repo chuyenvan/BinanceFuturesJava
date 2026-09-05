@@ -125,20 +125,38 @@ public class DcaGridScalarTest {
         assertFalse(DcaUtils.shouldDcaGrid(100f, 1f, 3));
     }
 
-    /** Ti trong quy ve ti le tren TONG roi nhan SCALE — tong cac leg = SCALE (khong phinh exposure ngau nhien). */
+    /**
+     * [B2 2026-09-05] BAT BIEN THAT: exposure ca cum khi cham DAY ladder = budget x SCALE, voi
+     * budget = managerBudget(...) DA chia /dcaGridTotalWeight() mot lan.
+     *
+     * <p>Ban cu cua test nay khang dinh {@code sum(gridLegWeightRatio) == SCALE}. Do la bat bien
+     * cua CHINH CAI BUG: no dung o muc ratio nhung sai o muc margin THUC TE, vi managerBudget da
+     * chia tong trong so mot lan nua => margin ~ w[i]/total^2. Nay do o muc TICH
+     * (ratio x budget) = dung noi con so thuc su duoc dung de tinh quantity.
+     */
     @Test
-    public void weightRatioSumsToScale() {
-        Configs.DCA_GRID_SCALAR = true;
-        Configs.DCA_GRID_LEGS = 3;
-        Configs.DCA_GRID_W_RATIO = 2.0f;
-        Configs.DCA_GRID_SCALE = 8.0f;
+    public void clusterExposureIsBudgetTimesScale() {
+        boolean fix0 = Configs.FIX_B2;
+        try {
+            Configs.DCA_GRID_SCALAR = true;
+            Configs.DCA_GRID_LEGS = 3;
+            Configs.DCA_GRID_W_RATIO = 2.0f;
+            Configs.DCA_GRID_SCALE = 8.0f;
+            Configs.FIX_B2 = true;
 
-        float sum = 0;
-        for (int i = 0; i <= 3; i++) sum += DcaUtils.gridLegWeightRatio(i);
-        assertEquals("tong ti trong x SCALE phai = SCALE", 8.0f, sum, 1e-3f);
-        assertEquals("het bac -> 0", 0f, DcaUtils.gridLegWeightRatio(4), EPS);
-        assertTrue("leg sau phai nang hon leg truoc khi W_RATIO>1",
-                DcaUtils.gridLegWeightRatio(3) > DcaUtils.gridLegWeightRatio(0));
+            float equity = 35000f;
+            float budget = TradeUtils.managerBudget(700f, 0f, equity, null);   // u=0 -> throttle=1
+            float sumMargin = 0;
+            for (int i = 0; i <= 3; i++) sumMargin += budget * DcaUtils.gridLegWeightRatio(i);
+            assertEquals("cham day ladder => exposure cum = equity x F_BASE x SCALE",
+                    equity * Configs.F_BASE * 8.0f, sumMargin, 0.5f);
+
+            assertEquals("het bac -> 0", 0f, DcaUtils.gridLegWeightRatio(4), EPS);
+            assertTrue("leg sau phai nang hon leg truoc khi W_RATIO>1",
+                    DcaUtils.gridLegWeightRatio(3) > DcaUtils.gridLegWeightRatio(0));
+        } finally {
+            Configs.FIX_B2 = fix0;
+        }
     }
 
     /** Tran margin theo bac dang scalar: BASE + STEP*i, clamp <=0.98; STEP=0 => tran phang. */

@@ -394,6 +394,19 @@ public class Configs {
     // [ABLATION 2026-09-02] env TIER_FLAT=1: bo he so budget theo tier (1.2/1.0/0.5 -> 1.0). Default off = byte-identical.
     public static final boolean TIER_FLAT = "1".equals(Cfg.get("TIER_FLAT"));
 
+    // ========================================================================
+    // [2026-09-05 C3] BA CO SUA BUG B1/B2/B3 — xem docs/PREREG_C3.md, docs/C3_BASELINE.md.
+    //   MAC DINH true = DA SUA. Dat "false" trong profile => tai lap hanh vi CU byte-identical
+    //   (cong hoi quy C2b: b:60390 aerospike / b:60395 file, md5 8f7afdfb... / 910f1aa6...).
+    //   B1: mergeOrder() chep symbolPred sang object cum => trailRate() dung dung nhanh STRONG/WEAK.
+    //   B2: tong trong so DCA chi chia MOT LAN (bo lan chia thu hai o DcaUtils.gridLegWeightRatio).
+    //   B3: sizing lay EQUITY hien tai (balanceCurrent + unProfit) thay hang so capitalStart().
+    //   KHONG final: unit test lat co truc tiep.
+    // ========================================================================
+    public static boolean FIX_B1 = !"false".equalsIgnoreCase(Cfg.getOr("SIM_FIX_B1", "true"));
+    public static boolean FIX_B2 = !"false".equalsIgnoreCase(Cfg.getOr("SIM_FIX_B2", "true"));
+    public static boolean FIX_B3 = !"false".equalsIgnoreCase(Cfg.getOr("SIM_FIX_B3", "true"));
+
 
     // =========================================================
     // 9. KẾT NỐI DỮ LIỆU (STORAGE & AEROSPIKE)

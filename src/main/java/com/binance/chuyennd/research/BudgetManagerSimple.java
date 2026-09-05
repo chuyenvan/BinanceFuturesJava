@@ -151,6 +151,29 @@ public class BudgetManagerSimple {
         }
     }
 
+    /**
+     * [B3 2026-09-05] EQUITY HIEN TAI dung lam goc SIZING (thay hang so balanceBasic=capitalStart()).
+     *
+     * <p>= {@link #balanceCurrent} (= balanceBasic + realized profit) + {@link #unProfit}
+     * (unrealized cua cac cum dang chay). Chon cap nay chu khong phai
+     * {@code balanceBasic + profit + unProfit} vi CA HAI duoc ghi CUNG MOT LUC trong
+     * {@link #updateBalance} => anh chup NHAT QUAN: khong dem trung phan vua chuyen tu
+     * unrealized sang realized (profit cong ngay luc dong lenh, unProfit chi refresh theo tick).
+     *
+     * <p>Cadence: updateBalance duoc goi moi GIO va moi nua dem (Simulator dong 366/376) trong
+     * khi lenh mo theo phut => gia tri nay tre toi da 1 gio. Do la THUAN QUA KHU, KHONG
+     * look-ahead — va do la ly do chap nhan duoc do tre.
+     *
+     * <p>TRAN margin/leg la HE QUA cua cong thuc, khong phai hang so rieng:
+     * {@code max = equity * F_BASE * DCA_GRID_SCALE} = 4.5% equity (F_BASE=0.03, SCALE=1.5).
+     * O equity 35000 dung bang 1575 nhu truoc khi compound.
+     */
+    public Float equityNow() {
+        if (balanceCurrent == null) return balanceBasic;
+        float e = balanceCurrent + (unProfit != null ? unProfit : 0f);
+        return e > 0f ? e : balanceCurrent;
+    }
+
     public Float getBudget() {
         if (BUDGET_PER_ORDER == null || BUDGET_PER_ORDER == 0.0f) updateBudget();
         return BUDGET_PER_ORDER;

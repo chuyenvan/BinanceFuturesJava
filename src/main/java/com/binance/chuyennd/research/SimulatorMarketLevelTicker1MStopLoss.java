@@ -727,7 +727,29 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         BudgetManagerSimple.getInstance().marginRunning -= orderMulti.calMargin();
     }
 
-    private OrderTargetInfoTest mergeOrder(List<OrderTargetInfoTest> orders, KlineObjectSimple ticker,
+    /**
+     * [B1 2026-09-05] Chon symbolPred (= pNoPump cua selector S1) DAI DIEN cho ca cum.
+     *
+     * <p>Quet theo THU TU THOI GIAN TANG DAN va lay gia tri KHONG-NULL DAU TIEN.
+     * Ly do chon "leg dau co pred" chu khong phai "leg dau" hay "leg cuoi": chi leg vao qua
+     * selector ({@code PREDICT_SYMBOL_TRADE}) mang symbolPred; leg {@code BIG_DOWN} va
+     * {@code DCA_LEVEL1} duoc tao voi {@code symbolPred=null} (call-site 275/283/299) vi chung
+     * BO QUA gate AI. Lay "leg cuoi" se nhan null o moi cum co DCA => rot lai dung bug cu.
+     * "Leg dau co pred" = dac trung selector cua cum tai luc MO, bat bien qua DCA — cung nguyen
+     * tac da dung cho {@code firstEntryPrice} va {@code clusterFirstLegTime}.
+     *
+     * @param legsByTimeAsc cac leg cua cum, DA sap xep tang dan theo timeStart
+     */
+    static Float clusterSymbolPred(java.util.Collection<OrderTargetInfoTest> legsByTimeAsc) {
+        if (legsByTimeAsc == null) return null;
+        for (OrderTargetInfoTest lg : legsByTimeAsc) {
+            if (lg != null && lg.symbolPred != null) return lg.symbolPred;
+        }
+        return null;
+    }
+
+    // [B1 2026-09-05] package-private (truoc: private) de unit test goi truc tiep. Khong doi hanh vi.
+    OrderTargetInfoTest mergeOrder(List<OrderTargetInfoTest> orders, KlineObjectSimple ticker,
                                            OrderTargetInfoTest prevRunning) {
         TreeMap<Long, OrderTargetInfoTest> time2Order = new TreeMap<>();
         float quantity = 0f;
@@ -771,6 +793,18 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         if (Configs.FUNDING_MARK_NOTIONAL && prevRunning != null) {
             orderResult.fundingAccrued = prevRunning.fundingAccrued;
             orderResult.fundingLastSettle = prevRunning.fundingLastSettle;
+        }
+
+        // [B1 2026-09-05] BUG: truoc day symbolPred KHONG duoc chep sang object cum. Ma
+        //   OrderTargetInfoTest.trailRate() chay tren CHINH object cum va co fallback pnp=1f khi
+        //   null => 1f > TS_PNOPUMP_WEAK_THR (0.29) LUON dung => 100% lenh di nhanh WEAK
+        //   (cap TS_MAX_GAP_WEAK=0.03); nhanh STRONG (cap TS_MAX_GAP=0.08, cho symbolPred <= 0.29)
+        //   CHUA BAO GIO chay. Cot symbolPred trong printDone.csv van co so THAT vi closeOrder()
+        //   ghi tu object LEG — nhin CSV se tuong trailing da dung no. Xem docs/W1_SWEEP.md,
+        //   docs/QUEUE.md muc BUGS B1.
+        //   Gan null khi moi leg deu null => y het hanh vi cu (khong co nhanh moi).
+        if (Configs.FIX_B1) {
+            orderResult.symbolPred = clusterSymbolPred(time2Order.values());
         }
 
 
@@ -872,7 +906,14 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         }
 
         Float marginRunning = BudgetManagerSimple.getInstance().marginRunning;
-        Float balanceBasic = BudgetManagerSimple.getInstance().balanceBasic;
+        // [B3 2026-09-05] Goc sizing = EQUITY hien tai (compound) thay hang so capitalStart()=35000.
+        //   Anh huong CA HAI ve trong managerBudget: budget = equity*F_BASE*throttle/ladder VA
+        //   u = marginRunning/equity (tran U_MAX cung do tren equity — nhat quan, khong lech pha).
+        //   Duong LIVE (DetectEntrySignal2TradeNormal:556) KHONG doi: no truyen
+        //   BudgetManager.balanceBasic rieng cua no, khong di qua day.
+        Float balanceBasic = Configs.FIX_B3
+                ? BudgetManagerSimple.getInstance().equityNow()
+                : BudgetManagerSimple.getInstance().balanceBasic;
         Float budget = BudgetManagerSimple.getInstance().getBudget();
 
         budget = TradeUtils.managerBudget(budget, marginRunning, balanceBasic, levelChange);
