@@ -21,7 +21,10 @@ mkdir -p $L $B/logs
 [ -n "$(pgrep java || true)" ] && { echo "X3_ABORT: JAVA_BUSY"; exit 2; }
 FREE=$(df -BG --output=avail / | tail -1 | tr -dc '0-9')
 echo "disk_free_G=$FREE"
-[ "$FREE" -lt 8 ] && { echo "X3_ABORT: DISK_LOW ($FREE G < 8G)"; exit 3; }
+# Nguong 8G chi co y nghia khi CON PHAI BUILD dataset (~4G). Dataset da co roi thi moi run
+# chi ton them ~sim.out; nguong 3G la du. (Bug cua ban dau: chan ca luc dataset da san sang.)
+NEED=8; [ -f $DS/market.bin ] && NEED=3
+[ "$FREE" -lt "$NEED" ] && { echo "X3_ABORT: DISK_LOW ($FREE G < ${NEED}G)"; exit 3; }
 N=$(ls /home/ubuntu/predwf_map_s1a2_x1/predict_wf_*.bin | wc -l)
 [ "$N" = "16" ] || { echo "X3_ABORT: co $N bins, can 16"; exit 6; }
 
