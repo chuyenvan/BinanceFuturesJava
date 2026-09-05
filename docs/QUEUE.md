@@ -545,3 +545,40 @@ Pre-reg `docs/PREREG_X1.md` (`91d7b93`) · ket qua `docs/X1_EXTEND.md`.
 4. ⚠️ `wfo_gate_pred.csv` het o 2025-12-31 23:59. Do 2026 = dot holdout cuoi cung.
 5. ⚠️ `research/pipeline/ledger.py` (ban goc) van co glob `funding_label_202[1-4]*.pb` —
    chay no voi `T1` sau 2025 se **lang le thieu 2025**. Ban `x1/x1_ledger.py` da sua.
+
+---
+
+## H1 — dung INPUT cho holdout 2026 (2026-09-06) — **PREP DONE, cho user mo seal**
+
+Pre-reg `docs/PREREG_H1.md` · bao cao `docs/H1_HOLDOUT_PREP.md`. **Khong mo seal, khong chay
+sim nao qua 2025-12-31, khong doc outcome 2026 nao.**
+
+- **Cua so kha dung = 2026-01-01 -> 2026-07-01 GMT+7 = 6 THANG, 2 fold** (`20260101`,
+  `20260401`). Chan cung la feature store gate + Tool1 + OI (deu het 2026-07-01), **khong
+  phai ticker** (ticker co toi 2026-08-13 nhung vo dung).
+- ✅ **`p15` 2026 DA DUNG XONG**: `claudedata/wfo_gate_pred_2026_H1.csv`, 260,183 dong,
+  sha256 `4cc62c14f95f...` — khop doan bi cat ghi trong seal manifest (260,182 + 1 dong bien).
+  Sinh tu `fold_19`/`fold_20` ONNX da co, **khong train lai, khong replay Aerospike**.
+- ✅ **Cong P1 PASS**: tai tao `p15` cua 2024Q2 va 2025Q4 tu feature store + ONNX ra
+  **spearman = 1.000000** ca hai fold. **Byte-identity KHONG dat** (92.75% / 97.82% chuoi
+  `%.8f` trung) — phan du la lam tron chu so thu 8 cua float32 (`p50 |d| = 2.5e-09`), chi
+  21-46 phut/quy lech that.
+- 🔴 **`p15` la OUTPUT cua model gate, khong phai tinh tu gia.** Va **2026 khong con la holdout
+  sach o tang gate**: model gate duoc ghi 2026-08-06, ke hoach fold chay 2026-08-19 voi
+  `end=20260701` — chot trong luc 2026 dang nhin thay; seal chi dat 2026-09-01. Khong go lai duoc.
+- 🔴 **BLOCKER 1: `CLOSES_1H.bin` khong co generator** — grep toan van toan bo dia + git log
+  `-S`: moi file khop deu la READER. Va neo da do (`PREREG_FS` muc 0) noi nguon la **kline 1h
+  Vision**, KHONG phai ticker 1m. => `featv2`/`cand_dev`/bins deu chan tai day.
+- 🔴 **BLOCKER 2: bins fold 2026 lay P(win) tu dau?** fold `20260101`/`20260401` cua
+  `predwf_G015x26` da bi seal xoa, va bo do **khong tai lap duoc**. Train moi bang
+  `g72_train.py` = ho `G015_v2`, hieu chuan khac — ma ban le trailing `0.29` la nguong
+  **tuyet doi** tren chinh P(win) do. Phai do hieu chuan tai cutoff `20251001` (chi DEV) truoc.
+- ⛔ Cong P2/P3/P4/P5 **chua chay** (chan boi hai blocker). Parity dataset `SIM_END_DATE=20251231`
+  chua chay.
+- Lenh mo seal chinh xac + chuoi 2 arm: `docs/H1_HOLDOUT_PREP.md` muc 7.
+
+### Cho user quyet — H1 khong chay duoc neu chua co
+
+1. `CLOSES_1H` dung lai theo duong nao (Vision 1h kline = giu neo, hay Aerospike 1m = mat neo).
+2. Chap nhan bins tron nguon (16 fold G015x26 + 2 fold G015_v2) hay khong.
+3. Mo seal hay khong — mot lan, khong hoan tac.
