@@ -34,7 +34,7 @@ if sys.argv[1]=="build":
     mp=pd.read_csv("/home/ubuntu/selector_pred_out/symbol_map.csv"); sym2id=dict(zip(mp.symbol,mp.symId))
     P=load_bins("/home/ubuntu/claudedata/predwf_G015x26").rename(columns={"p":"p_g015"}); log("G015 recs",len(P))
     parts=[]
-    for f in sorted(glob.glob("/home/ubuntu/label_15m/funding_label_202[1-4]*.pb")):
+    for f in sorted(glob.glob("/home/ubuntu/label_15m/funding_label_%s*.pb" % os.environ.get("X1_LBGLOB","202[1-4]"))):
         L=read_label(f,usecols=["tEpochMs","symbol","maxFav_72h","maxAdv_72h","retEnd_72h","nBars_72h"]); L=L[L.tEpochMs%Q==0]
         L=L[L.tEpochMs.isin(open_ts.ts.values)]; L["sym"]=L.symbol.map(sym2id); L=L.dropna(subset=["sym"]); L["sym"]=L.sym.astype(np.int64)
         parts.append(L.drop(columns=["symbol"]).rename(columns={"tEpochMs":"ts"}))
