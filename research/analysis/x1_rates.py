@@ -160,12 +160,21 @@ def parity(tags):
 
 def n_eff(tags, dd):
     log.info("")
-    log.info("=== n_eff (so khoi 72h CO it nhat 1 lenh) — moc cu = 908 ===")
+    # CANH BAO DON VI: 908 cua F4_TIMING la n_eff muc TICK cua tang gate (n=86,615 tick),
+    # KHONG phai don vi cua rate muc lenh. Moc so sanh dung cho rate muc lenh la so khoi 72h
+    # CO lenh cua ban 30 thang: C3_BASE = 89, C3_FULL = 93.
+    ref = {"X1_C3": ("C3_BASE", 89), "X1_C3_FULL": ("C3_FULL", 93)}
+    log.info("=== n_eff muc LENH = so khoi 72h CO it nhat 1 lenh ===")
+    log.info("    (908 cua F4_TIMING la n_eff muc TICK cua tang gate — KHAC don vi, dung so sanh)")
     for t in tags:
         d = dd[t]
         ne = int(d.blk.nunique())
-        log.info("  %-12s n_eff=%d  (x%.2f so 908 => CI hep lai ~x%.2f)",
-                 t, ne, ne / 908.0, np.sqrt(ne / 908.0))
+        if t in ref:
+            rt, nr = ref[t]
+            log.info("  %-12s n_eff=%d vs %s=%d  (x%.2f => CI hep lai ~x%.2f)",
+                     t, ne, rt, nr, ne / nr, np.sqrt(ne / nr))
+        else:
+            log.info("  %-12s n_eff=%d", t, ne)
 
 
 def main():

@@ -478,3 +478,30 @@ theo phai tach **DCA** khoi **120 leg BIG_DOWN**; CI cham 0 nen bang chung con y
 
 ⚠️ **No ky thuat moi:** moi ket luan cua E1/W1/T1/T2/T2b sinh tu engine co 3 bug. Phan lien quan
 **trailing** (E1, W1 A/B/C, T2b DCA) can do lai tren engine moi.
+---
+
+## X1 — keo dai cua so do 30 -> 48 thang (2026-09-05) — **XONG**
+
+Pre-reg `docs/PREREG_X1.md` (`91d7b93`) · ket qua `docs/X1_EXTEND.md`.
+
+- **DEV moi = 2022-01-01 -> 2025-12-31.** Khong con VAL sach. Holdout duy nhat = 2026.
+- **Chan B (2021H2) BO** — cat 2 OI feature khoi S1 KEEP se pha cong parity voi `C3`.
+- **4/4 cong byte-identical PASS** (featv2 / ledger / pred_s1a2 / bins) + **parity noi bo
+  IDENTICAL** ca hai arm (961 va 1,059 dong).
+- **PHAN QUYET: GIU `C3`.** `C3_FULL` truot tieu chi 1 (1/5 rate ngoai CI) va 3 (UW).
+  Nhung **gia thuyet "DCA an FTX mot lan" DA BI BAC BO** (DCA duong o 2022 va 2025).
+- `n_eff` muc lenh: 89 -> **167** khoi 72h (x1.88, CI hep ~x1.37). Van khong du de doi ket luan.
+
+### Mo ra tu X1 — chua lam
+
+1. 🔴 **Nguong `UW <= 120` phai duoc user quyet lai** — ca `C3` lan `C3_FULL` deu FAIL o
+   2024 (121) va 2025 (302 / 227) tren cua so 48 thang. **Khong duoc tu ha nguong.**
+2. 🔴 `predwf_G015x26` (khong tai lap duoc) nay da lan sang ca 6 fold moi. Muon go phai do
+   lai toan bo baseline voi `predwf_G015_v2` mo rong — job rieng, `C3` se doi so.
+3. ⚠️ Do sau lenh thua 2025 (`mean(profit|SL)` -28.94) la kenh mat tien lon nhat cua cua so
+   moi. Truc `SIM_TS_MAX_GAP` / `SIM_TS_PNOPUMP_WEAK_THR` (vung trang cua `W1`) lien quan
+   truc tiep — **nhung dong vao chung SAU KHI da thay bang X1 la tune-after-the-fact**;
+   phai pre-reg rieng, khong duoc coi la tiep tuc X1.
+4. ⚠️ `wfo_gate_pred.csv` het o 2025-12-31 23:59. Do 2026 = dot holdout cuoi cung.
+5. ⚠️ `research/pipeline/ledger.py` (ban goc) van co glob `funding_label_202[1-4]*.pb` —
+   chay no voi `T1` sau 2025 se **lang le thieu 2025**. Ban `x1/x1_ledger.py` da sua.

@@ -5,9 +5,12 @@ khong can hoi lai user, khong can doc lai 30 doc khac.
 
 ## 0. LUAT CUNG — vi pham la sai, khong phai lua chon
 
-1. **KHONG chay VAL.** Moi thu trong pham vi DEV (2022-01 -> 2024-06, hoac 2021-07
-   sau khi mo rong). VAL da cham 5 lan, khong con la holdout. Muon chay VAL phai
-   co user duyet TRUC TIEP trong chat. Khong tu quyet.
+1. **DEV = 2022-01-01 -> 2025-12-31 (48 thang)** tu 2026-09-05 (`docs/X1_EXTEND.md`).
+   User da quyet: 2024-07 -> 2026-01 (xua la VAL) **nhap vao DEV**. **KHONG CON VAL SACH** —
+   validate cuoi cung = **forward test**. Holdout duy nhat con lai la **2026**
+   (`HoldoutSeal.SEAL_MS = 2026-01-01`; du lieu pred/gate 2026 da bi xoa khoi Oracle).
+   Mo 2026 phai co user duyet TRUC TIEP trong chat + `HOLDOUT_UNSEAL`. Khong tu quyet.
+   Chan 2021H2 (mo nguoc) **DA THU VA BO** — ly do cung o `X1_EXTEND` muc 1.2.
 2. **Pre-register TRUOC khi chay.** Viet `docs/PREREG_<TEN>.md`, commit, ROI moi chay.
    Khong sua pre-reg sau khi thay ket qua. Null co tinh thong tin — bao cao null.
 3. **Equity KHONG phai tieu chi.** `sd(dCAGR)` exit params = 2.57pp;
@@ -134,6 +137,26 @@ underwater **96 ngay**. Profile **`profiles/c3_min.properties`** (16 key cua `c2
 3 co `SIM_FIX_B1/B2/B3=true`), md5 printDone `38be0cb3195984e1000e61d9cdef54da`.
 Chi tiet: **`docs/C3_BASELINE.md`**, pre-reg `docs/PREREG_C3.md`.
 
+### Tren cua so DEV MOI 48 thang (X1, 2026-09-05) — `docs/X1_EXTEND.md`
+
+`X1_C3` (= `C3` chay toi 2025-12-31, bins `predwf_map_s1a2_x1` 16 fold, profile
+`profiles/x1_c3.properties`): **2,058 lenh**, win **85.33%**, TSloss **14.87%**,
+`mean(profit|SL)` **-21.85**, equity **98,523**, CAGR **29.58%**, maxDD **-13.31%**,
+UW **302 ngay**. md5 printDone `d39da2940dfd815f60772f70517750bf`.
+**Cong parity noi bo PASS**: cat toi 2024-06-30 ra **dung 961 dong IDENTICAL** `C3_BASE`.
+
+`X1_C3_FULL` (profile `profiles/x1_c3_full.properties`): 2,266 lenh, equity 111,428,
+CAGR 33.63%, maxDD -12.46%, UW 227. md5 `2478e90d4e6147bf4cc64f75967ef47d`.
+**KHONG duoc nhan lam baseline** — chi 1/5 rate chat luong ngoai CI, va FAIL rang buoc cung.
+
+🔴 **`UW <= 120 ngay` KHONG con la nguong dat duoc** tren 48 thang: **ca hai** arm FAIL o
+2024 (121) va 2025 (302 / 227). Nguong nay duoc dat khi chi co 30 thang (UW max 96).
+Can user quyet lai — **khong duoc tu ha nguong.**
+
+Chay lai: `research/pipeline/x1/run_x1.sh` (bins, 4 cong byte-identical) roi
+`research/pipeline/x1/run_x1_sim.sh` (dataset + 2 arm, Oracle + `TICKER_SOURCE=file`).
+Cham diem: `research/analysis/x1_rates.py X1_C3 X1_C3_FULL`.
+
 **`C2b` = 60,390 chi con la SO LICH SU.** No sinh tu engine co 3 bug (B1/B2/B3).
 KHONG ghep cap so cu (E1/W1/T1/T2/T2b) voi so moi trong cung mot so sanh.
 Muon tai lap C2b: `profiles/c3_regress.properties` (3 co `false`) -> ra
@@ -193,6 +216,15 @@ maxDD/UW tu **chuoi equity** (`qret.py`).
   Xem `docs/E1_EXIT_RESULT.md`.
 - Nhom bi time-stop chet vi **khong bao gio chay**: 66.6% chua tung vuot +3%,
   maxFav median 1.83% dat o gio thu 4. Ha nguong arm KHONG cuu duoc. `docs/E0_EXIT_CF.md`.
+- **DCA cua `C3_FULL` KHONG phai "an FTX mot lan"** (X1, 48 thang): leg 2+ duong o
+  **2022** (20 leg, +2,758) VA **2025** (32 leg, +4,813), am nhe 2024 (2 leg, -164),
+  khong co leg nao 2023. Gia thuyet regime-dependent da bi bac bo. Cai chan `C3_FULL` bay
+  gio la **chung co muc rate con mong** (1/5) va rang buoc cung UW — ma `C3` cung vi pham.
+- **2025 khong lam xau `TSloss%`/`win%`** (15.05 / 84.69, y het 4 nam). Cai xau di la
+  **do sau lenh thua**: `mean(profit|SL)` -15.52 (2024) -> **-28.94** (2025), moi phan vi
+  sau gap ~2 lan. Universe x2.2 (265 -> 591 coin), gate mo x5 (2,258 -> 11,653 tick 15m),
+  nhanh trailing STRONG 91.8% -> **95.4%**, median hold 13.8h -> **9.0h**.
+  S1 selector **manh len** o 2025 (`edge5` +8.52% -> **+19.34%**). Xem `X1_EXTEND` muc 10.
 - **Aerospike Oracle da du 2021** (`test/funding_data` 88-136 coin/thang). Khong
   can copy set nao ve. `docs/D1_DATA_AUDIT.md`.
 - **Sizing (F_BASE / U_MAX / DCA_GRID_SCALE) KHONG do duoc tren DEV.** Sizing khong

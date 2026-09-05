@@ -167,3 +167,39 @@ backtest, lay lai tu Kaggle version 1.
 Tu 2026-09-03 moi run cung TU KHAI bins: `DumpConfig` in `bins.sha256_16` va
 `WfoDataset.export` stamp `binsSha256` vao `manifest.txt` cua dataset. Xem
 `docs/C2B_SPEC.md` va `research/pipeline/README.md` muc 0.
+
+## X1 — `predwf_map_s1a2_x1/` (16 fold, cua so 48 thang 2022-01..2025-12)
+
+Sinh 2026-09-05 boi `research/pipeline/x1/x1_build_map.py s1a2x1` tu `pred_s1a2x1.parquet`
+(`x1_s1_rank.py`, 16 cutoff) map len phan phoi P(win) cua `claudedata/predwf_G015x26`.
+Pre-reg `docs/PREREG_X1.md`; ket qua `docs/X1_EXTEND.md`.
+**10 bin dau BYTE-IDENTICAL muc 2** (cong G4 PASS) — cot sha256 duoi day trung y bang tren.
+
+| File | Byte | Ban ghi | sha256 | ts range (ms) | span |
+|---|---|---|---|---|---|
+| predict_wf_20220101.bin | 29,220,204 | 1,123,854 | `beb9b1ad87920837c37a4fbad987d7266a8fdc65e872901f23bff6e877b9fca4` | 1640970000000..1648745100000 | 90d |
+| predict_wf_20220401.bin | 30,472,260 | 1,172,010 | `46d74f5af24408e29c4c89a5b0578e6b3b510ebd49341746368cbd88d1e54703` | 1648746000000..1656607500000 | 91d |
+| predict_wf_20220701.bin | 30,898,868 | 1,188,418 | `bba6d88bb55475d2b27524a8745a9cd1cd5e1c3a81246f98ac43749a928d8de6` | 1656608400000..1664556300000 | 92d |
+| predict_wf_20221001.bin | 32,308,276 | 1,242,626 | `52de4cf735a16ff3f35c7db01278ffa6740defccc28817d48c2f46af50d3b3c8` | 1664557200000..1672505100000 | 92d |
+| predict_wf_20230101.bin | 33,867,782 | 1,302,607 | `5fbeeb76e766885a9f25003937f79aa5f97fe56fbe46d4be5c6bcaa9b44b21a1` | 1672506000000..1680281100000 | 90d |
+| predict_wf_20230401.bin | 39,639,730 | 1,524,605 | `9dc70e5173d55e56f07b5e2d8dc57eccee8368887c2d54b819cabf146306697a` | 1680282000000..1688143500000 | 91d |
+| predict_wf_20230701.bin | 43,461,964 | 1,671,614 | `f34966245a911853967e8028bf54b4be294ba150ece54f16ff8e93cc3e4ee264` | 1688144400000..1696092300000 | 92d |
+| predict_wf_20231001.bin | 49,736,934 | 1,912,959 | `48d51834bb718cac1b4b089a33ebd953bbce2bb83348c7a2f62fb083f5e55005` | 1696093200000..1704041100000 | 92d |
+| predict_wf_20240101.bin | 55,665,792 | 2,140,992 | `ac1fadf2c90836a8b6f13f470910785504de111e3d7449e9a3990ac60a148f08` | 1704042000000..1711903500000 | 91d |
+| predict_wf_20240401.bin | 58,669,104 | 2,256,504 | `82d1b979cabda8aa3a5ee94ccdec95a00483150d93657a33189ceaa9f733e6ae` | 1711904400000..1719765900000 | 91d |
+| predict_wf_20240701.bin | 61,431,266 | 2,362,741 | `863667cac9d14abee8634bb9637b555eb7b1b4e902726acc0f5a2951d94a9917` | 1719766800000..1727714700000 | 92d |
+| predict_wf_20241001.bin | 70,705,752 | 2,719,452 | `16438f3c14c601d8305056aa665091850f2b6e3f4b7095df4af6275aa111195c` | 1727715600000..1735663500000 | 92d |
+| predict_wf_20250101.bin | 79,463,878 | 3,056,303 | `48a252b72affab2e9776fbf94dc4c897ad32211d0cdb8dd9726ad56684b72787` | 1735664400000..1743439500000 | 90d |
+| predict_wf_20250401.bin | 91,930,410 | 3,535,785 | `ad86905ee22532c055ad559cf9319426b65ae96ef330d508b46b7fb4a657be0c` | 1743440400000..1751301900000 | 91d |
+| predict_wf_20250701.bin | 106,035,774 | 4,078,299 | `a7fafe546f1ccb941a523270c8e6e5c643f449802d753184a8d27968c14fc1ad` | 1751302800000..1759250700000 | 92d |
+| predict_wf_20251001.bin | 117,457,860 | 4,517,610 | `618de63cdbd5db9bfbec6c217d0ef38ab6ce2c60a3bbdea44b5e24aa41229be9` | 1759251600000..1767199500000 | 92d |
+| **TONG** | **930,965,854** | — | — | — | 16 fold |
+
+    bins.sha256 (noi tiep, sort ten) = b87762312620f31769a8ef0160ec8132a5482c8f235d86e3364b59cce022a862
+    bins.files = 16   bins.bytes = 930965854
+
+Dataset WFO sinh tu bo nay: `manifest.txt` `binsSha256=b87762312620f31769a8ef0160ec8132a5482c8f235d86e3364b59cce022a862`,
+`foldCount=16`, `maxFoldSpanDays=91`, `leakFreeFrom=2022-01-01`.
+
+Dau vao: `/home/ubuntu/ledger/pred_s1a2x1.parquet` (64,056,011 B,
+sha256 `2618fe1a0235d8ed3602f7b4bf37d8ba611e4e6c923854e10184d036065309fe`).
