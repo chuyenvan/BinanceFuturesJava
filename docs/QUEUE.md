@@ -6,6 +6,28 @@ Sau khi xong: doi status thanh `DONE <commit>`, ghi ket qua vao doc rieng, commi
 
 ---
 
+## Q00 — X3 trailing cap theo RANK + pre-arm SL -50%  [DONE / `docs/X3_RANKCAP_SL50.md`]
+
+Pre-reg `docs/PREREG_X3.md` (`e622926`). 5 run tuan tu tren Oracle, 48 thang, nen `X1_C3`.
+Cong hoi quy PASS byte-identical (`X3_PARITY` = `X1_C3`, md5 `d39da294...`, 2,058 lenh).
+**CA HAI VIEC NULL.** Da them vao engine: `TS_CAP_STRONG_RANK` (mac dinh 0 = TAT).
+**Khong de cu baseline moi.**
+
+Bon viec DE LAI, deu can pre-reg rieng, **KHONG duoc tu chay**:
+- 🔴 **R4 (UW) phai dua len user** — bang chung dinh luong moi: `X3_R6` khong phan biet duoc voi
+  PARITY o **moi** rate muc lenh (0/8 ngoai CI, `n` va `win%` giong het) nhung `UW 2022` 64 -> 159.
+- **Tin hieu cho pha SAU-ARM van la vung trang.** X3 chi chung minh rank selector KHONG phai tin
+  hieu do. Huong con lai: dai luong sinh ra tu chinh pha sau-arm (bien dong realized cua cum,
+  `maePeak`/thoi gian tu luc arm). Trung mot phan voi `SIM_COND_EXIT_*` cua F2.
+- **`TS_MAX_GAP` / `TS_MAX_GAP_WEAK` (0.08 / 0.03) chua bao gio duoc quet tren 48 thang.** X3 chi
+  doi AI duoc cap nao, khong doi cap la BAO NHIEU. `W1` truc A/C van trang.
+- ⚠️ **Duong Kaggle 48 thang: code DA THONG, nut that la BANG THONG.** `tools/kaggle_sim.py` da sua
+  (`TICKER_DS` + guard 1,461 day qua `CFG["ticker_min_days"]`). Nhung bundle X3 = **5.32 GB** va
+  throughput Oracle -> Kaggle do duoc **3.23 MB/s** => **27.5 phut upload thuan**, khong nhanh hon
+  52 phut chay tuan tu. Sau khi upload MOT lan thi doi jar chi ton 95MB — luc do Kaggle moi thang.
+
+---
+
 ## Q0 — X2 exit 48 thang  [DONE c633861 / `docs/X2_EXIT48.md`]
 
 Hai truc exit (time-stop T, pre-arm hard SL S), 6 run one-at-a-time tren nen `C3` / 48 thang.
@@ -20,7 +42,7 @@ Ba viec DE LAI, deu can pre-reg rieng, **KHONG duoc tu chay**:
   nhan danh doi "UW 2025 302 -> 137, doi lay UW 2022 64 -> 99".
 - **SL PHU THUOC TRANG THAI** (`SIM_COND_EXIT_HOURS` / `SIM_COND_EXIT_MIN_FAV`, co san tu F2,
   **chua bao gio quet tren 48 thang**) — huong con lai sau khi SL TINH da bi bac bo.
-- Sua `tools/kaggle_sim.py` cho cua so 48 thang (xem `X2_EXIT48` muc 10).
+- ~~Sua `tools/kaggle_sim.py` cho cua so 48 thang~~ — **DA TRA o X3** (`X3_RANKCAP_SL50` muc 11).
 
 ---
 

@@ -170,9 +170,19 @@ P(win) cua G015x26 trong moi tick, chi gan lai theo rank cua S1 (`changed` 4.9%)
 Exit: arm +7% roi trailing `giveback = min(peak*0.5, cap)`.
 **Ban le NGUOC voi truc giac:** `symbolPred (=pNoPump) <= 0.29` -> **STRONG cap 0.08**
 (nha nhieu hon, nuoi lau hon); `> 0.29` hoac null -> **WEAK cap 0.03**.
-Do thuc tren `C3`: **71.5% lenh di nhanh STRONG**.
+Do thuc: **83.8% lenh di nhanh STRONG** tren 48 thang (`X1_C3`); 71.5% la so cu cua `C3` (30 thang).
+
+🔴 **DAY KHONG PHAI "trailing theo selector" — do lai o X3 (`docs/X3_RANKCAP_SL50.md` muc 3):**
+`symbolPred` la gia tri thang do **G015x26**; `build_map.py` giu NGUYEN multiset P(win) cua G015
+trong tung tick, chi gan lai coin nao nhan gia tri nao theo thu hang S1. Ban le 0.29 la **TUYET DOI,
+nam NGOAI tick**, ma cac gia tri trong MOT tick lai bam rat sat nhau (vd 0.3547 / 0.3586 / 0.3613).
+Hau qua do duoc: `%STRONG` theo rank chi trai tu **80.9% (rank 6) den 87.7% (rank 1)** — spread
+**6.8pp**, tuc ban le gan nhu **TRUC GIAO voi rank**. No quyet dinh theo **muc lac quan cua G015 tai
+tick do**: tick nong ca 8 coin STRONG, tick lanh ca 8 WEAK.
+Key `TS_CAP_STRONG_RANK` (mac dinh 0 = TAT) cho phep doi sang cap theo RANK — **da thu 2/4/6, NULL**.
 ⚠️ Truoc fix B1 (moi so <= `af6181e`) nhanh STRONG **CHUA BAO GIO chay** — 100% WEAK.
-**Khong co stop-loss truoc arm.** `STOP_LOSS_DONE` = **time-stop 168h**, KHONG phai SL.
+**Khong co stop-loss truoc arm** o baseline. `STOP_LOSS_DONE` = **time-stop 168h**, KHONG phai SL.
+(`SIM_PRE_ARM_SL` ton tai tu X2 nhung mac dinh 0 = TAT; −0.20/−0.30/−0.50 deu NULL.)
 
 Sizing: `margin = equity x F_BASE x throttle x DCA_GRID_SCALE x w[i]/total`, voi
 `equity = balanceCurrent + unProfit` (**COMPOUND**, tu fix B3) va
@@ -236,6 +246,21 @@ maxDD/UW tu **chuoi equity** (`qret.py`).
 - ⚠️ **`tools/kaggle_sim.py` CHUA chay duoc cua so 48 thang**: `TICKER_DS` thieu
   `wfo-ticker-2024h2` / `-2025h1` / `-2025h2` (ba dataset nay **DA co** tren Kaggle) va guard
   `len(tk) < 912` phai thanh 1,461. X1 va X2 deu phai chay tuan tu tren Oracle vi cho nay.
+- 🔴 **X3 (48 thang, 2026-09-06): CA HAI viec NULL — `docs/X3_RANKCAP_SL50.md`.**
+  - **Trailing cap theo RANK selector (`TS_CAP_STRONG_RANK` = 2/4/6): NULL, va ly do la CO HOC.**
+    Do tren `PARITY`: `mean(profit|SM)` cua **rank 1-2 = 6.801** con **rank 7-8 = 7.065** — **KHONG
+    co gradient chat luong theo rank**, rank sau con nhinh hon. Nha cap rong 8% cho rank nong la dat
+    cuoc vao mot truc khong mang thong tin. `X3_R6` ra **0/8 rate ngoai CI**, `n` (2,058) va `win%`
+    (85.33) **giong het** PARITY. `X3_R2` chi doi HINH DANG winner (than +0.5pp, p90 −1.27pp) — dung
+    phep doi median-doi-duoi cua B1, chay NGUOC chieu. **`S1` xep hang coin de VAO lenh, no KHONG noi
+    gi ve pha SAU-ARM.** Hai cau hoi khac nhau — dung tai dung selector cho trailing.
+  - **`SIM_PRE_ARM_SL=-0.50`: NULL.** `p10loser` **XAU DI** −46.89 -> −50.07 (co hoc: parity p10loser
+    nam TREN muc cat, nen cat dan phan vi do **hoi tu ve −50 tu ca hai phia**). Cai no mua duoc that
+    su: `minloser` −94.64 -> **−71.44** va **chi phi cat oan 1.8%** (re nhat da do, vs 10.0% cua `S30`,
+    22.9% cua `T72`). **DUNG them muc thu tu cho truc S** — X2 (−20/−30) + X3 (−50) da dong o ba do sau.
+  - 🔴 **R4 (underwater) o do phan giai nay chu yeu la NHIEU.** `X3_R6` khong phan biet duoc voi PARITY
+    o MOI rate muc lenh, nhung `UW 2022` **64 -> 159 ngay** va vo tran R4. Mot rang buoc bi nhieu
+    single-realization lam nhay 95 ngay thi khong con do duoc chat luong. Phai dua len user.
 - Nhom bi time-stop chet vi **khong bao gio chay**: 66.6% chua tung vuot +3%,
   maxFav median 1.83% dat o gio thu 4. Ha nguong arm KHONG cuu duoc. `docs/E0_EXIT_CF.md`.
 - **DCA cua `C3_FULL` KHONG phai "an FTX mot lan"** (X1, 48 thang): leg 2+ duong o
