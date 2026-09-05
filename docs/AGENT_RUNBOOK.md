@@ -68,9 +68,27 @@ env WFO_DATA_DIR=$DS WFO_SMART_CACHE=1 SIM_END_DATE=20240630 \
    duoi 5G free thi DUNG.
 6. Neo: **60390** voi `TICKER_SOURCE=aerospike`; **60395** voi `TICKER_SOURCE=file`
    (lech 1 lenh/970, FTT 2022-11-09). So sanh Oracle<->Kaggle chi tin toi ~0.01%.
-7. **GPU BI CAM cho rank-IC.** `XGBRanker(device=cuda)` spearman 0.985 vs CPU
-   (nguong 0.999), lech rank-IC 0.01843 > moi effect size dang do. Da tao 2 false
-   positive. Kaggle CPU != Oracle CPU (0.17040 vs 0.1723).
+7. **Device: CPU o dau cung duoc; GPU chi de QUET.** Do lai 2026-09-05, 3 moi truong
+   x 3 seed, cung mot file hash khop (`docs/BENCH_DEVICE.md`).
+   - **Kaggle CPU == Oracle CPU byte-for-byte**: per-tick `|dIC|` = **0.0 chinh xac**,
+     `ic_sha256` trung ca 3 seed, cay dau tien trung sha — du khac arch (x86 vs aarch64),
+     python (3.12 vs 3.10), numpy (2.0.2 vs 2.2.6). => **train S1 tren Kaggle CPU vo dieu
+     kien**. So cu `0.17040 vs 0.1723` la lech DU LIEU/pipeline, KHONG phai lech may;
+     khong duoc dung no de khoa vao Oracle.
+   - **GPU lech that, nhung ly do khac lenh cam cu**: per-tick lech ngang nhieu seed
+     (x1.07-x1.20), `edge5` cung nam trong nhieu seed (x1.21); cai lech that la
+     `|d mean rank-IC|` = **0.00448 ~ x3.7** nen seed cua CPU, va GPU **tu no nhieu gap
+     4.8 lan** CPU. Nguyen nhan: `Cover` lech 31/31 node (RNG `subsample`/`colsample`
+     khac) + `Split` lech 11/31 (quantile sketch `hist` khac). Ghim seed khong cuu duoc.
+   - **`nthread` khong anh huong**: `n_jobs=1` vs `4` cho ket qua giong het (tree1 sha
+     trung, `dIC` = 0.0).
+   - **Cong `spearman >= 0.999` DA BO.** Doi seed tren cung mot may cho spearman
+     **0.9817** (774,270 dong) — cong do loai ca viec re-seed chinh mo hinh. Chinh no
+     tao 2 false positive, khong phai GPU. Thay bang: **hieu ung phai vuot CI multi-seed
+     (>= 3 seed) do trong cung moi truong**; chua co CI thi chua duoc ket luan.
+   - **Van giu nguyen**: khong ghep cap so tu 2 moi truong trong mot so sanh; GPU thi CA
+     phep so phai tren GPU; parity/byte-identity phai chay tren dung device sinh ra neo;
+     Java sim o lai Oracle (data host + neo 60390).
 8. `TIME_RUN` (ngay bat dau DEV) o `configs/sim_dev.properties:39`, KHONG co
    `SIM_START_DATE`, va `TIME_RUN` khong trong whitelist `Cfg.java:50` => chi doi
    qua file config.

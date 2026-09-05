@@ -1,0 +1,63 @@
+{
+ "tag": "oracle_cpu",
+ "device": "cpu",
+ "n_jobs": 4,
+ "seeds": [
+  42,
+  43,
+  44
+ ],
+ "xgboost": "3.2.0",
+ "numpy": "2.2.6",
+ "pandas": "2.3.3",
+ "python": "3.10.12",
+ "machine": "aarch64",
+ "processor": "aarch64",
+ "cpu_count": 4,
+ "OMP_NUM_THREADS": "<unset>",
+ "data_path": "/home/ubuntu/bench_device/bench_s1.parquet",
+ "file_sha256": "6b407696d99bd8fa4477b9faed8e7c3c72f3b0cc9d0b6aa3edbb556b1355c994",
+ "X_sha256": "567fb13314098ce52ac92be13bcf7a5cf6b2246c296c9ee0df2ce82b72b3fd8f",
+ "X_dtype": "float32",
+ "X_shape": [
+  1220490,
+  9
+ ],
+ "ts_sha256": "b652840eb6cd7172b01bc1d422f542e3391600ba4910f1a269967c908c4877f3",
+ "y_sha256": "d4602dac895b2f8d05082cde907861b337a0856149cf06fd78b58a3ce7310208",
+ "g_sha256": "88c500c901009010bbb4373532f57828555dc5f16404f4f6087343a51b49bed1",
+ "tree1_rows": 31,
+ "tree1_sha": "a5924a0ed04e99cdc60751f95f92a3a7eaf3f75979d1134192c276a8a7dba940",
+ "tree1_train_rows": 445068,
+ "booster_cfg": {
+  "device": "cpu",
+  "fail_on_invalid_gpu_id": "0",
+  "n_jobs": "4",
+  "nthread": "4",
+  "random_state": "42",
+  "seed": "42",
+  "seed_per_iteration": "0",
+  "validate_parameters": "1"
+ },
+ "per_seed": {
+  "42": {
+   "mean_rank_ic": 0.173163703319128,
+   "n_ticks": 4595,
+   "edge5_pct": 6.8564646894649615,
+   "ic_sha256": "6470dd222d454c11f9f3c49db333ad9f98a6e6b0d97521092fd7ba3bcf1d32bb"
+  },
+  "43": {
+   "mean_rank_ic": 0.17159890524028698,
+   "n_ticks": 4595,
+   "edge5_pct": 6.749284605716026,
+   "ic_sha256": "47e74786152d00fc3eb57cbf61ec2d56c098cfa4a57bbd597a1e9bcce79e414c"
+  },
+  "44": {
+   "mean_rank_ic": 0.1713540727459887,
+   "n_ticks": 4595,
+   "edge5_pct": 6.6104481749882265,
+   "ic_sha256": "17d3233245894d4aae7ddddf05cd3f1e8efa5d78b41e6799a9831f2e5b5346d8"
+  }
+ },
+ "elapsed_s": 662.9
+}

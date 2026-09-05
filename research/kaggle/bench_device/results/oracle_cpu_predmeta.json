@@ -1,0 +1,14 @@
+{
+ "tag": "oracle_cpu",
+ "device": "cpu",
+ "rows": 774270,
+ "seeds": [
+  42,
+  43
+ ],
+ "sha_p42": "6fc9464bc8e700ff0a325495c0eb729151d7c91d335f29aca434c62696e4448c",
+ "sha_p43": "2fb15447b96ec3ece975d80e09d2f3d886da532a0a6cd97db1665efcf3068cee",
+ "spearman_pooled_seedAB": 0.9816512718697299,
+ "spearman_pertick_mean_seedAB": 0.9690956465676781,
+ "elapsed_s": 437.4
+}

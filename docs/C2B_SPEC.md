@@ -82,7 +82,7 @@ hon thi phai **them tick gate MO**, khong mua duoc bang doi do dai khoi.
 | nhan | `rel5 = min(int(rank_pct(rel) * 5), 4)`, `rel = g1lite - median_tick(g1lite)` |
 | WFO | 10 cutoff `20220101..20240401` (GMT+7), OOS 3 thang, **purge 72h**, `assert tr.ts.max() < cutoff` |
 | output | `score = -pred` => **score THAP = TOT** (`s1_rank.py:50`) |
-| moi truong | python 3.10.12, xgboost 3.2.0, **CPU** (GPU cam — xem §2.4) |
+| moi truong | xgboost 3.2.0, **CPU** — Oracle hoac Kaggle deu duoc (byte-identical, xem §2.4) |
 
 ### 2.1 Nhan — doc cho dung
 
@@ -133,12 +133,32 @@ Hai he qua that:
    admit-count; doi G015x26 thi doi ca he.
 2. `symbolPred` ma exit dung de chia STRONG/WEAK (§5) **la gia tri G015x26**, khong phai diem S1.
 
-### 2.4 GPU bi cam cho moi phep do rankIC
+### 2.4 Device: CPU o dau cung duoc; GPU chi de quet
 
-`XGBRanker(device="cuda")` khong tai lap CPU: spearman **0.985490** (nguong 0.999), sai lech
-tuyet doi trung binh per-tick rank-IC **0.01843** — lon hon moi hieu ung dang tim. Tren GPU da
-tung tao **2 ung vien vuot nguong GIA**. Va **Kaggle CPU != Oracle CPU** (cung xgboost 3.2.0):
-0.17040 vs 0.1723 => phep so ghep cap phai cung mot moi truong.
+Do 2026-09-05, 3 moi truong x 3 seed tren cung mot file da dong bang (hash khop tuyet doi):
+`docs/BENCH_DEVICE.md`, script `research/kaggle/bench_device/`.
+
+| cap | per-tick `mean\|dIC\|` | `\|d mean rank-IC\|` | `\|d edge5\|` |
+|---|---|---|---|
+| Oracle CPU vs **Kaggle CPU** | **0.00000** | **0.00000** | **0.000pp** |
+| CPU vs **Kaggle GPU** | 0.02185 | 0.00448 | 0.198pp |
+| *nen between-seed (chi CPU)* | *0.01824* | *0.00121* | *0.164pp* |
+
+**Kaggle CPU tai lap Oracle CPU byte-for-byte** (`ic_sha256` trung ca 3 seed, cay dau tien
+trung sha256), du khac arch/python/numpy => S1 duoc train o bat ky dau tren CPU. So cu
+`0.17040 vs 0.1723` la lech du lieu, khong phai lech may.
+
+**GPU** (`device="cuda"`) khong tuong duong: `Cover` lech 31/31 node (RNG lay mau khac),
+`Split` lech 11/31 (quantile sketch khac). Per-tick va `edge5` van nam trong nhieu seed,
+nhung `mean rank-IC` lech **x3.7** nen seed cua CPU va GPU tu no nhieu gap **4.8 lan**.
+=> GPU chi dung de QUET, **ca phep so phai cung tren GPU**, bao cao kem **CI >= 3 seed**.
+
+**Cong `spearman >= 0.999` da bo.** Do lai dung thong ke do tren 774,270 dong OOS:
+CPU-vs-GPU cung seed = **0.9813**, CPU seed42-vs-seed43 (cung may, cung device) = **0.9817**.
+Doi device ton dung bang doi seed; nguong 0.999 loai ca viec re-seed mo hinh, nen no khong
+phai bang chung ve moi truong. Thay bang **CI multi-seed do trong cung moi truong**.
+Van giu: khong ghep so tu hai moi truong trong mot so sanh; parity/byte-identity phai chay
+tren dung device sinh ra neo; Java sim o lai Oracle (data host + neo 60390).
 
 ## 3. BANG CHUNG VE BO FEATURE — feature nao that su ganh
 

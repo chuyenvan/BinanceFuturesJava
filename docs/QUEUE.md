@@ -215,3 +215,31 @@ Hướng gate còn mở vẫn là **hiệu chuẩn ngưỡng theo phân vị c�
 Pre-reg `f931265` + `6519c22`, chi tiết `docs/G1_HORIZON.md`, script
 `research/pipeline/g72_train.py`, `research/analysis/g1_repro_check.py`,
 `research/analysis/g1_horizon_eval.py`.
+
+---
+
+## BD — Train ở đâu được: Oracle hay Kaggle?  [DONE]
+
+**Kết luận:** **Kaggle CPU == Oracle CPU byte-for-byte** ⇒ được train ở bất kỳ đâu trên CPU,
+vô điều kiện. 3 môi trường × 3 seed trên cùng một file đã đóng băng (`bench_s1.parquet`,
+1,220,490 dòng, sha256 file + sha256 mảng X **khớp tuyệt đối** cả 3 nơi). Oracle (aarch64,
+py3.10.12, numpy 2.2.6) vs Kaggle CPU (x86_64, py3.12.13, numpy 2.0.2): per-tick
+`mean|ΔrankIC|` = **0.0 chính xác**, `ic_sha256` trùng cả 3 seed, cây đầu tiên trùng sha256.
+Số cũ `0.17040 vs 0.1723` là **lệch dữ liệu/pipeline, không phải lệch máy** — không được dùng
+để khoá vào Oracle. **GPU lệch thật nhưng vì lý do khác lệnh cấm cũ:** per-tick 0.02185 chỉ
+**×1.07–×1.20** nhiễu seed và `edge5` 0.198pp chỉ **×1.21**, nhưng `|Δ mean rank-IC|` = 0.00448
+là **×3.7** nền seed của CPU, và GPU **tự nó nhiễu gấp 4.8 lần** CPU (0.00586 vs 0.00121).
+Nguyên nhân chỉ ra được từ cây đầu tiên: `Cover` lệch **31/31 node** (RNG `subsample`/
+`colsample_bytree` khác) + `Split` lệch 11/31 (quantile sketch `hist` khác).
+**`nthread` không ảnh hưởng gì:** `n_jobs=1` vs `4` cho tree1 trùng sha, `ΔIC` = 0.0.
+**Cổng `spearman >= 0.999` bị bỏ:** đo lại đúng thống kê đó trên 774,270 dòng OOS —
+CPU-vs-GPU cùng seed **0.9813**, CPU seed42-vs-seed43 **cùng máy cùng device 0.9817**. Đổi
+device tốn đúng bằng đổi seed; ngưỡng 0.999 loại cả việc re-seed chính mô hình, nên nó đo
+"có phải cùng một mô hình không" chứ không đo "môi trường có lệch không". Chính cổng này tạo
+2 false positive, không phải GPU. Thay bằng: **hiệu ứng phải vượt CI multi-seed (≥3 seed) đo
+trong cùng một môi trường**. Giữ nguyên: không ghép số từ 2 môi trường trong một so sánh;
+GPU thì CẢ phép so phải trên GPU; parity/byte-identity chạy trên đúng device sinh ra neo;
+Java sim ở lại Oracle (data host + neo 60390).
+⚠️ Chưa đo: XGBClassifier (G015), Java sim, và GPU không phải T4 (chỉ đo T4 của Kaggle).
+Chi tiết `docs/BENCH_DEVICE.md`, script `research/kaggle/bench_device/`,
+Kaggle: dataset `chuyendinh/bench-device-pool`, kernel `bench-device-{cpu,gpu,pgpu}`.

@@ -1,0 +1,63 @@
+{
+ "tag": "kaggle_gpu",
+ "device": "cuda",
+ "n_jobs": 4,
+ "seeds": [
+  42,
+  43,
+  44
+ ],
+ "xgboost": "3.2.0",
+ "numpy": "2.0.2",
+ "pandas": "2.3.3",
+ "python": "3.12.13",
+ "machine": "x86_64",
+ "processor": "x86_64",
+ "cpu_count": 4,
+ "OMP_NUM_THREADS": "<unset>",
+ "data_path": "/kaggle/input/datasets/chuyendinh/bench-device-pool/bench_s1.parquet",
+ "file_sha256": "6b407696d99bd8fa4477b9faed8e7c3c72f3b0cc9d0b6aa3edbb556b1355c994",
+ "X_sha256": "567fb13314098ce52ac92be13bcf7a5cf6b2246c296c9ee0df2ce82b72b3fd8f",
+ "X_dtype": "float32",
+ "X_shape": [
+  1220490,
+  9
+ ],
+ "ts_sha256": "b652840eb6cd7172b01bc1d422f542e3391600ba4910f1a269967c908c4877f3",
+ "y_sha256": "d4602dac895b2f8d05082cde907861b337a0856149cf06fd78b58a3ce7310208",
+ "g_sha256": "88c500c901009010bbb4373532f57828555dc5f16404f4f6087343a51b49bed1",
+ "tree1_rows": 31,
+ "tree1_sha": "eec89081b09a56d460d932c83c36b509bed8b3f10e2d7eb14d277af5ed1f1334",
+ "tree1_train_rows": 445068,
+ "booster_cfg": {
+  "device": "cuda:0",
+  "fail_on_invalid_gpu_id": "0",
+  "n_jobs": "4",
+  "nthread": "4",
+  "random_state": "42",
+  "seed": "42",
+  "seed_per_iteration": "0",
+  "validate_parameters": "1"
+ },
+ "per_seed": {
+  "42": {
+   "mean_rank_ic": 0.17305173816436123,
+   "n_ticks": 4595,
+   "edge5_pct": 7.008466295972708,
+   "ic_sha256": "6c4652f00698862169e7b982ec8663f15fc2fda926c2ddf14be6ad2c73178f1f"
+  },
+  "43": {
+   "mean_rank_ic": 0.16425778275920355,
+   "n_ticks": 4595,
+   "edge5_pct": 6.916542131100746,
+   "ic_sha256": "1862c8864cd8b9873e5462f6c7e0c51a34582385b2c00fa0bc51dee13b2111a0"
+  },
+  "44": {
+   "mean_rank_ic": 0.16537128711744004,
+   "n_ticks": 4595,
+   "edge5_pct": 6.884055130330112,
+   "ic_sha256": "440aa1d06fe07802fcd3928ee240682d27d762fd629efc7cbdb2a1b6ec36b942"
+  }
+ },
+ "elapsed_s": 144.9
+}

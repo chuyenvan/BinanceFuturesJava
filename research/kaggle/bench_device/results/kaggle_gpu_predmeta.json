@@ -1,0 +1,14 @@
+{
+ "tag": "kaggle_gpu",
+ "device": "cuda",
+ "rows": 774270,
+ "seeds": [
+  42,
+  43
+ ],
+ "sha_p42": "381f93118ba60afc8bbb29a878b05bf2761d9de88401a6a3c0fc60864baaa144",
+ "sha_p43": "1f8e7c4a4c79e2dde37cec2f8a35295acfcd2bc6779ef317a2f0350601bdc237",
+ "spearman_pooled_seedAB": 0.9832032124993115,
+ "spearman_pertick_mean_seedAB": 0.9593428883461667,
+ "elapsed_s": 91.8
+}

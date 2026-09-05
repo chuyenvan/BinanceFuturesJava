@@ -1,0 +1,6 @@
+{"id": "chuyendinh/bench-device-gpu", "title": "bench-device-gpu",
+ "code_file": "main.py", "language": "python", "kernel_type": "script",
+ "is_private": true, "enable_gpu": true, "enable_tpu": false,
+ "enable_internet": false,
+ "dataset_sources": ["chuyendinh/bench-device-pool"],
+ "competition_sources": [], "kernel_sources": []}
