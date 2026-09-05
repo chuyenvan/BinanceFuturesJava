@@ -356,3 +356,60 @@ Status moi duy nhat cua luong day du: **`REQUEST` 1/2709** o `T2_full_old` (lenh
 **Khong de cu ung vien baseline moi.** The mo: chay lai luong day du voi `DCA_GRID_SCALE` **duoc
 bu** (~19.5 cho luoi 1,1,3,8) de giu `mean(margin)` ~971, kiem `CapacityProbe` truoc — dung the
 ma `W1_SWEEP muc 10` da mo.
+
+---
+
+## T2b — luong DAY DU voi SIZE DUOC BU: C2b vs selector cu  [DONE]
+
+Chua T2 de lai: `DCA_GRID_WEIGHTS=1,1,3,8` khong bu `DCA_GRID_SCALE` => `mean(margin)`
+971 -> 9.21, ca hai chan chay o ~1% von nen phep so selector vo nghia.
+Pre-reg `0058c35`, chi tiet `docs/T2B_FULLFLOW.md`. 3 sim run (parity tai dung `T2_c2b_ref`).
+
+**🔴 BUG SIZING — tong trong so DCA bi chia HAI LAN.** `TradeUtils.managerBudget` da chia
+`/dcaGridTotalWeight()` (comment: "chua cho du ladder DCA"), roi `DcaUtils.gridLegWeightRatio`
+chia tiep `w[i]/total` => `margin(leg i) = 35000 x F_BASE x throttle x SCALE x w[i] / total^2`.
+Voi `1,1,3,8` thi **`total^2` = 169, khong phai 13**. He so do duoc 106.19 = 169 / 1.59 (1.59 =
+`throttle` noi lai tu 0.6165 -> 0.9812 vi gan nhu khong dung von) — **khop tuyet doi**.
+`balanceBasic` la HANG SO 35000 => size khong compound. `getBudget()`/`BASE_BUDGET=700` la
+**tham so chet** (`managerBudget` khong doc no).
+=> **Dinh chinh `W1_SWEEP muc 10` va `T2_FULLFLOW muc 5`: scale bu dung la 253.5 (=1.5 x 169),
+KHONG phai 19.5.**
+
+**Hieu chuan PASS lan dau, khong dung quyen sua 1-lan**: `SCALE=253.5` cho `mean(margin)`
+leg 1 = **947.00** vs muc tieu 971.05 (**-2.5%**, cong ±20%). Ap y het cho ca 3 chan.
+
+**Parity PASS**: `T2_c2b_ref` byte-identical `C2b` (b:60390, 970, md5 `8f7afdfb…`); jar sha256
+khong doi, `find src -newer <jar>` rong.
+
+**PHAN QUYET CAU CHINH (`T2b_full_c2b` vs `T2b_full_old`): KHAC — selector C2b THANG.**
+Hai duong doc lap: (1) **2/6 rate PRIMARY ngoai CI cung huong** (`mean(profit)` 3.79 vs 1.45,
++2.34 CI[+0.30,+4.39]; `mean(margin)` +192 CI[+57,+320]) — vuot nguong `>=2`; (2) `T2b_full_old`
+**FAIL 4/4 rang buoc cung** (maxDD **-41.6%** @2022-11-10, UW **390 ngay**, nam 2022 **-29.7%**,
+quy 2022Q2 **-27.3%**) => loai truc tiep. `T2b_full_c2b` PASS het (maxDD -11.5, UW 81, quy min
+-1.4, n=1068). Equity 64,809 (CAGR 28.05%, Sharpe(q) 1.28) vs 42,687 (8.30%, 0.15) — **khong
+phai tieu chi**, chan tren nam trong nhieu 4.28pp so voi ref.
+
+**Bien so DUY NHAT doi so voi T2 la size.** T2 = 1/6 ngoai CI ("khong phan biet duoc"), T2b =
+2/6 + FAIL 4/4. => **mot phep so o diem van hanh sai co the tra null ma khong phai vi hai vat
+giong nhau.** Canh bao khi trich: `mean(margin)` la bien KIEM SOAT (lech vi `full_old` mo 2.5x
+so lenh => `throttle` thap hon), nen bang chung CHAT LUONG chi la `mean(profit)`; "selector cu"
+la **goi bins `G015_v2` + gate 0.014052** (2 bien, ghi truoc); va **uu the cua C2b van la hien
+tuong 2022** — bo 2022 ra thi ban cu con cao hon (65.5+4.8 vs 41.5+6.8), dung hinh dang ma
+`SELECTOR_LADDER_Q` da canh bao.
+
+**PHAN QUYET CAU PHU (DCA co dang bat khong): KHONG DANG** — `T2b_dca_c2b` vs ref **0/6 rate
+ngoai CI** (dieu kien `sum(pnl)` leg 2+ duong thi DAT: +3,177). Bat ca hai co che
+(`T2b_full_c2b`) cung 0/6 vs ref. Ghep voi `T2_full_c2b_noDCA` (big_down mot minh, 0/6):
+**khong co che nao trong luong day du phan biet duoc voi `c2b_min` tren rate.**
+
+**PnL tach theo leg — dau DAO CHIEU theo selector** (tai lap leg index bang gom `(sym,end)`,
+khop 100% so dong `DCA_LEVEL1`): leg 2+ lai **+3,398 USD / 21 leg** (`full_c2b`, mean profit%
+**+17.9**) nhung **-4,239 USD / 45 leg** (`full_old`, **-3.3**). DCA chi no trong quy sap
+(2022Q2 + 2022Q4 + 2024Q2, **0 leg suot 2023**) va cham rat it (1.7-2.0% so leg) vi luoi
+`-50/-75/-90%`. Bu size KHONG lam DCA cham nhieu hon (21 leg o T2 = 21 leg o T2b).
+`BIG_DOWN` = **dung 120 leg** o moi chan bat no (tin hieu market-level, khong phu thuoc selector).
+
+**Khong de cu ung vien baseline moi.** The mo: `mean(profit|STOP_LOSS_DONE)` -18.90 -> -16.37
+va maxDD -13.1 -> -11.6 / UW 93 -> 81 cua chan DCA **o cung muc size** (lech 1.1%) — lan dau
+hieu ung nay khong giai thich duoc bang sizing, nhung van trong CI. Muon dong the nay phai
+pre-reg rieng va co nhieu hon 21 leg.
