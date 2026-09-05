@@ -79,11 +79,13 @@ public class DumpConfig {
                 arm, Configs.tsPnoPumpWeakThr(), arm - gStrong,
                 Configs.tsPnoPumpWeakThr(), arm - gWeak,
                 rat, Configs.TS_MAX_GAP, Configs.TS_MAX_GAP_WEAK);
-        System.out.printf("derived.pre_arm_stop=%s%n",
-                Configs.LOSER_TIME_STOP_HOURS > 0
-                        ? "KHONG co SL cung truoc khi arm - loi ra duy nhat la time-stop "
-                          + Configs.LOSER_TIME_STOP_HOURS + "h"
-                        : "KHONG co SL va KHONG co time-stop truoc khi arm (!)");
+        String preArmSl = Configs.PRE_ARM_SL < 0f
+                ? String.format("HARD SL %.2f%% tren firstEntryPrice (BAT BIEN qua DCA)", Configs.PRE_ARM_SL * 100f)
+                : "KHONG co SL cung";
+        String preArmTs = Configs.LOSER_TIME_STOP_HOURS > 0
+                ? "time-stop " + Configs.LOSER_TIME_STOP_HOURS + "h"
+                : "KHONG co time-stop (!)";
+        System.out.printf("derived.pre_arm_stop=%s + %s%n", preArmSl, preArmTs);
         // SIM dung TradeUtils.managerBudget: THROTTLE LIEN TUC theo F_BASE/U_MAX (FROZEN v1 2026-08-24,
         //   thay logic vach roi rac BUDGET_MARGIN_RATIO_*/BUDGET_DIVIDER_* = overfit, nay DA CHET trong engine).
         //   budget = equity * F_BASE * clamp(1 - U/U_MAX,0,1) / dcaGridTotalWeight(), roi * DCA_GRID_SCALE * tier.

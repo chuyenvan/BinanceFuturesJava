@@ -384,6 +384,13 @@ public class Configs {
     //   nhung lenh dang chay. Default 0 => nhanh khong chay => byte-identical. Xem docs/PREREG_F2.md.
     public static int COND_EXIT_HOURS = 0;
     public static float COND_EXIT_MIN_FAV = 0f;
+    // [2026-09-05 X2] PRE-ARM HARD SL (SIM_PRE_ARM_SL, 0 = TAT = mac dinh): cum CHUA arm trailing
+    //   (priceSL==null) ma gia cham nguong lo do tren firstEntryPrice (BAT BIEN qua DCA) thi dong NGAY
+    //   tai min(stopLevel, min(open, close)). Gia tri AM (vd -0.20 = cat o -20%).
+    //   Dat TRUOC cong profit-arm VA truoc LOSER_TIME_STOP/COND_EXIT. Key cu SIM_HARD_SL_PCT da chet
+    //   o HEAD; day la ban viet lai. Default 0 => nhanh khong chay => byte-identical.
+    //   Logic thuan o PreArmSlUtils (co unit test). Xem docs/PREREG_X2.md muc 2.2.
+    public static float PRE_ARM_SL = 0f;
     /** [2026-09-03] ban MUTABLE de test do nhay; doc qua tsPnoPumpWeakThr(). */
     public static Float TS_PNOPUMP_WEAK_THR_OVR = null;
     public static float tsPnoPumpWeakThr() {
@@ -488,6 +495,7 @@ public class Configs {
             if ((v = Cfg.get("SIM_LOSER_TIME_STOP_HOURS")) != null) LOSER_TIME_STOP_HOURS = Integer.parseInt(v.trim());
             if ((v = Cfg.get("SIM_COND_EXIT_HOURS")) != null) COND_EXIT_HOURS = Integer.parseInt(v.trim());
             if ((v = Cfg.get("SIM_COND_EXIT_MIN_FAV")) != null) COND_EXIT_MIN_FAV = Float.parseFloat(v.trim());
+            if ((v = Cfg.get("SIM_PRE_ARM_SL")) != null) PRE_ARM_SL = Float.parseFloat(v.trim());
             // TASK (frozen leakage-free genome, Buoc 0): funding.bin trong WFO_DATA_DIR/-ff CHI tu-ap cho
             //   funding-SELECTOR (ds.funding), KHONG tu-ap thanh FEE. Fee van gate boi APPLY_FUNDING_FEE
             //   (default false). SIM_APPLY_FUNDING=true -> bat funding fee cho vong WFO/HPO nay (funding-on).

@@ -638,6 +638,26 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         if (orderMulti != null) {
             if (orderMulti.timeStart <= ticker.startTime) {
                 orderMulti.updatePriceByKlineSimple(ticker);
+                // [2026-09-05 X2] PRE-ARM HARD SL (SIM_PRE_ARM_SL < 0): cum CHUA arm (priceSL==null) ma gia
+                //     cham firstEntryPrice*(1+PRE_ARM_SL) -> dong NGAY tai min(stopLevel, min(open,close)).
+                //     Dat TRUOC LOSER_TIME_STOP: cung mot nen ma ca hai cung dieu kien thi SL (cong chat hon)
+                //     thang — xac dinh, khong ngau nhien. Default 0 => nhanh khong chay => byte-identical.
+                if (com.binance.chuyennd.tradecore.PreArmSlUtils.enabled() && orderMulti.priceSL == null
+                        && com.binance.chuyennd.tradecore.PreArmSlUtils.hit(orderMulti.firstEntryPrice, ticker.minPrice)) {
+                    float fep = orderMulti.firstEntryPrice;
+                    long anchorSl = orderMulti.clusterFirstLegTime > 0L ? orderMulti.clusterFirstLegTime : orderMulti.timeStart;
+                    orderMulti.status = OrderTargetStatus.STOP_LOSS_DONE;
+                    orderMulti.priceTP = com.binance.chuyennd.tradecore.PreArmSlUtils.exitPrice(
+                            fep, ticker.priceOpen, ticker.priceClose);
+                    // Ly do thoat KHONG duoc them vao printDone.csv (se pha cong hoi quy byte-identical);
+                    // ghi mot dong log de ghep lai theo (sym, tOpen). Xem docs/PREREG_X2.md muc 2.3.
+                    LOG.info("PREARM_SL sym={} first={} stop={} exit={} tOpen={} tNow={}",
+                            orderMulti.symbol, fep,
+                            com.binance.chuyennd.tradecore.PreArmSlUtils.stopLevel(fep),
+                            orderMulti.priceTP, anchorSl, time);
+                    closeOrder(symbolId, orderMulti);
+                    return;
+                }
                 // [2026-09-02] LOSER TIME-STOP (env SIM_LOSER_TIME_STOP_HOURS): cum chua arm SL qua N gio tu leg dau
                 //     -> dong tai min(open, close) (khong look-ahead, haircut nhu HARD_SL). TRUOC cong profit-arm.
                 //     Default 0 => nhanh khong chay => byte-identical.
