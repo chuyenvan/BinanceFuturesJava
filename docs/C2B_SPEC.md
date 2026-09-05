@@ -1,5 +1,22 @@
 # C2b — DAC TA DAY DU (ban viet lai 2026-09-04)
 
+> # 🔴 SUPERSEDED by C3 (2026-09-05)
+>
+> **Mo ta trailing STRONG/WEAK trong file nay SAI cho sim truoc fix B1.**
+> Doan "cap 0.08 STRONG / 0.03 WEAK, ban le `symbolPred`" mo ta THIET KE, nhung
+> `SimulatorMarketLevelTicker1MStopLoss.mergeOrder()` khong chep `symbolPred` sang object
+> cum, ma `trailRate()` fallback `pnp=1f` => **100% lenh chay nhanh WEAK (cap 0.03);
+> nhanh STRONG CHUA BAO GIO chay** trong moi run tao ra so cua file nay.
+> Cot `symbolPred` trong `printDone.csv` van co so THAT (ghi tu object LEG) nen nhin CSV
+> se TUONG trailing da dung no — do la cai bay da lam `W1` mat 5 run.
+>
+> Ngoai ra: sizing trong file nay khong compound (`balanceBasic` hang so 35000, bug B3) va
+> tong trong so DCA bi chia hai lan (bug B2).
+>
+> **Baseline hien hanh: `C3` (`docs/C3_BASELINE.md`, `profiles/c3_min.properties`).**
+> File nay giu lai lam ho so lich su cua `C2b` = 60,390. Cac muc KHONG lien quan trailing
+> (selector S1, bins, gate 2 tang, provenance) van dung.
+
 Ban truoc cua file nay ghi `PROFILE_HASH=1bc17b5075511263` / `CONFIG_HASH=28f7c17882b0b339` /
 "22 key" va huong dan §10 kiem theo hai hash do. **Ca ba deu da lac hau** — lam theo se ra FAIL
 gia. Ban nay do lai truc tiep bang `DumpConfig` ngay 2026-09-04.

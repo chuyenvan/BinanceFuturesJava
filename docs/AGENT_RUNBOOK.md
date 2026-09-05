@@ -129,20 +129,58 @@ java -cp $JAR com.binance.chuyennd.tradecore.DumpConfig     # PROFILE_HASH + der
 
 ## 3. Baseline hien tai
 
-`C2b` = equity 35,000 -> **60,390**, CAGR 24.48%, maxDD −13.12%, 970 lenh,
-underwater 93 ngay. Profile `profiles/c2b_min.properties` (16 key,
-`PROFILE_HASH=a2f859b2463108fe`), md5 printDone `8f7afdfb27b15f5b6d4c886700def93c`.
+`C3` = equity 35,000 -> **68,278**, CAGR **30.76%**, maxDD **-13.31%**, **961 lenh**,
+underwater **96 ngay**. Profile **`profiles/c3_min.properties`** (16 key cua `c2b_min` +
+3 co `SIM_FIX_B1/B2/B3=true`), md5 printDone `38be0cb3195984e1000e61d9cdef54da`.
+Chi tiet: **`docs/C3_BASELINE.md`**, pre-reg `docs/PREREG_C3.md`.
+
+**`C2b` = 60,390 chi con la SO LICH SU.** No sinh tu engine co 3 bug (B1/B2/B3).
+KHONG ghep cap so cu (E1/W1/T1/T2/T2b) voi so moi trong cung mot so sanh.
+Muon tai lap C2b: `profiles/c3_regress.properties` (3 co `false`) -> ra
+**byte-identical** 60395/970/`910f1aa6...` tren duong `file`.
 
 Kien truc: **S1** (9 feature, XGBRanker rank:ndcg, label `rel5` = quintile trong tick
-cua `g1lite − median`) quyet dinh THU TU coin; **G015x26** (45 feature, XGBClassifier,
+cua `g1lite - median`) quyet dinh THU TU coin; **G015x26** (45 feature, XGBClassifier,
 label `maxFav_4h >= 0.06`) quyet dinh GIA TRI gate. `build_map.py` giu nguyen multiset
 P(win) cua G015x26 trong moi tick, chi gan lai theo rank cua S1 (`changed` 4.9%).
 
-Exit: arm +7% roi trailing `giveback = min(peak*0.5, cap)`, cap 0.08 STRONG /
-0.03 WEAK (ban le `symbolPred < 0.29`). **Khong co stop-loss truoc arm.**
-`STOP_LOSS_DONE` = **time-stop 168h**, KHONG phai SL.
+Exit: arm +7% roi trailing `giveback = min(peak*0.5, cap)`.
+**Ban le NGUOC voi truc giac:** `symbolPred (=pNoPump) <= 0.29` -> **STRONG cap 0.08**
+(nha nhieu hon, nuoi lau hon); `> 0.29` hoac null -> **WEAK cap 0.03**.
+Do thuc tren `C3`: **71.5% lenh di nhanh STRONG**.
+⚠️ Truoc fix B1 (moi so <= `af6181e`) nhanh STRONG **CHUA BAO GIO chay** — 100% WEAK.
+**Khong co stop-loss truoc arm.** `STOP_LOSS_DONE` = **time-stop 168h**, KHONG phai SL.
+
+Sizing: `margin = equity x F_BASE x throttle x DCA_GRID_SCALE x w[i]/total`, voi
+`equity = balanceCurrent + unProfit` (**COMPOUND**, tu fix B3) va
+`throttle = 1 - marginRunning/(equity x U_MAX)`. Tran margin/leg = **4.5% equity**
+(= `F_BASE 0.03 x SCALE 1.5`), khong phai hang so 1575.
+⚠️ `maxDD` in trong log sim (`unProfitMin/35000`) MAT Y NGHIA duoi compound — luon do
+maxDD/UW tu **chuoi equity** (`qret.py`).
 
 ## 4. Ket luan da chot — DUNG lam lai
+
+- 🔴 **BA BUG DA SUA (C3, 2026-09-05)** — `docs/C3_BASELINE.md`. Cong hoi quy PASS
+  byte-identical. **Toan bo phan tang equity la B3 (compound), KHONG phai B1**:
+  B1 mot minh lam equity GIAM 60,395 -> 59,722 va **0/7 rate ngoai CI**.
+  B3 cho hieu **bang 0 TUYET DOI o moi rate muc lenh**, chi `mean(margin)` doi
+  (+424, CI [+287,+562]) => compound di qua DUNG MOT kenh (thang do), khong ro ri.
+- **B1 doi HINH DANG phan bo winner, khong doi trung binh**: than tut ~1pp
+  (p10 4.46->3.50, p25 4.99->4.00, med 6.00->5.00), duoi phai len (p90 11.00->12.06).
+  So hoc: `exit = peak - min(peak*0.5, cap)`; voi `peak` trong 6%..16% thi STRONG chot
+  THAP hon WEAK dung 5pp. **Danh doi median-doi-duoi, khong phai cai tien.**
+- **`SIM_TS_MAX_GAP` va `SIM_TS_PNOPUMP_WEAK_THR` GIO DA SONG** (truoc la key chet).
+  `W1` truc A va C la **vung trang**, quet lai duoc. Ban le 0.29 nam giua dai van hanh
+  (71.5% STRONG / 28.5% WEAK).
+- **Gate `SIM_MIN_MOMENTUM_15M=0.008` KHONG bo qua chat** (do lai tren engine DA SUA):
+  noi ra 0.006 mua them 631 lenh nhung 5/5 rate CHAT LUONG deu trong CI, va FAIL 3/4
+  rang buoc cung (maxDD -20.75, UW 133, quy -8.3). Hai rate vuot CI (`n`, `mean(margin)`)
+  la hai mat cua cung mot su kien co hoc, khong phai bang chung chat luong.
+- **`DCA_GRID_SCALE` bu dung sau B2 la 19.5** (`= 1.5 x 13`), KHONG phai 253.5
+  (`= 1.5 x 169`, bu cho chinh cai bug). Hieu chuan `C3_FULL` PASS lan dau (+2.19%).
+- ⚠️ **Moi ket luan cua E1/W1/T1/T2/T2b deu sinh tu engine co 3 bug.** Phan lien quan
+  **trailing** (E1, W1 A/B/C, T2b DCA) can do lai. Phan lien quan selector/gate/label
+  (T1, T2, F1-F4, G1) it kha nang doi nhung **chua kiem chung**.
 
 - **Selector ladder CHUA THIET LAP.** 78% uu the C2b−C2_g015 nam trong 2022; rebase
   2023-01 thi C2b THUA 5.5pp. medP giong het (5.50 vs 5.49). Khac biet la co dac

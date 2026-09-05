@@ -26,7 +26,7 @@ KHONG duoc tu chon X96 sau khi da thay so — do la sin.
 
 ---
 
-## Q2 — Ban le STRONG/WEAK `TS_PNOPUMP_WEAK_THR`  [DEAD KEY — W1 bd20e42: mergeOrder() khong chep symbolPred, 100% lenh WEAK cap 0.03. Sua bug truoc, roi quet lai]
+## Q2 - Ban le STRONG/WEAK `TS_PNOPUMP_WEAK_THR`  [READY - key DA SONG sau fix B1 (C3). Vung trang: 71.5% lenh di STRONG. Quet LAI TU DAU tren nen C3, KHONG dung so W1 cu]
 
 **Co che:** ban le dang 0.29 ma **88.55% hang duoc admit co score < 0.30**. Tuc ban le
 nam dung giua dai van hanh — dich mot chut la lat hang loat lenh giua cap giveback
@@ -47,7 +47,7 @@ thoa het rang buoc cung. Neu ca 3 trong sai so thi ghi null va dong huong.
 
 ---
 
-## Q3 — Siet momentum gate  [DONE W1 bd20e42: 5 rate don dieu nhung FAIL underwater 172/223d > 120; D va E la CUNG truc (ti so MIN_MOM/RATE_MAX). Null cho ung dung]
+## Q3 - Siet momentum gate  [DONE - do LAI tren engine da sua (C3_mom006): noi 0.006 -> 5/5 rate chat luong TRONG CI, FAIL 3/4 rang buoc cung. Gate 0.008 KHONG bo qua chat. Dong huong]
 
 **Co che:** chieu NOI da thu va xau: 0.006 -> equity cao hon (60,953) nhung maxDD
 **−21.1%** (vuot tran 15%); 0 -> 10,305 voi 14,007 lenh. Chieu SIET **chua tung thu**
@@ -417,7 +417,7 @@ pre-reg rieng va co nhieu hon 21 leg.
 
 ---
 
-## BUGS phat hien 2026-09-05 — sua = baseline MOI, can user quyet  [BLOCKED]
+## BUGS phat hien 2026-09-05 - B1/B2/B3  [DONE `5a001e5` -> baseline moi C3, `docs/C3_BASELINE.md`]
 
 B1. `mergeOrder()` (`SimulatorMarketLevelTicker1MStopLoss.java:730-777`) KHONG chep `symbolPred`
     => `trailRate()` fallback `pnp=1f` => 100% lenh nhanh WEAK (cap 0.03). Nhanh STRONG (cap 0.08)
@@ -435,3 +435,46 @@ va do lai toan bo. Khong tu quyet.
 vs `c2b_min` 60,390 / 24.48% / -13.1 / 93d. Trong nhieu N=4 (4.3pp) nhung PASS het rang buoc cung.
 Selector C2b THANG selector cu trong luong day du (2/6 rate ngoai CI; cu FAIL 4/4 rang buoc).
 DCA va big_down TU THAN khong phan biet duoc voi c2b_min (0/6 rate). Khong de cu baseline moi.
+
+
+---
+
+## C3 - Sua 3 bug B1/B2/B3, do lai baseline  [DONE `5a001e5`]
+
+**Cong hoi quy PASS byte-identical**: `C3_regress` (jar moi + 3 co `false`) = 60395 / 970 /
+md5 `910f1aa6f76b5e6797d97a31a7ea5f5a` = neo Kaggle. 5 arm chay song song (5/5 slot Kaggle -
+lan dau do duoc tran 5 that su). Pre-reg `docs/PREREG_C3.md`, chi tiet `docs/C3_BASELINE.md`,
+script `research/analysis/c3_rates.py`.
+
+**BASELINE MOI `C3`** = `profiles/c3_min.properties` = **68,278 / CAGR 30.76% / maxDD -13.31% /
+UW 96d / n=961**, md5 printDone `38be0cb3195984e1000e61d9cdef54da`. **PASS 4/4 rang buoc cung**
+nhung **sat bien o quy: -4.8% vs tran -5.0%** (bien 0.2pp; C2b cu -3.7%) - compound da an gan
+het bien do. `C2b` = 60,390 tu day chi con la SO LICH SU.
+
+**Phan tach hieu ung (day moi la ket qua chinh):**
+- **B1 mot minh: 0/7 rate ngoai CI, va equity GIAM** 60,395 -> 59,722. KHONG phan biet duoc.
+  Nhung **doi HINH DANG phan bo winner**: p10 4.46->3.50, p25 4.99->4.00, med 6.00->5.00,
+  **p90 11.00->12.06**. So hoc: `exit = peak - min(peak*0.5, cap)`, voi `peak` trong 6%..16%
+  thi STRONG chot THAP hon WEAK dung 5pp. **Danh doi median-doi-duoi, khong phai cai tien.**
+  => "null tren rate" KHONG dong nghia "khong doi gi" (cung mach `T1` bai hoc 2).
+- **B3 mot minh: hieu = 0.000 TUYET DOI o MOI rate muc lenh**, chi `mean(margin)` doi
+  (+424, CI [+287,+562]). `mean(margin)` theo nam 892 -> 1,609 -> 1,785 (chan khong compound:
+  892 -> 1,120 -> **924**, quay dau). => compound di qua DUNG MOT kenh, khong ro ri sang
+  quyet dinh vao/ra. Ly do: `throttle = 1 - marginRunning/(equity*U_MAX)`, tu va mau cung
+  nhan theo equity => throttle bat bien.
+- **B2 vo hinh o `1,0,0,0`** (total=1) - dung nhu du doan; chi hien o `C3_FULL`.
+
+**Toan bo phan tang equity la B3, KHONG phai B1.** Ai doc luot va quy cong cho B1 la doc nguoc.
+
+**`DCA_GRID_SCALE` bu dung sau B2 = 19.5** (`1.5 x 13`), KHONG phai 253.5 (`1.5 x 169` - so do
+bu cho chinh cai bug). Hieu chuan `C3_FULL` PASS lan dau: leg-1 `mean(margin)` 1,428.01 vs
+muc tieu 1,397.41 (**+2.19%**, cong +-20%). => `W1_SWEEP muc 10` (19.5) hoa ra DUNG cho engine
+moi; `T2B_FULLFLOW muc 1.4` (253.5) dung cho engine CU. Ca hai deu khong sai.
+
+**The mo manh nhat: `C3_FULL`** (big_down + DCA, size da bu) = 72,699 / maxDD -12.46 / **UW 81**
+(tot nhat 5 chan) / PASS 4/4, va **`mean(profit|SL)` -16.24 vs -18.83 (+2.59pp, CI [+0.035,
++5.841] - LAN DAU vuot CI o cung muc size)**. KHONG de cu baseline (pre-reg cam). Pre-reg tiep
+theo phai tach **DCA** khoi **120 leg BIG_DOWN**; CI cham 0 nen bang chung con yeu.
+
+⚠️ **No ky thuat moi:** moi ket luan cua E1/W1/T1/T2/T2b sinh tu engine co 3 bug. Phan lien quan
+**trailing** (E1, W1 A/B/C, T2b DCA) can do lai tren engine moi.
