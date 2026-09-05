@@ -138,3 +138,28 @@ python3 tools/kaggle_sim.py fetch --tag x96
   snapshot (`ExportKaggleBootstrapSnapshots` duoc nhac trong javadoc nhung **khong ton tai**
   trong `src/`). Chua lam trong dot nay vi phai rebuild jar + do lai neo.
 - WFO/HPO worker tren Kaggle van la chuyen khac (`docs/KAGGLE_RULES.md` §3d).
+
+## 6. 🔴 BINS KHONG DI QUA DUONG KAGGLE (do thuc 2026-09-05, `docs/T1_LABEL3.md`)
+
+`WFO_FUNDING_PRED_DIR` duoc **tieu thu o `ExportWfoDataset`** (noi sinh `funding.bin`),
+**KHONG** o luc sim. Kernel Kaggle chi chay sim tren dataset **DA BUILD**:
+
+    OFFLINE BIN: doc market/pred/funding tu WfoDataset tai /kaggle/input/.../sim-c2b-bundle
+
+=> **doi bins trong bundle / trong profile khong lam doi ket qua tren Kaggle.** Do thuc: 3 chan
+bins khac nhau day len Kaggle deu ra `equity 60395 / 970 lenh / md5 printDone 910f1aa6…`,
+**y het parity** — im lang, khong loi. Ba run do vo hieu.
+
+Muon chay bien the **bins** thi chi co hai duong:
+1. **Chay o Oracle** (noi build dataset) — job T1 da lam vay: build dataset rieng moi chan roi sim,
+   ~5 phut/chan, xoa dataset sau moi chan (`/home/ubuntu/t1_oracle.sh`).
+2. Upload **dataset DA BUILD** rieng cho tung chan (`funding.bin` ~1.7GB/chan) roi tro
+   `WFO_DATA_DIR` vao do — chua lam, ton bang thong.
+
+Bien the **exit/gate/sizing** (nhu `x96`/`x120`) van chay Kaggle binh thuong: chung khong cham bins.
+
+Kem theo: `tools/kaggle_sim.py` nay co tham so `bins_ds` (chon dataset bins rieng) — no chi doi
+`WFO_FUNDING_PRED_DIR` khai bao trong profile (=> doi `PROFILE_HASH`), **khong** doi ket qua sim.
+Giu lai vi `Cfg` van bat khai bao bins, nhung **dung tuong no la mot truc do duoc**.
+
+`/kaggle/input` KHONG phang: dataset nam duoi `/kaggle/input/datasets/<user>/<slug>/`.

@@ -126,7 +126,17 @@ DS = os.path.dirname(manifest)                     # WFO_DATA_DIR
 cfgp = f1(IN + "/**/config.properties")
 basep = f1(IN + "/**/prof_" + CFG["profile"] + ".properties")
 exinfo = f1(IN + "/**/exchange_info_pin.json")
-PREDWF = os.path.dirname(f1(IN + "/**/predict_wf_20220101.bin"))
+# Mount Kaggle KHONG phang: dataset nam duoi /kaggle/input/datasets/<user>/<slug>/ .
+# => loc theo slug tren duong dan da glob de quy, khong ghep tien to cung.
+_BDS = CFG.get("bins_ds") or ""          # bins rieng cua 1 chan (dataset khac bundle)
+_cand = sorted(glob.glob(IN + "/**/predict_wf_20220101.bin", recursive=True))
+if _BDS:
+    _cand = [c for c in _cand if ("/" + _BDS + "/") in c]
+if not _cand:
+    LOG.error("MISSING bins cho bins_ds=%r (ung vien=%s)", _BDS,
+              sorted(glob.glob(IN + "/**/predict_wf_20220101.bin", recursive=True)))
+    sys.exit(1)
+PREDWF = os.path.dirname(_cand[0])
 
 # ticker: loader doc RELATIVE "kaggle_data_hpo/" trong CWD; .gz co the bi Kaggle tu giai nen
 link = os.path.join(WORK, "kaggle_data_hpo")
@@ -251,7 +261,8 @@ sys.exit(0)
 '''
 
 
-def submit(tag, profile, overrides=None, *, code_sha="head", sim_end_date=DEFAULT_SIM_END,
+def submit(tag, profile, overrides=None, *, bins_ds=None, code_sha="head",
+           sim_end_date=DEFAULT_SIM_END,
            xmx=DEFAULT_XMX, timeout_s=DEFAULT_TIMEOUT_S, enable_internet=True,
            push=True) -> str:
     """Day 1 sim len Kaggle. Tra ve kernel ref (`chuyendinh/sim-<tag>`).
@@ -264,14 +275,15 @@ def submit(tag, profile, overrides=None, *, code_sha="head", sim_end_date=DEFAUL
     os.makedirs(folder, exist_ok=True)
     cfg = {"tag": str(tag), "profile": profile, "overrides": dict(overrides or {}),
            "sim_end_date": sim_end_date, "xmx": xmx, "timeout_s": timeout_s,
-           "code_sha": code_sha}
+           "code_sha": code_sha, "bins_ds": bins_ds or ""}
     code = KERNEL_TEMPLATE.replace("__CFG_JSON__", repr(json.dumps(cfg)))
     with open(os.path.join(folder, "run.py"), "w") as f:
         f.write(code)
     meta = {"id": ref, "title": ref.split("/")[1], "code_file": "run.py",
             "language": "python", "kernel_type": "script", "is_private": True,
             "enable_gpu": False, "enable_internet": enable_internet,
-            "dataset_sources": DATASETS, "competition_sources": [], "kernel_sources": []}
+            "dataset_sources": DATASETS + ([USER + "/" + bins_ds] if bins_ds else []),
+            "competition_sources": [], "kernel_sources": []}
     with open(os.path.join(folder, "kernel-metadata.json"), "w") as f:
         json.dump(meta, f, indent=1)
     if push:

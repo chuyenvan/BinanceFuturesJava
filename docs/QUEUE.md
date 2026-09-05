@@ -284,3 +284,33 @@ thích được bằng sizing: `mean(profit|STOP_LOSS_DONE)` −18.90→−18.09
 chỉ kiểm một giả thuyết: DCA có hạ `|mean(profit|STOP_LOSS_DONE)|` không.
 Parity OK (md5 `8f7afdfb27b15f5b6d4c886700def93c`, b:60390, 970 lệnh). 16 run, 1 dataset dùng chung.
 Pre-reg `e606b76`, chi tiết `docs/W1_SWEEP.md`, script `research/analysis/w1_rates.py`.
+
+---
+
+## T1 — 3 chan C2b vs "maxfav6" 4h/72h, DI HET TOI SIM  [DONE]
+
+`LABELH` dung o rank-IC va ket luan null; T1 di het luong (train S1 -> build_map -> bins -> sim
+-> rate + equity). Pre-reg `26a45ee`, chi tiet `docs/T1_LABEL3.md`.
+
+**Cong REPRO PASS**: `spearman(harness L_g1, pred_s1a2)` = **1.000000** / 774,270 dong.
+**Parity PASS hai duong**: Oracle `T1_g1o` **byte-identical** `C2b` (b:60390, 970,
+md5 `8f7afdfb…`); Kaggle `t1-g1` = neo 60395/970/`910f1aa6…`.
+
+**Phan quyet**: `L_f4` (`1{maxFav_4h>=0.06}`, dung cau hoi user) **KHAC C2b theo huong XAU HON** —
+2/4 rate PRIMARY ngoai CI cung huong o khoi 72h va 24h (`TSloss%` +2.53pp, `win%` -2.47pp;
+o 168h chi con 1/4). `L_f4q` (ngu phan vi 4h = ban `LABELH`) va `L_f72` (`1{maxFav_72h>=0.06}`)
+**KHONG PHAN BIET DUOC tren rate** (0/4). **Ca ba FAIL rang buoc cung**: maxDD -16.47 / -15.02 /
+-15.12, underwater 161 / 187 / 95 ngay, quy min -5.0 / -6.0 / -4.1. => khong chan nao thay C2b.
+
+**Ba thu hoc duoc, quan trong hon ket qua chinh:**
+1. 🔴 **Bay #13 — bins KHONG di qua duong Kaggle.** `WFO_FUNDING_PRED_DIR` bi tieu thu o
+   `ExportWfoDataset`, kernel Kaggle chi chay sim tren dataset DA BUILD => 3 chan bins khac nhau
+   deu ra md5 printDone y het parity, **im lang khong loi**. Da bo 3 run do va chay lai o Oracle.
+   `docs/KAGGLE_SIM.md §6`. Bay #14: `/kaggle/input` khong phang.
+2. **"Null o rank-IC" KHONG dong nghia "vo hai".** `L_f4q` khong phan biet duoc o CA rank-IC lan
+   rate, nhung underwater 93 -> **187 ngay** va maxDD -13.12 -> -15.02. `LABELH` dung o rank-IC
+   nen khong the thay dieu do.
+3. **rank-IC selector la proxy yeu cho rate**: `L_f4` khong phan biet duoc o moi tieu chi rank-IC
+   (CI chua 0) nhung o sim thi khac that.
+
+Cau hoi goc cua `CEIL_RESULT §3` (nhan **168h**) van nguyen — T1 chi kiem 4h va 72h.
