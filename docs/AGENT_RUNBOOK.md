@@ -93,6 +93,31 @@ env WFO_DATA_DIR=$DS WFO_SMART_CACHE=1 SIM_END_DATE=20240630 \
    `SIM_START_DATE`, va `TIME_RUN` khong trong whitelist `Cfg.java:50` => chi doi
    qua file config.
 
+### Chay SONG SONG tren Kaggle (thoat rang buoc 1 slot JVM Oracle)
+
+Oracle chi co **1 slot JVM** (bay #4) => moi sim phai xep hang. Kaggle CPU chay duoc
+**5 kernel cung luc**, moi kernel 4 core / 31GB. Do that 2026-09-05: Kaggle+file ra
+`b:60395` va `printDone.csv` **giong Oracle+file tung byte** (`md5 910f1aa6...`);
+`x96`/`x120` con giong ca ban Oracle+aerospike (`docs/E1_EXIT_RESULT.md`) tung byte.
+
+```python
+import sys; sys.path.insert(0, "/home/ubuntu/src/BinanceFuturesJava")
+from tools import kaggle_sim as ks
+ks.free_slots()                                                    # DUNG neu = 0
+r = ks.submit("x96", "c2b_min", {"SIM_LOSER_TIME_STOP_HOURS": 96}, code_sha="bd20e42")
+ks.wait([r]); out = ks.fetch("x96")      # out["result"]["equity_final"], out["print_done"]
+```
+
+**Bay rieng cua duong Kaggle (them vao 8 bay o tren):**
+9. **Neo Kaggle la 60395**, khong phai 60390 — Kaggle bat buoc `TICKER_SOURCE=file`.
+10. **Kernel phai `enable_internet=True`**: `SimpleSymbolMapper` van doc Aerospike Oracle.
+    Mapper rong => ket qua lech am tham; `kaggle_sim` da guard (`exit 2` neu < 800 symbol).
+11. **`PROFILE_HASH` Kaggle KHAC Oracle** (duong `WFO_FUNDING_PRED_DIR` khac) — so parity
+    bang md5 `printDone.csv`, KHONG bang `PROFILE_HASH`.
+12. Doi jar/profile => phai `dataset_create_version` lai `chuyendinh/sim-c2b-bundle`.
+
+Chi tiet + kiem ke dau vao + wall-clock: **`docs/KAGGLE_SIM.md`**.
+
 ### Cham diem
 ```bash
 python3 $R/research/analysis/qret_ladder.py C2b <TAG>...   # quy/nam/TSloss/margin/medP

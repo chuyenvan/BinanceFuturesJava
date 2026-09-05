@@ -70,6 +70,8 @@
   horizon 4h = nghi leak L1) nam ngay tren duong gate cua C2b. Xem AUDIT M13.
 - [PHASE1_RECIPE_FROZEN_v1](PHASE1_RECIPE_FROZEN_v1.md) · [PHASE1_RECIPE_DRAFT](PHASE1_RECIPE_DRAFT.md) ·
   [PHASE1_GENE_REFERENCE](PHASE1_GENE_REFERENCE.md)
+- [KAGGLE_SIM](KAGGLE_SIM.md) — chay sim SONG SONG tren Kaggle CPU (5 slot), neo **60395**,
+  API `tools/kaggle_sim.py` (`submit`/`wait`/`fetch`).
 - [GS_BASELINE_NOTE](GS_BASELINE_NOTE.md) — hai diem neo **60390** (aerospike) va **60395** (file):
   lech 1 lenh / 970 = 0.008%. Moi so sanh Oracle<->Kaggle chi tin toi ~0.01%.
 
