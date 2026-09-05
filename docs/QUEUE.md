@@ -6,7 +6,7 @@ Sau khi xong: doi status thanh `DONE <commit>`, ghi ket qua vao doc rieng, commi
 
 ---
 
-## Q1 — Chot horizon time-stop  [BLOCKED: can user duyet mo lai quota]
+## Q1 — Chot horizon time-stop  [BLOCKED: can user duyet mo lai quota] — LUU Y: F2/T1/W1 deu thay cat som keo UW len 150-190d; mo lai chi khi rang buoc UW<=120 duoc chap nhan la tieu chi
 
 E1 da dung het quota 4/4 (`docs/PREREG_EXIT.md`) va ra phan quyet TS_H=72.
 Nhung pre-reg co 2 loi dac ta, agent tu phat hien va KHONG sua sau:
@@ -26,7 +26,7 @@ KHONG duoc tu chon X96 sau khi da thay so — do la sin.
 
 ---
 
-## Q2 — Ban le STRONG/WEAK `TS_PNOPUMP_WEAK_THR`  [READY]
+## Q2 — Ban le STRONG/WEAK `TS_PNOPUMP_WEAK_THR`  [DEAD KEY — W1 bd20e42: mergeOrder() khong chep symbolPred, 100% lenh WEAK cap 0.03. Sua bug truoc, roi quet lai]
 
 **Co che:** ban le dang 0.29 ma **88.55% hang duoc admit co score < 0.30**. Tuc ban le
 nam dung giua dai van hanh — dich mot chut la lat hang loat lenh giua cap giveback
@@ -47,7 +47,7 @@ thoa het rang buoc cung. Neu ca 3 trong sai so thi ghi null va dong huong.
 
 ---
 
-## Q3 — Siet momentum gate  [READY, chay sau Q2]
+## Q3 — Siet momentum gate  [DONE W1 bd20e42: 5 rate don dieu nhung FAIL underwater 172/223d > 120; D va E la CUNG truc (ti so MIN_MOM/RATE_MAX). Null cho ung dung]
 
 **Co che:** chieu NOI da thu va xau: 0.006 -> equity cao hon (60,953) nhung maxDD
 **−21.1%** (vuot tran 15%); 0 -> 10,305 voi 14,007 lenh. Chieu SIET **chua tung thu**
@@ -413,3 +413,25 @@ khop 100% so dong `DCA_LEVEL1`): leg 2+ lai **+3,398 USD / 21 leg** (`full_c2b`,
 va maxDD -13.1 -> -11.6 / UW 93 -> 81 cua chan DCA **o cung muc size** (lech 1.1%) — lan dau
 hieu ung nay khong giai thich duoc bang sizing, nhung van trong CI. Muon dong the nay phai
 pre-reg rieng va co nhieu hon 21 leg.
+
+
+---
+
+## BUGS phat hien 2026-09-05 — sua = baseline MOI, can user quyet  [BLOCKED]
+
+B1. `mergeOrder()` (`SimulatorMarketLevelTicker1MStopLoss.java:730-777`) KHONG chep `symbolPred`
+    => `trailRate()` fallback `pnp=1f` => 100% lenh nhanh WEAK (cap 0.03). Nhanh STRONG (cap 0.08)
+    CHUA BAO GIO chay. `SIM_TS_MAX_GAP` + `SIM_TS_PNOPUMP_WEAK_THR` la key chet. (W1 bd20e42)
+B2. Sizing chia tong trong so DCA HAI LAN: `TradeUtils.managerBudget:62` /total va
+    `DcaUtils.gridLegWeightRatio:53` /total nua => margin ~ w[i]/total^2. Voi weights 1,0,0,0
+    total=1 nen vo hinh; bat DCA la sap size 169x. (T2b 16836eb)
+B3. `balanceBasic` = hang so 35000 => size KHONG compound theo equity. `getBudget()`/
+    `BASE_BUDGET=700` la tham so chet. Fitness hien tai khong phan anh he compound. (T2b)
+Sua B1 hoac B3 se doi C2b (khong con byte-identical 60390) => phai pre-reg nhu baseline moi
+va do lai toan bo. Khong tu quyet.
+
+## T2b [DONE 16836eb] — ket qua dang chu y nhat hom nay
+`full_c2b` (big_down + DCA bu size, selector C2b): 64,809 / CAGR 28.05% / maxDD -11.5 / UW 81d
+vs `c2b_min` 60,390 / 24.48% / -13.1 / 93d. Trong nhieu N=4 (4.3pp) nhung PASS het rang buoc cung.
+Selector C2b THANG selector cu trong luong day du (2/6 rate ngoai CI; cu FAIL 4/4 rang buoc).
+DCA va big_down TU THAN khong phan biet duoc voi c2b_min (0/6 rate). Khong de cu baseline moi.
