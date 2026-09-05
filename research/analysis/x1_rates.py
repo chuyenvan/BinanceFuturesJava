@@ -135,14 +135,27 @@ def parity(tags):
         a = pd.read_csv(f"{C.B}/{t}/storage/printDone.csv", on_bad_lines="skip")
         b = pd.read_csv(f"{C.B}/{rt}/storage/printDone.csv", on_bad_lines="skip")
         ae = pd.to_datetime(a["end"], format="%Y%m%d %H:%M", errors="coerce")
-        a = a[ae <= pd.Timestamp("2024-06-30 23:59")]
-        same = len(a) == len(b) and a.reset_index(drop=True).equals(b.reset_index(drop=True))
-        log.info("  %s cat: %d dong | %s: %d dong (ky vong %d) => %s",
-                 t, len(a), rt, len(b), nref, "IDENTICAL" if same else "**KHAC**")
-        if not same and len(a) == len(b):
-            for c in a.columns:
-                if not a[c].reset_index(drop=True).equals(b[c].reset_index(drop=True)):
+        be = pd.to_datetime(b["end"], format="%Y%m%d %H:%M", errors="coerce")
+        # Bien 2024-06-30: ban tham chieu chay SIM_END_DATE=20240630 nen lenh CON MO tai moc do
+        # bi DONG CUONG BUC; ban X1 chay tiep den 2025-12-31 nen cung lenh do dong MUON hon.
+        # => so sanh CHINH tren tap dong TRUOC 2024-06-30, va bao rieng so lenh bien.
+        cut = pd.Timestamp("2024-06-30 00:00")
+        nb_edge = int((be >= cut).sum())
+        a1 = a[ae < cut].reset_index(drop=True)
+        b1 = b[be < cut].reset_index(drop=True)
+        same = len(a1) == len(b1) and a1.equals(b1)
+        log.info("  %s: %d dong (end<2024-06-30) | %s: %d dong (tong %d, ky vong %d; "
+                 "%d lenh bi dong cuong buc tai bien) => %s",
+                 t, len(a1), rt, len(b1), len(b), nref, nb_edge,
+                 "IDENTICAL" if same else "**KHAC**")
+        if not same and len(a1) == len(b1):
+            for c in a1.columns:
+                if not a1[c].equals(b1[c]):
                     log.info("    cot lech: %s", c)
+        # phu: so ca tap end<=2024-06-30 23:59 (se lech dung phan bien, ghi de doi chieu)
+        a2 = a[ae <= pd.Timestamp("2024-06-30 23:59")].reset_index(drop=True)
+        log.info("    (phu) end<=2024-06-30 23:59: X1=%d dong vs tham chieu=%d dong",
+                 len(a2), len(b))
 
 
 def n_eff(tags, dd):
