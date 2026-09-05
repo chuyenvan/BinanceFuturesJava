@@ -243,3 +243,44 @@ Java sim ở lại Oracle (data host + neo 60390).
 ⚠️ Chưa đo: XGBClassifier (G015), Java sim, và GPU không phải T4 (chỉ đo T4 của Kaggle).
 Chi tiết `docs/BENCH_DEVICE.md`, script `research/kaggle/bench_device/`,
 Kaggle: dataset `chuyendinh/bench-device-pool`, kernel `bench-device-{cpu,gpu,pgpu}`.
+
+---
+
+## W1 — Quét các trục CHƯA TỪNG SWEEP trên nền C2b  [DONE]
+
+**Kết luận lớn nhất KHÔNG phải một tham số tốt hơn — mà là một BUG.**
+`SIM_TS_MAX_GAP` (trục A, 3 mức) và `SIM_TS_PNOPUMP_WEAK_THR` (trục C, 2 mức) cho
+`printDone.csv` **byte-identical với parity ở cả 5 run**. Nguyên nhân:
+`SimulatorMarketLevelTicker1MStopLoss.mergeOrder()` (dòng 730-777) tạo object cụm mới mà
+**không chép `symbolPred`**, trong khi `trailRate()` chạy trên chính object cụm đó và có
+fallback `pnp = (symbolPred != null) ? symbolPred : 1f`. ⇒ `1f > thres` luôn đúng ⇒
+**100% lệnh đi nhánh WEAK, cap = 0.03; nhánh STRONG chưa bao giờ được gọi.**
+⚠️ Vậy mô tả exit trong `AGENT_RUNBOOK §3` và `C2B_SPEC` ("cap 0.08 STRONG / 0.03 WEAK,
+bản lề `symbolPred < 0.29`") **SAI cho sim**. Cột `symbolPred` trong printDone vẫn có số thật
+vì `closeOrder()` ghi từ object LEG — nhìn CSV sẽ tưởng trailing đã dùng nó, nó chưa từng dùng.
+`DumpConfig` đổi giá trị cho cả 2 key ⇒ **DumpConfig-đổi KHÔNG đủ để kết luận key sống**.
+
+**Trục D và E không độc lập:** gate chỉ phụ thuộc TỈ SỐ `MIN_MOMENTUM_15M / PREDICT_SYMBOL_RATE_MAX`
+(nhánh sàn `AI_DYNAMIC_MIN` không bao giờ chạy vì `symbolPred` min 0.0723). `E010` byte-identical
+`D012`, `E012` byte-identical `D010` ⇒ 4 run = 2 điểm thông tin.
+
+Phán quyết: **A, C = key chết** (đóng trục, chờ sửa `mergeOrder` rồi quét LẠI TỪ ĐẦU).
+**B (`TS_MAX_GAP_WEAK`) = null** — 0/7 rate pre-reg đơn điệu (chỉ `medP` và `maxDD` đơn điệu,
+cả hai đều ngoài danh sách pre-reg; `medP` đơn điệu là hệ quả số học của `exit = peak - min(peak/2, cap)`).
+**D+E = đơn điệu mạnh nhưng bị ràng buộc cứng loại** (win% 85.26→85.56→86.90, TSloss% 15.15→15.06→13.29,
+mean(profit|SM) 7.48→7.83→7.86 đều đơn điệu; nhưng underwater 93→172→223 ngày, cả 2 mức FAIL).
+**F (`DCA_GRID_WEIGHTS`) = có tín hiệu nhưng CONFOUND sizing** — tổng trọng số giữ 1.0 nên leg đầu
+tụt còn 0.5/0.4 lần budget, `mean(margin)` 971→593→497; maxDD −13.12→−9.12→−7.62 là thứ bất kỳ lệnh
+nhỏ hơn nào cũng tạo ra, mà sizing KHÔNG đo được trên DEV (`RUNBOOK §4`). Mảnh duy nhất không giải
+thích được bằng sizing: `mean(profit|STOP_LOSS_DONE)` −18.90→−18.09→−17.37 (đơn điệu, bớt lỗ 1.53pp)
+— DCA hạ giá vốn của đúng nhóm time-stop, kênh mất tiền lớn nhất.
+**G (`N4_a8s175`) = LOẠI**: underwater 140 > 120 và quý 2022Q4 = −5.3% < −5%. Arm 7%→8% đẩy thêm
+4pp lệnh sang time-stop (TSloss 15.15→19.17). Số cũ 61,148/974 lệnh **không tái lập** (chạy lại:
+61,592/918) vì khác jar + khác đường cấu hình — không được ghép 2 số này.
+
+**Không đề cử ứng viên baseline mới** (quét khám phá). Hai thẻ mở:
+(1) sửa `mergeOrder` chép `symbolPred` rồi quét lại A và C từ đầu — hiện là vùng trắng;
+(2) pre-reg riêng cho DCA **tách khỏi sizing** (bù `DCA_GRID_SCALE` để `mean(margin)` không đổi),
+chỉ kiểm một giả thuyết: DCA có hạ `|mean(profit|STOP_LOSS_DONE)|` không.
+Parity OK (md5 `8f7afdfb27b15f5b6d4c886700def93c`, b:60390, 970 lệnh). 16 run, 1 dataset dùng chung.
+Pre-reg `e606b76`, chi tiết `docs/W1_SWEEP.md`, script `research/analysis/w1_rates.py`.
