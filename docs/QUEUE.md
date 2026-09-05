@@ -186,3 +186,32 @@ giao dịch được, không có xác nhận P&L. Hướng mở duy nhất: **sw
 `/home/ubuntu/ledger/f4_ticks.parquet` — chi phí ~0, nhưng chỉ chạy nếu viết được công thức đánh
 đổi precision/coverage TRƯỚC. Pre-reg `1fa042d`, chi tiết `docs/F4_TIMING.md`, script
 `research/analysis/f4_timing.py`.
+
+---
+
+## G1 — Tầng đặt GIÁ TRỊ gate có nên chuyển sang horizon 72h?  [DONE]
+
+**Kết luận:** NULL **có hướng NGƯỢC** — không phải null thiếu power. Train lại đúng recipe
+G015 (45 feature, XGBClassifier, 10 cutoff, purge 72h, CPU, seed 42), đổi **duy nhất** nhãn
+`maxFav_4h>=0.06` → `maxFav_72h>=0.07` (0.07 = đúng `SIM_RATE_PROFIT_STOP_MARKET`), được `G72`.
+`G72` xếp hạng **KÉM HƠN** `G4_repro` **ngay trên outcome 72h mà nó được train**:
+AUC **0.6259 vs 0.6558**, hiệu **−0.0299** CI95×1.21 **[−0.0459, −0.0145]** (nằm trọn dưới 0),
+`P(d>0)=0.0000`, dấu nhất quán **3/3 năm** (2022 −0.0332 / 2023 −0.0326 / 2024 −0.0277).
+spearman vs `Y72` −0.0498 [−0.0763, −0.0243]; vs `g1lite` −0.0290 [−0.0579, +0.0013].
+`n=15,442,092` dòng OOS DEV, join nhãn **100.00%**, **304 khối 72h**, 2000 rep, seed 20260906.
+**Cổng GO/NO-GO FAIL ⇒ 0/2 sim run đã chạy**; `PREREG_G1_SIM.md` không được thực thi, không có
+số parity/PRIMARY/equity. **`predwf_G015x26` giữ nguyên, C2b không đổi gì.**
+**Cổng REPRO PASS tuyệt đối:** `g72_train.py` với nhãn cũ ra **byte-identical 10/10** với
+`predwf_G015_v2`, `spearman=1.00000000` trên 15,536,189 bản ghi, `rho=0.18991` khớp
+`G015_PROVENANCE §0` ⇒ đổi nhãn là biến duy nhất. Đây cũng là **xác nhận độc lập thứ ba**
+rằng pipeline G015 deterministic.
+⚠️ Pre-reg §1 đã cảnh báo trước "H1 gần như hiển nhiên đúng vì G72 train trên chính họ nhãn
+dùng để chấm" — **cảnh báo đó SAI ở dấu**, ghi lại nguyên vẹn.
+Bác bỏ **đúng một mệnh đề**: "đổi nhãn G015 sang 72h/7% thì gate tốt hơn". **Không** bác bỏ
+"horizon là trục có tác dụng" — mới chạm 1 họ nhãn / 1 ngưỡng / 1 kiến trúc.
+Hướng gate còn mở vẫn là **hiệu chuẩn ngưỡng theo phân vị của chính S1** (`C2B_SPEC §1`).
+⚠️ Caveat window overlap: bảng động cơ "so horizon trên 970 lệnh thật" bị nhiễm (ROI tới 168h),
+`LABEL_ROI2 §2` đã retract vì đúng lý do đó — **không trích làm bằng chứng**.
+Pre-reg `f931265` + `6519c22`, chi tiết `docs/G1_HORIZON.md`, script
+`research/pipeline/g72_train.py`, `research/analysis/g1_repro_check.py`,
+`research/analysis/g1_horizon_eval.py`.
