@@ -336,6 +336,13 @@ public class DetectEntrySignal2TradeNormal {
             int rank = 0;
             for (Map.Entry<Float, String> entry : selPool.entrySet()) {
                 String symbol = entry.getValue();
+                // [L3 LEGACY] symbol co vi the THAT cu: so giay KHONG mo entry giay va KHONG dem
+                // rank cho no => legacy KHONG chiem slot top-K cua so giay. Profile TAT thi
+                // isLegacySymbol luon false => vong lap nay byte-identical HEAD.
+                if (com.binance.chuyennd.tradecore.selector.LegacySymbols.isLegacySymbol(symbol)) {
+                    LOG.info("[SHADOW] skip-LEGACY {}", symbol);
+                    continue;
+                }
                 Float symbolPred = s1Order ? selPnp.get(symbol) : entry.getKey();
                 if (s1Order) LATEST_SEL_RANK.put(symbol, rank + 1);
                 if (Configs.SELECTOR_RANK_TOPK > 0 && rank >= Configs.SELECTOR_RANK_TOPK) break;
@@ -595,6 +602,12 @@ public class DetectEntrySignal2TradeNormal {
         //   BUDGET_PER_ORDER se ket o 0 => moi entry bi chan: docs/L1_SHADOW_C3.md muc 3e).
         //   marginRunning lay tu so vi the giay vi live khong con PositionRisk nao khi shadow.
         if (com.binance.chuyennd.tradecore.selector.LiveProfileC3.on()) {
+            // [L3 LEGACY] chan MOI duong (selector, market-signal, DCA) mo entry GIAY tren coin
+            // dang co vi the THAT cu — hai duong khong duoc cham cung mot symbol.
+            if (com.binance.chuyennd.tradecore.selector.LegacySymbols.isLegacySymbol(symbol)) {
+                LOG.info("[SHADOW] skip-LEGACY {}", symbol);
+                return;
+            }
             com.binance.chuyennd.tradecore.selector.ShadowBookC3 book =
                     com.binance.chuyennd.tradecore.selector.ShadowBookC3.getInstance();
             if (book.isHolding(symbol)) return;   // giong guard symbol2Pos cua duong that
@@ -666,8 +679,19 @@ public class DetectEntrySignal2TradeNormal {
             orderTrade.marketLevel = levelChange;
             orderTrade.priceTP = priceMax15M;
             LOG.info("Push redis order: {} {} {} {} {} {}", Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()), symbol, levelChange, budget.longValue(), quantity, ticker.priceClose);
-            BudgetManager.getInstance().addMarginRunning(budget);
-            RedisHelper.getInstance().get().rpush(RedisConst.REDIS_KEY_BINANCE_TD_ORDER_MANAGER_QUEUE, Utils.toJson(orderTrade));
+            // [L3 LEGACY] TACH TRANG THAI VON: nhanh GIAY khong duoc cong margin vao BudgetManager
+            // (do la trang thai tai khoan THAT cua duong legacy). Margin giay nam trong ShadowBookC3.
+            if (!com.binance.chuyennd.tradecore.selector.LiveProfileC3.on()) {
+                BudgetManager.getInstance().addMarginRunning(budget);
+            }
+            // [L3 LEGACY] nhanh GIAY khong day qua Redis queue cua bot (tren 242 cum 30001-6 la cua
+            // bot THAT) — goi thang nhanh xu ly giay trong cung JVM. Co LIVE_C3_QUEUE=1 de quay lai.
+            if (com.binance.chuyennd.tradecore.selector.LiveProfileC3.on()
+                    && !com.binance.chuyennd.tradecore.selector.LiveProfileC3.shadowUseRedisQueue()) {
+                BinanceOrderTradingManager.shadowHandleOrder(orderTrade);
+            } else {
+                RedisHelper.getInstance().get().rpush(RedisConst.REDIS_KEY_BINANCE_TD_ORDER_MANAGER_QUEUE, Utils.toJson(orderTrade));
+            }
             writeOrder2File(orderTrade, ticker, marketRate, priceMax15M);
         } else {
             LOG.info("{} {} quantity false", symbol, quantity);

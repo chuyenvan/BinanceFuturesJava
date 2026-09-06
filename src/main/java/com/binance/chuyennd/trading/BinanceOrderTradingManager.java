@@ -170,16 +170,7 @@ public class BinanceOrderTradingManager {
                 // giu nguyen duong cu doc Cfg.get("SHADOW_NO_PUSH").
                 if (com.binance.chuyennd.tradecore.selector.LiveProfileC3.forceNoPush()
                         || "true".equalsIgnoreCase(com.binance.chuyennd.tradecore.Cfg.get("SHADOW_NO_PUSH"))) {
-                    LOG.info("[SHADOW] would-BUY {} {} entry: {} quantity: {} time:{} market level: {}",
-                            order.side, order.symbol, order.priceEntry, order.quantity,
-                            Utils.normalizeDateYYYYMMDDHHmm(order.timeStart), order.marketLevel);
-                    if (com.binance.chuyennd.tradecore.selector.LiveProfileC3.on()) {
-                        Integer rk = DetectEntrySignal2TradeNormal.LATEST_SEL_RANK.get(order.symbol);
-                        com.binance.chuyennd.tradecore.selector.ShadowBookC3.getInstance().openPos(
-                                order.symbol, order.timeStart, order.priceEntry, order.quantity,
-                                rk == null ? -1 : rk,
-                                DetectEntrySignal2TradeNormal.LATEST_SEL_PNOPUMP.get(order.symbol));
-                    }
+                    shadowHandleOrder(order);
                     symbol2Processing.remove(order.symbol);
                     return;
                 }
@@ -213,6 +204,31 @@ public class BinanceOrderTradingManager {
         }
         symbol2Processing.remove(order.symbol);
 
+    }
+
+    /**
+     * [C3-SHADOW] Xu ly MOT lenh GIAY: log {@code would-BUY} + mo vi the trong so giay.
+     * KHONG goi Binance, KHONG dat lenh.
+     *
+     * <p>[L3 LEGACY] symbol LEGACY (vi the THAT cu) bi CHAN o day: so giay khong duoc mo entry
+     * giay tren coin dang co vi the that (tranh trung xu ly hai duong). Khi profile TAT,
+     * {@code isLegacySymbol} luon false => nhanh nay y het HEAD (chi log would-BUY).
+     */
+    static void shadowHandleOrder(OrderTargetInfo order) {
+        if (com.binance.chuyennd.tradecore.selector.LegacySymbols.isLegacySymbol(order.symbol)) {
+            LOG.info("[SHADOW] skip-LEGACY {}", order.symbol);
+            return;
+        }
+        LOG.info("[SHADOW] would-BUY {} {} entry: {} quantity: {} time:{} market level: {}",
+                order.side, order.symbol, order.priceEntry, order.quantity,
+                Utils.normalizeDateYYYYMMDDHHmm(order.timeStart), order.marketLevel);
+        if (com.binance.chuyennd.tradecore.selector.LiveProfileC3.on()) {
+            Integer rk = DetectEntrySignal2TradeNormal.LATEST_SEL_RANK.get(order.symbol);
+            com.binance.chuyennd.tradecore.selector.ShadowBookC3.getInstance().openPos(
+                    order.symbol, order.timeStart, order.priceEntry, order.quantity,
+                    rk == null ? -1 : rk,
+                    DetectEntrySignal2TradeNormal.LATEST_SEL_PNOPUMP.get(order.symbol));
+        }
     }
 
     private void initData() {
@@ -320,7 +336,9 @@ public class BinanceOrderTradingManager {
 //                    LOG.info("Predict data for SL init: {} {}", Utils.normalizeDateYYYYMMDDHHmm(predictData.timestamp), Utils.toJson(predictData));
                     predReturn15M  = predictData.predReturn15M;
                 }
-                Float rateMin2MoveSl = TradeUtils.calRateMinWithPredReturn15MForTradingStop(predReturn15M );
+                // [L3 LEGACY] arm THEO SYMBOL: legacy -> nguong HEAD (Configs.RATE_PROFIT_STOP_MARKET
+                // = 0.05 tren 242); chi symbol cua so giay moi an nguong C3 0.07.
+                Float rateMin2MoveSl = TradeUtils.calRateMinWithPredReturn15MForTradingStop(predReturn15M, symbol);
                 if (rateLoss > rateMin2MoveSl) {
                     // [FIX LIVE 2026-09-02] tu chua SL SAI dang treo: da arm (rateLoss > nguong) ma priceSL < entry (do bug
                     //   tsGap fallback truoc day) -> coi nhu chua co SL de tao lai o tren entry. Chi ap dung BUY.
@@ -418,6 +436,13 @@ public class BinanceOrderTradingManager {
             bm.symbol2Pos = newSymbol2Pos;   // swap CUỐI (map được đọc nhiều nhất)
             bm.removeSymbolNotPos(newSymbol2Pos.keySet());
             updateSymbolRunning(newSymbol2Pos.keySet());
+            // [L3 LEGACY] RECONCILE tu Binance: LEGACY = (vi the THAT) \ (so GIAY). Tu thu hep khi
+            // vi the that dong. CHI chay khi profile bat => duong HEAD khong doi.
+            if (com.binance.chuyennd.tradecore.selector.LiveProfileC3.on()) {
+                com.binance.chuyennd.tradecore.selector.LegacySymbols.getInstance().reconcile(
+                        newSymbol2Pos.keySet(),
+                        com.binance.chuyennd.tradecore.selector.ShadowBookC3.getInstance().openSymbols());
+            }
             Long timeProcess = (System.currentTimeMillis() - startTime);
             LOG.info("Update all position:{} {} ms", bm.symbol2Pos.size(), timeProcess.floatValue());
         } finally {
@@ -500,9 +525,11 @@ public class BinanceOrderTradingManager {
                 }
                 // [C3-SHADOW (c)] profile bat -> he so 1.0 = ratchet LIEN TUC (giong sim);
                 // profile tat -> giu dead-zone x5.21847 cua live (HEAD).
+                // [L3 LEGACY] CA HAI thua so deu THEO SYMBOL: symbol legacy giu dead-zone x5.21847
+                // va arm HEAD => diem ratchet cua vi the that KHONG doi mot bit khi profile bat.
                 Float rateMin2MoveSl = com.binance.chuyennd.tradecore.selector.LiveProfileC3
-                        .ratchetDeadzoneMult(LIVE_RATCHET_DEADZONE_MULT)
-                        * TradeUtils.calRateMinWithPredReturn15MForTradingStop(maxChange60M);
+                        .ratchetDeadzoneMultFor(symbol, LIVE_RATCHET_DEADZONE_MULT)
+                        * TradeUtils.calRateMinWithPredReturn15MForTradingStop(maxChange60M, symbol);
                 // BUY
                 if (position.getPositionAmt().compareTo(new BigDecimal("0")) > 0) {
                     side2Sl = OrderSide.SELL;
@@ -511,7 +538,7 @@ public class BinanceOrderTradingManager {
                 }
                 // [C3-SHADOW (b)] TIME-STOP 168h — duong live HEAD khong co (chi ton tai o
                 // SimulatorMarketLevelTicker1MStopLoss:672). Trong shadow chi GHI LOG, khong dat lenh.
-                if (com.binance.chuyennd.tradecore.selector.LiveProfileC3.on()
+                if (com.binance.chuyennd.tradecore.selector.LiveProfileC3.timeStopApplies(symbol)
                         && orderInfo.priceSL == null
                         && System.currentTimeMillis() - orderInfo.timeStart
                            > com.binance.chuyennd.tradecore.selector.LiveProfileC3.TIME_STOP_HOURS * 3600_000L) {

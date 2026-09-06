@@ -624,3 +624,29 @@ Con lai (**KHONG mo duoc trong dot nay**):
 1. Deploy jar moi len 242 hay khong (co mac dinh TAT nen hanh vi bot that khong doi) — can runbook + pre-reg rieng.
 2. Do 2 feature OI: backfill `oi_feat_*` tren 242 (GHI len live) **hay** mo seal 2026-08 de do gian tiep.
 3. Chap nhan gia holdout: moi tuan shadow chay tieu mot tuan 2026.
+
+---
+
+## Q8 — L3: cô lập LEGACY + gói deploy 242  [DONE (chuẩn bị) / `docs/L3_DEPLOY_PREP.md`] · 🔴 **242 CHƯA DEPLOY**
+
+User quyết: một JVM trên 242 chạy `LIVE_PROFILE=c3_shadow` — 66 vị thế thật cũ (**LEGACY**) đóng
+THẬT theo luật HEAD, sổ giấy C3 chạy song song, không lệnh thật mới.
+
+Đã xong trên Oracle (agent **không** SSH 242):
+- `LegacySymbols` + tách cờ C3 theo symbol (arm / dead-zone / time-stop) + `[SHADOW] skip-LEGACY`
+  + legacy không chiếm slot top-K + nhánh giấy bỏ Redis queue của bot + không dùng chung
+  `BUDGET_PER_ORDER`/`balanceBasic`. `mvn -o test` **97/97 PASS**, `check_cfg_gateway.sh` OK.
+- Gói `/home/ubuntu/deploy_242_l3/` (`sim.jar` sha256 `c8cec398...`, `s1_c3/`, `env.sh.new`,
+  `deploy.sh`/`verify.sh`/`rollback.sh`/`README_DEPLOY.md`).
+- `tools/pull_242_shadow.sh` (Oracle) — cron **chưa bật**, đợi deploy.
+
+**Chờ user:**
+1. Chạy 3 lệnh deploy (README_DEPLOY.md mục 1) rồi báo lại.
+2. Quyết có bật `DCA_GRID_WEIGHTS=1,0,0,0` + `TIER_FLAT=1` không — không bật thì sizing sổ giấy
+   242 lệch ~13 lần so với C3/shadow Oracle (2 key này chỉ vào đường sizing ENTRY, không thể chạm
+   đường đóng legacy).
+3. Một lệnh CHỈ ĐỌC: `grep -i TS_GIVEBACK config.properties conf/env.sh` trên 242 —
+   `TS_GIVEBACK_RATIO` là trục **dùng chung** giữa hai đường, không tách được bằng env.
+
+Sau khi 242 verify PASS: bật cron `pull_242_shadow.sh`, và (tuỳ user) tắt shadow Oracle
+`cd /home/ubuntu/shadow_c3/app && bin/daemon.sh stop` + xoá cron health.

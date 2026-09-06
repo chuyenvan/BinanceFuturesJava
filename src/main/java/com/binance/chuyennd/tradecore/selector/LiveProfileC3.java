@@ -90,4 +90,49 @@ public final class LiveProfileC3 {
     public static float ratchetDeadzoneMult(float def) {
         return ON ? RATCHET_DEADZONE_MULT_ON : def;
     }
+
+    // ========================================================================================
+    // [L3 LEGACY 2026-09-06] TACH DUONG. Tren 242 mot JVM chay CA HAI: (i) dong 66 vi the THAT
+    // cu, (ii) so giay C3. Co C3 chi duoc ap cho SO GIAY. Voi symbol LEGACY (vi the that cu),
+    // ba ham duoi tra DUNG gia tri HEAD ke ca khi profile BAT => luat dong tien that khong doi.
+    // ========================================================================================
+
+    /** (a) nguong arm theo SYMBOL: legacy -> {@code def} (HEAD); giay -> 0.07. */
+    public static float armRateFor(String symbol, float def) {
+        return decideArmRate(ON, LegacySymbols.isLegacySymbol(symbol), def);
+    }
+
+    /** (c) dead-zone ratchet theo SYMBOL: legacy -> {@code def} (5.21847 HEAD); giay -> 1.0. */
+    public static float ratchetDeadzoneMultFor(String symbol, float def) {
+        return decideDeadzone(ON, LegacySymbols.isLegacySymbol(symbol), def);
+    }
+
+    /** (b) time-stop 168h: CHI cho so giay. Legacy KHONG BAO GIO bi time-stop (HEAD khong co). */
+    public static boolean timeStopApplies(String symbol) {
+        return ON && !LegacySymbols.isLegacySymbol(symbol);
+    }
+
+    /**
+     * Nhanh GIAY co day lenh qua Redis queue cua bot khong. MAC DINH KHONG
+     * ({@code LIVE_C3_QUEUE} khong dat) — tren 242 cum Redis 30001-6 la cua bot THAT, nhanh giay
+     * khong duoc dung chung. Dat {@code LIVE_C3_QUEUE=1} de quay lai duong queue (chi de debug).
+     */
+    public static boolean shadowUseRedisQueue() {
+        return "1".equals(Cfg.getOr("LIVE_C3_QUEUE", "0"));
+    }
+
+    /** Thuan tinh toan (de test khi khong doi duoc env trong JVM dang chay). */
+    static float decideArmRate(boolean on, boolean legacy, float def) {
+        return (on && !legacy) ? ARM_RATE : def;
+    }
+
+    /** Thuan tinh toan (de test khi khong doi duoc env trong JVM dang chay). */
+    static float decideDeadzone(boolean on, boolean legacy, float def) {
+        return (on && !legacy) ? RATCHET_DEADZONE_MULT_ON : def;
+    }
+
+    /** Thuan tinh toan cua {@link #timeStopApplies}. */
+    static boolean decideTimeStop(boolean on, boolean legacy) {
+        return on && !legacy;
+    }
 }

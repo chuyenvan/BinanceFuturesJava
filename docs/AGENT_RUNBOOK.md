@@ -48,6 +48,21 @@ khong can hoi lai user, khong can doc lai 30 doc khac.
    - **1 slot JVM Oracle**: shadow chiem ~1.7G RSS. **Dung sim truoc khi chay sim** (`bin/daemon.sh stop`).
    - 🔒 Co `LIVE_PROFILE` **mac dinh TAT** o moi noi khac. Co tat = HEAD (`LiveProfileC3Test`).
      Khi bat, `SHADOW_NO_PUSH` bi HARDCODE `true`, khong doc env.
+10. **L3 — goi deploy 242 DA SAN, 242 CHUA DEPLOY** (`docs/L3_DEPLOY_PREP.md`, 2026-09-06).
+   - Quyet dinh user: MOT JVM tren 242 chay `LIVE_PROFILE=c3_shadow`; 66 vi the that cu thanh
+     **LEGACY** (dong THAT theo luat HEAD: arm 0.05, dead-zone x5.21847, khong time-stop),
+     so giay C3 chay song song, khong lenh that moi.
+   - **LEGACY = (vi the that tu Binance) \ (so giay)**, reconcile moi tick trong
+     `updatePositionInfo()`, persist `run/legacy_symbols.csv`, log `[LEGACY] managed N: ...`.
+     Co C3 chi ap cho SO GIAY: `LiveProfileC3.armRateFor/ratchetDeadzoneMultFor/timeStopApplies`
+     deu nhan `symbol`. So giay khong mo entry tren symbol legacy (`[SHADOW] skip-LEGACY`) va
+     legacy KHONG chiem slot top-K cua so giay.
+   - Nhanh giay **khong dung Redis queue cua bot** (co `LIVE_C3_QUEUE`, mac dinh TAT) va khong ghi
+     vao `BudgetManager` (von giay = `PAPER_EQUITY` + PnL giay).
+   - Goi: `/home/ubuntu/deploy_242_l3/` (`sim.jar` + `s1_c3/` + `env.sh.new` + `deploy.sh` +
+     `verify.sh` + `rollback.sh` + `README_DEPLOY.md`). **Agent KHONG SSH 242** — user tu deploy.
+   - Cong hoi quy: `mvn -o test` **97/97 PASS** (82 cu + 15 moi), `check_cfg_gateway.sh` OK.
+   - Keo log ve doi chung: `tools/pull_242_shadow.sh` (Oracle) — **cron chua bat**, doi deploy.
 
 
 ## 1. Kenh truy cap Oracle

@@ -65,6 +65,16 @@ public class TradeUtils {
         return com.binance.chuyennd.tradecore.selector.LiveProfileC3.armRate(Configs.RATE_PROFIT_STOP_MARKET);
     }
 
+    /**
+     * [L3 LEGACY 2026-09-06] Nhu tren nhung THEO SYMBOL: symbol LEGACY (vi the THAT cu tren 242)
+     * LUON tra nguong HEAD {@code Configs.RATE_PROFIT_STOP_MARKET} ke ca khi
+     * {@code LIVE_PROFILE=c3_shadow} bat. Chi symbol cua SO GIAY moi an nguong C3 0.07.
+     */
+    public static Float calRateMinWithPredReturn15MForTradingStop(Float predReturn15M, String symbol) {
+        return com.binance.chuyennd.tradecore.selector.LiveProfileC3.armRateFor(
+                symbol, Configs.RATE_PROFIT_STOP_MARKET);
+    }
+
     public static Float managerBudget(Float budget, Float marginRunning, Float balanceBasic,
                                       MarketLevelChange levelChange) {
 
