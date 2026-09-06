@@ -1,5 +1,12 @@
 # G015X26_PROVENANCE — phan phoi gate THAT cua C2b (DONG BANG)
 
+> 🟢 **DINH CHINH 2026-09-06 — muc 1 duoi day SAI.** `predwf_G015x26` **TAI LAP DUOC**
+> (16/16 fold, `spearman = 1.00000000`, `max|d| = 1.192e-07`). Ban export Tool1 2021 **khong mat**
+> (sha256 Kaggle v1 == v5 == ban tren dia) va **18 model goc con nguyen** o
+> `/home/ubuntu/claudedata/predwf_G015/model_f{0..17}_4h.json` kem log day du cua lan chay 08-14.
+> Nhan THAT = `retEnd_4h > 0.015` (`LABEL_MODE=net`), khong phai `maxFav_4h >= 0.06`.
+> Xem **`docs/G3_X26_RECOVERY.md`**. Phan hash/backup o muc 2-3 van dung, giu nguyen.
+
 Sinh luc: 2026-09-04 (Oracle). VIEC BAO TON, KHONG train / KHONG rebuild / KHONG doi model.
 Chi: hash 16 file + backup off-disk + ghi provenance.
 

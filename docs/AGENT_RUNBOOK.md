@@ -174,6 +174,11 @@ java -cp $JAR com.binance.chuyennd.tradecore.DumpConfig     # PROFILE_HASH + der
 
 ## 3. Baseline hien tai
 
+> **Provenance selector G015x26** (2026-09-06, `docs/G3_X26_RECOVERY.md`): bins
+> `claudedata/predwf_G015x26/` TAI LAP DUOC bang `research/pipeline/g015x26_train.py`
+> (predict tu 18 model goc + input da ghim). Nhan THAT = `retEnd_4h > 0.015` (`LABEL_MODE=net`),
+> **KHONG** phai `maxFav_4h >= 0.06` — `predwf_G015_v2` la model KHAC NHAN, khong phai ban tai lap.
+
 `C3` = equity 35,000 -> **68,278**, CAGR **30.76%**, maxDD **-13.31%**, **961 lenh**,
 underwater **96 ngay**. Profile **`profiles/c3_min.properties`** (16 key cua `c2b_min` +
 3 co `SIM_FIX_B1/B2/B3=true`), md5 printDone `38be0cb3195984e1000e61d9cdef54da`.
@@ -335,7 +340,10 @@ maxDD/UW tu **chuoi equity** (`qret.py`).
   Moi pre-reg do exit tu nay **khong duoc dat cong "n phai giong het"**.
 
 ## 5. Leak / no ky thuat con mo
-- `predwf_G015x26` KHONG reproduce duoc (mat training export). Single point of failure.
+- ~~`predwf_G015x26` KHONG reproduce duoc~~ **DA GO 2026-09-06** — xem `docs/G3_X26_RECOVERY.md`.
+  Tai lap duoc: 16/16 fold `spearman = 1.0`, `max|d| = 1.192e-07`. Export Tool1 2021 KHONG mat;
+  18 model goc con o `claudedata/predwf_G015/`. Con thieu: source cua TRAINER ban 08-14
+  (khong chan gi — tai sinh bang predict tu model da luu).
 - `VisionMetricsClient.parseDay` con lo 5-phut forward. **KHONG rebuild OI truoc khi patch.**
 - purge 72h < holding 168h => train/test overlap tren equity path.
 - `Constants.diedSymbol` trong G015 f3/f4/f5 = danh sach delist hardcode (future info).

@@ -203,3 +203,38 @@ Dataset WFO sinh tu bo nay: `manifest.txt` `binsSha256=b87762312620f31769a8ef016
 
 Dau vao: `/home/ubuntu/ledger/pred_s1a2x1.parquet` (64,056,011 B,
 sha256 `2618fe1a0235d8ed3602f7b4bf37d8ba611e4e6c923854e10184d036065309fe`).
+
+---
+
+## G3 — `predwf_G015x26/` (16 fold, gate THAT cua C2b) — **TAI LAP DUOC** (2026-09-06)
+
+Bao cao day du: `docs/G3_X26_RECOVERY.md`. Bins goc: `/home/ubuntu/claudedata/predwf_G015x26/`
+(KHONG bi ghi de). Bins tai sinh doi chieu: `/home/ubuntu/g3x26/regen/` + `REGEN.sha256`
+(ban sao trong repo: `research/analysis/g015x26_regen_sha256.txt`).
+
+**Nguon that:** kernel Kaggle GPU `chuyendinh/selector-15mtr-pred15-net015-gpu`, chay
+2026-08-14 07:05-07:57 UTC, sinh 18 fold; `predwf_G015x26` = 16 fold dau (tag fanout "toi 2026").
+33 thu muc `predwf_*` la hardlink cua CUNG bo bins (`nlink = 33`).
+
+**Cach tai sinh (KHONG train lai):** `research/pipeline/g015x26_train.py` nap 18 model goc
+`/home/ubuntu/claudedata/predwf_G015/model_f{0..17}_4h.json` (mtime 2026-08-14 15:02, xgboost 3.2.0)
+va predict lai tren ma tran feature dung recipe goc.
+
+| cong | nguong | do duoc |
+|---|---|---|
+| so record moi fold | == manifest `G015X26_PROVENANCE` §2 | **16/16 khop tuyet doi** |
+| tap khoa `(ts, symId)` | trung khop | **16/16 True** |
+| `spearman(regen, goc)` | >= 0.999 | **1.00000000 (16/16)** |
+| `max\|delta p0\|` | — | **1.192e-07 = 1 ULP float32 (16/16)** |
+| sha256 byte-identical | — | **KHONG** (16/16) — do `sort_values("ts")` quicksort KHONG on dinh trong pipeline goc: thu tu dong trong CUNG mot `ts` la tuy y. Khiem khuyet cua pipeline goc, khong phai mat input. |
+| determinism cua ban tai sinh | — | **byte-identical** giua 2 duong build doc lap (45-cot vs memory-light) |
+
+**Nhan (khac han `predwf_G015_v2`):** `y = (retEnd_4h > 0.015)` (`LABEL_MODE=net`, `NET_THR=0.015`),
+base rate 4h = **0.1849**. `predwf_G015_v2` dung `y = (maxFav_4h >= 0.06)`, base **0.0457** —
+**hai model khac nhan**, khong phai ban tai lap cua nhau.
+
+Doi chieu: `python3 research/analysis/g015x26_compare.py`.
+ONNX fold cuoi (cutoff 20251001) + cong ONNX-vs-JSON: `research/analysis/g015x26_onnx_gate.py`
+-> `max|d| = 4.619e-07`, `spearman = 1.0` tren 300,000 dong feature THAT
+(`sha256(onnx) = 7921ceaf2405049ddf2c23187264c34d6c95a38125f33c9ef3506f02f4e6dd8b`).
+**KHONG** dua vao `deploy_242_l3/` (goi do ship selector S1, khong phai G015 — xem §7 bao cao).

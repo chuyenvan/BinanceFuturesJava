@@ -120,7 +120,9 @@ Chi tiet `docs/D1_DATA_AUDIT.md`. Trang thai:
 - Trong 2021 CA HAI = noise (OI 1 coin/thang toi 2021-11) => giu chung khi mo ve
   2021H2 con **te hon** cat.
 - **BLOCKER cho tang tien:** `predwf_G015x26` khong co bin 2021 (som nhat 20220101)
-  va G015x26 KHONG reproduce duoc. => mo 2021 chi validate duoc **tang selector**
+  va G015x26 ~~KHONG reproduce duoc~~ (**DA GO** 2026-09-06, `docs/G3_X26_RECOVERY.md` —
+  tai lap duoc spearman 1.0; van thieu bin 2021 vi `FIRST_CUTOFF=20220101`, nhung gio
+  SINH duoc bang `g015x26_train.py` neu can). => mo 2021 chi validate duoc **tang selector**
   (rank-IC / edge5) qua Python, **KHONG chay duoc Java sim**. Muon co equity 2021
   phai train G015 moi cho 2021Q3/Q4 — luc do khong con la G015x26 va provenance
   cua C2b doi.
@@ -369,7 +371,9 @@ Pre-reg `8aa20e3`, chi tiet `docs/T2_FULLFLOW.md`. 4 run, Oracle, 2 dataset buil
 lap** — dinh chinh `C2B_SPEC:73` (dong do ghi `SELECTOR_ONLY_ENTRY` tat ca BIG_DOWN lan DCA_LEVEL1).
 "Luong day du" duoc **dinh nghia lai** = `c2b_min` tru 2 cong nghien cuu (delta 2 key), KHONG
 dung `D0_full`/`G1_giveback5` lich su (khac jar, dataset da xoa — bay da dinh o `N4_a8s175`).
-"Selector cu" = **`predwf_G015_v2`** (ban `G015x26` goc KHONG tai lap duoc), kem hieu chuan gate
+"Selector cu" = **`predwf_G015_v2`** (ban `G015x26` goc ~~KHONG tai lap duoc~~ — **SAI, da go**
+2026-09-06: x26 tai lap duoc, va v2 la model KHAC NHAN chu khong phai ban tai lap cua x26,
+`docs/G3_X26_RECOVERY.md`), kem hieu chuan gate
 `SIM_MIN_MOMENTUM_15M=0.014052` cua `c3.properties`.
 
 **Parity PASS**: `T2_c2b_ref` byte-identical `C2b` (b:60390, 970, md5 `8f7afdfb…`).
@@ -536,7 +540,7 @@ Pre-reg `docs/PREREG_X1.md` (`91d7b93`) · ket qua `docs/X1_EXTEND.md`.
 
 1. 🔴 **Nguong `UW <= 120` phai duoc user quyet lai** — ca `C3` lan `C3_FULL` deu FAIL o
    2024 (121) va 2025 (302 / 227) tren cua so 48 thang. **Khong duoc tu ha nguong.**
-2. 🔴 `predwf_G015x26` (khong tai lap duoc) nay da lan sang ca 6 fold moi. Muon go phai do
+2. 🟢 `predwf_G015x26` (~~khong tai lap duoc~~ — **da go 2026-09-06**) nay da lan sang ca 6 fold moi. Muon go phai do
    lai toan bo baseline voi `predwf_G015_v2` mo rong — job rieng, `C3` se doi so.
 3. ⚠️ Do sau lenh thua 2025 (`mean(profit|SL)` -28.94) la kenh mat tien lon nhat cua cua so
    moi. Truc `SIM_TS_MAX_GAP` / `SIM_TS_PNOPUMP_WEAK_THR` (vung trang cua `W1`) lien quan
@@ -570,7 +574,8 @@ sim nao qua 2025-12-31, khong doc outcome 2026 nao.**
   `-S`: moi file khop deu la READER. Va neo da do (`PREREG_FS` muc 0) noi nguon la **kline 1h
   Vision**, KHONG phai ticker 1m. => `featv2`/`cand_dev`/bins deu chan tai day.
 - 🔴 **BLOCKER 2: bins fold 2026 lay P(win) tu dau?** fold `20260101`/`20260401` cua
-  `predwf_G015x26` da bi seal xoa, va bo do **khong tai lap duoc**. Train moi bang
+  `predwf_G015x26` da bi seal xoa, va bo do ~~**khong tai lap duoc**~~ (**da go 2026-09-06** —
+  `docs/G3_X26_RECOVERY.md`, tai sinh bang `research/pipeline/g015x26_train.py`). Train moi bang
   `g72_train.py` = ho `G015_v2`, hieu chuan khac — ma ban le trailing `0.29` la nguong
   **tuyet doi** tren chinh P(win) do. Phai do hieu chuan tai cutoff `20251001` (chi DEV) truoc.
 - ⛔ Cong P2/P3/P4/P5 **chua chay** (chan boi hai blocker). Parity dataset `SIM_END_DATE=20251231`
@@ -650,3 +655,34 @@ THẬT theo luật HEAD, sổ giấy C3 chạy song song, không lệnh thật m
 
 Sau khi 242 verify PASS: bật cron `pull_242_shadow.sh`, và (tuỳ user) tắt shadow Oracle
 `cd /home/ubuntu/shadow_c3/app && bin/daemon.sh stop` + xoá cron health.
+
+## G3 — Khoi phuc `predwf_G015x26` (2026-09-06) — **XONG, TAI LAP DUOC**
+
+Bao cao: `docs/G3_X26_RECOVERY.md`. Script: `research/pipeline/g015x26_train.py`.
+
+**Ket qua:** 16/16 fold `spearman = 1.00000000`, `max|d| = 1.192e-07` (1 ULP float32), so record
+khop tuyet doi manifest. Cong `>= 0.999` DAT voi bien rat rong.
+
+**Hai tuyen bo cu bi bac bo bang bang chung truc tiep:**
+1. "Ban export Tool1 2021 da mat" — SAI. `sha256(features_20210101_to_20210401.t1c)` giong het nhau
+   o Kaggle **v1**, Kaggle **v5**, va ban tren dia (`eca5b024...638c5c`). mtime 2026-08-16 chi la
+   lan tai ve lai sau khi dataset v4 bo 4 file 2021 va v5 them lai.
+2. "Khong con source de dung lai" — SAI o phan quan trong. **18 model da train** cua chinh lan chay
+   08-14 con nguyen o `/home/ubuntu/claudedata/predwf_G015/` kem **log day du**. Tai sinh bins =
+   predict lai, khong can train.
+
+**Nguyen nhan that su lam lan rebuild truoc "khong khop":** dung **SAI NHAN**. x26 =
+`retEnd_4h > 0.015` (base 0.1849); ban rebuild `G015_v2` = `maxFav_4h >= 0.06` (base 0.0457).
+=> `predwf_G015_v2` **khong phai** ban tai lap cua x26 ma la mot model khac; `rho` 0.16752 vs
+0.18991 la hai model khac nhan, khong so truc tiep duoc.
+
+**Con thieu (khong chan gi):** source code cua TRAINER ban 08-14 (`gen_funding_wf_predictions_1m.py`
+nhanh `LABEL_MODE=net`) — bi ghi de tren dia 2026-08-16 va Kaggle dataset `sel1m-code` da bi tao lai;
+API `kernels/pull?version_number=` tra 400. Muon TRAIN LAI tu dau (vd doi feature) thi phai viet lai
+phan nhan (3 dong, cot `retEnd_4h` co san trong `label_15m/*.pb`). Muon SINH LAI bins thi khong can.
+
+**Viec co the mo tiep (chua lam, can pre-reg):**
+- Sinh fold 2021 cho x26 (`FIRST_CUTOFF` cu = 20220101 nen chua co) => go blocker "mo DEV ve 2021"
+  o muc Q4 — nhung phai train model moi cho 2021, khong phai predict, nen KHONG con la x26.
+- Doi chieu lai moi ket luan tung dua tren "x26 khong tai lap duoc" (F4_TIMING §9, L1_SHADOW_C3 (c),
+  T2_FULLFLOW, AUDIT_APPLIED uu tien 1).

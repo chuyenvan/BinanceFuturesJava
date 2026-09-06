@@ -1,5 +1,10 @@
 # G015REBUILD_RESULT — G015 gio TAI LAP DUOC (Viec 1/3)
 
+> 🟠 **DINH CHINH 2026-09-06 (`docs/G3_X26_RECOVERY.md`):** `predwf_G015_v2` **khong phai** ban
+> tai lap cua `predwf_G015x26` — no dung NHAN KHAC (`maxFav_4h >= 0.06` vs `retEnd_4h > 0.015`).
+> Cau "moc 0.1675 coi nhu da mat" (§5) SAI: x26 tai lap duoc (spearman 1.0). Ket qua §1 (v2
+> byte-identical voi chinh no) va §4 (C3 truot maxDD) **van dung**, khong sua.
+
 PREREG: `docs/PREREG_G015REBUILD.md` @ **0449f21** (commit TRUOC khi train). Ngay: 2026-09-04.
 **CHI DEV.** Khong ghi de bins/ledger cu. Khong rebuild OI. Khong cham live/shadow.
 

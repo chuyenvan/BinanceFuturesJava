@@ -1,5 +1,12 @@
 # G015CUT_RESULT — bo 5 feature OI khoi G015: ket qua do
 
+> 🟠 **DINH CHINH 2026-09-06 (`docs/G3_X26_RECOVERY.md`):** gia thuyet §2.2 ("ban export Tool1
+> 2021 cu khong con ton tai") **da bi bac bo** bang sha256 (Kaggle v1 == v5 == dia). Nguyen nhan
+> that cua "cong tai lap FAIL" §2 la **sai NHAN**: `p_old` (x26) dung `retEnd_4h > 0.015`
+> (base 0.1849), con ban tai lap `full45` dung `maxFav_4h >= 0.06` (base 0.0457) — hai model khac
+> nhan, `rho` khong so truc tiep duoc. Moi ket luan ve OI (§3-§6) **khong bi anh huong**: chung so
+> cac bien the noi bo voi nhau, cung nhan `maxFav`.
+
 Tien dang ky: `docs/PREREG_G015CUT.md`, commit **9db99ef342bbd4ae466c2f355221a94182e12057**
 (commit TRUOC moi lan train). Ngay do: 2026-09-03/04. **CHI DEV**, khong cham VALIDATION/HOLDOUT,
 khong rebuild file OI, khong chay java/backtest.
