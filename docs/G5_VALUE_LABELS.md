@@ -262,7 +262,7 @@ huong TOT ngoai CI" cua `PREREG_G5` muc 5.3.
 | `G5_net030_4h` | FAIL (DD −20.43, nam −7.53%) | PASS | FAIL (DD −17.33, quy −10.12) | FAIL (quy −5.46) | **FAIL 3/4** |
 | `G5_x26_order` | FAIL (DD −22.07, nam −10.74%) | PASS | PASS | FAIL (DD −20.68) | **FAIL 2/4** |
 | `G5_net020_4h` | FAIL (DD −22.88, nam −9.77%) | PASS | FAIL (DD −16.41, quy −6.58) | PASS | **FAIL 2/4** |
-| `G5_maxfav06_72h` | FAIL (DD −21.71, nam −11.85%) | PASS | FAIL (DD, quy −7.91) | FAIL (DD −17.62, quy −7.85) | **FAIL 3/4** |
+| `G5_maxfav06_72h` | FAIL (DD −21.71, nam −11.85%) | PASS | FAIL (quy −7.91; DD −12.27 dat) | FAIL (DD −17.62, quy −7.85) | **FAIL 3/4** |
 | `G5_net030_72h` | FAIL (nam −14.01%) | PASS | FAIL | FAIL (DD −25.65, nam **−20.40%**) | **FAIL 3/4** |
 | `G5_net015_72h` | FAIL (nam −12.01%) | PASS | FAIL (quy −11.15) | FAIL (DD −27.30, nam **−25.34%**) | **FAIL 3/4** |
 | `G5_net020_72h` | FAIL (nam −12.14%) | PASS | FAIL (quy −11.90) | FAIL (DD −28.95, nam **−25.39%**) | **FAIL 3/4** |
