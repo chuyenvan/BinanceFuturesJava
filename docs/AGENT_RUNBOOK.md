@@ -34,6 +34,20 @@ khong can hoi lai user, khong can doc lai 30 doc khac.
    `blpop` CUOP lenh cua bot live.
    (c) **Moi tuan shadow chay la mot tuan holdout bi tieu.** Khi doi chung chi duoc
    `HOLDOUT_UNSEAL` DUNG doan shadow da troi qua, co user duyet truc tiep, roi seal lai.
+9. **Shadow C3 Oracle — DA CHAY tu 2026-09-06** (`docs/L2_PORT_C3.md`).
+   - **dir**: `/home/ubuntu/shadow_c3/` · JVM cwd `/home/ubuntu/shadow_c3/app`
+     (jar rieng, `config.properties` rieng, `conf/env.sh` co `LIVE_PROFILE=c3_shadow`).
+   - **start/stop**: `cd /home/ubuntu/shadow_c3/app && bin/daemon.sh {start|stop|restart|status}`.
+     pidfile `run/com.binance.chuyennd.trading.BinanceOrderTradingManager.pid`.
+   - **log**: `logs/full.log` (logback RIENG 50MB x 3 — dia Oracle 97%). `logs/error.log`.
+     health moi gio: `shadow_c3/health.log` (cron `0 * * * * shadow_c3/bin/health.sh`).
+     ledger: `shadow_c3/ledger.csv` (do `ShadowBookC3` ghi, co exit+pnl) va
+     `shadow_c3/ledger_from_log.csv` (do `tools/shadow_vs_sim.py parse` dung lai tu log).
+   - **Redis**: cum RIENG `127.0.0.1:7301` (`shadow_c3/redis/redis-shadow.conf`, cluster 1 node).
+     🔴 **TUYET DOI khong tro vao Redis 242** — se `blpop` CUOP lenh cua bot live.
+   - **1 slot JVM Oracle**: shadow chiem ~1.7G RSS. **Dung sim truoc khi chay sim** (`bin/daemon.sh stop`).
+   - 🔒 Co `LIVE_PROFILE` **mac dinh TAT** o moi noi khac. Co tat = HEAD (`LiveProfileC3Test`).
+     Khi bat, `SHADOW_NO_PUSH` bi HARDCODE `true`, khong doc env.
 
 
 ## 1. Kenh truy cap Oracle

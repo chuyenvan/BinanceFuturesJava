@@ -602,3 +602,25 @@ Hai khac biet CO CHE phai ghi vao moi bao cao, khong go duoc bang cau hinh:
 - live **khong co** time-stop 168h (code chi o `Simulator...:672`).
 
 Cai gia phai chap nhan truoc khi bat: moi tuan shadow chay tieu mot tuan holdout 2026.
+
+### Q7 cap nhat 2026-09-06 — **4 chan DA MO**, shadow DANG CHAY (`docs/L2_PORT_C3.md`)
+
+| chan (L1) | trang thai | bang chung |
+|---|---|---|
+| Model S1 khong co file | ✅ MO | `x1_s1_save_model.py` -> `/home/ubuntu/s1_model/s1a2x1_cut20251001.{json,onnx}` + manifest sha256. Cong: JSON spearman **1.000000**, max\|d\| **0** tren 3,499,202 dong OOS 2025Q4 |
+| Khong co bo tinh 9 feature S1 real-time | ✅ MO cho **7 feature GIA** | `S1FeatureLive` + `S1FeatParityProbe`: 2025-12, 421,344 cap, spearman **1.000000** cho 5 feature tho, **>= 0.9997** cho 2 feature rank. ⚠️ 2 feature OI **CHUA DO** (`oi_feat_*` tren 242 chi giu 2 thang) |
+| Duong live khong doc `WFO_FUNDING_PRED_DIR` | ✅ MO (khac cach) | `S1RankerLive` chay ONNX **thang** trong tick, thay THU TU `selectorRankPool`. Khong di qua bins. Cong top-8: **6800/6800 tick trung tuyet doi** |
+| `BUDGET_PER_ORDER = 0` (key STUB) | ✅ MO | co `PAPER_EQUITY` + `ShadowBookC3.equityNow()`, bo hoan toan `getAccountUMInfo()` khi profile bat. Cong hoi quy: 81/81 test PASS, co TAT = HEAD |
+
+Con lai (**KHONG mo duoc trong dot nay**):
+1. 🔴 `symbolPred` van la `Funding_Classifier_Final.onnx`, khong phai `predwf_G015x26` — **lech hieu
+   chuan**, phai tach STRONG/WEAK khi ghep cap. (L1 muc 4: truc nay 0/5 rate ngoai CI.)
+2. 🔴 Model S1 train toi 2025-09-28, chay forward 2026-09 = **ngoai mep train 11 thang**.
+3. 🔴 Cong ONNX truot |delta| tuyet doi (2.62e-06 > 1e-6) — nhung **thu hang trung 100%**.
+4. ⚠️ 2 feature OI chua co cua so nao do khop duoc ma khong cham 242 hoac khong mo seal.
+5. ⚠️ Time-stop 168h tren duong dat lenh THAT moi chi la **mot dong log**, chua noi vao lenh dong.
+
+### Cho user quyet — Q7
+1. Deploy jar moi len 242 hay khong (co mac dinh TAT nen hanh vi bot that khong doi) — can runbook + pre-reg rieng.
+2. Do 2 feature OI: backfill `oi_feat_*` tren 242 (GHI len live) **hay** mo seal 2026-08 de do gian tiep.
+3. Chap nhan gia holdout: moi tuan shadow chay tieu mot tuan 2026.

@@ -320,10 +320,24 @@ public class DetectEntrySignal2TradeNormal {
             //    skip coin dang giu SAU khi dem => chi xet top-K rank, khong dao sau qua rank K nhu truoc.
             //  - TOPK<=0: giu hanh vi cu (pool da loc + skip-held, khong cap) byte-identical.
             TreeMap<Float, String> selPool = (Configs.SELECTOR_RANK_TOPK > 0) ? selectorRankPool : sortedCandidates;
+            // [C3-SHADOW] doi THU TU xep hang sang score S1 (9 feature hourly). Gia tri gate
+            // (symbolPred = pNoPump cua Funding_Classifier_Final.onnx) GIU NGUYEN — day la diem
+            // shadow khac sim C3 (sim dung predwf_map_s1a2 tren G015x26). Xem docs/L2_PORT_C3.md.
+            boolean s1Order = false;
+            if (com.binance.chuyennd.tradecore.selector.LiveProfileC3.on()) {
+                TreeMap<Float, String> s1Pool = buildS1Pool(time);
+                if (s1Pool != null && !s1Pool.isEmpty()) {
+                    selPool = s1Pool;
+                    s1Order = true;
+                } else {
+                    LOG.warn("[S1] chua co score -> tick nay giu thu tu pNoPump cu (KHONG phai C3)");
+                }
+            }
             int rank = 0;
             for (Map.Entry<Float, String> entry : selPool.entrySet()) {
                 String symbol = entry.getValue();
-                Float symbolPred = entry.getKey();
+                Float symbolPred = s1Order ? selPnp.get(symbol) : entry.getKey();
+                if (s1Order) LATEST_SEL_RANK.put(symbol, rank + 1);
                 if (Configs.SELECTOR_RANK_TOPK > 0 && rank >= Configs.SELECTOR_RANK_TOPK) break;
                 rank++;
                 KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
@@ -353,6 +367,28 @@ public class DetectEntrySignal2TradeNormal {
 
     // [PARITY] Pool DAY DU (khong loc maxThres) cho selector rank-mode -> khop backtest RANK-TOPK.
     private final TreeMap<Float, String> selectorRankPool = new TreeMap<>();
+    // [C3-SHADOW] pNoPump per-coin cua tick hien tai. Khi profile doi THU TU sang score S1,
+    // symbolPred truyen xuong VAN PHAI la pNoPump (no chi vao ban le trailing STRONG/WEAK).
+    private final Map<String, Float> selPnp = new HashMap<>();
+    /** [C3-SHADOW] rank trong tick cua coin theo thu tu selector dang dung (ghi ledger shadow). */
+    public static final java.util.concurrent.ConcurrentHashMap<String, Integer> LATEST_SEL_RANK =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
+    /**
+     * [C3-SHADOW] Pool xep theo score S1 (thap = tot) tren DUNG tap coin ma selector live da
+     * cham diem trong tick nay. Tra null khi model/lich su chua san sang -> caller giu duong cu.
+     */
+    private TreeMap<Float, String> buildS1Pool(long time) {
+        if (selPnp.isEmpty()) return null;
+        Map<String, Float> s1 = com.binance.chuyennd.tradecore.selector.S1RankerLive.getInstance()
+                .scoreAll(selPnp.keySet(), time);
+        if (s1 == null || s1.isEmpty()) return null;
+        TreeMap<Float, String> pool = new TreeMap<>();
+        for (Map.Entry<String, Float> e : s1.entrySet()) {
+            if (e.getValue() != null && !e.getValue().isNaN()) pool.put(e.getValue(), e.getKey());
+        }
+        return pool;
+    }
 
     private Float getSymbolPred(TreeMap<Float, String> sortedCandidates, String symbol) {
 
@@ -376,6 +412,7 @@ public class DetectEntrySignal2TradeNormal {
             KlineObjectSimple> symbol2FinalTicker, Float rateDownAvg, Float rateUpAvg, Float rateDown15MAvg, long time) {
         TreeMap<Float, String> sortedCandidates = new TreeMap<>();
         selectorRankPool.clear(); // [PARITY] reset pool day du moi tick
+        selPnp.clear();           // [C3-SHADOW] reset ban do pNoPump moi tick
         // 2. Chuẩn bị AI Input
         List<String> aiCandidates = new ArrayList<>();
         List<FundingMarketFeatures> aiFeaturesList = new ArrayList<>();
@@ -466,6 +503,7 @@ public class DetectEntrySignal2TradeNormal {
                 symbol2FundingPred.put(sym, preds[0]);
                 LATEST_SEL_PNOPUMP.put(sym, preds[0]); // [PRED-GAP] P(no-pump) per-coin cho SL-loop
                 selectorRankPool.put(preds[0], sym); // [PARITY] pool day du (truoc loc maxThres) cho rank-mode
+                selPnp.put(sym, preds[0]);           // [C3-SHADOW] giu pNoPump theo symbol
                 // 🔥 FILTER: Reject nếu Fail Prob > 0.3
                 if (preds[0] > maxThres) {
 //                    LOG.info("❌ [FILTER AI SYMBOL] {}: Prediction FAIL too high ({})", sym, probs[0]);
@@ -552,8 +590,26 @@ public class DetectEntrySignal2TradeNormal {
         Float marginRunning = BudgetManager.getInstance().marginRunning;
         Float balanceBasic = BudgetManager.getInstance().balanceBasic;
         Float budget = BudgetManager.getInstance().getBudget();
+        // [C3-SHADOW (d)] sizing COMPOUND tren equity GIAY: PAPER_EQUITY + PnL shadow (mark-to-market
+        //   tu price_realtime). Bo hoan toan getAccountUMInfo() (key Oracle la STUB -> nem, va
+        //   BUDGET_PER_ORDER se ket o 0 => moi entry bi chan: docs/L1_SHADOW_C3.md muc 3e).
+        //   marginRunning lay tu so vi the giay vi live khong con PositionRisk nao khi shadow.
+        if (com.binance.chuyennd.tradecore.selector.LiveProfileC3.on()) {
+            com.binance.chuyennd.tradecore.selector.ShadowBookC3 book =
+                    com.binance.chuyennd.tradecore.selector.ShadowBookC3.getInstance();
+            if (book.isHolding(symbol)) return;   // giong guard symbol2Pos cua duong that
+            java.util.Map<String, Float> pxOpen = book.openCount() == 0
+                    ? java.util.Collections.emptyMap()
+                    : DataManagerAerospikeFloatSim.getAllPriceRealtimeLegacy(book.openSymbols());
+            balanceBasic = book.equityNow(pxOpen);
+            marginRunning = book.marginRunning();
+        }
 
         budget = TradeUtils.managerBudget(budget, marginRunning, balanceBasic, levelChange);
+        if (com.binance.chuyennd.tradecore.selector.LiveProfileC3.on() && budget != null) {
+            float cap = com.binance.chuyennd.tradecore.selector.LiveProfileC3.SIZE_CAP_OF_EQUITY * balanceBasic;
+            if (budget > cap) budget = cap;   // tran 4.5% equity
+        }
         if (budget == null || budget < 5) {
             LOG.info("Not trade because over capital or budget not enough: {} {} {} {}", symbol, levelChange, Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()), budget);
             return;

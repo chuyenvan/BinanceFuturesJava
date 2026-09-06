@@ -166,10 +166,20 @@ public class BinanceOrderTradingManager {
                 // (2026-09-03: da tung bi xoa trong dot refactor "xoa tham so tro" - SAI. Day
                 //  khong phai tham so chien luoc ma la lop chan cuoi truoc tien that. Da khoi phuc.)
                 // ============================================================================
-                if ("true".equalsIgnoreCase(com.binance.chuyennd.tradecore.Cfg.get("SHADOW_NO_PUSH"))) {
+                // [C3-SHADOW] profile bat => LUON chan (hardcode, khong doc env). Profile tat =>
+                // giu nguyen duong cu doc Cfg.get("SHADOW_NO_PUSH").
+                if (com.binance.chuyennd.tradecore.selector.LiveProfileC3.forceNoPush()
+                        || "true".equalsIgnoreCase(com.binance.chuyennd.tradecore.Cfg.get("SHADOW_NO_PUSH"))) {
                     LOG.info("[SHADOW] would-BUY {} {} entry: {} quantity: {} time:{} market level: {}",
                             order.side, order.symbol, order.priceEntry, order.quantity,
                             Utils.normalizeDateYYYYMMDDHHmm(order.timeStart), order.marketLevel);
+                    if (com.binance.chuyennd.tradecore.selector.LiveProfileC3.on()) {
+                        Integer rk = DetectEntrySignal2TradeNormal.LATEST_SEL_RANK.get(order.symbol);
+                        com.binance.chuyennd.tradecore.selector.ShadowBookC3.getInstance().openPos(
+                                order.symbol, order.timeStart, order.priceEntry, order.quantity,
+                                rk == null ? -1 : rk,
+                                DetectEntrySignal2TradeNormal.LATEST_SEL_PNOPUMP.get(order.symbol));
+                    }
                     symbol2Processing.remove(order.symbol);
                     return;
                 }
@@ -225,6 +235,11 @@ public class BinanceOrderTradingManager {
                 executorServiceOrderNew.execute(() -> initSLFirst());
 
             }
+            // [C3-SHADOW] nhip exit cua so vi the GIAY (arm 0.07 / ratchet lien tuc / time-stop 168h).
+            // Duong live that KHONG co vi the nao khi profile bat (SHADOW_NO_PUSH chan entry).
+            if (com.binance.chuyennd.tradecore.selector.LiveProfileC3.on() && currentSecond % 10 == 0) {
+                executorServiceOrderNew.execute(this::shadowTickC3);
+            }
             // sl dynamic
             if (currentSecond % 30 == 0) {
                 symbol2Tickers.putAll(DataManagerAerospikeFloatSim.readDataForSymbols(
@@ -237,6 +252,23 @@ public class BinanceOrderTradingManager {
         } catch (Exception e) {
             LOG.error("ERROR during ThreadManagerOrderNew: {}", e);
             e.printStackTrace();
+        }
+    }
+
+    /**
+     * [C3-SHADOW] Mot nhip exit cho so vi the giay: lay gia tuoi cua cac coin dang giu (shadow)
+     * roi cham {@code ShadowBookC3.tick}. KHONG goi Binance, KHONG dat lenh.
+     */
+    private void shadowTickC3() {
+        try {
+            com.binance.chuyennd.tradecore.selector.ShadowBookC3 book =
+                    com.binance.chuyennd.tradecore.selector.ShadowBookC3.getInstance();
+            if (book.openCount() == 0) return;
+            java.util.Map<String, Float> px = DataManagerAerospikeFloatSim.getAllPriceRealtimeLegacy(
+                    new HashSet<>(book.openSymbols()));
+            book.tick(px, System.currentTimeMillis());
+        } catch (Exception e) {
+            LOG.error("[SHADOW] loi nhip exit: {}", e.toString());
         }
     }
 
@@ -466,13 +498,25 @@ public class BinanceOrderTradingManager {
 //                    LOG.info("Predict data for SL DL: {} {}", Utils.normalizeDateYYYYMMDDHHmm(predictData.timestamp), Utils.toJson(predictData));
                     maxChange60M = predictData.predReturn15M;
                 }
-                Float rateMin2MoveSl = LIVE_RATCHET_DEADZONE_MULT
+                // [C3-SHADOW (c)] profile bat -> he so 1.0 = ratchet LIEN TUC (giong sim);
+                // profile tat -> giu dead-zone x5.21847 cua live (HEAD).
+                Float rateMin2MoveSl = com.binance.chuyennd.tradecore.selector.LiveProfileC3
+                        .ratchetDeadzoneMult(LIVE_RATCHET_DEADZONE_MULT)
                         * TradeUtils.calRateMinWithPredReturn15MForTradingStop(maxChange60M);
                 // BUY
                 if (position.getPositionAmt().compareTo(new BigDecimal("0")) > 0) {
                     side2Sl = OrderSide.SELL;
                 } else { // SELL
                     side2Sl = OrderSide.BUY;
+                }
+                // [C3-SHADOW (b)] TIME-STOP 168h — duong live HEAD khong co (chi ton tai o
+                // SimulatorMarketLevelTicker1MStopLoss:672). Trong shadow chi GHI LOG, khong dat lenh.
+                if (com.binance.chuyennd.tradecore.selector.LiveProfileC3.on()
+                        && orderInfo.priceSL == null
+                        && System.currentTimeMillis() - orderInfo.timeStart
+                           > com.binance.chuyennd.tradecore.selector.LiveProfileC3.TIME_STOP_HOURS * 3600_000L) {
+                    LOG.info("[SHADOW] would-CLOSE time-stop {} entry={} gio_giu={}", symbol, priceEntry,
+                            (System.currentTimeMillis() - orderInfo.timeStart) / 3600_000L);
                 }
                 if (orderInfo.priceSL != null && rateLoss > rateMin2MoveSl) {
                     // move SL

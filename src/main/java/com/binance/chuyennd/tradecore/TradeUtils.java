@@ -60,7 +60,9 @@ public class TradeUtils {
     public static Float calRateMinWithPredReturn15MForTradingStop(Float predReturn15M) {
         // FROZEN v1 (2026-08-24): BỎ TS_DYNAMIC_K — ngưỡng arm = RATE_PROFIT_STOP_MARKET thuần.
         // (giữ tham số để không vỡ chữ ký caller; giá trị predReturn15M không còn tác động.)
-        return Configs.RATE_PROFIT_STOP_MARKET;
+        // [C3-SHADOW (a)] LIVE_PROFILE=c3_shadow -> nguong arm 0.07 (C3) thay 0.05 (live 242).
+        // Co TAT (mac dinh) -> tra dung Configs.RATE_PROFIT_STOP_MARKET nhu HEAD.
+        return com.binance.chuyennd.tradecore.selector.LiveProfileC3.armRate(Configs.RATE_PROFIT_STOP_MARKET);
     }
 
     public static Float managerBudget(Float budget, Float marginRunning, Float balanceBasic,
