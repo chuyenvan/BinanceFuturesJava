@@ -199,7 +199,7 @@ def write_bin(path, ts, sid, p):
 def main():
     ap = argparse.ArgumentParser(description="Trainer tai dung cua predwf_G015x26 (net015)")
     ap.add_argument("--fold", default="20240101",
-                    help="cutoff YYYYMMDD trong 18 cutoff, hoac 'all'")
+                    help="cutoff YYYYMMDD, danh sach ngan cach dau phay, hoac 'all'")
     ap.add_argument("--device", default="cpu", choices=["cpu", "cuda"],
                     help="XGB_DEVICE. Ban goc x26 chay 'cuda' (Kaggle GPU)")
     ap.add_argument("--out-dir", default="/home/ubuntu/g4/net015_out")
@@ -217,7 +217,7 @@ def main():
     os.makedirs(a.out_dir, exist_ok=True)
     scratch = a.scratch or os.path.join(a.out_dir, "scratch")
     os.makedirs(scratch, exist_ok=True)
-    folds = CUT_DATES if a.fold == "all" else [a.fold]
+    folds = CUT_DATES if a.fold == "all" else [x.strip() for x in a.fold.split(",") if x.strip()]
     for f in folds:
         assert f in CUT_DATES, "fold %s khong nam trong 18 cutoff" % f
     log.info("PIPELINE_VERSION=%s | GRID_MIN=%d | PURGE=%dh | OOS_MONTHS=%d | TZ=+%dh",

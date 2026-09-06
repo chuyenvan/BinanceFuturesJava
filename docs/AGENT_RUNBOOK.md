@@ -174,10 +174,28 @@ java -cp $JAR com.binance.chuyennd.tradecore.DumpConfig     # PROFILE_HASH + der
 
 ## 3. Baseline hien tai
 
-> **Provenance selector G015x26** (2026-09-06, `docs/G3_X26_RECOVERY.md`): bins
-> `claudedata/predwf_G015x26/` TAI LAP DUOC bang `research/pipeline/g015x26_train.py`
-> (predict tu 18 model goc + input da ghim). Nhan THAT = `retEnd_4h > 0.015` (`LABEL_MODE=net`),
-> **KHONG** phai `maxFav_4h >= 0.06` — `predwf_G015_v2` la model KHAC NHAN, khong phai ban tai lap.
+> **C3 = HAI cau kien, ca hai DEU TAI LAP DUOC** (2026-09-06, `docs/G4_RECIPE_C4.md`):
+> **(1) S1 order** — `pred_s1a2x1.parquet` (sha256 `2618fe1a…`), 4 cong byte-identical o
+> `X1_EXTEND` muc 2. **(2) net015 value** — bins `claudedata/predwf_G015x26/`:
+> tai SINH byte-tuong-duong bang `research/pipeline/g015x26_train.py` (predict tu 18 model goc,
+> spearman 1.0), va **TRAIN LAI tu dau** bang `research/pipeline/g015_net_train.py`
+> (recipe day du: `docs/G015_RECIPE.md`; cong GPU-vs-GPU spearman **0.985997** > nen nhieu
+> between-seed 0.984931). Nhan THAT = `retEnd_4h > 0.015` (`LABEL_MODE=net`, base 0.1849),
+> **KHONG** phai `maxFav_4h >= 0.06` — `predwf_G015_v2` la model KHAC NHAN.
+> `c4_build_map.py` + bins x26 -> `predwf_map_s1a2_x1` **byte-identical 16/16**;
+> sim ra dung `X1_C3` (md5 `d39da294…`, 2,058 lenh, 98,523).
+>
+> 🔴 **Nhung `Funding_Classifier_Final.onnx` tren duong LIVE KHONG phai net015**: cham cung
+> 2,134,469 dong OOS 2024Q1, spearman vs net015 = **0.854** con vs `G015_v2` (nhan maxFav) =
+> **0.961**; hieu chuan live `p_mean 0.2268` vs net015 **0.4642**. Model live thuoc ho `maxFav`.
+> Muon shadow = C3 that thi phai thay bang ONNX cua net015
+> (`/home/ubuntu/g3x26/g015x26_f15_cut20251001.onnx`, sha256 `7921ceaf24…`).
+>
+> 🔴 **Bins SELECTOR khong tai lap BYTE duoc** du bins gia tri tai lap toi 1 ULP:
+> `sort_values("ts")` (quicksort khong on dinh) + `rank(method="first")` trong `build_map.py`
+> pha the theo THU TU DONG => sai so `1.19e-07` bi khuech dai thanh **0.3715**. Sim van gan
+> nhu khong doi (trung khoa `(sym,start)` 99.90%, `win%`/`TSloss%`/`mP|SL` bang 0 tuyet doi,
+> chi `mean(margin)` +0.18%) — nhung md5 `printDone` KHAC. `docs/G4_RECIPE_C4.md` muc 4.
 
 `C3` = equity 35,000 -> **68,278**, CAGR **30.76%**, maxDD **-13.31%**, **961 lenh**,
 underwater **96 ngay**. Profile **`profiles/c3_min.properties`** (16 key cua `c2b_min` +
@@ -210,8 +228,9 @@ Muon tai lap C2b: `profiles/c3_regress.properties` (3 co `false`) -> ra
 **byte-identical** 60395/970/`910f1aa6...` tren duong `file`.
 
 Kien truc: **S1** (9 feature, XGBRanker rank:ndcg, label `rel5` = quintile trong tick
-cua `g1lite - median`) quyet dinh THU TU coin; **G015x26** (45 feature, XGBClassifier,
-label `maxFav_4h >= 0.06`) quyet dinh GIA TRI gate. `build_map.py` giu nguyen multiset
+cua `g1lite - median`) quyet dinh THU TU coin; **G015x26 = net015** (45 feature, XGBClassifier,
+label **`retEnd_4h > 0.015`** — DINH CHINH 2026-09-06, truoc day ghi nham `maxFav_4h >= 0.06`)
+quyet dinh GIA TRI gate. `build_map.py` giu nguyen multiset
 P(win) cua G015x26 trong moi tick, chi gan lai theo rank cua S1 (`changed` 4.9%).
 
 Exit: arm +7% roi trailing `giveback = min(peak*0.5, cap)`.

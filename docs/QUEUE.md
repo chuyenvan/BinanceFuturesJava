@@ -6,6 +6,31 @@ Sau khi xong: doi status thanh `DONE <commit>`, ghi ket qua vao doc rieng, commi
 
 ---
 
+## Q000 — G4: recipe net015 tai dung + C4 thang GIA TRI  [DONE / `docs/G4_RECIPE_C4.md`]
+
+Pre-reg `docs/PREREG_C4.md` (`4da1486`). Ba viec:
+- **Recipe `net015` DUNG LAI DUOC** (`docs/G015_RECIPE.md` + `research/pipeline/g015_net_train.py`).
+  Cong GPU-vs-GPU tren fold 8: spearman **0.985997**, top-8 **0.8296** — **PASS**, vi nen nhieu
+  giua SEED tren cung GPU la 0.984931 / 0.8246. Nhan xac minh doc lap: `KEEP=48,724,373`,
+  `base=0.1849`. Bang 18 fold: `pos` tu log khop `scale_pos_weight` tu model 18/18.
+- **`C4_parity` byte-identical `X1_C3`** (md5 `d39da294…`, 2,058, 98,523) — moi truong khong troi.
+- **`C4_regen`**: n giong het, trung khoa `(sym,start)` 99.90%, `win%`/`TSloss%`/`mP|SL` bang 0
+  tuyet doi, chi `mean(margin)` +0.18% ngoai CI => **1/5 — FAIL van ban, PASS noi dung**.
+  Nguyen nhan goc: `build_map.py` khuech dai 1 ULP thanh 0.3715 (thu tu dong).
+
+**CHUA XONG:** `C4_maxfav` (`predwf_G015_v2` chi co 10/16 fold; 6 fold dang train tren kernel
+`chuyendinh/g015v2-maxfav-cpu`). **Cau hoi "thang gia tri co load-bearing o GATE khong" van MO.**
+
+Bon viec DE LAI, deu can pre-reg rieng, **KHONG duoc tu chay**:
+- 🔴 **Thay `Funding_Classifier_Final.onnx` cua duong live bang ONNX cua net015** — model live
+  thuoc ho `maxFav` (spearman 0.961 voi `G015_v2`, 0.854 voi net015). Day la DEPLOY, phai co user.
+- 🔴 **On dinh hoa `build_map.py` + `sort_values`** (`kind="stable"` + sort phu theo `symId`) —
+  se doi bins deploy hien tai, phai do lai baseline.
+- ⚠️ Hoan tat `C4_maxfav` roi cham bang `research/analysis/c4_rates.py`.
+- ⚠️ Khoi dong lai shadow C3 Oracle (`shadow_c3/app/bin/daemon.sh start`) — dang TAT.
+
+---
+
 ## Q00 — X3 trailing cap theo RANK + pre-arm SL -50%  [DONE / `docs/X3_RANKCAP_SL50.md`]
 
 Pre-reg `docs/PREREG_X3.md` (`e622926`). 5 run tuan tu tren Oracle, 48 thang, nen `X1_C3`.

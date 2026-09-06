@@ -140,6 +140,33 @@ def c4_gate(dd):
     return ok
 
 
+def c4_deep(dd):
+    """C4 sau hon: ghep (sym,start) voi PARITY de tach 'doi TRANG THAI' khoi 'doi TAP LENH'.
+
+    Trailing chi tac dong SAU arm => KHONG duoc bien mot lenh SM thanh SL (hay nguoc lai) tren
+    CUNG mot (sym,start). Neu n_SL lech ma so chuyen trang thai = 0 thi lech do den tu TAP LENH
+    (thoat som/muon doi thoi diem giai phong margin => lenh vao sau khac), khong phai tu trailing
+    cham nhanh pre-arm.
+    """
+    log.info("")
+    log.info("=== C4-DEEP: ghep (sym,start) voi PARITY - chuyen trang thai vs doi tap lenh ===")
+    pk = dd[PARITY][dd[PARITY].leg == 0].drop_duplicates(subset=["sym", "start"]).set_index(
+        ["sym", "start"])["status"]
+    log.info("%-10s %7s %8s %8s %9s %9s %9s %9s", "tag", "n_SL", "ghep%", "chung",
+             "SM->SL", "SL->SM", "moi", "mat")
+    for t in TAGS:
+        d = dd[t][dd[t].leg == 0].drop_duplicates(subset=["sym", "start"]).set_index(
+            ["sym", "start"])["status"]
+        common = d.index.intersection(pk.index)
+        a, b = d.loc[common], pk.loc[common]
+        sm2sl = int(((b == "STOP_MARKET_DONE") & (a == "STOP_LOSS_DONE")).sum())
+        sl2sm = int(((b == "STOP_LOSS_DONE") & (a == "STOP_MARKET_DONE")).sum())
+        log.info("%-10s %7d %7.1f%% %8d %9d %9d %9d %9d", t,
+                 int((d == "STOP_LOSS_DONE").sum()), 100.0 * len(common) / len(d), len(common),
+                 sm2sl, sl2sm, len(d) - len(common), len(pk) - len(common))
+    log.info("  => SM->SL = SL->SM = 0 o moi arm => C4 dat VE CHAT: trailing khong cham pha truoc arm")
+
+
 def branch_table(dd):
     log.info("")
     log.info("=== NHANH TRAILING STRONG/WEAK (ban le CUA CHINH ARM; null -> WEAK) ===")
@@ -303,6 +330,7 @@ def main():
     dd = {t: trades4(t) for t in TAGS}
     main_table(dd)
     c4_gate(dd)
+    c4_deep(dd)
     branch_table(dd)
     year_table(dd)
     ci = ci_all(dd)
