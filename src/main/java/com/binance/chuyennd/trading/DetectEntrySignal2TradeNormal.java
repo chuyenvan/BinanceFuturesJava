@@ -86,6 +86,24 @@ public class DetectEntrySignal2TradeNormal {
             new java.util.concurrent.ConcurrentHashMap<>();
     public static volatile long LATEST_SEL_TS = 0L;
 
+    // [L4 2026-09-07] symbolPred CUA SO GIAY = gia tri da qua quantile-map cua net015
+    // (LiveBuildMap). TACH HAN khoi LATEST_SEL_PNOPUMP: duong THAT (66 vi the legacy) van dung
+    // pNoPump cua Funding_Classifier_Final.onnx nhu HEAD — doi truc do la doi luat dong tien that.
+    public static final java.util.concurrent.ConcurrentHashMap<String, Float> LATEST_SEL_MAPPRED =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
+    /**
+     * [L4] Gia tri gate dung cho SO GIAY. Profile bat -> symbolPred da map (net015);
+     * tat, hoac chua co map -> pNoPump cu. Duong THAT doc thang {@link #LATEST_SEL_PNOPUMP}.
+     */
+    public static Float paperSymbolPred(String symbol) {
+        if (com.binance.chuyennd.tradecore.selector.LiveProfileC3.on()) {
+            Float v = LATEST_SEL_MAPPRED.get(symbol);
+            if (v != null) return v;
+        }
+        return LATEST_SEL_PNOPUMP.get(symbol);
+    }
+
 
     public static void main(String[] args) throws InterruptedException, ParseException {
 //        new DetectEntrySignal2Trader().getTickerBySymbol("QNTUSDT");
@@ -333,6 +351,14 @@ public class DetectEntrySignal2TradeNormal {
                     LOG.warn("[S1] chua co score -> tick nay giu thu tu pNoPump cu (KHONG phai C3)");
                 }
             }
+            // [L4] THANG GIA TRI: symbolPred phai la gia tri net015 da qua quantile-map, KHONG
+            // phai pNoPump cua Funding_Classifier_Final.onnx (ho maxFav, hieu chuan lech 2 lan
+            // -> admission x5.05, docs/G4_RECIPE_C4.md muc 6.2).
+            if (s1Order && !buildValueMap(time, selPool)) {
+                LOG.error("[MAP] chua co thang gia tri net015 cho tick {} -> KHONG mo entry giay "
+                        + "(KHONG thay bang pNoPump)", time);
+                selPool = new TreeMap<>();
+            }
             int rank = 0;
             for (Map.Entry<Float, String> entry : selPool.entrySet()) {
                 String symbol = entry.getValue();
@@ -343,7 +369,7 @@ public class DetectEntrySignal2TradeNormal {
                     LOG.info("[SHADOW] skip-LEGACY {}", symbol);
                     continue;
                 }
-                Float symbolPred = s1Order ? selPnp.get(symbol) : entry.getKey();
+                Float symbolPred = s1Order ? selMapPred.get(symbol) : entry.getKey();
                 if (s1Order) LATEST_SEL_RANK.put(symbol, rank + 1);
                 if (Configs.SELECTOR_RANK_TOPK > 0 && rank >= Configs.SELECTOR_RANK_TOPK) break;
                 rank++;
@@ -377,6 +403,10 @@ public class DetectEntrySignal2TradeNormal {
     // [C3-SHADOW] pNoPump per-coin cua tick hien tai. Khi profile doi THU TU sang score S1,
     // symbolPred truyen xuong VAN PHAI la pNoPump (no chi vao ban le trailing STRONG/WEAK).
     private final Map<String, Float> selPnp = new HashMap<>();
+    /** [L4] 45 feature cua tung coin trong tick (DUNG mang da nap cho model funding live). */
+    private final Map<String, float[]> selFeat45 = new HashMap<>();
+    /** [L4] symbolPred sau quantile-map cua tick hien tai (chi khi profile bat). */
+    private final Map<String, Float> selMapPred = new HashMap<>();
     /** [C3-SHADOW] rank trong tick cua coin theo thu tu selector dang dung (ghi ledger shadow). */
     public static final java.util.concurrent.ConcurrentHashMap<String, Integer> LATEST_SEL_RANK =
             new java.util.concurrent.ConcurrentHashMap<>();
@@ -395,6 +425,64 @@ public class DetectEntrySignal2TradeNormal {
             if (e.getValue() != null && !e.getValue().isNaN()) pool.put(e.getValue(), e.getKey());
         }
         return pool;
+    }
+
+    /**
+     * [L4] QUANTILE-MAP CHAY LIVE. Score TOAN vu tru da qua gate p15 bang {@code net015}
+     * (cung 45 feature dang dung cho model funding live) -> multiset P(win) cua tick; roi gan
+     * cho tung coin theo THU HANG S1 bang {@link LiveBuildMap} (quy uoc build_map.py) va DAO DAU
+     * thanh {@code symbolPred = 1 - P(win)}.
+     *
+     * @return false khi chua san sang — caller PHAI bo tick, khong duoc thay bang gia tri khac.
+     */
+    private boolean buildValueMap(long time, TreeMap<Float, String> s1Pool) {
+        selMapPred.clear();
+        com.binance.chuyennd.tradecore.selector.Net015ValueLive vm =
+                com.binance.chuyennd.tradecore.selector.Net015ValueLive.getInstance();
+        if (!vm.isReady()) return false;
+        java.util.List<String> uni = new ArrayList<>();
+        for (String sym : s1Pool.values()) if (selFeat45.containsKey(sym)) uni.add(sym);
+        if (uni.size() < 20) {
+            LOG.warn("[MAP] chi {} coin co du 45 feature -> bo tick", uni.size());
+            return false;
+        }
+        java.util.Collections.sort(uni);   // thu tu dong TAT DINH cho tie-break rank("first")
+        float[][] x = new float[uni.size()][];
+        for (int i = 0; i < uni.size(); i++) x[i] = selFeat45.get(uni.get(i));
+        float[] pwin = vm.pwin(x);
+        if (pwin == null) return false;
+        Map<String, Float> pw = new HashMap<>();
+        Map<String, Float> sc = new HashMap<>();
+        for (int i = 0; i < uni.size(); i++) {
+            if (Float.isNaN(pwin[i])) return false;
+            pw.put(uni.get(i), pwin[i]);
+        }
+        for (Map.Entry<Float, String> e : s1Pool.entrySet()) {
+            if (pw.containsKey(e.getValue())) sc.put(e.getValue(), e.getKey());
+        }
+        com.binance.chuyennd.tradecore.selector.LiveBuildMap.Assigned a =
+                com.binance.chuyennd.tradecore.selector.LiveBuildMap.assign(uni, sc, pw);
+        if (a == null) return false;
+        selMapPred.putAll(a.symbolPred);
+        LATEST_SEL_MAPPRED.putAll(a.symbolPred);
+        double[] srt = new double[a.size()];
+        int j = 0;
+        for (float v : a.symbolPred.values()) srt[j++] = v;
+        java.util.Arrays.sort(srt);
+        LOG.info("[MAP] tick={} n_coins={} p10={} p50={} p90={}", time, a.size(),
+                String.format(java.util.Locale.US, "%.4f",
+                        com.binance.chuyennd.tradecore.selector.LiveBuildMap.pct(srt, 10)),
+                String.format(java.util.Locale.US, "%.4f",
+                        com.binance.chuyennd.tradecore.selector.LiveBuildMap.pct(srt, 50)),
+                String.format(java.util.Locale.US, "%.4f",
+                        com.binance.chuyennd.tradecore.selector.LiveBuildMap.pct(srt, 90)));
+        int k = 0;
+        for (String sym : s1Pool.values()) {
+            if (++k > 8) break;
+            LOG.info("[MAP] top {} rank={} symbolPred={}", sym, a.rank.get(sym),
+                    a.symbolPred.get(sym));
+        }
+        return true;
     }
 
     private Float getSymbolPred(TreeMap<Float, String> sortedCandidates, String symbol) {
@@ -420,6 +508,8 @@ public class DetectEntrySignal2TradeNormal {
         TreeMap<Float, String> sortedCandidates = new TreeMap<>();
         selectorRankPool.clear(); // [PARITY] reset pool day du moi tick
         selPnp.clear();           // [C3-SHADOW] reset ban do pNoPump moi tick
+        selFeat45.clear();        // [L4] reset feature 45 moi tick
+        selMapPred.clear();       // [L4] reset ban do gia tri moi tick
         // 2. Chuẩn bị AI Input
         List<String> aiCandidates = new ArrayList<>();
         List<FundingMarketFeatures> aiFeaturesList = new ArrayList<>();
@@ -511,6 +601,11 @@ public class DetectEntrySignal2TradeNormal {
                 LATEST_SEL_PNOPUMP.put(sym, preds[0]); // [PRED-GAP] P(no-pump) per-coin cho SL-loop
                 selectorRankPool.put(preds[0], sym); // [PARITY] pool day du (truoc loc maxThres) cho rank-mode
                 selPnp.put(sym, preds[0]);           // [C3-SHADOW] giu pNoPump theo symbol
+                if (com.binance.chuyennd.tradecore.selector.LiveProfileC3.on()) {
+                    // [L4] CUNG mang float[45] vua cho vao Funding_Classifier_Final.onnx —
+                    // khong tinh them mot feature nao.
+                    selFeat45.put(sym, featureArrays.get(i));
+                }
                 // 🔥 FILTER: Reject nếu Fail Prob > 0.3
                 if (preds[0] > maxThres) {
 //                    LOG.info("❌ [FILTER AI SYMBOL] {}: Prediction FAIL too high ({})", sym, probs[0]);

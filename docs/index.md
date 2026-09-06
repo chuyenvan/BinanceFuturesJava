@@ -111,3 +111,5 @@ Tim chung o [archive/](archive/) (chu yeu `archive/_cleanup_20260829/`, commit `
 Chung la **SNAPSHOT lich su**: so lieu trong do co the da bi thoi (nhat la moi thu truoc ban fix
 funding `49fde3b` va truoc `5f40a90`). Muon dung lai mot file thi phai doi chieu lai voi
 `src/main` roi moi keo ra khoi archive.
+
+- [L4_LIVE_BUILDMAP](L4_LIVE_BUILDMAP.md) — `build_map` chay LIVE: shadow = C3 o tang entry (quy uoc `symbolPred = 1 - P(win)`, cong REPLAY 3 ngay DEV).

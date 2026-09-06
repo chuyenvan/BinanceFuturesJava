@@ -6,6 +6,27 @@ Sau khi xong: doi status thanh `DONE <commit>`, ghi ket qua vao doc rieng, commi
 
 ---
 
+## Q00000 — L4: `build_map` chay LIVE (shadow = C3 o tang entry)  [DONE / `docs/L4_LIVE_BUILDMAP.md`]
+
+Khong pre-reg rieng: day la **sua mot loi da duoc do** (`G4_RECIPE_C4` muc 6.5 — shadow dung
+thang gia tri SAI ho o tang admission), khong phai thi nghiem moi. Cong deu la cong TAI LAP.
+- **Quy uoc `build_map`** rut tu code + kiem 3 duong doc lap: `symbolPred = 1 − P(win)`;
+  coin rank k (S1, thap=tot) nhan `P(win)` lon thu k; `rank(method="first")` pha the theo
+  THU TU DONG. Xem `AGENT_RUNBOOK` muc 0 diem 11.
+- **REPLAY 3 ngay DEV PASS**: port `build_map` **byte-exact** (`max|d| = 0`, 150,084 dong);
+  end-to-end spearman **1.000000**, top-8 **100.0000%**, multiset `max|d| = 4.768e-07`.
+- **105/105 unit test** (97 cu + 8 moi), fixture vang do chinh pandas sinh.
+- Goi `/home/ubuntu/deploy_242_l3/` da cap nhat (jar moi + 2 model + 2 feature-order + sha,
+  `verify.sh` co cong `[MAP]`). **242 CHUA DEPLOY** — 3 lenh o `README_DEPLOY.md` muc 1.
+
+Viec DE LAI (**KHONG tu chay**):
+- 🔴 **Cong 45 feature live vs Tool1 CHUA DO DUOC** — `oi_feat_*` 242 chi giu 2 thang.
+  Hai duong, ca hai deu can USER DUYET: (1) backfill `ComputeOiFeat2Live242` cho 2025-11/12
+  (**GHI len 242**); (2) do tren 2026-08 (**can `HOLDOUT_UNSEAL`**). Agent khong tu mo.
+- ⚠️ Sau khi user deploy: bat `tools/pull_242_shadow.sh` de keo log ve doi chung.
+
+---
+
 ## Q0000 — G5: nhan/horizon cho VALUE MODEL  [DONE / `docs/G5_VALUE_LABELS.md`]
 
 Pre-reg `docs/PREREG_G5.md` (`f0b088b`). Thiet ke: **hieu chuan CO DINH** (multiset x26/tick),

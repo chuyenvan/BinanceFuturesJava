@@ -34,7 +34,11 @@ khong can hoi lai user, khong can doc lai 30 doc khac.
    `blpop` CUOP lenh cua bot live.
    (c) **Moi tuan shadow chay la mot tuan holdout bi tieu.** Khi doi chung chi duoc
    `HOLDOUT_UNSEAL` DUNG doan shadow da troi qua, co user duyet truc tiep, roi seal lai.
-9. **Shadow C3 Oracle — DA CHAY tu 2026-09-06** (`docs/L2_PORT_C3.md`).
+9. **Shadow C3 Oracle — DA TAT** (`docs/L2_PORT_C3.md`; trang thai 2026-09-07:
+   `health.log` bao `DOWN` lien tuc tu **2026-09-06 19:00Z**, pid mat. Dong bang tai luc tat:
+   `wouldBUY=30 wouldCLOSE=4 createOrder=0 errLines=0 ledgerRows=4`. Cron `health.sh` van cai.
+   **L4 KHONG khoi dong lai.** Muon chay lai: `cd /home/ubuntu/shadow_c3/app && bin/daemon.sh start`
+   — nhung jar trong do la ban L2, CHUA co `LiveBuildMap`; phai copy jar moi vao truoc.)
    - **dir**: `/home/ubuntu/shadow_c3/` · JVM cwd `/home/ubuntu/shadow_c3/app`
      (jar rieng, `config.properties` rieng, `conf/env.sh` co `LIVE_PROFILE=c3_shadow`).
    - **start/stop**: `cd /home/ubuntu/shadow_c3/app && bin/daemon.sh {start|stop|restart|status}`.
@@ -64,6 +68,35 @@ khong can hoi lai user, khong can doc lai 30 doc khac.
    - Cong hoi quy: `mvn -o test` **97/97 PASS** (82 cu + 15 moi), `check_cfg_gateway.sh` OK.
    - Keo log ve doi chung: `tools/pull_242_shadow.sh` (Oracle) — **cron chua bat**, doi deploy.
 
+
+11. **L4 — `build_map` chay LIVE, shadow thanh C3 dung nghia o tang ENTRY**
+    (`docs/L4_LIVE_BUILDMAP.md`, 2026-09-07). **242 van CHUA DEPLOY.**
+    - 🔴 **QUY UOC PHAI THUOC** (sai chieu la dao nguoc selector):
+      `symbolPred = 1 − P(win)` (`WfoDataset.buildFundingFromWfFiles:248` `// DAO DAU`);
+      `build_map` gan cho coin **rank k theo S1** (k=1 = `score` THAP nhat = tot nhat) gia tri
+      `P(win)` **LON thu k** cua tick => `symbolPred` **THAP thu k** => sim lay K phan tu dau
+      cua mang sort TANG. Ca hai lan rank deu `method="first"`, **the pha theo THU TU DONG**.
+      Kiem 3 duong doc lap: code; spearman per-tick `score` vs `p0(predwf_map_s1a2_x1)` =
+      **−1.000000 chinh xac**; edge8 chon `p0` CAO = **+21.5%** vs chon `p0` THAP = **−4.2%**.
+    - Lop moi: `tradecore/selector/LiveBuildMap.java` (thuan tinh toan) +
+      `Net015ValueLive.java`. Diem noi: `DetectEntrySignal2TradeNormal.buildValueMap(...)`.
+      🟢 **Khong tinh them mot feature nao** — `net015` an CUNG mang `float[45]` da nap cho
+      `Funding_Classifier_Final.onnx`.
+    - 🔒 `LATEST_SEL_MAPPRED` (so GIAY) **tach han** `LATEST_SEL_PNOPUMP` (duong THAT/legacy,
+      `BinanceOrderTradingManager:485`) — doi truc do la doi luat dong tien that.
+    - Cong REPLAY 3 ngay DEV (2025-11-03/11-17/12-08, 150,084 dong, 288 tick):
+      port `build_map` tai lap bins da deploy **BYTE-EXACT (`max|d| = 0`)**; end-to-end
+      spearman **1.000000** (per-tick min 1.000000), top-8 **100.0000%**, multiset
+      `max|d| = 4.768e-07`. `net015` ONNX trong Java vs bins: spearman 1.000000, `max|d|` 4.768e-07.
+    - 🔴 **CHUA DO DUOC: duong FEATURE 45 real-time vs Tool1 offline.** `oi_feat_*` tren 242 chi
+      giu 2 thang => khong tai lap duoc 2025-11/12; cua so co ca hai nguon la 2026-08 = holdout.
+      Chi moi cong THU TU (tinh) la PASS. **Day la rui ro lon nhat con lai o tang entry.**
+    - ⚠️ **Dai `symbolPred` co HAI muc, dung lan**: vu tru moi tick p50 ~**0.47** (= 1−0.4642,
+      dung `p_mean` net015); **muc LENH** (top-8) p10/50/90 = **0.2555/0.2974/0.3373**
+      (tham chieu `C4_parity` 48 thang: 0.1424/0.2173/0.3223). Log `[MAP]` in dai VU TRU,
+      nen `verify.sh` gate `p50 in [0.20, 0.70]` (do tren 220 tick: 0.2262..0.6093).
+    - `DCA_GRID_WEIGHTS=1,0,0,0` + `TIER_FLAT=1` **DA BAT** trong `env.sh.new` (user duyet
+      2026-09-07) — tham so SO GIAY, chi vao duong sizing entry.
 
 ## 1. Kenh truy cap Oracle
 

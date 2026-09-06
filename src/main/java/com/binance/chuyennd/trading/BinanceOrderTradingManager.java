@@ -227,7 +227,7 @@ public class BinanceOrderTradingManager {
             com.binance.chuyennd.tradecore.selector.ShadowBookC3.getInstance().openPos(
                     order.symbol, order.timeStart, order.priceEntry, order.quantity,
                     rk == null ? -1 : rk,
-                    DetectEntrySignal2TradeNormal.LATEST_SEL_PNOPUMP.get(order.symbol));
+                    DetectEntrySignal2TradeNormal.paperSymbolPred(order.symbol));
         }
     }
 
