@@ -186,6 +186,26 @@ Trang thai luc viet: **RUNNING**.
 Khi arm chay xong: `c4_build_map.py` -> `predwf_map_c4_maxfav` -> `run_c4_sim.sh C4_maxfav`
 -> `c4_rates.py C4_parity C4_regen C4_maxfav`. Du doan da ghi truoc: `PREREG_C4` muc 5.
 
+### 6.1 SAI LECH PHAM VI — khai bao TRUOC khi thay bat ky so nao cua arm nay
+
+Kernel 48 thang chay lau hon ngan sach cua dot nay. De **van tra loi duoc cau hoi chinh**,
+chay them mot arm **CUA SO 30 THANG** (`2022-01-01 .. 2024-06-30`) dung **10 fold DA CO SAN**
+cua `predwf_G015_v2` — **khong train them dong nao**:
+
+- `C4_maxfav30` = bins `predwf_G015_v2` (10 fold `20220101..20240401`), `SIM_END_DATE=20240630`.
+- Nen so sanh = **`C4_parity` cat toi `end < 2024-06-30`**. Phep cat nay DA duoc xac nhan
+  hop le: `X1_EXTEND` muc 3 do rang `X1_C3` cat toi 2024-06-30 ra **dung 961 dong IDENTICAL**
+  `C3_BASE`, tuc "chay 48 thang roi cat" == "chay 30 thang".
+- **Tieu chi giu nguyen** `PREREG_C4` muc 3-4: >= 2 rate CHAT LUONG cung huong, ngoai CI khoi-72h
+  x1.21 => KHAC parity. `n` va `mean(margin)` mot minh khong tinh.
+- **Diem yeu phai ghi:** cua so 30 thang co `n_eff` **89 khoi 72h** (so voi 167 cua 48 thang,
+  `X1_EXTEND` muc 9) => CI rong hon ~1.37 lan. Mot ket qua NULL o day **khong** manh bang null
+  o 48 thang. Neu ra null thi phai ghi la "chua do du power", khong phai "khong co hieu ung".
+- Arm 48 thang van chay tiep; khi xong se bao sung, **khong thay the** ket qua 30 thang.
+
+Du doan cho 30 thang (ghi truoc): giong `PREREG_C4` muc 5.2 diem 3-4 — `n` tang >= 15%,
+1-2 rate chat luong ngoai CI, `%STRONG` tang len > 95%.
+
 ## 7. Artifact + lenh tai lap
 
 | thu | duong dan |
