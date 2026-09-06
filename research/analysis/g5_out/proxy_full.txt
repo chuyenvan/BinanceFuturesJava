@@ -1,0 +1,42 @@
+gate_cfg: profile=/home/ubuntu/src/BinanceFuturesJava/profiles/c2b.properties
+  MIN_MOMENTUM_15M=0.00800 (profile:SIM_MIN_MOMENTUM_15M) AI_DYNAMIC_MIN=0.26787 (Configs.java:AI_DYNAMIC_MIN) MULT=1.28760 (Configs.java:AI_DYNAMIC_MULTIPLIER)
+  AI_DYNAMIC_MAX=2.14135 (Configs.java:AI_DYNAMIC_MAX) RATE_MAX=0.15000 (Configs.java:PREDICT_SYMBOL_RATE_MAX_THRESHOLD) SELECTOR_RANK_TOPK=8
+  AIRejectFilter: can_duoi=True can_tren=False (co OFF_FLAT_HARD con boc cap? False)
+  => KHONG CO TRAN. dyn_thr(san)=0.00214 dyn_thr(score=0.3212)=0.02206
+  TANG 1 tran ung vien = RATE_MAX*AI_DYNAMIC_MAX = 0.32120; TOPK=8 => tang 1 BI BO QUA (rank top-K)
+POOL rows=6554089 ticks=17349 (tick >=10 dong: 17240)
+TAGS: ['maxfav06_4h', 'maxfav06_72h', 'net015_4h', 'net015_72h', 'net020_4h', 'net020_72h', 'net030_4h', 'net030_72h']
+PARITY (x26 raw): pass=103840 adm_top8=5906
+maxfav06_4h   p10/50/90=0.1478/0.4294/0.8111 sd=0.2433 | IC=+0.16433 edge5=+0.20746 (tick 17240) | pass_raw=473561 (x4.56) adm8_raw=114335 | pass_map=103840 adm8_map=5906 | map==parity: True
+maxfav06_72h  p10/50/90=0.3863/0.5696/0.7613 sd=0.1449 | IC=+0.13319 edge5=+0.17559 (tick 17240) | pass_raw=231765 (x2.23) adm8_raw=31564 | pass_map=103840 adm8_map=5906 | map==parity: True
+net015_4h     p10/50/90=0.3701/0.5439/0.6949 sd=0.1301 | IC=+0.14412 edge5=+0.17205 (tick 17240) | pass_raw=103840 (x1.00) adm8_raw=5906 | pass_map=103840 adm8_map=5906 | map==parity: True
+net015_72h    p10/50/90=0.3773/0.5260/0.6703 sd=0.1175 | IC=-0.01277 edge5=+0.00782 (tick 17240) | pass_raw=83193 (x0.80) adm8_raw=9614 | pass_map=103840 adm8_map=5906 | map==parity: True
+net020_4h     p10/50/90=0.3315/0.5416/0.7218 sd=0.1514 | IC=+0.15037 edge5=+0.17990 (tick 17240) | pass_raw=124825 (x1.20) adm8_raw=8474 | pass_map=103840 adm8_map=5906 | map==parity: True
+net020_72h    p10/50/90=0.3743/0.5250/0.6678 sd=0.1172 | IC=-0.00350 edge5=+0.01621 (tick 17240) | pass_raw=83513 (x0.80) adm8_raw=9460 | pass_map=103840 adm8_map=5906 | map==parity: True
+net030_4h     p10/50/90=0.2538/0.5148/0.7533 sd=0.1873 | IC=+0.15882 edge5=+0.18878 (tick 17240) | pass_raw=179456 (x1.73) adm8_raw=26116 | pass_map=103840 adm8_map=5906 | map==parity: True
+net030_72h    p10/50/90=0.3705/0.5248/0.6645 sd=0.1175 | IC=+0.02741 edge5=+0.04006 (tick 17240) | pass_raw=73283 (x0.71) adm8_raw=8307 | pass_map=103840 adm8_map=5906 | map==parity: True
+CI maxfav06_4h   rankIC  d=+0.02021 [+0.01268,+0.02773] khoi=419 ngoai CI: True
+CI maxfav06_4h   edge5   d=+0.03542 [+0.00384,+0.06699] khoi=419 ngoai CI: True
+CI maxfav06_72h  rankIC  d=-0.01093 [-0.01689,-0.00496] khoi=419 ngoai CI: True
+CI maxfav06_72h  edge5   d=+0.00355 [-0.00854,+0.01563] khoi=419 ngoai CI: False
+CI net015_72h    rankIC  d=-0.15689 [-0.17792,-0.13586] khoi=419 ngoai CI: True
+CI net015_72h    edge5   d=-0.16423 [-0.20209,-0.12637] khoi=419 ngoai CI: True
+CI net020_4h     rankIC  d=+0.00625 [+0.00329,+0.00921] khoi=419 ngoai CI: True
+CI net020_4h     edge5   d=+0.00786 [+0.00012,+0.01560] khoi=419 ngoai CI: True
+CI net020_72h    rankIC  d=-0.14762 [-0.16762,-0.12761] khoi=419 ngoai CI: True
+CI net020_72h    edge5   d=-0.15584 [-0.18952,-0.12217] khoi=419 ngoai CI: True
+CI net030_4h     rankIC  d=+0.01470 [+0.00941,+0.01999] khoi=419 ngoai CI: True
+CI net030_4h     edge5   d=+0.01674 [+0.00126,+0.03222] khoi=419 ngoai CI: True
+CI net030_72h    rankIC  d=-0.11671 [-0.13400,-0.09942] khoi=419 ngoai CI: True
+CI net030_72h    edge5   d=-0.13198 [-0.16146,-0.10251] khoi=419 ngoai CI: True
+
+         tag  n_rows  cover     p10     p50     p90    mean      sd  tick_p10  tick_p50  tick_p90  tick_sd   rankIC   edge5  n_tick  pass_raw  adm8_raw  pass_map  adm8_map  pass_parity  adm8_parity  raw_vs_par_x  map_eq_parity  map_p10  map_p50  map_p90
+ maxfav06_4h 6554089    1.0 0.14783 0.42937 0.81110 0.45474 0.24330   0.27688   0.43216   0.74602  0.18025  0.16433 0.20746   17240    473561    114335    103840      5906       103840         5906         4.560           True  0.37005  0.54389  0.69494
+maxfav06_72h 6554089    1.0 0.38628 0.56956 0.76127 0.57148 0.14491   0.47432   0.58190   0.71012  0.09513  0.13319 0.17559   17240    231765     31564    103840      5906       103840         5906         2.232           True  0.37005  0.54389  0.69494
+   net015_4h 6554089    1.0 0.37005 0.54389 0.69494 0.53757 0.13010   0.45853   0.54500   0.63628  0.07472  0.14412 0.17205   17240    103840      5906    103840      5906       103840         5906         1.000           True  0.37005  0.54389  0.69494
+  net015_72h 6554089    1.0 0.37732 0.52604 0.67026 0.52583 0.11748   0.44873   0.53636   0.61942  0.06786 -0.01277 0.00782   17240     83193      9614    103840      5906       103840         5906         0.801           True  0.37005  0.54389  0.69494
+   net020_4h 6554089    1.0 0.33150 0.54156 0.72181 0.53301 0.15143   0.43290   0.53731   0.65958  0.09258  0.15037 0.17990   17240    124825      8474    103840      5906       103840         5906         1.202           True  0.37005  0.54389  0.69494
+  net020_72h 6554089    1.0 0.37430 0.52501 0.66779 0.52439 0.11721   0.44818   0.53496   0.61778  0.06756 -0.00350 0.01621   17240     83513      9460    103840      5906       103840         5906         0.804           True  0.37005  0.54389  0.69494
+   net030_4h 6554089    1.0 0.25380 0.51480 0.75328 0.50853 0.18728   0.37530   0.50637   0.68732  0.12313  0.15882 0.18878   17240    179456     26116    103840      5906       103840         5906         1.728           True  0.37005  0.54389  0.69494
+  net030_72h 6554089    1.0 0.37048 0.52483 0.66453 0.52219 0.11747   0.44194   0.53090   0.61477  0.06928  0.02741 0.04006   17240     73283      8307    103840      5906       103840         5906         0.706           True  0.37005  0.54389  0.69494
+G5_PROXY_DONE

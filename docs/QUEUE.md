@@ -6,6 +6,32 @@ Sau khi xong: doi status thanh `DONE <commit>`, ghi ket qua vao doc rieng, commi
 
 ---
 
+## Q0000 — G5: nhan/horizon cho VALUE MODEL  [DONE / `docs/G5_VALUE_LABELS.md`]
+
+Pre-reg `docs/PREREG_G5.md` (`f0b088b`). Thiet ke: **hieu chuan CO DINH** (multiset x26/tick),
+**ung vien chi quyet dinh THU TU**. 7 model train moi tren Kaggle GPU (16 fold, ~30'/model),
+10 sim 48 thang tren Oracle.
+- **Cong leak 18/18 fold PASS** (`ts_max <= cutoff−72h`, bien an dung 15'); OOS thuan, khong
+  chong lan (kiem doc lap tu `ts_min/ts_max` cua 16 bins). Wrapper user cung cap ghi
+  `FIRST_CUTOFF=20230101` — **LECH**, log goc la `20220101`; da dung `20220101`.
+- **Cong parity PASS byte-identical** `X1_C3` (md5 `d39da294…`, 2,058, 98,523).
+- **Kiem cau truc PASS TUYET DOI 8/8**: quantile-map cho `pass=103,840` / `adm_top8=5,906`
+  bang tung don vi voi parity.
+- 🔴 **KHONG ung vien nao thang**: 8/8 arm co >= 1 rate chat luong XAU ngoai CI, **0 rate TOT**;
+  8/8 FAIL rang buoc cung >= 2 nam (parity PASS 4/4). Ho **72h** xau nhat (2025 thanh nam AM
+  20-25%). `maxfav06_4h` it xau nhat (1/5, equity 86,047) nhung van FAIL 2 nam.
+- 🔴 **`G5_x26_order` thua parity 4/5 rate** => **thong tin COIN do S1, khong do value model**.
+  Value model = bo sinh nguong gate theo tick. Xac nhan cau truc voi `L1` (trailing: khong
+  load-bearing) va `C4` (gate: hieu chuan load-bearing).
+
+Viec DE LAI (chua co pre-reg, **KHONG tu chay**):
+- ⚠️ Ghep S1 (thu tu) voi `maxfav06_4h` (hieu chuan) — o trong duy nhat con lai cua truc nay.
+- ⚠️ Nhan **168h** van chua ai kiem (`LABELH` muc 4.3, `T1_LABEL3` muc 9, G5 chi 4h/72h).
+- ⚠️ `C4_maxfav` 48 thang: kernel `g015v2-maxfav-cpu` DA FAIL (argparse). G5 da tra loi
+  cau hoi do o duong khac (`maxfav06_4h` 16 fold) => **khong can chay lai**.
+
+---
+
 ## Q000 — G4: recipe net015 tai dung + C4 thang GIA TRI  [DONE / `docs/G4_RECIPE_C4.md`]
 
 Pre-reg `docs/PREREG_C4.md` (`4da1486`). Ba viec:

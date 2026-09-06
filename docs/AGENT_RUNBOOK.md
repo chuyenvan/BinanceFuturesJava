@@ -227,6 +227,19 @@ KHONG ghep cap so cu (E1/W1/T1/T2/T2b) voi so moi trong cung mot so sanh.
 Muon tai lap C2b: `profiles/c3_regress.properties` (3 co `false`) -> ra
 **byte-identical** 60395/970/`910f1aa6...` tren duong `file`.
 
+> 🔴 **G5 (2026-09-07, `docs/G5_VALUE_LABELS.md`): value model KHONG phai bo chon coin.**
+> Chay 10 sim 48 thang voi **hieu chuan CO DINH** (multiset `P(win)` cua x26 trong tung tick,
+> giu nguyen o moi arm) va chi doi THU TU: `G5_x26_order` (de chinh x26 xep hang, bo S1) thua
+> `G5_parity_S1` **4/5 rate chat luong ngoai CI** (`win%` −3.64, `TSloss%` +4.19), FAIL rang buoc
+> cung 2022 + 2025, equity 76,700 vs **98,523**. 7 nhan ung vien khac (`net` 0.015/0.02/0.03 x
+> {4h,72h}, `maxFav06` x {4h,72h}) **deu thua**: 8/8 arm co >= 1 rate xau ngoai CI, **0 arm co
+> rate nao TOT ngoai CI**, 8/8 FAIL rang buoc cung >= 2 nam (parity PASS 4/4).
+> => **Uu the cua C3 nam o THU TU cua S1.** Value model chi la bo sinh nguong gate theo tick.
+> Ho `72h` la huong CAM: `net*_72h` bien 2025 thanh nam AM 20-25%, `maxDD` −25..−31%.
+> Neu bat buoc train value model moi: `maxFav_4h >= 0.06` (rank-IC per-tick +0.164, cao nhat)
+> **VA phai quantile-map ve multiset cua bins dang deploy** — tha nguyen phan phoi cua no vao
+> gate = admit **x4.56** candidate-minute (`x19.4` adm_top8) = tai lap tham hoa `C4_maxfav30`.
+
 Kien truc: **S1** (9 feature, XGBRanker rank:ndcg, label `rel5` = quintile trong tick
 cua `g1lite - median`) quyet dinh THU TU coin; **G015x26 = net015** (45 feature, XGBClassifier,
 label **`retEnd_4h > 0.015`** — DINH CHINH 2026-09-06, truoc day ghi nham `maxFav_4h >= 0.06`)
@@ -365,6 +378,25 @@ maxDD/UW tu **chuoi equity** (`qret.py`).
   doi cap trailing -> doi thoi diem thoat -> doi `marginRunning` -> doi `throttle` ->
   vai tick sat tran von LAT quyet dinh admission. `n` 2,058 -> 2,056 / 2,077 (0.1% / 0.9%).
   Moi pre-reg do exit tu nay **khong duoc dat cong "n phai giong het"**.
+
+- 🔴 **G5 (2026-09-07): TACH duoc HIEU CHUAN khoi THONG TIN — `docs/G5_VALUE_LABELS.md`.**
+  Bang co hoc do TRUOC khi chay (pre-reg muc 1): `symbolPred = 1 − P(win)`
+  (`WfoDataset.export` ghi `floatBits(1-P(win))`), `dyn_thr` KHONG co tran nen trong MOT tick
+  "qua gate" ⟺ `p >= nguong_tick`; ma `predReturn15M` la dai luong THEO TICK => **so
+  candidate-minute qua gate chi phu thuoc MULTISET `p` cua tick**. `c4_build_map.py` giu nguyen
+  multiset do => **admission bat bien TUYET DOI**: do duoc `pass = 103,840` va `adm_top8 = 5,906`
+  o **CA 8** ung vien va o parity, bang tung don vi. Day la cong kiem cau truc re nhat cho moi
+  thi nghiem doi value model ve sau — chay bang `research/analysis/g5_proxy.py`, khong can sim.
+- ⚠️ **`n` (so lenh THUC THI) KHONG bat bien du admission bat bien.** G5 do +37%..+64%
+  (2,815..3,385 vs 2,058) trong khi so candidate-minute qua gate giong het. Nguyen nhan: coin
+  nao duoc chon quyet dinh von bi chiem bao lau + slot + khong mo trung symbol.
+  **Moi pre-reg doi THU TU khong duoc dat cong "n phai gan parity".**
+- 🔴 **rank-IC per-tick lai mot lan nua KHONG du de ket luan** (lan 1: `T1_LABEL3` muc 3 diem 3).
+  G5: truc nguong `net` 4h co rank-IC **tang don dieu** 0.144 → 0.150 → 0.159 (ca ba ngoai CI)
+  nhung o sim thu tu **dao lon** (4/5 → 4/5 → 2/5 rate xau; equity 76,700 → 72,140 → 72,995).
+  **Dung dung rank-IC lam tieu chi cuoi cho value model.**
+- ⚠️ **Tran Kaggle GPU do duoc: 2 batch session cung luc** (`Maximum batch GPU session count of 2
+  reached`). CPU van 5. Mot model 45-feature 16 fold = **~30 phut** GPU.
 
 ## 5. Leak / no ky thuat con mo
 - ~~`predwf_G015x26` KHONG reproduce duoc~~ **DA GO 2026-09-06** — xem `docs/G3_X26_RECOVERY.md`.
