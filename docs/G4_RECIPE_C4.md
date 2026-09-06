@@ -16,9 +16,12 @@ Doc kem: `docs/G015_RECIPE.md` (recipe mot trang), `docs/G3_X26_RECOVERY.md` (bo
    0.3715** tren 13.40% dong. Nguyen nhan: pipeline goc dung `sort_values("ts")` (quicksort
    KHONG on dinh) + `rank(method="first")` trong `build_map` pha vo the theo THU TU DONG.
    Day la no ky thuat that, khong phai loi cua model. Muc 4.2.
-3. ⚠️ **`C4_maxfav` CHUA CHAY XONG** — `predwf_G015_v2` chi co 10/16 fold; 6 fold con thieu
-   dang train tren Kaggle CPU (kernel `chuyendinh/g015v2-maxfav-cpu`). Cau hoi chinh cua C4
-   ("thang gia tri co load-bearing o gate khong") **chua co cau tra loi**. Muc 6.
+3. 🔴 **THANG GIA TRI CO LOAD-BEARING O TANG GATE — nguoc voi ket luan L1 o tang trailing.**
+   `C4_maxfav30` (30 thang, bins nhan `maxFav`) admit **x5.05** (4,857 vs 961 lenh), `win%`
+   **−8.04pp**, `TSloss%` **+8.44pp** — **3/5 rate chat luong ngoai CI**, FAIL rang buoc cung
+   moi nam, equity 28,384 (**am**). Chi **13.11%** lenh cua parity con ton tai. Muc 6.2-6.5.
+   Arm 48 thang van dang train (kernel `chuyendinh/g015v2-maxfav-cpu`) — bo sung sau,
+   khong thay the.
 4. ⚠️ **Shadow C3 tren Oracle DA DUNG** (pid 654317 mat, health.log dung o 2026-09-06 15:00Z).
    Job nay KHONG dung no; no da tat truoc khi job bat dau. Can khoi dong lai:
    `cd /home/ubuntu/shadow_c3/app && bin/daemon.sh start`.
@@ -205,6 +208,82 @@ cua `predwf_G015_v2` — **khong train them dong nao**:
 
 Du doan cho 30 thang (ghi truoc): giong `PREREG_C4` muc 5.2 diem 3-4 — `n` tang >= 15%,
 1-2 rate chat luong ngoai CI, `%STRONG` tang len > 95%.
+
+### 6.2 KET QUA `C4_maxfav30` — **THANG GIA TRI CO LOAD-BEARING O GATE. Khac han parity.**
+
+`SIM_END_DATE=20240630`, 10 fold `predwf_G015_v2`, md5 `printDone` `483d42bd839c9e4afffb0b009f84d671`,
+4,857 lenh. Nen = `C4_parity` cat `end < 2024-06-30` = **961 lenh** (= dung `C3_BASE`).
+
+| do | `C4_parity` (30t) | `C4_maxfav30` | hieu | CI khoi-72h x1.21 | ngoai CI |
+|---|---:|---:|---:|---|:---:|
+| n | 961 | **4,857** | **+3,896 (x5.05)** | [+3,231, +4,591] | **CO** |
+| **win%** | 85.12 | **77.08** | **−8.04** | [−12.10, −4.11] | **CO** |
+| **TSloss%** | 15.30 | **23.74** | **+8.44** | [+4.50, +12.39] | **CO** |
+| mP\|SM | 7.452 | 7.050 | −0.402 | [−1.915, +0.636] | - |
+| mP\|SL | −18.827 | −19.727 | −0.900 | [−5.758, +4.213] | - |
+| meanP | 3.432 | 0.694 | −2.739 | [−4.675, −0.926] | **CO** |
+| **mMargin** | 1,397 | 561 | **−836** | [−1,031, −638] | **CO** |
+| | | | | **so rate CHAT LUONG ngoai CI** | **3/5** |
+
+**Theo nam** (rate chat luong ngoai CI): 2022 **2/5** · 2023 **4/5** · 2024 (nua nam) **1/5**.
+2023 la nam ro nhat: `win%` 88.62 -> 76.47, `TSloss%` 12.07 -> 24.36, `mP|SL` −13.23 -> −18.26.
+
+**Admission** — day moi la cho gay soc:
+
+| arm | n | trung khoa `(sym,start)` voi parity | % cua arm | % cua parity | `symbolPred` p10/50/90 | %STRONG |
+|---|---:|---:|---:|---:|---|---:|
+| `C4_parity` | 961 | 961 | 100.00 | 100.00 | 0.1438 / 0.2420 / 0.3694 | 71.5 |
+| `C4_maxfav30` | 4,857 | **126** | **2.59** | **13.11** | 0.0550 / 0.0893 / 0.1610 | **98.4** |
+
+**Chi 126/961 = 13.11% lenh cua parity con ton tai** trong arm maxFav. Day khong phai "cung
+he thong voi nhieu lenh hon" — day la **mot he thong KHAC**.
+
+**Rang buoc cung: FAIL moi nam.** maxDD −28.87 / −20.82 / −23.54 (tran 15%); 2022 va 2024 la
+**nam AM** (−16.02%, −7.31%); quy xau nhat −19.61% (tran −5%). Equity (khong phai tieu chi):
+**28,384**, CAGR **−8.07%** — von 35,000 **bi an mon**, so voi 68,278 cua parity cung cua so.
+
+### 6.3 Phan quyet C4 — theo dung quy tac da chot
+
+`PREREG_C4` muc 4: `C4_maxfav` KHAC parity khi **>= 2 rate chat luong cung huong ngoai CI**
+tren toan cua so. Do duoc **3/5** (`win%` xau di, `TSloss%` xau di, `mMargin` giam) — **DAT
+NGUONG. KET LUAN: KHAC.**
+
+**Co che dung nhu master du doan.** `dyn_thr = SIM_MIN_MOMENTUM_15M * max(AI_DYNAMIC_MIN,
+score/0.15 * MULT)` tang don dieu theo `score`. Phan phoi `symbolPred` cua ho `maxFav` thap
+hon han (p50 **0.0893** vs **0.2420**) => nguong thap hon => **admit x5.05** => `TSloss%`
+**+8.44pp**. **Thang GIA TRI la load-bearing o tang GATE.**
+
+### 6.4 Tai sao KHONG the do cho nhanh trailing — va vi sao ket luan van vung
+Arm nay doi **dong thoi** ca hai kenh: gate (muc tren) va ban le trailing (`%STRONG`
+71.5% -> **98.4%**). `PREREG_C4` muc 5 da ghi truoc diem yeu nay. **Nhung no khong lam hong
+ket luan**, vi `L1_SHADOW_C3` muc 4 da do rieng kenh trailing: ep
+`SIM_TS_PNOPUMP_WEAK_THR = 1.0` -> **100% STRONG** tren 48 thang cho **0/5 rate ngoai CI**.
+Tuc kenh trailing mot minh **khong the** sinh ra 3/5. => phan du phai den tu **gate**.
+
+### 6.5 He qua — **NGUOC voi L1**, va do la thong tin chinh cua C4
+| tang | gia tri `symbolPred` co load-bearing? | bang chung |
+|---|---|---|
+| **trailing** (chon cap STRONG/WEAK) | **KHONG** | `L1_SHADOW_C3` muc 4: hang so o ca hai cuc -> 0/5 rate |
+| **gate** (`dyn_thr` admission) | **CO, rat manh** | C4 muc 6.2: 3/5 rate, admit x5.05, chi 13.11% lenh trung |
+
+🔴 **Ap ngay vao shadow:** `AGENT_RUNBOOK` muc 4 (L1) ket luan "shadow duoc phep dung
+`symbolPred` cua model 45-feature LIVE thay `predwf_G015x26` ... ma khong lam hong phep do".
+Ket luan do **chi dung cho tang trailing**. Muc 5 cua doc nay do duoc model live thuoc **ho
+`maxFav`** (spearman 0.961 voi `G015_v2`, hieu chuan 0.2268 vs 0.4642 cua net015) — dung cai
+ho vua lam hong 3/5 rate o gate. => **Shadow dang chay voi mot thang gia tri SAI o tang
+admission.** So lieu admission cua shadow **khong so duoc** voi C3.
+
+⚠️ **Gioi han cua ket qua nay:** cua so 30 thang, `n_eff` 89 khoi (vs 167 cua 48 thang) —
+CI rong hon ~1.37 lan. Hieu ung o day **lon hon nhieu** so voi do rong CI nen viec thu hep
+cua so **khong** de doa ket luan. Arm 48 thang (kernel `g015v2-maxfav-cpu`) van chay tiep de
+bo sung, **khong** de thay the.
+
+### 6.6 Du doan cua toi SAI o dau (ghi ro)
+`PREREG_C4` muc 5.2 diem 3: toi doan **1-2** rate ngoai CI va `TSloss%` tang **duoi 2pp**.
+Thuc te **3/5** va **+8.44pp**. Lap luan sai cua toi: "build_map giu nguyen multiset trong tick
+nen chi doi MUC chu khong doi thu tu" — dung, nhung toi bo qua rang **chinh cai MUC do la thu
+gate doc**. Du doan cua master **dung ca chieu lan do lon**. Diem 4 (toi doan `%STRONG` > 95%)
+**dung**: 98.4%.
 
 ## 7. Artifact + lenh tai lap
 

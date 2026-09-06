@@ -353,6 +353,14 @@ maxDD/UW tu **chuoi equity** (`qret.py`).
   (gia tri G015, rank S1, hang so). Dung quet lai.
   He qua thuc dung: shadow duoc phep dung `symbolPred` cua model 45-feature LIVE thay
   `predwf_G015x26` (khac hieu chuan 0.05-0.12 vs ~0.35) ma khong lam hong phep do.
+  🔴 **DINH CHINH 2026-09-06 (`docs/G4_RECIPE_C4.md` muc 6): cau tren CHI DUNG CHO TANG
+  TRAILING.** O tang **GATE** thi gia tri **CO** load-bearing va rat manh: `C4_maxfav30`
+  (bins nhan `maxFav`, `symbolPred` p50 0.0893 vs 0.2420) admit **x5.05** (4,857 vs 961 lenh),
+  `win%` −8.04pp, `TSloss%` +8.44pp — **3/5 rate ngoai CI**, FAIL rang buoc cung moi nam,
+  equity 28,384 (**am**), va chi **13.11%** lenh cua parity con ton tai. Co che:
+  `dyn_thr` tang don dieu theo `score` => phan phoi thap hon => nguong thap hon => admit nhieu
+  hon. Vi model live thuoc ho `maxFav` (khong phai `net015`), **so lieu ADMISSION cua shadow
+  khong so duoc voi C3**.
 - ⚠️ **`n` KHONG bat bien duoi thay doi EXIT khi sizing la compound (sau B3).** Do duoc o L1:
   doi cap trailing -> doi thoi diem thoat -> doi `marginRunning` -> doi `throttle` ->
   vai tick sat tran von LAT quyet dinh admission. `n` 2,058 -> 2,056 / 2,077 (0.1% / 0.9%).

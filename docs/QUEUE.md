@@ -18,8 +18,11 @@ Pre-reg `docs/PREREG_C4.md` (`4da1486`). Ba viec:
   tuyet doi, chi `mean(margin)` +0.18% ngoai CI => **1/5 — FAIL van ban, PASS noi dung**.
   Nguyen nhan goc: `build_map.py` khuech dai 1 ULP thanh 0.3715 (thu tu dong).
 
-**CHUA XONG:** `C4_maxfav` (`predwf_G015_v2` chi co 10/16 fold; 6 fold dang train tren kernel
-`chuyendinh/g015v2-maxfav-cpu`). **Cau hoi "thang gia tri co load-bearing o GATE khong" van MO.**
+- 🔴 **`C4_maxfav30` (30 thang, 10 fold co san): THANG GIA TRI CO LOAD-BEARING O GATE.**
+  admit **x5.05** (4,857 vs 961), `win%` −8.04pp, `TSloss%` +8.44pp => **3/5 rate ngoai CI**;
+  chi **13.11%** lenh cua parity con ton tai; FAIL rang buoc cung moi nam; equity 28,384 (am).
+  **NGUOC voi `L1` o tang trailing** (o do gia tri KHONG load-bearing, 0/5). Arm 48 thang van
+  dang train (`chuyendinh/g015v2-maxfav-cpu`) — bo sung, khong thay the.
 
 Bon viec DE LAI, deu can pre-reg rieng, **KHONG duoc tu chay**:
 - 🔴 **Thay `Funding_Classifier_Final.onnx` cua duong live bang ONNX cua net015** — model live

@@ -141,19 +141,39 @@ def equity_table(tags):
 
 
 def main(argv):
+    """--cut YYYYMMDD: chi giu lenh co `end` < moc do (phep cat cua X1_EXTEND muc 3;
+    da xac nhan 'chay 48 thang roi cat' == 'chay 30 thang')."""
+    cut = None
+    if "--cut" in argv:
+        i = argv.index("--cut")
+        cut = argv[i + 1]
+        argv = argv[:i] + argv[i + 2:]
     parity, arms = argv[0], argv[1:]
     tags = [parity] + arms
     dd = {t: C.trades(t) for t in tags}
+    if cut:
+        lim = pd.Timestamp(cut)
+        for t in tags:
+            e = pd.to_datetime(dd[t]["end"], format="%Y%m%d %H:%M", errors="coerce")
+            dd[t] = dd[t][e < lim]
+            log.info("CAT end < %s: %s -> %d lenh", cut, t, len(dd[t]))
     for t in tags:
         log.info("%s: %d lenh, %s .. %s", t, len(dd[t]), dd[t].ts.min(), dd[t].ts.max())
     rate_table(tags, dd, "BANG CHINH - 48 thang")
     ci_table(arms, parity, dd, "CI - 48 thang")
-    for y in (2022, 2023, 2024, 2025):
+    for y in (2022, 2023, 2024, 2025) if not cut else (2022, 2023, 2024):
         rate_table(tags, dd, "Nam %d" % y, sub=lambda d, y=y: d[d.ts.dt.year == y])
         ci_table(arms, parity, dd, "CI nam %d" % y, sub=lambda d, y=y: d[d.ts.dt.year == y])
     admission(arms, parity, dd)
-    hard(tags)
-    equity_table(tags)
+    if not cut:
+        hard(tags)
+        equity_table(tags)
+    else:
+        log.info("")
+        log.info("(bo bang rang buoc cung / equity: chuoi equity cua arm cat khong so duoc"
+                 " truc tiep voi arm chay du 48 thang)")
+        hard(arms)
+        equity_table(arms)
 
 
 if __name__ == "__main__":
