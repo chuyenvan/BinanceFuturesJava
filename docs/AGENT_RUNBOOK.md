@@ -22,6 +22,19 @@ khong can hoi lai user, khong can doc lai 30 doc khac.
 6. **Khong push.** Commit branch `module`, de user push.
 7. Model cho agent: Opus cho task nhieu buoc/co side-effect (chay sim, sua file,
    xoa file). Sonnet/Haiku cho doc-va-tom-tat. **KHONG dung Fable.**
+8. **Shadow C3 tren Oracle — ba luat, xem `docs/L1_SHADOW_C3.md`.**
+   (a) **Cai chay tren duong LIVE khong duoc goi la `C3` neu chua cam duoc score S1.**
+   Duong live tinh `symbolPred` bang `Funding_Classifier_Final.onnx` (45 feature) va
+   **khong doc `WFO_FUNDING_PRED_DIR`** o bat ky dong nao — bins `predwf_map_s1a2` la
+   artifact OFFLINE. Model S1 lai **khong co file** (`s1_rank.py` khong `save_model`).
+   Chay shadow bang selector live roi dan nhan C3 = so lieu VO GIA TRI.
+   (b) **Shadow tren 242 hien khong sinh tin hieu**: 66 vi the cu giu `marginRunning` =>
+   `u = 0.81 >= U_MAX 0.60` => `managerBudget` tra null => 0 dong `would-BUY` tu 27/08.
+   Shadow phai chay tren **Oracle** (RAM 23G) voi **Redis RIENG** — tro vao Redis 242 se
+   `blpop` CUOP lenh cua bot live.
+   (c) **Moi tuan shadow chay la mot tuan holdout bi tieu.** Khi doi chung chi duoc
+   `HOLDOUT_UNSEAL` DUNG doan shadow da troi qua, co user duyet truc tiep, roi seal lai.
+
 
 ## 1. Kenh truy cap Oracle
 
@@ -278,6 +291,19 @@ maxDD/UW tu **chuoi equity** (`qret.py`).
   doi chat luong tung lenh, chi doi thang do => tieu chi duy nhat la maxDD/underwater,
   deu la single-realization n_eff nho. Day la nut RISK PREFERENCE user dat, khong
   phai bai toan toi uu. **DUNG dot sim run vao day.**
+
+- 🔴 **L1 (2026-09-06): GIA TRI cua `symbolPred` KHONG load-bearing** — `docs/L1_SHADOW_C3.md`
+  muc 4. Thay no bang HANG SO o **ca hai cuc** (`SIM_TS_PNOPUMP_WEAK_THR` = 1.0 -> 100% STRONG,
+  = 0.0 -> 100% WEAK) tren 48 thang: **0/5 rate chat luong ngoai CI** o CA HAI arm. Lech equity
+  lon nhat +4.78% (CAGR +1.52pp) — trong nhieu `sd(dCAGR)` 2.57pp. Cong voi `X3`
+  (`TS_CAP_STRONG_RANK` NULL), **truc "chon cap trailing bang cai gi" da dong o ca ba huong**
+  (gia tri G015, rank S1, hang so). Dung quet lai.
+  He qua thuc dung: shadow duoc phep dung `symbolPred` cua model 45-feature LIVE thay
+  `predwf_G015x26` (khac hieu chuan 0.05-0.12 vs ~0.35) ma khong lam hong phep do.
+- ⚠️ **`n` KHONG bat bien duoi thay doi EXIT khi sizing la compound (sau B3).** Do duoc o L1:
+  doi cap trailing -> doi thoi diem thoat -> doi `marginRunning` -> doi `throttle` ->
+  vai tick sat tran von LAT quyet dinh admission. `n` 2,058 -> 2,056 / 2,077 (0.1% / 0.9%).
+  Moi pre-reg do exit tu nay **khong duoc dat cong "n phai giong het"**.
 
 ## 5. Leak / no ky thuat con mo
 - `predwf_G015x26` KHONG reproduce duoc (mat training export). Single point of failure.

@@ -582,3 +582,23 @@ sim nao qua 2025-12-31, khong doc outcome 2026 nao.**
 1. `CLOSES_1H` dung lai theo duong nao (Vision 1h kline = giu neo, hay Aerospike 1m = mat neo).
 2. Chap nhan bins tron nguon (16 fold G015x26 + 2 fold G015_v2) hay khong.
 3. Mo seal hay khong — mot lan, khong hoan tac.
+
+---
+
+## Q7 — Shadow C3 chay forward tren Oracle  [BLOCKED: 4 chan ky thuat, can user quyet]
+
+Khao sat day du: `docs/L1_SHADOW_C3.md`. Pre-reg run doi chung da chay: `docs/PREREG_L1.md`.
+**KHONG duoc bat shadow roi goi la C3** cho toi khi bon chan duoi day mo het.
+
+| chan | viec de mo | pre-reg rieng? |
+|---|---|---|
+| Model S1 khong co file | train lai tai cutoff `20251001` + `save_model` + manifest sha256 | khong (tai lap artifact) |
+| Khong co bo tinh 9 feature S1 real-time | do nguon gia truoc (`CLOSES_1H` = kline 1h, KHONG phai ticker 1m gop), roi viet sidecar | **CO** |
+| Duong live khong doc `WFO_FUNDING_PRED_DIR` | cam score S1 vao `selectorRankPool` | **CO** |
+| `BUDGET_PER_ORDER = 0` khi khong co API key (`PrivateConfig` la STUB tren Oracle) | key read-only, **hoac** co `PAPER_EQUITY` mac dinh TAT + cong hoi quy `X1_C3` byte-identical | **CO** |
+
+Hai khac biet CO CHE phai ghi vao moi bao cao, khong go duoc bang cau hinh:
+- live co dead-zone ratchet `5.21847 x arm` (= 26.1% khi arm 5%), sim da go;
+- live **khong co** time-stop 168h (code chi o `Simulator...:672`).
+
+Cai gia phai chap nhan truoc khi bat: moi tuan shadow chay tieu mot tuan holdout 2026.
