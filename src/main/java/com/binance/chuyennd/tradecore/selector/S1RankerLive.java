@@ -40,6 +40,44 @@ public final class S1RankerLive {
     /** Du tru them 2 ngay tren lookback 336h de rolling min_periods khong bi cut. */
     private static final int HIST_HOURS = S1FeatureLive.WARMUP_HOURS + 48;
 
+    /**
+     * Namespace mac dinh cua cum Aerospike-242. Do TRUC TIEP bang
+     * {@code client.info_all('namespaces')} ? xem {@code Configs} muc 9.
+     */
+    public static final String NS_242_DEFAULT = "ticker";
+
+    /**
+     * [L5 2026-09-07] Namespace THAT dung cho warm-up close 1h.
+     *
+     * <p>BUG da sua: {@code config.properties} cua bot live tren 242 KHONG khai bao
+     * {@code AEROSPIKE_NAMESPACE_242} (key nay them 2026-08-05 chi cho 2 tool copy chay tren
+     * Oracle) => {@code Configs.AEROSPIKE_NAMESPACE_242 == null} => {@code new Key(null, ...)}
+     * => {@code DataManagerAerospikeFloatSim.getExistingTickersMap} co {@code catch} RONG nen
+     * NUOT NPE => warm-up doc duoc 0/384 moc gio => {@code [S1] chi co 0 coin} moi tick.
+     * Tren Oracle key co san nen shadow L2 chay tot ? khac biet nam O CONFIG, khong o du lieu.
+     *
+     * <p>Nay: thieu key => ve {@link #NS_242_DEFAULT} va LOG ro nguon, KHONG de null di tiep.
+     */
+    public static final String NS_242 = resolveNs242(Configs.AEROSPIKE_NAMESPACE_242);
+
+    /** Thuan tinh toan (unit-test): null/rong -> {@link #NS_242_DEFAULT}, con lai trim. */
+    public static String resolveNs242(String cfg) {
+        return (cfg == null || cfg.trim().isEmpty()) ? NS_242_DEFAULT : cfg.trim();
+    }
+
+    /** So coin co it nhat {@code minPts} moc close 1h KHONG NaN trong cua so warm-up. */
+    public static int countReady(Map<String, double[]> closes, int minPts) {
+        int ready = 0;
+        if (closes == null) return 0;
+        for (double[] c : closes.values()) {
+            if (c == null) continue;
+            int n = 0;
+            for (double v : c) if (!Double.isNaN(v)) n++;
+            if (n >= minPts) ready++;
+        }
+        return ready;
+    }
+
     private final Map<String, TreeMap<Long, Double>> hist = new HashMap<>();
     /** {@code symbol -> [oi_delta24h, ls_global]} — CHI 2 set S1 can (LiveOiFeatProvider nap ca 5). */
     private final Map<String, TreeMap<Long, Float>[]> oiCache = new HashMap<>();
@@ -105,8 +143,15 @@ public final class S1RankerLive {
                 }
                 closes.put(sym, arr);
             }
-            if (closes.size() < 20) {
-                LOG.warn("[S1] chi co {} coin du lich su close 1h -> bo qua tick nay", closes.size());
+            int ready = countReady(closes, S1FeatureLive.WARMUP_HOURS);
+            if (closes.size() < 20 || ready < 20) {
+                // ERROR (khong phai WARN): warm-up hong la LOI cau hinh/du lieu, phai bat duoc
+                // bang `grep -c ERROR`, khong duoc chim trong WARN nhu dot 07/09.
+                LOG.error("[S1] warm-up CHUA DU -> BO tick nay (KHONG fallback pNoPump). "
+                                + "{} coin co chuoi close 1h, {} coin du >= {} moc. "
+                                + "Nguon aerospike {}:{} ns={} set={}",
+                        closes.size(), ready, S1FeatureLive.WARMUP_HOURS,
+                        Configs.AEROSPIKE_HOST_242, Configs.AEROSPIKE_PORT_242, NS_242, SET_TICKER);
                 return null;
             }
             ensureOi(closes.keySet(), lastClosedHour);
@@ -130,7 +175,8 @@ public final class S1RankerLive {
             if (raw == null) return null;
             Map<String, Float> out = new HashMap<>();
             for (int i = 0; i < syms.length; i++) out.put(syms[i], -raw[i]);   // score thap = tot
-            LOG.info("[S1] score {} coin tai {} (hist gio cuoi {})", out.size(), now, lastClosedHour);
+            LOG.info("[S1] score {} coin tai {} (hist gio cuoi {}, {} coin du >= {} moc, ns={})",
+                    out.size(), now, lastClosedHour, ready, S1FeatureLive.WARMUP_HOURS, NS_242);
             return out;
         } catch (Throwable t) {
             LOG.error("[S1] loi khi tinh score: {}", t.toString());
@@ -157,15 +203,24 @@ public final class S1RankerLive {
 
     /** Nap cac moc gio con thieu (warm-up lan dau; sau do moi gio 1 ban ghi). */
     private void refresh(Collection<String> universe, long lastClosedHour) {
-        long from = (lastHourLoaded == 0L)
+        boolean firstWarmup = (lastHourLoaded == 0L);
+        long from = firstWarmup
                 ? lastClosedHour - (long) (HIST_HOURS - 1) * H
                 : lastHourLoaded + H;
         if (from > lastClosedHour) return;
+        int want = (int) ((lastClosedHour - from) / H) + 1;
+        if (firstWarmup) {
+            LOG.info("[S1] warm-up BAT DAU: nguon aerospike {}:{} ns={} set={} | doc {} moc gio "
+                            + "({} -> {}), can >= {} moc close 1h moi coin",
+                    Configs.AEROSPIKE_HOST_242, Configs.AEROSPIKE_PORT_242, NS_242, SET_TICKER,
+                    want, from, lastClosedHour, S1FeatureLive.WARMUP_HOURS);
+        }
+        long tStart = System.currentTimeMillis();
         int cnt = 0;
         for (long t = from; t <= lastClosedHour; t += H) {
             // quy uoc VISION: close cua gio t = nen 1m co open_time = t - 1m
             Map<String, KlineObjectOptimized> m = DataManagerAerospikeFloatSim.getExistingTickersMap(
-                    new Key(Configs.AEROSPIKE_NAMESPACE_242, SET_TICKER, minuteKey(t - MIN)));
+                    new Key(NS_242, SET_TICKER, minuteKey(t - MIN)));
             if (m.isEmpty()) continue;
             cnt++;
             for (Map.Entry<String, KlineObjectOptimized> e : m.entrySet()) {
@@ -178,8 +233,38 @@ public final class S1RankerLive {
         lastHourLoaded = lastClosedHour;
         long cutoff = lastClosedHour - (long) HIST_HOURS * H;
         for (TreeMap<Long, Double> m : hist.values()) m.headMap(cutoff, false).clear();
-        if (cnt > 0) LOG.info("[S1] nap {} moc gio close (toi {}), {} coin trong bo nho",
-                cnt, lastClosedHour, hist.size());
+        long ms = System.currentTimeMillis() - tStart;
+        if (cnt > 0) {
+            LOG.info("[S1] nap {}/{} moc gio close (toi {}), {} coin trong bo nho, {} ms "
+                            + "(ns={} set={})",
+                    cnt, want, lastClosedHour, hist.size(), ms, NS_242, SET_TICKER);
+        } else {
+            LOG.error("[S1] warm-up DOC 0/{} moc gio tu {}:{} ns={} set={} trong {} ms. "
+                            + "Kiem: key AEROSPIKE_NAMESPACE_242 trong config.properties, "
+                            + "hoac du lieu kline_1m_opt tren cum do.",
+                    want, Configs.AEROSPIKE_HOST_242, Configs.AEROSPIKE_PORT_242, NS_242,
+                    SET_TICKER, ms);
+            probeSource(lastClosedHour);
+        }
+    }
+
+    /**
+     * Doc THU MOT ban ghi bang chinh client/ns/set cua warm-up, nhung KHONG di qua
+     * {@code getExistingTickersMap} (ham do co {@code catch} rong nen nuot exception) ? de
+     * exception THAT hien ra trong log. Chi goi khi warm-up doc duoc 0 moc.
+     */
+    private void probeSource(long lastClosedHour) {
+        String k = minuteKey(lastClosedHour - MIN);
+        try {
+            com.aerospike.client.Record r = DataManagerAerospikeFloatSim.getClient242()
+                    .get(null, new Key(NS_242, SET_TICKER, k));
+            LOG.error("[S1] warm-up PROBE ns={} set={} key={} -> {}", NS_242, SET_TICKER, k,
+                    r == null ? "RECORD NULL (ns/set dung nhung KHONG co du lieu o moc nay)"
+                              : "RECORD OK (doc duoc ? loi nam o cho khac)");
+        } catch (Throwable t) {
+            LOG.error("[S1] warm-up PROBE ns={} set={} key={} -> EXCEPTION {}", NS_242, SET_TICKER,
+                    k, t.toString());
+        }
     }
 
     /**

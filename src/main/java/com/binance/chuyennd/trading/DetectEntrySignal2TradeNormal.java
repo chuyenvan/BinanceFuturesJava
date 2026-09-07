@@ -341,14 +341,18 @@ public class DetectEntrySignal2TradeNormal {
             // [C3-SHADOW] doi THU TU xep hang sang score S1 (9 feature hourly). Gia tri gate
             // (symbolPred = pNoPump cua Funding_Classifier_Final.onnx) GIU NGUYEN — day la diem
             // shadow khac sim C3 (sim dung predwf_map_s1a2 tren G015x26). Xem docs/L2_PORT_C3.md.
+            // [L5 2026-09-07] BO FALLBACK pNoPump. Truoc day khi S1 chua co score, so giay VAN mo
+            // entry theo thu tu pNoPump (mot selector KHAC) roi ghi vao ledger C3 => lam ban ca
+            // chuoi do. Nay: chua co score => pool RONG => BO TICK. Xem EntryPoolGate.
             boolean s1Order = false;
             if (com.binance.chuyennd.tradecore.selector.LiveProfileC3.on()) {
                 TreeMap<Float, String> s1Pool = buildS1Pool(time);
-                if (s1Pool != null && !s1Pool.isEmpty()) {
-                    selPool = s1Pool;
-                    s1Order = true;
-                } else {
-                    LOG.warn("[S1] chua co score -> tick nay giu thu tu pNoPump cu (KHONG phai C3)");
+                s1Order = com.binance.chuyennd.tradecore.selector.EntryPoolGate.usable(s1Pool);
+                selPool = com.binance.chuyennd.tradecore.selector.EntryPoolGate.choose(
+                        true, selPool, s1Pool);
+                if (!s1Order) {
+                    LOG.error("[S1] skip tick ? khong phai C3 (chua co score S1) -> so giay BO tick, "
+                            + "KHONG mo entry theo thu tu pNoPump");
                 }
             }
             // [L4] THANG GIA TRI: symbolPred phai la gia tri net015 da qua quantile-map, KHONG
