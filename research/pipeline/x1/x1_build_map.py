@@ -18,7 +18,7 @@ def _p(*a):
     LOG.info(" ".join(str(x) for x in a))
 
 import sys, os, glob, numpy as np, pandas as pd, time
-name,out=sys.argv[1],sys.argv[2]; os.makedirs(out,exist_ok=True); H=3600000; Q=900000
+name,out=sys.argv[1],sys.argv[2]; os.makedirs(out,exist_ok=True); H=3600000; Q=int(os.environ.get("X1_Q","900000"))
 dt=np.dtype([("ts",">i8"),("sym",">i2"),("p0",">f4"),("p1",">f4"),("p2",">f4"),("p3",">f4")])
 def log(*a): _p(time.strftime("%H:%M:%S"),*a)
 if name=="vol7d":
@@ -28,7 +28,7 @@ else:
     SC=pd.read_parquet(f"/home/ubuntu/ledger/pred_{name}.parquet")  # ts,sym,score (thap=tot) chi tren tick gate mo
 tot=chg=0
 X1_CUTS=set(os.environ.get("X1_CUTS","20220101 20220401 20220701 20221001 20230101 20230401 20230701 20231001 20240101 20240401").split())
-for f in sorted(glob.glob("/home/ubuntu/claudedata/predwf_G015x26/predict_wf_*.bin")):
+for f in sorted(glob.glob(os.environ.get("X1_G015_DIR","/home/ubuntu/claudedata/predwf_G015x26") + "/predict_wf_*.bin")):
     b=os.path.basename(f); yr=b[11:15]
     if b[11:19] not in X1_CUTS: continue
     a=np.fromfile(f,dtype=dt); G=pd.DataFrame({"ts":a["ts"].astype(np.int64),"sym":a["sym"].astype(np.int64),"p":a["p0"].astype(np.float64)})
