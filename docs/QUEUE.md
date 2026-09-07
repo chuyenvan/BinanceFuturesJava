@@ -6,6 +6,17 @@ Sau khi xong: doi status thanh `DONE <commit>`, ghi ket qua vao doc rieng, commi
 
 ---
 
+## K12 -- SELECTOR_RANK_TOPK 8->12 tren C3_FULL 48 thang  [DONE / `docs/K12_RESULT.md`]
+
+Pre-reg `docs/PREREG_K12.md` (`bc9d066`). Cong parity K=8 PASS (khop X1_EXTEND tung so).
+Ket qua: chi 1/5 rate ngoai CI toan cua so, 0/5 theo tung nam -- khong dat nguong thang.
+Rang buoc cung VI PHAM nhieu: 2022 maxDD -12.46->-17.09 (+123 ngay UW), 2024 UW 121->239
++ quy MOI vi pham -6.31%. Co che: TSloss% xau don dieu 4/4 nam (giong F1_FLOW, nay THAY
+tren nen C3_FULL co DCA -- DCA leg2+ PnL giam vi budget loang). => NULL, DONG huong,
+GIU SELECTOR_RANK_TOPK=8 cho C3_FULL. Dataset tam da xoa.
+
+---
+
 ## Q00000 — L4: `build_map` chay LIVE (shadow = C3 o tang entry)  [DONE / `docs/L4_LIVE_BUILDMAP.md`]
 
 Khong pre-reg rieng: day la **sua mot loi da duoc do** (`G4_RECIPE_C4` muc 6.5 — shadow dung
