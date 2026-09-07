@@ -24,7 +24,7 @@ CHAY:
   python3 g015_net_train.py --fold 20240101 --device cuda --save-model --out-dir /duong/dan
   python3 g015_net_train.py --fold all --device cpu --out-dir /duong/dan
 """
-import argparse, glob, hashlib, json, logging, os, struct, sys, time
+import argparse, ctypes, gc, glob, hashlib, json, logging, os, struct, sys, time
 import numpy as np
 import pandas as pd
 
@@ -274,6 +274,11 @@ def main():
                       "p_std": float(pv.std()), "sha_bin": sha256(outp)}
         log.info("fold %d %s p_mean=%.6f p_std=%.6f", fidx, f, float(pv.mean()), float(pv.std()))
         del pv
+        gc.collect()
+        try:
+            ctypes.CDLL("libc.so.6").malloc_trim(0)
+        except Exception:
+            pass
     del X
     if not a.keep_scratch:
         try:
