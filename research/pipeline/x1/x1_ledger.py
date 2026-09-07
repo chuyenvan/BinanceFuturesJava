@@ -15,7 +15,7 @@ sys.path.insert(0, "/home/ubuntu/featv2")
 import gate_cfg
 gate_cfg.describe()
 sys.path.insert(0,"/home/ubuntu/sel1m_code"); from funding_label_pb import read_label
-OUT="/home/ubuntu/ledger"; os.makedirs(OUT,exist_ok=True); Q=900000; H=3600000; TZ=7*H
+OUT="/home/ubuntu/ledger"; os.makedirs(OUT,exist_ok=True); Q=int(os.environ.get("X1_Q","900000")); H=3600000; TZ=7*H
 T0=int(pd.Timestamp("2021-04-01").value//1e6)-TZ; T1=int(pd.Timestamp(os.environ.get("X1_T1","2024-07-01")).value//1e6)-TZ
 X1_CUTS=set(os.environ.get("X1_CUTS","20220101 20220401 20220701 20221001 20230101 20230401 20230701 20231001 20240101 20240401").split())
 X1_LNAME=os.environ.get("X1_LNAME","cand_dev")   # v2: tu 2021-04 de fold 0 co train
@@ -34,7 +34,7 @@ if sys.argv[1]=="build":
     mp=pd.read_csv("/home/ubuntu/selector_pred_out/symbol_map.csv"); sym2id=dict(zip(mp.symbol,mp.symId))
     P=load_bins("/home/ubuntu/claudedata/predwf_G015x26").rename(columns={"p":"p_g015"}); log("G015 recs",len(P))
     parts=[]
-    for f in sorted(glob.glob("/home/ubuntu/label_15m/funding_label_%s*.pb" % os.environ.get("X1_LBGLOB","202[1-4]"))):
+    for f in sorted(glob.glob(os.environ.get("X1_LB_DIR","/home/ubuntu/label_15m") + "/funding_label_%s*.pb" % os.environ.get("X1_LBGLOB","202[1-4]"))):
         L=read_label(f,usecols=["tEpochMs","symbol","maxFav_72h","maxAdv_72h","retEnd_72h","nBars_72h"]); L=L[L.tEpochMs%Q==0]
         L=L[L.tEpochMs.isin(open_ts.ts.values)]; L["sym"]=L.symbol.map(sym2id); L=L.dropna(subset=["sym"]); L["sym"]=L.sym.astype(np.int64)
         parts.append(L.drop(columns=["symbol"]).rename(columns={"tEpochMs":"ts"}))

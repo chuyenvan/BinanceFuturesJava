@@ -42,7 +42,7 @@ OI_FILE = os.environ.get("OI_FILE", "/home/ubuntu/claudedata/oi/oi_percoin_full.
 MAP_CSV = os.environ.get("MAP_CSV", "/home/ubuntu/claudedata/oi/symbol_map.csv")
 SEL1M_CODE = os.environ.get("SEL1M_CODE", "/home/ubuntu/sel1m_code")
 
-GRID_MIN = 15
+GRID_MIN = int(os.environ.get("GRID_MIN", "15"))
 GRID_MS = GRID_MIN * 60_000
 TZ = 7 * 3_600_000
 OI_TOL = 2 * 3_600_000
