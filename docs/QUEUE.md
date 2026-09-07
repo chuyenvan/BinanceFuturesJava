@@ -761,3 +761,21 @@ phan nhan (3 dong, cot `retEnd_4h` co san trong `label_15m/*.pb`). Muon SINH LAI
   o muc Q4 — nhung phai train model moi cho 2021, khong phai predict, nen KHONG con la x26.
 - Doi chieu lai moi ket luan tung dua tren "x26 khong tai lap duoc" (F4_TIMING §9, L1_SHADOW_C3 (c),
   T2_FULLFLOW, AUDIT_APPLIED uu tien 1).
+
+---
+
+## SHADOW-HEALTH — kiem tra shadow C3 tren 242  [READY — LAP LAI MOI NGAY, READ-ONLY, khong bao gio DONE]
+Scheduled task chay job nay MOI LAN fire (khong lay job khac neu job nay READY). Chi doc 242, khong sua gi.
+Lenh (Git ssh tu Windows, viet .sh -> scp -> bash; KHONG nhung &,>,<,| trong ssh inline):
+  A=/home/chuyennd/java/v_t_m
+  pgrep -fc 'BinanceOrderTradingManager'                      # phai = 1
+  cat $A/run/*.pid; ps -o pid,rss,etime -C java               # pidfile = pid trading; RSS < 5G
+  tail -n 20000 $A/logs/full.log | grep -a 'Update all position:' | tail -1      # N (66 giam dan khi legacy dong)
+  tail -n 20000 $A/logs/full.log | grep -a '\[LEGACY\] managed' | tail -1 | cut -c1-60
+  tail -n 200000 $A/logs/full.log | grep -a '\[MAP\]' | grep -aoE 'p50=[0-9.]+' | tail -96   # 1 ngay = 96 tick; p50 phai trong [0.20,0.70]
+  tail -n 200000 $A/logs/full.log | grep -ac 'would-BUY'; grep -ac 'skip tick' ...; grep -acE 'Create order market|API-key format invalid|OutOfMemory' ...   # 3 cai cuoi phai = 0
+  wc -l /home/chuyennd/java/shadow_c3/ledger.csv; tail -3 /home/chuyennd/java/shadow_c3/ledger.csv
+  free -m | head -2
+Ghi 1 dong/ngay vao docs/SHADOW_LOG.md: ngay | pid | n_jvm | N_legacy | p50_min/med/max | would-BUY | skip | loi | ledger_rows | RSS | ghi chu.
+CANH BAO ngay (bao user) neu: n_jvm != 1; 'API-key format invalid' > 0; 'Create order market' > 0; p50 ngoai [0.20,0.70] >= 4 tick lien tiep; RSS >= 5G; OOM; khong co [MAP] trong 2 gio.
+KHONG restart, KHONG sua env, KHONG rollback tu dong — chi bao.
