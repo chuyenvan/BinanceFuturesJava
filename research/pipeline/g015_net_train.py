@@ -211,7 +211,16 @@ def main():
     ap.add_argument("--seed", type=int, default=SEED)
     ap.add_argument("--nest", type=int, default=NEST)
     ap.add_argument("--keep-scratch", action="store_true")
+    ap.add_argument("--drop-cols", default="",
+                    help="G015ABL: chi so cot 0-44 BO khoi X truoc khi train/predict, "
+                         "cach nhau dau phay (vd '23' hoac '18,21,22,23'). Mac dinh rong "
+                         "= HANH VI GOC KHONG DOI (giu du 45 cot).")
     a = ap.parse_args()
+    drop_set = set(int(x) for x in a.drop_cols.split(",") if x.strip() != "")
+    assert all(0 <= i < NF for i in drop_set), "drop-cols phai trong [0,%d)" % NF
+    keep_idx = [i for i in range(NF) if i not in drop_set]
+    log.info("G015ABL drop_cols=%s -> giu %d/%d cot: %s", sorted(drop_set), len(keep_idx), NF,
+             keep_idx)
 
     t00 = time.time()
     os.makedirs(a.out_dir, exist_ok=True)
@@ -251,7 +260,7 @@ def main():
         assert hi > lo, "fold %d OOS rong" % fidx
         pos = float(ty.mean())
         spw = (1 - pos) / max(pos, 1e-6)
-        Xtr = np.asarray(X[tp])
+        Xtr = np.asarray(X[tp])[:, keep_idx]
         clf = xgb.XGBClassifier(n_estimators=a.nest, max_depth=5, learning_rate=0.05,
                                 subsample=0.8, colsample_bytree=0.8, min_child_weight=20,
                                 scale_pos_weight=spw, eval_metric="auc", n_jobs=a.njobs,
@@ -264,7 +273,7 @@ def main():
             log.info("fold %d 4h: SAVED model -> %s", fidx, os.path.basename(mp))
         log.info("fold %d 4h: train %d (ts_max=%s<cutoff) pos=%.4f spw=%.6f", fidx, len(tp),
                  pd.to_datetime(int(ts_all[tp].max()), unit="ms"), pos, spw)
-        Xoo = np.asarray(X[lo:hi])
+        Xoo = np.asarray(X[lo:hi])[:, keep_idx]
         pv = clf.predict_proba(Xoo)[:, 1].astype(np.float32)
         del Xoo, clf
         outp = os.path.join(a.out_dir, "predict_wf_%s.bin" % f)
@@ -288,7 +297,8 @@ def main():
     meta = {"pipeline_version": PIPELINE_VERSION, "label_mode": a.label_mode, "thr": a.thr,
             "device": a.device, "njobs": a.njobs, "seed": a.seed, "nest": a.nest,
             "xgb": xgb.__version__, "purge_steps": PURGE_STEPS, "oos_months": OOS_MONTHS,
-            "grid_min": GRID_MIN, "folds": summary,
+            "grid_min": GRID_MIN, "folds": summary, "drop_cols": sorted(drop_set),
+            "keep_idx": keep_idx, "num_feature": len(keep_idx),
             "minutes": round((time.time() - t00) / 60, 1)}
     with open(os.path.join(a.out_dir, "net_train_summary.json"), "w") as fo:
         json.dump(meta, fo, indent=1)
