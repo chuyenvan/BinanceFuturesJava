@@ -1,5 +1,17 @@
 # PREREG_5MGRID -- train lai S1 + net015 o luoi 5 phut (GPU), thay luoi 15 phut hien hanh
 
+> **CAP NHAT 2026-09-08 (TRUOC khi chay ban cham diem cuoi, sau khi Kaggle GPU train
+> net015 o 5 phut OOM-kill 2 lan)**: user chi dao doi huong -- net015 GIU NGUYEN model
+> da train o 15 phut, chi predict-only tren feature 5-phut (script moi
+> `g015_predict5m.py`, xac thuc doc lap tren fold 20251001, xem
+> `docs/RESULT_5MGRID.md` muc 0). S1 van train lai day du o 5 phut nhu ke hoach goc.
+> Java `SIM_ENTRY_GRID_MIN` (muc 1, 3-Buoc-B-5) **KHONG can them/rebuild jar**: chi
+> anh huong `isTimeProcessData()` (duong live), khong dung trong
+> `SimulatorMarketLevelTicker1MStopLoss` (offline backtest dung o day). Phan con lai
+> cua file nay la BAN GOC, giu nguyen de doi chieu; xem `docs/RESULT_5MGRID.md` cho
+> ket qua va phan quyet cuoi cung.
+
+
 Viet va commit TRUOC khi chay bat ky buoc train/build nao. Khong sua sau khi thay ket qua.
 Bat nguon tu yeu cau user: "khong can train chi can predict lai theo luoi 5m" -> phat hien
 S1 chi co 1/16 fold co model da luu (con lai chi con output, khong con model) -> user quyet

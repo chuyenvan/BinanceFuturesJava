@@ -6,6 +6,23 @@ Sau khi xong: doi status thanh `DONE <commit>`, ghi ket qua vao doc rieng, commi
 
 ---
 
+## 5MGRID -- predict net015 luoi 5 phut (model 15 phut) + S1 train lai 5 phut  [DONE / `docs/RESULT_5MGRID.md`]
+
+Pre-reg `docs/PREREG_5MGRID.md` (cap nhat 2026-09-08 sau khi Kaggle GPU train net015 o 5
+phut OOM-kill 2 lan -- user chi dao doi huong: GIU model net015 15-phut, chi predict-only
+tren feature 5-phut; S1 van train lai day du 5 phut). Doi chung `X1_C3_FULL_PARITY`
+(15 phut, equity 111,428/n=2,266) vs `X1_C3_5M` (5 phut, equity 74,150/n=2,464), cung
+`TICKER_SOURCE=file`. Ket qua: 2/5 rate ngoai CI toan cua so -- CA HAI THEO HUONG XAU cho
+5M (win% -2.02pp, TSloss% +1.92pp), 0/5 theo tung nam. Rang buoc cung VI PHAM CA 4 NAM
+(te hon K12): 2022 UW +39 ngay, 2023 maxDD +3.63pp, 2024 UW +97 ngay, 2025 maxDD +12.13pp
++ nam am (-3.68%) + quy moi vi pham -5.78%. Co che: STRONG% tang (76.5%->80.8%, nhieu
+candidate hon nhung chat luong thap hon) -> mMargin giam 20% -> DCA leg2+ PnL 2025 dao
+chieu hoan toan (+4,813 -> -7,031). => NULL, GIU luoi 15 phut cho `X1_C3_FULL`. Giu lai
+cong cu (`g015_predict5m.py`, S1 5-phut, `x1_c3_full_5m.properties`) vi da xac nhan dung
+ky thuat, chi khong sinh loi. Dataset tam (`wfo_ds_x1_5m` 4.0G) da xoa.
+
+---
+
 ## K12 -- SELECTOR_RANK_TOPK 8->12 tren C3_FULL 48 thang  [DONE / `docs/K12_RESULT.md`]
 
 Pre-reg `docs/PREREG_K12.md` (`bc9d066`). Cong parity K=8 PASS (khop X1_EXTEND tung so).
