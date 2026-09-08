@@ -1,0 +1,1 @@
+08/09/2026 | pid=4349 | n_jvm=1 | N_legacy=65 | p50 min=0.4295/med=0.4892/max=0.5842 | would-BUY=1071(theo doi, khong bao dong) | skip-LEGACY=68 | loi(OOM/API-key)=0 | ledger_rows=23 | RSS=1.77G | ghi chu: xac minh deploy rev6 tu 07/09 06:29:57, sach 37h, xem docs/L3_DEPLOY_VERIFY_20260908.md

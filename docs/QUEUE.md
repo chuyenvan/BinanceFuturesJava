@@ -751,7 +751,7 @@ Con lai (**KHONG mo duoc trong dot nay**):
 
 ---
 
-## Q8 — L3: cô lập LEGACY + gói deploy 242  [DONE (chuẩn bị) / `docs/L3_DEPLOY_PREP.md`] · 🔴 **242 CHƯA DEPLOY**
+## Q8 — L3: cô lập LEGACY + gói deploy 242  [DEPLOYED 07/09/2026 06:29:57 / xac minh 08/09/2026 `docs/L3_DEPLOY_VERIFY_20260908.md`]
 
 User quyết: một JVM trên 242 chạy `LIVE_PROFILE=c3_shadow` — 66 vị thế thật cũ (**LEGACY**) đóng
 THẬT theo luật HEAD, sổ giấy C3 chạy song song, không lệnh thật mới.
@@ -774,6 +774,8 @@ THẬT theo luật HEAD, sổ giấy C3 chạy song song, không lệnh thật m
 
 Sau khi 242 verify PASS: bật cron `pull_242_shadow.sh`, và (tuỳ user) tắt shadow Oracle
 `cd /home/ubuntu/shadow_c3/app && bin/daemon.sh stop` + xoá cron health.
+
+**Cap nhat 08/09/2026**: da xac minh 242 dang chay dung rev6/c3_shadow (deploy tu 07/09 06:29:57, ~37h sach, 0 exception, LEGACY on dinh N=65, RSS/RAM/[MAP] p50 deu trong nguong). Chi tiet: `docs/L3_DEPLOY_VERIFY_20260908.md`. Con mo: quyet dinh co tat shadow Oracle hay khong (chua kiem tra no con chay khong).
 
 ## G3 — Khoi phuc `predwf_G015x26` (2026-09-06) — **XONG, TAI LAP DUOC**
 
@@ -817,9 +819,11 @@ Lenh (Git ssh tu Windows, viet .sh -> scp -> bash; KHONG nhung &,>,<,| trong ssh
   tail -n 20000 $A/logs/full.log | grep -a 'Update all position:' | tail -1      # N (66 giam dan khi legacy dong)
   tail -n 20000 $A/logs/full.log | grep -a '\[LEGACY\] managed' | tail -1 | cut -c1-60
   tail -n 200000 $A/logs/full.log | grep -a '\[MAP\]' | grep -aoE 'p50=[0-9.]+' | tail -96   # 1 ngay = 96 tick; p50 phai trong [0.20,0.70]
-  tail -n 200000 $A/logs/full.log | grep -ac 'would-BUY'; grep -ac 'skip tick' ...; grep -acE 'Create order market|API-key format invalid|OutOfMemory' ...   # 3 cai cuoi phai = 0
+  tail -n 200000 $A/logs/full.log | grep -ac 'would-BUY'   # THEO DOI, KHONG phai canh bao = 0 (tu 07/09 day la log hop le cua so giay C3 song song that; xem docs/L3_DEPLOY_VERIFY_20260908.md muc 5.2)
+  grep -ac 'skip tick' ...   # phai = 0
+  grep -acE 'API-key format invalid|OutOfMemory' ...   # phai = 0 (bo 'Create order market' khoi nguong nay -- tu 21/08 day la log dat lenh THAT hop le cua LEGACY, khong con dung de bao loi duoc)
   wc -l /home/chuyennd/java/shadow_c3/ledger.csv; tail -3 /home/chuyennd/java/shadow_c3/ledger.csv
   free -m | head -2
 Ghi 1 dong/ngay vao docs/SHADOW_LOG.md: ngay | pid | n_jvm | N_legacy | p50_min/med/max | would-BUY | skip | loi | ledger_rows | RSS | ghi chu.
-CANH BAO ngay (bao user) neu: n_jvm != 1; 'API-key format invalid' > 0; 'Create order market' > 0; p50 ngoai [0.20,0.70] >= 4 tick lien tiep; RSS >= 5G; OOM; khong co [MAP] trong 2 gio.
+CANH BAO ngay (bao user) neu: n_jvm != 1; 'API-key format invalid' > 0; p50 ngoai [0.20,0.70] >= 4 tick lien tiep; RSS >= 5G; OOM; khong co [MAP] trong 2 gio. (Da bo 'Create order market' khoi dieu kien canh bao 08/09/2026 -- xem Q8.)
 KHONG restart, KHONG sua env, KHONG rollback tu dong — chi bao.
