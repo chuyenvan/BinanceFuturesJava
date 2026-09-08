@@ -6,6 +6,22 @@ Sau khi xong: doi status thanh `DONE <commit>`, ghi ket qua vao doc rieng, commi
 
 ---
 
+## G015ABL -- ro soat 45 feature net015, bo dan funding-drift cluster (f23, f18/f21/f22)  [DONE / `docs/RESULT_G015ABL.md`]
+
+Pre-reg `docs/PREREG_G015ABL.md`. Them Stage 0 (control, retrain 45 feature) sau khi phat
+hien retrain-noise (G4_RECIPE_C4.md: spearman 0.986 vs model goc = trong nen nhieu seed) --
+so Stage 1/2 VOI Stage 0, khong so truc tiep X1_C3_FULL_PARITY. Cong hoi quy Stage 0 PASS
+(spearman fold 20240101 = 0.985997, khop 6 chu so voi G4_RECIPE_C4.md). Stage 1 (bo f23):
+0/5 rate thang ngoai CI, mMargin am ca 4 nam (~-10%), vi pham UW 2022 (+108 ngay) -- NULL
+"sach". Stage 2 (bo them f18/f21/f22): 0/5 rate thang, mMargin am manh hon (~-21%), nam 2022
+VO NANG (maxDD -27.74% vs -10.61% control, UW +196 ngay, nam AM duy nhat trong ca thi
+nghiem, quy moi vi pham -15.1%) -- NULL "nang". Gia thuyet: cum funding-drift mang tin hieu
+regime that (dac biet nam dau DEV, funding bien dong manh), khong chi la time-proxy nhu
+FEAT40_LOOKAHEAD.md canh bao. => GIU NGUYEN net015 45-feature. Model/code 3 stage giu lai
+tren Oracle (~3.4GB) + Kaggle kernel de tham khao. Dataset tam da xoa het.
+
+---
+
 ## 5MGRID -- predict net015 luoi 5 phut (model 15 phut) + S1 train lai 5 phut  [DONE / `docs/RESULT_5MGRID.md`]
 
 Pre-reg `docs/PREREG_5MGRID.md` (cap nhat 2026-09-08 sau khi Kaggle GPU train net015 o 5
