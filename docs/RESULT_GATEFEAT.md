@@ -62,6 +62,16 @@ IC = 0.5483, diff vs STAGE0 = **+0.0148**, CI95×1.21 **[+0.0084, +0.0211]**, P(
 | `momentumAcceleration` | GIU | −0.0042 | [−0.0059, −0.0025] |
 | `fundingRateRaw` | **BO** | +0.0024 | [+0.0011, +0.0036] |
 | COMBO 3 feature | **BO ca 3** | +0.0148 | [+0.0084, +0.0211] |
+| **CYC7 (27f: bo them hourOfDay/dayOfWeek/weekOfMonth)** | **BO 6 total** | +0.0159 vs STAGE0 | [+0.0093, +0.0224] |
+| CYC7 vs CYC_COMBO (30f) | bo 3 calendar them | +0.0011 | [−0.0003, +0.0025] P=0.974 |
+
+## CYC7 — bo them 3 calendar: `hourOfDay`, `dayOfWeek`, `weekOfMonth` (27 feature total)  [BO — CHAY SIM]
+IC = 0.5494 (vs STAGE0 +0.0158 CI [0.0093, 0.0224] P=1.000; vs CYC_COMBO 30f +0.0011
+CI [−0.0003, +0.0025] P=0.974 — khong hai, co loi nhe khong chac). User duyet 2026-09-09 09:14:
+bo luon nhom calendar roi chay sim 48 thang. => **Config SIM: 27 feature** (bo rsi14,
+monthOfYear, fundingRateRaw, hourOfDay, dayOfWeek, weekOfMonth).
+
+## SIM48 — X1_C3_FULL_GF27 (dang chay / xong — xem duoi)
 
 - **Config gate de xuat: 30 feature** = 33 − {`rsi14`, `monthOfYear`, `fundingRateRaw`}.
 - Chat luong do duoc (IC de-overlap 15m, 166,656 moc OOS 19 fold DEV): 0.5335 → **0.5483**
