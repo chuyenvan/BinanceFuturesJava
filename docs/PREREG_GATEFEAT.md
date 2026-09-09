@@ -83,3 +83,33 @@ pre-reg nay la **cao thien chat luong DU BAO cua p15** (IC/lift), khong tuyen bo
 - Disk: can ~2-3G tam cho model/fold cua tung chu trinh; xoa sau khi cham diem.
 - KHONG chay qua 2025-12-31, KHONG doc 2026. KHONG sua feature extractor Java.
 - Ket qua moi chu trinh ghi vao `docs/RESULT_GATEFEAT.md` (them dong, khong sua ket qua cu).
+
+---
+
+## PHU LUC A — dinh chinh 2026-09-09 (user duyet trong chat 09:14): bo them nhom calendar + chay sim 48 thang
+**Ly do**: sau CYC_COMBO (bo 3 feature, IC +0.0148), user chi dao: *"bo luon ca may feature
+thoi gian nhu weekOfMonth, hourOfDay roi dung sim full 48 thang chay xem ket qua roi tinh tiep"*.
+
+### A.1 Pham vi them
+- **CYC7**: bo them 3 feature calendar con lai — `hourOfDay`, `dayOfWeek`, `weekOfMonth`
+  (cung `monthOfYear` da bo o CYC4) → config 33 − 6 = **27 feature**:
+  {`rsi14`, `monthOfYear`, `fundingRateRaw`, `hourOfDay`, `dayOfWeek`, `weekOfMonth`}.
+  So CYC7 (27f) vs CYC_COMBO (30f) VA vs STAGE0 (33f). Cung metric muc 5.
+- **SIM48**: neu CYC7 khong lam IC tut ngoai CI so voi CYC_COMBO (hoac user van muon chay sim
+du IC tut nhe), dung config 27-feature de chay **sim 48 thang** (X1_C3_FULL) — day la buoc
+mo rong ngoai muc 5 pre-reg goc, user duyet truc tiep.
+
+### A.2 Quy trinh SIM48 (A/B sach, chi doi gate p15)
+1. Harness sinh p15 27f cho toan bo OOS DEV (19 fold, 2021-04→2025-12) → chuyen header ve
+   `timestamp,predReturn15M,predRisk4H` (predRisk4H=0, da chet o gate moi).
+2. Nap vao Aerospike set MOI (vd `ai_pred_market_gate_wfo_gf27`) bang `LoadWfoGatePredTool`
+   (arg1=csv, arg2=set) — KHONG ghi de set goc.
+3. Build dataset moi: `ExportWfoDataset` voi `WFO_SET_PRED=<set moi>`,
+   `WFO_FUNDING_PRED_DIR=/home/ubuntu/predwf_map_s1a2_x1` (bins X1 GIU NGUYEN),
+   `TICKER_SOURCE=file` (khop parity chay file).
+4. Chay sim: profile `profiles/x1_c3_full.properties`, `SIM_END_DATE=20251231` → tag
+   `X1_C3_FULL_GF27`. DOI CHUNG = artifact co san `X1_C3_FULL_PARITY` (md5 printDone
+   `2478e90d…`, equity 111,428, n=2,266) — cung jar/cung bins/cung TICKER_SOURCE=file.
+5. Cham bang `research/analysis/x1_rates.py X1_C3_FULL_PARITY X1_C3_FULL_GF27` (rate + CI
+   khoi 72h x1.21) + rang buoc cung (maxDD/UW/nam-am/quy-moi nhu K12 muc 5).
+   Equity bao rieng, KHONG phai tieu chi. KHONG dung 2026.
