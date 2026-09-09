@@ -71,7 +71,39 @@ CI [−0.0003, +0.0025] P=0.974 — khong hai, co loi nhe khong chac). User duye
 bo luon nhom calendar roi chay sim 48 thang. => **Config SIM: 27 feature** (bo rsi14,
 monthOfYear, fundingRateRaw, hourOfDay, dayOfWeek, weekOfMonth).
 
-## SIM48 — X1_C3_FULL_GF27 (dang chay / xong — xem duoi)
+## SIM48 — X1_C3_FULL_GF27 (gate 27-feature, 48 thang 2022-2025, TICKER_SOURCE=file)
+
+| tag | n | win% | TSloss% | mP\|SM | mP\|SL | meanP | mMargin | maxDD% | UW | equity |
+|---|---|---|---|---|---|---|---|---|---|---|
+| X1_C3_FULL_PARITY (33f, doi chung) | 2,266 | 84.69 | 14.96 | 7.333 | −19.570 | 3.308 | 1,945 | −12.46 | 227 | 111,428 |
+| X1_C3_FULL_GF27 (27f) | 2,272 | 84.11 | 15.54 | 7.330 | −18.983 | 3.242 | 1,818 | −12.93 | 223 | 107,101 |
+
+printDone md5: GF27 `64687fd4…` vs parity `2478e90d…`. PROFILE_HASH khop `135750e0…` (cung
+profile x1_c3_full, chi khac WFO_SET_PRED → pred.bin). Dataset wfo_ds_x1_gf27 4.0G (da xoa sau cham).
+
+### Tieu chi rate + CI (khoi 72h x1.21, tool x1_rates.py)
+- **TOAN CUA SO 48 thang: 0/5 rate chat luong ngoai CI** (win% −0.576 CI [−2.10,+0.94];
+  TSloss% +0.577 [−1.05,+2.00]; mP|SM −0.003; mP|SL +0.586; meanP −0.066) — KHONG phan biet duoc.
+- Theo nam: 2022 0/5, 2023 0/5, **2024 1/5 (TSloss% +1.26 CI [+0.08,+2.66] — huong XAU cho 27f)**, 2025 0/5.
+- `mMargin` −126 ngoai CI nhung la bien KIEM SOAT sizing (B3 compound) — tool loai khoi rate chat luong.
+- Rang buoc cung: ca hai deu FAIL nhu nhau (UW 223 vs 227 — da FAIL san o baseline, khong phai do gate).
+  DCA leg2+ PnL: 2023 GF27 +486 vs parity 0 (GF27 co 1 leg, mau qua nho).
+
+### Phan quyet SIM48: NULL o tang sim — GIU gate 33-feature
+Dieu kien thang (>=2 rate cung huong ngoai CI) KHONG dat: toan cua so 0/5, chi 1 rate ngoai CI
+theo nam (TSloss% 2024, huong XAU). **Gate 27-feature co IC OOS cao hon (+0.0159, muc 6) nhung
+KHONG chuyen thanh cai thien sim** — lap lai dung tien le F4/CI_REAUDIT #9 (gate value o tang sim
+chua chung minh doc lap; n_eff muc lenh 173-174 qua nho). Equity 107,101 < 111,428 (-3.9%) bao
+rieng, KHONG phai tieu chi, huong trung voi mMargin giam. => **KHONG de xuat thay doi gate p15**
+lam baseline. Bai hoc: feature ablation cua GATE nen danh gia o tang sim (rate), IC OOS la dieu
+kien can khong phai du.
+
+## TONG KET GATEFEAT (toan bo)
+- Gate p15 33-feature hien tai: giu nguyen (khong bot feature nao vao san xuat).
+- 3 feature bot duoc o tang IC (`rsi14`, `monthOfYear`, `fundingRateRaw`) va 3 calendar nua
+  (`hourOfDay`, `dayOfWeek`, `weekOfMonth`) → 27f IC tot hon that (+0.0159, P=1.000) nhung sim
+  KHONG cai thien → khong dung. Giu lai toan bo cong cu (`run_cycle.py`, `ci_cycle.py`, CSV
+  p15_CYC7.csv, set Aerospike `ai_pred_market_gate_wfo_gf27`) cho tai su dung.
 
 - **Config gate de xuat: 30 feature** = 33 − {`rsi14`, `monthOfYear`, `fundingRateRaw`}.
 - Chat luong do duoc (IC de-overlap 15m, 166,656 moc OOS 19 fold DEV): 0.5335 → **0.5483**
