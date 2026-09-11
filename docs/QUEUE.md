@@ -6,6 +6,15 @@ Sau khi xong: doi status thanh `DONE <commit>`, ghi ket qua vao doc rieng, commi
 
 ---
 
+## COLLAPSE_PROBE -- feature entry-time co du doan collapse khong? (offline, khong sim)  [DONE / `docs/RESULT_COLLAPSE_PROBE.md`]
+
+Pre-reg `docs/PREREG_COLLAPSE_PROBE.md` (7e1bbf6). 1,996 lenh PST, nhan collapse (time-stop & ret<=-20%) n=123. AUC walk-forward
+pooled M2 xgb = 0.566 (2023 0.50, 2024 0.52, 2025 0.60) vs nguong 0.65/0.60 => DONG. Model 48 feature khong hon feature don
+dd_7d (0.591). n_open_at_entry AUC 0.58 nhung HUONG NGUOC (book dong => it collapse/lenh), khop BOOKCAP 0/3. => KHONG xay
+model collapse-filter; collapse la cum regime, khong doc duoc per-lenh.
+
+---
+
 ## BOOKCAP -- overlay tran BOOK/VON tren X1_C3_FULL (CAP12 / CAP16 / NOT40)  [DONE / `docs/RESULT_BOOKCAP.md`]
 
 Pre-reg `docs/PREREG_BOOKCAP.md` commit `7e1bbf6` (chot TRUOC khi cai code). Them 2 key qua cong `Cfg`
