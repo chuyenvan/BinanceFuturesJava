@@ -69,6 +69,23 @@ khong can hoi lai user, khong can doc lai 30 doc khac.
    - Keo log ve doi chung: `tools/pull_242_shadow.sh` (Oracle) — **cron chua bat**, doi deploy.
 
 
+10b. **GATE ENTRY = MOT class `tradecore/EntryGate`, MOT knob, dung chung sim + live**
+    (`docs/L7_LEAN_GATE.md`, 2026-09-11. Goi `/home/ubuntu/deploy_242_l7/` san, **242 CHUA DEPLOY**.)
+    - `thr = SIM_MIN_MOMENTUM_15M * max(0.26787, symbolPred / 0.15 * 1.28760)`; PASS `<=> !(p15 < thr)`.
+      Ba he so la `static final` — **het knob**; gate chi con doc `SIM_MIN_MOMENTUM_15M`
+      (=> `conf/env.sh` 242 **khong phai doi**).
+    - 🔴 **KHONG duoc "rut gon" thanh `p15 >= K*symbolPred`** (`K=0.0686720`): floor CO bind that
+      1 lan/48 thang (2024-08-05 13:30 GMT+7, `symbolPred=0.024885`) va nhan `float` khong ket hop
+      (lech ULP). Do o `docs/LEAN_GATE_AUDIT.md` muc 3. **KHONG doi thu tu phep nhan.**
+    - Sim va live moi ben DUNG MOT call-site (`Simulator...createOrder`,
+      `DetectEntry...createOrderBuyRequest`) — ca hai goi `AIRejectFilter.entryGate`.
+      Lich su: hai ban sao da troi khoi nhau 3 tuan (`311bb29`) => lech 95.62% slot entry.
+    - Cong parity bat buoc khi cham vao gate: `printDone.csv` cua `X1_C3_FULL` phai
+      `md5 = 2478e90d4e6147bf4cc64f75967ef47d` (bo header `e13bc39e625b8d2ceebb7b9194f7f4f0`),
+      `b:111428`, 2,266 lenh. Chay: `bash /home/ubuntu/l7run.sh`.
+    - **Con lai, co y giu**: gene `AI_DYNAMIC_MIN`/`AI_DYNAMIC_MULTIPLIER` trong HPO tu L7
+      **khong con tac dong len gate** (da ghi canh bao tai `Configs.java`). Go khoi gene vector = L8.
+
 11. **L4 — `build_map` chay LIVE, shadow thanh C3 dung nghia o tang ENTRY**
     (`docs/L4_LIVE_BUILDMAP.md`, 2026-09-07). **242 van CHUA DEPLOY.**
     - 🔴 **QUY UOC PHAI THUOC** (sai chieu la dao nguoc selector):

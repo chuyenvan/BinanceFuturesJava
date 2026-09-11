@@ -969,3 +969,28 @@ Ghi 1 dong/ngay vao docs/SHADOW_LOG.md: ngay | pid | n_jvm | N_legacy | p50_min/
   te nhat DEV 2025-11-12) hoac open >= 30 (= max DEV) -> bao user, KHONG tu sua gi.
 CANH BAO ngay (bao user) neu: n_jvm != 1; 'API-key format invalid' > 0; p50 ngoai [0.20,0.70] >= 4 tick lien tiep; RSS >= 5G; OOM; khong co [MAP] trong 2 gio. (Da bo 'Create order market' khoi dieu kien canh bao 08/09/2026 -- xem Q8.)
 KHONG restart, KHONG sua env, KHONG rollback tu dong — chi bao.
+
+---
+
+## L7 — LEAN GATE (`EntryGate`)  [🔴 CHO USER DUYET DEPLOY — code+parity XONG]
+`docs/L7_LEAN_GATE.md`. Goi `/home/ubuntu/deploy_242_l7/`, jar sha256 `35ffb41c…`. **242 chua cham.**
+- Cong entry tang 2 gop ve MOT class `tradecore/EntryGate` (sim + live cung goi), gate tu 4 knob -> **1**
+  (`SIM_MIN_MOMENTUM_15M`) => **`conf/env.sh` 242 KHONG doi**. Xoa 4 co che tro (10 key, 1 class),
+  19 profile thi nghiem -> `profiles/archive/`.
+- Parity: `printDone.csv` **byte-identical** `X1_C3_FULL_PARITY_R` (`cmp` rc=0,
+  md5 `2478e90d…` / bo header `e13bc39e…`, `b:111428`, 2,266 lenh). `mvn -o test` **125/125**.
+- **L6 chua deploy => deploy L7 THAY L6.** Neu L6 da deploy => L7 la buoc sau, hanh vi gate khong doi.
+- Quyet dinh can user: (a) co deploy khong; (b) neu co, sau 2-4 tuan doi chieu dong `[GATE]` +
+  nhip entry (~1.4/ngay) voi DEV.
+
+## L8 — SIZING PARITY + SO GIAY MULTI-LEG  [BACKLOG, chua bat dau]
+`docs/L8_SIZING_PARITY_BACKLOG.md`. **Khong duoc lam chung dot voi cong parity gate.**
+1. 🔴 **Cong thuc sizing cua sim chua ai doc dung**: code cho `0.346% x throttle`, do duoc
+   **2.498%** equity/leg (lech ~7.2 lan). **Cam sua mot dong sizing nao truoc khi giai xong.**
+   Buoc dau: them log `[SIZE] equity throttle ladder ratio tier budget` roi doi chieu `printDone.margin`.
+2. 🔴 **So giay C3 thieu 22.6% pnl cua backtest**: `ShadowBookC3.open` la `Map<symbol,Pos>` +
+   `putIfAbsent` => leg thu 2 tren cung coin bi bo im lang. Sleeve `BIG_DOWN` + `DCA_LEVEL1` =
+   **17,291.7 / 76,428.4**. Moi so cua so giay phai doc kem canh bao nay.
+3. Env 242 can user xac nhan (agent khong SSH): `DCA_GRID_WEIGHTS`, `TIER_FLAT`, `PAPER_EQUITY`.
+4. Don not: go gene `AI_DYNAMIC_MIN`/`AI_DYNAMIC_MULTIPLIER` khoi `WFORunner` / `StrategyWfoTask` /
+   `SensitivityTool` (tu L7 chung khong con tac dong len gate; doi index gene nen tach rieng).

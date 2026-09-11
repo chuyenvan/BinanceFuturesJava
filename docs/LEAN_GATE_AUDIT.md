@@ -1,5 +1,10 @@
 # LEAN_GATE_AUDIT — rut gon cong entry (gate) va ra soat lech sim<->live
 
+> **CAP NHAT 2026-09-11**: master da doc bao cao nay va **DUYET** ban lean "giu nguyen bieu thuc,
+> gop hai ban sao ve mot ham" (byte-identical DO CAU TRUC, khong rut ve `K`). Da cai dat va chung
+> minh o **`docs/L7_LEAN_GATE.md`** (`printDone.csv` byte-identical voi `X1_C3_FULL_PARITY_R`).
+> Muc 4.3 co **dinh chinh** (xem trong muc do). Doan duoi day GIU NGUYEN lam ban ghi thoi diem audit.
+
 > **KET LUAN DIEU HANH: DUNG SAU PHAN A.** Rang buoc cung cua master la
 > "moi thay doi phai byte-identical voi `X1_C3_FULL_PARITY_R`", va lenh giao:
 > *neu floor / early-gate co bind du mot lan => DUNG sau Phan A, bao so*.
@@ -207,6 +212,14 @@ managerBudget = balanceBasic x F_BASE(0.03) x throttle / dcaGridTotalWeight()
 | tier | `TIER_FLAT=1` (profile:44) => **1.0** | 242/shadow **khong dat** `TIER_FLAT` => tier **1.2/1.0/0.5 CO chay** (`:761-773`) |
 | **`x gridLegWeightRatio(legIdx)`** | **CO** (`Simulator:1089-1105`), leg0 = `w0/sum x DCA_GRID_SCALE` = `1/13 x 19.5` = **1.5** | **KHONG CO** — duong live khong goi `DcaUtils.gridLegWeightRatio` o bat ky dong nao |
 | cap tran | **khong co** | `SIZE_CAP_OF_EQUITY = 0.045` x equity (`:746-747`) |
+
+> 🔴 **DINH CHINH 2026-09-11 (L7, do bang so — xem `docs/L8_SIZING_PARITY_BACKLOG.md` muc 1.2).**
+> Uoc luong "~16x" duoi day **SAI**: no suy tu cong thuc chu khong do. Do that:
+> sim **2.498%** equity/leg (2,266 leg, 48 thang, `printDone.csv`) vs live so giay
+> **3.000% -> 2.085%** (`docs/L2_PORT_C3.md` muc 4.1) => **~1.0-1.2x, KHOP bac do lon**.
+> Nhung phep do lai **khong khop chinh cong thuc duoi day** (cong thuc cho 0.346%, do duoc
+> 2.498% — lech ~7.2 lan) => **duong sizing cua sim chua ai doc dung**. Doan duoi giu nguyen
+> lam ban ghi cua suy dien SAI, de lan sau khong ai lap lai kieu ket luan tu doc code.
 
 => **leg dau**: sim = `equity x 0.03 x throttle x 1.5` ; live = `equity x 0.03 x throttle x tier / sum(w)`.
 Voi 242 (`sum(w)=13`, tier<=1.2) ti so **sim / live = 1.5 / 0.0923 = ~16x**.
