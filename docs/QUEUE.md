@@ -6,6 +6,16 @@ Sau khi xong: doi status thanh `DONE <commit>`, ghi ket qua vao doc rieng, commi
 
 ---
 
+## GRAVEYARD -- om bag sau time-stop + DCA 1:1 <=2 leg thay vi cat (de xuat user)  [DONE / `docs/RESULT_GRAVEYARD.md`]
+
+Pre-reg `docs/PREREG_GRAVEYARD.md` (2e031f1). Offline, 285 lenh PST time-stop X1_C3_FULL, hourly close, 108 su kien BIG_DOWN.
+PRIMARY (EV giu tiep tu diem cat, D2 180d) = -11.1%, CI [-21.3,+1.7] => DONG. Frame 've bo e0': om khong DCA ve bo 63%/90d
+77%/365d NHUNG PnL thua CAT 3-6% von goc; DCA 1:1 <=2 leg ve bo 86%/365d NHUNG thua CAT 13% von goc @180d, CI [-22,-4.5]
+loai 0, am ca 4 nam; write-off om toi cung = -98% von goc den cuoi. Ly do: ve bo = lai 0, that bai = -58..-88% va DCA nhan
+von vao dung nhom do. Edge 'DCA' that nam o sleeve BIG_DOWN (von MOI, coin MOI, +9.9k), khong phai them von vao bag.
+
+---
+
 ## COLLAPSE_PROBE -- feature entry-time co du doan collapse khong? (offline, khong sim)  [DONE / `docs/RESULT_COLLAPSE_PROBE.md`]
 
 Pre-reg `docs/PREREG_COLLAPSE_PROBE.md` (7e1bbf6). 1,996 lenh PST, nhan collapse (time-stop & ret<=-20%) n=123. AUC walk-forward
