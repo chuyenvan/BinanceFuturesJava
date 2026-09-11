@@ -847,5 +847,9 @@ Lenh (Git ssh tu Windows, viet .sh -> scp -> bash; KHONG nhung &,>,<,| trong ssh
   wc -l /home/chuyennd/java/shadow_c3/ledger.csv; tail -3 /home/chuyennd/java/shadow_c3/ledger.csv
   free -m | head -2
 Ghi 1 dong/ngay vao docs/SHADOW_LOG.md: ngay | pid | n_jvm | N_legacy | p50_min/med/max | would-BUY | skip | loi | ledger_rows | RSS | ghi chu.
+  **MTM (them 11/09/2026):** chay `tools/shadow_mtm_242.sh` TREN 242 (pipe qua ssh stdin) va dan dong tom tat + 3 lenh te nhat
+  vao cung dong SHADOW_LOG. Ly do: ledger chi co lenh DA DONG (100%% TRAILING_STOP) — realized la survivorship; phai doc
+  realized+unrealized (docs/SHADOW_EVAL_20260911.md, DEV_COLLAPSE_CHECK_20260911.md). CANH BAO them: net%% <= -8%% (= muc collapse-day
+  te nhat DEV 2025-11-12) hoac open >= 30 (= max DEV) -> bao user, KHONG tu sua gi.
 CANH BAO ngay (bao user) neu: n_jvm != 1; 'API-key format invalid' > 0; p50 ngoai [0.20,0.70] >= 4 tick lien tiep; RSS >= 5G; OOM; khong co [MAP] trong 2 gio. (Da bo 'Create order market' khoi dieu kien canh bao 08/09/2026 -- xem Q8.)
 KHONG restart, KHONG sua env, KHONG rollback tu dong — chi bao.

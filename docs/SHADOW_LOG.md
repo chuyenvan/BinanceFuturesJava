@@ -1,2 +1,3 @@
 08/09/2026 | pid=4349 | n_jvm=1 | N_legacy=65 | p50 min=0.4295/med=0.4892/max=0.5842 | would-BUY=1071(theo doi, khong bao dong) | skip-LEGACY=68 | loi(OOM/API-key)=0 | ledger_rows=23 | RSS=1.77G | ghi chu: xac minh deploy rev6 tu 07/09 06:29:57, sach 37h, xem docs/L3_DEPLOY_VERIFY_20260908.md
 11/09/2026 | pid=1451 | n_jvm=1 | N_legacy=63 | p50 min=0.3744/med=0.4500/max=0.5266 | would-BUY=4(theo doi) | skip-LEGACY=55 | loi=0 | ledger_rows=51 | RSS=1.73G | ghi chu: MTM net -$1,074 (realized +2,245 / unrealized -3,319, 26/27 mo am), book ket cap-then-skip, xem docs/SHADOW_EVAL_20260911.md
+11/09/2026 15:52 | MTM | realized=2245 | unrealized=-3236 | net=-990 (-2.83%) | open=27 am=26/27 avgRet=-21.8% >=96h=5 | worst SOPH -64% COLLECT -52% IOST -51%
