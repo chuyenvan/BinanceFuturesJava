@@ -22,6 +22,11 @@
    gate 2 tang, selector, exit, sizing, param TRO, cach tai lap.
 3. [RUNS_DEV](RUNS_DEV.md) — bang moi run DEV da chay + so do duoc. **Nguon su that ve "da do gi".**
 4. [ROADMAP_NOLEAK](ROADMAP_NOLEAK.md) — hang doi con lai + gi da dong.
+5. **GATE ENTRY** — [LEAN_GATE_AUDIT](LEAN_GATE_AUDIT.md) (do 48 thang: floor CO bind 1 lan =>
+   **cam** rut gon gate ve `K*symbolPred`) roi [L7_LEAN_GATE](L7_LEAN_GATE.md) (cong entry ve MOT
+   class `tradecore/EntryGate`, 1 knob, sim+live dung chung, `printDone.csv` byte-identical).
+   Tien than: [AUDIT_GATE_DYN_PARITY](AUDIT_GATE_DYN_PARITY.md), [L6_GATE_DYN_FIX](L6_GATE_DYN_FIX.md),
+   [RESULT_FLATGATE](RESULT_FLATGATE.md). Viec con lai: [L8_SIZING_PARITY_BACKLOG](L8_SIZING_PARITY_BACKLOG.md).
 
 ## 2. CAU HINH (he `TRADING_PROFILE`, chot 2026-09-03)
 
