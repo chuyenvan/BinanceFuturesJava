@@ -6,6 +6,30 @@ Sau khi xong: doi status thanh `DONE <commit>`, ghi ket qua vao doc rieng, commi
 
 ---
 
+## BOOKCAP -- overlay tran BOOK/VON tren X1_C3_FULL (CAP12 / CAP16 / NOT40)  [DONE / `docs/RESULT_BOOKCAP.md`]
+
+Pre-reg `docs/PREREG_BOOKCAP.md` commit `7e1bbf6` (chot TRUOC khi cai code). Them 2 key qua cong `Cfg`
+(`SIM_MAX_OPEN_POSITIONS`, `SIM_MAX_OPEN_NOTIONAL_PCT`, khong khai = TAT), cam o
+`createOrder` CHI cho leg `PREDICT_SYMBOL_TRADE`, SAU gate/AIRejectFilter va TRUOC budget/tier;
+DCA_LEVEL1 / BIG_DOWN khong bi chan. **Cong nghiem thu PASS**: tat overlay ra printDone BYTE-IDENTICAL
+voi `X1_C3_FULL_PARITY_R` (cmp rc=0, md5 `2478e90d…` ca header, 0 dong `BOOK-CAP` trong log),
+`check_cfg_gateway.sh` OK. Ket qua 3 bien the: **0/3 PASS**. (i) DAT ca 3 -- 0/5 rate chat luong xau
+ngoai CI toan cua so. (ii) KHONG DAT ca 3 -- maxDD chi tot hon 2/4 nam (CAP12, NOT40) hoac 1/4 (CAP16),
+rieng CAP12 xau hon 1.15pp o 2024 (vuot nguong 1.0pp). (iii) KHONG DAT ca 3 -- rang buoc cung tuyet doi
+FAIL 2-3/4 nam, chu yeu do **UW xau di co he thong** (CAP12 2022 64->137, 2024 121->244; CAP16 2025
+227->302), khong nam nao tot hon; baseline tu no cung FAIL 2/4 nam. Co che **da duoc thu that** (chan
+93.9% / 89.8% / 82.7% tick co ung vien, cat n 2,266 -> 1,810/1,987/2,082) nen KHONG roi vao cach doc (c).
+=> Cach doc **(b)**: **khong phan biet duoc / cap khong giup maxDD** (khong noi "cap thua"). d CAGR
+-1.30 / -2.60 / -0.91 pp, CI95 deu chua 0, khong vuot nguong k=3 (1.4823*sd) -- chi bao cao, khong quyet
+dinh. Ghi kem: CAP12 giam collapse-day 25->17 va tranh ngay te nhat 2025 (-8,415 -> -4,896) NHUNG cung la
+bien the lam UW xau nhat + vo them nguong quy (-5.93 nam 2024); nam 2024 CAP12/CAP16 co 3/5 rate xau ngoai
+CI theo nam (tieu chi (i) dinh nghia tren toan cua so nen khong doi phan quyet). `open_max` VUOT tran o ca
+3 (CAP12 max 17 > 12) -- dung thiet ke, vi DCA/BIG_DOWN khong bi chan. KHONG de xuat so giay thu 2,
+KHONG doi production, KHONG mo holdout. Artifact: `research/analysis/ci_bookcap.py`, 3 profile
+`x1_c3_full_cap12|cap16|not40.properties`, `devrun/X1_C3_FULL_{CAPOFF,CAP12,CAP16,NOT40}` (GIU).
+
+---
+
 ## AUDIT_GATEDYN — ro soat doc lap claim "GD92 THANG" (272d8f1/1c1ecca/41d5d76)  [DONE / `docs/AUDIT_GATEDYN_GD92.md`]
 
 Chay lai GD92 tu dau tren dataset build lai: **byte-identical** (`c18314d661…`, n=2,355) => so lieu

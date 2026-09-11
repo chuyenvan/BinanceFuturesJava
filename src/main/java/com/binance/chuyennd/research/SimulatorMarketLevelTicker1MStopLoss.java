@@ -97,6 +97,16 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     public long entryOther = 0;          // còn lại (SMALL_* nếu bật)
     public long predictSymbolRejectedGate = 0; // coin funding-selector bị gate REJECT (không vào lệnh)
 
+    // === BOOKCAP (2026-09-11, docs/PREREG_BOOKCAP.md commit 7e1bbf6) — THUAN DEM, in cuoi run ===
+    //   *Seen  = ung vien PREDICT_SYMBOL_TRADE da qua gate va toi duoc tang cap (mau so).
+    //   *Blocked = bi cap chan. "tick" = moc thoi gian ticker.startTime.
+    public long bookCapSeen = 0;
+    public long bookCapBlocked = 0;
+    public long bookCapTicksSeen = 0;
+    public long bookCapTicksBlocked = 0;
+    private long bookCapLastSeenTs = Long.MIN_VALUE;
+    private long bookCapLastBlockTs = Long.MIN_VALUE;
+
     // =================================================================
     // 🔥 SỬ DỤNG MẢNG CỐ ĐỊNH O(1) ĐỂ LOẠI BỎ AUTOBOXING RÁC CỦA HASHMAP
     // =================================================================
@@ -489,6 +499,15 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         if (TickDecisionLog.ON) {
             TickDecisionLog.close();
         }
+        // [BOOKCAP] Tong ket overlay — CHI in khi BAT (tat => 0 dong BOOK-CAP trong sim.out).
+        if (Configs.BOOK_CAP_ON) {
+            LOG.info("[BOOK-CAP] maxOpen={} maxNotionalPct={} blocked={}/{} seen (ticksBlocked={}/{} "
+                            + "ticksSeen = {}% tick co chan)",
+                    Configs.BOOK_MAX_OPEN, Configs.BOOK_MAX_NOTIONAL_PCT, bookCapBlocked, bookCapSeen,
+                    bookCapTicksBlocked, bookCapTicksSeen,
+                    bookCapTicksSeen > 0
+                            ? String.format("%.2f", 100.0 * bookCapTicksBlocked / bookCapTicksSeen) : "n/a");
+        }
         long _tot = readMs + simMs;
         LOG.info("[PROFILE] days={} readMs={} simMs={} (read={}% sim={}%) totalLoopMs={}",
                 dayCount, readMs, simMs,
@@ -542,6 +561,26 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         return activeMap;
     }
 
+
+    /**
+     * [BOOKCAP] Tong NOTIONAL cac lenh DANG MO = sum(priceEntry * quantity) tren MOI leg con mo
+     * (moi status chua DONE, moi level). Cum dong xong bi xoa khoi symbol2OrdersEntry (closeOrder)
+     * nen duyet theo activeRunningIds la dung tap "dang mo". LEVERAGE_ORDER=1 => notional = von vao lenh.
+     * READ-ONLY, chi duoc goi khi {@link Configs#BOOK_CAP_ON}.
+     */
+    private double openNotional() {
+        double s = 0;
+        for (int i = 0; i < activeRunningCount; i++) {
+            List<OrderTargetInfoTest> legs = symbol2OrdersEntry[activeRunningIds[i]];
+            if (legs == null) continue;
+            for (OrderTargetInfoTest o : legs) {
+                if (o != null && o.priceEntry != null && o.quantity != null) {
+                    s += (double) o.priceEntry * (double) o.quantity;
+                }
+            }
+        }
+        return s;
+    }
 
     private Integer counterOrderRunning() {
         int counter = 0;
@@ -945,6 +984,47 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
 
 
+
+        // === BOOKCAP (2026-09-11) — OVERLAY TANG BOOK/VON, docs/PREREG_BOOKCAP.md commit 7e1bbf6 ===
+        //   VI TRI: SAU gate thi truong / AIRejectFilter (va sau nhanh GATE_COUNT_ONLY), TRUOC
+        //   budget/tier. CHI chan leg selector PREDICT_SYMBOL_TRADE; DCA_LEVEL1 / BIG_DOWN KHONG
+        //   bi cham (khong doi luat leg cu).
+        //   n_open   = so lenh dang mo (moi status chua DONE, moi level) = counterOrderRunning().
+        //   notional = sum(priceEntry * quantity) cua cac lenh dang mo (openNotional()).
+        //   equity   = balance THUC HIEN b = balanceBasic + profit — KHONG mark-to-market, de tat dinh
+        //              (dung gia tri in o cot b: cua dong "Update ... => b:").
+        //   Vi pham => REJECT + TickDecisionLog.D_BOOK_CAP + dem. Hai key <=0/khong khai =>
+        //   BOOK_CAP_ON=false => khoi nay KHONG chay => byte-identical (cong nghiem thu muc 1).
+        if (Configs.BOOK_CAP_ON && levelChange == MarketLevelChange.PREDICT_SYMBOL_TRADE) {
+            bookCapSeen++;
+            if (ticker.startTime != bookCapLastSeenTs) {
+                bookCapTicksSeen++;
+                bookCapLastSeenTs = ticker.startTime;
+            }
+            boolean capHit = false;
+            if (Configs.BOOK_MAX_OPEN > 0 && counterOrderRunning() >= Configs.BOOK_MAX_OPEN) {
+                capHit = true;
+            }
+            if (!capHit && Configs.BOOK_MAX_NOTIONAL_PCT > 0f) {
+                BudgetManagerSimple bm = BudgetManagerSimple.getInstance();
+                double eq = (bm.balanceBasic != null ? bm.balanceBasic : 0f)
+                        + (bm.profit != null ? bm.profit : 0f);
+                if (eq > 0 && openNotional() >= (double) Configs.BOOK_MAX_NOTIONAL_PCT * eq) {
+                    capHit = true;
+                }
+            }
+            if (capHit) {
+                bookCapBlocked++;
+                if (ticker.startTime != bookCapLastBlockTs) {
+                    bookCapTicksBlocked++;
+                    bookCapLastBlockTs = ticker.startTime;
+                }
+                if (TickDecisionLog.ON) {
+                    tlCand(TickDecisionLog.D_BOOK_CAP, symbolId, ticker, levelChange, symbolPred, predict);
+                }
+                return;
+            }
+        }
 
         // TASK-134 PROBE: phân loại nguồn leg vừa PASS mọi cổng (thuần đếm)
         if (levelChange == MarketLevelChange.BIG_DOWN) entryBigDown++;

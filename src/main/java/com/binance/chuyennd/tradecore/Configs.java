@@ -297,6 +297,18 @@ public class Configs {
     //     ma van bao "chay thanh cong". true = nem loi ngay, khong cho ket qua ban ra ngoai.
     public static boolean SIM_FAIL_FAST_ON_DATA_ERROR = "true".equalsIgnoreCase(Cfg.get("SIM_FAIL_FAST_ON_DATA_ERROR"));
 
+    // =========================================================
+    // BOOKCAP (2026-09-11) — OVERLAY TANG BOOK/VON, docs/PREREG_BOOKCAP.md commit 7e1bbf6.
+    //   Hai tham so GIAO DICH, doc qua cong Cfg (khai trong PROFILE, KHONG doc env truc tiep).
+    //   SIM_MAX_OPEN_POSITIONS   : tran SO LENH dang mo. <=0 / khong khai = TAT.
+    //   SIM_MAX_OPEN_NOTIONAL_PCT: tran NOTIONAL dang mo theo ti le equity thuc hien. <=0 = TAT.
+    //   CA HAI khong khai => BOOK_CAP_ON=false => diem cam trong createOrder KHONG chay
+    //   => printDone.csv byte-identical voi ban truoc khi co overlay (cong nghiem thu muc 1).
+    public static final int BOOK_MAX_OPEN = envInt("SIM_MAX_OPEN_POSITIONS", 0);
+    public static final float BOOK_MAX_NOTIONAL_PCT = envFloat("SIM_MAX_OPEN_NOTIONAL_PCT", 0f);
+    public static final boolean BOOK_CAP_ON = BOOK_MAX_OPEN > 0 || BOOK_MAX_NOTIONAL_PCT > 0f;
+
+
 
 
     // =========================================================

@@ -65,6 +65,8 @@ public final class TickDecisionLog {
     public static final byte D_TIER3_DCA = 6;
     public static final byte D_GRID_EXHAUSTED = 7;
     public static final byte D_TOPK_CUT = 8;
+    /** [BOOKCAP 2026-09-11] bi overlay tran book/von chan (chi leg PREDICT_SYMBOL_TRADE). */
+    public static final byte D_BOOK_CAP = 9;
 
     // --- bit cua cot flags trong pos.bin ---
     public static final int F_ARMED = 1;
