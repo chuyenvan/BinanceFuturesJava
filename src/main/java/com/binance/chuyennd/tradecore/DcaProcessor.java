@@ -30,13 +30,6 @@ public class DcaProcessor {
                 .filter(entry -> {
                     OrderTargetInfoTest order = entry.getValue();
                     try {
-                        // HOLDDCA (2026-09-11): co che DCA DUY NHAT khi SIM_DCA_TRIGGER=BIG_DOWN.
-                        //   Do tren GIA VON TB cua cum + cooldown + tran leg + chua arm.
-                        //   Tat (key khong khai) -> nhanh nay khong chay -> byte-identical.
-                        if (Configs.HOLD_DCA_ON) {
-                            return DcaUtils.shouldDcaHold(order.priceEntry, order.lastPrice,
-                                    order.priceSL, order.legCount, order.timeStart, time);
-                        }
                         // DCA GRID (2026-08-01): grid co ke hoach, do tren firstEntryPrice + tran so leg.
                         // Mac dinh DCA_GRID_ENABLED=false -> chay logic cu NGUYEN VEN (byte-identical).
                         if (Configs.DCA_GRID_ENABLED) {

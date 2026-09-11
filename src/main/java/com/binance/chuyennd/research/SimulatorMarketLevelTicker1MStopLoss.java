@@ -96,18 +96,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     public long entryDcaLevel = 0;       // DCA nhồi
     public long entryOther = 0;          // còn lại (SMALL_* nếu bật)
     public long predictSymbolRejectedGate = 0; // coin funding-selector bị gate REJECT (không vào lệnh)
-    /** [DCA13] HOLDDCA: so leg nhoi THAT su duoc mo (chi dem khi HOLD_DCA_ON). */
-    public long holdDcaLegs = 0;
-
-    // === BOOKCAP (2026-09-11, docs/PREREG_BOOKCAP.md commit 7e1bbf6) — THUAN DEM, in cuoi run ===
-    //   *Seen  = ung vien PREDICT_SYMBOL_TRADE da qua gate va toi duoc tang cap (mau so).
-    //   *Blocked = bi cap chan. "tick" = moc thoi gian ticker.startTime.
-    public long bookCapSeen = 0;
-    public long bookCapBlocked = 0;
-    public long bookCapTicksSeen = 0;
-    public long bookCapTicksBlocked = 0;
-    private long bookCapLastSeenTs = Long.MIN_VALUE;
-    private long bookCapLastBlockTs = Long.MIN_VALUE;
 
     // =================================================================
     // 🔥 SỬ DỤNG MẢNG CỐ ĐỊNH O(1) ĐỂ LOẠI BỎ AUTOBOXING RÁC CỦA HASHMAP
@@ -303,10 +291,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                             startTimeRun = System.currentTimeMillis();
 
                             if (marketData != null) {
-                                // HOLDDCA (2026-09-11): mot co che DCA DUY NHAT => duong isDcaAlt cu TAT han
-                                //   khi SIM_DCA_TRIGGER=BIG_DOWN. Tat overlay => dieu kien y nhu cu.
-                                if (!Configs.HOLD_DCA_ON
-                                        && MarketBigChangeDetector.isDcaAlt(marketData.rateDown15MAvg, marketData.rateDownAvg, marketData.rateUpAvg)) {
+                                if (MarketBigChangeDetector.isDcaAlt(marketData.rateDown15MAvg, marketData.rateDownAvg, marketData.rateUpAvg)) {
                                     List<Short> symbolDcaLossBig = DcaProcessor.getDCA(null, time, BudgetManagerSimple.getInstance().getBudget(), getActiveOrderMap());
                                     for (short symbolId : symbolDcaLossBig) {
                                         KlineObjectSimple ticker = symbol2Ticker[symbolId];
@@ -321,12 +306,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                 // 🔥 BƯỚC 3: FUNDING FEE SIÊU TỐC (ĐÃ PRE-CALCULATE SORT SẴN) 🔥
                                 long[] symbol2Pred = time2SymbolPred.get(time);
                                 if (symbol2Pred != null) {
-                                    float maxThres = Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD * Configs.AI_DYNAMIC_MAX;
-                                    int nPass = 0;
-                                    for (long e : symbol2Pred) {
-                                        if (Float.intBitsToFloat((int) e) > maxThres) break;
-                                        nPass++;
-                                    }
                                     java.util.List<Long> chosenCands = new java.util.ArrayList<>();
                                     if (Configs.SELECTOR_RANK_TOPK > 0) {
                                         // RANK-BASED TOP-K (2026-07-28, Probe A go/no-go): BO QUA absolute maxThres/nPass,
@@ -335,18 +314,24 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                         //  luc manh.
                                         int nSel = Math.min(Configs.SELECTOR_RANK_TOPK, symbol2Pred.length);
                                         for (int i = 0; i < nSel; i++) chosenCands.add(symbol2Pred[i]);
-                                        if (LOG.isDebugEnabled()) {
-                                            LOG.debug("SELECTOR_RANK_TOPK k={} nSel={} poolSize={} nPassAbs={} maxThres={}",
-                                                    Configs.SELECTOR_RANK_TOPK, nSel, symbol2Pred.length, nPass, maxThres);
-                                        }
                                     } else {
-                                        // TOPK<=0 -> cutoff TUYET DOI: moi coin qua tran ung vien (nPass dau mang).
+                                        // TOPK<=0 -> cutoff TUYET DOI: moi coin qua tran ung vien.
+                                        // [L7] maxThres/nPass tinh O DAY, khong tinh o rank-mode nua: rank-mode
+                                        //   BO HAN tang 1 (docs/LEAN_GATE_AUDIT.md muc 3.5) nen truoc day day la
+                                        //   phep tinh chet chay moi tick. Nhanh nay VAN SONG (profile khong khai
+                                        //   SELECTOR_RANK_TOPK => -1) nen KHONG duoc xoa han.
+                                        float maxThres = Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD * Configs.AI_DYNAMIC_MAX;
+                                        int nPass = 0;
+                                        for (long e : symbol2Pred) {
+                                            if (Float.intBitsToFloat((int) e) > maxThres) break;
+                                            nPass++;
+                                        }
                                         for (int i = 0; i < nPass; i++) chosenCands.add(symbol2Pred[i]);
                                     }
                                     // [TICKLOG] read-only: ngu canh tick (pool/nPass/nCand) + pool bi top-K loai.
                                     int _tlRank = -1;
                                     if (TickDecisionLog.ON) {
-                                        TickDecisionLog.selCtx(symbol2Pred.length, nPass, chosenCands.size());
+                                        TickDecisionLog.selCtx(symbol2Pred.length, chosenCands.size(), chosenCands.size());
                                         if (TickDecisionLog.POOL) TickDecisionLog.poolCut(time, symbol2Pred, chosenCands.size());
                                     }
                                     // [X3 2026-09-06] RANK trong tick, 1-based, dem tren TOAN pool da chon
@@ -504,21 +489,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         if (TickDecisionLog.ON) {
             TickDecisionLog.close();
         }
-        // [DCA13] HOLDDCA — tong ket. CHI in khi BAT (tat => 0 dong [DCA13] trong sim.out).
-        if (Configs.HOLD_DCA_ON) {
-            LOG.info("[DCA13] TONG leg_nhoi={} trigger={} minDrop={} cooldownH={} maxLegs={} entryFraction={}",
-                    holdDcaLegs, Configs.HOLD_DCA_TRIGGER, Configs.HOLD_DCA_MIN_DROP,
-                    Configs.HOLD_DCA_COOLDOWN_H, Configs.HOLD_DCA_MAX_LEGS, Configs.ENTRY_FRACTION);
-        }
-        // [BOOKCAP] Tong ket overlay — CHI in khi BAT (tat => 0 dong BOOK-CAP trong sim.out).
-        if (Configs.BOOK_CAP_ON) {
-            LOG.info("[BOOK-CAP] maxOpen={} maxNotionalPct={} blocked={}/{} seen (ticksBlocked={}/{} "
-                            + "ticksSeen = {}% tick co chan)",
-                    Configs.BOOK_MAX_OPEN, Configs.BOOK_MAX_NOTIONAL_PCT, bookCapBlocked, bookCapSeen,
-                    bookCapTicksBlocked, bookCapTicksSeen,
-                    bookCapTicksSeen > 0
-                            ? String.format("%.2f", 100.0 * bookCapTicksBlocked / bookCapTicksSeen) : "n/a");
-        }
         long _tot = readMs + simMs;
         LOG.info("[PROFILE] days={} readMs={} simMs={} (read={}% sim={}%) totalLoopMs={}",
                 dayCount, readMs, simMs,
@@ -579,19 +549,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
      * nen duyet theo activeRunningIds la dung tap "dang mo". LEVERAGE_ORDER=1 => notional = von vao lenh.
      * READ-ONLY, chi duoc goi khi {@link Configs#BOOK_CAP_ON}.
      */
-    private double openNotional() {
-        double s = 0;
-        for (int i = 0; i < activeRunningCount; i++) {
-            List<OrderTargetInfoTest> legs = symbol2OrdersEntry[activeRunningIds[i]];
-            if (legs == null) continue;
-            for (OrderTargetInfoTest o : legs) {
-                if (o != null && o.priceEntry != null && o.quantity != null) {
-                    s += (double) o.priceEntry * (double) o.quantity;
-                }
-            }
-        }
-        return s;
-    }
 
     private Integer counterOrderRunning() {
         int counter = 0;
@@ -679,9 +636,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             }
         }
         // 3. CHẠY PRE-CALCULATE (SORT SẴN FUNDING FEE MỘT LẦN DUY NHẤT)
-        // [B4 2026-09-03] gate nguong truot theo phan vi (SIM_GATE_ROLLING_PCT, khai trong profile).
-        //   TAT (key khong khai bao) -> no-op, byte-identical. Xem docs/PREREG_B4.md.
-        com.binance.chuyennd.ai_ml.onnx.entry.GateRollingThreshold.init(predictionMap);
         preprocessFundingData(time2SymbolPred);
         aiRejectFilter = new AIRejectFilter();
 
@@ -960,16 +914,11 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             return;
         }
         if (!levelChange.equals(MarketLevelChange.BIG_DOWN)) {
-                AIRejectFilter.FilterResult filterResult = null;
-                // [FLATGATE] Configs.GATE_DYN_BYPASS=1 (SIM_GATE_DYN_BYPASS) => BO gate tang 2 dong,
-                //   de roi xuong checkSignal (nguong PHANG MIN_MOMENTUM_15M) = dung duong LIVE rank-mode
-                //   (DetectEntrySignal2TradeNormal bo checkSignalDynamic khi SELECTOR_RANK_TOPK>0).
-                //   Mac dinh TAT => nhanh duoi chay y nhu truoc, byte-identical. docs/PREREG_FLATGATE.md.
-                if (levelChange == MarketLevelChange.PREDICT_SYMBOL_TRADE && !Configs.GATE_DYN_BYPASS) {
-                    filterResult = aiRejectFilter.checkSignalDynamic(predict, symbolPred);
-                }
-                if (filterResult == null)
-                    filterResult = aiRejectFilter.checkSignal(predict);
+                // [L7 2026-09-11, docs/L7_LEAN_GATE.md] MOT cong entry duy nhat, DUNG CHUNG voi
+                //   LIVE (DetectEntrySignal2TradeNormal.createOrderBuyRequest goi cung ham nay).
+                //   Cong thuc nguong nam o com.binance.chuyennd.tradecore.EntryGate.
+                AIRejectFilter.FilterResult filterResult = aiRejectFilter.entryGate(predict, symbolPred,
+                        levelChange == MarketLevelChange.PREDICT_SYMBOL_TRADE);
 
                 ablationSignalSeen++;
                 if (filterResult.decision == AIRejectFilter.FilterDecision.REJECT) {
@@ -1000,46 +949,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
 
 
-        // === BOOKCAP (2026-09-11) — OVERLAY TANG BOOK/VON, docs/PREREG_BOOKCAP.md commit 7e1bbf6 ===
-        //   VI TRI: SAU gate thi truong / AIRejectFilter (va sau nhanh GATE_COUNT_ONLY), TRUOC
-        //   budget/tier. CHI chan leg selector PREDICT_SYMBOL_TRADE; DCA_LEVEL1 / BIG_DOWN KHONG
-        //   bi cham (khong doi luat leg cu).
-        //   n_open   = so lenh dang mo (moi status chua DONE, moi level) = counterOrderRunning().
-        //   notional = sum(priceEntry * quantity) cua cac lenh dang mo (openNotional()).
-        //   equity   = balance THUC HIEN b = balanceBasic + profit — KHONG mark-to-market, de tat dinh
-        //              (dung gia tri in o cot b: cua dong "Update ... => b:").
-        //   Vi pham => REJECT + TickDecisionLog.D_BOOK_CAP + dem. Hai key <=0/khong khai =>
-        //   BOOK_CAP_ON=false => khoi nay KHONG chay => byte-identical (cong nghiem thu muc 1).
-        if (Configs.BOOK_CAP_ON && levelChange == MarketLevelChange.PREDICT_SYMBOL_TRADE) {
-            bookCapSeen++;
-            if (ticker.startTime != bookCapLastSeenTs) {
-                bookCapTicksSeen++;
-                bookCapLastSeenTs = ticker.startTime;
-            }
-            boolean capHit = false;
-            if (Configs.BOOK_MAX_OPEN > 0 && counterOrderRunning() >= Configs.BOOK_MAX_OPEN) {
-                capHit = true;
-            }
-            if (!capHit && Configs.BOOK_MAX_NOTIONAL_PCT > 0f) {
-                BudgetManagerSimple bm = BudgetManagerSimple.getInstance();
-                double eq = (bm.balanceBasic != null ? bm.balanceBasic : 0f)
-                        + (bm.profit != null ? bm.profit : 0f);
-                if (eq > 0 && openNotional() >= (double) Configs.BOOK_MAX_NOTIONAL_PCT * eq) {
-                    capHit = true;
-                }
-            }
-            if (capHit) {
-                bookCapBlocked++;
-                if (ticker.startTime != bookCapLastBlockTs) {
-                    bookCapTicksBlocked++;
-                    bookCapLastBlockTs = ticker.startTime;
-                }
-                if (TickDecisionLog.ON) {
-                    tlCand(TickDecisionLog.D_BOOK_CAP, symbolId, ticker, levelChange, symbolPred, predict);
-                }
-                return;
-            }
-        }
 
         // TASK-134 PROBE: phân loại nguồn leg vừa PASS mọi cổng (thuần đếm)
         if (levelChange == MarketLevelChange.BIG_DOWN) entryBigDown++;
@@ -1089,14 +998,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         if (Configs.DCA_GRID_ENABLED) {
             List<OrderTargetInfoTest> cur = symbol2OrdersEntry[symbolId];
             int legIdx = (cur == null) ? 0 : cur.size();     // 0 = leg dau
-            // HOLDDCA (2026-09-11, PREREG muc 1.4): MOI leg (ke ca leg dau) nhan CUNG so USDT
-            //   = C x SIM_ENTRY_FRACTION, voi C = von leg DAU theo cong thuc hien hanh
-            //   (gridLegWeightRatio(0)). KHONG dung DCA_GRID_WEIGHTS=1,1,1,1: doi weights se doi
-            //   dcaGridTotalWeight() trong managerBudget => C khong con la C cu (13 -> 4).
-            //   Tran so leg do SIM_DCA_MAX_LEGS quyet dinh o DcaProcessor, khong con do do dai grid.
-            float ratio = Configs.HOLD_DCA_ON
-                    ? DcaUtils.gridLegWeightRatio(0) * Configs.ENTRY_FRACTION
-                    : DcaUtils.gridLegWeightRatio(legIdx);
+            float ratio = DcaUtils.gridLegWeightRatio(legIdx);
             if (ratio <= 0f) {
                 if (TickDecisionLog.ON) tlCand(TickDecisionLog.D_GRID_EXHAUSTED, symbolId, ticker, levelChange, symbolPred, predict);
                 return;                          // het bac grid -> khong mo them leg
@@ -1139,15 +1041,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             symbol2OrdersEntry[symbolId] = orders;
         }
         orders.add(order);
-        // [DCA13] HOLDDCA (PREREG muc 1.6): MOT dong SLF4J cho MOI leg nhoi that su mo.
-        //   avg = gia von TB cua cum TRUOC khi cong leg nay. Tat overlay => 0 dong.
-        if (Configs.HOLD_DCA_ON && levelChange == MarketLevelChange.DCA_LEVEL1) {
-            OrderTargetInfoTest prevCluster = symbol2OrderRunning[symbolId];
-            holdDcaLegs++;
-            LOG.info("[DCA13] sym={} leg={} avg={} px={} usdt={} t={}", symbolStr, orders.size(),
-                    prevCluster != null ? prevCluster.priceEntry : null, entry, budget,
-                    Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime));
-        }
         if (TickDecisionLog.ON) tlCand(TickDecisionLog.D_ENTERED, symbolId, ticker, levelChange, symbolPred, predict);
 
         // ENTRY-MATCH PROBE (env WFO_LOG_ENTRIES=1). Default off = byte-identical.
@@ -1176,9 +1069,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
         this.time2MarketData = time2MarketData;
         this.predictionMap = predictionMap;
-        // [B4 2026-09-03] gate nguong truot theo phan vi (SIM_GATE_ROLLING_PCT, khai trong profile).
-        //   TAT (key khong khai bao) -> no-op, byte-identical. Xem docs/PREREG_B4.md.
-        com.binance.chuyennd.ai_ml.onnx.entry.GateRollingThreshold.init(predictionMap);
         this.time2SymbolPred = time2FundingPre;
         // 3. CHẠY PRE-CALCULATE (SORT SẴN FUNDING FEE MỘT LẦN DUY NHẤT)
         preprocessFundingData(this.time2SymbolPred);

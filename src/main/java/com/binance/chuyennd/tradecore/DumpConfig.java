@@ -40,18 +40,21 @@ public class DumpConfig {
 
         System.out.println("# ===== GIA TRI DAN XUAT (derived) — thu logic THUC SU dung =====");
         float mm = Configs.MIN_MOMENTUM_15M, rmax = Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD;
-        float mult = Configs.AI_DYNAMIC_MULTIPLIER, lo = Configs.AI_DYNAMIC_MIN, hi = Configs.AI_DYNAMIC_MAX;
+        // [L7] gate tang 2 doc HANG SO trong EntryGate, KHONG doc Configs.AI_DYNAMIC_* nua.
+        float mult = com.binance.chuyennd.tradecore.EntryGate.DYN_MULT;
+        float lo = com.binance.chuyennd.tradecore.EntryGate.DYN_MIN;
+        float hi = Configs.AI_DYNAMIC_MAX;
         // TANG 1 — PRE-FILTER UNG VIEN (SimulatorMarketLevelTicker1MStopLoss: vong `if (score > maxThres) break`).
         //   AI_DYNAMIC_MAX lam viec o DAY: no la TRAN UNG VIEN, khong phai tran clamp cua nguong.
         float candMax = rmax * hi;
         System.out.printf("derived.candidate_score_max=%.5f (= rate_max %.5f x AI_DYNAMIC_MAX %.5f)%n"
                 + "derived.candidate_note=coin co score > tran nay KHONG BAO GIO la ung vien, du nguong bao nhieu%n",
                 candMax, rmax, hi);
-        // TANG 2 — NGUONG DONG (AIRejectFilter.checkSignalDynamic): CHI con can duoi AI_DYNAMIC_MIN.
+        // TANG 2 — NGUONG DONG (EntryGate.threshold): CHI con can duoi EntryGate.DYN_MIN.
         //   Co OFF_FLAT_HARD da go 2026-09-03 => tran clamp KHONG con ton tai trong code.
         boolean noCap = true;
         System.out.printf("derived.gate_formula=%s%n",
-                "min_mom * max(AI_DYNAMIC_MIN, score/rate_max*mult)   [KHONG CO TRAN]");
+                "min_mom * max(EntryGate.DYN_MIN, score/EntryGate.SCORE_BASE*EntryGate.DYN_MULT)   [KHONG CO TRAN]");
         for (float sc : new float[]{0.05f, 0.15f, 0.2494f, 0.30f, candMax}) {
             float raw = sc / rmax * mult;
             float cl = noCap ? Math.max(lo, raw) : Math.max(lo, Math.min(raw, hi));

@@ -133,8 +133,13 @@ public class ValidateBrakeDynamic {
         if (pred15 < Configs.MIN_MOMENTUM_15M && symbolPred > Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD)
             return R_EARLY;
 
-        float scale = (symbolPred / Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD) * Configs.AI_DYNAMIC_MULTIPLIER;
-        scale = Math.max(Configs.AI_DYNAMIC_MIN, Math.min(scale, Configs.AI_DYNAMIC_MAX));
+        // [L7] lay HANG SO tu EntryGate (nguon su that cua gate). LUU Y: ham nay VAN giu
+        //   nhanh Math.min(..., AI_DYNAMIC_MAX) va nhanh RISK — ca hai da BI BO khoi gate that
+        //   tu 2026-08-08/09-03, nen tool nay chi con gia tri lich su, KHONG phai ban sao gate.
+        float scale = (symbolPred / com.binance.chuyennd.tradecore.EntryGate.SCORE_BASE)
+                * com.binance.chuyennd.tradecore.EntryGate.DYN_MULT;
+        scale = Math.max(com.binance.chuyennd.tradecore.EntryGate.DYN_MIN,
+                Math.min(scale, Configs.AI_DYNAMIC_MAX));
 
         float dyn15 = Configs.MIN_MOMENTUM_15M * scale;
         float dynRisk = -0.2f / scale;

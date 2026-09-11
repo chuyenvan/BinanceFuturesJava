@@ -2,16 +2,32 @@ package com.binance.chuyennd.ai_ml.onnx.entry;
 
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.tradecore.Configs;
+import com.binance.chuyennd.tradecore.EntryGate;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Lọc tín hiệu entry dựa trên AI prediction.
+ * Loc tin hieu entry dua tren AI prediction.
  *
+ * <p>2026-09-03: filter chi con MOT cong duy nhat = MOM15 (nguong dong theo score selector).
+ * Nhanh RISK/DD4H bo 2026-08-08; cac co FILTER_MODE / gate-market-off / gate-rolling xoa 2026-09-03.
  *
+ * <p><b>L7 (2026-09-11, docs/L7_LEAN_GATE.md)</b>: cong thuc nguong da chuyen han sang
+ * {@link EntryGate} — MOT bieu thuc cho ca sim va live. Lop nay chi con lam vo boc:
+ * doi bool cua {@link EntryGate#pass} thanh {@link FilterResult} + dem counter cho ablation.
+ * Ba thu da XOA o ban nay:
+ * <ul>
+ *   <li>{@code checkSignalDynamic} — ban sao thu hai cua cung cong thuc;</li>
+ *   <li>{@code checkSignal} — nhanh "gate phang" rieng; nay la truong hop {@code symbolPred == null}
+ *       cua cung mot ham, khong con duong code rieng de troi;</li>
+ *   <li>nhanh EARLY-HARD-GATE ({@code p15 < thrBase && symbolPred > RATE_MAX} => REJECT) —
+ *       CHUNG MINH GIAI TICH la THUA (docs/LEAN_GATE_AUDIT.md muc 3.4): no chi fire khi
+ *       {@code symbolPred > 0.15}, luc do {@code thr = base*max(0.26787, sp/0.15*1.2876)
+ *       > 1.2876*base > base > p15} nen {@code evaluate} cung tra REJECT. Dung voi MOI input,
+ *       khong can du lieu. Bo no chi doi chuoi {@code reason} trong log va bo counter
+ *       {@code earlyHardGateReject}; {@code mom15RejectCount} tang dung 1 lan o ca hai duong.</li>
+ * </ul>
  */
-// 2026-09-03: filter chi con MOT cong duy nhat = MOM15 (nguong dong theo score selector).
-//   Nhanh RISK/DD4H bo 2026-08-08; cac co FILTER_MODE / gate-market-off / gate-rolling xoa 2026-09-03.
 public class AIRejectFilter {
     public enum FilterDecision {PASS, REJECT}
 
@@ -25,98 +41,30 @@ public class AIRejectFilter {
         }
     }
 
-    /** Đếm số REJECT do gate MOM15 trong một ablation run. Reset bằng resetCounters() trước mỗi run. */
+    /** Dem so REJECT do gate MOM15 trong mot ablation run. Reset bang resetCounters() truoc moi run. */
     public static final AtomicInteger mom15RejectCount = new AtomicInteger(0);
-    /** Tách nhánh: REJECT do early-hard-gate (pred15M<MIN & symbolPred>RATE_MAX). */
-    public static final AtomicInteger earlyHardGateReject = new AtomicInteger(0);
 
-    /** Reset counter trước mỗi ablation run. */
+    /** Reset counter truoc moi ablation run. */
     public static void resetCounters() {
         mom15RejectCount.set(0);
-        earlyHardGateReject.set(0);
-    }
-
-    /**
-     * Nguong CO SO cua gate MOM15. Nhanh B4 (docs/PREREG_B4.md, commit a0c7ad6): neu
-     * {@link GateRollingThreshold} bat thi lay nguong TRUOT theo phan vi tai thoi diem cua
-     * prediction; khong bat thi HANG SO Configs.MIN_MOMENTUM_15M => byte-identical voi C2b.
-     */
-    static float thres15M(AiPredictionData prediction) {
-        return GateRollingThreshold.isOn()
-                ? GateRollingThreshold.threshold(prediction.timestamp)
-                : Configs.MIN_MOMENTUM_15M;
-    }
-
-    /**
-     * [TICKLOG 2026-09-03] NGUONG DONG tang 2 cua gate MOM15, tinh lai THUAN (khong dung counter,
-     * khong doi state) de ghi vao log quyet dinh tung tick. Cong thuc y het checkSignalDynamic:
-     * thres15M(prediction) * max(AI_DYNAMIC_MIN, symbolPred/RATE_MAX * AI_DYNAMIC_MULTIPLIER).
-     * symbolPred == null => nguong CO SO (nhanh checkSignal). READ-ONLY, khong anh huong quyet dinh.
-     */
-    public static float dynThreshold(AiPredictionData prediction, Float symbolPred) {
-        float base = thres15M(prediction);
-        if (symbolPred == null) return base;
-        float scale = (symbolPred / Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD) * Configs.AI_DYNAMIC_MULTIPLIER;
-        return base * Math.max(Configs.AI_DYNAMIC_MIN, scale);
-    }
-
-    public FilterResult checkSignal(AiPredictionData prediction) {
-        return evaluate(prediction.predReturn15M, thres15M(prediction));
-    }
-
-    // ==============================================================
-    // LUỒNG 2: DÙNG RIÊNG CHO PREDICT_SYMBOL_TRADE (ĐỘNG)
-    // ==============================================================
-    public FilterResult checkSignalDynamic(AiPredictionData prediction, Float symbolPred) {
-        if (symbolPred == null) {
-            return checkSignal(prediction); // Fallback về cứng nếu lỗi
-        }
-
-        // EARLY check — chỉ chạy khi gate MOM15 bật
-        if (prediction.predReturn15M < thres15M(prediction)
-                && symbolPred > Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD) {
-            mom15RejectCount.incrementAndGet();
-            earlyHardGateReject.incrementAndGet();
-            return new FilterResult(FilterDecision.REJECT,
-                    String.format("DANGER: pred 15m %.2f%% thap (Min %.2f%%)",
-                            prediction.predReturn15M * 100, thres15M(prediction) * 100));
-        }
-
-        float baselineProb = Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD;
-        float scaleFactor = (symbolPred / baselineProb) * Configs.AI_DYNAMIC_MULTIPLIER;
-        // AI_DYNAMIC_MAX KHONG phai tran clamp o day: no la TRAN UNG VIEN o tang 1 cua selector
-        // (SimulatorMarketLevelTicker1MStopLoss). Gate chi con CAN DUOI. Xem docs/C2B_SPEC.md muc 0.
-        scaleFactor = Math.max(Configs.AI_DYNAMIC_MIN, scaleFactor);
-        float dynamic_15M = thres15M(prediction) * scaleFactor;
-        return evaluate(prediction.predReturn15M, dynamic_15M);
     }
 
     /**
      * CONG ENTRY TANG 2 — mot cho duy nhat quyet dinh gate cho ca SIM va LIVE.
      *
-     * <p>Tao 2026-09-11 (docs/L6_GATE_DYN_FIX.md). Truoc do LIVE
-     * ({@code DetectEntrySignal2TradeNormal.createOrderBuyRequest}) BO nhanh dong khi
-     * {@code SELECTOR_RANK_TOPK > 0} (commit {@code 311bb29}) trong khi SIM
-     * ({@code SimulatorMarketLevelTicker1MStopLoss.createOrder}) LUON goi no => hai ben chay
-     * HAI chien luoc khac nhau (docs/AUDIT_GATE_DYN_PARITY.md: lech 95.62% slot tren 48 thang,
-     * 77/78 entry so giay 242 07-11/09). Nay ca hai di cung cong nay.
-     *
      * <p>Quy tac: {@code predictSymbolTrade} (= levelChange PREDICT_SYMBOL_TRADE) VA
-     * {@code symbolPred != null} => gate DONG; moi truong hop con lai (BIG_DOWN, DCA_LEVEL1,
-     * leg market-signal, hoac thieu symbolPred) => gate PHANG nhu cu, hanh vi KHONG doi.
+     * {@code symbolPred != null} => nguong DONG; moi truong hop con lai (BIG_DOWN, DCA_LEVEL1,
+     * leg market-signal, hoac thieu symbolPred) => nguong CO SO, hanh vi KHONG doi.
      *
      * @param predictSymbolTrade leg nay den tu sleeve selector PREDICT_SYMBOL_TRADE
      */
     public FilterResult entryGate(AiPredictionData prediction, Float symbolPred, boolean predictSymbolTrade) {
-        FilterResult r = null;
-        if (predictSymbolTrade && symbolPred != null) {
-            r = checkSignalDynamic(prediction, symbolPred);
-        }
-        return r != null ? r : checkSignal(prediction);
+        Float sp = predictSymbolTrade ? symbolPred : null;
+        return evaluate(prediction.predReturn15M, EntryGate.threshold(Configs.MIN_MOMENTUM_15M, sp));
     }
 
-    /** Giữ signature cũ để không vỡ caller (BackTestEngineCombined/MarketThresholds/BenchmarkSpeedTest) —
-     *  {@code risk} chỉ còn ghi vào HARD_RISK_LIMIT_4H (field da xoa) cho log/HPO đọc, KHÔNG còn dùng để lọc. */
+    /** Giu signature cu de khong vo caller (BackTestEngineCombined/MarketThresholds/BenchmarkSpeedTest) —
+     *  {@code risk} chi con ghi vao HARD_RISK_LIMIT_4H (field da xoa) cho log/HPO doc, KHONG con dung de loc. */
     public void setConfig(float risk, float min15m) {
         // `risk` KHONG con duoc dung o dau ca (nhanh RISK/DD4H bo 2026-08-08, field xoa 2026-09-03);
         // giu tham so de khong phai sua 3 call-site HPO.
@@ -124,14 +72,14 @@ public class AIRejectFilter {
     }
 
     /**
-     * LOGIC ĐÁNH GIÁ LÕI — chỉ còn nhánh MOM15. Nhánh RISK (DD4H/predRisk4H) đã bỏ hẳn 2026-08-08:
-     * predRisk4H không còn model đứng sau (carry-forward từ gate cũ), dùng làm lá chắn live là rủi ro giả.
+     * LOGIC DANH GIA LOI — chi con nhanh MOM15. Nhanh RISK (DD4H/predRisk4H) da bo han 2026-08-08:
+     * predRisk4H khong con model dung sau (carry-forward tu gate cu), dung lam la chan live la rui ro gia.
      */
     private FilterResult evaluate(float pred15M, float thres15M) {
         if (pred15M < thres15M) {
             mom15RejectCount.incrementAndGet();
             return new FilterResult(FilterDecision.REJECT,
-                    String.format("BAD MOMENTUM: 15M chưa nảy mạnh (%.2f%% < %.2f%%)", pred15M * 100, thres15M * 100));
+                    String.format("BAD MOMENTUM: 15M chua nay manh (%.2f%% < %.2f%%)", pred15M * 100, thres15M * 100));
         }
         return new FilterResult(FilterDecision.PASS,
                 String.format("PERFECT: 15M(%.2f%%)", pred15M * 100));

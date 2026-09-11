@@ -42,36 +42,6 @@ public final class DcaUtils {
         return drop <= level;
     }
 
-    /**
-     * HOLDDCA (2026-09-11, docs/PREREG_HOLDDCA.md muc 1.3) — dieu kien nhoi cua co che DUY NHAT.
-     *
-     * <p>Khac grid cu o BON diem, moi diem la mot dieu khoan da chot TRUOC trong pre-reg:
-     * <ol>
-     *   <li>Do muc lo tren GIA VON TRUNG BINH cua cum ({@code avgEntry} = priceEntry cua object cum
-     *       sau mergeOrder = VWAP moi leg dang mo), KHONG phai firstEntryPrice.</li>
-     *   <li>Tran so leg THEM = {@code SIM_DCA_MAX_LEGS} (grid cu lay do dai mang levels).</li>
-     *   <li>Nguoi goi chi goi ham nay tai tick market BIG_DOWN => nhip nhoi theo THI TRUONG.</li>
-     *   <li>Cooldown {@code SIM_DCA_COOLDOWN_H} gio ke tu leg truoc cua chinh coin do, va cum
-     *       DA ARM ({@code priceSL != null}) thi khong nhoi nua.</li>
-     * </ol>
-     *
-     * @param avgEntry    gia von TB cua cum (priceEntry cua cum)
-     * @param lastPrice   gia hien tai
-     * @param priceSL     SL trailing cua cum; khac null = da arm
-     * @param legCount    so leg da khop (1 = chua nhoi)
-     * @param lastLegTime thoi diem leg GAN NHAT cua cum (timeStart cua cum sau merge)
-     * @param now         thoi diem tick hien tai (ms)
-     */
-    public static boolean shouldDcaHold(Float avgEntry, Float lastPrice, Float priceSL,
-                                        int legCount, long lastLegTime, long now) {
-        if (avgEntry == null || lastPrice == null || avgEntry <= 0f) return false;
-        if (priceSL != null) return false;                            // da arm -> khong nhoi
-        if (legCount < 1 || legCount > Configs.HOLD_DCA_MAX_LEGS) return false;   // het tran leg
-        float drop = lastPrice / avgEntry - 1f;                       // am khi lo
-        if (drop > -Math.abs(Configs.HOLD_DCA_MIN_DROP)) return false;
-        return now - lastLegTime >= (long) Configs.HOLD_DCA_COOLDOWN_H * 3600000L;
-    }
-
     /** Ti trong cho leg sap khop (0-based theo legCount hien tai), quy ve ti le tren TONG, x SCALE.
      *  SCALE bu lai phan du tru hiem khi dung (chi 0.34% cum cham day) — xem Configs.DCA_GRID_SCALE. */
     public static float gridLegWeightRatio(int legCount) {

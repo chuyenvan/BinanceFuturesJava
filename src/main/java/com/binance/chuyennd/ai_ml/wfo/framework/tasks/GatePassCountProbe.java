@@ -51,10 +51,9 @@ public class GatePassCountProbe {
             long seen = sim.ablationSignalSeen;
             long pass = sim.ablationPassCount;
             double passPct = seen > 0 ? 100.0 * pass / seen : 0.0;
-            LOG.info(String.format("%-8.4f %12d %12d %8.3f%% %12d %12d %12d",
+            LOG.info(String.format("%-8.4f %12d %12d %8.3f%% %12d %12d",
                     m15, seen, pass, passPct,
                     AIRejectFilter.mom15RejectCount.get(),
-                    AIRejectFilter.earlyHardGateReject.get(),
                     sim.predictSymbolRejectedGate));
         }
         Configs.MIN_MOMENTUM_15M = saved;

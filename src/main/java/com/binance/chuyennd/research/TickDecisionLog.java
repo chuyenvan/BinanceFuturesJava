@@ -3,7 +3,7 @@
 package com.binance.chuyennd.research;
 
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
-import com.binance.chuyennd.ai_ml.onnx.entry.AIRejectFilter;
+import com.binance.chuyennd.tradecore.EntryGate;
 import com.binance.chuyennd.object.MarketLevelChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.tradecore.Configs;
@@ -66,7 +66,6 @@ public final class TickDecisionLog {
     public static final byte D_GRID_EXHAUSTED = 7;
     public static final byte D_TOPK_CUT = 8;
     /** [BOOKCAP 2026-09-11] bi overlay tran book/von chan (chi leg PREDICT_SYMBOL_TRADE). */
-    public static final byte D_BOOK_CAP = 9;
 
     // --- bit cua cot flags trong pos.bin ---
     public static final int F_ARMED = 1;
@@ -154,7 +153,7 @@ public final class TickDecisionLog {
             candOut.writeByte(legIdx);
             candOut.writeByte(0);
             candOut.writeFloat(symbolPred != null ? symbolPred : Float.NaN);
-            candOut.writeFloat(predict != null ? AIRejectFilter.dynThreshold(predict, symbolPred) : Float.NaN);
+            candOut.writeFloat(predict != null ? EntryGate.threshold(symbolPred) : Float.NaN);
             candOut.writeFloat(predict != null ? predict.predReturn15M : Float.NaN);
             candOut.writeFloat(price);
             nCandRows++;

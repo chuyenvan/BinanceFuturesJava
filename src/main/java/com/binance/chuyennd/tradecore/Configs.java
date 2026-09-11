@@ -297,37 +297,6 @@ public class Configs {
     //     ma van bao "chay thanh cong". true = nem loi ngay, khong cho ket qua ban ra ngoai.
     public static boolean SIM_FAIL_FAST_ON_DATA_ERROR = "true".equalsIgnoreCase(Cfg.get("SIM_FAIL_FAST_ON_DATA_ERROR"));
 
-    // =========================================================
-    // BOOKCAP (2026-09-11) — OVERLAY TANG BOOK/VON, docs/PREREG_BOOKCAP.md commit 7e1bbf6.
-    //   Hai tham so GIAO DICH, doc qua cong Cfg (khai trong PROFILE, KHONG doc env truc tiep).
-    //   SIM_MAX_OPEN_POSITIONS   : tran SO LENH dang mo. <=0 / khong khai = TAT.
-    //   SIM_MAX_OPEN_NOTIONAL_PCT: tran NOTIONAL dang mo theo ti le equity thuc hien. <=0 = TAT.
-    //   CA HAI khong khai => BOOK_CAP_ON=false => diem cam trong createOrder KHONG chay
-    //   => printDone.csv byte-identical voi ban truoc khi co overlay (cong nghiem thu muc 1).
-    public static final int BOOK_MAX_OPEN = envInt("SIM_MAX_OPEN_POSITIONS", 0);
-    public static final float BOOK_MAX_NOTIONAL_PCT = envFloat("SIM_MAX_OPEN_NOTIONAL_PCT", 0f);
-    public static final boolean BOOK_CAP_ON = BOOK_MAX_OPEN > 0 || BOOK_MAX_NOTIONAL_PCT > 0f;
-
-    // =========================================================
-    // HOLDDCA (2026-09-11) — docs/PREREG_HOLDDCA.md commit 877694c muc 1.
-    //   MOT co che DCA duy nhat, thay CA hai duong cu (grid tren firstEntryPrice + duong isDcaAlt).
-    //   Nam tham so GIAO DICH, doc qua cong Cfg (khai trong PROFILE, KHONG doc env truc tiep).
-    //     SIM_DCA_TRIGGER    : "BIG_DOWN" = BAT. Nhip nhoi = tick market BIG_DOWN
-    //                          (MarketBigChangeDetector.getMarketStatus1M, luoi 1 phut cua sim).
-    //     SIM_DCA_MIN_DROP   : nhoi khi lastPrice <= (1 - MIN_DROP) x GIA VON TB cua cum
-    //                          (OrderTargetInfoTest.priceEntry cua cum da merge = VWAP moi leg dang mo).
-    //     SIM_DCA_COOLDOWN_H : cach leg TRUOC cua CHINH coin do it nhat N gio.
-    //     SIM_DCA_MAX_LEGS   : so leg THEM toi da (khong tinh leg dau) => tong 1 + MAX_LEGS leg/coin.
-    //     SIM_ENTRY_FRACTION : moi leg (ke ca leg dau) = C x FRACTION USDT, voi C = von leg DAU theo
-    //                          cong thuc HIEN HANH (managerBudget x tierMultiplier x gridLegWeightRatio(0)).
-    //   SIM_DCA_TRIGGER khong khai / khac "BIG_DOWN" => HOLD_DCA_ON=false => moi nhanh HOLDDCA
-    //   KHONG chay => printDone.csv byte-identical (cong nghiem thu PREREG muc 1.7).
-    public static final String HOLD_DCA_TRIGGER = Cfg.getOr("SIM_DCA_TRIGGER", "");
-    public static final boolean HOLD_DCA_ON = "BIG_DOWN".equalsIgnoreCase(HOLD_DCA_TRIGGER.trim());
-    public static final float HOLD_DCA_MIN_DROP = envFloat("SIM_DCA_MIN_DROP", 0.20f);
-    public static final int HOLD_DCA_COOLDOWN_H = envInt("SIM_DCA_COOLDOWN_H", 24);
-    public static final int HOLD_DCA_MAX_LEGS = envInt("SIM_DCA_MAX_LEGS", 3);
-    public static final float ENTRY_FRACTION = envFloat("SIM_ENTRY_FRACTION", 1.0f);
 
 
 
@@ -337,6 +306,13 @@ public class Configs {
     // =========================================================
     // 7. AI & BỘ LỌC TÍN HIỆU ĐỘNG (AI DYNAMIC FILTER - HPO UPDATE)
     // =========================================================
+    // [L7 2026-09-11] HAI FIELD DUOI DAY KHONG CON LA NGUONG GATE ENTRY.
+    //   Cong entry tang 2 doc HANG SO trong com.binance.chuyennd.tradecore.EntryGate.
+    //   Chung chi con phuc vu cac tool HPO/validation offline (WFORunner, StrategyWfoTask,
+    //   SensitivityTool, RunWorkerKaggle, BackTestEngineDynamicFilter, ValidateBrakeDynamic...).
+    //   => gene "AI_DYNAMIC_MIN"/"AI_DYNAMIC_MULTIPLIER" trong cac tool do KHONG con tac dong
+    //      len gate. Go chung khoi gene vector la viec cua L8 (doi index gene, khong lam chung
+    //      voi cong parity nay). Xem docs/L7_LEAN_GATE.md muc "con lai".
     public static float AI_DYNAMIC_MULTIPLIER = 1.28760f; // Cũ: 1.40234f
     public static float AI_DYNAMIC_MIN = 0.26787f;        // Cũ: 0.14568f
     public static float AI_DYNAMIC_MAX = 2.14135f;        // Cũ: 2.24405f
@@ -460,16 +436,6 @@ public class Configs {
     public static boolean FIX_B2 = !"false".equalsIgnoreCase(Cfg.getOr("SIM_FIX_B2", "true"));
     public static boolean FIX_B3 = !"false".equalsIgnoreCase(Cfg.getOr("SIM_FIX_B3", "true"));
 
-    // ========================================================================
-    // [FLATGATE 2026-09-11] SIM_GATE_DYN_BYPASS — mo phong gate cua duong LIVE rank-mode.
-    //   Audit docs/AUDIT_GATE_DYN_PARITY.md: SIM luon goi checkSignalDynamic cho
-    //   PREDICT_SYMBOL_TRADE, con LIVE (DetectEntrySignal2TradeNormal:656, commit 311bb29)
-    //   BO QUA no khi SELECTOR_RANK_TOPK>0 => live chi con gate PHANG MIN_MOMENTUM_15M.
-    //   Key nay cho phep SIM chay dung gate phang do de do chien luoc 242 dang chay that.
-    //   "1" = BAT (gate phang). Khong khai / khac "1" = TAT = byte-identical HEAD.
-    //   Pre-reg: docs/PREREG_FLATGATE.md. CHI anh huong tang 2 cua sleeve PREDICT_SYMBOL_TRADE.
-    // ========================================================================
-    public static final boolean GATE_DYN_BYPASS = "1".equals(Cfg.getOr("SIM_GATE_DYN_BYPASS", "0"));
 
 
     // =========================================================
@@ -532,12 +498,11 @@ public class Configs {
         try {
             String v;
             if ((v = Cfg.get("SIM_MIN_MOMENTUM_15M")) != null) MIN_MOMENTUM_15M = Float.parseFloat(v);
-            if ((v = Cfg.get("SIM_AI_DYNAMIC_MIN")) != null) AI_DYNAMIC_MIN = Float.parseFloat(v);
-            // [2026-09-03] mo override cho cac hang so HPO CON SONG, de test do nhay (lam tron).
-            //   MULTIPLIER = do doc duong nguong gate; MAX = TRAN UNG VIEN (rate_max * MAX);
-            //   PNOPUMP_WEAK_THR = ranh gioi strong/weak cua gap trailing; F_BASE/U_MAX = throttle von.
-            // Default (env rong) = gia tri cu => byte-identical.
-            if ((v = Cfg.get("SIM_AI_DYNAMIC_MULTIPLIER")) != null) AI_DYNAMIC_MULTIPLIER = Float.parseFloat(v.trim());
+            // [L7 2026-09-11] SIM_AI_DYNAMIC_MIN / SIM_AI_DYNAMIC_MULTIPLIER da XOA: hai he so do
+            //   nay la HANG SO trong com.binance.chuyennd.tradecore.EntryGate (gate chi con MOT knob
+            //   la SIM_MIN_MOMENTUM_15M). Khong profile/env nao tung khai hai key do
+            //   (docs/LEAN_GATE_AUDIT.md muc 2.3) nen xoa la byte-identical.
+            //   MAX = TRAN UNG VIEN tang 1 (rate_max * MAX) — VAN SONG, giu override.
             if ((v = Cfg.get("SIM_AI_DYNAMIC_MAX")) != null) AI_DYNAMIC_MAX = Float.parseFloat(v.trim());
             if ((v = Cfg.get("SIM_TS_PNOPUMP_WEAK_THR")) != null) TS_PNOPUMP_WEAK_THR_OVR = Float.parseFloat(v.trim());
             // [2026-09-03 GS] gap trailing: TRUOC DAY hardcode-only (0.08 / 0.03) => profile khong dieu khien duoc.
