@@ -6,6 +6,22 @@ Sau khi xong: doi status thanh `DONE <commit>`, ghi ket qua vao doc rieng, commi
 
 ---
 
+## 🔴 GATE-DYN PARITY -- sim CO gate tang 2, live BO -- da xac minh  [DONE / `docs/AUDIT_GATE_DYN_PARITY.md`]
+
+Audit read-only (HEAD `1a7847d`). **LECH THAT**: `Simulator...StopLoss.createOrder:964-965` LUON goi
+`checkSignalDynamic` cho `PREDICT_SYMBOL_TRADE` (khong dieu kien `SELECTOR_RANK_TOPK`), con
+`DetectEntrySignal2TradeNormal:656` BYPASS khi `TOPK>0` (tu `311bb29`) => live chi con gate phang
+0.008. `dyn_thr = 0.008*max(0.26787, symbolPred/0.15*1.2876)`; `symbolPred` top-8 = 0.25-0.35 =>
+thr 0.0172-0.0240 = **2.1-3.0x** nguong phang. Do 48 thang X1 (luoi 1m): **95.62%** slot top-8
+gate-phang-mo bi dyn CHAN (2022 89.6 / 2023 94.9 / 2024 93.6 / 2025 97.6%). Tren 242: **77/78**
+lenh so giay 07-11/09 se bi chan. Xac nhan chan thu 3: `printDone` cua `PARITY_R` co **100%**
+leg PST thoa `pred15m >= dyn_thr` va median `pred15m` 0.016-0.022 (>> 0.008).
+=> `X1_C3_FULL_PARITY_R` (111,428 / n 2,266) la **C3 CO gate dyn**; so giay 242 la **C3 gate
+PHANG = chien luoc CHUA TUNG backtest**. Comment `[PARITY]` o live (653-655) **SAI** (no suy tu
+tang 1 `maxThres` sang tang 2 entry-filter). **KHONG sua gi** -- de xuat: chay `X1_C3_FULL_FLATGATE`
+(pre-reg truoc) de do gate phang tren 48 thang, roi master chot sua live hay sua sim.
+**Rui ro dang mo**: 242 dang chay chien luoc khong co bang chung DEV/VAL.
+
 ## HOLDDCA -- bo time-stop + om bag + DCA 1:1 toi da 3 leg theo nhip BIG_DOWN  [DONE / `docs/RESULT_HOLDDCA.md`]
 
 Pre-reg `docs/PREREG_HOLDDCA.md` (877694c). Sim Java 48 thang, nen X1_C3_FULL_PARITY_R (eq 111,428 / n 2,266).
