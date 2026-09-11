@@ -308,6 +308,27 @@ public class Configs {
     public static final float BOOK_MAX_NOTIONAL_PCT = envFloat("SIM_MAX_OPEN_NOTIONAL_PCT", 0f);
     public static final boolean BOOK_CAP_ON = BOOK_MAX_OPEN > 0 || BOOK_MAX_NOTIONAL_PCT > 0f;
 
+    // =========================================================
+    // HOLDDCA (2026-09-11) — docs/PREREG_HOLDDCA.md commit 877694c muc 1.
+    //   MOT co che DCA duy nhat, thay CA hai duong cu (grid tren firstEntryPrice + duong isDcaAlt).
+    //   Nam tham so GIAO DICH, doc qua cong Cfg (khai trong PROFILE, KHONG doc env truc tiep).
+    //     SIM_DCA_TRIGGER    : "BIG_DOWN" = BAT. Nhip nhoi = tick market BIG_DOWN
+    //                          (MarketBigChangeDetector.getMarketStatus1M, luoi 1 phut cua sim).
+    //     SIM_DCA_MIN_DROP   : nhoi khi lastPrice <= (1 - MIN_DROP) x GIA VON TB cua cum
+    //                          (OrderTargetInfoTest.priceEntry cua cum da merge = VWAP moi leg dang mo).
+    //     SIM_DCA_COOLDOWN_H : cach leg TRUOC cua CHINH coin do it nhat N gio.
+    //     SIM_DCA_MAX_LEGS   : so leg THEM toi da (khong tinh leg dau) => tong 1 + MAX_LEGS leg/coin.
+    //     SIM_ENTRY_FRACTION : moi leg (ke ca leg dau) = C x FRACTION USDT, voi C = von leg DAU theo
+    //                          cong thuc HIEN HANH (managerBudget x tierMultiplier x gridLegWeightRatio(0)).
+    //   SIM_DCA_TRIGGER khong khai / khac "BIG_DOWN" => HOLD_DCA_ON=false => moi nhanh HOLDDCA
+    //   KHONG chay => printDone.csv byte-identical (cong nghiem thu PREREG muc 1.7).
+    public static final String HOLD_DCA_TRIGGER = Cfg.getOr("SIM_DCA_TRIGGER", "");
+    public static final boolean HOLD_DCA_ON = "BIG_DOWN".equalsIgnoreCase(HOLD_DCA_TRIGGER.trim());
+    public static final float HOLD_DCA_MIN_DROP = envFloat("SIM_DCA_MIN_DROP", 0.20f);
+    public static final int HOLD_DCA_COOLDOWN_H = envInt("SIM_DCA_COOLDOWN_H", 24);
+    public static final int HOLD_DCA_MAX_LEGS = envInt("SIM_DCA_MAX_LEGS", 3);
+    public static final float ENTRY_FRACTION = envFloat("SIM_ENTRY_FRACTION", 1.0f);
+
 
 
 

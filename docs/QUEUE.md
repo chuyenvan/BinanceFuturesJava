@@ -6,6 +6,25 @@ Sau khi xong: doi status thanh `DONE <commit>`, ghi ket qua vao doc rieng, commi
 
 ---
 
+## HOLDDCA -- bo time-stop + om bag + DCA 1:1 toi da 3 leg theo nhip BIG_DOWN  [DONE / `docs/RESULT_HOLDDCA.md`]
+
+Pre-reg `docs/PREREG_HOLDDCA.md` (877694c). Sim Java 48 thang, nen X1_C3_FULL_PARITY_R (eq 111,428 / n 2,266).
+Cong nghiem thu PASS: jar moi + x1_c3_full.properties -> printDone byte-identical (md5 2478e90d..., 0 dong [DCA13]).
+Ba bien the khac nhau DUNG o SIM_ENTRY_FRACTION 0.25/0.50/1.00. **0/3 PASS, ca ba THUA ro.**
+eq cuoi (b+unP) 41,117 / 37,861 / 31,017; d CAGR -29.5 / -31.6 / -36.6 pp, CI95 [-49,-11] / [-52,-13] / [-57,-17]
+(tren < 0 o ca block 21/10/42), nguong 1.4823*sd = 14.4 / 15.2 / 15.3 => khong vuot. Rang buoc cung VI PHAM 3/4 nam
+moi bien the (nen qua 4/4 khi bo UW): maxDD toan ky -18.9/-21.7/-23.5 vs -12.5; 2022 am -5.3/-13.0/-19.8;
+2025 am -14.4/-14.4/-13.6. Co che DA thu that (331/298/208 leg [DCA13] >> nguong 100; SL 339 -> 3) nen KHONG
+roi vao cach doc (c) => cach doc (b) + nhan THUA. Ly do co hoc do duoc: von khoa 44/55/61% equity nam 2025,
+entries/ngay 2.34 -> 2.08/1.80/0.40 (PST sleeve bi bag chiem slot, dung cai counterfactual offline khong mo hinh
+duoc), concentration top-5% 101/276/-107%, 65/66/38 cum con mo cuoi ky MTM -17.3k/-19.2k/-17.4k.
+LUU Y DOC SO: TSloss% 14.96 -> 0.13 va win% +1.3pp la HE QUA cau truc cua bo time-stop, KHONG phai cai thien.
+Code hien tai (ghi trong RESULT muc 0): arm/trailing DA tinh tren gia von TB (mergeOrder VWAP) nen khong phai sua;
+DCA grid cu do tren firstEntryPrice moc -50/-75/-90 (gan nhu khong ban: 54/2,266 leg); managerBudget BO QUA
+getBudget(), von leg = equity*F_BASE*throttle*w[i]*SCALE/ladder. Khong doi selector/gate/bins/242/duong LIVE.
+
+---
+
 ## GRAVEYARD -- om bag sau time-stop + DCA 1:1 <=2 leg thay vi cat (de xuat user)  [DONE / `docs/RESULT_GRAVEYARD.md`]
 
 Pre-reg `docs/PREREG_GRAVEYARD.md` (2e031f1). Offline, 285 lenh PST time-stop X1_C3_FULL, hourly close, 108 su kien BIG_DOWN.

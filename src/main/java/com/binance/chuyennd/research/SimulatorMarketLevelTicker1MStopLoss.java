@@ -96,6 +96,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     public long entryDcaLevel = 0;       // DCA nhồi
     public long entryOther = 0;          // còn lại (SMALL_* nếu bật)
     public long predictSymbolRejectedGate = 0; // coin funding-selector bị gate REJECT (không vào lệnh)
+    /** [DCA13] HOLDDCA: so leg nhoi THAT su duoc mo (chi dem khi HOLD_DCA_ON). */
+    public long holdDcaLegs = 0;
 
     // === BOOKCAP (2026-09-11, docs/PREREG_BOOKCAP.md commit 7e1bbf6) — THUAN DEM, in cuoi run ===
     //   *Seen  = ung vien PREDICT_SYMBOL_TRADE da qua gate va toi duoc tang cap (mau so).
@@ -301,7 +303,10 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                             startTimeRun = System.currentTimeMillis();
 
                             if (marketData != null) {
-                                if (MarketBigChangeDetector.isDcaAlt(marketData.rateDown15MAvg, marketData.rateDownAvg, marketData.rateUpAvg)) {
+                                // HOLDDCA (2026-09-11): mot co che DCA DUY NHAT => duong isDcaAlt cu TAT han
+                                //   khi SIM_DCA_TRIGGER=BIG_DOWN. Tat overlay => dieu kien y nhu cu.
+                                if (!Configs.HOLD_DCA_ON
+                                        && MarketBigChangeDetector.isDcaAlt(marketData.rateDown15MAvg, marketData.rateDownAvg, marketData.rateUpAvg)) {
                                     List<Short> symbolDcaLossBig = DcaProcessor.getDCA(null, time, BudgetManagerSimple.getInstance().getBudget(), getActiveOrderMap());
                                     for (short symbolId : symbolDcaLossBig) {
                                         KlineObjectSimple ticker = symbol2Ticker[symbolId];
@@ -498,6 +503,12 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         }
         if (TickDecisionLog.ON) {
             TickDecisionLog.close();
+        }
+        // [DCA13] HOLDDCA — tong ket. CHI in khi BAT (tat => 0 dong [DCA13] trong sim.out).
+        if (Configs.HOLD_DCA_ON) {
+            LOG.info("[DCA13] TONG leg_nhoi={} trigger={} minDrop={} cooldownH={} maxLegs={} entryFraction={}",
+                    holdDcaLegs, Configs.HOLD_DCA_TRIGGER, Configs.HOLD_DCA_MIN_DROP,
+                    Configs.HOLD_DCA_COOLDOWN_H, Configs.HOLD_DCA_MAX_LEGS, Configs.ENTRY_FRACTION);
         }
         // [BOOKCAP] Tong ket overlay — CHI in khi BAT (tat => 0 dong BOOK-CAP trong sim.out).
         if (Configs.BOOK_CAP_ON) {
@@ -1074,7 +1085,14 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         if (Configs.DCA_GRID_ENABLED) {
             List<OrderTargetInfoTest> cur = symbol2OrdersEntry[symbolId];
             int legIdx = (cur == null) ? 0 : cur.size();     // 0 = leg dau
-            float ratio = DcaUtils.gridLegWeightRatio(legIdx);
+            // HOLDDCA (2026-09-11, PREREG muc 1.4): MOI leg (ke ca leg dau) nhan CUNG so USDT
+            //   = C x SIM_ENTRY_FRACTION, voi C = von leg DAU theo cong thuc hien hanh
+            //   (gridLegWeightRatio(0)). KHONG dung DCA_GRID_WEIGHTS=1,1,1,1: doi weights se doi
+            //   dcaGridTotalWeight() trong managerBudget => C khong con la C cu (13 -> 4).
+            //   Tran so leg do SIM_DCA_MAX_LEGS quyet dinh o DcaProcessor, khong con do do dai grid.
+            float ratio = Configs.HOLD_DCA_ON
+                    ? DcaUtils.gridLegWeightRatio(0) * Configs.ENTRY_FRACTION
+                    : DcaUtils.gridLegWeightRatio(legIdx);
             if (ratio <= 0f) {
                 if (TickDecisionLog.ON) tlCand(TickDecisionLog.D_GRID_EXHAUSTED, symbolId, ticker, levelChange, symbolPred, predict);
                 return;                          // het bac grid -> khong mo them leg
@@ -1117,6 +1135,15 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             symbol2OrdersEntry[symbolId] = orders;
         }
         orders.add(order);
+        // [DCA13] HOLDDCA (PREREG muc 1.6): MOT dong SLF4J cho MOI leg nhoi that su mo.
+        //   avg = gia von TB cua cum TRUOC khi cong leg nay. Tat overlay => 0 dong.
+        if (Configs.HOLD_DCA_ON && levelChange == MarketLevelChange.DCA_LEVEL1) {
+            OrderTargetInfoTest prevCluster = symbol2OrderRunning[symbolId];
+            holdDcaLegs++;
+            LOG.info("[DCA13] sym={} leg={} avg={} px={} usdt={} t={}", symbolStr, orders.size(),
+                    prevCluster != null ? prevCluster.priceEntry : null, entry, budget,
+                    Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime));
+        }
         if (TickDecisionLog.ON) tlCand(TickDecisionLog.D_ENTERED, symbolId, ticker, levelChange, symbolPred, predict);
 
         // ENTRY-MATCH PROBE (env WFO_LOG_ENTRIES=1). Default off = byte-identical.
