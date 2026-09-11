@@ -6,6 +6,25 @@ Sau khi xong: doi status thanh `DONE <commit>`, ghi ket qua vao doc rieng, commi
 
 ---
 
+## 🔴 FLATGATE -- do chien luoc gate PHANG (cai 242 dang chay that) tren 48 thang  [DONE / `docs/RESULT_FLATGATE.md`]
+
+Pre-reg `docs/PREREG_FLATGATE.md` (`ee00475`, commit TRUOC run). Huong C cua `AUDIT_GATE_DYN_PARITY` 5.2.
+Co che: key moi `SIM_GATE_DYN_BYPASS` (Cfg, khai trong profile); `1` => sim bo `checkSignalDynamic`
+cho PREDICT_SYMBOL_TRADE, roi xuong `checkSignal` phang 0.008 = dung duong LIVE rank-mode.
+Cong nghiem thu PASS: jar moi + `x1_c3_full.properties` -> FLATOFF **byte-identical** PARITY_R
+(md5 `2478e90d...`, cmp rc=0). **PHAN QUYET: A -- TE HON RO.**
+eq 111,428 -> **9,666**; CAGR +33.58 -> **-27.51**; d CAGR **-61.08 pp** CI95 **[-85.76,-32.82]**
+(ben o block 10/21/42, P(d>0)=0.000; 3/4 nam tran CI < 0, rieng 2023 khong phan biet duoc).
+n 2,266 -> **21,382** (x9.4); win% -10.40pp; TSloss% +11.85pp; meanP 3.31 -> 0.60; mMargin 1,945 -> **197**;
+maxDD -12.46 -> **-73.19**; UW 227 -> **1,456**. 3/5 rate chat luong ngoai CI, cung huong xau.
+Rang buoc cung: FLATGATE **vo 4/4 nam** (2022/2024/2025 vo ca 4 muc) trong khi PARITY_R chi vo
+UW o 2024/2025. Nhip: **12.6-25.1 entry/ngay** (242 do duoc **17.0**) vs PARITY_R **0.84-2.43**
+=> bang chung thu tu rang 242 dang chay nhanh FLATGATE. Von khoa cham **90.5%** equity, collapse-day
+79-245 ngay/nam (PARITY_R 1-10). `mean(profit|SM)` KHONG doi (7.33 vs 7.25) => gate dyn khong lam
+lenh tot hon, no **loai lenh xau**. 6/6 du doan ghi truoc deu dung.
+=> **Huong B (sua sim cho khop live) bi bac bo bang so.** Huong A (sua live) duoc ung ho --
+patch `docs/L6_GATE_DYN_FIX.md`, **CHUA DEPLOY, cho user duyet**.
+
 ## 🔴 GATE-DYN PARITY -- sim CO gate tang 2, live BO -- da xac minh  [DONE / `docs/AUDIT_GATE_DYN_PARITY.md`]
 
 Audit read-only (HEAD `1a7847d`). **LECH THAT**: `Simulator...StopLoss.createOrder:964-965` LUON goi
