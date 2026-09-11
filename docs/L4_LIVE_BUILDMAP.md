@@ -300,10 +300,18 @@ diem 2**. Con lai:
 | **7** | **exit chay trong `ShadowBookC3`**, time-stop tren duong that chi la log | ⚠️ **con** |
 | **8** | **gate `p15`** (`Model_Regressor_Return15M.onnx` vs `wfo_gate_pred.csv`) | ⚠️ **con, chua chung minh dong nhat** |
 | **9** | **do tre** (tick 15m + kline 1m tre ~1' + OI asof <= 2h) | ⚠️ **con** |
+| **10** | **GATE ENTRY TANG 2** (`checkSignalDynamic` vs gate phang 0.008) | 🔴 **THEM 2026-09-11, LON HON CA 9 DIEM TREN CONG LAI.** Sim LUON chay gate dong `dyn_thr = 0.008*max(0.26787, symbolPred/0.15*1.28760)` (0.0172-0.0240 voi top-8), live rank-mode BO no (`DetectEntrySignal2TradeNormal:656`, `311bb29`) => chay gate PHANG 0.008. Lech **95.62%** slot tren 48 thang; **77/78** entry so giay 242 07-11/09 se bi chan neu live chay nhu sim. `docs/AUDIT_GATE_DYN_PARITY.md`. 🟢 **DA SUA** trong `docs/L6_GATE_DYN_FIX.md` (patch soan xong, **CHUA DEPLOY 242**). |
 
 De bai du doan "chi con: universe live, ke toan giay, model train toi 2025-09/2025-10".
 Do dung 3 diem **3, 6, 5**. **Nhung con them 3 diem nua** phai ghi: **4** (duong feature 45 —
 chua do duoc, quan trong nhat), **7/8/9**. Khong duoc bo qua diem 4.
+
+> **BO SUNG 2026-09-11 (audit `3a36f02`).** Bang tren truoc day THIEU **diem 10** — gate entry
+> tang 2. No khong nam trong 9 diem cua `L2_PORT_C3` vi ca hai ben deu "co gate", chi khac
+> NGUONG; nhung do lon thi vuot xa: no doi ~96% tap entry cua sleeve selector, tuc so giay
+> 07-11/09 **khong phai C3_FULL** ma la mot chien luoc gate phang chua tung backtest.
+> Do la ly do `docs/SHADOW_EVAL_20260911.md` va `docs/DEV_COLLAPSE_CHECK_20260911.md` phai
+> doc lai phan **nhip/so bag** (xem khung canh bao o dau hai file do).
 
 ---
 

@@ -6,6 +6,22 @@ Sau khi xong: doi status thanh `DONE <commit>`, ghi ket qua vao doc rieng, commi
 
 ---
 
+## 🔴 L6 GATE-DYN FIX -- bat gate dong tang 2 tren LIVE rank-mode  [SOAN XONG / **BLOCKED: cho user duyet deploy**]
+
+`docs/L6_GATE_DYN_FIX.md`. Bo dieu kien `SELECTOR_RANK_TOPK <= 0` o `DetectEntrySignal2TradeNormal`
+=> live va sim di CHUNG `AIRejectFilter.entryGate` (moi). Sua chu thich `[PARITY]` sai (cai sim bo
+khi TOPK>0 la `maxThres` tang 1, khong phai dyn tang 2). Them log 1 dong/tick `[GATE-DYN] topk=..
+thr_base=.. thr_dyn=[..] n_cand=.. n_rej=.. n_pass=..` de verify chung minh gate dong dang chay.
+`mvn -o test` **118/118 PASS** (112 cu + 6 moi `GateDynEntryTest`: TOPK=8 symbolPred=0.30,
+pred15m=0.012 => REJECT / 0.025 => PASS; leg khong-PST va symbolPred=null giu gate phang).
+`check_cfg_gateway.sh` OK. Goi `/home/ubuntu/deploy_242_l6/` (sim.jar sha256 `0aac66be...` +
+deploy/verify/rollback + README). **KHONG doi `conf/env.sh`**, khong them model.
+Du doan ghi truoc: nhip 17.0 -> ~1.4 entry/ngay, lenh mo 27 -> 3-8, `n_pass=0` o da so tick.
+Rui ro lon nhat: gate siet cat o 4% tren cung phan phoi `p15` => khuech dai lech p15 live-vs-offline
+(L4 muc 7 diem 8), **chua do duoc**. LEGACY khong dinh (armRateFor/ratchet/timeStop khong goi AIRejectFilter).
+🔴 **AGENT KHONG SSH 242. CHUA DEPLOY.** Can user quyet: deploy hay de 242 tiep tuc chay
+ban da do la TE HON RO tren 48 thang.
+
 ## 🔴 FLATGATE -- do chien luoc gate PHANG (cai 242 dang chay that) tren 48 thang  [DONE / `docs/RESULT_FLATGATE.md`]
 
 Pre-reg `docs/PREREG_FLATGATE.md` (`ee00475`, commit TRUOC run). Huong C cua `AUDIT_GATE_DYN_PARITY` 5.2.

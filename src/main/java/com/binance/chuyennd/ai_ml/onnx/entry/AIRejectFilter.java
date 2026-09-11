@@ -91,6 +91,30 @@ public class AIRejectFilter {
         return evaluate(prediction.predReturn15M, dynamic_15M);
     }
 
+    /**
+     * CONG ENTRY TANG 2 — mot cho duy nhat quyet dinh gate cho ca SIM va LIVE.
+     *
+     * <p>Tao 2026-09-11 (docs/L6_GATE_DYN_FIX.md). Truoc do LIVE
+     * ({@code DetectEntrySignal2TradeNormal.createOrderBuyRequest}) BO nhanh dong khi
+     * {@code SELECTOR_RANK_TOPK > 0} (commit {@code 311bb29}) trong khi SIM
+     * ({@code SimulatorMarketLevelTicker1MStopLoss.createOrder}) LUON goi no => hai ben chay
+     * HAI chien luoc khac nhau (docs/AUDIT_GATE_DYN_PARITY.md: lech 95.62% slot tren 48 thang,
+     * 77/78 entry so giay 242 07-11/09). Nay ca hai di cung cong nay.
+     *
+     * <p>Quy tac: {@code predictSymbolTrade} (= levelChange PREDICT_SYMBOL_TRADE) VA
+     * {@code symbolPred != null} => gate DONG; moi truong hop con lai (BIG_DOWN, DCA_LEVEL1,
+     * leg market-signal, hoac thieu symbolPred) => gate PHANG nhu cu, hanh vi KHONG doi.
+     *
+     * @param predictSymbolTrade leg nay den tu sleeve selector PREDICT_SYMBOL_TRADE
+     */
+    public FilterResult entryGate(AiPredictionData prediction, Float symbolPred, boolean predictSymbolTrade) {
+        FilterResult r = null;
+        if (predictSymbolTrade && symbolPred != null) {
+            r = checkSignalDynamic(prediction, symbolPred);
+        }
+        return r != null ? r : checkSignal(prediction);
+    }
+
     /** Giữ signature cũ để không vỡ caller (BackTestEngineCombined/MarketThresholds/BenchmarkSpeedTest) —
      *  {@code risk} chỉ còn ghi vào HARD_RISK_LIMIT_4H (field da xoa) cho log/HPO đọc, KHÔNG còn dùng để lọc. */
     public void setConfig(float risk, float min15m) {

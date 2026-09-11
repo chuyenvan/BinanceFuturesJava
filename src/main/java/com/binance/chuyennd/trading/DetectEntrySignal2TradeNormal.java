@@ -364,6 +364,10 @@ public class DetectEntrySignal2TradeNormal {
                 selPool = new TreeMap<>();
             }
             int rank = 0;
+            // [GATE-DYN 2026-09-11] dem ung vien THAT su di qua cong entry cua tick nay, de in
+            //   mot dong tong ket/tick (xem cuoi vong lap). Chi la LOG — khong doi quyet dinh nao.
+            int gateCand = 0;
+            Float gateThrMin = null, gateThrMax = null;
             for (Map.Entry<Float, String> entry : selPool.entrySet()) {
                 String symbol = entry.getValue();
                 // [L3 LEGACY] symbol co vi the THAT cu: so giay KHONG mo entry giay va KHONG dem
@@ -379,8 +383,29 @@ public class DetectEntrySignal2TradeNormal {
                 rank++;
                 KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
                 if (ticker == null || BudgetManager.getInstance().symbol2Pos.containsKey(symbol)) continue;
+                gateCand++;
+                if (predictData != null && symbolPred != null) {
+                    float thr = com.binance.chuyennd.ai_ml.onnx.entry.AIRejectFilter.dynThreshold(
+                            new AiPredictionData(ticker.startTime, predictData.return15M,
+                                    predictData.riskDrawdown4H), symbolPred);
+                    gateThrMin = (gateThrMin == null || thr < gateThrMin) ? thr : gateThrMin;
+                    gateThrMax = (gateThrMax == null || thr > gateThrMax) ? thr : gateThrMax;
+                }
                 createOrderBuyRequest(symbol, ticker, MarketLevelChange.PREDICT_SYMBOL_TRADE,
                         symbol2Max15m.get(symbol), marketRate, predictData, symbolPred, symbol2LastTickers, predictRejects);
+            }
+            // [GATE-DYN 2026-09-11] MOT dong/tick chung minh gate tang 2 DONG dang chay that tren live
+            //   (truoc L6 live rank-mode chay gate PHANG — docs/AUDIT_GATE_DYN_PARITY.md).
+            //   thr_base = nguong PHANG; thr_dyn = dai nguong DONG that su ap cho top-K cua tick nay.
+            //   n_pass = n_cand - n_rej (n_rej chi dem REJECT do gate, gom trong predictRejects).
+            //   verify.sh cua goi deploy doc dung dong nay. Thuan LOG, khong doi quyet dinh.
+            if (gateCand > 0) {
+                LOG.info("[GATE-DYN] topk={} thr_base={} thr_dyn=[{}..{}] n_cand={} n_rej={} n_pass={}",
+                        Configs.SELECTOR_RANK_TOPK,
+                        String.format("%.5f", Configs.MIN_MOMENTUM_15M),
+                        gateThrMin == null ? "-" : String.format("%.5f", gateThrMin),
+                        gateThrMax == null ? "-" : String.format("%.5f", gateThrMax),
+                        gateCand, predictRejects.size(), gateCand - predictRejects.size());
             }
             // market pred GIỐNG NHAU mọi coin → in 1 lần kèm danh sách SYM(symbolPred). (24H đã bỏ khỏi hệ.)
             if (!predictRejects.isEmpty() && predictData != null) {
@@ -649,17 +674,16 @@ public class DetectEntrySignal2TradeNormal {
                 ticker.startTime,
                 prediction.return15M, prediction.riskDrawdown4H
         );
-        if (levelChange == MarketLevelChange.PREDICT_SYMBOL_TRADE) {
-            // [PARITY] rank-mode (SELECTOR_RANK_TOPK>0): backtest RANK-TOPK BO nguong per-symbol,
-            //   chi dung market gate => KHONG goi checkSignalDynamic, de roi xuong checkSignal (market-only).
-            //   TOPK<=0: giu checkSignalDynamic cu (byte-identical).
-            if (symbolPred != null && Configs.SELECTOR_RANK_TOPK <= 0) {
-                filterResult = aiRejectFilter.checkSignalDynamic(predict, symbolPred);
-            }
-        }
-        if (filterResult == null) {
-            filterResult = aiRejectFilter.checkSignal(predict);
-        }
+        // [PARITY 2026-09-11, docs/L6_GATE_DYN_FIX.md + docs/AUDIT_GATE_DYN_PARITY.md]
+        //   DINH CHINH chu thich cu o day: cai ma backtest BO khi SELECTOR_RANK_TOPK>0 la nguong
+        //   UNG VIEN tang 1 (maxThres = RATE_MAX*AI_DYNAMIC_MAX, Simulator:324-345), KHONG phai
+        //   gate ENTRY tang 2. Sim GIU NGUYEN checkSignalDynamic cho PREDICT_SYMBOL_TRADE o moi
+        //   che do (Simulator.createOrder, khong he co dieu kien SELECTOR_RANK_TOPK). Dieu kien
+        //   `SELECTOR_RANK_TOPK <= 0` cu (commit 311bb29) suy sai tu tang 1 sang tang 2 va lam
+        //   LIVE rank-mode chay gate PHANG 0.008 trong khi sim chay 0.0172-0.0240 => lech 95.62%
+        //   slot tren 48 thang, 77/78 entry so giay 242. Nay ca hai di CHUNG AIRejectFilter.entryGate.
+        filterResult = aiRejectFilter.entryGate(predict, symbolPred,
+                levelChange == MarketLevelChange.PREDICT_SYMBOL_TRADE);
         // Gom log: với vòng PREDICT_SYMBOL_TRADE (hàng trăm coin/phút, market pred GIỐNG NHAU,
         // chỉ symbolPred khác) → KHÔNG log per-coin REJECT mà gom vào collector để in 1 dòng tổng hợp.
         // Mọi levelChange khác / collector null → giữ log cũ. Quyết định KHÔNG đổi.

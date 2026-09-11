@@ -1,5 +1,24 @@
 # DEV_COLLAPSE_CHECK_20260911 — pattern "collapse" cua shadow live co trong 2,266 lenh DEV X1_C3_FULL khong?
 
+> ## 🚨 CANH BAO DOC LAI (audit `3a36f02`, 2026-09-11)
+>
+> **So giay C3 tren 242 trong cua so 07-11/09 chay GATE PHANG, khong phai gate dong cua sim.**
+> `DetectEntrySignal2TradeNormal:656` bo `checkSignalDynamic` khi `SELECTOR_RANK_TOPK>0`
+> (commit `311bb29`), con sim LUON goi no. `dyn_thr = 0.008*max(0.26787, symbolPred/0.15*1.28760)`
+> = **0.0172-0.0240** voi top-8 vs nguong phang **0.008**. He qua do duoc:
+> **77/78 entry** cua cua so nay se KHONG ton tai neu live chay gate nhu sim, va nhip vao lenh
+> **17.0 entry/ngay** vs **1.37 entry PST/ngay** cua `X1_C3_FULL_PARITY_R` = **~12 lan**.
+> => **So giay nay KHONG phai `C3_FULL`**; goi no la "so giay C3" la sai ten.
+>
+> **Doc the nao:**
+> - 🟢 **VAN DUNG**: cau truc **lo tung lenh** / hinh dang phan phoi ret / co che collapse
+>   (chung do tren tung lenh da vao, doc lap voi so luong lenh).
+> - 🔴 **KHONG DUNG**: moi so sanh ve **NHIP** (entry/ngay), **SO BAG dang mo**, ty le
+>   lenh mo tren equity, va moi ket luan dang "live bam sat sim" dua tren dem so lenh.
+> - Con so 48 thang cua chien luoc gate phang: `docs/PREREG_FLATGATE.md` / `docs/RESULT_FLATGATE.md`.
+> - Patch sua live cho khop sim: `docs/L6_GATE_DYN_FIX.md` (**chua deploy**).
+
+
 Cau hoi (user, 11/09): shadow 242 sau 4.3 ngay co 27 lenh mo, 26/27 am, avg -22.5% (`docs/SHADOW_EVAL_20260911.md`).
 DEV (X1_C3_FULL canonical = `devrun/X1_C3_FULL_PARITY_R/printDone.csv`, 2,266 lenh, 2022-2025) co the khong, dac biet 2025?
 Script: `research/analysis/dev_collapse_check.py`. Parity tham so exit: `x1_c3_full.properties` arm 0.07 / TS_GIVEBACK 0.5 /
