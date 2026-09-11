@@ -13,6 +13,9 @@ PRIMARY (EV giu tiep tu diem cat, D2 180d) = -11.1%, CI [-21.3,+1.7] => DONG. Fr
 77%/365d NHUNG PnL thua CAT 3-6% von goc; DCA 1:1 <=2 leg ve bo 86%/365d NHUNG thua CAT 13% von goc @180d, CI [-22,-4.5]
 loai 0, am ca 4 nam; write-off om toi cung = -98% von goc den cuoi. Ly do: ve bo = lai 0, that bai = -58..-88% va DCA nhan
 von vao dung nhom do. Edge 'DCA' that nam o sleeve BIG_DOWN (von MOI, coin MOI, +9.9k), khong phai them von vao bag.
+BO SUNG (ngoai pre-reg): neu 've bo' = ARM 7%% + TRAILING C3 thay vi thoat tai gia von => om+DCA HOA CAT trong nhieu
+(K=2..4: chenh 180d +1..+5%%, CI [-11,+23]); edge nam o top-5%% lenh (39-94%% |PnL CAT|), 2022 am -18..-23%%, can them 84-153%% von.
+Muon di tiep phai PREREG SIM rieng (xem RESULT_GRAVEYARD muc 6).
 
 ---
 

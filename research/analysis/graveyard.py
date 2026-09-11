@@ -111,7 +111,7 @@ def simulate_exit(r, K, mult):
             out[f"val_{name}"] = sum(U * p_h / p for _, p in legs_h); out[f"cap_{name}"] = cap; out[f"exit_{name}"] = 0.0; out[f"days_{name}"] = (t_h - r.t0) / D
         out[f"extra_{name}"] = out[f"cap_{name}"] - U   # von DCA them
     return out
-for K, mult, tag in ((0, 1.00, "H0 om, thoat khi VE BO e0"), (2, 1.00, "D2 (<=2 leg 1:1) thoat khi VE BO avg"), (2, 1.07, "D2 thoat khi +7% tren avg"), (2, 9.99, "D2 om toi cung (khong thoat)")):
+for K, mult, tag in ((0, 1.00, "H0 om, thoat khi VE BO e0"), (2, 1.00, "D2 (<=2 leg 1:1) thoat khi VE BO avg"), (2, 1.07, "D2 thoat khi +7% tren avg"), (2, 9.99, "D2 om toi cung (khong thoat)"), (3, 1.00, "NGOAI PRE-REG D3 (<=3 leg 1:1) thoat VE BO avg"), (4, 1.00, "NGOAI PRE-REG D4 (<=4 leg 1:1) thoat VE BO avg"), (3, 9.99, "NGOAI PRE-REG D3 om toi cung"), (4, 9.99, "NGOAI PRE-REG D4 om toi cung")):
     X = pd.DataFrame([r for r in (simulate_exit(r, K, mult) for _, r in sl.iterrows()) if r])
     L.info("\n===== MO TA: %s =====", tag)
     for name in ("90", "180", "365", "end"):
@@ -127,3 +127,57 @@ for K, mult, tag in ((0, 1.00, "H0 om, thoat khi VE BO e0"), (2, 1.00, "D2 (<=2 
         i = rng.integers(0, len(x), len(x)); bs.append(((x.val_180.values[i] - x.cap_180.values[i]) - (x.cut_val.values[i] - x.U.values[i])).sum() / x.U.values[i].sum())
     L.info("180d chenh (om+DCA - CAT)/von goc CI95 = [%+.1f%%, %+.1f%%] | theo nam: %s", 100*np.percentile(bs, 2.5), 100*np.percentile(bs, 97.5),
            {y: round(100*((g.val_180 - g.cap_180).sum() - (g.cut_val - g.U).sum())/g.U.sum(), 1) for y, g in x.groupby("yr")})
+
+# ===== MO TA NGOAI PRE-REG (y user 11/09 toi): om + DCA 1:1 <=K leg; khi gia >= avg*1.07 => ARM va TRAILING nhu C3
+# (giveback = min(0.5*peak, cap), cap 0.08 STRONG / 0.03 WEAK (symbolPred<0.29); SL = avg*(1+peak-giveback)); chua arm => khong SL.
+def simulate_trail(r, K):
+    s = series.get(int(r.sid)); fut = s[s.index > r.t0] if s is not None else None
+    if fut is None or len(fut) == 0: return None
+    U = float(r.margin); e0 = float(r.entry); legs = [(r.ts, e0)]; avg = e0; last_leg = r.t0
+    cap_gb = 0.03 if float(r.symbolPred) < 0.29 else 0.08
+    idx = fut.index.values; vals = fut.values; last_ts = int(idx.max())
+    evs = events[events > r.t0 + H]; ei = 0; armed = False; peak = 0.0; exit_t = None; exit_px = None
+    for j in range(len(idx)):
+        t = int(idx[j]); px = float(vals[j])
+        # su kien BIG_DOWN roi vao gio nay (ev <= t va > gio truoc)
+        while ei < len(evs) and evs[ei] <= t:
+            if not armed and len(legs) - 1 < K and evs[ei] - last_leg >= D and px <= 0.80 * avg:
+                legs.append((int(evs[ei]), px)); avg = float(np.mean([p for _, p in legs])); last_leg = int(evs[ei])
+            ei += 1
+        rate = px / avg - 1
+        if not armed:
+            if rate >= 0.07: armed = True; peak = rate
+        else:
+            if rate > peak: peak = rate
+            sl_rate = peak - min(0.5 * peak, cap_gb)
+            if rate <= sl_rate: exit_t = t; exit_px = avg * (1 + sl_rate); break
+    cap = U * len(legs); out = {"yr": pd.Timestamp(r.t0, unit="ms").year, "depth": r.profit, "nleg": len(legs), "armed": float(armed),
+                                "cut_pnl": U * (float(r.tp) / e0 - 1), "U": U, "cap": cap}
+    for hz, name in ((180, "180"), (365, "365"), (None, "end")):
+        t_h = TEND if hz is None else r.t0 + hz * D
+        if t_h > TEND: out[f"pnl_{name}"] = np.nan; continue
+        if exit_t is not None and exit_t <= t_h:
+            legs_x = [(tt, p) for tt, p in legs if tt <= exit_t]; capx = U * len(legs_x)
+            out[f"pnl_{name}"] = sum(U * exit_px / p for _, p in legs_x) - capx; out[f"cap_{name}"] = capx; out[f"ex_{name}"] = 1.0
+        else:
+            legs_h = [(tt, p) for tt, p in legs if tt <= t_h]; caph = U * len(legs_h); m = idx <= t_h
+            if not m.any(): out[f"pnl_{name}"] = np.nan; continue
+            delisted = (t_h - last_ts) > 7 * D; p_h = 0.0 if delisted else float(vals[m][-1])
+            out[f"pnl_{name}"] = sum(U * p_h / p for _, p in legs_h) - caph; out[f"cap_{name}"] = caph; out[f"ex_{name}"] = 0.0
+    return out
+for K in (0, 2, 3, 4):
+    X = pd.DataFrame([r for r in (simulate_trail(r, K) for _, r in sl.iterrows()) if r])
+    L.info("\n===== MO TA: OM + DCA 1:1 <=%d leg + ARM 7%% + TRAILING C3 =====  armed=%.1f%%  leg TB=%.2f", K, 100*X.armed.mean(), X.nleg.mean())
+    for name in ("180", "365", "end"):
+        ok = X[f"pnl_{name}"].notna(); x = X[ok]
+        if len(x) == 0: continue
+        pnl = x[f"pnl_{name}"].sum(); cut = x.cut_pnl.sum(); U0 = x.U.sum(); ret = x[f"pnl_{name}"] / x[f"cap_{name}"]
+        top = x[f"pnl_{name}"].sort_values(ascending=False); k5 = max(1, int(0.05 * len(top)))
+        L.info("%-4s n=%3d | PnL om=%+.0f vs CAT=%+.0f | chenh %+.1f%% von goc | da thoat(trail)=%.1f%% | ret/von: med=%+.1f%% p90=%+.1f%% max=%+.0f%% | top5%% lenh gop %+.0f (=%.0f%% |PnL CAT|) | von them=%.0f%% | chua thoat: n=%d med=%+.1f%%",
+               name, len(x), pnl, cut, 100*(pnl - cut)/U0, 100*x[f"ex_{name}"].mean(), 100*ret.median(), 100*ret.quantile(.9), 100*ret.max(),
+               top.head(k5).sum(), 100*top.head(k5).sum()/abs(cut), 100*(x[f"cap_{name}"].sum()-U0)/U0, int((x[f"ex_{name}"]==0).sum()), 100*ret[x[f"ex_{name}"]==0].median() if (x[f"ex_{name}"]==0).any() else 0)
+    ok = X["pnl_180"].notna(); x = X[ok]; rng = np.random.default_rng(20260911); bs = []
+    for _ in range(2000):
+        i = rng.integers(0, len(x), len(x)); bs.append((x.pnl_180.values[i] - x.cut_pnl.values[i]).sum() / x.U.values[i].sum())
+    L.info("180d chenh CI95 = [%+.1f%%, %+.1f%%] | theo nam: %s", 100*np.percentile(bs, 2.5), 100*np.percentile(bs, 97.5),
+           {y: round(100*(g.pnl_180 - g.cut_pnl).sum()/g.U.sum(), 1) for y, g in x.groupby("yr")})

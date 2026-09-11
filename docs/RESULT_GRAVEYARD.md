@@ -39,3 +39,25 @@ sleeve PST, khong phai co hoi.
 
 ## 5. Khong lam
 Khong doi profile/exit/DCA. Khong cham 242. Khong mo them bien the (nguong 0.80/24h/2 leg giu nguyen).
+
+## 6. BO SUNG (NGOAI PRE-REG, 11/09 toi, theo y user) — "ve bo" = ARM 7% tren avg roi TRAILING nhu C3, khong phai thoat tai gia von
+Luat: om, DCA 1:1 <= K leg theo BIG_DOWN (gia <= 0.80 avg, cooldown 24h), chua arm => khong SL; gia >= avg*1.07 => arm, trail voi
+giveback = min(0.5*peak, cap 0.08 STRONG / 0.03 WEAK), SL = avg*(1+peak-giveback). Hourly close. So voi CAT (profit thuc cua lenh).
+| K | armed | chenh vs CAT / von goc: 180d | 365d (n=172, chi cohort 2022-24) | den cuoi (n=283) | CI95 180d | theo nam 180d (22/23/24/25) | von them | top-5%% lenh / |PnL CAT| | chua thoat den cuoi |
+|---|---|---|---|---|---|---|---|---|---|
+| 0 (om suong) | 61% | -0.6% | -0.7% | -3.9% | [-6.1, +4.9] | -4.8 / +7.7 / -2.6 / +0.6 | 0 | 9-12% | 39%, med -88% |
+| 2 | 70% | +0.9% | +11.3% | -9.7% | [-11.2, +13.8] | -18.1 / +11.1 / +6.1 / -2.4 | +84..98% | 39-45% | 30%, med -68% |
+| 3 | 72% | +4.4% | +14.2% | -8.7% | [-10.7, +21.5] | -22.7 / +19.9 / +8.6 / +2.9 | +104..128% | 57-58% | 28%, med -63% |
+| 4 | 73% | +5.5% | **+24.2%** | -5.4% | [-10.5, +22.8] | -23.1 / +24.6 / +12.6 / +0.3 | +119..153% | **63-94%** | 27%, med -58% |
+Doc dung:
+1. **User dung**: arm+trail doi ket qua tu "thua CAT 13%" (thoat tai gia von) thanh **hoa CAT trong nhieu** (CI chua 0 rong ca hai phia).
+   Lenh thoat trail co median +5..+9%, p90 +18..+37%, max +66..+158%.
+2. **Toan bo edge nam o ~12 lenh** (top 5%) = 39-94% |PnL CAT|; bo chung di la am. Dung nghi ngo cua user: "an lon ti le be".
+3. **Phu thuoc regime**: 2022 am -18..-23% o moi K (coin chet), 2023/2024 duong, 2025 ~0. Horizon 365d chi co cohort 2022-24 (2025 bi censor)
+   => +24% cua K=4 la so lac quan; horizon "den cuoi" (du 283) am o moi K.
+4. **Von**: K=3-4 can them 104-153% von goc, khoa hang thang; 27-30% vi the khong bao gio arm (med -58..-68%). Tinh tren TONG von
+   (2.2-2.5x) loi 365d cua K=4 ~ +3%/nam, trong khi CAT giai phong 83% von ngay lap tuc cho engine PST (CAGR 33.6%). Neu engine PST
+   con hap thu duoc von thi CAT + tai su dung von thang ro; neu PST da bao hoa (thanh khoan low-cap) thi om+DCA la cach dung von thua.
+5. Cac bien the nay them SAU khi thay so => **khong duoc dung lam phan quyet**. Muon di tiep: PREREG SIM Java rieng (time-stop off + DCA 1:1
+   K leg + arm/trail + budget parts nang len de khong bop PST), tieu chi chot truoc, 48 thang; rui ro ghi truoc: 2022-type regime va
+   ~12 lenh gánh edge.
