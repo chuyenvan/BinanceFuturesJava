@@ -6,6 +6,28 @@ Sau khi xong: doi status thanh `DONE <commit>`, ghi ket qua vao doc rieng, commi
 
 ---
 
+## AUDIT_GATEDYN — ro soat doc lap claim "GD92 THANG" (272d8f1/1c1ecca/41d5d76)  [DONE / `docs/AUDIT_GATEDYN_GD92.md`]
+
+Chay lai GD92 tu dau tren dataset build lai: **byte-identical** (`c18314d661…`, n=2,355) => so lieu
+cua GATEDYN/GATEDYN2 tai lap 100%, scope sach (SIM_END_DATE=20251231, khong cham 2026, bins X1
+khong rebuild, `GateRollingThreshold.java` khong sua, nBeforeFirst=0), pre-reg commit TRUOC run o
+ca hai dot. Nhung phan quyet **KHONG PHAN BIET DUOC**: paired block-bootstrap (block 21, 2000 rep,
+seed 20260903) cho `d = CAGR(GD92) - CAGR(PARITY_R) = +4.98pp`, `CI95 [-4.47, +16.09]` **chua 0**,
+`sd_boot 5.20`, cach nguong hieu chinh boi k=9 (`2.0963*sd = 10.90`) hon 2 lan; theo nam dau doi
+chieu (2022 **-10.06pp**, CI [-20.97,-1.10] = GD92 XAU hon o nam gau; 2023 +13.69; 2024 -0.97;
+2025 +20.38), deu KHONG DAT. Bang chung quyet dinh cua OpenClaw la **UW** — so quan sat mot lan,
+`PREREG_CI` 2.5 cam coi la co CI — va GD92 dat 116/nguong 120 (du 4 ngay) trong khi lang gieng
+cung pct cho 153 (W=120) va 183 (W=60). Dot GATEDYN2 (grid pct x W quanh winner) **vi pham**
+`B4_RESULT` 179-180 ("noi cua so, doi phan vi ... = leak L2"); ket qua "6/6 FAIL" la dau hieu
+**dinh nhieu**, khong phai vung on dinh (3 metric dat dinh o 3 diem khac nhau). PRIMARY (do deu,
+CV quy 0.712->0.518) la THAT va tai lap duoc — nhung khong duoc suy ra "THANG".
+**KHUYEN NGHI: khong chot GD92 vao production** bang bang chung DEV hien co; muon nang len ket luan
+thi can VALIDATION/holdout voi pre-reg rieng, mot cau hinh duy nhat (0.92/90), khong quet them.
+Artifact: `research/analysis/ci_gatedyn.py`, `devrun/X1_C3_FULL_GD92_R/`, `/home/ubuntu/wfo_ds_x1`
+(4.0G, GIU — dataset canonical khung X1).
+
+---
+
 ## G015ABL -- ro soat 45 feature net015, bo dan funding-drift cluster (f23, f18/f21/f22)  [DONE / `docs/RESULT_G015ABL.md`]
 
 Pre-reg `docs/PREREG_G015ABL.md`. Them Stage 0 (control, retrain 45 feature) sau khi phat
