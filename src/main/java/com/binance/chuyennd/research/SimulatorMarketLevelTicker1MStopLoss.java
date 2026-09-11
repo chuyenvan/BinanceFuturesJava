@@ -961,7 +961,11 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         }
         if (!levelChange.equals(MarketLevelChange.BIG_DOWN)) {
                 AIRejectFilter.FilterResult filterResult = null;
-                if (levelChange == MarketLevelChange.PREDICT_SYMBOL_TRADE) {
+                // [FLATGATE] Configs.GATE_DYN_BYPASS=1 (SIM_GATE_DYN_BYPASS) => BO gate tang 2 dong,
+                //   de roi xuong checkSignal (nguong PHANG MIN_MOMENTUM_15M) = dung duong LIVE rank-mode
+                //   (DetectEntrySignal2TradeNormal bo checkSignalDynamic khi SELECTOR_RANK_TOPK>0).
+                //   Mac dinh TAT => nhanh duoi chay y nhu truoc, byte-identical. docs/PREREG_FLATGATE.md.
+                if (levelChange == MarketLevelChange.PREDICT_SYMBOL_TRADE && !Configs.GATE_DYN_BYPASS) {
                     filterResult = aiRejectFilter.checkSignalDynamic(predict, symbolPred);
                 }
                 if (filterResult == null)

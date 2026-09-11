@@ -460,6 +460,17 @@ public class Configs {
     public static boolean FIX_B2 = !"false".equalsIgnoreCase(Cfg.getOr("SIM_FIX_B2", "true"));
     public static boolean FIX_B3 = !"false".equalsIgnoreCase(Cfg.getOr("SIM_FIX_B3", "true"));
 
+    // ========================================================================
+    // [FLATGATE 2026-09-11] SIM_GATE_DYN_BYPASS — mo phong gate cua duong LIVE rank-mode.
+    //   Audit docs/AUDIT_GATE_DYN_PARITY.md: SIM luon goi checkSignalDynamic cho
+    //   PREDICT_SYMBOL_TRADE, con LIVE (DetectEntrySignal2TradeNormal:656, commit 311bb29)
+    //   BO QUA no khi SELECTOR_RANK_TOPK>0 => live chi con gate PHANG MIN_MOMENTUM_15M.
+    //   Key nay cho phep SIM chay dung gate phang do de do chien luoc 242 dang chay that.
+    //   "1" = BAT (gate phang). Khong khai / khac "1" = TAT = byte-identical HEAD.
+    //   Pre-reg: docs/PREREG_FLATGATE.md. CHI anh huong tang 2 cua sleeve PREDICT_SYMBOL_TRADE.
+    // ========================================================================
+    public static final boolean GATE_DYN_BYPASS = "1".equals(Cfg.getOr("SIM_GATE_DYN_BYPASS", "0"));
+
 
     // =========================================================
     // 9. KẾT NỐI DỮ LIỆU (STORAGE & AEROSPIKE)
