@@ -47,3 +47,12 @@ LOSER_TIME_STOP 168h / TOPK 8 = `LiveProfileC3` (0.07 / ratchet lien tuc / 168h 
 
 ## 4. KHONG LAM
 Khong sua gi tren 242/Oracle ngoai them 2 file nay. Khong doi neo. Khong tune theo tuan live.
+
+## 5. BO SUNG (cung ngay) — khong gian EXIT DA DONG, khong de xuat mo lai
+- `E1_EXIT_RESULT.md` (C2b, 04/09): grid time-stop 168/120/96/72 -> chon 72 theo luat "ngan nhat thoa P1+P2", ghi ro "khong phai
+  muc toi uu da chung minh", quota het.
+- `X2_EXIT48.md` (X1_C3, 48 thang, 6 run): truc T (time-stop 120/96/72) cai thien mP|SL va p10loser don dieu (2025: mP|SL -28.9 ->
+  -18.9) NHUNG win% giam ngoai CI o ca 3 muc va **5/5 arm FAIL rang buoc cung**; truc S (pre-arm hard SL -30/-20) khong don dieu,
+  S30 xau hon parity. **=> CA HAI TRUC NULL.** Cat time-stop/hard-SL chi "dun duoi lo len thanh cot o muc cat", khong cuu lenh nao.
+- Vay tail time-stop cua C3_FULL la chi phi da do va da thu cat bang 2 cach: khong cat duoc theo luat du an. Huong con chua do:
+  tang **book/von** (cap so lenh mo dong thoi / cap notional khi book nang loser) — la overlay rui ro, can PREREG rieng.
