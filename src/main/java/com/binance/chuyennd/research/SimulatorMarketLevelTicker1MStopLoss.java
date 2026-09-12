@@ -660,18 +660,25 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                 //     cham firstEntryPrice*(1+PRE_ARM_SL) -> dong NGAY tai min(stopLevel, min(open,close)).
                 //     Dat TRUOC LOSER_TIME_STOP: cung mot nen ma ca hai cung dieu kien thi SL (cong chat hon)
                 //     thang — xac dinh, khong ngau nhien. Default 0 => nhanh khong chay => byte-identical.
-                if (com.binance.chuyennd.tradecore.PreArmSlUtils.enabled() && orderMulti.priceSL == null
-                        && com.binance.chuyennd.tradecore.PreArmSlUtils.hit(orderMulti.firstEntryPrice, ticker.minPrice)) {
+                // [SL-ADAPTIVE A 2026-09-12] preArmSl hieu dung theo selRank khi SL_ADAPT_HARDSL bat;
+                //     OFF => = Configs.PRE_ARM_SL => *Val arithmetic IEEE-identical hanh vi cu.
+                float preArmSlEff = Configs.PRE_ARM_SL;
+                if (Configs.SL_ADAPT_HARDSL) {
+                    preArmSlEff = (orderMulti.selRank != null && orderMulti.selRank <= Configs.SL_ADAPT_RANK_N)
+                            ? Configs.SL_ADAPT_HARDSL_STRONG : Configs.SL_ADAPT_HARDSL_WEAK;
+                }
+                if (com.binance.chuyennd.tradecore.PreArmSlUtils.enabledVal(preArmSlEff) && orderMulti.priceSL == null
+                        && com.binance.chuyennd.tradecore.PreArmSlUtils.hitVal(orderMulti.firstEntryPrice, ticker.minPrice, preArmSlEff)) {
                     float fep = orderMulti.firstEntryPrice;
                     long anchorSl = orderMulti.clusterFirstLegTime > 0L ? orderMulti.clusterFirstLegTime : orderMulti.timeStart;
                     orderMulti.status = OrderTargetStatus.STOP_LOSS_DONE;
-                    orderMulti.priceTP = com.binance.chuyennd.tradecore.PreArmSlUtils.exitPrice(
-                            fep, ticker.priceOpen, ticker.priceClose);
+                    orderMulti.priceTP = com.binance.chuyennd.tradecore.PreArmSlUtils.exitPriceVal(
+                            fep, ticker.priceOpen, ticker.priceClose, preArmSlEff);
                     // Ly do thoat KHONG duoc them vao printDone.csv (se pha cong hoi quy byte-identical);
                     // ghi mot dong log de ghep lai theo (sym, tOpen). Xem docs/PREREG_X2.md muc 2.3.
                     LOG.info("PREARM_SL sym={} first={} stop={} exit={} tOpen={} tNow={}",
                             orderMulti.symbol, fep,
-                            com.binance.chuyennd.tradecore.PreArmSlUtils.stopLevel(fep),
+                            com.binance.chuyennd.tradecore.PreArmSlUtils.stopLevelVal(fep, preArmSlEff),
                             orderMulti.priceTP, anchorSl, time);
                     closeOrder(symbolId, orderMulti);
                     return;
@@ -679,9 +686,16 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                 // [2026-09-02] LOSER TIME-STOP (env SIM_LOSER_TIME_STOP_HOURS): cum chua arm SL qua N gio tu leg dau
                 //     -> dong tai min(open, close) (khong look-ahead, haircut nhu HARD_SL). TRUOC cong profit-arm.
                 //     Default 0 => nhanh khong chay => byte-identical.
-                if (Configs.LOSER_TIME_STOP_HOURS > 0 && orderMulti.priceSL == null) {
+                // [SL-ADAPTIVE B 2026-09-12] hours hieu dung theo selRank khi SL_ADAPT_TSTOP bat;
+                //     OFF => = Configs.LOSER_TIME_STOP_HOURS => byte-identical.
+                int loserTsHours = Configs.LOSER_TIME_STOP_HOURS;
+                if (Configs.SL_ADAPT_TSTOP) {
+                    loserTsHours = (orderMulti.selRank != null && orderMulti.selRank <= Configs.SL_ADAPT_RANK_N)
+                            ? Configs.SL_ADAPT_TSTOP_STRONG_H : Configs.SL_ADAPT_TSTOP_WEAK_H;
+                }
+                if (loserTsHours > 0 && orderMulti.priceSL == null) {
                     long anchor = orderMulti.clusterFirstLegTime > 0L ? orderMulti.clusterFirstLegTime : orderMulti.timeStart;
-                    if (time - anchor > Configs.LOSER_TIME_STOP_HOURS * 3600000L) {
+                    if (time - anchor > loserTsHours * 3600000L) {
                         orderMulti.status = OrderTargetStatus.STOP_LOSS_DONE;
                         orderMulti.priceTP = Math.min(ticker.priceOpen, ticker.priceClose);
                         closeOrder(symbolId, orderMulti);
@@ -705,7 +719,14 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                         return;
                     }
                 }
-                if (ticker.maxPrice >= orderMulti.priceEntry * (1 + Configs.RATE_PROFIT_STOP_MARKET)
+                // [SL-ADAPTIVE C 2026-09-12] armRate hieu dung theo selRank khi SL_ADAPT_ARM bat;
+                //     OFF => = Configs.RATE_PROFIT_STOP_MARKET => byte-identical.
+                float armRate = Configs.RATE_PROFIT_STOP_MARKET;
+                if (Configs.SL_ADAPT_ARM) {
+                    armRate = (orderMulti.selRank != null && orderMulti.selRank <= Configs.SL_ADAPT_RANK_N)
+                            ? Configs.SL_ADAPT_ARM_STRONG : Configs.SL_ADAPT_ARM_WEAK;
+                }
+                if (ticker.maxPrice >= orderMulti.priceEntry * (1 + armRate)
                         || orderMulti.priceSL != null) {
                     Float predReturn15M  = getPredReturn15MForTradingStop(time);
                     orderMulti.updateStatusNew(predReturn15M , ticker);

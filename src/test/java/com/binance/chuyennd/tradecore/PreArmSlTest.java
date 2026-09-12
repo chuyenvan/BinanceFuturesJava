@@ -73,4 +73,29 @@ public class PreArmSlTest {
         assertEquals(72f, PreArmSlUtils.exitPrice(100f, 74f, 72f), EPS);
         assertEquals(74f, PreArmSlUtils.exitPrice(100f, 74f, 79f), EPS);
     }
+
+    /** (5) SL-ADAPTIVE: ban *Val doc lap Configs.PRE_ARM_SL (lever A dung theo selRank). */
+    @Test
+    public void valVariantsIndependentOfGlobal() {
+        Configs.PRE_ARM_SL = 0f;                 // global TAT
+        assertFalse(PreArmSlUtils.enabledVal(0f));
+        assertTrue(PreArmSlUtils.enabledVal(-0.08f));
+        assertEquals(92f, PreArmSlUtils.stopLevelVal(100f, -0.08f), EPS);
+        assertFalse("global off nhung Val -0.08 van quyet dinh doc lap",
+                PreArmSlUtils.hitVal(100f, 92.01f, -0.08f));
+        assertTrue(PreArmSlUtils.hitVal(100f, 92f, -0.08f));
+        assertEquals(92f, PreArmSlUtils.exitPriceVal(100f, 95f, 96f, -0.08f), EPS);
+        assertEquals(90f, PreArmSlUtils.exitPriceVal(100f, 91f, 90f, -0.08f), EPS);
+    }
+
+    /** (6) Ban khong tham so = *Val voi Configs.PRE_ARM_SL (uy quyen, khong doi hanh vi cu). */
+    @Test
+    public void noArgDelegatesToVal() {
+        Configs.PRE_ARM_SL = -0.20f;
+        assertEquals(PreArmSlUtils.stopLevelVal(100f, -0.20f), PreArmSlUtils.stopLevel(100f), EPS);
+        assertEquals(Boolean.valueOf(PreArmSlUtils.hitVal(100f, 80f, -0.20f)),
+                Boolean.valueOf(PreArmSlUtils.hit(100f, 80f)));
+        assertEquals(PreArmSlUtils.exitPriceVal(100f, 95f, 96f, -0.20f),
+                PreArmSlUtils.exitPrice(100f, 95f, 96f), EPS);
+    }
 }

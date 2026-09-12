@@ -420,6 +420,32 @@ public class Configs {
     //   KHONG final: unit test lat truc tiep.
     public static int TS_CAP_STRONG_RANK = Cfg.get("TS_CAP_STRONG_RANK") != null
             ? Integer.parseInt(Cfg.get("TS_CAP_STRONG_RANK").trim()) : 0;
+    // [SL-ADAPTIVE 2026-09-12] 3 lever SL tuy bien theo selRank (STRONG = rank<=N, WEAK = rank>N hoac null).
+    //   Default TAT (SIM_SL_ADAPT_* khong khai bao trong profile) => nhanh OFF chay nguyen code cu =>
+    //   byte-identical. Chi doc selRank co san tren orderMulti (khong plumbing). Xem docs/PREREG_SL_ADAPTIVE_SWEEP.md.
+    public static int SL_ADAPT_RANK_N = Cfg.get("SIM_SL_ADAPT_RANK_N") != null
+            ? Integer.parseInt(Cfg.get("SIM_SL_ADAPT_RANK_N").trim()) : 4;
+    // B — LOSER TIME-STOP theo rank (cum CHUA arm). STRONG giu 168h, WEAK cat 72h.
+    public static boolean SL_ADAPT_TSTOP = "1".equals(Cfg.get("SIM_SL_ADAPT_TSTOP"))
+            || "true".equalsIgnoreCase(Cfg.getOr("SIM_SL_ADAPT_TSTOP", ""));
+    public static int SL_ADAPT_TSTOP_STRONG_H = Cfg.get("SIM_SL_ADAPT_TSTOP_STRONG_H") != null
+            ? Integer.parseInt(Cfg.get("SIM_SL_ADAPT_TSTOP_STRONG_H").trim()) : 168;
+    public static int SL_ADAPT_TSTOP_WEAK_H = Cfg.get("SIM_SL_ADAPT_TSTOP_WEAK_H") != null
+            ? Integer.parseInt(Cfg.get("SIM_SL_ADAPT_TSTOP_WEAK_H").trim()) : 72;
+    // A — PRE-ARM HARD SL theo rank. STRONG=0 (giu/off), WEAK=-0.08 (cap -8%).
+    public static boolean SL_ADAPT_HARDSL = "1".equals(Cfg.get("SIM_SL_ADAPT_HARDSL"))
+            || "true".equalsIgnoreCase(Cfg.getOr("SIM_SL_ADAPT_HARDSL", ""));
+    public static float SL_ADAPT_HARDSL_STRONG = Cfg.get("SIM_SL_ADAPT_HARDSL_STRONG") != null
+            ? Float.parseFloat(Cfg.get("SIM_SL_ADAPT_HARDSL_STRONG").trim()) : 0f;
+    public static float SL_ADAPT_HARDSL_WEAK = Cfg.get("SIM_SL_ADAPT_HARDSL_WEAK") != null
+            ? Float.parseFloat(Cfg.get("SIM_SL_ADAPT_HARDSL_WEAK").trim()) : -0.08f;
+    // C — arm rate theo rank. STRONG=0.03, WEAK=0.05.
+    public static boolean SL_ADAPT_ARM = "1".equals(Cfg.get("SIM_SL_ADAPT_ARM"))
+            || "true".equalsIgnoreCase(Cfg.getOr("SIM_SL_ADAPT_ARM", ""));
+    public static float SL_ADAPT_ARM_STRONG = Cfg.get("SIM_SL_ADAPT_ARM_STRONG") != null
+            ? Float.parseFloat(Cfg.get("SIM_SL_ADAPT_ARM_STRONG").trim()) : 0.03f;
+    public static float SL_ADAPT_ARM_WEAK = Cfg.get("SIM_SL_ADAPT_ARM_WEAK") != null
+            ? Float.parseFloat(Cfg.get("SIM_SL_ADAPT_ARM_WEAK").trim()) : 0.05f;
     // [ABLATION 2026-09-02] env TIER_FLAT=1: bo he so budget theo tier (1.2/1.0/0.5 -> 1.0). Default off = byte-identical.
     public static final boolean TIER_FLAT = "1".equals(Cfg.get("TIER_FLAT"));
 
