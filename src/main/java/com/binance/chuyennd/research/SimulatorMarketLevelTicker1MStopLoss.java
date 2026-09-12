@@ -1010,6 +1010,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                 return;                          // het bac grid -> khong mo them leg
             }
             budget *= ratio;
+            if ("1".equals(System.getenv("SIZE_PROBE"))) { float _thr=1f-(marginRunning==null?0f:marginRunning)/balanceBasic/Configs.U_MAX; if(_thr<0f)_thr=0f; else if(_thr>1f)_thr=1f; LOG.info("[SIZE] lvl={} eq={} thr={} fbase={} ladder={} tier={} ratio={} budget={} pct={}", levelChange, balanceBasic, _thr, Configs.F_BASE, Configs.dcaGridTotalWeight(), tierMultiplier, ratio, budget, budget/balanceBasic); }
         }
 
         String symbolStr = SimpleSymbolMapper.getInstance().getSymbol(symbolId);
