@@ -230,8 +230,26 @@ public final class ShadowBookC3 {
      * nguoc lai {@code TS_MAX_GAP (0.08)} — CUNG HAM voi sim ({@code OrderTargetInfoTest.trailRate}).
      */
     static float trailRate(float peakRate, Float symbolPred) {
-        float pnp = symbolPred != null ? symbolPred : 1f;   // chua co selector -> coi nhu YEU
-        return TradeUtils.calRateLossDynamicBuyPNoPump(peakRate, pnp, Configs.tsPnoPumpWeakThr());
+        return trailRate(peakRate, symbolPred, null);
+    }
+
+    /**
+     * [LIVE_EQ_SIM] TRAIL_HINGE_NET015 (default OFF): khi BAT, ban le trailing STRONG/WEAK cua vi
+     * the SHADOW/PAPER dung net015-mapped cua symbol ({@code LATEST_SEL_MAPPRED}, DUNG gia tri
+     * gate + sim) thay cho {@code symbolPred} luc mo. Vi the LEGACY THAT di qua
+     * {@code BinanceOrderTradingManager.tsGap} -> {@code LATEST_SEL_PNOPUMP} (Funding), KHONG qua
+     * day => VAN dung Funding pNoPump. Flag TAT => dung {@code symbolPred} => byte-identical HEAD.
+     */
+    static float trailRate(float peakRate, Float symbolPred, String symbol) {
+        Float pnp = symbolPred;
+        if (symbol != null
+                && com.binance.chuyennd.tradecore.selector.TrailHingeSource.net015()) {
+            Float n = com.binance.chuyennd.trading.DetectEntrySignal2TradeNormal
+                    .LATEST_SEL_MAPPRED.get(symbol);
+            if (n != null) pnp = n;   // net015-mapped per-coin, dong bo voi gate + sim
+        }
+        float p = pnp != null ? pnp : 1f;   // chua co selector -> coi nhu YEU
+        return TradeUtils.calRateLossDynamicBuyPNoPump(peakRate, p, Configs.tsPnoPumpWeakThr());
     }
 
     /**
@@ -252,7 +270,7 @@ public final class ShadowBookC3 {
             if (p.priceSL == null) {
                 // (a) ARM: chi arm khi lai vuot nguong C3 0.07
                 if (rate > LiveProfileC3.ARM_RATE) {
-                    p.priceSL = p.entry * (1f + trailRate(p.peakRate, p.symbolPred));
+                    p.priceSL = p.entry * (1f + trailRate(p.peakRate, p.symbolPred, p.symbol));
                     dirty = true;
                     LOG.info("[SHADOW] arm {} peak={} SL={}", p.symbol, p.peakRate, p.priceSL);
                 } else if (now - p.tsOpen > LiveProfileC3.TIME_STOP_HOURS * 3600_000L) {
@@ -267,7 +285,7 @@ public final class ShadowBookC3 {
             }
             if (p.priceSL != null) {
                 // (c) RATCHET LIEN TUC — khong co dead-zone x5.21847 cua live
-                float nsl = p.entry * (1f + trailRate(p.peakRate, p.symbolPred));
+                float nsl = p.entry * (1f + trailRate(p.peakRate, p.symbolPred, p.symbol));
                 if (nsl > p.priceSL) {
                     p.priceSL = nsl;
                     dirty = true;

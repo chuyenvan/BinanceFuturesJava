@@ -531,6 +531,28 @@ public class DetectEntrySignal2TradeNormal {
         return true;
     }
 
+    /**
+     * [LIVE_EQ_SIM] net015-raw (1 - P(win)) cho DUNG thu tu {@code feats} cua tang-1, dung
+     * {@link com.binance.chuyennd.tradecore.selector.Net015ValueLive} — CUNG model + CUNG float[45]
+     * da cho vao Funding_Classifier_Final.onnx. Tra null (=> BO tick) khi model hong / thieu feature,
+     * KHONG doan bang pNoPump (giong luat C3). Chi goi khi SELECTOR_TIER1_NET015 BAT.
+     */
+    private float[] buildNet015Tier1(java.util.List<float[]> feats) {
+        com.binance.chuyennd.tradecore.selector.Net015ValueLive vm =
+                com.binance.chuyennd.tradecore.selector.Net015ValueLive.getInstance();
+        if (!vm.isReady() || feats == null || feats.isEmpty()) return null;
+        float[][] x = new float[feats.size()][];
+        for (int i = 0; i < feats.size(); i++) x[i] = feats.get(i);
+        float[] pwin = vm.pwin(x);
+        if (pwin == null) return null;
+        float[] out = new float[pwin.length];
+        for (int i = 0; i < pwin.length; i++) {
+            if (Float.isNaN(pwin[i])) return null;
+            out[i] = 1.0f - pwin[i];
+        }
+        return out;
+    }
+
     private java.util.Map<String, Float> buildRawNet015(TreeMap<Float, String> pool) {
         com.binance.chuyennd.tradecore.selector.Net015ValueLive vm =
                 com.binance.chuyennd.tradecore.selector.Net015ValueLive.getInstance();
@@ -659,25 +681,47 @@ public class DetectEntrySignal2TradeNormal {
 
             List<float[]> results = fundingBrain.predictBatch(featureArrays);
             float maxThres = Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD * Configs.AI_DYNAMIC_MAX;
+            // [LIVE_EQ_SIM] SELECTOR_TIER1_NET015 (default OFF): tang-1 universe/pool + maxThres cho
+            //   ENTRY MOI dung net015-raw thay pNoPump Funding, khop cach SIM dung universe. Funding
+            //   VAN chay tren de nuoi LATEST_SEL_PNOPUMP (duong legacy THAT). OFF => tier1Net015=null
+            //   => vong lap byte-identical HEAD.
+            float[] tier1Net015 = null;
+            boolean tier1Broken = false;
+            if (com.binance.chuyennd.tradecore.selector.SelectorTier1Source.net015()) {
+                tier1Net015 = buildNet015Tier1(featureArrays);
+                tier1Broken = (tier1Net015 == null);
+                if (tier1Broken) {
+                    LOG.error("[TIER1-NET015] net015 chua san sang tick nay -> BO ung vien tang-1 "
+                            + "(KHONG thay bang pNoPump)");
+                }
+            }
             for (int i = 0; i < aiCandidates.size(); i++) {
                 String sym = aiCandidates.get(i);
                 float[] preds = results.get(i);
                 symbol2FundingPred.put(sym, preds[0]);
-                LATEST_SEL_PNOPUMP.put(sym, preds[0]); // [PRED-GAP] P(no-pump) per-coin cho SL-loop
-                selectorRankPool.put(preds[0], sym); // [PARITY] pool day du (truoc loc maxThres) cho rank-mode
+                LATEST_SEL_PNOPUMP.put(sym, preds[0]); // [PRED-GAP] P(no-pump) LEGACY Funding (KHONG doi - duong that)
                 selPnp.put(sym, preds[0]);           // [C3-SHADOW] giu pNoPump theo symbol
                 if (com.binance.chuyennd.tradecore.selector.LiveProfileC3.on()
-                        || com.binance.chuyennd.tradecore.selector.GateValueSource.net015Raw()) {
+                        || com.binance.chuyennd.tradecore.selector.GateValueSource.net015Raw()
+                        || com.binance.chuyennd.tradecore.selector.SelectorTier1Source.net015()) {
                     // [L4] CUNG mang float[45] vua cho vao Funding_Classifier_Final.onnx —
                     // khong tinh them mot feature nao.
                     selFeat45.put(sym, featureArrays.get(i));
                 }
-                // 🔥 FILTER: Reject nếu Fail Prob > 0.3
-                if (preds[0] > maxThres) {
-//                    LOG.info("❌ [FILTER AI SYMBOL] {}: Prediction FAIL too high ({})", sym, probs[0]);
+                // [LIVE_EQ_SIM] diem so tang-1: MAC DINH = preds[0] (Funding) => byte-identical HEAD.
+                //   SELECTOR_TIER1_NET015 BAT => net015-raw; net015 hong => BO ung vien (giong C3).
+                float tier1Score = preds[0];
+                if (tier1Net015 != null) {
+                    if (tier1Broken) continue;
+                    tier1Score = tier1Net015[i];
+                }
+                selectorRankPool.put(tier1Score, sym); // [PARITY] pool day du (truoc loc maxThres) cho rank-mode
+                // FILTER: Reject neu Fail Prob > maxThres
+                if (tier1Score > maxThres) {
+//                    LOG.info("[FILTER AI SYMBOL] {}: Prediction FAIL too high ({})", sym, probs[0]);
                 } else {
-                    // Tự động sắp xếp: Key càng bé (ProbFail thấp) càng đứng đầu
-                    sortedCandidates.put(preds[0], sym);
+                    // Tu dong sap xep: Key cang be (ProbFail thap) cang dung dau
+                    sortedCandidates.put(tier1Score, sym);
                 }
             }
         }
