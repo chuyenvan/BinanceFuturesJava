@@ -89,3 +89,45 @@ Kaggle GPU seed 42, cung `g015_net_train.py`) vs x26 goc fold 20240101:
 
 Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_011zpgT8SsGrmcqzxbC93PQT
+
+---
+
+## 8. x26 2021 — KERNEL COMPLETE + PULL + INTEGRITY (cap nhat 2026-09-12)
+
+Kernel `chuyendinh/g015x26-2021-gpu` v1: **status COMPLETE** (failureMessage rong). Pull ve
+`/home/ubuntu/kg015x26_2021/g015x26-2021-gpu/out/` (3 model JSON + 3 bins + summary + log).
+device=cuda, seed=42, xgb 3.2.0, drop_cols=[] (full 45 feature = cong thuc x26).
+
+### 8.1 Integrity 3 fold (PASS)
+| cutoff | n_train | pos (train) | spw | n_oos = rec bins | NaN/inf | p0 min/mean/max |
+|---|---:|---:|---:|---:|:---:|---|
+| 20210401 | 702,071 | 0.3312 | 2.020 | 933,005 | 0/0 | 0.0166 / 0.4821 / 0.9953 |
+| 20210701 | 1,632,008 | 0.3140 | 2.185 | 999,162 | 0/0 | 0.0656 / 0.4406 / 0.9714 |
+| 20211001 | 2,628,041 | 0.2944 | 2.397 | 1,104,563 | 0/0 | 0.1007 / 0.4366 / 0.9849 |
+
+- record count bins = n_oos khop tuyet doi (filesize/26). pred KHONG NaN/inf. p0 trong (0,1) hop ly.
+- sha256 bins (tinh lai khi pull) = sha_bin trong `net_train_summary.json` ca 3 fold -> **self-consistent**.
+
+### 8.2 Base rate — dung ky vong (khong phai bat thuong)
+Base rate nhan `retEnd_4h>0.015` **doc lap tren toan 2021** (nBars_4h>=16, 3,768,122 dong) =
+**0.2690**. Vay pos train tung fold 2021 (0.29-0.33) la DUNG — 0.1849 la base TOAN CUC moi nam;
+2021 (futures som, bien dong manh) cao hon, khop g015ablv0 fold 20220101 pos=0.2699 (train tren
+ca 2021). pos giam dan 0.331 -> 0.294 khi cua so train mo rong trong 2021 (som cao hon). Khong
+phai anomaly.
+
+### 8.3 Manifest sha256 (3 fold x26 2021)
+File: `/home/ubuntu/kg015x26_2021/g015x26-2021-gpu/out/MANIFEST_DEV2021.sha256`
+```
+predict_wf_20210401.bin  933005   fd4b3bc7aaed9c318245e284a18221ed3bcd8f7e17caea537d1388566b50b2f9
+predict_wf_20210701.bin  999162   87b7d2e7a01cf84824ebe42982f127522fa5d8aa4d116dcf76b7cf0326473210
+predict_wf_20211001.bin  1104563  59e0241dd60fa2d1f6eac1830379c2e8b31a14ddb8cd1d265c6493592f9f898b
+```
+Model JSON: `model_f0_4h.json` (cut20210401), `model_f1` (20210701), `model_f2` (20211001).
+
+### 8.4 Phan quyet cap nhat
+- **x26 2021 + S1 2021 DONE, integrity PASS ca 5 fold.** DEV da mo lui ve 2021.
+- Con lai (pre-reg RIENG, cho master duyet): phan xu lai T170/GD92/GATESCALE tren fold 2021.
+- KHONG cham 242, KHONG push, KHONG train 2026, holdout 2026 nguyen ven.
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_011zpgT8SsGrmcqzxbC93PQT
