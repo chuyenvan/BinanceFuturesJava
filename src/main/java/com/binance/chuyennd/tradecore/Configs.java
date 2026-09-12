@@ -498,6 +498,13 @@ public class Configs {
         try {
             String v;
             if ((v = Cfg.get("SIM_MIN_MOMENTUM_15M")) != null) MIN_MOMENTUM_15M = Float.parseFloat(v);
+            // [2026-09-12 GATESCALE] do doc gate dyn (docs/PREREG_GATESCALE.md): nhan 1 he so vao
+            //   KET QUA dyn_thr da tinh trong EntryGate. Doc 1 lan o day (khong nong). Khong khai /
+            //   <=0 => giu 1.0f => x*1.0f IEEE-exact => byte-identical.
+            if ((v = Cfg.get("SIM_GATE_DYN_SCALE")) != null) {
+                float gs = Float.parseFloat(v.trim());
+                if (gs > 0f) EntryGate.GATE_DYN_SCALE = gs;
+            }
             // [L7 2026-09-11] SIM_AI_DYNAMIC_MIN / SIM_AI_DYNAMIC_MULTIPLIER da XOA: hai he so do
             //   nay la HANG SO trong com.binance.chuyennd.tradecore.EntryGate (gate chi con MOT knob
             //   la SIM_MIN_MOMENTUM_15M). Khong profile/env nao tung khai hai key do

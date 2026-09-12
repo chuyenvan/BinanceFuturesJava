@@ -47,6 +47,16 @@ public final class EntryGate {
     /** He so nhan (cu: {@code Configs.AI_DYNAMIC_MULTIPLIER}). */
     public static final float DYN_MULT = 1.28760f;
 
+    /**
+     * He so nhan them vao KET QUA dyn_thr da tinh (docs/PREREG_GATESCALE.md). Doc DUNG MOT LAN
+     * luc {@code Configs} nap (key {@code SIM_GATE_DYN_SCALE}); khong khai / {@code <=0} => 1.0f
+     * => {@code x*1.0f} IEEE-exact => byte-identical. {@code >1} = gate CHAT hon (it lenh),
+     * {@code <1} = LONG hon (nhieu lenh). KHONG doc Cfg moi lan goi (nong). Chi ap o nhanh dyn
+     * ({@code symbolPred != null}); nhanh nguong CO SO ({@code symbolPred == null}: BIG_DOWN /
+     * DCA_LEVEL1 / leg market-signal) KHONG bi scale.
+     */
+    public static float GATE_DYN_SCALE = 1.0f;
+
     private EntryGate() {
     }
 
@@ -60,7 +70,7 @@ public final class EntryGate {
     public static float threshold(float thrBase, Float symbolPred) {
         if (symbolPred == null) return thrBase;
         float scale = (symbolPred / SCORE_BASE) * DYN_MULT;
-        return thrBase * Math.max(DYN_MIN, scale);
+        return thrBase * Math.max(DYN_MIN, scale) * GATE_DYN_SCALE;
     }
 
     /** Nguong voi {@code thrBase} lay thang tu cau hinh dang chay. */

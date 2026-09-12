@@ -493,6 +493,12 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         LOG.info("[PROFILE] days={} readMs={} simMs={} (read={}% sim={}%) totalLoopMs={}",
                 dayCount, readMs, simMs,
                 _tot > 0 ? (100 * readMs / _tot) : 0, _tot > 0 ? (100 * simMs / _tot) : 0, _tot);
+        // [2026-09-12 GATESCALE] mot dong tong ket cong entry tang 2 cho sim (docs/PREREG_GATESCALE.md):
+        //   scale = he so gate dyn dang chay; base = nguong CO SO; n_cand = tin hieu qua cong (tru BIG_DOWN);
+        //   n_pass = so PASS. Thuan LOG, KHONG doi printDone => parity byte-identical khi scale=1.0.
+        LOG.info("[GATE] scale={} base={} n_cand={} n_pass={}",
+                com.binance.chuyennd.tradecore.EntryGate.GATE_DYN_SCALE,
+                Configs.MIN_MOMENTUM_15M, ablationSignalSeen, ablationPassCount);
         Utils.printMemoryUse(System.currentTimeMillis() - timeSimulator);
     }
 

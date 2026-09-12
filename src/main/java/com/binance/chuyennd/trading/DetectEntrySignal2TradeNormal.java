@@ -398,7 +398,8 @@ public class DetectEntrySignal2TradeNormal {
             //   n_pass = n_cand - n_rej (n_rej chi dem REJECT do gate, gom trong predictRejects).
             //   verify.sh cua goi deploy doc dung dong nay. Thuan LOG, khong doi quyet dinh.
             if (gateCand > 0) {
-                LOG.info("[GATE] topk={} base={} thr=[{}..{}] n_cand={} n_rej={} n_pass={}",
+                LOG.info("[GATE] scale={} topk={} base={} thr=[{}..{}] n_cand={} n_rej={} n_pass={}",
+                        String.format("%.4f", com.binance.chuyennd.tradecore.EntryGate.GATE_DYN_SCALE),
                         Configs.SELECTOR_RANK_TOPK,
                         String.format("%.5f", Configs.MIN_MOMENTUM_15M),
                         gateThrMin == null ? "-" : String.format("%.5f", gateThrMin),
