@@ -363,6 +363,24 @@ public class DetectEntrySignal2TradeNormal {
                         + "(KHONG thay bang pNoPump)", time);
                 selPool = new TreeMap<>();
             }
+            // [TIER-1 net015-raw] flag SELECTOR_GATE_NET015_RAW: doi NGUON gia tri gate sang
+            // net015-raw (1 - P(win)), KHONG quantile-map (map can S1 = tier-2). Chi khi KHONG
+            // dung C3 mapped. Flag OFF => nhanh nay khong chay => byte-identical HEAD.
+            if (!s1Order && com.binance.chuyennd.tradecore.selector.GateValueSource.net015Raw()) {
+                java.util.Map<String, Float> rawPred = buildRawNet015(selPool);
+                if (rawPred == null) {
+                    LOG.error("[NET015-RAW] chua co gia tri net015 cho tick {} -> BO tick "
+                            + "(KHONG thay bang pNoPump)", time);
+                    selPool = new TreeMap<>();
+                } else {
+                    TreeMap<Float, String> rk = new TreeMap<>();
+                    for (Map.Entry<Float, String> e : selPool.entrySet()) {
+                        Float v = rawPred.get(e.getValue());
+                        if (v != null) rk.put(v, e.getValue());
+                    }
+                    selPool = rk;
+                }
+            }
             int rank = 0;
             // [GATE 2026-09-11] dem ung vien THAT su di qua cong entry cua tick nay, de in
             //   mot dong tong ket/tick (xem cuoi vong lap). Chi la LOG — khong doi quyet dinh nao.
@@ -513,6 +531,25 @@ public class DetectEntrySignal2TradeNormal {
         return true;
     }
 
+    private java.util.Map<String, Float> buildRawNet015(TreeMap<Float, String> pool) {
+        com.binance.chuyennd.tradecore.selector.Net015ValueLive vm =
+                com.binance.chuyennd.tradecore.selector.Net015ValueLive.getInstance();
+        if (!vm.isReady()) return null;
+        java.util.List<String> uni = new ArrayList<>();
+        for (String sym : pool.values()) if (selFeat45.containsKey(sym)) uni.add(sym);
+        if (uni.isEmpty()) return null;
+        float[][] x = new float[uni.size()][];
+        for (int i = 0; i < uni.size(); i++) x[i] = selFeat45.get(uni.get(i));
+        float[] pwin = vm.pwin(x);
+        if (pwin == null) return null;
+        java.util.Map<String, Float> out = new HashMap<>();
+        for (int i = 0; i < uni.size(); i++) {
+            if (Float.isNaN(pwin[i])) return null;
+            out.put(uni.get(i), 1.0f - pwin[i]);
+        }
+        return out;
+    }
+
     private Float getSymbolPred(TreeMap<Float, String> sortedCandidates, String symbol) {
 
         if (sortedCandidates == null || symbol == null) {
@@ -629,7 +666,8 @@ public class DetectEntrySignal2TradeNormal {
                 LATEST_SEL_PNOPUMP.put(sym, preds[0]); // [PRED-GAP] P(no-pump) per-coin cho SL-loop
                 selectorRankPool.put(preds[0], sym); // [PARITY] pool day du (truoc loc maxThres) cho rank-mode
                 selPnp.put(sym, preds[0]);           // [C3-SHADOW] giu pNoPump theo symbol
-                if (com.binance.chuyennd.tradecore.selector.LiveProfileC3.on()) {
+                if (com.binance.chuyennd.tradecore.selector.LiveProfileC3.on()
+                        || com.binance.chuyennd.tradecore.selector.GateValueSource.net015Raw()) {
                     // [L4] CUNG mang float[45] vua cho vao Funding_Classifier_Final.onnx —
                     // khong tinh them mot feature nao.
                     selFeat45.put(sym, featureArrays.get(i));
