@@ -6,6 +6,14 @@ Sau khi xong: doi status thanh `DONE <commit>`, ghi ket qua vao doc rieng, commi
 
 ---
 
+## ✅ GATESCALE -- do doc gate dyn scale (0.80/1.30/1.70) tren 48 thang  [DONE 71a713f + RESULT]
+
+`docs/PREREG_GATESCALE.md` (1985a81) / `docs/RESULT_GATESCALE.md`. Code+parity 71a713f. Key `SIM_GATE_DYN_SCALE`
+-> `EntryGate.GATE_DYN_SCALE` (scale=1.0 byte-identical: X1_GS_OFF md5 2478e90d = PARITY_R; 0 dong [GATE] scale!=1.0).
+3 bien the khoa L80/T130/T170. **0/3 PASS** (d CAGR paired block-21 deu AM, khong vuot 1.4823*sd_boot): L80 d=-12.9pp
+(CI tren<0 = am ro, + vi pham nam am 2025) => gate LONG hon THUA; T130 d=-8.3pp (+ them vi pham maxDD 2025) => chat 30%
+xau di; T170 d=-3.9pp (CI om 0) => KHONG phan biet duoc du qua HET rang buoc cung ca 4 nam (rui ro tot hon: UW 92 vs 227).
+Cach doc B4 nhanh (b): GIU gate incumbent, KHONG forward, KHONG doi production. Ky vong ghi truoc NULL — KHOP.
 ## 🔴 L6 GATE-DYN FIX -- bat gate dong tang 2 tren LIVE rank-mode  [SOAN XONG / **BLOCKED: cho user duyet deploy**]
 
 `docs/L6_GATE_DYN_FIX.md`. Bo dieu kien `SELECTOR_RANK_TOPK <= 0` o `DetectEntrySignal2TradeNormal`
