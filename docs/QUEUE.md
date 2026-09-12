@@ -980,7 +980,7 @@ KHONG restart, KHONG sua env, KHONG rollback tu dong — chi bao.
 
 ---
 
-## L7 — LEAN GATE (`EntryGate`)  [🔴 CHO USER DUYET DEPLOY — code+parity XONG]
+## L7 — LEAN GATE (`EntryGate`)  [✅ DEPLOYED 242 12/09/2026 09:06 — jar user build `bb582099…` (PrivateConfig that; Oracle build `35ffb41c` la STUB key -> -2014, xem SHADOW_LOG)]
 `docs/L7_LEAN_GATE.md`. Goi `/home/ubuntu/deploy_242_l7/`, jar sha256 `35ffb41c…`. **242 chua cham.**
 - Cong entry tang 2 gop ve MOT class `tradecore/EntryGate` (sim + live cung goi), gate tu 4 knob -> **1**
   (`SIM_MIN_MOMENTUM_15M`) => **`conf/env.sh` 242 KHONG doi**. Xoa 4 co che tro (10 key, 1 class),
