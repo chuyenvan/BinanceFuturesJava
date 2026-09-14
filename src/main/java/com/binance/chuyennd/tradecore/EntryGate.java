@@ -57,6 +57,15 @@ public final class EntryGate {
      */
     public static float GATE_DYN_SCALE = 1.0f;
 
+    /** [REGIME] docs/PREREG_REGIME_GATE.md: gate scale doi theo regime BTC 30d. default OFF => byte-identical. */
+    public static boolean GATE_REGIME_ADAPTIVE = false;
+    /** Scale khi regime UP (uptrend BTC 30d): = T100. HANG SO pre-reg, KHONG fit. */
+    public static final float REGIME_SCALE_UP = 1.00f;
+    /** Scale khi regime NOT-UP (chop/down): = T170. HANG SO pre-reg, KHONG fit. */
+    public static final float REGIME_SCALE_NOTUP = 1.70f;
+    /** Scale theo-tick do simulator dat moi tick khi GATE_REGIME_ADAPTIVE bat (RegimeSchedule.scaleForTime). */
+    public static float CURRENT_REGIME_SCALE = REGIME_SCALE_NOTUP;
+
     private EntryGate() {
     }
 
@@ -70,7 +79,8 @@ public final class EntryGate {
     public static float threshold(float thrBase, Float symbolPred) {
         if (symbolPred == null) return thrBase;
         float scale = (symbolPred / SCORE_BASE) * DYN_MULT;
-        return thrBase * Math.max(DYN_MIN, scale) * GATE_DYN_SCALE;
+        float gateScale = GATE_REGIME_ADAPTIVE ? CURRENT_REGIME_SCALE : GATE_DYN_SCALE;
+        return thrBase * Math.max(DYN_MIN, scale) * gateScale;
     }
 
     /** Nguong voi {@code thrBase} lay thang tu cau hinh dang chay. */

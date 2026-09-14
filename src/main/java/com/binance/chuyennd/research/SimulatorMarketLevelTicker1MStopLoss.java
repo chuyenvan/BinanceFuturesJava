@@ -153,6 +153,18 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         // [PROFILE] đo tách thời gian ĐỌC kline vs SIMULATE (đo không đoán)
         long readMs = 0, simMs = 0;
         int dayCount = 0;
+        // [REGIME] docs/PREREG_REGIME_GATE.md: nap lich regime (hoac ep hang so cho cong 2-cuc).
+        if (EntryGate.GATE_REGIME_ADAPTIVE) {
+            if (Configs.SIM_REGIME_FORCE != null && !Configs.SIM_REGIME_FORCE.isEmpty()) {
+                RegimeSchedule.force(Configs.SIM_REGIME_FORCE);
+                LOG.info("[REGIME] adaptive ON force={} (UP=>{} NOTUP=>{})", Configs.SIM_REGIME_FORCE,
+                        EntryGate.REGIME_SCALE_UP, EntryGate.REGIME_SCALE_NOTUP);
+            } else {
+                RegimeSchedule.load(Configs.SIM_REGIME_FILE);
+                LOG.info("[REGIME] adaptive ON file={} (UP=>{} NOTUP=>{})", Configs.SIM_REGIME_FILE,
+                        EntryGate.REGIME_SCALE_UP, EntryGate.REGIME_SCALE_NOTUP);
+            }
+        }
         while (true) {
             TreeMap<Long, KlineObjectSimple[]> time2Tickers;
             // TASK-112: nguồn ticker TƯỜNG MINH theo config per-box TICKER_SOURCE (aerospike|file) + fail-fast.
@@ -188,6 +200,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                     dayCount++;
                     for (Map.Entry<Long, KlineObjectSimple[]> entry : time2Tickers.entrySet()) {
                         Long time = entry.getKey();
+                            // [REGIME] dat scale gate theo UTC-day cua tick (1 lan/tick, truoc createOrder).
+                            if (EntryGate.GATE_REGIME_ADAPTIVE) EntryGate.CURRENT_REGIME_SCALE = RegimeSchedule.scaleForTime(time);
                         try {
                             long startTimeRun = System.currentTimeMillis();
                             KlineObjectSimple[] symbol2Ticker = entry.getValue();
