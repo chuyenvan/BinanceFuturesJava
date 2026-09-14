@@ -251,6 +251,51 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                             logByProcessTime(startTimeRun, "Done update order", time);
                             startTimeRun = System.currentTimeMillis();
 
+                            // === [DCA-SIGNAL V2 2026-09-14] docs/PREREG_DCA_SIGNAL_GATE_V2.md muc 3 + 7 ===
+                            //  (1) TIE-BREAK: hai lan goi DcaProcessor.getDCA ben duoi chay TRUOC vong
+                            //      chosenCands, nen de signal-gate duoc UU TIEN ta phai GIU CHO tu day:
+                            //      symbol vua nam trong top-K vua thoa (a)(b)(d) => grid BO QUA tick nay.
+                            //  (2) PHIEU LOC: T1 = cum tung cham nguong X; T2 = cham X tai tick DA qua
+                            //      cooldown. T3 (thuc su ban) doc tu printDone.csv. Thuan dem/log.
+                            //  Ca khoi chi chay khi DCA_SIGNAL_GATE=true => flag OFF byte-identical.
+                            if (Configs.DCA_SIGNAL_GATE) {
+                                dsReserved.clear();
+                                if (dsTouchX == null) {
+                                    dsTouchX = new long[symbol2OrderRunning.length];
+                                    dsTouchXCd = new long[symbol2OrderRunning.length];
+                                }
+                                for (int i = 0; i < activeRunningCount; i++) {
+                                    short id = activeRunningIds[i];
+                                    OrderTargetInfoTest cl = symbol2OrderRunning[id];
+                                    KlineObjectSimple tk = symbol2Ticker[id];
+                                    if (cl == null || tk == null || cl.firstEntryPrice == null
+                                            || cl.firstEntryPrice <= 0f) continue;
+                                    if (tk.priceClose / cl.firstEntryPrice - 1f > Configs.DCA_SIGNAL_LOSS) continue;
+                                    long t0 = cl.clusterFirstLegTime > 0L ? cl.clusterFirstLegTime : cl.timeStart;
+                                    if (dsTouchX[id] != t0) {
+                                        dsTouchX[id] = t0;
+                                        dsT1++;
+                                        LOG.info("DS_T1 sym={} tOpen={} t={}", id, t0, time);
+                                    }
+                                    if (time - t0 < (long) Configs.DCA_SIGNAL_COOLDOWN_MIN * Utils.TIME_MINUTE) continue;
+                                    if (dsTouchXCd[id] != t0) {
+                                        dsTouchXCd[id] = t0;
+                                        dsT2++;
+                                        LOG.info("DS_T2 sym={} tOpen={} t={}", id, t0, time);
+                                    }
+                                }
+                                long[] dsPred = time2SymbolPred.get(time);
+                                if (dsPred != null) {
+                                    for (long enc : selectCands(dsPred)) {
+                                        short sid = (short) (enc >> 32);
+                                        KlineObjectSimple tk = symbol2Ticker[sid];
+                                        if (tk != null && isSymbolRunning(sid) && dcaSignalEligible(sid, tk, time)) {
+                                            dsReserved.add(sid);
+                                        }
+                                    }
+                                }
+                            }
+
                             MarketDataObject marketData = time2MarketData.get(time);
                             Set<Short> symbolLocked = new HashSet<>();
                             MarketLevelChange levelChange = null;
@@ -279,6 +324,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                     Map<Short, OrderTargetInfoTest> activeOrderMap = getActiveOrderMap();
                                     List<Short> symbolDcaLevel = DcaProcessor.getDCA(levelChange, time,
                                             BudgetManagerSimple.getInstance().getBudget(), activeOrderMap);
+                                    // [DCA-SIGNAL V2] tie-break: nhuong tick nay cho signal-gate (neu co).
+                                    symbolDcaLevel = dsFilterGrid(symbolDcaLevel, time);
 
                                     // SELECTOR_ONLY_ENTRY=1 -> bo qua leg market-signal Best-N (FOMO), co lap selector.
                                     // Default false -> chay leg nay -> byte-identical.
@@ -307,6 +354,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                             if (marketData != null) {
                                 if (MarketBigChangeDetector.isDcaAlt(marketData.rateDown15MAvg, marketData.rateDownAvg, marketData.rateUpAvg)) {
                                     List<Short> symbolDcaLossBig = DcaProcessor.getDCA(null, time, BudgetManagerSimple.getInstance().getBudget(), getActiveOrderMap());
+                                    // [DCA-SIGNAL V2] tie-break: nhuong tick nay cho signal-gate (neu co).
+                                    symbolDcaLossBig = dsFilterGrid(symbolDcaLossBig, time);
                                     for (short symbolId : symbolDcaLossBig) {
                                         KlineObjectSimple ticker = symbol2Ticker[symbolId];
                                         if (Utils.isTickerAvailable(ticker)) {
@@ -320,28 +369,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                 // 🔥 BƯỚC 3: FUNDING FEE SIÊU TỐC (ĐÃ PRE-CALCULATE SORT SẴN) 🔥
                                 long[] symbol2Pred = time2SymbolPred.get(time);
                                 if (symbol2Pred != null) {
-                                    java.util.List<Long> chosenCands = new java.util.ArrayList<>();
-                                    if (Configs.SELECTOR_RANK_TOPK > 0) {
-                                        // RANK-BASED TOP-K (2026-07-28, Probe A go/no-go): BO QUA absolute maxThres/nPass,
-                                        //  chon K coin score THAP nhat per timestamp (symbol2Pred sort tang -> k phan tu dau).
-                                        //  Tu-chuan-hoa theo regime: khong starve luc yeu (nPass=0 van admit K), khong flood
-                                        //  luc manh.
-                                        int nSel = Math.min(Configs.SELECTOR_RANK_TOPK, symbol2Pred.length);
-                                        for (int i = 0; i < nSel; i++) chosenCands.add(symbol2Pred[i]);
-                                    } else {
-                                        // TOPK<=0 -> cutoff TUYET DOI: moi coin qua tran ung vien.
-                                        // [L7] maxThres/nPass tinh O DAY, khong tinh o rank-mode nua: rank-mode
-                                        //   BO HAN tang 1 (docs/LEAN_GATE_AUDIT.md muc 3.5) nen truoc day day la
-                                        //   phep tinh chet chay moi tick. Nhanh nay VAN SONG (profile khong khai
-                                        //   SELECTOR_RANK_TOPK => -1) nen KHONG duoc xoa han.
-                                        float maxThres = Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD * Configs.AI_DYNAMIC_MAX;
-                                        int nPass = 0;
-                                        for (long e : symbol2Pred) {
-                                            if (Float.intBitsToFloat((int) e) > maxThres) break;
-                                            nPass++;
-                                        }
-                                        for (int i = 0; i < nPass; i++) chosenCands.add(symbol2Pred[i]);
-                                    }
+                                    java.util.List<Long> chosenCands = selectCands(symbol2Pred);
                                     // [TICKLOG] read-only: ngu canh tick (pool/nPass/nCand) + pool bi top-K loai.
                                     int _tlRank = -1;
                                     if (TickDecisionLog.ON) {
@@ -524,6 +552,11 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         LOG.info("[GATE] scale={} base={} n_cand={} n_pass={}",
                 com.binance.chuyennd.tradecore.EntryGate.GATE_DYN_SCALE,
                 Configs.MIN_MOMENTUM_15M, ablationSignalSeen, ablationPassCount);
+        // [DCA-SIGNAL V2 2026-09-14] phieu loc 3 tang (T3 doc tu printDone.csv) + so lan tie-break.
+        if (Configs.DCA_SIGNAL_GATE) {
+            LOG.info("[DS-FUNNEL] X={} cooldownMin={} T1_touchX={} T2_postCooldown={} tieBreak={}",
+                    Configs.DCA_SIGNAL_LOSS, Configs.DCA_SIGNAL_COOLDOWN_MIN, dsT1, dsT2, dsTieBreak);
+        }
         Utils.printMemoryUse(System.currentTimeMillis() - timeSimulator);
     }
 
@@ -549,6 +582,67 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                 return;
             }
         }
+    }
+
+    // ===== [DCA-SIGNAL V2 2026-09-14] docs/PREREG_DCA_SIGNAL_GATE_V2.md — tie-break voi grid DCA cu
+    //   + phieu loc 3 tang. TAT CA chi song khi Configs.DCA_SIGNAL_GATE=true => flag OFF byte-identical.
+    /** Symbol da duoc signal-gate GIU CHO trong tick hien tai (grid phai nhuong). Reset moi tick. */
+    private final Set<Short> dsReserved = new HashSet<>();
+    /** clusterFirstLegTime cua cum da dem o tang T1 (tung cham nguong X), theo symbolId. */
+    private long[] dsTouchX;
+    /** ... T2 (cham X tai mot tick DA qua cooldown). */
+    private long[] dsTouchXCd;
+    private long dsT1 = 0L, dsT2 = 0L, dsTieBreak = 0L;
+
+    /**
+     * [DCA-SIGNAL V2] Tie-break: bo khoi danh sach ung vien GRID cac symbol da duoc signal-gate giu cho
+     * trong tick nay (luat: moi symbol moi tick toi da MOT leg, signal-gate uu tien). Grid KHONG mat —
+     * neu cong AI tu choi thi tick sau grid ban lai (gia van duoi nguong).
+     * Flag OFF hoac khong giu cho ai => tra ve DUNG list cu (cung tham chieu) => byte-identical.
+     */
+    private List<Short> dsFilterGrid(List<Short> cands, long time) {
+        if (!Configs.DCA_SIGNAL_GATE || dsReserved.isEmpty() || cands == null || cands.isEmpty()) return cands;
+        List<Short> out = new ArrayList<>(cands.size());
+        for (Short id : cands) {
+            if (id != null && dsReserved.contains(id)) {
+                dsTieBreak++;
+                LOG.info("DS_TIEBREAK sym={} t={}", id, time);
+                continue;
+            }
+            out.add(id);
+        }
+        return out;
+    }
+
+    /**
+     * Phep chon ung vien cua MOT tick — tach nguyen van khoi vong tick (2026-09-14, V2) de tap
+     * {@code dsReserved} cua tie-break dung CHINH phep chon nay, khong viet lai ban thu hai co the troi.
+     * Khong doi mot bieu thuc nao => byte-identical.
+     *
+     * <p>RANK-BASED TOP-K (2026-07-28, Probe A go/no-go): BO QUA absolute maxThres/nPass, chon K coin
+     * score THAP nhat per timestamp (symbol2Pred sort tang -> k phan tu dau). Tu-chuan-hoa theo regime:
+     * khong starve luc yeu (nPass=0 van admit K), khong flood luc manh.
+     *
+     * <p>TOPK&lt;=0 -> cutoff TUYET DOI: moi coin qua tran ung vien. [L7] maxThres/nPass tinh O DAY,
+     * khong tinh o rank-mode nua: rank-mode BO HAN tang 1 (docs/LEAN_GATE_AUDIT.md muc 3.5) nen truoc
+     * day day la phep tinh chet chay moi tick. Nhanh nay VAN SONG (profile khong khai SELECTOR_RANK_TOPK
+     * => -1) nen KHONG duoc xoa han.
+     */
+    static java.util.List<Long> selectCands(long[] symbol2Pred) {
+        java.util.List<Long> chosenCands = new java.util.ArrayList<>();
+        if (Configs.SELECTOR_RANK_TOPK > 0) {
+            int nSel = Math.min(Configs.SELECTOR_RANK_TOPK, symbol2Pred.length);
+            for (int i = 0; i < nSel; i++) chosenCands.add(symbol2Pred[i]);
+        } else {
+            float maxThres = Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD * Configs.AI_DYNAMIC_MAX;
+            int nPass = 0;
+            for (long e : symbol2Pred) {
+                if (Float.intBitsToFloat((int) e) > maxThres) break;
+                nPass++;
+            }
+            for (int i = 0; i < nPass; i++) chosenCands.add(symbol2Pred[i]);
+        }
+        return chosenCands;
     }
 
     /**
