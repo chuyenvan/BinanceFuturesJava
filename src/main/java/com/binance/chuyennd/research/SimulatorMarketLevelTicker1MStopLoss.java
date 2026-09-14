@@ -371,6 +371,17 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                             } else if (TickDecisionLog.ON) {
                                                 TickDecisionLog.candNoTicker(time, targetId, MarketLevelChange.PREDICT_SYMBOL_TRADE, symbolPred);
                                             }
+                                        } else if (Configs.DCA_SIGNAL_GATE) {
+                                            // [DCA-SIGNAL 2026-09-14] docs/PREREG_DCA_SIGNAL_GATE.md — NHANH DUY NHAT duoc them.
+                                            //   Binh thuong symbol dang co vi the bi LOAI khoi ung vien (dieu kien tren). O day:
+                                            //   neu cum do moi co leg-signal = 0, da lo >= |DCA_SIGNAL_LOSS| tren firstEntryPrice va
+                                            //   qua cooldown, thi cho no di TIEP y het mot lenh moi — gate AI + sizing nam trong
+                                            //   createOrder nen day la TAI SU DUNG pipeline admit, khong phai luat rieng.
+                                            KlineObjectSimple ticker = symbol2Ticker[targetId];
+                                            if (Utils.isTickerAvailable(ticker) && dcaSignalEligible(targetId, ticker, time)) {
+                                                createOrderBuyDcaSignal(targetId, ticker, MarketLevelChange.PREDICT_SYMBOL_TRADE,
+                                                        marketData, symbolPred, selRank);
+                                            }
                                         }
                                     }
                                 }
@@ -538,6 +549,48 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                 return;
             }
         }
+    }
+
+    /**
+     * [DCA-SIGNAL 2026-09-14] So leg cua cum tinh vao BAC GRID DCA = cac leg KHONG phai leg-signal.
+     * Khi {@link Configs#DCA_SIGNAL_GATE} = false thi khong leg nao la signal nen tra ve dung
+     * {@code legs.size()} — y het bieu thuc cu => byte-identical.
+     */
+    static int gridLegCount(List<OrderTargetInfoTest> legs) {
+        if (legs == null) return 0;
+        if (!Configs.DCA_SIGNAL_GATE) return legs.size();
+        int n = 0;
+        for (OrderTargetInfoTest lg : legs) {
+            if (lg != null && !lg.dcaSignalLeg) n++;
+        }
+        return n;
+    }
+
+    /**
+     * [DCA-SIGNAL 2026-09-14] docs/PREREG_DCA_SIGNAL_GATE.md muc 3.3 — dieu kien (a) (b) (d).
+     *
+     * <p>Dieu kien (c) — "symbol phai DOC LAP pass dung pipeline admit lenh moi" — CO TINH nhung
+     * KHONG kiem o day, vi no da duoc thuc thi BANG CHINH duong code: ham nay chi duoc goi tu vong
+     * lap {@code chosenCands} (= top-K cua tick, cung mang {@code symbol2Pred} sort tang ma lenh moi
+     * dung), va leg tao ra van di qua {@code aiRejectFilter.entryGate(...)} ben trong
+     * {@code createOrder}. Tuc la tai su dung NGUYEN VEN cong gate + rank, khong tinh lai.
+     */
+    private boolean dcaSignalEligible(short symbolId, KlineObjectSimple ticker, long time) {
+        OrderTargetInfoTest cluster = symbol2OrderRunning[symbolId];
+        if (cluster == null || cluster.firstEntryPrice == null || cluster.firstEntryPrice <= 0f) return false;
+        List<OrderTargetInfoTest> legs = symbol2OrdersEntry[symbolId];
+        if (legs == null || legs.isEmpty()) return false;
+        // (a) TRAN: toi da MOT leg-signal moi cum. Leg grid DCA cu KHONG tinh vao tran nay
+        //     (hai co che doc lap — grid chi ban o -50/-75/-90%).
+        for (OrderTargetInfoTest lg : legs) {
+            if (lg != null && lg.dcaSignalLeg) return false;
+        }
+        // (d) cooldown ke tu leg DAU cua cum (tranh nhieu intra-bar).
+        long t0 = cluster.clusterFirstLegTime > 0L ? cluster.clusterFirstLegTime : cluster.timeStart;
+        if (time - t0 < (long) Configs.DCA_SIGNAL_COOLDOWN_MIN * Utils.TIME_MINUTE) return false;
+        // (b) muc lo do tren firstEntryPrice (BAT BIEN qua DCA) — cung convention DcaUtils.shouldDcaGrid.
+        float drop = ticker.priceClose / cluster.firstEntryPrice - 1f;
+        return drop <= Configs.DCA_SIGNAL_LOSS;
     }
 
     private boolean isSymbolRunning(short id) {
@@ -875,7 +928,9 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         // clusterFirstLegTime — TUYỆT ĐỐI KHÔNG đụng timeStart (=leg-cuối, là tham chiếu logic mở/đóng;
         // đổi nó làm rò funding vào giao dịch → +69 lệnh, vỡ GATE). timeStart giữ nguyên gốc = leg-cuối.
         orderResult.clusterFirstLegTime = time2Order.firstEntry().getKey();
-        orderResult.legCount = orders.size();   // DCA GRID: cum dang o bac nao
+        // [DCA-SIGNAL 2026-09-14] bac grid cua cum KHONG dem leg-signal (PREREG muc 3.4).
+        //   Flag OFF => gridLegCount(orders) == orders.size() => byte-identical.
+        orderResult.legCount = gridLegCount(orders);   // DCA GRID: cum dang o bac nao
         // [2026-09-02] FUNDING notional MARK: carry phan da tich + moc settle cuoi sang cum moi (khong tinh trung/khong mat).
         if (Configs.FUNDING_MARK_NOTIONAL && prevRunning != null) {
             orderResult.fundingAccrued = prevRunning.fundingAccrued;
@@ -927,6 +982,12 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         createOrder(OrderSide.BUY, symbolId, ticker, levelChange, marketData, symbolPred, selRank);
     }
 
+    /** [DCA-SIGNAL 2026-09-14] leg-2 nhoi theo TIN HIEU — docs/PREREG_DCA_SIGNAL_GATE.md muc 3.3. */
+    public void createOrderBuyDcaSignal(short symbolId, KlineObjectSimple ticker, MarketLevelChange levelChange,
+                                        MarketDataObject marketData, Float symbolPred, Integer selRank) {
+        createOrder(OrderSide.BUY, symbolId, ticker, levelChange, marketData, symbolPred, selRank, true);
+    }
+
 
     /**
      * Loi tao lenh dung chung cho ca 2 CHIEU (mot bo nao — tranh drift long/short). Toan bo
@@ -943,6 +1004,16 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     /** [X3] Nhu tren, co them RANK selector cua tick (null = khong di qua selector). */
     private void createOrder(OrderSide side, short symbolId, KlineObjectSimple ticker, MarketLevelChange levelChange,
                              MarketDataObject marketData, Float symbolPred, Integer selRank) {
+        createOrder(side, symbolId, ticker, levelChange, marketData, symbolPred, selRank, false);
+    }
+
+    /**
+     * [DCA-SIGNAL 2026-09-14] docs/PREREG_DCA_SIGNAL_GATE.md.
+     * {@code dcaSignal=true} = leg-2 nhoi THEO TIN HIEU (da qua top-K + EntryGate y het lenh moi).
+     * Goi voi false => hanh vi cu byte-identical (chi them mot stack-frame).
+     */
+    private void createOrder(OrderSide side, short symbolId, KlineObjectSimple ticker, MarketLevelChange levelChange,
+                             MarketDataObject marketData, Float symbolPred, Integer selRank, boolean dcaSignal) {
 
 
 
@@ -1038,13 +1109,20 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         //   chi doi CACH RAI von theo do sau. Mac dinh DCA_GRID_ENABLED=false -> byte-identical.
         if (Configs.DCA_GRID_ENABLED) {
             List<OrderTargetInfoTest> cur = symbol2OrdersEntry[symbolId];
-            int legIdx = (cur == null) ? 0 : cur.size();     // 0 = leg dau
+            // [DCA-SIGNAL 2026-09-14] bac grid dem CHI cac leg KHONG phai leg-signal (PREREG muc 3.4):
+            //   leg-signal KHONG duoc an mat mot bac cua ladder 1,1,3,8. Flag OFF => y het cur.size().
+            int legIdx = gridLegCount(cur);     // 0 = leg dau
+            // leg-signal an DUNG suat von co so (bac 0) — nua con lai cua suat da bi chia doi o leg dau.
+            if (dcaSignal) legIdx = 0;
             float ratio = DcaUtils.gridLegWeightRatio(legIdx);
             if (ratio <= 0f) {
                 if (TickDecisionLog.ON) tlCand(TickDecisionLog.D_GRID_EXHAUSTED, symbolId, ticker, levelChange, symbolPred, predict);
                 return;                          // het bac grid -> khong mo them leg
             }
             budget *= ratio;
+            // [DCA-SIGNAL 2026-09-14] chia doi suat von co so: leg MO CUM va leg-signal moi cai an 50%.
+            //   Bac grid >= 1 KHONG dong vao (ladder grid DCA cu giu nguyen 100%).
+            if (Configs.DCA_SIGNAL_GATE && legIdx == 0) budget *= Configs.DCA_SIGNAL_BASE_RATIO;
             if ("1".equals(System.getenv("SIZE_PROBE"))) { float _thr=1f-(marginRunning==null?0f:marginRunning)/balanceBasic/Configs.U_MAX; if(_thr<0f)_thr=0f; else if(_thr>1f)_thr=1f; LOG.info("[SIZE] lvl={} eq={} thr={} fbase={} ladder={} tier={} ratio={} budget={} pct={}", levelChange, balanceBasic, _thr, Configs.F_BASE, Configs.dcaGridTotalWeight(), tierMultiplier, ratio, budget, budget/balanceBasic); }
         }
 
@@ -1072,6 +1150,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         //   — KHONG them cot vao printDone.csv (se pha cong hoi quy byte-identical), dung tinh than
         //   dong PREARM_SL cua X2. tOpen in dung dinh dang cot `start` cua printDone.
         order.selRank = selRank;
+        order.dcaSignalLeg = dcaSignal;   // [DCA-SIGNAL] false o moi call-site cu => byte-identical
         if (selRank != null) {
             LOG.info("SELRANK sym={} tOpen={} tMs={} rank={} pred={}", symbolStr,
                     Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime), ticker.startTime, selRank, symbolPred);

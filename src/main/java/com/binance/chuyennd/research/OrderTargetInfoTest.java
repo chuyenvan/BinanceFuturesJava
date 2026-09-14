@@ -51,6 +51,11 @@ public class OrderTargetInfoTest implements Serializable {
     /** DCA GRID (2026-08-01): so leg da khop cua CUM. Set trong mergeOrder. 1 = chua nhoi lan nao.
      *  Dung de biet dang o bac nao cua grid -> lay dung moc va ti trong tiep theo. */
     public int legCount = 1;
+    /** [DCA-SIGNAL 2026-09-14] leg nay la leg-2 ban THEO TIN HIEU (khong phai leg grid DCA).
+     *  Grid DCA dem bac KHONG tinh leg-signal — xem docs/PREREG_DCA_SIGNAL_GATE.md muc 3.4.
+     *  Mac dinh false => khi Configs.DCA_SIGNAL_GATE=false moi phep dem y het truoc => byte-identical.
+     *  serialVersionUID khai bao tuong minh o tren nen them field KHONG pha doc/ghi storage cu. */
+    public boolean dcaSignalLeg = false;
     public Float lastEntry;
 
     public Float priceTP;
