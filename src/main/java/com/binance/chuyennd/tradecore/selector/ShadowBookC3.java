@@ -34,7 +34,12 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>KHONG dat lenh, KHONG goi Binance, KHONG ghi Aerospike/Redis. "Dong lenh" = mot dong log
  * {@code [SHADOW] would-CLOSE ...} + mot dong ledger.
  *
- * <p>⚠️ Ke toan GIAY: PnL o day tinh tu gia {@code price_realtime}, khong co phi/slippage/funding
+ * <p>[BOOKFIX 2026-09-13] DCA/BIG_DOWN cung coin: truoc day {@code open} la {@code Map<String,Pos>}
+ * + {@code putIfAbsent} => leg2+ bi VUT im lang (khong VWAP/legCount/margin) => thieu 22.6% pnl
+ * (docs/RESULT_BOOKFIX.md). Nay {@code open} la {@code Map<String,Cluster>}: openPos CONG leg vao
+ * cum + tinh lai VWAP giong {@code SimulatorMarketLevelTicker1MStopLoss.mergeOrder}.
+ *
+ * <p>&#9888; Ke toan GIAY: PnL o day tinh tu gia {@code price_realtime}, khong co phi/slippage/funding
  * va khong lam tron tick-size. Khong duoc so {@code mean(margin)}/equity voi sim
  * ({@code docs/L1_SHADOW_C3.md} muc 7.2).
  */
@@ -43,7 +48,7 @@ public final class ShadowBookC3 {
     private static final Logger LOG = LoggerFactory.getLogger(ShadowBookC3.class);
     private static volatile ShadowBookC3 INSTANCE;
 
-    /** Cot ledger: giu ten {@code sym/ts_entry/symbol_pred/entry/ts_exit} de
+    /** Cot ledger: giu ten {@code sym/ts_entry/symbol_pred/entry} de
      * {@code tools/shadow_vs_sim.py pair} doc truc tiep duoc. */
     private static final String HEADER =
             "sym,ts_entry,entry,qty,rank,symbol_pred,ts_exit,exit_price,reason,pnl";
@@ -51,37 +56,78 @@ public final class ShadowBookC3 {
     public static final String REASON_TRAILING = "TRAILING_STOP";
     public static final String REASON_TIME_STOP = "TIME_STOP_168H";
 
-    /** Mot vi the giay. */
-    public static final class Pos {
+    /**
+     * Mot CUM vi the giay cua 1 coin: gop tat ca leg (leg mo + DCA_LEVEL1 + BIG_DOWN) giong
+     * {@code OrderTargetInfoTest} cum cua sim sau {@code mergeOrder}. Giu VWAP entry, tong qty,
+     * so leg, gia entry leg dau (bat bien) va moc leg dau (neo time-stop).
+     */
+    public static final class Cluster {
         public final String symbol;
-        public final long tsOpen;
-        public final float entry;
-        public final float qty;
-        public final int rank;
-        public final Float symbolPred;
-        /** null = CHUA arm trailing (dieu kien cua time-stop, giong {@code priceSL == null} o sim). */
+        /** Moc leg DAU cua cum — neo time-stop 168h (giong {@code clusterFirstLegTime} cua sim). */
+        public long tsFirstLeg;
+        /** Moc leg CUOI (chi de luu tru/chan doan). */
+        public long tsLastLeg;
+        /** &Sigma;(entry_i * qty_i) — notional cum; VWAP = sumEntryQty / qty. */
+        public double sumEntryQty;
+        /** Tong qty cua ca cum. */
+        public float qty;
+        /** So leg da khop (1 = chua nhoi). Giong {@code OrderTargetInfoTest.legCount}. */
+        public int legCount;
+        /** Gia entry leg DAU — bat bien qua DCA (giong {@code firstEntryPrice} cua sim). */
+        public float firstEntryPrice;
+        /** Rank cua leg KHONG-null (>=0) DAU TIEN — giong {@code clusterSelRank}. -1 = chua co. */
+        public int rank;
+        /** symbolPred cua leg KHONG-null DAU TIEN — giong {@code clusterSymbolPred}. */
+        public Float symbolPred;
+        /** null = CHUA arm trailing (dieu kien time-stop, giong {@code priceSL == null} o sim). */
         public Float priceSL;
-        /** dinh lai (ty le so voi entry) da dat duoc — ratchet bam theo dinh nhu sim. */
+        /** dinh lai (ty le so voi VWAP entry) da dat — ratchet bam theo dinh nhu sim. */
         public float peakRate;
 
-        Pos(String symbol, long tsOpen, float entry, float qty, int rank, Float symbolPred) {
+        Cluster(String symbol, long ts, float entry, float qty, int rank, Float symbolPred) {
             this.symbol = symbol;
-            this.tsOpen = tsOpen;
-            this.entry = entry;
+            this.tsFirstLeg = ts;
+            this.tsLastLeg = ts;
+            this.sumEntryQty = (double) entry * qty;
             this.qty = qty;
+            this.legCount = 1;
+            this.firstEntryPrice = entry;
             this.rank = rank;
             this.symbolPred = symbolPred;
+            this.priceSL = null;
+            this.peakRate = 0f;
+        }
+
+        /** VWAP entry = &Sigma;(entry_i*qty_i)/&Sigma;qty_i — CUNG cong thuc {@code mergeOrder} cua sim. */
+        public float avgEntry() {
+            return (float) (sumEntryQty / qty);
+        }
+
+        /**
+         * Cong 1 leg (DCA/BIG_DOWN cung coin) vao cum: cap nhat VWAP/qty/legCount; giu rank/pred
+         * cua leg KHONG-null dau tien; RE-ARM (priceSL=null, peakRate=0) vi sim {@code mergeOrder}
+         * tao ra mot cum {@code REQUEST} moi voi {@code minPrice=priceClose} (dinh trailing reset).
+         * KHONG dung tsFirstLeg/firstEntryPrice (bat bien qua DCA nhu sim).
+         */
+        void addLeg(long ts, float entry, float q, int legRank, Float legPred) {
+            this.sumEntryQty += (double) entry * q;
+            this.qty += q;
+            this.legCount++;
+            if (ts > this.tsLastLeg) this.tsLastLeg = ts;
+            if (this.rank < 0 && legRank >= 0) this.rank = legRank;
+            if (this.symbolPred == null && legPred != null) this.symbolPred = legPred;
+            this.priceSL = null;
             this.peakRate = 0f;
         }
 
         /** Margin dang chiem = notional / don bay (cung cach {@code PositionHelper.callMargin}). */
         float margin() {
             int lev = Configs.LEVERAGE_ORDER > 0 ? Configs.LEVERAGE_ORDER : 1;
-            return entry * qty / lev;
+            return (float) (sumEntryQty / lev);
         }
     }
 
-    private final Map<String, Pos> open = new ConcurrentHashMap<>();
+    private final Map<String, Cluster> open = new ConcurrentHashMap<>();
     private final String ledgerPath;
     /** Vi the DANG MO + PnL da chot, ghi ra dia sau MOI thay doi. */
     private final String statePath;
@@ -116,6 +162,10 @@ public final class ShadowBookC3 {
      * Nap lai vi the dang mo sau restart. BAT BUOC: {@code ThreadAutoRestartProgram} restart JVM
      * moi 4 gio — neu so chi nam trong RAM thi (i) time-stop 168h KHONG BAO GIO toi duoc,
      * (ii) cung mot coin bi mo lai moi lan restart => ledger sai he thong.
+     *
+     * <p>Tuong thich nguoc: dong 8-truong cu (1 leg) van doc duoc — legCount=1,
+     * firstEntryPrice=entry, tsLastLeg=tsFirstLeg. Dong 11-truong moi mang them leg_count,
+     * first_entry, ts_last de tai lap cum DCA.
      */
     private void loadState() {
         File f = new File(statePath);
@@ -123,18 +173,24 @@ public final class ShadowBookC3 {
         try {
             for (String ln : java.nio.file.Files.readAllLines(f.toPath())) {
                 // dong "#realized,<so>,,,,,," CUNG co 8 truong nen phai bat TRUOC guard do dai,
-                // neu khong no roi vao nhanh parse Pos -> nem -> mat TOAN BO state (bug 2026-09-06).
+                // neu khong no roi vao nhanh parse Cluster -> nem -> mat TOAN BO state (bug 2026-09-06).
                 if (ln.startsWith("#realized,")) {
                     realized = Double.parseDouble(ln.split(",", -1)[1]);
                     continue;
                 }
                 String[] p = ln.split(",", -1);
                 if (p.length < 8 || "sym".equals(p[0])) continue;
-                Pos q = new Pos(p[0], Long.parseLong(p[1]), Float.parseFloat(p[2]), Float.parseFloat(p[3]),
-                        Integer.parseInt(p[4]), p[5].isEmpty() ? null : Float.parseFloat(p[5]));
-                q.priceSL = p[6].isEmpty() ? null : Float.parseFloat(p[6]);
-                q.peakRate = Float.parseFloat(p[7]);
-                open.put(q.symbol, q);
+                Cluster c = new Cluster(p[0], Long.parseLong(p[1]), Float.parseFloat(p[2]),
+                        Float.parseFloat(p[3]), Integer.parseInt(p[4]),
+                        p[5].isEmpty() ? null : Float.parseFloat(p[5]));
+                c.priceSL = p[6].isEmpty() ? null : Float.parseFloat(p[6]);
+                c.peakRate = Float.parseFloat(p[7]);
+                if (p.length >= 11) {
+                    c.legCount = Integer.parseInt(p[8]);
+                    c.firstEntryPrice = Float.parseFloat(p[9]);
+                    c.tsLastLeg = Long.parseLong(p[10]);
+                }
+                open.put(c.symbol, c);
             }
         } catch (Exception e) {
             LOG.error("[SHADOW] khong nap duoc state {}: {}", statePath, e.getMessage());
@@ -143,14 +199,15 @@ public final class ShadowBookC3 {
 
     private synchronized void saveState() {
         try (PrintWriter w = new PrintWriter(new FileWriter(statePath, false))) {
-            w.println("sym,ts_open,entry,qty,rank,symbol_pred,price_sl,peak_rate");
-            w.printf("#realized,%.10f,,,,,,%n", realized);
-            for (Pos p : open.values()) {
-                w.printf("%s,%d,%s,%s,%d,%s,%s,%s%n", p.symbol, p.tsOpen, Float.toString(p.entry),
-                        Float.toString(p.qty), p.rank,
-                        p.symbolPred == null ? "" : Float.toString(p.symbolPred),
-                        p.priceSL == null ? "" : Float.toString(p.priceSL),
-                        Float.toString(p.peakRate));
+            w.println("sym,ts_first,avg_entry,qty,rank,symbol_pred,price_sl,peak_rate,leg_count,first_entry,ts_last");
+            w.printf("#realized,%.10f,,,,,,,,,%n", realized);
+            for (Cluster c : open.values()) {
+                w.printf("%s,%d,%s,%s,%d,%s,%s,%s,%d,%s,%d%n", c.symbol, c.tsFirstLeg,
+                        Float.toString(c.avgEntry()), Float.toString(c.qty), c.rank,
+                        c.symbolPred == null ? "" : Float.toString(c.symbolPred),
+                        c.priceSL == null ? "" : Float.toString(c.priceSL),
+                        Float.toString(c.peakRate),
+                        c.legCount, Float.toString(c.firstEntryPrice), c.tsLastLeg);
             }
         } catch (IOException e) {
             LOG.error("[SHADOW] khong ghi duoc state {}: {}", statePath, e.getMessage());
@@ -186,39 +243,55 @@ public final class ShadowBookC3 {
         return new java.util.HashSet<>(open.keySet());
     }
 
+    /** CHI cho unit test (cung package): doc cum de kiem tra VWAP/legCount. */
+    Cluster cluster(String symbol) {
+        return open.get(symbol);
+    }
+
     public String ledgerPath() {
         return ledgerPath;
     }
 
-    /** Mo mot vi the giay. Bo qua neu dang giu coin do (giong guard {@code symbol2Pos}). */
+    /**
+     * Mo/nhoi mot leg giay. Neu CHUA giu coin => tao cum moi. Neu DANG giu => CONG leg vao cum
+     * (VWAP + legCount + qty), giong sim {@code mergeOrder}. [BOOKFIX] Truoc day leg2+ bi
+     * {@code putIfAbsent} vut im lang => thieu pnl DCA/BIG_DOWN.
+     */
     public void openPos(String symbol, long ts, float entry, float qty, int rank, Float symbolPred) {
         if (symbol == null || entry <= 0f || qty <= 0f) return;
-        Pos p = new Pos(symbol, ts, entry, qty, rank, symbolPred);
-        if (open.putIfAbsent(symbol, p) == null) {
+        Cluster c = open.get(symbol);
+        if (c == null) {
+            c = new Cluster(symbol, ts, entry, qty, rank, symbolPred);
+            open.put(symbol, c);
             nOpen++;
             saveState();
             LOG.info("[SHADOW] open {} entry={} qty={} rank={} symbolPred={} margin={} open={}",
-                    symbol, entry, qty, rank, symbolPred, p.margin(), open.size());
+                    symbol, entry, qty, rank, symbolPred, c.margin(), open.size());
+        } else {
+            c.addLeg(ts, entry, qty, rank, symbolPred);
+            saveState();
+            LOG.info("[SHADOW] add-leg {} leg={} entry={} qty={} avgEntry={} totQty={} margin={} open={}",
+                    symbol, c.legCount, entry, qty, c.avgEntry(), c.qty, c.margin(), open.size());
         }
     }
 
     /** Tong margin giay dang chiem — thay {@code BudgetManager.marginRunning} khi profile bat. */
     public float marginRunning() {
         float s = 0f;
-        for (Pos p : open.values()) s += p.margin();
+        for (Cluster c : open.values()) s += c.margin();
         return s;
     }
 
     /**
-     * (d) Equity GIAY = {@code PAPER_EQUITY} + PnL da chot + PnL mark-to-market cua vi the mo.
-     * Day la thu {@code docs/L1_SHADOW_C3.md} muc 3(e) noi la con thieu.
+     * (d) Equity GIAY = {@code PAPER_EQUITY} + PnL da chot + PnL mark-to-market cua cum mo
+     * (tinh tren VWAP entry va tong qty). Day la thu {@code docs/L1_SHADOW_C3.md} muc 3(e).
      */
     public float equityNow(Map<String, Float> price) {
         double eq = LiveProfileC3.paperEquity() + realized;
         if (price != null) {
-            for (Pos p : open.values()) {
-                Float px = price.get(p.symbol);
-                if (px != null && px > 0f) eq += (px - p.entry) * (double) p.qty;
+            for (Cluster c : open.values()) {
+                Float px = price.get(c.symbol);
+                if (px != null && px > 0f) eq += (px - c.avgEntry()) * (double) c.qty;
             }
         }
         return (float) eq;
@@ -254,47 +327,48 @@ public final class ShadowBookC3 {
 
     /**
      * Mot nhip exit. {@code price} = gia hien tai theo symbol; {@code now} = moc thoi gian.
-     * Tra so lenh vua dong.
+     * Tra so cum vua dong. Ratchet/arm/time-stop chay tren VWAP entry cua cum.
      */
     public int tick(Map<String, Float> price, long now) {
         if (price == null || open.isEmpty()) return 0;
-        List<Pos> closing = new ArrayList<>();
+        List<Cluster> closing = new ArrayList<>();
         boolean dirty = false;
-        for (Pos p : open.values()) {
-            Float pxObj = price.get(p.symbol);
+        for (Cluster c : open.values()) {
+            Float pxObj = price.get(c.symbol);
             if (pxObj == null || pxObj <= 0f) continue;
             float px = pxObj;
-            float rate = (px - p.entry) / p.entry;
-            if (rate > p.peakRate) p.peakRate = rate;
+            float entry = c.avgEntry();
+            float rate = (px - entry) / entry;
+            if (rate > c.peakRate) c.peakRate = rate;
 
-            if (p.priceSL == null) {
+            if (c.priceSL == null) {
                 // (a) ARM: chi arm khi lai vuot nguong C3 0.07
                 if (rate > LiveProfileC3.ARM_RATE) {
-                    p.priceSL = p.entry * (1f + trailRate(p.peakRate, p.symbolPred, p.symbol));
+                    c.priceSL = entry * (1f + trailRate(c.peakRate, c.symbolPred, c.symbol));
                     dirty = true;
-                    LOG.info("[SHADOW] arm {} peak={} SL={}", p.symbol, p.peakRate, p.priceSL);
-                } else if (now - p.tsOpen > LiveProfileC3.TIME_STOP_HOURS * 3600_000L) {
+                    LOG.info("[SHADOW] arm {} peak={} SL={}", c.symbol, c.peakRate, c.priceSL);
+                } else if (now - c.tsFirstLeg > LiveProfileC3.TIME_STOP_HOURS * 3600_000L) {
                     // (b) TIME-STOP 168h cho cum CHUA arm — port tu sim, live khong co
                     LOG.info("[SHADOW] would-CLOSE time-stop {} entry={} px={} gio_giu={}",
-                            p.symbol, p.entry, px, (now - p.tsOpen) / 3600_000L);
-                    p.priceSL = null;
-                    closing.add(p);
-                    closeAt(p, px, REASON_TIME_STOP, now);
+                            c.symbol, entry, px, (now - c.tsFirstLeg) / 3600_000L);
+                    c.priceSL = null;
+                    closing.add(c);
+                    closeAt(c, px, REASON_TIME_STOP, now);
                     continue;
                 }
             }
-            if (p.priceSL != null) {
+            if (c.priceSL != null) {
                 // (c) RATCHET LIEN TUC — khong co dead-zone x5.21847 cua live
-                float nsl = p.entry * (1f + trailRate(p.peakRate, p.symbolPred, p.symbol));
-                if (nsl > p.priceSL) {
-                    p.priceSL = nsl;
+                float nsl = entry * (1f + trailRate(c.peakRate, c.symbolPred, c.symbol));
+                if (nsl > c.priceSL) {
+                    c.priceSL = nsl;
                     dirty = true;
                 }
-                if (px <= p.priceSL) {
+                if (px <= c.priceSL) {
                     LOG.info("[SHADOW] would-CLOSE trailing {} entry={} SL={} px={} peak={}",
-                            p.symbol, p.entry, p.priceSL, px, p.peakRate);
-                    closing.add(p);
-                    closeAt(p, p.priceSL, REASON_TRAILING, now);
+                            c.symbol, entry, c.priceSL, px, c.peakRate);
+                    closing.add(c);
+                    closeAt(c, c.priceSL, REASON_TRAILING, now);
                 }
             }
         }
@@ -302,22 +376,23 @@ public final class ShadowBookC3 {
         return closing.size();
     }
 
-    private void closeAt(Pos p, float exitPx, String reason, long now) {
-        open.remove(p.symbol);
-        double pnl = (exitPx - p.entry) * (double) p.qty;
+    private void closeAt(Cluster c, float exitPx, String reason, long now) {
+        open.remove(c.symbol);
+        float entry = c.avgEntry();
+        double pnl = (exitPx - entry) * (double) c.qty;
         realized += pnl;
         nClose++;
         try (PrintWriter w = new PrintWriter(new FileWriter(ledgerPath, true))) {
             w.printf("%s,%d,%s,%s,%d,%s,%d,%s,%s,%.6f%n",
-                    p.symbol, p.tsOpen, Float.toString(p.entry), Float.toString(p.qty), p.rank,
-                    p.symbolPred == null ? "" : Float.toString(p.symbolPred),
+                    c.symbol, c.tsFirstLeg, Float.toString(entry), Float.toString(c.qty), c.rank,
+                    c.symbolPred == null ? "" : Float.toString(c.symbolPred),
                     now, Float.toString(exitPx), reason, pnl);
         } catch (IOException e) {
             LOG.error("[SHADOW] khong ghi duoc ledger {}: {}", ledgerPath, e.getMessage());
         }
         saveState();
-        LOG.info("[SHADOW] closed {} reason={} pnl={} realized={} open={}",
-                p.symbol, reason, pnl, realized, open.size());
+        LOG.info("[SHADOW] closed {} reason={} pnl={} legs={} realized={} open={}",
+                c.symbol, reason, pnl, c.legCount, realized, open.size());
     }
 
     /** Dong tom tat cho log dinh ky / health. */
