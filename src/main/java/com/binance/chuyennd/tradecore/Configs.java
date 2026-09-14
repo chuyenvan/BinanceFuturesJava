@@ -464,6 +464,26 @@ public class Configs {
     public static boolean FIX_B2 = !"false".equalsIgnoreCase(Cfg.getOr("SIM_FIX_B2", "true"));
     public static boolean FIX_B3 = !"false".equalsIgnoreCase(Cfg.getOr("SIM_FIX_B3", "true"));
 
+    // ========================================================================
+    // [DCA-SIGNAL 2026-09-14] docs/PREREG_DCA_SIGNAL_GATE.md — chia doi suat von/lenh (base 50%)
+    //   + leg-2 chi ban khi symbol DOC LAP pass dung pipeline admit lenh moi (top-K + EntryGate)
+    //   VA dang lo X% tren firstEntryPrice. DOC LAP voi grid DCA cu (-50/-75/-90%).
+    //   DCA_SIGNAL_GATE=false (mac dinh) => KHONG nhanh nao doc 3 key con lai, khong doi sizing,
+    //   khong doi phep dem bac grid => printDone.csv byte-identical.
+    //   KHONG final: unit test lat co truc tiep.
+    // ========================================================================
+    public static boolean DCA_SIGNAL_GATE = "true".equalsIgnoreCase(Cfg.getOr("SIM_DCA_SIGNAL_GATE", "false"))
+            || "1".equals(Cfg.getOr("SIM_DCA_SIGNAL_GATE", "false"));
+    /** Nguong lo (AM) do tren firstEntryPrice de duoc phep ban leg-2 DCA-signal. */
+    public static float DCA_SIGNAL_LOSS = Cfg.get("SIM_DCA_SIGNAL_LOSS") != null
+            ? Float.parseFloat(Cfg.get("SIM_DCA_SIGNAL_LOSS").trim()) : -0.08f;
+    /** Ti le suat von co so cho leg MO CUM va cho leg-2 DCA-signal (0.5 = chia doi). */
+    public static float DCA_SIGNAL_BASE_RATIO = Cfg.get("SIM_DCA_SIGNAL_BASE_RATIO") != null
+            ? Float.parseFloat(Cfg.get("SIM_DCA_SIGNAL_BASE_RATIO").trim()) : 0.5f;
+    /** Cooldown (phut) ke tu leg DAU cua cum truoc khi leg-2 duoc phep ban. */
+    public static int DCA_SIGNAL_COOLDOWN_MIN = Cfg.get("SIM_DCA_SIGNAL_COOLDOWN_MIN") != null
+            ? Integer.parseInt(Cfg.get("SIM_DCA_SIGNAL_COOLDOWN_MIN").trim()) : 60;
+
 
 
     // =========================================================
