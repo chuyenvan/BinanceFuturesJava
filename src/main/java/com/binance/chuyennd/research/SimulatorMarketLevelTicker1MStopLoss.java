@@ -803,6 +803,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             }
         }
         // 3. CHẠY PRE-CALCULATE (SORT SẴN FUNDING FEE MỘT LẦN DUY NHẤT)
+        // [GD92-RECHECK 2026-09-15] gate nguong truot theo phan vi. Key khong khai bao -> no-op.
+        com.binance.chuyennd.ai_ml.onnx.entry.GateRollingThreshold.init(predictionMap);
         preprocessFundingData(time2SymbolPred);
         aiRejectFilter = new AIRejectFilter();
 
@@ -1284,6 +1286,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
         this.time2MarketData = time2MarketData;
         this.predictionMap = predictionMap;
+        // [GD92-RECHECK 2026-09-15] gate nguong truot theo phan vi. Key khong khai bao -> no-op.
+        com.binance.chuyennd.ai_ml.onnx.entry.GateRollingThreshold.init(predictionMap);
         this.time2SymbolPred = time2FundingPre;
         // 3. CHẠY PRE-CALCULATE (SORT SẴN FUNDING FEE MỘT LẦN DUY NHẤT)
         preprocessFundingData(this.time2SymbolPred);
