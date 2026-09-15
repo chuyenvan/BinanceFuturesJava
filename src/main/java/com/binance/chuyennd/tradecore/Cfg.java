@@ -53,7 +53,10 @@ public final class Cfg {
     /** Tien to cua bien env DUOC COI LA THAM SO GIAO DICH — cam dat khi da co profile. */
     private static final List<String> TRADING_PREFIXES = Arrays.asList(
             "SIM_", "DCA_", "TS_", "SELECTOR_", "TIER_", "CONF_SIZE_", "TRAIL_", "GATE_", "LIVE_",
-            "SIZE_MULT", "MAX_CONCURRENT", "TIME_STOP_HOURS", "ENABLE_SHORT", "ABLATION_MODE", "SHORT_");
+            "SIZE_MULT", "MAX_CONCURRENT", "TIME_STOP_HOURS", "ENABLE_SHORT", "ABLATION_MODE", "SHORT_",
+            // [CONC-CAP 2026-09-15] docs/PREREG_CONCENTRATION_SAFETYCAP.md — 2 guard safety-net
+            //   la THAM SO GIAO DICH: da co profile thi khong duoc dat qua env (fail-fast nhu moi key khac).
+            "CONC_CAP_");
 
     /** Tham so giao dich co ten KHONG khop tien to nao o tren — phai liet ke dich danh. */
     private static final List<String> TRADING_KEYS = Arrays.asList(

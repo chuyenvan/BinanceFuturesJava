@@ -107,6 +107,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     // 🔥 TỐI ƯU TUYỆT ĐỐI: Dùng mảng nguyên thủy thay cho HashSet<Short>
     // Loại bỏ hoàn toàn Autoboxing khi gọi add(), remove() hay contains()
     public short[] activeRunningIds = new short[1000]; // Tối đa 100 lệnh chạy cùng lúc
+    /** [CONC-CAP] Rolling window timestamp cac leg BIG_DOWN DA MO. null khi guard TAT (khong cap phat). */
+    private java.util.ArrayDeque<Long> concBdOpenTimes = null;
     public int activeRunningCount = 0;
 
     public static void main(String[] args) throws ParseException, IOException, InterruptedException {
@@ -717,6 +719,46 @@ public class SimulatorMarketLevelTicker1MStopLoss {
      * READ-ONLY, chi duoc goi khi {@link Configs#BOOK_CAP_ON}.
      */
 
+    /**
+     * [CONC-CAP 2026-09-15] Tong margin dang nam trong MOI leg DCA-grid bac>=1 con mo, cong dong
+     * TOAN BO coin. Mot leg dang mo la DCA-grid bac>=1 khi va chi khi marketLevelChange==DCA_LEVEL1
+     * va khong phai leg DCA-SIGNAL: DcaProcessor.getDCA chi duyet symbol DANG CO vi the nen moi leg
+     * DCA_LEVEL1 tat yeu la leg thu >=2 cua cum. Cum dong xong bi xoa khoi symbol2OrdersEntry
+     * (closeOrder) nen duyet theo activeRunningIds la dung tap "dang mo" (cung quy uoc
+     * counterOrderRunning). READ-ONLY, chi duoc goi khi CONC_CAP_AGG_DCA_ENABLED.
+     */
+    private float concAggDcaGridMargin() {
+        float sum = 0f;
+        for (int i = 0; i < activeRunningCount; i++) {
+            List<OrderTargetInfoTest> legs = symbol2OrdersEntry[activeRunningIds[i]];
+            if (legs == null) continue;
+            for (OrderTargetInfoTest lg : legs) {
+                if (lg == null || lg.dcaSignalLeg) continue;
+                if (lg.marketLevelChange == MarketLevelChange.DCA_LEVEL1) {
+                    Float m = lg.calMargin();
+                    if (m != null) sum += m;
+                }
+            }
+        }
+        return sum;
+    }
+
+    /** [CONC-CAP] So leg BIG_DOWN DA MO trong 60 phut gan nhat (theo thoi gian SIM, khong phai dong ho that). */
+    private int concBdCountLastHour(long now) {
+        if (concBdOpenTimes == null) return 0;
+        long from = now - 60L * Utils.TIME_MINUTE;
+        while (!concBdOpenTimes.isEmpty() && concBdOpenTimes.peekFirst() <= from) {
+            concBdOpenTimes.pollFirst();
+        }
+        return concBdOpenTimes.size();
+    }
+
+    /** [CONC-CAP] Ghi nhan mot leg BIG_DOWN DA THUC SU duoc mo. */
+    private void concBdRecord(long now) {
+        if (concBdOpenTimes == null) concBdOpenTimes = new java.util.ArrayDeque<>();
+        concBdOpenTimes.addLast(now);
+    }
+
     private Integer counterOrderRunning() {
         int counter = 0;
         for (int i = 0; i < activeRunningCount; i++) {
@@ -762,6 +804,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
     public void initData() throws IOException, ParseException {
         BudgetManagerSimple.getInstance().resetInstance();
+        concBdOpenTimes = null;   // [CONC-CAP] rolling window sach o moi lan khoi tao (sample WFO)
         allOrderDone = new TreeMap<>();
 
         Long startTime = Utils.sdfFile.parse(Configs.TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
@@ -1223,6 +1266,35 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         String symbolStr = SimpleSymbolMapper.getInstance().getSymbol(symbolId);
         Float quantity = Utils.calQuantityTest(budget, leverage, entry, symbolStr);
 
+        // ===== [CONC-CAP 2026-09-15] SAFETY-NET — docs/PREREG_CONCENTRATION_SAFETYCAP.md =====
+        //   Dat o DAY (sau MOI cong hien co, sau khi quantity da tinh) vi hai ly do:
+        //     (1) margin du kien cua leg la so THAT, khong phai uoc luong (budget da nhan het
+        //         throttle / tierMultiplier / gridLegWeightRatio);
+        //     (2) guard la LOP CUOI CUNG, khong tranh chap voi cong nao khac.
+        //   Chan HAN (return), KHONG throttle giam size — cung tinh than U_MAX tra null o
+        //   TradeUtils.managerBudget. Ca hai co mac dinh FALSE => khong nhanh nao chay => byte-identical.
+        if (Configs.CONC_CAP_AGG_DCA_ENABLED
+                && levelChange == MarketLevelChange.DCA_LEVEL1 && !dcaSignal) {
+            float legNew = quantity * entry / leverage;
+            float aggNow = concAggDcaGridMargin();
+            float ratioAgg = balanceBasic > 0f ? (aggNow + legNew) / balanceBasic : 0f;
+            if (ratioAgg > Configs.CONC_CAP_AGG_DCA_PCT) {
+                LOG.info("[CONC-CAP] SKIP DCA-grid leg sym={} t={} aggNow={} legNew={} eq={} ratio={} cap={}",
+                        symbolStr, Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime), aggNow, legNew,
+                        balanceBasic, ratioAgg, Configs.CONC_CAP_AGG_DCA_PCT);
+                return;
+            }
+        }
+        if (Configs.CONC_CAP_BD_RATE_ENABLED && levelChange == MarketLevelChange.BIG_DOWN) {
+            int nBd60m = concBdCountLastHour(ticker.startTime);
+            if (nBd60m >= Configs.CONC_CAP_BD_PER_HOUR) {
+                LOG.info("[CONC-CAP] SKIP BIG_DOWN leg sym={} t={} nBd60m={} cap={}",
+                        symbolStr, Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime), nBd60m,
+                        Configs.CONC_CAP_BD_PER_HOUR);
+                return;
+            }
+        }
+
         OrderTargetInfoTest order = new OrderTargetInfoTest(OrderTargetStatus.REQUEST, entry,
                 null, quantity, leverage, symbolStr, ticker.startTime,
                 ticker.startTime, side);
@@ -1270,6 +1342,10 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
         BudgetManagerSimple.getInstance().updateMaxOrderRunning(counterOrderRunning());
         BudgetManagerSimple.getInstance().marginRunning += order.calMargin();
+        // [CONC-CAP] chi dem leg BIG_DOWN DA THUC SU mo (khong dem ung vien bi cong khac loai).
+        if (Configs.CONC_CAP_BD_RATE_ENABLED && levelChange == MarketLevelChange.BIG_DOWN) {
+            concBdRecord(ticker.startTime);
+        }
     }
 
     public void initDataReady(TreeMap<Long, MarketDataObject> time2MarketData,
@@ -1277,6 +1353,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                               AIRejectFilter aiRejectFilter) throws OrtException {
 
         BudgetManagerSimple.getInstance().resetInstance();
+        concBdOpenTimes = null;   // [CONC-CAP] rolling window sach o moi lan khoi tao (sample WFO)
         allOrderDone = new TreeMap<>();
 
         // Khởi tạo Mapper để cache sẵn danh sách symbol

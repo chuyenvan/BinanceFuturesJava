@@ -484,6 +484,31 @@ public class Configs {
     public static int DCA_SIGNAL_COOLDOWN_MIN = Cfg.get("SIM_DCA_SIGNAL_COOLDOWN_MIN") != null
             ? Integer.parseInt(Cfg.get("SIM_DCA_SIGNAL_COOLDOWN_MIN").trim()) : 60;
 
+    // ========================================================================
+    // [CONC-CAP 2026-09-15] docs/PREREG_CONCENTRATION_SAFETYCAP.md — SAFETY-NET, KHONG phai lever.
+    //   Guard 1: tran AGGREGATE margin nam trong cac leg DCA-grid bac>=1, cong dong TOAN BO coin.
+    //   Guard 2: tran so leg BIG_DOWN mo trong 60 phut (rolling window, theo thoi gian SIM).
+    //   Hai nguong dat CO CHU DICH CAO HON dinh lich su da do tren 4.5 nam
+    //   (docs/DIAG_DCA_CONCURRENCY.md: aggregate max 0.4120 equity; BIG_DOWN max 54 leg/gio)
+    //   => KHONG binding tren vung da quan sat; chi bat trong kich ban TE HON moi thu da thay.
+    //   Mac dinh CA HAI TAT => khong nhanh nao doc nguong, khong cap phat cau truc nao
+    //   => printDone.csv byte-identical voi baseline.
+    //   KHONG duoc dua 2 nguong nay vao HPO/WFO/grid-search: day la BIEN AN TOAN, khong phai gene.
+    //   KHONG final: unit test lat co truc tiep.
+    // ========================================================================
+    public static boolean CONC_CAP_AGG_DCA_ENABLED =
+            "true".equalsIgnoreCase(Cfg.getOr("CONC_CAP_AGG_DCA_ENABLED", "false"))
+            || "1".equals(Cfg.getOr("CONC_CAP_AGG_DCA_ENABLED", "false"));
+    /** Tran (ti le tren equity) cua TONG margin dang nam trong cac leg DCA-grid bac>=1 toan so. */
+    public static float CONC_CAP_AGG_DCA_PCT = Cfg.get("CONC_CAP_AGG_DCA_PCT") != null
+            ? Float.parseFloat(Cfg.get("CONC_CAP_AGG_DCA_PCT").trim()) : 0.45f;
+    public static boolean CONC_CAP_BD_RATE_ENABLED =
+            "true".equalsIgnoreCase(Cfg.getOr("CONC_CAP_BD_RATE_ENABLED", "false"))
+            || "1".equals(Cfg.getOr("CONC_CAP_BD_RATE_ENABLED", "false"));
+    /** Tran so leg BIG_DOWN duoc mo trong 60 phut gan nhat. */
+    public static int CONC_CAP_BD_PER_HOUR = Cfg.get("CONC_CAP_BD_PER_HOUR") != null
+            ? Integer.parseInt(Cfg.get("CONC_CAP_BD_PER_HOUR").trim()) : 75;
+
 
 
     // =========================================================
