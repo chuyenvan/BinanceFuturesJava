@@ -88,3 +88,7 @@ KHONG cham 242, KHONG tune, KHONG push, KHONG doi code.
 
 Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_011zpgT8SsGrmcqzxbC93PQT
+
+> **AUDIT 2026-09-15**: cham lai vong nay bang he so CI dung (`sqrt(2 ln k)`, k=2 da pre-reg = 1.177
+> thay vi hang so 1.21) — xem `docs/AUDIT_READJUDICATE_CI_RESCORE.md`. Ket qua: T170 co **3** rate chat
+> luong ngoai CI (tang tu 2), phan quyet THANG **dung vung va manh hon**; T130 van NULL. Khong dao nguoc gi.
