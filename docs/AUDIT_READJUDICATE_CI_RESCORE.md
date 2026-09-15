@@ -89,3 +89,56 @@ deu da NULL voi bien do rong, nen cung khong doi verdict nao (da kiem o PHU LUC 
 
 Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_011zpgT8SsGrmcqzxbC93PQT
+
+---
+## PHU LUC B (2026-09-15) — GD92 da co AUDIT DOC LAP rieng; quyet dinh k=2 duoc CUNG CO
+> Doc-doi-chieu, **KHONG chay gi, KHONG khoi phuc code GD92 vao repo**.
+
+Muc 2 o tren loai GD92 khoi multiplicity voi ly do: *"GD92 BLOCKED, khong bao gio chay (co che rolling
+bi xoa o `f1c43a3`); multiplicity dem cac phep kiem DA THUC HIEN"*. Ly do do van dung, nhung **chua day
+du**. Sau khi doc hai tai lieu duoi day, co mot ly do thu hai **manh hon**:
+
+**Nguon:**
+- `/home/ubuntu/gate_feat_study/GD92_CODE_AND_RESULTS.md` (644 dong; code `GateRollingThreshold.java`
+  da xoa + profile + ket qua goc; tao 2026-09-15, NGOAI repo).
+- **`docs/AUDIT_GATEDYN_GD92.md`** (trong CHINH repo nay, 20,294 byte, 2026-09-11) — audit doc lap cua
+  agent AUDIT+REPLICATE ro soat claim "GD92 THANG" cua OpenClaw (commit `272d8f1`/`1c1ecca`/`41d5d76`).
+
+**Phan quyet cua audit do: "KHONG PHAN BIET DUOC (nhieu)" + "VI PHAM PHUONG PHAP" (rieng dot GATEDYN2).**
+Bon tru cot:
+1. **Hieu qua khong phan biet duoc**: `d = CAGR(GD92) − CAGR(PARITY_R) = +4.98pp` voi
+   `CI95 [−4.47, +16.09]` **chua 0**, va **thap hon 2.2 lan** nguong da hieu chinh cho k=9 bien the
+   (`2.0963 × sd_boot = 10.90pp`).
+2. **Bang chung quyet dinh bi dung sai**: thu duy nhat tach GD92 khoi cac bien the khac la **UW=116** so
+   voi tran 120 — **du 4 ngay**, trong khi `PREREG_CI` muc 2.5 ghi ro UW **KHONG duoc bootstrap** (chi la
+   quan sat mot lan), va hai lang gieng cung co che lai o **153 va 183**.
+3. **Leak L2 (grid quanh winner)**: dot GATEDYN2 mo 6 bien the quanh diem thang bang cach doi phan vi /
+   noi cua so — dung thu ma `docs/B4_RESULT.md` dong 179-180 **cam dich danh**. "6/6 FAIL" khong phai
+   bang chung on dinh ma la dau hieu **be mat tham so gap ghenh**: ba metric dat dinh o **ba diem KHAC
+   NHAU** (CV thap nhat o G90W60 = 0.469; equity cao nhat o G92W60 = 130,175; UW thap nhat o diem thu ba).
+4. **Dao dau theo nam** => khong phai giam rui ro that: `d` doi chieu giua cac nam (2022 am, 2023 duong,
+   2024 ~0, 2025 duong), va nam **DUY NHAT** co CI khong chua 0 la **2022 ve phia XAU**
+   (**−10.06pp** [−20.971, −1.100]). Rang buoc cung 2022: GD92_R thua PARITY_R tren **ca ba truc**
+   (maxDD −13.21 vs −12.46; ret nam +7.24 vs +17.30; quy min −3.81 vs +0.63). Audit ket luan nguyen van:
+   no **"doi rui ro tu 2025 sang 2022"**, chu khong giam rui ro.
+
+**Dieu audit do CONG NHAN** (phai ghi cho can): muc tieu PRIMARY ma user dat ra — phan bo lenh deu hon
+theo quy — **dat that** (CV quy **0.712 → 0.518**), so lieu **tai lap byte-identical**, khong cham holdout,
+khong bia so. Audit **khong** chung minh GD92 *xau hon* gate cung; no chung minh DEV 48 thang **khong du
+suc phan biet** hai cau hinh o tang hieu qua. Phan bi bac bo la **buoc nhay tu "dat do deu" sang
+"thang ve hieu qua"**.
+
+**He qua cho muc 2 (k=2) cua audit nay:** loai GD92 khoi multiplicity budget **khong phai bo sot**.
+Ngoai ly do "khong co so lieu de so", con mot ly do doc lap: **chinh so lieu GD92 (khi con) da bi mot
+audit rieng ket luan la san pham cua quy trinh leak/nhieu**. Dem mot phep kiem nhu vay vao `k` se lam
+**phinh** nguong multiplicity bang mot "phep kiem" von da bi loai vi vi pham phuong phap — tuc phat oan
+T170/T130. => **k = 2 duoc CUNG CO, khong phai duoc nhan nhuong.**
+
+*(Doi chieu: tom tat cua user khop voi noi dung file that o tat ca cac diem chinh — verdict nhieu /
+CI chua 0 / UW 116 vs 120 khong CI / lang gieng 153-183 / grid-leak bi B4_RESULT cam / 6-6 fail voi ba
+dinh khac nhau / dao dau theo nam voi 2022 −10.06pp / PRIMARY CV 0.712→0.518 duoc cong nhan. **Khong
+phat hien sai lech dang ke.** Chi tiet bo sung co trong file that ma tom tat khong neu: he so k=9 va
+nguong 10.90pp; audit noi ro no KHONG chung minh GD92 xau hon; GD92 chua he kiem tren validation/holdout.)*
+
+**KHONG khoi phuc code GD92 vao repo. KHONG chay lai bat cu thu gi lien quan GD92.** Muc nay chi la
+ghi chu lien ket tai lieu.
