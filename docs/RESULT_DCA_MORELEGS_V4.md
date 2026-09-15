@@ -224,3 +224,198 @@ Ghi lai de dinh huong; **KHONG chay tiep khi chua co pre-reg**.
 
 Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_011zpgT8SsGrmcqzxbC93PQT
+
+---
+# PHU LUC A (2026-09-15) — doc lai output cu, KHONG chay sim moi, KHONG pre-reg
+Ba viec user yeu cau: (A1) bang PnL/return day du theo nam; (A2) verify bat thuong GS070 UW=400 >
+GS055 UW=359; (A3) verify multiplicity/seed dung cho V4.
+
+## A1. BANG DAY DU THEO TUNG NAM — 12 ban (10 config V3/V4 + GS120/GS140 + T170)
+`dEquity$` = equity cuoi nam - equity dau nam (gom ca mark-to-market). `pnl_real$` = tong cot `pnl`
+cua cac leg DONG trong nam do (thuan thuc hien). Hai cot lech nhau chut o nam co lenh vat qua giao thua.
+
+| tag | nam | ret% | dEquity$ | pnl_real$ | maxDD% | UW | n_leg | eq cuoi nam |
+|---|---|---|---|---|---|---|---|---|
+| T170 | 2021 | 12.21 | 4,272 | 4,273 | -2.46 | 37 | 149 | 39,272 |
+| T170 | 2022 | 19.58 | 7,688 | 7,688 | -11.84 | 72 | 198 | 46,960 |
+| T170 | 2023 | 34.96 | 16,418 | 16,637 | -2.73 | 63 | 125 | 63,378 |
+| T170 | 2024 | 32.14 | 20,355 | 20,097 | -6.60 | 92 | 282 | 83,695 |
+| T170 | 2025 | 32.71 | 27,375 | 27,375 | -4.23 | 52 | 335 | 111,070 |
+| **T170** | **TONG** | **217.34** | **76,070** | **76,070** | **-11.84** | **92** | **1089** | **111,070** |
+| GS100 | 2021 | 7.43 | 2,601 | 2,601 | -4.33 | 47 | 342 | 37,601 |
+| GS100 | 2022 | 16.50 | 6,203 | 6,203 | -10.83 | 64 | 495 | 43,804 |
+| GS100 | 2023 | 36.85 | 16,140 | 16,243 | -1.52 | 57 | 318 | 59,944 |
+| GS100 | 2024 | 43.15 | 25,860 | 25,740 | -7.91 | 88 | 776 | 85,787 |
+| GS100 | 2025 | 42.06 | 36,082 | 36,082 | -6.27 | **221** | 1084 | 121,869 |
+| **GS100** | **TONG** | **248.20** | **86,869** | **86,869** | **-12.66** | **221** | **3015** | **121,869** |
+| GS120 | 2021 | 7.50 | 2,626 | 2,626 | -3.03 | 33 | 270 | 37,626 |
+| GS120 | 2022 | 14.72 | 5,538 | 5,538 | -9.77 | 113 | 390 | 43,164 |
+| GS120 | 2023 | 28.12 | 12,136 | 12,231 | -1.48 | 57 | 230 | 55,300 |
+| GS120 | 2024 | 26.37 | 14,579 | 14,468 | -7.59 | 145 | 533 | 69,863 |
+| GS120 | 2025 | 33.15 | 23,161 | 23,161 | -6.43 | **221** | 754 | 93,024 |
+| **GS120** | **TONG** | **165.78** | **58,024** | **58,025** | **-9.77** | **221** | **2177** | **93,024** |
+| GS140 | 2021 | 8.12 | 2,842 | 2,843 | -1.85 | 22 | 203 | 37,842 |
+| GS140 | 2022 | 13.38 | 5,063 | 5,063 | -8.62 | 109 | 304 | 42,905 |
+| GS140 | 2023 | 24.36 | 10,452 | 10,544 | -1.31 | 37 | 179 | 53,357 |
+| GS140 | 2024 | 26.01 | 13,873 | 13,765 | -5.62 | 89 | 434 | 67,214 |
+| GS140 | 2025 | 28.89 | 19,421 | 19,421 | -5.65 | **221** | 542 | 86,635 |
+| **GS140** | **TONG** | **147.53** | **51,635** | **51,635** | **-8.62** | **221** | **1662** | **86,635** |
+| GS085 | 2021 | 10.85 | 3,799 | 4,143 | -5.21 | 47 | 446 | 38,799 |
+| GS085 | 2022 | 11.85 | 4,594 | 4,213 | -11.88 | 53 | 655 | 43,355 |
+| GS085 | 2023 | 37.61 | 16,306 | 16,901 | -1.59 | 53 | 404 | 59,661 |
+| GS085 | 2024 | 34.82 | 20,792 | 20,255 | -8.62 | 114 | 1031 | 80,510 |
+| GS085 | 2025 | 15.23 | 12,259 | 12,259 | -13.94 | **236** | 1560 | 92,769 |
+| **GS085** | **TONG** | **165.05** | **57,769** | **57,770** | **-13.94** | **236** | **4096** | **92,769** |
+| GS070 | 2021 | 10.40 | 3,639 | 4,056 | -6.92 | 34 | 650 | 38,639 |
+| GS070 | 2022 | **-5.15** | **-1,986** | **-2,446** | -23.24 | **318** | 918 | 36,609 |
+| GS070 | 2023 | 48.34 | 17,697 | 18,774 | -2.20 | 63 | 566 | 54,306 |
+| GS070 | 2024 | 28.69 | 15,604 | 14,730 | -12.16 | **242** | 1523 | 69,996 |
+| GS070 | 2025 | **-18.58** | **-13,024** | **-13,039** | -26.35 | **302** | 2661 | 57,089 |
+| **GS070** | **TONG** | **63.11** | **22,089** | **22,075** | **-26.35** | **400** | **6318** | **57,089** |
+| GS055 | 2021 | 19.43 | 6,801 | 7,491 | -10.59 | 67 | 1122 | 41,801 |
+| GS055 | 2022 | 4.00 | 1,670 | 959 | -20.66 | **144** | 1409 | 43,450 |
+| GS055 | 2023 | 53.56 | 23,273 | 24,783 | -4.35 | 85 | 905 | 66,723 |
+| GS055 | 2024 | 27.42 | 18,222 | 16,994 | -21.23 | **263** | 2555 | 84,676 |
+| GS055 | 2025 | **-37.55** | **-31,751** | **-33,088** | -41.68 | **359** | 5571 | 52,804 |
+| **GS055** | **TONG** | **50.87** | **17,804** | **17,140** | **-41.68** | **359** | **11562** | **52,804** |
+| K10_GS100 | 2021 | 7.87 | 2,756 | 2,756 | -5.31 | 46 | 414 | 37,756 |
+| K10_GS100 | 2022 | 7.57 | 2,858 | 2,858 | -13.46 | **187** | 555 | 40,614 |
+| K10_GS100 | 2023 | 41.55 | 16,874 | 16,972 | -1.92 | 33 | 380 | 57,488 |
+| K10_GS100 | 2024 | 43.95 | 25,257 | 25,142 | -8.31 | 88 | 915 | 82,728 |
+| K10_GS100 | 2025 | 31.64 | 26,174 | 26,174 | -7.07 | **223** | 1262 | 108,902 |
+| **K10_GS100** | **TONG** | **211.15** | **73,902** | **73,902** | **-16.59** | **279** | **3526** | **108,902** |
+| K12_GS100 | 2021 | 6.80 | 2,381 | 2,381 | -6.47 | 46 | 472 | 37,381 |
+| K12_GS100 | 2022 | 4.63 | 1,730 | 1,730 | -16.10 | **224** | 626 | 39,111 |
+| K12_GS100 | 2023 | 44.07 | 17,236 | 17,364 | -2.25 | 53 | 439 | 56,347 |
+| K12_GS100 | 2024 | 46.12 | 25,964 | 25,786 | -8.74 | 86 | 1041 | 82,261 |
+| K12_GS100 | 2025 | 31.00 | 25,504 | 25,503 | -6.71 | **222** | 1427 | 107,765 |
+| **K12_GS100** | **TONG** | **207.90** | **72,765** | **72,765** | **-20.04** | **425** | **4005** | **107,765** |
+| DCA20_GS100 | 2021 | 8.19 | 2,867 | 2,867 | -4.59 | 47 | 313 | 37,867 |
+| DCA20_GS100 | 2022 | 17.66 | 6,688 | 6,688 | -10.23 | 64 | 473 | 44,555 |
+| DCA20_GS100 | 2023 | 35.09 | 15,635 | 15,738 | -1.52 | 57 | 313 | 60,190 |
+| DCA20_GS100 | 2024 | 35.23 | 21,197 | 21,076 | -7.61 | 92 | 704 | 81,369 |
+| DCA20_GS100 | 2025 | 33.38 | 27,158 | 27,158 | -6.79 | **221** | 985 | 108,527 |
+| **DCA20_GS100** | **TONG** | **210.08** | **73,527** | **73,528** | **-10.99** | **221** | **2788** | **108,527** |
+| DCA25_GS100 | 2021 | 7.30 | 2,554 | 2,554 | -4.57 | 47 | 305 | 37,554 |
+| DCA25_GS100 | 2022 | 18.28 | 6,864 | 6,864 | -9.97 | 64 | 465 | 44,418 |
+| DCA25_GS100 | 2023 | 34.45 | 15,302 | 15,404 | -1.53 | 57 | 312 | 59,720 |
+| DCA25_GS100 | 2024 | 35.37 | 21,115 | 20,996 | -7.45 | 91 | 686 | 80,817 |
+| DCA25_GS100 | 2025 | 34.65 | 28,005 | 28,005 | -4.77 | **183** | 966 | 108,822 |
+| **DCA25_GS100** | **TONG** | **210.92** | **73,822** | **73,823** | **-10.45** | **212** | **2734** | **108,822** |
+| DCA30_GS100 | 2021 | 7.84 | 2,745 | 2,745 | -4.24 | 47 | 302 | 37,745 |
+| DCA30_GS100 | 2022 | 18.53 | 6,996 | 6,996 | -10.03 | 63 | 455 | 44,741 |
+| DCA30_GS100 | 2023 | 34.45 | 15,413 | 15,517 | -1.52 | 57 | 312 | 60,154 |
+| DCA30_GS100 | 2024 | 34.28 | 20,616 | 20,494 | -7.61 | 91 | 681 | 80,752 |
+| DCA30_GS100 | 2025 | 30.64 | 24,743 | 24,744 | -4.40 | **183** | 943 | 105,495 |
+| **DCA30_GS100** | **TONG** | **201.41** | **70,495** | **70,496** | **-10.66** | **211** | **2693** | **105,495** |
+
+**PHAT HIEN MOI cua bang nay (chua co trong bao cao V4 goc):** GS070 va GS055 con vi pham **rang buoc
+`ret nam >= 0`**, khong chi maxDD/UW: GS070 **2022 = -5.15%** va **2025 = -18.58%**; GS055 **2025 = -37.55%**.
+Truoc do V4 muc 7 chi ghi maxDD/UW/quy — bo sung o day cho day du.
+
+## A2. VERIFY "bat thuong" GS070 UW=400 > GS055 UW=359 — **SO DUNG, KHONG phai loi tinh**
+Liet ke TAT CA cac dot underwater >= 60 ngay (khong chi dot dai nhat):
+
+**DS_GS070 (scale 0.70)**
+| dai | dinh truoc | uw_start | hoi ve dinh | equity dinh | DD sau nhat |
+|---|---|---|---|---|---|
+| **400** | 2022-02-16 | 2022-02-17 | **2023-03-24** | 39,854 | -23.24% |
+| 302 | 2025-03-03 | **2025-03-04** | **CHUA HOI (het du lieu)** | 72,689 | -26.35% |
+| 242 | 2024-03-18 | 2024-03-19 | 2024-11-16 | 63,713 | -12.16% |
+| 75 | 2021-12-02 | 2021-12-03 | 2022-02-16 | 39,626 | -6.92% |
+| 63 | 2023-04-28 | 2023-04-29 | 2023-07-01 | 43,860 | -2.20% |
+
+**DS_GS055 (scale 0.55)**
+| dai | dinh truoc | uw_start | hoi ve dinh | equity dinh | DD sau nhat |
+|---|---|---|---|---|---|
+| **359** | 2025-01-05 | 2025-01-06 | **CHUA HOI (het du lieu)** | 85,749 | -41.68% |
+| 263 | 2024-03-18 | 2024-03-19 | 2024-12-07 | 83,772 | -21.23% |
+| 144 | 2022-04-02 | 2022-04-03 | 2022-08-25 | 44,271 | -20.66% |
+| 85 | 2023-04-06 | 2023-04-07 | 2023-07-01 | 53,965 | -4.28% |
+| 78 | 2022-11-08 | 2022-11-09 | 2023-01-26 | 45,273 | -13.22% |
+| 67 | 2021-08-28 | 2021-08-29 | 2021-11-04 | 40,419 | -10.59% |
+
+**GIAI THICH — khong co nghich ly, chi so "max UW" dang so HAI DOT KHAC NHAU:**
+1. **Dot dai nhat cua GS070 KHONG nam o 2025** ma o **bear 2022** (2022-02-17 → 2023-03-24, 400 ngay,
+   da HOAN THANH). GS055 o dung bear do chi bi 144 ngay. Tuc o 2022, scale 0.70 bi ket lau hon 0.55 —
+   vi 0.55 nap qua nhieu lenh nen equity dinh cua no bi ha xuong lien tuc, lam "dinh can vuot" thap hon
+   va no vuot lai som hon. Day la hieu ung co hoc cua cummax, khong phai "0.55 an toan hon".
+2. **Dot dai nhat cua GS055 la o 2025 va bi CAT CUT boi bien du lieu**: 2025-01-06 → het cua so
+   (2025-12-31) va **chua bao gio hoi ve dinh**. 359 la **CAN DUOI**, khong phai gia tri that.
+   Neu du lieu chay tiep, no gan nhu chac chan vuot 400.
+3. **So sanh LIKE-FOR-LIKE thi truc giac DUNG**: rieng dot 2025 chung, GS055 = **359 ngay** (chua hoi)
+   > GS070 = **302 ngay** (cung chua hoi). Va moi truc khac GS055 deu te hon: maxDD -41.68 vs -26.35;
+   ret 2025 -37.55% vs -18.58%; UW 2024 263 vs 242.
+4. Ca HAI ban deu co dot underwater **chua ket thuc** khi het cua so => UW bao cao cua ca hai la
+   **can duoi**. Ghi ro dieu nay: bang V4 muc 4/5 nen doc la "UW >= 400" va "UW >= 359".
+
+**Ket luan A2: khong phai loi doc file / loi tinh UW.** `uw_window.py` dem dung; chi la thong ke
+"dot dai nhat" cua hai config roi vao HAI thoi ky khac nhau, va dot cua GS055 bi bien du lieu cat.
+Doi chieu: GS100 cung co hai dot gan bang nhau (221 o 2025 va 212 o 2021-11) — cung hien tuong.
+
+## A3. VERIFY multiplicity/seed dung cho V4 — **CO SAI SOT, da xac nhan bang so; verdict KHONG doi**
+### A3.1 Su that trong code (doc truc tiep)
+`research/analysis/c3_rates.py` dong 31-34:
+```
+BLOCK_H = 72 ; NREP = 2000 ; CI_INFLATE = 1.21 ; SEED = 20260905
+```
+`x1_rates.py` chi dung lai `C.SEED` / `C.NREP` / `C.CI_INFLATE`. **Grep toan bo hai file: KHONG co mot
+phep tinh `sqrt(2 ln k)` nao, va KHONG co tham so `k` nao.** `CI_INFLATE = 1.21` la **HANG SO CUNG**,
+giong het nhau o MOI vong (V1 k=3, V2 k=3, V3 k=3, V4 k=8).
+
+=> **V4 KHONG dung k=8. No dung dung 1.21 nhu moi vong truoc.** Day la sai sot can ghi ro.
+
+### A3.2 1.21 that ra tuong duong k bao nhieu
+| k | sqrt(2 ln k) | so voi 1.21 |
+|---|---|---|
+| 2 | 1.1774 | 0.973 |
+| **3** | **1.4823** | **1.225** |
+| **8** | **2.0393** | **1.685** |
+| 11 | 2.1899 | 1.810 |
+
+`1.21 = sqrt(2 ln k)` khi `k = exp(1.21²/2) = **2.079**`.
+=> **1.21 chi phu k≈2.08.** Nghia la cau trong `PREREG_2X_HALFSIZE` muc 5 — "x1.21 la muc noi rong DA BAO
+k=3 multiplicity" — **KHONG dung ve so hoc** (k=3 can 1.4823). Cau do da duoc chep lai vao
+PREREG V1/V2/V3/V4 cua toi. **Dinh chinh tai day**: 1.21 la mot he so noi rong co dinh cua du an, KHONG
+phai ham cua k, va no thap hon muc sqrt(2 ln k) can thiet cho moi k >= 3.
+
+### A3.3 Anh huong len verdict — **KHONG DOI MOT CAI NAO** (kiem bang so, khong suy doan)
+Noi rong CI **chi co the** bien mot rate tu "ngoai CI" thanh "trong CI", **khong bao gio** tao ra rate
+moi co y nghia. Ma ca 8 config V4 da co **0 rate huong TOT ngoai CI** ngay voi CI HEP (1.21).
+Tinh lai voi CI dung cho k=8 (rong them 1.685 lan):
+
+| config | so rate huong TOT ngoai CI (x1.21) | so rate huong TOT ngoai CI (k=8, x2.0393) |
+|---|---|---|
+| GS085 / GS070 / GS055 | 0 | **0** |
+| K10 / K12 | 0 | **0** |
+| DCA20 / DCA25 / DCA30 | 0 | **0** |
+
+(Cai doi la so rate huong XAU: vd DCA30 win% [0.260, 8.571] -> [-2.588, 11.419] vao trong CI; K10/K12/
+DCA20/25/30 mat het cac rate "xau" co y nghia. Tuc **CI dung lam ban an NHE hon cho cac config**, nhung
+van khong config nao dat >= 2 rate TOT.)
+
+Va **rang buoc cung hoan toan doc lap voi CI**: ca 8 config FAIL hard-constraint (UW, va voi GS070/GS055
+them maxDD + nam am). => **Verdict NULL 8/8 GIU NGUYEN**, du dung 1.21 hay 2.0393.
+
+### A3.4 Hoi kiem cac vong truoc (k=3 => 1.4823, rong them 1.225 lan)
+Chi V1 tung co rate huong TOT ngoai CI (deu la TSloss%, va deu chi co **1** rate — duoi nguong 2):
+| config | CI x1.21 | CI k=3 | ket qua |
+|---|---|---|---|
+| DCA5 | [0.150, 3.309] | [-0.205, 3.664] | **vao trong CI** (1 -> 0 rate tot) |
+| DCA8 | [0.487, 3.395] | [0.160, 3.722] | van ngoai CI (1 rate tot) |
+| DCA12 | [0.436, 2.699] | [0.181, 2.954] | van ngoai CI (1 rate tot) |
+V2/V3: moi rate ngoai CI deu huong XAU => noi rong chi lam giam, khong the tao rate TOT.
+=> **Khong vong nao doi verdict.** Tat ca van NULL.
+
+### A3.5 Seed
+`SEED = 20260905` dung nhat quan o ca 5 vong (V1..V4 + cac bai truoc). Luu y: mo ta nhiem vu ban dau
+nhac "seed 20260903" — gia tri THUC TE trong repo la **20260905**; toi dung hang so co san trong repo
+(da ghi ro o PREREG V1 muc 7) chu khong doi seed rieng cho bai nao.
+
+### A3.6 Khuyen nghi (KHONG tu y lam)
+Neu muon nghiem ngat, nen tham so hoa `CI_INFLATE` theo so config that su so sanh trong moi vong
+(`sqrt(2*ln(k))`) thay vi hang so 1.21. Day la thay doi cong cu cham diem, **phai co pre-reg rieng** va
+phai chay lai cham diem cho cac vong cu de so sanh cong bang — **khong lam trong phu luc nay**.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_011zpgT8SsGrmcqzxbC93PQT
