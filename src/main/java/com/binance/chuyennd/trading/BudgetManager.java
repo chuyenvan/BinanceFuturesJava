@@ -32,6 +32,16 @@ public class BudgetManager {
     private static volatile BudgetManager INSTANCE = null;
     public static Float balanceBasic = Configs.capitalStart();
 
+    /**
+     * [CONC-CAP LIVE 2026-09-15] Anh chup walletBalance THAT doc tu getAccountUMInfo().
+     * CHI dung lam mau so cho 2 guard safety-net (ConcCapLiveGuard) — HOAN TOAN TACH BIET khoi
+     * {@link #balanceBasic} va {@link #BUDGET_PER_ORDER}: KHONG mot dong nao cua duong sizing
+     * doc bien nay, nen size lenh live khong doi mot chut. null = chua doc duoc (guard FAIL-OPEN).
+     * Cap nhat theo nhip san co cua updateBudget() (luc khoi tao + moi gio) — safety-net khong
+     * can equity real-time tuyet doi, dung gia tri cache gan nhat la du.
+     */
+    public static volatile Float liveEquitySnapshot = null;
+
 
     public Float BUDGET_PER_ORDER = 0f;
 
@@ -58,6 +68,8 @@ public class BudgetManager {
         try {
             Asset umInfo = BinanceFuturesClientSingleton.getInstance().getAccountUMInfo();
             Float balanceCurrent = umInfo.getWalletBalance().floatValue();
+            // [CONC-CAP LIVE] chi GHI LAI anh chup cho guard; KHONG dung vao BUDGET_PER_ORDER.
+            liveEquitySnapshot = balanceCurrent;
             BUDGET_PER_ORDER = balanceBasic / Configs.number_order_budget;
             long time = new File("target/binance-java-sdk-1.2.4.jar").lastModified();
             LOG.info("Ba and Bu {}: {} -> {} balance init:{} marginRunning:{} ", Utils.normalizeDateYYYYMMDDHHmm(time),

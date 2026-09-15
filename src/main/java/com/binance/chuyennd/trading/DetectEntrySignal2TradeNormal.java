@@ -40,6 +40,7 @@ import com.binance.chuyennd.tradecore.CoinRankManager;
 import com.binance.chuyennd.tradecore.DcaProcessor;
 import com.binance.chuyennd.tradecore.MarketBigChangeDetector;
 import com.binance.chuyennd.tradecore.TradeUtils;
+import com.binance.chuyennd.tradecore.ConcCapLiveGuard;
 import com.binance.chuyennd.tradecore.Configs;
 import com.binance.chuyennd.utils.StorageSnappy;
 import com.binance.chuyennd.utils.Utils;
@@ -878,6 +879,40 @@ public class DetectEntrySignal2TradeNormal {
         }
         LOG.info("Market level:{} {} {} {} {} {}", Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime.longValue()), levelChange, symbol, budget, quantity, ticker.priceClose);
         if (quantity != null && quantity != 0) {
+            // ===== [CONC-CAP LIVE 2026-09-15] SAFETY-NET =====================================
+            //   Ban port cua 2 guard da verify parity 6/6 tren duong sim (commit 5e82983,
+            //   docs/RESULT_CONCENTRATION_SAFETYCAP.md). Trang thai + phep quyet dinh nam o
+            //   com.binance.chuyennd.tradecore.ConcCapLiveGuard (ham thuan, co unit test).
+            //   Dat o DAY = diem doi xung voi ban sim: sau khi quantity da tinh (nen margin du
+            //   kien la so THAT), sau MOI cong hien co (EntryGate, kill-switch mat do, U_MAX,
+            //   TIER_3_SHITCOIN, tierMultiplier), va TRUOC khi order ton tai / duoc day di.
+            //   CA HAI CO MAC DINH FALSE => khong nhanh nao chay => luong live khong doi gi.
+            final ConcCapLiveGuard ccGuard = ConcCapLiveGuard.getInstance();
+            final float ccLegMargin = quantity * ticker.priceClose / Configs.LEVERAGE_ORDER;
+            if (Configs.CONC_CAP_AGG_DCA_ENABLED && levelChange == MarketLevelChange.DCA_LEVEL1) {
+                // dong bo truoc khi doc: bo cac cum da dong khoi aggregate (neu khong, structure
+                // chi phinh ra va guard se binding NHAM roi chan lenh that).
+                ccGuard.retainSymbols(BudgetManager.getInstance().symbol2Pos.keySet());
+                Float ccEquity = BudgetManager.liveEquitySnapshot;
+                if (ccEquity == null || ccEquity <= 0f) {
+                    LOG.warn("[CONC-CAP] guard-1 BO QUA (fail-open): chua co liveEquitySnapshot tu getAccountUMInfo. sym={} lvl={}",
+                            symbol, levelChange);
+                } else if (ccGuard.blockDcaLeg(ccLegMargin, ccEquity)) {
+                    LOG.warn("[CONC-CAP] CHAN leg DCA-grid sym={} legMargin={} aggDca={} equity={} ratio={} cap={}",
+                            symbol, ccLegMargin, ccGuard.aggDcaLegMargin(), ccEquity,
+                            ccGuard.ratioIfAdd(ccLegMargin, ccEquity), Configs.CONC_CAP_AGG_DCA_PCT);
+                    return;
+                }
+            }
+            if (Configs.CONC_CAP_BD_RATE_ENABLED && levelChange == MarketLevelChange.BIG_DOWN) {
+                long ccNow = System.currentTimeMillis();
+                if (ccGuard.blockBigDownLeg(ccNow)) {
+                    LOG.warn("[CONC-CAP] CHAN leg BIG_DOWN sym={} nBd60m={} cap={}",
+                            symbol, ccGuard.bdCountLastHour(ccNow), Configs.CONC_CAP_BD_PER_HOUR);
+                    return;
+                }
+            }
+            // =================================================================================
             OrderTargetInfo orderTrade = new OrderTargetInfo(OrderTargetStatus.REQUEST, ticker.priceClose, null, quantity, Configs.LEVERAGE_ORDER, symbol, ticker.startTime.longValue(), ticker.startTime.longValue(), OrderSide.BUY, Constants.TRADING_TYPE_VOLUME_MINI);
             orderTrade.marketLevel = levelChange;
             orderTrade.priceTP = priceMax15M;
@@ -894,6 +929,13 @@ public class DetectEntrySignal2TradeNormal {
                 BinanceOrderTradingManager.shadowHandleOrder(orderTrade);
             } else {
                 RedisHelper.getInstance().get().rpush(RedisConst.REDIS_KEY_BINANCE_TD_ORDER_MANAGER_QUEUE, Utils.toJson(orderTrade));
+            }
+            // [CONC-CAP LIVE] chi ghi nhan leg DA THUC SU duoc gui di (khong dem ung vien bi loai).
+            if (Configs.CONC_CAP_AGG_DCA_ENABLED && levelChange == MarketLevelChange.DCA_LEVEL1) {
+                ccGuard.recordDcaLeg(symbol, ccLegMargin);
+            }
+            if (Configs.CONC_CAP_BD_RATE_ENABLED && levelChange == MarketLevelChange.BIG_DOWN) {
+                ccGuard.recordBigDownLeg(System.currentTimeMillis());
             }
             writeOrder2File(orderTrade, ticker, marketRate, priceMax15M);
         } else {
