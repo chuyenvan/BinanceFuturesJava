@@ -12,8 +12,10 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class DcaProcessor {
@@ -78,7 +80,9 @@ public class DcaProcessor {
         capLegsCut = 0;
     }
 
-    /** Xep hang drop tang dan (rot sau nhat truoc) + cong don margin moi toi tran PCT x equity. */
+    /** Xep hang drop tang dan (rot sau nhat truoc) + cong don margin moi toi tran PCT x equity.
+     *  Chi cat (bo) ung vien khi tong vuot tran; GIU NGUYEN thu tu GOC cua cac ung vien duoc giu
+     *  (khong reorder khi khong cat => byte-identical voi parity khi cap khong binding). */
     private static <K> List<K> capByDrop(List<Map.Entry<K, OrderTargetInfoTest>> candidates, Long time) {
         long t = time != null ? time.longValue() : Long.MIN_VALUE;
         if (t != capTickMillis) {   // tick moi => reset budget luot (xuyen 2 call-site cung tick)
@@ -89,7 +93,9 @@ public class DcaProcessor {
             return java.util.Collections.emptyList();
         }
 
-        candidates.sort(Comparator.comparingDouble(e ->
+        // xep hang drop tang dan (rot sau nhat truoc) — chi de QUYET DINH ai bi cat
+        List<Map.Entry<K, OrderTargetInfoTest>> ranked = new ArrayList<>(candidates);
+        ranked.sort(Comparator.comparingDouble(e ->
                 (double) DcaUtils.dcaGridDrop(
                         e.getValue().firstEntryPrice != null ? e.getValue().firstEntryPrice : e.getValue().priceEntry,
                         e.getValue().lastPrice)));
@@ -100,20 +106,26 @@ public class DcaProcessor {
                 bm.marginRunning, balanceBasic, MarketLevelChange.DCA_LEVEL1);
         float capValue = Configs.DCA_ROUND_CAP_PCT * balanceBasic;
 
-        List<K> kept = new ArrayList<>();
-        int cut = 0;
-        float sumKept = 0f;
-        for (Map.Entry<K, OrderTargetInfoTest> e : candidates) {
+        // duyet tu sau nhat (drop nho nhat truoc), cong don margin; bo (cat) khi vuot tran / het bac
+        Set<K> cutKeys = new HashSet<>();
+        for (Map.Entry<K, OrderTargetInfoTest> e : ranked) {
             OrderTargetInfoTest o = e.getValue();
             float tier = tierMultiplierOf(e.getKey());
             float m = DcaUtils.dcaGridLegMargin(mb, tier, o.legCount);
-            if (m <= 0f) { cut++; continue; }                       // het bac grid / u>=U_MAX
-            if (capUsedThisTick + m > capValue) { cut++; continue; } // tran 10% equity
-            capUsedThisTick += m;
-            sumKept += m;
-            kept.add(e.getKey());
+            if (m <= 0f || capUsedThisTick + m > capValue) {   // het bac grid / u>=U_MAX / tran 10%
+                cutKeys.add(e.getKey());
+            } else {
+                capUsedThisTick += m;
+            }
         }
 
+        // giu thu tu GOC (byte-identical khi khong cat), chi bo cac key bi cat
+        List<K> kept = new ArrayList<>();
+        for (Map.Entry<K, OrderTargetInfoTest> e : candidates) {
+            if (!cutKeys.contains(e.getKey())) kept.add(e.getKey());
+        }
+
+        int cut = cutKeys.size();
         capRounds++;
         if (cut > 0) {
             capRoundsCut++;
@@ -124,8 +136,8 @@ public class DcaProcessor {
             LOG.info("[DCA-CAP] MODE rank={} capPct={}", Configs.DCA_RANK_MODE, Configs.DCA_ROUND_CAP_PCT);
         }
         if (cut > 0) {
-            LOG.info("[DCA-CAP] t={} nCand={} kept={} cut={} sumKept={} cap={} eq={}",
-                    time, candidates.size(), kept.size(), cut, sumKept, capValue, balanceBasic);
+            LOG.info("[DCA-CAP] t={} nCand={} kept={} cut={} cap={} eq={}",
+                    time, candidates.size(), kept.size(), cut, capValue, balanceBasic);
         }
         return kept;
     }
