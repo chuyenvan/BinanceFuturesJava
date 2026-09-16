@@ -509,6 +509,19 @@ public class Configs {
     public static int CONC_CAP_BD_PER_HOUR = Cfg.get("CONC_CAP_BD_PER_HOUR") != null
             ? Integer.parseInt(Cfg.get("CONC_CAP_BD_PER_HOUR").trim()) : 75;
 
+    // ========================================================================
+    // [BD-SIZE-ADAPT 2026-09-16] docs/PREREG_BD_SIZE_ADAPT.md — size leg BIG_DOWN
+    //   theo severity causal (rolling N-ngay). KHONG doi trigger BIG_DOWN.
+    //   Mac dinh "off" => khong cap phat cau truc, khong nhanh nao chay => byte-identical.
+    //   Cac mode: down50 (giam khi sau), down25 (giam nhe), up50 (tang khi sau).
+    //   KHONG final: unit test lat co truc tiep.
+    // ========================================================================
+    /** Che do size-adapt cho leg BIG_DOWN (off|down50|down25|up50). */
+    public static String BD_SIZE_ADAPT = Cfg.getOr("BD_SIZE_ADAPT", "off");
+    /** Cua so lich (ngay) tinh qmin(D) = min(dayMin[D-N .. D-1]), causal, KHONG gom D. */
+    public static int BD_SIZE_ADAPT_N = Cfg.get("BD_SIZE_ADAPT_N") != null
+            ? Integer.parseInt(Cfg.get("BD_SIZE_ADAPT_N").trim()) : 120;
+
 
 
     // =========================================================

@@ -559,6 +559,10 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             LOG.info("[DS-FUNNEL] X={} cooldownMin={} T1_touchX={} T2_postCooldown={} tieBreak={}",
                     Configs.DCA_SIGNAL_LOSS, Configs.DCA_SIGNAL_COOLDOWN_MIN, dsT1, dsT2, dsTieBreak);
         }
+        // [BD-SIZE-ADAPT 2026-09-16] bao 1 dong: mode + so leg BIG_DOWN bi scale (m != 1).
+        if (BdSizeAdapt.ACTIVE) {
+            LOG.info("[BD-SIZE-ADAPT] mode={} scaledBdLegs={}", BdSizeAdapt.MODE, BdSizeAdapt.scaledLegs());
+        }
         Utils.printMemoryUse(System.currentTimeMillis() - timeSimulator);
     }
 
@@ -850,6 +854,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         aiRejectFilter = new AIRejectFilter();
 
         SimpleSymbolMapper.getInstance().init();
+        BdSizeAdapt.build(time2MarketData);
 
         Utils.printMemoryUsage("Load time2FundingPre (time2SymbolPred)");
         LOG.info("✅ TẤT CẢ DỮ LIỆU ĐÃ SẴN SÀNG. BẮT ĐẦU SIMULATE...");
@@ -1263,6 +1268,16 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             if ("1".equals(System.getenv("SIZE_PROBE"))) { float _thr=1f-(marginRunning==null?0f:marginRunning)/balanceBasic/Configs.U_MAX; if(_thr<0f)_thr=0f; else if(_thr>1f)_thr=1f; LOG.info("[SIZE] lvl={} eq={} thr={} fbase={} ladder={} tier={} ratio={} budget={} pct={}", levelChange, balanceBasic, _thr, Configs.F_BASE, Configs.dcaGridTotalWeight(), tierMultiplier, ratio, budget, budget/balanceBasic); }
         }
 
+        // [BD-SIZE-ADAPT 2026-09-16] docs/PREREG_BD_SIZE_ADAPT.md — size leg BIG_DOWN theo severity
+        //   (causal rolling N-ngay). Chi nhan budget khi mode != off VA levelChange == BIG_DOWN.
+        //   Dat SAU tierMultiplier + DCA-grid ratio (phep nhan giao hoan voi ratio) va TRUOC chot quantity.
+        //   Budget-null check (managerBudget) nam TRUOC day => khong bao gio cham budget null. Scale-up
+        //   (up50) co the day marginRunning qua U_MAX — TƯỜNG MINH, khong chan (da pre-reg).
+        if (BdSizeAdapt.ACTIVE && levelChange == MarketLevelChange.BIG_DOWN) {
+            budget *= BdSizeAdapt.mult(levelChange, Math.floorDiv(ticker.startTime, 86400000L),
+                    marketData != null ? marketData.rateDownAvg : 0f);
+        }
+
         String symbolStr = SimpleSymbolMapper.getInstance().getSymbol(symbolId);
         Float quantity = Utils.calQuantityTest(budget, leverage, entry, symbolStr);
 
@@ -1367,6 +1382,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         // FUNDING (Bước 3): warm-up cache funding_data NGAY (nạp 1 lần vào RAM) để initFunding/updateFundingFee
         // trong vòng nóng chỉ tra TreeMap, KHÔNG trigger scanAll Aerospike giữa backtest.
         FundingFeeManager.getInstance();
+        BdSizeAdapt.build(this.time2MarketData);
         this.aiRejectFilter = aiRejectFilter;
     }
 
