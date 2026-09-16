@@ -11,6 +11,7 @@ Day la thay doi **KHAU VI RUI RO**, KHONG phai thay doi **NGUONG BANG CHUNG**.
 | `UW` (ngay) | <= 120 | **<= 200** |
 | nam am | khong | khong (GIU) |
 | quy xau nhat | >= -5% | **>= -15%** |
+| **tap trung 1 coin** | (chua co) | **<= 15% equity** (chot 2026-09-17) |
 | NGUONG BANG CHUNG | >= 2 rate ngoai CI | **GIU NGUYEN** (`>=2`, bootstrap block-72h, x1.21, 2000 rep, seed 20260905) |
 
 Ghi chu: nguong cu `UW <= 120` da duoc ghi nhan la **KHONG dat duoc** tren cua so 48 thang
@@ -61,3 +62,13 @@ MaxDD nam xau nhat / UW dai nhat (tu `sim.out` tung run, da co san):
   lai** cho 6 bien the. KHONG anh huong ket luan cu (khong bien the nao cham quy).
 - Khong con muc nao treo trong file nay.
 - Nguong trong `docs/AGENT_RUNBOOK.md` muc 0.3 tro ve file nay.
+
+## 5. Chot bo sung 2026-09-17 (chat)
+
+- **Tap trung 1 coin <= 15% equity** (user chot: *"chặn max cap trên một coin 15%"*). Day la rang
+  buoc rui ro MOI, ap cho moi bai cham diem. Co che thuc thi: guard `CONC_CAP_PERCOIN_ENABLED`/
+  `CONC_CAP_PERCOIN_PCT` (0.15) trong `SimulatorMarketLevelTicker1MStopLoss.createOrder` — chan HAN
+  khi `(margin hien co cua coin + margin leg moi) / equity > 15%`. Da duoc prove trong
+  `docs/RESULT_DCA_AGG_PERCOIN.md` (tap trung 17.15% -> 12.51%, khong lam XAU rate nao).
+- Tran aggregate `CONC_CAP_AGG_DCA_PCT` giu nguyen mac dinh 0.45; user chot 0.30 cho experiment nay
+  nhung tren lich su no KHONG binding (dinh tong DCA-grid 16.76% < 30%).
