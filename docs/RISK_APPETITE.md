@@ -11,6 +11,7 @@ Day la thay doi **KHAU VI RUI RO**, KHONG phai thay doi **NGUONG BANG CHUNG**.
 | `UW` (ngay) | <= 120 | **<= 200** |
 | nam am | khong | khong (GIU) |
 | quy xau nhat | >= -5% | **>= -15%** |
+| tap trung 1 coin | "khong tang so parity" | **<= 15% equity** |
 | **tap trung 1 coin** | (chua co) | **<= 15% equity** (chot 2026-09-17) |
 | NGUONG BANG CHUNG | >= 2 rate ngoai CI | **GIU NGUYEN** (`>=2`, bootstrap block-72h, x1.21, 2000 rep, seed 20260905) |
 
@@ -62,6 +63,15 @@ MaxDD nam xau nhat / UW dai nhat (tu `sim.out` tung run, da co san):
   lai** cho 6 bien the. KHONG anh huong ket luan cu (khong bien the nao cham quy).
 - Khong con muc nao treo trong file nay.
 - Nguong trong `docs/AGENT_RUNBOOK.md` muc 0.3 tro ve file nay.
+
+## 5. Chot bo sung 2026-09-17 (chat)
+
+- **Trần tập trung 1 coin = `<= 15%` equity** (user: *"Ok với 0.3 nhưng chặn max cap trên một coin 15%"*,
+  roi *"Chốt trần per coin thôi giữ nó"*). Day la rang buoc **CUNG** thay cho luat cu "khong tang so parity".
+  Luu y co y thuc: nguong nay **RONG HON** thuc te cu (parity 9.77%), tuc chu dong chap nhan tap trung cao hon.
+- Co che thuc thi: `CONC_CAP_PERCOIN_ENABLED`/`CONC_CAP_PERCOIN_PCT` (moi, default OFF/0.15) — chan lenh
+  moi khi `(margin coin + lenh moi)/equity > pct`. Da do that: binding 45 lan, ha tap trung 17.15% -> 12.51%.
+- Tran aggregate `CONC_CAP_AGG_DCA_PCT` **BO** (dat 0.30 nhung binding 0 lan — dinh lich su chi 16.76%).
 
 ## 5. Chot bo sung 2026-09-17 (chat)
 
