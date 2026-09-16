@@ -575,6 +575,12 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         if (BdSelection.ACTIVE) {
             LOG.info("[BD-SEL] mode={} topk={}", BdSelection.MODE, BdSelection.TOPK);
         }
+        // [DCA-ROUND-CAP 2026-09-16] bao 1 dong aggregate: so luot/leg bi cat (de cham co che).
+        if (Configs.DCA_ROUND_CAP_ENABLED) {
+            LOG.info("[DCA-CAP] SUMMARY rounds={} roundsCut={} legsCut={} capPct={} rank={}",
+                    DcaProcessor.capRounds, DcaProcessor.capRoundsCut, DcaProcessor.capLegsCut,
+                    Configs.DCA_ROUND_CAP_PCT, Configs.DCA_RANK_MODE);
+        }
         Utils.printMemoryUse(System.currentTimeMillis() - timeSimulator);
     }
 
@@ -1380,6 +1386,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                               AIRejectFilter aiRejectFilter) throws OrtException {
 
         BudgetManagerSimple.getInstance().resetInstance();
+        DcaProcessor.resetRoundCapStats();   // [DCA-ROUND-CAP] dem per-run sach
         concBdOpenTimes = null;   // [CONC-CAP] rolling window sach o moi lan khoi tao (sample WFO)
         allOrderDone = new TreeMap<>();
 

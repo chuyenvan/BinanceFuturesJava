@@ -190,6 +190,18 @@ public class Configs {
             Cfg.get("DCA_GRID_WEIGHTS") != null ? Cfg.get("DCA_GRID_WEIGHTS") : "1,1,3,8");
 
     // =========================================================
+    // DCA ROUND CAP (2026-09-16) — tran TONG margin moi moi luot DCA. docs/PREREG_DCA_ROUND_CAP.md.
+    //   Mac dinh OFF => DcaProcessor.getDCA chay logic cu NGUYEN VEN (byte-identical).
+    //   - DCA_ROUND_CAP_ENABLED : bat/tat tran (goc cua user: "moi luot max 10% von").
+    //   - DCA_ROUND_CAP_PCT      : tran = PCT x equity hien tai (equityNow).
+    //   - DCA_RANK_MODE          : off (khong rank/khong cap) | drop (rank theo drop tang dan).
+    // =========================================================
+    public static boolean DCA_ROUND_CAP_ENABLED = "true".equalsIgnoreCase(Cfg.get("DCA_ROUND_CAP_ENABLED"));
+    public static float DCA_ROUND_CAP_PCT = Cfg.get("DCA_ROUND_CAP_PCT") != null
+            ? Float.parseFloat(Cfg.get("DCA_ROUND_CAP_PCT").trim()) : 0.10f;
+    public static String DCA_RANK_MODE = Cfg.getOr("DCA_RANK_MODE", "off");
+
+    // =========================================================
     // DCA GRID — DANG SCALAR (2026-08-01, de HPO tune duoc)
     // =========================================================
     // VAN DE: StrategyWfoTask ap gene bang reflection len FIELD SCALAR cua Configs

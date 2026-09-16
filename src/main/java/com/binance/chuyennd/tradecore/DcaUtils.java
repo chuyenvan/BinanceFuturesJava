@@ -63,6 +63,24 @@ public final class DcaUtils {
         return (w / total) * Configs.DCA_GRID_SCALE;
     }
 
+    /** [DCA-ROUND-CAP 2026-09-16] Do sau cua cum so voi gia vao leg DAU (am khi lo).
+     *  Cung cong thuc trong shouldDcaGrid — dung cho xep hang ung vien DCA. */
+    public static float dcaGridDrop(Float firstEntryPrice, Float lastPrice) {
+        if (firstEntryPrice == null || lastPrice == null || firstEntryPrice <= 0f) return 0f;
+        return lastPrice / firstEntryPrice - 1f;
+    }
+
+    /** [DCA-ROUND-CAP 2026-09-16] Margin MOI cua leg DCA-grid sap khop cho mot ung vien.
+     *  Dung DUNG cong thuc sizing trong Simulator.createOrder (managerBudget * tierMultiplier *
+     *  gridLegWeightRatio(legCount)) — truoc calQuantityTest (FLOOR) nen margin THAT <= gia tri nay
+     *  (cap theo day la CONSERVATIVE). managerBudget null (= u>=U_MAX) => 0. */
+    public static float dcaGridLegMargin(Float managerBudget, float tierMultiplier, int legCount) {
+        if (managerBudget == null) return 0f;
+        float ratio = gridLegWeightRatio(legCount);
+        if (ratio <= 0f) return 0f;
+        return managerBudget * tierMultiplier * ratio;
+    }
+
     /**
      * Phương thức chính, chỉ nhận vào các tham số đơn để kiểm tra.
      * Đây là hàm duy nhất bạn cần gọi từ bên ngoài.
