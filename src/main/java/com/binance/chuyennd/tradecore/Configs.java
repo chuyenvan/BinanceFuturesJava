@@ -390,6 +390,10 @@ public class Configs {
     public static float MIN_MOMENTUM_15M = 0.02284f;                  // HPO (đã revert về cũ): 0.01720f
     public static float MS_UP_BIG_THRES = 0.02046f;                  // HPO (đã revert về cũ): 0.01757f
     public static float MS_DOWN_BIG_AVG = -0.03157f;                  // HPO (đã revert về cũ): -0.05514f
+    // [BD-THRESHOLD-FRAGILITY 2026-09-17] tach nguong DCA khoi nguong BIG_DOWN (docs/PREREG_BD_THRESHOLD_FRAGILITY.md).
+    //   MS_DOWN_BIG_AVG chi con dieu khien getMarketStatus1M (BIG_DOWN); duong isDcaAlt doc field nay.
+    //   Default = gia tri cu => parity byte-identical. Override qua SIM_MS_DOWN_BIG_AVG_DCA.
+    public static float MS_DOWN_BIG_AVG_DCA = -0.03157f;
 
     public static float MS_UP_SMALL_THRES = 0.00442f;
     public static float MS_DOWN_SMALL_AVG_OR_15M = -0.02069f;         // HPO (đã revert về cũ): -0.02007f
@@ -655,6 +659,8 @@ public class Configs {
             if ((v = Cfg.get("SIM_PREDICT_SYMBOL_RATE_MAX")) != null) PREDICT_SYMBOL_RATE_MAX_THRESHOLD = Float.parseFloat(v);
             if ((v = Cfg.get("SIM_RATE_PROFIT_STOP_MARKET")) != null) RATE_PROFIT_STOP_MARKET = Float.parseFloat(v);
             if ((v = Cfg.get("SIM_MS_DOWN_BIG_AVG")) != null) MS_DOWN_BIG_AVG = Float.parseFloat(v);
+            // [BD-THRESHOLD-FRAGILITY] nguong rieng cho duong DCA (isDcaAlt); default = gia tri cu.
+            if ((v = Cfg.get("SIM_MS_DOWN_BIG_AVG_DCA")) != null) MS_DOWN_BIG_AVG_DCA = Float.parseFloat(v);
             if ((v = Cfg.get("SIM_LOSER_TIME_STOP_HOURS")) != null) LOSER_TIME_STOP_HOURS = Integer.parseInt(v.trim());
             if ((v = Cfg.get("SIM_COND_EXIT_HOURS")) != null) COND_EXIT_HOURS = Integer.parseInt(v.trim());
             if ((v = Cfg.get("SIM_COND_EXIT_MIN_FAV")) != null) COND_EXIT_MIN_FAV = Float.parseFloat(v.trim());

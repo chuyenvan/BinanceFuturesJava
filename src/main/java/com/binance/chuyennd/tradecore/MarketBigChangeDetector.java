@@ -186,8 +186,9 @@ public class MarketBigChangeDetector {
     }
 
     public static boolean isDcaAlt(Float rateDown15MAvg, Float rateDownAvg, Float rateUpAvg) {
-        return rateDown15MAvg < Configs.MS_DOWN_BIG_AVG
-                || rateDownAvg < Configs.MS_DOWN_BIG_AVG / 3;
+        // [BD-THRESHOLD-FRAGILITY] tach nguong DCA khoi BIG_DOWN: dung MS_DOWN_BIG_AVG_DCA (default = gia tri cu).
+        return rateDown15MAvg < Configs.MS_DOWN_BIG_AVG_DCA
+                || rateDownAvg < Configs.MS_DOWN_BIG_AVG_DCA / 3;
     }
 
     // ================================================================================
