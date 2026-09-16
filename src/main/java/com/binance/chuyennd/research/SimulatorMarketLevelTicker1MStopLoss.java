@@ -320,8 +320,16 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                     Set<Short> symbol2BUY = new HashSet<>();
                                     TreeMap<Float, Short> predict2Symbol = extractPredict2Symbol(time2SymbolPred.get(time));
 
-                                    symbol2BUY.addAll(MarketBigChangeDetector.getTopSymbolArray(numberOrder,
-                                            symbol2Ticker, symbolLocked, predict2Symbol));
+                                    if (levelChange.equals(MarketLevelChange.BIG_DOWN) && BdSelection.ACTIVE) {
+                                        // [BD-SEL 2026-09-16] docs/PREREG_SEL_BIGDOWN.md — doi cach chon 2 coin
+                                        //   cua leg BIG_DOWN (drop/mix/drop_top8). Chi trong nhanh BIG_DOWN;
+                                        //   mode off => ACTIVE=false => di nhanh cu (byte-identical).
+                                        symbol2BUY.addAll(BdSelection.select(numberOrder,
+                                                symbol2Ticker, symbolLocked, predict2Symbol));
+                                    } else {
+                                        symbol2BUY.addAll(MarketBigChangeDetector.getTopSymbolArray(numberOrder,
+                                                symbol2Ticker, symbolLocked, predict2Symbol));
+                                    }
 
                                     Map<Short, OrderTargetInfoTest> activeOrderMap = getActiveOrderMap();
                                     List<Short> symbolDcaLevel = DcaProcessor.getDCA(levelChange, time,
@@ -562,6 +570,10 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         // [BD-SIZE-ADAPT 2026-09-16] bao 1 dong: mode + so leg BIG_DOWN bi scale (m != 1).
         if (BdSizeAdapt.ACTIVE) {
             LOG.info("[BD-SIZE-ADAPT] mode={} scaledBdLegs={}", BdSizeAdapt.MODE, BdSizeAdapt.scaledLegs());
+        }
+        // [BD-SEL 2026-09-16] bao 1 dong: mode hieu dung (chi leg BIG_DOWN).
+        if (BdSelection.ACTIVE) {
+            LOG.info("[BD-SEL] mode={} topk={}", BdSelection.MODE, BdSelection.TOPK);
         }
         Utils.printMemoryUse(System.currentTimeMillis() - timeSimulator);
     }

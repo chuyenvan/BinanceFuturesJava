@@ -522,6 +522,19 @@ public class Configs {
     public static int BD_SIZE_ADAPT_N = Cfg.get("BD_SIZE_ADAPT_N") != null
             ? Integer.parseInt(Cfg.get("BD_SIZE_ADAPT_N").trim()) : 120;
 
+    // ========================================================================
+    // [BD-SEL 2026-09-16] docs/PREREG_SEL_BIGDOWN.md — doi cach chon 2 coin cua leg
+    //   BIG_DOWN theo drop 1-phut causal thay vi pNoPump. KHONG sua getTopSymbolArray.
+    //   Mac dinh "off" => khong cap phat, khong nhanh nao chay => byte-identical.
+    //   Cac mode: drop (am nhat), mix (tong hang rankP+rankD), drop_top8 (top-K pNoPump
+    //   roi chon rot nhat). KHONG final: unit test lat co truc tiep.
+    // ========================================================================
+    /** Che do chon coin cho leg BIG_DOWN (off|drop|mix|drop_top8). */
+    public static String BD_SEL_MODE = Cfg.getOr("BD_SEL_MODE", "off");
+    /** Shortlist size pNoPump cho drop_top8 (default 8). */
+    public static int BD_SEL_TOPK = Cfg.get("BD_SEL_TOPK") != null
+            ? Integer.parseInt(Cfg.get("BD_SEL_TOPK").trim()) : 8;
+
 
 
     // =========================================================
