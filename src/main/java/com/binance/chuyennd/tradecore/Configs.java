@@ -522,6 +522,21 @@ public class Configs {
             ? Integer.parseInt(Cfg.get("CONC_CAP_BD_PER_HOUR").trim()) : 75;
 
     // ========================================================================
+    // [CONC-PERCOIN 2026-09-17] docs/PREREG_DCA_AGG_PERCOIN.md — tran margin MOT coin
+    //   (entry + moi leg DCA). Khac Guard 1 (aggregate): guard nay chan khi MOT coin don le tich
+    //   luy margin qua nguong (STOCK concentration), khong phai tong toan so. Mac dinh FALSE
+    //   => khong nhanh nao chay => printDone.csv byte-identical.
+    //   KHONG final: unit test lat co truc tiep.
+    // ========================================================================
+    /** Bat/tat tran ti le margin cua MOT coin tren equity (entry + moi leg DCA). */
+    public static boolean CONC_CAP_PERCOIN_ENABLED =
+            "true".equalsIgnoreCase(Cfg.getOr("CONC_CAP_PERCOIN_ENABLED", "false"))
+            || "1".equals(Cfg.getOr("CONC_CAP_PERCOIN_ENABLED", "false"));
+    /** Tran (ti le tren equity) cua TONG margin dang nam cua MOT coin khi mo leg moi. */
+    public static float CONC_CAP_PERCOIN_PCT = Cfg.get("CONC_CAP_PERCOIN_PCT") != null
+            ? Float.parseFloat(Cfg.get("CONC_CAP_PERCOIN_PCT").trim()) : 0.15f;
+
+    // ========================================================================
     // [BD-SIZE-ADAPT 2026-09-16] docs/PREREG_BD_SIZE_ADAPT.md — size leg BIG_DOWN
     //   theo severity causal (rolling N-ngay). KHONG doi trigger BIG_DOWN.
     //   Mac dinh "off" => khong cap phat cau truc, khong nhanh nao chay => byte-identical.

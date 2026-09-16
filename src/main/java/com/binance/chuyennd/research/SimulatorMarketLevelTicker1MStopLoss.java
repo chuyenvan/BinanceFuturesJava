@@ -109,6 +109,9 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     public short[] activeRunningIds = new short[1000]; // Tối đa 100 lệnh chạy cùng lúc
     /** [CONC-CAP] Rolling window timestamp cac leg BIG_DOWN DA MO. null khi guard TAT (khong cap phat). */
     private java.util.ArrayDeque<Long> concBdOpenTimes = null;
+    /** [CONC-PERCOIN] Dem so leg bi tran per-coin chan (de log SUMMARY). */
+    private long concPerCoinBlocked = 0L;
+    private boolean concPerCoinModeLogged = false;
     public int activeRunningCount = 0;
 
     public static void main(String[] args) throws ParseException, IOException, InterruptedException {
@@ -581,6 +584,11 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                     DcaProcessor.capRounds, DcaProcessor.capRoundsCut, DcaProcessor.capLegsCut,
                     Configs.DCA_ROUND_CAP_PCT, Configs.DCA_RANK_MODE);
         }
+        // [CONC-PERCOIN 2026-09-17] bao 1 dong aggregate: so leg bi tran per-coin chan.
+        if (Configs.CONC_CAP_PERCOIN_ENABLED) {
+            LOG.info("[CONC-PC] SUMMARY blocked={} pct={}",
+                    concPerCoinBlocked, Configs.CONC_CAP_PERCOIN_PCT);
+        }
         Utils.printMemoryUse(System.currentTimeMillis() - timeSimulator);
     }
 
@@ -765,6 +773,23 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         return sum;
     }
 
+    /**
+     * [CONC-PERCOIN 2026-09-17] docs/PREREG_DCA_AGG_PERCOIN.md — Tong margin DANG MO cua MOT coin
+     * (moi leg, moi level: entry + DCA). Duyet truc tiep `symbol2OrdersEntry[symbolId]`; cum dong
+     * xong bi xoa (closeOrder) nen day dung la tap "dang mo" cua coin do. READ-ONLY.
+     */
+    private float concPerCoinMargin(short symbolId) {
+        List<OrderTargetInfoTest> legs = symbol2OrdersEntry[symbolId];
+        if (legs == null) return 0f;
+        float sum = 0f;
+        for (OrderTargetInfoTest lg : legs) {
+            if (lg == null) continue;
+            Float m = lg.calMargin();
+            if (m != null) sum += m;
+        }
+        return sum;
+    }
+
     /** [CONC-CAP] So leg BIG_DOWN DA MO trong 60 phut gan nhat (theo thoi gian SIM, khong phai dong ho that). */
     private int concBdCountLastHour(long now) {
         if (concBdOpenTimes == null) return 0;
@@ -827,6 +852,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     public void initData() throws IOException, ParseException {
         BudgetManagerSimple.getInstance().resetInstance();
         concBdOpenTimes = null;   // [CONC-CAP] rolling window sach o moi lan khoi tao (sample WFO)
+        concPerCoinBlocked = 0L;  // [CONC-PERCOIN] dem sach o moi lan khoi tao
+        concPerCoinModeLogged = false;
         allOrderDone = new TreeMap<>();
 
         Long startTime = Utils.sdfFile.parse(Configs.TIME_RUN).getTime() + 7 * Utils.TIME_HOUR;
@@ -1318,6 +1345,26 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                 return;
             }
         }
+        // ===== [CONC-PERCOIN 2026-09-17] docs/PREREG_DCA_AGG_PERCOIN.md — tran margin MOT coin =====
+        //   Ap cho MOI leg moi (entry + DCA, moi level). Chan HAN (return) khi
+        //   (margin hien co cua coin + margin leg moi) / equity > CONC_CAP_PERCOIN_PCT.
+        //   Mac dinh FALSE => khong nhanh nao chay => byte-identical.
+        if (Configs.CONC_CAP_PERCOIN_ENABLED) {
+            if (!concPerCoinModeLogged) {
+                concPerCoinModeLogged = true;
+                LOG.info("[CONC-PC] MODE pct={}", Configs.CONC_CAP_PERCOIN_PCT);
+            }
+            float legNewPc = quantity * entry / leverage;
+            float coinNow = concPerCoinMargin(symbolId);
+            float ratioPc = balanceBasic > 0f ? (coinNow + legNewPc) / balanceBasic : 0f;
+            if (ratioPc > Configs.CONC_CAP_PERCOIN_PCT) {
+                concPerCoinBlocked++;
+                LOG.info("[CONC-PC] SKIP leg sym={} t={} lvl={} coinNow={} legNew={} eq={} ratio={} cap={}",
+                        symbolStr, Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime), levelChange,
+                        coinNow, legNewPc, balanceBasic, ratioPc, Configs.CONC_CAP_PERCOIN_PCT);
+                return;
+            }
+        }
         if (Configs.CONC_CAP_BD_RATE_ENABLED && levelChange == MarketLevelChange.BIG_DOWN) {
             int nBd60m = concBdCountLastHour(ticker.startTime);
             if (nBd60m >= Configs.CONC_CAP_BD_PER_HOUR) {
@@ -1388,6 +1435,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         BudgetManagerSimple.getInstance().resetInstance();
         DcaProcessor.resetRoundCapStats();   // [DCA-ROUND-CAP] dem per-run sach
         concBdOpenTimes = null;   // [CONC-CAP] rolling window sach o moi lan khoi tao (sample WFO)
+        concPerCoinBlocked = 0L;  // [CONC-PERCOIN] dem per-run sach
+        concPerCoinModeLogged = false;
         allOrderDone = new TreeMap<>();
 
         // Khởi tạo Mapper để cache sẵn danh sách symbol
