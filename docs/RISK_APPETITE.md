@@ -10,7 +10,7 @@ Day la thay doi **KHAU VI RUI RO**, KHONG phai thay doi **NGUONG BANG CHUNG**.
 | `maxDD` (theo nam) | <= 15% | **<= 30%** |
 | `UW` (ngay) | <= 120 | **<= 200** |
 | nam am | khong | khong (GIU) |
-| quy xau nhat | >= -5% | >= -5% (GIU) |
+| quy xau nhat | >= -5% | **>= -15%** |
 | NGUONG BANG CHUNG | >= 2 rate ngoai CI | **GIU NGUYEN** (`>=2`, bootstrap block-72h, x1.21, 2000 rep, seed 20260905) |
 
 Ghi chu: nguong cu `UW <= 120` da duoc ghi nhan la **KHONG dat duoc** tren cua so 48 thang
@@ -52,10 +52,12 @@ MaxDD nam xau nhat / UW dai nhat (tu `sim.out` tung run, da co san):
 - Nguong MOI chi tro thanh rang buoc **binding** khi mot bien the co `maxDD > 11.89%` hoac
   `UW > 119 ngay`.
 
-## 4. Con treo (chua chot)
+## 4. Chot bo sung 2026-09-16 22:52 (chat)
 
-- Hai rang buoc `khong nam am` va `quy >= -5%` CHUA duoc noi (user chi noi maxDD/UW). Luu y bat
-  nhat quan: chap nhan maxDD 30% ma cam nam am la hoi cang — neu muon noi tiep thi noi rieng.
-- Bang `quy xau nhat` khong co trong `sim.out` cua 6 run nay o dang doc truc tiep => **chua do lai**
-  cho 6 bien the; giu nguyen ket luan cu (khong bien the nao cham quy).
-- Nguong trong `docs/AGENT_RUNBOOK.md` muc 0.3 da duoc cap nhat tro ve file nay.
+- `khong nam am`: **GIU CUNG, tuyet doi** (user: *"năm âm thì trade làm gì, gửi ngân hàng cho nhanh"*).
+- `quy xau nhat`: noi tu `>= -5%` len **`>= -15%`** (user chot "15 ok"). Ly do: nhat quan voi maxDD
+  30%/nam (1 quy xau nhat ~ nua drawdown nam) va van la mot cua chan co nghia.
+- Bang `quy xau nhat` khong co trong `sim.out` cua 6 run gan nhat o dang doc truc tiep => **chua do
+  lai** cho 6 bien the. KHONG anh huong ket luan cu (khong bien the nao cham quy).
+- Khong con muc nao treo trong file nay.
+- Nguong trong `docs/AGENT_RUNBOOK.md` muc 0.3 tro ve file nay.
