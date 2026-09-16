@@ -17,6 +17,9 @@ khong can hoi lai user, khong can doc lai 30 doc khac.
    `E[max nhieu]` = 2.57*sqrt(2 ln N) => N=50 cho +7.2pp. DEV da chay ~125 run.
    Tieu chi phai la RATE tren hang tram trade (TSloss%, win%, mean(profit|status),
    admit%). Equity bao cao rieng, dan nhan "khong phai tieu chi".
+   -> Nguong RUI RO (khau vi, KHONG phai tieu chi bang chung): **`maxDD <= 30%/nam`, `UW <= 200 ngay`**
+      (user chot 2026-09-16 — `docs/RISK_APPETITE.md`; thay nguong cu 15%/120). Nguong BANG CHUNG
+      (>= 2 rate ngoai CI, block-72h x1.21) GIU NGUYEN.
 4. **Bao rui ro/lo hong TRUOC**, khong khen, tieng Viet + thuat ngu Anh nguyen ban.
 5. **Khong `print()` trong Python** — dung module `logging`. Java dung SLF4J.
 6. **Khong push.** Commit branch `module`, de user push.
