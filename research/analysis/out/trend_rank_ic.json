@@ -1,0 +1,169 @@
+{
+  "meta": {
+    "closes": "/home/ubuntu/java/fsrun/CLOSES_1H.bin",
+    "s1": "/home/ubuntu/ledger/pred_s1a2x1.parquet",
+    "seed": 20260905,
+    "nrep": 2000,
+    "block_h": 72,
+    "inflate": 1.21,
+    "min_n": 10,
+    "horizons": [
+      1,
+      4,
+      24
+    ],
+    "snapshots_per_horizon": {
+      "1": 43799,
+      "4": 43799,
+      "24": 43799
+    },
+    "ma_lbs": [
+      50,
+      100,
+      200
+    ],
+    "mom_lb": 168,
+    "vol_lb": 168,
+    "warmup": 200
+  },
+  "results": {
+    "1": {
+      "trend": {
+        "mean": -0.024063857112719765,
+        "lo": -0.02603058600620954,
+        "hi": -0.022073542291334722,
+        "n_snap": 43411,
+        "n_blocks": 606,
+        "contains_zero": false,
+        "pearson_mean": -0.0026597208917497296,
+        "ncoins_median": 187.0,
+        "ncoins_mean": 235.3
+      },
+      "mom": {
+        "mean": -0.023433988449270058,
+        "lo": -0.02553000942919189,
+        "hi": -0.021207949095714353,
+        "n_snap": 43630,
+        "n_blocks": 607,
+        "contains_zero": false,
+        "pearson_mean": -0.0017186279449753962,
+        "ncoins_median": 187.0,
+        "ncoins_mean": 235.3
+      },
+      "vol": {
+        "mean": -0.03336048030864229,
+        "lo": -0.03553868900795802,
+        "hi": -0.03119656230913527,
+        "n_snap": 43630,
+        "n_blocks": 607,
+        "contains_zero": false,
+        "pearson_mean": -0.006009228469214492,
+        "ncoins_median": 187.0,
+        "ncoins_mean": 235.3
+      },
+      "S1": {
+        "mean": -0.024653460304955594,
+        "lo": -0.0264277692515285,
+        "hi": -0.02285223566385159,
+        "n_snap": 35046,
+        "n_blocks": 488,
+        "contains_zero": false,
+        "pearson_mean": -0.00042055913127867536,
+        "ncoins_median": 187.0,
+        "ncoins_mean": 235.3
+      }
+    },
+    "4": {
+      "trend": {
+        "mean": -0.030021908268947246,
+        "lo": -0.03350247996985096,
+        "hi": -0.026672048985494017,
+        "n_snap": 43410,
+        "n_blocks": 606,
+        "contains_zero": false,
+        "pearson_mean": -0.0025453601934354642,
+        "ncoins_median": 187.0,
+        "ncoins_mean": 235.3
+      },
+      "mom": {
+        "mean": -0.03376528726241689,
+        "lo": -0.03758362800605719,
+        "hi": -0.02988143743460975,
+        "n_snap": 43631,
+        "n_blocks": 607,
+        "contains_zero": false,
+        "pearson_mean": -0.0024916626202553475,
+        "ncoins_median": 187.0,
+        "ncoins_mean": 235.3
+      },
+      "vol": {
+        "mean": -0.052402774614835466,
+        "lo": -0.056780883993388,
+        "hi": -0.04808380844915408,
+        "n_snap": 43631,
+        "n_blocks": 607,
+        "contains_zero": false,
+        "pearson_mean": -0.011528722759368924,
+        "ncoins_median": 187.0,
+        "ncoins_mean": 235.3
+      },
+      "S1": {
+        "mean": -0.040651456823898674,
+        "lo": -0.04403048954295693,
+        "hi": -0.03701746068670529,
+        "n_snap": 35047,
+        "n_blocks": 488,
+        "contains_zero": false,
+        "pearson_mean": -0.003996287157529778,
+        "ncoins_median": 187.0,
+        "ncoins_mean": 235.3
+      }
+    },
+    "24": {
+      "trend": {
+        "mean": -0.03633766020575334,
+        "lo": -0.042923901892082145,
+        "hi": -0.02973469392553775,
+        "n_snap": 43413,
+        "n_blocks": 606,
+        "contains_zero": false,
+        "pearson_mean": -0.005095576915240118,
+        "ncoins_median": 186.0,
+        "ncoins_mean": 235.0
+      },
+      "mom": {
+        "mean": -0.04902786232688415,
+        "lo": -0.057517315639485714,
+        "hi": -0.04060015699912635,
+        "n_snap": 43631,
+        "n_blocks": 607,
+        "contains_zero": false,
+        "pearson_mean": -0.005952672466581113,
+        "ncoins_median": 186.0,
+        "ncoins_mean": 235.0
+      },
+      "vol": {
+        "mean": -0.0905448876094519,
+        "lo": -0.10170318767319071,
+        "hi": -0.07990261215451121,
+        "n_snap": 43631,
+        "n_blocks": 607,
+        "contains_zero": false,
+        "pearson_mean": -0.022943843621120622,
+        "ncoins_median": 186.0,
+        "ncoins_mean": 235.0
+      },
+      "S1": {
+        "mean": -0.06932132553063287,
+        "lo": -0.07704781421827168,
+        "hi": -0.06127168215287215,
+        "n_snap": 35047,
+        "n_blocks": 488,
+        "contains_zero": false,
+        "pearson_mean": -0.009948840273726015,
+        "ncoins_median": 186.0,
+        "ncoins_mean": 235.0
+      }
+    }
+  }
+}
