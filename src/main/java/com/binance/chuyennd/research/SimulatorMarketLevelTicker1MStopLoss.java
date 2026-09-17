@@ -578,6 +578,12 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         if (BdSelection.ACTIVE) {
             LOG.info("[BD-SEL] mode={} topk={}", BdSelection.MODE, BdSelection.TOPK);
         }
+        // [D3D4-FILTER 2026-09-17] bao 1 dong: mode + so lenh moi bi loc (docs/PREREG_D3D4_FILTER_SIM.md).
+        if (PumpDumpFilter.active()) {
+            LOG.info("[D3D4-FILTER] mode={} skipped={} p90_d3={} p90_d4={}",
+                    PumpDumpFilter.mode(), PumpDumpFilter.skippedCount(),
+                    PumpDumpFilter.P90_D3, PumpDumpFilter.P90_D4);
+        }
         // [DCA-ROUND-CAP 2026-09-16] bao 1 dong aggregate: so luot/leg bi cat (de cham co che).
         if (Configs.DCA_ROUND_CAP_ENABLED) {
             LOG.info("[DCA-CAP] SUMMARY rounds={} roundsCut={} legsCut={} capPct={} rank={}",
@@ -1226,6 +1232,13 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                     return;
                 }
             ablationPassCount++;
+        }
+
+        // [D3D4-FILTER 2026-09-17] docs/PREREG_D3D4_FILTER_SIM.md: bo qua lenh moi (selector Best-N +
+        //   BIG_DOWN) neu feature pump-dump > p90. KHONG ap DCA (shouldSkip loai). OFF => false ngay.
+        if (PumpDumpFilter.shouldSkip(symbolId, ticker.startTime, levelChange, dcaSignal)) {
+            if (TickDecisionLog.ON) tlCand(TickDecisionLog.D_GATE_REJECT, symbolId, ticker, levelChange, symbolPred, predict);
+            return;
         }
 
         if (Configs.GATE_COUNT_ONLY) {

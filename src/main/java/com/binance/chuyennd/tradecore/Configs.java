@@ -387,6 +387,7 @@ public class Configs {
             Integer.parseInt(Cfg.getOr("SIM_TICKLOG_POS_EVERY_MIN", "1").trim());
     public static String SIM_REGIME_FILE = null;   // [REGIME] docs/PREREG_REGIME_GATE.md
     public static String SIM_REGIME_FORCE = null;  // [REGIME] UP|NOTUP: ep hang so cho cong 2-cuc
+    public static String SIM_FILTER_D3D4 = null;   // [D3D4-FILTER] docs/PREREG_D3D4_FILTER_SIM.md — off|d3|d4|both, default off
     public static float MIN_MOMENTUM_15M = 0.02284f;                  // HPO (đã revert về cũ): 0.01720f
     public static float MS_UP_BIG_THRES = 0.02046f;                  // HPO (đã revert về cũ): 0.01757f
     public static float MS_DOWN_BIG_AVG = -0.03157f;                  // HPO (đã revert về cũ): -0.05514f
@@ -643,6 +644,12 @@ public class Configs {
             }
             if ((v = Cfg.get("SIM_REGIME_FILE")) != null) SIM_REGIME_FILE = v.trim();
             if ((v = Cfg.get("SIM_REGIME_FORCE")) != null) SIM_REGIME_FORCE = v.trim();
+            // [D3D4-FILTER 2026-09-17] docs/PREREG_D3D4_FILTER_SIM.md: filter pump-dump cho lenh moi
+            //   (selector + BIG_DOWN). default off => byte-identical. configure() throw neu gia tri sai.
+            if ((v = Cfg.get("SIM_FILTER_D3D4")) != null) {
+                SIM_FILTER_D3D4 = v.trim();
+                PumpDumpFilter.configure(SIM_FILTER_D3D4);
+            }
             // [L7 2026-09-11] SIM_AI_DYNAMIC_MIN / SIM_AI_DYNAMIC_MULTIPLIER da XOA: hai he so do
             //   nay la HANG SO trong com.binance.chuyennd.tradecore.EntryGate (gate chi con MOT knob
             //   la SIM_MIN_MOMENTUM_15M). Khong profile/env nao tung khai hai key do
