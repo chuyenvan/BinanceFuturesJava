@@ -44,6 +44,15 @@ Moi profile = copy `x1_gs_t170.properties`, chi doi 3 key tren (moi key khac giu
 Ca hai fail => DUNG, bao master.
 
 ## 5. Cham diem (x1_rates.py, CI khoi-72h x1.21 da bao k=3 multiplicity)
+
+> **[DINH CHINH 2026-09-17]** Cau "**x1.21 da bao k=3 multiplicity**" o tieu de muc nay la **SAI VE SO HOC**
+> va **KHONG duoc chep lai**. He so dung cho `k=3` la `sqrt(2 ln 3) = 1.4823`; hang so `1.21` chi ung voi
+> `k = exp(1.21^2/2) = 2.079`. Dong nay da lan truyen sang **4 pre-reg khac** (`PREREG_DCA_SIGNAL_GATE`,
+> `PREREG_DCA_SIGNAL_GATE_V2`, `PREREG_DCA_GATEWIDEN_V3`, va chinh round nay), khien 5 round cham diem o
+> he so **qua LONG**. Da kiem lai toan bo: **khong round nao doi verdict** vi hieu chinh chi lam CHAT hon
+> o WIN-test. Chi tiet + bang 24 round: `docs/AUDIT_CI_INFLATE_STANDARDIZATION.md`.
+> Tu 2026-09-17 `c3_rates.CI_INFLATE` da bi go; dung `c3_rates.inflate(k)` voi `k` bat buoc truyen vao.
+> **Phan con lai cua tai lieu nay giu nguyen** (ghi lai lich su dung nhu no da xay ra).
 Moi config vs baseline. Do:
 - **n** (boi so so voi 1089; muc tieu 1.8-2.2x).
 - **size%/leg thuc do** = mean(margin / equity-at-entry) tren leg-0; muc tieu ~ 1/2 baseline.

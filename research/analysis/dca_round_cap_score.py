@@ -1,7 +1,8 @@
 """DCA-ROUND-CAP (docs/PREREG_DCA_ROUND_CAP.md) — cham diem muc 4.
 
 PRIMARY = khong rate nao XAU ngoai CI (5 rate chat luong TOAN BO leg: win/tsloss/mp_sm/mp_sl/meanP).
-CI bootstrap block-72h x(1.21 * B4) , B4 = sqrt(2 ln 3) = 1.4823 (k=3 variants), 2000 rep, seed 20260905.
+CI bootstrap block-72h x sqrt(2 ln 3) = 1.4823 (k=3 variants), 2000 rep, seed 20260905.
+[CHUAN HOA 2026-09-17] truoc day dung 1.21*1.4823=1.7936 (nhan chong) - xem docs/AUDIT_CI_INFLATE_STANDARDIZATION.md.
 CHAN: maxDD nam <=30%, UW <=200 ngay, quy >= -15%, khong nam am; tap trung 1 coin khong tang.
 CO CHE: tong margin moi moi luot DCA <= 10% equity (tu printDone.csv + log SUMMARY).
 
@@ -17,9 +18,12 @@ import c3_rates as C
 B = C.B
 BLOCK_H = C.BLOCK_H          # 72
 NREP = C.NREP                # 2000
-CI_BASE = C.CI_INFLATE       # 1.21
-B4 = float(np.sqrt(2 * np.log(3)))   # 1.4823 (k=3 variants, multiplicity)
-CI_TOTAL = CI_BASE * B4
+# [CHUAN HOA 2026-09-17] docs/AUDIT_CI_INFLATE_STANDARDIZATION.md muc 6 loi (3):
+#   ban cu: CI_TOTAL = C.CI_INFLATE(1.21) * sqrt(2 ln 3)(1.4823) = 1.7936 - NHAN CHONG.
+#   1.21 khong phai "he so nen": no la mot he so multiplicity lich su (ung k=2.079).
+#   He so DUNG cho k=3 ung vien = sqrt(2 ln 3) = 1.482304, ap MOT lan.
+K_VARIANTS = 3               # CAP10, CAP10_LOOSE, LOOSE (baseline PARITY khong tinh)
+CI_TOTAL = C.inflate(K_VARIANTS)
 SEED = C.SEED
 
 # 5 rate chat luong (TOAN BO leg). direction: "up" = lon hon la tot, "down" = nho hon la tot.
@@ -124,8 +128,9 @@ def main():
     parity = tags[0]
     variants = tags[1:]
 
-    print("=== CI B4 multiplicity: base=%.3f B4=%.4f total=%.4f (%d rep seed %d) ===" % (
-        CI_BASE, B4, CI_TOTAL, NREP, SEED))
+    print("=== CI multiplicity: k=%d => sqrt(2 ln k) = %.6f (%d rep seed %d) ===" % (
+        K_VARIANTS, CI_TOTAL, NREP, SEED))
+    print("=== [CHUAN HOA 2026-09-17] ban cu dung 1.7936 = 1.21 x 1.4823 (nhan chong) ===")
     print("PRIMARY = khong rate nao XAU ngoai CI (XAU = ngoai CI + nguoc huong tot)\n")
 
     allr = {t: C.trades(t) for t in tags}

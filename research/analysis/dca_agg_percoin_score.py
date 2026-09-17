@@ -18,9 +18,12 @@ import c3_rates as C
 B = C.B
 BLOCK_H = C.BLOCK_H          # 72
 NREP = C.NREP                # 2000
-CI_BASE = C.CI_INFLATE       # 1.21
-B4 = float(np.sqrt(2 * np.log(3)))   # 1.4823 (k=3 variants, multiplicity)
-CI_TOTAL = CI_BASE * B4
+# [CHUAN HOA 2026-09-17] docs/AUDIT_CI_INFLATE_STANDARDIZATION.md muc 6 loi (3):
+#   ban cu: CI_TOTAL = C.CI_INFLATE(1.21) * sqrt(2 ln 3)(1.4823) = 1.7936 - NHAN CHONG.
+#   1.21 khong phai "he so nen": no la mot he so multiplicity lich su (ung k=2.079).
+#   He so DUNG cho k=3 ung vien = sqrt(2 ln 3) = 1.482304, ap MOT lan.
+K_VARIANTS = 3
+CI_TOTAL = C.inflate(K_VARIANTS)
 SEED = C.SEED
 PERCOIN_CAP = 15.0           # % equity
 AGG_CAP = 30.0               # % equity
@@ -169,8 +172,9 @@ def main():
     parity = tags[0]
     variants = tags[1:]
 
-    print("=== CI B4 multiplicity: base=%.3f B4=%.4f total=%.4f (%d rep seed %d) ===" % (
-        CI_BASE, B4, CI_TOTAL, NREP, SEED))
+    print("=== CI multiplicity: k=%d => sqrt(2 ln k) = %.6f (%d rep seed %d) ===" % (
+        K_VARIANTS, CI_TOTAL, NREP, SEED))
+    print("=== [CHUAN HOA 2026-09-17] ban cu dung 1.7936 = 1.21 x 1.4823 (nhan chong) ===")
     print("CO CHE: per-coin <= %.0f%% equity | aggregate DCA-grid <= %.0f%% equity" % (
         PERCOIN_CAP, AGG_CAP))
     print("PRIMARY = khong rate nao XAU ngoai CI (XAU = ngoai CI + nguoc huong tot)\n")

@@ -23,9 +23,14 @@ LBL = {"n": "n", "win": "win%", "tsloss": "TSloss%", "mp_sm": "mP|SM",
        "mp_sl": "mP|SL", "meanP": "meanP", "margin": "mMargin"}
 HARD_DD, HARD_UW, HARD_Q = 15.0, 120, -5.0
 
+# [CHUAN HOA 2026-09-17] he so no rong CI - dat MOT LAN o main() tu --k. None = chua dat.
+F_INFLATE = None
+
 
 def ci_pair_df(da, db, tag=""):
     """Block-72h paired bootstrap CI cua hieu (A-B) tren HAI BANG TRADE da loc."""
+    if F_INFLATE is None:
+        raise RuntimeError("F_INFLATE chua duoc dat - chay qua main() voi --k <so ung vien>.")
     if len(da) == 0 or len(db) == 0:
         return {k: (float("nan"),) * 3 + (False,) for k in KEYS}
     blocks = np.union1d(da.blk.unique(), db.blk.unique())
@@ -51,7 +56,7 @@ def ci_pair_df(da, db, tag=""):
             continue
         lo, hi = np.percentile(arr, [2.5, 97.5])
         c = (lo + hi) / 2.0
-        lo, hi = c - (c - lo) * C.CI_INFLATE, c + (hi - c) * C.CI_INFLATE
+        lo, hi = c - (c - lo) * F_INFLATE, c + (hi - c) * F_INFLATE
         out[k] = (obs[k], lo, hi, not (lo <= 0.0 <= hi))
     return out
 
@@ -77,8 +82,8 @@ def ci_table(a, b, dd, label, sub=None):
         db = db[db.ts.dt.year == sub]
     r = ci_pair_df(da, db)
     log.info("")
-    log.info("--- CI khoi-72h x%.2f : %s - %s [%s] (n_A=%d n_B=%d)",
-             C.CI_INFLATE, a, b, label, len(da), len(db))
+    log.info("--- CI khoi-72h x%.4f : %s - %s [%s] (n_A=%d n_B=%d)",
+             F_INFLATE, a, b, label, len(da), len(db))
     log.info("%-9s %10s %11s %11s %8s", "rate", "hieu", "lo", "hi", "ngoaiCI")
     nout = 0
     for k in KEYS:
@@ -177,8 +182,31 @@ def n_eff(tags, dd):
             log.info("  %-12s n_eff=%d", t, ne)
 
 
+def parse_k(argv):
+    """[CHUAN HOA 2026-09-17] --k BAT BUOC (docs/AUDIT_CI_INFLATE_STANDARDIZATION.md)."""
+    if "--k" not in argv:
+        raise SystemExit(
+            "THIEU --k. Usage: python3 x1_rates.py --k <so ung vien> TAG_BASE TAG_VAR [...]\n"
+            "  k = so UNG VIEN duoc kiem dinh so voi baseline TRONG round nay (baseline KHONG tinh).\n"
+            "  k=1 -> he so 1.0 ; k>=2 -> sqrt(2 ln k). KHONG co gia tri mac dinh.\n"
+            "  Xem docs/AUDIT_CI_INFLATE_STANDARDIZATION.md (hang so cu 1.21 ung k=2.079, da bi go).")
+    i = argv.index("--k")
+    if i + 1 >= len(argv):
+        raise SystemExit("--k thieu gia tri.")
+    k = int(argv[i + 1])
+    del argv[i:i + 2]
+    return k
+
+
 def main():
-    tags = sys.argv[1:]
+    global F_INFLATE
+    argv = list(sys.argv[1:])
+    k = parse_k(argv)
+    F_INFLATE = C.inflate(k)
+    log.info("### CI_INFLATE = sqrt(2 ln %d) = %.6f | block=%dh nrep=%d seed=%d",
+             k, F_INFLATE, C.BLOCK_H, C.NREP, C.SEED)
+    log.info("### k = so ung vien trong round (baseline KHONG tinh) | docs/AUDIT_CI_INFLATE_STANDARDIZATION.md")
+    tags = argv
     dd = {t: C.trades(t) for t in tags}
     C.report(tags)
     year_rate_table(tags, dd)

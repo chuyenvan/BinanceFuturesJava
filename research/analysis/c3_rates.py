@@ -16,6 +16,8 @@ import logging
 import re
 import sys
 
+import math
+
 import numpy as np
 import pandas as pd
 
@@ -30,7 +32,34 @@ QS = ['2022Q1', '2022Q2', '2022Q3', '2022Q4', '2023Q1',
 WEAK_THR = 0.29          # Configs.TS_PNOPUMP_WEAK_THR; <= thr => STRONG (cap 0.08)
 BLOCK_H = 72
 NREP = 2000
-CI_INFLATE = 1.21
+# ---------------------------------------------------------------------------
+# [CHUAN HOA 2026-09-17] docs/AUDIT_CI_INFLATE_STANDARDIZATION.md
+#   He so no rong CI cho multiplicity PHAI la sqrt(2 ln k) voi k = SO UNG VIEN
+#   duoc kiem dinh so voi baseline TRONG DUNG round do (baseline KHONG tinh).
+#   Hang so cu 1.21 ung voi k = exp(1.21^2/2) = 2.079 - khong phai so nguyen,
+#   khong co can cu. No da lan truyen qua 11/24 round (5 round vien dan cau SAI
+#   "x1.21 da bao k=3"; 2 round nhan CHONG 1.21 x sqrt(2 ln 3) = 1.7936).
+#   Nay `CI_INFLATE` KHONG con doc duoc: moi truy cap NEM AttributeError
+#   (xem __getattr__ cuoi file). Dung inflate(k).
+LEGACY_CI_INFLATE = 1.21   # CHI de tai lap NGUYEN VAN doc cu. KHONG dung cho round moi.
+
+
+def inflate(k):
+    """He so no rong CI cho multiplicity. k = so ung vien trong round (>=1).
+
+    k = 1  -> 1.0 (khong co multiplicity, giu CI goc)
+    k >= 2 -> sqrt(2 ln k)
+    KHONG co gia tri mac dinh o bat ky call-site nao: k phai duoc truyen vao.
+    """
+    if k is None:
+        raise ValueError("inflate(k): k la BAT BUOC, khong co default. "
+                         "k = so ung vien so voi baseline trong round nay.")
+    k = int(k)
+    if k < 1:
+        raise ValueError("inflate(k): k phai >= 1, nhan duoc %r" % (k,))
+    if k == 1:
+        return 1.0
+    return float(math.sqrt(2.0 * math.log(k)))
 SEED = 20260905
 
 
@@ -245,3 +274,15 @@ def main(argv):
 
 if __name__ == "__main__":
     main(sys.argv[1:])
+
+
+def __getattr__(name):
+    """[CHUAN HOA 2026-09-17] chan viec vo tinh dung lai hang so CI_INFLATE cu."""
+    if name == "CI_INFLATE":
+        raise AttributeError(
+            "c3_rates.CI_INFLATE DA BI GO (2026-09-17). He so no rong CI phai tinh tu so "
+            "ung vien cua round: dung c3_rates.inflate(k) voi k BAT BUOC truyen vao "
+            "(k=1 -> 1.0 ; k>=2 -> sqrt(2 ln k)). Muon tai lap NGUYEN VAN mot doc cu thi dung "
+            "c3_rates.LEGACY_CI_INFLATE (=1.21) VA ghi ro trong doc. "
+            "Xem docs/AUDIT_CI_INFLATE_STANDARDIZATION.md")
+    raise AttributeError("module %r has no attribute %r" % (__name__, name))

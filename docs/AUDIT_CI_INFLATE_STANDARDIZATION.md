@@ -221,3 +221,94 @@ hon nhieu. Audit nay **khong** giai quyet van de do — no chi chuan hoa tang ro
 
 - KHONG chay sim, KHONG sua `.py`/`.java`, KHONG doi verdict nao.
 - KHONG 242, KHONG `git push`, holdout 2026 nguyen ven.
+
+---
+
+# PHU LUC — GIAI DOAN 2 (2026-09-17): FIX SCRIPT + RESCORE 2 ROUND
+
+> Duyet boi MASTER sau khi doc Giai doan 1. **Khong chay sim moi** — chi doc lai `printDone.csv`
+> da co va chay lai bootstrap voi he so DUNG. Khong hoi to verdict cua 22 round con lai.
+
+## B.1 Thay doi script
+
+| file | thay doi |
+|---|---|
+| `research/analysis/c3_rates.py` | **go `CI_INFLATE = 1.21`**; them `inflate(k)` (`k=1 -> 1.0`, `k>=2 -> sqrt(2 ln k)`, `k` BAT BUOC, nem `ValueError` neu `None`); them `LEGACY_CI_INFLATE = 1.21` (CHI de tai lap nguyen van doc cu); them module `__getattr__` **nem `AttributeError` co huong dan** khi ai do truy cap `CI_INFLATE` |
+| `research/analysis/x1_rates.py` | `--k` **BAT BUOC** (khong default, thieu thi `SystemExit` kem huong dan); `F_INFLATE` dat mot lan o `main()`; **header in `k` + he so + block/nrep/seed**; guard `RuntimeError` neu goi `ci_pair_df` ma chua dat he so. (Bang CI cua `x1_rates` von **da in day du `lo`/`hi`** — giu nguyen.) |
+| `research/analysis/dca_round_cap_score.py` | `CI_TOTAL = C.inflate(3)` thay `C.CI_INFLATE * sqrt(2 ln 3)` (**bo nhan chong**); header in `k` + he so + ghi chu ban cu 1.7936 |
+| `research/analysis/dca_agg_percoin_score.py` | y het tren |
+
+**KHONG doi**: `BLOCK_H=72`, `NREP=2000`, `SEED=20260905`, cong thuc bootstrap, `rates()`, percentile 2.5/97.5.
+
+**CO Y KHONG patch**: `x2_rates.py`, `x3_rates.py`, `x4_rates.py` (round X2/X3/X4 da dong). Chung
+tham chieu `C.CI_INFLATE` nen **tu nem `AttributeError` kem huong dan** — day la hanh vi an toan
+mong muon (fail LOUD, khong am tham dung so sai). Bon script chan doan co hang so `CI_INFLATE=1.21`
+RIENG (`postpump_measure.py`, `pumpdump_detect.py`, `pumpdump_ohlcv.py`, `trend_rank_ic.py`)
+**khong bi dong** — chung la cong cu DO (rank-IC), khong phai bo cham verdict; sua se lam doi so
+da cong bo ma khong co mandate.
+
+**Da co san tu truoc**: `research/analysis/score_k.py` von **da dung chuan** (`--k` bat buoc,
+`sqrt(2 ln k)`, in day du `lo`/`hi`). Giai doan 2 nay dua `x1_rates` ve cung chuan voi no.
+
+## B.2 RESCORE — **CA 2 ROUND DOI TU PRIMARY PASS SANG PRIMARY FAIL**
+
+He so cu `1.7936` (= `1.21 × 1.4823`, nhan chong) -> he so dung **`1.482304`** (k=3).
+CI **hep lai 21%** => nhieu rate vuot ra ngoai CI hon => **VETO-test CHAT hon**.
+
+### DCA_ROUND_CAP (`X1_GS_T170_2021` = baseline)
+
+| variant | `win%` hieu | CI95 @1.4823 | ngoai CI | rate XAU | PRIMARY cu | **PRIMARY moi** |
+|---|---|---|---|---|---|---|
+| `CAP10` | 0.000 | [0.000, 0.000] | - | 0 | PASS | PASS (byte-identical, no-op) |
+| **`CAP10_LOOSE`** | **−1.327** | **[−2.424, −0.042]** | **YES** | **1** | PASS | **FAIL** |
+| **`LOOSE`** | **−1.390** | **[−2.487, −0.116]** | **YES** | **1** | PASS | **FAIL** |
+
+Cac rate khac cua ca hai variant van TRONG CI: `tsloss` +0.335 [−1.225,+2.087] / +0.232
+[−1.322,+1.970]; `mp_sm` +0.562 [−0.252,+1.295] / +0.483 [−0.331,+1.217]; `meanP` +0.834
+[−0.179,+1.765] / +0.860 [−0.142,+1.779]. `mp_sl` cua `LOOSE` +4.835 [+0.138,+9.556] ngoai CI
+nhung **huong TOT** (khong phai XAU).
+
+### DCA_AGG_PERCOIN (`X1_GS_T170_2021` = baseline)
+
+| variant | `win%` hieu | CI95 @1.4823 | ngoai CI | rate XAU | PRIMARY cu | **PRIMARY moi** |
+|---|---|---|---|---|---|---|
+| **`LOOSE_AGG30`** | **−1.390** | **[−2.487, −0.116]** | **YES** | **1** | PASS | **FAIL** |
+| **`LOOSE_AGG30_PC15`** | **−1.327** | **[−2.424, −0.042]** | **YES** | **1** | PASS | **FAIL** |
+| **`LOOSE_PC15`** | **−1.327** | **[−2.424, −0.042]** | **YES** | **1** | PASS | **FAIL** |
+
+### B.2.1 Doc ket qua
+
+- **Huong doi dung nhu Giai doan 1 du bao: CHAT hon, KHONG phai NULL→PASS.** Khong co case nao
+  "duoc cuu" boi viec chuan hoa.
+- Rate bat duoc la **`win%` giam ~1.3–1.4pp** — noi nguong DCA **lam ti le lenh thang giam co y
+  nghia thong ke**. O he so cu (qua rong) dieu nay bi che khuat.
+- Ca hai round truoc day da bi loai boi **chan tap trung** (`max1coin` 12.51%/17.15% > parity 9.77%).
+  Nay chung **con truot them ca PRIMARY**. => **Ket luan loai bo cua hai round duoc CUNG CO, khong
+  phai dao nguoc.**
+- Rieng `LOOSE` con **VUOT co che**: `max_round_margin` 15,085 = **11.52% equity > tran 10%**
+  (ban cu ghi nhan roi).
+- `CAP10` van la no-op byte-identical (mo ta cu dung).
+
+### B.2.2 He qua cho cau hoi "co mo lai case nay khong"
+
+Con so PnL hap dan cua `LOOSE` (CAGR 29.27→32.53, equity +11.9%, maxDD −11.84→−9.64) **van dung**
+— nhung nay no di kem **mot rate chat luong XAU co y nghia thong ke** (`win%` −1.39pp), **tang tap
+trung 1 coin len 17.15%**, va **vuot tran co che 10%**. Tuc day **khong** phai "so dep bi luat qua
+chat vui dap" — no la mot danh doi THAT: nhieu lenh hon, moi lenh te hon, rui ro tap trung cao hon.
+Day la du lieu cho MASTER quyet, khong phai khuyen nghi.
+
+## B.3 Dinh chinh dong sai da lan truyen
+
+`docs/PREREG_2X_HALFSIZE.md` muc 5 — **KHONG xoa, KHONG viet lai**. Da chen mot khoi
+`> **[DINH CHINH 2026-09-17]**` ngay duoi tieu de muc, ghi ro: cau "x1.21 da bao k=3 multiplicity"
+sai ve so hoc, he so dung cho k=3 la 1.4823, dong nay da lan sang 4 pre-reg khac, va **khong round
+nao doi verdict**. Phan con lai cua tai lieu giu nguyen.
+
+## B.4 Artifact
+
+| | |
+|---|---|
+| Output rescore | `/tmp/rc_new.txt` (DCA_ROUND_CAP), `/tmp/agg_new.txt` (DCA_AGG_PERCOIN) tren Oracle |
+| Tag da dung | `X1_GS_T170_2021` (baseline) + `_CAP10` / `_CAP10_LOOSE` / `_LOOSE` / `_LOOSE_AGG30` / `_LOOSE_AGG30_PC15` / `_LOOSE_PC15` |
+| Khong chay sim | moi `printDone.csv` la ban cu, khong sinh lai |
+| Kiem tra guard | `c3_rates.CI_INFLATE` -> `AttributeError` (da verify); `inflate(1/2/3/8)` = 1.0 / 1.177410 / 1.482304 / 2.039334 (da verify) |

@@ -1,0 +1,64 @@
+=== CI multiplicity: k=3 => sqrt(2 ln k) = 1.482304 (2000 rep seed 20260905) ===
+=== [CHUAN HOA 2026-09-17] ban cu dung 1.7936 = 1.21 x 1.4823 (nhan chong) ===
+CO CHE: per-coin <= 15% equity | aggregate DCA-grid <= 30% equity
+PRIMARY = khong rate nao XAU ngoai CI (XAU = ngoai CI + nguoc huong tot)
+
+  X1_GS_T170_2021          n=1089 win=88.25 tsloss=9.73 mp_sm=7.642 mp_sl=-16.992 meanP=5.244
+  X1_GS_T170_2021_LOOSE_AGG30 n=1164 win=86.86 tsloss=9.97 mp_sm=8.125 mp_sl=-12.157 meanP=6.103
+  X1_GS_T170_2021_LOOSE_AGG30_PC15 n=1162 win=86.92 tsloss=10.07 mp_sm=8.203 mp_sl=-12.905 meanP=6.078
+  X1_GS_T170_2021_LOOSE_PC15 n=1162 win=86.92 tsloss=10.07 mp_sm=8.203 mp_sl=-12.905 meanP=6.078
+
+--- X1_GS_T170_2021_LOOSE_AGG30 vs X1_GS_T170_2021 (TOAN BO leg, n=1164 vs 1089) ---
+    win      hieu=   -1.390  CI=[   -2.487,    -0.116]  ngoaiCI=YES  dir=up  XAU
+    tsloss   hieu=    0.232  CI=[   -1.322,     1.970]  ngoaiCI=-  dir=down  -
+    mp_sm    hieu=    0.483  CI=[   -0.331,     1.217]  ngoaiCI=-  dir=up  -
+    mp_sl    hieu=    4.835  CI=[    0.138,     9.556]  ngoaiCI=YES  dir=up  ngoaaiCI
+    meanP    hieu=    0.860  CI=[   -0.142,     1.779]  ngoaiCI=-  dir=up  -
+  >>> PRIMARY: so rate XAU ngoai CI = 1 (can =0 de PASS)
+
+--- X1_GS_T170_2021_LOOSE_AGG30_PC15 vs X1_GS_T170_2021 (TOAN BO leg, n=1162 vs 1089) ---
+    win      hieu=   -1.327  CI=[   -2.424,    -0.042]  ngoaiCI=YES  dir=up  XAU
+    tsloss   hieu=    0.335  CI=[   -1.225,     2.087]  ngoaiCI=-  dir=down  -
+    mp_sm    hieu=    0.562  CI=[   -0.252,     1.295]  ngoaiCI=-  dir=up  -
+    mp_sl    hieu=    4.087  CI=[   -1.298,     9.132]  ngoaiCI=-  dir=up  -
+    meanP    hieu=    0.834  CI=[   -0.179,     1.765]  ngoaiCI=-  dir=up  -
+  >>> PRIMARY: so rate XAU ngoai CI = 1 (can =0 de PASS)
+
+--- X1_GS_T170_2021_LOOSE_PC15 vs X1_GS_T170_2021 (TOAN BO leg, n=1162 vs 1089) ---
+    win      hieu=   -1.327  CI=[   -2.424,    -0.042]  ngoaiCI=YES  dir=up  XAU
+    tsloss   hieu=    0.335  CI=[   -1.225,     2.087]  ngoaiCI=-  dir=down  -
+    mp_sm    hieu=    0.562  CI=[   -0.252,     1.295]  ngoaiCI=-  dir=up  -
+    mp_sl    hieu=    4.087  CI=[   -1.298,     9.132]  ngoaiCI=-  dir=up  -
+    meanP    hieu=    0.834  CI=[   -0.179,     1.765]  ngoaiCI=-  dir=up  -
+  >>> PRIMARY: so rate XAU ngoai CI = 1 (can =0 de PASS)
+
+=== CHAN (hard) ===
+  X1_GS_T170_2021          maxDD/yr=-11.84% UW=92 qmin=-0.9% neg_year=[]  PASS
+  X1_GS_T170_2021_LOOSE_AGG30 maxDD/yr=-9.64% UW=119 qmin=-1.7% neg_year=[]  PASS
+  X1_GS_T170_2021_LOOSE_AGG30_PC15 maxDD/yr=-9.64% UW=119 qmin=-1.7% neg_year=[]  PASS
+  X1_GS_T170_2021_LOOSE_PC15 maxDD/yr=-9.64% UW=119 qmin=-1.7% neg_year=[]  PASS
+
+=== CO CHE: tap trung 1 coin (<= 15% equity, TUYET DOI) ===
+  X1_GS_T170_2021          max1coin=9.77%  OK
+  X1_GS_T170_2021_LOOSE_AGG30 max1coin=17.15%  VUOT
+  X1_GS_T170_2021_LOOSE_AGG30_PC15 max1coin=12.51%  OK
+  X1_GS_T170_2021_LOOSE_PC15 max1coin=12.51%  OK
+
+=== CO CHE: tong margin DCA-grid DANG MO (<= 30% equity) ===
+  X1_GS_T170_2021          peak_agg=9.19% (abs 9399)  OK
+  X1_GS_T170_2021_LOOSE_AGG30 peak_agg=16.76% (abs 20449)  OK
+  X1_GS_T170_2021_LOOSE_AGG30_PC15 peak_agg=16.76% (abs 19123)  OK
+  X1_GS_T170_2021_LOOSE_PC15 peak_agg=16.76% (abs 19123)  OK
+
+=== CO CHE: guard binding (log [CONC-PC]) + leg counts ===
+  X1_GS_T170_2021          DCAlegs=20/1089  pc_mode=None pc_blocked=None pc_skip_logged=0
+  X1_GS_T170_2021_LOOSE_AGG30 DCAlegs=86/1164  pc_mode=None pc_blocked=None pc_skip_logged=0
+  X1_GS_T170_2021_LOOSE_AGG30_PC15 DCAlegs=84/1162  pc_mode=0.15 pc_blocked=45 pc_skip_logged=45
+  X1_GS_T170_2021_LOOSE_PC15 DCAlegs=84/1162  pc_mode=0.15 pc_blocked=45 pc_skip_logged=45
+
+=== EQUITY cuoi / CAGR (THAM CHIEU, KHONG phai tieu chi) ===
+  X1_GS_T170_2021          equity=111070 CAGR=29.27%
+  X1_GS_T170_2021_LOOSE_AGG30 equity=124238 CAGR=32.53%
+  X1_GS_T170_2021_LOOSE_AGG30_PC15 equity=122043 CAGR=32.00%
+  X1_GS_T170_2021_LOOSE_PC15 equity=122043 CAGR=32.00%
+DONE
