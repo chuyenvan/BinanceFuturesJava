@@ -1,0 +1,14 @@
+[Unit]
+Description=Shadow C3 Redis (port 7301 single-node cluster, paper state store)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+ExecStart=/usr/bin/redis-server /home/ubuntu/shadow_c3/redis/redis-shadow.conf --daemonize no
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

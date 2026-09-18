@@ -1,0 +1,20 @@
+[Unit]
+Description=Shadow C3 (T170 paper, SHADOW_NO_PUSH=true) BinanceOrderTradingManager
+After=network-online.target shadow-c3-redis.service
+Wants=network-online.target
+Requires=shadow-c3-redis.service
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/shadow_c3/app
+ExecStart=/home/ubuntu/shadow_c3/app/bin/run_foreground.sh
+Restart=always
+RestartSec=15
+# stdout/err -> journald (capped). KHONG append vao file: tranh runaway lam day dia
+# (18/09 su co: vong lap exception redis-down khong backoff ghi 7GB nohup.out lam day /).
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
