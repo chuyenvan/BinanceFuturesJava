@@ -1,6 +1,13 @@
 # ENV instance SHADOW C3 tren Oracle. KHONG deploy file nay len 242.
 # [2026-09-18 T170-FIX] Sua cho KHOP T170 backtest chuan (profiles/x1_gs_t170.properties,
 #   run md5 efb793e2468ca3a7318da0f0ad23d4fc). Xem docs/RESULT_SHADOW_T170_FIX.md.
+# [2026-09-19 FLATGRID KEEPLEG0] User CHOT chuyen production shadow sang bien the FLATGRID
+#   KEEPLEG0: DCA ladder 1,1,1,1 + DCA_GRID_SCALE=6.0 (thay 1,1,3,8 + 19.5 cua T170).
+#   Nguon chuan: profiles/t170_flat_keepleg0.properties (diff T170 DUNG 2 dong: WEIGHTS + SCALE).
+#   Quyet dinh KHAU VI RUI RO CO Y THUC: NOI hard-constraint UW 120 -> >=147 ngay (toan ky),
+#   danh doi CAGR -2.13pp de HA tran tap trung 1 coin 58.5% -> 18.0%. Xem
+#   docs/DECISION_SHADOW_FLATGRID_KEEPLEG0.md. CANH BAO: chi doi WEIGHTS ma giu SCALE=19.5 se
+#   thanh KEEPSCALE (phong to moi lenh 3.25x, tran van 58.5%) => SAI. Phai doi CA HAI.
 #   GIU NGUYEN: SHADOW_NO_PUSH=true (paper, khong ra lenh that), LIVE_PROFILE=c3_shadow, PAPER_EQUITY.
 export APP_MAIN_CLASS=com.binance.chuyennd.trading.BinanceOrderTradingManager
 export APP_PID_DIR=./run
@@ -30,11 +37,12 @@ export SIM_LOSER_TIME_STOP_HOURS=168
 export TIER_FLAT=1
 # [FIX] gate scale 1.70 (T170). Truoc day KHONG set => default 1.0 (= T100, sai).
 export SIM_GATE_DYN_SCALE=1.70
-# --- DCA GRID (profile: ENABLED=true, WEIGHTS=1,1,3,8, SCALE=19.5) ---
-# [FIX] ENABLED them (truoc unset=false=tat DCA); WEIGHTS 1,0,0,0 -> 1,1,3,8; SCALE them 19.5 (truoc unset=1.0).
+# --- DCA GRID (FLATGRID KEEPLEG0, nguon: profiles/t170_flat_keepleg0.properties) ---
+# [2026-09-19 FLATGRID] T170 goc la 1,1,3,8 / scale 19.5. KEEPLEG0 = 1,1,1,1 / scale 6.0
+#   (ha tran tap trung 58.5% -> 18.0%). PHAI doi CA HAI dong; doi mot minh WEIGHTS = KEEPSCALE (SAI).
 export DCA_GRID_ENABLED=true
-export DCA_GRID_WEIGHTS=1,1,3,8
-export DCA_GRID_SCALE=19.5
+export DCA_GRID_WEIGHTS=1,1,1,1
+export DCA_GRID_SCALE=6.0
 # --- 3 bug-fix B1/B2/B3 (profile bat het; default cung true nhung ghi ro) ---
 export SIM_FIX_B1=true
 export SIM_FIX_B2=true
