@@ -1,4 +1,14 @@
 # GATE vs SELECTOR — Khảo sát & Hướng mới
+
+> **DINH CHINH 2026-09-20 (commit `d39f015`) — doc nay co MOT LOI DA KIEM CHUNG:**
+> Muc **5/B** ghi "72h chi co summary, chua sinh bins, chua co IC" la **SAI so voi repo**.
+> Huong B (gate 4h -> 72h) **DA duoc pre-register va chay** o vong G5: `docs/PREREG_G5.md` (`f0b088b`)
+> -> `docs/G5_VALUE_LABELS.md` (`5d1afa7`) — ket qua **XAU HON ro ret** (4/5 rate ngoai CI theo huong xau;
+> rang buoc cung FAIL 3/4 nam; equity 39,181 vs 98,523). Xem `docs/RESULT_GATE_H72.md`.
+> Them nua: trong kien truc `map_s1a2`, **thu tu cua gate bi bo** (gate chi con lai kenh HIEU CHUAN),
+> nen "doi horizon gate" khong the tac dong len co che chon coin. => Cac huong con lai (A/C/E/D/F) phai
+> doc lai voi gia dinh nay.
+
 *Ngày khảo sát: 2026-09-20. Chỉ đọc; không sửa code, không commit, không chạy sim.*
 
 ---
