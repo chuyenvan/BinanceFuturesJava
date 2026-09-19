@@ -396,30 +396,58 @@ def main():
     baseline.to_parquet(f"{OUT}/pred_baseline18.parquet")
 
     RL = pd.read_parquet(PATH_LABELS, columns=["ts", "sym", "g1_replay"])
+    # CHAN DOAN (phat hien khi chay full, TRUOC khi xem bat ky Delta P1-P3 nao): join rate
+    # g1_replay tong the chi ~13.25% tren baseline 18-fold, TUONG PHAN voi gia dinh >=95% cua
+    # Sec 2.5. Da xac nhan thuc nghiem tren pred_baseline18.parquet: fold 0-11 (cutoff <=
+    # 20240401) co rate ~99.9-100%, fold 12-17 (cutoff >= 20240701) co rate = 0.000000 TUYET
+    # DOI, khop chinh xac voi ts max cua path_labels.parquet (2024-06-30 16:45, dung bien
+    # OOS-end cua fold 11). Day la GIOI HAN CO SAN cua file nhan phu path_labels.parquet (chua
+    # duoc tinh cho nua sau 2024 tro di), KHONG phai loi join key/harness -- va KHONG duoc sinh
+    # lai/mo rong file nay trong vong nay (pham vi cam Sec 6: "khong sinh bins/dataset moi").
+    # Sua: ap nguong >=95% cua Sec 2.5 CHI trong pham vi coverage thuc te (ts <= REPLAY_MAX_TS)
+    # thay vi tren toan bo 18 fold; metric CHINH edge5 (tren g1lite) khong bi anh huong vi
+    # g1lite luon co du 18 fold. He qua: Delta rank-IC tren g1_replay o cua so CONFIRM (fold
+    # 10-17) chi con du lieu that o fold 10-11 (2024 Q1-Q2) -- ghi ro trong RESULT, day la gioi
+    # han BAO CAO cua mot metric PHU (Sec 2.4: rank-IC "bao cao song song, khong phai luat
+    # quyet dinh"), khong lam sai lech phan quyet THANG/NULL/THUA (luon theo edge5).
+    REPLAY_MAX_TS = int(RL.ts.max())
+    _p(f"path_labels (g1_replay) coverage: ts <= {pd.Timestamp(REPLAY_MAX_TS, unit='ms')} -- "
+       f"cutoff 20240701 tro di (fold 12-17) KHONG co g1_replay (gioi han von co cua file nhan).")
 
     def with_replay(P):
         m = P.merge(RL, on=["ts", "sym"], how="left")
-        rate = m.g1_replay.notna().mean()
-        return m, rate
+        covered = m.ts <= REPLAY_MAX_TS
+        n_covered = int(covered.sum())
+        rate_overall = float(m.g1_replay.notna().mean())
+        rate_covered = (float(m.loc[covered, "g1_replay"].notna().mean())
+                        if n_covered else float("nan"))
+        return m, dict(rate_overall=rate_overall, rate_covered=rate_covered,
+                       n_covered=n_covered, n_total=len(m))
 
-    base_r, base_rate = with_replay(baseline)
-    _p(f"baseline g1_replay join rate = {base_rate:.4f}")
+    base_r, base_rate_info = with_replay(baseline)
+    _p(f"baseline g1_replay join rate: overall={base_rate_info['rate_overall']:.4f} "
+       f"covered(ts<=REPLAY_MAX_TS, n={base_rate_info['n_covered']})="
+       f"{base_rate_info['rate_covered']:.4f}")
 
     base_e = edge5_series(baseline)
     base_ic_lite = rankic_series(baseline, "g1lite")
     base_ic_replay = rankic_series(base_r, "g1_replay")
 
     def metrics_for(P, tag):
-        Pr, rate = with_replay(P)
+        Pr, rate_info = with_replay(P)
         e = edge5_series(P)
         ic_lite = rankic_series(P, "g1lite")
         ic_replay = rankic_series(Pr, "g1_replay")
         n_bad = int((~np.isfinite(P.score)).sum())
-        sanity = dict(n_oos=len(P), replay_join_rate=rate, n_bad_score=n_bad,
+        sanity = dict(n_oos=len(P), replay_join_rate_overall=rate_info["rate_overall"],
+                      replay_join_rate_covered=rate_info["rate_covered"],
+                      replay_n_covered=rate_info["n_covered"], n_bad_score=n_bad,
                       ticks=int(P.ts.nunique()))
         log(tag, "sanity", sanity)
         assert n_bad == 0, f"{tag}: score co NaN/Inf"
-        assert rate >= 0.95, f"{tag}: g1_replay join rate {rate:.4f} < 0.95"
+        assert rate_info["n_covered"] == 0 or rate_info["rate_covered"] >= 0.95, (
+            f"{tag}: g1_replay join rate TRONG pham vi coverage "
+            f"{rate_info['rate_covered']:.4f} < 0.95")
         return dict(edge5=e, ic_lite=ic_lite, ic_replay=ic_replay, sanity=sanity)
 
     base_m = metrics_for(baseline, "baseline")
