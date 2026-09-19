@@ -1,0 +1,13 @@
+{
+  "id": "chuyendinh/s1-baseline18-parity-20260919",
+  "title": "s1-baseline18-parity-20260919",
+  "code_file": "train_baseline18.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": false,
+  "enable_internet": true,
+  "dataset_sources": ["chuyendinh/s1-featv2-x1-20260919"],
+  "competition_sources": [],
+  "kernel_sources": []
+}

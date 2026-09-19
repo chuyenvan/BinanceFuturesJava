@@ -1,0 +1,13 @@
+{
+  "n_oracle": 6685957,
+  "n_kaggle": 6685957,
+  "n_join": 6685957,
+  "spearman_global": 0.9927774331333924,
+  "intick_spearman_median": 0.988715975007116,
+  "intick_spearman_min": 0.4739495798319328,
+  "n_ticks_intick": 18283,
+  "rank_exact_match_frac": 0.05573951492658418,
+  "edge5_oracle_pct": 15.012825012207031,
+  "edge5_kaggle_pct": 15.209467887878418,
+  "edge5_diff_pp": 0.19664287567138672
+}
