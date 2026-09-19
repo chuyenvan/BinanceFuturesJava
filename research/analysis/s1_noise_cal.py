@@ -69,16 +69,15 @@ def main():
 
     # baseline: TAI SU DUNG pred_baseline18.parquet (seed 42, KEEP9, da PASS self-check trong
     # result.json). Ghep lai g1lite tu D (cung ts,sym), suy lai fold tu 18 cua so cutoff.
-    base_pred = pd.read_parquet(f"{OUT}/pred_baseline18.parquet")
-    windows = fold_windows()
-    base_pred = base_pred.copy()
-    base_pred["fold"] = assign_fold(base_pred.ts.to_numpy(), windows)
-    n_nofold = int((base_pred.fold < 0).sum())
-    assert n_nofold == 0, f"baseline reuse: {n_nofold} dong ts ngoai moi cua so fold (BUG)"
-    bm = base_pred.merge(D[["ts", "sym", "g1lite"]], on=["ts", "sym"], how="left")
-    n_bad_join = int(bm.g1lite.isna().sum())
-    assert n_bad_join == 0, f"baseline reuse: {n_bad_join} dong khong ghep duoc g1lite (BUG)"
-    baseline = bm
+    baseline = pd.read_parquet(f"{OUT}/pred_baseline18.parquet")
+    # pred_baseline18.parquet da duoc main() cua s1_hpo_bag_featgrp.py ghi de bang
+    # baseline.to_parquet(...) SAU KHI tinh xong (khong phai ban rut gon ts,sym,score cua
+    # run_variant(save=True) noi bo) -- xac nhan thuc nghiem: file co du ts,sym,g1lite,yr,
+    # score,fold. Vi vay dung truc tiep, KHONG can suy lai fold/g1lite (sua loi so voi thiet ke
+    # ban dau trong PREREG_S1_NOISE_CAL.md Sec 2 -- gia tri ket qua khong doi vi day la CUNG
+    # mot du lieu, chi khac cach lay).
+    assert {"ts", "sym", "g1lite", "fold", "score"}.issubset(baseline.columns), (
+        f"pred_baseline18.parquet thieu cot: {list(baseline.columns)}")
     base._p("baseline (tai su dung pred_baseline18.parquet) ticks/fold:\n",
             baseline.groupby("fold").ts.nunique().to_string())
 
