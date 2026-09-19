@@ -1,5 +1,57 @@
 # Index — router tri thuc `docs/`
 
+## ⚠️ TRẠNG THÁI THẬT (cập nhật 2026-09-19)
+
+- **C2b SUPERSEDED** bởi C3 — xem [`C3_BASELINE.md`](C3_BASELINE.md).
+- **VALIDATION đã nhập vào DEV mở rộng** theo quyết định user (không còn VAL sạch; validate
+  cuối cùng = forward test) — xem [`PREREG_X1.md`](PREREG_X1.md) dòng 7.
+- Chỉ **HOLDOUT 2026 còn sạch** (chưa đụng, chưa có pre-reg).
+- **Incumbent nghiên cứu = T170** — [`../profiles/x1_gs_t170.properties`](../profiles/x1_gs_t170.properties),
+  devrun `X1_GS_T170_2021`, md5 printDone `efb793e2`. Xem
+  [`RESULT_DEV2021_READJUDICATE.md`](RESULT_DEV2021_READJUDICATE.md) +
+  [`AUDIT_READJUDICATE_CI_RESCORE.md`](AUDIT_READJUDICATE_CI_RESCORE.md).
+- **Luật CI mới**: [`AUDIT_CI_INFLATE_STANDARDIZATION.md`](AUDIT_CI_INFLATE_STANDARDIZATION.md)
+  (hệ số đúng `inflate(k)=sqrt(2 ln k)`; hệ số cũ `x1.7936` dùng ở `DCA_ROUND_CAP`/
+  `DCA_AGG_PERCOIN` bị nhân chồng, đã đính chính PRIMARY PASS→FAIL ở § B.2).
+- **Khẩu vị rủi ro mới**: [`RISK_APPETITE.md`](RISK_APPETITE.md) (maxDD<=30%, UW<=200 ngày, quý
+  xấu nhất>=-15%, tập trung 1 coin<=15% equity; ngưỡng bằng chứng CI giữ nguyên >=2 rate ngoài
+  CI).
+- **Shadow production 242 = FLATGRID KEEPLEG0** (paper, `SHADOW_NO_PUSH=true`) — xem
+  [`DECISION_SHADOW_FLATGRID_KEEPLEG0.md`](DECISION_SHADOW_FLATGRID_KEEPLEG0.md).
+
+Mục 1 "ĐỌC ĐẦU TIÊN" bên dưới mô tả trạng thái 09-03, giữ để truy vết;
+[`RUNS_DEV.md`](RUNS_DEV.md) / [`ROADMAP_NOLEAK.md`](ROADMAP_NOLEAK.md) /
+[`QUEUE.md`](QUEUE.md) đứng yên từ 09-03 / 09-02 / 09-12.
+
+**12 RESULT gần nhất theo mtime (trích dòng phán quyết đầu file, không diễn giải):**
+
+1. [`RESULT_SHADOW_T170_FIX.md`](RESULT_SHADOW_T170_FIX.md) (09-18): "Trước khi sửa, shadow
+   không sinh entry nào" — process chết ~12 ngày không auto-restart + cấu hình lệch T170; đã
+   sửa bằng systemd watchdog (`Restart=always`), kill-test PASS (~20s tự bật lại).
+2. [`RESULT_D3D4_FILTER_SIM.md`](RESULT_D3D4_FILTER_SIM.md): "Verdict: NULL — cả 3 biến thể
+   KHÔNG cải thiện chất lượng; giữ nguyên T170 (parity)."
+3. [`RESULT_PUMPDUMP_OHLCV.md`](RESULT_PUMPDUMP_OHLCV.md): "Cả 4 detector đều NULL. Không
+   detector nào đạt cả 3 tiêu chí chốt trước."
+4. [`RESULT_PUMPDUMP_DETECT.md`](RESULT_PUMPDUMP_DETECT.md): "Cả 6 feature / 4 detector đều
+   NULL. Không detector nào đạt cả 3 tiêu chí chốt trước."
+5. [`RESULT_POSTPUMP_MEASURE.md`](RESULT_POSTPUMP_MEASURE.md): "MÔ TẢ (descriptive) — KHÔNG
+   chạy sim, KHÔNG sửa `.java`, KHÔNG push" (đo tín hiệu post-pump trên n=1089 lệnh).
+6. [`RESULT_S1_CORRECT_MEASURE.md`](RESULT_S1_CORRECT_MEASURE.md): "DESCRIPTIVE MEASUREMENT —
+   sửa 2 lệch cấu trúc của `RESULT_S1_RANK_QUALITY.md`... KHÔNG phải bằng chứng alpha."
+7. [`RESULT_S1_RANK_QUALITY.md`](RESULT_S1_RANK_QUALITY.md): "DESCRIPTIVE MEASUREMENT — lần
+   ĐẦU đo trực tiếp chất lượng xếp hạng của S1... KHÔNG phải bằng chứng alpha."
+8. [`RESULT_TREND_RANK_IC.md`](RESULT_TREND_RANK_IC.md): "DESCRIPTIVE SCREENING (không phải
+   bằng chứng alpha). Chạy MỘT lần, không tune."
+9. [`RESULT_BD_THRESHOLD_FRAGILITY.md`](RESULT_BD_THRESHOLD_FRAGILITY.md): "Edge BIG_DOWN mong
+   manh theo ngưỡng. PnL BIG_DOWN dao 2x (8,323 → 16,254 USD) trong 4 biến thể ngưỡng lân cận."
+10. [`RESULT_DCA_AGG_PERCOIN.md`](RESULT_DCA_AGG_PERCOIN.md): "Per-coin 15% là công cụ ĐÚNG —
+    chặn được tập trung (17.15% → 12.51%)..." — **⚠️ PRIMARY nay đã đính chính PASS→FAIL**, xem
+    banner đầu file.
+11. [`RESULT_DCA_ROUND_CAP.md`](RESULT_DCA_ROUND_CAP.md): "NULL — giữ T170. Trần 10%/lượt
+    (CAP10) KHÔNG binding..." — **⚠️ PRIMARY nay đã đính chính PASS→FAIL**, xem banner đầu file.
+12. [`RESULT_SEL_BIGDOWN.md`](RESULT_SEL_BIGDOWN.md): "Verdict: NULL — giữ nguyên T170
+    (parity)."
+
 > **VIET LAI 2026-09-03 (M6).** Ban cu tro tuong minh toi **37 duong dan KHONG TON TAI**, trong
 > do 6 file no goi la bat buoc doc: `CORE.md` ("Luon doc CORE"), `FINDINGS.md` ("NGUON SU THAT"),
 > `SESSION_START.md` ("DOC DAU TIEN moi session"), `DATA_STATE.md`, `architecture.md`,

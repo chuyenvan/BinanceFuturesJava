@@ -15,6 +15,12 @@ Day la thay doi **KHAU VI RUI RO**, KHONG phai thay doi **NGUONG BANG CHUNG**.
 | **tap trung 1 coin** | (chua co) | **<= 15% equity** (chot 2026-09-17) |
 | NGUONG BANG CHUNG | >= 2 rate ngoai CI | **GIU NGUYEN** (`>=2`, bootstrap block-72h, x1.21, 2000 rep, seed 20260905) |
 
+> Chú thích 2026-09-19: hệ số `x1.21` ở dòng trên là hệ số **CŨ**. Vụ `DCA_ROUND_CAP` /
+> `DCA_AGG_PERCOIN` cho thấy hệ số này từng bị **nhân chồng** với hệ số CI đúng. Hệ số CI chuẩn
+> hoá hiện nay là **`inflate(k) = sqrt(2 ln k)`** theo `docs/AUDIT_CI_INFLATE_STANDARDIZATION.md`
+> giai đoạn 2 (§ B.1); mọi phép chấm điểm CI **BẮT BUỘC** gọi `x1_rates.py --k <so_round>` để
+> lấy đúng hệ số theo `k`, không hardcode `x1.21` hay `x1.7936`.
+
 Ghi chu: nguong cu `UW <= 120` da duoc ghi nhan la **KHONG dat duoc** tren cua so 48 thang
 (`docs/AGENT_RUNBOOK.md` muc 3: ca hai arm FAIL — 2024=121 ngay, 2025=302/227 ngay). Nguong 200
 phu hop hon voi do dai cua so hien tai.

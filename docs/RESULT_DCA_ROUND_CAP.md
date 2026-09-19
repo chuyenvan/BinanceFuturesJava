@@ -1,5 +1,15 @@
 # RESULT — DCA ROUND CAP (siet tong margin moi luot DCA)
 
+> ⚠️ **ĐÍNH CHÍNH 2026-09-19**: Verdict PRIMARY của round này đổi từ **PASS sang FAIL**. Hệ
+> số CI dùng trong bản gốc (`1.7936`) bị **nhân chồng** hai lớp hệ số (`1.21 × 1.4823`); hệ số
+> đúng cho `k=3` là **`1.4823`** (= `sqrt(2 ln 3)`). Rescore lại ở hệ số đúng: biến thể
+> `CAP10_LOOSE` và `LOOSE` có `win%` lệch **−1.33pp / −1.39pp**, CI95 `[−2.42,−0.04]` /
+> `[−2.49,−0.12]` — **NGOÀI CI, rate XẤU** ⇒ **PRIMARY FAIL** (trước đây báo PASS chỉ vì CI quá
+> rộng). Kết luận loại bỏ round này (do vi phạm chặn tập trung `max1coin`) **được củng cố
+> thêm**, không đảo ngược. Chi tiết đầy đủ + bảng rescore: `docs/AUDIT_CI_INFLATE_STANDARDIZATION.md`
+> § B.2 ("RESCORE — CA 2 ROUND ĐỔI TỪ PRIMARY PASS SANG PRIMARY FAIL"). Nội dung bên dưới GIỮ
+> NGUYÊN để truy vết, KHÔNG xoá/sửa.
+
 > **Ket qua (da chay sim + cham).** Branch `module`. KHONG push. DEV 2021-07..2025-12.
 > Pre-reg: `docs/PREREG_DCA_ROUND_CAP.md`. Baseline/parity T170 md5 `efb793e2468ca3a7318da0f0ad23d4fc`.
 

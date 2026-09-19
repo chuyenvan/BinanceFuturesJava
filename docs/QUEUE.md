@@ -1,5 +1,8 @@
 # QUEUE — hang doi thi nghiem DEV, theo thu tu
 
+> ⚠️ **QUEUE này dừng cập nhật từ 2026-09-12**; các vòng thí nghiệm 2026-09-13 → 2026-09-19 xem
+> banner đầu [`docs/index.md`](index.md).
+
 Doc `docs/AGENT_RUNBOOK.md` truoc. Moi job phai co `docs/PREREG_*.md` commit TRUOC khi chay.
 Lay job DAU TIEN co status `READY`. Job `BLOCKED` phai cho user duyet trong chat.
 Sau khi xong: doi status thanh `DONE <commit>`, ghi ket qua vao doc rieng, commit.
