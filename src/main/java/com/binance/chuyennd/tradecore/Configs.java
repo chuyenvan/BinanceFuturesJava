@@ -555,6 +555,15 @@ public class Configs {
             ? Integer.parseInt(Cfg.get("BD_SIZE_ADAPT_N").trim()) : 120;
 
     // ========================================================================
+    // [VOL_TARGET 2026-09-20] docs/PREREG_VOL_TARGET.md - TASK 5: size lenh theo bien dong
+    //   THUC TE (risk parity), KHONG doi lenh nao duoc chon vao/ra - chi doi KICH THUOC. Mac dinh
+    //   "OFF" -> VolTargetSizing.ACTIVE=false -> khong nhanh nao chay -> byte-identical voi T170
+    //   (cong repro md5 efb793e2). Xem VolTargetSizing.java cho COIN/PORTFOLIO.
+    // ========================================================================
+    /** Che do vol-target sizing (OFF|COIN|PORTFOLIO). */
+    public static String SIZE_VOL_TARGET_MODE = Cfg.getOr("SIZE_VOL_TARGET_MODE", "OFF");
+
+    // ========================================================================
     // [BD-SEL 2026-09-16] docs/PREREG_SEL_BIGDOWN.md — doi cach chon 2 coin cua leg
     //   BIG_DOWN theo drop 1-phut causal thay vi pNoPump. KHONG sua getTopSymbolArray.
     //   Mac dinh "off" => khong cap phat, khong nhanh nao chay => byte-identical.

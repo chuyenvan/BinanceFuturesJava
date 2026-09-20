@@ -1301,6 +1301,15 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         float tierMultiplier = CoinRankManager.getInstance().getBudgetMultiplier(symbolId);
         budget *= tierMultiplier;
 
+        // [VOL_TARGET 2026-09-20] docs/PREREG_VOL_TARGET.md - TASK 5: scale size theo bien dong
+        //   THUC TE (COIN: vol 7d cua chinh coin; PORTFOLIO: vol 20d cua equity chien luoc). Nhan
+        //   SAU tierMultiplier, TRUOC DCA-grid ratio -> moi leg cua CUNG mot cum an chung he so nay
+        //   (nhat quan voi cach tierMultiplier ap dung). Default OFF -> VolTargetSizing.ACTIVE=false
+        //   -> nhanh nay KHONG chay -> byte-identical voi T170 (cong repro md5 efb793e2).
+        if (VolTargetSizing.ACTIVE) {
+            String vtSymbol = SimpleSymbolMapper.getInstance().getSymbol(symbolId);
+            budget *= VolTargetSizing.multiplier(vtSymbol, currentTs);
+        }
 
 
         // === DCA GRID sizing (2026-08-01) — TONG von moi coin GIU NGUYEN = budget ===
