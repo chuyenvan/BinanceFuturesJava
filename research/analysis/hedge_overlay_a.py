@@ -307,7 +307,28 @@ def main():
 
     daily = BD.daily_frame(TAG)
     daily = daily[(daily.index >= WIN_START) & (daily.index <= WIN_END)]
-    beta_day, nobs_day, dbg = rolling_beta(daily, nopen_day)
+    # [TASK C 2026-09-20] BIEN THE MO TA THEM SAU KHI RESULT DA CONG BO, KHONG tham gia phan
+    # quyet muc 9: HEDGE_BETA_CONST=1 dung MOT beta CO DINH = beta OLS TOAN KY in-sample
+    # (KHONG causal, nhin ca tuong lai) tren dung dang well-posed dPnL = a + b*(Nopen*r_b).
+    # Day la "can tren lac quan": mot beta biet truoc CA QUA KHU LAN TUONG LAI, khong the dung
+    # live, chi de xem hedge "tot nhat co the" (khong nhieu do uoc luong rolling causal) co
+    # giam duoc ICC hay khong.
+    beta_const_mode = os.environ.get("HEDGE_BETA_CONST", "0") not in ("0", "", "false", "False")
+    b_const = None
+    if beta_const_mode:
+        nopen_full = nopen_day.reindex(daily.index).fillna(0.0).values
+        dpnl_full = daily["equity"].diff().values.astype(float)
+        z_full = nopen_full * daily["r_b"].values.astype(float)
+        mfull = np.isfinite(dpnl_full) & np.isfinite(z_full)
+        vx_full = float(np.var(z_full[mfull]))
+        b_const = float(np.cov(dpnl_full[mfull], z_full[mfull], bias=True)[0, 1] / vx_full) \
+            if vx_full > 0 else 0.0
+        log.info("*** BIEN THE MO TA (HEDGE_BETA_CONST, KHONG causal, can tren lac quan): "
+                 "beta CO DINH toan ky in-sample = %+.6f (n=%d) ***", b_const, int(mfull.sum()))
+        beta_day = pd.Series(b_const, index=daily.index)
+        nobs_day = pd.Series(int(mfull.sum()), index=daily.index)
+    else:
+        beta_day, nobs_day, dbg = rolling_beta(daily, nopen_day)
     # SENSITIVITY MO TA (khong nam trong phan quyet muc 9, chay RIENG qua bien moi truong):
     # kep beta ve [-CLIP, +CLIP] de kiem xem ket luan co bi lai boi duoi |beta| lon hay khong.
     clip = float(os.environ.get("HEDGE_BETA_CLIP", "0"))
@@ -404,7 +425,10 @@ def main():
         "verdict": v, "criteria": crit,
     }
     res["beta_clip_sensitivity"] = clip
-    out = OUT_JSON if clip <= 0 else OUT_JSON.replace(".json", "_clip%g.json" % clip)
+    res["beta_const_mode"] = beta_const_mode
+    res["beta_const_value"] = b_const
+    suffix = ("_betaconst" if beta_const_mode else "") + ("_clip%g" % clip if clip > 0 else "")
+    out = OUT_JSON if not suffix else OUT_JSON.replace(".json", suffix + ".json")
     os.makedirs(os.path.dirname(out), exist_ok=True)
     with open(out, "w") as f:
         json.dump(res, f, indent=2, default=str)

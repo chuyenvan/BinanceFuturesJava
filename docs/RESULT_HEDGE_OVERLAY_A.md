@@ -111,6 +111,27 @@ ngay co |beta|>10). Day la mot dau hieu ro rang rang beta rolling causal tren du
 | 2024 | −6.60 / 92 / PASS | −4.99 / 74 / PASS |
 | 2025 | −4.23 / 52 / PASS | −8.36 / **168** / **FAIL** |
 
+### 3.3b [TASK C 2026-09-20] Rang buoc cung theo nam — khau vi HIEN HANH (maxDD<=30%,
+UW<=200, nam khong am, quy>=−15%; tap trung 1 coin<=15% KHONG do o day, xem
+`docs/RESULT_VOL_TARGET.md` muc 3). Cham lai tu CUNG so tho o bang tren, doi chieu bang cong cu
+`x1_rates.py --appetite current` (bang cu o tren KHONG bi xoa).
+
+| nam | GOC maxDD/UW/PASS | HEDGED maxDD/UW/PASS |
+|---|---|---|
+| 2021 | −2.46 / 37 / PASS | −4.84 / 37 / PASS |
+| 2022 | −11.84 / 72 / PASS | −16.65 / 100 / PASS |
+| 2023 | −2.73 / 63 / PASS | −2.30 / 78 / PASS |
+| 2024 | −6.60 / 92 / PASS | −4.99 / 74 / PASS |
+| 2025 | −4.23 / 52 / PASS | −8.36 / 168 / PASS |
+
+**Ca GOC va HEDGED PASS 5/5 nam theo khau vi hien hanh** (khac khau vi CU: HEDGED FAIL 2022 va
+2025 o do). Nhung **toan ky** (bang muc 0): GOC PASS moi rang buoc (maxDD −11.84%>=−30%,
+UW 92<=200); **HEDGED FAIL rieng UW toan ky = 266 > 200** — moi nam rieng le deu <=200 nhung
+mot chuoi duoi-nuoc thuc te bac qua ranh gioi nam dai hon bat ky nam rieng le nao. Day la diem
+DUY NHAT HEDGED khong PASS o khau vi hien hanh, khop voi review cua MASTER
+(`round_2026-09-20_beta_decomp_and_data_survey.md` muc REVIEW.4). **T170 GOC PASS ca hai khau vi
+(cu va hien hanh), moi nam va toan ky.**
+
 ### 3.4 Kiem do ben mo ta: kep beta ve [−3, +3] (KHONG nam trong phan quyet)
 Them **sau** khi da co ket qua chinh, ghi ro de minh bach. Muc dich: kiem xem NULL co phai chi
 do duoi |beta| lon hay khong.
@@ -191,6 +212,80 @@ khong tinh ICC/CAGR/maxDD.**
 ### (D) Kiem do ben kep beta ±3 (muc 3.4) — **SAU** khi co ket qua chinh, **mo ta**, khong tham
 gia phan quyet. Them vao vi `|hedge notional| max = 6.1 lan equity` la bat thuong va can chung
 minh NULL khong phai artefact cua duoi.
+
+### (E) 🔴 PHAT HIEN KHI MASTER REVIEW, SAU KHI RESULT DA COMMIT — thay doi (B) lam guard
+`MIN_OBS=20` VO HIEU
+
+Thay doi (B) o tren doi dang uoc luong beta sang `dPnL(d) = a + b*(Nopen(d)*r_b(d))`. Guard
+`valid = np.isfinite(y) & np.isfinite(x)` (voi `y=dpnl`, `x=z=nopen*r_b`) trong `rolling_beta()`
+**coi moi ngay co `Nopen=0` la mot quan sat hop le**, vi `z = 0*r_b = 0` la mot so huu han (qua
+duoc `isfinite`). Nhung ngay khong co vi the nao mo thi `z` LUON bang 0 bat ke `r_b` la gi —
+day la mot quan sat KHONG mang thong tin gi ve beta (khong co don bay long nao de uoc luong he
+so tren). Hau qua: cua so lich 60 ngay chi can >=20 ngay BAT KY (ke ca ngay khong vi the) la du
+`MIN_OBS=20` va tinh duoc beta, trong khi y dinh ban dau cua guard nay la doi it nhat 20 ngay
+**CO vi the mo** (co thong tin thuc su). Do luong: T170 chi co vi the mo **431/1644 ngay (26.2%)**
+trong ca cua so — rat nhieu cua so 60-ngay co duoi 20 ngay CO vi the that nhung van "du 20 obs"
+nho dem ca ngay `Nopen=0` (z=0). Day la loi giai thich hop ly nhat cho `beta_roll` nhieu bat
+thuong da ghi trong RESULT (med 0.935, p05 −1.97, p95 +2.95, |beta|>10 tren 0.45% ngay) va
+hedge notional max **6.1 lan equity**.
+
+**He qua cho phan quyet**: `ICC x4.3` (0.0516→0.2208), `maxDD` −11.84%→−17.32%, `UW` 92→266 la
+**ARTEFACT cua loi nay** (beta duoc uoc luong tu it quan sat "that" hon nhieu so voi tuong dinh).
+**Verdict NULL KHONG doi**: ly do that cua NULL khong phai chat luong uoc luong beta ma la
+**r²=0.031** (TASK1/muc 2 o tren) — hedge BTC don gian KHONG CO gi de lay di, du beta co uoc
+luong hoan hao den dau (xem bien the (F) duoi day do truc tiep dieu nay). Sua guard (doi `valid`
+thanh chi dem ngay `nopen>0`) se lam beta on dinh hon nhung se KHONG doi ket luan NULL vi tran
+thong tin la r², khong phai nhieu uoc luong. **KHONG sua code de tinh lai so chinh thuc trong
+RESULT nay** (da cong bo; sua se la thay doi thiet ke SAU khi thay ket qua ma khong co ly do gi
+khac ngoai "cho dep so") — chi ghi nhan tai day theo dung luat minh bach muc 5, va do truc tiep
+bang bien the mo ta (F).
+
+### (F) 🔵 BIEN THE MO TA THEM SAU (TASK C 2026-09-20, KHONG tham gia phan quyet muc 9):
+`HEDGE_BETA_CONST` — beta CO DINH = beta OLS TOAN KY in-sample ("can tren lac quan")
+
+De tach rieng "NULL vi r² thap" khoi "NULL vi beta_roll nhieu do (E)", them bien moi truong
+`HEDGE_BETA_CONST=1` vao `hedge_overlay_a.py`: thay vi beta rolling causal 60-ngay, dung MOT beta
+CO DINH cho toan bo cua so = beta OLS tren TOAN KY (khong causal, nhin ca qua khu lan tuong lai,
+dung dung dang well-posed `dPnL = a + b*(Nopen*r_b)`). Day la mot **can tren lac quan**: mot nha
+giao dich khong the biet truoc beta nay tai thoi diem t (khong the dung live), no chi tra loi cau
+hoi "neu co MOT beta hoan hao, on dinh, biet truoc CA CHUOI, thi hedge tot nhat co the co giam
+duoc ICC hay khong?".
+
+Ket qua (`HEDGE_BETA_CONST=1 python3 research/analysis/hedge_overlay_a.py` →
+`/home/ubuntu/hedge_a/hedge_overlay_a_betaconst.json`):
+
+| | GOC | HEDGED (beta_roll causal, muc 0) | HEDGED (beta CO DINH toan ky, can tren lac quan) |
+|---|---|---|---|
+| beta dung de hedge | — | rolling 60d, med 0.935, p05/p95 −1.97/+2.95 | **hang so +1.368 (n=1643)** |
+| ICC (ngay) | +0.0516 | +0.2208 | **+0.0496** |
+| beta ngay (sau hedge) | +0.04866 | −0.01340 | −0.02100 |
+| r² (sau hedge) | 0.0312 | 0.0015 | 0.0112 |
+| n_eff(k_bar=3.55) | 3.13 | 2.27 | **3.15** (+0.6%) |
+| maxDD | −11.84% | −17.32% | **−4.58%** |
+| UW | 92 | 266 | 128 |
+| CAGR | 29.27% | 30.96% | 34.08% |
+| c1 ICC<=0.70x0 & <0.15 | — | False | **False** (0.0496 > 0.0361) |
+| c2 &#124;beta_h&#124;<=0.30x&#124;beta_0&#124; | — | True | **False** (0.021 > 0.0146) |
+| c3 maxDD>=1.25xDD0 & CAGR>0 | — | False | True |
+| c4 n_eff tang >=20% | — | False | **False** (+0.6%, can >=20%) |
+
+**Doc ket qua**: voi mot beta "hoan hao" (khong the co that trong thuc te), ICC **KHONG con tang
+manh** nhu ban causal (0.0496 vs 0.2208) — xac nhan phan lon muc tang ICC 4.3 lan trong ket qua
+chinh la do nhieu uoc luong ((E) o tren), KHONG phai do ban than co che phan bo pro-rata. NHUNG
+ICC van **KHONG giam** xuong duoi nguong c1 (0.0496 van > 0.0361 = 0.70x0.0516) va `n_eff` gan
+nhu khong doi (+0.6%, xa duoi nguong +20% can cho tin hieu duong) — ngay ca can tren lac quan
+nhat (beta biet truoc ca qua khu lan tuong lai) cung KHONG dat du tieu chi thang (chi dat rieng
+c3 rui ro, khong dat c1/c2/c4). **Bang chung doc lap them cho ket luan o muc 2**: tran that su cua
+ICC/n_eff T170 khong nam o chat luong uoc luong beta BTC (du toi uu den dau), ma o **r²=0.031**
+— BTC don gian khong giai thich du bien dong ngay cua T170 de bat ky phep hedge beta nao (nhieu
+hay khong nhieu) co the cai thien duoc tuong quan trong-cohort. maxDD/UW cai thien manh o cot nay
+(−4.58%/128) la hieu ung phu cua don bay/foresight (beta co dinh lon +1.368 ap dung ca cho qua
+khu), KHONG phai bang chung kha thi — khong the dung lam can cu quyet dinh vi khong causal.
+
+**Ghi chu ky thuat**: day la so MO TA THEM sau khi RESULT da cong bo, dung env var moi
+`HEDGE_BETA_CONST=1`, KHONG doi hanh vi mac dinh cua script — da kiem lai: chay khong bien moi
+truong cho DUNG so byte-for-byte nhu RESULT da cong bo o muc 0 (ICC 0.0516→0.2208, maxDD
+−11.84%→−17.32%, UW 92→266, verdict NULL). KHONG tham gia phan quyet muc 9.
 
 ---
 
