@@ -80,10 +80,41 @@ ngưỡng CŨ (15/120/−5, chưa cập nhật) — cột `PASS (mới)` ở tr�
 theo ngưỡng MỚI của `docs/RISK_APPETITE.md`. PORTFOLIO 2025 UW=164 ngày là dòng DUY NHẤT phân
 biệt CŨ/MỚI (FAIL cũ → PASS mới).
 
+> **[TASK C 2026-09-20]** `x1_rates.py` nay đã có cờ `--appetite {old,current}` (mặc định
+> `current` = đúng bảng trên: 30/200/−15; `old` = 15/120/−5, tái lập đúng bảng dưới đây) — không
+> cần agent tự chấm tay nữa. Bảng `PASS (mới)` ở trên đã được xác nhận khớp lại bằng công cụ.
+
+### 3b. [TASK C 2026-09-20] Đối chiếu bảng khẩu vị CŨ (`--appetite old`: maxDD≤15%, UW≤120,
+năm không âm, quý≥−5%) — KHÔNG xoá bảng khẩu vị MỚI ở trên, chỉ thêm để tham chiếu tái lập
+
+| tag | năm | maxDD% | UW | ret_năm% | quý_min% | PASS (cũ) |
+|---|---|---|---|---|---|---|
+| PARITY | 2021 | −2.46 | 37 | 12.21 | 4.44 | PASS |
+| PARITY | 2022 | −11.84 | 72 | 19.58 | 2.90 | PASS |
+| PARITY | 2023 | −2.73 | 63 | 34.96 | −0.37 | PASS |
+| PARITY | 2024 | −6.60 | 92 | 32.14 | −0.92 | PASS |
+| PARITY | 2025 | −4.23 | 52 | 32.71 | 1.27 | PASS |
+| COIN | 2021 | −2.04 | 37 | 8.25 | 2.76 | PASS |
+| COIN | 2022 | −8.13 | 73 | 15.51 | 2.34 | PASS |
+| COIN | 2023 | −2.61 | 88 | 20.69 | −0.03 | PASS |
+| COIN | 2024 | −4.06 | 88 | 23.07 | −0.09 | PASS |
+| COIN | 2025 | −2.21 | 52 | 23.60 | 1.17 | PASS |
+| PORTFOLIO | 2021 | −3.93 | 37 | 13.19 | 4.51 | PASS |
+| PORTFOLIO | 2022 | −13.42 | 72 | 21.74 | 3.26 | PASS |
+| PORTFOLIO | 2023 | −4.71 | 63 | 43.24 | −0.24 | PASS |
+| PORTFOLIO | 2024 | −10.53 | 119 | 41.49 | −2.68 | PASS |
+| PORTFOLIO | 2025 | −6.12 | **164** | 26.67 | 1.27 | **FAIL** (UW 164>120) |
+
+**PARITY (T170) và COIN PASS 5/5 năm ở CẢ HAI khẩu vị.** PORTFOLIO chỉ khác biệt đúng 1 dòng
+(2025, UW) giữa cũ/mới, khớp chính xác con số đã nêu ở đoạn trên (tái lập bằng công cụ, không
+còn cần chấm tay). Đã chạy bằng `python3 research/analysis/x1_rates.py --k 2 --appetite old
+X1_GS_T170_2021_VT_PARITY X1_GS_T170_2021_VT_{COIN,PORTFOLIO}` (2026-09-20).
+
 **Rào cứng "tập trung 1 coin ≤15% equity": KHÔNG đo trong round này** — `x1_rates.py` không
 xuất số này, và đo riêng cần công cụ khác (giống task `CONC_CAP_PERCOIN`, không nằm trong ước
 tính 1 ngày của TASK 5 này). Ghi nhận đây là khoảng trống, không ảnh hưởng verdict NULL vì tiêu
-chí rate quyết định đã chốt ở mức 0/4.
+chí rate quyết định đã chốt ở mức 0/4. (TASK C 2026-09-20: vẫn CHƯA đo — `--appetite` mới thêm
+chỉ bao phủ maxDD/UW/quý, không bao phủ tập trung coin; khoảng trống này còn nguyên.)
 
 ## 4. Metric phụ: sd(return ngày), Calmar, CV quý
 
