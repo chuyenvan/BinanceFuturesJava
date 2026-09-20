@@ -1,61 +1,88 @@
-# RESULT_GATE_CALIB — hieu chuan gate quanh T170 (1.30 / 2.10): **BLOCKED (du lieu chua len Kaggle)**
+# RESULT_GATE_CALIB — hieu chuan gate quanh T170 (1.30 / 2.10): **NULL** (da chay duoc tren Oracle)
 
-Pre-reg: `docs/PREREG_GATE_CALIB.md` (commit cung dot nay, `module`). Baseline T170 `efb793e2468ca3a7318da0f0ad23d4fc` (n=1089).
-**Vong nay KHONG chay sim, KHONG push.**
+Pre-reg: `docs/PREREG_GATE_CALIB.md` (commit `52f6123`, `module`). Baseline T170
+`efb793e2468ca3a7318da0f0ad23d4fc` (n=1089, equity 111,070). Vong nay HOAN TAT phan sim/parity ma
+ban dau BLOCKED vi bundle Kaggle chua dataset CU + JVM slot bi chiem. Nay chay TRUC TIEP tren Oracle
+(noi data `wfo_ds_x1_2021` nam). KHONG push.
 
 ## 0. Ket luan mot cau
 
-**BLOCKED — parity (byte-identical `efb793e2`) KHONG chay duoc tren Kaggle vi bundle `sim-c2b-bundle`
-dang chua dataset CU `wfo_ds_clean` (10-fold, 2022-01), KHONG phai `wfo_ds_x1_2021` (18-fold, 2021-07)
-ma T170 dang tro vao.** Khong phai loi tool, khong phai quota, khong phai auth — thieu du lieu.
+**NULL cho CA HAI.** scale 1.30 (long hon) va 2.10 (chat hon) deu **0/5 rate CHAT LUONG ngoai CI**
+so T170; T130 con FAIL rang buoc cung (UW 221 > 200), T210 qua rang buoc cung nhung khong phan biet
+duoc tren rate. T170 (1.70) van la diem toi uu — do doc hien tai DA dung. **Giu T170.**
 
-## 1. Phan tich code gate (buoc 1 — da lam, xac nhan)
+## 1. Parity — PASS (Oracle, truc tiep)
 
-`EntryGate.java` + `Configs` (key `SIM_GATE_DYN_SCALE`):
-```
-thr = MIN_MOMENTUM_15M(0.008) * max(DYN_MIN=0.26787, symbolPred/SCORE_BASE(0.15) * DYN_MULT(1.28760)) * GATE_DYN_SCALE
-PASS <=> !(predReturn15M < thr)
-```
-- `SIM_GATE_DYN_SCALE=1.70` (T170) = nhan **1.70** vao `dyn_thr` da tinh. `>1` = **CHAT hon** (nguong cao => it lenh),
-  `<1` = **LONG hon**. Log that T170: `[GATE] scale=1.7 base=0.008 n_cand=17925650 n_pass=841`.
-- Tang scale => nguong cao hon => bot coin qua cong (loc gay hon); giam scale => nhieu coin qua hon.
-  Chi ap o nhanh dyn (`symbolPred != null`); nhanh nguong co so (BIG_DOWN/DCA_LEVEL1) khong bi scale.
-- => 2 bien the pre-reg: **1.30 (long hon)** va **2.10 (chat hon)**, doi xung quanh 1.70.
+| do | md5 printDone | n | equity | ket |
+|---|---|---|---|---|
+| T170 (x1_gs_t170, dataset goc) | `efb793e2468ca3a7318da0f0ad23d4fc` | 1089 | 111,070 | **PASS** |
+| T170 (dataset rebuild Sep-20) | `efb793e2468ca3a7318da0f0ad23d4fc` | 1089 | 111,070 | **PASS** |
 
-## 2. Blocker — chi tiet (da xac minh, khong doan)
+Jar `target/binance-java-sdk-1.2.4.jar` (md5 `20e4fc40f47d`, HEAD `52f6123`) tai lap byte-identical.
 
-| thu | T170 baseline (`X1_GS_T170_2021`) | Kaggle `sim-c2b-bundle` (staging `/home/ubuntu/simbundle`) |
+## 2. Bang chinh (equity/CAGR KHONG phai tieu chi)
+
+| tag | scale | n | win% | TSloss% | mP\|SM | mP\|SL | meanP | maxDD% | UW | equity | CAGR% | n_pass |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| **T170** | 1.70 | 1089 | 88.25 | 9.73 | 7.642 | −16.992 | 5.244 | −11.84 | 92 | **111,070** | **29.27** | 841 |
+| T130 | 1.30 | 1580 | 85.57 | 13.48 | 7.256 | −18.718 | 3.755 | −18.34 | 221 | 92,616 | 24.15 | 1334 |
+| T210 | 2.10 | 808 | 89.73 | 9.28 | 7.530 | −19.204 | 5.048 | −7.60 | 144 | 85,804 | 22.06 | 664 |
+
+`[GATE]`: T130 `scale=1.3 n_cand=17607060 n_pass=1334`; T170 `scale=1.7 n_pass=841`;
+T210 `scale=2.1 n_cand=18044936 n_pass=664`. Scale tang => n_pass giam (1334 > 841 > 664) — dung co che.
+
+## 3. CI khoi-72h (2000 rep seed 20260905, inflate = sqrt(2 ln 2) = 1.177, k=2)
+
+Hieu = variant − T170 (toan cua so):
+
+**T130 (n_A=1580 n_B=1089)** — 0 rate CHAT LUONG ngoai CI:
+| rate | hieu | CI | ngoaiCI |
+|---|---|---|---|
+| win% | −2.676 | [−6.607, +1.117] | - |
+| TSloss% | +3.747 | [−0.633, +8.142] | - |
+| mP\|SM | −0.385 | [−1.979, +1.215] | - |
+| mP\|SL | −1.726 | [−6.893, +2.834] | - |
+| meanP | −1.489 | [−3.529, +0.559] | - |
+
+**T210 (n_A=808 n_B=1089)** — 0 rate CHAT LUONG ngoai CI:
+| rate | hieu | CI | ngoaiCI |
+|---|---|---|---|
+| win% | +1.482 | [−0.823, +4.072] | - |
+| TSloss% | −0.452 | [−3.141, +1.809] | - |
+| mP\|SM | −0.112 | [−1.093, +0.903] | - |
+| mP\|SL | −2.212 | [−6.384, +2.598] | - |
+| meanP | −0.195 | [−1.630, +1.337] | - |
+
+## 4. Rang buoc cung (RISK_APPETITE moi: maxDD<=30%, UW<=200, khong nam am, quy>=-15%)
+
+| tag | nam xau nhat | ket |
 |---|---|---|
-| dataset | `wfo_ds_x1_2021` (funding.bin **4.4GB**) | `wfo_ds_clean` (funding.bin **1.8GB**) |
-| `leakFreeFrom` | **2021-07-01** | 2022-01-01 |
-| `TIME_RUN` | **20210701** | 20220101 |
-| `foldCount` | **18** | 10 |
-| `fundingPredDir` | `predwf_map_s1a2_x1_2021` (18 bins, 20210701..20251001) | `predwf_map_s1a2` (10 bins, 20220101..20240401) |
-| `md5_funding` | `8e57d900d5c54c744bfcaf5c9b27fc93` | `7b9ba20f7a5b49ec3d5aaafed60d45be` |
+| T170 | maxDD −11.84, UW 92, khong nam am | **PASS** |
+| T130 | maxDD −18.34, **UW 221**, quy −5.6 | **FAIL (UW>200)** |
+| T210 | maxDD −7.60, UW 144, khong nam am, quy −3.0 | **PASS** |
 
-- Kaggle bundle manifest (da tai ve de kiem): `leakFreeFrom=2022-01-01, foldCount=10, fundingPredDir=predwf_map_s1a2,
-  md5_funding=7b9ba20f...` => la data CU, KHONG phai data T170.
-- Profile `x1_gs_t170` **khong co trong bundle** (bundle chi co `c2b/c2b_min/c3/e1_*/f2_*`...).
-- `wfo_ds_clean` KHONG con ton tai o dia (chi con `wfo_ds_x1_2021`) => bundle la snapshot cu chua duoc restage cho T170.
-- Doc `KAGGLE_SIM.md` §3/§4 (bundle layout) chi dung cho `wfo_ds_clean` + `predwf_map_s1a2`; muc §6
-  ("exit/gate/sizing chay Kaggle binh thuong") dung voi CUNG bundle cu do, KHONG dung voi dataset T170 moi.
+(T130 con FAIL o nguong cu: UW 221 > 120; T210 UW 144 chi FAIL o nguong cu 120, qua nguong moi 200.)
 
-### De unblock can (khong tu che, can phe duyet)
-Stage bundle MOI voi `wfo_ds_x1_2021` (funding.bin 4.4GB + market.bin 51MB + pred.bin 40MB + manifest) +
-bins `predwf_map_s1a2_x1*` + jar hien hanh + `prof_x1_gs_t170/t130/t210` + config/exchange_info, roi
-`dataset_create_version` (~**5.4GB upload**). Day la cong viec moi, chua duoc giao trong task.
+## 5. Phan quyet
 
-## 3. Da kiem / khong phai blocker
-- `tools/kaggle_sim.py` CON (API `submit/wait/fetch` OK).
-- Auth Kaggle OK (lie ke duoc toan bo dataset `chuyendinh/*`).
-- Aerospike Oracle `161.118.212.3:3222` **REACHABLE** (Symbol Mapper 863 symbols se load duoc).
-- Jar `target/binance-java-sdk-1.2.4.jar` (build 2026-09-17): moi commit java tu 09-14 deu "default OFF
-  byte-identical" + nhieu moc xac nhan `parity T170 efb793e2 KHOP` => jar **du kien** tai lap duoc baseline.
+- **T130 (1.30): NULL** — 0/5 rate ngoai CI + FAIL rang buoc cung (UW 221). Khop `RESULT_DEV2021_READJUDICATE.md` (T130 da chot NULL truoc do; md5 `68510567e9…` trung khop byte-identical => moi truong khong troi).
+- **T210 (2.10): NULL** — 0/5 rate ngoai CI; qua rang buoc cung nhung khong phan biet duoc tren rate.
+- **T170 (1.70): GIU** — diem toi uu cua do doc (equity 111,070 cao nhat; 1.30 va 2.10 deu thap hon).
 
-## 4. Chi phi / thoi gian
-- Kaggle: **0** (khong push kernel nao — chan truoc khi can Kaggle).
-- Phan tich code + xac minh blocker: chi doc file + API lie ke dataset (khong job JVM).
+Xac nhan "ky vong ghi truoc: NULL" cua pre-reg. Do doc hien tai 1.70 la dung; khong co margin de noi
+loi 1.30 hay chat 2.10.
 
-## 5. Khong lam
-Khong push, khong cham 2026/HOLDOUT, khong dung/kill tien trinh song, khong tu che bundle moi (can phe duyet),
-khong chay sim tren Oracle (JVM slot bi chiem).
+## 6. Artifact + chi phi
+
+| thu | duong |
+|---|---|
+| run sim | `/home/ubuntu/java/devrun/CALIB_T130/`, `CALIB_T210/` |
+| md5 printDone | T130 `68510567e9…` (= RESULT_DEV2021), T210 `1673fa25a8…` |
+| rate+CI | `/home/ubuntu/calib_rates.out`, `calib_t210_rates.out` |
+| profile | `profiles/x1_gs_t130.properties` (co san), `profiles/x1_gs_t210.properties` (clone t170, scale 2.10) |
+
+Chi phi: 2 sim ~12.7 phut moi (read 75% / sim 24%), tren dataset CU (KHONG rebuild). Kaggle 0.
+
+## 7. Khong lam
+
+Khong push, khong cham 2026/HOLDOUT, khong tune 1.30/2.10, khong doi scale sau khi thay so.
