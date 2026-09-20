@@ -1,0 +1,35 @@
+n_total=1089  n_SUP=49  n_DOI_CHUNG=1040
+CLOSES_1H loaded: 10322386 records, 627 symbols
+n_NAN mom30d=250 (coin niem yet < 30d truoc entry)
+(a) mom30d: SUP mean=48.95 med=21.86 (n=37) | DC mean=47.66 med=5.33 (n=802) | diff mean=1.29 med=16.53
+(a) bootstrap mean diff: CI raw [-47.40, 40.68] -> inflated x1.21 [-56.65, 49.93] | excludes0=False | sd=22.086 n_rep=2000
+(b) decile momentum: Spearman rho=0.389 (nguong >=0.7), D1=3.6% D10=4.8% => monotone=False
+  decile  1  mom[ -95.7, -62.5]  n=  84  nSUP= 3  sup%=  3.6  meanPnL=  +136.3  totPnL= +11452.8
+  decile  2  mom[ -62.5, -51.9]  n=  84  nSUP= 3  sup%=  3.6  meanPnL=   +70.9  totPnL=  +5957.6
+  decile  3  mom[ -51.8, -39.4]  n=  84  nSUP= 2  sup%=  2.4  meanPnL=   +75.7  totPnL=  +6362.9
+  decile  4  mom[ -39.2, -16.8]  n=  84  nSUP= 6  sup%=  7.1  meanPnL=   +33.2  totPnL=  +2790.5
+  decile  5  mom[ -16.8,   6.6]  n=  84  nSUP= 3  sup%=  3.6  meanPnL=   +73.2  totPnL=  +6146.7
+  decile  6  mom[   6.6,  34.4]  n=  83  nSUP= 2  sup%=  2.4  meanPnL=   +45.8  totPnL=  +3799.2
+  decile  7  mom[  34.5,  63.8]  n=  84  nSUP= 6  sup%=  7.1  meanPnL=   +46.2  totPnL=  +3879.7
+  decile  8  mom[  63.8, 105.1]  n=  84  nSUP= 3  sup%=  3.6  meanPnL=   +71.2  totPnL=  +5978.4
+  decile  9  mom[ 106.8, 198.1]  n=  84  nSUP= 5  sup%=  6.0  meanPnL=   +81.8  totPnL=  +6871.7
+  decile 10  mom[ 198.9,1910.5]  n=  84  nSUP= 4  sup%=  4.8  meanPnL=   +24.6  totPnL=  +2066.6
+(c) theo nam:
+  2021: n=127 nSUP=2 sup%=1.6 mean_mom SUP=18.2 DC=96.5
+  2022: n=171 nSUP=8 sup%=4.7 mean_mom SUP=-27.7 DC=-15.7
+  2023: n=102 nSUP=1 sup%=1.0 mean_mom SUP=116.7 DC=63.6
+  2024: n=228 nSUP=9 sup%=3.9 mean_mom SUP=108.3 DC=89.1
+  2025: n=211 nSUP=17 sup%=8.1 mean_mom SUP=53.2 DC=14.4
+(d) danh doi what-if (KHONG re-run):
+  p75 (mom>77.45): removed=210 SUP=10(lo tranh +8398 USD) win=186(lai mat +24274 USD) otherloss=14 => PnL rong -12171 USD
+  p90 (mom>198.23): removed=84 SUP=4(lo tranh +5741 USD) win=76(lai mat +8694 USD) otherloss=4 => PnL rong -2067 USD
+  p95 (mom>277.53): removed=42 SUP=1(lo tranh +1316 USD) win=38(lai mat +4391 USD) otherloss=3 => PnL rong -2281 USD
+feature phu (SUP vs DC, mean/median):
+  vol30d       SUP mean=3.031 med=2.449 | DC mean=2.537 med=2.033
+  drawdown30d  SUP mean=-39.031 med=-39.758 | DC mean=-37.307 med=-37.168
+  symbolPred   SUP mean=0.202 med=0.176 | DC mean=0.180 med=0.170
+  age_days     SUP mean=253.008 med=114.032 | DC mean=293.729 med=164.656
+
+KET LUAN: (a) CI hieu mean mom30d excludes0=False | (b) monotone=False => NULL
+
+DONE_POSTPUMP  json=/home/ubuntu/src/BinanceFuturesJava/research/analysis/out/postpump_measure.json

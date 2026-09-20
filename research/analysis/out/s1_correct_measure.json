@@ -1,0 +1,115 @@
+{
+  "meta": {
+    "pre_reg_commit": "69fb2d1",
+    "market": "/home/ubuntu/simbundle/market.bin",
+    "ms_down_big_avg": -0.03156999871134758,
+    "closes": "/home/ubuntu/java/fsrun/CLOSES_1H.bin",
+    "s1": "/home/ubuntu/ledger/pred_s1a2x1.parquet",
+    "seed": 20260905,
+    "nrep": 2000,
+    "block_h": 72,
+    "inflate": 1.21,
+    "min_n": 10,
+    "topk": 8,
+    "horizons": [
+      24,
+      72
+    ],
+    "g1lite": "maxFav_72h>=0.05 ? maxFav_72h-min(0.5*maxFav_72h,0.08) : retEnd_72h (ledger.py:40)",
+    "sign_convention": "s1=-score; rank_ic_forward=Spearman(s1,ret)=Spearman(-score,ret) (>0 = dung); rank_ic_inverted=Spearman(score,ret); top8_forward=score thap nhat; top8_inverted=score cao nhat.",
+    "n_decision_min": 108,
+    "n_decision_buckets": 59
+  },
+  "coverage_by_year": {
+    "2022": {
+      "n_decision_min": 10,
+      "n_buckets": 7
+    },
+    "2023": {
+      "n_decision_min": 25,
+      "n_buckets": 18
+    },
+    "2024": {
+      "n_decision_min": 35,
+      "n_buckets": 23
+    },
+    "2025": {
+      "n_decision_min": 38,
+      "n_buckets": 11
+    }
+  },
+  "results": {
+    "24": {
+      "rank_ic_forward": {
+        "mean": 0.019012211771007124,
+        "lo": -0.03333345116758736,
+        "hi": 0.06639793869232645,
+        "n_snap": 59,
+        "n_blocks": 44,
+        "contains_zero": true
+      },
+      "rank_ic_inverted": {
+        "mean": -0.019012211771007124,
+        "lo": -0.06639793869232649,
+        "hi": 0.03333345116758735,
+        "n_snap": 59,
+        "n_blocks": 44,
+        "contains_zero": true
+      },
+      "top8_forward_vs_universe": {
+        "mean": 0.03404431645680711,
+        "lo": 0.0052062614483064824,
+        "hi": 0.07383126986455332,
+        "n_snap": 59,
+        "n_blocks": 44,
+        "contains_zero": false
+      },
+      "top8_inverted_vs_universe": {
+        "mean": -0.006604189285291081,
+        "lo": -0.013580913522146331,
+        "hi": 0.0008446637145254413,
+        "n_snap": 59,
+        "n_blocks": 44,
+        "contains_zero": true
+      },
+      "universe_mean_ret": -0.039550496930887816,
+      "median_coins_per_bucket": 253.0
+    },
+    "72": {
+      "rank_ic_forward": {
+        "mean": -0.019237182708456608,
+        "lo": -0.06616556730000865,
+        "hi": 0.0207578410695213,
+        "n_snap": 59,
+        "n_blocks": 44,
+        "contains_zero": true
+      },
+      "rank_ic_inverted": {
+        "mean": 0.019237182708456608,
+        "lo": -0.020757841069521322,
+        "hi": 0.06616556730000858,
+        "n_snap": 59,
+        "n_blocks": 44,
+        "contains_zero": true
+      },
+      "top8_forward_vs_universe": {
+        "mean": 0.020454550178938335,
+        "lo": -0.0033919606383786202,
+        "hi": 0.04641763820578343,
+        "n_snap": 59,
+        "n_blocks": 44,
+        "contains_zero": true
+      },
+      "top8_inverted_vs_universe": {
+        "mean": -0.0118034504030785,
+        "lo": -0.021336943196717258,
+        "hi": -0.0026160347448627615,
+        "n_snap": 59,
+        "n_blocks": 44,
+        "contains_zero": false
+      },
+      "universe_mean_ret": -0.01825556089629803,
+      "median_coins_per_bucket": 253.0
+    }
+  }
+}
