@@ -1,0 +1,22 @@
+[
+  {
+    "sym": "BTCUSDT",
+    "month": "2022-06",
+    "download_sec": 41.60554504394531,
+    "unzip_sec": 27.077189922332764,
+    "duckdb_agg_sec": 15.699371814727783,
+    "n_hours": 720,
+    "n_rows_total": 74364398,
+    "rows_per_sec_duckdb": 4736775.386785719
+  },
+  {
+    "sym": "SOLUSDT",
+    "month": "2022-06",
+    "download_sec": 6.3866260051727295,
+    "unzip_sec": 3.097835063934326,
+    "duckdb_agg_sec": 2.002246379852295,
+    "n_hours": 720,
+    "n_rows_total": 9194015,
+    "rows_per_sec_duckdb": 4591849.98035968
+  }
+]
