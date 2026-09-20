@@ -52,7 +52,7 @@ khong can hoi lai user, khong can doc lai 30 doc khac.
      `shadow_c3/ledger_from_log.csv` (do `tools/shadow_vs_sim.py parse` dung lai tu log).
    - **Redis**: cum RIENG `127.0.0.1:7301` (`shadow_c3/redis/redis-shadow.conf`, cluster 1 node).
      🔴 **TUYET DOI khong tro vao Redis 242** — se `blpop` CUOP lenh cua bot live.
-   - **1 slot JVM Oracle**: shadow chiem ~1.7G RSS. **Dung sim truoc khi chay sim** (`bin/daemon.sh stop`).
+   - **1 slot JVM Oracle**: shadow chiem **~2.6-3.2G RSS** (do lai 2026-09-20, docs/PLAN_SHADOW_T170_PARALLEL.md; so ~1.7G cu SAI, da dinh chinh). **Dung sim truoc khi chay sim** (`bin/daemon.sh stop`).
    - 🔒 Co `LIVE_PROFILE` **mac dinh TAT** o moi noi khac. Co tat = HEAD (`LiveProfileC3Test`).
      Khi bat, `SHADOW_NO_PUSH` bi HARDCODE `true`, khong doc env.
 10. **L3 — goi deploy 242 DA SAN, 242 CHUA DEPLOY** (`docs/L3_DEPLOY_PREP.md`, 2026-09-06).

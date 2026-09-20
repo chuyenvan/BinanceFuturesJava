@@ -18,6 +18,14 @@
   CI).
 - **Shadow production 242 = FLATGRID KEEPLEG0** (paper, `SHADOW_NO_PUSH=true`) — xem
   [`DECISION_SHADOW_FLATGRID_KEEPLEG0.md`](DECISION_SHADOW_FLATGRID_KEEPLEG0.md).
+- **Vong 09-20 (bigdown/hedge/vol-target)**: `T170` = **ALPHA** do truc tiep (%beta=3.9%,
+  |t(a)|=4.372) — xem [`ANALYSIS_BETA_DECOMP_T170.md`](ANALYSIS_BETA_DECOMP_T170.md); hedge BTC
+  (Phuong an A, overlay counterfactual) = **NULL** —
+  [`RESULT_HEDGE_OVERLAY_A.md`](RESULT_HEDGE_OVERLAY_A.md); dinh chinh **ICC=0.247 la cua C2b,
+  KHONG phai T170** (T170 that = 0.0516, tran 1/ICC=19.4) — xem [`power_wall.md`](power_wall.md);
+  vol-target COIN/PORTFOLIO = NULL rate chat luong —
+  [`RESULT_VOL_TARGET.md`](RESULT_VOL_TARGET.md); shadow-c3 production DOWN 09-20 06:13 (jar cu
+  mang STUB key) da **KHOI PHUC** 09-20 22:06.
 
 Mục 1 "ĐỌC ĐẦU TIÊN" bên dưới mô tả trạng thái 09-03, giữ để truy vết;
 [`RUNS_DEV.md`](RUNS_DEV.md) / [`ROADMAP_NOLEAK.md`](ROADMAP_NOLEAK.md) /
