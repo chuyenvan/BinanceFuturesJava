@@ -1,0 +1,12 @@
+{
+  "n_symbol_months_attempted": 810,
+  "n_ok": 486,
+  "n_skip_404": 324,
+  "n_err": 0,
+  "total_elapsed_sec": 5667.524898529053,
+  "stopped_early": false,
+  "n_feature_rows": 349651,
+  "n_symbols_with_data": 15,
+  "ts_min": 1625097600000,
+  "ts_max": 1767222000000
+}

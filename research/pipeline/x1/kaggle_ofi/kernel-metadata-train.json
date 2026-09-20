@@ -1,0 +1,13 @@
+{
+  "id": "chuyendinh/ofi-train-eval-15sym",
+  "title": "ofi-train-eval-15sym",
+  "code_file": "ofi_train_eval.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": false,
+  "enable_internet": false,
+  "dataset_sources": ["chuyendinh/s1-featv2-x1-20260919"],
+  "competition_sources": [],
+  "kernel_sources": ["chuyendinh/s1-baseline18-det-n1-20260919", "chuyendinh/ofi-build-feat-15sym"]
+}
