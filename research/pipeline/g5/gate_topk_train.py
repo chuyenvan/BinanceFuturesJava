@@ -42,9 +42,14 @@ OI_DT = np.dtype([("ts", ">i8"), ("sym", ">i2"), ("oi", ">f4", 5)])
 NF = 45
 NEST, SEED = 400, 42
 
-# 10 cut WFO (yeu cau nhiem vu) — trung 10 file bin gate cu 2022/2023/2024
+# 10 cut WFO (yeu cau nhiem vu goc) — trung 10 file bin gate cu 2022/2023/2024
 CUT_DATES = ["20220101", "20220401", "20220701", "20221001", "20230101",
              "20230401", "20230701", "20231001", "20240101", "20240401"]
+# 16 cut (mo rong de KHO P 18-fold T170 `wfo_ds_x1_2021`, 2022-01..2025-12):
+# chi THEM 6 cut 2024H2+2025, KHONG doi design (label/features/model/purge).
+CUT_DATES_X16 = ["20220101", "20220401", "20220701", "20221001", "20230101",
+                 "20230401", "20230701", "20231001", "20240101", "20240401",
+                 "20240701", "20241001", "20250101", "20250401", "20250701", "20251001"]
 
 # S1 pred (score thap=tot); nhan g1lite; gate cu
 S1_FILES = ["/home/ubuntu/ledger/pred_s1a2x1.parquet",
@@ -203,7 +208,12 @@ def main():
     ap = argparse.ArgumentParser(description="Gate G015 train tren top-K outcome label")
     ap.add_argument("--out-dir", default="/home/ubuntu/gate_topk")
     ap.add_argument("--k", type=int, default=8)
+    ap.add_argument("--cuts", choices=["10", "16"], default="10",
+                    help="10 = cut DEV goc 2022-2024; 16 = mo rong 2022-2025 (khop T170 18-fold)")
     a = ap.parse_args()
+    global CUT_DATES
+    if a.cuts == "16":
+        CUT_DATES = CUT_DATES_X16
     t00 = time.time()
     os.makedirs(a.out_dir, exist_ok=True)
 
