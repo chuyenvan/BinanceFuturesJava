@@ -1,0 +1,403 @@
+{
+  "gate_formula": {
+    "THR_BASE": 0.008,
+    "DYN_MIN": 0.26787,
+    "SCORE_BASE": 0.15,
+    "DYN_MULT": 1.2876
+  },
+  "uw_streaks_top5": {
+    "T170": [
+      {
+        "start": "2024-04-10",
+        "end": "2024-07-10",
+        "length_days": 92,
+        "depth_pct": -6.598457683202041,
+        "trough_date": "2024-04-14"
+      },
+      {
+        "start": "2022-02-27",
+        "end": "2022-05-09",
+        "length_days": 72,
+        "depth_pct": -0.2864147188038513,
+        "trough_date": "2022-02-28"
+      },
+      {
+        "start": "2022-11-13",
+        "end": "2023-01-14",
+        "length_days": 63,
+        "depth_pct": -3.905638421665081,
+        "trough_date": "2022-11-14"
+      },
+      {
+        "start": "2023-04-29",
+        "end": "2023-06-30",
+        "length_days": 63,
+        "depth_pct": -2.730456787633173,
+        "trough_date": "2023-05-12"
+      },
+      {
+        "start": "2022-05-17",
+        "end": "2022-07-13",
+        "length_days": 58,
+        "depth_pct": -1.867766701042739,
+        "trough_date": "2022-05-17"
+      }
+    ],
+    "T100": [
+      {
+        "start": "2021-11-16",
+        "end": "2022-07-21",
+        "length_days": 248,
+        "depth_pct": -16.128952569169964,
+        "trough_date": "2022-05-12"
+      },
+      {
+        "start": "2025-03-04",
+        "end": "2025-10-16",
+        "length_days": 227,
+        "depth_pct": -9.204302468735825,
+        "trough_date": "2025-10-03"
+      },
+      {
+        "start": "2024-04-10",
+        "end": "2024-08-08",
+        "length_days": 121,
+        "depth_pct": -11.362531279277999,
+        "trough_date": "2024-04-14"
+      },
+      {
+        "start": "2024-08-29",
+        "end": "2024-10-29",
+        "length_days": 62,
+        "depth_pct": -2.0172377937472508,
+        "trough_date": "2024-10-18"
+      },
+      {
+        "start": "2025-10-31",
+        "end": "2025-12-30",
+        "length_days": 61,
+        "depth_pct": -10.599990683374482,
+        "trough_date": "2025-11-23"
+      }
+    ],
+    "P3": [
+      {
+        "start": "2021-11-16",
+        "end": "2022-07-21",
+        "length_days": 248,
+        "depth_pct": -14.27549283264662,
+        "trough_date": "2022-05-12"
+      },
+      {
+        "start": "2025-03-04",
+        "end": "2025-10-21",
+        "length_days": 232,
+        "depth_pct": -8.51240206755307,
+        "trough_date": "2025-10-03"
+      },
+      {
+        "start": "2024-04-10",
+        "end": "2024-08-16",
+        "length_days": 129,
+        "depth_pct": -11.362790264786637,
+        "trough_date": "2024-04-14"
+      },
+      {
+        "start": "2024-08-29",
+        "end": "2024-10-29",
+        "length_days": 62,
+        "depth_pct": -2.017983626161346,
+        "trough_date": "2024-10-18"
+      },
+      {
+        "start": "2023-04-29",
+        "end": "2023-06-12",
+        "length_days": 45,
+        "depth_pct": -2.5088296188040426,
+        "trough_date": "2023-05-12"
+      }
+    ]
+  },
+  "q2_regime": {
+    "T100_longest_streak": {
+      "n_days": 248,
+      "pct_below_ma200": 89.11290322580645,
+      "dd_from_peak365_mean": -43.9598274996062,
+      "dd_from_peak365_min": -72.15217118473896,
+      "ret30_mean_pct": -11.422766905440863,
+      "ret60_mean_pct": -16.010935608605454,
+      "pct_ret30_negative": 78.62903225806451,
+      "close_start": 60929.44140625,
+      "close_end": 22552.5,
+      "btc_ret_over_window_pct": -62.98587434992204
+    },
+    "P3_longest_streak": {
+      "n_days": 248,
+      "pct_below_ma200": 89.11290322580645,
+      "dd_from_peak365_mean": -43.9598274996062,
+      "dd_from_peak365_min": -72.15217118473896,
+      "ret30_mean_pct": -11.422766905440863,
+      "ret60_mean_pct": -16.010935608605454,
+      "pct_ret30_negative": 78.62903225806451,
+      "close_start": 60929.44140625,
+      "close_end": 22552.5,
+      "btc_ret_over_window_pct": -62.98587434992204
+    },
+    "T170_longest_streak": {
+      "n_days": 92,
+      "pct_below_ma200": 7.608695652173914,
+      "dd_from_peak365_mean": -10.78054266407221,
+      "dd_from_peak365_min": -23.03922848453398,
+      "ret30_mean_pct": -2.607361146225378,
+      "ret60_mean_pct": 3.709584992142508,
+      "pct_ret30_negative": 59.78260869565217,
+      "close_start": 68742.703125,
+      "close_end": 57686.0,
+      "btc_ret_over_window_pct": -16.084184389570446
+    },
+    "T170_during_T100_window": {
+      "n_days": 248,
+      "pct_below_ma200": 89.11290322580645,
+      "dd_from_peak365_mean": -43.9598274996062,
+      "dd_from_peak365_min": -72.15217118473896,
+      "ret30_mean_pct": -11.422766905440863,
+      "ret60_mean_pct": -16.010935608605454,
+      "pct_ret30_negative": 78.62903225806451,
+      "close_start": 60929.44140625,
+      "close_end": 22552.5,
+      "btc_ret_over_window_pct": -62.98587434992204
+    }
+  },
+  "q3_core_vs_marginal": {
+    "T100": {
+      "window": [
+        "2021-11-16",
+        "2022-07-21"
+      ],
+      "n_overlap_window": 401,
+      "label_counts_overlap": {
+        "marginal": 335,
+        "unscaled": 33,
+        "core": 33
+      },
+      "label_counts_overall": {
+        "marginal": 2044,
+        "unscaled": 302,
+        "core": 213
+      },
+      "bucket_stats_in_window": {
+        "core": {
+          "n": 33,
+          "roi_mean": -0.00445300495539497,
+          "roi_ci90_lo": -0.06165247904650745,
+          "roi_ci90_hi": 0.03667251562209733,
+          "loss_rate_pct": 18.181818181818183,
+          "pnl_sum": 5.696340599999999,
+          "neg_pnl_sum": -412.58828800000003,
+          "pct_of_window_neg_pnl": 2.644146803275139
+        },
+        "marginal": {
+          "n": 335,
+          "roi_mean": -0.0023526606917263064,
+          "roi_ci90_lo": -0.03302669420279142,
+          "roi_ci90_hi": 0.02758104540149646,
+          "loss_rate_pct": 21.791044776119403,
+          "pnl_sum": 82.02009420000036,
+          "neg_pnl_sum": -14920.142134999998,
+          "pct_of_window_neg_pnl": 95.6184343523366
+        },
+        "unscaled": {
+          "n": 33,
+          "roi_mean": 0.0794354464245987,
+          "roi_ci90_lo": 0.0490528456115503,
+          "roi_ci90_hi": 0.09679693260348349,
+          "loss_rate_pct": 15.151515151515152,
+          "pnl_sum": 835.9584080999999,
+          "neg_pnl_sum": -271.10395900000003,
+          "pct_of_window_neg_pnl": 1.737418844388245
+        },
+        "below_gate100_anomaly": {
+          "n": 0
+        }
+      },
+      "bucket_stats_outside_window": {
+        "core": {
+          "n": 180,
+          "roi_mean": 0.06756191617258034,
+          "roi_ci90_lo": 0.03564983346613091,
+          "roi_ci90_hi": 0.11214741147677124,
+          "loss_rate_pct": 8.88888888888889,
+          "pnl_sum": 17461.81123146,
+          "neg_pnl_sum": -5364.170254,
+          "pct_of_window_neg_pnl": 3.0664752889568034
+        },
+        "marginal": {
+          "n": 1709,
+          "roi_mean": 0.019073467814370106,
+          "roi_ci90_lo": 0.011922356282636656,
+          "roi_ci90_hi": 0.025798996698653286,
+          "loss_rate_pct": 14.979520187244002,
+          "pnl_sum": 49565.79597348,
+          "neg_pnl_sum": -151679.80367812002,
+          "pct_of_window_neg_pnl": 86.70909903837187
+        },
+        "unscaled": {
+          "n": 269,
+          "roi_mean": 0.06840313223678526,
+          "roi_ci90_lo": 0.020979605220505702,
+          "roi_ci90_hi": 0.10401008017202584,
+          "loss_rate_pct": 18.95910780669145,
+          "pnl_sum": 18818.88644074,
+          "neg_pnl_sum": -17885.537918759994,
+          "pct_of_window_neg_pnl": 10.22442567267132
+        },
+        "below_gate100_anomaly": {
+          "n": 0
+        }
+      }
+    },
+    "P3": {
+      "window": [
+        "2021-11-16",
+        "2022-07-21"
+      ],
+      "n_overlap_window": 401,
+      "label_counts_overlap": {
+        "marginal": 335,
+        "unscaled": 33,
+        "core": 33
+      },
+      "label_counts_overall": {
+        "marginal": 2050,
+        "unscaled": 300,
+        "core": 212
+      },
+      "bucket_stats_in_window": {
+        "core": {
+          "n": 33,
+          "roi_mean": -0.0044089735373228165,
+          "roi_ci90_lo": -0.06165247508803911,
+          "roi_ci90_hi": 0.0366725147634122,
+          "loss_rate_pct": 18.181818181818183,
+          "pnl_sum": -18.01579899999998,
+          "neg_pnl_sum": -305.915291,
+          "pct_of_window_neg_pnl": 2.1199677020194256
+        },
+        "marginal": {
+          "n": 335,
+          "roi_mean": -0.002354052635802186,
+          "roi_ci90_lo": -0.033029744079844436,
+          "roi_ci90_hi": 0.02758157035927883,
+          "loss_rate_pct": 21.791044776119403,
+          "pnl_sum": 513.0842724000005,
+          "neg_pnl_sum": -13851.702781,
+          "pct_of_window_neg_pnl": 95.99115630245713
+        },
+        "unscaled": {
+          "n": 33,
+          "roi_mean": 0.0794440429315798,
+          "roi_ci90_lo": 0.04905283922774104,
+          "roi_ci90_hi": 0.09681044504805908,
+          "loss_rate_pct": 15.151515151515152,
+          "pnl_sum": 724.2784180000001,
+          "neg_pnl_sum": -272.568327,
+          "pct_of_window_neg_pnl": 1.888875995523445
+        },
+        "below_gate100_anomaly": {
+          "n": 0
+        }
+      },
+      "bucket_stats_outside_window": {
+        "core": {
+          "n": 179,
+          "roi_mean": 0.0680060243938202,
+          "roi_ci90_lo": 0.036040054039234944,
+          "roi_ci90_hi": 0.11364523340430294,
+          "loss_rate_pct": 9.497206703910614,
+          "pnl_sum": 16577.105216000004,
+          "neg_pnl_sum": -5380.684048,
+          "pct_of_window_neg_pnl": 3.1354803755858263
+        },
+        "marginal": {
+          "n": 1715,
+          "roi_mean": 0.019575579981621658,
+          "roi_ci90_lo": 0.012469570541621924,
+          "roi_ci90_hi": 0.026294931134033517,
+          "loss_rate_pct": 14.927113702623906,
+          "pnl_sum": 50121.768793359995,
+          "neg_pnl_sum": -150993.35539014,
+          "pct_of_window_neg_pnl": 87.98819972446007
+        },
+        "unscaled": {
+          "n": 267,
+          "roi_mean": 0.08069047722440874,
+          "roi_ci90_lo": 0.03724435847680229,
+          "roi_ci90_hi": 0.11304282671554444,
+          "loss_rate_pct": 17.228464419475657,
+          "pnl_sum": 28380.857234400002,
+          "neg_pnl_sum": -15232.3303512,
+          "pct_of_window_neg_pnl": 8.876319899954096
+        },
+        "below_gate100_anomaly": {
+          "n": 0
+        }
+      }
+    }
+  },
+  "q4_dynamics": {
+    "T100": {
+      "window_days": 248,
+      "up_days": 61,
+      "down_days": 49,
+      "flat_days": 137,
+      "pct_up_days": 24.696356275303643,
+      "daily_ret_std_pct": 0.9690245376208053,
+      "overall_daily_ret_std_pct": 0.986094258484419,
+      "n_rallies_ge3d": 7,
+      "max_partial_recovery_pct_of_depth": 94.45550620309389,
+      "n_opened_in_window": 386,
+      "opened_per_day_in_window": 1.5564516129032258,
+      "opened_per_day_overall": 1.5760408397886843,
+      "mean_holding_days_opened_in_window": 1.797378742084053,
+      "mean_holding_days_opened_outside_window": 1.6849516797054762
+    },
+    "P3": {
+      "window_days": 248,
+      "up_days": 62,
+      "down_days": 48,
+      "flat_days": 137,
+      "pct_up_days": 25.101214574898787,
+      "daily_ret_std_pct": 0.9091564560540449,
+      "overall_daily_ret_std_pct": 0.9314531877393049,
+      "n_rallies_ge3d": 7,
+      "max_partial_recovery_pct_of_depth": 98.66920152091255,
+      "n_opened_in_window": 386,
+      "opened_per_day_in_window": 1.5564516129032258,
+      "opened_per_day_overall": 1.5778884843839815,
+      "mean_holding_days_opened_in_window": 1.797378742084053,
+      "mean_holding_days_opened_outside_window": 1.654787709354575
+    }
+  },
+  "q5_t170_same_window": {
+    "window_used": [
+      "2021-11-16",
+      "2022-07-21"
+    ],
+    "t170": {
+      "n_opened_in_window": 173,
+      "opened_per_day_in_window": 0.6975806451612904,
+      "opened_per_day_overall": 0.6857025919799348,
+      "admission_ratio_in_vs_overall": 1.0173224562956051,
+      "mean_holding_days_opened_in_window": 1.3139731856133587,
+      "mean_holding_days_overall": 1.1941491939598,
+      "n_opened_out_window": 916
+    },
+    "t170_own_longest_streak": {
+      "start": "2024-04-10",
+      "end": "2024-07-10",
+      "length_days": 92,
+      "depth_pct": -6.598457683202041,
+      "trough_date": "2024-04-14"
+    }
+  }
+}
