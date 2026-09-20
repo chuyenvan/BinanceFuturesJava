@@ -564,6 +564,16 @@ public class Configs {
     public static String SIZE_VOL_TARGET_MODE = Cfg.getOr("SIZE_VOL_TARGET_MODE", "OFF");
 
     // ========================================================================
+    // [PACING 2026-09-21] docs/PREREG_PACING_BIGDOWN.md - TASK B: giam size khi bigdown
+    //   (P3, regime-conditional, causal BD1a) hoac giam size DEU khong dieu kien (P0, doi
+    //   chung) tren nen gate 1.0. KHONG doi lenh nao duoc chon vao/ra - chi doi KICH THUOC
+    //   (giong VolTargetSizing). Mac dinh "OFF" -> PacingSizing.ACTIVE=false -> khong nhanh
+    //   nao chay -> byte-identical voi T170 (cong repro md5 efb793e2). Xem PacingSizing.java.
+    // ========================================================================
+    /** Che do pacing sizing (OFF|P0|P3). */
+    public static String SIZE_PACING_MODE = Cfg.getOr("SIZE_PACING_MODE", "OFF");
+
+    // ========================================================================
     // [BD-SEL 2026-09-16] docs/PREREG_SEL_BIGDOWN.md — doi cach chon 2 coin cua leg
     //   BIG_DOWN theo drop 1-phut causal thay vi pNoPump. KHONG sua getTopSymbolArray.
     //   Mac dinh "off" => khong cap phat, khong nhanh nao chay => byte-identical.

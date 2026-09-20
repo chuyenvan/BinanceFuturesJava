@@ -1311,6 +1311,14 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             budget *= VolTargetSizing.multiplier(vtSymbol, currentTs);
         }
 
+        // [PACING 2026-09-21] docs/PREREG_PACING_BIGDOWN.md - TASK B: nhan SAU VolTargetSizing,
+        //   TRUOC DCA-grid ratio -> moi leg cua CUNG mot cum an chung he so nay (nhat quan voi
+        //   cach VolTargetSizing/tierMultiplier ap dung). Default OFF -> PacingSizing.ACTIVE=false
+        //   -> nhanh nay KHONG chay -> byte-identical voi T170 (cong repro md5 efb793e2).
+        if (PacingSizing.ACTIVE) {
+            budget *= PacingSizing.multiplier(currentTs);
+        }
+
 
         // === DCA GRID sizing (2026-08-01) — TONG von moi coin GIU NGUYEN = budget ===
         //   leg_i = budget * w[i] / sum(w). Vi du 1:1:3:8 -> leg1 chi 1/13 budget, leg cuoi 8/13.
