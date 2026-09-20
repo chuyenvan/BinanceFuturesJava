@@ -178,5 +178,44 @@ nay).
 - `research/pipeline/x1/kaggle_ofi/ofi_result.json` — so that day du Giai doan B buoc 2
   (bang muc 3.1 trich tu day).
 
+## 7. CAP NHAT 2026-09-20 -- DIEU TRA HARNESS_NGHI_NGO DAY DU (theo yeu cau Uni/MASTER)
+
+Da dieu tra day du theo dung trinh tu MASTER yeu cau (Giai doan 1 re truoc: kiem tra
+population mismatch bang doc code + thuc nghiem row/tick-count + restricted-population
+test; Giai doan 2: train baseline_fresh + candidate + noise CUNG session de kiem tra
+truc tiep cross-session determinism). CA HAI gia thuyet nay (population mismatch,
+cross-session non-determinism) deu bi **BAC BO bang bang chung thuc nghiem truc tiep**:
+
+- Population: `len(BASE)==len(CAND)==len(NOISE)=6,685,957`, so tick giong het
+  (18,283=18,283=18,283), 0/18,283 tick lech so dong. Han che quan the xuong dung tap
+  co OFI-coverage (2.66-2.80%) lam edge5 **GIAM** (khong tang) cho ca 3 bien the --
+  nguoc huong hoan toan voi gia thuyet population mismatch.
+- Cross-session determinism: train lai `baseline_fresh` (KEEP9 thuan) TRONG CUNG kernel
+  voi candidate/noise (kernel `chuyendinh/ofi-train-eval-v2-audit`, 2026-09-20) cho ket
+  qua **GIONG HET TUYET DOI** voi `baseline_frozen` (session 2026-09-19):
+  `15.209467887878418% == 15.209467887878418%`, CONFIRM delta = 0.000000 CHINH XAC.
+  Kaggle tai lap 100% giua hai session cach nhau 1 ngay -- khong co drift.
+
+**Nguyen nhan that su da xac dinh**: mot CONFOUND missingness-la-chi-bao-subset-symbol
+-- vi OFI/noise chi phu 15/>600 symbol, mask NaN cua chung trung khop chinh xac voi
+"co phai 1 trong 15 symbol thanh khoan cao duoc chon o Giai doan A hay khong"; XGBoost
+hoc huong-mac-dinh cho NaN nhu mot chi bao nhi phan DOC LAP voi gia tri that (neu co) --
+va 15 symbol nay tinh co co dac tinh edge5 CONFIRM (2024-2025) khac biet so voi phan
+con lai cua universe, hoan toan KHONG lien quan gi den OFI/order-flow. Day KHONG phai
+loi purge/join/leak, KHONG phai bug harness -- ma la GIOI HAN THIET KE tat yeu cua
+quyet dinh thu hep pham vi 15/>600 symbol da chot o Giai doan A.
+
+Chi tiet day du (bang so lieu, code trich dan, kiem tra tung buoc, ra soat cac vong
+truoc, de xuat huong tiep theo neu muon tach OFI-content ra khoi confound) tai
+`docs/AUDIT_HARNESS_OFI_2026-09-20.md`.
+
+**Verdict cuoi cung khong doi**: HARNESS_NGHI_NGO -> khong cong bo THANG/NULL/THUA cho
+gia thuyet OFI trong thiet ke hien tai -- nhung nay la mot ket luan CO NGUYEN NHAN RO
+RANG (confound thiet ke), khong con la "chua ro nguyen nhan" nhu ban dau. Cac vong
+truoc (`RESULT_S1_HPO_BAG_FEATGRP.md`, `PREREG_S1_NOISE_CAL.md`) KHONG dung feature
+gioi han theo subset-symbol nen KHONG can ra soat lai vi ly do nay; quyet dinh "tai su
+dung baseline dong bang" trong cac vong do da duoc XAC NHAN AN TOAN boi phep do cross-
+session determinism o tren.
+
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01UoVRjusfNM2USSVNKQrm7z

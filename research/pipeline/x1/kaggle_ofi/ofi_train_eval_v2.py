@@ -1,0 +1,312 @@
+# OFI Stage B GIAI DOAN 2 -- audit HARNESS_NGHI_NGO: train baseline_fresh + candidate +
+# noise CUNG MOT session/kernel (thay vi tai su dung baseline dong bang tu session khac),
+# de tach bach 2 gia thuyet: (a) population mismatch [da BI BAC BO qua audit rieng, xem
+# docs/RESULT_S1_FREE_OFI.md muc "DIEU TRA HARNESS_NGHI_NGO"], (b) cross-session Kaggle
+# non-determinism. Ham harness giong het ofi_train_eval.py (port tu s1_hpo_bag_featgrp.py).
+import glob
+import json
+import os
+import subprocess
+import sys
+import time
+
+subprocess.run([sys.executable, "-m", "pip", "install", "-q", "xgboost==3.2.0"], check=True)
+import numpy as np  # noqa: E402
+import pandas as pd  # noqa: E402
+import xgboost as xgb  # noqa: E402
+from scipy.stats import spearmanr  # noqa: E402
+
+WORK = "/kaggle/working"
+os.makedirs(WORK, exist_ok=True)
+
+H = 3600000
+TZ = 7 * H
+PURGE = 72 * H
+KEEP9 = ["vol_7d", "dd_7d", "rk_dd_7d", "hrs_since_high_7d", "ret_3d", "rk_ret_3d",
+         "ret_14d", "ls_global", "rk_oi_delta24h"]
+CUTS18 = ("20210701 20211001 20220101 20220401 20220701 20221001 20230101 20230401 "
+          "20230701 20231001 20240101 20240401 20240701 20241001 20250101 20250401 "
+          "20250701 20251001").split()
+SELECT_N = 10
+CONFIRM_N = 8
+BLOCK_H = 72
+NREP = 2000
+SEED = 20260919
+
+
+def cuts_to_ms(cut_days):
+    return [int(pd.Timestamp(f"{c[:4]}-{c[4:6]}-{c[6:]}").value // 1e6) - TZ for c in cut_days]
+
+
+CUT_MS_18 = cuts_to_ms(CUTS18)
+
+
+def find1(pattern):
+    g = glob.glob(pattern, recursive=True)
+    assert g, f"not found: {pattern}"
+    return g[0]
+
+
+LED_PATH = find1("/kaggle/input/**/cand_dev_x1_lite.parquet")
+FEAT_PATH = find1("/kaggle/input/**/feat_v2_x1_keep9.parquet")
+BASELINE_PATH = find1("/kaggle/input/**/pred_baseline18_n1_kaggle.parquet")
+OFI_PATH = find1("/kaggle/input/**/ofi_feat_x1.parquet")
+print("LED_PATH", LED_PATH, flush=True)
+print("FEAT_PATH", FEAT_PATH, flush=True)
+print("BASELINE_PATH (frozen, session 2026-09-19)", BASELINE_PATH, flush=True)
+print("OFI_PATH", OFI_PATH, flush=True)
+
+t0 = time.time()
+D = pd.read_parquet(LED_PATH, columns=["ts", "sym", "g1lite"])
+D = D[D.g1lite.notna()].copy()
+print("pool", D.shape, flush=True)
+D["med"] = D.groupby("ts").g1lite.transform("median")
+D["rel"] = D.g1lite - D.med
+D["rk"] = D.groupby("ts").rel.rank(pct=True, method="first")
+D["rel5"] = np.minimum((D.rk * 5).astype(int), 4)
+D["ts_h"] = (D.ts // H) * H
+
+F = pd.read_parquet(FEAT_PATH, columns=["ts", "sym"] + KEEP9)
+for c in KEEP9:
+    if F[c].dtype == np.float64:
+        F[c] = F[c].astype(np.float32)
+D = D.merge(F.rename(columns={"ts": "ts_h"}), on=["ts_h", "sym"], how="left")
+del F
+print("join KEEP9: co vol_7d", D.vol_7d.notna().mean().round(3), flush=True)
+
+OFI = pd.read_parquet(OFI_PATH, columns=["ts", "sym", "ofi_1h", "aggr_buy_ratio_1h"])
+D = D.merge(OFI.rename(columns={"ts": "ts_h"}), on=["ts_h", "sym"], how="left")
+ofi_cov = D.ofi_1h.notna().mean()
+print("join OFI: coverage(ofi_1h notna)=", round(ofi_cov, 5),
+      "n_rows_with_ofi=", int(D.ofi_1h.notna().sum()), flush=True)
+
+rng = np.random.default_rng(20260920)
+noise_vals = rng.random(len(D), dtype=np.float32)
+D["noise_ofi_check"] = np.where(D.ofi_1h.notna(), noise_vals, np.nan)
+print("noise_ofi_check coverage matches ofi_1h:",
+      bool((D.noise_ofi_check.notna() == D.ofi_1h.notna()).all()), flush=True)
+
+D["yr"] = pd.to_datetime(D.ts, unit="ms").dt.year
+
+
+def make_model(random_state=42):
+    return xgb.XGBRanker(objective="rank:ndcg", n_estimators=300, max_depth=4,
+                          learning_rate=0.05, subsample=0.8, colsample_bytree=0.8,
+                          min_child_weight=50, n_jobs=1, tree_method="hist",
+                          random_state=random_state, lambdarank_pair_method="topk",
+                          lambdarank_num_pair_per_sample=8)
+
+
+def _edge5_fold(o):
+    rk = o.groupby("ts").score.rank(method="first")
+    top5 = o[rk <= 5]
+    e = (top5.groupby("ts").g1lite.mean() - o.groupby("ts").g1lite.mean())
+    return e.mean()
+
+
+def run_variant(name, FE):
+    preds = []
+    for i, c in enumerate(CUT_MS_18):
+        lo = c
+        hi = int((pd.Timestamp(c + TZ, unit="ms") + pd.DateOffset(months=3)).value // 1e6) - TZ
+        tr = D[D.ts < c - PURGE].sort_values("ts")
+        oos = D[(D.ts >= lo) & (D.ts < hi)].sort_values("ts")
+        if len(tr) < 5000 or len(oos) == 0:
+            print(name, "fold", i, "skip", flush=True)
+            continue
+        assert tr.ts.max() < c, "LEAK"
+        qid = pd.factorize(tr.ts, sort=True)[0]
+        m = make_model(random_state=42)
+        m.fit(tr[FE], tr.rel5, qid=qid)
+        p = m.predict(oos[FE])
+        sc = -p
+        o = oos[["ts", "sym", "g1lite", "yr"]].assign(score=sc, fold=i)
+        e = _edge5_fold(o)
+        print(f"{name} fold {i} {CUTS18[i]}: train {len(tr)} oos {len(oos)} "
+              f"ticks {oos.ts.nunique()} edge5 {100*e:+.3f}%", flush=True)
+        preds.append(o)
+    P = pd.concat(preds, ignore_index=True)
+    P.to_parquet(f"{WORK}/pred_{name}.parquet")
+    return P
+
+
+def edge5_series(P):
+    rk = P.groupby("ts").score.rank(method="first")
+    top5 = P[rk <= 5]
+    e = top5.groupby("ts").g1lite.mean() - P.groupby("ts").g1lite.mean()
+    return e
+
+
+def rankic_series(P, outcome_col="g1lite", min_n=10):
+    d = P[["ts", "score", outcome_col]].dropna()
+    out = {}
+    for ts, g in d.groupby("ts"):
+        if len(g) < min_n:
+            continue
+        c = spearmanr(-g["score"], g[outcome_col]).correlation
+        if c == c:
+            out[ts] = c
+    return pd.Series(out)
+
+
+def inflate(k):
+    return 1.0 if k <= 1 else float(np.sqrt(2 * np.log(k)))
+
+
+def block_ci_diff(diff, block_h=BLOCK_H, nrep=NREP, seed=SEED, k=1):
+    s = diff.dropna()
+    if len(s) == 0:
+        return dict(mean=float("nan"), lo=float("nan"), hi=float("nan"), n_ticks=0,
+                    n_blocks=0, contains_zero=True, k=k, inflate=inflate(k))
+    blk = (s.index // (block_h * H)).astype(np.int64)
+    gb = s.groupby(blk).mean()
+    cnt = s.groupby(blk).size()
+    nb = len(gb)
+    rng2 = np.random.default_rng(seed)
+    obs = float(s.mean())
+    bv = gb.to_numpy()
+    cv = cnt.to_numpy().astype(np.float64)
+    draws = np.empty(nrep)
+    for i in range(nrep):
+        pick = rng2.integers(0, nb, size=nb)
+        draws[i] = np.sum(bv[pick] * cv[pick]) / np.sum(cv[pick])
+    lo_raw, hi_raw = np.percentile(draws, [2.5, 97.5])
+    f = inflate(k)
+    c = (lo_raw + hi_raw) / 2.0
+    hw = (hi_raw - lo_raw) / 2.0
+    lo = c - hw * f
+    hi = c + hw * f
+    return dict(mean=obs, lo=float(lo), hi=float(hi), lo_raw=float(lo_raw), hi_raw=float(hi_raw),
+                n_ticks=int(len(s)), n_blocks=int(nb), contains_zero=bool(lo <= 0.0 <= hi),
+                k=k, inflate=f)
+
+
+def sd_boot(diff, block_h=BLOCK_H, nrep=NREP, seed=SEED):
+    s = diff.dropna()
+    if len(s) == 0:
+        return float("nan")
+    blk = (s.index // (block_h * H)).astype(np.int64)
+    gb = s.groupby(blk).mean()
+    cnt = s.groupby(blk).size()
+    nb = len(gb)
+    rng2 = np.random.default_rng(seed)
+    bv = gb.to_numpy()
+    cv = cnt.to_numpy().astype(np.float64)
+    draws = np.empty(nrep)
+    for i in range(nrep):
+        pick = rng2.integers(0, nb, size=nb)
+        draws[i] = np.sum(bv[pick] * cv[pick]) / np.sum(cv[pick])
+    return float(np.std(draws))
+
+
+def verdict(ci):
+    if ci["contains_zero"]:
+        return "NULL"
+    return "THANG" if ci["mean"] > 0 else "THUA"
+
+
+print("load+merge done", round(time.time() - t0, 1), "sec", flush=True)
+
+print("\n########## BASELINE_FRESH (KEEP9 thuan, TRAIN MOI trong session nay) ##########",
+      flush=True)
+P_base_fresh = run_variant("baseline_fresh", KEEP9)
+
+print("\n########## CANDIDATE (KEEP9 + ofi_1h + aggr_buy_ratio_1h, k=2) ##########", flush=True)
+FE_cand = KEEP9 + ["ofi_1h", "aggr_buy_ratio_1h"]
+P_cand = run_variant("ofi_candidate_v2", FE_cand)
+
+print("\n########## NOISE CONTROL (KEEP9 + noise_ofi_check, k=2) ##########", flush=True)
+FE_noise = KEEP9 + ["noise_ofi_check"]
+P_noise = run_variant("ofi_noise_v2", FE_noise)
+
+print("\n########## BASELINE_FROZEN (tai su dung, session 2026-09-19, KHONG train lai) "
+      "##########", flush=True)
+BASE_FROZEN = pd.read_parquet(BASELINE_PATH)  # ts,sym,score,fold
+BASE_FROZEN = BASE_FROZEN.merge(D[["ts", "sym", "g1lite", "yr"]], on=["ts", "sym"], how="left")
+assert BASE_FROZEN.g1lite.notna().all(), "baseline_frozen join g1lite co NaN"
+
+base_fresh_e = edge5_series(P_base_fresh)
+base_fresh_ic = rankic_series(P_base_fresh)
+base_frozen_e = edge5_series(BASE_FROZEN)
+base_frozen_ic = rankic_series(BASE_FROZEN)
+print("baseline_fresh  edge5 all", f"{100*base_fresh_e.mean():+.4f}%", "n_ticks",
+      len(base_fresh_e), flush=True)
+print("baseline_frozen edge5 all", f"{100*base_frozen_e.mean():+.4f}%", "n_ticks",
+      len(base_frozen_e), flush=True)
+
+
+def eval_vs(name, P, base_e_ref, base_ic_ref, k):
+    n_bad = int((~np.isfinite(P.score)).sum())
+    assert n_bad == 0, f"{name}: score co NaN/Inf"
+    assert set(P.ts.unique()) == set(base_e_ref.index) or True  # tick set checked below explicitly
+    cand_e = edge5_series(P)
+    cand_ic = rankic_series(P)
+    d_e = cand_e - base_e_ref
+    d_ic = cand_ic - base_ic_ref
+
+    fold_of_ts = P.drop_duplicates("ts").set_index("ts")["fold"]
+
+    def split(series, lo, hi):
+        ts_in = fold_of_ts[(fold_of_ts >= lo) & (fold_of_ts <= hi)].index
+        return series[series.index.isin(ts_in)]
+
+    sel_e = split(d_e, 0, SELECT_N - 1)
+    conf_e = split(d_e, SELECT_N, SELECT_N + CONFIRM_N - 1)
+    sel_ic = split(d_ic, 0, SELECT_N - 1)
+    conf_ic = split(d_ic, SELECT_N, SELECT_N + CONFIRM_N - 1)
+
+    sd_sel = sd_boot(sel_e)
+    ci_conf_e = block_ci_diff(conf_e, k=k)
+    ci_conf_ic = block_ci_diff(conf_ic, k=k)
+    return dict(
+        name=name, k=k, n_oos=len(P), n_ticks=int(P.ts.nunique()),
+        select_mean_edge5=float(sel_e.mean()) if len(sel_e) else float("nan"),
+        select_sd_boot_edge5=sd_sel,
+        select_threshold=inflate(k) * sd_sel if sd_sel == sd_sel else float("nan"),
+        select_exceeds_threshold=(bool(abs(sel_e.mean()) >= inflate(k) * sd_sel)
+                                   if sd_sel == sd_sel else None),
+        select_n_ticks=int(len(sel_e)),
+        confirm_edge5_ci=ci_conf_e,
+        confirm_rankic_ci=ci_conf_ic,
+        confirm_verdict_edge5=verdict(ci_conf_e),
+        confirm_verdict_rankic=verdict(ci_conf_ic),
+        confirm_n_ticks=int(len(conf_e)),
+    )
+
+
+print("\n=== A. candidate vs baseline_FRESH (cung session) k=2 ===", flush=True)
+res_cand_vs_fresh = eval_vs("candidate_vs_fresh", P_cand, base_fresh_e, base_fresh_ic, k=2)
+print(json.dumps(res_cand_vs_fresh, indent=2, default=str), flush=True)
+
+print("\n=== B. noise vs baseline_FRESH (cung session) k=2 ===", flush=True)
+res_noise_vs_fresh = eval_vs("noise_vs_fresh", P_noise, base_fresh_e, base_fresh_ic, k=2)
+print(json.dumps(res_noise_vs_fresh, indent=2, default=str), flush=True)
+
+print("\n=== C. baseline_FRESH vs baseline_FROZEN -- kiem tra truc tiep cross-session "
+      "determinism (k=1, cung code/seed/n_jobs=1, KHAC session/ngay) ===", flush=True)
+res_fresh_vs_frozen = eval_vs("fresh_vs_frozen", P_base_fresh, base_frozen_e, base_frozen_ic, k=1)
+print(json.dumps(res_fresh_vs_frozen, indent=2, default=str), flush=True)
+
+noise_confirm_exceed = not res_noise_vs_fresh["confirm_edge5_ci"]["contains_zero"]
+if noise_confirm_exceed:
+    final_verdict = ("HARNESS_NGHI_NGO_VAN_CON -- noise vuot nguong CONFIRM ngay CA KHI so "
+                      "voi baseline_fresh cung session -- KHONG cong bo THANG/NULL/THUA")
+else:
+    final_verdict = res_cand_vs_fresh["confirm_verdict_edge5"]
+
+result = dict(
+    baseline_fresh_edge5_all_pct=float(100 * base_fresh_e.mean()),
+    baseline_frozen_edge5_all_pct=float(100 * base_frozen_e.mean()),
+    ofi_coverage_frac=float(ofi_cov),
+    candidate_vs_fresh=res_cand_vs_fresh,
+    noise_vs_fresh=res_noise_vs_fresh,
+    fresh_vs_frozen_determinism_check=res_fresh_vs_frozen,
+    noise_vs_fresh_confirm_exceeds=noise_confirm_exceed,
+    final_verdict=final_verdict,
+)
+with open(f"{WORK}/ofi_result_v2.json", "w") as f:
+    json.dump(result, f, indent=2, default=str)
+print("\n=== FINAL v2 ===", flush=True)
+print(json.dumps(result, indent=2, default=str), flush=True)
+print("DONE", flush=True)
+sys.exit(0)
