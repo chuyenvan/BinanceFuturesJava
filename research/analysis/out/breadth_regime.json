@@ -1,0 +1,250 @@
+{
+  "meta": {
+    "sim0": "2021-07-01",
+    "sim1": "2025-12-31",
+    "topn_main": 50,
+    "ma_main": 200,
+    "threshold_main_pct": 50.0,
+    "min_periods_floor": 30,
+    "uw2022_window": [
+      "2021-11-16",
+      "2022-07-21"
+    ],
+    "uw2025_window": [
+      "2025-03-04",
+      "2025-10-16"
+    ],
+    "ma200_btc_notup_pct_ref": {
+      "2021": 35.3,
+      "2022": 100.0,
+      "2023": 19.7,
+      "2024": 19.9,
+      "2025": 26.6
+    },
+    "trenddet_btc_notup_pct_ref": {
+      "2021": 20.7,
+      "2022": 60.8,
+      "2023": 13.2,
+      "2024": 15.3,
+      "2025": 32.6
+    },
+    "gate_threshold_pct": 60.0,
+    "universe_proxy": "symId 1..N theo map_kaggle.csv (thu tu niem yet Binance Futures, KHONG phai xep hang volume rolling thuc - xem PREREG SS1)"
+  },
+  "breadth_by_year": {
+    "2021": {
+      "n": 184,
+      "pct_notup": 63.04347826086957
+    },
+    "2022": {
+      "n": 365,
+      "pct_notup": 100.0
+    },
+    "2023": {
+      "n": 365,
+      "pct_notup": 66.02739726027397
+    },
+    "2024": {
+      "n": 366,
+      "pct_notup": 55.19125683060109
+    },
+    "2025": {
+      "n": 365,
+      "pct_notup": 72.87671232876713
+    }
+  },
+  "n_alive_coins_stats": {
+    "min": 48,
+    "median": 50.0,
+    "max": 50
+  },
+  "uw_coverage_main": {
+    "UW2022": {
+      "n_days": 248,
+      "pct_notup": 92.74193548387096
+    },
+    "UW2025": {
+      "n_days": 227,
+      "pct_notup": 70.92511013215858
+    }
+  },
+  "gate_verdict": {
+    "config": "top50/MA200/threshold50%%",
+    "pct_notup_uw2022": 92.74193548387096,
+    "pct_notup_uw2025": 70.92511013215858,
+    "threshold_pct": 60.0,
+    "go": true
+  },
+  "forward_return_btc": {
+    "fwd1d": {
+      "up": {
+        "n": 455,
+        "mean_pct": -0.011804113000027304,
+        "std_pct": 2.5109357744310756
+      },
+      "notup": {
+        "n": 1190,
+        "mean_pct": 0.13460149713734143,
+        "std_pct": 2.8330722078824593
+      }
+    },
+    "fwd7d": {
+      "up": {
+        "n": 455,
+        "mean_pct": 0.14659234085624442,
+        "std_pct": 6.545102097787721
+      },
+      "notup": {
+        "n": 1185,
+        "mean_pct": 0.8833912720466252,
+        "std_pct": 7.787773812475302
+      }
+    }
+  },
+  "t100_by_regime": {
+    "up": {
+      "n": 1030,
+      "roi_mean_pct": 3.3358522031379825,
+      "roi_ci90_lo_pct": 1.6789700385656137,
+      "roi_ci90_hi_pct": 4.838628814759572,
+      "loss_rate_pct": 16.116504854368934,
+      "phi_loss": 2.1848007122424438
+    },
+    "notup": {
+      "n": 1529,
+      "roi_mean_pct": 1.9937963062100976,
+      "roi_ci90_lo_pct": 1.084405232007898,
+      "roi_ci90_hi_pct": 2.8757675544842987,
+      "loss_rate_pct": 15.761935905820797,
+      "phi_loss": 1.9138877582670308
+    }
+  },
+  "sweep_uw_coverage": [
+    {
+      "topn": 30,
+      "ma_window": 100,
+      "threshold_pct": 40.0,
+      "pct_notup_uw2022": 81.45161290322581,
+      "pct_notup_uw2025": 50.66079295154186
+    },
+    {
+      "topn": 30,
+      "ma_window": 100,
+      "threshold_pct": 50.0,
+      "pct_notup_uw2022": 91.12903225806451,
+      "pct_notup_uw2025": 55.50660792951542
+    },
+    {
+      "topn": 30,
+      "ma_window": 100,
+      "threshold_pct": 60.0,
+      "pct_notup_uw2022": 94.35483870967742,
+      "pct_notup_uw2025": 65.19823788546255
+    },
+    {
+      "topn": 30,
+      "ma_window": 200,
+      "threshold_pct": 40.0,
+      "pct_notup_uw2022": 87.90322580645162,
+      "pct_notup_uw2025": 63.436123348017624
+    },
+    {
+      "topn": 30,
+      "ma_window": 200,
+      "threshold_pct": 50.0,
+      "pct_notup_uw2022": 92.33870967741935,
+      "pct_notup_uw2025": 70.48458149779736
+    },
+    {
+      "topn": 30,
+      "ma_window": 200,
+      "threshold_pct": 60.0,
+      "pct_notup_uw2022": 95.56451612903226,
+      "pct_notup_uw2025": 80.61674008810573
+    },
+    {
+      "topn": 50,
+      "ma_window": 100,
+      "threshold_pct": 40.0,
+      "pct_notup_uw2022": 84.67741935483872,
+      "pct_notup_uw2025": 52.863436123348016
+    },
+    {
+      "topn": 50,
+      "ma_window": 100,
+      "threshold_pct": 50.0,
+      "pct_notup_uw2022": 92.74193548387096,
+      "pct_notup_uw2025": 56.38766519823789
+    },
+    {
+      "topn": 50,
+      "ma_window": 100,
+      "threshold_pct": 60.0,
+      "pct_notup_uw2022": 95.96774193548387,
+      "pct_notup_uw2025": 66.96035242290749
+    },
+    {
+      "topn": 50,
+      "ma_window": 200,
+      "threshold_pct": 40.0,
+      "pct_notup_uw2022": 91.93548387096774,
+      "pct_notup_uw2025": 64.75770925110133
+    },
+    {
+      "topn": 50,
+      "ma_window": 200,
+      "threshold_pct": 50.0,
+      "pct_notup_uw2022": 92.74193548387096,
+      "pct_notup_uw2025": 70.92511013215858
+    },
+    {
+      "topn": 50,
+      "ma_window": 200,
+      "threshold_pct": 60.0,
+      "pct_notup_uw2022": 97.58064516129032,
+      "pct_notup_uw2025": 81.93832599118943
+    },
+    {
+      "topn": 100,
+      "ma_window": 100,
+      "threshold_pct": 40.0,
+      "pct_notup_uw2022": 87.09677419354838,
+      "pct_notup_uw2025": 53.74449339207048
+    },
+    {
+      "topn": 100,
+      "ma_window": 100,
+      "threshold_pct": 50.0,
+      "pct_notup_uw2022": 91.12903225806451,
+      "pct_notup_uw2025": 61.67400881057269
+    },
+    {
+      "topn": 100,
+      "ma_window": 100,
+      "threshold_pct": 60.0,
+      "pct_notup_uw2022": 95.96774193548387,
+      "pct_notup_uw2025": 71.80616740088107
+    },
+    {
+      "topn": 100,
+      "ma_window": 200,
+      "threshold_pct": 40.0,
+      "pct_notup_uw2022": 89.91935483870968,
+      "pct_notup_uw2025": 72.68722466960352
+    },
+    {
+      "topn": 100,
+      "ma_window": 200,
+      "threshold_pct": 50.0,
+      "pct_notup_uw2022": 92.33870967741935,
+      "pct_notup_uw2025": 83.25991189427313
+    },
+    {
+      "topn": 100,
+      "ma_window": 200,
+      "threshold_pct": 60.0,
+      "pct_notup_uw2022": 92.33870967741935,
+      "pct_notup_uw2025": 94.27312775330397
+    }
+  ]
+}
