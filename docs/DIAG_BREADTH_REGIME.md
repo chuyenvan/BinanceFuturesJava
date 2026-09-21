@@ -142,3 +142,88 @@ vung PASS, khong phai diem cuc bien — GO khong phu thuoc vao chon dung 1 tham 
 tai dung nguyen van `trend_rank_ic.load_closes`/`bigdown_struct.load_trades_utc,
 block_boot_mean, phi_for`) + `research/analysis/out/breadth_regime.json` + doc nay (commit theo
 sau). 0-sim tuyet doi, dung `logging`, cam `print()`.
+
+## 8. Bước 5.3 (2026-09-21, giao bởi MASTER) — bổ sung định nghĩa B (BTC+ETH MA200 AND/OR) và C
+(BTC-đơn MA200), tính TRONG CÙNG script/cửa sổ với A để so cạnh công bằng
+
+Định nghĩa khoá TRƯỚC khi tính tại `docs/PREREG_BREADTH_REGIME_DIAG.md` §6. Chạy lại
+`research/analysis/breadth_regime.py` (đã bổ sung phần "BUOC 5.3"), ghi đè
+`research/analysis/out/breadth_regime.json` (thêm khoá `def_b_c`, `summary_a_b_c`; các khoá A cũ
+giữ nguyên số — đã xác nhận `gate_verdict` (A) vẫn `92.74%/70.93%/GO=True` như §3, không đổi).
+
+### 8.1 %ngày "yếu" mỗi năm — A vs B_AND vs B_OR vs C (BTC-đơn)
+
+| Năm  | A (breadth top50) | B_AND (BTC∧ETH<MA200) | B_OR (BTC∨ETH<MA200) | C (BTC-đơn<MA200) |
+|------|-------------------:|-----------------------:|-----------------------:|--------------------:|
+| 2021 | 63.0%              | 6.5%                    | 35.3%                   | 35.3%                |
+| 2022 | 100.0%             | 97.5%                   | 100.0%                  | 100.0%               |
+| 2023 | 66.0%              | 19.2%                   | 22.5%                   | 19.5%                |
+| 2024 | 55.2%              | 19.7%                   | 30.1%                   | 19.9%                |
+| 2025 | 72.9%              | 24.1%                   | 57.5%                   | 26.8%                |
+
+(ETH-đơn, chỉ mô tả — không dùng cho cổng: %yếu/năm 2021=6.5, 2022=97.5, 2023=22.2, 2024=29.8,
+2025=54.8 — ETH "yếu" nhiều hơn BTC ở 2024/2025 nhưng vẫn không đủ để B_OR/B_AND qua cổng UW2025,
+xem 8.2.)
+
+### 8.2 CỔNG QUYẾT ĐỊNH — %phủ not-up 2 chuỗi UW, từng định nghĩa (ngưỡng ≥60% CẢ HAI)
+
+| Định nghĩa | UW-2022 (248 ngày) | UW-2025 (227 ngày) | GATE (≥60% cả hai) |
+|---|---:|---:|:---:|
+| **A** — breadth top50/MA200/50% | **92.74%** | **70.93%** | **ĐẠT** |
+| **B_AND** — BTC∧ETH < MA200 | 77.82% | **15.86%** | KHÔNG ĐẠT |
+| **B_OR** — BTC∨ETH < MA200 | 84.27% | **52.42%** | KHÔNG ĐẠT (gần nhất trong nhóm B, vẫn dưới 60%) |
+| **C** — BTC-đơn < MA200 | 84.27% | **15.86%** | KHÔNG ĐẠT |
+
+**Nhận xét mấu chốt**: B_AND và C cho ra CÙNG %phủ UW-2025 (15.86%) — vì trong đúng cửa sổ
+UW-2025 (2025-03-04→2025-10-16), BTC gần như luôn ở trên MA200 của chính nó (đúng như bối cảnh:
+BTC +33% năm 2025), nên `not_up_BTC` gần như luôn False trong cửa sổ này ⇒ B_AND (cần CẢ HAI)
+bị chặn bởi chính BTC, không "nhìn thấy" gì thêm từ ETH. B_OR nới điều kiện (chỉ cần MỘT trong
+hai yếu) nên tăng lên 52.42% — ETH có yếu hơn trong giai đoạn này — nhưng NHÀNH VẪN chưa qua
+ngưỡng 60%. Kết hợp BTC+ETH bằng MA200 hướng-giá (dù AND hay OR) **KHÔNG giải quyết được** đúng
+điểm mù mà Bước 5.1 (SMA7/100-crossover BTC/ETH-OR, UW2025=32.6% not-up — xem PREREG_TREND_REGIME
+_DIAG) đã gặp: mọi tổ hợp hướng-giá BTC+ETH (MA200 lẫn SMA-crossover) đều KHÔNG đủ 60% ở UW-2025.
+Chỉ breadth (đo TRÊN 50 coin, không riêng BTC/ETH) làm được.
+
+### 8.3 Edge độc lập (forward-return BTC, ROI T100) — B_AND / B_OR, để kiểm tín hiệu có nghĩa
+
+- **Forward BTC return theo B_AND** (not_up n=598, up n=1047): fwd1d up=+0.159% notup=-0.020%;
+  fwd7d up=+0.888% notup=+0.311%. Theo B_OR (not_up n=832, up n=813): fwd1d up=+0.108%
+  notup=+0.081%; fwd7d up=+0.604% notup=+0.753%. Không như A (nơi "not-up" có forward-return CAO
+  hơn "up", một phát hiện nghịch-hướng ở §4), ở B_AND forward-return "notup" THẤP hơn "up" (đúng
+  hướng kỳ vọng của một detector hướng-giá thường), nhưng B_OR lại gần bằng/nghịch hướng nhẹ ở
+  fwd7d — không đủ mạnh, và dù sao cả hai đều KHÔNG qua được cổng bao phủ ở 8.2.
+- **ROI T100 theo B_AND** (n=706 "notup"): roi_mean=1.39% CI90[-0.16,2.80] (CHẠM 0, không dương
+  rõ như A), loss_rate=17.56% (CAO hơn "up" 15.27%), phi_dong-thua=2.14 (cao hơn "up" 1.95) — B_AND
+  là định nghĩa DUY NHẤT trong A/B/C có tín hiệu "notup = lệnh xấu hơn" ĐÚNG HƯỚNG (loss_rate và
+  phi đều cao hơn "up"), NHƯNG lại là định nghĩa có %phủ UW-2025 THẤP NHẤT (15.86%, cùng C) — một
+  sự đánh đổi: B_AND "chọn đúng lệnh xấu" nhưng "không phủ được thời gian" của UW-2025.
+- **ROI T100 theo B_OR** (n=1105 "notup"): roi_mean=1.49% CI90[0.32,2.58] (dương rõ, không giống
+  B_AND), loss_rate=16.38% (~bằng "up" 15.54%), phi=1.99 (~bằng "up" 2.04) — GIỐNG mẫu hình của A
+  (không tách được lệnh xấu), và vẫn KHÔNG qua cổng UW-2025 (52.42% < 60%).
+
+### 8.4 KẾT LUẬN A/B/C cho MASTER (cập nhật §6 cũ với B mới)
+
+| Định nghĩa | UW2022 | UW2025 | GATE | Có nhận ra CẢ 2022 và 2025? |
+|---|---:|---:|:---:|---|
+| A — breadth top50/MA200/50% | 92.7% | 70.9% | **ĐẠT** | **CÓ** — duy nhất trong A/B/C |
+| B_AND — BTC∧ETH<MA200 | 77.8% | 15.9% | KHÔNG | Không (mù 2025 như BTC-đơn) |
+| B_OR — BTC∨ETH<MA200 | 84.3% | 52.4% | KHÔNG | Không (gần nhất, vẫn thiếu ~8 điểm%) |
+| C — BTC-đơn<MA200 | 84.3% | 15.9% | KHÔNG | Không (như dự kiến, đây là baseline đã biết mù 2025) |
+
+**Kết hợp BTC+ETH bằng hướng-giá (định nghĩa B, dù AND hay OR, dù MA200 "nguyên văn" ở đây hay
+SMA7/100-crossover ở Bước 5.1) KHÔNG đủ để nhận ra giai đoạn giằng-co-2025** — ý (b) của Uni
+("altcoin đi theo ETH ngược BTC") không tự nó giải quyết được vấn đề khi đo qua đúng 1 coin thứ
+hai (ETH); phải mở rộng ra ĐỘ RỘNG toàn thị trường (ý (a), định nghĩa A, top-50 coin) mới bắt
+được đúng phân kỳ "giá BTC/ETH vẫn tăng nhưng đa số altcoin vẫn yếu". Xác nhận lại kết luận §6 cũ:
+**A là định nghĩa DUY NHẤT trong 3 (và duy nhất trong toàn bộ 7 round regime đã thử: MA200-BTC,
+SMA-crossover BTC/ETH-OR, B_AND, B_OR, breadth) phủ được CẢ HAI chuỗi UW qua ngưỡng 60%.**
+Các cảnh báo về edge độc lập ở §4/§8.3 (breadth "notup" không đánh dấu lệnh xấu rõ, chi phí CAGR
+tiềm ẩn khi gate thật) vẫn giữ nguyên — bao phủ-thời-gian PASS không đồng nghĩa sẽ thành công
+trong sim thật.
+
+### 8.5 Đầu ra bổ sung
+
+`research/analysis/breadth_regime.py` (đã sửa, thêm phần "BUOC 5.3" ở cuối `main()`, KHÔNG đụng
+code A cũ) + `research/analysis/out/breadth_regime.json` (ghi đè, thêm khoá `def_b_c`/
+`summary_a_b_c`) + `docs/PREREG_BREADTH_REGIME_DIAG.md` §6 (khoá định nghĩa B/C trước khi tính,
+theo brief MASTER) + mục này. 0-sim tuyệt đối (không Java, không xgboost, không build).

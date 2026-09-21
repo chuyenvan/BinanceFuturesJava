@@ -106,3 +106,23 @@ not_up(D)  = breadth(D) < 50.0   [NGUONG CHINH, ly le: duoi nua thi truong tren 
 `bigdown_struct.load_trades_utc/block_boot_mean/phi_for`, không sửa các file gốc) +
 `research/analysis/out/breadth_regime.json` + `docs/DIAG_BREADTH_REGIME.md` (kết quả + GO/NO-GO).
 Dùng `logging`, cấm `print()`.
+
+## 6. Bổ sung Bước 5.3 (2026-09-21, giao trực tiếp trong brief MASTER — khoá TRƯỚC khi tính số)
+
+MASTER giao thêm định nghĩa **B** để so cạnh A (breadth, §2 trên) và **C** (BTC-đơn MA200, đối
+chiếu). Định nghĩa B/C dưới đây được khoá NGUYÊN VĂN theo brief MASTER (không đổi sau khi thấy
+số), tính TRONG CÙNG script/cửa sổ SIM/UW như A để so sánh công bằng (`research/analysis/
+breadth_regime.py`, phần "BUOC 5.3" cuối file).
+
+- **C (BTC-đơn, đối chiếu)**: `not_up_C(D) = close_BTC[D-1] < MA200_causal_BTC(D)` — CÔNG THỨC
+  NGUYÊN VĂN của `regime_build_ma200.py` (Bước 2/4), tính lại bằng `up_matrix(symids=[1])` của
+  `breadth_regime.py` (cùng công thức causal, cùng `min_periods_floor=30`) để dùng đúng cửa sổ
+  UW2022/UW2025 và SIM range như A.
+- **B (BTC+ETH kết hợp, MA200 "nguyên văn" — KHÁC SMA7/100-crossover của Bước 5.1)**:
+  `not_up_BTC(D)` như C; `not_up_ETH(D) = close_ETH[D-1] < MA200_causal_ETH(D)` (symId 2, cùng
+  công thức). `B_AND(D) = not_up_BTC(D) AND not_up_ETH(D)`; `B_OR(D) = not_up_BTC(D) OR
+  not_up_ETH(D)`. Báo CẢ HAI biến thể (yêu cầu MASTER).
+- Cửa sổ SIM/UW, ngưỡng cổng (≥60% cả hai chuỗi) và 2 chuỗi UW2022/UW2025 GIỮ NGUYÊN như §2-4
+  trên (không tính lại, không đổi ngưỡng).
+- Gate cho B/C tính bằng CÙNG hàm `gate_verdict()` như A (không có tham số nào chọn sau khi thấy
+  số — B_AND/B_OR/C đều dùng công thức + cửa sổ cố định, không sweep để "tìm" biến thể đạt).

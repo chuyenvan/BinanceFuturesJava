@@ -2,6 +2,11 @@
 market-breadth (% coin top-50 tren MA200 cua CHINH no) lam regime filter thay MA200-BTC/
 SMA-crossover. HOAN TOAN 0-sim: KHONG chay Java, KHONG xgboost, KHONG build, KHONG sua .java.
 
+Buoc 5.3 (vong ke tiep, MASTER giao) BO SUNG dinh nghia B: ket hop BTC+ETH huong-gia bang MA200
+"nguyen van" (close[D-1] < MA200_causal(D), GIONG regime_build_ma200.py, KHAC voi SMA7/100-
+crossover cua Buoc 5.1) - AND va OR - de so canh voi A (breadth top50/MA200/50%, Buoc 5.2) va C
+(BTC-don MA200, Buoc 2/4) trong CUNG mot script/cua so UW, cho cong bang nhau.
+
 Nguon du lieu: CHI DOC research/analysis/trend_rank_ic.load_closes() (CLOSES_1H.bin, loc
 ts<2026-01-01 = HOLDOUT rule, NGUYEN VAN khong sua) + research/analysis/bigdown_struct
 .load_trades_utc/block_boot_mean/phi_for (doc printDone.csv/sim.out cua T100=X1_C3_FULL_2021,
@@ -31,6 +36,7 @@ log = logging.getLogger("breadth_regime")
 OUT_JSON = os.path.join(HERE, "out", "breadth_regime.json")
 DAY_MS = 86400000
 SYM_BTC = 1
+SYM_ETH = 2
 
 MA_MAIN = 200
 MIN_PERIODS_FLOOR = 30  # nhu regime_build_ma200.py / trend_regime.py
@@ -130,6 +136,60 @@ def window_pct_notup(not_up_bool_arr, day_range, start, end):
     return dict(n_days=int(len(v)), pct_notup=float(100.0 * v.mean()))
 
 
+def gate_verdict(name, cov2022, cov2025, threshold=GATE_THRESHOLD_PCT):
+    go = bool(cov2022["pct_notup"] is not None and cov2025["pct_notup"] is not None
+              and cov2022["pct_notup"] >= threshold and cov2025["pct_notup"] >= threshold)
+    v = dict(config=name, pct_notup_uw2022=cov2022["pct_notup"], pct_notup_uw2025=cov2025["pct_notup"],
+              threshold_pct=threshold, go=go)
+    return v
+
+
+def fwd_ret_series(close_by_day, day_range, h):
+    out = np.full(len(day_range), np.nan)
+    for i, d in enumerate(day_range):
+        c0 = close_by_day.get(d - 1)
+        c1 = close_by_day.get(d - 1 + h)
+        if c0 is not None and c1 is not None and np.isfinite(c0) and np.isfinite(c1) and c0 != 0:
+            out[i] = c1 / c0 - 1.0
+    return out
+
+
+def grp_stats(mask_notup, arr):
+    v_up = arr[(~mask_notup) & np.isfinite(arr)]
+    v_dn = arr[mask_notup & np.isfinite(arr)]
+    return dict(
+        up=dict(n=int(len(v_up)), mean_pct=float(100 * v_up.mean()) if len(v_up) else None,
+                 std_pct=float(100 * v_up.std()) if len(v_up) else None),
+        notup=dict(n=int(len(v_dn)), mean_pct=float(100 * v_dn.mean()) if len(v_dn) else None,
+                   std_pct=float(100 * v_dn.std()) if len(v_dn) else None),
+    )
+
+
+def t100_by_regime(trades, entry_day, day_to_pos, not_up_bool_arr, valid_arr):
+    """not_up_bool_arr, valid_arr: mang bool cung do dai day_range. Gan not_up cho tung lenh
+    theo ngay mo lenh (entry_day), chi giu lenh co ngay hop le (valid_arr=True tai vi tri do)."""
+    reg = np.full(len(entry_day), np.nan)
+    for i, d in enumerate(entry_day):
+        pos = day_to_pos.get(int(d))
+        if pos is not None and valid_arr[pos]:
+            reg[i] = 1.0 if not_up_bool_arr[pos] else 0.0
+    valid = np.isfinite(reg)
+    sub = trades.loc[valid].copy()
+    reg_v = reg[valid]
+    sub["loss"] = (sub["roi"] < 0).astype(int)
+    out = {}
+    for lbl, m in (("up", reg_v < 0.5), ("notup", reg_v >= 0.5)):
+        s2 = sub.loc[m]
+        obs, lo, hi = B.block_boot_mean(s2)
+        phi = B.phi_for(s2, "loss") if len(s2) >= 4 else dict(phi=None, J=0, phat=None)
+        out[lbl] = dict(n=int(len(s2)), roi_mean_pct=(obs * 100 if obs is not None else None),
+                         roi_ci90_lo_pct=(lo * 100 if lo is not None else None),
+                         roi_ci90_hi_pct=(hi * 100 if hi is not None else None),
+                         loss_rate_pct=float(100.0 * s2["loss"].mean()) if len(s2) else None,
+                         phi_loss=phi.get("phi"))
+    return out
+
+
 def main():
     os.makedirs(os.path.join(HERE, "out"), exist_ok=True)
     log.info("=== BREADTH_REGIME: nap CLOSES_1H.bin (top-100 symId de du cho sweep) ===")
@@ -160,14 +220,14 @@ def main():
                                           "Binance Futures, KHONG phai xep hang volume rolling "
                                           "thuc - xem PREREG SS1)"}}
 
-    # ---------------------------------------------------------------- 1. cau hinh CHINH (top50/MA200/50%)
+    # ---------------------------------------------------------------- 1. dinh nghia A (top50/MA200/50%)
     symids_main = list(range(1, TOPN_MAIN + 1))
     up_mat_main, alive_mat_main = up_matrix(daily_by_sym, symids_main, day_range, MA_MAIN)
     breadth_main, n_alive_main = breadth_from_up_matrix(up_mat_main)
     not_up_main = breadth_main < THRESHOLD_MAIN
 
     result["breadth_by_year"] = pct_notup_by_year(not_up_main, day_range)
-    log.info("%%not-up/nam (breadth top50/MA200/50%%): %s",
+    log.info("%%not-up/nam (breadth top50/MA200/50%%, dinh nghia A): %s",
               {y: result["breadth_by_year"][y]["pct_notup"] for y in sorted(result["breadth_by_year"])})
     result["n_alive_coins_stats"] = dict(
         min=int(np.min(n_alive_main)), median=float(np.median(n_alive_main)),
@@ -176,84 +236,32 @@ def main():
               result["n_alive_coins_stats"]["min"], result["n_alive_coins_stats"]["median"],
               result["n_alive_coins_stats"]["max"])
 
-    # ---------------------------------------------------------------- 2. CONG: %phu UW cua cau hinh CHINH
-    cov_uw2022 = window_pct_notup(not_up_main, day_range, *UW2022)
-    cov_uw2025 = window_pct_notup(not_up_main, day_range, *UW2025)
-    result["uw_coverage_main"] = {"UW2022": cov_uw2022, "UW2025": cov_uw2025}
-    log.info("phu not-up (breadth top50/MA200/50%%): UW2022=%s UW2025=%s", cov_uw2022, cov_uw2025)
+    # ---------------------------------------------------------------- 2. CONG A: %phu UW
+    cov_uw2022_a = window_pct_notup(not_up_main, day_range, *UW2022)
+    cov_uw2025_a = window_pct_notup(not_up_main, day_range, *UW2025)
+    result["uw_coverage_main"] = {"UW2022": cov_uw2022_a, "UW2025": cov_uw2025_a}
+    log.info("phu not-up (A, breadth top50/MA200/50%%): UW2022=%s UW2025=%s", cov_uw2022_a, cov_uw2025_a)
+    result["gate_verdict"] = gate_verdict("A: top50/MA200/threshold50%", cov_uw2022_a, cov_uw2025_a)
+    log.info("GATE VERDICT (A): %s", result["gate_verdict"])
 
-    go = bool(cov_uw2022["pct_notup"] is not None and cov_uw2025["pct_notup"] is not None
-              and cov_uw2022["pct_notup"] >= GATE_THRESHOLD_PCT
-              and cov_uw2025["pct_notup"] >= GATE_THRESHOLD_PCT)
-    result["gate_verdict"] = dict(
-        config="top50/MA200/threshold50%%",
-        pct_notup_uw2022=cov_uw2022["pct_notup"], pct_notup_uw2025=cov_uw2025["pct_notup"],
-        threshold_pct=GATE_THRESHOLD_PCT, go=go,
-    )
-    log.info("GATE VERDICT: %s", result["gate_verdict"])
-
-    # ---------------------------------------------------------------- 3a. edge doc lap: forward return BTC
-    def fwd_ret(h):
-        out = np.full(len(day_range), np.nan)
-        for i, d in enumerate(day_range):
-            c0 = close_by_day.get(d - 1)
-            c1 = close_by_day.get(d - 1 + h)
-            if c0 is not None and c1 is not None and np.isfinite(c0) and np.isfinite(c1) and c0 != 0:
-                out[i] = c1 / c0 - 1.0
-        return out
-
-    fwd1 = fwd_ret(1)
-    fwd7 = fwd_ret(7)
-
-    def grp_stats(mask_notup, arr):
-        v_up = arr[(~mask_notup) & np.isfinite(arr)]
-        v_dn = arr[mask_notup & np.isfinite(arr)]
-        return dict(
-            up=dict(n=int(len(v_up)), mean_pct=float(100 * v_up.mean()) if len(v_up) else None,
-                     std_pct=float(100 * v_up.std()) if len(v_up) else None),
-            notup=dict(n=int(len(v_dn)), mean_pct=float(100 * v_dn.mean()) if len(v_dn) else None,
-                       std_pct=float(100 * v_dn.std()) if len(v_dn) else None),
-        )
-
+    # ---------------------------------------------------------------- 3a. edge doc lap A: forward return BTC
+    fwd1 = fwd_ret_series(close_by_day, day_range, 1)
+    fwd7 = fwd_ret_series(close_by_day, day_range, 7)
     result["forward_return_btc"] = {"fwd1d": grp_stats(not_up_main, fwd1),
                                      "fwd7d": grp_stats(not_up_main, fwd7)}
-    log.info("forward return BTC theo breadth-regime (top50/MA200/50%%): fwd1d=%s fwd7d=%s",
+    log.info("forward return BTC theo A (breadth top50/MA200/50%%): fwd1d=%s fwd7d=%s",
               result["forward_return_btc"]["fwd1d"], result["forward_return_btc"]["fwd7d"])
 
-    # ---------------------------------------------------------------- 3b. edge doc lap: ROI so T100 theo regime
+    # ---------------------------------------------------------------- 3b. edge doc lap A: ROI T100
     trades = B.load_trades_utc(TAG_T100)
     entry_day = (trades["s_ms"].to_numpy() // DAY_MS).astype(np.int64)
     day_to_pos = {int(d): i for i, d in enumerate(day_range)}
+    valid_main = np.isfinite(breadth_main)
+    result["t100_by_regime"] = t100_by_regime(trades, entry_day, day_to_pos, not_up_main, valid_main)
+    log.info("T100 ROI theo A (breadth top50/MA200/50%%): up=%s notup=%s",
+              result["t100_by_regime"]["up"], result["t100_by_regime"]["notup"])
 
-    def regime_of(day_arr):
-        out = np.full(len(day_arr), np.nan)
-        for i, d in enumerate(day_arr):
-            pos = day_to_pos.get(int(d))
-            if pos is not None and np.isfinite(breadth_main[pos]):
-                out[i] = 0.0 if not_up_main[pos] else 1.0
-        return out
-
-    reg = regime_of(entry_day)
-    valid = np.isfinite(reg)
-    sub = trades.loc[valid].copy()
-    reg_v = reg[valid]
-    trades["loss"] = (trades["roi"] < 0).astype(int)
-    sub["loss"] = (sub["roi"] < 0).astype(int)
-    out_t100 = {}
-    for lbl, m in (("up", reg_v > 0.5), ("notup", reg_v <= 0.5)):
-        s2 = sub.loc[m]
-        obs, lo, hi = B.block_boot_mean(s2)
-        phi = B.phi_for(s2, "loss") if len(s2) >= 4 else dict(phi=None, J=0, phat=None)
-        out_t100[lbl] = dict(n=int(len(s2)), roi_mean_pct=(obs * 100 if obs is not None else None),
-                              roi_ci90_lo_pct=(lo * 100 if lo is not None else None),
-                              roi_ci90_hi_pct=(hi * 100 if hi is not None else None),
-                              loss_rate_pct=float(100.0 * s2["loss"].mean()) if len(s2) else None,
-                              phi_loss=phi.get("phi"))
-    result["t100_by_regime"] = out_t100
-    log.info("T100 ROI theo breadth-regime (top50/MA200/50%%): up=%s notup=%s",
-              out_t100["up"], out_t100["notup"])
-
-    # ---------------------------------------------------------------- 4. sweep MO TA, khong chon winner
+    # ---------------------------------------------------------------- 4. sweep MO TA A, khong chon winner
     sweep_rows = []
     for topn in SWEEP_TOPN:
         symids = list(range(1, topn + 1))
@@ -268,12 +276,71 @@ def main():
                                         pct_notup_uw2022=c22["pct_notup"],
                                         pct_notup_uw2025=c25["pct_notup"]))
     result["sweep_uw_coverage"] = sweep_rows
-    log.info("Sweep top-N x MA x nguong (%d to hop), cau hinh chinh (50/200/50%%) la o DUY NHAT "
-              "dung cho cong GO/NO-GO:", len(sweep_rows))
+    log.info("Sweep top-N x MA x nguong (%d to hop, dinh nghia A), cau hinh chinh (50/200/50%%) "
+              "la o DUY NHAT dung cho cong GO/NO-GO:", len(sweep_rows))
     for r in sweep_rows:
         log.info("  topN=%3d MA=%3d thr=%4.0f%%  UW2022=%s  UW2025=%s",
                   r["topn"], r["ma_window"], r["threshold_pct"],
                   r["pct_notup_uw2022"], r["pct_notup_uw2025"])
+
+    # ================================================================== BUOC 5.3: DINH NGHIA B (BTC+ETH MA200
+    # ket hop AND/OR) va DOI CHIEU C (BTC-don MA200) - CUNG cua so UW, CUNG script, de so canh cong bang.
+    log.info("=== DINH NGHIA B (BTC+ETH MA200 literal, AND/OR) va C (BTC-don MA200) ===")
+
+    up_mat_btc, alive_btc = up_matrix(daily_by_sym, [SYM_BTC], day_range, MA_MAIN)
+    up_mat_eth, alive_eth = up_matrix(daily_by_sym, [SYM_ETH], day_range, MA_MAIN)
+    up_btc_col = up_mat_btc[:, 0]
+    up_eth_col = up_mat_eth[:, 0]
+    valid_btc = ~np.isnan(up_btc_col)
+    valid_eth = ~np.isnan(up_eth_col)
+    log.info("BTC/ETH MA200 valid days: BTC %d/%d, ETH %d/%d (ky vong ~toan bo SIM range)",
+              int(valid_btc.sum()), len(day_range), int(valid_eth.sum()), len(day_range))
+
+    not_up_btc_c = np.where(valid_btc, up_btc_col < 0.5, False)   # dinh nghia C (BTC-don)
+    not_up_eth_only = np.where(valid_eth, up_eth_col < 0.5, False)  # ETH-don, chi de mo ta
+    valid_both = valid_btc & valid_eth
+    weak_and = not_up_btc_c & not_up_eth_only & valid_both   # B_AND: weak neu CA HAI yeu
+    weak_or = (not_up_btc_c | not_up_eth_only) & valid_both  # B_OR: weak neu MOT TRONG HAI yeu
+
+    result["def_b_c"] = {"meta": dict(ma_window=MA_MAIN, min_periods_floor=MIN_PERIODS_FLOOR,
+                                        formula="close[D-1] < mean(close[D-MA..D-1]) (nguyen "
+                                                "van regime_build_ma200.py, KHONG phai SMA7/100 "
+                                                "crossover cua Buoc 5.1)")}
+
+    for nm, arr in (("C_btc_only", not_up_btc_c), ("eth_only_desc", not_up_eth_only),
+                    ("B_and", weak_and), ("B_or", weak_or)):
+        by_year = pct_notup_by_year(arr, day_range)
+        cov22 = window_pct_notup(arr, day_range, *UW2022)
+        cov25 = window_pct_notup(arr, day_range, *UW2025)
+        gv = gate_verdict(nm, cov22, cov25)
+        result["def_b_c"][nm] = dict(pct_notup_by_year=by_year,
+                                      uw_coverage={"UW2022": cov22, "UW2025": cov25},
+                                      gate_verdict=gv)
+        log.info("[%s] %%notup/nam=%s | UW2022=%s UW2025=%s | GATE=%s", nm,
+                  {y: by_year[y]["pct_notup"] for y in sorted(by_year)}, cov22, cov25, gv)
+
+    # edge doc lap cho B_AND / B_OR: forward return BTC + ROI T100
+    result["def_b_c"]["B_and"]["forward_return_btc"] = {"fwd1d": grp_stats(weak_and, fwd1),
+                                                          "fwd7d": grp_stats(weak_and, fwd7)}
+    result["def_b_c"]["B_or"]["forward_return_btc"] = {"fwd1d": grp_stats(weak_or, fwd1),
+                                                         "fwd7d": grp_stats(weak_or, fwd7)}
+    result["def_b_c"]["B_and"]["t100_by_regime"] = t100_by_regime(
+        trades, entry_day, day_to_pos, weak_and, valid_both)
+    result["def_b_c"]["B_or"]["t100_by_regime"] = t100_by_regime(
+        trades, entry_day, day_to_pos, weak_or, valid_both)
+    log.info("forward return BTC (B_AND)=%s", result["def_b_c"]["B_and"]["forward_return_btc"])
+    log.info("forward return BTC (B_OR)=%s", result["def_b_c"]["B_or"]["forward_return_btc"])
+    log.info("T100 ROI (B_AND)=%s", result["def_b_c"]["B_and"]["t100_by_regime"])
+    log.info("T100 ROI (B_OR)=%s", result["def_b_c"]["B_or"]["t100_by_regime"])
+
+    # bang tong hop A/B/C cho MASTER
+    result["summary_a_b_c"] = {
+        "A_breadth_top50_ma200_50pct": result["gate_verdict"],
+        "B_and_btc_eth_ma200": result["def_b_c"]["B_and"]["gate_verdict"],
+        "B_or_btc_eth_ma200": result["def_b_c"]["B_or"]["gate_verdict"],
+        "C_btc_only_ma200": result["def_b_c"]["C_btc_only"]["gate_verdict"],
+    }
+    log.info("=== TONG HOP GATE A/B/C: %s ===", result["summary_a_b_c"])
 
     with open(OUT_JSON, "w") as f:
         json.dump(result, f, indent=2, default=str)
