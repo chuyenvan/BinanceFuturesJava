@@ -283,7 +283,7 @@ sys.exit(0)
 '''
 
 
-def submit(tag, profile, overrides=None, *, bins_ds=None, bundle_ds=None, code_sha="head",
+def submit(tag, profile, overrides=None, *, bins_ds=None, bundle_ds=None, extra_ds=None, code_sha="head",
            sim_end_date=DEFAULT_SIM_END, ticker_min_days=TICKER_MIN_DAYS,
            xmx=DEFAULT_XMX, timeout_s=DEFAULT_TIMEOUT_S, enable_internet=True,
            push=True) -> str:
@@ -310,7 +310,8 @@ def submit(tag, profile, overrides=None, *, bins_ds=None, bundle_ds=None, code_s
             "language": "python", "kernel_type": "script", "is_private": True,
             "enable_gpu": False, "enable_internet": enable_internet,
             "dataset_sources": [bundle_ref] + TICKER_DS
-                                + ([USER + "/" + bins_ds] if bins_ds else []),
+                                + ([USER + "/" + bins_ds] if bins_ds else [])
+                                + [(USER + "/" + d) for d in (extra_ds or [])],
             "competition_sources": [], "kernel_sources": []}
     with open(os.path.join(folder, "kernel-metadata.json"), "w") as f:
         json.dump(meta, f, indent=1)
