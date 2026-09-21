@@ -185,6 +185,12 @@ for ln in open(basep):
     pairs[k] = v.strip()
 ov = dict(CFG["overrides"])
 ov["WFO_FUNDING_PRED_DIR"] = PREDWF                 # bins pin: duong dan Oracle -> mount Kaggle
+# [BRC B7] regime CSV (gate lien tuc/nhi phan): SIM_REGIME_FILE tro ten file -> resolve mount Kaggle.
+#   No-op khi profile/overrides khong khai bao SIM_REGIME_FILE (T170/c2b...) => khong doi hanh vi cu.
+_rf = ov.get("SIM_REGIME_FILE") or pairs.get("SIM_REGIME_FILE")
+if _rf:
+    ov["SIM_REGIME_FILE"] = f1(IN + "/**/" + os.path.basename(_rf))
+    LOG.info("regime_file resolved=%s", ov["SIM_REGIME_FILE"])
 for k, v in ov.items():
     if k not in pairs:
         order.append(k)
