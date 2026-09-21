@@ -663,6 +663,14 @@ public class Configs {
             }
             if ((v = Cfg.get("SIM_REGIME_FILE")) != null) SIM_REGIME_FILE = v.trim();
             if ((v = Cfg.get("SIM_REGIME_FORCE")) != null) SIM_REGIME_FORCE = v.trim();
+            // [REGIME-UPDOWN 2026-09-21] docs/PREREG_REGIME_UPDOWN.md TASK B2 Buoc 4:
+            //   up-gate CHAT hon (RA12/RA14). Khong khai bao / <=0 giu nguyen
+            //   EntryGate.REGIME_SCALE_UP=1.00f (mac dinh Buoc 2) => byte-identical.
+            //   down-gate (REGIME_SCALE_NOTUP) KHONG doi, van la hang so 1.70f co dinh.
+            if ((v = Cfg.get("SIM_REGIME_SCALE_UP")) != null) {
+                float su = Float.parseFloat(v.trim());
+                if (su > 0f) EntryGate.REGIME_SCALE_UP = su;
+            }
             // [D3D4-FILTER 2026-09-17] docs/PREREG_D3D4_FILTER_SIM.md: filter pump-dump cho lenh moi
             //   (selector + BIG_DOWN). default off => byte-identical. configure() throw neu gia tri sai.
             if ((v = Cfg.get("SIM_FILTER_D3D4")) != null) {
