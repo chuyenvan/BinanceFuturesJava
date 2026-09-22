@@ -31,6 +31,10 @@ NREP = C.NREP                  # 2000
 SEED = C.SEED                  # 20260905
 LEGACY = 1.21                  # he so CU (rong hon inflate(2))
 KOUT = "/home/ubuntu/kaggle_sim/out"
+# [SELCUT] Moc neo block-72h CO DINH cho MOI arm (cua so DEV 2021-07-01..2025-12-31).
+#   c3_rates.trades() neo block vao ts.min() CUA TUNG BANG => neu 2 arm co lenh dau tien lech
+#   gio thi so hieu block lech nhau => ghep cap "paired" SAI. O day neo cung mot moc lich.
+ANCHOR = pd.Timestamp("2021-07-01")
 
 DD_MAX, UW_MAX, Q_MIN, CONC_MAX = 30.0, 200, -15.0, 15.0
 
@@ -71,8 +75,7 @@ def trades(tag):
     d = d.dropna(subset=["ts"])
     d = d.sort_values(["sym", "end", "ts"], kind="mergesort")
     d["leg"] = d.groupby(["sym", "end"]).cumcount()
-    t0 = d.ts.min()
-    d["blk"] = ((d.ts - t0) / pd.Timedelta(hours=BLOCK_H)).astype(int)
+    d["blk"] = ((d.ts - ANCHOR) / pd.Timedelta(hours=BLOCK_H)).astype(int)
     return d.reset_index(drop=True)
 
 
