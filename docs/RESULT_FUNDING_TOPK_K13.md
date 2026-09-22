@@ -348,7 +348,9 @@ chưa nói "K=1 có thể mất tín hiệu".
   chứng bằng re-run khớp tuyệt đối** — §1). Không đổi: mốc, ranking, HOLD, cost, CI, seed, null, MDE, cổng.
 - Trung gian **ngoài repo** (resume được, ghi sau **từng K**): `/tmp/funding_topk_k13/{mark_grid.npz,
   anchor_mom15.npz, partial.npz, report_K1.txt, report_K3.txt, report_full.txt, summary_K1.json,
-  summary_K3.json, summary_K5.json, summary_K10.json, summary_K20.json, *.log}` — dọn sau khi commit.
+  summary_K3.json, summary_K5.json, summary_K10.json, summary_K20.json, *.log}`. Sau khi commit: **đã xoá** 3 file
+  `.npz` lớn (grid/anchor/partial — dựng lại được trong ~62s), **giữ lại** `report_*.txt`, `summary_K*.json`,
+  `*.log` làm bằng chứng số (nhỏ, có thể kiểm tra lại từng K).
 - **Không** chạy Java, **không** `claude-run`, **không** đụng 2026, **không** push.
 - Ghi chú quy trình: chạy **từng K một** (K=1, rồi K=3) để có checkpoint, sau đó chạy **một lượt đủ 5 K**
   cho bảng so sánh chéo; **hai lượt chạy độc lập cho cùng số** (seed cố định) ⇒ tất định.
