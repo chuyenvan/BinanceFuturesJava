@@ -51,7 +51,7 @@ Nguồn: Aerospike `test.funding_data` (chỉ đọc), bin `f_data` = **Snappy(J
 | Symbol | **831** record, decode OK **831/831** |
 | Event | **2 394 587** (median 2 754/symbol, max 9 040) |
 | Khoảng | 2021-01-01 00:00 UTC → **2026-08-05** (chỉ dùng ≤ 2025-12-31) |
-| Tần suất | **hỗn hợp**: 476 symbol cadence trung vị **4h** (00/04/08/12/16/20 UTC), 345 symbol **8h** (00/08/16); BTC/ETH/SOL 8h suốt 2021–2025 |
+| Tần suất | **hỗn hợp**: 476 symbol cadence trung vị **4h** (00/04/08/12/16/20 UTC), 345 symbol **8h** (00/08/16), 10 symbol khác (1h–6h; 3 trong số đó là bản ghi có ts rác đã lọc); BTC/ETH/SOL 8h suốt 2021–2025 |
 | Giao universe | 627 symbol có `raw/<sym>.f32` (subset) |
 | Rác | 3 symbol có ts = 0/âm (`GAIBUSDT`, `GRAMUSDT`, `STPTUSDT`) ⇒ đã lọc `ts ≥ 2021-01-01` |
 
