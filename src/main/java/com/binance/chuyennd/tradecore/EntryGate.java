@@ -59,8 +59,11 @@ public final class EntryGate {
 
     /** [REGIME] docs/PREREG_REGIME_GATE.md: gate scale doi theo regime BTC 30d. default OFF => byte-identical. */
     public static boolean GATE_REGIME_ADAPTIVE = false;
-    /** Scale khi regime UP (uptrend BTC 30d): = T100. HANG SO pre-reg, KHONG fit. */
-    public static final float REGIME_SCALE_UP = 1.00f;
+    /** Scale khi regime UP (uptrend BTC 30d): mac dinh T100 (pre-reg Buoc 2). TASK B2 Buoc 4
+     *  (docs/PREREG_REGIME_UPDOWN.md) can up-gate CHAT hon (1.2/1.4), nen bo final, doc duoc
+     *  qua Configs (key SIM_REGIME_SCALE_UP). Khong khai bao key nay thi giu nguyen 1.00f,
+     *  byte-identical voi vong Buoc 2 (va voi OFF, vi OFF dung nhanh GATE_DYN_SCALE khac han). */
+    public static float REGIME_SCALE_UP = 1.00f;
     /** Scale khi regime NOT-UP (chop/down): = T170. HANG SO pre-reg, KHONG fit. */
     public static final float REGIME_SCALE_NOTUP = 1.70f;
     /** Scale theo-tick do simulator dat moi tick khi GATE_REGIME_ADAPTIVE bat (RegimeSchedule.scaleForTime). */

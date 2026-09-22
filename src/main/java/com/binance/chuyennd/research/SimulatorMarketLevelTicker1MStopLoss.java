@@ -165,6 +165,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                 LOG.info("[REGIME] adaptive ON force={} (UP=>{} NOTUP=>{})", Configs.SIM_REGIME_FORCE,
                         EntryGate.REGIME_SCALE_UP, EntryGate.REGIME_SCALE_NOTUP);
             } else {
+                RegimeSchedule.setGateValueCol(Configs.SIM_REGIME_GATE_VALUE_COL);
                 RegimeSchedule.load(Configs.SIM_REGIME_FILE);
                 LOG.info("[REGIME] adaptive ON file={} (UP=>{} NOTUP=>{})", Configs.SIM_REGIME_FILE,
                         EntryGate.REGIME_SCALE_UP, EntryGate.REGIME_SCALE_NOTUP);

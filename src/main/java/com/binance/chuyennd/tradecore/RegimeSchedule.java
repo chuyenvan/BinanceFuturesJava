@@ -22,8 +22,16 @@ public final class RegimeSchedule {
     private static TreeMap<Long, Float> dayScale = new TreeMap<>();
     private static boolean loaded = false;
     private static Float forceScale = null;
+    // [BRC B7] >=0: doc mot gia tri gate float/ngay truc tiep tu cot nay (che do LIEN TUC).
+    // -1 (mac dinh): giu che do NHI PHAN cu (map cot regime -> UP=1.00/khac=1.70). Them thuan cong.
+    private static int gateValueCol = -1;
 
     private RegimeSchedule() {
+    }
+
+    /** [BRC B7] Dat cot doc gia tri gate float (che do lien tuc). <0 = giu nhi phan (mac dinh). */
+    public static void setGateValueCol(int col) {
+        gateValueCol = col;
     }
 
     /** Ep hang so cho cong 2-cuc: "UP"->1.00, "NOTUP"->1.70. */
@@ -53,8 +61,15 @@ public final class RegimeSchedule {
                 String[] p = ln.split(",");
                 if (p.length < 4) continue;
                 long day = Long.parseLong(p[0].trim());
-                String reg = p[3].trim().toUpperCase();
-                float sc = reg.equals("UP") ? EntryGate.REGIME_SCALE_UP : EntryGate.REGIME_SCALE_NOTUP;
+                float sc;
+                if (gateValueCol >= 0) {
+                    // [BRC B7] che do LIEN TUC: doc gia tri gate float truc tiep tu cot chi dinh.
+                    if (p.length <= gateValueCol) continue;
+                    sc = Float.parseFloat(p[gateValueCol].trim());
+                } else {
+                    String reg = p[3].trim().toUpperCase();
+                    sc = reg.equals("UP") ? EntryGate.REGIME_SCALE_UP : EntryGate.REGIME_SCALE_NOTUP;
+                }
                 m.put(day, sc);
             }
         } catch (Exception e) {

@@ -387,6 +387,7 @@ public class Configs {
             Integer.parseInt(Cfg.getOr("SIM_TICKLOG_POS_EVERY_MIN", "1").trim());
     public static String SIM_REGIME_FILE = null;   // [REGIME] docs/PREREG_REGIME_GATE.md
     public static String SIM_REGIME_FORCE = null;  // [REGIME] UP|NOTUP: ep hang so cho cong 2-cuc
+    public static int SIM_REGIME_GATE_VALUE_COL = -1; // [BRC B7] >=0: doc float gate/ngay tu cot nay (lien tuc); -1 nhi phan
     public static String SIM_FILTER_D3D4 = null;   // [D3D4-FILTER] docs/PREREG_D3D4_FILTER_SIM.md — off|d3|d4|both, default off
     public static float MIN_MOMENTUM_15M = 0.02284f;                  // HPO (đã revert về cũ): 0.01720f
     public static float MS_UP_BIG_THRES = 0.02046f;                  // HPO (đã revert về cũ): 0.01757f
@@ -663,6 +664,17 @@ public class Configs {
             }
             if ((v = Cfg.get("SIM_REGIME_FILE")) != null) SIM_REGIME_FILE = v.trim();
             if ((v = Cfg.get("SIM_REGIME_FORCE")) != null) SIM_REGIME_FORCE = v.trim();
+            // [BRC B7] docs/PREREG_BREADTH_CONT.md: che do gate LIEN TUC doc float/ngay tu cot CSV.
+            //   Khong khai bao / <0 giu nguyen che do nhi phan cu => byte-identical.
+            if ((v = Cfg.get("SIM_REGIME_GATE_VALUE_COL")) != null) SIM_REGIME_GATE_VALUE_COL = Integer.parseInt(v.trim());
+            // [REGIME-UPDOWN 2026-09-21] docs/PREREG_REGIME_UPDOWN.md TASK B2 Buoc 4:
+            //   up-gate CHAT hon (RA12/RA14). Khong khai bao / <=0 giu nguyen
+            //   EntryGate.REGIME_SCALE_UP=1.00f (mac dinh Buoc 2) => byte-identical.
+            //   down-gate (REGIME_SCALE_NOTUP) KHONG doi, van la hang so 1.70f co dinh.
+            if ((v = Cfg.get("SIM_REGIME_SCALE_UP")) != null) {
+                float su = Float.parseFloat(v.trim());
+                if (su > 0f) EntryGate.REGIME_SCALE_UP = su;
+            }
             // [D3D4-FILTER 2026-09-17] docs/PREREG_D3D4_FILTER_SIM.md: filter pump-dump cho lenh moi
             //   (selector + BIG_DOWN). default off => byte-identical. configure() throw neu gia tri sai.
             if ((v = Cfg.get("SIM_FILTER_D3D4")) != null) {

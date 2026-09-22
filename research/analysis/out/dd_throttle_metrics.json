@@ -1,0 +1,516 @@
+{
+  "T170": {
+    "tag": "X1_GS_T170_2021",
+    "n_rows": 1089,
+    "n_episodes": 1069,
+    "icc_roi_day": {
+      "icc": 0.05160667836626019,
+      "J": 105,
+      "N": 1084,
+      "k0": 10.153154271927336
+    },
+    "n_eff": {
+      "n_eff_total": 606.2555268153774,
+      "n_eff_nbets": 731.8534576022564,
+      "J": 105,
+      "kbar": 10.323809523809524,
+      "cap_1_over_icc": 19.37733703577767
+    },
+    "n_exposed_bd": 603,
+    "maxdd": {
+      "maxDD_pct": -11.844309553336373,
+      "peak": "2022-10-17",
+      "trough": "2022-11-10",
+      "bd_share_of_maxdd_depth_pct": 100.0,
+      "uw_days_total": 1062,
+      "uw_days_bd_pct": 11.864406779661017,
+      "top10_worst_days": [
+        {
+          "day": "2022-11-10",
+          "ret_pct": -10.861052446321718,
+          "bigdown": true,
+          "n_opened": 5,
+          "n_closed": 12,
+          "pct_closed_loss": 33.33333333333333
+        },
+        {
+          "day": "2024-04-14",
+          "ret_pct": -4.2113333995939195,
+          "bigdown": true,
+          "n_opened": 13,
+          "n_closed": 11,
+          "pct_closed_loss": 0.0
+        },
+        {
+          "day": "2022-05-12",
+          "ret_pct": -3.2119451712797398,
+          "bigdown": true,
+          "n_opened": 16,
+          "n_closed": 10,
+          "pct_closed_loss": 30.0
+        },
+        {
+          "day": "2025-03-04",
+          "ret_pct": -2.334020618556698,
+          "bigdown": true,
+          "n_opened": 14,
+          "n_closed": 6,
+          "pct_closed_loss": 16.666666666666664
+        },
+        {
+          "day": "2022-11-14",
+          "ret_pct": -2.088902302319562,
+          "bigdown": true,
+          "n_opened": 5,
+          "n_closed": 6,
+          "pct_closed_loss": 16.666666666666664
+        },
+        {
+          "day": "2021-12-06",
+          "ret_pct": -1.903979690883295,
+          "bigdown": false,
+          "n_opened": 0,
+          "n_closed": 0,
+          "pct_closed_loss": null
+        },
+        {
+          "day": "2022-05-17",
+          "ret_pct": -1.867766701042739,
+          "bigdown": false,
+          "n_opened": 0,
+          "n_closed": 1,
+          "pct_closed_loss": 100.0
+        },
+        {
+          "day": "2022-11-13",
+          "ret_pct": -1.8554956098593034,
+          "bigdown": false,
+          "n_opened": 0,
+          "n_closed": 0,
+          "pct_closed_loss": null
+        },
+        {
+          "day": "2024-04-13",
+          "ret_pct": -1.693140895005718,
+          "bigdown": true,
+          "n_opened": 16,
+          "n_closed": 7,
+          "pct_closed_loss": 0.0
+        },
+        {
+          "day": "2025-11-07",
+          "ret_pct": -1.622286964144981,
+          "bigdown": false,
+          "n_opened": 2,
+          "n_closed": 2,
+          "pct_closed_loss": 50.0
+        }
+      ]
+    },
+    "uw_longest": {
+      "longest_days": 92,
+      "start": "2024-04-10",
+      "end": "2024-07-10"
+    },
+    "cagr": 29.268653300162594,
+    "maxDD_stats": -11.844309553336373,
+    "uw_stats": 92,
+    "yr": {
+      "2021": 12.205714285714286,
+      "2022": 19.576288449786116,
+      "2023": 34.96166950596251,
+      "2024": 32.05686515825681,
+      "2025": 32.7080470756915
+    }
+  },
+  "T100": {
+    "tag": "X1_C3_FULL_2021",
+    "n_rows": 2559,
+    "n_episodes": 2505,
+    "icc_roi_day": {
+      "icc": 0.10162087669603478,
+      "J": 230,
+      "N": 2521,
+      "k0": 10.915083603408226
+    },
+    "n_eff": {
+      "n_eff_total": 1103.8551125715353,
+      "n_eff_nbets": 1252.8374595049163,
+      "J": 230,
+      "kbar": 10.960869565217392,
+      "cap_1_over_icc": 9.84049766654906
+    },
+    "n_exposed_bd": 1262,
+    "maxdd": {
+      "maxDD_pct": -16.128952569169964,
+      "peak": "2021-11-15",
+      "trough": "2022-05-12",
+      "bd_share_of_maxdd_depth_pct": 74.84910257449407,
+      "uw_days_total": 1286,
+      "uw_days_bd_pct": 11.35303265940902,
+      "top10_worst_days": [
+        {
+          "day": "2022-11-10",
+          "ret_pct": -9.480522409942926,
+          "bigdown": true,
+          "n_opened": 5,
+          "n_closed": 6,
+          "pct_closed_loss": 16.666666666666664
+        },
+        {
+          "day": "2022-05-12",
+          "ret_pct": -8.807413376309425,
+          "bigdown": true,
+          "n_opened": 20,
+          "n_closed": 29,
+          "pct_closed_loss": 55.172413793103445
+        },
+        {
+          "day": "2024-04-14",
+          "ret_pct": -6.012248336917292,
+          "bigdown": true,
+          "n_opened": 22,
+          "n_closed": 13,
+          "pct_closed_loss": 0.0
+        },
+        {
+          "day": "2021-12-05",
+          "ret_pct": -3.6263983782566234,
+          "bigdown": true,
+          "n_opened": 2,
+          "n_closed": 6,
+          "pct_closed_loss": 33.33333333333333
+        },
+        {
+          "day": "2024-04-13",
+          "ret_pct": -3.6132457394972284,
+          "bigdown": true,
+          "n_opened": 26,
+          "n_closed": 12,
+          "pct_closed_loss": 0.0
+        },
+        {
+          "day": "2025-03-04",
+          "ret_pct": -3.596999935203782,
+          "bigdown": true,
+          "n_opened": 18,
+          "n_closed": 9,
+          "pct_closed_loss": 11.11111111111111
+        },
+        {
+          "day": "2025-04-09",
+          "ret_pct": -3.563228165660348,
+          "bigdown": true,
+          "n_opened": 5,
+          "n_closed": 5,
+          "pct_closed_loss": 0.0
+        },
+        {
+          "day": "2022-05-10",
+          "ret_pct": -3.5088179718664736,
+          "bigdown": true,
+          "n_opened": 18,
+          "n_closed": 18,
+          "pct_closed_loss": 0.0
+        },
+        {
+          "day": "2022-01-23",
+          "ret_pct": -3.4557866496666367,
+          "bigdown": true,
+          "n_opened": 1,
+          "n_closed": 5,
+          "pct_closed_loss": 0.0
+        },
+        {
+          "day": "2025-11-09",
+          "ret_pct": -3.4247010433705483,
+          "bigdown": false,
+          "n_opened": 0,
+          "n_closed": 2,
+          "pct_closed_loss": 0.0
+        }
+      ]
+    },
+    "uw_longest": {
+      "longest_days": 248,
+      "start": "2021-11-16",
+      "end": "2022-07-21"
+    },
+    "cagr": 31.93892520362953,
+    "maxDD_stats": -16.128952569169964,
+    "uw_stats": 248,
+    "yr": {
+      "2021": 9.27714285714285,
+      "2022": 17.305932491437236,
+      "2023": 60.42883252351447,
+      "2024": 45.27633443552197,
+      "2025": 16.451653007162868
+    }
+  },
+  "DT": {
+    "tag": "X1_C3_FULL_2021_DT",
+    "n_rows": 2568,
+    "n_episodes": 2514,
+    "icc_roi_day": {
+      "icc": 0.10398636391665829,
+      "J": 230,
+      "N": 2530,
+      "k0": 10.95074995253465
+    },
+    "n_eff": {
+      "n_eff_total": 1091.1456493088199,
+      "n_eff_nbets": 1240.2789830763734,
+      "J": 230,
+      "kbar": 11.0,
+      "cap_1_over_icc": 9.616645513266217
+    },
+    "n_exposed_bd": 1261,
+    "maxdd": {
+      "maxDD_pct": -14.39474927280412,
+      "peak": "2021-11-15",
+      "trough": "2022-05-12",
+      "bd_share_of_maxdd_depth_pct": 75.53093752273769,
+      "uw_days_total": 1381,
+      "uw_days_bd_pct": 11.223750905141202,
+      "top10_worst_days": [
+        {
+          "day": "2022-11-10",
+          "ret_pct": -8.410538144587342,
+          "bigdown": true,
+          "n_opened": 4,
+          "n_closed": 5,
+          "pct_closed_loss": 20.0
+        },
+        {
+          "day": "2022-05-12",
+          "ret_pct": -5.598355037697056,
+          "bigdown": true,
+          "n_opened": 20,
+          "n_closed": 29,
+          "pct_closed_loss": 55.172413793103445
+        },
+        {
+          "day": "2024-04-14",
+          "ret_pct": -5.387200632625399,
+          "bigdown": true,
+          "n_opened": 22,
+          "n_closed": 13,
+          "pct_closed_loss": 0.0
+        },
+        {
+          "day": "2025-03-04",
+          "ret_pct": -3.577453373417905,
+          "bigdown": true,
+          "n_opened": 18,
+          "n_closed": 9,
+          "pct_closed_loss": 11.11111111111111
+        },
+        {
+          "day": "2021-09-08",
+          "ret_pct": -3.5333488987469797,
+          "bigdown": true,
+          "n_opened": 14,
+          "n_closed": 14,
+          "pct_closed_loss": 0.0
+        },
+        {
+          "day": "2024-04-13",
+          "ret_pct": -3.4112143159158226,
+          "bigdown": true,
+          "n_opened": 26,
+          "n_closed": 12,
+          "pct_closed_loss": 0.0
+        },
+        {
+          "day": "2021-09-21",
+          "ret_pct": -3.291329210546745,
+          "bigdown": true,
+          "n_opened": 1,
+          "n_closed": 3,
+          "pct_closed_loss": 0.0
+        },
+        {
+          "day": "2021-12-05",
+          "ret_pct": -3.2906438989683373,
+          "bigdown": true,
+          "n_opened": 2,
+          "n_closed": 6,
+          "pct_closed_loss": 33.33333333333333
+        },
+        {
+          "day": "2025-11-09",
+          "ret_pct": -3.223068833828391,
+          "bigdown": false,
+          "n_opened": 0,
+          "n_closed": 2,
+          "pct_closed_loss": 0.0
+        },
+        {
+          "day": "2021-09-22",
+          "ret_pct": -3.208026755852844,
+          "bigdown": true,
+          "n_opened": 3,
+          "n_closed": 4,
+          "pct_closed_loss": 0.0
+        }
+      ]
+    },
+    "uw_longest": {
+      "longest_days": 332,
+      "start": "2021-11-16",
+      "end": "2022-10-13"
+    },
+    "cagr": 27.377379079742113,
+    "maxDD_stats": -14.39474927280412,
+    "uw_stats": 332,
+    "yr": {
+      "2021": 7.394285714285709,
+      "2022": 7.366712780674689,
+      "2023": 59.44445821047155,
+      "2024": 40.45410042426221,
+      "2025": 15.011396578813429
+    }
+  },
+  "R0": {
+    "tag": "X1_C3_FULL_2021",
+    "n_rows": 2559,
+    "n_episodes": 2505,
+    "icc_roi_day": {
+      "icc": 0.10162087669603478,
+      "J": 230,
+      "N": 2521,
+      "k0": 10.915083603408226
+    },
+    "n_eff": {
+      "n_eff_total": 1103.8551125715353,
+      "n_eff_nbets": 1252.8374595049163,
+      "J": 230,
+      "kbar": 10.960869565217392,
+      "cap_1_over_icc": 9.84049766654906
+    },
+    "n_exposed_bd": 1262,
+    "maxdd": {
+      "maxDD_pct": -16.128952569169964,
+      "peak": "2021-11-15",
+      "trough": "2022-05-12",
+      "bd_share_of_maxdd_depth_pct": 74.84910257449407,
+      "uw_days_total": 1286,
+      "uw_days_bd_pct": 11.35303265940902,
+      "top10_worst_days": [
+        {
+          "day": "2022-11-10",
+          "ret_pct": -9.480522409942926,
+          "bigdown": true,
+          "n_opened": 5,
+          "n_closed": 6,
+          "pct_closed_loss": 16.666666666666664
+        },
+        {
+          "day": "2022-05-12",
+          "ret_pct": -8.807413376309425,
+          "bigdown": true,
+          "n_opened": 20,
+          "n_closed": 29,
+          "pct_closed_loss": 55.172413793103445
+        },
+        {
+          "day": "2024-04-14",
+          "ret_pct": -6.012248336917292,
+          "bigdown": true,
+          "n_opened": 22,
+          "n_closed": 13,
+          "pct_closed_loss": 0.0
+        },
+        {
+          "day": "2021-12-05",
+          "ret_pct": -3.6263983782566234,
+          "bigdown": true,
+          "n_opened": 2,
+          "n_closed": 6,
+          "pct_closed_loss": 33.33333333333333
+        },
+        {
+          "day": "2024-04-13",
+          "ret_pct": -3.6132457394972284,
+          "bigdown": true,
+          "n_opened": 26,
+          "n_closed": 12,
+          "pct_closed_loss": 0.0
+        },
+        {
+          "day": "2025-03-04",
+          "ret_pct": -3.596999935203782,
+          "bigdown": true,
+          "n_opened": 18,
+          "n_closed": 9,
+          "pct_closed_loss": 11.11111111111111
+        },
+        {
+          "day": "2025-04-09",
+          "ret_pct": -3.563228165660348,
+          "bigdown": true,
+          "n_opened": 5,
+          "n_closed": 5,
+          "pct_closed_loss": 0.0
+        },
+        {
+          "day": "2022-05-10",
+          "ret_pct": -3.5088179718664736,
+          "bigdown": true,
+          "n_opened": 18,
+          "n_closed": 18,
+          "pct_closed_loss": 0.0
+        },
+        {
+          "day": "2022-01-23",
+          "ret_pct": -3.4557866496666367,
+          "bigdown": true,
+          "n_opened": 1,
+          "n_closed": 5,
+          "pct_closed_loss": 0.0
+        },
+        {
+          "day": "2025-11-09",
+          "ret_pct": -3.4247010433705483,
+          "bigdown": false,
+          "n_opened": 0,
+          "n_closed": 2,
+          "pct_closed_loss": 0.0
+        }
+      ]
+    },
+    "uw_longest": {
+      "longest_days": 248,
+      "start": "2021-11-16",
+      "end": "2022-07-21"
+    },
+    "cagr": 31.93892520362953,
+    "maxDD_stats": -16.128952569169964,
+    "uw_stats": 248,
+    "yr": {
+      "2021": 9.27714285714285,
+      "2022": 17.305932491437236,
+      "2023": 60.42883252351447,
+      "2024": 45.27633443552197,
+      "2025": 16.451653007162868
+    }
+  },
+  "gate": {
+    "u1_thr": 909.3832902230661,
+    "u1_pass": true,
+    "neff_dt": 1091.1456493088199,
+    "neff_t170": 606.2555268153774,
+    "u3_maxdd_thr": -14.8,
+    "u3_uw_thr": 115,
+    "u3_pass": false,
+    "maxdd_dt": -14.39474927280412,
+    "uw_dt": 332,
+    "u4_pass": false,
+    "uw_r0": 248,
+    "uw_t100": 248,
+    "longest_dt": 332,
+    "longest_r0": 248,
+    "u4_note": "R0 == T100 trong vong nay (g0 noi suy = 1.00) nen u4 thuc chat la 1 dieu kien (UW(DT) < UW(T100))",
+    "du_bao_xac_nhan": true
+  }
+}

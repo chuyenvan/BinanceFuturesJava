@@ -185,6 +185,12 @@ for ln in open(basep):
     pairs[k] = v.strip()
 ov = dict(CFG["overrides"])
 ov["WFO_FUNDING_PRED_DIR"] = PREDWF                 # bins pin: duong dan Oracle -> mount Kaggle
+# [BRC B7] regime CSV (gate lien tuc/nhi phan): SIM_REGIME_FILE tro ten file -> resolve mount Kaggle.
+#   No-op khi profile/overrides khong khai bao SIM_REGIME_FILE (T170/c2b...) => khong doi hanh vi cu.
+_rf = ov.get("SIM_REGIME_FILE") or pairs.get("SIM_REGIME_FILE")
+if _rf:
+    ov["SIM_REGIME_FILE"] = f1(IN + "/**/" + os.path.basename(_rf))
+    LOG.info("regime_file resolved=%s", ov["SIM_REGIME_FILE"])
 for k, v in ov.items():
     if k not in pairs:
         order.append(k)
@@ -277,7 +283,11 @@ sys.exit(0)
 '''
 
 
+<<<<<<< HEAD
 def submit(tag, profile, overrides=None, *, bins_ds=None, bundle_ds=None, code_sha="head",
+=======
+def submit(tag, profile, overrides=None, *, bins_ds=None, bundle_ds=None, extra_ds=None, code_sha="head",
+>>>>>>> ab447a7389d84e41ed55949f5458acdcd70bd2c4
            sim_end_date=DEFAULT_SIM_END, ticker_min_days=TICKER_MIN_DAYS,
            xmx=DEFAULT_XMX, timeout_s=DEFAULT_TIMEOUT_S, enable_internet=True,
            push=True) -> str:
@@ -304,7 +314,12 @@ def submit(tag, profile, overrides=None, *, bins_ds=None, bundle_ds=None, code_s
             "language": "python", "kernel_type": "script", "is_private": True,
             "enable_gpu": False, "enable_internet": enable_internet,
             "dataset_sources": [bundle_ref] + TICKER_DS
+<<<<<<< HEAD
                                 + ([USER + "/" + bins_ds] if bins_ds else []),
+=======
+                                + ([USER + "/" + bins_ds] if bins_ds else [])
+                                + [(USER + "/" + d) for d in (extra_ds or [])],
+>>>>>>> ab447a7389d84e41ed55949f5458acdcd70bd2c4
             "competition_sources": [], "kernel_sources": []}
     with open(os.path.join(folder, "kernel-metadata.json"), "w") as f:
         json.dump(meta, f, indent=1)

@@ -176,3 +176,75 @@ copy tại `tasks/` trong repo) — TASK A/A-recon/B ở vòng đó là hướng
 tần suất vào lệnh / k̄ vị thế đồng thời chứ không phải hedge-beta. Shadow-c3 production DOWN
 09-20 06:13 (jar cũ mang STUB API key) → **ĐÃ KHÔI PHỤC 09-20 22:06** (rebuild+redeploy, không
 sửa file repo).
+
+## 🔴 HƯỚNG BREADTH (hạ gate lấy breadth) — ĐÓNG 2026-09-21 sau 5 round
+
+Thực hiện đúng hướng "tăng k̄/tần suất" đề ra ở mục 5 ngay trên (hạ `SIM_GATE_DYN_SCALE` từ 1.70 để
+lấy thêm breadth), nhưng theo 5 round độc lập đều NULL/NO-GO:
+
+1. **TASK B (pacing-size P0/P3 trên gate 1.0, `0ca2c62`, PREREG `aa3c4aa`)**: giảm size khi bigdown
+   đạt breadth dễ dàng (n_eff ×1.74-1.80) nhưng KHÔNG kéo được UW về khẩu vị (cả hai vỡ 2025,
+   UW>200) — pacing theo kích thước chỉ sửa maxDD, không sửa UW (tần suất/thời gian dưới nước).
+2. **B2 Bước 2 (regime-adaptive gate MA200-trailing, `54d9cdb`, PREREG `9c5b74d`)**: cơ chế sửa
+   ĐÚNG UW-nguồn-2022 (khớp T170 gần tuyệt đối năm đó) nhưng vỡ khẩu vị vì 2025 — tồn tại nguồn UW
+   dài thứ hai, độc lập với xu hướng BTC, mà regime macro không bắt được.
+3. **B2 Bước 3 (drawdown-throttle nội tại, `50f7ff0`, PREREG `0d3eb51`)**: giảm đúng maxDD như dự
+   báo nhưng UW **TĂNG 34%** (248→332 ngày) so với chính nền nó chạy trên — xác nhận đúng dự báo
+   MASTER: giảm phơi nhiễm lúc dưới nước = phục hồi chậm hơn = UW không giảm.
+4. **B2 Bước 4 (up-gate chặt hơn: RA12 khoá, `dccba82`, PREREG `ba3d7ba`)**: chỉ đạt 1/5 tiêu chí;
+   RA14 (sweep mô tả, không phải ứng viên) là biến thể DUY NHẤT PASS khẩu vị 5/5 năm nhưng bị
+   luật chống overfit khoá trước khi chạy (cấm mở biến thể quanh winner sau khi thấy kết quả) —
+   không được dùng để thay RA12 làm quyết định.
+5. **B2 Bước 5.1 (trend-detector SMA7/100, `64285c1`, PREREG `3e3aa88`)**: NO-GO ở khâu coverage
+   (chỉ phân loại được 19.8% ngày, dưới ngưỡng tối thiểu 60% để tin số liệu) — không tới được
+   bước đo hiệu năng.
+
+**Kết luận cơ chế**: breadth CÓ alpha thật (CAGR round breadth-improvement dao động 31-34%, cao hơn
+T170 29.27%) nhưng UW (thời gian dưới nước) là nút thắt NỘI TẠI của hướng long-only-breadth trên
+crypto — không phải lỗi thiết kế phòng thủ có thể vá. Ba thiết kế phòng thủ ĐỘC LẬP về cơ chế
+(giảm-đều theo bigdown / theo-regime BTC-macro / theo-drawdown-nội-tại) đều thất bại CÙNG MỘT LÝ DO:
+giảm phơi nhiễm khi đang thua = phục hồi chậm hơn = UW không giảm (hoặc tăng). Không cơ chế phơi
+nhiễm nào đo được phá vỡ trade-off breadth↔UW trong 5 round độc lập này.
+
+RA14 (up=1.4, PASS khẩu vị 5/5 năm ở B2 Bước 4) là ứng viên "đẹp" nhất về số nhưng **KHÔNG được
+chọn thẳng từ số DEV** theo đúng luật chống overfit — nếu muốn theo đuổi lại, phải chờ một
+round PREREG riêng, có shadow-forward/holdout xác nhận trước, không được suy ra ngược từ kết quả
+đã thấy.
+
+**Hạ tầng để lại (dùng lại được, cổng OFF byte-identical PASS, md5 `efb793e2468ca3a7318da0f0ad23d4fc`
+xuyên suốt cả 5 round)**: `GATE_REGIME_ADAPTIVE`/`RegimeSchedule`/`SIM_REGIME_SCALE_UP` (regime
+BTC-vs-MA200-trailing, đọc CSV ngoài, causal), `PacingSizing.java` (mode `OFF|P0|P3|DT`, cắm được
+thêm mode mới không đổi đường OFF), script sinh CSV regime MA200. Không xoá, không revert — có thể
+tái sử dụng cho hướng khác (ví dụ sizing/risk-management) dù hướng breadth đã đóng.
+
+**Chuyển sang TASK D (alpha event-trigger mới, độc lập cơ chế với breadth/MOM15)**: Bước 1 recon
+(`docs/RECON_EVENT_ALPHA.md`, `5b97a07`) đã xong — nguồn listing/delisting (Binance Announcement
+Archive + `claudedata/universe_birth_death.csv` nội bộ), verdict **GO** cho nhánh listing (causal-safe,
+648 event/4.5 năm, độc lập MOM15 đo thật 0/709 cặp (symbol,tháng) trùng T170 entry). Quyết định của
+Uni, 2026-09-21.
+
+6. **B2 Bước 8 (breadth theo SUBSET majors/alts, ý Uni; recon `docs/DIAG_BREADTH_SUBSET.md`)**: NO-GO
+   ở cổng recon 0-sim (không tới bước sim). Book T170 = 98% alts ⇒ relevant-breadth = alt-only; nhưng
+   alt = 612/627 symId của all-coin ⇒ alt-breadth ≈ all-breadth (chênh gate ≤ 0.031/năm, dưới ngưỡng
+   0.10). Không định nghĩa nào (all/top50/top30/major/alt) đạt gate-2025 ≥ 1.60 + giữ 2023/24 ≤ 1.20:
+   gate-2025 đóng trần ~1.44 vì breadth-alt-2025 bình quân 0.194 (không ~0). Thu hẹp universe (top30/
+   major) còn NỚI 2025 (đọc "khoẻ hơn" — đúng chiều sai). ⇒ **lever breadth-subset đóng**, là bằng
+   chứng thứ 3 (sau BR nhị phân Bước 6 + BRC liên tục Bước 7) rằng breadth-gate không phá được trade-off
+   breadth↔UW-2025 cho T170. Roadmap: TASK D (event-alpha). Quyết định recon máy móc, 2026-09-22.
+
+7. **B2 Bước 9 (breadth TOP50 gate LIÊN TỤC = BRCT50; PREREG `docs/PREREG_BREADTH_CONT_T50.md`
+   `6312e06`, RESULT `docs/RESULT_BREADTH_CONT_T50.md` `e199557`)**: NULL — hoán vị CUỐI của
+   breadth (liên tục × top50). u1-u5 đều fail (n_eff ×1.339<1.5; UW=223 >115 & >200 vỡ khẩu vị
+   2025; ret-2025 26.8<31.07=0.95×T170; CAGR23 46.8<54.39). Cổng OFF byte-identical PASS
+   (`efb793e2`, jar breadth-cont `06def68b`, 0 dòng Java). **PHÁT HIỆN QUAN TRỌNG (dự báo SAI ở
+   tầng kết quả)**: gate-2025 top50 NỚI hơn all-coin ĐÚNG dự báo (mean 1.31 vs BRC 1.42 — top50
+   gồm majors mạnh 2025), NHƯNG ret-2025(BRCT50)=26.8 lại KÉM HƠN BRC (28.7), không gần T170 (32.7)
+   hơn — xếp hạng giữ-2025: T170 32.7 > BRC 28.7 > BRCT50 26.8 > BR 22.9 > T100 16.5. Nới đúng cửa
+   2025 (gate 1.31, +87 lệnh so BRC) vẫn cho ret-2025 GIẢM + UW-2025 dài y nguyên (223≈221) ⇒ củng
+   cố audit đối kháng: nới/cắt gate breadth = đổi phơi nhiễm KHÔNG đổi edge (lệnh breadth-thấp lãi
+   ≈ breadth-cao). ⇒ **hướng breadth-gate ĐÓNG DỨT ĐIỂM**: 3 biến thể gate (BR nhị phân Bước 6 /
+   BRC all-coin liên tục Bước 7 / BRCT50 top50 liên tục Bước 9) + subset recon Bước 8 + audit đối
+   kháng đều NULL/NO-GO; trade-off breadth↔UW-2025 không phá được cho T170. **Bài học khoá:
+   coverage thời-gian ≠ discrimination tầng-lệnh — phải base-rate-adjust + test ở TẦNG LỆNH (lãi
+   theo breadth-bin) trước khi tin một gate theo regime/breadth.** T170 vẫn incumbent. Roadmap:
+   TASK D (event-alpha). shadow-c3 KHÔNG đụng (sim 100% Kaggle). 2026-09-22.
