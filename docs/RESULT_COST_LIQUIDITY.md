@@ -301,3 +301,14 @@ xác nhận"*; `docs/ROADMAP.md:67` để ngỏ *"Calibrate chi phí từ log pr
 | `/tmp/liq_decide/` | trung gian (`legs.npz`, `anchor_mom15.npz`, `report_liq.txt`, `report_cost.txt`, `diag.json`, `summary.json`) — **dọn sau khi commit** |
 
 **Commit: `cd5e758`** (pre-reg) + commit kết quả (hash ở `git log`, `KHÔNG push`).
+
+---
+
+## 7. Vệ sinh file tạm (sau commit)
+
+`/tmp/liq_decide/` giữ lại **bằng chứng số nhỏ** (60 KB): `report_liq.txt`, `report_cost.txt`,
+`final_liq.log`, `final_cost.log`, `summary.json`, `diag.json`.
+Đã **xoá** phần trung gian nặng: `legs.npz` (351 KB), `anchor_mom15.npz` (411 KB, bản sao — bản gốc vẫn ở
+`/tmp/.trash_mine/range4h_topk_1790096271/`) và các log chạy trùng (`run*.log`).
+Hai script tái tạo lại `legs.npz` được từ nguồn: `python3 research/analysis/liq_decile_t170.py` (đọc
+`printDone.csv` + `raw/*.f32`), rồi `python3 research/analysis/cost_breakeven.py`.
