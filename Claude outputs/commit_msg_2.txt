@@ -1,0 +1,9 @@
+TASK B2 Buoc 5.1: DIAG trend-detector regime (SMA7/100 1D+4H-OR, BTC/ETH/OR) - VERDICT NO-GO
+
+Detector production isBtc/EthTrendBuyProduction goi 2025 up=67.4% (BTC, thap hon MA200=73.4%,
+dung huong ky vong) nhung phu not-up UW-2025 chi 19.8% (can >=60%), UW-2022 60.9% (vua du).
+Ca hai deu can dat >=60% theo cong PREREG => NO-GO. Ket qua: research/analysis/trend_regime.py,
+research/analysis/out/trend_regime.json, docs/DIAG_TREND_REGIME.md.
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01UoVRjusfNM2USSVNKQrm7z

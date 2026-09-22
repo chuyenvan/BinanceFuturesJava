@@ -1,0 +1,4 @@
+TASK B2 Buoc 5.1: PREREG trend-detector regime diagnostic (khoa dinh nghia detector SMA7/100 1D+4H-OR, metric, cong GO/NO-GO truoc khi tinh so)
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01UoVRjusfNM2USSVNKQrm7z

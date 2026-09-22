@@ -30,16 +30,22 @@ LOG = logging.getLogger(__name__)
 
 USER = "chuyendinh"
 BUNDLE_DS = USER + "/sim-c2b-bundle"
-# [X3 2026-09-06] tra no X2 muc 10: cua so DEV la 48 thang (2022-01-01..2025-12-31 = 1,461 ngay).
-#   Ba dataset 2024h2/2025h1/2025h2 DA co san tren Kaggle; truoc day danh sach nay dung o
-#   2024h1 nen kernel chi thay 912 ngay => X1/X2 phai chay tuan tu tren Oracle.
-TICKER_DS = [USER + "/wfo-ticker-2022", USER + "/wfo-ticker-2023",
+# [X1_T170_48M 2026-09-22] cua so DEV thuc te cua T170/X1 la 2021-07-01..2025-12-31
+#   (~54 thang, 1,645 ngay, xem leakFreeFrom trong manifest.txt cua wfo_ds_x1_2021) - can
+#   THEM wfo-ticker-2021 (365 ngay) chu KHONG CHI 2024h2/2025h1/2025h2: AGENT_RUNBOOK cu
+#   (2026-09-06) chi nhac 3 dataset nua sau nhung danh sach luc do van thieu ca nua dau
+#   2021. Kiem tra thuc te tren Kaggle (KaggleApi.dataset_list_files, 2026-09-22): CA 7
+#   dataset duoi day lien tuc, KHONG thieu ngay nao tu 2021-01-01 den 2025-12-31
+#   (365+365+365+182+184+181+184 = 1,826 file).
+TICKER_DS = [USER + "/wfo-ticker-2021",
+             USER + "/wfo-ticker-2022", USER + "/wfo-ticker-2023",
              USER + "/wfo-ticker-2024h1", USER + "/wfo-ticker-2024h2",
              USER + "/wfo-ticker-2025h1", USER + "/wfo-ticker-2025h2"]
 # So ngay ticker TOI THIEU kernel phai thay truoc khi chay (guard chong thieu ngay am tham).
-#   1,461 = 2022-01-01..2025-12-31 (2024 nhuan). Day qua CFG["ticker_min_days"] vao kernel;
-#   run cua so ngan hon truyen submit(..., ticker_min_days=912).
-TICKER_MIN_DAYS = 1461
+#   1,826 = TONG so file cua CA 7 dataset TICKER_DS o tren (2021-01-01..2025-12-31, da
+#   kiem KHONG thieu ngay nao). Day qua CFG["ticker_min_days"] vao kernel; run cua so
+#   ngan hon truyen submit(..., ticker_min_days=<nho hon, vd 912>).
+TICKER_MIN_DAYS = 1826
 DATASETS = [BUNDLE_DS] + TICKER_DS
 
 MAX_CONCURRENT = 5          # slot CPU toan account (docs/KAGGLE_RULES.md muc 1)
@@ -271,7 +277,7 @@ sys.exit(0)
 '''
 
 
-def submit(tag, profile, overrides=None, *, bins_ds=None, code_sha="head",
+def submit(tag, profile, overrides=None, *, bins_ds=None, bundle_ds=None, code_sha="head",
            sim_end_date=DEFAULT_SIM_END, ticker_min_days=TICKER_MIN_DAYS,
            xmx=DEFAULT_XMX, timeout_s=DEFAULT_TIMEOUT_S, enable_internet=True,
            push=True) -> str:
@@ -279,6 +285,9 @@ def submit(tag, profile, overrides=None, *, bins_ds=None, code_sha="head",
 
     `overrides` la dict key=value ghi de LEN BAN COPY cua profile (khong bao gio dat
     qua env — `Cfg` fail-fast `exit 2` neu co env tham so giao dich kem TRADING_PROFILE).
+    `bundle_ds` (moi, 2026-09-22): doi bundle du lieu chinh (mac dinh `BUNDLE_DS` =
+    sim-c2b-bundle) sang dataset KHAC (vd bundle X1 48 thang) — truyen TEN dataset
+    (KHONG prefix USER). `TICKER_DS` (ticker) va cach chon bins qua `bins_ds` khong doi.
     """
     ref = kernel_ref(tag)
     folder = os.path.join(WORKDIR, slug(tag))
@@ -290,10 +299,12 @@ def submit(tag, profile, overrides=None, *, bins_ds=None, code_sha="head",
     code = KERNEL_TEMPLATE.replace("__CFG_JSON__", repr(json.dumps(cfg)))
     with open(os.path.join(folder, "run.py"), "w") as f:
         f.write(code)
+    bundle_ref = (USER + "/" + bundle_ds) if bundle_ds else BUNDLE_DS
     meta = {"id": ref, "title": ref.split("/")[1], "code_file": "run.py",
             "language": "python", "kernel_type": "script", "is_private": True,
             "enable_gpu": False, "enable_internet": enable_internet,
-            "dataset_sources": DATASETS + ([USER + "/" + bins_ds] if bins_ds else []),
+            "dataset_sources": [bundle_ref] + TICKER_DS
+                                + ([USER + "/" + bins_ds] if bins_ds else []),
             "competition_sources": [], "kernel_sources": []}
     with open(os.path.join(folder, "kernel-metadata.json"), "w") as f:
         json.dump(meta, f, indent=1)
