@@ -1,0 +1,594 @@
+{
+  "T170": {
+    "tag": "X1_GS_T170_2021",
+    "n": 1089,
+    "n_eff_total": 606.2555268153774,
+    "icc": 0.05160667836626019,
+    "maxdd": {
+      "maxDD_pct": -11.844309553336373,
+      "peak": "2022-10-17",
+      "trough": "2022-11-10",
+      "bd_share_of_maxdd_depth_pct": 100.0,
+      "uw_days_total": 1062,
+      "uw_days_bd_pct": 11.864406779661017,
+      "top10_worst_days": [
+        {
+          "day": "2022-11-10",
+          "ret_pct": -10.861052446321718,
+          "bigdown": true,
+          "n_opened": 5,
+          "n_closed": 12,
+          "pct_closed_loss": 33.33333333333333
+        },
+        {
+          "day": "2024-04-14",
+          "ret_pct": -4.2113333995939195,
+          "bigdown": true,
+          "n_opened": 13,
+          "n_closed": 11,
+          "pct_closed_loss": 0.0
+        },
+        {
+          "day": "2022-05-12",
+          "ret_pct": -3.2119451712797398,
+          "bigdown": true,
+          "n_opened": 16,
+          "n_closed": 10,
+          "pct_closed_loss": 30.0
+        },
+        {
+          "day": "2025-03-04",
+          "ret_pct": -2.334020618556698,
+          "bigdown": true,
+          "n_opened": 14,
+          "n_closed": 6,
+          "pct_closed_loss": 16.666666666666664
+        },
+        {
+          "day": "2022-11-14",
+          "ret_pct": -2.088902302319562,
+          "bigdown": true,
+          "n_opened": 5,
+          "n_closed": 6,
+          "pct_closed_loss": 16.666666666666664
+        },
+        {
+          "day": "2021-12-06",
+          "ret_pct": -1.903979690883295,
+          "bigdown": false,
+          "n_opened": 0,
+          "n_closed": 0,
+          "pct_closed_loss": null
+        },
+        {
+          "day": "2022-05-17",
+          "ret_pct": -1.867766701042739,
+          "bigdown": false,
+          "n_opened": 0,
+          "n_closed": 1,
+          "pct_closed_loss": 100.0
+        },
+        {
+          "day": "2022-11-13",
+          "ret_pct": -1.8554956098593034,
+          "bigdown": false,
+          "n_opened": 0,
+          "n_closed": 0,
+          "pct_closed_loss": null
+        },
+        {
+          "day": "2024-04-13",
+          "ret_pct": -1.693140895005718,
+          "bigdown": true,
+          "n_opened": 16,
+          "n_closed": 7,
+          "pct_closed_loss": 0.0
+        },
+        {
+          "day": "2025-11-07",
+          "ret_pct": -1.622286964144981,
+          "bigdown": false,
+          "n_opened": 2,
+          "n_closed": 2,
+          "pct_closed_loss": 50.0
+        }
+      ]
+    },
+    "maxDD": -11.844309553336373,
+    "uw": 92,
+    "uw_year": {
+      "2021": 37,
+      "2022": 72,
+      "2023": 63,
+      "2024": 92,
+      "2025": 52
+    },
+    "cagr": 29.268653300162594,
+    "yr": {
+      "2021": 12.205714285714286,
+      "2022": 19.576288449786116,
+      "2023": 34.96166950596251,
+      "2024": 32.05686515825681,
+      "2025": 32.7080470756915
+    },
+    "equity": 111070.0
+  },
+  "T100": {
+    "tag": "X1_C3_FULL_2021",
+    "n": 2559,
+    "n_eff_total": 1103.8551125715353,
+    "icc": 0.10162087669603478,
+    "maxdd": {
+      "maxDD_pct": -16.128952569169964,
+      "peak": "2021-11-15",
+      "trough": "2022-05-12",
+      "bd_share_of_maxdd_depth_pct": 74.84910257449407,
+      "uw_days_total": 1286,
+      "uw_days_bd_pct": 11.35303265940902,
+      "top10_worst_days": [
+        {
+          "day": "2022-11-10",
+          "ret_pct": -9.480522409942926,
+          "bigdown": true,
+          "n_opened": 5,
+          "n_closed": 6,
+          "pct_closed_loss": 16.666666666666664
+        },
+        {
+          "day": "2022-05-12",
+          "ret_pct": -8.807413376309425,
+          "bigdown": true,
+          "n_opened": 20,
+          "n_closed": 29,
+          "pct_closed_loss": 55.172413793103445
+        },
+        {
+          "day": "2024-04-14",
+          "ret_pct": -6.012248336917292,
+          "bigdown": true,
+          "n_opened": 22,
+          "n_closed": 13,
+          "pct_closed_loss": 0.0
+        },
+        {
+          "day": "2021-12-05",
+          "ret_pct": -3.6263983782566234,
+          "bigdown": true,
+          "n_opened": 2,
+          "n_closed": 6,
+          "pct_closed_loss": 33.33333333333333
+        },
+        {
+          "day": "2024-04-13",
+          "ret_pct": -3.6132457394972284,
+          "bigdown": true,
+          "n_opened": 26,
+          "n_closed": 12,
+          "pct_closed_loss": 0.0
+        },
+        {
+          "day": "2025-03-04",
+          "ret_pct": -3.596999935203782,
+          "bigdown": true,
+          "n_opened": 18,
+          "n_closed": 9,
+          "pct_closed_loss": 11.11111111111111
+        },
+        {
+          "day": "2025-04-09",
+          "ret_pct": -3.563228165660348,
+          "bigdown": true,
+          "n_opened": 5,
+          "n_closed": 5,
+          "pct_closed_loss": 0.0
+        },
+        {
+          "day": "2022-05-10",
+          "ret_pct": -3.5088179718664736,
+          "bigdown": true,
+          "n_opened": 18,
+          "n_closed": 18,
+          "pct_closed_loss": 0.0
+        },
+        {
+          "day": "2022-01-23",
+          "ret_pct": -3.4557866496666367,
+          "bigdown": true,
+          "n_opened": 1,
+          "n_closed": 5,
+          "pct_closed_loss": 0.0
+        },
+        {
+          "day": "2025-11-09",
+          "ret_pct": -3.4247010433705483,
+          "bigdown": false,
+          "n_opened": 0,
+          "n_closed": 2,
+          "pct_closed_loss": 0.0
+        }
+      ]
+    },
+    "maxDD": -16.128952569169964,
+    "uw": 248,
+    "uw_year": {
+      "2021": 47,
+      "2022": 64,
+      "2023": 45,
+      "2024": 121,
+      "2025": 227
+    },
+    "cagr": 31.93892520362953,
+    "yr": {
+      "2021": 9.27714285714285,
+      "2022": 17.305932491437236,
+      "2023": 60.42883252351447,
+      "2024": 45.27633443552197,
+      "2025": 16.451653007162868
+    },
+    "equity": 121770.0
+  },
+  "BR": {
+    "tag": "X1_C3_FULL_2021_REGIME_BR",
+    "n": 1582,
+    "n_eff_total": 741.8331556627869,
+    "icc": 0.08273943560377706,
+    "maxdd": {
+      "maxDD_pct": -11.8420127907794,
+      "peak": "2022-10-17",
+      "trough": "2022-11-10",
+      "bd_share_of_maxdd_depth_pct": 100.0,
+      "uw_days_total": 1199,
+      "uw_days_bd_pct": 12.26021684737281,
+      "top10_worst_days": [
+        {
+          "day": "2022-11-10",
+          "ret_pct": -10.86266521388981,
+          "bigdown": true,
+          "n_opened": 5,
+          "n_closed": 12,
+          "pct_closed_loss": 33.33333333333333
+        },
+        {
+          "day": "2024-04-14",
+          "ret_pct": -6.012649292712535,
+          "bigdown": true,
+          "n_opened": 15,
+          "n_closed": 9,
+          "pct_closed_loss": 0.0
+        },
+        {
+          "day": "2021-12-05",
+          "ret_pct": -3.6268354693093974,
+          "bigdown": true,
+          "n_opened": 1,
+          "n_closed": 6,
+          "pct_closed_loss": 33.33333333333333
+        },
+        {
+          "day": "2024-04-13",
+          "ret_pct": -3.612785586958589,
+          "bigdown": true,
+          "n_opened": 26,
+          "n_closed": 12,
+          "pct_closed_loss": 0.0
+        },
+        {
+          "day": "2022-05-12",
+          "ret_pct": -3.207878819211085,
+          "bigdown": true,
+          "n_opened": 16,
+          "n_closed": 10,
+          "pct_closed_loss": 30.0
+        },
+        {
+          "day": "2021-09-08",
+          "ret_pct": -3.207715857061577,
+          "bigdown": true,
+          "n_opened": 11,
+          "n_closed": 12,
+          "pct_closed_loss": 0.0
+        },
+        {
+          "day": "2021-11-19",
+          "ret_pct": -3.0875323250528997,
+          "bigdown": true,
+          "n_opened": 0,
+          "n_closed": 14,
+          "pct_closed_loss": 92.85714285714286
+        },
+        {
+          "day": "2024-12-10",
+          "ret_pct": -3.013380265800225,
+          "bigdown": false,
+          "n_opened": 22,
+          "n_closed": 13,
+          "pct_closed_loss": 7.6923076923076925
+        },
+        {
+          "day": "2025-01-20",
+          "ret_pct": -2.710648369259505,
+          "bigdown": false,
+          "n_opened": 21,
+          "n_closed": 9,
+          "pct_closed_loss": 0.0
+        },
+        {
+          "day": "2021-12-06",
+          "ret_pct": -2.570797889522991,
+          "bigdown": false,
+          "n_opened": 0,
+          "n_closed": 1,
+          "pct_closed_loss": 0.0
+        }
+      ]
+    },
+    "maxDD": -11.8420127907794,
+    "uw": 180,
+    "uw_year": {
+      "2021": 46,
+      "2022": 72,
+      "2023": 63,
+      "2024": 121,
+      "2025": 58
+    },
+    "cagr": 30.1228878026502,
+    "yr": {
+      "2021": 4.202857142857153,
+      "2022": 19.58542403553509,
+      "2023": 47.00784151877837,
+      "2024": 45.168132759373634,
+      "2025": 22.921053762516653
+    },
+    "equity": 114410.0
+  },
+  "BRC": {
+    "tag": "X1_C3_FULL_2021_REGIME_BRC",
+    "n": 1689,
+    "n_eff_total": 753.5435009107571,
+    "icc": 0.09251794361861264,
+    "maxdd": {
+      "maxDD_pct": -13.216222589012027,
+      "peak": "2022-10-17",
+      "trough": "2022-11-10",
+      "bd_share_of_maxdd_depth_pct": 100.0,
+      "uw_days_total": 1294,
+      "uw_days_bd_pct": 11.205564142194746,
+      "top10_worst_days": [
+        {
+          "day": "2022-11-10",
+          "ret_pct": -11.064662671563886,
+          "bigdown": true,
+          "n_opened": 4,
+          "n_closed": 10,
+          "pct_closed_loss": 30.0
+        },
+        {
+          "day": "2024-04-14",
+          "ret_pct": -6.013092225254136,
+          "bigdown": true,
+          "n_opened": 15,
+          "n_closed": 9,
+          "pct_closed_loss": 0.0
+        },
+        {
+          "day": "2021-12-05",
+          "ret_pct": -3.63018597997139,
+          "bigdown": true,
+          "n_opened": 2,
+          "n_closed": 6,
+          "pct_closed_loss": 33.33333333333333
+        },
+        {
+          "day": "2024-04-13",
+          "ret_pct": -3.6113874541762625,
+          "bigdown": true,
+          "n_opened": 26,
+          "n_closed": 12,
+          "pct_closed_loss": 0.0
+        },
+        {
+          "day": "2021-09-08",
+          "ret_pct": -3.2080293914062086,
+          "bigdown": true,
+          "n_opened": 12,
+          "n_closed": 13,
+          "pct_closed_loss": 0.0
+        },
+        {
+          "day": "2021-09-22",
+          "ret_pct": -3.191692332851803,
+          "bigdown": true,
+          "n_opened": 0,
+          "n_closed": 1,
+          "pct_closed_loss": 0.0
+        },
+        {
+          "day": "2021-11-19",
+          "ret_pct": -3.085521185339224,
+          "bigdown": true,
+          "n_opened": 8,
+          "n_closed": 17,
+          "pct_closed_loss": 76.47058823529412
+        },
+        {
+          "day": "2022-05-12",
+          "ret_pct": -3.0681051921780167,
+          "bigdown": true,
+          "n_opened": 15,
+          "n_closed": 10,
+          "pct_closed_loss": 40.0
+        },
+        {
+          "day": "2024-12-10",
+          "ret_pct": -3.012622593534331,
+          "bigdown": false,
+          "n_opened": 22,
+          "n_closed": 13,
+          "pct_closed_loss": 7.6923076923076925
+        },
+        {
+          "day": "2025-01-20",
+          "ret_pct": -2.7113033263922226,
+          "bigdown": false,
+          "n_opened": 21,
+          "n_closed": 10,
+          "pct_closed_loss": 0.0
+        }
+      ]
+    },
+    "maxDD": -13.216222589012027,
+    "uw": 221,
+    "uw_year": {
+      "2021": 46,
+      "2022": 76,
+      "2023": 66,
+      "2024": 119,
+      "2025": 221
+    },
+    "cagr": 31.28190979754091,
+    "yr": {
+      "2021": 5.8599999999999985,
+      "2022": 17.000890664219593,
+      "2023": 47.686274509803916,
+      "2024": 44.49408015994503,
+      "2025": 28.708868422190513
+    },
+    "equity": 119066.0
+  },
+  "BRCT50": {
+    "tag": "X1_C3_FULL_2021_REGIME_BRCT50",
+    "n": 1776,
+    "n_eff_total": 811.9630668565903,
+    "icc": 0.08917649791581679,
+    "maxdd": {
+      "maxDD_pct": -13.222577309897543,
+      "peak": "2022-10-17",
+      "trough": "2022-11-10",
+      "bd_share_of_maxdd_depth_pct": 100.0,
+      "uw_days_total": 1312,
+      "uw_days_bd_pct": 11.28048780487805,
+      "top10_worst_days": [
+        {
+          "day": "2022-11-10",
+          "ret_pct": -11.070172903722963,
+          "bigdown": true,
+          "n_opened": 3,
+          "n_closed": 9,
+          "pct_closed_loss": 33.33333333333333
+        },
+        {
+          "day": "2024-04-14",
+          "ret_pct": -6.012595387364894,
+          "bigdown": true,
+          "n_opened": 15,
+          "n_closed": 9,
+          "pct_closed_loss": 0.0
+        },
+        {
+          "day": "2021-12-05",
+          "ret_pct": -3.6261100336837826,
+          "bigdown": true,
+          "n_opened": 2,
+          "n_closed": 6,
+          "pct_closed_loss": 33.33333333333333
+        },
+        {
+          "day": "2024-04-13",
+          "ret_pct": -3.6133707020302164,
+          "bigdown": true,
+          "n_opened": 26,
+          "n_closed": 12,
+          "pct_closed_loss": 0.0
+        },
+        {
+          "day": "2021-09-08",
+          "ret_pct": -3.2060785767235034,
+          "bigdown": true,
+          "n_opened": 12,
+          "n_closed": 13,
+          "pct_closed_loss": 0.0
+        },
+        {
+          "day": "2021-09-22",
+          "ret_pct": -3.180145068745266,
+          "bigdown": true,
+          "n_opened": 0,
+          "n_closed": 1,
+          "pct_closed_loss": 0.0
+        },
+        {
+          "day": "2021-11-19",
+          "ret_pct": -3.0920390953400156,
+          "bigdown": true,
+          "n_opened": 4,
+          "n_closed": 16,
+          "pct_closed_loss": 81.25
+        },
+        {
+          "day": "2022-05-12",
+          "ret_pct": -3.068134822167079,
+          "bigdown": true,
+          "n_opened": 15,
+          "n_closed": 10,
+          "pct_closed_loss": 40.0
+        },
+        {
+          "day": "2024-12-10",
+          "ret_pct": -3.014078474249582,
+          "bigdown": false,
+          "n_opened": 22,
+          "n_closed": 13,
+          "pct_closed_loss": 7.6923076923076925
+        },
+        {
+          "day": "2021-09-21",
+          "ret_pct": -2.842567514265426,
+          "bigdown": true,
+          "n_opened": 1,
+          "n_closed": 3,
+          "pct_closed_loss": 0.0
+        }
+      ]
+    },
+    "maxDD": -13.222577309897543,
+    "uw": 223,
+    "uw_year": {
+      "2021": 46,
+      "2022": 73,
+      "2023": 66,
+      "2024": 119,
+      "2025": 223
+    },
+    "cagr": 31.039444384284877,
+    "yr": {
+      "2021": 5.9800000000000075,
+      "2022": 17.205402636616075,
+      "2023": 46.78320874065556,
+      "2024": 45.98520700786661,
+      "2025": 26.751038547000295
+    },
+    "equity": 118080.0
+  },
+  "gate": {
+    "u1_thr": 909.3832902230661,
+    "u1_ratio": 1.3393083129844305,
+    "u1_pass": false,
+    "u3_maxdd_thr": -14.805386941670466,
+    "u3_uw_thr": 115.0,
+    "u3_pass": false,
+    "u4_ret2025_brct50": 26.751038547000295,
+    "u4_ret2025_thr": 31.072644721906926,
+    "u4_ret_pass": false,
+    "u4_uw_pass": null,
+    "u4_pass": false,
+    "u5_2023": [
+      46.78320874065556,
+      54.38594927116303
+    ],
+    "u5_2024": [
+      45.98520700786661,
+      40.74870099196977
+    ],
+    "u5_pass": false
+  }
+}
