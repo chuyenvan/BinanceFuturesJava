@@ -146,8 +146,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
         long timeSimulator = System.currentTimeMillis();
         LOG.info("=== 🚀 BẮT ĐẦU SIMULATE TỪ {} ĐẾN {} ===", Utils.normalizeDateYYYYMMDDHHmm(startTime), Utils.normalizeDateYYYYMMDDHHmm(endTime));
-        LOG.info("[SELECTOR-CFG] SELECTOR_RANK_TOPK={} SELECTOR_ONLY_ENTRY={} (TOPK<=0 => cutoff tuyet doi)",
-                Configs.SELECTOR_RANK_TOPK, Configs.SELECTOR_ONLY_ENTRY);
+        LOG.info("[SELECTOR-CFG] SELECTOR_RANK_TOPK={} SELECTOR_ONLY_ENTRY={} SELECTOR_LEG_CUT={} (TOPK<=0 => cutoff tuyet doi)",
+                Configs.SELECTOR_RANK_TOPK, Configs.SELECTOR_ONLY_ENTRY, Configs.SELECTOR_LEG_CUT);
 
                 // [TICKLOG 2026-09-03] docs/PREREG_TICKLOG.md — mac dinh OFF, byte-identical.
                 if (TickDecisionLog.ON) {
@@ -382,7 +382,10 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
                                 // 🔥 BƯỚC 3: FUNDING FEE SIÊU TỐC (ĐÃ PRE-CALCULATE SORT SẴN) 🔥
                                 long[] symbol2Pred = time2SymbolPred.get(time);
-                                if (symbol2Pred != null) {
+                                // [SELCUT 2026-09-23] docs/PREREG_SELECTOR_LEG_CUT.md: SELECTOR_LEG_CUT=1
+                                //   -> BO QUA toan bo khoi selector (level PREDICT_SYMBOL_TRADE + nhanh
+                                //   DCA_SIGNAL_GATE). Default false -> y het cu => byte-identical.
+                                if (symbol2Pred != null && !Configs.SELECTOR_LEG_CUT) {
                                     java.util.List<Long> chosenCands = selectCands(symbol2Pred);
                                     // [TICKLOG] read-only: ngu canh tick (pool/nPass/nCand) + pool bi top-K loai.
                                     int _tlRank = -1;

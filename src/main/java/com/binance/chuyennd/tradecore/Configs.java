@@ -365,6 +365,11 @@ public class Configs {
     // (levelChange getTopSymbolArray Best-N = luong FOMO), CHI giu luong selector PREDICT_SYMBOL_TRADE.
     // Dung de co lap 100% edge inverted-selector (khop proxy Kaggle). Default false = byte-identical.
     public static final boolean SELECTOR_ONLY_ENTRY = "1".equals(Cfg.get("SELECTOR_ONLY_ENTRY"));
+    // [SELCUT 2026-09-23] docs/PREREG_SELECTOR_LEG_CUT.md — CAT HAN leg SELECTOR (level
+    //   PREDICT_SYMBOL_TRADE), tuc khoi `if (symbol2Pred != null)` o
+    //   SimulatorMarketLevelTicker1MStopLoss:384-431. KHAC HAN SELECTOR_ONLY_ENTRY (cai do tat leg
+    //   market-signal = BIG_DOWN, xem :346). Default false = khong cap phat => byte-identical.
+    public static final boolean SELECTOR_LEG_CUT = "1".equals(Cfg.get("SELECTOR_LEG_CUT"));
     // COUNT-ONLY: đếm gate admission rồi short-circuit trước khi tạo order (đo tần suất qua gate).
     // Default false = byte-identical. Bật bằng env SIM_GATE_COUNT_ONLY=1.
     public static final boolean GATE_COUNT_ONLY = "1".equals(Cfg.get("SIM_GATE_COUNT_ONLY"));
