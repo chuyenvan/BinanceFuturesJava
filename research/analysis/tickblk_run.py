@@ -20,11 +20,15 @@ PROFILE = "x1_gs_t170"
 END = "20251231"
 SHA_COMMON = "b98c9ff"              # commit PREREG_TICK_BLOCK (chot truoc khi chay)
 
+# [FIX 2026-09-23] Ban chay 1 (tag `tickblk-*`, jar sha d14129bf) CO LOI: `new float[]` cua Java
+#   = 0.0 (khong phai NaN) => warm-up 14 ngay bi VO HIEU (nguong = 0.0 tu ngay 1) => chan them
+#   9.656 phut trong 2021-07-01..2021-09-17 (do bang ban tai lap Python doc lap). Da sua (jar sha
+#   715043ed) va CHAY LAI toan bo duoi tag `tickblk2-*`. So cong bo la cua ban da sua.
 JOBS = {
-    "par":     dict(tag="tickblk-par",     overrides={}, jar_ds=JAR_DS),
-    "depth":   dict(tag="tickblk-depth",   overrides={"SIM_TICK_BLOCK_IND": "DEPTH"}, jar_ds=JAR_DS),
-    "breadth": dict(tag="tickblk-breadth", overrides={"SIM_TICK_BLOCK_IND": "BREADTH"}, jar_ds=JAR_DS),
-    "drop15":  dict(tag="tickblk-drop15",  overrides={"SIM_TICK_BLOCK_IND": "DROP15M"}, jar_ds=JAR_DS),
+    "par":     dict(tag="tickblk2-par",     overrides={}, jar_ds=JAR_DS),
+    "depth":   dict(tag="tickblk2-depth",   overrides={"SIM_TICK_BLOCK_IND": "DEPTH"}, jar_ds=JAR_DS),
+    "breadth": dict(tag="tickblk2-breadth", overrides={"SIM_TICK_BLOCK_IND": "BREADTH"}, jar_ds=JAR_DS),
+    "drop15":  dict(tag="tickblk2-drop15",  overrides={"SIM_TICK_BLOCK_IND": "DROP15M"}, jar_ds=JAR_DS),
 }
 
 

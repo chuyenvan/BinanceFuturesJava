@@ -57,6 +57,16 @@ public final class TickWeakBlock {
     private static final float[] BUF = new float[(WIN + 1) * MIN_PER_DAY];
     private static final float[] SORT = new float[(WIN + 1) * MIN_PER_DAY];
 
+    // [FIX 2026-09-23] `new float[]` cua Java = TOAN SO 0.0, KHONG phai NaN. Neu de nguyen thi moi
+    //   slot CHUA GHI bi tinh la "mau hop le" (=0.0) => (a) dem mau luon >= MIN_SAMPLES nen WARM-UP
+    //   bi VO HIEU ngay tu ngay 1 (nguong = 0.0 thay vi null), va (b) block luon ca cac phut co
+    //   rateDownAvg >= 0 trong ~2,5 thang dau — KHAC thiet ke da pre-reg (docs/PREREG_TICK_BLOCK.md
+    //   §1.2: "chua du 20.160 mau hop le thi KHONG chan"). Do duoc: ban 0-init chan them 9.656 phut
+    //   (2021-07-01..2021-09-17). Nay dien NaN truoc khi dung => dung y thiet ke.
+    static {
+        java.util.Arrays.fill(BUF, Float.NaN);
+    }
+
     private static long curDay = Long.MIN_VALUE;
     private static double thr = Double.NaN;
     private static boolean blocked = false;
