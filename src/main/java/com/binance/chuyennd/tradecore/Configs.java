@@ -370,6 +370,16 @@ public class Configs {
     //   SimulatorMarketLevelTicker1MStopLoss:384-431. KHAC HAN SELECTOR_ONLY_ENTRY (cai do tat leg
     //   market-signal = BIG_DOWN, xem :346). Default false = khong cap phat => byte-identical.
     public static final boolean SELECTOR_LEG_CUT = "1".equals(Cfg.get("SELECTOR_LEG_CUT"));
+    // [TICKBLK 2026-09-23] docs/PREREG_TICK_BLOCK.md — chan ca LUOT (tick) khi luot YEU.
+    //   Khac HAN filter cap-coin (D3): bo qua 1 candidate thi he lay candidate ke tiep trong CUNG
+    //   tick => chi chan ca LUOT moi that su giam exposure. Key khong khai => OFF => tickBlocked
+    //   luon false => khong mot dong nao doi (parity byte-identical). Moi key la THAM SO GIAO DICH
+    //   (tien to SIM_ => dat qua profile, env se fail-fast theo Cfg).
+    public static final String TICK_BLOCK_IND = Cfg.getOr("SIM_TICK_BLOCK_IND", "").trim().toUpperCase();
+    public static final int TICK_BLOCK_PCT = Integer.parseInt(Cfg.getOr("SIM_TICK_BLOCK_PCT", "25").trim());
+    public static final int TICK_BLOCK_WIN_DAYS = Integer.parseInt(Cfg.getOr("SIM_TICK_BLOCK_WIN_DAYS", "30").trim());
+    public static final int TICK_BLOCK_MIN_SAMPLES = Integer.parseInt(Cfg.getOr("SIM_TICK_BLOCK_MIN_SAMPLES", "20160").trim());
+    public static final double TICK_BLOCK_DROP1M = Double.parseDouble(Cfg.getOr("SIM_TICK_BLOCK_DROP1M", "-0.03").trim());
     // COUNT-ONLY: đếm gate admission rồi short-circuit trước khi tạo order (đo tần suất qua gate).
     // Default false = byte-identical. Bật bằng env SIM_GATE_COUNT_ONLY=1.
     public static final boolean GATE_COUNT_ONLY = "1".equals(Cfg.get("SIM_GATE_COUNT_ONLY"));

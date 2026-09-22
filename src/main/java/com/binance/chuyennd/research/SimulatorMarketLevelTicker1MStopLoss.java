@@ -148,6 +148,10 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         LOG.info("=== 🚀 BẮT ĐẦU SIMULATE TỪ {} ĐẾN {} ===", Utils.normalizeDateYYYYMMDDHHmm(startTime), Utils.normalizeDateYYYYMMDDHHmm(endTime));
         LOG.info("[SELECTOR-CFG] SELECTOR_RANK_TOPK={} SELECTOR_ONLY_ENTRY={} SELECTOR_LEG_CUT={} (TOPK<=0 => cutoff tuyet doi)",
                 Configs.SELECTOR_RANK_TOPK, Configs.SELECTOR_ONLY_ENTRY, Configs.SELECTOR_LEG_CUT);
+        // [TICKBLK 2026-09-23] docs/PREREG_TICK_BLOCK.md — tham so chan ca luot (OFF => khong dong nao doi).
+        LOG.info("[TICKBLK-CFG] ind={} pct={} winDays={} minSamples={} drop1m={}",
+                Configs.TICK_BLOCK_IND, Configs.TICK_BLOCK_PCT, Configs.TICK_BLOCK_WIN_DAYS,
+                Configs.TICK_BLOCK_MIN_SAMPLES, Configs.TICK_BLOCK_DROP1M);
 
                 // [TICKLOG 2026-09-03] docs/PREREG_TICKLOG.md — mac dinh OFF, byte-identical.
                 if (TickDecisionLog.ON) {
@@ -303,11 +307,16 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                             }
 
                             MarketDataObject marketData = time2MarketData.get(time);
+                            // [TICKBLK 2026-09-23] docs/PREREG_TICK_BLOCK.md — quyet dinh "chan CA LUOT" tai
+                            //   phut nay (causal: nguong = quantile cuon 30 ngay TRUOC, tinh lai moi ngay).
+                            //   OFF (key SIM_TICK_BLOCK_IND khong khai) => luon false => byte-identical.
+                            //   KHONG chan khoi cap nhat/thoat lenh dang mo o tren.
+                            boolean tickBlocked = TickWeakBlock.step(time, marketData, symbol2Ticker);
                             Set<Short> symbolLocked = new HashSet<>();
                             MarketLevelChange levelChange = null;
                             AiPredictionData predict = predictionMap.get(time);
 
-                            if (predict != null && marketData != null) {
+                            if (!tickBlocked && predict != null && marketData != null) {
                                 levelChange = MarketBigChangeDetector.getMarketStatus1M(marketData.rateDownAvg, marketData.rateUpAvg, marketData.rateDown15MAvg);
 
                                 if (levelChange != null) {
@@ -366,7 +375,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                             startTimeRun = System.currentTimeMillis();
 
                             if (marketData != null) {
-                                if (MarketBigChangeDetector.isDcaAlt(marketData.rateDown15MAvg, marketData.rateDownAvg, marketData.rateUpAvg)) {
+                                if (!tickBlocked && MarketBigChangeDetector.isDcaAlt(marketData.rateDown15MAvg, marketData.rateDownAvg, marketData.rateUpAvg)) {
                                     List<Short> symbolDcaLossBig = DcaProcessor.getDCA(null, time, BudgetManagerSimple.getInstance().getBudget(), getActiveOrderMap());
                                     // [DCA-SIGNAL V2] tie-break: nhuong tick nay cho signal-gate (neu co).
                                     symbolDcaLossBig = dsFilterGrid(symbolDcaLossBig, time);
@@ -385,7 +394,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                 // [SELCUT 2026-09-23] docs/PREREG_SELECTOR_LEG_CUT.md: SELECTOR_LEG_CUT=1
                                 //   -> BO QUA toan bo khoi selector (level PREDICT_SYMBOL_TRADE + nhanh
                                 //   DCA_SIGNAL_GATE). Default false -> y het cu => byte-identical.
-                                if (symbol2Pred != null && !Configs.SELECTOR_LEG_CUT) {
+                                if (symbol2Pred != null && !Configs.SELECTOR_LEG_CUT && !tickBlocked) {
                                     java.util.List<Long> chosenCands = selectCands(symbol2Pred);
                                     // [TICKLOG] read-only: ngu canh tick (pool/nPass/nCand) + pool bi top-K loai.
                                     int _tlRank = -1;
@@ -582,6 +591,11 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         if (BdSelection.ACTIVE) {
             LOG.info("[BD-SEL] mode={} topk={}", BdSelection.MODE, BdSelection.TOPK);
         }
+        // [TICKBLK 2026-09-23] bao 1 dong: % luot bi chan (do exposure) + tham so hieu dung.
+        if (TickWeakBlock.ACTIVE) {
+            LOG.info("[TICKBLK] SUMMARY {}", TickWeakBlock.summary());
+        }
+        TickWeakBlock.close();
         // [D3D4-FILTER 2026-09-17] bao 1 dong: mode + so lenh moi bi loc (docs/PREREG_D3D4_FILTER_SIM.md).
         if (PumpDumpFilter.active()) {
             LOG.info("[D3D4-FILTER] mode={} skipped={} p90_d3={} p90_d4={}",
