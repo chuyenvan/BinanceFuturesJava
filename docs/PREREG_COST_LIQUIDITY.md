@@ -23,7 +23,7 @@ Hai việc **không** trộn kết luận: (2) dùng PnL/cost **nguyên trạng 
 
 | Nguồn | Đường dẫn | Ghi chú |
 |---|---|---|
-| Lệnh T170 | `/home/ubuntu/java/devrun/X1_GS_T170_2021/storage/printDone.csv` | md5 **`efb793e2468ca3a7318da0f0f0ad23d4fc`** (đã kiểm lại), 1089 dòng + header |
+| Lệnh T170 | `/home/ubuntu/java/devrun/X1_GS_T170_2021/storage/printDone.csv` | md5 **`efb793e2468ca3a7318da0f0ad23d4fc`** (đã kiểm lại bằng `md5sum`) — lưu ý: đề bài ghi `…8da0f0f0ad23d4fc` (**thừa `0f`**), đó là **chính tả**, md5 thật là chuỗi này; n = 1089 dòng + header |
 | Nến 1m + thanh khoản | `/home/ubuntu/claudedata/rvb_1m/raw/<SYM>USDT.f32` | 627 symbol, dtype `[ts<i4, o,h,l,c,v <f4]`, **ts = PHÚT EPOCH UTC**, v = `totalUsdt` (đã kiểm chứng, xem §2) |
 | Funding | Aerospike `test.funding_data` (127.0.0.1:3222), bin `f_data` | Snappy(JSON `{ts_ms: rate}`) |
 | Neo MOM15 | `/tmp/funding_factor/cache2.npz` + `/tmp/.trash_mine/range4h_topk_*/anchor_mom15.npz` | sinh bởi `range4h_topk.py` (commit `62e01bf`), giữ nguyên định nghĩa net |
@@ -148,7 +148,7 @@ Với `c` = chi phí **round-trip** mỗi lệnh ∈ **{0,02% (maker), 0,05%, 0,
 
 | Cổng | Điều kiện |
 |---|---|
-| G1 | md5 printDone = `efb793e2468ca3a7318da0f0f0ad23d4fc`, n = 1089 |
+| G1 | md5 printDone = `efb793e2468ca3a7318da0f0ad23d4fc`, n = 1089 |
 | G2 | `raw.v == totalUsdt` Aerospike tại ≥ 1 phút/symbol kiểm chứng, và `raw.v == volume` cho ≥ 95% trong 1089 lệnh |
 | G3 | Mọi lệnh dùng được có `t` suy từ `start` GMT+7 và có nến tại `t` (khớp `entry` ±0,5%) |
 | G4 | MOM15 DEV 24h `net(0,10%)` = +1,6690% ±0,05pp |
