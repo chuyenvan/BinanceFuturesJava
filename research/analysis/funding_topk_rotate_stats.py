@@ -11,6 +11,7 @@ CI block-72h x1.21 2000 rep seed 20260905; Bonferroni K_test=3; null K coin ngau
 MDE luoi rieng khung 8h; DEV 2022-2025 chinh, ALL 2021-2025 phu.
 """
 import os
+import json
 import logging
 from datetime import datetime, timezone
 
@@ -24,12 +25,15 @@ NREP_MDE_INNER = 200
 NULL_REPS = 300
 BLOCK_MIN = 72 * 60
 CI_INFLATE = 1.21
-K_TESTS = 3
+# K_LIST/K_TESTS: mac dinh NGUYEN BAN vong truoc (5,10,20)/K_test=3. Vong K13 (PREREG_FUNDING_TOPK_K13)
+# mo rong ho K bang env: TKR_KLIST=1,3,5,10,20 TKR_KTESTS=5 (Bonferroni p<0,01).
+K_LIST = tuple(int(x) for x in os.environ.get("TKR_KLIST", "5,10,20").split(",") if x.strip())
+K_TESTS = int(os.environ.get("TKR_KTESTS", "3"))
+REPORT_TAG = os.environ.get("TKR_REPORT_TAG", "")
 ALPHA = 0.05
 BONF_P = ALPHA / K_TESTS
 BONF_PCT = [100 * BONF_P / 2, 100 * (1 - BONF_P / 2)]
 MDE_GRID = [0.0001, 0.0002, 0.0005, 0.0010, 0.0020, 0.0050]   # %/chu ky (khung 8h)
-K_LIST = (5, 10, 20)
 FEE_GRID = (0.0005, 0.0010, 0.0015)
 FEE_MAIN = 0.0010
 SLIP_HALF = 0.5
@@ -269,7 +273,8 @@ def main():
     say("close(r+480); `f_entry` = rate event cuoi <= r (causal); xep hang TANG DAN => top-K nho nhat;")
     say("dong hang theo sym index. Long equal-weight, HOLD 480'. `net = mean(raw) - mean(f_cum) - cost`,")
     say("cost = (n_in/K)(fee/2+slip_in) + (n_out/K)(fee/2+slip_out) (slip 0.5xrange tai nen moc).")
-    say("CI block-72h 2000 rep seed 20260905 x1.21; Bonferroni K_test=3 (p<%.6f); DEV=2022-2025 CHINH, ALL phu." % BONF_P)
+    say("CI block-72h 2000 rep seed 20260905 x1.21; Bonferroni K_test=%d (p<%.6f); DEV=2022-2025 CHINH, ALL phu." % (K_TESTS, BONF_P))
+    say("Ho K cua vong nay: %s (K_test=%d)." % ("/".join("%d" % k for k in K_LIST), K_TESTS))
     say("")
 
     # ---------------- 0. neo MOM15 ----------------
@@ -334,7 +339,7 @@ def main():
 
     say("## 2. KET QUA CHINH — net/chu ky theo K (DEV = CHINH, phi 0,10%%)")
     say("")
-    say("| K | net/chu ky (DEV) | CI72h x1.21 | p(>0) | CI-Bonf3 | %%chu ky duong | N | N_blk | MDE80 |")
+    say("| K | net/chu ky (DEV) | CI72h x1.21 | p(>0) | CI-Bonf%d | %%chu ky duong | N | N_blk | MDE80 |" % K_TESTS)
     say("|---|---|---|---|---|---|---|---|---|")
     main_rows = {}
     for K in K_LIST:
@@ -347,6 +352,16 @@ def main():
         r["mde80"] = mde["mde80"]; r["cost"] = cost; r["n_in"] = n_in; r["n_out"] = n_out
         r["raw_mean"] = b["raw_mean"]; r["fund_mean"] = b["fund_mean"]; r["b"] = b
         main_rows[K] = r
+        try:   # checkpoint tung K (ngoai repo, resume duoc)
+            json.dump({"K": K, "obs": r["obs"], "ci_lo": r["ci_lo"], "ci_hi": r["ci_hi"],
+                       "b_lo": r["b_lo"], "b_hi": r["b_hi"], "p_gt0": r["p"], "pos": r["pos"],
+                       "n": r["n"], "nblk": r["nblk"], "mde80": mde["mde80"],
+                       "turnover": float((n_in / K)[w].mean()), "cost": float(cost[w].mean()),
+                       "raw_mean": float(b["raw_mean"][w].mean()),
+                       "fund_mean": float(b["fund_mean"][w].mean())},
+                      open(OUT + "/summary_K%d.json" % K, "w"), indent=1)
+        except Exception as e:
+            log.warning("summary write fail K=%d: %s", K, type(e).__name__)
         say("| **%d** | **%s** | [%s, %s] | %.3f | [%s, %s] | **%.1f%%** | %d | %d | %s |"
             % (K, fmt_pct(r["obs"]), fmt_pct(r["ci_lo"]), fmt_pct(r["ci_hi"]), r["p"],
                fmt_pct(r["b_lo"]), fmt_pct(r["b_hi"]), 100 * r["pos"], r["n"], r["nblk"],
@@ -572,8 +587,8 @@ def main():
     # ---------------- 12. do nhay MIN_SYM ----------------
     say("## 12. Do nhay MIN_SYM (descriptive)")
     say("")
-    say("| MIN_SYM | so moc dung | K=5 | K=10 | K=20 |")
-    say("|---|---|---|---|---|")
+    say("| MIN_SYM | so moc dung | " + " | ".join("K=%d" % K for K in K_LIST) + " |")
+    say("|" + "---|" * (len(K_LIST) + 2))
     for ms in (MIN_SYM_MAIN, MIN_SYM_ALT):
         exx = exec_marks(prep, ms)
         cells = []
@@ -584,7 +599,7 @@ def main():
             w = win_mask(prep["mark"][exx], base, "DEV")
             s = summ(net[w], blk[exx][w])
             cells.append("%s [%s, %s]" % (fmt_pct(s["obs"]), fmt_pct(s["ci_lo"]), fmt_pct(s["ci_hi"])))
-        say("| %d | %d | %s | %s | %s |" % (ms, len(exx), cells[0], cells[1], cells[2]))
+        say("| %d | %d | %s |" % (ms, len(exx), " | ".join(cells)))
     say("")
 
     # ---------------- 13. MDE ----------------
@@ -601,9 +616,9 @@ def main():
     say("")
 
     # ---------------- 14. GATE ----------------
-    say("## 14. CONG KET LUAN (K_test=3, Bonferroni p<%.6f)" % BONF_P)
+    say("## 14. CONG KET LUAN (K_test=%d, Bonferroni p<%.6f)" % (K_TESTS, BONF_P))
     say("")
-    say("| K | (1) net>0 | (2) CI x1.21 ngoai 0 | (3) CI-Bonf3 ngoai 0 | (4) >=60%% chu ky duong | (5) |net|>=MDE | (6) khong doi dau ALL | (7) khong doi dau phi 0,15%% | GO? |")
+    say("| K | (1) net>0 | (2) CI x1.21 ngoai 0 | (3) CI-Bonf%d ngoai 0 | (4) >=60%% chu ky duong | (5) |net|>=MDE | (6) khong doi dau ALL | (7) khong doi dau phi 0,15%% | GO? |" % K_TESTS)
     say("|---|---|---|---|---|---|---|---|---|")
     go_flags = {}
     for K in K_LIST:
@@ -628,10 +643,10 @@ def main():
                "GO" if g else "NO-GO"))
     say("")
     ngo = sum(1 for K in K_LIST if go_flags[K])
-    if ngo == 3:
-        verdict = "GO ca 3 K"
+    if ngo == len(K_LIST):
+        verdict = "GO ca %d K" % len(K_LIST)
     elif ngo == 0:
-        verdict = "NO-GO ca 3 K"
+        verdict = "NO-GO ca %d K" % len(K_LIST)
     else:
         verdict = "UNCONFIRMED (post-hoc) — %d/3 K dat, KHONG ap dung" % ngo
     say("**KET LUAN SO BO: %s**" % verdict)
@@ -649,7 +664,8 @@ def main():
             % (K, fmt_pct(gross), fmt_pct(float(r["cost"][w].mean())), fmt_pct(r["obs"]),
                fmt_pct(r["ci_lo"]), fmt_pct(r["ci_hi"]), 100 * float((r["n_in"] / K)[w].mean())))
     say("")
-    open(OUT + "/report.txt", "w").write("\n".join(rep).replace("%%", "%") + "\n")
+    tag = ("_" + REPORT_TAG) if REPORT_TAG else ""
+    open(OUT + "/report%s.txt" % tag, "w").write("\n".join(rep).replace("%%", "%") + "\n")
     log.info("report written")
 
 
