@@ -222,3 +222,12 @@ tái sử dụng cho hướng khác (ví dụ sizing/risk-management) dù hướ
 Archive + `claudedata/universe_birth_death.csv` nội bộ), verdict **GO** cho nhánh listing (causal-safe,
 648 event/4.5 năm, độc lập MOM15 đo thật 0/709 cặp (symbol,tháng) trùng T170 entry). Quyết định của
 Uni, 2026-09-21.
+
+6. **B2 Bước 8 (breadth theo SUBSET majors/alts, ý Uni; recon `docs/DIAG_BREADTH_SUBSET.md`)**: NO-GO
+   ở cổng recon 0-sim (không tới bước sim). Book T170 = 98% alts ⇒ relevant-breadth = alt-only; nhưng
+   alt = 612/627 symId của all-coin ⇒ alt-breadth ≈ all-breadth (chênh gate ≤ 0.031/năm, dưới ngưỡng
+   0.10). Không định nghĩa nào (all/top50/top30/major/alt) đạt gate-2025 ≥ 1.60 + giữ 2023/24 ≤ 1.20:
+   gate-2025 đóng trần ~1.44 vì breadth-alt-2025 bình quân 0.194 (không ~0). Thu hẹp universe (top30/
+   major) còn NỚI 2025 (đọc "khoẻ hơn" — đúng chiều sai). ⇒ **lever breadth-subset đóng**, là bằng
+   chứng thứ 3 (sau BR nhị phân Bước 6 + BRC liên tục Bước 7) rằng breadth-gate không phá được trade-off
+   breadth↔UW-2025 cho T170. Roadmap: TASK D (event-alpha). Quyết định recon máy móc, 2026-09-22.
