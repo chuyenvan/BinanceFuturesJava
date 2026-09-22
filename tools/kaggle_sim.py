@@ -136,6 +136,25 @@ def f1(pat):
 
 
 jar = f1(IN + "/**/sim.jar")
+# [JAR_DS 2026-09-23] neu CFG co jar_ds -> CHI lay sim.jar tu dataset do (doi code ma khong
+#   phai tao lai bundle 5.3GB). Bo trong => y het cu (sorted(glob)[0]).
+_JDS = CFG.get("jar_ds") or ""
+if _JDS:
+    _jc = [c for c in sorted(glob.glob(IN + "/**/sim.jar", recursive=True))
+           if ("/" + _JDS + "/") in c]
+    if not _jc:
+        LOG.error("MISSING sim.jar cho jar_ds=%r (ung vien=%s)", _JDS,
+                  sorted(glob.glob(IN + "/**/sim.jar", recursive=True)))
+        sys.exit(1)
+    jar = _jc[0]
+    LOG.info("jar_ds=%s -> %s", _JDS, jar)
+import hashlib as _hl
+_h = _hl.sha256()
+with open(jar, "rb") as _f:
+    for _b in iter(lambda: _f.read(1 << 20), b""):
+        _h.update(_b)
+JAR_SHA = _h.hexdigest()
+LOG.info("JAR_SHA256=%s", JAR_SHA)
 manifest = f1(IN + "/**/manifest.txt")
 DS = os.path.dirname(manifest)                     # WFO_DATA_DIR
 cfgp = f1(IN + "/**/config.properties")
@@ -267,7 +286,7 @@ res = {"tag": CFG["tag"], "profile": CFG["profile"], "overrides": CFG["overrides
        "b_final": last[2] if last else None,
        "date_first": first[0] if first else None,
        "date_last": last[0] if last else None,
-       "n_trades": n_trades, "symbol_mapper": mapper_n,
+       "n_trades": n_trades, "symbol_mapper": mapper_n, "jar_sha256": JAR_SHA,
        "ok": bool(last and n_trades > 0)}
 with open(WORK + "/result.json", "w") as f:
     json.dump(res, f, indent=1)
@@ -283,11 +302,8 @@ sys.exit(0)
 '''
 
 
-<<<<<<< HEAD
-def submit(tag, profile, overrides=None, *, bins_ds=None, bundle_ds=None, code_sha="head",
-=======
-def submit(tag, profile, overrides=None, *, bins_ds=None, bundle_ds=None, extra_ds=None, code_sha="head",
->>>>>>> ab447a7389d84e41ed55949f5458acdcd70bd2c4
+def submit(tag, profile, overrides=None, *, bins_ds=None, bundle_ds=None, extra_ds=None,
+           jar_ds=None, code_sha="head",
            sim_end_date=DEFAULT_SIM_END, ticker_min_days=TICKER_MIN_DAYS,
            xmx=DEFAULT_XMX, timeout_s=DEFAULT_TIMEOUT_S, enable_internet=True,
            push=True) -> str:
@@ -298,13 +314,18 @@ def submit(tag, profile, overrides=None, *, bins_ds=None, bundle_ds=None, extra_
     `bundle_ds` (moi, 2026-09-22): doi bundle du lieu chinh (mac dinh `BUNDLE_DS` =
     sim-c2b-bundle) sang dataset KHAC (vd bundle X1 48 thang) — truyen TEN dataset
     (KHONG prefix USER). `TICKER_DS` (ticker) va cach chon bins qua `bins_ds` khong doi.
+    `extra_ds` (2026-09-22, BRC): them dataset phu (vd regime CSV) — ten KHONG prefix USER.
+    `jar_ds` (moi, 2026-09-23): dataset CHI chua `sim.jar` — kernel se uu tien lay jar tu
+    dataset nay thay vi jar trong bundle. Dung khi doi CODE ma KHONG muon tao lai bundle
+    (bundle ~5.3GB; jar rieng ~95MB). Kernel log `JAR_SHA256=` + ghi vao result.json de
+    phat hien "jar cu bi dung am tham". Bo trong = hanh vi cu (lay sim.jar trong bundle).
     """
     ref = kernel_ref(tag)
     folder = os.path.join(WORKDIR, slug(tag))
     os.makedirs(folder, exist_ok=True)
     cfg = {"tag": str(tag), "profile": profile, "overrides": dict(overrides or {}),
            "sim_end_date": sim_end_date, "xmx": xmx, "timeout_s": timeout_s,
-           "code_sha": code_sha, "bins_ds": bins_ds or "",
+           "code_sha": code_sha, "bins_ds": bins_ds or "", "jar_ds": jar_ds or "",
            "ticker_min_days": int(ticker_min_days)}
     code = KERNEL_TEMPLATE.replace("__CFG_JSON__", repr(json.dumps(cfg)))
     with open(os.path.join(folder, "run.py"), "w") as f:
@@ -314,12 +335,9 @@ def submit(tag, profile, overrides=None, *, bins_ds=None, bundle_ds=None, extra_
             "language": "python", "kernel_type": "script", "is_private": True,
             "enable_gpu": False, "enable_internet": enable_internet,
             "dataset_sources": [bundle_ref] + TICKER_DS
-<<<<<<< HEAD
-                                + ([USER + "/" + bins_ds] if bins_ds else []),
-=======
                                 + ([USER + "/" + bins_ds] if bins_ds else [])
+                                + ([USER + "/" + jar_ds] if jar_ds else [])
                                 + [(USER + "/" + d) for d in (extra_ds or [])],
->>>>>>> ab447a7389d84e41ed55949f5458acdcd70bd2c4
             "competition_sources": [], "kernel_sources": []}
     with open(os.path.join(folder, "kernel-metadata.json"), "w") as f:
         json.dump(meta, f, indent=1)
@@ -388,13 +406,16 @@ def _cli():
     ap.add_argument("--profile", default="c2b_min")
     ap.add_argument("--set", action="append", default=[], metavar="KEY=VAL")
     ap.add_argument("--code-sha", default="head")
+    ap.add_argument("--bundle-ds", default=None)
+    ap.add_argument("--jar-ds", default=None)
     a = ap.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     if a.cmd == "slots":
         LOG.info("free_slots=%d", free_slots())
     elif a.cmd == "submit":
         ov = dict(s.split("=", 1) for s in a.set)
-        LOG.info("ref=%s", submit(a.tag, a.profile, ov, code_sha=a.code_sha))
+        LOG.info("ref=%s", submit(a.tag, a.profile, ov, code_sha=a.code_sha,
+                                 bundle_ds=a.bundle_ds, jar_ds=a.jar_ds))
     elif a.cmd == "wait":
         LOG.info("%s", wait([kernel_ref(a.tag)]))
     else:
