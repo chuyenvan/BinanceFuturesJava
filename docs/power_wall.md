@@ -231,3 +231,20 @@ Uni, 2026-09-21.
    major) còn NỚI 2025 (đọc "khoẻ hơn" — đúng chiều sai). ⇒ **lever breadth-subset đóng**, là bằng
    chứng thứ 3 (sau BR nhị phân Bước 6 + BRC liên tục Bước 7) rằng breadth-gate không phá được trade-off
    breadth↔UW-2025 cho T170. Roadmap: TASK D (event-alpha). Quyết định recon máy móc, 2026-09-22.
+
+7. **B2 Bước 9 (breadth TOP50 gate LIÊN TỤC = BRCT50; PREREG `docs/PREREG_BREADTH_CONT_T50.md`
+   `6312e06`, RESULT `docs/RESULT_BREADTH_CONT_T50.md` `e199557`)**: NULL — hoán vị CUỐI của
+   breadth (liên tục × top50). u1-u5 đều fail (n_eff ×1.339<1.5; UW=223 >115 & >200 vỡ khẩu vị
+   2025; ret-2025 26.8<31.07=0.95×T170; CAGR23 46.8<54.39). Cổng OFF byte-identical PASS
+   (`efb793e2`, jar breadth-cont `06def68b`, 0 dòng Java). **PHÁT HIỆN QUAN TRỌNG (dự báo SAI ở
+   tầng kết quả)**: gate-2025 top50 NỚI hơn all-coin ĐÚNG dự báo (mean 1.31 vs BRC 1.42 — top50
+   gồm majors mạnh 2025), NHƯNG ret-2025(BRCT50)=26.8 lại KÉM HƠN BRC (28.7), không gần T170 (32.7)
+   hơn — xếp hạng giữ-2025: T170 32.7 > BRC 28.7 > BRCT50 26.8 > BR 22.9 > T100 16.5. Nới đúng cửa
+   2025 (gate 1.31, +87 lệnh so BRC) vẫn cho ret-2025 GIẢM + UW-2025 dài y nguyên (223≈221) ⇒ củng
+   cố audit đối kháng: nới/cắt gate breadth = đổi phơi nhiễm KHÔNG đổi edge (lệnh breadth-thấp lãi
+   ≈ breadth-cao). ⇒ **hướng breadth-gate ĐÓNG DỨT ĐIỂM**: 3 biến thể gate (BR nhị phân Bước 6 /
+   BRC all-coin liên tục Bước 7 / BRCT50 top50 liên tục Bước 9) + subset recon Bước 8 + audit đối
+   kháng đều NULL/NO-GO; trade-off breadth↔UW-2025 không phá được cho T170. **Bài học khoá:
+   coverage thời-gian ≠ discrimination tầng-lệnh — phải base-rate-adjust + test ở TẦNG LỆNH (lãi
+   theo breadth-bin) trước khi tin một gate theo regime/breadth.** T170 vẫn incumbent. Roadmap:
+   TASK D (event-alpha). shadow-c3 KHÔNG đụng (sim 100% Kaggle). 2026-09-22.
