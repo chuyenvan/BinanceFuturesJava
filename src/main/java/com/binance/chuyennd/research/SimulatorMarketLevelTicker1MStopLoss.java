@@ -148,6 +148,12 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         LOG.info("=== 🚀 BẮT ĐẦU SIMULATE TỪ {} ĐẾN {} ===", Utils.normalizeDateYYYYMMDDHHmm(startTime), Utils.normalizeDateYYYYMMDDHHmm(endTime));
         LOG.info("[SELECTOR-CFG] SELECTOR_RANK_TOPK={} SELECTOR_ONLY_ENTRY={} SELECTOR_LEG_CUT={} (TOPK<=0 => cutoff tuyet doi)",
                 Configs.SELECTOR_RANK_TOPK, Configs.SELECTOR_ONLY_ENTRY, Configs.SELECTOR_LEG_CUT);
+        // [TRAIL-LADDER 2026-09-23] docs/PREREG_TRAIL_LADDER.md — gap BAC THANG theo dinh.
+        //   validateLadder() fail-fast (exit 2) neu mang LO/GAPS sai; OFF => khong lam gi => byte-identical.
+        Configs.validateLadder();
+        LOG.info("[TRAIL-LADDER-CFG] on={} lo={} gaps={} trace={}",
+                Configs.TS_LADDER_ON, java.util.Arrays.toString(Configs.TS_LADDER_LO),
+                java.util.Arrays.toString(Configs.TS_LADDER_GAPS), Configs.SIM_TRAIL_TRACE);
         // [TICKBLK 2026-09-23] docs/PREREG_TICK_BLOCK.md — tham so chan ca luot (OFF => khong dong nao doi).
         LOG.info("[TICKBLK-CFG] ind={} pct={} winDays={} minSamples={} drop1m={}",
                 Configs.TICK_BLOCK_IND, Configs.TICK_BLOCK_PCT, Configs.TICK_BLOCK_WIN_DAYS,
@@ -561,6 +567,10 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                 Storage.writeObject2File(FILE_STORAGE_ORDER_DONE, allOrderDone);
                 Storage.writeObject2File("storage/BalanceIndex.data", BudgetManagerSimple.getInstance().balanceIndex);
                 TraceOrderDone.printOrderTestDone("storage/printDone.csv", allOrderDone);
+                // [TRAIL-LADDER 2026-09-23] do-luong-only: file RIENG, KHONG them cot vao printDone.csv.
+                if (Configs.SIM_TRAIL_TRACE) {
+                    TraceOrderDone.printTrailTrace("storage/trailTrace.csv", allOrderDone);
+                }
             } catch (Exception e) {
                 e.printStackTrace();
             }

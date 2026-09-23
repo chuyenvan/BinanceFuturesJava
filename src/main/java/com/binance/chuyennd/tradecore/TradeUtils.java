@@ -46,6 +46,41 @@ public class TradeUtils {
     }
 
     /**
+     * [TRAIL-LADDER 2026-09-23] docs/PREREG_TRAIL_LADDER.md — GAP BAC THANG theo dinh.
+     *
+     * <p>{@code lo}/{@code gaps} cung do dai, {@code lo} tang dan nghiem ngat, {@code gaps[i] > 0}.
+     * Chon bac CUOI CUNG ma {@code maxProfitRate >= lo[i]}; duoi {@code lo[0]} => tra {@code NaN}
+     * de caller quay ve cong thuc CU ({@link #trailFromCap}).
+     *
+     * <p>KHONG tham gia HPO: 2 tham so la {@code float[]}, ma {@code StrategyWfoTask} ap gene bang
+     * reflection len FIELD SCALAR => mang khong bi HPO dieu khien (do la CHU Y, xem pre-reg muc 3).
+     */
+    public static float ladderGap(float maxProfitRate, float[] lo, float[] gaps) {
+        float g = Float.NaN;
+        for (int i = 0; i < lo.length && i < gaps.length; i++) {
+            if (maxProfitRate >= lo[i]) g = gaps[i];
+        }
+        return g;
+    }
+
+    /**
+     * SL moi theo bang BAC THANG. Duoi bac thap nhat => cong thuc CU voi cap {@code fallbackMaxGap}
+     * (STRONG/WEAK theo pNoPump). Gap LUON bi cap <= {@code peak*0.9} => BAT BIEN "SL tren entry".
+     * Lam tron buoc 0.005 GIONG HET {@link #trailFromCap} de nhat quan.
+     */
+    public static float trailFromLadder(float maxProfitRate, float[] lo, float[] gaps, float fallbackMaxGap) {
+        float gap = ladderGap(maxProfitRate, lo, gaps);
+        if (Float.isNaN(gap)) {
+            return trailFromCap(maxProfitRate, fallbackMaxGap);
+        }
+        float cap = maxProfitRate * 0.9f;
+        if (gap > cap) gap = cap;
+        float rate = maxProfitRate - gap;
+        float step = 0.005f;
+        return Math.round(rate / step) * step;
+    }
+
+    /**
      * [X3 2026-09-06] Gap trailing theo RANK cua coin trong tick (khong theo gia tri pNoPump).
      *
      * <p>{@code selRank} 1-based, do {@code SELECTOR_RANK_TOPK} sinh ra tai diem chon top-K.

@@ -455,6 +455,68 @@ public class Configs {
     //   KHONG final: unit test lat truc tiep.
     public static int TS_CAP_STRONG_RANK = Cfg.get("TS_CAP_STRONG_RANK") != null
             ? Integer.parseInt(Cfg.get("TS_CAP_STRONG_RANK").trim()) : 0;
+
+    // =========================================================
+    // [TRAIL-LADDER 2026-09-23] docs/PREREG_TRAIL_LADDER.md — GAP TRAILING BAC THANG
+    // =========================================================
+    // Y tuong (Uni): thay "tran PHANG" (TS_MAX_GAP 0.08 / TS_MAX_GAP_WEAK 0.03) bang GAP THEO
+    //   BAC NHAY: dinh cang cao thi cho phep nha lai cang XA (gap cang lon) => khong bi "truot song
+    //   2x/3x". Moi bang bac thang la 2 MANG (cung do dai, LO tang dan nghiem ngat):
+    //     TS_LADDER_LO   = can duoi cua tung bac, theo RATE DINH (0.10 = +10%)
+    //     TS_LADDER_GAPS = gap tuong ung (> 0)
+    //   peak < LO[0]  => quay ve CONG THUC CU (trailFromCap voi cap STRONG/WEAK theo pNoPump)
+    //   peak >= LO[i] => gap = GAPS[i] (chi so CUOI cung thoa); gap bi cap <= peak*0.9
+    //   => BAT BIEN "SL LUON TREN ENTRY" giu nguyen (SL >= peak*0.1 > 0).
+    // ⚠️ KHONG lam no thanh gene HPO — va do la CHU Y (khong phai so sot): StrategyWfoTask ap gene
+    //   bang REFLECTION len FIELD SCALAR cua Configs (Field.setFloat/setInt). LO/GAPS la float[]
+    //   => reflection KHONG cham toi duoc => mang KHONG duoc HPO dieu khien. Cung tien le
+    //   DCA_GRID_LEVELS/DCA_GRID_WEIGHTS (xem chu thich "DCA GRID — DANG SCALAR" o tren).
+    //   TS_LADDER chi la CONG TAC (boolean).
+    // Default OFF (khong khai bao TS_LADDER) => trailRate() di NGUYEN duong cu => byte-identical.
+    public static final boolean TS_LADDER_ON = "1".equals(Cfg.get("TS_LADDER"))
+            || "true".equalsIgnoreCase(Cfg.getOr("TS_LADDER", ""));
+    public static final float[] TS_LADDER_LO = cfgCsvFloats("TS_LADDER_LO");
+    public static final float[] TS_LADDER_GAPS = cfgCsvFloats("TS_LADDER_GAPS");
+    // [TRAIL-LADDER] DO-LUONG-ONLY: ghi storage/trailTrace.csv (printDone + cot `peak`).
+    //   KHONG them cot vao printDone.csv (se pha cong hoi quy byte-identical). Default OFF.
+    public static final boolean SIM_TRAIL_TRACE = "1".equals(Cfg.get("SIM_TRAIL_TRACE"))
+            || "true".equalsIgnoreCase(Cfg.getOr("SIM_TRAIL_TRACE", ""));
+
+    /** Doc danh sach so ngan cach dau phay tu profile (null/rong => mang rong). */
+    private static float[] cfgCsvFloats(String key) {
+        String v = Cfg.get(key);
+        if (v == null || v.trim().isEmpty()) return new float[0];
+        String[] parts = v.split(",");
+        float[] out = new float[parts.length];
+        for (int i = 0; i < parts.length; i++) out[i] = Float.parseFloat(parts[i].trim());
+        return out;
+    }
+
+    /**
+     * Kiem tra bang bac thang hop le. Goi luc khoi dong sim (fail-fast: go sai key/gia tri thi DUNG
+     * ngay, khong am tham roi ve default nhu cac loi "key sai ten" truoc day).
+     */
+    public static void validateLadder() {
+        if (!TS_LADDER_ON) return;
+        if (TS_LADDER_LO.length == 0 || TS_LADDER_LO.length != TS_LADDER_GAPS.length) {
+            System.err.println("[CFG] DUNG: TS_LADDER=1 nhung TS_LADDER_LO/TS_LADDER_GAPS trong hoac lech do dai ("
+                    + TS_LADDER_LO.length + " vs " + TS_LADDER_GAPS.length + ")");
+            System.exit(2);
+        }
+        for (int i = 0; i < TS_LADDER_LO.length; i++) {
+            if (TS_LADDER_GAPS[i] <= 0f) {
+                System.err.println("[CFG] DUNG: TS_LADDER_GAPS[" + i + "]=" + TS_LADDER_GAPS[i] + " <= 0");
+                System.exit(2);
+            }
+            if (i > 0 && TS_LADDER_LO[i] <= TS_LADDER_LO[i - 1]) {
+                System.err.println("[CFG] DUNG: TS_LADDER_LO khong TANG DAN nghiem ngat tai " + i);
+                System.exit(2);
+            }
+        }
+        System.out.println("[CFG] TS_LADDER ON lo=" + java.util.Arrays.toString(TS_LADDER_LO)
+                + " gaps=" + java.util.Arrays.toString(TS_LADDER_GAPS));
+    }
+
     // [SL-ADAPTIVE 2026-09-12] 3 lever SL tuy bien theo selRank (STRONG = rank<=N, WEAK = rank>N hoac null).
     //   Default TAT (SIM_SL_ADAPT_* khong khai bao trong profile) => nhanh OFF chay nguyen code cu =>
     //   byte-identical. Chi doc selRank co san tren orderMulti (khong plumbing). Xem docs/PREREG_SL_ADAPTIVE_SWEEP.md.

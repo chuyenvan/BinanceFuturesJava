@@ -172,4 +172,48 @@ public class TraceOrderDone {
         }
         FileUtils.writeLines(new File(fileName), lines);
     }
+
+    /**
+     * [TRAIL-LADDER 2026-09-23] docs/PREREG_TRAIL_LADDER.md muc 3.2 — DUMP DO LUONG trailing.
+     *
+     * <p>File RIENG (`storage/trailTrace.csv`), ghi CHI khi {@code Configs.SIM_TRAIL_TRACE=1} (default
+     * OFF). Cot: printDone rut gon + {@code peak} ({@code maePeak} = dinh GIA THAT cua cum tu leg dau)
+     * + {@code peakPct}/{@code ratePct} (%).
+     *
+     * <p><b>KHONG them cot vao printDone.csv</b> (se pha cong hoi quy byte-identical) — dung tien le
+     * dong log PREARM_SL (X2) / SELRANK (X3). Phuong phap nay chi DOC trang thai co san, KHONG tham gia
+     * quyet dinh vao/ra lenh.
+     */
+    public static void printTrailTrace(String fileName, TreeMap<Long, OrderTargetInfoTest> time2Order) throws
+            IOException {
+        List<String> lines = new ArrayList<>();
+        lines.add("sym,side,entry,tp,ratePct,peak,peakPct,status,start,end,level,quantity,margin,pnl,symbolPred,selRank");
+        for (OrderTargetInfoTest order : time2Order.values()) {
+            float rate = Utils.rateOf2Double(order.priceTP, order.priceEntry);
+            if (order.side != null && order.side.equals(OrderSide.SELL)) {
+                rate = -rate;
+            }
+            float peakPct = (order.maePeak != null && order.priceEntry != null && order.priceEntry > 0f)
+                    ? Utils.rateOf2Double(order.maePeak, order.priceEntry) * 100f : Float.NaN;
+            StringBuilder builder = new StringBuilder();
+            builder.append(order.symbol).append(",");
+            builder.append(order.side).append(",");
+            builder.append(order.priceEntry).append(",");
+            builder.append(order.priceTP).append(",");
+            builder.append(rate * 100).append(",");
+            builder.append(order.maePeak).append(",");
+            builder.append(peakPct).append(",");
+            builder.append(order.status).append(",");
+            builder.append(Utils.normalizeDateYYYYMMDDHHmm(order.timeStart)).append(",");
+            builder.append(Utils.normalizeDateYYYYMMDDHHmm(order.timeUpdate)).append(",");
+            builder.append(order.marketLevelChange).append(",");
+            builder.append(order.quantity).append(",");
+            builder.append(order.calMargin()).append(",");
+            builder.append(order.calTp()).append(",");
+            builder.append(order.symbolPred).append(",");
+            builder.append(order.selRank).append(",");
+            lines.add(builder.toString());
+        }
+        FileUtils.writeLines(new File(fileName), lines);
+    }
 }

@@ -368,6 +368,17 @@ public class OrderTargetInfoTest implements Serializable {
      * Vi du arm 5% -> SL +2.5%; 10% -> +7% (weak) / +5% (strong). LUON duong => SL khong bao gio duoi entry (khop live tsGap sau fix).
      */
     float trailRate(float maxProfitRate) {
+        // [TRAIL-LADDER 2026-09-23] docs/PREREG_TRAIL_LADDER.md: gap BAC THANG theo dinh (thay tran
+        //   PHANG). Default OFF (TS_LADDER khong khai bao) => roi xuong NGUYEN duong cu o duoi
+        //   => byte-identical. Cap STRONG/WEAK theo pNoPump chi con lam FALLBACK cho vung duoi
+        //   bac thap nhat (L3 "chi noi o vung lai lon"); L1/L2 phu toan bo vung dinh.
+        if (Configs.TS_LADDER_ON) {
+            Float pnpL = (this.symbolPred != null) ? this.symbolPred : 1f;
+            float capOld = (pnpL > Configs.tsPnoPumpWeakThr())
+                    ? Configs.TS_MAX_GAP_WEAK : Configs.TS_MAX_GAP;
+            return TradeUtils.trailFromLadder(maxProfitRate, Configs.TS_LADDER_LO,
+                    Configs.TS_LADDER_GAPS, capOld);
+        }
         // [X3 2026-09-06] TS_CAP_STRONG_RANK > 0 -> chon cap theo RANK trong tick, BO QUA ban le
         //   TUYET DOI TS_PNOPUMP_WEAK_THR. Default 0 -> roi xuong duong cu, byte-identical.
         if (Configs.TS_CAP_STRONG_RANK > 0) {
