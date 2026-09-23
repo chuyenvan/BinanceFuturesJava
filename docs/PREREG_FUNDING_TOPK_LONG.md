@@ -7,6 +7,13 @@ chi phí, cổng thống kê, số rep, seed, xử lý cadence/delist, định n
 
 Trạng thái: **ĐANG CHỜ ĐO** (khi xong ⇒ `docs/RESULT_FUNDING_TOPK_LONG.md`).
 
+> **AMEND 2026-09-23 (TRƯỚC mọi phép đo — chưa có grid/stats nào tồn tại):** chỉ **làm rõ nguồn dữ
+> liệu** cho universe V3 (§4): (i) dùng file `printDone.csv` của **`X1_GS_T170_2021_SEL_DROP_TOP8`**
+> (biến thể đúng `SELECTOR_RANK_TOPK=8` của cùng run T170) thay vì `X1_GS_T170_2021` trần;
+> (ii) map tên `sym` (không hậu tố) → `sym + "USDT"`; (iii) nới điều kiện V3 "đứng ngoài" sang
+> **< 3 tên**. **KHÔNG** đổi bất kỳ định nghĩa nào khác (biến thể, chi phí, cổng, seed). Đã kiểm
+> **365/365** tên khớp TRƯỚC khi đo.
+
 ---
 
 ## 0. Vì sao đây là phép đo MỚI (và vì sao tiên lượng là NO-GO)
@@ -78,10 +85,13 @@ Tại mốc `r`, symbol đủ điều kiện nếu: (a) có nến tại `r` **v�
 Decile: `K = max(1, round(n_elig / 10))` (khớp 2 vòng trước ⇒ so sánh được).
 
 **Universe V3 (hệ thống) — KHOÁ:** tại mốc `r`, symbol thuộc **universe hệ thống** nếu nó có **ít nhất
-1 lệnh đã mở** trong run `devrun/X1_GS_T170_2021/storage/printDone.csv` với `start` (đọc là **UTC**,
-hướng bảo thủ: nếu file là giờ GMT+7 thì mốc đọc ra **muộn hơn** thực ⇒ **không** look-ahead)
-**≤ thời điểm mốc `r`**. Tập này **mở rộng dần** (causal, không dùng tương lai). Ghi rõ: đây là **proxy**
-cho universe mà selector/TOPK (`SELECTOR_RANK_TOPK=8`) thực sự giao dịch, không phải danh sách cấu hình.
+1 lệnh đã mở** trong run `devrun/X1_GS_T170_2021_SEL_DROP_TOP8/storage/printDone.csv` (biến thể
+**selector top-K = 8** của chính run T170, tức đúng run có `SELECTOR_RANK_TOPK=8`) với `start`
+(đọc là **UTC**, hướng bảo thủ: nếu file là giờ GMT+7 thì mốc đọc ra **muộn hơn** thực ⇒ **không**
+look-ahead) **≤ thời điểm mốc `r`**. Map tên: `sym` trong printDone **không có hậu tố** `USDT` ⇒
+khớp `sym` **hoặc** `sym + "USDT"` với `raw/<tên>.f32` (đã kiểm: **365/365** tên khớp TRƯỚC khi đo).
+Tập này **mở rộng dần** (causal, không dùng tương lai). Ghi rõ: đây là **proxy** cho universe mà
+selector/TOPK (`SELECTOR_RANK_TOPK=8`) thực sự giao dịch, không phải danh sách cấu hình.
 
 ## 5. Ba biến thể + 4 đối chứng (KHOÁ — tối đa 3 biến thể)
 
