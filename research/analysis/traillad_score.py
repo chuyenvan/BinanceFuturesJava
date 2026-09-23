@@ -82,7 +82,7 @@ def trace(tag):
     p = trace_path(tag)
     if not os.path.exists(p):
         return None
-    d = pd.read_csv(p, on_bad_lines="skip")
+    d = pd.read_csv(p, on_bad_lines="skip", index_col=False)
     d.columns = [c.strip() for c in d.columns]
     for c in ("entry", "tp", "ratePct", "peak", "peakPct", "quantity", "margin", "pnl"):
         if c in d.columns:
@@ -258,6 +258,63 @@ def bigmove(t, lv):
     )
 
 
+def bigmove_ci(tb, tv, lv, width, seed=SEED):
+    """[POST-HOC / KHAM PHA — KHONG phai tieu chi quyet dinh cua pre-reg]
+
+    Paired block-72h bootstrap (cung luoi khoi cho 2 chan) cho 2 metric trong NHOM peak >= lv:
+      - mean capture ratio (ratePct/peakPct tung leg trong nhom)
+      - SumPnL cua nhom
+    LUU Y phuong phap: nhom duoc CHON theo peak DA XAY RA (post-selection) — chan co gap lon hon
+    thi NHIEU lenh song sot den dinh cao hon => nhom khac nhau ve thanh phan. CI nay chi de biet
+    tin hieu co "ngoai nhieu" khong, KHONG dung de ket luan GO/NO-GO.
+    """
+    a, b = trace(tb), trace(tv)
+    if a is None or b is None or len(a) == 0 or len(b) == 0:
+        return None
+    thr = lv * 100.0
+    a = a.loc[a.peakPct >= thr].copy()
+    b = b.loc[b.peakPct >= thr].copy()
+    for d in (a, b):
+        d["ts"] = pd.to_datetime(d["start"].astype(str), format="%Y%m%d %H:%M", errors="coerce")
+        d["blk"] = ((d.ts - ANCHOR) / pd.Timedelta(hours=BLOCK_H)).astype(int)
+        d["cap"] = d.ratePct / d.peakPct
+    blocks = np.union1d(a.blk.unique(), b.blk.unique())
+    ga = {k: v for k, v in a.groupby("blk")}
+    gb = {k: v for k, v in b.groupby("blk")}
+    empty = a.iloc[:0]
+
+    def stat(sa, sb):
+        return (sa.cap.mean() - sb.cap.mean(), sa.pnl.sum() - sb.pnl.sum())
+
+    obs = stat(a, b)
+    rng = np.random.default_rng(seed)
+    draws = ([], [])
+    for _ in range(NREP):
+        pick = rng.choice(blocks, size=len(blocks), replace=True)
+        sa = pd.concat([ga[k] for k in pick if k in ga]) if any(k in ga for k in pick) else empty
+        sb = pd.concat([gb[k] for k in pick if k in gb]) if any(k in gb for k in pick) else empty
+        try:
+            d0, d1 = stat(sa, sb)
+        except Exception:
+            continue
+        draws[0].append(d0)
+        draws[1].append(d1)
+    out = {}
+    for i, nm in enumerate(("d_capture", "d_sumPnL")):
+        arr = np.asarray(draws[i], dtype=float)
+        arr = arr[np.isfinite(arr)]
+        if len(arr) == 0:
+            out[nm] = (obs[i], float("nan"), float("nan"), False)
+            continue
+        lo, hi = np.percentile(arr, [2.5, 97.5])
+        c = (lo + hi) / 2.0
+        lo, hi = c - (c - lo) * width, c + (hi - c) * width
+        out[nm] = (float(obs[i]), float(lo), float(hi), not (lo <= 0.0 <= hi))
+    out["n_var"] = int(len(a))     # a = tag dau tien (bien the)
+    out["n_base"] = int(len(b))    # b = tag thu hai (baseline)
+    return out
+
+
 def main():
     pos, k, jout = [], 3, None
     i = 1
@@ -368,6 +425,27 @@ def main():
                 t, r["n"], r["pct_trailing"], r["med_gap_pp"], r["mean_gap_pp"],
                 r["med_capture"], r["mean_capture"], r["sumPnL"]))
             res["bigmove"].setdefault(t, {})["%d" % int(lv * 100)] = r
+
+    print("\n=== (c2) [POST-HOC — KHONG phai tieu chi pre-reg] CI block-72h cho NHOM song lon")
+    print("     baseline capture = %s (trace) | do rong inflate(k)=%.6f | nhom CHON theo peak => co post-selection" % (parity if T[parity] is not None else variants[0], W_STD))
+    base_tr = parity if T[parity] is not None and len(T[parity]) else (
+        variants[0] if variants and T[variants[0]] is not None else None)
+    if base_tr is not None:
+        for lv in PEAK_LEVELS:
+            for t in variants:
+                if t == base_tr:
+                    continue
+                r = bigmove_ci(t, base_tr, lv, W_STD)
+                if r is None:
+                    continue
+                print("  peak>=+%3d%%  %-9s n_var=%4d n_base=%4d | d_capture %+.3f [%+.3f,%+.3f]%s | d_SumPnL %+9.1f [%+9.1f,%+9.1f]%s" % (
+                    int(lv * 100), t, r["n_var"], r["n_base"],
+                    r["d_capture"][0], r["d_capture"][1], r["d_capture"][2],
+                    " *" if r["d_capture"][3] else "",
+                    r["d_sumPnL"][0], r["d_sumPnL"][1], r["d_sumPnL"][2],
+                    " *" if r["d_sumPnL"][3] else ""))
+                res["bigmove_ci"] = res.get("bigmove_ci", {})
+                res["bigmove_ci"]["%s|%d" % (t, int(lv * 100))] = r
 
     print("\n=== (d) PnL / EQUITY (KHONG dung de chon) + theo LEVEL ===")
     print("%-9s %-22s %7s %14s %10s %8s %8s" % ("tag", "level", "n", "SumPnL", "meanP", "win%", "TSloss%"))
