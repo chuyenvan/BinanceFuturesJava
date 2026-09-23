@@ -73,6 +73,13 @@ chan variant.
 
 ## 4. BUOC 3 — Ket qua chan cap 0.10/0.30 (`tc-cap`)
 
+Chan variant chay **tren CHINH profile `x1_gs_t170` nhu chan parity** + dung 3 override
+`SIM_TS_MAX_GAP=0.30`, `SIM_TS_MAX_GAP_WEAK=0.10`, `SIM_TRAIL_TRACE=1` (kiem lai trong
+`prof_run.properties` cua kernel: tc-cap co 2 dong cap, tc-par khong co -> 2 chan chi khac nhau
+**dung 2 tham so nay**; moi key khac giong y nguyen). Profile da commit
+`profiles/x1_gs_t170_cap1030.properties` la **ban ghi tuong duong** cua tap override nay (khac
+`x1_gs_t170` dung 2 dong) — dung lam tai lieu, khong can dua vao dataset.
+
 `md5 printDone = 0c110a8aee1df8ce4ce1c963008674a1`, `profile_hash = e38c2d1b874d8b16`, `n = 1090`.
 
 ### 4.1 5 rate chat luong (theo LEG, toan bo tap) + CI block-72h
