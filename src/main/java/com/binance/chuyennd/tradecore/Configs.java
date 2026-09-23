@@ -477,6 +477,37 @@ public class Configs {
             || "true".equalsIgnoreCase(Cfg.getOr("TS_LADDER", ""));
     public static final float[] TS_LADDER_LO = cfgCsvFloats("TS_LADDER_LO");
     public static final float[] TS_LADDER_GAPS = cfgCsvFloats("TS_LADDER_GAPS");
+
+    // =========================================================
+    // [PEAK-CLOSE 2026-09-23] docs/PREREG_PEAK_CLOSE.md — DINH TRAILING DO BANG CLOSE thay vi HIGH
+    // =========================================================
+    // Hien trang (den commit eb4c0de, xac nhan bang harness offline `research/exitfit`): "dinh" dung
+    //   cho CONG ARM va de tinh gap trailing la HIGH cua nen 1m (`ticker.maxPrice`) — dat o CA HAI cho:
+    //     SimulatorMarketLevelTicker1MStopLoss.startUpdateOldOrderTrading (cong arm)
+    //     OrderTargetInfoTest.updateStatusNew / updateTPSL (calRateLossMax)
+    //   Fit 17 cong thuc gap tren harness (RESULT_EXIT_FIT.md): 16/17 <= baseline; chi F3 (dinh = CLOSE,
+    //   arm CUNG theo close) tot hon (TEST net/lenh +20.6%) NHUNG CI block-ngay chua 0 => chua ket luan.
+    // Flag nay = bo HIGH ra khoi ca arm lan dinh (bo 1 nguon nhieu: bong nen 1m).
+    //   TS_PEAK_MODE=high  (mac dinh, KHONG khai bao) -> NGUYEN `ticker.maxPrice` o ca 2 cho
+    //                                             => byte-identical (cong parity md5 efb793e2 phai PASS)
+    //   TS_PEAK_MODE=close                          -> `ticker.priceClose` o ca 2 cho (profile x1_gs_t170_close)
+    // Doc qua Cfg (profile > env; co TRADING_PROFILE thi KHONG duoc dat qua env). Gia tri khac 2 gia tri
+    //   tren => exit 2 (fail-fast, khong am tham roi ve default).
+    public static final String TS_PEAK_MODE = Cfg.get("TS_PEAK_MODE") == null
+            ? "high" : Cfg.get("TS_PEAK_MODE").trim().toLowerCase();
+    public static final boolean TS_PEAK_CLOSE = "close".equals(TS_PEAK_MODE);
+
+    /** Fail-fast luc khoi dong sim: TS_PEAK_MODE chi nhan `high`/`close`. high => khong lam gi. */
+    public static void validatePeakMode() {
+        if ("high".equals(TS_PEAK_MODE)) return;
+        if ("close".equals(TS_PEAK_MODE)) {
+            System.out.println("[CFG] TS_PEAK_MODE=close — dinh trailing (arm + ratchet) do bang CLOSE nen 1m "
+                    + "(docs/PREREG_PEAK_CLOSE.md). Ratchet cu 0.005 va bat bien SL>entry giu nguyen.");
+            return;
+        }
+        System.err.println("[CFG] DUNG: TS_PEAK_MODE=" + TS_PEAK_MODE + " (chi nhan `high` hoac `close`)");
+        System.exit(2);
+    }
     // [TRAIL-LADDER] DO-LUONG-ONLY: ghi storage/trailTrace.csv (printDone + cot `peak`).
     //   KHONG them cot vao printDone.csv (se pha cong hoi quy byte-identical). Default OFF.
     public static final boolean SIM_TRAIL_TRACE = "1".equals(Cfg.get("SIM_TRAIL_TRACE"))

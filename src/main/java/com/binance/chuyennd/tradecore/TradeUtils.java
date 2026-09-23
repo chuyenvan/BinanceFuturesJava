@@ -1,6 +1,7 @@
 package com.binance.chuyennd.tradecore;
 
 import com.binance.chuyennd.object.MarketLevelChange;
+import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,6 +19,17 @@ public class TradeUtils {
     }
 
 
+
+    /**
+     * [PEAK-CLOSE 2026-09-23] docs/PREREG_PEAK_CLOSE.md — gia "dinh" dung cho CA CONG ARM lan TRAILING.
+     *
+     * <p>Mac dinh (`TS_PEAK_MODE` khong khai bao / `high`): `ticker.maxPrice` = HIGH nen 1m —
+     * NGUYEN hanh vi cu, tra ve dung field cu => byte-identical.
+     * `close`: `ticker.priceClose` = CLOSE nen 1m (bo "bong nen" HIGH ra khoi ca arm lan dinh).
+     */
+    public static float peakPrice(KlineObjectSimple ticker) {
+        return Configs.TS_PEAK_CLOSE ? ticker.priceClose : ticker.maxPrice;
+    }
 
     /**
      * [PRED-GAP] Gap trailing quyet dinh theo SELECTOR per-coin P(no-pump) (=1-sel) thay market gate pred.

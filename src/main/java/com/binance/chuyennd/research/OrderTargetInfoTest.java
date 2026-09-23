@@ -184,8 +184,9 @@ public class OrderTargetInfoTest implements Serializable {
 
     public void updateStatusNew(Float predReturn15M, KlineObjectSimple ticker) {
         if (priceSL == null) {
-            // dinh trailing = HIGH cua nen 1m (co TRAIL_PEAK_MODE da go 2026-09-03, chi con che do "high").
-            Float rateLoss = calRateLossMax(ticker.maxPrice);
+            // dinh trailing = HIGH cua nen 1m (mac dinh) hoac CLOSE nen 1m (TS_PEAK_MODE=close,
+            // [PEAK-CLOSE 2026-09-23] docs/PREREG_PEAK_CLOSE.md). high => NGUYEN `ticker.maxPrice`.
+            Float rateLoss = calRateLossMax(TradeUtils.peakPrice(ticker));
             Float rateMin2MoveSl = TradeUtils.calRateMinWithPredReturn15MForTradingStop(predReturn15M);
             if (rateLoss > rateMin2MoveSl) {
                 Float rateStop = trailRate(rateLoss);
@@ -245,8 +246,9 @@ public class OrderTargetInfoTest implements Serializable {
     public void updateTPSL(Float rateChangeMax90M, KlineObjectSimple ticker) {
         // move SL
         if (priceSL != null) {
-            // dinh trailing = HIGH cua nen 1m (co TRAIL_PEAK_MODE da go 2026-09-03, chi con che do "high").
-            Float rateLoss = calRateLossMax(ticker.maxPrice);
+            // dinh trailing = HIGH cua nen 1m (mac dinh) hoac CLOSE nen 1m (TS_PEAK_MODE=close,
+            // [PEAK-CLOSE 2026-09-23] docs/PREREG_PEAK_CLOSE.md). high => NGUYEN `ticker.maxPrice`.
+            Float rateLoss = calRateLossMax(TradeUtils.peakPrice(ticker));
             // Ratchet LIEN TUC (SIM_TS_GIVEBACK=1 la duong DUY NHAT con lai): nguong dich SL = base,
             //   khong con dead-zone x TS_PROFIT_MULTIPLIER. Thiet ke Uni: ROI 5% -> arm SL 2.5%, sau do
             //   dich len theo cung cong thuc.

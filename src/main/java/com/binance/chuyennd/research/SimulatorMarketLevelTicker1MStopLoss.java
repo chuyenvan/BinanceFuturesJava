@@ -154,6 +154,10 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         LOG.info("[TRAIL-LADDER-CFG] on={} lo={} gaps={} trace={}",
                 Configs.TS_LADDER_ON, java.util.Arrays.toString(Configs.TS_LADDER_LO),
                 java.util.Arrays.toString(Configs.TS_LADDER_GAPS), Configs.SIM_TRAIL_TRACE);
+        // [PEAK-CLOSE 2026-09-23] docs/PREREG_PEAK_CLOSE.md — dinh trailing = HIGH nen (mac dinh) hoac
+        //   CLOSE nen (TS_PEAK_MODE=close). high => khong lam gi => byte-identical.
+        Configs.validatePeakMode();
+        LOG.info("[PEAK-CLOSE-CFG] mode={} close={}", Configs.TS_PEAK_MODE, Configs.TS_PEAK_CLOSE);
         // [TICKBLK 2026-09-23] docs/PREREG_TICK_BLOCK.md — tham so chan ca luot (OFF => khong dong nao doi).
         LOG.info("[TICKBLK-CFG] ind={} pct={} winDays={} minSamples={} drop1m={}",
                 Configs.TICK_BLOCK_IND, Configs.TICK_BLOCK_PCT, Configs.TICK_BLOCK_WIN_DAYS,
@@ -1014,7 +1018,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                     armRate = (orderMulti.selRank != null && orderMulti.selRank <= Configs.SL_ADAPT_RANK_N)
                             ? Configs.SL_ADAPT_ARM_STRONG : Configs.SL_ADAPT_ARM_WEAK;
                 }
-                if (ticker.maxPrice >= orderMulti.priceEntry * (1 + armRate)
+                if (TradeUtils.peakPrice(ticker) >= orderMulti.priceEntry * (1 + armRate)
                         || orderMulti.priceSL != null) {
                     Float predReturn15M  = getPredReturn15MForTradingStop(time);
                     orderMulti.updateStatusNew(predReturn15M , ticker);
