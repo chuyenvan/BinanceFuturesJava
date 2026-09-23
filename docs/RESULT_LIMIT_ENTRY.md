@@ -2,7 +2,7 @@
 
 Ngày: 2026-09-23. Pre-reg: `docs/PREREG_LIMIT_ENTRY.md` (**commit `493c02f`, chốt TRƯỚC khi chạy**, không sửa thiết kế sau đó).
 Script: `research/analysis/limit_entry.py`. Trung gian: `/home/ubuntu/claudedata/limit_entry/`
-(`events_d00.npz`, `events_d00015.npz`, `report.txt`, `summary.json`, `run.log`) — **dọn sau khi commit**.
+(`report.txt`, `summary.json`, `run.log` — giữ; **`events_d00.npz`/`events_d00015.npz` đã dọn sau commit**, tái tạo bằng script).
 
 **Tuân thủ:** thuần Python (0-sim) · **không** Java trên Oracle (shadow đang chạy) · **không** `claude-run`/Claude Code
 · **không push** · **không chạm 2026** (mọi cửa sổ `< 2026-01-01`). Nguồn 1m: `raw/*.f32` (627 symbol, nến đã đóng);
@@ -172,4 +172,4 @@ cần khớp ~96–100% mới trung tính) — ở đây **δ=0 khớp 98,6%** n
 | `docs/RESULT_FUNDING_SIGN.md` | Phần 1 (funding) |
 | `research/analysis/limit_entry.py` | script (thuần Python, chỉ đọc; `LE_STATS_ONLY=1` để chạy lại phần thống kê từ npz) |
 | `research/analysis/funding_sign_reconcile.py` | script Phần 1 |
-| `/home/ubuntu/claudedata/limit_entry/` | `events_d00.npz`, `events_d00015.npz`, `report.txt`, `summary.json`, `run.log` (ngoài repo, dọn sau commit) |
+| `/home/ubuntu/claudedata/limit_entry/` | `report.txt`, `summary.json`, `run.log` (ngoài repo). **`events_*.npz` (250 MB) đã dọn sau commit** để lấy chỗ đĩa — tái tạo được bằng `python3 research/analysis/limit_entry.py` (~4 phút) |

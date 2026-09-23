@@ -2,7 +2,7 @@
 
 Ngày: 2026-09-23. Pre-reg: `docs/PREREG_LIMIT_ENTRY.md` (**commit `493c02f`, TRƯỚC khi đo**).
 Script: `research/analysis/funding_sign_reconcile.py`. Trung gian: `/home/ubuntu/claudedata/funding_sign/`
-(`report.txt`, `summary.json`, `fund_cache.npz`, `orders_funding.csv`) — ngoài repo, **dọn sau khi commit**.
+(`report.txt`, `summary.json`, `orders_funding.csv` — giữ; **`fund_cache.npz` đã dọn sau commit**, tái tạo bằng script ~10 s).
 
 **Tuân thủ:** thuần Python (0-sim) · **không** Java trên Oracle (shadow đang chạy) · **không** `claude-run`/Claude Code
 · **không push** · **không chạm 2026** (mọi mốc `< 2026-01-01`; 579.924 cặp `(symbol,T)` có `T ≥ 2026` đã **loại**).
@@ -204,4 +204,4 @@ phép đo cũ mà owner nhớ (#2/#4: "được NHẬN/thưởng") — đều **
 | `docs/PREREG_LIMIT_ENTRY.md` | chốt trước (commit `493c02f`) |
 | `docs/RESULT_FUNDING_SIGN.md` | file này — truy vết + đo 2 tầng + chốt quy ước + số đúng |
 | `research/analysis/funding_sign_reconcile.py` | script tái tạo (thuần Python, chỉ đọc) |
-| `/home/ubuntu/claudedata/funding_sign/` | `report.txt`, `summary.json`, `fund_cache.npz`, `orders_funding.csv` (ngoài repo, dọn sau commit) |
+| `/home/ubuntu/claudedata/funding_sign/` | `report.txt`, `summary.json`, `orders_funding.csv` (ngoài repo). `fund_cache.npz` đã dọn sau commit |
