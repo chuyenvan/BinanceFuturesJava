@@ -144,7 +144,7 @@ def main():
     Y = {t: G.yearly_detail(t) for t in have}
     print("\n[3] *** BANG PnL THEO NAM + TOTAL PnL *** (PnL = realized `pnl` USDT)")
     yrs = [2021, 2022, 2023, 2024, 2025]
-    print("%-9s %s %s %12s %12s" % ("ratio",
+    print("%-9s %s %12s %12s" % ("ratio",
                                     " ".join("%13s" % ("%d n/PnL" % y) for y in yrs),
                                     "TONG n", "TOTAL PnL"))
     for t in have:

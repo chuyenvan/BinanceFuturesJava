@@ -21,7 +21,7 @@ from tools import kaggle_sim as ks
 
 BUNDLE = "sim-x1-2021-bundle"
 END = "20251231"
-SHA = "prereg-giveback-ratio"
+SHA = "bca8575+gbratio"
 
 # KEEPLEG0 = x1_gs_t170 + DUNG 2 dong (docs/DECISION_SHADOW_FLATGRID_KEEPLEG0.md)
 KEEP = {"DCA_GRID_WEIGHTS": "1,1,1,1", "DCA_GRID_SCALE": 6.0}
