@@ -135,7 +135,12 @@ OI 24h, va do la feature OI duy nhat vuot (a)–(d) trong khi `oiPersistence` (c
    cac feature khac ≥ 0,9623. `oi_delta7d` NaN 1,91% (chu yeu do ky 24h thieu trong chuoi OI 5m).
 4. **Multiplicity:** do **20** feature (23 de xuat, 3 loai vi thieu du lieu) ⇒ CI nhan
    `inflate(k=23) = sqrt(2 ln 23) = 2,5042`; 2000 rep block-72h seed `20260905`.
-5. **Nhan do ≠ nhan train:** IC do tren `retEnd_4h`; nhan train that la `maxFav_4h >= 6%`.
+5. **Nhan do vs nhan train (DINH CHINH 2026-09-24, commit `4adc4e1`):** nhan train THAT cua selector la
+   **`retEnd_4h > 0,015`** (base 0,1849), **khong** phai `maxFav_4h >= 6%`. Sua lai: do IC tren
+   **chinh `retEnd_4h`** (ban lien tuc cua nhan train) ⇒ IC o day **gan voi muc tieu train hon**
+   so voi gia dinh trong pre-reg §6.1 ("nhan do khac nhan train") — day la **dinh chinh pham vi
+   dien giai**, **khong** doi tieu chi/nguong/`k`. Luu y `maxFav>=0.06` la nhan cua ho
+   `G015_v2` / **model LIVE ONNX**, khac han, khong dung cheo.
 6. **Khong co ket luan** ve: sim/PnL, `maxFav`, nhom B, 3 feature bi loai, va ve "feature co alpha".
 
 ## 6. DE XUAT SO BIEN THE TRAIN (V0..V5) — ly do ngan
@@ -165,6 +170,8 @@ voi thu tu cot ghi ro (21 keeper theo thu tu `fs_v2_21` + cac cot moi **noi tiep
 
 ## 7. Gioi han
 1. Pre-screen nay tra loi "co dang dot GPU khong", **khong** tra loi "co alpha khong".
+1b. **Chinh chinh nhan (2026-09-24, `4adc4e1`):** nhan train la `retEnd_4h > 0,015` ⇒ IC do tren
+   `retEnd_4h` la **ban lien tuc cua chinh nhan train** (xem §5.5). Khong doi ket qua loc.
 2. `edge` decile (bp) khong feature nao ngoai 0 ⇒ ky vong **mac dinh la NULL** van giu nguyen.
 3. Chua do: do on dinh theo nam, do on dinh qua fold, tac dong len `maxFav`, va tac dong len sim.
 4. Lech nguon gia (§5.2) chua dinh luong duoc ⇒ moi IC o day co sai so chua do.
