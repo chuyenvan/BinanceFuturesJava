@@ -32,6 +32,12 @@ Ngoai le duy nhat dang chu y: **`maxDD` KHONG xau di dang ke** (moi diem −11.8
 ca tran CU 30%**) — dung y `RISK_APPETITE.md` §6 da ghi truoc: maxDD khong phai rang buoc dang chan.
 Rang buoc chan **that su** la **UW** va **tap trung 1 coin**, va ca hai **XAU di khi n tang**.
 
+> ⚠️ **Chuan do maxDD/UW da doi GIUA LUC CHAY** (commit `7d85426`, §7.3, 11:04 gio VN): tu nay
+> maxDD/UW phai do tren **MTM moc PHUT**, chuoi NGAY **che mat 7.8-10.1pp** (T100 −16.13 → −26.26%).
+> **Bang trong file nay la thang NGAY** (dung nhu pre-reg da khoa). Huong ket luan **khong doi**
+> (UW moc phut chi **dai hon**; va *tap trung*, *do venh nam*, *5 rate*, *relSE* **khong phu thuoc**
+> chuan do). Chi tiet + viec can lam: §9.7.
+
 ---
 
 ## 1. Cong parity + co che + bang theo scale
@@ -305,3 +311,23 @@ no DI LEN, khong di xuong.**
    sau khi thay so.
 6. Sinh lai toan bo so: `python3 research/analysis/gatescale_score.py --json research/analysis/gatescale_sweep_score.json`
    (doc truc tiep `kaggle_sim/out/{t170-x1-2021,gs2-t155,gs2-t140,gs2-t125,gs2-t110,hn-t100}`).
+7. **CHUAN DO maxDD/UW DA DOI GIUA LUC CHAY — phai doc kem (khong tu doi so sau khi thay ket qua).**
+   Pre-reg cua vong nay (commit `bc6082b` luc **08:26** gio VN, amend `4835854` 10:16) chot do
+   maxDD/UW tren **chuoi equity NGAY** (dung quy uoc dang dung cua repo: `gd92xexit_score.equity()`
+   doc `sim.out`, moc ngay). Trong luc 4 kernel dang chay, commit **`7d85426` (11:04 gio VN,
+   `risk-appetite(§7.3)`)** da **SUA CHUAN DO**: *"TU NAY maxDD/UW PHAI do tren MTM moc PHUT;
+   daily chi doi chieu"*, vi chuoi daily **che mat 7.8-10.1pp** (rieng 2025: 15.7pp) va **xep sai nam
+   xau nhat**. So cu the da cong bo (`RESULT_INTRADAY_DD`): T170 −11.84 → **−19.96%**,
+   KEEPLEG0 −11.21 → −19.96%, **T100 −16.13 → −26.26%**, GD92 −16.55 → −24.30%.
+
+   ⇒ **Bang trong §1/§3/§4 cua file nay la thang NGAY (dung nhu pre-reg khoa).** He qua phai ghi ro:
+   (i) **maxDD that su sau hon** so voi bang — uoc luong tuong tu (T100 −26.26%) **van duoi 30%**,
+   nen **chua the ket luan maxDD co tro thanh rang buoc chan hay khong** o cac diem 1.55-1.10 —
+   **can do lai moc phut** neu muon chot;
+   (ii) **UW moc phut se DAI HON** UW ngay ⇒ **muc UW fail se XAU HON**, khong the tot hon
+   (huong ket luan (a)/(b)/(c) **KHONG doi**, chi manh hon);
+   (iii) cac thuoc **khong phu thuoc chuan do** (tap trung 1 coin tinh theo equity/margin, SD+range
+   `ret%` nam, `meanP`/win%/TSloss%, relSE, 5 rate + CI) **khong doi** — day la phan tra loi cau hoi
+   trung tam, va no **KHONG bi anh huong**.
+   De xuat: neu ap §7.3 cho vong nay thi phai **do lai 4 chan moi tren moc phut** (khuon
+   `RESULT_INTRADAY_DD`) **truoc khi** ket luan ve maxDD; **khong** doi so cua file nay.
