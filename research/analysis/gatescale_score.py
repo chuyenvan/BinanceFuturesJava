@@ -70,25 +70,25 @@ def rel_se(tag, nrep=NREP, seed=SEED):
                 n_blk=int(len(blocks)))
 
 
-def gates(S, Y, dd_max):
+def gates(S, Y, dd_max, uw_max=G.UW_MAX, q_min=G.Q_MIN, conc_max=G.CONC_MAX):
     """Qua het rao cung? Tra ve (ok_whole, ly_do, ok_theo_nam:dict)."""
     bad = []
     if S["maxDD"] < -dd_max:
         bad.append("maxDD toan ky %.2f" % S["maxDD"])
-    if S["uw"] > G.UW_MAX:
+    if S["uw"] > uw_max:
         bad.append("UW toan ky %d" % S["uw"])
-    if S["qmin"] < G.Q_MIN:
+    if S["qmin"] < q_min:
         bad.append("qmin toan ky %.2f" % S["qmin"])
-    if S["conc"] > G.CONC_MAX:
+    if S["conc"] > conc_max:
         bad.append("conc %.2f" % S["conc"])
     yb = {}
     for y, r in sorted(Y.items()):
         b = []
         if r["maxDD"] < -dd_max:
             b.append("maxDD %.2f" % r["maxDD"])
-        if r["uw"] > G.UW_MAX:
+        if r["uw"] > uw_max:
             b.append("UW %d" % r["uw"])
-        if r["qmin"] < G.Q_MIN:
+        if r["qmin"] < q_min:
             b.append("qmin %.2f" % r["qmin"])
         if r["ret"] < 0:
             b.append("nam am %.2f" % r["ret"])
@@ -111,8 +111,8 @@ def main():
 
     print("=== GATE-SCALE SWEEP — %d diem | block-%dh %d rep seed %d anchor %s | CI quyet dinh x%.2f (phu inflate(%d)=%.4f) ===" % (
         len(ARMS), G.BLOCK_H, NREP, SEED, G.ANCHOR.date(), G.LEGACY, k, W))
-    print("    rao cung: S1 maxDD<=%.0f%% | S2 maxDD<=%.0f%% | UW<=%d | quy>=%.0f%% | ko nam am | conc<=%.0f%%" % (
-        30.0, 40.0, G.UW_MAX, G.Q_MIN, G.CONC_MAX))
+    print("    rao cung: S1 maxDD<=30%% UW<=200 quy>=-15%% | S2 maxDD<=40%% (con lai nhu S1) | "
+          "S3(HIEN HANH §7 sau 0c2a8a5) maxDD<=40%% UW<=250 quy>=-20%% | ko nam am | conc<=%.0f%%" % G.CONC_MAX)
 
     # ---- [0] parity ----
     print("\n[0] CONG PARITY (md5 printDone.csv)")
@@ -192,7 +192,7 @@ def main():
         ci_res[t] = dict(detail=det, good=ng, bad=nb, e_pass=bool(ng >= 2 and nb == 0))
 
     # ---- [3] rao cung ----
-    print("\n[3] RAO CUNG (S1 maxDD<=30% / S2 maxDD<=40%) — theo nam VA toan ky")
+    print("\n[3] RAO CUNG S1 (maxDD<=30%) / S2 (maxDD<=40%) / S3 (HIEN HANH: 40%/UW250/quy-20%) — theo nam VA toan ky")
     print("%-8s %6s %10s %7s %8s %6s %8s %8s %7s %6s" % (
         "tag", "scale", "equity", "CAGR%", "maxDD%", "UW", "qmin%", "conc%", "n", "SumPnL"))
     for t in tags:
@@ -203,8 +203,10 @@ def main():
     gres = {}
     for t in tags:
         row = {}
-        for lab, dd in (("S1", 30.0), ("S2", 40.0)):
-            okw, bad, yb = gates(S[t], Y[t], dd)
+        for lab, kw in (("S1", dict(dd_max=30.0)),
+                        ("S2", dict(dd_max=40.0)),
+                        ("S3", dict(dd_max=40.0, uw_max=250, q_min=-20.0))):
+            okw, bad, yb = gates(S[t], Y[t], **kw)
             row[lab] = dict(ok=bool(okw), bad=bad, year=yb)
         gres[t] = row
     print("\n  maxDD/UW/qmin THEO NAM:")
@@ -218,7 +220,9 @@ def main():
                 r["maxDD"], r["uw"], r["ret"], r["qmin"])))
         print("  %-8s %s" % (t, " ".join(cells)))
     print("  (moi o = maxDD% / UW / ret% / qmin%)")
-    for lab, nm in (("S1", "S1 maxDD<=30%"), ("S2", "S2 maxDD<=40%")):
+    for lab, nm in (("S1", "S1 maxDD<=30% UW<=200 quy>=-15%"),
+                    ("S2", "S2 maxDD<=40% UW<=200 quy>=-15%"),
+                    ("S3", "S3 HIEN HANH maxDD<=40% UW<=250 quy>=-20%")):
         print("\n  RAO CUNG (%s):" % nm)
         for t in tags:
             r = gres[t][lab]
@@ -273,15 +277,17 @@ def main():
 
     # ---- [7] ket luan ----
     print("\n[7] KET LUAN (theo luat §7 pre-reg)")
-    print("  %-8s %6s %7s %10s %10s %12s %12s %10s %10s" % (
-        "tag", "scale", "n", "R-PASS S1", "R-PASS S2", "E-PASS", "PASS day du", "maxDD_ky", "UW_ky"))
+    print("  %-8s %6s %7s %10s %10s %10s %12s %12s %12s %10s %10s" % (
+        "tag", "scale", "n", "R-PASS S1", "R-PASS S2", "R-PASS S3", "E-PASS", "PASS day du", "PASS S3 full", "maxDD_ky", "UW_ky"))
     for t in tags:
         r1 = gres[t]["S1"]["ok"]
         r2 = gres[t]["S2"]["ok"]
+        r3 = gres[t]["S3"]["ok"]
         ep = ci_res[t]["e_pass"] if t in ci_res else False
-        print("  %-8s %6.2f %7d %10s %10s %12s %12s %10.2f %10d" % (
+        print("  %-8s %6.2f %7d %10s %10s %10s %12s %12s %12s %10.2f %10d" % (
             t, sc_of[t], len(D[t]), "PASS" if r1 else "FAIL", "PASS" if r2 else "FAIL",
-            "PASS" if ep else "FAIL", "PASS" if (r1 and ep) else "FAIL",
+            "PASS" if r3 else "FAIL", "PASS" if ep else "FAIL",
+            "PASS" if (r1 and ep) else "FAIL", "PASS" if (r3 and ep) else "FAIL",
             S[t]["maxDD"], S[t]["uw"]))
 
     res.update(dict(arms=[dict(tag=t, scale=sc_of[t], n=len(D[t]), equity=S[t]["end"],

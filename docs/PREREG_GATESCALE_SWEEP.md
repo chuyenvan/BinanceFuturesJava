@@ -164,7 +164,30 @@ Chan 1.00 (`hn-t100`) chay bang jar `sim-jar-exithighn` (cherry-pick rolling **t
 **Ghi chu tranh cai (ghi truoc):** `docs/RISK_APPETITE.md` **§6 (2026-09-24)** da noi `maxDD` theo
 nam len `<= 40%` theo chot cua user. Nghia la **S2 chinh la rao HIEN HANH neu tinh §6**, con **S1 la
 rao theo ban §1** (30%). Task yeu cau bao cao CA HAI, nen vong nay bao cao ca hai va **khong duoc
-doi nguong nao sau khi thay so**. `qmin` = return quy xau nhat (tinh trong nam), `conc` = dinh
+doi nguong nao sau khi thay so**.
+
+### 6b. (S3) — rao HIEN HANH sau commit `0c2a8a5` (dang ky TRUOC khi co ket qua)
+
+Trong luc vong nay dang chay, mot commit KHAC (`0c2a8a5 baseline(2026-09-24)`) da vao branch va
+cap nhat `docs/RISK_APPETITE.md` §7 (user chot lan 2): **`maxDD <= 40%/nam` · `UW <= 250 ngay` ·
+`quy xau nhat >= -20%` · `khong nam am` · tap trung `<= 15%`**. User kem chi dan *"uu tien nhat la
+nhieu lenh de on dinh"* — dung chu de cua vong nay.
+
+⇒ Vong nay bao cao them **chuan (S3) = rao hien hanh §7** (khong thay S1/S2 — S1/S2 van la nguong
+**quyet dinh** theo task/pre-reg). S3 la chuan **UNG VIEN DI TIEP** (veto), KHONG phai bang chung.
+
+```
+S1 = maxDD<=30% | UW<=200 | qmin>=-15% | ko nam am | conc<=15%   (quyet dinh theo task)
+S2 = maxDD<=40% | UW<=200 | qmin>=-15% | ko nam am | conc<=15%
+S3 = maxDD<=40% | UW<=250 | qmin>=-20% | ko nam am | conc<=15%   (= RISK_APPETITE §7, hien hanh)
+```
+
+**CANH BAO nen (ghi truoc, KHONG doi thiet ke):** commit `0c2a8a5` cung doi **BASELINE nghien cuu**
+sang `FLATGRID KEEPLEG0` (`DCA_GRID_WEIGHTS=1,1,1,1` + `DCA_GRID_SCALE=6.0`, parity md5
+`99e42b75cf1a2142f9cd14dc72e371ba`, 1085 leg). Thang chot cua vong nay **da bi khoa tren nen
+`x1_c3_full`/`x1_gs_t170` (DCA `1,1,3,8`)** voi 2 cong parity `efb793e2`/`dc16e4da` — **KHONG doi
+nen** (doi nen la doi thiet ke + pha 2 cong parity). Ket qua vong nay vi vay duoc dan nhan la
+**do tren NEN CU (DCA 1,1,3,8)**; muon ket luan cho baseline MOI thi phai chay vong moi. `qmin` = return quy xau nhat (tinh trong nam), `conc` = dinh
 `sum(margin)/equity` theo `(sym,end)` (khuon `gd92xexit_score.conc_max`).
 
 ---
