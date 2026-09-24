@@ -97,6 +97,19 @@ MaxDD nam xau nhat / UW dai nhat (tu `sim.out` tung run, da co san):
   - `margin/(quantity*entry)` = **1.0000 tren 1089/1089 leg** ⇒ **1x isolated**, khong co don bay.
   - **Max concurrent margin = 52,151 USDT** tai 2025-10-11 = **~47% equity** luc do ⇒ exposure < 1x
     ⇒ **khong the chay tk** ⇒ drawdown la **tam thoi** (dung nhu user noi).
+- **BO SUNG 2026-09-24 (do lai T100 + GD92, `docs/RESULT_FRAGILITY_N.md`)**:
+  - `lv = 1.0000` tren **2559/2559 (T100)** va **2632/2632 (GD92)** ⇒ 1x tren **ca ba nen**.
+  - Max concurrent margin: **T170 55,964** (2025-10-11) · **T100 67,248** (2025-11-07) ·
+    **GD92 66,998** (2025-10-11) ⇒ **54.7% / 57.1% / 57.5% equity**. **0 moc** nao co
+    `exposure > equity` ⇒ **khong the chay tk** ca ba nen.
+  - ⇒ Menh de *"1x nen khong chay duoc tk"* **duoc XAC NHAN bang du lieu**, khong con la suy doan.
+  - **Nhung kenh MAT THAT khong nam o 1x**: (a) **tap trung 1 coin** — T100 **28.51%** equity
+    (coin CUDIS, 2025-11-12) **vuot tran 15%**; GD92 14.38%; T170 9.77% (FTT). (b) **ngay su kien**:
+    2022-05-12 (LUNA) −12.06% / −13.55% equity **trong 1 ngay**. (c) **funding = n×eps**
+    (`Σfunding/ΣPnL`: T170 −2.76% · T100 −10.73% · GD92 −6.33%).
+  - **Delist gan nhu khong xay ra trong mau**: chi **1/6,280 leg** co `pnl/margin <= -0.90`
+    (T100, −2,088 USDT = 2.4% tong PnL). ⇒ "lo tam thoi" dung trong mau nay, nhung **do la may**
+    (FTT 2022-11: giu toi 9.8% equity, stop cat trong ~1 ngay).
 - **LUU Y QUAN TRONG**: `maxDD` **khong phai rang buoc dang chan ket qua nao**.
   T170 −11.84% · T100 −16.13% · GD92 −16.55% — **ca ba deu duoi ca tran CU 30%**.
   ⇒ Noi nguong nay **khong mo khoa them ung vien nao** cho den hien tai.
