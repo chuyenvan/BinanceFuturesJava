@@ -73,11 +73,17 @@ def load_legs(base):
     return d
 
 
-def load_daily(base):
+def load_daily(base, tmpdir=None):
     p = os.path.join(base, "logs", "sim.out")
     if not os.path.exists(p) and os.path.exists(p + ".gz"):
-        with gzip.open(p + ".gz", "rt", errors="ignore") as f, open(p, "w") as o:
-            o.write(f.read())
+        # mount Kaggle la READ-ONLY => giai nen ra thu muc ghi duoc (mac dinh /tmp)
+        import tempfile
+        tmp = tmpdir or tempfile.gettempdir()
+        dst = os.path.join(tmp, os.path.abspath(base).replace("/", "_") + "_sim.out")
+        if not os.path.exists(dst):
+            with gzip.open(p + ".gz", "rb") as fi, open(dst, "wb") as fo:
+                fo.write(fi.read())
+        p = dst
     rows, uptimes = [], set()
     with open(p, errors="ignore") as fh:
         for line in fh:
@@ -119,6 +125,19 @@ def per_year(t, s):
     return out
 
 
+def _ticker_path(day):
+    """Kaggle tu giai nen .gz => tren mount ten la `ticker_YYYYMMDD.bin`; Oracle la .bin.gz."""
+    for nm in ("ticker_%s.bin.gz" % day, "ticker_%s.bin" % day):
+        p = os.path.join(TICKER, nm)
+        if os.path.exists(p):
+            return p
+    return None
+
+
+def _open_ticker(p):
+    return gzip.open(p, "rb") if p.endswith(".gz") else open(p, "rb")
+
+
 _G = {}
 
 
@@ -130,15 +149,15 @@ def _init(legs_by_run, need_by_day):
 def _work(days):
     res = {}
     for day in days:
-        p = os.path.join(TICKER, "ticker_%s.bin.gz" % day)
-        syms = sorted(_G["need"].get(day, ())) if os.path.exists(p) else []
+        p = _ticker_path(day)
+        syms = sorted(_G["need"].get(day, ())) if p else []
         C = L = None
         srow = {s: i for i, s in enumerate(syms)}
         if syms:
             C = np.full((len(syms), 1440), np.nan, np.float32)
             L = np.full((len(syms), 1440), np.nan, np.float32)
             t0 = int(pd.Timestamp(day).value // 10 ** 6)
-            with gzip.open(p, "rb") as f:
+            with _open_ticker(p) as f:
                 for k, v in jbin.iter_minutes(f.read()):
                     if k < t0 or k >= t0 + 1440 * 60000:
                         continue
@@ -210,6 +229,11 @@ def main():
         e = daily[k]
         checks["V1_" + k] = dict(diff=float(CAP0 + legs[k].pnl.sum() - e.b.iloc[-1]))
     days = [pd.Timestamp(d).strftime("%Y%m%d") for d in pd.date_range(DAY0, DAY1, freq="D")]
+    ntf = sum(1 for d in days if _ticker_path(d))
+    LOG.info("ticker: %d/%d ngay co file trong %s", ntf, len(days), TICKER)
+    if ntf == 0:
+        LOG.error("S3_INTRADAY_FAIL: khong thay file ticker nao trong %s", TICKER)
+        sys.exit(4)
     need = {}
     for rn, d in legs.items():
         for day in days:

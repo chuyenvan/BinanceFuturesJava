@@ -469,16 +469,148 @@ def glob_free(root, name):
     return sorted(out)
 
 
+MTM_TEMPLATE = r'''"""S3 MTM-only kernel — tinh maxDD/UW tren MTM MOC PHUT cho 4 kenh (KHONG chay sim).
+
+Mount 4 kernel sim (kernel_sources) + 7 dataset ticker; chay research/analysis/s3_intraday.py
+tren 4 thu muc run. Sinh tu research/analysis/s3_kernel.py."""
+import base64
+import glob
+import hashlib
+import gzip
+import json
+import logging
+import os
+import shutil
+import subprocess
+import sys
+import time
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s",
+                    stream=sys.stdout)
+LOG = logging.getLogger("s3-mtm")
+CFG = json.loads(__CFG_JSON__)
+IN, WORK = "/kaggle/input", "/kaggle/working"
+HELPDIR = WORK + "/helpers"
+os.makedirs(HELPDIR, exist_ok=True)
+for _nm, _b64 in json.loads(__HELPERS__).items():
+    with open(os.path.join(HELPDIR, _nm), "wb") as _f:
+        _f.write(base64.b64decode(_b64))
+
+
+def md5f(p):
+    h = hashlib.md5()
+    with open(p, "rb") as f:
+        for b in iter(lambda: f.read(1 << 22), b""):
+            h.update(b)
+    return h.hexdigest()
+
+
+link = os.path.join(WORK, "kaggle_data_hpo")
+os.makedirs(link, exist_ok=True)
+tk = sorted(glob.glob(IN + "/**/ticker_2*.bin*", recursive=True))
+for t in tk:
+    dst = os.path.join(link, os.path.basename(t))
+    if not os.path.lexists(dst):
+        os.symlink(t, dst)
+LOG.info("ticker symlink=%d", len(tk))
+
+runs, md5s = [], {}
+for arm in CFG["arms"]:
+    cand = [p for p in glob.glob(IN + "/**/printDone.csv", recursive=True)
+            if ("/" + CFG["slug"] + "-" + arm.lower() + "/") in p.replace("\\", "/")]
+    if not cand:
+        LOG.error("MISSING printDone cho arm=%s (ung vien=%s)", arm,
+                  [p.split("/kaggle/input/")[1] for p in glob.glob(IN + "/**/printDone.csv", recursive=True)][:6])
+        sys.exit(1)
+    mandir = os.path.dirname(cand[0])
+    run = os.path.dirname(mandir)
+    md5s[arm] = md5f(cand[0])
+    if os.path.exists(os.path.join(run, "logs", "sim.out")) is False and \
+            not os.path.exists(os.path.join(run, "logs", "sim.out.gz")):
+        LOG.error("MISSING sim.out cho arm=%s tai %s", arm, run)
+        sys.exit(1)
+    runs.append((arm, run))
+LOG.info("runs=%s", runs)
+for arm, want in CFG["md5_want"].items():
+    got = md5s.get(arm) or ""
+    LOG.info("md5 %-4s %s want %s %s", arm, got[:16], want[:16],
+             "OK" if got[:16] == want[:16] else "*** LECH ***")
+
+ij = WORK + "/intraday_all.json"
+cmd = [sys.executable, os.path.join(HELPDIR, "s3_intraday.py")]
+for arm, run in runs:
+    cmd += ["--run", "%s=%s" % (arm, run)]
+cmd += ["--ticker", link, "--workers", str(CFG["workers"]), "--json", ij]
+t0 = time.time()
+rc = subprocess.call(cmd)
+LOG.info("intraday rc=%s %.0fs", rc, time.time() - t0)
+res = {"md5": md5s, "rc": rc, "secs": round(time.time() - t0, 1)}
+if os.path.exists(ij):
+    I = json.load(open(ij))
+    res["checks"] = I["checks"]
+    res["stats"] = I["stats"]
+with open(WORK + "/mtm_result.json", "w") as f:
+    json.dump(res, f, indent=1)
+LOG.info("S3_MTM_DONE rc=%s %s", rc, json.dumps({k: {x: v for x, v in (res.get("stats", {}).get(k, {}) or {}).items() if x in ("minute", "daily")} for k in (res.get("stats") or {})}))
+if rc != 0:
+    sys.exit(3)
+'''
+
+
+def submit_mtm(push=True):
+    ref = "%s/%s-s3-mtm" % (ks.USER, ks.KERNEL_PREFIX)
+    folder = os.path.join(WORKDIR, "s3-mtm")
+    os.makedirs(folder, exist_ok=True)
+    hb = {}
+    for src, nm in ((os.path.join("/home/ubuntu/src/BinanceFuturesJava/research/analysis/s3_intraday.py"),
+                     "s3_intraday.py"),
+                    (os.path.join("/home/ubuntu/src/BinanceFuturesJava/research/analysis/jbin.py"),
+                     "jbin.py")):
+        import base64
+        with open(src, "rb") as f:
+            hb[nm] = base64.b64encode(f.read()).decode()
+    for src, nm in ((os.path.join("/home/ubuntu/src/BinanceFuturesJava/research/analysis/s3_intraday.py"),
+                     "s3_intraday.py"),
+                    (os.path.join("/home/ubuntu/src/BinanceFuturesJava/research/analysis/jbin.py"),
+                     "jbin.py")):
+        with open(src) as f:
+            body = f.read()
+        with open(os.path.join(folder, nm), "w") as f:
+            f.write(body)
+    cfg = {"arms": list(ARMS), "slug": "sim-s3", "workers": 4,
+           "md5_want": {"moc": KEEP_MD5, "V0": "99e4ae1bf31498b7",
+                        "V1": "7bc02e71ccb4f2c0", "V5": "0f672c2e3755188e"}}
+    code = (MTM_TEMPLATE.replace("__CFG_JSON__", repr(json.dumps(cfg)))
+            .replace("__HELPERS__", repr(json.dumps(hb))))
+    with open(os.path.join(folder, "run.py"), "w") as f:
+        f.write(code)
+    meta = {"id": ref, "title": ref.split("/")[1], "code_file": "run.py", "language": "python",
+            "kernel_type": "script", "is_private": True, "enable_gpu": False,
+            "enable_internet": True, "dataset_sources": list(ks.TICKER_DS),
+            "competition_sources": [],
+            "kernel_sources": ["%s/sim-s3-%s" % (ks.USER, a.lower()) for a in ARMS]}
+    with open(os.path.join(folder, "kernel-metadata.json"), "w") as f:
+        json.dump(meta, f, indent=1)
+    if push:
+        r = ks._api().kernels_push(folder)
+        LOG.info("push %s -> %s", ref, getattr(r, "url", r))
+    return ref
+
+
 def _cli():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["submit", "wait", "fetch", "all"])
+    ap.add_argument("cmd", choices=["submit", "wait", "fetch", "all", "mtm"])
     ap.add_argument("--arm", action="append", default=None)
     a = ap.parse_args()
     arms = a.arm or list(ARMS)
     if a.cmd == "submit":
         for x in arms:
             submit(x)
+    elif a.cmd == "mtm":
+        refs = [submit_mtm()]
+        LOG.info("%s", wait(refs))
+        LOG.info("mtm done: xem /home/ubuntu/kaggle_sim/out/s3-mtm/mtm_result.json")
     elif a.cmd == "wait":
         LOG.info("%s", wait([_ref(x) for x in arms]))
     elif a.cmd == "fetch":

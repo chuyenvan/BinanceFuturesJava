@@ -34,7 +34,7 @@ LOG = logging.getLogger("s3_score")
 
 KOUT = "/home/ubuntu/kaggle_sim/out"
 ARMS = ["moc", "V0", "V1", "V5"]
-TAGS = {a: "s3-" + a.lower() for a in ARMS}
+TAGS = {a: "s3-" + a for a in ARMS}       # khop ten thu muc da keo ve (/out/s3-V0, /out/s3-moc, ...)
 LEGACY = 1.21
 KEEP_MD5 = "99e42b75cf1a2142f9cd14dc72e371ba"
 MOC_FUND_MD5 = "8e57d900d5c54c744bfcaf5c9b27fc93"
@@ -44,10 +44,15 @@ NAM = {2021: "2021H2"}
 
 
 def find_run_dir(arm):
-    """Thu muc chua storage/printDone.csv trong output da keo ve."""
+    """Thu muc RUN (chua storage/printDone.csv + logs/sim.out) trong output da keo ve."""
     root = os.path.join(KOUT, TAGS[arm])
     for dp, _dn, fn in os.walk(root):
         if any("printdone" in f.lower().replace(" ", "") for f in fn):
+            b = os.path.basename(dp)
+            if b == "storage":
+                return os.path.dirname(dp)
+            if b == "logs":
+                return os.path.dirname(dp)
             return dp
     return None
 
@@ -114,6 +119,12 @@ def ci_block(ta_tag, tb_tag, W, quiet=False, label=None):
     if not quiet:
         print("  >>> %s: TOT ngoai CI (ca hai do rong) = %d/5 | XAU = %d/5" % (lab, ng, nb))
     return dict(good=ng, bad=nb, e_pass=bool(ng >= 2 and nb == 0), detail=det)
+
+
+def find_mtm():
+    """mtm_result.json cua kernel sim-s3-mtm (maxDD/UW tren MTM MOC PHUT cho 4 kenh)."""
+    hits = glob.glob(os.path.join(KOUT, "s3-mtm") + "/**/mtm_result.json", recursive=True)
+    return json.load(open(sorted(hits)[0])) if hits else None
 
 
 def main():
@@ -207,14 +218,22 @@ def main():
 
     # ---------------- [3] rao cung ----------------
     print("\n[3] RAO CUNG — MTM MOC PHUT (maxDD/UW) + chuoi NGAY (qmin/nam am/conc)")
+    MTM = find_mtm() or {}
+    if not MTM:
+        print("    [!] KHONG thay mtm_result.json (kernel sim-s3-mtm) => maxDD/UW chi la chuoi NGAY")
+    else:
+        print("    MTM phut: rc=%s | md5 printDone 4 kenh khop? %s" % (
+            MTM.get("rc"),
+            {a: ((MTM.get("md5") or {}).get(a, "")[:16] == (RES[a]["result"].get("md5_printdone") or "")[:16])
+             for a in ARMS}))
     print("%-4s %10s %9s %8s %8s %8s %8s %8s %9s %11s" % (
         "kenh", "equity", "CAGR%", "maxDD_d", "UW_d", "maxDD_m", "UW_m(d)", "qmin%", "conc%", "SumPnL"))
     FENCE = {}
     for a in ARMS:
-        I = RES[a]["result"].get("intraday")
+        I = (MTM.get("stats") or {}).get(a)
         s = S[a]
-        mn = I["stats"]["minute"] if I else {}
-        py_min = I["stats"]["py_min"] if I else {}
+        mn = I.get("minute", {}) if I else {}
+        py_min = I.get("py_min", {}) if I else {}
         pad = {int(y): v for y, v in (py_min or {}).items()}
         yy = {}
         for y, r in Y[a].items():
@@ -225,7 +244,7 @@ def main():
         okw = (mn.get("maxDD", s["maxDD"]) >= -DD_MAX and mn.get("uw_days", s["uw"]) <= UW_MAX
                and s["conc"] <= CONC_MAX and all(v["ret"] >= 0 for v in Y[a].values()))
         FENCE[a] = dict(ok_year=ok, bad_year=bad, ok_whole=bool(okw), per_year=yy,
-                        checks=(I or {}).get("checks", {}))
+                        checks=(MTM.get("checks") or {}))
         print("%-4s %10.0f %9.2f %8.2f %8d %8.2f %8.1f %8.2f %9.2f %11.0f  %s%s" % (
             a, s["end"], s["cagr"], s["maxDD"], s["uw"], mn.get("maxDD", float("nan")),
             mn.get("uw_days", float("nan")), s["qmin"], s["conc"], s["sumpnl"],
@@ -243,17 +262,18 @@ def main():
             cells.append("%8.2f/%6.1f/%+7.2f/%+7.2f %s" % (
                 r["maxDD"], r["uw"], r["ret"], r["qmin"], "P" if ok else "F"))
         print("  %-4s %s" % (a, " ".join("%-34s" % c for c in cells)))
-    print("\n  Cong nghiem thu MTM phut (V1/V2rel/V3/V5) cua tung kenh:")
+    print("\n  Cong nghiem thu MTM phut (V1/V2rel/V3/V5) — moc la cong TAI LAP lai KEEPLEG0 da cong bo:")
     for a in ARMS:
         ck = FENCE[a]["checks"]
         if not ck:
-            print("    %-4s (khong co JSON intraday)" % a); continue
+            print("    %-4s (khong co MTM)" % a); continue
         v1 = ck.get("V1_" + a, {}).get("diff")
         v2 = ck.get("V2rel_" + a, {}).get("rel_pct")
         v3 = ck.get("V3_" + a, {}).get("rel_pct")
         v5 = ck.get("V5_" + a, {}).get("d_pp")
-        print("    %-4s V1 diff=%.2f | V2rel=%.4f%% | V3=%.3f%% | V5=%.3f pp | low maxDD=%.2f%%" % (
-            a, v1, v2, v3, v5, RES[a]["result"]["intraday"]["stats"]["minute"].get("maxDD_low", float("nan"))))
+        mm = (MTM.get("stats") or {}).get(a, {}).get("minute", {})
+        print("    %-4s V1 diff=%.2f | V2rel=%.4f%% | V3=%.3f%% | V5=%.3f pp | maxDD low=%.2f%% | UW low=%.1f d" % (
+            a, v1, v2, v3, v5, mm.get("maxDD_low", float("nan")), mm.get("uw_low_days", float("nan"))))
 
     # ---------------- [4] PnL theo nam ----------------
     print("\n[4] *** BANG PnL THEO NAM (n + PnL USDT) ***")
@@ -297,7 +317,8 @@ def main():
             a, ci["good"], ci["bad"], "CO khac biet" if (ci["good"] + ci["bad"]) else "KHONG (ngoai CI)"))
     out = dict(k=k, inflate=W, legacy=LEGACY, summary=S, yearly=Y, ci=RES["ci"],
                fence=FENCE, verdict=VERD, results={a: RES[a]["result"] for a in ARMS},
-               funding={a: RES[a].get("funding_sum") for a in ARMS})
+               funding={a: RES[a].get("funding_sum") for a in ARMS},
+               mtm={a: (MTM.get("stats") or {}).get(a) for a in ARMS})
     if jout:
         with open(jout, "w") as f:
             json.dump(out, f, indent=1, default=str)
