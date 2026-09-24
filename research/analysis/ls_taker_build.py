@@ -164,10 +164,15 @@ def main():
         log.info("f5 co san -> bo qua")
 
     # ---------- 4. GIA TRI 5m tai su kien MOM15 (cho H3 overlay) ----------
+    # CANH BAO (da sua): `m_sym` cua pools.npz la CHI SO COT 0-based (0..626, max = ncol-1) theo thu tu
+    # sorted glob RAW/*.f32 — KHONG phai symId. Ban dau build nay so khop bang symId => SAI SYMBOL
+    # (48,1% "khop" nhung lech coin). Sua: quy symId -> chi so cot truoc khi so khop.
     if not os.path.exists(OUT + "/events_5m.npz"):
         z = np.load(POOLS)
         m_min = z["m_min"].astype(np.int64)
-        m_sym = z["m_sym"].astype(np.int64)
+        m_sym = z["m_sym"].astype(np.int64)   # CHI SO COT 0-based
+        colmap = np.full(int(ids.max()) + 1, -1, dtype=np.int64)
+        colmap[ids] = np.arange(ncol, dtype=np.int64)   # symId -> cot
         t0m = T0 // 60
         stp = (m_min - t0m) // 5
         off = m_min - (t0m + 5 * stp)
@@ -187,7 +192,8 @@ def main():
             if not m.any():
                 continue
             st = (ts[m] // 300000) - (T0 * 1000 // 300000)
-            sy = np.asarray(b["sym"], dtype=np.int64)[m]
+            syid = np.asarray(b["sym"], dtype=np.int64)[m]
+            sy = np.where(syid <= ids.max(), colmap[np.clip(syid, 0, ids.max())], -1)
             kk = st * 100000 + sy
             pos = np.searchsorted(sk, kk)
             pc = np.clip(pos, 0, len(sk) - 1)
