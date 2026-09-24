@@ -156,11 +156,12 @@ def main():
             sl.mean() if len(sl) else float("nan"), d.profit.mean(),
             s["hold_med"], s["turn"]))
     n_by_scale = [(sc_of[t], len(D[t])) for t in tags]
-    n_sorted = [n for _, n in sorted(n_by_scale)]
-    mono = all(n_sorted[i] < n_sorted[i + 1] for i in range(len(n_sorted) - 1))
-    print("    co che: n theo scale %s => %s" % (
+    n_sorted = [n for _, n in sorted(n_by_scale)]   # scale tang dan
+    mono = all(n_sorted[i] > n_sorted[i + 1] for i in range(len(n_sorted) - 1))
+    print("    co che: n theo scale (tang dan) %s => %s" % (
         ["%.2f:%d" % (s, n) for s, n in sorted(n_by_scale)],
-        "DON DIEU (dung chieu)" if mono else "*** KHONG DON DIEU — co che bat thuong, ghi ro ***"))
+        "DON DIEU GIAM (dung chieu: scale lon => it lenh)" if mono
+        else "*** KHONG DON DIEU — co che bat thuong, ghi ro ***"))
 
     # ---- [2] CI vs T170 ----
     print("\n[2] CI block-72h x%.2f cua hieu 5 rate SO T170 (1.70) — 'NGOAI CI' = ngoai o x%.2f" % (
@@ -172,6 +173,7 @@ def main():
         c1 = G.ci_pair(t, T170, G.LEGACY)
         c2 = G.ci_pair(t, T170, W)
         ng = nb = 0
+        ng_w = nb_w = 0
         print("  -- %s (scale %.2f, n=%d) - T170 --" % (t, sc_of[t], len(D[t])))
         print("  %-9s %11s %26s %30s %5s" % ("rate", "hieu", "CI @1.21", "CI @%.4f (phu)" % W, "huong"))
         det = {}
@@ -179,17 +181,23 @@ def main():
             obs = c1[name][0]
             lo1, hi1, o1 = c1[name][1], c1[name][2], c1[name][3]
             lo2, hi2, o2 = c2[name][1], c2[name][2], c2[name][3]
-            out = o1 and o2
-            good = out and ((dirc > 0 and obs > 0) or (dirc < 0 and obs < 0))
-            bad = out and not good
+            # QUYET DINH theo do rong x1.21 (nhu pre-reg §5.2 + label); do rong rong hon chi bao kem.
+            good = o1 and ((dirc > 0 and obs > 0) or (dirc < 0 and obs < 0))
+            bad = o1 and not good
+            outw = o1 and o2
+            good_w = outw and ((dirc > 0 and obs > 0) or (dirc < 0 and obs < 0))
+            bad_w = outw and not good_w
             ng += int(good); nb += int(bad)
-            det[name] = dict(obs=obs, lo21=lo1, hi21=hi1, out21=bool(o1), out_both=bool(out),
+            ng_w += int(good_w); nb_w += int(bad_w)
+            det[name] = dict(obs=obs, lo21=lo1, hi21=hi1, out21=bool(o1), out_both=bool(outw),
                              good=bool(good), bad=bool(bad))
             print("  %-9s %+11.3f [%9.3f,%9.3f] %5s [%9.3f,%9.3f] %5s %s" % (
                 name, obs, lo1, hi1, "Y" if o1 else "-", lo2, hi2, "Y" if o2 else "-",
                 "TOT" if good else ("XAU" if bad else "-")))
-        print("  >>> %s vs T170: TOT ngoai CI @x1.21 = %d/5 | XAU = %d/5" % (t, ng, nb))
-        ci_res[t] = dict(detail=det, good=ng, bad=nb, e_pass=bool(ng >= 2 and nb == 0))
+        print("  >>> %s vs T170 [x1.21, QUYET DINH]: TOT ngoai CI = %d/5 | XAU = %d/5  ||  [x%.4f, phu]: %d/%d" % (
+            t, ng, nb, W, ng_w, nb_w))
+        ci_res[t] = dict(detail=det, good=ng, bad=nb, good_w=ng_w, bad_w=nb_w,
+                         e_pass=bool(ng >= 2 and nb == 0))
 
     # ---- [3] rao cung ----
     print("\n[3] RAO CUNG S1 (maxDD<=30%) / S2 (maxDD<=40%) / S3 (HIEN HANH: 40%/UW250/quy-20%) — theo nam VA toan ky")
