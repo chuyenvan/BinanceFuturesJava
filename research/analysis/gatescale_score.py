@@ -32,10 +32,10 @@ NREP = 2000
 #   tag la ten thu muc -> gd92xexit_score.base()/trades() resolve dung ngay.
 ARMS = [
     ("t170-x1-2021", 1.70, "efb793e2468ca3a7318da0f0ad23d4fc"),   # moc/T170
-    ("gs-t155", 1.55, None),
-    ("gs-t140", 1.40, None),
-    ("gs-t125", 1.25, None),
-    ("gs-t110", 1.10, None),
+    ("gs2-t155", 1.55, None),
+    ("gs2-t140", 1.40, None),
+    ("gs2-t125", 1.25, None),
+    ("gs2-t110", 1.10, None),
     ("hn-t100", 1.00, "dc16e4da6ff6cb7b8d41c592bc3d9c45"),          # T100 base
 ]
 T170 = "t170-x1-2021"

@@ -32,10 +32,10 @@ SHA = "dc5aecc+prereg-gatescale-sweep"
 #   override => `prof_run.properties` ra DUNG bang noi dung `profiles/x1_gs_t1*.properties`
 #   (tru `WFO_FUNDING_PRED_DIR` bi tro vao mount Kaggle) — kiem lai duoc tu output tung chan.
 JOBS = {
-    "t155": dict(tag="gs-t155", profile="x1_c3_full", overrides={"SIM_GATE_DYN_SCALE": 1.55}),
-    "t140": dict(tag="gs-t140", profile="x1_c3_full", overrides={"SIM_GATE_DYN_SCALE": 1.40}),
-    "t125": dict(tag="gs-t125", profile="x1_c3_full", overrides={"SIM_GATE_DYN_SCALE": 1.25}),
-    "t110": dict(tag="gs-t110", profile="x1_c3_full", overrides={"SIM_GATE_DYN_SCALE": 1.10}),
+    "t155": dict(tag="gs2-t155", profile="x1_c3_full", overrides={"SIM_GATE_DYN_SCALE": 1.55}),
+    "t140": dict(tag="gs2-t140", profile="x1_c3_full", overrides={"SIM_GATE_DYN_SCALE": 1.40}),
+    "t125": dict(tag="gs2-t125", profile="x1_c3_full", overrides={"SIM_GATE_DYN_SCALE": 1.25}),
+    "t110": dict(tag="gs2-t110", profile="x1_c3_full", overrides={"SIM_GATE_DYN_SCALE": 1.10}),
 }
 ALIAS = {"all": ["t155", "t140", "t125", "t110"]}
 
