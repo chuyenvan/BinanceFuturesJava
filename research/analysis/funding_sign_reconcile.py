@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """FUNDING_SIGN_RECONCILE — truy lai + do lai QUY UOC DAU funding, 2 tang doc lap.
 
-Pre-reg: docs/PREREG_LIMIT_ENTRY.md (commit TRUOC khi chay).
+Pre-reg: docs/prereg/PREREG_LIMIT_ENTRY.md (commit TRUOC khi chay).
 Thuan Python, chi DOC. Khong Java tren Oracle, khong claude-run, khong push, khong cham 2026.
 
 Tang A: phan bo FUNDING RATE (unconditional, moi (symbol,T) co T < 2026-01-01) tu Aerospike funding_data.

@@ -2,7 +2,7 @@
 # (KEEP9 + noise_ofi_check), compare vs reused Kaggle-baseline (KEEP9 only, n_jobs=1,
 # edge5=15.209468%), nested SELECT(fold0-9)/CONFIRM(fold10-17), block-bootstrap CI.
 # Harness ported verbatim from research/analysis/s1_hpo_bag_featgrp.py (same formulas,
-# same seeds/NREP/block size) per docs/PREREG_S1_FREE_OFI.md Sec 4. Self-contained Kaggle
+# same seeds/NREP/block size) per docs/prereg/PREREG_S1_FREE_OFI.md Sec 4. Self-contained Kaggle
 # CPU kernel. dataset_sources=["chuyendinh/s1-featv2-x1-20260919"],
 # kernel_sources=["chuyendinh/s1-baseline18-det-n1-20260919","chuyendinh/ofi-build-feat-15sym"].
 import glob

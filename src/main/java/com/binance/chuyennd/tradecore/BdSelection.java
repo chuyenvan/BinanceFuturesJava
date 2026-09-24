@@ -13,7 +13,7 @@ import java.util.Set;
 import java.util.TreeMap;
 
 /**
- * [BD-SEL 2026-09-16] docs/PREREG_SEL_BIGDOWN.md — doi cach chon 2 coin cua leg BIG_DOWN
+ * [BD-SEL 2026-09-16] docs/prereg/PREREG_SEL_BIGDOWN.md — doi cach chon 2 coin cua leg BIG_DOWN
  * theo drop 1-phut causal thay vi pNoPump (getTopSymbolArray GIU NGUYEN, khong sua).
  *
  * <p>drop_i(t) = {@code Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen)}

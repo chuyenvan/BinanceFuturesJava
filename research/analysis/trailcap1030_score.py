@@ -1,4 +1,4 @@
-"""TRAIL-CAP-1030 scorer — cham chan cap 0.10/0.30 theo docs/PREREG_TRAIL_CAP_1030.md.
+"""TRAIL-CAP-1030 scorer — cham chan cap 0.10/0.30 theo docs/prereg/PREREG_TRAIL_CAP_1030.md.
 
 Doc output KAGGLE (/home/ubuntu/kaggle_sim/out/<tag>/). Dung lai may do cua `traillad_score.py` /
 `peakclose_score.py` (cung don vi LEG / cung block-72h / cung seed) — KHONG viet lai cong thuc.

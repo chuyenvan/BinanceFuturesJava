@@ -1,7 +1,7 @@
 #!/bin/bash
 # X1 SIM — build dataset 1 lan tu bins X1 roi chay 2 arm TUAN TU tren Oracle voi TICKER_SOURCE=file.
 # Ly do duong `file` (khong phai aerospike): C3/C3_FULL chay tren Kaggle = duong `file`; neo 60395.
-# Xem docs/PREREG_X1.md muc 1.4 + 3.
+# Xem docs/prereg/PREREG_X1.md muc 1.4 + 3.
 set -u
 R=/home/ubuntu/src/BinanceFuturesJava
 JAR=$R/target/binance-java-sdk-1.2.4.jar

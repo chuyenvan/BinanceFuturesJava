@@ -6,7 +6,7 @@
 #   bash run_x4_sim.sh combo    -> chi X4_COMBO (run 11, chi khi >= 2 truc doi)
 # Cong C1 (hoi quy): X4_PARITY phai ra md5 printDone = d39da2940dfd815f60772f70517750bf (= X1_C3).
 # Cong C2 (key song): moi arm phai ra md5 KHAC parity; arm dau tien trung parity => exit 10.
-# Xem docs/PREREG_X4.md muc 3.
+# Xem docs/prereg/PREREG_X4.md muc 3.
 set -u
 MODE=${1:-all}
 R=/home/ubuntu/src/BinanceFuturesJava

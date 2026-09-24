@@ -79,7 +79,7 @@ for f in fields:
 cnt = collections.Counter(b for _, b, _, _ in rows)
 print("so field:", len(rows)); print("phan bo:", dict(cnt))
 
-with open(R + "/docs/CONFIG_FIELD_MAP.md", "w", encoding="utf-8") as fh:
+with open(R + "/docs/ops/CONFIG_FIELD_MAP.md", "w", encoding="utf-8") as fh:
     fh.write("# BAN DO FIELD CAU HINH — sinh tu ma nguon (tools/gen_config_field_map.py)\n\n")
     fh.write("**KHONG go tay.** Chay lai sau moi lan doi code.\n\n")
     fh.write("## ⚠️ Ban do nay chi de DIEU HUONG, KHONG de quyet dinh xoa\n\n")
@@ -91,7 +91,7 @@ with open(R + "/docs/CONFIG_FIELD_MAP.md", "w", encoding="utf-8") as fh:
     fh.write("> roi so `printDone.csv`) hoac doc tay tung cho doc. Khong xoa chi vi ban do noi DEAD.\n\n")
     fh.write("Nhan cung KHONG noi field co REACHABLE duoi mot cau hinh cu the: mot field\n")
     fh.write("`ENGINE_SIM` van co the TRO voi C2b vi bi co khac tat (vd `MAX_CONCURRENT_ORDERS`\n")
-    fh.write("chi song khi `BREAKER_MODE != OFF`). Xem `docs/C2B_SPEC.md` muc 8.\n\n")
+    fh.write("chi song khi `BREAKER_MODE != OFF`). Xem `docs/design/C2B_SPEC.md` muc 8.\n\n")
     fh.write("| nhan | nghia |\n|---|---|\n")
     fh.write("| `ENGINE_SIM` | doc trong engine backtest (`research/**`) |\n")
     fh.write("| `ENGINE_LIVE` | doc trong `trading/**` — san giao dich that |\n")
@@ -110,7 +110,7 @@ with open(R + "/docs/CONFIG_FIELD_MAP.md", "w", encoding="utf-8") as fh:
             w = ", ".join("`%s`" % x for x in rels[:3]) or "—"
             if len(rels) > 3: w += " +%d" % (len(rels) - 3)
             fh.write("| `%s` | %s | %d |\n" % (f, w, max(0, bare)))
-print("da sinh docs/CONFIG_FIELD_MAP.md")
+print("da sinh docs/ops/CONFIG_FIELD_MAP.md")
 
 print("\n=== UNG VIEN XOA (DEAD / TOOL_ONLY / TOOL+SELF) — VAN PHAI KIEM TRUOC KHI XOA ===")
 for f, b, rels, bare in rows:

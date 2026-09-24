@@ -13,7 +13,7 @@ require_review: true
 
 > ⚠️ **CHỈ 1 CCD làm task này.** Trước đó 2 CCD cùng nhảy vào 103 → trùng việc.
 > Nếu bạn thấy CCD khác đang chạy task 103/103f → DỪNG, báo user, KHÔNG chạy song song.
-> `git pull` (branch module) trước khi bắt đầu. Đọc `docs/KAGGLE_RULES.md`.
+> `git pull` (branch module) trước khi bắt đầu. Đọc `docs/runbooks/KAGGLE_RULES.md`.
 >
 > ⚠️ **2026-06-18: CCD-103f bị DỪNG giữa chừng, reset về TODO.** Việc CÒN LẠI chính:
 > rebuild jar HEAD trên 226 (đã có ValidateOiData nới ngưỡng CHECK-3a, commit aee88af) →

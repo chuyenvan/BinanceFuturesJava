@@ -1,4 +1,4 @@
-"""X3 — day 5 kernel Kaggle SONG SONG (dung 5 slot). Doc docs/KAGGLE_SIM.md truoc.
+"""X3 — day 5 kernel Kaggle SONG SONG (dung 5 slot). Doc docs/runbooks/KAGGLE_SIM.md truoc.
 
 Chi chay duoc sau khi `sim-c2b-bundle` da co jar X3 + dataset WFO 48 thang. Ba dataset ticker
 2024h2/2025h1/2025h2 da co san tren Kaggle (X2 muc 10); `tools/kaggle_sim.TICKER_DS` da them.

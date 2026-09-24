@@ -1,4 +1,4 @@
-"""GB scorer — cham 4 chan cua docs/PREREG_GIVEBACK_RATIO.md (TS_GIVEBACK_RATIO 0.5/1/2/5).
+"""GB scorer — cham 4 chan cua docs/prereg/PREREG_GIVEBACK_RATIO.md (TS_GIVEBACK_RATIO 0.5/1/2/5).
 
 Nen = PRODUCTION FLATGRID KEEPLEG0. Doi tuong so CI = moc `kg0-g170` (TS_GIVEBACK_RATIO=0.5).
   [0] CONG PARITY moc (md5 99e42b75 / n 1,085 / eq 103,083) + "chi 1 key doi"

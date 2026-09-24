@@ -3,7 +3,7 @@
 Tai hien duong THOAT cua profile `x1_gs_t170` (baseline T170) va cho phep thay HAM GAP:
   arm +7% / ratchet lien tuc / dinh HIGH (nen 1m) / loser time-stop 168h / SL luon > entry.
 
-Nguon chan doan code (doc TRUOC khi viet, xem docs/PREREG_EXIT_FIT.md):
+Nguon chan doan code (doc TRUOC khi viet, xem docs/prereg/PREREG_EXIT_FIT.md):
   SimulatorMarketLevelTicker1MStopLoss.startUpdateOldOrderTrading (~:930-1030)
   OrderTargetInfoTest.updateStatusNew (:178-215), updateTPSL (:245-266), trailRate (:367-383)
   TradeUtils.trailFromCap (:45-52), calRateMinWithPredReturn15MForTradingStop (:95-101)

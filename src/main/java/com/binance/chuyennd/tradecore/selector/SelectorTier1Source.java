@@ -13,7 +13,7 @@ import org.slf4j.LoggerFactory;
  * selectorRankPool + maxThres + sortedCandidates, khop cach SIM dung universe. Funding VAN chay de
  * nuoi {@code LATEST_SEL_PNOPUMP} cho duong LEGACY THAT. Khi TAT: duong live byte-identical HEAD.
  *
- * <p>Doc 1 LAN luc class nap. Xem docs/PREREG_LIVE_EQ_SIM.md + docs/AUDIT_SELECTOR_MODEL_PARITY.md.
+ * <p>Doc 1 LAN luc class nap. Xem docs/prereg/PREREG_LIVE_EQ_SIM.md + docs/audit/AUDIT_SELECTOR_MODEL_PARITY.md.
  */
 public final class SelectorTier1Source {
 

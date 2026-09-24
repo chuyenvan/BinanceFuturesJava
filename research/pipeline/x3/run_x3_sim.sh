@@ -4,7 +4,7 @@
 #   bash run_x3_sim.sh parity     -> chi dataset + X3_PARITY + cong hoi quy
 #   bash run_x3_sim.sh arms       -> chi 4 arm (gia dinh cong hoi quy DA PASS)
 # Cong hoi quy: X3_PARITY phai ra md5 printDone = d39da2940dfd815f60772f70517750bf (= X1_C3).
-# FAIL => exit 9, KHONG chay arm nao. Xem docs/PREREG_X3.md muc 3.1.
+# FAIL => exit 9, KHONG chay arm nao. Xem docs/prereg/PREREG_X3.md muc 3.1.
 set -u
 MODE=${1:-all}
 R=/home/ubuntu/src/BinanceFuturesJava

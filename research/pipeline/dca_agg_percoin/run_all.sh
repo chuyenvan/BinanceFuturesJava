@@ -1,5 +1,5 @@
 #!/bin/bash
-# DCA-AGG-PERCOIN (docs/PREREG_DCA_AGG_PERCOIN.md) — parity + 3 bien the, TUAN TU, 1 slot JVM.
+# DCA-AGG-PERCOIN (docs/prereg/PREREG_DCA_AGG_PERCOIN.md) — parity + 3 bien the, TUAN TU, 1 slot JVM.
 # KHONG push. DEV 2021-07..2025-12 (wfo_ds_x1_2021). SIM_END_DATE=20251231.
 set -u
 export PATH=/home/ubuntu/tools/apache-maven-3.9.9/bin:$PATH
@@ -20,13 +20,13 @@ echo "disk_free_G=$FREE"
 
 # tao profile clone cho 3 bien the (base x1_gs_t170 + key moi)
 cp -f $P/x1_gs_t170.properties $P/x1_gs_t170_loose_agg30.properties
-printf '\n# DCA-AGG-PERCOIN LOOSE_AGG30 (docs/PREREG_DCA_AGG_PERCOIN.md)\nDCA_GRID_LEVELS=-0.30,-0.55,-0.75\nCONC_CAP_AGG_DCA_ENABLED=true\nCONC_CAP_AGG_DCA_PCT=0.30\n' >> $P/x1_gs_t170_loose_agg30.properties
+printf '\n# DCA-AGG-PERCOIN LOOSE_AGG30 (docs/prereg/PREREG_DCA_AGG_PERCOIN.md)\nDCA_GRID_LEVELS=-0.30,-0.55,-0.75\nCONC_CAP_AGG_DCA_ENABLED=true\nCONC_CAP_AGG_DCA_PCT=0.30\n' >> $P/x1_gs_t170_loose_agg30.properties
 
 cp -f $P/x1_gs_t170.properties $P/x1_gs_t170_loose_agg30_pc15.properties
-printf '\n# DCA-AGG-PERCOIN LOOSE_AGG30_PC15 (docs/PREREG_DCA_AGG_PERCOIN.md)\nDCA_GRID_LEVELS=-0.30,-0.55,-0.75\nCONC_CAP_AGG_DCA_ENABLED=true\nCONC_CAP_AGG_DCA_PCT=0.30\nCONC_CAP_PERCOIN_ENABLED=true\nCONC_CAP_PERCOIN_PCT=0.15\n' >> $P/x1_gs_t170_loose_agg30_pc15.properties
+printf '\n# DCA-AGG-PERCOIN LOOSE_AGG30_PC15 (docs/prereg/PREREG_DCA_AGG_PERCOIN.md)\nDCA_GRID_LEVELS=-0.30,-0.55,-0.75\nCONC_CAP_AGG_DCA_ENABLED=true\nCONC_CAP_AGG_DCA_PCT=0.30\nCONC_CAP_PERCOIN_ENABLED=true\nCONC_CAP_PERCOIN_PCT=0.15\n' >> $P/x1_gs_t170_loose_agg30_pc15.properties
 
 cp -f $P/x1_gs_t170.properties $P/x1_gs_t170_loose_pc15.properties
-printf '\n# DCA-AGG-PERCOIN LOOSE_PC15 (docs/PREREG_DCA_AGG_PERCOIN.md)\nDCA_GRID_LEVELS=-0.30,-0.55,-0.75\nCONC_CAP_PERCOIN_ENABLED=true\nCONC_CAP_PERCOIN_PCT=0.15\n' >> $P/x1_gs_t170_loose_pc15.properties
+printf '\n# DCA-AGG-PERCOIN LOOSE_PC15 (docs/prereg/PREREG_DCA_AGG_PERCOIN.md)\nDCA_GRID_LEVELS=-0.30,-0.55,-0.75\nCONC_CAP_PERCOIN_ENABLED=true\nCONC_CAP_PERCOIN_PCT=0.15\n' >> $P/x1_gs_t170_loose_pc15.properties
 
 runx() { TAG=$1; PROF=$2; D=$B/$TAG
   echo "### $(date +%T) RUN $TAG prof=$PROF"

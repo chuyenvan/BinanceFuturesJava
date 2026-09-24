@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """INTRADAY_DD — maxDD/UW do tren chuoi equity MOC PHUT (mark-to-market) vs chuoi NGAY.
 
-Thuc thi DUNG docs/PREREG_INTRADAY_DD.md (chot TRUOC khi do).
+Thuc thi DUNG docs/prereg/PREREG_INTRADAY_DD.md (chot TRUOC khi do).
 
 THUAN PYTHON OFFLINE tren Oracle. KHONG Java/sim, KHONG claude-run, KHONG push, DEV only
 (moi moc <= 2025-12-30, khong doc 2026).

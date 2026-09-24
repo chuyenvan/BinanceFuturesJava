@@ -1,4 +1,4 @@
-"""X1 — cham diem 2 arm tren cua so 48 thang (docs/PREREG_X1.md muc 4-7).
+"""X1 — cham diem 2 arm tren cua so 48 thang (docs/prereg/PREREG_X1.md muc 4-7).
 
 Dung lai may bootstrap khoi-72h x1.21 cua research/analysis/c3_rates.py (khong viet lai).
 Them: bang rate THEO NAM, CI theo nam, DCA leg 2+ theo nam, rang buoc cung theo nam,
@@ -25,7 +25,7 @@ LBL = {"n": "n", "win": "win%", "tsloss": "TSloss%", "mp_sm": "mP|SM",
 # cong bo truoc day; 'current' = khau vi HIEN HANH round 09-19 (TASKS_2026-09-20b muc 0.5):
 # maxDD<=30, UW<=200, quy>=-15. Chon qua --appetite, mac dinh 'current'. LUU Y: rang buoc
 # "tap trung 1 coin <=15% equity" KHONG duoc do trong script nay - da ghi nhan la khoang
-# trong o docs/RESULT_VOL_TARGET.md muc 3 (can cong cu rieng).
+# trong o docs/result/RESULT_VOL_TARGET.md muc 3 (can cong cu rieng).
 APPETITES = {
     "old": {"dd": 15.0, "uw": 120, "q": -5.0},
     "current": {"dd": 30.0, "uw": 200, "q": -15.0},
@@ -195,13 +195,13 @@ def n_eff(tags, dd):
 
 
 def parse_k(argv):
-    """[CHUAN HOA 2026-09-17] --k BAT BUOC (docs/AUDIT_CI_INFLATE_STANDARDIZATION.md)."""
+    """[CHUAN HOA 2026-09-17] --k BAT BUOC (docs/audit/AUDIT_CI_INFLATE_STANDARDIZATION.md)."""
     if "--k" not in argv:
         raise SystemExit(
             "THIEU --k. Usage: python3 x1_rates.py --k <so ung vien> TAG_BASE TAG_VAR [...]\n"
             "  k = so UNG VIEN duoc kiem dinh so voi baseline TRONG round nay (baseline KHONG tinh).\n"
             "  k=1 -> he so 1.0 ; k>=2 -> sqrt(2 ln k). KHONG co gia tri mac dinh.\n"
-            "  Xem docs/AUDIT_CI_INFLATE_STANDARDIZATION.md (hang so cu 1.21 ung k=2.079, da bi go).")
+            "  Xem docs/audit/AUDIT_CI_INFLATE_STANDARDIZATION.md (hang so cu 1.21 ung k=2.079, da bi go).")
     i = argv.index("--k")
     if i + 1 >= len(argv):
         raise SystemExit("--k thieu gia tri.")
@@ -213,7 +213,7 @@ def parse_k(argv):
 def parse_appetite(argv):
     """--appetite {old,current}, mac dinh 'current' neu khong truyen (TASKS_2026-09-20b muc
     0.5). 'old' = 15/120/-5 (tai lap so cu). KHONG do rang buoc coin<=15% o day (xem
-    docs/RESULT_VOL_TARGET.md muc 3)."""
+    docs/result/RESULT_VOL_TARGET.md muc 3)."""
     if "--appetite" not in argv:
         return "current"
     i = argv.index("--appetite")
@@ -236,7 +236,7 @@ def main():
     F_INFLATE = C.inflate(k)
     log.info("### CI_INFLATE = sqrt(2 ln %d) = %.6f | block=%dh nrep=%d seed=%d",
              k, F_INFLATE, C.BLOCK_H, C.NREP, C.SEED)
-    log.info("### k = so ung vien trong round (baseline KHONG tinh) | docs/AUDIT_CI_INFLATE_STANDARDIZATION.md")
+    log.info("### k = so ung vien trong round (baseline KHONG tinh) | docs/audit/AUDIT_CI_INFLATE_STANDARDIZATION.md")
     log.info("### appetite=%s: maxDD<=%.0f%% UW<=%d quy>=%.0f%% (coin<=15%% KHONG do o day, "
              "xem RESULT_VOL_TARGET.md muc 3)", APPETITE_NAME, HARD_DD, HARD_UW, HARD_Q)
     tags = argv

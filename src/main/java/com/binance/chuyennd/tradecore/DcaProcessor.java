@@ -54,7 +54,7 @@ public class DcaProcessor {
                 })
                 .collect(Collectors.toList());
 
-        // DCA ROUND CAP (2026-09-16) docs/PREREG_DCA_ROUND_CAP.md — tran tong margin moi moi luot.
+        // DCA ROUND CAP (2026-09-16) docs/prereg/PREREG_DCA_ROUND_CAP.md — tran tong margin moi moi luot.
         //   Mac dinh OFF => tra ve keys theo dung thu tu stream cu (byte-identical).
         if (Configs.DCA_ROUND_CAP_ENABLED && "drop".equals(Configs.DCA_RANK_MODE)) {
             return capByDrop(candidates, time);

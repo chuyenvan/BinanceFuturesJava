@@ -1,4 +1,4 @@
-"""BD-SIZE-ADAPT (docs/PREREG_BD_SIZE_ADAPT.md) — cham diem §2.
+"""BD-SIZE-ADAPT (docs/prereg/PREREG_BD_SIZE_ADAPT.md) — cham diem §2.
 
 Chay SAU khi da co parity + 3 bien the. So sanh TUNG bien the vs parity tren tap leg
 level == BIG_DOWN: pnl/leg, meanP, TSloss%, win% + block-72h bootstrap CI (x1.21, 2000
@@ -21,7 +21,7 @@ NREP = C.NREP                # 2000
 CI_INFLATE = C.CI_INFLATE    # 1.21
 SEED = C.SEED                # 20260905
 
-# Tolerance hard-constraint (docs/PREREG_BD_SIZE_ADAPT.md muc 2)
+# Tolerance hard-constraint (docs/prereg/PREREG_BD_SIZE_ADAPT.md muc 2)
 DD_TOL = 3.0      # maxDD nam khong xau hon parity qua +3pp
 UW_TOL = 30       # UW khong xau hon parity qua +30 ngay
 

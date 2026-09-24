@@ -1,5 +1,5 @@
 """G015 REBUILD — tai lap DETERMINISTIC tren CPU, sinh bins predict_wf_*.bin MOI.
-Xem docs/PREREG_G015REBUILD.md. CHI DEV. KHONG ghi de bins cu. KHONG rebuild OI (chi doc + ghim sha).
+Xem docs/prereg/PREREG_G015REBUILD.md. CHI DEV. KHONG ghi de bins cu. KHONG rebuild OI (chi doc + ghim sha).
 Env: OUT_DIR (bat buoc), G015_NJOBS (mac dinh 4).
 """
 import os, sys, glob, json, time, struct, hashlib, logging

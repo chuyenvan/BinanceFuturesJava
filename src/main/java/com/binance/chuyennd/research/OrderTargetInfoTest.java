@@ -52,7 +52,7 @@ public class OrderTargetInfoTest implements Serializable {
      *  Dung de biet dang o bac nao cua grid -> lay dung moc va ti trong tiep theo. */
     public int legCount = 1;
     /** [DCA-SIGNAL 2026-09-14] leg nay la leg-2 ban THEO TIN HIEU (khong phai leg grid DCA).
-     *  Grid DCA dem bac KHONG tinh leg-signal — xem docs/PREREG_DCA_SIGNAL_GATE.md muc 3.4.
+     *  Grid DCA dem bac KHONG tinh leg-signal — xem docs/prereg/PREREG_DCA_SIGNAL_GATE.md muc 3.4.
      *  Mac dinh false => khi Configs.DCA_SIGNAL_GATE=false moi phep dem y het truoc => byte-identical.
      *  serialVersionUID khai bao tuong minh o tren nen them field KHONG pha doc/ghi storage cu. */
     public boolean dcaSignalLeg = false;
@@ -78,7 +78,7 @@ public class OrderTargetInfoTest implements Serializable {
     //    quyết định SL/TP (đối xứng với maeLow). Phục vụ đo "% đỉnh giữ được" khi đóng lệnh thắng.
     //    [2026-09-04 F2] NGOẠI LỆ DUY NHẤT: khi Configs.COND_EXIT_HOURS > 0 (mặc định 0 = tắt) thì
     //    SimulatorMarketLevelTicker1MStopLoss dùng maePeak làm "maxFav tới giờ H" cho conditional exit.
-    //    Tắt => không đường nào đọc nó cho quyết định => byte-identical. Xem docs/PREREG_F2.md.
+    //    Tắt => không đường nào đọc nó cho quyết định => byte-identical. Xem docs/prereg/PREREG_F2.md.
     public Float maePeak;
     public Float lastPrice;
 
@@ -185,7 +185,7 @@ public class OrderTargetInfoTest implements Serializable {
     public void updateStatusNew(Float predReturn15M, KlineObjectSimple ticker) {
         if (priceSL == null) {
             // dinh trailing = HIGH cua nen 1m (mac dinh) hoac CLOSE nen 1m (TS_PEAK_MODE=close,
-            // [PEAK-CLOSE 2026-09-23] docs/PREREG_PEAK_CLOSE.md). high => NGUYEN `ticker.maxPrice`.
+            // [PEAK-CLOSE 2026-09-23] docs/prereg/PREREG_PEAK_CLOSE.md). high => NGUYEN `ticker.maxPrice`.
             Float rateLoss = calRateLossMax(TradeUtils.peakPrice(ticker));
             Float rateMin2MoveSl = TradeUtils.calRateMinWithPredReturn15MForTradingStop(predReturn15M);
             if (rateLoss > rateMin2MoveSl) {
@@ -247,7 +247,7 @@ public class OrderTargetInfoTest implements Serializable {
         // move SL
         if (priceSL != null) {
             // dinh trailing = HIGH cua nen 1m (mac dinh) hoac CLOSE nen 1m (TS_PEAK_MODE=close,
-            // [PEAK-CLOSE 2026-09-23] docs/PREREG_PEAK_CLOSE.md). high => NGUYEN `ticker.maxPrice`.
+            // [PEAK-CLOSE 2026-09-23] docs/prereg/PREREG_PEAK_CLOSE.md). high => NGUYEN `ticker.maxPrice`.
             Float rateLoss = calRateLossMax(TradeUtils.peakPrice(ticker));
             // Ratchet LIEN TUC (SIM_TS_GIVEBACK=1 la duong DUY NHAT con lai): nguong dich SL = base,
             //   khong con dead-zone x TS_PROFIT_MULTIPLIER. Thiet ke Uni: ROI 5% -> arm SL 2.5%, sau do
@@ -370,7 +370,7 @@ public class OrderTargetInfoTest implements Serializable {
      * Vi du arm 5% -> SL +2.5%; 10% -> +7% (weak) / +5% (strong). LUON duong => SL khong bao gio duoi entry (khop live tsGap sau fix).
      */
     float trailRate(float maxProfitRate) {
-        // [TRAIL-LADDER 2026-09-23] docs/PREREG_TRAIL_LADDER.md: gap BAC THANG theo dinh (thay tran
+        // [TRAIL-LADDER 2026-09-23] docs/prereg/PREREG_TRAIL_LADDER.md: gap BAC THANG theo dinh (thay tran
         //   PHANG). Default OFF (TS_LADDER khong khai bao) => roi xuong NGUYEN duong cu o duoi
         //   => byte-identical. Cap STRONG/WEAK theo pNoPump chi con lam FALLBACK cho vung duoi
         //   bac thap nhat (L3 "chi noi o vung lai lon"); L1/L2 phu toan bo vung dinh.

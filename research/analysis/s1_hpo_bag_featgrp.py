@@ -1,5 +1,5 @@
 # S1_HPO_BAG_FEATGRP — 3 pre-reg doc lap (HPO / bagging / feature-group) tren S1, OFFLINE.
-# Pre-reg: docs/PREREG_S1_HPO_BAG_FEATGRP.md. Copy khoi load-data/nhan/purge/run cua
+# Pre-reg: docs/prereg/PREREG_S1_HPO_BAG_FEATGRP.md. Copy khoi load-data/nhan/purge/run cua
 # research/pipeline/x1/x1_s1_rank.py (KHONG doi logic nhan/purge), tham so hoa KEEP/hyperparam/
 # seed/bagging. OFFLINE thuan: khong sim, khong bins, khong GPU. n_jobs=4 moi run.
 #

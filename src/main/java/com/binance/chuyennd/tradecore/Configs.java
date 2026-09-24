@@ -190,7 +190,7 @@ public class Configs {
             Cfg.get("DCA_GRID_WEIGHTS") != null ? Cfg.get("DCA_GRID_WEIGHTS") : "1,1,3,8");
 
     // =========================================================
-    // DCA ROUND CAP (2026-09-16) — tran TONG margin moi moi luot DCA. docs/PREREG_DCA_ROUND_CAP.md.
+    // DCA ROUND CAP (2026-09-16) — tran TONG margin moi moi luot DCA. docs/prereg/PREREG_DCA_ROUND_CAP.md.
     //   Mac dinh OFF => DcaProcessor.getDCA chay logic cu NGUYEN VEN (byte-identical).
     //   - DCA_ROUND_CAP_ENABLED : bat/tat tran (goc cua user: "moi luot max 10% von").
     //   - DCA_ROUND_CAP_PCT      : tran = PCT x equity hien tai (equityNow).
@@ -324,7 +324,7 @@ public class Configs {
     //   SensitivityTool, RunWorkerKaggle, BackTestEngineDynamicFilter, ValidateBrakeDynamic...).
     //   => gene "AI_DYNAMIC_MIN"/"AI_DYNAMIC_MULTIPLIER" trong cac tool do KHONG con tac dong
     //      len gate. Go chung khoi gene vector la viec cua L8 (doi index gene, khong lam chung
-    //      voi cong parity nay). Xem docs/L7_LEAN_GATE.md muc "con lai".
+    //      voi cong parity nay). Xem docs/experiment/L7_LEAN_GATE.md muc "con lai".
     public static float AI_DYNAMIC_MULTIPLIER = 1.28760f; // Cũ: 1.40234f
     public static float AI_DYNAMIC_MIN = 0.26787f;        // Cũ: 0.14568f
     public static float AI_DYNAMIC_MAX = 2.14135f;        // Cũ: 2.24405f
@@ -344,7 +344,7 @@ public class Configs {
     // BINS SELECTOR (2026-09-03): thu muc predict_wf_*.bin cua selector dang dung.
     // Doc o day de MOI process (sim va export) deu KHAI BAO bins nao va de duong dan bins
     // vao CONFIG_HASH - truoc day doi selector ma CONFIG_HASH/PROFILE_HASH khong he doi
-    // (docs/AUDIT_APPLIED.md 3.3a). Gia tri hash noi dung bins: xem BinsProvenance/DumpConfig.
+    // (docs/audit/AUDIT_APPLIED.md 3.3a). Gia tri hash noi dung bins: xem BinsProvenance/DumpConfig.
     // KHONG dat default: thieu = fail cung o WfoDataset.export.
     public static final String WFO_FUNDING_PRED_DIR = Cfg.getOr("WFO_FUNDING_PRED_DIR", "");
 
@@ -365,12 +365,12 @@ public class Configs {
     // (levelChange getTopSymbolArray Best-N = luong FOMO), CHI giu luong selector PREDICT_SYMBOL_TRADE.
     // Dung de co lap 100% edge inverted-selector (khop proxy Kaggle). Default false = byte-identical.
     public static final boolean SELECTOR_ONLY_ENTRY = "1".equals(Cfg.get("SELECTOR_ONLY_ENTRY"));
-    // [SELCUT 2026-09-23] docs/PREREG_SELECTOR_LEG_CUT.md — CAT HAN leg SELECTOR (level
+    // [SELCUT 2026-09-23] docs/prereg/PREREG_SELECTOR_LEG_CUT.md — CAT HAN leg SELECTOR (level
     //   PREDICT_SYMBOL_TRADE), tuc khoi `if (symbol2Pred != null)` o
     //   SimulatorMarketLevelTicker1MStopLoss:384-431. KHAC HAN SELECTOR_ONLY_ENTRY (cai do tat leg
     //   market-signal = BIG_DOWN, xem :346). Default false = khong cap phat => byte-identical.
     public static final boolean SELECTOR_LEG_CUT = "1".equals(Cfg.get("SELECTOR_LEG_CUT"));
-    // [TICKBLK 2026-09-23] docs/PREREG_TICK_BLOCK.md — chan ca LUOT (tick) khi luot YEU.
+    // [TICKBLK 2026-09-23] docs/prereg/PREREG_TICK_BLOCK.md — chan ca LUOT (tick) khi luot YEU.
     //   Khac HAN filter cap-coin (D3): bo qua 1 candidate thi he lay candidate ke tiep trong CUNG
     //   tick => chi chan ca LUOT moi that su giam exposure. Key khong khai => OFF => tickBlocked
     //   luon false => khong mot dong nao doi (parity byte-identical). Moi key la THAM SO GIAO DICH
@@ -390,9 +390,9 @@ public class Configs {
     //  Vi GATE_COUNT_ONLY khong bao gio tao order -> isSymbolRunning luon false -> tu dong BO filter von,
     //  dung y muon C1. Default false = OFF = khong ton RAM, byte-identical.
     public static final boolean ENTRY_UNIVERSE_DUMP = "1".equals(Cfg.get("SIM_ENTRY_UNIVERSE_DUMP"));
-    // [TICKLOG 2026-09-03] LOG QUYET DINH TUNG TICK CHO TUNG RUN (docs/PREREG_TICKLOG.md).
+    // [TICKLOG 2026-09-03] LOG QUYET DINH TUNG TICK CHO TUNG RUN (docs/prereg/PREREG_TICKLOG.md).
     //  Ly do: khong ton tai log quyet dinh theo tick cho tung run => ghep cap theo tick chi lam
-    //  duoc cho gene selector/gate (docs/PREREG_GS.md muc 12.2). Doc qua cong Cfg, khai trong
+    //  duoc cho gene selector/gate (docs/prereg/PREREG_GS.md muc 12.2). Doc qua cong Cfg, khai trong
     //  profile. Mac dinh khong khai bao => OFF => moi diem chen la if(false) => byte-identical.
     public static final boolean TICKLOG = "1".equals(Cfg.get("SIM_TICKLOG"));
     public static final boolean TICKLOG_POOL = "1".equals(Cfg.getOr("SIM_TICKLOG_POOL", "0"));
@@ -400,14 +400,14 @@ public class Configs {
     public static final String TICKLOG_TAG = Cfg.getOr("SIM_TICKLOG_TAG", "run");
     public static final int TICKLOG_POS_EVERY_MIN =
             Integer.parseInt(Cfg.getOr("SIM_TICKLOG_POS_EVERY_MIN", "1").trim());
-    public static String SIM_REGIME_FILE = null;   // [REGIME] docs/PREREG_REGIME_GATE.md
+    public static String SIM_REGIME_FILE = null;   // [REGIME] docs/prereg/PREREG_REGIME_GATE.md
     public static String SIM_REGIME_FORCE = null;  // [REGIME] UP|NOTUP: ep hang so cho cong 2-cuc
     public static int SIM_REGIME_GATE_VALUE_COL = -1; // [BRC B7] >=0: doc float gate/ngay tu cot nay (lien tuc); -1 nhi phan
-    public static String SIM_FILTER_D3D4 = null;   // [D3D4-FILTER] docs/PREREG_D3D4_FILTER_SIM.md — off|d3|d4|both, default off
+    public static String SIM_FILTER_D3D4 = null;   // [D3D4-FILTER] docs/prereg/PREREG_D3D4_FILTER_SIM.md — off|d3|d4|both, default off
     public static float MIN_MOMENTUM_15M = 0.02284f;                  // HPO (đã revert về cũ): 0.01720f
     public static float MS_UP_BIG_THRES = 0.02046f;                  // HPO (đã revert về cũ): 0.01757f
     public static float MS_DOWN_BIG_AVG = -0.03157f;                  // HPO (đã revert về cũ): -0.05514f
-    // [BD-THRESHOLD-FRAGILITY 2026-09-17] tach nguong DCA khoi nguong BIG_DOWN (docs/PREREG_BD_THRESHOLD_FRAGILITY.md).
+    // [BD-THRESHOLD-FRAGILITY 2026-09-17] tach nguong DCA khoi nguong BIG_DOWN (docs/prereg/PREREG_BD_THRESHOLD_FRAGILITY.md).
     //   MS_DOWN_BIG_AVG chi con dieu khien getMarketStatus1M (BIG_DOWN); duong isDcaAlt doc field nay.
     //   Default = gia tri cu => parity byte-identical. Override qua SIM_MS_DOWN_BIG_AVG_DCA.
     public static float MS_DOWN_BIG_AVG_DCA = -0.03157f;
@@ -425,7 +425,7 @@ public class Configs {
     // [2026-09-04 F2] CONDITIONAL EXIT (SIM_COND_EXIT_HOURS=0 -> tat; SIM_COND_EXIT_MIN_FAV): cum CHUA arm
     //   (priceSL==null) da giu qua N gio ke tu leg DAU MA dinh THAT dat duoc tinh tu entry < MIN_FAV thi dong
     //   tai min(open, close). Khac LOSER_TIME_STOP_HOURS (cat PHANG theo gio): day cat CO DIEU KIEN nen giu lai
-    //   nhung lenh dang chay. Default 0 => nhanh khong chay => byte-identical. Xem docs/PREREG_F2.md.
+    //   nhung lenh dang chay. Default 0 => nhanh khong chay => byte-identical. Xem docs/prereg/PREREG_F2.md.
     public static int COND_EXIT_HOURS = 0;
     public static float COND_EXIT_MIN_FAV = 0f;
     // [2026-09-05 X2] PRE-ARM HARD SL (SIM_PRE_ARM_SL, 0 = TAT = mac dinh): cum CHUA arm trailing
@@ -433,7 +433,7 @@ public class Configs {
     //   tai min(stopLevel, min(open, close)). Gia tri AM (vd -0.20 = cat o -20%).
     //   Dat TRUOC cong profit-arm VA truoc LOSER_TIME_STOP/COND_EXIT. Key cu SIM_HARD_SL_PCT da chet
     //   o HEAD; day la ban viet lai. Default 0 => nhanh khong chay => byte-identical.
-    //   Logic thuan o PreArmSlUtils (co unit test). Xem docs/PREREG_X2.md muc 2.2.
+    //   Logic thuan o PreArmSlUtils (co unit test). Xem docs/prereg/PREREG_X2.md muc 2.2.
     public static float PRE_ARM_SL = 0f;
     /** [2026-09-03] ban MUTABLE de test do nhay; doc qua tsPnoPumpWeakThr(). */
     public static Float TS_PNOPUMP_WEAK_THR_OVR = null;
@@ -451,13 +451,13 @@ public class Configs {
     //   (TS_MAX_GAP_WEAK) khi sau hon; ban le 0.29 BI BO QUA hoan toan.
     //   selRank == null (leg DCA_LEVEL1 / BIG_DOWN, khong di qua selector) -> WEAK, dung quy uoc
     //   bao thu giong nhanh pNoPump == null.
-    //   Default 0 => trailRate di NGUYEN duong cu => byte-identical. Xem docs/PREREG_X3.md.
+    //   Default 0 => trailRate di NGUYEN duong cu => byte-identical. Xem docs/prereg/PREREG_X3.md.
     //   KHONG final: unit test lat truc tiep.
     public static int TS_CAP_STRONG_RANK = Cfg.get("TS_CAP_STRONG_RANK") != null
             ? Integer.parseInt(Cfg.get("TS_CAP_STRONG_RANK").trim()) : 0;
 
     // =========================================================
-    // [TRAIL-LADDER 2026-09-23] docs/PREREG_TRAIL_LADDER.md — GAP TRAILING BAC THANG
+    // [TRAIL-LADDER 2026-09-23] docs/prereg/PREREG_TRAIL_LADDER.md — GAP TRAILING BAC THANG
     // =========================================================
     // Y tuong (Uni): thay "tran PHANG" (TS_MAX_GAP 0.08 / TS_MAX_GAP_WEAK 0.03) bang GAP THEO
     //   BAC NHAY: dinh cang cao thi cho phep nha lai cang XA (gap cang lon) => khong bi "truot song
@@ -479,7 +479,7 @@ public class Configs {
     public static final float[] TS_LADDER_GAPS = cfgCsvFloats("TS_LADDER_GAPS");
 
     // =========================================================
-    // [PEAK-CLOSE 2026-09-23] docs/PREREG_PEAK_CLOSE.md — DINH TRAILING DO BANG CLOSE thay vi HIGH
+    // [PEAK-CLOSE 2026-09-23] docs/prereg/PREREG_PEAK_CLOSE.md — DINH TRAILING DO BANG CLOSE thay vi HIGH
     // =========================================================
     // Hien trang (den commit eb4c0de, xac nhan bang harness offline `research/exitfit`): "dinh" dung
     //   cho CONG ARM va de tinh gap trailing la HIGH cua nen 1m (`ticker.maxPrice`) — dat o CA HAI cho:
@@ -502,7 +502,7 @@ public class Configs {
         if ("high".equals(TS_PEAK_MODE)) return;
         if ("close".equals(TS_PEAK_MODE)) {
             System.out.println("[CFG] TS_PEAK_MODE=close — dinh trailing (arm + ratchet) do bang CLOSE nen 1m "
-                    + "(docs/PREREG_PEAK_CLOSE.md). Ratchet cu 0.005 va bat bien SL>entry giu nguyen.");
+                    + "(docs/prereg/PREREG_PEAK_CLOSE.md). Ratchet cu 0.005 va bat bien SL>entry giu nguyen.");
             return;
         }
         System.err.println("[CFG] DUNG: TS_PEAK_MODE=" + TS_PEAK_MODE + " (chi nhan `high` hoac `close`)");
@@ -550,7 +550,7 @@ public class Configs {
 
     // [SL-ADAPTIVE 2026-09-12] 3 lever SL tuy bien theo selRank (STRONG = rank<=N, WEAK = rank>N hoac null).
     //   Default TAT (SIM_SL_ADAPT_* khong khai bao trong profile) => nhanh OFF chay nguyen code cu =>
-    //   byte-identical. Chi doc selRank co san tren orderMulti (khong plumbing). Xem docs/PREREG_SL_ADAPTIVE_SWEEP.md.
+    //   byte-identical. Chi doc selRank co san tren orderMulti (khong plumbing). Xem docs/prereg/PREREG_SL_ADAPTIVE_SWEEP.md.
     public static int SL_ADAPT_RANK_N = Cfg.get("SIM_SL_ADAPT_RANK_N") != null
             ? Integer.parseInt(Cfg.get("SIM_SL_ADAPT_RANK_N").trim()) : 4;
     // B — LOSER TIME-STOP theo rank (cum CHUA arm). STRONG giu 168h, WEAK cat 72h.
@@ -578,7 +578,7 @@ public class Configs {
     public static final boolean TIER_FLAT = "1".equals(Cfg.get("TIER_FLAT"));
 
     // ========================================================================
-    // [2026-09-05 C3] BA CO SUA BUG B1/B2/B3 — xem docs/PREREG_C3.md, docs/C3_BASELINE.md.
+    // [2026-09-05 C3] BA CO SUA BUG B1/B2/B3 — xem docs/prereg/PREREG_C3.md, docs/experiment/C3_BASELINE.md.
     //   MAC DINH true = DA SUA. Dat "false" trong profile => tai lap hanh vi CU byte-identical
     //   (cong hoi quy C2b: b:60390 aerospike / b:60395 file, md5 8f7afdfb... / 910f1aa6...).
     //   B1: mergeOrder() chep symbolPred sang object cum => trailRate() dung dung nhanh STRONG/WEAK.
@@ -591,7 +591,7 @@ public class Configs {
     public static boolean FIX_B3 = !"false".equalsIgnoreCase(Cfg.getOr("SIM_FIX_B3", "true"));
 
     // ========================================================================
-    // [DCA-SIGNAL 2026-09-14] docs/PREREG_DCA_SIGNAL_GATE.md — chia doi suat von/lenh (base 50%)
+    // [DCA-SIGNAL 2026-09-14] docs/prereg/PREREG_DCA_SIGNAL_GATE.md — chia doi suat von/lenh (base 50%)
     //   + leg-2 chi ban khi symbol DOC LAP pass dung pipeline admit lenh moi (top-K + EntryGate)
     //   VA dang lo X% tren firstEntryPrice. DOC LAP voi grid DCA cu (-50/-75/-90%).
     //   DCA_SIGNAL_GATE=false (mac dinh) => KHONG nhanh nao doc 3 key con lai, khong doi sizing,
@@ -611,11 +611,11 @@ public class Configs {
             ? Integer.parseInt(Cfg.get("SIM_DCA_SIGNAL_COOLDOWN_MIN").trim()) : 60;
 
     // ========================================================================
-    // [CONC-CAP 2026-09-15] docs/PREREG_CONCENTRATION_SAFETYCAP.md — SAFETY-NET, KHONG phai lever.
+    // [CONC-CAP 2026-09-15] docs/prereg/PREREG_CONCENTRATION_SAFETYCAP.md — SAFETY-NET, KHONG phai lever.
     //   Guard 1: tran AGGREGATE margin nam trong cac leg DCA-grid bac>=1, cong dong TOAN BO coin.
     //   Guard 2: tran so leg BIG_DOWN mo trong 60 phut (rolling window, theo thoi gian SIM).
     //   Hai nguong dat CO CHU DICH CAO HON dinh lich su da do tren 4.5 nam
-    //   (docs/DIAG_DCA_CONCURRENCY.md: aggregate max 0.4120 equity; BIG_DOWN max 54 leg/gio)
+    //   (docs/diag/DIAG_DCA_CONCURRENCY.md: aggregate max 0.4120 equity; BIG_DOWN max 54 leg/gio)
     //   => KHONG binding tren vung da quan sat; chi bat trong kich ban TE HON moi thu da thay.
     //   Mac dinh CA HAI TAT => khong nhanh nao doc nguong, khong cap phat cau truc nao
     //   => printDone.csv byte-identical voi baseline.
@@ -636,7 +636,7 @@ public class Configs {
             ? Integer.parseInt(Cfg.get("CONC_CAP_BD_PER_HOUR").trim()) : 75;
 
     // ========================================================================
-    // [CONC-PERCOIN 2026-09-17] docs/PREREG_DCA_AGG_PERCOIN.md — tran margin MOT coin
+    // [CONC-PERCOIN 2026-09-17] docs/prereg/PREREG_DCA_AGG_PERCOIN.md — tran margin MOT coin
     //   (entry + moi leg DCA). Khac Guard 1 (aggregate): guard nay chan khi MOT coin don le tich
     //   luy margin qua nguong (STOCK concentration), khong phai tong toan so. Mac dinh FALSE
     //   => khong nhanh nao chay => printDone.csv byte-identical.
@@ -651,7 +651,7 @@ public class Configs {
             ? Float.parseFloat(Cfg.get("CONC_CAP_PERCOIN_PCT").trim()) : 0.15f;
 
     // ========================================================================
-    // [BD-SIZE-ADAPT 2026-09-16] docs/PREREG_BD_SIZE_ADAPT.md — size leg BIG_DOWN
+    // [BD-SIZE-ADAPT 2026-09-16] docs/prereg/PREREG_BD_SIZE_ADAPT.md — size leg BIG_DOWN
     //   theo severity causal (rolling N-ngay). KHONG doi trigger BIG_DOWN.
     //   Mac dinh "off" => khong cap phat cau truc, khong nhanh nao chay => byte-identical.
     //   Cac mode: down50 (giam khi sau), down25 (giam nhe), up50 (tang khi sau).
@@ -664,7 +664,7 @@ public class Configs {
             ? Integer.parseInt(Cfg.get("BD_SIZE_ADAPT_N").trim()) : 120;
 
     // ========================================================================
-    // [VOL_TARGET 2026-09-20] docs/PREREG_VOL_TARGET.md - TASK 5: size lenh theo bien dong
+    // [VOL_TARGET 2026-09-20] docs/prereg/PREREG_VOL_TARGET.md - TASK 5: size lenh theo bien dong
     //   THUC TE (risk parity), KHONG doi lenh nao duoc chon vao/ra - chi doi KICH THUOC. Mac dinh
     //   "OFF" -> VolTargetSizing.ACTIVE=false -> khong nhanh nao chay -> byte-identical voi T170
     //   (cong repro md5 efb793e2). Xem VolTargetSizing.java cho COIN/PORTFOLIO.
@@ -673,7 +673,7 @@ public class Configs {
     public static String SIZE_VOL_TARGET_MODE = Cfg.getOr("SIZE_VOL_TARGET_MODE", "OFF");
 
     // ========================================================================
-    // [PACING 2026-09-21] docs/PREREG_PACING_BIGDOWN.md - TASK B: giam size khi bigdown
+    // [PACING 2026-09-21] docs/prereg/PREREG_PACING_BIGDOWN.md - TASK B: giam size khi bigdown
     //   (P3, regime-conditional, causal BD1a) hoac giam size DEU khong dieu kien (P0, doi
     //   chung) tren nen gate 1.0. KHONG doi lenh nao duoc chon vao/ra - chi doi KICH THUOC
     //   (giong VolTargetSizing). Mac dinh "OFF" -> PacingSizing.ACTIVE=false -> khong nhanh
@@ -683,7 +683,7 @@ public class Configs {
     public static String SIZE_PACING_MODE = Cfg.getOr("SIZE_PACING_MODE", "OFF");
 
     // ========================================================================
-    // [BD-SEL 2026-09-16] docs/PREREG_SEL_BIGDOWN.md — doi cach chon 2 coin cua leg
+    // [BD-SEL 2026-09-16] docs/prereg/PREREG_SEL_BIGDOWN.md — doi cach chon 2 coin cua leg
     //   BIG_DOWN theo drop 1-phut causal thay vi pNoPump. KHONG sua getTopSymbolArray.
     //   Mac dinh "off" => khong cap phat, khong nhanh nao chay => byte-identical.
     //   Cac mode: drop (am nhat), mix (tong hang rankP+rankD), drop_top8 (top-K pNoPump
@@ -757,14 +757,14 @@ public class Configs {
         try {
             String v;
             if ((v = Cfg.get("SIM_MIN_MOMENTUM_15M")) != null) MIN_MOMENTUM_15M = Float.parseFloat(v);
-            // [2026-09-12 GATESCALE] do doc gate dyn (docs/PREREG_GATESCALE.md): nhan 1 he so vao
+            // [2026-09-12 GATESCALE] do doc gate dyn (docs/prereg/PREREG_GATESCALE.md): nhan 1 he so vao
             //   KET QUA dyn_thr da tinh trong EntryGate. Doc 1 lan o day (khong nong). Khong khai /
             //   <=0 => giu 1.0f => x*1.0f IEEE-exact => byte-identical.
             if ((v = Cfg.get("SIM_GATE_DYN_SCALE")) != null) {
                 float gs = Float.parseFloat(v.trim());
                 if (gs > 0f) EntryGate.GATE_DYN_SCALE = gs;
             }
-            // [REGIME 2026-09-14] docs/PREREG_REGIME_GATE.md: gate scale doi theo regime BTC 30d.
+            // [REGIME 2026-09-14] docs/prereg/PREREG_REGIME_GATE.md: gate scale doi theo regime BTC 30d.
             //   default OFF => byte-identical. SIM_REGIME_FORCE=UP|NOTUP chi cho cong 2-cuc.
             if ((v = Cfg.get("SIM_GATE_REGIME_ADAPTIVE")) != null) {
                 String t = v.trim();
@@ -772,10 +772,10 @@ public class Configs {
             }
             if ((v = Cfg.get("SIM_REGIME_FILE")) != null) SIM_REGIME_FILE = v.trim();
             if ((v = Cfg.get("SIM_REGIME_FORCE")) != null) SIM_REGIME_FORCE = v.trim();
-            // [BRC B7] docs/PREREG_BREADTH_CONT.md: che do gate LIEN TUC doc float/ngay tu cot CSV.
+            // [BRC B7] docs/prereg/PREREG_BREADTH_CONT.md: che do gate LIEN TUC doc float/ngay tu cot CSV.
             //   Khong khai bao / <0 giu nguyen che do nhi phan cu => byte-identical.
             if ((v = Cfg.get("SIM_REGIME_GATE_VALUE_COL")) != null) SIM_REGIME_GATE_VALUE_COL = Integer.parseInt(v.trim());
-            // [REGIME-UPDOWN 2026-09-21] docs/PREREG_REGIME_UPDOWN.md TASK B2 Buoc 4:
+            // [REGIME-UPDOWN 2026-09-21] docs/prereg/PREREG_REGIME_UPDOWN.md TASK B2 Buoc 4:
             //   up-gate CHAT hon (RA12/RA14). Khong khai bao / <=0 giu nguyen
             //   EntryGate.REGIME_SCALE_UP=1.00f (mac dinh Buoc 2) => byte-identical.
             //   down-gate (REGIME_SCALE_NOTUP) KHONG doi, van la hang so 1.70f co dinh.
@@ -783,7 +783,7 @@ public class Configs {
                 float su = Float.parseFloat(v.trim());
                 if (su > 0f) EntryGate.REGIME_SCALE_UP = su;
             }
-            // [D3D4-FILTER 2026-09-17] docs/PREREG_D3D4_FILTER_SIM.md: filter pump-dump cho lenh moi
+            // [D3D4-FILTER 2026-09-17] docs/prereg/PREREG_D3D4_FILTER_SIM.md: filter pump-dump cho lenh moi
             //   (selector + BIG_DOWN). default off => byte-identical. configure() throw neu gia tri sai.
             if ((v = Cfg.get("SIM_FILTER_D3D4")) != null) {
                 SIM_FILTER_D3D4 = v.trim();
@@ -792,7 +792,7 @@ public class Configs {
             // [L7 2026-09-11] SIM_AI_DYNAMIC_MIN / SIM_AI_DYNAMIC_MULTIPLIER da XOA: hai he so do
             //   nay la HANG SO trong com.binance.chuyennd.tradecore.EntryGate (gate chi con MOT knob
             //   la SIM_MIN_MOMENTUM_15M). Khong profile/env nao tung khai hai key do
-            //   (docs/LEAN_GATE_AUDIT.md muc 2.3) nen xoa la byte-identical.
+            //   (docs/audit/LEAN_GATE_AUDIT.md muc 2.3) nen xoa la byte-identical.
             //   MAX = TRAN UNG VIEN tang 1 (rate_max * MAX) — VAN SONG, giu override.
             if ((v = Cfg.get("SIM_AI_DYNAMIC_MAX")) != null) AI_DYNAMIC_MAX = Float.parseFloat(v.trim());
             if ((v = Cfg.get("SIM_TS_PNOPUMP_WEAK_THR")) != null) TS_PNOPUMP_WEAK_THR_OVR = Float.parseFloat(v.trim());

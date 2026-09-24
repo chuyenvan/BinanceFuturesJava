@@ -1,7 +1,7 @@
 # research/pipeline — PIPELINE SINH BINS SELECTOR S1 (predwf_map_s1a2)
 
 Muc dich: S1 la nguon edge duy nhat da chung minh cua C2b (+7.35pp CAGR va maxDD -13.12 vs
--20.82 so voi G015 o CUNG thang exit C2b — xem `docs/AUDIT_APPLIED.md` muc 3.4). Truoc
+-20.82 so voi G015 o CUNG thang exit C2b — xem `docs/audit/AUDIT_APPLIED.md` muc 3.4). Truoc
 2026-09-03 toan bo pipeline sinh S1 nam NGOAI git, chi ton tai o `/home/ubuntu/featv2/`
 tren dia Oracle (dia 91% day). File trong thu muc nay la ban duoc git theo doi.
 

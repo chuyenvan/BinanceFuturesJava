@@ -1,4 +1,4 @@
-"""C4 — cham diem cac arm "thang GIA TRI" so voi PARITY (docs/PREREG_C4.md muc 3-4).
+"""C4 — cham diem cac arm "thang GIA TRI" so voi PARITY (docs/prereg/PREREG_C4.md muc 3-4).
 
 Dung lai may bootstrap khoi-72h x1.21 cua research/analysis/c3_rates.py (khong viet lai).
 Them: do ADMISSION (trung khoa (sym,start) voi parity, phan phoi symbolPred), bang rate

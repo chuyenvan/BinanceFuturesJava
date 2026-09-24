@@ -6,7 +6,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 /**
- * Lich regime theo UTC-day cho gate regime-adaptive (docs/PREREG_REGIME_GATE.md).
+ * Lich regime theo UTC-day cho gate regime-adaptive (docs/prereg/PREREG_REGIME_GATE.md).
  *
  * <p>Nap file CSV daily (cot: utcDay,dateUTC,ret30,regime,scale) -> TreeMap&lt;utcDay, scale&gt;.
  * Scale KHONG doc tu cot so (chi de audit) ma map tu cot regime -> HANG SO trong {@link EntryGate}

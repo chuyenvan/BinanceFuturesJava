@@ -8,7 +8,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 /**
- * X2 — pre-arm hard stop-loss ({@link PreArmSlUtils}). Xem docs/PREREG_X2.md muc 2.2.
+ * X2 — pre-arm hard stop-loss ({@link PreArmSlUtils}). Xem docs/prereg/PREREG_X2.md muc 2.2.
  *
  * <p>Khoa 4 tinh chat: (1) TAT = mac dinh = khong bao gio kich hoat; (2) nguong do tren
  * firstEntryPrice va BAT BIEN qua DCA; (3) gia dong khong bao gio TOT hon muc stop

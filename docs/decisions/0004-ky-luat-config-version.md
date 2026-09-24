@@ -37,4 +37,4 @@ Chọn (2).
 
 - Mỗi lần bump: cache `hpo_results_<cũ>` thành rác (không xoá cũng không sao, chỉ không dùng); **phải chạy lại HPO từ đầu** trên version mới.
 - Worker đang chạy version cũ ghi vào set cũ → vô hại với version mới.
-- `docs/ROADMAP.md` Bước 0 nhắc "bump CONFIG_VERSION" như việc-còn-lại — thực tế đã vượt tới v8; roadmap nên cập nhật (chỉ báo).
+- `docs/plan/ROADMAP.md` Bước 0 nhắc "bump CONFIG_VERSION" như việc-còn-lại — thực tế đã vượt tới v8; roadmap nên cập nhật (chỉ báo).

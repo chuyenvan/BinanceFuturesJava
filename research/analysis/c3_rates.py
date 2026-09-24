@@ -1,4 +1,4 @@
-"""C3 baseline — do lai toan bo sau khi sua 3 bug B1/B2/B3 (docs/PREREG_C3.md).
+"""C3 baseline — do lai toan bo sau khi sua 3 bug B1/B2/B3 (docs/prereg/PREREG_C3.md).
 
 Them so voi w1_rates.py:
   - phan bo profit cua WINNER (p10/p25/med/p75/p90/max)  <- B1 doi HINH DANG cai nay
@@ -33,7 +33,7 @@ WEAK_THR = 0.29          # Configs.TS_PNOPUMP_WEAK_THR; <= thr => STRONG (cap 0.
 BLOCK_H = 72
 NREP = 2000
 # ---------------------------------------------------------------------------
-# [CHUAN HOA 2026-09-17] docs/AUDIT_CI_INFLATE_STANDARDIZATION.md
+# [CHUAN HOA 2026-09-17] docs/audit/AUDIT_CI_INFLATE_STANDARDIZATION.md
 #   He so no rong CI cho multiplicity PHAI la sqrt(2 ln k) voi k = SO UNG VIEN
 #   duoc kiem dinh so voi baseline TRONG DUNG round do (baseline KHONG tinh).
 #   Hang so cu 1.21 ung voi k = exp(1.21^2/2) = 2.079 - khong phai so nguyen,
@@ -284,5 +284,5 @@ def __getattr__(name):
             "ung vien cua round: dung c3_rates.inflate(k) voi k BAT BUOC truyen vao "
             "(k=1 -> 1.0 ; k>=2 -> sqrt(2 ln k)). Muon tai lap NGUYEN VAN mot doc cu thi dung "
             "c3_rates.LEGACY_CI_INFLATE (=1.21) VA ghi ro trong doc. "
-            "Xem docs/AUDIT_CI_INFLATE_STANDARDIZATION.md")
+            "Xem docs/audit/AUDIT_CI_INFLATE_STANDARDIZATION.md")
     raise AttributeError("module %r has no attribute %r" % (__name__, name))

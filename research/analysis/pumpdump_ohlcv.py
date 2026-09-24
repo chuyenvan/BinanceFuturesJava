@@ -1,7 +1,7 @@
 """PREREG_PUMPDUMP_OHLCV (commit df60077): do 4 detector "pump xong chuan bi dump" bang OHLCV 1m + OI.
 
 MO TA (descriptive) — KHONG chay sim, KHONG sua .java, KHONG push.
-Thuc hien DUNG docs/PREREG_PUMPDUMP_OHLCV.md. Xem header day du o file goc (pumpdump_detect.py).
+Thuc hien DUNG docs/prereg/PREREG_PUMPDUMP_OHLCV.md. Xem header day du o file goc (pumpdump_detect.py).
 Pipeline: sinh manifest -> chay PumpDumpOhlcvExtract (Java doc-only) -> doc CSV -> tinh feature.
 Du lieu trung gian chi trong /tmp (KHONG commit).
 """

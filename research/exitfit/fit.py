@@ -1,7 +1,7 @@
 """EXIT FIT — BUOC 2: fit co ky luat tren TRAIN, bao cao out-of-sample (TEST).
 
 Chay:  python3 fit.py      # -> /home/ubuntu/exitfit/fit_results.pkl + fit_table.csv + fit_summary.txt
-17 policy da chot TRUOC (docs/PREREG_EXIT_FIT.md muc 3.2): chon tren TRAIN theo net/trade, bao cao TEST
+17 policy da chot TRUOC (docs/prereg/PREREG_EXIT_FIT.md muc 3.2): chon tren TRAIN theo net/trade, bao cao TEST
 + CI bootstrap block-ngay (1000 rep, seed 20260923) cho hieu so voi P0.
 """
 import datetime as dt

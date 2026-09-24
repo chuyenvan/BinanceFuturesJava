@@ -1,11 +1,11 @@
 #!/bin/bash
-# BREADTH_GATE — chay MOT arm sim cho TASK B2 Buoc 6 (docs/PREREG_BREADTH_GATE_SIM.md).
+# BREADTH_GATE — chay MOT arm sim cho TASK B2 Buoc 6 (docs/prereg/PREREG_BREADTH_GATE_SIM.md).
 #   run_breadth_gate.sh OFFCHECK -> jar moi + x1_gs_t170.properties (cong OFF byte-identical)
 #   run_breadth_gate.sh BR       -> jar moi + x1_c3_full_regime_br.properties  (bien the chinh)
 #   run_breadth_gate.sh BR0      -> jar moi + x1_c3_full_regime_br0.properties (doi chung)
 # Giu nguyen khuon `runx` cua research/pipeline/x1/run_flatgate.sh, doi DS sang wfo_ds_x1_2021
 # (dung dataset ma cac tag X1_*_2021_REGIME_* truoc day dung - xem RESULT_REGIME_GATE.md/
-# RESULT_REGIME_UPDOWN.md). Xem docs/PREREG_BREADTH_GATE_SIM.md.
+# RESULT_REGIME_UPDOWN.md). Xem docs/prereg/PREREG_BREADTH_GATE_SIM.md.
 set -u
 R=/home/ubuntu/src/BinanceFuturesJava
 JAR=$R/target/binance-java-sdk-1.2.4.jar

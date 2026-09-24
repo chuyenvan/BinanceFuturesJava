@@ -1,4 +1,4 @@
-"""GB runner — day 3 chan moi cua docs/PREREG_GIVEBACK_RATIO.md len Kaggle CPU kernel.
+"""GB runner — day 3 chan moi cua docs/prereg/PREREG_GIVEBACK_RATIO.md len Kaggle CPU kernel.
 
 Nen = PRODUCTION FLATGRID KEEPLEG0 (= prof_x1_gs_t170 + DUNG 2 dong
 DCA_GRID_WEIGHTS=1,1,1,1 / DCA_GRID_SCALE=6.0).
@@ -23,7 +23,7 @@ BUNDLE = "sim-x1-2021-bundle"
 END = "20251231"
 SHA = "bca8575+gbratio"
 
-# KEEPLEG0 = x1_gs_t170 + DUNG 2 dong (docs/DECISION_SHADOW_FLATGRID_KEEPLEG0.md)
+# KEEPLEG0 = x1_gs_t170 + DUNG 2 dong (docs/decisions/DECISION_SHADOW_FLATGRID_KEEPLEG0.md)
 KEEP = {"DCA_GRID_WEIGHTS": "1,1,1,1", "DCA_GRID_SCALE": 6.0}
 
 

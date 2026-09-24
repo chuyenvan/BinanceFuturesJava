@@ -1,4 +1,4 @@
-"""G015CUT — ap dung dieu kien chot cua docs/PREREG_G015CUT.md len g015cut_final.json."""
+"""G015CUT — ap dung dieu kien chot cua docs/prereg/PREREG_G015CUT.md len g015cut_final.json."""
 import json, logging, sys
 import pandas as pd
 logging.basicConfig(level=logging.INFO, format="%(message)s")

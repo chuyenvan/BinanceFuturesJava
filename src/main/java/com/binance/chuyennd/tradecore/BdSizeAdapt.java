@@ -9,7 +9,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 /**
- * [BD-SIZE-ADAPT 2026-09-16] docs/PREREG_BD_SIZE_ADAPT.md — size leg BIG_DOWN theo severity
+ * [BD-SIZE-ADAPT 2026-09-16] docs/prereg/PREREG_BD_SIZE_ADAPT.md — size leg BIG_DOWN theo severity
  * causal (rolling N-ngay), KHONG doi trigger BIG_DOWN.
  *
  * <p>Severity:

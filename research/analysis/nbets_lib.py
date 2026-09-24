@@ -1,4 +1,4 @@
-"""Thu vien dung chung cho job NBETS. Phuong phap chot o docs/PREREG_NBETS.md."""
+"""Thu vien dung chung cho job NBETS. Phuong phap chot o docs/prereg/PREREG_NBETS.md."""
 import logging, os, re
 import numpy as np
 import pandas as pd

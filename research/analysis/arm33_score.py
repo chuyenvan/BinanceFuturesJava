@@ -1,4 +1,4 @@
-"""ARM3-3NEN scorer — cham 6 chan cua docs/PREREG_ARM3_3NEN.md.
+"""ARM3-3NEN scorer — cham 6 chan cua docs/prereg/PREREG_ARM3_3NEN.md.
 
   3 nEN x 2 MUC arm: A=KEEPLEG0, B=T100, C=GD92; MOC=0.07, ARM3=0.03.
   CHI doi SIM_RATE_PROFIT_STOP_MARKET (khong SIM_PRE_ARM_SL, khong key khac).

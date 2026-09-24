@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """CROWDED_LONG BUILD — panel GIO (1h) cho vong crowded-long bang QUANTILE TRUOT.
 
-Pre-reg: docs/PREREG_CROWDED_LONG.md (commit 0acf68c, chot TRUOC khi do).
+Pre-reg: docs/prereg/PREREG_CROWDED_LONG.md (commit 0acf68c, chot TRUOC khi do).
 Chi dung 4 mang: lsg (log ls_global), c5 (close), rg (high-low), f5 (funding tich luy).
 KHONG lam lai events_5m (vong ls_taker da co /tmp/ls_study/events_5m.npz; vong nay khong can).
 

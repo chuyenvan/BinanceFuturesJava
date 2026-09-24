@@ -29,7 +29,7 @@ Nếu Bước 6 cho n_eff BR quá thấp (u1 fail vì notup thường xuyên) �
 ## 4. ĐO — metric tổng hợp/phân phối (KHÔNG khoá sym,start). Cùng cửa sổ 2021-07-01..2025-12-31, per-year.
 
 ## 5. QUY TRÌNH
-PREREG `docs/PREREG_BREADTH_GATE_SIM.md` (cơ chế + biến thể + u1-u5 + **dự báo cảnh báo §trên** + phán quyết) commit TRƯỚC → sinh CSV regime breadth + profile BR/BR0 (dùng `SIM_REGIME_SCALE_UP`; nếu buộc sửa .java thì tối thiểu + OFF byte-identical) → cổng OFF T170 md5 `efb793e2` → dừng shadow-c3 → sim tuần tự (T170 verify, BR, BR0) → bật shadow-c3 verify → tính u1-u5 (`bigdown_struct.py`+`x1_rates.py`) per-year → `docs/RESULT_BREADTH_GATE_SIM.md` verdict + đối chiếu dự báo → commit branch `module` (KHÔNG push) → dọn wfo_ds tạm, giữ printDone/sim.out.
+PREREG `docs/prereg/PREREG_BREADTH_GATE_SIM.md` (cơ chế + biến thể + u1-u5 + **dự báo cảnh báo §trên** + phán quyết) commit TRƯỚC → sinh CSV regime breadth + profile BR/BR0 (dùng `SIM_REGIME_SCALE_UP`; nếu buộc sửa .java thì tối thiểu + OFF byte-identical) → cổng OFF T170 md5 `efb793e2` → dừng shadow-c3 → sim tuần tự (T170 verify, BR, BR0) → bật shadow-c3 verify → tính u1-u5 (`bigdown_struct.py`+`x1_rates.py`) per-year → `docs/result/RESULT_BREADTH_GATE_SIM.md` verdict + đối chiếu dự báo → commit branch `module` (KHÔNG push) → dọn wfo_ds tạm, giữ printDone/sim.out.
 OFF không byte-identical → DỪNG, báo MASTER.
 
 ## 6. Ý nghĩa

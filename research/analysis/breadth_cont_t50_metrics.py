@@ -1,4 +1,4 @@
-"""BREADTH_CONT_T50_METRICS (TASK B2 Buoc 9, docs/PREREG_BREADTH_CONT_T50.md) — u1..u5 cho BRCT50.
+"""BREADTH_CONT_T50_METRICS (TASK B2 Buoc 9, docs/prereg/PREREG_BREADTH_CONT_T50.md) — u1..u5 cho BRCT50.
 Tai dung nguyen van ham cua bigdown_struct.py (icc_for=icc_anova, n_eff, maxdd_decomp, label_trades,
 build_bd_flags, load_trades_utc, hourly_grid) + c3_rates.py (equity, stats). Khong sua 2 file goc.
 u2 (khau vi) tinh rieng bang x1_rates.py --appetite current --k. Chay: python3 breadth_cont_t50_metrics.py

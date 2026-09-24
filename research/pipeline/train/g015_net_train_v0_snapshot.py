@@ -7,18 +7,18 @@ Ban SAO cua `research/pipeline/g72_train.py`, chi doi DUNG hai phan:
   (2) HYPERPARAM/WFO: 18 cutoff 20220101..20260401 (FIRST_CUTOFF=20220101, OOS_MONTHS=3,
       PURGE_STEPS=288 buoc x 15m = 72h, TZ=+7h), luu model per-fold, chon device.
 
-Nguon cua recipe (KHONG doan): `docs/G015_RECIPE.md` muc 2. Rut tu
+Nguon cua recipe (KHONG doan): `docs/experiment/G015_RECIPE.md` muc 2. Rut tu
   - log kernel goc `claudedata/predwf_G015/selector-15mtr-pred15-net015-gpu.log`
   - 18 model JSON `claudedata/predwf_G015/model_f{0..17}_4h.json`
   - kernel stage `kB15/net008/selector-15mtr-pred15-net008-gpu.py` (mtime 2026-08-14 14:04)
   - ban trainer con giu `claudedata/gen_funding_wf_predictions_1m.py` (2026-08-10)
 
-Trainer goc ban 2026-08-14 DA MAT (xem `docs/G3_X26_RECOVERY.md` muc 8). Day la ban TAI DUNG.
+Trainer goc ban 2026-08-14 DA MAT (xem `docs/experiment/G3_X26_RECOVERY.md` muc 8). Day la ban TAI DUNG.
 Script nay TRAIN THAT. Muon chi PREDICT lai tu 18 model da luu -> `g015x26_train.py`.
 
 DUONG BUILD FEATURE: memory-light (merge_asof chi tren (ts,symId) + 5 cot OI, 40 cot Tool1
 gather bang ridx) — da chung minh byte-identical voi duong 45-cot-pandas o fold 20240101
-(`docs/G3_X26_RECOVERY.md` muc 6.1). Ly do: Oracle 23 GB bi OOM-kill im lang o duong nang.
+(`docs/experiment/G3_X26_RECOVERY.md` muc 6.1). Ly do: Oracle 23 GB bi OOM-kill im lang o duong nang.
 
 CHAY:
   python3 g015_net_train.py --fold 20240101 --device cuda --save-model --out-dir /duong/dan
@@ -54,7 +54,7 @@ NEED = H_BASE_MIN["4h"] // GRID_MIN          # 16 buoc
 OI_NAMES = ["oi_delta24h", "oi_z", "ls_global", "ls_toptrader", "taker_buy"]
 OI_DT = np.dtype([("ts", ">i8"), ("sym", ">i2"), ("oi", ">f4", 5)])
 NF = 45
-CUT_DATES = ["20210401", "20210701", "20211001",  # DEV2021 (docs/PREREG_DEV2021.md): fold 2021 moi
+CUT_DATES = ["20210401", "20210701", "20211001",  # DEV2021 (docs/prereg/PREREG_DEV2021.md): fold 2021 moi
              "20220101", "20220401", "20220701", "20221001", "20230101", "20230401",
              "20230701", "20231001", "20240101", "20240401", "20240701", "20241001",
              "20250101", "20250401", "20250701", "20251001", "20251231", "20260101", "20260401"]

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """COST_REAL_AUDIT — Phase A (trich nguon chi phi THAT) + Phase B (do phan bo chi phi).
 
-Plan: docs/PLAN_COST_AUDIT_REAUDIT.md (viet TRUOC khi chay).
+Plan: docs/audit/PLAN_COST_AUDIT_REAUDIT.md (viet TRUOC khi chay).
 
 Thuan Python. KHONG Java tren Oracle, KHONG claude-run, KHONG push, KHONG cham 2026 (du lieu <= 2025-12-31).
-242 CHI DOC: viec quet 242 lam bang tay (ssh) va ghi lai trong docs/RESULT_COST_REAL_AUDIT.md,
+242 CHI DOC: viec quet 242 lam bang tay (ssh) va ghi lai trong docs/result/RESULT_COST_REAL_AUDIT.md,
 script nay chi doc du lieu local + Aerospike funding_data (read-only).
 
 Nguon:
@@ -134,7 +134,7 @@ say("     -> %s" % ("KHONG co bang chung fill that trong log local"
 led = pd.read_csv(SHADOW_LEDGER)
 say("[A5] shadow ledger paper: %s  n=%d  cot=%s" % (SHADOW_LEDGER, len(led), list(led.columns)))
 say("     ts_entry %s .. %s (ms UTC)" % (int(led.ts_entry.min()), int(led.ts_entry.max())))
-say("     -> pnl la GROSS (per docs/RESULT_LIVE_VS_SIM.md), khong co commission/orderId/status order")
+say("     -> pnl la GROSS (per docs/result/RESULT_LIVE_VS_SIM.md), khong co commission/orderId/status order")
 SUMMARY["shadow_n"] = int(len(led))
 
 # A6. funding_data (Aerospike) — nguon funding THAT

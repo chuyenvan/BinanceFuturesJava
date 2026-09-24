@@ -3,7 +3,7 @@
 Người soạn: MASTER. Người thực thi: agent Sonnet (khi bridge Oracle sẵn). Chủ quyết định: Uni (đã chọn hướng "Hạ gate + pacing bigdown").
 Trạng thái: **THIẾT KẾ — chưa chạy.** Đây là khung; agent viết PREREG cuối trên Oracle từ khung này, commit TRƯỚC khi chạy sim.
 
-Đầu vào đã có (đọc trước): `docs/ANALYSIS_BIGDOWN_STRUCT.md` (`dc63488`), `docs/RECON_ADMISSION_PACING.md` (`4268254`), `docs/RESULT_VOL_TARGET.md`, `docs/ANALYSIS_BETA_DECOMP_T170.md`. Project memory: `round_2026-09-20_beta_decomp_and_data_survey.md` (mục TASK A + A-recon), `power_wall.md`, `oracle_access.md`.
+Đầu vào đã có (đọc trước): `docs/analysis/ANALYSIS_BIGDOWN_STRUCT.md` (`dc63488`), `docs/analysis/RECON_ADMISSION_PACING.md` (`4268254`), `docs/result/RESULT_VOL_TARGET.md`, `docs/analysis/ANALYSIS_BETA_DECOMP_T170.md`. Project memory: `round_2026-09-20_beta_decomp_and_data_survey.md` (mục TASK A + A-recon), `power_wall.md`, `oracle_access.md`.
 
 ---
 
@@ -55,13 +55,13 @@ Gọi các số của T170 làm mốc: n_eff_total(T170), maxDD −11.84%, UW 92
 KHÔNG dùng khoá `(sym,start)` để so tập lệnh giữa các run (M7 TASK A: match chỉ 32.6% dù chỉ khác 1 tham số — gate động lệch giờ vào lệnh). So bằng **metric tổng hợp/phân phối**: n_eff_total, ICC(roi,ngày), phân rã maxDD theo bigdown, CAGR+CI, số lệnh/ngày, k̄, Σnotional/equity phân phối. Mọi so sánh cùng cửa sổ 2021-07-01..2025-12-31, cùng kiến trúc (Oracle ARM64, chỉ so Oracle).
 
 ## 6. QUY TRÌNH CHẠY (agent)
-1. PREREG `docs/PREREG_PACING_BIGDOWN.md` từ khung này (điền γ, hệ số P0 tính từ dữ liệu, định nghĩa cờ bigdown causal chính xác trong engine, khoá config mới) → commit TRƯỚC.
+1. PREREG `docs/prereg/PREREG_PACING_BIGDOWN.md` từ khung này (điền γ, hệ số P0 tính từ dữ liệu, định nghĩa cờ bigdown causal chính xác trong engine, khoá config mới) → commit TRƯỚC.
 2. Code: thêm khoá pacing vào `Configs.java` + điểm cắm sizing (`VolTargetSizing`-style hoặc mở rộng nó), giữ OFF byte-identical. Cổng OFF: chạy T170 với flag OFF → md5 `efb793e2`.
 3. `systemctl stop shadow-c3`. Kiểm `pgrep java` rỗng + `free -g`.
 4. Chạy tuần tự (1 java/lần, ~13 phút/run): (a) cổng T170 verify md5; (b) P0; (c) P3; (d) T100 no-pacing nếu cần sim mới. KHÔNG song song.
 5. `systemctl start shadow-c3` NGAY sau chuỗi sim. Verify shadow active + log sạch.
 6. Tính t1-t4 bằng `bigdown_struct.py` + `x1_rates.py --appetite current --k 2` cho từng run. Bảng so T170/T100/P0/P3.
-7. `docs/RESULT_PACING_BIGDOWN.md`: 4 tiêu chí ✅/❌ mỗi biến thể, verdict, khuyến nghị. Commit code+doc branch `module` (KHÔNG push). Dọn `wfo_ds_*` tạm; giữ printDone/sim.out từng biến thể.
+7. `docs/result/RESULT_PACING_BIGDOWN.md`: 4 tiêu chí ✅/❌ mỗi biến thể, verdict, khuyến nghị. Commit code+doc branch `module` (KHÔNG push). Dọn `wfo_ds_*` tạm; giữ printDone/sim.out từng biến thể.
 
 ## 7. Ý NGHĨA QUYẾT ĐỊNH
 - THẮNG ⇒ đề xuất Uni cân nhắc incumbent mới **chỉ sau** shadow paper song song ≥1 tháng (PLAN_SHADOW_T170_PARALLEL) — không đổi live vì 1 run.

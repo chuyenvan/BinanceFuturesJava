@@ -1,6 +1,6 @@
 """HEDGE_OVERLAY_A — Phuong an A: overlay hedge BTC COUNTERFACTUAL tren sach T170.
 
-Thuc thi DUNG theo docs/PREREG_HEDGE_OVERLAY_A.md (commit 03c037e). KHONG sua .java,
+Thuc thi DUNG theo docs/prereg/PREREG_HEDGE_OVERLAY_A.md (commit 03c037e). KHONG sua .java,
 KHONG chay sim. Sach long giu nguyen byte-identical: script nay chi DOC printDone.csv +
 sim.out cua T170 va cong mot chuoi PnL hedge tinh ngoai engine.
 
@@ -139,7 +139,7 @@ def rolling_beta(daily, nopen_day):
     (chi dung d <= D-1), toi thieu 20 quan sat.
 
     SUA THIET KE (thuc hien TRUOC khi co bat ky ket qua gia thuyet nao — xem
-    docs/RESULT_HEDGE_OVERLAY_A.md muc "minh bach"): dang pre-reg goc la OLS cua
+    docs/result/RESULT_HEDGE_OVERLAY_A.md muc "minh bach"): dang pre-reg goc la OLS cua
     y = dPnL/Nopen tren x = r_b. Dang do ILL-POSED vi chia cho Nopen co the rat nho
     (ngay chi co 1 lenh mo 1 gio => Nopen ~ notional/24) => diem don bay gia tao.
     Chan doan (diag2, luat quyet dinh chot TRUOC khi chay): 1.42% so ngay co |beta|>10,
@@ -405,7 +405,7 @@ def main():
     log.info("  c4 n_eff tang >=20%%        : %s", crit["c4_neff"])
 
     res = {
-        "prereg": "docs/PREREG_HEDGE_OVERLAY_A.md (commit 03c037e)",
+        "prereg": "docs/prereg/PREREG_HEDGE_OVERLAY_A.md (commit 03c037e)",
         "tag": TAG, "window": [str(WIN_START.date()), str(WIN_END.date())],
         "roll_days": ROLL_DAYS, "min_obs": MIN_OBS, "cost_rate": COST_RATE,
         "n_trades": int(len(d)),

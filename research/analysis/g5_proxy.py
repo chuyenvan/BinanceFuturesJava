@@ -1,5 +1,5 @@
 """G5 PROXY — do nhanh cac ung vien nhan tren pool OOS DEV 48 thang, KHONG chay sim.
-Xem docs/PREREG_G5.md muc 4. Output: /home/ubuntu/g5/proxy_table.csv, proxy_ci.csv.
+Xem docs/prereg/PREREG_G5.md muc 4. Output: /home/ubuntu/g5/proxy_table.csv, proxy_ci.csv.
 
 (a) phan phoi p toan pool + per-tick
 (b) rank-IC per-tick vs g1lite + edge5; CI block-bootstrap khoi 72h x1.21, GHEP CAP vs net015_4h

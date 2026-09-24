@@ -1,4 +1,4 @@
-"""FLATGATE — CI cua HIEU CAGR giua X1_C3_FULL_FLATGATE va PARITY_R (docs/PREREG_FLATGATE.md 5.3).
+"""FLATGATE — CI cua HIEU CAGR giua X1_C3_FULL_FLATGATE va PARITY_R (docs/prereg/PREREG_FLATGATE.md 5.3).
 
 Khuon research/analysis/ci_bookcap.py, GIU NGUYEN: equity = b+unP (mark-to-market) doc tu
 logs/sim.out, ban ghi cuoi cung trong ngay; moving-block circular bootstrap, block chinh 21

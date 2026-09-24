@@ -7,8 +7,8 @@ bi sua o cac phien sau. Snapshot la **ban sao byte-identical** lay tu git (khong
 
 | thu | gia tri |
 |---|---|
-| Trainer goc (Kaggle) | kernel `chuyendinh/selector-15mtr-pred15-net015-gpu` — **notebook goc DA MAT** (`docs/G3_X26_RECOVERY.md` §8) |
-| Code train trong repo | `research/pipeline/g015_net_train.py` (ban **TAI DUNG**, xac minh PASS o `docs/G015_RECIPE.md` §4, fold 8) |
+| Trainer goc (Kaggle) | kernel `chuyendinh/selector-15mtr-pred15-net015-gpu` — **notebook goc DA MAT** (`docs/experiment/G3_X26_RECOVERY.md` §8) |
+| Code train trong repo | `research/pipeline/g015_net_train.py` (ban **TAI DUNG**, xac minh PASS o `docs/experiment/G015_RECIPE.md` §4, fold 8) |
 | Snapshot dong bang | `g015_net_train_v0_snapshot.py` — sha256 `e8b6798fdb8e3f497e976fb45f5ad801040258902fcea0e8d4e6f6c0fc85aafc` |
 | Snapshot code predict | `g015x26_train_v0_snapshot.py` — sha256 `56844a3e2534914186d9e629d2d6269282885dd1be06be48c128b6edf067cb2a` |
 | `train_code_git_commit` | `6695a8c` (repo HEAD luc ghi, 2026-09-24); file `g015_net_train.py` **khong doi tu `f442c0e`** |
@@ -16,7 +16,7 @@ bi sua o cac phien sau. Snapshot la **ban sao byte-identical** lay tu git (khong
 `g015_net_train.py` = TRAIN THAT (WFO 18 fold). `g015x26_train.py` = CHI PREDICT lai tu 18 model da luu
 (dung khi chi can sinh lai bins). Model: `/home/ubuntu/claudedata/predwf_G015/model_f{0..17}_4h.json`.
 
-## Tham so train v0 (nguon `docs/G015_RECIPE.md` §2)
+## Tham so train v0 (nguon `docs/experiment/G015_RECIPE.md` §2)
 
 | muc | gia tri |
 |---|---|
@@ -30,7 +30,7 @@ bi sua o cac phien sau. Snapshot la **ban sao byte-identical** lay tu git (khong
 | `scale_pos_weight` | tinh **theo TUNG FOLD**: fold 0 = `2.70527601` ... fold 17 = `4.35441685` (khong phai toan cuc) |
 | xgboost | 3.2.0 · `MAX_TRAIN_ROWS=60.000.000` (khong bao gio cham) |
 
-Cong thuc day du + dau vao ghim (sha256 Tool1/label/OI) o `docs/G015_RECIPE.md` §2/§5/§6.
+Cong thuc day du + dau vao ghim (sha256 Tool1/label/OI) o `docs/experiment/G015_RECIPE.md` §2/§5/§6.
 Duong train THAT (script · luong · fold · seed · tham so) o `docs/PREP_STAGE2_TRAIN.md` §1.
 
 ## 🔴 BAT DANH SO FOLD (phai doc truoc khi so bang)
@@ -49,5 +49,5 @@ sua ca 3 tang: train · bins/predict · ONNX input) — xem `docs/PREP_STAGE2_TR
 python3 research/pipeline/g015_net_train.py --fold 20240101 --device cuda --save-model --out-dir <dir>
 ```
 
-⚠️ `--device cuda` la device GOC; CPU cho mau khac (`docs/G015_RECIPE.md` §4/§7).
+⚠️ `--device cuda` la device GOC; CPU cho mau khac (`docs/experiment/G015_RECIPE.md` §4/§7).
 ⚠️ Fold `20260101`/`20260401` nam TREN `HoldoutSeal` — khong dua vao sim/verdict khi chua `HOLDOUT_UNSEAL`.

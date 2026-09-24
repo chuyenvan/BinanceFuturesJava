@@ -1,6 +1,6 @@
 """kaggle_sim - chay Java sim cua repo tren Kaggle CPU kernel, NHIEU KERNEL SONG SONG.
 
-Doc `docs/KAGGLE_SIM.md` truoc khi dung.
+Doc `docs/runbooks/KAGGLE_SIM.md` truoc khi dung.
 
 Neo (anchor): tren Kaggle sim luon chay `TICKER_SOURCE=file` (Kaggle khong co Aerospike
 ticker) => equity cuoi cua `c2b_min` la **60395**, KHONG phai 60390 (so cua Oracle +
@@ -48,7 +48,7 @@ TICKER_DS = [USER + "/wfo-ticker-2021",
 TICKER_MIN_DAYS = 1826
 DATASETS = [BUNDLE_DS] + TICKER_DS
 
-MAX_CONCURRENT = 5          # slot CPU toan account (docs/KAGGLE_RULES.md muc 1)
+MAX_CONCURRENT = 5          # slot CPU toan account (docs/runbooks/KAGGLE_RULES.md muc 1)
 KERNEL_PREFIX = "sim"
 WORKDIR = os.environ.get("KAGGLE_SIM_WORKDIR", "/home/ubuntu/kaggle_sim")
 OUTDIR = os.environ.get("KAGGLE_SIM_OUTDIR", "/home/ubuntu/kaggle_sim/out")

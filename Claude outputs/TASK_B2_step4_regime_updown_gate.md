@@ -34,7 +34,7 @@ k cho phán quyết = 1 (chỉ RA12 quyết định); sweep mô tả không vào
 ## 5. ĐO — metric tổng hợp/phân phối (KHÔNG khoá sym,start). Cùng cửa sổ 2021-07-01..2025-12-31, Oracle ARM64, per-year.
 
 ## 6. QUY TRÌNH
-PREREG `docs/PREREG_REGIME_UPDOWN.md` (cặp RA12 khoá + sweep mô tả + u1-u5 + phán quyết + chống-overfit §1) commit TRƯỚC → tạo profile (RA12, RA14; regime CSV dùng lại Bước 2) → cổng OFF byte-identical T170 md5 → dừng shadow-c3 → sim tuần tự (T170 verify, RA12, RA14; R up1.0 dùng lại) → bật shadow-c3 verify → tính u1-u5 (`bigdown_struct.py`+`x1_rates.py`) per-year + đường cong up-gate {1.0,1.2,1.4} → `docs/RESULT_REGIME_UPDOWN.md` verdict → commit branch `module` (KHÔNG push) → dọn wfo_ds tạm, giữ printDone/sim.out.
+PREREG `docs/prereg/PREREG_REGIME_UPDOWN.md` (cặp RA12 khoá + sweep mô tả + u1-u5 + phán quyết + chống-overfit §1) commit TRƯỚC → tạo profile (RA12, RA14; regime CSV dùng lại Bước 2) → cổng OFF byte-identical T170 md5 → dừng shadow-c3 → sim tuần tự (T170 verify, RA12, RA14; R up1.0 dùng lại) → bật shadow-c3 verify → tính u1-u5 (`bigdown_struct.py`+`x1_rates.py`) per-year + đường cong up-gate {1.0,1.2,1.4} → `docs/result/RESULT_REGIME_UPDOWN.md` verdict → commit branch `module` (KHÔNG push) → dọn wfo_ds tạm, giữ printDone/sim.out.
 
 ## 7. Ý NGHĨA
 - THẮNG (RA12 đạt u1-u5) ⇒ breadth CÓ giải được bằng regime-gate up/down đúng mức ⇒ shadow paper song song ≥1 tháng trước khi bàn đổi incumbent; và đây là tin lớn (ý Uni đúng).

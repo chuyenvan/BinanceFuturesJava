@@ -11,7 +11,7 @@ import org.slf4j.LoggerFactory;
  * lam duong live chay Y HET HEAD (cong hoi quy: xem {@code LiveProfileC3Test}).
  *
  * <p>Khi BAT, profile ap 5 khac biet C3 <-> live 242 da liet ke o
- * {@code docs/L1_SHADOW_C3.md} muc 2:
+ * {@code docs/experiment/L1_SHADOW_C3.md} muc 2:
  * <ol>
  *   <li>(a) arm trailing {@code RATE_PROFIT_STOP_MARKET} 0.05 -> <b>0.07</b></li>
  *   <li>(b) time-stop 168h cho cum CHUA arm — live khong co, port tu sim

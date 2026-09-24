@@ -166,13 +166,13 @@ backtest, lay lai tu Kaggle version 1.
 
 Tu 2026-09-03 moi run cung TU KHAI bins: `DumpConfig` in `bins.sha256_16` va
 `WfoDataset.export` stamp `binsSha256` vao `manifest.txt` cua dataset. Xem
-`docs/C2B_SPEC.md` va `research/pipeline/README.md` muc 0.
+`docs/design/C2B_SPEC.md` va `research/pipeline/README.md` muc 0.
 
 ## X1 — `predwf_map_s1a2_x1/` (16 fold, cua so 48 thang 2022-01..2025-12)
 
 Sinh 2026-09-05 boi `research/pipeline/x1/x1_build_map.py s1a2x1` tu `pred_s1a2x1.parquet`
 (`x1_s1_rank.py`, 16 cutoff) map len phan phoi P(win) cua `claudedata/predwf_G015x26`.
-Pre-reg `docs/PREREG_X1.md`; ket qua `docs/X1_EXTEND.md`.
+Pre-reg `docs/prereg/PREREG_X1.md`; ket qua `docs/experiment/X1_EXTEND.md`.
 **10 bin dau BYTE-IDENTICAL muc 2** (cong G4 PASS) — cot sha256 duoi day trung y bang tren.
 
 | File | Byte | Ban ghi | sha256 | ts range (ms) | span |
@@ -208,7 +208,7 @@ sha256 `2618fe1a0235d8ed3602f7b4bf37d8ba611e4e6c923854e10184d036065309fe`).
 
 ## G3 — `predwf_G015x26/` (16 fold, gate THAT cua C2b) — **TAI LAP DUOC** (2026-09-06)
 
-Bao cao day du: `docs/G3_X26_RECOVERY.md`. Bins goc: `/home/ubuntu/claudedata/predwf_G015x26/`
+Bao cao day du: `docs/experiment/G3_X26_RECOVERY.md`. Bins goc: `/home/ubuntu/claudedata/predwf_G015x26/`
 (KHONG bi ghi de). Bins tai sinh doi chieu: `/home/ubuntu/g3x26/regen/` + `REGEN.sha256`
 (ban sao trong repo: `research/analysis/g015x26_regen_sha256.txt`).
 

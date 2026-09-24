@@ -1,4 +1,4 @@
-"""UW_SOURCE (TASK B2 Buoc 1, docs/PREREG_UW_DIAG.md) - UW that su den tu dau?
+"""UW_SOURCE (TASK B2 Buoc 1, docs/prereg/PREREG_UW_DIAG.md) - UW that su den tu dau?
 CHI DOC printDone.csv/sim.out cua T170 (X1_GS_T170_2021), gate-1.0 baseline
 (X1_C3_FULL_2021) va P3 (X1_C3_FULL_2021_PACING_P3) + CLOSES_1H.bin (qua
 bigdown_struct.hourly_grid). KHONG chay sim, KHONG xgboost, KHONG sua .java.

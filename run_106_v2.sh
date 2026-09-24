@@ -58,7 +58,7 @@ PY
 
 PROMPT=$(cat <<'PROMPT'
 Ban la CCD headless chay doc lap, TU QUYET theo spec, KHONG hoi giua chung (gom cau hoi cuoi).
-DOC TRUOC (cwd hien tai): docs/CORE.md + docs/index.md + docs/KAGGLE_RULES.md + docs/rules/code.md + docs/rules/task-workflow.md + docs/db/index.md.
+DOC TRUOC (cwd hien tai): docs/CORE.md + docs/index.md + docs/runbooks/KAGGLE_RULES.md + docs/rules/code.md + docs/rules/task-workflow.md + docs/db/index.md.
 THUC THI task: tasks/106-reexport-features-with-filter.md (doc ky, lam dung tung buoc B1..B7).
 
 QUAN TRONG - chay 2 PHA:

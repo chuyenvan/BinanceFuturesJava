@@ -1,4 +1,4 @@
-"""CONC-CAP-HIGHN scorer — cham 4 chan cua docs/PREREG_CONC_CAP_HIGHN.md.
+"""CONC-CAP-HIGHN scorer — cham 4 chan cua docs/prereg/PREREG_CONC_CAP_HIGHN.md.
 
   (0) CO CHE  : guard [CONC-PC] MODE + SUMMARY blocked= + so dong SKIP; [GATE-ROLL] BAT; md5 printDone
   (1) CONC    : tap trung 1 coin max theo thoi gian (OFF vs ON)

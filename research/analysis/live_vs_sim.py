@@ -1,9 +1,9 @@
 """LIVE_VS_SIM - so SHADOW/LIVE (forward, lenh that paper) voi SIM T170 theo notional.
 
-Chot truoc: docs/PREREG_LIVE_VS_SIM.md (commit edcc551). KHONG tune, khong push,
+Chot truoc: docs/prereg/PREREG_LIVE_VS_SIM.md (commit edcc551). KHONG tune, khong push,
 khong chay Java tren Oracle, khong ghi 242. Thuan Python, chi DOC du lieu nguon.
 
-Ghi ra /tmp/live_vs_sim/ (JSON + txt) de dan vao docs/RESULT_LIVE_VS_SIM.md.
+Ghi ra /tmp/live_vs_sim/ (JSON + txt) de dan vao docs/result/RESULT_LIVE_VS_SIM.md.
 """
 import csv
 import datetime as dt

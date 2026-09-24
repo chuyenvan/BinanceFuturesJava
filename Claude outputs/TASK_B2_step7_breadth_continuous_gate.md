@@ -34,7 +34,7 @@ k phán quyết = 1 (BRC). Nếu muốn so all-coin vs top50 cho BRC → top50 l
 ## 5. ĐO — metric tổng hợp/phân phối, per-year, cùng cửa sổ 2021-07..2025-12.
 
 ## 6. QUY TRÌNH
-PREREG `docs/PREREG_BREADTH_CONT.md` (cơ chế + gate formula + biến thể + u1-u5 + dự báo + phán quyết) commit TRƯỚC → recon+sửa RegimeSchedule tối thiểu (nếu cần) + sinh CSV gate-value từ breadth-score + profile BRC/BRC0 → cổng OFF T170 md5 `efb793e2` → dừng shadow-c3 → sim tuần tự (T170 verify, BRC, BRC0) → bật shadow-c3 verify → tính u1-u5 (`bigdown_struct.py`+`x1_rates.py`) per-year, so BR nhị phân → `docs/RESULT_BREADTH_CONT.md` verdict + đối chiếu dự báo + bảng BRC vs BR vs T170 → commit branch `module` (KHÔNG push) → dọn wfo_ds tạm, giữ printDone/sim.out.
+PREREG `docs/prereg/PREREG_BREADTH_CONT.md` (cơ chế + gate formula + biến thể + u1-u5 + dự báo + phán quyết) commit TRƯỚC → recon+sửa RegimeSchedule tối thiểu (nếu cần) + sinh CSV gate-value từ breadth-score + profile BRC/BRC0 → cổng OFF T170 md5 `efb793e2` → dừng shadow-c3 → sim tuần tự (T170 verify, BRC, BRC0) → bật shadow-c3 verify → tính u1-u5 (`bigdown_struct.py`+`x1_rates.py`) per-year, so BR nhị phân → `docs/result/RESULT_BREADTH_CONT.md` verdict + đối chiếu dự báo + bảng BRC vs BR vs T170 → commit branch `module` (KHÔNG push) → dọn wfo_ds tạm, giữ printDone/sim.out.
 OFF không byte-identical → DỪNG, báo MASTER.
 
 ## 7. Ý nghĩa

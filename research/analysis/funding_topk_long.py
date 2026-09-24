@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """FUNDING_TOPK_LONG — huong DOI XUNG: LONG top-K coin FUNDING CAO, do offline (0-sim).
 
-Pre-reg: docs/PREREG_FUNDING_TOPK_LONG.md (commit da76e41, chot TRUOC khi chay; KHONG sua thiet ke).
+Pre-reg: docs/prereg/PREREG_FUNDING_TOPK_LONG.md (commit da76e41, chot TRUOC khi chay; KHONG sua thiet ke).
 
 Thuan Python. Chi DOC: Aerospike test.funding_data + raw/<sym>.f32 (1m OHLCV) + cache2.npz (neo MOM15)
 + printDone.csv cua run T170 (proxy universe he thong, causal).
 
-Quy uoc dau (KHOA, = Binance that, kiem chung o docs/RESULT_FUNDING_SIGN.md):
+Quy uoc dau (KHOA, = Binance that, kiem chung o docs/result/RESULT_FUNDING_SIGN.md):
   rate > 0  =>  LONG TRA, SHORT THU.   f_cyc = 100*sum(rate) tren (t_e, t_x]  (%/notional).
   => LONG top-decile funding CAO: funding la CHI PHI (-f_cyc). KHONG duoc bo qua.
 

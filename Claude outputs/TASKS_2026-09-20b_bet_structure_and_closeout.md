@@ -3,7 +3,7 @@
 Người soạn: MASTER (Claude). Người thực thi dự kiến: agent Sonnet. Chủ sở hữu quyết định: Uni.
 Trạng thái: **KẾ HOẠCH — chưa thực thi gì.** Uni redirect 09-20 (đọc §0.5).
 
-Tiền đề đọc trước (Oracle, branch `module`): `docs/RESULT_HEDGE_OVERLAY_A.md` (`38691b6`), `docs/DESIGN_HEDGED_BOOK.md` (`8a081ae`), `docs/ANALYSIS_BETA_DECOMP_T170.md` (`61a7fc7`), `docs/RESULT_VOL_TARGET.md` (`99208f7`), `docs/NBETS_RESULT.md` (mục 4.2, 5.1, 8), `docs/TICKLOG_RESULT.md`, `research/analysis/{nbets_step3_crosssec.py, hedge_overlay_a.py, c3_rates.py, beta_decomp_t170.py}`. Java: `BudgetManagerSimple.java`, `TradeUtils.java` (`managerBudget`/`throttle`), `Configs.java`, `SimulatorMarketLevelTicker1MStopLoss.java`, `VolTargetSizing.java`. Project memory: `round_2026-09-20_beta_decomp_and_data_survey.md`, `power_wall.md`, `oracle_access.md`.
+Tiền đề đọc trước (Oracle, branch `module`): `docs/result/RESULT_HEDGE_OVERLAY_A.md` (`38691b6`), `docs/design/DESIGN_HEDGED_BOOK.md` (`8a081ae`), `docs/analysis/ANALYSIS_BETA_DECOMP_T170.md` (`61a7fc7`), `docs/result/RESULT_VOL_TARGET.md` (`99208f7`), `docs/result/NBETS_RESULT.md` (mục 4.2, 5.1, 8), `docs/result/TICKLOG_RESULT.md`, `research/analysis/{nbets_step3_crosssec.py, hedge_overlay_a.py, c3_rates.py, beta_decomp_t170.py}`. Java: `BudgetManagerSimple.java`, `TradeUtils.java` (`managerBudget`/`throttle`), `Configs.java`, `SimulatorMarketLevelTicker1MStopLoss.java`, `VolTargetSizing.java`. Project memory: `round_2026-09-20_beta_decomp_and_data_survey.md`, `power_wall.md`, `oracle_access.md`.
 
 ---
 
@@ -73,7 +73,7 @@ Không chốt 1 ngưỡng trước; đo dose-response để thấy độ nhạy 
 - **BD3 (severity buckets)**: chia cường độ mild/moderate/severe để xem liều-đáp ứng.
 Tất cả cờ bigdown phải **causal** (chỉ dùng dữ liệu tới t). Ghi rõ công thức từng định nghĩa trong PREREG.
 
-### 2.4 PRE-REG lite — commit `docs/PREREG_BIGDOWN_STRUCT.md`, metric khoá TRƯỚC
+### 2.4 PRE-REG lite — commit `docs/prereg/PREREG_BIGDOWN_STRUCT.md`, metric khoá TRƯỚC
 Mô tả, không verdict THẮNG/THUA, chỉ cổng GO/NO-GO cho B (§2.6). Mỗi run, cửa sổ 2021-07-01..2025-12-31:
 
 **(M1) Đơn vị dòng**: dùng `sym`,`time_order`,cột leg/blk; xác định 1 dòng = 1 lệnh symbol hay 1 leg DCA. Báo số dòng, số "symbol-episode" (gộp dòng cùng `sym` chồng lấn thời gian), tỉ lệ dòng/episode. Mọi metric burst/k̄ báo theo **cả hai** đơn vị (dòng và episode).
@@ -107,7 +107,7 @@ MASTER dự báo: (a) φ(lỗ,bigdown) ≫ φ(lỗ,non-bigdown) ở CẢ hai run
 Lý do ngưỡng: g1 tỉ số 1.5 = đồng-thua bigdown phải trội rõ mới đáng nhắm riêng; g2 50% = pacing chỉ cứu được phần rủi ro nằm trong bigdown; g3 như cũ (không thêm cược alpha âm); g4 là bài học Phương án B.
 
 ### 2.7 Đầu ra
-`docs/ANALYSIS_BIGDOWN_STRUCT.md` + `research/analysis/bigdown_struct.py` (+ json `research/analysis/out/`), commit. Cập nhật memory. Trả lời MASTER: bảng metric M1–M7 (2–3 run), GO/NO-GO với số, và gì không tính được.
+`docs/analysis/ANALYSIS_BIGDOWN_STRUCT.md` + `research/analysis/bigdown_struct.py` (+ json `research/analysis/out/`), commit. Cập nhật memory. Trả lời MASTER: bảng metric M1–M7 (2–3 run), GO/NO-GO với số, và gì không tính được.
 
 ---
 
@@ -121,7 +121,7 @@ Mục đích: biết chính xác "fix cứng hiện tại" là gì, để thiế
 4. **Sizing quyết theo gì?** fixed fraction? theo equity? theo vốn rảnh? DCA grid scale? `SIM_F_BASE`/`DCA_GRID_SCALE` (GS wave-1 nói đây là 2 đòn size mạnh nhất) vào ở đâu.
 5. **Điểm cắm cho pacing giữ OFF byte-identical**: `VolTargetSizing` (TASK5) cắm ở đâu trong luồng sizing, và một rule pacing (điều tiết size/admission theo vốn rảnh hoặc regime) có cắm được cùng chỗ với 1 flag mặc-định-OFF không? Nếu cắm được ở tầng sizing (nhân multiplier) thì rẻ+an toàn; nếu bắt buộc sửa admission (chặn/hoãn lệnh) thì đắt+rủi ro như Phương án B — nêu rõ chi phí dòng và rủi ro md5.
 
-Đầu ra: `docs/RECON_ADMISSION_PACING.md`, commit. **Không code cơ chế.** Đây là recon quyết định B khả thi qua config hay phải hoãn.
+Đầu ra: `docs/analysis/RECON_ADMISSION_PACING.md`, commit. **Không code cơ chế.** Đây là recon quyết định B khả thi qua config hay phải hoãn.
 
 ---
 
@@ -164,7 +164,7 @@ NULL/HỖN HỢP ⇒ ghi `power_wall.md`: pacing động đã đo, đóng; gate 
 1. **Chú thích `RESULT_HEDGE_OVERLAY_A.md` mục 5, thêm (E) — phát hiện khi MASTER review, sau khi RESULT đã commit**: thay đổi (B) làm guard `MIN_OBS=20` vô hiệu (`rolling_beta()`: `valid = np.isfinite(y) & np.isfinite(x)` với `y=dpnl`,`x=z` ⇒ ngày `Nopen=0`/z=0 vẫn được đếm là quan sát ⇒ cửa sổ 60 ngày luôn "đủ 20 obs" dù chỉ 3–5 ngày có vị thế ⇒ β̂ nhiễu, hedge notional 6.1× equity, ICC×4.3/maxDD/UW là artefact). Khẳng định verdict NULL không đổi (lý do thật: r²=0.031, TASK1). **Tuỳ chọn mô tả ≤30 phút**: chạy `hedge_overlay_a.py` với β cố định = beta FULL-period in-sample per-notional (biến môi trường mới `HEDGE_BETA_CONST`, gắn nhãn "cận trên lạc quan"), chỉ báo ICC/maxDD/UW để cho thấy hedge "tốt nhất có thể" cũng không giảm ICC — nếu làm, ghi rõ là số mô tả thêm sau.
 2. **Commit** `profiles/x1_gs_t170_vt_coin.properties`, `x1_gs_t170_vt_portfolio.properties` (đối chiếu tham số với `RESULT_VOL_TARGET.md`). Xử lý 5 json `research/analysis/out/*` untracked (tìm vòng sinh qua `git log -S`; commit kèm ghi chú hoặc chuyển scratch). Kiểm `git show --stat 38691b6` có `dump_funding_btc.py` chưa; nếu chưa, commit từ `/home/ubuntu/hedge_a/`.
 3. **`x1_rates.py --appetite {old,current}`** (mặc định `current`: 30/200/−15/coin15; giữ `old` để tái lập). Thêm bảng "chấm theo khẩu vị hiện hành" vào `RESULT_VOL_TARGET.md` và `RESULT_HEDGE_OVERLAY_A.md` (không xoá bảng cũ). Xác nhận T170 PASS theo cả hai.
-4. **Docs Oracle**: `docs/power_wall.md` (repo) thêm banner đính chính C2b/T170 (giống project memory); `docs/AGENT_RUNBOOK.md` sửa RSS shadow 1.7G→2.6–3.2G; `docs/index.md` banner thêm dòng vòng 09-20.
+4. **Docs Oracle**: `docs/notes/power_wall.md` (repo) thêm banner đính chính C2b/T170 (giống project memory); `docs/runbooks/AGENT_RUNBOOK.md` sửa RSS shadow 1.7G→2.6–3.2G; `docs/index.md` banner thêm dòng vòng 09-20.
 5. Cập nhật project memory.
 
 ---

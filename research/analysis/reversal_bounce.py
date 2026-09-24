@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """REVERSAL_BOUNCE — reversal-bounce long (tong quat isBtcTrendReverse) edge + MOM15 overlap/ICC.
 
-Pre-registered: docs/PREREG_REVERSAL_BOUNCE.md (commit truoc khi chay). 0-sim, THUAN PYTHON,
+Pre-registered: docs/prereg/PREREG_REVERSAL_BOUNCE.md (commit truoc khi chay). 0-sim, THUAN PYTHON,
 khong Java, khong push. Doc 1M closes causal (Aerospike kline_1m_opt da extract san thanh
 raw/<sym>.f32). Trigger: 1 nguong CO DINH (DROP_THRESH=0.01), HOLD 24h.
 

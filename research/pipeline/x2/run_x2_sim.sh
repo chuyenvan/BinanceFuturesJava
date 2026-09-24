@@ -1,7 +1,7 @@
 #!/bin/bash
 # X2 SIM — build dataset WFO 48 thang 1 LAN roi chay 6 arm TUAN TU tren Oracle (TICKER_SOURCE=file).
 # Cong hoi quy: X2_PARITY phai ra md5 printDone = d39da2940dfd815f60772f70517750bf (= X1_C3).
-# FAIL => DUNG, khong chay 5 arm con lai. Xem docs/PREREG_X2.md muc 3-4.
+# FAIL => DUNG, khong chay 5 arm con lai. Xem docs/prereg/PREREG_X2.md muc 3-4.
 set -u
 R=/home/ubuntu/src/BinanceFuturesJava
 JAR=$R/target/binance-java-sdk-1.2.4.jar

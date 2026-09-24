@@ -1,7 +1,7 @@
 """X1 S1 — TRAIN + LUU MODEL fold CUOI (cutoff 20251001) + CONG doi chung.
 
 `s1_rank.py`/`x1_s1_rank.py` train roi predict ngay trong vong lap, KHONG luu model
-(`docs/L1_SHADOW_C3.md` muc 3b = blocker B1). Script nay tai lap DUNG fold cuoi cua X1
+(`docs/experiment/L1_SHADOW_C3.md` muc 3b = blocker B1). Script nay tai lap DUNG fold cuoi cua X1
 (cung ledger, cung feature, cung sieu tham so, cung purge 72h), roi:
   1. `booster.save_model(<out>/s1a2x1_cut20251001.json)`
   2. convert ONNX (`onnxmltools`) -> `<out>/s1a2x1_cut20251001.onnx`

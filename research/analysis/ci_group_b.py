@@ -1,5 +1,5 @@
 """Nhom B (#7,#8,#9): CI cua HIEU o tang XEP HANG, block-bootstrap khoi 72h cua tick.
-Phuong phap chot o docs/PREREG_CI.md section 3 (commit 2493eca).
+Phuong phap chot o docs/prereg/PREREG_CI.md section 3 (commit 2493eca).
 Diem uoc luong tai lap y research/analysis/gate_vs_rank3.py."""
 import logging
 import numpy as np, pandas as pd

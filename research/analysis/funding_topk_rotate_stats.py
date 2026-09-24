@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """FUNDING_TOPK_ROTATE stats — luat quay vong 8h LONG top-K funding nho nhat.
 
-Pre-reg: docs/PREREG_FUNDING_TOPK_ROTATE.md (commit 55b8280, chot TRUOC khi chay; KHONG sua thiet ke).
+Pre-reg: docs/prereg/PREREG_FUNDING_TOPK_ROTATE.md (commit 55b8280, chot TRUOC khi chay; KHONG sua thiet ke).
 
 Doc $TKR_OUT/mark_grid.npz (grid moc 8h) + $TKR_OUT/anchor_mom15.npz (neo MOM15).
 Moi chu ky = 1 moc 8h: basket = K symbol co f_entry nho nhat (tang dan, dong hang theo sym index),
@@ -268,7 +268,7 @@ def main():
     n_sym = len(cadence)
 
     say("=== FUNDING_TOPK_ROTATE — luat quay vong 8h: LONG top-K funding nho nhat ===")
-    say("Pre-reg `docs/PREREG_FUNDING_TOPK_ROTATE.md` (commit **55b8280**, chot TRUOC khi chay).")
+    say("Pre-reg `docs/prereg/PREREG_FUNDING_TOPK_ROTATE.md` (commit **55b8280**, chot TRUOC khi chay).")
     say("Moc 8h 00/08/16 UTC (r %% 480 == 0, BASE=%d, NMIN=%d, tong moc=%d). Entry close(r), exit" % (base, int(np.load(OUT + "/mark_grid.npz")["nmin"]), len(prep["mark"])))
     say("close(r+480); `f_entry` = rate event cuoi <= r (causal); xep hang TANG DAN => top-K nho nhat;")
     say("dong hang theo sym index. Long equal-weight, HOLD 480'. `net = mean(raw) - mean(f_cum) - cost`,")
@@ -480,7 +480,7 @@ def main():
     say("")
 
     say("### 7c. Dan chieu H2 vong truoc (funding thap => long)")
-    say("- `docs/RESULT_FUNDING_FACTOR.md` (commit 5b548e4): D1 (decile funding thap nhat) net 24h = **-0,1913%%**,")
+    say("- `docs/result/RESULT_FUNDING_FACTOR.md` (commit 5b548e4): D1 (decile funding thap nhat) net 24h = **-0,1913%%**,")
     say("  CI chua 0, IC cross-section **+0,0009**; H3 NULL. Tien le xa: `SURVEY_OLDCODE_SIGNALS` FUNDING_FEE_BUY ->")
     say("  ML funding_selector -> **FAIL (WFE med 0,098)**.")
     for K in K_LIST:

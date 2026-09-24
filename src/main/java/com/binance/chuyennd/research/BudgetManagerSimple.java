@@ -39,7 +39,7 @@ public class BudgetManagerSimple {
     private static volatile BudgetManagerSimple INSTANCE = null;
     public Float marginRunning = 0f;
 
-    // [VOL_TARGET 2026-09-20] docs/PREREG_VOL_TARGET.md - lich equity NGAY (causal) cho PORTFOLIO
+    // [VOL_TARGET 2026-09-20] docs/prereg/PREREG_VOL_TARGET.md - lich equity NGAY (causal) cho PORTFOLIO
     //   mode. Key = Utils.getDate(timeUpdate) (moc dau ngay), value = equity (balance+unProfit) GAN
     //   NHAT da thay trong ngay do. Chi ghi khi VolTargetSizing.PORTFOLIO_MODE (xem updateBalance) ->
     //   OFF/COIN khong dung toi cau truc nay, khong cap phat/ghi gi them -> byte-identical.
@@ -221,7 +221,7 @@ public class BudgetManagerSimple {
         //    = đáy/đỉnh equity trong quý → maxDD per-quý thật (đáy trong quý so đầu quý).
         float equity = balance + unProfit;   // balance đã = balanceBasic + profit
 
-        // [VOL_TARGET 2026-09-20] docs/PREREG_VOL_TARGET.md - ghi lich equity NGAY (causal) CHI khi
+        // [VOL_TARGET 2026-09-20] docs/prereg/PREREG_VOL_TARGET.md - ghi lich equity NGAY (causal) CHI khi
         //   PORTFOLIO mode dang bat. VolTargetSizing.portfolioMultiplier() doc lai qua headMap(today)
         //   (loai tru ngay dang chay) nen KHONG look-ahead.
         if (VolTargetSizing.PORTFOLIO_MODE) {

@@ -15,7 +15,7 @@ report: docs/reports/106.md
 # TASK-106: Re-export feature Tool1 (40 cột + EntrySignalFilter) — PER-MONTH DISTRIBUTED
 
 > ⚠️ CCD headless chạy ĐẦU–CUỐI, TỰ QUYẾT theo spec này, KHÔNG hỏi người giữa chừng (gom câu hỏi cuối).
-> Đọc TRƯỚC: `docs/CORE.md` + `docs/KAGGLE_RULES.md` + `docs/rules/task-workflow.md` + report cũ `docs/reports/037.md` + `docs/reports/013.md`.
+> Đọc TRƯỚC: `docs/CORE.md` + `docs/runbooks/KAGGLE_RULES.md` + `docs/rules/task-workflow.md` + report cũ `docs/reports/037.md` + `docs/reports/013.md`.
 > Chỉ 1 CCD làm task này. Thấy CCD khác đang chạy 106 → DỪNG, báo. Ghi tiến trình (mỗi bước 1 dòng + timestamp) vào `/d/claudedata/agent106.log`.
 
 ## MỤC TIÊU

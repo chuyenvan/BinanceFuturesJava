@@ -3,7 +3,7 @@
 tren 3 pool (M-LEVEL / P-COIN / P-COIN-DEDUP), CI block-72h x1.21 + Bonferroni K=27, null sign-flip,
 ICC, va MDE cho N moi.
 
-Doc /tmp/level_sens/pools.npz. Thuan Python. Pre-reg: docs/PREREG_LEVEL_SENSITIVITY.md.
+Doc /tmp/level_sens/pools.npz. Thuan Python. Pre-reg: docs/prereg/PREREG_LEVEL_SENSITIVITY.md.
 """
 import os
 import sys
@@ -208,7 +208,7 @@ def main():
     devs = {k: (v[0] >= DEV_START) & (v[0] < DEV_END) for k, v in pools.items()}
 
     say("=== LEVEL_SENSITIVITY — N (market-level vs per-coin) + lưới 9 ô (HOLD × phí) + MDE ===")
-    say("pre-reg docs/PREREG_LEVEL_SENSITIVITY.md (commit b88f467, chot TRUOC khi chay). Harness nguyen:")
+    say("pre-reg docs/prereg/PREREG_LEVEL_SENSITIVITY.md (commit b88f467, chot TRUOC khi chay). Harness nguyen:")
     say("HOLD×(4h/24h/72h) × phí(0.05/0.10/0.15%), slip 0.5×range + funding Aerospike; CI block-72h 2000 rep")
     say("seed 20260905 ×1.21; null sign-flip 72h; DEV = 2022-01-01..2025-12-31 (CHÍNH), ALL = 2021-01..2025-12 (PHỤ, gồm 2021).")
     say("")

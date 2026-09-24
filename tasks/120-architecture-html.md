@@ -12,7 +12,7 @@
    4 node (242 live ingest+trading GMT+7 write-protected · 226 Aerospike ticker/funding/OI + jobstore Kaggle ·
    Oracle compute chính 23GB + Aerospike local ns=test · Kaggle 5 slot CPU) + local dev Windows; luồng dữ liệu
    live→Aerospike→export per-fold models→WfoDataset→workers→verdict; model pipeline (funding selector, gate/market);
-   nguồn đọc: docs/PIPELINE_PROVENANCE.md, docs/KAGGLE_RULES.md, docs/db/aerospike-226.md, docs/insights/WFO_ROADMAP.md.
+   nguồn đọc: docs/PIPELINE_PROVENANCE.md, docs/runbooks/KAGGLE_RULES.md, docs/db/aerospike-226.md, docs/insights/WFO_ROADMAP.md.
 4. Yêu cầu HTML: single-file tự chứa (CSS inline, không build step), tiếng Việt, màu trạng thái (xanh=xong/vàng=đang/đỏ=chưa)
    + legend, responsive, click node hiện tooltip mô tả + đường dẫn file nguồn. Cuối file ghi chú cách cập nhật trạng thái.
 5. `docs/architecture/README.md` ngắn: quy ước folder + cách cập nhật.

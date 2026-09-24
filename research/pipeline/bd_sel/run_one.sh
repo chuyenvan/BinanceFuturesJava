@@ -1,5 +1,5 @@
 #!/bin/bash
-# Run ONE BD-SEL variant (docs/PREREG_SEL_BIGDOWN.md). Usage: run_one.sh TAG PROFILE
+# Run ONE BD-SEL variant (docs/prereg/PREREG_SEL_BIGDOWN.md). Usage: run_one.sh TAG PROFILE
 set -u
 R=/home/ubuntu/src/BinanceFuturesJava
 JAR=$R/target/binance-java-sdk-1.2.4.jar

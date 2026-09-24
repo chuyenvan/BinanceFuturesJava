@@ -1,7 +1,7 @@
 # TASK-108: Generate selector predict-only (tách extract, tăng tốc cho WFO)
 
 - **status:** todo
-- **Milestone:** B4 (selector WFO) — [docs/ROADMAP.md](../docs/ROADMAP.md)
+- **Milestone:** B4 (selector WFO) — [docs/plan/ROADMAP.md](../docs/plan/ROADMAP.md)
 - **Ưu tiên:** trung bình — chỉ cần TRƯỚC khi chạy WFO nhiều vòng (mỗi vòng phải generate lại set).
 
 ## Mục tiêu (1 câu)

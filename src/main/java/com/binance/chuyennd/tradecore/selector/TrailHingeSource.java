@@ -14,7 +14,7 @@ import org.slf4j.LoggerFactory;
  * {@code BinanceOrderTradingManager.tsGap} -> {@code LATEST_SEL_PNOPUMP} (Funding), KHONG qua day,
  * nen VAN dung Funding pNoPump. Khi TAT: byte-identical HEAD.
  *
- * <p>Doc 1 LAN luc class nap. Xem docs/PREREG_LIVE_EQ_SIM.md.
+ * <p>Doc 1 LAN luc class nap. Xem docs/prereg/PREREG_LIVE_EQ_SIM.md.
  */
 public final class TrailHingeSource {
 

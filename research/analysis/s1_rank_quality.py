@@ -1,6 +1,6 @@
 """S1 RANKING QUALITY (STANDALONE, CRYPTO DEV) — lan dau do TRUC TIEP chat luong xep hang cua S1.
 
-PRE-REG: docs/PREREG_S1_RANK_QUALITY.md (commit da0ea2f). Chay DUNG MOT lan, khong tune.
+PRE-REG: docs/prereg/PREREG_S1_RANK_QUALITY.md (commit da0ea2f). Chay DUNG MOT lan, khong tune.
 Tai su dung data-loading da xac minh trong trend_rank_ic.py (cung binary close 1h + S1
 parquet). Cau hoi: "S1 xep hang coin tot den dau, manh o dau, yeu o dau?"
 

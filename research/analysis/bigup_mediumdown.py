@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """BIGUP_MEDIUPDOWN — sinh tin hieu BIG_UP / MEDIUM_UP / MEDIUM_DOWN (logic code cu 157cf4d)
-va do edge + MOM15 overlap. Pre-reg: docs/PREREG_BIGUP_MEDIUPDOWN.md (commit TRUOC khi chay).
+va do edge + MOM15 overlap. Pre-reg: docs/prereg/PREREG_BIGUP_MEDIUPDOWN.md (commit TRUOC khi chay).
 
 Thuan Python, 0-sim, khong Java, khong push. Doc 1M closes causal tu raw/<sym>.f32
 (Aerospike kline_1m_opt da extract san). Chi doc funding tu Aerospike (khong ghi).

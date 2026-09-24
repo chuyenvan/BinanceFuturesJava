@@ -1,5 +1,5 @@
 """VIEC A (A.2): doc doc lap cand.bin.gz cua TICKLOG (C2b-nen env-mode) de XAC NHAN lai
-phan ra quyet dinh tung phut-ung-vien theo LY DO (docs/TICKLOG_RESULT.md §5)."""
+phan ra quyet dinh tung phut-ung-vien theo LY DO (docs/result/TICKLOG_RESULT.md §5)."""
 import gzip, struct, collections, sys
 NAME={0:"ENTERED",1:"ALREADY_OPEN",2:"NO_TICKER",3:"NO_PRED",4:"GATE_REJECT",5:"NO_BUDGET",
       6:"TIER3_DCA",7:"GRID_EXHAUSTED",8:"TOPK_CUT"}

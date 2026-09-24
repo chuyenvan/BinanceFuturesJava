@@ -14,13 +14,13 @@ import java.io.FileWriter;
 import java.util.Arrays;
 
 /**
- * [TICKBLK 2026-09-23] docs/PREREG_TICK_BLOCK.md — chan ca LUOT (tick) khi luot YEU.
+ * [TICKBLK 2026-09-23] docs/prereg/PREREG_TICK_BLOCK.md — chan ca LUOT (tick) khi luot YEU.
  *
  * <p><b>Vi sao</b>: moi filter CAP-COIN deu vo hieu ve exposure (D3 loc 4.942 candidate nhung net chi
- * mat 109 lenh — docs/RESULT_D3D4_FILTER_SIM.md §2): bo qua 1 candidate thi he lay candidate xep hang
+ * mat 109 lenh — docs/result/RESULT_D3D4_FILTER_SIM.md §2): bo qua 1 candidate thi he lay candidate xep hang
  * ke tiep trong CUNG tick. Muon giam exposure that su thi phai chan ca LUOT.
  *
- * <p><b>Gia thuyet (chot TRUOC, docs/PREREG_TICK_BLOCK.md §1.0)</b>: edge cua lenh long la hieu ung
+ * <p><b>Gia thuyet (chot TRUOC, docs/prereg/PREREG_TICK_BLOCK.md §1.0)</b>: edge cua lenh long la hieu ung
  * THOI DIEM tap trung o phut xa/bán thao dien rong (RESULT_HARNESS_CONTROL §3 B-SECONDARY: symbol
  * NGAU NHIEN tai phut MOM15 fire an +2,00%). ⇒ "nhom te nhat" = nhom NGUOI (it ap luc ban nhat).
  *
@@ -60,7 +60,7 @@ public final class TickWeakBlock {
     // [FIX 2026-09-23] `new float[]` cua Java = TOAN SO 0.0, KHONG phai NaN. Neu de nguyen thi moi
     //   slot CHUA GHI bi tinh la "mau hop le" (=0.0) => (a) dem mau luon >= MIN_SAMPLES nen WARM-UP
     //   bi VO HIEU ngay tu ngay 1 (nguong = 0.0 thay vi null), va (b) block luon ca cac phut co
-    //   rateDownAvg >= 0 trong ~2,5 thang dau — KHAC thiet ke da pre-reg (docs/PREREG_TICK_BLOCK.md
+    //   rateDownAvg >= 0 trong ~2,5 thang dau — KHAC thiet ke da pre-reg (docs/prereg/PREREG_TICK_BLOCK.md
     //   §1.2: "chua du 20.160 mau hop le thi KHONG chan"). Do duoc: ban 0-init chan them 9.656 phut
     //   (2021-07-01..2021-09-17). Nay dien NaN truoc khi dung => dung y thiet ke.
     static {

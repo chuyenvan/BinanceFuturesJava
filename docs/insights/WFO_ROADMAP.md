@@ -1,6 +1,6 @@
 # WFO_ROADMAP — sub-roadmap + HIỆN TRẠNG SỐNG (Walk-Forward)
 
-> **Quan hệ:** đây là CHI TIẾT của [ROADMAP](../ROADMAP.md) **Bước 4 (WFO)**. ROADMAP giữ Bước 4 = 2 dòng pointer;
+> **Quan hệ:** đây là CHI TIẾT của [ROADMAP](../plan/ROADMAP.md) **Bước 4 (WFO)**. ROADMAP giữ Bước 4 = 2 dòng pointer;
 > mọi chi tiết + trạng thái live nằm ở đây để KHÔNG phình context tổng.
 > **Hub file WFO:** kiến trúc → [WFO_FRAMEWORK_DESIGN](WFO_FRAMEWORK_DESIGN.md) · leak L0–L5 → [WFO_LEAKS_TODO](WFO_LEAKS_TODO.md)
 > · hàm mục tiêu/ngưỡng → [WFO_OBJECTIVE_RESEARCH](WFO_OBJECTIVE_RESEARCH.md) · runbook thao tác → [reports/LEAKFREE_WFO_RUNBOOK](../reports/LEAKFREE_WFO_RUNBOOK.md)

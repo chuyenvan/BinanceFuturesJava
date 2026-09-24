@@ -1,6 +1,6 @@
 """X3 — cham diem 5 run: trailing cap theo RANK selector (viec A) + pre-arm SL -50% (viec B).
 
-Xem docs/PREREG_X3.md muc 4-6. Dung lai may bootstrap khoi-72h x1.21 cua c3_rates.
+Xem docs/prereg/PREREG_X3.md muc 4-6. Dung lai may bootstrap khoi-72h x1.21 cua c3_rates.
 Them so voi x2_rates.py:
   - phan bo `profit | STOP_MARKET_DONE` (p10/p25/med/p75/p90/mean) — muc tieu that cua viec A
   - bang 8 hang RANK -> n, %STRONG (ban le 0.29), mean(profit|SM)  [doc dong SELRANK trong sim.out]

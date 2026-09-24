@@ -1,6 +1,6 @@
 """paired_test.py — phep do GHEP CAP o tang TUNG LENH giua hai run DEV.
 
-Phuong phap chot truoc o `docs/PREREG_PAIRED.md` (commit c96ddb3). KHONG doi
+Phuong phap chot truoc o `docs/prereg/PREREG_PAIRED.md` (commit c96ddb3). KHONG doi
 phuong phap trong file nay; moi tham so duoi day la trich tu pre-reg do.
 
 Don vi quan sat : lenh da dong (`printDone.csv`), gan khoi theo THOI DIEM VAO.
@@ -320,7 +320,7 @@ def report_decomp(res):
 
 # ---------------------------------------------------------------------------
 # THAM CHIEU TANG EQUITY — de tra loi "tang tung lenh co NHAY HON khong" tren
-# CUNG mot cap, CUNG seed. Phuong phap: docs/PREREG_CI.md muc 2 (block 21 ngay
+# CUNG mot cap, CUNG seed. Phuong phap: docs/prereg/PREREG_CI.md muc 2 (block 21 ngay
 # chinh, kiem 10 va 42; moving-block CIRCULAR; ghep cap; 2000 rep; seed
 # 20260903). Khong thay the phan quyet cua tang tung lenh.
 # ---------------------------------------------------------------------------
@@ -398,7 +398,7 @@ def main(argv):
     if len(argv) < 3 or len(argv) % 2 == 0:
         LOG.error("dung: paired_test.py <TAG_A> <TAG_B> [<TAG_A2> <TAG_B2> ...]")
         return 2
-    LOG.info("paired_test — phuong phap: docs/PREREG_PAIRED.md (commit c96ddb3)")
+    LOG.info("paired_test — phuong phap: docs/prereg/PREREG_PAIRED.md (commit c96ddb3)")
     LOG.info("N_REP=%d SEED=%d khoi=%s dai luong CHINH=roisum=sum(pnl/margin) theo khoi",
              N_REP, SEED, BLOCK_HOURS)
     allres = []

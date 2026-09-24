@@ -1,4 +1,4 @@
-"""Cong REPRO cua docs/PREREG_G1.md muc 2: so bins G4_repro voi predwf_G015_v2.
+"""Cong REPRO cua docs/prereg/PREREG_G1.md muc 2: so bins G4_repro voi predwf_G015_v2.
 
 usage: python3 g1_repro_check.py <dir_moi> <dir_goc>
 PRIMARY: spearman(pred_moi, pred_goc) tren toan bo ban ghi 10 fold, khop theo (ts,symId).

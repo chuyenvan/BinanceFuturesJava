@@ -1,4 +1,4 @@
-"""ARM3-3NEN runner — day 2 chan MOI cua docs/PREREG_ARM3_3NEN.md len Kaggle.
+"""ARM3-3NEN runner — day 2 chan MOI cua docs/prereg/PREREG_ARM3_3NEN.md len Kaggle.
 
   t100a3 : B2 = T100 + arm 3%  = x1_c3_full + TRAIL_TRACE + SIM_RATE_PROFIT_STOP_MARKET=0.03
   g92a3  : C2 = GD92 + arm 3%  = x1_c3_full + TRAIL_TRACE + GATE_ROLLING(0.92/90) + arm 3%

@@ -1,4 +1,4 @@
-"""GATESCALE — CI hieu CAGR giua 3 bien the gate dyn scale va PARITY_R (docs/PREREG_GATESCALE.md muc 3).
+"""GATESCALE — CI hieu CAGR giua 3 bien the gate dyn scale va PARITY_R (docs/prereg/PREREG_GATESCALE.md muc 3).
 Copy y het khuon research/analysis/ci_bookcap.py: block 21, 2000 rep, seed 20260903, k=3 => KMULT=1.4823.
 Chi doi OUT + default VAR (3 tag GATESCALE). CHI BAO CAO/LOGGING (cam print).
 """

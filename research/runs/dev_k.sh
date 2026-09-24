@@ -1,5 +1,5 @@
 #!/bin/bash
-# PRE-REG: docs/PREREG_K.md (viet TRUOC khi chay). K0 doi chung tai lap H1a; K1/K2 them tran lenh dong thoi.
+# PRE-REG: docs/prereg/PREREG_K.md (viet TRUOC khi chay). K0 doi chung tai lap H1a; K1/K2 them tran lenh dong thoi.
 # Dung he TRADING_PROFILE moi: moi tham so giao dich trong file profile, KHONG env.
 set -u
 export PATH=/home/ubuntu/tools/apache-maven-3.9.9/bin:$PATH
@@ -47,7 +47,7 @@ runp K1_conc25   $P/k1.properties
 runp K2_conc20   $P/k2.properties
 rm -rf $DS
 
-echo "=== CHAM DIEM (tieu chi trong docs/PREREG_K.md) ==="
+echo "=== CHAM DIEM (tieu chi trong docs/prereg/PREREG_K.md) ==="
 python3 /home/ubuntu/java/fsrun/qret.py C2b H1a_mom006 K0_h1a_prof K1_conc25 K2_conc20 2>&1 | grep -aE '^===|nam %|maxDD|quy >=|underwater'
 df -h / | tail -1
 echo DEV_K_DONE

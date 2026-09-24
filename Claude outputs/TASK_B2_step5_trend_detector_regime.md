@@ -17,7 +17,7 @@ Mục tiêu: biết detector có đánh dấu ĐÚNG cả 2022 (bear) lẫn 2025
 - SMA7, SMA100 trên mỗi khung (close, đúng `SimpleMovingAverage.calculate`: trung bình N close gần nhất). up_1d = SMA7_1d − SMA100_1d > 0; up_4h tương tự. **detector_up(t) = up_1d(t) OR up_4h(t)**, causal (chỉ dùng nến đã đóng ≤ t).
 - Cấu hình CHÍNH (khoá theo production gốc, KHÔNG nhặt từ sweep): SMA_SHORT=7, SMA_LONG=100, khung {1D,4H}, OR, ngưỡng 0.
 
-### 1.2 Đo (commit `docs/PREREG_TREND_REGIME_DIAG.md` khoá metric trước)
+### 1.2 Đo (commit `docs/prereg/PREREG_TREND_REGIME_DIAG.md` khoá metric trước)
 - **Chuỗi regime**: % ngày detector=up mỗi năm 2021-2025. So MA200 (Bước 4: 2021 UP64.7%, 2022 UP0%, 2023 UP80.3%, 2024 UP80.1%, 2025 UP73.4%). **Câu chính: detector gọi 2025 UP bao nhiêu %?** Kỳ vọng < 73% (thấp hơn MA200 = bắt bull-nhiễu tốt hơn).
 - **Phủ chuỗi UW dài**: lấy 2 chuỗi UW dài của gate-1.0/T100 (2022: 2021-11-16→2022-07-21; 2025: 2025-03-04→2025-10-16, từ `RESULT_REGIME_UPDOWN.md`/uw_source). Tính % ngày trong MỖI chuỗi mà detector=not-up. **Cổng: detector phải phủ tốt CẢ HAI** (không chỉ 2022 như MA200).
 - **Edge độc lập (không qua sim)**: forward return BTC 1D/7D khi detector=up vs not-up (detector có tách được up/down thật không, hay nhiễu). ROI/đồng-thua của sổ T100 gán theo detector-regime (lệnh mở khi detector=not-up có tệ hơn không).
@@ -28,7 +28,7 @@ Mục tiêu: biết detector có đánh dấu ĐÚNG cả 2022 (bear) lẫn 2025
 - NO-GO nếu: detector gọi 2025-UW-window phần lớn là up (giống MA200, miss 2025) → detector không hơn MA200, dừng, ghi power_wall.
 - Ngưỡng 60% theo lý lẽ (đủ phủ để gate-chặt cắt phần lớn phơi nhiễm xấu); khoá trước.
 
-Output `docs/DIAG_TREND_REGIME.md` + `research/analysis/trend_regime.py` + json, commit. Trả MASTER: %up mỗi năm (detector vs MA200), %phủ 2 chuỗi UW, edge độc lập, GO/NO-GO.
+Output `docs/diag/DIAG_TREND_REGIME.md` + `research/analysis/trend_regime.py` + json, commit. Trả MASTER: %up mỗi năm (detector vs MA200), %phủ 2 chuỗi UW, edge độc lập, GO/NO-GO.
 
 ## BƯỚC 2 — SIM regime-gate dùng detector (chỉ khi Bước 1 GO)
 Như Bước 4 nhưng regime = detector (thay MA200). Cắm: sinh CSV regime từ detector (giống `regime_build_ma200.py` → `regime_daily_trenddet.csv`), dùng `GATE_REGIME_ADAPTIVE`+`RegimeSchedule`+`SIM_REGIME_SCALE_UP` (hạ tầng đã có từ Bước 2/4, 0-diff Java nếu chỉ đổi CSV+profile). Biến thể QUYẾT ĐỊNH: up→1.0/down→1.7 (nền, giống R nhưng regime=detector); nếu Bước 1 cho thấy cần up chặt hơn thì up→1.2 — chốt 1 cặp trong PREREG theo kết quả Bước 1, KHÔNG quét-chọn-winner. Đối chứng R0 (giảm đều khớp n). Tiêu chí u1-u5 y Bước 4 (u1 n_eff≥1.5×T170; u2 UW≤200 mọi năm+CAGR floor; u3 maxDD/UW vs T170; u4 cứu 2025 + giữ 2022; u5 giữ uptrend 2023/2024). Cổng OFF byte-identical + tái lập T170. Dừng/bật shadow, sim tuần tự, per-year.

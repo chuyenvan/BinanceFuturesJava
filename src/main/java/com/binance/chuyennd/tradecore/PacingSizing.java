@@ -15,11 +15,11 @@ import java.util.Map;
 import java.util.TreeMap;
 
 /**
- * [PACING 2026-09-21] docs/PREREG_PACING_BIGDOWN.md - TASK B: giam size khi thi truong dang sap
+ * [PACING 2026-09-21] docs/prereg/PREREG_PACING_BIGDOWN.md - TASK B: giam size khi thi truong dang sap
  * (P3, regime-conditional, causal) hoac giam size DEU khong dieu kien (P0, doi chung) tren nen
  * gate 1.0. KHONG doi lenh nao duoc chon vao/ra - chi doi KICH THUOC (giong VolTargetSizing).
  *
- * <p>[DT 2026-09-21] docs/PREREG_DD_THROTTLE.md - TASK B2 Buoc 3: them mode DT (drawdown-throttle,
+ * <p>[DT 2026-09-21] docs/prereg/PREREG_DD_THROTTLE.md - TASK B2 Buoc 3: them mode DT (drawdown-throttle,
  * UNIVERSAL, khong theo regime cu the) - giam phoi nhiem MOI theo do sau drawdown NOI TAI cua
  * chinh he (equity hien tai so voi dinh equity da thay, causal tuyet doi). Xem {@link #DT_MODE}.
  *
@@ -28,7 +28,7 @@ import java.util.TreeMap;
  * md5 efb793e2).
  *
  * <p><b>P0</b> (doi chung, khong regime, BAT BUOC lam doi chung): multiplier = {@link #P0_MULT}
- * CO DINH moi luc. Gia tri chot TRUOC khi chay (docs/PREREG_PACING_BIGDOWN.md muc 2) = ti le
+ * CO DINH moi luc. Gia tri chot TRUOC khi chay (docs/prereg/PREREG_PACING_BIGDOWN.md muc 2) = ti le
  * median(Sigma(notional)/equity | bigdown BD1a, tinh dung cong thuc M3 cua
  * research/analysis/bigdown_struct.py) cua T170 / T100 tren 2021-07-01..2025-12-31.
  *
@@ -48,7 +48,7 @@ import java.util.TreeMap;
  * TRUOC khi tinh dd trong CUNG loi goi {@link #ddThrottleMultiplier()} (xem than ham) - vi vay
  * CHI phu thuoc cac gia tri equity &le; t da quan sat duoc tai thoi diem goi (Simulator chay 1
  * luong tuan tu theo thoi gian, khong da luong trong quy trinh nay) - KHONG lookahead. Tham so
- * khoa TRUOC trong docs/PREREG_DD_THROTTLE.md muc 2, KHONG doi sau khi thay ket qua.
+ * khoa TRUOC trong docs/prereg/PREREG_DD_THROTTLE.md muc 2, KHONG doi sau khi thay ket qua.
  *
  * <p>Ca hai mode fallback ve multiplier=1.0f khi thieu du lieu (vd chua du 25h lich su BTC dau
  * DEV, hoac khong doc duoc file) - KHONG BAO GIO tra null/NaN/&lt;=0.
@@ -63,7 +63,7 @@ public final class PacingSizing {
     public static final boolean DT_MODE = "DT".equals(MODE);
 
     // --- HANG SO PRE-REG (chot 2026-09-21 TRUOC khi chay variant, xem
-    //     docs/PREREG_PACING_BIGDOWN.md muc 2 - KHONG duoc doi sau khi thay ket qua) ---
+    //     docs/prereg/PREREG_PACING_BIGDOWN.md muc 2 - KHONG duoc doi sau khi thay ket qua) ---
     /** He so size CO DINH cho P0 = median(margin/equity|bigdown,T170) / median(margin/equity|
      *  bigdown,T100) = 0.057965.../0.270101... , tinh 2026-09-21
      *  (research/analysis/compute_p0_mult2.py, dung dung ham M3 cua bigdown_struct.py). */
@@ -71,11 +71,11 @@ public final class PacingSizing {
     /** He so size khi bigdown BAT trong P3 - chot 1 gia tri, KHONG quet. */
     public static final float P3_GAMMA = 0.5f;
     /** Nguong BD1a: BTC return 24h &lt;= nguong nay => bigdown BAT (khop dinh nghia headline
-     *  docs/ANALYSIS_BIGDOWN_STRUCT.md muc 0 / docs/PREREG_BIGDOWN_STRUCT.md). */
+     *  docs/analysis/ANALYSIS_BIGDOWN_STRUCT.md muc 0 / docs/prereg/PREREG_BIGDOWN_STRUCT.md). */
     public static final float BD_RET24H_THRESHOLD = -0.05f;
 
     // --- HANG SO PRE-REG cho DT (chot 2026-09-21 TRUOC khi chay variant, xem
-    //     docs/PREREG_DD_THROTTLE.md muc 2 - KHONG duoc doi sau khi thay ket qua) ---
+    //     docs/prereg/PREREG_DD_THROTTLE.md muc 2 - KHONG duoc doi sau khi thay ket qua) ---
     /** D = do sau |dd| (ty le tren equity, vd 0.15 = 15%) tai do phoi nhiem giam toi FLOOR.
      *  Chot = nua nguong maxDD khau vi hien hanh (30%) - ly le: bat dau phong thu manh khi da
      *  mat nua "ngan sach" rui ro cho phep. */

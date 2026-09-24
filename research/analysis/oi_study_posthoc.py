@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """OI_STUDY_POSTHOC — MO TA (POST-HOC / KHAI PHA), KHONG nam trong thiet ke pre-reg.
 
-Pre-reg: docs/PREREG_OI_STUDY.md (commit 7c5f025). Script nay chi lam 3 viec MO TA, khong dung
+Pre-reg: docs/prereg/PREREG_OI_STUDY.md (commit 7c5f025). Script nay chi lam 3 viec MO TA, khong dung
 de phan quyet:
   (1) MDE cho H3 (nua-do-rong x1.21 + p80 tren 500 chuoi null sign-flip 72h) — vi script chinh
       chi tinh MDE cho H1.

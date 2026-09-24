@@ -1,4 +1,4 @@
-"""SL3 scorer — cham 5 chan cua docs/PREREG_SL_7_TO_3.md.
+"""SL3 scorer — cham 5 chan cua docs/prereg/PREREG_SL_7_TO_3.md.
 
 Nen = PRODUCTION FLATGRID KEEPLEG0. Doi tuong so CI = moc `sl3-base`.
   [0] CONG PARITY: base md5 99e42b75 / n 1,085 / eq 103,083 (+ so dong PREARM_SL tung chan)

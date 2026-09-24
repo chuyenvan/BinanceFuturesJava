@@ -1,4 +1,4 @@
-"""TRAIL-LADDER — cham diem bien the gap BAC THANG (docs/PREREG_TRAIL_LADDER.md).
+"""TRAIL-LADDER — cham diem bien the gap BAC THANG (docs/prereg/PREREG_TRAIL_LADDER.md).
 
 Doc output KAGGLE (/home/ubuntu/kaggle_sim/out/<tag>/) — khong doc devrun Oracle (o day khong chay Java).
 

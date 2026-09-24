@@ -1,4 +1,4 @@
-"""TICKBLK runner — day 4 chan cua docs/PREREG_TICK_BLOCK.md len Kaggle.
+"""TICKBLK runner — day 4 chan cua docs/prereg/PREREG_TICK_BLOCK.md len Kaggle.
 
   par     : x1_gs_t170 nguyen ban + jar MOI, co OFF  — md5 phai = efb793e2468ca3a7318da0f0ad23d4fc
   depth   : V1  SIM_TICK_BLOCK_IND=DEPTH    (rateDownAvg, chan nhom "it am nhat")

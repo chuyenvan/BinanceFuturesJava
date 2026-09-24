@@ -1,6 +1,6 @@
-"""BREADTH_REGIME_CSV (TASK B2 Buoc 6, docs/PREREG_BREADTH_GATE_SIM.md) - sinh file regime CSV
+"""BREADTH_REGIME_CSV (TASK B2 Buoc 6, docs/prereg/PREREG_BREADTH_GATE_SIM.md) - sinh file regime CSV
 causal cho GATE_REGIME_ADAPTIVE tu dinh nghia A (breadth top50/MA200/50%) da khoa o Buoc 5.2/5.3
-(docs/DIAG_BREADTH_REGIME.md, VERDICT GO). KHONG sua research/analysis/breadth_regime.py - chi
+(docs/diag/DIAG_BREADTH_REGIME.md, VERDICT GO). KHONG sua research/analysis/breadth_regime.py - chi
 import cac ham dung lai nguyen van (build_daily_close_by_sym, up_matrix, breadth_from_up_matrix,
 day_id, cac hang so TOPN_MAIN/MA_MAIN/THRESHOLD_MAIN/MIN_PERIODS_FLOOR). Dinh dang cot GIONG
 regime_build_ma200.py (Buoc 2): cot 0=utcDay, cot 3=regime - RegimeSchedule.java CHI doc 2 cot do,

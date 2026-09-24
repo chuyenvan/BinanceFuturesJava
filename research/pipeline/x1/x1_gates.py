@@ -1,4 +1,4 @@
-"""X1 GATES — cong byte-identical G1..G4 cua docs/PREREG_X1.md muc 2.
+"""X1 GATES — cong byte-identical G1..G4 cua docs/prereg/PREREG_X1.md muc 2.
 usage: x1_gates.py {g1|g2|g3|g4}
 Moi cong in PASS/FAIL. FAIL => exit 1 (dung pipeline, khong chay sim)."""
 import hashlib

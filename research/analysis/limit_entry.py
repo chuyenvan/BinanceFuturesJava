@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """LIMIT_ENTRY — test entry LIMIT 15 phut (fill-or-fail) tren ung vien C1 = REVERSAL-BOUNCE.
 
-Pre-reg: docs/PREREG_LIMIT_ENTRY.md (commit TRUOC khi chay).
+Pre-reg: docs/prereg/PREREG_LIMIT_ENTRY.md (commit TRUOC khi chay).
 Thuan Python, chi DOC 1m tu /home/ubuntu/claudedata/rvb_1m/raw/*.f32 + Aerospike funding_data (cache).
 Khong Java tren Oracle, khong claude-run, khong push, khong cham 2026 (du lieu < 2026-01-01).
 
@@ -173,7 +173,7 @@ def main():
         files = files[:int(os.environ["LE_NUM"])]
     stats_only = os.environ.get("LE_STATS_ONLY") == "1"
     say("=" * 100)
-    say("LIMIT_ENTRY — C1 = REVERSAL-BOUNCE | pre-reg docs/PREREG_LIMIT_ENTRY.md")
+    say("LIMIT_ENTRY — C1 = REVERSAL-BOUNCE | pre-reg docs/prereg/PREREG_LIMIT_ENTRY.md")
     say("symbols=%d  DEV=[%s..%s)  HOLD=%d  FILL_WIN=%d  deltas=%s"
         % (len(files), DEV_START, DEV_END, HOLD, FILL_WIN, DELTAS))
     say("=" * 100)

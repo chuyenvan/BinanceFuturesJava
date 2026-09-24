@@ -1,7 +1,7 @@
 # OFI Stage B GIAI DOAN 2 -- audit HARNESS_NGHI_NGO: train baseline_fresh + candidate +
 # noise CUNG MOT session/kernel (thay vi tai su dung baseline dong bang tu session khac),
 # de tach bach 2 gia thuyet: (a) population mismatch [da BI BAC BO qua audit rieng, xem
-# docs/RESULT_S1_FREE_OFI.md muc "DIEU TRA HARNESS_NGHI_NGO"], (b) cross-session Kaggle
+# docs/result/RESULT_S1_FREE_OFI.md muc "DIEU TRA HARNESS_NGHI_NGO"], (b) cross-session Kaggle
 # non-determinism. Ham harness giong het ofi_train_eval.py (port tu s1_hpo_bag_featgrp.py).
 import glob
 import json

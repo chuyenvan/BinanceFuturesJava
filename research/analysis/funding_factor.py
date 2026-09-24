@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """FUNDING_FACTOR — sinh mau do cho funding nhu (a) factor cross-section + (b) thanh phan chi phi.
 
-Pre-reg: docs/PREREG_FUNDING_FACTOR.md (commit 17d600a, chot TRUOC khi chay; KHONG sua thiet ke).
+Pre-reg: docs/prereg/PREREG_FUNDING_FACTOR.md (commit 17d600a, chot TRUOC khi chay; KHONG sua thiet ke).
 
 Grid A (chinh): mau = (symbol, event funding cua chinh symbol do) trong [2021-01-01, 2026-01-01).
   f_entry = rate cua event do (rate DA BIET tai luc vao lenh) — predictor, KHONG nam trong f_cum.

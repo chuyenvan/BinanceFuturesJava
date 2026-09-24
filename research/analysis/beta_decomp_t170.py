@@ -5,7 +5,7 @@ Cau hoi nghien cuu: CAGR ~29%/nam cua T170 chu yeu la alpha xep hang coin (S1)
 hay chi la beta thi truong BTC duoc gate bat/tat dung luc?
 
 LUAT DOC D (PRE-DECLARED boi MASTER, chep NGUYEN VAN, KHONG duoc doi sau khi
-thay so - xem bien READING_RULE_D o duoi va docs/ANALYSIS_BETA_DECOMP_T170.md):
+thay so - xem bien READING_RULE_D o duoi va docs/analysis/ANALYSIS_BETA_DECOMP_T170.md):
 "(i) Neu phan beta >= 60% tong loi nhuan log VA |t(alpha)| < 2 => nhan CHU YEU
 BETA (toi uu selector S1 tiep la toi uu sai cho; san pham that dang van hanh la
 mot chien luoc BTC-beta co timing qua gate). (ii) Neu phan beta <= 40% VA
@@ -31,7 +31,7 @@ Nguon du lieu (CHI DOC, khong sua):
     causal). symId cua BTCUSDT = 1 (selector_pred_out/symbol_map.csv).
 
 Moc ghep thoi gian (DA KIEM TRA truoc khi chay toan bo - xem
-docs/ANALYSIS_BETA_DECOMP_T170.md muc "kiem tra mui gio"):
+docs/analysis/ANALYSIS_BETA_DECOMP_T170.md muc "kiem tra mui gio"):
   - JVM sim chay voi -Duser.timezone=Asia/Ho_Chi_Minh => nhan 'Update YYYYMMDD'
     trong sim.out LA LICH GMT+7.
   - Tang ngay: gia BTC dung cho ngay D = close 1h co ctime <= 00:00 UTC ngay D

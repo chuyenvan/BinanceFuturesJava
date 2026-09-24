@@ -2,11 +2,11 @@
 """gen_featuresets.py — sinh cac file JSON version hoa danh sach feature (selector S1/G015x26).
 
 NGUON (khong doan):
-  - `docs/EVAL_SELECTOR_FEATURES.md` §1 (bang 45 cot: ten · nguon · cong thuc, co file:line)
-  - `docs/EVAL_SELECTOR_FEATURES.md` §6.3 (GIU 22 feature, share >= 1.30%)
-  - `docs/DIAG_RVOL15M.md` §D (rvol15m: chua du can cu cat offline -> version v1 = drop-one de test)
-  - `docs/G015_RECIPE.md` §2 (cong thuc train: nhan, WFO, XGB hyperparam) + §5/§6 (model, bins)
-  - `docs/AGENT_RUNBOOK.md` (nhan THAT cua predwf_G015 = `retEnd_4h > 0.015`)
+  - `docs/analysis/EVAL_SELECTOR_FEATURES.md` §1 (bang 45 cot: ten · nguon · cong thuc, co file:line)
+  - `docs/analysis/EVAL_SELECTOR_FEATURES.md` §6.3 (GIU 22 feature, share >= 1.30%)
+  - `docs/diag/DIAG_RVOL15M.md` §D (rvol15m: chua du can cu cat offline -> version v1 = drop-one de test)
+  - `docs/experiment/G015_RECIPE.md` §2 (cong thuc train: nhan, WFO, XGB hyperparam) + §5/§6 (model, bins)
+  - `docs/runbooks/AGENT_RUNBOOK.md` (nhan THAT cua predwf_G015 = `retEnd_4h > 0.015`)
 
 KHONG train, KHONG sim. Thuan sinh JSON. Chay lai: `python3 gen_featuresets.py`
 """
@@ -68,12 +68,12 @@ assert len(FEATURES) == 45 and [f[0] for f in FEATURES] == list(range(45))
 KEEPERS_22 = [20, 24, 5, 30, 6, 32, 14, 18, 42, 2, 17, 7, 41, 29, 8, 35, 31, 44, 10, 40, 28, 36]
 
 SOURCES = {
-    "feature_list": "docs/EVAL_SELECTOR_FEATURES.md §1 (45 cot, co file:line) + §0",
-    "keepers": "docs/EVAL_SELECTOR_FEATURES.md §6.3 (GIU 22, share >= 1.30%)",
-    "rvol15m": "docs/DIAG_RVOL15M.md §D (KHONG du can cu cat tu offline; phai do bang rank-IC + lift@8)",
-    "recipe": "docs/G015_RECIPE.md §2 (cong thuc) + §5 (dau vao ghim) + §6 (bins)",
+    "feature_list": "docs/analysis/EVAL_SELECTOR_FEATURES.md §1 (45 cot, co file:line) + §0",
+    "keepers": "docs/analysis/EVAL_SELECTOR_FEATURES.md §6.3 (GIU 22, share >= 1.30%)",
+    "rvol15m": "docs/diag/DIAG_RVOL15M.md §D (KHONG du can cu cat tu offline; phai do bang rank-IC + lift@8)",
+    "recipe": "docs/experiment/G015_RECIPE.md §2 (cong thuc) + §5 (dau vao ghim) + §6 (bins)",
     "train_duong": "docs/PREP_STAGE2_TRAIN.md §1 (duong train THAT cua net015-45, script + fold + seed + tham so)",
-    "label": "docs/AGENT_RUNBOOK.md (nhan THAT cua predwf_G015x26 = retEnd_4h > 0.015; dinh chinh 2026-09-06)",
+    "label": "docs/runbooks/AGENT_RUNBOOK.md (nhan THAT cua predwf_G015x26 = retEnd_4h > 0.015; dinh chinh 2026-09-06)",
 }
 
 HYPERPARAMS = {
@@ -110,18 +110,18 @@ FOLDS_V0 = {
 }
 
 SIM_RUNS_V0 = [
-    {"run": "C3", "mo_ta": "48 thang (30 thang cho C2b la so lich su)", "nguon": "docs/AGENT_RUNBOOK.md"},
-    {"run": "X1_C3 / X1_C3_FULL", "mo_ta": "48 thang, cham diem bang research/analysis/x1_rates.py", "nguon": "docs/AGENT_RUNBOOK.md"},
-    {"run": "FG_KEEPLEG0", "mo_ta": "MOC parity (kg0-g170, md5 99e42b75) — ton tai ca Oracle lan Kaggle", "nguon": "docs/AGENT_RUNBOOK.md; commit 24e6bdc"},
-    {"run": "C4_parity", "mo_ta": "map s1a2x1 tu bins predwf_G015x26, byte-identical 16/16", "nguon": "docs/G015_RECIPE.md §6"},
-    {"run": "G5_parity_S1", "mo_ta": "doi THU TU x26, giu nguyen multiset P(win)", "nguon": "docs/G5_VALUE_LABELS.md"},
+    {"run": "C3", "mo_ta": "48 thang (30 thang cho C2b la so lich su)", "nguon": "docs/runbooks/AGENT_RUNBOOK.md"},
+    {"run": "X1_C3 / X1_C3_FULL", "mo_ta": "48 thang, cham diem bang research/analysis/x1_rates.py", "nguon": "docs/runbooks/AGENT_RUNBOOK.md"},
+    {"run": "FG_KEEPLEG0", "mo_ta": "MOC parity (kg0-g170, md5 99e42b75) — ton tai ca Oracle lan Kaggle", "nguon": "docs/runbooks/AGENT_RUNBOOK.md; commit 24e6bdc"},
+    {"run": "C4_parity", "mo_ta": "map s1a2x1 tu bins predwf_G015x26, byte-identical 16/16", "nguon": "docs/experiment/G015_RECIPE.md §6"},
+    {"run": "G5_parity_S1", "mo_ta": "doi THU TU x26, giu nguyen multiset P(win)", "nguon": "docs/experiment/G5_VALUE_LABELS.md"},
 ]
 
 MODEL_PATHS_V0 = {
     "dir": "/home/ubuntu/claudedata/predwf_G015",
     "files": "model_f{0..17}_4h.json (18 fold, num_feature=45, feature_names=None)",
     "kernel_goc": "chuyendinh/selector-15mtr-pred15-net015-gpu (log: claudedata/predwf_G015/selector-15mtr-pred15-net015-gpu.log, mtime 2026-08-14)",
-    "trainer_goc": "DA MAT (docs/G3_X26_RECOVERY.md §8) — ban trong repo la ban TAI DUNG, xac minh PASS o docs/G015_RECIPE.md §4 (fold 8)",
+    "trainer_goc": "DA MAT (docs/experiment/G3_X26_RECOVERY.md §8) — ban trong repo la ban TAI DUNG, xac minh PASS o docs/experiment/G015_RECIPE.md §4 (fold 8)",
 }
 BINS_PATH_V0 = {
     "dir": "/home/ubuntu/claudedata/predwf_G015x26",
@@ -179,7 +179,7 @@ FILES = {
         "predwf_G015 / G015x26 / net015 (45 cot)"),
     "fs_v1_44.json": fs("v1", "45 - rvol15m", IDX_V1, "planned",
         "Drop-one #36 rvol15m (NGHIEM THU DUY NHAT cua vong ablation). "
-        "Can cu: docs/DIAG_RVOL15M.md §D — tieu chi cat chot TRUOC khong thoa offline (lift@8 = 4,12 [3,93;4,33]), "
+        "Can cu: docs/diag/DIAG_RVOL15M.md §D — tieu chi cat chot TRUOC khong thoa offline (lift@8 = 4,12 [3,93;4,33]), "
         "nen phai quyet dinh bang drop-one retrain + sim. DU DOAN chot truoc: admit TANG, expectancy/top-8 win GIAM "
         "(rvol15m do BIEN DO/fat-tail). Cham bang rank-IC cross-section + top-8 lift (KHONG dung gain). "
         "CHUA train/chua sim — dien model_paths/bins_path/sim_runs o Stage 1/2.",

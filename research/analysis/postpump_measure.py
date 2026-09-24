@@ -1,7 +1,7 @@
 """PREREG_POSTPUMP_MEASURE (commit f8ebac7): do tin hieu "post-pump" tren TOAN BO lenh T170.
 
 MO TA (descriptive) — KHONG chay sim, KHONG sua .java, KHONG push.
-Thuc hien DUNG theo docs/PREREG_POSTPUMP_MEASURE.md:
+Thuc hien DUNG theo docs/prereg/PREREG_POSTPUMP_MEASURE.md:
   - Nhom: SUP = profit <= -20 (n=49), DOI_CHUNG = con lai (n=1040).
   - Feature chinh mom30d (causal, 30d return cua chinh coin tai entry).
   - Feature phu: vol30d, drawdown30d, symbolPred, tuoi niem yet.

@@ -1,5 +1,5 @@
 #!/bin/bash
-# DCA-ROUND-CAP (docs/PREREG_DCA_ROUND_CAP.md) — parity + 3 bien the, TUAN TU, 1 slot JVM.
+# DCA-ROUND-CAP (docs/prereg/PREREG_DCA_ROUND_CAP.md) — parity + 3 bien the, TUAN TU, 1 slot JVM.
 # KHONG push. DEV 2021-07..2025-12 (wfo_ds_x1_2021). SIM_END_DATE=20251231.
 set -u
 export PATH=/home/ubuntu/tools/apache-maven-3.9.9/bin:$PATH
@@ -20,13 +20,13 @@ echo "disk_free_G=$FREE"
 
 # tao profile clone cho 3 bien the (base x1_gs_t170 + key moi)
 cp -f $P/x1_gs_t170.properties $P/x1_gs_t170_cap10.properties
-printf '\n# DCA-ROUND-CAP variant CAP10 (docs/PREREG_DCA_ROUND_CAP.md)\nDCA_ROUND_CAP_ENABLED=true\nDCA_ROUND_CAP_PCT=0.10\nDCA_RANK_MODE=drop\nDCA_GRID_LEVELS=-0.50,-0.75,-0.90\n' >> $P/x1_gs_t170_cap10.properties
+printf '\n# DCA-ROUND-CAP variant CAP10 (docs/prereg/PREREG_DCA_ROUND_CAP.md)\nDCA_ROUND_CAP_ENABLED=true\nDCA_ROUND_CAP_PCT=0.10\nDCA_RANK_MODE=drop\nDCA_GRID_LEVELS=-0.50,-0.75,-0.90\n' >> $P/x1_gs_t170_cap10.properties
 
 cp -f $P/x1_gs_t170.properties $P/x1_gs_t170_cap10_loose.properties
-printf '\n# DCA-ROUND-CAP variant CAP10_LOOSE (docs/PREREG_DCA_ROUND_CAP.md)\nDCA_ROUND_CAP_ENABLED=true\nDCA_ROUND_CAP_PCT=0.10\nDCA_RANK_MODE=drop\nDCA_GRID_LEVELS=-0.30,-0.55,-0.75\n' >> $P/x1_gs_t170_cap10_loose.properties
+printf '\n# DCA-ROUND-CAP variant CAP10_LOOSE (docs/prereg/PREREG_DCA_ROUND_CAP.md)\nDCA_ROUND_CAP_ENABLED=true\nDCA_ROUND_CAP_PCT=0.10\nDCA_RANK_MODE=drop\nDCA_GRID_LEVELS=-0.30,-0.55,-0.75\n' >> $P/x1_gs_t170_cap10_loose.properties
 
 cp -f $P/x1_gs_t170.properties $P/x1_gs_t170_loose.properties
-printf '\n# DCA-ROUND-CAP variant LOOSE (docs/PREREG_DCA_ROUND_CAP.md)\nDCA_GRID_LEVELS=-0.30,-0.55,-0.75\n' >> $P/x1_gs_t170_loose.properties
+printf '\n# DCA-ROUND-CAP variant LOOSE (docs/prereg/PREREG_DCA_ROUND_CAP.md)\nDCA_GRID_LEVELS=-0.30,-0.55,-0.75\n' >> $P/x1_gs_t170_loose.properties
 
 runx() { TAG=$1; PROF=$2; D=$B/$TAG
   echo "### $(date +%T) RUN $TAG prof=$PROF"

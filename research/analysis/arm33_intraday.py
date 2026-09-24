@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """ARM3-3NEN intraday MTM — maxDD/UW tren chuoi equity MOC PHUT cho 6 chan cua
-docs/PREREG_ARM3_3NEN.md.
+docs/prereg/PREREG_ARM3_3NEN.md.
 
 Tai dung NGUYEN logic da nghiem thu cua research/analysis/intraday_dd.py
-(docs/RESULT_INTRADAY_DD.md, RISK_APPETITE §7.3). Chi doi RUNS + cache dir.
+(docs/result/RESULT_INTRADAY_DD.md, RISK_APPETITE §7.3). Chi doi RUNS + cache dir.
 
 Usage: python3 research/analysis/arm33_intraday.py
 """

@@ -28,7 +28,7 @@ Tính chuỗi breadth-score causal (all-coin sống trên MA200 của chính nó
 - **NO-GO** nếu: relevant-breadth per-year ~ trùng all-coin (chênh gate mọi năm < 0.10 → không đổi gì) HOẶC nó siết cả 2023/24 (gate > 1.30 → giết breadth) HOẶC book T170 hoá ra majors-heavy và major-breadth đọc 2025 là "khoẻ" (gate < 1.4 → sẽ nới 2025 → thảm, đúng chiều sai của agent). NO-GO → DỪNG, ghi power_wall "subset-breadth không tách được năm", KHÔNG sim.
 - Ngưỡng theo lý lẽ (1.60 gần 1.7-thắng; 1.20 đủ lỏng lấy breadth; chênh 0.10 = đủ khác all-coin để đáng sim), khoá trước.
 
-Output BƯỚC 1: `docs/DIAG_BREADTH_SUBSET.md` + script + json. Trả MASTER: book-comp T170, bảng gate-profile 5 định nghĩa × per-year, GO/NO-GO + định nghĩa relevant-breadth khoá.
+Output BƯỚC 1: `docs/diag/DIAG_BREADTH_SUBSET.md` + script + json. Trả MASTER: book-comp T170, bảng gate-profile 5 định nghĩa × per-year, GO/NO-GO + định nghĩa relevant-breadth khoá.
 
 ## BƯỚC 2 — SIM (chỉ khi BƯỚC 1 GO)
 PREREG `docs/PREREG_BREADTH_SUBSET.md` khoá trước.

@@ -21,7 +21,7 @@ Giờ cần bản **MỖI PHÚT của tập đã filter** (Tool1 vốn có per-p
 set MỚI **chunk-NGÀY** `funding_selector_pred_1m`, rồi VERIFY reader đọc khớp (chuẩn bị backtest).
 
 > Vì sao chunk-NGÀY: per-phút ~15x dày hơn 15m → chunk-tháng vỡ "Record too big". Bắt buộc dùng
-> `writeMetricMapDay226`. Xem `docs/DATA_CHUNKING_STANDARD.md`.
+> `writeMetricMapDay226`. Xem `docs/data/DATA_CHUNKING_STANDARD.md`.
 
 ## Tiền đề ĐÃ ĐO (không cần làm lại)
 - Tool1 (`ff_*.bin.gz`) ĐÃ chứa dữ liệu **mỗi phút** của tập lọt EntrySignalFilter (đo 202101:

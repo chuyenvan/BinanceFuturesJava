@@ -1,5 +1,5 @@
 # OFI V3 UNIVERSE -- build hourly OFI_1h / aggressive_buy_ratio_1h features from Binance Vision
-# monthly aggTrades bulk CSV, cho PHAM VI MO RONG chot trong docs/PREREG_S1_FREE_OFI_V3_UNIVERSE.md
+# monthly aggTrades bulk CSV, cho PHAM VI MO RONG chot trong docs/prereg/PREREG_S1_FREE_OFI_V3_UNIVERSE.md
 # (toan bo symbol trong symbol_map.csv co >=1 thang aggTrades monthly trong 2021-07..2025-12,
 # KHONG loc theo thanh khoan). Chia 10 shard can bang theo MB (ofi_v3_shards.json); moi kernel
 # Kaggle chay 1 shard. LOGIC TINH OFI Y HET research/pipeline/x1/kaggle_ofi/ofi_build_feat.py

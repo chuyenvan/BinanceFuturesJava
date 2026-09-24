@@ -1,6 +1,6 @@
 """T1_LABEL3 — bon chan S1 chi khac NHAN, di het tu train den bins.
 
-Tuan `docs/PREREG_T1.md`. CHI DEV. CPU (GPU cam — BENCH_DEVICE). Khong ghi de artifact nao.
+Tuan `docs/prereg/PREREG_T1.md`. CHI DEV. CPU (GPU cam — BENCH_DEVICE). Khong ghi de artifact nao.
 
 PHA A: cong REPRO — train `L_g1` tren POOL GOC bang chinh harness nay, phai cho
        spearman(score, ledger/pred_s1a2.parquet.score) = 1.000000. Truot => exit 2.

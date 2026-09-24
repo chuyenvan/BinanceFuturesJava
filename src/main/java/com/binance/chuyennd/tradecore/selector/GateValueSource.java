@@ -13,7 +13,7 @@ import org.slf4j.LoggerFactory;
  * byte-identical HEAD.
  *
  * <p>Doc 1 LAN luc class nap (khong doc trong vong nong). Xem
- * docs/PREREG_SELECTOR_NET015_GATE.md + docs/AUDIT_SELECTOR_MODEL_PARITY.md.
+ * docs/prereg/PREREG_SELECTOR_NET015_GATE.md + docs/audit/AUDIT_SELECTOR_MODEL_PARITY.md.
  */
 public final class GateValueSource {
 

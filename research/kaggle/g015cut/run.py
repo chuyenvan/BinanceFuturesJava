@@ -1,4 +1,4 @@
-"""G015CUT — train lai G015 cac bien the CAT FEATURE, CHI DEV. Xem docs/PREREG_G015CUT.md.
+"""G015CUT — train lai G015 cac bien the CAT FEATURE, CHI DEV. Xem docs/prereg/PREREG_G015CUT.md.
 Khong ghi de gi cua ai; output /kaggle/working. Khong rebuild OI (chi doc file sach).
 """
 import os, sys, glob, json, time, hashlib, logging
@@ -111,7 +111,7 @@ def load_oi():
     p = OI_DIR + "/oi_percoin_full.bin"
     dig, nb = sha256(p)
     log.info("OI file %s bytes=%d sha256=%s (cho doi %s) KHOP=%s", p, nb, dig, SHA_OI, dig == SHA_OI)
-    assert dig == SHA_OI, "FILE OI KHONG PHAI BAN SACH -> VOID (xem docs/OI_FIX_LOG.md)"
+    assert dig == SHA_OI, "FILE OI KHONG PHAI BAN SACH -> VOID (xem docs/ops/OI_FIX_LOG.md)"
     a = np.memmap(p, dtype=OI_DT, mode="r")
     keep = np.asarray(a["ts"]) < TS_HI
     o = np.array(a[keep])

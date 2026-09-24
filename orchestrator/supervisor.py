@@ -183,7 +183,7 @@ def packs_for(fm):
     hints = []
     res = fm.get("resource", "local")
     if res in ("kaggle", "kaggle_distributed"):
-        hints.append("docs/KAGGLE_RULES.md (BAT BUOC truoc moi Kaggle job: slot=5, 12h-kill, System.exit, o-C)")
+        hints.append("docs/runbooks/KAGGLE_RULES.md (BAT BUOC truoc moi Kaggle job: slot=5, 12h-kill, System.exit, o-C)")
     if res == "heavy_226":
         hints.append("docs/rules/run-226.md (don job cu + kill dung PID) + docs/db/index.md")
     if fm.get("writes_242_data", False):

@@ -1,6 +1,6 @@
 """TREND/VOL RANK-IC SCREENING (STANDALONE, CRYPTO DEV).
 
-PRE-REG: docs/PREREG_TREND_RANK_IC.md (commit e26e3c3). Chay DUNG MOT LAN, khong tune.
+PRE-REG: docs/prereg/PREREG_TREND_RANK_IC.md (commit e26e3c3). Chay DUNG MOT LAN, khong tune.
 Cau hoi: tap dac trung trend/vol (tinh than holdout) co xep hang duoc coin theo
 forward return khong, tren crypto DEV? Do Spearman rank-IC cross-section moi snapshot
 1h + bootstrap block-72h (x1.21, 2000 rep, seed 20260905). Doi chung S1 (pred_s1a2x1).

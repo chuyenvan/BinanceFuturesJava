@@ -1,4 +1,4 @@
-"""tickblk_verify.py — TU-KIEM DOC LAP (thuan Python) cho `TickWeakBlock` (docs/PREREG_TICK_BLOCK.md).
+"""tickblk_verify.py — TU-KIEM DOC LAP (thuan Python) cho `TickWeakBlock` (docs/prereg/PREREG_TICK_BLOCK.md).
 
 Doc truc tiep `market.bin` (nguon sim da doc), tai lap cong thuc trong code Java:
   mo hinh quantile CUON 30 ngay TRUOC, tinh lai moi ngay UTC, vi tri `floor(q*(n-1))` tren mang da sort;

@@ -235,7 +235,7 @@ def main():
     result["proxy_verdict"] = dict(
         ma200_all_combo_go="%d/%d" % (ma200_go, len(ma200_rows)),
         all_coin_ma200_go="%d/%d" % (all_ma200_go, len(all_ma200_rows)),
-        note="xem docs/VALIDATE_BREADTH_ROBUST.md Phan 3 cho ket luan chi tiet")
+        note="xem docs/analysis/VALIDATE_BREADTH_ROBUST.md Phan 3 cho ket luan chi tiet")
     log.info("=== PHAN 3 proxy: MA200 (moi universe) GO %d/%d to hop; rieng all-coin/MA200 GO %d/%d ===",
               ma200_go, len(ma200_rows), all_ma200_go, len(all_ma200_rows))
 

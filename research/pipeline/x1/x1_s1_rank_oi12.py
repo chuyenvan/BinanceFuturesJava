@@ -1,5 +1,5 @@
 # X1 — ban SAO cua s1_rank.py, CHI them tham so hoa qua env (mac dinh = hanh vi cu).
-# Sinh boi research/pipeline/x1/make_x1.sh. Xem docs/PREREG_X1.md muc 2.
+# Sinh boi research/pipeline/x1/make_x1.sh. Xem docs/prereg/PREREG_X1.md muc 2.
 """S1 — LambdaRank tren POOL ledger (pre-reg trong PROCESS_LOG). Output: /home/ubuntu/ledger/pred_s1{a,b}.parquet (ts,sym,score thap=tot) + edge table.
 S1a: 9 feat V3. S1b: 9 feat + p_g015. Label relevance = quintile trong tick cua rel = g1lite - median(pool)."""
 

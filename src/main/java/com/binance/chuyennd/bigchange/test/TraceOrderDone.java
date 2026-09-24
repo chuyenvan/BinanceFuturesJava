@@ -174,7 +174,7 @@ public class TraceOrderDone {
     }
 
     /**
-     * [TRAIL-LADDER 2026-09-23] docs/PREREG_TRAIL_LADDER.md muc 3.2 — DUMP DO LUONG trailing.
+     * [TRAIL-LADDER 2026-09-23] docs/prereg/PREREG_TRAIL_LADDER.md muc 3.2 — DUMP DO LUONG trailing.
      *
      * <p>File RIENG (`storage/trailTrace.csv`), ghi CHI khi {@code Configs.SIM_TRAIL_TRACE=1} (default
      * OFF). Cot: printDone rut gon + {@code peak} ({@code maePeak} = dinh GIA THAT cua cum tu leg dau)

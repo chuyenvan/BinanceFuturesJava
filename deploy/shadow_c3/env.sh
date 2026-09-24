@@ -1,12 +1,12 @@
 # ENV instance SHADOW C3 tren Oracle. KHONG deploy file nay len 242.
 # [2026-09-18 T170-FIX] Sua cho KHOP T170 backtest chuan (profiles/x1_gs_t170.properties,
-#   run md5 efb793e2468ca3a7318da0f0ad23d4fc). Xem docs/RESULT_SHADOW_T170_FIX.md.
+#   run md5 efb793e2468ca3a7318da0f0ad23d4fc). Xem docs/result/RESULT_SHADOW_T170_FIX.md.
 # [2026-09-19 FLATGRID KEEPLEG0] User CHOT chuyen production shadow sang bien the FLATGRID
 #   KEEPLEG0: DCA ladder 1,1,1,1 + DCA_GRID_SCALE=6.0 (thay 1,1,3,8 + 19.5 cua T170).
 #   Nguon chuan: profiles/t170_flat_keepleg0.properties (diff T170 DUNG 2 dong: WEIGHTS + SCALE).
 #   Quyet dinh KHAU VI RUI RO CO Y THUC: NOI hard-constraint UW 120 -> >=147 ngay (toan ky),
 #   danh doi CAGR -2.13pp de HA tran tap trung 1 coin 58.5% -> 18.0%. Xem
-#   docs/DECISION_SHADOW_FLATGRID_KEEPLEG0.md. CANH BAO: chi doi WEIGHTS ma giu SCALE=19.5 se
+#   docs/decisions/DECISION_SHADOW_FLATGRID_KEEPLEG0.md. CANH BAO: chi doi WEIGHTS ma giu SCALE=19.5 se
 #   thanh KEEPSCALE (phong to moi lenh 3.25x, tran van 58.5%) => SAI. Phai doi CA HAI.
 #   GIU NGUYEN: SHADOW_NO_PUSH=true (paper, khong ra lenh that), LIVE_PROFILE=c3_shadow, PAPER_EQUITY.
 export APP_MAIN_CLASS=com.binance.chuyennd.trading.BinanceOrderTradingManager

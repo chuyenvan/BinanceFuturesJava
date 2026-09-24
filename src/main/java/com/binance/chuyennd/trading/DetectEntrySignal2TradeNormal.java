@@ -341,7 +341,7 @@ public class DetectEntrySignal2TradeNormal {
             TreeMap<Float, String> selPool = (Configs.SELECTOR_RANK_TOPK > 0) ? selectorRankPool : sortedCandidates;
             // [C3-SHADOW] doi THU TU xep hang sang score S1 (9 feature hourly). Gia tri gate
             // (symbolPred = pNoPump cua Funding_Classifier_Final.onnx) GIU NGUYEN — day la diem
-            // shadow khac sim C3 (sim dung predwf_map_s1a2 tren G015x26). Xem docs/L2_PORT_C3.md.
+            // shadow khac sim C3 (sim dung predwf_map_s1a2 tren G015x26). Xem docs/experiment/L2_PORT_C3.md.
             // [L5 2026-09-07] BO FALLBACK pNoPump. Truoc day khi S1 chua co score, so giay VAN mo
             // entry theo thu tu pNoPump (mot selector KHAC) roi ghi vao ledger C3 => lam ban ca
             // chuoi do. Nay: chua co score => pool RONG => BO TICK. Xem EntryPoolGate.
@@ -358,7 +358,7 @@ public class DetectEntrySignal2TradeNormal {
             }
             // [L4] THANG GIA TRI: symbolPred phai la gia tri net015 da qua quantile-map, KHONG
             // phai pNoPump cua Funding_Classifier_Final.onnx (ho maxFav, hieu chuan lech 2 lan
-            // -> admission x5.05, docs/G4_RECIPE_C4.md muc 6.2).
+            // -> admission x5.05, docs/experiment/G4_RECIPE_C4.md muc 6.2).
             if (s1Order && !buildValueMap(time, selPool)) {
                 LOG.error("[MAP] chua co thang gia tri net015 cho tick {} -> KHONG mo entry giay "
                         + "(KHONG thay bang pNoPump)", time);
@@ -756,12 +756,12 @@ public class DetectEntrySignal2TradeNormal {
                 ticker.startTime,
                 prediction.return15M, prediction.riskDrawdown4H
         );
-        // [L7 2026-09-11, docs/L7_LEAN_GATE.md] CUNG cong voi backtest: ca hai goi
+        // [L7 2026-09-11, docs/experiment/L7_LEAN_GATE.md] CUNG cong voi backtest: ca hai goi
         //   AIRejectFilter.entryGate -> com.binance.chuyennd.tradecore.EntryGate.threshold.
         //   Lich su: dieu kien `SELECTOR_RANK_TOPK <= 0` cu (commit 311bb29) suy SAI tu tang 1
         //   (tran ung vien maxThres) sang tang 2 (gate entry) va lam LIVE rank-mode chay gate
         //   PHANG 0.008 trong khi sim chay 0.0172-0.0240 => lech 95.62% slot tren 48 thang,
-        //   77/78 entry so giay 242 (docs/AUDIT_GATE_DYN_PARITY.md). L6 da bo dieu kien do;
+        //   77/78 entry so giay 242 (docs/audit/AUDIT_GATE_DYN_PARITY.md). L6 da bo dieu kien do;
         //   L7 gop not hai ban sao cong thuc ve MOT cho de khong the troi lai lan nua.
         filterResult = aiRejectFilter.entryGate(predict, symbolPred,
                 levelChange == MarketLevelChange.PREDICT_SYMBOL_TRADE);
@@ -803,7 +803,7 @@ public class DetectEntrySignal2TradeNormal {
         Float budget = BudgetManager.getInstance().getBudget();
         // [C3-SHADOW (d)] sizing COMPOUND tren equity GIAY: PAPER_EQUITY + PnL shadow (mark-to-market
         //   tu price_realtime). Bo hoan toan getAccountUMInfo() (key Oracle la STUB -> nem, va
-        //   BUDGET_PER_ORDER se ket o 0 => moi entry bi chan: docs/L1_SHADOW_C3.md muc 3e).
+        //   BUDGET_PER_ORDER se ket o 0 => moi entry bi chan: docs/experiment/L1_SHADOW_C3.md muc 3e).
         //   marginRunning lay tu so vi the giay vi live khong con PositionRisk nao khi shadow.
         if (com.binance.chuyennd.tradecore.selector.LiveProfileC3.on()) {
             // [L3 LEGACY] chan MOI duong (selector, market-signal, DCA) mo entry GIAY tren coin
@@ -881,7 +881,7 @@ public class DetectEntrySignal2TradeNormal {
         if (quantity != null && quantity != 0) {
             // ===== [CONC-CAP LIVE 2026-09-15] SAFETY-NET =====================================
             //   Ban port cua 2 guard da verify parity 6/6 tren duong sim (commit 5e82983,
-            //   docs/RESULT_CONCENTRATION_SAFETYCAP.md). Trang thai + phep quyet dinh nam o
+            //   docs/result/RESULT_CONCENTRATION_SAFETYCAP.md). Trang thai + phep quyet dinh nam o
             //   com.binance.chuyennd.tradecore.ConcCapLiveGuard (ham thuan, co unit test).
             //   Dat o DAY = diem doi xung voi ban sim: sau khi quantity da tinh (nen margin du
             //   kien la so THAT), sau MOI cong hien co (EntryGate, kill-switch mat do, U_MAX,

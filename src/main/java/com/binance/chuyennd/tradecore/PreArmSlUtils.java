@@ -10,7 +10,7 @@ package com.binance.chuyennd.tradecore;
  *
  * <p>[SL-ADAPTIVE 2026-09-12] Them ban {@code *Val(...)} nhan {@code preArmSl} tuong minh de lever A
  * (SL_ADAPT_HARDSL) chon muc cat theo selRank cua cum. Ban khong tham so goi {@code *Val} voi
- * {@code Configs.PRE_ARM_SL} => arithmetic IEEE-identical hanh vi cu. Xem docs/PREREG_SL_ADAPTIVE_SWEEP.md.
+ * {@code Configs.PRE_ARM_SL} => arithmetic IEEE-identical hanh vi cu. Xem docs/prereg/PREREG_SL_ADAPTIVE_SWEEP.md.
  */
 public final class PreArmSlUtils {
 

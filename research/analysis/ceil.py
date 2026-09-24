@@ -17,7 +17,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s",
 LG = logging.getLogger("ceil")
 H = 3600_000
 SEED, NREP = 20260904, 2000
-F_COV = 1.21   # he so hieu chinh do phu tu docs/COV_RESULT.md cho ho chuoi DAY
+F_COV = 1.21   # he so hieu chinh do phu tu docs/result/COV_RESULT.md cho ho chuoi DAY
 
 C = pd.read_parquet("/home/ubuntu/ledger/cand_dev.parquet",
                     columns=["ts", "sym", "g1lite", "retEnd_72h", "maxFav_72h", "score_g015"])

@@ -35,7 +35,7 @@ LOG = logging.getLogger("e0_exit_cf")
 PRINT_DONE = "/home/ubuntu/java/devrun/C2b/storage/printDone.csv"
 CLOSES = "/home/ubuntu/java/fsrun/CLOSES_1H.bin"
 SYMMAP = "/home/ubuntu/claudedata/oi/symbol_map.csv"
-DOC_OUT = "/home/ubuntu/src/BinanceFuturesJava/docs/E0_EXIT_CF.md"
+DOC_OUT = "/home/ubuntu/src/BinanceFuturesJava/docs/experiment/E0_EXIT_CF.md"
 
 H_MS = 3_600_000
 TZ_OFFSET_H = 7          # printDone `start` is GMT+7, CLOSES_1H.bin ts is UTC

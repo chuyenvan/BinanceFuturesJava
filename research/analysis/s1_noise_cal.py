@@ -1,5 +1,5 @@
 # NOISE_CAL: do ty le duong-tinh-gia cua doi chung nhieu tren SELECT vs CONFIRM.
-# Pre-reg: docs/PREREG_S1_NOISE_CAL.md. TAI SU DUNG nguyen ham load_D/run_variant/metric cua
+# Pre-reg: docs/prereg/PREREG_S1_NOISE_CAL.md. TAI SU DUNG nguyen ham load_D/run_variant/metric cua
 # research/analysis/s1_hpo_bag_featgrp.py (import module, KHONG sua logic train/nhan/purge).
 # Tai su dung baseline da co san (/home/ubuntu/s1hpo/pred_baseline18.parquet, seed 42, KEEP9,
 # da PASS tu-kiem spearman=1.0 trong result.json.baseline18_selfcheck) thay vi train lai --
@@ -23,7 +23,7 @@ SELECT_N = base.SELECT_N
 CONFIRM_N = base.CONFIRM_N
 
 # seed cho cot nhieu MOI (noise_0/1/2 da co san trong feat_v2_x1.parquet, seed goc 20260902,
-# xem docs/PREREG_S1_NOISE_CAL.md Sec 2). Chot TRUOC khi chay, khong doi sau khi thay so.
+# xem docs/prereg/PREREG_S1_NOISE_CAL.md Sec 2). Chot TRUOC khi chay, khong doi sau khi thay so.
 NEW_NOISE_SEEDS = {"noise_3": 20260920, "noise_4": 20260921}
 
 

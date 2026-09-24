@@ -105,7 +105,7 @@ def main():
     ev2 = prep(pd.read_csv(OUT + "/ev2.csv"))
 
     rep.append("=== HARNESS CONTROL: A positive (MOM15) / B placebo / C MDE ===")
-    rep.append("pre-reg docs/PREREG_HARNESS_CONTROL.md (commit 9611823); harness nguyen ban: HOLD 1440,")
+    rep.append("pre-reg docs/prereg/PREREG_HARNESS_CONTROL.md (commit 9611823); harness nguyen ban: HOLD 1440,")
     rep.append("fee 0.10%% + slip 0.5x range + funding; CI block-72h 2000 rep seed %s x1.21; DEV=%s..%s"
                % (SEED, "2022-01-01", "2024-06-30"))
 
@@ -365,8 +365,8 @@ def main():
             "DƯỚI MDE" if below else "tren MDE"))
     rep.append("")
     rep.append("Ghi chu: N_DEV cua BIG_UP/MEDIUM_UP/MEDIUM_DOWN = tong N theo nam 2022+2023+2024 trong")
-    rep.append("docs/RESULT_BIGUP_MEDIUPDOWN.md §3.2 (can tren, 2024 chi tinh 6 thang); reversal-bounce N=1 179 302")
-    rep.append("va net DEV -0.080% lay tu docs/RESULT_REVERSAL_BOUNCE.md (CI rieng cua no: half x1.21=0.43%).")
+    rep.append("docs/result/RESULT_BIGUP_MEDIUPDOWN.md §3.2 (can tren, 2024 chi tinh 6 thang); reversal-bounce N=1 179 302")
+    rep.append("va net DEV -0.080% lay tu docs/result/RESULT_REVERSAL_BOUNCE.md (CI rieng cua no: half x1.21=0.43%).")
 
     txt = "\n".join(rep)
     open(OUT + "/report_A.txt", "w").write(txt + "\n")

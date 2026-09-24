@@ -1,4 +1,4 @@
-"""GD92 x EXIT — cham diem (docs/PREREG_GD92_X_EXIT.md).
+"""GD92 x EXIT — cham diem (docs/prereg/PREREG_GD92_X_EXIT.md).
 
 Doc output KAGGLE (/home/ubuntu/kaggle_sim/out/<tag>/) — KHONG doc devrun Oracle cho cac chan moi
 (chi doc devrun cho HANG THAM CHIEU HINGE V3, da co san tu truoc).

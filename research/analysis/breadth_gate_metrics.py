@@ -1,4 +1,4 @@
-"""BREADTH_GATE_METRICS (TASK B2 Buoc 6, docs/PREREG_BREADTH_GATE_SIM.md) - tinh u1/u3/u4 cho
+"""BREADTH_GATE_METRICS (TASK B2 Buoc 6, docs/prereg/PREREG_BREADTH_GATE_SIM.md) - tinh u1/u3/u4 cho
 T170/gate-1.0(T100)/BR/BR0.
 
 TAI DUNG NGUYEN VAN cac ham cua bigdown_struct.py (icc_for, n_eff, maxdd_decomp, label_trades,

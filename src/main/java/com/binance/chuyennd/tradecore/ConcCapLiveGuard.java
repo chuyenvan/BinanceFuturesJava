@@ -9,8 +9,8 @@ import java.util.Set;
 
 /**
  * [CONC-CAP LIVE 2026-09-15] TRANG THAI + QUYET DINH cua 2 guard safety-net tren duong LIVE.
- * Xem docs/PREREG_CONCENTRATION_SAFETYCAP.md (spec goc) va
- * docs/RESULT_CONCENTRATION_SAFETYCAP_LIVE_PORT.md (ban port live).
+ * Xem docs/prereg/PREREG_CONCENTRATION_SAFETYCAP.md (spec goc) va
+ * docs/result/RESULT_CONCENTRATION_SAFETYCAP_LIVE_PORT.md (ban port live).
  *
  * <p><b>Vi sao tach ra khoi {@code DetectEntrySignal2TradeNormal}</b>: lop do phu thuoc Redis +
  * Binance client nen KHONG unit-test duoc. Toan bo trang thai va phep quyet dinh cua guard la ham

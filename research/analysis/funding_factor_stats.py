@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """FUNDING_FACTOR stats — T1/T2 (decile cross-section tai moc funding) + T3 (overlay MOM15).
 
-Doc $FF_OUT/pools.npz. Thuan Python. Pre-reg: docs/PREREG_FUNDING_FACTOR.md (commit 17d600a).
+Doc $FF_OUT/pools.npz. Thuan Python. Pre-reg: docs/prereg/PREREG_FUNDING_FACTOR.md (commit 17d600a).
 K=3 test khoa o DEV/24h/phi 0,10%: T1 spread(D10-D1) net < 0; T2 net(D1) > 0;
 T3 diff(G_lo f_entry<=0  -  G_hi f_entry>0) > 0 (pool P-COIN MOM15).
 Cac bang 4h/72h, ALL, grid B (8h-aligned), decile, IC, H3b = DESCRIPTIVE.
@@ -245,7 +245,7 @@ def main():
     devm = (m_min >= DEV_START) & (m_min < DEV_END)
 
     say("=== FUNDING_FACTOR — funding như factor cross-section + thành phần chi phí (long-only perp) ===")
-    say("Pre-reg `docs/PREREG_FUNDING_FACTOR.md` (commit **17d600a**, chốt TRƯỚC khi chạy). Harness nguyên:")
+    say("Pre-reg `docs/prereg/PREREG_FUNDING_FACTOR.md` (commit **17d600a**, chốt TRƯỚC khi chạy). Harness nguyên:")
     say("HOLD {4h,24h,72h} × phí {0.05,0.10,0.15}%, slip 0.5×range + funding Aerospike (cộng event trong")
     say("(m_e, m_x]); CI block-72h 2000 rep seed 20260905 ×1.21; null block sign-flip / block-swap;")
     say("DEV = 2022-01-01..2025-12-31 (CHÍNH), ALL = 2021-01..2025-12 (PHỤ). K=3 test khoá (Bonferroni 0,0167).")

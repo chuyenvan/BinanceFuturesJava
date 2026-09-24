@@ -1,4 +1,4 @@
-"""TRAIL-CAP-1030 runner — day 2 chan cua docs/PREREG_TRAIL_CAP_1030.md len Kaggle.
+"""TRAIL-CAP-1030 runner — day 2 chan cua docs/prereg/PREREG_TRAIL_CAP_1030.md len Kaggle.
 
   par : profile x1_gs_t170 NGUYEN BAN + SIM_TRAIL_TRACE=1 => CONG PARITY (md5 efb793e2, n=1089)
         (trace la do-luong-only: KHONG duoc doi printDone)

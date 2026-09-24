@@ -1,8 +1,8 @@
-"""DCA-ROUND-CAP (docs/PREREG_DCA_ROUND_CAP.md) — cham diem muc 4.
+"""DCA-ROUND-CAP (docs/prereg/PREREG_DCA_ROUND_CAP.md) — cham diem muc 4.
 
 PRIMARY = khong rate nao XAU ngoai CI (5 rate chat luong TOAN BO leg: win/tsloss/mp_sm/mp_sl/meanP).
 CI bootstrap block-72h x sqrt(2 ln 3) = 1.4823 (k=3 variants), 2000 rep, seed 20260905.
-[CHUAN HOA 2026-09-17] truoc day dung 1.21*1.4823=1.7936 (nhan chong) - xem docs/AUDIT_CI_INFLATE_STANDARDIZATION.md.
+[CHUAN HOA 2026-09-17] truoc day dung 1.21*1.4823=1.7936 (nhan chong) - xem docs/audit/AUDIT_CI_INFLATE_STANDARDIZATION.md.
 CHAN: maxDD nam <=30%, UW <=200 ngay, quy >= -15%, khong nam am; tap trung 1 coin khong tang.
 CO CHE: tong margin moi moi luot DCA <= 10% equity (tu printDone.csv + log SUMMARY).
 
@@ -18,7 +18,7 @@ import c3_rates as C
 B = C.B
 BLOCK_H = C.BLOCK_H          # 72
 NREP = C.NREP                # 2000
-# [CHUAN HOA 2026-09-17] docs/AUDIT_CI_INFLATE_STANDARDIZATION.md muc 6 loi (3):
+# [CHUAN HOA 2026-09-17] docs/audit/AUDIT_CI_INFLATE_STANDARDIZATION.md muc 6 loi (3):
 #   ban cu: CI_TOTAL = C.CI_INFLATE(1.21) * sqrt(2 ln 3)(1.4823) = 1.7936 - NHAN CHONG.
 #   1.21 khong phai "he so nen": no la mot he so multiplicity lich su (ung k=2.079).
 #   He so DUNG cho k=3 ung vien = sqrt(2 ln 3) = 1.482304, ap MOT lan.

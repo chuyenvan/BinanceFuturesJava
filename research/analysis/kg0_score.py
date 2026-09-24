@@ -1,4 +1,4 @@
-"""KG0 scorer — cham 8 chan cua docs/PREREG_GATESCALE_KEEPLEG0.md.
+"""KG0 scorer — cham 8 chan cua docs/prereg/PREREG_GATESCALE_KEEPLEG0.md.
 
 Nen = PRODUCTION FLATGRID KEEPLEG0. Doi tuong so CI = moc KEEPLEG0 (`kg0-g170`).
   [0] CONG PARITY: P1 t170-x1-2021 md5 efb793e2 | P2 kg0-g170 = 1,085 leg / 103,083

@@ -1,4 +1,4 @@
-"""EXIT-HIGH-N scorer — cham diem 9 chan cua docs/PREREG_EXIT_HIGH_N.md.
+"""EXIT-HIGH-N scorer — cham diem 9 chan cua docs/prereg/PREREG_EXIT_HIGH_N.md.
 
   - 5 rate chat luong vs BASELINE CUA CHINH NEN (nen G: hn-g92; nen T: hn-t100)
   - CI block-72h, 2000 rep, seed 20260905, anchor 2021-07-01, CA HAI do rong

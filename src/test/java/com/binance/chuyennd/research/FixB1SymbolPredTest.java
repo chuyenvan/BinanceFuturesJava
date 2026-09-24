@@ -14,7 +14,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 /**
- * BUG B1 (docs/QUEUE.md muc BUGS) — mergeOrder() KHONG chep symbolPred sang object cum, ma
+ * BUG B1 (docs/plan/QUEUE.md muc BUGS) — mergeOrder() KHONG chep symbolPred sang object cum, ma
  * OrderTargetInfoTest.trailRate() chay tren CHINH object cum va fallback pnp=1f khi null
  * => 1f > TS_PNOPUMP_WEAK_THR(0.29) luon dung => 100% lenh di nhanh WEAK (cap 0.03).
  * Nhanh STRONG (cap 0.08) chua bao gio chay trong suot lich su DEV.

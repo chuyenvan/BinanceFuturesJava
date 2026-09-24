@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """COST_BREAKEVEN — VIEC (1): audit MO HINH CHI PHI cua sim + DIEM HOA VON theo nhom lenh.
 
-Pre-reg: docs/PREREG_COST_LIQUIDITY.md (commit cd5e758, chot TRUOC khi do).
+Pre-reg: docs/prereg/PREREG_COST_LIQUIDITY.md (commit cd5e758, chot TRUOC khi do).
 
 KHONG chay Java (khong dung jar sim): moi so lieu lay tu
   * doc CODE (hằng số chi phí)                       — src/main/java/.../Configs.java, OrderTargetInfoTest.java, DumpConfig.java
@@ -254,14 +254,14 @@ def part_reality(df, cost_impl, fee_slip):
     say("## 6. So với THỰC TẾ — mô hình chi phí có khớp không?")
     say("")
     say("**Mốc thực tế dùng được trong repo** (đọc docs, không tự bịa):")
-    say("- `docs/PREREG_HARNESS_CONTROL.md:38` — harness PYTHON: *\"taker `0.0005×2 = 0,10%` + slippage 0,5×(high−low)/entry + funding\"*.")
-    say("- `docs/PREREG_HEDGE_OVERLAY_A.md:117` — *\"taker_fee = 0,05% … slippage = 1bp\"*.")
-    say("- `docs/DESIGN_HEDGED_BOOK.md:112` — *\"taker fee 0,05%, slippage 1bp\"*.")
+    say("- `docs/prereg/PREREG_HARNESS_CONTROL.md:38` — harness PYTHON: *\"taker `0.0005×2 = 0,10%` + slippage 0,5×(high−low)/entry + funding\"*.")
+    say("- `docs/prereg/PREREG_HEDGE_OVERLAY_A.md:117` — *\"taker_fee = 0,05% … slippage = 1bp\"*.")
+    say("- `docs/design/DESIGN_HEDGED_BOOK.md:112` — *\"taker fee 0,05%, slippage 1bp\"*.")
     say("- ⇒ Binance USDⓈ-M: **maker 0,02%/chân, taker 0,05%/chân** ⇒ round-trip **0,04%** (maker) / **0,10%** (taker).")
     say("")
     say("**Bằng chứng slip ĐO ĐƯỢC (fill thật):** đã quét repo — `ledger.csv` ở gốc là dữ liệu TEST tổng hợp")
-    say("(symbol AAA/CCC, ts=0, `HedgeBook` mock), **không** phải fill thật; `docs/PHASE1_DECISION_SURFACE.md:40`")
-    say("ghi rõ *\"CON THIEU: gia tri fee/slippage BASE chua xac nhan\"*; `docs/ROADMAP.md:67` để ngỏ")
+    say("(symbol AAA/CCC, ts=0, `HedgeBook` mock), **không** phải fill thật; `docs/analysis/PHASE1_DECISION_SURFACE.md:40`")
+    say("ghi rõ *\"CON THIEU: gia tri fee/slippage BASE chua xac nhan\"*; `docs/plan/ROADMAP.md:67` để ngỏ")
     say("*\"Calibrate chi phí từ log product thật khi có\"* ⇒ **repo KHÔNG có số slip thực.**")
     say("Nên phần slip chỉ có **proxy** `0,5·(h−l)/c` — và proxy này đo **biến động**, KHÔNG đo **tác động thị trường**.")
     say("")
@@ -297,7 +297,7 @@ def part_reality(df, cost_impl, fee_slip):
 
 def main():
     say("=== COST_BREAKEVEN — VIEC (1) ===")
-    say("Pre-reg docs/PREREG_COST_LIQUIDITY.md, commit cd5e758. Thuan Python.")
+    say("Pre-reg docs/prereg/PREREG_COST_LIQUIDITY.md, commit cd5e758. Thuan Python.")
     say("")
     part_constants()
     df = pd.read_csv(PRINT_DONE)

@@ -20,7 +20,7 @@ import java.util.TreeMap;
  *
  * <p>KHÁC {@link ExportSelectorPredToAerospike} (set 15m, chunk-tháng): per-phút dày ~15x →
  * chunk-tháng vỡ "Record too big" → BẮT BUỘC chunk-NGÀY ({@code writeMetricMapDay226}). Xem
- * docs/DATA_CHUNKING_STANDARD.md.
+ * docs/data/DATA_CHUNKING_STANDARD.md.
  *
  * <p>Đọc record 26B big-endian {@code >q h 4f} (ts:long, symId:short, p4h..p72h:float), gom PER-FILE
  * theo symbol → ghi 4 bin (p4h/p12h/p24h/p72h). NaN bỏ qua. Chạy TRÊN 226.

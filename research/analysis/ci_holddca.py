@@ -1,5 +1,5 @@
 """HOLDDCA — CI cua HIEU CAGR giua 3 bien the om-bag + DCA 1:1 va PARITY_R
-(docs/PREREG_HOLDDCA.md commit 877694c, muc 3).
+(docs/prereg/PREREG_HOLDDCA.md commit 877694c, muc 3).
 
 Tai su dung Y HET khuon research/analysis/ci_bookcap.py (da dung cho BOOKCAP/GATEDYN), chi doi:
   - VAR mac dinh = 3 tag HOLDDCA (E25/E50/E100), OUT = /home/ubuntu/x1log/ci_holddca.out

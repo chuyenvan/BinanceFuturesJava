@@ -1,5 +1,5 @@
 #!/bin/bash
-# PRE-REG: docs/PREREG_BR.md. Bat circuit breaker (kiem soat phoi nhiem tang danh muc).
+# PRE-REG: docs/prereg/PREREG_BR.md. Bat circuit breaker (kiem soat phoi nhiem tang danh muc).
 set -u
 export PATH=/home/ubuntu/tools/apache-maven-3.9.9/bin:$PATH
 R=/home/ubuntu/src/BinanceFuturesJava
@@ -44,7 +44,7 @@ runp BR2_both   $P/br2.properties
 runp BR3_mg006  $P/br3.properties
 rm -rf $DS
 
-echo "=== CHAM DIEM theo docs/PREREG_BR.md ==="
+echo "=== CHAM DIEM theo docs/prereg/PREREG_BR.md ==="
 python3 /home/ubuntu/java/fsrun/qret.py C2b K0_h1a_prof BR1_margin BR2_both BR3_mg006 2>&1 \
   | grep -aE '^===|nam %|maxDD|quy >=|underwater'
 df -h / | tail -1

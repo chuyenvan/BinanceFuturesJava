@@ -1,7 +1,7 @@
 # RUNBOOK CHUẨN — CPCV AUTO-VALIDATION (Pha 2, chống-leak)
 
 > **Trạng thái tài liệu:** CHUẨN THỰC HIỆN (SOP). Cập nhật 2026-08-26.
-> **Luật gốc:** `docs/DATA_GOVERNANCE_PROTOCOL.md` · **Recipe:** `docs/PHASE1_RECIPE_FROZEN_v1.md` (sha256 738772ff…)
+> **Luật gốc:** `docs/data/DATA_GOVERNANCE_PROTOCOL.md` · **Recipe:** `docs/analysis/PHASE1_RECIPE_FROZEN_v1.md` (sha256 738772ff…)
 > **Bản đồ file chi tiết:** `docs/CPCV_PIPELINE_INVENTORY.md`
 >
 > **Hợp đồng một câu.** Máy chạy validate trên VALIDATION; người + LLM CHỈ nhận `verdict.json`
@@ -43,7 +43,7 @@ ssh -i ~/.ssh/id_rsa_chuyennd_openssh ubuntu@161.118.212.3
 # [ ] dataset VAL:    ls /home/ubuntu/wfo_ds_VAL/manifest.txt /home/ubuntu/wfo_ds_VAL/*.bin
 # [ ] config file-mode: grep TICKER_SOURCE /home/ubuntu/cpcv/run/config.properties   (=file)
 # [ ] ticker daily:   ls /home/ubuntu/java/simulator/kaggle_data_hpo/daily | wc -l    (đủ 2024-07→2025-12)
-# [ ] recipe hash khớp: sha256sum docs/PHASE1_RECIPE_FROZEN_v1.md == 738772ff…
+# [ ] recipe hash khớp: sha256sum docs/analysis/PHASE1_RECIPE_FROZEN_v1.md == 738772ff…
 ```
 
 **3 GUARD BẮT BUỘC mọi lệnh java (thiếu 1 = kết quả SAI recipe, âm thầm):**

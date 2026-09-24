@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """FUNDING_TOPK_ROTATE — sinh grid moc 8h cho luat quay vong LONG top-K funding nho nhat.
 
-Pre-reg: docs/PREREG_FUNDING_TOPK_ROTATE.md (commit 55b8280, chot TRUOC khi chay; KHONG sua thiet ke).
+Pre-reg: docs/prereg/PREREG_FUNDING_TOPK_ROTATE.md (commit 55b8280, chot TRUOC khi chay; KHONG sua thiet ke).
 
 Moc 8h (00/08/16 UTC): r % 480 == 0 (phut tuong doi so voi BASE=2021-01-01).
 Moi dong = (moc r, symbol) voi: f_entry = rate event funding cuoi cung co ts <= r*60000 (causal,

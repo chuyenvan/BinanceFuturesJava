@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """LS_TAKER_DECLE — thang decile DAY DU 0..9 cho o CHINH cua H1 (log(ls_global), W1, 24h).
 
-Pre-reg docs/PREREG_LS_TAKER.md §1.H1 ghi ro: "Do net trung binh TUNG decile + chenh Q_d - EW".
+Pre-reg docs/prereg/PREREG_LS_TAKER.md §1.H1 ghi ro: "Do net trung binh TUNG decile + chenh Q_d - EW".
 Script nay bo sung dung phan da dang ky do (khong phai post-hoc). Dung nguyen ham harness cua
 research/analysis/ls_taker.py.
 """

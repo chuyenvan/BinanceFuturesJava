@@ -10,8 +10,8 @@ Phần 0 là luật chung — dán kèm vào MỌI brief.
 **Nguồn sự thật & kênh**
 - Repo canonical: Oracle `/home/ubuntu/src/BinanceFuturesJava`, branch `module` (HEAD ≥ `99b6580`). Bản Windows
   `E:\educa\source\github\20260415\BinanceFuturesJava` CŨ ~50 commit, có `.git/index.lock` rác + diff CRLF giả —
-  chỉ dùng để đọc `docs/AGENT_RUNBOOK.md` §1, KHÔNG làm nguồn code/docs, KHÔNG commit bên Windows.
-- Tới Oracle CHỈ qua desktop bridge (`docs/AGENT_RUNBOOK.md` §1): desktop-commander `write_file` .sh →
+  chỉ dùng để đọc `docs/runbooks/AGENT_RUNBOOK.md` §1, KHÔNG làm nguồn code/docs, KHÔNG commit bên Windows.
+- Tới Oracle CHỈ qua desktop bridge (`docs/runbooks/AGENT_RUNBOOK.md` §1): desktop-commander `write_file` .sh →
   `C:\Users\pc\AppData\Local\Temp\<prefix>_<n>.sh`; `start_process` (timeout_ms 25000)
   `powershell.exe -NoProfile -Command "Start-Process powershell.exe -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File','C:\Users\pc\AppData\Local\Temp\runsh.ps1','-Sh','<sh>','-Out','<log>' -WindowStyle Hidden; 'launched'"`;
   đọc `read_file <log>` (ENOENT = chưa xong). Load 3 tool desktop-commander bằng MỘT ToolSearch. Job > 5 phút:
@@ -21,7 +21,7 @@ Phần 0 là luật chung — dán kèm vào MỌI brief.
   rỗng. Process `BinanceOrderTradingManager` (shadow-c3, -Xmx4g) là paper, không đụng. Vi phạm 09-19 đã gây OOM + sập SSH.
 - Kaggle CPU = x86_64 ≠ Oracle ARM64 ⇒ **mọi A/B phải cùng env**; Kaggle-variant chỉ so Kaggle-baseline
   (S1 edge5 15.209%, dataset `chuyendinh/s1-featv2-x1-20260919`), Oracle-variant chỉ so Oracle-baseline. Sàn vênh
-  cross-arch +0.197pp edge5 (`docs/RESULT_S1_DETERMINISM.md`). GPU CẤM cho rank-IC.
+  cross-arch +0.197pp edge5 (`docs/result/RESULT_S1_DETERMINISM.md`). GPU CẤM cho rank-IC.
 - Đĩa Oracle ~26G trống. Dataset WFO tạm (~4.3G) `rm -rf` ngay sau khi dùng. KHÔNG xoá: `aerospike-data/`,
   `predwf_*`, `claudedata/`, `featv2/`, `ledger/`, `wfo_ds_x1_2021/`, `derivs_store/`, `kaggle_data_hpo/`, `ds_feat*/`,
   `java/fsrun/`, `selector_pred_out/`, `shadow_c3/`, `s1hpo/`.
@@ -29,22 +29,22 @@ Phần 0 là luật chung — dán kèm vào MỌI brief.
 **Kỷ luật nghiên cứu**
 - **Pre-reg TRƯỚC khi chạy**: `docs/PREREG_<TÊN>.md` commit trước bất kỳ run nào; ghi luật thắng, k, dự đoán;
   KHÔNG sửa sau khi thấy số (chỉ thêm phụ lục đính chính). Kết quả → `docs/RESULT_<TÊN>.md` cùng format
-  `docs/RESULT_K_DENSITY.md`.
+  `docs/result/RESULT_K_DENSITY.md`.
 - Incumbent = **T170**: `profiles/x1_gs_t170.properties` (`SIM_GATE_DYN_SCALE=1.70`), devrun
   `/home/ubuntu/java/devrun/X1_GS_T170_2021`, md5 printDone `efb793e2`, n=1089, equity 111.070, CAGR 29.27,
   maxDD −11.84, UW 92; dataset `wfo_ds_x1_2021` (18 fold 2021-07→2025-12), bins `predwf_map_s1a2_x1_2021`.
   **Cổng reproduction bắt buộc** trước mỗi vòng sim: chạy lại T170 phải ra md5 `efb793e2` (devrun cần symlink
-  `ln -sfn /home/ubuntu/java/simulator/kaggle_data_hpo kaggle_data_hpo`; ~13 phút/run; xem `docs/AGENT_RUNBOOK.md` §2,
-  `docs/RESULT_DEV2021_READJUDICATE.md` §7, `docs/RESULT_TRAIL_HINGE.md` ghi chú vận hành).
+  `ln -sfn /home/ubuntu/java/simulator/kaggle_data_hpo kaggle_data_hpo`; ~13 phút/run; xem `docs/runbooks/AGENT_RUNBOOK.md` §2,
+  `docs/result/RESULT_DEV2021_READJUDICATE.md` §7, `docs/result/RESULT_TRAIL_HINGE.md` ghi chú vận hành).
 - **Luật thắng sim**: variant THẮNG ⇔ ≥2 rate chất lượng (win%, TSloss%, meanP, mP|SL) ngoài CI block-72h
   **cùng hướng tốt** với `research/analysis/x1_rates.py ... --k <số variant>` (inflate(k)=sqrt(2 ln k), k=1→1.0;
-  `docs/AUDIT_CI_INFLATE_STANDARDIZATION.md`) VÀ PASS rào cứng theo năm theo **khẩu vị mới** `docs/RISK_APPETITE.md`:
+  `docs/audit/AUDIT_CI_INFLATE_STANDARDIZATION.md`) VÀ PASS rào cứng theo năm theo **khẩu vị mới** `docs/runbooks/RISK_APPETITE.md`:
   maxDD≤30 · UW≤200 · quý≥−15 · tập trung 1 coin ≤15% (ghi thêm ngưỡng cũ 15/120/−5 để tham khảo). ≥2 rate hướng
   xấu ⇒ THUA; còn lại NULL. Equity/CAGR chỉ báo cáo, không phải tiêu chí. **Cấm mở biến thể quanh winner** (B4/GD92).
 - **Luật offline (rank-IC/edge5)**: metric chính edge5 OOS (mean g1lite top-5 trong tick − mean tick); paired
   block-bootstrap 72h, 2000 rep, CI95 × inflate(k). **Nested**: SELECT (OOS 2021Q3→2023Q4) chỉ để ĐỀ CỬ,
   **CONFIRM (2024Q1→2025Q4) là cổng quyết duy nhất**; đối chứng nhiễu chỉ chấm trên CONFIRM
-  (bài học `docs/RESULT_S1_HPO_BAG_FEATGRP.md` §1, `docs/PREREG_S1_NOISE_CAL.md`). Score S1: thấp = tốt (bẫy dấu).
+  (bài học `docs/result/RESULT_S1_HPO_BAG_FEATGRP.md` §1, `docs/prereg/PREREG_S1_NOISE_CAL.md`). Score S1: thấp = tốt (bẫy dấu).
 - **HOLDOUT 2026 KHÔNG đụng** (`SIM_END_DATE=20251231`; `HoldoutSeal`). Box 242 (tiền thật) KHÔNG ssh, KHÔNG deploy.
   KHÔNG `git push`. Trailer commit: `Co-Authored-By: <model của bạn> <noreply@anthropic.com>` +
   `Claude-Session: <link phiên của bạn>`. Gặp `index.lock` do agent khác: chờ 30s thử lại, không xoá.
@@ -84,7 +84,7 @@ Phần 0 là luật chung — dán kèm vào MỌI brief.
   **CHỦ YẾU ALPHA**. (iii) còn lại ⇒ **HỖN HỢP**, báo tỉ lệ." Không kết luận gì ngoài 3 nhãn.
 
 **Đầu ra**: `research/analysis/beta_decomp_t170.py`, `/home/ubuntu/s1hpo/beta_decomp.json`,
-`docs/ANALYSIS_BETA_DECOMP_T170.md` (nguồn + múi giờ, luật đọc, bảng A/B/C, nhãn D, giới hạn: BTC là proxy duy nhất,
+`docs/analysis/ANALYSIS_BETA_DECOMP_T170.md` (nguồn + múi giờ, luật đọc, bảng A/B/C, nhãn D, giới hạn: BTC là proxy duy nhất,
 mẫu theo năm nhỏ). Commit 2 file. Báo: bảng β/α ann./t/R²/%beta/dual-beta/beta lệnh cho T170 & baseline theo năm
 + toàn kỳ, nhãn D, bất thường.
 
@@ -101,10 +101,10 @@ yếu tố chung bằng short BTCUSDT perp theo beta ⇒ ICC↓, n_eff↑ 4-5×,
 mirror, đã đóng) và `ENABLE_SHORT` (đảo tín hiệu).
 
 **Bước 1 — Recon code (trước khi thiết kế)**: đọc `SimulatorMarketLevelTicker1MStopLoss`, `BudgetManagerSimple`,
-`tradecore/EntryGate`, `Configs.java` (`grep -rn "SHORT\|hedge\|SELL" src/main/java | head -50`), `docs/RESEARCH_SHORT.md`,
-`docs/C3_BASELINE.md`. Trả lời: sim có mở được vị thế SELL độc lập không (không qua cơ chế đảo tín hiệu)? Funding
+`tradecore/EntryGate`, `Configs.java` (`grep -rn "SHORT\|hedge\|SELL" src/main/java | head -50`), `docs/analysis/RESEARCH_SHORT.md`,
+`docs/experiment/C3_BASELINE.md`. Trả lời: sim có mở được vị thế SELL độc lập không (không qua cơ chế đảo tín hiệu)? Funding
 được tính cho SELL không? Có chỗ nào ghép "portfolio-level leg" (một lệnh không thuộc coin selector) không?
-Ước lượng số dòng code. Nếu >~400 dòng hoặc đụng lõi sizing → viết `docs/DESIGN_HEDGED_BOOK.md` trước, dừng chờ Uni duyệt.
+Ước lượng số dòng code. Nếu >~400 dòng hoặc đụng lõi sizing → viết `docs/design/DESIGN_HEDGED_BOOK.md` trước, dừng chờ Uni duyệt.
 
 **Bước 2 — Thiết kế (ghi vào PREREG, chốt trước)**
 - Hedge leg: một vị thế SHORT BTCUSDT perp, notional = β_target × Σ notional long đang mở, rebalance khi Σ notional
@@ -114,7 +114,7 @@ mirror, đã đóng) và `ENABLE_SHORT` (đảo tín hiệu).
   phí taker 0.05%/rebalance, slippage 1bp. Ghi rõ giả định.
 - Cổng byte-identity: `HEDGE_MODE=OFF` phải ra md5 `efb793e2` (T170 không đổi). Đây là điều kiện bắt buộc trước khi tin số.
 - **Metric chính KHÔNG phải CAGR** (hedge sẽ cắt CAGR — đó là mục đích): 
-  (a) ICC(ROI lệnh, cohort ngày) và n_eff (tái dùng `docs/NBETS_RESULT.md`/`PREREG_NBETS.md` cách tính) — kỳ vọng ICC↓;
+  (a) ICC(ROI lệnh, cohort ngày) và n_eff (tái dùng `docs/result/NBETS_RESULT.md`/`PREREG_NBETS.md` cách tính) — kỳ vọng ICC↓;
   (b) Sharpe ngày (annualized) và **CI bootstrap của Sharpe**; (c) β thực nghiệm của book sau hedge (từ TASK 1 script) —
   kỳ vọng |β|<0.2; (d) maxDD/UW theo khẩu vị mới; (e) MDE80 cho hiệu ứng selector: chạy lại cặp T170-vs-T100 (hoặc
   S1-vs-G015) DƯỚI hedge và đo CI của hiệu — **đây là câu hỏi thật: hedge có làm phép so selector phân biệt được không**.
@@ -151,7 +151,7 @@ dòng nào (Uni kiểm `derivs_store/$(date +%Y%m%d)/liquidations.csv`). Chờ 6
    amihud) và vì sao bản fine-grained khác.
 4. Kế hoạch dùng: sau khi có feature → pre-reg kiểu `PREREG_FS` (k = số feature, ngưỡng inflate(k), noise control chấm
    trên CONFIRM) — đo rank-IC/edge5 trước, sim sau.
-**Đầu ra**: `docs/PROPOSAL_MICROSTRUCTURE_DATA.md` (bảng so nhà cung cấp, subset đề xuất, GB, USD, nơi lưu, timeline,
+**Đầu ra**: `docs/plan/PROPOSAL_MICROSTRUCTURE_DATA.md` (bảng so nhà cung cấp, subset đề xuất, GB, USD, nơi lưu, timeline,
 feature list, rủi ro: licence, chất lượng dữ liệu, survivorship symbol đã delist). Commit. Uni quyết mua.
 
 ---
@@ -174,14 +174,14 @@ Prior cao hơn feature lưới giờ vì là NGUYÊN NHÂN.
 3. Pre-reg `docs/PREREG_FS_EVENTS.md` theo khung `PREREG_FS`: thêm-1 vào KEEP-9, k = số feature, Δedge5 + Δrank-IC,
    block-bootstrap 72h, inflate(k), **đối chứng nhiễu chấm trên CONFIRM** (không SELECT), nested SELECT→CONFIRM. Chạy
    offline CPU Oracle (1 job/lần) hoặc Kaggle (so Kaggle-baseline). Dự đoán ghi trước.
-**Đầu ra**: `docs/EVENT_DATA_SURVEY.md`, `research/pipeline/x1/build_feat_events.py`, PREREG + RESULT. Nếu không nguồn nào
+**Đầu ra**: `docs/ops/EVENT_DATA_SURVEY.md`, `research/pipeline/x1/build_feat_events.py`, PREREG + RESULT. Nếu không nguồn nào
 phủ trước 2023 ⇒ báo và dừng ở survey (không ép).
 
 ---
 
 ## TASK 5 — VOL_TARGET sizing: size ∝ 1/σ realized · code nhỏ + pre-reg · 1 ngày · Sonnet
 
-**Lý do**: GS wave-1 (`docs/GS_WAVE1_RESULT.md`): trục duy nhất có ảnh hưởng là size/leverage, đổi DD lấy CAGR tuyến tính.
+**Lý do**: GS wave-1 (`docs/result/GS_WAVE1_RESULT.md`): trục duy nhất có ảnh hưởng là size/leverage, đổi DD lấy CAGR tuyến tính.
 Vol-targeting làm size thích nghi theo σ realized của coin/danh mục — chuẩn ngành, chưa có trong sim. Không phải alpha;
 kỳ vọng cải thiện DD/UW/độ đều equity ở cùng CAGR.
 
@@ -194,7 +194,7 @@ kỳ vọng cải thiện DD/UW/độ đều equity ở cùng CAGR.
 3. Luật: như luật sim chung; thêm metric phụ: sd(return ngày), Calmar, độ lệch ROI theo quý (CV). Dự đoán MASTER:
    NULL ở rate chất lượng (đúng, vì sizing không đổi lệnh nào vào), cải thiện maxDD/UW/CV — ghi là "cải thiện rủi ro,
    không phải bằng chứng alpha".
-**Đầu ra**: code flag + `docs/PREREG_VOL_TARGET.md` + `docs/RESULT_VOL_TARGET.md`. Cổng repro + OFF byte-identity bắt buộc.
+**Đầu ra**: code flag + `docs/prereg/PREREG_VOL_TARGET.md` + `docs/result/RESULT_VOL_TARGET.md`. Cổng repro + OFF byte-identity bắt buộc.
 
 ---
 
@@ -202,8 +202,8 @@ kỳ vọng cải thiện DD/UW/độ đều equity ở cùng CAGR.
 
 Shadow 242 hiện chạy FLATGRID KEEPLEG0 (`DECISION_SHADOW_FLATGRID_KEEPLEG0.md`), KHÔNG phải T170 ⇒ không tích được
 bằng chứng forward cho incumbent nghiên cứu. Cách duy nhất số cược độc lập tăng THẬT là forward.
-**Việc agent**: đọc `docs/RESULT_SHADOW_T170_FIX.md`, `shadow_c3/app/conf/env.sh`, unit `shadow-c3.service`; soạn
-`docs/PLAN_SHADOW_T170_PARALLEL.md`: chạy **instance thứ hai** song song (`shadow_t170/`, redis riêng, port riêng,
+**Việc agent**: đọc `docs/result/RESULT_SHADOW_T170_FIX.md`, `shadow_c3/app/conf/env.sh`, unit `shadow-c3.service`; soạn
+`docs/plan/PLAN_SHADOW_T170_PARALLEL.md`: chạy **instance thứ hai** song song (`shadow_t170/`, redis riêng, port riêng,
 `SHADOW_NO_PUSH=true`, env = đúng `profiles/x1_gs_t170.properties` md5 `efb793e2`, systemd riêng, log journald),
 RAM/CPU thêm bao nhiêu (box còn ~12G khi rảnh, nhưng phải chừa cho sim -Xmx14g ⇒ có thể phải giảm Xmx sim xuống 10g
 hoặc chạy shadow thứ hai trên máy khác), cách đo MTM định kỳ không ssh 242 (đọc sổ giấy trên Oracle). **KHÔNG deploy** —

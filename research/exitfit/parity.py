@@ -1,7 +1,7 @@
 """EXIT FIT — BUOC 1b: CONG PARITY (harness offline vs printDone T170).
 
 Chay:  python3 parity.py
-PASS/FAIL theo nguong da chot trong docs/PREREG_EXIT_FIT.md muc 2.3.
+PASS/FAIL theo nguong da chot trong docs/prereg/PREREG_EXIT_FIT.md muc 2.3.
 Ket qua chi tiet: /home/ubuntu/exitfit/parity_detail.csv
 """
 import csv

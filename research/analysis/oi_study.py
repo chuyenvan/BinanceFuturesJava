@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """OI_STUDY — do H1 (DeltaOI factor cross-section) / H2 (OI+gia phan ky) / H3 (OI overlay MOM15).
 
-Pre-reg: docs/PREREG_OI_STUDY.md (commit 7c5f025, chot TRUOC khi do; KHONG sua thiet ke).
+Pre-reg: docs/prereg/PREREG_OI_STUDY.md (commit 7c5f025, chot TRUOC khi do; KHONG sua thiet ke).
 Harness: CI block-72h bootstrap 2000 rep seed 20260905 x1.21, null block sign-flip 72h, MDE p80
 nua-do-rong, N_eff = N/(1+(n_bar-1)*ICC72h) — ham block_boot/block_perm/icc CHEP NGUYEN tu
 research/analysis/harness_control_stats.py, chi doi cach lay half-width cho chuoi null (precompute

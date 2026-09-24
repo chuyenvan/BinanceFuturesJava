@@ -2,7 +2,7 @@
 """LEVEL_SENSITIVITY — sinh 3 pool do cho BIG_UP / MEDIUM_UP / MEDIUM_DOWN (code cu 157cf4d)
 + MOM15 (reference), do forward return tai 3 HOLD {240,1440,4320} phut.
 
-Pre-reg: docs/PREREG_LEVEL_SENSITIVITY.md (commit TRUOC khi chay; khong sua thiet ke).
+Pre-reg: docs/prereg/PREREG_LEVEL_SENSITIVITY.md (commit TRUOC khi chay; khong sua thiet ke).
 
 Pool:
   M-LEVEL : dung luat vong truoc (d15 tang dan, bo symbol lock, lay NUMBER_ORDER coin, lock HOLD)

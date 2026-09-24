@@ -1,6 +1,6 @@
 """F1 — noi dong co hoi o TONG EXPOSURE KHONG DOI. Cham diem 4 run F1_* + neo C2b.
 
-Tieu chi PRIMARY (pre-reg docs/PREREG_F1_FLOW.md): sd(daily equity return), n~900.
+Tieu chi PRIMARY (pre-reg docs/prereg/PREREG_F1_FLOW.md): sd(daily equity return), n~900.
 C1 = mean(tong margin dang mo / equity) theo ngay -> quyet dinh tinh hop le (+-20% vs F1_parity).
 Equity KHONG phai tieu chi (bao cao rieng).
 Usage: python3 f1_flow.py

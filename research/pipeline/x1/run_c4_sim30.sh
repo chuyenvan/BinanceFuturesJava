@@ -2,7 +2,7 @@
 # C4 SIM — ban SAO run_x1_sim.sh, tham so hoa theo ARM. Build dataset tu bins cua arm roi
 # chay 1 sim tren Oracle voi TICKER_SOURCE=file (neo 60395, dung ho voi X1_C3).
 # usage: run_c4_sim.sh <TAG> <profile.properties> <bins_dir>
-# Xem docs/PREREG_C4.md.
+# Xem docs/prereg/PREREG_C4.md.
 set -u
 TAG=$1; PROF=$2; BINS=$3
 R=/home/ubuntu/src/BinanceFuturesJava

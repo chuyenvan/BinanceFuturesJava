@@ -1,4 +1,4 @@
-"""COV — kiem phu (coverage) cho nhom TICK/XEP HANG. Tuan theo docs/PREREG_COV.md @ b6de3af.
+"""COV — kiem phu (coverage) cho nhom TICK/XEP HANG. Tuan theo docs/prereg/PREREG_COV.md @ b6de3af.
 CHI DEV. Khong train, khong java, khong cham VALIDATION.
 """
 import json

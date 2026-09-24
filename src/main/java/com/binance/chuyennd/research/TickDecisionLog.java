@@ -18,12 +18,12 @@ import java.io.PrintWriter;
 import java.util.zip.GZIPOutputStream;
 
 /**
- * LOG QUYET DINH TUNG TICK CHO TUNG RUN — ha tang do luong (docs/PREREG_TICKLOG.md, commit 4d80fb9).
+ * LOG QUYET DINH TUNG TICK CHO TUNG RUN — ha tang do luong (docs/prereg/PREREG_TICKLOG.md, commit 4d80fb9).
  *
  * <p>Ly do ton tai: truoc day khong ton tai log quyet dinh theo tick cho TUNG run
  * ({@code sim.out} chi co 911 dong {@code Update} theo ngay; pool tick o {@code /home/ubuntu/ledger/}
  * doc lap voi config). Vi vay ghep cap theo tick chi lam duoc cho gene selector/gate — moi gene
- * exit/sizing/concurrency khong co tang nao du suc phan biet (docs/PREREG_GS.md muc 12.2).
+ * exit/sizing/concurrency khong co tang nao du suc phan biet (docs/prereg/PREREG_GS.md muc 12.2).
  *
  * <p>Ba stream nhi phan rieng (schema chot o PREREG_TICKLOG muc 2), MOI ban ghi 32 byte,
  * big-endian, ghi qua {@code BufferedOutputStream(1MB) -> GZIPOutputStream}:

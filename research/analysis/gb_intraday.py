@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """GB intraday MTM — maxDD/UW tren chuoi equity MOC PHUT cho 4 chan cua
-docs/PREREG_GIVEBACK_RATIO.md (moc 0.5 + ratio 1/2/5).
+docs/prereg/PREREG_GIVEBACK_RATIO.md (moc 0.5 + ratio 1/2/5).
 
 Tai dung NGUYEN logic da nghiem thu cua research/analysis/intraday_dd.py
-(docs/RESULT_INTRADAY_DD.md, RISK_APPETITE §7.3). Chi doi RUNS + cache dir.
+(docs/result/RESULT_INTRADAY_DD.md, RISK_APPETITE §7.3). Chi doi RUNS + cache dir.
 Cache `series.npz`: LAN CHAY DAU tao moi (4 chan = 4 chuoi), cac lan sau doc lai.
 
 Usage: python3 research/analysis/gb_intraday.py

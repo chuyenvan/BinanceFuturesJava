@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """TAIL_LEVER — don bay dung: chan `gross exposure` (tran G) / trap ALT cat duoc bao nhieu duoi rui ro.
 
-Thuc thi DUNG docs/PREREG_TAIL_LEVER.md (chot TRUOC khi do).
+Thuc thi DUNG docs/prereg/PREREG_TAIL_LEVER.md (chot TRUOC khi do).
 
 THUAN PYTHON OFFLINE tren Oracle. KHONG Java/sim, KHONG claude-run, KHONG push, DEV only
 (moi moc <= 2025-12-30, khong doc 2026).

@@ -1,5 +1,5 @@
 {
-  "prereg": "docs/PREREG_GS.md muc 4 (buoc 1-5) + muc 9.1/9.2",
+  "prereg": "docs/prereg/PREREG_GS.md muc 4 (buoc 1-5) + muc 9.1/9.2",
   "input_jsonl": "/home/ubuntu/gs/out/gs_wave1_all.jsonl",
   "n_lines_input": 257,
   "anchor": {

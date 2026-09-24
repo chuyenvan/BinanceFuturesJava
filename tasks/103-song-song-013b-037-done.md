@@ -25,7 +25,7 @@ Sau khi cả hai xong → chạy `ValidateOiData --quick` trên 226 (compile PAS
 
 ## NHÁNH A — 013b: Launch OI backfill Kaggle (5 worker, ~886 symbol)
 
-> Tiền đề đã đủ (docs/KAGGLE_RULES.md §9): slot FREE=5, jar sanitized sẵn, folder kernel sẵn.
+> Tiền đề đã đủ (docs/runbooks/KAGGLE_RULES.md §9): slot FREE=5, jar sanitized sẵn, folder kernel sẵn.
 > Chi tiết từng bước: `tasks/013b-launch-oi-backfill-full.md` (đọc trước).
 
 ### A1. Kiểm state 226

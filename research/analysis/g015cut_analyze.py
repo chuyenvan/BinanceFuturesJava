@@ -1,4 +1,4 @@
-"""G015CUT — cham diem + CI cho MOI bien the, tren Oracle. Theo dung docs/PREREG_G015CUT.md.
+"""G015CUT — cham diem + CI cho MOI bien the, tren Oracle. Theo dung docs/prereg/PREREG_G015CUT.md.
 Doc pred_<v>.npy (thu tu POOL) tu cac thu muc output kernel + pool_dev.parquet. Chi DOC.
 """
 import os, sys, glob, json, time, logging

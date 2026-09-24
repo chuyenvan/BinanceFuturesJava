@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""GHEP CAP THEO TICK — do MDE80 o tang tick va so voi tang equity (docs/PREREG_TICKLOG.md muc 6).
+"""GHEP CAP THEO TICK — do MDE80 o tang tick va so voi tang equity (docs/prereg/PREREG_TICKLOG.md muc 6).
 
-Phuong phap CHOT TRUOC o PREREG_TICKLOG muc 6.2 (theo docs/PREREG_CI.md, khong doi mot chu):
+Phuong phap CHOT TRUOC o PREREG_TICKLOG muc 6.2 (theo docs/prereg/PREREG_CI.md, khong doi mot chu):
 khoi 72h chinh (do ben 24h/168h), N_REP=2000, SEED=20260903, ghep cap tren CUNG danh sach chi so
 khoi, CI95 percentile, MDE80 = 2.80158*sd_boot.
 
@@ -208,7 +208,7 @@ def main(argv):
     dirb = argv[4] if len(argv) > 4 else tb
 
     LOG.info("=== GHEP CAP THEO TICK: %s vs %s ===", ta, tb)
-    LOG.info("N_REP=%d SEED=%d MDE80=%.5f*sd  (docs/PREREG_TICKLOG.md muc 6)", N_REP, SEED, MDE_K)
+    LOG.info("N_REP=%d SEED=%d MDE80=%.5f*sd  (docs/prereg/PREREG_TICKLOG.md muc 6)", N_REP, SEED, MDE_K)
 
     tka = read_stream("%s/%s/tick.bin.gz" % (TICK, dira), DT_TICK)
     tkb = read_stream("%s/%s/tick.bin.gz" % (TICK, dirb), DT_TICK)

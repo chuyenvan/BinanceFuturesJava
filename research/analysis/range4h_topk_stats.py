@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """RANGE4H_TOPK stats — luat quay vong 4h LONG top-K coin co NEN 4h BIEN DO RONG NHAT.
 
-Pre-reg: docs/PREREG_RANGE4H_TOPK.md (commit 62e01bf, chot TRUOC khi chay; KHONG sua thiet ke).
+Pre-reg: docs/prereg/PREREG_RANGE4H_TOPK.md (commit 62e01bf, chot TRUOC khi chay; KHONG sua thiet ke).
 
 Doc $R4H_OUT/mark_grid4h.npz (grid moc 4h) + $R4H_OUT/anchor_mom15.npz (neo MOM15).
 Moi chu ky = 1 moc 4h: basket = K symbol co range4h LON NHAT (giam dan, dong hang theo sym index),
@@ -248,7 +248,7 @@ def main():
     yidx = year_idx(prep["mark"], base)
 
     say("=== RANGE4H_TOPK — luat quay vong 4h: LONG top-K NEN 4h BIEN DO RONG NHAT ===")
-    say("Pre-reg `docs/PREREG_RANGE4H_TOPK.md` (commit **62e01bf**, chot TRUOC khi chay).")
+    say("Pre-reg `docs/prereg/PREREG_RANGE4H_TOPK.md` (commit **62e01bf**, chot TRUOC khi chay).")
     say("Moc 4h 00/04/08/12/16/20 UTC (r %% 240 == 0, BASE=%d, NMIN=%d)." % (base, int(z["nmin"])))
     say("range4h = (max high - min low)/open tren [r-240, r-1] (nen 4h DA DONG, >=200/240 phut).")
     say("Xep hang GIAM DAN => top-K LON NHAT; dong hang theo sym index. Entry close(r), exit close(r+240).")

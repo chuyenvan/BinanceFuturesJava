@@ -1,7 +1,7 @@
 """PREREG_PUMPDUMP_DETECT (commit f22bae0): do 4 detector pump->dump (close-based) tren TOAN BO lenh T170.
 
 MO TA (descriptive) — KHONG chay sim, KHONG sua .java, KHONG push.
-Dung DUNG theo docs/PREREG_PUMPDUMP_DETECT.md:
+Dung DUNG theo docs/prereg/PREREG_PUMPDUMP_DETECT.md:
   - Nhom: SUP = profit <= -20 (n=49), DOI_CHUNG = con lai (n=1040).
   - 6 feature close-based (4 detector): ret_24h, ret_72h (D1); ext_ma7, ext_ma30 (D2);
     ddmag_72h (D3); accel_24h (D4).

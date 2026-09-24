@@ -1,5 +1,5 @@
 #!/bin/bash
-# Run ONE BD-SIZE-ADAPT variant (docs/PREREG_BD_SIZE_ADAPT.md). Usage: run_one.sh TAG PROFILE
+# Run ONE BD-SIZE-ADAPT variant (docs/prereg/PREREG_BD_SIZE_ADAPT.md). Usage: run_one.sh TAG PROFILE
 set -u
 R=/home/ubuntu/src/BinanceFuturesJava
 JAR=$R/target/binance-java-sdk-1.2.4.jar

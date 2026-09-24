@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """OI_STUDY_POSTHOC3 — %coin+ (chi so DA KHAI BAO trong pre-reg §2 'bao them %coin+'), POST-HOC.
 
-Pre-reg docs/PREREG_OI_STUDY.md (7c5f025) §2 ghi: "bao them %coin+". Script nay tinh dung no cho
+Pre-reg docs/prereg/PREREG_OI_STUDY.md (7c5f025) §2 ghi: "bao them %coin+". Script nay tinh dung no cho
 H1 24h (Q9 va EW): mean net theo tung symbol, dem ty le symbol co mean > 0 (voi >=1, >=5, >=10, >=20 lenh).
 Thuan Python, khong Java, khong cham 2026.
 """

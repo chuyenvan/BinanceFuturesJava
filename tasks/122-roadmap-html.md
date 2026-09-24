@@ -4,9 +4,9 @@
 - **resource:** local · **touches_live_process:** không
 
 ## Việc làm
-1. Tạo file `docs/architecture/roadmap.html` — trực quan hóa lộ trình kiểm chứng 6 bước, nguồn sự thật: `docs/ROADMAP.md`.
-2. Hiển thị đủ 6 bước (Bước 0–5) với status badge đúng: Bước 0 (áp xong / đo đối chứng chưa), Bước 1 (todo), Bước 2 (PASS 2026-06-23), Bước 3 (2 track song song), Bước 4 (đang chạy), Bước 5 (todo). Chi tiết nội dung đọc từ `docs/ROADMAP.md`.
-3. **Bước 3 — trạng thái CHỐT (master cung cấp, dùng nguyên văn, không suy diễn):** nội dung block-quote trạng thái từ `docs/ROADMAP.md §Bước 3` (▶️ TRẠNG THÁI 2026-06-29 — 2 TRACK SONG SONG…) phải hiển thị nguyên văn trong HTML, không tóm tắt, không diễn giải lại.
+1. Tạo file `docs/architecture/roadmap.html` — trực quan hóa lộ trình kiểm chứng 6 bước, nguồn sự thật: `docs/plan/ROADMAP.md`.
+2. Hiển thị đủ 6 bước (Bước 0–5) với status badge đúng: Bước 0 (áp xong / đo đối chứng chưa), Bước 1 (todo), Bước 2 (PASS 2026-06-23), Bước 3 (2 track song song), Bước 4 (đang chạy), Bước 5 (todo). Chi tiết nội dung đọc từ `docs/plan/ROADMAP.md`.
+3. **Bước 3 — trạng thái CHỐT (master cung cấp, dùng nguyên văn, không suy diễn):** nội dung block-quote trạng thái từ `docs/plan/ROADMAP.md §Bước 3` (▶️ TRẠNG THÁI 2026-06-29 — 2 TRACK SONG SONG…) phải hiển thị nguyên văn trong HTML, không tóm tắt, không diễn giải lại.
 4. Yêu cầu HTML: single-file tự chứa (CSS inline, không build step), tiếng Việt, màu trạng thái (xanh=done/vàng=wip/đỏ=todo) + legend, responsive, click component hiện tooltip + đường dẫn nguồn. Style (dark-theme, font, card layout) khớp `wfo_architecture.html` + `system_architecture_all.html`.
 5. Output: file HTML + commit theo quy ước (`docs(122): …`) + done marker `/d/claudedata/CCD122_DONE`.
 

@@ -1,5 +1,5 @@
 """UW2025_SOURCE - chan doan nguon UW-2025 (doc lap voi BTC-trend), theo
-docs/PREREG_UW2025_DIAG.md. CHI DOC printDone.csv/sim.out cua T170 (X1_GS_T170_2021), gate-1.0
+docs/prereg/PREREG_UW2025_DIAG.md. CHI DOC printDone.csv/sim.out cua T170 (X1_GS_T170_2021), gate-1.0
 (X1_C3_FULL_2021), R (X1_C3_FULL_2021_REGIME_R) + CLOSES_1H.bin. KHONG chay sim, KHONG xgboost,
 KHONG sua .java. TAI DUNG NGUYEN VAN uw_source.py/bigdown_struct.py/hedge_overlay_a.py/c3_rates.py
 (KHONG sua cac file do). Dung module logging, cam print().

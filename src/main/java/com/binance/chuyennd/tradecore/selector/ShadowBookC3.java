@@ -36,12 +36,12 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * <p>[BOOKFIX 2026-09-13] DCA/BIG_DOWN cung coin: truoc day {@code open} la {@code Map<String,Pos>}
  * + {@code putIfAbsent} => leg2+ bi VUT im lang (khong VWAP/legCount/margin) => thieu 22.6% pnl
- * (docs/RESULT_BOOKFIX.md). Nay {@code open} la {@code Map<String,Cluster>}: openPos CONG leg vao
+ * (docs/result/RESULT_BOOKFIX.md). Nay {@code open} la {@code Map<String,Cluster>}: openPos CONG leg vao
  * cum + tinh lai VWAP giong {@code SimulatorMarketLevelTicker1MStopLoss.mergeOrder}.
  *
  * <p>&#9888; Ke toan GIAY: PnL o day tinh tu gia {@code price_realtime}, khong co phi/slippage/funding
  * va khong lam tron tick-size. Khong duoc so {@code mean(margin)}/equity voi sim
- * ({@code docs/L1_SHADOW_C3.md} muc 7.2).
+ * ({@code docs/experiment/L1_SHADOW_C3.md} muc 7.2).
  */
 public final class ShadowBookC3 {
 
@@ -284,7 +284,7 @@ public final class ShadowBookC3 {
 
     /**
      * (d) Equity GIAY = {@code PAPER_EQUITY} + PnL da chot + PnL mark-to-market cua cum mo
-     * (tinh tren VWAP entry va tong qty). Day la thu {@code docs/L1_SHADOW_C3.md} muc 3(e).
+     * (tinh tren VWAP entry va tong qty). Day la thu {@code docs/experiment/L1_SHADOW_C3.md} muc 3(e).
      */
     public float equityNow(Map<String, Float> price) {
         double eq = LiveProfileC3.paperEquity() + realized;

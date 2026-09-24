@@ -1,4 +1,4 @@
-"""GD92 x EXIT runner — day cac chan cua docs/PREREG_GD92_X_EXIT.md len Kaggle.
+"""GD92 x EXIT runner — day cac chan cua docs/prereg/PREREG_GD92_X_EXIT.md len Kaggle.
 
   par1 : profile x1_gs_t170 NGUYEN BAN, KHONG key rolling => cong parity 1 (md5 efb793e2)
   par2 : profile x1_c3_full,  KHONG key rolling            => cong parity 2 (md5 dc16e4da)

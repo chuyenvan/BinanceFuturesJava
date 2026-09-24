@@ -1,4 +1,4 @@
-"""BD-SEL (docs/PREREG_SEL_BIGDOWN.md) — cham diem muc 2.
+"""BD-SEL (docs/prereg/PREREG_SEL_BIGDOWN.md) — cham diem muc 2.
 
 So sanh TUNG bien the (drop/mix/drop_top8) vs parity tren tap leg level == BIG_DOWN.
 PRIMARY (3 rate): pnl/leg, meanP, TSloss%. Thang khi >=2/3 rate NGOAI CI (khoi 72h x1.21,

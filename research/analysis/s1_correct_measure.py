@@ -1,6 +1,6 @@
 """S1 RANKING QUALITY — CORRECT MEASURE (đúng horizon 72h + đúng mốc quyết định + test đảo dấu).
 
-PRE-REG: docs/PREREG_S1_RANK_CORRECT_MEASURE.md (commit 69fb2d1). Chạy ĐÚNG MỘT lần, không tune.
+PRE-REG: docs/prereg/PREREG_S1_RANK_CORRECT_MEASURE.md (commit 69fb2d1). Chạy ĐÚNG MỘT lần, không tune.
 Sửa 2 lệch cấu trúc của RESULT_S1_RANK_QUALITY.md (commit 57223a0):
   (i)  S1 train trên nhãn g1lite = 72h, đo lần này ở 72h (so sánh 24h).
   (ii) đo ở MỐC QUYẾT ĐỊNH THẬT (market.bin, levelChange != null = BIG_DOWN), không mọi snapshot 1h.

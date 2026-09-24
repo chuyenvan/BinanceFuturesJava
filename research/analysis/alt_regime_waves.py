@@ -1,6 +1,6 @@
 """ALT REGIME WAVES - do hanh vi ALT (MO TA, 0-sim).
 
-Theo docs/PREREG_ALT_REGIME_WAVES.md (commit b0e91fa) - khoa dinh nghia/nguong TRUOC khi do.
+Theo docs/prereg/PREREG_ALT_REGIME_WAVES.md (commit b0e91fa) - khoa dinh nghia/nguong TRUOC khi do.
 DEV = 2021-01-01..2025-12-31 (CLOSES_1H.bin). Post-DEV = 2026-01-01..2026-09-22 (ticker bins +
 Aerospike). Khong chay Java, khong sim, khong tune, khong push.
 

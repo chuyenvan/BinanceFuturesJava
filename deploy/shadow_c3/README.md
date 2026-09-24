@@ -10,8 +10,8 @@ ngoài repo:
 | `shadow-c3.service` | `/etc/systemd/system/shadow-c3.service` |
 | `shadow-c3-redis.service` | `/etc/systemd/system/shadow-c3-redis.service` |
 
-Chi tiết + bảng cấu hình + kết quả verify: `docs/RESULT_SHADOW_T170_FIX.md`.
-Quyết định chuyển sang FLATGRID KEEPLEG0 (2026-09-19): `docs/DECISION_SHADOW_FLATGRID_KEEPLEG0.md`.
+Chi tiết + bảng cấu hình + kết quả verify: `docs/result/RESULT_SHADOW_T170_FIX.md`.
+Quyết định chuyển sang FLATGRID KEEPLEG0 (2026-09-19): `docs/decisions/DECISION_SHADOW_FLATGRID_KEEPLEG0.md`.
 
 ## Đặc điểm
 - **Paper only**: `SHADOW_NO_PUSH=true` (hardcode trong `LiveProfileC3` + đặt lại trong env.sh).

@@ -1,6 +1,6 @@
 """AUDIT_GATEDYN — CI cua HIEU CAGR giua GD92 (rolling gate 0.92/90d) va PARITY_R (gate cung 0.008).
 
-Khuon chot TRUOC o docs/PREREG_CI.md muc 2.1-2.5 + docs/PREREG_B4.md muc 3, tai su dung y het
+Khuon chot TRUOC o docs/prereg/PREREG_CI.md muc 2.1-2.5 + docs/prereg/PREREG_B4.md muc 3, tai su dung y het
 research/analysis/ci_b4.py:
   - equity = b+unP (mark-to-market) doc tu logs/sim.out, giu ban ghi cuoi cung trong ngay
   - block-bootstrap GHEP CAP, moving-block circular, block chinh 21 ngay (kiem 10 va 42),

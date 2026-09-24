@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """RANGE4H_TOPK — sinh grid moc 4h cho luat quay vong LONG top-K BIEN DO NEN 4h RONG NHAT.
 
-Pre-reg: docs/PREREG_RANGE4H_TOPK.md (commit 62e01bf, chot TRUOC khi chay; KHONG sua thiet ke).
+Pre-reg: docs/prereg/PREREG_RANGE4H_TOPK.md (commit 62e01bf, chot TRUOC khi chay; KHONG sua thiet ke).
 
 Moc 4h (00/04/08/12/16/20 UTC): r % 240 == 0 (phut tuong doi so voi BASE=2021-01-01).
 Bien xep hang (predictor, causal):

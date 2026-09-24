@@ -1,5 +1,5 @@
 # X1 — ban SAO cua ledger.py, CHI them tham so hoa qua env (mac dinh = hanh vi cu).
-# Sinh boi research/pipeline/x1/make_x1.sh. Xem docs/PREREG_X1.md muc 2.
+# Sinh boi research/pipeline/x1/make_x1.sh. Xem docs/prereg/PREREG_X1.md muc 2.
 """S0 — CANDIDATE LEDGER (DEV 2022-01..2024-06) + EDGE SCORE (check nhanh selector, khong can sim).
 Pool(tick) = moi coin co pred G015 tai tick 15m ma gate thi truong MO (predReturn15M >= 0.008 = nguong long nhat; sim thuc te siet them theo
 symbolPred: dyn = MIN_MOMENTUM_15M * max(AI_DYNAMIC_MIN, symbolPred/RATE_MAX*AI_DYNAMIC_MULTIPLIER)

@@ -21,7 +21,7 @@ public class TradeUtils {
 
 
     /**
-     * [PEAK-CLOSE 2026-09-23] docs/PREREG_PEAK_CLOSE.md — gia "dinh" dung cho CA CONG ARM lan TRAILING.
+     * [PEAK-CLOSE 2026-09-23] docs/prereg/PREREG_PEAK_CLOSE.md — gia "dinh" dung cho CA CONG ARM lan TRAILING.
      *
      * <p>Mac dinh (`TS_PEAK_MODE` khong khai bao / `high`): `ticker.maxPrice` = HIGH nen 1m —
      * NGUYEN hanh vi cu, tra ve dung field cu => byte-identical.
@@ -58,7 +58,7 @@ public class TradeUtils {
     }
 
     /**
-     * [TRAIL-LADDER 2026-09-23] docs/PREREG_TRAIL_LADDER.md — GAP BAC THANG theo dinh.
+     * [TRAIL-LADDER 2026-09-23] docs/prereg/PREREG_TRAIL_LADDER.md — GAP BAC THANG theo dinh.
      *
      * <p>{@code lo}/{@code gaps} cung do dai, {@code lo} tang dan nghiem ngat, {@code gaps[i] > 0}.
      * Chon bac CUOI CUNG ma {@code maxProfitRate >= lo[i]}; duoi {@code lo[0]} => tra {@code NaN}

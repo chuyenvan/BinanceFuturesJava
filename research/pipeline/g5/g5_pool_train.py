@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""g5_pool_train.py — TRAINER ung vien NHAN cho G5 (docs/PREREG_G5.md).
+"""g5_pool_train.py — TRAINER ung vien NHAN cho G5 (docs/prereg/PREREG_G5.md).
 
 Ban SAO cua `research/pipeline/g015_net_train.py` (sha256 05298cba5578...), THEM DUNG ba thu:
   (1) `--label-h {4,72}`  -> cot nhan `retEnd_{H}h` / `maxFav_{H}h`, loc `nBars_{H}h >= H*60/15`.

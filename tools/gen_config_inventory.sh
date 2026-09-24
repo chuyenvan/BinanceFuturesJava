@@ -1,5 +1,5 @@
 #!/bin/bash
-# Sinh docs/CONFIG_INVENTORY.md tu CHINH ma nguon. Chay tu goc repo: bash tools/gen_config_inventory.sh
+# Sinh docs/ops/CONFIG_INVENTORY.md tu CHINH ma nguon. Chay tu goc repo: bash tools/gen_config_inventory.sh
 # CANH BAO ve mot lan sai truoc day: KHONG duoc chi grep Configs.java. Key duoc doc qua nhieu duong
 # (Configs.getString/getInt/getDouble/getBoolean, properties.get, Cfg.get) va tu NHIEU FILE khac
 # (vd DIED_SYMBOLS/SPECIAL_SYMBOLS doc trong client/constant/Constants.java, CAPITAL_START trong
@@ -7,7 +7,7 @@
 # survivorship bias. Script nay grep chuoi ten key tren TOAN BO src/.
 set -u
 [ -d src/main ] || { echo "chay tu goc repo"; exit 2; }
-OUT=docs/CONFIG_INVENTORY.md
+OUT=docs/ops/CONFIG_INVENTORY.md
 mkdir -p docs
 
 keys_read() {  # moi key ma code doc tu config.properties

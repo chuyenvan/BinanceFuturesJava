@@ -1,6 +1,6 @@
 """X4 - cham diem 10 run: quet 4 hang so trailing (G/W/R/H) + truc U tren jar SACH.
 
-Xem docs/PREREG_X4.md muc 4-6. Dung lai may bootstrap khoi-72h x1.21 cua c3_rates.
+Xem docs/prereg/PREREG_X4.md muc 4-6. Dung lai may bootstrap khoi-72h x1.21 cua c3_rates.
 Khac x3_rates.py:
   - khong doc log SELRANK (khong sua engine trong dot nay); nhanh STRONG/WEAK duoc SUY
     CHINH XAC tu printDone.csv: STRONG <=> symbolPred_leg1 <= thr CUA CHINH ARM DO

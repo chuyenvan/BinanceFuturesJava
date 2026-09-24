@@ -1,8 +1,8 @@
-"""TICKBLK — cham diem bien the "chan ca LUOT khi luot YEU" (docs/PREREG_TICK_BLOCK.md).
+"""TICKBLK — cham diem bien the "chan ca LUOT khi luot YEU" (docs/prereg/PREREG_TICK_BLOCK.md).
 
 Doc lap voi selcut_score.py (chi tai dung may block-72h cua c3_rates.py, KHONG import lai file kia).
 Doc output KAGGLE (/home/ubuntu/kaggle_sim/out/<tag>/) va dung inflate(k) theo
-docs/AUDIT_CI_INFLATE_STANDARDIZATION.md.
+docs/audit/AUDIT_CI_INFLATE_STANDARDIZATION.md.
 
 Bao cao:
   (a) 5 rate chat luong toan bo leg + n, moi bien the vs PARITY; CI block-72h 2000 rep seed 20260905

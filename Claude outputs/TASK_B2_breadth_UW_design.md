@@ -18,16 +18,16 @@ An toàn (HOLDOUT/242/push/thư mục bảo vệ/index.lock); 1 job nặng/lần
 ## 2. BƯỚC 1 — CHẨN ĐOÁN NGUỒN UW (0-sim, làm TRƯỚC, ~0.5 ngày)
 **Không thiết kế cơ chế pacing trước khi biết UW đến từ đâu** (bài học TASK B: đoán regime sai → sim phí).
 
-Dữ liệu: printDone/sim.out của T170 (`X1_GS_T170_2021`), gate-1.0 baseline (`X1_C3_FULL_2021`), và **P0/P3 của TASK B** (đã có sim.out, tìm run tag trong `docs/RESULT_PACING_BIGDOWN.md` / `/home/ubuntu/java/devrun/`). BTC 1h `CLOSES_1H.bin`. Tái dùng `bigdown_struct.py`/`c3_rates.py`.
+Dữ liệu: printDone/sim.out của T170 (`X1_GS_T170_2021`), gate-1.0 baseline (`X1_C3_FULL_2021`), và **P0/P3 của TASK B** (đã có sim.out, tìm run tag trong `docs/result/RESULT_PACING_BIGDOWN.md` / `/home/ubuntu/java/devrun/`). BTC 1h `CLOSES_1H.bin`. Tái dùng `bigdown_struct.py`/`c3_rates.py`.
 
-Câu hỏi (commit `docs/PREREG_UW_DIAG.md` khoá metric trước):
+Câu hỏi (commit `docs/prereg/PREREG_UW_DIAG.md` khoá metric trước):
 1. **Định vị chuỗi UW dài nhất** của gate-1.0 và P3: bắt đầu/kết thúc ngày nào, sâu bao nhiêu, là 1 chuỗi hay nhiều. So cùng lịch với T170 (T170 dưới nước 92 ngày ở đâu?).
 2. **Regime BTC trong chuỗi UW đó**: BTC vs MA200, drawdown BTC từ đỉnh, slope trend. Xác định UW dài trùng bear/sideway kéo dài hay không → **ĐỊNH NGHĨA REGIME cho pacing bước 2 lấy từ đây**, không đoán.
 3. **Kênh/lệnh nào giữ hệ dưới nước**: trong chuỗi UW, các lệnh đang mở/đang lỗ là lệnh-lõi (có cả ở T170) hay lệnh-biên (chỉ gate 1.0 thêm)? Lệnh biên có ROI âm hơn trong bear không? (dùng đo tổng hợp/phân phối, KHÔNG khoá (sym,start) — match_rate 32.6% không tin được.)
 4. **UW do đào sâu hay do không phục hồi**: trong chuỗi UW, equity đi ngang-âm (giữ lệnh lỗ, không thoát) hay dao động quanh đáy (vào-ra liên tục)? Phân biệt: cần regime-filter-admission (đừng vào thêm) hay cần exit nhanh hơn.
 5. **T170 làm gì khác trong cùng giai đoạn** khiến UW nó chỉ 92: nó dừng vào lệnh (gate chặt tự lọc bear?) hay thoát sớm? — đây là manh mối cơ chế cần sao chép ở gate thấp.
 
-Output `docs/DIAG_UW_SOURCE.md` + script + json, commit. **Cổng quyết định cho bước 2**: định nghĩa regime UW cụ thể (đo được, causal) + xác định cơ chế đúng là admission-filter hay exit — nếu chẩn đoán cho thấy UW là tính chất long-only-trong-bear không tránh khỏi mà không giết breadth, ghi NO-GO + kết luận vào `power_wall.md`.
+Output `docs/diag/DIAG_UW_SOURCE.md` + script + json, commit. **Cổng quyết định cho bước 2**: định nghĩa regime UW cụ thể (đo được, causal) + xác định cơ chế đúng là admission-filter hay exit — nếu chẩn đoán cho thấy UW là tính chất long-only-trong-bear không tránh khỏi mà không giết breadth, ghi NO-GO + kết luận vào `power_wall.md`.
 
 ## 3. BƯỚC 2 — PACING NHẮM UW (sim, chỉ sau bước 1, thiết kế chi tiết CHỐT SAU chẩn đoán)
 Khung (điền sau bước 1). Nền gate 1.0 (breadth). Biến thể theo cơ chế chẩn đoán chỉ ra:

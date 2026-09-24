@@ -1,5 +1,5 @@
 """Nhom A: CI cua HIEU CAGR giua cac cap run, block-bootstrap GHEP CAP tren chuoi
-loi nhuan NGAY. Phuong phap chot o docs/PREREG_CI.md (commit 2493eca)."""
+loi nhuan NGAY. Phuong phap chot o docs/prereg/PREREG_CI.md (commit 2493eca)."""
 import logging, os, re
 import numpy as np, pandas as pd
 

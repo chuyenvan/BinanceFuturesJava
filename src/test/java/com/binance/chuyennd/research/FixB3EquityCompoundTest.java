@@ -10,7 +10,7 @@ import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 
 /**
- * BUG B3 (docs/QUEUE.md muc BUGS, docs/T2B_FULLFLOW.md muc 1.2) — goc sizing la HANG SO
+ * BUG B3 (docs/plan/QUEUE.md muc BUGS, docs/experiment/T2B_FULLFLOW.md muc 1.2) — goc sizing la HANG SO
  * balanceBasic = Configs.capitalStart() = 35000, khong doan nao trong duong sim ghi lai no
  * => size KHONG compound theo equity, fitness khong phan anh he compound.
  */

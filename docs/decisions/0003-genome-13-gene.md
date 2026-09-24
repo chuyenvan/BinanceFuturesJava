@@ -44,5 +44,5 @@ Genome = **13 gene** `DoubleChromosome`, định nghĩa tại `RunHpoMaster_Dist
 
 ## Hệ quả
 
-- Mốc "14 gene" trong `docs/ROADMAP.md` Bước 4 đã CŨ (thực tế 13) — chỉ báo, không sửa roadmap ở ADR.
+- Mốc "14 gene" trong `docs/plan/ROADMAP.md` Bước 4 đã CŨ (thực tế 13) — chỉ báo, không sửa roadmap ở ADR.
 - Mọi tài liệu/HPO nói "14 gene" cần đọc lại theo 13.

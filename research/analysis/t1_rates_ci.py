@@ -1,6 +1,6 @@
 """T1 — RATE PRIMARY + CI block-bootstrap ghep cap THEO THOI GIAN cho cac chan T1.
 
-Tuan `docs/PREREG_T1.md` §6/§8. Bon chan chon COIN KHAC NHAU nen khong ghep cap duoc theo
+Tuan `docs/prereg/PREREG_T1.md` §6/§8. Bon chan chon COIN KHAC NHAU nen khong ghep cap duoc theo
 tung lenh; ghep cap theo KHOI THOI GIAN (cung danh sach khoi cho moi chan) la cach dung.
 Usage: python3 t1_rates_ci.py TAG_BASE TAG ...   (TAG = thu muc trong /home/ubuntu/java/devrun)
 """

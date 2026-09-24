@@ -6,7 +6,7 @@ Trạng thái: **KHUNG — chưa chạy.** Bước đầu là recon + thiết k�
 ## 0. Vì sao TASK D (bối cảnh đóng breadth)
 Đường power của T170 là "tăng số cược độc lập" (power_wall). Hướng breadth (hạ gate lấy nhiều lệnh) đã đóng sau 5 round NULL: breadth có alpha nhưng UW là nút thắt nội tại, và phòng thủ per-regime vượt số sự kiện độc lập 4.5 năm cho phép fit. **Đường còn lại: tăng số NGÀY có cược bằng một TRIGGER MỚI, không tương quan với gate MOM15 hiện tại.** T170 chỉ vào lệnh ~110/1644 ngày (77% giờ trống) — nếu có một nguồn tín hiệu độc lập (không dựa momentum 15m) thì nó thêm cược ở những ngày MOM15 im lặng ⇒ tăng số cược độc lập thật (khác breadth: breadth thêm lệnh cùng cơ chế → tương quan cao; trigger mới thêm lệnh cơ chế khác → ít tương quan).
 
-Ứng viên (từ `docs/EVENT_DATA_SURVEY.md`, TASK4 bước 1): **listing/delisting event** (khả thi nhất; token unlock đã loại vì lookahead risk + coverage kém).
+Ứng viên (từ `docs/ops/EVENT_DATA_SURVEY.md`, TASK4 bước 1): **listing/delisting event** (khả thi nhất; token unlock đã loại vì lookahead risk + coverage kém).
 
 ## 1. LUẬT (không nới)
 An toàn (HOLDOUT 2026/242/push/thư mục bảo vệ/index.lock); 1 job nặng/lần; PREREG trước; đo tầng xếp hạng phải CPU không GPU; Kaggle-variant chỉ so Kaggle, Oracle chỉ so Oracle; logging chuẩn. **Cổng tái lập T170 md5 `efb793e2` nếu chạm sim.**
@@ -17,13 +17,13 @@ An toàn (HOLDOUT 2026/242/push/thư mục bảo vệ/index.lock); 1 job nặng/
 3. **Đo tầng xếp hạng trước, không tầng equity** (power_wall): rank-IC/edge CPU trên CONFIRM trước; chỉ khi có edge tầng xếp hạng mới cân nhắc sim tầng equity. Nested SELECT/CONFIRM, block-bootstrap-72h, inflate(k).
 
 ## 3. BƯỚC 1 — RECON nguồn dữ liệu event (0-sim, làm TRƯỚC)
-Đọc `docs/EVENT_DATA_SURVEY.md` (commit `c9c5c23`) + xác định chính xác:
+Đọc `docs/ops/EVENT_DATA_SURVEY.md` (commit `c9c5c23`) + xác định chính xác:
 - Nguồn listing/delisting: Binance API/announcement nào cho ngày listing & delisting của mọi symbol trong universe? Có FREE không (như aggTrades ở TASK3)? Coverage lịch sử 2021-2025 đủ không?
 - Timestamp: mỗi event có announcement_time VÀ effective_time riêng không? (bắt buộc cho causal — RÀNG BUỘC 1).
 - Coverage: bao nhiêu symbol/ngày có event? (phủ subset nhỏ → RÀNG BUỘC 2).
 - Giả thuyết alpha cụ thể: listing mới → pump/vol tăng (long momentum sớm)? delisting → dump (tránh/short)? Hình dạng edge kỳ vọng, cửa sổ thời gian sau event.
 - Trigger này có THẬT không tương quan MOM15 không: event xảy ra ở ngày/symbol nào so với ngày T170 vào lệnh — overlap thấp = độc lập thật.
-Output: `docs/RECON_EVENT_ALPHA.md` — nguồn, coverage, timestamp causal-safe, giả thuyết đo được. Cổng GO/NO-GO: có nguồn causal-safe + coverage đủ + giả thuyết đo được → GO thiết kế feature; nếu không (như token unlock) → NO-GO, báo MASTER.
+Output: `docs/analysis/RECON_EVENT_ALPHA.md` — nguồn, coverage, timestamp causal-safe, giả thuyết đo được. Cổng GO/NO-GO: có nguồn causal-safe + coverage đủ + giả thuyết đo được → GO thiết kế feature; nếu không (như token unlock) → NO-GO, báo MASTER.
 
 ## 4. BƯỚC 2 — ĐO EDGE TẦNG XẾP HẠNG (chỉ khi Bước 1 GO)
 PREREG trước. Build feature event causal (announcement→effective an toàn). Đo edge:

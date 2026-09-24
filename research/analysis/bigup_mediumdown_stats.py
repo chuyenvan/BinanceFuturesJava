@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """BIGUP_MEDIUPDOWN stats — edge/null/CI(block-72h x1.21)/ICC/MOM15-overlap + GO/NO-GO theo level.
 
-Doc /tmp/bigup_mediumdown/{signals.csv, bu_arrays.npz}. Thuan Python. Pre-reg: docs/PREREG_BIGUP_MEDIUPDOWN.md.
+Doc /tmp/bigup_mediumdown/{signals.csv, bu_arrays.npz}. Thuan Python. Pre-reg: docs/prereg/PREREG_BIGUP_MEDIUPDOWN.md.
 """
 import os
 import math

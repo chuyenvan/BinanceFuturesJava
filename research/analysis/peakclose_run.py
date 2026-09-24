@@ -1,4 +1,4 @@
-"""PEAK-CLOSE runner — day cac chan cua docs/PREREG_PEAK_CLOSE.md len Kaggle.
+"""PEAK-CLOSE runner — day cac chan cua docs/prereg/PREREG_PEAK_CLOSE.md len Kaggle.
 
   par   : profile x1_gs_t170 NGUYEN BAN, KHONG override => CONG PARITY (md5 efb793e2, jar MOI)
   part  : nhu par + SIM_TRAIL_TRACE=1 (do-luong-only; printDone phai VAN efb793e2) + trace baseline

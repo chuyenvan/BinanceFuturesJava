@@ -23,7 +23,7 @@ log = logging.getLogger("cpcv_val")
 TZ = timezone(timedelta(hours=7))  # data_tiers timezone
 MS_DAY = 86_400_000
 
-# ===== SEARCH SPACE FROZEN v1 (khớp docs/PHASE1_RECIPE_FROZEN_v1.md) =====
+# ===== SEARCH SPACE FROZEN v1 (khớp docs/analysis/PHASE1_RECIPE_FROZEN_v1.md) =====
 SPACE = {
     "MIN_MOMENTUM_15M": (0.005, 0.020), "PREDICT_SYMBOL_RATE_MAX_THRESHOLD": (0.10, 0.30),
     "AI_DYNAMIC_MULTIPLIER": (1.0, 3.0), "AI_DYNAMIC_MIN": (0.1, 1.0),

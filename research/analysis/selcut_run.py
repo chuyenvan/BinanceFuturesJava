@@ -1,4 +1,4 @@
-"""SELCUT runner — day 3 chan cua docs/PREREG_SELECTOR_LEG_CUT.md len Kaggle.
+"""SELCUT runner — day 3 chan cua docs/prereg/PREREG_SELECTOR_LEG_CUT.md len Kaggle.
 
   parity  : x1_gs_t170 nguyen ban (cong chan BUOC 0) — md5 phai = efb793e2468ca3a7318da0f0ad23d4fc
   cutpar  : jar MOI (chua SELECTOR_LEG_CUT, default false) => cong parity rieng cho jar (muc 3.1)

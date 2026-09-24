@@ -1,5 +1,5 @@
 #!/bin/bash
-# BD-SIZE-ADAPT (docs/PREREG_BD_SIZE_ADAPT.md) — parity + 3 bien the, TUAN TU, 1 slot JVM.
+# BD-SIZE-ADAPT (docs/prereg/PREREG_BD_SIZE_ADAPT.md) — parity + 3 bien the, TUAN TU, 1 slot JVM.
 # KHONG push. DEV 2021-07..2025-12 (wfo_ds_x1_2021). SIM_END_DATE=20251231.
 set -u
 export PATH=/home/ubuntu/tools/apache-maven-3.9.9/bin:$PATH
@@ -21,7 +21,7 @@ echo "disk_free_G=$FREE"
 # tao profile clone cho 3 bien the
 for m in down50 down25 up50; do
   cp -f $P/x1_gs_t170.properties $P/x1_gs_t170_bd_$m.properties
-  printf '\n# BD-SIZE-ADAPT variant (docs/PREREG_BD_SIZE_ADAPT.md)\nBD_SIZE_ADAPT=%s\nBD_SIZE_ADAPT_N=120\n' "$m" >> $P/x1_gs_t170_bd_$m.properties
+  printf '\n# BD-SIZE-ADAPT variant (docs/prereg/PREREG_BD_SIZE_ADAPT.md)\nBD_SIZE_ADAPT=%s\nBD_SIZE_ADAPT_N=120\n' "$m" >> $P/x1_gs_t170_bd_$m.properties
 done
 
 runx() { TAG=$1; PROF=$2; D=$B/$TAG

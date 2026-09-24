@@ -1,4 +1,4 @@
-"""DCA-AGG-PERCOIN (docs/PREREG_DCA_AGG_PERCOIN.md) — cham diem muc 4.
+"""DCA-AGG-PERCOIN (docs/prereg/PREREG_DCA_AGG_PERCOIN.md) — cham diem muc 4.
 
 PRIMARY = khong rate nao XAU ngoai CI (5 rate chat luong TOAN BO leg: win/tsloss/mp_sm/mp_sl/meanP).
 CI bootstrap block-72h x(1.21 * B4), B4 = sqrt(2 ln 3) = 1.4823 (k=3 variants), 2000 rep, seed 20260905.
@@ -18,7 +18,7 @@ import c3_rates as C
 B = C.B
 BLOCK_H = C.BLOCK_H          # 72
 NREP = C.NREP                # 2000
-# [CHUAN HOA 2026-09-17] docs/AUDIT_CI_INFLATE_STANDARDIZATION.md muc 6 loi (3):
+# [CHUAN HOA 2026-09-17] docs/audit/AUDIT_CI_INFLATE_STANDARDIZATION.md muc 6 loi (3):
 #   ban cu: CI_TOTAL = C.CI_INFLATE(1.21) * sqrt(2 ln 3)(1.4823) = 1.7936 - NHAN CHONG.
 #   1.21 khong phai "he so nen": no la mot he so multiplicity lich su (ung k=2.079).
 #   He so DUNG cho k=3 ung vien = sqrt(2 ln 3) = 1.482304, ap MOT lan.

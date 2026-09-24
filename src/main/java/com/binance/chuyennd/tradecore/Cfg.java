@@ -54,7 +54,7 @@ public final class Cfg {
     private static final List<String> TRADING_PREFIXES = Arrays.asList(
             "SIM_", "DCA_", "TS_", "SELECTOR_", "TIER_", "CONF_SIZE_", "TRAIL_", "GATE_", "LIVE_",
             "SIZE_MULT", "MAX_CONCURRENT", "TIME_STOP_HOURS", "ENABLE_SHORT", "ABLATION_MODE", "SHORT_",
-            // [CONC-CAP 2026-09-15] docs/PREREG_CONCENTRATION_SAFETYCAP.md — 2 guard safety-net
+            // [CONC-CAP 2026-09-15] docs/prereg/PREREG_CONCENTRATION_SAFETYCAP.md — 2 guard safety-net
             //   la THAM SO GIAO DICH: da co profile thi khong duoc dat qua env (fail-fast nhu moi key khac).
             "CONC_CAP_");
 
@@ -66,7 +66,7 @@ public final class Cfg {
             // QUYET DINH cua selector S1 (+7.35pp CAGR / maxDD -13.12 vs -20.82 so voi G015 o
             // cung thang exit C2b), khong phai duong dan ha tang. Truoc day no o INFRA_KEYS nen
             // dat tuy y qua env, khong duoc pin trong profile, va CONFIG_HASH/PROFILE_HASH khong
-            // he doi khi doi selector => khong truy nguyen duoc. Xem docs/AUDIT_APPLIED.md 3.3(a).
+            // he doi khi doi selector => khong truy nguyen duoc. Xem docs/audit/AUDIT_APPLIED.md 3.3(a).
             "WFO_FUNDING_PRED_DIR");
 
     private static final Map<String, String> PROFILE;   // null neu khong dung profile

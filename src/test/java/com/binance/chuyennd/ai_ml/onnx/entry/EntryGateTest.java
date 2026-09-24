@@ -18,7 +18,7 @@ import static org.junit.Assert.assertTrue;
  * <p>Moc so: {@code thr = MIN_MOMENTUM_15M * max(DYN_MIN, symbolPred/SCORE_BASE * DYN_MULT)}
  * = {@code 0.008 * max(0.26787, 0.30/0.15*1.28760)} = {@code 0.0206016}.
  *
- * <p>Hai bien QUAN TRONG lay tu do that 48 thang (docs/LEAN_GATE_AUDIT.md muc 3.3):
+ * <p>Hai bien QUAN TRONG lay tu do that 48 thang (docs/audit/LEAN_GATE_AUDIT.md muc 3.3):
  * {@code symbolPred = 0.031206} la diem chuyen floor/tuyen tinh, va
  * {@code symbolPred = 0.024885} la slot DUY NHAT trong 48 thang ma floor THUC SU thang
  * (2024-08-05 13:30 GMT+7, symId 261) — do la ly do gate KHONG duoc rut ve {@code K*symbolPred}.
@@ -113,7 +113,7 @@ public class EntryGateTest {
     }
 
     /**
-     * Slot floor-bind DUY NHAT cua 48 thang (docs/LEAN_GATE_AUDIT.md muc 3.3). Test nay la LY DO
+     * Slot floor-bind DUY NHAT cua 48 thang (docs/audit/LEAN_GATE_AUDIT.md muc 3.3). Test nay la LY DO
      * gate khong duoc rut ve {@code K*symbolPred}: hai dang cho HAI nguong khac nhau o day.
      */
     @Test

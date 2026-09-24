@@ -2,7 +2,7 @@
 # FLATGATE — chay MOT arm sim tren dataset X1 da co (KHONG build lai dataset).
 #   run_flatgate.sh FLATOFF   -> jar moi + x1_c3_full.properties          (cong nghiem thu)
 #   run_flatgate.sh FLATGATE  -> jar moi + x1_c3_full_flatgate.properties (bien the)
-# Giu nguyen khuon `runx` cua research/pipeline/x1/run_x1_sim.sh. Xem docs/PREREG_FLATGATE.md.
+# Giu nguyen khuon `runx` cua research/pipeline/x1/run_x1_sim.sh. Xem docs/prereg/PREREG_FLATGATE.md.
 set -u
 R=/home/ubuntu/src/BinanceFuturesJava
 JAR=$R/target/binance-java-sdk-1.2.4.jar

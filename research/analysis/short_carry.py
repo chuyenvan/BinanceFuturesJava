@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """SHORT_CARRY — luong MOI: SHORT-side funding harvest (carry), do offline (0-sim).
 
-Pre-reg: docs/PREREG_SHORT_CARRY.md (commit edd1e70, chot TRUOC khi chay; KHONG sua thiet ke).
+Pre-reg: docs/prereg/PREREG_SHORT_CARRY.md (commit edd1e70, chot TRUOC khi chay; KHONG sua thiet ke).
 
 Thuan Python. Chi DOC: Aerospike test.funding_data + raw/<sym>.f32 (kline_1m_opt, 627 sym, 1m OHLCV).
 KHONG Java tren Oracle, KHONG claude-run, KHONG push, KHONG cham 2026 (gia het 2025-12-31 16:59 UTC).
 
-Quy uoc dau (KHOA, = Binance that, kiem chung o docs/RESULT_FUNDING_SIGN.md):
+Quy uoc dau (KHOA, = Binance that, kiem chung o docs/result/RESULT_FUNDING_SIGN.md):
   rate > 0  =>  LONG TRA, SHORT THU.   f_cyc = 100*sum(rate) tren (t_e, t_x]  (%/notional).
 
 Bien the: V1 pure carry (short top-decile f_sig) | V2 carry + filter (f_sig>p90 & ret24<=0)

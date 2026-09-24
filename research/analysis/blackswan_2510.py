@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """BLACKSWAN_2510 — stress THIEN NGA DEN quanh 2025-10-10/11 (alt cascade).
 
-Thuc thi DUNG docs/PREREG_BLACKSWAN_2510.md (commit ffece1f, chot TRUOC khi do).
+Thuc thi DUNG docs/prereg/PREREG_BLACKSWAN_2510.md (commit ffece1f, chot TRUOC khi do).
 
 THUAN PYTHON OFFLINE tren artifact DA CO + du lieu 1m. KHONG Java tren Oracle, KHONG claude-run,
 KHONG push, DEV only (moi leg end <= 2025-12-31), KHONG doc 2026.

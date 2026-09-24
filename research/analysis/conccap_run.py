@@ -1,4 +1,4 @@
-"""CONC-CAP-HIGHN runner — day 4 chan cua docs/PREREG_CONC_CAP_HIGHN.md len Kaggle.
+"""CONC-CAP-HIGHN runner — day 4 chan cua docs/prereg/PREREG_CONC_CAP_HIGHN.md len Kaggle.
 
   par1 : profile x1_gs_t170 NGUYEN BAN (cap OFF)              => cong parity P1 (efb793e2)
   t100 : x1_c3_full                              + CONC_CAP  => doi chieu OFF hn-t100 (dc16e4da)

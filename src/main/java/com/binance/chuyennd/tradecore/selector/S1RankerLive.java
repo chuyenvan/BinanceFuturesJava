@@ -22,7 +22,7 @@ import java.util.*;
  *
  * <p>Duong di: chuoi close 1h dung tu {@code kline_1m_opt} tren Aerospike-242 (quy uoc VISION:
  * {@code close(t)} = {@code priceClose} cua nen 1m {@code open_time = t - 1m}, da do khop
- * {@code featv2/feat_v2_x1.parquet} — xem {@code docs/L2_PORT_C3.md} cong 1) -> 9 feature qua
+ * {@code featv2/feat_v2_x1.parquet} — xem {@code docs/experiment/L2_PORT_C3.md} cong 1) -> 9 feature qua
  * {@link S1FeatureLive} (2 feature OI lay tu {@link LiveOiFeatProvider}) -> ONNX -> score.
  * <b>score THAP = TOT</b> (cung quy uoc {@code pred_s1a2x1.parquet}: {@code score = -predict}).
  *

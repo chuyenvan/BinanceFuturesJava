@@ -1,6 +1,6 @@
 """Bo chi tiet theo QUY cho selector ladder: equity tu sim.out + trade stats tu printDone.csv.
 Usage: python3 qret_ladder.py [TAG ...]   (mac dinh: 10 tag cua ladder)
-Sinh ra bang trong docs/SELECTOR_LADDER_Q.md."""
+Sinh ra bang trong docs/analysis/SELECTOR_LADDER_Q.md."""
 import re
 import sys
 import logging

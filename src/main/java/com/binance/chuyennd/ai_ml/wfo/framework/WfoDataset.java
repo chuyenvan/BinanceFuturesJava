@@ -83,7 +83,7 @@ public class WfoDataset {
         // TRUOC DAY: fundingPredDir rong -> chi LOG.warn roi doc funding-pred tu Aerospike.
         // Hau qua: dataset duoc build tu MOT bo selector KHAC, backtest ra so KHAC, khong
         // mot dong loi nao. Day la bay im lang nguy hiem nhat cua tang du lieu
-        // (docs/AUDIT_APPLIED.md muc 3.3a). Nay: thieu / tro sai / khong co file -> THROW.
+        // (docs/audit/AUDIT_APPLIED.md muc 3.3a). Nay: thieu / tro sai / khong co file -> THROW.
         if (fundingPredDir.isEmpty())
             throw new IOException("THIEU BINS SELECTOR: WFO_FUNDING_PRED_DIR khong duoc khai bao."
                     + " Khai bao trong profile giao dich, vi du profiles/c2b.properties:"

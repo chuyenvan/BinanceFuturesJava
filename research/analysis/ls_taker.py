@@ -2,7 +2,7 @@
 """LS_TAKER — do H1 (ls_global factor cross-section + regime) / H2 (ls_toptrader & phan ky
 smart-vs-retail) / H3 (taker_buy overlay MOM15) — 3 cot CHUA TUNG dung cua oi_percoin_full.bin.
 
-Pre-reg: docs/PREREG_LS_TAKER.md (commit 51cfe29, chot TRUOC khi do; KHONG sua thiet ke).
+Pre-reg: docs/prereg/PREREG_LS_TAKER.md (commit 51cfe29, chot TRUOC khi do; KHONG sua thiet ke).
 Harness: CI block-72h bootstrap 2000 rep seed 20260905 x1.21; null block sign-flip 72h; MDE p80
 nua-do-rong; N_eff = N/(1+(n_bar-1)*ICC72h) — ham CHEP NGUYEN tu research/analysis/oi_study.py
 (vong nay phai SO SANH DUOC voi RESULT_OI_STUDY).

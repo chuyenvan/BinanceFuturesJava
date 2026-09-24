@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """LIQ_DECILE_T170 — VIEC (2): decile THANH KHOAN / BIEN DONG cua tung leg T170 (causal tai entry).
 
-Pre-reg: docs/PREREG_COST_LIQUIDITY.md (commit cd5e758, chot TRUOC khi do; KHONG sua thiet ke).
+Pre-reg: docs/prereg/PREREG_COST_LIQUIDITY.md (commit cd5e758, chot TRUOC khi do; KHONG sua thiet ke).
 
 Nguon:
   * leg:  /home/ubuntu/java/devrun/X1_GS_T170_2021/storage/printDone.csv (md5 efb793e2468ca3a7318da0f0ad23d4fc)
@@ -291,7 +291,7 @@ def corr_section(dl):
 
 def main():
     say("=== LIQ_DECILE_T170 — VIEC (2) ===")
-    say("Pre-reg docs/PREREG_COST_LIQUIDITY.md, commit cd5e758. Thuan Python.")
+    say("Pre-reg docs/prereg/PREREG_COST_LIQUIDITY.md, commit cd5e758. Thuan Python.")
     df = load_legs()
     say("[G5] khoang ngay GMT+7: %s .. %s" % (df["start"].min(), df["start"].max()))
     bad2026 = df["start"] >= "20260101"

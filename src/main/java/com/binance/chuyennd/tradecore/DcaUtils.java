@@ -52,7 +52,7 @@ public final class DcaUtils {
         if (total <= 0f) return 0f;
         // [B2 2026-09-05] TradeUtils.managerBudget DA chia /dcaGridTotalWeight() mot lan roi
         //   (comment o do: "chua cho du ladder DCA"). Chia THEM o day => margin ~ w[i]/total^2:
-        //   voi luoi 1,1,3,8 he so danh la 169 chu khong phai 13 (docs/T2B_FULLFLOW.md muc 1).
+        //   voi luoi 1,1,3,8 he so danh la 169 chu khong phai 13 (docs/experiment/T2B_FULLFLOW.md muc 1).
         //   Voi 1,0,0,0 thi total=1 nen bug VO HINH — do la ly do C2b khong bao gio thay.
         // CHON BO LAN CHIA O DAY, GIU LAN CHIA TRONG managerBudget. Ly do (khong phai tuy chon):
         //   duong LIVE DetectEntrySignal2TradeNormal:556 goi managerBudget nhung KHONG BAO GIO

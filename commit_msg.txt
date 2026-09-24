@@ -5,7 +5,7 @@
   cost_roundtrip, SL khoa tai arm, che do ratchet.
 - SHA-256 CONFIG_HASH de moi run tai lap duoc. C2b = 42d651b45acd0e5e.
 - Khong doi hanh vi trading (chi doc + in).
-- Kem docs/TRADING_CONFIG_REDESIGN.md: chan doan (118 field / 85 mutable / 64 getenv ngoai Configs /
+- Kem docs/ops/TRADING_CONFIG_REDESIGN.md: chan doan (118 field / 85 mutable / 64 getenv ngoai Configs /
   18 key properties chet / 2 moi gia), thiet ke TradingProfile mot nguon su that, lo trinh 5 buoc co parity gate.
 
 Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>

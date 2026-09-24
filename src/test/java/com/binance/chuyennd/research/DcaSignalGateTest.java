@@ -15,7 +15,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 /**
- * DCA-SIGNAL (docs/PREREG_DCA_SIGNAL_GATE.md) — hai manh ghep de vo neu code sai:
+ * DCA-SIGNAL (docs/prereg/PREREG_DCA_SIGNAL_GATE.md) — hai manh ghep de vo neu code sai:
  *
  * <ol>
  *   <li><b>Cong parity.</b> Khi {@code DCA_SIGNAL_GATE=false} thi {@code gridLegCount(legs)} PHAI
@@ -115,7 +115,7 @@ public class DcaSignalGateTest {
         assertTrue(DcaUtils.shouldDcaGrid(100f, 45f, 1));
     }
 
-    /** (V2-6) COOLDOWN do tu leg-1 KHOP, khong do tu luc cham nguong — docs/PREREG_DCA_SIGNAL_GATE_V2.md muc 2.
+    /** (V2-6) COOLDOWN do tu leg-1 KHOP, khong do tu luc cham nguong — docs/prereg/PREREG_DCA_SIGNAL_GATE_V2.md muc 2.
      *  Kiem dung bieu thuc ma dcaSignalEligible dung, voi ba cap (X, cooldown) da khoa cua V2. */
     @Test
     public void cooldownIsMeasuredFromFirstLegFill() {

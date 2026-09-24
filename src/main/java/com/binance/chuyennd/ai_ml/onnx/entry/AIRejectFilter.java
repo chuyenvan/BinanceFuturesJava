@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <p>2026-09-03: filter chi con MOT cong duy nhat = MOM15 (nguong dong theo score selector).
  * Nhanh RISK/DD4H bo 2026-08-08; cac co FILTER_MODE / gate-market-off / gate-rolling xoa 2026-09-03.
  *
- * <p><b>L7 (2026-09-11, docs/L7_LEAN_GATE.md)</b>: cong thuc nguong da chuyen han sang
+ * <p><b>L7 (2026-09-11, docs/experiment/L7_LEAN_GATE.md)</b>: cong thuc nguong da chuyen han sang
  * {@link EntryGate} — MOT bieu thuc cho ca sim va live. Lop nay chi con lam vo boc:
  * doi bool cua {@link EntryGate#pass} thanh {@link FilterResult} + dem counter cho ablation.
  * Ba thu da XOA o ban nay:
@@ -21,7 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  *   <li>{@code checkSignal} — nhanh "gate phang" rieng; nay la truong hop {@code symbolPred == null}
  *       cua cung mot ham, khong con duong code rieng de troi;</li>
  *   <li>nhanh EARLY-HARD-GATE ({@code p15 < thrBase && symbolPred > RATE_MAX} => REJECT) —
- *       CHUNG MINH GIAI TICH la THUA (docs/LEAN_GATE_AUDIT.md muc 3.4): no chi fire khi
+ *       CHUNG MINH GIAI TICH la THUA (docs/audit/LEAN_GATE_AUDIT.md muc 3.4): no chi fire khi
  *       {@code symbolPred > 0.15}, luc do {@code thr = base*max(0.26787, sp/0.15*1.2876)
  *       > 1.2876*base > base > p15} nen {@code evaluate} cung tra REJECT. Dung voi MOI input,
  *       khong can du lieu. Bo no chi doi chuoi {@code reason} trong log va bo counter

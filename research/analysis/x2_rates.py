@@ -1,4 +1,4 @@
-"""X2 — cham diem 6 arm (2 truc exit) tren cua so 48 thang. Xem docs/PREREG_X2.md muc 5-7.
+"""X2 — cham diem 6 arm (2 truc exit) tren cua so 48 thang. Xem docs/prereg/PREREG_X2.md muc 5-7.
 
 Dung lai may bootstrap khoi-72h x1.21 cua research/analysis/c3_rates.py.
 Them so voi x1_rates.py:

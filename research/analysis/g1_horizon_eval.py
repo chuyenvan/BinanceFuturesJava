@@ -1,6 +1,6 @@
 """G1_HORIZON — cham diem giai doan 1: G72 vs G4_repro tren OOS DEV.
 
-Theo docs/PREREG_G1.md muc 4-6. CHI DEV. Khong sim, khong VAL, khong GPU.
+Theo docs/prereg/PREREG_G1.md muc 4-6. CHI DEV. Khong sim, khong VAL, khong GPU.
 usage: python3 g1_horizon_eval.py <dirA> <dirB>   (A = G4_repro, B = G72)
 Moi dir phai co pred_pool.npy thang hang voi pool_dev.parquet.
 """

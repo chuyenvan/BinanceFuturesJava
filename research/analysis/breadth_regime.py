@@ -1,4 +1,4 @@
-"""BREADTH_REGIME (TASK B2 Buoc 5.2, de xuat Uni, docs/PREREG_BREADTH_REGIME_DIAG.md) - do
+"""BREADTH_REGIME (TASK B2 Buoc 5.2, de xuat Uni, docs/prereg/PREREG_BREADTH_REGIME_DIAG.md) - do
 market-breadth (% coin top-50 tren MA200 cua CHINH no) lam regime filter thay MA200-BTC/
 SMA-crossover. HOAN TOAN 0-sim: KHONG chay Java, KHONG xgboost, KHONG build, KHONG sua .java.
 
@@ -11,7 +11,7 @@ Nguon du lieu: CHI DOC research/analysis/trend_rank_ic.load_closes() (CLOSES_1H.
 ts<2026-01-01 = HOLDOUT rule, NGUYEN VAN khong sua) + research/analysis/bigdown_struct
 .load_trades_utc/block_boot_mean/phi_for (doc printDone.csv/sim.out cua T100=X1_C3_FULL_2021,
 NGUYEN VAN khong sua 2 file goc do). Universe = symId 1..N theo map_kaggle.csv (PROXY top-N khi
-khong co volume trong CLOSES_1H.bin - xem docs/PREREG_BREADTH_REGIME_DIAG.md SS1). Dung module
+khong co volume trong CLOSES_1H.bin - xem docs/prereg/PREREG_BREADTH_REGIME_DIAG.md SS1). Dung module
 logging, cam print().
 
 Chay: cd /home/ubuntu/src/BinanceFuturesJava && python3 research/analysis/breadth_regime.py

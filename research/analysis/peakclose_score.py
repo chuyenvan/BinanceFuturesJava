@@ -1,4 +1,4 @@
-"""PEAK-CLOSE scorer — cham chan F3 (dinh trailing do bang CLOSE) theo docs/PREREG_PEAK_CLOSE.md.
+"""PEAK-CLOSE scorer — cham chan F3 (dinh trailing do bang CLOSE) theo docs/prereg/PREREG_PEAK_CLOSE.md.
 
 Doc output KAGGLE (/home/ubuntu/kaggle_sim/out/<tag>/). Dung lai may do cua `traillad_score.py`
 (cung don vi LEG / cung block-72h / cung seed) — KHONG viet lai cong thuc.

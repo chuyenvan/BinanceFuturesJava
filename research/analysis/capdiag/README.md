@@ -1,7 +1,7 @@
 # capdiag — chan doan "hap thu cong suat" + "thuoc do cho exit" (2026-09-23)
 
-Thuan Python offline (khong JVM). Pre-reg: `docs/PREREG_CAPACITY_DIAG.md` (commit `aedf535`).
-Ket qua: `docs/RESULT_CAPACITY_DIAG.md`.
+Thuan Python offline (khong JVM). Pre-reg: `docs/prereg/PREREG_CAPACITY_DIAG.md` (commit `aedf535`).
+Ket qua: `docs/result/RESULT_CAPACITY_DIAG.md`.
 
 | file | viec |
 |---|---|

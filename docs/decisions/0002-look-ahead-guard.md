@@ -18,7 +18,7 @@ Backtest dễ vô tình đo lợi nhuận trong điều kiện ăn gian: (a) kh�
 Chọn (2).
 
 **Vị trí THẬT của guard (đã xác minh):** `BacktestIntegrityGuard.assertProductionGrade()` được gọi ở đầu `SimulatorMarketLevelTicker1MStopLoss.simulatorWithInitEntry(...)` tại `src/main/java/com/binance/chuyennd/research/SimulatorMarketLevelTicker1MStopLoss.java:74`.
-> ⚠️ Mọi engine (HPO master, WFO, các BackTestEngine*, chạy `main()` trực tiếp) đều đi qua hàm này, nên đây là choke-point duy nhất. **Roadmap (`docs/ROADMAP.md` Bước 0) ghi guard "cắm trong `BackTestEngineMaster.run`" — KHÔNG khớp code; vị trí đúng là `simulatorWithInitEntry:74`.**
+> ⚠️ Mọi engine (HPO master, WFO, các BackTestEngine*, chạy `main()` trực tiếp) đều đi qua hàm này, nên đây là choke-point duy nhất. **Roadmap (`docs/plan/ROADMAP.md` Bước 0) ghi guard "cắm trong `BackTestEngineMaster.run`" — KHÔNG khớp code; vị trí đúng là `simulatorWithInitEntry:74`.**
 
 **Guard kiểm gì** (`src/main/java/com/binance/chuyennd/ai_ml/hpo/BacktestIntegrityGuard.java:31-58`): ném `IllegalStateException` nếu BẤT KỲ điều sau sai —
 - `!Configs.BLOCK_INTRABAR_LOOKAHEAD` (đang cho look-ahead nội-nến)

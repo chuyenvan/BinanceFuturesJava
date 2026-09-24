@@ -1,4 +1,4 @@
-"""KG0 runner — day 8 chan cua docs/PREREG_GATESCALE_KEEPLEG0.md len Kaggle CPU kernel.
+"""KG0 runner — day 8 chan cua docs/prereg/PREREG_GATESCALE_KEEPLEG0.md len Kaggle CPU kernel.
 
 Nen = PRODUCTION FLATGRID KEEPLEG0 (= prof_x1_gs_t170 + DUNG 2 dong
 DCA_GRID_WEIGHTS=1,1,1,1 / DCA_GRID_SCALE=6.0).
@@ -25,7 +25,7 @@ BUNDLE = "sim-x1-2021-bundle"
 END = "20251231"
 SHA = "2350f47+prereg-gatescale-keepleg0"
 
-# KEEPLEG0 = x1_gs_t170 + DUNG 2 dong (docs/DECISION_SHADOW_FLATGRID_KEEPLEG0.md)
+# KEEPLEG0 = x1_gs_t170 + DUNG 2 dong (docs/decisions/DECISION_SHADOW_FLATGRID_KEEPLEG0.md)
 KEEP = {"DCA_GRID_WEIGHTS": "1,1,1,1", "DCA_GRID_SCALE": 6.0}
 CAP = {"CONC_CAP_PERCOIN_ENABLED": 1, "CONC_CAP_PERCOIN_PCT": 0.15}
 

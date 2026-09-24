@@ -17,11 +17,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Facts hạ tầng (Oracle ce · Kaggle fleet · dataset provenance · gotchas · gate/genome) → `docs/INFRA_FACTS.md`** (ĐỌC TRƯỚC khi chạy experiment — chống re-discover, cắt token)
 - Build Maven / môi trường dev → `docs/rules/build-env.md`
 - Đụng secret / key → `docs/rules/security.md`
-- Chạy Kaggle → `docs/KAGGLE_RULES.md`
+- Chạy Kaggle → `docs/runbooks/KAGGLE_RULES.md`
 - Đọc/ghi/chọn-nơi-chạy theo data → `docs/db/` (242 source · 226 compute · redis)
 - Điều phối / nhận & chạy task nhiều CCD → `docs/rules/task-workflow.md` + `docs/AGENT_WORKFLOW.md` + `docs/AGENTS.md`
 - Bức tranh lớn codebase → `docs/architecture.md`
-- Lộ trình & mô hình → `docs/ROADMAP.md` · `docs/REBUILD_ROADMAP.md` · `docs/FINDINGS.md`
+- Lộ trình & mô hình → `docs/plan/ROADMAP.md` · `docs/REBUILD_ROADMAP.md` · `docs/FINDINGS.md`
 
 > 2 process live: `websocket/BinanceDataIngestor.main()` + `trading/BinanceOrderTradingManager.main()`. ⛔ Deploy/restart = NGƯỜI tay (xem `docs/CORE.md`).
-> Thứ tự ưu tiên công việc kiểm chứng: `docs/ROADMAP.md`.
+> Thứ tự ưu tiên công việc kiểm chứng: `docs/plan/ROADMAP.md`.

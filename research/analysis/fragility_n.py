@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""FRAGILITY-N — do do venh theo n + kiem gia thuyet 1x (docs/PREREG_FRAGILITY_N.md).
+"""FRAGILITY-N — do do venh theo n + kiem gia thuyet 1x (docs/prereg/PREREG_FRAGILITY_N.md).
 
 THUAN PYTHON OFFLINE tren artifact DA CO. KHONG chay sim, KHONG Java.
   VIEC A: leverage = margin/(qty*entry) tren MOI leg; max concurrent margin (quet start/end);

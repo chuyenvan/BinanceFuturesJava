@@ -4,7 +4,7 @@ o luoi 15 PHUT (khong train lai). Theo chi dao: train 15m khong anh huong nhieu,
 predict/trade can luoi 5m cho chuan.
 
 Model: /home/ubuntu/claudedata/predwf_G015/model_f{0..17}_4h.json (18 model goc da
-train+validate luoi 15m, 2026-08-14, xem docs/G3_X26_RECOVERY.md). KHONG train lai.
+train+validate luoi 15m, 2026-08-14, xem docs/experiment/G3_X26_RECOVERY.md). KHONG train lai.
 Feature: /home/ubuntu/ds_feat5m (Tool1 5-phut, T1C2, 22 quy, local Oracle).
 OI: khong phu thuoc grid, dung chung claudedata/oi/*.
 

@@ -3,10 +3,10 @@
 TAI DUNG NGUYEN VAN cac ham cua bigdown_struct.py (icc_for, n_eff, maxdd_decomp, label_trades,
 build_bd_flags, load_trades_utc, hourly_grid) va c3_rates.py (equity, stats) - KHONG sua 2 file
 goc do. u2 (khau vi + CAGR CI theo nam) tinh rieng bang x1_rates.py --appetite current --k <k>
-va cagr_ci_t170.py --k <k> (xem docs/RESULT_DD_THROTTLE.md).
+va cagr_ci_t170.py --k <k> (xem docs/result/RESULT_DD_THROTTLE.md).
 
-GHI CHU QUAN TRONG: theo cong thuc noi suy log-tuyen tinh khoa trong docs/PREREG_DD_THROTTLE.md
-muc 3.2 (tai su dung nguyen ven tu docs/PREREG_REGIME_GATE.md muc 3), voi n_total(DT) do duoc
+GHI CHU QUAN TRONG: theo cong thuc noi suy log-tuyen tinh khoa trong docs/prereg/PREREG_DD_THROTTLE.md
+muc 3.2 (tai su dung nguyen ven tu docs/prereg/PREREG_REGIME_GATE.md muc 3), voi n_total(DT) do duoc
 tu sim thuc te, g0 tinh ra lam tron 2 chu so = 1.00 - TRUNG voi gate-1.0/T100 (SIM_GATE_DYN_SCALE
 mac dinh = 1.00 khong dat). Ly do: DT la co che SIZE-only (khong doi tap lenh duoc admit), nen
 n_total(DT) ~ n_total(gate-1.0) mot cach TU NHIEN (2568 vs 2559, lech 0.35%) - hoan toan khac

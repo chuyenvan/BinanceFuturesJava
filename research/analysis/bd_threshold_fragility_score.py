@@ -1,4 +1,4 @@
-"""BD-THRESHOLD-FRAGILITY (docs/PREREG_BD_THRESHOLD_FRAGILITY.md) — bang duong cong do nhay.
+"""BD-THRESHOLD-FRAGILITY (docs/prereg/PREREG_BD_THRESHOLD_FRAGILITY.md) — bang duong cong do nhay.
 
 DESCRIPTIVE ONLY: khong chon nguong, khong de xuat nguong, khong xep hang winner.
 Moi diem: n leg, n leg BIG_DOWN, PnL BIG_DOWN (USD), 5 rate chat luong TOAN BO leg + CI

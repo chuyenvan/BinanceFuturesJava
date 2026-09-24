@@ -1,5 +1,5 @@
 #!/bin/bash
-# BD-SEL (docs/PREREG_SEL_BIGDOWN.md) — parity + 3 bien the, TUAN TU, 1 slot JVM.
+# BD-SEL (docs/prereg/PREREG_SEL_BIGDOWN.md) — parity + 3 bien the, TUAN TU, 1 slot JVM.
 # KHONG push. DEV 2021-07..2025-12 (wfo_ds_x1_2021). SIM_END_DATE=20251231.
 set -u
 export PATH=/home/ubuntu/tools/apache-maven-3.9.9/bin:$PATH
@@ -21,7 +21,7 @@ echo "disk_free_G=$FREE"
 # tao profile clone cho 3 bien the
 for m in drop mix drop_top8; do
   cp -f $P/x1_gs_t170.properties $P/x1_gs_t170_sel_$m.properties
-  printf '\n# BD-SEL variant (docs/PREREG_SEL_BIGDOWN.md)\nBD_SEL_MODE=%s\nBD_SEL_TOPK=8\n' "$m" >> $P/x1_gs_t170_sel_$m.properties
+  printf '\n# BD-SEL variant (docs/prereg/PREREG_SEL_BIGDOWN.md)\nBD_SEL_MODE=%s\nBD_SEL_TOPK=8\n' "$m" >> $P/x1_gs_t170_sel_$m.properties
 done
 
 runx() { TAG=$1; PROF=$2; D=$B/$TAG

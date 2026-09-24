@@ -20,7 +20,7 @@ import static org.junit.Assert.assertTrue;
  * </ul>
  * Test nay chot phan CO THE chot bang code. Phan KHONG chot duoc bang test la **hieu chuan**:
  * phan phoi cua map net015 tren live khac phan phoi score bins tren sim, nen cung mot ban le
- * co the phan loai khac nhau tren du lieu that — do la muc 2 cua docs/L8_SIZING_PARITY_BACKLOG.md,
+ * co the phan loai khac nhau tren du lieu that — do la muc 2 cua docs/experiment/L8_SIZING_PARITY_BACKLOG.md,
  * KHONG phai loi nhanh code.
  */
 public class TrailHingeTest {

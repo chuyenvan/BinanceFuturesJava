@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """EXEC_MAKER_T170 — execution realism: maker (post-only) vs taker tren 1089 lenh T170.
 
-Pre-reg: docs/PREREG_EXECUTION_MAKER.md (commit e2eb646, chot TRUOC khi chay).
+Pre-reg: docs/prereg/PREREG_EXECUTION_MAKER.md (commit e2eb646, chot TRUOC khi chay).
 
 Thuan Python. KHONG Java, KHONG claude-run, KHONG push, KHONG cham 2026, KHONG sua tham so.
 
@@ -208,7 +208,7 @@ def boot_ci(vals, days, rng, nrep=2000):
 
 def main():
     say("=== EXEC_MAKER_T170 — execution realism maker vs taker (1089 lenh T170) ===")
-    say("Pre-reg docs/PREREG_EXECUTION_MAKER.md (commit e2eb646). Thuan Python.")
+    say("Pre-reg docs/prereg/PREREG_EXECUTION_MAKER.md (commit e2eb646). Thuan Python.")
     df, t7 = load()
     univ = universe_proxy(df)
     days = df["day"].values

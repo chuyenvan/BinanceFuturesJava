@@ -7,7 +7,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
 /**
- * [PEAK-CLOSE 2026-09-23] docs/PREREG_PEAK_CLOSE.md — flag `TS_PEAK_MODE` va helper
+ * [PEAK-CLOSE 2026-09-23] docs/prereg/PREREG_PEAK_CLOSE.md — flag `TS_PEAK_MODE` va helper
  * {@link TradeUtils#peakPrice(KlineObjectSimple)}.
  *
  * <p>Test nay canh cong hoi quy QUAN TRONG NHAT: khi KHONG khai bao `TS_PEAK_MODE` (moi profile khac,

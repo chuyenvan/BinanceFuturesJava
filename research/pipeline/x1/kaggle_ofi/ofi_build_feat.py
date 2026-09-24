@@ -1,6 +1,6 @@
 # OFI Stage B -- build hourly OFI_1h / aggressive_buy_ratio_1h features from Binance
 # Vision monthly aggTrades bulk CSV, for the 15-symbol scope chosen in
-# docs/PREREG_S1_FREE_OFI.md (Stage A feasibility). Streaming-through: download one
+# docs/prereg/PREREG_S1_FREE_OFI.md (Stage A feasibility). Streaming-through: download one
 # monthly zip, unzip, duckdb-aggregate to (ts_h, sym) buy/sell volume, delete raw file,
 # checkpoint after every symbol. Self-contained Kaggle CPU kernel, enable_internet=true.
 import json

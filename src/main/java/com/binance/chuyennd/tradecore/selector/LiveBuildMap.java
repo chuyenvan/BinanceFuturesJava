@@ -16,7 +16,7 @@ import java.util.Map;
  * <i>coin nao nhan gia tri nao</i> theo thu hang cua S1. Shadow truoc L4 dung thang
  * {@code pNoPump} cua {@code Funding_Classifier_Final.onnx} lam {@code symbolPred} — do la
  * model ho {@code maxFav}, hieu chuan lech 2 lan ({@code p_mean} 0.2268 vs 0.4642) va
- * {@code docs/G4_RECIPE_C4.md} muc 6.2 do duoc no lam admission x5.05 o tang gate.
+ * {@code docs/experiment/G4_RECIPE_C4.md} muc 6.2 do duoc no lam admission x5.05 o tang gate.
  *
  * <h2>QUY UOC (rut TRUC TIEP tu build_map.py, khong dien giai)</h2>
  * <pre>

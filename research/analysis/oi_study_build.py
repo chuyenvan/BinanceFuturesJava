@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """OI_STUDY BUILD — dung 5 ma tran (5m step x symbol) tu nguon CAUSAL.
 
-Pre-reg: docs/PREREG_OI_STUDY.md (commit 7c5f025, chot TRUOC khi do).
+Pre-reg: docs/prereg/PREREG_OI_STUDY.md (commit 7c5f025, chot TRUOC khi do).
 
 Nguon:
   OI    /home/ubuntu/claudedata/oi/oi_percoin_full.bin  (140.924.110 x 30B; >i8 ts, >i2 sym, 5x>f4)

@@ -21,7 +21,7 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 
 /**
- * [VOL_TARGET 2026-09-20] docs/PREREG_VOL_TARGET.md - TASK 5: size lenh theo BIEN DONG THUC TE
+ * [VOL_TARGET 2026-09-20] docs/prereg/PREREG_VOL_TARGET.md - TASK 5: size lenh theo BIEN DONG THUC TE
  * (risk parity), KHONG doi lenh nao duoc chon vao/ra (chi doi KICH THUOC). Day la cai tien QUAN TRI
  * RUI RO, KHONG phai thu nghiem tim alpha - ky vong NULL o cac rate chat luong chuan.
  *
@@ -55,7 +55,7 @@ public final class VolTargetSizing {
     public static final boolean COIN_MODE = "COIN".equals(MODE);
     public static final boolean PORTFOLIO_MODE = "PORTFOLIO".equals(MODE);
 
-    // --- HANG SO PRE-REG (chot 2026-09-20 TRUOC khi chay variant, xem docs/PREREG_VOL_TARGET.md
+    // --- HANG SO PRE-REG (chot 2026-09-20 TRUOC khi chay variant, xem docs/prereg/PREREG_VOL_TARGET.md
     //     muc 2 - KHONG duoc doi sau khi thay ket qua) ---
     /** Trung vi vol_7d (do lech chuan return 1h, cua so 168h min_periods=84) toan bo universe
      *  CLOSES_1H.bin 2021-01-01..2026-01-01 (627 coin, 10,283,808 o hop le, tinh 2026-09-20). */

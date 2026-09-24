@@ -1,4 +1,4 @@
-"""TREND_REGIME (TASK B2 Buoc 5, Buoc 1, docs/PREREG_TREND_REGIME_DIAG.md) - do detector
+"""TREND_REGIME (TASK B2 Buoc 5, Buoc 1, docs/prereg/PREREG_TREND_REGIME_DIAG.md) - do detector
 production TrendDetector.isBtc/EthTrendBuyProduction (SMA7/100, khung 1D+4H, OR; lay lai NGUYEN
 VAN tu commit 157cf4d, da xoa o HEAD) lam regime filter thay MA200-trailing. HOAN TOAN 0-sim:
 KHONG chay Java, KHONG xgboost, KHONG build, KHONG sua .java.

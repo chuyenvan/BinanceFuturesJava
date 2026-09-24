@@ -8,7 +8,7 @@ B/ NEGATIVE CONTROL (placebo "day-permute": giu symbol + giu chinh xac phut-tron
    symbol" -> pool.npz
 C/ MDE: chay tren chuoi placebo (script stats).
 
-Pre-reg: docs/PREREG_HARNESS_CONTROL.md (commit 9611823) — commit TRUOC khi chay; khong sua thiet ke.
+Pre-reg: docs/prereg/PREREG_HARNESS_CONTROL.md (commit 9611823) — commit TRUOC khi chay; khong sua thiet ke.
 Thuan Python, 0-sim, khong Java, khong push, khong cham 2026.
 Nguon: raw/<sym>.f32 = Aerospike set kline_1m_opt da extract causal (cung nguon BD/MOM15);
 funding = Aerospike funding_data (chi DOC).

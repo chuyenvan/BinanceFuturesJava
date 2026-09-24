@@ -1,7 +1,7 @@
 #!/bin/bash
 # MTM so giay C3 tren 242 — READ-ONLY. Chay TREN 242 (bash+awk+curl, 242 khong co python):
 #   ssh.exe -p 2222 ... root@103.157.218.242 "tr -d '\r' | bash -s" < tools/shadow_mtm_242.sh
-# In 1 dong tom tat + 3 lenh te nhat. Job SHADOW-HEALTH (docs/QUEUE.md) dan dong nay vao docs/SHADOW_LOG.md.
+# In 1 dong tom tat + 3 lenh te nhat. Job SHADOW-HEALTH (docs/plan/QUEUE.md) dan dong nay vao docs/analysis/SHADOW_LOG.md.
 # realized = dong '#realized' trong open_positions.csv; unrealized = (px_now - entry)*qty theo fapi ticker. Khong tinh phi/funding.
 D=/home/chuyennd/java/shadow_c3; EQ=35000; T=/tmp/shadow_mtm.$$
 REAL=$(grep -a '^#realized' $D/open_positions.csv | cut -d, -f2)

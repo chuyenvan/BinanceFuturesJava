@@ -5,7 +5,7 @@ chung. Tool nay dua log shadow ve dung cac cot ma `printDone.csv` cua sim co, de
 tung lenh theo (symbol, ts_entry).
 
 CANH BAO PHAM VI (doc truoc khi tin so):
-  * Shadow KHONG co equity that (`docs/L1_SHADOW_C3.md` muc 3e) => cot `profit` o day la
+  * Shadow KHONG co equity that (`docs/experiment/L1_SHADOW_C3.md` muc 3e) => cot `profit` o day la
     ke toan giay tinh tu gia, KHONG phai PnL tai khoan. Khong duoc so `mean(margin)`/equity
     voi sim.
   * Duong live KHONG co time-stop 168h => nhom lenh ma sim dong bang `STOP_LOSS_DONE`
@@ -150,7 +150,7 @@ def parse(log_path, out_path):
              n_line, len(orders), n_open, n_nopred, out_path)
     if not orders:
         LOG.warning("KHONG co dong would-BUY nao. Kiem: SHADOW_NO_PUSH=true? budget > 0?"
-                    " (xem docs/L1_SHADOW_C3.md muc 1.1 - shadow 242 dang bi chan budget)")
+                    " (xem docs/experiment/L1_SHADOW_C3.md muc 1.1 - shadow 242 dang bi chan budget)")
     return 0
 
 
@@ -158,7 +158,7 @@ def pair(shadow_csv, sim_csv, out_path):
     """Ghep cap (sym, ts_entry) giua ledger shadow va printDone.csv cua sim.
 
     KHONG tinh ty le chat luong o day — chi ghep cap va bao do phu. Cham diem lam rieng,
-    va PHAI tach STRONG/WEAK (docs/L1_SHADOW_C3.md muc 7.2).
+    va PHAI tach STRONG/WEAK (docs/experiment/L1_SHADOW_C3.md muc 7.2).
     """
     sh = {}
     with open(shadow_csv) as fh:
@@ -195,7 +195,7 @@ def pair(shadow_csv, sim_csv, out_path):
              len(sh), len(sim), both,
              100.0 * both / max(len(sh), 1), 100.0 * both / max(len(sim), 1))
     LOG.info("Do phu thap la DU KIEN: K=5 vs K=8, selector khac he"
-             " (docs/L1_SHADOW_C3.md muc 2.2). Khong doc nhu loi.")
+             " (docs/experiment/L1_SHADOW_C3.md muc 2.2). Khong doc nhu loi.")
     return 0
 
 

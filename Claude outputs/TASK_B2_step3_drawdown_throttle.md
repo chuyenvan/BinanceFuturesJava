@@ -36,7 +36,7 @@ Baseline (không tính k): **T170**, **gate-1.0**.
 ## 5. ĐO — metric tổng hợp/phân phối (KHÔNG khoá sym,start). Cùng cửa sổ 2021-07-01..2025-12-31, Oracle ARM64. Báo per-year.
 
 ## 6. QUY TRÌNH
-PREREG `docs/PREREG_DD_THROTTLE.md` (cơ chế §2 + D/floor + biến thể + u1-u4 + dự báo §1 + phán quyết) commit TRƯỚC → code (throttle vào điểm cắm sizing, OFF byte-identical) → cổng OFF T170 md5 → dừng shadow-c3 → sim tuần tự (T170 verify, DT, R0 nếu cần chỉnh) → bật shadow-c3 verify → tính u1-u4 (`bigdown_struct.py`+`x1_rates.py`) → `docs/RESULT_DD_THROTTLE.md` verdict → commit branch `module` (KHÔNG push) → dọn wfo_ds tạm, giữ printDone/sim.out.
+PREREG `docs/prereg/PREREG_DD_THROTTLE.md` (cơ chế §2 + D/floor + biến thể + u1-u4 + dự báo §1 + phán quyết) commit TRƯỚC → code (throttle vào điểm cắm sizing, OFF byte-identical) → cổng OFF T170 md5 → dừng shadow-c3 → sim tuần tự (T170 verify, DT, R0 nếu cần chỉnh) → bật shadow-c3 verify → tính u1-u4 (`bigdown_struct.py`+`x1_rates.py`) → `docs/result/RESULT_DD_THROTTLE.md` verdict → commit branch `module` (KHÔNG push) → dọn wfo_ds tạm, giữ printDone/sim.out.
 OFF không byte-identical → DỪNG, báo MASTER.
 
 ## 7. Ý NGHĨA (điểm quyết định lớn)

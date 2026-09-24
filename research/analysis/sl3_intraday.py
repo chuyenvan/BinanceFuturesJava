@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """SL3 intraday MTM — maxDD/UW tren chuoi equity MOC PHUT cho 5 chan cua
-docs/PREREG_SL_7_TO_3.md.
+docs/prereg/PREREG_SL_7_TO_3.md.
 
 Tai dung NGUYEN logic da nghiem thu cua research/analysis/intraday_dd.py
-(docs/RESULT_INTRADAY_DD.md): equity_mtm(m) = 35,000 + realized(m) + unP(m), mark = priceClose 1m,
+(docs/result/RESULT_INTRADAY_DD.md): equity_mtm(m) = 35,000 + realized(m) + unP(m), mark = priceClose 1m,
 cong nghiem thu V1/V2/V3/V5 chay truoc khi bao cao. Chi doi RUNS + cache dir.
 
 Usage: python3 research/analysis/sl3_intraday.py

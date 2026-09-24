@@ -1,6 +1,6 @@
 """F4 - Tang TIMING co phai noi chua alpha? Do OFFLINE thuan (khong Java, khong VAL, khong GPU).
 
-Pre-reg: docs/PREREG_F4.md (commit 1fa042d). Khong sua tieu chi sau khi thay so.
+Pre-reg: docs/prereg/PREREG_F4.md (commit 1fa042d). Khong sua tieu chi sau khi thay so.
 
 Don vi quan sat = tick 15m tren LUOI LICH DAY DU cua DEV 2022-01-01..2024-06-30 (87,552 tick),
 KHONG phai cand_dev.parquet (chi co 4,639 tick p15>=0.008). Luoi mo rong dung lai tu dung
@@ -354,7 +354,7 @@ def wfo_model(T):
 
 
 def main():
-    L.info("F4 TIMING - pre-reg docs/PREREG_F4.md commit 1fa042d")
+    L.info("F4 TIMING - pre-reg docs/prereg/PREREG_F4.md commit 1fa042d")
     gate_cfg.describe()
     T = get_panel(force="--rebuild" in sys.argv)
     L.info("=== 0. LUOI TICK ===")

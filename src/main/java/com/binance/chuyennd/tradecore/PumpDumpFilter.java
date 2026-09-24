@@ -12,7 +12,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 
 /**
- * [D3D4-FILTER 2026-09-17] docs/PREREG_D3D4_FILTER_SIM.md — filter "pump xong chuan bi dump" ap cho
+ * [D3D4-FILTER 2026-09-17] docs/prereg/PREREG_D3D4_FILTER_SIM.md — filter "pump xong chuan bi dump" ap cho
  * LENH MOI (selector Best-N + BIG_DOWN), KHONG ap DCA.
  *
  * <p>Hai detector POST-HOC (da nhin DEV truoc): D3 {@code oi_px_div = oiDelta24h - ret_24h}, D4

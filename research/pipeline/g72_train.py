@@ -1,6 +1,6 @@
 """G72 TRAIN — ban SAO NGUYEN VAN cua research/analysis/g015_rebuild.py, chi THEM tham so
 hoa NHAN qua env. Mac dinh (G72_LABEL_H=4, G72_WIN=0.06) = hanh vi cu, phai tai lap
-predwf_G015_v2 byte-identical (cong REPRO cua docs/PREREG_G1.md muc 2).
+predwf_G015_v2 byte-identical (cong REPRO cua docs/prereg/PREREG_G1.md muc 2).
 Bien the G72: G72_LABEL_H=72 G72_WIN=0.07. CHI DEV. CPU. KHONG ghi de bins cu.
 Env: OUT_DIR (bat buoc), G015_NJOBS (mac dinh 4), G72_LABEL_H, G72_WIN.
 """

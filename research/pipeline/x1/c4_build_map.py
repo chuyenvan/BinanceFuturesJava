@@ -1,7 +1,7 @@
 # X1 — ban SAO cua build_map.py, CHI them tham so hoa qua env (mac dinh = hanh vi cu).
-# Sinh boi research/pipeline/x1/make_x1.sh. Xem docs/PREREG_X1.md muc 2.
+# Sinh boi research/pipeline/x1/make_x1.sh. Xem docs/prereg/PREREG_X1.md muc 2.
 # C4 — ban SAO x1_build_map.py, CHI them env G015_BINS_DIR (mac dinh = predwf_G015x26 = hanh vi cu).
-# Xem docs/PREREG_C4.md muc 1.
+# Xem docs/prereg/PREREG_C4.md muc 1.
 """Quantile-map: giu NGUYEN phan phoi P(win) cua G015 trong tung tick (gate dong y het), chi doi coin nao nhan gia tri nao theo thu hang cua ranker moi.
 usage: build_map.py <name> <out_dir>   name in {vol7d, s1a, s1b}. Tick khong co score moi -> giu G015 nguyen (ghi ti le)."""
 

@@ -13,7 +13,7 @@
    dùng pred/score trong sim (AIRejectFilter + nơi đọc predReturn15M/predRisk4H + funding selector threshold/direction,
    kèm manifest các dataset) và GHI MỤC "ĐỊNH NGHĨA PRE-REGISTERED" đầu report: công thức outcome, chiều kỳ vọng
    (score cao = gì), horizon, nguồn giá. Ghi xong mới code. Số không khớp định nghĩa đã ghi → sửa số liệu là gian lận, chỉ được sửa nếu phát hiện định nghĩa sai và GHI RÕ lý do đổi.
-3. Kaggle kernel: theo rule docs/KAGGLE_RULES.md §3b-bis (glob recursive /kaggle/input, .gz→.bin auto-unzip, copy
+3. Kaggle kernel: theo rule docs/runbooks/KAGGLE_RULES.md §3b-bis (glob recursive /kaggle/input, .gz→.bin auto-unzip, copy
    config.properties vào CWD nếu chạy java — task này thuần python thì không cần, dataset_sources: wfo-dataset-wf-leakfree
    + hpo-ticker-daily + java-run-lc nếu cần mapper).
 4. Số nào cũng kèm lệnh/cell tái lập. Validate-small trước (1 quý) rồi mới full.

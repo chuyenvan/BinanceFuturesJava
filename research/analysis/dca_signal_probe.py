@@ -1,4 +1,4 @@
-"""DCA-SIGNAL — tra loi truc dien 3 cau hoi cua user (docs/PREREG_DCA_SIGNAL_GATE.md muc 8).
+"""DCA-SIGNAL — tra loi truc dien 3 cau hoi cua user (docs/prereg/PREREG_DCA_SIGNAL_GATE.md muc 8).
 
   (i)   so LEG va so CUM (vi the) thay doi bao nhieu % so voi baseline?
   (ii)  ti le lo RAW muc LEG (moi leg tinh rieng) co TANG khong?

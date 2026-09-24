@@ -1,4 +1,4 @@
-"""GATE-SCALE SWEEP runner — day 4 chan MOI cua docs/PREREG_GATESCALE_SWEEP.md len Kaggle.
+"""GATE-SCALE SWEEP runner — day 4 chan MOI cua docs/prereg/PREREG_GATESCALE_SWEEP.md len Kaggle.
 
 Thang chot {1.70, 1.55, 1.40, 1.25, 1.10, 1.00}:
   1.70 = kaggle_sim/out/t170-x1-2021   -> TAI SU DUNG (md5 efb793e2468ca3a7318da0f0ad23d4fc)
@@ -23,7 +23,7 @@ BUNDLE = "sim-x1-2021-bundle"
 END = "20251231"
 SHA = "dc5aecc+prereg-gatescale-sweep"
 
-# [!] BUNDLE LA MOT SNAPSHOT (docs/KAGGLE_SIM.md §0.4): sim-x1-2021-bundle chi chua 3 profile
+# [!] BUNDLE LA MOT SNAPSHOT (docs/runbooks/KAGGLE_SIM.md §0.4): sim-x1-2021-bundle chi chua 3 profile
 #   (`prof_x1_c3_full`, `prof_x1_gs_t170`, `prof_x1_c3_full_regime_brc`) — KHONG chua 4 profile
 #   MOI `x1_gs_t155/140/125/110` (them sau khi bundle duoc tao 2026-09-21). Push kernel voi
 #   profile do => kernel exit "MISSING /kaggle/input/**/prof_x1_gs_t155.properties" (da gap

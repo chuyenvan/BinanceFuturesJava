@@ -1,8 +1,8 @@
-"""SELCUT — cham diem bien the cat/gioi han leg SELECTOR (docs/PREREG_SELECTOR_LEG_CUT.md).
+"""SELCUT — cham diem bien the cat/gioi han leg SELECTOR (docs/prereg/PREREG_SELECTOR_LEG_CUT.md).
 
 Doc lap voi bd_sel_score.py (file do doc CHET tu /home/ubuntu/java/devrun va dung C.CI_INFLATE
 da bi go). File nay doc output KAGGLE (/home/ubuntu/kaggle_sim/out/<tag>/) va dung inflate(k)
-theo docs/AUDIT_CI_INFLATE_STANDARDIZATION.md.
+theo docs/audit/AUDIT_CI_INFLATE_STANDARDIZATION.md.
 
 Bao cao:
   (a) 5 rate chat luong toan bo leg + n, moi bien the vs PARITY, CI block-72h 2000 rep seed 20260905

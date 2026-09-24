@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """CROWDED_LONG — do luat RUI RO/SIZE "crowded-long => giam size" bang QUANTILE TRUOT.
 
-Thuc thi DUNG docs/PREREG_CROWDED_LONG.md (commit 0acf68c, chot TRUOC khi do; KHONG sua thiet ke).
+Thuc thi DUNG docs/prereg/PREREG_CROWDED_LONG.md (commit 0acf68c, chot TRUOC khi do; KHONG sua thiet ke).
 
 Cau hoi: KHONG phai alpha. La RUI RO/SIZE: giam size khi crowded-long co lam GIAM DUOI
 (intraday maxDD / worst-window drop cua sach) > CHI PHI (loi nhuan bo lo) khong?

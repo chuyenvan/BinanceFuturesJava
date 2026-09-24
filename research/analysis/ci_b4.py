@@ -1,9 +1,9 @@
 """B4 — CI cua HIEU CAGR giua 3 bien the rolling-percentile gate va C2b.
 
-Phuong phap chot TRUOC o docs/PREREG_B4.md (commit a0c7ad6), muc 3/4/5:
+Phuong phap chot TRUOC o docs/prereg/PREREG_B4.md (commit a0c7ad6), muc 3/4/5:
   - equity = b+unP (mark-to-market), y het qret.py
   - block-bootstrap GHEP CAP, moving-block circular, block chinh 21 ngay (kiem 10 va 42),
-    2000 rep, seed 20260903  (docs/PREREG_CI.md 2.1-2.4)
+    2000 rep, seed 20260903  (docs/prereg/PREREG_CI.md 2.1-2.4)
   - TIEU CHI CHINH: d = CAGR(RG) - CAGR(C2b) DAT khi d > 1.48*sd_boot, 1.48 = sqrt(2 ln 3)
   - RANG BUOC CUNG: maxDD >= -15.12%, tang equity, KHONG bootstrap (PREREG_CI 2.5)
   - TIEU CHI PHU: cat theo ngay, bear 2022-01-01..2022-12-31 vs hoi phuc 2023-01-01..2023-12-31

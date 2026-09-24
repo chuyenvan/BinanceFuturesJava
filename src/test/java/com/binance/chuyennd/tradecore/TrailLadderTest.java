@@ -6,7 +6,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 /**
- * TRAIL-LADDER — bang gap BAC THANG (docs/PREREG_TRAIL_LADDER.md muc 3).
+ * TRAIL-LADDER — bang gap BAC THANG (docs/prereg/PREREG_TRAIL_LADDER.md muc 3).
  *
  * <p>Test nay chot bang so DUNG NHU PRE-REG (L1/L2/L3) + BAT BIEN "SL luon tren entry"
  * ({@code rate > 0} voi moi dinh) + duong FALLBACK ve cong thuc cu khi dinh duoi bac thap nhat

@@ -1,6 +1,6 @@
 """G5 — doi pool_<tag>.parquet (ts,sym,p) thanh ledger/pred_g5_<tag>.parquet (ts,sym,score).
 score = -p  (quy uoc c4_build_map.py: score THAP = TOT; p CAO = TOT).
-Chi giu dong nam trong 16 fold DEV. Xem docs/PREREG_G5.md muc 5."""
+Chi giu dong nam trong 16 fold DEV. Xem docs/prereg/PREREG_G5.md muc 5."""
 import logging, os, sys
 import pandas as pd
 logging.basicConfig(level=logging.INFO, format="%(message)s", stream=sys.stdout)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """LS_TAKER BUILD — dung panel GIO (1h) cho 3 cot CHUA TUNG dung: ls_global, ls_toptrader, taker_buy.
 
-Pre-reg: docs/PREREG_LS_TAKER.md (chot TRUOC khi do).
+Pre-reg: docs/prereg/PREREG_LS_TAKER.md (chot TRUOC khi do).
 
 Vi sao panel GIO (khong phai 5m): moi horizon cua H1/H2 (1h/4h/24h) deu la boi so 1h, va rank
 cross-section cua OI study cung lay tai moc gio -> panel gio cho GIA TRI Y HET, ton ~700MB thay vi

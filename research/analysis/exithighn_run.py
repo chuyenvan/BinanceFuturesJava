@@ -1,4 +1,4 @@
-"""EXIT-HIGH-N runner — day 9 chan cua docs/PREREG_EXIT_HIGH_N.md len Kaggle.
+"""EXIT-HIGH-N runner — day 9 chan cua docs/prereg/PREREG_EXIT_HIGH_N.md len Kaggle.
 
   par1 : profile x1_gs_t170 NGUYEN BAN, khong key rolling       => cong parity 1 (efb793e2)
   t100 : profile x1_c3_full                                     => cong parity 2 (dc16e4da) + baseline nen T

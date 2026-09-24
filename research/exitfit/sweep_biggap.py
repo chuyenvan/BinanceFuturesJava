@@ -1,6 +1,6 @@
 """CLOSE_BIGGAP — quet "dinh CLOSE × giveback lon" tren harness offline (thuan Python).
 
-Chot TRUOC: docs/PREREG_CLOSE_BIGGAP.md (commit 7349c39). KHONG sua thiet ke sau khi thay ket qua.
+Chot TRUOC: docs/prereg/PREREG_CLOSE_BIGGAP.md (commit 7349c39). KHONG sua thiet ke sau khi thay ket qua.
 
 Ham gap: gap_rate = min(ratio * peak_rate, cap) voi peak do bang CLOSE 1m (nhu F3).
   (A) 15 policy chinh: ratio {0.5,0.7,0.9} x cap {0.08,0.12,0.20,0.35,None}

@@ -1,5 +1,5 @@
 #!/bin/bash
-# CONG NGHIEM THU TICKLOG (docs/PREREG_TICKLOG.md muc 5) — hai phan byte-identity vs baseline C2b.
+# CONG NGHIEM THU TICKLOG (docs/prereg/PREREG_TICKLOG.md muc 5) — hai phan byte-identity vs baseline C2b.
 set -u
 R=/home/ubuntu/src/BinanceFuturesJava
 B=/home/ubuntu/java/devrun
@@ -12,7 +12,7 @@ if [ -n "$(pgrep -a java || true)" ]; then echo "*** DUNG: dang co JVM chay ***"
 cp -f $R/profiles/c2b.properties $R/profiles/c2b_ticklog.properties
 cat >> $R/profiles/c2b_ticklog.properties <<'EOF'
 
-# --- TICKLOG (docs/PREREG_TICKLOG.md, commit 4d80fb9) — CHI ha tang do luong, khong doi quyet dinh ---
+# --- TICKLOG (docs/prereg/PREREG_TICKLOG.md, commit 4d80fb9) — CHI ha tang do luong, khong doi quyet dinh ---
 SIM_TICKLOG=1
 SIM_TICKLOG_TAG=C2b_TLON
 SIM_TICKLOG_POOL=1

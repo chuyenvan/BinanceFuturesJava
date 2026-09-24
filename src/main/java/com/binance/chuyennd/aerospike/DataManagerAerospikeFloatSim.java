@@ -458,7 +458,7 @@ public class DataManagerAerospikeFloatSim {
     // BIẾN THỂ CHUNK-NGÀY (SYMBOL_yyyyMMdd) — cho dữ liệu cadence DÀY (per-phút). Chunk-tháng
     // (writeMetricMap226) vỡ "Record too big" với per-phút (~43k điểm/tháng); chunk-ngày ~1440 điểm
     // /ngày → an toàn. CHUẨN HÓA: mọi dữ liệu per-phút (hoặc dày hơn 5m) PHẢI dùng biến thể ngày này.
-    // Xem docs/DATA_CHUNKING_STANDARD.md.
+    // Xem docs/data/DATA_CHUNKING_STANDARD.md.
     // ============================================================================================
 
     /** TZ + tháng bắt đầu dùng CHUNG với chunk-tháng (GMT+7) để reader iterate nhất quán. */

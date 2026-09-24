@@ -5,11 +5,11 @@ package com.binance.chuyennd.tradecore;
  * dung chung cho BACKTEST ({@code SimulatorMarketLevelTicker1MStopLoss.createOrder}) va LIVE
  * ({@code DetectEntrySignal2TradeNormal.createOrderBuyRequest}).
  *
- * <p><b>Vi sao co class nay</b> (L7, docs/L7_LEAN_GATE.md + docs/LEAN_GATE_AUDIT.md): cong nay
+ * <p><b>Vi sao co class nay</b> (L7, docs/experiment/L7_LEAN_GATE.md + docs/audit/LEAN_GATE_AUDIT.md): cong nay
  * tung nam o HAI ban sao trong {@code AIRejectFilter} ({@code checkSignalDynamic} va
  * {@code dynThreshold}) va duoc goi tu hai duong khac nhau, da troi khoi nhau 3 tuan
  * (commit {@code 311bb29}) ma khong ai thay — lech 95.62% slot entry tren 48 thang,
- * 77/78 entry so giay 242 (docs/AUDIT_GATE_DYN_PARITY.md). Nay chi con MOT bieu thuc.
+ * 77/78 entry so giay 242 (docs/audit/AUDIT_GATE_DYN_PARITY.md). Nay chi con MOT bieu thuc.
  *
  * <p><b>Cong thuc — GIU NGUYEN TUNG PHEP NHAN, khong duoc "rut gon"</b>:
  * <pre>
@@ -17,7 +17,7 @@ package com.binance.chuyennd.tradecore;
  *   PASS  &lt;=&gt;  !(predReturn15M &lt; thr)
  * </pre>
  * Dang rut gon {@code predReturn15M >= K * symbolPred} voi {@code K = thrBase*DYN_MULT/SCORE_BASE}
- * = 0.0686720 **DA BI BAC BO** o docs/LEAN_GATE_AUDIT.md muc 3:
+ * = 0.0686720 **DA BI BAC BO** o docs/audit/LEAN_GATE_AUDIT.md muc 3:
  * <ol>
  *   <li>floor {@code DYN_MIN} CO bind that (1 slot / 140,244 moc 15m x top-8 tren 48 thang:
  *       2024-08-05 13:30 GMT+7, symId 261, symbolPred 0.024885) => khong phai dong nhat thuc;</li>
@@ -30,7 +30,7 @@ package com.binance.chuyennd.tradecore;
  * <p><b>Ba he so la HANG SO, co chu dich</b>: chung tung la {@code Configs.AI_DYNAMIC_MIN} /
  * {@code PREDICT_SYMBOL_RATE_MAX_THRESHOLD} / {@code AI_DYNAMIC_MULTIPLIER} doc qua key
  * {@code SIM_AI_DYNAMIC_*} — nhung KHONG profile/env nao tung khai bao chung (do o
- * docs/LEAN_GATE_AUDIT.md muc 2.3), tuc chung la hang so tra hinh cau hinh. Nay chot cung o day:
+ * docs/audit/LEAN_GATE_AUDIT.md muc 2.3), tuc chung la hang so tra hinh cau hinh. Nay chot cung o day:
  * gate chi con DUNG MOT knob la {@code Configs.MIN_MOMENTUM_15M} (key {@code SIM_MIN_MOMENTUM_15M},
  * da co san trong {@code conf/env.sh} cua 242 => deploy KHONG phai sua env).
  *
@@ -48,7 +48,7 @@ public final class EntryGate {
     public static final float DYN_MULT = 1.28760f;
 
     /**
-     * He so nhan them vao KET QUA dyn_thr da tinh (docs/PREREG_GATESCALE.md). Doc DUNG MOT LAN
+     * He so nhan them vao KET QUA dyn_thr da tinh (docs/prereg/PREREG_GATESCALE.md). Doc DUNG MOT LAN
      * luc {@code Configs} nap (key {@code SIM_GATE_DYN_SCALE}); khong khai / {@code <=0} => 1.0f
      * => {@code x*1.0f} IEEE-exact => byte-identical. {@code >1} = gate CHAT hon (it lenh),
      * {@code <1} = LONG hon (nhieu lenh). KHONG doc Cfg moi lan goi (nong). Chi ap o nhanh dyn
@@ -57,10 +57,10 @@ public final class EntryGate {
      */
     public static float GATE_DYN_SCALE = 1.0f;
 
-    /** [REGIME] docs/PREREG_REGIME_GATE.md: gate scale doi theo regime BTC 30d. default OFF => byte-identical. */
+    /** [REGIME] docs/prereg/PREREG_REGIME_GATE.md: gate scale doi theo regime BTC 30d. default OFF => byte-identical. */
     public static boolean GATE_REGIME_ADAPTIVE = false;
     /** Scale khi regime UP (uptrend BTC 30d): mac dinh T100 (pre-reg Buoc 2). TASK B2 Buoc 4
-     *  (docs/PREREG_REGIME_UPDOWN.md) can up-gate CHAT hon (1.2/1.4), nen bo final, doc duoc
+     *  (docs/prereg/PREREG_REGIME_UPDOWN.md) can up-gate CHAT hon (1.2/1.4), nen bo final, doc duoc
      *  qua Configs (key SIM_REGIME_SCALE_UP). Khong khai bao key nay thi giu nguyen 1.00f,
      *  byte-identical voi vong Buoc 2 (va voi OFF, vi OFF dung nhanh GATE_DYN_SCALE khac han). */
     public static float REGIME_SCALE_UP = 1.00f;

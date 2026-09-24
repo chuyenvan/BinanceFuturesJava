@@ -1,4 +1,4 @@
-"""REGIME_BUILD_MA200 (TASK B2 Buoc 2, docs/PREREG_REGIME_GATE.md) - sinh file regime causal
+"""REGIME_BUILD_MA200 (TASK B2 Buoc 2, docs/prereg/PREREG_REGIME_GATE.md) - sinh file regime causal
 MA200-trailing cho GATE_REGIME_ADAPTIVE (khac han regime_build.py cu = BTC ret30, khong sua file
 do). KHONG fit tren du lieu sim - MA200 la chuan nganh (trend-following), dd_from_peak365<=-25%
 la dinh nghia "bear" pho bien, ca hai khoa TRUOC trong PREREG_REGIME_GATE.md.

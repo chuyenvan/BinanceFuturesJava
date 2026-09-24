@@ -47,7 +47,7 @@ public class LiveProfileC3Test {
         assertEquals(0f, LiveProfileC3.paperEquity(), 0f);
     }
 
-    /** Hang so profile dung theo C3 (docs/C3_BASELINE.md / L1 muc 2). */
+    /** Hang so profile dung theo C3 (docs/experiment/C3_BASELINE.md / L1 muc 2). */
     @Test
     public void c3Constants() {
         assertEquals(0.07f, LiveProfileC3.ARM_RATE, 0f);

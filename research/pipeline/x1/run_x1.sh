@@ -1,5 +1,5 @@
 #!/bin/bash
-# X1 — chuoi ledger -> S1 -> map, moi buoc co CONG byte-identical (docs/PREREG_X1.md muc 2).
+# X1 — chuoi ledger -> S1 -> map, moi buoc co CONG byte-identical (docs/prereg/PREREG_X1.md muc 2).
 # Cong FAIL => dung ngay, KHONG chay tiep. Chay nen: nohup bash run_x1.sh > /home/ubuntu/x1log/chain.out 2>&1 &
 set -u
 R=/home/ubuntu/src/BinanceFuturesJava

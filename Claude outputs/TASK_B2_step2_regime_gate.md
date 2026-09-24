@@ -1,7 +1,7 @@
 # TASK B2 Bước 2 — Regime-adaptive gate (breadth ở uptrend, phòng thủ ở bear) — thiết kế MASTER 2026-09-21
 
 Người soạn: MASTER. Thực thi: agent Sonnet. Chủ quyết định: Uni ("theo đuổi breadth").
-Tiền đề: `docs/DIAG_UW_SOURCE.md` (`9b10742`) — nguồn UW = phơi nhiễm đồng thời cao trong bear-multi-week (LUNA 2022), KHÔNG phải flash-crash/lệnh-biên-tệ/giữ-lệnh-lỗ. Cơ chế đúng = giảm SỐ lệnh đồng thời theo regime bear, KHÔNG phải size (TASK B NULL) / exit (đã nhanh sẵn).
+Tiền đề: `docs/diag/DIAG_UW_SOURCE.md` (`9b10742`) — nguồn UW = phơi nhiễm đồng thời cao trong bear-multi-week (LUNA 2022), KHÔNG phải flash-crash/lệnh-biên-tệ/giữ-lệnh-lỗ. Cơ chế đúng = giảm SỐ lệnh đồng thời theo regime bear, KHÔNG phải size (TASK B NULL) / exit (đã nhanh sẵn).
 
 ## 0. LUẬT — như TASK B/B2 (không nới)
 An toàn (HOLDOUT/242/push/thư mục bảo vệ/index.lock); **1 job nặng/lần** (`free -g`≥12G, `pgrep java` rỗng → **dừng shadow-c3 trước chuỗi sim, bật lại ngay sau, ghi mốc**); PREREG commit trước; cổng tái lập T170 md5 `efb793e2468ca3a7318da0f0ad23d4fc`; **cổng OFF byte-identical** mỗi flag mới; khẩu vị hiện hành qua `x1_rates.py --appetite current --k <k>`; logging chuẩn.
@@ -43,7 +43,7 @@ Mỗi biến thể = profile mới copy `x1_gs_t170.properties`, `git diff` ch�
 ## 6. ĐO — như B2: metric tổng hợp/phân phối, KHÔNG khoá (sym,start). Cùng cửa sổ 2021-07-01..2025-12-31, Oracle ARM64.
 
 ## 7. QUY TRÌNH
-PREREG `docs/PREREG_REGIME_GATE.md` (recon §2 + regime §3 + biến thể + u1-u5 + phán quyết) commit trước → code (bật/hiệu chỉnh `GATE_REGIME_ADAPTIVE` + regime MA200-trailing causal, giữ OFF byte-identical) → cổng OFF T170 md5 → dừng shadow-c3 → sim tuần tự (T170 verify, R, R0; gate-1.0 dùng lại nếu còn) → bật shadow-c3 → tính u1-u5 (`bigdown_struct.py` + `x1_rates.py --appetite current --k`) → `docs/RESULT_REGIME_GATE.md` verdict → commit branch `module` (KHÔNG push) → dọn wfo_ds tạm, giữ printDone/sim.out.
+PREREG `docs/prereg/PREREG_REGIME_GATE.md` (recon §2 + regime §3 + biến thể + u1-u5 + phán quyết) commit trước → code (bật/hiệu chỉnh `GATE_REGIME_ADAPTIVE` + regime MA200-trailing causal, giữ OFF byte-identical) → cổng OFF T170 md5 → dừng shadow-c3 → sim tuần tự (T170 verify, R, R0; gate-1.0 dùng lại nếu còn) → bật shadow-c3 → tính u1-u5 (`bigdown_struct.py` + `x1_rates.py --appetite current --k`) → `docs/result/RESULT_REGIME_GATE.md` verdict → commit branch `module` (KHÔNG push) → dọn wfo_ds tạm, giữ printDone/sim.out.
 Nếu OFF không byte-identical hoặc regime chỉ tính được lookahead → DỪNG, báo MASTER, không ép.
 
 ## 8. Ý nghĩa

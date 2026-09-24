@@ -673,6 +673,6 @@
   "proxy_verdict": {
     "ma200_all_combo_go": "12/12",
     "all_coin_ma200_go": "3/3",
-    "note": "xem docs/VALIDATE_BREADTH_ROBUST.md Phan 3 cho ket luan chi tiet"
+    "note": "xem docs/analysis/VALIDATE_BREADTH_ROBUST.md Phan 3 cho ket luan chi tiet"
   }
 }

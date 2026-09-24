@@ -13,7 +13,7 @@ import java.util.TreeMap;
 
 /**
  * Dump BTC (symId=1) daily close tu tick-data (kaggle_data_hpo) — nguon gia CHINH ma sim giao dich
- * (docs/PREREG_REGIME_GATE.md). Bucket theo UTC-day (startTime/86400000); daily close = bar co
+ * (docs/prereg/PREREG_REGIME_GATE.md). Bucket theo UTC-day (startTime/86400000); daily close = bar co
  * startTime LON nhat trong ngay UTC. Doc lap timezone (bucket theo epoch tuyet doi).
  *
  * <p>Args: startYYYYMMDD endYYYYMMDD outCsv. Chay voi cwd co symlink {@code kaggle_data_hpo}.

@@ -45,7 +45,7 @@ for rank, pid in enumerate(res["finalist_ids"], 1):
     })
 
 doc = {
-    "prereg": "docs/PREREG_GS.md muc 4 (buoc 1-5) + muc 9.1/9.2",
+    "prereg": "docs/prereg/PREREG_GS.md muc 4 (buoc 1-5) + muc 9.1/9.2",
     "input_jsonl": IN,
     "n_lines_input": len(recs),
     "anchor": {

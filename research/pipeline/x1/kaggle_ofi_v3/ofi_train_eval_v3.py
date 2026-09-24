@@ -1,4 +1,4 @@
-# OFI V3 UNIVERSE -- train/eval CONFIRM cho OFI build tren TOAN BO universe (docs/PREREG_S1_FREE_OFI_V3_UNIVERSE.md).
+# OFI V3 UNIVERSE -- train/eval CONFIRM cho OFI build tren TOAN BO universe (docs/prereg/PREREG_S1_FREE_OFI_V3_UNIVERSE.md).
 # Sinh CO HOC tu ofi_train_eval_v2.py (gen_train_v3.py): harness/model/CI/noise-mask Y HET v2. Khac biet DUY NHAT:
 # (1) doc + ghep TAT CA ofi_feat_x1.parquet cua cac kernel shard (bo symbol chua hoan tat cua shard bi cat, dedupe dong trung y het, assert khong xung dot),
 # (2) log mo ta coverage theo nam (KHONG tinh edge5 them), (3) logging thay print, (4) output ofi_result_v3.json.

@@ -7,7 +7,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 /**
- * BUG B2 (docs/QUEUE.md muc BUGS, docs/T2B_FULLFLOW.md muc 1) — tong trong so DCA bi chia HAI LAN:
+ * BUG B2 (docs/plan/QUEUE.md muc BUGS, docs/experiment/T2B_FULLFLOW.md muc 1) — tong trong so DCA bi chia HAI LAN:
  * {@link TradeUtils#managerBudget} chia /dcaGridTotalWeight() VA {@link DcaUtils#gridLegWeightRatio}
  * chia them mot lan nua => margin(leg i) ~ w[i]/total^2.
  *

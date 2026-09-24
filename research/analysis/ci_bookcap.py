@@ -1,4 +1,4 @@
-"""BOOKCAP — CI cua HIEU CAGR giua 3 bien the cap book va PARITY_R (docs/PREREG_BOOKCAP.md muc 3).
+"""BOOKCAP — CI cua HIEU CAGR giua 3 bien the cap book va PARITY_R (docs/prereg/PREREG_BOOKCAP.md muc 3).
 
 Tai su dung y het khuon research/analysis/ci_gatedyn.py (da dung cho GATEDYN), chi doi:
   - k = 3 bien the khoa truoc (CAP12 / CAP16 / NOT40) => KMULT = sqrt(2 ln 3) = 1.4823

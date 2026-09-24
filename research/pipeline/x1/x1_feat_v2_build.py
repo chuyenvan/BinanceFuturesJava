@@ -1,5 +1,5 @@
 # X1 — ban SAO cua feat_v2_build.py, CHI them tham so hoa qua env (mac dinh = hanh vi cu).
-# Sinh boi research/pipeline/x1/make_x1.sh. Xem docs/PREREG_X1.md muc 2.
+# Sinh boi research/pipeline/x1/make_x1.sh. Xem docs/prereg/PREREG_X1.md muc 2.
 """V2 FEATURE BUILD + VALIDATE (V2 label check, V3 unit/causality/distribution). Output: /home/ubuntu/featv2/feat_v2.parquet (hourly, DEV 2021-01..2024-06)
 Chay tren Oracle. Moi buoc in PASS/FAIL ro rang; FAIL -> dung (sys.exit) de khong train tren du lieu sai."""
 

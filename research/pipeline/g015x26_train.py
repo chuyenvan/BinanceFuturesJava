@@ -2,10 +2,10 @@
 """
 g015x26_train.py — TAI SINH bins `predwf_G015x26` (gate that cua C2b).
 
-BOI CANH (xem `docs/G3_X26_RECOVERY.md`):
+BOI CANH (xem `docs/experiment/G3_X26_RECOVERY.md`):
   `predwf_G015x26/predict_wf_*.bin` sinh 2026-08-14 boi kernel Kaggle GPU
-  `chuyendinh/selector-15mtr-pred15-net015-gpu`. Tai lieu cu (`docs/G015CUT_RESULT.md` §2.2,
-  `docs/G015X26_PROVENANCE.md` §1) ket luan "KHONG tai lap duoc / mat training export".
+  `chuyendinh/selector-15mtr-pred15-net015-gpu`. Tai lieu cu (`docs/result/G015CUT_RESULT.md` §2.2,
+  `docs/experiment/G015X26_PROVENANCE.md` §1) ket luan "KHONG tai lap duoc / mat training export".
   Ca hai ve deu SAI:
     1. Ban export Tool1 2021 KHONG mat — sha256 file 2021Q1 tren Kaggle version 1 == version 5
        == ban tren dia (`eca5b024...638c5c`). mtime 2026-08-16 chi la LAN TAI VE lai.

@@ -1,4 +1,4 @@
-"""TRAIL-LADDER runner — day cac chan cua docs/PREREG_TRAIL_LADDER.md len Kaggle.
+"""TRAIL-LADDER runner — day cac chan cua docs/prereg/PREREG_TRAIL_LADDER.md len Kaggle.
 
   par   : profile x1_gs_t170 NGUYEN BAN, KHONG override => cong chan BUOC 0 (md5 efb793e2)
   part  : nhu par + SIM_TRAIL_TRACE=1 (do-luong-only; printDone phai VAN efb793e2)

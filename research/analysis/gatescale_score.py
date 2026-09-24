@@ -1,4 +1,4 @@
-"""GATE-SCALE SWEEP scorer — cham diem 6 diem cua docs/PREREG_GATESCALE_SWEEP.md.
+"""GATE-SCALE SWEEP scorer — cham diem 6 diem cua docs/prereg/PREREG_GATESCALE_SWEEP.md.
 
   [0] cong parity md5 (1.70 = efb793e2, 1.00 = dc16e4da)
   [1] co che + 5 rate (n, meanP/leg, win%, TSloss%) + maxDD/UW nam & toan ky

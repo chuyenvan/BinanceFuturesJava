@@ -202,12 +202,12 @@
   "bins_path": null,
   "sim_runs": [],
   "sources": {
-    "feature_list": "docs/EVAL_SELECTOR_FEATURES.md §1 (45 cot, co file:line) + §0",
-    "keepers": "docs/EVAL_SELECTOR_FEATURES.md §6.3 (GIU 22, share >= 1.30%)",
-    "rvol15m": "docs/DIAG_RVOL15M.md §D (KHONG du can cu cat tu offline; phai do bang rank-IC + lift@8)",
-    "recipe": "docs/G015_RECIPE.md §2 (cong thuc) + §5 (dau vao ghim) + §6 (bins)",
+    "feature_list": "docs/analysis/EVAL_SELECTOR_FEATURES.md §1 (45 cot, co file:line) + §0",
+    "keepers": "docs/analysis/EVAL_SELECTOR_FEATURES.md §6.3 (GIU 22, share >= 1.30%)",
+    "rvol15m": "docs/diag/DIAG_RVOL15M.md §D (KHONG du can cu cat tu offline; phai do bang rank-IC + lift@8)",
+    "recipe": "docs/experiment/G015_RECIPE.md §2 (cong thuc) + §5 (dau vao ghim) + §6 (bins)",
     "train_duong": "docs/PREP_STAGE2_TRAIN.md §1 (duong train THAT cua net015-45, script + fold + seed + tham so)",
-    "label": "docs/AGENT_RUNBOOK.md (nhan THAT cua predwf_G015x26 = retEnd_4h > 0.015; dinh chinh 2026-09-06)"
+    "label": "docs/runbooks/AGENT_RUNBOOK.md (nhan THAT cua predwf_G015x26 = retEnd_4h > 0.015; dinh chinh 2026-09-06)"
   },
   "notes": "Tap GIU theo §6.3 (share >= 1,30%) BO rvol15m => 21 cot. Luu y: §6.3 ghi GIU = 22 (gOM #36 rvol15m); v2 co tinh chon loc lai sau khi #36 duoc phan xu o v1, nen = 21. Neu ablation cho thay GIU ca #36 thi dung fs_v0_45.json / fs_v1_44.json, KHONG sua file nay. CHUA train/chua sim — dien o Stage 1/2."
 }

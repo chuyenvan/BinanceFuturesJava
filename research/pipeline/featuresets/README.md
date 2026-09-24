@@ -20,10 +20,10 @@ dung version feature da sinh ra no.
 
 | version | file | n_features | `status` | ket qua / sim gan voi version | nguon |
 |---|---|---|---|---|---|
-| v0 | `fs_v0_45.json` | 45 | trained | `predwf_G015` (= G015x26 = net015): 18 fold `model_f0..17_4h.json`, bins `predwf_G015x26`, sim `C3`, `X1_C3`, `FG_KEEPLEG0` (moc parity md5 `99e42b75`), `C4_parity`, `G5_parity_S1` | `docs/G015_RECIPE.md`, `docs/AGENT_RUNBOOK.md` |
-| v1 | `fs_v1_44.json` | 44 | planned | drop-one `rvol15m` — **chua train, chua sim**; du doan chot truoc: admit TANG, expectancy/top-8 win GIAM; do bang rank-IC cross-section + top-8 lift, KHONG dung gain | `docs/DIAG_RVOL15M.md` §D |
-| v2 | `fs_v2_21.json` | 21 | planned | tap GIU (§6.3, 22 cot) BO `rvol15m` => 21; **chua train, chua sim** | `docs/EVAL_SELECTOR_FEATURES.md` §6.3 |
-| v3 | `fs_v3_reserved.json` | (rong) | reserved | khung cho vong ablation Stage 1 (bo nhom NGAT CHAC 5/45) | `docs/PREREG_FEAT_ABLATION.md` |
+| v0 | `fs_v0_45.json` | 45 | trained | `predwf_G015` (= G015x26 = net015): 18 fold `model_f0..17_4h.json`, bins `predwf_G015x26`, sim `C3`, `X1_C3`, `FG_KEEPLEG0` (moc parity md5 `99e42b75`), `C4_parity`, `G5_parity_S1` | `docs/experiment/G015_RECIPE.md`, `docs/runbooks/AGENT_RUNBOOK.md` |
+| v1 | `fs_v1_44.json` | 44 | planned | drop-one `rvol15m` — **chua train, chua sim**; du doan chot truoc: admit TANG, expectancy/top-8 win GIAM; do bang rank-IC cross-section + top-8 lift, KHONG dung gain | `docs/diag/DIAG_RVOL15M.md` §D |
+| v2 | `fs_v2_21.json` | 21 | planned | tap GIU (§6.3, 22 cot) BO `rvol15m` => 21; **chua train, chua sim** | `docs/analysis/EVAL_SELECTOR_FEATURES.md` §6.3 |
+| v3 | `fs_v3_reserved.json` | (rong) | reserved | khung cho vong ablation Stage 1 (bo nhom NGAT CHAC 5/45) | `docs/prereg/PREREG_FEAT_ABLATION.md` |
 | v4 | `fs_v4_reserved.json` | (rong) | reserved | khung cho ket qua Stage 1 | — |
 | v5 | `fs_v5_reserved.json` | (rong) | reserved | khung cho Stage 2 prep | — |
 
@@ -38,7 +38,7 @@ Moi file JSON deu co day du truong bat buoc: `version` · `n_features` · `featu
 - GIU 22: `#2,#5,#6,#7,#8,#10,#14,#17,#18,#20,#24,#28,#29,#30,#31,#32,#35,#36,#40,#41,#42,#44`
 
 `#36 rvol15m` nam trong GIU (share 34,09%) nhung rank-IC ~ 0 => la NGHIEM THU DUY NHAT cua vong
-ablation v1 (`docs/DIAG_RVOL15M.md`).
+ablation v1 (`docs/diag/DIAG_RVOL15M.md`).
 
 ## Code train
 
