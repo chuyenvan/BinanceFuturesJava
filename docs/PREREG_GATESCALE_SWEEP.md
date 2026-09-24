@@ -89,6 +89,23 @@ Moi chan: bundle `chuyendinh/sim-x1-2021-bundle` (dataset `wfo_ds_x1_2021`, `lea
 | 1.25 | `gs-t125` | **CHAY MOI** (Kaggle) | profile moi, chua co chan nao |
 | 1.10 | `gs-t110` | **CHAY MOI** (Kaggle) | profile moi, chua co chan nao |
 
+### 4b. SUA CO CHE CHAY (amend 2026-09-24, ghi TRUOC khi co bat ky ket qua nao)
+
+`sim-x1-2021-bundle` la **SNAPSHOT** (`docs/KAGGLE_SIM.md` §0.4) va chi chua **3 profile**:
+`prof_x1_c3_full`, `prof_x1_gs_t170`, `prof_x1_c3_full_regime_brc` (kiem bang
+`KaggleApi.dataset_list_files` co phan trang `nextPageToken`: 28 file). 4 profile MOI cua thang
+chot **KHONG** co trong bundle (tao sau 2026-09-21) ⇒ push kernel voi profile do thi kernel
+**exit** `MISSING /kaggle/input/**/prof_x1_gs_t155.properties` (da xay ra that: tag `sim-gs-t155`
+vu 1 = ERROR; 3 chan con lai khong tao duoc kernel).
+
+⇒ **Doi sang DUONG OVERRIDE** (dung khuon `research/analysis/exithighn_run.py` da dung cho T100):
+`profile=x1_c3_full` + **DUNG 1** override `SIM_GATE_DYN_SCALE=<v>`. Kernel **COPY** profile roi ghi
+override vao ban copy (`KERNEL_TEMPLATE`: `pairs` = profile, `ov` = overrides) ⇒ `prof_run.properties`
+ra **DUNG bang noi dung** `profiles/x1_gs_t1*.properties` (tru `WFO_FUNDING_PRED_DIR` bi tro vao
+mount Kaggle) ⇒ **4 profile file van la ban ghi tuong duong** cua thiet ke, khong doi thiet ke.
+Khong doi thang chot, khong doi num, khong doi diem nao. Kiem chung tu output: `prof_run.properties`
+cua tung chan phai co `SIM_GATE_DYN_SCALE=<v>` (ghi vao **RESULT**, khong suy dien).
+
 **Khong dung lai `java/devrun/CALIB_T130` / `X1_GS_T130_2021` / `CALIB_T210`** (da kiem trong vong
 nay): ca ba la run **Oracle** (`TIME_RUN=20210701`, dataset `wfo_ds_x1_2021`) nhung scale cua chung
 la **1.30** (`CALIB_T130` ≡ `X1_GS_T130_2021`, n=1580, md5 `68510567`) va **2.10** (`CALIB_T210`,

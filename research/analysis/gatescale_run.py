@@ -23,11 +23,19 @@ BUNDLE = "sim-x1-2021-bundle"
 END = "20251231"
 SHA = "dc5aecc+prereg-gatescale-sweep"
 
+# [!] BUNDLE LA MOT SNAPSHOT (docs/KAGGLE_SIM.md §0.4): sim-x1-2021-bundle chi chua 3 profile
+#   (`prof_x1_c3_full`, `prof_x1_gs_t170`, `prof_x1_c3_full_regime_brc`) — KHONG chua 4 profile
+#   MOI `x1_gs_t155/140/125/110` (them sau khi bundle duoc tao 2026-09-21). Push kernel voi
+#   profile do => kernel exit "MISSING /kaggle/input/**/prof_x1_gs_t155.properties" (da gap
+#   that 2026-09-24, tag sim-gs-t155 vu 1). => DUNG DUONG OVERRIDE (khuon `exithighn_run.py`):
+#   profile `x1_c3_full` + 1 override `SIM_GATE_DYN_SCALE=<v>`. Kernel COPY profile roi ghi
+#   override => `prof_run.properties` ra DUNG bang noi dung `profiles/x1_gs_t1*.properties`
+#   (tru `WFO_FUNDING_PRED_DIR` bi tro vao mount Kaggle) — kiem lai duoc tu output tung chan.
 JOBS = {
-    "t155": dict(tag="gs-t155", profile="x1_gs_t155", overrides={}),
-    "t140": dict(tag="gs-t140", profile="x1_gs_t140", overrides={}),
-    "t125": dict(tag="gs-t125", profile="x1_gs_t125", overrides={}),
-    "t110": dict(tag="gs-t110", profile="x1_gs_t110", overrides={}),
+    "t155": dict(tag="gs-t155", profile="x1_c3_full", overrides={"SIM_GATE_DYN_SCALE": 1.55}),
+    "t140": dict(tag="gs-t140", profile="x1_c3_full", overrides={"SIM_GATE_DYN_SCALE": 1.40}),
+    "t125": dict(tag="gs-t125", profile="x1_c3_full", overrides={"SIM_GATE_DYN_SCALE": 1.25}),
+    "t110": dict(tag="gs-t110", profile="x1_c3_full", overrides={"SIM_GATE_DYN_SCALE": 1.10}),
 }
 ALIAS = {"all": ["t155", "t140", "t125", "t110"]}
 
