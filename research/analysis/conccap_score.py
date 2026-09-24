@@ -259,13 +259,13 @@ def main():
     res["pnl_lost_pct"] = lost
 
     print("\n=== (5) n / meanP-leg / hold / turnover / Sum funding / Sum PnL ===")
-    print("%-9s %7s %11s %9s %8s %13s %13s %11s" % (
-        "tag", "n", "meanP/leg", "hold_med", "turn", "Sum funding", "SumPnL", "fund/PnL%"))
+    print("%-9s %7s %11s %9s %8s %12s %12s %11s %11s" % (
+        "tag", "n", "meanP/leg", "hold_med", "turn", "Sum funding", "funding/leg", "SumPnL", "fund/PnL%"))
     for t in tags:
         s, f = S[t], F[t]
-        print("%-9s %7d %11.3f %9.1f %8.3f %13.1f %13.0f %10.2f%%" % (
-            t, f["n"], s["sumpnl"] / max(f["n"], 1), s["hold_med"], s["turn"],
-            f["funding_sum"], f["funding_mean"] * f["n"], f["funding_over_pnl"]))
+        print("%-9s %7d %11.3f %9.1f %8.3f %12.1f %12.2f %11.0f %10.2f%%" % (
+            t, f["n"], s["sumpnl"] / max(f["n"], 1), s["hold_med"],
+            s["turn"], f["funding_sum"], f["funding_mean"], s["sumpnl"], f["funding_over_pnl"]))
     print("\n  (funding/PnL% = Sum funding / Sum PnL — hang SO HOC theo n, RESULT_FRAGILITY_N §6.3)")
 
     print("\n*** KET LUAN SO BO ***")
