@@ -1,0 +1,43 @@
+{
+  "job": "PREP Stage 2 — de-risk duong train S1 (net015-45) theo subset feature",
+  "date": "2026-09-24",
+  "where": "Kaggle GPU (chuyendinh/g015p2-prep-trial-gpu), KHONG Oracle",
+  "env": {"xgboost": "3.2.0", "device": "cuda", "seed": 42, "nest": 400,
+          "label_mode": "net", "thr": 0.015, "fold": "20240101", "fold_idx_in_CUT_DATES": 11},
+  "trainer_sha256": "e8b6798fdb8e3f497e976fb45f5ad801040258902fcea0e8d4e6f6c0fc85aafc",
+  "note_fold_idx": "model luu ra la model_f11_4h.json (KHONG phai f8): CUT_DATES ban repo hien tai da noi them 3 fold DEV2021 o dau danh sach",
+  "arms": {
+    "A45": {"drop_cols": "", "num_feature": 45, "bin_exists": true, "minutes": 7.3,
+            "n_train": 14834006, "pos": 0.18636469474260695, "spw": 4.365823185454335,
+            "n_oos": 2140992, "p_mean": 0.46353596448898315, "p_std": 0.1277783066034317,
+            "sha_bin": "53750a944acdb10594af20a40ae7f64bfe6d4ebdcdcba34cacfb0559ca13931d"},
+    "B40": {"drop_cols": "9,26,33,37,38", "num_feature": 40, "bin_exists": true, "minutes": 5.3,
+            "n_train": 14834006, "pos": 0.18636469474260695, "spw": 4.365823185454335,
+            "n_oos": 2140992, "p_mean": 0.4624730050563812, "p_std": 0.12796887755393982,
+            "sha_bin": "b16fcc9cb79b7283892074f93180396b7cc66a2efd50f87a953a1522a4570b27"}
+  },
+  "reference": {
+    "G015_RECIPE_fold8": {"n_train": 14834006, "pos": 0.1864, "spw": 4.365823,
+                          "n_oos": 2140992, "p_mean_gpu_retrain": 0.46354,
+                          "p_std_gpu_retrain": 0.12778,
+                          "sha_bin_gpu_retrain": "53750a944acdb10594af20a40ae7f64bfe6d4ebdcdcba34cacfb0559ca13931d",
+                          "sha_bin_production": "e5a684f4132996ea47cc2341960cf0fd3a5dc0262c65368bac5cf63a4117f131"},
+    "G4_RECIPE_C4_noise_floor_s42_vs_s43_spearman": 0.984931
+  },
+  "parity_vs_production_bins": {
+    "A45_vs_model_f8_production": {"spearman": 0.985997, "max_abs_d": 0.2304, "top8_per_tick": 0.8296,
+      "khop_G015_RECIPE_4": true},
+    "B40_vs_model_f8_production": {"spearman": 0.981928, "max_abs_d": 0.1903, "top8_per_tick": 0.8161},
+    "B40_vs_A45": {"spearman": 0.982579, "max_abs_d": 0.2494, "top8_per_tick": 0.8135}
+  },
+  "conclusions": {
+    "both_bins_written": true,
+    "subset_runs_clean": true,
+    "drop_cols_keeps_same_rows": true,
+    "full_45_reproduces_documented_gpu_retrain_byte_identical": true,
+    "note": "khong co phan quyet thang/thua — day la buoc chuan bi"
+  },
+  "timing": {"kernel_total_min": 12.8, "per_arm_min": {"A45": 7.3, "B40": 5.3},
+             "train_only_per_fold_min_est": 2.0,
+             "18fold_estimate_min": 52, "source_18fold": "log goc selector-15mtr-pred15-net015-gpu.log = 3108s"}
+}
