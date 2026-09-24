@@ -166,3 +166,29 @@ uu tien nhat la nhieu lenh de on dinh"*
 - ⇒ **NHUNG**: ha rao rui ro **KHONG tao ra bang chung** — ca 4 nen van **0/5 rate ngoai CI**.
 - ⇒ Doi trong: tran tap trung **lam GIAM n** (chan leg moi). Voi uu tien "nhieu lenh", day la **danh doi
   phai do bang so** (dang do: `PREREG_CONC_CAP_HIGHN.md`).
+
+### 7.3 SUA CACH DO `maxDD` (2026-09-24) — BAT BUOC dung MTM MOC PHUT
+
+`docs/RESULT_INTRADAY_DD.md` (commit `ea6bf11`) chung minh **chuoi equity DAILY da CHE MAT drawdown
+that**. Nguyen nhan: `BudgetManagerSimple: Update` chi xuat **1 moc/ngay tai 00:00Z** (1644 dong/run),
+con `unPMin` la **day CHAY TICH LUY** chu khong phai day trong ngay ⇒ khong co duong MTM trong ngay
+trong log. Da **tai tao MTM moc phut tu du lieu 1m** (2,367,360 moc) va kiem chung
+(`min_chay(unP_low)` vs `unPMin` lech **0.001–0.003%**).
+
+| nen | maxDD NGAY | **maxDD PHUT (that)** | Δ | UW ngay / phut |
+|---|---|---|---|---|
+| T170 | -11.84% | **-19.96%** | **-8.12 pp** | 92 / 144.4 |
+| KEEPLEG0 | -11.21% | **-19.96%** | **-8.75 pp** | 147 / 147.2 |
+| T100 | -16.13% | **-26.26%** | **-10.13 pp** | 248 / 248.2 |
+| GD92 | -16.55% | **-24.30%** | **-7.76 pp** | 278 / 277.8 |
+
+- **Nam xau nhat theo MTM la 2025** voi T170/KEEPLEG0 (-19.96%), KHONG phai 2022 ⇒ moi bang
+  `maxDD theo nam` cu **dang xep sai nam xau nhat** (2025: daily -4.23% vs phut -19.96%).
+- Cua so **2025-10-09..13**: daily **0.00%** vs phut **-19.57…-20.70%** (bien the `bar.low` -23.7…-24.5%).
+- **8/10 cu giam intraday lon nhat la HE THONG** (coin xau nhat chi dong gop 9–18% do sau, 13–30 coin
+  mo cung luc); chi 2022-11 (FTT 32%) la don le. ⇒ Rui ro duoi la **thi truong**, khong phai 1 coin/1 lenh.
+- **Khong verdict nao doi huong** (0/4 doi PASS/FAIL): tran `maxDD <= 40%` van PASS (max -26.26%),
+  nhung **bien an toan that MONG hon nhieu** (T100 chi con cach tran **13.7 pp** thay vi 23.9 pp).
+- **TU NAY**: moi bao cao `maxDD`/`UW` **PHAI dung MTM moc phut**; so daily chi de doi chieu.
+- **Gioi han**: chua mo hinh margin-call/thanh ly ⇒ moi so la **CAN DUOI** cua rui ro that;
+  1 quan sat lich su, **khong co CI**.
