@@ -88,3 +88,24 @@ MaxDD nam xau nhat / UW dai nhat (tu `sim.out` tung run, da co san):
   `docs/RESULT_DCA_AGG_PERCOIN.md` (tap trung 17.15% -> 12.51%, khong lam XAU rate nao).
 - Tran aggregate `CONC_CAP_AGG_DCA_PCT` giu nguyen mac dinh 0.45; user chot 0.30 cho experiment nay
   nhung tren lich su no KHONG binding (dinh tong DCA-grid 16.76% < 30%).
+
+## 6. Chot bo sung 2026-09-24 (chat)
+
+- **`maxDD` (theo nam): noi tu `<= 30%` len `<= 40%`** — user: *"toi san sang voi maxdd co the len 30 hay
+  40% deu ok no chi la so lo tam thoi ko chay duoc tk vi danh 1x"*.
+- Ly do da **kiem chung bang du lieu** (`printDone.csv`, T170, khong phai suy doan):
+  - `margin/(quantity*entry)` = **1.0000 tren 1089/1089 leg** ⇒ **1x isolated**, khong co don bay.
+  - **Max concurrent margin = 52,151 USDT** tai 2025-10-11 = **~47% equity** luc do ⇒ exposure < 1x
+    ⇒ **khong the chay tk** ⇒ drawdown la **tam thoi** (dung nhu user noi).
+- **LUU Y QUAN TRONG**: `maxDD` **khong phai rang buoc dang chan ket qua nao**.
+  T170 −11.84% · T100 −16.13% · GD92 −16.55% — **ca ba deu duoi ca tran CU 30%**.
+  ⇒ Noi nguong nay **khong mo khoa them ung vien nao** cho den hien tai.
+  Rang buoc **dang chan that su** la **`UW <= 200`** (T100 248 · GD92 278) va **tap trung 1 coin
+  `<= 15%`** (T100 27.08–28.35%).
+- **TREO — cho user chot** (ghi ro, khong tu quyet):
+  1. `quy xau nhat`: giu `>= -15%` hay noi `>= -20%` cho tuong thich voi maxDD 40%/nam?
+  2. `UW <= 200`: giu hay noi?
+  3. tap trung 1 coin `<= 15%`: giu hay noi? — Ghi chu: khi danh 1x, **tap trung 1 coin la nguon
+     MAT THAT duy nhat** (coin delist ve 0 khi dang giu thi khong hoi phuc duoc), nen khuyen nghi GIU.
+- Cac phan con lai cua file (khong nam am; quy xau nhat; tap trung 1 coin; NGUONG BANG CHUNG >=2 rate
+  ngoai CI) **giu nguyen**.
