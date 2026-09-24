@@ -25,6 +25,10 @@ Cửa sổ `20210701 .. 20251230` (DEV), `TICKER_SOURCE=file`, mapper **863** (�
 > **GD92 thuần nó là NO-OP** (`blocked=0`, md5 giống hệt OFF). ⇒ **ĐỀ XUẤT: bật mặc định
 > `CONC_CAP_PERCOIN_ENABLED=1 / PCT=0.15`** (an toàn + không mất chất lượng), **KHÔNG tự bật**,
 > **KHÔNG** coi đây là GO cho T100/GD92 (2 nền này vẫn FAIL rào cứng toàn kỳ từ trước, không do cap).
+>
+> **Bổ sung 3.3**: dưới khẩu vị MỚI NHẤT (`RISK_APPETITE.md` §7, `UW ≤ 250` — commit `2350f47`
+> nới **giữa lúc vòng này chạy**), bật cap biến **`cc-t100` và `cc-g-cp` thành PASS HẾT rào cứng**
+> (chúng chỉ còn FAIL vì `conc`); `GD92` thuần vẫn FAIL vì `UW 278` — cap không chạm tới UW.
 
 ---
 
@@ -119,6 +123,29 @@ Tham chiếu (KHÔNG phải tiêu chí): mọi chân nhiều lệnh đều XAU *
   `cc-g92` không đổi (vốn 14.38% < 15% ⇒ đã PASS conc).
 - **`UW ≤ 200` KHÔNG đổi** và vẫn là rào đang chặn (đúng nhận định `RESULT_FRAGILITY_N` §6.4).
 - **`maxDD` không phải rào chặn**: mọi chân dưới **cả** 30% và 40% theo năm lẫn toàn kỳ.
+
+### 3.3 Chấm THÊM dưới khẩu vị MỚI NHẤT của `RISK_APPETITE.md` §7 (UW ≤ 250, quỹ ≥ −20%)
+
+`RISK_APPETITE.md` được nới **giữa lúc vòng này đang chạy** (commit `2350f47`, 09:06:56 — sau
+pre-reg `a93982f` 08:37): `UW 200 → 250`, `quỹ xấu nhất −15% → −20%`, `maxDD 30% → 40%`,
+`conc ≤ 15%` **GIỮ**, `không năm âm` **GIỮ**. Pre-reg đã khoá theo đúng thang task giao
+(`UW ≤ 200`) nên **không đổi**; dưới đây là **báo cáo thêm** dưới thang mới:
+
+| chân | maxDD ≤ 40% | UW ≤ 250 | quỹ ≥ −20% | conc ≤ 15% | năm âm | dưới §7 (mới) |
+|---|---|---|---|---|---|---|
+| `hn-t100` (OFF) | −16.13 ✓ | 248 ✓ | −4.64 ✓ | **27.23 ✗** | không | **FAIL (chỉ vì conc)** |
+| **`cc-t100`** | −16.13 ✓ | 248 ✓ | −4.64 ✓ | **10.83 ✓** | không | **PASS HẾT** |
+| `hn-g92` (OFF) | −16.55 ✓ | **278 ✗** | −4.59 ✓ | 14.38 ✓ | không | **FAIL (UW)** |
+| `cc-g92` | −16.55 ✓ | **278 ✗** | −4.59 ✓ | 14.38 ✓ | không | **FAIL (UW)** |
+| `hn-g-cp` (OFF) | −17.65 ✓ | 249 ✓ | −5.58 ✓ | **15.29 ✗** | không | **FAIL (chỉ vì conc)** |
+| **`cc-g-cp`** | −17.65 ✓ | 249 ✓ | −5.58 ✓ | **8.92 ✓** | không | **PASS HẾT** |
+
+⇒ **Dưới khẩu vị mới, bật cap 15% là thứ DUY NHẤT xoá được mục FAIL còn lại của T100 và GD92+CAP**
+(biến 2/3 nền nhiều lệnh từ FAIL thành **PASS hết rào cứng**); GD92 thuần vẫn FAIL vì `UW`
+(cap không chạm tới). **Lưu ý đo lường:** §7.3 (commit `7d85426`, 11:04) đã đổi cách đo `maxDD`
+sang **MTM mốc PHÚT** (dao sâu hơn chuỗi ngày: T100 −16.13% → **−26.26%**, T170 −11.84% → −19.96%)
+— số ở bảng trên là **thang CŨ (chuỗi ngày)** dùng đúng như pre-reg đã khoá; **dưới thang phút mới
+thì `maxDD` vẫn dưới 40%** nên không đổi kết luận PASS/FAIL, nhưng biên an toàn mỏng hơn nhiều.
 
 ---
 
