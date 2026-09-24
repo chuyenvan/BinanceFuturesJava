@@ -353,3 +353,19 @@ Ghi chú GIỮ: `taker_buy` (#44) giữ vì share 2,65% **nhưng** kèm điều 
    `~/.bash_history` — không còn); provenance được truy lại từ transcript phiên trước: 18 file
    `model_f*_4h.json` như mô tả §2. Nếu cần tái lập: `xgboost.Booster.load_model` + `get_score(...)`
    cho 18 file đó (thao tác nhẹ, không train).
+
+---
+
+## ĐÍNH CHÍNH (2026-09-24) — NHÃN TRAIN ghi ở §3 là SAI
+
+§3 (mục "Phương pháp") ghi nhãn train của selector là `y = (maxFav_4h >= 6%)` — **SAI**.
+
+**Nhãn THẬT = `y = (retEnd_4h > 0.015)`**, base rate **0,1849**. Xác nhận 3 cách độc lập
+(`docs/PREP_STAGE2_TRAIN.md`, commit `2231738`): log gốc của kernel train + đếm lại từ `.pb`
++ `scale_pos_weight` fold0 `2.70527601` ⇒ tỷ lệ dương **0,2699**.
+
+Nhãn `maxFav >= 0,06` là của **họ `G015_v2` / model LIVE ONNX** — **KHÁC** với S1 dùng trong
+nghiên cứu (spearman giữa 2 họ ≈ **0,854**). ⇒ Hai việc khác nhau, **không dùng chéo**.
+
+Các kết luận ở §3 (rank-IC/decile theo `retEnd_4h`) vẫn đúng **với tư cách thước đo lợi nhuận 4h**,
+nhưng **không** phải thước của nhãn train — đọc §3 phải nhớ điều này.
