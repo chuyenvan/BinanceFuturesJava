@@ -105,7 +105,11 @@ def main():
         A("- Tien trinh train (hit cua cot append theo nam): `%s`" % (ca.get("add_hits") or "n/a"))
         A("- `num_feature` tung arm: %s"
           % ", ".join("%s=%d" % (t, S["arms"][t]["num_feature"]) for t in ARMS if t in S["arms"]))
-        A("- `drop_cols` tung arm va `base_trainer_sha256`: xem `net_train_summary.json` cua tung arm.")
+    A("- **Cong tai lap du lieu (doi chieu ban deploy):** fold `20220101` cho `pos=0.26989` · `spw=2.705276`"
+      " — khop moc deploy da tai lieu hoa (`0.2699` / `2.70527601`, `docs/plan/PREP_STAGE2_TRAIN.md` §1.3)"
+      " ⇒ tap dong/nhan/split cua vong nay DUNG la cua net015-45, chi khac vector cot.")
+    A("- `spw` tang dan theo fold (2.705276 → 4.287861) — khop quy luat expanding (pos 0,2699 → 0,1891).")
+    A("- `drop_cols` tung arm va `base_trainer_sha256`: xem `net_train_summary.json` cua tung arm.")
     A("")
     A("---")
     A("")
@@ -145,7 +149,7 @@ def main():
                 return "%s [%s, %s]" % (fm(x["mean"]), fm(x["infl"][0]), fm(x["infl"][1]))
             A("| %s | %s | %s | %s | %s | %s | %s |"
               % (t, g("ic_vs_V0"), g("ic_vs_V5"), g("lift8_vs_V0"), g("lift8_vs_V5"),
-                 (r.get("ic_vs_V0") or {}).get("ngoai_0_duong"), (r.get("ic_vs_V5") or {}).get("ngoai_0_duong")))
+                 (r.get("ic_vs_V0") or {}).get("huong_tot"), (r.get("ic_vs_V5") or {}).get("huong_tot")))
     A("")
     A("### 2.3 rank-IC theo TUNG FOLD (16 fold × 6 bien the)")
     A("")
@@ -191,7 +195,8 @@ def main():
         A("- `Δrank-IC(V5 − V0)` = **%s**, CI x inflate = **[%s, %s]** ⇒ %s"
           % (fm(r["ic_vs_V0"]["mean"]), fm(r["ic_vs_V0"]["infl"][0]), fm(r["ic_vs_V0"]["infl"][1]),
              "**CI CHUA 0** ⇒ nhieu KHONG hon moc (dung du doan P1)"
-             if not r["ic_vs_V0"]["ngoai_0_duong"] else "**CI NGOAI 0, DUONG** ⇒ canh bao: hieu ung den tu them cot/mask"))
+             if not r["ic_vs_V0"]["huong_tot"] else
+             "**CI NGOAI 0 theo CHIEU MANH HON** ⇒ **P1 SAI**: hieu ung 'them cot' KHONG den tu noi dung feature"))
         A("- `Δlift@8(V5 − V0)` = %s, CI x inflate = [%s, %s]"
           % (fm(r["lift8_vs_V0"]["mean"]), fm(r["lift8_vs_V0"]["infl"][0]), fm(r["lift8_vs_V0"]["infl"][1])))
     A("")
@@ -202,7 +207,8 @@ def main():
     A("| # | Du doan | Ket qua |")
     A("|---|---|---|")
     if SC and "V5" in SC.get("vs", {}):
-        p1 = "DUNG" if not SC["vs"]["V5"]["ic_vs_V0"]["ngoai_0_duong"] else "**SAI**"
+        p1 = "DUNG" if not SC["vs"]["V5"]["ic_vs_V0"]["huong_tot"] else \
+            "**SAI** ⇒ theo pre-reg §5: vong nay **NULL / khong do duoc**, giu 21 keeper + phai dieu tra subset-selection-bias"
         A("| P1 | V5 (nhieu) khong hon V0 ngoai CI o rank-IC | %s |" % p1)
     if SC:
         d1 = SC["vs"].get("V1", {}).get("ic_vs_V0")
@@ -218,8 +224,18 @@ def main():
           % ("DUNG" if not S["cross_arm"]["mismatch"] else "**SAI** — loi co che"))
     if SC and "V3" in SC.get("vs", {}):
         r = SC["vs"]["V3"]
-        A("| P5 | V3 (rvol7d) la ung vien sang nhat nhung van khong vuot §4 | rank-IC Δ vs V0 = %s ⇒ %s |"
-          % (fm(r["ic_vs_V0"]["mean"]), "khong vuot" if not r["ic_vs_V0"]["ngoai_0_duong"] else "VUOT (P5 sai)"))
+        A("| P5 | V3 (rvol7d) la ung vien sang nhat nhung van khong vuot §4 | rank-IC Δ vs V0 = %s ⇒ %s; Δ vs V5 = %s ⇒ %s |"
+          % (fm(r["ic_vs_V0"]["mean"]),
+             "VUOT V0" if r["ic_vs_V0"]["huong_tot"] else "khong vuot V0",
+             fm(r["ic_vs_V5"]["mean"]),
+             "VUOT V5 (sai P5)" if r["ic_vs_V5"]["huong_tot"] else "khong tach duoc khoi V5"))
+    A("")
+    A("> **LAM RO SAU KHI XEM SO (KHONG sua pre-reg):** pre-reg §4 viet \"CI khong chua 0 VA **cUNG DAU DUONG**\".")
+    A("> Cau do viet theo quy uoc `IC > 0`. Do duoc: **rank-IC cua MOI bien the deu AM** (giong Stage 0 —")
+    A("> momentum/vol dai han tuong quan AM voi `retEnd_4h`), nen \"HON\" phai doc la **|IC| LON HON = AM HON**.")
+    A("> Bang §2.2 o tren dung ban doc theo **chieu tot len** (`huong_tot`). Neu doc **CHU NGHIA** (dau duong)")
+    A("> thi khong bien the nao 'hon V0' ca — **ket cuc NULL khong doi** (V1/V3/V5 deu AM HON V0, tuc la")
+    A("> \"khong duong\" theo chu nghia). Ca hai ban doc deu cho **cung mot ket luan §0**. Khong doi tieu chi/nguong/k.")
     A("")
     A("---")
     A("")
@@ -233,8 +249,12 @@ def main():
     A("  - `<TAG>/predict_wf_<cutoff>.bin` = 16 bin/bien the (26 B/rec, `>q h 4f`, `p0` = 4h);"
       " `<TAG>/net_train_summary.json`, `stage2_summary.json`, `stage2_metrics.json`,"
       " `<TAG>_perfold_ticks.parquet`")
-    A("- **Backup tai may:** `/tmp/s2out/` (chi artifact NHO: summary + metric theo tick + model,"
-      " **khong** tai 5,3 GB bins — bins o kernel output).")
+    A("- **Backup tai may (ben vung, khong phai /tmp):** `/home/ubuntu/claudedata/stage2_featvar_out/`"
+      " (173 MB: 6 thu muc model + `*_perfold_ticks.parquet` + 3 JSON summary/score/metrics + log kernel)."
+      " **KHONG** tai 5,3 GB bins — bins o kernel output (tai lai bang API theo `fileName`).")
+    A("- Du lieu nguon cot append: `/home/ubuntu/claudedata/prefeat_stage2/prefeat_full.parquet`"
+      " (39.610.611 dong · 924 MB · sha256 `a601fef5599d12216dddbd9ff25c540109c4af76d2de89efbf188e1789d71d38`)"
+      " + dataset Kaggle `chuyendinh/funding-prefeat-stage2`.")
     A("- **Bang sha256 bins tung fold × tung arm:** trong `stage2_summary.json` (khoa `sha_bin`).")
     if S:
         A("")
@@ -273,6 +293,10 @@ def main():
     A("- `mom30d`/`daysSinceHigh30D` NaN ~4,5 % (warmup + coin moi list) — nhu Stage 0.")
     A("- Tap dong KHONG doi khi them cot (join trai + NaN, va `--drop-cols` chi cat cot): da assert.")
     A("- Multiplicity **k = 6** ap cho **ca hai** chieu so (vs V0 va vs V5) — khong noi `k` sau khi xem so.")
+    A("- **Co che do duoc (quan trong nhat vong nay):** 3 bien the CO cot append (V1 +5 that / V3 +1 that /"
+      " V5 +5 nhieu) deu dich rank-IC ve cung mot phia voi do lon tuong duong; 2 bien the chi +2 cot that"
+      " (V2, V4) gan nhu khong dich. ⇒ Phan 'thang' KHONG quy duoc cho noi dung 5 feature.")
+    A("- `lift@8` cua MOI bien the deu duong lon (~+0,105) va chenh nhau rat it ⇒ thuoc nay khong phan biet duoc arm.")
     A("- CI o tang rank-IC dung cung hang so `c3_rates` nhu `x1_rates.py` ⇒ nhat quan giua Stage 2 va Stage 3.")
     A("")
     A("---")

@@ -99,21 +99,39 @@ def main():
                 r["%s_vs_%s" % (m, other)] = {
                     "mean": mm, "raw": [lo, hi],
                     "infl": [float(mm - (mm - lo) * INFL), float(mm + (hi - mm) * INFL)],
-                    "ngoai_0_duong": bool(mm - (mm - lo) * INFL > 0)}
+                    "ngoai_0": bool(lo > 0 or hi < 0),
+                    "huong": float(np.sign(mm)),
+                    "ngoai_0_duong": bool(mm - (mm - lo) * INFL > 0),
+                    "ngoai_0_am": bool(mm + (hi - mm) * INFL < 0)}
+                # [LAM RO SAU KHI XEM SO — KHONG sua pre-reg] pre-reg §4 viet "CI khong chua 0 VA
+                # CUNG DAU DUONG"; cau do viet theo quy uoc IC > 0. Do duoc: rank-IC o day AM
+                # (giong Stage 0) => "HON" nghia la |IC| LON HON = AM HON. `huong_tot` duoi day la
+                # ban doc theo CHIEU TOT LEN: `ic` = am hon; `lift8` = duong hon.
+                _x = r["%s_vs_%s" % (m, other)]
+                _x["huong_tot"] = bool(_x["ngoai_0"] and
+                                       (_x["infl"][1] < 0 if m == "ic" else _x["infl"][0] > 0))
         out["vs"][t] = r
     json.dump(out, open(os.path.join(d, "stage2_score.json"), "w"), indent=1)
 
     # --- ap LUAT §4 ---
-    log.info("\n### LUAT §4 (GIU = (1) hon V0 ngoai CI VA (2) khac V5 ngoai CI, ca hai DUONG)")
+    log.info("\n### LUAT §4 (GIU = (1) hon V0 ngoai CI VA (2) khac V5 ngoai CI; 'hon' = CHIEU TOT LEN: "
+             "rank-IC AM HON / lift@8 DUONG HON — xem lam ro)")
     verdict = {}
     for t in ARMS:
         if t not in out["vs"]:
             continue
         a = out["vs"][t].get("ic_vs_V0"); b = out["vs"][t].get("ic_vs_V5")
-        ok1 = bool(a and a["ngoai_0_duong"])
-        ok2 = bool(b and b["ngoai_0_duong"])
-        verdict[t] = {"hon_V0": ok1, "khac_V5": ok2, "GIU": ok1 and ok2}
-        log.info("  %-3s hon_V0=%-5s khac_V5=%-5s => %s", t, ok1, ok2, "GIU" if ok1 and ok2 else "NULL")
+        ok1 = bool(a and a.get("huong_tot"))
+        ok2 = bool(b and b.get("huong_tot"))
+        lit1 = bool(a and a.get("ngoai_0_duong"))          # ban doc CHU NGHIA pre-reg (dau duong)
+        lit2 = bool(b and b.get("ngoai_0_duong"))
+        verdict[t] = {"hon_V0": ok1, "khac_V5": ok2, "GIU": ok1 and ok2,
+                      "doc_chu_nghia_hon_V0": lit1, "doc_chu_nghia_khac_V5": lit2,
+                      "doc_chu_nghia_GIU": lit1 and lit2,
+                      "d_ic_vs_V0": (a or {}).get("mean"), "d_ic_vs_V5": (b or {}).get("mean")}
+        log.info("  %-3s (chieu tot len) hon_V0=%-5s khac_V5=%-5s => %-4s | (doc chu nghia 'dau duong') "
+                 "hon_V0=%-5s khac_V5=%-5s", t, ok1, ok2, "GIU" if ok1 and ok2 else "NULL",
+                 lit1, lit2)
     out["verdict"] = verdict
     json.dump(out, open(os.path.join(d, "stage2_score.json"), "w"), indent=1)
     log.info("WROTE %s/stage2_score.json", d)
