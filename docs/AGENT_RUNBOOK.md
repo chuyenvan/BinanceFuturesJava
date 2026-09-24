@@ -28,6 +28,14 @@ khong can hoi lai user, khong can doc lai 30 doc khac.
       printDone md5 **`99e42b75cf1a2142f9cd14dc72e371ba`** (1,085 leg, eq 103,083).
       **`efb793e2` (T170, 1,1,3,8) KHONG con la baseline** — chi la "nen cu" de doi chieu.
       MOI ket luan moi phai do tren baseline MOI; ket luan cu tren nen T170 KHONG tu dong chuyen.
+   -> **SO SANH PHAI CUNG NGUON HA TANG** (user chot 2026-09-24): *"neu kaggle thi so voi kaggle con
+      oracle so voi oracle"*. Moi bang so sanh (variant vs moc) **PHAI cung mot nguon chay**:
+      Kaggle ↔ Kaggle, Oracle ↔ Oracle — **KHONG tron**. Ly do: cung 1 cau hinh co the lech giua hai
+      ha tang (ticker source, mount path, phien ban bundle).
+      Thuc te: moc KEEPLEG0 ton tai o CA HAI va **byte-identical** (`java/devrun/FG_KEEPLEG0` =
+      `kaggle_sim/out/kg0-g170`, md5 `99e42b75`) ⇒ khi so sanh thi **dung ban Kaggle lam moc**
+      (vi moi variant moi deu chay tren Kaggle) va **ghi ro nguon trong bang**.
+      **Sim MOI = Kaggle** (Oracle KHONG chay sim/job: shadow dang LIVE).
 4. **Bao rui ro/lo hong TRUOC**, khong khen, tieng Viet + thuat ngu Anh nguyen ban.
 5. **Khong `print()` trong Python** — dung module `logging`. Java dung SLF4J.
 6. **Khong push.** Commit branch `module`, de user push.
