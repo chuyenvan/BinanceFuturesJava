@@ -51,9 +51,10 @@ ARMS = [
     ("kg0-g125", 1.25, "scale"),
     ("kg0-g110", 1.10, "scale"),
     ("kg0-g100", 1.00, "scale"),
+    ("kg0-cap-s100", 1.00, "cap3"),   # nhom (3): KEEPLEG0 + CAP + scale s* (luat chot truoc)
 ]
 SCALE_ARMS = ["kg0-g170", "kg0-g155", "kg0-g140", "kg0-g125", "kg0-g110", "kg0-g100"]
-CAP_ARMS = ["kg0-cap"]
+CAP_ARMS = ["kg0-cap", "kg0-cap-s100"]
 
 
 def md5f(path):
@@ -262,21 +263,26 @@ def main():
     pairs = [(sc_of[t], S[t]["n"]) for t in SCALE_ARMS if t in have]
     pairs.sort()
     ns = [n for _, n in pairs]
-    mono = all(ns[i] <= ns[i + 1] for i in range(len(ns) - 1))
-    print("    thang gate-scale: %s => n %s => %s" % (
-        ["%.2f:%d" % p for p in pairs],
-        "GIAM DAN theo scale" if mono else "*** KHONG DON DIEU ***",
-        "OK (co che dung chieu)" if mono else "ghi ro bat thuong"))
-    if "kg0-cap" in have:
-        g = Gd["kg0-cap"]
-        print("    CAP: MODE pct=%s | SUMMARY blocked=%s | dong SKIP=%d | md5 %s" % (
-            g["mode"], g["summary"], g["skip"], (md5("kg0-cap") or "-")[:12]))
+    # scale nho => n lon: n phai GIAM DON DIEU khi scale tang
+    mono = all(ns[i] >= ns[i + 1] for i in range(len(ns) - 1))
+    print("    thang gate-scale (scale tang dan): %s" % ["%.2f:%d" % p for p in pairs])
+    print("    co che: n %s theo chieu scale tang => %s" % (
+        "GIAM DON DIEU" if mono else "*** KHONG DON DIEU ***",
+        "OK (dung co che: scale nho = gate long = nhieu lenh)" if mono else "ghi ro bat thuong"))
+    for tcap, toff in (("kg0-cap", "kg0-g170"), ("kg0-cap-s100", "kg0-g100")):
+        if tcap not in have:
+            continue
+        g = Gd[tcap]
+        print("    CAP %s: MODE pct=%s | SUMMARY blocked=%s | dong SKIP=%d | md5 %s" % (
+            tcap, g["mode"], g["summary"], g["skip"], (md5(tcap) or "-")[:12]))
         if (g["summary"] or 0) == 0 and g["skip"] == 0:
             print("    *** CANH BAO: blocked=0 => chan CAP nay la TAM THUONG (no-op tren nen nay) ***")
-        if "kg0-g170" in have:
-            print("    CAP bind? so leg bi chan (OFF %d -> ON %d), md5 OFF %s vs ON %s" % (
-                S["kg0-g170"]["n"], S["kg0-cap"]["n"],
-                (md5("kg0-g170") or "-")[:12], (md5("kg0-cap") or "-")[:12]))
+        if toff in have:
+            same = md5(tcap) == md5(toff)
+            print("    CAP bind? so leg bi chan (OFF %s %d -> ON %d), md5 OFF %s vs ON %s => %s" % (
+                toff, S[toff]["n"], S[tcap]["n"],
+                (md5(toff) or "-")[:12], (md5(tcap) or "-")[:12],
+                "BYTE-IDENTICAL (no-op)" if same else "KHAC nhau"))
 
     # ---- [2] CI ----
     print("\n[2] 5 RATE + CI vs MOC KEEPLEG0 (%s) — quyet dinh = ngoai CA HAI do rong" % BASE)
