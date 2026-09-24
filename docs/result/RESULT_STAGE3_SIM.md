@@ -36,7 +36,7 @@ Nền = **FLATGRID KEEPLEG0**; 4 kênh **cùng một cấu hình, chỉ khác th
 | **P2** dựng lại funding byte-faithful | `md5_funding` = **`8e57d900d5c54c744bfcaf5c9b27fc93`** ✓ (= manifest bundle) · `binsSha256` = **`407e2aba…`** ✓ |
 | **P3** đồng nhất dữ liệu | `market.bin`/`pred.bin` **copy NGUYÊN BYTE** từ bundle (`4ab691c908fc545c…` / `5dd6bb4c3f98d89d…`, có guard md5 trong kernel) ⇒ 4 kênh dùng **cùng** market/pred |
 | **jar** | sha256 `2c2f8aef78c98470fdc3b0d464edd7ec2c604a7589985b1f4211c1da05fcdca0` = jar của bundle ✓ |
-| **MTM mốc phút (cổng bắt buộc trước khi đọc maxDD)** | kênh MỐC tái lập **đúng số đã công bố** của KEEPLEG0: minute maxDD **−19,96 %** (149.1 §3), UW **147,2 ngày**, năm xấu nhất **2025 −19,96 %**; V1 0,18 USDT · V2-rel **0,0129 %** · V3 **0,001 %** · V5 **0,001 pp** — **PASS toàn bộ** (ngưỡng: 1 USDT / 0,05 % / 1 % / 0,1 pp) |
+| **MTM mốc phút (cổng bắt buộc trước khi đọc maxDD)** | kênh MỐC tái lập **đúng số đã công bố** của KEEPLEG0: minute maxDD **−19,96 %** (`RESULT_INTRADAY_DD` §3.1), UW **147,2 ngày**, năm xấu nhất **2025 −19,96 %**; V1 0,18 USDT · V2-rel **0,0129 %** · V3 **0,001 %** · V5 **0,001 pp** — **PASS toàn bộ** (ngưỡng: 1 USDT / 0,05 % / 1 % / 0,1 pp) |
 
 - `binsSha256` từng kênh: MỐC `407e2aba…` · V0 `9709dd62…` · V1 `7b4cc34a…` · V5 `d649e8c1…`; `md5_funding`: `8e57d900…` / `e942ad45…` / `d5acde84…` / `192cbe66…`.
 - Nguồn ranker S1 (`pred_s1a2x1.parquet`) sha256 **`2618fe1a0235d8ed3602f7b4bf37d8ba611e4e6c923854e10184d036065309fe`** = đúng bản dùng để dựng bins MỐC (`BINS_MANIFEST` §X1) ⇒ 4 kênh **cùng thứ tự coin**, chỉ khác **multiset `P(win)`**.
@@ -101,6 +101,19 @@ Theo năm (`maxDD_phút% / UW_phút ngày / ret% / qmin%`, ngưỡng 40 % · 250
 - **2021H2 GIỐNG HỆT TUYỆT ĐỐI ở cả 4 kênh (149 lệnh / +4.273 / +12,21 % / maxDD −2,46 %)** — đúng như thiết kế (2 fold 2021 dùng chung bins của MỐC; xem §7.1) ⇒ khác biệt giữa các kênh **chỉ** đến từ 16 fold 2022+.
 - Cả 4 kênh **không năm nào âm**; PnL kém hơn của các biến thể tập trung ở **2025** (MỐC +24.282 vs V0 +15.373 / V1 +14.350 / V5 +14.462) — các biến thể vào nhiều lệnh hơn nhưng chất lượng/lệnh thấp hơn.
 
+## 5b. ĐỐI CHIẾU DỰ ĐOÁN KHOÁ TRƯỚC (pre-reg §5 — KHÔNG sửa pre-reg sau khi xem số)
+
+| # | Dự đoán (chốt trước) | Kết quả |
+|---|---|---|
+| P1 | Cổng parity P1 PASS (md5 `99e42b75…`, 1.085 leg / 103.083) | **ĐÚNG** |
+| P2 | Cổng P2 PASS (funding dựng lại = `8e57d900…`) | **ĐÚNG** |
+| P3 | **V0 ≈ MỐC** ở 5 rate (0 rate ngoài CI, hoặc 1 rate ngoài CI ở kênh `mMargin`) | **SAI** — 2 rate CHẤT LƯỢNG ngoài CI (`mP\|SM`, `meanP`, đều XẤU hơn) |
+| P4 | V1 ≈ V0 và V5 ≈ V0 ⇒ SIM không phân biệt feature thật với nhiễu | **ĐÚNG** (0/5 cả hai) |
+| P5 | Cả 4 kênh PASS rào cứng §7 (mọi năm + toàn kỳ) | **ĐÚNG** |
+| P6 | `n` 4 kênh chênh < 20 %; `Σfunding/ΣPnL` chênh < 5 pp | **ĐÚNG** (n +10,6 %/+16,9 %/+14,2 %; Σfund/ΣPnL trải −3,47…−6,24 % = 2,77 pp) |
+
+> **P3 SAI là kết quả quan trọng nhất của vòng này**: dự đoán "cắt 45→21 không làm tệ đi" **không** đúng ở tầng rate — nhưng nó **đúng** ở tầng RÀO RỦI RO. Cả hai điều được báo song song; **không** sửa tiêu chí/luật sau khi thấy số.
+
 ## 6. KẾT LUẬN THEO LUẬT §4 + TRẢ LỜI
 
 | kênh | n | TỐT/5 | XẤU/5 | rào năm | rào toàn kỳ | **quyết định** |
@@ -133,5 +146,7 @@ Theo năm (`maxDD_phút% / UW_phút ngày / ret% / qmin%`, ngưỡng 40 % · 250
 | Kernel | `chuyendinh/sim-s3-{moc,v0,v1,v5}` · `sim-s3-mtm` · `sim-s3-probe` |
 | Dataset mới | `chuyendinh/s3-s1-sc` (`pred_s1a2x1.parquet`) · `chuyendinh/s3-moc-2021bins` (2 fold 2021 của mốc) |
 | Bins Stage 2 (nguồn) | kernel `chuyendinh/g015p2-stage2-featvar-gpu` → `stage2/{V0,V1,V5}/predict_wf_*.bin` |
+| Thời gian | 4 sim song song: JVM **890–1.202 s/kênh**, push→COMPLETE **~25–30 phút**; MTM mốc phút 4 kênh: **525 s**; probe ~1 phút |
+| Chi phí | **0** (Kaggle CPU kernel không tính quota; không dùng GPU; 6 lần chạy kernel) |
 
 *Sinh bởi `research/analysis/s3_score.py` từ artifact kernel.*
