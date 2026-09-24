@@ -122,3 +122,47 @@ MaxDD nam xau nhat / UW dai nhat (tu `sim.out` tung run, da co san):
      MAT THAT duy nhat** (coin delist ve 0 khi dang giu thi khong hoi phuc duoc), nen khuyen nghi GIU.
 - Cac phan con lai cua file (khong nam am; quy xau nhat; tap trung 1 coin; NGUONG BANG CHUNG >=2 rate
   ngoai CI) **giu nguyen**.
+
+## 7. Chot bo sung 2026-09-24 (lan 2, chat) — khau vi sau khi XAC NHAN 1x
+
+User: *"tap trung <= 15% la cai gi. quy ok giam 20% cung ok uu tien dai han hon. uw co the keo len 250
+uu tien ca nam van lai on dinh hon co khi keo dai ra se tim duoc mo hinh keo no lai nhung ko uu tien.
+uu tien nhat la nhieu lenh de on dinh"*
+
+| rang buoc | truoc | MOI (2026-09-24, lan 2) |
+|---|---|---|
+| `maxDD` (theo nam) | <= 30% | **<= 40%** (xem §6) |
+| `quy xau nhat` | >= -15% | **>= -20%** |
+| `UW` (ngay) | <= 200 | **<= 250** |
+| `tap trung 1 coin` | <= 15% equity | **<= 15% (GIU)** |
+| `nam am` | khong | **khong (GIU)** |
+| NGUONG BANG CHUNG | >= 2 rate ngoai CI | **GIU NGUYEN** |
+
+- **Uu tien chien luoc (ghi de nho)**: *"uu tien nhat la NHIEU LENH de ON DINH"*; uu tien **dai han**
+  hon ngan han; `UW` dai "co the keo dai ra se tim duoc mo hinh keo no lai" nhung **KHONG uu tien**.
+
+### 7.1 `tap trung 1 coin` nghia la gi (dinh nghia chinh thuc)
+
+- Tai **MOI thoi diem**: `tong margin cua TAT CA vi the dang mo tren MOT coin / equity hien tai <= 15%`.
+  Vi chien luoc danh **1x** nen `margin == notional` ⇒ day la **ty trong von thuc su dat vao 1 coin**.
+- Co che: `CONC_CAP_PERCOIN_ENABLED` / `CONC_CAP_PERCOIN_PCT` — chan **leg MOI** khi
+  `(margin coin + margin leg moi)/equity > pct`. (DCA grid `1,1,3,8` don vao 1 coin nen tran nay
+  chinh la **phanh cua DCA**.)
+- **Ly do ton tai**: khi danh 1x, **day la KENH MAT THAT DUY NHAT** — coin delist/ve 0 khi dang giu thi
+  **khong hoi phuc**, khac han `maxDD`/`UW` (chi la lo TAM THOI).
+- Do duoc (`RESULT_FRAGILITY_N`): T170 **9.77%** (FTT) · GD92 **14.38%** (JELLYJELLY) ·
+  **T100 28.51%** (CUDIS, 2025-11-12) · `hn-g-cp` (GD92+CAP) **15.29%**.
+
+### 7.2 HAU QUA NGAY — cham lai cac nen nhieu lenh duoi khau vi MOI
+
+| nen | maxDD | UW | conc | ket qua duoi khau vi MOI |
+|---|---|---|---|---|
+| T170 | -11.84% | 92 | 9.77% | PASS het |
+| T100 | -16.13% | 248 | **27.23%** | **FAIL chi vi TAP TRUNG** (UW 248 <= 250 da dat) |
+| GD92 | -16.55% | **278** | 14.38% | FAIL vi UW (>250) |
+| GD92+CAP (`hn-g-cp`) | -17.65% | 249 | **15.29%** | **FAIL chi vi TAP TRUNG** (vuot 0.29 diem) |
+
+- ⇒ Tu nay **tap trung 1 coin la rang buoc RUI RO DUY NHAT con chan** cac nen nhieu lenh.
+- ⇒ **NHUNG**: ha rao rui ro **KHONG tao ra bang chung** — ca 4 nen van **0/5 rate ngoai CI**.
+- ⇒ Doi trong: tran tap trung **lam GIAM n** (chan leg moi). Voi uu tien "nhieu lenh", day la **danh doi
+  phai do bang so** (dang do: `PREREG_CONC_CAP_HIGHN.md`).
