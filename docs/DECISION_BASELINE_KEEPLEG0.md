@@ -67,3 +67,15 @@ moi bac len **13/4 = 3.25 lan**; va bat bien `TONG = F_BASE x SCALE` (doc lap vo
 (`docs/RESULT_FRAGILITY_N.md`) ⇒ danh **1x**, khong don bay; max concurrent margin ~47–58% equity
 ⇒ **khong the chay tk** ⇒ `maxDD`/`UW` la **lo TAM THOI**. **Kenh MAT THAT duy nhat = tap trung
 1 coin** (delist/ve 0 khi dang giu) ⇒ tran `conc <= 15%` giu **CUNG**.
+
+## BO SUNG 2026-09-24 — BAT `CONC_CAP_PERCOIN = 15%` lam MAC DINH (user chot "Ok")
+
+- **Baseline** `profiles/t170_flat_keepleg0.properties` them:
+  `CONC_CAP_PERCOIN_ENABLED=true` + `CONC_CAP_PERCOIN_PCT=0.15`.
+- **Production** `/home/ubuntu/shadow_c3/app/conf/env.sh` them dung 2 key do (da `cp -a` backup
+  `env.sh.bak_*` truoc khi sua). **CHUA restart service** ⇒ chi co hieu luc o lan restart ke tiep.
+- **Tren KEEPLEG0 day la NO-OP trong mau**: `RESULT_GATESCALE_KEEPLEG0` nhom (1) — `[CONC-PC] MODE
+  pct=0.15`, `blocked=0`, printDone **y het** khi OFF (conc do duoc **7.12%** << 15%). ⇒ Parity
+  `99e42b75` **khong doi**; gia tri nam o **bao hiem** (chan kenh MAT THAT duy nhat khi danh 1x).
+- Bang chung quan trong: conc 1 coin **co the len toi 40.43%** (gate 1.25, `RESULT_GATESCALE_SWEEP`),
+  va tren T100 cap 15% cat conc **27.23% → 10.83%** ma PnL **+8.36%** (`RESULT_CONC_CAP_HIGHN`).
