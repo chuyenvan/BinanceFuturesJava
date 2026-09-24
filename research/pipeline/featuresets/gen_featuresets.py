@@ -65,6 +65,35 @@ FEATURES = [
 
 assert len(FEATURES) == 45 and [f[0] for f in FEATURES] == list(range(45))
 
+# --- STAGE 2 (docs/prereg/PREREG_STAGE2_FEATVAR.md) — cot APPEND vao CUOI vector -------------
+# Index 45..54 KHONG nam trong vector 45 cot cua Tool1/ONNX. Chung chi ton tai o duong OFFLINE
+# Stage 2 (`g015_net_train_add.py --add-feats`), gan vao cac cot CUOI (append-only, xem
+# docs/plan/PREP_STAGE2_TRAIN.md §2.2). 45 vi tri cu KHONG xE dich => model 45 cot con so duoc.
+# 45..49 = 5 feature PASS cua Stage 0 (docs/result/RESULT_PRESCREEN_FEAT.md §3).
+# 50..54 = 5 cot NHIEU sinh trong kernel, dung DUNG NaN-mask cua 45..49 (doi chung "them cot != them tin hieu").
+APPENDED = [
+    (45, "rvol7d", "prefeat (rvb_1m 1h bars)",
+     "std(log-return 1h) tren 168 gio (7d), cua so DONG, min_periods=84"),
+    (46, "mom30d", "prefeat (rvb_1m 15m bars)", "c15(t)/c15(t-30d)-1 (2880 nen 15m)"),
+    (47, "mom7d", "prefeat (rvb_1m 15m bars)", "c15(t)/c15(t-7d)-1 (672 nen 15m)"),
+    (48, "daysSinceHigh30D", "prefeat (rvb_1m 15m bars)",
+     "(idx - argmax(h15 trong 2880 nen 15m))/96, don vi NGAY; sliding argmax min_periods=1440"),
+    (49, "oi_delta7d", "prefeat (oi_percoin_full.bin cot 0)",
+     "prod_{k=0..6}(1+oi_delta24h(t-24h*k))-1 tren luoi 5m roi lay tai tick 15m"),
+    (50, "noise_rvol7d", "SINH TRONG KERNEL (numpy default_rng)",
+     "gia tri ngau nhien N(0,1) tai moi dong, NaN dung DUNG mask cua cot 45"),
+    (51, "noise_mom30d", "SINH TRONG KERNEL (numpy default_rng)",
+     "gia tri ngau nhien N(0,1) tai moi dong, NaN dung DUNG mask cua cot 46"),
+    (52, "noise_mom7d", "SINH TRONG KERNEL (numpy default_rng)",
+     "gia tri ngau nhien N(0,1) tai moi dong, NaN dung DUNG mask cua cot 47"),
+    (53, "noise_daysSinceHigh30D", "SINH TRONG KERNEL (numpy default_rng)",
+     "gia tri ngau nhien N(0,1) tai moi dong, NaN dung DUNG mask cua cot 48"),
+    (54, "noise_oi_delta7d", "SINH TRONG KERNEL (numpy default_rng)",
+     "gia tri ngau nhien N(0,1) tai moi dong, NaN dung DUNG mask cua cot 49"),
+]
+assert [f[0] for f in APPENDED] == list(range(45, 55))
+FEATURES_EXT = FEATURES + APPENDED
+
 KEEPERS_22 = [20, 24, 5, 30, 6, 32, 14, 18, 42, 2, 17, 7, 41, 29, 8, 35, 31, 44, 10, 40, 28, 36]
 
 SOURCES = {
@@ -141,7 +170,7 @@ TRAIN_CODE = {
 
 
 def fs(version, name, keep_idx, status, notes, alias):
-    feats = [{"index": i, "name": n, "source": s, "formula": f} for (i, n, s, f) in FEATURES if i in keep_idx]
+    feats = [{"index": i, "name": n, "source": s, "formula": f} for (i, n, s, f) in FEATURES_EXT if i in keep_idx]
     d = {
         "version": version,
         "alias": alias,
@@ -204,8 +233,65 @@ def reserved(version, purpose):
 
 
 FILES["fs_v3_reserved.json"] = reserved("v3", "cho vong ablation Stage 1 (bo nhom NGAT CHAC 5/45, xem commit 26cdf5e / docs/PREREG_FEAT_ABLATION*)")
-FILES["fs_v4_reserved.json"] = reserved("v4", "cho Ket qua ablation Stage 1 (neu v3 chot duoc tap cot moi)")
-FILES["fs_v5_reserved.json"] = reserved("v5", "cho bien the Stage 2 prep (feature/OI mo rong)")
+# fs_v4_reserved.json / fs_v5_reserved.json da BI GO (git rm, 2026-09-24): 2 khung trong do da
+# duoc dung that boi 6 bien the Stage 2 (v4..v9). Khong co thong tin nao mat (chung rong).
+
+# --- STAGE 2: 6 bien the train (docs/prereg/PREREG_STAGE2_FEATVAR.md muc 1) --------------------
+KEEPERS21 = set(KEEPERS_22) - {36}                       # 21 moc (fs_v2_21)
+ADD_REAL = {45, 46, 47, 48, 49}                          # 5 feature PASS
+ADD_NOISE = {50, 51, 52, 53, 54}                         # 5 cot nhieu
+DROP_ARG = sorted(ALL45 - KEEPERS21)                     # 24 cot bo (--drop-cols), DUNG CHUNG moi bien the
+assert len(DROP_ARG) == 24
+
+
+def fs_var(version, alias, keep_idx, drop_cols, notes, purpose):
+    """File version cho 1 bien the Stage 2: 21 moc (+ cot append o cuoi), ghi ro --drop-cols."""
+    d = fs(version, alias, keep_idx, "planned", notes, alias)
+    d["variant"] = version
+    d["stage2"] = {
+        "purpose": purpose,
+        "base_keepers": sorted(KEEPERS21),
+        "appended_real": sorted(ADD_REAL & keep_idx),
+        "appended_noise": sorted(ADD_NOISE & keep_idx),
+        "drop_cols_arg": ",".join(str(i) for i in sorted(drop_cols)),
+        "keep_idx": sorted(keep_idx),
+        "so_cot": len(keep_idx),
+        "trainer": "research/pipeline/g015_net_train_add.py",
+        "lenh": "python3 g015_net_train_add.py --add-feats <prefeat.parquet> --drop-cols \"%s\" --out-dir <dir>"
+                 % ",".join(str(i) for i in sorted(drop_cols)),
+        "pre_reg": "docs/prereg/PREREG_STAGE2_FEATVAR.md",
+        "luu_y": "10 cot index 45..54 la append-only cho duong OFFLINE; KHONG cham ONNX/NUM_FEATURES=45/LIVE.",
+    }
+    return d
+
+
+V_ARMS = {
+    "fs_v4_21.json": ("V0", "21 keeper (MOC, control)", KEEPERS21,
+                      set(DROP_ARG) | ADD_REAL | ADD_NOISE,
+                      "Moc doi chung: dung 21 keeper, KHONG cot append nao."),
+    "fs_v5_26.json": ("V1", "21 + ca 5 feature PASS", KEEPERS21 | ADD_REAL,
+                      set(DROP_ARG) | ADD_NOISE, "De xuat chinh: them ca 5 feature Stage 0 PASS."),
+    "fs_v6_23.json": ("V2", "21 + {mom7d, mom30d}", KEEPERS21 | {46, 47},
+                      set(DROP_ARG) | {45, 48, 49} | ADD_NOISE,
+                      "Nhom momentum dai han thuan (2 khung)."),
+    "fs_v7_22.json": ("V3", "21 + {rvol7d}", KEEPERS21 | {45},
+                      set(DROP_ARG) | {46, 47, 48, 49} | ADD_NOISE,
+                      "Nguoi thay truc tiep cua rvol15m vua bi bo (#36)."),
+    "fs_v8_23.json": ("V4", "21 + {daysSinceHigh30D, oi_delta7d}", KEEPERS21 | {48, 49},
+                      set(DROP_ARG) | {45, 46, 47} | ADD_NOISE,
+                      "2 feature it trung nhat voi ho hien co (rho 0,320 / 0,259)."),
+    "fs_v9_31.json": ("V5", "21 + 5 + 5 cot NHIEU (mask khop)", KEEPERS21 | ADD_REAL | ADD_NOISE,
+                      set(DROP_ARG), "Doi chung nhieu: cung so cot/mask nhu V1, noi dung ngau nhien."),
+}
+
+for _fn, (_v, _alias, _keep, _drop, _purpose) in V_ARMS.items():
+    assert not (set(_keep) & set(_drop)), _fn
+    assert sorted(set(_keep) | set(_drop)) == list(range(55)), _fn
+    _n_ap = len((ADD_REAL | ADD_NOISE) & _keep)
+    FILES[_fn] = fs_var(_v, _alias, _keep, _drop,
+                        "Bien the train Stage 2 (%s). Base = 21 keeper (fs_v2_21) + cot APPEND o CUOI "
+                        "(%d cot append). Dat ten theo dung luat them/bot cot => VERSION MOI; fs_v2_21.json "
+                        "KHONG bi sua. Xem docs/prereg/PREREG_STAGE2_FEATVAR.md." % (_v, _n_ap), _purpose)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,288 @@
+{
+  "version": "V2",
+  "alias": "21 + {mom7d, mom30d}",
+  "status": "planned",
+  "n_features": 23,
+  "features": [
+    {
+      "index": 2,
+      "name": "btcMomentum24H",
+      "source": "Tool1 f2",
+      "formula": "close_BTC(t)/close_BTC(t-1440m)-1"
+    },
+    {
+      "index": 5,
+      "name": "rateDown15MAvg",
+      "source": "Tool1 f5",
+      "formula": "avg top-100 (close(t)/max15m-1), [t-14m,t]; ⚠ survivorship"
+    },
+    {
+      "index": 6,
+      "name": "momentum1H",
+      "source": "Tool1 f6",
+      "formula": "close(t)/close(t-60m)-1"
+    },
+    {
+      "index": 7,
+      "name": "momentum4H",
+      "source": "Tool1 f7",
+      "formula": "close(t)/close(t-240m)-1"
+    },
+    {
+      "index": 8,
+      "name": "momentum24H",
+      "source": "Tool1 f8",
+      "formula": "close(t)/close(t-1440m)-1"
+    },
+    {
+      "index": 10,
+      "name": "distFromLow24H",
+      "source": "Tool1 f10",
+      "formula": "(close(t)-low24)/low24"
+    },
+    {
+      "index": 14,
+      "name": "basketMomentum24H",
+      "source": "Tool1 f14",
+      "formula": "avg_basket getReturn(1440)"
+    },
+    {
+      "index": 17,
+      "name": "coinFundingRate",
+      "source": "Tool1 f17",
+      "formula": "funding settlement gan nhat <= t (floorEntry)"
+    },
+    {
+      "index": 18,
+      "name": "basketFundingAvg",
+      "source": "Tool1 f18",
+      "formula": "avg_basket cua f17"
+    },
+    {
+      "index": 20,
+      "name": "fundingRateTrend",
+      "source": "Tool1 f20",
+      "formula": "f17 - f19"
+    },
+    {
+      "index": 24,
+      "name": "fundingSum24h",
+      "source": "Tool1 f24",
+      "formula": "sum funding settle trong (t-24h, t]"
+    },
+    {
+      "index": 28,
+      "name": "distFromHigh24H",
+      "source": "Tool1 f28",
+      "formula": "(high24-close(t))/high24"
+    },
+    {
+      "index": 29,
+      "name": "rangePosition24H",
+      "source": "Tool1 f29",
+      "formula": "(close(t)-low24)/(high24-low24)"
+    },
+    {
+      "index": 30,
+      "name": "atrSqueeze",
+      "source": "Tool1 f30",
+      "formula": "avgRange14/avgRange100 (bo nen t)"
+    },
+    {
+      "index": 31,
+      "name": "relStrengthBtc24H",
+      "source": "Tool1 f31",
+      "formula": "f8 - f2"
+    },
+    {
+      "index": 32,
+      "name": "fundingRankCS",
+      "source": "Tool1 f32",
+      "formula": "rank-percentile f17 giua cac coin cung moc t"
+    },
+    {
+      "index": 35,
+      "name": "ret15m",
+      "source": "Tool1 f35",
+      "formula": "close(t)/close(t-15m)-1"
+    },
+    {
+      "index": 40,
+      "name": "oi_delta24h",
+      "source": "OI tool #41",
+      "formula": "oi(t)/oi(t-24h)-1; ExportFundingOiPerCoin.java:104-107"
+    },
+    {
+      "index": 41,
+      "name": "oi_z",
+      "source": "OI tool #42",
+      "formula": "OI z-score expanding no-leak; ExportFundingOiPerCoin.java:85"
+    },
+    {
+      "index": 42,
+      "name": "ls_global",
+      "source": "OI tool #43",
+      "formula": "long/short ratio global (Binance metrics)"
+    },
+    {
+      "index": 44,
+      "name": "taker_buy",
+      "source": "OI tool #45",
+      "formula": "takerBuyRatio r/(1+r); ExportFundingOiPerCoin.java:117-124"
+    },
+    {
+      "index": 46,
+      "name": "mom30d",
+      "source": "prefeat (rvb_1m 15m bars)",
+      "formula": "c15(t)/c15(t-30d)-1 (2880 nen 15m)"
+    },
+    {
+      "index": 47,
+      "name": "mom7d",
+      "source": "prefeat (rvb_1m 15m bars)",
+      "formula": "c15(t)/c15(t-7d)-1 (672 nen 15m)"
+    }
+  ],
+  "label": "retEnd_4h > 0.015",
+  "label_filter": "nBars_4h >= 16 va retEnd_4h notna",
+  "label_mode": "net (LABEL_MODE=net, NET_THR=0.015)",
+  "folds": {
+    "scheme": "expanding WFO",
+    "first_cutoff": "20220101",
+    "last_cutoff": "20260401",
+    "n_folds": 18,
+    "oos_months": 3,
+    "purge_steps": 288,
+    "purge_hours": 72,
+    "tz_offset_ms": 25200000,
+    "tz": "GMT+7",
+    "cutoffs": [
+      "20220101",
+      "20220401",
+      "20220701",
+      "20221001",
+      "20230101",
+      "20230401",
+      "20230701",
+      "20231001",
+      "20240101",
+      "20240401",
+      "20240701",
+      "20241001",
+      "20250101",
+      "20250401",
+      "20250701",
+      "20251001",
+      "20260101",
+      "20260401"
+    ],
+    "canh_bao": "fold 20260101/20260401 nam TREN HoldoutSeal (2026-01-01): KHONG dua vao sim/verdict khi chua HOLDOUT_UNSEAL",
+    "bat_danh_so_fold": "model_f<i>_4h.json lay i = VI TRI trong CUT_DATES. CUT_DATES ban repo hien tai da noi them 3 fold DEV2021 (20210401/20210701/20211001) + 20251231 => cutoff 20240101 = fidx 11, KHONG phai 8 nhu ban deploy. Moi bang so sanh phai khop theo CUTOFF, khong theo so trong ten file (nguon docs/plan/PREP_STAGE2_TRAIN.md §1.2)."
+  },
+  "seed": 42,
+  "hyperparams": {
+    "xgb": {
+      "objective": "binary:logistic",
+      "n_estimators": 400,
+      "max_depth": 5,
+      "learning_rate": 0.05,
+      "subsample": 0.8,
+      "colsample_bytree": 0.8,
+      "min_child_weight": 20,
+      "scale_pos_weight": "(1-pos)/pos, pos = ty le lop 1 CUA TUNG FOLD (khong phai toan cuc): fold0 = 2.70527601 ... fold17 = 4.35441685",
+      "eval_metric": "auc",
+      "n_jobs": -1,
+      "tree_method": "hist",
+      "random_state": 42,
+      "device_goc": "cuda (Kaggle GPU)"
+    },
+    "xgboost_version": "3.2.0",
+    "pipeline_version": "wfo-selector-v2-1m-canonical-20260804",
+    "grid_min": 15,
+    "max_train_rows": 60000000
+  },
+  "train_code_git_commit": null,
+  "train_code": {
+    "git_commit_repo_head": "6695a8c",
+    "file": "research/pipeline/g015_net_train.py",
+    "file_last_modified_commit": "f442c0e",
+    "snapshot": "research/pipeline/train/g015_net_train_v0_snapshot.py (byte-identical, sha256 e8b6798f...)",
+    "predict_file": "research/pipeline/g015x26_train.py (predict lai tu 18 model da luu; snapshot o research/pipeline/train/)",
+    "lenh": "python3 g015_net_train.py --fold 20240101 --device cuda --save-model --out-dir <dir>"
+  },
+  "model_paths": null,
+  "bins_path": null,
+  "sim_runs": [],
+  "sources": {
+    "feature_list": "docs/analysis/EVAL_SELECTOR_FEATURES.md §1 (45 cot, co file:line) + §0",
+    "keepers": "docs/analysis/EVAL_SELECTOR_FEATURES.md §6.3 (GIU 22, share >= 1.30%)",
+    "rvol15m": "docs/diag/DIAG_RVOL15M.md §D (KHONG du can cu cat tu offline; phai do bang rank-IC + lift@8)",
+    "recipe": "docs/experiment/G015_RECIPE.md §2 (cong thuc) + §5 (dau vao ghim) + §6 (bins)",
+    "train_duong": "docs/plan/PREP_STAGE2_TRAIN.md §1 (duong train THAT cua net015-45, script + fold + seed + tham so)",
+    "label": "docs/runbooks/AGENT_RUNBOOK.md (nhan THAT cua predwf_G015x26 = retEnd_4h > 0.015; dinh chinh 2026-09-06)"
+  },
+  "notes": "Bien the train Stage 2 (V2). Base = 21 keeper (fs_v2_21) + cot APPEND o CUOI (2 cot append). Dat ten theo dung luat them/bot cot => VERSION MOI; fs_v2_21.json KHONG bi sua. Xem docs/prereg/PREREG_STAGE2_FEATVAR.md.",
+  "variant": "V2",
+  "stage2": {
+    "purpose": "Nhom momentum dai han thuan (2 khung).",
+    "base_keepers": [
+      2,
+      5,
+      6,
+      7,
+      8,
+      10,
+      14,
+      17,
+      18,
+      20,
+      24,
+      28,
+      29,
+      30,
+      31,
+      32,
+      35,
+      40,
+      41,
+      42,
+      44
+    ],
+    "appended_real": [
+      46,
+      47
+    ],
+    "appended_noise": [],
+    "drop_cols_arg": "0,1,3,4,9,11,12,13,15,16,19,21,22,23,25,26,27,33,34,36,37,38,39,43,45,48,49,50,51,52,53,54",
+    "keep_idx": [
+      2,
+      5,
+      6,
+      7,
+      8,
+      10,
+      14,
+      17,
+      18,
+      20,
+      24,
+      28,
+      29,
+      30,
+      31,
+      32,
+      35,
+      40,
+      41,
+      42,
+      44,
+      46,
+      47
+    ],
+    "so_cot": 23,
+    "trainer": "research/pipeline/g015_net_train_add.py",
+    "lenh": "python3 g015_net_train_add.py --add-feats <prefeat.parquet> --drop-cols \"0,1,3,4,9,11,12,13,15,16,19,21,22,23,25,26,27,33,34,36,37,38,39,43,45,48,49,50,51,52,53,54\" --out-dir <dir>",
+    "pre_reg": "docs/prereg/PREREG_STAGE2_FEATVAR.md",
+    "luu_y": "10 cot index 45..54 la append-only cho duong OFFLINE; KHONG cham ONNX/NUM_FEATURES=45/LIVE."
+  }
+}

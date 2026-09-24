@@ -24,8 +24,19 @@ dung version feature da sinh ra no.
 | v1 | `fs_v1_44.json` | 44 | planned | drop-one `rvol15m` — **chua train, chua sim**; du doan chot truoc: admit TANG, expectancy/top-8 win GIAM; do bang rank-IC cross-section + top-8 lift, KHONG dung gain | `docs/diag/DIAG_RVOL15M.md` §D |
 | v2 | `fs_v2_21.json` | 21 | planned | tap GIU (§6.3, 22 cot) BO `rvol15m` => 21; **chua train, chua sim** | `docs/analysis/EVAL_SELECTOR_FEATURES.md` §6.3 |
 | v3 | `fs_v3_reserved.json` | (rong) | reserved | khung cho vong ablation Stage 1 (bo nhom NGAT CHAC 5/45) | `docs/prereg/PREREG_FEAT_ABLATION.md` |
-| v4 | `fs_v4_reserved.json` | (rong) | reserved | khung cho ket qua Stage 1 | — |
-| v5 | `fs_v5_reserved.json` | (rong) | reserved | khung cho Stage 2 prep | — |
+| v4 | `fs_v4_21.json` | 21 | planned | **Stage 2 · V0** = MOC 21 keeper (`drop-cols` bo 24 cot + 10 cot append) | `docs/prereg/PREREG_STAGE2_FEATVAR.md` |
+| v5 | `fs_v5_26.json` | 26 | planned | **Stage 2 · V1** = 21 + ca 5 feature PASS | nhu tren |
+| v6 | `fs_v6_23.json` | 23 | planned | **Stage 2 · V2** = 21 + `{mom7d, mom30d}` | nhu tren |
+| v7 | `fs_v7_22.json` | 22 | planned | **Stage 2 · V3** = 21 + `{rvol7d}` (nguoi thay `rvol15m`) | nhu tren |
+| v8 | `fs_v8_23.json` | 23 | planned | **Stage 2 · V4** = 21 + `{daysSinceHigh30D, oi_delta7d}` | nhu tren |
+| v9 | `fs_v9_31.json` | 31 | planned | **Stage 2 · V5** = 21 + 5 + 5 cot NHIEU (doi chung, mask khop) | nhu tren |
+
+`fs_v4_reserved.json` / `fs_v5_reserved.json` da bi **go** 2026-09-24 (`git rm`): 2 khung TRONG do nay duoc
+dung that boi v4..v9 cua Stage 2. Khong mat thong tin nao (chung rong).
+
+**Cot index ≥ 45 (append)**: 6 bien the Stage 2 dung **cot append o CUOI vector** (idx 45..54) qua
+`g015_net_train_add.py --add-feats`. Chung **KHONG** thuoc vector 45 cot cua Tool1/ONNX va **khong** duoc
+sao vao duong LIVE (xem `docs/plan/PREP_STAGE2_TRAIN.md` §2.2/§3.2, `docs/prereg/PREREG_STAGE2_FEATVAR.md` §1).
 
 Moi file JSON deu co day du truong bat buoc: `version` · `n_features` · `features[{index,name,source,formula}]`
 (co thu tu) · `label` (**`retEnd_4h > 0.015`**) · `folds` · `seed` · `hyperparams` ·
