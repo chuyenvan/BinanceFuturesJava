@@ -41,7 +41,7 @@ while pending:
             log("  %s da chay tren Kaggle (%s) -> bo khoi pending" % (n, st))
             pending.remove(n)
     if slots <= 0:
-        time.sleep(240)
+        time.sleep(90)
         continue
     for n in list(pending)[:slots]:
         j = R.JOBS[n]

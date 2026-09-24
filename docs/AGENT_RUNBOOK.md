@@ -17,9 +17,17 @@ khong can hoi lai user, khong can doc lai 30 doc khac.
    `E[max nhieu]` = 2.57*sqrt(2 ln N) => N=50 cho +7.2pp. DEV da chay ~125 run.
    Tieu chi phai la RATE tren hang tram trade (TSloss%, win%, mean(profit|status),
    admit%). Equity bao cao rieng, dan nhan "khong phai tieu chi".
-   -> Nguong RUI RO (khau vi, KHONG phai tieu chi bang chung): **`maxDD <= 30%/nam`, `UW <= 200 ngay`**
-      (user chot 2026-09-16 — `docs/RISK_APPETITE.md`; thay nguong cu 15%/120). Nguong BANG CHUNG
-      (>= 2 rate ngoai CI, block-72h x1.21) GIU NGUYEN.
+   -> Nguong RUI RO (khau vi, KHONG phai tieu chi bang chung) — **`docs/RISK_APPETITE.md` §6–§7**
+      (user chot 2026-09-24): **`maxDD <= 40%/nam` · `UW <= 250 ngay` · `quy xau nhat >= -20%` ·
+      `khong nam am` (CUNG) · `tap trung 1 coin <= 15% equity` (CUNG — kenh MAT THAT duy nhat khi
+      danh 1x; xem `docs/RESULT_FRAGILITY_N.md`)**. Nguong BANG CHUNG (>= 2 rate ngoai CI,
+      bootstrap block-72h, 2000 rep, seed 20260905; lay he so bang `x1_rates.py --k <so_round>`) GIU NGUYEN.
+   -> **BASELINE (moc so sanh + cong parity) = FLATGRID KEEPLEG0** ke tu 2026-09-24
+      (`docs/DECISION_BASELINE_KEEPLEG0.md`): `profiles/t170_flat_keepleg0.properties`
+      (`DCA_GRID_WEIGHTS=1,1,1,1` + `DCA_GRID_SCALE=6.0`), run `java/devrun/FG_KEEPLEG0`,
+      printDone md5 **`99e42b75cf1a2142f9cd14dc72e371ba`** (1,085 leg, eq 103,083).
+      **`efb793e2` (T170, 1,1,3,8) KHONG con la baseline** — chi la "nen cu" de doi chieu.
+      MOI ket luan moi phai do tren baseline MOI; ket luan cu tren nen T170 KHONG tu dong chuyen.
 4. **Bao rui ro/lo hong TRUOC**, khong khen, tieng Viet + thuat ngu Anh nguyen ban.
 5. **Khong `print()` trong Python** — dung module `logging`. Java dung SLF4J.
 6. **Khong push.** Commit branch `module`, de user push.
