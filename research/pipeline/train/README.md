@@ -31,17 +31,17 @@ bi sua o cac phien sau. Snapshot la **ban sao byte-identical** lay tu git (khong
 | xgboost | 3.2.0 · `MAX_TRAIN_ROWS=60.000.000` (khong bao gio cham) |
 
 Cong thuc day du + dau vao ghim (sha256 Tool1/label/OI) o `docs/experiment/G015_RECIPE.md` §2/§5/§6.
-Duong train THAT (script · luong · fold · seed · tham so) o `docs/PREP_STAGE2_TRAIN.md` §1.
+Duong train THAT (script · luong · fold · seed · tham so) o `docs/plan/PREP_STAGE2_TRAIN.md` §1.
 
 ## 🔴 BAT DANH SO FOLD (phai doc truoc khi so bang)
 
 `model_f<i>_4h.json` lay `i` = **vi tri trong `CUT_DATES`**. `CUT_DATES` ban repo hien tai da noi them
 3 fold DEV2021 (`20210401/20210701/20211001`) + `20251231` => **cutoff `20240101` = fidx 11, khong phai 8**
 nhu ban deploy. Moi bang so sanh phai khop theo **CUTOFF**, khong theo so trong ten file
-(nguon `docs/PREP_STAGE2_TRAIN.md` §1.2).
+(nguon `docs/plan/PREP_STAGE2_TRAIN.md` §1.2).
 
 Tien ich trong script: `--drop-cols` (bo cot, da co san) · `--add-cols`/`--add-names` (them cot, phai
-sua ca 3 tang: train · bins/predict · ONNX input) — xem `docs/PREP_STAGE2_TRAIN.md` §2.
+sua ca 3 tang: train · bins/predict · ONNX input) — xem `docs/plan/PREP_STAGE2_TRAIN.md` §2.
 
 ## Chay lai (NEU can — khong chay tren Oracle khi shadow LIVE)
 

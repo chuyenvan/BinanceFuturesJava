@@ -72,7 +72,7 @@ SOURCES = {
     "keepers": "docs/analysis/EVAL_SELECTOR_FEATURES.md §6.3 (GIU 22, share >= 1.30%)",
     "rvol15m": "docs/diag/DIAG_RVOL15M.md §D (KHONG du can cu cat tu offline; phai do bang rank-IC + lift@8)",
     "recipe": "docs/experiment/G015_RECIPE.md §2 (cong thuc) + §5 (dau vao ghim) + §6 (bins)",
-    "train_duong": "docs/PREP_STAGE2_TRAIN.md §1 (duong train THAT cua net015-45, script + fold + seed + tham so)",
+    "train_duong": "docs/plan/PREP_STAGE2_TRAIN.md §1 (duong train THAT cua net015-45, script + fold + seed + tham so)",
     "label": "docs/runbooks/AGENT_RUNBOOK.md (nhan THAT cua predwf_G015x26 = retEnd_4h > 0.015; dinh chinh 2026-09-06)",
 }
 
@@ -94,7 +94,7 @@ HYPERPARAMS = {
 FOLD_INDEX_TRAP = (
     "model_f<i>_4h.json lay i = VI TRI trong CUT_DATES. CUT_DATES ban repo hien tai da noi them 3 fold DEV2021 "
     "(20210401/20210701/20211001) + 20251231 => cutoff 20240101 = fidx 11, KHONG phai 8 nhu ban deploy. "
-    "Moi bang so sanh phai khop theo CUTOFF, khong theo so trong ten file (nguon docs/PREP_STAGE2_TRAIN.md §1.2)."
+    "Moi bang so sanh phai khop theo CUTOFF, khong theo so trong ten file (nguon docs/plan/PREP_STAGE2_TRAIN.md §1.2)."
 )
 
 FOLDS_V0 = {

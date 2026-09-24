@@ -303,7 +303,7 @@
       "20260401"
     ],
     "canh_bao": "fold 20260101/20260401 nam TREN HoldoutSeal (2026-01-01): KHONG dua vao sim/verdict khi chua HOLDOUT_UNSEAL",
-    "bat_danh_so_fold": "model_f<i>_4h.json lay i = VI TRI trong CUT_DATES. CUT_DATES ban repo hien tai da noi them 3 fold DEV2021 (20210401/20210701/20211001) + 20251231 => cutoff 20240101 = fidx 11, KHONG phai 8 nhu ban deploy. Moi bang so sanh phai khop theo CUTOFF, khong theo so trong ten file (nguon docs/PREP_STAGE2_TRAIN.md §1.2)."
+    "bat_danh_so_fold": "model_f<i>_4h.json lay i = VI TRI trong CUT_DATES. CUT_DATES ban repo hien tai da noi them 3 fold DEV2021 (20210401/20210701/20211001) + 20251231 => cutoff 20240101 = fidx 11, KHONG phai 8 nhu ban deploy. Moi bang so sanh phai khop theo CUTOFF, khong theo so trong ten file (nguon docs/plan/PREP_STAGE2_TRAIN.md §1.2)."
   },
   "seed": 42,
   "hyperparams": {
@@ -344,7 +344,7 @@
     "keepers": "docs/analysis/EVAL_SELECTOR_FEATURES.md §6.3 (GIU 22, share >= 1.30%)",
     "rvol15m": "docs/diag/DIAG_RVOL15M.md §D (KHONG du can cu cat tu offline; phai do bang rank-IC + lift@8)",
     "recipe": "docs/experiment/G015_RECIPE.md §2 (cong thuc) + §5 (dau vao ghim) + §6 (bins)",
-    "train_duong": "docs/PREP_STAGE2_TRAIN.md §1 (duong train THAT cua net015-45, script + fold + seed + tham so)",
+    "train_duong": "docs/plan/PREP_STAGE2_TRAIN.md §1 (duong train THAT cua net015-45, script + fold + seed + tham so)",
     "label": "docs/runbooks/AGENT_RUNBOOK.md (nhan THAT cua predwf_G015x26 = retEnd_4h > 0.015; dinh chinh 2026-09-06)"
   },
   "notes": "Drop-one #36 rvol15m (NGHIEM THU DUY NHAT cua vong ablation). Can cu: docs/diag/DIAG_RVOL15M.md §D — tieu chi cat chot TRUOC khong thoa offline (lift@8 = 4,12 [3,93;4,33]), nen phai quyet dinh bang drop-one retrain + sim. DU DOAN chot truoc: admit TANG, expectancy/top-8 win GIAM (rvol15m do BIEN DO/fat-tail). Cham bang rank-IC cross-section + top-8 lift (KHONG dung gain). CHUA train/chua sim — dien model_paths/bins_path/sim_runs o Stage 1/2."

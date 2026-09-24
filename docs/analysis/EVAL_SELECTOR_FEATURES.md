@@ -361,7 +361,7 @@ Ghi chú GIỮ: `taker_buy` (#44) giữ vì share 2,65% **nhưng** kèm điều 
 §3 (mục "Phương pháp") ghi nhãn train của selector là `y = (maxFav_4h >= 6%)` — **SAI**.
 
 **Nhãn THẬT = `y = (retEnd_4h > 0.015)`**, base rate **0,1849**. Xác nhận 3 cách độc lập
-(`docs/PREP_STAGE2_TRAIN.md`, commit `2231738`): log gốc của kernel train + đếm lại từ `.pb`
+(`docs/plan/PREP_STAGE2_TRAIN.md`, commit `2231738`): log gốc của kernel train + đếm lại từ `.pb`
 + `scale_pos_weight` fold0 `2.70527601` ⇒ tỷ lệ dương **0,2699**.
 
 Nhãn `maxFav >= 0,06` là của **họ `G015_v2` / model LIVE ONNX** — **KHÁC** với S1 dùng trong

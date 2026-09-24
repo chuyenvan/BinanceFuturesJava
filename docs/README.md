@@ -61,7 +61,7 @@ Khong tu dong sua vi phai chon giua "tro vao archive" (doi y nghia lich su) va "
 
 ## 4. File cua job khac (chua di chuyen)
 
-- `docs/PREP_STAGE2_TRAIN.md` — do job Stage 2 prep tao **giua luc dang don** (2026-09-24) => **de nguyen o
+- `docs/plan/PREP_STAGE2_TRAIN.md` — do job Stage 2 prep tao **giua luc dang don** (2026-09-24) => **de nguyen o
   root**, khong `git mv` (tranh de len job dang ghi). Khi job do xong: chuyen vao `docs/plan/` theo luat 10.
 - `Untitled-1.md` — ten rac, giu nguyen ten (luat: khong doi ten file), xem lai sau.
 

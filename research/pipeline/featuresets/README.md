@@ -53,4 +53,4 @@ Xem `research/pipeline/train/README.md`. Snapshot dong bang:
 2. **Bat danh so fold**: `model_f<i>_4h.json` lay `i` = vi tri trong `CUT_DATES` (da noi them 3 fold DEV2021 +
    `20251231`) => cutoff `20240101` = **fidx 11**, khong phai 8. So sanh phai khop theo CUTOFF.
 
-Nguon: `docs/PREP_STAGE2_TRAIN.md` §0/§1.2.
+Nguon: `docs/plan/PREP_STAGE2_TRAIN.md` §0/§1.2.
