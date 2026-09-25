@@ -201,3 +201,18 @@ tục `retEnd_h`**, cả **PnL thật theo luật thoát** đều không tạo �
 sai là MỤC TIÊU/ĐẶC TRƯNG**, không phải mô hình hay ngưỡng. Vòng sau (khi owner yêu cầu) chỉ nên đi vào
 (1) **cơ chế rank** (`rank:pairwise`/`lambdarank` với `qid`) và (2) **feature mới** — **không** tinh chỉnh
 hyperparam của 45 feature hiện có.
+
+---
+
+## AMEND 1 (2026-09-25, TRƯỚC khi push kernel train nhãn (b) — chưa đọc số nào của (b))
+
+**Chỉ 1 điều, thuần KỸ THUẬT, không đổi luật/khoa học:** thêm cờ `--min-train` (mặc định **5000** = hành vi cũ)
+cho guard `len(train) >= 5000` của trainer, và 2 arm nhãn (b) chạy với `--min-train 2000`.
+Lý do: pool ứng viên của (b) chỉ ~top-32/255 coin mỗi tick ⇒ fold ĐẦU (`20220401`, cửa sổ ~88 ngày)
+chỉ có ~5,3k dòng train — sát ngưỡng guard cũ ⇒ rủi ro **lỗi hạ tầng**, không phải lỗi khoa học.
+Guard này **KHÔNG phải ngưỡng quyết định**; mọi ngưỡng của LUẬT §6 **giữ nguyên**.
+
+**Ghi nhận kèm (đã kiểm bằng lập luận dtype, không retrain):** `train_rows` nay trả nhãn `float64` thay vì
+`int8`; với nhãn nhị phân giá trị vẫn `0,0/1,0` và XGBoost nhận `float32` nội bộ ⇒ đường `bin` **giữ nguyên
+hành vi**. `--min-train` mặc định 5000 ⇒ các arm (a) (kernel đã push trước AMEND này, không truyền cờ)
+hành vi không đổi.

@@ -118,12 +118,7 @@ print("trainer sha256:", __import__("hashlib").sha256(_SRC.encode()).hexdigest()
 FOLDS16 = "20220101,20220401,20220701,20221001,20230101,20230401,20230701,20231001,20240101,20240401,20240701,20241001,20250101,20250401,20250701,20251001"
 FOLDS15 = ",".join(FOLDS16.split(",")[1:])
 OUT = "/kaggle/working/mr"
-RUNS = [
-    ("MRA4",  ["--label-kind", "cont", "--label-h", "4"],  FOLDS16),
-    ("MRA72", ["--label-kind", "cont", "--label-h", "72"], FOLDS16),
-    ("MRB8",  ["--label-custom", _CUST.get("label_b_K8.parquet", ""), "--label-h", "4"], FOLDS15),
-    ("MRB32", ["--label-custom", _CUST.get("label_b_K32.parquet", ""), "--label-h", "4"], FOLDS15),
-]
+__RUNS__
 _rep = {}
 for tag, extra, folds in RUNS:
     if extra[1] == "" and extra[0] == "--label-custom":
@@ -173,18 +168,27 @@ def main():
 
     fset2 = {dst: open(os.path.join(REPO, rel)).read() for rel, dst in [TRAINER]}
     fb2 = base64.b64encode(json.dumps(fset2).encode()).decode()
-    d2 = os.path.join(DST, "mr-train-gpu")
-    os.makedirs(d2, exist_ok=True)
-    open(os.path.join(d2, "mr_train_gpu.py"), "w").write(TRAIN_KERNEL.replace("__FILES_B64__", fb2))
-    json.dump({"id": "chuyendinh/mr-train-gpu", "title": "mr-train-gpu",
-               "code_file": "mr_train_gpu.py", "language": "python", "kernel_type": "script",
-               "is_private": True, "enable_gpu": True, "enable_tpu": False,
-               "enable_internet": False, "keywords": ["gpu"],
-               "dataset_sources": FEAT_DS + ["chuyendinh/money-ranker-labels"],
-               "kernel_sources": [], "competition_sources": [], "model_sources": []},
-              open(os.path.join(d2, "kernel-metadata.json"), "w"), indent=1)
-    print("wrote %s/mr-labelb-cpu (%d B) + %s/mr-train-gpu (%d B)" %
-          (DST, len(LABEL_KERNEL.replace("__FILES_B64__", fb)), DST, len(TRAIN_KERNEL.replace("__FILES_B64__", fb2))))
+    for suffix, runs, extra_ds in (
+            ("a", 'RUNS = [("MRA4", ["--label-kind", "cont", "--label-h", "4"], FOLDS16),\n'
+                  '        ("MRA72", ["--label-kind", "cont", "--label-h", "72"], FOLDS16)]', []),
+            ("b", 'RUNS = [("MRB8", ["--label-custom", _CUST.get("label_b_K8.parquet", ""), '
+                  '"--label-h", "4", "--min-train", "2000"], FOLDS15),\n'
+                  '        ("MRB32", ["--label-custom", _CUST.get("label_b_K32.parquet", ""), '
+                  '"--label-h", "4", "--min-train", "2000"], FOLDS15)]',
+             ["chuyendinh/money-ranker-labels"])):
+        d2 = os.path.join(DST, "mr-train-%s-gpu" % suffix)
+        os.makedirs(d2, exist_ok=True)
+        src = TRAIN_KERNEL.replace("__FILES_B64__", fb2).replace("__RUNS__", runs)
+        open(os.path.join(d2, "mr_train_%s_gpu.py" % suffix), "w").write(src)
+        json.dump({"id": "chuyendinh/mr-train-%s-gpu" % suffix,
+                   "title": "mr-train-%s-gpu" % suffix,
+                   "code_file": "mr_train_%s_gpu.py" % suffix, "language": "python",
+                   "kernel_type": "script", "is_private": True, "enable_gpu": True,
+                   "enable_tpu": False, "enable_internet": False, "keywords": ["gpu"],
+                   "dataset_sources": FEAT_DS + extra_ds,
+                   "kernel_sources": [], "competition_sources": [], "model_sources": []},
+                  open(os.path.join(d2, "kernel-metadata.json"), "w"), indent=1)
+        print("wrote %s (%d B)" % (d2, len(src)))
 
 
 if __name__ == "__main__":

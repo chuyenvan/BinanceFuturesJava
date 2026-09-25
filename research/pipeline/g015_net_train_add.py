@@ -339,6 +339,10 @@ def main():
                     help="PREREG_MONEY_RANKER §3: bin = nhan nhi phan (cu) | cont = y = retEnd_h LIEN TUC")
     ap.add_argument("--label-custom", default="",
                     help="PREREG_MONEY_RANKER §4: parquet (ts, symId, y) thay cho .pb (nhan (b) PnL)")
+    ap.add_argument("--min-train", type=int, default=5000,
+                    help="GUARD KY THUAT (khong phai nguong quyet dinh): so dong train toi thieu moi fold. "
+                         "Mac dinh 5000 = hanh vi cu. Nhan (b) (pool top-K ~8%%/tick) can ha xuong 2000 "
+                         "— PREREG_MONEY_RANKER AMEND §5.")
     ap.add_argument("--njobs", type=int, default=int(os.environ.get("G015_NJOBS", "-1")))
     ap.add_argument("--seed", type=int, default=SEED)
     ap.add_argument("--nest", type=int, default=NEST)
@@ -420,9 +424,10 @@ def main():
             tr_cut = c - PURGE_MS
             tp, ty = train_rows(ts_all, sym_all, L, tr_cut)
             if OBJ == "binary:logistic":
-                assert len(tp) >= 5000 and len(np.unique(ty)) == 2, "fold %d train it" % fidx
+                assert len(tp) >= a.min_train and len(np.unique(ty)) == 2, "fold %d train it" % fidx
             else:
-                assert len(tp) >= 5000 and float(np.std(ty)) > 0, "fold %d train it/khong bien thien" % fidx
+                assert len(tp) >= a.min_train and float(np.std(ty)) > 0, \
+                    "fold %d train it/khong bien thien" % fidx
             assert int(ts_all[tp].max()) < c, "LEAK fold %d" % fidx
             lo = int(np.searchsorted(ts_all, c, "left"))
             hi = int(np.searchsorted(ts_all, b_hi, "left"))
