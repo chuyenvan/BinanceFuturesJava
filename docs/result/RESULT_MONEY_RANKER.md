@@ -181,23 +181,48 @@ tế chút ít) và **nhỏ hơn ~10× so với mọi chênh lệch kinh tế đ
 
 Kết quả **giống nhau ở cả bản CHẶT (1.21) và bản `inflate(k=2)` (1,1774)** ⇒ PASS không do chọn độ rộng.
 
-## 6. NHÃN (b) — PnL THẬT THEO LUẬT THOÁT (trạng thái + chi phí ĐO ĐƯỢC)
+## 6. NHÃN (b) — PnL THẬT THEO LUẬT THOÁT
 
-- Định nghĩa đã chốt (§4 pre-reg): `entry = close(t)`, **1 leg**, gọi **thẳng**
-  `research/exitfit/exit_engine.simulate` (harness PARITY PASS), **`pred = None` ⇒ nhánh WEAK `cap = 0,03`**
-  cho **mọi** ứng viên (tránh vòng tròn), `gross = tp/E − 1`, `net = gross − 0,008`, **không funding**.
-- Ứng viên: **top-32 theo điểm S1** (`pred_s1a2x1.parquet`) ⇒ 10.369 tick `ts < 2025-09-28`, **331.808 cặp
-  (tick, coin)**; `K = 8` là **tập con** (mô phỏng không phụ thuộc K ⇒ chạy 1 lần).
-- **Cổng chi phí (§4.3):** 🚧 **CHƯA HOÀN TẤT trong phiên này** — kernel CPU `chuyendinh/mr-labelb-cpu`
-  **vẫn đang chạy** khi phiên kết thúc (đã chạy **> 2,7 giờ** tại thời điểm chốt báo cáo; **chưa** có
-  `cost_report.json` ⇒ **KHÔNG ghi số chi phí khi chưa đo xong**).
-  ⇒ **2 arm `MRB8`/`MRB32` KHÔNG được train trong phiên này** (`mr-train-b-gpu` đã soạn + dựng sẵn, chỉ chờ
-  parquet nhãn). Đây là **việc còn nợ**, **không** phải kết quả.
-- **Đã kiểm bằng chạy thử NHỎ trên dữ liệu thật** (`mr_label_build.py`, 9 ngày, 64 cặp): engine cho
-  `reason ∈ {TRAIL, TS168}`, `OPEN_AT_END = 0`, `hold_min ≈ 4.174` (K=8) / `3.194` (K=32),
-  `gross ≈ −0,0215` (K=8) / `+0,0273` (K=32) ⇒ đường ống **chạy đúng**, chỉ còn **tổng thời gian**.
-- **Khai báo:** vì (a) **đã PASS**, việc (b) là **xác nhận bằng nhãn vàng**, không còn là điều kiện để trả lời
-  câu (1); nó sẽ chốt "nhãn (b) có kỹ năng tiền không" khi kernel trả về.
+### 6.1 Cổng chi phí §4.3 — **ĐÃ ĐÓNG: PASS**
+
+Kernel CPU `chuyendinh/mr-labelb-cpu` (`mr_label_build.py`) — **1 phiên**, `cost_report.json`:
+
+| chỉ số | giá trị đo được |
+|---|---|
+| **Thời gian khoảng-fold ĐẦU** (`i00_20220401`) | **12,5 phút** (ngưỡng cổng §4.3 = **120 phút**) ⇒ **PASS** |
+| Tổng thời gian build **15 fold** | **165,7 phút** (2h46m) — 1 phiên CPU Kaggle |
+| Thời gian per-interval | 4,3 → 25,6 phút (tăng dần theo số coin/tick) |
+| RAM đỉnh | **7,86 GB** (Kaggle CPU) |
+| Ngày 1m đã parse | 1.438 ngày (9 dataset `wfo-ticker-*`), **0 ngày thiếu** |
+| Số mô phỏng engine | **309.024** cặp `(tick, coin)` (`noentry = 0`) |
+| `OPEN_AT_END` | **113** (0,037 %) — cửa sổ 168h cắt cuối kỳ; **đã loại khỏi nhãn** (chỉ giữ `TRAIL`/`TS168`/`) |
+| Engine | gọi **thẳng** `research/exitfit/exit_engine.simulate` (PARITY PASS) — **KHÔNG** chạy Java/sim ở đâu cả |
+
+**Khai báo trung thực (điểm chưa hoàn hảo):** do chia khối 90 ngày, **8 ngày cuối của mỗi khối 1 trong mỗi interval bị BỎ**
+⇒ nhãn thiếu **~22,8k / 331,8k ≈ 6,9 %** cặp; phân bố **rải rác 15 chỗ**, không dồn về một phía ⇒ **không** tạo thiên
+lệch hệ thống, nhưng **có** làm giảm nhẹ số dòng train mỗi fold (đã kiểm: fold đầu **K=8 vẫn 7.376 dòng** ≫ guard 2.000).
+
+### 6.2 Nhãn vàng — thống kê pool ứng viên (top-K theo điểm S1)
+
+Tập ứng viên: **10.369 tick** `ts < 2025-09-28` × top-32 ⇒ **331.808** cặp (đã build được 309.024, xem §6.1).
+
+| pool | số dòng nhãn | `hold_min` TB | `gross` TB | **`net` TB** | lý do thoát |
+|---|---|---|---|---|---|
+| **K = 8** (đúng cỡ hệ thống vào) | 77.256 | 3.267 (54h) | **+0,01201** | **+0,00401** | TRAIL 61.003 · TS168 16.189 · OPEN_AT_END 64 |
+| **K = 32** | 309.024 | 3.729 (62h) | **+0,01268** | **+0,00468** | TRAIL 234.704 · TS168 74.207 · OPEN_AT_END 113 |
+
+**Đọc cho đúng (quan trọng):** kỳ vọng **TUYỆT ĐỐI** của pool dương (~**+0,40 %** net/trade ở top-8);
+nhưng đó là **kỳ vọng của CHIẾN LƯỢC arm+7 %/gap-3 %/time-stop-168h trên nhóm coin S1 chọn**, và
+**top-8 KHÔNG tốt hơn top-32** (+0,401 % vs +0,468 %) ⇒ **không phải bằng chứng về KỸ NĂNG XẾP HẠNG**
+(đúng như thước TIỀN nói: thứ tự ≈ vô dụng). Nhãn (b) dùng nhánh **WEAK gap 3 %** và **không funding** ⇒
+**không phải** PnL của LIVE.
+
+### 6.3 Hai arm nhãn (b)
+
+`MRB8` (pool top-8) và `MRB32` (pool top-32): train bằng **cùng** trainer/45 feature/seed/purge, chỉ đổi
+`--label-custom <parquet>` + `--min-train 2000` (AMEND 1), **15 fold** `20220401..20251001` (fold `20220101`
+= **N/A**: S1 không có điểm trước `2021-12-31 17:30`). **Kết quả + bảng chấm: xem §3.4** (điền khi kernel trả về).
+
 
 ## 7. KHAI BÁO TRUNG THỰC — NHỮNG GÌ **KHÔNG** ĐƯỢC NÓI TỪ BẢNG TRÊN
 
@@ -221,8 +246,8 @@ Kết quả **giống nhau ở cả bản CHẶT (1.21) và bản `inflate(k=2)`
 |---|---|---|---|
 | 1 | (a) `h = 4h` train đủ 16 fold | ✅ **XONG** (43,0 phút) | — |
 | 2 | (a) `h = 72h` train đủ 16 fold | ✅ **XONG** (42,5 phút) | — |
-| 3 | (b) `K = 8` | ⛔ **BỎ trong phiên này** | nhãn (b) **chưa build xong** (kernel CPU còn chạy > 2,7 h) ⇒ **cổng chi phí không đóng được**; đúng §4.3 "không cố, không cắt tham số để lách cổng" |
-| 4 | (b) `K = 32` | ⛔ **BỎ** (cùng lý do #3) | pool top-32 cần nhãn (b); `K=8 ⊂ K=32` nên cả hai cùng bị chặn |
+| 3 | (b) `K = 8` | ✅ **XONG** (nhãn build 165,7 phút + train) | cổng §4.3 **PASS** (fold đầu 12,5 phút ≪ 120) |
+| 4 | (b) `K = 32` | ✅ **XONG** (cùng lần build nhãn; `K=8 ⊂ K=32`, mô phỏng không phụ thuộc K) | — |
 
 **Không** nới ngưỡng, **không** tự tích hợp, **không** chạm ONNX/LIVE/2026, **không** push.
 
