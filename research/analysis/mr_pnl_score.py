@@ -104,6 +104,8 @@ def main():
     ap.add_argument("--bins-root", default=MRBINS)
     ap.add_argument("--out", default="/tmp/mrpnp/pnl.json")
     ap.add_argument("--folds", default="")
+    ap.add_argument("--slot3-arms", default="",
+                    help="PREREG_S1_MAXFAV: arm co DIEM o slot 3 (72h) — vd MFC72,MFB72")
     a = ap.parse_args()
     os.makedirs(CACHE, exist_ok=True)
     os.makedirs(os.path.dirname(a.out), exist_ok=True)
@@ -118,9 +120,10 @@ def main():
     print("### ARMS %s + CTL %s | folds=%d" % (arms, CONTROLS, len(folds)), flush=True)
 
     T = {}
+    SLOT3 = set(x for x in a.slot3_arms.split(",") if x)
     for K in (32, 8):
         for arm, bd in bins.items():
-            T[(arm, K)] = frames(arm, bd, K, folds)
+            T[(arm, K)] = frames(arm, bd, K, folds, 3 if arm in SLOT3 else 0)
         print("  P%d xong" % K, flush=True)
 
     res = {"label": LABEL, "fees": FEES, "FEES_NOTE": "netm8(f) = gross8 - f ; phi hoa von = gross8",

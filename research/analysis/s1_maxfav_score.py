@@ -70,34 +70,27 @@ def mk(v, infl):
             "ci_honest": [round(ah[0], 6), round(ah[1], 6)]}
 
 
-def load_all_labels():
-    LK, LV = MR.load_labels(LABELS, LBLCOLS, key_col=KEYCOL)
+def load_all_labels(need4=False):
+    cols = ["retEnd_72h", "maxFav_72h"] + (["retEnd_4h", "maxFav_4h"] if need4 else [])
+    LK, LV = MR.load_labels(LABELS, cols, key_col=KEYCOL)
     mf, re_ = LV["maxFav_72h"], LV["retEnd_72h"]
     LV["g1lite"] = np.where(mf >= 0.05, mf - np.minimum(0.5 * mf, 0.08), re_)
     return LK, LV
 
 
-def ruler_frames(bins, arm, rul, LK, LV, folds):
-    """Per-tick metrics cua 1 arm tren 1 ruler (streaming theo fold).
+def arm_frames(bins, arm, rules, LK, LV, folds):
+    """Per-tick metrics cua 1 ARM tren NHIEU ruler — doc bins MOT lan/fold (tiet kiem I/O).
 
-    Slot: ruler 72h -> arm thuoc HI_ARMS lay slot 3 (diem cua chinh horizon do); moi arm khac
-    (doi chung + arm 4h) lay slot 0 => CROSS-HORIZON, khai bao truoc (PREREG_S1_MAXFAV §4).
+    Slot: ruler co `hi=True` -> arm thuoc HI_ARMS lay slot 3 (diem cua chinh horizon do); moi arm khac
+    (doi chung + arm 4h) lay slot 0 ⇒ CROSS-HORIZON, khai bao truoc (PREREG_S1_MAXFAV §4).
     """
-    h, ycol, ybcol, ybop, ybthr, hi = RULERS[rul]
-    slot = 3 if (hi and arm in HI_ARMS) else 0
-    parts = []
+    out = {r: [] for r in rules}
     for f in folds:
         bp = os.path.join(bins, "predict_wf_%s.bin" % f)
         if not os.path.exists(bp):
             continue
         arr = np.fromfile(bp, dtype=MR.BIN_DT)
         ts = arr["ts"].astype(np.int64); sy = arr["sym"].astype(np.int64)
-        p = (arr["p"] if slot == 0 else arr["z"][:, slot - 1]).astype(np.float32).astype(np.float64)
-        if not np.isfinite(p).any():
-            del arr
-            print("  [N/A]   %-8s %-9s fold %s: slot %d TOAN NaN" % (
-                os.path.basename(bins), rul, f, slot), flush=True)
-            return None
         key = ts * 1024 + sy
         ip = np.clip(np.searchsorted(LK, key), 0, len(LK) - 1)
         hit = LK[ip] == key
@@ -106,16 +99,38 @@ def ruler_frames(bins, arm, rul, LK, LV, folds):
             v = np.full(len(key), np.nan)
             v[hit] = LV[col][ip[hit]]
             return v
-        y = _take(ycol); raw = _take(ybcol)
-        yb = np.where(raw >= ybthr if ybop == ">=" else raw > ybthr, 1.0, 0.0)
-        m = np.isfinite(y) & np.isfinite(p) & np.isfinite(raw)
-        tm, _ = MR.tick_metrics(ts[m], p[m], y[m], yb[m])
-        tm["fold"] = f
-        parts.append(tm)
-        del arr, p, key
-    if not parts:
-        return None
-    return pd.concat(parts, ignore_index=True)
+        CACHE_COL = {}
+
+        def _take_c(col):
+            if col not in CACHE_COL:
+                CACHE_COL[col] = _take(col)
+            return CACHE_COL[col]
+
+        for rul in rules:
+            h, ycol, ybcol, ybop, ybthr, hi = RULERS[rul]
+            slot = 3 if (hi and arm in HI_ARMS) else 0
+            p = (arr["p"] if slot == 0 else arr["z"][:, slot - 1]).astype(np.float32).astype(np.float64)
+            if not np.isfinite(p).any():
+                print("  [N/A]   %-8s %-9s fold %s: slot %d TOAN NaN" % (arm, rul, f, slot), flush=True)
+                out[rul] = None
+                continue
+            y = _take_c(ycol); raw = _take_c(ybcol)
+            yb = np.where(raw >= ybthr if ybop == ">=" else raw > ybthr, 1.0, 0.0)
+            m = np.isfinite(y) & np.isfinite(p) & np.isfinite(raw)
+            tm, _ = MR.tick_metrics(ts[m], p[m], y[m], yb[m])
+            tm["fold"] = f
+            out[rul].append(tm)
+            del p
+        del arr, key
+    res = {}
+    for rul in rules:
+        if out[rul] is None:
+            res[rul] = None
+        elif not out[rul]:
+            res[rul] = None
+        else:
+            res[rul] = pd.concat(out[rul], ignore_index=True)
+    return res
 
 
 def main():
@@ -130,6 +145,8 @@ def main():
     a = ap.parse_args()
 
     infl = C.inflate(a.k)
+    RULES = [x for x in a.rulers.split(",") if x]
+    assert all(r in RULERS for r in RULES), RULES
     print("### k=%d honest inflate=%.6f | block=%dh nrep=%d seed=%d | LEG=%.2f" % (
         a.k, infl, C.BLOCK_H, C.NREP, C.SEED, LEG), flush=True)
 
@@ -143,29 +160,29 @@ def main():
         print("### ARM %-8s bins=%s exists=%s" % (n, bd, bool(bd and os.path.exists(
             os.path.join(bd, "predict_wf_20220101.bin")))), flush=True)
 
-    LK, LV = load_all_labels()
+    LK, LV = load_all_labels(need4=any(RULERS[r][0] == "4h" for r in RULES))
     folds = ([x for x in a.folds.split(",") if x] if a.folds else MR.FOLDS)
 
     T = {}
-    for rul in [x for x in a.rulers.split(",") if x]:
-        for arm, bd in bins_of.items():
-            if bd is None:
-                continue
-            if rul.startswith(("g1lite", "lab7", "money7")) and arm not in HI_ARMS:
-                pass          # cross-horizon: doi chung/arm 4h -> slot 0 (khai bao §4)
-            cp = os.path.join(CACHE, "%s_%s_k%d_%d.parquet" % (arm, rul, a.k, len(folds)))
-            if os.path.exists(cp):
-                T[(arm, rul)] = pd.read_parquet(cp)
-                continue
-            print("  [calc]  %-8s %-9s ..." % (arm, rul), end="", flush=True)
-            d = ruler_frames(bd, arm, rul, LK, LV, folds)
-            if d is None:
-                T[(arm, rul)] = None
-                print(" N/A", flush=True)
-                continue
-            d.to_parquet(cp, index=False)
-            T[(arm, rul)] = d
-            print(" n_tick=%d coin/tick=%.1f" % (len(d), d.n_coin.mean()), flush=True)
+    for arm, bd in bins_of.items():
+        if bd is None:
+            continue
+        miss = [r for r in RULES
+                if not os.path.exists(os.path.join(CACHE, "%s_%s_k%d_%d.parquet" % (arm, r, a.k, len(folds))))]
+        if miss:
+            print("  [calc]  %-8s %s ..." % (arm, ",".join(miss)), end="", flush=True)
+            got = arm_frames(bd, arm, miss, LK, LV, folds)
+            for r, d in got.items():
+                if d is not None:
+                    d.to_parquet(os.path.join(CACHE, "%s_%s_k%d_%d.parquet" % (arm, r, a.k, len(folds))),
+                                 index=False)
+            print(" ok", flush=True)
+        for r in RULES:
+            cp = os.path.join(CACHE, "%s_%s_k%d_%d.parquet" % (arm, r, a.k, len(folds)))
+            T[(arm, r)] = pd.read_parquet(cp) if os.path.exists(cp) else None
+            if T[(arm, r)] is not None:
+                print("  [got]   %-8s %-9s n_tick=%d coin/tick=%.1f" % (
+                    arm, r, len(T[(arm, r)]), T[(arm, r)].n_coin.mean()), flush=True)
 
     out = {"k": a.k, "inflate_honest": infl, "arms": list(bins_of), "rulers": list(RULERS),
            "hi_arms": sorted(HI_ARMS), "summary": {}, "delta": {}, "rule": {}}
