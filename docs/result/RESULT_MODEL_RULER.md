@@ -255,7 +255,8 @@ thuẫn số liệu. *Hệ quả:* muốn thước model có nghĩa cho hệ th�
 > **GHI RÕ (để không "hai bản số"):** trong cùng ngày có **2 phiên chạy song song** cùng vòng này. **§13**
 > (dưới, của phiên kia) báo **cùng bộ số** theo bố cục khác; **§10 này** bổ sung 3 thứ §13 chưa có:
 > `auc8c` (bản sửa của M1′ — **đã đo**), decile **GỘP** từng arm (M3(a)), và **kiểm kinh tế cross-horizon
-> cho cả 6 arm**. Hai bản **khớp nhau**; **KHÔNG xóa** bản nào (giữ lịch sử).
+> cho cả 6 arm**. Hai bản **khớp nhau**; **KHÔNG xóa** bản nào (giữ lịch sử). **§11** (sau §10) là phần
+> **NHÃN MỚI `Y1` = CHẠM +7 %** (AMEND §12.10) — **§13 KHÔNG bao gồm** phần này.
 
 ### 10.0 CỔNG PROVENANCE (phải PASS mới đọc số)
 
