@@ -18,7 +18,9 @@ from decimal import Decimal, ROUND_FLOOR, ROUND_HALF_UP
 
 import numpy as np
 
-OUT = "/home/ubuntu/exitfit"
+# PREREG_MONEY_RANKER §4: cho phep override qua env de tai dung engine NGUYEN VEN o noi khac
+# (Kaggle). Mac dinh GIU NGUYEN duong dan cu => hanh vi cu khong doi.
+OUT = os.environ.get("EXITFIT_OUT", "/home/ubuntu/exitfit")
 CACHE = os.path.join(OUT, "cache")
 BARS_PKL = os.path.join(OUT, "bars.pkl")
 
@@ -38,7 +40,7 @@ DAY_MS = 86400000
 HOUR_MS = 3600000
 
 # --- tick size (exchange_info_pin.json, cung file sim da dung) ---
-PIN = "/home/ubuntu/java/exchange_info_pin.json"
+PIN = os.environ.get("EXITFIT_PIN", "/home/ubuntu/java/exchange_info_pin.json")
 
 
 def load_tick_sizes():
@@ -303,7 +305,7 @@ def simulate(cl, ticks, policy, keep_trace=False):
             "pnl": float(sum(r["pnl_nofund"] for r in rows))}
 
 
-TICKS = load_tick_sizes()
+TICKS = load_tick_sizes() if os.path.exists(PIN) else {}   # env EXITFIT_PIN: thieu file => tick size rong
 
 
 def load_clusters():

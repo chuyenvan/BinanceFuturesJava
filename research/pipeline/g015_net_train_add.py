@@ -12,6 +12,17 @@ roi sua DUNG 4 diem, ghi ro o day:
   (4) `--out-root <dir>`: moi arm ghi vao `<out-root>/<TAG>/`.
 Mac dinh KHONG co `--add-feats` va KHONG co `--arms` => hanh vi GOC y nguyen (NF=45, 1 arm, 1 out-dir).
 
+--- PREREG_MONEY_RANKER (2026-09-25) — 2 co MOI, MAC DINH = HANH VI CU ---
+  (5) `--label-kind {bin,cont}` (mac dinh `bin` = y nguyen):
+      `bin`  = `y = (retEnd_h > thr)` / `(maxFav_h >= thr)` + `XGBClassifier(binary:logistic)`.
+      `cont` = **`y = retEnd_h` LIEN TUC** (bo nguong) + `XGBRegressor(objective='reg:squarederror',
+               eval_metric='rmse')`; `scale_pos_weight`/`eval_metric='auc'` = **N/A** (hoi quy).
+      Ly do: trainer KHONG co co che rank-label (khong `qid`/`rank:*`) => dung `y` lien tuc +
+      cham bang Spearman-rank (PREREG_MONEY_RANKER §3).
+  (6) `--label-custom <parquet>` (mac dinh rong): nap `y` TU PARQUET `(ts, symId, y)` thay cho `.pb`
+      (dung cho NHAN (b) = PnL that theo luat thoat, PREREG_MONEY_RANKER §4). Loc `nBars_h` KHONG ap
+      dung (nhan da duoc loc tu truoc); loc `ts < cutoff - purge` GIU NGUYEN.
+
 Pre-reg: docs/prereg/PREREG_STAGE2_FEATVAR.md. KHONG cham ONNX/NUM_FEATURES/extractFeatures45/LIVE.
 KHONG sim. Moi thu khac (nhan, fold, purge, seed, hyperparam, write_bin) GIU Y NGUYEN ban goc.
 
@@ -86,6 +97,8 @@ ADD_FILE = ""                  # --add-feats ; rong = khong them cot (hanh vi go
 ADD_TAB = None                 # (key da sort, values float32) — nap MOT lan
 ADD_HITS = []                  # [(so dong khop, so dong nam)] theo tung nam
 BASE_SHA = "b48c4812e905ae7909d578c5a4be0f9a188461c163ea121fe17e24a2a81d0bc8"  # g015_net_train.py goc
+LABEL_KIND = "bin"        # --label-kind (PREREG_MONEY_RANKER §3): bin = cu, cont = y lien tuc
+LABEL_CUSTOM = ""         # --label-custom (PREREG_MONEY_RANKER §4): parquet (ts, symId, y)
 
 
 def load_add_table(path):
@@ -208,6 +221,19 @@ def build_matrix(years, scratch):
     return X, ts_all, sym_all, mm
 
 
+def load_custom_labels(path):
+    """NHAN (b) tu parquet `(ts, symId, y)` (PREREG_MONEY_RANKER §4).
+    KHONG loc `nBars_h`; GIU nguyen quy uoc `ts` (ms) + `symId`."""
+    d = pd.read_parquet(path, columns=["ts", "symId", "y"])
+    d = d[np.isfinite(d.y.to_numpy(np.float64))]
+    L = pd.DataFrame({"ts": d.ts.to_numpy(np.int64), "symId": d.symId.to_numpy(np.int32),
+                      "y": d.y.to_numpy(np.float32)})
+    log.info("Label CUSTOM %s: %d dong | y: tb=%.6f sd=%.6f min=%.4f max=%.4f",
+             os.path.basename(path), len(L), float(L.y.mean()), float(L.y.std()),
+             float(L.y.min()), float(L.y.max()))
+    return L
+
+
 def load_labels(mode, thr, hi_ms):
     """NHAN. mode='net' -> y = (retEnd_4h > thr)   [= recipe THAT cua x26]
               mode='maxfav' -> y = (maxFav_4h >= thr)  [= recipe cua predwf_G015_v2 / g72]
@@ -232,13 +258,19 @@ def load_labels(mode, thr, hi_ms):
         ts = d.tEpochMs.to_numpy(np.int64)[k]
         v = d[col].to_numpy(np.float64)[k]
         keep = ts < hi_ms
-        yv = (v[keep] > thr) if mode == "net" else (v[keep] >= thr)
-        parts.append(pd.DataFrame({"ts": ts[keep], "symId": sid[k].to_numpy(np.int32)[keep],
-                                   "y": yv.astype(np.int8)}))
+        if LABEL_KIND == "cont":
+            yv = v[keep]                     # LIEN TUC (PREREG_MONEY_RANKER §3)
+            parts.append(pd.DataFrame({"ts": ts[keep], "symId": sid[k].to_numpy(np.int32)[keep],
+                                       "y": yv.astype(np.float32)}))
+        else:
+            yv = (v[keep] > thr) if mode == "net" else (v[keep] >= thr)
+            parts.append(pd.DataFrame({"ts": ts[keep], "symId": sid[k].to_numpy(np.int32)[keep],
+                                       "y": yv.astype(np.int8)}))
         del d
     L = pd.concat(parts, ignore_index=True)
     log.info("Label (protobuf): %d dong tu %d file", tot, len(fs))
-    log.info("Label 4h (%s thr=%.4f): %d rows | base=%.4f", mode, thr, len(L), float(L.y.mean()))
+    log.info("Label %dh (%s thr=%.4f kind=%s): %d rows | mean=%.6f", LABEL_H, mode, thr, LABEL_KIND,
+             len(L), float(np.asarray(L.y, dtype=np.float64).mean()))
     return L
 
 
@@ -250,11 +282,11 @@ def train_rows(ts_all, sym_all, L, tr_cut):
     ks = key[srt]
     assert not np.any(np.diff(ks) == 0), "Xall trung (ts,symId)"
     kl = L.ts.to_numpy(np.int64) * 1024 + L.symId.to_numpy(np.int64)
-    lab = np.full(len(ts_all), -1, dtype=np.int8)
+    lab = np.full(len(ts_all), np.nan, dtype=np.float64)   # sentinel NaN (dung cho CA bin va cont)
     ip = np.clip(np.searchsorted(ks, kl), 0, len(ks) - 1)
     hit = ks[ip] == kl
-    lab[srt[ip[hit]]] = L.y.to_numpy(np.int8)[hit]
-    sel = (lab >= 0) & (ts_all < tr_cut)
+    lab[srt[ip[hit]]] = L.y.to_numpy(np.float64)[hit]
+    sel = np.isfinite(lab) & (ts_all < tr_cut)
     pos_idx = np.flatnonzero(sel)
     return pos_idx, lab[pos_idx]
 
@@ -289,7 +321,7 @@ def parse_arms(s):
 
 
 def main():
-    global ADD_FILE, ADD_TAB, NF, LABEL_H, NEED
+    global ADD_FILE, ADD_TAB, NF, LABEL_H, NEED, LABEL_KIND, LABEL_CUSTOM
     ap = argparse.ArgumentParser(description="Trainer net015 + cot APPEND (Stage 2)")
     ap.add_argument("--fold", default="20240101",
                     help="cutoff YYYYMMDD, danh sach ngan cach dau phay, hoac 'all'")
@@ -303,6 +335,10 @@ def main():
                     help="horizon cua NHAN (PREREG_H72): 4 = hanh vi cu, 72 = them head 72h")
     ap.add_argument("--label-mode", default="net", choices=["net", "maxfav"])
     ap.add_argument("--thr", type=float, default=0.015, help="NET_THR (net) hoac WIN (maxfav)")
+    ap.add_argument("--label-kind", default="bin", choices=["bin", "cont"],
+                    help="PREREG_MONEY_RANKER §3: bin = nhan nhi phan (cu) | cont = y = retEnd_h LIEN TUC")
+    ap.add_argument("--label-custom", default="",
+                    help="PREREG_MONEY_RANKER §4: parquet (ts, symId, y) thay cho .pb (nhan (b) PnL)")
     ap.add_argument("--njobs", type=int, default=int(os.environ.get("G015_NJOBS", "-1")))
     ap.add_argument("--seed", type=int, default=SEED)
     ap.add_argument("--nest", type=int, default=NEST)
@@ -319,7 +355,9 @@ def main():
     a = ap.parse_args()
 
     LABEL_H = int(a.label_h)
-    NEED = H_BASE_MIN["%dh" % LABEL_H] // GRID_MIN
+    LABEL_KIND = a.label_kind
+    LABEL_CUSTOM = a.label_custom
+    NEED = 0 if LABEL_CUSTOM else H_BASE_MIN["%dh" % LABEL_H] // GRID_MIN
     log.info("LABEL_H=%dh | NEED=%d nBar %dh | ghi diem vao slot %d",
              LABEL_H, NEED, LABEL_H, H_SLOT[LABEL_H])
 
@@ -362,7 +400,9 @@ def main():
         tot_row = sum(n for _, n in ADD_HITS)
         log.info("ADD-FEATS hit tong: %d/%d = %.4f (theo nam %s)", tot_hit, tot_row,
                  tot_hit / max(tot_row, 1), ADD_HITS)
-    L = load_labels(a.label_mode, a.thr, hi_all)
+    L = load_custom_labels(LABEL_CUSTOM) if LABEL_CUSTOM else load_labels(a.label_mode, a.thr, hi_all)
+    OBJ = "reg:squarederror" if (LABEL_KIND == "cont" or LABEL_CUSTOM) else "binary:logistic"
+    log.info("LABEL_KIND=%s | CUSTOM=%s | objective=%s", LABEL_KIND, bool(LABEL_CUSTOM), OBJ)
 
     import xgboost as xgb
     log.info("xgboost %s | device=%s", xgb.__version__, a.device)
@@ -379,7 +419,10 @@ def main():
             b_hi = int((cdt + pd.DateOffset(months=OOS_MONTHS)).value // 10 ** 6) - TZ
             tr_cut = c - PURGE_MS
             tp, ty = train_rows(ts_all, sym_all, L, tr_cut)
-            assert len(tp) >= 5000 and len(np.unique(ty)) == 2, "fold %d train it" % fidx
+            if OBJ == "binary:logistic":
+                assert len(tp) >= 5000 and len(np.unique(ty)) == 2, "fold %d train it" % fidx
+            else:
+                assert len(tp) >= 5000 and float(np.std(ty)) > 0, "fold %d train it/khong bien thien" % fidx
             assert int(ts_all[tp].max()) < c, "LEAK fold %d" % fidx
             lo = int(np.searchsorted(ts_all, c, "left"))
             hi = int(np.searchsorted(ts_all, b_hi, "left"))
@@ -387,10 +430,16 @@ def main():
             pos = float(ty.mean())
             spw = (1 - pos) / max(pos, 1e-6)
             Xtr = np.asarray(X[tp])[:, keep_idx]
-            clf = xgb.XGBClassifier(n_estimators=a.nest, max_depth=5, learning_rate=0.05,
-                                    subsample=0.8, colsample_bytree=0.8, min_child_weight=20,
-                                    scale_pos_weight=spw, eval_metric="auc", n_jobs=a.njobs,
-                                    tree_method="hist", random_state=a.seed, device=a.device)
+            if OBJ == "binary:logistic":
+                clf = xgb.XGBClassifier(n_estimators=a.nest, max_depth=5, learning_rate=0.05,
+                                        subsample=0.8, colsample_bytree=0.8, min_child_weight=20,
+                                        scale_pos_weight=spw, eval_metric="auc", n_jobs=a.njobs,
+                                        tree_method="hist", random_state=a.seed, device=a.device)
+            else:
+                clf = xgb.XGBRegressor(n_estimators=a.nest, max_depth=5, learning_rate=0.05,
+                                       subsample=0.8, colsample_bytree=0.8, min_child_weight=20,
+                                       eval_metric="rmse", n_jobs=a.njobs,
+                                       tree_method="hist", random_state=a.seed, device=a.device)
             clf.fit(Xtr, ty, verbose=False)
             del Xtr
             if a.save_model:
@@ -401,7 +450,8 @@ def main():
                      tag, fidx, len(tp), pd.to_datetime(int(ts_all[tp].max()), unit="ms"), pos, spw,
                      len(keep_idx))
             Xoo = np.asarray(X[lo:hi])[:, keep_idx]
-            pv = clf.predict_proba(Xoo)[:, 1].astype(np.float32)
+            pv = (clf.predict_proba(Xoo)[:, 1] if OBJ == "binary:logistic"
+                  else clf.predict(Xoo)).astype(np.float32)
             del Xoo, clf
             outp = os.path.join(out_dir, "predict_wf_%s.bin" % f)
             write_bin(outp, ts_all[lo:hi], sym_all[lo:hi], pv, slot=H_SLOT[LABEL_H])
@@ -417,6 +467,7 @@ def main():
             except Exception:
                 pass
         meta = {"pipeline_version": PIPELINE_VERSION, "label_mode": a.label_mode, "thr": a.thr,
+                "label_kind": LABEL_KIND, "label_custom": a.label_custom, "objective": OBJ,
                 "device": a.device, "njobs": a.njobs, "seed": a.seed, "nest": a.nest,
                 "xgb": xgb.__version__, "purge_steps": PURGE_STEPS, "oos_months": OOS_MONTHS,
                 "grid_min": GRID_MIN, "folds": summary, "drop_cols": sorted(drop_set),
