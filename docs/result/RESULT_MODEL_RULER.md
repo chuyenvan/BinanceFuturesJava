@@ -717,3 +717,34 @@ arm ở tầng nhãn: `45deploy ≈ A45 > A44 > V0`; `V1 ≈ V5` cao `ic` nhưng
 - `retEnd_4h` là **GROSS**; `net = −0,008` theo **mô hình phí trong code** (`FEE_RT`), **KHÔNG** trừ funding.
 - **`h = 72h` vẫn N/A** (`z` = NaN 100 %, §10.5/§12.7 G-2) ⇒ câu “tiền ở đúng horizon cơ chế” **chưa trả lời được**.
 - Kết quả này **KHÔNG** suy ra được PnL hệ thống (Tầng B): thứ tự ở 4h ≈ 0 ⇒ phải để **sim** trả lời (ràng buộc §6.2).
+
+---
+
+## 15. ⭐ `h = 72h` — ĐÃ ĐO ĐƯỢC (nhờ điểm S1 có sẵn) · chi tiết `docs/result/RESULT_H72.md`
+
+§12.7 G-2 / §14.7 đánh dấu `h = 72h` = **N/A** vì điểm 72h trong **bins của arm** = NaN 100 %. Vòng này
+(`PREREG_H72.md`, commit `d39d095` + AMEND `648c88b`) đóng nốt khoảng trống đó bằng **2 nguồn KHÁC**:
+- **(a) điểm 72h THẬT:** `/home/ubuntu/ledger/pred_s1a2x1.parquet` = điểm **ranker sống S1** theo
+  `(ts, symId)`, sinh bởi `x1_s1_save_all_folds.py` (16 fold, mỗi fold OOS train `< cutoff − 72h`) ⇒
+  **chấm NGAY ở 72h, KHÔNG train** (VIỆC 0 pre-reg). Nhãn train của S1 **chính là `g1lite`** (định nghĩa ở
+  72h) ⇒ S1 **là** model 72h.
+- **(b) đầu 72h của arm: PHẢI train** (điểm slot 3 = NaN) — job `chuyendinh/g015p2-h72-gpu`
+  (`--label-h 72`, `write_bin(slot=3)`, `A45`/`A44`, 16 fold) **đã đẩy, `running`, CHƯA có số** trong
+  ngân sách phiên. Bù lại chạy **cross-horizon** (điểm 4h × nhãn 72h) — **không** gọi là "đầu 72h".
+
+**Kết quả gọn ở 72h** (`n_tick = 17.349` cho S1 · `140.237` cho arm cross-horizon):
+
+| câu | trả lời |
+|---|---|
+| Kỹ năng **NHÃN** ở 72h | **CÓ.** S1: `g1lite` `ic` **+0,167`*`**/`pacc` **0,556`*`**/`dec_rho` **+0,571`*`**; `maxFav_72h` `ic` **+0,277`*`**/`pacc` **0,596`*`**/`dec_rho` **+0,752`*`** |
+| Kỹ năng **TIỀN** ở 72h | **KHÔNG và NGƯỢC DẤU.** S1: `ic` **−0,087`*`**, `pacc` **0,469`*`**, `auc8` 0,476 (ns), `netm8` −0,011 (ns). Arm cross-horizon: `ic` ≈ −0,085, `pacc` ≈ 0,470 |
+| `A44` vs `A45` ở 72h | **vẫn THUA Ở TẦNG NHÃN** (13/13 `Δ` âm `out_both`), **`≈` Ở TẦNG TIỀN** (0/13 âm `out_both`; `Δic` **+0,0026`*`**) ⇒ **bước sai = MỤC TIÊU (nhãn)** — **bất kể horizon** |
+| `4h` vs `72h` | **4h > 72h** ở cả 2 tầng đo được: TIỀN `Δic` **−0,044`*`**, `Δpacc` **−0,016`*`**, `Δauc8` **−0,142`*`**; NHÃN `Δic` **−0,021`*`**, `Δpacc` **−0,008`*`** nhưng **`Δauc8` = ns** |
+| `base` 72h | `retEnd_72h > 0,015` = **0,4066`*`** (khớp khoảng khai trước 0,39–0,46) ⇒ `lift@8` 72h **nhỏ hơn** 4h là **bình thường** |
+| "PASS RỖNG"? | **KHÔNG.** Tầng NHÃN **không** Δ≈0 (13/13 ngoài CI); tầng TIỀN `Δ≈0` **đã đúng ở 4h nữa** (base 4h chỉ 0,250) nên **không** do base 72h cao |
+| Verdict `NOT GO` | **KHÔNG ĐỔI** — điều kiện (i) fail ở **4h** (`§13.3`); 72h **không** đảo được, và **thêm dữ kiện cùng chiều XẤU** |
+
+**Cách đo (chốt trước, không nới ngưỡng):** 3 nhãn `g1lite`/`retEnd_72h` net/`maxFav_72h`; lọc
+`nBars_72h ≥ 288`; chỉ số **dùng lại nguyên** `tick_metrics` (`K_SEL = 8`, `FEE_RT = 0,008`); CI block-72h
+`NREP = 2000`, `SEED = 20260905`, `inflate(k = 2) = 1,1774`; * = ngoài **cả hai** độ rộng; `ts < 2026-01-01`
+(**KHÔNG** chạm `HoldoutSeal`).
