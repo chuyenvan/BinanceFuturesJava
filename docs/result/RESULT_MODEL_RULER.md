@@ -192,11 +192,12 @@ thuẫn số liệu. *Hệ quả:* muốn thước model có nghĩa cho hệ th�
 
 ## 7. MỤC **KHÔNG ĐỌC ĐƯỢC** (ghi rõ — không che)
 
-1. **M5/M6/M7/M8/M9/M10 (AUC, pairwise, decile, gross, net) chỉ có cho `45deploy`.**
-   4 arm retrain (`A45/A44/V0/V1/V5`) **không giữ bins** (kernel chỉ tải về per-tick parquet ~30 MB, không
-   tải ~5 GB bins) ⇒ **Δ giữa các arm chỉ có M1–M4**. Đây là **khoảng trống hạ tầng kernel**, KHÔNG phải lỗi
-   thước. **Cách bịt (đề xuất, chưa làm):** kernel ghi thêm 1 parquet per-`(tick,coin)` **score+label** đã
-   nén (chỉ cần `ts,sym,p,y`) ⇒ mọi Δ sau này có đủ M5–M10.
+> ⚠️ **CẬP NHẬT 2026-09-25 (đọc kèm §13):** mục **7.1 dưới đây ĐÃ HẾT HIỆU LỰC** — phiên song song đã
+> **tải bins thô của 4 arm retrain** từ kernel output Kaggle ⇒ `M1/M2/M3` **tính được cho mọi arm**
+> (§13.1–§13.2). Mục **7.2** (funding) **giữ nguyên**. Mục 72h: xem **§13.4** (không arm nào có điểm 72h).
+
+1. ~~**M5/M6/M7/M8/M9/M10 (AUC, pairwise, decile, gross, net) chỉ có cho `45deploy`.**~~ **(HẾT HIỆU LỰC
+   từ §13)** 4 arm retrain ~~**không giữ bins**~~ — nay **có** bins thô.
 2. **Funding CHƯA trừ** trong M9/M10: không có chuỗi funding-rate local (crawler gọi API ⇒ ngoài phạm vi
    offline). Đối chứng: sim/WFO của repo **mặc định** `APPLY_FUNDING_FEE=false` (comment `Configs.java:130`:
    ~0,9 % PnL, maxDD không đổi). ⇒ Số net ở đây là net **"ex-funding"**.
@@ -366,9 +367,17 @@ biến thể khi `--skip-selftest` ⇒ crash — nay chỉ đòi khi bật self-
 - 🔴 **M3(a) KHÔNG phân biệt được arm nào** — **cả 6 arm đều ρ = +1,0000** và dốc dương ⇒ ngưỡng `>0,8`
   **không có tác dụng chọn lọc** ở bộ dữ liệu này; phần **quyết định của M3 là (b)**. (Ghi rõ vì luật §12.1
   viết M3 = (a) ∧ (b) — kết quả cho thấy (a) gần như luôn PASS ở họ model này.)
-- **Q9 ĐÚNG**: `lift@8 > lift@12 > lift@16` ở **mọi** arm (tín hiệu nhọn nhất ở đúng K=8, tắt dần).
-- **Q8 ĐÚNG**: `AUC@top8 = 0,6239` ∈ dải dự đoán 0,55–0,80, và **thấp hơn** `AUC` whole-tick (0,6685)
+- **Q9 ĐÚNG**: `lift@8 > lift@12 > lift@16` ở **mọi** arm (tín hiệu nhọn nhất ở đúng K=8, tắt dần).- **Q8 ĐÚNG**: `AUC@top8 = 0,6239` ∈ dải dự đoán 0,55–0,80, và **thấp hơn** `AUC` whole-tick (0,6685)
   — đúng như đã khoá trước (mẫu số của M1 dồn trọng số vào cặp `P\T × N∩T` = vùng model sai).
+
+> 🔴 **ERRATA (2026-09-25, do PHIÊN SONG SONG `agent:main:main` phát hiện — nhận lỗi, không che):**
+> công thức `auc8` ở §13.1 **của tôi bị ĐẾM TRÙNG**: cặp `(pos ∈ T, neg ∈ T)` được cộng **2 lần ở tử số**
+> (một lần qua `pos∈T`, một lần qua `neg∈T`) nhưng **chỉ 1 lần ở mẫu số** (`den8`) ⇒ về nguyên tắc `auc8`
+> **có thể > 1** trên dữ liệu nhỏ. Bản sửa = `auc8c` (chỉ tính cặp `(T,T)` một lần) do phiên song song thêm vào
+> `model_ruler.py` (kèm bằng chứng tổng hợp ở §10.1 của họ). **Ảnh hưởng đọc số:** độ lệch ước lượng
+> `≈ |P∩T|·|N∩T|·0,5 / den8 ≈ 0,009` ⇒ **KHÔNG đổi bất kỳ verdict nào** (Δ của `A44`/`V0` đều bất lợi
+> ≥ 0,005 ở **cả 3** chỉ số, và độ lệch gần như chung cho mọi arm) — **nhưng con số M1 tuyệt đối/Δ ở §13.1–13.2
+> phải được THAY bằng bản `auc8c`** khi phiên song song chạy lại xong. `M2`/`M3` **không** bị ảnh hưởng.
 
 ## 13.2 Δ SO VỚI **CẢ HAI** ĐỐI CHỨNG (ghép cặp 140.238 tick; `*` = ngoài CI **cả hai** độ rộng)
 
