@@ -240,3 +240,209 @@ thuẫn số liệu. *Hệ quả:* muốn thước model có nghĩa cho hệ th�
 
 **File:** `research/analysis/model_ruler.py` · `docs/prereg/PREREG_MODEL_RULER.md` · `docs/result/RESULT_MODEL_RULER.md`
 · JSON: `/home/ubuntu/.cache/ruler_validate.json` (KHÔNG commit — artifact ngoài repo).
+
+---
+
+## 10. AMEND — KẾT QUẢ THEO **CỔNG MỚI** (M1′/M2′/M3′, h ∈ {4h, 72h}) — sau khi **ĐÓNG G-1** bằng BINS THÔ
+
+**Trạng thái:** ĐO XONG (thuần Python offline: **KHÔNG** train, **KHÔNG** sim, **KHÔNG** job).
+**Tiền đăng ký:** `PREREG_MODEL_RULER.md` **§12** (commit `214c420`) + **§12.9** (commit `b37b548`).
+**JSON:** `/home/ubuntu/.cache/ruler_bins_4h.json` · `ruler_bins_72h.json` · `ruler_bins_econ72h.json`
+(cache per-tick: `/tmp/model_ruler_out/`). **KHÔNG** chạm ONNX/LIVE/2026 · **KHÔNG** push.
+
+### 10.0 CỔNG PROVENANCE (phải PASS mới đọc số)
+
+| # | cổng | kết quả |
+|---|---|---|
+| **G6** | bins THÔ của 4 arm retrain | **CÓ** — tải từ **kernel output** Kaggle (`kaggle kernels output`, 80 file / **4,65 GB**): `V0/V1/V5` ← `g015p2-stage2-featvar-gpu`; `A44/A45` ← `g015p2-arm44-gpu`. **Chỉ tải artifact đã có** — không train/sim/job |
+| **G7** | RAW từ bins **tái lập đúng số đã công bố** (6 chữ số) | `A45` −0,051061/+0,110850 · `A44` −0,049096/+0,107775 · `V0` −0,047526/+0,105444 · `V1` −0,052018/+0,109101 · `V5` −0,051858/+0,108477 — **trùng khít** per-tick parquet kernel ✓ |
+| **G8** | coverage | **6/6** arm `n_tick = 140.238`, `ts` khớp khít từng dòng ✓ |
+| **G9** | CI | block-72h, 2000 rep, seed 20260905; **k = 2** (2 ứng viên `A44`,`V0`) ⇒ `inflate(2)` = **1,177410**; 1,21 chỉ in tham chiếu ✓ |
+| **G10** | T1/T2 (thước) | **T2 `max\|Δ\| = 0,0`** trên cả chỉ số mới (`auc8`, `lift8/12/16`, `dec_rho_lab`); **T1** `lift8` shuffled = −3,9e−7, `ic` = +8,1e−6 ✓ |
+| **G11** | **ĐIỂM 72h** | **KHÔNG TỒN TẠI**: `z[:,0..2]` = NaN **100 %** ở **MỌI** bins (deploy 18 fold + 5 arm × 16 fold) — xem §10.5 |
+
+### 10.1 MỨC — 5 arm × 3 chỉ số chính (RAW, nhãn train `y = retEnd_4h > 0,015`, 140.238 tick)
+
+| arm | vai trò | **M1′ `auc8`** | **M2′ `lift@8`** | **M2′ `lift@12`** | **M2′ `lift@16`** | **M3(b) `dec_rho_lab`** | `ic` (PHỤ) |
+|---|---|---|---|---|---|---|---|
+| `45deploy` | **MỐC** | 0,623932 | +0,110510 | +0,099856 | +0,091935 | +0,461524 | −0,051110 |
+| `A45` | đối chứng **retrain** | 0,624411 | +0,110850 | +0,100345 | +0,092180 | +0,461195 | −0,051061 |
+| `A44` | **ỨNG VIÊN 1** | 0,618747 | +0,107775 | +0,097269 | +0,089608 | +0,448348 | −0,049096 |
+| `V0` | **ỨNG VIÊN 2** | 0,612618 | +0,105444 | +0,095284 | +0,087695 | +0,438940 | −0,047526 |
+| `V1` | tham chiếu (OFI thật) | 0,618866 | +0,109101 | +0,099456 | +0,092306 | **+0,470669** | −0,052018 |
+| `V5` | đối chứng **nhiễu** | 0,617625 | +0,108477 | +0,099064 | +0,092055 | +0,470235 | −0,051858 |
+
+- **M1′ (`auc8`)** > 0,5 ở **mọi** arm ⇒ top-8-vs-phần-còn-lại **có** skill (thấp hơn `auc` whole-tick 0,6685 — đúng như dự đoán **Q8**).
+- **M2′**: `lift@8 > lift@12 > lift@16 > 0` ở **mọi** arm (đúng **Q9**).
+- **M3(a) — decile GỘP trên NHÃN TRAIN** (`45deploy`): **ρ = +1,0000**, dốc `D10−D1 = +0,15835` ⇒ **PASS** (đúng **Q10**). **Nhưng** gộp trên `retEnd` **liên tục**: ρ = **−0,1394**, dốc −0,00008 (phẳng) ⇒ **nhãn nhị phân xếp được, ĐỘ LỚN kết quả thì KHÔNG** (khớp `pacc 0,4821` của v1). *(M3(a) cho 4 arm retrain: xem JSON `pooled_deciles` — cùng kết luận PASS/ρ≈1.)*
+
+### 10.2 Δ vs **CẢ HAI** ĐỐI CHỨNG (ghép cặp theo tick; `*` = ngoài CI cả hai độ rộng)
+
+| so sánh | Δ`auc8` | Δ`lift8` | Δ`lift12` | Δ`lift16` | Δ`dec_rho_lab` |
+|---|---|---|---|---|---|
+| `A44 − A45` (C1 retrain) | −0,005665`*` | **−0,003075`*`** | −0,003076`*` | −0,002572`*` | −0,012847`*` |
+| `A44 − 45deploy` (MỐC) | −0,005185`*` | −0,002735`*` | −0,002587`*` | −0,002328`*` | −0,013177`*` |
+| `V0 − V5` (C2 nhiễu) | −0,005007`*` | −0,003032`*` | −0,003779`*` | −0,004360`*` | −0,031295`*` |
+| `V0 − 45deploy` (MỐC) | −0,011313`*` | −0,005065`*` | −0,004572`*` | −0,004241`*` | −0,022584`*` |
+| `A45 − 45deploy` (nền nhiễu retrain) | +0,000480 | +0,000340 | +0,000488 | +0,000245 | −0,000329 |
+| `V5 − V1` (bước nhiễu THUẦN) | −0,001241 | −0,000624 | −0,000392 | −0,000251 | −0,000433 |
+| `V1 − V0` (OFI thật) | +0,006248`*` | +0,003656`*` | +0,004171`*` | +0,004611`*` | +0,031729`*` |
+| `V5 − 45deploy` | −0,006306`*` | −0,002033 | −0,000793 | +0,000119 | +0,008711`*` |
+| `V1 − 45deploy` | −0,005065`*` | −0,001409 | −0,000401 | +0,000370 | +0,009145`*` |
+
+- **C1 (retrain)**: nền nhiễu `A45 − 45deploy` **KHÔNG ngoài CI** ở **cả 5** chỉ số (lớn nhất = +0,000488 của `lift12`) ⇒ mọi Δ của ứng viên là **THẬT**, không phải nhiễu máy. **C2 (nhiễu)**: bước nhiễu thuần `V5 − V1` **KHÔNG ngoài CI** ⇒ đối chứng nhiễu **đúng chức năng**; `V1 − V0 = +0,003656*` ⇒ OFI thật **có** thêm tín hiệu.
+- **Đọc thẳng:** ứng viên **XẤU hơn cả hai** đối chứng ở **cả 5** chỉ số, và **XẤU hơn ở MỌI mức K**, không phải chỉ K=8.
+- **Kiểm THÊM (không nằm trong cặp đối chứng đã khai báo — chặt hơn):** `A44 − V5` = `auc8` +0,001121 / `lift8` −0,000701 / `lift12` −0,001795`*` / `lift16` −0,002447`*` / `dec_rho_lab` −0,021888`*`; `V0 − A45` = **cả 5 âm và ngoài CI**. ⇒ **đổi cặp đối chứng thế nào cũng KHÔNG GO.**
+
+### 10.3 LUẬT GO (h=4h cần ≥ 2/3) + **FAIL HẸP**
+
+| ứng viên | cặp đối chứng (khai báo §12.3) | **M1′** | **M2′** | **M3′** | **đạt/3** | h=4h | **fail hẹp** |
+|---|---|---|---|---|---|---|---|
+| `A44` | `{A45` (retrain), `45deploy` (mốc)`}` | fail | **fail (K8,K12,K16 đều fail)** | fail | **0/3** | **NOT GO** | **KHÔNG** (3/3 mức K fail) |
+| `V0` | `{V5` (nhiễu), `45deploy` (mốc)`}` | fail | **fail (K8,K12,K16 đều fail)** | fail | **0/3** | **NOT GO** | **KHÔNG** (3/3 mức K fail) |
+
+- **"fail hẹp" KHÔNG xảy ra** ở round này: cả 2 ứng viên fail **cả 3** mức `K` và **cả** M1′/M3′, nên **không** phải "chỉ 1 trong 3 mức K" ⇒ ghi "fail **RỘNG**", **KHÔNG** nới ngưỡng (`n_K_fail = 3`, `flag = false` trong JSON).
+- 3 arm còn lại (`A45`, `V1`, `V5`) **không phải ứng viên** của round (không có quyết định đổi mốc); số của chúng ở §10.1 để đối chiếu.
+
+### 10.4 M5–M10 (AUC / pairwise / decile / gross-net) giờ có **cho MỌI arm** (G-1 ĐÃ ĐÓNG)
+
+| arm | `auc` (whole-tick) | `pacc` `P(s_A>s_B\|y_A>y_B)` | `dec_rho` (y liên tục) | `dec_mono` | `gross@8` | **`net@8`** (−0,008) | `net_lift@8` |
+|---|---|---|---|---|---|---|---|
+| `45deploy` | 0,668537 | 0,482131 | −0,021778 | 0,495939 | +0,000148 | **−0,007852** | +0,118805 |
+| `A45` | 0,668671 | 0,482139 | −0,021705 | 0,495329 | +0,000210 | −0,007790 | +0,118822 |
+| `A44` | 0,663915 | 0,482894 | −0,021145 | 0,495665 | +0,000170 | −0,007830 | +0,115832 |
+| `V0` | 0,658897 | 0,483466 | −0,022040 | 0,495527 | +0,000198 | −0,007802 | +0,112415 |
+| `V1` | 0,672532 | 0,481744 | −0,021111 | 0,495267 | +0,000110 | −0,007890 | +0,115479 |
+| `V5` | 0,672086 | 0,481819 | −0,021565 | 0,495906 | +0,000009 | −0,007991 | +0,114997 |
+
+⇒ Phát hiện của v1 **đúng cho MỌI arm**, không phải riêng bản deploy: điểm cao ⇒ **có** cho câu hỏi **nhị phân** (`auc` 0,659–0,673), **KHÔNG** cho câu hỏi **độ lớn** (`pacc` 0,4817–0,4835 < 0,5), và **`net@8` ÂM** ở mọi arm (−0,00779…−0,00799) ⇒ top-8 theo `P(win)` **không** sống nổi chi phí round-trip 0,008 ở horizon 4h. **Thước đo THỨ TỰ, không đo lợi nhuận** — đúng lý do Tầng A không được nhìn PnL.
+
+### 10.5 h = 72h: **KHÔNG ĐÁNH GIÁ ĐƯỢC** (đo, không suy đoán) + kiểm KINH TẾ cross-horizon
+
+1. **Cổng 72h ⇒ NA.** `z[:,2]` (slot 72h) = **NaN 100 %** ở **mọi** bins ⇒ **KHÔNG arm nào có điểm 72h** ⇒ điều kiện **(ii)** của luật GO ("h=72h không chỉ số nào Δ<0 ngoài CI") **KHÔNG ĐÁNH GIÁ ĐƯỢC** ở round này. Lý do = **thiếu hạ tầng** (trainer ghi thẳng 3 NaN — `g015_net_train_add.py` `write_bin`), **KHÔNG** phải "số xấu". Vì vậy round này **không** được cấp GO **và** cũng **không** bị chặn bởi (ii).
+2. **Bịa số đã bị chặn:** code **không** lấy `p4h` thay cho điểm 72h (slot toàn NaN ⇒ bỏ arm, in "KHÔNG ĐÁNH GIÁ ĐƯỢC").
+3. **Kiểm KINH TẾ cross-horizon** (điểm **4h** × nhãn **`retEnd_72h`**, `n_tick = 140.237`) — **KHÔNG PHẢI cổng**, chỉ để trả lời "mượn điểm 4h cho 72h được không": `45deploy` `auc8 = 0,4791` (< 0,5), `lift8 = −0,014062`, `ic = −0,085570`; `A45` `auc8 = 0,4808`, `lift8 = −0,012891`.
+⇒ **Không mượn được:** chọn top-8 theo điểm 4h rồi **giữ 72h** là **kém hơn mức trung bình của tick** (lift **âm**) ⇒ muốn có cổng 72h **phải train đầu 72h RIÊNG**.
+
+### 10.6 KẾT LUẬN: `GIỮ 45` **CÒN ĐÚNG**, và bây giờ đúng vì **SỐ ĐO** (không vì NA)
+
+1. **`GIỮ 45` CÒN ĐÚNG** — trên **cả 3** chỉ số chính (M1′/M2′/M3′) và **cả 3** mức `K`, `A44` và `V0` đều **xấu hơn** *cả hai* đối chứng, **ngoài CI**: `A44` 0/3 · `V0` 0/3 ⇒ **NOT GO** (không đổi mốc).
+2. **Điểm khác biệt so với bản chạy thiếu bins:** các ô `NA` ở phiên chạy không có bins **đã được lấp bằng số thật** — kết luận **không đổi**, nhưng bây giờ nó là **số đo** chứ không phải "không đọc được".
+3. **G-1 đã đóng** (M5–M10 + `lift@12/16` cho mọi arm); **G-2 mở rộng hơn dự kiến** (72h thiếu ở **cả** `45deploy`) ⇒ điều kiện (ii) phải chờ **đầu 72h**, xem §10.7.
+4. **Việc chưa làm (đề xuất):** (a) train **đầu 72h** + ghi vào slot 3 của bins; (b) `g5_proxy.py` làm thước Tầng-A-song-song cho **cơ chế GATE**.
+
+### 10.7 ĐỀ XUẤT: đưa `retEnd_72h` + nhãn 72h vào pipeline (KHÔNG tự làm — cần train, ngoài phạm vi vòng này)
+
+- **NHÃN 72h ĐÃ CÓ, KHÔNG cần sinh mới:** `/home/ubuntu/label_15m/*.pb` có `retEnd_72h` + `nBars_72h` (meta: `hStepsMinutes=[240,720,1440,4320]`, `hNames=[4h,12h,24h,72h]`); `funding_label_pb.read_label(usecols=["retEnd_72h","nBars_72h"])` đọc được ngay.
+- **CÁI THIẾU LÀ ĐIỂM:** `write_bin` (`g015_net_train_add.py`) ghi `>qh4f` với 3 NaN ⇒ **sửa 2 chỗ**: (1) thêm `--label-h` cho `load_labels`/`load_features` (`col = "retEnd_%dh" % h`, `NEED = h*60/15`, lọc `nBars_%dh`), (2) `write_bin(..., slot)` ghi điểm vào đúng slot (`p` cho 4h, `z[:, h−1]` cho 12/24/72h). **PURGE** đã là 72h (`PURGE_STEPS=288`) nên **không** phải đổi cửa sổ chống leak.
+- **Sim dùng được ngay:** `s3_funding.py --horizon 3` (`WfoDataset.horizonIdx`: 0=4h…3=72h) ⇒ không phải sửa Java.
+- **Kỳ vọng phải khai báo TRƯỚC khi chạy:** base rate 72h ≈ **0,3932** (so 0,1849 của 4h) ⇒ `lift@K` **sẽ nhỏ hơn** và `Δ` **nhỏ hơn** ⇒ luật ≥2/3 **không** nới ngưỡng; và **`net@8`(72h)** phải báo kèm (chi phí 0,008 là hằng số, horizon dài hơn ⇒ "cửa sổ" lớn hơn).
+- **Đề xuất thay cho "bịt G-1" kiểu cũ:** giữ bins (đã chứng minh tải được 4,65 GB trong **95 s**, ~50 MB/s) ⇒ **không** cần thêm parquet per-`(tick,coin)` nữa.
+
+---
+
+# 13. AMEND §12 — KẾT QUẢ (h=4h, **RAW cho CẢ 5 arm**, luật GO của owner)
+
+**Ngày:** 2026-09-25 · **Pre-reg:** `214c420` (§12 amend, TRƯỚC khi đọc số bộ mới) + `b37b548` (§12.9 đóng G-1/G-2)
+**JSON:** `/home/ubuntu/.cache/ruler_bins_4h.json` · `.../ruler_bins_4h_fresh.json` (bản fresh, có đường decile gộp)
+**Bối cảnh:** giữa chừng, **phiên song song** (`agent:main:main`) tải **bins thô 4 arm retrain** từ kernel
+output Kaggle (80 file / 4,65 GB — chỉ tải artifact, không train/không sim) ⇒ **G-1 (mục §7.1 v1) hết
+hiệu lực**: `M1/M2/M3` giờ tính được cho **mọi** arm, kết quả là **số đo thật** chứ không còn NA.
+2 lỗi chặn mà tôi sửa trong file dùng chung: (i) `go_rule` `KeyError 'state'` (khối `fail_hep` không có
+khoá `state`) — bản sửa tương đương của phiên song song cũng đã áp; (ii) nhánh `--reuse` đòi **cả** cache
+biến thể khi `--skip-selftest` ⇒ crash — nay chỉ đòi khi bật self-tests.
+
+## 13.1 BA CHỈ SỐ CHÍNH theo arm (h=4h, nhãn train `retEnd_4h > 0,015`, 140.238 tick, 16 fold, 255,2 coin/tick)
+
+| arm | **M1 `AUC@top8`** [CI block-72h] | **M2** `lift@8` / `@12` / `@16` | **M3(b)** ρ per-tick (nhãn train) | **M3(a)** ρ gộp / dốc |
+|---|---|---|---|---|
+| `45deploy` | **0,623932** [0,615858; 0,631675] | +0,110510 / +0,099856 / +0,091935 | **+0,461524** [0,447019; 0,475590] | **+1,0000** / **+0,15835 PASS** |
+| `A45` (C1) | 0,624411 [0,616292; 0,632256] | +0,110850 / +0,100345 / +0,092180 | +0,461195 [0,447040; 0,475407] | +1,0000 / +0,15834 PASS |
+| `A44` | 0,618747 [0,610659; 0,626679] | +0,107775 / +0,097269 / +0,089608 | +0,448348 [0,434200; 0,462608] | +1,0000 / +0,15162 PASS |
+| `V0` | 0,612618 [0,604206; 0,620617] | +0,105444 / +0,095284 / +0,087695 | +0,438940 [0,424357; 0,453664] | +1,0000 / +0,14878 PASS |
+| `V1` | 0,618866 [0,610855; 0,626860] | +0,109101 / +0,099456 / +0,092306 | +0,470669 [0,456172; 0,484663] | +1,0000 / +0,16105 PASS |
+| `V5` (C2) | 0,617625 [0,609694; 0,625639] | +0,108477 / +0,099064 / +0,092055 | +0,470235 [0,455821; 0,484029] | +1,0000 / +0,16117 PASS |
+
+- 🔴 **M3(a) KHÔNG phân biệt được arm nào** — **cả 6 arm đều ρ = +1,0000** và dốc dương ⇒ ngưỡng `>0,8`
+  **không có tác dụng chọn lọc** ở bộ dữ liệu này; phần **quyết định của M3 là (b)**. (Ghi rõ vì luật §12.1
+  viết M3 = (a) ∧ (b) — kết quả cho thấy (a) gần như luôn PASS ở họ model này.)
+- **Q9 ĐÚNG**: `lift@8 > lift@12 > lift@16` ở **mọi** arm (tín hiệu nhọn nhất ở đúng K=8, tắt dần).
+- **Q8 ĐÚNG**: `AUC@top8 = 0,6239` ∈ dải dự đoán 0,55–0,80, và **thấp hơn** `AUC` whole-tick (0,6685)
+  — đúng như đã khoá trước (mẫu số của M1 dồn trọng số vào cặp `P\T × N∩T` = vùng model sai).
+
+## 13.2 Δ SO VỚI **CẢ HAI** ĐỐI CHỨNG (ghép cặp 140.238 tick; `*` = ngoài CI **cả hai** độ rộng)
+
+| so sánh | Δ`auc8` (M1) | Δ`lift@8/12/16` (M2) | Δ`ρ_lab` (M3b) |
+|---|---|---|---|
+| **`A44 − A45`** (C1 retrain) | **−0,005665** `*` [−0,007689;−0,003674] | **−0,003075\* / −0,003076\* / −0,002572\*** | **−0,012847** `*` [−0,014797;−0,010926] |
+| **`A44 − 45deploy`** (MỐC) | **−0,005185** `*` | **−0,002735\* / −0,002587\* / −0,002328\*** | **−0,013177** `*` |
+| **`V0 − V5`** (C2 noise) | **−0,005007** `*` | **−0,003032\* / −0,003779\* / −0,004360\*** | **−0,031295** `*` |
+| **`V0 − 45deploy`** (MỐC) | **−0,011313** `*` | **−0,005065\* / −0,004572\* / −0,004241\*** | **−0,022584** `*` |
+| `A45 − 45deploy` (nền nhiễu **retrain**) | +0,000480 (không) | +0,000340 / +0,000488 / +0,000245 (**không**) | −0,000329 (không) |
+| `V5 − V1` (**bước nhiễu THUẦN** — bẫy OFI) | −0,001241 (**không**) | −0,000624 / −0,000392 / −0,000251 (**không**) | −0,000433 (**không**) |
+| `V1 − 45deploy` (OFI thật vs MỐC) | **−0,005065** `*` | −0,001409 / −0,000401 / +0,000370 (**không**) | **+0,009145** `*` |
+
+- **Nền nhiễu retrain & bước nhiễu thuần đều ~0, KHÔNG ngoài CI ở CẢ 3 chỉ số chính** ⇒ (i) khác biệt của
+  `A44`/`V0` là **thật**, không do máy; (ii) **không dính bẫy OFI** (nhiễu không "thắng"), và **đối chứng
+  nhiễu đúng chức năng**.
+- 🔴 **`V1 − 45deploy` MÂU THUẪN**: `auc8` **xấu hơn** ngoài CI nhưng `ρ_lab` **tốt hơn** ngoài CI (lift thì
+  ngang) ⇒ **thước vẫn chưa cho một thứ tự duy nhất**; ghi rõ, không che. (Đây là lý do luật cần "cả 2/3 +
+  không chỉ số nào xấu ở 72h" — nhưng ở 72h lại không đo được, xem §13.4.)
+
+## 13.3 LUẬT GO — KẾT QUẢ
+
+| ứng viên | M1 | M2 | M3 | PASS | **GO (h=4h)** | `fail_hẹp` |
+|---|---|---|---|---|---|---|
+| **`A44`** (bỏ `rvol15m`) vs {`A45`, `45deploy`} | **fail** | **fail** (fail **cả 3** mức K) | **fail** | **0/3** | **NOT GO** | False |
+| **`V0`** (cắt 45 → 21) vs {`V5`, `45deploy`} | **fail** | **fail** (fail **cả 3** mức K) | **fail** | **0/3** | **NOT GO** | False |
+
+⇒ **Q11 ĐÚNG** (và nặng hơn dự đoán: fail **cả 3** mức K của M2 chứ không chỉ K=8); **Q12 ĐÚNG**.
+⇒ `GIU 45` được **tự nói lại**, và lần này bằng **số đo RAW đầy đủ**, không còn phụ thuộc AGG.
+
+## 13.4 h = 72h — **KHÔNG ĐÁNH GIÁ ĐƯỢC** (đo được, không phải suy đoán)
+
+Đo trực tiếp `z[:,0..2]` của **mọi** thư mục bins: **NaN 100 %** (`45deploy` 16 fold + 5 arm × 16 fold;
+`p` (4h) thì 0,0000 % NaN). ⇒ **KHÔNG arm nào có ĐIỂM 72h** (trainer ghi thẳng 3 NaN vào `write_bin`) ⇒
+**điều kiện (ii) của luật GO KHÔNG ĐÁNH GIÁ ĐƯỢC**, và **Q13 không kiểm được**.
+**Không thay thế bằng điểm 4h** (làm vậy là bịa số) — phiên song song đã chặn đúng ở code.
+**Hệ quả đọc luật (ghi rõ):** round này chỉ đánh giá được **điều kiện (i)**. Vì (i) đã **0/3** nên (ii)
+**không thể** đảo ngược kết luận ⇒ **NOT GO** vẫn đứng vững. **Nhưng** nếu tương lai có ứng viên PASS (i),
+thì luật **vẫn không thể cấp GO** khi thiếu (ii) — cần **hoặc** train model 72h (ngoài phạm vi Tầng A /
+cần owner quyết), **hoặc** owner sửa luật. Đây là **khoảng trống hạ tầng**, không phải số xấu.
+
+## 13.5 KINH TẾ (báo kèm theo §12.2, **KHÔNG** dùng cho luật GO) — `45deploy`
+
+| chỉ số | giá trị | CI |
+|---|---|---|
+| `gross@8` (mốc cả tick = **−0,000062**) | **+0,000148** | [−0,000473; +0,000774] |
+| `net@8` = `gross@8 − 0,008` | **−0,007852** | [−0,008473; −0,007226] |
+| `AUC` whole-tick (nhị phân) | **0,668537** | [0,663102; 0,674067] |
+| `pairwise P(s_A>s_B \| y_A>y_B)` (liên tục) | **0,482131** (< 0,5) | [0,480996; 0,483303] |
+| decile gộp trên `retEnd` (gross) | ρ = **−0,1394**, dốc **−0,00008** | — |
+
+🔴 **Cặp số quan trọng nhất của cả vòng** (trả lời trực tiếp câu hỏi chủ dự án): cùng một model, cùng tick —
+- **Nhãn train**: đường decile gộp **đơn điệu hoàn hảo** D1→D10 = `0,1099 → 0,2682` (ρ=+1,0000, dốc +0,1584);
+- **Kết quả thật (`retEnd`)**: dốc D10−D1 = **−0,00008** (gần như **phẳng**), ρ gộp **−0,1394**.
+⇒ Model **xếp hạng rất tốt theo XÁC SUẤT TRÚNG**, và **gần như KHÔNG xếp hạng được theo ĐỘ LỚN kết quả**.
+Điểm cao ⇒ coin dễ "bơm >1,5 %" hơn, **KHÔNG** ⇒ coin lãi nhiều hơn; sau chi phí 0,008 thì top-8 **âm**.
+
+## 13.6 ĐỐI CHIẾU DỰ ĐOÁN KHOÁ TRƯỚC (bộ mới)
+
+| # | dự đoán | kết quả |
+|---|---|---|
+| Q8 | `0,55 < AUC@top8 < 0,80`, không hứa hơn whole-tick | **ĐÚNG** (0,6239 < 0,6685) |
+| Q9 | `lift@8 ≥ lift@12 ≥ lift@16` | **ĐÚNG** (mọi arm) |
+| Q10 | M3(a) PASS trên nhãn train NHƯNG ρ âm trên `retEnd` | **ĐÚNG** (ρ_lab=+1,0000 vs ρ gộp `retEnd` = −0,1394) |
+| Q11 | `A44`/`V0` fail `K=8` của M2 | **ĐÚNG** (fail **cả 3** mức K) |
+| Q12 | NOT GO cả hai | **ĐÚNG** (0/3 cả hai) |
+| Q13 | `lift@8(72h) > 0` nhưng nhỏ hơn 4h | **KHÔNG KIỂM ĐƯỢC** (không tồn tại điểm 72h) |
+
+## 13.7 VIỆC TIẾP (đề xuất)
+
+1. **Bịt 72h**: muốn dùng được điều kiện (ii) thì phải **có model 72h** (train — ngoài phạm vi Tầng A,
+   cần owner duyệt) — hoặc owner **sửa luật** cho khớp hạ tầng hiện có. **Không** thay bằng điểm 4h.
+2. **Kinh tế cross-horizon** (điểm 4h × nhãn `retEnd_72h`) đã có cờ `--label-horizon` — chạy như **báo cáo
+   kinh tế**, **không** áp luật GO.
+3. **Ghi vào pre-reg vòng sau**: (a) M3(a) **không phân biệt** (cả 6 arm ρ=1,0) ⇒ cân nhắc bỏ (a) hoặc
+   thay bằng ngưỡng chặt hơn; (b) `V1 − 45deploy` cho **hai tín hiệu ngược chiều** ⇒ cần luật hoà giải
+   TRƯỚC khi dùng thước để đổi model.
