@@ -163,7 +163,7 @@ def load_labels(labels_dir, cols, key_col=None):
 
 
 def join_labels_per_fold(bins_dir, LK, LV, folds, slot=0, h_label="4h", yb_col=None,
-                         yb_thr=None, yb_op=">"):
+                         yb_thr=None, yb_op=">", y_col=None):
     """Doc bins tung fold + join nhan -> (ts, p, y, yb, nbars, fold). Dung DUNG format bins 26 B/rec.
 
     AMEND §12.2: `slot` 0 -> cot `p` (4h); 1/2/3 -> `z[:, slot-1]` (12h/24h/72h). Coin co DIEM NaN
@@ -184,7 +184,7 @@ def join_labels_per_fold(bins_dir, LK, LV, folds, slot=0, h_label="4h", yb_col=N
             v = np.full(len(key), np.nan)
             v[hit] = LV[col][ip[hit]]
             return v
-        y = _take("retEnd_" + h_label)
+        y = _take(y_col or ("retEnd_" + h_label))
         nb = _take("nBars_" + h_label)
         if yb_col is None:
             yb = np.where(y > yb_thr, 1.0, 0.0)
@@ -385,15 +385,15 @@ def tick_metrics(ts, p, y, yb_in=None, with_pacc=True):
 
 
 def ruler_raw(bins_dir, labels_dir, folds, self_tests=False, horizon="4h", label_horizon=None,
-              label_kind="y2"):
+              label_kind="y2", y_kind="retend"):
     """RAW theo TUNG FOLD (streaming) — tranh OOM: khong bao gio giu ca 16 fold cung luc.
 
     AMEND §12.2: doc DIEM o slot `H_SLOT[horizon]` (khop horizon cua nhan). Tra `(None, None)` khi
     slot do KHONG co diem (toan NaN) — KHONG bia so, KHONG lay slot 4h thay cho 72h.
     `label_horizon` (mac dinh = `horizon`) cho phep do KINH TE CROSS-HORIZON: diem cua horizon
     `horizon` nhung nhan `retEnd_<label_horizon>` — LUON ghi ro, khong duoc goi la "cong 72h".
-    AMEND §12.10: `label_kind` `y2` (nhan train) | `y1` (CHAM `maxFav_h >= 0,07`). `y` luon la
-    `retEnd_<label_horizon>` LIEN TUC (kinh te, Y3); `yb` la nhan cua CONG. Tra them ti le DU cua so
+    AMEND §12.10: `label_kind` `y2` (nhan train) | `y1` (CHAM `maxFav_h >= 0,07`). `y` LIEN TUC (`retEnd_<label_horizon>`
+    khi `y_kind=retend`, `maxFav_<label_horizon>` khi `y_kind=maxfav` — PREREG_YCONT_4H); `yb` la nhan cua CONG. Tra them ti le DU cua so
     `nBars_h >= H/15m` trong `aux["_diag"]` (KHONG loc — giu nguyen tap dong de ghep cap).
     """
     h_lab = label_horizon or horizon
@@ -408,8 +408,9 @@ def ruler_raw(bins_dir, labels_dir, folds, self_tests=False, horizon="4h", label
         return None, None
     _pref, yb_thr, yb_op = LBL_KINDS[label_kind]
     yb_col = "%s_%s" % (_pref, h_lab)
-    cols = ["retEnd_" + h_lab, "nBars_" + h_lab] + ([yb_col] if yb_col not in
-                                                     ("retEnd_" + h_lab,) else [])
+    y_col = ("maxFav_%s" % h_lab) if y_kind == "maxfav" else ("retEnd_%s" % h_lab)
+    cols = list(dict.fromkeys(["retEnd_" + h_lab, "nBars_" + h_lab, y_col]
+                              + ([yb_col] if yb_col not in ("retEnd_" + h_lab, y_col) else [])))
     LK, LV = load_labels(labels_dir, cols)
     keys = ["self", "shuffled", "unif", "logit"] if self_tests else ["self"]
     parts = {k: [] for k in keys}
@@ -417,12 +418,12 @@ def ruler_raw(bins_dir, labels_dir, folds, self_tests=False, horizon="4h", label
            for k in keys}
     aux["_diag"] = {"nb_ok": 0, "nb_all": 0, "nb_need": NB_NEED.get(h_lab), "label_kind": label_kind,
                      "yb_col": yb_col, "yb_thr": yb_thr, "h_label": h_lab,
-                     "yb_usable_only": 0}
+                     "y_kind": y_kind, "y_col": y_col, "yb_usable_only": 0}
     rng = np.random.default_rng(SELF_SEED)
     for f in folds:
         ts, p, y, yb, nb, fold = join_labels_per_fold(
             bins_dir, LK, LV, [f], slot, h_lab, yb_col if label_kind == "y1" else None,
-            yb_thr, yb_op)
+            yb_thr, yb_op, y_col)
         if len(ts) == 0:
             LOG.info("    fold %s: 0 dong (nhan hoac diem NaN) -> BO", f)
             continue
@@ -629,7 +630,7 @@ def cmd_ruler(a):
              a.name, a.horizon, a.label_horizon or a.horizon, a.label_kind, a.k, infl, G.LEGACY)
     if a.bins:
         res, aux = ruler_raw(a.bins, a.labels, FOLDS[:a.folds] if a.folds else FOLDS,
-                             a.self_tests, a.horizon, a.label_horizon, a.label_kind)
+                             a.self_tests, a.horizon, a.label_horizon, a.label_kind, a.y_kind)
         metrics = RAW_METRICS
         tag = a.name
         out = {"name": a.name, "mode": "RAW", "bins": a.bins, "labels": a.labels,
@@ -745,6 +746,8 @@ def cmd_validate(a):
         lh = a.label_horizon or a.horizon
         lk = a.label_kind
         tag_h = "%s_lab%s" % (a.horizon, lh) if lk == "y2" else "%s_lab%s_%s" % (a.horizon, lh, lk)
+        if a.y_kind != "retend":
+            tag_h += "_yc" + a.y_kind
         pt = os.path.join(TMP, "%s_pertick.parquet" % name if tag_h == "4h_lab4h"
                           else "%s_%s_pertick.parquet" % (name, tag_h))
         auxp = _aux_path(name, tag_h)
@@ -779,7 +782,7 @@ def cmd_validate(a):
             LOG.info("  [%s] cache CU (thieu auc8/dec_rho_lab) => tinh lai", name)
         if bins:
             res, aux = ruler_raw(bins, a.labels, FOLDS, a.self_tests, a.horizon, a.label_horizon,
-                                 a.label_kind)
+                                 a.label_kind, a.y_kind)
             if res is None:
                 LOG.info("  [%s] BO QUA — KHONG co DIEM o h=%s (slot bins toan NaN)", name, a.horizon)
                 continue
@@ -847,7 +850,9 @@ def cmd_validate(a):
 
     # [V-A..V-E] delta + verdict  (M = v1 phu + cac cot AMEND khi co)
     M = ["auc8", "auc8c", "lift8", "lift12", "lift16", "dec_rho_lab",
-         "glift8", "glift12", "glift16", "netm8", "netm12", "netm16"] + AGG_METRICS
+         "glift8", "glift12", "glift16", "netm8", "netm12", "netm16",
+         # PREREG_YCONT_4H: Δ cac chi so LIEN TUC (chi THÊM so; vong cu khong doi verdict)
+         "ic", "pacc", "dec_mono", "dec_rho", "gross8", "net8"] + AGG_METRICS
     D = {}
     pairs = [("A44", "45deploy"), ("A44", "A45"), ("A45", "45deploy"),
              ("V0", "45deploy"), ("V0", "V5"), ("V5", "V0"), ("V1", "V0"), ("V5", "45deploy"),
@@ -929,7 +934,7 @@ def cmd_validate(a):
              "CO (khong ung vien nao GO)" if GO and not any(v["GO_h4"] for v in GO.values())
              else "KHONG")
     out = {"k": a.k, "inflate": infl, "legacy_reference": G.LEGACY, "horizon": a.horizon,
-           "label_horizon": lh, "label_kind": a.label_kind,
+           "label_horizon": lh, "label_kind": a.label_kind, "y_kind": a.y_kind,
            "block_h": C.BLOCK_H, "nrep": C.NREP, "seed": C.SEED, "thr": THR,
            "fee_rt": FEE_RT, "k_sel": K_SEL, "k_lifts": list(K_LIFTS), "touch": TOUCH,
            "coverage": cov, "summary": SUM, "raw_summary": RAWO, "delta": D,
@@ -956,6 +961,8 @@ def main():
                    help="mac dinh = --horizon; khac di => KINH TE CROSS-HORIZON (khong ap luat GO)")
     r.add_argument("--label-kind", default="y2", choices=["y2", "y1"],
                    help="y2=nhan train (doi chieu) · y1=NHAN CHAM maxFav>=0,07 (CHINH, §12.10)")
+    r.add_argument("--y-kind", default="retend", choices=["retend", "maxfav"],
+                   help="nguon cot `y` LIEN TUC: retend=retEnd_h (kinh te, mac dinh) · maxfav=maxFav_h (PREREG_YCONT_4H)")
     r.add_argument("--folds", type=int, default=0)
     r.add_argument("--self-tests", action="store_true")
     v = sub.add_parser("validate")
@@ -968,6 +975,8 @@ def main():
                    help="mac dinh = --horizon; khac di => KINH TE CROSS-HORIZON (khong ap luat GO)")
     v.add_argument("--label-kind", default="y2", choices=["y2", "y1"],
                    help="y2=nhan train (doi chieu) · y1=NHAN CHAM maxFav>=0,07 (CHINH, §12.10)")
+    v.add_argument("--y-kind", default="retend", choices=["retend", "maxfav"],
+                   help="nguon cot `y` LIEN TUC: retend=retEnd_h (mac dinh) · maxfav=maxFav_h (PREREG_YCONT_4H)")
     v.add_argument("--reuse", action="store_true",
                    help="dung lai per-tick cache trong %s (KHONG tinh lai)" % TMP)
     a = ap.parse_args()

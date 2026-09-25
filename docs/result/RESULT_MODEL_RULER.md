@@ -480,7 +480,7 @@ như khai báo trước; **KHÔNG** nới ngưỡng, **KHÔNG** chọn nhãn the
 
 ### 11.7 VIỆC TIẾP (đề xuất, chưa làm)
 
-1. Đo `rank-IC`/`pacc` với **`y = maxFav_h` liên tục** (để chốt câu 2 ở §11.4 bằng số).
+1. Đo `rank-IC`/`pacc` với **`y = maxFav_h` liên tục** (để chốt câu 2 ở §11.4 bằng số). ⇒ **ĐÃ LÀM — §14** (kết quả: trên `maxFav` liên tục **CÓ** kỹ năng, `pacc ≈ 0,60`; chỉ trên `retEnd` liên tục mới không).
 2. Đổi nhãn trainer sang `maxFav` (`--label-col maxFav_h`, ngưỡng 0,07) → **train lại** 1 vòng đối chứng.
 3. Sinh **đầu 72h** (§10.7) để mở điều kiện (ii).
 4. Sửa `auc8 → auc8c` cho M1′ ở vòng sau (đã khai báo §10.1/§13).
@@ -600,3 +600,120 @@ cần owner quyết), **hoặc** owner sửa luật. Đây là **khoảng trốn
 3. **Ghi vào pre-reg vòng sau**: (a) M3(a) **không phân biệt** (cả 6 arm ρ=1,0) ⇒ cân nhắc bỏ (a) hoặc
    thay bằng ngưỡng chặt hơn; (b) `V1 − 45deploy` cho **hai tín hiệu ngược chiều** ⇒ cần luật hoà giải
    TRƯỚC khi dùng thước để đổi model.
+
+---
+
+# 14. AMEND `PREREG_YCONT_4H` — 5 ARM BẰNG **NHÃN LIÊN TỤC** + **THƯỚC TIỀN** (đóng §11.7 mục 1)
+
+**Ngày:** 2026-09-25 · **Pre-reg:** commit `ba1e881` (`docs/prereg/PREREG_YCONT_4H.md`) — **chốt TRƯỚC khi đọc số**.
+**JSON:** `/home/ubuntu/.cache/ruler_bins_ycont_maxfav_4h.json` (thước NHÃN) ·
+`/home/ubuntu/.cache/ruler_bins_ycont_money_4h.json` (thước TIỀN) · log `/tmp/rb_ycont_{maxfav,money}.log`.
+**KHÔNG push.** Thuần Python offline (không train, không sim, không job).
+
+## 14.0 CÁCH CHẠY + SỬA CÔNG CỤ (tối thiểu, chỉ **THÊM** số)
+
+- Thêm `--y-kind {retend,maxfav}` = đổi **NGUỒN cột `y` LIÊN TỤC** (`retEnd_h` ↔ `maxFav_h`); mặc định
+  `retend` ⇒ **byte-identical** mọi vòng cũ. Thêm `pacc/dec_mono/dec_rho/ic/gross8/net8` vào danh sách Δ.
+  Cache per-tick của vòng mới tách bằng hậu tố `_ycmaxfav` (không đè cache cũ).
+- **Tái dùng cache** cho thước TIỀN (`--reuse`, đúng cặp nhãn+điểm đã chốt); thước NHÃN chạy RAW mới
+  (6 arm, 16 fold, **140.238 tick**, `ts` khớp khít — `[T3] coverage` = true cho cả 6).
+- ⚠️ **Nguồn `glift8`/`netm8` của thước TIỀN**: cache per-tick cũ (`*_pertick.parquet`, 10:03) **chưa có**
+  2 cột này (thêm ở §12.10) ⇒ Δ`glift8/netm8` **thước TIỀN** lấy từ lượt `y1` (`/tmp/rb_y1_4h.log`, cùng
+  `y = retEnd` **liên tục**, chỉ khác `yb`) — **đối chiếu chéo**: `Δpacc`/`Δdec_mono` giữa 2 lượt **giống
+  hệt từng chữ số** (A44−A45: `pacc = +0,000755` ở **cả hai**) ⇒ hai nguồn nhất quán.
+
+## 14.1 THƯỚC **NHÃN** — `y = maxFav_4h` LIÊN TỤC (không nhị phân), 6 arm
+
+| arm | `ic` | `pacc` | `dec_mono` | `dec_rho` | `glift8` | `netm8` | decile GỘP `maxFav` (ρ / dốc) |
+|---|---|---|---|---|---|---|---|
+| `45deploy` | +0,298152 | +0,60437 | +0,66867 | +0,74898 | +0,024346 | +0,033727 | +1,0000 / +0,02387 |
+| `A45` | +0,297629 | +0,60418 | +0,66871 | +0,74831 | +0,024438 | +0,033819 | +1,0000 / +0,02390 |
+| `A44` | +0,280487 | +0,59787 | +0,66064 | +0,72904 | +0,024018 | +0,033399 | +1,0000 / +0,02308 |
+| `V0` | +0,272146 | +0,59482 | +0,65561 | +0,71345 | +0,022829 | +0,032210 | +1,0000 / +0,02235 |
+| `V1` | +0,303323 | +0,60636 | +0,67158 | +0,75079 | +0,022816 | +0,032198 | +1,0000 / +0,02331 |
+| `V5` | +0,303281 | +0,60634 | +0,67130 | +0,74941 | +0,022798 | +0,032180 | +1,0000 / +0,02332 |
+
+`dec_rho_lab`/`auc8`/`lift8` (nhị phân CHẠM +7 %) **không đổi** so §11.1 ⇒ nhãn liên tục **không** thay thứ tự
+arm ở tầng nhãn: `45deploy ≈ A45 > A44 > V0`; `V1 ≈ V5` cao `ic` nhưng **thấp `glift8`** (hai họ chỉ số khác nhau).
+
+## 14.2 THƯỚC **TIỀN** — `y = retEnd_4h` LIÊN TỤC (net = `y − 0,008`)
+
+| arm | `ic` | `pacc` | `dec_mono` | `dec_rho` | `glift8` / `netm8` (§14.0) | decile GỘP `retEnd` (dốc) |
+|---|---|---|---|---|---|---|
+| `45deploy` | **−0,05111** | **+0,48213** | +0,49594 | −0,02178 | +0,000209 / −0,007852 | −0,00008 |
+| `A45` | **−0,05106** | **+0,48214** | +0,49533 | −0,02170 | +0,000272 / −0,007790 | −0,00004 |
+| `A44` | **−0,04910** | **+0,48289** | +0,49566 | −0,02114 | +0,000231 / −0,007830 | −0,00005 |
+| `V0` | **−0,04753** | **+0,48347** | +0,49553 | −0,02204 | +0,000259 / −0,007802 | −0,00006 |
+| `V1` | **−0,05202** | **+0,48174** | +0,49527 | −0,02111 | +0,000172 / −0,007890 | −0,00007 |
+| `V5` | **−0,05186** | **+0,48182** | +0,49591 | −0,02156 | +0,000070 / −0,007991 | −0,00006 |
+
+**Đọc:** trên thước TIỀN **MỌI arm** có `ic < 0`, `pacc < 0,5`, `dec_mono < 0,5`, decile gộp `retEnd`
+**dốc ≈ 0 (âm nhẹ)** ⇒ **KHÔNG arm nào có kỹ năng xếp hạng `retEnd_4h` ròng ở 4h** — kể cả `45deploy`
+(bản đang deploy). Đây là bản **liên tục** của “cặp số quan trọng nhất” §13.5 và **giữ nguyên** kết luận đó.
+
+## 14.3 ⭐ `Δ` (ghép cặp 140.238 tick, CI block-72h, `*` = ngoài CI **cả hai** độ rộng)
+
+| so sánh | `Δic` | `Δpacc` | `Δdec_mono` | `Δdec_rho` | `Δglift8` | `Δnetm8` |
+|---|---|---|---|---|---|---|
+| **`A44 − A45` — NHÃN** | **−0,017143`*`** | **−0,006312`*`** | **−0,008076`*`** | **−0,019270`*`** | **−0,000420`*`** | **−0,000420`*`** |
+| **`A44 − A45` — TIỀN** | +0,001965`*` | **+0,000755`*`** | +0,000335 | +0,000560 | −0,000040 | −0,000040 |
+| `A44 − 45deploy` — NHÃN | −0,017666`*` | −0,006505`*` | −0,008036`*` | −0,019938`*` | −0,000328`*` | −0,000328`*` |
+| `A44 − 45deploy` — TIỀN | +0,002014`*` | +0,000763`*` | −0,000275 | +0,000633 | +0,000022 | +0,000022 |
+| **đối chứng retrain** `A45 − 45deploy` — NHÃN | −0,000523 | −0,000192 | +0,000040 | −0,000668 | +0,000092 | +0,000092 |
+| **đối chứng retrain** `A45 − 45deploy` — TIỀN | +0,000050 | +0,000009 | −0,000610 | +0,000074 | +0,000062 | +0,000062 |
+| **đối chứng nhiễu** `V5 − V1` — NHÃN | −0,000042 | −0,000013 | −0,000280 | −0,001384 | −0,000018 | −0,000018 |
+| **đối chứng nhiễu** `V5 − V1` — TIỀN | +0,000160 | +0,000075 | +0,000639 | −0,000454 | **−0,000102`*`** | **−0,000102`*`** |
+| `V0 − V5` — NHÃN | −0,031136`*` | −0,011523`*` | −0,015693`*` | −0,035959`*` | +0,000030 | +0,000030 |
+| `V0 − V5` — TIỀN | +0,004332`*` | +0,001647`*` | −0,000379 | −0,000475 | +0,000189 | +0,000189 |
+
+Áp **đúng luật đã chốt** (`PREREG_YCONT_4H` §3):
+- **NHÃN:** `A44 − A45` **âm `out_both` ở 5/5** chỉ số quyết định (kể cả `glift8`/`netm8`) ⇒ **`A44` THUA `A45`**.
+  (Cùng chiều với nhãn nhị phân: `Δauc8 = −0,009948`\*, `Δlift8 = −0,002791`\*, `Δdec_rho_lab = −0,009763`\* — §11.2.)
+- **TIỀN:** **0/4** chỉ số âm `out_both` (`pacc`/`ic` **dương** `out_both`; `dec_mono`/`glift8`/`netm8` ≈ 0, **không** ngoài CI)
+  ⇒ **`A44` ≈ `A45`** (không thua; nhỉnh hơn ở `pacc`/`ic`).
+- 2 đối chứng **còn đúng chức năng**: `A45 − 45deploy` ≈ 0 **không** `out_both` ở mọi chỉ số (2 thước);
+  `V5 − V1` ≈ 0 (ngoại lệ duy nhất: `glift8`/`netm8` = **−0,000102`*`**, tức **1,0e−4** — nhỏ nhưng **có** ngoài CI ⇒ ghi nhận, không che).
+
+## 14.4 ⭐ KẾT LUẬN — **`A44` vs `A45`: THUA Ở TẦNG NÀO, VÀ BƯỚC SAI LÀ GÌ**
+
+**`A44` thua `A45` ở TẦNG ĐOÁN NHÃN, KHÔNG thua ở TẦNG TIỀN.** ⇒ theo đúng nhánh (a) đã chốt trước:
+
+> **BƯỚC SAI = MỤC TIÊU (NHÃN).** `rvol15m` **có** đóng góp cho khả năng đoán *“coin nào chạm/lên mạnh (maxFav)”*,
+> nhưng **không** đóng góp gì cho *“coin nào lãi ròng nhiều hơn (retEnd)”* — vì **không arm nào** (kể cả `45deploy`)
+> có kỹ năng ở thước tiền 4h. Việc **chọn/loại đặc trưng** (và mọi so arm) đang được chấm bằng một thước
+> **không tương quan với tiền**; ngược lại thước tiền **không phân biệt được** arm nào (bão hoà ≈ 0 cho mọi arm).
+
+**Hệ quả trực tiếp cho câu hỏi của owner** (*“thước đo mới mà kết quả model 44 không thắng 45? rõ ràng features kia nhiều mà chiến hơn 30 % trọng số”*):
+- 30 % trọng số / nhiều feature **có** thắng ở tầng **nhãn** (`maxFav` liên tục **và** nhị phân) — đúng như kỳ vọng;
+- nhưng **không** thắng (≈ 0) ở tầng **`retEnd` 4h ròng** ⇒ **`rvol15m` là tín hiệu “độ nảy”, không phải tín hiệu “độ lãi”**.
+- ⇒ Đổi sang đó **không** chứng minh được gì về PnL; **vấn đề không nằm ở bước so arm**, mà ở **nhãn/horizon**
+  đang chấm (và ở chỗ hệ thống kiếm tiền bằng **trailing từ `maxFav`**, không bằng `retEnd` 4h — xem §6.3, §11.4).
+
+## 14.5 ĐỐI CHIẾU DỰ ĐOÁN KHOÁ TRƯỚC (`PREREG_YCONT_4H` §4)
+
+| # | dự đoán | kết quả |
+|---|---|---|
+| **Q18** | `A44 < A45` trên thước NHÃN (`maxFav` liên tục) | **ĐÚNG** — âm `out_both` ở **5/5** chỉ số |
+| **Q19** | `A44 ≈ A45` trên thước TIỀN ⇒ kết luận (a) | **ĐÚNG** — 0/4 chỉ số âm `out_both` |
+| **Q20** | `pacc ≈ 0,48` (< 0,5) ở **MỌI** arm trên **CẢ HAI** nhãn liên tục | **SAI (một nửa)** — TIỀN: 0,4817–0,4835 ✓; **NHÃN: 0,5948–0,6064** (> 0,5, cách xa) ⇒ *“biết coin nào LÊN MẠNH NHẤT (theo `maxFav`)”* **CÓ** kỹ năng; chỉ *“lên nhiều nhất theo lãi ròng `retEnd`”* mới **không** |
+| **Q21** | `A45 − 45deploy` và `V5 − V1` ≈ 0 trên thước TIỀN | **ĐÚNG** (2 đối chứng còn chức năng); ngoại lệ nhỏ đã ghi: `V5−V1` `glift8/netm8` = −1,0e−4`*` |
+
+## 14.6 ĐỀ XUẤT (KHÔNG tự làm — cần owner quyết)
+
+1. **Đừng dùng `retEnd_4h` làm thước chọn arm/feature** ở 4h: nó **bão hoà âm nhẹ** với **mọi** arm
+   (`ic ≈ −0,05`, decile dốc ≈ 0). Chọn theo **cơ chế** (`maxFav`/chạm +7 %, §11) **hoặc** theo **Tầng B (sim)**.
+2. **Nhãn/h “quy ra tiền” phải là h trên cơ chế arm** — đề xuất cụ thể: dùng `y = g1lite` (đã dùng cho S1:
+   `maxFav_72h` pha `retEnd_72h`, `x1_ledger.py:7,44`) làm thước **thứ ba** ở `h = 72h` (điểm 72h **chưa có** →
+   cần train 1 vòng, **ngoài phạm vi**, cần owner duyệt).
+3. **Nếu owner muốn giữ tiêu chí tiền 4h**: phải đổi **thước**, không đổi model — hiện `Δ` giữa các arm
+   ở thước tiền **≤ 3e−4** (glift/netm) và `Δpacc ≤ 1,7e−3` ⇒ **dưới mức phân giải của artifact**, không đủ để GO/NO-GO.
+4. **Bổ sung vào runbook**: khi 2 thước **ngược chiều** (nhãn: `A44` thua; tiền: `≈ 0`) ⇒ **mặc định KHÔNG GO**
+   (đã đúng ở vòng này) **và** mở mục “sai tầng mục tiêu” thay vì “sai model”.
+
+## 14.7 HẠN CHẾ / KHÔNG ĐỌC ĐƯỢC (ghi rõ)
+
+- Thước TIỀN dùng **cache per-tick tái sử dụng**; `glift8/netm8` lấy từ lượt `y1` (§14.0) — **có** đối chiếu chéo
+  `pacc/dec_mono` khớp từng chữ số, nhưng **không** chạy lại RAW cho thước TIỀN ở vòng này.
+- `retEnd_4h` là **GROSS**; `net = −0,008` theo **mô hình phí trong code** (`FEE_RT`), **KHÔNG** trừ funding.
+- **`h = 72h` vẫn N/A** (`z` = NaN 100 %, §10.5/§12.7 G-2) ⇒ câu “tiền ở đúng horizon cơ chế” **chưa trả lời được**.
+- Kết quả này **KHÔNG** suy ra được PnL hệ thống (Tầng B): thứ tự ở 4h ≈ 0 ⇒ phải để **sim** trả lời (ràng buộc §6.2).
