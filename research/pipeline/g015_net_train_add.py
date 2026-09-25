@@ -66,8 +66,13 @@ OI_TOL = 2 * 3_600_000
 PURGE_STEPS = 288
 PURGE_MS = PURGE_STEPS * GRID_MS
 OOS_MONTHS = 3
-H_BASE_MIN = {"4h": 240}
+# PREREG_H72 §5.1: them head 72h. `H_BASE_MIN["4h"]` = 240 phut (16 buoc 15m) giu NGUYEN;
+# `72h` = 4320 phut => 288 buoc (khop `model_ruler.NB_NEED`). Mac dinh 4h => byte-identical.
+H_BASE_MIN = {"4h": 240, "72h": 4320}
+LABEL_HS = (4, 72)
+LABEL_H = 4                                   # doi bang `--label-h` (mac dinh 4 = hanh vi cu)
 NEED = H_BASE_MIN["4h"] // GRID_MIN          # 16 buoc
+H_SLOT = {4: 0, 72: 3}                        # slot trong ban ghi 26 B (WfoDataset.java:193)
 OI_NAMES = ["oi_delta24h", "oi_z", "ls_global", "ls_toptrader", "taker_buy"]
 OI_DT = np.dtype([("ts", ">i8"), ("sym", ">i2"), ("oi", ">f4", 5)])
 NF = 45
@@ -207,7 +212,8 @@ def load_labels(mode, thr, hi_ms):
     """NHAN. mode='net' -> y = (retEnd_4h > thr)   [= recipe THAT cua x26]
               mode='maxfav' -> y = (maxFav_4h >= thr)  [= recipe cua predwf_G015_v2 / g72]
     Loc chung: nBars_4h >= 16 va cot nhan notna (y het pipeline goc)."""
-    col = "retEnd_4h" if mode == "net" else "maxFav_4h"
+    col = ("retEnd_%dh" % LABEL_H) if mode == "net" else ("maxFav_%dh" % LABEL_H)
+    nbc = "nBars_%dh" % LABEL_H
     fs = sorted(glob.glob(LB_DIR + "/funding_label_*.pb"))
     fs = [f for f in fs if os.path.basename(f).split("_")[2] < "20260701"]
     m0 = FLPB.meta(fs[0])
@@ -218,9 +224,9 @@ def load_labels(mode, thr, hi_ms):
     s2i = dict(zip(smap.symbol, smap.symId.astype(np.int32)))
     parts, tot = [], 0
     for fp in fs:
-        d = FLPB.read_label(fp, usecols=["tEpochMs", "symbol", col, "nBars_4h"])
+        d = FLPB.read_label(fp, usecols=["tEpochMs", "symbol", col, nbc])
         tot += len(d)
-        d = d[(d["nBars_4h"] >= NEED) & d[col].notna()]
+        d = d[(d[nbc] >= NEED) & d[col].notna()]
         sid = d.symbol.map(s2i)
         k = sid.notna().to_numpy()
         ts = d.tEpochMs.to_numpy(np.int64)[k]
@@ -253,12 +259,16 @@ def train_rows(ts_all, sym_all, L, tr_cut):
     return pos_idx, lab[pos_idx]
 
 
-def write_bin(path, ts, sid, p):
+def write_bin(path, ts, sid, p, slot=0):
+    """Ghi 26 B/rec: `slot` 0..3 (0=4h,3=72h). Mac dinh 0 => byte-identical ban goc."""
+    assert slot in (0, 1, 2, 3), "slot phai trong 0..3"
     nan = float("nan")
     with open(path, "wb") as fo:
         buf = bytearray()
         for i in range(len(ts)):
-            buf += struct.pack(">qh4f", int(ts[i]), int(sid[i]), float(p[i]), nan, nan, nan)
+            q = [nan, nan, nan, nan]
+            q[slot] = float(p[i])
+            buf += struct.pack(">qh4f", int(ts[i]), int(sid[i]), q[0], q[1], q[2], q[3])
         fo.write(buf)
         fo.flush()
         os.fsync(fo.fileno())
@@ -279,7 +289,7 @@ def parse_arms(s):
 
 
 def main():
-    global ADD_FILE, ADD_TAB, NF
+    global ADD_FILE, ADD_TAB, NF, LABEL_H, NEED
     ap = argparse.ArgumentParser(description="Trainer net015 + cot APPEND (Stage 2)")
     ap.add_argument("--fold", default="20240101",
                     help="cutoff YYYYMMDD, danh sach ngan cach dau phay, hoac 'all'")
@@ -288,7 +298,9 @@ def main():
     ap.add_argument("--out-dir", default="/home/ubuntu/g4/net015_out")
     ap.add_argument("--out-root", default="", help="STAGE2: moi arm ghi vao <out-root>/<TAG>/")
     ap.add_argument("--scratch", default=None, help="mac dinh = <out-root|out-dir>/scratch")
-    ap.add_argument("--save-model", action="store_true", help="luu model_f<i>_4h.json")
+    ap.add_argument("--save-model", action="store_true", help="luu model_f<i>_<h>h.json")
+    ap.add_argument("--label-h", type=int, default=4, choices=list(LABEL_HS),
+                    help="horizon cua NHAN (PREREG_H72): 4 = hanh vi cu, 72 = them head 72h")
     ap.add_argument("--label-mode", default="net", choices=["net", "maxfav"])
     ap.add_argument("--thr", type=float, default=0.015, help="NET_THR (net) hoac WIN (maxfav)")
     ap.add_argument("--njobs", type=int, default=int(os.environ.get("G015_NJOBS", "-1")))
@@ -305,6 +317,11 @@ def main():
                     help="STAGE2: 'TAG:drop_cols;TAG2:drop_cols2' -> train nhieu bien the tren CUNG "
                          "mot lan dung ma tran (moc V0 phai cung kernel). Rong = 1 arm (--drop-cols).")
     a = ap.parse_args()
+
+    LABEL_H = int(a.label_h)
+    NEED = H_BASE_MIN["%dh" % LABEL_H] // GRID_MIN
+    log.info("LABEL_H=%dh | NEED=%d nBar %dh | ghi diem vao slot %d",
+             LABEL_H, NEED, LABEL_H, H_SLOT[LABEL_H])
 
     ADD_FILE = a.add_feats
     NF = NF_BASE + (len(ADD_REAL) + len(ADD_NOISE) if ADD_FILE else 0)
@@ -377,7 +394,7 @@ def main():
             clf.fit(Xtr, ty, verbose=False)
             del Xtr
             if a.save_model:
-                mp = os.path.join(out_dir, "model_f%d_4h.json" % fidx)
+                mp = os.path.join(out_dir, "model_f%d_%dh.json" % (fidx, LABEL_H))
                 clf.save_model(mp)
                 log.info("arm %s fold %d 4h: SAVED model -> %s", tag, fidx, os.path.basename(mp))
             log.info("arm %s fold %d 4h: train %d (ts_max=%s<cutoff) pos=%.4f spw=%.6f nfeat=%d",
@@ -387,7 +404,7 @@ def main():
             pv = clf.predict_proba(Xoo)[:, 1].astype(np.float32)
             del Xoo, clf
             outp = os.path.join(out_dir, "predict_wf_%s.bin" % f)
-            write_bin(outp, ts_all[lo:hi], sym_all[lo:hi], pv)
+            write_bin(outp, ts_all[lo:hi], sym_all[lo:hi], pv, slot=H_SLOT[LABEL_H])
             summary[f] = {"fold_idx": fidx, "n_train": int(len(tp)), "pos": pos, "spw": spw,
                           "n_oos": int(hi - lo), "p_mean": float(pv.mean()),
                           "p_std": float(pv.std()), "sha_bin": sha256(outp)}
