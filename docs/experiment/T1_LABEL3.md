@@ -209,3 +209,10 @@ khong dung lai.
 | log train | `/home/ubuntu/cov/T1_LABEL3.out`, per-tick IC: `/home/ubuntu/cov/T1_ic_*.csv` |
 | log rate CI | `/home/ubuntu/cov/T1_RATES_CI.out` |
 | run Kaggle VO HIEU | `/home/ubuntu/kaggle_sim/out/t1-{g1,f4,f4q,f72}/` |
+
+## ERRATA (2026-09-25) — `p_mean` **KHÔNG** phải calibration của chân
+
+`p_mean` gần trùng giữa các chân T1 **không** phải calibration: `build_map.py` **giữ nguyên multiset
+`P(win)` trong từng tick** (đúng `PREREG_T1.md` §3.2) nên tổng/mean chỉ khác do **nhiễu thứ tự cộng
+float32**. Các chân được so bằng **THỨ HẠNG qua cùng một gate**, không phải so mức.
+Chi tiết: `docs/diag/DIAG_BINS_P_OVERWRITE.md` (`927bb44`).

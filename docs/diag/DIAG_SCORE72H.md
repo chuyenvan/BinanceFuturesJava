@@ -199,3 +199,14 @@ Quota Kaggle GPU 30 h/tuần ⇒ **lọt**, nhưng vẫn là **quota + owner duy
 3. **Không** đo được ma trận phủ pool/fold của `net015_72h` ngoài 2 fold đã đọc trong log.
 4. **Dị thường chưa lý giải:** `predwf_t1_f4`, `predwf_t1_f4q`, `predwf_t1_f72` (3 chân nhãn *khác nhau*: `1{maxFav_4h>=0.06}`, rel5 của `maxFav_4h`, `1{maxFav_72h>=0.06}` — `docs/experiment/T1_LABEL3.md` §2) lại có `p` **gần trùng khít** (mean 0,41971642 / 0,41971648 / 0,41971651; khác ≤1 ULP; sha256 KHÁC nhau) — trong khi base rate của 3 nhãn là 14,14 % / rel5 / **65,71 %**, không thể cho cùng phân bố điểm. ⇒ **nghi bins 3 chân dùng chung một nguồn điểm (hoặc bước `build_map.py` đè `p`)**. Cần người tạo (T1_LABEL3) xác nhận trước khi tin bất kỳ bins `predwf_t1_*` nào. Không ảnh hưởng 5 arm.
 5. **Không** kiểm được `WfoDataset` end-to-end với slot 3 (cần chạy Java — ngoài phạm vi; đã đọc code, chưa chạy).
+
+## ERRATA (2026-09-25) — dị thường `p` ở `predwf_t1_*` ĐÃ LÝ GIẢI, **KHÔNG PHẢI LỖI**
+
+§2.4 và §4-ý-4 (nghi `build_map.py` đè `p`) — **đã kiểm byte-level và lý giải**:
+`docs/diag/DIAG_BINS_P_OVERWRITE.md` (commit `927bb44`).
+
+`build_map.py:44` chỉ đè **slot 0 (`p4h`)** bằng **rank-map**, và **GIỮ NGUYÊN multiset `P(win)`
+trong từng tick** — đúng hợp đồng đã chốt ở `docs/prereg/PREREG_T1.md` §3.2. Bằng chứng: multiset
+`p0` theo tick trùng **87.547/87.547 = 100,0000 %** với cả 4 đối chiếu; `corr(rank p0, rank score)`
+chéo chính = **−1,000000**; "`p_mean` gần trùng" chỉ là **nhiễu thứ tự cộng float32**.
+⇒ **Không phải lỗi, không cần sửa số.**
