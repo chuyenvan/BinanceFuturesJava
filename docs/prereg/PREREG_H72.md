@@ -82,3 +82,21 @@ nếu dùng phải khai là **pool-subset**.
 python3 -u research/analysis/h72_s1_measure.py                 # VIỆC 0 + VIỆC 2 (nhãn 72h × 3)
 python3 -u research/analysis/model_ruler.py ruler --name <arm> --bins <dir> --horizon 72h --out ...
 ```
+
+---
+
+## 11. AMEND (2026-09-25, TRƯỚC khi đo 4h) — đo S1 ở `h = 4h` bằng **ĐÚNG** code/ngưỡng
+
+VIỆC 3-(4) hỏi *"4h vs 72h: horizon nào model mạnh hơn"*. Để trả lời **không** phải đem số của 2
+bảng khác nhau ra so (S1 vs arm, universe khác), tôi **thêm** một lượt đo **cùng một model S1,
+cùng code (`tick_metrics`), cùng cách lọc, cùng CI**, chỉ khác `h`:
+
+- `h = 4h`: `retEnd_4h`, `maxFav_4h`, lọc `nBars_4h >= 16` (`NB_NEED["4h"]`).
+- `h = 72h`: như §3.
+- **KHÔNG** đổi `K`/`THR`/`TOUCH`/nhãn/CI. **KHÔNG** nới ngưỡng.
+- Nhãn (i) `g1lite` **luôn** dùng định nghĩa 72h (§2) ở **cả hai** lượt (đó là công thức nhãn của S1,
+  không phải tham số của lượt đo) — ghi rõ để không so nhầm.
+- Đây là **so sánh THÊM**, khai báo TRƯỚC khi có số; không dùng để đổi luật §6.
+
+**Dự đoán Q28 (trước khi đo):** kỹ năng **nhãn** (i)/(iii) **giảm** khi `h` tăng (72h khó hơn);
+kỹ năng **tiền** (ii) `≈ 0`/âm ở **cả hai** `h`.
