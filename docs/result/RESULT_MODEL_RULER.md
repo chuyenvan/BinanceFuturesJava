@@ -360,6 +360,132 @@ thuẫn số liệu. *Hệ quả:* muốn thước model có nghĩa cho hệ th�
 
 ---
 
+## 11. AMEND §12.10 — NHÃN KHỚP CƠ CHẾ ARM (`Y1` = **CHẠM +7%**): KẾT QUẢ + CÂU TRẢ LỜI BẮT BUỘC
+
+**Trạng thái:** đo xong (thuần Python offline). **Pre-reg: §12.10** (commit `acfe6ff`) — **chốt TRƯỚC khi đọc số
+Y1**. **JSON:** `/home/ubuntu/.cache/ruler_bins_y1_4h.json` · `ruler_bins_y1_72h.json`
+(cache: `/tmp/model_ruler_out/*_4h_lab4h_y1_pertick.parquet`). **KHÔNG** push.
+
+### 11.0 NGUỒN NHÃN + ĐỘ ĐỦ DỮ LIỆU (không bịa)
+
+- `Y1 = maxFav_4h ≥ 0,07` — lấy **THẲNG** từ cột `maxFav_4h` của label `.pb` (**KHÔNG** phải tính lại từ
+giá 1m): `maxFav_H = max(high(τ)/close(t) − 1)`, τ = nến **15m** trong `(t, t+H]` (`ExportFundingLabel.java`).
+`high(15m)` **chặn trên** mọi high 1m trong nến đó ⇒ phát hiện “chạm” **tương đương ở độ phân giải cần**;
+entry = `close(t)`; **GROSS**.
+- **Độ đủ cửa sổ (in ra bởi tool, KHÔNG lọc):** `nBars_4h ≥ 16` trên **99,98 %** dòng ⇒ nhãn `Y1` **đủ dữ
+liệu**, không có lỗ hổng đáng kể.
+- `n_tick = 140.238` và `ts` **khớp khít** với mọi lượt chạy (kể cả bản `Y2`) ⇒ so `Y1` vs `Y2` là **ghép cặp
+cùng tick, cùng điểm**.
+- **KHÔNG** đổi bất kỳ luật nào đã chốt; `Y2`/`Y3` chỉ đối chiếu.
+
+### 11.1 `Y1` — 5 arm tại h=4h (nhãn **CHÍNH**)
+
+| arm | `prec8` | `base`(Y1) | **RR8 = prec8/base** | `lift8` | `lift12` | `lift16` | `auc8` | `auc8c` | `dec_rho_lab` |
+|---|---|---|---|---|---|---|---|---|---|
+| `45deploy` | 0,156404 | 0,026744 | **5,85×** | +0,129660 | +0,110801 | +0,097384 | 0,675072 | 0,663990 | +0,5122 |
+| `A45` | 0,156413 | 0,026744 | 5,85× | +0,129669 | +0,111110 | +0,097758 | 0,674894 | 0,663864 | +0,5117 |
+| `A44` | 0,153622 | 0,026744 | 5,74× | +0,126878 | +0,108116 | +0,095006 | 0,664946 | 0,654018 | +0,5020 |
+| `V0` | 0,146835 | 0,026744 | 5,49× | +0,120091 | +0,103017 | +0,090859 | 0,645381 | 0,634894 | +0,4912 |
+| `V1` | 0,147798 | 0,026744 | 5,53× | +0,121054 | +0,104209 | +0,092263 | 0,650640 | 0,640087 | +0,5113 |
+| `V5` | 0,147706 | 0,026744 | 5,52× | +0,120962 | +0,104095 | +0,092219 | 0,649333 | 0,638852 | +0,5096 |
+
+- `base` **không** nằm trong `RAW_METRICS` ⇒ suy ra `base = prec8 − lift8` (hằng số theo tick: **0,026744** ở
+**mọi** arm — đúng vì base là thuộc tính của **tick+nhãn**, không của arm). **2026-09-25:** `base(Y1) = 2,67 %`
+so `base(Y2) = 17,62 %`.
+- `M2′` vẫn **đơn điệu giảm theo K** ở mọi arm; `M3(a)` decile **GỘP** trên `Y1`: **ρ = +1,0000** ở **6/6** arm
+(dốc `D10−D1 = +0,10969` cho `45deploy`) ⇒ **PASS**. `M1′` và `M3(b)` **giảm đơn điệu** theo thứ tự
+`45deploy ≈ A45 > A44 > V1 ≈ V5 > V0` (giống bản `Y2`).
+
+### 11.2 LUẬT GO trên `Y1` (nhãn chính) + Δ vs **CẢ HAI** đối chứng
+
+| so sánh | Δ`auc8` | Δ`auc8c` | Δ`lift8` | Δ`lift12` | Δ`lift16` | Δ`dec_rho_lab` |
+|---|---|---|---|---|---|---|
+| `A44 − A45` (C1 retrain) | −0,009948`*` | −0,009847`*` | −0,002791`*` | −0,002994`*` | −0,002752`*` | −0,009763`*` |
+| `A44 − 45deploy` (MỐC) | −0,010126`*` | −0,009972`*` | −0,002782`*` | −0,002685`*` | −0,002379`*` | −0,010188`*` |
+| `V0 − V5` (C2 nhiễu) | −0,003952 | −0,003957 | −0,000871 | −0,001079 | −0,001360 | −0,018445`*` |
+| `V0 − 45deploy` (MỐC) | −0,029692`*` | −0,029096`*` | −0,009569`*` | −0,007784`*` | −0,006525`*` | −0,020974`*` |
+| `A45 − 45deploy` (nền nhiễu retrain) | −0,000178 | −0,000125 | +0,000009 | +0,000309 | +0,000373 | −0,000426 |
+| `V5 − V1` (bước nhiễu THUẦN) | −0,001307 | −0,001236 | −0,000092 | −0,000114 | −0,000044 | −0,001645`*` |
+| `V1 − V0` (OFI thật) | +0,005259 | +0,005193 | +0,000963 | +0,001193 | +0,001404 | +0,020090`*` |
+
+| ứng viên | cặp đối chứng | **M1′** | **M2′** | **M3′** | **đạt/3** | h=4h | **fail hẹp** |
+|---|---|---|---|---|---|---|---|
+| `A44` | `{A45, 45deploy}` | fail | **fail (K8,K12,K16)** | fail | **0/3** | **NOT GO** | **KHÔNG** |
+| `V0` | `{V5, 45deploy}` | fail | **fail (K8,K12,K16)** | fail | **0/3** | **NOT GO** | **KHÔNG** |
+
+- **`GIỮ 45` CÒN ĐÚNG cả trên nhãn KHỚP CƠ CHẾ (`Y1`)**: `A44`/`V0` **0/3**; cả 3 mức `K` fail ⇒ **không**
+“fail hẹp”; nền nhiễu retrain (`A45 − 45deploy`) **không ngoài CI** ở mọi chỉ số ở **cả hai** nhãn ⇒ hai đối
+chứng **vẫn đúng chức năng**. (`V0 − V5` trên `Y1` **yếu hơn** bản `Y2`: không ngoài CI ở M1/M2 — nhưng
+**không** đổi verdict, vì luật đòi Δ>0 ngoài CI chứ không đòi Δ<0.)
+
+### 11.3 `Y3` — KINH TẾ LIÊN TỤC theo K (không phụ thuộc nhãn; `net` = trừ 0,008)
+
+| arm | `glift8` | `glift12` | `glift16` | `netm8` | `netm12` | `netm16` | `netbase` (= cả tick) |
+|---|---|---|---|---|---|---|---|
+| `45deploy` | +0,000209 | +0,000041 | −0,000021 | −0,007852 | −0,008021 | −0,008083 | −0,008062 |
+| `A45` | +0,000272 | +0,000100 | +0,000019 | −0,007790 | −0,007962 | −0,008043 | −0,008062 |
+| `A44` | +0,000231 | +0,000090 | +0,000029 | −0,007830 | −0,007971 | −0,008032 | −0,008062 |
+| `V0` | +0,000259 | +0,000108 | +0,000034 | −0,007802 | −0,007953 | −0,008027 | −0,008062 |
+| `V1` | +0,000172 | +0,000055 | −0,000003 | −0,007890 | −0,008007 | −0,008064 | −0,008062 |
+| `V5` | +0,000070 | −0,000012 | −0,000035 | −0,007991 | −0,008073 | −0,008097 | −0,008062 |
+
+⇒ **MỨC net của top-K ≈ MỨC net của cả tick** (lệch ≤ 1e−4) và `glift@16 ≈ 0` ⇒ **cổng xếp hạng (h=4h)
+KHÔNG có lợi thế kinh tế**: chọn top-8/12/16 theo điểm rồi giữ 4h (trừ 0,008) ≈ chọn ngẫu nhiên về **PnL**.
+“Model tốt hơn” là chuyện **XẾP HẠNG**, **không** phải chuyện **kiếm tiền** (đó vẫn là Tầng B, §6.2).
+
+### 11.4 ⭐ KẾT LUẬN BẮT BUỘC: **model giỏi `Y1` hay `Y2` hơn?** ⇒ **`Y1`, RÕ RÀNG và có CI**
+
+| thước | 45deploy | A44 | V0 | đọc |
+|---|---|---|---|---|
+| `auc` whole-tick: `Y1` vs `Y2` | 0,7968 vs 0,6685 | 0,7885 vs 0,6639 | 0,7794 vs 0,6589 | **Δ(Y1−Y2) = +0,135`*` / +0,132`*` / +0,127`*`** |
+| `auc8` (M1′) | 0,6751 vs 0,6239 | 0,6649 vs 0,6187 | 0,6454 vs 0,6126 | **Δ = +0,035`*` / +0,030`*` / +0,016`*`** |
+| `auc8c` | 0,6640 vs 0,6139 | 0,6540 vs 0,6088 | 0,6349 vs 0,6028 | **Δ = +0,034`*` / +0,029`*` / +0,015`*`** |
+| `dec_rho_lab` (M3b) | +0,5122 vs +0,4615 | +0,5020 vs +0,4483 | +0,4912 vs +0,4389 | **Δ = +0,043`*` / +0,047`*` / +0,046`*`** |
+| `lift8` | +0,1297 vs +0,1105 | +0,1269 vs +0,1078 | +0,1201 vs +0,1054 | **Δ = +0,019`*` / +0,019`*` / +0,015`*`** |
+| `RR8` (scale-free) | **5,85× vs 1,63×** | 5,74× vs 1,61× | 5,49× vs 1,60× | Y1 gấp ~3,5 lần |
+| `pacc` (độ lớn, `retEnd`) | **0,4821 cả hai** | 0,4829 | 0,4835 | **Δ = 0,000000** (không đổi theo nhãn) |
+| `dec_mono` (trên `retEnd`) | **0,4959 cả hai** | 0,4957 | 0,4955 | **Δ = 0,000000** |
+
+1. **Model giỏi `Y1` HƠN `Y2` — ở MỌI thước xếp hạng, MỌI arm, ngoài CI** (kể cả từng arm: Δ`auc8`
++0,016…+0,035). ⇒ **Cổng cũ (`Y2`) ĐO THẤP kỹ năng của model ở đúng cơ chế hệ thống kiếm tiền** (chạm
++7 %). Lệch **research (nhãn `retEnd`)** ↔ **cơ chế (`maxFav`)** là **CÓ THẬT và LỚN**. ⇒ **Đề xuất: đổi
+nhãn research/cổng sang họ `maxFav` (Y1)**; điều này cũng **khớp** việc model **LIVE** đã dùng họ `maxFav`
+(Spearman 0,854 với `net` — `LiveBuildMap.java`/`EntryPoolGate.java`) ⇒ **hiện trạng LIVE là hợp lý**.
+2. **NHƯNG `pairwise ≈ 0,48` KHÔNG do lệch nhãn:** `pacc`/`dec_mono` đo trên `retEnd` **LIÊN TỤC** nên
+**giống hệt** ở hai nhãn (Δ = 0,000000) ⇒ *“biết coin nào CHẠM ngưỡng”* **≠** *“biết coin nào LÊN NHIỀU NHẤT”*,
+và cái thứ hai **không** có kỹ năng ở **cả** hai nhãn ⇒ đây vẫn là **nghi vấn mở** (không giải thích được
+bằng nhãn). Nếu cần trả lời triệt để: chạy thêm `pacc`/rank-IC với **`y = maxFav_h` liên tục** (chưa làm).
+3. Kết luận nghiệp vụ: **đổi nhãn pipeline sang `maxFav` ĐÁNG LÀM** (đo được lợi thế +0,13 AUC) — và nó
+**rẻ** (cột `maxFav_h` **đã có sẵn** trong label `.pb`, chỉ cần sửa `load_labels` của trainer) — **nhưng**
+**KHÔNG** tự động cải thiện PnL: kinh tế của thứ tự (Y3, §11.3) vẫn ≈ 0 ở 4h.
+
+### 11.5 h = 72h cho cả 3 nhãn ⇒ **N/A** (thiếu ĐIỂM, không thiếu nhãn)
+
+Nhãn `maxFav_72h`/`retEnd_72h` **có**, nhưng **điểm 72h KHÔNG tôn tại** (`z[:,2]` = NaN 100 % — §10.5) ⇒
+cả 3 nhãn ở h=72h **không đánh giá được**; **KHÔNG** thay bằng điểm 4h (đã có số chứng minh điều đó là **sai**:
+§10.5 mục 3 — mọi arm `auc8 < 0,5`, `lift8 < 0`).
+
+### 11.6 MULTIPLICITY + ĐỐI CHIẾU DỰ ĐOÁN (§12.10.6)
+
+- Đã đọc **3 chỉ số × 3 nhãn = 9 phép kiểm** ở h=4h (chỉ **3** ở `Y1` là quyết định) + 18 số kinh tế — đúng
+như khai báo trước; **KHÔNG** nới ngưỡng, **KHÔNG** chọn nhãn theo điểm.
+
+| # | dự đoán | kết quả |
+|---|---|---|
+| **Q14** | `base(Y1@4h)` ≈ 0,5–0,8 (cao hơn `Y2` 0,1849) | **SAI**: `base(Y1) = 0,026744` (2,67 %) — **THẤP HƠN** `Y2` (17,62 %); chạm +7 % trong 4h là **hiếm** |
+| **Q15** | `auc8c(Y1) < auc8c(Y2)` hoặc xấp xỉ | **SAI (ngược lại)**: `auc8c(Y1) > auc8c(Y2)` và Δ **ngoài CI dương** ở mọi arm |
+| **Q16** | `Y1` **không** làm `A44`/`V0` lật sang GO | **ĐÚNG** (0/3 cả hai) |
+| **Q17** | decile GỘP của `Y1` đơn điệu (ρ ≈ 1) | **ĐÚNG** (ρ = 1,0000 ở **6/6** arm) |
+
+### 11.7 VIỆC TIẾP (đề xuất, chưa làm)
+
+1. Đo `rank-IC`/`pacc` với **`y = maxFav_h` liên tục** (để chốt câu 2 ở §11.4 bằng số).
+2. Đổi nhãn trainer sang `maxFav` (`--label-col maxFav_h`, ngưỡng 0,07) → **train lại** 1 vòng đối chứng.
+3. Sinh **đầu 72h** (§10.7) để mở điều kiện (ii).
+4. Sửa `auc8 → auc8c` cho M1′ ở vòng sau (đã khai báo §10.1/§13).
+
+---
+
 # 13. AMEND §12 — KẾT QUẢ (h=4h, **RAW cho CẢ 5 arm**, luật GO của owner)
 
 **Ngày:** 2026-09-25 · **Pre-reg:** `214c420` (§12 amend, TRƯỚC khi đọc số bộ mới) + `b37b548` (§12.9 đóng G-1/G-2)
