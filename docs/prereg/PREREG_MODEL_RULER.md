@@ -277,3 +277,45 @@ vào 2/3). Áp dụng nguyên văn.
 | **Q11** | `A44` và `V0` **fail `K=8` của M2** (`Δlift8 < 0` ngoài CI vs **cả hai**) — tái lập v1 |
 | **Q12** | **NOT GO** cho cả `A44` và `V0` |
 | **Q13** | Ở `45deploy`: `lift@8(72h) > 0` nhưng **nhỏ hơn** `lift@8(4h)` (base rate 72h cao hơn ⇒ lift nhỏ hơn) |
+
+---
+
+## 12.9 BỔ SUNG SAU KHI ĐO — ĐÓNG G-1 BẰNG **BINS THÔ** (khai báo TRƯỚC khi đọc số 5 arm)
+
+**Thời điểm:** 2026-09-25, SAU commit `214c420` (§12.7) và **TRƯỚC** khi đọc bất kỳ số nào của bộ
+`M1'/M2'/M3'` trên 5 arm. Số DUY NHẤT đã đọc trước khi viết mục này = **kiểm provenance** ở (A).
+Luật/quyết định §12.1–§12.6 **KHÔNG đổi một chữ**.
+
+**(A) §12.7 G-1 KHAI BÁO SAI — nhận lỗi, không sửa lén.** G-1 viết "4 arm retrain KHÔNG có điểm/nhãn
+thô"; câu đó đúng với **đĩa local**, SAI với **artifact thật**: `predict_wf_<fold>.bin` của CẢ 5 arm nằm
+TRONG **kernel output** trên Kaggle (`g015p2-stage2-featvar-gpu` → `V0/V1/V5`; `g015p2-arm44-gpu` →
+`A44/A45`); trước đây kernel chỉ tải về per-tick parquet (~30 MB) nên local không có. Đã tải **80 file
+bins / 4,65 GB** bằng `kaggle kernels output` — **CHỈ tải artifact đã tồn tại, KHÔNG train, KHÔNG sim,
+KHÔNG job**.
+**Kiểm provenance (trước khi đọc số 5 arm):** tính lại RAW từ bins `V0` cho **2 fold đầu**
+(`20220101`,`20220401`): `rank-IC = −0,035599`, `lift@8 = +0,037469`, `n_tick = 17.369` — **trùng khít 6
+chữ số** với `V0_perfold_ticks.parquet` của kernel cho **đúng** 2 fold đó. ⇒ bins tải về **ĐÚNG** là
+artifact của kernel đã sinh ra bộ số đã công bố.
+⇒ **M1/M3 và `lift@12/16` (M2) TÍNH ĐƯỢC cho cả 4 arm** ⇒ câu "dự kiến NOT GO vì *thiếu hạ tầng*" ở
+§12.7 **hết hiệu lực**: kết quả round này là **số đo thật**, không còn NA.
+
+**(B) §12.7 G-2 SAI THEO HƯỚNG NẶNG HƠN (đo được).** G-2 viết "không có artifact 72h cho arm nào
+goài `45deploy`" (ngụ ý `45deploy` CÓ). Đo trên **mọi** bins: `z[:,0..2]` = NaN **100 %** (`45deploy`
+18 fold + 5 arm × 16 fold) — vì trainer ghi thẳng 3 NaN (`g015_net_train_add.py` `write_bin`: `>qh4f` với
+`nan,nan,nan`). ⇒ **KHÔNG arm nào (kể cả `45deploy`) có ĐIỂM 72h** ⇒ **điều kiện (ii) của luật GO
+KHÔNG ĐÁNH GIÁ ĐƯỢC** ở round này — **vì thiếu hạ tầng**, không vì số xấu. ⇒ dự đoán **Q13** (§12.8)
+**không kiểm được**.
+
+**(C) SỬA LỖI KỸ THUẬT (chặn BỊA SỐ) — làm TRƯỚC khi đọc số.** `ruler_raw` nay đọc **điểm ở ĐÚNG slot
+horizon**: `H_SLOT = {4h:0 (`p`), 12h:1, 24h:2, 72h:3 (`z[:,k−1]`)}`; slot toàn NaN ⇒ **trả `None` + bỏ
+arm** ("KHÔNG ĐÁNH GIÁ ĐƯỢC"), **không** lấy `p4h` thay cho 72h. Trước khi sửa, `--horizon 72h` sẽ ghép
+**điểm 4h với nhãn `retEnd_72h`** rồi in số **SAI** dưới nhãn "72h" — đó là **bịa số** và đã bị chặn.
+
+**(D) THÊM 2 THỨ ĐÚNG NHƯ LUẬT ĐÃ CHỐT.** (1) cờ **"fail hẹp"** (§12.1/§12.3): M2 fail mà **đúng 1/3**
+mức `K` fail, M1/M3 không fail ⇒ ghi riêng `fail_hẹp=True` + số từng `K`, **KHÔNG** nới ngưỡng.
+(2) `--label-horizon` cho **kiểm kinh tế cross-horizon** (điểm 4h × nhãn `retEnd_72h`) — **luôn ghi rõ**
+là cross-horizon và **KHÔNG** áp luật GO cho lượt chạy đó (§12.5: Tầng A không nhìn PnL).
+
+**(E) ĐIỀU KHÔNG ĐỔI:** `k = 2` (2 ứng viên `A44`, `V0`) ⇒ hệ số CI = `c3_rates.inflate(2)` =
+**1,177410** (1,21 legacy chỉ in tham chiếu); "ngoài CI" = ngoài **CẢ HAI** độ rộng; M2 đòi **cả 3** `K`;
+h=4h cần **≥ 2/3**; `rank-IC` vẫn chỉ là **PHỤ**.

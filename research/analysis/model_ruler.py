@@ -327,15 +327,17 @@ def tick_metrics(ts, p, y, with_pacc=True):
     return R.sort_values("ts").reset_index(drop=True), aux
 
 
-def ruler_raw(bins_dir, labels_dir, folds, self_tests=False, horizon="4h"):
+def ruler_raw(bins_dir, labels_dir, folds, self_tests=False, horizon="4h", label_horizon=None):
     """RAW theo TUNG FOLD (streaming) — tranh OOM: khong bao gio giu ca 16 fold cung luc.
 
     AMEND §12.2: doc DIEM o slot `H_SLOT[horizon]` (khop horizon cua nhan). Tra `(None, None)` khi
     slot do KHONG co diem (toan NaN) — KHONG bia so, KHONG lay slot 4h thay cho 72h.
+    `label_horizon` (mac dinh = `horizon`) cho phep do KINH TE CROSS-HORIZON: diem cua horizon
+    `horizon` nhung nhan `retEnd_<label_horizon>` — LUON ghi ro, khong duoc goi la "cong 72h".
     """
     t0 = time.time()
     slot = H_SLOT[horizon]
-    col = H_COL[horizon]
+    col = H_COL[label_horizon or horizon]
     probe = np.fromfile(os.path.join(bins_dir, "predict_wf_%s.bin" % folds[0]), dtype=BIN_DT,
                         count=200000)
     pv = (probe["p"] if slot == 0 else probe["z"][:, slot - 1]).astype(np.float64)
@@ -546,11 +548,11 @@ def go_rule(D1, D2, label, cand):
 
 def cmd_ruler(a):
     infl = C.inflate(a.k)
-    LOG.info("### MODEL RULER — arm `%s` | h=%s | k=%d inflate(k)=%.6f | tham chieu legacy %.2f",
-             a.name, a.horizon, a.k, infl, G.LEGACY)
+    LOG.info("### MODEL RULER — arm `%s` | h=%s (nhan %s) | k=%d inflate(k)=%.6f | tham chieu legacy %.2f",
+             a.name, a.horizon, a.label_horizon or a.horizon, a.k, infl, G.LEGACY)
     if a.bins:
         res, aux = ruler_raw(a.bins, a.labels, FOLDS[:a.folds] if a.folds else FOLDS,
-                             a.self_tests, a.horizon)
+                             a.self_tests, a.horizon, a.label_horizon)
         metrics = RAW_METRICS
         tag = a.name
         out = {"name": a.name, "mode": "RAW", "bins": a.bins, "labels": a.labels,
@@ -646,10 +648,12 @@ def cmd_validate(a):
         if a.horizon == "72h" and not bins:
             LOG.info("  [%s] BO QUA (AGG chi co per-tick 4h — khai bao truoc §12.7 G-2)", name)
             continue
-        pt = os.path.join(TMP, "%s_pertick.parquet" % name)
-        if a.horizon == "72h":
-            pt = os.path.join(TMP, "%s_72h_pertick.parquet" % name)
-        paths = [pt] + ([os.path.join(TMP, "%s_%s_pertick.parquet" % (name, k))
+        lh = a.label_horizon or a.horizon
+        tag_h = "%s_lab%s" % (a.horizon, lh)
+        pt = os.path.join(TMP, "%s_pertick.parquet" % name if tag_h == "4h_lab4h"
+                          else "%s_%s_pertick.parquet" % (name, tag_h))
+        paths = [pt] + ([os.path.join(TMP, "%s_%s_pertick.parquet" % (
+                            name, k if tag_h == "4h_lab4h" else "%s_%s" % (tag_h, k)))
                          for k in ("shuffled", "unif", "logit")] if bins else [])
         if a.reuse and all(os.path.exists(p) for p in paths):
             probe = pd.read_parquet(pt)
@@ -674,7 +678,7 @@ def cmd_validate(a):
                 continue
             LOG.info("  [%s] cache CU (thieu auc8/dec_rho_lab) => tinh lai", name)
         if bins:
-            res, aux = ruler_raw(bins, a.labels, FOLDS, a.self_tests, a.horizon)
+            res, aux = ruler_raw(bins, a.labels, FOLDS, a.self_tests, a.horizon, a.label_horizon)
             if res is None:
                 LOG.info("  [%s] BO QUA — KHONG co DIEM o h=%s (slot bins toan NaN)", name, a.horizon)
                 continue
@@ -685,8 +689,10 @@ def cmd_validate(a):
                 RAWO[name][k] = summarize(res[k], name + ("" if k == "self" else "|" + k),
                                           RAW_METRICS, infl, aux[k] if k == "self" else None)
             for k in ("shuffled", "unif", "logit"):
-                res[k].to_parquet(
-                    os.path.join(TMP, "%s_%s_pertick.parquet" % (name, k)), index=False)
+                if k not in res:            # --skip-selftest: chi co bien the `self`
+                    continue
+                res[k].to_parquet(os.path.join(TMP, "%s_%s_pertick.parquet" % (
+                    name, k if tag_h == "4h_lab4h" else "%s_%s" % (tag_h, k))), index=False)
         else:
             df = ruler_agg(ticks); df.to_parquet(pt, index=False)
         PT[name] = df
@@ -758,20 +764,26 @@ def cmd_validate(a):
         LOG.info("  %-16s %s", "%s - %s" % (x, b), " | ".join(bits))
 
     # ── LUAT GO (AMEND §12.3) ──
-    LOG.info("\n[GO — AMEND §12.3] M1=AUC@top8 · M2=lift@{8,12,16} DEU OK · M3(b)=delta decile-rho")
+    lh = a.label_horizon or a.horizon
     GO = {}
-    for cand, c1, c2 in (("A44", "A45", "45deploy"), ("V0", "V5", "45deploy")):
-        if cand not in PT:
-            continue
-        GO[cand] = go_rule(D.get("%s_minus_%s" % (cand, c1)),
-                           D.get("%s_minus_%s" % (cand, c2)),
-                           "%s vs {%s, %s}" % (cand, c1, c2), cand)
-        GO[cand]["controls"] = [c1, c2]
-    if a.horizon == "72h":
-        LOG.info("\n[GO dieu kien (ii) h=72h] KHONG DANH GIA DUOC cho A44/V0 (khai bao truoc §12.7 G-2)")
-        for cand in ("A44", "V0"):
-            if cand in GO:
-                GO[cand]["h72_evaluable"] = False
+    if lh != a.horizon:
+        LOG.info("\n[GO] BO QUA: day la lan chay KINH TE CROSS-HORIZON (diem h=%s x nhan h=%s)"
+                 " => khong ap luat GO (luat GO doi diem DUNG horizon cua nhan).", a.horizon, lh)
+    else:
+        LOG.info("\n[GO — AMEND §12.3] M1=AUC@top8 · M2=lift@{8,12,16} DEU OK · M3(b)=delta"
+                 " decile-rho (nhan train h=%s)", lh)
+        for cand, c1, c2 in (("A44", "A45", "45deploy"), ("V0", "V5", "45deploy")):
+            if cand not in PT:
+                continue
+            GO[cand] = go_rule(D.get("%s_minus_%s" % (cand, c1)),
+                               D.get("%s_minus_%s" % (cand, c2)),
+                               "%s vs {%s, %s}" % (cand, c1, c2), cand)
+            GO[cand]["controls"] = [c1, c2]
+        if a.horizon == "72h":
+            LOG.info("\n[GO dieu kien (ii) h=72h] KHONG DANH GIA DUOC cho A44/V0 (§12.7 G-2)")
+            for cand in ("A44", "V0"):
+                if cand in GO:
+                    GO[cand]["h72_evaluable"] = False
     LOG.info("\n[V-A..V-C] LUAT v1 §5 (THAM CHIEU, giu nguyen dinh nghia cu; * = ngoai CI ca hai do rong)")
     V = {}
     if "A44_minus_45deploy" in D and "A44_minus_A45" in D:
@@ -836,6 +848,8 @@ def main():
     r.add_argument("--out"); r.add_argument("--per-tick")
     r.add_argument("--k", type=int, default=1)
     r.add_argument("--horizon", default="4h", choices=["4h", "72h"])
+    r.add_argument("--label-horizon", default=None, choices=["4h", "12h", "24h", "72h"],
+                   help="mac dinh = --horizon; khac di => KINH TE CROSS-HORIZON (khong ap luat GO)")
     r.add_argument("--folds", type=int, default=0)
     r.add_argument("--self-tests", action="store_true")
     v = sub.add_parser("validate")
@@ -844,6 +858,8 @@ def main():
     v.add_argument("--k", type=int, default=2,
                    help="so UNG VIEN cua round (mac dinh 2: A44 + V0) => he so CI = inflate(k)")
     v.add_argument("--horizon", default="4h", choices=["4h", "72h"])
+    v.add_argument("--label-horizon", default=None, choices=["4h", "12h", "24h", "72h"],
+                   help="mac dinh = --horizon; khac di => KINH TE CROSS-HORIZON (khong ap luat GO)")
     v.add_argument("--reuse", action="store_true",
                    help="dung lai per-tick cache trong %s (KHONG tinh lai)" % TMP)
     a = ap.parse_args()
