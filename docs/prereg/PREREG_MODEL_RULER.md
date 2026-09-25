@@ -191,3 +191,89 @@ Mọi kết luận kiểu "A44 tốt hơn" (PnL/DD thuộc Tầng B) **không** 
 ## 11. SẢN PHẨM
 
 `research/analysis/model_ruler.py` · `docs/result/RESULT_MODEL_RULER.md` · commit (**KHÔNG push**).
+
+---
+
+# 12. AMEND — điều chỉnh **TRƯỚC khi đọc số** các chỉ số MỚI (CHỐT CỦA OWNER, 2026-09-25 08:59)
+
+> Chủ dự án chốt lại **bộ chỉ số chính + luật GO** cho CÙNG vòng này. Mục §0–§11 ở trên **GIỮ NGUYÊN**
+> (không xoá, không sửa) — đây là bản **amend**, đọc kèm.
+
+## 12.0 KHAI BÁO TRUNG THỰC (không che)
+
+- Bộ chỉ số/luật dưới đây do **owner chốt lúc 08:59 2026-09-25**, trước khi **bất kỳ số nào của bộ mới**
+  được tính. Commit amend này là commit **đầu tiên** chứa định nghĩa bộ mới.
+- **Nói rõ để không tự lừa:** vòng v1 (§0–§11) **đã chạy và đã đọc số** (commit `999e6c6`) theo bộ chỉ số
+  CŨ. Vì vậy amend này **không** phải "chưa từng thấy số". Phân loại rõ:
+  - **Đã thấy (dưới spec cũ, báo nguyên trạng, KHÔNG tính lại để chọn):** `AUC` whole-tick (0,6685),
+    `lift@8`, `decile ρ` **trên `retEnd` liên tục**, `gross@8`/`net@8`, `rank-IC`, `pacc`.
+  - **CHƯA từng thấy (bộ mới ⇒ chạy mù):** **`AUC@top8` (M1)**, **`lift@12`/`lift@16` (M2)**,
+    **`decile ρ` + đường decile GỘP trên NHÃN TRAIN (M3)**, **Δ theo luật GO 3 chỉ số**, và **toàn bộ h=72h**.
+- Không đổi ngưỡng/luật sau khi xem số. Nếu chạy xong thấy luật có lỗ hổng ⇒ ghi RÕ như đã làm ở §5.2 v1,
+  **không** sửa lén.
+
+## 12.1 BỘ CHỈ SỐ CHÍNH (bỏ `rank-IC` khỏi CHÍNH; vẫn báo như thông tin PHỤ)
+
+| # | chỉ số | định nghĩa chốt trước |
+|---|---|---|
+| **M1** | **AUC@top8** | AUC **pairwise TRONG TICK**, **chỉ xét cặp có ≥1 coin nằm trong top-8** (theo điểm). Công thức chính xác: `T` = 8 coin điểm cao nhất (đúng quy ước `sort p desc, head(8)` của kernel); `P`=nhãn 1, `N`=nhãn 0; `AUC8 = (A+B)/(\|P∩T\|·\|N\| + \|P\\T\|·\|N∩T\|)`; `A = Σ_{p∈P∩T}[#N(s<s_p)+0,5·#N(s=s_p)]`; `B = Σ_{n∈N∩T}[#P(s>s_n)+0,5·#P(s=s_n)]`. Tick thiếu `P` hoặc `N` ⇒ bỏ. Đọc: **>0,5 = tốt**; chỉ dùng dạng **Δ** (không đặt ngưỡng tuyệt đối). |
+| **M2** | **lift@K, K ∈ {8,12,16}** | `lift_K(tick) = mean(y_lab)(top-K) − mean(y_lab)(tick)`. **M2 PASS ⟺ với MỖI K** `Δlift_K > 0` **ngoài CI so với CẢ HAI** đối chứng. **1 mức K fail ⇒ M2 FAIL** (kiểm tín hiệu không chỉ nhọn ở đúng 8). |
+| **M3** | **decile monotonicity** | `D1` = decile điểm **THẤP nhất** … `D10` = **CAO nhất** (decile theo hạng score trong tick, `floor(10r/(n+1))`). **Hai phần BẮT BUỘC:** (a) TUYỆT ĐỐI — trên **nhãn train**, đường decile **GỘP** (row-weighted toàn bộ tick) có `Spearman(D, mean_y) > 0,8` **VÀ** dốc `mean_y[D10] − mean_y[D1]` **cùng dấu KỲ VỌNG = DƯƠNG**; (b) SO SÁNH — `Δ` của `mean per-tick ρ(D, mean_y_lab)` `> 0` **ngoài CI vs CẢ HAI**. **M3 PASS ⟺ (a) ∧ (b)**. |
+| phụ | `rank-IC`, `\|rank-IC\|`, `precision@K`, `AUC` whole-tick, `pacc`, `gross@8`, `net@8`, `net_lift@8`, `drift` | **BÁO CÁO như thông tin phụ — KHÔNG dùng cho luật GO** |
+
+## 12.2 NHÃN + HORIZON
+
+- **Cổng xếp hạng**: dùng **nhãn train** `y_h = (retEnd_h > 0,015)`. **h ∈ {4h, 72h}**; **BỎ h = 1h**.
+- **Kinh tế (BẮT BUỘC báo kèm, không dùng cho GO)**: `gross_h = retEnd_h`; `net_h = retEnd_h − 0,008`
+  (`fee 0,002` + `slip 0,003×2`; theo code `Configs.java`), **cùng horizon**.
+- 72h: join `retEnd_72h` notna (cùng quy ước `notna` như 4h), tick ≥ 2 coin.
+
+## 12.3 LUẬT GO (chốt trước)
+
+`GO(ứng viên)` ⟺ **(i) h=4h**: **≥ 2/3** chỉ số chính `{M1,M2,M3}` có `Δ > 0` **NGOÀI CI so với CẢ
+retrain-control VÀ noise-control**; **VÀ (ii) h=72h**: **KHÔNG** chỉ số chính nào có `Δ < 0` ngoài CI
+(không đòi tốt hơn — chỉ không được xấu đi).
+Không thoả ⇒ **NOT GO (giữ nguyên model)**.
+**Khai báo trước:** chỉ số **KHÔNG TÍNH ĐƯỢC** ⇒ **KHÔNG** được tính là PASS (thiếu bằng chứng không cộng
+vào 2/3). Áp dụng nguyên văn.
+
+## 12.4 CI (không hardcode hệ số)
+
+- block **theo tick**, khối **72h**, **2000 rep**, seed **20260905** (không đổi).
+- Hệ số = `c3_rates.inflate(k)` = `sqrt(2 ln k)`, `inflate(1)=1,0` (`docs/audit/AUDIT_CI_INFLATE_STANDARDIZATION.md`).
+  **k = số ỨNG VIÊN của round = 2** (`A44`, `V0`) ⇒ **`inflate(2) = 1,177410`**; truyền qua `--k`, **không hardcode**.
+  Hằng số `1,21` (≈ k=2,079) **đã bị gỡ** ⇒ chỉ in như **tham chiếu**, không dùng để quyết định.
+- "Ngoài CI" = ngoài **CẢ** `raw` **VÀ** `inflate(k)`.
+
+## 12.5 TẦNG A KHÔNG NHÌN PnL/EQUITY
+
+(budget · DCA · trailing · impact của luồng tín hiệu khác) ⇒ **NGOÀI PHẠM VI Tầng A** (giữ nguyên v1 §0.1).
+
+## 12.6 GIỮ NGUYÊN
+
+2 đối chứng **BẮT BUỘC** (retrain `A45` · noise `V5` cùng NaN-mask) · cross-section **TRONG TICK** ·
+**scale-invariant** (T2) · bước **validate: thước có tự nói lại `GIỮ 45` trên 5 arm đã có**
+(`45deploy`, `A45`, `A44`, `V0`, `V5`).
+
+## 12.7 KHOẢNG TRỐNG DỮ LIỆU — KHAI BÁO TRƯỚC (không phải "phát hiện" sau)
+
+- **G-1:** 4 arm retrain chỉ có per-tick parquet 4h với cột `{ic, base, t8, n8, n_coin, lift8, fold}`
+  ⇒ **KHÔNG có điểm/nhãn thô** ⇒ **M1 và M3 KHÔNG tính được** cho `A45/A44/V0/V5`; và **`lift@12/16`
+  cũng không có** ⇒ **M2 chỉ đo được ở K=8**.
+- **G-2:** **không có artifact 72h cho arm nào ngoài `45deploy`** ⇒ điều kiện **(ii)** của luật GO
+  **KHÔNG đánh giá được** cho `A44`/`V0`.
+- **Hệ quả khai báo trước:** nếu `K=8` của M2 fail thì **M2 fail bất kể K=12/16**; và **GO không thể được
+  cấp** khi thiếu bằng chứng cho M1/M3. ⇒ Dự kiến round này = **NOT GO** cho **cả 2** ứng viên, với lý do
+  **vừa là số đo, vừa là thiếu hạ tầng**. **Việc mở khoá:** kernel xuất thêm parquet per-`(tick,coin)`
+  `(ts, sym, p, retEnd_4h, retEnd_72h)`.
+
+## 12.8 DỰ ĐOÁN KHOÁ TRƯỚC (bộ mới)
+
+| # | dự đoán |
+|---|---|
+| **Q8** | `AUC@top8(45deploy)` nằm trong **0,55–0,80**; **KHÔNG** hứa cao hơn `AUC` whole-tick (mẫu số của M1 đặt trọng số lớn vào các cặp `P\\T` vs `N∩T` = đúng vùng model sai) |
+| **Q9** | `lift@8 ≥ lift@12 ≥ lift@16` cho `45deploy` (lift giảm khi K tăng) |
+| **Q10** | `45deploy` **PASS (a)** của M3 trên **nhãn train** (`ρ_gộp > 0,8`, dốc `> 0`) **NHƯNG** nếu đo trên `retEnd` liên tục thì ρ **âm** ⇒ tách bạch "nhãn nhị phân xếp được" vs "độ lớn kết quả không xếp được" |
+| **Q11** | `A44` và `V0` **fail `K=8` của M2** (`Δlift8 < 0` ngoài CI vs **cả hai**) — tái lập v1 |
+| **Q12** | **NOT GO** cho cả `A44` và `V0` |
+| **Q13** | Ở `45deploy`: `lift@8(72h) > 0` nhưng **nhỏ hơn** `lift@8(4h)` (base rate 72h cao hơn ⇒ lift nhỏ hơn) |
