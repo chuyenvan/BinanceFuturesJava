@@ -1,0 +1,5797 @@
+{
+ "arms": [
+  "45deploy",
+  "A45",
+  "V5",
+  "V1",
+  "MRA4",
+  "MRA72",
+  "MRB8",
+  "MRB32"
+ ],
+ "controls": [
+  "45deploy",
+  "A45",
+  "V5",
+  "V1"
+ ],
+ "inflate_k2": 1.17741,
+ "summary": {
+  "45deploy|money4|all16": {
+   "n_tick": 140238,
+   "n_coin": 255.24,
+   "metrics": {
+    "pacc": {
+     "mean": 0.482131,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.480757,
+      0.483549
+     ],
+     "hi": [
+      0.480794,
+      0.48351
+     ]
+    },
+    "ic": {
+     "mean": -0.05111,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.054958,
+      -0.047145
+     ],
+     "hi": [
+      -0.054854,
+      -0.047252
+     ]
+    },
+    "dec_mono": {
+     "mean": 0.495939,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.493309,
+      0.498381
+     ],
+     "hi": [
+      0.493379,
+      0.498315
+     ]
+    },
+    "dec_rho": {
+     "mean": -0.021778,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.034429,
+      -0.008896
+     ],
+     "hi": [
+      -0.034088,
+      -0.009243
+     ]
+    },
+    "glift8": {
+     "mean": 0.000209,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": 1,
+     "infl": [
+      -0.000358,
+      0.000739
+     ],
+     "hi": [
+      -0.000342,
+      0.000725
+     ]
+    },
+    "netm8": {
+     "mean": -0.007852,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.008603,
+      -0.007095
+     ],
+     "hi": [
+      -0.008583,
+      -0.007115
+     ]
+    },
+    "auc8": {
+     "mean": 0.623932,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.614163,
+      0.633302
+     ],
+     "hi": [
+      0.614426,
+      0.633049
+     ]
+    },
+    "lift8": {
+     "mean": 0.11051,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.103742,
+      0.117085
+     ],
+     "hi": [
+      0.103924,
+      0.116908
+     ]
+    },
+    "base": {
+     "mean": 0.1762,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.168551,
+      0.183805
+     ],
+     "hi": [
+      0.168757,
+      0.1836
+     ]
+    }
+   }
+  },
+  "45deploy|money4|ge202204": {
+   "n_tick": 131598,
+   "n_coin": 263.45,
+   "metrics": {
+    "pacc": {
+     "mean": 0.482018,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.480595,
+      0.483342
+     ],
+     "hi": [
+      0.480634,
+      0.483306
+     ]
+    },
+    "ic": {
+     "mean": -0.051374,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.055385,
+      -0.04766
+     ],
+     "hi": [
+      -0.055277,
+      -0.04776
+     ]
+    },
+    "dec_mono": {
+     "mean": 0.496014,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.493406,
+      0.49851
+     ],
+     "hi": [
+      0.493476,
+      0.498443
+     ]
+    },
+    "dec_rho": {
+     "mean": -0.020641,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.033986,
+      -0.008175
+     ],
+     "hi": [
+      -0.033626,
+      -0.008511
+     ]
+    },
+    "glift8": {
+     "mean": 0.000207,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": 1,
+     "infl": [
+      -0.000373,
+      0.000814
+     ],
+     "hi": [
+      -0.000357,
+      0.000798
+     ]
+    },
+    "netm8": {
+     "mean": -0.007855,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.00858,
+      -0.007085
+     ],
+     "hi": [
+      -0.00856,
+      -0.007106
+     ]
+    },
+    "auc8": {
+     "mean": 0.631046,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.621099,
+      0.640349
+     ],
+     "hi": [
+      0.621367,
+      0.640098
+     ]
+    },
+    "lift8": {
+     "mean": 0.115139,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.108693,
+      0.121472
+     ],
+     "hi": [
+      0.108867,
+      0.121301
+     ]
+    },
+    "base": {
+     "mean": 0.173409,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.165669,
+      0.181372
+     ],
+     "hi": [
+      0.165877,
+      0.181157
+     ]
+    }
+   }
+  },
+  "A45|money4|all16": {
+   "n_tick": 140238,
+   "n_coin": 255.24,
+   "metrics": {
+    "pacc": {
+     "mean": 0.482139,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.480811,
+      0.48354
+     ],
+     "hi": [
+      0.480847,
+      0.483502
+     ]
+    },
+    "ic": {
+     "mean": -0.051061,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.054787,
+      -0.047144
+     ],
+     "hi": [
+      -0.054687,
+      -0.047249
+     ]
+    },
+    "dec_mono": {
+     "mean": 0.495329,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.49271,
+      0.497933
+     ],
+     "hi": [
+      0.492781,
+      0.497863
+     ]
+    },
+    "dec_rho": {
+     "mean": -0.021705,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.034756,
+      -0.008865
+     ],
+     "hi": [
+      -0.034404,
+      -0.009211
+     ]
+    },
+    "glift8": {
+     "mean": 0.000272,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": 1,
+     "infl": [
+      -0.0003,
+      0.000848
+     ],
+     "hi": [
+      -0.000284,
+      0.000832
+     ]
+    },
+    "netm8": {
+     "mean": -0.00779,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.008588,
+      -0.006991
+     ],
+     "hi": [
+      -0.008567,
+      -0.007013
+     ]
+    },
+    "auc8": {
+     "mean": 0.624411,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.614587,
+      0.633904
+     ],
+     "hi": [
+      0.614852,
+      0.633648
+     ]
+    },
+    "lift8": {
+     "mean": 0.11085,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.104096,
+      0.11748
+     ],
+     "hi": [
+      0.104278,
+      0.117302
+     ]
+    },
+    "base": {
+     "mean": 0.1762,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.168551,
+      0.183805
+     ],
+     "hi": [
+      0.168757,
+      0.1836
+     ]
+    }
+   }
+  },
+  "A45|money4|ge202204": {
+   "n_tick": 131598,
+   "n_coin": 263.45,
+   "metrics": {
+    "pacc": {
+     "mean": 0.482095,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.480652,
+      0.483395
+     ],
+     "hi": [
+      0.480691,
+      0.48336
+     ]
+    },
+    "ic": {
+     "mean": -0.051134,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.055182,
+      -0.047467
+     ],
+     "hi": [
+      -0.055073,
+      -0.047566
+     ]
+    },
+    "dec_mono": {
+     "mean": 0.495597,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.493037,
+      0.498107
+     ],
+     "hi": [
+      0.493106,
+      0.498039
+     ]
+    },
+    "dec_rho": {
+     "mean": -0.019755,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.033215,
+      -0.007139
+     ],
+     "hi": [
+      -0.032853,
+      -0.007479
+     ]
+    },
+    "glift8": {
+     "mean": 0.000285,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": 1,
+     "infl": [
+      -0.00032,
+      0.000923
+     ],
+     "hi": [
+      -0.000304,
+      0.000906
+     ]
+    },
+    "netm8": {
+     "mean": -0.007776,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.008552,
+      -0.006993
+     ],
+     "hi": [
+      -0.008531,
+      -0.007014
+     ]
+    },
+    "auc8": {
+     "mean": 0.63124,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.621708,
+      0.640469
+     ],
+     "hi": [
+      0.621965,
+      0.64022
+     ]
+    },
+    "lift8": {
+     "mean": 0.115418,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.109095,
+      0.121551
+     ],
+     "hi": [
+      0.109266,
+      0.121386
+     ]
+    },
+    "base": {
+     "mean": 0.173409,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.165669,
+      0.181372
+     ],
+     "hi": [
+      0.165877,
+      0.181157
+     ]
+    }
+   }
+  },
+  "V5|money4|all16": {
+   "n_tick": 140238,
+   "n_coin": 255.24,
+   "metrics": {
+    "pacc": {
+     "mean": 0.481819,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.480398,
+      0.48335
+     ],
+     "hi": [
+      0.480437,
+      0.483308
+     ]
+    },
+    "ic": {
+     "mean": -0.051858,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.05578,
+      -0.04758
+     ],
+     "hi": [
+      -0.055674,
+      -0.047695
+     ]
+    },
+    "dec_mono": {
+     "mean": 0.495906,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.493211,
+      0.498513
+     ],
+     "hi": [
+      0.493284,
+      0.498443
+     ]
+    },
+    "dec_rho": {
+     "mean": -0.021565,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.034823,
+      -0.008516
+     ],
+     "hi": [
+      -0.034466,
+      -0.008868
+     ]
+    },
+    "glift8": {
+     "mean": 7e-05,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": 1,
+     "infl": [
+      -0.000446,
+      0.000583
+     ],
+     "hi": [
+      -0.000432,
+      0.000569
+     ]
+    },
+    "netm8": {
+     "mean": -0.007991,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.00872,
+      -0.007266
+     ],
+     "hi": [
+      -0.0087,
+      -0.007286
+     ]
+    },
+    "auc8": {
+     "mean": 0.617625,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.608029,
+      0.627322
+     ],
+     "hi": [
+      0.608287,
+      0.627061
+     ]
+    },
+    "lift8": {
+     "mean": 0.108477,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.10211,
+      0.114709
+     ],
+     "hi": [
+      0.102282,
+      0.114541
+     ]
+    },
+    "base": {
+     "mean": 0.1762,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.168551,
+      0.183805
+     ],
+     "hi": [
+      0.168757,
+      0.1836
+     ]
+    }
+   }
+  },
+  "V5|money4|ge202204": {
+   "n_tick": 131598,
+   "n_coin": 263.45,
+   "metrics": {
+    "pacc": {
+     "mean": 0.481772,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.480221,
+      0.48319
+     ],
+     "hi": [
+      0.480263,
+      0.483152
+     ]
+    },
+    "ic": {
+     "mean": -0.051932,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.056344,
+      -0.047916
+     ],
+     "hi": [
+      -0.056225,
+      -0.048024
+     ]
+    },
+    "dec_mono": {
+     "mean": 0.496039,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.493287,
+      0.49863
+     ],
+     "hi": [
+      0.493361,
+      0.49856
+     ]
+    },
+    "dec_rho": {
+     "mean": -0.020146,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.033873,
+      -0.007657
+     ],
+     "hi": [
+      -0.033503,
+      -0.007994
+     ]
+    },
+    "glift8": {
+     "mean": 9.2e-05,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": 1,
+     "infl": [
+      -0.000454,
+      0.000657
+     ],
+     "hi": [
+      -0.000439,
+      0.000642
+     ]
+    },
+    "netm8": {
+     "mean": -0.00797,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.008687,
+      -0.007221
+     ],
+     "hi": [
+      -0.008668,
+      -0.007241
+     ]
+    },
+    "auc8": {
+     "mean": 0.62395,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.613724,
+      0.633662
+     ],
+     "hi": [
+      0.613999,
+      0.6334
+     ]
+    },
+    "lift8": {
+     "mean": 0.112746,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.106391,
+      0.118796
+     ],
+     "hi": [
+      0.106563,
+      0.118633
+     ]
+    },
+    "base": {
+     "mean": 0.173409,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.165669,
+      0.181372
+     ],
+     "hi": [
+      0.165877,
+      0.181157
+     ]
+    }
+   }
+  },
+  "V1|money4|all16": {
+   "n_tick": 140238,
+   "n_coin": 255.24,
+   "metrics": {
+    "pacc": {
+     "mean": 0.481744,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.480328,
+      0.483264
+     ],
+     "hi": [
+      0.480366,
+      0.483223
+     ]
+    },
+    "ic": {
+     "mean": -0.052018,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.055962,
+      -0.047817
+     ],
+     "hi": [
+      -0.055856,
+      -0.04793
+     ]
+    },
+    "dec_mono": {
+     "mean": 0.495267,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.492516,
+      0.497968
+     ],
+     "hi": [
+      0.49259,
+      0.497896
+     ]
+    },
+    "dec_rho": {
+     "mean": -0.021111,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.034052,
+      -0.00822
+     ],
+     "hi": [
+      -0.033703,
+      -0.008567
+     ]
+    },
+    "glift8": {
+     "mean": 0.000172,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": 1,
+     "infl": [
+      -0.000347,
+      0.000684
+     ],
+     "hi": [
+      -0.000333,
+      0.00067
+     ]
+    },
+    "netm8": {
+     "mean": -0.00789,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.008622,
+      -0.007161
+     ],
+     "hi": [
+      -0.008603,
+      -0.007181
+     ]
+    },
+    "auc8": {
+     "mean": 0.618866,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.609173,
+      0.628538
+     ],
+     "hi": [
+      0.609434,
+      0.628278
+     ]
+    },
+    "lift8": {
+     "mean": 0.109101,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.102853,
+      0.115353
+     ],
+     "hi": [
+      0.103022,
+      0.115185
+     ]
+    },
+    "base": {
+     "mean": 0.1762,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.168551,
+      0.183805
+     ],
+     "hi": [
+      0.168757,
+      0.1836
+     ]
+    }
+   }
+  },
+  "V1|money4|ge202204": {
+   "n_tick": 131598,
+   "n_coin": 263.45,
+   "metrics": {
+    "pacc": {
+     "mean": 0.481642,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.480111,
+      0.483107
+     ],
+     "hi": [
+      0.480153,
+      0.483067
+     ]
+    },
+    "ic": {
+     "mean": -0.052261,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.056528,
+      -0.048187
+     ],
+     "hi": [
+      -0.056413,
+      -0.048297
+     ]
+    },
+    "dec_mono": {
+     "mean": 0.495336,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.492553,
+      0.497981
+     ],
+     "hi": [
+      0.492627,
+      0.49791
+     ]
+    },
+    "dec_rho": {
+     "mean": -0.020263,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.034109,
+      -0.007592
+     ],
+     "hi": [
+      -0.033736,
+      -0.007933
+     ]
+    },
+    "glift8": {
+     "mean": 0.000177,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": 1,
+     "infl": [
+      -0.000363,
+      0.000737
+     ],
+     "hi": [
+      -0.000348,
+      0.000722
+     ]
+    },
+    "netm8": {
+     "mean": -0.007885,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.008584,
+      -0.00715
+     ],
+     "hi": [
+      -0.008565,
+      -0.00717
+     ]
+    },
+    "auc8": {
+     "mean": 0.624512,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.614627,
+      0.634194
+     ],
+     "hi": [
+      0.614893,
+      0.633934
+     ]
+    },
+    "lift8": {
+     "mean": 0.1131,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.106921,
+      0.119314
+     ],
+     "hi": [
+      0.107088,
+      0.119147
+     ]
+    },
+    "base": {
+     "mean": 0.173409,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.165669,
+      0.181372
+     ],
+     "hi": [
+      0.165877,
+      0.181157
+     ]
+    }
+   }
+  },
+  "MRA4|money4|all16": {
+   "n_tick": 140238,
+   "n_coin": 255.24,
+   "metrics": {
+    "pacc": {
+     "mean": 0.504094,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.503234,
+      0.504915
+     ],
+     "hi": [
+      0.503257,
+      0.504893
+     ]
+    },
+    "ic": {
+     "mean": 0.012083,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.009543,
+      0.014508
+     ],
+     "hi": [
+      0.009611,
+      0.014443
+     ]
+    },
+    "dec_mono": {
+     "mean": 0.505385,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.503911,
+      0.506843
+     ],
+     "hi": [
+      0.50395,
+      0.506804
+     ]
+    },
+    "dec_rho": {
+     "mean": 0.033351,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.024323,
+      0.04197
+     ],
+     "hi": [
+      0.024566,
+      0.041738
+     ]
+    },
+    "glift8": {
+     "mean": 0.000367,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      8.3e-05,
+      0.000674
+     ],
+     "hi": [
+      9.1e-05,
+      0.000665
+     ]
+    },
+    "netm8": {
+     "mean": -0.007695,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.008228,
+      -0.007153
+     ],
+     "hi": [
+      -0.008214,
+      -0.007168
+     ]
+    },
+    "auc8": {
+     "mean": 0.422591,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.4119,
+      0.433731
+     ],
+     "hi": [
+      0.412188,
+      0.433431
+     ]
+    },
+    "lift8": {
+     "mean": 0.024472,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.020411,
+      0.028486
+     ],
+     "hi": [
+      0.02052,
+      0.028378
+     ]
+    },
+    "base": {
+     "mean": 0.1762,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.168551,
+      0.183805
+     ],
+     "hi": [
+      0.168757,
+      0.1836
+     ]
+    }
+   }
+  },
+  "MRA4|money4|ge202204": {
+   "n_tick": 131598,
+   "n_coin": 263.45,
+   "metrics": {
+    "pacc": {
+     "mean": 0.503935,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.503088,
+      0.50478
+     ],
+     "hi": [
+      0.50311,
+      0.504757
+     ]
+    },
+    "ic": {
+     "mean": 0.011623,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.009145,
+      0.014112
+     ],
+     "hi": [
+      0.009212,
+      0.014045
+     ]
+    },
+    "dec_mono": {
+     "mean": 0.505557,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.504143,
+      0.506985
+     ],
+     "hi": [
+      0.504182,
+      0.506947
+     ]
+    },
+    "dec_rho": {
+     "mean": 0.033322,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.024588,
+      0.042149
+     ],
+     "hi": [
+      0.024823,
+      0.041911
+     ]
+    },
+    "glift8": {
+     "mean": 0.000382,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      6.6e-05,
+      0.000704
+     ],
+     "hi": [
+      7.5e-05,
+      0.000696
+     ]
+    },
+    "netm8": {
+     "mean": -0.007679,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.008213,
+      -0.007149
+     ],
+     "hi": [
+      -0.008199,
+      -0.007164
+     ]
+    },
+    "auc8": {
+     "mean": 0.426781,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.415137,
+      0.438169
+     ],
+     "hi": [
+      0.41545,
+      0.437862
+     ]
+    },
+    "lift8": {
+     "mean": 0.026172,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.021823,
+      0.030428
+     ],
+     "hi": [
+      0.02194,
+      0.030313
+     ]
+    },
+    "base": {
+     "mean": 0.173409,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.165669,
+      0.181372
+     ],
+     "hi": [
+      0.165877,
+      0.181157
+     ]
+    }
+   }
+  },
+  "MRB8|money4|all16": {
+   "n_tick": 131598,
+   "n_coin": 263.45,
+   "metrics": {
+    "pacc": {
+     "mean": 0.504731,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.503944,
+      0.50556
+     ],
+     "hi": [
+      0.503966,
+      0.505537
+     ]
+    },
+    "ic": {
+     "mean": 0.01404,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.011683,
+      0.016498
+     ],
+     "hi": [
+      0.011746,
+      0.016432
+     ]
+    },
+    "dec_mono": {
+     "mean": 0.504232,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.502828,
+      0.50556
+     ],
+     "hi": [
+      0.502866,
+      0.505524
+     ]
+    },
+    "dec_rho": {
+     "mean": 0.025673,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.016903,
+      0.034589
+     ],
+     "hi": [
+      0.01714,
+      0.034349
+     ]
+    },
+    "glift8": {
+     "mean": 0.000212,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      6.2e-05,
+      0.000361
+     ],
+     "hi": [
+      6.6e-05,
+      0.000357
+     ]
+    },
+    "netm8": {
+     "mean": -0.007849,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.008331,
+      -0.00736
+     ],
+     "hi": [
+      -0.008318,
+      -0.007373
+     ]
+    },
+    "auc8": {
+     "mean": 0.34025,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.32956,
+      0.351164
+     ],
+     "hi": [
+      0.329848,
+      0.35087
+     ]
+    },
+    "lift8": {
+     "mean": 0.006579,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.003712,
+      0.009563
+     ],
+     "hi": [
+      0.003789,
+      0.009483
+     ]
+    },
+    "base": {
+     "mean": 0.173409,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.165669,
+      0.181372
+     ],
+     "hi": [
+      0.165877,
+      0.181157
+     ]
+    }
+   }
+  },
+  "MRB8|money4|ge202204": {
+   "n_tick": 131598,
+   "n_coin": 263.45,
+   "metrics": {
+    "pacc": {
+     "mean": 0.504731,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.503944,
+      0.50556
+     ],
+     "hi": [
+      0.503966,
+      0.505537
+     ]
+    },
+    "ic": {
+     "mean": 0.01404,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.011683,
+      0.016498
+     ],
+     "hi": [
+      0.011746,
+      0.016432
+     ]
+    },
+    "dec_mono": {
+     "mean": 0.504232,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.502828,
+      0.50556
+     ],
+     "hi": [
+      0.502866,
+      0.505524
+     ]
+    },
+    "dec_rho": {
+     "mean": 0.025673,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.016903,
+      0.034589
+     ],
+     "hi": [
+      0.01714,
+      0.034349
+     ]
+    },
+    "glift8": {
+     "mean": 0.000212,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      6.2e-05,
+      0.000361
+     ],
+     "hi": [
+      6.6e-05,
+      0.000357
+     ]
+    },
+    "netm8": {
+     "mean": -0.007849,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.008331,
+      -0.00736
+     ],
+     "hi": [
+      -0.008318,
+      -0.007373
+     ]
+    },
+    "auc8": {
+     "mean": 0.34025,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.32956,
+      0.351164
+     ],
+     "hi": [
+      0.329848,
+      0.35087
+     ]
+    },
+    "lift8": {
+     "mean": 0.006579,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.003712,
+      0.009563
+     ],
+     "hi": [
+      0.003789,
+      0.009483
+     ]
+    },
+    "base": {
+     "mean": 0.173409,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.165669,
+      0.181372
+     ],
+     "hi": [
+      0.165877,
+      0.181157
+     ]
+    }
+   }
+  },
+  "MRB32|money4|all16": {
+   "n_tick": 131598,
+   "n_coin": 263.45,
+   "metrics": {
+    "pacc": {
+     "mean": 0.501996,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.501184,
+      0.502856
+     ],
+     "hi": [
+      0.501206,
+      0.502833
+     ]
+    },
+    "ic": {
+     "mean": 0.00592,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.003543,
+      0.008484
+     ],
+     "hi": [
+      0.003607,
+      0.008415
+     ]
+    },
+    "dec_mono": {
+     "mean": 0.502855,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.501281,
+      0.504361
+     ],
+     "hi": [
+      0.501324,
+      0.50432
+     ]
+    },
+    "dec_rho": {
+     "mean": 0.018514,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.009149,
+      0.027969
+     ],
+     "hi": [
+      0.009402,
+      0.027714
+     ]
+    },
+    "glift8": {
+     "mean": 0.000207,
+     "raw": true,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": 1,
+     "infl": [
+      -1.8e-05,
+      0.000437
+     ],
+     "hi": [
+      -1.2e-05,
+      0.000431
+     ]
+    },
+    "netm8": {
+     "mean": -0.007854,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.008345,
+      -0.007372
+     ],
+     "hi": [
+      -0.008332,
+      -0.007385
+     ]
+    },
+    "auc8": {
+     "mean": 0.40476,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.394352,
+      0.414918
+     ],
+     "hi": [
+      0.394632,
+      0.414644
+     ]
+    },
+    "lift8": {
+     "mean": 0.022895,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.019407,
+      0.026152
+     ],
+     "hi": [
+      0.019501,
+      0.026064
+     ]
+    },
+    "base": {
+     "mean": 0.173409,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.165669,
+      0.181372
+     ],
+     "hi": [
+      0.165877,
+      0.181157
+     ]
+    }
+   }
+  },
+  "MRB32|money4|ge202204": {
+   "n_tick": 131598,
+   "n_coin": 263.45,
+   "metrics": {
+    "pacc": {
+     "mean": 0.501996,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.501184,
+      0.502856
+     ],
+     "hi": [
+      0.501206,
+      0.502833
+     ]
+    },
+    "ic": {
+     "mean": 0.00592,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.003543,
+      0.008484
+     ],
+     "hi": [
+      0.003607,
+      0.008415
+     ]
+    },
+    "dec_mono": {
+     "mean": 0.502855,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.501281,
+      0.504361
+     ],
+     "hi": [
+      0.501324,
+      0.50432
+     ]
+    },
+    "dec_rho": {
+     "mean": 0.018514,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.009149,
+      0.027969
+     ],
+     "hi": [
+      0.009402,
+      0.027714
+     ]
+    },
+    "glift8": {
+     "mean": 0.000207,
+     "raw": true,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": 1,
+     "infl": [
+      -1.8e-05,
+      0.000437
+     ],
+     "hi": [
+      -1.2e-05,
+      0.000431
+     ]
+    },
+    "netm8": {
+     "mean": -0.007854,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.008345,
+      -0.007372
+     ],
+     "hi": [
+      -0.008332,
+      -0.007385
+     ]
+    },
+    "auc8": {
+     "mean": 0.40476,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.394352,
+      0.414918
+     ],
+     "hi": [
+      0.394632,
+      0.414644
+     ]
+    },
+    "lift8": {
+     "mean": 0.022895,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.019407,
+      0.026152
+     ],
+     "hi": [
+      0.019501,
+      0.026064
+     ]
+    },
+    "base": {
+     "mean": 0.173409,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.165669,
+      0.181372
+     ],
+     "hi": [
+      0.165877,
+      0.181157
+     ]
+    }
+   }
+  }
+ },
+ "delta": {
+  "MRA4|45deploy|money4|all16": {
+   "n_tick_common": 140238,
+   "metrics": {
+    "pacc": {
+     "mean": 0.021964,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.020317,
+      0.023578
+     ],
+     "hi": [
+      0.020361,
+      0.023535
+     ]
+    },
+    "ic": {
+     "mean": 0.063193,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.058473,
+      0.067815
+     ],
+     "hi": [
+      0.0586,
+      0.06769
+     ]
+    },
+    "dec_mono": {
+     "mean": 0.009446,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.006412,
+      0.012614
+     ],
+     "hi": [
+      0.006494,
+      0.012529
+     ]
+    },
+    "dec_rho": {
+     "mean": 0.055129,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.038248,
+      0.071435
+     ],
+     "hi": [
+      0.038703,
+      0.070996
+     ]
+    },
+    "glift8": {
+     "mean": 0.000157,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": 1,
+     "infl": [
+      -0.000277,
+      0.000623
+     ],
+     "hi": [
+      -0.000265,
+      0.000611
+     ]
+    },
+    "netm8": {
+     "mean": 0.000157,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": 1,
+     "infl": [
+      -0.000277,
+      0.000623
+     ],
+     "hi": [
+      -0.000265,
+      0.000611
+     ]
+    },
+    "auc8": {
+     "mean": -0.20134,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.211613,
+      -0.189902
+     ],
+     "hi": [
+      -0.211336,
+      -0.190211
+     ]
+    },
+    "lift8": {
+     "mean": -0.086038,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.090981,
+      -0.080785
+     ],
+     "hi": [
+      -0.090848,
+      -0.080927
+     ]
+    },
+    "base": {
+     "mean": 0.0,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": -1,
+     "infl": [
+      0.0,
+      0.0
+     ],
+     "hi": [
+      0.0,
+      0.0
+     ]
+    }
+   }
+  },
+  "MRA4|45deploy|money4|ge202204": {
+   "n_tick_common": 131598,
+   "metrics": {
+    "pacc": {
+     "mean": 0.021917,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.020243,
+      0.023648
+     ],
+     "hi": [
+      0.020288,
+      0.023602
+     ]
+    },
+    "ic": {
+     "mean": 0.062997,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.058219,
+      0.067917
+     ],
+     "hi": [
+      0.058347,
+      0.067784
+     ]
+    },
+    "dec_mono": {
+     "mean": 0.009543,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.006563,
+      0.012682
+     ],
+     "hi": [
+      0.006643,
+      0.012597
+     ]
+    },
+    "dec_rho": {
+     "mean": 0.053964,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.038015,
+      0.071151
+     ],
+     "hi": [
+      0.038444,
+      0.070688
+     ]
+    },
+    "glift8": {
+     "mean": 0.000176,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": 1,
+     "infl": [
+      -0.000329,
+      0.000633
+     ],
+     "hi": [
+      -0.000315,
+      0.00062
+     ]
+    },
+    "netm8": {
+     "mean": 0.000176,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": 1,
+     "infl": [
+      -0.000329,
+      0.000633
+     ],
+     "hi": [
+      -0.000315,
+      0.00062
+     ]
+    },
+    "auc8": {
+     "mean": -0.204266,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.215713,
+      -0.193283
+     ],
+     "hi": [
+      -0.215404,
+      -0.193579
+     ]
+    },
+    "lift8": {
+     "mean": -0.088967,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.094023,
+      -0.084
+     ],
+     "hi": [
+      -0.093887,
+      -0.084134
+     ]
+    },
+    "base": {
+     "mean": 0.0,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": -1,
+     "infl": [
+      0.0,
+      0.0
+     ],
+     "hi": [
+      0.0,
+      0.0
+     ]
+    }
+   }
+  },
+  "MRA4|A45|money4|all16": {
+   "n_tick_common": 140238,
+   "metrics": {
+    "pacc": {
+     "mean": 0.021955,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.020288,
+      0.023556
+     ],
+     "hi": [
+      0.020333,
+      0.023513
+     ]
+    },
+    "ic": {
+     "mean": 0.063143,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.058405,
+      0.067703
+     ],
+     "hi": [
+      0.058532,
+      0.06758
+     ]
+    },
+    "dec_mono": {
+     "mean": 0.010056,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.007046,
+      0.013173
+     ],
+     "hi": [
+      0.007127,
+      0.013089
+     ]
+    },
+    "dec_rho": {
+     "mean": 0.055055,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.037973,
+      0.071606
+     ],
+     "hi": [
+      0.038433,
+      0.07116
+     ]
+    },
+    "glift8": {
+     "mean": 9.5e-05,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": 1,
+     "infl": [
+      -0.000396,
+      0.000603
+     ],
+     "hi": [
+      -0.000383,
+      0.00059
+     ]
+    },
+    "netm8": {
+     "mean": 9.5e-05,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": 1,
+     "infl": [
+      -0.000396,
+      0.000603
+     ],
+     "hi": [
+      -0.000383,
+      0.00059
+     ]
+    },
+    "auc8": {
+     "mean": -0.20182,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.212227,
+      -0.190294
+     ],
+     "hi": [
+      -0.211946,
+      -0.190605
+     ]
+    },
+    "lift8": {
+     "mean": -0.086378,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.091297,
+      -0.081203
+     ],
+     "hi": [
+      -0.091165,
+      -0.081343
+     ]
+    },
+    "base": {
+     "mean": 0.0,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": -1,
+     "infl": [
+      0.0,
+      0.0
+     ],
+     "hi": [
+      0.0,
+      0.0
+     ]
+    }
+   }
+  },
+  "MRA4|A45|money4|ge202204": {
+   "n_tick_common": 131598,
+   "metrics": {
+    "pacc": {
+     "mean": 0.021839,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.020182,
+      0.023532
+     ],
+     "hi": [
+      0.020226,
+      0.023487
+     ]
+    },
+    "ic": {
+     "mean": 0.062757,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.058051,
+      0.067564
+     ],
+     "hi": [
+      0.058177,
+      0.067434
+     ]
+    },
+    "dec_mono": {
+     "mean": 0.00996,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.007094,
+      0.013057
+     ],
+     "hi": [
+      0.007171,
+      0.012973
+     ]
+    },
+    "dec_rho": {
+     "mean": 0.053077,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.037122,
+      0.069923
+     ],
+     "hi": [
+      0.037552,
+      0.06947
+     ]
+    },
+    "glift8": {
+     "mean": 9.7e-05,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": 1,
+     "infl": [
+      -0.000454,
+      0.000615
+     ],
+     "hi": [
+      -0.000439,
+      0.000601
+     ]
+    },
+    "netm8": {
+     "mean": 9.7e-05,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": 1,
+     "infl": [
+      -0.000454,
+      0.000615
+     ],
+     "hi": [
+      -0.000439,
+      0.000601
+     ]
+    },
+    "auc8": {
+     "mean": -0.204459,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.215995,
+      -0.193337
+     ],
+     "hi": [
+      -0.215685,
+      -0.193637
+     ]
+    },
+    "lift8": {
+     "mean": -0.089246,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.094248,
+      -0.084357
+     ],
+     "hi": [
+      -0.094113,
+      -0.084489
+     ]
+    },
+    "base": {
+     "mean": 0.0,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": -1,
+     "infl": [
+      0.0,
+      0.0
+     ],
+     "hi": [
+      0.0,
+      0.0
+     ]
+    }
+   }
+  },
+  "MRA4|V5|money4|all16": {
+   "n_tick_common": 140238,
+   "metrics": {
+    "pacc": {
+     "mean": 0.022275,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.020519,
+      0.023981
+     ],
+     "hi": [
+      0.020567,
+      0.023935
+     ]
+    },
+    "ic": {
+     "mean": 0.06394,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.058956,
+      0.06879
+     ],
+     "hi": [
+      0.05909,
+      0.068659
+     ]
+    },
+    "dec_mono": {
+     "mean": 0.009479,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.006443,
+      0.012594
+     ],
+     "hi": [
+      0.006524,
+      0.01251
+     ]
+    },
+    "dec_rho": {
+     "mean": 0.054915,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.037978,
+      0.071871
+     ],
+     "hi": [
+      0.038434,
+      0.071415
+     ]
+    },
+    "glift8": {
+     "mean": 0.000297,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": 1,
+     "infl": [
+      -0.000156,
+      0.000753
+     ],
+     "hi": [
+      -0.000144,
+      0.000741
+     ]
+    },
+    "netm8": {
+     "mean": 0.000297,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": 1,
+     "infl": [
+      -0.000156,
+      0.000753
+     ],
+     "hi": [
+      -0.000144,
+      0.000741
+     ]
+    },
+    "auc8": {
+     "mean": -0.195034,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.206703,
+      -0.183339
+     ],
+     "hi": [
+      -0.206389,
+      -0.183654
+     ]
+    },
+    "lift8": {
+     "mean": -0.084005,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.088863,
+      -0.079007
+     ],
+     "hi": [
+      -0.088732,
+      -0.079142
+     ]
+    },
+    "base": {
+     "mean": 0.0,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": -1,
+     "infl": [
+      0.0,
+      0.0
+     ],
+     "hi": [
+      0.0,
+      0.0
+     ]
+    }
+   }
+  },
+  "MRA4|V5|money4|ge202204": {
+   "n_tick_common": 131598,
+   "metrics": {
+    "pacc": {
+     "mean": 0.022162,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.020365,
+      0.023934
+     ],
+     "hi": [
+      0.020414,
+      0.023887
+     ]
+    },
+    "ic": {
+     "mean": 0.063555,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.058426,
+      0.06863
+     ],
+     "hi": [
+      0.058564,
+      0.068493
+     ]
+    },
+    "dec_mono": {
+     "mean": 0.009518,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.006531,
+      0.012622
+     ],
+     "hi": [
+      0.006612,
+      0.012538
+     ]
+    },
+    "dec_rho": {
+     "mean": 0.053468,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.037608,
+      0.070761
+     ],
+     "hi": [
+      0.038036,
+      0.070296
+     ]
+    },
+    "glift8": {
+     "mean": 0.000291,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": 1,
+     "infl": [
+      -0.000196,
+      0.000767
+     ],
+     "hi": [
+      -0.000183,
+      0.000755
+     ]
+    },
+    "netm8": {
+     "mean": 0.000291,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": 1,
+     "infl": [
+      -0.000196,
+      0.000767
+     ],
+     "hi": [
+      -0.000183,
+      0.000755
+     ]
+    },
+    "auc8": {
+     "mean": -0.19717,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.209144,
+      -0.185229
+     ],
+     "hi": [
+      -0.208821,
+      -0.18555
+     ]
+    },
+    "lift8": {
+     "mean": -0.086574,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.091617,
+      -0.081697
+     ],
+     "hi": [
+      -0.091481,
+      -0.081829
+     ]
+    },
+    "base": {
+     "mean": 0.0,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": -1,
+     "infl": [
+      0.0,
+      0.0
+     ],
+     "hi": [
+      0.0,
+      0.0
+     ]
+    }
+   }
+  },
+  "MRA4|V1|money4|all16": {
+   "n_tick_common": 140238,
+   "metrics": {
+    "pacc": {
+     "mean": 0.02235,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.020611,
+      0.024041
+     ],
+     "hi": [
+      0.020658,
+      0.023995
+     ]
+    },
+    "ic": {
+     "mean": 0.0641,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.059116,
+      0.068903
+     ],
+     "hi": [
+      0.05925,
+      0.068774
+     ]
+    },
+    "dec_mono": {
+     "mean": 0.010119,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.007053,
+      0.013285
+     ],
+     "hi": [
+      0.007136,
+      0.013199
+     ]
+    },
+    "dec_rho": {
+     "mean": 0.054462,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.036985,
+      0.071293
+     ],
+     "hi": [
+      0.037456,
+      0.070839
+     ]
+    },
+    "glift8": {
+     "mean": 0.000195,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": 1,
+     "infl": [
+      -0.000244,
+      0.000632
+     ],
+     "hi": [
+      -0.000233,
+      0.000621
+     ]
+    },
+    "netm8": {
+     "mean": 0.000195,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": 1,
+     "infl": [
+      -0.000244,
+      0.000632
+     ],
+     "hi": [
+      -0.000233,
+      0.000621
+     ]
+    },
+    "auc8": {
+     "mean": -0.196275,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.208028,
+      -0.184598
+     ],
+     "hi": [
+      -0.207711,
+      -0.184913
+     ]
+    },
+    "lift8": {
+     "mean": -0.084628,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.089614,
+      -0.079619
+     ],
+     "hi": [
+      -0.08948,
+      -0.079754
+     ]
+    },
+    "base": {
+     "mean": 0.0,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": -1,
+     "infl": [
+      0.0,
+      0.0
+     ],
+     "hi": [
+      0.0,
+      0.0
+     ]
+    }
+   }
+  },
+  "MRA4|V1|money4|ge202204": {
+   "n_tick_common": 131598,
+   "metrics": {
+    "pacc": {
+     "mean": 0.022292,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.020483,
+      0.024074
+     ],
+     "hi": [
+      0.020532,
+      0.024026
+     ]
+    },
+    "ic": {
+     "mean": 0.063884,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.058754,
+      0.069015
+     ],
+     "hi": [
+      0.058892,
+      0.068876
+     ]
+    },
+    "dec_mono": {
+     "mean": 0.010221,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.007136,
+      0.013472
+     ],
+     "hi": [
+      0.007219,
+      0.013385
+     ]
+    },
+    "dec_rho": {
+     "mean": 0.053585,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.037543,
+      0.071171
+     ],
+     "hi": [
+      0.037975,
+      0.070698
+     ]
+    },
+    "glift8": {
+     "mean": 0.000205,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": 1,
+     "infl": [
+      -0.000275,
+      0.000678
+     ],
+     "hi": [
+      -0.000262,
+      0.000665
+     ]
+    },
+    "netm8": {
+     "mean": 0.000205,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": 1,
+     "infl": [
+      -0.000275,
+      0.000678
+     ],
+     "hi": [
+      -0.000262,
+      0.000665
+     ]
+    },
+    "auc8": {
+     "mean": -0.197731,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.209515,
+      -0.186048
+     ],
+     "hi": [
+      -0.209198,
+      -0.186362
+     ]
+    },
+    "lift8": {
+     "mean": -0.086929,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.091962,
+      -0.081918
+     ],
+     "hi": [
+      -0.091826,
+      -0.082053
+     ]
+    },
+    "base": {
+     "mean": 0.0,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": -1,
+     "infl": [
+      0.0,
+      0.0
+     ],
+     "hi": [
+      0.0,
+      0.0
+     ]
+    }
+   }
+  },
+  "MRB8|45deploy|money4|all16": {
+   "n_tick_common": 131598,
+   "metrics": {
+    "pacc": {
+     "mean": 0.022713,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.021228,
+      0.024227
+     ],
+     "hi": [
+      0.021268,
+      0.024187
+     ]
+    },
+    "ic": {
+     "mean": 0.065415,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.06116,
+      0.069783
+     ],
+     "hi": [
+      0.061275,
+      0.069666
+     ]
+    },
+    "dec_mono": {
+     "mean": 0.008218,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.005354,
+      0.011066
+     ],
+     "hi": [
+      0.005431,
+      0.010989
+     ]
+    },
+    "dec_rho": {
+     "mean": 0.046314,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.030454,
+      0.062045
+     ],
+     "hi": [
+      0.030881,
+      0.061621
+     ]
+    },
+    "glift8": {
+     "mean": 5e-06,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": 1,
+     "infl": [
+      -0.000587,
+      0.000562
+     ],
+     "hi": [
+      -0.000571,
+      0.000547
+     ]
+    },
+    "netm8": {
+     "mean": 5e-06,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": 1,
+     "infl": [
+      -0.000587,
+      0.000562
+     ],
+     "hi": [
+      -0.000571,
+      0.000547
+     ]
+    },
+    "auc8": {
+     "mean": -0.290796,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.304818,
+      -0.276035
+     ],
+     "hi": [
+      -0.30444,
+      -0.276432
+     ]
+    },
+    "lift8": {
+     "mean": -0.10856,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.114815,
+      -0.10206
+     ],
+     "hi": [
+      -0.114646,
+      -0.102235
+     ]
+    },
+    "base": {
+     "mean": 0.0,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": -1,
+     "infl": [
+      0.0,
+      0.0
+     ],
+     "hi": [
+      0.0,
+      0.0
+     ]
+    }
+   }
+  },
+  "MRB8|45deploy|money4|ge202204": {
+   "n_tick_common": 131598,
+   "metrics": {
+    "pacc": {
+     "mean": 0.022713,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.021228,
+      0.024227
+     ],
+     "hi": [
+      0.021268,
+      0.024187
+     ]
+    },
+    "ic": {
+     "mean": 0.065415,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.06116,
+      0.069783
+     ],
+     "hi": [
+      0.061275,
+      0.069666
+     ]
+    },
+    "dec_mono": {
+     "mean": 0.008218,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.005354,
+      0.011066
+     ],
+     "hi": [
+      0.005431,
+      0.010989
+     ]
+    },
+    "dec_rho": {
+     "mean": 0.046314,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.030454,
+      0.062045
+     ],
+     "hi": [
+      0.030881,
+      0.061621
+     ]
+    },
+    "glift8": {
+     "mean": 5e-06,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": 1,
+     "infl": [
+      -0.000587,
+      0.000562
+     ],
+     "hi": [
+      -0.000571,
+      0.000547
+     ]
+    },
+    "netm8": {
+     "mean": 5e-06,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": 1,
+     "infl": [
+      -0.000587,
+      0.000562
+     ],
+     "hi": [
+      -0.000571,
+      0.000547
+     ]
+    },
+    "auc8": {
+     "mean": -0.290796,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.304818,
+      -0.276035
+     ],
+     "hi": [
+      -0.30444,
+      -0.276432
+     ]
+    },
+    "lift8": {
+     "mean": -0.10856,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.114815,
+      -0.10206
+     ],
+     "hi": [
+      -0.114646,
+      -0.102235
+     ]
+    },
+    "base": {
+     "mean": 0.0,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": -1,
+     "infl": [
+      0.0,
+      0.0
+     ],
+     "hi": [
+      0.0,
+      0.0
+     ]
+    }
+   }
+  },
+  "MRB8|A45|money4|all16": {
+   "n_tick_common": 131598,
+   "metrics": {
+    "pacc": {
+     "mean": 0.022635,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.02117,
+      0.024119
+     ],
+     "hi": [
+      0.021209,
+      0.024079
+     ]
+    },
+    "ic": {
+     "mean": 0.065174,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.06085,
+      0.069466
+     ],
+     "hi": [
+      0.060967,
+      0.069351
+     ]
+    },
+    "dec_mono": {
+     "mean": 0.008635,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.005776,
+      0.011523
+     ],
+     "hi": [
+      0.005853,
+      0.011445
+     ]
+    },
+    "dec_rho": {
+     "mean": 0.045428,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.02927,
+      0.061008
+     ],
+     "hi": [
+      0.029705,
+      0.060589
+     ]
+    },
+    "glift8": {
+     "mean": -7.3e-05,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": -1,
+     "infl": [
+      -0.000715,
+      0.000547
+     ],
+     "hi": [
+      -0.000697,
+      0.000531
+     ]
+    },
+    "netm8": {
+     "mean": -7.3e-05,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": -1,
+     "infl": [
+      -0.000715,
+      0.000547
+     ],
+     "hi": [
+      -0.000697,
+      0.000531
+     ]
+    },
+    "auc8": {
+     "mean": -0.29099,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.304699,
+      -0.276326
+     ],
+     "hi": [
+      -0.30433,
+      -0.276721
+     ]
+    },
+    "lift8": {
+     "mean": -0.108839,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.115075,
+      -0.102515
+     ],
+     "hi": [
+      -0.114907,
+      -0.102685
+     ]
+    },
+    "base": {
+     "mean": 0.0,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": -1,
+     "infl": [
+      0.0,
+      0.0
+     ],
+     "hi": [
+      0.0,
+      0.0
+     ]
+    }
+   }
+  },
+  "MRB8|A45|money4|ge202204": {
+   "n_tick_common": 131598,
+   "metrics": {
+    "pacc": {
+     "mean": 0.022635,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.02117,
+      0.024119
+     ],
+     "hi": [
+      0.021209,
+      0.024079
+     ]
+    },
+    "ic": {
+     "mean": 0.065174,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.06085,
+      0.069466
+     ],
+     "hi": [
+      0.060967,
+      0.069351
+     ]
+    },
+    "dec_mono": {
+     "mean": 0.008635,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.005776,
+      0.011523
+     ],
+     "hi": [
+      0.005853,
+      0.011445
+     ]
+    },
+    "dec_rho": {
+     "mean": 0.045428,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.02927,
+      0.061008
+     ],
+     "hi": [
+      0.029705,
+      0.060589
+     ]
+    },
+    "glift8": {
+     "mean": -7.3e-05,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": -1,
+     "infl": [
+      -0.000715,
+      0.000547
+     ],
+     "hi": [
+      -0.000697,
+      0.000531
+     ]
+    },
+    "netm8": {
+     "mean": -7.3e-05,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": -1,
+     "infl": [
+      -0.000715,
+      0.000547
+     ],
+     "hi": [
+      -0.000697,
+      0.000531
+     ]
+    },
+    "auc8": {
+     "mean": -0.29099,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.304699,
+      -0.276326
+     ],
+     "hi": [
+      -0.30433,
+      -0.276721
+     ]
+    },
+    "lift8": {
+     "mean": -0.108839,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.115075,
+      -0.102515
+     ],
+     "hi": [
+      -0.114907,
+      -0.102685
+     ]
+    },
+    "base": {
+     "mean": 0.0,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": -1,
+     "infl": [
+      0.0,
+      0.0
+     ],
+     "hi": [
+      0.0,
+      0.0
+     ]
+    }
+   }
+  },
+  "MRB8|V5|money4|all16": {
+   "n_tick_common": 131598,
+   "metrics": {
+    "pacc": {
+     "mean": 0.022958,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.021343,
+      0.024574
+     ],
+     "hi": [
+      0.021386,
+      0.024531
+     ]
+    },
+    "ic": {
+     "mean": 0.065972,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.061405,
+      0.070679
+     ],
+     "hi": [
+      0.061528,
+      0.070553
+     ]
+    },
+    "dec_mono": {
+     "mean": 0.008192,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.005316,
+      0.011131
+     ],
+     "hi": [
+      0.005394,
+      0.011052
+     ]
+    },
+    "dec_rho": {
+     "mean": 0.045819,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.02944,
+      0.062493
+     ],
+     "hi": [
+      0.029882,
+      0.062044
+     ]
+    },
+    "glift8": {
+     "mean": 0.00012,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": 1,
+     "infl": [
+      -0.000437,
+      0.000657
+     ],
+     "hi": [
+      -0.000422,
+      0.000642
+     ]
+    },
+    "netm8": {
+     "mean": 0.00012,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": 1,
+     "infl": [
+      -0.000437,
+      0.000657
+     ],
+     "hi": [
+      -0.000422,
+      0.000642
+     ]
+    },
+    "auc8": {
+     "mean": -0.2837,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.298227,
+      -0.268564
+     ],
+     "hi": [
+      -0.297836,
+      -0.268971
+     ]
+    },
+    "lift8": {
+     "mean": -0.106167,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.112171,
+      -0.099875
+     ],
+     "hi": [
+      -0.112009,
+      -0.100044
+     ]
+    },
+    "base": {
+     "mean": 0.0,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": -1,
+     "infl": [
+      0.0,
+      0.0
+     ],
+     "hi": [
+      0.0,
+      0.0
+     ]
+    }
+   }
+  },
+  "MRB8|V5|money4|ge202204": {
+   "n_tick_common": 131598,
+   "metrics": {
+    "pacc": {
+     "mean": 0.022958,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.021343,
+      0.024574
+     ],
+     "hi": [
+      0.021386,
+      0.024531
+     ]
+    },
+    "ic": {
+     "mean": 0.065972,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.061405,
+      0.070679
+     ],
+     "hi": [
+      0.061528,
+      0.070553
+     ]
+    },
+    "dec_mono": {
+     "mean": 0.008192,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.005316,
+      0.011131
+     ],
+     "hi": [
+      0.005394,
+      0.011052
+     ]
+    },
+    "dec_rho": {
+     "mean": 0.045819,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.02944,
+      0.062493
+     ],
+     "hi": [
+      0.029882,
+      0.062044
+     ]
+    },
+    "glift8": {
+     "mean": 0.00012,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": 1,
+     "infl": [
+      -0.000437,
+      0.000657
+     ],
+     "hi": [
+      -0.000422,
+      0.000642
+     ]
+    },
+    "netm8": {
+     "mean": 0.00012,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": 1,
+     "infl": [
+      -0.000437,
+      0.000657
+     ],
+     "hi": [
+      -0.000422,
+      0.000642
+     ]
+    },
+    "auc8": {
+     "mean": -0.2837,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.298227,
+      -0.268564
+     ],
+     "hi": [
+      -0.297836,
+      -0.268971
+     ]
+    },
+    "lift8": {
+     "mean": -0.106167,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.112171,
+      -0.099875
+     ],
+     "hi": [
+      -0.112009,
+      -0.100044
+     ]
+    },
+    "base": {
+     "mean": 0.0,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": -1,
+     "infl": [
+      0.0,
+      0.0
+     ],
+     "hi": [
+      0.0,
+      0.0
+     ]
+    }
+   }
+  },
+  "MRB8|V1|money4|all16": {
+   "n_tick_common": 131598,
+   "metrics": {
+    "pacc": {
+     "mean": 0.023088,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.021517,
+      0.024668
+     ],
+     "hi": [
+      0.021559,
+      0.024625
+     ]
+    },
+    "ic": {
+     "mean": 0.066301,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.061786,
+      0.070944
+     ],
+     "hi": [
+      0.061907,
+      0.070819
+     ]
+    },
+    "dec_mono": {
+     "mean": 0.008896,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.005956,
+      0.011798
+     ],
+     "hi": [
+      0.006035,
+      0.01172
+     ]
+    },
+    "dec_rho": {
+     "mean": 0.045936,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.029063,
+      0.06288
+     ],
+     "hi": [
+      0.029518,
+      0.062424
+     ]
+    },
+    "glift8": {
+     "mean": 3.5e-05,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": 1,
+     "infl": [
+      -0.000518,
+      0.000563
+     ],
+     "hi": [
+      -0.000503,
+      0.000549
+     ]
+    },
+    "netm8": {
+     "mean": 3.5e-05,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": 1,
+     "infl": [
+      -0.000518,
+      0.000563
+     ],
+     "hi": [
+      -0.000503,
+      0.000549
+     ]
+    },
+    "auc8": {
+     "mean": -0.284262,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.298763,
+      -0.269266
+     ],
+     "hi": [
+      -0.298373,
+      -0.26967
+     ]
+    },
+    "lift8": {
+     "mean": -0.106521,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.112652,
+      -0.100055
+     ],
+     "hi": [
+      -0.112487,
+      -0.100229
+     ]
+    },
+    "base": {
+     "mean": 0.0,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": -1,
+     "infl": [
+      0.0,
+      0.0
+     ],
+     "hi": [
+      0.0,
+      0.0
+     ]
+    }
+   }
+  },
+  "MRB8|V1|money4|ge202204": {
+   "n_tick_common": 131598,
+   "metrics": {
+    "pacc": {
+     "mean": 0.023088,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.021517,
+      0.024668
+     ],
+     "hi": [
+      0.021559,
+      0.024625
+     ]
+    },
+    "ic": {
+     "mean": 0.066301,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.061786,
+      0.070944
+     ],
+     "hi": [
+      0.061907,
+      0.070819
+     ]
+    },
+    "dec_mono": {
+     "mean": 0.008896,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.005956,
+      0.011798
+     ],
+     "hi": [
+      0.006035,
+      0.01172
+     ]
+    },
+    "dec_rho": {
+     "mean": 0.045936,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.029063,
+      0.06288
+     ],
+     "hi": [
+      0.029518,
+      0.062424
+     ]
+    },
+    "glift8": {
+     "mean": 3.5e-05,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": 1,
+     "infl": [
+      -0.000518,
+      0.000563
+     ],
+     "hi": [
+      -0.000503,
+      0.000549
+     ]
+    },
+    "netm8": {
+     "mean": 3.5e-05,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": 1,
+     "infl": [
+      -0.000518,
+      0.000563
+     ],
+     "hi": [
+      -0.000503,
+      0.000549
+     ]
+    },
+    "auc8": {
+     "mean": -0.284262,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.298763,
+      -0.269266
+     ],
+     "hi": [
+      -0.298373,
+      -0.26967
+     ]
+    },
+    "lift8": {
+     "mean": -0.106521,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.112652,
+      -0.100055
+     ],
+     "hi": [
+      -0.112487,
+      -0.100229
+     ]
+    },
+    "base": {
+     "mean": 0.0,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": -1,
+     "infl": [
+      0.0,
+      0.0
+     ],
+     "hi": [
+      0.0,
+      0.0
+     ]
+    }
+   }
+  },
+  "MRB32|45deploy|money4|all16": {
+   "n_tick_common": 131598,
+   "metrics": {
+    "pacc": {
+     "mean": 0.019978,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.018563,
+      0.021388
+     ],
+     "hi": [
+      0.018601,
+      0.02135
+     ]
+    },
+    "ic": {
+     "mean": 0.057294,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.053276,
+      0.061376
+     ],
+     "hi": [
+      0.053384,
+      0.061266
+     ]
+    },
+    "dec_mono": {
+     "mean": 0.006842,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.004052,
+      0.00966
+     ],
+     "hi": [
+      0.004127,
+      0.009584
+     ]
+    },
+    "dec_rho": {
+     "mean": 0.039155,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.024402,
+      0.054338
+     ],
+     "hi": [
+      0.0248,
+      0.053929
+     ]
+    },
+    "glift8": {
+     "mean": 1e-06,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": 1,
+     "infl": [
+      -0.00052,
+      0.000544
+     ],
+     "hi": [
+      -0.000506,
+      0.000529
+     ]
+    },
+    "netm8": {
+     "mean": 1e-06,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": 1,
+     "infl": [
+      -0.00052,
+      0.000544
+     ],
+     "hi": [
+      -0.000506,
+      0.000529
+     ]
+    },
+    "auc8": {
+     "mean": -0.226286,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.23808,
+      -0.214421
+     ],
+     "hi": [
+      -0.237762,
+      -0.214741
+     ]
+    },
+    "lift8": {
+     "mean": -0.092244,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.097739,
+      -0.086797
+     ],
+     "hi": [
+      -0.097591,
+      -0.086944
+     ]
+    },
+    "base": {
+     "mean": 0.0,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": -1,
+     "infl": [
+      0.0,
+      0.0
+     ],
+     "hi": [
+      0.0,
+      0.0
+     ]
+    }
+   }
+  },
+  "MRB32|45deploy|money4|ge202204": {
+   "n_tick_common": 131598,
+   "metrics": {
+    "pacc": {
+     "mean": 0.019978,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.018563,
+      0.021388
+     ],
+     "hi": [
+      0.018601,
+      0.02135
+     ]
+    },
+    "ic": {
+     "mean": 0.057294,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.053276,
+      0.061376
+     ],
+     "hi": [
+      0.053384,
+      0.061266
+     ]
+    },
+    "dec_mono": {
+     "mean": 0.006842,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.004052,
+      0.00966
+     ],
+     "hi": [
+      0.004127,
+      0.009584
+     ]
+    },
+    "dec_rho": {
+     "mean": 0.039155,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.024402,
+      0.054338
+     ],
+     "hi": [
+      0.0248,
+      0.053929
+     ]
+    },
+    "glift8": {
+     "mean": 1e-06,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": 1,
+     "infl": [
+      -0.00052,
+      0.000544
+     ],
+     "hi": [
+      -0.000506,
+      0.000529
+     ]
+    },
+    "netm8": {
+     "mean": 1e-06,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": 1,
+     "infl": [
+      -0.00052,
+      0.000544
+     ],
+     "hi": [
+      -0.000506,
+      0.000529
+     ]
+    },
+    "auc8": {
+     "mean": -0.226286,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.23808,
+      -0.214421
+     ],
+     "hi": [
+      -0.237762,
+      -0.214741
+     ]
+    },
+    "lift8": {
+     "mean": -0.092244,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.097739,
+      -0.086797
+     ],
+     "hi": [
+      -0.097591,
+      -0.086944
+     ]
+    },
+    "base": {
+     "mean": 0.0,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": -1,
+     "infl": [
+      0.0,
+      0.0
+     ],
+     "hi": [
+      0.0,
+      0.0
+     ]
+    }
+   }
+  },
+  "MRB32|A45|money4|all16": {
+   "n_tick_common": 131598,
+   "metrics": {
+    "pacc": {
+     "mean": 0.0199,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.018471,
+      0.021355
+     ],
+     "hi": [
+      0.018509,
+      0.021316
+     ]
+    },
+    "ic": {
+     "mean": 0.057054,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.053026,
+      0.061161
+     ],
+     "hi": [
+      0.053135,
+      0.06105
+     ]
+    },
+    "dec_mono": {
+     "mean": 0.007259,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.004478,
+      0.010108
+     ],
+     "hi": [
+      0.004553,
+      0.010032
+     ]
+    },
+    "dec_rho": {
+     "mean": 0.038268,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.023564,
+      0.053792
+     ],
+     "hi": [
+      0.02396,
+      0.053374
+     ]
+    },
+    "glift8": {
+     "mean": -7.8e-05,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": -1,
+     "infl": [
+      -0.000653,
+      0.000509
+     ],
+     "hi": [
+      -0.000638,
+      0.000493
+     ]
+    },
+    "netm8": {
+     "mean": -7.8e-05,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": -1,
+     "infl": [
+      -0.000653,
+      0.000509
+     ],
+     "hi": [
+      -0.000638,
+      0.000493
+     ]
+    },
+    "auc8": {
+     "mean": -0.22648,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.238253,
+      -0.214526
+     ],
+     "hi": [
+      -0.237936,
+      -0.214848
+     ]
+    },
+    "lift8": {
+     "mean": -0.092523,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.097919,
+      -0.087075
+     ],
+     "hi": [
+      -0.097774,
+      -0.087222
+     ]
+    },
+    "base": {
+     "mean": 0.0,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": -1,
+     "infl": [
+      0.0,
+      0.0
+     ],
+     "hi": [
+      0.0,
+      0.0
+     ]
+    }
+   }
+  },
+  "MRB32|A45|money4|ge202204": {
+   "n_tick_common": 131598,
+   "metrics": {
+    "pacc": {
+     "mean": 0.0199,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.018471,
+      0.021355
+     ],
+     "hi": [
+      0.018509,
+      0.021316
+     ]
+    },
+    "ic": {
+     "mean": 0.057054,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.053026,
+      0.061161
+     ],
+     "hi": [
+      0.053135,
+      0.06105
+     ]
+    },
+    "dec_mono": {
+     "mean": 0.007259,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.004478,
+      0.010108
+     ],
+     "hi": [
+      0.004553,
+      0.010032
+     ]
+    },
+    "dec_rho": {
+     "mean": 0.038268,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.023564,
+      0.053792
+     ],
+     "hi": [
+      0.02396,
+      0.053374
+     ]
+    },
+    "glift8": {
+     "mean": -7.8e-05,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": -1,
+     "infl": [
+      -0.000653,
+      0.000509
+     ],
+     "hi": [
+      -0.000638,
+      0.000493
+     ]
+    },
+    "netm8": {
+     "mean": -7.8e-05,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": -1,
+     "infl": [
+      -0.000653,
+      0.000509
+     ],
+     "hi": [
+      -0.000638,
+      0.000493
+     ]
+    },
+    "auc8": {
+     "mean": -0.22648,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.238253,
+      -0.214526
+     ],
+     "hi": [
+      -0.237936,
+      -0.214848
+     ]
+    },
+    "lift8": {
+     "mean": -0.092523,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.097919,
+      -0.087075
+     ],
+     "hi": [
+      -0.097774,
+      -0.087222
+     ]
+    },
+    "base": {
+     "mean": 0.0,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": -1,
+     "infl": [
+      0.0,
+      0.0
+     ],
+     "hi": [
+      0.0,
+      0.0
+     ]
+    }
+   }
+  },
+  "MRB32|V5|money4|all16": {
+   "n_tick_common": 131598,
+   "metrics": {
+    "pacc": {
+     "mean": 0.020223,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.018658,
+      0.021805
+     ],
+     "hi": [
+      0.0187,
+      0.021763
+     ]
+    },
+    "ic": {
+     "mean": 0.057851,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.053432,
+      0.062353
+     ],
+     "hi": [
+      0.053551,
+      0.062231
+     ]
+    },
+    "dec_mono": {
+     "mean": 0.006816,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.003918,
+      0.009821
+     ],
+     "hi": [
+      0.003996,
+      0.00974
+     ]
+    },
+    "dec_rho": {
+     "mean": 0.038659,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.023568,
+      0.055299
+     ],
+     "hi": [
+      0.023974,
+      0.054851
+     ]
+    },
+    "glift8": {
+     "mean": 0.000116,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": 1,
+     "infl": [
+      -0.000385,
+      0.000643
+     ],
+     "hi": [
+      -0.000371,
+      0.000629
+     ]
+    },
+    "netm8": {
+     "mean": 0.000116,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": 1,
+     "infl": [
+      -0.000385,
+      0.000643
+     ],
+     "hi": [
+      -0.000371,
+      0.000629
+     ]
+    },
+    "auc8": {
+     "mean": -0.21919,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.231437,
+      -0.206717
+     ],
+     "hi": [
+      -0.231107,
+      -0.207053
+     ]
+    },
+    "lift8": {
+     "mean": -0.089851,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.095017,
+      -0.084459
+     ],
+     "hi": [
+      -0.094878,
+      -0.084604
+     ]
+    },
+    "base": {
+     "mean": 0.0,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": -1,
+     "infl": [
+      0.0,
+      0.0
+     ],
+     "hi": [
+      0.0,
+      0.0
+     ]
+    }
+   }
+  },
+  "MRB32|V5|money4|ge202204": {
+   "n_tick_common": 131598,
+   "metrics": {
+    "pacc": {
+     "mean": 0.020223,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.018658,
+      0.021805
+     ],
+     "hi": [
+      0.0187,
+      0.021763
+     ]
+    },
+    "ic": {
+     "mean": 0.057851,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.053432,
+      0.062353
+     ],
+     "hi": [
+      0.053551,
+      0.062231
+     ]
+    },
+    "dec_mono": {
+     "mean": 0.006816,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.003918,
+      0.009821
+     ],
+     "hi": [
+      0.003996,
+      0.00974
+     ]
+    },
+    "dec_rho": {
+     "mean": 0.038659,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.023568,
+      0.055299
+     ],
+     "hi": [
+      0.023974,
+      0.054851
+     ]
+    },
+    "glift8": {
+     "mean": 0.000116,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": 1,
+     "infl": [
+      -0.000385,
+      0.000643
+     ],
+     "hi": [
+      -0.000371,
+      0.000629
+     ]
+    },
+    "netm8": {
+     "mean": 0.000116,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": 1,
+     "infl": [
+      -0.000385,
+      0.000643
+     ],
+     "hi": [
+      -0.000371,
+      0.000629
+     ]
+    },
+    "auc8": {
+     "mean": -0.21919,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.231437,
+      -0.206717
+     ],
+     "hi": [
+      -0.231107,
+      -0.207053
+     ]
+    },
+    "lift8": {
+     "mean": -0.089851,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.095017,
+      -0.084459
+     ],
+     "hi": [
+      -0.094878,
+      -0.084604
+     ]
+    },
+    "base": {
+     "mean": 0.0,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": -1,
+     "infl": [
+      0.0,
+      0.0
+     ],
+     "hi": [
+      0.0,
+      0.0
+     ]
+    }
+   }
+  },
+  "MRB32|V1|money4|all16": {
+   "n_tick_common": 131598,
+   "metrics": {
+    "pacc": {
+     "mean": 0.020353,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.018804,
+      0.021906
+     ],
+     "hi": [
+      0.018845,
+      0.021864
+     ]
+    },
+    "ic": {
+     "mean": 0.05818,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.05375,
+      0.062584
+     ],
+     "hi": [
+      0.05387,
+      0.062466
+     ]
+    },
+    "dec_mono": {
+     "mean": 0.00752,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.004604,
+      0.010485
+     ],
+     "hi": [
+      0.004682,
+      0.010405
+     ]
+    },
+    "dec_rho": {
+     "mean": 0.038777,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.023837,
+      0.05511
+     ],
+     "hi": [
+      0.02424,
+      0.05467
+     ]
+    },
+    "glift8": {
+     "mean": 3e-05,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": 1,
+     "infl": [
+      -0.000463,
+      0.000537
+     ],
+     "hi": [
+      -0.000449,
+      0.000524
+     ]
+    },
+    "netm8": {
+     "mean": 3e-05,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": 1,
+     "infl": [
+      -0.000463,
+      0.000537
+     ],
+     "hi": [
+      -0.000449,
+      0.000524
+     ]
+    },
+    "auc8": {
+     "mean": -0.219752,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.23186,
+      -0.207265
+     ],
+     "hi": [
+      -0.231533,
+      -0.207601
+     ]
+    },
+    "lift8": {
+     "mean": -0.090206,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.095517,
+      -0.084651
+     ],
+     "hi": [
+      -0.095374,
+      -0.084801
+     ]
+    },
+    "base": {
+     "mean": 0.0,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": -1,
+     "infl": [
+      0.0,
+      0.0
+     ],
+     "hi": [
+      0.0,
+      0.0
+     ]
+    }
+   }
+  },
+  "MRB32|V1|money4|ge202204": {
+   "n_tick_common": 131598,
+   "metrics": {
+    "pacc": {
+     "mean": 0.020353,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.018804,
+      0.021906
+     ],
+     "hi": [
+      0.018845,
+      0.021864
+     ]
+    },
+    "ic": {
+     "mean": 0.05818,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.05375,
+      0.062584
+     ],
+     "hi": [
+      0.05387,
+      0.062466
+     ]
+    },
+    "dec_mono": {
+     "mean": 0.00752,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.004604,
+      0.010485
+     ],
+     "hi": [
+      0.004682,
+      0.010405
+     ]
+    },
+    "dec_rho": {
+     "mean": 0.038777,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": 1,
+     "infl": [
+      0.023837,
+      0.05511
+     ],
+     "hi": [
+      0.02424,
+      0.05467
+     ]
+    },
+    "glift8": {
+     "mean": 3e-05,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": 1,
+     "infl": [
+      -0.000463,
+      0.000537
+     ],
+     "hi": [
+      -0.000449,
+      0.000524
+     ]
+    },
+    "netm8": {
+     "mean": 3e-05,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": 1,
+     "infl": [
+      -0.000463,
+      0.000537
+     ],
+     "hi": [
+      -0.000449,
+      0.000524
+     ]
+    },
+    "auc8": {
+     "mean": -0.219752,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.23186,
+      -0.207265
+     ],
+     "hi": [
+      -0.231533,
+      -0.207601
+     ]
+    },
+    "lift8": {
+     "mean": -0.090206,
+     "raw": true,
+     "w121": true,
+     "strict": true,
+     "honest": true,
+     "dir": -1,
+     "infl": [
+      -0.095517,
+      -0.084651
+     ],
+     "hi": [
+      -0.095374,
+      -0.084801
+     ]
+    },
+    "base": {
+     "mean": 0.0,
+     "raw": false,
+     "w121": false,
+     "strict": false,
+     "honest": false,
+     "dir": -1,
+     "infl": [
+      0.0,
+      0.0
+     ],
+     "hi": [
+      0.0,
+      0.0
+     ]
+    }
+   }
+  }
+ },
+ "rule": {
+  "MRA4|money4|all16": {
+   "truc": {
+    "pacc": true,
+    "ic": true,
+    "dec_mono": true
+   },
+   "ngoai_CI_vs_A45_V5": {
+    "A45": {
+     "pacc": true,
+     "ic": true,
+     "dec_mono": true
+    },
+    "V5": {
+     "pacc": true,
+     "ic": true,
+     "dec_mono": true
+    }
+   },
+   "ngoai_CI_vs_A45_V5_honest_k2": {
+    "A45": {
+     "pacc": true,
+     "ic": true,
+     "dec_mono": true
+    },
+    "V5": {
+     "pacc": true,
+     "ic": true,
+     "dec_mono": true
+    }
+   },
+   "PASS": true
+  },
+  "MRB8|money4|all16": {
+   "truc": {
+    "pacc": true,
+    "ic": true,
+    "dec_mono": true
+   },
+   "ngoai_CI_vs_A45_V5": {
+    "A45": {
+     "pacc": true,
+     "ic": true,
+     "dec_mono": true
+    },
+    "V5": {
+     "pacc": true,
+     "ic": true,
+     "dec_mono": true
+    }
+   },
+   "ngoai_CI_vs_A45_V5_honest_k2": {
+    "A45": {
+     "pacc": true,
+     "ic": true,
+     "dec_mono": true
+    },
+    "V5": {
+     "pacc": true,
+     "ic": true,
+     "dec_mono": true
+    }
+   },
+   "PASS": true
+  },
+  "MRB32|money4|all16": {
+   "truc": {
+    "pacc": true,
+    "ic": true,
+    "dec_mono": true
+   },
+   "ngoai_CI_vs_A45_V5": {
+    "A45": {
+     "pacc": true,
+     "ic": true,
+     "dec_mono": true
+    },
+    "V5": {
+     "pacc": true,
+     "ic": true,
+     "dec_mono": true
+    }
+   },
+   "ngoai_CI_vs_A45_V5_honest_k2": {
+    "A45": {
+     "pacc": true,
+     "ic": true,
+     "dec_mono": true
+    },
+    "V5": {
+     "pacc": true,
+     "ic": true,
+     "dec_mono": true
+    }
+   },
+   "PASS": true
+  }
+ }
+}

@@ -42,10 +42,16 @@ def ticks_pool(bins_dir, poolK, folds, slot, h_lab, y_kind):
     cols = list(dict.fromkeys(["retEnd_" + h_lab, "nBars_" + h_lab, ycol]))
     LK, LV = MR.load_labels(LABELS, cols)
     PK = pool_keys(poolK)
+    cdir = "/tmp/mrscore/pcache"
+    os.makedirs(cdir, exist_ok=True)
     out = []
     for f in folds:
         bp = os.path.join(bins_dir, "predict_wf_%s.bin" % f)
         if not os.path.exists(bp):
+            continue
+        cp = os.path.join(cdir, "%s_%s_%s.parquet" % (os.path.basename(bins_dir), poolK, f))
+        if os.path.exists(cp):
+            out.append(pd.read_parquet(cp))
             continue
         arr = np.fromfile(bp, dtype=MR.BIN_DT)
         ts = arr["ts"].astype(np.int64); sy = arr["sym"].astype(np.int64)
@@ -59,6 +65,7 @@ def ticks_pool(bins_dir, poolK, folds, slot, h_lab, y_kind):
         m = hit & inpool & np.isfinite(y) & np.isfinite(p)
         R, _ = MR.tick_metrics(ts[m], p[m], y[m], None)
         R["fold"] = f
+        R.to_parquet(cp, index=False)
         out.append(R)
         del arr
     return pd.concat(out, ignore_index=True) if out else None
@@ -70,11 +77,12 @@ def main():
     ap.add_argument("--pool", default="top8,top32")
     ap.add_argument("--bins-root", default=MRBINS)
     ap.add_argument("--out", default="/tmp/mrscore/pool.json")
+    ap.add_argument("--no-controls", action="store_true")
     a = ap.parse_args()
     bins = {}
     for n in [x for x in a.arms.split(",") if x]:
         bins[n] = os.path.join(a.bins_root, n)
-    for n in CONTROLS:
+    for n in ([] if a.no_controls else CONTROLS):
         bins[n] = dict(MR.PATHS)[n][0]
     res = {"summary": {}, "delta": {}}
     folds16 = MR.FOLDS
@@ -84,7 +92,10 @@ def main():
         for arm, bd in bins.items():
             slot = 3 if arm == "MRA72" else 0
             T[arm] = ticks_pool(bd, K, folds16, slot, "4h", "retend")
-            s = MR.summarize(T[arm], arm, M, INFL)
+            s = MR.summarize(T[arm], arm, M, INFL) if T[arm] is not None else None
+            if s is None:
+                print("[%s] %-9s KHONG CO DONG TRONG POOL" % (pk, arm), flush=True)
+                continue
             res["summary"]["%s|%s" % (arm, pk)] = {
                 "n_tick": s["n_tick"], "n_coin": round(float(s["n_coin_mean"]), 2),
                 "metrics": {m: {"mean": round(v["mean"], 6), "infl": [round(x, 6) for x in v["infl"]],
@@ -95,6 +106,8 @@ def main():
                      s["metrics"]["dec_mono"]["mean"], s["metrics"]["netm8"]["mean"]), flush=True)
         for arm in [x for x in a.arms.split(",") if x]:
             for ctl in CONTROLS:
+                if ctl not in T:
+                    continue
                 d = MR.delta(T[arm], T[ctl], M, "%s-%s" % (arm, ctl))
                 res["delta"]["%s|%s|%s" % (arm, ctl, pk)] = {
                     "n_tick_common": d["n_tick_common"],

@@ -1,0 +1,1918 @@
+{
+ "summary": {
+  "MRB8|top8": {
+   "n_tick": 16397,
+   "n_coin": 7.97,
+   "metrics": {
+    "ic": {
+     "mean": 0.040972,
+     "infl": [
+      0.021855,
+      0.060497
+     ],
+     "strict": true
+    },
+    "pacc": {
+     "mean": 0.515648,
+     "infl": [
+      0.50839,
+      0.523086
+     ],
+     "strict": true
+    },
+    "dec_mono": {
+     "mean": 0.506252,
+     "infl": [
+      0.502286,
+      0.510115
+     ],
+     "strict": true
+    },
+    "dec_rho": {
+     "mean": 0.040943,
+     "infl": [
+      0.021846,
+      0.060467
+     ],
+     "strict": true
+    },
+    "glift8": {
+     "mean": 0.0,
+     "infl": [
+      0.0,
+      0.0
+     ],
+     "strict": false
+    },
+    "netm8": {
+     "mean": -0.00612,
+     "infl": [
+      -0.008905,
+      -0.003587
+     ],
+     "strict": true
+    },
+    "auc8": {
+     "mean": 1.022149,
+     "infl": [
+      0.996487,
+      1.046562
+     ],
+     "strict": true
+    },
+    "auc8c": {
+     "mean": 0.511074,
+     "infl": [
+      0.498244,
+      0.523281
+     ],
+     "strict": true
+    },
+    "lift8": {
+     "mean": 0.0,
+     "infl": [
+      0.0,
+      0.0
+     ],
+     "strict": false
+    },
+    "base": {
+     "mean": 0.352927,
+     "infl": [
+      0.3391,
+      0.366515
+     ],
+     "strict": true
+    }
+   }
+  },
+  "MRB32|top8": {
+   "n_tick": 16397,
+   "n_coin": 7.97,
+   "metrics": {
+    "ic": {
+     "mean": 0.049633,
+     "infl": [
+      0.029354,
+      0.069997
+     ],
+     "strict": true
+    },
+    "pacc": {
+     "mean": 0.518914,
+     "infl": [
+      0.511118,
+      0.526847
+     ],
+     "strict": true
+    },
+    "dec_mono": {
+     "mean": 0.507555,
+     "infl": [
+      0.503541,
+      0.511729
+     ],
+     "strict": true
+    },
+    "dec_rho": {
+     "mean": 0.049629,
+     "infl": [
+      0.02935,
+      0.069994
+     ],
+     "strict": true
+    },
+    "glift8": {
+     "mean": 0.0,
+     "infl": [
+      0.0,
+      0.0
+     ],
+     "strict": false
+    },
+    "netm8": {
+     "mean": -0.00612,
+     "infl": [
+      -0.008905,
+      -0.003587
+     ],
+     "strict": true
+    },
+    "auc8": {
+     "mean": 1.038586,
+     "infl": [
+      1.012949,
+      1.064405
+     ],
+     "strict": true
+    },
+    "auc8c": {
+     "mean": 0.519293,
+     "infl": [
+      0.506474,
+      0.532203
+     ],
+     "strict": true
+    },
+    "lift8": {
+     "mean": 0.0,
+     "infl": [
+      0.0,
+      0.0
+     ],
+     "strict": false
+    },
+    "base": {
+     "mean": 0.352927,
+     "infl": [
+      0.3391,
+      0.366515
+     ],
+     "strict": true
+    }
+   }
+  },
+  "45deploy|top8": {
+   "n_tick": 17349,
+   "n_coin": 7.97,
+   "metrics": {
+    "ic": {
+     "mean": -0.01333,
+     "infl": [
+      -0.029314,
+      0.003308
+     ],
+     "strict": false
+    },
+    "pacc": {
+     "mean": 0.494768,
+     "infl": [
+      0.48851,
+      0.501189
+     ],
+     "strict": true
+    },
+    "dec_mono": {
+     "mean": 0.498634,
+     "infl": [
+      0.495307,
+      0.501956
+     ],
+     "strict": true
+    },
+    "dec_rho": {
+     "mean": -0.013349,
+     "infl": [
+      -0.029306,
+      0.003278
+     ],
+     "strict": false
+    },
+    "glift8": {
+     "mean": 0.0,
+     "infl": [
+      0.0,
+      0.0
+     ],
+     "strict": false
+    },
+    "netm8": {
+     "mean": -0.006207,
+     "infl": [
+      -0.008674,
+      -0.003748
+     ],
+     "strict": true
+    },
+    "auc8": {
+     "mean": 1.100999,
+     "infl": [
+      1.078159,
+      1.124024
+     ],
+     "strict": true
+    },
+    "auc8c": {
+     "mean": 0.5505,
+     "infl": [
+      0.539079,
+      0.562012
+     ],
+     "strict": true
+    },
+    "lift8": {
+     "mean": 0.0,
+     "infl": [
+      0.0,
+      0.0
+     ],
+     "strict": false
+    },
+    "base": {
+     "mean": 0.351739,
+     "infl": [
+      0.338958,
+      0.365053
+     ],
+     "strict": true
+    }
+   }
+  },
+  "A45|top8": {
+   "n_tick": 17349,
+   "n_coin": 7.97,
+   "metrics": {
+    "ic": {
+     "mean": -0.013574,
+     "infl": [
+      -0.031363,
+      0.004669
+     ],
+     "strict": false
+    },
+    "pacc": {
+     "mean": 0.494852,
+     "infl": [
+      0.488266,
+      0.50174
+     ],
+     "strict": true
+    },
+    "dec_mono": {
+     "mean": 0.498852,
+     "infl": [
+      0.495559,
+      0.502183
+     ],
+     "strict": true
+    },
+    "dec_rho": {
+     "mean": -0.013596,
+     "infl": [
+      -0.031385,
+      0.00465
+     ],
+     "strict": false
+    },
+    "glift8": {
+     "mean": 0.0,
+     "infl": [
+      0.0,
+      0.0
+     ],
+     "strict": false
+    },
+    "netm8": {
+     "mean": -0.006207,
+     "infl": [
+      -0.008674,
+      -0.003748
+     ],
+     "strict": true
+    },
+    "auc8": {
+     "mean": 1.09807,
+     "infl": [
+      1.072817,
+      1.123547
+     ],
+     "strict": true
+    },
+    "auc8c": {
+     "mean": 0.549035,
+     "infl": [
+      0.536408,
+      0.561773
+     ],
+     "strict": true
+    },
+    "lift8": {
+     "mean": 0.0,
+     "infl": [
+      0.0,
+      0.0
+     ],
+     "strict": false
+    },
+    "base": {
+     "mean": 0.351739,
+     "infl": [
+      0.338958,
+      0.365053
+     ],
+     "strict": true
+    }
+   }
+  },
+  "V5|top8": {
+   "n_tick": 17349,
+   "n_coin": 7.97,
+   "metrics": {
+    "ic": {
+     "mean": -0.004836,
+     "infl": [
+      -0.024607,
+      0.015578
+     ],
+     "strict": false
+    },
+    "pacc": {
+     "mean": 0.498077,
+     "infl": [
+      0.490583,
+      0.505702
+     ],
+     "strict": true
+    },
+    "dec_mono": {
+     "mean": 0.498018,
+     "infl": [
+      0.494252,
+      0.501774
+     ],
+     "strict": true
+    },
+    "dec_rho": {
+     "mean": -0.004824,
+     "infl": [
+      -0.024583,
+      0.015604
+     ],
+     "strict": false
+    },
+    "glift8": {
+     "mean": 0.0,
+     "infl": [
+      0.0,
+      0.0
+     ],
+     "strict": false
+    },
+    "netm8": {
+     "mean": -0.006207,
+     "infl": [
+      -0.008674,
+      -0.003748
+     ],
+     "strict": true
+    },
+    "auc8": {
+     "mean": 1.08552,
+     "infl": [
+      1.063812,
+      1.109365
+     ],
+     "strict": true
+    },
+    "auc8c": {
+     "mean": 0.54276,
+     "infl": [
+      0.531906,
+      0.554682
+     ],
+     "strict": true
+    },
+    "lift8": {
+     "mean": 0.0,
+     "infl": [
+      0.0,
+      0.0
+     ],
+     "strict": false
+    },
+    "base": {
+     "mean": 0.351739,
+     "infl": [
+      0.338958,
+      0.365053
+     ],
+     "strict": true
+    }
+   }
+  },
+  "V1|top8": {
+   "n_tick": 17349,
+   "n_coin": 7.97,
+   "metrics": {
+    "ic": {
+     "mean": -0.007216,
+     "infl": [
+      -0.025112,
+      0.011305
+     ],
+     "strict": false
+    },
+    "pacc": {
+     "mean": 0.497034,
+     "infl": [
+      0.490323,
+      0.503842
+     ],
+     "strict": true
+    },
+    "dec_mono": {
+     "mean": 0.498341,
+     "infl": [
+      0.494973,
+      0.501686
+     ],
+     "strict": true
+    },
+    "dec_rho": {
+     "mean": -0.007229,
+     "infl": [
+      -0.02511,
+      0.011291
+     ],
+     "strict": false
+    },
+    "glift8": {
+     "mean": 0.0,
+     "infl": [
+      0.0,
+      0.0
+     ],
+     "strict": false
+    },
+    "netm8": {
+     "mean": -0.006207,
+     "infl": [
+      -0.008674,
+      -0.003748
+     ],
+     "strict": true
+    },
+    "auc8": {
+     "mean": 1.083671,
+     "infl": [
+      1.062272,
+      1.106883
+     ],
+     "strict": true
+    },
+    "auc8c": {
+     "mean": 0.541845,
+     "infl": [
+      0.531134,
+      0.553465
+     ],
+     "strict": true
+    },
+    "lift8": {
+     "mean": 0.0,
+     "infl": [
+      0.0,
+      0.0
+     ],
+     "strict": false
+    },
+    "base": {
+     "mean": 0.351739,
+     "infl": [
+      0.338958,
+      0.365053
+     ],
+     "strict": true
+    }
+   }
+  },
+  "MRB8|top32": {
+   "n_tick": 16397,
+   "n_coin": 31.78,
+   "metrics": {
+    "ic": {
+     "mean": 0.031229,
+     "infl": [
+      0.021792,
+      0.040428
+     ],
+     "strict": true
+    },
+    "pacc": {
+     "mean": 0.510727,
+     "infl": [
+      0.507486,
+      0.513933
+     ],
+     "strict": true
+    },
+    "dec_mono": {
+     "mean": 0.506058,
+     "infl": [
+      0.502984,
+      0.508677
+     ],
+     "strict": true
+    },
+    "dec_rho": {
+     "mean": 0.045322,
+     "infl": [
+      0.028352,
+      0.061896
+     ],
+     "strict": true
+    },
+    "glift8": {
+     "mean": 0.001573,
+     "infl": [
+      0.000347,
+      0.002824
+     ],
+     "strict": true
+    },
+    "netm8": {
+     "mean": -0.004888,
+     "infl": [
+      -0.006731,
+      -0.002951
+     ],
+     "strict": true
+    },
+    "auc8": {
+     "mean": 0.534638,
+     "infl": [
+      0.522473,
+      0.546114
+     ],
+     "strict": true
+    },
+    "auc8c": {
+     "mean": 0.475406,
+     "infl": [
+      0.46453,
+      0.485496
+     ],
+     "strict": true
+    },
+    "lift8": {
+     "mean": 0.007296,
+     "infl": [
+      0.001849,
+      0.012869
+     ],
+     "strict": true
+    },
+    "base": {
+     "mean": 0.331257,
+     "infl": [
+      0.31851,
+      0.344529
+     ],
+     "strict": true
+    }
+   }
+  },
+  "MRB32|top32": {
+   "n_tick": 16397,
+   "n_coin": 31.78,
+   "metrics": {
+    "ic": {
+     "mean": 0.031522,
+     "infl": [
+      0.020544,
+      0.042158
+     ],
+     "strict": true
+    },
+    "pacc": {
+     "mean": 0.510823,
+     "infl": [
+      0.506958,
+      0.514502
+     ],
+     "strict": true
+    },
+    "dec_mono": {
+     "mean": 0.50689,
+     "infl": [
+      0.503768,
+      0.509858
+     ],
+     "strict": true
+    },
+    "dec_rho": {
+     "mean": 0.049792,
+     "infl": [
+      0.030222,
+      0.070121
+     ],
+     "strict": true
+    },
+    "glift8": {
+     "mean": 0.001716,
+     "infl": [
+      0.000572,
+      0.002774
+     ],
+     "strict": true
+    },
+    "netm8": {
+     "mean": -0.004745,
+     "infl": [
+      -0.00663,
+      -0.002958
+     ],
+     "strict": true
+    },
+    "auc8": {
+     "mean": 0.544956,
+     "infl": [
+      0.530971,
+      0.558013
+     ],
+     "strict": true
+    },
+    "auc8c": {
+     "mean": 0.484472,
+     "infl": [
+      0.472314,
+      0.496025
+     ],
+     "strict": true
+    },
+    "lift8": {
+     "mean": 0.011344,
+     "infl": [
+      0.004986,
+      0.017183
+     ],
+     "strict": true
+    },
+    "base": {
+     "mean": 0.331257,
+     "infl": [
+      0.31851,
+      0.344529
+     ],
+     "strict": true
+    }
+   }
+  },
+  "45deploy|top32": {
+   "n_tick": 17349,
+   "n_coin": 31.79,
+   "metrics": {
+    "ic": {
+     "mean": -0.02575,
+     "infl": [
+      -0.03555,
+      -0.015122
+     ],
+     "strict": true
+    },
+    "pacc": {
+     "mean": 0.49081,
+     "infl": [
+      0.48736,
+      0.494507
+     ],
+     "strict": true
+    },
+    "dec_mono": {
+     "mean": 0.497544,
+     "infl": [
+      0.494451,
+      0.50046
+     ],
+     "strict": true
+    },
+    "dec_rho": {
+     "mean": -0.02616,
+     "infl": [
+      -0.042846,
+      -0.008566
+     ],
+     "strict": true
+    },
+    "glift8": {
+     "mean": 0.000501,
+     "infl": [
+      -0.00102,
+      0.002001
+     ],
+     "strict": false
+    },
+    "netm8": {
+     "mean": -0.006027,
+     "infl": [
+      -0.008388,
+      -0.003657
+     ],
+     "strict": true
+    },
+    "auc8": {
+     "mean": 0.597669,
+     "infl": [
+      0.585331,
+      0.608982
+     ],
+     "strict": true
+    },
+    "auc8c": {
+     "mean": 0.53039,
+     "infl": [
+      0.519433,
+      0.540247
+     ],
+     "strict": true
+    },
+    "lift8": {
+     "mean": 0.035634,
+     "infl": [
+      0.029433,
+      0.041803
+     ],
+     "strict": true
+    },
+    "base": {
+     "mean": 0.330821,
+     "infl": [
+      0.318621,
+      0.343607
+     ],
+     "strict": true
+    }
+   }
+  },
+  "A45|top32": {
+   "n_tick": 17349,
+   "n_coin": 31.79,
+   "metrics": {
+    "ic": {
+     "mean": -0.024592,
+     "infl": [
+      -0.034547,
+      -0.014074
+     ],
+     "strict": true
+    },
+    "pacc": {
+     "mean": 0.491146,
+     "infl": [
+      0.487653,
+      0.494917
+     ],
+     "strict": true
+    },
+    "dec_mono": {
+     "mean": 0.497532,
+     "infl": [
+      0.494709,
+      0.50022
+     ],
+     "strict": true
+    },
+    "dec_rho": {
+     "mean": -0.025863,
+     "infl": [
+      -0.043316,
+      -0.007986
+     ],
+     "strict": true
+    },
+    "glift8": {
+     "mean": 0.000412,
+     "infl": [
+      -0.001001,
+      0.001864
+     ],
+     "strict": false
+    },
+    "netm8": {
+     "mean": -0.006116,
+     "infl": [
+      -0.0084,
+      -0.003759
+     ],
+     "strict": true
+    },
+    "auc8": {
+     "mean": 0.596772,
+     "infl": [
+      0.584918,
+      0.607768
+     ],
+     "strict": true
+    },
+    "auc8c": {
+     "mean": 0.529732,
+     "infl": [
+      0.51917,
+      0.539494
+     ],
+     "strict": true
+    },
+    "lift8": {
+     "mean": 0.034964,
+     "infl": [
+      0.028577,
+      0.041193
+     ],
+     "strict": true
+    },
+    "base": {
+     "mean": 0.330821,
+     "infl": [
+      0.318621,
+      0.343607
+     ],
+     "strict": true
+    }
+   }
+  },
+  "V5|top32": {
+   "n_tick": 17349,
+   "n_coin": 31.79,
+   "metrics": {
+    "ic": {
+     "mean": -0.015913,
+     "infl": [
+      -0.025858,
+      -0.005763
+     ],
+     "strict": true
+    },
+    "pacc": {
+     "mean": 0.494097,
+     "infl": [
+      0.490581,
+      0.49764
+     ],
+     "strict": true
+    },
+    "dec_mono": {
+     "mean": 0.497467,
+     "infl": [
+      0.494719,
+      0.500189
+     ],
+     "strict": true
+    },
+    "dec_rho": {
+     "mean": -0.016163,
+     "infl": [
+      -0.033227,
+      0.000681
+     ],
+     "strict": false
+    },
+    "glift8": {
+     "mean": 0.000286,
+     "infl": [
+      -0.000927,
+      0.001499
+     ],
+     "strict": false
+    },
+    "netm8": {
+     "mean": -0.006241,
+     "infl": [
+      -0.008534,
+      -0.003932
+     ],
+     "strict": true
+    },
+    "auc8": {
+     "mean": 0.584133,
+     "infl": [
+      0.571893,
+      0.595856
+     ],
+     "strict": true
+    },
+    "auc8c": {
+     "mean": 0.520513,
+     "infl": [
+      0.509705,
+      0.531065
+     ],
+     "strict": true
+    },
+    "lift8": {
+     "mean": 0.031967,
+     "infl": [
+      0.025831,
+      0.037759
+     ],
+     "strict": true
+    },
+    "base": {
+     "mean": 0.330821,
+     "infl": [
+      0.318621,
+      0.343607
+     ],
+     "strict": true
+    }
+   }
+  },
+  "V1|top32": {
+   "n_tick": 17349,
+   "n_coin": 31.79,
+   "metrics": {
+    "ic": {
+     "mean": -0.015129,
+     "infl": [
+      -0.024341,
+      -0.005506
+     ],
+     "strict": true
+    },
+    "pacc": {
+     "mean": 0.494354,
+     "infl": [
+      0.491128,
+      0.497688
+     ],
+     "strict": true
+    },
+    "dec_mono": {
+     "mean": 0.496449,
+     "infl": [
+      0.493668,
+      0.499099
+     ],
+     "strict": true
+    },
+    "dec_rho": {
+     "mean": -0.014842,
+     "infl": [
+      -0.031578,
+      0.002797
+     ],
+     "strict": false
+    },
+    "glift8": {
+     "mean": 0.000441,
+     "infl": [
+      -0.00073,
+      0.001614
+     ],
+     "strict": false
+    },
+    "netm8": {
+     "mean": -0.006087,
+     "infl": [
+      -0.008212,
+      -0.003883
+     ],
+     "strict": true
+    },
+    "auc8": {
+     "mean": 0.587225,
+     "infl": [
+      0.575304,
+      0.598572
+     ],
+     "strict": true
+    },
+    "auc8c": {
+     "mean": 0.523149,
+     "infl": [
+      0.512584,
+      0.533022
+     ],
+     "strict": true
+    },
+    "lift8": {
+     "mean": 0.032205,
+     "infl": [
+      0.026012,
+      0.037979
+     ],
+     "strict": true
+    },
+    "base": {
+     "mean": 0.330821,
+     "infl": [
+      0.318621,
+      0.343607
+     ],
+     "strict": true
+    }
+   }
+  }
+ },
+ "delta": {
+  "MRB8|45deploy|top8": {
+   "n_tick_common": 16397,
+   "metrics": {
+    "ic": {
+     "mean": 0.054592,
+     "out_both": true,
+     "dir": 1
+    },
+    "pacc": {
+     "mean": 0.02101,
+     "out_both": true,
+     "dir": 1
+    },
+    "dec_mono": {
+     "mean": 0.007944,
+     "out_both": true,
+     "dir": 1
+    },
+    "dec_rho": {
+     "mean": 0.054583,
+     "out_both": true,
+     "dir": 1
+    },
+    "glift8": {
+     "mean": 0.0,
+     "out_both": false,
+     "dir": 0
+    },
+    "netm8": {
+     "mean": 0.0,
+     "out_both": false,
+     "dir": 0
+    },
+    "auc8": {
+     "mean": -0.083879,
+     "out_both": true,
+     "dir": -1
+    },
+    "auc8c": {
+     "mean": -0.04194,
+     "out_both": true,
+     "dir": -1
+    },
+    "lift8": {
+     "mean": 0.0,
+     "out_both": false,
+     "dir": 0
+    },
+    "base": {
+     "mean": 0.0,
+     "out_both": false,
+     "dir": 0
+    }
+   }
+  },
+  "MRB8|A45|top8": {
+   "n_tick_common": 16397,
+   "metrics": {
+    "ic": {
+     "mean": 0.054518,
+     "out_both": true,
+     "dir": 1
+    },
+    "pacc": {
+     "mean": 0.020803,
+     "out_both": true,
+     "dir": 1
+    },
+    "dec_mono": {
+     "mean": 0.007424,
+     "out_both": true,
+     "dir": 1
+    },
+    "dec_rho": {
+     "mean": 0.054512,
+     "out_both": true,
+     "dir": 1
+    },
+    "glift8": {
+     "mean": 0.0,
+     "out_both": false,
+     "dir": 0
+    },
+    "netm8": {
+     "mean": 0.0,
+     "out_both": false,
+     "dir": 0
+    },
+    "auc8": {
+     "mean": -0.079577,
+     "out_both": true,
+     "dir": -1
+    },
+    "auc8c": {
+     "mean": -0.039789,
+     "out_both": true,
+     "dir": -1
+    },
+    "lift8": {
+     "mean": 0.0,
+     "out_both": false,
+     "dir": 0
+    },
+    "base": {
+     "mean": 0.0,
+     "out_both": false,
+     "dir": 0
+    }
+   }
+  },
+  "MRB8|V5|top8": {
+   "n_tick_common": 16397,
+   "metrics": {
+    "ic": {
+     "mean": 0.046316,
+     "out_both": true,
+     "dir": 1
+    },
+    "pacc": {
+     "mean": 0.01776,
+     "out_both": true,
+     "dir": 1
+    },
+    "dec_mono": {
+     "mean": 0.00849,
+     "out_both": true,
+     "dir": 1
+    },
+    "dec_rho": {
+     "mean": 0.046275,
+     "out_both": true,
+     "dir": 1
+    },
+    "glift8": {
+     "mean": 0.0,
+     "out_both": false,
+     "dir": 0
+    },
+    "netm8": {
+     "mean": 0.0,
+     "out_both": false,
+     "dir": 0
+    },
+    "auc8": {
+     "mean": -0.064941,
+     "out_both": true,
+     "dir": -1
+    },
+    "auc8c": {
+     "mean": -0.032471,
+     "out_both": true,
+     "dir": -1
+    },
+    "lift8": {
+     "mean": 0.0,
+     "out_both": false,
+     "dir": 0
+    },
+    "base": {
+     "mean": 0.0,
+     "out_both": false,
+     "dir": 0
+    }
+   }
+  },
+  "MRB8|V1|top8": {
+   "n_tick_common": 16397,
+   "metrics": {
+    "ic": {
+     "mean": 0.04874,
+     "out_both": true,
+     "dir": 1
+    },
+    "pacc": {
+     "mean": 0.018858,
+     "out_both": true,
+     "dir": 1
+    },
+    "dec_mono": {
+     "mean": 0.008122,
+     "out_both": true,
+     "dir": 1
+    },
+    "dec_rho": {
+     "mean": 0.048724,
+     "out_both": true,
+     "dir": 1
+    },
+    "glift8": {
+     "mean": 0.0,
+     "out_both": false,
+     "dir": 0
+    },
+    "netm8": {
+     "mean": 0.0,
+     "out_both": false,
+     "dir": 0
+    },
+    "auc8": {
+     "mean": -0.062791,
+     "out_both": true,
+     "dir": -1
+    },
+    "auc8c": {
+     "mean": -0.031406,
+     "out_both": true,
+     "dir": -1
+    },
+    "lift8": {
+     "mean": 0.0,
+     "out_both": false,
+     "dir": 0
+    },
+    "base": {
+     "mean": 0.0,
+     "out_both": false,
+     "dir": 0
+    }
+   }
+  },
+  "MRB32|45deploy|top8": {
+   "n_tick_common": 16397,
+   "metrics": {
+    "ic": {
+     "mean": 0.063253,
+     "out_both": true,
+     "dir": 1
+    },
+    "pacc": {
+     "mean": 0.024275,
+     "out_both": true,
+     "dir": 1
+    },
+    "dec_mono": {
+     "mean": 0.009248,
+     "out_both": true,
+     "dir": 1
+    },
+    "dec_rho": {
+     "mean": 0.063269,
+     "out_both": true,
+     "dir": 1
+    },
+    "glift8": {
+     "mean": 0.0,
+     "out_both": false,
+     "dir": 0
+    },
+    "netm8": {
+     "mean": 0.0,
+     "out_both": false,
+     "dir": 0
+    },
+    "auc8": {
+     "mean": -0.067442,
+     "out_both": true,
+     "dir": -1
+    },
+    "auc8c": {
+     "mean": -0.033721,
+     "out_both": true,
+     "dir": -1
+    },
+    "lift8": {
+     "mean": 0.0,
+     "out_both": false,
+     "dir": 0
+    },
+    "base": {
+     "mean": 0.0,
+     "out_both": false,
+     "dir": 0
+    }
+   }
+  },
+  "MRB32|A45|top8": {
+   "n_tick_common": 16397,
+   "metrics": {
+    "ic": {
+     "mean": 0.063179,
+     "out_both": true,
+     "dir": 1
+    },
+    "pacc": {
+     "mean": 0.024068,
+     "out_both": true,
+     "dir": 1
+    },
+    "dec_mono": {
+     "mean": 0.008727,
+     "out_both": true,
+     "dir": 1
+    },
+    "dec_rho": {
+     "mean": 0.063198,
+     "out_both": true,
+     "dir": 1
+    },
+    "glift8": {
+     "mean": 0.0,
+     "out_both": false,
+     "dir": 0
+    },
+    "netm8": {
+     "mean": 0.0,
+     "out_both": false,
+     "dir": 0
+    },
+    "auc8": {
+     "mean": -0.06314,
+     "out_both": true,
+     "dir": -1
+    },
+    "auc8c": {
+     "mean": -0.03157,
+     "out_both": true,
+     "dir": -1
+    },
+    "lift8": {
+     "mean": 0.0,
+     "out_both": false,
+     "dir": 0
+    },
+    "base": {
+     "mean": 0.0,
+     "out_both": false,
+     "dir": 0
+    }
+   }
+  },
+  "MRB32|V5|top8": {
+   "n_tick_common": 16397,
+   "metrics": {
+    "ic": {
+     "mean": 0.054977,
+     "out_both": true,
+     "dir": 1
+    },
+    "pacc": {
+     "mean": 0.021026,
+     "out_both": true,
+     "dir": 1
+    },
+    "dec_mono": {
+     "mean": 0.009793,
+     "out_both": true,
+     "dir": 1
+    },
+    "dec_rho": {
+     "mean": 0.05496,
+     "out_both": true,
+     "dir": 1
+    },
+    "glift8": {
+     "mean": 0.0,
+     "out_both": false,
+     "dir": 0
+    },
+    "netm8": {
+     "mean": 0.0,
+     "out_both": false,
+     "dir": 0
+    },
+    "auc8": {
+     "mean": -0.048504,
+     "out_both": true,
+     "dir": -1
+    },
+    "auc8c": {
+     "mean": -0.024252,
+     "out_both": true,
+     "dir": -1
+    },
+    "lift8": {
+     "mean": 0.0,
+     "out_both": false,
+     "dir": 0
+    },
+    "base": {
+     "mean": 0.0,
+     "out_both": false,
+     "dir": 0
+    }
+   }
+  },
+  "MRB32|V1|top8": {
+   "n_tick_common": 16397,
+   "metrics": {
+    "ic": {
+     "mean": 0.057401,
+     "out_both": true,
+     "dir": 1
+    },
+    "pacc": {
+     "mean": 0.022123,
+     "out_both": true,
+     "dir": 1
+    },
+    "dec_mono": {
+     "mean": 0.009425,
+     "out_both": true,
+     "dir": 1
+    },
+    "dec_rho": {
+     "mean": 0.057409,
+     "out_both": true,
+     "dir": 1
+    },
+    "glift8": {
+     "mean": 0.0,
+     "out_both": false,
+     "dir": 0
+    },
+    "netm8": {
+     "mean": 0.0,
+     "out_both": false,
+     "dir": 0
+    },
+    "auc8": {
+     "mean": -0.046354,
+     "out_both": true,
+     "dir": -1
+    },
+    "auc8c": {
+     "mean": -0.023187,
+     "out_both": true,
+     "dir": -1
+    },
+    "lift8": {
+     "mean": 0.0,
+     "out_both": false,
+     "dir": 0
+    },
+    "base": {
+     "mean": 0.0,
+     "out_both": false,
+     "dir": 0
+    }
+   }
+  },
+  "MRB8|45deploy|top32": {
+   "n_tick_common": 16397,
+   "metrics": {
+    "ic": {
+     "mean": 0.057861,
+     "out_both": true,
+     "dir": 1
+    },
+    "pacc": {
+     "mean": 0.020244,
+     "out_both": true,
+     "dir": 1
+    },
+    "dec_mono": {
+     "mean": 0.009046,
+     "out_both": true,
+     "dir": 1
+    },
+    "dec_rho": {
+     "mean": 0.072835,
+     "out_both": true,
+     "dir": 1
+    },
+    "glift8": {
+     "mean": 0.001053,
+     "out_both": false,
+     "dir": 0
+    },
+    "netm8": {
+     "mean": 0.001053,
+     "out_both": false,
+     "dir": 0
+    },
+    "auc8": {
+     "mean": -0.065433,
+     "out_both": true,
+     "dir": -1
+    },
+    "auc8c": {
+     "mean": -0.05691,
+     "out_both": true,
+     "dir": -1
+    },
+    "lift8": {
+     "mean": -0.029693,
+     "out_both": true,
+     "dir": -1
+    },
+    "base": {
+     "mean": 0.0,
+     "out_both": false,
+     "dir": 0
+    }
+   }
+  },
+  "MRB8|A45|top32": {
+   "n_tick_common": 16397,
+   "metrics": {
+    "ic": {
+     "mean": 0.056491,
+     "out_both": true,
+     "dir": 1
+    },
+    "pacc": {
+     "mean": 0.019823,
+     "out_both": true,
+     "dir": 1
+    },
+    "dec_mono": {
+     "mean": 0.008977,
+     "out_both": true,
+     "dir": 1
+    },
+    "dec_rho": {
+     "mean": 0.072102,
+     "out_both": true,
+     "dir": 1
+    },
+    "glift8": {
+     "mean": 0.001126,
+     "out_both": false,
+     "dir": 0
+    },
+    "netm8": {
+     "mean": 0.001126,
+     "out_both": false,
+     "dir": 0
+    },
+    "auc8": {
+     "mean": -0.064691,
+     "out_both": true,
+     "dir": -1
+    },
+    "auc8c": {
+     "mean": -0.056587,
+     "out_both": true,
+     "dir": -1
+    },
+    "lift8": {
+     "mean": -0.029205,
+     "out_both": true,
+     "dir": -1
+    },
+    "base": {
+     "mean": 0.0,
+     "out_both": false,
+     "dir": 0
+    }
+   }
+  },
+  "MRB8|V5|top32": {
+   "n_tick_common": 16397,
+   "metrics": {
+    "ic": {
+     "mean": 0.047779,
+     "out_both": true,
+     "dir": 1
+    },
+    "pacc": {
+     "mean": 0.016868,
+     "out_both": true,
+     "dir": 1
+    },
+    "dec_mono": {
+     "mean": 0.008752,
+     "out_both": true,
+     "dir": 1
+    },
+    "dec_rho": {
+     "mean": 0.062481,
+     "out_both": true,
+     "dir": 1
+    },
+    "glift8": {
+     "mean": 0.001285,
+     "out_both": false,
+     "dir": 0
+    },
+    "netm8": {
+     "mean": 0.001285,
+     "out_both": false,
+     "dir": 0
+    },
+    "auc8": {
+     "mean": -0.052206,
+     "out_both": true,
+     "dir": -1
+    },
+    "auc8c": {
+     "mean": -0.047377,
+     "out_both": true,
+     "dir": -1
+    },
+    "lift8": {
+     "mean": -0.025691,
+     "out_both": true,
+     "dir": -1
+    },
+    "base": {
+     "mean": 0.0,
+     "out_both": false,
+     "dir": 0
+    }
+   }
+  },
+  "MRB8|V1|top32": {
+   "n_tick_common": 16397,
+   "metrics": {
+    "ic": {
+     "mean": 0.047738,
+     "out_both": true,
+     "dir": 1
+    },
+    "pacc": {
+     "mean": 0.016855,
+     "out_both": true,
+     "dir": 1
+    },
+    "dec_mono": {
+     "mean": 0.009509,
+     "out_both": true,
+     "dir": 1
+    },
+    "dec_rho": {
+     "mean": 0.062739,
+     "out_both": true,
+     "dir": 1
+    },
+    "glift8": {
+     "mean": 0.001153,
+     "out_both": false,
+     "dir": 0
+    },
+    "netm8": {
+     "mean": 0.001153,
+     "out_both": false,
+     "dir": 0
+    },
+    "auc8": {
+     "mean": -0.054707,
+     "out_both": true,
+     "dir": -1
+    },
+    "auc8c": {
+     "mean": -0.04938,
+     "out_both": true,
+     "dir": -1
+    },
+    "lift8": {
+     "mean": -0.025744,
+     "out_both": true,
+     "dir": -1
+    },
+    "base": {
+     "mean": 0.0,
+     "out_both": false,
+     "dir": 0
+    }
+   }
+  },
+  "MRB32|45deploy|top32": {
+   "n_tick_common": 16397,
+   "metrics": {
+    "ic": {
+     "mean": 0.058154,
+     "out_both": true,
+     "dir": 1
+    },
+    "pacc": {
+     "mean": 0.02034,
+     "out_both": true,
+     "dir": 1
+    },
+    "dec_mono": {
+     "mean": 0.009878,
+     "out_both": true,
+     "dir": 1
+    },
+    "dec_rho": {
+     "mean": 0.077305,
+     "out_both": true,
+     "dir": 1
+    },
+    "glift8": {
+     "mean": 0.001196,
+     "out_both": false,
+     "dir": 0
+    },
+    "netm8": {
+     "mean": 0.001196,
+     "out_both": false,
+     "dir": 0
+    },
+    "auc8": {
+     "mean": -0.055115,
+     "out_both": true,
+     "dir": -1
+    },
+    "auc8c": {
+     "mean": -0.047844,
+     "out_both": true,
+     "dir": -1
+    },
+    "lift8": {
+     "mean": -0.025645,
+     "out_both": true,
+     "dir": -1
+    },
+    "base": {
+     "mean": 0.0,
+     "out_both": false,
+     "dir": 0
+    }
+   }
+  },
+  "MRB32|A45|top32": {
+   "n_tick_common": 16397,
+   "metrics": {
+    "ic": {
+     "mean": 0.056784,
+     "out_both": true,
+     "dir": 1
+    },
+    "pacc": {
+     "mean": 0.019919,
+     "out_both": true,
+     "dir": 1
+    },
+    "dec_mono": {
+     "mean": 0.00981,
+     "out_both": true,
+     "dir": 1
+    },
+    "dec_rho": {
+     "mean": 0.076571,
+     "out_both": true,
+     "dir": 1
+    },
+    "glift8": {
+     "mean": 0.001269,
+     "out_both": false,
+     "dir": 0
+    },
+    "netm8": {
+     "mean": 0.001269,
+     "out_both": false,
+     "dir": 0
+    },
+    "auc8": {
+     "mean": -0.054374,
+     "out_both": true,
+     "dir": -1
+    },
+    "auc8c": {
+     "mean": -0.047521,
+     "out_both": true,
+     "dir": -1
+    },
+    "lift8": {
+     "mean": -0.025157,
+     "out_both": true,
+     "dir": -1
+    },
+    "base": {
+     "mean": 0.0,
+     "out_both": false,
+     "dir": 0
+    }
+   }
+  },
+  "MRB32|V5|top32": {
+   "n_tick_common": 16397,
+   "metrics": {
+    "ic": {
+     "mean": 0.048072,
+     "out_both": true,
+     "dir": 1
+    },
+    "pacc": {
+     "mean": 0.016964,
+     "out_both": true,
+     "dir": 1
+    },
+    "dec_mono": {
+     "mean": 0.009584,
+     "out_both": true,
+     "dir": 1
+    },
+    "dec_rho": {
+     "mean": 0.066951,
+     "out_both": true,
+     "dir": 1
+    },
+    "glift8": {
+     "mean": 0.001428,
+     "out_both": false,
+     "dir": 0
+    },
+    "netm8": {
+     "mean": 0.001428,
+     "out_both": false,
+     "dir": 0
+    },
+    "auc8": {
+     "mean": -0.041888,
+     "out_both": true,
+     "dir": -1
+    },
+    "auc8c": {
+     "mean": -0.038311,
+     "out_both": true,
+     "dir": -1
+    },
+    "lift8": {
+     "mean": -0.021643,
+     "out_both": true,
+     "dir": -1
+    },
+    "base": {
+     "mean": 0.0,
+     "out_both": false,
+     "dir": 0
+    }
+   }
+  },
+  "MRB32|V1|top32": {
+   "n_tick_common": 16397,
+   "metrics": {
+    "ic": {
+     "mean": 0.048031,
+     "out_both": true,
+     "dir": 1
+    },
+    "pacc": {
+     "mean": 0.016951,
+     "out_both": true,
+     "dir": 1
+    },
+    "dec_mono": {
+     "mean": 0.010342,
+     "out_both": true,
+     "dir": 1
+    },
+    "dec_rho": {
+     "mean": 0.067208,
+     "out_both": true,
+     "dir": 1
+    },
+    "glift8": {
+     "mean": 0.001296,
+     "out_both": false,
+     "dir": 0
+    },
+    "netm8": {
+     "mean": 0.001296,
+     "out_both": false,
+     "dir": 0
+    },
+    "auc8": {
+     "mean": -0.044389,
+     "out_both": true,
+     "dir": -1
+    },
+    "auc8c": {
+     "mean": -0.040314,
+     "out_both": true,
+     "dir": -1
+    },
+    "lift8": {
+     "mean": -0.021696,
+     "out_both": true,
+     "dir": -1
+    },
+    "base": {
+     "mean": 0.0,
+     "out_both": false,
+     "dir": 0
+    }
+   }
+  }
+ }
+}

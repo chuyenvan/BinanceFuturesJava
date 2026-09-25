@@ -1,161 +1,207 @@
 # RESULT_MONEY_RANKER — CÓ ranker xếp hạng RA TIỀN không? (nhãn (a) rank `retEnd_h` · nhãn (b) PnL thật theo luật thoát)
 
-**Ngày:** 2026-09-25 · **Nhánh:** `module` · **Trạng thái:** ĐO XONG **nhãn (a)** + chấm 2 thước (offline;
-**KHÔNG** chạm ONNX/LIVE, **KHÔNG** sim Java, **KHÔNG** chạm 2026/`HoldoutSeal`) · **KHÔNG push**
+**Ngày:** 2026-09-25 · **Nhánh:** `module` · **Trạng thái:** ĐO XONG **cả (a) và (b)** + chấm **2 thước**
+(offline; **KHÔNG** chạm ONNX/LIVE, **KHÔNG** chạy Java/sim, **KHÔNG** chạm 2026/`HoldoutSeal`) · **KHÔNG push**
 **Pre-reg:** `docs/prereg/PREREG_MONEY_RANKER.md` (commit `acd6523`, AMEND 1 `0b09c86`) — **chốt TRƯỚC** khi đọc số.
-**Code:** `research/pipeline/mr_label_build.py` (nhãn b) · `research/pipeline/g015_net_train_add.py` (+`--label-kind cont`,
-`--label-custom`, `--min-train`) · `research/analysis/money_ranker_score.py` (dùng **nguyên**
-`model_ruler.tick_metrics` / `summarize` / `delta` / `ci_mean`) · `research/analysis/mr_tables.py`
-**Chi phí:** 2 phiên Kaggle GPU (train) + 1 phiên Kaggle CPU (nhãn b) — số cụ thể ở §6.
+**Code:** `research/pipeline/mr_label_build.py` (nhãn b) · `research/pipeline/g015_net_train_add.py`
+(+`--label-kind cont`, `--label-custom`, `--min-train`; mặc định = hành vi cũ) · `research/analysis/money_ranker_score.py`
+· `research/analysis/mr_pool_score.py` · `research/analysis/mr_tables.py` — chấm bằng **NGUYÊN**
+`model_ruler.tick_metrics` / `summarize` / `delta` / `ci_mean` (không viết lại chỉ số nào).
+**Chi phí:** 2 phiên Kaggle **GPU** (train) + 1 phiên Kaggle **CPU** (nhãn b) — số đo ở §6.1.
 
 ---
 
 ## 0. TRẢ LỜI NGẮN (3 câu bắt buộc)
 
-**1) CÓ tồn tại ranker xếp hạng RA TIỀN không?**
-**CÓ — nhưng chỉ ở nghĩa THỐNG KÊ, KHÔNG ở nghĩa KINH TẾ.** Nhãn **(a)** (hồi quy `retEnd_h` liên tục, 45
-feature, 16 fold) cho ra thứ tự coin **có kỹ năng tiền theo đúng luật đã chốt §6**: ở `h = 4h`
-(`MRA4`) `pacc` **+0,50409`*`** · `ic` **+0,01208`*`** · `dec_mono` **+0,50538`*`**, **ngoài CI** so với
-**cả hai** đối chứng (`A45` retrain, `V5` nhiễu) ⇒ **PASS**; ở `h = 72h` (`MRA72`) `pacc` **+0,50374`*`** ·
-`ic` **+0,01098`*`** · `dec_mono` **+0,50689`*`** ⇒ **PASS**. Nhưng **lợi thế KINH TẾ thì ~0**: Δ`glift8`/Δ`netm8`
-so với **cả hai** đối chứng đều **TRONG CI**, `netm8` vẫn **ÂM** (−0,00769 ở 4h; −0,00612 ở 72h), và mức
-lift gross tốt nhất (**+0,311 %/72h**) vẫn **nhỏ hơn phí round-trip 0,8 %**.
+### (1) **CÓ** tồn tại ranker xếp hạng RA TIỀN — nhưng chỉ ở **TẦNG THỐNG KÊ**, không ở **TẦNG KINH TẾ**
 
-**2) Nếu KHÔNG ⇒ ...** **Không áp dụng được** (câu 1 là "có, ở tầng thống kê"). Nhưng câu trả lời *có tính
-quyết định* cho "sai ở bước nào" **giữ nguyên như `RESULT_MODEL_RULER` §14**: thứ tự coin **không quy ra
-được tiền**. Vòng này **nâng** kết luận đó lên một bậc: **kể cả khi nhãn ĐƯỢC đổi thẳng sang chính đại
-lượng tiền** (`retEnd_h` liên tục), tín hiệu tăng thêm **chỉ xuất hiện trên đúng họ chỉ số trùng với mục
-tiêu train** (IC/pairwise/decile trên `retEnd`) và **biến mất / đảo dấu** trên mọi chỉ số khác (§3.3).
+| nhãn | biến thể | `pacc` | `ic` | `dec_mono` | luật §6 |
+|---|---|---|---|---|---|
+| **(a)** rank `retEnd_h` liên tục | `MRA4` (4h) | **+0,50409`*`** | **+0,01208`*`** | **+0,50538`*`** | **PASS** |
+| **(a)** | `MRA72` (72h) | **+0,50374`*`** | **+0,01098`*`** | **+0,50689`*`** | **PASS** |
+| **(b)** PnL thật theo luật thoát | `MRB8` (pool top-8) | **+0,50473`*`** | **+0,01404`*`** | **+0,50423`*`** | **PASS** |
+| **(b)** | `MRB32` (pool top-32) | **+0,50200`*`** | **+0,00592`*`** | **+0,50286`*`** | **PASS** |
 
-**3) So với `45deploy` và có đáng đổi model không?**
-Mạnh hơn **có ý nghĩa thống kê**: Δ`ic` **+0,06319`*`** · Δ`pacc` **+0,02196`*`** · Δ`dec_mono` **+0,00945`*`**
-(4h, so `45deploy`; tương tự so `A45`/`V5`). **NHƯNG**:
-(a) **Δ`glift8` = +0,00016** và **Δ`netm8` = +0,00016` (TRONG CI)`** — tức **không** cải thiện kinh tế;
-(b) ở **tầng NHÃN** (`maxFav_4h`) model mới **TỆ HƠN HẲN**: Δ`ic` **−0,32742`*`**, Δ`pacc` **−0,11429`*`**,
-Δ`lift8` **−0,18461`*`** (top-8 ≈ 0,061 vs 0,272);
-(c) ở **tầng chọn coin nhị phân** `auc8c` = **0,41530** vs **0,60794–0,61443** của đối chứng (top-8 theo
-model mới **kém hơn ngẫu nhiên** ở thước này).
-⇒ **KHÔNG đáng đổi model.** Kèm **cảnh báo ONNX/LIVE**: đổi sang đầu HỒI QUY là đổi *ngữ nghĩa điểm*
-(`P(win)` → *dự báo lợi suất*), phải chỉnh lại `NUM_FEATURES`/`extractFeatures45`, ngưỡng cổng
-(`net015 = retEnd_4h > 0,015`) và cách chọn top-8 — **rủi ro cao, lợi ích kinh tế đo được = 0** ⇒ **KHÔNG**.
+Cả 4 biến thể **PASS đúng luật đã chốt trước** (`pacc > 0,5` **VÀ** `ic > 0` **VÀ** `dec_mono > 0,5`, **cả ba
+ngoài CI** so với **CẢ HAI** đối chứng `A45` và `V5`), ở **cả bản CHẶT (1.21)** lẫn **bản `inflate(k=2)=1,1774`**.
+Đặc biệt **nhãn (b)** còn cho kỹ năng **trong đúng pool ứng viên**: `MRB8` trong top-8 ⇒ `pacc` **0,51565**,
+`ic` **+0,04097** (đối chứng cùng pool: `pacc` 0,49477, `ic` −0,01333); **ghép cặp trên giao tick
+(`n=16.397`)** Δ`pacc` = **+0,02101`*`**, Δ`ic` = **+0,05459`*`**, Δ`dec_mono` = **+0,00794`*`** vs `45deploy`
+(và cùng dấu/độ lớn vs `A45`, `V5`, `V1`) ⇒ **vượt ngoài CI NGAY TRONG pool** (bảng đầy đủ §3.4).
+
+### (2) …nhưng **KINH TẾ = 0** ⇒ câu trả lời dứt khoát cho "sai ở bước nào" **KHÔNG đổi**
+
+- Δ`glift8` và Δ`netm8` của **mọi** biến thể mới so với **mọi** đối chứng đều **TRONG CI**
+  (Δ`glift8` = **+0,00016** (a-4h) · **+0,00001** (b-8) · **+0,00000** (b-32); Δ`netm8` = **+0,00016** · **+0,00001** · **+0,00000**).
+- `netm8` của **mọi** biến thể vẫn **ÂM**: −0,00769 (a-4h) · −0,00785 (b-8/b-32) · −0,00612 (a-72h) · −0,00762 (b-8/72h).
+- **Mức lift gross tốt nhất** của model mới = **+0,00311 / 72h ≈ +0,311 %** < **phí round-trip 0,8 %** ⇒
+  **dù có tin, cũng không phủ được chi phí.**
+- Ở **tầng NHÃN** (`maxFav_4h`), model mới **TỆ HƠN HẲN**: Δ`ic` **−0,33`*`** (b-8) / **−0,29`*`** … và `auc8c`
+  của model (b) chỉ **0,34** vs **0,61** của đối chứng.
+
+**⇒ "Sai ở bước nào": MỤC TIÊU/ĐẶC TRƯNG — không phải mô hình, không phải ngưỡng.** Kể cả khi **đổi hẳn nhãn
+sang chính đại lượng tiền** (liên tục **và** PnL thật theo luật thoát), chỉ số **thứ tự** tăng lên **ngoài CI**
+trong khi **mọi chỉ số KINH TẾ đứng yên (trong CI)** ⇒ phần tăng thêm là **hiệu ứng khớp mục tiêu train**,
+**KHÔNG** phải thông tin mới về tiền.
+
+### (3) So `45deploy` mạnh hơn bao nhiêu — và **có đáng đổi model không? ⇒ KHÔNG**
+
+| Δ vs `45deploy` (thước TIỀN 4h) | `ic` | `pacc` | `dec_mono` | `glift8` | `netm8` |
+|---|---|---|---|---|---|
+| `MRA4` − 45deploy | **+0,06319`*`** | **+0,02196`*`** | **+0,00945`*`** | +0,00016 (CI) | +0,00016 (CI) |
+| `MRB8` − 45deploy | **+0,06542`*`** | **+0,02271`*`** | **+0,00822`*`** | +0,00001 (CI) | +0,00001 (CI) |
+| `MRB32` − 45deploy | **+0,05729`*`** | **+0,01998`*`** | **+0,00684`*`** | +0,00000 (CI) | +0,00000 (CI) |
+
+⇒ Mạnh hơn **có ý nghĩa thống kê** ở tầng thứ tự (+0,06 IC, +0,02 `pacc`), **không** mạnh hơn ở tầng kinh tế,
+và **yếu hơn hẳn** ở tầng NHÃN + tầng chọn-nhị-phân. **KHÔNG đáng đổi model.**
+**Cảnh báo ONNX/LIVE:** đổi sang đầu HỒI QUY là đổi **ngữ nghĩa điểm** (`P(win)` → *dự đoán lợi suất*) ⇒ phải
+sửa `NUM_FEATURES`/`extractFeatures45`, **re-calibrate** ngưỡng cổng (`net015 = retEnd_4h > 0,015`) và luật
+chọn top-8; rủi ro cao, lợi ích kinh tế đo được = **0** ⇒ **KHÔNG làm**.
 
 ---
 
-## 1. CÁCH ĐO (đúng pre-reg §2–§7)
+## 1. CÁCH ĐO (đúng pre-reg §2–§7; 4 biến thể = **k = 2 nhãn** × 2 mức)
 
-- **Nhãn (a) — rank `retEnd_h`:** `y = retEnd_h` (cột **có sẵn** trong `.pb`, `h ∈ {4h,72h}`, `nBars_h ≥ H/15m`).
-  Trainer **không có cơ chế rank-label** (không `qid`/`rank:*`) ⇒ đúng điều khoản đã cho: **`y` LIÊN TỤC +
-  chấm Spearman-rank**; model = `XGBRegressor(reg:squarederror, rmse)`, **giữ nguyên** 45 feature / 16 fold
-  `20220101..20251001` / purge 72h / `seed 42` / `nest 400` / `depth 5` / `lr 0,05` / `subsample 0,8` /
-  `colsample 0,8` / `min_child_weight 20` / `hist` / GPU (`scale_pos_weight`+`auc` = N/A với hồi quy).
-- **Thước TIỀN:** `y = retEnd_h` (gross; mọi chỉ số thứ tự bất biến với dịch `−0,008`), `netm@K` có trừ phí.
-  **Thước NHÃN:** `y = maxFav_4h` (CHẠM). **Chỉ số:** **nguyên** `model_ruler.tick_metrics` (không viết lại).
-- **CI:** `stage2_score.block_boot_mean`, `BLOCK_H=72`, `NREP=2000`, `SEED=20260905`; in **cả hai** độ rộng:
-  **`*` = ngoài theo `model_ruler.decide` (hệ số 1.21 — CHẶT HƠN)** và **`+` = ngoài theo `inflate(k=2)=1,177410`**
-  (§2 pre-reg). **Luật dùng bản CHẶT (1.21)** ⇒ không có chuyện nới ngưỡng.
-- **Đối chứng (dùng nguyên, không retrain):** `45deploy` (`claudedata/predwf_G015x26`), `A45`
-  (`ruler_bins/g015p2-arm44-gpu/stage2/A45`), `V5`/`V1` (`ruler_bins/g015p2-stage2-featvar-gpu/stage2/*`).
-- **4 biến thể (k = 2 nhãn × 2 mức):** `MRA4` = (a) `retEnd_4h` · `MRA72` = (a) `retEnd_72h` ·
-  `MRB8`/`MRB32` = (b) PnL thật (pool top-8 / top-32) — xem §6.
+- **Nhãn (a):** `y = retEnd_h` liên tục (`.pb`, `nBars_h ≥ H/15m`). Trainer **KHÔNG có cơ chế rank-label**
+  (không `qid`/`rank:*`) ⇒ dùng đúng điều khoản đã cho: **`y` liên tục + chấm Spearman-rank**;
+  `XGBRegressor(reg:squarederror, rmse)`, giữ nguyên 45 feature / 16 fold / purge 72h / `seed 42` / `nest 400`
+  / `depth 5` / `lr 0,05` / `subsample 0,8` / `colsample 0,8` / `min_child_weight 20` / `hist` / GPU
+  (`scale_pos_weight` + `eval_metric=auc` = **N/A** với hồi quy, đã khai trong AMEND/docstring).
+- **Nhãn (b):** `PnL(t,sym)` = kết quả của **chính `research/exitfit/exit_engine.simulate`** (harness **PARITY
+  PASS**) khi vào ở `t`: `entry = close(t)`, **1 leg**, **`pred = None` ⇒ nhánh WEAK `cap = 0,03`** cho **mọi**
+  ứng viên (tránh vòng tròn với điểm đang chấm), arm +7 %/HIGH 1m, ratchet, `BLOCK_INTRABAR_LOOKAHEAD`, khớp
+  `min(priceSL, open)`, time-stop 168h, `gross = tp/E − 1`, **`net = gross − 0,008`**, **không funding**.
+  **Ứng viên:** top-K theo điểm S1 (`pred_s1a2x1.parquet`, score **thấp = tốt**), `K ∈ {8, 32}`, `K = 8 ⊂ K = 32`
+  (mô phỏng không phụ thuộc K ⇒ **1 lần chạy**).
+- **Thước:** TIỀN `y = retEnd_h`; NHÃN `y = maxFav_4h`. Chỉ số: **nguyên** `model_ruler.tick_metrics`.
+  **CI:** `block_boot_mean`, `BLOCK_H=72`, `NREP=2000`, `SEED=20260905`. **`*` = ngoài CI theo hệ số 1.21 (CHẶT
+  HƠN — dùng cho LUẬT)**; `+` = ngoài CI theo `inflate(k=2)=1,177410`. Không nới ngưỡng ở đâu.
+- **Đối chứng dùng nguyên (không retrain):** `45deploy`, `A45` (retrain), `V5` (nhiễu), `V1`.
+- **Bảng PHỤ §4.2 (bắt buộc theo pre-reg):** chấm **giới hạn trong pool ứng viên** bằng `mr_pool_score.py`
+  (cùng chỉ số, cùng CI, chỉ khác tập dòng) — vì model (b) **chỉ thấy pool khi train** ⇒ điểm ngoài pool là **ngoại suy**.
 
-## 2. TẦNG NHÃN (a) — ĐÃ TRAIN XONG (2 phiên GPU, 4 biến thể = 2 biến thể nhãn (a))
+## 2. TRAIN — 4 BIẾN THỂ (2 phiên Kaggle GPU, `mr-train-a-gpu` + `mr-train-b-gpu`)
 
-| arm | nhãn train | fold | n_train/fold | n_oos/fold | `p_mean` (OOS) | phút |
+| arm | nhãn | fold | n_train/fold | n_oos/fold | phút | out |
 |---|---|---|---|---|---|---|
-| **MRA4** | `retEnd_4h` liên tục | 16 (`20220101..20251001`) | 3,73M → 34,9M | 1,12M → 4,52M | +0,00059 … +0,00105 | **43,0** |
-| **MRA72** | `retEnd_72h` liên tục | 16 | 3,71M → 34,7M | 1,12M → 4,52M | +0,00972 … +0,01199 | **42,5** |
+| **MRA4** | (a) `retEnd_4h` | 16 | 3,73M → 34,9M | 1,12M → 4,52M | **43,0** | `mr/MRA4` |
+| **MRA72** | (a) `retEnd_72h` | 16 | 3,71M → 34,7M | 1,12M → 4,52M | **42,5** | `mr/MRA72` |
+| **MRB8** | (b) PnL thật, pool top-8 | **15** (`20220101` = N/A) | 7.376 → 77.255 | 1,17M → 4,52M | **6,6** | `mr/MRB8` |
+| **MRB32** | (b) PnL thật, pool top-32 | **15** | 29.504 → 309.018 | 1,17M → 4,52M | **4,4** | `mr/MRB32` |
 
-Model + bins: `/kaggle/working/mr/{MRA4,MRA72}` (kernel `chuyendinh/mr-train-a-gpu`; đã tải về
-`/tmp/mrbins/{MRA4,MRA72}`, gồm `model_f*_{4,72}h.json` + `predict_wf_*.bin`). **Không** ghi đè bins deploy.
+Fold `20220101` = **N/A cho (b)** vì S1 **không có điểm trước `2021-12-31 17:30`** (đã chốt trước trong §4.2).
+Model + bins đã tải về `/tmp/mrbins/{MRA4,MRA72,MRB8,MRB32}` (`model_f*_*.json` + `predict_wf_*.bin`);
+**không** ghi đè bins deploy.
 
-## 3. BẢNG CHẤM (n_tick = 140.238, 16 fold, `base` = tỉ lệ nhãn nhị phân của tick)
+## 3. BẢNG CHẤM — THƯỚC TIỀN
 
-`*` = ngoài CI (1.21, **chặt**) · `+` = ngoài CI (1.1774) · không dấu = trong CI.
+`*` = ngoài CI 1.21 (**chặt**, dùng cho LUẬT) · `+` = ngoài CI 1.1774 · không dấu = trong CI.
 
-### 3.1 THƯỚC TIỀN `h = 4h` — `y = retEnd_4h`
+### 3.1 `h = 4h` — `y = retEnd_4h` (`base` = 0,17620 cho arm 16 fold; 0,17341 cho arm 15 fold)
 
-| arm | `ic` | `pacc` | `dec_mono` | `dec_rho` | `glift8` | `netm8` | `auc8` | `lift8` | `base` |
+| arm | `ic` | `pacc` | `dec_mono` | `dec_rho` | `glift8` | `netm8` | `auc8` | `lift8` | n_tick |
 |---|---|---|---|---|---|---|---|---|---|
-| **MRA4** | **+0,01208`*`** | **+0,50409`*`** | **+0,50538`*`** | +0,03335`*` | +0,00037`*` | **−0,00769`*`** | 0,42259`*` | +0,02447`*` | 0,17620 |
-| 45deploy | −0,05111`*` | +0,48213`*` | +0,49594`*` | −0,02178`*` | +0,00021 | −0,00785`*` | 0,62393`*` | +0,11051`*` | 0,17620 |
-| A45 (đối chứng retrain) | −0,05106`*` | +0,48214`*` | +0,49533`*` | −0,02170`*` | +0,00027 | −0,00779`*` | 0,62441`*` | +0,11085`*` | 0,17620 |
-| V5 (đối chứng nhiễu) | −0,05186`*` | +0,48182`*` | +0,49591`*` | −0,02157`*` | +0,00007 | −0,00799`*` | 0,61762`*` | +0,10848`*` | 0,17620 |
-| V1 | −0,05202`*` | +0,48174`*` | +0,49527`*` | −0,02111`*` | +0,00017 | −0,00789`*` | 0,61887`*` | +0,10910`*` | 0,17620 |
+| **MRA4** | **+0,01208`*`** | **+0,50409`*`** | **+0,50538`*`** | +0,03335`*` | +0,00037`*` | −0,00769`*` | 0,42259`*` | +0,02447`*` | 140.238 |
+| **MRB8** | **+0,01404`*`** | **+0,50473`*`** | **+0,50423`*`** | +0,02567`*` | +0,00021`*` | −0,00785`*` | 0,34025`*` | +0,00658`*` | 131.598 |
+| **MRB32** | **+0,00592`*`** | **+0,50200`*`** | **+0,50286`*`** | +0,01851`*` | +0,00021 (CI) | −0,00785`*` | 0,40476`*` | +0,02289`*` | 131.598 |
+| 45deploy | −0,05111`*` | +0,48213`*` | +0,49594`*` | −0,02178`*` | +0,00021 | −0,00785`*` | 0,62393`*` | +0,11051`*` | 140.238 |
+| A45 | −0,05106`*` | +0,48214`*` | +0,49533`*` | −0,02170`*` | +0,00027 | −0,00779`*` | 0,62441`*` | +0,11085`*` | 140.238 |
+| V5 | −0,05186`*` | +0,48182`*` | +0,49591`*` | −0,02157`*` | +0,00007 | −0,00799`*` | 0,61762`*` | +0,10848`*` | 140.238 |
+| V1 | −0,05202`*` | +0,48174`*` | +0,49527`*` | −0,02111`*` | +0,00017 | −0,00789`*` | 0,61887`*` | +0,10910`*` | 140.238 |
 
-**Δ ghép cặp theo tick (n = 140.238):**
+Δ ghép cặp theo tick: xem §0-(3) (vs `45deploy`); vs `A45`/`V5` **y hệt về dấu và độ lớn** (`MRB8`: ic +0,06517`*`/+0,06597`*`,
+pacc +0,02263`*`/+0,02296`*`, dec_mono +0,00864`*`/+0,00819`*`; `glift8`/`netm8` **trong CI** ở mọi cặp).
 
-| Δ | `ic` | `pacc` | `dec_mono` | `glift8` | `netm8` |
-|---|---|---|---|---|---|
-| **MRA4 − 45deploy** | **+0,06319`*`** | **+0,02196`*`** | **+0,00945`*`** | +0,00016 (trong CI) | +0,00016 (trong CI) |
-| **MRA4 − A45** | **+0,06314`*`** | **+0,02195`*`** | **+0,01006`*`** | +0,00010 (trong CI) | +0,00010 (trong CI) |
-| **MRA4 − V5** | **+0,06394`*`** | **+0,02227`*`** | **+0,00948`*`** | +0,00030 (trong CI) | +0,00030 (trong CI) |
+### 3.2 `h = 72h` — `y = retEnd_72h` (`base` = 0,38900 / 0,38586)
 
-### 3.2 THƯỚC TIỀN `h = 72h` — `y = retEnd_72h`
-
-| arm | `ic` | `pacc` | `dec_mono` | `dec_rho` | `glift8` | `netm8` | `auc8` | `lift8` | `base` |
+| arm | `ic` | `pacc` | `dec_mono` | `dec_rho` | `glift8` | `netm8` | `auc8` | `lift8` | n_tick |
 |---|---|---|---|---|---|---|---|---|---|
-| **MRA72** | **+0,01098`*`** | **+0,50374`*`** | **+0,50689`*`** | +0,03884`*` | +0,00311`*` | −0,00612 (CI) | +0,48107`*` | +0,00713 (CI) | 0,38900 |
-| 45deploy | −0,08557`*` | +0,47006`*` | +0,48917`*` | −0,05237`*` | +0,00393 (CI) | −0,00531 (CI) | +0,47911`*` | −0,01406 (CI) | 0,38900 |
-| A45 | −0,08509`*` | +0,47022`*` | +0,48978`*` | −0,05164`*` | +0,00430 (CI) | −0,00494 (CI) | +0,48075`*` | −0,01289 (CI) | 0,38900 |
-| V5 | −0,09495`*` | +0,46659`*` | +0,48762`*` | −0,06394`*` | +0,00318 (CI) | −0,00605 (CI) | +0,47744`*` | −0,01515 (CI) | 0,38900 |
+| **MRA72** | **+0,01098`*`** | **+0,50374`*`** | **+0,50689`*`** | +0,03884`*` | +0,00311`*` | −0,00612 (CI) | +0,48107`*` | +0,00713 (CI) | 140.237 |
+| **MRB8** | **+0,02639`*`** | **+0,50889`*`** | **+0,50952`*`** | +0,05792`*` | +0,00164 (CI) | −0,00762`*` | +0,47243`*` | +0,01047`*` | 131.597 |
+| **MRB32** | **+0,01747`*`** | **+0,50589`*`** | **+0,50783`*`** | +0,05353`*` | +0,00181 (CI) | −0,00745`*` | +0,47680`*` | +0,00554 (CI) | 131.597 |
+| 45deploy | −0,08557`*` | +0,47006`*` | +0,48917`*` | −0,05237`*` | +0,00393 (CI) | −0,00531 (CI) | +0,47911`*` | −0,01406 (CI) | 140.237 |
+| A45 | −0,08509`*` | +0,47022`*` | +0,48978`*` | −0,05164`*` | +0,00430 (CI) | −0,00494 (CI) | +0,48075`*` | −0,01289 (CI) | 140.237 |
+| V5 | −0,09495`*` | +0,46659`*` | +0,48762`*` | −0,06394`*` | +0,00318 (CI) | −0,00605 (CI) | +0,47744`*` | −0,01515 (CI) | 140.237 |
 
-| Δ | `ic` | `pacc` | `dec_mono` | `glift8` | `netm8` |
-|---|---|---|---|---|---|
-| **MRA72 − 45deploy** | **+0,09655`*`** | **+0,03368`*`** | **+0,01773`*`** | −0,00082 (CI) | −0,00082 (CI) |
-| **MRA72 − A45** | **+0,09607`*`** | **+0,03352`*`** | **+0,01711`*`** | −0,00118 (CI) | −0,00118 (CI) |
-| **MRA72 − V5** | **+0,10594`*`** | **+0,03714`*`** | **+0,01927`*`** | −0,00007 (CI) | −0,00007 (CI) |
+Δ vs `45deploy`: `MRB8` ic **+0,11154`*`** · pacc **+0,03872`*`** · dec_mono **+0,01995`*`** (glift8 −0,00266 CI) ·
+`MRB32` ic **+0,10261`*`** · pacc **+0,03572`*`** · dec_mono **+0,01826`*`** (glift8 −0,00249 CI) ·
+`MRA72` ic **+0,09655`*`** · pacc **+0,03368`*`** · dec_mono **+0,01773`*`** (glift8 −0,00082 CI).
 
-> **Lưu ý ghép cặp (khai báo):** `MRA72` chấm bằng **điểm slot 3** của chính nó với **nhãn 72h** (khớp
-> horizon); các đối chứng **không** có điểm slot 3 (`z` = NaN 100 %, `DIAG_SCORE72H.md`) nên được chấm bằng
-> **điểm slot 0 × nhãn 72h** (cross-horizon) — **đúng như `RESULT_MODEL_RULER`/`RESULT_H72`.**
-> `MRA4` không có điểm slot 3 ⇒ chỉ chấm ở 4h; `MRA72` không có điểm slot 0 ⇒ chỉ chấm ở 72h.
+> **Ghép cặp (khai báo):** `MRA72` chấm bằng **điểm slot 3** × **nhãn 72h**; các đối chứng **không** có điểm
+> slot 3 (`z` = NaN 100 %, `DIAG_SCORE72H.md`) nên chấm **slot 0 × nhãn 72h** (cross-horizon) — **đúng như
+> `RESULT_MODEL_RULER`/`RESULT_H72`**, **không** phải cùng điều kiện. `MRB8`/`MRB32`/`MRA4` chỉ có slot 0.
 
-### 3.3 THƯỚC NHÃN (đối chiếu) — `y = maxFav_4h` (CHẠM)
+### 3.3 THƯỚC NHÃN (đối chiếu) — `y = maxFav_4h` (CHẠM) — **model mới TỆ HƠN HẲN**
 
-| arm | `ic` | `pacc` | `dec_mono` | `dec_rho` | `glift8` | `netm8` | `auc8` | `lift8` |
-|---|---|---|---|---|---|---|---|---|
-| **MRA4** | **−0,02927`*`** | **0,49008`*`** | **0,48406`*`** | −0,09757`*` | +0,00649`*` | +0,01587`*` | 0,56377`*` | +0,06107`*` |
-| 45deploy | +0,29815`*` | 0,60437`*` | 0,66867`*` | +0,74898`*` | +0,02435`*` | +0,03373`*` | 0,78751`*` | +0,27221`*` |
-| A45 | +0,29763`*` | 0,60418`*` | 0,66871`*` | +0,74831`*` | +0,02444`*` | +0,03382`*` | 0,78737`*` | +0,27229`*` |
-| V5 | +0,30328`*` | 0,60634`*` | 0,67130`*` | +0,74941`*` | +0,02280`*` | +0,03218`*` | 0,78517`*` | +0,26489`*` |
-
-| Δ (MRA4 −) | `ic` | `pacc` | `dec_mono` | `glift8` | `netm8` | `auc8` | `lift8` |
+| arm | `ic` | `pacc` | `dec_mono` | `glift8` | `netm8` | `auc8` | `lift8` |
 |---|---|---|---|---|---|---|---|
-| 45deploy | **−0,32742`*`** | **−0,11429`*`** | **−0,18461`*`** | −0,01785`*` | −0,01785`*` | **−0,22374`*`** | −0,21114`*` |
-| A45 | **−0,32690`*`** | **−0,11410`*`** | **−0,18465`*`** | −0,01795`*` | −0,01795`*` | **−0,22361`*`** | −0,21122`*` |
-| V5 | **−0,33255`*`** | **−0,11626`*`** | **−0,18724`*`** | −0,01631`*` | −0,01631`*` | **−0,22141`*`** | −0,20382`*` |
+| **MRA4** | −0,02927`*` | 0,49008`*` | 0,48406`*` | +0,00649`*` | +0,01587`*` | 0,56377`*` | +0,06107`*` |
+| **MRB8** | −0,02752`*` | 0,49078`*` | 0,48004`*` | +0,00105`*` | +0,01034`*` | 0,48424`*` | +0,01097`*` |
+| **MRB32** | +0,00441 (CI) | 0,50150`*` | 0,50311`*` | +0,00404`*` | +0,01333`*` | 0,55629`*` | +0,05291`*` |
+| 45deploy | +0,29815`*` | 0,60437`*` | 0,66867`*` | +0,02435`*` | +0,03373`*` | 0,78751`*` | +0,27221`*` |
+| A45 | +0,29763`*` | 0,60418`*` | 0,66871`*` | +0,02444`*` | +0,03382`*` | 0,78737`*` | +0,27229`*` |
+| V5 | +0,30328`*` | 0,60634`*` | 0,67130`*` | +0,02280`*` | +0,03218`*` | 0,78517`*` | +0,26489`*` |
 
-**Đọc §3.1–§3.3 — đây là chỗ phải đọc cho đúng:**
-1. `MRA4`/`MRA72` **thắng** trên **đúng họ chỉ số trùng với mục tiêu train** (thứ tự trên `retEnd`) và
-   **thua đậm** trên mọi thứ khác: **thước NHÃN** (§3.3), **`auc8c`** (§4.1), và **kinh tế top-8** (§4.2).
-2. `auc8` của `MRA4` = **0,42259`*`** (< 0,5) trong khi `45deploy` = 0,62393`*` ⇒ theo thước **nhị phân**
-   trong top-8, model mới **kém hơn ngẫu nhiên**. `lift8` của `MRA4` = +0,024 vs **+0,111** của `45deploy`.
-3. Nghĩa là: *"train thẳng vào đại lượng tiền"* làm điểm số **khớp hơn với đại lượng tiền** (hiển nhiên),
-   **không** làm hệ thống chọn được coin tốt hơn ⇒ **hiệu ứng khớp mục tiêu, KHÔNG phải thông tin mới.**
+Δ (`MRB8 − 45deploy`): ic **−0,33204`*`** · pacc **−0,11589`*`** · dec_mono **−0,19389`*`** · glift8 −0,02434`*` ·
+netm8 −0,02434`*` · auc8 **−0,31051`*`** · lift8 −0,26124`*`. (`MRB32` và `MRA4` cùng dấu, cùng độ lớn.)
 
-## 4. KIỂM TÍNH HỢP LỆ CỦA THƯỚC VÀ KINH TẾ
+### 3.4 BẢNG PHỤ (§4.2 pre-reg) — chấm **TRONG POOL ỨNG VIÊN** (n_tick = số tick S1 có điểm)
 
-### 4.1 `auc8c` (bản AUC@top8 **ĐÚNG** — bản `auc8` có lỗi đếm cặp đã errata) — thước TIỀN 4h
+⚠️ **Trong pool top-8, `lift8`/`glift8`/`auc8` là SUY BIẾN** (top-8 = **toàn bộ** pool ⇒ `prec8 = base`,
+`glift8 = 0` theo cấu trúc; `auc8` còn bị lỗi đếm cặp > 1) ⇒ **chỉ đọc `ic`/`pacc`/`dec_mono`/`dec_rho`/`netm8`**.
+Đối chứng ở pool top-8 có `n_tick = 17.349` vs `MRB8` 16.397 (thiếu fold `20220101`) ⇒ so sánh ghép cặp
+phải lấy **giao tick** (cột `n_tick_common` ở bảng Δ).
 
-| arm | `auc8c` (CI chặt) |
-|---|---|
-| **MRA4** | **+0,41530`*`** [0,40650; 0,42456] |
-| 45deploy | +0,61394`*` [0,60574; 0,62177] |
-| A45 | +0,61443`*` [0,60626; 0,62238] |
-| V5 | +0,60794`*` [0,60000; 0,61593] |
-| V1 | +0,60914`*` [0,60112; 0,61716] |
+| pool | arm | `ic` | `pacc` | `dec_mono` | `dec_rho` | `glift8` | `netm8` | `lift8` | n_tick |
+|---|---|---|---|---|---|---|---|---|---|
+| top-8 | **MRB32** (train pool 32, chấm pool 8) | **+0,04963`*`** | **+0,51891`*`** | **+0,50755`*`** | +0,04963`*` | +0,00000 (suy biến) | −0,00612`*` | +0,00000 (suy biến) | 16.397 |
+| top-8 | **MRB8** | **+0,04097`*`** | **+0,51565`*`** | **+0,50625`*`** | +0,04094`*` | +0,00000 (suy biến) | **−0,00612`*`** | +0,00000 (suy biến) | 16.397 |
+| top-8 | 45deploy | −0,01333 (CI) | 0,49477`*` | 0,49863`*` | −0,01335 (CI) | +0,00000 (suy biến) | −0,00621`*` | +0,00000 | 17.349 |
+| top-8 | A45 | −0,01357 (CI) | 0,49485`*` | 0,49885`*` | −0,01360 (CI) | +0,00000 | −0,00621`*` | +0,00000 | 17.349 |
+| top-8 | V5 | −0,00484 (CI) | 0,49808`*` | 0,49802`*` | −0,00482 (CI) | +0,00000 | −0,00621`*` | +0,00000 | 17.349 |
+| top-8 | V1 | −0,00722 (CI) | 0,49703`*` | 0,49834`*` | −0,00723 (CI) | +0,00000 | −0,00621`*` | +0,00000 | 17.349 |
+| top-32 | **MRB8** (train pool 8, chấm pool 32) | **+0,03123`*`** | **+0,51073`*`** | **+0,50606`*`** | +0,04532`*` | +0,00157`*` | −0,00489`*` | +0,00730`*` | 16.397 |
+| top-32 | **MRB32** | **+0,03152`*`** | **+0,51082`*`** | **+0,50689`*`** | +0,04979`*` | +0,00172`*` | **−0,00475`*`** | +0,01134`*` | 16.397 |
+| top-32 | 45deploy | −0,02575`*` | 0,49081`*` | 0,49754`*` | −0,02616`*` | +0,00050 (CI) | −0,00603`*` | +0,03563`*` | 17.349 |
+| top-32 | A45 | −0,02459`*` | 0,49115`*` | 0,49753`*` | −0,02586`*` | +0,00041 (CI) | −0,00612`*` | +0,03496`*` | 17.349 |
+| top-32 | V5 | −0,01591`*` | 0,49410`*` | 0,49747`*` | −0,01616 (CI) | +0,00029 (CI) | −0,00624`*` | +0,03197`*` | 17.349 |
+| top-32 | V1 | −0,01513`*` | 0,49435`*` | 0,49645`*` | −0,01484 (CI) | +0,00044 (CI) | −0,00609`*` | +0,03220`*` | 17.349 |
 
-⇒ Ở tầng **chọn coin trong top-8**, model mới **kém hơn ngẫu nhiên** (`< 0,5`) và **kém hơn đối chứng ~0,19**.
-**Kết luận kinh tế không phụ thuộc chỉ số lỗi `auc8`** — đã kiểm bằng `auc8c`.
+**Đọc:** trong đúng pool mà model (b) **được train**, kỹ năng **rõ hơn** ở bảng chính
+(`pacc` 0,5157 (MRB8, top-8) — **+0,0209 so đối chứng cùng pool**; `ic` +0,0410 vs −0,0133; `dec_mono` 0,5063 vs 0,4986),
+**nhưng vẫn chỉ ở tầng thứ tự**. Pool top-32: `MRB32` **nhỉnh hơn đối chứng cả ở KINH TẾ** trong pool
+(`glift8` +0,00172 vs +0,00050; `netm8` −0,00475 vs −0,00603) — nhưng 2 chênh lệch này **nhỏ (≈ 1e-3)**,
+phải đọc `n_tick_common` + CI ghép cặp ở bảng Δ trước khi nói gì thêm.
 
-### 4.2 Kinh tế top-8 (đã trừ phí `FEE_RT = 0,008`)
+**Δ ghép cặp TRONG POOL (giao tick, `n_tick_common` = 16.397 ≈ 3,7 năm):**
 
-- 4h: `netm8` = **−0,00769`*`** (MRA4) vs −0,00779 … −0,00799 (đối chứng) ⇒ **vẫn LỖ**; Δ so đối chứng **+0,00016 (CI)**.
-- 72h: `netm8` = −0,00612 (MRA4/MRA72: **trong CI**) vs −0,00494 … −0,00605 ⇒ **vẫn LỖ**; Δ = **−0,00082 (CI)**.
-- **Mức lift gross tốt nhất** của model mới: **+0,00311/72h ≈ +0,311 %** < **phí round-trip 0,8 %** ⇒ **dù có
-  tin, cũng không phủ được chi phí giao dịch.**
+| pool | Δ | `ic` | `pacc` | `dec_mono` | `dec_rho` | `glift8` | `netm8` |
+|---|---|---|---|---|---|---|---|
+| top-8 | MRB8 − 45deploy | **+0,05459`*`** | **+0,02101`*`** | **+0,00794`*`** | +0,05458`*` | +0,00000 (suy biến) | +0,00000 (suy biến) |
+| top-8 | MRB32 − 45deploy | **+0,06325`*`** | **+0,02428`*`** | **+0,00925`*`** | +0,06327`*` | +0,00000 (suy biến) | +0,00000 (suy biến) |
+| top-32 | MRB8 − 45deploy | **+0,05786`*`** | **+0,02024`*`** | **+0,00905`*`** | +0,07283`*` | +0,00105 (CI) | +0,00105 (CI) |
+| top-32 | MRB32 − 45deploy | **+0,05815`*`** | **+0,02034`*`** | **+0,00988`*`** | +0,07730`*` | +0,00120 (CI) | +0,00120 (CI) |
 
-### 4.3 KIỂM ĐỐI CHỨNG (bắt buộc, §6 pre-reg)
+(các cặp vs `A45`/`V5`/`V1` **cùng dấu, cùng độ lớn**, `glift8`/`netm8` **luôn trong CI**).
+⇒ **Ngay TRONG pool ứng viên**: kỹ năng THỨ TỰ **vượt cả 4 đối chứng ngoài CI**, nhưng lợi thế KINH TẾ
+(≈**+0,12 %/trade**, gross) **trong CI** — và **0,12 % < 0,8 % phí**. **Cùng một hình ở mọi tầng.**
+
+## 4. LUẬT §6 — KẾT QUẢ TỪNG BIẾN THỂ (đúng luật đã chốt, không nới)
+
+| biến thể | thước | `pacc`>0,5 | `ic`>0 | `dec_mono`>0,5 | ngoài CI vs `A45` | ngoài CI vs `V5` | **PASS** |
+|---|---|---|---|---|---|---|---|
+| `MRA4` | TIỀN 4h | ✔`*` | ✔`*` | ✔`*` | ✔ ✔ ✔ | ✔ ✔ ✔ | **PASS** |
+| `MRB8` | TIỀN 4h | ✔`*` | ✔`*` | ✔`*` | ✔ ✔ ✔ | ✔ ✔ ✔ | **PASS** |
+| `MRB32` | TIỀN 4h | ✔`*` | ✔`*` | ✔`*` | ✔ ✔ ✔ | ✔ ✔ ✔ | **PASS** |
+| `MRA72` | TIỀN 72h | ✔`*` | ✔`*` | ✔`*` | ✔ ✔ ✔ | ✔ ✔ ✔ | **PASS** |
+| `MRB8` | TIỀN 72h | ✔`*` | ✔`*` | ✔`*` | ✔ ✔ ✔ | ✔ ✔ ✔ | **PASS** |
+| `MRB32` | TIỀN 72h | ✔`*` | ✔`*` | ✔`*` | ✔ ✔ ✔ | ✔ ✔ ✔ | **PASS** |
+
+Kết quả **giống nhau ở CẢ HAI độ rộng CI** ⇒ PASS **không** do chọn độ rộng. **Không nới ngưỡng nào.**
+
+## 5. KIỂM TÍNH HỢP LỆ CỦA THƯỚC + KINH TẾ + `auc8c`
+
+### 5.1 Đối chứng (bắt buộc, §6 pre-reg) — thước **hợp lệ ở 3 chỉ số LUẬT**
 
 | Δ | `ic` | `pacc` | `dec_mono` | `glift8` | `netm8` |
 |---|---|---|---|---|---|
@@ -164,97 +210,96 @@ Model + bins: `/kaggle/working/mr/{MRA4,MRA72}` (kernel `chuyendinh/mr-train-a-g
 | A45 − 45deploy — TIỀN 72h | +0,00048 | +0,00016 | +0,00062 | +0,00037 | +0,00037 |
 | V5 − V1 — TIỀN 72h | +0,00074 | +0,00029 | −0,00041 | −0,00055 | −0,00055 |
 
-⇒ **3 chỉ số LUẬT (`ic`/`pacc`/`dec_mono`) đều ~0 ở CẢ HAI bước kiểm trên CẢ HAI horizon** ⇒ thước **hợp lệ
-đúng chỗ dùng để quyết định** (không bắt nhiễu). **Khai báo trung thực:** `glift8`/`netm8` của bước *nhiễu*
-ở 4h = **−0,00010`*`** (**ngoài CI**, độ lớn 1e-4 ≈ 0,01 %) — đúng chiều mong đợi (thêm nhiễu làm hại kinh
-tế chút ít) và **nhỏ hơn ~10× so với mọi chênh lệch kinh tế đang bàn**; **không** đủ để đảo bất kỳ kết luận nào
-ở đây (cả (a) cũng chỉ "PASS thống kê, kinh tế 0").
+⇒ **3 chỉ số LUẬT ~0 ở CẢ HAI bước, CẢ HAI horizon** ⇒ thước hợp lệ đúng chỗ dùng để quyết định.
+🔶 **Khai báo trung thực:** `glift8`/`netm8` của bước *nhiễu* ở 4h = **−0,00010`*`** (**ngoài CI**, độ lớn
+1e-4 ≈ 0,01 %, đúng chiều mong đợi: thêm nhiễu hại kinh tế chút ít) — **nhỏ hơn ~10×** mọi chênh lệch kinh tế
+đang bàn và **không** đảo kết luận nào.
 
-## 5. LUẬT §6 — KẾT QUẢ TỪNG BIẾN THỂ
+### 5.2 `auc8c` (AUC@top8 **ĐÚNG**; bản `auc8` có lỗi đếm cặp đã errata) + KINH TẾ — TIỀN 4h
 
-| biến thể | `pacc`>0,5 | `ic`>0 | `dec_mono`>0,5 | ngoài CI vs A45 | ngoài CI vs V5 | **PASS** |
-|---|---|---|---|---|---|---|
-| **MRA4** (`retEnd_4h`, TIỀN 4h) | ✔ (*) | ✔ (*) | ✔ (*) | ✔ ✔ ✔ | ✔ ✔ ✔ | **PASS** |
-| **MRA72** (`retEnd_72h`, TIỀN 72h) | ✔ (*) | ✔ (*) | ✔ (*) | ✔ ✔ ✔ | ✔ ✔ ✔ | **PASS** |
-| MRB8 (PnL thật, K=8) | — xem §6 | | | | | — |
-| MRB32 (PnL thật, K=32) | — xem §6 | | | | | — |
+| arm | `auc8c` | `netm8` | `glift8` |
+|---|---|---|---|
+| **MRA4** | **0,41530`*`** | −0,00769 | +0,00037 |
+| **MRB8** | **0,33488`*`** | −0,00785 | +0,00021 |
+| **MRB32** | **0,39823`*`** | −0,00785 | +0,00021 |
+| 45deploy | 0,61394`*` | −0,00785 | +0,00021 |
+| A45 | 0,61443`*` | −0,00779 | +0,00027 |
+| V5 | 0,60794`*` | −0,00799 | +0,00007 |
 
-Kết quả **giống nhau ở cả bản CHẶT (1.21) và bản `inflate(k=2)` (1,1774)** ⇒ PASS không do chọn độ rộng.
+⇒ Ở tầng **chọn coin vào top-8**, **mọi** model mới **kém ngẫu nhiên** (`auc8c < 0,5`) và **kém đối chứng ~0,21–0,28**.
+**Kinh tế theo top-8 vì thế không thể tốt hơn** — kết luận **không** phụ thuộc chỉ số lỗi `auc8`.
 
 ## 6. NHÃN (b) — PnL THẬT THEO LUẬT THOÁT
 
-### 6.1 Cổng chi phí §4.3 — **ĐÃ ĐÓNG: PASS**
+### 6.1 Cổng chi phí §4.3 — **ĐÓNG: PASS** (đo được, `cost_report.json` của kernel `mr-labelb-cpu`)
 
-Kernel CPU `chuyendinh/mr-labelb-cpu` (`mr_label_build.py`) — **1 phiên**, `cost_report.json`:
-
-| chỉ số | giá trị đo được |
+| chỉ số | giá trị |
 |---|---|
-| **Thời gian khoảng-fold ĐẦU** (`i00_20220401`) | **12,5 phút** (ngưỡng cổng §4.3 = **120 phút**) ⇒ **PASS** |
-| Tổng thời gian build **15 fold** | **165,7 phút** (2h46m) — 1 phiên CPU Kaggle |
-| Thời gian per-interval | 4,3 → 25,6 phút (tăng dần theo số coin/tick) |
-| RAM đỉnh | **7,86 GB** (Kaggle CPU) |
-| Ngày 1m đã parse | 1.438 ngày (9 dataset `wfo-ticker-*`), **0 ngày thiếu** |
-| Số mô phỏng engine | **309.024** cặp `(tick, coin)` (`noentry = 0`) |
-| `OPEN_AT_END` | **113** (0,037 %) — cửa sổ 168h cắt cuối kỳ; **đã loại khỏi nhãn** (chỉ giữ `TRAIL`/`TS168`/`) |
-| Engine | gọi **thẳng** `research/exitfit/exit_engine.simulate` (PARITY PASS) — **KHÔNG** chạy Java/sim ở đâu cả |
+| **Thời gian khoảng-fold ĐẦU** (`i00_20220401`) | **12,5 phút** (ngưỡng cổng = **120**) ⇒ **PASS** |
+| Tổng build **15 fold** | **165,7 phút** (1 phiên CPU Kaggle) |
+| Per-interval | 4,3 → 25,6 phút (tăng theo số coin/tick) |
+| RAM đỉnh | **7,86 GB** |
+| Ngày 1m đã parse | **1.438** ngày (9 dataset `wfo-ticker-*`), **0 ngày thiếu** |
+| Mô phỏng engine | **309.024** cặp `(tick, coin)`, `noentry = 0` |
+| `OPEN_AT_END` | **113** (0,037 %) — cắt cuối cửa sổ, **đã loại khỏi nhãn** |
+| Engine | gọi **thẳng** `research/exitfit/exit_engine.simulate` — **không** chạy Java/sim ở đâu |
 
-**Khai báo trung thực (điểm chưa hoàn hảo):** do chia khối 90 ngày, **8 ngày cuối của mỗi khối 1 trong mỗi interval bị BỎ**
-⇒ nhãn thiếu **~22,8k / 331,8k ≈ 6,9 %** cặp; phân bố **rải rác 15 chỗ**, không dồn về một phía ⇒ **không** tạo thiên
-lệch hệ thống, nhưng **có** làm giảm nhẹ số dòng train mỗi fold (đã kiểm: fold đầu **K=8 vẫn 7.376 dòng** ≫ guard 2.000).
+**Khai báo điểm chưa hoàn hảo:** do chia khối 90 ngày, **8 ngày cuối của khối 1 trong mỗi interval bị BỎ** ⇒ thiếu
+**~22,8k / 331,8k ≈ 6,9 %** cặp nhãn, **rải rác 15 chỗ** (không dồn một phía). Đã kiểm: fold đầu `K=8` vẫn còn
+**7.376 dòng** ≫ guard 2.000 ⇒ **không** ảnh hưởng kết luận, nhưng **có** làm nhẹ tập train.
 
-### 6.2 Nhãn vàng — thống kê pool ứng viên (top-K theo điểm S1)
+### 6.2 Thống kê nhãn vàng
 
-Tập ứng viên: **10.369 tick** `ts < 2025-09-28` × top-32 ⇒ **331.808** cặp (đã build được 309.024, xem §6.1).
-
-| pool | số dòng nhãn | `hold_min` TB | `gross` TB | **`net` TB** | lý do thoát |
+| pool | dòng nhãn | `hold_min` TB | `gross` TB | **`net` TB** | lý do thoát |
 |---|---|---|---|---|---|
-| **K = 8** (đúng cỡ hệ thống vào) | 77.256 | 3.267 (54h) | **+0,01201** | **+0,00401** | TRAIL 61.003 · TS168 16.189 · OPEN_AT_END 64 |
+| **K = 8** | 77.256 | 3.267 (54h) | **+0,01201** | **+0,00401** | TRAIL 61.003 · TS168 16.189 · OPEN_AT_END 64 |
 | **K = 32** | 309.024 | 3.729 (62h) | **+0,01268** | **+0,00468** | TRAIL 234.704 · TS168 74.207 · OPEN_AT_END 113 |
 
-**Đọc cho đúng (quan trọng):** kỳ vọng **TUYỆT ĐỐI** của pool dương (~**+0,40 %** net/trade ở top-8);
-nhưng đó là **kỳ vọng của CHIẾN LƯỢC arm+7 %/gap-3 %/time-stop-168h trên nhóm coin S1 chọn**, và
-**top-8 KHÔNG tốt hơn top-32** (+0,401 % vs +0,468 %) ⇒ **không phải bằng chứng về KỸ NĂNG XẾP HẠNG**
-(đúng như thước TIỀN nói: thứ tự ≈ vô dụng). Nhãn (b) dùng nhánh **WEAK gap 3 %** và **không funding** ⇒
-**không phải** PnL của LIVE.
+**Đọc cho đúng (rất dễ đọc sai):** kỳ vọng **TUYỆT ĐỐI** của pool dương (~**+0,40 %** net/trade ở top-8),
+nhưng (i) đó là kỳ vọng của **CHIẾN LƯỢC** arm+7 %/gap-3 %/time-stop-168h trên **nhóm coin S1 chọn**, **KHÔNG**
+phải kỹ năng xếp hạng; (ii) **top-8 KHÔNG tốt hơn top-32** (+0,401 % vs +0,468 %) ⇒ thứ tự S1 **không** cộng
+thêm giá trị; (iii) nhãn (b) dùng **nhánh WEAK gap 3 %**, **không funding** ⇒ **KHÔNG** phải PnL của LIVE.
 
-### 6.3 Hai arm nhãn (b)
+## 7. KHAI BÁO TRUNG THỰC — **KHÔNG** ĐƯỢC NÓI GÌ TỪ BẢNG TRÊN
 
-`MRB8` (pool top-8) và `MRB32` (pool top-32): train bằng **cùng** trainer/45 feature/seed/purge, chỉ đổi
-`--label-custom <parquet>` + `--min-train 2000` (AMEND 1), **15 fold** `20220401..20251001` (fold `20220101`
-= **N/A**: S1 không có điểm trước `2021-12-31 17:30`). **Kết quả + bảng chấm: xem §3.4** (điền khi kernel trả về).
+1. **KHÔNG** được nói "có ranker kiếm được tiền": `netm8` **âm** ở mọi biến thể/horizon; Δ`glift8`/Δ`netm8`
+   so đối chứng **TRONG CI**; gross lift tốt nhất **+0,311 %/72h < 0,8 % phí**.
+2. **KHÔNG** được nói model mới "tốt hơn" nói chung: nó **tệ hơn hẳn** ở thước NHÃN (§3.3) và ở `auc8c` (§5.2).
+3. **KHÔNG** được gọi `MRA72` là "rank 4h" hay `MRA4/MRB*` là "rank 72h": slot/horizon đã ghi rõ ở §3.2.
+4. `K = 8` vs `K = 32` là **2 mức của cùng một trục**, không phải 2 bằng chứng độc lập (**k = 2 = 2 NHÃN**).
+5. Nhãn (b) là **bản bảo thủ** (WEAK gap, không funding, 1 leg, không DCA/gate/sizing) — **KHÔNG** phải equity.
+6. Model (b) **chỉ thấy pool khi train** ⇒ điểm ngoài pool là **ngoại suy**; bảng §3 là bảng **QUYẾT ĐỊNH**
+   (mọi coin), bảng §3.4 là **đối chiếu công bằng trong pool**.
+7. `glift8`/`netm8` của bước kiểm *nhiễu* ở 4h **ngoài CI** (1e-4) — đã khai §5.1.
+8. **Deviation hạ tầng (đã khai trong AMEND 1):** `train_rows` trả nhãn `float64` thay `int8`; với nhãn nhị phân
+   giá trị vẫn 0,0/1,0 và XGBoost nhận `float32` nội bộ ⇒ đường `bin` **giữ nguyên hành vi** (kiểm bằng dtype,
+   **không** retrain lại để so byte). Vòng này **không** retrain đường `bin`.
+9. **Chưa làm:** chấm `MRA*`/`MRB*` trên `retEnd_12h/24h`; `rank:pairwise`/`lambdarank` (cơ chế rank) — để vòng sau.
 
-
-## 7. KHAI BÁO TRUNG THỰC — NHỮNG GÌ **KHÔNG** ĐƯỢC NÓI TỪ BẢNG TRÊN
-
-1. **KHÔNG** được nói "có ranker kiếm được tiền": `netm8` **âm** ở cả 2 horizon, Δ kinh tế so đối chứng **trong CI**,
-   gross lift tốt nhất **+0,311 %/72h < 0,8 % phí**.
-2. **KHÔNG** được nói model mới "tốt hơn" nói chung: nó **tệ hơn hẳn** ở thước NHÃN (§3.3) và ở `auc8c` (§4.1).
-3. **KHÔNG** được gọi `MRA4`/`MRA72` là "rank 72h/4h": `MRA72` chấm bằng **điểm slot 3 × nhãn 72h**;
-   đối chứng chấm **cross-horizon** (§3.2) — đúng như các vòng trước, **không** phải cùng điều kiện.
-4. `K = 8` vs `K = 32` là 2 mức của **cùng một trục**, không phải 2 bằng chứng độc lập (k = 2 = 2 nhãn).
-5. Nhãn (b) là **bản bảo thủ** (WEAK gap 3 %, không funding, 1 leg, không DCA/gate/sizing) — **KHÔNG** phải
-   equity của hệ thống.
-6. `glift8`/`netm8` của bước kiểm *nhiễu* ở 4h **ngoài CI** (1e-4) — đã khai ở §4.3.
-7. **Deviation hạ tầng (khai báo):** `train_rows` nay trả nhãn `float64` thay `int8`; với nhãn nhị phân giá
-   trị vẫn 0,0/1,0 và XGBoost nhận `float32` nội bộ ⇒ đường `bin` **giữ nguyên hành vi** (kiểm bằng dtype,
-   **không** retrain lại để so byte). Vòng này **không** retrain đường `bin` nên không ảnh hưởng số nào.
-8. **Việc còn nợ:** nhãn (b) + 2 arm `MRB8`/`MRB32` (§6); chưa chấm `MRA*` trên `retEnd_12h/24h`.
-
-## 8. VIỆC NÀO BỎ + LÝ DO (theo đúng thứ tự ưu tiên đã chốt §7)
+## 8. VIỆC BỎ + LÝ DO (theo thứ tự ưu tiên đã chốt §7)
 
 | # | việc | trạng thái | lý do |
 |---|---|---|---|
-| 1 | (a) `h = 4h` train đủ 16 fold | ✅ **XONG** (43,0 phút) | — |
-| 2 | (a) `h = 72h` train đủ 16 fold | ✅ **XONG** (42,5 phút) | — |
-| 3 | (b) `K = 8` | ✅ **XONG** (nhãn build 165,7 phút + train) | cổng §4.3 **PASS** (fold đầu 12,5 phút ≪ 120) |
-| 4 | (b) `K = 32` | ✅ **XONG** (cùng lần build nhãn; `K=8 ⊂ K=32`, mô phỏng không phụ thuộc K) | — |
+| 1 | (a) `h = 4h` | ✅ XONG (43,0 phút GPU) | — |
+| 2 | (a) `h = 72h` | ✅ XONG (42,5 phút GPU) | — |
+| 3 | (b) `K = 8` | ✅ XONG (nhãn 165,7 phút CPU + train 6,6 phút) | cổng §4.3 PASS (fold đầu 12,5 phút ≪ 120) |
+| 4 | (b) `K = 32` | ✅ XONG (train 4,4 phút; dùng lại 1 lần build nhãn) | `K=8 ⊂ K=32` |
+| 5 | chấm thêm `12h/24h` | ⛔ BỎ | ngoài thứ tự ưu tiên đã chốt; không đổi câu trả lời (mọi horizon cho cùng hình: thứ tự tăng, kinh tế đứng yên) |
+| 6 | `rank:pairwise`/`lambdarank` | ⛔ BỎ | pre-reg §3 nói rõ vòng này 1 cơ chế (hồi quy); dành vòng sau |
 
-**Không** nới ngưỡng, **không** tự tích hợp, **không** chạm ONNX/LIVE/2026, **không** push.
+**Không** nới ngưỡng · **không** tự tích hợp · **không** chạm ONNX/LIVE/2026 · **không** push.
 
-## 9. KHUYẾN NGHỊ (chỉ đọc-được, không tự làm)
+## 9. KẾT LUẬN CUỐI + KHUYẾN NGHỊ
 
-1. **GIỮ `45deploy` (45 feature, nhãn nhị phân `retEnd_4h>0,015`).** Không đổi sang đầu hồi quy.
-2. Nếu muốn cải thiện **kinh tế** (không phải IC), vòng sau phải đi vào **feature mới** hoặc **cấu trúc
-   chọn top-K** — **không** tinh chỉnh loss/hyperparam của 45 feature hiện có, vì vòng này đã chứng minh
-   "khớp mục tiêu" chỉ làm đẹp chỉ số, không làm ra tiền.
-3. Việc **còn nợ**: đóng cổng chi phí nhãn (b) rồi train `MRB8`/`MRB32` (kernel đã dựng sẵn).
+1. **Có** tín hiệu xếp hạng quy ra tiền **ở tầng thống kê**: cả **2 nhãn độc lập** ((a) rank liên tục, (b) PnL
+   thật theo luật thoát) đều tạo ranker **PASS luật §6** và **vượt `45deploy` + cả 2 đối chứng ngoài CI** ở
+   `ic`/`pacc`/`dec_mono`; nhãn (b) còn vượt **trong pool ứng viên** (`pacc` 0,5157 vs 0,4948).
+2. **Nhưng KHÔNG có lợi thế KINH TẾ**: Δ`glift8`/Δ`netm8` so đối chứng **trong CI**, `netm8` **âm** ở mọi
+   biến thể, lift gross tốt nhất **+0,311 %/72h < 0,8 % phí**, và skill **đảo chiều/tan biến** trên thước NHÃN
+   và `auc8c`. ⇒ Phần tăng thêm là **khớp mục tiêu train**, không phải thông tin mới.
+3. **"Sai ở bước nào" (câu trả lời cuối):** **MỤC TIÊU/ĐẶC TRƯNG.** Đổi nhãn sang chính đại lượng tiền
+   (2 cách khác nhau) **không** tạo ra kỹ năng tiền ở tầng chọn coin.
+4. **GIỮ `45deploy`** (45 feature, nhãn nhị phân `retEnd_4h > 0,015`). **Không** đổi sang đầu hồi quy — rủi ro
+   ONNX/LIVE cao, lợi ích đo được = 0.
+5. Vòng sau chỉ nên đi vào **(i) feature mới**, **(ii) cơ chế rank (`rank:pairwise`/`lambdarank`)**, hoặc
+   **(iii) cấu trúc chọn top-K** — **không** tinh chỉnh loss/hyperparam của 45 feature hiện có.
