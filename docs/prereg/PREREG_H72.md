@@ -100,3 +100,19 @@ cùng code (`tick_metrics`), cùng cách lọc, cùng CI**, chỉ khác `h`:
 
 **Dự đoán Q28 (trước khi đo):** kỹ năng **nhãn** (i)/(iii) **giảm** khi `h` tăng (72h khó hơn);
 kỹ năng **tiền** (ii) `≈ 0`/âm ở **cả hai** `h`.
+
+---
+
+## 12. AMEND (2026-09-25, TRƯỚC khi đo) — đo **CROSS-HORIZON** của arm (bổ sung, KHÔNG thay §6)
+
+§6-5 cấm *lấy `p4h` thay cho điểm 72h*; nhưng công cụ cho phép **đo cross-horizon** với khai báo rõ.
+Trong lúc chờ job train đầu 72h (§5), chạy thêm **1 lượt bổ sung** trên artifact **ĐÃ CÓ**
+(`--horizon 4h --label-horizon 72h`): điểm **4h** của `A44`/`A45` × nhãn **72h**.
+
+- **Tên gọi BẮT BUỘC trong mọi báo cáo:** *"cross-horizon (điểm 4h × nhãn 72h)"* — **CẤM** gọi là
+  "đầu 72h của arm".
+- `--k 2` (2 ứng viên `A44`,`V0`) · `--y-kind maxfav` (thước NHÃN, nhãn cổng `maxFav_72h ≥ 0,07`)
+  và mặc định `retend` (thước TIỀN `retEnd_72h`). **KHÔNG** đổi `K`/`THR`/`TOUCH`.
+- Mục đích: (a) có bằng chứng arm-ở-72h **ngay** không phụ thuộc job; (b) kiểm chéo job (nếu job
+  xong): nếu `Δ(A44−A45)` cross-horizon **cùng chiều** với `Δ` ở đầu 72h thật ⇒ tin hơn.
+- **KHÔNG** dùng lượt này để thay §3/§5, **KHÔNG** dùng để đổi luật §6.
