@@ -206,3 +206,10 @@ Kết quả **giống nhau ở cả 3 độ rộng CI** (1,21 · `k=3` · `k=6`)
 `docs/result/mr_pnl_score.json` · `docs/result/RESULT_PNL_RULER.md` (commit cuối vòng).
 **Tái lập:** `python3 research/analysis/mr_pnl_score.py --out docs/result/mr_pnl_score.json`
 (cache 1 fold ở `/tmp/mrpnp/cache`).
+
+## ERRATA (2026-09-25) — §0(1): câu **"0 chỉ số Δ ngoài CI"** là **SAI cách viết**, KẾT LUẬN KHÔNG ĐỔI
+
+Audit độc lập (`docs/result/RESULT_AUDIT_PNL.md`, commit `43968cc`) mở lại **JSON của chính vòng này** và đếm được **38 mục `out_both`** — **TẤT CẢ ÂM** (`auc8` · `auc8c` · `lift8` · `ic` · `pacc` …), **không mục nào là chỉ số KINH TẾ**.
+
+⇒ Câu đúng: **"0 chỉ số Δ *kinh tế dương* ngoài CI"** — KHÔNG phải "0 chỉ số Δ ngoài CI".
+⇒ Kết luận giữ nguyên, thực ra **MẠNH HƠN**: model mới **KÉM** ở 38 mục ngoài CI; chúng chỉ **không kém** ở các chỉ số kinh tế (và cũng không hơn).
