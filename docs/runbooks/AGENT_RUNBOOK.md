@@ -133,6 +133,21 @@ khong can hoi lai user, khong can doc lai 30 doc khac.
       nen `verify.sh` gate `p50 in [0.20, 0.70]` (do tren 220 tick: 0.2262..0.6093).
     - `DCA_GRID_WEIGHTS=1,0,0,0` + `TIER_FLAT=1` **DA BAT** trong `env.sh.new` (user duyet
       2026-09-07) — tham so SO GIAY, chi vao duong sizing entry.
+12. **THUOC CHON MODEL = MODEL RULER (Tang A); SIM = kiem HE THONG (Tang B)** — chot 2026-09-25
+    (`docs/prereg/PREREG_MODEL_RULER.md` **`cc22253`** · `docs/result/RESULT_MODEL_RULER.md` ·
+    tool `research/analysis/model_ruler.py`).
+    - Cau hoi *"tap feature moi co tot hon khong"* **PHAI** tra loi bang **model ruler**
+      (`rank-IC` / `|rank-IC|` / `lift@8` (K=8) / `precision@8` / `AUC` / `pairwise P(s_A>s_B|y_A>y_B)` /
+      decile / gross-net theo chi phi `0,008`, tat ca OFFLINE, **khong train, khong sim**) —
+      **KHONG** bang equity/PnL/`n` (equity da la luat 3).
+    - **SIM CHI chay cho model DA QUA Tang A**, VA **phai RE-CALIBRATE gate theo scale score cua model
+      moi** (gate dung **multiset `P(win)`** cua tick ⇒ doi model ⇒ doi `dyn_thr` ⇒ doi so lenh;
+      bang chung: `docs/experiment/G5_VALUE_LABELS.md`). So sim giua 2 model khac scale score ma
+      khong re-calibrate = do CALIBRATION, **khong** do skill.
+    - Thao tac: `python3 research/analysis/model_ruler.py ruler --name <TAG> (--bins <dir> | --ticks <parquet>)`
+      · `... validate [--reuse]` (6 arm + 2 doi chung + tu-kiem T1 shuffle / T2 bat bien rank).
+    - Trai nghiem do duoc: **thuoc nay bat bien** voi moi bien doi TANG NGHIEM NGAT cua score
+      (`max|Δ| = 0,00e+00`) ⇒ no **khong** bi "thuong" vi hop hien trang.
 
 ## 1. Kenh truy cap Oracle
 
