@@ -53,8 +53,9 @@ viết TRƯỚC khi đọc số) · **KHÔNG push.**
 - **KAGGLE GPU** (`chuyendinh/mf-train-gpu`, private, 3 arm trong **1 session**):
   `MFC72 40,7′` + `MFB72 42,1′` + `MFC4 41,0′` = **123,8 phút GPU**; tổng wall-time kernel **≈ 132′** (< 12h cap).
 - Oracle chỉ bước **NHẸ**: chấm (đọc bins + `.pb`, không train/sim/Java).
-- **1 kernel DƯ (hedge)** đã push lúc 22:25 khi kernel chính chạy quá lâu (`mf-train2-gpu`, chỉ `MFC72`) —
-  dùng làm **kiểm tính lặp lại giữa 2 session Kaggle** (§9). Không train gì trên Oracle.
+- **1 kernel DƯ (hedge)** đã push lúc 22:25 khi kernel chính chạy quá lâu (`mf-train2-gpu`, chỉ `MFC72`,
+  41,4′) — dùng làm **kiểm tính lặp lại giữa 2 session Kaggle** (§11: khớp 16/16 `sha_bin`). Không train gì trên Oracle.
+  **Tổng GPU thực dùng vòng này = 165,2 phút** (123,8 chính + 41,4 dự phòng).
 
 ## 3. ARTIFACT (đường dẫn RÕ)
 
@@ -204,9 +205,10 @@ nhãn" chỉ là KHỚP MỤC TIÊU TRAIN**, không phải thông tin mới. ⚠
 
 ## 11. TRẠNG THÁI ARTIFACT PHỤ
 
-- Hedge `chuyendinh/mf-train2-gpu` (chỉ `MFC72`, cùng dataset/seed): **đang chạy** khi đóng vòng —
-  **không** dùng cho kết luận nào ở trên. Nếu COMPLETE: đối chiếu `sha_bin` fold 20220101/20251001 với
-  `1be21031…` / `a468a172…` (khớp ⇒ tính lặp lại giữa 2 session Kaggle; lệch ⇒ ghi nhận, **không** kết luận khoa học).
+- Hedge `chuyendinh/mf-train2-gpu` (chỉ `MFC72`, cùng dataset/seed, push lúc 22:25 vì kernel chính chạy
+  > 2h): **COMPLETE** (41,4′) — `sha_bin` **khớp 16/16 fold** với kernel chính (`1be21031…` / `a468a172…`)
+  ⇒ **tính lặp lại giữa 2 session Kaggle độc lập = PASS** (không dùng cho kết luận khoa học nào; chi phí
+  dư 41,4′ GPU đã khai báo).
 - Mọi số của vòng này đọc từ `docs/result/s1_maxfav_score.json` + `docs/result/s1_maxfav_pnl.json`.
 
 ## 12. ĐIỀU **KHÔNG** LÀM (đã giữ đúng)
