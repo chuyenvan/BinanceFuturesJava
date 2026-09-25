@@ -319,3 +319,68 @@ là cross-horizon và **KHÔNG** áp luật GO cho lượt chạy đó (§12.5: 
 **(E) ĐIỀU KHÔNG ĐỔI:** `k = 2` (2 ứng viên `A44`, `V0`) ⇒ hệ số CI = `c3_rates.inflate(2)` =
 **1,177410** (1,21 legacy chỉ in tham chiếu); "ngoài CI" = ngoài **CẢ HAI** độ rộng; M2 đòi **cả 3** `K`;
 h=4h cần **≥ 2/3**; `rank-IC` vẫn chỉ là **PHỤ**.
+
+---
+
+## 12.10 AMEND — **THÊM NHÃN KHỚP CƠ CHẾ ARM** (owner 09:17, **CHỐT TRƯỚC khi đọc số Y1**)
+
+**Trạng thái:** amend này viết **TRƯỚC** khi chạy/đọc **bất kỳ** số nào của nhãn `Y1` (mới chỉ đọc
+**định nghĩa cột** trong exporter + `LabelPbSink`). **Bản cũ GIỮ NGUYÊN, KHÔNG sửa:** §12.1–§12.9 (và §13
+của phiên song song) coi nhãn train `net>1,5%` là nhãn DUY NHẤT cho cổng xếp hạng — mục này **mở rộng**,
+**không** thay thế.
+
+### 12.10.1 LÝ DO (cơ chế arm ≠ nhãn research)
+Hệ thống arm khớp khi **`maxPrice ≥ entry × 1,07` theo HIGH nến 1m** ⇒ điều kiện thật là **CHẠM (touch)**,
+**không** phải giá cuối khung. Nhãn train hiện tại (`retEnd_4h > 1,5%`) đo **giá cuối** ⇒ **lệch cơ chế**.
+
+### 12.10.2 BA NHÃN — THỨ TỰ ƯU TIÊN **CHỐT TRƯỚC** (không được chọn nhãn cho điểm đẹp nhất)
+
+| mã | nhãn | nguồn (ĐÃ CÓ) | vai trò |
+|---|---|---|---|
+| **`Y1`** | `maxFav_h ≥ 0,07` (**touch** +7 %, GROSS) | cột `maxFav_h` trong `/home/ubuntu/label_15m/*.pb` (`maxFav_H = max(high(τ)/close(t) − 1)`, τ = nến 15m thuộc `(t, t+H]` — `ExportFundingLabel.java` §định nghĩa path) | **NHÃN CHÍNH cho cổng xếp hạng** |
+| **`Y2`** | `retEnd_h > 0,015` (nhãn train, "net") | cột `retEnd_h` (như cũ) | **ĐỐI CHIẾU** (giữ) |
+| **`Y3`** | `retEnd_h` **liên tục**, net (`= retEnd_h − 0,008`) | cột `retEnd_h` + hằng số `FEE_RT` | **KIỂM KINH TẾ** (giữ) |
+
+- **Thứ tự CHỐT TRƯỚC: `Y1` (chính) → `Y2`/`Y3` (đối chiếu).** Luật GO chỉ được áp trên **`Y1`**;
+  `Y2`/**`Y3`** **KHÔNG** bao giờ được dùng để "cứu" một ứng viên, và **KHÔNG** được đổi nhãn sau khi thấy số.
+- **Horizon: `h ∈ {4h, 72h}` cho CẢ 3 nhãn** (không thêm mốc nào).
+- **KHÔNG** đổi: 3 chỉ số chính (M1′ `auc8`@top8 · M2′ `lift@K` K∈{8,12,16}, **cả 3 phải OK** · M3′ decile
+  monotonicity) · luật **≥2/3 ở h=4h** + **h=72h không chỉ số nào Δ<0 ngoài CI** · **fail hẹp** · **Tầng A
+  KHÔNG nhìn PnL/equity** · 2 đối chứng (retrain + noise cùng NaN-mask) · **cross-section trong tick** ·
+  **scale-invariant** (T2).
+
+### 12.10.3 KHAI BÁO LỆCH (không overclaim "khớp 1:1")
+- `Y1` dùng **entry = `close(t)`** và cửa sổ **`(t, t+h]`** theo **HIGH nến 15m** — mà `high(15m)` **chặn
+trên** mọi high 1m trong nến đó ⇒ phát hiện "chạm" **tương đương ở độ phân giải cần**. **NHƯNG**: giá vào
+lệnh THẬT trong sim là **giá vào của lệnh** (không hẳn `close(t)`) và thời gian giữ **không hẳn đúng `h`**
+⇒ `Y1` khớp cơ chế **Ở MỨC NHÃN**, **KHÔNG** phải bản sao 1:1 của lệnh. Ghi rõ, không gọi là "nhãn arm".
+- `Y1` là **GROSS** (không trừ chi phí) — đúng như arm tính `1,07` trên giá; kiểm kinh tế là **`Y3` (net)**.
+- **Thiếu dữ liệu ⇒ GHI RÕ, KHÔNG BỊA:** chạy kèm **kiểm đủ cửa sổ** `nBars_h ≥ h/15m` (16 cho 4h, 288 cho
+72h) và **in ra tỉ lệ dòng đủ**; **KHÔNG** lọc (giữ nguyên tập dòng để so **ghép cặp** giữa các nhãn).
+
+### 12.10.4 MULTIPLICITY (đếm, không nới ngưỡng)
+- Cổng xếp hạng h=4h: **3 chỉ số × 3 nhãn = 9 phép kiểm** (chỉ **3** phép ở `Y1` được dùng để quyết định;
+6 phép `Y2`/`Y3` là đối chiếu).
+- Kiểm kinh tế `Y3`: `gross/net` × `K∈{8,12,16}` × `h∈{4h,72h}` = **12 số** (mô tả, không quyết định).
+- **Khai báo để đọc số có trách nhiệm:** với ~9 phép kiểm ở mức CI 95 % (2 phía) + ghép cặp theo tick,
+kỳ vọng **~0,45 dương-tính-giả** nếu mọi giả thuyết đều NULL ⇒ **không** kết luận từ 1 ô lẻ; **KHÔNG** nới
+ngưỡng, **KHÔNG** lọc theo nhãn.
+- `h = 72h`: **vẫn N/A cho cả 3 nhãn** vì **KHÔNG có ĐIỂM 72h** (`z[:,2]` = NaN 100 % — §10.5 đã đo; amend
+này chỉ thêm **NHÃN**, không sinh được **ĐIỂM**).
+
+### 12.10.5 KẾT LUẬN BẮT BUỘC (thêm vào RESULT)
+**"Model giỏi `Y1` hay `Y2` hơn?"** — so **cùng arm, cùng tick, cùng 3 chỉ số**, giữa `Y1` và `Y2`:
+- Nếu `Y1` **tốt hơn rõ** ⇒ cổng cũ **đánh giá sai cơ chế** (model *có* kỹ năng touch nhưng bị đo bằng
+  "giá cuối") ⇒ ứng viên số 1 giải thích `pairwise ≈ 0,48` **và** chỗ lệch **research ↔ live** (model LIVE
+  dùng họ `maxFav`, Spearman 0,854 với `net` — xem `LiveBuildMap.java` / `EntryPoolGate.java`).
+- Nếu `Y2` **tốt hơn** ⇒ "chạm" và "kết thúc" **cùng dễ** với model ⇒ không có chỗ lệch nhãn;
+- **Ghi CẢ HAI chiều, kèm số**, không chọn kết luận theo ý muốn.
+
+### 12.10.6 DỰ ĐOÁN KHOÁ TRƯỚC (Y1)
+
+| # | dự đoán |
+|---|---|
+| **Q14** | Base rate `Y1@4h` **cao hơn hẳn** `Y2@4h` (0,1849) — ước lượng **0,5–0,8** (chạm +7 % trong 4h dễ hơn kết thúc >1,5 %) |
+| **Q15** | `auc8c(Y1) < auc8c(Y2)` **ở cùng arm** (nhãn "chạm" khó phân biệt hơn nhãn "kết thúc" nếu model học theo phân phối cuối khung) **HOẶC** xấp xỉ — ghi số thật |
+| **Q16** | `Y1` **KHÔNG** làm `A44`/`V0` lật sang GO (vẫn xấu so với đối chứng) |
+| **Q17** | Decile GỘP của `Y1` **đơn điệu** như `Y2` (ρ ≈ 1) vì cả hai đều là nhãn "đạt ngưỡng" |
