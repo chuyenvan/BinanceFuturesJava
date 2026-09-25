@@ -192,3 +192,39 @@ trong log. Da **tai tao MTM moc phut tu du lieu 1m** (2,367,360 moc) va kiem chu
 - **TU NAY**: moi bao cao `maxDD`/`UW` **PHAI dung MTM moc phut**; so daily chi de doi chieu.
 - **Gioi han**: chua mo hinh margin-call/thanh ly ⇒ moi so la **CAN DUOI** cua rui ro that;
   1 quan sat lich su, **khong co CI**.
+
+## 8. Chot bo sung 2026-09-26 (chat) — TRẦN GROSS EXPOSURE 70 % (CỨNG) + PHÍ CHUẨN 0,6 %/vòng
+
+Nguon: **quyet dinh owner 26/09 05:35** (nguon duy nhat). Bang chung: `docs/result/RESULT_CAP70_FEE06.md`
+· pre-reg `docs/prereg/PREREG_CAP70_FEE06.md` (`6f37caa`) · quyet dinh `docs/decisions/DECISION_GROSS_CAP70_FEE06.md`.
+
+| rang buoc | CU | MOI (2026-09-26) |
+|---|---|---|
+| **gross exposure** | *khong co tran*; chi **quan sat** 54–58 % | **<= 70 % equity — CUNG / binding** |
+| **phi chuan nghien cuu** | **0,8 %/vong** | **0,6 %/vong** |
+
+- **`maxDD` / `UW` / `quy xau nhat` / `tap trung 1 coin` / `nam am` / NGUONG BANG CHUNG**: **GIU NGUYEN**
+  (nhu §7 / §6). Muc nay chi **THEM** tran gross + **THAY** moc phi.
+- **THAY THE cu the**: (1) cau "quan sat gross 54–58 %" tro thanh **mo ta**, **KHONG** con la nguong — nguong
+  binding la **70 %**; (2) moi con so o cac vong truoc dung **0,8 %** phai doc lai la **moc cu**; moc
+  nghien cuu tu nay la **0,6 %** (0,8 % van bao de doi chieu).
+- **He qua da do (pool P32, duong RE, KHONG build lai):**
+  - **MUC:** `break-even fee` ro top-K = **1,2006 %/vong (K=8) → 1,2678 % (K=32)** ⇒ o **0,6 %** net/coin
+    ≈ **+0,60…+0,67 %/vong** (o 0,8 % ≈ +0,40…+0,47 %). Ro duong o ca 2 muc.
+  - **`K`:** moi Δ cua `K ∈ {10,12,16,32}` vs `K=8` — ca `net/tick` sau size lan `net/1dv-gross` — **TRONG CI**
+    o **ca 3 cach ap tran** va **ca 4 muc phi** ⇒ **khong co `K*` do duoc** ⇒ **GIU `K = 8`**.
+  - **Delta alpha xep hang = 0 BAT BIEN theo phi**: `Δ(f=0,004) = Δ(f=0,006) = Δ(f=0,008)` tren **24/24 cap**
+    (lech `0,00e+00`); o `f=0,006` **0/12 cap** ngoai CI ⇒ **phi 0,6 % khong cuu duoc `Δ = 0`**.
+  - **Kiem hop le o `f=0,006`:** `A45 − 45deploy = +0,00035` (TRONG CI); `V5 − V1 = −0,00018` (TRONG CI).
+- **Tran 70 % la rang buoc BUOC CO, khong phai cho phep noi** (do tren pool P32, neo POST-HOC `2,0 %/lenh`
+  tren coin PHAN BIET): `gross_TB(K=8) = 48,8 %` nhung `gross_max = 84 %` ⇒ neu siet **moi tick <= 70 %** thi
+  **size ≈ 0,83× hien hanh** (≈ 1,67 % equity/lenh thay 2,0 %), TB tut con **40,7 %**. Cach chuan hoa theo TB
+  (size 1,43×) giu TB = 70 % nhung **max van 120,5 %** ⇒ **KHONG** dat tran CUNG.
+- ⚠️ **Gioi han (bat buoc doc):** con so gross la **quy doi POST-HOC** (neo `2,0 %/lenh` tren coin phan biet);
+  ban neo tren **so VI THE `e_t`** cho `K=8` = **821 %** (vo ly) ⇒ chi **ti le giua cac `K`** doc duoc.
+  **CHUA** mo hinh hoa de-dup live / DCA nhieu chan / tran size·notional / funding. `net/tick` tuyet doi la
+  **MO HINH**, khong phai equity LIVE.
+- **Viec treo (chua lam, khong tu quyet):** (1) chon cach ap tran (A hay B) + them guard gross-exposure
+  (tuong tu `CONC_CAP_PERCOIN_*`) va **prove binding** bang sim **shadow** — khong cham LIVE;
+  (2) `CONC_CAP_PERCOIN_PCT = 0,15` **giu nguyen** (noi `K` khong lam xau tran 1-coin: ti trong ≈ 1/so coin
+  phan biet, 4,1 % → 3,0 % khi 8 → 12 ⇒ rang buoc bind la **gross**, khong phai conc).
