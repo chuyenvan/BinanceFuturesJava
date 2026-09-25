@@ -21,7 +21,8 @@ viết TRƯỚC khi đọc số) · **KHÔNG push.**
    `MFC72` — **nhưng không chuyển thành tiền** (§4). Trên **PnL luật thoát**: Δglift8 **trong CI** cho cả
    2 arm; `MFC72` **KÉM** cả 4 đối chứng (−0,0015…−0,0020).
 3. **Kết luận dứt khoát:** **KHÔNG đáng đổi nhãn trainer, KHÔNG đổi model.** `MFC4` là ca rõ nhất của
-   "kỹ năng nhãn ≠ kỹ năng tiền": **đứng nhất ở cả 2 thước NHÃN** và **đứng bét ở thước TIỀN**
+   "kỹ năng nhãn ≠ kỹ năng tiền": **đứng NHẤT ở các chỉ số MỨC/top-8** (`glift8`, `netm8`, `dec_mono`)
+   **trên CẢ 2 thước NHÃN** (thêm cả `ic`/`pacc` trên `g1lite72`) **nhưng đứng BÉT ở thước TIỀN**
    (Δ vs A45 **âm ngoài CI trên CẢ 5 chỉ số**, `netm8` −0,0085 = tệ nhất). **GIỮ NGUYÊN** ONNX
    `s1a2x1_cut20251001.onnx` / nhãn `g1lite` / 45 feature. ⚠️ Không có cơ sở nào để chạm đường LIVE.
    **Đây là BƯỚC CUỐI của trục "đổi nhãn"** (đã thử: `g1lite` (deploy) · `retEnd_h` · PnL luật thoát ·
@@ -82,7 +83,7 @@ viết TRƯỚC khi đọc số) · **KHÔNG push.**
 | A45 *(đối chứng retrain)* | +0,0931`*` | +0,5307`*` | +0,5645`*` | +0,0789`*` | +0,0871`*` |
 | V5 *(đối chứng nhiễu)* | +0,0950`*` | +0,5312`*` | +0,5652`*` | +0,0736`*` | +0,0818`*` |
 | V1 | +0,0944`*` | +0,5310`*` | +0,5655`*` | +0,0746`*` | +0,0828`*` |
-| **MFC72** (`maxFav_72h` liên tục) | +0,0943`*` | +0,5312`*` | +0,5662`*` | **+0,0810`*`** | **+0,0892`*`** |
+| **MFC72** (`maxFav_72h` liên tục) | +0,0943`*` | +0,5312`*` | +0,5662`*` | +0,0810`*` | +0,0892`*` |
 | **MFB72** (`≥0,07`) | +0,0884`*` | +0,5293`*` | +0,5611`*` | +0,0765`*` | +0,0848`*` |
 | **MFC4** (`maxFav_4h`) | **+0,0984`*`** | **+0,5325`*`** | **+0,5689`*`** | **+0,0864`*`** | **+0,0946`*`** |
 | **ruler `lab72`** (`y = maxFav_72h`) | | | | | |
@@ -90,7 +91,7 @@ viết TRƯỚC khi đọc số) · **KHÔNG push.**
 | A45 | +0,2429`*` | +0,5845`*` | +0,6322`*` | +0,0990`*` | +0,1733`*` |
 | V5 | **+0,2601`*`** | **+0,5909`*`** | **+0,6395`*`** | +0,0946`*` | +0,1689`*` |
 | V1 | +0,2596`*` | +0,5907`*` | +0,6402`*` | +0,0956`*` | +0,1698`*` |
-| **MFC72** | +0,2267`*` | +0,5785`*` | +0,6295`*` | **+0,1016`*`** | **+0,1759`*`** |
+| **MFC72** | +0,2267`*` | +0,5785`*` | +0,6295`*` | +0,1016`*` | +0,1759`*` |
 | **MFB72** | +0,2195`*` | +0,5759`*` | +0,6223`*` | +0,0960`*` | +0,1703`*` |
 | **MFC4** | +0,2570`*` | +0,5897`*` | +0,6420`*` | **+0,1086`*`** | **+0,1828`*`** |
 
@@ -184,8 +185,10 @@ viết TRƯỚC khi đọc số) · **KHÔNG push.**
 | Q4 thước nhãn `g1lite` không vượt hệ thống | **ĐÚNG một phần** — `MFC4` vượt ở 5 chỉ số vs A45, nhưng không đồng thời vs V5 |
 | Q5 Δ(A45−45deploy), Δ(V5−V1) ~ 0 | **ĐÚNG** (§7) |
 
-**Phát hiện phải nói rõ (không được đọc thành tin tốt):** `MFC4` = **số 1 ở cả 2 thước NHÃN** và **số
-bét ở thước TIỀN** (Δ vs A45 âm ngoài CI ở cả 5 chỉ số) ⇒ **hai thước GẦN NHƯ NGƯỢC DẤU**. Đây là bản
+**Phát hiện phải nói rõ (không được đọc thành tin tốt):** `MFC4` = **số 1 ở 3 chỉ số MỨC** (`glift8`,
+`netm8`, `dec_mono`) **trên cả 2 thước NHÃN** (thêm `ic`/`pacc` trên `g1lite72`; còn trên `lab72`
+`ic`/`pacc` của nó xếp sau `V5`/`V1`) và **số bét ở thước TIỀN** (Δ vs A45 âm ngoài CI ở cả 5 chỉ số)
+⇒ **hai thước GẦN NHƯ NGƯỢC DẤU**. Đây là bản
 sao thứ 4 của cùng một hiện tượng (`RESULT_H72` §3, `RESULT_MONEY_RANKER`), tức **cải thiện "kỹ năng
 nhãn" chỉ là KHỚP MỤC TIÊU TRAIN**, không phải thông tin mới. ⚠️ **Cấm** dùng bảng §4.1 để biện minh
 đổi model.
