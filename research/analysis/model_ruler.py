@@ -73,7 +73,7 @@ TZ = "Asia/Ho_Chi_Minh"
 # Chỉ số dùng cho LUẬT §5 (chiều TỐT = lớn hơn)
 PRIMARY = "lift8"
 SECOND = "abs_ic"
-RAW_METRICS = ["auc8", "lift8", "lift12", "lift16", "dec_rho_lab",
+RAW_METRICS = ["auc8", "auc8c", "lift8", "lift12", "lift16", "dec_rho_lab",
                # PHU (khong dung cho luat GO)
                "ic", "abs_ic", "prec8", "auc", "pacc", "dec_rho", "dec_mono",
                "gross8", "net8", "net_lift8", "gross_all", "gross_lift8"]
@@ -288,6 +288,20 @@ def tick_metrics(ts, p, y, with_pacc=True):
     nNT = pd.Series(NnT).groupby(D.ts.to_numpy()).sum()
     den8 = (nPT * nneg + (npos - nPT) * nNT).reindex(size_s.index)
     auc8 = (A_sum.reindex(size_s.index) + B_sum.reindex(size_s.index)) / den8.replace(0, np.nan)
+    # M1'-BAN DUNG (`auc8c`): cong thuc o tren CONG cap (pos∈T, neg∈T) **2 lan ở tử** (1 lan qua
+    # `nbel` cua pos∈T, 1 lan qua `pabv` cua neg∈T) nhung **1 lan ở mẫu** (`den8`) ⇒ co the > 1 tren
+    # du lieu nho (bang chung tong hop o RESULT §10.1). `auc8c` = `auc8` − phan trung: chi tinh cap
+    # `(T,T)` MOT lan. MẪU KHÔNG ĐỔI (den8 da dem cap `(T,T)` dung 1 lan).
+    _tt = D[D._T8.to_numpy()].sort_values(["ts", "p"], kind="stable").copy()
+    _tt["_neg"] = 1.0 - _tt.yb
+    _cp = _tt.groupby("ts", sort=True)["yb"].cumsum()
+    _cn = _tt.groupby("ts", sort=True)["_neg"].cumsum()
+    _gs = _tt.groupby(["ts", "p"], sort=True)["p"].transform("size")
+    _gp = _tt.groupby(["ts", "p"], sort=True)["yb"].transform("sum")
+    _nbelT = _cn - 0.5 * (_gs - _gp)
+    C_TT = (_nbelT * _tt.yb).groupby(_tt.ts).sum().reindex(size_s.index).fillna(0.0)
+    auc8c = (A_sum.reindex(size_s.index) + B_sum.reindex(size_s.index) - C_TT) / den8.replace(0, np.nan)
+    del _tt, _cp, _cn, _gs, _gp, _nbelT, C_TT
     D.drop(columns=["_num", "_s1", "_s2", "_srp"], inplace=True)
 
     # ---- M3: decile theo RANK score trong tick, 3 nhan ----
@@ -299,7 +313,7 @@ def tick_metrics(ts, p, y, with_pacc=True):
     _, _, aux_net = _decile_block(tsa, dec, (D.y - FEE_RT).to_numpy(), size_s.index)
 
     R = pd.DataFrame({
-        "n_coin": size_s, "ic": ic, "auc": auc, "auc8": auc8, "n8": n8,
+        "n_coin": size_s, "ic": ic, "auc": auc, "auc8": auc8, "auc8c": auc8c, "n8": n8,
         "prec8": prec[8], "lift8": prec[8] - base_s,
         "lift12": prec[12] - base_s, "lift16": prec[16] - base_s,
         "base": base_s, "base_net": base_n_s, "gross8": gross8, "gross_all": gross_all,
@@ -532,7 +546,7 @@ def go_rule(D1, D2, label, cand):
                  "out1": bool(((D1 or {}).get("metrics", {}).get(m) or {}).get("out_both")),
                  "out2": bool(((D2 or {}).get("metrics", {}).get(m) or {}).get("out_both"))}
              for m in LIFT_COLS})
-    npass = sum(1 for v in res.values() if v["state"] == "PASS")
+    npass = sum(1 for k in ("M1_auc8", "M2_liftK", "M3_decile_b") if res[k]["state"] == "PASS")
     res["n_pass"] = npass
     res["GO_h4"] = bool(npass >= 2)
     LOG.info("  %-26s M1=%s M2=%s%s M3=%s => %d/3 => h=4h: %s", label,
@@ -631,6 +645,22 @@ LOG.info("### BINS THO cua arm retrain: %s",
 TMP = "/tmp/model_ruler_out"
 
 
+def _aux_path(name, tag_h):
+    """Sidecar `aux` decile (sum/cnt theo decile) — M3(a) GOP can no, nen cache phai co no."""
+    return os.path.join(TMP, "%s_%s_aux.npz" % (name, tag_h))
+
+
+def save_aux(path, aux):
+    np.savez(path, **{"%s_%s" % (c, f): np.asarray(aux[c][f], dtype=np.float64)
+                      for c in aux for f in ("sum", "cnt")})
+
+
+def load_aux(path):
+    z = np.load(path)
+    return {c: {"sum": z["%s_sum" % c], "cnt": z["%s_cnt" % c]}
+            for c in ("gross", "lab", "net")}
+
+
 def cmd_validate(a):
     os.makedirs(TMP, exist_ok=True)
     t0 = time.time()
@@ -652,9 +682,11 @@ def cmd_validate(a):
         tag_h = "%s_lab%s" % (a.horizon, lh)
         pt = os.path.join(TMP, "%s_pertick.parquet" % name if tag_h == "4h_lab4h"
                           else "%s_%s_pertick.parquet" % (name, tag_h))
-        paths = [pt] + ([os.path.join(TMP, "%s_%s_pertick.parquet" % (
+        auxp = _aux_path(name, tag_h)
+        paths = [pt, auxp] + ([os.path.join(TMP, "%s_%s_pertick.parquet" % (
                             name, k if tag_h == "4h_lab4h" else "%s_%s" % (tag_h, k)))
-                         for k in ("shuffled", "unif", "logit")] if bins else [])
+                         for k in ("shuffled", "unif", "logit")] if (bins and a.self_tests)
+                        else [])
         if a.reuse and all(os.path.exists(p) for p in paths):
             probe = pd.read_parquet(pt)
             if "auc8" in probe.columns and "dec_rho_lab" in probe.columns:
@@ -665,14 +697,17 @@ def cmd_validate(a):
                 SUM[name] = summarize(df, name, AGG_METRICS, infl)
                 PT[name] = df.sort_values("ts").reset_index(drop=True)
                 if bins:
-                    RAWO[name] = {"self": summarize(df, name, RAW_METRICS, infl)}
-                    for k in ("shuffled", "unif", "logit"):
-                        dk = pd.read_parquet(os.path.join(TMP, "%s_%s_pertick.parquet" % (name, k)))
-                        dk["ts"] = dk.ts.astype(np.int64)
-                        if "abs_ic" not in dk.columns:
-                            dk["abs_ic"] = dk.ic.abs()
-                        VF[k] = dk.sort_values("ts").reset_index(drop=True)
-                        RAWO[name][k] = summarize(dk, "%s|%s" % (name, k), RAW_METRICS, infl)
+                    RAWO[name] = {"self": summarize(df, name, RAW_METRICS, infl,
+                                                       load_aux(auxp))}
+                    if a.self_tests:
+                        for k in ("shuffled", "unif", "logit"):
+                            dk = pd.read_parquet(
+                                os.path.join(TMP, "%s_%s_pertick.parquet" % (name, k)))
+                            dk["ts"] = dk.ts.astype(np.int64)
+                            if "abs_ic" not in dk.columns:
+                                dk["abs_ic"] = dk.ic.abs()
+                            VF[k] = dk.sort_values("ts").reset_index(drop=True)
+                            RAWO[name][k] = summarize(dk, "%s|%s" % (name, k), RAW_METRICS, infl)
                 LOG.info("  [%s] REUSE | n_tick=%d lift8=%+.6f auc8=%s", name, len(df),
                          df.lift8.mean(), df.auc8.mean() if "auc8" in df else "NA")
                 continue
@@ -683,6 +718,7 @@ def cmd_validate(a):
                 LOG.info("  [%s] BO QUA — KHONG co DIEM o h=%s (slot bins toan NaN)", name, a.horizon)
                 continue
             AUX = aux
+            save_aux(auxp, aux["self"])       # `aux` long theo bien the => lay nhanh `self`
             df = res["self"]; df.to_parquet(pt, index=False)
             RAWO[name] = {}
             for k in res:
@@ -744,7 +780,7 @@ def cmd_validate(a):
                  selftest["T2_pass"], t2, selftest["T1_lift8"], selftest["T1_ic"])
 
     # [V-A..V-E] delta + verdict  (M = v1 phu + cac cot AMEND khi co)
-    M = ["auc8", "lift8", "lift12", "lift16", "dec_rho_lab"] + AGG_METRICS
+    M = ["auc8", "auc8c", "lift8", "lift12", "lift16", "dec_rho_lab"] + AGG_METRICS
     D = {}
     pairs = [("A44", "45deploy"), ("A44", "A45"), ("A45", "45deploy"),
              ("V0", "45deploy"), ("V0", "V5"), ("V5", "V0"), ("V1", "V0"), ("V5", "45deploy"),
