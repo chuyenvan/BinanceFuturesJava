@@ -16,7 +16,7 @@ viết TRƯỚC khi đọc số) · **KHÔNG push.**
    (Δ trong CI) ⇒ không PASS.
 2. **Thước TIỀN:** **KHÔNG.** Ở **trục KINH TẾ** (`Δglift8`, `Δnetm8`), **0/3 arm** có Δ ngoài CI so với
    **CẢ HAI** đối chứng; `netm8` của cả 3 arm **vẫn ÂM** (−0,0063 / −0,0042 / −0,0085 so với A45 −0,0049
-   và 45deploy −0,0053). Có cải thiện **trục THỨ TỰ** (`ic`/`pacc`/`dec_mono` ngoài CI vs cả 2 đối
+   và 45deploy −0,0053; **S1 deploy** −0,0108). Có cải thiện **trục THỨ TỰ** (`ic`/`pacc`/`dec_mono` ngoài CI vs cả 2 đối
    chứng) ở `MFB72` (`money72`: Δic +0,0105`*`/+0,0204`*`, Δpacc +0,0038`*`/+0,0074`*`) và một phần ở
    `MFC72` — **nhưng không chuyển thành tiền** (§4). Trên **PnL luật thoát**: Δglift8 **trong CI** cho cả
    2 arm; `MFC72` **KÉM** cả 4 đối chứng (−0,0015…−0,0020).
@@ -110,6 +110,18 @@ viết TRƯỚC khi đọc số) · **KHÔNG push.**
 
 > Đọc đúng: trên thước TIỀN, **`MFB72` nhích nhất** ở trục THỨ TỰ (`ic`/`pacc`/`dec_mono` cao nhất
 > trong 7 arm) và `glift8` +0,0050 > A45 +0,0043 — **nhưng `netm8` vẫn ÂM** và **Δ không ngoài CI** (§5).
+
+### 4.3 S1 DEPLOY (model đang chạy, nền nhãn `g1lite`) — MỐC BỐI CẢNH
+
+Đo lại bằng `h72_s1_measure.py --k 3 --h 72` trên **ledger điểm đã deploy** `/home/ubuntu/ledger/pred_s1a2x1.parquet`
+(**`n_tick = 17.349`** — lưới tick của S1, **KHÁC** 140.237 tick của bins 16-fold ở §4.1/§4.2 ⇒ **không
+so từng ô** với 3 arm mới, chỉ để biết mốc đã deploy; khớp `RESULT_H72.md` §3).
+
+| S1 deploy \ ruler | `ic` | `pacc` | `dec_mono` | `glift8` | `netm8` |
+|---|---|---|---|---|---|
+| `g1lite72` (nhãn của chính nó) | +0,16694`*` | +0,55571`*` | +0,61073`*` | +0,14278`*` | +0,17260`*` |
+| `lab72` (`maxFav_72h`) | +0,27693`*` | +0,59640`*` | +0,66546`*` | +0,16687`*` | +0,26884`*` |
+| `money72` (`retEnd_72h`) | −0,08690`*` | +0,46887`*` | +0,49680`*` | −0,00546 (ns) | −0,01079 (ns) |
 
 ---
 
