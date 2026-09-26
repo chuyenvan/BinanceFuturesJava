@@ -4,7 +4,7 @@ Dung lai may bootstrap khoi-72h x1.21 cua research/analysis/c3_rates.py (khong v
 Them: bang rate THEO NAM, CI theo nam, DCA leg 2+ theo nam, rang buoc cung theo nam,
 cong parity noi bo (cat toi 2024-06-30), n_eff.
 
-Usage: python3 x1_rates.py --k <so_ung_vien> [--appetite old|current] X1_C3 X1_C3_FULL
+Usage: python3 x1_rates.py --k <so_ung_vien> [--appetite old|current|latest] X1_C3 X1_C3_FULL
 """
 import logging
 import sys
@@ -21,16 +21,23 @@ log = logging.getLogger(__name__)
 KEYS = C.KEYS
 LBL = {"n": "n", "win": "win%", "tsloss": "TSloss%", "mp_sm": "mP|SM",
        "mp_sl": "mP|SL", "meanP": "meanP", "margin": "mMargin"}
-# [TASK C 2026-09-20] Hai khau vi rui ro: 'old' = so cu (15/120/-5) de tai lap ket qua da
-# cong bo truoc day; 'current' = khau vi HIEN HANH round 09-19 (TASKS_2026-09-20b muc 0.5):
-# maxDD<=30, UW<=200, quy>=-15. Chon qua --appetite, mac dinh 'current'. LUU Y: rang buoc
-# "tap trung 1 coin <=15% equity" KHONG duoc do trong script nay - da ghi nhan la khoang
-# trong o docs/result/RESULT_VOL_TARGET.md muc 3 (can cong cu rieng).
+# [TASK C 2026-09-20] BA khau vi rui ro (chon qua --appetite; mac dinh = 'latest'):
+#   'old'     = 15/120/-5   — tai lap so da cong bo TRUOC round 09-19
+#   'current' = 30/200/-15  — khau vi round 09-19, GIU de tai lap cac ket qua da cong bo
+#   'latest'  = 40/250/-20  — KHAU VI HIEN HANH, owner chot 26/09/2026
+#               (docs/runbooks/RISK_APPETITE.md §6/§8 · docs/analysis/RULERS_CURRENT.md)
+# [SUA 2026-09-26] Truoc day mac dinh la 'current' (30/200/-15) ⇒ moi verdict PASS/FAIL
+#   tinh ra bi LECH so voi khau vi owner da chot (40/250/-20). Nay mac dinh = 'latest'.
+# LUU Y: rang buoc "tap trung 1 coin <=15% equity" KHONG duoc do trong script nay (khoang
+#   trong da ghi o docs/result/RESULT_VOL_TARGET.md muc 3, can cong cu rieng).
+#   Cac RAO MOI cua owner (26/09) — (a) %PnL tu top-1% <= 15% va (b') tail-free (bo
+#   top-50%) > 0 — CHUA duoc do o day; xem docs/analysis/RULERS_CURRENT.md §8/§9.
 APPETITES = {
     "old": {"dd": 15.0, "uw": 120, "q": -5.0},
     "current": {"dd": 30.0, "uw": 200, "q": -15.0},
+    "latest": {"dd": 40.0, "uw": 250, "q": -20.0},
 }
-APPETITE_NAME = "current"
+APPETITE_NAME = "latest"
 HARD_DD, HARD_UW, HARD_Q = (APPETITES[APPETITE_NAME]["dd"], APPETITES[APPETITE_NAME]["uw"],
                              APPETITES[APPETITE_NAME]["q"])
 
@@ -211,17 +218,18 @@ def parse_k(argv):
 
 
 def parse_appetite(argv):
-    """--appetite {old,current}, mac dinh 'current' neu khong truyen (TASKS_2026-09-20b muc
-    0.5). 'old' = 15/120/-5 (tai lap so cu). KHONG do rang buoc coin<=15% o day (xem
+    """--appetite {old,current,latest}, mac dinh 'latest' neu khong truyen.
+    'old'=15/120/-5 · 'current'=30/200/-15 (tai lap so da cong bo) · 'latest'=40/250/-20
+    (khau vi HIEN HANH, owner chot 26/09). KHONG do rang buoc coin<=15% o day (xem
     docs/result/RESULT_VOL_TARGET.md muc 3)."""
     if "--appetite" not in argv:
-        return "current"
+        return "latest"
     i = argv.index("--appetite")
     if i + 1 >= len(argv):
-        raise SystemExit("--appetite thieu gia tri (old|current).")
+        raise SystemExit("--appetite thieu gia tri (old|current|latest).")
     v = argv[i + 1]
     if v not in APPETITES:
-        raise SystemExit("--appetite phai la 'old' hoac 'current', nhan '%s'." % v)
+        raise SystemExit("--appetite phai la 'old', 'current' hoac 'latest', nhan '%s'." % v)
     del argv[i:i + 2]
     return v
 
