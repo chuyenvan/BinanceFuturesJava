@@ -82,7 +82,7 @@ def main():
         pts = p.ts.to_numpy(np.int64)
         i = np.searchsorted(ticks, pts)
         i = np.where((i < nt) & (ticks[np.minimum(i, nt - 1)] == pts), i, -1)
-        df = pd.DataFrame({"t": i, "s": p.sym.to_numpy(np.int64), "v": p.score.to_numpy(np.float64)})
+        df = pd.DataFrame({"t": i, "s": p.symId.to_numpy(np.int64), "v": p.score.to_numpy(np.float64)})
         key = pd.DataFrame({"t": np.repeat(np.arange(nt), maxC), "s": SY.reshape(-1),
                             "c": np.tile(np.arange(maxC), nt)})
         key = key[key.s >= 0]
