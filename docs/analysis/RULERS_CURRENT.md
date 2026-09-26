@@ -103,3 +103,28 @@ Nguyên văn: *"cần cứng, chấp nhận làm lại từ đầu. **20% với 
 - **Đổi bản chất mục tiêu:** từ *"tối ưu hệ thống hiện tại"* sang *"tìm CẤU TRÚC LÃI không phụ thuộc đuôi"*
   (hệ quả: các luật kiểu arm +7% → trailing, ăn bằng vài leg lớn, **không thể** thoả rào này).
 - **Cơ chế thoát đã thoả thuận trước:** nếu **không cấu hình nào ra** ⇒ owner **hạ rào**; đây **không** tính là thất bại.
+
+---
+
+## 9. KẾT QUẢ KIỂM TRÙNG LẶP RATE (`RESULT_RATE_REDUNDANCY`, `8ddc173`) + **SỬA SAI §6**
+
+### 9.1 🔴 SỬA SAI §6 (câu "bỏ top-5% ⇒ PnL ÂM" là **SAI**)
+Số đúng (448 run DEV ≤2025-12-31, 1800 ô run×năm): **bỏ top-5% VẪN DƯƠNG** (+2.771 T100 · +14.794 GD92).
+**Ngưỡng gãy thật `q*`** (bỏ bao nhiêu % thì PnL = 0): **5,5% (T100) · 7,0% (GD92) · 19,0% (KEEPLEG0/T170)**.
+⇒ Cảnh báo vẫn đúng về bản chất (lãi tập trung ở ~5–19% lệnh đầu), nhưng **con số "5%" em nói trước đó là bịa** — đã sửa.
+
+### 9.2 TRÙNG LẶP (đo, có `file:line`)
+- Định nghĩa: `c3_rates.py:94-109` (`n :102` · `win% :103` · `TSloss% :104` = **SL = dừng lỗ cứng ≈ nhóm LỖ** · `mP|SM :105` = **SM = trailing vào vùng lãi ≈ nhóm THẮNG** · `mP|SL :106` · `meanP :107` · `mMargin :108`).
+- **Đồng nhất thức đại số:** `meanP ≡ (1−TSloss%/100)·mP|SM + (TSloss%/100)·mP|SL` — đúng **tuyệt đối (≤1e-15) trên 408/408** run ⇒ **`meanP` KHÔNG mang thông tin mới**.
+- **Cặp `|ρ|≥0,9` DUY NHẤT: `win%` ↔ `TSloss%`** (Pearson **−0,992**, Spearman −0,930) ⇒ **không phải 2 bằng chứng độc lập**.
+- **Độc lập THẬT:** `mP|SM` · `mP|SL` · `mMargin`; `n` **không phải rate** (quy mô mẫu + mẫu số chung).
+- ⇒ **Bộ rate tối thiểu: `{TSloss% · mP|SM · mP|SL}` (+ `mMargin` = 4)**. **Luật siết lại:**
+  *"≥2 rate ngoài CI, **tối đa 1 rate** thuộc nhóm tần suất `{win%, TSloss%}`, **KHÔNG tính `meanP`**"*.
+- **Bỏ/hạ về báo cáo:** `meanP` (trùng đại số) · `win%` (ρ −0,99) · `n` (không là rate).
+
+### 9.3 Rào (a) `≤15%` và (b) `bỏ top-20% > 0` — kết quả
+- **(a) 1/8 PASS**: `kg0-q998-15m` **12,91%**; còn lại 20,70–40,85% (**T100 40,85 tệ nhất**, `KEEPLEG0` 23,74).
+- **(b) 4/8 PASS** (dương MỎNG): `q998-15m` +5.848 · `q998` +4.180 · `q999` +2.901 · `q995` +772.
+  **ÂM:** `KEEPLEG0` −1.575 · `T170` −1.723 · `GD92` −61.183 · `T100` −76.850.
+- **PASS CẢ (a)+(b): DUY NHẤT `kg0-q998-15m`** — nhưng nhịp 15′ **không tái lập nhịp live 1′** (0,255 vs 0,660 entry/ngày; tỷ lệ 0,440 < 0,60) + CAGR **11,08%** vs 27,14% ⇒ **dưới rào mới: KHÔNG cấu hình nào đủ go-live**.
+- ⚠️ Chưa đo được `sel15`/`all15` (chỉ có `kernel-metadata.json` + `run.py`, **không có artifact output cục bộ**).
