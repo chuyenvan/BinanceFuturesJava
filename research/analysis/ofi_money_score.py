@@ -164,8 +164,11 @@ def main():
         out = {}
         order = np.argsort(-sco, axis=1, kind="stable")
         sels = np.take_along_axis(G, order, axis=1)
+        rowbase = np.arange(nt)[:, None] * NS
         for K in KS:
-            mf = (order < K).reshape(-1)
+            topk = order[:, :K]                      # CHI SO COT GOC cua top-K (dung Thu tu diem)
+            mf = np.zeros(nt * NS, bool)
+            mf[(rowbase + topk).reshape(-1)] = True
             ti, ei, sy = tsflat[mf], exflat[mf], symflat[mf]
             sv = sels[:, :K]
             mg, sg = sv.mean(1), sv.sum(1)

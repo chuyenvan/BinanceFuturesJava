@@ -107,13 +107,15 @@ def main():
         sel = np.take_along_axis(GR, order, axis=1)
         selx = np.take_along_axis(EX, order, axis=1)
         sels = np.take_along_axis(SY, order, axis=1)
-        vld = ~np.isnan(sel)
+        rowbase = np.arange(nt)[:, None] * maxC
         for K in KS:
-            mk_ = (order < K) & vld
-            nsel = mk_.sum(1)
-            sv = np.where(vld, sel, np.nan)[:, :K]
-            mg = np.nanmean(np.where(mk_[:, :K], sel[:, :K], np.nan), axis=1)
-            sg = np.nansum(np.where(mk_[:, :K], sel[:, :K], np.nan), axis=1)
+            sv = sel[:, :K]                                  # top-K THEO DIEM (da sap xep)
+            nsel = (~np.isnan(sv)).sum(1)
+            mg = np.nanmean(sv, axis=1)
+            sg = np.nansum(sv, axis=1)
+            mk_ = np.zeros_like(order, bool)
+            np.put_along_axis(mk_, order[:, :K], True, axis=1)   # MASK o LAYOUT GOC (cho mang phang)
+            mk_ &= ~np.isnan(sel)
             mf = mk_.reshape(-1)
             ti_, ei_, sy_ = np.repeat(ticks, maxC)[mf], selx.reshape(-1)[mf], sels.reshape(-1)[mf]
             aa = np.searchsorted(ticks, ti_, "left")
