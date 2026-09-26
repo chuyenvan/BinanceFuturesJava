@@ -1,11 +1,17 @@
-"""Sinh ofi_train_eval_v3.py tu ofi_train_eval_v2.py bang cac thay the CO HOC (in diff so dong)."""
+"""Sinh ofi_train_eval_v3.py tu ofi_train_eval_v2.py bang cac thay the CO HOC (in diff so dong).
+Duong SRC/DST: env OFI_V3_SRC / OFI_V3_OUT neu co, nguoc lai mac dinh Windows (giu nguyen)."""
 import logging
+import os
 import re
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 log = logging.getLogger("gen")
-SRC = r"E:\educa\source\github\20260415\BinanceFuturesJava\research\pipeline\x1\kaggle_ofi\ofi_train_eval_v2.py"
-DST = r"D:\claudedata\ofi_v3\stage\research\pipeline\x1\kaggle_ofi_v3\ofi_train_eval_v3.py"
+# AMENDMENT-A: override duong ghi output (OFI_V3_OUT); OFI_V3_SRC chi de doi chieu khi chay tren Linux.
+SRC = os.environ.get("OFI_V3_SRC") or (
+    r"E:\educa\source\github\20260415\BinanceFuturesJava\research\pipeline\x1\kaggle_ofi\ofi_train_eval_v2.py")
+DST = os.path.join(os.environ.get("OFI_V3_OUT") or r"D:\claudedata\ofi_v3",
+                   "stage", "research", "pipeline", "x1", "kaggle_ofi_v3", "ofi_train_eval_v3.py")
+os.makedirs(os.path.dirname(DST), exist_ok=True)
 s = open(SRC, encoding="utf-8").read()
 n0 = s.count("\n")
 

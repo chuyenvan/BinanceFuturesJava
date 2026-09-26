@@ -1,6 +1,7 @@
 """Sinh thu muc kernel Kaggle cho OFI V3: 10 kernel build (1 shard/kernel, tu ofi_v3_shards.json)
-+ 1 kernel train/eval. Chay tren Windows (python311), output D:\\claudedata\\ofi_v3\\kernels\\.
-Dung: python gen_kernels_v3.py [--remainder NAME SYM1,SYM2,...]  (chi dung khi shard bi cat, xem PREREG)."""
++ 1 kernel train/eval. Chay tren Windows (python311) hoac Oracle (Linux).
+Output: env OFI_V3_OUT neu co, nguoc lai mac dinh Windows D:\\claudedata\\ofi_v3\\kernels (giu nguyen).
+Dung: [OFI_V3_OUT=<dir>] python gen_kernels_v3.py [--remainder NAME SYM1,SYM2,...]  (chi dung khi shard bi cat, xem PREREG)."""
 import json
 import logging
 import os
@@ -9,7 +10,7 @@ import sys
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 log = logging.getLogger("genk")
 HERE = os.path.dirname(os.path.abspath(__file__))
-OUT = r"D:\claudedata\ofi_v3\kernels"
+OUT = os.environ.get("OFI_V3_OUT") or r"D:\claudedata\ofi_v3\kernels"  # AMENDMENT-A: override duong ghi output
 SH = json.load(open(os.path.join(HERE, "ofi_v3_shards.json")))
 TPL = open(os.path.join(HERE, "ofi_build_feat_v3.py"), encoding="utf-8").read()
 USER = "chuyendinh"
