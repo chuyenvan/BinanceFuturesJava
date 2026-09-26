@@ -146,9 +146,10 @@ def main():
             print("SKIP %s (%s): %s" % (lbl, tag, e)); continue
         d = load(tag)
         rao[lbl] = tf_block(d.pnl.to_numpy(float))
+        rao_ret = tf_block((d.pnl / d.margin).to_numpy(float))
         rr = rulers_of((d.pnl / d.margin).to_numpy(float))
         rr_u = rulers_of(d.pnl.to_numpy(float))
-        rows[lbl] = dict(tag=tag, n=s["n"], ndays=s["ndays"], eq=s["end"], cagr=s["cagr"],
+        rows[lbl] = dict(tag=tag, n=s["n"], rao_ret=rao_ret, ndays=s["ndays"], eq=s["end"], cagr=s["cagr"],
                          maxdd=s["maxDD"], uw=s["uw"], qmin=s["qmin"], conc=s["conc"],
                          entry_month=s["n"] / s["ndays"] * 365.25 / 12.0,
                          sumpnl=s["sumpnl"], meanP=s["sumpnl"] / s["n"] if s["n"] else float("nan"),
@@ -166,6 +167,10 @@ def main():
             if v.get("uw", 0) > 250: bad.append("%s:UW%d" % (y, v["uw"]))
             if v.get("maxDD", 0) < -40: bad.append("%s:DD%.1f" % (y, v["maxDD"]))
             if v.get("qmin", 0) < -20: bad.append("%s:qmin%.1f" % (y, v["qmin"]))
+        if s["maxDD"] < -40: bad.append("ALL:DD%.1f" % s["maxDD"])
+        if s["uw"] > 250: bad.append("ALL:UW%d" % s["uw"])
+        if s["qmin"] < -20: bad.append("ALL:qmin%.1f" % s["qmin"])
+        if s["conc"] > 15: bad.append("ALL:conc%.1f" % s["conc"])
         rail[lbl] = dict(pass_=not bad, violations=bad)
 
     print("=" * 118)
@@ -189,8 +194,18 @@ def main():
                     ("%.1f" % r["q_breakeven_pct"]) if r["q_breakeven_pct"] else "-",
                     "%.1f" % r["median_leg"], "%.1f" % r["tf5"], "%.1f" % r["tf10"]))
 
+    print("\n  [SIZE-NEUTRAL, P = pnl/margin (lai suat/leg)] — A2/A3 chay ~1/6 size vi grid OFF bo he so DCA_GRID_SCALE=6")
+    print(hd % ("arm", "%top1", "(a)", "bo-50%", "(b')", "q*%", "median", "tf_5", "tf_10"))
+    for lbl, tag in ARMS:
+        if lbl not in rows: continue
+        rr = rows[lbl]["rao_ret"]
+        print(hd % (lbl, "%.2f" % rr["share_top1_pct"], "PASS" if rr["pass_a"] else "FAIL",
+                    "%.2f" % rr["tf50"], "PASS" if rr["pass_b50"] else "FAIL",
+                    ("%.1f" % rr["q_breakeven_pct"]) if rr["q_breakeven_pct"] else "-",
+                    "%.4f" % rr["median_leg"], "%.4f" % rr["tf5"], "%.4f" % rr["tf10"]))
+
     print("\n" + "=" * 118)
-    print("MAT CAN XUNG (return/leg = pnl/margin) + 5 thau chuan + 4 rate")
+    print("MAT CAN XUNG (asym=return/leg, asymU=USDT) + 5 thau chuan + 4 rate")
     hd2 = "%-3s %7s %7s %10s %10s %9s %8s %9s %9s %9s %9s %8s"
     print(hd2 % ("arm", "asym", "asymU", "sign%", "loss_mean", "win_mean", "median", "conc_5", "tf_5", "TSloss%", "mP|SM", "mP|SL"))
     for lbl, tag in ARMS:
