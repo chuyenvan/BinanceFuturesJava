@@ -1005,3 +1005,18 @@ KHONG restart, KHONG sua env, KHONG rollback tu dong — chi bao.
 3. Env 242 can user xac nhan (agent khong SSH): `DCA_GRID_WEIGHTS`, `TIER_FLAT`, `PAPER_EQUITY`.
 4. Don not: go gene `AI_DYNAMIC_MIN`/`AI_DYNAMIC_MULTIPLIER` khoi `WFORunner` / `StrategyWfoTask` /
    `SensitivityTool` (tu L7 chung khong con tac dong len gate; doi index gene nen tach rieng).
+
+## GATE-RECAL — nguong gate theo PHAN VI CUON p15 + do lai nhip 15'  [✅ XONG 26/09/2026 — ket qua **NULL**, KHONG de xuat deploy]
+`docs/prereg/PREREG_GATE_RECAL.md` (chot `2e41190`) -> `docs/result/RESULT_GATE_RECAL.md` (+ `.json`).
+Code `fec652e` (2 key **mac dinh TAT**, chi duong SIM: `SIM_GATE_P15_Q`, `SIM_ENTRY_SAMPLE_MIN`).
+Kaggle 6 chan (`sim-gr-*`), jar `chuyendinh/sim-jar-gate-recal`, chi phi 0.
+- **Parity TAT: PASS CA HAI** — `x1_gs_t170` md5 `efb793e2…` (n 1.089 / eq 111.070, `diff`=0) va
+  **KEEPLEG0** md5 `99e42b75…` (n 1.085 / eq 103.083) => 2 key TAT la **byte-identical**.
+- **0/4 arm PASS.** Q 0.995/0.998/0.999 chi **SIET** duoc (n 1.021/954/868; equity 99.531/97.674/90.698
+  vs baseline 103.083), dCAGR −0,99/−1,51/−3,56 pp (chua tach khoi 0); 0/5 rate ngoai CI ca 2 do rong.
+- **NHIP (VIEC 4):** 1 phut 0,660 entry/ngay (20,1/thang) vs **15 phut 0,255 entry/ngay (7,8/thang)**,
+  ty le 0,440 (< 0,60) => **khong "chuyen doi duoc"**. `n_cand` giam dung 15,0x nhung so lenh chi giam 2,27x
+  => **SUA chan doan 26/09: nhip chi giai thich ~2,3x, KHONG phai 15x**; phan chenh con lai la **nguon/thang do p15**.
+- **Can owner duyet:** KHONG co gi de deploy (0 PASS). Neu muon thuc su dua nguong live ve trong tam p15 live
+  (`thr = rolling` thay vi `max(rolling, dyn)`) thi phai **pre-reg MOI**; uu tien con lai: do lai nguon/thang do
+  p15 sim<->live + watchdog `gatePassCuoi` (`DIAG_...` §4.3).
