@@ -140,7 +140,7 @@ def stage_scores(P, tag, objs):
     out = os.path.join(TMP, "scores_%s.npz" % tag)
     if os.path.exists(out):
         z = np.load(out)
-        if all(o in z.files for o in objs):
+        if all(o in z.files and z[o].shape[0] == len(P["gross"]) for o in objs):
             return {o: z[o] for o in objs}
     SC = {}
     for o in objs:
@@ -568,7 +568,20 @@ def main():
     a = ap.parse_args()
     tag = a.tag or a.pool
     os.makedirs(TMP, exist_ok=True)
-    P = load_pool(POOL_P32, "p32") if a.pool == "p32" else load_pool(POOL_EXT, "ext")
+    if a.pool == "p32":
+        P = load_pool(POOL_P32, "p32")
+    else:
+        # B2 = pool MO RONG = P32 ∪ tap coin MOI (nhu RESULT_OFI_MONEY §1), KHONG chi file `_ext`
+        A_ = pd.read_parquet(POOL_P32, columns=["ts", "symId", "gross", "exit_ts"],)
+        B_ = pd.read_parquet(POOL_EXT, columns=["ts", "symId", "gross", "exit_ts"])
+        U = pd.concat([A_, B_], ignore_index=True).drop_duplicates(["ts", "symId"], keep="first")
+        tmp = os.path.join(TMP, "pool_ext_union.parquet")
+        U.to_parquet(tmp, index=False)
+        B = load_pool(tmp, "ext")
+        log("  ### pool_ext union: P32=%d + NEW=%d -> %d dong | %d tick" % (
+            len(A_), len(B_), len(U), len(B["ticks"])))
+        del A_, B_, U
+        P = B
     objs = [x for x in a.objects.split(",") if x] or (OBJECTS if a.pool == "p32"
                                                      else ["ofi_candidate", "ofi_baseline_fresh",
                                                            "ofi_noise", "45deploy", "S1"])
@@ -585,8 +598,10 @@ def main():
     if a.stage == "level":
         stage_level(P, SC, objs, tag)
     elif a.stage == "publish":
-        stage_publish({"p32": "/tmp/trr/rep_full.json", "p32mrb": "/tmp/trr/rep_mrb.json"},
-                      a.out or "docs/result/tail_robust_rulers.json",
+        src = {"p32": "/tmp/trr/rep_full.json", "p32mrb": "/tmp/trr/rep_mrb.json",
+               "pool_ext_B2": "/tmp/trr/rep_ext.json"}
+        src = {k: v for k, v in src.items() if os.path.exists(v)}
+        stage_publish(src, a.out or "docs/result/tail_robust_rulers.json",
                       extra=(json.load(open("/tmp/trr/validate.json"))
                              if os.path.exists("/tmp/trr/validate.json") else None))
     else:

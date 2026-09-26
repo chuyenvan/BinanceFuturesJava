@@ -132,3 +132,33 @@ Nếu **≥3** ⇒ phát biểu **"có alpha không-đuôi"** (kèm bảng CI đ
 
 `df -h /` ~93 % ⇒ chỉ ghi file **NHỎ** (`docs/result/*.json` vài trăm KB, `/tmp/trr/` xoá sau khi xong).
 Output tool **THẬT NHỎ** (log ra file). Không train, không sim, không push.
+
+---
+
+## AMENDMENT 1 (ghi SAU khi đo, 2026-09-27) — SỬA **CHIỀU ĐIỂM** CỦA 2 NGUỒN
+
+**Phát hiện (không phải sửa luật):** trong lúc chạy **kiểm hợp lệ (b)/(e)**, đo được
+`corr(score, rank của pool)`:
+
+| nguồn | corr | quy ước |
+|---|---|---|
+| `predwf_G015x26/*.bin`, `ruler_bins/**` (bins, `p`) | **−0,316 … −0,323** | **điểm CAO = TỐT** (chuẩn `model_ruler`) |
+| `pred_s1a2x1.parquet` | **+1,000** | **điểm THẤP = TỐT** (`score = −pred`) |
+| `pred_ofi_candidate_v2` / `baseline_fresh` / `noise_v2` | **+0,899 / +0,937 / +0,916** | **điểm THẤP = TỐT** (`score = −pred`; xem `research/pipeline/x1/kaggle_ofi_v3/ofi_train_eval_v3.py:150,177`) |
+
+Bản chạy ĐẦU áp **một** quy ước (`argsort(−score)`) cho **mọi** đối tượng ⇒ 4 đối tượng
+`S1` + 3 OFI bị lấy **nhầm top-8 = 8 coin XẤU NHẤT của pool** (kiểm: mean rank top-8 = **27,5** thay vì **3,5**).
+
+**Xử lý (đã làm, đã chạy lại):**
+1. Thêm bảng `ORIENT` trong `tail_robust_rulers.py`: **mọi đối tượng được chuẩn hoá về "điểm CAO = TỐT"**
+   trước khi xếp hạng; nhánh `S1`/OFI **chạy lại toàn bộ** (mức + Δ + CI).
+2. Thêm **kiểm hợp lệ (e)** vào pre-reg §8: `corr(score, rank)` + `mean rank top-8` sau chuẩn hoá
+   (kỳ vọng ≈ 3,5 với đối tượng chọn được top của pool) — **từ nay BẮT BUỘC** cho mọi vòng dùng
+   nhiều nguồn điểm.
+3. **Không** đổi: đối tượng, thước, tham số, `f`, `k`, luật D1–D4, thứ tự ưu tiên. Chỉ đổi **cách xếp hạng
+   cho đúng chiều** — tức sửa **BUG**, không nới luật.
+4. **Cảnh báo phạm vi rộng:** `research/analysis/ofi_money_score.py` / `ofi_money_ext.py` cũng dùng
+   `argsort(−score)` cho `pred_ofi_*` ⇒ **nghi vấn CÙNG lỗi chiều** ⇒ cần **vòng riêng** kiểm lại
+   `RESULT_OFI_MONEY` (KHÔNG tự ý kết luận thay trong tài liệu này).
+
+Kết quả sau sửa: D1 chỉ còn **`MRA4`/`MRB8`/`MRB32`** (trục DOWNSIDE); `S1`/OFI **về 0 ô ngoài CI**.
