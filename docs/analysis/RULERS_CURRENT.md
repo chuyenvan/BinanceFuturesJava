@@ -128,3 +128,32 @@ Số đúng (448 run DEV ≤2025-12-31, 1800 ô run×năm): **bỏ top-5% VẪN 
   **ÂM:** `KEEPLEG0` −1.575 · `T170` −1.723 · `GD92` −61.183 · `T100` −76.850.
 - **PASS CẢ (a)+(b): DUY NHẤT `kg0-q998-15m`** — nhưng nhịp 15′ **không tái lập nhịp live 1′** (0,255 vs 0,660 entry/ngày; tỷ lệ 0,440 < 0,60) + CAGR **11,08%** vs 27,14% ⇒ **dưới rào mới: KHÔNG cấu hình nào đủ go-live**.
 - ⚠️ Chưa đo được `sel15`/`all15` (chỉ có `kernel-metadata.json` + `run.py`, **không có artifact output cục bộ**).
+
+---
+
+## 10. OWNER CHỐT **BỘ THƯỚC CHUẨN** — 2026-09-27 05:22 (owner: *"Ok"*)
+
+### 10.1 Bộ 4 THƯỚC CHUẨN (dùng cho MỌI vòng từ nay — KHÔNG đổi nữa)
+```
+wl_ratio  ·  tf_5  ·  loss_mean  ·  conc_5          (dự bị: median)
+```
+- **`tf_5`** = net/leg sau khi **bỏ top-5% leg** · **`loss_mean`** = độ lớn lỗ trung bình
+- **`wl_ratio`** = tỷ số mean-thắng / mean-thua · **`conc_5`** = tập trung PnL ở top-5% leg
+- **`median`** = dự bị (không bắt buộc báo cáo, dùng khi cần kiểm chéo)
+- **BỎ khỏi bộ chuẩn:** các thước còn lại của **cụm vị trí** (đã chứng minh trùng `tf_5`: `wmean_p1p99` · `wmean_p5p95` · `tmean_1` · `tmean_5` · `tf_1` · `tf_10`) · `sign_frac` (**≡ `win%`**, ρ 0,999) · `conc_1` (trùng `conc_5` ở cấp run) · `ic_wmean`/`ic_med` (**chưa chấm được**: `pred15m` là 1 feature cố định, cần điểm đối tượng căn pool)
+
+### 10.2 Bộ RATE giữ lại (`RESULT_RATE_REDUNDANCY`)
+`{ TSloss% · mP|SM · mP|SL · mMargin }` với luật **siết**:
+> **≥2 rate ngoài CI · TỐI ĐA 1 rate** thuộc nhóm tần suất `{win%, TSloss%}` · **KHÔNG tính `meanP`** (đồng nhất thức đại số, 408/408)
+
+### 10.3 RÀO hiện hành (đầy đủ)
+| nhóm | rào |
+|---|---|
+| **MỚI (owner 26/09)** | **(a)** `%PnL từ top-1% lệnh ≤ 15%` · **(b′)** **`bỏ top-50% lệnh` ⇒ PnL vẫn phải DƯƠNG** (CỨNG; cơ chế thoát: không cấu hình nào ra thì owner hạ rào) |
+| **CŨ (appetite `latest`)** | maxDD ≤ 40%/năm · UW ≤ 250 ngày · quý xấu nhất ≥ −20% · **0 năm âm (CỨNG)** · **conc 1 coin ≤ 15% (CỨNG)** · **trần gross 70% (CỨNG)** · phí chuẩn **0,6%/vòng** |
+| **Luật bằng chứng** | ≥2 chỉ số ngoài CI cùng hướng tốt vs **CẢ 2** đối chứng (retrain + nhiễu) · block-72h · 2000 rep · seed 20260905 · `inflate(k)` · multi-seed ≥3 |
+
+### 10.4 HỆ QUẢ SỐ HỌC đang treo (để không quên)
+- Với bộ thước + rào trên: **chưa cấu hình nào đủ go-live** (rào (a) giết 7/8; (b′) giết 8/8 — `RESULT_TAIL50_RULER_REDUNDANCY.md`).
+- **Nhịp:** con số hay được trích (**CAGR ~27%**) là con số **1′ cho tất cả** — **KHÔNG phải** con số live. Cấu hình **đúng thiết kế live** (`sel15`: selector 15′ + BIG_DOWN/DCA 1′) = **CAGR ~17,3%** (`RESULT_SIM_CADENCE_MATCH.md`).
+  ⇒ **Còn 1 câu owner chưa chốt: live giữ 15′ hay đổi sang 1′** (đổi ⇒ phải sửa `ENTRY_GRID_MIN=15L`, `DetectEntrySignal2TradeNormal.java:988` — **đụng production, cần duyệt riêng**).
