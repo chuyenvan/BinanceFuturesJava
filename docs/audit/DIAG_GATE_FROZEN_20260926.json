@@ -1,0 +1,84 @@
+{
+  "doc": "DIAG_GATE_FROZEN_20260926",
+  "date": "2026-09-26",
+  "repo": "/home/ubuntu/src/BinanceFuturesJava",
+  "branch": "module",
+  "head": "25e96d9",
+  "verdict": "CALIBRATION (HIEU CHUAN)",
+  "gate_formula": {
+    "file_line": "src/main/java/com/binance/chuyennd/tradecore/EntryGate.java:85-87",
+    "expr": "thr = MIN_MOMENTUM_15M * max(DYN_MIN, symbolPred/SCORE_BASE*DYN_MULT) * GATE_DYN_SCALE",
+    "DYN_MIN": 0.26787,
+    "SCORE_BASE": 0.15,
+    "DYN_MULT": 1.2876,
+    "base_from": "Configs.java:407 (default 0.02284) / Configs.java:759 key SIM_MIN_MOMENTUM_15M = 0.008 in env",
+    "scale_from": "EntryGate.java:58 + Configs.java:763-765 key SIM_GATE_DYN_SCALE = 1.70"
+  },
+  "oracle_shadow": {
+    "log": "/home/ubuntu/shadow_c3/app/logs/full.log",
+    "gate_lines": 538,
+    "gate_first": "20/09/2026 22:19:00.125",
+    "gate_last": "26/09/2026 19:33:36.601",
+    "gate_lines_n_pass_gt_0": 0,
+    "gate_per_day": {"20/09": 7, "21/09": 76, "22/09": 96, "23/09": 93, "24/09": 96, "25/09": 95, "26/09": 75},
+    "thr_band_pct": [2.947, 3.76],
+    "ai_pass_total": 1008,
+    "ai_pass_last": "20/09/2026 05:33:14.128 15M(0.83%) Min15M:0.80% (gate PHANG 0.008)",
+    "jar_new_start": "20/09/2026 22:06:11 PID 1247839",
+    "p15_pct_samples": {"n": 553, "min": 0.53, "p50": 0.94, "p90": 1.16, "p95": 1.25, "p99": 1.49, "max": 2.30}
+  },
+  "host_242": {
+    "log": "/home/chuyennd/java/v_t_m/logs/full.log",
+    "gate_lines": 1385,
+    "gate_first": "12/09/2026 08:15:53",
+    "gate_lines_n_pass_gt_0": 0,
+    "scale_counts": {"1.0000": 37, "1.7000": 1344, "(no field)": 4},
+    "would_buy_last": "12/09/2026 07:15:48",
+    "p15_pct_samples": {"n": 8929, "min": 0.40, "p50": 0.91, "p90": 1.22, "p99": 1.77, "p99_5": 1.85, "max": 2.30,
+      "ge_1_5": 293, "ge_1_705": 135, "ge_2_0": 5, "ge_2_284": 1, "ge_2_3": 1, "ge_2_9": 0,
+      "top8": [1.96, 1.97, 1.99, 2.00, 2.08, 2.10, 2.10, 2.30]}
+  },
+  "dev_pred_distribution": {
+    "source": "/home/ubuntu/wfo_ds_x1_2021/pred.bin (predReturn15M, 1m grid, dtype >i8,>f4,>f4)",
+    "n": 2500260,
+    "window": "2021-07..2025-12",
+    "min": 0.202, "p50": 0.545, "p90": 0.837, "p99": 1.308, "p99_9": 2.818, "max": 12.261,
+    "frac_ge": {"0.008": 12.289, "0.015": 0.6058, "0.0175": 0.354, "0.020": 0.2323, "0.023": 0.1595, "0.029": 0.0938, "0.036": 0.056, "0.0376": 0.0509, "0.046": 0.0311},
+    "subset_2024_2025": {"n": 1052640, "frac_ge": {"0.020": 0.0945, "0.029": 0.0381}}
+  },
+  "threshold_percentiles": {
+    "thr_2.947_current_min": {"dev_2021_25": "p99.910", "dev_2024_25": "p99.963", "y2026": ">p100 (max 2.30)"},
+    "thr_3.760_current_max": {"dev_2021_25": "p99.949", "dev_2024_25": "p99.975", "y2026": ">p100"},
+    "thr_1.705_242_deploy": {"dev_2021_25": "p99.610", "dev_2024_25": "p99.840"},
+    "flat_0.008": {"dev_2021_25": "p87.711", "dev_2024_25": "p81.151", "y2026": "~p52"}
+  },
+  "poisson_dev_vs_2026_n8929": {
+    "ge_1.5": {"dev_rate_pct": 0.6058, "expected": 54.1, "observed": 293},
+    "ge_2.0": {"dev_rate_pct": 0.2323, "expected": 20.7, "observed": 5, "p_le": 4.1e-05},
+    "ge_2.3": {"dev_rate_pct": 0.1595, "expected": 14.2, "observed": 1, "p_le": 9.9e-06},
+    "ge_2.9": {"dev_rate_pct": 0.0938, "expected": 8.4, "observed": 0, "p_le": 2.3e-04},
+    "note_2026_p50_0.91_is_dev": "p93.4 (2024-25: p90.5)"
+  },
+  "dev_entry_rate_current_rule": {
+    "T170_x1_2021": {"window": "2021-07..2025-12", "days": 1645, "n_pass": 841, "orders": 1089, "passes_per_day": 0.51},
+    "T170_x1": {"window": "2022-01..2025-12", "days": 1460, "n_pass": 724, "orders": 940, "selector_legs": 704},
+    "scale_1.0_x1": {"days": 1460, "n_pass": 2056, "orders": 2266, "passes_per_day": 1.41}
+  },
+  "cadence_gap": {
+    "sim_evals_per_day": 1440,
+    "sim_evals_per_day_evidence": "SimulatorMarketLevelTicker1MStopLoss.java:219-221 + 403-436; n_cand 17925650 / (1645d*1440) = 7.57 candidates/tick",
+    "live_evals_per_day": 96,
+    "live_evidence": "96 [GATE] lines/day on Oracle AND 242 (15-minute cadence)",
+    "expected_live_passes_per_day": 0.086,
+    "expected_live_per_month": 2.6,
+    "observed_7d": 0,
+    "P0_under_expected_0.6": 0.55
+  },
+  "sanity": {
+    "conclusion": "Rule is not degenerate on DEV (0.5-1.4 passes/day) -> problem is live input distribution + cadence, not the rule mechanics.",
+    "threshold_outside_2026_support": true
+  },
+  "residual_uncertainty": "Cannot 100% exclude a genuine 2026 'compressed volatility' regime; distinguishing requires realized-vol comparison (not run: no sim/Java on Oracle).",
+  "constraints_kept": "read-only Oracle+242; no restart/config change/deploy; no Java/sim on Oracle; no git push; no 2026 fitting.",
+  "deviation_disclosed": "Wrote temp /tmp/p15_242.txt on 242 (4.4KB) for percentiles, removed in same session (rm -f)."
+}
