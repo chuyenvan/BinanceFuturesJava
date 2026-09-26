@@ -1020,3 +1020,24 @@ Kaggle 6 chan (`sim-gr-*`), jar `chuyendinh/sim-jar-gate-recal`, chi phi 0.
 - **Can owner duyet:** KHONG co gi de deploy (0 PASS). Neu muon thuc su dua nguong live ve trong tam p15 live
   (`thr = rolling` thay vi `max(rolling, dyn)`) thi phai **pre-reg MOI**; uu tien con lai: do lai nguon/thang do
   p15 sim<->live + watchdog `gatePassCuoi` (`DIAG_...` §4.3).
+
+## SIM CADENCE MATCH — sim phai the hien dung thiet ke: selector 15' + BIG_DOWN/DCA 1'  [✅ XONG 26/09/2026 — SUA PHAM VI, KHONG deploy]
+`docs/prereg/PREREG_GATE_RECAL.md` **§7 AMENDMENT** (chot `30e5f4d`) -> `docs/result/RESULT_SIM_CADENCE_MATCH.md` (+ `.json`).
+Code **`3b6c6e9`** (fix PHAM VI `SIM_ENTRY_SAMPLE_MIN` = **chi selector-entry**; `BIG_DOWN` + `DCA_LEVEL1` khong bi
+lay mau; **khong** them key moi, default OFF = byte-identical). Kaggle 5 chan song song (`sim-cd-*`), jar moi
+`chuyendinh/sim-jar-cadence` (`43888ebd…`), chi phi 0.
+- **Parity TAT: PASS CA HAI** — KEEPLEG0 md5 `99e42b75…` (n 1.085 / eq 103.083) VA T170 md5 `efb793e2…` (n 1.089 / eq 111.070).
+- **TRA LOI (1): SIM HIEN TAI = 1 PHUT CHO TAT CA** (tick 1m, `createOrder` la diem dung chung ca 3 nguon leg) => cho lech.
+- **`all-1'`** 1.085 / 0,660 entry-ngay / +27,14% / maxDD −11,21 / UW 147 · **`all-15'`** (chan TAT CA, kem Q998)
+  420 / 0,256 / +11,08% / −5,93 / UW 278 · **`sel15`** (select 15' + BD/DCA 1') **744 / 0,453 / +17,29% / −6,27 / UW 166**,
+  `entry/thang 13,77` ∈ [5,30], rao cung PASS, 0/5 rate ngoai CI.
+- **BC bang so leg:** `BIG_DOWN` **248/248 = 1,000** o ca 3 arm sel15 (truoc fix: 14) => cong lay mau da chi cham selector;
+  `DCA_LEVEL1` 20 -> 13 (giao duc dan, khong phai bi lay mau). `n_cand` 15,0x nhung `n_pass` chi 1,69x.
+- **TRA LOI (2):** `sel15` vs `all-1'` = −341 lenh (−31,4%), dCAGR **−9,84 pp** (CI tren −0,49 < 0 = am RO), maxDD TOT hon
+  +4,94, UW +19. Nhung ty le chuyen doi **DAT 0,686 ≥ 0,60** => ket luan "nhip 15' khong chuyen doi duoc" cua bai cu la
+  **he qua cua chan OAN**: doi chieu cung Q998, sua pham vi hoi lai **+3,97 pp CAGR / +188 lenh** (≈1/4 mat mat la chan oan,
+  ≈3/4 la nhip selector 15' that).
+- **TRA LOI (3):** cau hinh go-live = **`sel15`** (selector 15' + BIG_DOWN/DCA 1', gate incumbent 1.70, **khong** bat
+  `SIM_GATE_P15_Q`). **CO, live can chinh** neu live dang danh gia entry 96/ngay cho TAT CA leg (chan doan 26/09) — phai
+  tach: selector 15', BIG_DOWN/DCA 1'. Con 1 nut rieng (nguon/thang do p15 live<->sim) can **pre-reg KHAC**; khong cham 2026.
+- Khong deploy/khong cham production/242; khong push git.

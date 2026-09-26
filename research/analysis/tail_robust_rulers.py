@@ -65,6 +65,12 @@ PREDS = {
     "ofi_noise": "/home/ubuntu/s1hpo/kaggle_ofi_train_v2/out/pred_ofi_noise_v2.parquet",
 }
 OBJECTS = list(BINS) + list(PREDS)
+# ⚠️ CHIEU DIEM KHAC NHAU GIUA 2 NGUON (do duoc, khong doan):
+#   - bins (`p`): corr(score, rank cua pool) ~ -0,32 => DIEM CAO = TOT (chuan model_ruler)
+#   - `pred_s1a2x1.parquet` + `pred_ofi_*_v2.parquet`: score = -pred (xem
+#     `research/pipeline/x1/kaggle_ofi_v3/ofi_train_eval_v3.py:150,177`) => DIEM THAP = TOT
+#   => phai DOI DAU cho nhom nay, neu khong se chon nham top-8 = 8 coin XAU NHAT cua pool.
+ORIENT = {o: -1 for o in PREDS}
 PAIRS = [("A45", "45deploy"), ("V5", "V1"),
          ("A44", "45deploy"), ("A44", "V1"), ("A45", "V1"),
          ("MRA4", "45deploy"), ("MRA4", "A45"), ("MRA4", "V1"),
@@ -147,10 +153,16 @@ def stage_scores(P, tag, objs):
 def common_ticks(P, SC, objs):
     """Giao cac tick co DIEM DU cho MOI doi tuong (de Δ la ghep cap that)."""
     nt = len(P["ticks"])
-    m = np.ones(nt, bool)
-    for o in objs:
-        Sm = SC[o].reshape(nt, -1)
-        m &= np.isfinite(Sm).all(1)
+    if P["mode"] == "p32":
+        m = np.ones(nt, bool)
+        for o in objs:
+            m &= np.isfinite(SC[o].reshape(nt, -1)).all(1)
+    else:
+        tot = np.bincount(P["tick"], minlength=nt)
+        m = np.ones(nt, bool)
+        for o in objs:
+            f = np.isfinite(SC[o])
+            m &= (np.bincount(P["tick"][f], minlength=nt) == tot)
     log("  ### tick dung chung: %d / %d (bo %d)" % (m.sum(), nt, nt - m.sum()))
     return P["ticks"][m]
 
@@ -562,6 +574,8 @@ def main():
                                                            "ofi_noise", "45deploy", "S1"])
     log("### pool=%s rows=%d tick=%d | objs=%d" % (a.pool, len(P["gross"]), len(P["ticks"]), len(objs)))
     SC = stage_scores(P, "pool_" + a.pool, objs)
+    for o in objs:                      # chuan hoa CHIEU: diem CAO = TOT cho MOI doi tuong
+        SC[o] = SC[o] * ORIENT.get(o, 1)
     tk = common_ticks(P, SC, objs)
     if len(tk) < len(P["ticks"]):
         m = np.isin(P["ts"], tk)

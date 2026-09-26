@@ -25,6 +25,14 @@ V = {}
 objs = ["45deploy", "A45", "S1", "ofi_candidate", "ofi_baseline_fresh", "ofi_noise"]
 SC = T.stage_scores(P, "val", objs)
 V["coverage"] = {o: round(float(100 * np.isfinite(SC[o]).mean()), 3) for o in objs}
+# (a2) CHIEU DIEM: corr(score, rank cua pool) am => diem cao = tot (bins); duong => phai doi dau
+V["chieu_diem_corr_rank"] = {o: round(float(np.nanmean([
+    pd.Series(SC[o].reshape(nt, -1)[i]).corr(pd.Series(np.arange(32)), method="spearman")
+    for i in range(0, nt, 499)])), 4) for o in objs}
+_or = {o: (SC[o] * T.ORIENT.get(o, 1)) for o in objs}
+V["mean_rank_top8_sau_chuan_hoa"] = {o: round(float(T.select_topk(
+    P, _or[o])["sym"].size and np.mean(np.argsort(-_or[o].reshape(nt, -1), axis=1, kind="stable")[:, :8])), 2)
+    for o in objs}
 # (b) S1 tai lap thu tu rank: trong pool, S1 diem CAO hon => rank NHO hon
 d = pd.read_parquet(T.POOL_P32, columns=["ts", "rank"])
 S1 = SC["S1"].reshape(nt, -1)
@@ -40,7 +48,7 @@ V["so_hoc_net"] = float(np.abs(d.net.to_numpy() - (d.gross.to_numpy() - 0.008)).
 # (d) trung nhau top-8
 sel = {}
 for o in objs:
-    S = T.select_topk(P, SC[o])
+    S = T.select_topk(P, _or[o])
     key = S["tick"] * 1_000_000 + S["sym"]
     sel[o] = key
 J = {}
