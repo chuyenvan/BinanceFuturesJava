@@ -5,7 +5,7 @@
 (+ **AMENDMENT 1** ở cuối pre-reg: sửa CHIỀU ĐIỂM của 2 nguồn, phát hiện **sau** khi đo, ghi rõ).
 **Code:** `research/analysis/tail_robust_rulers.py` (17 thước + bootstrap khối, paired) ·
 `research/analysis/tail_robust_validate.py` (kiểm hợp lệ) · `research/analysis/tail_robust_tables.py` (bảng).
-**Số thô:** `docs/result/tail_robust_rulers.json` (3,1 MB) · log `/tmp/trr/*.log` (không commit).
+**Số thô:** `docs/result/tail_robust_rulers.json` (3,9 MB) · log `/tmp/trr/*.log` (không commit).
 **KHÔNG** train, **KHÔNG** Java/sim, **KHÔNG** chạm `242`/ONNX/LIVE. DEV only (`<= 2025-12-31`, pool tới 2025-09-27).
 
 ---
