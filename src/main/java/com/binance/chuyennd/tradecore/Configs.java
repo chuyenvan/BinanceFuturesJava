@@ -407,9 +407,11 @@ public class Configs {
     public static float MIN_MOMENTUM_15M = 0.02284f;                  // HPO (đã revert về cũ): 0.01720f
 
     /**
-     * [GATE-RECAL 2026-09-26] docs/prereg/PREREG_GATE_RECAL.md §3.6 — nhip LAY MAU entry-leg cua sim
-     * (phut). 1 = moi phut (hanh vi cu). &gt;1 = chi cho MO lenh moi o cac phut chia het (vd 15 = 96 co hoi/ngay,
-     * khop nhip live). Key {@code SIM_ENTRY_SAMPLE_MIN}; khong khai / &lt;=1 =&gt; 1 =&gt; byte-identical.
+     * [GATE-RECAL 2026-09-26] docs/prereg/PREREG_GATE_RECAL.md §3.6 + AMENDMENT §7 — nhip LAY MAU entry-leg
+     * cua sim (phut). 1 = moi phut (hanh vi cu). &gt;1 = chi cho MO lenh moi o cac phut chia het (vd 15 = 96 co
+     * hoi/ngay, khop nhip live). PHAM VI (AMENDMENT §7): CHI leg do selector khoi tao — leg BIG_DOWN va
+     * DCA_LEVEL1 KHONG bi lay mau (giu nhip 1 phut cua sim), dung thiet ke live (selector 15', bigdown/DCA 1').
+     * Key {@code SIM_ENTRY_SAMPLE_MIN}; khong khai / &lt;=1 =&gt; 1 =&gt; byte-identical.
      */
     public static int ENTRY_SAMPLE_MIN = 1;
     public static float MS_UP_BIG_THRES = 0.02046f;                  // HPO (đã revert về cũ): 0.01757f

@@ -1275,9 +1275,17 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
 
 
-        // [GATE-RECAL 2026-09-26] docs/prereg/PREREG_GATE_RECAL.md §3.6 — nhip LAY MAU entry-leg:
+        // [GATE-RECAL 2026-09-26] docs/prereg/PREREG_GATE_RECAL.md §3.6 + AMENDMENT §7 — nhip LAY MAU
+        //   entry-leg: PHAM VI = CHI leg MO MOI khong phai BIG_DOWN va khong phai DCA_LEVEL1
+        //   (tuc leg do SELECTOR khoi tao, PREDICT_SYMBOL_TRADE). BIG_DOWN (market-signal bat day)
+        //   va DCA_LEVEL1 (nhoi) GIU nhip 1 phut cua sim — dung thiet ke LIVE (selector 15',
+        //   bigdown/DCA 1'); truoc day cong nam o DAU ham nay nen chan OAN ca 2 loai leg do.
+        //   Bang chung: baseline KEEPLEG0 co 817 PREDICT_SYMBOL_TRADE + 248 BIG_DOWN + 20 DCA_LEVEL1
+        //   (+ 0 entryOther) => nhanh FOMO/market-signal khong mo lenh nao trong cua so nay.
         //   SIM_ENTRY_SAMPLE_MIN &lt;=1 (mac dinh) => khong lam gi => byte-identical.
-        if (Configs.ENTRY_SAMPLE_MIN > 1) {
+        if (Configs.ENTRY_SAMPLE_MIN > 1
+                && levelChange != MarketLevelChange.BIG_DOWN
+                && levelChange != MarketLevelChange.DCA_LEVEL1) {
             long _t = EntryGate.CURRENT_P15_TIME;
             if (_t == Long.MIN_VALUE) _t = ticker.startTime;
             if (((_t / 60000L) % Configs.ENTRY_SAMPLE_MIN) != 0) return;
