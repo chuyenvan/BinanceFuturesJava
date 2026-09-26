@@ -22,13 +22,18 @@ production/242/ONNX/LIVE, **KHÔNG** push. DEV only: mọi leg `start <= 2025-12
 5. **Rào (b) bỏ top-20 % ⇒ PnL DƯƠNG: 4/8 PASS** — `kg0-q995` (+772) · `kg0-q998` (+4 180) ·
    `kg0-q999` (+2 901) · `kg0-q998-15m` (+5 848). **ÂM:** `KEEPLEG0` (−1 575) · `T100` (−76 850) ·
    `GD92` (−61 183) · `T170` (−1 723).
-6. **PASS CẢ (a) VÀ (b): DUY NHẤT `kg0-q998-15m`** — nhưng đây **KHÔNG** phải cấu hình live hợp lệ:
-   nhịp lấy mẫu **15′** chỉ tái lập **0,255** entry/ngày vs **0,660** của nhịp **1′** (tỷ lệ **0,440 < 0,60**,
-   `RESULT_GATE_RECAL.md`) ⇒ **không chuyển đổi được** sang live; và **CAGR tụt còn ~11,2 %/năm**
-   (equity 35 000 → **56 148**) so với **~26,9 %/năm** (→ **103 083**) của `KEEPLEG0`.
-   ⇒ **Dưới rào mới, KHÔNG cấu hình nào đủ điều kiện go-live.** (Hệ quả owner cần biết — đúng như dự kiến,
-   nhưng **lý do KHÁC** dự kiến: không phải vì mọi biến thể âm ở bỏ-20 %, mà vì (a) chặn hết, và biến thể
-   duy nhất qua được cả 2 rào là 1 cấu hình **không tái lập được nhịp live**.)
+5b. **RÀO (b′) NÂNG LÊN bỏ top-50 % (owner 26/09 23:17, `RULERS_CURRENT.md` §8) ⇒ PnL DƯƠNG:
+   **0/8 PASS** — **TẤT CẢ FAIL rất sâu**: `T100` **−155 919** · `GD92` **−134 390** · `T170` **−35 416** ·
+   `KEEPLEG0` **−33 196** · `kg0-q995` **−29 512** · `kg0-q998` **−24 511** · `kg0-q999` **−23 257** ·
+   `kg0-q998-15m` **−3 357**. (Đồng nhất thức `TF(50 %) ≡ Σ nửa dưới` — kiểm **ĐÚNG 8/8**, lệch 0 USDT.)
+5c. **⚠️ KHẮC RÕ "gần với median leg > 0" — SAI nếu đọc là tương đương.** `median leg PnL` **DƯƠNG ở
+   CẢ 8 biến thể** (59,1 – 74,6 USDT; `sign_frac(pnl>0)` = 83,4 – 90,5 %) nhưng `Σ nửa dưới` **ÂM ở cả 8**.
+   ⇒ **`median > 0` KHÔNG suy ra được rào (b′)**, và ngược lại. Điều kiện thật là **"lãi TRUNG BÌNH của nửa
+   dưới > 0"**, mạnh hơn hẳn "lệnh trung vị có lãi".
+6. **KHÔNG cấu hình nào đủ điều kiện go-live.** Với rào (b′)-50 %: **0/8** (mọi biến thể âm sâu).
+   Với rào (b)-20 %: biến thể duy nhất PASS cả (a)+(b) là `kg0-q998-15m`, mà cấu hình này (i) **không tái lập
+   được nhịp live 1′** (tỷ lệ entry 0,440 < 0,60 → `RESULT_GATE_RECAL.md`), (ii) đã **0/4 arm PASS**,
+   (iii) **CAGR 11,08 %/năm vs 27,14 %** của `KEEPLEG0` (−59 % tương đối; PnL cuối kỳ 21 148 vs 68 083 = −69 %).
 7. **SỬA SAI SỐ LIỆU ĐANG LƯU HÀNH:** `RULERS_CURRENT.md` §7 và `RESULT_FRAGILITY_N.md` §0.3 viết
    *"hiện bỏ top-5 % đã ÂM (T100/GD92)"* — **SAI**. Số thật: bỏ **top-5 %** vẫn **DƯƠNG**
    (`T170` +32 922 · `KEEPLEG0` +30 416 · `GD92` +14 794 · `T100` +2 771); chỉ **top-10 %** mới ÂM
@@ -172,7 +177,49 @@ biến thể duy nhất PASS cả (a)+(b) là `kg0-q998-15m`, mà cấu hình n�
 (iii) **CAGR 11,08 %/năm vs 27,14 %** của `KEEPLEG0` (−59 % tương đối; PnL cuối kỳ 21 148 vs 68 083 = −69 %). 3 arm `kg0-q99*` PASS (b) nhưng
 **FAIL (a)**, và đã **0/5 rate ngoài CI vs cả 2 đối chứng**, `dCAGR −0,99/−1,51/−3,56 pp` (cùng vòng trên).
 
+## 4b. BỔ SUNG — RÀO (b′) **BỎ TOP-50 %** (owner nâng rào 26/09 23:17, `RULERS_CURRENT.md` §8)
+
+| biến thể | n | `Σpnl` | **TF50 (= `Σ nửa dưới`)** | **(b′) >0** | `median leg` | `sign%(pnl>0)` | `TF50` trên `profit` | == nửa dưới? |
+|---|---|---|---|---|---|---|---|---|
+| `KEEPLEG0` | 1 085 | 68 083 | **−33 196** | **FAIL** | +70,0 | 87,8 % | −971,1 | ✔ |
+| `T100` | 2 559 | 86 770 | **−155 919** | **FAIL** | +70,6 | 84,1 % | −5 118,3 | ✔ |
+| `GD92` | 2 632 | 98 944 | **−134 390** | **FAIL** | +63,7 | 83,4 % | −4 719,4 | ✔ |
+| `kg0-q995` | 1 021 | 64 531 | **−29 512** | **FAIL** | +71,7 | 87,8 % | −764,9 | ✔ |
+| `kg0-q998` | 954 | 62 674 | **−24 511** | **FAIL** | +72,5 | 87,8 % | −578,5 | ✔ |
+| `kg0-q999` | 868 | 55 699 | **−23 257** | **FAIL** | +74,6 | 87,9 % | −578,1 | ✔ |
+| `T170` | 1 089 | 76 070 | **−35 416** | **FAIL** | +74,2 | 88,0 % | −791,5 | ✔ |
+| `kg0-q998-15m` | 420 | 21 149 | **−3 357** | **FAIL** | +59,1 | 90,5 % | −5,8 | ✔ |
+
+(Cột cuối cùng = `TF50` đo trên cột `profit` **% giá** thay vì `pnl` **USDT** — **cũng ÂM cả 8** ⇒ kết luận
+không phụ thuộc cách đo; `median leg profit` = **+4,5…+5,0 %** dương cả 8, cùng hiện tượng.)
+
+**→ 0/8 PASS. Không biến thể nào (kể cả `kg0-q998-15m`) qua được rào (b′).**
+
+**1) Ý NGHĨA TƯƠNG ĐƯƠNG (đã kiểm bằng số, `tf50_equals_bottom_half = true` 8/8):**
+`bỏ top-50 % > 0` ⟺ **`Σ pnl của nửa dưới (floor(n/2) leg nhỏ nhất) > 0`** ⟺ **lãi TRUNG BÌNH/leg của
+nửa dưới > 0**. Đây **KHÔNG** phải "median leg > 0" (xem 2).
+
+**2) ⚠️ KHẮC RÕ ĐỂ KHÔNG HIỂU SAI:** `median leg PnL` **> 0 với CẢ 8 biến thể** (+59…+75 USDT,
+`sign%(pnl>0)` = 83–91 %) **NHƯNG** `Σ nửa dưới` **< 0 với CẢ 8**. Hai điều kiện **KHÔNG tương đương**.
+**Cơ chế (số đo):** luật thoát hiện tại cho **tỷ lệ thắng rất cao** nhưng **mất cân xứng độ lớn**:
+`mean pnl/leg | SM` = **+112,5 USDT** vs `mean pnl/leg | SL` = **−369,2 USDT** ⇒ **1 leg lỗ lớn bằng 3,3 leg lãi**
+(tỷ số 0,27–0,32 trên cả 8). Vì vậy **nửa dưới (chứa phần lớn leg SL) âm nặng**, dù lệnh **trung vị lãi**.
+⇒ **Muốn qua rào (b′), phải sửa MẤT CÂN XỨNG LỚN/THUA (cắt lỗ ngắn hơn hoặc để lãi chạy dài hơn),**
+không phải chỉ "có thêm 1 leg lãi nữa".
+
+**3) THEO NĂM (rào b′): DUY NHẤT 3/40 ô dương** — `kg0-q998` 2021 **+325** · `kg0-q999` 2021 **+134** ·
+`kg0-q998-15m` 2023 **+214**; **37/40 ô ÂM**. Sâu nhất: `T100` 2025 **−96 186** · `GD92` 2025 **−57 385** ·
+`T100` 2024 **−29 579**. **Không** biến thể nào dương **cả 5 năm**. (`median leg` dương ở **mọi** ô.)
+
+**4) KẾT LUẬN BẢN CHẤT (phải ghi rõ):** rào (b′) **đổi bản chất mục tiêu** — từ *"tối ưu hệ thống hiện tại"*
+sang *"tìm CẤU TRÚC LÃI không phụ thuộc đuôi"*. Với luật thoát "**arm +7 % → trailing**": lãi đến từ
+**% thắng thấp nhưng biên độ lớn trên vài leg** ⇒ **về mặt cấu trúc KHÔNG THỂ thoả** rào (b′) **bất kể
+cách tham số hoá** (0/8 ở mọi biến thể, kể cả biến thể siết gate nặng nhất `kg0-q999`). ⇒ **go-live bị CHẶN**
+cho tới khi có **nguồn lãi không-đuôi**, đúng như `RULERS_CURRENT.md` §8 đã ghi. Cơ chế thoát đã thoả thuận:
+owner **hạ rào** nếu không cấu hình nào ra — **không** tính là thất bại (ghi ở đây để đối chiếu §8).
+
 ## 5. VIỆC 5 — ĐỀ XUẤT
+
 
 **(1) Bộ rate tối thiểu KHÔNG trùng (để *"≥2 rate ngoài CI"* = 2 bằng chứng ĐỘC LẬP):**
 
@@ -201,8 +248,10 @@ chứng"** nhưng thực chất là **1** (`rho = −0,99`).
 Thay vai trò *"bằng chứng độ lớn"* (mean-based) bằng họ **không-đuôi**:
 - **`median` (R5)** — thay `meanP`/`mP|SM` làm **độ lớn trung tâm** (ưu tiên #1 theo D3 của prereg đó).
 - **`sign_frac` (R6)** — thay `win%`/`TSloss%` làm **tần suất** (có **sign test** = CI của tỷ lệ, không bị đuôi chi phối).
-- **`loss_mean` (R15)** — thay `mP|SL` làm **độ lớn thua** (downside).
-- **`tf_20`** = chính **rào (b)** và **`conc_1`/`conc_5` (R10/R11)** = chính **rào (a)** ⇒ dùng làm **RÀO**, **không** dùng làm bằng chứng.
+- **`loss_mean` (R15)** — thay `mP|SL` làm **độ lớn thua** (downside); **cần thiết nhất** vì nguyên nhân
+  FAIL rào (b′) là **mất cân xứng độ lớn thắng/thua** (`|SL|/SM` = **3,3×**), không phải tần suất.
+- **`tf_20` (R9)** = rào (b) cũ, **`tf_50` (**mức owner nâng 26/09 23:17**) = rào (b′)**, và
+  **`conc_1`/`conc_5` (R10/R11)** = chính **rào (a)** ⇒ cả ba nhóm dùng làm **RÀO**, **KHÔNG** dùng làm bằng chứng.
 ⚠️ **Chưa kiểm trùng lặp cho họ 17** (`median`/`tmean_1`/`wmean_*` **có thể** gần nhau) — nếu chốt dùng
 họ này làm bộ chuẩn thì **phải chạy lại ma trận `rho` y như vòng này** trước khi tin luật "≥2 thước".
 

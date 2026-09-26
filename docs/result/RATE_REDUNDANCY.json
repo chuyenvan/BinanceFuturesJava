@@ -3189,12 +3189,27 @@
      "dropped": 69658.58786,
      "pct_of_total": -2.313949383870083
     },
+    "tf50": {
+     "k": 543,
+     "tail_sum": -33195.83343839999,
+     "dropped": 101279.01103,
+     "pct_of_total": -48.75776162729461
+    },
+    "bottom_half_sum": -33195.83343839999,
+    "bottom_half_n": 542,
+    "tf50_equals_bottom_half": true,
+    "median_leg_pnl": 70.03229,
+    "sign_frac_pnl_pos": 87.83410138248848,
     "pass_a": false,
     "pass_b20": false,
+    "pass_b50": false,
     "q_breakeven": 0.19,
     "share_top1_pct_profit": 22.42781085750537,
     "tf20_profit": 1014.7134967000006,
+    "tf50_profit": -971.0741833000006,
+    "median_leg_profit": 4.9946795,
     "pass_a_profit": false,
+    "pass_b50_profit": false,
     "pass_b20_profit": true
    },
    "years": {
@@ -3223,12 +3238,27 @@
       "dropped": 2932.2427049999997,
       "pct_of_total": 31.37196320807468
      },
+     "tf50": {
+      "k": 75,
+      "tail_sum": -872.9590449,
+      "dropped": 5145.619086,
+      "pct_of_total": -20.43127785741774
+     },
+     "bottom_half_sum": -872.9590449,
+     "bottom_half_n": 74,
+     "tf50_equals_bottom_half": true,
+     "median_leg_pnl": 37.836224,
+     "sign_frac_pnl_pos": 92.61744966442953,
      "pass_a": true,
      "pass_b20": true,
+     "pass_b50": false,
      "q_breakeven": 0.365,
      "share_top1_pct_profit": 8.8343035854597,
      "tf20_profit": 319.82575779999996,
+     "tf50_profit": 64.36293350000001,
+     "median_leg_profit": 4.995112,
      "pass_a_profit": true,
+     "pass_b50_profit": true,
      "pass_b20_profit": true
     },
     "2022": {
@@ -3256,12 +3286,27 @@
       "dropped": 6645.738544,
       "pct_of_total": -34.453111503186044
      },
+     "tf50": {
+      "k": 98,
+      "tail_sum": -5093.848241,
+      "dropped": 10036.640914,
+      "pct_of_total": -103.0560773634132
+     },
+     "bottom_half_sum": -5093.848241,
+     "bottom_half_n": 98,
+     "tf50_equals_bottom_half": true,
+     "median_leg_pnl": 40.760968,
+     "sign_frac_pnl_pos": 82.6530612244898,
      "pass_a": false,
      "pass_b20": false,
+     "pass_b50": false,
      "q_breakeven": 0.11,
      "share_top1_pct_profit": 28.870975593511194,
      "tf20_profit": -234.93015850000006,
+     "tf50_profit": -550.8701014999999,
+     "median_leg_profit": 4.4998119,
      "pass_a_profit": false,
+     "pass_b50_profit": false,
      "pass_b20_profit": false
     },
     "2023": {
@@ -3289,12 +3334,27 @@
       "dropped": 11899.130620000002,
       "pct_of_total": 24.036336892970837
      },
+     "tf50": {
+      "k": 63,
+      "tail_sum": -950.2591105000001,
+      "dropped": 16614.499266000003,
+      "pct_of_total": -6.066423274073379
+     },
+     "bottom_half_sum": -950.2591105000001,
+     "bottom_half_n": 62,
+     "tf50_equals_bottom_half": true,
+     "median_leg_pnl": 90.8049,
+     "sign_frac_pnl_pos": 87.2,
      "pass_a": false,
      "pass_b20": true,
+     "pass_b50": false,
      "q_breakeven": 0.425,
      "share_top1_pct_profit": 29.05976806735895,
      "tf20_profit": 277.44656706,
+     "tf50_profit": 4.665626160000016,
+     "median_leg_profit": 5.499329,
      "pass_a_profit": false,
+     "pass_b50_profit": true,
      "pass_b20_profit": true
     },
     "2024": {
@@ -3322,12 +3382,27 @@
       "dropped": 15539.547410000001,
       "pct_of_total": 17.87511699372506
      },
+     "tf50": {
+      "k": 141,
+      "tail_sum": -5632.777812,
+      "dropped": 24554.628098,
+      "pct_of_total": -29.768641685996272
+     },
+     "bottom_half_sum": -5632.777812,
+     "bottom_half_n": 141,
+     "tf50_equals_bottom_half": true,
+     "median_leg_pnl": 81.2392475,
+     "sign_frac_pnl_pos": 89.71631205673759,
      "pass_a": true,
      "pass_b20": true,
+     "pass_b50": false,
      "q_breakeven": 0.295,
      "share_top1_pct_profit": 9.276315499269018,
      "tf20_profit": 468.2788193,
+     "tf50_profit": -44.26350000000002,
+     "median_leg_profit": 4.9990264,
      "pass_a_profit": true,
+     "pass_b50_profit": false,
      "pass_b20_profit": true
     },
     "2025": {
@@ -3355,12 +3430,27 @@
       "dropped": 29865.02653,
       "pct_of_total": -22.994300934380476
      },
+     "tf50": {
+      "k": 167,
+      "tail_sum": -18171.209333000003,
+      "dropped": 42452.843769,
+      "pct_of_total": -74.83519851554694
+     },
+     "bottom_half_sum": -18171.209333000003,
+     "bottom_half_n": 166,
+     "tf50_equals_bottom_half": true,
+     "median_leg_pnl": 93.35727,
+     "sign_frac_pnl_pos": 87.38738738738738,
      "pass_a": false,
      "pass_b20": false,
+     "pass_b50": false,
      "q_breakeven": 0.125,
      "share_top1_pct_profit": 28.0766553325984,
      "tf20_profit": 192.73083164000002,
+     "tf50_profit": -445.12250506,
+     "median_leg_profit": 4.947279,
      "pass_a_profit": false,
+     "pass_b50_profit": false,
      "pass_b20_profit": true
     }
    },
@@ -3393,12 +3483,27 @@
      "dropped": 163620.43298,
      "pct_of_total": -88.56761007849656
     },
+    "tf50": {
+     "k": 1280,
+     "tail_sum": -155918.71306542002,
+     "dropped": 242688.88155399996,
+     "pct_of_total": -179.69161035562675
+    },
+    "bottom_half_sum": -155918.71306542002,
+    "bottom_half_n": 1279,
+    "tf50_equals_bottom_half": true,
+    "median_leg_pnl": 70.58674,
+    "sign_frac_pnl_pos": 84.09534974599453,
     "pass_a": false,
     "pass_b20": false,
+    "pass_b50": false,
     "q_breakeven": 0.055,
     "share_top1_pct_profit": 24.151402491405086,
     "tf20_profit": -597.5691825600006,
+    "tf50_profit": -5118.32621896,
+    "median_leg_profit": 4.5000014,
     "pass_a_profit": false,
+    "pass_b50_profit": false,
     "pass_b20_profit": false
    },
    "years": {
@@ -3427,12 +3532,27 @@
       "dropped": 6301.350149,
       "pct_of_total": -94.0350392262587
      },
+     "tf50": {
+      "k": 147,
+      "tail_sum": -7136.7914781,
+      "dropped": 10384.32356,
+      "pct_of_total": -219.76046111681677
+     },
+     "bottom_half_sum": -7136.7914781,
+     "bottom_half_n": 146,
+     "tf50_equals_bottom_half": true,
+     "median_leg_pnl": 30.947279,
+     "sign_frac_pnl_pos": 81.56996587030717,
      "pass_a": false,
      "pass_b20": false,
+     "pass_b50": false,
      "q_breakeven": 0.07500000000000001,
      "share_top1_pct_profit": 10.938237694451328,
      "tf20_profit": -30.10140769999998,
+     "tf50_profit": -536.0893155,
+     "median_leg_profit": 4.997045,
      "pass_a_profit": true,
+     "pass_b50_profit": false,
      "pass_b20_profit": false
     },
     "2022": {
@@ -3460,12 +3580,27 @@
       "dropped": 13237.850818,
       "pct_of_total": -99.99476666506317
      },
+     "tf50": {
+      "k": 203,
+      "tail_sum": -12452.2666212,
+      "dropped": 19071.36523,
+      "pct_of_total": -188.12631986846193
+     },
+     "bottom_half_sum": -12452.2666212,
+     "bottom_half_n": 203,
+     "tf50_equals_bottom_half": true,
+     "median_leg_pnl": 32.893594,
+     "sign_frac_pnl_pos": 82.01970443349754,
      "pass_a": false,
      "pass_b20": false,
+     "pass_b50": false,
      "q_breakeven": 0.04,
      "share_top1_pct_profit": 36.18586887757914,
      "tf20_profit": -480.3205185600001,
+     "tf50_profit": -1160.81018946,
+     "median_leg_profit": 4.49999875,
      "pass_a_profit": false,
+     "pass_b50_profit": false,
      "pass_b20_profit": false
     },
     "2023": {
@@ -3493,12 +3628,27 @@
       "dropped": 20153.99383,
       "pct_of_total": 26.33199013526838
      },
+     "tf50": {
+      "k": 154,
+      "tail_sum": -3222.1032213000008,
+      "dropped": 30579.967058000002,
+      "pct_of_total": -11.77761261088527
+     },
+     "bottom_half_sum": -3222.1032213000008,
+     "bottom_half_n": 153,
+     "tf50_equals_bottom_half": true,
+     "median_leg_pnl": 82.90256,
+     "sign_frac_pnl_pos": 87.94788273615634,
      "pass_a": false,
      "pass_b20": true,
+     "pass_b50": false,
      "q_breakeven": 0.39,
      "share_top1_pct_profit": 21.746034338940394,
      "tf20_profit": 629.98784242,
+     "tf50_profit": 12.68945272000002,
+     "median_leg_profit": 5.495497,
      "pass_a_profit": false,
+     "pass_b50_profit": true,
      "pass_b20_profit": true
     },
     "2024": {
@@ -3526,12 +3676,27 @@
       "dropped": 39975.12949,
       "pct_of_total": -23.595621932403475
      },
+     "tf50": {
+      "k": 335,
+      "tail_sum": -29579.13948502,
+      "dropped": 61922.622907000004,
+      "pct_of_total": -91.45316569370692
+     },
+     "bottom_half_sum": -29579.13948502,
+     "bottom_half_n": 334,
+     "tf50_equals_bottom_half": true,
+     "median_leg_pnl": 80.12155,
+     "sign_frac_pnl_pos": 86.09865470852019,
      "pass_a": false,
      "pass_b20": false,
+     "pass_b50": false,
      "q_breakeven": 0.135,
      "share_top1_pct_profit": 10.73911612786657,
      "tf20_profit": 597.9185233000001,
+     "tf50_profit": -600.4653243000001,
+     "median_leg_profit": 4.499853,
      "pass_a_profit": true,
+     "pass_b50_profit": false,
      "pass_b20_profit": true
     },
     "2025": {
@@ -3559,12 +3724,27 @@
       "dropped": 76053.36862,
       "pct_of_total": -342.1144414526229
      },
+     "tf50": {
+      "k": 442,
+      "tail_sum": -96185.65849880001,
+      "dropped": 113387.849038,
+      "pct_of_total": -559.14773342159
+     },
+     "bottom_half_sum": -96185.65849880001,
+     "bottom_half_n": 442,
+     "tf50_equals_bottom_half": true,
+     "median_leg_pnl": 100.95516699999999,
+     "sign_frac_pnl_pos": 83.0316742081448,
      "pass_a": false,
      "pass_b20": false,
+     "pass_b50": false,
      "q_breakeven": 0.015,
      "share_top1_pct_profit": 37.72400025434018,
      "tf20_profit": -1308.543724120001,
+     "tf50_profit": -2819.154278520001,
+     "median_leg_profit": 4.4993031000000006,
      "pass_a_profit": false,
+     "pass_b50_profit": false,
      "pass_b20_profit": false
     }
    },
@@ -3597,12 +3777,27 @@
      "dropped": 160127.33907,
      "pct_of_total": -61.836307013910364
     },
+    "tf50": {
+     "k": 1316,
+     "tail_sum": -134389.57601801,
+     "dropped": 233333.590513,
+     "pct_of_total": -135.82385625238075
+    },
+    "bottom_half_sum": -134389.57601801,
+    "bottom_half_n": 1316,
+    "tf50_equals_bottom_half": true,
+    "median_leg_pnl": 63.674693,
+    "sign_frac_pnl_pos": 83.43465045592706,
     "pass_a": false,
     "pass_b20": false,
+    "pass_b50": false,
     "q_breakeven": 0.07,
     "share_top1_pct_profit": 21.995880527442814,
     "tf20_profit": -32.378636919998826,
+    "tf50_profit": -4719.420454720001,
+    "median_leg_profit": 4.935855350000001,
     "pass_a_profit": false,
+    "pass_b50_profit": false,
     "pass_b20_profit": false
    },
    "years": {
@@ -3631,12 +3826,27 @@
       "dropped": 5379.7406869999995,
       "pct_of_total": -300.5871707789793
      },
+     "tf50": {
+      "k": 139,
+      "tail_sum": -7452.23316,
+      "dropped": 8795.196959,
+      "pct_of_total": -554.9094596257243
+     },
+     "bottom_half_sum": -7452.23316,
+     "bottom_half_n": 138,
+     "tf50_equals_bottom_half": true,
+     "median_leg_pnl": 25.461288,
+     "sign_frac_pnl_pos": 79.78339350180505,
      "pass_a": false,
      "pass_b20": false,
+     "pass_b50": false,
      "q_breakeven": 0.030000000000000002,
      "share_top1_pct_profit": 15.28939235244736,
      "tf20_profit": -153.20954700000004,
+     "tf50_profit": -626.4680384,
+     "median_leg_profit": 4.981015,
      "pass_a_profit": false,
+     "pass_b50_profit": false,
      "pass_b20_profit": false
     },
     "2022": {
@@ -3664,12 +3874,27 @@
       "dropped": 10996.456594000001,
       "pct_of_total": -316.93806435398574
      },
+     "tf50": {
+      "k": 208,
+      "tail_sum": -13827.6879753,
+      "dropped": 16465.119655,
+      "pct_of_total": -524.2861106784329
+     },
+     "bottom_half_sum": -13827.6879753,
+     "bottom_half_n": 208,
+     "tf50_equals_bottom_half": true,
+     "median_leg_pnl": 29.3365605,
+     "sign_frac_pnl_pos": 79.5673076923077,
      "pass_a": false,
      "pass_b20": false,
+     "pass_b50": false,
      "q_breakeven": 0.01,
      "share_top1_pct_profit": 60.97084618864128,
      "tf20_profit": -789.3882233899999,
+     "tf50_profit": -1483.48836889,
+     "median_leg_profit": 4.4999995,
      "pass_a_profit": false,
+     "pass_b50_profit": false,
      "pass_b20_profit": false
     },
     "2023": {
@@ -3697,12 +3922,27 @@
       "dropped": 25337.606415000002,
       "pct_of_total": 15.688852333633754
      },
+     "tf50": {
+      "k": 252,
+      "tail_sum": -8543.514057699998,
+      "dropped": 38596.01259,
+      "pct_of_total": -28.42863147807012
+     },
+     "bottom_half_sum": -8543.514057699998,
+     "bottom_half_n": 251,
+     "tf50_equals_bottom_half": true,
+     "median_leg_pnl": 64.92718,
+     "sign_frac_pnl_pos": 86.28230616302187,
      "pass_a": false,
      "pass_b20": true,
+     "pass_b50": false,
      "q_breakeven": 0.29000000000000004,
      "share_top1_pct_profit": 19.500252972061936,
      "tf20_profit": 741.3039000200001,
+     "tf50_profit": -216.95740868000007,
+     "median_leg_profit": 4.998998,
      "pass_a_profit": false,
+     "pass_b50_profit": false,
      "pass_b20_profit": true
     },
     "2024": {
@@ -3730,12 +3970,27 @@
       "dropped": 44441.62799000001,
       "pct_of_total": -53.76367918567193
      },
+     "tf50": {
+      "k": 399,
+      "tail_sum": -39027.14972921001,
+      "dropped": 67929.702156,
+      "pct_of_total": -135.0301148248604
+     },
+     "bottom_half_sum": -39027.14972921001,
+     "bottom_half_n": 399,
+     "tf50_equals_bottom_half": true,
+     "median_leg_pnl": 73.2869375,
+     "sign_frac_pnl_pos": 83.83458646616542,
      "pass_a": false,
      "pass_b20": false,
+     "pass_b50": false,
      "q_breakeven": 0.09000000000000001,
      "share_top1_pct_profit": 11.730336531818022,
      "tf20_profit": 417.7032728999998,
+     "tf50_profit": -1000.2941159000001,
+     "median_leg_profit": 4.4998382,
      "pass_a_profit": true,
+     "pass_b50_profit": false,
      "pass_b20_profit": true
     },
     "2025": {
@@ -3763,12 +4018,27 @@
       "dropped": 64550.15809,
       "pct_of_total": -79.26332973713748
      },
+     "tf50": {
+      "k": 319,
+      "tail_sum": -57385.3299748,
+      "dropped": 93393.898032,
+      "pct_of_total": -159.3657650691435
+     },
+     "bottom_half_sum": -57385.3299748,
+     "bottom_half_n": 319,
+     "tf50_equals_bottom_half": true,
+     "median_leg_pnl": 112.22599,
+     "sign_frac_pnl_pos": 84.79623824451411,
      "pass_a": false,
      "pass_b20": false,
+     "pass_b50": false,
      "q_breakeven": 0.055,
      "share_top1_pct_profit": 26.57233066223475,
      "tf20_profit": -246.56275064999977,
+     "tf50_profit": -1383.6304326499999,
+     "median_leg_profit": 4.4999981,
      "pass_a_profit": false,
+     "pass_b50_profit": false,
      "pass_b20_profit": false
     }
    },
@@ -3801,12 +4071,27 @@
      "dropped": 63759.73557999999,
      "pct_of_total": 1.1957135639806233
     },
+    "tf50": {
+     "k": 511,
+     "tail_sum": -29512.325953250005,
+     "dropped": 94043.67158599998,
+     "pct_of_total": -45.7333186901225
+    },
+    "bottom_half_sum": -29512.325953250005,
+    "bottom_half_n": 510,
+    "tf50_equals_bottom_half": true,
+    "median_leg_pnl": 71.65313,
+    "sign_frac_pnl_pos": 87.75710088148874,
     "pass_a": false,
     "pass_b20": true,
+    "pass_b50": false,
     "q_breakeven": 0.21000000000000002,
     "share_top1_pct_profit": 23.38976945689263,
     "tf20_profit": 1097.4669311999999,
+    "tf50_profit": -764.9390989999997,
+    "median_leg_profit": 4.997132,
     "pass_a_profit": false,
+    "pass_b50_profit": false,
     "pass_b20_profit": true
    },
    "years": {
@@ -3835,12 +4120,27 @@
       "dropped": 3202.8758339999995,
       "pct_of_total": 32.43073941191052
      },
+     "tf50": {
+      "k": 76,
+      "tail_sum": -763.3403738999999,
+      "dropped": 5503.477835999999,
+      "pct_of_total": -16.10376028128562
+     },
+     "bottom_half_sum": -763.3403738999999,
+     "bottom_half_n": 76,
+     "tf50_equals_bottom_half": true,
+     "median_leg_pnl": 38.877641,
+     "sign_frac_pnl_pos": 92.76315789473685,
      "pass_a": true,
      "pass_b20": true,
+     "pass_b50": false,
      "q_breakeven": 0.385,
      "share_top1_pct_profit": 8.556245830292177,
      "tf20_profit": 333.820406,
+     "tf50_profit": 75.85201410000002,
+     "median_leg_profit": 4.998853,
      "pass_a_profit": true,
+     "pass_b50_profit": true,
      "pass_b20_profit": true
     },
     "2022": {
@@ -3868,12 +4168,27 @@
       "dropped": 6546.456661999999,
       "pct_of_total": -11.2247403349552
      },
+     "tf50": {
+      "k": 92,
+      "tail_sum": -4179.0975958,
+      "dropped": 10064.88941,
+      "pct_of_total": -71.00315008963709
+     },
+     "bottom_half_sum": -4179.0975958,
+     "bottom_half_n": 92,
+     "tf50_equals_bottom_half": true,
+     "median_leg_pnl": 45.48352,
+     "sign_frac_pnl_pos": 83.69565217391305,
      "pass_a": false,
      "pass_b20": false,
+     "pass_b50": false,
      "q_breakeven": 0.16,
      "share_top1_pct_profit": 20.727903019654757,
      "tf20_profit": -44.4149759,
+     "tf50_profit": -360.0250006,
+     "median_leg_profit": 4.98699635,
      "pass_a_profit": false,
+     "pass_b50_profit": false,
      "pass_b20_profit": false
     },
     "2023": {
@@ -3901,12 +4216,27 @@
       "dropped": 12278.557490000001,
       "pct_of_total": 24.037798309039452
      },
+     "tf50": {
+      "k": 63,
+      "tail_sum": -980.4438182999997,
+      "dropped": 17144.479637000004,
+      "pct_of_total": -6.065588008446101
+     },
+     "bottom_half_sum": -980.4438182999997,
+     "bottom_half_n": 62,
+     "tf50_equals_bottom_half": true,
+     "median_leg_pnl": 93.70098,
+     "sign_frac_pnl_pos": 87.2,
      "pass_a": false,
      "pass_b20": true,
+     "pass_b50": false,
      "q_breakeven": 0.425,
      "share_top1_pct_profit": 29.059760704942107,
      "tf20_profit": 277.44682706,
+     "tf50_profit": 4.665626160000016,
+     "median_leg_profit": 5.499329,
      "pass_a_profit": false,
+     "pass_b50_profit": true,
      "pass_b20_profit": true
     },
     "2024": {
@@ -3934,12 +4264,27 @@
       "dropped": 15935.930260000001,
       "pct_of_total": 17.20005189161963
      },
+     "tf50": {
+      "k": 137,
+      "tail_sum": -5738.220030600001,
+      "dropped": 24984.524677,
+      "pct_of_total": -29.814658637201447
+     },
+     "bottom_half_sum": -5738.220030600001,
+     "bottom_half_n": 137,
+     "tf50_equals_bottom_half": true,
+     "median_leg_pnl": 83.565475,
+     "sign_frac_pnl_pos": 89.78102189781022,
      "pass_a": true,
      "pass_b20": true,
+     "pass_b50": false,
      "q_breakeven": 0.29000000000000004,
      "share_top1_pct_profit": 9.44000411029716,
      "tf20_profit": 455.897626,
+     "tf50_profit": -47.352336899999955,
+     "median_leg_profit": 4.9990264,
      "pass_a_profit": true,
+     "pass_b50_profit": false,
      "pass_b20_profit": true
     },
     "2025": {
@@ -3967,12 +4312,27 @@
       "dropped": 23115.184109999995,
       "pct_of_total": -24.980206871228827
      },
+     "tf50": {
+      "k": 143,
+      "tail_sum": -15448.251003649999,
+      "dropped": 33943.326895000006,
+      "pct_of_total": -83.52629150808201
+     },
+     "bottom_half_sum": -15448.251003649999,
+     "bottom_half_n": 143,
+     "tf50_equals_bottom_half": true,
+     "median_leg_pnl": 95.4591255,
+     "sign_frac_pnl_pos": 86.01398601398601,
      "pass_a": false,
      "pass_b20": false,
+     "pass_b50": false,
      "q_breakeven": 0.12000000000000001,
      "share_top1_pct_profit": 29.801757769774873,
      "tf20_profit": 86.05324583999993,
+     "tf50_profit": -433.4957028599998,
+     "median_leg_profit": 4.499525500000001,
      "pass_a_profit": false,
+     "pass_b50_profit": false,
      "pass_b20_profit": true
     }
    },
@@ -4005,12 +4365,27 @@
      "dropped": 58494.192109999996,
      "pct_of_total": 6.669735444378038
     },
+    "tf50": {
+     "k": 477,
+     "tail_sum": -24510.687954099994,
+     "dropped": 87185.09736300001,
+     "pct_of_total": -39.10796796534214
+    },
+    "bottom_half_sum": -24510.687954099994,
+    "bottom_half_n": 477,
+    "tf50_equals_bottom_half": true,
+    "median_leg_pnl": 72.46964299999999,
+    "sign_frac_pnl_pos": 87.84067085953879,
     "pass_a": false,
     "pass_b20": true,
+    "pass_b50": false,
     "q_breakeven": 0.23500000000000001,
     "share_top1_pct_profit": 23.069970451366498,
     "tf20_profit": 1192.7648809,
+    "tf50_profit": -578.5266742999997,
+    "median_leg_profit": 4.99855975,
     "pass_a_profit": false,
+    "pass_b50_profit": false,
     "pass_b20_profit": true
    },
    "years": {
@@ -4039,12 +4414,27 @@
       "dropped": 2653.8950809999997,
       "pct_of_total": 47.05797001389347
      },
+     "tf50": {
+      "k": 61,
+      "tail_sum": 325.2307511,
+      "dropped": 4687.601363000001,
+      "pct_of_total": 6.487964162717461
+     },
+     "bottom_half_sum": 325.2307511,
+     "bottom_half_n": 61,
+     "tf50_equals_bottom_half": true,
+     "median_leg_pnl": 44.4216325,
+     "sign_frac_pnl_pos": 95.08196721311475,
      "pass_a": true,
      "pass_b20": true,
+     "pass_b50": true,
      "q_breakeven": null,
      "share_top1_pct_profit": 7.929272174547269,
      "tf20_profit": 353.12445549999995,
+     "tf50_profit": 128.09742110000002,
+     "median_leg_profit": 5.1003517,
      "pass_a_profit": true,
+     "pass_b50_profit": true,
      "pass_b20_profit": true
     },
     "2022": {
@@ -4072,12 +4462,27 @@
       "dropped": 5831.436613999999,
       "pct_of_total": -3.2366105391950124
      },
+     "tf50": {
+      "k": 87,
+      "tail_sum": -3538.0419140000004,
+      "dropped": 9186.654923999999,
+      "pct_of_total": -62.635586961550416
+     },
+     "bottom_half_sum": -3538.0419140000004,
+     "bottom_half_n": 86,
+     "tf50_equals_bottom_half": true,
+     "median_leg_pnl": 46.654335,
+     "sign_frac_pnl_pos": 83.8150289017341,
      "pass_a": false,
      "pass_b20": false,
+     "pass_b50": false,
      "q_breakeven": 0.185,
      "share_top1_pct_profit": 23.1532262633653,
      "tf20_profit": 16.47344770000001,
+     "tf50_profit": -279.1022604,
+     "median_leg_profit": 4.982983,
      "pass_a_profit": false,
+     "pass_b50_profit": false,
      "pass_b20_profit": true
     },
     "2023": {
@@ -4105,12 +4510,27 @@
       "dropped": 12288.321619999999,
       "pct_of_total": 24.036945232872036
      },
+     "tf50": {
+      "k": 63,
+      "tail_sum": -980.9957437999999,
+      "dropped": 17157.703826,
+      "pct_of_total": -6.064248293380752
+     },
+     "bottom_half_sum": -980.9957437999999,
+     "bottom_half_n": 62,
+     "tf50_equals_bottom_half": true,
+     "median_leg_pnl": 93.7743,
+     "sign_frac_pnl_pos": 87.2,
      "pass_a": false,
      "pass_b20": true,
+     "pass_b50": false,
      "q_breakeven": 0.425,
      "share_top1_pct_profit": 29.059760874843988,
      "tf20_profit": 277.44682106,
+     "tf50_profit": 4.665626160000016,
+     "median_leg_profit": 5.499329,
      "pass_a_profit": false,
+     "pass_b50_profit": true,
      "pass_b20_profit": true
     },
     "2024": {
@@ -4138,12 +4558,27 @@
       "dropped": 15439.425249999998,
       "pct_of_total": 16.34476200183665
      },
+     "tf50": {
+      "k": 134,
+      "tail_sum": -5818.798962000002,
+      "dropped": 24274.816325000003,
+      "pct_of_total": -31.52792310255046
+     },
+     "bottom_half_sum": -5818.798962000002,
+     "bottom_half_n": 134,
+     "tf50_equals_bottom_half": true,
+     "median_leg_pnl": 83.78324,
+     "sign_frac_pnl_pos": 89.55223880597015,
      "pass_a": true,
      "pass_b20": true,
+     "pass_b50": false,
      "q_breakeven": 0.28500000000000003,
      "share_top1_pct_profit": 9.695259525826996,
      "tf20_profit": 435.4455367000001,
+     "tf50_profit": -59.29758700000002,
+     "median_leg_profit": 4.999167399999999,
      "pass_a_profit": true,
+     "pass_b50_profit": false,
      "pass_b20_profit": true
     },
     "2025": {
@@ -4171,12 +4606,27 @@
       "dropped": 20199.395199999995,
       "pct_of_total": -16.220469617348954
      },
+     "tf50": {
+      "k": 133,
+      "tail_sum": -12760.8373814,
+      "dropped": 30141.076220999996,
+      "pct_of_total": -73.42153061973508
+     },
+     "bottom_half_sum": -12760.8373814,
+     "bottom_half_n": 133,
+     "tf50_equals_bottom_half": true,
+     "median_leg_pnl": 93.8565325,
+     "sign_frac_pnl_pos": 85.71428571428571,
      "pass_a": false,
      "pass_b20": false,
+     "pass_b50": false,
      "q_breakeven": 0.14500000000000002,
      "share_top1_pct_profit": 30.874366154529483,
      "tf20_profit": 113.09628483999995,
+     "tf50_profit": -374.7761509599999,
+     "median_leg_profit": 4.499997349999999,
      "pass_a_profit": false,
+     "pass_b50_profit": false,
      "pass_b20_profit": true
     }
    },
@@ -4209,12 +4659,27 @@
      "dropped": 52798.08722000001,
      "pct_of_total": 5.208152657777746
     },
+    "tf50": {
+     "k": 434,
+     "tail_sum": -23257.436581500006,
+     "dropped": 78956.411441,
+     "pct_of_total": -41.75559180427757
+    },
+    "bottom_half_sum": -23257.436581500006,
+    "bottom_half_n": 434,
+    "tf50_equals_bottom_half": true,
+    "median_leg_pnl": 74.62679,
+    "sign_frac_pnl_pos": 87.90322580645162,
     "pass_a": false,
     "pass_b20": true,
+    "pass_b50": false,
     "q_breakeven": 0.225,
     "share_top1_pct_profit": 23.59947304773909,
     "tf20_profit": 1056.8622236,
+    "tf50_profit": -578.1294811000001,
+    "median_leg_profit": 4.9993565,
     "pass_a_profit": false,
+    "pass_b50_profit": false,
     "pass_b20_profit": true
    },
    "years": {
@@ -4243,12 +4708,27 @@
       "dropped": 2280.065297,
       "pct_of_total": 46.56716980357776
      },
+     "tf50": {
+      "k": 55,
+      "tail_sum": 134.44669519999985,
+      "dropped": 4132.715064,
+      "pct_of_total": 3.150728816645697
+     },
+     "bottom_half_sum": 134.44669519999985,
+     "bottom_half_n": 55,
+     "tf50_equals_bottom_half": true,
+     "median_leg_pnl": 44.130855,
+     "sign_frac_pnl_pos": 94.54545454545455,
      "pass_a": true,
      "pass_b20": true,
+     "pass_b50": true,
      "q_breakeven": null,
      "share_top1_pct_profit": 8.79781825510521,
      "tf20_profit": 318.6249788,
+     "tf50_profit": 107.28929090000001,
+     "median_leg_profit": 5.4976599,
      "pass_a_profit": true,
+     "pass_b50_profit": true,
      "pass_b20_profit": true
     },
     "2022": {
@@ -4276,12 +4756,27 @@
       "dropped": 5528.485934,
       "pct_of_total": 7.972016222293476
      },
+     "tf50": {
+      "k": 84,
+      "tail_sum": -2933.2037044999997,
+      "dropped": 8940.600267000002,
+      "pct_of_total": -48.826536986253764
+     },
+     "bottom_half_sum": -2933.2037044999997,
+     "bottom_half_n": 83,
+     "tf50_equals_bottom_half": true,
+     "median_leg_pnl": 49.528275,
+     "sign_frac_pnl_pos": 85.62874251497006,
      "pass_a": false,
      "pass_b20": true,
+     "pass_b50": false,
      "q_breakeven": 0.23500000000000001,
      "share_top1_pct_profit": 20.04456358409845,
      "tf20_profit": 54.365907600000014,
+     "tf50_profit": -235.8221915,
+     "median_leg_profit": 4.9926786,
      "pass_a_profit": false,
+     "pass_b50_profit": false,
      "pass_b20_profit": true
     },
     "2023": {
@@ -4309,12 +4804,27 @@
       "dropped": 12184.244120000001,
       "pct_of_total": 24.03749479542318
      },
+     "tf50": {
+      "k": 63,
+      "tail_sum": -972.8992859000002,
+      "dropped": 17012.712726999995,
+      "pct_of_total": -6.065527441903211
+     },
+     "bottom_half_sum": -972.8992859000002,
+     "bottom_half_n": 62,
+     "tf50_equals_bottom_half": true,
+     "median_leg_pnl": 93.004456,
+     "sign_frac_pnl_pos": 87.2,
      "pass_a": false,
      "pass_b20": true,
+     "pass_b50": false,
      "q_breakeven": 0.425,
      "share_top1_pct_profit": 29.05976594358448,
      "tf20_profit": 277.44664206,
+     "tf50_profit": 4.665447160000014,
+     "median_leg_profit": 5.499329,
      "pass_a_profit": false,
+     "pass_b50_profit": true,
      "pass_b20_profit": true
     },
     "2024": {
@@ -4342,12 +4852,27 @@
       "dropped": 14393.672150000002,
       "pct_of_total": 16.841586690348755
      },
+     "tf50": {
+      "k": 123,
+      "tail_sum": -5416.1534409999995,
+      "dropped": 22724.891760000002,
+      "pct_of_total": -31.291439856448843
+     },
+     "bottom_half_sum": -5416.1534409999995,
+     "bottom_half_n": 122,
+     "tf50_equals_bottom_half": true,
+     "median_leg_pnl": 84.446724,
+     "sign_frac_pnl_pos": 89.79591836734694,
      "pass_a": true,
      "pass_b20": true,
+     "pass_b50": false,
      "q_breakeven": 0.29000000000000004,
      "share_top1_pct_profit": 10.498881043561854,
      "tf20_profit": 407.94441430000006,
+     "tf50_profit": -56.314004700000005,
+     "median_leg_profit": 4.9993644,
      "pass_a_profit": true,
+     "pass_b50_profit": false,
      "pass_b20_profit": true
     },
     "2025": {
@@ -4375,12 +4900,27 @@
       "dropped": 16467.47953,
       "pct_of_total": -36.366875856458854
      },
+     "tf50": {
+      "k": 111,
+      "tail_sum": -12660.0001893,
+      "dropped": 24735.864966999998,
+      "pct_of_total": -104.83721391679293
+     },
+     "bottom_half_sum": -12660.0001893,
+     "bottom_half_n": 110,
+     "tf50_equals_bottom_half": true,
+     "median_leg_pnl": 94.16553,
+     "sign_frac_pnl_pos": 84.61538461538461,
      "pass_a": false,
      "pass_b20": false,
+     "pass_b50": false,
      "q_breakeven": 0.10500000000000001,
      "share_top1_pct_profit": 35.673258210899775,
      "tf20_profit": 8.408516639999903,
+     "tf50_profit": -404.71361456,
+     "median_leg_profit": 4.9932404,
      "pass_a_profit": false,
+     "pass_b50_profit": false,
      "pass_b20_profit": true
     }
    },
@@ -4413,12 +4953,27 @@
      "dropped": 77793.22608,
      "pct_of_total": -2.265109942856869
     },
+    "tf50": {
+     "k": 545,
+     "tail_sum": -35415.973499800006,
+     "dropped": 111486.12697000001,
+     "pct_of_total": -46.556989678841646
+    },
+    "bottom_half_sum": -35415.973499800006,
+    "bottom_half_n": 544,
+    "tf50_equals_bottom_half": true,
+    "median_leg_pnl": 74.173485,
+    "sign_frac_pnl_pos": 87.97061524334252,
     "pass_a": false,
     "pass_b20": false,
+    "pass_b50": false,
     "q_breakeven": 0.19,
     "share_top1_pct_profit": 19.20275505040073,
     "tf20_profit": 1207.9387110000002,
+    "tf50_profit": -791.4848223000001,
+    "median_leg_profit": 4.996811,
     "pass_a_profit": false,
+    "pass_b50_profit": false,
     "pass_b20_profit": true
    },
    "years": {
@@ -4447,12 +5002,27 @@
       "dropped": 2932.2427049999997,
       "pct_of_total": 31.37196320807468
      },
+     "tf50": {
+      "k": 75,
+      "tail_sum": -872.9590449,
+      "dropped": 5145.619086,
+      "pct_of_total": -20.43127785741774
+     },
+     "bottom_half_sum": -872.9590449,
+     "bottom_half_n": 74,
+     "tf50_equals_bottom_half": true,
+     "median_leg_pnl": 37.836224,
+     "sign_frac_pnl_pos": 92.61744966442953,
      "pass_a": true,
      "pass_b20": true,
+     "pass_b50": false,
      "q_breakeven": 0.365,
      "share_top1_pct_profit": 8.8343035854597,
      "tf20_profit": 319.82575779999996,
+     "tf50_profit": 64.36293350000001,
+     "median_leg_profit": 4.995112,
      "pass_a_profit": true,
+     "pass_b50_profit": true,
      "pass_b20_profit": true
     },
     "2022": {
@@ -4480,12 +5050,27 @@
       "dropped": 8256.487759,
       "pct_of_total": -7.390229041310514
      },
+     "tf50": {
+      "k": 99,
+      "tail_sum": -4199.0012353,
+      "dropped": 11887.305686,
+      "pct_of_total": -54.61543910267097
+     },
+     "bottom_half_sum": -4199.0012353,
+     "bottom_half_n": 99,
+     "tf50_equals_bottom_half": true,
+     "median_leg_pnl": 43.0211735,
+     "sign_frac_pnl_pos": 83.83838383838383,
      "pass_a": false,
      "pass_b20": false,
+     "pass_b50": false,
      "q_breakeven": 0.17,
      "share_top1_pct_profit": 16.72082689131139,
      "tf20_profit": -8.40687250000002,
+     "tf50_profit": -338.46333979999997,
+     "median_leg_profit": 4.49999525,
      "pass_a_profit": false,
+     "pass_b50_profit": false,
      "pass_b20_profit": false
     },
     "2023": {
@@ -4513,12 +5098,27 @@
       "dropped": 12638.040109999998,
       "pct_of_total": 24.03652007768534
      },
+     "tf50": {
+      "k": 63,
+      "tail_sum": -1009.1336225,
+      "dropped": 17646.128298,
+      "pct_of_total": -6.0656004415633555
+     },
+     "bottom_half_sum": -1009.1336225,
+     "bottom_half_n": 62,
+     "tf50_equals_bottom_half": true,
+     "median_leg_pnl": 96.45042,
+     "sign_frac_pnl_pos": 87.2,
      "pass_a": false,
      "pass_b20": true,
+     "pass_b50": false,
      "q_breakeven": 0.425,
      "share_top1_pct_profit": 29.059760874843988,
      "tf20_profit": 277.44682106,
+     "tf50_profit": 4.665626160000016,
+     "median_leg_profit": 5.499329,
      "pass_a_profit": false,
+     "pass_b50_profit": true,
      "pass_b20_profit": true
     },
     "2024": {
@@ -4546,12 +5146,27 @@
       "dropped": 16504.56418,
       "pct_of_total": 17.87713508637215
      },
+     "tf50": {
+      "k": 141,
+      "tail_sum": -5982.955525399999,
+      "dropped": 26080.35982,
+      "pct_of_total": -29.769792345808398
+     },
+     "bottom_half_sum": -5982.955525399999,
+     "bottom_half_n": 141,
+     "tf50_equals_bottom_half": true,
+     "median_leg_pnl": 86.284825,
+     "sign_frac_pnl_pos": 89.71631205673759,
      "pass_a": true,
      "pass_b20": true,
+     "pass_b50": false,
      "q_breakeven": 0.295,
      "share_top1_pct_profit": 9.27628218692552,
      "tf20_profit": 468.28473700000006,
+     "tf50_profit": -44.25820390000001,
+     "median_leg_profit": 4.9990264,
      "pass_a_profit": true,
+     "pass_b50_profit": false,
      "pass_b20_profit": true
     },
     "2025": {
@@ -4579,12 +5194,27 @@
       "dropped": 34227.45496999999,
       "pct_of_total": -25.032758094664025
      },
+     "tf50": {
+      "k": 168,
+      "tail_sum": -20478.482925700002,
+      "dropped": 47853.27293399999,
+      "pct_of_total": -74.80781740970781
+     },
+     "bottom_half_sum": -20478.482925700002,
+     "bottom_half_n": 167,
+     "tf50_equals_bottom_half": true,
+     "median_leg_pnl": 99.32478,
+     "sign_frac_pnl_pos": 87.16417910447761,
      "pass_a": false,
      "pass_b20": false,
+     "pass_b50": false,
      "q_breakeven": 0.115,
      "share_top1_pct_profit": 23.758757049906148,
      "tf20_profit": 164.92371304000017,
+     "tf50_profit": -479.4265646599998,
+     "median_leg_profit": 4.947279,
      "pass_a_profit": false,
+     "pass_b50_profit": false,
      "pass_b20_profit": true
     }
    },
@@ -4617,12 +5247,27 @@
      "dropped": 15300.485084999998,
      "pct_of_total": 27.653055381527793
     },
+    "tf50": {
+     "k": 210,
+     "tail_sum": -3356.511721,
+     "dropped": 24505.276421000002,
+     "pct_of_total": -15.870958746824584
+    },
+    "bottom_half_sum": -3356.511721,
+    "bottom_half_n": 210,
+    "tf50_equals_bottom_half": true,
+    "median_leg_pnl": 59.1272,
+    "sign_frac_pnl_pos": 90.47619047619048,
     "pass_a": true,
     "pass_b20": true,
+    "pass_b50": false,
     "q_breakeven": 0.38,
     "share_top1_pct_profit": 12.9113324825754,
     "tf20_profit": 722.9851491,
+    "tf50_profit": -5.764857000000006,
+    "median_leg_profit": 4.9960866,
     "pass_a_profit": true,
+    "pass_b50_profit": false,
     "pass_b20_profit": true
    },
    "years": {
@@ -4651,12 +5296,27 @@
       "dropped": 1682.4829669999997,
       "pct_of_total": 36.437516063974854
      },
+     "tf50": {
+      "k": 38,
+      "tail_sum": -370.792954,
+      "dropped": 3017.7678089999995,
+      "pct_of_total": -14.008178177423602
+     },
+     "bottom_half_sum": -370.792954,
+     "bottom_half_n": 37,
+     "tf50_equals_bottom_half": true,
+     "median_leg_pnl": 44.00187,
+     "sign_frac_pnl_pos": 90.66666666666666,
      "pass_a": true,
      "pass_b20": true,
+     "pass_b50": false,
      "q_breakeven": 0.405,
      "share_top1_pct_profit": 7.068992746975108,
      "tf20_profit": 154.3215874,
+     "tf50_profit": 17.83371379999999,
+     "median_leg_profit": 4.99972,
      "pass_a_profit": true,
+     "pass_b50_profit": true,
      "pass_b20_profit": true
     },
     "2022": {
@@ -4684,12 +5344,27 @@
       "dropped": 3380.377995,
       "pct_of_total": 37.53929507719914
      },
+     "tf50": {
+      "k": 57,
+      "tail_sum": -227.23919399999988,
+      "dropped": 5639.24663,
+      "pct_of_total": -4.19879678081063
+     },
+     "bottom_half_sum": -227.23919399999988,
+     "bottom_half_n": 56,
+     "tf50_equals_bottom_half": true,
+     "median_leg_pnl": 54.47553,
+     "sign_frac_pnl_pos": 91.1504424778761,
      "pass_a": false,
      "pass_b20": true,
+     "pass_b50": false,
      "q_breakeven": 0.465,
      "share_top1_pct_profit": 13.089041660777145,
      "tf20_profit": 213.3823697,
+     "tf50_profit": 17.481154899999996,
+     "median_leg_profit": 4.9780793,
      "pass_a_profit": true,
+     "pass_b50_profit": true,
      "pass_b20_profit": true
     },
     "2023": {
@@ -4717,12 +5392,27 @@
       "dropped": 1675.46663,
       "pct_of_total": 37.01283504515871
      },
+     "tf50": {
+      "k": 14,
+      "tail_sum": 214.19746500000008,
+      "dropped": 2445.8153030000003,
+      "pct_of_total": 8.052497626206884
+     },
+     "bottom_half_sum": 214.19746500000008,
+     "bottom_half_n": 13,
+     "tf50_equals_bottom_half": true,
+     "median_leg_pnl": 73.80066,
+     "sign_frac_pnl_pos": 96.29629629629629,
      "pass_a": false,
      "pass_b20": true,
+     "pass_b50": true,
      "q_breakeven": null,
      "share_top1_pct_profit": 20.944175898667616,
      "tf20_profit": 73.3624342,
+     "tf50_profit": 25.3971247,
+     "median_leg_profit": 5.000004,
      "pass_a_profit": false,
+     "pass_b50_profit": true,
      "pass_b20_profit": true
     },
     "2024": {
@@ -4750,12 +5440,27 @@
       "dropped": 4704.298905,
       "pct_of_total": 15.589313960798792
      },
+     "tf50": {
+      "k": 64,
+      "tail_sum": -1957.269469,
+      "dropped": 7530.377716000001,
+      "pct_of_total": -35.11988969626773
+     },
+     "bottom_half_sum": -1957.269469,
+     "bottom_half_n": 64,
+     "tf50_equals_bottom_half": true,
+     "median_leg_pnl": 59.7761115,
+     "sign_frac_pnl_pos": 88.28125,
      "pass_a": false,
      "pass_b20": true,
+     "pass_b50": false,
      "q_breakeven": 0.28500000000000003,
      "share_top1_pct_profit": 18.458039396662805,
      "tf20_profit": 167.84476540000003,
+     "tf50_profit": -42.588509500000015,
+     "median_leg_profit": 4.9967797,
      "pass_a_profit": false,
+     "pass_b50_profit": false,
      "pass_b20_profit": true
     },
     "2025": {
@@ -4783,12 +5488,27 @@
       "dropped": 3808.4426640000006,
       "pct_of_total": 21.58311327396608
      },
+     "tf50": {
+      "k": 39,
+      "tail_sum": -908.893531,
+      "dropped": 5765.554925,
+      "pct_of_total": -18.714368930946307
+     },
+     "bottom_half_sum": -908.893531,
+     "bottom_half_n": 38,
+     "tf50_equals_bottom_half": true,
+     "median_leg_pnl": 68.25712,
+     "sign_frac_pnl_pos": 90.9090909090909,
      "pass_a": false,
      "pass_b20": true,
+     "pass_b50": false,
      "q_breakeven": 0.34,
      "share_top1_pct_profit": 16.364856977495997,
      "tf20_profit": 100.58194630000004,
+     "tf50_profit": -33.3326517,
+     "median_leg_profit": 4.499714,
      "pass_a_profit": false,
+     "pass_b50_profit": false,
      "pass_b20_profit": true
     }
    },

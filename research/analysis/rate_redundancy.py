@@ -147,10 +147,18 @@ def money_rulers(d):
     res["share_top1_pct"] = float(o[:k1].sum() / tot * 100) if tot else float("nan")
     res["share_top5_pct"] = float(o[:max(1, int(math.ceil(.05 * n)))].sum() / tot * 100) if tot else float("nan")
     res["top1_usdt"] = float(o[:k1].sum())
-    for q in (0.05, 0.10, 0.20):
+    for q in (0.05, 0.10, 0.20, 0.50):
         res["tf%d" % int(q * 100)] = tf(q)
+    # [BO SUNG Owner 26/09 23:17] bo TOP-50% ⟺ giu floor(n/2) leg NHO NHAT = "nua duoi"
+    kk = max(1, int(math.ceil(0.50 * n)))
+    res["bottom_half_sum"] = float(o[kk:].sum())
+    res["bottom_half_n"] = int(n - kk)
+    res["tf50_equals_bottom_half"] = bool(abs(res["tf50"]["tail_sum"] - res["bottom_half_sum"]) < 1e-6)
+    res["median_leg_pnl"] = float(np.median(P))
+    res["sign_frac_pnl_pos"] = float((P > 0).mean() * 100)
     res["pass_a"] = bool(res["share_top1_pct"] <= 15.0)
     res["pass_b20"] = bool(res["tf20"]["tail_sum"] > 0)
+    res["pass_b50"] = bool(res["tf50"]["tail_sum"] > 0)
     # q* = ty le bo-top NHO NHAT (buoc 0,5%) lam tail-free sum <= 0
     qs = np.arange(0.005, 0.5055, 0.005)
     qs_ = None
@@ -166,7 +174,10 @@ def money_rulers(d):
     if gt:
         res["share_top1_pct_profit"] = float(go[:k1].sum() / gt * 100)
         res["tf20_profit"] = float(go[max(1, int(math.ceil(.20 * n))):].sum())
+        res["tf50_profit"] = float(go[max(1, int(math.ceil(.50 * n))):].sum())
+        res["median_leg_profit"] = float(np.median(G))
         res["pass_a_profit"] = bool(res["share_top1_pct_profit"] <= 15.0)
+        res["pass_b50_profit"] = bool(res["tf50_profit"] > 0)
         res["pass_b20_profit"] = bool(res["tf20_profit"] > 0)
     return res
 
