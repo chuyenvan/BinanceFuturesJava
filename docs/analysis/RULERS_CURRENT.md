@@ -87,3 +87,19 @@ Nguồn: `docs/runbooks/RISK_APPETITE.md:134-136`, §6, §7.3 (MTM mốc phút),
   trùng/phụ thuộc đại số thì luật *"≥2 rate ngoài CI"* **không còn là 2 bằng chứng độc lập**. Đang phân tích.
 
 **⇒ Luật bằng chứng sẽ đổi thành:** *"≥2 thang **TAIL-ROBUST** + **KHÔNG trùng lặp** ngoài CI vs cả 2 đối chứng"*.
+
+---
+
+## 8. OWNER CHỐT LẠI — 2026-09-26 23:17: **NÂNG rào tail-free lên 50%** (thay §7-(b))
+
+Nguyên văn: *"cần cứng, chấp nhận làm lại từ đầu. **20% với tôi vẫn rủi ro lắm**, nếu được để **50%** rồi không ra mới hạ nó xuống."*
+
+- **(b′) RÀO CỨNG (thay thế (b)):** **bỏ TOP-50% lệnh ⇒ PnL vẫn phải DƯƠNG.**
+- **Ý nghĩa tương đương (phải ghi rõ để không hiểu sai):** bỏ top-50% > 0 ⟺ **tổng NỬA DƯỚI lệnh > 0**
+  ⇒ gần với **"lệnh TRUNG VỊ phải có lãi"** (median leg > 0), không chỉ "lãi không phụ thuộc vài leg".
+- **(a) giữ nguyên:** `%PnL đến từ top-1% lệnh ≤ 15%`.
+- ⚠️ **Hệ quả đã biết trước:** bỏ top-**5%** đã ÂM (T100/GD92) ⇒ bỏ top-**50%** sẽ **âm rất sâu**
+  ⇒ **mọi biến thể hiện có FAIL** ⇒ **go-live bị CHẶN cho tới khi có nguồn lãi không-đuôi**.
+- **Đổi bản chất mục tiêu:** từ *"tối ưu hệ thống hiện tại"* sang *"tìm CẤU TRÚC LÃI không phụ thuộc đuôi"*
+  (hệ quả: các luật kiểu arm +7% → trailing, ăn bằng vài leg lớn, **không thể** thoả rào này).
+- **Cơ chế thoát đã thoả thuận trước:** nếu **không cấu hình nào ra** ⇒ owner **hạ rào**; đây **không** tính là thất bại.
