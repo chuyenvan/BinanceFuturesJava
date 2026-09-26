@@ -51,13 +51,19 @@ khong can hoi lai user, khong can doc lai 30 doc khac.
    `u = 0.81 >= U_MAX 0.60` => `managerBudget` tra null => 0 dong `would-BUY` tu 27/08.
    Shadow phai chay tren **Oracle** (RAM 23G) voi **Redis RIENG** — tro vao Redis 242 se
    `blpop` CUOP lenh cua bot live.
+   (242 da duoc owner mo quyen doc 26/09 — xem `AUDIT_LIVE_242_20260926.md`.)
    (c) **Moi tuan shadow chay la mot tuan holdout bi tieu.** Khi doi chung chi duoc
    `HOLDOUT_UNSEAL` DUNG doan shadow da troi qua, co user duyet truc tiep, roi seal lai.
-9. **Shadow C3 Oracle — DA TAT** (`docs/experiment/L2_PORT_C3.md`; trang thai 2026-09-07:
-   `health.log` bao `DOWN` lien tuc tu **2026-09-06 19:00Z**, pid mat. Dong bang tai luc tat:
-   `wouldBUY=30 wouldCLOSE=4 createOrder=0 errLines=0 ledgerRows=4`. Cron `health.sh` van cai.
-   **L4 KHONG khoi dong lai.** Muon chay lai: `cd /home/ubuntu/shadow_c3/app && bin/daemon.sh start`
-   — nhung jar trong do la ban L2, CHUA co `LiveBuildMap`; phai copy jar moi vao truoc.)
+9. **Shadow C3 Oracle — DANG CHAY (paper).** (Trang thai "DA TAT" cu trong
+   `docs/experiment/L2_PORT_C3.md` la 2026-09-07, **DA CU**.) Trang thai 2026-09-26:
+   `shadow-c3.service` **active** (`NRestarts=29`, tu restart vai gio/lan), `health.log` **UP lien tuc**,
+   ledger 69 lenh da dong / realized +1.454,90, 5 vi the mo. **Nhung 0 entry moi tu 2026-09-20 05:34**:
+   `[GATE] n_pass=0` moi tick (gate dong, `scale=1.70`); chan doan **HIEU CHUAN**, khong phai BUG
+   (`docs/audit/DIAG_GATE_FROZEN_20260926.md`, `2e41190`): `thr = 2,947-3,760%` = p99,91-99,95 cua DEV
+   nhung **> p100 cua model live 2026** (max 2,30%); lech nhip **sim 1' (1440 lan/ngay) vs live 15'
+   (96 dong/ngay) = 15x**. Jar chay (`sha256 e3bf2d21…`, build 20/09 22:06) **lech** build HEAD
+   (`c2b0c963…`). Watchdog moi (26/09): `bin/health.sh` them field `gatePassCuoi`/`gateRejStreak`
+   + `ALERT: GATE_DONG_BANG`. Muon tat: `cd /home/ubuntu/shadow_c3/app && bin/daemon.sh stop`.
    - **dir**: `/home/ubuntu/shadow_c3/` · JVM cwd `/home/ubuntu/shadow_c3/app`
      (jar rieng, `config.properties` rieng, `conf/env.sh` co `LIVE_PROFILE=c3_shadow`).
    - **start/stop**: `cd /home/ubuntu/shadow_c3/app && bin/daemon.sh {start|stop|restart|status}`.
