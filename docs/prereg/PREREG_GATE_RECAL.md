@@ -89,3 +89,86 @@ Cach doc:
 - `docs/prereg/PREREG_GATESCALE.md` + `docs/result/RESULT_GATESCALE.md` — nguon goc `SIM_GATE_DYN_SCALE=1.70`.
 - `docs/prereg/PREREG_GATE_CALIB.md` + `docs/result/RESULT_GATE_CALIB.md` — quet 1.30/2.10 quanh 1.70 (NULL, giu 1.70).
 - `docs/result/RESULT_FLATGATE.md` — bo gate dyn => -61pp CAGR (ly do gate nay ton tai).
+
+---
+
+## 7. AMENDMENT 2026-09-26 23:05 (+07) — PHAM VI AP DUNG cua `SIM_ENTRY_SAMPLE_MIN`: **CHI selector-entry**
+
+**Chot TRUOC khi chay bat cu chan nao cua bai nay. KHONG xoa/sua muc 1-6 o tren; muc nay bo sung**
+
+### 7.1 Ly do (y owner 26/09 23:02, nguon chan ly)
+
+Thiet ke LIVE dung: **selector (funding-selector, `PREDICT_SYMBOL_TRADE`) = nhip 15 phut**;
+**`BIG_DOWN` (market-signal bat day) + `DCA_LEVEL1` (nhoi) = nhip 1 phut**. Sim phai the hien dung
+thiet ke do; shadow/live bam theo sim; live lech thi chinh live.
+
+Cong `SIM_ENTRY_SAMPLE_MIN` (commit `fec652e`) duoc dat o **DAU ham `createOrder(...)`** — tuc no
+chan **MOI leg mo moi**, gom ca `BIG_DOWN` va `DCA_LEVEL1`. Do la **SAI PHAM VI** so voi thiet ke
+tren: ham `createOrder` la diem dung chung cho ca 3 nguon leg (selector / BIG_DOWN / DCA). Bang
+chung trong chinh file sim: `simulatorWithInitEntry` goi `createOrderBUY(..., DCA_LEVEL1, ...)`
+(~:379 va ~:397) va nhanh `BIG_DOWN` ~:348-371; nhanh selector goi `createOrderBUY(...,
+PREDICT_SYMBOL_TRADE, ..., selRank)` ~:436. Day la sua **PHAM VI AP DUNG**, **KHONG** doi thuat toan,
+KHONG doi tham so nao khac (khong doi Q, khong doi `W`, khong doi gate/selector/exit/trailing/sizing).
+
+### 7.2 Pham vi moi (chot cung)
+
+- `SIM_ENTRY_SAMPLE_MIN > 1` **CHI** chan cac leg mo moi **KHONG phai** `BIG_DOWN` va **KHONG phai**
+  `DCA_LEVEL1` — tuc trong cua so nay la **leg selector `PREDICT_SYMBOL_TRADE`**.
+- `BIG_DOWN` va `DCA_LEVEL1` **KHONG bi lay mau**: giu nhip **1 phut** cua sim.
+- **Khong them key moi.** Scope co dinh = selector-only (khong co `SIM_ENTRY_SAMPLE_SCOPE`). Cach lam:
+  giu kiem tra trong `createOrder` nhung **loai tru** 2 loai leg tren (diff nho nhat).
+- `SIM_ENTRY_SAMPLE_MIN` khong khai / `<=1` => **khong lam gi** => **byte-identical** (nhu cu).
+- Bang chung "entryOther = 0": tren baseline KEEPLEG0 (`printDone.csv`, cot `level`) chi co
+  817 `PREDICT_SYMBOL_TRADE` + 248 `BIG_DOWN` + 20 `DCA_LEVEL1` = 1.085 lenh => nhanh FOMO /
+  market-signal (`SMALL_*`, dem vao `entryOther`) **khong mo lenh nao** trong cua so nay; nen
+  "loai tru BIG_DOWN/DCA" == "chi selector" ve mat so lieu (ghi ro de khong hieu nham).
+
+### 7.3 Doi tuong so sanh (chot truoc)
+
+1. **`all-1'`** = baseline = KEEPLEG0 (`sim_par_kg0`, khong khai key) — `99e42b75cf1a2142f9cd14dc72e371ba`,
+   1.085 lenh, equity 103.083, CAGR +27,14%, **0,660 entry/ngay (20,1/thang)**, maxDD −11,21, UW 147.
+2. **`all-15'`** = **GIU NGUYEN lam doi chieu** = ket qua cu `gr-kg0-q998-15m` (chan TAT CA leg o 15',
+   kem Q=0,998): 420 lenh, 0,255 entry/ngay (7,8/thang), equity 56.148, CAGR +11,08%, UW 278.
+3. **`sel15`** = **cai can biet**: `SIM_ENTRY_SAMPLE_MIN=15`, gate **TAT** (`SIM_GATE_P15_Q` khong khai),
+   scope selector-only theo §7.2 => selector 15' + BIG_DOWN/DCA 1'.
+
+### 7.4 Cac chan se chay (toi da 5, chay SONG SONG vi con 5 slot; chi phi 0)
+
+| chan | tag | profile + override | muc dich |
+|---|---|---|---|
+| parity-1 | `cd-par-kg0` | `x1_gs_t170` + KEEPLEG0 (khong khai key) | **cong nghiem thu TAT** => md5 `99e42b75…` |
+| parity-2 | `cd-par-t170` | `x1_gs_t170` (khong override) | **cong nghiem thu TAT** => md5 `efb793e2…` |
+| arm-a | `cd-sel15` | KEEPLEG0 + `SIM_ENTRY_SAMPLE_MIN=15` | selector 15', gate TAT |
+| arm-b | `cd-sel15-q998` | KEEPLEG0 + `SIM_ENTRY_SAMPLE_MIN=15` + `SIM_GATE_P15_Q=0.998` | selector 15' + nguong phan vi cuon |
+| arm-c | `cd-sel15-q999` | nhu arm-b nhung `Q=0.999` | neu con ngan sach |
+
+`KEEPLEG0` = dung 2 dong `DCA_GRID_WEIGHTS=1,1,1,1` + `DCA_GRID_SCALE=6.0` tren `x1_gs_t170`.
+Cua so DEV **2021-07-01..2025-12-31** (`sim-x1-2021-bundle`, `TIME_RUN=20210701`, `SIM_END_DATE=20251231`,
+`ticker_min_days=1826`). **KHONG cham 2026 / holdout / 242 / shadow_c3. KHONG push git.** Kaggle CPU
+(nen `sim-x1-2021-bundle`, jar rieng), **KHONG** chay Java/sim tren Oracle.
+
+**Uu tien cat arm neu thieu ngan sach/thoi gian:** parity-1 (bat buoc) > parity-2 (bat buoc) > arm-a >
+arm-b > arm-c. Chan bi cat phai **khai ro**.
+
+### 7.5 Cham diem (bo sung so leg)
+
+Nhu §3.7/§4 (5 rate + CI khoi-72h, paired block-bootstrap equity ngay block 21/2000 rep/seed
+**20260903**, nguong `1.4823 * sd_boot`), **cong them**: dem so leg theo cot `level` cua
+`printDone.csv` (selector / BIG_DOWN / DCA_LEVEL1) cho **ca 3 cau hinh** de chung minh viec lay mau
+**chi** anh huong selector: ky vong `BIG_DOWN` ~248 va `DCA_LEVEL1` ~20 **giu nguyen** o `sel15`, trong
+khi `all-15'` da bop chung xuong 14 / 2.
+
+### 7.6 Cau hoi phai tra loi (chot truoc)
+
+1. **SIM hien tai la 15' hay 1'?** (1 dong + bang chung code).
+2. `sel15` **khac `all-1'` bao nhieu** (so cu the) => **nhip selector 15' co phai thu lam mat hieu
+   nang**, hay phan lon mat mat la do chan oan `DCA`/`BIG_DOWN`?
+3. Sau khi sim khop thiet ke: **cau hinh nao go-live duoc** (kem so + rao UW/maxDD), **co can chinh
+   live khong**?
+
+### 7.7 Khong lam
+
+- Khong doi `EntryGate` / `SIM_GATE_P15_Q` / `MIN_MOMENTUM_15M` / `SIM_GATE_DYN_SCALE` / bins / selector /
+  exit / trailing / sizing / `NUMBER_ENTRY_EACH_SIGNAL`.
+- Khong cham ONNX / `NUM_FEATURES` / `extractFeatures45` / duong LIVE; khong restart/sua env/profile host live.
+- Khong push git.
