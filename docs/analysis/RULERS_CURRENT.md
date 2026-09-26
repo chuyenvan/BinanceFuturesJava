@@ -71,3 +71,19 @@ Nguồn: `docs/runbooks/RISK_APPETITE.md:134-136`, §6, §7.3 (MTM mốc phút),
 | 5 | **Hạ cấp** `meanP` / `mP|SM` / `mP|SL` / `ic` / `glift8` / `netm8` về **báo cáo**, không làm cổng quyết định | chờ chốt |
 
 **Cần owner chốt đúng 3 điều:** (a) **X%** cho rào #3-① · (b) **`tail-free PnL > 0` có thành rào CỨNG không** · (c) **hạ cấp thang mean-based về báo cáo** — có/không.
+
+---
+
+## 7. OWNER CHỐT — 2026-09-26 23:11 (cập nhật RÀO + thang đo)
+
+- **(a) RÀO CỨNG MỚI:** `%PnL đến từ top-1% lệnh` **≤ 15%** (owner chốt `15%`).
+- **(b) RÀO CỨNG MỚI:** **tail-free PnL: BỎ TOP-20% lệnh ⇒ PnL vẫn phải DƯƠNG**
+  *(mạnh hơn đề xuất ban đầu là top-5%)*.
+  ⚠️ **Hệ quả phải nói rõ và kiểm bằng số:** hiện **bỏ top-5% đã ÂM** (T100/GD92) ⇒ **mọi biến thể hiện có
+  gần như chắc chắn FAIL rào này** ⇒ dưới rào mới, **không cấu hình nào đủ điều kiện go-live**.
+  Đang kiểm định lượng ở vòng riêng (`RESULT_RATE_REDUNDANCY`): bỏ 5% / 10% / 20%, từng năm + toàn kỳ.
+- **(c) ĐANG CHỜ:** hạ cấp thang *mean-based* về mức **báo cáo** (không làm cổng quyết định), kèm câu hỏi
+  **các rate có TRÙNG NHAU không** (`n` · `win%` · `TSloss%` · `mP|SM` · `mP|SL` · `meanP`) — nếu có cặp
+  trùng/phụ thuộc đại số thì luật *"≥2 rate ngoài CI"* **không còn là 2 bằng chứng độc lập**. Đang phân tích.
+
+**⇒ Luật bằng chứng sẽ đổi thành:** *"≥2 thang **TAIL-ROBUST** + **KHÔNG trùng lặp** ngoài CI vs cả 2 đối chứng"*.
