@@ -222,6 +222,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                         Long time = entry.getKey();
                             // [REGIME] dat scale gate theo UTC-day cua tick (1 lan/tick, truoc createOrder).
                             if (EntryGate.GATE_REGIME_ADAPTIVE) EntryGate.CURRENT_REGIME_SCALE = RegimeSchedule.scaleForTime(time);
+                            // [GATE-RECAL 2026-09-26] moc thoi gian tick cho nguong cuon (chi doc khi P15_Q>0).
+                            EntryGate.setCurrentTime(time);
                         try {
                             long startTimeRun = System.currentTimeMillis();
                             KlineObjectSimple[] symbol2Ticker = entry.getValue();
@@ -592,6 +594,12 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         LOG.info("[GATE] scale={} base={} n_cand={} n_pass={}",
                 com.binance.chuyennd.tradecore.EntryGate.GATE_DYN_SCALE,
                 Configs.MIN_MOMENTUM_15M, ablationSignalSeen, ablationPassCount);
+        // [GATE-RECAL 2026-09-26] docs/prereg/PREREG_GATE_RECAL.md §1 — thuan LOG, khong doi printDone.
+        if (com.binance.chuyennd.tradecore.EntryGate.P15_Q > 0f) {
+            LOG.info("[GATE-RECAL] W={}d Q={} sampleMin={} (thr_rolling = phan vi cuon p15 cua chinh nguon sim)",
+                    com.binance.chuyennd.tradecore.EntryGate.P15_W_DAYS,
+                    com.binance.chuyennd.tradecore.EntryGate.P15_Q, Configs.ENTRY_SAMPLE_MIN);
+        }
         // [DCA-SIGNAL V2 2026-09-14] phieu loc 3 tang (T3 doc tu printDone.csv) + so lan tie-break.
         if (Configs.DCA_SIGNAL_GATE) {
             LOG.info("[DS-FUNNEL] X={} cooldownMin={} T1_touchX={} T2_postCooldown={} tieBreak={}",
@@ -939,6 +947,31 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         SimpleSymbolMapper.getInstance().init();
         BdSizeAdapt.build(time2MarketData);
 
+        // [GATE-RECAL 2026-09-26] docs/prereg/PREREG_GATE_RECAL.md — dung nguong cuon (phan vi Q, cua so
+        //   W=30 ngay) tu CHINH chuoi p15 cua nguon sim (predictionMap), CAUSAL (cua so [t-W, t)).
+        //   OFF (SIM_GATE_P15_Q khong khai / <=0) => khong lam gi => byte-identical.
+        if (com.binance.chuyennd.tradecore.EntryGate.P15_Q > 0f && predictionMap != null) {
+            long _tP15 = System.currentTimeMillis();
+            int _n = predictionMap.size();
+            long[] _rt = new long[_n];
+            float[] _rv = new float[_n];
+            int _i = 0;
+            for (Map.Entry<Long, AiPredictionData> _e : predictionMap.entrySet()) {
+                _rt[_i] = _e.getKey();
+                _rv[_i] = _e.getValue().predReturn15M;
+                _i++;
+            }
+            com.binance.chuyennd.tradecore.EntryGate.buildP15Rolling(
+                    _rt, _rv, com.binance.chuyennd.tradecore.EntryGate.P15_Q,
+                    com.binance.chuyennd.tradecore.EntryGate.P15_W_DAYS);
+            LOG.info("[GATE-RECAL] built W={}d Q={} n={} in {}ms",
+                    com.binance.chuyennd.tradecore.EntryGate.P15_W_DAYS,
+                    com.binance.chuyennd.tradecore.EntryGate.P15_Q, _n,
+                    System.currentTimeMillis() - _tP15);
+        } else {
+            LOG.info("[GATE-RECAL] OFF (P15_Q={})", com.binance.chuyennd.tradecore.EntryGate.P15_Q);
+        }
+
         Utils.printMemoryUsage("Load time2FundingPre (time2SymbolPred)");
         LOG.info("✅ TẤT CẢ DỮ LIỆU ĐÃ SẴN SÀNG. BẮT ĐẦU SIMULATE...");
     }
@@ -1241,6 +1274,14 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                              MarketDataObject marketData, Float symbolPred, Integer selRank, boolean dcaSignal) {
 
 
+
+        // [GATE-RECAL 2026-09-26] docs/prereg/PREREG_GATE_RECAL.md §3.6 — nhip LAY MAU entry-leg:
+        //   SIM_ENTRY_SAMPLE_MIN &lt;=1 (mac dinh) => khong lam gi => byte-identical.
+        if (Configs.ENTRY_SAMPLE_MIN > 1) {
+            long _t = EntryGate.CURRENT_P15_TIME;
+            if (_t == Long.MIN_VALUE) _t = ticker.startTime;
+            if (((_t / 60000L) % Configs.ENTRY_SAMPLE_MIN) != 0) return;
+        }
 
         AiPredictionData predict = predictionMap.get(ticker.startTime);
         // 🧠 #10 PARITY (TASK-030, một bộ não): LIVE createOrderBuyRequest reject khi prediction==null

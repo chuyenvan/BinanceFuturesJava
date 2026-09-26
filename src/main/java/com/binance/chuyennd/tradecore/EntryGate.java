@@ -69,6 +69,108 @@ public final class EntryGate {
     /** Scale theo-tick do simulator dat moi tick khi GATE_REGIME_ADAPTIVE bat (RegimeSchedule.scaleForTime). */
     public static float CURRENT_REGIME_SCALE = REGIME_SCALE_NOTUP;
 
+    // =========================================================================
+    // [GATE-RECAL 2026-09-26] docs/prereg/PREREG_GATE_RECAL.md — nguong gate bieu dien theo
+    //   PHAN VI CUON cua chinh chuoi p15 cua NGUON DANG CHAY (thay vi hang so tuyet doi hieu
+    //   chuan tren bo pred DEV). Key `SIM_GATE_P15_Q` (float, doc 1 lan o Configs).
+    //   KHONG khai / <=0 => P15_Q = 0f => moi bieu thuc duoi day KHONG duoc cham
+    //   => hanh vi cu BYTE-IDENTICAL.
+    //   PASS <=> !(predReturn15M < thr); thr = max(MIN_MOMENTUM_15M, quantile_W(p15_past, Q));
+    //   nhanh symbolPred != null: thr_final = max(rolling_thr, threshold(sp)) — CHI siet, KHONG noi long.
+    // =========================================================================
+
+    /** Q cua phan vi cuon (0 = OFF => byte-identical). Doc 1 lan o {@code Configs} tu key {@code SIM_GATE_P15_Q}. */
+    public static float P15_Q = 0f;
+
+    /** W = so NGAY cua so truot — HANG SO pre-reg, KHONG fit, khong doc tu config. */
+    public static final int P15_W_DAYS = 30;
+
+    /** Thoi diem TICK hien tai cua sim (do simulator dat moi tick). Chi dung khi {@code P15_Q > 0}. */
+    public static long CURRENT_P15_TIME = Long.MIN_VALUE;
+
+    /** Moc thoi gian cua tung mau p15 (sort tang). Rong khi OFF. */
+    private static long[] p15RollTime = null;
+    /** Nguong cuon tuong ung tung moc (CAUSAL: cua so [t-W, t)). null khi OFF. */
+    private static float[] p15RollThr = null;
+
+    /** Do simulator dat moi tick (truoc moi createOrder cua tick do). */
+    public static void setCurrentTime(long time) {
+        CURRENT_P15_TIME = time;
+    }
+
+    /**
+     * Dung chuoi p15 cua nguon dang chay thanh NGUONG CUON CAUSAL.
+     *
+     * @param t      moc thoi gian tung mau (PHai sort tang dan)
+     * @param v      gia tri p15 tung mau ({@code predReturn15M})
+     * @param q      Q phan vi (vd 0.995)
+     * @param wDays  W ngay cua so truot
+     *               <p>Cua so tai mau i = {j : t[i]-W &lt;= t[j] &lt; t[i]} — CHI QUA KHU, khong nhin tuong lai.
+     *               Phan vi theo ky phap NEAREST-RANK: chi so 1-based = ceil(q*n), lam tron vao [1,n].
+     */
+    public static void buildP15Rolling(long[] t, float[] v, float q, int wDays) {
+        int n = t.length;
+        long[] rt = new long[n];
+        float[] rv = new float[n];
+        java.util.TreeMap<Float, Integer> cnt = new java.util.TreeMap<>();
+        int lo = 0, hi = 0;
+        long wms = (long) wDays * 86400000L;
+        for (int i = 0; i < n; i++) {
+            long ti = t[i];
+            while (hi < i) {
+                cnt.merge(v[hi], 1, Integer::sum);
+                hi++;
+            }
+            long cut = ti - wms;
+            while (lo < hi && t[lo] < cut) {
+                float x = v[lo];
+                Integer c = cnt.get(x);
+                if (c == null || c <= 1) cnt.remove(x);
+                else cnt.put(x, c - 1);
+                lo++;
+            }
+            rt[i] = ti;
+            int m = hi - lo;
+            if (m <= 0) {
+                rv[i] = Float.NEGATIVE_INFINITY;
+                continue;
+            }
+            int rank = (int) Math.ceil((double) q * m);
+            if (rank < 1) rank = 1;
+            if (rank > m) rank = m;
+            int need = m - rank + 1;              // so phan tu ke tu DINH xuong
+            int acc = 0;
+            float val = Float.NaN;
+            for (java.util.Map.Entry<Float, Integer> e : cnt.descendingMap().entrySet()) {
+                acc += e.getValue();
+                if (acc >= need) {
+                    val = e.getKey();
+                    break;
+                }
+            }
+            rv[i] = val;
+        }
+        p15RollTime = rt;
+        p15RollThr = rv;
+    }
+
+    /** Nguong cuon tai {@code time} (moc lon nhat &lt;= time). Chua co cua so =&gt; -inf (san base se ap). */
+    public static float rollingThrAt(long time) {
+        long[] rt = p15RollTime;
+        if (rt == null || rt.length == 0) return Float.NEGATIVE_INFINITY;
+        int lo = 0, hi = rt.length - 1, best = -1;
+        while (lo <= hi) {
+            int mid = (lo + hi) >>> 1;
+            if (rt[mid] <= time) {
+                best = mid;
+                lo = mid + 1;
+            } else {
+                hi = mid - 1;
+            }
+        }
+        return best < 0 ? Float.NEGATIVE_INFINITY : p15RollThr[best];
+    }
+
     private EntryGate() {
     }
 
@@ -80,6 +182,16 @@ public final class EntryGate {
      *                   (BIG_DOWN / DCA_LEVEL1 / leg market-signal) => nguong CO SO, y nhu cu
      */
     public static float threshold(float thrBase, Float symbolPred) {
+        // [GATE-RECAL 2026-09-26] P15_Q = 0 (mac dinh) => KHONG vao nhanh nay => bieu thuc cu nguyen ven.
+        if (P15_Q > 0f) {
+            // thr = max(base, quantile_cuon): san base luon giu; cua so rong => -inf => = base.
+            float roll = Math.max(thrBase, rollingThrAt(CURRENT_P15_TIME));
+            if (symbolPred == null) return roll;
+            float sc = (symbolPred / SCORE_BASE) * DYN_MULT;
+            float gs = GATE_REGIME_ADAPTIVE ? CURRENT_REGIME_SCALE : GATE_DYN_SCALE;
+            // max(rolling, dyn): CHI siet them so voi hanh vi dang co, KHONG bao gio noi long.
+            return Math.max(roll, thrBase * Math.max(DYN_MIN, sc) * gs);
+        }
         if (symbolPred == null) return thrBase;
         float scale = (symbolPred / SCORE_BASE) * DYN_MULT;
         float gateScale = GATE_REGIME_ADAPTIVE ? CURRENT_REGIME_SCALE : GATE_DYN_SCALE;

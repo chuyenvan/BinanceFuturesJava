@@ -405,6 +405,13 @@ public class Configs {
     public static int SIM_REGIME_GATE_VALUE_COL = -1; // [BRC B7] >=0: doc float gate/ngay tu cot nay (lien tuc); -1 nhi phan
     public static String SIM_FILTER_D3D4 = null;   // [D3D4-FILTER] docs/prereg/PREREG_D3D4_FILTER_SIM.md — off|d3|d4|both, default off
     public static float MIN_MOMENTUM_15M = 0.02284f;                  // HPO (đã revert về cũ): 0.01720f
+
+    /**
+     * [GATE-RECAL 2026-09-26] docs/prereg/PREREG_GATE_RECAL.md §3.6 — nhip LAY MAU entry-leg cua sim
+     * (phut). 1 = moi phut (hanh vi cu). &gt;1 = chi cho MO lenh moi o cac phut chia het (vd 15 = 96 co hoi/ngay,
+     * khop nhip live). Key {@code SIM_ENTRY_SAMPLE_MIN}; khong khai / &lt;=1 =&gt; 1 =&gt; byte-identical.
+     */
+    public static int ENTRY_SAMPLE_MIN = 1;
     public static float MS_UP_BIG_THRES = 0.02046f;                  // HPO (đã revert về cũ): 0.01757f
     public static float MS_DOWN_BIG_AVG = -0.03157f;                  // HPO (đã revert về cũ): -0.05514f
     // [BD-THRESHOLD-FRAGILITY 2026-09-17] tach nguong DCA khoi nguong BIG_DOWN (docs/prereg/PREREG_BD_THRESHOLD_FRAGILITY.md).
@@ -763,6 +770,18 @@ public class Configs {
             if ((v = Cfg.get("SIM_GATE_DYN_SCALE")) != null) {
                 float gs = Float.parseFloat(v.trim());
                 if (gs > 0f) EntryGate.GATE_DYN_SCALE = gs;
+            }
+            // [GATE-RECAL 2026-09-26] docs/prereg/PREREG_GATE_RECAL.md §1 — nguong theo PHAN VI CUON
+            //   W=30 ngay cua chinh chuoi p15 cua nguon dang chay. Khong khai / <=0 / >=1 => OFF
+            //   (giu nguyen hanh vi cu, byte-identical).
+            if ((v = Cfg.get("SIM_GATE_P15_Q")) != null) {
+                float q = Float.parseFloat(v.trim());
+                if (q > 0f && q < 1f) EntryGate.P15_Q = q;
+            }
+            // [GATE-RECAL 2026-09-26] §3.6 — nhip lay mau entry-leg (do "ty le entry chuyen doi duoc").
+            if ((v = Cfg.get("SIM_ENTRY_SAMPLE_MIN")) != null) {
+                int sm = Integer.parseInt(v.trim());
+                if (sm > 1) ENTRY_SAMPLE_MIN = sm;
             }
             // [REGIME 2026-09-14] docs/prereg/PREREG_REGIME_GATE.md: gate scale doi theo regime BTC 30d.
             //   default OFF => byte-identical. SIM_REGIME_FORCE=UP|NOTUP chi cho cong 2-cuc.
