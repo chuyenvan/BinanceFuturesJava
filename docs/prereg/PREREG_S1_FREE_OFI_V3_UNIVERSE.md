@@ -2,6 +2,36 @@
 
 Chot TRUOC khi build bat ky feature that nao va TRUOC khi tinh bat ky rank-IC/edge5 nao.
 File nay PHAI duoc commit truoc `docs/RESULT_S1_FREE_OFI_V3_UNIVERSE.md`; nguoc lai ket qua VO HIEU.
+> ## AMENDMENT-A (2026-09-26) — DOI MAY PUSH: Windows → **Oracle**
+>
+> **Chot TRUOC khi push kernel dau tien va TRUOC khi doc bat ky so V3 nao** (tai thoi diem viet amendment:
+> **chua ton tai bat ky ket qua V3 nao**).
+>
+> **Ly do:** owner yeu cau chay tu Oracle (26/09 07:14), sau khi kiem chung **LIVE** rang Oracle du dieu kien:
+> `kaggle` CLI **1.6.17** (`/home/ubuntu/.local/bin/kaggle`) · `~/.kaggle/kaggle.json` co, user **`chuyendinh`**
+> (CUNG account voi ban Windows) · `kaggle kernels list --user chuyendinh` chay duoc tu Oracle · va Oracle
+> **da push thanh cong nhieu lan**: `chuyendinh/mf-train-gpu` (25/09) · `chuyendinh/g015p2-stage2-featvar-gpu`
+> · `chuyendinh/g015p2-stage3-y21fold-gpu`.
+>
+> **Doi DUY NHAT = MAY PUSH.** KHONG doi: feature (§3), harness (§4), fold, CI, **luat quyet dinh (§4.1)**,
+> sanity (§4.2), pham vi §2, thu tu §8. Moi con so va luat o cac muc duoi giu NGUYEN hieu luc.
+>
+> **Doi tooling (khong doi thiet ke do):** `gen_kernels_v3.py` / `gen_train_v3.py` dang ghi ra duong Windows
+> `D:\claudedata\ofi_v3\kernels` ⇒ them override qua env **`OFI_V3_OUT`** de ghi ra Linux; gia tri mac dinh cu
+> giu nguyen. Day thuan tuy la **duong ghi output**, khong cham thuat toan/feature/harness.
+>
+> **Rang buoc Oracle KHONG doi:** khong chay Java/sim tren Oracle (shadow-c3 LIVE PAPER, `systemctl is-active`
+> = `active` tai thoi diem amend); **khong tai aggTrades ve Oracle** (kernel Kaggle tu tai); kiem `df -h /` +
+> `free -g` + `systemctl is-active shadow-c3` TRUOC/SAU moi dot push.
+>
+> ⚠️ **Canh bao tai nguyen 26/09:** `df -h /` = **16G trong, / da dung 93%** ⇒ chi push **text** (vai chuc KB/kernel),
+> **KHONG** stage du lieu tren Oracle; neu output Kaggle can tai ve thi tai **tung phan** va don ngay sau khi dung.
+>
+> ⚠️ **Quota:** tran **5 CPU session dong thoi** (theo ACCOUNT `chuyendinh`, khong theo may) ⇒ push 5 roi doi slot,
+> dung nhu §8.2.
+
+**Doan duoi day la BAN GOC (giu nguyen de doi chieu lich su), da bi AMENDMENT-A thay the o phan MAY PUSH:**
+
 Toan bo tinh toan THAT (tai aggTrades, build feature, train XGBoost, do rank-IC/edge5) chay tren
 **Kaggle** (account `chuyendinh`), day kernel tu **may Windows** (kaggle CLI 2.2.2, `C:\Users\pc\.kaggle`).
 **Oracle KHONG chay bat ky job nao** (shadow-c3 dang LIVE PAPER) — Oracle chi dung de `git commit`
