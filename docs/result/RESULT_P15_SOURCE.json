@@ -1,0 +1,54 @@
+{
+  "doc": "RESULT_P15_SOURCE",
+  "prereg": {"file": "docs/prereg/PREREG_P15_SOURCE.md", "commit": "47ffcff"},
+  "verdict": {"H1_missing_scaler_causes_compression": "REFUTED",
+              "root_cause_primary": "iii_pipeline_feature_khac",
+              "root_cause_status": "i refuted; iv no evidence; ii not fully excludable (original DEV store missing)"},
+  "evidence_class": {"oracle_shadow": "READ-ONLY", "host_242": "READ-ONLY", "compute": "local python light", "java_sim_on_oracle": "NOT RUN"},
+  "onnx": {
+    "gate_p15_Model_Regressor_Return15M.onnx": {"shadow_md5": "8ec9975726270782692bfe00b39bd37f", "host242_md5": "8ec9975726270782692bfe00b39bd37f", "size": 144774, "equals_wfo_models_fold_20": true, "same": true},
+    "S1_MODEL_ONNX": {"shadow": "s1a2x1_cut20251001.onnx md5 afaa2828a6d8c73e4b32c3f9a6d0c79b", "host242": "s1a2x1_cut20251231.onnx md5 511add621b12647823d9906046520906", "same": false},
+    "NET015_MODEL_ONNX": {"shadow_default": "g015x26_f15_cut20251001.onnx md5 a39dbe9a24bc7241ba7c7ffcd90fc7c7", "host242": "g015x26_f15_cut20251231.onnx md5 e65e683b1be5c752dea5b616cce04a1a", "same": false}
+  },
+  "scaler": {
+    "expected_by_code": "Scaler_Return15M.onnx (OnnxInferenceManager.java:103)",
+    "missing": ["Scaler_Return15M.onnx"],
+    "present": ["Scaler_Return1H.onnx", "Scaler_Return4H.onnx", "Scaler_Return24H.onnx", "Scaler_maxDrawdown4H.onnx", "Scaler_maxDrawdown24H.onnx"],
+    "host242_disabled": ["Scaler_Return15M.onnx.disabled_wfo (564B)", "Scaler_Return15M.onnx.bak_gatewfo_20260817 (564B)"],
+    "dev_pipeline_uses_scaler": false,
+    "intentional": true,
+    "intentional_evidence": "docs/archive/_cleanup_20260829/docs/project-memory/v1_live_deploy_gate_wfo_2026-08-17.md + ml/gate/train_gate_fold.py:7 'KHONG scaler (XGBoost bat bien scale)'"
+  },
+  "code": {
+    "file": "src/main/java/com/binance/chuyennd/ai_ml/onnx/entry/OnnxInferenceManager.java",
+    "scaler_name_line": 103,
+    "if_present_scale_line": "107-112",
+    "if_missing_warn_line": 111,
+    "use_raw_if_scaler_null_line": "134-138",
+    "behavior": "missing scaler => scaler=null => inputForModel=rawFeatures (RAW, no default)"
+  },
+  "quant": {
+    "scaler_effect_p50_percent": {"fold20_raw_2021feats": 0.724, "fold20_scaled_2021feats": 8.770,
+                                  "fold20_raw_2026feats": 1.097, "fold20_scaled_2026feats": 7.612, "live242": 0.910},
+    "scaler_effect_max_percent": {"fold20_raw_2021feats": 21.14, "fold20_scaled_2021feats": 66.86,
+                                  "fold20_raw_2026feats": 64.21, "fold20_scaled_2026feats": 76.62, "live242": 2.300},
+    "cadence_15min": {
+      "dev_full_1min": {"n": 2500260, "p50": 0.545, "p99": 1.308, "max": 12.261, "ge2.947": 2248},
+      "dev_full_15min": {"n": 166684, "p50": 0.549, "p99": 1.321, "max": 11.126, "ge2.947": 158},
+      "dev_2025Q4_1min": {"n": 132465, "p50": 0.900, "p99": 1.401, "p999": 3.510, "max": 11.946, "ge2.947": 150},
+      "dev_2025Q4_15min": {"n": 8831, "p50": 0.915, "p99": 1.415, "p999": 3.390, "max": 10.315, "ge2.947": 10},
+      "live242": {"n": 8986, "p50": 0.910, "p99": 1.770, "p999": 1.960, "max": 2.300, "ge2.947": 0},
+      "shadow": {"n": 609, "p50": 0.930, "p99": 1.490, "max": 2.300, "ge2.947": 0}
+    },
+    "pred_bin_equals_wfo_gate_pred_csv": {"max_abs_diff": 3.7e-09, "ts_equal": true},
+    "fold_reproduction": {"fold_0_p50": 0.748, "fold_5_p50": 1.630, "fold_20_p50": 1.122,
+                          "target_dev_2025Q4_p50": 0.900, "join_corr_with_offline_store": 0.762,
+                          "result": "no fold reproduces pred.bin; offline store is not the original store"}
+  },
+  "consequences": {
+    "do_not_restore_scaler": true,
+    "gate_can_pass_again": false,
+    "recalibrate_on_dev_invalid_until_source_fixed": true,
+    "next_step": "capture live 33-feature vector per tick (read-only) and diff vs offline export same window"
+  }
+}
