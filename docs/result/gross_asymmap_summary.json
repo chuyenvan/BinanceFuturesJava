@@ -1,0 +1,159 @@
+{
+ "n_runs_scanned": 462,
+ "n_scored": 461,
+ "roots": {
+  "/home/ubuntu/java/devrun": 361,
+  "/home/ubuntu/kaggle_sim/out": 100
+ },
+ "pass_a_meaningful": 3,
+ "pass_b": 0,
+ "pass_both": 0,
+ "asym_min_all": 0.2611385471,
+ "asym_min_all_tag": "R2_trail",
+ "asym_min_profitable": 0.2611385471,
+ "asym_min_profitable_tag": "R2_trail",
+ "asym_lt_1": 32,
+ "asym_lt_1_profitable": 30,
+ "asym_med": 3.0614598229,
+ "asym_med_x1_gs_t170": 3.0267741366,
+ "asym_min_x1_gs_t170": 0.705336737,
+ "gross_new_max_over_70": 14,
+ "gross_new_max_over_70_kaggle": 0,
+ "gross_new_max_max": 232.8005067776,
+ "gross_corr_new_vs_oldledger_mean": 0.8680893322230666,
+ "gross_med_ratio_new_over_oldledger": 1.3399500039962438,
+ "partA_cd_sel15": {
+  "G_new_mean": 1.741,
+  "G_new_max": 49.532,
+  "G_old_ledger_mean": 1.061,
+  "G_old_ledger_max": 48.0,
+  "G_old_pool_mean": 48.82,
+  "G_old_pool_max": 84.0,
+  "d_mean_ledger": 0.531,
+  "d_max_ledger": 24,
+  "d_mean_pool": 24.409,
+  "d_max_pool": 42,
+  "ratio_pool_mean_over_new": 28.0,
+  "ratio_pool_mean_over_oldledger": 46.0
+ },
+ "pool_K": {
+  "8": [
+   24.409,
+   42,
+   48.82,
+   84.0
+  ],
+  "12": [
+   33.692,
+   53,
+   67.38,
+   106.0
+  ]
+ },
+ "tf50_max": -174.157218097,
+ "structure": {
+  "sign_le45": {
+   "n": 32,
+   "asym_min": 0.2611385471,
+   "asym_med": 0.45305129369999997
+  },
+  "sign_gt80": {
+   "n": 406,
+   "asym_min": 1.7929157903,
+   "asym_med": 3.0774512871
+  },
+  "sl3_family": [
+   {
+    "tag": "sl3-base",
+    "n": 1085.0,
+    "asym": 3.0774512871,
+    "sign_pct": 87.8341013825,
+    "top1_share": 23.7396320527,
+    "TF50": -33125.8011484
+   },
+   {
+    "tag": "sl3-v1-arm03",
+    "n": 1503.0,
+    "asym": 4.3251923183,
+    "sign_pct": 92.5482368596,
+    "top1_share": 30.4338948012,
+    "TF50": -15813.09511257
+   },
+   {
+    "tag": "sl3-v2-sl3",
+    "n": 3021.0,
+    "asym": 0.705336737,
+    "sign_pct": 38.1992717643,
+    "top1_share": -111.9406976626,
+    "TF50": -70723.813658
+   },
+   {
+    "tag": "sl3-v3-both",
+    "n": 4219.0,
+    "asym": 1.5629291945000001,
+    "sign_pct": 52.7376155487,
+    "top1_share": -50.7577474457,
+    "TF50": -67632.90399023
+   },
+   {
+    "tag": "sl3-v4-sl7",
+    "n": 2013.0,
+    "asym": 1.2691395899,
+    "sign_pct": 58.2712369598,
+    "top1_share": 151.2402526294,
+    "TF50": -84271.4273171
+   }
+  ],
+  "time_stop_0": [
+   {
+    "tag": "xs-a1",
+    "n": 780.0,
+    "asym": 6.6841520281,
+    "sign_pct": 91.2820512821,
+    "top1_share": 37.3474093707,
+    "TF50": -21072.69420577,
+    "hold_med": 317.5
+   },
+   {
+    "tag": "xs-a2",
+    "n": 935.0,
+    "asym": 2.0461677246,
+    "sign_pct": 84.7058823529,
+    "top1_share": 16.0987529047,
+    "TF50": -4610.31678624,
+    "hold_med": 283.0
+   },
+   {
+    "tag": "xs-a3",
+    "n": 877.0,
+    "asym": 1.7929157903,
+    "sign_pct": 82.6681870011,
+    "top1_share": 16.6826967709,
+    "TF50": -3529.29159419,
+    "hold_med": 221.0
+   }
+  ]
+ },
+ "tried_knobs": {
+  "SIM_PRE_ARM_SL": [
+   -0.03,
+   -0.07
+  ],
+  "SIM_LOSER_TIME_STOP_HOURS": [
+   0,
+   96,
+   120
+  ],
+  "TS_GIVEBACK_RATIO": [
+   1,
+   2,
+   5
+  ],
+  "SELECTOR_RANK_TOPK": [
+   3,
+   8,
+   16,
+   32
+  ]
+ }
+}
