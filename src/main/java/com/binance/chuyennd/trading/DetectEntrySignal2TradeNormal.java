@@ -123,10 +123,21 @@ public class DetectEntrySignal2TradeNormal {
         new Thread(() -> {
             Thread.currentThread().setName("ThreadDetectMarketLevel2Trader");
             LOG.info("Start thread ThreadDetectMarketLevel2Trader");
+            // [CADENCE-SPLIT 2026-09-27] 1 dong xac minh nhip hieu luc (deploy verify). Thuan LOG.
+            LOG.info("[CADENCE-SPLIT] MARKET_SCAN_MIN={} => MARKET-LEVEL(BIG_DOWN/DCA) quet {}, SELECTOR luon 15'",
+                    Configs.MARKET_SCAN_MIN, Configs.MARKET_SCAN_MIN > 0 ? "1 PHUT" : "15 PHUT (nhu cu)");
             while (true) {
-                if (isTimeProcessData()) {
+                // [CADENCE-SPLIT 2026-09-27] docs/plan/PLAN_LIVE_CADENCE_SPLIT.md
+                //   selectorTick: moc luoi 15' nhu CU (isTimeProcessData KHONG doi).
+                //   marketTick: nhip 1' cho phan MARKET-LEVEL (BIG_DOWN/DCA) — CHI khi
+                //   Configs.MARKET_SCAN_MIN > 0. Khong khai key => marketTick luon false
+                //   => chi con duong 15' => byte-identical HEAD.
+                boolean selectorTick = isTimeProcessData();
+                boolean marketTick = !selectorTick && isTimeProcessMarket1M();
+                if (selectorTick || marketTick) {
+                    final boolean selectorLeg = selectorTick;
                     try {
-                        executorService.execute(() -> checkMarketLevelChange2Trade());
+                        executorService.execute(() -> checkMarketLevelChange2Trade(selectorLeg));
                     } catch (Exception e) {
                         LOG.error("ERROR during ThreadDetectMarketLevel2Trader: {}", e);
                         e.printStackTrace();
@@ -141,7 +152,7 @@ public class DetectEntrySignal2TradeNormal {
         }).start();
     }
 
-    private void checkMarketLevelChange2Trade() {
+    private void checkMarketLevelChange2Trade(boolean selectorLeg) {
         try {
             LOG.info("Start check level change of market for trade! {}", new Date());
             Map<String, KlineObjectSimple> symbol2FinalTicker = new HashMap<>();
@@ -329,6 +340,17 @@ public class DetectEntrySignal2TradeNormal {
                 }
             }
 
+
+            // [CADENCE-SPLIT 2026-09-27] docs/plan/PLAN_LIVE_CADENCE_SPLIT.md — RANH GIOI TACH:
+            //   Toan bo phan o TREN (prep + levelChange + ONNX entry predict + funding candidates +
+            //   leg BIG_DOWN L270-295 + DCA L296-311 + DCA big-loss L314-330 (so dong HEAD)) la
+            //   MARKET-LEVEL => chay o CA 2 nhip. Khoi tu day tro xuong (build pool S1/rank + vong
+            //   entry PREDICT_SYMBOL_TRADE L333-441 (HEAD) + ghi prediction) la SELECTOR => moc 15'.
+            //   Tick 1' (selectorLeg=false) bo qua khoi selector => nhip selector giu nguyen 15'.
+            if (!selectorLeg) {
+                LOG.info("Finish check level change of market 2 trade (market-only tick): {}", new Date());
+                return;
+            }
 
             // Duyệt qua danh sách đã sắp xếp (con ngon nhất duyệt trước)
             // Gom REJECT của PREDICT_SYMBOL_TRADE thành 1 dòng/phút (xem createOrderBuyRequest).
@@ -996,8 +1018,33 @@ public class DetectEntrySignal2TradeNormal {
         // Mở rộng cửa sổ thời gian từ giây 03 đến giây 10 (rộng 7 giây).
         // Cờ lastProcessedMinute đảm bảo trong 7 giây này nó chỉ được phép trả về TRUE đúng 1 lần.
         // curMin % ENTRY_GRID_MIN == 0 => chỉ chạy tại mốc lưới (mặc định 15m: :00/:15/:30/:45 UTC).
-        if (second >= 6 && second <= 10 && curMin % ENTRY_GRID_MIN == 0 && curMin > lastProcessedMinute) {
+        if (selectorGrid(second, curMin, lastProcessedMinute)) {
             lastProcessedMinute = curMin;
+            return true;
+        }
+        return false;
+    }
+
+    // [CADENCE-SPLIT 2026-09-27] Cong nhip SELECTOR — THUAN HAM (pure), logic Y NGUYEN bieu thuc cu.
+    static boolean selectorGrid(long second, long curMin, long lastProcessedMin) {
+        return second >= 6 && second <= 10 && curMin % ENTRY_GRID_MIN == 0 && curMin > lastProcessedMin;
+    }
+
+    private long lastMarketProcessedMinute = 0; // [CADENCE-SPLIT] phut da quet o nhip MARKET-LEVEL
+
+    // [CADENCE-SPLIT 2026-09-27] Cong nhip MARKET-LEVEL (1') — THUAN HAM (pure) de test.
+    //   scanMin <= 0 (key khong khai) => LUON false => khong co duong 1' => y nguyen hanh vi cu.
+    static boolean marketScanGrid(long second, long curMin, long lastProcessedMin, int scanMin) {
+        return scanMin > 0 && second >= 6 && second <= 10 && curMin > lastProcessedMin;
+    }
+
+    /** TRUE dung 1 lan cho moi PHUT MOI khi MARKET_SCAN_MIN > 0; khong khai key => luon FALSE. */
+    public boolean isTimeProcessMarket1M() {
+        long time = System.currentTimeMillis();
+        long second = (time / Utils.TIME_SECOND) % 60;
+        long curMin = time / (60 * Utils.TIME_SECOND);
+        if (marketScanGrid(second, curMin, lastMarketProcessedMinute, Configs.MARKET_SCAN_MIN)) {
+            lastMarketProcessedMinute = curMin;
             return true;
         }
         return false;

@@ -414,6 +414,15 @@ public class Configs {
      * Key {@code SIM_ENTRY_SAMPLE_MIN}; khong khai / &lt;=1 =&gt; 1 =&gt; byte-identical.
      */
     public static int ENTRY_SAMPLE_MIN = 1;
+
+    /**
+     * [CADENCE-SPLIT 2026-09-27] docs/plan/PLAN_LIVE_CADENCE_SPLIT.md — tach NHIP QUET cua LIVE.
+     * 0 (mac dinh / khong khai) =&gt; giu NGUYEN hanh vi cu: ca SELECTOR va MARKET-LEVEL chi chay o moc
+     * luoi 15'. &gt;0 (dung 1) =&gt; phan MARKET-LEVEL ({@code levelChange} = BIG_DOWN + DCA_LEVEL1) quet
+     * moi PHUT, con phan SELECTOR van 15' (giong thiet ke sim sel15). Key {@code MARKET_SCAN_MIN}.
+     * Khong cham ONNX / NUM_FEATURES / extractFeatures45. Khong khai / &lt;=0 =&gt; byte-identical.
+     */
+    public static int MARKET_SCAN_MIN = 0;
     public static float MS_UP_BIG_THRES = 0.02046f;                  // HPO (đã revert về cũ): 0.01757f
     public static float MS_DOWN_BIG_AVG = -0.03157f;                  // HPO (đã revert về cũ): -0.05514f
     // [BD-THRESHOLD-FRAGILITY 2026-09-17] tach nguong DCA khoi nguong BIG_DOWN (docs/prereg/PREREG_BD_THRESHOLD_FRAGILITY.md).
@@ -784,6 +793,12 @@ public class Configs {
             if ((v = Cfg.get("SIM_ENTRY_SAMPLE_MIN")) != null) {
                 int sm = Integer.parseInt(v.trim());
                 if (sm > 1) ENTRY_SAMPLE_MIN = sm;
+            }
+            // [CADENCE-SPLIT 2026-09-27] tach nhip quet LIVE (docs/plan/PLAN_LIVE_CADENCE_SPLIT.md).
+            //   Khong khai / <=0 => 0 => giu NGUYEN (chi moc 15'), byte-identical.
+            if ((v = Cfg.get("MARKET_SCAN_MIN")) != null) {
+                int mm = Integer.parseInt(v.trim());
+                if (mm > 0) MARKET_SCAN_MIN = mm;
             }
             // [REGIME 2026-09-14] docs/prereg/PREREG_REGIME_GATE.md: gate scale doi theo regime BTC 30d.
             //   default OFF => byte-identical. SIM_REGIME_FORCE=UP|NOTUP chi cho cong 2-cuc.
