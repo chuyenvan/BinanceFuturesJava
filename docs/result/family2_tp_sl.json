@@ -1,0 +1,52 @@
+{
+  "doc": "RESULT_FAMILY2_TP_SL",
+  "date": "2026-09-27",
+  "branch": "module",
+  "status": "BLOCKER_NO_FIXED_TP",
+  "decision": "FAMILY2_NOT_RUNNABLE_ON_CURRENT_ENGINE",
+  "sim_runs": 0,
+  "code_changed": false,
+  "parity": {
+    "needed": false,
+    "md5_keepleg0": "99e42b75cf1a2142f9cd14dc72e371ba",
+    "md5_t170": "efb793e2468ca3a7318da0f0ad23d4fc",
+    "result": "PASS_UNCHANGED"
+  },
+  "switches": {
+    "arm_threshold": {"key": "SIM_RATE_PROFIT_STOP_MARKET", "field": "Configs.RATE_PROFIT_STOP_MARKET", "file_line": "Configs.java:169", "env_line": "Configs.java:842", "unit": "rate_dimensionless", "default": 0.03, "profile_x1_gs_t170": 0.07, "is_key_not_constant": true},
+    "take_profit_fixed": {"exists": false, "key": null, "note": "NO fixed TP knob anywhere; TAKE_PROFIT_DONE only in dead look-ahead branch OrderTargetInfoTest.java:206 (guard BLOCK_INTRABAR_LOOKAHEAD=true, Configs.java:122)"},
+    "hard_sl_pre_arm": {"key": "SIM_PRE_ARM_SL", "field": "Configs.PRE_ARM_SL", "file_line": "Configs.java:455", "env_line": "Configs.java:849", "unit": "negative_rate_on_firstEntryPrice", "default": 0.0, "zero_means": "OFF"},
+    "dca_off": {"key": "WFO_DISABLE_DCA", "field": "Configs.WFO_DISABLE_DCA", "file_line": "Configs.java:338", "unit": "boolean_1_is_disable", "default": false},
+    "loser_time_stop_hours": {"key": "SIM_LOSER_TIME_STOP_HOURS", "field": "Configs.LOSER_TIME_STOP_HOURS", "file_line": "Configs.java:442", "env_line": "Configs.java:846", "unit": "hours_int", "default": 0, "zero_means": "OFF", "profile_x1_gs_t170": 168},
+    "ratchet_trailing": {"key": "SIM_TS_GIVEBACK", "must_equal": 1, "file_line": "Configs.java:900-903", "note": "old trailing path deleted 2026-09-03"},
+    "giveback_ratio": {"key": "TS_GIVEBACK_RATIO", "field": "Configs.java:173", "default": 0.5}
+  },
+  "exit_mechanism_evidence": {
+    "arm_condition": "SimulatorMarketLevelTicker1MStopLoss.java:1049,1054  armRate=Configs.RATE_PROFIT_STOP_MARKET; arm when peakPrice>=priceEntry*(1+armRate)",
+    "close_condition": "SimulatorMarketLevelTicker1MStopLoss.java:1058-1060 close only on TAKE_PROFIT_DONE|STOP_LOSS_DONE|STOP_MARKET_DONE; else updateTPSL :1062 ratchet",
+    "updateStatusNew": "OrderTargetInfoTest.java:185-243 after arm only sets trailing priceSL; TAKE_PROFIT_DONE :206 dead behind BLOCK_INTRABAR_LOOKAHEAD return",
+    "priceTP_assign_sites": ["SimulatorMarketLevelTicker1MStopLoss.java:1000 PRE_ARM_SL", ":1025 LOSER_TIME_STOP", ":1042 COND_EXIT", ":551 end-of-run", ":892 de-list", ":1091 propagate"],
+    "dumpconfig_note": "DumpConfig.java:71-72 'Trailing: duong DUY NHAT la TradeUtils.calRateLossDynamicBuyPNoPump'",
+    "sim_keys_with_TP": []
+  },
+  "arms": {
+    "N0": {"config": "baseline cd-sel15 (reused)", "n": 744, "entry_per_month": 13.77, "cagr_pct": 17.29, "maxdd_pct": -6.27, "uw": 166, "qmin_pct": -3.36, "conc_pct": 6.77, "top1_pct": 19.13, "tf50_usdt": -17551, "asym": 3.375, "sign_pct": 88.44, "guard_a": "FAIL", "guard_bprime": "FAIL", "status": "reused_from_RESULT_SHAPE1_EARLY_CUT"},
+    "N1": {"config": "arm/trailing OFF + TP 2% / SL -1% + DCA OFF", "status": "VOID_BLOCKER"},
+    "N2": {"config": "arm/trailing OFF + TP 1% / SL -1% + DCA OFF", "status": "VOID_BLOCKER"},
+    "N3": {"config": "arm/trailing OFF + TP 3% / SL -1.5% + DCA OFF", "status": "VOID_BLOCKER"},
+    "N4": {"config": "N1 + SIM_LOSER_TIME_STOP_HOURS=24", "status": "VOID_BLOCKER"}
+  },
+  "answers": {
+    "q1_any_arm_pass_a_and_bprime": "NONE - 0 arms runnable (BLOCKER)",
+    "q2_asym_lt1_with_positive_pnl": "NOT TESTABLE - engine lacks fixed TP; in old family asym<1 always loss (RESULT_GROSS_ASYMMAP)",
+    "q3_trailing_off_reduces_top1": "NOT TESTABLE - armRate->inf leaves winners unclosed => top1 worsens/undefined",
+    "q4_new_family_feasible": "INCONCLUSIVE - tooling BLOCKER, not a scientific NULL; next step: (A) add SIM_TAKE_PROFIT_RATE branch (default 0=OFF=byte-identical, needs owner approval), or (B) change train label / timeframe / coin selection"
+  },
+  "constraints": {
+    "sim_on_oracle": 0,
+    "dev_end": "2025-12-31",
+    "touch_2026": false,
+    "git_push": false,
+    "touch_production_242_onnx_live": false
+  }
+}
