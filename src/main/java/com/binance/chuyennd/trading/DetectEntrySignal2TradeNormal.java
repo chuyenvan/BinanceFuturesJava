@@ -263,6 +263,10 @@ public class DetectEntrySignal2TradeNormal {
 
                     // 3. Dự báo Entry Model
                     predictData = aiBrain.predictAll(features);
+                    // INSTRUMENT (mac dinh TAT; key LIVE_FEAT_DUMP>0 moi ghi) — chi ghi, khong doi logic.
+                    com.binance.chuyennd.ai_ml.features.export.entry.LiveFeatureDump.maybeDump(
+                            timestamp, Constants.SYMBOL_PAIR_BTC, features,
+                            predictData != null ? predictData.return15M : 0f);
                     if (predictData != null) {
                         AiPredictionData preData = new AiPredictionData(
                                 timestamp,
