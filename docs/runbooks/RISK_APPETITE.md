@@ -228,3 +228,10 @@ Nguon: **quyet dinh owner 26/09 05:35** (nguon duy nhat). Bang chung: `docs/resu
   (tuong tu `CONC_CAP_PERCOIN_*`) va **prove binding** bang sim **shadow** — khong cham LIVE;
   (2) `CONC_CAP_PERCOIN_PCT = 0,15` **giu nguyen** (noi `K` khong lam xau tran 1-coin: ti trong ≈ 1/so coin
   phan biet, 4,1 % → 3,0 % khi 8 → 12 ⇒ rang buoc bind la **gross**, khong phai conc).
+
+### §8-ERRATA (2026-09-27) — **TRẦN GROSS 70 % KHÔNG BIND**: bỏ kết luận "size ≈ 0,83×"
+
+`RESULT_GROSS_ASYMMAP` (`42a48cd`) đối chiếu 2 công thức `gross` và kết luận:
+số cũ **48,82 %** lấy `d` (số vị thế đồng thời) từ **POOL ỨNG VIÊN** (`d_mean 24,409`) trong khi **ledger thật** `d_mean = 0,531` (lệch **46×**).
+Theo **định nghĩa đúng (ledger)**: gross K=8 = **1,74 % TB / 49,53 % MAX** ⇒ **< `U_MAX=0,60`** ⇒ **trần 70 % KHÔNG bind** ở K=8.
+⇒ **BỎ** câu *"size phải co còn 0,83× để vừa trần 70 %"* (đã ghi trước đó dựa trên `gross_max[pool]=84 %`). Xem `docs/analysis/RULERS_CURRENT.md` §11.

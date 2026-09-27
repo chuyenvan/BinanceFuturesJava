@@ -157,3 +157,19 @@ wl_ratio  ·  tf_5  ·  loss_mean  ·  conc_5          (dự bị: median)
 - Với bộ thước + rào trên: **chưa cấu hình nào đủ go-live** (rào (a) giết 7/8; (b′) giết 8/8 — `RESULT_TAIL50_RULER_REDUNDANCY.md`).
 - **Nhịp:** con số hay được trích (**CAGR ~27%**) là con số **1′ cho tất cả** — **KHÔNG phải** con số live. Cấu hình **đúng thiết kế live** (`sel15`: selector 15′ + BIG_DOWN/DCA 1′) = **CAGR ~17,3%** (`RESULT_SIM_CADENCE_MATCH.md`).
   ⇒ **Còn 1 câu owner chưa chốt: live giữ 15′ hay đổi sang 1′** (đổi ⇒ phải sửa `ENTRY_GRID_MIN=15L`, `DetectEntrySignal2TradeNormal.java:988` — **đụng production, cần duyệt riêng**).
+
+---
+
+## 11. ERRATA QUAN TRỌNG — **TRẦN GROSS 70 % KHÔNG BIND** & **BỎ kết luận "size 0,83×"** (`RESULT_GROSS_ASYMMAP`, `42a48cd`)
+
+- **2 công thức `gross` cùng dạng** `100 × (%equity/lệnh) × (số vị thế đồng thời)`, nhưng **khác nguồn `d`**:
+  - MỚI (`size_count_score.py`) lấy `Σ margin_leg_đang_mở(t)/equity(t)` ⇒ **1,74 % TB / 49,53 % MAX**
+  - CŨ (`cap70_fee06.py`) lấy **`d` từ POOL ỨNG VIÊN** (`d_mean 24,409`) trong khi ledger thật `d_mean = 0,531` ⇒ **lệch 46,0×**
+  - Trên **cùng** `cd-sel15`: `G_old[ledger]` = **1,06 % / 48,0 %** ⇒ **khớp định nghĩa mới** ⇒ **định nghĩa ĐÚNG = ledger**
+- ⇒ 🔴 **ĐÍNH CHÍNH**: câu *"`K=12` phá trần ⇒ size phải co 0,83×"* (dùng ở §10.3 / `RISK_APPETITE.md` §8) **là SAI** — nó dựa trên `gross_max[pool](K=8)=84 %>70`. Gross **thật** ở K=8 chỉ **48–49,5 %** (< `U_MAX=0,60`) ⇒ **BỎ kết luận đó**.
+  *(Chỉ **14/461** run cũ vượt 70 % theo **cả 2** định nghĩa — trần chỉ bind ở họ đó.)*
+- **Quét 461 run** (`RESULT_GROSS_ASYMMAP`): **PASS (a) = 3/461** · **PASS (b′) = 0/461** (TF50 max −174) · **PASS cả hai = 0**
+- **`asym`**: min **0,261** (`R2_trail`) · **32 run `asym<1`** nhưng **tất cả** win-rate 29–42 %, top-1 **35–96 %**, TF50<0 ⇒ **fail cả (a) và (b′)**. Pipeline `x1_gs_t170`: min **0,705** (`sl3-v2-sl3`, **lỗ**), median **3,03**
+  ⇒ **`asym<1` + PnL DƯƠNG BỀN: CHƯA TỒN TẠI** — *đã thử, không phải chưa thử*
+- **Cấu trúc kéo `asym` xuống**: win-rate thấp ≤45 % · **cắt lỗ sớm/ngắn** (`PRE_ARM_SL −0,03` ⇒ 0,705) · `loss_mean` nhỏ (corr `asym~loss_mean` **−0,47**, `~sign%` **+0,25**)
+- **3 giá trị CHƯA THỬ** (đề xuất sim mới): ① `SIM_PRE_ARM_SL=−0,05` · ② `SIM_PRE_ARM_SL=−0,03` + `SELECTOR_RANK_TOPK=16` · ③ `SIM_LOSER_TIME_STOP_HOURS=8`
