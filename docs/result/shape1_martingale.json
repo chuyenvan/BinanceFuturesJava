@@ -1,0 +1,242 @@
+{
+ "cd-sel15": {
+  "tag": "cd-sel15",
+  "n": 744,
+  "conc_pct": 6.774,
+  "conc_over15": false,
+  "by_year": {
+   "2021": {
+    "worst_pos": -320.9,
+    "worst_leg": -320.9,
+    "n_pos": 121,
+    "n_pos_loss": 7
+   },
+   "2022": {
+    "worst_pos": -450.4,
+    "worst_leg": -678.5,
+    "n_pos": 166,
+    "n_pos_loss": 13
+   },
+   "2023": {
+    "worst_pos": -731.0,
+    "worst_leg": -731.0,
+    "n_pos": 69,
+    "n_pos_loss": 14
+   },
+   "2024": {
+    "worst_pos": -912.7,
+    "worst_leg": -912.7,
+    "n_pos": 189,
+    "n_pos_loss": 20
+   },
+   "2025": {
+    "worst_pos": -2483.3,
+    "worst_leg": -1527.3,
+    "n_pos": 186,
+    "n_pos_loss": 23
+   }
+  },
+  "worst_pos_all": -2483.3,
+  "worst_leg_all": -1527.3,
+  "n_coins": 272,
+  "n_dead_coins": 52,
+  "dead_pnl_sum": -14665.7,
+  "top_dead": {
+   "EVAA": -1970.1,
+   "IN": -940.3,
+   "SOON": -873.5
+  }
+ },
+ "sh1-s1-sl05": {
+  "tag": "sh1-s1-sl05",
+  "n": 1285,
+  "conc_pct": 4.848,
+  "conc_over15": false,
+  "by_year": {
+   "2021": {
+    "worst_pos": -200.5,
+    "worst_leg": -200.5,
+    "n_pos": 190,
+    "n_pos_loss": 79
+   },
+   "2022": {
+    "worst_pos": -251.4,
+    "worst_leg": -251.4,
+    "n_pos": 421,
+    "n_pos_loss": 226
+   },
+   "2023": {
+    "worst_pos": -130.4,
+    "worst_leg": -130.4,
+    "n_pos": 72,
+    "n_pos_loss": 31
+   },
+   "2024": {
+    "worst_pos": -296.1,
+    "worst_leg": -296.1,
+    "n_pos": 285,
+    "n_pos_loss": 157
+   },
+   "2025": {
+    "worst_pos": -548.0,
+    "worst_leg": -548.0,
+    "n_pos": 317,
+    "n_pos_loss": 177
+   }
+  },
+  "worst_pos_all": -548.0,
+  "worst_leg_all": -548.0,
+  "n_coins": 257,
+  "n_dead_coins": 140,
+  "dead_pnl_sum": -19729.6,
+  "top_dead": {
+   "AIA": -876.2,
+   "FTT": -875.9,
+   "BEL": -820.6
+  }
+ },
+ "sh1-s2-sl03k16": {
+  "tag": "sh1-s2-sl03k16",
+  "n": 2510,
+  "conc_pct": 5.035,
+  "conc_over15": false,
+  "by_year": {
+   "2021": {
+    "worst_pos": -200.1,
+    "worst_leg": -200.1,
+    "n_pos": 366,
+    "n_pos_loss": 198
+   },
+   "2022": {
+    "worst_pos": -221.7,
+    "worst_leg": -221.7,
+    "n_pos": 889,
+    "n_pos_loss": 585
+   },
+   "2023": {
+    "worst_pos": -113.2,
+    "worst_leg": -113.2,
+    "n_pos": 97,
+    "n_pos_loss": 44
+   },
+   "2024": {
+    "worst_pos": -260.8,
+    "worst_leg": -260.8,
+    "n_pos": 532,
+    "n_pos_loss": 339
+   },
+   "2025": {
+    "worst_pos": -500.1,
+    "worst_leg": -500.1,
+    "n_pos": 626,
+    "n_pos_loss": 412
+   }
+  },
+  "worst_pos_all": -500.1,
+  "worst_leg_all": -500.1,
+  "n_coins": 348,
+  "n_dead_coins": 200,
+  "dead_pnl_sum": -22254.4,
+  "top_dead": {
+   "AIA": -934.1,
+   "BEL": -663.2,
+   "STBL": -559.4
+  }
+ },
+ "sh1-s3-ts8": {
+  "tag": "sh1-s3-ts8",
+  "n": 833,
+  "conc_pct": 6.217,
+  "conc_over15": false,
+  "by_year": {
+   "2021": {
+    "worst_pos": -234.6,
+    "worst_leg": -234.6,
+    "n_pos": 133,
+    "n_pos_loss": 30
+   },
+   "2022": {
+    "worst_pos": -705.2,
+    "worst_leg": -593.5,
+    "n_pos": 209,
+    "n_pos_loss": 55
+   },
+   "2023": {
+    "worst_pos": -185.4,
+    "worst_leg": -185.4,
+    "n_pos": 69,
+    "n_pos_loss": 26
+   },
+   "2024": {
+    "worst_pos": -291.8,
+    "worst_leg": -291.8,
+    "n_pos": 205,
+    "n_pos_loss": 64
+   },
+   "2025": {
+    "worst_pos": -675.4,
+    "worst_leg": -783.4,
+    "n_pos": 208,
+    "n_pos_loss": 63
+   }
+  },
+  "worst_pos_all": -705.2,
+  "worst_leg_all": -783.4,
+  "n_coins": 271,
+  "n_dead_coins": 93,
+  "dead_pnl_sum": -11306.2,
+  "top_dead": {
+   "BEL": -558.7,
+   "COAI": -525.7,
+   "EVAA": -489.5
+  }
+ },
+ "sh1-s4-sl03": {
+  "tag": "sh1-s4-sl03",
+  "n": 1506,
+  "conc_pct": 4.919,
+  "conc_over15": false,
+  "by_year": {
+   "2021": {
+    "worst_pos": -200.1,
+    "worst_leg": -200.1,
+    "n_pos": 216,
+    "n_pos_loss": 119
+   },
+   "2022": {
+    "worst_pos": -227.2,
+    "worst_leg": -227.2,
+    "n_pos": 535,
+    "n_pos_loss": 358
+   },
+   "2023": {
+    "worst_pos": -117.5,
+    "worst_leg": -117.5,
+    "n_pos": 76,
+    "n_pos_loss": 40
+   },
+   "2024": {
+    "worst_pos": -264.9,
+    "worst_leg": -264.9,
+    "n_pos": 321,
+    "n_pos_loss": 206
+   },
+   "2025": {
+    "worst_pos": -494.1,
+    "worst_leg": -494.1,
+    "n_pos": 358,
+    "n_pos_loss": 242
+   }
+  },
+  "worst_pos_all": -494.1,
+  "worst_leg_all": -494.1,
+  "n_coins": 255,
+  "n_dead_coins": 154,
+  "dead_pnl_sum": -19580.1,
+  "top_dead": {
+   "AIA": -987.0,
+   "BEL": -758.9,
+   "DAR": -662.2
+  }
+ }
+}
