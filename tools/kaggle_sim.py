@@ -233,6 +233,9 @@ env.update({
     "EXCHANGE_INFO_PATH": exinfo,
     "TRADING_PROFILE": prof,
 })
+# [TP-SL 2026-09-27] env bo sung (mac dinh rong => khong doi hanh vi cu). Dung cho WFO_DISABLE_DCA=1
+#   (WFO_DISABLE_DCA nam trong INFRA_KEYS cua Cfg => doc tu env, KHONG dat duoc qua profile).
+env.update({str(k): str(v) for k, v in (CFG.get("extra_env") or {}).items()})
 
 LOGP, PDONE = WORK + "/logs/sim.out", WORK + "/storage/printDone.csv"
 t0 = time.time()
@@ -303,7 +306,7 @@ sys.exit(0)
 
 
 def submit(tag, profile, overrides=None, *, bins_ds=None, bundle_ds=None, extra_ds=None,
-           jar_ds=None, code_sha="head",
+           jar_ds=None, code_sha="head", extra_env=None,
            sim_end_date=DEFAULT_SIM_END, ticker_min_days=TICKER_MIN_DAYS,
            xmx=DEFAULT_XMX, timeout_s=DEFAULT_TIMEOUT_S, enable_internet=True,
            push=True) -> str:
@@ -326,6 +329,7 @@ def submit(tag, profile, overrides=None, *, bins_ds=None, bundle_ds=None, extra_
     cfg = {"tag": str(tag), "profile": profile, "overrides": dict(overrides or {}),
            "sim_end_date": sim_end_date, "xmx": xmx, "timeout_s": timeout_s,
            "code_sha": code_sha, "bins_ds": bins_ds or "", "jar_ds": jar_ds or "",
+           "extra_env": {str(k): str(v) for k, v in (extra_env or {}).items()},
            "ticker_min_days": int(ticker_min_days)}
     code = KERNEL_TEMPLATE.replace("__CFG_JSON__", repr(json.dumps(cfg)))
     with open(os.path.join(folder, "run.py"), "w") as f:

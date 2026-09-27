@@ -1044,6 +1044,24 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                         return;
                     }
                 }
+                // [TP-FIXED 2026-09-27] TP CO DINH (SIM_TAKE_PROFIT_RATE>0): cum dong khi DONG NEN (priceClose)
+                //     cham firstEntryPrice*(1+TP). CAUSAL: chi dung priceClose (KHONG high/low), gia dong = MUC TP
+                //     (khong bao gio TOT HON TP => khong look-ahead). Xep SAU cac cong cat lo (SL/time-stop thang
+                //     khi cung nen, quy uoc X2) va TRUOC cong arm => "TP dong truoc, trailing la fallback".
+                //     Default 0 => nhanh khong chay => byte-identical. Xem PREREG_FAMILY2_TP_SL.md (AMENDMENT).
+                if (Configs.TAKE_PROFIT_RATE > 0f && orderMulti.firstEntryPrice != null
+                        && orderMulti.firstEntryPrice > 0f) {
+                    float tpLevel = orderMulti.firstEntryPrice * (1f + Configs.TAKE_PROFIT_RATE);
+                    if (ticker.priceClose >= tpLevel) {
+                        orderMulti.status = OrderTargetStatus.TAKE_PROFIT_DONE;
+                        orderMulti.priceTP = tpLevel;
+                        LOG.info("TAKEPROFIT sym={} first={} tp={} exit={} tOpen={} tNow={}",
+                                orderMulti.symbol, orderMulti.firstEntryPrice, tpLevel, orderMulti.priceTP,
+                                orderMulti.clusterFirstLegTime > 0L ? orderMulti.clusterFirstLegTime : orderMulti.timeStart, time);
+                        closeOrder(symbolId, orderMulti);
+                        return;
+                    }
+                }
                 // [SL-ADAPTIVE C 2026-09-12] armRate hieu dung theo selRank khi SL_ADAPT_ARM bat;
                 //     OFF => = Configs.RATE_PROFIT_STOP_MARKET => byte-identical.
                 float armRate = Configs.RATE_PROFIT_STOP_MARKET;
@@ -1051,8 +1069,10 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                     armRate = (orderMulti.selRank != null && orderMulti.selRank <= Configs.SL_ADAPT_RANK_N)
                             ? Configs.SL_ADAPT_ARM_STRONG : Configs.SL_ADAPT_ARM_WEAK;
                 }
-                if (TradeUtils.peakPrice(ticker) >= orderMulti.priceEntry * (1 + armRate)
-                        || orderMulti.priceSL != null) {
+                // [TP-FIXED] SIM_TAKE_PROFIT_ONLY=1 (chi khi TAKE_PROFIT_RATE>0): bo han arm/trailing.
+                boolean tpOnly = Configs.TAKE_PROFIT_RATE > 0f && Configs.TAKE_PROFIT_ONLY;
+                if (!tpOnly && (TradeUtils.peakPrice(ticker) >= orderMulti.priceEntry * (1 + armRate)
+                        || orderMulti.priceSL != null)) {
                     Float predReturn15M  = getPredReturn15MForTradingStop(time);
                     orderMulti.updateStatusNew(predReturn15M , ticker);
                     if (orderMulti.status.equals(OrderTargetStatus.TAKE_PROFIT_DONE)

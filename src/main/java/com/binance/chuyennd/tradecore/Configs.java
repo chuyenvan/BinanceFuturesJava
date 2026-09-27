@@ -167,6 +167,15 @@ public class Configs {
     // maxDD khong doi). Truoc ban sua nay, gia tri nay CHI dung cho duong live/production
     // (khong qua HPO) nen bi lech so voi bestGenome cua WFO (~0.0385) - ban sua dong bo lai.
     public static float RATE_PROFIT_STOP_MARKET = 0.03f; // Khoảng dời SL tối thiểu (Base rate)
+    // [TP-FIXED 2026-09-27] TAKE-PROFIT CO DINH (SIM_TAKE_PROFIT_RATE, <=0 hoac khong khai = TAT = mac dinh).
+    //   >0: cum dong khi DONG NEN (priceClose) cham firstEntryPrice*(1+TP) — CAUSAL, KHONG dung high/low nen
+    //   (tuan thu BLOCK_INTRABAR_LOOKAHEAD=true), gia dong = MUC TP (khong bao gio TOT HON TP => khong look-ahead).
+    //   Xep SAU cac cong cat lo (SL/time-stop thang khi cung nen, quy uoc X2) va TRUOC cong arm
+    //   => "TP dong truoc, trailing la fallback". Default <=0 => nhanh khong chay => byte-identical.
+    //   Xem docs/prereg/PREREG_FAMILY2_TP_SL.md (AMENDMENT 2026-09-27).
+    public static float TAKE_PROFIT_RATE = 0f;
+    //   SIM_TAKE_PROFIT_ONLY=1: chi TP (+ SL/time-stop), BO arm/trailing. Chi co nghia khi TAKE_PROFIT_RATE>0.
+    public static boolean TAKE_PROFIT_ONLY = false;
     // TASK (2026-07-10): ti le nha lai dinh cua trailing (cu hardcode 0.5). 0.3 = giu chat, 0.7 = long nuoi trend.
     // 2026-08-02: them env-fallback (khop pattern TS_MIN_GAP) de sweep duoc TS_GIVEBACK_RATIO qua env.
     //   env > properties > 0.5f. env unset -> byte-identical hanh vi cu.
@@ -847,6 +856,8 @@ public class Configs {
             if ((v = Cfg.get("SIM_COND_EXIT_HOURS")) != null) COND_EXIT_HOURS = Integer.parseInt(v.trim());
             if ((v = Cfg.get("SIM_COND_EXIT_MIN_FAV")) != null) COND_EXIT_MIN_FAV = Float.parseFloat(v.trim());
             if ((v = Cfg.get("SIM_PRE_ARM_SL")) != null) PRE_ARM_SL = Float.parseFloat(v.trim());
+            if ((v = Cfg.get("SIM_TAKE_PROFIT_RATE")) != null) TAKE_PROFIT_RATE = Float.parseFloat(v.trim());
+            if ((v = Cfg.get("SIM_TAKE_PROFIT_ONLY")) != null) TAKE_PROFIT_ONLY = Boolean.parseBoolean(v.trim());
             // TASK (frozen leakage-free genome, Buoc 0): funding.bin trong WFO_DATA_DIR/-ff CHI tu-ap cho
             //   funding-SELECTOR (ds.funding), KHONG tu-ap thanh FEE. Fee van gate boi APPLY_FUNDING_FEE
             //   (default false). SIM_APPLY_FUNDING=true -> bat funding fee cho vong WFO/HPO nay (funding-on).
