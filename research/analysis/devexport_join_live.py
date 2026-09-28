@@ -79,8 +79,12 @@ def main():
     exp["ts"] = exp.ts.astype(np.int64)
     m = live.merge(exp, on="ts", suffixes=("_l", "_e"), how="inner")
     # chi giu cap symbol trung (export la feature thi truong, khong co cot symbol)
-    print("ghep duoc %d cap (ts,symbol) [live x export]" % len(m))
+    n_distinct = int(m.ts.nunique())
+    print("ghep duoc %d dong live (trong do %d phut PHAN BIET) [live x export]" % (len(m), n_distinct))
+    by_host = live[live.ts.isin(m.ts.unique())].groupby("__src").size().to_dict()
+    print("theo host:", by_host)
     rep = {"live_rows": int(len(live)), "export_rows": int(len(exp)), "pairs": int(len(m)),
+           "distinct_ts": n_distinct, "rows_by_host": {k: int(v) for k, v in by_host.items()},
            "live_hosts": sorted(live.__src.unique().tolist()), "feats": {}}
     if len(m) < 200:
         rep["verdict"] = "CHUA DU MAU (<200 cap) — chi de nghi"
