@@ -54,3 +54,6 @@ ship_jar.sh
 ship_and_run.sh
 prepare/
 orchestrator/*_LLM_ANSWER.json
+
+# scratch cua Claude (khong track; ban chuan nam trong docs/)
+_claude_tmp/
