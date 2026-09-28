@@ -161,6 +161,25 @@ Cần retention ≤12 ngày (xem audit 2026-09-27 §0) trước khi bật.
 - Nếu owner muốn **bằng chứng md5 empirical** trước khi deploy: chạy 2 chân parity trên Kaggle
   (`python3 research/analysis/family2_tp_run.py par`). **Lệch ⇒ DỪNG, báo RÕ.**
 
+### 5b. CẬP NHẬT 2026-09-28 — ĐÃ CHẠY 2 CHÂN PARITY md5 TRÊN JAR `bd7c4cd` ⇒ **PASS**
+
+Bằng chứng thực nghiệm đã bổ sung (thay thế “chưa chạy lại được” ở trên). Chi tiết đầy đủ:
+`docs/result/RESULT_CADENCE_V2_PARITY.md`.
+
+- Jar build **local** từ HEAD `bd7c4cd` (working tree sạch):
+  **sha256 `4aa42ceb03d34b91090a615260ad7dd1256ff6b22df79e2a083f2b9fb466f80c`**;
+  dataset `chuyendinh/sim-jar-cadence-v2`; kernel log + `result.json` xác nhận đúng sha256 này.
+- Runner (mới, mỏng, tái dùng `tools/kaggle_sim.py`): `research/analysis/cadence_v2_parity_run.py`.
+- Kết quả md5 `printDone.csv` (bundle `sim-x1-2021-bundle`, 2021-07-01..2025-12-31, `symbol_mapper=863`):
+  - `par-kg0` (KEEPLEG0, không khai key mới) ⇒ **`99e42b75cf1a2142f9cd14dc72e371ba`** (1085/103.083) = **KHỚP**.
+  - `par-t170` (x1_gs_t170, không khai key) ⇒ **`efb793e2468ca3a7318da0f0ad23d4fc`** (1089/111.070) = **KHỚP**.
+  - `par-bb` belt-and-braces (KEEPLEG0 + khai rõ `MARKET_SCAN_MIN=0` + `MARKET_SCAN_PRIORITY=0`) ⇒
+    **`99e42b75…`** = **KHỚP** ⇒ “khai = 0” cũng y nguyên (đúng `Configs.java:818-826` chỉ gán khi `>0`).
+- `diff` vs baseline local đã ghi: **0 dòng khác** cả 3 so sánh ⇒ byte-identical.
+- Thời gian JVM mỗi chân: 819,9 / 1246,5 / 1104,4 s; wall push→COMPLETE ~23 phút (3 chân song song, 0 đồng, 0 sim Oracle).
+- ⇒ §5 “chưa chạy lại được trong vòng này” **không còn hiệu lực**: parity md5 **đã PASS thực nghiệm**.
+  Deploy vẫn cần owner duyệt riêng + đúng thứ tự shadow → 242 (§4).
+
 ---
 
 ## 6. CẦN OWNER DUYỆT
