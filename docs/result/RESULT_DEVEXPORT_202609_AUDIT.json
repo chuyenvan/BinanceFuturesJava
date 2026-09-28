@@ -1,0 +1,59 @@
+{
+ "export": {
+  "path": "/home/ubuntu/claudedata/devexport_202609/devexport_20260701_20260928_FULL.csv.gz",
+  "sha256": "3c328e54fc316bb1ca45388b1a7af687cec5433ebf008038b61a10a4f2d59daa",
+  "rows": 129137,
+  "cols": 36,
+  "header": "ts,momentum1M,momentum5M,momentum15M,momentum1H,momentum4H,momentum24H,momentumAcceleration,trendStrengthETH,trendConsistency,volatility1M,volatility15M,volatility1H,volatility24H,volatilityTermStructure,volatilityRegime,advanceDeclineRatio,percentAboveMA20,volumeRatioUpDown,marketBreadthStrength,btcDominance,rsi14,volumeSpike,distMA20,basketMomentum15M,basketMomentum1H,basketRsi14,basketVolSpike,fundingRateRaw,fundingRateAvg24H,fundingRateTrend,hourOfDay,dayOfWeek,weekOfMonth,monthOfYear,md_src",
+  "ts_min": 1782838800000,
+  "ts_max": 1790586960000,
+  "md_src0_rows": 68902,
+  "bytes_gz": 14610639
+ },
+ "verify": [
+  {
+   "file": "verify_20260501.json",
+   "joined": 1440,
+   "n_feat_lech": 3,
+   "verdict": "FAIL",
+   "regime_match": 1.0,
+   "lech_feats": [
+    "momentum1M",
+    "momentum15M",
+    "momentumAcceleration"
+   ]
+  },
+  {
+   "file": "verify_20260310_cluster242.json",
+   "joined": 1440,
+   "n_feat_lech": 6,
+   "verdict": "FAIL",
+   "regime_match": 1.0,
+   "lech_feats": [
+    "momentum1M",
+    "momentum15M",
+    "momentumAcceleration",
+    "fundingRateRaw",
+    "fundingRateAvg24H",
+    "fundingRateTrend"
+   ]
+  }
+ ],
+ "join_live": {
+  "live_rows": 469,
+  "export_rows": 129137,
+  "pairs": 469,
+  "verdict": "DU MAU",
+  "top_suspects": [
+   "momentumAcceleration",
+   "fundingRateAvg24H",
+   "fundingRateRaw"
+  ],
+  "live_hosts": [
+   "feat_dump_20260928_084006.csv.gz",
+   "feat_dump_20260928_084506.csv.gz",
+   "feat_dump_20260928_124006.csv.gz",
+   "feat_dump_20260928_124506.csv.gz"
+  ]
+ }
+}
