@@ -131,7 +131,7 @@ def main():
         "m1_live_mean": float(lm1.mean()), "m1_inline_mean": float(li1.mean()),
         "m15_meanAbsDiff": float(np.mean(np.abs(lm15 - li15))), "m15_corr": float(np.corrcoef(lm15, li15)[0, 1]),
         "m15_live_mean": float(lm15.mean()), "m15_inline_mean": float(li15.mean())}
-    if lma:
+    if len(lia) > 3:
         lma = np.array(lma); lia = np.array(lia)
         RES["momentum_inline"].update({"acc_meanAbsDiff": float(np.mean(np.abs(lma - lia))),
                                        "acc_corr": float(np.corrcoef(lma, lia)[0, 1])})
