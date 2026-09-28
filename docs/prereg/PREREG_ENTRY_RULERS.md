@@ -94,7 +94,16 @@ Mọi thước tính trên **toàn bộ pool 32 coin/tick** (KHÔNG lọc top-K,
 - **Đề xuất bộ chuẩn ENTRY (2–4 cái, KHÔNG trùng):** giữ các thước vừa **phân giải được** vừa
   **không trùng** VÀ **phát hiện đúng cặp hiệu chuẩn là Δ≈0** (không tạo dương tính giả).
 
-## 7. OUTPUT
+## 7. AMENDMENT 1 (2026-09-28 ~16:05 GMT+7, TRƯỚC khi chốt kết quả)
+
+**Đổi phạm vi 2 thước `winrate` và `pnl_vol_norm`:** từ **toàn pool 32 coin** (như §4) ⇒ **tập chọn CỐ ĐỊNH top-8/tick** (K=8 vận hành).
+**Lý do (đo được):** bản "toàn pool" cho kết quả **GIỐNG HỆT nhau ở cả 10 đối tượng**
+(`winrate=0,76760`, `pnl_vol_norm=0,11482`) vì **vũ trụ không phụ thuộc `score`** ⇒ thước **không phân
+biệt được đối tượng nào** (không đo được gì) ⇒ **vô nghĩa**. Bản top-8/tick giữ đúng tinh thần
+"cửa sổ CỐ ĐỊNH (top-K) + KHÔNG cắt đuôi" và **phụ thuộc `score`** ⇒ mới phân biệt được.
+`rank_ic`/`top_decile_lift`/`edge5`/`med_lift` **vẫn trên cả 32 coin** như §4.
+
+## 8. OUTPUT
 
 `docs/prereg/PREREG_ENTRY_RULERS.md` + `research/analysis/entry_rulers.py` +
 `docs/result/RESULT_ENTRY_RULERS.md` (+ `docs/result/entry_rulers.json` **nhỏ**). Commit + **push**.
