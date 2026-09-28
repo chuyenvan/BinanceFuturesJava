@@ -1,0 +1,60 @@
+{
+  "task": "REASONS_RECHECK",
+  "date": "2026-09-28",
+  "source": "0b1bd73 RESULT_RECHECK_P12_P5.md + RECHECK_P12_P5.json",
+  "mode": "offline-read-only-rewrite; 0 train/sim/Java; DEV<=2025-12-31; no 2026/242/ONNX/LIVE/shadow",
+  "appetite_closed_with": {"maxDD": 40, "UW": 250, "quarter_min": -20, "negative_years": 0, "conc_percoin_pct": 15},
+  "law": {"S10.2_rate": ">=2 rate outside CI, max 1 freq-group rate, no meanP", "S10.3_a": "pctPnL top-1% <= 15", "S10.3_bprime": "drop top-50% legs => PnL > 0 (HARD)"},
+  "viec1": {
+    "round_verdict_unchanged": true,
+    "gatecells_changed": 16,
+    "f2p": 16,
+    "p2f": 0,
+    "robust_12": 12,
+    "conditional_conc_4": 4,
+    "tag_flips_460": 85,
+    "tag_flips_cause": "100% UW in (200,250]",
+    "reopened_gate": ["R@REGIME_GATE", "R@REGIME_UPDOWN", "RA12@REGIME_UPDOWN", "BR0@BREADTH_GATE_SIM", "BRC@BREADTH_CONT", "BRC@BREADTH_CONT_T50", "BRCT50@BREADTH_CONT_T50", "P0@PACING_BIGDOWN", "P3@PACING_BIGDOWN", "DT@DD_THROTTLE", "T130@GATE_CALIB", "GD92+LADDER_L1@EXIT_HIGH_N"],
+    "reopened_conditional_conc": ["T100/gate-1.0@REGIME_GATE", "T100/gate-1.0@REGIME_UPDOWN", "T100/gate-1.0@BREADTH_GATE_SIM", "T100@PACING_BIGDOWN"],
+    "correct_reasons": {
+      "breadth": "u1: n_eff < 1.5xT170 (BR 1.224 / BRC 1.243 / BRCT50 1.339) + u5 (CAGR-2023) + u3 (UW fy > 115 vs T170); core coverage != discrimination",
+      "regime": "u3: UW whole-period > 115 (223/221); RA12 also u1 (1.268) + u5 (loses 2023&2024 uptrend)",
+      "pacing": "t3: pace cuts size only, not UW duration (>115); P0 also t2b CAGR 12.14 < floor 14.80; P3 also t4 (bigdown-share 74.8 > P0 72.7, against hypothesis)",
+      "dd_throttle": "u2: UW whole-period 332 > 250 (worse than T100 248) + u4: UW(DT) >= UW(R0) => throttle does not shorten UW",
+      "gate_calib": "0/5 rate outside CI (T130/T210 do not discriminate on rate); claim 'T130 fails hard cap UW 221>200' no longer valid (221<=250)",
+      "exit_high_n": "evidence (mechanism): exit 0 good / 0 bad outside CI at 2.4x n (1089->2632); mechanism only shifts exit line, no new quality rate"
+    },
+    "reason_inversions_fixed": [
+      "BREADTH_GATE_SIM:77 'BR first variant UW-2025<200' lost uniqueness (T100 227, BR0 221 also pass under 250)",
+      "DD_THROTTLE:61 / PACING_BIGDOWN:39 'P0/P3/DT do not bring gate 1.0 into appetite' no longer true",
+      "REGIME_UPDOWN:45 'RA12 worsens 2024' no longer true (205<=250)"
+    ]
+  },
+  "viec2": {
+    "law": "S10.2 + S10.3 + latest",
+    "T170":     {"maxDD_day_worst": -11.84, "maxDD_min_worst": -19.96, "UW_day": 92, "UW_min": 144.4, "quarter_min": -0.92, "neg_years": 0, "conc": 9.77, "top1_pct": 25.90, "TF50": -35342, "risk_ruler_latest": "PASS", "S10_2_10_3": "FAIL"},
+    "KEEPLEG0": {"maxDD_day_worst": -11.21, "maxDD_min_worst": -19.96, "UW_day": 147, "UW_min": 147.2, "quarter_min": -1.08, "neg_years": 0, "conc": 7.12, "top1_pct": 23.74, "TF50": -33126, "risk_ruler_latest": "PASS", "S10_2_10_3": "FAIL"},
+    "T100_hn_off": {"maxDD_day_worst": -16.13, "maxDD_min_worst": -26.26, "UW_day": 248, "UW_min": 248.2, "quarter_min": -4.64, "neg_years": 0, "conc": 27.23, "conc_cap_on": 10.83, "top1_pct": 40.85, "TF50": -155848, "risk_ruler_latest": "FAIL(conc)", "S10_2_10_3": "FAIL"},
+    "cc_t100":  {"maxDD_day_worst": -16.13, "maxDD_min_worst": "MISSING", "UW_day": 248, "UW_min": "MISSING", "quarter_min": -4.64, "neg_years": 0, "conc": 10.83, "top1_pct": 41.93, "TF50": -157291, "risk_ruler_latest": "PASS", "S10_2_10_3": "FAIL", "run_exists": true, "run_path": "/home/ubuntu/kaggle_sim/out/cc-t100", "cap_blocked": 44, "n": 2557, "equity": 129024},
+    "winner": "T170/KEEPLEG0 (incumbent)",
+    "cc_t100_effect": "restores risk ruler via cap (conc 27.23->10.83) but does NOT improve tail: (a) top-1% worse (41.93 vs 40.85)",
+    "any_pass_all": false,
+    "minute_mtm_series_available": ["T170", "KEEPLEG0", "T100", "GD92"],
+    "minute_mtm_missing": ["cc-t100"]
+  },
+  "answers": {
+    "1_reopened": "16 gate-cells (12 robust + 4 conc-conditional); round verdict still NULL; tag-level 85 FAIL->PASS, all UW in (200,250]",
+    "2_reasons_1line": {
+      "breadth": "u1 insufficient n_eff (<1.5x) + u5 + u3",
+      "regime": "u3 UW whole-period >115 vs T170",
+      "pacing": "t3 UW not shortened (+t2b/t4)",
+      "dd_throttle": "UW whole-period 332>250, worse than T100",
+      "gate_calib": "0/5 rate outside CI",
+      "exit_high_n": "evidence: exit effect does not scale with n"
+    },
+    "3_p4": "incumbent T170/KEEPLEG0 wins; cc-t100 only restores risk ruler via cap; NO variant passes all",
+    "4_next": "no variant passes all => no GO step; (b') CORE killed 8/8 + 4/4, (a) kills all multi-leg bases; if reopening: (i) minute-MTM for cc-t100 via Kaggle s3_intraday (needs 1m ticker), (ii) multi-seed >=3 for T170/KEEPLEG0, (iii) different endpoint (Calmar/UW on T170) with its own pre-reg"
+  },
+  "dropped": ["reason 'closes due to appetite UW>200' for the 6 axes", "meanP", "rate on pnl column for verdict"],
+  "limits": ["minute MTM missing for cc-t100 and for the 16 tags of 4 rounds", "top1/TF50 for cc-t100 from gross_asymmap.json"]
+}
