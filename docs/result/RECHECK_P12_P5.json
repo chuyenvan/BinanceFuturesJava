@@ -1,0 +1,971 @@
+{
+ "task": "RECHECK_P12_P5",
+ "date": "2026-09-28",
+ "prereg": "56af3cc",
+ "p12": {
+  "window": "last-commit 2026-09-24..2026-09-26 + doc con hieu luc mang verdict --appetite current",
+  "A_current": [
+   30,
+   200,
+   -15
+  ],
+  "B_latest": [
+   40,
+   250,
+   -20
+  ],
+  "rows_total": 37,
+  "flips_total": 16,
+  "flips_f2p": 0,
+  "tag_flips": 85,
+  "reason": "100% do UW in (200,250]",
+  "docs": [
+   [
+    "docs/result/RESULT_REGIME_GATE.md:40",
+    4,
+    2,
+    "gate-1.0/T100 (UW2025 227) FAIL->PASS; R (223) FAIL->PASS"
+   ],
+   [
+    "docs/result/RESULT_REGIME_UPDOWN.md:45",
+    5,
+    3,
+    "T100/gate-1.0 227; R 223; RA12 (2024 UW205 + 2025 UW221) FAIL->PASS"
+   ],
+   [
+    "docs/result/RESULT_BREADTH_GATE_SIM.md:77",
+    4,
+    2,
+    "T100/gate-1.0 227; BR0 221 FAIL->PASS (BR da PASS)"
+   ],
+   [
+    "docs/result/RESULT_DD_THROTTLE.md:61",
+    3,
+    1,
+    "DT (UW2025 223) FAIL->PASS"
+   ],
+   [
+    "docs/result/RESULT_PACING_BIGDOWN.md:39",
+    4,
+    3,
+    "T100 227 / P0 221 / P3 232 FAIL->PASS"
+   ],
+   [
+    "docs/result/RESULT_BREADTH_CONT.md:49",
+    3,
+    1,
+    "BRC (221) FAIL->PASS"
+   ],
+   [
+    "docs/result/RESULT_BREADTH_CONT_T50.md:57",
+    4,
+    2,
+    "BRC 221 / BRCT50 223 FAIL->PASS"
+   ],
+   [
+    "docs/result/RESULT_GATE_CALIB.md:56",
+    3,
+    1,
+    "T130 (221) FAIL->PASS"
+   ],
+   [
+    "docs/result/RESULT_EXIT_HIGH_N.md:192",
+    5,
+    1,
+    "GD92+LADDER L1 (245) FAIL->PASS; T100 van FAIL (conc 27,23), GD92 base/HINGE van FAIL (278)"
+   ],
+   [
+    "docs/result/RESULT_HEDGE_OVERLAY_A.md:117",
+    2,
+    0,
+    "da PASS duoi current => khong doi"
+   ]
+  ],
+  "tag_current_fail": {
+   "C2a_stress2": [
+    "2022:UW224"
+   ],
+   "CALIB_T130": [
+    "2025:UW221"
+   ],
+   "CC_OFF_T100": [
+    "2025:UW227"
+   ],
+   "CC_OFF_T130": [
+    "2025:UW221"
+   ],
+   "CC_ON_T100": [
+    "2025:UW227"
+   ],
+   "CC_ON_T130": [
+    "2025:UW221"
+   ],
+   "DS_DCA20_GS100": [
+    "2025:UW221"
+   ],
+   "DS_GS085": [
+    "2025:UW236"
+   ],
+   "DS_GS100": [
+    "2025:UW221"
+   ],
+   "DS_GS120": [
+    "2025:UW221"
+   ],
+   "DS_GS140": [
+    "2025:UW221"
+   ],
+   "DS_K10_GS100": [
+    "2025:UW223"
+   ],
+   "DS_K12_GS100": [
+    "2022:UW224",
+    "2025:UW222"
+   ],
+   "GD_PARITY_C3": [
+    "2025:UW227"
+   ],
+   "L1_PNP_WEAK": [
+    "2025:UW240"
+   ],
+   "NB_PAR_T100": [
+    "2025:UW227"
+   ],
+   "NB_PAR_T130": [
+    "2025:UW221"
+   ],
+   "NB_T130_NOBD": [
+    "2025:UW224"
+   ],
+   "RG_A_T100": [
+    "2025:UW227"
+   ],
+   "RG_B_UP": [
+    "2025:UW227"
+   ],
+   "VAL_C2b": [
+    "2025:UW234"
+   ],
+   "X1_2XH_V1": [
+    "2025:UW223"
+   ],
+   "X1_2XH_V2": [
+    "2025:UW222"
+   ],
+   "X1_2XH_V3": [
+    "2025:UW221"
+   ],
+   "X1_C3_FULL": [
+    "2025:UW227"
+   ],
+   "X1_C3_FULL_2021": [
+    "2025:UW227"
+   ],
+   "X1_C3_FULL_2021CTRL": [
+    "2025:UW227"
+   ],
+   "X1_C3_FULL_2021_DT": [
+    "2025:UW223"
+   ],
+   "X1_C3_FULL_2021_PACING_P0": [
+    "2025:UW221"
+   ],
+   "X1_C3_FULL_2021_PACING_P3": [
+    "2025:UW232"
+   ],
+   "X1_C3_FULL_2021_REGIME_BR0": [
+    "2025:UW221"
+   ],
+   "X1_C3_FULL_2021_REGIME_BRC": [
+    "2025:UW221"
+   ],
+   "X1_C3_FULL_2021_REGIME_BRC0": [
+    "2025:UW221"
+   ],
+   "X1_C3_FULL_2021_REGIME_BRCT50": [
+    "2025:UW223"
+   ],
+   "X1_C3_FULL_2021_REGIME_R": [
+    "2025:UW223"
+   ],
+   "X1_C3_FULL_2021_REGIME_RA12": [
+    "2024:UW205",
+    "2025:UW221"
+   ],
+   "X1_C3_FULL_BOOKFIX": [
+    "2025:UW227"
+   ],
+   "X1_C3_FULL_CAP12": [
+    "2024:UW244",
+    "2025:UW240"
+   ],
+   "X1_C3_FULL_CAPOFF": [
+    "2025:UW227"
+   ],
+   "X1_C3_FULL_FLATOFF": [
+    "2025:UW227"
+   ],
+   "X1_C3_FULL_G90W120": [
+    "2025:UW223"
+   ],
+   "X1_C3_FULL_G90W60": [
+    "2025:UW221"
+   ],
+   "X1_C3_FULL_GD88": [
+    "2025:UW223"
+   ],
+   "X1_C3_FULL_GF27": [
+    "2025:UW223"
+   ],
+   "X1_C3_FULL_K12": [
+    "2024:UW239",
+    "2025:UW232"
+   ],
+   "X1_C3_FULL_LEAN": [
+    "2025:UW227"
+   ],
+   "X1_C3_FULL_LIVEQSIM_OFF": [
+    "2025:UW227"
+   ],
+   "X1_C3_FULL_NOT40": [
+    "2025:UW232"
+   ],
+   "X1_C3_FULL_PARITY": [
+    "2025:UW227"
+   ],
+   "X1_C3_FULL_PARITY_R": [
+    "2025:UW227"
+   ],
+   "X1_C3_FULL_SIZEPROBE": [
+    "2025:UW227"
+   ],
+   "X1_C3_FULL_TIER1OFF": [
+    "2025:UW227"
+   ],
+   "X1_C3_G015ABL0": [
+    "2024:UW240",
+    "2025:UW234"
+   ],
+   "X1_C3_G015ABL1": [
+    "2024:UW223",
+    "2025:UW223"
+   ],
+   "X1_GS_OFF": [
+    "2025:UW227"
+   ],
+   "X1_GS_T130": [
+    "2025:UW221"
+   ],
+   "X1_GS_T130_2021": [
+    "2025:UW221"
+   ],
+   "X1_HD_OFF": [
+    "2025:UW227"
+   ],
+   "X1_SLADAPT_B": [
+    "2025:UW223"
+   ],
+   "X1_SLADAPT_C": [
+    "2025:UW227"
+   ],
+   "X1_SLADAPT_PARITY": [
+    "2025:UW227"
+   ],
+   "X2_S30": [
+    "2022:UW224"
+   ],
+   "X4_R03": [
+    "2025:UW240"
+   ],
+   "brc-cont": [
+    "2025:UW221"
+   ],
+   "brc0-g127": [
+    "2025:UW221"
+   ],
+   "brc0-g134": [
+    "2025:UW221"
+   ],
+   "brct50": [
+    "2025:UW223"
+   ],
+   "cc-t100": [
+    "2025:UW224"
+   ],
+   "gs2-t125": [
+    "2025:UW221"
+   ],
+   "gs2-t140": [
+    "2025:UW221"
+   ],
+   "gs2-t155": [
+    "2025:UW204"
+   ],
+   "gx-par2": [
+    "2025:UW227"
+   ],
+   "hn-t-cp": [
+    "2025:UW223"
+   ],
+   "hn-t-hi": [
+    "2025:UW223"
+   ],
+   "hn-t-la": [
+    "2025:UW234"
+   ],
+   "hn-t100": [
+    "2025:UW227"
+   ],
+   "kg0-cap-s100": [
+    "2025:UW232"
+   ],
+   "kg0-g100": [
+    "2025:UW232"
+   ],
+   "kg0-g125": [
+    "2025:UW221"
+   ],
+   "kg0-g140": [
+    "2025:UW221"
+   ],
+   "kg0-g155": [
+    "2025:UW204"
+   ],
+   "selcut-topk3": [
+    "2025:UW203"
+   ],
+   "sh1-s3-ts8": [
+    "2025:UW230"
+   ],
+   "tickblk-breadth": [
+    "2025:UW205"
+   ],
+   "tickblk2-breadth": [
+    "2025:UW205"
+   ]
+  },
+  "flips_robust": 12,
+  "flips_conditional_conc_cap": 4,
+  "conc_caveat": "x1_rates KHONG do conc<=15%. 4 o ho T100/gate-1.0 co conc da biet 27,23%>15 (RESULT_CONC_CAP_HIGHN:127-143) => van FAIL neu khong bat CONC_CAP_PERCOIN=15% (bat => cc-t100 conc 10,83 => PASS)."
+ },
+ "p5": {
+  "defs": "ofi_reorient_rulers.point(); net=pnl; rate chuan=profit%",
+  "mtm_runs": [
+   "T170",
+   "KEEPLEG0",
+   "T100",
+   "GD92"
+  ],
+  "mtm_shift_pp": {
+   "T170": -8.12,
+   "KEEPLEG0": -8.75,
+   "T100": -10.13,
+   "GD92": -7.76,
+   "mean": -8.69
+  },
+  "arms_total": 19,
+  "arms_changed": 0,
+  "arms": {
+   "EXIT_STRUCT": {
+    "A0": {
+     "tag": "cd-sel15",
+     "rateNEW_win%": 88.7097,
+     "rateNEW_TSloss%": 9.8118,
+     "rateNEW_mp_sm": 7.7017,
+     "rateNEW_mp_sl": -16.6352,
+     "rateNEW_mMargin": 1490.5766,
+     "rateOLD_win%": 88.4409,
+     "share_top1_pct": 19.1251,
+     "bottom_half_sum": -17550.944,
+     "wl_ratio": 0.2963,
+     "loss_mean": 337.046,
+     "tf_5": 27.7474,
+     "conc_5": 0.4665,
+     "q_breakeven_pct": 21.5,
+     "pass_a": false,
+     "pass_b50": false,
+     "both_ab": false,
+     "maxDD_day": -6.2686,
+     "maxDD_min_est": -14.9686,
+     "UW_day": 166,
+     "maxDD_year": -6.2686,
+     "UW_year": 166,
+     "qmin": -3.3644,
+     "neg_years": [],
+     "rao_latest_day": true,
+     "rao_latest_min": true,
+     "conc1coin_pnlshare_pct": 4.802
+    },
+    "A1": {
+     "tag": "xs-a1",
+     "rateNEW_win%": 91.4103,
+     "rateNEW_TSloss%": 0.0,
+     "rateNEW_mp_sm": 8.4718,
+     "rateNEW_mp_sl": null,
+     "rateNEW_mMargin": 760.7154,
+     "rateOLD_win%": 91.2821,
+     "share_top1_pct": 37.3474,
+     "bottom_half_sum": -21072.6942,
+     "wl_ratio": 0.1496,
+     "loss_mean": 412.9329,
+     "tf_5": 2.1534,
+     "conc_5": 0.8997,
+     "q_breakeven_pct": 6.5,
+     "pass_a": false,
+     "pass_b50": false,
+     "both_ab": false,
+     "maxDD_day": -12.3778,
+     "maxDD_min_est": -21.0778,
+     "UW_day": 318,
+     "maxDD_year": -12.1321,
+     "UW_year": 304,
+     "qmin": -5.8825,
+     "neg_years": [
+      2022,
+      2025
+     ],
+     "rao_latest_day": false,
+     "rao_latest_min": false,
+     "conc1coin_pnlshare_pct": 4.4899
+    },
+    "A2": {
+     "tag": "xs-a2",
+     "rateNEW_win%": 85.1337,
+     "rateNEW_TSloss%": 0.0,
+     "rateNEW_mp_sm": 7.0664,
+     "rateNEW_mp_sl": null,
+     "rateNEW_mMargin": 262.5098,
+     "rateOLD_win%": 84.7059,
+     "share_top1_pct": 16.0988,
+     "bottom_half_sum": -4622.3197,
+     "wl_ratio": 0.4887,
+     "loss_mean": 52.0464,
+     "tf_5": 7.7226,
+     "conc_5": 0.4601,
+     "q_breakeven_pct": 22.0,
+     "pass_a": false,
+     "pass_b50": false,
+     "both_ab": false,
+     "maxDD_day": -4.761,
+     "maxDD_min_est": -13.461,
+     "UW_day": 92,
+     "maxDD_year": -4.761,
+     "UW_year": 92,
+     "qmin": -0.1762,
+     "neg_years": [],
+     "rao_latest_day": true,
+     "rao_latest_min": true,
+     "conc1coin_pnlshare_pct": 2.8161
+    },
+    "A3": {
+     "tag": "xs-a3",
+     "rateNEW_win%": 83.1243,
+     "rateNEW_TSloss%": 7.4116,
+     "rateNEW_mp_sm": 7.0746,
+     "rateNEW_mp_sl": -14.1129,
+     "rateNEW_mMargin": 264.2118,
+     "rateOLD_win%": 82.6682,
+     "share_top1_pct": 16.6827,
+     "bottom_half_sum": -3540.6205,
+     "wl_ratio": 0.5578,
+     "loss_mean": 39.3016,
+     "tf_5": 6.6486,
+     "conc_5": 0.4416,
+     "q_breakeven_pct": 24.0,
+     "pass_a": false,
+     "pass_b50": false,
+     "both_ab": false,
+     "maxDD_day": -1.5932,
+     "maxDD_min_est": -10.2932,
+     "UW_day": 276,
+     "maxDD_year": -1.5932,
+     "UW_year": 146,
+     "qmin": -0.0519,
+     "neg_years": [],
+     "rao_latest_day": false,
+     "rao_latest_min": false,
+     "conc1coin_pnlshare_pct": 3.3742
+    }
+   },
+   "SHAPE1": {
+    "S0": {
+     "tag": "cd-sel15",
+     "rateNEW_win%": 88.7097,
+     "rateNEW_TSloss%": 9.8118,
+     "rateNEW_mp_sm": 7.7017,
+     "rateNEW_mp_sl": -16.6352,
+     "rateNEW_mMargin": 1490.5766,
+     "rateOLD_win%": 88.4409,
+     "share_top1_pct": 19.1251,
+     "bottom_half_sum": -17550.944,
+     "wl_ratio": 0.2963,
+     "loss_mean": 337.046,
+     "tf_5": 27.7474,
+     "conc_5": 0.4665,
+     "q_breakeven_pct": 21.5,
+     "pass_a": false,
+     "pass_b50": false,
+     "both_ab": false,
+     "maxDD_day": -6.2686,
+     "maxDD_min_est": -14.9686,
+     "UW_day": 166,
+     "maxDD_year": -6.2686,
+     "UW_year": 166,
+     "qmin": -3.3644,
+     "neg_years": [],
+     "rao_latest_day": true,
+     "rao_latest_min": true,
+     "conc1coin_pnlshare_pct": 4.802
+    },
+    "S1": {
+     "tag": "sh1-s1-sl05",
+     "rateNEW_win%": 47.9377,
+     "rateNEW_TSloss%": 52.0623,
+     "rateNEW_mp_sm": 7.2246,
+     "rateNEW_mp_sl": -5.8172,
+     "rateNEW_mMargin": 1100.4859,
+     "rateOLD_win%": 47.8599,
+     "share_top1_pct": -89.8086,
+     "bottom_half_sum": -47967.659,
+     "wl_ratio": 0.9648,
+     "loss_mean": 73.2357,
+     "tf_5": -15.9404,
+     "conc_5": -2.4643,
+     "q_breakeven_pct": 0.5,
+     "pass_a": false,
+     "pass_b50": false,
+     "both_ab": false,
+     "maxDD_day": -21.4047,
+     "maxDD_min_est": -30.1047,
+     "UW_day": 1487,
+     "maxDD_year": -14.1859,
+     "UW_year": 363,
+     "qmin": -8.9969,
+     "neg_years": [
+      2022,
+      2024,
+      2025
+     ],
+     "rao_latest_day": false,
+     "rao_latest_min": false,
+     "conc1coin_pnlshare_pct": -15.5976
+    },
+    "S2": {
+     "tag": "sh1-s2-sl03k16",
+     "rateNEW_win%": 37.1713,
+     "rateNEW_TSloss%": 62.8287,
+     "rateNEW_mp_sm": 7.2011,
+     "rateNEW_mp_sl": -3.5794,
+     "rateNEW_mMargin": 798.0478,
+     "rateOLD_win%": 37.1315,
+     "share_top1_pct": -66.2155,
+     "bottom_half_sum": -50893.4894,
+     "wl_ratio": 1.4061,
+     "loss_mean": 35.8999,
+     "tf_5": -11.6684,
+     "conc_5": -1.8962,
+     "q_breakeven_pct": 0.5,
+     "pass_a": false,
+     "pass_b50": false,
+     "both_ab": false,
+     "maxDD_day": -28.8442,
+     "maxDD_min_est": -37.5442,
+     "UW_day": 1487,
+     "maxDD_year": -23.2794,
+     "UW_year": 329,
+     "qmin": -16.103,
+     "neg_years": [
+      2021,
+      2022,
+      2024,
+      2025
+     ],
+     "rao_latest_day": false,
+     "rao_latest_min": false,
+     "conc1coin_pnlshare_pct": -4.2093
+    },
+    "S3": {
+     "tag": "sh1-s3-ts8",
+     "rateNEW_win%": 72.9892,
+     "rateNEW_TSloss%": 35.2941,
+     "rateNEW_mp_sm": 7.9754,
+     "rateNEW_mp_sl": -5.2296,
+     "rateNEW_mMargin": 1275.8165,
+     "rateOLD_win%": 70.8283,
+     "share_top1_pct": 32.297,
+     "bottom_half_sum": -24070.6531,
+     "wl_ratio": 0.6837,
+     "loss_mean": 116.6044,
+     "tf_5": 5.6748,
+     "conc_5": 0.7599,
+     "q_breakeven_pct": 8.5,
+     "pass_a": false,
+     "pass_b50": false,
+     "both_ab": false,
+     "maxDD_day": -4.5628,
+     "maxDD_min_est": -13.2628,
+     "UW_day": 233,
+     "maxDD_year": -4.5628,
+     "UW_year": 230,
+     "qmin": -0.8932,
+     "neg_years": [],
+     "rao_latest_day": true,
+     "rao_latest_min": true,
+     "conc1coin_pnlshare_pct": 8.4612
+    },
+    "S4": {
+     "tag": "sh1-s4-sl03",
+     "rateNEW_win%": 35.9894,
+     "rateNEW_TSloss%": 64.0106,
+     "rateNEW_mp_sm": 7.1481,
+     "rateNEW_mp_sl": -3.7097,
+     "rateNEW_mMargin": 1029.9764,
+     "rateOLD_win%": 35.923,
+     "share_top1_pct": -47.2847,
+     "bottom_half_sum": -39056.9287,
+     "wl_ratio": 1.3969,
+     "loss_mean": 46.8257,
+     "tf_5": -16.1286,
+     "conc_5": -1.3537,
+     "q_breakeven_pct": 0.5,
+     "pass_a": false,
+     "pass_b50": false,
+     "both_ab": false,
+     "maxDD_day": -28.5706,
+     "maxDD_min_est": -37.2706,
+     "UW_day": 1487,
+     "maxDD_year": -18.7301,
+     "UW_year": 342,
+     "qmin": -13.0571,
+     "neg_years": [
+      2021,
+      2022,
+      2024,
+      2025
+     ],
+     "rao_latest_day": false,
+     "rao_latest_min": false,
+     "conc1coin_pnlshare_pct": -5.0231
+    }
+   },
+   "FAMILY2": {
+    "N0": {
+     "tag": "cd-sel15",
+     "rateNEW_win%": 88.7097,
+     "rateNEW_TSloss%": 9.8118,
+     "rateNEW_mp_sm": 7.7017,
+     "rateNEW_mp_sl": -16.6352,
+     "rateNEW_mMargin": 1490.5766,
+     "rateOLD_win%": 88.4409,
+     "share_top1_pct": 19.1251,
+     "bottom_half_sum": -17550.944,
+     "wl_ratio": 0.2963,
+     "loss_mean": 337.046,
+     "tf_5": 27.7474,
+     "conc_5": 0.4665,
+     "q_breakeven_pct": 21.5,
+     "pass_a": false,
+     "pass_b50": false,
+     "both_ab": false,
+     "maxDD_day": -6.2686,
+     "maxDD_min_est": -14.9686,
+     "UW_day": 166,
+     "maxDD_year": -6.2686,
+     "UW_year": 166,
+     "qmin": -3.3644,
+     "neg_years": [],
+     "rao_latest_day": true,
+     "rao_latest_min": true,
+     "conc1coin_pnlshare_pct": 4.802
+    },
+    "N1": {
+     "tag": "tp-n1",
+     "rateNEW_win%": 31.1354,
+     "rateNEW_TSloss%": 68.8646,
+     "rateNEW_mp_sm": null,
+     "rateNEW_mp_sl": -1.4965,
+     "rateNEW_mMargin": 754.0406,
+     "rateOLD_win%": 31.2524,
+     "share_top1_pct": -1.9651,
+     "bottom_half_sum": -26928.4945,
+     "wl_ratio": 0.5061,
+     "loss_mean": 17.6095,
+     "tf_5": -10.585,
+     "conc_5": -0.0785,
+     "q_breakeven_pct": 0.5,
+     "pass_a": false,
+     "pass_b50": false,
+     "both_ab": false,
+     "maxDD_day": -68.2715,
+     "maxDD_min_est": -76.9715,
+     "UW_day": 1575,
+     "maxDD_year": -32.2843,
+     "UW_year": 363,
+     "qmin": -26.4464,
+     "neg_years": [
+      2021,
+      2022,
+      2023,
+      2024,
+      2025
+     ],
+     "rao_latest_day": false,
+     "rao_latest_min": false,
+     "conc1coin_pnlshare_pct": -0.1634
+    },
+    "N2": {
+     "tag": "tp-n2",
+     "rateNEW_win%": 41.7337,
+     "rateNEW_TSloss%": 58.2663,
+     "rateNEW_mp_sm": null,
+     "rateNEW_mp_sl": -1.5101,
+     "rateNEW_mMargin": 725.7,
+     "rateOLD_win%": 41.8435,
+     "share_top1_pct": -0.478,
+     "bottom_half_sum": -25565.5828,
+     "wl_ratio": 0.0872,
+     "loss_mean": 16.9822,
+     "tf_5": -9.8927,
+     "conc_5": -0.0152,
+     "q_breakeven_pct": 0.5,
+     "pass_a": false,
+     "pass_b50": false,
+     "both_ab": false,
+     "maxDD_day": -67.1371,
+     "maxDD_min_est": -75.8371,
+     "UW_day": 1538,
+     "maxDD_year": -33.3006,
+     "UW_year": 363,
+     "qmin": -20.9944,
+     "neg_years": [
+      2021,
+      2022,
+      2023,
+      2024,
+      2025
+     ],
+     "rao_latest_day": false,
+     "rao_latest_min": false,
+     "conc1coin_pnlshare_pct": -0.0296
+    },
+    "N3": {
+     "tag": "tp-n3",
+     "rateNEW_win%": 31.3656,
+     "rateNEW_TSloss%": 68.6344,
+     "rateNEW_mp_sm": 1.1773,
+     "rateNEW_mp_sl": -2.0187,
+     "rateNEW_mMargin": 780.2733,
+     "rateOLD_win%": 31.3656,
+     "share_top1_pct": -3.2313,
+     "bottom_half_sum": -29668.7651,
+     "wl_ratio": 0.762,
+     "loss_mean": 22.1909,
+     "tf_5": -11.8564,
+     "conc_5": -0.1344,
+     "q_breakeven_pct": 0.5,
+     "pass_a": false,
+     "pass_b50": false,
+     "both_ab": false,
+     "maxDD_day": -64.3857,
+     "maxDD_min_est": -73.0857,
+     "UW_day": 1618,
+     "maxDD_year": -30.3145,
+     "UW_year": 363,
+     "qmin": -23.363,
+     "neg_years": [
+      2021,
+      2022,
+      2023,
+      2024,
+      2025
+     ],
+     "rao_latest_day": false,
+     "rao_latest_min": false,
+     "conc1coin_pnlshare_pct": -0.2893
+    },
+    "N4": {
+     "tag": "tp-n4",
+     "rateNEW_win%": 31.1354,
+     "rateNEW_TSloss%": 68.8646,
+     "rateNEW_mp_sm": null,
+     "rateNEW_mp_sl": -1.4965,
+     "rateNEW_mMargin": 754.0406,
+     "rateOLD_win%": 31.2524,
+     "share_top1_pct": -1.9651,
+     "bottom_half_sum": -26928.4945,
+     "wl_ratio": 0.5061,
+     "loss_mean": 17.6095,
+     "tf_5": -10.585,
+     "conc_5": -0.0785,
+     "q_breakeven_pct": 0.5,
+     "pass_a": false,
+     "pass_b50": false,
+     "both_ab": false,
+     "maxDD_day": -68.2715,
+     "maxDD_min_est": -76.9715,
+     "UW_day": 1575,
+     "maxDD_year": -32.2843,
+     "UW_year": 363,
+     "qmin": -26.4464,
+     "neg_years": [
+      2021,
+      2022,
+      2023,
+      2024,
+      2025
+     ],
+     "rao_latest_day": false,
+     "rao_latest_min": false,
+     "conc1coin_pnlshare_pct": -0.1634
+    }
+   },
+   "SIZE_COUNT": {
+    "B0": {
+     "tag": "cd-sel15",
+     "rateNEW_win%": 88.7097,
+     "rateNEW_TSloss%": 9.8118,
+     "rateNEW_mp_sm": 7.7017,
+     "rateNEW_mp_sl": -16.6352,
+     "rateNEW_mMargin": 1490.5766,
+     "rateOLD_win%": 88.4409,
+     "share_top1_pct": 19.1251,
+     "bottom_half_sum": -17550.944,
+     "wl_ratio": 0.2963,
+     "loss_mean": 337.046,
+     "tf_5": 27.7474,
+     "conc_5": 0.4665,
+     "q_breakeven_pct": 21.5,
+     "pass_a": false,
+     "pass_b50": false,
+     "both_ab": false,
+     "maxDD_day": -6.2686,
+     "maxDD_min_est": -14.9686,
+     "UW_day": 166,
+     "maxDD_year": -6.2686,
+     "UW_year": 166,
+     "qmin": -3.3644,
+     "neg_years": [],
+     "rao_latest_day": true,
+     "rao_latest_min": true,
+     "conc1coin_pnlshare_pct": 4.802
+    },
+    "B1": {
+     "tag": "sc-b1",
+     "rateNEW_win%": 88.4564,
+     "rateNEW_TSloss%": 9.6644,
+     "rateNEW_mp_sm": 7.3256,
+     "rateNEW_mp_sl": -16.6394,
+     "rateNEW_mMargin": 791.8338,
+     "rateOLD_win%": 88.1879,
+     "share_top1_pct": 18.6874,
+     "bottom_half_sum": -7690.765,
+     "wl_ratio": 0.3311,
+     "loss_mean": 165.8075,
+     "tf_5": 16.3781,
+     "conc_5": 0.4609,
+     "q_breakeven_pct": 25.0,
+     "pass_a": false,
+     "pass_b50": false,
+     "both_ab": false,
+     "maxDD_day": -3.9008,
+     "maxDD_min_est": -12.6008,
+     "UW_day": 164,
+     "maxDD_year": -3.9008,
+     "UW_year": 164,
+     "qmin": -1.561,
+     "neg_years": [],
+     "rao_latest_day": true,
+     "rao_latest_min": true,
+     "conc1coin_pnlshare_pct": 5.1381
+    },
+    "B2": {
+     "tag": "sc-b2",
+     "rateNEW_win%": 88.9757,
+     "rateNEW_TSloss%": 9.809,
+     "rateNEW_mp_sm": 7.3333,
+     "rateNEW_mp_sl": -15.7273,
+     "rateNEW_mMargin": 728.508,
+     "rateOLD_win%": 88.8021,
+     "share_top1_pct": 15.8325,
+     "bottom_half_sum": -10396.3049,
+     "wl_ratio": 0.3236,
+     "loss_mean": 152.4393,
+     "tf_5": 15.6068,
+     "conc_5": 0.4455,
+     "q_breakeven_pct": 25.5,
+     "pass_a": false,
+     "pass_b50": false,
+     "both_ab": false,
+     "maxDD_day": -5.4796,
+     "maxDD_min_est": -14.1796,
+     "UW_day": 164,
+     "maxDD_year": -5.4796,
+     "UW_year": 164,
+     "qmin": -1.3564,
+     "neg_years": [],
+     "rao_latest_day": true,
+     "rao_latest_min": true,
+     "conc1coin_pnlshare_pct": 2.8141
+    },
+    "B3": {
+     "tag": "sc-b3",
+     "rateNEW_win%": 88.2228,
+     "rateNEW_TSloss%": 10.557,
+     "rateNEW_mp_sm": 7.1848,
+     "rateNEW_mp_sl": -14.6074,
+     "rateNEW_mMargin": 356.2388,
+     "rateOLD_win%": 87.8515,
+     "share_top1_pct": 15.2253,
+     "bottom_half_sum": -8112.8413,
+     "wl_ratio": 0.3593,
+     "loss_mean": 67.7987,
+     "tf_5": 7.7142,
+     "conc_5": 0.4435,
+     "q_breakeven_pct": 26.0,
+     "pass_a": false,
+     "pass_b50": false,
+     "both_ab": false,
+     "maxDD_day": -4.9963,
+     "maxDD_min_est": -13.6963,
+     "UW_day": 278,
+     "maxDD_year": -4.9963,
+     "UW_year": 164,
+     "qmin": -0.7797,
+     "neg_years": [],
+     "rao_latest_day": false,
+     "rao_latest_min": false,
+     "conc1coin_pnlshare_pct": 1.9063
+    },
+    "B4": {
+     "tag": "sc-b4",
+     "rateNEW_win%": 88.2322,
+     "rateNEW_TSloss%": 10.8626,
+     "rateNEW_mp_sm": 7.4519,
+     "rateNEW_mp_sl": -14.1237,
+     "rateNEW_mMargin": 605.4875,
+     "rateOLD_win%": 87.8594,
+     "share_top1_pct": 16.7972,
+     "bottom_half_sum": -16678.9103,
+     "wl_ratio": 0.3413,
+     "loss_mean": 119.1026,
+     "tf_5": 11.9339,
+     "conc_5": 0.4667,
+     "q_breakeven_pct": 22.5,
+     "pass_a": false,
+     "pass_b50": false,
+     "both_ab": false,
+     "maxDD_day": -7.0446,
+     "maxDD_min_est": -15.7446,
+     "UW_day": 277,
+     "maxDD_year": -7.0446,
+     "UW_year": 164,
+     "qmin": -2.2682,
+     "neg_years": [],
+     "rao_latest_day": false,
+     "rao_latest_min": false,
+     "conc1coin_pnlshare_pct": 2.2622
+    }
+   }
+  }
+ }
+}
