@@ -188,3 +188,30 @@ Nguyên văn: *"a. giữ 15%  b giảm 50% về 25 nhé"*
 - Hệ quả cần nhớ: rào **(a) = 15%** vẫn **giết** các arm `q995/q998/q999` (vì (a) của chúng ≈ **20,7–23,5%**) ⇒ tổ hợp (a)=15% + (b′)=25% **có thể vẫn không mở được cấu hình nào deploy được** — đang đo để chốt bằng số.
 
 **ĐÃ ĐO (2026-09-28, `RESULT_TAIL25`):** sanity `TF(20/30 %)` **khớp tuyệt đối `76cc051`**. **Bỏ-25 % = 1/8 dương** = `kg0-q998-15m` (+4.002; CI raw95 [−2.140,+9.199] **chứa 0**). **PASS cả (a)+(b′) = duy nhất `kg0-q998-15m`** — **nhưng trượt bài kiểm nhịp (0,440<0,60) + CI chứa 0 ⇒ KHÔNG deploy được**. ⇒ **dưới (a)=15 % + (b′)=25 % KHÔNG cấu hình nào go-live**; 2 lựa chọn ở `RESULT_TAIL25` §5.
+
+---
+
+## 13. RESET 2026-09-28/29 — **LUẬT 4 TẦNG** thay "superiority" + `(a)/(b′)`; **CHI PHÍ THẬT**; KẾT LUẬN **GIỮ `B*`**
+
+Nguồn: `PLAN_OPENCLAW_BASELINE_RESET_20260928.md` + `PLAN_OPENCLAW_ADDENDUM_20260928.md` (MASTER); **owner duyệt** ("Ok tiếp đi", 2026-09-28 22:38). Thực thi D0–D5.
+
+### 13.1 CHI PHÍ THẬT (`RESULT_COST_TRUTH`, `d059cc3`) — **BỎ `0,8 %/vòng` làm chi phí**
+- Sim **vào ở CLOSE nến 1 PHÚT** (`SimulatorMarketLevelTicker1MStopLoss.java:1372`); ra ở `priceClose`/`min(open,close)`. ⇒ chi phí sim ĐÚNG = **`fee + spread(±impact)`**, **KHÔNG** phải slip.
+- Trên **991 chân THẬT**: slip CÓ DẤU ≈ 0 cho **mọi** loại leg (CI chứa 0); **riêng leg VÀO LÚC SẬP = +1,675 %/chân** (CI [+0,90,+2,67], n=37) = **LOOK-AHEAD của "vào ở close"**, **KHÔNG** phải phí thị trường.
+- **3 mức: `base 0,112` · `stress 0,150` · `legacy 0,800` (%/vòng)**. Key có sẵn, gated: `SIM_RATE_FEE` + `SIM_SLIPPAGE_RATE` (default = byte-identical).
+
+### 13.2 LUẬT MỚI (thay §7/§8 + `(a)/(b′)` + luật "superiority")
+**4 tầng:** (1) **RÀO RỦI RO** (maxDD **MTM phút** ≤40 %/năm · UW ≤250 · quý xấu ≥−20 % · 0 năm âm · conc 1 coin ≤15 %) · (2) **RÀO ĐỘ BỀN** (`q* ≥15 %` · `top-1 % lệnh ≤25 %` · **bỏ top-3 EPISODE** ⇒ ΣPnL >0) · (3) **NON-INFERIORITY** vs `B*` (win% ≥ −2,0pp · TSloss% ≤ +2,5pp) · (4) **MỤC TIÊU** (`Calmar_MTM ≥ B*` · `n ≥1,3×B*` · `conc ≤ B*`).
+**BỎ khỏi luật** (đo **0/20 bind**, `RESULT_RESET_RULE_P1`): trần **gross ≤70 %** (max thực 59,7 %) · `mP|SM%`/`mP|SL%` tầng 3 (CI quá rộng) · "bỏ top-3 episode" trong tầng 2.
+**`(a)/(b′)` = BỎ**: chứng minh toán học **bất khả thi** với lợi nhuận ~chuẩn (`(b′)` cần Sharpe năm ≈**8,1**; `(a)@15 %` cần ≈**3,6**) — khớp số đo: `(a)@15 %` chỉ **3/452** arm (0 bền), book U1 **210–382 %**.
+
+### 13.3 KẾT QUẢ 3 vòng
+- **D2** `a7016b0` (chấm lại 20 artifact cũ): tự kiểm KEEPLEG0/cd-sel15 **12/12 khớp** + MTM phút KEEPLEG0 **−19,96 %/UW 147,2** khớp `RESULT_INTRADAY_DD`; **T4 0/20 ⇒ giữ `B*`**; hạ phí lật **T1 6 / T2 2**, **KHÔNG lật** verdict "nới gate = rác".
+  ⚠️ **Caveat**: công thức hậu kiểm `net_leg = pnl + (0,008−c)·notional` **lệch ~8,6 %** vs sim thật (bỏ compounding) ⇒ dùng **số D3** cho `@base`.
+- **D3** `47a9d90` (sim Kaggle k=5, 11 run): `R0` parity **md5 `99e42b75` PASS**; **`R4` (size ×0,5 · K=16 · gate 1.55 · nhịp 1') = arm DUY NHẤT qua CẢ 4 TẦNG**, ở **cả `base` và `stress`** (Calmar 1,676 vs `B*` 1,661; n 2027 = 1,87×). `R2` FAIL T3 · `R1/R3` FAIL T4 · blocked=0 · gross MAX 55,9 %.
+- **D5** `911ad42` (độ bền `R4`): **T1 episode jackknife = FAIL** (`Calmar_còn(3)` 2,70 < `B*` 4,15) ⇒ **TRẢ VỀ GIỮ `B*`**; T2 PASS nhưng **CI chênh `R4−B*` chứa 0** (biên +0,7…0,95 % = **NHIỄU**), chênh CAGR −5,62pp/ΣPnL −21 510 **âm ngoài CI**.
+
+### 13.4 TRẠNG THÁI CHỐT
+- **KHÔNG cấu hình nào thay được incumbent `B*`** (= KEEPLEG0 + nhịp 1' + CONC_CAP 15 %) ⇒ **production KHÔNG đổi**; **KHÔNG tiêu `HOLDOUT_UNSEAL`** (2026 vẫn đóng).
+- **Track B: CHẾT** — "edge" `+0,074 %/ngày` = **artifact stop −10 %** (quyền chọn miễn phí); bỏ stop ⇒ chênh `+0,006 %/ngày`, CI [−0,034,+0,045] **chứa 0** (`RESULT_TRACKB_REDFLAGS`, `7f6e46d`).
+- **Cần MASTER/owner chốt tiếp**: (i) chính thức hoá §13.2 vào `RISK_APPETITE.md`; (ii) `(a)/(b′)` gỡ khỏi mọi pre-reg mới; (iii) câu treo cũ: **live giữ 15' hay đổi 1'** (đổi ⇒ sửa `ENTRY_GRID_MIN` = đụng production).
