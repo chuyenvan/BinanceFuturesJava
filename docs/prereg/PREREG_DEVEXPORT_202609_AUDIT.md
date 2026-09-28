@@ -99,8 +99,16 @@ basketMomentum15M, basketMomentum1H, basketRsi14, basketVolSpike
     = **GMT+7**; `dayOfWeek` Sun=1; `weekOfMonth` Sun-start (đã xác nhận khớp DEV ở PASS 1).
 11. **tần suất ghi**: **1 dòng / 1 phút, KHÔNG de-overlap** (`ExportGateDataset` ghi mọi phút).
     Warmup nến **48h** trước đầu cửa sổ (không ghi warmup).
-12. **định dạng**: CSV, số `%.8f` (Locale.US), header **đúng 34 cột feature + `ts`** (KHÔNG label —
-    label không cần cho audit này), ghi thêm `volatilityRegime` để đối chiếu phụ.
+12. **định dạng**: CSV, số `%.8f` (Locale.US), header = `ts` + **34 cột feature GIỐNG HỆT bản DEV**
+    (33 số + `volatilityRegime`, cùng tên, cùng thứ tự) **+ 1 cột chẩn đoán `md_src`** (1 = có record
+    `market_data_object` tại `ts`, 0 = thiếu ⇒ `momentum1M/momentum15M` giữ 0.0).
+    KHÔNG ghi 7 cột label (không cần cho audit; label cần dữ liệu ngày kế tiếp).
+
+> **[SỬA PRE-REG 2026-09-28, TRƯỚC KHI TÍNH SỐ]** Bổ sung ở §4.12: cột `md_src` + ghi nhận nguồn
+> `market_data_object` CHỈ có trên cụm Oracle-local (ns `test`) và **mới nhất là 2026-08-13** ⇒ từ
+> 2026-08-14 trở đi `momentum1M`/`momentum15M` của bản offline sẽ = 0,0 do THIẾU NGUỒN (không phải do
+> code). Hai feature này vì vậy **loại khỏi bảng xếp hạng nghi phạm** nếu `md_src=0`. Lý do sửa: phát
+> hiện tính khả dụng của nguồn TRƯỚC khi chạy (chưa nhìn thấy bất kỳ giá trị feature nào).
 
 ## 5. CỬA SỔ + KIỂM CHỨNG
 
@@ -114,6 +122,23 @@ basketMomentum15M, basketMomentum1H, basketRsi14, basketVolSpike
   - **KHÔNG ĐẠT ⇒ DỪNG**, không xuất số 2026, báo RO nguyên nhân (theo yêu cầu task).
 - **Kiểm chứng chéo phụ (không chặn)**: `p15_out` của dump LIVE so vector offline cùng `ts` bằng
   model `fold_20` — đã làm ở PASS 1, không lặp.
+
+## 5b. KẾT QUẢ KIỂM CHỨNG VÙNG GIAO NHAU — **[GHI TRƯỚC KHI CHẠY CỬA SỔ 2026]**, 2026-09-28
+
+Chạy `devexport_202609.py --cluster local --start 20260501 --end 20260502` (warmup 2 ngày) rồi
+`devexport_verify.py` trên `2026-05-01 00:00 → 2026-05-02 00:00 (+07)` (1.440 dòng, ghép đủ 1.440):
+
+| nhóm | feature | kết quả |
+|---|---|---|
+| **29/33** | momentum5M/1H/4H/24H, trendStrengthETH, trendConsistency, volatility1M/15M/1H/24H, volatilityTermStructure, advanceDeclineRatio, volumeRatioUpDown, marketBreadthStrength, btcDominance, rsi14, volumeSpike, distMA20, basketMomentum15M/1H, basketRsi14, basketVolSpike, fundingRateRaw/Avg24H/Trend, hourOfDay/dayOfWeek/weekOfMonth/monthOfYear | **KHỚP TUYỆT ĐỐI** `max\|Δ\| ≤ 1e-8` (nhiều cái = 0,0) |
+| 3 | momentum1M, momentum15M, momentumAcceleration | lệch ở **30/1.440 dòng**; **28 dòng DEV = 0** trong khi nguồn `market_data_object` hiện có giá trị ⇒ **store đã được ghi thêm SAU 2026-08-29** (nguồn trôi), không phải sai logic |
+| 1 | percentAboveMA20 | lệch nhỏ `max\|Δ\|=1,06e-2`, corr **0,99992**, trung bình 0,50413 vs 0,50374 (~0,1–3 symbol/282 mỗi dòng; 359/1.440 dòng lệch) |
+| — | volatilityRegime (chuỗi) | match **1,0000** |
+
+**QUYẾT ĐỊNH (chốt trước khi có số 2026):** coi tái lập là **ĐẠT CÓ NGOẠI LỆ ĐÃ ĐỊNH LƯỢNG** cho mục đích AUDIT ⇒ **vẫn xuất cửa sổ 2026** nhưng:
+- 3 feature nguồn-trôi (`momentum1M`, `momentum15M`, `momentumAcceleration`) **loại khỏi bảng nghi phạm** (nguồn offline đã trôi/thiếu từ 2026-08-14);
+- `percentAboveMA20` **đánh dấu kém tin cậy** (sai số tái lập ~1%).
+- KHÔNG nới tiêu chí §5 cho các feature khác; các feature khác vẫn phải khớp `≤1e-6 / 1e-4` mới dùng.
 
 ## 6. GHÉP CẶP VỚI `feat_dump`
 
