@@ -186,3 +186,5 @@ Nguyên văn: *"a. giữ 15%  b giảm 50% về 25 nhé"*
   bỏ **20%**: 4/8 dương (`q998-15m` +5.848 · `q998` +4.180 · `q999` +2.901 · `q995` +772) · bỏ **30%**: **1/8** (`q998-15m` +2.328) · bỏ **50%**: **0/8**.
   ⇒ **mức 25% nằm giữa 20% và 30%** ⇒ **phải đo lại đúng 25%** (không suy diễn nội suy).
 - Hệ quả cần nhớ: rào **(a) = 15%** vẫn **giết** các arm `q995/q998/q999` (vì (a) của chúng ≈ **20,7–23,5%**) ⇒ tổ hợp (a)=15% + (b′)=25% **có thể vẫn không mở được cấu hình nào deploy được** — đang đo để chốt bằng số.
+
+**ĐÃ ĐO (2026-09-28, `RESULT_TAIL25`):** sanity `TF(20/30 %)` **khớp tuyệt đối `76cc051`**. **Bỏ-25 % = 1/8 dương** = `kg0-q998-15m` (+4.002; CI raw95 [−2.140,+9.199] **chứa 0**). **PASS cả (a)+(b′) = duy nhất `kg0-q998-15m`** — **nhưng trượt bài kiểm nhịp (0,440<0,60) + CI chứa 0 ⇒ KHÔNG deploy được**. ⇒ **dưới (a)=15 % + (b′)=25 % KHÔNG cấu hình nào go-live**; 2 lựa chọn ở `RESULT_TAIL25` §5.
