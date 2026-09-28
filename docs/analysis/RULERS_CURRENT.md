@@ -173,3 +173,16 @@ wl_ratio  ·  tf_5  ·  loss_mean  ·  conc_5          (dự bị: median)
   ⇒ **`asym<1` + PnL DƯƠNG BỀN: CHƯA TỒN TẠI** — *đã thử, không phải chưa thử*
 - **Cấu trúc kéo `asym` xuống**: win-rate thấp ≤45 % · **cắt lỗ sớm/ngắn** (`PRE_ARM_SL −0,03` ⇒ 0,705) · `loss_mean` nhỏ (corr `asym~loss_mean` **−0,47**, `~sign%` **+0,25**)
 - **3 giá trị CHƯA THỬ** (đề xuất sim mới): ① `SIM_PRE_ARM_SL=−0,05` · ② `SIM_PRE_ARM_SL=−0,03` + `SELECTOR_RANK_TOPK=16` · ③ `SIM_LOSER_TIME_STOP_HOURS=8`
+
+---
+
+## 12. OWNER CHỐT LẠI RÀO — 2026-09-28 15:51: `(b′)` **HẠ TỪ 50% → 25%**
+
+Nguyên văn: *"a. giữ 15%  b giảm 50% về 25 nhé"*
+- **(a)** `%PnL từ top-1% lệnh ≤ 15%` — **GIỮ NGUYÊN**.
+- **(b′)** **bỏ TOP-25% lệnh ⇒ PnL vẫn phải DƯƠNG** *(thay cho bỏ top-50%)*. Đây là **cơ chế thoát đã thoả thuận trước** ("không ra mới hạ nó xuống") — dùng đúng lúc, và **không tính là thất bại**.
+- **Ý nghĩa (vẫn phải ghi rõ để không hiểu sai):** bỏ top-25% > 0 = **75% lệnh còn lại (kể cả nhóm yếu) vẫn phải có lãi ròng**.
+- **Mốc tham chiếu đã đo** (từ `RESULT_TAIL50_RULER_REDUNDANCY` `76cc051`):
+  bỏ **20%**: 4/8 dương (`q998-15m` +5.848 · `q998` +4.180 · `q999` +2.901 · `q995` +772) · bỏ **30%**: **1/8** (`q998-15m` +2.328) · bỏ **50%**: **0/8**.
+  ⇒ **mức 25% nằm giữa 20% và 30%** ⇒ **phải đo lại đúng 25%** (không suy diễn nội suy).
+- Hệ quả cần nhớ: rào **(a) = 15%** vẫn **giết** các arm `q995/q998/q999` (vì (a) của chúng ≈ **20,7–23,5%**) ⇒ tổ hợp (a)=15% + (b′)=25% **có thể vẫn không mở được cấu hình nào deploy được** — đang đo để chốt bằng số.
