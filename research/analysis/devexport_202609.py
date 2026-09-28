@@ -483,8 +483,14 @@ class Engine:
         if not ok.any():
             return out
         idx, valid = self._pos(ids, periods)
-        v = np.where(valid, self.CL[ids[:, None], idx], 0.0).astype(np.float64)
-        out[ok] = v.sum(axis=1)[ok] / periods
+        mat = np.where(valid, self.CL[ids[:, None], idx], np.float32(0.0)).astype(np.float32)
+        # CO Y: cong float32 TUAN TU (giong Java `sum += priceClose`), KHONG dung pairwise sum
+        # cua numpy — vi percentAboveMA20 la mot PHEP DEM, lech 1e-8 o margin se doi ket qua dem.
+        seq = np.zeros(n, dtype=np.float32)
+        for j in range(periods):
+            seq = (seq + mat[:, j]).astype(np.float32)
+        res = (seq / np.float32(periods)).astype(np.float64)
+        out[ok] = res[ok]
         return out
 
     def vol_bulk(self, ids, periods):
