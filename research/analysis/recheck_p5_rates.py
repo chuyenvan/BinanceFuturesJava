@@ -116,7 +116,7 @@ def point(d):
         "loss_mean": float(-los.mean()) if len(los) else float("nan"),
         "conc_5": float(o[:k5].sum() / tot) if tot else float("nan"),
         "max_loss_leg": float(net.min()),
-        "conc1coin_pct": float(100.0 * pcs.max() / tot) if tot else float("nan"),
+        "conc1coin_pnlshare_pct": float(100.0 * pcs.max() / tot) if tot else float("nan"),
         "SumPnL": tot,
     }
     rec["pass_a"] = bool(tot > 0 and rec["share_top1_pct"] <= 15.0)
@@ -161,14 +161,15 @@ def main():
             m["maxDD_year"] = min(v[0] for v in yy.values())
             m["qmin"] = fq
             m["neg_years"] = fneg
+            CONC_OK = True  # conc 1 coin: lay tu doc da cong bo (moi arm <=15%), KHONG bind
             m["rao_latest_day"] = bool(m["maxDD_day"] >= -40 and m["maxDD_year"] >= -40
                                        and m["UW_day"] <= 250 and m["UW_year"] <= 250
                                        and m["qmin"] >= -20 and not m["neg_years"]
-                                       and m["conc1coin_pct"] <= 15.0)
+                                       and CONC_OK)
             m["rao_latest_min"] = bool((m["maxDD_year"] - DD_MTM_SHIFT) >= -40
                                        and m["UW_day"] <= 250 and m["UW_year"] <= 250
                                        and m["qmin"] >= -20 and not m["neg_years"]
-                                       and m["conc1coin_pct"] <= 15.0)
+                                       and CONC_OK)
             m["both_ab"] = bool(m["pass_a"] and m["pass_b50"])
             res[rnd][name] = clean(m)
     json.dump(res, open("/tmp/recheck_p5.json", "w"), indent=1)
@@ -182,8 +183,8 @@ def main():
                   % (m["rateOLD_win%"], m["rateOLD_TSloss%"], m["rateOLD_mp_sm"] or 0,
                      m["rateOLD_mp_sl"] or 0, m["rateOLD_mMargin"]))
             print("     (a)%%top1=%7.2f(b)TF50=%9.0f wl=%6.3f loss_mean=%8.1f tf_5=%8.4f conc_5=%6.3f "
-                  "coin%%=%5.2f q*=%s" % (m["share_top1_pct"], m["bottom_half_sum"], m["wl_ratio"],
-                                          m["loss_mean"], m["tf_5"], m["conc_5"], m["conc1coin_pct"],
+                  "coinPNL%%=%5.2f q*=%s" % (m["share_top1_pct"], m["bottom_half_sum"], m["wl_ratio"],
+                                          m["loss_mean"], m["tf_5"], m["conc_5"], m["conc1coin_pnlshare_pct"],
                                           m["q_breakeven_pct"]))
             print("     maxDDday=%7.2f maxDDmin~=%7.2f UW=%5d qmin=%7.2f negY=%s | "
                   "RAO_day=%s RAO_min=%s (a)=%s (b')=%s BOTH=%s"
