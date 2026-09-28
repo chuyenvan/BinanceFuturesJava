@@ -1,0 +1,35 @@
+{
+  "prereg": "docs/prereg/PREREG_PREDBIN_REPRO.md",
+  "date": "2026-09-28",
+  "pred_bin": {
+    "path": "/home/ubuntu/wfo_ds_x1_2021/pred.bin",
+    "md5": "5dd6bb4c3f98d89d58770005c0001526",
+    "bytes": 40004164, "n": 2500260,
+    "format": "BE int32 count + count x (int64 ts, float32 predReturn15M, float32 predRisk4H)",
+    "ts_min": "2021-04-01 00:00 +07", "ts_max": "2025-12-31 23:59 +07",
+    "grid": "1m contiguous, 0 dup, 100% ts%60000==0",
+    "p50": 0.005452, "p99": 0.013079, "max": 0.122613,
+    "manifest": {"sourcePredSet": "ai_pred_market_gate_wfo", "codeGitSha": "e57fd3d", "exportedAt": "2026-09-12 15:59 +07", "leakFreeFrom": "2021-07-01"}
+  },
+  "identity_with_csv": {"csv": "/home/ubuntu/claudedata/wfo_gate_pred.csv", "md5_csv": "b160a018b912ffdd61b6409d1208dad3", "join": 2500260, "exact_1e-7": 1.0, "corr": 1.0},
+  "stores_feature_identical": {"gate_dataset_full.csv.gz": 0.0, "gate_ab_full/fs_full.csv": 0.0, "gate15m_v2_full.csv": 0.0, "gate_ab_full2/fs_full2.csv": 0.0, "note": "max|dF| tren 33 feature, cua so 2025Q4, 132480 dong"},
+  "frozen_onnx_vs_predbin": {"wfo_models/fold_18@2025Q4": 0.681, "gate_ab_full/label_oldbasket/fold_18@2025Q4": 0.681, "best_of_21_wfo_models@2025Q4": {"fold": 20, "pearson": 0.76214}, "doc_number_0.762": "= fold_20 (model cuoi) ap len cua so 2025Q4"},
+  "fresh_retrain_vs_predbin_per_fold": {
+    "0": {"pearson": 0.99578, "spearman": 0.987172}, "1": {"pearson": 0.99232, "spearman": 0.988608},
+    "2": {"pearson": 0.99563, "spearman": 0.992239}, "3": {"pearson": 0.99406, "spearman": 0.990381},
+    "4": {"pearson": 0.99571, "spearman": 0.99589}, "5": {"pearson": 0.99182, "spearman": 0.991761},
+    "6": {"pearson": 0.99528, "spearman": 0.984659}, "7": {"pearson": 0.99679, "spearman": 0.996141},
+    "8": {"pearson": 0.99605, "spearman": 0.995601}, "9": {"pearson": 0.99589, "spearman": 0.994428},
+    "10": {"pearson": 0.99757, "spearman": 0.99755}, "11": {"pearson": 0.99689, "spearman": 0.998121},
+    "12": {"pearson": 0.99728, "spearman": 0.997201}, "13": {"pearson": 0.99719, "spearman": 0.997423},
+    "14": {"pearson": 0.99786, "spearman": 0.998442}, "15": {"pearson": 0.99599, "spearman": 0.996516},
+    "16": {"pearson": 0.99592, "spearman": 0.996493}, "17": {"pearson": 0.99641, "spearman": 0.996671},
+    "18": {"pearson": 0.99347, "spearman": 0.995254}
+  },
+  "verdict": "TAI LAP DUOC (19/19 fold pearson>=0.9918, spearman>=0.9847, p50 khop 1e-5)",
+  "hypotheses": {"H1_feature": "BAC BO", "H2_tienxu_ly": "BAC BO", "H3_phamvi": "XAC NHAN (dang provenance: bo .onnx dong bang khong phai the he san xuat)", "H4_nhan": "BAC BO"},
+  "label_check_vs_predbin": {"label_oldbasket_csv": 0.999914, "label_ret15m": 0.4278, "label_ret60m": 0.4422, "label_retall15m": 0.40731, "label_retall60m": 0.42158, "v4v5_ret15m": 0.42147, "v4v5_ret60m": 0.47968},
+  "dev_tail_is_artifact": "KHONG co bang chung; duoi tai lap duoc (fold2 max 0.1170 vs 0.1226; fold18 0.1169 vs 0.1195)",
+  "open_gap": "nguon 33 feature cua duong LIVE khac store DEV (nghi pham VTS+funding, 26e4b3f) — chua dong",
+  "notes": {"predRisk4H": "cot 2 pred.bin tu set CU ai_pred_market_full_basket_v2 (KHONG leak-free)", "40_feature_tool1": "khong lien quan truc tiep (feature S1/selector)"}
+}

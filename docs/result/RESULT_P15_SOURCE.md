@@ -126,6 +126,14 @@ Hai doc quan trong:
 
 ### 3.4 Thu tai tao `pred.bin` bang `wfo_models/fold_*` — **KHONG tai tao duoc**
 
+> **DINH CHINH 2026-09-28 (`docs/result/RESULT_PREDBIN_REPRO.md`):** ket luan "store goc da mat" o muc nay la
+> **SAI**. Con so `corr 0,762` chinh la corr cua **`fold_20`** (model cuoi, train toi 2026-04) ap len cua so
+> 2025Q4 — tuc **model dong bang ap sai cua so**, khong phai phep tai lap per-fold. **Retrain** per-fold dung
+> hyperparam tai lieu tren chinh store con tren dia tai lap `pred.bin` **19/19 fold** (pearson 0,9918–0,99786,
+> spearman 0,9847–0,99812, p50 khop 1e-5, duoi DEV cung tai lap). Nguyen nhan: bo `.onnx` dong bang tren dia
+> **khong phai the he model da sinh `pred.bin`**. Ket luan "khong hieu chuan lai tren DEV duoc" (muc 4) **giu nguyen**,
+> nhung ly do la **nguon feature LIVE khac store DEV**, khong phai store bi mat.
+
 Chay **ca 21** `fold_0…fold_20` tren feature `2025-10→12`: p50 chay tu 0,748 (fold_0) → 1,630 (fold_5);
 **khong** fold nao cho p50 ≈ 0,900 + p99 1,401 + max 11,946 nhu `pred.bin`. Do chinh xac join voi
 `gate15m_v2_full.csv` chi **corr 0,762**, `mean ratio 1,33`. ⇒ **store feature ngoai tuyen hien co KHONG phai**
