@@ -432,6 +432,16 @@ public class Configs {
      * Khong cham ONNX / NUM_FEATURES / extractFeatures45. Khong khai / &lt;=0 =&gt; byte-identical.
      */
     public static int MARKET_SCAN_MIN = 0;
+
+    /**
+     * [CADENCE-SPLIT-V2 2026-09-28] docs/plan/PLAN_CADENCE_SPLIT_V2.md — CONG TAC UU TIEN + HANG DOI CO CHAN
+     * cho nhip LIVE (pool 1 thread). 0 (mac dinh / khong khai) =&gt; TAT: nop tick vao {@code executorService}
+     * y nhu cu (khong cong tac gi) =&gt; byte-identical. &gt;0 (dung 1) =&gt; BAT: tick SELECTOR luon duoc xep hang
+     * (toi da 1 dang cho), tick MARKET-LEVEL chi nop khi executor RANH (ban =&gt; BO QUA, khong xep hang)
+     * =&gt; hang doi khong bao gio phinh, nhip SELECTOR 15' khong bi gian.
+     * Key {@code MARKET_SCAN_PRIORITY}. Khong cham ONNX / NUM_FEATURES / extractFeatures45.
+     */
+    public static int MARKET_SCAN_PRIORITY = 0;
     public static float MS_UP_BIG_THRES = 0.02046f;                  // HPO (đã revert về cũ): 0.01757f
     public static float MS_DOWN_BIG_AVG = -0.03157f;                  // HPO (đã revert về cũ): -0.05514f
     // [BD-THRESHOLD-FRAGILITY 2026-09-17] tach nguong DCA khoi nguong BIG_DOWN (docs/prereg/PREREG_BD_THRESHOLD_FRAGILITY.md).
@@ -808,6 +818,12 @@ public class Configs {
             if ((v = Cfg.get("MARKET_SCAN_MIN")) != null) {
                 int mm = Integer.parseInt(v.trim());
                 if (mm > 0) MARKET_SCAN_MIN = mm;
+            }
+            // [CADENCE-SPLIT-V2 2026-09-28] cong tac UU TIEN + hang doi CO CHAN (pool 1 thread).
+            //   Khong khai / <=0 => 0 => TAT => y nguyen (khong cong tac gi).
+            if ((v = Cfg.get("MARKET_SCAN_PRIORITY")) != null) {
+                int mp = Integer.parseInt(v.trim());
+                if (mp > 0) MARKET_SCAN_PRIORITY = mp;
             }
             // [REGIME 2026-09-14] docs/prereg/PREREG_REGIME_GATE.md: gate scale doi theo regime BTC 30d.
             //   default OFF => byte-identical. SIM_REGIME_FORCE=UP|NOTUP chi cho cong 2-cuc.

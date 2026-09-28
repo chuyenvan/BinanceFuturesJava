@@ -126,6 +126,11 @@ public class DetectEntrySignal2TradeNormal {
             // [CADENCE-SPLIT 2026-09-27] 1 dong xac minh nhip hieu luc (deploy verify). Thuan LOG.
             LOG.info("[CADENCE-SPLIT] MARKET_SCAN_MIN={} => MARKET-LEVEL(BIG_DOWN/DCA) quet {}, SELECTOR luon 15'",
                     Configs.MARKET_SCAN_MIN, Configs.MARKET_SCAN_MIN > 0 ? "1 PHUT" : "15 PHUT (nhu cu)");
+            // [CADENCE-SPLIT-V2 2026-09-28] 1 dong xac minh cong tac uu tien (deploy verify). Thuan LOG.
+            LOG.info("[CADENCE-SPLIT-V2] MARKET_SCAN_PRIORITY={} => {}", Configs.MARKET_SCAN_PRIORITY,
+                    Configs.MARKET_SCAN_PRIORITY > 0
+                            ? "BAT: SEL luon xep hang (<=1 cho), MKT chi nop khi RANH"
+                            : "TAT (y nguyen: nop thang, khong cong tac)");
             while (true) {
                 // [CADENCE-SPLIT 2026-09-27] docs/plan/PLAN_LIVE_CADENCE_SPLIT.md
                 //   selectorTick: moc luoi 15' nhu CU (isTimeProcessData KHONG doi).
@@ -136,11 +141,28 @@ public class DetectEntrySignal2TradeNormal {
                 boolean marketTick = !selectorTick && isTimeProcessMarket1M();
                 if (selectorTick || marketTick) {
                     final boolean selectorLeg = selectorTick;
-                    try {
-                        executorService.execute(() -> checkMarketLevelChange2Trade(selectorLeg));
-                    } catch (Exception e) {
-                        LOG.error("ERROR during ThreadDetectMarketLevel2Trader: {}", e);
-                        e.printStackTrace();
+                    // [CADENCE-SPLIT-V2 2026-09-28] docs/plan/PLAN_CADENCE_SPLIT_V2.md — cong uu tien +
+                    //   hang doi CO CHAN (pool 1 thread). priority<=0 => shouldSubmit=true => y nguyen.
+                    if (shouldSubmit(Configs.MARKET_SCAN_PRIORITY, tickGate, selectorLeg)) {
+                        try {
+                            executorService.execute(() -> {
+                                try {
+                                    checkMarketLevelChange2Trade(selectorLeg);
+                                } finally {
+                                    // tra slot khi BAT cong tac (priority<=0 => khong cham gi).
+                                    if (Configs.MARKET_SCAN_PRIORITY > 0) {
+                                        tickGate.done(selectorLeg);
+                                    }
+                                }
+                            });
+                        } catch (Exception e) {
+                            // nop that bai => tra slot da chiem (khi BAT cong tac).
+                            if (Configs.MARKET_SCAN_PRIORITY > 0) {
+                                tickGate.done(selectorLeg);
+                            }
+                            LOG.error("ERROR during ThreadDetectMarketLevel2Trader: {}", e);
+                            e.printStackTrace();
+                        }
                     }
                 }
                 try {
@@ -1052,6 +1074,61 @@ public class DetectEntrySignal2TradeNormal {
             return true;
         }
         return false;
+    }
+
+    // ===== [CADENCE-SPLIT-V2 2026-09-28] CONG UU TIEN + HANG DOI CO CHAN (pool 1 thread) =====
+    // docs/plan/PLAN_CADENCE_SPLIT_V2.md — muc tieu: SELECTOR luon chay dung moc 15' VA MARKET-LEVEL
+    // (BIG_DOWN/DCA) best-effort moi phut, voi pool 1 thread, KHONG lam phinh hang doi.
+    //   - acceptSelector(): LUON nhan (toi da 1 dang cho) => selector khong bao gio bi bo.
+    //   - acceptMarket()  : chi nhan khi RANH (pending==0); ban => BO QUA (khong xep hang).
+    // => hang doi toi da 1 (chi con 1 selector cho), khong bao gio phinh. Dung THUAN HAM de test.
+    static final class TickGate {
+
+        private final java.util.concurrent.atomic.AtomicInteger pending
+                = new java.util.concurrent.atomic.AtomicInteger(0);
+        private final java.util.concurrent.atomic.AtomicBoolean selectorWaiting
+                = new java.util.concurrent.atomic.AtomicBoolean(false);
+
+        /** SELECTOR: luon nhan; toi da 1 dang cho. false =&gt; da co 1 cho (khong phinh). */
+        boolean acceptSelector() {
+            if (!selectorWaiting.compareAndSet(false, true)) {
+                return false;
+            }
+            pending.incrementAndGet();
+            return true;
+        }
+
+        /** MARKET-LEVEL: chi nhan khi RANH; dang ban =&gt; false (BO QUA, khong xep hang). */
+        boolean acceptMarket() {
+            return pending.compareAndSet(0, 1);
+        }
+
+        /** Goi trong finally cua task khi ket thuc (tra slot). */
+        void done(boolean selectorLeg) {
+            if (selectorLeg) {
+                selectorWaiting.set(false);
+            }
+            pending.decrementAndGet();
+        }
+
+        /** So task dang chay + dang cho (0 hoac 1 khi cong tac BAT). */
+        int pending() {
+            return pending.get();
+        }
+    }
+
+    private final TickGate tickGate = new TickGate();
+
+    /**
+     * QUYET DINH NOP tick (THUAN HAM, test duoc). priority &lt;= 0 =&gt; TAT =&gt; luon true (y nguyen: nop
+     * thang nhu cu, khong cong tac). priority &gt; 0 =&gt; SELECTOR luon nhan (toi da 1 cho), MARKET chi khi
+     * RANH. Neu true khi priority&gt;0 thi BEN GOI phai goi {@code tickGate.done(selectorLeg)} khi task xong.
+     */
+    static boolean shouldSubmit(int priority, TickGate gate, boolean selectorLeg) {
+        if (priority <= 0) {
+            return true;
+        }
+        return selectorLeg ? gate.acceptSelector() : gate.acceptMarket();
     }
 
     private void initData() {
