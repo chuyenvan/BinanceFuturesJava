@@ -167,7 +167,11 @@ def main():
         for mo in range(1, 13):
             sample_days.append((y, mo))
     dv = {}   # symId -> list USD volume
-    for (y, mo) in sample_days:
+    # D4 (redflags): them chuoi dv theo TUNG mau (de dung universe AS-OF, khong nhin tuong lai)
+    DVS = np.full((NS, len(sample_days)), np.nan, dtype=np.float32)
+    DVS_DATE = np.zeros((len(sample_days), 2), dtype=np.int32)
+    for si, (y, mo) in enumerate(sample_days):
+        DVS_DATE[si] = (y, mo)
         key_day = "%04d%02d15" % (y, mo)
         if (y, mo) == (2025, 12):
             key_day = "20251215"
@@ -195,6 +199,9 @@ def main():
             sid = s2i.get(nm)
             if sid is not None:
                 dv.setdefault(sid, []).append(v * 15.0)   # scale: 15' sample -> full day
+                jj = cidx.get(sid)
+                if jj is not None:
+                    DVS[jj, si] = v * 15.0
         log("liq %s nrec=%d nsym=%d (%.0fs)" % (key_day, nrec, len(tot_usd), time.time() - t0))
     dv_med = np.full(NS, np.nan, dtype=np.float32)
     dv_n = np.zeros(NS, dtype=np.int32)
@@ -206,7 +213,8 @@ def main():
     log("liq med done nsym=%d (%.0fs)" % (int(np.isfinite(dv_med).sum()), time.time() - t0))
 
     np.savez(OUT + "/panel.npz", D=D, fwd=fwd, lo24=lo24, hi24=hi24, vol168=vol168,
-             ret168=ret168, fsum=fsum, fmax=fmax, oid=oid, oiz=oiz, dv_med=dv_med, dv_n=dv_n)
+             ret168=ret168, fsum=fsum, fmax=fmax, oid=oid, oiz=oiz, dv_med=dv_med, dv_n=dv_n,
+             DVS=DVS, DVS_DATE=DVS_DATE)
     json.dump(dict(syms=syms_all, sym_names=[i2s.get(s) for s in syms_all],
                    NDAY=NDAY, NS=NS, H0=H0, T1=T1, mp_kv=None), open(OUT + "/meta.json", "w"))
     log("PANEL_DONE %.0fs size=%.1fMB" % (time.time() - t0, os.path.getsize(OUT + "/panel.npz") / 1e6))
