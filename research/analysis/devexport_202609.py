@@ -83,7 +83,7 @@ assert len(V3FULL) == 33
 
 # --------------------------- Aerospike ---------------------------
 class Store:
-    def __init__(self, cluster, pool=16):
+    def __init__(self, cluster, pool=40):
         self.cluster = cluster
         if cluster == "local":
             self.client = aerospike.client({"hosts": [("127.0.0.1", 3222)]}).connect()
@@ -156,7 +156,12 @@ class Store:
         return out
 
     def get_funding_map(self, symbol, prefer_local=False):
-        """Tra ve (times:int64[], rates:float64[]) hoac None."""
+        """Tra ve (times:int64[], rates:float64[]) hoac None.
+
+        Thu tu nguon: cluster=242 => UU TIEN 242 ns `ticker` (store SONG, giong he LIVE dang doc),
+        roi moi den ban sao local ns `test`. Ly do: ban sao local NGUNG cap nhat tu 2026-07-07
+        (do duoc) => dung local lam chinh se lam 3 feature funding sai cho 2026-07-08..09.
+        """
         for ns, cli in self._fund_candidates(prefer_local):
             try:
                 r = cli.get((ns, "funding_data", symbol))
@@ -180,9 +185,10 @@ class Store:
 
     def _fund_candidates(self, prefer_local):
         loc = self.local()
-        cands = [("test", loc)]
         if self.cluster == "242":
-            cands.append(("ticker", self.client))
+            cands = [("ticker", self.client), ("test", loc)]
+        else:
+            cands = [("test", loc)]
         if prefer_local:
             cands.reverse()
         return cands
@@ -589,28 +595,37 @@ class Engine:
         return float(rarr[i])
 
     def fund_feats(self, store, basket_ids, ts):
+        """Cache theo (symbol, gio): funding la ham bac thang tren tung gio (settlement tai :00)
+        nen gia tri tai ts va trung binh 7 mau (0,4h,...,+24h) chi phu thuoc vao GIO cua ts."""
+        hb = ts // HOUR
         cur_sum = 0.0
         avg_sum = 0.0
         valid = 0
+        cache = self.fund_hour
         for i in basket_ids:
             sym = self.id2str.get(int(i))
             if sym is None:
                 continue
-            m = self.load_fund(store, sym)
-            if m is None:
-                continue
-            c = self.fund_at(store, sym, ts, m)
-            if c is None:
-                continue
-            s24 = 0.0
-            c24 = 0
-            for k in range(0, 25, 4):
-                v = self.fund_at(store, sym, ts - k * HOUR, m)
-                if v is not None:
-                    s24 += v
-                    c24 += 1
-            cur_sum += c
-            avg_sum += (s24 / c24) if c24 > 0 else c
+            key = (sym, hb)
+            got = cache.get(key)
+            if got is None:
+                m = self.load_fund(store, sym)
+                if m is None:
+                    continue
+                c = self.fund_at(store, sym, ts, m)
+                if c is None:
+                    continue
+                s24 = 0.0
+                c24 = 0
+                for k in range(0, 25, 4):
+                    v = self.fund_at(store, sym, ts - k * HOUR, m)
+                    if v is not None:
+                        s24 += v
+                        c24 += 1
+                got = (c, (s24 / c24) if c24 > 0 else c)
+                cache[key] = got
+            cur_sum += got[0]
+            avg_sum += got[1]
             valid += 1
         if valid > 0:
             raw = cur_sum / valid
