@@ -115,6 +115,12 @@ Cả 4 arm **FAIL (a) lẫn (b′)** (0/4). ⇒ Đúng như đã thoả thuận:
 - **Confound size (lớn nhất):** grid OFF tắt luôn `DCA_GRID_SCALE=6,0` ⇒ A2/A3 ~1/6 size, không apples-to-apples
   với A0. Đây là lý do (b′) USDT "đỡ âm" nhưng size-neutral lại xấu hơn. **Nếu owner muốn kiểm chặt**:
   chạy thêm 1 arm "A2 với size khớp" (`F_BASE`×~6) — cần ngân sách (1 chân Kaggle ~19–23 phút, phí 0).
+  - ✅ **ĐÃ CHẠY — xem `docs/result/RESULT_EXIT_STRUCT_P6.md`** (2026-09-28, `xs-a2s6`, `SIM_F_BASE=0,18`).
+    Kết quả: khớp size/lệnh **0,82×** (1.490,6 → 1.225,8 USDT/leg, trong hạn 1,25×) nhưng `gross` portfolio
+    **7,8×** A0 · `gross MAX` 58,85 % (≈ `U_MAX` 60 %) · `n` 935→900 (35 lệnh bị chặn).
+    **`dCAGR −10,18 pp (P>0 0,001)` của A2 là ARTIFACT SIZE — RÚT LẠI**: ở size khớp `dCAGR +4,51 pp` (P>0 0,797).
+    **Phán quyết FAIL GIỮ** ((b′) âm ở cả hai không gian, `q*` 22,0→18,0 %), **nhưng thêm mới: A2size
+    VI PHẠM trần conc 1 coin (24,24 % > 15 %)** — A2 "tuân thủ" chỉ vì chạy 1/6 size.
 - **Trần gross 70 % CHƯA áp** (như `RESULT_CAP70 §5` đã khai): cần mô hình exposure/tick, **ngoài** dữ liệu
   leg-level. Phí: sim đã tính `RATE_FEE 0,002/chân + SLIPPAGE 0,003/chân` (≥ 0,006 chuẩn owner).
 - A1/A2 có leg `REQUEST` (mở tới cuối kỳ, mark-to-market) ⇒ `TSloss%`/`mP|SL` suy biến; A1 lệch eq−Σpnl 1,5 %.
