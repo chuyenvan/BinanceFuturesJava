@@ -442,6 +442,17 @@ public class Configs {
      * Key {@code MARKET_SCAN_PRIORITY}. Khong cham ONNX / NUM_FEATURES / extractFeatures45.
      */
     public static int MARKET_SCAN_PRIORITY = 0;
+
+    /**
+     * [CASCADE 2026-09-28] docs/plan/PLAN_CASCADE_ENTRY.md — GATE-FIRST: tinh gate RE truoc, CHI ung
+     * vien DAT moi duoc chay tang predict (funding + S1) va ghi {@code prediction*}. Dong thoi cat
+     * chi phi 1 tick khi cong entry dong (thi truong yeu) => mo duong nhip 1'/5'.
+     * 0 (mac dinh / khong khai) =&gt; TAT: predict TOAN BO universe y nhu cu =&gt; byte-identical.
+     * &gt;0 =&gt; BAT: gia tri = so ung vien TOI DA giu lai cho tang predict (nen = SELECTOR_RANK_TOPK).
+     * ⚠️ BAT cascade = DOI DUONG LIVE =&gt; can owner duyet truoc khi deploy (xem plan).
+     * Key {@code ENTRY_CASCADE}. Khong cham ONNX / NUM_FEATURES / extractFeatures45.
+     */
+    public static int ENTRY_CASCADE = 0;
     public static float MS_UP_BIG_THRES = 0.02046f;                  // HPO (đã revert về cũ): 0.01757f
     public static float MS_DOWN_BIG_AVG = -0.03157f;                  // HPO (đã revert về cũ): -0.05514f
     // [BD-THRESHOLD-FRAGILITY 2026-09-17] tach nguong DCA khoi nguong BIG_DOWN (docs/prereg/PREREG_BD_THRESHOLD_FRAGILITY.md).
@@ -824,6 +835,12 @@ public class Configs {
             if ((v = Cfg.get("MARKET_SCAN_PRIORITY")) != null) {
                 int mp = Integer.parseInt(v.trim());
                 if (mp > 0) MARKET_SCAN_PRIORITY = mp;
+            }
+            // [CASCADE 2026-09-28] GATE-FIRST (docs/plan/PLAN_CASCADE_ENTRY.md).
+            //   Khong khai / <=0 => 0 => TAT => predict toan bo universe => byte-identical.
+            if ((v = Cfg.get("ENTRY_CASCADE")) != null) {
+                int ec = Integer.parseInt(v.trim());
+                if (ec > 0) ENTRY_CASCADE = ec;
             }
             // [REGIME 2026-09-14] docs/prereg/PREREG_REGIME_GATE.md: gate scale doi theo regime BTC 30d.
             //   default OFF => byte-identical. SIM_REGIME_FORCE=UP|NOTUP chi cho cong 2-cuc.

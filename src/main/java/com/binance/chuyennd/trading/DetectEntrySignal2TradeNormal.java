@@ -302,7 +302,12 @@ public class DetectEntrySignal2TradeNormal {
                 }
             }
             // 3. Chạy AI Predict -> Sort theo L0 (Prob Fail) từ bé đến lớn
-            TreeMap<Float, String> sortedCandidates = predictAllCandidates(symbol2FinalTicker.keySet(), symbol2FinalTicker,
+            // [CASCADE 2026-09-28] docs/plan/PLAN_CASCADE_ENTRY.md — GATE-FIRST (mac dinh TAT):
+            //   tinh gate RE truoc tren tap ung vien RE (levelChange + pred co san + pred thi truong),
+            //   CHI ung vien CON CO THE DAT moi duoc dua xuong tang predict (funding + S1).
+            //   ENTRY_CASCADE<=0 => tra ve DUNG tap cu (cung object) => byte-identical HEAD.
+            Set<String> candidatesToPredict = cascadeUniverse(symbol2FinalTicker.keySet(), levelChange, predictData);
+            TreeMap<Float, String> sortedCandidates = predictAllCandidates(candidatesToPredict, symbol2FinalTicker,
                     rateDownAvg, rateUpAvg, rateDown15MAvg, time);
             if (levelChange != null) {
                 Integer numberOrder = Configs.NUMBER_ENTRY_EACH_SIGNAL;
@@ -639,6 +644,76 @@ public class DetectEntrySignal2TradeNormal {
         return null;
     }
 
+    // ==========================================================================================
+    // [CASCADE 2026-09-28] docs/plan/PLAN_CASCADE_ENTRY.md — GATE-FIRST (mac dinh TAT).
+    //   Y tuong owner: "kieu pass gate du the thap thi moi pred selector va s1".
+    //   Do duoc (shadow, 710 tick tron, 28/09): predict toan universe ~215s/tick = 98,9% thoi gian
+    //   tick, con S1 ~11s, map/gate/ghi file ~20ms. Cong entry lai dong voi phan lon ung vien
+    //   (n_pass=0 nhieu tuan) => predict la phi.
+    //   CASCADE: dung du lieu RE de quyet ai CON CO THE DAT, chi giu bay nhieu ung vien.
+    // ⚠️ ENTRY_CASCADE<=0 => tra ve DUNG tap dau vao (cung object) => khong doi gi.
+    // ==========================================================================================
+
+    /**
+     * Tap universe cho tang predict khi BAT cascade. Tra ve DUNG {@code universe} (cung object) khi
+     * cascade TAT => byte-identical.
+     *
+     * <p>Khi BAT: chi cat khi (a) {@code levelChange == null} (tick KHONG co leg market-signal ca truc)
+     * va (b) co pred thi truong {@code predictData}. Ngược lai tra tap day du.
+     * Coin DANG GIU luon duoc giu lai (leg DCA/`isDcaAlt` can pred cua chinh no).
+     */
+    static Set<String> cascadeUniverse(Set<String> universe, MarketLevelChange levelChange,
+            OnnxInferenceManager.PredictionResult predictData) {
+        if (Configs.ENTRY_CASCADE <= 0) return universe;                 // OFF => y nguyen
+        if (levelChange != null || predictData == null) return universe; // co leg market-signal / khong co pred => y nguyen
+        int topK = Configs.ENTRY_CASCADE;
+        if (Configs.SELECTOR_RANK_TOPK > 0 && topK > Configs.SELECTOR_RANK_TOPK) {
+            topK = Configs.SELECTOR_RANK_TOPK;
+        }
+        Set<String> held = new HashSet<>();
+        try { held.addAll(BudgetManager.getInstance().symbol2Pos.keySet()); } catch (Exception ignore) { }
+        Set<String> keep = cascadeGateFirst(universe, held, predictData.return15M, topK);
+        LOG.info("[CASCADE] gate-first: universe={} held={} keep={} topK={} mkt15M={}",
+                universe.size(), held.size(), keep.size(), topK, predictData.return15M);
+        return keep;
+    }
+
+    /**
+     * [CASCADE] Logic THUAN (test duoc khong can ONNX): tu tap ung vien + pred per-coin CO SAN
+     * (cache tick truoc) + pred thi truong, giu lai toi da {@code topK} coin CO THE DAT cong entry.
+     *
+     * <p>Thu tu: (1) held (DCA) luon giu; (2) xep ung vien theo pred cache TANG (be = tot, dung
+     * thu tu selector se dung); (3) giu coin khi {@code marketReturn15M >= EntryGate.threshold(pred)};
+     * (4) dung khi du {@code topK}. Coin CHUA co pred cache => GIU (khong bo vi thieu thong tin).
+     */
+    static Set<String> cascadeGateFirst(Collection<String> universe, Set<String> held,
+            float marketReturn15M, int topK) {
+        Set<String> keep = new LinkedHashSet<>();
+        if (held != null) for (String s : held) if (universe.contains(s)) keep.add(s);
+        List<String> cand = new ArrayList<>(universe);
+        cand.removeAll(keep);
+        cand.sort((a, b) -> {
+            Float pa = cachedPredFor(a), pb = cachedPredFor(b);
+            int c = Float.compare(pa == null ? Float.MAX_VALUE : pa, pb == null ? Float.MAX_VALUE : pb);
+            return c != 0 ? c : a.compareTo(b);
+        });
+        for (String s : cand) {
+            if (keep.size() >= topK) break;
+            Float p = cachedPredFor(s);
+            if (p == null || marketReturn15M >= com.binance.chuyennd.tradecore.EntryGate.threshold(p)) {
+                keep.add(s);
+            }
+        }
+        return keep;
+    }
+
+    /** [CASCADE] pred per-coin CO SAN (cache tick truoc): map net015 (C3) neu co, roi pNoPump. null = chua biet. */
+    static Float cachedPredFor(String symbol) {
+        Float v = LATEST_SEL_MAPPRED.get(symbol);
+        if (v != null) return v;
+        return LATEST_SEL_PNOPUMP.get(symbol);
+    }
+
     private TreeMap<Float, String> predictAllCandidates(Set<String> allSymbols, Map<String,
             KlineObjectSimple> symbol2FinalTicker, Float rateDownAvg, Float rateUpAvg, Float rateDown15MAvg, long time) {
         TreeMap<Float, String> sortedCandidates = new TreeMap<>();
@@ -646,6 +721,12 @@ public class DetectEntrySignal2TradeNormal {
         selPnp.clear();           // [C3-SHADOW] reset ban do pNoPump moi tick
         selFeat45.clear();        // [L4] reset feature 45 moi tick
         selMapPred.clear();       // [L4] reset ban do gia tri moi tick
+        // [CASCADE 2026-09-28] BAT + khong con ung vien DAT => tick RAT RE: khong doc OI/basket/CS,
+        //   khong ghi prediction*. TAT => guard nay khong chay => byte-identical HEAD.
+        if (Configs.ENTRY_CASCADE > 0 && allSymbols.isEmpty()) {
+            LOG.info("[CASCADE] khong con ung vien DAT => bo qua tang predict (tick re)");
+            return sortedCandidates;
+        }
         // 2. Chuẩn bị AI Input
         List<String> aiCandidates = new ArrayList<>();
         List<FundingMarketFeatures> aiFeaturesList = new ArrayList<>();
