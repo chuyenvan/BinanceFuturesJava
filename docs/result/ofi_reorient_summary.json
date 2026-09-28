@@ -1,0 +1,135 @@
+{
+ "what": "OFI_MONEY reorient — chay lai voi DUNG CHIEU DIEM (ORIENT=-1)",
+ "prereg": "docs/prereg/PREREG_OFI_MONEY_REORIENT.md (1a5cc92)",
+ "bug": "score=-pred (THAP=TOT) nhung chon top-K bang argsort(-score) => chon coin TE NHAT (ofi_money_score.py:149,165; ofi_money_ext.py:106)",
+ "fix": "ORIENT=-1 (diem xep hang = ORIENT*score) trong ofi_money_score_v2.py / ofi_money_ext_v2.py / ofi_ext_trades_build.py",
+ "tai_lap": {
+  "RE_orient_p1_khop_ofi_money.json": true,
+  "B2_orient_p1": "cu=166080 moi=166080 chi_cu=0 chi_moi=0 bang_giong_het=True",
+  "B2_orient_p1_oldpool_dnet_coin_K8": -0.000565,
+  "khop_RESULT_OFI_MONEY": true
+ },
+ "hai_chieu_P32_K8_f0006": {
+  "entry": {
+   "cu": 504.7,
+   "sua": 404.3
+  },
+  "net_coin": {
+   "cu": 0.6416,
+   "sua": 0.648
+  },
+  "net_gr1dv_x1e3": {
+   "cu": 0.10171,
+   "sua": 0.1282
+  },
+  "TF50": {
+   "cu": -2474.0032,
+   "sua": -2514.8873
+  },
+  "asym": {
+   "cu": -2.509,
+   "sua": -3.395
+  },
+  "share_top1_pct": {
+   "cu": 41.93,
+   "sua": 30.39
+  },
+  "B1_K8_pct_ngoai_P32": {
+   "cu": 100.0,
+   "sua": 0.054
+  }
+ },
+ "luat_v2_false_2_duong": true,
+ "RE_P32": {
+  "dnet_gr1dv_cand_base_K8": {
+   "mean": -3.19797583e-09,
+   "k5": [
+    -2.94382e-05,
+    2.7385e-05
+   ],
+   "out": false
+  },
+  "dnet_gr1dv_cand_noise_K8": {
+   "mean": 1.07125289e-05,
+   "k5": [
+    -1.75252e-05,
+    3.77815e-05
+   ],
+   "out": false
+  },
+  "per_seed_cand_base": [
+   7.12e-06,
+   -5.85e-06,
+   1.704e-05
+  ],
+  "per_seed_cand_noise": [
+   1.987e-05,
+   1.93e-06,
+   1.442e-05
+  ],
+  "B1_K8": 0.054,
+  "orient": "-1",
+  "level_K8": {
+   "candidate": {
+    "net_coin": 0.648,
+    "net_gr1dv": 0.01282,
+    "entry": 404.3
+   }
+  }
+ },
+ "B2_reorient": {
+  "pool_rows": 309317,
+  "P32": 309024,
+  "NEW": 293,
+  "coin_per_tick": 32.0,
+  "dnet_gr1dv_cand_base_K8": {
+   "mean": -1.06e-06,
+   "k5": [
+    -2.71e-05,
+    2.39e-05
+   ],
+   "out": false
+  },
+  "dnet_gr1dv_cand_noise_K8": {
+   "mean": 1.01e-05,
+   "k5": [
+    -1.53e-05,
+    3.3e-05
+   ],
+   "out": false
+  },
+  "per_seed_cand_base": [
+   4.72e-06,
+   -2.24e-06,
+   1.201e-05
+  ],
+  "per_seed_cand_noise": [
+   1.674e-05,
+   1.55e-06,
+   1.173e-05
+  ],
+  "level_K8": {
+   "candidate": {
+    "net_coin": 0.6485,
+    "net_gr1dv": 0.01127,
+    "entry": 404.4
+   },
+   "baseline_fresh": {
+    "net_coin": 0.6551,
+    "net_gr1dv": 0.01133
+   },
+   "noise_ofi_check": {
+    "net_coin": 0.5987,
+    "net_gr1dv": 0.01029
+   }
+  }
+ },
+ "kiem_hop_le": {
+  "noise-cand_khong_duong_ngoai_CI": true,
+  "dnet_coin_bat_bien_f": true,
+  "K32_delta_0": true,
+  "B1_duoi_10pct": true
+ },
+ "ket_luan": "KHONG co gia tri TIEN (ca 2 duong). Lan thu 5 tren truc tien; lan thu 2 cua rieng OFI.",
+ "rate_set_va_rao_appetite": "N/A — can khung sim Java (printDone.csv/equity); ràng buộc cam chay sim"
+}
