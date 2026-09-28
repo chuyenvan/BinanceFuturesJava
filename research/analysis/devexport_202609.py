@@ -654,11 +654,36 @@ def fnum(v):
     return "%.8f" % v
 
 
+def load_died_set(path):
+    """Doc DIED_SYMBOLS tu config.properties (mac dinh shadow) — dung cho --md-inline."""
+    if not path:
+        path = os.path.expanduser("~/shadow_c3/app/config.properties")
+    try:
+        txt = open(path).read()
+    except Exception:
+        return set()
+    ln = [l for l in txt.splitlines() if l.startswith("DIED_SYMBOLS=")]
+    if not ln:
+        return set()
+    out = set()
+    for s in ln[0].split("=", 1)[1].split(","):
+        s = s.strip()
+        if s:
+            out.add(s if "USDT" in s else s + "USDT")
+    return out
+
+
 def run(args):
     store = Store(args.cluster)
     mapper = store.get_symbol_mapper()
     if not mapper:
         print("KHONG doc duoc symbol_mapper -> dung"); return 3
+
+    # [AUDIT] --md-inline: sinh market_data_object INLINE tu kline (thay store da chet tu 2026-08-14).
+    inline_gen = None
+    if getattr(args, "md_inline", False):
+        import md_inline
+        inline_gen = md_inline.InlineMD(load_died_set(getattr(args, "died_config", "")))
     eng = Engine(mapper)
     print("[init] mapper=%d symbols | cluster=%s | %s -> %s" % (len(mapper), args.cluster,
                                                                 args.start, args.end))
@@ -691,6 +716,18 @@ def run(args):
             except Exception:
                 continue
             parsed[ts] = v
+        if inline_gen is not None:
+            # [AUDIT] thay store bang INLINE md (cung dinh dang key 'yyyyMMdd-HHmm')
+            md = {}
+            for ts in sorted(parsed.keys()):
+                s2, a2 = parse_minute(parsed[ts])
+                if not s2:
+                    continue
+                snap = {sy: (float(a2[i, 0]), float(a2[i, 1]), float(a2[i, 2]), float(a2[i, 3]))
+                        for i, sy in enumerate(s2)}
+                r = inline_gen.update(snap)
+                if r is not None:
+                    md[datetime.datetime.fromtimestamp(ts / 1000, TZ7).strftime("%Y%m%d-%H%M")] = r
         for ts in sorted(parsed.keys()):
             syms, arr = parse_minute(parsed[ts])
             if not syms:
@@ -821,6 +858,9 @@ def main():
     ap.add_argument("--end", required=True)
     ap.add_argument("--out", required=True)
     ap.add_argument("--cluster", default="local", choices=["local", "242"])
+    ap.add_argument("--md-inline", action="store_true",
+                    help="[AUDIT] sinh market_data_object INLINE tu kline thay store da chet (2026-08-14+)")
+    ap.add_argument("--died-config", default="", help="duong dan config.properties chua DIED_SYMBOLS")
     return run(ap.parse_args())
 
 
