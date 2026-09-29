@@ -3,6 +3,11 @@
 Trạng thái: **PRE-REG DEPLOY** · 2026-09-29 · branch `module` · commit code `dd8d063`
 Chỉ **shadow-c3** trên Oracle (paper). **KHÔNG** chạm 242 · **KHÔNG** đổi `SHADOW_NO_PUSH=true`.
 
+> ⚠️ **KẾT QUẢ (2026-09-29): DEPLOY FAIL → ĐÃ ROLLBACK.** Xung đột cấp thiết kế: `cascadeUniverse` cap
+> `topK = min(ENTRY_CASCADE, SELECTOR_RANK_TOPK) = 16`, trong khi `S1RankerLive` cần ≥ 20 coin ⇒ S1
+> warm-up fail ⇒ 0 entry. Chi tiết + hướng fix: `docs/audit/DEPLOY_R4_1M_SHADOW_20260929.md` §4–§5.
+> Code B1 (`LIVE_ENTRY_GRID_MIN` + `CONC_CAP_PERCOIN` live) vẫn đúng, parity PASS — giữ nguyên.
+
 ## 0. MỤC TIÊU & PHẠM VI
 
 Owner 09-29: *"cứ test 1 phút"* — đưa cấu hình **R4** lên shadow ở **nhịp 1'** để verify live khớp
