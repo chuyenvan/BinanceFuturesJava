@@ -211,7 +211,19 @@ Nguồn: `PLAN_OPENCLAW_BASELINE_RESET_20260928.md` + `PLAN_OPENCLAW_ADDENDUM_20
 - **D3** `47a9d90` (sim Kaggle k=5, 11 run): `R0` parity **md5 `99e42b75` PASS**; **`R4` (size ×0,5 · K=16 · gate 1.55 · nhịp 1') = arm DUY NHẤT qua CẢ 4 TẦNG**, ở **cả `base` và `stress`** (Calmar 1,676 vs `B*` 1,661; n 2027 = 1,87×). `R2` FAIL T3 · `R1/R3` FAIL T4 · blocked=0 · gross MAX 55,9 %.
 - **D5** `911ad42` (độ bền `R4`): **T1 episode jackknife = FAIL** (`Calmar_còn(3)` 2,70 < `B*` 4,15) ⇒ **TRẢ VỀ GIỮ `B*`**; T2 PASS nhưng **CI chênh `R4−B*` chứa 0** (biên +0,7…0,95 % = **NHIỄU**), chênh CAGR −5,62pp/ΣPnL −21 510 **âm ngoài CI**.
 
-### 13.4 TRẠNG THÁI CHỐT
-- **KHÔNG cấu hình nào thay được incumbent `B*`** (= KEEPLEG0 + nhịp 1' + CONC_CAP 15 %) ⇒ **production KHÔNG đổi**; **KHÔNG tiêu `HOLDOUT_UNSEAL`** (2026 vẫn đóng).
-- **Track B: CHẾT** — "edge" `+0,074 %/ngày` = **artifact stop −10 %** (quyền chọn miễn phí); bỏ stop ⇒ chênh `+0,006 %/ngày`, CI [−0,034,+0,045] **chứa 0** (`RESULT_TRACKB_REDFLAGS`, `7f6e46d`).
-- **Cần MASTER/owner chốt tiếp**: (i) chính thức hoá §13.2 vào `RISK_APPETITE.md`; (ii) `(a)/(b′)` gỡ khỏi mọi pre-reg mới; (iii) câu treo cũ: **live giữ 15' hay đổi 1'** (đổi ⇒ sửa `ENTRY_GRID_MIN` = đụng production).
+### 13.4 TRẠNG THÁI CHỐT (cập nhật 2026-09-29)
+- **Không cấu hình nào thay được incumbent `B*` về CHẤT LƯỢNG** (P3: `R4` không hơn `B*`, thua CAGR) ⇒ **production KHÔNG đổi**
+  (incumbent production vẫn `B*` = KEEPLEG0 + nhịp 1' + CONC_CAP 15 %); **KHÔNG tiêu `HOLDOUT_UNSEAL`** (2026 vẫn đóng).
+- **OWNER CHỐT 2026-09-29** (hoàn tất việc treo (i)/(ii) + đổi baseline):
+  1. **(i) Chính thức hoá luật 4 tầng §13.2** vào `docs/runbooks/RISK_APPETITE.md` §9 (thay "superiority" + `(a)/(b′)`).
+  2. **(ii) `(a)/(b′)` gỡ khỏi mọi pre-reg mới** — bỏ hẳn (bất khả thi toán học: Sharpe năm ≈ 8,1 / ≈ 3,6).
+  3. **Baseline nghiên cứu MỚI = `R4`** (owner chọn vì ưu tiên số lệnh; R3 loại vì kém rõ): KEEPLEG0 + CONC_CAP 15 % +
+     `SIM_F_BASE=0.015` + `SELECTOR_RANK_TOPK=16` + `SIM_GATE_DYN_SCALE=1.55` + nhịp 1' + phí base —
+     `docs/decisions/DECISION_BASELINE_R4.md` + `profiles/r4_kg0_k16_f015_g155.properties` (md5 `06fd6e9a…`).
+  4. **T4 đổi: ƯU TIÊN SỐ LỆNH** — `n` là mục tiêu chính; `Calmar_MTM ≥ 0,90×baseline`; `conc ≤ baseline`.
+     **Chỉ áp vòng MỚI, KHÔNG hồi tố P2/P3.**
+- ⚠️ Quyết định là **KHẨU VỊ** (ưu tiên `n ×1,87`, DD −16,4 vs −19,9, conc 5,3 vs 7,1), **KHÔNG phải "win"**:
+  `R4` KHÔNG hơn `B*` về Calmar (CI chứa 0) và THUA về CAGR (−5,62pp ngoài CI).
+- **Track B: CHẾT** — "edge" `+0,074 %/ngày` = **artifact stop −10 %** (quyền chọn miễn phí); bỏ stop ⇒ chênh `+0,006 %/ngày`,
+  CI [−0,034,+0,045] **chứa 0** (`RESULT_TRACKB_REDFLAGS`, `7f6e46d`).
+- **Câu treo còn lại**: **live giữ 15' hay đổi 1'** (đổi ⇒ sửa `ENTRY_GRID_MIN` = đụng production).

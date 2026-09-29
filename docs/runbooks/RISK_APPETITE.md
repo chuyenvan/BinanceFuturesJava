@@ -235,3 +235,47 @@ Nguon: **quyet dinh owner 26/09 05:35** (nguon duy nhat). Bang chung: `docs/resu
 số cũ **48,82 %** lấy `d` (số vị thế đồng thời) từ **POOL ỨNG VIÊN** (`d_mean 24,409`) trong khi **ledger thật** `d_mean = 0,531` (lệch **46×**).
 Theo **định nghĩa đúng (ledger)**: gross K=8 = **1,74 % TB / 49,53 % MAX** ⇒ **< `U_MAX=0,60`** ⇒ **trần 70 % KHÔNG bind** ở K=8.
 ⇒ **BỎ** câu *"size phải co còn 0,83× để vừa trần 70 %"* (đã ghi trước đó dựa trên `gross_max[pool]=84 %`). Xem `docs/analysis/RULERS_CURRENT.md` §11.
+
+## 9. Chot 2026-09-29 (owner) — LUẬT 4 TẦNG chính thức, thay "superiority" + rào `(a)/(b′)`
+
+Nguon: `docs/analysis/RULERS_CURRENT.md` §13.2 (RESET 28-29/09), owner duyệt 2026-09-29. Luật 4 tầng
+thành **nguồn CHÍNH THỨC** thay thế: luật "superiority" (≥2 rate ngoài CI hướng TỐT) và rào `(a)/(b′)`
+ở §7/§8. **Baseline nghiên cứu mới = `R4`** (`docs/decisions/DECISION_BASELINE_R4.md`).
+
+### 9.1 Vì sao bỏ `(a)/(b′)` — bất khả thi TOÁN HỌC (không phải "chưa đạt")
+
+Với PnL đơn vị ~ chuẩn (μ, σ):
+- **`(b′)`** (bỏ top-25% lệnh ⇒ PnL vẫn dương) ⇔ `0,75μ − 0,318σ > 0` ⇔ `μ/σ > 0,424` ⇒ đơn vị NGÀY
+  cần **Sharpe năm ≈ 8,1**.
+- **`(a)`** (`%PnL top-1% lệnh ≤ 15%`) ⇔ `μ/σ ≥ 0,19` ⇒ đơn vị NGÀY cần **Sharpe năm ≈ 3,6**.
+Khớp số đo: `(a)@15%` chỉ **3/452** arm (0 bền), book U1 share top-1% **210–382 %** ⇒ rào trái bản chất
+chiến lược skew dương.
+
+### 9.2 LUẬT 4 TẦNG (nội dung chính thức)
+
+| tầng | tên | ngưỡng |
+|---|---|---|
+| **T1** | RÀO RỦI RO (**MTM phút**) | maxDD **MTM phút** ≤ 40 %/năm · `UW ≤ 250` ngày · quý xấu nhất ≥ −20 % · **0 năm âm** (CỨNG) · conc 1 coin ≤ 15 % (CỨNG) |
+| **T2** | RÀO ĐỘ BỀN | `q* ≥ 15 %` · `%PnL top-1% lệnh ≤ 25 %` |
+| **T3** | NON-INFERIORITY vs baseline | `win%` ≥ −2,0 pp · `TSloss%` ≤ +2,5 pp (CI block-72h, 2000 rep, seed 20260905, `inflate(k)`) |
+| **T4** | MỤC TIÊU | xem §9.3 (owner 09-29) |
+
+**BỎ khỏi luật** (đo 0/20 bind, `RESULT_RESET_RULE_P1` `a7016b0`): trần **gross ≤ 70 %** (max thực 59,7 %) ·
+`mP|SM%`/`mP|SL%` tầng 3 (CI quá rộng) · "bỏ top-3 episode" trong tầng 2.
+
+### 9.3 T4 — ƯU TIÊN SỐ LỆNH (owner chốt 09-29)
+
+Nguyên bản §13.2 T4: `Calmar_MTM ≥ B*` · `n ≥ 1,3×B*` · `conc ≤ B*`. **Owner 09-29 đổi thành:**
+- **`n` là MỤC TIÊU CHÍNH** (thay vì `n ≥ 1,3×baseline`);
+- ràng buộc **`Calmar_MTM ≥ 0,90 × baseline`** (nới từ `≥ baseline`);
+- ràng buộc **`conc ≤ baseline`** (giữ).
+
+⚠️ **Chỉ áp cho vòng MỚI — KHÔNG hồi tố P2/P3** (P2/P3 vẫn giữ T4 gốc `Calmar_MTM ≥ B*` đã chốt trước).
+
+### 9.4 Baseline nghiên cứu MỚI = `R4` (owner chọn vì ưu tiên số lệnh)
+
+`profiles/r4_kg0_k16_f015_g155.properties` = KEEPLEG0 (DCA 1,1,1,1 scale 6.0) + `CONC_CAP_PERCOIN 15%` +
+`SIM_F_BASE=0.015` + `SELECTOR_RANK_TOPK=16` + `SIM_GATE_DYN_SCALE=1.55` + nhịp 1' + phí base
+(`SIM_RATE_FEE=0.000982`/`SIM_SLIPPAGE_RATE=0.000067`). Parity md5 printDone **`06fd6e9aa9c916945b2cf12310b337ff`**
+(n 2027, eq 104 489). `R3` bị loại vì kém rõ. Chi tiết + bảng so R0/R4 + bằng chứng KHÔNG-hơn-`B*`:
+`docs/decisions/DECISION_BASELINE_R4.md`.

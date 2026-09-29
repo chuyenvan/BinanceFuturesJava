@@ -1,13 +1,22 @@
 # Index — router tri thuc `docs/`
 
-## ⚠️ TRẠNG THÁI THẬT (cập nhật 2026-09-19)
+## ⚠️ TRẠNG THÁI THẬT (cập nhật 2026-09-29)
 
+- **OWNER 09-29: LUẬT 4 TẦNG chính thức + baseline nghiên cứu MỚI = `R4`** — thay luật "superiority" + rào
+  `(a)/(b′)`; T4 = **ƯU TIÊN SỐ LỆNH** (`n` mục tiêu chính, `Calmar_MTM ≥ 0,90×baseline`, `conc ≤ baseline`).
+  Xem [`RISK_APPETITE.md §9`](runbooks/RISK_APPETITE.md) · [`DECISION_BASELINE_R4.md`](decisions/DECISION_BASELINE_R4.md) ·
+  [`RULERS_CURRENT.md §13`](analysis/RULERS_CURRENT.md). ⚠️ Đây là quyết định **KHẨU VỊ** (ưu tiên số lệnh), **KHÔNG phải "win"**
+  (`R4` không hơn `B*` về Calmar — CI chứa 0 — và thua CAGR −5,62pp ngoài CI).
 - **C2b SUPERSEDED** bởi C3 — xem [`C3_BASELINE.md`](experiment/C3_BASELINE.md).
 - **VALIDATION đã nhập vào DEV mở rộng** theo quyết định user (không còn VAL sạch; validate
   cuối cùng = forward test) — xem [`PREREG_X1.md`](prereg/PREREG_X1.md) dòng 7.
 - Chỉ **HOLDOUT 2026 còn sạch** (chưa đụng, chưa có pre-reg).
-- **Incumbent nghiên cứu = T170** — [`../profiles/x1_gs_t170.properties`](../profiles/x1_gs_t170.properties),
-  devrun `X1_GS_T170_2021`, md5 printDone `efb793e2`. Xem
+- **Baseline nghiên cứu (09-29) = `R4`** — [`../profiles/r4_kg0_k16_f015_g155.properties`](../profiles/r4_kg0_k16_f015_g155.properties)
+  (KEEPLEG0 + CONC_CAP 15% + `SIM_F_BASE=0.015` + `K=16` + `gate 1.55` + nhịp 1' + phí base), md5 printDone `06fd6e9a…`.
+  Chuỗi baseline: T170 (`efb793e2`, 1,1,3,8) → KEEPLEG0 (`99e42b75`, 1,1,1,1) → **R4**.
+  Xem [`DECISION_BASELINE_KEEPLEG0.md`](decisions/DECISION_BASELINE_KEEPLEG0.md) +
+  [`DECISION_BASELINE_R4.md`](decisions/DECISION_BASELINE_R4.md).
+- **Incumbent production KHÔNG đổi = `B*`** (KEEPLEG0 + nhịp 1' + CONC_CAP 15%) — xem
   [`RESULT_DEV2021_READJUDICATE.md`](result/RESULT_DEV2021_READJUDICATE.md) +
   [`AUDIT_READJUDICATE_CI_RESCORE.md`](audit/AUDIT_READJUDICATE_CI_RESCORE.md).
 - **Luật CI mới**: [`AUDIT_CI_INFLATE_STANDARDIZATION.md`](audit/AUDIT_CI_INFLATE_STANDARDIZATION.md)
