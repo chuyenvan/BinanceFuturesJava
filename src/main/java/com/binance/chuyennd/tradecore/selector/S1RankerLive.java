@@ -85,7 +85,7 @@ public final class S1RankerLive {
     /** {@code symbol -> [oi_delta24h, ls_global]} — CHI 2 set S1 can (LiveOiFeatProvider nap ca 5). */
     private final Map<String, TreeMap<Long, Float>[]> oiCache = new HashMap<>();
     /** Moc gio cua lan nap OI gan nhat: {@code ComputeOiFeat2Live242} cadence 60' nen nap 1 lan/gio. */
-    private long oiCacheHour = 0L;
+    private volatile long oiCacheHour = 0L;
     /** [B6-SPEED] Buffer OI prefetch nen cho gio ke (double-buffer, swap atomic o {@link #ensureOi}). */
     private volatile Map<String, TreeMap<Long, Float>[]> oiBuffer = null;
     private volatile long oiBufferHour = 0L;
