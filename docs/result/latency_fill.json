@@ -1,0 +1,180 @@
+{
+  "n_buy_entry_orders": 224,
+  "n_matched_legs": 218,
+  "n_unmatched": 6,
+  "level_counts": {
+    "DCA_LEVEL1": 21,
+    "PREDICT_SYMBOL_TRADE": 197
+  },
+  "crash_threshold": -0.01,
+  "crash": {
+    "n": 27,
+    "n_blocks": 10,
+    "mean_pct": 0.6926226445741954,
+    "mean_ci95_raw": [
+      -0.05456577798321405,
+      1.3760758236380233
+    ],
+    "mean_ci95_inf": [
+      -0.18712449285242605,
+      1.4973272675240097
+    ],
+    "median_pct": 0.33694585648485986,
+    "median_ci95_inf": [
+      -0.17786014991485044,
+      1.404275542185565
+    ],
+    "latency_mean_s": 12.196481481481479,
+    "latency_median_s": 7.16,
+    "bar_ret_mean_pct": -1.7664052369930914,
+    "ci_degenerate": false,
+    "signif_pos": false,
+    "signif_neg": false
+  },
+  "normal": {
+    "n": 191,
+    "n_blocks": 12,
+    "mean_pct": 0.08096275184771112,
+    "mean_ci95_raw": [
+      -0.007012440112984621,
+      0.16042268443873528
+    ],
+    "mean_ci95_inf": [
+      -0.022620120899534857,
+      0.17451967286878697
+    ],
+    "median_pct": 0.023707183325038905,
+    "median_ci95_inf": [
+      -0.004205622646273707,
+      0.08777926608152811
+    ],
+    "latency_mean_s": 14.030738219895289,
+    "latency_median_s": 7.127,
+    "bar_ret_mean_pct": 0.3027596794544498,
+    "ci_degenerate": false,
+    "signif_pos": false,
+    "signif_neg": false
+  },
+  "crash_infl5": {
+    "n": 27,
+    "n_blocks": 10,
+    "mean_pct": 0.6926226445741954,
+    "mean_ci95_raw": [
+      -0.05456577798321405,
+      1.3760758236380233
+    ],
+    "mean_ci95_inf": [
+      -0.64792497435185,
+      1.9188214241344546
+    ],
+    "median_pct": 0.33694585648485986,
+    "median_ci95_inf": [
+      -0.44750905871572566,
+      1.9633294022846965
+    ],
+    "latency_mean_s": 12.196481481481479,
+    "latency_median_s": 7.16,
+    "bar_ret_mean_pct": -1.7664052369930914,
+    "ci_degenerate": false,
+    "signif_pos": false,
+    "signif_neg": false
+  },
+  "crash_infl3": {
+    "n": 27,
+    "n_blocks": 10,
+    "mean_pct": 0.6926226445741954,
+    "mean_ci95_raw": [
+      -0.05456577798321405,
+      1.3760758236380233
+    ],
+    "mean_ci95_inf": [
+      -0.4149375990035775,
+      1.7057078940579369
+    ],
+    "median_pct": 0.33694585648485986,
+    "median_ci95_inf": [
+      -0.3111706778993415,
+      1.6806637003761802
+    ],
+    "latency_mean_s": 12.196481481481479,
+    "latency_median_s": 7.16,
+    "bar_ret_mean_pct": -1.7664052369930914,
+    "ci_degenerate": false,
+    "signif_pos": false,
+    "signif_neg": false
+  },
+  "levels": {
+    "DCA_LEVEL1": {
+      "n": 21,
+      "n_blocks": 1,
+      "mean_pct": 1.2541079540874283,
+      "mean_ci95_raw": [
+        1.2541079540874283,
+        1.2541079540874283
+      ],
+      "mean_ci95_inf": [
+        1.2541079540874283,
+        1.2541079540874283
+      ],
+      "median_pct": 0.4180213655364706,
+      "median_ci95_inf": [
+        0.4180213655364706,
+        0.4180213655364706
+      ],
+      "latency_mean_s": 27.608666666666668,
+      "latency_median_s": 27.627,
+      "bar_ret_mean_pct": 0.21549064490982314,
+      "ci_degenerate": true,
+      "signif_pos": true,
+      "signif_neg": false
+    },
+    "PREDICT_SYMBOL_TRADE": {
+      "n": 197,
+      "n_blocks": 12,
+      "mean_pct": 0.039738223200914254,
+      "mean_ci95_raw": [
+        -0.02503705519381925,
+        0.1087555086566301
+      ],
+      "mean_ci95_inf": [
+        -0.05627841858688971,
+        0.1420428082060922
+      ],
+      "median_pct": 0.023980815347719182,
+      "median_ci95_inf": [
+        -0.011570737035783589,
+        0.15228129896195589
+      ],
+      "latency_mean_s": 12.331949238578682,
+      "latency_median_s": 7.079,
+      "bar_ret_mean_pct": 0.028471339258274893,
+      "ci_degenerate": false,
+      "signif_pos": false,
+      "signif_neg": false
+    }
+  },
+  "crash_spearman_lat": 0.24786324786324787,
+  "crash_pearson_lat": 0.3319183055234526,
+  "crash_binned_lat": [
+    {
+      "bin": "<=median_lat",
+      "n": 14,
+      "mean_slip_pct": 0.31934928336290824
+    },
+    {
+      "bin": ">median_lat",
+      "n": 13,
+      "mean_slip_pct": 1.0946093412632736
+    }
+  ],
+  "reconcile": {
+    "n_entry_fills_kline": 498,
+    "n_fill_candle_crash": 37,
+    "bd_s_close_mean_pct": 1.6804130345807973,
+    "bd_slip_dec_mean_pct": -0.20801275523529136,
+    "bd_dec_bar_mean_pct": 0.33533562774294035,
+    "bd_n_dec_crash": 9
+  },
+  "verdict": "a_anchor",
+  "verdict_reason": "CI slip_dec nhóm sập CHỨA 0 (mean_ci95_inf=[-0.187, 1.497]) ⇒ lệch mốc đo, không bias"
+}
