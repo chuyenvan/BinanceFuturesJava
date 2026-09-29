@@ -38,6 +38,7 @@ import struct
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 import zipfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -72,7 +73,8 @@ def universe():
 
 
 def one_month(sym, ym):
-    url = f"{VISION}/{sym}/1h/{sym}-1h-{ym}.zip"
+    q = urllib.parse.quote(sym)   # URL-encode (vd '币安人生USDT' co ky tu non-ASCII)
+    url = f"{VISION}/{q}/1h/{q}-1h-{ym}.zip"
     for att in range(3):
         try:
             raw = urllib.request.urlopen(url, timeout=90).read()
