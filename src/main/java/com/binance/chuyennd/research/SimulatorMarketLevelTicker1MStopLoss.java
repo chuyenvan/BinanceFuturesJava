@@ -594,6 +594,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         LOG.info("[GATE] scale={} base={} n_cand={} n_pass={}",
                 com.binance.chuyennd.tradecore.EntryGate.GATE_DYN_SCALE,
                 Configs.MIN_MOMENTUM_15M, ablationSignalSeen, ablationPassCount);
+        // [GDV2-EVEN 2026-09-29] thuan LOG (rho + per-quarter), khong doi printDone => parity byte-identical.
+        LOG.info("[GATE-RATIO] {}", com.binance.chuyennd.ai_ml.onnx.entry.GateRollingRatio.stats());
         // [GATE-RECAL 2026-09-26] docs/prereg/PREREG_GATE_RECAL.md §1 — thuan LOG, khong doi printDone.
         if (com.binance.chuyennd.tradecore.EntryGate.P15_Q > 0f) {
             LOG.info("[GATE-RECAL] W={}d Q={} sampleMin={} (thr_rolling = phan vi cuon p15 cua chinh nguon sim)",
@@ -941,6 +943,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             }
         }
         // 3. CHẠY PRE-CALCULATE (SORT SẴN FUNDING FEE MỘT LẦN DUY NHẤT)
+        // [GDV2-EVEN 2026-09-29] quantile cuon tren TY SO r (SIM_GATE_ROLLING_MODE=ratio). Key vang -> no-op.
+        com.binance.chuyennd.ai_ml.onnx.entry.GateRollingRatio.init();
         preprocessFundingData(time2SymbolPred);
         aiRejectFilter = new AIRejectFilter();
 
@@ -1577,6 +1581,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         this.predictionMap = predictionMap;
         this.time2SymbolPred = time2FundingPre;
         // 3. CHẠY PRE-CALCULATE (SORT SẴN FUNDING FEE MỘT LẦN DUY NHẤT)
+        // [GDV2-EVEN 2026-09-29] quantile cuon tren TY SO r (SIM_GATE_ROLLING_MODE=ratio). Key vang -> no-op.
+        com.binance.chuyennd.ai_ml.onnx.entry.GateRollingRatio.init();
         preprocessFundingData(this.time2SymbolPred);
         // FUNDING (Bước 3): warm-up cache funding_data NGAY (nạp 1 lần vào RAM) để initFunding/updateFundingFee
         // trong vòng nóng chỉ tra TreeMap, KHÔNG trigger scanAll Aerospike giữa backtest.

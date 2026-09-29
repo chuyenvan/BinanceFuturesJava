@@ -60,7 +60,33 @@ public class AIRejectFilter {
      */
     public FilterResult entryGate(AiPredictionData prediction, Float symbolPred, boolean predictSymbolTrade) {
         Float sp = predictSymbolTrade ? symbolPred : null;
-        return evaluate(prediction.predReturn15M, EntryGate.threshold(Configs.MIN_MOMENTUM_15M, sp));
+        // [GDV2-EVEN 2026-09-29] bộ đếm ρ (PREDICT) LUÔN chạy cho sim (đo ρ ở G0 parity), không đổi hành vi gate.
+        //   Live gate ratio chỉ đếm khi LIVE bật (no-op khi OFF) => sim (không có LIVE_*) không đổi hành vi.
+        if (predictSymbolTrade) {
+            GateRollingRatio.noteCandidate(prediction.timestamp);
+            if (LiveGateRollingRatio.isOn()) {
+                LiveGateRollingRatio.noteCandidate(prediction.timestamp);
+            }
+        }
+        // [G2-LIVE-PORT 2026-09-29] docs/plan/PLAN_G2_LIVE_PORT.md — quantile cuộn trên CHÍNH TỈ SỐ r.
+        //   LIVE key (LIVE_GATE_ROLLING_*) ưu tiên; SIM key (SIM_GATE_ROLLING_*) giữ nguyên GDV2.
+        //   Cả hai vắng => thrBase = MIN_MOMENTUM_15M => byte-identical HEAD.
+        float thrBase;
+        if (LiveGateRollingRatio.isOn() && sp != null) {
+            thrBase = LiveGateRollingRatio.threshold(prediction.timestamp, prediction.predReturn15M, sp);
+        } else if (GateRollingRatio.isOn() && sp != null) {
+            thrBase = GateRollingRatio.threshold(prediction.timestamp, prediction.predReturn15M, sp);
+        } else {
+            thrBase = Configs.MIN_MOMENTUM_15M;
+        }
+        FilterResult res = evaluate(prediction.predReturn15M, EntryGate.threshold(thrBase, sp));
+        if (predictSymbolTrade && res.decision == FilterDecision.PASS) {
+            GateRollingRatio.notePass(prediction.timestamp);
+            if (LiveGateRollingRatio.isOn()) {
+                LiveGateRollingRatio.notePass(prediction.timestamp);
+            }
+        }
+        return res;
     }
 
     /** Giu signature cu de khong vo caller (BackTestEngineCombined/MarketThresholds/BenchmarkSpeedTest) —

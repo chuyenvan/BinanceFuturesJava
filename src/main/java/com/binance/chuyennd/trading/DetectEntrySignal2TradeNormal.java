@@ -1271,6 +1271,10 @@ public class DetectEntrySignal2TradeNormal {
 
     private void initData() {
 
+        // [G2-LIVE-PORT 2026-09-29] docs/plan/PLAN_G2_LIVE_PORT.md — gate rolling GDV2 (MODE=ratio).
+        //   Key LIVE_GATE_ROLLING_* vắng => no-op (byte-identical HEAD). Nạp persist + seed lịch sử.
+        com.binance.chuyennd.ai_ml.onnx.entry.LiveGateRollingRatio.init();
+
         // TASK-019 A: đây là LIVE init (backtest dùng Simulator, KHÔNG gọi hàm này) → bật production
         // mode cho FundingFeeManager để refresh funding định kỳ (tránh dùng funding cũ/0 sau 24h).
         FundingFeeManager.getInstance().setProductionMode(true);
