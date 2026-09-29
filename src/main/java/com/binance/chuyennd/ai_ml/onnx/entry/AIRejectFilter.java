@@ -60,7 +60,29 @@ public class AIRejectFilter {
      */
     public FilterResult entryGate(AiPredictionData prediction, Float symbolPred, boolean predictSymbolTrade) {
         Float sp = predictSymbolTrade ? symbolPred : null;
-        return evaluate(prediction.predReturn15M, EntryGate.threshold(Configs.MIN_MOMENTUM_15M, sp));
+        // [GDV2-EVEN 2026-09-29] docs/prereg/PREREG_GDV2_EVEN.md — quantile cuon tren CHINH TY SO r.
+        //   Bo dem rho (PREDICT) LUON chay (ke ca parity G0), khong doi hanh vi gate.
+        if (predictSymbolTrade) {
+            GateRollingRatio.noteCandidate(prediction.timestamp);
+        }
+        // [GD92-RECHECK 2026-09-15] phuc hoi nguong TRUOT theo phan vi (docs/PREREG_GD92_RECHECK.md).
+        //   Ban cu f1c43a3^ bom o AIRejectFilter.thres15M = DUNG cho nguong CO SO nay.
+        //   Key SIM_GATE_ROLLING_PCT khong khai bao -> isOn()=false -> bieu thuc y het HEAD
+        //   -> byte-identical (cong parity GD_PARITY_C3).
+        float thrBase;
+        if (GateRollingRatio.isOn() && sp != null) {
+            // GDV2: nguong cuon tren ty so r (chi nhanh PREDICT).
+            thrBase = GateRollingRatio.threshold(prediction.timestamp, prediction.predReturn15M, sp);
+        } else if (GateRollingThreshold.isOn()) {
+            thrBase = GateRollingThreshold.threshold(prediction.timestamp);
+        } else {
+            thrBase = Configs.MIN_MOMENTUM_15M;
+        }
+        FilterResult res = evaluate(prediction.predReturn15M, EntryGate.threshold(thrBase, sp));
+        if (predictSymbolTrade && res.decision == FilterDecision.PASS) {
+            GateRollingRatio.notePass(prediction.timestamp);
+        }
+        return res;
     }
 
     /** Giu signature cu de khong vo caller (BackTestEngineCombined/MarketThresholds/BenchmarkSpeedTest) —

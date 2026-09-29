@@ -95,6 +95,9 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     public long entryPredictSymbol = 0;  // leg đầu từ PREDICT_SYMBOL_TRADE (funding-selector)
     public long entryDcaLevel = 0;       // DCA nhồi
     public long entryOther = 0;          // còn lại (SMALL_* nếu bật)
+    // [CRASH-PENALTY 2026-09-29] docs/prereg/PREREG_CRASH_PENALTY.md — đếm "leg sập" bị phạt (theo năm GMT+7).
+    public long crashPenTotal = 0;
+    public final java.util.TreeMap<Integer, Integer> crashPenByYear = new java.util.TreeMap<>();
     public long predictSymbolRejectedGate = 0; // coin funding-selector bị gate REJECT (không vào lệnh)
 
     // =================================================================
@@ -594,6 +597,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         LOG.info("[GATE] scale={} base={} n_cand={} n_pass={}",
                 com.binance.chuyennd.tradecore.EntryGate.GATE_DYN_SCALE,
                 Configs.MIN_MOMENTUM_15M, ablationSignalSeen, ablationPassCount);
+        // [GDV2-EVEN 2026-09-29] thuan LOG (rho + per-quarter), khong doi printDone => parity byte-identical.
+        LOG.info("[GATE-RATIO] {}", com.binance.chuyennd.ai_ml.onnx.entry.GateRollingRatio.stats());
         // [GATE-RECAL 2026-09-26] docs/prereg/PREREG_GATE_RECAL.md §1 — thuan LOG, khong doi printDone.
         if (com.binance.chuyennd.tradecore.EntryGate.P15_Q > 0f) {
             LOG.info("[GATE-RECAL] W={}d Q={} sampleMin={} (thr_rolling = phan vi cuon p15 cua chinh nguon sim)",
@@ -634,6 +639,11 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         if (Configs.CONC_CAP_PERCOIN_ENABLED) {
             LOG.info("[CONC-PC] SUMMARY blocked={} pct={}",
                     concPerCoinBlocked, Configs.CONC_CAP_PERCOIN_PCT);
+        }
+        // [CRASH-PENALTY 2026-09-29] docs/prereg/PREREG_CRASH_PENALTY.md — tong leg sập bị phạt (theo năm).
+        if (Configs.CRASH_ENTRY_PENALTY > 0f) {
+            LOG.info("[CRASH-PENALTY] SUMMARY penalty={} total={} byYear={}",
+                    Configs.CRASH_ENTRY_PENALTY, crashPenTotal, crashPenByYear);
         }
         Utils.printMemoryUse(System.currentTimeMillis() - timeSimulator);
     }
@@ -941,6 +951,10 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             }
         }
         // 3. CHẠY PRE-CALCULATE (SORT SẴN FUNDING FEE MỘT LẦN DUY NHẤT)
+        // [GD92-RECHECK 2026-09-15] gate nguong truot theo phan vi. Key khong khai bao -> no-op.
+        com.binance.chuyennd.ai_ml.onnx.entry.GateRollingThreshold.init(predictionMap);
+        // [GDV2-EVEN 2026-09-29] quantile cuon tren TY SO r (MODE=ratio). Key vang -> no-op.
+        com.binance.chuyennd.ai_ml.onnx.entry.GateRollingRatio.init();
         preprocessFundingData(time2SymbolPred);
         aiRejectFilter = new AIRejectFilter();
 
@@ -1370,6 +1384,21 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         else entryOther++;
 
         Float entry = ticker.priceClose;
+        // [CRASH-PENALTY 2026-09-29] docs/prereg/PREREG_CRASH_PENALTY.md — "leg sập" = nến quyết định
+        //   bar_ret ≤ −1% (định nghĩa y hệt RESULT_LATENCY_FILL). Phạt vào GIÁ VÀO (BUY: vào ĐẮT hơn = bất lợi).
+        //   Default penalty=0 => nhanh nay KHONG chay => byte-identical (parity R4/G2 bắt buộc).
+        if (Configs.CRASH_ENTRY_PENALTY > 0f) {
+            float barRet = (ticker.priceClose - ticker.priceOpen) / ticker.priceOpen;
+            if (barRet <= -0.01f) {
+                entry = entry * (1f + Configs.CRASH_ENTRY_PENALTY);
+                crashPenTotal++;
+                int y = Integer.parseInt(Utils.sdfMonth.format(new Date(ticker.startTime)).substring(0, 4));
+                crashPenByYear.merge(y, 1, Integer::sum);
+                LOG.info("[CRASH-PENALTY] leg sap sym={} t={} barRet={} penalty={} entry={}",
+                        symbolId, Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime),
+                        String.format("%.4f", barRet), Configs.CRASH_ENTRY_PENALTY, entry);
+            }
+        }
         Integer leverage = Configs.LEVERAGE_ORDER;
 
         long currentTs = ticker.startTime;
@@ -1575,6 +1604,10 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
         this.time2MarketData = time2MarketData;
         this.predictionMap = predictionMap;
+        // [GD92-RECHECK 2026-09-15] gate nguong truot theo phan vi. Key khong khai bao -> no-op.
+        com.binance.chuyennd.ai_ml.onnx.entry.GateRollingThreshold.init(predictionMap);
+        // [GDV2-EVEN 2026-09-29] quantile cuon tren TY SO r (MODE=ratio). Key vang -> no-op.
+        com.binance.chuyennd.ai_ml.onnx.entry.GateRollingRatio.init();
         this.time2SymbolPred = time2FundingPre;
         // 3. CHẠY PRE-CALCULATE (SORT SẴN FUNDING FEE MỘT LẦN DUY NHẤT)
         preprocessFundingData(this.time2SymbolPred);

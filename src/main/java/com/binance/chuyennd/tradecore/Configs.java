@@ -115,6 +115,10 @@ public class Configs {
     // Trượt giá mô phỏng cho mỗi chân khớp (entry + exit). 0.0005–0.001 là vùng hợp lý
     // cho coin thanh khoản tốt; coin nhỏ nên cao hơn. Áp cho cả entry và exit.
     public static float SLIPPAGE_RATE = 0.003f;
+    // [CRASH-PENALTY 2026-09-29] docs/prereg/PREREG_CRASH_PENALTY.md — phạt thêm vào GIÁ VÀO của
+    //   "leg sập" (nến quyết định bar_ret ≤ −1%, định nghĩa RESULT_LATENCY_FILL). Default 0 (không
+    //   khai báo SIM_CRASH_ENTRY_PENALTY) = byte-identical. Giá trị là FRACTION (vd 0.0069 / 0.0150).
+    public static float CRASH_ENTRY_PENALTY = 0f;
 
     // Công tắc bịt look-ahead nội-nến. MẶC ĐỊNH true (luôn bật khi backtest thật).
     // Đặt false CHỈ để đo "trước/sau khi bịt" — nếu PnL false >> true thì phần chênh
@@ -916,6 +920,9 @@ public class Configs {
             if ((v = Cfg.get("SIM_RATE_FEE")) != null) RATE_FEE = Float.parseFloat(v.trim());
             if ((v = Cfg.get("SIM_SLIPPAGE_RATE")) != null) SLIPPAGE_RATE = Float.parseFloat(v.trim());
             if ((v = Cfg.get("SIM_FUNDING_SCALE")) != null) FUNDING_SCALE = Float.parseFloat(v.trim());
+            // [CRASH-PENALTY 2026-09-29] docs/prereg/PREREG_CRASH_PENALTY.md — phạt GIÁ VÀO leg sập.
+            //   Default (không khai báo) = 0f => byte-identical (parity R4/G2 bắt buộc).
+            if ((v = Cfg.get("SIM_CRASH_ENTRY_PENALTY")) != null) CRASH_ENTRY_PENALTY = Float.parseFloat(v.trim());
         } catch (Exception e) {
             System.err.println("SIM env override parse error: " + e);
         }
