@@ -34,13 +34,13 @@ public class CadenceSplitTest {
 
     @Test
     public void congSelector_vanChiChayTaiMocLuoi15Phut() {
-        assertTrue(DetectEntrySignal2TradeNormal.selectorGrid(7, 900, 899));   // 900 % 15 == 0
-        assertTrue(DetectEntrySignal2TradeNormal.selectorGrid(6, 900, 0));
-        assertTrue(DetectEntrySignal2TradeNormal.selectorGrid(10, 915, 900));
-        assertFalse(DetectEntrySignal2TradeNormal.selectorGrid(5, 900, 0));    // ngoai cua so giay
-        assertFalse(DetectEntrySignal2TradeNormal.selectorGrid(11, 900, 0));   // ngoai cua so giay
-        assertFalse(DetectEntrySignal2TradeNormal.selectorGrid(7, 901, 0));    // 901 % 15 != 0
-        assertFalse(DetectEntrySignal2TradeNormal.selectorGrid(7, 900, 900));  // da quet moc nay
+        assertTrue(DetectEntrySignal2TradeNormal.selectorGrid(7, 900, 899, 15));   // 900 % 15 == 0
+        assertTrue(DetectEntrySignal2TradeNormal.selectorGrid(6, 900, 0, 15));
+        assertTrue(DetectEntrySignal2TradeNormal.selectorGrid(10, 915, 900, 15));
+        assertFalse(DetectEntrySignal2TradeNormal.selectorGrid(5, 900, 0, 15));    // ngoai cua so giay
+        assertFalse(DetectEntrySignal2TradeNormal.selectorGrid(11, 900, 0, 15));   // ngoai cua so giay
+        assertFalse(DetectEntrySignal2TradeNormal.selectorGrid(7, 901, 0, 15));    // 901 % 15 != 0
+        assertFalse(DetectEntrySignal2TradeNormal.selectorGrid(7, 900, 900, 15));  // da quet moc nay
     }
 
     // ---- (ii) key = 1 => MARKET-LEVEL moi phut ----
@@ -85,7 +85,7 @@ public class CadenceSplitTest {
         int n = 0;
         // 1 gio = 60 phut, moi phut quet 1 lan trong cua so giay 6..10
         for (long min = 900; min < 960; min++) {
-            boolean selectorTick = DetectEntrySignal2TradeNormal.selectorGrid(WINDOW_SEC, min, lastSel);
+            boolean selectorTick = DetectEntrySignal2TradeNormal.selectorGrid(WINDOW_SEC, min, lastSel, 15);
             if (selectorTick) lastSel = min;
             boolean marketTick = !selectorTick
                     && DetectEntrySignal2TradeNormal.marketScanGrid(WINDOW_SEC, min, lastMkt, scanMin);

@@ -131,6 +131,9 @@ public class DetectEntrySignal2TradeNormal {
                     Configs.MARKET_SCAN_PRIORITY > 0
                             ? "BAT: SEL luon xep hang (<=1 cho), MKT chi nop khi RANH"
                             : "TAT (y nguyen: nop thang, khong cong tac)");
+            // [R4-1M 2026-09-29] luoi SELECTOR theo key LIVE_ENTRY_GRID_MIN (mac dinh 15 = nhu cu). Thuan LOG.
+            LOG.info("[R4-1M] LIVE_ENTRY_GRID_MIN={} => SELECTOR quet moi {} phut",
+                    Configs.LIVE_ENTRY_GRID_MIN, Configs.LIVE_ENTRY_GRID_MIN);
             while (true) {
                 // [CADENCE-SPLIT 2026-09-27] docs/plan/PLAN_LIVE_CADENCE_SPLIT.md
                 //   selectorTick: moc luoi 15' nhu CU (isTimeProcessData KHONG doi).
@@ -1018,6 +1021,24 @@ public class DetectEntrySignal2TradeNormal {
             //   CA HAI CO MAC DINH FALSE => khong nhanh nao chay => luong live khong doi gi.
             final ConcCapLiveGuard ccGuard = ConcCapLiveGuard.getInstance();
             final float ccLegMargin = quantity * ticker.priceClose / Configs.LEVERAGE_ORDER;
+            // [CONC-PERCOIN live 2026-09-29] port cua sim (SimulatorMarketLevelTicker1MStopLoss ~:1483):
+            //   chan HAN (return) khi (margin coin + leg moi)/equity > CONC_CAP_PERCOIN_PCT.
+            //   Truoc day CONC_CAP_PERCOIN chi chay o duong SIM, LIVE KHONG doc (gap). Mac dinh
+            //   CONC_CAP_PERCOIN_ENABLED=false => khong nhanh nao chay => byte-identical. Trong duong
+            //   GIAY (LiveProfileC3.on) doc margin coin tu ShadowBookC3; duong legacy (242) de trong.
+            if (Configs.CONC_CAP_PERCOIN_ENABLED) {
+                float pcCoinNow = 0f;
+                if (com.binance.chuyennd.tradecore.selector.LiveProfileC3.on()) {
+                    pcCoinNow = com.binance.chuyennd.tradecore.selector.ShadowBookC3.getInstance().perCoinMargin(symbol);
+                }
+                float pcRatio = balanceBasic > 0f ? (pcCoinNow + ccLegMargin) / balanceBasic : 0f;
+                if (pcRatio > Configs.CONC_CAP_PERCOIN_PCT) {
+                    LOG.warn("[CONC-PC] CHAN leg sym={} lvl={} coinNow={} legNew={} eq={} ratio={} cap={}",
+                            symbol, levelChange, pcCoinNow, ccLegMargin, balanceBasic, pcRatio,
+                            Configs.CONC_CAP_PERCOIN_PCT);
+                    return;
+                }
+            }
             if (Configs.CONC_CAP_AGG_DCA_ENABLED && levelChange == MarketLevelChange.DCA_LEVEL1) {
                 // dong bo truoc khi doc: bo cac cum da dong khoi aggregate (neu khong, structure
                 // chi phinh ra va guard se binding NHAM roi chan lenh that).
@@ -1113,8 +1134,8 @@ public class DetectEntrySignal2TradeNormal {
     private long lastProcessedMinute = 0; // Biến đánh dấu phút đã quét
 
     // v1 parity WFO G015: entry CHỈ tại mốc lưới 15m (khớp grid selector/label backtest).
-    // 2026-09-03: da go env doi cadence - entry chay o HANG SO 15 phut.
-    private static final long ENTRY_GRID_MIN = 15L;
+    // [R4-1M 2026-09-29] da go env doi cadence: luoi SELECTOR doc tu Configs.LIVE_ENTRY_GRID_MIN
+    // (mac dinh 15 = nhu cu; =1 => nhip 1 PHUT cho R4). Xem docs/plan/PLAN_R4_1M_SHADOW.md.
 
 
     public boolean isTimeProcessData() {
@@ -1124,8 +1145,8 @@ public class DetectEntrySignal2TradeNormal {
 
         // Mở rộng cửa sổ thời gian từ giây 03 đến giây 10 (rộng 7 giây).
         // Cờ lastProcessedMinute đảm bảo trong 7 giây này nó chỉ được phép trả về TRUE đúng 1 lần.
-        // curMin % ENTRY_GRID_MIN == 0 => chỉ chạy tại mốc lưới (mặc định 15m: :00/:15/:30/:45 UTC).
-        if (selectorGrid(second, curMin, lastProcessedMinute)) {
+        // curMin % gridMin == 0 => chỉ chạy tại mốc lưới (mặc định 15m: :00/:15/:30/:45 UTC).
+        if (selectorGrid(second, curMin, lastProcessedMinute, Configs.LIVE_ENTRY_GRID_MIN)) {
             lastProcessedMinute = curMin;
             return true;
         }
@@ -1133,8 +1154,9 @@ public class DetectEntrySignal2TradeNormal {
     }
 
     // [CADENCE-SPLIT 2026-09-27] Cong nhip SELECTOR — THUAN HAM (pure), logic Y NGUYEN bieu thuc cu.
-    static boolean selectorGrid(long second, long curMin, long lastProcessedMin) {
-        return second >= 6 && second <= 10 && curMin % ENTRY_GRID_MIN == 0 && curMin > lastProcessedMin;
+    // [R4-1M 2026-09-29] gridMin la tham so (mac dinh 15) de test duoc luoi 1' ma khong doi Configs tinh.
+    static boolean selectorGrid(long second, long curMin, long lastProcessedMin, long gridMin) {
+        return second >= 6 && second <= 10 && curMin % gridMin == 0 && curMin > lastProcessedMin;
     }
 
     private long lastMarketProcessedMinute = 0; // [CADENCE-SPLIT] phut da quet o nhip MARKET-LEVEL

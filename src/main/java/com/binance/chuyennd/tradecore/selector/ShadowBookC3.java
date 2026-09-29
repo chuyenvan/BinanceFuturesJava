@@ -282,6 +282,12 @@ public final class ShadowBookC3 {
         return s;
     }
 
+    /** [R4-1M/PERCOIN 2026-09-29] margin dang chiem cua MOT coin (cum giay); 0 neu khong giu. */
+    public float perCoinMargin(String symbol) {
+        Cluster c = open.get(symbol);
+        return c == null ? 0f : c.margin();
+    }
+
     /**
      * (d) Equity GIAY = {@code PAPER_EQUITY} + PnL da chot + PnL mark-to-market cua cum mo
      * (tinh tren VWAP entry va tong qty). Day la thu {@code docs/experiment/L1_SHADOW_C3.md} muc 3(e).

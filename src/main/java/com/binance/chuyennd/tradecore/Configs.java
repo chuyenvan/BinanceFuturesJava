@@ -453,6 +453,15 @@ public class Configs {
      * Key {@code ENTRY_CASCADE}. Khong cham ONNX / NUM_FEATURES / extractFeatures45.
      */
     public static int ENTRY_CASCADE = 0;
+
+    /**
+     * [R4-1M 2026-09-29] docs/plan/PLAN_R4_1M_SHADOW.md — nhip LUOI SELECTOR cua duong LIVE (phut).
+     * Truoc day la hang so {@code ENTRY_GRID_MIN = 15L} (entry chi o moc luoi 15': :00/:15/:30/:45).
+     * 0/khong khai =&gt; 15 =&gt; giu NGUYEN hanh vi cu (byte-identical). &gt;0 =&gt; luoi moi (dung 1 = 1 PHUT).
+     * Chi doi nhip QUET cua SELECTOR; KHONG cham ONNX / NUM_FEATURES / extractFeatures45 / gate.
+     * Key {@code LIVE_ENTRY_GRID_MIN}.
+     */
+    public static int LIVE_ENTRY_GRID_MIN = 15;
     public static float MS_UP_BIG_THRES = 0.02046f;                  // HPO (đã revert về cũ): 0.01757f
     public static float MS_DOWN_BIG_AVG = -0.03157f;                  // HPO (đã revert về cũ): -0.05514f
     // [BD-THRESHOLD-FRAGILITY 2026-09-17] tach nguong DCA khoi nguong BIG_DOWN (docs/prereg/PREREG_BD_THRESHOLD_FRAGILITY.md).
@@ -841,6 +850,12 @@ public class Configs {
             if ((v = Cfg.get("ENTRY_CASCADE")) != null) {
                 int ec = Integer.parseInt(v.trim());
                 if (ec > 0) ENTRY_CASCADE = ec;
+            }
+            // [R4-1M 2026-09-29] nhip luoi SELECTOR cua LIVE (docs/plan/PLAN_R4_1M_SHADOW.md).
+            //   Khong khai / <=0 => 15 => giu nguyen hanh vi cu (byte-identical).
+            if ((v = Cfg.get("LIVE_ENTRY_GRID_MIN")) != null) {
+                int gm = Integer.parseInt(v.trim());
+                if (gm > 0) LIVE_ENTRY_GRID_MIN = gm;
             }
             // [REGIME 2026-09-14] docs/prereg/PREREG_REGIME_GATE.md: gate scale doi theo regime BTC 30d.
             //   default OFF => byte-identical. SIM_REGIME_FORCE=UP|NOTUP chi cho cong 2-cuc.
