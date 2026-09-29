@@ -313,12 +313,11 @@ public class DetectEntrySignal2TradeNormal {
             //   CHI ung vien CON CO THE DAT moi duoc dua xuong tang predict (funding + S1).
             //   ENTRY_CASCADE<=0 => tra ve DUNG tap cu (cung object) => byte-identical HEAD.
             Set<String> candidatesToPredict = cascadeUniverse(symbol2FinalTicker.keySet(), levelChange, predictData);
-            // [B4-SPEED] Tick market-only (1') + KHÔNG có tín hiệu thị trường (levelChange==null): chỉ DCA
-            //   cần pred của symbol đang giữ => bỏ predict cả universe (~250s/tick). Tick có levelChange
-            //   != null VÀ mọi selector tick (15') VẪN predict full universe (y hệt cũ) => parity giữ nguyên.
-            if (!selectorLeg && levelChange == null) {
-                candidatesToPredict = marketOnlyUniverse(candidatesToPredict);
-            }
+            // [B5-PARITY 2026-09-29] ĐÃ BỎ market-only skip của B4: tick market-only (selectorLeg=false,
+            //   levelChange==null) GIỜ VẪN predict full universe (y hệt 876250e^). Lý do: skip làm tập con
+            //   ⇒ PASS-2 cross-sectional rank (#33..#35) tính trên held∩csPop thay vì full csPop ⇒ pNoPump
+            //   symbol đang giữ LỆCH ⇒ parity vỡ (trailing tsGap + DCA big-loss). OI cache đã làm full
+            //   universe ~250ms steady nên skip không còn cần thiết. Xem PREREG_PASS_SPEED_V2 §2.2.
             TreeMap<Float, String> sortedCandidates = predictAllCandidates(candidatesToPredict, symbol2FinalTicker,
                     rateDownAvg, rateUpAvg, rateDown15MAvg, time);
             if (levelChange != null) {
@@ -730,36 +729,6 @@ public class DetectEntrySignal2TradeNormal {
         Float v = LATEST_SEL_MAPPRED.get(symbol);
         if (v != null) return v;
         return LATEST_SEL_PNOPUMP.get(symbol);
-    }
-
-    /**
-     * [B4-SPEED] Universe tối thiểu cho tick market-only KHÔNG tín hiệu: chỉ symbol ĐANG GIỮ
-     * (real {@code BudgetManager.symbol2Pos} + paper {@code ShadowBookC3.openSymbols()}) giao với
-     * universe. Đủ cho DCA big-loss (isDcaAlt) và giữ pNoPump tươi cho trailing tsGap (chỉ đọc cho
-     * symbol đang giữ) => quyết định BIT-IDENTICAL, bỏ ~650 coin predict phí mỗi tick 1'.
-     */
-    static Set<String> marketOnlyUniverse(Set<String> universe) {
-        Set<String> held = new HashSet<>();
-        try {
-            held.addAll(BudgetManager.getInstance().symbol2Pos.keySet());
-        } catch (Exception ignore) {
-        }
-        if (com.binance.chuyennd.tradecore.selector.LiveProfileC3.on()) {
-            try {
-                held.addAll(com.binance.chuyennd.tradecore.selector.ShadowBookC3.getInstance().openSymbols());
-            } catch (Exception ignore) {
-            }
-        }
-        return marketOnlyUniverse(universe, held);
-    }
-
-    /** [B4-SPEED] PHẦN THUẦN (test được): giao của universe với tập symbol đang giữ. */
-    static Set<String> marketOnlyUniverse(Set<String> universe, Collection<String> held) {
-        Set<String> out = new HashSet<>();
-        for (String s : universe) {
-            if (held.contains(s)) out.add(s);
-        }
-        return out;
     }
 
     private TreeMap<Float, String> predictAllCandidates(Set<String> allSymbols, Map<String,

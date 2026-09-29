@@ -1,5 +1,11 @@
 # PLAN — R4 LIVE 1' V2: THIẾT KẾ ĐƯỜNG LIVE KHÔNG LÀM LỆCH S1 (KHÔNG deploy)
 
+> **AMENDMENT 2026-09-29 (B5, commit `617a973`): MASTER chốt PHƯƠNG ÁN A (đồng bộ, giữ parity tuyệt đối)
+> THAY B (async).** Lý do: B4 (`876250e`) OI cache + BatchRead + recent đưa 1 lượt live steady
+> ~250ms (parity 60/60), nên async full-universe 15' + gate 1' KHÔNG còn cần — và B5 (`RESULT_PASS_SPEED_V2`)
+> xác nhận funding predict ~52ms (232s cũ là OI IO, B4 đã bỏ). Phần §3 dưới đây (đề xuất B + variant B-trễ)
+> GIỮ NGUYÊN làm lịch sử lập luận, KHÔNG còn là phương án chọn. Deploy theo A: xem `PLAN_DEPLOY_R4_1M_V3.md`.
+
 Trạng thái: **THIẾT KẾ (chưa deploy)** · 2026-09-29 · branch `module` · KHÔNG push code live.
 Bối cảnh: **B2 STOP đúng** — cascade (`ENTRY_CASCADE`) cắt tập rank xuống `SELECTOR_RANK_TOPK=16 < S1 min 20`
 ⇒ chỉ 10/16 top-16 thật còn lại (`0264816` FAIL + rollback). **MASTER chốt: KHÔNG dùng cascade cắt tập rank.**
