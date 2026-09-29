@@ -18,8 +18,8 @@ Giữ nguyên `SHADOW_NO_PUSH=true` + `LIVE_PROFILE=c3_shadow` (paper). KHÔNG c
 - B5 đã **bỏ market-only skip** (parity); jar mới = HEAD (B4 OI cache + B5 parity) + profile R4.
 
 ## 2. CHUẨN BỊ JAR
-1. Build HEAD (`module`) đã qua `mvn -o test` **181 PASS**: `cd /home/ubuntu/src/BinanceFuturesJava && mvn -o package -DskipTests`.
-2. Ghi sha256 jar mới (tham chiếu build B5 hiện tại: `4deeed58…`).
+1. Build HEAD (`module`) đã qua `mvn -o test` **184 PASS** (B6 PASS-SPEED-V3): `cd /home/ubuntu/src/BinanceFuturesJava && mvn -o package -DskipTests`.
+2. Ghi sha256 jar mới (build B6 hiện tại: `31a24f90…`; B5 trước là `4deeed58…`).
 3. Đối chiếu 3 jar: 242 (KHÔNG đổi) / shadow đang chạy (`78387f30…`, build cũ 20/09) / build HEAD mới.
 
 ## 3. BACKUP (trước mọi thay đổi)
@@ -54,8 +54,9 @@ bin/daemon.sh status       # verify RUNNING
 Theo dõi `logs/full.log` (logback RIÊNG) + `health.log` (cron mỗi giờ):
 | tiêu chí | ngưỡng |
 |---|---|
-| p50 1 lượt | **≤ 3s** (đo `[PASS-TIMING]`; B5 bench steady ~2.1–2.7s) |
-| p95 1 lượt | **≤ 10s** |
+| p50 1 lượt | **≤ 1s** (đo `[PASS-TIMING]`; B6 bench steady p50 ~0.64s) |
+| p95 1 lượt | **≤ 3s** (B6 bench p95 ~2.1s) |
+| max 1 lượt (kể cả tick đầu giờ) | **≤ 5s** (B6: tick đầu giờ KHÔNG chặn nhờ OI double-buffer + S1 prefetch; cold-start ~28s là warmup 1 lần, không phải tick định kỳ) |
 | phút có `[GATE]` | **≥ 95%** phút (selector 1' ⇒ `[GATE]` mỗi phút) |
 | S1 score | **≥ 400 coin/tick** (universe ~660 coin, giữ S1 full) |
 | `warm-up CHUA DU` | **0** dòng |

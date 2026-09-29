@@ -14,6 +14,9 @@ import org.slf4j.LoggerFactory;
 
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * SELECTOR S1 REAL-TIME — thay THU TU xep hang cua duong live bang score cua model S1
@@ -83,6 +86,17 @@ public final class S1RankerLive {
     private final Map<String, TreeMap<Long, Float>[]> oiCache = new HashMap<>();
     /** Moc gio cua lan nap OI gan nhat: {@code ComputeOiFeat2Live242} cadence 60' nen nap 1 lan/gio. */
     private long oiCacheHour = 0L;
+    /** [B6-SPEED] Buffer OI prefetch nen cho gio ke (double-buffer, swap atomic o {@link #ensureOi}). */
+    private volatile Map<String, TreeMap<Long, Float>[]> oiBuffer = null;
+    private volatile long oiBufferHour = 0L;
+    /** Universe cua lan scoreAll gan nhat (de prefetch biet coin can nap). */
+    private volatile Set<String> lastUniverse = new HashSet<>();
+    private final ScheduledExecutorService prefetchBg = Executors.newSingleThreadScheduledExecutor(r -> {
+        Thread t = new Thread(r, "S1OiPrefetch");
+        t.setDaemon(true);
+        return t;
+    });
+    private volatile boolean prefetchStarted = false;
     private OrtEnvironment env;
     private OrtSession session;
     private String inputName;
@@ -128,6 +142,7 @@ public final class S1RankerLive {
     public synchronized Map<String, Float> scoreAll(Collection<String> universe, long now) {
         if (broken || universe == null || universe.isEmpty()) return null;
         try {
+            startPrefetchIfNeeded();
             long lastClosedHour = (now / H) * H;      // moc gio da co day du 60 nen 1m truoc do
             refresh(universe, lastClosedHour);
             int n = HIST_HOURS;
@@ -275,12 +290,58 @@ public final class S1RankerLive {
     @SuppressWarnings("unchecked")
     private void ensureOi(java.util.Set<String> syms, long lastClosedHour) {
         if (oiCacheHour == lastClosedHour && !oiCache.isEmpty()) return;
+        Map<String, TreeMap<Long, Float>[]> buf = oiBuffer;
+        if (buf != null && oiBufferHour == lastClosedHour && buf.keySet().containsAll(syms)) {
+            oiCache.clear();
+            oiCache.putAll(buf);
+            oiCacheHour = lastClosedHour;
+            LOG.info("[S1] swap OI prefetch cho {} coin tai gio {} (khong doc dong bo)", buf.size(), lastClosedHour);
+            return;
+        }
         long t0 = System.currentTimeMillis();
+        Map<String, TreeMap<Long, Float>[]> fresh = loadOi(syms, lastClosedHour);
+        if (!fresh.isEmpty()) {
+            oiCache.clear();
+            oiCache.putAll(fresh);
+            oiCacheHour = lastClosedHour;
+            LOG.info("[S1] nap OI (delta24h + ls_global) cho {} coin trong {} ms", fresh.size(),
+                    System.currentTimeMillis() - t0);
+        }
+        lastUniverse = new HashSet<>(syms);
+    }
+
+    /** [B6-SPEED] Thread nen prefetch OI cho gio ke truoc moc gio de scoreAll khong chan tick. */
+    private void startPrefetchIfNeeded() {
+        if (prefetchStarted) return;
+        synchronized (this) {
+            if (prefetchStarted) return;
+            prefetchBg.scheduleWithFixedDelay(this::prefetchOnce, 5, 10, TimeUnit.SECONDS);
+            prefetchStarted = true;
+        }
+    }
+
+    /** [B6-SPEED] Nap OI cho gio hien tai vao {@link #oiBuffer} (neu qua moc gio va co universe). */
+    private void prefetchOnce() {
+        try {
+            long targetHour = (System.currentTimeMillis() / H) * H;
+            Set<String> uni = lastUniverse;
+            if (targetHour > oiCacheHour && targetHour > oiBufferHour && !uni.isEmpty()) {
+                Map<String, TreeMap<Long, Float>[]> fresh = loadOi(uni, targetHour);
+                if (!fresh.isEmpty()) {
+                    oiBuffer = fresh;
+                    oiBufferHour = targetHour;
+                    LOG.info("[S1] prefetch OI {} coin cho gio {} (nen)", fresh.size(), targetHour);
+                }
+            }
+        } catch (Throwable t) {
+            LOG.error("[S1] prefetch OI loi: {}", t.toString());
+        }
+    }
+
+    /** Nap OI 2 set cho {@code syms} tai {@code lastClosedHour} (24h+1h biên; tail cat 24h). BIT-IDENTICAL full. */
+    private Map<String, TreeMap<Long, Float>[]> loadOi(java.util.Set<String> syms, long lastClosedHour) {
         Map<String, TreeMap<Long, Float>[]> fresh = new java.util.HashMap<>();
         try {
-            // [B4-SPEED] BatchRead 1 lần cho mọi coin (2 set) — ~1 round-trip thay vì ~1472 (8 thread
-            //   đọc tuần tự). Chỉ chunk-tháng gần (24h+1h biên); tail() vẫn cắt [lastClosedHour-24h,...]
-            //   => BIT-IDENTICAL full-history.
             final long oiSince = lastClosedHour - 24L * 3600_000L - 3600_000L;
             Map<String, TreeMap<Long, Float>[]> batch = DataManagerAerospikeFloatSim.getMetricMap242RecentBatch(
                     syms, new String[]{OiFeatLiveSets.OI_DELTA24H, OiFeatLiveSets.LS_GLOBAL},
@@ -292,13 +353,7 @@ public final class S1RankerLive {
         } catch (Exception e) {
             LOG.error("[S1] nap OI loi: {}", e.toString());
         }
-        if (!fresh.isEmpty()) {
-            oiCache.clear();
-            oiCache.putAll(fresh);
-            oiCacheHour = lastClosedHour;
-            LOG.info("[S1] nap OI (delta24h + ls_global) cho {} coin trong {} ms", fresh.size(),
-                    System.currentTimeMillis() - t0);
-        }
+        return fresh;
     }
 
     /** Cat map ve 24h gan nhat (>> MERGE_TOL_MS 2h) — giong FIX OOM cua LiveOiFeatProvider. */

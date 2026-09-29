@@ -16,6 +16,7 @@
 package com.binance.chuyennd.trading;
 
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
+import com.binance.chuyennd.aerospike.LiveTickerWindow;
 import com.binance.chuyennd.ai_ml.features.export.entry.ComprehensiveMarketFeatureExtractor;
 import com.binance.chuyennd.ai_ml.features.export.entry.MarketFeatures;
 import com.binance.chuyennd.ai_ml.features.export.HistoryManager;
@@ -79,6 +80,8 @@ public class DetectEntrySignal2TradeNormal {
     private FundingDataCollectionManager.FundingFeatureExtractorV2 fundingExtractor;
     // OI feature (#41..#45) đã tính sẵn trên Oracle, live chỉ lookup từ 242 (fix reconcile 2026-08-17).
     private final LiveOiFeatProvider liveOiProvider = new LiveOiFeatProvider();
+    // [B6-SPEED] Cửa sổ nến 1m trượt: đọc CHỈ phút mới mỗi tick (bỏ đọc lại 1000' ~1.8–2.4s/tick).
+    private final LiveTickerWindow tickerWindow = new LiveTickerWindow();
 
     // [PRED-GAP] Latest per-coin selector output = prob[0] = P(no-pump) = 1 - sel (P(maxFav>=6%)).
     // Cap nhat moi tick entry (15m, duyet MOI symbol) -> SL-loop (BinanceOrderTradingManager) doc de
@@ -188,8 +191,9 @@ public class DetectEntrySignal2TradeNormal {
             TreeMap<Float, String> rateUp2Symbols = new TreeMap<>();
             Map<String, Float> symbol2Max15m = new HashMap<>();
 
-            Map<String, List<KlineObjectSimple>> symbol2LastTickers = DataManagerAerospikeFloatSim.readDataForSymbols(
-                    System.currentTimeMillis() - 1000 * Utils.TIME_MINUTE, 1000);
+            // [B6-SPEED] ticker cache trượt: chỉ đọc phút MỚI mỗi tick, full reload khi lệch/khởi động.
+            //   Parity BIT-IDENTICAL full-read (nội dung nến cùng record; offset sub-phút startTime vô hại).
+            Map<String, List<KlineObjectSimple>> symbol2LastTickers = tickerWindow.read(System.currentTimeMillis(), 1000);
             long tTickerMs = (System.nanoTime() - tTop0) / 1_000_000L;
             List<KlineObjectSimple> btcTickers = symbol2LastTickers.get(Constants.SYMBOL_PAIR_BTC);
             // TASK-027: thiếu data BTC → trước đây NPE rơi vào catch in stacktrace (im lặng).
