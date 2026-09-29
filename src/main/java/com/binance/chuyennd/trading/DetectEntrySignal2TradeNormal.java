@@ -180,6 +180,7 @@ public class DetectEntrySignal2TradeNormal {
     private void checkMarketLevelChange2Trade(boolean selectorLeg) {
         try {
             LOG.info("Start check level change of market for trade! {}", new Date());
+            long tTop0 = System.nanoTime();
             Map<String, KlineObjectSimple> symbol2FinalTicker = new HashMap<>();
             TreeMap<Float, String> rateDown15M2Symbols = new TreeMap<>();
             TreeMap<Float, String> rateUp15M2Symbols = new TreeMap<>();
@@ -189,6 +190,7 @@ public class DetectEntrySignal2TradeNormal {
 
             Map<String, List<KlineObjectSimple>> symbol2LastTickers = DataManagerAerospikeFloatSim.readDataForSymbols(
                     System.currentTimeMillis() - 1000 * Utils.TIME_MINUTE, 1000);
+            long tTickerMs = (System.nanoTime() - tTop0) / 1_000_000L;
             List<KlineObjectSimple> btcTickers = symbol2LastTickers.get(Constants.SYMBOL_PAIR_BTC);
             // TASK-027: thiếu data BTC → trước đây NPE rơi vào catch in stacktrace (im lặng).
             // Nay BỎ vòng entry phút này + log rõ (BTC là gốc tính market level, không có thì không quyết được).
@@ -250,7 +252,7 @@ public class DetectEntrySignal2TradeNormal {
                     rateUp15M2Symbols.put(-Utils.rateOf2Double(tickers.get(tickers.size() - 1).priceClose, priceMin).floatValue(), symbol);
 
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    LOG.error("loop ticker symbol loi: {}", e.toString());
                 }
             }
 
@@ -273,6 +275,7 @@ public class DetectEntrySignal2TradeNormal {
             if (fundingExtractor != null) {
                 fundingExtractor.updateMarketHistory(symbol2FinalTicker);
             }
+            long tHistMs = (System.nanoTime() - tTop0) / 1_000_000L;
 
             Set<String> symbolLocked = new HashSet<>();
             symbolLocked.addAll(BudgetManager.getInstance().symbol2Pos.keySet());
@@ -301,7 +304,7 @@ public class DetectEntrySignal2TradeNormal {
                     }
 
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    LOG.error("entry predict (extractAllFeatures/predictAll) loi: {}", e.toString());
                 }
             }
             // 3. Chạy AI Predict -> Sort theo L0 (Prob Fail) từ bé đến lớn
@@ -310,6 +313,12 @@ public class DetectEntrySignal2TradeNormal {
             //   CHI ung vien CON CO THE DAT moi duoc dua xuong tang predict (funding + S1).
             //   ENTRY_CASCADE<=0 => tra ve DUNG tap cu (cung object) => byte-identical HEAD.
             Set<String> candidatesToPredict = cascadeUniverse(symbol2FinalTicker.keySet(), levelChange, predictData);
+            // [B4-SPEED] Tick market-only (1') + KHÔNG có tín hiệu thị trường (levelChange==null): chỉ DCA
+            //   cần pred của symbol đang giữ => bỏ predict cả universe (~250s/tick). Tick có levelChange
+            //   != null VÀ mọi selector tick (15') VẪN predict full universe (y hệt cũ) => parity giữ nguyên.
+            if (!selectorLeg && levelChange == null) {
+                candidatesToPredict = marketOnlyUniverse(candidatesToPredict);
+            }
             TreeMap<Float, String> sortedCandidates = predictAllCandidates(candidatesToPredict, symbol2FinalTicker,
                     rateDownAvg, rateUpAvg, rateDown15MAvg, time);
             if (levelChange != null) {
@@ -335,7 +344,7 @@ public class DetectEntrySignal2TradeNormal {
                         createOrderBuyRequest(symbol, ticker, levelChange, symbol2Max15m.get(symbol), marketRate,
                                 predictData, getSymbolPred(sortedCandidates, symbol), symbol2LastTickers, null);
                     } catch (Exception e) {
-                        e.printStackTrace();
+                        LOG.error("BIG_DOWN createOrderBuyRequest loi sym={}: {}", symbol, e.toString());
                     }
                 }
                 try {
@@ -352,7 +361,7 @@ public class DetectEntrySignal2TradeNormal {
                         }
                     }
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    LOG.error("DCA createOrderBuyRequest loi: {}", e.toString());
                 }
             }
             // dca buy
@@ -382,6 +391,9 @@ public class DetectEntrySignal2TradeNormal {
             //   entry PREDICT_SYMBOL_TRADE L333-441 (HEAD) + ghi prediction) la SELECTOR => moc 15'.
             //   Tick 1' (selectorLeg=false) bo qua khoi selector => nhip selector giu nguyen 15'.
             if (!selectorLeg) {
+                long tTotalMs = (System.nanoTime() - tTop0) / 1_000_000L;
+                LOG.info("[PASS-TIMING] market-only tick total={}ms | ticker={}ms hist={}ms (pred={})",
+                        tTotalMs, tTickerMs, tHistMs, levelChange);
                 LOG.info("Finish check level change of market 2 trade (market-only tick): {}", new Date());
                 return;
             }
@@ -495,8 +507,11 @@ public class DetectEntrySignal2TradeNormal {
             StorageSnappy.writeObject2File("storage/data/prediction/" + Utils.normalizeDateYYYYMMDD(time) + "/" + time, predictData);
             StorageSnappy.writeObject2File("storage/data/prediction/" + Utils.normalizeDateYYYYMMDD(time) + "/" + time + ".features", features);
             LOG.info("Predict: {}", Utils.toJson(predictData));
+            long tTotalMs = (System.nanoTime() - tTop0) / 1_000_000L;
+            LOG.info("[PASS-TIMING] selector tick total={}ms | ticker={}ms hist={}ms (pred={})",
+                    tTotalMs, tTickerMs, tHistMs, levelChange);
         } catch (Exception e) {
-            e.printStackTrace();
+            LOG.error("checkMarketLevelChange2Trade loi: {}", e.toString());
         }
         LOG.info("Finish check level change of market 2 trade: {}", new Date());
     }
@@ -717,6 +732,36 @@ public class DetectEntrySignal2TradeNormal {
         return LATEST_SEL_PNOPUMP.get(symbol);
     }
 
+    /**
+     * [B4-SPEED] Universe tối thiểu cho tick market-only KHÔNG tín hiệu: chỉ symbol ĐANG GIỮ
+     * (real {@code BudgetManager.symbol2Pos} + paper {@code ShadowBookC3.openSymbols()}) giao với
+     * universe. Đủ cho DCA big-loss (isDcaAlt) và giữ pNoPump tươi cho trailing tsGap (chỉ đọc cho
+     * symbol đang giữ) => quyết định BIT-IDENTICAL, bỏ ~650 coin predict phí mỗi tick 1'.
+     */
+    static Set<String> marketOnlyUniverse(Set<String> universe) {
+        Set<String> held = new HashSet<>();
+        try {
+            held.addAll(BudgetManager.getInstance().symbol2Pos.keySet());
+        } catch (Exception ignore) {
+        }
+        if (com.binance.chuyennd.tradecore.selector.LiveProfileC3.on()) {
+            try {
+                held.addAll(com.binance.chuyennd.tradecore.selector.ShadowBookC3.getInstance().openSymbols());
+            } catch (Exception ignore) {
+            }
+        }
+        return marketOnlyUniverse(universe, held);
+    }
+
+    /** [B4-SPEED] PHẦN THUẦN (test được): giao của universe với tập symbol đang giữ. */
+    static Set<String> marketOnlyUniverse(Set<String> universe, Collection<String> held) {
+        Set<String> out = new HashSet<>();
+        for (String s : universe) {
+            if (held.contains(s)) out.add(s);
+        }
+        return out;
+    }
+
     private TreeMap<Float, String> predictAllCandidates(Set<String> allSymbols, Map<String,
             KlineObjectSimple> symbol2FinalTicker, Float rateDownAvg, Float rateUpAvg, Float rateDown15MAvg, long time) {
         TreeMap<Float, String> sortedCandidates = new TreeMap<>();
@@ -736,7 +781,12 @@ public class DetectEntrySignal2TradeNormal {
         Map<String, FundingMarketFeatures> symbol2FundingFeatures = new HashMap<>();
         Map<String, Float> symbol2FundingPred = new HashMap<>();
         final List<String> basket = CoinRankManager.getInstance().getTopCoin(time);
-        liveOiProvider.clear(); // đọc lại OI feature Oracle vừa push (tránh stale) mỗi tick
+        // [B4-SPEED] thay clear() (reload full-history MỖI tick ~250s) bằng cache-qua-tick + BatchRead
+        // 1 lần cho mọi coin + refresh khi pipelineFreshTs tăng => lookup BIT-IDENTICAL, IO giảm ~1000x.
+        liveOiProvider.beginTick(allSymbols);
+        // [PASS-TIMING] mỏc cho 1 dong/luot (xac nhan/bac bo so MASTER). Thuần LOG, khong doi quyet dinh.
+        long tPass0 = System.nanoTime();
+        long tOiLoad = 0L;
 
         // ============================================================================
         // KILL-SWITCH AN TOAN - KHONG XOA. [OI-GUARD-2] Neu pipeline oi_feat qua han
@@ -760,6 +810,7 @@ public class DetectEntrySignal2TradeNormal {
                 return sortedCandidates; // rong -> khong tao entry moi vong nay
             }
         }
+        long tExtract0 = System.nanoTime();
 
         for (String symbol : allSymbols) {
             KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
@@ -779,7 +830,9 @@ public class DetectEntrySignal2TradeNormal {
                 if (feats != null) {
                     // #41..#45 OI/LS/taker: lookup feature ĐÃ TÍNH SẴN trên Oracle từ 242 (fix reconcile
                     // 2026-08-17). Live không tính expanding oiZ (tránh OOM). NaN nếu chưa có OI ≤ t trong 2h.
+                    long tOi0 = System.nanoTime();
                     float[] oi = liveOiProvider.lookup(symbol, time);
+                    tOiLoad += (System.nanoTime() - tOi0);
                     feats.oiDelta24hCoin = oi[0];
                     feats.oiZCoin = oi[1];
                     feats.lsGlobalCoin = oi[2];
@@ -796,6 +849,8 @@ public class DetectEntrySignal2TradeNormal {
         // Live trước đây bỏ PASS-2 -> fundingRankCS/volumeZRankCS/momentumRankCS luôn NaN (selector
         // ăn 37/45 feature). Population PHẢI = EntrySignalFilter (giống export/train) chứ không rank
         // trên toàn bộ candidate, nếu không rank lệch phân bố. Mutate feature IN-PLACE trước predictBatch.
+        long tExtractMs = (System.nanoTime() - tExtract0) / 1_000_000L;
+        long tCs0 = System.nanoTime();
         try {
             Set<String> csPop = EntrySignalFilter.selectCoins(symbol2FinalTicker, HistoryManager.getInstance());
             List<FundingMarketFeatures> csList = new ArrayList<>();
@@ -806,13 +861,17 @@ public class DetectEntrySignal2TradeNormal {
         } catch (Exception e) {
             LOG.warn("PASS-2 cross-sectional rank lỗi (giữ NaN #33..35): {}", e.toString());
         }
+        long tCsMs = (System.nanoTime() - tCs0) / 1_000_000L;
 
+        long tBatchMs = 0L;
         if (fundingBrain != null && !aiFeaturesList.isEmpty()) {
             List<float[]> featureArrays = aiFeaturesList.stream()
                     .map(f -> fundingBrain.extractFeaturesToArray(f))
                     .collect(Collectors.toList());
 
+            long tBatch0 = System.nanoTime();
             List<float[]> results = fundingBrain.predictBatch(featureArrays);
+            tBatchMs = (System.nanoTime() - tBatch0) / 1_000_000L;
             float maxThres = Configs.PREDICT_SYMBOL_RATE_MAX_THRESHOLD * Configs.AI_DYNAMIC_MAX;
             // [LIVE_EQ_SIM] SELECTOR_TIER1_NET015 (default OFF): tang-1 universe/pool + maxThres cho
             //   ENTRY MOI dung net015-raw thay pNoPump Funding, khop cach SIM dung universe. Funding
@@ -864,8 +923,11 @@ public class DetectEntrySignal2TradeNormal {
             StorageSnappy.writeObject2File("storage/data/predictionSymbol/" + Utils.normalizeDateYYYYMMDD(time)
                     + "/" + time + ".features", symbol2FundingFeatures);
         } catch (Exception e) {
-            e.printStackTrace();
+            LOG.error("write predictionSymbol loi: {}", e.toString());
         }
+        long tPassMs = (System.nanoTime() - tPass0) / 1_000_000L;
+        LOG.info("[PASS-TIMING] predictAllCandidates nCoin={} total={}ms | extract+oi={}ms (oiLookup={}ms) cs={}ms batch={}ms",
+                aiCandidates.size(), tPassMs, tExtractMs, tOiLoad / 1_000_000L, tCsMs, tBatchMs);
         return sortedCandidates;
     }
 

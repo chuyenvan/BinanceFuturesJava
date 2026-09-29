@@ -276,24 +276,21 @@ public final class S1RankerLive {
     private void ensureOi(java.util.Set<String> syms, long lastClosedHour) {
         if (oiCacheHour == lastClosedHour && !oiCache.isEmpty()) return;
         long t0 = System.currentTimeMillis();
-        java.util.concurrent.ExecutorService ex = java.util.concurrent.Executors.newFixedThreadPool(8);
-        Map<String, TreeMap<Long, Float>[]> fresh = new java.util.concurrent.ConcurrentHashMap<>();
+        Map<String, TreeMap<Long, Float>[]> fresh = new java.util.HashMap<>();
         try {
-            java.util.List<java.util.concurrent.Future<?>> fs = new java.util.ArrayList<>();
-            for (String sym : syms) {
-                fs.add(ex.submit(() -> {
-                    TreeMap<Long, Float> d = DataManagerAerospikeFloatSim.getMetricMap242(
-                            OiFeatLiveSets.OI_DELTA24H, OiFeatLiveSets.BIN, sym);
-                    TreeMap<Long, Float> g = DataManagerAerospikeFloatSim.getMetricMap242(
-                            OiFeatLiveSets.LS_GLOBAL, OiFeatLiveSets.BIN, sym);
-                    fresh.put(sym, new TreeMap[]{tail(d, lastClosedHour), tail(g, lastClosedHour)});
-                }));
+            // [B4-SPEED] BatchRead 1 lần cho mọi coin (2 set) — ~1 round-trip thay vì ~1472 (8 thread
+            //   đọc tuần tự). Chỉ chunk-tháng gần (24h+1h biên); tail() vẫn cắt [lastClosedHour-24h,...]
+            //   => BIT-IDENTICAL full-history.
+            final long oiSince = lastClosedHour - 24L * 3600_000L - 3600_000L;
+            Map<String, TreeMap<Long, Float>[]> batch = DataManagerAerospikeFloatSim.getMetricMap242RecentBatch(
+                    syms, new String[]{OiFeatLiveSets.OI_DELTA24H, OiFeatLiveSets.LS_GLOBAL},
+                    OiFeatLiveSets.BIN, oiSince);
+            for (Map.Entry<String, TreeMap<Long, Float>[]> e : batch.entrySet()) {
+                TreeMap<Long, Float>[] v = e.getValue();
+                fresh.put(e.getKey(), new TreeMap[]{tail(v[0], lastClosedHour), tail(v[1], lastClosedHour)});
             }
-            for (java.util.concurrent.Future<?> f : fs) f.get();
         } catch (Exception e) {
             LOG.error("[S1] nap OI loi: {}", e.toString());
-        } finally {
-            ex.shutdownNow();
         }
         if (!fresh.isEmpty()) {
             oiCache.clear();

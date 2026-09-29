@@ -573,6 +573,29 @@ public class DataManagerAerospikeFloatSim {
     }
 
     /**
+     * [B4-SPEED] Danh sách "yyyyMM" từ tháng chứa {@code fromTs} đến tháng chứa {@code toTs} (GMT+7),
+     * tăng dần, bao gồm cả 2 tháng biên. Dùng cho {@link #getMetricMap242Recent} — chỉ quét vài tháng gần.
+     */
+    static List<String> monthsBetween(long fromTs, long toTs) {
+        List<String> months = new ArrayList<>();
+        try {
+            SimpleDateFormat f = monthFmt();
+            Calendar cal = Calendar.getInstance(TimeZone.getTimeZone(OI_METRIC_TZ));
+            cal.setTimeInMillis(fromTs);
+            cal.set(Calendar.DAY_OF_MONTH, 1);
+            Calendar end = Calendar.getInstance(TimeZone.getTimeZone(OI_METRIC_TZ));
+            end.setTimeInMillis(toTs);
+            while (!cal.after(end)) {
+                months.add(f.format(cal.getTime()));
+                cal.add(Calendar.MONTH, 1);
+            }
+        } catch (Exception e) {
+            LOG.error("❌ monthsBetween parse lỗi: {}", e.getMessage());
+        }
+        return months;
+    }
+
+    /**
      * LÕI ghi: TÁCH map theo THÁNG (GMT+7) → mỗi tháng 1 record nhỏ ({@code SYMBOL_yyyyMM}, ~8.9k điểm 5m
      * → vừa max record size, KHÁC funding 1-record/symbol vốn vỡ với data 5m × nhiều năm). Mỗi chunk
      * read-merge-GUARD-write riêng. Trả số chunk LỖI (0 = OK) để caller biết có nên mark DONE.
@@ -660,6 +683,67 @@ public class DataManagerAerospikeFloatSim {
         return getMetricMapFrom(getClient242(), setName, binName, symbol);
     }
 
+    /**
+     * [B4-SPEED] Như {@link #getMetricMap242} nhưng CHỈ đọc các chunk-tháng phủ {@code [sinceTs, now]}
+     * (thay vì toàn bộ {@code 202001..now} ~81 tháng). Dùng cho LIVE selector — chỉ cần 24h gần nhất
+     * (lookup merge_asof backward 2h) ⇒ kết quả tailMap(now-24h) BIT-IDENTICAL full-history mà IO giảm ~40x.
+     */
+    public static TreeMap<Long, Float> getMetricMap242Recent(String setName, String binName, String symbol, long sinceTs) {
+        return getMetricMapMonths(getClient242(), setName, binName, symbol, monthsBetween(sinceTs, System.currentTimeMillis()));
+    }
+
+    /**
+     * [B4-SPEED] BATCH-READ: đọc NHIỀU symbol × NHIỀU set (cùng bin, chỉ chunk-tháng gần) trong ~vài
+     * round-trip (batch theo {@link #BATCH_CHUNK_SIZE}), thay vì 1 round-trip/symbol/set (~3250 trips
+     * cho 650 coin × 5 set). Trả {@code Map<symbol, TreeMap[theo thứ tự setNames]>}; symbol thiếu data
+     * => mảng các TreeMap RỖNG (không phải null).
+     */
+    public static Map<String, TreeMap<Long, Float>[]> getMetricMap242RecentBatch(
+            Collection<String> symbols, String[] setNames, String binName, long sinceTs) {
+        Map<String, TreeMap<Long, Float>[]> out = new HashMap<>();
+        if (symbols == null || symbols.isEmpty() || setNames == null || setNames.length == 0) return out;
+        List<String> symList = new ArrayList<>(symbols);
+        int nSym = symList.size();
+        int nSet = setNames.length;
+        @SuppressWarnings("unchecked")
+        TreeMap<Long, Float>[] empty = new TreeMap[nSet];
+        for (int i = 0; i < nSet; i++) empty[i] = new TreeMap<>();
+        for (String s : symList) {
+            TreeMap<Long, Float>[] arr = new TreeMap[nSet];
+            for (int i = 0; i < nSet; i++) arr[i] = new TreeMap<>();
+            out.put(s, arr);
+        }
+        List<String> months = monthsBetween(sinceTs, System.currentTimeMillis());
+        if (months.isEmpty()) return out;
+        List<Key> keys = new ArrayList<>(nSym * nSet * months.size());
+        int[] routeSym = new int[nSym * nSet * months.size()];
+        int[] routeSet = new int[nSym * nSet * months.size()];
+        int idx = 0;
+        for (int si = 0; si < nSym; si++) {
+            for (int seti = 0; seti < nSet; seti++) {
+                for (String m : months) {
+                    keys.add(new Key(Configs.AEROSPIKE_NAMESPACE, setNames[seti], monthKey(symList.get(si), m)));
+                    routeSym[idx] = si;
+                    routeSet[idx] = seti;
+                    idx++;
+                }
+            }
+        }
+        AerospikeClient client = getClient242();
+        for (int off = 0; off < keys.size(); off += BATCH_CHUNK_SIZE) {
+            Key[] sub = keys.subList(off, Math.min(off + BATCH_CHUNK_SIZE, keys.size())).toArray(new Key[0]);
+            Record[] recs = client.get(batchPolicy, sub);
+            if (recs == null) continue;
+            for (int i = 0; i < recs.length; i++) {
+                if (recs[i] == null) continue;
+                TreeMap<Long, Float> m = decodeMap(recs[i], binName);
+                if (m.isEmpty()) continue;
+                out.get(symList.get(routeSym[off + i]))[routeSet[off + i]].putAll(m);
+            }
+        }
+        return out;
+    }
+
     /** [C1] Ghi accumulator expanding (per-coin) vao 242: JSON double[]{lastTs,sum,sumSq,n} Snappy 1 bin. */
     public static void writeAccum242(String setName, String binName, String symbol,
                                      long lastTs, double sum, double sumSq, long n) {
@@ -698,9 +782,14 @@ public class DataManagerAerospikeFloatSim {
      * theo {@link #BATCH_CHUNK_SIZE}), bỏ qua tháng null.
      */
     private static TreeMap<Long, Float> getMetricMapFrom(AerospikeClient client, String setName, String binName, String symbol) {
+        return getMetricMapMonths(client, setName, binName, symbol, allMonthsTillNow());
+    }
+
+    /** LÕI batch-get: gộp các chunk-tháng {@code months} (SYMBOL_yyyyMM) thành 1 TreeMap (bỏ tháng null). */
+    private static TreeMap<Long, Float> getMetricMapMonths(AerospikeClient client, String setName, String binName,
+                                                            String symbol, List<String> months) {
         TreeMap<Long, Float> results = new TreeMap<>();
         try {
-            List<String> months = allMonthsTillNow();
             Key[] keys = new Key[months.size()];
             for (int i = 0; i < months.size(); i++) {
                 keys[i] = new Key(Configs.AEROSPIKE_NAMESPACE, setName, monthKey(symbol, months.get(i)));
