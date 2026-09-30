@@ -1,0 +1,85 @@
+{
+ "kernel": "https://www.kaggle.com/code/chuyendinh/oi-heap-bench-o512",
+ "kernel_version": 3,
+ "date": "2026-09-30",
+ "jvm": "OpenJDK 17.0.18 (Kaggle CPU script kernel)",
+ "bench_source_sha256": {
+  "OiReloadHeapBench.java": "40ff61f2d46082f3395ce3964ac4b75aeacd898caa76540c3c103d8ff33dd8be",
+  "OiReloadParityCheck.java": "d1839058123fd365b4a01611d32ccd766a3fad521389340b30545c95750d4334",
+  "OiReloadHeapBenchExt.java": "a3c635c15857dc7205d973b0e87eecf8cf5e19324783a8e44284b46fa0b6e6b1"
+ },
+ "shipped_jar_sha256": "c389b4becfe07197d61dbd4b1265405ac4be9e167e835d572c3120d8abca1e15",
+ "runs": {
+  "bench_legacy_512m": {
+   "heap": "512m",
+   "rc": 1,
+   "verdict": "FAIL",
+   "err": "OutOfMemoryError",
+   "note": "bench g\u1ed1c: OOM ngay chu k\u1ef3 1"
+  },
+  "bench_inplace_512m": {
+   "heap": "512m",
+   "rc": 1,
+   "verdict": "FAIL",
+   "err": null,
+   "peakUsedMb": 405,
+   "note": "KH\u00d4NG OOM; FAIL ch\u1ec9 v\u00ec PASS c\u1ee7a bench d\u00f9ng peakUsed (ch\u1ee9a r\u00e1c ch\u01b0a GC) > BENCH_BUDGET_MB=200"
+  },
+  "ext_legacy_512m": {
+   "heap": "512m",
+   "rc": 1,
+   "verdict": "FAIL",
+   "err": "OutOfMemoryError",
+   "retainedMb": 1
+  },
+  "ext_inplace_512m": {
+   "heap": "512m",
+   "rc": 0,
+   "verdict": "PASS",
+   "peakUsedMb": 350,
+   "retainedMb": 73,
+   "entries": 943585
+  },
+  "ext_inplace_slice_512m": {
+   "heap": "512m",
+   "rc": 0,
+   "verdict": "PASS",
+   "peakUsedMb": 222,
+   "retainedMb": 73,
+   "entries": 940320
+  },
+  "ext_legacy_4g": {
+   "heap": "4g",
+   "rc": 1,
+   "verdict": "FAIL",
+   "err": "OutOfMemoryError",
+   "peakUsedMb": 2194,
+   "retainedMb": 2155,
+   "entries": 28209600,
+   "note": "t\u00e1i hi\u1ec7n OOM production: 1 b\u1ea3n ~2,2GB, double-buffer > 4g"
+  },
+  "ext_inplace_4g": {
+   "heap": "4g",
+   "rc": 0,
+   "verdict": "PASS",
+   "peakUsedMb": 770,
+   "retainedMb": 74,
+   "entries": 943585
+  },
+  "parity": {
+   "heap": "512m",
+   "rc": 0,
+   "verdict": "PASS",
+   "checks": 980,
+   "mismatches": 0
+  }
+ },
+ "conclusion": {
+  "legacy_oom": true,
+  "inplace_pass_no_oom": true,
+  "inplace_retained_mb": 73,
+  "legacy_live_mb_per_copy": 2194,
+  "reduce_factor_live": 30.1,
+  "parity_lookup_inplace_eq_legacy_in_24h": true
+ }
+}

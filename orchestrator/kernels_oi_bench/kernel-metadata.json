@@ -1,0 +1,13 @@
+{
+ "id": "chuyendinh/oi-heap-bench-o512",
+ "title": "oi-heap-bench-o512",
+ "code_file": "run_bench.py",
+ "language": "python",
+ "kernel_type": "script",
+ "is_private": true,
+ "enable_gpu": false,
+ "enable_internet": false,
+ "dataset_sources": [],
+ "competition_sources": [],
+ "kernel_sources": []
+}
