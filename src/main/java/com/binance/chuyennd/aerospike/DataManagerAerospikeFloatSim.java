@@ -744,6 +744,78 @@ public class DataManagerAerospikeFloatSim {
         return out;
     }
 
+    /**
+     * [FIX-OOM-OI 2026-09-30] Như {@link #getMetricMap242RecentBatch} nhưng STREAM theo từng lô symbol
+     * ({@code symChunk}) và CẮT mỗi TreeMap về {@code [keepFromTs, ∞)} NGAY khi decode.
+     *
+     * <p>Vì sao cần: chunk-tháng {@code SYMBOL_yyyyMM} được writer MERGE-tích-luỹ nên chứa ~CẢ THÁNG
+     * (~8640 điểm 5m), KHÔNG phải 24h như tên method gợi ý — đọc batch toàn universe rồi mới dùng sẽ
+     * giữ ~28M entry (~2,2–2,5 GB) ⇒ OOM. Method này giữ TỐI ĐA 1 lô key + 1 record decode một lúc và
+     * chỉ giữ lại phần {@code keepFromTs..} ⇒ đỉnh RAM ≈ 1 lô.
+     *
+     * <p>Gọi {@code sink.accept(symbol, arr)} cho từng symbol trong lô ({@code arr[m]} = TreeMap của
+     * {@code setNames[m]}; symbol thiếu data ⇒ mảng các TreeMap RỖNG, không null). KHÔNG đổi API cũ
+     * ⇒ caller khác không bị ảnh hưởng.
+     *
+     * @param keepFromTs cắt bỏ điểm {@code < keepFromTs}; {@code <= 0} = không cắt.
+     */
+    public static void getMetricMap242RecentBatchInto(
+            Collection<String> symbols, String[] setNames, String binName,
+            long sinceTs, long keepFromTs, int symChunk,
+            java.util.function.BiConsumer<String, TreeMap<Long, Float>[]> sink) {
+        if (symbols == null || symbols.isEmpty() || setNames == null || setNames.length == 0 || sink == null) return;
+        List<String> symList = new ArrayList<>(symbols);
+        int nSet = setNames.length;
+        List<String> months = monthsBetween(sinceTs, System.currentTimeMillis());
+        if (months.isEmpty()) return;
+        AerospikeClient client = getClient242();
+        int chunk = Math.max(1, symChunk);
+        for (int s0 = 0; s0 < symList.size(); s0 += chunk) {
+            int s1 = Math.min(s0 + chunk, symList.size());
+            int nSym = s1 - s0;
+            // keys CHỈ cho lô này (giải phóng sau mỗi lô — không giữ list toàn universe).
+            List<Key> keys = new ArrayList<>(nSym * nSet * months.size());
+            int[] routeSym = new int[nSym * nSet * months.size()];
+            int[] routeSet = new int[nSym * nSet * months.size()];
+            int idx = 0;
+            for (int si = s0; si < s1; si++) {
+                for (int seti = 0; seti < nSet; seti++) {
+                    for (String m : months) {
+                        keys.add(new Key(Configs.AEROSPIKE_NAMESPACE, setNames[seti], monthKey(symList.get(si), m)));
+                        routeSym[idx] = si;
+                        routeSet[idx] = seti;
+                        idx++;
+                    }
+                }
+            }
+            Map<String, TreeMap<Long, Float>[]> chunkOut = new HashMap<>();
+            for (int si = s0; si < s1; si++) {
+                TreeMap<Long, Float>[] arr = new TreeMap[nSet];
+                for (int i = 0; i < nSet; i++) arr[i] = new TreeMap<>();
+                chunkOut.put(symList.get(si), arr);
+            }
+            for (int off = 0; off < keys.size(); off += BATCH_CHUNK_SIZE) {
+                Key[] sub = keys.subList(off, Math.min(off + BATCH_CHUNK_SIZE, keys.size())).toArray(new Key[0]);
+                Record[] recs = client.get(batchPolicy, sub);
+                if (recs == null) continue;
+                for (int i = 0; i < recs.length; i++) {
+                    if (recs[i] == null) continue;
+                    TreeMap<Long, Float> m = decodeMap(recs[i], binName);
+                    if (m.isEmpty()) continue;
+                    // CẮT NGAY (chỉ giữ 1 TreeMap-tháng decode một lúc) — không tích luỹ cả tháng.
+                    if (keepFromTs > 0 && m.firstKey() < keepFromTs) {
+                        m = new TreeMap<>(m.tailMap(keepFromTs, true));
+                        if (m.isEmpty()) continue;
+                    }
+                    chunkOut.get(symList.get(routeSym[off + i]))[routeSet[off + i]].putAll(m);
+                }
+            }
+            for (Map.Entry<String, TreeMap<Long, Float>[]> e : chunkOut.entrySet()) {
+                sink.accept(e.getKey(), e.getValue());
+            }
+        }
+    }
+
     /** [C1] Ghi accumulator expanding (per-coin) vao 242: JSON double[]{lastTs,sum,sumSq,n} Snappy 1 bin. */
     public static void writeAccum242(String setName, String binName, String symbol,
                                      long lastTs, double sum, double sumSq, long n) {
