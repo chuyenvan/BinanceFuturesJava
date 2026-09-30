@@ -1,0 +1,46 @@
+[SRC] OiReloadHeapBench.java sha256=40ff61f2d46082f3395ce3964ac4b75aeacd898caa76540c3c103d8ff33dd8be bytes=6045
+[SRC] OiReloadParityCheck.java sha256=d1839058123fd365b4a01611d32ccd766a3fad521389340b30545c95750d4334 bytes=3794
+[SRC] OiReloadHeapBenchExt.java sha256=a3c635c15857dc7205d973b0e87eecf8cf5e19324783a8e44284b46fa0b6e6b1 bytes=5695
+[TOOL] java: openjdk version "17.0.18" 2026-01-20
+[BUILD] javac rc=0
+========== bench_legacy @-Xmx512m rc=1 wall=6.5s ==========
+[BENCH] mode=legacy nCoins=653 cycles=3 points/set=8640 chunk=64 maxHeap=512MB
+[BENCH] coins=0 cycles=3 peakUsed=0MB err=OutOfMemoryError: Java heap space
+[BENCH] VERDICT FAIL
+========== bench_inplace @-Xmx512m rc=1 wall=10.5s ==========
+[BENCH] mode=inplace nCoins=653 cycles=3 points/set=8640 chunk=64 maxHeap=512MB
+[BENCH] coins=653 cycles=3 peakUsed=405MB err=none
+[BENCH] VERDICT FAIL
+========== ext_legacy @-Xmx512m rc=1 wall=7.9s ==========
+[EXT] mode=legacy nCoins=653 cycles=3 points/set=8640 chunk=64 maxHeap=512MB
+[EXT] coins=0 entries=0 peakUsed=0MB retained(afterGC)=1MB err=OutOfMemoryError
+[EXT] VERDICT FAIL
+========== ext_inplace @-Xmx512m rc=0 wall=11.2s ==========
+[EXT] mode=inplace nCoins=653 cycles=3 points/set=8640 chunk=64 maxHeap=512MB
+[EXT] cycle=0 usedNow=98MB
+[EXT] cycle=1 usedNow=256MB
+[EXT] cycle=2 usedNow=350MB
+[EXT] coins=653 entries=943585 peakUsed=350MB retained(afterGC)=73MB err=none
+[EXT] VERDICT PASS
+========== ext_inplace_slice @-Xmx512m rc=0 wall=1.4s ==========
+[EXT] mode=inplace_slice nCoins=653 cycles=3 points/set=8640 chunk=64 maxHeap=512MB
+[EXT] cycle=0 usedNow=75MB
+[EXT] cycle=1 usedNow=149MB
+[EXT] cycle=2 usedNow=222MB
+[EXT] coins=653 entries=940320 peakUsed=222MB retained(afterGC)=73MB err=none
+[EXT] VERDICT PASS
+========== ext_legacy_4g @-Xmx512m rc=1 wall=60.2s ==========
+[EXT] mode=legacy nCoins=653 cycles=3 points/set=8640 chunk=64 maxHeap=4096MB
+[EXT] cycle=0 usedNow=2194MB
+[EXT] coins=653 entries=28209600 peakUsed=2194MB retained(afterGC)=2155MB err=OutOfMemoryError
+[EXT] VERDICT FAIL
+========== ext_inplace_4g @-Xmx512m rc=0 wall=13.3s ==========
+[EXT] mode=inplace nCoins=653 cycles=3 points/set=8640 chunk=64 maxHeap=4096MB
+[EXT] cycle=0 usedNow=308MB
+[EXT] cycle=1 usedNow=478MB
+[EXT] cycle=2 usedNow=770MB
+[EXT] coins=653 entries=943585 peakUsed=770MB retained(afterGC)=74MB err=none
+[EXT] VERDICT PASS
+========== parity @-Xmx512m rc=0 wall=0.3s ==========
+[PARITY] coins=20 points/set=8640 checks=980 mismatches=0
+[PARITY] VERDICT PASS
