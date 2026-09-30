@@ -237,8 +237,9 @@ def load_custom_labels(path):
 def load_labels(mode, thr, hi_ms):
     """NHAN. mode='net' -> y = (retEnd_4h > thr)   [= recipe THAT cua x26]
               mode='maxfav' -> y = (maxFav_4h >= thr)  [= recipe cua predwf_G015_v2 / g72]
+              mode='ndown' -> y = (retEnd_h <= -thr)  [PREREG_SHORT_MODEL: NHAN NGUOC — su kien GIAM]
     Loc chung: nBars_4h >= 16 va cot nhan notna (y het pipeline goc)."""
-    col = ("retEnd_%dh" % LABEL_H) if mode == "net" else ("maxFav_%dh" % LABEL_H)
+    col = ("retEnd_%dh" % LABEL_H) if mode in ("net", "ndown") else ("maxFav_%dh" % LABEL_H)
     nbc = "nBars_%dh" % LABEL_H
     fs = sorted(glob.glob(LB_DIR + "/funding_label_*.pb"))
     fs = [f for f in fs if os.path.basename(f).split("_")[2] < "20260701"]
@@ -262,6 +263,10 @@ def load_labels(mode, thr, hi_ms):
             yv = v[keep]                     # LIEN TUC (PREREG_MONEY_RANKER §3)
             parts.append(pd.DataFrame({"ts": ts[keep], "symId": sid[k].to_numpy(np.int32)[keep],
                                        "y": yv.astype(np.float32)}))
+        elif mode == "ndown":
+            yv = (v[keep] <= -thr)           # PREREG_SHORT_MODEL: nhan NGUOC (mirror cua net)
+            parts.append(pd.DataFrame({"ts": ts[keep], "symId": sid[k].to_numpy(np.int32)[keep],
+                                       "y": yv.astype(np.int8)}))
         else:
             yv = (v[keep] > thr) if mode == "net" else (v[keep] >= thr)
             parts.append(pd.DataFrame({"ts": ts[keep], "symId": sid[k].to_numpy(np.int32)[keep],
@@ -333,7 +338,7 @@ def main():
     ap.add_argument("--save-model", action="store_true", help="luu model_f<i>_<h>h.json")
     ap.add_argument("--label-h", type=int, default=4, choices=list(LABEL_HS),
                     help="horizon cua NHAN (PREREG_H72): 4 = hanh vi cu, 72 = them head 72h")
-    ap.add_argument("--label-mode", default="net", choices=["net", "maxfav"])
+    ap.add_argument("--label-mode", default="net", choices=["net", "maxfav", "ndown"])
     ap.add_argument("--thr", type=float, default=0.015, help="NET_THR (net) hoac WIN (maxfav)")
     ap.add_argument("--label-kind", default="bin", choices=["bin", "cont"],
                     help="PREREG_MONEY_RANKER §3: bin = nhan nhi phan (cu) | cont = y = retEnd_h LIEN TUC")
