@@ -1,0 +1,45 @@
+{
+ "source": "/home/ubuntu/kaggle_sim/out/de-p1/storage/printDone.csv",
+ "n": 2517,
+ "notional_sum": 2509117.8326750677,
+ "pnl_long_sum": 96908.85473926045,
+ "funding_sum": -1420.5034756269972,
+ "fee_rt": 4927.907423373833,
+ "slip_rt": 336.2217895784591,
+ "net_short": -102172.98395221274,
+ "long": {
+  "price_ret_mean_pct": 4.476721271848629,
+  "win_pct": 85.85617798967024
+ },
+ "short": {
+  "price_ret_mean_pct": -4.476721271848629,
+  "win_pct": 14.143822010329758
+ },
+ "by_year": {
+  "2021": {
+   "n": 434,
+   "pnl_long": 6486.5,
+   "net_short_est": -6959.3
+  },
+  "2022": {
+   "n": 423,
+   "pnl_long": 4608.9,
+   "net_short_est": -5087.1
+  },
+  "2023": {
+   "n": 527,
+   "pnl_long": 24918.0,
+   "net_short_est": -25932.8
+  },
+  "2024": {
+   "n": 599,
+   "pnl_long": 30841.6,
+   "net_short_est": -32392.6
+  },
+  "2025": {
+   "n": 534,
+   "pnl_long": 30053.8,
+   "net_short_est": -31801.1
+  }
+ }
+}

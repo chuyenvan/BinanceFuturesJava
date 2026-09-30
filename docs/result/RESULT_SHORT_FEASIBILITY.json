@@ -1,0 +1,79 @@
+{
+ "prereg": "docs/prereg/PREREG_SHORT_FEASIBILITY.md @9c570e6f",
+ "verdict": "NO-GO",
+ "P1": {
+  "source": "/home/ubuntu/kaggle_sim/out/de-p1/storage/printDone.csv",
+  "n": 2517,
+  "pnl_long_sum": 96908.9,
+  "net_short": -102173.0,
+  "fee_rt": 4927.9,
+  "slip_rt": 336.2,
+  "short_win_pct": 14.1,
+  "long_price_ret_mean_pct": 4.477,
+  "by_year": {
+   "2021": -6959.3,
+   "2022": -5087.1,
+   "2023": -25932.8,
+   "2024": -32392.6,
+   "2025": -31801.1
+  },
+  "G1": "FAIL"
+ },
+ "P2": {
+  "fee_rt_pct": 0.1964,
+  "slip_rt_pct": 0.0134,
+  "gate_threshold_ret24_pct": -0.2098,
+  "ic": {
+   "1": -0.02465,
+   "4": -0.04065,
+   "24": -0.06932
+  },
+  "decile_ret24_pct": {
+   "0": -0.03299,
+   "1": -0.03846,
+   "2": -0.02526,
+   "3": -0.03279,
+   "4": -0.02258,
+   "5": -0.04501,
+   "6": -0.02982,
+   "7": -0.0774,
+   "8": -0.08984,
+   "9": 0.02446
+  },
+  "worst_decile_24h": "d8",
+  "worst_ret24_pct": -0.08984,
+  "d8_years": {
+   "2021": 5.2145,
+   "2022": -0.4305,
+   "2023": 0.2677,
+   "2024": 0.077,
+   "2025": -0.2781
+  },
+  "G2": "FAIL"
+ },
+ "costs": {
+  "funding_gross_pct_cycle": 0.0251,
+  "carry_cost_pct_cycle": 0.1599,
+  "carry_cost_over_gross_pct": 810,
+  "funding_topk_rotate_net_pct_cycle": {
+   "K5": -0.2223,
+   "K10": -0.1709,
+   "K20": -0.146
+  }
+ },
+ "build": {
+  "files_ref_orderside_buy": 20,
+  "simulator_createOrderBUY_sites": 7,
+  "sell_path": "go 2026-09-03 (long-only, SimulatorMarketLevelTicker1MStopLoss.java:375)"
+ },
+ "squeeze": {
+  "V1_MAE_p99_pct": 20.38,
+  "V1_MAE_max_pct": 602.21,
+  "V1_squeeze_gt20_pct": 1.04,
+  "alt_excess_kurt": {
+   "d1": 370.9,
+   "d7": 1964.0,
+   "d30": 878.3
+  }
+ }
+}
