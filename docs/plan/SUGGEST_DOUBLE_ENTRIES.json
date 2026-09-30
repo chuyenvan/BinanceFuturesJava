@@ -1,0 +1,58 @@
+{
+  "task": "SUGGEST_DOUBLE_ENTRIES",
+  "date": "2026-09-30",
+  "branch": "module",
+  "mode": "read-only design (0 sim / 0 train)",
+  "baseline": {
+    "profile": "profiles/g2_flat3.properties",
+    "components": "r4_kg0_k16_f015_g155 + GDV2 rolling gate(ratio,0.99995083,90d) + FLAT3 exit",
+    "base": {"n": 2517, "equity": 131908, "md5_printDone": "650c386f0d0dfea334af9d55ca2f21d4", "src": "RESULT_FEAT_ADD_V1"},
+    "stress": {"n": 2509, "equity": 129642, "CAGR_pct": 33.79, "ddPhut_pct": -18.00, "UW_days": 128.9, "qstar_pct": 23.7, "top1_pct": 17.59, "conc_pct": 4.09, "Calmar_MTM": 1.877, "verdict": "PASS 4/4", "src": "RESULT_GDV2_P3"}
+  },
+  "answer": "NULL: khong co duong CONFIG tu G2+FLAT3 dat dong thoi gap doi n VA giam margin ma giu chat luong. n bi chan boi GATE (khong phai slot/von); giam size don thuan = 0 lenh them; moi cach tang n = mo gate va da do la ha chat luong.",
+  "levers": [
+    {"lever": "SELECTOR_RANK_TOPK", "tried": true, "evidence": "RESULT_K_DENSITY 1579f5a (K8/12/16 -> n1089/1409/1730, coverage tuan 33.8% & gap 129.24d Y HET); RESULT_SIZE_COUNT 87a9f5c7 (K32 n1878 UW277)", "wall": "T2/T3 chat luong giam don dieu; T1 UW o K32"},
+    {"lever": "SIM_F_BASE (size/margin)", "tried": true, "evidence": "RESULT_SIZE_COUNT (B1 x0.5 K8 = n745 ~ B0 744, CAGR 17.29->11.22); RESULT_2X_HALFSIZE (size x0.5 + mo gate -> CAGR -5..-8pp, UW~222)", "wall": "khong phai lever n (0 lenh); ha CAGR"},
+    {"lever": "SIM_GATE_DYN_SCALE", "tried": true, "evidence": "RESULT_GATESCALE_KEEPLEG0 a75c00a (1.70->1.00: n1085->2549 x2.35; UW147->248; conc7.12->12.48%; TSloss10.3->15.6 = 1 rate XAU ngoai CI); RESULT_GATESCALE_SWEEP a450046 = NULL 0 diem qua S1", "wall": "T3 (TSloss) · T1 (UW/conc)"},
+    {"lever": "SIM_GATE_ROLLING_MODE/PCT/DAYS", "tried": true, "evidence": "RESULT_GDV2_EVEN 39944db (W30 n3199 FAIL 4/4 UW472.6; W90 n2509 PASS 4/4 = baseline); RESULT_GD92_R4 68a2836 (D1 pct0.92+scale1.55 n2141; D2 pct0.92+scale1.00 n4287 FAIL 4/4)", "wall": "T1-T4 (D2) · T4 (D1 chi +5.6%)"},
+    {"lever": "SIM_ENTRY_SAMPLE_MIN (nhip)", "tried": true, "evidence": "RESULT_R4_CADENCE 7f5ed6b8 (nhip15' -> n1287 = 63.5%, Calmar 75.8%); RESULT_SIM_CADENCE_MATCH (key chi ap leg selector)", "wall": "da o tran (1')"},
+    {"lever": "SIM_LOSER_TIME_STOP_HOURS", "tried": true, "evidence": "RESULT_EXIT_STRUCT 6b9e29b4 (A1 BO TS168: n744->780 +4.8%, UW166->318, CAGR -8.23pp); PREREG_EXIT 168/120/96/72; PREREG_X2", "wall": "khong them lenh that; T1 UW"},
+    {"lever": "TP / TS-giveback / FLAT3 exit", "tried": true, "evidence": "RESULT_EXIT_HIGH_N 33f0b77 (6/6 chan exit 0 TOT/0 XAU ngoai CI tren 2632/2559 leg); RESULT_EXIT_FIT cb9078f = NULL", "wall": "khong co lever dieu chinh n"},
+    {"lever": "DCA_GRID_*", "tried": true, "evidence": "RESULT_DCA_MORELEGS_V4 b4548b5 NULL 8/8; RESULT_DCA_GATEWIDEN_V3 f95d928 n3015 UW221; RESULT_HOLDDCA 877694c 0/3; RESULT_EXIT_STRUCT A2/A3 KEM A0", "wall": "T1 (UW) · T3"},
+    {"lever": "CONC_CAP_PERCOIN_PCT", "tried": "chi 15%", "evidence": "RESULT_CONC_CAP_HIGHN a93982f (bind that: T100 27.23->10.83%, chan 44 leg; 0 rate XAU ngoai CI; gia PnL <=5.5%); tren KEEPLEG0 NO-OP blocked=0", "wall": "cap chan leg => n giam nhe; lever rui ro, khong phai lever n"},
+    {"lever": "universe (so coin)", "tried": "chi de cat", "evidence": "RESULT_COST_LIQUIDITY cd5e758 (decile kem thanh khoan nhat LAI NHIEU NHAT +4.93%/lenh; cat universe mat 10-64% lai, rho~0)", "wall": "khong co du dia mo rong bang loc"},
+    {"lever": "nguon su kien / signal thu 2", "tried": false, "evidence": "OFI V3 630 symbol CHI la UNG VIEN (RESULT_S1_FREE_OFI_V3_MULTISEED PASS multi-seed, chua tich hop)", "wall": null}
+  ],
+  "untested": [
+    {"gap": "2-D (K, size) K=24/32 x size x0.67/x0.5, GIU gate G2 (khong dyn_scale 1.00)", "why_untested": "SIZE_COUNT/K_DENSITY chay tren nen KEEPLEG0/T170 khong bat rolling gate; D2 bat gate nhung mo luon scale 1.00", "est_dn": "K16->24 ~ x1.25-1.35 (~3100-3400); K16->32 ~ x1.55-1.65 (~3900-4100); size gan nhu khong doi n", "risk": "T3 TSloss (K>=24 gan chac); T1 UW (K32); T2 q*"},
+    {"gap": "rut ngan TS 168h -> 96/72h", "why_untested": "chi thu bo han TS", "est_dn": "+2..+6% (A1 +4.8%)", "risk": "thap; loi ich ~0 (khong ket slot)"},
+    {"gap": "CONC_CAP_PERCOIN 15% -> 10/7.5%", "why_untested": "moi thu 15%", "est_dn": "-2..-8% (cap chan leg)", "risk": "giam conc (tot T1) nhung nguoc muc tieu n"},
+    {"gap": "gate scale x K (1.30-1.45 x K24, gate G2 ON)", "why_untested": "GATESCALE_* chay tren KEEPLEG0 K8 khong co rolling gate; GDV2 giu scale 1.55", "est_dn": "scale1.40 ~ x1.13; scale1.30 ~ x1.25", "risk": "T3; nhung la o can bang nhat"},
+    {"gap": "mo rong universe", "why_untested": "COST_LIQUIDITY chi do cat, khong do them", "est_dn": "~0", "risk": null}
+  ],
+  "arms_preregistered_not_run": {
+    "base_profile": "profiles/g2_flat3.properties (giu nguyen GATE_ROLLING + FLAT3 + KEEPLEG0 + nhip 1')",
+    "overrides": "chi SELECTOR_RANK_TOPK + SIM_F_BASE",
+    "arms": [
+      {"id": "P1", "K": 16, "F_BASE": 0.015, "role": "parity anchor", "expect_n": 2509, "gate": "md5 650c386f (cong DUNG)"},
+      {"id": "P2", "K": 24, "F_BASE": 0.015, "expect_n": "3100-3400", "t3": "co the PASS"},
+      {"id": "P3", "K": 32, "F_BASE": 0.015, "expect_n": "3900-4100", "t3": "DU BAO TRUOT T3/T2 (ve duong bien)"},
+      {"id": "P4", "K": 24, "F_BASE": 0.010, "expect_n": "3100-3400", "t3": "nhu P2; ung vien giam margin hop ly nhat"},
+      {"id": "P5", "K": 32, "F_BASE": 0.0075, "expect_n": "3900-4100", "t3": "DU BAO TRUOT T3/T2"},
+      {"id": "P6", "K": 16, "F_BASE": 0.010, "expect_n": 2509, "t3": "DU BAO T3 PASS nhung T4 TRUOT (n khong tang)"}
+    ],
+    "rules_t4": {"n": "muc tieu chinh", "Calmar_MTM_min": 1.689, "conc_max_pct": 4.09, "T3": "win% >= -2.0pp & TSloss% <= +2.5pp (CI block-72h, 2000 rep, seed 20260905, inflate(k))"},
+    "cost": "6 chan Kaggle CPU = 0; 0 sim Oracle; DEV <= 2025-12-31; khong cham 2026"
+  },
+  "structural_directions": [
+    {"id": "S1", "name": "OFI V3 (Binance Vision aggTrades, 630 symbol) = nguon su kien thu 2", "why_only_this": "K_DENSITY: burstiness la thuoc tinh cua GATE, khong cua K — coverage tuan 33.8% va gap dai nhat 129.24 ngay Y HET o K=8/12/16; gate dong ~66% tuan vi S1 khong co tin hieu. Chi tin hieu DOC LAP moi lap duoc tuan gate funding dong.", "status": "ung vien (multi-seed PASS), chua tich hop"},
+    {"id": "S2", "name": "ENTRY_CASCADE (PLAN_CASCADE_ENTRY, default OFF)", "why": "94% thoi gian 1 luot la predict toan universe => cascade lam nhip 1' kha thi tren LIVE; KHONG phai lever n ma la lever do tre", "status": "code san sang, can owner duyet (doi duong LIVE)"}
+  ],
+  "dropped": [
+    "giam margin de tang n (B1=B0: 0 lenh them)",
+    "rut ngan TS de giai phong slot (CAPACITY_DIAG: khong ket slot)",
+    "cat universe de tang chat luong (decile kem thanh khoan lai nhat)",
+    "(a)/(b') (bat kha thi toan hoc: Sharpe nam ~8.1 / ~3.6)",
+    "dyn_scale 1.00 / gate W30 / pct0.92+scale1.00 (FAIL 4/4 tang)"
+  ]
+}
