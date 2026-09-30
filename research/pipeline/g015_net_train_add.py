@@ -234,13 +234,22 @@ def load_custom_labels(path):
     return L
 
 
-def load_labels(mode, thr, hi_ms):
-    """NHAN. mode='net' -> y = (retEnd_4h > thr)   [= recipe THAT cua x26]
-              mode='maxfav' -> y = (maxFav_4h >= thr)  [= recipe cua predwf_G015_v2 / g72]
+def load_labels(mode, thr, hi_ms, e_inf=float("inf")):
+    """NHAN. mode='net' -> y = (retEnd_h > thr)   [= recipe THAT cua x26]
+              mode='maxfav' -> y = (maxFav_h >= thr)  [= recipe cua predwf_G015_v2 / g72]
               mode='ndown' -> y = (retEnd_h <= -thr)  [PREREG_SHORT_MODEL: NHAN NGUOC — su kien GIAM]
-    Loc chung: nBars_4h >= 16 va cot nhan notna (y het pipeline goc)."""
-    col = ("retEnd_%dh" % LABEL_H) if mode in ("net", "ndown") else ("maxFav_%dh" % LABEL_H)
+              mode='pa'  -> PATH-AWARE hard (PREREG_SHORT_LABEL2): y = 1[retEnd_h <= -thr] NHUNG
+                            dong co maxFav_h > e_inf (coin DA TANG qua E) bi LOAI (y = NaN)
+              mode='pw'  -> PATH-AWARE trong so: y = 1[retEnd_h <= -thr] tren MOI dong;
+                            w = 1 neu maxFav_h <= e_inf, nguoc lai w = max(0, 1-(maxFav_h-e)/e)
+              mode='pn'  -> NOISE control: CUNG mask nhu 'pa' nhung y = Bernoulli(ti le goc)
+    Loc chung: nBars_h >= NEED va cot nhan notna (y het pipeline goc).
+    maxFav_h = max(high/close_t - 1) tren (t, t+h] = MAE_nguoc cua SHORT (muc coin TANG te nhat)."""
+    pa = mode in ("pa", "pw", "pn")
     nbc = "nBars_%dh" % LABEL_H
+    mfc = "maxFav_%dh" % LABEL_H
+    col = mfc if mode == "maxfav" else ("retEnd_%dh" % LABEL_H)
+    want = ["tEpochMs", "symbol", nbc, col] + ([mfc] if (pa and mfc != col) else [])
     fs = sorted(glob.glob(LB_DIR + "/funding_label_*.pb"))
     fs = [f for f in fs if os.path.basename(f).split("_")[2] < "20260701"]
     m0 = FLPB.meta(fs[0])
@@ -250,38 +259,57 @@ def load_labels(mode, thr, hi_ms):
     smap = pd.read_csv(MAP_CSV)
     s2i = dict(zip(smap.symbol, smap.symId.astype(np.int32)))
     parts, tot = [], 0
+    rng = np.random.default_rng(NOISE_SEED)
     for fp in fs:
-        d = FLPB.read_label(fp, usecols=["tEpochMs", "symbol", col, nbc])
+        d = FLPB.read_label(fp, usecols=want)
         tot += len(d)
         d = d[(d[nbc] >= NEED) & d[col].notna()]
+        if pa:
+            d = d[d[mfc].notna()]
         sid = d.symbol.map(s2i)
         k = sid.notna().to_numpy()
         ts = d.tEpochMs.to_numpy(np.int64)[k]
         v = d[col].to_numpy(np.float64)[k]
         keep = ts < hi_ms
+        ts_k = ts[keep]
+        sid_k = sid[k].to_numpy(np.int32)[keep]
+        if pa:
+            mv = d[mfc].to_numpy(np.float64)[k][keep]
         if LABEL_KIND == "cont":
-            yv = v[keep]                     # LIEN TUC (PREREG_MONEY_RANKER §3)
-            parts.append(pd.DataFrame({"ts": ts[keep], "symId": sid[k].to_numpy(np.int32)[keep],
-                                       "y": yv.astype(np.float32)}))
+            parts.append(pd.DataFrame({"ts": ts_k, "symId": sid_k,
+                                       "y": v[keep].astype(np.float32)}))
         elif mode == "ndown":
-            yv = (v[keep] <= -thr)           # PREREG_SHORT_MODEL: nhan NGUOC (mirror cua net)
-            parts.append(pd.DataFrame({"ts": ts[keep], "symId": sid[k].to_numpy(np.int32)[keep],
-                                       "y": yv.astype(np.int8)}))
+            parts.append(pd.DataFrame({"ts": ts_k, "symId": sid_k,
+                                       "y": (v[keep] <= -thr).astype(np.int8)}))
+        elif mode == "pa":
+            yv = (v[keep] <= -thr).astype(np.float64)
+            yv[mv > e_inf] = np.nan                 # LOAI dong 'coin da TANG > E'
+            parts.append(pd.DataFrame({"ts": ts_k, "symId": sid_k, "y": yv.astype(np.float32)}))
+        elif mode == "pw":
+            yv = (v[keep] <= -thr).astype(np.float32)
+            wv = np.where(mv <= e_inf, 1.0, np.maximum(0.0, 1.0 - (mv - e_inf) / e_inf))
+            parts.append(pd.DataFrame({"ts": ts_k, "symId": sid_k, "y": yv,
+                                       "w": wv.astype(np.float32)}))
+        elif mode == "pn":
+            m = mv <= e_inf
+            base = float((v[keep][m] <= -thr).mean()) if m.sum() else 0.0
+            yv = (rng.random(int(m.sum())) < base).astype(np.int8)
+            parts.append(pd.DataFrame({"ts": ts_k[m], "symId": sid_k[m], "y": yv}))
         else:
             yv = (v[keep] > thr) if mode == "net" else (v[keep] >= thr)
-            parts.append(pd.DataFrame({"ts": ts[keep], "symId": sid[k].to_numpy(np.int32)[keep],
-                                       "y": yv.astype(np.int8)}))
+            parts.append(pd.DataFrame({"ts": ts_k, "symId": sid_k, "y": yv.astype(np.int8)}))
         del d
     L = pd.concat(parts, ignore_index=True)
     log.info("Label (protobuf): %d dong tu %d file", tot, len(fs))
-    log.info("Label %dh (%s thr=%.4f kind=%s): %d rows | mean=%.6f", LABEL_H, mode, thr, LABEL_KIND,
-             len(L), float(np.asarray(L.y, dtype=np.float64).mean()))
+    log.info("Label %dh (%s thr=%.4f kind=%s E=%s): %d rows | mean=%.6f", LABEL_H, mode, thr,
+             LABEL_KIND, e_inf, len(L), float(np.nanmean(np.asarray(L.y, dtype=np.float64))))
     return L
 
 
 def train_rows(ts_all, sym_all, L, tr_cut):
     """Vi tri cac dong feature co nhan va ts < tr_cut, GIU THU TU VI TRI (= thu tu ts tang dan)
-    — khop `tr_meta.merge(labels, how='inner')` cua pipeline goc (merge giu thu tu frame TRAI)."""
+    — khop `tr_meta.merge(labels, how='inner')` cua pipeline goc (merge giu thu tu frame TRAI).
+    Tra (pos_idx, y, w|None): y NaN = dong bi loai (vd mask path-aware); w = trong so (mode 'pw')."""
     key = ts_all * 1024 + sym_all.astype(np.int64)
     srt = np.argsort(key, kind="stable")
     ks = key[srt]
@@ -291,9 +319,13 @@ def train_rows(ts_all, sym_all, L, tr_cut):
     ip = np.clip(np.searchsorted(ks, kl), 0, len(ks) - 1)
     hit = ks[ip] == kl
     lab[srt[ip[hit]]] = L.y.to_numpy(np.float64)[hit]
+    wv = None
+    if "w" in L.columns:
+        wv = np.full(len(ts_all), np.nan, dtype=np.float64)
+        wv[srt[ip[hit]]] = L.w.to_numpy(np.float64)[hit]
     sel = np.isfinite(lab) & (ts_all < tr_cut)
     pos_idx = np.flatnonzero(sel)
-    return pos_idx, lab[pos_idx]
+    return pos_idx, lab[pos_idx], (wv[pos_idx] if wv is not None else None)
 
 
 def write_bin(path, ts, sid, p, slot=0):
@@ -338,7 +370,10 @@ def main():
     ap.add_argument("--save-model", action="store_true", help="luu model_f<i>_<h>h.json")
     ap.add_argument("--label-h", type=int, default=4, choices=list(LABEL_HS),
                     help="horizon cua NHAN (PREREG_H72): 4 = hanh vi cu, 72 = them head 72h")
-    ap.add_argument("--label-mode", default="net", choices=["net", "maxfav", "ndown"])
+    ap.add_argument("--label-mode", default="net", choices=["net", "maxfav", "ndown", "pa", "pw", "pn"])
+    ap.add_argument("--label-e", type=float, default=float("inf"),
+                    help="PREREG_SHORT_LABEL2: nguong MAE_nguoc E cho nhan path-aware (pa/pw/pn); "
+                         "inf = khong mask (nhan cu).")
     ap.add_argument("--thr", type=float, default=0.015, help="NET_THR (net) hoac WIN (maxfav)")
     ap.add_argument("--label-kind", default="bin", choices=["bin", "cont"],
                     help="PREREG_MONEY_RANKER §3: bin = nhan nhi phan (cu) | cont = y = retEnd_h LIEN TUC")
@@ -409,7 +444,7 @@ def main():
         tot_row = sum(n for _, n in ADD_HITS)
         log.info("ADD-FEATS hit tong: %d/%d = %.4f (theo nam %s)", tot_hit, tot_row,
                  tot_hit / max(tot_row, 1), ADD_HITS)
-    L = load_custom_labels(LABEL_CUSTOM) if LABEL_CUSTOM else load_labels(a.label_mode, a.thr, hi_all)
+    L = load_custom_labels(LABEL_CUSTOM) if LABEL_CUSTOM else load_labels(a.label_mode, a.thr, hi_all, a.label_e)
     OBJ = "reg:squarederror" if (LABEL_KIND == "cont" or LABEL_CUSTOM) else "binary:logistic"
     log.info("LABEL_KIND=%s | CUSTOM=%s | objective=%s", LABEL_KIND, bool(LABEL_CUSTOM), OBJ)
 
@@ -427,7 +462,7 @@ def main():
             cdt = pd.to_datetime(c + TZ, unit="ms").normalize()
             b_hi = int((cdt + pd.DateOffset(months=OOS_MONTHS)).value // 10 ** 6) - TZ
             tr_cut = c - PURGE_MS
-            tp, ty = train_rows(ts_all, sym_all, L, tr_cut)
+            tp, ty, tw = train_rows(ts_all, sym_all, L, tr_cut)
             if OBJ == "binary:logistic":
                 assert len(tp) >= a.min_train and len(np.unique(ty)) == 2, "fold %d train it" % fidx
             else:
@@ -450,7 +485,7 @@ def main():
                                        subsample=0.8, colsample_bytree=0.8, min_child_weight=20,
                                        eval_metric="rmse", n_jobs=a.njobs,
                                        tree_method="hist", random_state=a.seed, device=a.device)
-            clf.fit(Xtr, ty, verbose=False)
+            clf.fit(Xtr, ty, sample_weight=tw, verbose=False)
             del Xtr
             if a.save_model:
                 mp = os.path.join(out_dir, "model_f%d_%dh.json" % (fidx, LABEL_H))
@@ -477,6 +512,7 @@ def main():
             except Exception:
                 pass
         meta = {"pipeline_version": PIPELINE_VERSION, "label_mode": a.label_mode, "thr": a.thr,
+                "label_e": a.label_e,
                 "label_kind": LABEL_KIND, "label_custom": a.label_custom, "objective": OBJ,
                 "device": a.device, "njobs": a.njobs, "seed": a.seed, "nest": a.nest,
                 "xgb": xgb.__version__, "purge_steps": PURGE_STEPS, "oos_months": OOS_MONTHS,
