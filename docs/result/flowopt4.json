@@ -1,0 +1,246 @@
+{
+ "meta": {
+  "nb": 235,
+  "w0": "2021-07-01",
+  "wend": "2025-12-31",
+  "infl_k2": 1.17741,
+  "blk_h": 72,
+  "nrep": 2000,
+  "seed_ci": 20260919,
+  "seed_perm": 20260930,
+  "path": [
+   "BIG_DOWN",
+   "DCA_LEVEL1"
+  ],
+  "net_def": "pnl/margin (calTp da net fee+slippage+funding)"
+ },
+ "main": {
+  "tag": "G2",
+  "n": 2517,
+  "nB": 235,
+  "n_weeks_D1": 141,
+  "n_weeks_D2": 133,
+  "n_weeks_open_predict": 94,
+  "n_weeks_any": 102,
+  "level_counts": {
+   "PREDICT_SYMBOL_TRADE": 2223,
+   "BIG_DOWN": 248,
+   "DCA_LEVEL1": 46
+  },
+  "m_leg_D1": 17,
+  "m_week_D1_covered": 8,
+  "share_weeks_D1_pct": 5.67,
+  "m_leg_D2": 0,
+  "by_level_D1": {
+   "BIG_DOWN": 16,
+   "DCA_LEVEL1": 1
+  },
+  "pnl_sum_D1": -671.2,
+  "pnl_sum_all_path": 19944.1,
+  "m_leg_total_path": 294,
+  "dn_pct_of_n": 0.675,
+  "B1_net_D1": {
+   "mean": -0.0032711919099442984,
+   "raw": [
+    -0.08996532890607013,
+    0.05820022688155582
+   ],
+   "k2": [
+    -0.10534573770251246,
+    0.06910587267341403
+   ],
+   "out_k2": false,
+   "n": 17,
+   "nblk": 8
+  },
+  "raw_mean_D1": -0.00327,
+  "med_D1": 0.05416,
+  "winrate_D1": 70.6,
+  "B3_net_open": {
+   "mean": 0.10978663415134313,
+   "raw": [
+    0.054916420819693536,
+    0.1422768657121519
+   ],
+   "k2": [
+    0.045181895037096687,
+    0.14804095842488796
+   ],
+   "out_k2": true,
+   "n": 277,
+   "nblk": 44
+  },
+  "B3_raw_mean_open": 0.10979,
+  "placebo_perm": {
+   "m": 17,
+   "null_mean": 0.04364,
+   "null_p2_5": -0.0177,
+   "null_p97_5": 0.11869,
+   "p_two_sided": 0.116
+  },
+  "A1_pass": false,
+  "B1_pass": false,
+  "B2_pass": false,
+  "VERDICT": "NO-GO/NULL"
+ },
+ "robust_artifact": {
+  "G2S": {
+   "tag": "G2S",
+   "n": 2509,
+   "nB": 235,
+   "n_weeks_D1": 141,
+   "n_weeks_D2": 133,
+   "n_weeks_open_predict": 94,
+   "n_weeks_any": 102,
+   "level_counts": {
+    "PREDICT_SYMBOL_TRADE": 2216,
+    "BIG_DOWN": 248,
+    "DCA_LEVEL1": 45
+   },
+   "m_leg_D1": 17,
+   "m_week_D1_covered": 8,
+   "share_weeks_D1_pct": 5.67,
+   "m_leg_D2": 0,
+   "by_level_D1": {
+    "BIG_DOWN": 16,
+    "DCA_LEVEL1": 1
+   },
+   "pnl_sum_D1": -685.7,
+   "pnl_sum_all_path": 19223.6,
+   "m_leg_total_path": 293,
+   "dn_pct_of_n": 0.678,
+   "B1_net_D1": {
+    "mean": -0.003389135546787187,
+    "raw": [
+     -0.08945980690576208,
+     0.0578162246711332
+    ],
+    "k2": [
+     -0.10472960664947983,
+     0.0686746690054622
+    ],
+    "out_k2": false,
+    "n": 17,
+    "nblk": 8
+   },
+   "raw_mean_D1": -0.00339,
+   "med_D1": 0.05377,
+   "winrate_D1": 70.6,
+   "B3_net_open": {
+    "mean": 0.10600305614088765,
+    "raw": [
+     0.054311672679584616,
+     0.1357089949654842
+    ],
+    "k2": [
+     0.04514110317585881,
+     0.14097912624119918
+    ],
+    "out_k2": true,
+    "n": 276,
+    "nblk": 44
+   },
+   "B3_raw_mean_open": 0.106,
+   "placebo_perm": {
+    "m": 17,
+    "null_mean": 0.04335,
+    "null_p2_5": -0.01566,
+    "null_p97_5": 0.11259,
+    "p_two_sided": 0.115
+   },
+   "A1_pass": false,
+   "B1_pass": false,
+   "B2_pass": false,
+   "VERDICT": "NO-GO/NULL"
+  },
+  "G2B": {
+   "tag": "G2B",
+   "n": 2517,
+   "nB": 235,
+   "n_weeks_D1": 141,
+   "n_weeks_D2": 133,
+   "n_weeks_open_predict": 94,
+   "n_weeks_any": 102,
+   "level_counts": {
+    "PREDICT_SYMBOL_TRADE": 2223,
+    "BIG_DOWN": 248,
+    "DCA_LEVEL1": 46
+   },
+   "m_leg_D1": 17,
+   "m_week_D1_covered": 8,
+   "share_weeks_D1_pct": 5.67,
+   "m_leg_D2": 0,
+   "by_level_D1": {
+    "BIG_DOWN": 16,
+    "DCA_LEVEL1": 1
+   },
+   "pnl_sum_D1": -671.2,
+   "pnl_sum_all_path": 19944.1,
+   "m_leg_total_path": 294,
+   "dn_pct_of_n": 0.675,
+   "B1_net_D1": {
+    "mean": -0.0032711919099442984,
+    "raw": [
+     -0.08996532890607013,
+     0.05820022688155582
+    ],
+    "k2": [
+     -0.10534573770251246,
+     0.06910587267341403
+    ],
+    "out_k2": false,
+    "n": 17,
+    "nblk": 8
+   },
+   "raw_mean_D1": -0.00327,
+   "med_D1": 0.05416,
+   "winrate_D1": 70.6,
+   "B3_net_open": {
+    "mean": 0.10978663415134313,
+    "raw": [
+     0.054916420819693536,
+     0.1422768657121519
+    ],
+    "k2": [
+     0.045181895037096687,
+     0.14804095842488796
+    ],
+    "out_k2": true,
+    "n": 277,
+    "nblk": 44
+   },
+   "B3_raw_mean_open": 0.10979,
+   "placebo_perm": {
+    "m": 17,
+    "null_mean": 0.04364,
+    "null_p2_5": -0.0177,
+    "null_p97_5": 0.11869,
+    "p_two_sided": 0.116
+   },
+   "A1_pass": false,
+   "B1_pass": false,
+   "B2_pass": false,
+   "VERDICT": "NO-GO/NULL"
+  }
+ },
+ "robust_origin": {
+  "+1d": {
+   "m_leg_D1": 13,
+   "covered": 6,
+   "net": 0.01381,
+   "verdict": "NO-GO/NULL"
+  },
+  "+2d": {
+   "m_leg_D1": 8,
+   "covered": 4,
+   "net": 0.04808,
+   "verdict": "NO-GO/NULL"
+  },
+  "+3d": {
+   "m_leg_D1": 10,
+   "covered": 5,
+   "net": -0.00157,
+   "verdict": "NO-GO/NULL"
+  }
+ }
+}
