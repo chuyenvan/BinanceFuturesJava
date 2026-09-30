@@ -72,10 +72,53 @@ LIVE_PROFILE=c3_shadow
 | `OutOfMemoryError` | **0** |
 | `[S1] warm-up CHUA DU` | **0** |
 
-## 5. RSS timeline (0/15/30/60/120')
+## 5. RSS timeline (2h, mau ~2-5')
 
-(xem bang ben duoi — cap nhat trong qua trinh canh)
+| Moc | Gio | RSS (MiB) | GATE (luy ke) | OOM |
+|---|---|---|---|---|
+| 0' | 14:59 | 2874 | 2 | 0 |
+| ~7' | 15:05 | 3291 | 7 | 0 |
+| 15' | 15:14 | 3319 | 17 | 0 |
+| 30' | 15:27 | 3321 | 30 | 0 |
+| 45' | 15:44 | 3324 | 47 | 0 |
+| 60' | 15:57 | 3322 | 60 | 0 |
+| 65' | 16:03 | 3630 | 66 | 0 |
+| 75' | 16:12 | 3635 | 75 | 0 |
+| 90' | 16:27 | 3635 | 90 | 0 |
+| 105' | 16:42 | 3636 | 105 | 0 |
+| **120'** | **16:58** | **3637** | **121** | **0** |
 
-## 6. Ket luan
+**Doc dien:** 2 lan tang bac thang (2874 -> ~3320 tai ~7'; ~3322 -> ~3630 tai 65'), sau moi lan **phang** (khong tang don dieu).
+RSS dinh **3637 MiB** < `-Xmx4g` (4096 MiB), bien an toan ~450 MiB.
+So sanh: ban cu (legacy) dinh **~4,4-5,0 GB > 4g => OOM**; ban cu dang chay truoc restart RSS ~3096 MiB va da co OOM.
 
-(cap nhat sau khi du 2h)
+## 6. Canh du 2h (14:57:49 -> 16:58)
+
+| Tieu chi | Ket qua | Ket luan |
+|---|---|---|
+| `OutOfMemoryError` | **0** | DAT |
+| `[OI-LIVE] reload nền lỗi` (retry-storm) | **0** | DAT |
+| RSS tang don dieu | **KHONG** (2 bac thang roi phang) | DAT |
+| RSS dinh | 3637 MiB < 4096 | DAT |
+| `[OI-LIVE] inplace` | **3** (cold-load 14:58 + refresh 15:32 + refresh 16:32) | DAT |
+| `[GATE]` | **121** dong / 14:59:01 -> 16:58:06 (~100% so phut, >= 90%) | DAT |
+| `topk=16` trong `[GATE]` | 121/121 | DAT |
+| `[S1] warm-up CHUA DU` | **0** | DAT |
+| Lenh that | **0** (SHADOW_NO_PUSH=true) | DAT |
+| `systemctl is-active` | active (MainPID 2201049) | DAT |
+
+## 7. KET LUAN: **PASS**
+
+Fix `OI_LIVE_REFRESH_MODE=inplace` giu OI reader trong bien (cat 24h + nap tung lo + bound RAM):
+qua 2h lien tuc **0 OOM**, RSS phang ~3,6 GB, `[GATE]` giu nhịp 1 phut (~100%), TOPK=16 dung.
+Config R4-1M (TOPK=16, LIVE_ENTRY_GRID_MIN=1, ENTRY_CASCADE=0) chay on dinh tren Oracle PAPER.
+**KHONG rollback.** Giu nguyen de chuyen sang 242 theo yeu cau owner.
+
+### Rollback (neu can)
+```bash
+cd /home/ubuntu/shadow_c3/app
+cp -p target/binance-java-sdk-1.2.4.jar.bak_20260930_145728 target/binance-java-sdk-1.2.4.jar
+cp -p conf/env.sh.bak_20260930_145728 conf/env.sh
+sudo systemctl restart shadow-c3   # xac nhan SELECTOR_RANK_TOPK=8 + active
+```
+
