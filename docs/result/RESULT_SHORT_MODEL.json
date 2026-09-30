@@ -1,0 +1,179 @@
+{
+ "prereg": "docs/prereg/PREREG_SHORT_MODEL.md",
+ "kernel": "kaggle chuyendinh/sm-train-gpu v2 (GPU); train 37.0-44.8 phut/arm, cham 5.7 phut",
+ "trainer_sha256": "950cc8a72ba1457d088a4d9f187b3bca316c7533613fdb3d4d0db432e229ac1e",
+ "features": "45 (selector extractFeatures45 = 40 Tool1-15m + 5 OI) \u2014 nguyen ban, khong them feature",
+ "horizon_h": 72,
+ "needed_nbars": 288,
+ "n_rows_matrix": 39589971,
+ "label": {
+  "short": "y=1[retEnd_72h <= -0.015]",
+  "long": "y=1[retEnd_72h >= +0.015]",
+  "base_rate_short": 0.446936,
+  "base_rate_long": 0.393159,
+  "rows_with_label": 39251704
+ },
+ "folds": 16,
+ "oos": "2022-01..2025-12-31 (DEV)",
+ "n_tick": 139381,
+ "n_sel_per_tick_topk": 8,
+ "cost": {
+  "base_per_round": 0.00112,
+  "stress_per_round": 0.0015,
+  "funding": "khong credit (conservative)"
+ },
+ "ci": {
+  "block_h": 72,
+  "nrep": 2000,
+  "seed": 20260905,
+  "legacy_inflate": 1.21
+ },
+ "A_rank_ic": {
+  "mean_seed": 0.051874,
+  "per_seed": {
+   "SHORT42": {
+    "ic": 0.051873,
+    "raw": [
+     0.045323949217492415,
+     0.05835451659862316
+    ],
+    "out_raw": true,
+    "out_legacy": true
+   },
+   "SHORT7": {
+    "ic": 0.050884,
+    "raw": [
+     0.04456599399767059,
+     0.05735721839344313
+    ],
+    "out_raw": true,
+    "out_legacy": true
+   },
+   "SHORT13": {
+    "ic": 0.052866,
+    "raw": [
+     0.046535032584000116,
+     0.05943314028553458
+    ],
+    "out_raw": true,
+    "out_legacy": true
+   }
+  },
+  "long_mirror_ic": -0.021333,
+  "PASS": true
+ },
+ "B_econ_cut": {
+  "by_cut": {
+   "0.30": {
+    "net_mean_seed": 0.004088,
+    "all_seed_positive_out_both": false,
+    "years_net_pos": 2,
+    "year_mean": {
+     "2022": 0.011698,
+     "2023": -0.005921,
+     "2024": -0.00112,
+     "2025": 0.011792
+    },
+    "PASS": false
+   },
+   "0.50": {
+    "net_mean_seed": 0.003423,
+    "all_seed_positive_out_both": false,
+    "years_net_pos": 2,
+    "year_mean": {
+     "2022": 0.011344,
+     "2023": -0.005403,
+     "2024": -0.002224,
+     "2025": 0.010073
+    },
+    "PASS": false
+   },
+   "0.90": {
+    "net_mean_seed": 0.002652,
+    "all_seed_positive_out_both": false,
+    "years_net_pos": 2,
+    "year_mean": {
+     "2022": 0.011051,
+     "2023": -0.003989,
+     "2024": -0.003053,
+     "2025": 0.006707
+    },
+    "PASS": false
+   }
+  },
+  "PASS": false
+ },
+ "no_cut": {
+  "net_mean_seed": 0.003378,
+  "ci_seed42": [
+   -0.003455185512283492,
+   0.009901357356658156
+  ],
+  "out_raw": false,
+  "by_year_seed42": {
+   "2022": 0.012224,
+   "2023": -0.003034,
+   "2024": -0.003732,
+   "2025": 0.007999
+  },
+  "max_loss": -14.98728,
+  "p01": -0.66397,
+  "p99": 0.391746
+ },
+ "cut_rates_mean": {
+  "0.30": 0.0999,
+  "0.50": 0.0441,
+  "0.90": 0.0153
+ },
+ "lut": {
+  "SHORT42": {
+   "net": 0.00334,
+   "cut30": 0.00386,
+   "cut50": 0.00321,
+   "cut90": 0.00246
+  },
+  "SHORT7": {
+   "net": 0.00331,
+   "cut30": 0.0042,
+   "cut50": 0.00352,
+   "cut90": 0.0028
+  },
+  "SHORT13": {
+   "net": 0.00349,
+   "cut30": 0.00421,
+   "cut50": 0.00354,
+   "cut90": 0.0027
+  }
+ },
+ "decile_ret_short_seed42": {
+  "0": -0.000632,
+  "1": -0.000549,
+  "2": -0.001019,
+  "3": -0.001054,
+  "4": -0.001266,
+  "5": -0.00129,
+  "6": -0.001196,
+  "7": -0.001376,
+  "8": -0.001536,
+  "9": -0.003243
+ },
+ "decile_net_short_seed42": {
+  "0": -0.000488,
+  "1": -0.000571,
+  "2": -0.000101,
+  "3": -6.6e-05,
+  "4": 0.000146,
+  "5": 0.00017,
+  "6": 7.6e-05,
+  "7": 0.000256,
+  "8": 0.000416,
+  "9": 0.002123
+ },
+ "long_mirror": {
+  "ic": -0.021333,
+  "k8_net_long": -8.788961896178631e-05,
+  "short_the_long_picks": -0.002152110381038229
+ },
+ "VERDICT": "NO-GO/NULL",
+ "note": "A PASS (IC +0,0519 ngoai CI, ca 3 seed) nhung B FAIL (moi muc cat: CI raw chua 0 va chi 2/4 nam duong) => NO-GO/NULL theo luat khoa \u00a77"
+}
