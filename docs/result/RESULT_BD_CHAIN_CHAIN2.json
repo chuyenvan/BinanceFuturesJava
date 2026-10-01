@@ -5,7 +5,7 @@
   "mode": "0-SIM THUAN PYTHON (NHIEM VU A); KHONG Java/sim/xgboost; KHONG cham 2026",
   "dev_end": "2025-12-31",
   "status": "A_NULL__B_NOT_RUN",
-  "commits": ["PENDING"],
+  "commits": ["47513292"],
   "source_check_ic_plus50": {
     "verdict": "KHONG CO NGUON",
     "scanned": ["docs/**/*.md", "docs/prereg/*", "research/analysis/out/*.json", "git log --all (1572 commits)"],
