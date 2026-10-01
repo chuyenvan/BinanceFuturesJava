@@ -1,6 +1,7 @@
 {
   "task": "BD-CHAIN",
   "date": "2026-10-01",
+  "round": 2,
   "branch": "module",
   "baseline_profile": "profiles/g2_flat3.properties",
   "baseline_profile_md5": "c6d4ef57ecee25c663d2d396ac574c30",
@@ -20,11 +21,32 @@
     "formula": "N = clamp(round(f*size),1,size), cap 4/5 kept",
     "files": ["src/main/java/com/binance/chuyennd/tradecore/Configs.java", "src/main/java/com/binance/chuyennd/tradecore/MarketBigChangeDetector.java"]
   },
+  "v1_slot_wait": {
+    "polled": "kaggle kernels status chuyendinh/sm-pathexit",
+    "first_seen_running_utf": "2026-10-01T05:48:56 (lastRunTime)",
+    "still_running_at": "2026-10-01T13:07+07:00",
+    "poll_log": "/home/ubuntu/bd_chain_poll.log",
+    "api_list_status_unreliable": "kaggle CLI 1.6.17 kernels_list does not return status -> count 0 running is WRONG; kernels_status is the source of truth"
+  },
   "v2_chain": {
     "blocked": true,
-    "blocker": "kaggle kernel chuyendinh/sm-pathexit status=running (other job, commit c4f6f38e)",
-    "kaggle_checked_at": "2026-10-01T13:05+07:00",
-    "parity_f0_md5": null,
+    "blockers": [
+      {"id": "A", "kind": "slot_busy", "detail": "chuyendinh/sm-pathexit status=running (other job, commit c4f6f38e)"},
+      {"id": "B", "kind": "missing_upstream_harness", "detail": "no Kaggle-runnable path for steps 1-3: market.bin regen, gate store replay, gate retrain/pred; all are Java+Aerospike-226 jobs; sim bundle artifacts are static snapshots"}
+    ],
+    "upstream_step_evidence": {
+      "market_bin": {"source": "Aerospike set market_data (WfoDataset.java:45,66)", "sim_reads_static": "SimulatorMarketLevelTicker1MStopLoss.java:921"},
+      "gate_store": {"tool": "ExportGateDataset.java", "cost": "Aerospike replay ~30-45s/day -> many hours for 2021-2026 (ExportGateDataset.java:36)", "on_kaggle": false},
+      "gate_pred": {"tool": "WFOGateRunner.java:60-70 -> set ai_pred_market_gate_wfo -> LoadWfoGatePredTool.java", "on_kaggle": false}
+    },
+    "parity_f0": {
+      "md5": "650c386f0d0dfea334af9d55ca2f21d4",
+      "source": "existing Kaggle run chuyendinh/sim-g2flat3-val (2026-09-29), bundle sim-x1-2021-bundle, jar sim-jar-gdv2",
+      "equity_final": 131908,
+      "n_trades": 2517,
+      "rerun_this_round": false,
+      "reason": "stop rule (job running); not re-confirmed with JAR HEAD"
+    },
     "arms": {
       "f0.10": "NOT_RUN",
       "f0.30": "NOT_RUN",
@@ -33,5 +55,5 @@
     }
   },
   "v3_scoring": {"ran": false, "reason": "no arm produced"},
-  "conclusion": {"verdict": "NO-GO (provisional/BLOCKED)", "f_kept": 0.0, "note": "not a scientific negative; unmeasured due to busy Kaggle"}
+  "conclusion": {"verdict": "NO-GO (provisional/BLOCKED)", "f_kept": 0.0, "note": "not a scientific negative; unmeasured due to busy slot AND missing upstream chain harness"}
 }
