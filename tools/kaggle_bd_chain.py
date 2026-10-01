@@ -240,6 +240,145 @@ def fetch_market(tag, out_dir=None):
 
 
 # ============================================================================ #
+# KERNEL B — PATCH gate store: cot rate-derived theo market.bin moi
+# ============================================================================ #
+# Chi 3 cot phu thuoc market-rate (ComprehensiveMarketFeatureExtractor.java:93-100):
+#   momentum1M = rateDownAvg (=market.down) ; momentum15M = rateDown15MAvg (=market.down15)
+#   momentumAcceleration = momentum5M - momentum15M   (momentum5M = return BTC, KHONG doi)
+# Cac cot khac (momentum5M/1H/4H/24H, volatility*, breadth*, rsi*, basket*, time*) la ham cua
+# gia tung coin / lich => KHONG doi theo f. => patch du 3 cot nay.
+KERNEL_B = r'''"""BD-CHAIN Kernel B — patch cot rate-derived cua gate store bang market.bin (SINH TU harness)."""
+import glob, gzip, json, logging, os, struct, sys, time
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s", stream=sys.stdout)
+LOG = logging.getLogger("bdchain-B")
+CFG = json.loads(__CFG_JSON__)
+IN, WORK = "/kaggle/input", "/kaggle/working"
+
+
+def f1(pat):
+    m = sorted(glob.glob(pat, recursive=True))
+    if not m:
+        LOG.error("MISSING %s", pat); sys.exit(1)
+    return m[0]
+
+
+mk = CFG.get("market_ds") or ""
+_c = sorted(glob.glob(IN + "/**/market.bin", recursive=True))
+if mk:
+    _c = [c for c in _c if ("/" + mk + "/") in c]
+if not _c:
+    LOG.error("MISSING market.bin (market_ds=%r)", mk); sys.exit(1)
+mb = _c[0]
+LOG.info("market.bin=%s", mb)
+rate = {}
+with open(mb, "rb") as f:
+    n = struct.unpack(">i", f.read(4))[0]
+    buf = f.read(n * 20)
+for i in range(n):
+    o = i * 20
+    ts = struct.unpack_from(">q", buf, o)[0]
+    d, u, d15 = struct.unpack_from(">fff", buf, o + 8)
+    rate[ts] = (d, d15)
+LOG.info("market.bin rows=%d", len(rate))
+
+store = f1(IN + "/**/" + CFG["store_file"])
+LOG.info("store=%s", store)
+OUT = WORK + "/gate_store_patched.csv.gz"
+n_rows = n_hit = n_miss = 0
+with gzip.open(store, "rt") as fi, gzip.open(OUT, "wt", 6) as fo:
+    hdr = fi.readline().rstrip("\n").split(",")
+    fo.write(",".join(hdr) + "\n")
+    i_ts = hdr.index("timestamp"); i_m1 = hdr.index("momentum1M")
+    i_m5 = hdr.index("momentum5M"); i_m15 = hdr.index("momentum15M")
+    i_mac = hdr.index("momentumAcceleration")
+    for line in fi:
+        p = line.rstrip("\n").split(",")
+        ts = int(p[i_ts])
+        r = rate.get(ts)
+        if r is None:
+            n_miss += 1
+        else:
+            n_hit += 1
+            p[i_m1] = "%.8f" % r[0]
+            p[i_m15] = "%.8f" % r[1]
+            p[i_mac] = "%.8f" % (float(p[i_m5]) - r[1])
+        fo.write(",".join(p) + "\n")
+        n_rows += 1
+        if n_rows % 500000 == 0:
+            LOG.info("... rows=%d hit=%d", n_rows, n_hit)
+res = {"tag": CFG["tag"], "store": os.path.basename(store), "out": os.path.basename(OUT),
+       "rows": n_rows, "hit": n_hit, "miss": n_miss, "ok": n_rows > 0}
+with open(WORK + "/result.json", "w") as f:
+    json.dump(res, f, indent=1)
+LOG.info("RESULT %s", json.dumps(res))
+LOG.info("KERNEL_B_DONE rows=%d hit=%d", n_rows, n_hit)
+sys.exit(0)
+'''
+
+STORE_DS = "bdchain-gate-store"
+STORE_FILE = "gate_dataset_full.csv.gz"
+
+
+def stage_store_dataset(src="/home/ubuntu/claudedata/gate_dataset_full.csv.gz",
+                        stage_dir="/home/ubuntu/bdchain_store"):
+    """Stage + push gate store CSV (356MB) thanh dataset rieng (KHONG vao git)."""
+    import shutil
+    os.makedirs(stage_dir, exist_ok=True)
+    dst = os.path.join(stage_dir, STORE_FILE)
+    if not os.path.exists(dst) or os.path.getsize(dst) != os.path.getsize(src):
+        shutil.copy(src, dst)
+    meta = {"title": STORE_DS, "id": USER + "/" + STORE_DS, "licenses": [{"name": "unknown"}]}
+    with open(os.path.join(stage_dir, "dataset-metadata.json"), "w") as f:
+        json.dump(meta, f, indent=1)
+    api = _api()
+    try:
+        api.dataset_create_new(folder=stage_dir, public=False, dir_mode="skip")
+        LOG.info("dataset_create_new %s OK", STORE_DS)
+    except Exception as e:
+        LOG.info("create_new loi (%s) -> create_version", e)
+        api.dataset_create_version(folder=stage_dir, version_notes="gate store", dir_mode="skip")
+    return USER + "/" + STORE_DS
+
+
+def stage_market_dataset(market_bin_src, ds_name, stage_dir=None):
+    """Stage 1 market.bin (51MB) thanh dataset rieng cho tung f."""
+    import shutil
+    stage_dir = stage_dir or os.path.join(WORKDIR, "ds_" + slug(ds_name))
+    os.makedirs(stage_dir, exist_ok=True)
+    shutil.copy(market_bin_src, os.path.join(stage_dir, "market.bin"))
+    meta = {"title": ds_name, "id": USER + "/" + ds_name, "licenses": [{"name": "unknown"}]}
+    with open(os.path.join(stage_dir, "dataset-metadata.json"), "w") as f:
+        json.dump(meta, f, indent=1)
+    api = _api()
+    try:
+        api.dataset_create_new(folder=stage_dir, public=False, dir_mode="skip")
+    except Exception as e:
+        LOG.info("create_new loi (%s) -> create_version", e)
+        api.dataset_create_version(folder=stage_dir, version_notes="market.bin", dir_mode="skip")
+    return USER + "/" + ds_name
+
+
+def submit_patch_store(tag, *, market_ds, store_ds=STORE_DS, code_sha="head", push=True) -> str:
+    ref = kernel_ref(tag)
+    folder = os.path.join(WORKDIR, slug(tag))
+    os.makedirs(folder, exist_ok=True)
+    cfg = {"tag": str(tag), "market_ds": market_ds, "store_file": STORE_FILE, "code_sha": code_sha}
+    with open(os.path.join(folder, "run.py"), "w") as f:
+        f.write(KERNEL_B.replace("__CFG_JSON__", repr(json.dumps(cfg))))
+    meta = {"id": ref, "title": ref.split("/")[1], "code_file": "run.py",
+            "language": "python", "kernel_type": "script", "is_private": True,
+            "enable_gpu": False, "enable_internet": False,
+            "dataset_sources": [USER + "/" + store_ds, USER + "/" + market_ds],
+            "competition_sources": [], "kernel_sources": []}
+    with open(os.path.join(folder, "kernel-metadata.json"), "w") as f:
+        json.dump(meta, f, indent=1)
+    if push:
+        r = _api().kernels_push(folder)
+        LOG.info("push %s -> %s", ref, getattr(r, "url", r))
+    return ref
+
+
+# ============================================================================ #
 # STAGE JAR — dataset sim.jar (HEAD) + config.properties
 # ============================================================================ #
 def stage_jar_dataset(jar_path="target/binance-java-sdk-1.2.4.jar",

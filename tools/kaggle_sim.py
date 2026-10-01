@@ -172,6 +172,42 @@ if not _cand:
     sys.exit(1)
 PREDWF = os.path.dirname(_cand[0])
 
+# [BD-CHAIN 2026-10-01] market_ds: thay market.bin cua bundle bang market.bin tu dataset rieng
+#   (sinh boi Kernel A cua tools/kaggle_bd_chain.py cho tung f). WfoDataset.load verify md5 tung
+#   file theo manifest => phai viet lai dong md5_market. pred/funding GIU NGUYEN (symlink, khong copy).
+#   Bo trong => hanh vi cu (byte-identical).
+_MDS = CFG.get("market_ds") or ""
+if _MDS:
+    import hashlib as _h2
+    _mc = [c for c in sorted(glob.glob(IN + "/**/market.bin", recursive=True))
+           if ("/" + _MDS + "/") in c]
+    if not _mc:
+        LOG.error("MISSING market.bin cho market_ds=%r", _MDS)
+        sys.exit(1)
+    _ov = os.path.join(WORK, "wfo_ds_override")
+    os.makedirs(_ov, exist_ok=True)
+    for _nm in ("pred.bin", "funding.bin"):
+        _src = os.path.join(DS, _nm)
+        _dst = os.path.join(_ov, _nm)
+        if not os.path.lexists(_dst):
+            os.symlink(_src, _dst)
+    shutil.copy(_mc[0], os.path.join(_ov, "market.bin"))
+    _h = _h2.md5()
+    with open(os.path.join(_ov, "market.bin"), "rb") as _f:
+        for _b in iter(lambda: _f.read(1 << 20), b""):
+            _h.update(_b)
+    _newmd5 = _h.hexdigest()
+    _mlines = []
+    for _ln in open(os.path.join(DS, "manifest.txt")):
+        if _ln.startswith("md5_market="):
+            _mlines.append("md5_market=" + _newmd5 + "\n")
+        else:
+            _mlines.append(_ln)
+    with open(os.path.join(_ov, "manifest.txt"), "w") as _f:
+        _f.writelines(_mlines)
+    LOG.info("market_ds=%s -> WFO_DATA_DIR override md5_market=%s", _MDS, _newmd5)
+    DS = _ov
+
 # ticker: loader doc RELATIVE "kaggle_data_hpo/" trong CWD; .gz co the bi Kaggle tu giai nen
 link = os.path.join(WORK, "kaggle_data_hpo")
 os.makedirs(link, exist_ok=True)
@@ -306,7 +342,7 @@ sys.exit(0)
 
 
 def submit(tag, profile, overrides=None, *, bins_ds=None, bundle_ds=None, extra_ds=None,
-           jar_ds=None, code_sha="head", extra_env=None,
+           jar_ds=None, market_ds=None, code_sha="head", extra_env=None,
            sim_end_date=DEFAULT_SIM_END, ticker_min_days=TICKER_MIN_DAYS,
            xmx=DEFAULT_XMX, timeout_s=DEFAULT_TIMEOUT_S, enable_internet=True,
            push=True) -> str:
@@ -329,6 +365,7 @@ def submit(tag, profile, overrides=None, *, bins_ds=None, bundle_ds=None, extra_
     cfg = {"tag": str(tag), "profile": profile, "overrides": dict(overrides or {}),
            "sim_end_date": sim_end_date, "xmx": xmx, "timeout_s": timeout_s,
            "code_sha": code_sha, "bins_ds": bins_ds or "", "jar_ds": jar_ds or "",
+           "market_ds": market_ds or "",
            "extra_env": {str(k): str(v) for k, v in (extra_env or {}).items()},
            "ticker_min_days": int(ticker_min_days)}
     code = KERNEL_TEMPLATE.replace("__CFG_JSON__", repr(json.dumps(cfg)))
@@ -341,6 +378,7 @@ def submit(tag, profile, overrides=None, *, bins_ds=None, bundle_ds=None, extra_
             "dataset_sources": [bundle_ref] + TICKER_DS
                                 + ([USER + "/" + bins_ds] if bins_ds else [])
                                 + ([USER + "/" + jar_ds] if jar_ds else [])
+                                + ([USER + "/" + market_ds] if market_ds else [])
                                 + [(USER + "/" + d) for d in (extra_ds or [])],
             "competition_sources": [], "kernel_sources": []}
     with open(os.path.join(folder, "kernel-metadata.json"), "w") as f:
