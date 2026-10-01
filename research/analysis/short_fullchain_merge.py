@@ -61,9 +61,11 @@ def main():
         print("\n== %s (n=%d, frac=%.3f) ==" % (vn, res["variants"][vn]["n_pick"],
                                                 res["variants"][vn]["frac"]))
         for k, r in res["variants"][vn]["grid"].items():
-            print("  %-18s net=%+.4f%% CI[%+.4f,%+.4f] out=%s win=%.1f%% held=%.1fh yr=%s ypos=%d"
-                  % (k, 100 * r["net"], 100 * r["ci_raw"][0], 100 * r["ci_raw"][1], r["out_both"],
-                     100 * r["winrate"], r["mean_held_h"], r["by_year"], r["years_pos"]))
+            lbl = k + (" (SL=100 no-stop)" if "_SL100_" in k else "")
+            print("  %-24s net=%+.4f%% CI[%+.4f,%+.4f] out=%s win=%.1f%% held=%.1fh tail=%+.1f%% yr=%s ypos=%d"
+                  % (lbl, 100 * r["net"], 100 * r["ci_raw"][0], 100 * r["ci_raw"][1], r["out_both"],
+                     100 * r["winrate"], r["mean_held_h"], 100 * r["max_loss"],
+                     r["by_year"], r["years_pos"]))
     json.dump(res, open(a.out, "w"), indent=1, default=str)
     print("\nGO configs:", go, flush=True)
     print("JSON ->", a.out, flush=True)

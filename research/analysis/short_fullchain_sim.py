@@ -23,7 +23,7 @@ COST_BASE = 0.00112
 FUND72 = 0.00585
 TS_GRID = ((24, 1440), (72, 4320))
 TRAILS = (0.03, 0.05, 0.08)
-SLS = (0.10, 0.15, 0.20)
+SLS = (0.10, 0.15, 0.20, 0.30, 0.50, 1.00)   # AMENDMENT A1: 1.00 = no-stop (chi TRAILING/time-stop)
 DEV_END_MS = int(datetime(2025, 12, 31, tzinfo=timezone.utc).timestamp() * 1000)
 TZ7 = timezone(timedelta(hours=7))
 
@@ -186,9 +186,10 @@ def ci_mean(v, ts):
 def by_year(vals, ts):
     o = {}
     tt = pd.to_datetime(ts, unit="ms", utc=True).tz_convert("Asia/Bangkok").year.to_numpy()
+    vv = np.asarray(vals, np.float64)
     for yr in (2022, 2023, 2024, 2025):
-        m = tt == yr
-        o[str(yr)] = round(float(np.asarray(vals)[m].mean()), 6) if m.sum() else None
+        m = (tt == yr) & np.isfinite(vv)
+        o[str(yr)] = round(float(vv[m].mean()), 6) if m.sum() else None
     return o
 
 
@@ -199,15 +200,16 @@ def agg(pnl, held, ts):
                 "out_both": False, "winrate": None, "mean_held_h": None, "max_loss": None,
                 "by_year": {}, "years_pos": 0}
     net = pnl - COST_BASE - FUND72 * (held / 4320.0)
-    pt = pd.DataFrame({"ts": ts, "v": net}).groupby("ts")["v"].mean()
+    fin = np.isfinite(net)
+    pt = pd.DataFrame({"ts": ts[fin], "v": net[fin]}).groupby("ts")["v"].mean()
     ci = ci_mean(pt.to_numpy(), pt.index.to_numpy(np.int64))
     npos = sum(1 for v in by_year(net, ts).values() if v is not None and v > 0)
-    return {"n_pick": int(len(net)), "net": round(ci["mean"], 6),
+    return {"n_pick": int(fin.sum()), "net": round(ci["mean"], 6),
             "ci_raw": [round(ci["raw"][0], 6), round(ci["raw"][1], 6)],
             "out_raw": ci["out_raw"], "out_both": ci["out_both"],
-            "winrate": round(float((net > 0).mean()), 4),
-            "mean_held_h": round(float(held.mean() / 60.0), 2),
-            "max_loss": round(float(net.min()), 6),
+            "winrate": round(float((net[fin] > 0).mean()), 4),
+            "mean_held_h": round(float(held[fin].mean() / 60.0), 2),
+            "max_loss": round(float(net[fin].min()), 6),
             "by_year": by_year(net, ts), "years_pos": npos}
 
 

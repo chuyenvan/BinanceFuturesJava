@@ -1,7 +1,8 @@
 # RESULT_SHORT_FULLCHAIN — SHORT: GHÉP 3 TẦNG THEO BƯỚC (S1 selector → GATE → SIM 1m)
 
 Ngày: **2026-10-01**, branch `module`, repo `/home/ubuntu/src/BinanceFuturesJava`.
-Pre-reg: `docs/prereg/PREREG_SHORT_FULLCHAIN.md` (**`9ac83699`**, commit **TRƯỚC** đo).
+Pre-reg: `docs/prereg/PREREG_SHORT_FULLCHAIN.md` (**`9ac83699`**, commit **TRƯỚC** đo) +
+**AMENDMENT A1 `444377a4`** (thêm dải SL {30,50,100 %}; `SL=100` = no-stop; commit TRƯỚC khi đo lại).
 Code: bước 1 **`f4d3cc55`** · bước 2 **`1b4b96c1`** · bước 3 sim **`ffb7703f`**.
 Số: `docs/result/RESULT_SHORT_FULLCHAIN.json`. Nền: `RESULT_SHORT_FEASIBILITY` (`9c570e6f`) ·
 `RESULT_SHORT_PATHEXIT` (`c4d56074`) · `RESULT_SHORT_PATHEXIT_PSOFT` (`05169026`).
@@ -15,11 +16,13 @@ stream Aerospike `kline_1m_opt` (1 lượt, buffer trượt 72h, **không ghi đ
 
 ## 0. KẾT LUẬN NGẮN
 
-**`NO-GO`** theo luật §4.6 pre-reg. Ghép đủ 3 tầng rồi **vẫn âm**: **0/72 tổ hợp** (18 cấu hình thoát
-× 4 nhánh gate) đạt net > 0. **Gate KHÔNG cứu được short** — đúng **2 hướng owner chỉ định** (CHẶN /
-THUẬN) đều **làm XẤU**; chỉ hướng **NGHỊCH** (vào khi risk CAO) kéo net **về sát 0** (tốt nhất
-`−0,042 %`, CI **chứa 0**, chỉ 1/4 năm dương) nhưng **vẫn ≤ 0** và **bị nhiễu do `predRisk4H`
-không leak-free**. **2023 vẫn âm** ở mọi nhánh. **Không có "vùng đẹp"** (0 tổ hợp dương).
+**`NO-GO`** theo luật §4.6 pre-reg. Ghép đủ 3 tầng rồi **vẫn âm**: **0/144 ô** (36 cấu hình thoát
+[**AMENDMENT A1**: SL ∈ {10,15,20,**30,50,100%**}] × 4 nhánh gate) đạt net > 0. **Gate KHÔNG cứu
+được short** — đúng **2 hướng owner chỉ định** (CHẶN / THUẬN) đều **làm XẤU**; chỉ hướng **NGHỊCH**
+(vào khi risk CAO) kéo net **về sát 0** (tốt nhất `−0,040 %`, CI **chứa 0**, chỉ 1/4 năm dương) nhưng
+**vẫn ≤ 0** và **bị nhiễu do `predRisk4H` không leak-free**. **Bỏ SL cứng (SL=100, no-stop) chỉ nhích
+net ~+0,003…0,014 %/lệnh — KHÔNG lật được dấu** ⇒ ``cắt cứng không phải thứ đang giết short``. **2023
+vẫn âm** ở mọi nhánh. **Không có "vùng đẹp"** (0 ô dương).
 
 ---
 
@@ -67,24 +70,51 @@ exit **ưu tiên SL** khi cùng nến. Phi base 0,112 %; funding pro-rata `−0,
 
 **Lưới 18 cấu hình × 4 nhánh (net %/lệnh; CI95 block-72h; `ypos` = số năm net>0):**
 
-| nhánh | net (min..max trên 18 ô) | ô ngoài CI `out_both` | ô net>0 | năm dương tốt nhất |
+| nhánh | net (min..max trên 36 ô) | ô ngoài CI `out_both` | ô net>0 | năm dương tốt nhất |
 |---|---|---|---|---|
-| **A** không gate | **−0,24 % … −0,37 %** | 9/18 | **0/18** | 0/4 |
-| **B** CHẶN q10 | −0,34 % … −0,46 % | 9/18 | **0/18** | 0/4 |
-| **C** THUẬN q90 | −0,59 % … −1,17 % | 12/18 | **0/18** | 0/4 |
-| **D** NGHỊCH q10 (exploratory) | **−0,04 % … −0,23 %** | **0/18** | **0/18** | **1/4** (2022) |
+| **A** không gate | **−0,23 % … −0,37 %** | 18/36 | **0/36** | 0/4 |
+| **B** CHẶN q10 | −0,33 % … −0,46 % | 18/36 | **0/36** | 0/4 |
+| **C** THUẬN q90 | −0,59 % … −1,17 % | 24/36 | **0/36** | 0/4 |
+| **D** NGHỊCH q10 (exploratory) | **−0,04 % … −0,23 %** | **0/36** | **0/36** | **1/4** (2022) |
 
-Ô tốt nhất mỗi nhánh (%, net / CI95 / winrate / giữ / theo năm):
+**Bảng §3a — dải SL (nhánh A, trailing T=5 %, time-stop 72h):** net/CI/win/**tail(max loss)**/theo năm
+(`SL=100` = **no-stop**, chỉ TRAILING/time-stop):
 
-| nhánh (ô) | net | CI95 | win | giữ | 2022 | 2023 | 2024 | 2025 |
+| SL | net % | CI95 | win | tail | 2022 | 2023 | 2024 | 2025 |
 |---|---|---|---|---|---|---|---|---|
-| A `T3_SL20_TS72h` | −0,237 | [−0,406; −0,052] | 34,7 % | 14,7 h | −0,19 | −0,81 | −0,29 | −0,22 |
-| B `T3_SL10_TS72h` | −0,337 | [−0,552; −0,095] | 33,7 % | 17,2 h | −0,74 | −1,01 | −0,52 | −0,22 |
-| C `T3_SL10_TS72h` | −0,591 | [−1,016; −0,105] | 31,6 % | 19,6 h | −1,12 | −0,96 | −1,06 | −0,02 |
-| **D `T3_SL20_TS24h`** | **−0,042** | **[−0,228; +0,132]** | 37,9 % | 6,8 h | **+0,15** | **−0,30** | **−0,02** | **−0,20** |
+| 10 % | −0,331 | [−0,682; +0,047] | 37,9 % | **−10,6 %** | −0,24 | −1,48 | −0,71 | −0,21 |
+| 15 % | −0,330 | [−0,682; +0,049] | 37,9 % | −15,6 % | −0,23 | −1,48 | −0,71 | −0,21 |
+| 20 % | −0,330 | [−0,682; +0,050] | 37,9 % | −20,6 % | −0,23 | −1,48 | −0,71 | −0,21 |
+| 30 % | −0,326 | [−0,677; +0,054] | 37,9 % | −30,5 % | −0,23 | −1,48 | −0,71 | −0,21 |
+| 50 % | −0,325 | [−0,677; +0,056] | 37,9 % | −50,2 % | −0,23 | −1,48 | −0,70 | −0,20 |
+| **100 % (no-stop)** | **−0,325** | [−0,677; +0,056] | 37,9 % | **−8,8 %** | −0,23 | −1,48 | −0,70 | −0,20 |
 
-- **TRAILING/SL gần như KHÔNG đổi kết quả** theo SL (10/15/20 %) — vì trailing chạm rất sớm; T lớn
-  (8 %) thì **xấu hơn** (giữ lâu ⇒ trả funding & dính đuôi tăng). Time-stop 24h vs 72h chênh nhỏ.
+**Bảng §3b — dải SL (nhánh D NGHỊCH, trailing T=3 %, time-stop 24h) — dải SÁT 0 nhất:**
+
+| SL | net % | CI95 | win | tail | 2022 | 2023 | 2024 | 2025 |
+|---|---|---|---|---|---|---|---|---|
+| 10 % | −0,0430 | [−0,227; +0,131] | 37,9 % | −10,3 % | +0,15 | −0,30 | −0,01 | −0,20 |
+| 15 % | −0,0426 | [−0,227; +0,131] | 37,9 % | −15,3 % | +0,15 | −0,30 | −0,01 | −0,20 |
+| 20 % | −0,0419 | [−0,227; +0,132] | 37,9 % | −20,3 % | +0,15 | −0,30 | −0,02 | −0,20 |
+| 30 % | −0,0402 | [−0,224; +0,133] | 37,9 % | **−6,7 %** | +0,15 | −0,30 | −0,01 | −0,19 |
+| 50 % | −0,0402 | [−0,224; +0,133] | 37,9 % | **−6,7 %** | +0,15 | −0,30 | −0,01 | −0,19 |
+| **100 % (no-stop)** | **−0,0402** | [−0,224; +0,133] | 37,9 % | **−6,7 %** | +0,15 | −0,30 | −0,01 | −0,19 |
+
+Ô tốt nhất mỗi nhánh trên cả 36 ô (net/CI95/win/tail):
+
+| nhánh (ô) | net | CI95 | win | tail |
+|---|---|---|---|---|
+| A `T3_SL50…100_TS72h` | −0,234 | [−0,403; −0,049] | 34,7 % | −6,7 % |
+| B `T3_SL100_TS72h` | −0,334 | [−0,549; −0,091] | 33,7 % | −4,5 % |
+| C `T3_SL100_TS72h` | −0,590 | [−1,016; −0,104] | 31,6 % | −3,9 % |
+| **D `T3_SL30…100_TS24h`** | **−0,040** | **[−0,224; +0,133]** | 37,9 % | −6,7 % |
+
+- **Dải SL LỚN (AMENDMENT A1)**: bỏ cắt cứng (SL=100 no-stop) **chỉ nhích net ~+0,003…0,014 %/lệnh**
+  (A T5_TS72h: −0,331→−0,325; D T3_TS24h: −0,043→−0,040) — **KHÔNG lật dấu ở ô nào**; và làm
+  **tail nhỏ đi** ở dải SL≥30 (từ −50 % về −6,7 %/−8,8 %) vì trailing/time-stop thoát trước khi giá tăng cực lớn.
+  ⇒ giả thuyết owner ("cắt cứng đang cắt mất lãi") **đúng một phần rất nhỏ nhưng KHÔNG đủ cứu short**.
+- **TRAILING** là biến chính: T nhỏ (3 %) tốt hơn T 5/8 % (giữ lâu ⇒ trả funding & dính đuôi tăng).
+  Time-stop 24h vs 72h chênh nhỏ.
 - **Kiểm chứng kênh:** A `T3_SL20_TS24h` net `−0,243 %` → **gross trước phí/funding ≈ −0,043 %**
   (cộng lại 0,112 % fee + 0,089 % funding) ≈ đúng `d0 ret24 = −0,041 %` của bước 2 ⇒ sim 1m **khớp**
   kênh 0-sim. (Parser/offset **copy nguyên** sim đã kiểm `mae=0` — `RESULT_SHORT_PATHEXIT` §1.)
@@ -94,12 +124,13 @@ exit **ưu tiên SL** khi cùng nến. Phi base 0,112 %; funding pro-rata `−0,
 
 ## 4. TRẢ LỜI 4 CÂU (bắt buộc)
 
-1. **Gate có làm short > 0 & ngoài CI không?** — **KHÔNG.** 0/72 tổ hợp net>0. Đúng 2 hướng chỉ định
+1. **Gate có làm short > 0 & ngoài CI không?** — **KHÔNG.** 0/144 ô net>0. Đúng 2 hướng chỉ định
    (**CHẶN/THUẬN**) **làm xấu**; hướng **NGHỊCH** kéo net về sát 0 (`−0,042 %`) nhưng **CI chứa 0**
    (`[−0,228; +0,132]`) và chỉ 1/4 năm dương ⇒ **không ngoài CI**.
 2. **2023 còn âm không?** — **CÒN.** 2023 âm ở **mọi** nhánh (A −0,81 %, B −1,01 %, C −0,96 %,
    D −0,30 % ở ô tốt nhất) ⇒ đúng "hard year" như các vòng trước.
-3. **Có > 1 "vùng đẹp" (overfit) không?** — **KHÔNG có vùng đẹp nào** (0 tổ hợp dương) ⇒ vấn đề
+3. **Có > 1 "vùng đẹp" (overfit) không?** — **KHÔNG có vùng đẹp nào** (0 ô dương trên 144),
+   kể cả khi **bỏ hẳn SL cứng (SL=100 no-stop)** ⇒ vấn đề
    **không phải overfit cục bộ** mà là **thiếu edge ròng** một cách hệ thống. (Ngược lại: nếu có 1 ô
    dương lẻ thì mới lo overfit.)
 4. **Nguyên nhân THẬT (NO-GO):** (i) **biên gross của decile-0 S1 quá nhỏ** (≈ −0,04 %/lệnh, đúng
