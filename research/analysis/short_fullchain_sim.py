@@ -324,7 +324,8 @@ def main():
     ap.add_argument("--aero", default="127.0.0.1:3222")
     ap.add_argument("--years", default="2022,2023,2024,2025")
     ap.add_argument("--max-days", type=int, default=0)
-    ap.add_argument("--out", required=True)
+    ap.add_argument("--out", default="")
+    ap.add_argument("--raw-out", default="")   # npz per-pick (de merge nhieu phien)
     a = ap.parse_args()
     t0 = time.time()
     pk = build_picks(a.panel)
@@ -344,6 +345,15 @@ def main():
              for x in a.years.split(",")]
     rec_ts, rec_sym, rec_g, rec_pnl, rec_held = sim(pk, id2name, gate_min, None, a.aero,
                                                     years, max_days=a.max_days)
+    if a.raw_out:
+        np.savez(a.raw_out, ts=np.asarray(rec_ts, np.int64), g=np.asarray(rec_g, np.float32),
+                 pnl=np.asarray([rec_pnl[c] for c in COMBOS], np.float32).T,
+                 held=np.asarray([rec_held[c] for c in COMBOS], np.float32).T,
+                 combos=np.array(["%d|%d|%d" % (int(c[0] * 100), int(c[1] * 100), c[2])
+                                  for c in COMBOS]))
+        print("RAW -> %s n=%d" % (a.raw_out, len(rec_ts)), flush=True)
+        if not a.out:
+            return
     rec_ts = np.asarray(rec_ts, np.int64); rec_g = np.asarray(rec_g, np.float64)
     keep = {"A_all": np.ones(len(rec_ts), bool),
             "B_CHAN_q10": ~(rec_g <= q10),
