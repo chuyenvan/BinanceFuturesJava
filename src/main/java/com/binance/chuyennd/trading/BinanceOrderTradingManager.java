@@ -102,7 +102,10 @@ public class BinanceOrderTradingManager {
             LOG.info("Start thread ThreadAutoRestartProgram");
             while (true) {
                 try {
-                    Thread.sleep(Utils.TIME_HOUR * 4);
+                    // [FIX 2026-10-01] 4h -> 12h: restart chi de reload state (ShadowBookC3.loadState),
+                    //   giam cua so gian doan; dong bo nhip voi BinanceDataIngestor (da 12h).
+                    //   Xem docs/audit/FIX_242_G2FLAT3_20261001.md + PROBE_242_20261001.md muc 3.
+                    Thread.sleep(Utils.TIME_HOUR * 12);
                 } catch (InterruptedException ex) {
                     java.util.logging.Logger.getLogger(DetectEntrySignal2TradeNormal.class.getName()).log(Level.SEVERE, null, ex);
                 }

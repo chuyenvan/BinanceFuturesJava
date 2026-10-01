@@ -12,65 +12,65 @@
 | label | path | md5 | bytes |
 |---|---|---|---|
 | baseline_profile | `/home/ubuntu/src/BinanceFuturesJava/profiles/g2_flat3.properties` | c6d4ef57ecee25c663d2d396ac574c30 | 5307 |
-| live_cfg_snapshot | `/home/ubuntu/src/BinanceFuturesJava/research/parity/data/live_242_config.snapshot` | c3be2af63df2f55792699b149b70a984 | 1623 |
-| live_log_summary | `/home/ubuntu/src/BinanceFuturesJava/research/parity/data/live_242_log_summary.json` | b0405433d6bf59c777802fec9337f390 | 346 |
+| live_cfg_snapshot | `/home/ubuntu/src/BinanceFuturesJava/research/parity/data/live_242_config.snapshot` | c977f4b9e23876cbded26741aac7469b | 2059 |
+| live_log_summary | `/home/ubuntu/src/BinanceFuturesJava/research/parity/data/live_242_log_summary.json` | 2a748017bbc710ee7605c3e945412171 | 346 |
 | dev_export | `/home/ubuntu/claudedata/devexport_202609/devexport_20260701_20260928_FULL.csv.gz` | f8cb50f79d5f4098192af6e55e42e3fb | 14610639 |
 
 ## Tang
 
 | tang | trang thai | ly do |
 |---|---|---|
-| **config** | FAIL | 242 KHONG khop baseline: 4 LECH + 18 MISSING key |
+| **config** | PASS | khop |
 | **features** | FAIL | 27/33 feature lech (exact<=1e-08, inline<=1e-03; o nguong may 29/33) |
-| **gate** | FAIL | 242 gate=fixed, thr 0.0326 > p15_max 0.0150 => n_pass=0 (baseline=ratio) |
+| **gate** | MISSING | 242 gate=ratio, thr 0.0339 > p15_max 0.0150 => n_pass=0 (baseline=ratio) |
 | **marketparams** | MISSING | field: rateDownAvg/rateDown15MAvg khop muc nhieu (<1e-3); rateUpAvg MISSING (khong dump); nguong MATCH default; flip LIVE=0/0, DEV(stress)=0/1 |
 | **selector** | MISSING | MISSING: thieu nguon selector doi ung (khong co cot score/rank) |
 | **entry** | FAIL | entry lech: LIVE=0 vs BACKTEST(G2)>=1 |
 | **exit** | MISSING | MISSING: khong co lenh dong (gate chan truoc) |
 
-### config — FAIL
+### config — PASS
 
-- metrics: `{"lech": 4, "match": 5, "missing": 18}`
+- metrics: `{"lech": 0, "match": 27, "missing": 0}`
 
 - [PASS] input.baseline: profile 31 key
-- [PASS] input.live: snapshot 242 52 key non-secret
-- [FAIL] config.key_parity: MATCH=5 LECH=4 MISSING=18 (khong tinh SKIP)
+- [PASS] input.live: snapshot 242 71 key non-secret
+- [PASS] config.key_parity: MATCH=27 LECH=0 MISSING=0 (khong tinh SKIP)
 
 | key | profile | LIVE | verdict |
 |---|---|---|---|
 | `SELECTOR_RANK_TOPK` | 16 | 16 | MATCH |
-| `SELECTOR_ONLY_ENTRY` | 0 | (unset) | MISSING |
+| `SELECTOR_ONLY_ENTRY` | 0 | 0 | MATCH |
 | `SIM_MIN_MOMENTUM_15M` | 0.008 | 0.008 | MATCH |
-| `SIM_GATE_ROLLING_MODE` | ratio | (unset) | MISSING |
-| `SIM_GATE_ROLLING_DAYS` | 90 | (unset) | MISSING |
-| `SIM_GATE_ROLLING_PCT` | 0.999950829 | (unset) | MISSING |
-| `SIM_GATE_DYN_SCALE` | 1.55 | 1.70 | LECH |
-| `SIM_RATE_PROFIT_STOP_MARKET` | 0.07 | 0.05 | LECH |
-| `TS_GIVEBACK_RATIO` | 1.0 | (unset; default=0.5) | MISSING |
-| `SIM_TS_MAX_GAP` | 0.03 | (unset; default=0.08) | MISSING |
-| `SIM_TS_MAX_GAP_WEAK` | 0.03 | (unset; default=0.03) | MATCH-DEFAULT |
-| `SIM_TS_GIVEBACK` | 1 | (unset) | MISSING |
-| `SIM_LOSER_TIME_STOP_HOURS` | 168 | (unset) | MISSING |
-| `DCA_GRID_SCALE` | 6.0 | (unset) | MISSING |
-| `DCA_GRID_WEIGHTS` | 1,1,1,1 | 1,0,0,0 | LECH |
+| `SIM_GATE_ROLLING_MODE` | ratio | ratio | MATCH |
+| `SIM_GATE_ROLLING_DAYS` | 90 | 90 | MATCH |
+| `SIM_GATE_ROLLING_PCT` | 0.999950829 | 0.999950829 | MATCH |
+| `SIM_GATE_DYN_SCALE` | 1.55 | 1.55 | MATCH |
+| `SIM_RATE_PROFIT_STOP_MARKET` | 0.07 | 0.07 | MATCH |
+| `TS_GIVEBACK_RATIO` | 1.0 | 1.0 | MATCH |
+| `SIM_TS_MAX_GAP` | 0.03 | 0.03 | MATCH |
+| `SIM_TS_MAX_GAP_WEAK` | 0.03 | 0.03 | MATCH |
+| `SIM_TS_GIVEBACK` | 1 | 1 | MATCH |
+| `SIM_LOSER_TIME_STOP_HOURS` | 168 | 168 | MATCH |
+| `DCA_GRID_SCALE` | 6.0 | 6.0 | MATCH |
+| `DCA_GRID_WEIGHTS` | 1,1,1,1 | 1,1,1,1 | MATCH |
 | `TIER_FLAT` | 1 | 1 | MATCH |
-| `SIM_F_BASE` | 0.015 | (unset; default=0.03) | MISSING |
-| `CAPITAL_START` | 35000 | 14000 | LECH |
-| `SIM_RATE_FEE` | 0.000982 | (unset; default=0.002) | MISSING |
-| `SIM_SLIPPAGE_RATE` | 0.000067 | (unset; default=0.003) | MISSING |
-| `SIM_FIX_B1` | true | (unset) | MISSING |
-| `SIM_FIX_B2` | true | (unset) | MISSING |
-| `SIM_FIX_B3` | true | (unset) | MISSING |
-| `SIM_BREAKER_MODE` | OFF | (unset) | MISSING |
-| `CONC_CAP_PERCOIN_ENABLED` | true | (unset; default=False) | MISSING |
-| `CONC_CAP_PERCOIN_PCT` | 0.15 | (unset) | MISSING |
+| `SIM_F_BASE` | 0.015 | 0.015 | MATCH |
+| `CAPITAL_START` | 35000 | 35000 | MATCH |
+| `SIM_RATE_FEE` | 0.000982 | 0.000982 | MATCH |
+| `SIM_SLIPPAGE_RATE` | 0.000067 | 0.000067 | MATCH |
+| `SIM_FIX_B1` | true | true | MATCH |
+| `SIM_FIX_B2` | true | true | MATCH |
+| `SIM_FIX_B3` | true | true | MATCH |
+| `SIM_BREAKER_MODE` | OFF | OFF | MATCH |
+| `CONC_CAP_PERCOIN_ENABLED` | true | true | MATCH |
+| `CONC_CAP_PERCOIN_PCT` | 0.15 | 0.15 | MATCH |
 | `SIM_ENTRY_SAMPLE_MIN` | 1 | 1 | MATCH |
 
 ### features — FAIL
 
-- metrics: `{"feat_fail": 27, "feat_fail_machine_tol": 29, "files": 6, "inline_minutes": 1426, "pairs": 385, "reconstructed": ["momentum15M", "momentum1M", "momentumAcceleration"], "symbols": ["BTCUSDT"], "tol": 1e-08, "tol_inline": 0.001, "truncated_files": 6}`
+- metrics: `{"fail_groups": {"i-nhieu-ticker-vs-kline": 15, "i-ti-so-nhay (nhieu ticker-vs-kline)": 5, "ii-export-thieu-nguon(=0) + logic con lai": 1, "iii-nghi-logic/tap-hop (can control cung-nguon)": 6}, "feat_fail": 27, "feat_fail_machine_tol": 29, "files": 6, "inline_minutes": 1426, "pairs": 385, "reconstructed": ["momentum15M", "momentum1M", "momentumAcceleration"], "symbols": ["BTCUSDT"], "tol": 1e-08, "tol_inline": 0.001, "truncated_files": 6}`
 
-- [PASS] input.integrity: LIVE files=6 (cut cut=6 — GOC: writer Java khong finalize GZIPOutputStream (thieu gz trailer; da xac minh tren CA file 242 moi nhat 20261001_090200) => harness phuc hoi dong hoan chinh bang partial-inflate), pairs=385
+- [PASS] input.integrity: LIVE files=6 (thieu-trailer=6, sync-flush-tail=6 — GOC VIEC1: file thieu gz trailer=6/6, tail sync-flush(00 00 FF FF)=6/6 => writer da flush() nhung KHONG finalize: src/main/java/com/binance/chuyennd/ai_ml/features/export/entry/LiveFeatureDump.java:133-146 (syncFlush=true) + close():148-155 CHI goi khi du REMAINING/200MB; KHONG co shutdown hook => JVM restart giua chung => thieu trailer => harness phuc hoi dong hoan chinh bang partial-inflate), pairs=385
 - [PASS] input.inline_source: tai tao inline 1426 phut (md_inline<-kline 242)
 - [PASS] input.pair: 385 cap (ts) giao
 - [PASS] output.nan: NaN LIVE bất thường=0
@@ -112,13 +112,13 @@
 | basketRsi14 | 385 | 29.961 | 3.023 | 0.8615 | FAIL |
 | basketVolSpike | 385 | 79.601 | 1.022 | 0.1042 | FAIL |
 
-### gate — FAIL
+### gate — MISSING
 
-- metrics: `{"baseline_mode": "ratio", "gate_npass_total": 0, "live_mode": "fixed", "p15_live_max": 0.0150123108, "thr_applied_max": 0.04375, "thr_applied_min": 0.03257}`
+- metrics: `{"baseline_mode": "ratio", "gate_npass_total": 0, "live_mode": "ratio", "p15_live_max": 0.0150123108, "thr_applied_max": 0.04702, "thr_applied_min": 0.03388}`
 
 - [PASS] input.live: LIVE p15 n=502 max=0.01501
-- [PASS] gate.repro: n_pass log=0; p15_max=0.01501 < thr_min=0.03257 => dong nhat (0 pass)
-- [FAIL] gate.mode_parity: LIVE gate mode=fixed vs BASELINE=ratio
+- [PASS] gate.repro: n_pass log=0; p15_max=0.01501 < thr_min=0.03388 => dong nhat (0 pass)
+- [PASS] gate.mode_parity: LIVE gate mode=ratio vs BASELINE=ratio
 - [MISSING] gate.p15_dev_parity: nguon p15 DEV KHONG-ONNX = pred.bin (n=2500260, ts 1617210000000..1767225540000). Cua so LIVE 1790559600000..1790617260000: giao=KHONG => KHONG so cung phut duoc => MISSING (2026=holdout, ngoai DEV<=2025-12-31)
 
 ### marketparams — MISSING
@@ -161,10 +161,10 @@ nguong (242 vs baseline vs default Java):
 
 ### entry — FAIL
 
-- metrics: `{"backtest_entries_min": 1, "gate_all_zero": true, "gate_lines": 2818, "live_entries": 0, "window_candidates": 502}`
+- metrics: `{"backtest_entries_min": 1, "gate_all_zero": true, "gate_lines": 2834, "live_entries": 0, "window_candidates": 502}`
 
-- [PASS] input.live: 2818 dong [GATE], all n_pass=0=True, ledger trades=0? next
-- [PASS] entry.live_consistency: n_pass=0 nhat quan voi p15_max=0.01501 < thr=0.03257
+- [PASS] input.live: 2834 dong [GATE], all n_pass=0=True, ledger trades=0? next
+- [PASS] entry.live_consistency: n_pass=0 nhat quan voi p15_max=0.01501 < thr=0.03388
 - [FAIL] entry.window_parity: LIVE entries=0 vs BACKTEST(G2) expected>=1
 
 ### exit — MISSING
