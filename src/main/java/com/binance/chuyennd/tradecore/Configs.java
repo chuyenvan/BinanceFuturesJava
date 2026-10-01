@@ -469,6 +469,12 @@ public class Configs {
     //   Default = gia tri cu => parity byte-identical. Override qua SIM_MS_DOWN_BIG_AVG_DCA.
     public static float MS_DOWN_BIG_AVG_DCA = -0.03157f;
 
+    // [BD-CHAIN 2026-10-01] docs/prereg/PREREG_BD_CHAIN.md — chuan hoa N cua calRateChangeAvg theo
+    //   TY LE UNIVERSE f: N_f = clamp(round(f * |universe|), 1, |universe|). f = 0 (default) => GIU
+    //   NGUYEN N=100 cu => byte-identical (parity f=0 = G2+FLAT3). f > 0 => N theo cong thuc tren
+    //   (cap 4/5 cu VAN ap dung trong calRateChangeAvg). Override qua key SIM_BD_FRACTION.
+    public static float BD_FRACTION = 0f;
+
     public static float MS_UP_SMALL_THRES = 0.00442f;
     public static float MS_DOWN_SMALL_AVG_OR_15M = -0.02069f;         // HPO (đã revert về cũ): -0.02007f
 
@@ -900,6 +906,9 @@ public class Configs {
             if ((v = Cfg.get("SIM_MS_DOWN_BIG_AVG")) != null) MS_DOWN_BIG_AVG = Float.parseFloat(v);
             // [BD-THRESHOLD-FRAGILITY] nguong rieng cho duong DCA (isDcaAlt); default = gia tri cu.
             if ((v = Cfg.get("SIM_MS_DOWN_BIG_AVG_DCA")) != null) MS_DOWN_BIG_AVG_DCA = Float.parseFloat(v);
+            // [BD-CHAIN 2026-10-01] ty le universe f cho N cua calRateChangeAvg. Khong khai / <=0
+            //   => 0f => giu N=100 cu => byte-identical. >0 => N_f = clamp(round(f*size),1,size).
+            if ((v = Cfg.get("SIM_BD_FRACTION")) != null) BD_FRACTION = Float.parseFloat(v.trim());
             if ((v = Cfg.get("SIM_LOSER_TIME_STOP_HOURS")) != null) LOSER_TIME_STOP_HOURS = Integer.parseInt(v.trim());
             if ((v = Cfg.get("SIM_COND_EXIT_HOURS")) != null) COND_EXIT_HOURS = Integer.parseInt(v.trim());
             if ((v = Cfg.get("SIM_COND_EXIT_MIN_FAV")) != null) COND_EXIT_MIN_FAV = Float.parseFloat(v.trim());

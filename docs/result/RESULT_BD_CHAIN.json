@@ -1,0 +1,37 @@
+{
+  "task": "BD-CHAIN",
+  "date": "2026-10-01",
+  "branch": "module",
+  "baseline_profile": "profiles/g2_flat3.properties",
+  "baseline_profile_md5": "c6d4ef57ecee25c663d2d396ac574c30",
+  "baseline_parity_printDone_md5_target": "650c386f0d0dfea334af9d55ca2f21d4",
+  "status": "BLOCKED",
+  "v0_rateDown15MAvg_is_input_model_or_rule": {
+    "verdict": "INPUT_MODEL_AND_RULE",
+    "gate33": {"feature": "momentum15M (index 2)", "vector_line": "ai_ml/onnx/entry/OnnxInferenceManager.java:67", "source_line": "ai_ml/features/export/entry/ComprehensiveMarketFeatureExtractor.java:94"},
+    "selector45": {"feature": "rateDown15MAvg (index 5)", "vector_line": "ai_ml/onnx/funding/SelectorOnnxInferenceManager.java:62", "source_line": "ai_ml/features/export/funding/FundingDataCollectionManager.java:285-286"},
+    "rule_lines": ["tradecore/MarketBigChangeDetector.java:169-178", "tradecore/BdSizeAdapt.java:86-89", "tradecore/TickWeakBlock.java:135"],
+    "consequence": "retrain + pred full chain (gate33 -> ledger -> S1 -> bins -> sim)"
+  },
+  "v1_code": {
+    "key": "SIM_BD_FRACTION",
+    "default": 0.0,
+    "default_behavior": "byte-identical (N=100)",
+    "formula": "N = clamp(round(f*size),1,size), cap 4/5 kept",
+    "files": ["src/main/java/com/binance/chuyennd/tradecore/Configs.java", "src/main/java/com/binance/chuyennd/tradecore/MarketBigChangeDetector.java"]
+  },
+  "v2_chain": {
+    "blocked": true,
+    "blocker": "kaggle kernel chuyendinh/sm-pathexit status=running (other job, commit c4f6f38e)",
+    "kaggle_checked_at": "2026-10-01T13:05+07:00",
+    "parity_f0_md5": null,
+    "arms": {
+      "f0.10": "NOT_RUN",
+      "f0.30": "NOT_RUN",
+      "f0.50": "NOT_RUN",
+      "f1.00": "NOT_RUN"
+    }
+  },
+  "v3_scoring": {"ran": false, "reason": "no arm produced"},
+  "conclusion": {"verdict": "NO-GO (provisional/BLOCKED)", "f_kept": 0.0, "note": "not a scientific negative; unmeasured due to busy Kaggle"}
+}

@@ -147,6 +147,15 @@ public class MarketBigChangeDetector {
 
 
     public static Float calRateChangeAvg(TreeMap<Float, String> rateLoss2Symbols, Integer period) {
+        // [BD-CHAIN 2026-10-01] docs/prereg/PREREG_BD_CHAIN.md — chuan hoa N theo TY LE UNIVERSE f.
+        //   BD_FRACTION = 0 (default) => KHONG cham `period` => byte-identical (N=100 cu).
+        //   BD_FRACTION > 0 => N = clamp(round(f * size), 1, size); cap 4/5 ben duoi VAN ap dung.
+        if (Configs.BD_FRACTION > 0f && !rateLoss2Symbols.isEmpty()) {
+            int n = Math.round(Configs.BD_FRACTION * rateLoss2Symbols.size());
+            if (n < 1) n = 1;
+            if (n > rateLoss2Symbols.size()) n = rateLoss2Symbols.size();
+            period = n;
+        }
         Float total = 0f;
         int counter = 0;
         if (period > rateLoss2Symbols.size() * 4 / 5) {
