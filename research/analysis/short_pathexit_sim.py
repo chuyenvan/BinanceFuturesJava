@@ -184,7 +184,8 @@ def load_labels(lb_dir, map_csv, hs=("12h", "24h", "72h")):
     smap = pd.read_csv(map_csv)
     s2i = dict(zip(smap.symbol, smap.symId.astype(np.int32)))
     fs = sorted(glob.glob(lb_dir + "/funding_label_*.pb"))
-    fs = [f for f in fs if os.path.basename(f).split("_")[2] < "20260701"]
+    fs = [f for f in fs if os.path.basename(f).split("_")[2] < "20260101"]
+    fs = [f for f in fs if os.path.basename(f).split("_")[2] < "20260101"]
     parts = []
     for fp in fs:
         cols = ["tEpochMs", "symbol"]
@@ -321,13 +322,14 @@ def _exit_pick(hh, ll, cc, P, thr, E, C, T):
     hh, ll, cc = _ffill(hh), _ffill(ll), _ffill(cc)
     n = len(hh)
     last = cc[-1]
+    chg = last / P - 1
     # CUT
     hi_c = P * (1 + C)
     s = hh >= hi_c
     if s.any():
         pnl_c, held_c, rc = -C, float(np.argmax(s) + 1), "cut"
     else:
-        pnl_c, held_c, rc = (last / P - 1), float(n), "hold"
+        pnl_c, held_c, rc = -chg, float(n), "hold"
     # LABEL
     sl = hh >= P * (1 + E); tp = ll <= P * (1 - thr)
     isl = int(np.argmax(sl)) if sl.any() else 10 ** 9
@@ -337,18 +339,18 @@ def _exit_pick(hh, ll, cc, P, thr, E, C, T):
     elif itp < 10 ** 9:
         pnl_l, held_l, rl = thr, float(itp + 1), "tp"
     else:
-        pnl_l, held_l, rl = (last / P - 1), float(n), "hold"
+        pnl_l, held_l, rl = -chg, float(n), "hold"
     # TRAIL
     runmin = np.fmin.accumulate(ll)
     lvl = runmin * (1 + T)
     st = hh >= lvl
     if st.any():
         i = int(np.argmax(st))
-        pnl_t, held_t, rt = (lvl[i] / P - 1), float(i + 1), "trail"
+        pnl_t, held_t, rt = -(lvl[i] / P - 1), float(i + 1), "trail"
     else:
-        pnl_t, held_t, rt = (last / P - 1), float(n), "hold"
+        pnl_t, held_t, rt = -chg, float(n), "hold"
     return dict(CUT=(pnl_c, held_c, rc), LABEL=(pnl_l, held_l, rl), TRAIL=(pnl_t, held_t, rt),
-                NOSTOP=((last / P - 1), float(n), "hold"))
+                NOSTOP=(-chg, float(n), "hold"))
 
 
 def sim_1m(picks_by_tag, id2name, sym_ids_needed, aero, years, thrE, C=0.20, T=0.05,
@@ -361,7 +363,8 @@ def sim_1m(picks_by_tag, id2name, sym_ids_needed, aero, years, thrE, C=0.20, T=0
     ticks = {}
     for tag, pk in picks_by_tag.items():
         for ts, s in zip(pk["ts"].to_numpy(), pk["sym"].to_numpy()):
-            ticks.setdefault(int(ts) // 60000, []).append((tag, int(s)))
+            # t = OPEN time cua nen 15m; close(t) = phut cuoi nen = m0+14 (khop .pb, do that)
+            ticks.setdefault(int(ts) // 60000 + 14, []).append((tag, int(s)))
     all_m0 = sorted(ticks)
     if max_ticks:
         all_m0 = all_m0[:max_ticks]
@@ -563,6 +566,21 @@ def main():
                 ag = agg_rule(pnl, ts, held, "prorata")
                 ag["reason_frac"] = {k: round(reason.count(k) / len(reason), 4)
                                      for k in set(reason)}
+                # cross-check: .pb retEnd tren DUNG pick da mo phong
+                sym_a = np.array([r[4] for r in recs], np.int32)
+                kk = (m0 - 14) * 60000 * RES + sym_a.astype(np.int64)
+                ipp = np.clip(np.searchsorted(lbl["key"], kk), 0, len(lbl["key"]) - 1)
+                hitm = lbl["key"][ipp] == kk
+                if hitm.any():
+                    ag["pb_ret_same_mean"] = round(float(
+                        lbl["retEnd_72h"][ipp[hitm]].astype(np.float64).mean()), 6)
+                    ag["pb_maxfav_same_mean"] = round(float(
+                        lbl["maxFav_72h"][ipp[hitm]].astype(np.float64).mean()), 6)
+                    ag["pb_cutfrac20_same"] = round(float(
+                        (lbl["maxFav_72h"][ipp[hitm]] >= 0.20).mean()), 6)
+                    ag["pb_cut20_same_mean"] = round(float(np.where(
+                        lbl["maxFav_72h"][ipp[hitm]] >= 0.20, -0.20,
+                        -lbl["retEnd_72h"][ipp[hitm]].astype(np.float64)).mean()), 6)
                 res["arms"][tag]["sim1m"][rule] = ag
     json.dump(res, open(a.out, "w"), indent=1, default=str)
     print("JSON -> %s (%.0fs)" % (a.out, time.time() - t0), flush=True)
