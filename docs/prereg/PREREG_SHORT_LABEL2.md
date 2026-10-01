@@ -86,19 +86,21 @@ không có sẵn trên Kaggle ⇒ cần push dataset mới ⇒ vi phạm §1.3).
 
 ---
 
-## 4. (c) LƯỚI ARM (khóa TRƯỚC) — **thr ∈ {1,5 %, 7 %} × E ∈ {+3 %, +10 %}**
+## 4. (c) LƯỚI ARM (khóa TRƯỚC) — **thr = 1,5 % × E ∈ {+3 %, +10 %}**
 
 | nhóm | mode | `thr` | `E` | seeds | #arm |
 |---|---|---|---|---|---|
-| **chính (P-hard)** | `pa` | 1,5 % , 7 % | +3 % , +10 % | 42, 7, 13 | 4×3 = **12** |
+| **chính (P-hard)** | `pa` | 1,5 % | +3 % , +10 % | 42, 7, 13 | 2×3 = **6** |
 | đối chiếu (a) | `ndown` (`E=∞`) | 1,5 % | ∞ | 42, 7, 13 | **đã có** (`sm-train-gpu`) |
-| đối chiếu (b) | `pw` | 1,5 % | +10 % | 42, 7, 13 | **3** |
-| đối chiếu (c) | `pn` | 1,5 % | +10 % | 42, 7, 13 | **3** |
+| đối chiếu (b) | `pw` | 1,5 % | +10 % | 42 | **1** |
+| đối chiếu (c) | `pn` | 1,5 % | +10 % | 42 | **1** |
 
-- **GIẢM so với đề bài (8 arm):** lock **2 mức E {+3 %, +10 %}** thay vì 4 mức {+3,+5,+10,+20 %},
-  **lý do CPU/GPU**: kernel anh em `sm-thr-sweep` (9 arm) đang chiếm GPU; mỗi arm ~40 phút
-  ⇒ 12+6 = 18 arm ≈ 12 g giờ GPU chia 2 kernel (giới hạn 12 g/kernel + quota ~30 g/tuần).
-  E=+5 %/+20 % **để vòng sau** nếu lưới này có tín hiệu (ghi rõ, KHÔNG tune sau khi thấy số).
+- **AMEND 2026-10-01 07:2x GMT+7 (TRƯỚC mọi kết quả):** bản gốc khóa
+  `thr ∈ {1,5 %, 7 %} × E ∈ {+3 %, +10 %}` (12 arm) + control 3-seed (6 arm). Đo thời lượng thật
+  của kernel anh em (`sm-train-gpu` = 4 arm / ~3 h; `sm-thr-sweep` = 9 arm / >4,3 h ⇒ ~37 phút/arm)
+  ⇒ 12+6 arm ≈ 8–9 h **vượt khả năng chờ của phiên**. Thu về **6 arm chính** (giữ **TRỌN trục E**
+  ở `thr` khóa 1,5 %, đủ 3 seed) + control 1 seed. **Trục `thr=7 %`** và **E=+5 %/+20 %** để vòng sau
+  (ghi rõ, KHÔNG tune sau khi thấy số).
 - Không tune feature/hyperparam/K/cơ-chế-thoát. K=8/tick như mọi vòng.
 
 ---

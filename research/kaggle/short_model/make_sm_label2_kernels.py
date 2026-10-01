@@ -135,24 +135,23 @@ def _mk(name, desc, runs):
 def main():
     os.makedirs(DST, exist_ok=True)
     seeds = [42, 7, 13]
-    main_grid = [("PA_t15_E3", 0.015, 0.03), ("PA_t15_E10", 0.015, 0.10),
-                 ("PA_t70_E3", 0.070, 0.03), ("PA_t70_E10", 0.070, 0.10)]
+    main_grid = [("PA_t15_E3", 0.015, 0.03), ("PA_t15_E10", 0.015, 0.10)]
     runs_a = []
     for nm, thr, e in main_grid:
         for s in seeds:
             runs_a.append(["%s_S%d" % (nm, s),
                            ["--label-mode", "pa", "--label-h", "72", "--thr", "%.3f" % thr,
                             "--label-e", "%.3f" % e, "--label-kind", "bin"], s])
-    _mk("sm-label2", "P-hard pa thr{1.5,7%} x E{3,10%} x seed{42,7,13} = 12 arm", runs_a)
+    _mk("sm-label2", "P-hard pa thr=1.5% x E{3,10%} x seed{42,7,13} = 6 arm", runs_a)
 
     ctrl = [("PW_t15_E10", "pw", 0.015, 0.10), ("PN_t15_E10", "pn", 0.015, 0.10)]
     runs_b = []
     for nm, mode, thr, e in ctrl:
-        for s in seeds:
+        for s in [42]:
             runs_b.append(["%s_S%d" % (nm, s),
                            ["--label-mode", mode, "--label-h", "72", "--thr", "%.3f" % thr,
                             "--label-e", "%.3f" % e, "--label-kind", "bin"], s])
-    _mk("sm-label2b", "control pw(weight) + pn(noise) at thr=1.5%, E=10% x seed{42,7,13} = 6 arm",
+    _mk("sm-label2b", "control pw(weight) + pn(noise) at thr=1.5%, E=10% seed42 = 2 arm",
         runs_b)
 
 
