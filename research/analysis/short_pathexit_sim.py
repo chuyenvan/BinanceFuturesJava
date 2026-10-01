@@ -112,6 +112,32 @@ def parse_needed(buf, need):
     return out
 
 
+THRS_GRID = (0.015, 0.03, 0.07)
+ES_GRID = (0.03, 0.05, 0.10)
+HS_GRID = (("12h", 720), ("24h", 1440), ("72h", 4320))
+
+
+def _exit_grid(hh, ll, cc, P, thr, E, hs):
+    """Tra {(h_name,thr,E): (pnl,held)} voi first-hit CHINH XAC tren duong 1m."""
+    if np.isnan(hh).all() or not np.isfinite(P) or P <= 0:
+        return None
+    hh = _ffill(hh); ll = _ffill(ll); cc = _ffill(cc)
+    cmin = np.minimum.accumulate(ll)
+    cmax = np.maximum.accumulate(hh)
+    out = {}
+    for hn, n in hs:
+        hh_w, ll_w, cc_w = hh[:n], ll[:n], cc[:n]
+        itp = int(np.argmax(np.minimum.accumulate(ll_w) <= P * (1 - thr))) if (np.minimum.accumulate(ll_w) <= P * (1 - thr)).any() else 10 ** 9
+        isl = int(np.argmax(np.maximum.accumulate(hh_w) >= P * (1 + E))) if (np.maximum.accumulate(hh_w) >= P * (1 + E)).any() else 10 ** 9
+        if isl <= itp and isl < 10 ** 9:
+            out[(hn, thr, E)] = (-E, float(isl + 1))
+        elif itp < 10 ** 9:
+            out[(hn, thr, E)] = (thr, float(itp + 1))
+        else:
+            out[(hn, thr, E)] = (-(cc_w[-1] / P - 1), float(n))
+    return out
+
+
 def parse_min(buf):
     out = {}; i = 0; n = len(buf)
     while i < n:
@@ -354,7 +380,7 @@ def _exit_pick(hh, ll, cc, P, thr, E, C, T):
 
 
 def sim_1m(picks_by_tag, id2name, sym_ids_needed, aero, years, thrE, C=0.20, T=0.05,
-           max_ticks=0, max_days=0, ranges=None):
+           max_ticks=0, max_days=0, ranges=None, grid=False):
     import aerospike, cramjam
     _h, _p = aero.split(":")
     cli = aerospike.client({"hosts": [(_h, int(_p))]}).connect()
@@ -371,6 +397,12 @@ def sim_1m(picks_by_tag, id2name, sym_ids_needed, aero, years, thrE, C=0.20, T=0
     union = sorted(sym_ids_needed)
     rows = {s: i for i, s in enumerate(union)}
     out = {tag: defaultdict(list) for tag in picks_by_tag}
+    COMBOS = [(hn, thr, E) for hn, _n in HS_GRID for thr in THRS_GRID for E in ES_GRID]
+    n_tick = len(all_m0)
+    gsum = {cb: np.zeros(n_tick) for cb in COMBOS} if grid else None
+    gcnt = {cb: np.zeros(n_tick) for cb in COMBOS} if grid else None
+    gheld = {cb: np.zeros(n_tick) for cb in COMBOS} if grid else None
+    tsi = {m0: i for i, m0 in enumerate(all_m0)}
     DBG = [0]
     if ranges is None:
         ranges = []
@@ -465,10 +497,24 @@ def sim_1m(picks_by_tag, id2name, sym_ids_needed, aero, years, thrE, C=0.20, T=0
                         r = _exit_pick(hh_w, ll_w, cc_w, P, thr, E, C, T)
                         for rule, (pnl, held, reason) in r.items():
                             out[tag][rule].append((m0f, pnl, held, reason, s))
+                        if grid and tag == list(picks_by_tag)[0]:
+                            ii = tsi[m0f]
+                            for thr in THRS_GRID:
+                                for E in ES_GRID:
+                                    gg = _exit_grid(hh_w, ll_w, cc_w, P, thr, E, HS_GRID)
+                                    if gg is None:
+                                        gg = {(hn, thr, E): (np.nan, 4320.0)
+                                              for hn, _n in HS_GRID}
+                                    for (hn, _t, _e), (pn, hd) in gg.items():
+                                        cb = (hn, thr, E)
+                                        gsum[cb][ii] += pn; gcnt[cb][ii] += 1; gheld[cb][ii] += hd
             if di % 10 == 0:
                 print("  y=%d day %d/%d %.0fs" % (y, di, ndays, time.time() - t0), flush=True)
         print("YEAR %d DONE nmin=%d %.0fs" % (y, nmin, time.time() - t0), flush=True)
         # (ket qua da gom trong out theo tung pick)
+    if grid:
+        grid_res = {cb: (gsum[cb], gcnt[cb], gheld[cb]) for cb in COMBOS}
+        return out, grid_res, np.array(all_m0, np.int64) * 60000
     return out
 
 
@@ -489,6 +535,7 @@ def main():
     ap.add_argument("--max-days", type=int, default=0)
     ap.add_argument("--sim-start", default="")
     ap.add_argument("--sim-end", default="")
+    ap.add_argument("--grid", action="store_true")
     a = ap.parse_args()
     folds = [x.strip() for x in a.folds.split(",") if x.strip()]
     sys.path.insert(0, "/home/ubuntu/src/BinanceFuturesJava/ml/lib")
@@ -551,7 +598,29 @@ def main():
             re_ = datetime.strptime(a.sim_end, "%Y-%m-%d").replace(tzinfo=TZ7)
             ranges = [(rs, re_, rs.year)]
         outp = sim_1m(picks, id2name, need, a.aero, years, thrE, max_ticks=a.max_ticks,
-                      max_days=a.max_days, ranges=ranges)
+                      max_days=a.max_days, ranges=ranges, grid=a.grid)
+        if a.grid:
+            outp, grid_res, tick_ts = outp
+            key0 = list(picks)[0]
+            gsw = {}
+            for (hn, thr, E), (ss, cc_, hh_) in grid_res.items():
+                m = cc_ > 0
+                if m.sum() == 0:
+                    continue
+                pt = ss[m] / cc_[m]
+                ts_pt = tick_ts[m]
+                hd = hh_[m] / cc_[m]
+                net = pt - COST_BASE - FUND72 * (hd / float(dict(HS_GRID)[hn]))
+                ci = ci_mean(net, ts_pt)
+                gsw["%s_t%d_E%d" % (hn, int(thr * 1000), int(E * 100))] = {
+                    key0: {"net": round(float(net.mean()), 6), "out_both": ci["out_both"],
+                           "raw": [round(ci["raw"][0], 6), round(ci["raw"][1], 6)],
+                           "by_year": by_year(net, ts_pt),
+                           "years_pos": sum(1 for vv in by_year(net, ts_pt).values()
+                                            if vv is not None and vv > 0),
+                           "winrate": round(float((net > 0).mean()), 4),
+                           "mean_held_h": round(float(hd.mean() / 60.0), 2)}}
+            res["sweep_sim"] = gsw
         for tag in outp:
             res["arms"][tag]["sim1m"] = {}
             for rule in ("CUT", "LABEL", "TRAIL", "NOSTOP"):
