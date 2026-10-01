@@ -41,6 +41,12 @@ LIVE_FEAT_GLOBS = [
     HOME + "/claudedata/devexport_202609/live_242/feat_dump_*.csv.gz",
     HOME + "/shadow_c3/app/feat_dump/feat_dump_20260928_*.csv.gz",
 ]
+# [EXPORT-FIX 2026-10-01] dump selector CUNG tick (LiveFeatureDump.maybeDumpSelector):
+#   ts,symbol,selectorScore,rank,gateValue,p15
+SEL_DUMP_GLOBS = [
+    HOME + "/claudedata/devexport_202609/live_242/sel_dump_*.csv.gz",
+    HOME + "/shadow_c3/app/feat_dump/sel_dump_*.csv.gz",
+]
 DEV_EXPORT = HOME + "/claudedata/devexport_202609/devexport_20260701_20260928_FULL.csv.gz"
 
 JSON_OUT = os.path.join(REPO, "docs", "result", "parity_report.json")
@@ -69,7 +75,7 @@ SRC_GAP_FEATS = {"momentum1M", "momentum15M", "momentumAcceleration"}
 # Dung 4 noi (file:line): MarketBigChangeDetector.getMarketStatus1M (BIG_DOWN), isDcaAlt (DCA),
 #   TickWeakBlock:135 (DROP15M), BdSizeAdapt:90 (thr=MS_DOWN_BIG_AVG).
 MKT_FIELDS = [("rateDownAvg", "momentum1M"), ("rateDown15MAvg", "momentum15M")]
-MKT_UNAVAIL = ["rateUpAvg", "rateUp15MAvg"]        # khong co trong CSV (chi trong MarketDataObject)
+MKT_UNAVAIL = []   # [EXPORT-FIX 2026-10-01] feat_dump DA co rateUpAvg + rateUp15MAvg (LiveFeatureDump)
 MKT_THRESH_KEYS = ["MS_DOWN_BIG_AVG", "MS_DOWN_BIG_AVG_DCA", "MS_UP_BIG_THRES"]
 MKT_THRESH_ALIAS = {"MS_DOWN_BIG_AVG": ["SIM_MS_DOWN_BIG_AVG"],
                     "MS_DOWN_BIG_AVG_DCA": ["SIM_MS_DOWN_BIG_AVG_DCA"],
@@ -320,6 +326,22 @@ def load_live_feat():
             except Exception:
                 continue
     return rows, files, trunc, syms, None
+
+
+def load_sel_dump():
+    """[EXPORT-FIX] doc dump selector cung tick (ts,symbol,selectorScore,rank,gateValue,p15). Tra (rows, files, err)."""
+    import glob
+    files = []
+    for g in SEL_DUMP_GLOBS:
+        files.extend(sorted(glob.glob(g)))
+    rows = []
+    for f in files:
+        try:
+            hdr, rr, _ = read_gz_partial(f)
+        except Exception as e:
+            return None, files, "khong doc duoc %s: %s" % (os.path.basename(f), str(e)[:80])
+        rows.extend(rr)
+    return rows, files, None
 
 
 def load_export():
@@ -840,11 +862,30 @@ def layer_marketparams():
         table.append({"field": "rateDown15MAvg", "col": "momentum15M", "n": len(common),
                       "maxabs": m15[0], "meanabs": m15[1], "corr": m15[2],
                       "status": "PASS" if m15[0] <= FEAT_TOL_INLINE else "FAIL"})
+        # [EXPORT-FIX 2026-10-01] rateUpAvg/rateUp15MAvg: LIVE doc TRUC TIEP tu cot feat_dump (neu co)
+        # vs inline cung phut. Truoc day feat_dump khong xuat => phai do vong qua DEV store.
+        up_common = [t for t in common if "rateUpAvg" in live_rows[t]]
+        live_has_up = bool(up_common)
+        if live_has_up:
+            a_u = np.array([float(live_rows[t]["rateUpAvg"]) for t in up_common])
+            b_u = np.array([inline[t][1] for t in up_common])
+            a_u15 = np.array([float(live_rows[t].get("rateUp15MAvg", 0.0)) for t in up_common])
+            b_u15 = np.zeros(len(up_common))
+            mu = _stats(a_u, b_u); mu15 = _stats(a_u15, b_u15)
+            table.append({"field": "rateUpAvg", "col": "rateUpAvg", "n": len(up_common),
+                          "maxabs": mu[0], "meanabs": mu[1], "corr": mu[2],
+                          "status": "PASS" if mu[0] <= FEAT_TOL_INLINE else "FAIL",
+                          "note": "LIVE feat_dump cot rateUpAvg vs inline cung phut"})
+            table.append({"field": "rateUp15MAvg", "col": "rateUp15MAvg", "n": len(up_common),
+                          "maxabs": mu15[0], "meanabs": mu15[1], "corr": mu15[2],
+                          "status": "PASS" if mu15[0] <= FEAT_TOL_INLINE else "FAIL",
+                          "note": "LIVE feat_dump=0 vs inline=0 (khong tinh trong pipeline)"})
         bad = [t for t in table if t["status"] == "FAIL"]
         checks.append(mkcheck("mp.fields_live_vs_inline", "FAIL" if bad else "PASS",
-            "LIVE vs inline: rateDownAvg max|d|=%.3e corr=%.5f ; rateDown15MAvg max|d|=%.3e corr=%.5f "
-            "(rateUpAvg: feat_dump KHONG xuat -> do o phia DEV store ben duoi)" % (
-                m1[0], m1[2], m15[0], m15[2])))
+            "LIVE vs inline: rateDownAvg max|d|=%.3e corr=%.5f ; rateDown15MAvg max|d|=%.3e corr=%.5f ; "
+            "rateUpAvg %s" % (
+                m1[0], m1[2], m15[0], m15[2],
+                ("max|d|=%.3e corr=%.5f" % (mu[0], mu[2])) if live_has_up else "THIEU cot feat_dump")))
         # ---- (3) TAC DONG: so PHUT BIG_DOWN / DCA doi trang thai ----
         fl = _flip_counts(a_d, a_x, b_d, b_x)
         checks.append(mkcheck("mp.decision_flips_live", "PASS" if (fl["bigdown_flips"] == 0 and fl["dca_flips"] == 0)
@@ -900,10 +941,12 @@ def layer_marketparams():
         checks.append(mkcheck("mp.csv_export", "PASS",
                               "xuat 4 field ra CSV (tuong duong --md-inline): %s (K=%s) — rateUp15MAvg=0 (khong tinh)" % (
                                   os.path.basename(mp_csv or ""), ",".join(MKT_ALL4))))
-    n_meas = sum(1 for t in table if t.get("field") in MKT_ALL4 and t["status"] in ("PASS", "FAIL"))
+    n_meas = len({t["field"] for t in table
+                  if t.get("field") in MKT_ALL4 and t["status"] in ("PASS", "FAIL")})
     checks.append(mkcheck("mp.fields4", "PASS" if n_meas == 4 else "MISSING",
-                          "%d/4 field market DO DUOC (rateDownAvg/rateUpAvg/rateDown15MAvg max|d|<=~1e-3 muc nhieu; "
-                          "rateUp15MAvg=0 ca 2 phia). LIVE-side truc tiep: 2/4 (dump thieu cot rateUpAvg/rateUp15MAvg)" % n_meas))
+                          "%d/4 field market DO DUOC; LIVE-side TRUC TIEP tu feat_dump: %s (cot rateUpAvg/rateUp15MAvg "
+                          "da them boi EXPORT-FIX 2026-10-01)" % (
+                              n_meas, "4/4" if any(t.get("col") == "rateUpAvg" for t in table) else "2/4")))
     # ---- (1c) LIVE vs BACKTEST-STORE cung phut: khong the ----
     if not mberr:
         ov = len(set(live_md) & set(mb))
@@ -1054,13 +1097,20 @@ def layer_selector():
     """
     live_rows, files, trunc, syms, err = load_live_feat()
     cols = set(next(iter(live_rows.values())).keys()) if live_rows else set()
-    has_sel = ("selectorScore" in cols) or ("rank" in cols) or ("selector_score" in cols)
+    sel_rows, sel_files, sel_err = load_sel_dump()
+    sel_ticks = len({tms(r["ts"]) for r in (sel_rows or []) if r.get("ts")}) if sel_rows else 0
+    has_sel = bool(sel_rows) or ("selectorScore" in cols) or ("rank" in cols)
     checks = []
-    if has_sel:
+    if sel_rows:
+        checks.append(mkcheck("input.live_col", "PASS",
+                              "sel_dump CUNG tick CO cot selectorScore/rank/gateValue/p15: %d tick, %d dong, %d file" % (
+                                  sel_ticks, len(sel_rows), len(sel_files))))
+    elif has_sel:
         checks.append(mkcheck("input.live_col", "PASS", "feat_dump CO cot selectorScore/rank"))
     else:
         checks.append(mkcheck("input.live_col", "MISSING",
-                              "feat_dump KHONG co cot selectorScore/rank (cot hien co: %d)" % len(cols)))
+                              "chua co sel_dump/feat_dump cot selectorScore/rank (feat_dump cot=%d)%s" % (
+                                  len(cols), (" sel_err=%s" % sel_err) if sel_err else "")))
     if not live_rows:
         return layer("selector", checks, {}, [], "khong doc duoc LIVE feat_dump")
     # --- LIVE: artifact predictionSymbol cho dung NGAY cua cua so parity (2026-09-28) ---
@@ -1098,11 +1148,13 @@ def layer_selector():
     else:
         checks.append(mkcheck("output.compare", "MISSING",
                               "funding.bin(%s..%s) KHONG phu cua so LIVE(%s..%s) => KHONG so cung tick; "
-                              "de xuat: them cot selectorScore+rank vao feat_dump (ca live lan export)" % (
+                              "DA them sel_dump cung tick (LIVE) + de xuat regenerate export DEV (<=2025-12-31) "
+                              "co selectorScore+rank+p15 de co cung tick" % (
                                   fmeta["ts0"] if fmeta else "?", fmeta["ts1"] if fmeta else "?", lmin, lmax)))
-        reason = "MISSING cung-tick: đo được phía LIVE (artifact %s: %d tick, %d dong), thiếu đối ứng cung-tick DEV" % (
-            day, sstats.get("ticks", 0), sstats.get("rows", 0))
+        reason = "MISSING cung-tick: đo được phía LIVE (sel_dump %d tick + artifact %s: %d tick, %d dong), thiếu đối ứng cung-tick DEV" % (
+            sel_ticks, day, sstats.get("ticks", 0), sstats.get("rows", 0))
     metrics = {"feat_dump_cols": len(cols), "has_selector_col": has_sel,
+               "sel_dump_ticks": sel_ticks, "sel_dump_rows": len(sel_rows or []),
                "live_artifact_day": day, "live_ticks": sstats.get("ticks"),
                "live_rows": sstats.get("rows"), "live_syms_per_tick": [sstats.get("syms_min"), sstats.get("syms_max")],
                "dev_selector": fmeta, "selector_csv": csv}

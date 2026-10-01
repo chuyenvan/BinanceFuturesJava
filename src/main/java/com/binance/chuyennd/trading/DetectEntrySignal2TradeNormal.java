@@ -296,9 +296,10 @@ public class DetectEntrySignal2TradeNormal {
                     // 3. Dự báo Entry Model
                     predictData = aiBrain.predictAll(features);
                     // INSTRUMENT (mac dinh TAT; key LIVE_FEAT_DUMP>0 moi ghi) — chi ghi, khong doi logic.
+                    // [EXPORT-FIX 2026-10-01] them marketRate => feat_dump du 4 cot market.
                     com.binance.chuyennd.ai_ml.features.export.entry.LiveFeatureDump.maybeDump(
                             timestamp, Constants.SYMBOL_PAIR_BTC, features,
-                            predictData != null ? predictData.return15M : 0f);
+                            predictData != null ? predictData.return15M : 0f, marketRate);
                     if (predictData != null) {
                         AiPredictionData preData = new AiPredictionData(
                                 timestamp,
@@ -471,6 +472,12 @@ public class DetectEntrySignal2TradeNormal {
                 if (s1Order) LATEST_SEL_RANK.put(symbol, rank + 1);
                 if (Configs.SELECTOR_RANK_TOPK > 0 && rank >= Configs.SELECTOR_RANK_TOPK) break;
                 rank++;
+                // [EXPORT-FIX 2026-10-01] ghi selector CUNG tick (score/rank/gateValue/p15) — mac dinh TAT
+                // (key LIVE_FEAT_DUMP<=0 => no-op), chi ghi, khong doi quyet dinh.
+                com.binance.chuyennd.ai_ml.features.export.entry.LiveFeatureDump.maybeDumpSelector(
+                        time, symbol, entry.getKey() == null ? 0f : entry.getKey(), rank,
+                        symbolPred == null ? 0f : symbolPred,
+                        predictData != null ? predictData.return15M : 0f);
                 KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
                 if (ticker == null || BudgetManager.getInstance().symbol2Pos.containsKey(symbol)) continue;
                 gateCand++;

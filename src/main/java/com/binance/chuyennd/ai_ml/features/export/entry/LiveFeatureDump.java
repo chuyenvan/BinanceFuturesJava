@@ -1,5 +1,6 @@
 package com.binance.chuyennd.ai_ml.features.export.entry;
 
+import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.tradecore.Cfg;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,6 +26,19 @@ import java.util.zip.GZIPOutputStream;
  *
  * <p><b>Tran cung dung luong: 200 MB (file nen).</b> Cham tran => tu dong ghi them dong cuoi roi DONG file.
  * Ngoai ra con tran so tick = gia tri key. Chi ghi, KHONG doc/sua logic, KHONG anh huong gate/ONNX.
+ *
+ * <p><b>[EXPORT-FIX 2026-10-01] Sua bug "cat cut" (thieu gz trailer):</b> writer dung
+ * {@code GZIPOutputStream(...,syncFlush=true)} + {@code flush()} moi dong => file LUON ket thuc bang
+ * DEFLATE sync-flush block {@code 00 00 FF FF}, NHUNG trailer GZIP (CRC32+ISIZE) chi duoc ghi khi
+ * {@code close()}. Truoc day {@code close()} CHI goi khi du REMAINING tick / cham 200 MB, KHONG co
+ * shutdown hook => JVM restart giua chung => moi file thieu trailer. Nay: (1) dang ky shutdown hook
+ * finalize (giong {@code LiveGateRollingRatio}); (2) Tuy chon xoay file theo phut qua key
+ * {@code LIVE_FEAT_DUMP_ROTATE_MIN} (mac dinh 0 = TAT = hanh vi cu) de moi file luon duoc dong dung.
+ *
+ * <p><b>[EXPORT-FIX 2026-10-01] Them cot market 4/4 + selector cung tick:</b>
+ * feat_dump duoc them 4 cot {@code rateDownAvg,rateUpAvg,rateDown15MAvg,rateUp15MAvg} (tu
+ * {@link MarketDataObject}); va them 1 file {@code sel_dump_*.csv.gz} ghi
+ * {@code ts,symbol,selectorScore,rank,gateValue,p15} de do selector/gate CUNG tick (khong can ONNX).
  *
  * <p><b>Thu tu 33 feature</b> PHAI mirror {@code OnnxInferenceManager.extractFeaturesV3Full}
  * (src/main/java/com/binance/chuyennd/ai_ml/onnx/entry/OnnxInferenceManager.java:67-80) vi model
@@ -53,12 +67,13 @@ public final class LiveFeatureDump {
     private static final String DIR = "feat_dump";
 
     private static final int REMAINING; // so tick con lai; <=0 => TAT hoan toan
+    private static final long ROTATE_MS; // [EXPORT-FIX] xoay file moi N phut; 0 => TAT (hanh vi cu)
     private static boolean disabled = false;
-    private static long bytesWritten = 0;
     private static long rowsWritten = 0;
-    private static File outFile = null;
-    private static Counting counter = null;
-    private static BufferedWriter writer = null;
+    private static boolean hookInstalled = false;
+
+    private static final GzSink mainSink = new GzSink("feat_dump");
+    private static final GzSink selSink = new GzSink("sel_dump");
 
     static {
         int n = 0;
@@ -68,13 +83,50 @@ public final class LiveFeatureDump {
             n = 0;
         }
         REMAINING = n;
+        long rot = 0;
+        try {
+            rot = (long) (Double.parseDouble(Cfg.getOr("LIVE_FEAT_DUMP_ROTATE_MIN", "0").trim()) * 60_000L);
+        } catch (Exception e) {
+            rot = 0;
+        }
+        ROTATE_MS = rot < 0 ? 0 : rot;
         if (REMAINING > 0) {
-            LOG.warn("🟠 [LIVE_FEAT_DUMP] BAT — se ghi toi da {} tick vao {}/*.csv.gz (tran {} MB). "
-                    + "Chi ghi, khong doi logic.", REMAINING, DIR, MAX_BYTES / (1024 * 1024));
+            installShutdownHook();
+            LOG.warn("🟠 [LIVE_FEAT_DUMP] BAT — se ghi toi da {} tick vao {}/*.csv.gz (tran {} MB, xoay={} phut). "
+                    + "Chi ghi, khong doi logic.", REMAINING, DIR, MAX_BYTES / (1024 * 1024),
+                    ROTATE_MS / 60_000L);
         }
     }
 
     private LiveFeatureDump() {
+    }
+
+    /** [EXPORT-FIX] dang ky 1 lan: dong + finalize writer khi JVM dung (tranh file thieu gz trailer). */
+    private static synchronized void installShutdownHook() {
+        if (hookInstalled) return;
+        hookInstalled = true;
+        try {
+            Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    finalizeOnShutdown();
+                }
+            }, "LiveFeatureDumpFinalize"));
+        } catch (Throwable t) {
+            LOG.warn("🟠 [LIVE_FEAT_DUMP] khong dang ky duoc shutdown hook (van chay binh thuong): {}", t.toString());
+        }
+    }
+
+    private static synchronized void finalizeOnShutdown() {
+        disabled = true;
+        try {
+            mainSink.close();
+        } catch (Throwable ignore) {
+        }
+        try {
+            selSink.close();
+        } catch (Throwable ignore) {
+        }
     }
 
     /**
@@ -83,74 +135,168 @@ public final class LiveFeatureDump {
      */
     public static synchronized void maybeDump(long timestamp, String symbol,
                                               MarketFeatures f, float p15Out) {
+        maybeDump(timestamp, symbol, f, p15Out, null);
+    }
+
+    /** [EXPORT-FIX] them 4 cot market (rateDownAvg/rateUpAvg/rateDown15MAvg/rateUp15MAvg). */
+    public static synchronized void maybeDump(long timestamp, String symbol,
+                                              MarketFeatures f, float p15Out, MarketDataObject marketRate) {
         if (REMAINING <= 0 || disabled || f == null) return;
         try {
-            if (writer == null) open(timestamp, p15Out);
-            if (writer == null) return;
+            if (mainSink.writer == null) openMain(timestamp);
+            if (mainSink.writer == null) return;
 
             StringBuilder sb = new StringBuilder(256);
             sb.append(timestamp).append(',').append(symbol == null ? "BTCUSDT" : symbol);
             double[] v = values(f);
             for (double d : v) sb.append(',').append(String.format(Locale.ROOT, "%.9g", d));
             sb.append(',').append(String.format(Locale.ROOT, "%.9g", p15Out));
-            writer.write(sb.toString());
-            writer.write('\n');
-            writer.flush();
+            // [EXPORT-FIX] 4 field market: rateDownAvg/rateUpAvg/rateDown15MAvg tu MarketDataObject;
+            // rateUp15MAvg KHONG duoc tinh trong pipeline (MarketDataObject/calMarketData chi 3 field)
+            // => 0, khop DEV store (market.bin cung chi 3 float).
+            sb.append(',').append(fmt(marketRate == null ? 0f : marketRate.rateDownAvg));
+            sb.append(',').append(fmt(marketRate == null ? 0f : marketRate.rateUpAvg));
+            sb.append(',').append(fmt(marketRate == null ? 0f : marketRate.rateDown15MAvg));
+            sb.append(',').append(fmt(0f));
+            mainSink.write(sb.toString());
             rowsWritten++;
-            // Dem BYTE THUC GHI ra file (gzip buffer nen file.length() bao THIEU => tran se khong bao gio cham).
-            bytesWritten = counter == null ? 0 : counter.count();
             if (rowsWritten >= REMAINING) {
                 LOG.warn("🟠 [LIVE_FEAT_DUMP] DU TICK ({} dong, {} MB) -> DONG file {}.", rowsWritten,
-                        bytesWritten / (1024 * 1024), outFile.getName());
+                        mainSink.bytes() / (1024 * 1024), mainSink.name());
                 disabled = true;
-                close();
-            } else if (bytesWritten >= MAX_BYTES) {
+                finalizeOnShutdown();
+            } else if (mainSink.bytes() >= MAX_BYTES) {
                 LOG.warn("🟠 [LIVE_FEAT_DUMP] CHAM TRAN {} MB ({} dong) -> DUNG ghi, dong file {}.",
-                        MAX_BYTES / (1024 * 1024), rowsWritten, outFile.getName());
+                        MAX_BYTES / (1024 * 1024), rowsWritten, mainSink.name());
                 disabled = true;
-                close();
+                finalizeOnShutdown();
+            } else if (rotateDue(timestamp)) {
+                LOG.warn("🟠 [LIVE_FEAT_DUMP] XOAY file theo {} phut -> dong {} + {}", ROTATE_MS / 60_000L,
+                        mainSink.name(), selSink.name());
+                mainSink.close();
+                selSink.close();
             }
         } catch (Throwable t) {
             disabled = true;
             LOG.error("🟠 [LIVE_FEAT_DUMP] loi IO -> TAT dump (khong anh huong live): {}", t.toString());
             try {
-                close();
+                finalizeOnShutdown();
             } catch (Exception ignore) {
             }
         }
     }
 
-    /** Mo file moi + ghi header (1 lan). */
-    private static void open(long timestamp, float p15Out) throws Exception {
-        File dir = new File(DIR);
-        if (!dir.exists() && !dir.mkdirs()) {
-            disabled = true;
-            LOG.error("🟠 [LIVE_FEAT_DUMP] khong tao duoc thu muc {} -> TAT dump.", DIR);
-            return;
+    /**
+     * [EXPORT-FIX] Ghi 1 dong selector cung tick: {@code ts,symbol,selectorScore,rank,gateValue,p15}.
+     * rank = thu tu 1-based trong pool selector cua tick (thap = tot). gateValue = gia tri cong entry
+     * (symbolPred); p15 = predictData.return15M cua tick. Cung cong tac gate (REMAINING/disabled).
+     */
+    public static synchronized void maybeDumpSelector(long timestamp, String symbol,
+                                                      float selectorScore, int rank,
+                                                      float gateValue, float p15) {
+        if (REMAINING <= 0 || disabled || symbol == null) return;
+        try {
+            if (selSink.writer == null) openSel(timestamp);
+            if (selSink.writer == null) return;
+            StringBuilder sb = new StringBuilder(96);
+            sb.append(timestamp).append(',').append(symbol);
+            sb.append(',').append(String.format(Locale.ROOT, "%.9g", selectorScore));
+            sb.append(',').append(rank);
+            sb.append(',').append(String.format(Locale.ROOT, "%.9g", gateValue));
+            sb.append(',').append(String.format(Locale.ROOT, "%.9g", p15));
+            selSink.write(sb.toString());
+        } catch (Throwable t) {
+            LOG.error("🟠 [LIVE_FEAT_DUMP] loi IO sel_dump (tat sel dump): {}", t.toString());
+            try {
+                selSink.close();
+            } catch (Exception ignore) {
+            }
         }
-        String ts = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.ROOT).format(new Date(timestamp));
-        outFile = new File(dir, "feat_dump_" + ts + ".csv.gz");
-        // syncFlush=true => moi writer.flush() day 1 block xuong file: file doc duoc NGAY khi dang chay.
-        counter = new Counting(new FileOutputStream(outFile));
-        writer = new BufferedWriter(new OutputStreamWriter(
-                new GZIPOutputStream(counter, 16384, true), StandardCharsets.UTF_8));
-        StringBuilder h = new StringBuilder("ts,symbol");
-        for (String n : FEATURE_NAMES) h.append(',').append(n);
-        h.append(",p15_out");
-        writer.write(h.toString());
-        writer.write('\n');
-        writer.flush();
-        bytesWritten = counter.count();
-        LOG.warn("🟠 [LIVE_FEAT_DUMP] mo file {} ({} feature + ts/symbol/p15_out).", outFile.getPath(),
-                FEATURE_NAMES.length);
     }
 
-    private static void close() throws Exception {
-        try {
-            if (writer != null) writer.close();
-        } finally {
-            writer = null;
-            counter = null;
+    private static boolean rotateDue(long timestamp) {
+        return ROTATE_MS > 0 && mainSink.openTs > 0 && (timestamp - mainSink.openTs) >= ROTATE_MS;
+    }
+
+    /** Mo file feat_dump moi + ghi header (1 lan). */
+    private static void openMain(long timestamp) throws Exception {
+        StringBuilder h = new StringBuilder("ts,symbol");
+        for (String n : FEATURE_NAMES) h.append(',').append(n);
+        h.append(",p15_out,rateDownAvg,rateUpAvg,rateDown15MAvg,rateUp15MAvg");
+        mainSink.open(timestamp, h.toString());
+        if (mainSink.writer != null) {
+            LOG.warn("🟠 [LIVE_FEAT_DUMP] mo file {} ({} feature + ts/symbol/p15_out + 4 market).",
+                    mainSink.path(), FEATURE_NAMES.length);
+        }
+    }
+
+    /** Mo file sel_dump moi + ghi header (1 lan). */
+    private static void openSel(long timestamp) throws Exception {
+        selSink.open(timestamp, "ts,symbol,selectorScore,rank,gateValue,p15");
+        if (selSink.writer != null) {
+            LOG.warn("🟠 [LIVE_FEAT_DUMP] mo file {} (selector cung tick).", selSink.path());
+        }
+    }
+
+    private static String fmt(float v) {
+        return String.format(Locale.ROOT, "%.9g", v);
+    }
+
+    /** [EXPORT-FIX] 1 writer csv.gz + counter byte; tai dung cho ca feat_dump lan sel_dump. */
+    private static final class GzSink {
+        private final String prefix;
+        File file = null;
+        Counting counter = null;
+        BufferedWriter writer = null;
+        long openTs = 0;
+
+        GzSink(String prefix) {
+            this.prefix = prefix;
+        }
+
+        void open(long timestamp, String header) throws Exception {
+            File dir = new File(DIR);
+            if (!dir.exists() && !dir.mkdirs()) {
+                throw new java.io.IOException("khong tao duoc thu muc " + DIR);
+            }
+            String ts = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.ROOT).format(new Date(timestamp));
+            file = new File(dir, prefix + "_" + ts + ".csv.gz");
+            // syncFlush=true => moi writer.flush() day 1 block xuong file: file doc duoc NGAY khi dang chay.
+            counter = new Counting(new FileOutputStream(file));
+            writer = new BufferedWriter(new OutputStreamWriter(
+                    new GZIPOutputStream(counter, 16384, true), StandardCharsets.UTF_8));
+            writer.write(header);
+            writer.write('\n');
+            writer.flush();
+            openTs = timestamp;
+        }
+
+        void write(String line) throws Exception {
+            writer.write(line);
+            writer.write('\n');
+            writer.flush();
+        }
+
+        long bytes() {
+            return counter == null ? 0 : counter.count();
+        }
+
+        String name() {
+            return file == null ? "?" : file.getName();
+        }
+
+        String path() {
+            return file == null ? "?" : file.getPath();
+        }
+
+        void close() throws Exception {
+            try {
+                if (writer != null) writer.close();
+            } finally {
+                writer = null;
+                counter = null;
+                openTs = 0;
+            }
         }
     }
 

@@ -24,7 +24,7 @@
 | **features** | FAIL | 27/33 feature lech (exact<=1e-08, inline<=1e-03; o nguong may 29/33) |
 | **gate** | MISSING | 242 gate=ratio, thr 0.0339 > p15_max 0.0150 => n_pass=0 (baseline=ratio) |
 | **marketparams** | MISSING | 4/4 field: rateDownAvg/rateUpAvg/rateDown15MAvg khop muc nhieu ticker-vs-kline (LIVE&DEV, max|d|~7e-4..2e-3, corr>0.99); rateUp15MAvg=0 ca 2 phia (khong duoc calMarketData tinh); nguong MATCH default; flip LIVE=0/0, DEV(stress)=0/1 |
-| **selector** | MISSING | MISSING cung-tick: đo được phía LIVE (artifact 20260928: 249 tick, 163520 dong), thiếu đối ứng cung-tick DEV |
+| **selector** | MISSING | MISSING cung-tick: đo được phía LIVE (sel_dump 10 tick + artifact 20260928: 249 tick, 163520 dong), thiếu đối ứng cung-tick DEV |
 | **entry** | FAIL | entry lech: LIVE=0 vs BACKTEST(G2)>=1 |
 | **exit** | MISSING | MISSING: khong co lenh dong (gate chan truoc) |
 
@@ -68,10 +68,10 @@
 
 ### features — FAIL
 
-- metrics: `{"fail_groups": {"i-nhieu-ticker-vs-kline": 15, "i-ti-so-nhay (nhieu ticker-vs-kline)": 5, "ii-export-thieu-nguon(=0) + logic con lai": 1, "iii-nghi-logic/tap-hop (can control cung-nguon)": 6}, "feat_fail": 27, "feat_fail_machine_tol": 29, "files": 6, "inline_minutes": 1426, "pairs": 385, "reconstructed": ["momentum15M", "momentum1M", "momentumAcceleration"], "symbols": ["BTCUSDT"], "tol": 1e-08, "tol_inline": 0.001, "truncated_files": 6}`
+- metrics: `{"fail_groups": {"i-nhieu-ticker-vs-kline": 15, "i-ti-so-nhay (nhieu ticker-vs-kline)": 5, "ii-export-thieu-nguon(=0) + logic con lai": 1, "iii-nghi-logic/tap-hop (can control cung-nguon)": 6}, "feat_fail": 27, "feat_fail_machine_tol": 29, "files": 7, "inline_minutes": 1780, "pairs": 385, "reconstructed": ["momentum15M", "momentum1M", "momentumAcceleration"], "symbols": ["BTCUSDT"], "tol": 1e-08, "tol_inline": 0.001, "truncated_files": 6}`
 
-- [PASS] input.integrity: LIVE files=6 (thieu-trailer=6, sync-flush-tail=6 — GOC VIEC1: file thieu gz trailer=6/6, tail sync-flush(00 00 FF FF)=6/6 => writer da flush() nhung KHONG finalize: src/main/java/com/binance/chuyennd/ai_ml/features/export/entry/LiveFeatureDump.java:133-146 (syncFlush=true) + close():148-155 CHI goi khi du REMAINING/200MB; KHONG co shutdown hook => JVM restart giua chung => thieu trailer => harness phuc hoi dong hoan chinh bang partial-inflate), pairs=385
-- [PASS] input.inline_source: tai tao inline 1426 phut (md_inline<-kline 242)
+- [PASS] input.integrity: LIVE files=7 (thieu-trailer=6, sync-flush-tail=6 — GOC VIEC1: file thieu gz trailer=6/7, tail sync-flush(00 00 FF FF)=6/7 => writer da flush() nhung KHONG finalize: src/main/java/com/binance/chuyennd/ai_ml/features/export/entry/LiveFeatureDump.java:133-146 (syncFlush=true) + close():148-155 CHI goi khi du REMAINING/200MB; KHONG co shutdown hook => JVM restart giua chung => thieu trailer => harness phuc hoi dong hoan chinh bang partial-inflate), pairs=385
+- [PASS] input.inline_source: tai tao inline 1780 phut (md_inline<-kline 242)
 - [PASS] input.pair: 385 cap (ts) giao
 - [PASS] output.nan: NaN LIVE bất thường=0
 - [FAIL] output.feature_parity: 27/33 feature vuot nguong (exact<=1e-08 / inline<=1e-03); o nguong MAY (1e-08): 29/33 vuot
@@ -114,9 +114,9 @@
 
 ### gate — MISSING
 
-- metrics: `{"baseline_mode": "ratio", "gate_npass_total": 0, "live_mode": "ratio", "p15_dev": {"dev": {"n": 2500260, "p15_max": 0.12261255830526352, "p15_mean": 0.005854084683967189, "p15_min": 0.002019499894231558, "p15_q": {"0.5": 0.005452214973047376, "0.99": 0.013078836379572755, "0.999": 0.028179553244261704, "0.9999": 0.06818976540344729}, "risk_mean": -0.017001774267111417, "ts0": 1617210000000, "ts1": 1767225540000}, "live_window": [1790559600000, 1790617260000], "overlap_live_minutes": 0}, "p15_live_max": 0.0150123108, "thr_applied_max": 0.04702, "thr_applied_min": 0.03388}`
+- metrics: `{"baseline_mode": "ratio", "gate_npass_total": 0, "live_mode": "ratio", "p15_dev": {"dev": {"n": 2500260, "p15_max": 0.12261255830526352, "p15_mean": 0.005854084683967189, "p15_min": 0.002019499894231558, "p15_q": {"0.5": 0.005452214973047376, "0.99": 0.013078836379572755, "0.999": 0.028179553244261704, "0.9999": 0.06818976540344729}, "risk_mean": -0.017001774267111417, "ts0": 1617210000000, "ts1": 1767225540000}, "live_window": [1790559600000, 1790834580000], "overlap_live_minutes": 0}, "p15_live_max": 0.0150123108, "thr_applied_max": 0.04702, "thr_applied_min": 0.03388}`
 
-- [PASS] input.live: LIVE p15 n=502 max=0.01501
+- [PASS] input.live: LIVE p15 n=513 max=0.01501
 - [PASS] gate.repro: n_pass log=0; p15_max=0.01501 < thr_min=0.03388 => dong nhat (0 pass)
 - [PASS] gate.mode_parity: LIVE gate mode=ratio vs BASELINE=ratio
 - [PASS] gate.p15_dev.csv: dump p15 DEV (nguon KHONG-ONNX pred.bin) -> p15_dev.csv (n=2500260)
@@ -125,15 +125,15 @@
 
 ### marketparams — MISSING
 
-- metrics: `{"dev_flips": {"bigdown_a": 0, "bigdown_b": 0, "bigdown_flips": 0, "dca_a": 1, "dca_b": 0, "dca_flips": 1}, "dev_store": {"n": 1376, "rateDown15MAvg_corr": 0.9977090169770493, "rateDown15MAvg_maxabs": 0.0020271385816998146, "rateDownAvg_corr": 0.9969522638229248, "rateDownAvg_maxabs": 0.000978882038359503, "rateUpAvg_corr": 0.997266262938794, "rateUpAvg_maxabs": 0.0006197462125881411}, "fields_measured_4": 4, "inline_minutes": 1426, "live_minutes": 502, "marketparams_csv": "/home/ubuntu/src/BinanceFuturesJava/research/parity/data/marketparams_inline.csv", "thr_live_overrides": {}, "thresholds": [{"default": -0.03157, "key": "MS_DOWN_BIG_AVG", "live": "(unset)", "profile": "(unset)", "verdict": "MATCH-DEFAULT"}, {"default": -0.03157, "key": "MS_DOWN_BIG_AVG_DCA", "live": "(unset)", "profile": "(unset)", "verdict": "MATCH-DEFAULT"}, {"default": 0.02046, "key": "MS_UP_BIG_THRES", "live": "(unset)", "profile": "(unset)", "verdict": "MATCH-DEFAULT"}]}`
+- metrics: `{"dev_flips": {"bigdown_a": 0, "bigdown_b": 0, "bigdown_flips": 0, "dca_a": 1, "dca_b": 0, "dca_flips": 1}, "dev_store": {"n": 1376, "rateDown15MAvg_corr": 0.9977090169770493, "rateDown15MAvg_maxabs": 0.0020271385816998146, "rateDownAvg_corr": 0.9969522638229248, "rateDownAvg_maxabs": 0.000978882038359503, "rateUpAvg_corr": 0.997266262938794, "rateUpAvg_maxabs": 0.0006197462125881411}, "fields_measured_4": 4, "inline_minutes": 1780, "live_minutes": 513, "marketparams_csv": "/home/ubuntu/src/BinanceFuturesJava/research/parity/data/marketparams_inline.csv", "thr_live_overrides": {}, "thresholds": [{"default": -0.03157, "key": "MS_DOWN_BIG_AVG", "live": "(unset)", "profile": "(unset)", "verdict": "MATCH-DEFAULT"}, {"default": -0.03157, "key": "MS_DOWN_BIG_AVG_DCA", "live": "(unset)", "profile": "(unset)", "verdict": "MATCH-DEFAULT"}, {"default": 0.02046, "key": "MS_UP_BIG_THRES", "live": "(unset)", "profile": "(unset)", "verdict": "MATCH-DEFAULT"}]}`
 
-- [PASS] input.live: LIVE feat_dump: 502 phut (momentum1M=rateDownAvg, momentum15M=rateDown15MAvg)
-- [PASS] input.pair: 502 phut giao (LIVE vs inline=cung thuat toan calMarketData)
-- [PASS] mp.fields_live_vs_inline: LIVE vs inline: rateDownAvg max|d|=7.492e-04 corr=0.99485 ; rateDown15MAvg max|d|=7.399e-04 corr=0.99958 (rateUpAvg: feat_dump KHONG xuat -> do o phia DEV store ben duoi)
+- [PASS] input.live: LIVE feat_dump: 513 phut (momentum1M=rateDownAvg, momentum15M=rateDown15MAvg)
+- [PASS] input.pair: 513 phut giao (LIVE vs inline=cung thuat toan calMarketData)
+- [PASS] mp.fields_live_vs_inline: LIVE vs inline: rateDownAvg max|d|=7.492e-04 corr=0.99486 ; rateDown15MAvg max|d|=7.399e-04 corr=0.99958 ; rateUpAvg max|d|=4.726e-04 corr=0.94710
 - [PASS] mp.decision_flips_live: BIG_DOWN flip=0 (live=0 inline=0); DCA flip=0 (live=0 inline=0)
 - [PASS] mp.dev_store: market.bin(DEV store) vs inline @2025-10-10: n=1376; rateDownAvg max|d|=9.789e-04 corr=0.9970; rateUpAvg max|d|=6.197e-04 corr=0.9973; rateDown15MAvg max|d|=2.027e-03 corr=0.9977; BIG_DOWN flip=0 DCA flip=1
 - [PASS] mp.csv_export: xuat 4 field ra CSV (tuong duong --md-inline): marketparams_inline.csv (K=rateDownAvg,rateUpAvg,rateDown15MAvg,rateUp15MAvg) — rateUp15MAvg=0 (khong tinh)
-- [PASS] mp.fields4: 4/4 field market DO DUOC (rateDownAvg/rateUpAvg/rateDown15MAvg max|d|<=~1e-3 muc nhieu; rateUp15MAvg=0 ca 2 phia). LIVE-side truc tiep: 2/4 (dump thieu cot rateUpAvg/rateUp15MAvg)
+- [PASS] mp.fields4: 4/4 field market DO DUOC; LIVE-side TRUC TIEP tu feat_dump: 4/4 (cot rateUpAvg/rateUp15MAvg da them boi EXPORT-FIX 2026-10-01)
 - [MISSING] mp.live_vs_store_sameminute: LIVE(2026-09) vs market.bin(<=2025-12-31): giao=0 phut => khong so truc tiep cung phut duoc; dung inline lam cau noi (ca 2 phia khop ~1e-3)
 - [PASS] mp.thresholds: 3 nguong: 242 & baseline deu UNSET -> cung default Java (-0.03157/-0.03157/0.02046)
 
@@ -147,8 +147,10 @@ nguong (242 vs baseline vs default Java):
 
 | field | col | n | max\|Δ\| | mean\|Δ\| | corr | status |
 |---|---|---|---|---|---|---|
-| rateDownAvg | momentum1M | 502 | 7.492e-04 | 4.477e-05 | 0.9949 | PASS |
-| rateDown15MAvg | momentum15M | 502 | 7.399e-04 | 5.591e-05 | 0.9996 | PASS |
+| rateDownAvg | momentum1M | 513 | 7.492e-04 | 4.468e-05 | 0.9949 | PASS |
+| rateDown15MAvg | momentum15M | 513 | 7.399e-04 | 5.802e-05 | 0.9996 | PASS |
+| rateUpAvg | rateUpAvg | 11 | 4.726e-04 | 5.977e-05 | 0.9471 | PASS |
+| rateUp15MAvg | rateUp15MAvg | 11 | 0.000e+00 | 0.000e+00 | nan | PASS |
 | rateUpAvg | market.bin[1] | 1376 | 6.197e-04 | 1.475e-04 | 0.9973 | PASS |
 | rateUp15MAvg | - | 1376 | 0.000e+00 | 0.000e+00 | 1.0000 | PASS |
 | THR:MS_DOWN_BIG_AVG | MS_DOWN_BIG_AVG | 0 | 0.000e+00 | 0.000e+00 | 1.0000 | MATCH-DEFAULT |
@@ -157,16 +159,16 @@ nguong (242 vs baseline vs default Java):
 
 ### selector — MISSING
 
-- metrics: `{"dev_selector": {"first_len": 110, "n": 2301065, "ts0": 1625072400000, "ts1": 1767200400000}, "feat_dump_cols": 36, "has_selector_col": false, "live_artifact_day": "20260928", "live_rows": 163520, "live_syms_per_tick": [533, 719], "live_ticks": 249, "selector_csv": "/home/ubuntu/src/BinanceFuturesJava/research/parity/data/selector_live.csv"}`
+- metrics: `{"dev_selector": {"first_len": 110, "n": 2301065, "ts0": 1625072400000, "ts1": 1767200400000}, "feat_dump_cols": 36, "has_selector_col": true, "live_artifact_day": "20260928", "live_rows": 163520, "live_syms_per_tick": [533, 719], "live_ticks": 249, "sel_dump_rows": 160, "sel_dump_ticks": 10, "selector_csv": "/home/ubuntu/src/BinanceFuturesJava/research/parity/data/selector_live.csv"}`
 
-- [MISSING] input.live_col: feat_dump KHONG co cot selectorScore/rank (cot hien co: 36)
+- [PASS] input.live_col: sel_dump CUNG tick CO cot selectorScore/rank/gateValue/p15: 10 tick, 160 dong, 1 file
 - [PASS] input.artifact: artifact LIVE 20260928/* : ticks=249 rows=163520 syms/tick=533..719 -> selector_live.csv (RAW, khong ONNX)
 - [PASS] input.dev_source: nguon selector DEV = funding.bin (n=2301065 ts 1625072400000..1767200400000) — KHONG-ONNX
-- [MISSING] output.compare: funding.bin(1625072400000..1767200400000) KHONG phu cua so LIVE(1790559600000..1790617260000) => KHONG so cung tick; de xuat: them cot selectorScore+rank vao feat_dump (ca live lan export)
+- [MISSING] output.compare: funding.bin(1625072400000..1767200400000) KHONG phu cua so LIVE(1790559600000..1790834580000) => KHONG so cung tick; DA them sel_dump cung tick (LIVE) + de xuat regenerate export DEV (<=2025-12-31) co selectorScore+rank+p15 de co cung tick
 
 ### entry — FAIL
 
-- metrics: `{"backtest_entries_min": 1, "gate_all_zero": true, "gate_lines": 2834, "live_entries": 0, "window_candidates": 502}`
+- metrics: `{"backtest_entries_min": 1, "gate_all_zero": true, "gate_lines": 2834, "live_entries": 0, "window_candidates": 513}`
 
 - [PASS] input.live: 2834 dong [GATE], all n_pass=0=True, ledger trades=0? next
 - [PASS] entry.live_consistency: n_pass=0 nhat quan voi p15_max=0.01501 < thr=0.03388
