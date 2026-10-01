@@ -63,6 +63,20 @@ FEATS = [
 # export thieu nguon (dev=0) => can tai tao inline (RESULT_FEATDIFF_PASS2 §2.1); ghi chu, KHONG mien tru.
 SRC_GAP_FEATS = {"momentum1M", "momentum15M", "momentumAcceleration"}
 
+# STEER owner 2026-10-01 10:45: audit tham so MARKET rateDown15MAvg (+3 field market).
+# Mapping (ComprehensiveMarketFeatureExtractor.extractMomentumFeatures:93-94):
+#   momentum1M  = rateDownAvg ; momentum15M = rateDown15MAvg
+# Dung 4 noi (file:line): MarketBigChangeDetector.getMarketStatus1M (BIG_DOWN), isDcaAlt (DCA),
+#   TickWeakBlock:135 (DROP15M), BdSizeAdapt:90 (thr=MS_DOWN_BIG_AVG).
+MKT_FIELDS = [("rateDownAvg", "momentum1M"), ("rateDown15MAvg", "momentum15M")]
+MKT_UNAVAIL = ["rateUpAvg", "rateUp15MAvg"]        # khong co trong CSV (chi trong MarketDataObject)
+MKT_THRESH_KEYS = ["MS_DOWN_BIG_AVG", "MS_DOWN_BIG_AVG_DCA", "MS_UP_BIG_THRES"]
+MKT_THRESH_ALIAS = {"MS_DOWN_BIG_AVG": ["SIM_MS_DOWN_BIG_AVG"],
+                    "MS_DOWN_BIG_AVG_DCA": ["SIM_MS_DOWN_BIG_AVG_DCA"],
+                    "MS_UP_BIG_THRES": ["SIM_MS_UP_BIG_THRES"]}
+MKT_DEFAULTS = {"MS_DOWN_BIG_AVG": -0.03157, "MS_DOWN_BIG_AVG_DCA": -0.03157,
+                "MS_UP_BIG_THRES": 0.02046}
+
 FEAT_TOL = 1e-8   # "khop may": max|delta| tuyet doi tren cung ts
 
 CHECKS = [
@@ -426,6 +440,104 @@ def layer_gate():
     return layer("gate", checks, metrics, [], reason)
 
 
+def layer_marketparams():
+    checks, table = [], []
+    if np is None:
+        return layer("marketparams", [mkcheck("input.numpy", "FAIL", "thieu numpy")], {}, [], "thieu numpy")
+    live_rows, files, trunc, syms, err = load_live_feat()
+    _, export_by_ts, eerr = load_export()
+    live_cfg = parse_props(LIVE_CFG_SNAP)
+    prof = parse_props(BASELINE_PROFILE)
+    if not live_rows or not export_by_ts:
+        return layer("marketparams", [mkcheck("input.live", "FAIL", err or eerr or "thieu du lieu")], {}, [], "thieu du lieu")
+    common = sorted(set(live_rows) & set(export_by_ts))
+    if not common:
+        return layer("marketparams", [mkcheck("input.pair", "FAIL", "0 cap (ts)")], {}, [], "0 cap")
+
+    # --- 1. 4 field market cung phut ---
+    live_dec = {}
+    bt_dec = {}
+    for fn, col in MKT_FIELDS:
+        a = np.array([float(live_rows[t][col]) for t in common])
+        b = np.array([float(export_by_ts[t][col]) for t in common])
+        d = np.abs(a - b)
+        mx, mn = float(d.max()), float(d.mean())
+        try:
+            cr = float(np.corrcoef(a, b)[0, 1]) if (a.std() > 0 and b.std() > 0) else float("nan")
+        except Exception:
+            cr = float("nan")
+        st = "PASS" if mx <= FEAT_TOL else "FAIL"
+        # luu gia tri de do tac dong quyet dinh
+        live_dec[fn] = a
+        bt_dec[fn] = b
+        table.append({"field": fn, "col": col, "n": len(common), "maxabs": mx, "meanabs": mn,
+                      "corr": cr, "status": st})
+    for fn in MKT_UNAVAIL:
+        table.append({"field": fn, "col": "(n/a)", "n": 0, "maxabs": None, "meanabs": None,
+                      "corr": None, "status": "MISSING"})
+    nf = sum(1 for t in table if t["status"] == "FAIL")
+    checks.append(mkcheck("mkt.field_parity", "FAIL" if nf else "PASS",
+                          "%d/%d field co nguon bi lech max|delta|>%.0e; %d field MISSING (khong co trong CSV)"
+                          % (nf, len(MKT_FIELDS), FEAT_TOL, len(MKT_UNAVAIL))))
+
+    # --- 2. nguong ---
+    th_rows = []
+    n_th_lech = 0
+    for k in MKT_THRESH_KEYS:
+        exp = prof.get(k)
+        got = None
+        used = None
+        for al in [k] + MKT_THRESH_ALIAS[k]:
+            if al in live_cfg:
+                got, used = live_cfg[al], al
+                break
+        dflt = MKT_DEFAULTS[k]
+        if got is not None and exp is not None and cmp_val(got, exp):
+            v = "MATCH"
+        elif got is None and exp is None:
+            v = "MATCH-DEFAULT"            # ca 2 ben unset => cung an default Java
+        elif exp is None and got is None:
+            v = "MATCH-DEFAULT"
+        elif got is not None and exp is not None:
+            v = "MATCH" if cmp_val(got, exp) else "LECH"
+        elif got is None and exp is not None:
+            v = "MATCH-DEFAULT" if cmp_val(dflt, exp) else "MISSING"
+        else:
+            v = "LECH"
+        if v in ("LECH", "MISSING"):
+            n_th_lech += 1
+        th_rows.append({"key": k, "profile": exp if exp is not None else "(unset)",
+                        "live": ("%s (%s)" % (got, used)) if got is not None else "(unset)",
+                        "default": dflt, "verdict": v})
+    checks.append(mkcheck("mkt.threshold_parity", "FAIL" if n_th_lech else "PASS",
+                          "%d/%d nguong lech; ca 2 ben unset => dung default Java (MS_DOWN_BIG_AVG=%.5f, DCA=%.5f)"
+                          % (n_th_lech, len(MKT_THRESH_KEYS), MKT_DEFAULTS["MS_DOWN_BIG_AVG"],
+                             MKT_DEFAULTS["MS_DOWN_BIG_AVG_DCA"])))
+
+    # --- 3. tac dong len quyet dinh BIG_DOWN / DCA ---
+    thr_bd = MKT_DEFAULTS["MS_DOWN_BIG_AVG"]
+    thr_dca = MKT_DEFAULTS["MS_DOWN_BIG_AVG_DCA"]
+    def dec(a_down, a_15):
+        return (a_down < thr_bd), (a_15 < thr_dca) | (a_down < thr_dca / 3.0)
+    live_bd, live_dca = dec(live_dec["rateDownAvg"], live_dec["rateDown15MAvg"])
+    bt_bd, bt_dca = dec(bt_dec["rateDownAvg"], bt_dec["rateDown15MAvg"])
+    flip_bd = int(np.sum(live_bd != bt_bd))
+    flip_dca = int(np.sum(live_dca != bt_dca))
+    dead_bt = int(np.sum((bt_dec["rateDownAvg"] == 0) & (bt_dec["rateDown15MAvg"] == 0)))
+    checks.append(mkcheck("mkt.impact_bigdown_dca",
+                          "FAIL" if (flip_bd or flip_dca or dead_bt) else "PASS",
+                          "BIG_DOWN flip=%d, DCA flip=%d; BACKTEST field=0 (chet) %d/%d phut (%.0f%%) "
+                          "=> BIG_DOWN/DCA khong the kich hoat tu field nay o cac phut do"
+                          % (flip_bd, flip_dca, dead_bt, len(common), 100.0 * dead_bt / len(common))))
+    metrics = {"pairs": len(common), "field_fail": nf, "thresh_fail": n_th_lech,
+               "bigdown_flip": flip_bd, "dca_flip": flip_dca, "backtest_dead_minutes": dead_bt,
+               "live_bigdown_minutes": int(live_bd.sum()), "live_dca_minutes": int(live_dca.sum()),
+               "thresholds": th_rows}
+    reason = ("market: %d/%d field lech (rateDown15MAvg max|delta|=%.4f), BACKTEST field=0 %.0f%% phut; "
+              "nguong khop (default)" % (nf, len(MKT_FIELDS), table[1]["maxabs"] or 0, 100.0 * dead_bt / len(common)))
+    return layer("marketparams", checks, metrics, table, reason)
+
+
 def layer_selector():
     checks = [mkcheck("input.live", "MISSING",
                       "artifact selector LIVE la Java-serialized HashMap<String,Float> "
@@ -658,6 +770,8 @@ def build_report(which="all"):
         layers.append(layer_features())
     if which in ("all", "gate"):
         layers.append(layer_gate())
+    if which in ("all", "marketparams"):
+        layers.append(layer_marketparams())
     if which in ("all", "selector"):
         layers.append(layer_selector())
     if which in ("all", "entry"):
@@ -705,6 +819,16 @@ def render_md(rep):
             L.append("\n| key | profile | LIVE | verdict |\n|---|---|---|---|")
             for t in la["table"]:
                 L.append("| `%s` | %s | %s | %s |" % (t["key"], t["profile"], t["live"], t["verdict"]))
+        if la["name"] == "marketparams" and la["metrics"].get("thresholds"):
+            L.append("\nnguong (242 vs baseline vs default Java):\n")
+            L.append("| key | profile | LIVE | default | verdict |\n|---|---|---|---|---|")
+            for t in la["metrics"]["thresholds"]:
+                L.append("| `%s` | %s | %s | %s | %s |" % (t["key"], t["profile"], t["live"], t["default"], t["verdict"]))
+        if la["name"] == "marketparams" and la["table"]:
+            L.append("\n| field | col | n | max\\|Δ\\| | mean\\|Δ\\| | corr | status |\n|---|---|---|---|---|---|---|")
+            for t in la["table"]:
+                L.append("| %s | %s | %d | %s | %s | %s | %s |" % (
+                    t["field"], t["col"], t["n"], _f(t["maxabs"]), _f(t["meanabs"]), _f(t["corr"], 4), t["status"]))
         if la["name"] == "features" and la["table"]:
             L.append("\n| feature | n | max\\|Δ\\| | mean\\|Δ\\| | corr | status |\n|---|---|---|---|---|---|")
             for t in la["table"]:
@@ -749,7 +873,8 @@ def print_layers(rep):
 
 def main():
     ap = argparse.ArgumentParser(description="Parity harness shadow/242 <-> backtest (audit-only)")
-    ap.add_argument("cmd", choices=["config", "features", "gate", "selector", "entry", "exit", "all", "selftest", "fetch"])
+    ap.add_argument("cmd", choices=["config", "features", "gate", "marketparams", "selector", "entry", "exit",
+                                   "all", "selftest", "fetch"])
     args = ap.parse_args()
     if args.cmd == "fetch":
         r = fetch_live()

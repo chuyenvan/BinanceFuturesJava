@@ -6,18 +6,19 @@
 - **Report (sinh tự động):** `docs/result/parity_report.json` + `.md` (deterministic, `sort_keys`, **không** timestamp).
 - **Ràng buộc đã giữ:** Python thuần; **0 Java/sim**; **242 READ-ONLY** (chỉ `fetch` đọc key non-secret); **0 ONNX**;
   không in secret; **không push file dữ liệu** (chỉ code/doc/JSON/snapshot non-secret); 2026 = **HOLDOUT** (chỉ đo).
+- **Bổ sung STEER owner 10:45:** thêm tầng `marketparams` audit tham số market `rateDown15MAvg` (+3 field market) — xem §2B.
 - **Ngày chạy:** 2026-10-01 (GMT+7). **Kết quả tổng: `FAIL` (exit_code=2).**
 
 ---
 
-## 1. HARNESS — 7 subcommand + 3 tự kiểm (đều ĐẠT)
+## 1. HARNESS — 10 subcommand + 3 tự kiểm (đều ĐẠT)
 
-`python3 research/parity/parity_check.py {config|features|gate|selector|entry|exit|all|selftest|fetch}`
+`python3 research/parity/parity_check.py {config|features|gate|marketparams|selector|entry|exit|all|selftest|fetch}`
 
 | tự kiểm | kết quả | bằng chứng |
 |---|---|---|
 | (a) **tiêm lệch** 1 feature (BACKTEST += 1.0) | **PASS** | `hourOfDay` chuyển PASS→**FAIL**, **chỉ** feature đó (`FAIL them moi=['hourOfDay']`) |
-| (b) **deterministic** (chạy 2 lần) | **PASS** | stdout **byte-identical**; `parity_report.json` md5 `e153207b…` **= nhau** giữa 2 lần |
+| (b) **deterministic** (chạy 2 lần) | **PASS** | stdout **byte-identical**; `parity_report.json` md5 `17c28162…` **= nhau** giữa 2 lần |
 | (c) **xoá 1 cột** input (`momentum5M`) | **PASS** | **FAIL kèm lý do** `"thieu cot trong export: momentum5M"` — **không crash**, **không 0-kết-quả** |
 
 Ngoài ra: artifact feat_dump bị **cắt cụt 6/6 file** (đang ghi/copy dở) ⇒ harness **phục hồi các dòng hoàn chỉnh**
@@ -32,6 +33,7 @@ Ngoài ra: artifact feat_dump bị **cắt cụt 6/6 file** (đang ghi/copy dở
 | **config** | 4 LECH + 18 MISSING | profile 31 key | — | == | **FAIL** |
 | **features** | feat_dump BTCUSDT (385 cặp ts) | export DEV cùng phút | **29/33 feature** vượt \|Δ\| | max\|Δ\| ≤ 1e-8 | **FAIL** |
 | **gate** | mode=**fixed**, p15_max **0.0150** | mode=**ratio** (G2) | thr 0.0326 **>** p15_max | mode khớp | **FAIL** (1 check MISSING) |
+| **marketparams** (STEER 10:45) | `rateDownAvg/rateDown15MAvg` thật | export **=0** 100% cửa sổ | 2/2 field lệch; **385/385** phút field chết | max\|Δ\| ≤ 1e-8 & flip=0 | **FAIL** (2 field MISSING) |
 | **selector** | Java-serialized HashMap | — | — | == | **MISSING** |
 | **entry** | **0 entry** (2818/2818 dòng `n_pass=0`) | G2 ≥1 (bất biến thang đo) | 0 vs ≥1 | == | **FAIL** |
 | **exit** | ledger **0 lệnh đóng** từ 12/09 | — | — | == | **MISSING** |
@@ -40,6 +42,34 @@ Ngoài ra: artifact feat_dump bị **cắt cụt 6/6 file** (đang ghi/copy dở
 **29/33 feature LỆCH** — lớn nhất: `volumeRatioUpDown` (max\|Δ\| **236.3**, corr 0.64) · `volumeSpike` (**122.7**, 0.69) ·
 `basketVolSpike` (**79.6**, 0.10) · `rsi14` (**40.3**, 0.86) · `advanceDeclineRatio` (6.64) · `volatilityTermStructure` (1.30).
 Ba feature `momentum1M/15M/acceleration` lệch **vì export thiếu nguồn (=0)** — cần tái tạo inline (`RESULT_FEATDIFF_PASS2 §2.1`).
+
+---
+
+## 2B. STEER owner (2026-10-01 10:45) — AUDIT THAM SỐ MARKET `rateDown15MAvg`
+
+Ánh xạ đã xác minh (`ComprehensiveMarketFeatureExtractor.java:93-94`): **`momentum1M = rateDownAvg`**, **`momentum15M = rateDown15MAvg`**.
+`rateDown15MAvg` chạy vào **4 nơi** (BIG_DOWN `:174-186`, DCA `:188-191`, `TickWeakBlock:135` DROP15M, `BdSizeAdapt:90`).
+
+**(1) 4 field market tại cùng phút** (385 cặp):
+
+| field | cột | max\|Δ\| | mean\|Δ\| | corr | kết |
+|---|---|---|---|---|---|
+| `rateDownAvg` | momentum1M | **0.0091** | 0.0016 | nan (BT hằng 0) | **FAIL** |
+| `rateDown15MAvg` | momentum15M | **0.0249** | 0.0127 | nan (BT hằng 0) | **FAIL** |
+| `rateUpAvg` | — | — | — | — | **MISSING** (không có trong CSV) |
+| `rateUp15MAvg` | — | — | — | — | **MISSING** (không có trong CSV) |
+
+**(2) Ngưỡng:** `MS_DOWN_BIG_AVG`, `MS_DOWN_BIG_AVG_DCA`, `MS_UP_BIG_THRES` (+ alias `SIM_MS_*`): **242 unset & baseline unset**
+⇒ cả hai dùng **cùng default Java** `-0.03157 / -0.03157 / 0.02046` (`Configs.java:465-470`) ⇒ **MATCH-DEFAULT (PASS)** — ngưỡng KHÔNG phải nguồn lệch.
+
+**(3) Tác động lên quyết định (đo bằng số lần ĐỔI TRẠNG THÁI, không chỉ max|Δ|):** trên 385 phút ghép,
+BIG_DOWN flip = **0**, DCA flip = **0** (cả hai bên đều 0 vì live 2026-09-28 là ngày yên: `rateDown15MAvg` min **-0.0249 > -0.0316**)
+**NHƯNG** phía BACKTEST field **= 0 (chết) ở 385/385 = 100%** cửa sổ ⇒ BIG_DOWN/DCA **không thể kích hoạt từ field này**.
+Trên **toàn export 2026-07→09** field chết **68 902/129 137 = 53.4%** số phút (60 phút còn lại mới vượt ngưỡng) ⇒
+**nguồn market của export bị khuyết nặng** — đây chính là "lệch nhiều nơi" (BIG_DOWN + DCA + weak-block + size-adapt cùng chết).
+
+**Đề xuất:** bật lại nguồn `MarketBigChangeDetector.calMarketData` (inline) cho exporter trước khi dùng export làm backtest;
+xuất thêm `rateUpAvg/rateUp15MAvg` ra CSV để đo đủ 4 field. *(Ghi rõ: đây là **STEER của owner 10:45**.)*
 
 ---
 
@@ -61,7 +91,7 @@ Ba feature `momentum1M/15M/acceleration` lệch **vì export thiếu nguồn (=0
 **(3) Tầng nào MISSING + lý do?** → **selector**: artifact live là Java-serialized `HashMap<String,Float>`
 (`storage/data/predictionSymbol/*`), không có score CSV đọc được, và **không có** artifact selector BACKTEST cùng tick.
 → **exit**: 242 **không có lệnh đóng nào từ 12/09** (gate đóng trước) ⇒ không có dữ liệu thoát để so FLAT3 vs T0.
-(Thêm 1 check MISSING trong tầng gate: p15 phía BACKTEST cần ONNX — bị cấm nên không đo.)
+(Thêm MISSING: `rateUpAvg`/`rateUp15MAvg` không có trong CSV artifact; p15 phía BACKTEST cần ONNX — bị cấm nên không đo.)
 
 **(4) Đề xuất TỐI THIỂU để khớp 100 % (trình bày — KHÔNG tự sửa 242, cần restart):**
 1. Thêm `conf/env.sh`: `LIVE_GATE_ROLLING_MODE=ratio`, `LIVE_GATE_ROLLING_PCT=0.999950829`, `LIVE_GATE_ROLLING_DAYS=90`
@@ -86,3 +116,5 @@ Ba feature `momentum1M/15M/acceleration` lệch **vì export thiếu nguồn (=0
 - **Bỏ** đo selector/exit live (thiếu nguồn đối ứng) ⇒ **MISSING + lý do + đề xuất**, không bịa PASS.
 - **KHÔNG** sửa bất kỳ file nào trên 242; mọi thay đổi config chỉ **trình bày** ở §3(4).
 - **KHÔNG** dùng 2026 để chọn/tune; chỉ audit/đối chiếu.
+- **STEER 10:45:** tầng `marketparams` đo **2/4 field** (`rateDownAvg`,`rateDown15MAvg`); 2 field `rateUp*` **MISSING** (không có trong CSV).
+  Kernel field, threshold parity, và impact đã ghi ở §2B; đề xuất bật nguồn inline cho exporter + xuất `rateUp*` ra CSV.

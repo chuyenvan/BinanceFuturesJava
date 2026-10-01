@@ -816,6 +816,99 @@
   {
    "checks": [
     {
+     "detail": "2/2 field co nguon bi lech max|delta|>1e-08; 2 field MISSING (khong co trong CSV)",
+     "id": "mkt.field_parity",
+     "status": "FAIL"
+    },
+    {
+     "detail": "0/3 nguong lech; ca 2 ben unset => dung default Java (MS_DOWN_BIG_AVG=-0.03157, DCA=-0.03157)",
+     "id": "mkt.threshold_parity",
+     "status": "PASS"
+    },
+    {
+     "detail": "BIG_DOWN flip=0, DCA flip=0; BACKTEST field=0 (chet) 385/385 phut (100%) => BIG_DOWN/DCA khong the kich hoat tu field nay o cac phut do",
+     "id": "mkt.impact_bigdown_dca",
+     "status": "FAIL"
+    }
+   ],
+   "metrics": {
+    "backtest_dead_minutes": 385,
+    "bigdown_flip": 0,
+    "dca_flip": 0,
+    "field_fail": 2,
+    "live_bigdown_minutes": 0,
+    "live_dca_minutes": 0,
+    "pairs": 385,
+    "thresh_fail": 0,
+    "thresholds": [
+     {
+      "default": -0.03157,
+      "key": "MS_DOWN_BIG_AVG",
+      "live": "(unset)",
+      "profile": "(unset)",
+      "verdict": "MATCH-DEFAULT"
+     },
+     {
+      "default": -0.03157,
+      "key": "MS_DOWN_BIG_AVG_DCA",
+      "live": "(unset)",
+      "profile": "(unset)",
+      "verdict": "MATCH-DEFAULT"
+     },
+     {
+      "default": 0.02046,
+      "key": "MS_UP_BIG_THRES",
+      "live": "(unset)",
+      "profile": "(unset)",
+      "verdict": "MATCH-DEFAULT"
+     }
+    ]
+   },
+   "name": "marketparams",
+   "reason": "market: 2/2 field lech (rateDown15MAvg max|delta|=0.0249), BACKTEST field=0 100% phut; nguong khop (default)",
+   "status": "FAIL",
+   "table": [
+    {
+     "col": "momentum1M",
+     "corr": NaN,
+     "field": "rateDownAvg",
+     "maxabs": 0.00913885329,
+     "meanabs": 0.0021246516752181817,
+     "n": 385,
+     "status": "FAIL"
+    },
+    {
+     "col": "momentum15M",
+     "corr": NaN,
+     "field": "rateDown15MAvg",
+     "maxabs": 0.0248868018,
+     "meanabs": 0.012715135048675325,
+     "n": 385,
+     "status": "FAIL"
+    },
+    {
+     "col": "(n/a)",
+     "corr": null,
+     "field": "rateUpAvg",
+     "maxabs": null,
+     "meanabs": null,
+     "n": 0,
+     "status": "MISSING"
+    },
+    {
+     "col": "(n/a)",
+     "corr": null,
+     "field": "rateUp15MAvg",
+     "maxabs": null,
+     "meanabs": null,
+     "n": 0,
+     "status": "MISSING"
+    }
+   ]
+  },
+  {
+   "checks": [
+    {
      "detail": "artifact selector LIVE la Java-serialized HashMap<String,Float> (storage/data/predictionSymbol/*), khong co score CSV doc duoc; khong co artifact selector BACKTEST cung tick.",
      "id": "input.live",
      "status": "MISSING"

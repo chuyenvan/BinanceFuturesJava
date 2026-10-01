@@ -23,6 +23,7 @@
 | **config** | FAIL | 242 KHONG khop baseline: 4 LECH + 18 MISSING key |
 | **features** | FAIL | 29/33 feature lech (max|delta|>1e-08) |
 | **gate** | FAIL | 242 gate=fixed, thr 0.0326 > p15_max 0.0150 => n_pass=0 (baseline=ratio) |
+| **marketparams** | FAIL | market: 2/2 field lech (rateDown15MAvg max|delta|=0.0249), BACKTEST field=0 100% phut; nguong khop (default) |
 | **selector** | MISSING | MISSING: thieu nguon selector doi ung |
 | **entry** | FAIL | entry lech: LIVE=0 vs BACKTEST(G2)>=1 |
 | **exit** | MISSING | MISSING: khong co lenh dong (gate chan truoc) |
@@ -118,6 +119,29 @@
 - [PASS] gate.repro: n_pass log=0; p15_max=0.01501 < thr_min=0.03257 => dong nhat (0 pass)
 - [FAIL] gate.mode_parity: LIVE gate mode=fixed vs BASELINE=ratio
 - [MISSING] gate.p15_dev_parity: p15 phia BACKTEST can ONNX inference (bi cam) => khong do duoc; de xuat: dump p15/dev CSV
+
+### marketparams — FAIL
+
+- metrics: `{"backtest_dead_minutes": 385, "bigdown_flip": 0, "dca_flip": 0, "field_fail": 2, "live_bigdown_minutes": 0, "live_dca_minutes": 0, "pairs": 385, "thresh_fail": 0, "thresholds": [{"default": -0.03157, "key": "MS_DOWN_BIG_AVG", "live": "(unset)", "profile": "(unset)", "verdict": "MATCH-DEFAULT"}, {"default": -0.03157, "key": "MS_DOWN_BIG_AVG_DCA", "live": "(unset)", "profile": "(unset)", "verdict": "MATCH-DEFAULT"}, {"default": 0.02046, "key": "MS_UP_BIG_THRES", "live": "(unset)", "profile": "(unset)", "verdict": "MATCH-DEFAULT"}]}`
+
+- [FAIL] mkt.field_parity: 2/2 field co nguon bi lech max|delta|>1e-08; 2 field MISSING (khong co trong CSV)
+- [PASS] mkt.threshold_parity: 0/3 nguong lech; ca 2 ben unset => dung default Java (MS_DOWN_BIG_AVG=-0.03157, DCA=-0.03157)
+- [FAIL] mkt.impact_bigdown_dca: BIG_DOWN flip=0, DCA flip=0; BACKTEST field=0 (chet) 385/385 phut (100%) => BIG_DOWN/DCA khong the kich hoat tu field nay o cac phut do
+
+nguong (242 vs baseline vs default Java):
+
+| key | profile | LIVE | default | verdict |
+|---|---|---|---|---|
+| `MS_DOWN_BIG_AVG` | (unset) | (unset) | -0.03157 | MATCH-DEFAULT |
+| `MS_DOWN_BIG_AVG_DCA` | (unset) | (unset) | -0.03157 | MATCH-DEFAULT |
+| `MS_UP_BIG_THRES` | (unset) | (unset) | 0.02046 | MATCH-DEFAULT |
+
+| field | col | n | max\|Δ\| | mean\|Δ\| | corr | status |
+|---|---|---|---|---|---|---|
+| rateDownAvg | momentum1M | 385 | 0.009 | 0.002 | nan | FAIL |
+| rateDown15MAvg | momentum15M | 385 | 0.025 | 0.013 | nan | FAIL |
+| rateUpAvg | (n/a) | 0 | - | - | - | MISSING |
+| rateUp15MAvg | (n/a) | 0 | - | - | - | MISSING |
 
 ### selector — MISSING
 

@@ -16,7 +16,7 @@
 
 ## 0. MỘT ENTRY POINT, 7 SUBCOMMAND
 
-`python3 research/parity/parity_check.py {config|features|gate|selector|entry|exit|all|selftest|fetch}`
+`python3 research/parity/parity_check.py {config|features|gate|marketparams|selector|entry|exit|all|selftest|fetch}`
 
 Mỗi subcommand in 1 bảng (tầng · LIVE · BACKTEST · lệch · ngưỡng · PASS/FAIL) và trả **exit code**:
 `0` = mọi tầng PASS · `2` = có ≥1 FAIL · `3` = không FAIL nhưng có ≥1 MISSING.
@@ -94,3 +94,29 @@ Ba kết quả này ghi vào `parity_report.json` mục `selftests` (mỗi phép
 - **KHÔNG** ghi/sửa/restart/kill trên 242.
 - **KHÔNG** push file dữ liệu; chỉ commit code + doc + JSON nhỏ + snapshot config non-secret.
 - **KHÔNG** dùng 2026 để chọn tham số; chỉ audit/đối chiếu.
+
+---
+
+## 6. AMEND — STEER owner 2026-10-01 10:45: audit tham số MARKET `rateDown15MAvg`
+
+> **Steer owner:** *"dau vao cua features co DownAvg15M no la tham so market gi do can audit ca cai nay. no lech la rat nhieu noi lech"*.
+> Amend này **chốt TRƯỚC khi chạy tầng `marketparams`** (chưa xem số).
+
+**Vì sao:** `rateDown15MAvg` chạy vào **4 nơi** (file:line): `MarketBigChangeDetector.java:174-186` `getMarketStatus1M`
+→ **BIG_DOWN** (`MS_DOWN_BIG_AVG=-0.03157`) · `:188-191` `isDcaAlt` → **DCA** (`MS_DOWN_BIG_AVG_DCA=-0.03157`) ·
+`TickWeakBlock.java:135` (`MODE=DROP15M`) · `BdSizeAdapt.java:90` (`thr=MS_DOWN_BIG_AVG`). Lệch field ⇒ lệch 4 nơi.
+
+**Ánh xạ (đã xác minh, `ComprehensiveMarketFeatureExtractor.java:93-94`):** `momentum1M = rateDownAvg`,
+`momentum15M = rateDown15MAvg` ⇒ 2 field đọc được từ feat_dump/export; **`rateUpAvg`/`rateUp15MAvg`**
+không có trong CSV ⇒ **MISSING + lý do**.
+
+**Ngưỡng (chốt):** so `MS_DOWN_BIG_AVG`, `MS_DOWN_BIG_AVG_DCA`, `MS_UP_BIG_THRES` (alias `SIM_MS_DOWN_BIG_AVG*`)
+giữa **242 snapshot** vs `g2_flat3.properties`; **unset cả 2 bên ⇒ MATCH-DEFAULT** (default Java
+`-0.03157 / -0.03157 / 0.02046`, `Configs.java:465-470`).
+
+**Đo tác động (chốt):** trên cùng cửa sổ ghép, đếm **số phút quyết định BIG_DOWN / DCA ĐỔI TRẠNG THÁI**
+giữa LIVE và BACKTEST (không chỉ `max|Δ|`), **+** số phút mà field BACKTEST = 0 (chết) khiến BIG_DOWN/DCA
+**không thể kích hoạt**.
+
+**Ngưỡng PASS tầng `marketparams`:** field `max|Δ| ≤ 1e-8` · ngưỡng khớp (==, hoặc cùng default) ·
+impact flip = 0 **và** dead-minutes = 0. Bất kỳ feature/field nào thiếu ⇒ **MISSING + lý do + đề xuất**, không tính PASS.
