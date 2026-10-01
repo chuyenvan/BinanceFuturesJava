@@ -121,11 +121,64 @@ def run_sweep():
     log.info("-> %s", os.path.join(OUT_DIR, "bd_deep_sweep.json"))
 
 
+CLOSES = "/home/ubuntu/java/fsrun/CLOSES_1H.bin"
+HOUR_MS = 3600 * 1000
+SEAL_2026 = int(pd.Timestamp("2026-01-01", tz="UTC").timestamp() * 1000)
+
+
+def run_link():
+    """Quan he BIG_DOWN/DCA voi BTC (1H) + regime MA200 - 0-sim, CHI DOC CLOSES_1H.bin."""
+    DTc = np.dtype([("ts", ">i8"), ("sym", ">i2"), ("c", ">f4")])
+    a = np.fromfile(CLOSES, dtype=DTc)
+    ts = a["ts"].astype(np.int64)
+    sym = a["sym"].astype(np.int64)
+    c = a["c"].astype(np.float64)
+    m = (ts < SEAL_2026) & (sym == 1)
+    bt = ts[m] + HOUR_MS
+    bc = c[m]
+    o = np.argsort(bt)
+    bt, bc = bt[o], bc[o]
+    # MA200 daily causal tren BTC 1H
+    s = pd.Series(bc)
+    ma = s.rolling(200, min_periods=30).mean().to_numpy()
+    bull = bc > ma
+
+    tsd, down, up, d15 = load_market()
+    idx = np.searchsorted(bt, tsd, side="right") - 1
+    ok = idx >= 1
+    ret1h = np.where(ok, bc[np.clip(idx, 0, len(bc) - 1)] / np.where(idx >= 1, bc[np.clip(idx - 1, 0, len(bc) - 1)], np.nan) - 1, np.nan)
+    fwd1h = np.where(ok & (idx + 1 < len(bc)), bc[np.clip(idx + 1, 0, len(bc) - 1)] / bc[np.clip(idx, 0, len(bc) - 1)] - 1, np.nan)
+    bullm = np.where(ok, bull[np.clip(idx, 0, len(bc) - 1)], np.nan)
+
+    bd = down < THR_BD
+    dca = d15 < THR_DCA
+    res = {}
+    for name, mask in (("ALL", np.ones(len(tsd), bool)), ("BIG_DOWN", bd), ("DCA15", dca)):
+        r = ret1h[mask]
+        f = fwd1h[mask]
+        r = r[~np.isnan(r)]
+        f = f[~np.isnan(f)]
+        bb = bullm[mask]
+        bb = bb[~np.isnan(bb)]
+        res[name] = dict(n=int(mask.sum()),
+                         btc_ret1h_mean=round(float(r.mean()) * 100, 4),
+                         btc_ret1h_p1=round(float(np.percentile(r, 1)) * 100, 4),
+                         btc_fwd1h_mean=round(float(f.mean()) * 100, 4),
+                         frac_bull=round(float(np.nanmean(bb)) * 100, 2))
+        log.info("%-9s n=%6d  BTC ret1h mean=%+.4f%% p1=%+.4f%%  fwd1h mean=%+.4f%%  %%bullMA200=%.1f",
+                 name, res[name]["n"], res[name]["btc_ret1h_mean"], res[name]["btc_ret1h_p1"],
+                 res[name]["btc_fwd1h_mean"], res[name]["frac_bull"])
+    json.dump(res, open(os.path.join(OUT_DIR, "bd_deep_link.json"), "w"), indent=1)
+    log.info("-> %s", os.path.join(OUT_DIR, "bd_deep_link.json"))
+
+
 if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else "dist"
     if cmd == "dist":
         run_dist()
     elif cmd == "sweep":
         run_sweep()
+    elif cmd == "link":
+        run_link()
     else:
         raise SystemExit("unknown cmd " + cmd)
