@@ -283,9 +283,11 @@ LOG.info("market.bin rows=%d", len(rate))
 
 store = f1(IN + "/**/" + CFG["store_file"])
 LOG.info("store=%s", store)
+import gzip as _gz
+_open = (lambda p: _gz.open(p, "rt")) if store.endswith(".gz") else (lambda p: open(p, "rt"))
 OUT = WORK + "/gate_store_patched.csv.gz"
 n_rows = n_hit = n_miss = 0
-with gzip.open(store, "rt") as fi, gzip.open(OUT, "wt", 6) as fo:
+with _open(store) as fi, gzip.open(OUT, "wt", 6) as fo:
     hdr = fi.readline().rstrip("\n").split(",")
     fo.write(",".join(hdr) + "\n")
     i_ts = hdr.index("timestamp"); i_m1 = hdr.index("momentum1M")
@@ -316,7 +318,7 @@ sys.exit(0)
 '''
 
 STORE_DS = "bdchain-gate-store"
-STORE_FILE = "gate_dataset_full.csv.gz"
+STORE_FILE = "gate_dataset_full.csv*"   # Kaggle tu giai nen .gz -> file that la .csv
 
 
 def stage_store_dataset(src="/home/ubuntu/claudedata/gate_dataset_full.csv.gz",
