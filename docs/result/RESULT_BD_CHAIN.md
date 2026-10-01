@@ -15,7 +15,7 @@ Chạy 2026-10-01 (vòng 3 · subagent "BD-CHAIN BUILD"), nhánh `module`. Pre-r
 | hạng mục | kết quả |
 |---|---|
 | **Kernel A** — sinh `market.bin` từ ticker file Kaggle (+ `SIM_BD_FRACTION`) | ✅ chạy 5/5 arm (f=0/0.1/0.3/0.5/1.0), ~18–38 phút/arm |
-| **Kernel B** — patch cột rate-derived của gate store từ `market.bin` (Python thuần) | ✅ chạy (f=0/0.1/0.3 xong; f=0.5/1.0 đẩy lại) |
+| **Kernel B** — patch cột rate-derived của gate store từ `market.bin` (Python thuần) | ✅ chạy 5/5 (f=0/0.1/0.3/0.5/1.0) |
 | **Parity JAR HEAD** (`bdjar-par`: jar HEAD + `market.bin` GỐC) | ✅ **md5 `650c386f0d0dfea334af9d55ca2f21d4` — khớp byte-identical** |
 | **Parity `f=0` toàn phần** (`bdf000-par`: jar HEAD + `market.bin` SINH LẠI) | ⛔ **md5 `6617c809…` ≠ target** (n 2517, equity 131878 vs 131908) |
 | **Kernel C** (gate retrain → `pred.bin`) | code viết xong, **CHƯA chạy** |
@@ -120,14 +120,19 @@ Theo **đúng chữ** pre-reg §4 ("lệch ⇒ DỪNG"), đây vẫn là **FAIL 
 | 0.10 | `bdal-010` | 2782 | 85,62 | 14,59 | 134174 | 11,60 | 3,00 | 34,76 |
 | 0.30 | `bdal-030` | 2564 | 85,96 | 14,35 | 134799 | 10,97 | 3,18 | 34,90 |
 | 0.50 | `bdal-050` | 2482 | 85,94 | 14,38 | 131663 | 10,93 | 3,13 | 34,20 |
-| 1.00 | `bdal-100` | — | — | — | — | — | — | — (đang chạy) |
+| 1.00 | `bdal-100` | 2392 | 85,95 | 14,30 | 129958 | 10,08 | 3,36 | 33,81 |
 
 **Đọc sơ:** đổi `f` **chỉ ở đường rule** làm `n` đổi ±10 %, equity đổi **+2 % (f=0,1/0,3)** tới
-−0,2 % (f=0,5); win%/TSloss% gần như phẳng; **maxDD TĂNG** (10,0 → 11,6 % ở f=0,1) ⇒ **Calmar của
-MỌI f đều THẤP HƠN nền** (3,42). Số này **không dùng để kết luận 4 tầng** (thiếu retrain model).
+**−1,5 % (f=1,0)**; win%/TSloss% gần như phẳng; **maxDD TĂNG** (10,0 → 11,6 % ở f=0,1) ⇒ **Calmar
+của MỌI f đều THẤP HƠN nền** (3,42; gần nhất f=1,0 = 3,36). Số này **không dùng để kết luận 4 tầng**
+(thiếu retrain model).
 
-**Trôi theo năm:** pnl/năm gần như không đổi theo f (2021..2025 đều dịch ≤ ~3 %); không có xu
-hướng "f tốt dần theo năm" rõ rệt trong phụ lục này.
+**Trôi theo năm:** f=0,1 tăng pnl ở 2021/2022/2023/2025; f=1,0 **giảm** ở 2024 (2539 vs 2794) và
+2025 (2644 vs 2887); f=0,5 giảm ở 2024/2025. ⇒ **không có f «tốt dần theo năm»**; xu hướng ngược
+ở f lớn về cuối kỳ (non-stationarity như `RESULT_BD_DEEP §3.4`).
+
+_Lưu ý nhỏ: `PROFILE_HASH` của `bdal-100` = `61e1c515…` khác 4 run còn lại (`c47b73f3…`) — nên đọc
+bảng như xấp xỉ; đây là phụ lục định hướng, không phải kết luận._
 
 ---
 

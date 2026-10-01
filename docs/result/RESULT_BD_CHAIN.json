@@ -11,7 +11,7 @@
   "harness": {
     "kernels": {
       "A_market_bin_from_ticker": {"tool": "ExportMarketBinFromTicker.java + tools/kaggle_bd_chain.py::submit_market", "status": "RUN_OK", "arms_run": ["f000", "f010", "f030", "f050", "f100"], "rows": 2627810, "secs_range": [1097, 2290], "note": "ticker wfo-ticker-2021..2025h2 -> MarketDataInlineGenerator (buffer LIEN TUC) -> market.bin [count][ts][down,up,down15m]; f qua SIM_BD_FRACTION"},
-      "B_patch_gate_store": {"tool": "tools/kaggle_bd_chain.py::submit_patch_store", "status": "RUN_OK", "arms_run": ["f000", "f010", "f030"], "rows": 2889623, "hit": 2627810, "miss": 261813, "note": "chi patch 3 cot rate-derived: momentum1M, momentum15M, momentumAcceleration"},
+      "B_patch_gate_store": {"tool": "tools/kaggle_bd_chain.py::submit_patch_store", "status": "RUN_OK", "arms_run": ["f000", "f010", "f030", "f050", "f100"], "rows": 2889623, "hit": 2627810, "miss": 261813, "note": "chi patch 3 cot rate-derived: momentum1M, momentum15M, momentumAcceleration"},
       "C_gate_retrain_predbin": {"tool": "tools/kaggle_bd_chain.py::submit_gate_train", "status": "CODE_READY_NOT_RUN"},
       "D_s1_bins": {"status": "NOT_WRITTEN"},
       "E_sim": {"tool": "tools/kaggle_sim.py (+ market_ds, market_align)", "status": "RUN_OK"}
@@ -39,12 +39,20 @@
   "appendix_rulepath_only_aligned": {
     "registered": false,
     "note": "CHI duong RULE (BIG_DOWN/DCA/size-adapt); gate+selector KHONG retrain; maxDD ngay (xap xi)",
+    "yearly_pnl": {
+      "bdal-000_f0.00": {"2021": 1498, "2022": 1306, "2023": 2782, "2024": 2794, "2025": 2887},
+      "bdal-010_f0.10": {"2021": 1559, "2022": 1401, "2023": 2944, "2024": 2814, "2025": 3100},
+      "bdal-030_f0.30": {"2021": 1579, "2022": 1322, "2023": 2802, "2024": 2804, "2025": 2923},
+      "bdal-050_f0.50": {"2021": 1562, "2022": 1353, "2023": 2795, "2024": 2711, "2025": 2750},
+      "bdal-100_f1.00": {"2021": 1498, "2022": 1294, "2023": 2776, "2024": 2539, "2025": 2644}
+    },
+    "no_f_beats_baseline_calmar": true,
     "rows": [
       {"f": 0.00, "kernel": "bdal-000", "n": 2517, "win_pct": 85.86, "tsloss_pct": 14.30, "equity_final": 131908, "maxdd_pct_day": 10.02, "calmar": 3.42, "cagr_pct": 34.25},
       {"f": 0.10, "kernel": "bdal-010", "n": 2782, "win_pct": 85.62, "tsloss_pct": 14.59, "equity_final": 134174, "maxdd_pct_day": 11.60, "calmar": 3.00, "cagr_pct": 34.76},
       {"f": 0.30, "kernel": "bdal-030", "n": 2564, "win_pct": 85.96, "tsloss_pct": 14.35, "equity_final": 134799, "maxdd_pct_day": 10.97, "calmar": 3.18, "cagr_pct": 34.90},
       {"f": 0.50, "kernel": "bdal-050", "n": 2482, "win_pct": 85.94, "tsloss_pct": 14.38, "equity_final": 131663, "maxdd_pct_day": 10.93, "calmar": 3.13, "cagr_pct": 34.20},
-      {"f": 1.00, "kernel": "bdal-100", "n": null, "note": "dang chay"}
+      {"f": 1.00, "kernel": "bdal-100", "n": 2392, "win_pct": 85.95, "tsloss_pct": 14.30, "equity_final": 129958, "maxdd_pct_day": 10.08, "calmar": 3.356, "cagr_pct": 33.81}
     ]
   },
   "verdict": {"decision": "NO-GO / BLOCKED (parity gate)", "f_kept": 0.0, "note": "khong phai bien the kem; chua qua cong parity cua day chuyen dang ky; jar HEAD PASS parity"},
