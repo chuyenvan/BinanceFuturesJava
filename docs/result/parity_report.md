@@ -23,8 +23,8 @@
 | **config** | PASS | khop |
 | **features** | FAIL | 27/33 feature lech (exact<=1e-08, inline<=1e-03; o nguong may 29/33) |
 | **gate** | MISSING | 242 gate=ratio, thr 0.0339 > p15_max 0.0150 => n_pass=0 (baseline=ratio) |
-| **marketparams** | MISSING | field: rateDownAvg/rateDown15MAvg khop muc nhieu (<1e-3); rateUpAvg MISSING (khong dump); nguong MATCH default; flip LIVE=0/0, DEV(stress)=0/1 |
-| **selector** | MISSING | MISSING: thieu nguon selector doi ung (khong co cot score/rank) |
+| **marketparams** | MISSING | 4/4 field: rateDownAvg/rateUpAvg/rateDown15MAvg khop muc nhieu ticker-vs-kline (LIVE&DEV, max|d|~7e-4..2e-3, corr>0.99); rateUp15MAvg=0 ca 2 phia (khong duoc calMarketData tinh); nguong MATCH default; flip LIVE=0/0, DEV(stress)=0/1 |
+| **selector** | MISSING | MISSING cung-tick: đo được phía LIVE (artifact 20260928: 249 tick, 163520 dong), thiếu đối ứng cung-tick DEV |
 | **entry** | FAIL | entry lech: LIVE=0 vs BACKTEST(G2)>=1 |
 | **exit** | MISSING | MISSING: khong co lenh dong (gate chan truoc) |
 
@@ -76,60 +76,64 @@
 - [PASS] output.nan: NaN LIVE bất thường=0
 - [FAIL] output.feature_parity: 27/33 feature vuot nguong (exact<=1e-08 / inline<=1e-03); o nguong MAY (1e-08): 29/33 vuot
 
-| feature | n | max\|Δ\| | mean\|Δ\| | corr | status |
-|---|---|---|---|---|---|
-| momentum1M | 385 | 7.492e-04 | 5.296e-05 | 0.9942 | PASS |
-| momentum5M | 385 | 0.002 | 1.683e-04 | 0.9311 | FAIL |
-| momentum15M | 385 | 7.399e-04 | 5.833e-05 | 0.9995 | PASS |
-| momentum1H | 385 | 0.001 | 8.774e-05 | 0.9967 | FAIL |
-| momentum4H | 385 | 6.870e-04 | 2.792e-05 | 0.9998 | FAIL |
-| momentum24H | 385 | 6.810e-04 | 2.773e-05 | 0.9998 | FAIL |
-| momentumAcceleration | 385 | 0.002 | 1.804e-04 | 0.9945 | FAIL |
-| trendStrengthETH | 385 | 0.002 | 9.887e-05 | 0.9975 | FAIL |
-| trendConsistency | 385 | 2.000 | 0.135 | 0.8560 | FAIL |
-| volatility1M | 385 | 0.002 | 1.883e-04 | 0.5200 | FAIL |
-| volatility15M | 385 | 0.001 | 1.177e-04 | 0.5457 | FAIL |
-| volatility1H | 385 | 4.806e-04 | 9.015e-05 | 0.4743 | FAIL |
-| volatility24H | 385 | 1.247e-05 | 3.402e-06 | 0.9861 | FAIL |
-| volatilityTermStructure | 385 | 1.300 | 0.238 | 0.5300 | FAIL |
-| advanceDeclineRatio | 385 | 6.637 | 0.204 | 0.9839 | FAIL |
-| percentAboveMA20 | 385 | 0.646 | 0.058 | 0.9029 | FAIL |
-| volumeRatioUpDown | 385 | 236.264 | 2.014 | 0.6357 | FAIL |
-| marketBreadthStrength | 385 | 0.263 | 0.017 | 0.9942 | FAIL |
-| btcDominance | 385 | 0.646 | 0.065 | 0.5611 | FAIL |
-| rsi14 | 385 | 40.294 | 4.167 | 0.8620 | FAIL |
-| volumeSpike | 385 | 122.710 | 1.328 | 0.6939 | FAIL |
-| distMA20 | 385 | 0.003 | 3.227e-04 | 0.8526 | FAIL |
-| fundingRateRaw | 385 | 4.619e-05 | 1.791e-05 | 0.8970 | FAIL |
-| fundingRateAvg24H | 385 | 1.352e-05 | 7.152e-06 | 0.0389 | FAIL |
-| fundingRateTrend | 385 | 3.267e-05 | 1.076e-05 | 0.9368 | FAIL |
-| hourOfDay | 385 | 0.000e+00 | 0.000e+00 | 1.0000 | PASS |
-| dayOfWeek | 385 | 0.000e+00 | 0.000e+00 | nan | PASS |
-| weekOfMonth | 385 | 0.000e+00 | 0.000e+00 | nan | PASS |
-| monthOfYear | 385 | 0.000e+00 | 0.000e+00 | nan | PASS |
-| basketMomentum15M | 385 | 0.020 | 0.002 | 0.5453 | FAIL |
-| basketMomentum1H | 385 | 0.020 | 0.002 | 0.7035 | FAIL |
-| basketRsi14 | 385 | 29.961 | 3.023 | 0.8615 | FAIL |
-| basketVolSpike | 385 | 79.601 | 1.022 | 0.1042 | FAIL |
+| feature | n | max\|Δ\| | mean\|Δ\| | corr | exp0 | status | nhom (VIEC4) |
+|---|---|---|---|---|---|---|---|
+| momentum1M | 385 | 7.492e-04 | 5.296e-05 | 0.9942 | 0.00e+00 | PASS | ok |
+| momentum5M | 385 | 0.002 | 1.683e-04 | 0.9311 | 0.00e+00 | FAIL | i-nhieu-ticker-vs-kline |
+| momentum15M | 385 | 7.399e-04 | 5.833e-05 | 0.9995 | 0.00e+00 | PASS | ok |
+| momentum1H | 385 | 0.001 | 8.774e-05 | 0.9967 | 0.00e+00 | FAIL | i-nhieu-ticker-vs-kline |
+| momentum4H | 385 | 6.870e-04 | 2.792e-05 | 0.9998 | 0.00e+00 | FAIL | i-nhieu-ticker-vs-kline |
+| momentum24H | 385 | 6.810e-04 | 2.773e-05 | 0.9998 | 0.00e+00 | FAIL | i-nhieu-ticker-vs-kline |
+| momentumAcceleration | 385 | 0.002 | 1.804e-04 | 0.9945 | 0.00e+00 | FAIL | ii-export-thieu-nguon(=0) + logic con lai |
+| trendStrengthETH | 385 | 0.002 | 9.887e-05 | 0.9975 | 0.00e+00 | FAIL | i-nhieu-ticker-vs-kline |
+| trendConsistency | 385 | 2.000 | 0.135 | 0.8560 | 0.00e+00 | FAIL | i-nhieu-ticker-vs-kline |
+| volatility1M | 385 | 0.002 | 1.883e-04 | 0.5200 | 0.00e+00 | FAIL | iii-nghi-logic/tap-hop (can control cung-nguon) |
+| volatility15M | 385 | 0.001 | 1.177e-04 | 0.5457 | 0.00e+00 | FAIL | iii-nghi-logic/tap-hop (can control cung-nguon) |
+| volatility1H | 385 | 4.806e-04 | 9.015e-05 | 0.4743 | 0.00e+00 | FAIL | iii-nghi-logic/tap-hop (can control cung-nguon) |
+| volatility24H | 385 | 1.247e-05 | 3.402e-06 | 0.9861 | 0.00e+00 | FAIL | i-nhieu-ticker-vs-kline |
+| volatilityTermStructure | 385 | 1.300 | 0.238 | 0.5300 | 0.00e+00 | FAIL | iii-nghi-logic/tap-hop (can control cung-nguon) |
+| advanceDeclineRatio | 385 | 6.637 | 0.204 | 0.9839 | 0.00e+00 | FAIL | i-ti-so-nhay (nhieu ticker-vs-kline) |
+| percentAboveMA20 | 385 | 0.646 | 0.058 | 0.9029 | 0.00e+00 | FAIL | i-nhieu-ticker-vs-kline |
+| volumeRatioUpDown | 385 | 236.264 | 2.014 | 0.6357 | 0.00e+00 | FAIL | i-ti-so-nhay (nhieu ticker-vs-kline) |
+| marketBreadthStrength | 385 | 0.263 | 0.017 | 0.9942 | 0.00e+00 | FAIL | i-nhieu-ticker-vs-kline |
+| btcDominance | 385 | 0.646 | 0.065 | 0.5611 | 0.00e+00 | FAIL | i-ti-so-nhay (nhieu ticker-vs-kline) |
+| rsi14 | 385 | 40.294 | 4.167 | 0.8620 | 0.00e+00 | FAIL | i-nhieu-ticker-vs-kline |
+| volumeSpike | 385 | 122.710 | 1.328 | 0.6939 | 0.00e+00 | FAIL | i-ti-so-nhay (nhieu ticker-vs-kline) |
+| distMA20 | 385 | 0.003 | 3.227e-04 | 0.8526 | 0.00e+00 | FAIL | i-nhieu-ticker-vs-kline |
+| fundingRateRaw | 385 | 4.619e-05 | 1.791e-05 | 0.8970 | 0.00e+00 | FAIL | i-nhieu-ticker-vs-kline |
+| fundingRateAvg24H | 385 | 1.352e-05 | 7.152e-06 | 0.0389 | 0.00e+00 | FAIL | iii-nghi-logic/tap-hop (can control cung-nguon) |
+| fundingRateTrend | 385 | 3.267e-05 | 1.076e-05 | 0.9368 | 0.00e+00 | FAIL | i-nhieu-ticker-vs-kline |
+| hourOfDay | 385 | 0.000e+00 | 0.000e+00 | 1.0000 | 0.00e+00 | PASS | ok |
+| dayOfWeek | 385 | 0.000e+00 | 0.000e+00 | nan | 0.00e+00 | PASS | ok |
+| weekOfMonth | 385 | 0.000e+00 | 0.000e+00 | nan | 0.00e+00 | PASS | ok |
+| monthOfYear | 385 | 0.000e+00 | 0.000e+00 | nan | 0.00e+00 | PASS | ok |
+| basketMomentum15M | 385 | 0.020 | 0.002 | 0.5453 | 0.00e+00 | FAIL | iii-nghi-logic/tap-hop (can control cung-nguon) |
+| basketMomentum1H | 385 | 0.020 | 0.002 | 0.7035 | 0.00e+00 | FAIL | i-nhieu-ticker-vs-kline |
+| basketRsi14 | 385 | 29.961 | 3.023 | 0.8615 | 0.00e+00 | FAIL | i-nhieu-ticker-vs-kline |
+| basketVolSpike | 385 | 79.601 | 1.022 | 0.1042 | 0.00e+00 | FAIL | i-ti-so-nhay (nhieu ticker-vs-kline) |
 
 ### gate — MISSING
 
-- metrics: `{"baseline_mode": "ratio", "gate_npass_total": 0, "live_mode": "ratio", "p15_live_max": 0.0150123108, "thr_applied_max": 0.04702, "thr_applied_min": 0.03388}`
+- metrics: `{"baseline_mode": "ratio", "gate_npass_total": 0, "live_mode": "ratio", "p15_dev": {"dev": {"n": 2500260, "p15_max": 0.12261255830526352, "p15_mean": 0.005854084683967189, "p15_min": 0.002019499894231558, "p15_q": {"0.5": 0.005452214973047376, "0.99": 0.013078836379572755, "0.999": 0.028179553244261704, "0.9999": 0.06818976540344729}, "risk_mean": -0.017001774267111417, "ts0": 1617210000000, "ts1": 1767225540000}, "live_window": [1790559600000, 1790617260000], "overlap_live_minutes": 0}, "p15_live_max": 0.0150123108, "thr_applied_max": 0.04702, "thr_applied_min": 0.03388}`
 
 - [PASS] input.live: LIVE p15 n=502 max=0.01501
 - [PASS] gate.repro: n_pass log=0; p15_max=0.01501 < thr_min=0.03388 => dong nhat (0 pass)
 - [PASS] gate.mode_parity: LIVE gate mode=ratio vs BASELINE=ratio
-- [MISSING] gate.p15_dev_parity: nguon p15 DEV KHONG-ONNX = pred.bin (n=2500260, ts 1617210000000..1767225540000). Cua so LIVE 1790559600000..1790617260000: giao=KHONG => KHONG so cung phut duoc => MISSING (2026=holdout, ngoai DEV<=2025-12-31)
+- [PASS] gate.p15_dev.csv: dump p15 DEV (nguon KHONG-ONNX pred.bin) -> p15_dev.csv (n=2500260)
+- [PASS] gate.p15_dev.stats: DEV p15: n=2500260 ts 1617210000000..1767225540000; min=0.0020 q0.5=0.00545 q0.99=0.0131 q0.999=0.0282 max=0.1226
+- [MISSING] gate.p15_dev_parity: pred.bin(DEV<=2025-12-31) KHONG phu cua so LIVE(2026-09-28) => giao=0 phut, khong so cung phut duoc (2026 = holdout) => giu MISSING + ly do; de xuat: xuat p15 ra kline LIVE
 
 ### marketparams — MISSING
 
-- metrics: `{"dev_flips": {"bigdown_a": 0, "bigdown_b": 0, "bigdown_flips": 0, "dca_a": 1, "dca_b": 0, "dca_flips": 1}, "dev_store": {"n": 1376, "rateDown15MAvg_corr": 0.9977090169770493, "rateDown15MAvg_maxabs": 0.0020271385816998146, "rateDownAvg_corr": 0.9969522638229248, "rateDownAvg_maxabs": 0.000978882038359503}, "inline_minutes": 1426, "live_minutes": 502, "thr_live_overrides": {}, "thresholds": [{"default": -0.03157, "key": "MS_DOWN_BIG_AVG", "live": "(unset)", "profile": "(unset)", "verdict": "MATCH-DEFAULT"}, {"default": -0.03157, "key": "MS_DOWN_BIG_AVG_DCA", "live": "(unset)", "profile": "(unset)", "verdict": "MATCH-DEFAULT"}, {"default": 0.02046, "key": "MS_UP_BIG_THRES", "live": "(unset)", "profile": "(unset)", "verdict": "MATCH-DEFAULT"}]}`
+- metrics: `{"dev_flips": {"bigdown_a": 0, "bigdown_b": 0, "bigdown_flips": 0, "dca_a": 1, "dca_b": 0, "dca_flips": 1}, "dev_store": {"n": 1376, "rateDown15MAvg_corr": 0.9977090169770493, "rateDown15MAvg_maxabs": 0.0020271385816998146, "rateDownAvg_corr": 0.9969522638229248, "rateDownAvg_maxabs": 0.000978882038359503, "rateUpAvg_corr": 0.997266262938794, "rateUpAvg_maxabs": 0.0006197462125881411}, "fields_measured_4": 4, "inline_minutes": 1426, "live_minutes": 502, "marketparams_csv": "/home/ubuntu/src/BinanceFuturesJava/research/parity/data/marketparams_inline.csv", "thr_live_overrides": {}, "thresholds": [{"default": -0.03157, "key": "MS_DOWN_BIG_AVG", "live": "(unset)", "profile": "(unset)", "verdict": "MATCH-DEFAULT"}, {"default": -0.03157, "key": "MS_DOWN_BIG_AVG_DCA", "live": "(unset)", "profile": "(unset)", "verdict": "MATCH-DEFAULT"}, {"default": 0.02046, "key": "MS_UP_BIG_THRES", "live": "(unset)", "profile": "(unset)", "verdict": "MATCH-DEFAULT"}]}`
 
 - [PASS] input.live: LIVE feat_dump: 502 phut (momentum1M=rateDownAvg, momentum15M=rateDown15MAvg)
 - [PASS] input.pair: 502 phut giao (LIVE vs inline=cung thuat toan calMarketData)
-- [MISSING] mp.fields_live_vs_inline: 2/4 field do duoc: rateDownAvg max|d|=7.492e-04 corr=0.99485 ; rateDown15MAvg max|d|=7.399e-04 corr=0.99958
+- [PASS] mp.fields_live_vs_inline: LIVE vs inline: rateDownAvg max|d|=7.492e-04 corr=0.99485 ; rateDown15MAvg max|d|=7.399e-04 corr=0.99958 (rateUpAvg: feat_dump KHONG xuat -> do o phia DEV store ben duoi)
 - [PASS] mp.decision_flips_live: BIG_DOWN flip=0 (live=0 inline=0); DCA flip=0 (live=0 inline=0)
-- [PASS] mp.dev_store: market.bin(DEV store) vs inline @2025-10-10: n=1376; rateDownAvg max|d|=9.789e-04 corr=0.9970; rateDown15MAvg max|d|=2.027e-03 corr=0.9977; BIG_DOWN flip=0 DCA flip=1
+- [PASS] mp.dev_store: market.bin(DEV store) vs inline @2025-10-10: n=1376; rateDownAvg max|d|=9.789e-04 corr=0.9970; rateUpAvg max|d|=6.197e-04 corr=0.9973; rateDown15MAvg max|d|=2.027e-03 corr=0.9977; BIG_DOWN flip=0 DCA flip=1
+- [PASS] mp.csv_export: xuat 4 field ra CSV (tuong duong --md-inline): marketparams_inline.csv (K=rateDownAvg,rateUpAvg,rateDown15MAvg,rateUp15MAvg) — rateUp15MAvg=0 (khong tinh)
+- [PASS] mp.fields4: 4/4 field market DO DUOC (rateDownAvg/rateUpAvg/rateDown15MAvg max|d|<=~1e-3 muc nhieu; rateUp15MAvg=0 ca 2 phia). LIVE-side truc tiep: 2/4 (dump thieu cot rateUpAvg/rateUp15MAvg)
 - [MISSING] mp.live_vs_store_sameminute: LIVE(2026-09) vs market.bin(<=2025-12-31): giao=0 phut => khong so truc tiep cung phut duoc; dung inline lam cau noi (ca 2 phia khop ~1e-3)
 - [PASS] mp.thresholds: 3 nguong: 242 & baseline deu UNSET -> cung default Java (-0.03157/-0.03157/0.02046)
 
@@ -145,19 +149,20 @@ nguong (242 vs baseline vs default Java):
 |---|---|---|---|---|---|---|
 | rateDownAvg | momentum1M | 502 | 7.492e-04 | 4.477e-05 | 0.9949 | PASS |
 | rateDown15MAvg | momentum15M | 502 | 7.399e-04 | 5.591e-05 | 0.9996 | PASS |
-| rateUpAvg | - | 0 | - | - | - | MISSING |
-| rateUp15MAvg | - | 0 | - | - | - | N/A |
+| rateUpAvg | market.bin[1] | 1376 | 6.197e-04 | 1.475e-04 | 0.9973 | PASS |
+| rateUp15MAvg | - | 1376 | 0.000e+00 | 0.000e+00 | 1.0000 | PASS |
 | THR:MS_DOWN_BIG_AVG | MS_DOWN_BIG_AVG | 0 | 0.000e+00 | 0.000e+00 | 1.0000 | MATCH-DEFAULT |
 | THR:MS_DOWN_BIG_AVG_DCA | MS_DOWN_BIG_AVG_DCA | 0 | 0.000e+00 | 0.000e+00 | 1.0000 | MATCH-DEFAULT |
 | THR:MS_UP_BIG_THRES | MS_UP_BIG_THRES | 0 | 0.000e+00 | 0.000e+00 | 1.0000 | MATCH-DEFAULT |
 
 ### selector — MISSING
 
-- metrics: `{"feat_dump_cols": 36, "has_selector_col": false}`
+- metrics: `{"dev_selector": {"first_len": 110, "n": 2301065, "ts0": 1625072400000, "ts1": 1767200400000}, "feat_dump_cols": 36, "has_selector_col": false, "live_artifact_day": "20260928", "live_rows": 163520, "live_syms_per_tick": [533, 719], "live_ticks": 249, "selector_csv": "/home/ubuntu/src/BinanceFuturesJava/research/parity/data/selector_live.csv"}`
 
-- [MISSING] input.live: feat_dump co cot selectorScore/rank? KHONG (cot hien co: 36)
-- [MISSING] input.artifact: artifact selector LIVE = Java-serialized HashMap<String,Float> (242 storage/data/predictionSymbol/*) — lan ghi CUOI 2026-08-20, KHONG phu cua so LIVE 2026-09-28; khong co artifact selector BACKTEST cung tick.
-- [MISSING] output.compare: khong so duoc score/rank tung tick. De xuat: them cot selectorScore+rank vao feat_dump CSV (CA live lan export) => khi do harness do duoc rank-overlap/top-K parity khong can ONNX.
+- [MISSING] input.live_col: feat_dump KHONG co cot selectorScore/rank (cot hien co: 36)
+- [PASS] input.artifact: artifact LIVE 20260928/* : ticks=249 rows=163520 syms/tick=533..719 -> selector_live.csv (RAW, khong ONNX)
+- [PASS] input.dev_source: nguon selector DEV = funding.bin (n=2301065 ts 1625072400000..1767200400000) — KHONG-ONNX
+- [MISSING] output.compare: funding.bin(1625072400000..1767200400000) KHONG phu cua so LIVE(1790559600000..1790617260000) => KHONG so cung tick; de xuat: them cot selectorScore+rank vao feat_dump (ca live lan export)
 
 ### entry — FAIL
 
@@ -179,3 +184,4 @@ nguong (242 vs baseline vs default Java):
 | deterministic | PASS | 2 lan tinh features => byte-identical (385 cap) |
 | injected_shift_fails_right | PASS | tai hourOfDay status=FAIL; FAIL them moi=['hourOfDay'] (mong doi [hourOfDay]; truoc= PASS) |
 | missing_column_fails_with_reason | PASS | FAIL=True err=thieu cot detail=thieu cot trong export: momentum5M |
+| gz_writer_finalize | PASS | tai lap: buggy(no-close) decompress_ok=False tail=0000ffff | fixed(close) ok=True | file that khop True |

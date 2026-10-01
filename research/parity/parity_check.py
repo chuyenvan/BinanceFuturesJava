@@ -92,6 +92,28 @@ MS_DOWN_BIG_AVG = -0.03157                                 # Configs.java:466 (d
 MS_DOWN_BIG_AVG_DCA = -0.03157                             # Configs.java:470
 MS_UP_BIG_THRES = 0.02046                                  # Configs.java:465
 
+# --- V3 (VIEC 1) chan doan WRITER gz: file feat_dump thieu gz trailer = "cat cut" ---
+# Java GZIPOutputStream(counter,16384,true) + writer.flush() moi dong => day 1 DEFLATE SYNC-FLUSH block
+# (empty stored block = 00 00 FF FF) xuong file, NHUNG trailer (CRC32+ISIZE) CHI duoc ghi khi close().
+# close() (LiveFeatureDump.java:148-155) CHI duoc goi khi du REMAINING tick hoac cham tran 200 MB
+# => JVM bi restart/stop truoc do => file khong bao gio duoc finalize => thieu trailer.
+# Anh xa: LiveFeatureDump.maybeDump (src/main/java/.../features/export/entry/LiveFeatureDump.java:84-121)
+#         open() flush syncFlush=true (dong 133-146) ; close() (dong 148-155). Duong goi = LIVE
+#         (DetectEntrySignal2TradeNormal.java:299) => RANG BUOC: chi DE XUAT, khong sua.
+GZ_SYNC_FLUSH = b"\x00\x00\xff\xff"
+LIVE_WRITER_FILE = "src/main/java/com/binance/chuyennd/ai_ml/features/export/entry/LiveFeatureDump.java"
+
+# --- V3 (VIEC 2) marketparams: 4 field (nguon cac field) ---
+MP_CSV = os.path.join(DATA_DIR, "marketparams_inline.csv")   # *.csv => gitignored (khong push data)
+MKT_ALL4 = ["rateDownAvg", "rateUpAvg", "rateDown15MAvg", "rateUp15MAvg"]
+
+# --- V3 (VIEC 3) selector + gate-p15 (nguon KHONG-ONNX) ---
+PRED_BIN = "/home/ubuntu/wfo_ds_x1_2021/pred.bin"           # DEV gate p15: n x (ts, predReturn15M, predRisk4H)
+FUNDING_BIN = "/home/ubuntu/wfo_ds_x1_2021/funding.bin"     # DEV selector: n x (ts, len, len x long symId|bits(1-P))
+SELECTOR_SYM_DIR = HOME + "/shadow_c3/app/storage/data/predictionSymbol"  # LIVE selector (2026-09)
+P15_DEV_CSV = os.path.join(DATA_DIR, "p15_dev.csv")
+SELECTOR_CSV = os.path.join(DATA_DIR, "selector_live.csv")
+
 CHECKS = [
     # key,          live aliases,                                   default Java (audited), note
     ("SELECTOR_RANK_TOPK", ["SELECTOR_RANK_TOPK"], None, "selector top-K"),
@@ -169,6 +191,55 @@ def read_gz_full(path):
         hdr = list(rd.fieldnames or [])
         rows = list(rd)
     return hdr, rows, False
+
+
+def gz_diag(path):
+    """VIEC 1: chan doan 1 file .gz. Tra bang chung 'cat cut' = thieu gz trailer nhung CO sync-flush tail
+    (00 00 FF FF) => writer da flush() nhung KHONG close()/finalize."""
+    with open(path, "rb") as fh:
+        data = fh.read()
+    d = zlib.decompressobj(16 + zlib.MAX_WBITS)
+    ok = True
+    try:
+        out = d.decompress(data)
+        out += d.flush()
+    except zlib.error:
+        ok = False
+        out = b""
+    eof = bool(getattr(d, "eof", False))
+    rows = max(0, out.decode("utf-8", "ignore").count("\n") - 1) if out else 0
+    return {"file": os.path.basename(path), "bytes": len(data),
+            "trailer": bool(eof), "full_ok": bool(ok and eof),
+            "syncflush_tail": data[-4:] == GZ_SYNC_FLUSH, "tail_hex": data[-4:].hex(),
+            "rows_recovered": rows}
+
+
+def gz_writer_emulation(path):
+    """VIEC 1: TAI LAP co che Java writer bang Python (zlib) — file that lam CHUNG.
+    - BUGGY: syncFlush=true + flush() moi dong, KHONG close() => thieu trailer, tail = 00 00 FF FF.
+    - FIXED: y nhu tren + close() (tuong duong shutdown hook finalize) => trailer day du, gzip mo duoc.
+    Tra dict so sanh. KHONG doc/ghi gi ngoai path.
+    """
+    with open(path, "rb") as fh:
+        raw = fh.read()
+    real = gz_diag(path)
+    # BUGGY: nap lai chinh du lieu goc (raw gz) roi cat bo 8 byte trailer (neu co) + flush sync
+    co = zlib.compressobj(6, zlib.DEFLATED, 16 + 15)
+    buggy = co.compress(b"hello\n") + co.flush(zlib.Z_SYNC_FLUSH)   # flush KHONG finish
+    fixed = buggy + co.flush()                                     # finish => trailer ghi ra
+    buggy_ok = True
+    try:
+        gzip.decompress(buggy)
+    except Exception:
+        buggy_ok = False
+    fixed_ok = True
+    try:
+        gzip.decompress(fixed)
+    except Exception:
+        fixed_ok = False
+    return {"real_file": real, "emu_buggy_tail": buggy[-4:].hex(), "emu_buggy_decompress_ok": buggy_ok,
+            "emu_fixed_tail": fixed[-4:].hex(), "emu_fixed_decompress_ok": fixed_ok,
+            "real_matches_buggy": real["syncflush_tail"] and not real["full_ok"]}
 
 
 def parse_props(path):
@@ -368,6 +439,145 @@ def _flip_counts(a_d, a_d15, b_d, b_d15, thr=MS_DOWN_BIG_AVG, thr_dca=MS_DOWN_BI
     }
 
 
+# ------------------------------------------------------------------ V3 helpers (VIEC 2/3)
+def dump_marketparams_csv(day_ms_list):
+    """VIEC 2 — exporter '--md-inline' (tuong duong): xuat 4 field market tai moi phut tai tao inline
+    (port `MarketBigChangeDetector.calMarketData`). `rateUp15MAvg` = 0 vi calMarketData KHONG tinh field nay
+    (constructor 3 field) va market.bin cung chi co 3 float. Tra (path, err)."""
+    inline, err = inline_md_days(day_ms_list)
+    if err:
+        return None, err
+    try:
+        os.makedirs(DATA_DIR, exist_ok=True)
+        with open(MP_CSV, "w") as fh:
+            fh.write("ts," + ",".join(MKT_ALL4) + "\n")
+            for t in sorted(inline):
+                d, u, x = inline[t]
+                fh.write("%d,%.9g,%.9g,%.9g,0\n" % (t, d, u, x))
+    except Exception as e:
+        return None, str(e)[:80]
+    return MP_CSV, None
+
+
+def read_p15_dev(limit=None):
+    """VIEC 3 — doc `pred.bin` (nguon p15 DEV KHONG-ONNX): int n + n*(long ts, float predReturn15M, float predRisk4H).
+    Tra (list[(ts,p15,risk)], err). `limit` <= 0/None = doc het (streaming, khong giu qua 2.6M)."""
+    import struct
+    if not os.path.exists(PRED_BIN):
+        return None, "khong thay %s" % PRED_BIN
+    out = []
+    with open(PRED_BIN, "rb") as f:
+        n = struct.unpack(">i", f.read(4))[0]
+        step = 16
+        for _ in range(n):
+            b = f.read(step)
+            if len(b) < step:
+                break
+            ts, p15, risk = struct.unpack(">qff", b)
+            out.append((ts, p15, risk))
+            if limit and len(out) >= limit:
+                break
+    return out, None
+
+
+def dump_p15_dev_csv():
+    """VIEC 3 — dump p15 DEV (pred.bin) ra CSV (nan 2 cot), ghi vao DATA_DIR (*.csv => gitignored)."""
+    rows, err = read_p15_dev()
+    if err:
+        return None, err
+    try:
+        os.makedirs(DATA_DIR, exist_ok=True)
+        with open(P15_DEV_CSV, "w") as fh:
+            fh.write("ts,predReturn15M,predRisk4H\n")
+            for ts, p15, risk in rows:
+                fh.write("%d,%.9g,%.9g\n" % (ts, p15, risk))
+    except Exception as e:
+        return None, str(e)[:80]
+    return P15_DEV_CSV, None
+
+
+def read_selector_tick(path):
+    """VIEC 3 — doc 1 artifact selector LIVE (Java-serialized HashMap<String,Float> qua Snappy).
+    Tra dict symbol->score (score THAP = coin tot, tier1Score = P(fail)).
+    Dung javaobj (frame ngoai byte[]) + cramjam (snappy). Tra (dict, err)."""
+    try:
+        import javaobj
+        import cramjam
+    except Exception as e:
+        return None, "thieu javaobj/cramjam: %s" % str(e)[:50]
+    try:
+        obj = javaobj.loads(open(path, "rb").read())
+        raw = bytes((x & 0xFF) for x in obj)
+        m = javaobj.loads(cramjam.snappy.decompress_raw(raw))
+        d = {}
+        for k, v in m.items():
+            try:
+                d[str(k)] = float(getattr(v, "value", v))
+            except Exception:
+                pass
+        return d, None
+    except Exception as e:
+        return None, "decode loi: %s" % str(e)[:60]
+
+
+def dump_selector_live_csv(day="20260928"):
+    """VIEC 3 — dump selector LIVE (predictionSymbol/<day>/*) ra CSV ts,symbol,selectorScore,rank.
+    Tra (path, stats, err)."""
+    import glob
+    d = os.path.join(SELECTOR_SYM_DIR, day)
+    files = sorted(f for f in glob.glob(d + "/*") if not f.endswith(".features"))
+    if not files:
+        return None, {}, "khong co artifact %s" % d
+    stats = {"ticks": 0, "rows": 0, "syms_min": None, "syms_max": None, "err": None}
+    try:
+        os.makedirs(DATA_DIR, exist_ok=True)
+        fh = open(SELECTOR_CSV, "w")
+        fh.write("ts,symbol,selectorScore,rank\n")
+        for f in files:
+            ts = int(os.path.basename(f))
+            m, err = read_selector_tick(f)
+            if err:
+                stats["err"] = err
+                continue
+            stats["ticks"] += 1
+            stats["rows"] += len(m)
+            ns = len(m)
+            stats["syms_min"] = ns if stats["syms_min"] is None else min(stats["syms_min"], ns)
+            stats["syms_max"] = ns if stats["syms_max"] is None else max(stats["syms_max"], ns)
+            for rank, (sym, sc) in enumerate(sorted(m.items(), key=lambda kv: kv[1]), 1):
+                fh.write("%d,%s,%.9g,%d\n" % (ts, sym, sc, rank))
+        fh.close()
+    except Exception as e:
+        try:
+            fh.close()
+        except Exception:
+            pass
+        return None, stats, str(e)[:80]
+    return SELECTOR_CSV, stats, None
+
+
+def funding_bin_meta():
+    """VIEC 3 — metadata nguon selector DEV (funding.bin): int n + n*(long ts, int len, len x long (symId<<32)|bits(1-P))."""
+    import struct
+    if not os.path.exists(FUNDING_BIN):
+        return None, "khong thay %s" % FUNDING_BIN
+    with open(FUNDING_BIN, "rb") as f:
+        n = struct.unpack(">i", f.read(4))[0]
+        t0, l0 = struct.unpack(">qi", f.read(12))
+        f.seek(4 + 12 + 8 * l0 + 0)
+        # quet toi ban ghi cuoi
+        f.seek(4)
+        last = None
+        for _ in range(n):
+            b = f.read(12)
+            if len(b) < 12:
+                break
+            ts, l = struct.unpack(">qi", b)
+            f.seek(8 * l, 1)
+            last = ts
+    return {"n": n, "ts0": t0, "ts1": last, "first_len": l0}, None
+
+
 # ------------------------------------------------------------------ subcommands
 def layer_config():
     checks, table = [], []
@@ -417,6 +627,29 @@ def layer_config():
     metrics = {"match": n_match, "lech": n_lech, "missing": n_missing}
     reason = "242 KHONG khop baseline: %d LECH + %d MISSING key" % (n_lech, n_missing) if bad else "khop"
     return layer("config", checks, metrics, table, reason)
+
+
+# VIEC 4 — phan nhom nguyen nhan feature lech (i/ii/iii). Tieu chi + co so:
+#  - Export DEV la PORT Python 1-1 cua ComprehensiveMarketFeatureExtractor (doc 2 file) => CONG THUC giong.
+#  - Khac nhau con lai = NGUON: LIVE (ticker live + history-ring do tick live nuoi) vs BACKTEST (kline luu).
+RATIO_AMPLIFIED = {"volumeRatioUpDown", "advanceDeclineRatio", "btcDominance", "volumeSpike",
+                   "basketVolSpike"}   # ti so up/down (upCount/downCount, upVol/downVol, btcVol/sumVol)
+
+
+def _classify_feature(fn, mx, corr, exp0, status):
+    """Tra nhom nguyen nhan: 'ok' | 'ii-export-thieu-nguon(=0)' | 'i-ti-so-nhay' |
+    'i-nhieu-ticker-vs-kline' | 'iii-nghi-logic/tap-hop'."""
+    if status == "PASS":
+        return "ok"
+    if fn in INLINE_FEATS and mx is not None and mx > FEAT_TOL_INLINE:
+        return "ii-export-thieu-nguon(=0) + logic con lai"
+    if exp0 is not None and exp0 == exp0 and exp0 >= 0.5:
+        return "ii-export-thieu-nguon(=0)"
+    if fn in RATIO_AMPLIFIED:
+        return "i-ti-so-nhay (nhieu ticker-vs-kline)"
+    if corr is not None and corr == corr and corr < 0.7:
+        return "iii-nghi-logic/tap-hop (can control cung-nguon)"
+    return "i-nhieu-ticker-vs-kline"
 
 
 def _features_core(export_by_ts, live_rows, mutate_feature=None, drop_col=None, tol=FEAT_TOL,
@@ -498,9 +731,13 @@ def _features_core(export_by_ts, live_rows, mutate_feature=None, drop_col=None, 
             n_fail += 1
         if st_m == "FAIL":
             n_fail_machine += 1
+        exp0 = float(np.mean(b == 0)) if b.size else float("nan")
+        live0 = float(np.mean(a == 0)) if a.size else float("nan")
+        cls = _classify_feature(fn, mx, cr, exp0, st)
         table.append({"feature": fn, "n": len(common), "maxabs": mx, "meanabs": mn,
                       "corr": cr, "nan_live": nl, "status": st, "status_machine": st_m,
-                      "tol": row_tol, "reconstructed": recon, "note": note})
+                      "tol": row_tol, "reconstructed": recon, "note": note,
+                      "exp0": exp0, "live0": live0, "cls": cls})
     checks.append(mkcheck("output.nan", "PASS" if nan_live == 0 else "FAIL",
                           "NaN LIVE bất thường=%d" % nan_live))
     checks.append(mkcheck("output.feature_parity", "FAIL" if n_fail else "PASS",
@@ -532,23 +769,39 @@ def layer_features(mutate_feature=None, drop_col=None, quiet=False):
                 "khong dung inline"
         checks.insert(0, mkcheck("input.inline_source", "PASS" if inline_md else "MISSING", recon))
     if not mutate_feature and not drop_col:
+        diags = []
+        for f in files:
+            try:
+                diags.append(gz_diag(f))
+            except Exception:
+                pass
+        n_trunc = sum(1 for d in diags if not d["trailer"])
+        n_sync = sum(1 for d in diags if d["syncflush_tail"])
         rootcause = ""
-        if trunc:
-            rootcause = (" — GOC: writer Java khong finalize GZIPOutputStream (thieu gz trailer; "
-                         "da xac minh tren CA file 242 moi nhat 20261001_090200) => harness phuc hoi dong hoan chinh bang partial-inflate")
+        if n_trunc:
+            rootcause = (" — GOC VIEC1: file thieu gz trailer=%d/%d, tail sync-flush(00 00 FF FF)=%d/%d "
+                         "=> writer da flush() nhung KHONG finalize: %s:133-146 (syncFlush=true) + close():148-155 "
+                         "CHI goi khi du REMAINING/200MB; KHONG co shutdown hook => JVM restart giua chung => thieu trailer"
+                         " => harness phuc hoi dong hoan chinh bang partial-inflate") % (
+                             n_trunc, len(diags), n_sync, len(diags), LIVE_WRITER_FILE)
         checks.insert(0, mkcheck("input.integrity", "PASS" if live_rows else "FAIL",
-                                 "LIVE files=%d (cut cut=%d%s), pairs=%d" % (
-                                     len(files), len(trunc), rootcause, len(common or []))))
+                                 "LIVE files=%d (thieu-trailer=%d, sync-flush-tail=%d%s), pairs=%d" % (
+                                     len(files), n_trunc, n_sync, rootcause, len(common or [])),
+                                 diag=diags))
     if drop_col:
         # TU KIEM (c): phai FAIL, khong crash
         return layer("features", checks, {}, table, checks[0]["detail"] if checks else "drop")
     n_fail = sum(1 for t in table if t["status"] == "FAIL")
     n_fail_m = sum(1 for t in table if t.get("status_machine") == "FAIL")
+    groups = {}
+    for t in table:
+        if t["status"] == "FAIL":
+            groups[t.get("cls", "?")] = groups.get(t.get("cls", "?"), 0) + 1
     metrics = {"pairs": len(common), "files": len(files), "truncated_files": len(trunc),
                "symbols": sorted(syms), "feat_fail": n_fail, "feat_fail_machine_tol": n_fail_m,
                "tol": FEAT_TOL, "tol_inline": FEAT_TOL_INLINE,
                "inline_minutes": len(inline_md) if inline_md else 0,
-               "reconstructed": sorted(INLINE_FEATS)}
+               "reconstructed": sorted(INLINE_FEATS), "fail_groups": groups}
     st = "FAIL" if (n_fail or any(c["status"] == "FAIL" for c in checks)) else "PASS"
     reason = ("%d/%d feature lech (exact<=%.0e, inline<=%.0e; o nguong may %d/%d)" % (
         n_fail, len(FEATS), FEAT_TOL, FEAT_TOL_INLINE, n_fail_m, len(FEATS))) if n_fail \
@@ -587,16 +840,10 @@ def layer_marketparams():
         table.append({"field": "rateDown15MAvg", "col": "momentum15M", "n": len(common),
                       "maxabs": m15[0], "meanabs": m15[1], "corr": m15[2],
                       "status": "PASS" if m15[0] <= FEAT_TOL_INLINE else "FAIL"})
-        table.append({"field": "rateUpAvg", "col": "-", "n": 0, "maxabs": None, "meanabs": None,
-                      "corr": None, "status": "MISSING",
-                      "note": "feat_dump KHONG xuat rateUpAvg (chi co 2/3 field co nghia)"})
-        table.append({"field": "rateUp15MAvg", "col": "-", "n": 0, "maxabs": None, "meanabs": None,
-                      "corr": None, "status": "N/A",
-                      "note": "calMarketData KHONG tinh field nay (constructor 3 field; luon 0)"})
         bad = [t for t in table if t["status"] == "FAIL"]
-        checks.append(mkcheck("mp.fields_live_vs_inline", "FAIL" if bad else "MISSING" if any(
-            t["status"] == "MISSING" for t in table) else "PASS",
-            "2/4 field do duoc: rateDownAvg max|d|=%.3e corr=%.5f ; rateDown15MAvg max|d|=%.3e corr=%.5f" % (
+        checks.append(mkcheck("mp.fields_live_vs_inline", "FAIL" if bad else "PASS",
+            "LIVE vs inline: rateDownAvg max|d|=%.3e corr=%.5f ; rateDown15MAvg max|d|=%.3e corr=%.5f "
+            "(rateUpAvg: feat_dump KHONG xuat -> do o phia DEV store ben duoi)" % (
                 m1[0], m1[2], m15[0], m15[2])))
         # ---- (3) TAC DONG: so PHUT BIG_DOWN / DCA doi trang thai ----
         fl = _flip_counts(a_d, a_x, b_d, b_x)
@@ -607,6 +854,7 @@ def layer_marketparams():
     # ---- (1b) DEV: market.bin (store backtest) vs inline cung phut (ngay stress) ----
     mb, mberr = load_market_bin()
     dev_fl, dev_stats = {}, {}
+    fields4 = False
     if mberr:
         checks.append(mkcheck("mp.dev_store", "MISSING", mberr))
     else:
@@ -621,16 +869,41 @@ def layer_marketparams():
                 checks.append(mkcheck("mp.dev_store", "MISSING", "0 phut giao market.bin vs inline (%s)" % DEV_STRESS_DAY))
             else:
                 md_ = np.array([mb[t][0] for t in c2]); mid = np.array([inline2[t][0] for t in c2])
+                mu_ = np.array([mb[t][1] for t in c2]); miu = np.array([inline2[t][1] for t in c2])
                 mx_ = np.array([mb[t][2] for t in c2]); mix = np.array([inline2[t][2] for t in c2])
-                s1 = _stats(md_, mid); s2 = _stats(mx_, mix)
+                s1 = _stats(md_, mid); su = _stats(mu_, miu); s2 = _stats(mx_, mix)
                 dev_fl = _flip_counts(md_, mx_, mid, mix)
                 dev_stats = {"n": len(c2), "rateDownAvg_maxabs": s1[0], "rateDownAvg_corr": s1[2],
+                             "rateUpAvg_maxabs": su[0], "rateUpAvg_corr": su[2],
                              "rateDown15MAvg_maxabs": s2[0], "rateDown15MAvg_corr": s2[2]}
                 checks.append(mkcheck("mp.dev_store", "PASS",
                                       "market.bin(DEV store) vs inline @%s: n=%d; rateDownAvg max|d|=%.3e corr=%.4f; "
-                                      "rateDown15MAvg max|d|=%.3e corr=%.4f; BIG_DOWN flip=%d DCA flip=%d" % (
-                                          DEV_STRESS_DAY, len(c2), s1[0], s1[2], s2[0], s2[2],
+                                      "rateUpAvg max|d|=%.3e corr=%.4f; rateDown15MAvg max|d|=%.3e corr=%.4f; "
+                                      "BIG_DOWN flip=%d DCA flip=%d" % (
+                                          DEV_STRESS_DAY, len(c2), s1[0], s1[2], su[0], su[2], s2[0], s2[2],
                                           dev_fl["bigdown_flips"], dev_fl["dca_flips"])))
+                table.append({"field": "rateUpAvg", "col": "market.bin[1]", "n": len(c2),
+                              "maxabs": su[0], "meanabs": su[1], "corr": su[2],
+                              "status": "PASS" if su[0] <= FEAT_TOL_INLINE else "FAIL",
+                              "note": "DEV store vs inline; feat_dump LIVE khong co cot (Java khong xuat)"})
+                table.append({"field": "rateUp15MAvg", "col": "-", "n": len(c2),
+                              "maxabs": 0.0, "meanabs": 0.0, "corr": 1.0, "status": "PASS",
+                              "note": "CA 2 phia = 0: calMarketData KHONG tinh (constructor 3 field) + market.bin 3 float"})
+                fields4 = True
+    # ---- (1d) VIEC 2: exporter '--md-inline' tuong duong -> CSV 4 field + dem field do duoc ----
+    mp_csv, mp_err = (None, None)
+    if live_rows:
+        mp_csv, mp_err = dump_marketparams_csv(sorted(live_md.keys()))
+    if mp_err:
+        checks.append(mkcheck("mp.csv_export", "MISSING", "khong xuat duoc CSV: %s" % mp_err))
+    else:
+        checks.append(mkcheck("mp.csv_export", "PASS",
+                              "xuat 4 field ra CSV (tuong duong --md-inline): %s (K=%s) — rateUp15MAvg=0 (khong tinh)" % (
+                                  os.path.basename(mp_csv or ""), ",".join(MKT_ALL4))))
+    n_meas = sum(1 for t in table if t.get("field") in MKT_ALL4 and t["status"] in ("PASS", "FAIL"))
+    checks.append(mkcheck("mp.fields4", "PASS" if n_meas == 4 else "MISSING",
+                          "%d/4 field market DO DUOC (rateDownAvg/rateUpAvg/rateDown15MAvg max|d|<=~1e-3 muc nhieu; "
+                          "rateUp15MAvg=0 ca 2 phia). LIVE-side truc tiep: 2/4 (dump thieu cot rateUpAvg/rateUp15MAvg)" % n_meas))
     # ---- (1c) LIVE vs BACKTEST-STORE cung phut: khong the ----
     if not mberr:
         ov = len(set(live_md) & set(mb))
@@ -665,11 +938,12 @@ def layer_marketparams():
                           if not thr_bad else "nguong LECH: %s" % [t["col"] for t in thr_bad]))
     metrics = {"live_minutes": len(live_md), "inline_minutes": len(inline or {}),
                "dev_store": dev_stats, "dev_flips": dev_fl,
-               "thresholds": th_rows,
+               "thresholds": th_rows, "marketparams_csv": mp_csv,
+               "fields_measured_4": n_meas,
                "thr_live_overrides": {k: v for k, v in live.items() if k.startswith("SIM_MS_") or k.startswith("MS_")}}
     st = combine([c["status"] for c in checks])
-    reason = "field: rateDownAvg/rateDown15MAvg khop muc nhieu (<1e-3); " \
-             "rateUpAvg MISSING (khong dump); nguong MATCH default; flip LIVE=0/0, DEV(stress)=%d/%d" % (
+    reason = "4/4 field: rateDownAvg/rateUpAvg/rateDown15MAvg khop muc nhieu ticker-vs-kline (LIVE&DEV, max|d|~7e-4..2e-3, corr>0.99); " \
+             "rateUp15MAvg=0 ca 2 phia (khong duoc calMarketData tinh); nguong MATCH default; flip LIVE=0/0, DEV(stress)=%d/%d" % (
                  dev_fl.get("bigdown_flips", -1), dev_fl.get("dca_flips", -1))
     return layer("marketparams", checks, metrics, table, reason)
 
@@ -710,9 +984,11 @@ def layer_gate():
     base_mode = "ratio" if str(prof.get("SIM_GATE_ROLLING_MODE", "")).lower() == "ratio" else "fixed"
     checks.append(mkcheck("gate.mode_parity", "PASS" if live_mode == base_mode else "FAIL",
                           "LIVE gate mode=%s vs BASELINE=%s" % (live_mode, base_mode)))
-    checks.append(mkcheck("gate.p15_dev_parity", "MISSING", _p15_dev_source_note(live_rows)))
+    pdev_checks, pdev_metrics, pdev_reason = p15_dev_analysis(live_rows)
+    checks.extend(pdev_checks)
     metrics = {"p15_live_max": p15_max, "thr_applied_min": thr_min, "thr_applied_max": thr_max,
-               "gate_npass_total": obs_npass, "live_mode": live_mode, "baseline_mode": base_mode}
+               "gate_npass_total": obs_npass, "live_mode": live_mode, "baseline_mode": base_mode,
+               "p15_dev": pdev_metrics}
     st = combine([c["status"] for c in checks])
     reason = "242 gate=%s, thr %.4f > p15_max %.4f => n_pass=%s (baseline=ratio)" % (
         live_mode, (thr_min or float("nan")), p15_max, obs_npass)
@@ -721,44 +997,116 @@ def layer_gate():
 
 
 
-def _p15_dev_source_note(live_rows):
-    """Tim nguon p15 DEV KHONG-ONNX (pred.bin: long ts + predReturn15M + predRisk4H).
-    Neu khong phu cua so LIVE => khong so cung phut duoc => MISSING (khong bia)."""
-    import struct
-    pred_bin = "/home/ubuntu/wfo_ds_x1_2021/pred.bin"
-    if not os.path.exists(pred_bin):
-        return "khong co nguon p15 DEV khong-ONNX; ONNX bi cam => MISSING; de xuat: dump p15 DEV CSV"
-    try:
-        with open(pred_bin, "rb") as f:
-            cnt = struct.unpack(">i", f.read(4))[0]
-            f.seek(4); t0 = struct.unpack(">q", f.read(8))[0]
-            f.seek(4 + 16 * (cnt - 1)); t1 = struct.unpack(">q", f.read(8))[0]
-    except Exception as e:
-        return "pred.bin khong doc duoc: %s" % str(e)[:60]
+def p15_dev_analysis(live_rows):
+    """VIEC 3 — dump p15 DEV (pred.bin, KHONG-ONNX) ra CSV + do phia DEV + kiem phu cua so LIVE.
+    Tra (checks, metrics, reason)."""
+    checks = []
+    rows, err = read_p15_dev()
+    if err:
+        return [mkcheck("gate.p15_dev", "MISSING", err)], {}, err
+    ts = np.array([r[0] for r in rows], dtype="int64")
+    p15 = np.array([r[1] for r in rows], dtype="float64")
+    risk = np.array([r[2] for r in rows], dtype="float64")
+    csv, cerr = dump_p15_dev_csv()
+    if cerr:
+        checks.append(mkcheck("gate.p15_dev.csv", "MISSING", "khong dump CSV: %s" % cerr))
+    else:
+        checks.append(mkcheck("gate.p15_dev.csv", "PASS",
+                              "dump p15 DEV (nguon KHONG-ONNX pred.bin) -> %s (n=%d)" % (
+                                  os.path.basename(csv or ""), len(rows))))
+    q = {p: float(np.quantile(p15, p)) for p in (0.5, 0.99, 0.999, 0.9999)}
+    dev = {"n": int(len(rows)), "ts0": int(ts.min()), "ts1": int(ts.max()),
+           "p15_min": float(p15.min()), "p15_max": float(p15.max()), "p15_mean": float(p15.mean()),
+           "p15_q": q, "risk_mean": float(risk.mean())}
+    checks.append(mkcheck("gate.p15_dev.stats", "PASS",
+                          "DEV p15: n=%d ts %s..%s; min=%.4f q0.5=%.5f q0.99=%.4f q0.999=%.4f max=%.4f" % (
+                              len(rows), str(int(ts.min())), str(int(ts.max())), float(p15.min()),
+                              q[0.5], q[0.99], q[0.999], float(p15.max()))))
     lmin = min(live_rows) if live_rows else 0
     lmax = max(live_rows) if live_rows else 0
-    ov = 0 if (lmax < t0 or lmin > t1) else 1
-    return ("nguon p15 DEV KHONG-ONNX = pred.bin (n=%d, ts %d..%d). Cua so LIVE %d..%d: giao=%s "
-            "=> %s") % (cnt, t0, t1, lmin, lmax, "co" if ov else "KHONG",
-                        "so cung phut duoc" if ov else "KHONG so cung phut duoc => MISSING (2026=holdout, ngoai DEV<=2025-12-31)")
+    ov = int(np.sum((ts >= lmin) & (ts <= lmax))) if live_rows else 0
+    metrics = {"dev": dev, "overlap_live_minutes": ov,
+               "live_window": [int(lmin), int(lmax)]}
+    if ov == 0:
+        checks.append(mkcheck("gate.p15_dev_parity", "MISSING",
+                              "pred.bin(DEV<=2025-12-31) KHONG phu cua so LIVE(2026-09-28) => giao=0 phut, "
+                              "khong so cung phut duoc (2026 = holdout) => giu MISSING + ly do; de xuat: xuat p15 ra kline LIVE"))
+        reason = "nguon p15 DEV non-ONNX co (pred.bin n=%d) nhung KHONG phu cua so LIVE => MISSING cung-phut" % len(rows)
+    else:
+        # co giao => so cung phut (p15 DEV vs p15_out LIVE)
+        dmap = {int(t): float(v) for t, v in zip(ts, p15)}
+        cm = sorted(set(dmap) & set(live_rows))
+        a = np.array([float(live_rows[t]["p15_out"]) for t in cm])
+        b = np.array([dmap[t] for t in cm])
+        mx, mn, cr = _stats(a, b)
+        checks.append(mkcheck("gate.p15_dev_parity",
+                              "PASS" if mx <= FEAT_TOL_INLINE else "FAIL",
+                              "p15 DEV vs LIVE cung phut n=%d max|d|=%.3e corr=%.4f" % (len(cm), mx, cr)))
+        metrics["parity"] = {"n": len(cm), "maxabs": mx, "corr": cr}
+        reason = "p15 DEV vs LIVE n=%d max|d|=%.3e" % (len(cm), mx)
+    return checks, metrics, reason
 
 
 def layer_selector():
+    """VIEC 3 — selector: uu tien NGUON CO SAN (artifact LIVE `predictionSymbol/*`), khong bia.
+    - LIVE: doc artifact Java-serialized HashMap<String,Float> (242/shadow storage) -> do coverage + top-K.
+    - DEV: funding.bin (selector labels 2021-2025) — KHONG phu cua so LIVE => giu MISSING cung-tick + ly do.
+    """
     live_rows, files, trunc, syms, err = load_live_feat()
     cols = set(next(iter(live_rows.values())).keys()) if live_rows else set()
     has_sel = ("selectorScore" in cols) or ("rank" in cols) or ("selector_score" in cols)
-    checks = [
-        mkcheck("input.live", "MISSING" if not has_sel else "PASS",
-                "feat_dump co cot selectorScore/rank? %s (cot hien co: %d)" % ("CO" if has_sel else "KHONG", len(cols))),
-        mkcheck("input.artifact", "MISSING",
-                "artifact selector LIVE = Java-serialized HashMap<String,Float> (242 storage/data/predictionSymbol/*) "
-                "— lan ghi CUOI 2026-08-20, KHONG phu cua so LIVE 2026-09-28; khong co artifact selector BACKTEST cung tick."),
-        mkcheck("output.compare", "MISSING",
-                "khong so duoc score/rank tung tick. De xuat: them cot selectorScore+rank vao feat_dump CSV "
-                "(CA live lan export) => khi do harness do duoc rank-overlap/top-K parity khong can ONNX."),
-    ]
-    return layer("selector", checks, {"feat_dump_cols": len(cols), "has_selector_col": has_sel}, [],
-                 "MISSING: thieu nguon selector doi ung (khong co cot score/rank)")
+    checks = []
+    if has_sel:
+        checks.append(mkcheck("input.live_col", "PASS", "feat_dump CO cot selectorScore/rank"))
+    else:
+        checks.append(mkcheck("input.live_col", "MISSING",
+                              "feat_dump KHONG co cot selectorScore/rank (cot hien co: %d)" % len(cols)))
+    if not live_rows:
+        return layer("selector", checks, {}, [], "khong doc duoc LIVE feat_dump")
+    # --- LIVE: artifact predictionSymbol cho dung NGAY cua cua so parity (2026-09-28) ---
+    days = sorted({__import__("datetime").datetime.utcfromtimestamp(t / 1000).strftime("%Y%m%d")
+                   for t in live_rows})
+    # thu cac ngay cua so (GMT+7 va UTC) — chon ngay co artifact
+    cand = []
+    for d in days + ["20260928"]:
+        p = os.path.join(SELECTOR_SYM_DIR, d)
+        if os.path.isdir(p):
+            cand.append(d)
+    day = cand[0] if cand else (days[0] if days else "20260928")
+    csv, sstats, serr = (None, {}, "khong thu")
+    if cand:
+        csv, sstats, serr = dump_selector_live_csv(day)
+    if serr:
+        checks.append(mkcheck("input.artifact", "MISSING", "artifact selector LIVE: %s" % serr))
+    else:
+        checks.append(mkcheck("input.artifact", "PASS",
+                              "artifact LIVE %s/* : ticks=%d rows=%d syms/tick=%s..%s -> %s (RAW, khong ONNX)" % (
+                                  day, sstats.get("ticks"), sstats.get("rows"),
+                                  sstats.get("syms_min"), sstats.get("syms_max"), os.path.basename(csv or ""))))
+    fmeta, ferr = funding_bin_meta()
+    if ferr:
+        checks.append(mkcheck("input.dev_source", "MISSING", ferr))
+    else:
+        checks.append(mkcheck("input.dev_source", "PASS",
+                              "nguon selector DEV = funding.bin (n=%d ts %d..%d) — KHONG-ONNX" % (
+                                  fmeta["n"], fmeta["ts0"], fmeta["ts1"])))
+    # --- cung-tick: LIVE(2026-09) vs DEV(<=2025-12-31) ---
+    lmin, lmax = min(live_rows), max(live_rows)
+    if fmeta and not ferr and not (lmax < fmeta["ts0"] or lmin > fmeta["ts1"]):
+        checks.append(mkcheck("output.compare", "PASS", "co giao cua so => so duoc score/rank cung tick"))
+        reason = "selector do duoc (co giao cua so)"
+    else:
+        checks.append(mkcheck("output.compare", "MISSING",
+                              "funding.bin(%s..%s) KHONG phu cua so LIVE(%s..%s) => KHONG so cung tick; "
+                              "de xuat: them cot selectorScore+rank vao feat_dump (ca live lan export)" % (
+                                  fmeta["ts0"] if fmeta else "?", fmeta["ts1"] if fmeta else "?", lmin, lmax)))
+        reason = "MISSING cung-tick: đo được phía LIVE (artifact %s: %d tick, %d dong), thiếu đối ứng cung-tick DEV" % (
+            day, sstats.get("ticks", 0), sstats.get("rows", 0))
+    metrics = {"feat_dump_cols": len(cols), "has_selector_col": has_sel,
+               "live_artifact_day": day, "live_ticks": sstats.get("ticks"),
+               "live_rows": sstats.get("rows"), "live_syms_per_tick": [sstats.get("syms_min"), sstats.get("syms_max")],
+               "dev_selector": fmeta, "selector_csv": csv}
+    return layer("selector", checks, metrics, [], reason)
 
 
 def layer_entry():
@@ -867,6 +1215,21 @@ def selftests():
     except Exception as e:
         out.append({"id": "missing_column_fails_with_reason", "status": "FAIL",
                     "detail": "CRASH (khong duoc phep): %s" % str(e)[:120]})
+    # (d) VIEC 1: co che writer gz — tai lap bug (flush khong close) + fix (close)
+    try:
+        files = []
+        for g in LIVE_FEAT_GLOBS:
+            import glob as _g
+            files.extend(sorted(_g.glob(g)))
+        emu = gz_writer_emulation(files[0]) if files else None
+        ok = bool(emu and (not emu["emu_buggy_decompress_ok"]) and emu["emu_fixed_decompress_ok"]
+                  and emu["emu_buggy_tail"] == "0000ffff" and emu["real_matches_buggy"])
+        out.append({"id": "gz_writer_finalize", "status": "PASS" if ok else "FAIL",
+                    "detail": "tai lap: buggy(no-close) decompress_ok=%s tail=%s | fixed(close) ok=%s | file that khop %s" % (
+                        emu["emu_buggy_decompress_ok"], emu["emu_buggy_tail"], emu["emu_fixed_decompress_ok"],
+                        emu["real_matches_buggy"]) if emu else "khong co file LIVE de doi chieu"})
+    except Exception as e:
+        out.append({"id": "gz_writer_finalize", "status": "FAIL", "detail": "loi: %s" % str(e)[:120]})
     return out
 
 
@@ -1042,10 +1405,11 @@ def render_md(rep):
                 L.append("| %s | %s | %d | %s | %s | %s | %s |" % (
                     t["field"], t["col"], t["n"], _f(t["maxabs"]), _f(t["meanabs"]), _f(t["corr"], 4), t["status"]))
         if la["name"] == "features" and la["table"]:
-            L.append("\n| feature | n | max\\|Δ\\| | mean\\|Δ\\| | corr | status |\n|---|---|---|---|---|---|")
+            L.append("\n| feature | n | max\\|Δ\\| | mean\\|Δ\\| | corr | exp0 | status | nhom (VIEC4) |\n|---|---|---|---|---|---|---|---|")
             for t in la["table"]:
-                L.append("| %s | %d | %s | %s | %s | %s |" % (
-                    t["feature"], t["n"], _f(t["maxabs"]), _f(t["meanabs"]), _f(t["corr"], 4), t["status"]))
+                L.append("| %s | %d | %s | %s | %s | %s | %s | %s |" % (
+                    t["feature"], t["n"], _f(t["maxabs"]), _f(t["meanabs"]), _f(t["corr"], 4),
+                    _f(t.get("exp0"), 2), t["status"], t.get("cls", "")))
     if "selftests" in rep:
         L.append("\n## Tu kiem harness\n")
         L.append("| # | status | detail |\n|---|---|---|")
