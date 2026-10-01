@@ -154,6 +154,12 @@ def main():
     _mk("sm-label2b", "control pw(weight) + pn(noise) at thr=1.5%, E=10% seed42 = 2 arm",
         runs_b)
 
+    # HEDGE nhanh: chi cau hinh chinh (thr=1.5%, E=+10%) x 3 seed -> ~2h, co so som
+    runs_c = [["PA_t15_E10_S%d" % s,
+               ["--label-mode", "pa", "--label-h", "72", "--thr", "0.015",
+                "--label-e", "0.100", "--label-kind", "bin"], s] for s in seeds]
+    _mk("sm-label2c", "HEDGE P-hard pa thr=1.5% x E=10% x seed{42,7,13} = 3 arm", runs_c)
+
 
 if __name__ == "__main__":
     main()
