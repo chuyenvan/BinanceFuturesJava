@@ -379,6 +379,126 @@ def submit_patch_store(tag, *, market_ds, store_ds=STORE_DS, code_sha="head", pu
 
 
 # ============================================================================ #
+# KERNEL C — gate retrain WFO tren store da patch -> pred.bin (p15 moi, r4 giu)
+# ============================================================================ #
+# Dung CHINH hyperparam + fold cua research/pipeline/gate_feat_study/run_cycle.py
+# (XGBRegressor depth4 n150 lr0.05 sub0.8 col0.8 mw10 seed42, purge 15'). pred.bin = [count]
+# × [ts][predReturn15M][predRisk4H]; predRisk4H KHONG con model dung (AIRejectFilter bo 2026-08-08)
+# => giu r4 cua pred.bin nen, chi thay p15.
+KERNEL_C = r'''"""BD-CHAIN Kernel C — gate retrain WFO tren store da patch -> pred.bin (SINH TU harness)."""
+import glob, gzip, json, logging, os, struct, sys, time
+import numpy as np, pandas as pd, xgboost as xgb
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s", stream=sys.stdout)
+LOG = logging.getLogger("bdchain-C")
+CFG = json.loads(__CFG_JSON__)
+IN, WORK = "/kaggle/input", "/kaggle/working"
+TZ = 7 * 3600_000
+DEV_END_MS = int(pd.Timestamp("2026-01-01").value // 1e6) - TZ
+PURGE_MS = 15 * 60_000
+V3FULL = ["momentum1M", "momentum5M", "momentum15M", "momentum1H", "momentum4H", "momentum24H",
+          "momentumAcceleration", "trendStrengthETH", "trendConsistency",
+          "volatility1M", "volatility15M", "volatility1H", "volatility24H", "volatilityTermStructure",
+          "advanceDeclineRatio", "percentAboveMA20", "volumeRatioUpDown", "marketBreadthStrength",
+          "btcDominance", "rsi14", "volumeSpike", "distMA20",
+          "fundingRateRaw", "fundingRateAvg24H", "fundingRateTrend",
+          "hourOfDay", "dayOfWeek", "weekOfMonth", "monthOfYear",
+          "basketMomentum15M", "basketMomentum1H", "basketRsi14", "basketVolSpike"]
+LABEL = "label_oldbasket"
+PARAMS = dict(objective="reg:squarederror", max_depth=4, n_estimators=150, learning_rate=0.05,
+              subsample=0.8, colsample_bytree=0.8, min_child_weight=10, random_state=42, n_jobs=4)
+
+
+def f1(pat):
+    m = sorted(glob.glob(pat, recursive=True))
+    if not m:
+        LOG.error("MISSING %s", pat); sys.exit(1)
+    return m[0]
+
+
+store = f1(IN + "/**/" + CFG["store_file"])
+LOG.info("store=%s", store)
+df = pd.read_csv(store, usecols=["timestamp"] + V3FULL + [LABEL])
+df = df[df.timestamp < DEV_END_MS].reset_index(drop=True)
+LOG.info("store DEV rows=%d", len(df))
+
+base = int(pd.Timestamp("2021-04-01", tz="Asia/Ho_Chi_Minh").value // 1e6)
+folds = []
+k = 0
+while True:
+    a = int((pd.Timestamp("2021-04-01", tz="Asia/Ho_Chi_Minh") + pd.DateOffset(months=3 * k)).value // 1e6)
+    b = int((pd.Timestamp("2021-04-01", tz="Asia/Ho_Chi_Minh") + pd.DateOffset(months=3 * (k + 1))).value // 1e6)
+    if a >= DEV_END_MS:
+        break
+    folds.append((a, b, k)); k += 1
+
+parts = []
+for cutoff, oos_end, k in folds:
+    tr = df[df.timestamp < cutoff - PURGE_MS]
+    if len(tr) < 1000:
+        continue
+    m = xgb.XGBRegressor(**PARAMS)
+    m.fit(tr[V3FULL].values.astype(np.float32), tr[LABEL].values.astype(np.float32))
+    oos = df[(df.timestamp >= cutoff) & (df.timestamp < oos_end)]
+    pred = m.predict(oos[V3FULL].values.astype(np.float32)).astype(np.float64)
+    parts.append(pd.DataFrame({"timestamp": oos.timestamp.values, "pred": pred}))
+    LOG.info("fold %d OOS=%d", k, len(oos))
+out = pd.concat(parts, ignore_index=True).sort_values("timestamp").drop_duplicates("timestamp")
+out.to_csv(WORK + "/p15.csv", index=False)
+LOG.info("p15 rows=%d", len(out))
+predmap = dict(zip(out.timestamp.astype(np.int64).values, out.pred.values))
+
+# merge vao pred.bin nen (giu r4)
+pb = f1(IN + "/**/pred.bin")
+with open(pb, "rb") as f:
+    n = struct.unpack(">i", f.read(4))[0]
+    buf = f.read(n * 16)
+tsarr = np.empty(n, dtype=np.int64); r4arr = np.empty(n, dtype=np.float32); p15arr = np.empty(n, dtype=np.float32)
+for i in range(n):
+    o = i * 16
+    tsarr[i] = struct.unpack_from(">q", buf, o)[0]
+    p15arr[i] = struct.unpack_from(">f", buf, o + 8)[0]
+    r4arr[i] = struct.unpack_from(">f", buf, o + 12)[0]
+n_hit = 0
+for i in range(n):
+    v = predmap.get(int(tsarr[i]))
+    if v is not None:
+        p15arr[i] = v; n_hit += 1
+LOG.info("pred.bin merged: n=%d hit=%d (%.3f)", n, n_hit, n_hit / n)
+with open(WORK + "/pred.bin", "wb") as f:
+    f.write(struct.pack(">i", n))
+    for i in range(n):
+        f.write(struct.pack(">qfff", int(tsarr[i]), float(p15arr[i]), float(r4arr[i])))
+res = {"tag": CFG["tag"], "p15_rows": int(len(out)), "predbin_n": int(n), "hit": int(n_hit),
+       "ok": n_hit > 0}
+with open(WORK + "/result.json", "w") as f:
+    json.dump(res, f, indent=1)
+LOG.info("RESULT %s", json.dumps(res))
+LOG.info("KERNEL_C_DONE")
+sys.exit(0)
+'''
+
+
+def submit_gate_train(tag, *, store_ds, bundle_ds=BUNDLE_DS, code_sha="head", push=True) -> str:
+    ref = kernel_ref(tag)
+    folder = os.path.join(WORKDIR, slug(tag))
+    os.makedirs(folder, exist_ok=True)
+    cfg = {"tag": str(tag), "store_file": STORE_FILE, "code_sha": code_sha}
+    with open(os.path.join(folder, "run.py"), "w") as f:
+        f.write(KERNEL_C.replace("__CFG_JSON__", repr(json.dumps(cfg))))
+    meta = {"id": ref, "title": ref.split("/")[1], "code_file": "run.py",
+            "language": "python", "kernel_type": "script", "is_private": True,
+            "enable_gpu": False, "enable_internet": False,
+            "dataset_sources": [USER + "/" + store_ds, USER + "/" + bundle_ds],
+            "competition_sources": [], "kernel_sources": []}
+    with open(os.path.join(folder, "kernel-metadata.json"), "w") as f:
+        json.dump(meta, f, indent=1)
+    if push:
+        r = _api().kernels_push(folder)
+        LOG.info("push %s -> %s", ref, getattr(r, "url", r))
+    return ref
+
+
+# ============================================================================ #
 # STAGE JAR — dataset sim.jar (HEAD) + config.properties
 # ============================================================================ #
 def stage_jar_dataset(jar_path="target/binance-java-sdk-1.2.4.jar",
