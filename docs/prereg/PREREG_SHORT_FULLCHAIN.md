@@ -138,3 +138,19 @@ Cộng báo cáo §9. **NO-GO** nếu A **hoặc** B FAIL. Bắt buộc báo ph�
 | `research/analysis/short_fullchain_gate.py` | bước 2 (gate 2 hướng) |
 | `research/analysis/short_fullchain_sim.py` | bước 3 (sim 1m trailing+SL) |
 | `docs/result/RESULT_SHORT_FULLCHAIN.md` (+`.json`) | kết quả + trả lời 4 câu |
+
+---
+
+## 7. AMENDMENT A1 (2026-10-01, owner qua `sessions_send`) — commit TRƯỚC khi đo lại
+
+**Thêm dải SL LỚN** vào lưới §4.3 (giữ NGUYÊN mọi thứ khác):
+`SL ∈ {10 %, 15 %, 20 %, **30 %, 50 %, 100 %**}` × `TRAILING ∈ {3 %,5 %,8 %}` × `time-stop ∈ {24h,72h}`
+= **36 tổ hợp** (thay 18). **`SL = 100 % ⇔ KHÔNG CẮT CỨNG (no-stop)`** — chỉ thoát bằng **TRAILING**
+hoặc **time-stop**. Lý do (owner): như bên LONG, **cắt cứng có thể đang cắt mất LÃI**; cần xem short
+có "sống" hơn khi KHÔNG có SL cứng không.
+
+Bảng kết quả bước 3 phải có **cột `SL` đầy đủ (gồm 30/50/100)** × trailing × time-stop, kèm
+**net / CI95 / winrate / tail(`max_loss`) / theo năm**; ghi rõ nhãn **"SL=100 (no-stop)"**.
+
+Vẫn: 4 nhánh gate A/B/C/D; cost base 0,112 %; funding pro-rata; CI block-72h; DEV ≤ 2025-12-31;
+0 kernel; không `.java`. Luật GO §4.6 giữ nguyên.
