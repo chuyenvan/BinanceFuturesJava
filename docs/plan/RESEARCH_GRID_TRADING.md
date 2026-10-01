@@ -56,5 +56,11 @@ ca basket ngau nhien** (anti-signal) — nen "chon thoi diem" phai do bang **CI*
 ② **trend filter** (ER/MA) — tat luoi khi trend; ③ **phi maker** — giam chi phi moi chu ky.
 ⇒ Danh gia dinh luong o `RESULT_GRID_RESEARCH` (ton kho max, maxDD MTM, net khi |ret| lon vs nho).
 
-## 3. KET LUAN KHA THI (dien sau khi do)
-→ xem `docs/result/RESULT_GRID_RESEARCH.md` muc "TRA LOI".
+## 3. KET LUAN KHA THI (da do 2026-10-01)
+→ `docs/result/RESULT_GRID_RESEARCH.md`. **NO-GO/NULL**: 3 luoi trung tinh (G1 ±10%/1 % · G2 ±10%/0,5 % · G3 ±30%/1,5 %)
+× 6 coin × 6 cua so 1m DEV ⇒ gross **−1,63 %/thang** (CI chua 0), realized chu ky **+2,31 %** nhung MTM ton kho
+**−3,93 %**; sau phi maker **−1,86 %** / taker **−2,20 %**. **Phi khong phai diem chet** (chênh 0,34 pp/thang,
+turnover chi ~12×B/thang voi luoi rong); **diem chet la ton kho trong TREND** (2022-05 −20 %/thang, 2024 +9,8 %).
+Chon coin/thoi diem (ER/ADR thap, o trong dai) **co huong dung nhung khong qua CI** (`corr(|ret|,net)` sai dau ⇒ C3 FAIL).
+Thieu: orderbook de do maker-fill that; funding; chuoi lien tuc (hien 6 cua so roi rac 1 thang).
+Khong tich hop, khong tieu holdout 2026, khong doi incumbent.
