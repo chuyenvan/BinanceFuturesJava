@@ -1,0 +1,44 @@
+{
+  "task": "PARITY_242_VS_G2FLAT3",
+  "date": "2026-10-01",
+  "mode_242": "PAPER (SHADOW_NO_PUSH=true, LIVE_PROFILE=c3_shadow)",
+  "readonly": true,
+  "q1_runs_g2_flat3": false,
+  "gate": {
+    "rolling_keys_present_242": false,
+    "live_gate_rolling_isOn": false,
+    "effective_gate": "fixed thrBase=MIN_MOMENTUM_15M=0.008",
+    "gate_ratio_log_lines_242": 0,
+    "thr_applied_pct": [3.03, 4.51],
+    "p15_live_max_pct_24h": 1.67,
+    "p15_dev_max_pct": 12.261,
+    "divergence_D": 11.26
+  },
+  "exit": {
+    "profile_g2_flat3": "FLAT3 (TS_GIVEBACK_RATIO=1.0, MAX_GAP=0.03, WEAK=0.03)",
+    "actual_242": "T0 default (0.5, 0.08, 0.03)"
+  },
+  "key_mismatches": [
+    "SIM_GATE_ROLLING_MODE/DAYS/PCT absent (SIM+LIVE)",
+    "SIM_GATE_DYN_SCALE 1.70 != 1.55",
+    "TS_GIVEBACK_RATIO absent -> default 0.5 vs 1.0",
+    "SIM_TS_MAX_GAP absent -> default 0.08 vs 0.03",
+    "SIM_RATE_PROFIT_STOP_MARKET 0.05 != 0.07",
+    "DCA_GRID_WEIGHTS 1,0,0,0 != 1,1,1,1",
+    "SIM_F_BASE absent -> default 0.03 vs 0.015",
+    "CONC_CAP_PERCOIN_* absent -> disabled",
+    "SIM_RATE_FEE/SIM_SLIPPAGE_RATE absent -> default",
+    "SIM_FIX_B1/B2/B3 absent"
+  ],
+  "parity_tiers": {
+    "feature": {"verdict": "match", "momentum_corr_1M": 0.9949, "momentum_corr_15M": 0.9995},
+    "gate_same_minute": {"live_p15_pct": 0.9426, "dev_p15_pct": 0.9484, "delta_pp": 0.0058},
+    "selector": {"verdict": "approx_match_c3_shadow_net015", "note": "FundingClf path would differ +0.25 mean"},
+    "entry": {"live_n_pass": 0, "sim_r4_n_pass": 1819, "sim_g2_n": 2509, "verdict": "diverge"},
+    "exit": {"verdict": "not_measurable_no_entries_since_20260912"}
+  },
+  "explains_n_pass_zero": true,
+  "mechanism": "missing rolling keys -> fixed absolute threshold (3.03-4.51%) above live p15 p100 (1.67%); G2 rolling quantile on r=p15/(factor*gs) is scale-invariant and would self-calibrate to live p15 scale",
+  "recommendation": "add LIVE_GATE_ROLLING_MODE=ratio/PCT=0.999950829/DAYS=90 + TS_GIVEBACK_RATIO=1.0 + SIM_TS_MAX_GAP(_WEAK)=0.03; align SIM_GATE_DYN_SCALE 1.55, RATE_PROFIT_STOP_MARKET 0.07; no rebuild needed (jar c389b4be already contains LiveGateRollingRatio)",
+  "jar_242_sha256": "c389b4becfe07197d61dbd4b1265405ac4be9e167e835d572c3120d8abca1e15"
+}
