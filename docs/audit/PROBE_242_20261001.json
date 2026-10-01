@@ -1,0 +1,67 @@
+{
+  "probe": "PROBE_242_20261001",
+  "date": "2026-10-01",
+  "host": "3stech.vn (103.157.218.242)",
+  "app": "/home/chuyennd/java/v_t_m",
+  "mode": "PAPER",
+  "read_only": true,
+  "changes_on_242": [],
+  "gate_24h": {
+    "gate_lines_total": 2794,
+    "n_pass_values": {"0": 2794},
+    "n_pass_zero_pct": 100.0,
+    "n_cand_values": {"8": 1753, "16": 1041},
+    "first_gate_line": "12/09/2026 08:15:53 topk=8 thr=[0.01846..0.02300] n_cand=8 n_pass=0",
+    "last_gate_line": "01/10/2026 10:23:06 scale=1.7000 topk=16 thr=[0.03441..0.04473] n_cand=16 n_pass=0"
+  },
+  "p15_live_24h": {
+    "source": "logs/full.log lines 'Predict: {\"return15M\":...}' (last 1500 ticks)",
+    "n": 1500,
+    "min_pct": 0.460,
+    "mean_pct": 0.858,
+    "max_pct": 1.668
+  },
+  "thr_applied": {"min_pct": 3.03, "max_pct": 4.51, "scale": 1.70, "base": 0.008},
+  "gate_formula": "PASS <=> !(predReturn15M < thr); thr = thrBase*max(DYN_MIN,(symbolPred/SCORE_BASE)*DYN_MULT)*GATE_DYN_SCALE",
+  "counterfactual_scale_1_0": {"thr_min_pct": 1.99, "thr_max_pct": 2.61, "still_above_live_max_pct": 1.668, "still_closed": true},
+  "conclusion_n_pass": "KNOWN-EXPECTED (gate closed by calibration); NOT a new bug",
+  "known_refs": ["docs/result/RESULT_GATE_ROOTCAUSE.md", "docs/result/RESULT_P15_SOURCE.md"],
+  "restart_4h_source": {
+    "kind": "JAVA_CODE",
+    "file": "src/main/java/com/binance/chuyennd/trading/BinanceOrderTradingManager.java",
+    "line": 105,
+    "code": "Thread.sleep(Utils.TIME_HOUR * 4);",
+    "reset_call_line": 110,
+    "reset_impl": "src/main/java/com/binance/chuyennd/utils/Utils.java:543 (ProcessBuilder re-exec + System.exit(0))",
+    "log_proof": "c.b.c.u.Utils: Restart: Reset by Schedule (x260 in full.log)",
+    "log_proof_lines": ["30/09 08:50","30/09 12:51","30/09 16:51","30/09 21:01","01/10 01:01","01/10 05:02","01/10 09:02"],
+    "cron_present": false,
+    "systemd_timer_present": false,
+    "script_watchdog_present": false,
+    "ingestor_restart_hours": 12
+  },
+  "shadow_c3": {
+    "writes_paper": true,
+    "proof": "shadow_c3/archive_flatgate_20260912_060749/ledger.csv = 52 rows with pnl/TRAILING_STOP",
+    "current_ledger": "header-only, mtime 13/09 08:35",
+    "current_open_positions": "header-only",
+    "last_shadow_open_close": "12/09/2026 09:59",
+    "init_log_is_reload_not_wipe": true,
+    "init_impl": "ShadowBookC3.loadState() lines 155-158; tested by ShadowBookC3Test/LegacyIsolationTest",
+    "init_count_full_log": 155
+  },
+  "fix_proposal": {
+    "applied": false,
+    "reason": "source is Java code -> hard constraint says propose only (not modify)",
+    "file": "src/main/java/com/binance/chuyennd/trading/BinanceOrderTradingManager.java",
+    "line": 105,
+    "change": "Utils.TIME_HOUR * 4  ->  Utils.TIME_HOUR * 12",
+    "requires": "rebuild jar + deploy (out of scope, read-only probe)"
+  },
+  "risks": [
+    "gate closed permanently => no paper trades at all on 242; C3 metrics meaningless since 12/09 08:15",
+    "lowering SIM_GATE_DYN_SCALE to 1.0 does NOT open gate (thr ~2.0% > live max 1.67%)",
+    "any conclusion drawn from C3 numbers since 12/09 is empty, not 'zero performance'",
+    "restart 4h is state-safe (reload); propose 12h to reduce interruption windows"
+  ]
+}
