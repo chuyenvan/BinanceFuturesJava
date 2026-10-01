@@ -192,6 +192,35 @@ if _MDS:
         if not os.path.lexists(_dst):
             os.symlink(_src, _dst)
     shutil.copy(_mc[0], os.path.join(_ov, "market.bin"))
+    # [BD-CHAIN] market_align: neu bat, dung TS-SET cua market.bin bundle lam chuan va chi lay
+    #   GIA TRI tu market.bin moi (f). Ly do: market.bin bundle la set "live" (co ~2,8% phut
+    #   thieu) con Kernel A sinh tu ticker day du hon -> neu thay nguyen file thi so phut lech
+    #   lam ban ket qua. Align giu CO DINH tap phut (data availability), chi doi GIA TRI rate.
+    if CFG.get("market_align"):
+        import struct
+        def _rd(p):
+            with open(p, "rb") as f:
+                n = struct.unpack(">i", f.read(4))[0]
+                b = f.read(n * 20)
+            d = {}
+            for i in range(n):
+                o = i * 20
+                d[struct.unpack_from(">q", b, o)[0]] = b[o + 8:o + 20]
+            return d
+        ref = _rd(os.path.join(DS, "market.bin"))
+        new = _rd(_mc[0])
+        ts = sorted(ref.keys())
+        with open(os.path.join(_ov, "market.bin"), "wb") as f:
+            f.write(struct.pack(">i", len(ts)))
+            nsw = 0
+            for t in ts:
+                v = new.get(t)
+                if v is not None:
+                    nsw += 1
+                else:
+                    v = ref[t]
+                f.write(struct.pack(">q", t)); f.write(v)
+        LOG.info("market_align=1: ts=ref (%d), gia tri f thay %d", len(ts), nsw)
     _h = _h2.md5()
     with open(os.path.join(_ov, "market.bin"), "rb") as _f:
         for _b in iter(lambda: _f.read(1 << 20), b""):
@@ -342,7 +371,7 @@ sys.exit(0)
 
 
 def submit(tag, profile, overrides=None, *, bins_ds=None, bundle_ds=None, extra_ds=None,
-           jar_ds=None, market_ds=None, code_sha="head", extra_env=None,
+           jar_ds=None, market_ds=None, market_align=False, code_sha="head", extra_env=None,
            sim_end_date=DEFAULT_SIM_END, ticker_min_days=TICKER_MIN_DAYS,
            xmx=DEFAULT_XMX, timeout_s=DEFAULT_TIMEOUT_S, enable_internet=True,
            push=True) -> str:
@@ -365,7 +394,7 @@ def submit(tag, profile, overrides=None, *, bins_ds=None, bundle_ds=None, extra_
     cfg = {"tag": str(tag), "profile": profile, "overrides": dict(overrides or {}),
            "sim_end_date": sim_end_date, "xmx": xmx, "timeout_s": timeout_s,
            "code_sha": code_sha, "bins_ds": bins_ds or "", "jar_ds": jar_ds or "",
-           "market_ds": market_ds or "",
+           "market_ds": market_ds or "", "market_align": bool(market_align),
            "extra_env": {str(k): str(v) for k, v in (extra_env or {}).items()},
            "ticker_min_days": int(ticker_min_days)}
     code = KERNEL_TEMPLATE.replace("__CFG_JSON__", repr(json.dumps(cfg)))
