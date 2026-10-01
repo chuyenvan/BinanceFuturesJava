@@ -1,0 +1,79 @@
+{
+  "task": "BD-CHAIN 2 (verify IC+50% + full chain for rateDown15MAvg fraction f)",
+  "date": "2026-10-01",
+  "branch": "module",
+  "mode": "0-SIM THUAN PYTHON (NHIEM VU A); KHONG Java/sim/xgboost; KHONG cham 2026",
+  "dev_end": "2025-12-31",
+  "status": "A_NULL__B_NOT_RUN",
+  "commits": ["PENDING"],
+  "source_check_ic_plus50": {
+    "verdict": "KHONG CO NGUON",
+    "scanned": ["docs/**/*.md", "docs/prereg/*", "research/analysis/out/*.json", "git log --all (1572 commits)"],
+    "no_source_for_rateDown15MAvg_fraction_ic": true,
+    "misattribution_source": {
+      "file": "docs/result/RESULT_SHORT_LABEL2.md:62",
+      "commit": "f6a5cba2",
+      "claim": "rank-IC 0.0519 -> 0.0778..0.0824 (tang ~50-59%)",
+      "why_different": "la NHAN path-aware cua model SHORT tren 45 feature; KHONG lien quan rateDown15MAvg-theo-f; chinh no ket luan NO-GO/NULL"
+    },
+    "fictitious_commit_60b7c995": "KHONG TON TAI (git cat-file -t: Not a valid object)"
+  },
+  "ic_measurement": {
+    "definition": "rank-IC (Spearman) theo THOI GIAN, de-overlap 15m (ts%900000==0); signal = rateDown15MAvg la scalar market-level => IC cross-section suy bien",
+    "ci": {"method": "block-72h bootstrap", "nrep": 2000, "seed": 20260905, "inflate": 1.21},
+    "arms_rank_ic": {
+      "gate_label_oldbasket": {"n": 175189, "f0_regen": -0.43452, "f05": -0.35998, "f10": -0.32713, "f0_store_live": -0.41048},
+      "retEnd_72h_EW": {"n": 166410, "f0": -0.05253, "f05": -0.07245, "f10": -0.06848},
+      "pathq_72h_EW": {"n": 166419, "f0": -0.07546, "f05": -0.08841, "f10": -0.07762}
+    },
+    "delta_vs_f0_pct_absIC": {
+      "gate_label_oldbasket": {"f05": -17.1, "f10": -24.7, "note": "GIAM, CI KHONG chong lan => that"},
+      "retEnd_72h_EW": {"f05": 37.9, "f10": 30.4, "note": "CI chong lan nang => khong phan biet"},
+      "pathq_72h_EW": {"f05": 17.2, "f10": 2.9, "note": "CI chong lan nang"}
+    },
+    "ci_inflated": {
+      "gate_label_oldbasket": {
+        "f0": [-0.46474, -0.40609], "f05": [-0.38461, -0.33644], "f10": [-0.35084, -0.30460],
+        "contains_zero": {"f0": false, "f05": false, "f10": false}
+      },
+      "retEnd_72h_EW": {
+        "f0": [-0.09633, -0.00877], "f05": [-0.11270, -0.03261], "f10": [-0.10635, -0.03218],
+        "contains_zero": {"f0": false, "f05": false, "f10": false},
+        "overlap": "manh"
+      },
+      "pathq_72h_EW": {
+        "f0": [-0.11604, -0.03150], "f05": [-0.12770, -0.04926], "f10": [-0.11515, -0.04138],
+        "contains_zero": {"f0": false, "f05": false, "f10": false},
+        "overlap": "manh"
+      }
+    },
+    "by_year_gate_label_absIC": {
+      "2021": {"f0": 0.2484, "f05": 0.2647, "f10": 0.2490},
+      "2022": {"f0": 0.2947, "f05": 0.3141, "f10": 0.2976},
+      "2023": {"f0": 0.2836, "f05": 0.2908, "f10": 0.2637},
+      "2024": {"f0": 0.2583, "f05": 0.2447, "f10": 0.2219},
+      "2025": {"f0": 0.3653, "f05": 0.2531, "f10": 0.2052}
+    },
+    "by_year_retEnd_72h": {
+      "2021": {"f0": -0.0776, "f05": -0.0833, "f10": -0.0787},
+      "2022": {"f0": -0.0260, "f05": -0.0254, "f10": -0.0271},
+      "2023": {"f0": -0.0552, "f05": -0.0528, "f10": -0.0554},
+      "2024": {"f0": -0.0701, "f05": -0.0662, "f10": -0.0603},
+      "2025": {"f0": -0.0769, "f05": -0.0492, "f10": -0.0398}
+    }
+  },
+  "task_A_verdict": {
+    "ic_increased_50pct": false,
+    "detail": "Nhan GATE: |IC| GIAM 17-25% (ngoai CI). Nhan 72h: |IC| tang 3-38% nhung CI chong lan (khong phan biet). Khong nguon nao noi +50%.",
+    "A": "NULL"
+  },
+  "task_B": {
+    "status": "NOT_RUN",
+    "reason": "luat task: A=NULL => DUNG nhiem vu B (tiet kiem vong Kaggle). Kernel C van CODE_READY_NOT_RUN; Kernel D chua viet.",
+    "kernels_launched": 0,
+    "f_x_metrics_table": null,
+    "f_passing_4tiers": null
+  },
+  "verdict": {"decision": "NO-GO", "f_kept": 0.0, "note": "giu f=0 (N=100); khong f nao duoc de xuat"},
+  "not_touched": ["242", "ONNX", "LIVE", "2026", "duong SELL", "file do-dang job khac (short_pathexit_sim.py, RESULT_SHORT_PATHEXIT.*)"]
+}
