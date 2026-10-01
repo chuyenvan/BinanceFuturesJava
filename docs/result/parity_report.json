@@ -1,0 +1,905 @@
+{
+ "exit_code": 2,
+ "feat_tol": 1e-08,
+ "harness": "research/parity/parity_check.py",
+ "inputs": [
+  {
+   "bytes": 5307,
+   "label": "baseline_profile",
+   "md5": "c6d4ef57ecee25c663d2d396ac574c30",
+   "path": "/home/ubuntu/src/BinanceFuturesJava/profiles/g2_flat3.properties"
+  },
+  {
+   "bytes": 1623,
+   "label": "live_cfg_snapshot",
+   "md5": "c3be2af63df2f55792699b149b70a984",
+   "path": "/home/ubuntu/src/BinanceFuturesJava/research/parity/data/live_242_config.snapshot"
+  },
+  {
+   "bytes": 346,
+   "label": "live_log_summary",
+   "md5": "b0405433d6bf59c777802fec9337f390",
+   "path": "/home/ubuntu/src/BinanceFuturesJava/research/parity/data/live_242_log_summary.json"
+  },
+  {
+   "bytes": 14610639,
+   "label": "dev_export",
+   "md5": "f8cb50f79d5f4098192af6e55e42e3fb",
+   "path": "/home/ubuntu/claudedata/devexport_202609/devexport_20260701_20260928_FULL.csv.gz"
+  }
+ ],
+ "layers": [
+  {
+   "checks": [
+    {
+     "detail": "profile 31 key",
+     "id": "input.baseline",
+     "status": "PASS"
+    },
+    {
+     "detail": "snapshot 242 52 key non-secret",
+     "id": "input.live",
+     "status": "PASS"
+    },
+    {
+     "detail": "MATCH=5 LECH=4 MISSING=18 (khong tinh SKIP)",
+     "id": "config.key_parity",
+     "mismatches": [
+      {
+       "key": "SELECTOR_ONLY_ENTRY",
+       "live": "(unset)",
+       "profile": "0",
+       "verdict": "MISSING"
+      },
+      {
+       "key": "SIM_GATE_ROLLING_MODE",
+       "live": "(unset)",
+       "profile": "ratio",
+       "verdict": "MISSING"
+      },
+      {
+       "key": "SIM_GATE_ROLLING_DAYS",
+       "live": "(unset)",
+       "profile": "90",
+       "verdict": "MISSING"
+      },
+      {
+       "key": "SIM_GATE_ROLLING_PCT",
+       "live": "(unset)",
+       "profile": "0.999950829",
+       "verdict": "MISSING"
+      },
+      {
+       "key": "SIM_GATE_DYN_SCALE",
+       "live": "1.70",
+       "profile": "1.55",
+       "verdict": "LECH"
+      },
+      {
+       "key": "SIM_RATE_PROFIT_STOP_MARKET",
+       "live": "0.05",
+       "profile": "0.07",
+       "verdict": "LECH"
+      },
+      {
+       "key": "TS_GIVEBACK_RATIO",
+       "live": "(unset; default=0.5)",
+       "profile": "1.0",
+       "verdict": "MISSING"
+      },
+      {
+       "key": "SIM_TS_MAX_GAP",
+       "live": "(unset; default=0.08)",
+       "profile": "0.03",
+       "verdict": "MISSING"
+      },
+      {
+       "key": "SIM_TS_GIVEBACK",
+       "live": "(unset)",
+       "profile": "1",
+       "verdict": "MISSING"
+      },
+      {
+       "key": "SIM_LOSER_TIME_STOP_HOURS",
+       "live": "(unset)",
+       "profile": "168",
+       "verdict": "MISSING"
+      },
+      {
+       "key": "DCA_GRID_SCALE",
+       "live": "(unset)",
+       "profile": "6.0",
+       "verdict": "MISSING"
+      },
+      {
+       "key": "DCA_GRID_WEIGHTS",
+       "live": "1,0,0,0",
+       "profile": "1,1,1,1",
+       "verdict": "LECH"
+      },
+      {
+       "key": "SIM_F_BASE",
+       "live": "(unset; default=0.03)",
+       "profile": "0.015",
+       "verdict": "MISSING"
+      },
+      {
+       "key": "CAPITAL_START",
+       "live": "14000",
+       "profile": "35000",
+       "verdict": "LECH"
+      },
+      {
+       "key": "SIM_RATE_FEE",
+       "live": "(unset; default=0.002)",
+       "profile": "0.000982",
+       "verdict": "MISSING"
+      },
+      {
+       "key": "SIM_SLIPPAGE_RATE",
+       "live": "(unset; default=0.003)",
+       "profile": "0.000067",
+       "verdict": "MISSING"
+      },
+      {
+       "key": "SIM_FIX_B1",
+       "live": "(unset)",
+       "profile": "true",
+       "verdict": "MISSING"
+      },
+      {
+       "key": "SIM_FIX_B2",
+       "live": "(unset)",
+       "profile": "true",
+       "verdict": "MISSING"
+      },
+      {
+       "key": "SIM_FIX_B3",
+       "live": "(unset)",
+       "profile": "true",
+       "verdict": "MISSING"
+      },
+      {
+       "key": "SIM_BREAKER_MODE",
+       "live": "(unset)",
+       "profile": "OFF",
+       "verdict": "MISSING"
+      },
+      {
+       "key": "CONC_CAP_PERCOIN_ENABLED",
+       "live": "(unset; default=False)",
+       "profile": "true",
+       "verdict": "MISSING"
+      },
+      {
+       "key": "CONC_CAP_PERCOIN_PCT",
+       "live": "(unset)",
+       "profile": "0.15",
+       "verdict": "MISSING"
+      }
+     ],
+     "status": "FAIL"
+    }
+   ],
+   "metrics": {
+    "lech": 4,
+    "match": 5,
+    "missing": 18
+   },
+   "name": "config",
+   "reason": "242 KHONG khop baseline: 4 LECH + 18 MISSING key",
+   "status": "FAIL",
+   "table": [
+    {
+     "key": "SELECTOR_RANK_TOPK",
+     "live": "16",
+     "live_key": "SELECTOR_RANK_TOPK",
+     "note": "selector top-K",
+     "profile": "16",
+     "verdict": "MATCH"
+    },
+    {
+     "key": "SELECTOR_ONLY_ENTRY",
+     "live": "(unset)",
+     "live_key": "-",
+     "note": "sleeve gate/market",
+     "profile": "0",
+     "verdict": "MISSING"
+    },
+    {
+     "key": "SIM_MIN_MOMENTUM_15M",
+     "live": "0.008",
+     "live_key": "SIM_MIN_MOMENTUM_15M",
+     "note": "gate base",
+     "profile": "0.008",
+     "verdict": "MATCH"
+    },
+    {
+     "key": "SIM_GATE_ROLLING_MODE",
+     "live": "(unset)",
+     "live_key": "-",
+     "note": "G2 gate rolling",
+     "profile": "ratio",
+     "verdict": "MISSING"
+    },
+    {
+     "key": "SIM_GATE_ROLLING_DAYS",
+     "live": "(unset)",
+     "live_key": "-",
+     "note": "G2 gate rolling",
+     "profile": "90",
+     "verdict": "MISSING"
+    },
+    {
+     "key": "SIM_GATE_ROLLING_PCT",
+     "live": "(unset)",
+     "live_key": "-",
+     "note": "G2 gate rolling",
+     "profile": "0.999950829",
+     "verdict": "MISSING"
+    },
+    {
+     "key": "SIM_GATE_DYN_SCALE",
+     "live": "1.70",
+     "live_key": "SIM_GATE_DYN_SCALE",
+     "note": "gate scale",
+     "profile": "1.55",
+     "verdict": "LECH"
+    },
+    {
+     "key": "SIM_RATE_PROFIT_STOP_MARKET",
+     "live": "0.05",
+     "live_key": "SIM_RATE_PROFIT_STOP_MARKET",
+     "note": "exit TP arm",
+     "profile": "0.07",
+     "verdict": "LECH"
+    },
+    {
+     "key": "TS_GIVEBACK_RATIO",
+     "live": "(unset; default=0.5)",
+     "live_key": "-",
+     "note": "FLAT3=1.0",
+     "profile": "1.0",
+     "verdict": "MISSING"
+    },
+    {
+     "key": "SIM_TS_MAX_GAP",
+     "live": "(unset; default=0.08)",
+     "live_key": "-",
+     "note": "FLAT3=0.03",
+     "profile": "0.03",
+     "verdict": "MISSING"
+    },
+    {
+     "key": "SIM_TS_MAX_GAP_WEAK",
+     "live": "(unset; default=0.03)",
+     "live_key": "-",
+     "note": "FLAT3=0.03",
+     "profile": "0.03",
+     "verdict": "MATCH-DEFAULT"
+    },
+    {
+     "key": "SIM_TS_GIVEBACK",
+     "live": "(unset)",
+     "live_key": "-",
+     "note": "exit arm on",
+     "profile": "1",
+     "verdict": "MISSING"
+    },
+    {
+     "key": "SIM_LOSER_TIME_STOP_HOURS",
+     "live": "(unset)",
+     "live_key": "-",
+     "note": "exit time stop",
+     "profile": "168",
+     "verdict": "MISSING"
+    },
+    {
+     "key": "DCA_GRID_SCALE",
+     "live": "(unset)",
+     "live_key": "-",
+     "note": "sizing",
+     "profile": "6.0",
+     "verdict": "MISSING"
+    },
+    {
+     "key": "DCA_GRID_WEIGHTS",
+     "live": "1,0,0,0",
+     "live_key": "DCA_GRID_WEIGHTS",
+     "note": "KEEPLEG0 1,1,1,1",
+     "profile": "1,1,1,1",
+     "verdict": "LECH"
+    },
+    {
+     "key": "TIER_FLAT",
+     "live": "1",
+     "live_key": "TIER_FLAT",
+     "note": "sizing",
+     "profile": "1",
+     "verdict": "MATCH"
+    },
+    {
+     "key": "SIM_F_BASE",
+     "live": "(unset; default=0.03)",
+     "live_key": "-",
+     "note": "size x0.5 khi=0.015",
+     "profile": "0.015",
+     "verdict": "MISSING"
+    },
+    {
+     "key": "CAPITAL_START",
+     "live": "14000",
+     "live_key": "CAPITAL_START",
+     "note": "budget goc",
+     "profile": "35000",
+     "verdict": "LECH"
+    },
+    {
+     "key": "SIM_RATE_FEE",
+     "live": "(unset; default=0.002)",
+     "live_key": "-",
+     "note": "phi base",
+     "profile": "0.000982",
+     "verdict": "MISSING"
+    },
+    {
+     "key": "SIM_SLIPPAGE_RATE",
+     "live": "(unset; default=0.003)",
+     "live_key": "-",
+     "note": "phi base",
+     "profile": "0.000067",
+     "verdict": "MISSING"
+    },
+    {
+     "key": "SIM_FIX_B1",
+     "live": "(unset)",
+     "live_key": "-",
+     "note": "bugfix",
+     "profile": "true",
+     "verdict": "MISSING"
+    },
+    {
+     "key": "SIM_FIX_B2",
+     "live": "(unset)",
+     "live_key": "-",
+     "note": "bugfix",
+     "profile": "true",
+     "verdict": "MISSING"
+    },
+    {
+     "key": "SIM_FIX_B3",
+     "live": "(unset)",
+     "live_key": "-",
+     "note": "bugfix",
+     "profile": "true",
+     "verdict": "MISSING"
+    },
+    {
+     "key": "SIM_BREAKER_MODE",
+     "live": "(unset)",
+     "live_key": "-",
+     "note": "breaker",
+     "profile": "OFF",
+     "verdict": "MISSING"
+    },
+    {
+     "key": "CONC_CAP_PERCOIN_ENABLED",
+     "live": "(unset; default=False)",
+     "live_key": "-",
+     "note": "risk cap",
+     "profile": "true",
+     "verdict": "MISSING"
+    },
+    {
+     "key": "CONC_CAP_PERCOIN_PCT",
+     "live": "(unset)",
+     "live_key": "-",
+     "note": "risk cap",
+     "profile": "0.15",
+     "verdict": "MISSING"
+    },
+    {
+     "key": "SIM_ENTRY_SAMPLE_MIN",
+     "live": "1",
+     "live_key": "LIVE_ENTRY_GRID_MIN",
+     "note": "nhip vao",
+     "profile": "1",
+     "verdict": "MATCH"
+    }
+   ]
+  },
+  {
+   "checks": [
+    {
+     "detail": "LIVE files=6 (cut cut=6, da phuc hoi partial), pairs=385",
+     "id": "input.integrity",
+     "status": "PASS"
+    },
+    {
+     "detail": "385 cap (ts) giao",
+     "id": "input.pair",
+     "status": "PASS"
+    },
+    {
+     "detail": "NaN LIVE b\u1ea5t th\u01b0\u1eddng=0",
+     "id": "output.nan",
+     "status": "PASS"
+    },
+    {
+     "detail": "29/33 feature vuot nguong max|delta|<=1e-08",
+     "id": "output.feature_parity",
+     "status": "FAIL"
+    }
+   ],
+   "metrics": {
+    "feat_fail": 29,
+    "files": 6,
+    "pairs": 385,
+    "symbols": [
+     "BTCUSDT"
+    ],
+    "tol": 1e-08,
+    "truncated_files": 6
+   },
+   "name": "features",
+   "reason": "29/33 feature lech (max|delta|>1e-08)",
+   "status": "FAIL",
+   "table": [
+    {
+     "corr": NaN,
+     "feature": "momentum1M",
+     "maxabs": 0.00913885329,
+     "meanabs": 0.0021246516752181817,
+     "n": 385,
+     "nan_live": 0,
+     "note": "export thieu nguon (dev=0) \u2014 can tai tao inline",
+     "status": "FAIL"
+    },
+    {
+     "corr": 0.9311191420403977,
+     "feature": "momentum5M",
+     "maxabs": 0.0021972831899999996,
+     "meanabs": 0.00016829802382132465,
+     "n": 385,
+     "nan_live": 0,
+     "note": "",
+     "status": "FAIL"
+    },
+    {
+     "corr": NaN,
+     "feature": "momentum15M",
+     "maxabs": 0.0248868018,
+     "meanabs": 0.012715135048675325,
+     "n": 385,
+     "nan_live": 0,
+     "note": "export thieu nguon (dev=0) \u2014 can tai tao inline",
+     "status": "FAIL"
+    },
+    {
+     "corr": 0.9966631381702887,
+     "feature": "momentum1H",
+     "maxabs": 0.0014724076799999997,
+     "meanabs": 8.774255786903894e-05,
+     "n": 385,
+     "nan_live": 0,
+     "note": "",
+     "status": "FAIL"
+    },
+    {
+     "corr": 0.9997613497881039,
+     "feature": "momentum4H",
+     "maxabs": 0.0006870442000000004,
+     "meanabs": 2.7918201844155836e-05,
+     "n": 385,
+     "nan_live": 0,
+     "note": "",
+     "status": "FAIL"
+    },
+    {
+     "corr": 0.999786071198949,
+     "feature": "momentum24H",
+     "maxabs": 0.0006809550999999983,
+     "meanabs": 2.77288867532468e-05,
+     "n": 385,
+     "nan_live": 0,
+     "note": "",
+     "status": "FAIL"
+    },
+    {
+     "corr": -0.2391869437824503,
+     "feature": "momentumAcceleration",
+     "maxabs": 0.0248868041,
+     "meanabs": 0.012699029207402597,
+     "n": 385,
+     "nan_live": 0,
+     "note": "export thieu nguon (dev=0) \u2014 can tai tao inline",
+     "status": "FAIL"
+    },
+    {
+     "corr": 0.997520790408775,
+     "feature": "trendStrengthETH",
+     "maxabs": 0.0016741298130000001,
+     "meanabs": 9.886932923381816e-05,
+     "n": 385,
+     "nan_live": 0,
+     "note": "",
+     "status": "FAIL"
+    },
+    {
+     "corr": 0.8560076144450692,
+     "feature": "trendConsistency",
+     "maxabs": 2.0,
+     "meanabs": 0.13506493506493505,
+     "n": 385,
+     "nan_live": 0,
+     "note": "",
+     "status": "FAIL"
+    },
+    {
+     "corr": 0.519951962047742,
+     "feature": "volatility1M",
+     "maxabs": 0.0020044677699999998,
+     "meanabs": 0.0001883040942978961,
+     "n": 385,
+     "nan_live": 0,
+     "note": "",
+     "status": "FAIL"
+    },
+    {
+     "corr": 0.5457428597031877,
+     "feature": "volatility15M",
+     "maxabs": 0.0010245505099999999,
+     "meanabs": 0.0001176660960987013,
+     "n": 385,
+     "nan_live": 0,
+     "note": "",
+     "status": "FAIL"
+    },
+    {
+     "corr": 0.47430525256999656,
+     "feature": "volatility1H",
+     "maxabs": 0.000480602123,
+     "meanabs": 9.01457890909091e-05,
+     "n": 385,
+     "nan_live": 0,
+     "note": "",
+     "status": "FAIL"
+    },
+    {
+     "corr": 0.9861039446094925,
+     "feature": "volatility24H",
+     "maxabs": 1.2474775999999992e-05,
+     "meanabs": 3.401949051948051e-06,
+     "n": 385,
+     "nan_live": 0,
+     "note": "",
+     "status": "FAIL"
+    },
+    {
+     "corr": 0.5300450745429073,
+     "feature": "volatilityTermStructure",
+     "maxabs": 1.3001790400000002,
+     "meanabs": 0.23802191888051952,
+     "n": 385,
+     "nan_live": 0,
+     "note": "",
+     "status": "FAIL"
+    },
+    {
+     "corr": 0.9839090241824462,
+     "feature": "advanceDeclineRatio",
+     "maxabs": 6.637426809999999,
+     "meanabs": 0.20373874180805196,
+     "n": 385,
+     "nan_live": 0,
+     "note": "",
+     "status": "FAIL"
+    },
+    {
+     "corr": 0.9029183134968456,
+     "feature": "percentAboveMA20",
+     "maxabs": 0.6456486640000001,
+     "meanabs": 0.05809470889064935,
+     "n": 385,
+     "nan_live": 0,
+     "note": "",
+     "status": "FAIL"
+    },
+    {
+     "corr": 0.635678420298368,
+     "feature": "volumeRatioUpDown",
+     "maxabs": 236.26364874,
+     "meanabs": 2.014153244394935,
+     "n": 385,
+     "nan_live": 0,
+     "note": "",
+     "status": "FAIL"
+    },
+    {
+     "corr": 0.9942289220218226,
+     "feature": "marketBreadthStrength",
+     "maxabs": 0.26310313300000004,
+     "meanabs": 0.01693748001922078,
+     "n": 385,
+     "nan_live": 0,
+     "note": "",
+     "status": "FAIL"
+    },
+    {
+     "corr": 0.5610960776896484,
+     "feature": "btcDominance",
+     "maxabs": 0.6459304299999999,
+     "meanabs": 0.06506309012334285,
+     "n": 385,
+     "nan_live": 0,
+     "note": "",
+     "status": "FAIL"
+    },
+    {
+     "corr": 0.8620455960991643,
+     "feature": "rsi14",
+     "maxabs": 40.29412459,
+     "meanabs": 4.166537489324676,
+     "n": 385,
+     "nan_live": 0,
+     "note": "",
+     "status": "FAIL"
+    },
+    {
+     "corr": 0.6938660918008708,
+     "feature": "volumeSpike",
+     "maxabs": 122.71034722000002,
+     "meanabs": 1.3276600209801583,
+     "n": 385,
+     "nan_live": 0,
+     "note": "",
+     "status": "FAIL"
+    },
+    {
+     "corr": 0.852630089558188,
+     "feature": "distMA20",
+     "maxabs": 0.0028487122400000005,
+     "meanabs": 0.00032273821725612985,
+     "n": 385,
+     "nan_live": 0,
+     "note": "",
+     "status": "FAIL"
+    },
+    {
+     "corr": 0.8969893315772771,
+     "feature": "fundingRateRaw",
+     "maxabs": 4.6192391000000004e-05,
+     "meanabs": 1.7906845936103895e-05,
+     "n": 385,
+     "nan_live": 0,
+     "note": "",
+     "status": "FAIL"
+    },
+    {
+     "corr": 0.03890877999000979,
+     "feature": "fundingRateAvg24H",
+     "maxabs": 1.3524438010000001e-05,
+     "meanabs": 7.151709695812988e-06,
+     "n": 385,
+     "nan_live": 0,
+     "note": "",
+     "status": "FAIL"
+    },
+    {
+     "corr": 0.93678326545352,
+     "feature": "fundingRateTrend",
+     "maxabs": 3.26679536e-05,
+     "meanabs": 1.0756902590077923e-05,
+     "n": 385,
+     "nan_live": 0,
+     "note": "",
+     "status": "FAIL"
+    },
+    {
+     "corr": 1.0,
+     "feature": "hourOfDay",
+     "maxabs": 0.0,
+     "meanabs": 0.0,
+     "n": 385,
+     "nan_live": 0,
+     "note": "",
+     "status": "PASS"
+    },
+    {
+     "corr": NaN,
+     "feature": "dayOfWeek",
+     "maxabs": 0.0,
+     "meanabs": 0.0,
+     "n": 385,
+     "nan_live": 0,
+     "note": "",
+     "status": "PASS"
+    },
+    {
+     "corr": NaN,
+     "feature": "weekOfMonth",
+     "maxabs": 0.0,
+     "meanabs": 0.0,
+     "n": 385,
+     "nan_live": 0,
+     "note": "",
+     "status": "PASS"
+    },
+    {
+     "corr": NaN,
+     "feature": "monthOfYear",
+     "maxabs": 0.0,
+     "meanabs": 0.0,
+     "n": 385,
+     "nan_live": 0,
+     "note": "",
+     "status": "PASS"
+    },
+    {
+     "corr": 0.545294469225297,
+     "feature": "basketMomentum15M",
+     "maxabs": 0.020245088100000003,
+     "meanabs": 0.0022422138141735717,
+     "n": 385,
+     "nan_live": 0,
+     "note": "",
+     "status": "FAIL"
+    },
+    {
+     "corr": 0.703464388473976,
+     "feature": "basketMomentum1H",
+     "maxabs": 0.0203373812,
+     "meanabs": 0.002035266143923065,
+     "n": 385,
+     "nan_live": 0,
+     "note": "",
+     "status": "FAIL"
+    },
+    {
+     "corr": 0.8615248796600065,
+     "feature": "basketRsi14",
+     "maxabs": 29.961288409999998,
+     "meanabs": 3.022661284779221,
+     "n": 385,
+     "nan_live": 0,
+     "note": "",
+     "status": "FAIL"
+    },
+    {
+     "corr": 0.10417510686493901,
+     "feature": "basketVolSpike",
+     "maxabs": 79.6006148,
+     "meanabs": 1.022163649816104,
+     "n": 385,
+     "nan_live": 0,
+     "note": "",
+     "status": "FAIL"
+    }
+   ]
+  },
+  {
+   "checks": [
+    {
+     "detail": "LIVE p15 n=502 max=0.01501",
+     "id": "input.live",
+     "status": "PASS"
+    },
+    {
+     "detail": "n_pass log=0; p15_max=0.01501 < thr_min=0.03257 => dong nhat (0 pass)",
+     "id": "gate.repro",
+     "status": "PASS"
+    },
+    {
+     "detail": "LIVE gate mode=fixed vs BASELINE=ratio",
+     "id": "gate.mode_parity",
+     "status": "FAIL"
+    },
+    {
+     "detail": "p15 phia BACKTEST can ONNX inference (bi cam) => khong do duoc; de xuat: dump p15/dev CSV",
+     "id": "gate.p15_dev_parity",
+     "status": "MISSING"
+    }
+   ],
+   "metrics": {
+    "baseline_mode": "ratio",
+    "gate_npass_total": 0,
+    "live_mode": "fixed",
+    "p15_live_max": 0.0150123108,
+    "thr_applied_max": 0.04375,
+    "thr_applied_min": 0.03257
+   },
+   "name": "gate",
+   "reason": "242 gate=fixed, thr 0.0326 > p15_max 0.0150 => n_pass=0 (baseline=ratio)",
+   "status": "FAIL",
+   "table": []
+  },
+  {
+   "checks": [
+    {
+     "detail": "artifact selector LIVE la Java-serialized HashMap<String,Float> (storage/data/predictionSymbol/*), khong co score CSV doc duoc; khong co artifact selector BACKTEST cung tick.",
+     "id": "input.live",
+     "status": "MISSING"
+    },
+    {
+     "detail": "khong so duoc score/rank tung tick. De xuat: them cot selectorScore+rank vao feat_dump CSV (hoac dump CSV rieng) cho CA live lan export.",
+     "id": "output.compare",
+     "status": "MISSING"
+    }
+   ],
+   "metrics": {},
+   "name": "selector",
+   "reason": "MISSING: thieu nguon selector doi ung",
+   "status": "MISSING",
+   "table": []
+  },
+  {
+   "checks": [
+    {
+     "detail": "2818 dong [GATE], all n_pass=0=True, ledger trades=0? next",
+     "id": "input.live",
+     "status": "PASS"
+    },
+    {
+     "detail": "n_pass=0 nhat quan voi p15_max=0.01501 < thr=0.03257",
+     "id": "entry.live_consistency",
+     "status": "PASS"
+    },
+    {
+     "detail": "LIVE entries=0 vs BACKTEST(G2) expected>=1",
+     "id": "entry.window_parity",
+     "status": "FAIL"
+    }
+   ],
+   "metrics": {
+    "backtest_entries_min": 1,
+    "gate_all_zero": true,
+    "gate_lines": 2818,
+    "live_entries": 0,
+    "window_candidates": 502
+   },
+   "name": "entry",
+   "reason": "entry lech: LIVE=0 vs BACKTEST(G2)>=1",
+   "status": "FAIL",
+   "table": []
+  },
+  {
+   "checks": [
+    {
+     "detail": "ledger 242: 0 lenh dong tu 12/09 (gate dong => khong co lenh)",
+     "id": "input.live",
+     "status": "MISSING"
+    },
+    {
+     "detail": "khong co lenh dong de doi chieu exit (FLAT3 vs T0). De xuat: sau khi gate mo, so TS_GIVEBACK_RATIO/SIM_TS_MAX_GAP tren ledger that + printDone.",
+     "id": "output.compare",
+     "status": "MISSING"
+    }
+   ],
+   "metrics": {},
+   "name": "exit",
+   "reason": "MISSING: khong co lenh dong (gate chan truoc)",
+   "status": "MISSING",
+   "table": []
+  }
+ ],
+ "overall": "FAIL",
+ "prereg": "docs/prereg/PREREG_PARITY_HARNESS.md",
+ "selftests": [
+  {
+   "detail": "2 lan tinh features => byte-identical (385 cap)",
+   "id": "deterministic",
+   "status": "PASS"
+  },
+  {
+   "detail": "tai hourOfDay status=FAIL; FAIL them moi=['hourOfDay'] (mong doi [hourOfDay]; truoc= PASS)",
+   "id": "injected_shift_fails_right",
+   "status": "PASS"
+  },
+  {
+   "detail": "FAIL=True err=thieu cot detail=thieu cot trong export: momentum5M",
+   "id": "missing_column_fails_with_reason",
+   "status": "PASS"
+  }
+ ],
+ "window_note": "2026 = HOLDOUT: chi do/doi chieu (audit-only), KHONG chon tham so"
+}

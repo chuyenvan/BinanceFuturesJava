@@ -1,0 +1,13 @@
+{
+ "ai_pass_lines": 5954,
+ "gate_all_zero": true,
+ "gate_lines": 2818,
+ "gate_npass_total": 0,
+ "gate_npass_zero_lines": 2818,
+ "last_gate_thr_max": 0.04375,
+ "last_gate_thr_min": 0.03257,
+ "ledger_closed_since_1209": 0,
+ "ledger_rows": 0,
+ "ledger_trades_since_1209": 0,
+ "note": "READ-ONLY; ledger tren 242 gan nhat rong (gate dong tu 12/09)"
+}
