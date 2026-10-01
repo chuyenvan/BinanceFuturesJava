@@ -21,10 +21,10 @@
 | tang | trang thai | ly do |
 |---|---|---|
 | **config** | FAIL | 242 KHONG khop baseline: 4 LECH + 18 MISSING key |
-| **features** | FAIL | 29/33 feature lech (max|delta|>1e-08) |
+| **features** | FAIL | 27/33 feature lech (exact<=1e-08, inline<=1e-03; o nguong may 29/33) |
 | **gate** | FAIL | 242 gate=fixed, thr 0.0326 > p15_max 0.0150 => n_pass=0 (baseline=ratio) |
-| **marketparams** | FAIL | market: 2/2 field lech (rateDown15MAvg max|delta|=0.0249), BACKTEST field=0 100% phut; nguong khop (default) |
-| **selector** | MISSING | MISSING: thieu nguon selector doi ung |
+| **marketparams** | MISSING | field: rateDownAvg/rateDown15MAvg khop muc nhieu (<1e-3); rateUpAvg MISSING (khong dump); nguong MATCH default; flip LIVE=0/0, DEV(stress)=0/1 |
+| **selector** | MISSING | MISSING: thieu nguon selector doi ung (khong co cot score/rank) |
 | **entry** | FAIL | entry lech: LIVE=0 vs BACKTEST(G2)>=1 |
 | **exit** | MISSING | MISSING: khong co lenh dong (gate chan truoc) |
 
@@ -68,22 +68,23 @@
 
 ### features — FAIL
 
-- metrics: `{"feat_fail": 29, "files": 6, "pairs": 385, "symbols": ["BTCUSDT"], "tol": 1e-08, "truncated_files": 6}`
+- metrics: `{"feat_fail": 27, "feat_fail_machine_tol": 29, "files": 6, "inline_minutes": 1426, "pairs": 385, "reconstructed": ["momentum15M", "momentum1M", "momentumAcceleration"], "symbols": ["BTCUSDT"], "tol": 1e-08, "tol_inline": 0.001, "truncated_files": 6}`
 
-- [PASS] input.integrity: LIVE files=6 (cut cut=6, da phuc hoi partial), pairs=385
+- [PASS] input.integrity: LIVE files=6 (cut cut=6 — GOC: writer Java khong finalize GZIPOutputStream (thieu gz trailer; da xac minh tren CA file 242 moi nhat 20261001_090200) => harness phuc hoi dong hoan chinh bang partial-inflate), pairs=385
+- [PASS] input.inline_source: tai tao inline 1426 phut (md_inline<-kline 242)
 - [PASS] input.pair: 385 cap (ts) giao
 - [PASS] output.nan: NaN LIVE bất thường=0
-- [FAIL] output.feature_parity: 29/33 feature vuot nguong max|delta|<=1e-08
+- [FAIL] output.feature_parity: 27/33 feature vuot nguong (exact<=1e-08 / inline<=1e-03); o nguong MAY (1e-08): 29/33 vuot
 
 | feature | n | max\|Δ\| | mean\|Δ\| | corr | status |
 |---|---|---|---|---|---|
-| momentum1M | 385 | 0.009 | 0.002 | nan | FAIL |
+| momentum1M | 385 | 7.492e-04 | 5.296e-05 | 0.9942 | PASS |
 | momentum5M | 385 | 0.002 | 1.683e-04 | 0.9311 | FAIL |
-| momentum15M | 385 | 0.025 | 0.013 | nan | FAIL |
+| momentum15M | 385 | 7.399e-04 | 5.833e-05 | 0.9995 | PASS |
 | momentum1H | 385 | 0.001 | 8.774e-05 | 0.9967 | FAIL |
 | momentum4H | 385 | 6.870e-04 | 2.792e-05 | 0.9998 | FAIL |
 | momentum24H | 385 | 6.810e-04 | 2.773e-05 | 0.9998 | FAIL |
-| momentumAcceleration | 385 | 0.025 | 0.013 | -0.2392 | FAIL |
+| momentumAcceleration | 385 | 0.002 | 1.804e-04 | 0.9945 | FAIL |
 | trendStrengthETH | 385 | 0.002 | 9.887e-05 | 0.9975 | FAIL |
 | trendConsistency | 385 | 2.000 | 0.135 | 0.8560 | FAIL |
 | volatility1M | 385 | 0.002 | 1.883e-04 | 0.5200 | FAIL |
@@ -118,15 +119,19 @@
 - [PASS] input.live: LIVE p15 n=502 max=0.01501
 - [PASS] gate.repro: n_pass log=0; p15_max=0.01501 < thr_min=0.03257 => dong nhat (0 pass)
 - [FAIL] gate.mode_parity: LIVE gate mode=fixed vs BASELINE=ratio
-- [MISSING] gate.p15_dev_parity: p15 phia BACKTEST can ONNX inference (bi cam) => khong do duoc; de xuat: dump p15/dev CSV
+- [MISSING] gate.p15_dev_parity: nguon p15 DEV KHONG-ONNX = pred.bin (n=2500260, ts 1617210000000..1767225540000). Cua so LIVE 1790559600000..1790617260000: giao=KHONG => KHONG so cung phut duoc => MISSING (2026=holdout, ngoai DEV<=2025-12-31)
 
-### marketparams — FAIL
+### marketparams — MISSING
 
-- metrics: `{"backtest_dead_minutes": 385, "bigdown_flip": 0, "dca_flip": 0, "field_fail": 2, "live_bigdown_minutes": 0, "live_dca_minutes": 0, "pairs": 385, "thresh_fail": 0, "thresholds": [{"default": -0.03157, "key": "MS_DOWN_BIG_AVG", "live": "(unset)", "profile": "(unset)", "verdict": "MATCH-DEFAULT"}, {"default": -0.03157, "key": "MS_DOWN_BIG_AVG_DCA", "live": "(unset)", "profile": "(unset)", "verdict": "MATCH-DEFAULT"}, {"default": 0.02046, "key": "MS_UP_BIG_THRES", "live": "(unset)", "profile": "(unset)", "verdict": "MATCH-DEFAULT"}]}`
+- metrics: `{"dev_flips": {"bigdown_a": 0, "bigdown_b": 0, "bigdown_flips": 0, "dca_a": 1, "dca_b": 0, "dca_flips": 1}, "dev_store": {"n": 1376, "rateDown15MAvg_corr": 0.9977090169770493, "rateDown15MAvg_maxabs": 0.0020271385816998146, "rateDownAvg_corr": 0.9969522638229248, "rateDownAvg_maxabs": 0.000978882038359503}, "inline_minutes": 1426, "live_minutes": 502, "thr_live_overrides": {}, "thresholds": [{"default": -0.03157, "key": "MS_DOWN_BIG_AVG", "live": "(unset)", "profile": "(unset)", "verdict": "MATCH-DEFAULT"}, {"default": -0.03157, "key": "MS_DOWN_BIG_AVG_DCA", "live": "(unset)", "profile": "(unset)", "verdict": "MATCH-DEFAULT"}, {"default": 0.02046, "key": "MS_UP_BIG_THRES", "live": "(unset)", "profile": "(unset)", "verdict": "MATCH-DEFAULT"}]}`
 
-- [FAIL] mkt.field_parity: 2/2 field co nguon bi lech max|delta|>1e-08; 2 field MISSING (khong co trong CSV)
-- [PASS] mkt.threshold_parity: 0/3 nguong lech; ca 2 ben unset => dung default Java (MS_DOWN_BIG_AVG=-0.03157, DCA=-0.03157)
-- [FAIL] mkt.impact_bigdown_dca: BIG_DOWN flip=0, DCA flip=0; BACKTEST field=0 (chet) 385/385 phut (100%) => BIG_DOWN/DCA khong the kich hoat tu field nay o cac phut do
+- [PASS] input.live: LIVE feat_dump: 502 phut (momentum1M=rateDownAvg, momentum15M=rateDown15MAvg)
+- [PASS] input.pair: 502 phut giao (LIVE vs inline=cung thuat toan calMarketData)
+- [MISSING] mp.fields_live_vs_inline: 2/4 field do duoc: rateDownAvg max|d|=7.492e-04 corr=0.99485 ; rateDown15MAvg max|d|=7.399e-04 corr=0.99958
+- [PASS] mp.decision_flips_live: BIG_DOWN flip=0 (live=0 inline=0); DCA flip=0 (live=0 inline=0)
+- [PASS] mp.dev_store: market.bin(DEV store) vs inline @2025-10-10: n=1376; rateDownAvg max|d|=9.789e-04 corr=0.9970; rateDown15MAvg max|d|=2.027e-03 corr=0.9977; BIG_DOWN flip=0 DCA flip=1
+- [MISSING] mp.live_vs_store_sameminute: LIVE(2026-09) vs market.bin(<=2025-12-31): giao=0 phut => khong so truc tiep cung phut duoc; dung inline lam cau noi (ca 2 phia khop ~1e-3)
+- [PASS] mp.thresholds: 3 nguong: 242 & baseline deu UNSET -> cung default Java (-0.03157/-0.03157/0.02046)
 
 nguong (242 vs baseline vs default Java):
 
@@ -138,15 +143,21 @@ nguong (242 vs baseline vs default Java):
 
 | field | col | n | max\|Δ\| | mean\|Δ\| | corr | status |
 |---|---|---|---|---|---|---|
-| rateDownAvg | momentum1M | 385 | 0.009 | 0.002 | nan | FAIL |
-| rateDown15MAvg | momentum15M | 385 | 0.025 | 0.013 | nan | FAIL |
-| rateUpAvg | (n/a) | 0 | - | - | - | MISSING |
-| rateUp15MAvg | (n/a) | 0 | - | - | - | MISSING |
+| rateDownAvg | momentum1M | 502 | 7.492e-04 | 4.477e-05 | 0.9949 | PASS |
+| rateDown15MAvg | momentum15M | 502 | 7.399e-04 | 5.591e-05 | 0.9996 | PASS |
+| rateUpAvg | - | 0 | - | - | - | MISSING |
+| rateUp15MAvg | - | 0 | - | - | - | N/A |
+| THR:MS_DOWN_BIG_AVG | MS_DOWN_BIG_AVG | 0 | 0.000e+00 | 0.000e+00 | 1.0000 | MATCH-DEFAULT |
+| THR:MS_DOWN_BIG_AVG_DCA | MS_DOWN_BIG_AVG_DCA | 0 | 0.000e+00 | 0.000e+00 | 1.0000 | MATCH-DEFAULT |
+| THR:MS_UP_BIG_THRES | MS_UP_BIG_THRES | 0 | 0.000e+00 | 0.000e+00 | 1.0000 | MATCH-DEFAULT |
 
 ### selector — MISSING
 
-- [MISSING] input.live: artifact selector LIVE la Java-serialized HashMap<String,Float> (storage/data/predictionSymbol/*), khong co score CSV doc duoc; khong co artifact selector BACKTEST cung tick.
-- [MISSING] output.compare: khong so duoc score/rank tung tick. De xuat: them cot selectorScore+rank vao feat_dump CSV (hoac dump CSV rieng) cho CA live lan export.
+- metrics: `{"feat_dump_cols": 36, "has_selector_col": false}`
+
+- [MISSING] input.live: feat_dump co cot selectorScore/rank? KHONG (cot hien co: 36)
+- [MISSING] input.artifact: artifact selector LIVE = Java-serialized HashMap<String,Float> (242 storage/data/predictionSymbol/*) — lan ghi CUOI 2026-08-20, KHONG phu cua so LIVE 2026-09-28; khong co artifact selector BACKTEST cung tick.
+- [MISSING] output.compare: khong so duoc score/rank tung tick. De xuat: them cot selectorScore+rank vao feat_dump CSV (CA live lan export) => khi do harness do duoc rank-overlap/top-K parity khong can ONNX.
 
 ### entry — FAIL
 

@@ -78,6 +78,19 @@ MKT_DEFAULTS = {"MS_DOWN_BIG_AVG": -0.03157, "MS_DOWN_BIG_AVG_DCA": -0.03157,
                 "MS_UP_BIG_THRES": 0.02046}
 
 FEAT_TOL = 1e-8   # "khop may": max|delta| tuyet doi tren cung ts
+# 3 feature market (momentum1M/15M/acceleration) = rateDownAvg/rateDown15MAvg cua export.
+# Export chet nguon (=0) trong cua so LIVE => phai TAI TAO INLINE tu kline (md_inline).
+# Nguong inline KHONG the 1e-8 (2 duong ticker-vs-kline khac nhau); do duoc max|delta| = 7.5e-4
+# (502 cap, 2026-09-28/29) => dat nguong thuc dung 1e-3, van nho hon 1 bac so voi lech that (~1e-2..1e+0).
+INLINE_FEATS = {"momentum1M", "momentum15M", "momentumAcceleration"}
+FEAT_TOL_INLINE = 1e-3
+
+# --- marketparams (STEER owner 2026-10-01 10:45) ---
+MARKET_BIN = "/home/ubuntu/wfo_ds_x1_2021/market.bin"      # DEV: simulator market_data source (<=2025-12-31)
+DEV_STRESS_DAY = "2025-10-10"                              # ngay crash manh (down15 min -0.718)
+MS_DOWN_BIG_AVG = -0.03157                                 # Configs.java:466 (default; baseline g2_flat3 khong override)
+MS_DOWN_BIG_AVG_DCA = -0.03157                             # Configs.java:470
+MS_UP_BIG_THRES = 0.02046                                  # Configs.java:465
 
 CHECKS = [
     # key,          live aliases,                                   default Java (audited), note
@@ -252,6 +265,109 @@ def load_export():
     return hdr, by_ts, None
 
 
+# ------------------------------------------------------------------ marketparams helpers
+_ANALYSIS_DIR = os.path.join(REPO, "research", "analysis")
+_INLINE_CACHE = {}
+
+
+def load_market_bin(path=MARKET_BIN):
+    """Doc market.bin (DEV `market_data` source): int n + n*(long ts, float down,up,down15)."""
+    import struct
+    if np is None or not os.path.exists(path):
+        return None, "thieu numpy hoac khong thay %s" % path
+    with open(path, "rb") as f:
+        cnt = struct.unpack(">i", f.read(4))[0]
+        buf = f.read(20 * cnt)
+    if len(buf) < 20 * cnt:
+        return None, "market.bin cut cut"
+    a = np.frombuffer(buf, dtype=np.dtype([("ts", ">i8"), ("d", ">f4"), ("u", ">f4"), ("x", ">f4")]))
+    out = {int(t): (float(d), float(u), float(x)) for t, d, u, x in a}
+    return out, None
+
+
+def inline_md_days(day_ms_list):
+    """Tai tao MarketDataObject INLINE tu kline 242 (md_inline + devexport parse). Tra (dict, err).
+    dict: min_ts(ms) -> (rateDownAvg, rateUpAvg, rateDown15MAvg). Cache theo ngay."""
+    days = sorted(set(d // 86400000 * 86400000 for d in day_ms_list))
+    key = tuple(days)
+    if key in _INLINE_CACHE:
+        return _INLINE_CACHE[key]
+    try:
+        if _ANALYSIS_DIR not in sys.path:
+            sys.path.insert(0, _ANALYSIS_DIR)
+        import datetime
+        import devexport_202609 as dx
+        from md_inline import InlineMD
+        import featdiff_pass2 as fp
+    except Exception as e:
+        r = (None, "thieu module (aerospike/cramjam): %s" % str(e)[:80])
+        _INLINE_CACHE[key] = r
+        return r
+    TZ7, DAY = dx.TZ7, dx.DAY
+    try:
+        store = dx.Store("242")
+    except Exception as e:
+        r = (None, "khong mo duoc Aerospike 242 READ-ONLY: %s" % str(e)[:90])
+        _INLINE_CACHE[key] = r
+        return r
+    out = {}
+    try:
+        for dms in days:
+            gen = InlineMD(fp.load_died())
+            kl = store.get_kline_day(dms)
+            parsed = {}
+            for k, v in kl.items():
+                try:
+                    ts = int(datetime.datetime.strptime(k, "%Y%m%d-%H%M").replace(tzinfo=TZ7).timestamp() * 1000)
+                except Exception:
+                    continue
+                parsed[ts] = v
+            for ts in sorted(parsed.keys()):
+                syms, arr = dx.parse_minute(parsed[ts])
+                if not syms:
+                    continue
+                snap = {s: (float(arr[i, 0]), float(arr[i, 1]), float(arr[i, 2]), float(arr[i, 3]))
+                        for i, s in enumerate(syms)}
+                md = gen.update(snap)
+                if md is not None:
+                    out[ts // 60000 * 60000] = md
+    except Exception as e:
+        store.close()
+        r = (None, "loi tai tao inline: %s" % str(e)[:90])
+        _INLINE_CACHE[key] = r
+        return r
+    store.close()
+    r = (out, None)
+    _INLINE_CACHE[key] = r
+    return r
+
+
+def live_market_series(live_rows):
+    """LIVE side tu feat_dump: momentum1M=rateDownAvg, momentum15M=rateDown15MAvg. Tra dict min_ts->(d,d15)."""
+    return {t: (float(r["momentum1M"]), float(r["momentum15M"])) for t, r in live_rows.items()}
+
+
+def _stats(a, b):
+    d = np.abs(a - b)
+    try:
+        cr = float(np.corrcoef(a, b)[0, 1]) if (a.std() > 0 and b.std() > 0) else float("nan")
+    except Exception:
+        cr = float("nan")
+    return float(np.max(d)) if d.size else float("nan"), float(np.mean(d)) if d.size else float("nan"), cr
+
+
+def _flip_counts(a_d, a_d15, b_d, b_d15, thr=MS_DOWN_BIG_AVG, thr_dca=MS_DOWN_BIG_AVG_DCA):
+    """Dem so PHUT quyet dinh BIG_DOWN / DCA DOI TRANG THAI giua 2 duong field."""
+    bl = a_d < thr
+    bi = b_d < thr
+    dl = (a_d15 < thr_dca) | (a_d < thr_dca / 3)
+    di = (b_d15 < thr_dca) | (b_d < thr_dca / 3)
+    return {
+        "bigdown_flips": int(np.sum(bl != bi)), "bigdown_a": int(bl.sum()), "bigdown_b": int(bi.sum()),
+        "dca_flips": int(np.sum(dl != di)), "dca_a": int(dl.sum()), "dca_b": int(di.sum()),
+    }
+
+
 # ------------------------------------------------------------------ subcommands
 def layer_config():
     checks, table = [], []
@@ -303,7 +419,8 @@ def layer_config():
     return layer("config", checks, metrics, table, reason)
 
 
-def _features_core(export_by_ts, live_rows, mutate_feature=None, drop_col=None, tol=FEAT_TOL):
+def _features_core(export_by_ts, live_rows, mutate_feature=None, drop_col=None, tol=FEAT_TOL,
+                   inline_md=None):
     """Tra (validate_checks, table, pairs, err)."""
     checks, table = [], []
     if np is None:
@@ -333,6 +450,7 @@ def _features_core(export_by_ts, live_rows, mutate_feature=None, drop_col=None, 
 
     nan_live = 0
     n_fail = 0
+    n_fail_machine = 0
     for fn in FEATS:
         try:
             a = np.array([float(live_rows[t][fn]) for t in common], dtype=float)
@@ -341,7 +459,25 @@ def _features_core(export_by_ts, live_rows, mutate_feature=None, drop_col=None, 
             table.append({"feature": fn, "n": len(common), "maxabs": None, "meanabs": None,
                           "corr": None, "status": "FAIL", "note": "parse: %s" % str(e)[:40]})
             n_fail += 1
+            n_fail_machine += 1
             continue
+        row_tol = tol
+        note = ""
+        recon = False
+        if inline_md is not None and fn in INLINE_FEATS:
+            # TAI TAO INLINE phia BACKTEST tu kline (thay field chet =0 trong export)
+            if fn == "momentum1M":
+                b = np.array([inline_md.get(t, (np.nan,) * 3)[0] for t in common], dtype=float)
+            elif fn == "momentum15M":
+                b = np.array([inline_md.get(t, (np.nan,) * 3)[2] for t in common], dtype=float)
+            else:  # momentumAcceleration = momentum5M(export) - momentum15MAvg(inline)
+                b = np.array([float(export_by_ts[t]["momentum5M"]) - inline_md.get(t, (np.nan,) * 3)[2]
+                              for t in common], dtype=float)
+            row_tol = FEAT_TOL_INLINE
+            recon = True
+            note = "tai tao inline tu kline (nguon export=0)"
+        elif fn in SRC_GAP_FEATS:
+            note = "export thieu nguon (dev=0) — can tai tao inline"
         if mutate_feature == fn:
             b = b + 1.0                                  # TU KIEM (a): tiem lech
         nl = int(np.sum(~np.isfinite(a)))
@@ -356,16 +492,22 @@ def _features_core(export_by_ts, live_rows, mutate_feature=None, drop_col=None, 
                 cr = float("nan")
         except Exception:
             cr = float("nan")
-        st = "PASS" if (mx <= tol and nl == 0) else "FAIL"
+        st = "PASS" if (mx <= row_tol and nl == 0) else "FAIL"
+        st_m = "PASS" if (mx <= FEAT_TOL and nl == 0) else "FAIL"
         if st == "FAIL":
             n_fail += 1
-        note = "export thieu nguon (dev=0) — can tai tao inline" if fn in SRC_GAP_FEATS else ""
+        if st_m == "FAIL":
+            n_fail_machine += 1
         table.append({"feature": fn, "n": len(common), "maxabs": mx, "meanabs": mn,
-                      "corr": cr, "nan_live": nl, "status": st, "note": note})
+                      "corr": cr, "nan_live": nl, "status": st, "status_machine": st_m,
+                      "tol": row_tol, "reconstructed": recon, "note": note})
     checks.append(mkcheck("output.nan", "PASS" if nan_live == 0 else "FAIL",
                           "NaN LIVE bất thường=%d" % nan_live))
     checks.append(mkcheck("output.feature_parity", "FAIL" if n_fail else "PASS",
-                          "%d/%d feature vuot nguong max|delta|<=%.0e" % (n_fail, len(FEATS), tol)))
+                          "%d/%d feature vuot nguong (exact<=%.0e / inline<=%.0e); "
+                          "o nguong MAY (%.0e): %d/%d vuot" % (
+                              n_fail, len(FEATS), tol, FEAT_TOL_INLINE, FEAT_TOL, n_fail_machine, len(FEATS)),
+                          n_fail=n_fail, n_fail_machine=n_fail_machine))
     return checks, table, common, None
 
 
@@ -375,23 +517,161 @@ def layer_features(mutate_feature=None, drop_col=None, quiet=False):
     hdr_e, export_by_ts, eerr = load_export()
     if err:
         return layer("features", [mkcheck("input.live", "FAIL", err)], {}, [], err)
-    checks, table, common, cerr = _features_core(export_by_ts, live_rows, mutate_feature, drop_col)
+    inline_md, inline_err = (None, None)
+    if not mutate_feature and not drop_col and live_rows:
+        inline_md, inline_err = inline_md_days(sorted(live_rows.keys()))
+    checks, table, common, cerr = _features_core(export_by_ts, live_rows, mutate_feature, drop_col,
+                                                 inline_md=inline_md)
     if cerr and cerr != "0 cap":
         return layer("features", checks, {}, table, cerr)
+    if inline_err:
+        checks.insert(0, mkcheck("input.inline_source", "MISSING",
+                                 "khong tai tao duoc inline: %s" % inline_err))
+    else:
+        recon = ("tai tao inline %d phut (md_inline<-kline 242)" % len(inline_md)) if inline_md else \
+                "khong dung inline"
+        checks.insert(0, mkcheck("input.inline_source", "PASS" if inline_md else "MISSING", recon))
     if not mutate_feature and not drop_col:
+        rootcause = ""
+        if trunc:
+            rootcause = (" — GOC: writer Java khong finalize GZIPOutputStream (thieu gz trailer; "
+                         "da xac minh tren CA file 242 moi nhat 20261001_090200) => harness phuc hoi dong hoan chinh bang partial-inflate")
         checks.insert(0, mkcheck("input.integrity", "PASS" if live_rows else "FAIL",
-                                 "LIVE files=%d (cut cut=%d, da phuc hoi partial), pairs=%d" % (
-                                     len(files), len(trunc), len(common or []))))
+                                 "LIVE files=%d (cut cut=%d%s), pairs=%d" % (
+                                     len(files), len(trunc), rootcause, len(common or []))))
     if drop_col:
         # TU KIEM (c): phai FAIL, khong crash
         return layer("features", checks, {}, table, checks[0]["detail"] if checks else "drop")
     n_fail = sum(1 for t in table if t["status"] == "FAIL")
+    n_fail_m = sum(1 for t in table if t.get("status_machine") == "FAIL")
     metrics = {"pairs": len(common), "files": len(files), "truncated_files": len(trunc),
-               "symbols": sorted(syms), "feat_fail": n_fail, "tol": FEAT_TOL}
+               "symbols": sorted(syms), "feat_fail": n_fail, "feat_fail_machine_tol": n_fail_m,
+               "tol": FEAT_TOL, "tol_inline": FEAT_TOL_INLINE,
+               "inline_minutes": len(inline_md) if inline_md else 0,
+               "reconstructed": sorted(INLINE_FEATS)}
     st = "FAIL" if (n_fail or any(c["status"] == "FAIL" for c in checks)) else "PASS"
-    reason = ("%d/%d feature lech (max|delta|>%.0e)" % (n_fail, len(FEATS), FEAT_TOL)) if n_fail \
+    reason = ("%d/%d feature lech (exact<=%.0e, inline<=%.0e; o nguong may %d/%d)" % (
+        n_fail, len(FEATS), FEAT_TOL, FEAT_TOL_INLINE, n_fail_m, len(FEATS))) if n_fail \
         else "33/33 feature khop"
     return layer("features", checks, metrics, table, reason)
+
+
+def layer_marketparams():
+    """STEER owner 2026-10-01 10:45: audit tham so market rateDownAvg/rateUpAvg/rateDown15MAvg
+    (nguon that: MarketBigChangeDetector.calMarketData) — 4 noi dung:
+    (1) field LIVE vs BACKTEST cung phut; (2) nguong; (3) SO LAN BIG_DOWN/DCA DOI TRANG THAI; (4) MISSING.
+    """
+    checks, table = [], []
+    live_rows, files, trunc, syms, err = load_live_feat()
+    live = parse_props(LIVE_CFG_SNAP)
+    prof = parse_props(BASELINE_PROFILE)
+    if not live_rows:
+        return layer("marketparams", [mkcheck("input.live", "FAIL", err or "0 dong LIVE")], {}, [], err or "0 dong")
+    live_md = live_market_series(live_rows)
+    checks.append(mkcheck("input.live", "PASS",
+                          "LIVE feat_dump: %d phut (momentum1M=rateDownAvg, momentum15M=rateDown15MAvg)" % len(live_md)))
+
+    # ---- (1) BACKTEST: tai tao inline (dung CHINH calMarketData) tren cung phut live ----
+    inline, ierr = inline_md_days(sorted(live_md.keys()))
+    if ierr:
+        checks.append(mkcheck("mp.live_vs_backtest", "MISSING", "khong tai tao inline: %s" % ierr))
+    else:
+        common = sorted(set(live_md) & set(inline))
+        a_d = np.array([live_md[t][0] for t in common]); b_d = np.array([inline[t][0] for t in common])
+        a_x = np.array([live_md[t][1] for t in common]); b_x = np.array([inline[t][2] for t in common])
+        m1 = _stats(a_d, b_d); m15 = _stats(a_x, b_x)
+        checks.append(mkcheck("input.pair", "PASS", "%d phut giao (LIVE vs inline=cung thuat toan calMarketData)" % len(common)))
+        table.append({"field": "rateDownAvg", "col": "momentum1M", "n": len(common),
+                      "maxabs": m1[0], "meanabs": m1[1], "corr": m1[2],
+                      "status": "PASS" if m1[0] <= FEAT_TOL_INLINE else "FAIL"})
+        table.append({"field": "rateDown15MAvg", "col": "momentum15M", "n": len(common),
+                      "maxabs": m15[0], "meanabs": m15[1], "corr": m15[2],
+                      "status": "PASS" if m15[0] <= FEAT_TOL_INLINE else "FAIL"})
+        table.append({"field": "rateUpAvg", "col": "-", "n": 0, "maxabs": None, "meanabs": None,
+                      "corr": None, "status": "MISSING",
+                      "note": "feat_dump KHONG xuat rateUpAvg (chi co 2/3 field co nghia)"})
+        table.append({"field": "rateUp15MAvg", "col": "-", "n": 0, "maxabs": None, "meanabs": None,
+                      "corr": None, "status": "N/A",
+                      "note": "calMarketData KHONG tinh field nay (constructor 3 field; luon 0)"})
+        bad = [t for t in table if t["status"] == "FAIL"]
+        checks.append(mkcheck("mp.fields_live_vs_inline", "FAIL" if bad else "MISSING" if any(
+            t["status"] == "MISSING" for t in table) else "PASS",
+            "2/4 field do duoc: rateDownAvg max|d|=%.3e corr=%.5f ; rateDown15MAvg max|d|=%.3e corr=%.5f" % (
+                m1[0], m1[2], m15[0], m15[2])))
+        # ---- (3) TAC DONG: so PHUT BIG_DOWN / DCA doi trang thai ----
+        fl = _flip_counts(a_d, a_x, b_d, b_x)
+        checks.append(mkcheck("mp.decision_flips_live", "PASS" if (fl["bigdown_flips"] == 0 and fl["dca_flips"] == 0)
+                              else "FAIL", "BIG_DOWN flip=%d (live=%d inline=%d); DCA flip=%d (live=%d inline=%d)" % (
+                                  fl["bigdown_flips"], fl["bigdown_a"], fl["bigdown_b"],
+                                  fl["dca_flips"], fl["dca_a"], fl["dca_b"]), **fl))
+    # ---- (1b) DEV: market.bin (store backtest) vs inline cung phut (ngay stress) ----
+    mb, mberr = load_market_bin()
+    dev_fl, dev_stats = {}, {}
+    if mberr:
+        checks.append(mkcheck("mp.dev_store", "MISSING", mberr))
+    else:
+        import datetime
+        dms = int(datetime.datetime.strptime(DEV_STRESS_DAY + " +0700", "%Y-%m-%d %z").timestamp() * 1000)
+        inline2, ierr2 = inline_md_days([dms])
+        if ierr2:
+            checks.append(mkcheck("mp.dev_store", "MISSING", "inline ngay DEV: %s" % ierr2))
+        else:
+            c2 = sorted(set(mb) & set(inline2))
+            if not c2:
+                checks.append(mkcheck("mp.dev_store", "MISSING", "0 phut giao market.bin vs inline (%s)" % DEV_STRESS_DAY))
+            else:
+                md_ = np.array([mb[t][0] for t in c2]); mid = np.array([inline2[t][0] for t in c2])
+                mx_ = np.array([mb[t][2] for t in c2]); mix = np.array([inline2[t][2] for t in c2])
+                s1 = _stats(md_, mid); s2 = _stats(mx_, mix)
+                dev_fl = _flip_counts(md_, mx_, mid, mix)
+                dev_stats = {"n": len(c2), "rateDownAvg_maxabs": s1[0], "rateDownAvg_corr": s1[2],
+                             "rateDown15MAvg_maxabs": s2[0], "rateDown15MAvg_corr": s2[2]}
+                checks.append(mkcheck("mp.dev_store", "PASS",
+                                      "market.bin(DEV store) vs inline @%s: n=%d; rateDownAvg max|d|=%.3e corr=%.4f; "
+                                      "rateDown15MAvg max|d|=%.3e corr=%.4f; BIG_DOWN flip=%d DCA flip=%d" % (
+                                          DEV_STRESS_DAY, len(c2), s1[0], s1[2], s2[0], s2[2],
+                                          dev_fl["bigdown_flips"], dev_fl["dca_flips"])))
+    # ---- (1c) LIVE vs BACKTEST-STORE cung phut: khong the ----
+    if not mberr:
+        ov = len(set(live_md) & set(mb))
+        checks.append(mkcheck("mp.live_vs_store_sameminute", "MISSING",
+                              "LIVE(2026-09) vs market.bin(<=2025-12-31): giao=%d phut => khong so truc tiep cung phut duoc; "
+                              "dung inline lam cau noi (ca 2 phia khop ~1e-3)" % ov))
+    # ---- (2) NGUONG ----
+    def _resolve(key, simkey, dflt):
+        v = live.get(key, live.get(simkey))
+        return ("LIVE=%s" % v) if v is not None else ("unset->default %.5f" % dflt)
+    th_rows = []
+    for key, simkey, dflt in [("MS_DOWN_BIG_AVG", "SIM_MS_DOWN_BIG_AVG", MS_DOWN_BIG_AVG),
+                              ("MS_DOWN_BIG_AVG_DCA", "SIM_MS_DOWN_BIG_AVG_DCA", MS_DOWN_BIG_AVG_DCA),
+                              ("MS_UP_BIG_THRES", None, MS_UP_BIG_THRES)]:
+        lv = live.get(key, live.get(simkey)) if simkey else None
+        pv = prof.get(key)
+        if lv is None and pv is None:
+            v = "MATCH-DEFAULT"
+            table.append({"field": "THR:%s" % key, "col": key, "n": 0, "maxabs": 0.0, "meanabs": 0.0,
+                          "corr": 1.0, "status": v, "note": _resolve(key, simkey, dflt)})
+        else:
+            ok = cmp_val(lv, pv) if (lv is not None and pv is not None) else False
+            v = "MATCH" if ok else "LECH"
+            table.append({"field": "THR:%s" % key, "col": key, "n": 0, "maxabs": None, "meanabs": None,
+                          "corr": None, "status": v, "note": "LIVE=%s baseline=%s" % (lv, pv)})
+        th_rows.append({"key": key, "profile": pv if pv is not None else "(unset)",
+                        "live": ("%s" % lv) if lv is not None else "(unset)",
+                        "default": dflt, "verdict": v})
+    thr_bad = [t for t in table if t["status"] == "LECH"]
+    checks.append(mkcheck("mp.thresholds", "FAIL" if thr_bad else "PASS",
+                          "3 nguong: 242 & baseline deu UNSET -> cung default Java (-0.03157/-0.03157/0.02046)"
+                          if not thr_bad else "nguong LECH: %s" % [t["col"] for t in thr_bad]))
+    metrics = {"live_minutes": len(live_md), "inline_minutes": len(inline or {}),
+               "dev_store": dev_stats, "dev_flips": dev_fl,
+               "thresholds": th_rows,
+               "thr_live_overrides": {k: v for k, v in live.items() if k.startswith("SIM_MS_") or k.startswith("MS_")}}
+    st = combine([c["status"] for c in checks])
+    reason = "field: rateDownAvg/rateDown15MAvg khop muc nhieu (<1e-3); " \
+             "rateUpAvg MISSING (khong dump); nguong MATCH default; flip LIVE=0/0, DEV(stress)=%d/%d" % (
+                 dev_fl.get("bigdown_flips", -1), dev_fl.get("dca_flips", -1))
+    return layer("marketparams", checks, metrics, table, reason)
 
 
 def layer_gate():
@@ -430,8 +710,7 @@ def layer_gate():
     base_mode = "ratio" if str(prof.get("SIM_GATE_ROLLING_MODE", "")).lower() == "ratio" else "fixed"
     checks.append(mkcheck("gate.mode_parity", "PASS" if live_mode == base_mode else "FAIL",
                           "LIVE gate mode=%s vs BASELINE=%s" % (live_mode, base_mode)))
-    checks.append(mkcheck("gate.p15_dev_parity", "MISSING",
-                          "p15 phia BACKTEST can ONNX inference (bi cam) => khong do duoc; de xuat: dump p15/dev CSV"))
+    checks.append(mkcheck("gate.p15_dev_parity", "MISSING", _p15_dev_source_note(live_rows)))
     metrics = {"p15_live_max": p15_max, "thr_applied_min": thr_min, "thr_applied_max": thr_max,
                "gate_npass_total": obs_npass, "live_mode": live_mode, "baseline_mode": base_mode}
     st = combine([c["status"] for c in checks])
@@ -440,113 +719,46 @@ def layer_gate():
     return layer("gate", checks, metrics, [], reason)
 
 
-def layer_marketparams():
-    checks, table = [], []
-    if np is None:
-        return layer("marketparams", [mkcheck("input.numpy", "FAIL", "thieu numpy")], {}, [], "thieu numpy")
-    live_rows, files, trunc, syms, err = load_live_feat()
-    _, export_by_ts, eerr = load_export()
-    live_cfg = parse_props(LIVE_CFG_SNAP)
-    prof = parse_props(BASELINE_PROFILE)
-    if not live_rows or not export_by_ts:
-        return layer("marketparams", [mkcheck("input.live", "FAIL", err or eerr or "thieu du lieu")], {}, [], "thieu du lieu")
-    common = sorted(set(live_rows) & set(export_by_ts))
-    if not common:
-        return layer("marketparams", [mkcheck("input.pair", "FAIL", "0 cap (ts)")], {}, [], "0 cap")
 
-    # --- 1. 4 field market cung phut ---
-    live_dec = {}
-    bt_dec = {}
-    for fn, col in MKT_FIELDS:
-        a = np.array([float(live_rows[t][col]) for t in common])
-        b = np.array([float(export_by_ts[t][col]) for t in common])
-        d = np.abs(a - b)
-        mx, mn = float(d.max()), float(d.mean())
-        try:
-            cr = float(np.corrcoef(a, b)[0, 1]) if (a.std() > 0 and b.std() > 0) else float("nan")
-        except Exception:
-            cr = float("nan")
-        st = "PASS" if mx <= FEAT_TOL else "FAIL"
-        # luu gia tri de do tac dong quyet dinh
-        live_dec[fn] = a
-        bt_dec[fn] = b
-        table.append({"field": fn, "col": col, "n": len(common), "maxabs": mx, "meanabs": mn,
-                      "corr": cr, "status": st})
-    for fn in MKT_UNAVAIL:
-        table.append({"field": fn, "col": "(n/a)", "n": 0, "maxabs": None, "meanabs": None,
-                      "corr": None, "status": "MISSING"})
-    nf = sum(1 for t in table if t["status"] == "FAIL")
-    checks.append(mkcheck("mkt.field_parity", "FAIL" if nf else "PASS",
-                          "%d/%d field co nguon bi lech max|delta|>%.0e; %d field MISSING (khong co trong CSV)"
-                          % (nf, len(MKT_FIELDS), FEAT_TOL, len(MKT_UNAVAIL))))
 
-    # --- 2. nguong ---
-    th_rows = []
-    n_th_lech = 0
-    for k in MKT_THRESH_KEYS:
-        exp = prof.get(k)
-        got = None
-        used = None
-        for al in [k] + MKT_THRESH_ALIAS[k]:
-            if al in live_cfg:
-                got, used = live_cfg[al], al
-                break
-        dflt = MKT_DEFAULTS[k]
-        if got is not None and exp is not None and cmp_val(got, exp):
-            v = "MATCH"
-        elif got is None and exp is None:
-            v = "MATCH-DEFAULT"            # ca 2 ben unset => cung an default Java
-        elif exp is None and got is None:
-            v = "MATCH-DEFAULT"
-        elif got is not None and exp is not None:
-            v = "MATCH" if cmp_val(got, exp) else "LECH"
-        elif got is None and exp is not None:
-            v = "MATCH-DEFAULT" if cmp_val(dflt, exp) else "MISSING"
-        else:
-            v = "LECH"
-        if v in ("LECH", "MISSING"):
-            n_th_lech += 1
-        th_rows.append({"key": k, "profile": exp if exp is not None else "(unset)",
-                        "live": ("%s (%s)" % (got, used)) if got is not None else "(unset)",
-                        "default": dflt, "verdict": v})
-    checks.append(mkcheck("mkt.threshold_parity", "FAIL" if n_th_lech else "PASS",
-                          "%d/%d nguong lech; ca 2 ben unset => dung default Java (MS_DOWN_BIG_AVG=%.5f, DCA=%.5f)"
-                          % (n_th_lech, len(MKT_THRESH_KEYS), MKT_DEFAULTS["MS_DOWN_BIG_AVG"],
-                             MKT_DEFAULTS["MS_DOWN_BIG_AVG_DCA"])))
-
-    # --- 3. tac dong len quyet dinh BIG_DOWN / DCA ---
-    thr_bd = MKT_DEFAULTS["MS_DOWN_BIG_AVG"]
-    thr_dca = MKT_DEFAULTS["MS_DOWN_BIG_AVG_DCA"]
-    def dec(a_down, a_15):
-        return (a_down < thr_bd), (a_15 < thr_dca) | (a_down < thr_dca / 3.0)
-    live_bd, live_dca = dec(live_dec["rateDownAvg"], live_dec["rateDown15MAvg"])
-    bt_bd, bt_dca = dec(bt_dec["rateDownAvg"], bt_dec["rateDown15MAvg"])
-    flip_bd = int(np.sum(live_bd != bt_bd))
-    flip_dca = int(np.sum(live_dca != bt_dca))
-    dead_bt = int(np.sum((bt_dec["rateDownAvg"] == 0) & (bt_dec["rateDown15MAvg"] == 0)))
-    checks.append(mkcheck("mkt.impact_bigdown_dca",
-                          "FAIL" if (flip_bd or flip_dca or dead_bt) else "PASS",
-                          "BIG_DOWN flip=%d, DCA flip=%d; BACKTEST field=0 (chet) %d/%d phut (%.0f%%) "
-                          "=> BIG_DOWN/DCA khong the kich hoat tu field nay o cac phut do"
-                          % (flip_bd, flip_dca, dead_bt, len(common), 100.0 * dead_bt / len(common))))
-    metrics = {"pairs": len(common), "field_fail": nf, "thresh_fail": n_th_lech,
-               "bigdown_flip": flip_bd, "dca_flip": flip_dca, "backtest_dead_minutes": dead_bt,
-               "live_bigdown_minutes": int(live_bd.sum()), "live_dca_minutes": int(live_dca.sum()),
-               "thresholds": th_rows}
-    reason = ("market: %d/%d field lech (rateDown15MAvg max|delta|=%.4f), BACKTEST field=0 %.0f%% phut; "
-              "nguong khop (default)" % (nf, len(MKT_FIELDS), table[1]["maxabs"] or 0, 100.0 * dead_bt / len(common)))
-    return layer("marketparams", checks, metrics, table, reason)
+def _p15_dev_source_note(live_rows):
+    """Tim nguon p15 DEV KHONG-ONNX (pred.bin: long ts + predReturn15M + predRisk4H).
+    Neu khong phu cua so LIVE => khong so cung phut duoc => MISSING (khong bia)."""
+    import struct
+    pred_bin = "/home/ubuntu/wfo_ds_x1_2021/pred.bin"
+    if not os.path.exists(pred_bin):
+        return "khong co nguon p15 DEV khong-ONNX; ONNX bi cam => MISSING; de xuat: dump p15 DEV CSV"
+    try:
+        with open(pred_bin, "rb") as f:
+            cnt = struct.unpack(">i", f.read(4))[0]
+            f.seek(4); t0 = struct.unpack(">q", f.read(8))[0]
+            f.seek(4 + 16 * (cnt - 1)); t1 = struct.unpack(">q", f.read(8))[0]
+    except Exception as e:
+        return "pred.bin khong doc duoc: %s" % str(e)[:60]
+    lmin = min(live_rows) if live_rows else 0
+    lmax = max(live_rows) if live_rows else 0
+    ov = 0 if (lmax < t0 or lmin > t1) else 1
+    return ("nguon p15 DEV KHONG-ONNX = pred.bin (n=%d, ts %d..%d). Cua so LIVE %d..%d: giao=%s "
+            "=> %s") % (cnt, t0, t1, lmin, lmax, "co" if ov else "KHONG",
+                        "so cung phut duoc" if ov else "KHONG so cung phut duoc => MISSING (2026=holdout, ngoai DEV<=2025-12-31)")
 
 
 def layer_selector():
-    checks = [mkcheck("input.live", "MISSING",
-                      "artifact selector LIVE la Java-serialized HashMap<String,Float> "
-                      "(storage/data/predictionSymbol/*), khong co score CSV doc duoc; "
-                      "khong co artifact selector BACKTEST cung tick."),
-              mkcheck("output.compare", "MISSING",
-                      "khong so duoc score/rank tung tick. De xuat: them cot selectorScore+rank vao feat_dump CSV "
-                      "(hoac dump CSV rieng) cho CA live lan export.")]
-    return layer("selector", checks, {}, [], "MISSING: thieu nguon selector doi ung")
+    live_rows, files, trunc, syms, err = load_live_feat()
+    cols = set(next(iter(live_rows.values())).keys()) if live_rows else set()
+    has_sel = ("selectorScore" in cols) or ("rank" in cols) or ("selector_score" in cols)
+    checks = [
+        mkcheck("input.live", "MISSING" if not has_sel else "PASS",
+                "feat_dump co cot selectorScore/rank? %s (cot hien co: %d)" % ("CO" if has_sel else "KHONG", len(cols))),
+        mkcheck("input.artifact", "MISSING",
+                "artifact selector LIVE = Java-serialized HashMap<String,Float> (242 storage/data/predictionSymbol/*) "
+                "— lan ghi CUOI 2026-08-20, KHONG phu cua so LIVE 2026-09-28; khong co artifact selector BACKTEST cung tick."),
+        mkcheck("output.compare", "MISSING",
+                "khong so duoc score/rank tung tick. De xuat: them cot selectorScore+rank vao feat_dump CSV "
+                "(CA live lan export) => khi do harness do duoc rank-overlap/top-K parity khong can ONNX."),
+    ]
+    return layer("selector", checks, {"feat_dump_cols": len(cols), "has_selector_col": has_sel}, [],
+                 "MISSING: thieu nguon selector doi ung (khong co cot score/rank)")
 
 
 def layer_entry():
@@ -633,8 +845,8 @@ def selftests():
         c, table, pr, _ = _features_core(export_by_ts, live_rows, mutate_feature="hourOfDay")
         row = next((t for t in table if t["feature"] == "hourOfDay"), None)
         ok = row is not None and row["status"] == "FAIL"
-        base = layer_features()
-        base_fail = [t["feature"] for t in base["table"] if t["status"] == "FAIL"]
+        _, bt, _, _ = _features_core(export_by_ts, live_rows)
+        base_fail = [t["feature"] for t in bt if t["status"] == "FAIL"]
         only_extra = sorted(set([t["feature"] for t in table if t["status"] == "FAIL"]) - set(base_fail))
         out.append({"id": "injected_shift_fails_right", "status": "PASS" if (ok and only_extra == ["hourOfDay"]) else "FAIL",
                     "detail": "tai hourOfDay status=%s; FAIL them moi=%s (mong doi [hourOfDay]; truoc= %s)" % (

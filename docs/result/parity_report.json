@@ -411,8 +411,13 @@
   {
    "checks": [
     {
-     "detail": "LIVE files=6 (cut cut=6, da phuc hoi partial), pairs=385",
+     "detail": "LIVE files=6 (cut cut=6 \u2014 GOC: writer Java khong finalize GZIPOutputStream (thieu gz trailer; da xac minh tren CA file 242 moi nhat 20261001_090200) => harness phuc hoi dong hoan chinh bang partial-inflate), pairs=385",
      "id": "input.integrity",
+     "status": "PASS"
+    },
+    {
+     "detail": "tai tao inline 1426 phut (md_inline<-kline 242)",
+     "id": "input.inline_source",
      "status": "PASS"
     },
     {
@@ -426,34 +431,47 @@
      "status": "PASS"
     },
     {
-     "detail": "29/33 feature vuot nguong max|delta|<=1e-08",
+     "detail": "27/33 feature vuot nguong (exact<=1e-08 / inline<=1e-03); o nguong MAY (1e-08): 29/33 vuot",
      "id": "output.feature_parity",
+     "n_fail": 27,
+     "n_fail_machine": 29,
      "status": "FAIL"
     }
    ],
    "metrics": {
-    "feat_fail": 29,
+    "feat_fail": 27,
+    "feat_fail_machine_tol": 29,
     "files": 6,
+    "inline_minutes": 1426,
     "pairs": 385,
+    "reconstructed": [
+     "momentum15M",
+     "momentum1M",
+     "momentumAcceleration"
+    ],
     "symbols": [
      "BTCUSDT"
     ],
     "tol": 1e-08,
+    "tol_inline": 0.001,
     "truncated_files": 6
    },
    "name": "features",
-   "reason": "29/33 feature lech (max|delta|>1e-08)",
+   "reason": "27/33 feature lech (exact<=1e-08, inline<=1e-03; o nguong may 29/33)",
    "status": "FAIL",
    "table": [
     {
-     "corr": NaN,
+     "corr": 0.9941885209432646,
      "feature": "momentum1M",
-     "maxabs": 0.00913885329,
-     "meanabs": 0.0021246516752181817,
+     "maxabs": 0.0007491796382750387,
+     "meanabs": 5.2963609089813716e-05,
      "n": 385,
      "nan_live": 0,
-     "note": "export thieu nguon (dev=0) \u2014 can tai tao inline",
-     "status": "FAIL"
+     "note": "tai tao inline tu kline (nguon export=0)",
+     "reconstructed": true,
+     "status": "PASS",
+     "status_machine": "FAIL",
+     "tol": 0.001
     },
     {
      "corr": 0.9311191420403977,
@@ -463,17 +481,23 @@
      "n": 385,
      "nan_live": 0,
      "note": "",
-     "status": "FAIL"
+     "reconstructed": false,
+     "status": "FAIL",
+     "status_machine": "FAIL",
+     "tol": 1e-08
     },
     {
-     "corr": NaN,
+     "corr": 0.9995194388082878,
      "feature": "momentum15M",
-     "maxabs": 0.0248868018,
-     "meanabs": 0.012715135048675325,
+     "maxabs": 0.0007399289028825126,
+     "meanabs": 5.832736988913026e-05,
      "n": 385,
      "nan_live": 0,
-     "note": "export thieu nguon (dev=0) \u2014 can tai tao inline",
-     "status": "FAIL"
+     "note": "tai tao inline tu kline (nguon export=0)",
+     "reconstructed": true,
+     "status": "PASS",
+     "status_machine": "FAIL",
+     "tol": 0.001
     },
     {
      "corr": 0.9966631381702887,
@@ -483,7 +507,10 @@
      "n": 385,
      "nan_live": 0,
      "note": "",
-     "status": "FAIL"
+     "reconstructed": false,
+     "status": "FAIL",
+     "status_machine": "FAIL",
+     "tol": 1e-08
     },
     {
      "corr": 0.9997613497881039,
@@ -493,7 +520,10 @@
      "n": 385,
      "nan_live": 0,
      "note": "",
-     "status": "FAIL"
+     "reconstructed": false,
+     "status": "FAIL",
+     "status_machine": "FAIL",
+     "tol": 1e-08
     },
     {
      "corr": 0.999786071198949,
@@ -503,17 +533,23 @@
      "n": 385,
      "nan_live": 0,
      "note": "",
-     "status": "FAIL"
+     "reconstructed": false,
+     "status": "FAIL",
+     "status_machine": "FAIL",
+     "tol": 1e-08
     },
     {
-     "corr": -0.2391869437824503,
+     "corr": 0.9945264379096257,
      "feature": "momentumAcceleration",
-     "maxabs": 0.0248868041,
-     "meanabs": 0.012699029207402597,
+     "maxabs": 0.0022159775938228737,
+     "meanabs": 0.0001804291474224931,
      "n": 385,
      "nan_live": 0,
-     "note": "export thieu nguon (dev=0) \u2014 can tai tao inline",
-     "status": "FAIL"
+     "note": "tai tao inline tu kline (nguon export=0)",
+     "reconstructed": true,
+     "status": "FAIL",
+     "status_machine": "FAIL",
+     "tol": 0.001
     },
     {
      "corr": 0.997520790408775,
@@ -523,7 +559,10 @@
      "n": 385,
      "nan_live": 0,
      "note": "",
-     "status": "FAIL"
+     "reconstructed": false,
+     "status": "FAIL",
+     "status_machine": "FAIL",
+     "tol": 1e-08
     },
     {
      "corr": 0.8560076144450692,
@@ -533,7 +572,10 @@
      "n": 385,
      "nan_live": 0,
      "note": "",
-     "status": "FAIL"
+     "reconstructed": false,
+     "status": "FAIL",
+     "status_machine": "FAIL",
+     "tol": 1e-08
     },
     {
      "corr": 0.519951962047742,
@@ -543,7 +585,10 @@
      "n": 385,
      "nan_live": 0,
      "note": "",
-     "status": "FAIL"
+     "reconstructed": false,
+     "status": "FAIL",
+     "status_machine": "FAIL",
+     "tol": 1e-08
     },
     {
      "corr": 0.5457428597031877,
@@ -553,7 +598,10 @@
      "n": 385,
      "nan_live": 0,
      "note": "",
-     "status": "FAIL"
+     "reconstructed": false,
+     "status": "FAIL",
+     "status_machine": "FAIL",
+     "tol": 1e-08
     },
     {
      "corr": 0.47430525256999656,
@@ -563,7 +611,10 @@
      "n": 385,
      "nan_live": 0,
      "note": "",
-     "status": "FAIL"
+     "reconstructed": false,
+     "status": "FAIL",
+     "status_machine": "FAIL",
+     "tol": 1e-08
     },
     {
      "corr": 0.9861039446094925,
@@ -573,7 +624,10 @@
      "n": 385,
      "nan_live": 0,
      "note": "",
-     "status": "FAIL"
+     "reconstructed": false,
+     "status": "FAIL",
+     "status_machine": "FAIL",
+     "tol": 1e-08
     },
     {
      "corr": 0.5300450745429073,
@@ -583,7 +637,10 @@
      "n": 385,
      "nan_live": 0,
      "note": "",
-     "status": "FAIL"
+     "reconstructed": false,
+     "status": "FAIL",
+     "status_machine": "FAIL",
+     "tol": 1e-08
     },
     {
      "corr": 0.9839090241824462,
@@ -593,7 +650,10 @@
      "n": 385,
      "nan_live": 0,
      "note": "",
-     "status": "FAIL"
+     "reconstructed": false,
+     "status": "FAIL",
+     "status_machine": "FAIL",
+     "tol": 1e-08
     },
     {
      "corr": 0.9029183134968456,
@@ -603,7 +663,10 @@
      "n": 385,
      "nan_live": 0,
      "note": "",
-     "status": "FAIL"
+     "reconstructed": false,
+     "status": "FAIL",
+     "status_machine": "FAIL",
+     "tol": 1e-08
     },
     {
      "corr": 0.635678420298368,
@@ -613,7 +676,10 @@
      "n": 385,
      "nan_live": 0,
      "note": "",
-     "status": "FAIL"
+     "reconstructed": false,
+     "status": "FAIL",
+     "status_machine": "FAIL",
+     "tol": 1e-08
     },
     {
      "corr": 0.9942289220218226,
@@ -623,7 +689,10 @@
      "n": 385,
      "nan_live": 0,
      "note": "",
-     "status": "FAIL"
+     "reconstructed": false,
+     "status": "FAIL",
+     "status_machine": "FAIL",
+     "tol": 1e-08
     },
     {
      "corr": 0.5610960776896484,
@@ -633,7 +702,10 @@
      "n": 385,
      "nan_live": 0,
      "note": "",
-     "status": "FAIL"
+     "reconstructed": false,
+     "status": "FAIL",
+     "status_machine": "FAIL",
+     "tol": 1e-08
     },
     {
      "corr": 0.8620455960991643,
@@ -643,7 +715,10 @@
      "n": 385,
      "nan_live": 0,
      "note": "",
-     "status": "FAIL"
+     "reconstructed": false,
+     "status": "FAIL",
+     "status_machine": "FAIL",
+     "tol": 1e-08
     },
     {
      "corr": 0.6938660918008708,
@@ -653,7 +728,10 @@
      "n": 385,
      "nan_live": 0,
      "note": "",
-     "status": "FAIL"
+     "reconstructed": false,
+     "status": "FAIL",
+     "status_machine": "FAIL",
+     "tol": 1e-08
     },
     {
      "corr": 0.852630089558188,
@@ -663,7 +741,10 @@
      "n": 385,
      "nan_live": 0,
      "note": "",
-     "status": "FAIL"
+     "reconstructed": false,
+     "status": "FAIL",
+     "status_machine": "FAIL",
+     "tol": 1e-08
     },
     {
      "corr": 0.8969893315772771,
@@ -673,7 +754,10 @@
      "n": 385,
      "nan_live": 0,
      "note": "",
-     "status": "FAIL"
+     "reconstructed": false,
+     "status": "FAIL",
+     "status_machine": "FAIL",
+     "tol": 1e-08
     },
     {
      "corr": 0.03890877999000979,
@@ -683,7 +767,10 @@
      "n": 385,
      "nan_live": 0,
      "note": "",
-     "status": "FAIL"
+     "reconstructed": false,
+     "status": "FAIL",
+     "status_machine": "FAIL",
+     "tol": 1e-08
     },
     {
      "corr": 0.93678326545352,
@@ -693,7 +780,10 @@
      "n": 385,
      "nan_live": 0,
      "note": "",
-     "status": "FAIL"
+     "reconstructed": false,
+     "status": "FAIL",
+     "status_machine": "FAIL",
+     "tol": 1e-08
     },
     {
      "corr": 1.0,
@@ -703,7 +793,10 @@
      "n": 385,
      "nan_live": 0,
      "note": "",
-     "status": "PASS"
+     "reconstructed": false,
+     "status": "PASS",
+     "status_machine": "PASS",
+     "tol": 1e-08
     },
     {
      "corr": NaN,
@@ -713,7 +806,10 @@
      "n": 385,
      "nan_live": 0,
      "note": "",
-     "status": "PASS"
+     "reconstructed": false,
+     "status": "PASS",
+     "status_machine": "PASS",
+     "tol": 1e-08
     },
     {
      "corr": NaN,
@@ -723,7 +819,10 @@
      "n": 385,
      "nan_live": 0,
      "note": "",
-     "status": "PASS"
+     "reconstructed": false,
+     "status": "PASS",
+     "status_machine": "PASS",
+     "tol": 1e-08
     },
     {
      "corr": NaN,
@@ -733,7 +832,10 @@
      "n": 385,
      "nan_live": 0,
      "note": "",
-     "status": "PASS"
+     "reconstructed": false,
+     "status": "PASS",
+     "status_machine": "PASS",
+     "tol": 1e-08
     },
     {
      "corr": 0.545294469225297,
@@ -743,7 +845,10 @@
      "n": 385,
      "nan_live": 0,
      "note": "",
-     "status": "FAIL"
+     "reconstructed": false,
+     "status": "FAIL",
+     "status_machine": "FAIL",
+     "tol": 1e-08
     },
     {
      "corr": 0.703464388473976,
@@ -753,7 +858,10 @@
      "n": 385,
      "nan_live": 0,
      "note": "",
-     "status": "FAIL"
+     "reconstructed": false,
+     "status": "FAIL",
+     "status_machine": "FAIL",
+     "tol": 1e-08
     },
     {
      "corr": 0.8615248796600065,
@@ -763,7 +871,10 @@
      "n": 385,
      "nan_live": 0,
      "note": "",
-     "status": "FAIL"
+     "reconstructed": false,
+     "status": "FAIL",
+     "status_machine": "FAIL",
+     "tol": 1e-08
     },
     {
      "corr": 0.10417510686493901,
@@ -773,7 +884,10 @@
      "n": 385,
      "nan_live": 0,
      "note": "",
-     "status": "FAIL"
+     "reconstructed": false,
+     "status": "FAIL",
+     "status_machine": "FAIL",
+     "tol": 1e-08
     }
    ]
   },
@@ -795,7 +909,7 @@
      "status": "FAIL"
     },
     {
-     "detail": "p15 phia BACKTEST can ONNX inference (bi cam) => khong do duoc; de xuat: dump p15/dev CSV",
+     "detail": "nguon p15 DEV KHONG-ONNX = pred.bin (n=2500260, ts 1617210000000..1767225540000). Cua so LIVE 1790559600000..1790617260000: giao=KHONG => KHONG so cung phut duoc => MISSING (2026=holdout, ngoai DEV<=2025-12-31)",
      "id": "gate.p15_dev_parity",
      "status": "MISSING"
     }
@@ -816,30 +930,66 @@
   {
    "checks": [
     {
-     "detail": "2/2 field co nguon bi lech max|delta|>1e-08; 2 field MISSING (khong co trong CSV)",
-     "id": "mkt.field_parity",
-     "status": "FAIL"
-    },
-    {
-     "detail": "0/3 nguong lech; ca 2 ben unset => dung default Java (MS_DOWN_BIG_AVG=-0.03157, DCA=-0.03157)",
-     "id": "mkt.threshold_parity",
+     "detail": "LIVE feat_dump: 502 phut (momentum1M=rateDownAvg, momentum15M=rateDown15MAvg)",
+     "id": "input.live",
      "status": "PASS"
     },
     {
-     "detail": "BIG_DOWN flip=0, DCA flip=0; BACKTEST field=0 (chet) 385/385 phut (100%) => BIG_DOWN/DCA khong the kich hoat tu field nay o cac phut do",
-     "id": "mkt.impact_bigdown_dca",
-     "status": "FAIL"
+     "detail": "502 phut giao (LIVE vs inline=cung thuat toan calMarketData)",
+     "id": "input.pair",
+     "status": "PASS"
+    },
+    {
+     "detail": "2/4 field do duoc: rateDownAvg max|d|=7.492e-04 corr=0.99485 ; rateDown15MAvg max|d|=7.399e-04 corr=0.99958",
+     "id": "mp.fields_live_vs_inline",
+     "status": "MISSING"
+    },
+    {
+     "bigdown_a": 0,
+     "bigdown_b": 0,
+     "bigdown_flips": 0,
+     "dca_a": 0,
+     "dca_b": 0,
+     "dca_flips": 0,
+     "detail": "BIG_DOWN flip=0 (live=0 inline=0); DCA flip=0 (live=0 inline=0)",
+     "id": "mp.decision_flips_live",
+     "status": "PASS"
+    },
+    {
+     "detail": "market.bin(DEV store) vs inline @2025-10-10: n=1376; rateDownAvg max|d|=9.789e-04 corr=0.9970; rateDown15MAvg max|d|=2.027e-03 corr=0.9977; BIG_DOWN flip=0 DCA flip=1",
+     "id": "mp.dev_store",
+     "status": "PASS"
+    },
+    {
+     "detail": "LIVE(2026-09) vs market.bin(<=2025-12-31): giao=0 phut => khong so truc tiep cung phut duoc; dung inline lam cau noi (ca 2 phia khop ~1e-3)",
+     "id": "mp.live_vs_store_sameminute",
+     "status": "MISSING"
+    },
+    {
+     "detail": "3 nguong: 242 & baseline deu UNSET -> cung default Java (-0.03157/-0.03157/0.02046)",
+     "id": "mp.thresholds",
+     "status": "PASS"
     }
    ],
    "metrics": {
-    "backtest_dead_minutes": 385,
-    "bigdown_flip": 0,
-    "dca_flip": 0,
-    "field_fail": 2,
-    "live_bigdown_minutes": 0,
-    "live_dca_minutes": 0,
-    "pairs": 385,
-    "thresh_fail": 0,
+    "dev_flips": {
+     "bigdown_a": 0,
+     "bigdown_b": 0,
+     "bigdown_flips": 0,
+     "dca_a": 1,
+     "dca_b": 0,
+     "dca_flips": 1
+    },
+    "dev_store": {
+     "n": 1376,
+     "rateDown15MAvg_corr": 0.9977090169770493,
+     "rateDown15MAvg_maxabs": 0.0020271385816998146,
+     "rateDownAvg_corr": 0.9969522638229248,
+     "rateDownAvg_maxabs": 0.000978882038359503
+    },
+    "inline_minutes": 1426,
+    "live_minutes": 502,
+    "thr_live_overrides": {},
     "thresholds": [
      {
       "default": -0.03157,
@@ -865,63 +1015,103 @@
     ]
    },
    "name": "marketparams",
-   "reason": "market: 2/2 field lech (rateDown15MAvg max|delta|=0.0249), BACKTEST field=0 100% phut; nguong khop (default)",
-   "status": "FAIL",
+   "reason": "field: rateDownAvg/rateDown15MAvg khop muc nhieu (<1e-3); rateUpAvg MISSING (khong dump); nguong MATCH default; flip LIVE=0/0, DEV(stress)=0/1",
+   "status": "MISSING",
    "table": [
     {
      "col": "momentum1M",
-     "corr": NaN,
+     "corr": 0.9948533251167861,
      "field": "rateDownAvg",
-     "maxabs": 0.00913885329,
-     "meanabs": 0.0021246516752181817,
-     "n": 385,
-     "status": "FAIL"
+     "maxabs": 0.0007491796382750387,
+     "meanabs": 4.476869886825044e-05,
+     "n": 502,
+     "status": "PASS"
     },
     {
      "col": "momentum15M",
-     "corr": NaN,
+     "corr": 0.9995823540073501,
      "field": "rateDown15MAvg",
-     "maxabs": 0.0248868018,
-     "meanabs": 0.012715135048675325,
-     "n": 385,
-     "status": "FAIL"
+     "maxabs": 0.0007399289028825126,
+     "meanabs": 5.591235710089666e-05,
+     "n": 502,
+     "status": "PASS"
     },
     {
-     "col": "(n/a)",
+     "col": "-",
      "corr": null,
      "field": "rateUpAvg",
      "maxabs": null,
      "meanabs": null,
      "n": 0,
+     "note": "feat_dump KHONG xuat rateUpAvg (chi co 2/3 field co nghia)",
      "status": "MISSING"
     },
     {
-     "col": "(n/a)",
+     "col": "-",
      "corr": null,
      "field": "rateUp15MAvg",
      "maxabs": null,
      "meanabs": null,
      "n": 0,
-     "status": "MISSING"
+     "note": "calMarketData KHONG tinh field nay (constructor 3 field; luon 0)",
+     "status": "N/A"
+    },
+    {
+     "col": "MS_DOWN_BIG_AVG",
+     "corr": 1.0,
+     "field": "THR:MS_DOWN_BIG_AVG",
+     "maxabs": 0.0,
+     "meanabs": 0.0,
+     "n": 0,
+     "note": "unset->default -0.03157",
+     "status": "MATCH-DEFAULT"
+    },
+    {
+     "col": "MS_DOWN_BIG_AVG_DCA",
+     "corr": 1.0,
+     "field": "THR:MS_DOWN_BIG_AVG_DCA",
+     "maxabs": 0.0,
+     "meanabs": 0.0,
+     "n": 0,
+     "note": "unset->default -0.03157",
+     "status": "MATCH-DEFAULT"
+    },
+    {
+     "col": "MS_UP_BIG_THRES",
+     "corr": 1.0,
+     "field": "THR:MS_UP_BIG_THRES",
+     "maxabs": 0.0,
+     "meanabs": 0.0,
+     "n": 0,
+     "note": "unset->default 0.02046",
+     "status": "MATCH-DEFAULT"
     }
    ]
   },
   {
    "checks": [
     {
-     "detail": "artifact selector LIVE la Java-serialized HashMap<String,Float> (storage/data/predictionSymbol/*), khong co score CSV doc duoc; khong co artifact selector BACKTEST cung tick.",
+     "detail": "feat_dump co cot selectorScore/rank? KHONG (cot hien co: 36)",
      "id": "input.live",
      "status": "MISSING"
     },
     {
-     "detail": "khong so duoc score/rank tung tick. De xuat: them cot selectorScore+rank vao feat_dump CSV (hoac dump CSV rieng) cho CA live lan export.",
+     "detail": "artifact selector LIVE = Java-serialized HashMap<String,Float> (242 storage/data/predictionSymbol/*) \u2014 lan ghi CUOI 2026-08-20, KHONG phu cua so LIVE 2026-09-28; khong co artifact selector BACKTEST cung tick.",
+     "id": "input.artifact",
+     "status": "MISSING"
+    },
+    {
+     "detail": "khong so duoc score/rank tung tick. De xuat: them cot selectorScore+rank vao feat_dump CSV (CA live lan export) => khi do harness do duoc rank-overlap/top-K parity khong can ONNX.",
      "id": "output.compare",
      "status": "MISSING"
     }
    ],
-   "metrics": {},
+   "metrics": {
+    "feat_dump_cols": 36,
+    "has_selector_col": false
+   },
    "name": "selector",
-   "reason": "MISSING: thieu nguon selector doi ung",
+   "reason": "MISSING: thieu nguon selector doi ung (khong co cot score/rank)",
    "status": "MISSING",
    "table": []
   },

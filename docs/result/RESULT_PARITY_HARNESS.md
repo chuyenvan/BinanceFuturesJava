@@ -1,5 +1,9 @@
 # RESULT — PARITY HARNESS shadow/242 ↔ BACKTEST (`research/parity/parity_check.py`)
 
+> ⚠️ **BẢN CŨ (V1).** Số ở §2B dưới đây là của V1 (khi export field market **chưa** được tái tạo inline, và chưa có
+> nguồn non-ONNX cho gate). **BẢN HIỆN HÀNH: `docs/result/RESULT_PARITY_HARNESS_V2.md`** + `docs/result/parity_report.{json,md}`
+> (tái tạo inline `momentum1M/15M`; field market khớp mức nhiễu ~1e-3; có `pred.bin` cho p15 DEV).
+
 - **Yêu cầu owner (2026-10-01):** viết harness so shadow với backtest; **validate INPUT/OUTPUT chặt**; **deterministic**;
   **LUÔN ra PASS/FAIL/MISSING + exit code** (không "test fail rồi không có kết quả"); tiêu chí **khớp 100 %**.
 - **Pre-reg (chốt TRƯỚC):** `docs/prereg/PREREG_PARITY_HARNESS.md`. Harness: `research/parity/parity_check.py`.
