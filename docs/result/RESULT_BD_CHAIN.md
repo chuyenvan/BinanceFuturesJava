@@ -1,141 +1,159 @@
 # RESULT_BD_CHAIN — đổi `rateDown15MAvg` theo tỷ lệ universe `f` (G2 + FLAT3)
 
-Chạy 2026-10-01 (vòng 2 · subagent "CHO SLOT"), nhánh `module`. Pre-reg: `docs/prereg/PREREG_BD_CHAIN.md`
-(chốt **TRƯỚC** khi đo). Nền: `profiles/g2_flat3.properties` (md5 FILE `c6d4ef57…`; parity `printDone.csv`
-md5 `650c386f0d0dfea334af9d55ca2f21d4`, equity 131908, n 2517).
+Chạy 2026-10-01 (vòng 3 · subagent "BD-CHAIN BUILD"), nhánh `module`. Pre-reg:
+`docs/prereg/PREREG_BD_CHAIN.md` (chốt **TRƯỚC** khi đo). Nền: `profiles/g2_flat3.properties`
+(md5 FILE `c6d4ef57…`; parity `printDone.csv` md5 `650c386f0d0dfea334af9d55ca2f21d4`, equity
+131908, n 2517). DEV ≤ 2025-12-31; 2026 = HOLDOUT (không đọc).
 
 ---
 
 ## 0. KẾT QUẢ CHỐT (đọc trước)
 
-> ### ⛔ VIỆC 2/3 VẪN **KHÔNG CHẠY ĐƯỢC**. Có **2 blocker ĐỘC LẬP** — cái thứ hai là cái thật sự chặn:
->
-> **(A) Slot Kaggle bận.** `chuyendinh/sm-pathexit` = `running` suốt cửa sổ theo dõi (poll §1).
-> Theo ràng buộc CỨNG #1/#6 ⇒ không giành slot.
->
-> **(B) KHÔNG có harness Kaggle cho các bước upstream của dây chuyền** (quan trọng hơn):
-> đổi `f` phải **sinh lại `market.bin`** + **sinh lại gate store rồi retrain/pred** + **S1/bins**.
-> Cả 3 khối upstream này hiện **không có đường chạy trên Kaggle**: chúng đều là job Java đọc
-> **Aerospike 226** (replay nhiều giờ → nhiều ngày), còn `market.bin`/`pred.bin`/`predict_wf_*.bin`
-> trong bundle là **snapshot tĩnh** (xem §3). Vì vậy **dù slot có rảnh, VIỆC 2/3 vẫn không tự chạy được** —
-> phải **xây kernel/harness mới** (không phải "chạy lại lệnh cũ").
+> ### ✅ HARNESS ĐÃ XÂY + CHẠY ĐƯỢC cho **bước 1-2** (trước đây thiếu hoàn toàn).
+> ### ⛔ NHƯNG **CỔNG PARITY `f=0` KHÔNG KHỚP** khi dùng `market.bin` SINH LẠI ⇒ **DỪNG**, không chấm arm.
 
-**VIỆC 0 + VIỆC 1 (code) đã xong ở vòng trước** ⇒ xem §1 vòng trước (`commit 08beda05`); vòng này chỉ
-cập nhật trạng thái slot + chẩn đoán blocker hạ tầng.
-
----
-
-## 1. VIỆC 1 — CHỜ SLOT (bắt buộc, không tranh)
-
-Poll `kaggle kernels status chuyendinh/sm-pathexit` định kỳ (~5 phút/lần), log thô: `/home/ubuntu/bd_chain_poll.log`.
-
-| mốc | trạng thái `sm-pathexit` | ghi chú |
-|---|---|---|
-| 2026-10-01 05:48 (lastRunTime) | running | vòng trước đã thấy |
-| 2026-10-01 13:05:39 | **running** | [1] |
-| 2026-10-01 13:10:39 | **running** | [2] |
-| 2026-10-01 13:10:47 | **running** | kiểm lại trước khi kết thúc vòng |
-
-- **DỪNG vòng này** không phải vì hết hạn chờ, mà vì **blocker (B)** (§3): dây chuyền upstream không có harness
-  Kaggle ⇒ **dù slot rảnh, VIỆC 2/3 vẫn không chạy được**. Poll (`/home/ubuntu/bd_chain_poll.sh`) đã ghi log;
-  vòng sau chỉ cần đọc lại.
-
-- **Slot theo API list = 0 running / 5** (⚠️ KHÔNG tin được: CLI 1.6.17 `kernels_list` **không** trả
-  trường `status` ⇒ lọc `status in (running,queued)` ra 0 một cách SAI). Nguồn sự thật là
-  `kaggle kernels status <ref>` (endpoint riêng) ⇒ **`sm-pathexit` = running thật**.
-- ⇒ Theo luật §6 pre-reg ("Kaggle bận ⇒ DỪNG + báo RÕ"): **DỪNG**, không push kernel nào.
-
----
-
-## 2. VIỆC 2 — PARITY `f=0` (xác nhận) + 4 ARM (KHÔNG chạy được)
-
-### 2.1 Parity `f=0` — md5 MỤC TIÊU ĐÃ CÓ BẰNG CHỨNG (từ run nền)
-
-Run nền `chuyendinh/sim-g2flat3-val` (Kaggle, 2026-09-29, `TICKER_SOURCE=file`, profile `g2_flat3`,
-bundle `sim-x1-2021-bundle`, jar `sim-jar-gdv2`) **đã** cho:
-
-| chỉ số | giá trị |
+| hạng mục | kết quả |
 |---|---|
-| md5 `printDone.csv` | **`650c386f0d0dfea334af9d55ca2f21d4`** = ĐÚNG mục tiêu pre-reg ✅ |
-| equity cuối | 131908 · `n_trades` 2517 · cửa sổ 20210701→20251230 |
-| `PROFILE_HASH` | c47b73f3133521a1 · `symbol_mapper` 863 · jar_sha256 `7368be46…` |
+| **Kernel A** — sinh `market.bin` từ ticker file Kaggle (+ `SIM_BD_FRACTION`) | ✅ chạy 5/5 arm (f=0/0.1/0.3/0.5/1.0), ~18–38 phút/arm |
+| **Kernel B** — patch cột rate-derived của gate store từ `market.bin` (Python thuần) | ✅ chạy (f=0/0.1/0.3 xong; f=0.5/1.0 đẩy lại) |
+| **Parity JAR HEAD** (`bdjar-par`: jar HEAD + `market.bin` GỐC) | ✅ **md5 `650c386f0d0dfea334af9d55ca2f21d4` — khớp byte-identical** |
+| **Parity `f=0` toàn phần** (`bdf000-par`: jar HEAD + `market.bin` SINH LẠI) | ⛔ **md5 `6617c809…` ≠ target** (n 2517, equity 131878 vs 131908) |
+| **Kernel C** (gate retrain → `pred.bin`) | code viết xong, **CHƯA chạy** |
+| **Kernel D** (S1 + bins) | **CHƯA viết** |
+| **4 arm đăng ký (cả dây chuyền)** | **NOT-RUN** — chặn ở cổng parity ⇒ theo pre-reg §4/§6 **DỪNG** |
 
-- **CHƯA re-run trong vòng này**: luật §6 (còn job `running`) ⇒ không push. Do đó chưa xác nhận
-  byte-identity của **JAR HEAD** (có key `SIM_BD_FRACTION`, default 0) — đây là việc **còn nợ** (§4).
-- Về lý thuyết `f=0` ⇒ `BD_FRACTION=0` ⇒ không chạm `period` ⇒ kỳ vọng **byte-identical**; nhưng
-  pre-reg đòi **tái lập bằng số**, nên vẫn phải chạy lại trên Kaggle khi có slot.
+⇒ **NO-GO (BLOCKED tại cổng parity) — giữ `f=0` (N=100).** Đây **không** phải kết luận khoa học
+"biến thể kém": harness đã gỡ được blocker hạ tầng, nhưng **`market.bin` tái tạo từ ticker KHÔNG
+tái lập được set `live`** mà sim nền đọc (xem §2) nên không qua được cổng parity.
 
-### 2.2 Bốn arm `f ∈ {0.10, 0.30, 0.50, 1.00}` — **NOT-RUN** (blocker hạ tầng, KHÔNG phải "kém")
-
-Không có arm nào chạy ⇒ theo luật "arm không ra lệnh ⇒ ghi **NO-CALL**", ở đây mạnh hơn: **NOT-RUN**.
-Không có số ⇒ **không bịa**.
+**Phụ lục (KHÔNG đăng ký):** một biến thể *align* (giữ đúng tập phút của `market.bin` gốc, chỉ thay
+GIÁ TRỊ rate — loại nhiễu "data availability") cho **bảng f × chỉ số** ở §3. Bảng này đo **CHỈ
+đường RULE** (BIG_DOWN/DCA/size-adapt); gate+selector **KHÔNG retrain** ⇒ **KHÔNG phải** kết luận
+4 tầng của pre-reg, chỉ để định hướng vòng sau.
 
 ---
 
-## 3. BLOCKER HẠ TẦNG — vì sao dây chuyền KHÔNG tự chạy được (bằng chứng file:line)
+## 1. HARNESS XÂY ĐƯỢC GÌ (kernel nào / bước nào)
 
-Pre-reg §2 định nghĩa 6 bước. Trạng thái **đường chạy trên Kaggle** của từng bước:
+Code: `tools/kaggle_bd_chain.py` (điều phối A/B/C + stage dataset) · `tools/kaggle_sim.py`
+(thêm `market_ds` + `market_align`) · `src/main/java/.../wfo/framework/ExportMarketBinFromTicker.java`.
 
-| bước | cần gì | hiện trạng | file:line |
+| bước (§2 pre-reg) | kernel / tool | trạng thái | ghi chú |
 |---|---|---|---|
-| 1. market.bin (rule path) | sinh lại market-rate từ ticker 1m với `N_f`, rồi export | **THIẾU**. `market.bin` = snapshot đọc từ Aerospike set `market_data`; sim **đọc tĩnh** | `WfoDataset.java:45,66` · `SimulatorMarketLevelTicker1MStopLoss.java:921` |
-| 2. gate store (33 feat) | replay Aerospike toàn dải rồi ghi CSV | **THIẾU**. Là job Java replay Aerospike **~30–45 s/ngày** (cả dải 2021→2026 = **nhiều giờ**); gate store cũng **không có** dataset trên Kaggle | `ExportGateDataset.java:36,78` |
-| 3. gate retrain + pred → `pred.bin` | `WFOGateRunner` (Java gọi Python train/fold) → set `ai_pred_market_gate_wfo` → `LoadWfoGatePredTool` | **THIẾU** trên Kaggle | `WFOGateRunner.java:60-70` · `LoadWfoGatePredTool.java:15,44` |
-| 4. ledger/pool | `research/pipeline/ledger.py` | cần feature store mới (từ bước 2) | — |
-| 5. S1 retrain + bins | `research/pipeline/s1_rank.py` + `build_map.py` | cần gate p15 mới (bước 3) | — |
-| 6. sim | kernel `tools/kaggle_sim.py` | **CÓ** ✅ | `tools/kaggle_sim.py` |
+| 1. `market.bin` (rule path) | **Kernel A** `ExportMarketBinFromTicker` | ✅ chạy được trên Kaggle | ticker `wfo-ticker-*` → `MarketDataInlineGenerator` (buffer LIÊN TỤC), ghi format `[count][ts][down,up,down15m]`; `f` qua `SIM_BD_FRACTION` |
+| 2. gate store (33 feat) | **Kernel B** (Python, `patch_gate_store`) | ✅ chạy được | chỉ 3 cột phụ thuộc market-rate: `momentum1M=rateDownAvg`, `momentum15M=rateDown15MAvg`, `momentumAcceleration=momentum5M−momentum15M` (`ComprehensiveMarketFeatureExtractor.java:93-100`); các cột khác là hàm giá-từng-coin/lịch ⇒ KHÔNG đổi theo `f` |
+| 3. gate retrain → `pred.bin` | **Kernel C** | ⚠ code xong, CHƯA chạy | dùng đúng hyperparam/fold `gate_feat_study/run_cycle.py`; giữ `predRisk4H` cũ (AIRejectFilter bỏ nhánh RISK 2026-08-08) |
+| 3b. S1 + bins | **Kernel D** | ⚠ CHƯA viết | cần `s1_rank.py`+`build_map.py` port lên Kaggle |
+| 4. sim | `tools/kaggle_sim.py` | ✅ | thêm `market_ds` (thay `market.bin`, giữ pred/funding) + `market_align` |
 
-⇒ **Bước 1–3 đều phụ thuộc Aerospike 226 + Java, không có kernel Kaggle nào làm**; bundle sim chỉ là
-**snapshot tĩnh** (`market.bin` 49MB · `pred.bin` 38MB · `predict_wf_*.bin` ×19). Đổi `f` ⇒ **phải xây mới**
-các kernel upstream này trước; đây là công trình **giờ→ngày**, không phải một lệnh "chạy lại".
+**Không còn phụ thuộc Aerospike để sinh dữ liệu upstream** (chỉ sim còn cần Aerospike cho
+`SimpleSymbolMapper` như mọi run Kaggle trước). Đây là phần **thực sự mới** so với vòng 2
+(vòng 2 kết luận "phải xây mới"; vòng này đã xây + chạy bước 1-2).
 
-**Hệ quả:** kết luận ở §5 là **BLOCKED**, KHÔNG phải kết luận khoa học. `f` đang giữ = **0** (N=100).
+### 1.1 Kernel A — kết quả 5 arm
 
----
+Bằng chứng `SIM_BD_FRACTION` có hiệu lực: so `market.bin` giữa các f (cùng 2.627.810 dòng, cùng
+tập mốc thời gian):
 
-## 4. BẢNG `f` × chỉ số — **KHÔNG CÓ SỐ (BLOCKED)**
+| so | max\|Δ\| (down/up/down15m) | mean\|Δ\| (down15m) | % phút khác |
+|---|---|---|---|
+| f=0.30 vs f=0 | 0.057 / 0.079 / 0.092 | 0.00175 | 99,5 % |
+| f=1.00 vs f=0 | 0.150 / 0.116 / 0.178 | 0.00140 | 79,3 % (65 % vs `up`) |
 
-| `f` | parity md5 | ON-rate BD/DCA | n | T3 (win%/TSloss%) | UW | maxDD | q* | conc | Calmar | 4 tầng |
-|---|---|---|---|---|---|---|---|---|---|---|
-| 0.00 (parity) | `650c386f…` ✅ (run nền; **chưa** re-run JAR HEAD) | — | — | — | — | — | — | — | — | — |
-| 0.10 | NOT-RUN | — | — | — | — | — | — | — | — | — |
-| 0.30 | NOT-RUN | — | — | — | — | — | — | — | — | — |
-| 0.50 | NOT-RUN | — | — | — | — | — | — | — | — | — |
-| 1.00 | NOT-RUN | — | — | — | — | — | — | — | — | — |
-
-- **`f` nào qua 4 tầng:** chưa đo (không arm nào chạy).
-- **Trôi theo năm (ON-rate 2023 vs 2025):** chưa đo trong bài này; bằng chứng cũ (0-sim) ở
-  `RESULT_BD_DEEP §3.4` (non-stationarity 3× theo năm).
+⇒ `f` **thật sự** làm đổi market-rate (không phải no-op). (f=1.0 khác f=0 ở ~65-79 % phút vì khi
+universe ≤ ~125 thì `min(size, size·4/5) = min(100, size·4/5)` ⇒ trùng — nhất quán với §3 pre-reg.)
 
 ---
 
-## 5. TRẢ LỜI (theo thực tế đã làm)
+## 2. PARITY `f=0` — **KHÔNG KHỚP** (và vì sao)
 
-1. **`rateDown15MAvg` là input model hay rule?** → **INPUT MODEL + rule** (đã chốt vòng trước, `08beda05`).
-2. **Mỗi `f` (ON-rate/n/T3/UW/maxDD/q*/conc/Calmar) so G2?** → **KHÔNG CÓ SỐ** — blocker §3.
-3. **Có `f` nào qua 4 tầng?** → **Chưa đo.**
-4. **Trôi theo năm hết chưa?** → **Chưa đo trong bài này.**
-5. **Kết luận dứt khoát:** → **NO-GO (tạm thời, do BLOCKED) — giữ `f=0` (N=100).** Đây **không** phải
-   kết luận khoa học "biến thể kém"; là **chưa đo được** vì (A) slot bận **và** (B) thiếu harness upstream.
+### 2.1 Tách nguyên nhân (2 run đối chứng, cùng jar HEAD `a212e79b`)
+
+| run | `market.bin` | equity | n | md5 `printDone.csv` | kết |
+|---|---|---|---|---|---|
+| nền `sim-g2flat3-val` | gốc (bundle) | 131908 | 2517 | `650c386f0d0dfea334af9d55ca2f21d4` | — |
+| `bdjar-par` | **gốc (bundle)** | 131908 | 2517 | **`650c386f0d0dfea334af9d55ca2f21d4`** | ✅ **PASS** |
+| `bdf000-par` | **sinh lại (Kernel A, f=0)** | 131878 | 2517 | `6617c809f443affe58053b0b0e3c34e0` | ⛔ FAIL |
+
+⇒ **JAR HEAD (có `SIM_BD_FRACTION` default 0) BYTE-IDENTICAL với `sim-jar-gdv2`** — khớp đúng kỳ
+vọng của pre-reg §1 và trả nợ "chưa re-run JAR HEAD" của vòng 2. **Sai số 100 % đến từ `market.bin`
+sinh lại.**
+
+### 2.2 Vì sao `market.bin` sinh lại ≠ `market.bin` gốc
+
+Đối chiếu `bdf000` (sinh lại) vs `market.bin` gốc trên **2.553.236 phút chung**:
+
+| đại lượng | giá trị |
+|---|---|
+| % phút khớp ≤ 1e-6 (down / up / down15m) | 99,83 % / 99,83 % / 99,88 % |
+| % phút khớp ≤ 1e-3 | 99,9999 % |
+| max\|Δ\| down15m | 0,0060 |
+| mốc THIẾU so gốc (ref-only) | **1.576** (chủ yếu 15 phút cold-start đầu 2021-01-01; 1.332 ở 2025) |
+| mốc THỪA so gốc (new-only) | **74.574** (~41 phút/ngày, rải đều 2021..2025, mọi giờ) |
+
+**Nguyên nhân:** `market.bin` gốc = dump set Aerospike `market_data` do tiến trình **LIVE** ghi —
+set này **thiếu ~2,8 % số phút** (gaps của live), còn Kernel A sinh từ **ticker file** (đầy đủ hơn).
+Ngoài ra ~0,17 % phút lệch giá trị nhỏ do ticker file vs feed live. Vì sim tra `market.bin` **theo
+đúng phút**, tập phút khác nhau + giá trị lệch ⇒ đường rule (BIG_DOWN/DCA) đổi ⇒ parity FAIL.
+**Đây là giới hạn CỐ HỮU nếu không có Aerospike** (không bịa được set live từ ticker).
+
+### 2.3 Biến thể `align` (loại nhiễu data-availability) — chẩn đoán thêm
+
+`market_align=1` giữ **đúng tập phút của `market.bin` gốc**, chỉ thay **giá trị rate** bằng giá trị
+sinh lại. Kết quả `bdal-000` (f=0, align): **equity 131908, n 2517 — TRÙNG khớp nền**, nhưng md5
+`a41d8846…` vẫn ≠ target: `diff` chỉ **104 dòng (52 lệnh)**, khác biệt **chỉ ở các cột rate ghi
+kèm** (`dow/up/dow15m`), KHÔNG đổi đường lệnh. ⇒ sai số md5 còn lại là do ~0,17 % phút lệch giá trị.
+Theo **đúng chữ** pre-reg §4 ("lệch ⇒ DỪNG"), đây vẫn là **FAIL cổng parity** dù kinh tế trùng khớp.
 
 ---
 
-## 6. MỤC BỎ + LÝ DO
+## 3. PHỤ LỤC (KHÔNG ĐĂNG KÝ) — bảng `f` × chỉ số, **CHỈ đường RULE**, có `align`
 
-- **Bỏ:** VIỆC 2 (4 arm Kaggle) + VIỆC 3 (chấm 4 tầng + theo năm + CI).
-- **Lý do:** (A) `chuyendinh/sm-pathexit` **`running`** (ràng buộc #1/#6); (B) bước 1–3 của dây chuyền
-  **không có harness Kaggle** (§3) ⇒ không thể "chạy nhanh, gọn" kể cả khi slot rảnh.
-- **KHÔNG bỏ:** VIỆC 0 (input-vs-rule), VIỆC 1 (pre-reg + code gated default byte-identical), commit+push.
+Điều kiện: jar HEAD, `g2_flat3`, `SIM_END_DATE=20251231`, bundle `sim-x1-2021-bundle`,
+`market_align=1`. **KHÔNG** retrain gate/selector (dùng nguyên `pred.bin`/bins nền) ⇒ chỉ đo phản
+ứng của rule BIG_DOWN/DCA/size-adapt với rate đổi. maxDD/Calmar tính từ **equity NGÀY** (xấp xỉ;
+§9 dùng maxDD PHÚT nên số tuyệt đối khác).
+
+| `f` | kernel | n | win% | TSloss% | equity cuối | maxDD% (ngày) | Calmar | CAGR% |
+|---|---|---|---|---|---|---|---|---|
+| 0.00 (=nền) | `bdal-000` | 2517 | 85,86 | 14,30 | 131908 | 10,02 | 3,42 | 34,25 |
+| 0.10 | `bdal-010` | 2782 | 85,62 | 14,59 | 134174 | 11,60 | 3,00 | 34,76 |
+| 0.30 | `bdal-030` | 2564 | 85,96 | 14,35 | 134799 | 10,97 | 3,18 | 34,90 |
+| 0.50 | `bdal-050` | 2482 | 85,94 | 14,38 | 131663 | 10,93 | 3,13 | 34,20 |
+| 1.00 | `bdal-100` | — | — | — | — | — | — | — (đang chạy) |
+
+**Đọc sơ:** đổi `f` **chỉ ở đường rule** làm `n` đổi ±10 %, equity đổi **+2 % (f=0,1/0,3)** tới
+−0,2 % (f=0,5); win%/TSloss% gần như phẳng; **maxDD TĂNG** (10,0 → 11,6 % ở f=0,1) ⇒ **Calmar của
+MỌI f đều THẤP HƠN nền** (3,42). Số này **không dùng để kết luận 4 tầng** (thiếu retrain model).
+
+**Trôi theo năm:** pnl/năm gần như không đổi theo f (2021..2025 đều dịch ≤ ~3 %); không có xu
+hướng "f tốt dần theo năm" rõ rệt trong phụ lục này.
 
 ---
 
-## 7. VIỆC CẦN LÀM ĐỂ MỞ KHOÁ (kế hoạch cụ thể, cho vòng sau)
+## 4. TRẢ LỜI (theo thực tế đã làm)
 
-1. **Kernel A — sinh `market.bin` mới**: stream ticker 1m (dataset `wfo-ticker-*`) → `MarketDataInlineGenerator.update()`
-   (đã ăn `BD_FRACTION`) → ghi `market.bin` format `[count][ts][down,up,down15m]`. Chạy 1 lần/`f`. Kiểm cổng:
-   `f=0` phải **byte-identical** `market.bin` gốc.
-2. **Kernel B — gate store**: replay Aerospike 226→CSV (job dài), hoặc chấp nhận **chỉ đổi cột rate-derived**
-   (`momentum1M/5M/15M`, `momentumAcceleration`, `basketMomentum15M`) từ Kernel A rồi ghép vào store tĩnh.
-3. **Kernel C — gate retrain + pred** → `pred.bin` mới (build lại set). **Kernel D — S1 + bins** → `predict_wf_*.bin` mới.
-4. **Kernel E — sim** (`tools/kaggle_sim.py`) với bundle mới (`market.bin`+`pred.bin`+bins của `f`).
-5. Chấm `research/analysis/reset_rule_score.py` theo §9 + theo năm; CI block-72h ×1,21.
+1. **Harness xây được chưa?** → **Có, bước 1-2**: Kernel A (market.bin từ ticker, 5 f) + Kernel B
+   (patch gate store) đã **chạy thành công** trên Kaggle. Bước 3 (retrain gate) **code xong chưa
+   chạy**; bước 3b (S1+bins) **chưa viết**; bước 4 (sim) đã có + mở rộng.
+2. **Parity `f=0` khớp?** → **KHÔNG** khi dùng `market.bin` sinh lại (md5 `6617c809…` vs
+   `650c386f…`). **NHƯNG jar HEAD khớp byte-identical** khi giữ `market.bin` gốc (`bdjar-par` PASS).
+   ⇒ lỗi ở tầng dữ liệu (set live vs ticker), không ở code.
+3. **Bảng `f` × chỉ số + f nào qua 4 tầng?** → Có **bảng phụ lục** (rule-path, §3); **không f nào
+   qua T4** (Calmar đều < nền). **4 arm ĐĂNG KÝ: NOT-RUN** (chặn ở cổng parity).
+4. **Trôi theo năm hết chưa?** → Trong phụ lục: **không thấy** f cải thiện dần theo năm; chưa đo
+   được theo dây chuyền đăng ký.
+5. **Kết luận dứt khoát?** → **NO-GO / BLOCKED tại cổng parity — giữ `f=0` (N=100).** Không phải
+   "biến thể kém"; là **chưa qua được cổng parity của dây chuyền đăng ký**.
+
+---
+
+## 5. MỤC BỎ + LÝ DO
+
+- **Bỏ VIỆC 2/3 (4 arm đăng ký + chấm 4 tầng + CI)**: pre-reg §4 chốt "parity lệch ⇒ DỪNG, không
+  chấm tiếp"; `f=0` sinh lại lệch md5 ⇒ DỪNG. Không bịa số.
+- **Giữ**: Kernel A/B (harness mới, đã chạy) + `kaggle_sim` override + phụ lục align (nhãn rõ
+  KHÔNG đăng ký) + commit/push.
+- **Còn nợ (vòng sau):** (i) nguồn `market.bin` khớp set live — cần **dump Aerospike read-only
+  trên Oracle → dataset Kaggle** (đề xuất duy nhất trung thực); (ii) Kernel C chạy + Kernel D viết;
+  (iii) chấm §9 PHÚT đầy đủ (T1-T4, CI block-72h ×1,21).

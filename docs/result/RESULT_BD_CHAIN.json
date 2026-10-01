@@ -1,59 +1,56 @@
 {
   "task": "BD-CHAIN",
   "date": "2026-10-01",
-  "round": 2,
+  "round": 3,
   "branch": "module",
   "baseline_profile": "profiles/g2_flat3.properties",
   "baseline_profile_md5": "c6d4ef57ecee25c663d2d396ac574c30",
   "baseline_parity_printDone_md5_target": "650c386f0d0dfea334af9d55ca2f21d4",
-  "status": "BLOCKED",
-  "v0_rateDown15MAvg_is_input_model_or_rule": {
-    "verdict": "INPUT_MODEL_AND_RULE",
-    "gate33": {"feature": "momentum15M (index 2)", "vector_line": "ai_ml/onnx/entry/OnnxInferenceManager.java:67", "source_line": "ai_ml/features/export/entry/ComprehensiveMarketFeatureExtractor.java:94"},
-    "selector45": {"feature": "rateDown15MAvg (index 5)", "vector_line": "ai_ml/onnx/funding/SelectorOnnxInferenceManager.java:62", "source_line": "ai_ml/features/export/funding/FundingDataCollectionManager.java:285-286"},
-    "rule_lines": ["tradecore/MarketBigChangeDetector.java:169-178", "tradecore/BdSizeAdapt.java:86-89", "tradecore/TickWeakBlock.java:135"],
-    "consequence": "retrain + pred full chain (gate33 -> ledger -> S1 -> bins -> sim)"
-  },
-  "v1_code": {
-    "key": "SIM_BD_FRACTION",
-    "default": 0.0,
-    "default_behavior": "byte-identical (N=100)",
-    "formula": "N = clamp(round(f*size),1,size), cap 4/5 kept",
-    "files": ["src/main/java/com/binance/chuyennd/tradecore/Configs.java", "src/main/java/com/binance/chuyennd/tradecore/MarketBigChangeDetector.java"]
-  },
-  "v1_slot_wait": {
-    "polled": "kaggle kernels status chuyendinh/sm-pathexit",
-    "first_seen_running_utf": "2026-10-01T05:48:56 (lastRunTime)",
-    "still_running_at": "2026-10-01T13:07+07:00",
-    "poll_log": "/home/ubuntu/bd_chain_poll.log",
-    "api_list_status_unreliable": "kaggle CLI 1.6.17 kernels_list does not return status -> count 0 running is WRONG; kernels_status is the source of truth"
-  },
-  "v2_chain": {
-    "blocked": true,
-    "blockers": [
-      {"id": "A", "kind": "slot_busy", "detail": "chuyendinh/sm-pathexit status=running (other job, commit c4f6f38e)"},
-      {"id": "B", "kind": "missing_upstream_harness", "detail": "no Kaggle-runnable path for steps 1-3: market.bin regen, gate store replay, gate retrain/pred; all are Java+Aerospike-226 jobs; sim bundle artifacts are static snapshots"}
-    ],
-    "upstream_step_evidence": {
-      "market_bin": {"source": "Aerospike set market_data (WfoDataset.java:45,66)", "sim_reads_static": "SimulatorMarketLevelTicker1MStopLoss.java:921"},
-      "gate_store": {"tool": "ExportGateDataset.java", "cost": "Aerospike replay ~30-45s/day -> many hours for 2021-2026 (ExportGateDataset.java:36)", "on_kaggle": false},
-      "gate_pred": {"tool": "WFOGateRunner.java:60-70 -> set ai_pred_market_gate_wfo -> LoadWfoGatePredTool.java", "on_kaggle": false}
+  "status": "BLOCKED_AT_PARITY_GATE",
+  "commits": ["a212e79b", "0a48f028", "b1d1dcb3", "4c570692", "86a75e68"],
+  "harness": {
+    "kernels": {
+      "A_market_bin_from_ticker": {"tool": "ExportMarketBinFromTicker.java + tools/kaggle_bd_chain.py::submit_market", "status": "RUN_OK", "arms_run": ["f000", "f010", "f030", "f050", "f100"], "rows": 2627810, "secs_range": [1097, 2290], "note": "ticker wfo-ticker-2021..2025h2 -> MarketDataInlineGenerator (buffer LIEN TUC) -> market.bin [count][ts][down,up,down15m]; f qua SIM_BD_FRACTION"},
+      "B_patch_gate_store": {"tool": "tools/kaggle_bd_chain.py::submit_patch_store", "status": "RUN_OK", "arms_run": ["f000", "f010", "f030"], "rows": 2889623, "hit": 2627810, "miss": 261813, "note": "chi patch 3 cot rate-derived: momentum1M, momentum15M, momentumAcceleration"},
+      "C_gate_retrain_predbin": {"tool": "tools/kaggle_bd_chain.py::submit_gate_train", "status": "CODE_READY_NOT_RUN"},
+      "D_s1_bins": {"status": "NOT_WRITTEN"},
+      "E_sim": {"tool": "tools/kaggle_sim.py (+ market_ds, market_align)", "status": "RUN_OK"}
     },
-    "parity_f0": {
-      "md5": "650c386f0d0dfea334af9d55ca2f21d4",
-      "source": "existing Kaggle run chuyendinh/sim-g2flat3-val (2026-09-29), bundle sim-x1-2021-bundle, jar sim-jar-gdv2",
-      "equity_final": 131908,
-      "n_trades": 2517,
-      "rerun_this_round": false,
-      "reason": "stop rule (job running); not re-confirmed with JAR HEAD"
-    },
-    "arms": {
-      "f0.10": "NOT_RUN",
-      "f0.30": "NOT_RUN",
-      "f0.50": "NOT_RUN",
-      "f1.00": "NOT_RUN"
+    "no_aerospike_for_upstream_data": true
+  },
+  "f_effect_proof_kernelA": {
+    "f0.30_vs_f0": {"max_abs_delta": [0.05671, 0.07851, 0.09187], "mean_abs_delta_down15m": 0.001746, "pct_minutes_diff": 0.9953},
+    "f1.00_vs_f0": {"max_abs_delta": [0.15021, 0.11626, 0.1779], "mean_abs_delta_down15m": 0.001404, "pct_minutes_diff": 0.793}
+  },
+  "parity": {
+    "jar_only_new_jar_original_market": {"run": "bdjar-par", "md5": "650c386f0d0dfea334af9d55ca2f21d4", "equity_final": 131908, "n_trades": 2517, "verdict": "PASS", "note": "JAR HEAD (SIM_BD_FRACTION default 0) BYTE-IDENTICAL voi sim-jar-gdv2"},
+    "f0_full_regenerated_market": {"run": "bdf000-par", "md5": "6617c809f443affe58053b0b0e3c34e0", "equity_final": 131878, "n_trades": 2517, "verdict": "FAIL"},
+    "f0_align_regenerated_market": {"run": "bdal-000", "md5": "a41d8846f1bd1f29d80fefbda121e624", "equity_final": 131908, "n_trades": 2517, "verdict": "FAIL_md5_but_economics_identical", "diff_rows": 52, "note": "khac chi o cot rate ghi kem, khong doi duong lenh"},
+    "regenerated_vs_original_market": {
+      "common_ts": 2553236,
+      "pct_match_le_1e-6": {"down": 0.9983, "up": 0.9983, "down15m": 0.9988},
+      "max_abs_delta_down15m": 0.006,
+      "ref_only_ts": 1576,
+      "new_only_ts": 74574,
+      "root_cause": "market.bin goc = dump set Aerospike live (thieu ~2.8% phut); Kernel A sinh tu ticker file (day du hon) => tap phut + gia tri lech nho"
     }
   },
-  "v3_scoring": {"ran": false, "reason": "no arm produced"},
-  "conclusion": {"verdict": "NO-GO (provisional/BLOCKED)", "f_kept": 0.0, "note": "not a scientific negative; unmeasured due to busy slot AND missing upstream chain harness"}
+  "arms_registered_4tier": {"f0.10": "NOT_RUN", "f0.30": "NOT_RUN", "f0.50": "NOT_RUN", "f1.00": "NOT_RUN", "reason": "pre-reg §4: parity f=0 lech => DUNG, khong cham tiep"},
+  "appendix_rulepath_only_aligned": {
+    "registered": false,
+    "note": "CHI duong RULE (BIG_DOWN/DCA/size-adapt); gate+selector KHONG retrain; maxDD ngay (xap xi)",
+    "rows": [
+      {"f": 0.00, "kernel": "bdal-000", "n": 2517, "win_pct": 85.86, "tsloss_pct": 14.30, "equity_final": 131908, "maxdd_pct_day": 10.02, "calmar": 3.42, "cagr_pct": 34.25},
+      {"f": 0.10, "kernel": "bdal-010", "n": 2782, "win_pct": 85.62, "tsloss_pct": 14.59, "equity_final": 134174, "maxdd_pct_day": 11.60, "calmar": 3.00, "cagr_pct": 34.76},
+      {"f": 0.30, "kernel": "bdal-030", "n": 2564, "win_pct": 85.96, "tsloss_pct": 14.35, "equity_final": 134799, "maxdd_pct_day": 10.97, "calmar": 3.18, "cagr_pct": 34.90},
+      {"f": 0.50, "kernel": "bdal-050", "n": 2482, "win_pct": 85.94, "tsloss_pct": 14.38, "equity_final": 131663, "maxdd_pct_day": 10.93, "calmar": 3.13, "cagr_pct": 34.20},
+      {"f": 1.00, "kernel": "bdal-100", "n": null, "note": "dang chay"}
+    ]
+  },
+  "verdict": {"decision": "NO-GO / BLOCKED (parity gate)", "f_kept": 0.0, "note": "khong phai bien the kem; chua qua cong parity cua day chuyen dang ky; jar HEAD PASS parity"},
+  "next_round_todo": [
+    "dump Aerospike market_data read-only tren Oracle -> Kaggle dataset (de market.bin f=0 khop set live)",
+    "chay Kernel C (gate retrain -> pred.bin) + viet Kernel D (S1+bins)",
+    "cham §9 PHUT day du (T1-T4, CI block-72h x1.21)"
+  ]
 }
