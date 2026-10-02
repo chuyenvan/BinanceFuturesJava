@@ -18,7 +18,10 @@ vòng 3 làm trên Oracle (chỉ đọc, DEV ≤ 2025-12-31, không Java/không 
 
 ## 1. Báo cáo audit vòng trước (nguyên văn)
 
-> **CHƯA CÓ — chờ MASTER dán nguyên văn báo cáo text R2B.** Không có kết luận nào của auditor vòng 3 được
+> **(Báo cáo nguyên văn của auditor vòng 1 — bị chặn SSH, MASTER dán lại)
+
+Kết luận: giữ NO-GO R2b; R2 GO(1h) ảo. 3 điểm: (1) R2b không phải phép thử mù — kết quả đã có trong post-hoc R2 (38a99bc 13:02) trước ADDENDUM1 (13:31)/pre-reg R2b (13:35); (2) G1 trượt mỏng: D0 lật PASS chỉ cần ~8/37 lệnh "quét intrabar" không kích stop (vd stop theo MARK_PRICE) hoặc ~25 coin dumper thiếu; G5 bền (cần ≥32/37 hoặc 75–100 coin). (3) Nhiễm bẩn tập listing 489: ≥8 rename/migration (RENDER/RNDR, POL/MATIC, KAIA/KLAY, S/FTM, A/EOS, SKY/MKR, G/GAL, FORM/BNX), 4 index (FOOTBALL, BLUEBIRD, PAXG, XAU), ~4 relist (1000LUNC, USTC, BSV, RAYSOL); loại 16 → D0 +1,98 [lo raw −0,22; infl −0,62], bỏ top10% −3,04 ⇒ verdict không đổi. Ngưỡng fallback "<12 nến" đúng mode phân phối (106 listing đúng 12 nến, listing 12:00 UTC); "<13" → D0 1m +1,41 (lo −0,69), D0 1h từ +4,41 → +3,49, bỏ top10% −1,10 ⇒ R2 1h chỉ vượt G5 ở đúng ngưỡng 12 (knife-edge, không tune). Survivorship: nếu coin thiếu là dumper (ret7 quartile thấp, net TB +23%) m=25 làm G1 PASS, G5 cần m≈75–100; cần kiểm stale/ffill cuối chuỗi của FTM/MATIC/EOS/MKR/BNX/KLAY/RNDR/GAL/ALPACA trong CLOSES_1H. 164 lệnh fallback trùng y hệt D0/D1 ⇒ inflate k=2 bảo thủ. CI block tháng cài đúng; 200 seed: lo raw D0 ∈ [−0,44;−0,04], median −0,24 (seed 20260905 thuận lợi mà vẫn trượt); cluster-t tháng lo −0,46; block tuần −0,07; iid +0,17 raw nhưng infl −0,18. G5 ngưỡng −0,5 chọn khi đã biết R2 D0 = −0,26 (post-hoc), nhưng bỏ G5 vẫn NO-GO. Fill quy ước: KHÔNG mâu thuẫn (fill tại mức, gap → open) — tiền đề MASTER đọc sai; chỉ 1 lệnh gap (RAVE). Trượt stop 1%/2% → lo raw −0,55/−1,10. Tái lập từ per-trade JSON khớp tuyệt đối mọi số. Bug: short_v3_r2_slcheck.py:65 bytes([len(sym)]) dùng số ký tự thay byte UTF-8 → 币安人生USDT không đọc được 1m; lỗi ẩn khi len>127. Chưa tái lập từ dữ liệu thô (phần này agent 2 đã bổ sung trong doc). Script ở Windows repo _claude_tmp/audit_SHORT_V3_R2B/{repro,adv,adv2}.py (chưa commit).
+
 > viết vào mục này.
 
 ## 2. Bổ sung tái lập trên dữ liệu thô (auditor vòng 3)

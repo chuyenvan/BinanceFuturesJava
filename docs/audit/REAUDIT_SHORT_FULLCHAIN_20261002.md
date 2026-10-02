@@ -16,7 +16,28 @@ chạy). Doc này = (1) báo cáo text vòng trước + (2) bổ sung tái lập
 
 ## 1. Báo cáo audit vòng trước (nguyên văn)
 
-> **CHƯA CÓ — chờ MASTER dán nguyên văn báo cáo text FULLCHAIN.** Không có kết luận nào của auditor vòng 3
+> **(Báo cáo nguyên văn của auditor vòng 1 — bị chặn SSH, MASTER dán lại)
+
+Verdict NO-GO đứng (vẫn NO-GO khi funding=0/đảo dấu, bỏ D, sửa artifact SL) NHƯNG giải thích/phạm vi sai 4 chỗ lớn:
+
+F1 (CAO): "nhánh A không gate" thực chất = tick GATE LONG MỞ: pred_s1a2x1 chấm trên pool cand_dev_x1 = 17 349 tick, 100% dòng đã lọc p15 ≥ 0,008 (G5_VALUE_LABELS.md:123, BRIEF_GATE_SELECTOR_20260911.md:96, X1_EXTEND.md:287). Tick gate mở theo năm 2022=2926, 2023=510, 2024=2258, 2025=11653 ⇒ 83% pick ở 2025. Kết luận đúng phạm vi: "short S1-d0 TRONG tick gate long mở là âm"; short khi gate đóng CHƯA test.
+
+F2 (CAO): đọc ngược dấu IC bước 1: IC(s1,ret)<0 với s1=−score ⇒ decile 0 (ứng viên short) có hạng lợi nhuận CAO hơn ⇒ selector đi NGƯỢC short, không phải "đúng chiều & bền". Bảng decile khớp (d0 ≈ trung bình, thấp nhất d7/d8). trend_rank_ic.add_s1 ghép asof không giới hạn độ cũ ⇒ 35 047 snapshot 1h dùng điểm S1 cũ hàng tuần (panel chỉ 17 349 tick thật).
+
+F3 (TRUNG–CAO): FUND72 hằng số 0,585%·held/72 dao động 0,055% (D T3) → 0,46% (C T8_TS72h), lớn hơn |net| nhiều ô. Tính lại 144 ô từ mean_held_h: funding=0 → 30/144 ô net>0 (tốt nhất D T8_TS72h +0,085%); đảo dấu → 72/144 (A T8_SL100_TS72h +0,448%, CI≈[−0,16;…]); vẫn 0 ô GO (CI chứa 0, ≤2/4 năm, 2023 âm). "A âm có ý nghĩa" cũng phụ thuộc funding (f=0: A T3_TS72h −0,115 CI [−0,284;+0,070]). --raw-out không lưu sym ⇒ không tính funding exact từ npz.
+
+F4 (TRUNG): thoát lệnh: trailing kích hoạt NGAY từ lúc vào, không arm (runmin=fmin.accumulate(low), level=runmin·(1+T)) ⇒ trailing = stop ≈ P·(1+T), T≤8% ⇒ SL ∈{10…100%} gần như không kích trước (agent 2 tái lập: SL10 có kích ≤0,36% lệnh, ảnh hưởng net ≤0,03pp); "ưu tiên SL cùng nến" sai vật lý (2 stop cùng phía, giá chạm level thấp hơn trước) ⇒ lệnh thoát SL là artifact (tail −50,2% ở SL50; "+0,003…0,014% khi bỏ SL" của A1). "SL=100 no-stop" KHÔNG phải no-stop ⇒ giả thuyết owner "cắt cứng mất lãi" CHƯA HỀ được test. Lưới thực chất 6 cấu hình thoát (3 trailing × 2 TS) × 4 nhánh lồng nhau (A=B∪D, C⊂B). Thiên lệch lạc quan nhỏ: trailing dùng low nến kích hoạt, fill đúng level bỏ gap, slippage 0,67bp/chân.
+
+F5 (TRUNG): vũ trụ pick bước 2 (944k, lưới 1h, điểm cũ) ≠ bước 3 (654k, tick 15m pool); C 9,8%→0,55% (3 607 lệnh), D 9,2%→28,8% (q10/q90 tính trên toàn chuỗi phút 2021–2025 trong khi pick dồn 2025). "Kiểm chứng kênh gross −0,042 ≈ ret24 −0,041" là trùng hợp (giữ 10,9h vs 24h, khác tập, khác trọng số).
+
+F6 (THẤP): phí bước 3 trừ 1 lần 0,112% khớp Java; bước 1 dùng 0,2098% (đếm 2 lần) — không đổi kết luận.
+
+F7 (THẤP): amendment 444377a (23:29:22) tạo 29s SAU commit kết quả gốc 5784f0e (23:28:53) ⇒ post-hoc theo yêu cầu owner; sửa code (SLS, lọc NaN agg) commit cùng lúc kết quả; A1 tái lập 18 ô gốc ≤3e-6, n 654 326→654 256 (70 pick NaN); không đổi verdict.
+
+F8 (THẤP): RESULT ghi "18 cấu hình" (thực 36); §4 dùng số cũ; §5 "0/72"; net headline trung bình theo tick, by_year theo pick (luật A và B đo 2 đại lượng khác); by_year theo TZ+7, bước 1 UTC.
+
+Trả lời 9 điểm: (1) tái lập — agent 2 đã làm lát 2024, khớp 4 chữ số; (3) m0+14 đọc code đúng (ts = open nến 15m, entry close 1m m0+14 = m0+15; lọc p15 tại ctime=ts có thể nhìn trước 15' — chưa xác minh); (4) MDE80 ≈ 0,25–0,5%/lệnh; 2023 chỉ vài chục cụm; (8) bỏ D: A/B/C ≤ −0,23…−1,17, 0/4 năm ⇒ NO-GO đứng (với funding gốc); (9) "0 ô ⇒ không overfit/thiếu edge hệ thống" sai một phần: power thấp, lưới dư, D CI chứa 0 = chưa kết luận được.
+
 > được viết vào mục này.
 
 ## 2. Bổ sung tái lập trên dữ liệu thô (auditor vòng 3)
