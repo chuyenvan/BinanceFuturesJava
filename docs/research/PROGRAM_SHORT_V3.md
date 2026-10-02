@@ -45,3 +45,25 @@ GO-R3 ⇔ netproxy_T > +0,5% ngoài CI raw & inflate; ≥3/4 năm; excess vs ALL
 ## Sau vòng
 R1 GO ⇒ Pha kế: thêm filter/ranking (OI, funding, taker ratio, listing-age) như selector, rồi sim sổ. R2/R3 GO ⇒ ghép làm gate/sự kiện cho R1.
 Cả 3 NO-GO ⇒ short ở nhịp giờ/sự kiện/cascade cũng đóng trên dữ liệu hiện có; chỉ còn data mới (unlock calendar, L2/liquidation forward).
+
+## ADDENDUM 1 (2026-10-02, sau R1/R2/R3) — R1b selector tại trigger, R2b listing chuẩn 1m
+Kết quả: R1 `3fea4f50` NO-GO nhưng lệch chiều THẬT (short + cả 6 ô, long − cả 6 ô; B24 net +0,17%, 4/4 năm, CI raw [−0,03;+0,37]);
+R2 `38a99bca` GO theo luật 1h nhưng post-hoc SL 1m-high ⇒ CI chứa 0; R3 `0e7aee0b` NO-GO (capitulation → hồi). ⇒ Đi tiếp đúng cách long: thêm SELECTOR.
+
+### R1b — SELECTOR tại phút trigger (model tier + per-trade net), tái dùng per-trade R1 (`~/claude_master/1002/r1_cache/`)
+Tập: đúng n = 10 991 trigger của R1 (không đổi trigger). Target: `net_B24` (ô B24 của R1) — chính; `net_B12` phụ (báo cáo).
+Feature tại t (chỉ dùng ≤ t), KHÓA danh sách (bỏ feature nếu dữ liệu không có, ghi rõ, không thay bằng feature khác):
+  f1 `r60`; f2 `r15` (close_t/close_{t-15}−1); f3 `ext24 = close_t/close_{t-1440}−1`; f4 `volratio = W0/M` của volclimax; f5 `wick = (high_t − close_t)/(high_t − low_t)` của nến t (nếu có H/L);
+  f6 `fund_now` (rate kỳ hiện hành/dự kiến tại t, dấu: rate<0 ⇒ short trả); f7 `fund_sign` (= f6<0); f8 `dOI_60` (OI_t/OI_{t-60}−1 từ derivs_store nếu có độ phân giải ≤5'); f9 `takerLS` (long/short ratio nếu có);
+  f10 `tier` (tercile quoteVol 30d); f11 `listing_age` (ngày từ listing_day, cap 365); f12 `btc_bull` (BTC>SMA50 ngày); f13 `btc_r60` (BTC 60' cùng lúc); f14 `n_trig_day` (số trigger khác trong 24h trước — đo "ngày sập/pump toàn thị trường").
+Model: LightGBM (nếu không có thì sklearn HistGradientBoosting) hồi quy `net_B24`, tham số CỐ ĐỊNH (num_leaves 15, lr 0,05, 300 cây, min_child 100, feature_fraction 0,8, seed 20260905) — KHÔNG tune.
+WFO theo NỬA NĂM: fold h ∈ {2023H1, 2023H2, 2024H1, 2024H2, 2025H1, 2025H2}: train trên mọi trigger có exit kết thúc trước đầu h − 72h, test h. (2022 chỉ train.)
+Chấm (trên ghép 6 fold OOS): rank-IC(score, net_B24) theo fold; net tercile-TOP vs ALL; SL-rate tercile-top; theo năm; CI block-72h NREP 2000 seed 20260905 trên tercile-top, raw và inflate k=2 (B24 chính + B12 phụ) = 1,18; stress: net tercile-top − 0,10% (slippage spike) ; đối chứng: permutation (xáo nhãn 1 lần seed 20260905) ⇒ IC phải ≈ 0.
+Báo thêm: importance; net theo decile score; ablation KHÓA 3 nhóm (bỏ f6–f9 "crowding"; bỏ f10–f14 "context"; chỉ f1–f5 "giá/vol") — chỉ báo cáo, không chọn.
+GO-R1b ⇔ tất cả: rank-IC OOS > +0,05 và dương ≥5/6 fold; net tercile-top (B24) > 0 ngoài CI raw & inflate; ≥3/4 năm (2023–2025 + 2022-không-tính ⇒ 3/3); SL-rate tercile-top ≤ 25%; stress −0,10% vẫn > 0 ở điểm ước lượng; permutation IC ∈ [−0,02;+0,02].
+GO ⇒ Pha kế: sim SỔ short (vốn, size, đồng thời, MTM phút) + đo slippage thật tại spike từ 1m volume; rồi engine.
+
+### R2b — LISTING chuẩn 1m (cùng tham số R2, đổi CHUẨN đo)
+Chiến lược y hệt R2 (short close D0/D1, 7d, SL +15%, phí 0,112, funding exact) nhưng SL kiểm trên HIGH 1m (fill tại mức SL; nếu open 1m vượt SL thì fill tại open). k=2 (D0/D1), inflate 1,18. Thêm: cột "bỏ 10% lệnh tốt nhất" (fragility), và SL-rate.
+GO-R2b ⇔ net > 0 ngoài CI raw & inflate; ≥3/4 năm; n ≥ 120; excess vs ALL > 0; VÀ "bỏ 10% tốt nhất" vẫn > −0,5% (không sống chỉ nhờ đuôi).
+Ghi rõ survivorship (file không có coin delist 2025) — chiều lệch: coin delist thường sập ⇒ thiếu chúng làm KÉM short (bias chống lại chiến lược), nêu nhưng không "sửa".
