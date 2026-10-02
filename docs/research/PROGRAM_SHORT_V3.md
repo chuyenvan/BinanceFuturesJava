@@ -77,3 +77,14 @@ Time-stop TS ∈ {24h, 48h}. Phí ra taker 0,056% mọi ô. Funding exact. Slipp
 Lưu ý so sánh: ô LIMIT có tập lệnh con (chỉ lệnh fill) ⇒ báo thêm ô TAKER trên ĐÚNG tập con fill để tách "chọn lệnh" khỏi "giá vào".
 GO-R1c ⇔ ≥1 ô: net > 0 ngoài CI raw & inflate; ≥3/4 năm; n ≥ 1500; SL-rate ≤ 25%; stress −0,10% > 0; đối chứng LONG cùng ô ≤ 0.
 NO-GO ⇒ ĐÓNG short trên dữ liệu hiện có (20 vòng pre-reg); giữ R1 như "tín hiệu mỏng có thật" để kiểm forward khi có fill thật/L2.
+
+## ADDENDUM 3 (2026-10-02, sau R1c) — R1d: CONFIRMATION ENTRY (chờ 15' không đỉnh mới rồi mới vào)
+Nguồn giả thuyết (POST-HOC, ghi rõ): R1c `e7c3e09d` cho thấy tập trigger mà high[t+1..t+15] < close_t×1,007 (limit không fill, 2 703 lệnh)
+có TAKER net ≈ +1,5%/lệnh, còn tập fill −0,27%. Tức edge của fade nằm ở lệnh ĐẢO CHIỀU NGAY sau spike; thông tin đó không có tại t
+nhưng CÓ tại t+15 (causal). Vì giả thuyết sinh ra sau khi thấy số, bar cao hơn: bắt buộc qua CI inflate, k=2, và báo cả stress.
+### R1d — 2 ô KHÓA (k=2, inflate 1,18), cùng trigger R1 (tập 10 977 của R1c), exit nhánh B (arm 5%, gap 3%, SL +10%, TS 24h tính từ entry)
+Điều kiện xác nhận tại t+W: `max(high[t+1..t+W]) < close_t × (1+δ)`, δ = 0,7% (giữ nguyên R1c, KHÔNG tune); W ∈ {15, 30} phút.
+Entry: short TAKER tại close t+W+1 (phí vào 0,056%, ra 0,056%); funding exact; cooldown như R1. Không điều kiện ⇒ không lệnh (ghi tỉ lệ vào lệnh).
+Báo: 2 ô (net mean/median, CI raw & inflate, theo năm, SL-rate, win, n, tail, stress −0,10%); đối chứng (a) LONG mirror cùng điều kiện (low không thủng close_t×(1−δ) ⇒ long tại t+W+1) phải ≤ 0; (b) tập BỊ LOẠI (có đỉnh mới) short tại t+W+1 — kỳ vọng xấu hơn rõ; (c) "no-fill" R1c vào tại t+1 (+1,5%) để thấy phần edge mất đi do vào trễ W phút.
+GO-R1d ⇔ ≥1 ô: net > 0 ngoài CI raw VÀ inflate; ≥3/4 năm; n ≥ 1500; SL-rate ≤ 25%; stress −0,10% > 0; LONG mirror ≤ 0; tập bị loại < ô chính.
+GO ⇒ Pha kế: sim SỔ (vốn/size/đồng thời/MTM) + slippage từ volume 1m; sau đó engine Java (PLAN_SHORT_ENGINE). NO-GO ⇒ đóng short trên dữ liệu hiện có.
