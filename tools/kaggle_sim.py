@@ -253,7 +253,51 @@ if len(tk) < CFG["ticker_min_days"]:
 
 os.makedirs(WORK + "/storage", exist_ok=True)
 os.makedirs(WORK + "/logs", exist_ok=True)
-shutil.copy(cfgp, WORK + "/config.properties")     # Configs static-init doc CWD
+# [FIX_NO_WRITE_242 2026-10-03] config.properties cua bundle co AEROSPIKE_HOST=103.157.218.242 = Aerospike
+#   TIEN THAT. Sim KHONG doc host nay (mapper doc qua AEROSPIKE_HOST_226 = Oracle; P0 flat3-cp: 0 truy cap
+#   host nay) nhung khi mapper RONG, SimpleSymbolMapper.getId -> saveSymbolMapping GHI vao host nay
+#   (flat3-cp-p1 VOID: 624 lan, may ma NoRouteToHost). => LUON viet de AEROSPIKE_HOST trong BAN COPY ve
+#   127.0.0.1 (Kaggle khong co Aerospike => tu choi ngay, 0 ghi). Ap cho MOI bundle/jar, khong tao lai bundle.
+NOWRITE_HOST = b"127.0.0.1"
+with open(cfgp, "rb") as _f:
+    _raw = _f.read()
+_out, _nrep, _h226, _p226 = [], 0, None, None
+for _ln in _raw.splitlines(True):
+    _m = re.match(rb"\s*(AEROSPIKE_HOST|AEROSPIKE_HOST_226|AEROSPIKE_PORT_226)\s*=\s*(\S*)", _ln)
+    if _m and _m.group(1) == b"AEROSPIKE_HOST":
+        _eol = b"\r\n" if _ln.endswith(b"\r\n") else (b"\n" if _ln.endswith(b"\n") else b"")
+        LOG.info("NOWRITE242 AEROSPIKE_HOST %s -> %s (ban copy WORK, bundle giu nguyen)",
+                 _m.group(2).decode(), NOWRITE_HOST.decode())
+        _ln = b"AEROSPIKE_HOST=" + NOWRITE_HOST + _eol
+        _nrep += 1
+    elif _m and _m.group(1) == b"AEROSPIKE_HOST_226":
+        _h226 = _m.group(2).decode()
+    elif _m and _m.group(1) == b"AEROSPIKE_PORT_226":
+        _p226 = _m.group(2).decode()
+    _out.append(_ln)
+if _nrep != 1:
+    LOG.error("NOWRITE242_FAIL: config.properties co %d dong AEROSPIKE_HOST (can dung 1) -> DUNG", _nrep)
+    sys.exit(2)
+with open(WORK + "/config.properties", "wb") as _f:   # Configs static-init doc CWD
+    _f.write(b"".join(_out))
+# [FIX_NO_WRITE_242] PREFLIGHT: mapper doc tu Aerospike Oracle (AEROSPIKE_HOST_226). Khong TCP toi duoc
+#   => mapper se RONG => id symbol tu sinh (ket qua sai) + duong ghi mapping. DUNG TRUOC KHI chay sim
+#   (guard SYMBOL_MAPPER_FAIL sau sim van giu: TCP song chua chac record mapper doc duoc).
+import socket as _socket
+_pf_ok = False
+for _i in range(3):
+    try:
+        with _socket.create_connection((_h226, int(_p226)), timeout=10):
+            _pf_ok = True
+            break
+    except Exception as _e:
+        LOG.warning("PREFLIGHT mapper host %s:%s lan %d loi: %s", _h226, _p226, _i + 1, _e)
+        time.sleep(20)
+if not _pf_ok:
+    LOG.error("SYMBOL_MAPPER_PREFLIGHT_FAIL: khong toi duoc Aerospike Oracle %s:%s -> DUNG TRUOC sim "
+              "(khong chay sim, khong ghi gi).", _h226, _p226)
+    sys.exit(2)
+LOG.info("PREFLIGHT mapper host %s:%s TCP OK", _h226, _p226)
 os.chdir(WORK)
 
 # --- profile: COPY roi sua, khong bao gio dat tham so giao dich qua env ---

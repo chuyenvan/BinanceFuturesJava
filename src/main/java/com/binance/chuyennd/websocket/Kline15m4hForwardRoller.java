@@ -196,6 +196,7 @@ public class Kline15m4hForwardRoller {
 
     /** Append khung {@code fs} vào record-tháng tương ứng trên 242 (read-modify-write, 1 thread forward). */
     private void writeFrame(String set, String symbol, long fs, float[] ohlcv) {
+        if (!com.binance.chuyennd.aerospike.Live242WriteGuard.allowed("kline15m4h:" + set)) return;   // [FIX_NO_WRITE_242]
         try {
             TreeMap<Long, float[]> month = readMonth(set, symbol, fs);
             if (month == null) month = new TreeMap<>();
