@@ -24,6 +24,8 @@ mẫu 14 ngày) · script `research/analysis/short_state_defs.py` · số: `rese
 | P10 | Long et al. 2020 seasonality | 10.1016/j.frl.2020.101566 | seasonality cross-section (bối cảnh) |
 | P11 | Ardia et al. 2018 MS-GARCH | 10.1016/j.ribaf.2018.12.009 | **cần regime-switching** (không 1 GARCH tĩnh) ⇒ hợp lý hoá **state/regime** |
 | P12 | Soska et al. 2021 BitMEX | 10.1145/3442381.3450059 | derivative/liquidation (tới 100×) **gây biến động mạnh giá spot** ⇒ tail có cơ chế |
+| P13 | BenSaïda et al. 2021 regime spillover | 10.1186/s40854-020-00210-4 | **MS-VARX 18 coin**: spillover **khác nhau ở regime vol thấp / cao**, **bùng mạnh ở regime vol cao** (COVID) ⇒ hợp lý hoá **state theo vol** (B cần vol thấp/xả) |
+| P14 | Kavya 2026 stop-loss density | 10.2139/ssrn.7293038 | **lý thuyết ngưỡng cascade thanh lý** (preprint 2026, **không abstract**) ⇒ cơ chế đuôi +10 % = cụm stop/liquidation |
 
 ## 2. DỮ LIỆU THẬT — PHÂN BỐ THỜI LƯỢNG CHU KỲ (daily, ZigZag θ=25%)
 
