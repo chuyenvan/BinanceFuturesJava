@@ -67,3 +67,13 @@ GO ⇒ Pha kế: sim SỔ short (vốn, size, đồng thời, MTM phút) + đo s
 Chiến lược y hệt R2 (short close D0/D1, 7d, SL +15%, phí 0,112, funding exact) nhưng SL kiểm trên HIGH 1m (fill tại mức SL; nếu open 1m vượt SL thì fill tại open). k=2 (D0/D1), inflate 1,18. Thêm: cột "bỏ 10% lệnh tốt nhất" (fragility), và SL-rate.
 GO-R2b ⇔ net > 0 ngoài CI raw & inflate; ≥3/4 năm; n ≥ 120; excess vs ALL > 0; VÀ "bỏ 10% tốt nhất" vẫn > −0,5% (không sống chỉ nhờ đuôi).
 Ghi rõ survivorship (file không có coin delist 2025) — chiều lệch: coin delist thường sập ⇒ thiếu chúng làm KÉM short (bias chống lại chiến lược), nêu nhưng không "sửa".
+
+## ADDENDUM 2 (2026-10-02, sau R1b/R2b NO-GO) — R1c: lớp EXECUTION của fade (vòng cuối trên dữ liệu hiện có)
+R1b `f4bfba27`: 13 feature tại t không tách continuation (SL-rate ~28% mọi tercile, IC OOS 0,019). R2b `53a2479f`: listing NO-GO dưới chuẩn 1m.
+Phần còn lại chưa chạm ở R1: (i) phí taker 0,112% RT ăn 35% gross; (ii) entry tại close t+1 = đúng điểm spike; (iii) mean nhánh B tăng theo TS (4h→24h).
+### R1c — 2×2 ô KHÓA (k=4, inflate √(2 ln 4)=1,67), cùng trigger R1 (n=10 991), cùng exit nhánh B (arm 5%, gap 3%, SL +10%)
+Entry E ∈ {TAKER: short tại close t+1, phí vào 0,056% (nửa RT R1) ; LIMIT: đặt sell limit tại close_t × (1+δ), δ = 0,7%, hiệu lực 15 phút (t+1..t+15), fill khi high_1m ≥ giá limit (fill tại giá limit), phí vào MAKER 0,02%; không fill ⇒ không lệnh (ghi fill-rate)}.
+Time-stop TS ∈ {24h, 48h}. Phí ra taker 0,056% mọi ô. Funding exact. Slippage: cột stress −0,10%/lệnh (ghi cả raw & stress).
+Lưu ý so sánh: ô LIMIT có tập lệnh con (chỉ lệnh fill) ⇒ báo thêm ô TAKER trên ĐÚNG tập con fill để tách "chọn lệnh" khỏi "giá vào".
+GO-R1c ⇔ ≥1 ô: net > 0 ngoài CI raw & inflate; ≥3/4 năm; n ≥ 1500; SL-rate ≤ 25%; stress −0,10% > 0; đối chứng LONG cùng ô ≤ 0.
+NO-GO ⇒ ĐÓNG short trên dữ liệu hiện có (20 vòng pre-reg); giữ R1 như "tín hiệu mỏng có thật" để kiểm forward khi có fill thật/L2.
