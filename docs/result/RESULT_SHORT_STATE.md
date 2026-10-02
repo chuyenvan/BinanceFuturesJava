@@ -11,7 +11,8 @@ DEV ≤ 2025-12-31 · chỉ `git add` file của mình.
 
 ## 0. KẾT LUẬN NGẮN
 
-> **NULL.** Tập **(B) "xả dần"** đúng là *tốt hơn* baseline: drift SHORT **+0,152 %/24h** (baseline universe
+> **NULL.** *(AMENDMENT A2 — ngưỡng có cơ sở paper+data — xem §5: B đổi dấu điểm **net24 +0,055 %**,
+tail 27,0 %→20,9 %, nhưng **CI vẫn chứa 0** ⇒ vẫn NULL.)* Tập **(B) "xả dần"** *tốt hơn* baseline: drift SHORT **+0,152 %/24h** (baseline universe
 > +0,012 %; S1-d0 −0,033 %) và **cắt được một phần đuôi** (SL-rate `maxFav≥+10 %`: **27,0 %→22,1 %**,
 > big-alt **20,6 %**) — **NHƯNG vẫn < cost 0,21 %/24h** ⇒ **net24 = −0,058 %** (CI95 `[−0,137;+0,428]` **chứa 0**),
 > không ngoài CI ⇒ **FAIL luật GO**. Tập **(A) đúng là phải AVOID**: drift **+0,234 %/24h** (short lỗ) và
@@ -55,9 +56,34 @@ Theo năm (short24 %): **B** = 2022 **+0,138** · 2023 **−0,218** · 2024 **+0
   **CI chứa 0**, không state nào net>0 ngoài CI.
 - **Overfit?** Nhiều biến thể nhưng **không biến thể nào net>0** ⇒ **không phải overfit**, mà là **thiếu biên**.
 
+## 5. AMENDMENT A2 — STATE theo **NGƯỠNG CÓ CƠ SỞ** (paper + data thật)
+
+Cơ sở: `docs/research/SHORT_STATE_DEFS.md` (12 paper + đo ZigZag thật). Ngưỡng **lấy từ số đo**:
+up-leg median **18 ngày** / +54 %; bleed median **24 ngày**. Thay định nghĩa A/B thô bằng:
+- **A `A_ev`** = `pump_age_d ≤ 18` **hoặc** `ret7 ≥ +50 %` (median của 1 leg) — *cơ sở P7/P8 MAX dương, P9 momentum ≤2–4 tuần, P2/P3 coin nhỏ bơm/xả*.
+- **B `B_ev`** = `pump_age_d > 18` **và** `vol_decay < 1` **và** `ret30 < 0` **và** `dd30 < −20 %` — *cơ sở P9 reversal >1 tháng, P6 illiquidity, P11 regime, data bleed dài 24+ ngày*.
+
+| state (A2) | n | mean ret24 | **short net24** | CI95 | ngoài 0? | hit24 | **SL-rate** | năm dương |
+|---|---|---|---|---|---|---|---|---|
+| ALL | 37 489 126 | +0,012 | −0,222 | [−0,216;+0,202] | KHÔNG | 51,3 % | 27,0 % | 2/4 |
+| **A `ret7≥50 %`** | 496 432 | **+0,180** | −0,390 | [−0,781;+0,416] | KHÔNG | 59,6 % | **55,3 %** | 3/4 |
+| A `pump_age≤18` | 17 912 735 | +0,083 | −0,293 | [−0,328;+0,172] | KHÔNG | 52,3 % | 34,4 % | 2/4 |
+| **B xả dần `B_ev`** | 6 275 538 | **−0,265** | **+0,055** | [−0,075;+0,636] | **KHÔNG** | 51,0 % | **20,9 %** | **3/4** |
+| B_ev · big-alt | 1 474 730 | −0,276 | **+0,066** | [−0,072;+0,633] | KHÔNG | 51,4 % | **19,8 %** | 3/4 |
+| B_ev · rac | 1 917 865 | −0,258 | **+0,048** | [−0,105;+0,653] | KHÔNG | 50,3 % | 20,8 % | 3/4 |
+| B_ev · dd<−10 % (rộng) | 9 004 246 | −0,227 | **+0,017** | [−0,041;+0,514] | KHÔNG | 51,1 % | **18,6 %** | 3/4 |
+
+Theo năm (short24 %): **B_ev** = 2022 **+0,391** · 2023 **−0,304** · 2024 **+0,557** · 2025 **+0,276** (2023 âm).
+
+**Đọc A2:** ngưỡng có cơ sở **đổi dấu điểm** của B: net24 **`−0,058 % → +0,055 %`** và cắt đuôi mạnh hơn
+(SL-rate 27,0 %→**20,9 %**, big-alt **19,8 %**); A vẫn **xấu rõ** (đặc biệt `ret7≥+50 %`: SL-rate **55,3 %** ⇒ tuyệt đối avoid).
+**NHƯNG vẫn FAIL GO** vì **CI chứa 0** (`B_ev` CI `[−0,075;+0,636]`), chưa ngoài CI. ⚠️ **Nguy cơ overfit:
+ngưỡng 18d/50 %/−20 % suy từ **chính** phân bố full-DEV, và **4 biến thể B đều net>0** ⇒ theo pre-reg ⇒ **nghi overfit**, KHÔNG được coi là GO.
+
 ## 4. QUYẾT ĐỊNH
 
-**NULL — chốt đóng hướng short.** State gate định hướng đúng (B tốt hơn, A xấu) và **cắt được ~18 % đuôi**,
-nhưng **biên gross (−0,15 %/24h) vẫn < cost (0,21 %)** ⇒ không có cửa. Cơ chế gốc không đổi: **đuôi tăng
+**NULL — chốt đóng hướng short.** State gate định hướng đúng (B tốt hơn, A xấu) và **cắt được ~18–31 % đuôi**
+(đến SL-rate 20,9 %/18,6 %), nhưng **biên vẫn không vượt cost một cách có ý nghĩa** (CI chứa 0; kể cả A2
+net24 +0,055 % **chưa ngoài CI**) ⇒ không có cửa. Cơ chế gốc không đổi: **đuôi tăng
 đến từ idiosyncratic coin, và biên ròng sau phí+funding ≤ 0** ở mọi state ĐÃ THỬ (carry, down-signal,
 gate market, regime, state-coin, path-exit). Mở lại chỉ khi có **DATA MỚI** (liquidation / L2 / fill thật).
