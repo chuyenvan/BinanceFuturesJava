@@ -48,7 +48,9 @@ public final class Cfg {
             "WFO_MAX_OOS_DATE", "WFO_MAX_WINDOWS", "WFO_N_SAMPLES", "WFO_LOG_ENTRIES", "WFO_HARNESS_FIX",
             "WFO_DISABLE_DCA", "WFO_FROZEN_GENOME", "EXCHANGE_INFO_PATH", "HOLDOUT_UNSEAL", "TRADING_PROFILE",
             "SIM_END_DATE", "HOME", "APP_PID_DIR", "APP_MAIN_CLASS", "GEN_THREADS", "NO_VALIDATE",
-            "CONFIG_STRICT", "SHADOW_NO_PUSH", "OI_STALE_HALT", "OI_STALE_HALT_MS");
+            "CONFIG_STRICT", "SHADOW_NO_PUSH", "OI_STALE_HALT", "OI_STALE_HALT_MS",
+            // [FIX_NO_WRITE_242 2026-10-03] cong ghi Aerospike 242 (Live242WriteGuard) — ha tang, khong phai tham so GD
+            "LIVE_WRITE_242_ENABLED", "LIVE_IS_SHADOW_HOST");
 
     /** Tien to cua bien env DUOC COI LA THAM SO GIAO DICH — cam dat khi da co profile. */
     private static final List<String> TRADING_PREFIXES = Arrays.asList(

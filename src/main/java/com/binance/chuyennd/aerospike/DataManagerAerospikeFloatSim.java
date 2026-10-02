@@ -160,6 +160,7 @@ public class DataManagerAerospikeFloatSim {
      * Dùng MapOperation để chỉ ghi thêm, không cần ghi đè toàn bộ record.
      */
     public static void saveSymbolMapping(String symbol, short id) {
+        if (!Live242WriteGuard.allowed("symbol_mapper")) return;   // [FIX_NO_WRITE_242] shadow host => khong ghi 242
         try {
             Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_MAPPER, MAPPER_KEY_GLOBAL);
 
@@ -189,6 +190,7 @@ public class DataManagerAerospikeFloatSim {
     }
 
     public static void writeMinuteBatch(long timestamp, Map<String, KlineObjectOptimized> newTickers) {
+        if (!Live242WriteGuard.allowed("kline_1m_opt")) return;   // [FIX_NO_WRITE_242] shadow host => khong ghi 242
         try {
             SimpleDateFormat fmt = new SimpleDateFormat("yyyyMMdd-HHmm");
             String keyString = fmt.format(new Date(timestamp));
@@ -210,6 +212,7 @@ public class DataManagerAerospikeFloatSim {
     }
 
     public static void writePriceRealtime(Map<String, Float> priceMap) {
+        if (!Live242WriteGuard.allowed("price_realtime")) return;   // [FIX_NO_WRITE_242] shadow host => khong ghi 242
         if (priceMap == null || priceMap.isEmpty()) return;
         try {
             long now = System.currentTimeMillis();
@@ -313,6 +316,7 @@ public class DataManagerAerospikeFloatSim {
      * Ghi Funding Map sử dụng Snappy để nén, phá bỏ giới hạn 2000 kỳ
      */
     public static void writeFundingMap(String symbol, Map<Long, Float> fundingRates) {
+        if (!Live242WriteGuard.allowed("funding_data")) return;   // [FIX_NO_WRITE_242] shadow host => khong ghi 242
         try {
             Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_FUNDINGFEE, symbol);
 
@@ -365,6 +369,7 @@ public class DataManagerAerospikeFloatSim {
      * @param oiByTs  map mốc-thời-gian (ms) → OI notional (USD); rỗng/null → bỏ qua.
      */
     public static void writeOpenInterestMap(String symbol, Map<Long, Float> oiByTs) {
+        if (!Live242WriteGuard.allowed("open_interest")) return;   // [FIX_NO_WRITE_242] shadow host => khong ghi 242
         if (oiByTs == null || oiByTs.isEmpty()) return;
         try {
             Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_OPEN_INTEREST, symbol);
@@ -451,6 +456,7 @@ public class DataManagerAerospikeFloatSim {
      * @return số chunk-tháng GHI LỖI (0 = OK).
      */
     public static int writeMetricMap242(String setName, String binName, String symbol, Map<Long, Float> byTs) {
+        if (!Live242WriteGuard.allowed("metric:" + setName)) return 0;   // [FIX_NO_WRITE_242] shadow host => khong ghi 242
         return writeMetricMapTo(getClient242(), "242", setName, binName, symbol, byTs);
     }
 
@@ -819,6 +825,7 @@ public class DataManagerAerospikeFloatSim {
     /** [C1] Ghi accumulator expanding (per-coin) vao 242: JSON double[]{lastTs,sum,sumSq,n} Snappy 1 bin. */
     public static void writeAccum242(String setName, String binName, String symbol,
                                      long lastTs, double sum, double sumSq, long n) {
+        if (!Live242WriteGuard.allowed("accum:" + setName)) return;   // [FIX_NO_WRITE_242] shadow host => khong ghi 242
         try {
             Key key = new Key(Configs.AEROSPIKE_NAMESPACE, setName, symbol);
             double[] arr = new double[]{(double) lastTs, sum, sumSq, (double) n};
@@ -1485,6 +1492,7 @@ public class DataManagerAerospikeFloatSim {
      * Ghi 1 record cho mỗi phút. Key = yyyyMMdd-HHmm
      */
     public static void saveAiPrediction1M(AiPredictionData data) {
+        if (!Live242WriteGuard.allowed("ai_pred_1m")) return;   // [FIX_NO_WRITE_242] shadow host => khong ghi 242
         if (data == null) return;
         try {
             SimpleDateFormat fmt = new SimpleDateFormat("yyyyMMdd-HHmm");
@@ -1590,6 +1598,7 @@ public class DataManagerAerospikeFloatSim {
      * Value: JSON Compressed (Map<Short, float[]>)
      */
     public static void saveDcaPredictions1M(long timestamp, Map<Short, float[]> predictions) {
+        if (!Live242WriteGuard.allowed("dca_pred_1m")) return;   // [FIX_NO_WRITE_242] shadow host => khong ghi 242
         if (predictions == null || predictions.isEmpty()) return;
         try {
             SimpleDateFormat fmt = new SimpleDateFormat("yyyyMMdd-HHmm");
