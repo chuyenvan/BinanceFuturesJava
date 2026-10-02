@@ -1,0 +1,731 @@
+{
+ "doc": "docs/audit/DEPLOY242_G2FLAT3_READINESS_20261002.md",
+ "lineage": {
+  "generated": "2026-10-02 17:18:02 +0700",
+  "inputs": {
+   "store": {
+    "path": "/home/ubuntu/claudedata/gate_dataset_full.csv.gz",
+    "sha256": "d153b3baf87ee509bf3471bf040f14a371e3153b3e051dbc59c9af006afa61ad",
+    "rows": 2889623,
+    "ts_min": "2021-01-01 00:00:00",
+    "ts_max": "2026-06-30 17:00:00"
+   },
+   "predbin": {
+    "path": "/home/ubuntu/wfo_ds_x1_2021/pred.bin",
+    "md5": "5dd6bb4c3f98d89d58770005c0001526",
+    "rows": 2500260
+   },
+   "feat_dump": {
+    "dir": "/home/ubuntu/claude_master/1002/deploy242/live242/fd/feat_dump",
+    "files": 177,
+    "rows": 6229,
+    "ts_min": "2026-09-28 01:45:06.109000",
+    "ts_max": "2026-10-02 10:13:00"
+   },
+   "devexport": {
+    "path": "/home/ubuntu/claudedata/devexport_202609/devexport_20260701_20260928_FULL.csv.gz",
+    "rows": 129137,
+    "ts_min": "2026-06-30 17:00:00",
+    "ts_max": "2026-09-28 09:16:00"
+   }
+  },
+  "A1_fold18_vs_predbin_2025Q4": {
+   "meta": {
+    "cutoff": "20251001",
+    "cut_ms": 1759276800000,
+    "train_rows": 2496945,
+    "train_ts_min": "2021-01-01 00:00:00",
+    "train_ts_max": "2025-09-30 23:44:00"
+   },
+   "corr": {
+    "n": 132480,
+    "pearson": 0.991926708030295,
+    "spearman": 0.995466725470945,
+    "max_abs_diff": 0.030754856765270233
+   },
+   "dist_retrain": {
+    "name": "retrain18@2025Q4",
+    "n": 132480,
+    "p50": 0.9009,
+    "p90": 1.1082,
+    "p99": 1.383,
+    "p99.9": 3.2573,
+    "max": 10.8875,
+    "frac_ge_2947": 0.0010492149758454107,
+    "n_ge_2947": 139
+   },
+   "dist_predbin": {
+    "name": "pred.bin@2025Q4",
+    "n": 132480,
+    "p50": 0.9008,
+    "p90": 1.1141,
+    "p99": 1.4018,
+    "p99.9": 3.483,
+    "max": 11.9465,
+    "frac_ge_2947": 0.0011322463768115942,
+    "n_ge_2947": 150
+   }
+  },
+  "A2_final_export": {
+   "meta": {
+    "cutoff": "20260101",
+    "cut_ms": 1767225600000,
+    "train_rows": 2629425,
+    "train_ts_min": "2021-01-01 00:00:00",
+    "train_ts_max": "2025-12-31 23:44:00"
+   },
+   "xgb_params": {
+    "objective": "reg:squarederror",
+    "max_depth": 4,
+    "n_estimators": 150,
+    "learning_rate": 0.05,
+    "subsample": 0.8,
+    "colsample_bytree": 0.8,
+    "min_child_weight": 10,
+    "random_state": 42,
+    "n_jobs": 4
+   },
+   "onnx": {
+    "md5": "fcb45a5fbc5634977af9708265eda7aa",
+    "sha256": "d37969eefa93bf93865cd3de78618a4a5b899b6c22e5a06529e30c0c8aeab915",
+    "bytes": 143761,
+    "producer": "OnnxMLTools 1.16.0",
+    "ir_version": 8,
+    "opset": [
+     [
+      "ai.onnx.ml",
+      1
+     ]
+    ],
+    "inputs": [
+     [
+      "float_input",
+      [
+       "",
+       33
+      ]
+     ]
+    ],
+    "outputs": [
+     [
+      "variable",
+      [
+       "",
+       1
+      ]
+     ]
+    ],
+    "metadata": {},
+    "doc_string": "",
+    "tree_op": "TreeEnsembleRegressor",
+    "n_trees": 150,
+    "n_nodes": 4572,
+    "n_leaves": 2361,
+    "base_values": [
+     0.006085187662392855
+    ],
+    "post_transform": "NONE",
+    "n_features_used": 33
+   },
+   "parity_py_vs_ort": {
+    "n": 39143,
+    "max_abs": 3.3527612686157227e-08,
+    "p99_abs": 7.450580596923828e-09,
+    "pass_1e6": true
+   },
+   "versions": {
+    "xgboost": "3.2.0",
+    "onnxruntime": "1.23.2",
+    "onnxmltools": "1.16.0"
+   }
+  },
+  "B_lineage_live_onnx": {
+   "live": {
+    "md5": "8ec9975726270782692bfe00b39bd37f",
+    "sha256": "d19fc8cddd9fb11778653e4b108bb52da92ea168117efac4a407c18c0f260474",
+    "bytes": 144774,
+    "producer": "OnnxMLTools 1.16.0",
+    "ir_version": 8,
+    "opset": [
+     [
+      "ai.onnx.ml",
+      1
+     ]
+    ],
+    "inputs": [
+     [
+      "float_input",
+      [
+       "",
+       33
+      ]
+     ]
+    ],
+    "outputs": [
+     [
+      "variable",
+      [
+       "",
+       1
+      ]
+     ]
+    ],
+    "metadata": {},
+    "doc_string": "",
+    "tree_op": "TreeEnsembleRegressor",
+    "n_trees": 150,
+    "n_nodes": 4604,
+    "n_leaves": 2377,
+    "base_values": [
+     0.006191032472997904
+    ],
+    "post_transform": "NONE",
+    "n_features_used": 33,
+    "same_md5_as_wfo_models": [
+     "fold_20"
+    ]
+   },
+   "new": {
+    "md5": "fcb45a5fbc5634977af9708265eda7aa",
+    "sha256": "d37969eefa93bf93865cd3de78618a4a5b899b6c22e5a06529e30c0c8aeab915",
+    "bytes": 143761,
+    "producer": "OnnxMLTools 1.16.0",
+    "ir_version": 8,
+    "opset": [
+     [
+      "ai.onnx.ml",
+      1
+     ]
+    ],
+    "inputs": [
+     [
+      "float_input",
+      [
+       "",
+       33
+      ]
+     ]
+    ],
+    "outputs": [
+     [
+      "variable",
+      [
+       "",
+       1
+      ]
+     ]
+    ],
+    "metadata": {},
+    "doc_string": "",
+    "tree_op": "TreeEnsembleRegressor",
+    "n_trees": 150,
+    "n_nodes": 4572,
+    "n_leaves": 2361,
+    "base_values": [
+     0.006085187662392855
+    ],
+    "post_transform": "NONE",
+    "n_features_used": 33
+   },
+   "corr_live_vs_predbin_2025Q4": {
+    "n": 132480,
+    "pearson": 0.6913763149131371,
+    "spearman": 0.9808165557455908,
+    "max_abs_diff": 1.0813746005296707
+   },
+   "corr_live_vs_retrain18_2025Q4": {
+    "n": 132480,
+    "pearson": 0.6615957360038862,
+    "spearman": 0.9812481419744526,
+    "max_abs_diff": 1.0984675511717796
+   },
+   "corr_new_vs_predbin_2025Q4": {
+    "n": 132480,
+    "pearson": 0.6865941279290199,
+    "spearman": 0.9864303452485712,
+    "max_abs_diff": 1.1561730653047562
+   },
+   "dist_live_on_store_2025Q4": {
+    "name": "ONNX242@store2025Q4",
+    "n": 132480,
+    "p50": 0.951,
+    "p90": 1.2141,
+    "p99": 1.5693,
+    "p99.9": 3.9511,
+    "max": 119.4797,
+    "frac_ge_2947": 0.0014945652173913044,
+    "n_ge_2947": 198
+   },
+   "dist_new_on_store_2025Q4": {
+    "name": "NEW(insample)@store2025Q4",
+    "n": 132480,
+    "p50": 0.9507,
+    "p90": 1.2309,
+    "p99": 1.5909,
+    "p99.9": 4.243,
+    "max": 126.9596,
+    "frac_ge_2947": 0.0014719202898550725,
+    "n_ge_2947": 195
+   }
+  },
+  "C_dist": {
+   "predbin_2025": {
+    "name": "pred.bin DEV 2025",
+    "n": 525600,
+    "p50": 0.7041,
+    "p90": 0.9786,
+    "p99": 1.2629,
+    "p99.9": 1.9505,
+    "max": 11.9465,
+    "frac_ge_2947": 0.0003310502283105023,
+    "n_ge_2947": 174
+   },
+   "predbin_2025Q4": {
+    "name": "pred.bin DEV 2025Q4",
+    "n": 132480,
+    "p50": 0.9008,
+    "p90": 1.1141,
+    "p99": 1.4018,
+    "p99.9": 3.483,
+    "max": 11.9465,
+    "frac_ge_2947": 0.0011322463768115942,
+    "n_ge_2947": 150
+   },
+   "predbin_all": {
+    "name": "pred.bin DEV 2021-04..2025-12",
+    "n": 2500260,
+    "p50": 0.5452,
+    "p90": 0.837,
+    "p99": 1.3079,
+    "p99.9": 2.818,
+    "max": 12.2613,
+    "frac_ge_2947": 0.0008991064929247359,
+    "n_ge_2947": 2248
+   },
+   "live_p15_out_featdump": {
+    "name": "LIVE p15_out (feat_dump 242)",
+    "n": 6229,
+    "p50": 0.8657,
+    "p90": 1.0625,
+    "p99": 1.2796,
+    "p99.9": 1.5641,
+    "max": 1.895,
+    "frac_ge_2947": 0.0,
+    "n_ge_2947": 0
+   },
+   "onnx242_on_featdump": {
+    "name": "ONNX242(feat_dump)",
+    "n": 6229,
+    "p50": 0.8657,
+    "p90": 1.0625,
+    "p99": 1.2796,
+    "p99.9": 1.5641,
+    "max": 1.895,
+    "frac_ge_2947": 0.0,
+    "n_ge_2947": 0
+   },
+   "new_on_featdump": {
+    "name": "NEW(feat_dump LIVE)",
+    "n": 6229,
+    "p50": 0.8635,
+    "p90": 1.0721,
+    "p99": 1.3094,
+    "p99.9": 1.5574,
+    "max": 1.9753,
+    "frac_ge_2947": 0.0,
+    "n_ge_2947": 0
+   },
+   "onnx242_on_devexport": {
+    "name": "ONNX242(devexport 07-09/2026)",
+    "n": 129137,
+    "p50": 0.5944,
+    "p90": 1.0056,
+    "p99": 1.2441,
+    "p99.9": 1.5392,
+    "max": 3.5702,
+    "frac_ge_2947": 1.5487428080255853e-05,
+    "n_ge_2947": 2
+   },
+   "new_on_devexport": {
+    "name": "NEW(devexport 07-09/2026)",
+    "n": 129137,
+    "p50": 0.5833,
+    "p90": 1.0616,
+    "p99": 1.3197,
+    "p99.9": 1.6121,
+    "max": 6.6886,
+    "frac_ge_2947": 8.518085444140719e-05,
+    "n_ge_2947": 11
+   }
+  },
+  "C_check_dump_consistency": {
+   "n": 6229,
+   "pearson": 0.9999999999998578,
+   "spearman": 0.9999999999131111,
+   "max_abs_diff": 5.6353313439283514e-09
+  },
+  "C_corr_new_vs_live_featdump": {
+   "n": 6229,
+   "pearson": 0.9848566796285587,
+   "spearman": 0.9883219007431234,
+   "max_abs_diff": 0.0033255042508244514
+  },
+  "C_corr_new_vs_live_devexport": {
+   "n": 129137,
+   "pearson": 0.994256970068145,
+   "spearman": 0.9901347578376727,
+   "max_abs_diff": 0.03589293919503689
+  },
+  "D_gate_buffer": {
+   "file": "/home/ubuntu/claude_master/1002/deploy242/live242/gate_ratio_live.bin",
+   "sha256": "338e3c0d5b9442b65b74f80565eaeff296e6dcc8eb9beec7c8362fe3cf5054da",
+   "chunks": 9,
+   "n": 46224,
+   "ts_unique": 2889,
+   "ts_min": "2026-09-30 10:01:00",
+   "ts_max": "2026-10-02 10:10:00",
+   "span_days": 2.00625,
+   "r_p50": 0.0020743818022310734,
+   "r_p99": 0.006856287093833085,
+   "r_q_pct_all": 0.011804262231034908,
+   "r_max": 0.014007063582539558,
+   "matched_records": 46224,
+   "matched_ts": 2889,
+   "factor_gs_p50": 4.33026899866905,
+   "thr_fallback_p50": 0.0346421519893524,
+   "thr_fallback_min": 0.005194394406169215,
+   "fallback_pass_old": 164,
+   "fallback_pass_new": 158,
+   "r_new_p50": 0.0020744046479635563,
+   "r_new_max": 0.013438140048348502,
+   "r_old_max_matched": 0.014007063582539558
+  }
+ },
+ "lineage_probe": {
+  "eval_rows": 200000,
+  "eval_from": "2024-01-01",
+  "pairs": {
+   "retrain20250701~ONNX242": {
+    "n": 200000,
+    "pearson": 0.6787947187620453,
+    "spearman": 0.9844922172244288,
+    "max_abs_diff": 1.05841863155365
+   },
+   "retrain20250701~fold_16": {
+    "n": 200000,
+    "pearson": 0.99017109677748,
+    "spearman": 0.9942760218384102,
+    "max_abs_diff": 0.01607571542263031
+   },
+   "retrain20250701~fold_17": {
+    "n": 200000,
+    "pearson": 0.9978762817361669,
+    "spearman": 0.9991046619904995,
+    "max_abs_diff": 0.017651893198490143
+   },
+   "retrain20250701~fold_18": {
+    "n": 200000,
+    "pearson": 0.990183087682193,
+    "spearman": 0.992383678622448,
+    "max_abs_diff": 0.022981345653533936
+   },
+   "retrain20250701~fold_19": {
+    "n": 200000,
+    "pearson": 0.6817577733428702,
+    "spearman": 0.9869587370245115,
+    "max_abs_diff": 1.1099027395248413
+   },
+   "retrain20251001~ONNX242": {
+    "n": 200000,
+    "pearson": 0.6745922581729507,
+    "spearman": 0.9927410012924281,
+    "max_abs_diff": 1.0556974783539772
+   },
+   "retrain20251001~fold_16": {
+    "n": 200000,
+    "pearson": 0.9769028773348144,
+    "spearman": 0.9849109299774035,
+    "max_abs_diff": 0.014885835349559784
+   },
+   "retrain20251001~fold_17": {
+    "n": 200000,
+    "pearson": 0.9894699747831255,
+    "spearman": 0.9920077183913392,
+    "max_abs_diff": 0.01504996046423912
+   },
+   "retrain20251001~fold_18": {
+    "n": 200000,
+    "pearson": 0.997598243524798,
+    "spearman": 0.9987309190598876,
+    "max_abs_diff": 0.0183822363615036
+   },
+   "retrain20251001~fold_19": {
+    "n": 200000,
+    "pearson": 0.6779775071470745,
+    "spearman": 0.995208611119691,
+    "max_abs_diff": 1.1071815863251686
+   },
+   "retrain20260101~ONNX242": {
+    "n": 200000,
+    "pearson": 0.996748938494694,
+    "spearman": 0.9968800732884208,
+    "max_abs_diff": 0.0628821849822998
+   },
+   "retrain20260101~fold_16": {
+    "n": 200000,
+    "pearson": 0.6911871797397603,
+    "spearman": 0.9804060992690601,
+    "max_abs_diff": 1.1275683417916298
+   },
+   "retrain20260101~fold_17": {
+    "n": 200000,
+    "pearson": 0.7015930229560003,
+    "spearman": 0.987842485673702,
+    "max_abs_diff": 1.1089593693614006
+   },
+   "retrain20260101~fold_18": {
+    "n": 200000,
+    "pearson": 0.6991497443457991,
+    "spearman": 0.9956319138551442,
+    "max_abs_diff": 1.1083841398358345
+   },
+   "retrain20260101~fold_19": {
+    "n": 200000,
+    "pearson": 0.9979042053641469,
+    "spearman": 0.9986079110840721,
+    "max_abs_diff": 0.08349323272705078
+   },
+   "retrain20260401~ONNX242": {
+    "n": 200000,
+    "pearson": 0.9982060897049612,
+    "spearman": 0.9987673524220103,
+    "max_abs_diff": 0.06777593493461609
+   },
+   "retrain20260401~fold_16": {
+    "n": 200000,
+    "pearson": 0.6881123337764236,
+    "spearman": 0.9777185813800376,
+    "max_abs_diff": 1.0527781024575233
+   },
+   "retrain20260401~fold_17": {
+    "n": 200000,
+    "pearson": 0.6968025914078523,
+    "spearman": 0.9843529233384782,
+    "max_abs_diff": 1.0341691300272942
+   },
+   "retrain20260401~fold_18": {
+    "n": 200000,
+    "pearson": 0.693598811143684,
+    "spearman": 0.9928549748366261,
+    "max_abs_diff": 1.033593900501728
+   },
+   "retrain20260401~fold_19": {
+    "n": 200000,
+    "pearson": 0.9965704157454872,
+    "spearman": 0.9970274755748509,
+    "max_abs_diff": 0.09754234552383423
+   },
+   "retrain20260701~ONNX242": {
+    "n": 200000,
+    "pearson": 0.9890002234909823,
+    "spearman": 0.9694538463745918,
+    "max_abs_diff": 0.11954605579376221
+   },
+   "retrain20260701~fold_16": {
+    "n": 200000,
+    "pearson": 0.7095813982435648,
+    "spearman": 0.931989869911332,
+    "max_abs_diff": 0.9451401010155678
+   },
+   "retrain20260701~fold_17": {
+    "n": 200000,
+    "pearson": 0.7219036366656041,
+    "spearman": 0.9434029817059751,
+    "max_abs_diff": 0.9265311285853386
+   },
+   "retrain20260701~fold_18": {
+    "n": 200000,
+    "pearson": 0.7210611720168322,
+    "spearman": 0.9550765106675799,
+    "max_abs_diff": 0.9259558990597725
+   },
+   "retrain20260701~fold_19": {
+    "n": 200000,
+    "pearson": 0.9868628286687102,
+    "spearman": 0.9658525268387232,
+    "max_abs_diff": 0.1710301637649536
+   }
+  },
+  "buffer_invariant": {
+   "seed_or_pre": {
+    "records": 17312,
+    "with_p15": 17312,
+    "fgs_min": 0.6492993007711518,
+    "frac_below_floor": 0.0,
+    "fallback_pass_if_same_p15": 164
+   },
+   "live_after_g2": {
+    "records": 28912,
+    "with_p15": 28912,
+    "fgs_min": 2.6582785105243945,
+    "frac_below_floor": 0.0,
+    "fallback_pass_if_same_p15": 0
+   }
+  }
+ },
+ "export_cut20260701": {
+  "cutoff": "20260701",
+  "train": {
+   "cutoff": "20260701",
+   "cut_ms": 1782864000000,
+   "train_rows": 2889623,
+   "train_ts_min": "2021-01-01 00:00:00",
+   "train_ts_max": "2026-06-30 17:00:00"
+  },
+  "uses_2026_in_train": true,
+  "parity_py_vs_ort": {
+   "n": 26229,
+   "max_abs": 6.705522537231445e-08,
+   "pass_1e6": true
+  },
+  "dist_on_live_featdump": {
+   "name": "cut20260701(feat_dump LIVE)",
+   "n": 6229,
+   "p50": 0.8653,
+   "p90": 1.0664,
+   "p99": 1.304,
+   "p99.9": 1.5275,
+   "max": 1.866,
+   "frac_ge_2947": 0.0,
+   "n_ge_2947": 0
+  },
+  "corr_vs_onnx242_live": {
+   "n": 6229,
+   "pearson": 0.990188531578381,
+   "spearman": 0.9903141708976901,
+   "max_abs_diff": 0.0029237037511897074
+  },
+  "onnx_sha256": "9ba5b0b87b6609e0af232a7eb8f56476af1ef268bb12ff2ea978e3bfb3ae1ca9"
+ },
+ "jar_diff": {
+  "jars": {
+   "live242/jar242.jar": "8f3ee52ce4ceac8c742950cd585ba5968abd318ae5dfb1fa2748831cf9f4fcf0",
+   "/home/ubuntu/kaggle_sim/jar_gdv2/sim.jar": "7368be46edb3fa387a41585bea18feb81ab812ebabdc9ff245f6d25947a82d6a",
+   "/home/ubuntu/src/BinanceFuturesJava/target/binance-java-sdk-1.2.4.jar": "ea14071d0a0664928b0bf96a0ca5e5c64abe57aa0612a3786bd0707fa635bd00",
+   "/home/ubuntu/shadow_c3/app/target/binance-java-sdk-1.2.4.jar": "c389b4becfe07197d61dbd4b1265405ac4be9e167e835d572c3120d8abca1e15"
+  },
+  "pairs": [
+   {
+    "a": "jar242.jar",
+    "b": "sim.jar",
+    "classes_a": 550,
+    "classes_b": 537,
+    "n_diff": 17,
+    "n_only_a": 14,
+    "n_only_b": 1,
+    "diff_outer": [
+     "DataManagerAerospikeFloatSim",
+     "LiveFeatureDump",
+     "AIRejectFilter",
+     "GateRollingRatio",
+     "LiveOiFeatProvider",
+     "SimulatorMarketLevelTicker1MStopLoss",
+     "S1RankerLive",
+     "BinanceOrderTradingManager",
+     "DetectEntrySignal2TradeNormal"
+    ],
+    "only_a_outer": [
+     "LiveTickerWindow",
+     "LiveFeatureDump",
+     "GateRatioBuffer",
+     "GateRatioPersist",
+     "LiveGateRollingRatio",
+     "LiveOiFeatProvider",
+     "OiReloadHeapBench",
+     "OiReloadHeapBenchExt",
+     "OiReloadParityCheck",
+     "PassSpeedBench",
+     "PassSpeedBenchV2",
+     "PassSpeedBenchV3"
+    ],
+    "only_b_outer": [
+     "GateRollingThreshold"
+    ],
+    "hot_changed": [
+     "ai_ml/features/export/entry/LiveFeatureDump",
+     "ai_ml/onnx/entry/AIRejectFilter",
+     "ai_ml/onnx/entry/GateRatioBuffer",
+     "ai_ml/onnx/entry/GateRatioPersist",
+     "ai_ml/onnx/entry/GateRollingRatio",
+     "ai_ml/onnx/entry/GateRollingThreshold",
+     "ai_ml/onnx/entry/LiveGateRollingRatio",
+     "ai_ml/onnx/funding/LiveOiFeatProvider",
+     "research/SimulatorMarketLevelTicker1MStopLoss",
+     "tradecore/selector/S1RankerLive",
+     "trading/BinanceOrderTradingManager",
+     "trading/DetectEntrySignal2TradeNormal"
+    ]
+   },
+   {
+    "a": "jar242.jar",
+    "b": "binance-java-sdk-1.2.4.jar",
+    "classes_a": 550,
+    "classes_b": 551,
+    "n_diff": 3,
+    "n_only_a": 0,
+    "n_only_b": 1,
+    "diff_outer": [
+     "Configs",
+     "MarketBigChangeDetector"
+    ],
+    "only_a_outer": [],
+    "only_b_outer": [
+     "ExportMarketBinFromTicker"
+    ],
+    "hot_changed": [
+     "tradecore/Configs",
+     "tradecore/MarketBigChangeDetector"
+    ]
+   },
+   {
+    "a": "jar242.jar",
+    "b": "binance-java-sdk-1.2.4.jar",
+    "classes_a": 550,
+    "classes_b": 546,
+    "n_diff": 5,
+    "n_only_a": 4,
+    "n_only_b": 0,
+    "diff_outer": [
+     "LiveFeatureDump",
+     "BinanceOrderTradingManager",
+     "DetectEntrySignal2TradeNormal"
+    ],
+    "only_a_outer": [
+     "LiveFeatureDump",
+     "OiReloadHeapBenchExt",
+     "OiReloadParityCheck"
+    ],
+    "only_b_outer": [],
+    "hot_changed": [
+     "ai_ml/features/export/entry/LiveFeatureDump",
+     "trading/BinanceOrderTradingManager",
+     "trading/DetectEntrySignal2TradeNormal"
+    ]
+   }
+  ]
+ },
+ "harness_summary": [
+  "=== PARITY HARNESS \u2014 overall=FAIL (exit=2) ===",
+  "[PASS] config \u2014 khop",
+  "[FAIL] features \u2014 27/33 feature lech (exact<=1e-08, inline<=1e-03; o nguong may 29/33)",
+  "[MISSING] gate \u2014 242 gate=ratio, thr 0.0308 > p15_max 0.0190 => n_pass=0 (baseline=ratio)",
+  "[FAIL] marketparams \u2014 4/4 field: rateDownAvg/rateUpAvg/rateDown15MAvg khop muc nhieu ticker-vs-kline (LIVE&DEV, max|d|~7e-4..2e-3, corr>0.99); rateUp15MAvg=0 ca 2 phia (khong duoc calMarketData tinh); nguong MATCH default; flip LIVE=0/0, DEV(stress)=0/1",
+  "[MISSING] selector \u2014 MISSING cung-tick: \u0111o \u0111\u01b0\u1ee3c ph\u00eda LIVE (sel_dump 1701 tick + artifact 20260928: 249 tick, 163520 dong), thi\u1ebfu \u0111\u1ed1i \u1ee9ng cung-tick DEV",
+  "[FAIL] entry \u2014 entry lech: LIVE=0 vs BACKTEST(G2)>=1",
+  "[MISSING] exit \u2014 MISSING: khong co lenh dong (gate chan truoc)",
+  "[PASS] selftest deterministic \u2014 2 lan tinh features => byte-identical (451 cap)",
+  "[PASS] selftest injected_shift_fails_right \u2014 tai hourOfDay status=FAIL; FAIL them moi=['hourOfDay'] (mong doi [hourOfDay]; truoc= PASS)",
+  "[PASS] selftest missing_column_fails_with_reason \u2014 FAIL=True err=thieu cot detail=thieu cot trong export: momentum5M",
+  "[PASS] selftest gz_writer_finalize \u2014 tai lap: buggy(no-close) decompress_ok=False tail=0000ffff | fixed(close) ok=True | file that khop True"
+ ]
+}
