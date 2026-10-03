@@ -131,8 +131,9 @@ def build():
     os.makedirs(kd, exist_ok=True)
     gm = json.load(open(D + "/geom_meta.json"))["md5"]
     src = open(os.path.abspath(__file__)).read()
-    assert src.count('"__GEOM_MD5__"') == 1
-    open(kd + "/" + SLUG + ".py", "w").write(src.replace('"__GEOM_MD5__"', '"%s"' % gm))
+    ph = '"geom_x1.parquet": "' + "__GEOM" + '_MD5__"'
+    assert src.count(ph) == 1
+    open(kd + "/" + SLUG + ".py", "w").write(src.replace(ph, '"geom_x1.parquet": "%s"' % gm))
     meta = {"id": USER + "/" + SLUG, "title": SLUG, "code_file": SLUG + ".py", "language": "python",
             "kernel_type": "script", "is_private": True, "enable_gpu": True, "enable_tpu": False,
             "enable_internet": True, "dataset_sources": [USER + "/" + x for x in DS], "kernel_sources": [],

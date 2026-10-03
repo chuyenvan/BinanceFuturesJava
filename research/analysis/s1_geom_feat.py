@@ -52,9 +52,14 @@ def keep9():
     a, b = 'OUT="/home/ubuntu/featv2"', 'long.to_parquet(f"{OUT}/{NAME}.parquet",index=False)'
     assert src.count(a) == 1 and src.count(b) == 1, "builder da doi — khong patch duoc"
     src = src.replace(a, 'OUT="%s"' % rb).replace(b, '_save_keep9(long, f"{OUT}/{NAME}.parquet")')
+    # bo nho: chi stack 9 cot KEEP9 (gia tri tung cot doc lap, khong doi); ban stack-tat-ca bi OOM 23G (2026-10-03 17:16)
+    c6 = "# ---------- 6. long format + save ----------"
+    assert src.count(c6) == 1
+    src = src.replace(c6, c6 + "\nFEATS=[f for f in FEATS if f in _KEEP9]\nfor _k in [k for k in list(F) if k not in FEATS]: del F[_k]\n"
+                      "import gc as _gc; _gc.collect(); log('chi stack KEEP9', FEATS)")
     t0 = time.time()
     if not os.path.exists(rb + "/feat_v2_x1.parquet"):
-        g = {"__name__": "__main__", "_save_keep9": _save_keep9}
+        g = {"__name__": "__main__", "_save_keep9": _save_keep9, "_KEEP9": list(KEEP9)}
         exec(compile(src, BUILDER, "exec"), g)
         del g
     log.info("builder xong %.0fs", time.time() - t0)
@@ -181,9 +186,11 @@ def geom():
                    pos7d=bool(np.nanmin(F["pos7d"]) >= 0 and np.nanmax(F["pos7d"]) <= 1),
                    dist_high24=bool(np.nanmax(F["dist_high24"]) <= 1e-7), dist_low24=bool(np.nanmin(F["dist_low24"]) >= -1e-7),
                    rk=bool(all(np.nanmin(F[k]) > 0 and np.nanmax(F[k]) <= 1 for k in GEOM if k.startswith("rk_"))),
-                   atr=bool(np.nanmin(F["atr_ratio"]) > 0), range7d=bool(np.nanmin(F["range7d"]) >= 0))
+                   atr=bool(np.nanmin(F["atr_ratio"]) >= 0), range7d=bool(np.nanmin(F["range7d"]) >= 0),
+                   n_atr_ratio_zero=int((F["atr_ratio"] == 0).sum()), n_atr_ratio_finite=int(np.isfinite(F["atr_ratio"]).sum()))
+    # atr_ratio = 0 hop le: 24h nen phang (H=L=C, khong giao dich) trong khi ATR168 > 0 — chi dem, khong loai
     log.info("RANGE %s", rng_chk)
-    assert bad == 0 and all(rng_chk.values()), "GEOM check FAIL"
+    assert bad == 0 and all(v for k, v in rng_chk.items() if not k.startswith("n_")), "GEOM check FAIL"
     del Hm, Lm, Cm
     K = pd.read_parquet(KEEP9_PQ, columns=["ts", "sym"])
     kt, ks_ = K.ts.to_numpy(np.int64), K.sym.to_numpy(np.int64)
