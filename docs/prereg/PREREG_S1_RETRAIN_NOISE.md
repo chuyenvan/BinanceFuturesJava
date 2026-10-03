@@ -99,3 +99,17 @@ Phụ: toàn kỳ MTM phút (`reset_rule_score.run_mtm`, legacy).
 ## 7. Output
 `docs/result/RESULT_S1_RETRAIN_NOISE.md`, `docs/result/s1_retrain_noise.json`, script `research/analysis/s1_retrain_noise_*.py`.
 Artifact Oracle `~/claude_master/1003/s1rn/` (pred, map bins, log). Không push bins/printDone.
+
+## A1 — Sửa đổi TRƯỚC sim (nguồn G015 cho map), chốt trước khi submit bất kỳ kernel sim arm nào
+**Phát hiện khi chạy `shas`:** `~/f0_repro/predwf_map_s1a2_x1` (= map từ `g015x26_regen`, MAP_PARITY 16/16 PASS ở §2.2)
+**KHÁC** bins deploy B0 `~/predwf_map_s1a2_x1` (md5 khác ngay fold 20220101: `0160dcec…` vs `a71cb93c…`); P0/B0 sim (sha
+`407e2aba`) dùng bản deploy. Tức `g015x26_regen` KHÔNG byte-identical `predwf_G015x26` gốc (X1_EXTEND §2 đã ghi G015x26 không
+tái lập được), và thư mục gốc `~/claudedata/predwf_G015x26` không còn trên đĩa. Dùng `g015x26_regen` sẽ đổi cả G015 ⇒ vi
+phạm "G015 giữ nguyên bins gốc".
+**Sửa:** nguồn G015 cho map = chính bins deploy `~/predwf_map_s1a2_x1`. Hợp lệ vì quantile-map chỉ hoán vị `p` TRONG nhóm
+coin có điểm S1 của mỗi tick (multiset `p` nhóm đó và `p` của coin không điểm giữ nguyên) và tập (ts,sym) có điểm của mọi arm
+== ORIG (đã kiểm §5.2) ⇒ map(deploy, S1_arm) ≡ map(G015x26 gốc, S1_arm) từng byte. **Cổng MAP_PARITY mới:**
+map(deploy, `pred_s1a2x1`) == deploy md5 16/16 (tính lũy đẳng), FAIL ⇒ DỪNG. Cổng sha `moc21 + deploy16 == 407e2aba` giữ.
+Đã thấy trước A1: chỉ số tầng model (không phụ thuộc G015): cổng K42~ORIG xs 0,984 ≥ 0,80 PASS. Chưa có số sim nào của arm.
+Phụ chú: bản map `f0_repro` (dùng ở LABEL_FIRSTHIT làm MAP_PARITY) ≠ deploy — chỉ ảnh hưởng kiểm tái lập của vòng đó,
+không đổi bins arm FH/CTRL (chúng map từ G015 retrain), nhưng nên ghi lại cho MASTER.
