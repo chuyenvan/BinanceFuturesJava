@@ -60,6 +60,8 @@ public class BinanceOrderTradingManager {
         Utils.writePid2File();
         // [LIVE-SIZING] nap lop som => log cau hinh MOT lan luc khoi dong (co TAT: khong log, khong doi hanh vi).
         com.binance.chuyennd.tradecore.selector.LiveGridSizing.on();
+        // [LIVE-DCA-GRID] idem cho co DCA grid so giay.
+        com.binance.chuyennd.tradecore.selector.LiveDcaGridC3.enabled();
         new DetectEntrySignal2TradeNormal().start();
         new BinanceOrderTradingManager().start();
     }
@@ -232,7 +234,8 @@ public class BinanceOrderTradingManager {
             com.binance.chuyennd.tradecore.selector.ShadowBookC3.getInstance().openPos(
                     order.symbol, order.timeStart, order.priceEntry, order.quantity,
                     rk == null ? -1 : rk,
-                    DetectEntrySignal2TradeNormal.paperSymbolPred(order.symbol));
+                    DetectEntrySignal2TradeNormal.paperSymbolPred(order.symbol),
+                    order.marketLevel == null ? null : order.marketLevel.toString());
         }
     }
 

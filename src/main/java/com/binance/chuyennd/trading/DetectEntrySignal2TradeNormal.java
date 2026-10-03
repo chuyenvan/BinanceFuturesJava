@@ -367,6 +367,10 @@ public class DetectEntrySignal2TradeNormal {
                 } catch (Exception e) {
                     LOG.error("DCA createOrderBuyRequest loi: {}", e.toString());
                 }
+                // [LIVE-DCA-GRID] diem goi 1 cua sim (getDCA trong nhanh levelChange != null).
+                if (com.binance.chuyennd.tradecore.selector.LiveDcaGridC3.active()) {
+                    paperDcaGrid("level", symbol2FinalTicker, symbol2Max15m, marketRate, predictData, symbol2LastTickers);
+                }
             }
             // dca buy
             if (MarketBigChangeDetector.isDcaAlt(rateDown15MAvg, rateDownAvg, rateUpAvg)) {
@@ -384,6 +388,10 @@ public class DetectEntrySignal2TradeNormal {
 
                         }
                     }
+                }
+                // [LIVE-DCA-GRID] diem goi 2 cua sim (getDCA(null,...) trong nhanh isDcaAlt).
+                if (com.binance.chuyennd.tradecore.selector.LiveDcaGridC3.active()) {
+                    paperDcaGrid("dcaAlt", symbol2FinalTicker, symbol2Max15m, marketRate, predictData, symbol2LastTickers);
                 }
             }
 
@@ -912,6 +920,33 @@ public class DetectEntrySignal2TradeNormal {
     }
 
 
+    /**
+     * [LIVE-DCA-GRID 2026-10-03] Nhoi leg DCA-grid cho SO GIAY C3 — ban port cua sim
+     * ({@code DcaProcessor.getDCA} nhanh DCA_GRID_ENABLED + {@code createOrderBUY(DCA_LEVEL1, symbolPred=null)}).
+     * Chi goi khi {@code LiveDcaGridC3.active()}. Leg di qua DUNG {@link #createOrderBuyRequest} (cong
+     * entryGate, TIER_3 chan DCA, managerBudget U/U_MAX tren so giay, ratio legIdx, tran 4.5%, CONC_PC).
+     */
+    private void paperDcaGrid(String site, Map<String, KlineObjectSimple> symbol2FinalTicker,
+                              Map<String, Float> symbol2Max15m, MarketDataObject marketRate,
+                              OnnxInferenceManager.PredictionResult predictData,
+                              Map<String, List<KlineObjectSimple>> symbol2LastTickers) {
+        try {
+            final Map<String, KlineObjectSimple> tk = symbol2FinalTicker;
+            List<String> due = com.binance.chuyennd.tradecore.selector.LiveDcaGridC3.candidates(
+                    com.binance.chuyennd.tradecore.selector.ShadowBookC3.getInstance(),
+                    s -> { KlineObjectSimple t = tk.get(s); return t == null ? null : t.priceClose; });
+            if (!due.isEmpty()) LOG.info("[LIVE-DCA-GRID] site={} due={}", site, due);
+            for (String symbol : due) {
+                KlineObjectSimple ticker = tk.get(symbol);
+                if (!Utils.isTickerAvailable(ticker)) continue;
+                createOrderBuyRequest(symbol, ticker, MarketLevelChange.DCA_LEVEL1, symbol2Max15m.get(symbol),
+                        marketRate, predictData, null, symbol2LastTickers, null);
+            }
+        } catch (Exception e) {
+            LOG.error("[LIVE-DCA-GRID] loi site={}: {}", site, e.toString());
+        }
+    }
+
     public void createOrderBuyRequest(String symbol, KlineObjectSimple ticker, MarketLevelChange levelChange, Float priceMax15M,
                                       MarketDataObject marketRate, OnnxInferenceManager.PredictionResult prediction,
                                       Float symbolPred, Map<String, List<KlineObjectSimple>> symbol2LastTickers,
@@ -992,7 +1027,14 @@ public class DetectEntrySignal2TradeNormal {
             }
             com.binance.chuyennd.tradecore.selector.ShadowBookC3 book =
                     com.binance.chuyennd.tradecore.selector.ShadowBookC3.getInstance();
-            if (book.isHolding(symbol)) return;   // giong guard symbol2Pos cua duong that
+            if (levelChange == MarketLevelChange.DCA_LEVEL1
+                    && com.binance.chuyennd.tradecore.selector.LiveDcaGridC3.active()) {
+                // [LIVE-DCA-GRID] leg DCA giay CHI nhoi cum DANG giu; bac = so leg da khop (nhu sim).
+                if (!book.isHolding(symbol)) return;
+                liveLegIdx = com.binance.chuyennd.tradecore.selector.LiveDcaGridC3.legIdxFor(book.legCount(symbol));
+            } else if (book.isHolding(symbol)) {
+                return;   // giong guard symbol2Pos cua duong that
+            }
             java.util.Map<String, Float> pxOpen = book.openCount() == 0
                     ? java.util.Collections.emptyMap()
                     : DataManagerAerospikeFloatSim.getAllPriceRealtimeLegacy(book.openSymbols());
