@@ -264,6 +264,10 @@ public class BinanceOrderTradingManager {
             if (com.binance.chuyennd.tradecore.selector.LiveProfileC3.on() && currentSecond % 10 == 0) {
                 executorServiceOrderNew.execute(this::shadowTickC3);
             }
+            // [C3-LIVE] doc lai cong push + kill-switch moi 10s (log khi doi trang thai). c3_shadow/tat: bo qua.
+            if (com.binance.chuyennd.tradecore.selector.LiveProfileC3.isLive() && currentSecond % 10 == 0) {
+                com.binance.chuyennd.tradecore.selector.LiveProfileC3.forceNoPush();
+            }
             // sl dynamic
             if (currentSecond % 30 == 0) {
                 symbol2Tickers.putAll(DataManagerAerospikeFloatSim.readDataForSymbols(

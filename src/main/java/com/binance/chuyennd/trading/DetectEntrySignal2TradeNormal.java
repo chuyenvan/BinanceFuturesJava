@@ -1170,8 +1170,12 @@ public class DetectEntrySignal2TradeNormal {
             }
             // [L3 LEGACY] nhanh GIAY khong day qua Redis queue cua bot (tren 242 cum 30001-6 la cua
             // bot THAT) — goi thang nhanh xu ly giay trong cung JVM. Co LIVE_C3_QUEUE=1 de quay lai.
+            // [C3-LIVE 2026-10-03] chi di thang so giay khi cong day lenh DONG (forceNoPush). c3_shadow:
+            //   forceNoPush LUON true => y het HEAD. c3_live + push mo => qua queue -> processOrderNewMarketNew
+            //   (kiem forceNoPush + kill-switch LAN NUA ngay truoc khi goi san).
             if (com.binance.chuyennd.tradecore.selector.LiveProfileC3.on()
-                    && !com.binance.chuyennd.tradecore.selector.LiveProfileC3.shadowUseRedisQueue()) {
+                    && !com.binance.chuyennd.tradecore.selector.LiveProfileC3.shadowUseRedisQueue()
+                    && com.binance.chuyennd.tradecore.selector.LiveProfileC3.forceNoPush()) {
                 BinanceOrderTradingManager.shadowHandleOrder(orderTrade);
             } else {
                 RedisHelper.getInstance().get().rpush(RedisConst.REDIS_KEY_BINANCE_TD_ORDER_MANAGER_QUEUE, Utils.toJson(orderTrade));
