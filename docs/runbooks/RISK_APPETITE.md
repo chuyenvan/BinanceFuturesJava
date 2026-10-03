@@ -334,3 +334,6 @@ Nguyên bản §13.2 T4: `Calmar_MTM ≥ B*` · `n ≥ 1,3×B*` · `conc ≤ B*`
 - **Mọi thay đổi S1** phải có **CTRL cùng đợt, ≥ 2 seed**, và chấm **end-to-end** (ablation toàn đường, không chỉ IC/overlap). Nhiễu seed đã đo: top-16 overlap CTRL K42 vs S7 ≈ 0,89 — khác biệt nhỏ hơn cỡ này không đọc được.
 
 *Ghi bởi MASTER (Claude), 2026-10-03, theo quyết định owner qua chat cùng ngày.*
+
+### A.6 (2026-10-04) — ĐỀ XUẤT amendment (ghi theo brief MASTER vòng S1_K24, chờ MASTER/owner xác nhận văn bản)
+- **K24 = khung vận hành mục tiêu** theo **quyết định owner 2026-10-04** (mục tiêu n 500→700/năm; bằng chứng `docs/result/RESULT_N700.md` A1: n ≈ 732/năm, ΔPnL +12,9k CI raw [+2,0k; +24,0k], trượt c1 inflate) — **không qua luật c1**; mọi so sánh selector từ đây dùng nền **CTRL4@K24** (TB 4 seed KEEP9 retrain @ SELECTOR_RANK_TOPK=24), xem `docs/prereg/PREREG_S1_K24.md`.
