@@ -102,18 +102,45 @@ public final class S1RankerLive {
     private String inputName;
     private long lastHourLoaded = 0L;
     private boolean broken = false;
+    /**
+     * [GEOM-LIVE 2026-10-03] Cong S1-GEOM ({@code docs/audit/GEOM_LIVE_IMPL_20261003.md}). OFF (mac dinh): KHONG tao
+     * provider, KHONG doc them gi, vector 9 feature + model {@code S1_MODEL_ONNX} y het truoc. ON: model
+     * {@code S1_GEOM_MODEL_ONNX} (18 input = KEEP9 roi GEOM9) + {@link GeomFeatProvider}.
+     */
+    private final boolean geomOn;
+    private final GeomFeatProvider geom;
+
+    /** Thuan (unit-test): chi "true" (khong phan biet hoa/thuong, trim) moi BAT. */
+    public static boolean geomEnabled(String v) {
+        return v != null && "true".equalsIgnoreCase(v.trim());
+    }
 
     private S1RankerLive() {
-        String path = Cfg.get("S1_MODEL_ONNX");
-        if (path == null || path.trim().isEmpty()) {
+        geomOn = geomEnabled(Cfg.get("LIVE_S1_GEOM_ENABLED"));
+        geom = geomOn ? new GeomFeatProvider(GeomFeatProvider.aerospike(
+                DataManagerAerospikeFloatSim.getClient242(), NS_242, SET_TICKER)) : null;
+        String path = geomOn ? Cfg.get("S1_GEOM_MODEL_ONNX") : Cfg.get("S1_MODEL_ONNX");
+        if (!geomOn && (path == null || path.trim().isEmpty())) {
             path = "/home/ubuntu/s1_model/s1a2x1_cut20251001.onnx";
         }
         try {
+            if (geomOn && (path == null || path.trim().isEmpty())) {
+                throw new IllegalStateException("LIVE_S1_GEOM_ENABLED=true nhung THIEU S1_GEOM_MODEL_ONNX");
+            }
             env = OrtEnvironment.getEnvironment();
             session = env.createSession(path.trim(), new OrtSession.SessionOptions());
             inputName = session.getInputNames().iterator().next();
             LOG.info("[S1] nap model ONNX {} input={} nFeature={}", path, inputName,
                     S1FeatureLive.FEATURE_ORDER.length);
+            if (geomOn) {
+                long[] shp = ((ai.onnxruntime.TensorInfo) session.getInputInfo().get(inputName).getInfo()).getShape();
+                long want = S1FeatureLive.FEATURE_ORDER.length + GeomFeatureLive.FEATURE_ORDER.length;
+                if (shp.length != 2 || shp[1] != want) {
+                    throw new IllegalStateException("model S1-GEOM input " + Arrays.toString(shp) + " != [?, " + want + "]");
+                }
+                LOG.info("[S1-GEOM] BAT: model {} nFeature={} (KEEP9 + GEOM9), nguon 1m aerospike {}:{} ns={} set={}",
+                        path, want, Configs.AEROSPIKE_HOST_242, Configs.AEROSPIKE_PORT_242, NS_242, SET_TICKER);
+            }
         } catch (Throwable t) {
             broken = true;
             LOG.error("[S1] KHONG nap duoc model ONNX {}: {} -> selector giu thu tu pNoPump cu",
@@ -180,12 +207,13 @@ public final class S1RankerLive {
                 lsg.put(sym, ref == null ? Double.NaN : valOf(a[1], ref));
             }
             Map<String, double[]> feat = S1FeatureLive.computeTick(closes, n - 1, lsg, oid);
-            String[] syms = feat.keySet().toArray(new String[0]);
-            float[][] x = new float[syms.length][S1FeatureLive.FEATURE_ORDER.length];
-            for (int i = 0; i < syms.length; i++) {
-                double[] v = feat.get(syms[i]);
-                for (int j = 0; j < v.length; j++) x[i][j] = (float) v[j];
+            Map<String, double[]> gf = null;
+            if (geomOn) {
+                gf = geomFeatures(lastClosedHour, now);
+                if (gf == null) return null;
             }
+            String[] syms = feat.keySet().toArray(new String[0]);
+            float[][] x = assemble(syms, feat, gf);
             float[] raw = predict(x);
             if (raw == null) return null;
             Map<String, Float> out = new HashMap<>();
@@ -197,6 +225,37 @@ public final class S1RankerLive {
             LOG.error("[S1] loi khi tinh score: {}", t.toString());
             return null;
         }
+    }
+
+    /**
+     * Ma tran input model. {@code geom == null} (OFF): DUNG vong lap cu — {@code [n][9]}, {@code (float) KEEP9}.
+     * {@code geom != null} (ON): {@code [n][18]} = KEEP9 roi GEOM9 ({@link GeomFeatureLive#FEATURE_ORDER}); symbol
+     * khong co GEOM -> NaN (nhu left-merge offline; XGB/ONNX xu ly missing).
+     */
+    static float[][] assemble(String[] syms, Map<String, double[]> feat, Map<String, double[]> geom) {
+        int k9 = S1FeatureLive.FEATURE_ORDER.length;
+        int g9 = GeomFeatureLive.FEATURE_ORDER.length;
+        float[][] x = new float[syms.length][geom == null ? k9 : k9 + g9];
+        for (int i = 0; i < syms.length; i++) {
+            double[] v = feat.get(syms[i]);
+            for (int j = 0; j < v.length; j++) x[i][j] = (float) v[j];
+            if (geom == null) continue;
+            double[] g = geom.get(syms[i]);
+            for (int j = 0; j < g9; j++) x[i][k9 + j] = g == null ? Float.NaN : (float) g[j];
+        }
+        return x;
+    }
+
+    /** [GEOM-LIVE] 9 feature GEOM tai gio dong {@code lastClosedHour}; chua du lich su / nguon loi -> null (BO tick). */
+    private Map<String, double[]> geomFeatures(long lastClosedHour, long now) {
+        boolean ok = geom.refresh(lastClosedHour, now);
+        Map<String, double[]> g = ok ? geom.features(lastClosedHour) : null;
+        if (g == null || g.size() < 20) {
+            LOG.error("[S1-GEOM] GEOM CHUA SAN SANG tai gio {} (nguon ok={}, {} gio / can {}, {} symbol) -> BO tick",
+                    lastClosedHour, ok, geom.hoursHeld(), GeomFeatProvider.HIST_HOURS, g == null ? 0 : g.size());
+            return null;
+        }
+        return g;
     }
 
     private float[] predict(float[][] x) {
