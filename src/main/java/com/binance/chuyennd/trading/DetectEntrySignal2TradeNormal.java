@@ -975,6 +975,10 @@ public class DetectEntrySignal2TradeNormal {
         Float marginRunning = BudgetManager.getInstance().marginRunning;
         Float balanceBasic = BudgetManager.getInstance().balanceBasic;
         Float budget = BudgetManager.getInstance().getBudget();
+        // [LIVE-SIZING 2026-10-03] bac grid cua leg nay cho LiveGridSizing: 0 = leg MO cum; leg DCA_LEVEL1
+        //   (vi the that legacy, khong biet bac) = -1 => khong nhan ratio. Chi co tac dung khi
+        //   LIVE_APPLY_GRID_RATIO=true (mac dinh TAT => bien nay khong duoc doc vao dau).
+        int liveLegIdx = (levelChange == MarketLevelChange.DCA_LEVEL1) ? -1 : 0;
         // [C3-SHADOW (d)] sizing COMPOUND tren equity GIAY: PAPER_EQUITY + PnL shadow (mark-to-market
         //   tu price_realtime). Bo hoan toan getAccountUMInfo() (key Oracle la STUB -> nem, va
         //   BUDGET_PER_ORDER se ket o 0 => moi entry bi chan: docs/experiment/L1_SHADOW_C3.md muc 3e).
@@ -997,6 +1001,14 @@ public class DetectEntrySignal2TradeNormal {
         }
 
         budget = TradeUtils.managerBudget(budget, marginRunning, balanceBasic, levelChange);
+        // [LIVE-SIZING 2026-10-03] docs/audit/LIVE_SIZING_DCA_C3LIVE_20261003.md (E2 parity): sim nhan
+        //   DcaUtils.gridLegWeightRatio(legIdx) (= w x DCA_GRID_SCALE) vao budget leg
+        //   (SimulatorMarketLevelTicker1MStopLoss:1439), live truoc day KHONG => leg dau = 1/6 sim.
+        //   Dat TRUOC tran 4.5% C3 (tran ap len leg THAT) va TRUOC tierMultiplier (giao hoan).
+        //   Co TAT (mac dinh) => legBudget tra DUNG budget => byte-identical HEAD.
+        if (com.binance.chuyennd.tradecore.selector.LiveGridSizing.on()) {
+            budget = com.binance.chuyennd.tradecore.selector.LiveGridSizing.legBudget(budget, liveLegIdx);
+        }
         if (com.binance.chuyennd.tradecore.selector.LiveProfileC3.on() && budget != null) {
             float cap = com.binance.chuyennd.tradecore.selector.LiveProfileC3.SIZE_CAP_OF_EQUITY * balanceBasic;
             if (budget > cap) budget = cap;   // tran 4.5% equity
