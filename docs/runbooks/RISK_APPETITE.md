@@ -257,8 +257,8 @@ chiến lược skew dương.
 |---|---|---|
 | **T1** | RÀO RỦI RO (**MTM phút**) | maxDD **MTM phút** ≤ 40 %/năm · `UW ≤ 250` ngày · quý xấu nhất ≥ −20 % · **0 năm âm** (CỨNG) · conc 1 coin ≤ 15 % (CỨNG) |
 | **T2** | RÀO ĐỘ BỀN | `q* ≥ 15 %` · `%PnL top-1% lệnh ≤ 25 %` |
-| **T3** | NON-INFERIORITY vs baseline | `win%` ≥ −2,0 pp · `TSloss%` ≤ +2,5 pp (CI block-72h, 2000 rep, seed 20260905, `inflate(k)`) |
-| **T4** | MỤC TIÊU | xem §9.3 (owner 09-29) |
+| **T3** | NON-INFERIORITY vs baseline | `win%` ≥ −2,0 pp · `TSloss%` ≤ +2,5 pp (CI block-72h, 2000 rep, seed 20260905, `inflate(k)`) **[⚠ A-20261003: hạ xuống CHỈ THÔNG TIN, không còn GO/NO-GO — xem cuối §9]** |
+| **T4** | MỤC TIÊU | xem §9.3 (owner 09-29) **[⚠ A-20261003: mục tiêu chính = PnL ròng; xem A.1]** |
 
 **BỎ khỏi luật** (đo 0/20 bind, `RESULT_RESET_RULE_P1` `a7016b0`): trần **gross ≤ 70 %** (max thực 59,7 %) ·
 `mP|SM%`/`mP|SL%` tầng 3 (CI quá rộng) · "bỏ top-3 episode" trong tầng 2.
@@ -279,3 +279,58 @@ Nguyên bản §13.2 T4: `Calmar_MTM ≥ B*` · `n ≥ 1,3×B*` · `conc ≤ B*`
 (`SIM_RATE_FEE=0.000982`/`SIM_SLIPPAGE_RATE=0.000067`). Parity md5 printDone **`06fd6e9aa9c916945b2cf12310b337ff`**
 (n 2027, eq 104 489). `R3` bị loại vì kém rõ. Chi tiết + bảng so R0/R4 + bằng chứng KHÔNG-hơn-`B*`:
 `docs/decisions/DECISION_BASELINE_R4.md`.
+
+---
+
+## 9-AMENDMENT A-20261003 — Quyết định owner 2026-10-03: mục tiêu chính = PnL ròng; T3 hạ xuống "chỉ thông tin"
+
+- **Ngày:** 2026-10-03. **Nguồn:** owner quyết qua chat 2026-10-03; **MASTER (Claude) ghi** nguyên ý.
+- **Quy tắc đọc:** §9.1–§9.4 phía trên **KHÔNG bị xoá**. Chỗ nào bị thay thế được đánh dấu `⚠ A-20261003` (cả ở đây lẫn tại dòng gốc §9.2). Chỗ nào MASTER **đề xuất** (chưa phải quyết định owner) ghi rõ "ĐỀ XUẤT MASTER — chờ owner".
+- **Phạm vi:** mặc định chỉ áp cho vòng MỚI, KHÔNG hồi tố các verdict đã chốt (theo tiền lệ §9.3) — MASTER ghi, owner có thể đổi.
+- **Bằng chứng nền:** `docs/audit/AUDIT_CHAIN_AND_N_20261003.md` (`c733467c`), `docs/audit/REAUDIT_FLAT3_20261003.md` (`69b3cf07`), `docs/result/RESULT_S1_FEAT_GEOM.md` (NO-GO theo pre-reg).
+
+### A.1 Mục tiêu và rào (thay đổi so với §9.2 / §9.3)
+
+| mục | §9 cũ | A-20261003 | trạng thái |
+|---|---|---|---|
+| Mục tiêu chính | §9.3: `n` là mục tiêu chính | **PnL ròng (ΣPnL / CAGR)**, KHÔNG phải winrate. `n` tăng dần là mục tiêu đồng hành có lộ trình (A.4), chỉ được đổi lấy PnL khi qua luật GO A.4 | **thay thế một phần §9.3** |
+| T3 (win% ≥ −2,0 pp · TSloss% ≤ +2,5 pp) | điều kiện GO/NO-GO | **chỉ thông tin** — vẫn tính và báo cáo, KHÔNG còn quyết GO/NO-GO | **thay thế §9.2 T3** |
+| T1 maxDD | maxDD MTM phút ≤ 40 %/năm | **maxDD MTM ≤ 40 %** là rào rủi ro tuyệt đối. Owner **sẵn sàng chịu** tới 40 % — đây là mức chịu được, KHÔNG phải mục tiêu (không được "tiêu" hết biên 40 % chỉ vì được phép) | giữ số, làm rõ ý nghĩa |
+| UW / exposure | UW ≤ 250 ngày (T1) | **vẫn BÁO CÁO bắt buộc**. Các rào T1 còn lại (UW ≤ 250, quý xấu ≥ −20 %, 0 năm âm, conc 1 coin ≤ 15 %) và T2 (`q*`, top-1 %) **không bị amendment này đổi** — nếu owner muốn hạ UW từ rào cứng xuống chỉ báo cáo thì phải nói rõ (điểm chưa rõ, MASTER giữ nguyên rào) | giữ |
+| T4 Calmar | §9.3: `Calmar_MTM ≥ 0,90 × baseline` | thay bằng ràng buộc A.4 (Calmar không giảm quá X %). **ĐỀ XUẤT MASTER — chờ owner:** X = 20 %. Tới khi owner duyệt X, **ràng buộc 0,90 của §9.3 vẫn là mặc định** | chờ owner |
+
+### A.2 Gate: GIỮ kiểu quota (rolling percentile, "đều lệnh")
+
+- **Quyết định owner (lý thuyết của owner):** ngưỡng tuyệt đối dễ overfit và kém linh hoạt theo regime ⇒ giữ gate kiểu **quota** (rolling percentile), để lệnh vào **đều** thay vì dồn theo một ngưỡng cố định.
+- **Hệ quả ĐÃ ĐO (AUDIT_CHAIN_AND_N `c733467c`) — phải nhớ khi dùng gate này:**
+  - `n = ρ × luồng ứng viên`, `ρ ≈ 6,2–6,3e-5` **không đổi** khi K 16→24→32 (pass 2223→3231→4414 chỉ vì ứng viên/phút tăng). `SIM_GATE_DYN_SCALE` triệt tiêu (chỉ còn tác dụng ở 7 ngày warm-up).
+  - ⇒ **"tăng K" và "hạ pct" là CÙNG MỘT lever** (nới quota). Không được báo cáo như hai lever độc lập, và không được tính chúng vào k riêng khi inflate nếu thực chất cùng cơ chế (nêu rõ trong pre-reg).
+  - Nới quota ×2/×3/×5 ⇒ lệnh +31 %/+48 %/+76 % (dưới tuyến tính); **85–89 % lệnh thêm rơi vào ngày B0 đã có lệnh**; ROI/lệnh của lệnh "chỉ-arm" 1,5–3,4 % vs B0 4,48 %. Trần cấu hình đo được ≈ ×1,8 `n` (~1000/năm).
+  - Rủi ro đi kèm quota (không phải nhược điểm bị bỏ qua): gate quota **không tự co lại** khi chất lượng ứng viên xấu đi; live W90 đang ramp từ 7 ngày (đủ 90 ngày ~2026-12-29) nên 3 tháng đầu gate live ≈ cửa sổ ngắn.
+
+### A.3 Thước chuẩn (bắt buộc cho mọi lever mới)
+
+1. Lever **size / exposure**: so **MTM daily ghép cặp** vs `nền × c` (c = hệ số đưa nền về cùng size/exposure để so công bằng).
+2. Lever chỉ đổi exit/size trên **cùng tập lệnh**: **ΔPnL ghép cặp theo lệnh** (size-neutral). Lever đổi tập lệnh: báo thêm phần khớp / chỉ-nền / chỉ-arm.
+3. **KHÔNG dùng ΔCalmar ledger-closed** làm tiêu chí chọn (CI ±25…±100 điểm Calmar ≈ vô lực; xem `AUDIT_LONG_LEVERS_20261002`). Calmar chỉ để báo cáo / ràng buộc A.4 với MTM.
+4. **Sự kiện cụm** (nhiều lệnh cùng cú sập) → **báo theo ngày**, không coi lệnh là độc lập.
+5. **inflate `√(2 ln k)`**, k = số arm/lever thử cùng đợt (đếm cả K và pct là 1 lever, xem A.2).
+6. CI = **block-10d** trên MTM (xem A.4 (1)).
+
+### A.4 Số lệnh: tăng dần — luật GO cho lever tăng `n`
+
+- **Lộ trình:** mốc gần **~500 → ~700 lệnh/năm** (B0: 2517 lệnh / ~4,5 năm DEV ≈ 560/năm — MASTER tính); mục tiêu xa **~2000 lệnh/năm**. Đo được: không cấu hình nào trong vùng đã thử tới ~2000/năm (trần ×1,8); đạt mức đó chỉ có thể qua một nguồn sự kiện độc lập có edge sau phí (hiện 0 ứng viên qua tầng tiền) — ghi nhận, không phải lý do bỏ mục tiêu.
+- **Không đổi lấy chất lượng bằng mọi giá.** Một lever tăng `n` chỉ GO khi **đồng thời**:
+  1. **ΔPnL (hoặc ΔCAGR) > 0 ngoài CI** MTM ghép cặp **block-10d**, đã inflate `√(2 ln k)`;
+  2. **maxDD MTM ≤ 40 %** (A.1);
+  3. **Calmar_MTM không giảm quá X %** so nền — X = 20 % là **ĐỀ XUẤT MASTER — chờ owner** (mặc định tạm: §9.3 0,90×);
+  4. **≥ 3/4 năm (2022–2025) ΔPnL không âm hơn nền** (không được dương chỉ nhờ 1 năm).
+- Thiếu bất kỳ điều kiện nào ⇒ NO-GO cho lever đó (vẫn được báo như "hướng quan sát", không promote).
+
+### A.5 Selector
+
+- **Baseline nghiên cứu = S1 KEEP9** (bản tốt nhất hiện tại).
+- **B1 = S1 + GEOM** (`cf5c90e4`) là **ỨNG VIÊN, CHƯA chứng minh**: `RESULT_S1_FEAT_GEOM` = NO-GO theo pre-reg (dCAGR +2,46 pp, CI [−0,20; +5,09] < ngưỡng +3,3 pp). Shadow #2 GEOM (xem `docs/runbooks/SHADOW2_GEOM_PLAN.md`) chỉ là quan sát A/B, không phải bước promote.
+- **Mọi thay đổi S1** phải có **CTRL cùng đợt, ≥ 2 seed**, và chấm **end-to-end** (ablation toàn đường, không chỉ IC/overlap). Nhiễu seed đã đo: top-16 overlap CTRL K42 vs S7 ≈ 0,89 — khác biệt nhỏ hơn cỡ này không đọc được.
+
+*Ghi bởi MASTER (Claude), 2026-10-03, theo quyết định owner qua chat cùng ngày.*

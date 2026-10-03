@@ -12,6 +12,8 @@
 | **1a** | **Chấp nhận** 48–62 vị thế LEGACY thật trên 242 chạy theo luật thoát mới (arm 0,07 + FLAT3 gap 3 %), **không** tách lại về luật HEAD cũ. | Đóng F2 của `AUDIT_G2FLAT3_20261002` ở mức governance. Luật thực tế đang áp xem §8 (dead-zone ×5,21847 VẪN còn cho legacy ⇒ SL legacy chỉ ratchet khi lãi ≥ 36,5 %). Hiện `[LEGACY] managed 48`; 0 sự kiện `New price SL`/`Update SL`/`TS-GAP` từ 01/10 00:00 → 02/10 17:14. |
 | **2** | Đưa 242 chạy **ĐÚNG cấu hình B0** đã backtest. | Bậc 1 (doc này) = audit + kế hoạch; bậc 2a/2b/3 ở §9. **Bậc 3 hiện CHẶN** (lý do §9.0). |
 
+> **[ghi chú bổ sung 2026-10-03, nguồn: `docs/audit/PARITY_LIVE_VS_SIM_20261003.md` mục E2]** Sizing live paper = **1/6 sim** (leg đầu 131,25 USDT @equity 35 000, live/sim = 0,1667): đường paper live không nhân `gridLegWeightRatio` (= w × `DCA_GRID_SCALE` 6.0). Mọi kết luận "242 chạy đúng B0" ở doc này **chưa tính** lệch sizing này. Shadow đã bù bằng `SIM_F_BASE=0.09` (=0.015×6); 242 mới chỉ đề xuất — nếu chuyển sang đẩy lệnh thật thì sizing là quyết định rủi ro tiền thật, owner chốt riêng (không có trần 4,5 % của `LiveProfileC3`).
+
 ## 1. KẾT LUẬN (8 câu)
 
 | # | câu | kết luận | 1 dòng bằng chứng |
