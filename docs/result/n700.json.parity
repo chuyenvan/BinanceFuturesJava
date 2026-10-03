@@ -1,0 +1,31 @@
+{
+ "ok": true,
+ "checks": {
+  "n": true,
+  "eq": true,
+  "jar": true,
+  "mapper": true,
+  "value_identical_vs_selab_p0": true
+ },
+ "md5": "ff3ce513edf2316088a4b5ac464f76dc",
+ "md5_eq_ff3ce513": true,
+ "n": 2517,
+ "eq": 131908.0,
+ "valeq": {
+  "rows_a": 2518,
+  "rows_b": 2518,
+  "cells_str_diff": 0,
+  "cells_val_diff": 0,
+  "cols": {}
+ },
+ "A1_vs_de-p2_valeq": {
+  "rows_a": 3527,
+  "rows_b": 3527,
+  "cells_str_diff": 5,
+  "cells_val_diff": 0,
+  "cols": {
+   "volume": 5
+  }
+ },
+ "A1_md5": "d9abf35fdc93cfbcf7c41c9c62c22c20"
+}
