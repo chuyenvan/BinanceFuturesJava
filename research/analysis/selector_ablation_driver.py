@@ -36,6 +36,7 @@ ARMS = ["P0", "R42", "R7", "R13", "L"]
 RARMS = ["R42", "R7", "R13"]
 TAG = {"P0": "selab-p0", "R42": "selab-r42", "R7": "selab-r7", "R13": "selab-r13", "L": "selab-liq"}
 LIQ_DIR = "/home/ubuntu/claude_master/1003/sa/liq"
+B0REF = "selab-b0ref"                                 # B0 thuan (kaggle_sim HEAD, khong SA block) cung dot
 KS_MD5_WANT = "8b60b00afad39f2528aaa15092225c9b"      # tools/kaggle_sim.py HEAD (NOWRITE242)
 JAR_DS, JAR_SHA = "sim-jar-gdv2", "7368be46edb3fa387a41585bea18feb81ab812ebabdc9ff245f6d25947a82d6a"
 BUNDLE = "sim-x1-2021-bundle"
@@ -207,20 +208,56 @@ def result_json(arm):
     return json.load(open(p)) if os.path.exists(p) else {}
 
 
+def printdone_valeq(tag_a, tag_b):
+    """So tung o printDone: o khac CHUOI -> so gia tri float32. Tra (so o khac chuoi, so o khac gia tri, cot)."""
+    import csv
+    pa = OUT % tag_a + "storage/printDone.csv"
+    pb = OUT % tag_b + "storage/printDone.csv"
+    a, b = list(csv.reader(open(pa))), list(csv.reader(open(pb)))
+    if len(a) != len(b):
+        return dict(rows_a=len(a), rows_b=len(b), cells_str_diff=-1, cells_val_diff=-1, cols={})
+    ns, nv, cols = 0, 0, {}
+    for ra, rb in zip(a, b):
+        if len(ra) != len(rb):
+            nv += 1
+            continue
+        for j, (x, y) in enumerate(zip(ra, rb)):
+            if x == y:
+                continue
+            ns += 1
+            c = a[0][j] if j < len(a[0]) else str(j)
+            cols[c] = cols.get(c, 0) + 1
+            try:
+                same = np.float32(float(x)) == np.float32(float(y))
+            except ValueError:
+                same = False
+            nv += 0 if same else 1
+    return dict(rows_a=len(a), rows_b=len(b), cells_str_diff=ns, cells_val_diff=nv, cols=cols)
+
+
 def parity():
+    """AMENDMENT A1 (pre-reg §5b): PASS <=> n/eq/jar/mapper/bins/funding khop VA printDone P0 GIONG B0 (de-p1) tung o
+    theo gia tri float32. md5 == 650c386f va md5(P0) == md5(B0REF cung anh Kaggle) = bang chung bo sung (ghi lai)."""
     import reset_rule_score as R
     rj = result_json("P0")
     md5 = R.md5_of(TAG["P0"])
     legs = R.load_legs(TAG["P0"])
     eq = float(R.load_daily(TAG["P0"])["equity"].iloc[-1])
     sel = rj.get("sel") or {}
-    chk = {"md5": md5 == PARITY_MD5, "n": len(legs) == PARITY_N, "eq": round(eq) == PARITY_EQ,
+    ve = printdone_valeq(TAG["P0"], "de-p1")
+    md5_ref = R.md5_of(B0REF) if os.path.exists(OUT % B0REF + "storage/printDone.csv") else None
+    chk = {"n": len(legs) == PARITY_N, "eq": round(eq) == PARITY_EQ,
            "jar": rj.get("jar_sha256") == JAR_SHA, "mapper": (rj.get("symbol_mapper") or 0) >= 800,
            "bins_sha_P0": sel.get("bins_ok") is True,
-           "funding_md5_eq_bundle": sel.get("funding_md5") == "8e57d900d5c54c744bfcaf5c9b27fc93"}
+           "funding_md5_eq_bundle": sel.get("funding_md5") == "8e57d900d5c54c744bfcaf5c9b27fc93",
+           "printdone_value_identical_vs_de-p1": ve["cells_val_diff"] == 0 and ve["rows_a"] == ve["rows_b"]}
+    info = {"md5_eq_650c386f": md5 == PARITY_MD5, "md5_b0ref": md5_ref, "md5_eq_b0ref": md5_ref == md5 if md5_ref else None,
+            "valeq_vs_de-p1": ve}
     ok = all(chk.values())
-    log.info("PARITY P0 md5=%s n=%d eq=%.0f %s -> %s", md5, len(legs), eq, chk, "PASS" if ok else "*** FAIL => VOID ***")
-    json.dump(dict(ok=ok, md5=md5, n=len(legs), eq=eq, checks=chk, sel=sel), open(JSON_OUT + ".parity", "w"), indent=1)
+    log.info("PARITY P0 md5=%s n=%d eq=%.0f %s info=%s -> %s", md5, len(legs), eq, chk, info,
+             "PASS" if ok else "*** FAIL => VOID ***")
+    json.dump(dict(ok=ok, md5=md5, n=len(legs), eq=eq, checks=chk, info=info, sel=sel),
+              open(JSON_OUT + ".parity", "w"), indent=1)
     return ok
 
 

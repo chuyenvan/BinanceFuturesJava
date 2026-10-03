@@ -75,3 +75,16 @@ Seed-dispersion: mean +- sd qua 3 seed R cho moi thuoc.
 Sim co path-dependence (coin dang giu, CONC_CAP 15%) nen R khong hoan toan "cung slot". BIG_DOWN/DCA_LEVEL1 khong qua
 selector => phan chung giua cac arm (lam loang hieu ung; bao cao overlap theo level). 3 seed => sai so mean(R) do
 hoan vi duoc bao cao bang sd qua seed, khong gop vao CI bootstrap.
+
+## 5b. AMENDMENT A1 — 2026-10-03 ~08:35 (+07), SAU P0, TRUOC khi day R/L (chua co ket qua R/L nao)
+- P0 (`selab-p0`, kernel 07:13): n 2517 = , equity 131908 = , jar 7368be46 = , bins sha 407e2aba = , funding md5 8e57d900 =
+  bundle, nhung md5 printDone **ff3ce513 != 650c386f**.
+- So tung o printDone P0 vs de-p1: 2518 dong, **5 o khac CHUOI (volume x4, quantity x1), 0 o khac GIA TRI float32** — chi la
+  dang in Float.toString (vd `7.387205E7` vs `7.3872048E7`, cung float 73872048). config chi khac `WFO_FUNDING_PRED_DIR`
+  (du kien). exit-time-p0 (01:08 cung ngay, cung jar/kernel) con ra 650c386f => nghi anh Kaggle (JDK) doi, CHUA chung minh.
+- Sua cong parity (chi ve tinh hop le, khong dung vao thuoc/luat §6-§7): PASS <=> n/eq/jar/mapper/bins sha/funding md5 khop
+  VA printDone P0 giong de-p1 TUNG O theo gia tri float32. Them arm **B0REF** = B0 thuan (`tools/kaggle_sim.py` HEAD, KHONG
+  SA block, cau hinh y exit-time-p0) chay CUNG DOT voi R/L: md5(B0REF) == md5(P0) => anh Kaggle doi, duong override
+  byte-identical tren anh hien tai; neu md5(B0REF) == 650c386f != md5(P0) => ghi ro "duong override doi dinh dang in
+  (gia tri giong)" — KHONG VOID vi moi lenh giong ve gia tri. B0REF khong vao thuoc/luat.
+- R/L so voi P0 (cung anh, cung dot kernel) nen tuong phan noi bo khong bi anh huong.
