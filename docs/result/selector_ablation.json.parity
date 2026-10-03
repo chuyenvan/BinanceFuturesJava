@@ -1,0 +1,43 @@
+{
+ "ok": true,
+ "md5": "ff3ce513edf2316088a4b5ac464f76dc",
+ "n": 2517,
+ "eq": 131908.0,
+ "checks": {
+  "n": true,
+  "eq": true,
+  "jar": true,
+  "mapper": true,
+  "bins_sha_P0": true,
+  "funding_md5_eq_bundle": true,
+  "printdone_value_identical_vs_de-p1": true
+ },
+ "info": {
+  "md5_eq_650c386f": false,
+  "md5_b0ref": "ff3ce513edf2316088a4b5ac464f76dc",
+  "md5_eq_b0ref": true,
+  "valeq_vs_de-p1": {
+   "rows_a": 2518,
+   "rows_b": 2518,
+   "cells_str_diff": 5,
+   "cells_val_diff": 0,
+   "cols": {
+    "volume": 4,
+    "quantity": 1
+   }
+  }
+ },
+ "sel": {
+  "arm": "P0",
+  "src_bins_sha256": "407e2abab3053a39a51dcb9f331d063b3e67196bf608ae061aee444cd2841ca5",
+  "bins_sha256": "407e2abab3053a39a51dcb9f331d063b3e67196bf608ae061aee444cd2841ca5",
+  "want_bins_sha256": "407e2abab3053a39a51dcb9f331d063b3e67196bf608ae061aee444cd2841ca5",
+  "bins_ok": true,
+  "funding_md5": "8e57d900d5c54c744bfcaf5c9b27fc93",
+  "funding_count": 2301065,
+  "fold_count": 18,
+  "leak_free_from": "2021-07-01",
+  "orig_md5_funding": "8e57d900d5c54c744bfcaf5c9b27fc93",
+  "md5_printdone": "ff3ce513edf2316088a4b5ac464f76dc"
+ }
+}
