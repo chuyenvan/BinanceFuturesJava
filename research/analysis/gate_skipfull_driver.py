@@ -157,6 +157,11 @@ def logtxt(tag):
     return out
 
 
+def offline_line(tag):
+    v = [ln for ln in logtxt(tag).splitlines() if "md5 verified" in ln and "pred=" in ln]
+    return v[-1].split("LOAD offline OK")[-1] if v else None
+
+
 def parity(a=None):
     import reset_rule_score as R
     res = {}
@@ -179,7 +184,9 @@ def parity(a=None):
                    topk24=pr.get("SELECTOR_RANK_TOPK") == "24", key_on=pr.get(KEY) == "true", ok=rj.get("ok") is True,
                    b0ov=all(pr.get(k) == str(v) for k, v in GA.B0OV.items()),
                    log_key="[GATE-QUOTA] SKIP_WHEN_FULL=ON" in txt, skip_count=bool(sk),
-                   pred=(md5[:8] in ver[-1]) if (dsn is None and ver) else
+                   # A1 (pred goc trong bundle): dong Java "LOAD offline OK ... (md5 verified)" khong in md5 -> so
+                   # NGUYEN dong (bo timestamp) voi run OFF n700-a1 cung bundle (sua checker sau lan chay dau, khong doi run)
+                   pred=(bool(ver) and ver[-1].split("LOAD offline OK")[-1] == offline_line(OFF[s])) if dsn is None else
                    (rj.get("pred_md5_used") == md5 and rj.get("pred_md5_base") == GA.PRED0_MD5))
         res[s] = dict(ok=all(chk.values()), checks=chk, md5=R.md5_of(tag), n=rj.get("n_trades"),
                       eq=rj.get("equity_final"), skip_full=int(sk[-1]) if sk else None, pred_md5=md5,
