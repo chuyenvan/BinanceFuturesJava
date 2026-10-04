@@ -44,4 +44,13 @@ KHÔNG thêm arm, KHÔNG đổi pct/ngưỡng (`SIM_GATE_ROLLING_PCT` 0.99995082
 - Báo bản có/không 2022 cho mọi arm. Không tune. Mọi thứ ngoài pre-reg = chỉ báo cáo.
 
 ## 6. md5 pred.bin (điền sau khi sinh, commit bổ sung TRƯỚC khi đẩy kernel)
-(chưa sinh)
+| arm | md5 pred.bin | G0 (fmt / multiset DEV / 2026 = p0 / decile maxdiff) | spearman vs gốc | ghi chú |
+|---|---|---|---|---|
+| BAG8M | `a56d99b6880166ebe63033715a766285` | PASS (True/True/True/0.0e+00) | 0.9984 | spearman(x, p0)_DEV 0.99838; x float32 == BAG8 cũ: True |
+| RBAG8 | `e571ce90757172e53131db35b09deeb8` | PASS (True/True/True/0.0e+00) | 0.9984 | spearman(x, p0)_DEV 0.99840; x float32 == BAG8 cũ: None |
+| NULL1 | `8490f16b807f0bdf12a0a5a8ac97bce7` | PASS (True/True/True/0.0e+00) | 0.0055 | rng 1, 58 khối, perm[:6] [40, 6, 28, 30, 14, 20] |
+| NULL2 | `b681c3e93e2004e5b12e5b8f90fab884` | PASS (True/True/True/0.0e+00) | 0.0852 | rng 2, 58 khối, perm[:6] [47, 23, 38, 6, 40, 48] |
+| NULL3 | `730fb2729cdc42464b6b8fd1ee7e94e4` | PASS (True/True/True/0.0e+00) | 0.1434 | rng 3, 58 khối, perm[:6] [22, 0, 3, 37, 52, 2] |
+| NULL4 | `d03842d878a0b0f69ea459aaf0473e7e` | PASS (True/True/True/0.0e+00) | 0.1302 | rng 4, 58 khối, perm[:6] [57, 37, 54, 23, 18, 35] |
+
+Spot-check 3 mốc (p0 → arm) trong `~/claude_master/1004/gbn/g1.json`; G0 đầy đủ `g0.json`. Sinh bằng `gate_bagfix_null_driver.py gen` (commit 8ee3b238), 11 s, RSS 0,89 GB.
