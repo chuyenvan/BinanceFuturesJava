@@ -39,7 +39,18 @@ Seed 42 (A1) và seed 7 (gabl-seed7) KHÔNG chạy lại. KHÔNG thêm arm, KHÔ
 - Không tune. Mọi thứ ngoài pre-reg = chỉ báo cáo.
 
 ## 6. md5 pred.bin (điền sau khi sinh, commit bổ sung TRƯỚC khi đẩy kernel)
-md5 điền sau.
+| arm | md5 pred.bin | G0 | spearman vs gốc | G1 pearson/fold min / median (fold < 0,97) |
+|---|---|---|---|---|
+| S13 | `cd6d7b2ed05b9ad326358717fdbdd842` | PASS | 0.9962 | 0.9836 / 0.9935 (0) |
+| S21 | `0b541d2259b31cf2794160e0aeafa3ff` | PASS | 0.9953 | 0.9786 / 0.9932 (0) |
+| S99 | `5ef90e928cd4f5a7aa55c4b88a1b6bd1` | PASS | 0.9968 | 0.9766 / 0.9938 (0) |
+| S123 | `9b1dad9051c3d72b8bba8c0f547623f9` | PASS | 0.9958 | 0.9788 / 0.9935 (0) |
+| S777 | `25f738f752d4ed195ac42bd5075c9e94` | PASS | 0.9959 | 0.9797 / 0.9936 (0) |
+| S2024 | `3be4fac48ab8b9e2fcec45a3f45417e4` | PASS | 0.9970 | 0.9888 / 0.9933 (0) |
+| BAG8 | `8bad71a4c9b816b0e3f2efe5e1472c9f` | PASS | 0.9984 | — |
+| NULLB | `0939a4cba68e09dd985bda85354976f3` | PASS | 0.0326 | — |
+
+Thành phần BAG8: 42 = `5dd6bb4c3f98d89d58770005c0001526` (pred.bin gốc), 7 = `b737fb6d64d198c14654ea9c92510b36`, + 6 seed trên. NULLB: 58 khối 30 ngày (khối cuối 26 ngày), rng 20261004.
 
 ## 7. Tái lập
 `research/analysis/gate_seedband_driver.py` (retrain / bag / nullb / g0 / upload / submit / fetch / parity / score); artefact `~/claude_master/1004/gsb/`; Kaggle out `~/kaggle_sim/out/gsb-*`.
