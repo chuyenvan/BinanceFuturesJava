@@ -46,6 +46,20 @@ SD_OFF_PREREG, CAL_OFF_PREREG = 3.58, 1.529
 DISK_MIN_MB = 500
 JSON_OUT = os.path.join(REPO, "docs/result/gate_skipfull.json")
 GSB_MTM = "/home/ubuntu/claude_master/1004/gsb/mtm.json"
+TOPK_WANT = "24"
+MTM_FILE = D + "/mtm.json"
+# [K16 bo sung] PREREG_GATE_QUOTA_SKIPFULL_K16.md: 3 seed @K16 (profile g2_flat3), OFF = jar moi key vang.
+K16 = "--k16" in sys.argv
+if K16:
+    SEEDS = ["A1", "S21", "S7"]
+    ON = {s: "gqsf16-" + s.lower() for s in SEEDS}
+    OFF = {"A1": P0_TAG, "S21": "gqsf16off-s21", "S7": "gqsf16off-s7"}
+    OV_ON = dict(GA.B0OV, **{KEY: "true"})
+    TOPK_WANT = "16"
+    K_INFL = 3
+    INFL = math.sqrt(2.0 * math.log(K_INFL))
+    SD_OFF_PREREG, CAL_OFF_PREREG = None, None
+    MTM_FILE = D + "/mtm_k16.json"
 
 
 def pred_of(s):
@@ -103,17 +117,19 @@ def submit(a):
     disk("truoc submit")
     log.info("free_slots=%d", ks.free_slots())
     for s in a.arms:
-        tag = ON[s]
+        tag = OFF[s] if a.off else ON[s]
+        ov = dict(GA.B0OV) if a.off else dict(OV_ON)
+        assert not (a.off and tag == P0_TAG)
         dsn, md5 = pred_of(s)
         if dsn is None:
-            r = ks.submit(tag, GA.PROFILE, dict(OV_ON), jar_ds=JAR_DS, bundle_ds=GA.BUNDLE, sim_end_date="20251231",
+            r = ks.submit(tag, GA.PROFILE, ov, jar_ds=JAR_DS, bundle_ds=GA.BUNDLE, sim_end_date="20251231",
                           xmx="22g", timeout_s=7200, code_sha=a.code_sha)
-            log.info("PUSHED %s %s ov=%s", s, r, json.dumps(OV_ON))
+            log.info("PUSHED %s %s ov=%s", tag, r, json.dumps(ov))
             continue
         ref = ks.kernel_ref(tag)
         folder = os.path.join(ks.WORKDIR, ks.slug(tag))
         os.makedirs(folder, exist_ok=True)
-        cfg = {"tag": tag, "profile": GA.PROFILE, "overrides": dict(OV_ON), "sim_end_date": "20251231", "xmx": "22g",
+        cfg = {"tag": tag, "profile": GA.PROFILE, "overrides": ov, "sim_end_date": "20251231", "xmx": "22g",
                "timeout_s": 7200, "code_sha": a.code_sha, "bins_ds": "", "jar_ds": JAR_DS, "market_ds": "",
                "market_align": False, "extra_env": {}, "ticker_min_days": ks.TICKER_MIN_DAYS,
                "pred_ds": dsn, "want_pred_md5": md5, "want_pred_base": GA.PRED0_MD5}
@@ -126,7 +142,7 @@ def submit(a):
         with open(os.path.join(folder, "kernel-metadata.json"), "w") as f:
             json.dump(md, f, indent=1)
         r = ks._api().kernels_push(folder)
-        log.info("PUSHED %s %s pred=%s md5=%s ov=%s", s, getattr(r, "url", r), dsn, md5, json.dumps(OV_ON))
+        log.info("PUSHED %s %s pred=%s md5=%s ov=%s", tag, getattr(r, "url", r), dsn, md5, json.dumps(ov))
 
 
 def status(a):
@@ -142,7 +158,7 @@ def fetch(a):
     ks = GA.ks_mod()
     for x in a.arms:
         disk("truoc fetch " + x)
-        t = P0_TAG if x == "P0" else ON[x]
+        t = P0_TAG if x == "P0" else (OFF[x] if a.off else ON[x])
         o = ks.fetch(t)
         log.info("%s %s", t, json.dumps(o.get("result"), default=str)[:600])
 
@@ -181,7 +197,7 @@ def parity(a=None):
         ver = [ln for ln in txt.splitlines() if "md5 verified" in ln and "pred=" in ln]
         sk = re.findall(r"skipFull=(\d+)", txt)
         chk = dict(jar=rj.get("jar_sha256") == JAR_SHA, mapper=(rj.get("symbol_mapper") or 0) >= 800,
-                   topk24=pr.get("SELECTOR_RANK_TOPK") == "24", key_on=pr.get(KEY) == "true", ok=rj.get("ok") is True,
+                   topk24=pr.get("SELECTOR_RANK_TOPK") == TOPK_WANT, key_on=pr.get(KEY) == "true", ok=rj.get("ok") is True,
                    b0ov=all(pr.get(k) == str(v) for k, v in GA.B0OV.items()),
                    log_key="[GATE-QUOTA] SKIP_WHEN_FULL=ON" in txt, skip_count=bool(sk),
                    # A1 (pred goc trong bundle): dong Java "LOAD offline OK ... (md5 verified)" khong in md5 -> so
@@ -193,7 +209,21 @@ def parity(a=None):
                       secs=rj.get("secs"), date_last=rj.get("date_last"))
         log.info("PARITY %-6s %s n=%s eq=%s skipFull=%s %s", s, "PASS" if res[s]["ok"] else "*** VOID ***",
                  res[s]["n"], res[s]["eq"], res[s]["skip_full"], chk)
-    json.dump(res, open(D + "/parity.json", "w"), indent=1)
+    if K16:
+        for s in SEEDS:
+            tag = OFF[s]
+            if tag == P0_TAG or not os.path.exists(GA.OUT % tag + "storage/printDone.csv"):
+                continue
+            rj, pr = GA.result_json(tag), GA.prof_run(tag)
+            dsn, md5 = pred_of(s)
+            chk = dict(jar=rj.get("jar_sha256") == JAR_SHA, topk=pr.get("SELECTOR_RANK_TOPK") == TOPK_WANT,
+                       key_absent=KEY not in pr, ok=rj.get("ok") is True,
+                       b0ov=all(pr.get(k) == str(v) for k, v in GA.B0OV.items()),
+                       pred=rj.get("pred_md5_used") == md5 and rj.get("pred_md5_base") == GA.PRED0_MD5)
+            res["OFF_" + s] = dict(ok=all(chk.values()), checks=chk, md5=R.md5_of(tag), n=rj.get("n_trades"),
+                                   eq=rj.get("equity_final"))
+            log.info("PARITY OFF_%-5s %s %s", s, "PASS" if res["OFF_" + s]["ok"] else "*** VOID ***", res["OFF_" + s])
+    json.dump(res, open(D + ("/parity_k16.json" if K16 else "/parity.json"), "w"), indent=1)
     return res
 
 
@@ -234,7 +264,7 @@ def score(a):
     SAD.INFL = INFL
     par = parity()
     assert par.get("P0", {}).get("ok"), "P0 chua PASS -> khong cham"
-    ok = [s for s in SEEDS if par.get(s, {}).get("ok")]
+    ok = [s for s in SEEDS if par.get(s, {}).get("ok") and (not K16 or OFF[s] == P0_TAG or par.get("OFF_" + s, {}).get("ok"))]
     void = [s for s in SEEDS if s not in ok]
     keys = ["OFF_" + s for s in ok] + ["ON_" + s for s in ok]
     for k in keys:
@@ -242,7 +272,7 @@ def score(a):
     legs, daily, md5 = {}, {}, {}
     for k in keys:
         legs[k], daily[k], md5[k] = R.load_legs(tagof(k)), R.load_daily(tagof(k)), R.md5_of(tagof(k))
-    raw = json.load(open(D + "/mtm.json")) if os.path.exists(D + "/mtm.json") else {}
+    raw = json.load(open(MTM_FILE)) if os.path.exists(MTM_FILE) else {}
     gm = json.load(open(GSB_MTM))
     for s in ok:
         if "OFF_" + s not in raw and gm.get(s, {}).get("md5") == md5["OFF_" + s]:
@@ -255,7 +285,7 @@ def score(a):
             vv["md5"] = md5[k]
             raw[k] = vv
         disk("truoc ghi mtm")
-        json.dump(raw, open(D + "/mtm.json", "w"))
+        json.dump(raw, open(MTM_FILE, "w"))
     M = {}
     for k in keys:
         M[k] = N.arm_metrics(R, F3, k, legs[k], daily[k], raw[k]["legacy"])
@@ -281,6 +311,8 @@ def finish(M, con, par, ok, void):
     d23 = np.array([on(s, "cagr23") - off(s, "cagr23") for s in ok])
     if n == 8:
         tc = T975_DF7
+    elif n == 3:
+        tc = 4.302653
     else:
         from scipy import stats as _st
         tc = float(_st.t.ppf(0.975, n - 1))
@@ -292,13 +324,14 @@ def finish(M, con, par, ok, void):
         C1=dict(mean=float(d22.mean()), ci=[float(d22.mean() - hw), float(d22.mean() + hw)], t=tc,
                 ok=bool(d22.mean() > 0 and d22.mean() - hw > 0)),
         C2=dict(sd_on=band["ON"]["cagr22"]["sd"], sd_off_prereg=SD_OFF_PREREG, sd_off_calc=band["OFF"]["cagr22"]["sd"],
-                ok=bool(band["ON"]["cagr22"]["sd"] < SD_OFF_PREREG)),
+                ok=bool(band["ON"]["cagr22"]["sd"] < (SD_OFF_PREREG or band["OFF"]["cagr22"]["sd"]))),
         C3=dict(worst_dd=min(min(on(s, "dd_mtm"), on(s, "dd_mtm22")) for s in ok),
                 ok=all(abs(on(s, "dd_mtm")) <= 40 and abs(on(s, "dd_mtm22")) <= 40 for s in ok)),
-        C4=dict(mean_on=band["ON"]["calmar22"]["mean"], thr=0.9 * CAL_OFF_PREREG, mean_off_calc=band["OFF"]["calmar22"]["mean"],
-                ok=bool(band["ON"]["calmar22"]["mean"] >= 0.9 * CAL_OFF_PREREG)),
+        C4=dict(mean_on=band["ON"]["calmar22"]["mean"], thr=0.9 * (CAL_OFF_PREREG or band["OFF"]["calmar22"]["mean"]),
+                mean_off_calc=band["OFF"]["calmar22"]["mean"],
+                ok=bool(band["ON"]["calmar22"]["mean"] >= 0.9 * (CAL_OFF_PREREG or band["OFF"]["calmar22"]["mean"]))),
         C5=dict(mean_d_cagr23=float(d23.mean()), ok=bool(d23.mean() >= -1.0)))
-    rule["GO"] = bool(n == 8 and all(rule[c]["ok"] for c in ("C1", "C2", "C3", "C4", "C5")))
+    rule["GO"] = bool(n == len(SEEDS) and all(rule[c]["ok"] for c in ("C1", "C2", "C3", "C4", "C5")))
     rows = {}
     for s in ok:
         gm0, gm1 = M["OFF_" + s]["gate_minutes"]["per_year"], M["ON_" + s]["gate_minutes"]["per_year"]
@@ -325,6 +358,11 @@ def finish(M, con, par, ok, void):
               void=void, parity=par, rows=rows, band=band, d_cagr22=d22.tolist(), d_cagr23=d23.tolist(), rule=rule,
               metrics=M)
     disk("truoc ghi json")
+    if K16:
+        js["prereg"], js["note"] = "docs/prereg/PREREG_GATE_QUOTA_SKIPFULL_K16.md", "n=3, df 2: chi bao cao"
+        base = json.load(open(JSON_OUT))
+        base["k16"] = js
+        js = base
     json.dump(js, open(JSON_OUT, "w"), indent=1, ensure_ascii=False, default=str)
     log.info("JSON -> %s", JSON_OUT)
 
@@ -335,6 +373,8 @@ def main():
     ap.add_argument("arms", nargs="*")
     ap.add_argument("--code-sha", default="")
     ap.add_argument("--workers", type=int, default=3)
+    ap.add_argument("--off", action="store_true")
+    ap.add_argument("--k16", action="store_true")
     a = ap.parse_args()
     for s in a.arms:
         assert s in SEEDS or s == "P0", s
