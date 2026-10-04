@@ -60,3 +60,14 @@ Lưu ý thước: CI ghép cặp từng seed (bootstrap ngày MTM khối 10 ngà
 
 ## 7. Tái lập
 `python3 research/analysis/gate_skipfull_offline.py` (cổng) → `… posthoc`; `python3 research/analysis/gate_skipfull_driver.py jards | p0 --code-sha 128290af | submit <seed> --code-sha 128290af | fetch | parity | score --workers 3`; điểm tách/tập lệnh: `research/analysis/gate_skipfull_div.py`.
+
+## 8. Bổ sung K16 (khung live/242) — pre-reg `PREREG_GATE_QUOTA_SKIPFULL_K16.md` 5b9eb34f
+Cấu hình: g2_flat3 (TOPK 16), bins S1 deploy (bundle), jar 0944841c; OFF = cùng jar, key vắng (seed 42 = `gqsf-p0`). 5 kernel mới, parity 5/5 PASS (TOPK 16, key=true/vắng, pred md5, jar).
+| seed | CAGR22 OFF→ON | maxDD22 | Calmar22 | UW22 | n/năm | phút vào 2022 | skipFull | md5 printDone OFF = ON |
+|---|---|---|---|---|---|---|---|---|
+| 42 (B0) | 33,56 → 33,56 (0) | −17,68 | 1,898 | 87 | 521 | 139 | **0** | ff3ce513 = ff3ce513 |
+| 21 | 32,91 → 32,91 (0) | −19,39 | 1,697 | 89 | 526 | 138 | **0** | 0d4fbb71 = 0d4fbb71 |
+| 7 | 31,91 → 31,91 (0) | −19,49 | 1,637 | 106 | 520 | 137 | **0** | 6f50cc6b = 6f50cc6b |
+- **Kết quả:** @K16 sổ KHÔNG BAO GIỜ chạm U_MAX ở lúc gate (skipFull = 0 cả 3 seed) ⇒ key là no-op, ON **byte-identical** OFF. Δ = 0 mọi chỉ số. Luật (chỉ báo cáo, df 2): C1 FAIL (Δ 0), C2 FAIL (sd bằng nhau 0,83), C3/C4/C5 ĐẠT ⇒ không GO.
+- **So kỳ vọng khai trước:** seed 42 ≈ 0 — ĐÚNG; seed 21/7 +3…+6 — **SAI** (0). Lý do: dải seed @K16 hẹp sẵn (CAGR22 OFF 31,91–33,56, sd 0,83 vs @K24 sd 3,58) vì không có tình trạng tiêu quota dưới trần vốn; phương sai seed tháng 5/2022 là hiện tượng của K24 (nhiều vị thế hơn ⇒ chạm U_MAX).
+- **Hệ quả live:** trên cấu hình deploy (K16) sim, lever không tác dụng. Live chỉ khác khi U live chạm trần do nguồn ngoài sim (242: 48–62 vị thế legacy; shadow: sổ giấy) — khi đó key chỉ đổi q_t live, không đo được bằng sim. Không có cơ sở bật live từ vòng này. Lever chỉ có giá trị nếu MASTER chuyển B0 sang K24.
