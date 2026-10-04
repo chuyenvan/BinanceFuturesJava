@@ -279,12 +279,13 @@ def hourly_q(vals, hours, first_ts, days, pct, J, ctx=None):
     return q, qh, jmax
 
 
-def run_g2(C, days=90, pct=PCT, J=256):
-    """Gate G2 offline tren o ung vien (phut x rank). Tra P (pass), r, q theo phut, co warm-up."""
+def run_g2(C, days=90, pct=PCT, J=256, full=None):
+    """Gate G2 offline tren o ung vien (phut x rank). Tra P (pass), r, q theo phut, co warm-up.
+    full (bool theo phut, GATE_QUOTA_SKIPFULL): phut so day => r KHONG nap buffer + KHONG tinh pass. None => y cu."""
     ts, p, SP, valid = C["ts"], C["p15"], C["SP"], C["valid"]
     fac = np.maximum(DYN_MIN, (SP / SCORE_BASE) * DYN_MULT)
     r = p[:, None] / (fac * GS)
-    rows, cols = np.nonzero(valid)
+    rows, cols = np.nonzero(valid if full is None else (valid & ~full[:, None]))
     vals = r[rows, cols]
     hv = (ts // H)[rows]
     first = int(ts[rows[0]])
@@ -298,6 +299,8 @@ def run_g2(C, days=90, pct=PCT, J=256):
     thr = (qm[:, None] * fac) * GS
     would = ~np.isnan(SP) & ~(p[:, None] < thr)
     P = valid & would
+    if full is not None:
+        P &= ~full[:, None]
     Hw = C["lock"] & would
     log.info("G2 days=%d: pass %d, jmax %d/J %d, gio warm %d, rss %.2f GB", days, int(P.sum()), jmax, J,
              int(warm_h.sum()), rss())
@@ -653,3 +656,6 @@ if __name__ == "__main__":
         prep()
     if st in ("all", "both"):
         run_all()
+    if st == "skipfull":
+        import gate_skipfull_offline
+        gate_skipfull_offline.main()
