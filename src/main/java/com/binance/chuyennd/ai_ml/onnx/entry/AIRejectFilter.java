@@ -59,6 +59,18 @@ public class AIRejectFilter {
      * @param predictSymbolTrade leg nay den tu sleeve selector PREDICT_SYMBOL_TRADE
      */
     public FilterResult entryGate(AiPredictionData prediction, Float symbolPred, boolean predictSymbolTrade) {
+        return entryGate(prediction, symbolPred, predictSymbolTrade, false);
+    }
+
+    /**
+     * [GATE_QUOTA_SKIPFULL 2026-10-04] docs/prereg/PREREG_GATE_QUOTA_SKIPFULL.md.
+     * {@code bookFull} = caller da goi {@code TradeUtils.managerBudget(...)} tren CUNG nguon von ma duong mo lenh
+     * dung ngay sau gate va nhan {@code null} (U &gt;= U_MAX). Khi {@code Configs.GATE_QUOTA_SKIP_WHEN_FULL} bat VA
+     * ung vien PREDICT ({@code sp != null}) VA {@code bookFull}: KHONG goi threshold (r KHONG nap buffer rolling),
+     * REJECT, KHONG notePass. {@code noteCandidate} giu nguyen. Key tat => y het ban 3 tham so.
+     */
+    public FilterResult entryGate(AiPredictionData prediction, Float symbolPred, boolean predictSymbolTrade,
+                                  boolean bookFull) {
         Float sp = predictSymbolTrade ? symbolPred : null;
         // [GDV2-EVEN 2026-09-29] bộ đếm ρ (PREDICT) LUÔN chạy cho sim (đo ρ ở G0 parity), không đổi hành vi gate.
         //   Live gate ratio chỉ đếm khi LIVE bật (no-op khi OFF) => sim (không có LIVE_*) không đổi hành vi.
@@ -67,6 +79,10 @@ public class AIRejectFilter {
             if (LiveGateRollingRatio.isOn()) {
                 LiveGateRollingRatio.noteCandidate(prediction.timestamp);
             }
+        }
+        if (Configs.GATE_QUOTA_SKIP_WHEN_FULL && bookFull && sp != null) {
+            GateRollingRatio.noteSkipFull(prediction.timestamp);
+            return new FilterResult(FilterDecision.REJECT, "BOOK FULL: U>=U_MAX -> bo qua quota gate (khong nap r)");
         }
         // [G2-LIVE-PORT 2026-09-29] docs/plan/PLAN_G2_LIVE_PORT.md — quantile cuộn trên CHÍNH TỈ SỐ r.
         //   LIVE key (LIVE_GATE_ROLLING_*) ưu tiên; SIM key (SIM_GATE_ROLLING_*) giữ nguyên GDV2.

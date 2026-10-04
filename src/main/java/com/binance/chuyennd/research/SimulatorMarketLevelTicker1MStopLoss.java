@@ -1289,6 +1289,18 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         createOrder(side, symbolId, ticker, levelChange, marketData, symbolPred, selRank, false);
     }
 
+    /** [GATE_QUOTA_SKIPFULL 2026-10-04] docs/prereg/PREREG_GATE_QUOTA_SKIPFULL.md: nguon marginRunning cua sizing managerBudget (dung chung voi kiem tra so day truoc gate). */
+    private static Float sizingMarginRunning() {
+        return BudgetManagerSimple.getInstance().marginRunning;
+    }
+
+    /** [B3] goc sizing = EQUITY hien tai (FIX_B3) hoac balanceBasic — dung chung sizing + kiem tra so day. */
+    private static Float sizingEquity() {
+        return Configs.FIX_B3
+                ? BudgetManagerSimple.getInstance().equityNow()
+                : BudgetManagerSimple.getInstance().balanceBasic;
+    }
+
     /**
      * [DCA-SIGNAL 2026-09-14] docs/prereg/PREREG_DCA_SIGNAL_GATE.md.
      * {@code dcaSignal=true} = leg-2 nhoi THEO TIN HIEU (da qua top-K + EntryGate y het lenh moi).
@@ -1327,8 +1339,14 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                 // [L7 2026-09-11, docs/experiment/L7_LEAN_GATE.md] MOT cong entry duy nhat, DUNG CHUNG voi
                 //   LIVE (DetectEntrySignal2TradeNormal.createOrderBuyRequest goi cung ham nay).
                 //   Cong thuc nguong nam o com.binance.chuyennd.tradecore.EntryGate.
+                // [GATE_QUOTA_SKIPFULL 2026-10-04] docs/prereg/PREREG_GATE_QUOTA_SKIPFULL.md: key tat => bookFull=false, khong goi
+                //   managerBudget them => byte-identical. Bat => CUNG nguon von (sizingMarginRunning/sizingEquity) +
+                //   CUNG ham managerBudget voi khoi sizing ben duoi (giua gate va budget khong co gi doi von).
+                boolean bookFull = Configs.GATE_QUOTA_SKIP_WHEN_FULL
+                        && levelChange == MarketLevelChange.PREDICT_SYMBOL_TRADE
+                        && TradeUtils.managerBudget(null, sizingMarginRunning(), sizingEquity(), levelChange) == null;
                 AIRejectFilter.FilterResult filterResult = aiRejectFilter.entryGate(predict, symbolPred,
-                        levelChange == MarketLevelChange.PREDICT_SYMBOL_TRADE);
+                        levelChange == MarketLevelChange.PREDICT_SYMBOL_TRADE, bookFull);
 
                 ablationSignalSeen++;
                 if (filterResult.decision == AIRejectFilter.FilterDecision.REJECT) {
@@ -1385,15 +1403,13 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             }
         }
 
-        Float marginRunning = BudgetManagerSimple.getInstance().marginRunning;
+        Float marginRunning = sizingMarginRunning();
         // [B3 2026-09-05] Goc sizing = EQUITY hien tai (compound) thay hang so capitalStart()=35000.
         //   Anh huong CA HAI ve trong managerBudget: budget = equity*F_BASE*throttle/ladder VA
         //   u = marginRunning/equity (tran U_MAX cung do tren equity — nhat quan, khong lech pha).
         //   Duong LIVE (DetectEntrySignal2TradeNormal:556) KHONG doi: no truyen
         //   BudgetManager.balanceBasic rieng cua no, khong di qua day.
-        Float balanceBasic = Configs.FIX_B3
-                ? BudgetManagerSimple.getInstance().equityNow()
-                : BudgetManagerSimple.getInstance().balanceBasic;
+        Float balanceBasic = sizingEquity();
         Float budget = BudgetManagerSimple.getInstance().getBudget();
 
         budget = TradeUtils.managerBudget(budget, marginRunning, balanceBasic, levelChange);
