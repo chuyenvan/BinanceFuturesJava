@@ -153,6 +153,10 @@ public class Configs {
 
     // ===== BUDGET v1 (FROZEN 2026-08-24) — throttle liên tục thay logic vách rời rạc =====
     public static float F_BASE = 0.03f;   // % equity mỗi lệnh gốc (gene search [0.01, 0.05])
+    // [GATE_QUOTA_SKIPFULL 2026-10-04] docs/prereg/PREREG_GATE_QUOTA_SKIPFULL.md
+    //   true => ung vien PREDICT tai luc so KHONG mo duoc lenh moi (managerBudget null, U >= U_MAX) KHONG nap r
+    //   vao buffer gate rolling va KHONG tinh pass. Mac dinh false => byte-identical. Key GATE_QUOTA_SKIP_WHEN_FULL.
+    public static boolean GATE_QUOTA_SKIP_WHEN_FULL = false;
     public static float U_MAX  = 0.60f;   // trần tổng margin/equity, U≥U_MAX → chặn (gene search [0.40, 0.80])
 
 
@@ -901,6 +905,8 @@ public class Configs {
             if ((v = Cfg.get("SIM_TS_MAX_GAP_WEAK")) != null) TS_MAX_GAP_WEAK = Float.parseFloat(v.trim());
             if ((v = Cfg.get("SIM_F_BASE")) != null) F_BASE = Float.parseFloat(v.trim());
             if ((v = Cfg.get("SIM_U_MAX")) != null) U_MAX = Float.parseFloat(v.trim());
+            // [GATE_QUOTA_SKIPFULL 2026-10-04] docs/prereg/PREREG_GATE_QUOTA_SKIPFULL.md (sim + live cung key; khong khai => false)
+            if ((v = Cfg.get("GATE_QUOTA_SKIP_WHEN_FULL")) != null) GATE_QUOTA_SKIP_WHEN_FULL = Boolean.parseBoolean(v.trim());
             if ((v = Cfg.get("SIM_PREDICT_SYMBOL_RATE_MAX")) != null) PREDICT_SYMBOL_RATE_MAX_THRESHOLD = Float.parseFloat(v);
             if ((v = Cfg.get("SIM_RATE_PROFIT_STOP_MARKET")) != null) RATE_PROFIT_STOP_MARKET = Float.parseFloat(v);
             if ((v = Cfg.get("SIM_MS_DOWN_BIG_AVG")) != null) MS_DOWN_BIG_AVG = Float.parseFloat(v);

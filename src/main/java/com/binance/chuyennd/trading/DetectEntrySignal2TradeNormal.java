@@ -912,6 +912,26 @@ public class DetectEntrySignal2TradeNormal {
     }
 
 
+    /**
+     * [GATE_QUOTA_SKIPFULL 2026-10-04] docs/prereg/PREREG_GATE_QUOTA_SKIPFULL.md: so co the mo lenh moi khong — CUNG nguon
+     * marginRunning/equity nhu khoi sizing trong createOrderBuyRequest (BudgetManager; so giay ShadowBookC3 khi
+     * LiveProfileC3.on()) va CUNG ham {@link TradeUtils#managerBudget} (null = U &gt;= U_MAX). Chi goi khi key bat.
+     */
+    private boolean liveBookFull(MarketLevelChange levelChange) {
+        Float marginRunning = BudgetManager.getInstance().marginRunning;
+        Float balanceBasic = BudgetManager.getInstance().balanceBasic;
+        if (com.binance.chuyennd.tradecore.selector.LiveProfileC3.on()) {
+            com.binance.chuyennd.tradecore.selector.ShadowBookC3 book =
+                    com.binance.chuyennd.tradecore.selector.ShadowBookC3.getInstance();
+            java.util.Map<String, Float> pxOpen = book.openCount() == 0
+                    ? java.util.Collections.emptyMap()
+                    : DataManagerAerospikeFloatSim.getAllPriceRealtimeLegacy(book.openSymbols());
+            balanceBasic = book.equityNow(pxOpen);
+            marginRunning = book.marginRunning();
+        }
+        return TradeUtils.managerBudget(null, marginRunning, balanceBasic, levelChange) == null;
+    }
+
     public void createOrderBuyRequest(String symbol, KlineObjectSimple ticker, MarketLevelChange levelChange, Float priceMax15M,
                                       MarketDataObject marketRate, OnnxInferenceManager.PredictionResult prediction,
                                       Float symbolPred, Map<String, List<KlineObjectSimple>> symbol2LastTickers,
@@ -937,8 +957,13 @@ public class DetectEntrySignal2TradeNormal {
         //   PHANG 0.008 trong khi sim chay 0.0172-0.0240 => lech 95.62% slot tren 48 thang,
         //   77/78 entry so giay 242 (docs/audit/AUDIT_GATE_DYN_PARITY.md). L6 da bo dieu kien do;
         //   L7 gop not hai ban sao cong thuc ve MOT cho de khong the troi lai lan nua.
+        // [GATE_QUOTA_SKIPFULL 2026-10-04] docs/prereg/PREREG_GATE_QUOTA_SKIPFULL.md: key tat (mac dinh) => bookFull=false,
+        //   khong goi gi them => y nguyen. Bat => CUNG ham managerBudget tren CUNG nguon von voi khoi sizing ben duoi.
+        boolean bookFull = Configs.GATE_QUOTA_SKIP_WHEN_FULL
+                && levelChange == MarketLevelChange.PREDICT_SYMBOL_TRADE
+                && liveBookFull(levelChange);
         filterResult = aiRejectFilter.entryGate(predict, symbolPred,
-                levelChange == MarketLevelChange.PREDICT_SYMBOL_TRADE);
+                levelChange == MarketLevelChange.PREDICT_SYMBOL_TRADE, bookFull);
         // Gom log: với vòng PREDICT_SYMBOL_TRADE (hàng trăm coin/phút, market pred GIỐNG NHAU,
         // chỉ symbolPred khác) → KHÔNG log per-coin REJECT mà gom vào collector để in 1 dòng tổng hợp.
         // Mọi levelChange khác / collector null → giữ log cũ. Quyết định KHÔNG đổi.
@@ -1281,6 +1306,9 @@ public class DetectEntrySignal2TradeNormal {
         // [G2-LIVE-PORT 2026-09-29] docs/plan/PLAN_G2_LIVE_PORT.md — gate rolling GDV2 (MODE=ratio).
         //   Key LIVE_GATE_ROLLING_* vắng => no-op (byte-identical HEAD). Nạp persist + seed lịch sử.
         com.binance.chuyennd.ai_ml.onnx.entry.LiveGateRollingRatio.init();
+        if (Configs.GATE_QUOTA_SKIP_WHEN_FULL) {
+            LOG.warn("*** [GATE-QUOTA] LIVE SKIP_WHEN_FULL=ON: so day (managerBudget null) => khong nap r, khong tinh pass ***");
+        }
 
         // TASK-019 A: đây là LIVE init (backtest dùng Simulator, KHÔNG gọi hàm này) → bật production
         // mode cho FundingFeeManager để refresh funding định kỳ (tránh dùng funding cũ/0 sau 24h).
