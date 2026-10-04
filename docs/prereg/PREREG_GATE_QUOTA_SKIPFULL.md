@@ -63,3 +63,10 @@ Thước (dùng lại `reset_rule_score` / `n700_driver.arm_metrics` / `selector
 
 ## 8. Đầu ra
 `docs/result/RESULT_GATE_QUOTA_SKIPFULL.md` + `docs/result/gate_skipfull.json`; driver `research/analysis/gate_skipfull_driver.py`; offline `docs/audit/gate_skipfull_offline.json`. Code trên branch `feat/gate-quota-skipfull` (push branch, KHÔNG merge).
+
+## 9. Bổ sung TRƯỚC kernel P0 (chỉ ghi định danh, không đổi thiết kế/luật)
+- Code: branch `feat/gate-quota-skipfull` commit **128290af** (push branch, không merge). `mvn -o test` 217 test, 0 fail (GateQuotaSkipFullTest 7/7); `check_cfg_gateway` OK.
+- Jar `target/binance-java-sdk-1.2.4.jar` sha256 **0944841ca1b3ac444caa17ac144a0a89e44b6f2270a525cd545f32b95469ad7f** → dataset Kaggle `sim-jar-gqsf` (kèm `prof_r4_kg0_k16_f015_g155.properties` md5 0e0caef0).
+- Class diff (build 19072857 vs 128290af, `target/classes`): đúng 6 file — `AIRejectFilter`, `GateRollingRatio`, `SimulatorMarketLevelTicker1MStopLoss`, `Configs`, `DetectEntrySignal2TradeNormal` + `DetectEntrySignal2TradeNormal$TickGate` (chỉ LineNumberTable) — khớp §2.
+- Driver `research/analysis/gate_skipfull_driver.py` (jards | p0 | submit | parity | score) chốt cùng commit này.
+- Cổng offline §4 đã chạy (dbc435ef): xấp xỉ U gắn 0 phút full ⇒ cổng không đo được (ghi trong RESULT); hậu kiểm proxy (không phải cổng) cho thấy q T6–T9 giảm. Theo §4: vẫn sim.
