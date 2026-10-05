@@ -1502,8 +1502,17 @@ def print_layers(rep):
 def main():
     ap = argparse.ArgumentParser(description="Parity harness shadow/242 <-> backtest (audit-only)")
     ap.add_argument("cmd", choices=["config", "features", "gate", "marketparams", "selector", "entry", "exit",
-                                   "all", "selftest", "fetch"])
-    args = ap.parse_args()
+                                   "all", "selftest", "fetch", "live"])
+    args, rest = ap.parse_known_args()
+    if args.cmd == "live":
+        # A-I live-vs-sim (shadow_c3 + 242 chi-doc): research/parity/live_vs_sim_check.py ; exit 0 PASS / 2 FAIL / 3 MISSING
+        # vd: parity_check.py live --fetch --probe --out docs/audit/PARITY_LIVE_VS_SIM_<ngay>.json --md ...
+        # KHONG ghi de docs/result/parity_report.* (do la cua 'all').
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        import live_vs_sim_check as lv
+        return lv.main(rest)
+    if rest:
+        ap.error("tham so la: %s" % " ".join(rest))
     if args.cmd == "fetch":
         r = fetch_live()
         print(json.dumps(r, indent=1, sort_keys=True)[:1500])

@@ -1,0 +1,59 @@
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+
+/**
+ * Probe doc-chi: goi HAM THAT cua jar (khong build, khong sua .java repo) de doi chieu cong thuc live<->sim.
+ * stdin: "T base sp" | "R peak pnp" | "B equity margin" | "G leg" | "L equity margin legIdx" ;
+ * stdout: "<lenh> <args> => <float> <bits>".
+ * [LIVE-SIZING 2026-10-03] "L" = budget leg DUONG LIVE = LiveGridSizing.legBudget(managerBudget, legIdx)
+ * (doc co LIVE_APPLY_GRID_RATIO cua env probe). Jar cu khong co lop nay => live = managerBudget.
+ */
+public class FormulaProbe {
+    public static void main(String[] a) throws Exception {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        String ln;
+        while ((ln = br.readLine()) != null) {
+            ln = ln.trim();
+            if (ln.isEmpty()) continue;
+            String[] p = ln.split("\\s+");
+            float v;
+            switch (p[0]) {
+                case "T":
+                    v = com.binance.chuyennd.tradecore.EntryGate.threshold(Float.parseFloat(p[1]), Float.parseFloat(p[2]));
+                    break;
+                case "R":
+                    v = com.binance.chuyennd.tradecore.TradeUtils.calRateLossDynamicBuyPNoPump(
+                            Float.parseFloat(p[1]), Float.parseFloat(p[2]),
+                            com.binance.chuyennd.tradecore.Configs.tsPnoPumpWeakThr());
+                    break;
+                case "B": {
+                    Float b = com.binance.chuyennd.tradecore.TradeUtils.managerBudget(
+                            null, Float.parseFloat(p[2]), Float.parseFloat(p[1]), null);
+                    v = b == null ? Float.NaN : b;
+                    break;
+                }
+                case "G":
+                    v = com.binance.chuyennd.tradecore.DcaUtils.gridLegWeightRatio(Integer.parseInt(p[1]));
+                    break;
+                case "L": {
+                    Float b = com.binance.chuyennd.tradecore.TradeUtils.managerBudget(
+                            null, Float.parseFloat(p[2]), Float.parseFloat(p[1]), null);
+                    Float r = b;
+                    try {
+                        Class<?> c = Class.forName("com.binance.chuyennd.tradecore.selector.LiveGridSizing");
+                        r = (Float) c.getMethod("legBudget", Float.class, int.class)
+                                .invoke(null, b, Integer.parseInt(p[3]));
+                    } catch (ClassNotFoundException e) {
+                        r = b;
+                    }
+                    v = r == null ? Float.NaN : r;
+                    break;
+                }
+                default:
+                    continue;
+            }
+            System.out.println("FP\t" + ln + "\t" + v + "\t" + Float.floatToIntBits(v));
+        }
+        System.exit(0);
+    }
+}

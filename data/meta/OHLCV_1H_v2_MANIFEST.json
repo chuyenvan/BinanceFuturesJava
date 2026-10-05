@@ -1,0 +1,98 @@
+{
+ "created_utc": "2026-10-03 10:09:10",
+ "script": "research/analysis/s1_geom_store.py (month -> merge)",
+ "prereg": "docs/prereg/PREREG_S1_FEAT_GEOM.md",
+ "source": "Aerospike test.kline_1m_opt (1 luot stream theo thang, short_v3_r1_fade.stream; field5 = quoteVol USDT)",
+ "minutes_utc": "2021-01-01 00:00 .. 2025-12-31 23:59",
+ "rule": {
+  "bar": "nen gio [h,h+1h): ts_h = h+1h (gio DONG); open = O phut huu han dau; high = max H; low = min L; close = C phut huu han cuoi; quoteVol = sum V; gio khong co phut nao -> khong co rec",
+  "lineage": "symbol trong data/meta/symbol_lineage_v2.csv (627); bo gio h < floor_h(first_real_ts) hoac h > floor_h(last_real_ts) (F_HEAD/F_TAIL nhu CLOSES_1H_v2)",
+  "stable": "STABLE cua short_v3_r1_fade bi loai khi stream"
+ },
+ "format": "30 B/rec big-endian [ts_h:int64 close-time ms][symId:int16 symbol_map.csv][open,high,low,close,quoteVol:float32], sort (ts_h, symId)",
+ "symbol_map": "/home/ubuntu/selector_pred_out/symbol_map.csv",
+ "lineage": {
+  "path": "data/meta/symbol_lineage_v2.csv",
+  "md5": "33f3c45006ff85d17e95ad6bec825560"
+ },
+ "out": {
+  "path": "/home/ubuntu/java/fsrun/OHLCV_1H_v2.bin",
+  "md5": "86f1061cccbdc69fca8f2ec4a0c4eec0",
+  "n_rec": 10009699,
+  "n_sym": 626,
+  "bytes": 300290970,
+  "ts_first": "2021-01-01 01:00:00",
+  "ts_last": "2026-01-01 00:00:00"
+ },
+ "drop": {
+  "raw_rows": 10323924,
+  "raw_nsym": 626,
+  "not_in_lineage": 0,
+  "head": 0,
+  "tail": 314225
+ },
+ "rec_by_year": {
+  "2021": 960901,
+  "2022": 1199652,
+  "2023": 1621858,
+  "2024": 2390802,
+  "2025": 3836486
+ },
+ "sanity": {
+  "S1_n": 720,
+  "S1_eq": 720,
+  "S1_pass": true,
+  "S1_syms": [
+   14,
+   408,
+   156,
+   538,
+   194,
+   460,
+   338,
+   348,
+   276,
+   457,
+   261,
+   430,
+   60,
+   574,
+   6,
+   119,
+   444,
+   469,
+   562,
+   224,
+   778,
+   441,
+   461,
+   531,
+   181,
+   265,
+   446,
+   210,
+   451,
+   410
+  ],
+  "S2_bad_high": 0,
+  "S2_bad_low": 0,
+  "S2_pass": true,
+  "nan_close": 0,
+  "nan_open": 0,
+  "nan_high_or_low": 0,
+  "cov_v2_in_store": 0.9999999000181767,
+  "cov_v2_in_store_by_year": {
+   "2021": 1.0,
+   "2022": 1.0,
+   "2023": 0.9999993833791072,
+   "2024": 1.0,
+   "2025": 1.0,
+   "2026": 1.0
+  },
+  "store_rows_in_v2": 0.999212563734434,
+  "close_eq_v2_all_joined": 1.0,
+  "close_rel_diff_v2_q999": 0.0,
+  "close_rel_diff_v2_max": 0.0,
+  "n_close_ne_v2": 0
+ }
+}

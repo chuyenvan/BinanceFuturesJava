@@ -1,0 +1,70 @@
+{
+ "ok": true,
+ "md5": "ff3ce513edf2316088a4b5ac464f76dc",
+ "n": 2517,
+ "eq": 131908.0,
+ "checks": {
+  "n": true,
+  "eq": true,
+  "jar": true,
+  "mapper": true,
+  "printdone_value_identical_vs_de-p1": true
+ },
+ "arms": {
+  "R50s42": {
+   "jar": true,
+   "mapper": true,
+   "bins_ok": true,
+   "src_sha_ok": true,
+   "funding_md5": "89ca50ddbcca108e7a66a5fad1d71887",
+   "md5": "7f66dd7aa1eb2664c4cc9eb3478179e1"
+  },
+  "R50s7": {
+   "jar": true,
+   "mapper": true,
+   "bins_ok": true,
+   "src_sha_ok": true,
+   "funding_md5": "0f9359af0d3e9bf5e2331d8023a495e3",
+   "md5": "196ed37dc5fad287c6b22b359ff8fe7b"
+  },
+  "R100s42": {
+   "jar": true,
+   "mapper": true,
+   "bins_ok": true,
+   "src_sha_ok": true,
+   "funding_md5": "7f9f253f6fcabbf66a8d553e8bfd40be",
+   "md5": "efca90bed073cff92b0bd7b3dff04053"
+  },
+  "R100s7": {
+   "jar": true,
+   "mapper": true,
+   "bins_ok": true,
+   "src_sha_ok": true,
+   "funding_md5": "54d49b4b5540335e8d4f0ec7b8bad702",
+   "md5": "db17a10525ebc6e51856b1c16c97bc97"
+  }
+ },
+ "info": {
+  "md5_b0ref2": "ff3ce513edf2316088a4b5ac464f76dc",
+  "md5_selab_p0": "ff3ce513edf2316088a4b5ac464f76dc",
+  "same_image_as_prev_round": true,
+  "md5_eq_650c386f": false,
+  "valeq_vs_de-p1": {
+   "rows_a": 2518,
+   "rows_b": 2518,
+   "cells_str_diff": 5,
+   "cells_val_diff": 0,
+   "cols": {
+    "volume": 4,
+    "quantity": 1
+   }
+  },
+  "valeq_vs_selab-p0": {
+   "rows_a": 2518,
+   "rows_b": 2518,
+   "cells_str_diff": 0,
+   "cells_val_diff": 0,
+   "cols": {}
+  }
+ }
+}

@@ -1,0 +1,89 @@
+{
+ "created_utc": "2026-10-02 17:06:15",
+ "script": "research/analysis/data_audit_v2.py (stage build)",
+ "rule": {
+  "tail": "record sau last_real (gio Vision volume>0 cuoi cung; neu Vision thieu record: close dung yen) -> BO",
+  "head": "record truoc first_real (volume=0) -> BO",
+  "gap": "run khong giao dich (volume=0 / close dung yen khi Vision thieu) >= 24h giua chuoi -> close=NaN",
+  "short": "run < 24h -> giu, chi danh dau mask"
+ },
+ "format": "14 B/rec big-endian [ts:int64 close-time ms][symId:int16][close:float32], sort (ts, ten symbol) nhu v1",
+ "mask_format": "11 B/rec big-endian [ts:int64][symId:int16][flag:uint8], chi record v1 co flag != 0",
+ "flags": {
+  "1": "tail stale (sau last_real) -> BO record trong v2",
+  "2": "run khong giao dich >=24h giua chuoi -> close=NaN trong v2",
+  "4": "gio volume=0 le (<24h) -> GIU nguyen",
+  "8": "record v1 khong co trong Vision hien tai (volume chua kiem duoc) -> GIU",
+  "16": "head stale (truoc first_real, volume=0) -> BO record",
+  "32": "stale suy ra chi tu close dung yen (Vision khong co record) — kem F_TAIL/F_GAP"
+ },
+ "symbol_map": "/home/ubuntu/selector_pred_out/symbol_map.csv",
+ "v1": {
+  "path": "/home/ubuntu/java/fsrun/CLOSES_1H.bin",
+  "md5": "6c7548801136655065edfd8e6cd7c0af",
+  "n_rec": 10322386,
+  "bytes": 144513404
+ },
+ "v2": {
+  "path": "/home/ubuntu/java/fsrun/CLOSES_1H_v2.bin",
+  "md5": "58f56069e8e1a7c739011ddfa13e9636",
+  "n_rec": 10009513,
+  "n_nan": 7695,
+  "bytes": 140133182
+ },
+ "mask": {
+  "path": "/home/ubuntu/java/fsrun/CLOSES_1H_v2_mask.bin",
+  "md5": "ad4a2dc04ebfe2a30663f13b72a7ba73",
+  "n_rec": 326321,
+  "bytes": 3589531
+ },
+ "vision_snapshot": {
+  "n": 10636509,
+  "nsym": 627,
+  "nsym_v1": 627,
+  "fails": {},
+  "missing_sym": []
+ },
+ "checks": {
+  "n_rec": 10009513,
+  "ts_sorted": true,
+  "dup_keys": 0,
+  "max_ts": "2026-01-01 00:00",
+  "n_nan": 7695,
+  "n_nan_expected": 7695,
+  "subset_identical": true,
+  "p0a_load_hourly": {
+   "shape": [
+    38017,
+    626
+   ],
+   "n_sym": 626,
+   "finite": 9410759
+  },
+  "r2_load_hourly": {
+   "n_rows": 10009513,
+   "n_rows_after_dev": 0,
+   "n_rows_bad": 7695,
+   "t_start": "2021-01-01 01:00:00",
+   "n_sym": 627,
+   "shape": [
+    43824,
+    627
+   ],
+   "note": "assert luoi 1h PASS; n_rows_bad = so record NaN bi loai"
+  },
+  "trend_rank_ic_load_closes": {
+   "n": 10008981,
+   "n_nan_close": 7695,
+   "note": "loader dang dai KHONG loc NaN -> NaN lan vao rolling (on, khong am tham)"
+  }
+ },
+ "symbol_lineage_v2.csv": {
+  "path": "data/meta/symbol_lineage_v2.csv",
+  "md5": "33f3c45006ff85d17e95ad6bec825560"
+ },
+ "listing_clean_v2.csv": {
+  "path": "data/meta/listing_clean_v2.csv",
+  "md5": "8c0d39a11b976885b23c90fc6df68db9"
+ }
+}

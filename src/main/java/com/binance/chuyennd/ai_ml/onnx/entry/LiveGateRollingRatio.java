@@ -153,6 +153,11 @@ public final class LiveGateRollingRatio {
         days = daysValue;
     }
 
+    /** Chỉ cho unit test: số mẫu r trong buffer live. */
+    static int bufferSizeForTest() {
+        return buffer.size();
+    }
+
     /** Chỉ cho unit test: trả class về trạng thái chưa khởi tạo. */
     static void resetForTest() {
         inited = false;

@@ -1,0 +1,1927 @@
+{
+ "after": {
+  "checklist": "docs/runbooks/PARITY_LIVE_VS_SIM_CHECKLIST.md",
+  "exit_code": 2,
+  "extra": {
+   "arm242": {
+    "arm_ts": "2026-10-07 18:00",
+    "armed": false,
+    "first_ts": "2026-09-30 17:01",
+    "hours_to_arm": 91.63033805555555,
+    "last_ts": "2026-10-03 21:28",
+    "m_window": 73392,
+    "n": 73392,
+    "q_now": 0.011658821254968643,
+    "r_max": 0.014007063582539558,
+    "r_p50": 0.0019959253259003162,
+    "r_p99": 0.006404731888324022,
+    "ticks": 4587
+   },
+   "b5": {
+    "dist_p50_abs_diff_pp": 0.010430906000000073,
+    "n_cand_equal": 1.0,
+    "n_gate_pairs": 25,
+    "npass_equal": 1.0,
+    "p15": {
+     "abs_p50": 0.008725187999999995,
+     "d_p10": -0.039686100600000086,
+     "d_p50": -0.00679343999999988,
+     "d_p90": 0.016131307599999912,
+     "dist_p50_242": 0.9230421860000001,
+     "dist_p50_sh": 0.91261128,
+     "n": 23
+    },
+    "thr_within_1pct": 0.64
+   },
+   "b8": {
+    "gen_values": [
+     2
+    ],
+    "max_abs_ai_vs_242": 0.0016754619500000002,
+    "max_abs_ai_vs_sh": 4.200000000564863e-10,
+    "n": 24
+   },
+   "c1": {
+    "frac_16": 0.045454545454545456,
+    "frac_ge14": 1.0,
+    "gv_absdiff_median": 0.0037209990000000026,
+    "gv_absdiff_p90": 0.012206733999999997,
+    "mean_overlap": 15.045454545454545,
+    "n_ticks": 22,
+    "rank1_same": 1.0
+   },
+   "d1": {
+    "all": [
+     [
+      "momentum1M",
+      1.0
+     ],
+     [
+      "momentum5M",
+      1.0
+     ],
+     [
+      "momentum15M",
+      1.0
+     ],
+     [
+      "momentum1H",
+      1.0
+     ],
+     [
+      "momentum4H",
+      1.0
+     ],
+     [
+      "momentum24H",
+      1.0
+     ],
+     [
+      "momentumAcceleration",
+      1.0
+     ],
+     [
+      "trendStrengthETH",
+      1.0
+     ],
+     [
+      "trendConsistency",
+      1.0
+     ],
+     [
+      "volatility1M",
+      1.0
+     ],
+     [
+      "volatility15M",
+      1.0
+     ],
+     [
+      "volatility1H",
+      1.0
+     ],
+     [
+      "volatility24H",
+      1.0
+     ],
+     [
+      "volatilityTermStructure",
+      0.0
+     ],
+     [
+      "advanceDeclineRatio",
+      0.0
+     ],
+     [
+      "percentAboveMA20",
+      0.042
+     ],
+     [
+      "volumeRatioUpDown",
+      0.583
+     ],
+     [
+      "marketBreadthStrength",
+      0.083
+     ],
+     [
+      "btcDominance",
+      0.75
+     ],
+     [
+      "rsi14",
+      1.0
+     ],
+     [
+      "volumeSpike",
+      0.125
+     ],
+     [
+      "distMA20",
+      1.0
+     ],
+     [
+      "fundingRateRaw",
+      1.0
+     ],
+     [
+      "fundingRateAvg24H",
+      1.0
+     ],
+     [
+      "fundingRateTrend",
+      1.0
+     ],
+     [
+      "hourOfDay",
+      1.0
+     ],
+     [
+      "dayOfWeek",
+      1.0
+     ],
+     [
+      "weekOfMonth",
+      1.0
+     ],
+     [
+      "monthOfYear",
+      1.0
+     ],
+     [
+      "basketMomentum15M",
+      0.75
+     ],
+     [
+      "basketMomentum1H",
+      0.625
+     ],
+     [
+      "basketRsi14",
+      0.042
+     ],
+     [
+      "basketVolSpike",
+      0.0
+     ],
+     [
+      "p15_out",
+      0.958
+     ],
+     [
+      "rateDownAvg",
+      1.0
+     ],
+     [
+      "rateUpAvg",
+      1.0
+     ],
+     [
+      "rateDown15MAvg",
+      1.0
+     ],
+     [
+      "rateUp15MAvg",
+      1.0
+     ]
+    ],
+    "fail_cols": [
+     [
+      "volatilityTermStructure",
+      0.0,
+      "4.27e-03"
+     ],
+     [
+      "advanceDeclineRatio",
+      0.0,
+      "3.57e-01"
+     ],
+     [
+      "percentAboveMA20",
+      0.042,
+      "2.04e-02"
+     ],
+     [
+      "volumeRatioUpDown",
+      0.583,
+      "5.36e+00"
+     ],
+     [
+      "marketBreadthStrength",
+      0.083,
+      "3.88e-02"
+     ],
+     [
+      "btcDominance",
+      0.75,
+      "2.34e-01"
+     ],
+     [
+      "volumeSpike",
+      0.125,
+      "2.00e+00"
+     ],
+     [
+      "basketMomentum15M",
+      0.75,
+      "1.03e-02"
+     ],
+     [
+      "basketMomentum1H",
+      0.625,
+      "1.03e-02"
+     ],
+     [
+      "basketRsi14",
+      0.042,
+      "7.45e-01"
+     ],
+     [
+      "basketVolSpike",
+      0.0,
+      "1.20e+00"
+     ],
+     [
+      "p15_out",
+      0.958,
+      "1.68e-03"
+     ]
+    ],
+    "n_cols": 38,
+    "n_cols_fail": 12,
+    "n_pairs": 24
+   },
+   "e2": {
+    "242_leg0": 131.25,
+    "gridLegWeightRatio(0)_B0": 6.0,
+    "managerBudget(35000,0)": 787.50006,
+    "ratio_live_over_sim": 1.0000000761904762,
+    "shadow_leg0": 787.50006,
+    "sim_leg0_at_eq35000": 787.5
+   }
+  },
+  "generated": "2026-10-03 22:22:12 +07",
+  "items": [
+   {
+    "action": "",
+    "evidence": "Configs.APPLY_FUNDING_FEE: B0=true sh=false 242=false; Configs.DCA_GRID_ENABLED: B0=true sh=false 242=false; Configs.FUNDING_MARK_NOTIONAL: B0=true sh=false 242=false; Configs.F_BASE: B0=0.015 sh=0.09 242=0.015; Configs.LIVE_ENTRY_GRID_MIN: B0=15 sh=1 242=1; Configs.MARKET_SCAN_MIN: B0=0 sh=1 242=1; Configs.MARKET_SCAN_PRIORITY: B0=0 sh=1 242=1",
+    "expect_sim": "m\u1ecdi field = B0 (tr\u1eeb field live-only/kh\u00f4ng \u0111\u1ecdc)",
+    "id": "A1",
+    "known": false,
+    "layer": "A",
+    "name": "Configs.* hieu dung (jar 8f3ee52c, 139 field) B0 vs live",
+    "s242": "8 field khac B0, 0 chua giai thich",
+    "shadow": "7 field khac B0, 0 chua giai thich",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "",
+    "evidence": "",
+    "expect_sim": "giong nhau",
+    "id": "A1b",
+    "known": false,
+    "layer": "A",
+    "name": "shadow == 242 (Configs hieu dung, tru ha tang)",
+    "s242": "-",
+    "shadow": "0 field khac (+ F_BASE: shadow 0.09 = 0.015 x DCA_GRID_SCALE, co chu y, xem E2)",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "",
+    "evidence": "SELECTOR_RANK_TOPK=16|16|16; F_BASE=0.015|0.09|0.015; DCA_GRID_WEIGHTS=[1.0, 1.0, 1.0, 1.0]|[1.0, 1.0, 1.0, 1.0]|[1.0, 1.0, 1.0, 1.0]; DCA_GRID_SCALE=6.0|6.0|6.0; U_MAX=0.6|0.6|0.6; CONC_CAP_PERCOIN_PCT=0.15|0.15|0.15; MIN_MOMENTUM_15M=0.008|0.008|0.008; RATE_PROFIT_STOP_MARKET=0.07|0.07|0.07; TS_GIVEBACK_RATIO=1.0|1.0|1.0; TS_MAX_GAP=0.03|0.03|0.03; TS_MAX_GAP_WEAK=0.03|0.03|0.03; TS_PNOPUMP_WEAK_THR=0.29|0.29|0.29; LOSER_TIME_STOP_HOURS=168|168|168; RATE_FEE=9.82E-4|9.82E-4|9.82E-4; SLIPPAGE_RATE=6.7E-5|6.7E-5|6.7E-5; TIER_FLAT=true|true|true; TS_PEAK_MODE=high|high|high; ARM_RATE=0.07|0.07|0.07; TIME_STOP_HOURS=168|168|168; SIZE_CAP_OF_EQUITY=0.045|0.045|0.045",
+    "expect_sim": "-",
+    "id": "A1c",
+    "known": false,
+    "layer": "A",
+    "name": "gia tri hieu dung key vao/ra/size (B0|shadow|242)",
+    "s242": "xem evidence",
+    "shadow": "xem evidence",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "restart neu lech (shadow)",
+    "evidence": "",
+    "expect_sim": "tr\u00f9ng",
+    "id": "A2",
+    "known": false,
+    "layer": "A",
+    "name": "/proc/<pid>/environ (JVM dang chay) == conf/env.sh",
+    "s242": "0 lech []",
+    "shadow": "0 lech []",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "KHONG bat som: seed Aerospike 242 qua WAN ~2.2 h chan main thread; bat 10-07 17:15 sau khi buffer 242 du 7 ngay",
+    "evidence": "",
+    "expect_sim": "ratio/0.999950829/90",
+    "id": "A3",
+    "known": true,
+    "layer": "A",
+    "name": "gate rolling (B0: SIM_GATE_ROLLING_MODE/PCT/DAYS = ratio/0.999950829/90)",
+    "s242": "{'LIVE_GATE_ROLLING_DAYS': '90', 'LIVE_GATE_ROLLING_MODE': 'ratio', 'LIVE_GATE_ROLLING_PCT': '0.999950829'}",
+    "shadow": "KHONG co key (co chu y: bat 10-07 17:15, DEPLOY_SHADOW_2A \u00a77)",
+    "status_242": "PASS",
+    "status_shadow": "MISSING"
+   },
+   {
+    "action": "ghi nhan, khong sua",
+    "evidence": "",
+    "expect_sim": "-",
+    "id": "A4",
+    "known": true,
+    "layer": "A",
+    "name": "key B0 live KHONG doc / thay bang key live",
+    "s242": "idem (242 khong khai bao 3 key dau)",
+    "shadow": "SIM_APPLY_FUNDING -> ledger giay khong tru funding (G1); SIM_FUNDING_MARK -> idem; DCA_GRID_ENABLED -> live khong chay grid (E5); WFO_FUNDING_PRED_DIR -> chi tai lap sim; SIM_ENTRY_SAMPLE_MIN -> tuong duong LIVE_ENTRY_GRID_MIN=1",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "",
+    "evidence": "",
+    "expect_sim": "bat buoc",
+    "id": "A5",
+    "known": false,
+    "layer": "A",
+    "name": "key live-only bat buoc SHADOW_NO_PUSH=true, LIVE_PROFILE=c3_shadow",
+    "s242": "ok",
+    "shadow": "ok",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "ghi nhan (gia tri trong file la SAI SU THAT)",
+    "evidence": "",
+    "expect_sim": "khong anh huong",
+    "id": "A6",
+    "known": true,
+    "layer": "A",
+    "name": "config.properties key chet (Configs canh bao 'KHONG AI DOC': RATE_FEE, RATE_PROFIT_STOP_MARKET, ...)",
+    "s242": "idem",
+    "shadow": "20 key chet (RATE_PROFIT_STOP_MARKET=0.01, RATE_FEE=0.0015...) \u2014 Configs.RATE_*=0.07/0.000982 tu env",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "",
+    "evidence": "",
+    "expect_sim": "1/phut",
+    "id": "B1",
+    "known": false,
+    "layer": "B",
+    "name": "[GATE] coverage phut distinct / phut cua so (tu 2026-10-03 21:54)",
+    "s242": "104.3% (25 phut)",
+    "shadow": "104.3% (27 phut)",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "",
+    "evidence": "",
+    "expect_sim": "khop (|d|<=6e-6, >=99% phut)",
+    "id": "B2",
+    "known": false,
+    "layer": "B",
+    "name": "thr tinh lai tu sel_dump (EntryGate: base*max(0.26787,sp/0.15*1.2876)*scale) vs log thr=[min..max]",
+    "s242": "100.0% phut khop (n=23)",
+    "shadow": "100.0% phut khop (n=27)",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "",
+    "evidence": "",
+    "expect_sim": "100%",
+    "id": "B3",
+    "known": false,
+    "layer": "B",
+    "name": "n_pass tinh lai (!(p15<thr_i)) vs log n_pass",
+    "s242": "100.0% (0 lech)",
+    "shadow": "100.0% (0 lech)",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "model 242 gia dinh = d19fc8cd (DEPLOY_SHADOW_2A \u00a71)",
+    "evidence": "",
+    "expect_sim": "max|d|<=1e-6",
+    "id": "B4",
+    "known": false,
+    "layer": "B",
+    "name": "ORT(model gate d19fc8cd) tren feat_dump (33 feat) vs p15_out",
+    "s242": "max|d|=4.34e-11 (n=24)",
+    "shadow": "max|d|=4.74e-12 (n=27)",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "nguon: p15 shadow doc ticker qua WAN tre hon (xem D1); khong sua duoc bang env",
+    "evidence": "",
+    "expect_sim": "|dp50|<=0.02pp va thr +-1% >=90% phut",
+    "id": "B5",
+    "known": true,
+    "layer": "B",
+    "name": "shadow vs 242 cung phut: p15, thr_min, n_cand",
+    "s242": "-",
+    "shadow": "|dp50 phan phoi|=0.010pp; paired d p10/p50/p90=-0.040/-0.007/0.016 pp; thr_min +-1%=64.0% (n=25)",
+    "status_242": "FAIL",
+    "status_shadow": "FAIL"
+   },
+   {
+    "action": "",
+    "evidence": "",
+    "expect_sim": "base 0.00800; q_t=0.008 den arm",
+    "id": "B6",
+    "known": false,
+    "layer": "B",
+    "name": "nguong truoc arm: base=MIN_MOMENTUM_15M=0.008 (G2 fallback)",
+    "s242": "base=[0.008]; [GATE-RATIO] q_t=[0.008] buffer=73888",
+    "shadow": "base=[0.008] (ratio TAT)",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "chay lai gate_arm_check.py sau 10-07 17:15; so q_t log vs q tinh lai",
+    "evidence": "{\"n\": 73392, \"ticks\": 4587, \"first_ts\": \"2026-09-30 17:01\", \"last_ts\": \"2026-10-03 21:28\", \"arm_ts\": \"2026-10-07 18:00\", \"armed\": false, \"q_now\": 0.011658821254968643, \"m_window\": 73392, \"r_p50\": 0.0019959253259003162, \"r_p99\": 0.006404731888324022, \"r_max\": 0.014007063582539558, \"hours_to_arm\": 91.63033805555555}",
+    "expect_sim": "q_t log = q tinh lai sau arm; n_pass/ngay in [0.34;3.8]",
+    "id": "B7",
+    "known": false,
+    "layer": "B",
+    "name": "arm gate G2: buffer 242 (GRR1) -> firstTs+7d, q(0.99995) tinh lai (script gate_arm_check.py)",
+    "s242": "n=73392 firstTs=2026-09-30 17:01 arm>=2026-10-07 18:00; chua arm -> q_t fallback=0.008; q_now(neu arm)=0.011659; CHUA ARM",
+    "shadow": "shadow: ratio TAT (chua co buffer rieng) \u2014 bat 10-07 17:15",
+    "status_242": "MISSING",
+    "status_shadow": "MISSING"
+   },
+   {
+    "action": "2 writer (gen=2) => 1 trong 2 so se lech; fix = jar f282581a + LIVE_IS_SHADOW_HOST=true (10-07 17:15), KHONG lam som",
+    "evidence": "",
+    "expect_sim": "khop; ai_pred_1m = last-writer(242|shadow) toi 10-07",
+    "id": "B8",
+    "known": true,
+    "layer": "B",
+    "name": "p15 live (feat_dump p15_out) vs ai_pred_1m Aerospike 242 cung phut (n=24)",
+    "s242": "max|ai-p15_242|=1.68e-03; gen=[2]",
+    "shadow": "max|ai-p15_sh|=4.20e-10",
+    "status_242": "FAIL",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "",
+    "evidence": "",
+    "expect_sim": "16/16",
+    "id": "C1",
+    "known": false,
+    "layer": "C",
+    "name": "top-16 shadow vs 242 cung tick (|giao|)",
+    "s242": "-",
+    "shadow": "mean 15.05/16; =16: 4.5%; >=14: 100.0%; rank1 giong 100.0% (n=22 tick); |dgateValue| p50=0.0037 p90=0.0122",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "",
+    "evidence": "",
+    "expect_sim": "100% tick",
+    "id": "C2",
+    "known": false,
+    "layer": "C",
+    "name": "sort: rank tang => selectorScore & gateValue(sp) khong giam; rank1 = sp thap nhat (sim: sp nho = tot)",
+    "s242": "0/22 tick vi pham",
+    "shadow": "0/26 tick vi pham",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "CAN CODE: LiveFeatureDump.maybeDumpSelector them 45+9 cot (hoac dump selFeat45/S1 float[9])",
+    "evidence": "research ref: MAP_PARITY 16/16 (sim, B0REF5), LiveBuildMapTest byte-parity (AUDIT_SELECTOR_MODEL_PARITY \u00a71)",
+    "expect_sim": "16/16",
+    "id": "C3",
+    "known": false,
+    "layer": "C",
+    "name": "recompute offline top-16 tu model deploy (S1 8b1dcf00 + net015 41a07109 + map) tren CUNG feature vector live (45 G015 + 9 KEEP9)",
+    "s242": "idem",
+    "shadow": "feat_dump KHONG ghi vector 45/9 (chi 33 gate-feature) -> khong tai tao duoc",
+    "status_242": "MISSING",
+    "status_shadow": "MISSING"
+   },
+   {
+    "action": "",
+    "evidence": "",
+    "expect_sim": "16; ~universe sim",
+    "id": "C4",
+    "known": false,
+    "layer": "C",
+    "name": "n_cand=16 moi tick; so coin duoc cham diem [S1] score N",
+    "s242": "n_cand=[16]; N median=628 [570..689]",
+    "shadow": "n_cand=[16]; N median=628 [596..689]",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "nguon lech Oracle<->242 (doc ticker qua WAN, nen cuoi chua chot) \u2014 can code/di chuyen shadow ve cung LAN",
+    "evidence": "",
+    "expect_sim": "giong (cung nguon, cung code)",
+    "id": "D1",
+    "known": true,
+    "layer": "D",
+    "name": "33 feature gate (+4 market, p15_out): shadow vs 242 cung (ts,symbol), |d|<=1e-3(1+|x|)",
+    "s242": "-",
+    "shadow": "26/38 cot PASS (n=24 cap); FAIL: volatilityTermStructure(0%), advanceDeclineRatio(0%), percentAboveMA20(4%), volumeRatioUpDown(58%), marketBreadthStrength(8%), btcDominance(75%), volumeSpike(12%), basketMomentum15M(75%), basketMomentum1H(62%), basketRsi14(4%), basketVolSpike(0%), p15_out(96%)",
+    "status_242": "FAIL",
+    "status_shadow": "FAIL"
+   },
+   {
+    "action": "lech da biet (RESULT_FEATDIFF_PASS2): tong hieu ung len p15 <= 0.006pp",
+    "evidence": "",
+    "expect_sim": "27/33 FAIL lan truoc (thieu nguon/ticker-vs-kline)",
+    "id": "D2",
+    "known": true,
+    "layer": "D",
+    "name": "33 feature live vs DEV export cung phut (parity_check.py features)",
+    "s242": "-",
+    "shadow": "FAIL: 27/33 feature lech (exact<=1e-08, inline<=1e-03; o nguong may 29/33) | 1 check FAIL / 5",
+    "status_242": "FAIL",
+    "status_shadow": "FAIL"
+   },
+   {
+    "action": "CAN CODE (LiveFeatureDump); OI feature da audit rieng: AUDIT_OI_FEAT_PARITY = KHONG VENH (spearman 1.0)",
+    "evidence": "feat_dump header 40 cot = 33 gate + p15_out + 4 market; sel_dump 6 cot",
+    "expect_sim": "khop",
+    "id": "D3",
+    "known": false,
+    "layer": "D",
+    "name": "45 cot G015 + 9 cot KEEP9 (vector selector) live vs offline cung phut",
+    "s242": "242 KHONG dump vector selector",
+    "shadow": "shadow KHONG dump vector selector",
+    "status_242": "MISSING",
+    "status_shadow": "MISSING"
+   },
+   {
+    "action": "shadow: SIM_F_BASE = F_BASE(B0)*DCA_GRID_SCALE = 0.015*6 = 0.09 (bu, vi live khong nhan ratio). 242: chi de xuat (cung env hoac code)",
+    "evidence": "trading/DetectEntrySignal2TradeNormal.java:999: budget = TradeUtils.managerBudget(budget, marginRunning, balanceBasic, levelChange); | research/SimulatorMarketLevelTicker1MStopLoss.java:1439: float ratio = DcaUtils.gridLegWeightRatio(legIdx); | gridLegWeightRatio/DCA_GRID_SCALE xuat hien trong DetectEntrySignal2TradeNormal.java: KHONG",
+    "expect_sim": "787.50 USDT (=2.25% equity)",
+    "id": "E2",
+    "known": false,
+    "layer": "E",
+    "name": "margin leg dau @equity 35000, throttle 1: sim = managerBudget*tier*(w0*DCA_GRID_SCALE); live = managerBudget*tier",
+    "s242": "131.25 USDT (live/sim = 0.1667)",
+    "shadow": "787.50 USDT (live/sim = 1.0000)",
+    "status_242": "FAIL",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "",
+    "evidence": "trading/DetectEntrySignal2TradeNormal.java:1108: OrderTargetInfo orderTrade = new OrderTargetInfo(OrderTargetStatus.REQUEST, ticker.priceClose, null, quantity, Configs.LEVERAGE_ORDER, symbol, ticker.startTime. | research/SimulatorMarketLevelTicker1MStopLoss.java:1376: Float entry = ticker.priceClose;",
+    "expect_sim": "entry = priceClose",
+    "id": "E1",
+    "known": false,
+    "layer": "E",
+    "name": "gia vao = ticker.priceClose cua nen tin hieu (live: OrderTargetInfo.priceEntry=ticker.priceClose -> ShadowBookC3.openPos)",
+    "s242": "dung (code, legacy khong mo lenh moi)",
+    "shadow": "dung (code)",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "",
+    "evidence": "",
+    "expect_sim": "khong bind",
+    "id": "E3",
+    "known": false,
+    "layer": "E",
+    "name": "tran per-coin CONC_CAP_PERCOIN 15% equity va tran live 4.5% equity (live-only) co chan leg dau?",
+    "s242": "idem",
+    "shadow": "leg dau 2.25% equity < 4.5% va < 15% => khong bind",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "",
+    "evidence": "",
+    "expect_sim": "cung ham",
+    "id": "E4",
+    "known": false,
+    "layer": "E",
+    "name": "U=Sum(margin)/equity, throttle=1-U/U_MAX (U_MAX=0.60): hai ham managerBudget chung; live: marginRunning=ShadowBookC3 (khong DCA leg => U thap hon sim)",
+    "s242": "idem",
+    "shadow": "B(35000,5000)=600.00 | B(40000,12000)=450.00 | B(35000,21000)=nan",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "CAN CODE (hoac owner chap nhan 'B0-khong-grid' sau do tac dong tren sim)",
+    "evidence": "tradecore/DcaProcessor.java:156: public static List<String> getDCAProduction(MarketLevelChange levelChange, Long time, Float budget,",
+    "expect_sim": "co (46 DCA_LEVEL1 + leg grid)",
+    "id": "E5",
+    "known": true,
+    "layer": "E",
+    "name": "DCA grid (leg 1-3 tai -50/-75/-90%) + DCA_LEVEL1",
+    "s242": "chi coin legacy (skip-LEGACY cho so giay)",
+    "shadow": "KHONG co (DcaProcessor.getDCAProduction duyet vi the THAT; shadow khong co)",
+    "status_242": "FAIL",
+    "status_shadow": "FAIL"
+   },
+   {
+    "action": "chua co lenh sau 2a (n_pass=0 den arm 10-07); xac nhan size khi co lenh dau tien: margin = 787.50 x throttle",
+    "evidence": "",
+    "expect_sim": "-",
+    "id": "E6",
+    "known": false,
+    "layer": "E",
+    "name": "ledger giay shadow/242 (archive) \u2014 size thuc te",
+    "s242": "ledger.csv 242: 0 lenh (n_pass=0)",
+    "shadow": "74 lenh giay, ts_entry 2026-09-06..2026-09-19, notional p50=231 (rank/pred cu), reason={'TRAILING_STOP': 58, 'TIME_STOP_168H': 16}; 0 lenh tu 2a (10-02 17:53)",
+    "status_242": "MISSING",
+    "status_shadow": "MISSING"
+   },
+   {
+    "action": "",
+    "evidence": "tradecore/selector/LiveProfileC3.java:37: public static final float ARM_RATE = 0.07f; | tradecore/selector/ShadowBookC3.java:352: if (rate > LiveProfileC3.ARM_RATE) {",
+    "expect_sim": "0.07",
+    "id": "F1",
+    "known": false,
+    "layer": "F",
+    "name": "arm 7%: giay hardcode LiveProfileC3.ARM_RATE=0.07; legacy Configs.RATE_PROFIT_STOP_MARKET (env)",
+    "s242": "legacy: 0.07; giay: 0.07",
+    "shadow": "0.07 (hardcode)",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "",
+    "evidence": "",
+    "expect_sim": "SL(peak=7%)=+4.0%; SL(peak=10%)=+7.0%",
+    "id": "F2",
+    "known": false,
+    "layer": "F",
+    "name": "SL sau arm = trailFromCap(peak): peak - min(peak*1.0, 0.03), lam tron 0.005; ham Java that (calRateLossDynamicBuyPNoPump) vs Python float32, 493 diem",
+    "s242": "Java==Py: 0 sai; B0==242 bit-exact: True",
+    "shadow": "Java==Py: 0 sai; B0==shadow bit-exact: True; vi du {'R 0.07000 0.10': 0.04, 'R 0.08000 0.10': 0.05, 'R 0.10000 0.10': 0.07, 'R 0.20000 0.10': 0.17}",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "",
+    "evidence": "tradecore/TradeUtils.java:55: float step = 0.005f;",
+    "expect_sim": "step 0.005",
+    "id": "F3",
+    "known": false,
+    "layer": "F",
+    "name": "lam tron 0.5% (step 0.005) \u2014 chung ham trailFromCap voi sim (OrderTargetInfoTest.trailRate)",
+    "s242": "= sim (cung ham)",
+    "shadow": "= sim (cung ham)",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "owner chot huong (khong tu dong bo) \u2014 de xuat: legacy 242 = ratchet lien tuc (can code/env?)",
+    "evidence": "trading/BinanceOrderTradingManager.java:485: private static final float LIVE_RATCHET_DEADZONE_MULT = 5.21847f;",
+    "expect_sim": "sim lien tuc",
+    "id": "F4",
+    "known": true,
+    "layer": "F",
+    "name": "ratchet: giay lien tuc (mult 1.0); legacy dead-zone x5.21847 (arm*5.22=36.5%)",
+    "s242": "legacy: dead-zone x5.21847 => SL dung yen o +4% khi lai 7-36.5% (co chu y L3, khong doi luat tien that)",
+    "shadow": "giay: lien tuc (tradecore/selector/LiveProfileC3.java:41: public static final float RATCHET_DEADZONE_MULT_ON = 1.0f;)",
+    "status_242": "FAIL",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "legacy 242: chi bao cao",
+    "evidence": "tradecore/selector/LiveProfileC3.java:39: public static final int TIME_STOP_HOURS = 168;",
+    "expect_sim": "co (SIM_LOSER_TIME_STOP_HOURS=168, min(open,close))",
+    "id": "F5",
+    "known": true,
+    "layer": "F",
+    "name": "time-stop 168h cho cum CHUA arm: giay co; legacy khong",
+    "s242": "legacy: khong (timeStopApplies=false) \u2014 0 lenh giay",
+    "shadow": "co (ShadowBookC3 tick, px snapshot)",
+    "status_242": "FAIL",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "",
+    "evidence": "Configs.PRE_ARM_SL=0.0",
+    "expect_sim": "B0: khong co (PRE_ARM_SL=0)",
+    "id": "F6",
+    "known": false,
+    "layer": "F",
+    "name": "SL cung ban dau pre-arm (PRE_ARM_SL / HARD SL / calRateLossDynamic cu)",
+    "s242": "idem",
+    "shadow": "khong co (PRE_ARM_SL=0, khong nhanh trong ShadowBookC3)",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "CAN CODE (ShadowBookC3.tick doc high/low 1m) \u2014 hien khong sua duoc bang env",
+    "evidence": "research/SimulatorMarketLevelTicker1MStopLoss.java:1078: if (!tpOnly && (TradeUtils.peakPrice(ticker) >= orderMulti.priceEntry * (1 + armRate) | tradecore/selector/ShadowBookC3.java:352: if (rate > LiveProfileC3.ARM_RATE) { | research/OrderTargetInfoTest.java:207: priceTP = Math.min(priceSL, ticker.priceOpen);  // TASK-118: clamp \u2192 bar.open (\u0111\u1ed3ng b\u1ed9 nh\u00e1nh ch\u00ednh; b\u1ea5t ho\u1ea1t khi guard b\u1eadt) | tradecore/selector/ShadowBookC3.java:377: closeAt(c, c.priceSL, REASON_TRAILING, now);",
+    "expect_sim": "HIGH/LOW 1m",
+    "id": "F7",
+    "known": true,
+    "layer": "F",
+    "name": "nguon dinh/gia: sim = HIGH nen 1m (peakPrice), fill SL = min(SL, open); giay = snapshot price_realtime moi 10s, fill = dung SL",
+    "s242": "legacy: lenh SL that tren san (tiem can sim hon)",
+    "shadow": "snapshot 10s (dinh THAP hon HIGH => arm tre/it hon; fill SL khong haircut gap)",
+    "status_242": "FAIL",
+    "status_shadow": "FAIL"
+   },
+   {
+    "action": "cung nhom F7 (code)",
+    "evidence": "research/OrderTargetInfoTest.java:197: if (Configs.BLOCK_INTRABAR_LOOKAHEAD) {",
+    "expect_sim": "khong khop cung nen",
+    "id": "F8",
+    "known": true,
+    "layer": "F",
+    "name": "uu tien cung nen: sim dat SL o nen arm, khong khop cung nen (BLOCK_INTRABAR_LOOKAHEAD); giay: arm->ratchet->kiem px<=SL cung tick",
+    "s242": "-",
+    "shadow": "co the khop cung tick (gap 3pp nen hiem)",
+    "status_242": "MISSING",
+    "status_shadow": "FAIL"
+   },
+   {
+    "action": "chua kiem duoc; chay lai khi co lenh",
+    "evidence": "",
+    "expect_sim": "-",
+    "id": "F9",
+    "known": false,
+    "layer": "F",
+    "name": "vi the dang chay (giay/legacy): doi chieu SL so vs cong thuc",
+    "s242": "legacy 48 symbol, 0 'New price SL'/'Update SL' tu 10-01 (chua legacy nao lai >7%)",
+    "shadow": "0 vi the giay (n_pass=0 tu 2a)",
+    "status_242": "MISSING",
+    "status_shadow": "MISSING"
+   },
+   {
+    "action": "tinh offline tu ledger (tools/shadow_vs_sim.py); CAN CODE de tru trong ledger",
+    "evidence": "tradecore/selector/ShadowBookC3.java:388: double pnl = (exitPx - entry) * (double) c.qty;",
+    "expect_sim": "sim tru: fee 0.000982 + 2*slip 0.000067 ~ 0.2098%/vong + funding mark",
+    "id": "G1",
+    "known": true,
+    "layer": "G",
+    "name": "ledger giay: pnl=(exit-entry)*qty, KHONG tru phi/slippage/funding",
+    "s242": "idem (so giay)",
+    "shadow": "khong tru (PnL giay lac quan ~0.210% notional/vong + funding)",
+    "status_242": "FAIL",
+    "status_shadow": "FAIL"
+   },
+   {
+    "action": "doc userTrades khi co lenh dong (khong co API key o day)",
+    "evidence": "",
+    "expect_sim": "0.1116%",
+    "id": "G2",
+    "known": false,
+    "layer": "G",
+    "name": "242: fill that legacy dong \u2014 phi thuc te vs 0.1116%/vong",
+    "s242": "khong co fill legacy nao dong tu 10-01",
+    "shadow": "-",
+    "status_242": "MISSING",
+    "status_shadow": "MISSING"
+   },
+   {
+    "action": "shadow cham hon 242 (doc Aerospike 242 qua WAN) nhung << 60 s",
+    "evidence": "",
+    "expect_sim": "p90 << 60000 ms",
+    "id": "H1",
+    "known": false,
+    "layer": "H",
+    "name": "[PASS-TIMING] selector tick (ms) p50/p90/max trong cua so; nhip 60 s",
+    "s242": "p50=192 p90=263 max=1206 (n=25)",
+    "shadow": "p50=413 p90=3223 max=13985 (n=27)",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "loi Aerospike WAN (Node not found / MAT DATA chunk / getMetricMap) ngay sau restart: shadow doc Aerospike 242 qua WAN; tu hoi phuc ([GATE] dung nhip), khong sua duoc bang env",
+    "evidence": "",
+    "expect_sim": "0",
+    "id": "H2",
+    "known": true,
+    "layer": "H",
+    "name": "OOM + ERROR moi (tru nhieu co san: -2015 stub-key, Reporter NPE, P2PTracker, Legacy Scan) trong cua so",
+    "s242": "OOM=0, ERROR la=0 []",
+    "shadow": "OOM=0, ERROR la=3 [('ERROR [pool-#-thread-#] c.b.c.a.DataManagerAerospikeFloatSim: \u274c [AEROSPIKE-FAIL] M\u1ea4T DATA chunk start=# #:# ke', 1), ('ERROR [LiveOiFeatRefresh] c.b.c.a.DataManagerAerospikeFloatSim: \u274c Error getMetricMap set=oi_feat_z bin=f_data ', 2)]",
+    "status_242": "PASS",
+    "status_shadow": "FAIL"
+   },
+   {
+    "action": "",
+    "evidence": "",
+    "expect_sim": "inplace; evicted=0",
+    "id": "H2b",
+    "known": false,
+    "layer": "H",
+    "name": "[OI-LIVE] mode inplace, refresh hang gio evicted=0",
+    "s242": "inplace: cold-load=0, refresh=0, evicted!=0 / reload loi=0",
+    "shadow": "inplace: cold-load=0, refresh=1, evicted!=0 / reload loi=0",
+    "status_242": "MISSING",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "242: CHI DE XUAT: them export JAVA_TOOL_OPTIONS vao conf/env.sh (an toan, khong .java) \u2014 owner quyet",
+    "evidence": "",
+    "expect_sim": "giu heap 3g (kiem 3 restart)",
+    "id": "H3",
+    "known": true,
+    "layer": "H",
+    "name": "auto-restart 12h giu heap: JAVA_TOOL_OPTIONS trong environ (con ke thua) / -Xmx",
+    "s242": "KHONG: cmdline=.x86_64/bin/java -cp target/binance-java-sdk-1.2.4.jar com.binance.chuyennd.trading.BinanceOrderTradingManager; JAVA_TOOL_OPTIONS vang => heap mac dinh (~1.95GB) sau restart 12h",
+    "shadow": "co: -Xms3g -Xmx3g -Dfile.encoding=UTF-8 -Duser.timezone=Asia/Ho_Chi_Minh; jcmd MaxHeap=3221225472; 'Picked up' sau moi restart: 3",
+    "status_242": "FAIL",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "sau restart shadow universe nho ~560 den khi OI refresh gio dau (cold-load OI 564 coin) \u2014 xem H2b",
+    "evidence": "symbol la trong top-16 (18 symbol): []",
+    "expect_sim": "universe sim: USDT-perp, khong USDC/BTCDOM/_ (SurvivorshipBac0:52)",
+    "id": "I1",
+    "known": false,
+    "layer": "I",
+    "name": "universe live: so coin cham diem [S1] (>=336 moc gio) vs sim (mapper 863 id gom delisted)",
+    "s242": "N median=628 [570..689] (n_enough median=621)",
+    "shadow": "N median=628 [596..689] (n_enough median=621); 30 tick dau cua so=628, 30 tick cuoi=628",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "CAN CODE hoac Aerospike scan volume; neu can: loc theo kline_1m_opt volume",
+    "evidence": "",
+    "expect_sim": "khong",
+    "id": "I2",
+    "known": false,
+    "layer": "I",
+    "name": "symbol vol=0 / symbol la vao top-16",
+    "s242": "idem",
+    "shadow": "top-16 18 symbol khac nhau, 0 ky tu la; vol=0 KHONG kiem duoc (dump khong co volume; S1RankerLive chi loc pc<=0)",
+    "status_242": "MISSING",
+    "status_shadow": "MISSING"
+   },
+   {
+    "action": "ghi nhan",
+    "evidence": "",
+    "expect_sim": "-",
+    "id": "I3",
+    "known": false,
+    "layer": "I",
+    "name": "coin legacy (vi the THAT cu tren 242) bi chan khoi so giay",
+    "s242": "48 coin legacy; 'skip-LEGACY' 1748 lan trong log",
+    "shadow": "legacy_symbols.csv shadow: 0 (khong vi the that)",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   }
+  ],
+  "jar_sha256_shadow": "8f3ee52ce4ceac8c",
+  "layers": {
+   "A": {
+    "n": 8,
+    "s242": "PASS",
+    "shadow": "MISSING"
+   },
+   "B": {
+    "n": 8,
+    "s242": "FAIL",
+    "shadow": "FAIL"
+   },
+   "C": {
+    "n": 4,
+    "s242": "MISSING",
+    "shadow": "MISSING"
+   },
+   "D": {
+    "n": 3,
+    "s242": "FAIL",
+    "shadow": "FAIL"
+   },
+   "E": {
+    "n": 6,
+    "s242": "FAIL",
+    "shadow": "FAIL"
+   },
+   "F": {
+    "n": 9,
+    "s242": "FAIL",
+    "shadow": "FAIL"
+   },
+   "G": {
+    "n": 2,
+    "s242": "FAIL",
+    "shadow": "FAIL"
+   },
+   "H": {
+    "n": 4,
+    "s242": "FAIL",
+    "shadow": "FAIL"
+   },
+   "I": {
+    "n": 3,
+    "s242": "MISSING",
+    "shadow": "MISSING"
+   }
+  },
+  "overall": "FAIL",
+  "restart_242": "2026-10-03 12:58:01",
+  "restart_shadow": "2026-10-03 21:51:55",
+  "tool": "research/parity/live_vs_sim_check.py",
+  "window_since": "2026-10-03 21:54"
+ },
+ "before": {
+  "checklist": "docs/runbooks/PARITY_LIVE_VS_SIM_CHECKLIST.md",
+  "exit_code": 2,
+  "extra": {
+   "arm242": {
+    "arm_ts": "2026-10-07 18:00",
+    "armed": false,
+    "first_ts": "2026-09-30 17:01",
+    "hours_to_arm": 92.21082583333333,
+    "last_ts": "2026-10-03 21:28",
+    "m_window": 72928,
+    "n": 73392,
+    "q_now": 0.011658821254968643,
+    "r_max": 0.014007063582539558,
+    "r_p50": 0.0019959253259003162,
+    "r_p99": 0.006404731888324022,
+    "ticks": 4587
+   },
+   "b5": {
+    "dist_p50_abs_diff_pp": 0.011349935000000033,
+    "n_cand_equal": 1.0,
+    "n_gate_pairs": 229,
+    "npass_equal": 1.0,
+    "p15": {
+     "abs_p50": 0.005164509999999994,
+     "d_p10": -0.12692645239999994,
+     "d_p50": 0.0,
+     "d_p90": 0.011176951000000034,
+     "dist_p50_242": 0.752958609,
+     "dist_p50_sh": 0.741608674,
+     "n": 227
+    },
+    "thr_within_1pct": 0.4585152838427948
+   },
+   "b8": {
+    "gen_values": [
+     2
+    ],
+    "max_abs_ai_vs_242": 0.0019124433800000009,
+    "max_abs_ai_vs_sh": 2.9122490000000126e-05,
+    "n": 40
+   },
+   "c1": {
+    "frac_16": 0.05752212389380531,
+    "frac_ge14": 1.0,
+    "gv_absdiff_median": 0.004782439000000027,
+    "gv_absdiff_p90": 0.02241092960000003,
+    "mean_overlap": 15.057522123893806,
+    "n_ticks": 226,
+    "rank1_same": 0.995575221238938
+   },
+   "d1": {
+    "all": [
+     [
+      "momentum1M",
+      1.0
+     ],
+     [
+      "momentum5M",
+      1.0
+     ],
+     [
+      "momentum15M",
+      1.0
+     ],
+     [
+      "momentum1H",
+      1.0
+     ],
+     [
+      "momentum4H",
+      1.0
+     ],
+     [
+      "momentum24H",
+      1.0
+     ],
+     [
+      "momentumAcceleration",
+      1.0
+     ],
+     [
+      "trendStrengthETH",
+      1.0
+     ],
+     [
+      "trendConsistency",
+      0.996
+     ],
+     [
+      "volatility1M",
+      1.0
+     ],
+     [
+      "volatility15M",
+      1.0
+     ],
+     [
+      "volatility1H",
+      1.0
+     ],
+     [
+      "volatility24H",
+      1.0
+     ],
+     [
+      "volatilityTermStructure",
+      0.737
+     ],
+     [
+      "advanceDeclineRatio",
+      0.075
+     ],
+     [
+      "percentAboveMA20",
+      0.184
+     ],
+     [
+      "volumeRatioUpDown",
+      0.671
+     ],
+     [
+      "marketBreadthStrength",
+      0.232
+     ],
+     [
+      "btcDominance",
+      0.961
+     ],
+     [
+      "rsi14",
+      0.956
+     ],
+     [
+      "volumeSpike",
+      0.588
+     ],
+     [
+      "distMA20",
+      1.0
+     ],
+     [
+      "fundingRateRaw",
+      1.0
+     ],
+     [
+      "fundingRateAvg24H",
+      1.0
+     ],
+     [
+      "fundingRateTrend",
+      1.0
+     ],
+     [
+      "hourOfDay",
+      1.0
+     ],
+     [
+      "dayOfWeek",
+      1.0
+     ],
+     [
+      "weekOfMonth",
+      1.0
+     ],
+     [
+      "monthOfYear",
+      1.0
+     ],
+     [
+      "basketMomentum15M",
+      0.711
+     ],
+     [
+      "basketMomentum1H",
+      0.61
+     ],
+     [
+      "basketRsi14",
+      0.162
+     ],
+     [
+      "basketVolSpike",
+      0.145
+     ],
+     [
+      "p15_out",
+      0.877
+     ],
+     [
+      "rateDownAvg",
+      1.0
+     ],
+     [
+      "rateUpAvg",
+      1.0
+     ],
+     [
+      "rateDown15MAvg",
+      1.0
+     ],
+     [
+      "rateUp15MAvg",
+      1.0
+     ]
+    ],
+    "fail_cols": [
+     [
+      "volatilityTermStructure",
+      0.737,
+      "6.59e-03"
+     ],
+     [
+      "advanceDeclineRatio",
+      0.075,
+      "8.60e-01"
+     ],
+     [
+      "percentAboveMA20",
+      0.184,
+      "2.30e-02"
+     ],
+     [
+      "volumeRatioUpDown",
+      0.671,
+      "4.15e+00"
+     ],
+     [
+      "marketBreadthStrength",
+      0.232,
+      "5.01e-02"
+     ],
+     [
+      "btcDominance",
+      0.961,
+      "4.16e-01"
+     ],
+     [
+      "rsi14",
+      0.956,
+      "7.46e+00"
+     ],
+     [
+      "volumeSpike",
+      0.588,
+      "5.80e+00"
+     ],
+     [
+      "basketMomentum15M",
+      0.711,
+      "1.26e-02"
+     ],
+     [
+      "basketMomentum1H",
+      0.61,
+      "1.27e-02"
+     ],
+     [
+      "basketRsi14",
+      0.162,
+      "8.73e-01"
+     ],
+     [
+      "basketVolSpike",
+      0.145,
+      "3.78e+00"
+     ],
+     [
+      "p15_out",
+      0.877,
+      "1.92e-03"
+     ]
+    ],
+    "n_cols": 38,
+    "n_cols_fail": 13,
+    "n_pairs": 228
+   },
+   "e2": {
+    "242_leg0": 131.25,
+    "gridLegWeightRatio(0)_B0": 6.0,
+    "managerBudget(35000,0)": 131.25,
+    "ratio_live_over_sim": 0.16666666666666666,
+    "shadow_leg0": 131.25,
+    "sim_leg0_at_eq35000": 787.5
+   }
+  },
+  "generated": "2026-10-03 21:47:23 +07",
+  "items": [
+   {
+    "action": "",
+    "evidence": "Configs.APPLY_FUNDING_FEE: B0=true sh=false 242=false; Configs.DCA_GRID_ENABLED: B0=true sh=false 242=false; Configs.FUNDING_MARK_NOTIONAL: B0=true sh=false 242=false; Configs.LIVE_ENTRY_GRID_MIN: B0=15 sh=1 242=1; Configs.MARKET_SCAN_MIN: B0=0 sh=1 242=1; Configs.MARKET_SCAN_PRIORITY: B0=0 sh=1 242=1",
+    "expect_sim": "m\u1ecdi field = B0 (tr\u1eeb field live-only/kh\u00f4ng \u0111\u1ecdc)",
+    "id": "A1",
+    "known": false,
+    "layer": "A",
+    "name": "Configs.* hieu dung (jar 8f3ee52c, 139 field) B0 vs live",
+    "s242": "8 field khac B0, 0 chua giai thich",
+    "shadow": "6 field khac B0, 0 chua giai thich",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "",
+    "evidence": "",
+    "expect_sim": "giong nhau",
+    "id": "A1b",
+    "known": false,
+    "layer": "A",
+    "name": "shadow == 242 (Configs hieu dung, tru ha tang)",
+    "s242": "-",
+    "shadow": "0 field khac",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "",
+    "evidence": "SELECTOR_RANK_TOPK=16|16|16; F_BASE=0.015|0.015|0.015; DCA_GRID_WEIGHTS=[1.0, 1.0, 1.0, 1.0]|[1.0, 1.0, 1.0, 1.0]|[1.0, 1.0, 1.0, 1.0]; DCA_GRID_SCALE=6.0|6.0|6.0; U_MAX=0.6|0.6|0.6; CONC_CAP_PERCOIN_PCT=0.15|0.15|0.15; MIN_MOMENTUM_15M=0.008|0.008|0.008; RATE_PROFIT_STOP_MARKET=0.07|0.07|0.07; TS_GIVEBACK_RATIO=1.0|1.0|1.0; TS_MAX_GAP=0.03|0.03|0.03; TS_MAX_GAP_WEAK=0.03|0.03|0.03; TS_PNOPUMP_WEAK_THR=0.29|0.29|0.29; LOSER_TIME_STOP_HOURS=168|168|168; RATE_FEE=9.82E-4|9.82E-4|9.82E-4; SLIPPAGE_RATE=6.7E-5|6.7E-5|6.7E-5; TIER_FLAT=true|true|true; TS_PEAK_MODE=high|high|high; ARM_RATE=0.07|0.07|0.07; TIME_STOP_HOURS=168|168|168; SIZE_CAP_OF_EQUITY=0.045|0.045|0.045",
+    "expect_sim": "-",
+    "id": "A1c",
+    "known": false,
+    "layer": "A",
+    "name": "gia tri hieu dung key vao/ra/size (B0|shadow|242)",
+    "s242": "xem evidence",
+    "shadow": "xem evidence",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "restart neu lech (shadow)",
+    "evidence": "",
+    "expect_sim": "tr\u00f9ng",
+    "id": "A2",
+    "known": false,
+    "layer": "A",
+    "name": "/proc/<pid>/environ (JVM dang chay) == conf/env.sh",
+    "s242": "0 lech []",
+    "shadow": "0 lech []",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "KHONG bat som: seed Aerospike 242 qua WAN ~2.2 h chan main thread; bat 10-07 17:15 sau khi buffer 242 du 7 ngay",
+    "evidence": "",
+    "expect_sim": "ratio/0.999950829/90",
+    "id": "A3",
+    "known": true,
+    "layer": "A",
+    "name": "gate rolling (B0: SIM_GATE_ROLLING_MODE/PCT/DAYS = ratio/0.999950829/90)",
+    "s242": "{'LIVE_GATE_ROLLING_DAYS': '90', 'LIVE_GATE_ROLLING_MODE': 'ratio', 'LIVE_GATE_ROLLING_PCT': '0.999950829'}",
+    "shadow": "KHONG co key (co chu y: bat 10-07 17:15, DEPLOY_SHADOW_2A \u00a77)",
+    "status_242": "PASS",
+    "status_shadow": "MISSING"
+   },
+   {
+    "action": "ghi nhan, khong sua",
+    "evidence": "",
+    "expect_sim": "-",
+    "id": "A4",
+    "known": true,
+    "layer": "A",
+    "name": "key B0 live KHONG doc / thay bang key live",
+    "s242": "idem (242 khong khai bao 3 key dau)",
+    "shadow": "SIM_APPLY_FUNDING -> ledger giay khong tru funding (G1); SIM_FUNDING_MARK -> idem; DCA_GRID_ENABLED -> live khong chay grid (E5); WFO_FUNDING_PRED_DIR -> chi tai lap sim; SIM_ENTRY_SAMPLE_MIN -> tuong duong LIVE_ENTRY_GRID_MIN=1",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "",
+    "evidence": "",
+    "expect_sim": "bat buoc",
+    "id": "A5",
+    "known": false,
+    "layer": "A",
+    "name": "key live-only bat buoc SHADOW_NO_PUSH=true, LIVE_PROFILE=c3_shadow",
+    "s242": "ok",
+    "shadow": "ok",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "ghi nhan (gia tri trong file la SAI SU THAT)",
+    "evidence": "",
+    "expect_sim": "khong anh huong",
+    "id": "A6",
+    "known": true,
+    "layer": "A",
+    "name": "config.properties key chet (Configs canh bao 'KHONG AI DOC': RATE_FEE, RATE_PROFIT_STOP_MARKET, ...)",
+    "s242": "idem",
+    "shadow": "20 key chet (RATE_PROFIT_STOP_MARKET=0.01, RATE_FEE=0.0015...) \u2014 Configs.RATE_*=0.07/0.000982 tu env",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "",
+    "evidence": "",
+    "expect_sim": "1/phut",
+    "id": "B1",
+    "known": false,
+    "layer": "B",
+    "name": "[GATE] coverage phut distinct / phut cua so (tu 2026-10-03 17:57)",
+    "s242": "100.4% (229 phut)",
+    "shadow": "100.4% (229 phut)",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "",
+    "evidence": "",
+    "expect_sim": "khop (|d|<=6e-6, >=99% phut)",
+    "id": "B2",
+    "known": false,
+    "layer": "B",
+    "name": "thr tinh lai tu sel_dump (EntryGate: base*max(0.26787,sp/0.15*1.2876)*scale) vs log thr=[min..max]",
+    "s242": "100.0% phut khop (n=227)",
+    "shadow": "100.0% phut khop (n=229)",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "",
+    "evidence": "",
+    "expect_sim": "100%",
+    "id": "B3",
+    "known": false,
+    "layer": "B",
+    "name": "n_pass tinh lai (!(p15<thr_i)) vs log n_pass",
+    "s242": "100.0% (0 lech)",
+    "shadow": "100.0% (0 lech)",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "model 242 gia dinh = d19fc8cd (DEPLOY_SHADOW_2A \u00a71)",
+    "evidence": "",
+    "expect_sim": "max|d|<=1e-6",
+    "id": "B4",
+    "known": false,
+    "layer": "B",
+    "name": "ORT(model gate d19fc8cd) tren feat_dump (33 feat) vs p15_out",
+    "s242": "max|d|=9.36e-10 (n=228)",
+    "shadow": "max|d|=1.86e-09 (n=229)",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "nguon: p15 shadow doc ticker qua WAN tre hon (xem D1); khong sua duoc bang env",
+    "evidence": "",
+    "expect_sim": "|dp50|<=0.02pp va thr +-1% >=90% phut",
+    "id": "B5",
+    "known": true,
+    "layer": "B",
+    "name": "shadow vs 242 cung phut: p15, thr_min, n_cand",
+    "s242": "-",
+    "shadow": "|dp50 phan phoi|=0.011pp; paired d p10/p50/p90=-0.127/0.000/0.011 pp; thr_min +-1%=45.9% (n=229)",
+    "status_242": "FAIL",
+    "status_shadow": "FAIL"
+   },
+   {
+    "action": "",
+    "evidence": "",
+    "expect_sim": "base 0.00800; q_t=0.008 den arm",
+    "id": "B6",
+    "known": false,
+    "layer": "B",
+    "name": "nguong truoc arm: base=MIN_MOMENTUM_15M=0.008 (G2 fallback)",
+    "s242": "base=[0.008]; [GATE-RATIO] q_t=[0.008] buffer=72928",
+    "shadow": "base=[0.008] (ratio TAT)",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "chay lai gate_arm_check.py sau 10-07 17:15; so q_t log vs q tinh lai",
+    "evidence": "{\"n\": 73392, \"ticks\": 4587, \"first_ts\": \"2026-09-30 17:01\", \"last_ts\": \"2026-10-03 21:28\", \"arm_ts\": \"2026-10-07 18:00\", \"armed\": false, \"q_now\": 0.011658821254968643, \"m_window\": 72928, \"r_p50\": 0.0019959253259003162, \"r_p99\": 0.006404731888324022, \"r_max\": 0.014007063582539558, \"hours_to_arm\": 92.21082583333333}",
+    "expect_sim": "q_t log = q tinh lai sau arm; n_pass/ngay in [0.34;3.8]",
+    "id": "B7",
+    "known": false,
+    "layer": "B",
+    "name": "arm gate G2: buffer 242 (GRR1) -> firstTs+7d, q(0.99995) tinh lai (script gate_arm_check.py)",
+    "s242": "n=73392 firstTs=2026-09-30 17:01 arm>=2026-10-07 18:00; chua arm -> q_t fallback=0.008; q_now(neu arm)=0.011659; CHUA ARM",
+    "shadow": "shadow: ratio TAT (chua co buffer rieng) \u2014 bat 10-07 17:15",
+    "status_242": "MISSING",
+    "status_shadow": "MISSING"
+   },
+   {
+    "action": "2 writer (gen=2) => 1 trong 2 so se lech; fix = jar f282581a + LIVE_IS_SHADOW_HOST=true (10-07 17:15), KHONG lam som",
+    "evidence": "",
+    "expect_sim": "khop; ai_pred_1m = last-writer(242|shadow) toi 10-07",
+    "id": "B8",
+    "known": true,
+    "layer": "B",
+    "name": "p15 live (feat_dump p15_out) vs ai_pred_1m Aerospike 242 cung phut (n=40)",
+    "s242": "max|ai-p15_242|=1.91e-03; gen=[2]",
+    "shadow": "max|ai-p15_sh|=2.91e-05",
+    "status_242": "FAIL",
+    "status_shadow": "FAIL"
+   },
+   {
+    "action": "",
+    "evidence": "",
+    "expect_sim": "16/16",
+    "id": "C1",
+    "known": false,
+    "layer": "C",
+    "name": "top-16 shadow vs 242 cung tick (|giao|)",
+    "s242": "-",
+    "shadow": "mean 15.06/16; =16: 5.8%; >=14: 100.0%; rank1 giong 99.6% (n=226 tick); |dgateValue| p50=0.0048 p90=0.0224",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "",
+    "evidence": "",
+    "expect_sim": "100% tick",
+    "id": "C2",
+    "known": false,
+    "layer": "C",
+    "name": "sort: rank tang => selectorScore & gateValue(sp) khong giam; rank1 = sp thap nhat (sim: sp nho = tot)",
+    "s242": "0/226 tick vi pham",
+    "shadow": "0/228 tick vi pham",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "CAN CODE: LiveFeatureDump.maybeDumpSelector them 45+9 cot (hoac dump selFeat45/S1 float[9])",
+    "evidence": "research ref: MAP_PARITY 16/16 (sim, B0REF5), LiveBuildMapTest byte-parity (AUDIT_SELECTOR_MODEL_PARITY \u00a71)",
+    "expect_sim": "16/16",
+    "id": "C3",
+    "known": false,
+    "layer": "C",
+    "name": "recompute offline top-16 tu model deploy (S1 8b1dcf00 + net015 41a07109 + map) tren CUNG feature vector live (45 G015 + 9 KEEP9)",
+    "s242": "idem",
+    "shadow": "feat_dump KHONG ghi vector 45/9 (chi 33 gate-feature) -> khong tai tao duoc",
+    "status_242": "MISSING",
+    "status_shadow": "MISSING"
+   },
+   {
+    "action": "",
+    "evidence": "",
+    "expect_sim": "16; ~universe sim",
+    "id": "C4",
+    "known": false,
+    "layer": "C",
+    "name": "n_cand=16 moi tick; so coin duoc cham diem [S1] score N",
+    "s242": "n_cand=[16]; N median=609 [527..677]",
+    "shadow": "n_cand=[16]; N median=609 [527..677]",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "nguon lech Oracle<->242 (doc ticker qua WAN, nen cuoi chua chot) \u2014 can code/di chuyen shadow ve cung LAN",
+    "evidence": "",
+    "expect_sim": "giong (cung nguon, cung code)",
+    "id": "D1",
+    "known": true,
+    "layer": "D",
+    "name": "33 feature gate (+4 market, p15_out): shadow vs 242 cung (ts,symbol), |d|<=1e-3(1+|x|)",
+    "s242": "-",
+    "shadow": "25/38 cot PASS (n=228 cap); FAIL: volatilityTermStructure(74%), advanceDeclineRatio(7%), percentAboveMA20(18%), volumeRatioUpDown(67%), marketBreadthStrength(23%), btcDominance(96%), rsi14(96%), volumeSpike(59%), basketMomentum15M(71%), basketMomentum1H(61%), basketRsi14(16%), basketVolSpike(14%), p15_out(88%)",
+    "status_242": "FAIL",
+    "status_shadow": "FAIL"
+   },
+   {
+    "action": "lech da biet (RESULT_FEATDIFF_PASS2): tong hieu ung len p15 <= 0.006pp",
+    "evidence": "",
+    "expect_sim": "27/33 FAIL lan truoc (thieu nguon/ticker-vs-kline)",
+    "id": "D2",
+    "known": true,
+    "layer": "D",
+    "name": "33 feature live vs DEV export cung phut (parity_check.py features)",
+    "s242": "-",
+    "shadow": "FAIL: 27/33 feature lech (exact<=1e-08, inline<=1e-03; o nguong may 29/33) | 1 check FAIL / 5",
+    "status_242": "FAIL",
+    "status_shadow": "FAIL"
+   },
+   {
+    "action": "CAN CODE (LiveFeatureDump); OI feature da audit rieng: AUDIT_OI_FEAT_PARITY = KHONG VENH (spearman 1.0)",
+    "evidence": "feat_dump header 40 cot = 33 gate + p15_out + 4 market; sel_dump 6 cot",
+    "expect_sim": "khop",
+    "id": "D3",
+    "known": false,
+    "layer": "D",
+    "name": "45 cot G015 + 9 cot KEEP9 (vector selector) live vs offline cung phut",
+    "s242": "242 KHONG dump vector selector",
+    "shadow": "shadow KHONG dump vector selector",
+    "status_242": "MISSING",
+    "status_shadow": "MISSING"
+   },
+   {
+    "action": "shadow: SIM_F_BASE = F_BASE(B0)*DCA_GRID_SCALE = 0.015*6 = 0.09 (bu, vi live khong nhan ratio). 242: chi de xuat (cung env hoac code)",
+    "evidence": "trading/DetectEntrySignal2TradeNormal.java:999: budget = TradeUtils.managerBudget(budget, marginRunning, balanceBasic, levelChange); | research/SimulatorMarketLevelTicker1MStopLoss.java:1439: float ratio = DcaUtils.gridLegWeightRatio(legIdx); | gridLegWeightRatio/DCA_GRID_SCALE xuat hien trong DetectEntrySignal2TradeNormal.java: KHONG",
+    "expect_sim": "787.50 USDT (=2.25% equity)",
+    "id": "E2",
+    "known": false,
+    "layer": "E",
+    "name": "margin leg dau @equity 35000, throttle 1: sim = managerBudget*tier*(w0*DCA_GRID_SCALE); live = managerBudget*tier",
+    "s242": "131.25 USDT (live/sim = 0.1667)",
+    "shadow": "131.25 USDT (live/sim = 0.1667)",
+    "status_242": "FAIL",
+    "status_shadow": "FAIL"
+   },
+   {
+    "action": "",
+    "evidence": "trading/DetectEntrySignal2TradeNormal.java:1108: OrderTargetInfo orderTrade = new OrderTargetInfo(OrderTargetStatus.REQUEST, ticker.priceClose, null, quantity, Configs.LEVERAGE_ORDER, symbol, ticker.startTime. | research/SimulatorMarketLevelTicker1MStopLoss.java:1376: Float entry = ticker.priceClose;",
+    "expect_sim": "entry = priceClose",
+    "id": "E1",
+    "known": false,
+    "layer": "E",
+    "name": "gia vao = ticker.priceClose cua nen tin hieu (live: OrderTargetInfo.priceEntry=ticker.priceClose -> ShadowBookC3.openPos)",
+    "s242": "dung (code, legacy khong mo lenh moi)",
+    "shadow": "dung (code)",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "",
+    "evidence": "",
+    "expect_sim": "khong bind",
+    "id": "E3",
+    "known": false,
+    "layer": "E",
+    "name": "tran per-coin CONC_CAP_PERCOIN 15% equity va tran live 4.5% equity (live-only) co chan leg dau?",
+    "s242": "idem",
+    "shadow": "leg dau 0.38% equity < 4.5% va < 15% => khong bind",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "",
+    "evidence": "",
+    "expect_sim": "cung ham",
+    "id": "E4",
+    "known": false,
+    "layer": "E",
+    "name": "U=Sum(margin)/equity, throttle=1-U/U_MAX (U_MAX=0.60): hai ham managerBudget chung; live: marginRunning=ShadowBookC3 (khong DCA leg => U thap hon sim)",
+    "s242": "idem",
+    "shadow": "B(35000,5000)=100.00 | B(40000,12000)=75.00 | B(35000,21000)=nan",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "CAN CODE (hoac owner chap nhan 'B0-khong-grid' sau do tac dong tren sim)",
+    "evidence": "tradecore/DcaProcessor.java:156: public static List<String> getDCAProduction(MarketLevelChange levelChange, Long time, Float budget,",
+    "expect_sim": "co (46 DCA_LEVEL1 + leg grid)",
+    "id": "E5",
+    "known": true,
+    "layer": "E",
+    "name": "DCA grid (leg 1-3 tai -50/-75/-90%) + DCA_LEVEL1",
+    "s242": "chi coin legacy (skip-LEGACY cho so giay)",
+    "shadow": "KHONG co (DcaProcessor.getDCAProduction duyet vi the THAT; shadow khong co)",
+    "status_242": "FAIL",
+    "status_shadow": "FAIL"
+   },
+   {
+    "action": "chua co lenh sau 2a (n_pass=0 den arm 10-07); xac nhan size khi co lenh dau tien: margin = 787.50 x throttle",
+    "evidence": "",
+    "expect_sim": "-",
+    "id": "E6",
+    "known": false,
+    "layer": "E",
+    "name": "ledger giay shadow/242 (archive) \u2014 size thuc te",
+    "s242": "ledger.csv 242: 0 lenh (n_pass=0)",
+    "shadow": "74 lenh giay, ts_entry 2026-09-06..2026-09-19, notional p50=231 (rank/pred cu), reason={'TRAILING_STOP': 58, 'TIME_STOP_168H': 16}; 0 lenh tu 2a (10-02 17:53)",
+    "status_242": "MISSING",
+    "status_shadow": "MISSING"
+   },
+   {
+    "action": "",
+    "evidence": "tradecore/selector/LiveProfileC3.java:37: public static final float ARM_RATE = 0.07f; | tradecore/selector/ShadowBookC3.java:352: if (rate > LiveProfileC3.ARM_RATE) {",
+    "expect_sim": "0.07",
+    "id": "F1",
+    "known": false,
+    "layer": "F",
+    "name": "arm 7%: giay hardcode LiveProfileC3.ARM_RATE=0.07; legacy Configs.RATE_PROFIT_STOP_MARKET (env)",
+    "s242": "legacy: 0.07; giay: 0.07",
+    "shadow": "0.07 (hardcode)",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "",
+    "evidence": "",
+    "expect_sim": "SL(peak=7%)=+4.0%; SL(peak=10%)=+7.0%",
+    "id": "F2",
+    "known": false,
+    "layer": "F",
+    "name": "SL sau arm = trailFromCap(peak): peak - min(peak*1.0, 0.03), lam tron 0.005; ham Java that (calRateLossDynamicBuyPNoPump) vs Python float32, 493 diem",
+    "s242": "Java==Py: 0 sai; B0==242 bit-exact: True",
+    "shadow": "Java==Py: 0 sai; B0==shadow bit-exact: True; vi du {'R 0.07000 0.10': 0.04, 'R 0.08000 0.10': 0.05, 'R 0.10000 0.10': 0.07, 'R 0.20000 0.10': 0.17}",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "",
+    "evidence": "tradecore/TradeUtils.java:55: float step = 0.005f;",
+    "expect_sim": "step 0.005",
+    "id": "F3",
+    "known": false,
+    "layer": "F",
+    "name": "lam tron 0.5% (step 0.005) \u2014 chung ham trailFromCap voi sim (OrderTargetInfoTest.trailRate)",
+    "s242": "= sim (cung ham)",
+    "shadow": "= sim (cung ham)",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "owner chot huong (khong tu dong bo) \u2014 de xuat: legacy 242 = ratchet lien tuc (can code/env?)",
+    "evidence": "trading/BinanceOrderTradingManager.java:485: private static final float LIVE_RATCHET_DEADZONE_MULT = 5.21847f;",
+    "expect_sim": "sim lien tuc",
+    "id": "F4",
+    "known": true,
+    "layer": "F",
+    "name": "ratchet: giay lien tuc (mult 1.0); legacy dead-zone x5.21847 (arm*5.22=36.5%)",
+    "s242": "legacy: dead-zone x5.21847 => SL dung yen o +4% khi lai 7-36.5% (co chu y L3, khong doi luat tien that)",
+    "shadow": "giay: lien tuc (tradecore/selector/LiveProfileC3.java:41: public static final float RATCHET_DEADZONE_MULT_ON = 1.0f;)",
+    "status_242": "FAIL",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "legacy 242: chi bao cao",
+    "evidence": "tradecore/selector/LiveProfileC3.java:39: public static final int TIME_STOP_HOURS = 168;",
+    "expect_sim": "co (SIM_LOSER_TIME_STOP_HOURS=168, min(open,close))",
+    "id": "F5",
+    "known": true,
+    "layer": "F",
+    "name": "time-stop 168h cho cum CHUA arm: giay co; legacy khong",
+    "s242": "legacy: khong (timeStopApplies=false) \u2014 0 lenh giay",
+    "shadow": "co (ShadowBookC3 tick, px snapshot)",
+    "status_242": "FAIL",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "",
+    "evidence": "Configs.PRE_ARM_SL=0.0",
+    "expect_sim": "B0: khong co (PRE_ARM_SL=0)",
+    "id": "F6",
+    "known": false,
+    "layer": "F",
+    "name": "SL cung ban dau pre-arm (PRE_ARM_SL / HARD SL / calRateLossDynamic cu)",
+    "s242": "idem",
+    "shadow": "khong co (PRE_ARM_SL=0, khong nhanh trong ShadowBookC3)",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "CAN CODE (ShadowBookC3.tick doc high/low 1m) \u2014 hien khong sua duoc bang env",
+    "evidence": "research/SimulatorMarketLevelTicker1MStopLoss.java:1078: if (!tpOnly && (TradeUtils.peakPrice(ticker) >= orderMulti.priceEntry * (1 + armRate) | tradecore/selector/ShadowBookC3.java:352: if (rate > LiveProfileC3.ARM_RATE) { | research/OrderTargetInfoTest.java:207: priceTP = Math.min(priceSL, ticker.priceOpen);  // TASK-118: clamp \u2192 bar.open (\u0111\u1ed3ng b\u1ed9 nh\u00e1nh ch\u00ednh; b\u1ea5t ho\u1ea1t khi guard b\u1eadt) | tradecore/selector/ShadowBookC3.java:377: closeAt(c, c.priceSL, REASON_TRAILING, now);",
+    "expect_sim": "HIGH/LOW 1m",
+    "id": "F7",
+    "known": true,
+    "layer": "F",
+    "name": "nguon dinh/gia: sim = HIGH nen 1m (peakPrice), fill SL = min(SL, open); giay = snapshot price_realtime moi 10s, fill = dung SL",
+    "s242": "legacy: lenh SL that tren san (tiem can sim hon)",
+    "shadow": "snapshot 10s (dinh THAP hon HIGH => arm tre/it hon; fill SL khong haircut gap)",
+    "status_242": "FAIL",
+    "status_shadow": "FAIL"
+   },
+   {
+    "action": "cung nhom F7 (code)",
+    "evidence": "research/OrderTargetInfoTest.java:197: if (Configs.BLOCK_INTRABAR_LOOKAHEAD) {",
+    "expect_sim": "khong khop cung nen",
+    "id": "F8",
+    "known": true,
+    "layer": "F",
+    "name": "uu tien cung nen: sim dat SL o nen arm, khong khop cung nen (BLOCK_INTRABAR_LOOKAHEAD); giay: arm->ratchet->kiem px<=SL cung tick",
+    "s242": "-",
+    "shadow": "co the khop cung tick (gap 3pp nen hiem)",
+    "status_242": "MISSING",
+    "status_shadow": "FAIL"
+   },
+   {
+    "action": "chua kiem duoc; chay lai khi co lenh",
+    "evidence": "",
+    "expect_sim": "-",
+    "id": "F9",
+    "known": false,
+    "layer": "F",
+    "name": "vi the dang chay (giay/legacy): doi chieu SL so vs cong thuc",
+    "s242": "legacy 48 symbol, 0 'New price SL'/'Update SL' tu 10-01 (chua legacy nao lai >7%)",
+    "shadow": "0 vi the giay (n_pass=0 tu 2a)",
+    "status_242": "MISSING",
+    "status_shadow": "MISSING"
+   },
+   {
+    "action": "tinh offline tu ledger (tools/shadow_vs_sim.py); CAN CODE de tru trong ledger",
+    "evidence": "tradecore/selector/ShadowBookC3.java:388: double pnl = (exitPx - entry) * (double) c.qty;",
+    "expect_sim": "sim tru: fee 0.000982 + 2*slip 0.000067 ~ 0.2098%/vong + funding mark",
+    "id": "G1",
+    "known": true,
+    "layer": "G",
+    "name": "ledger giay: pnl=(exit-entry)*qty, KHONG tru phi/slippage/funding",
+    "s242": "idem (so giay)",
+    "shadow": "khong tru (PnL giay lac quan ~0.210% notional/vong + funding)",
+    "status_242": "FAIL",
+    "status_shadow": "FAIL"
+   },
+   {
+    "action": "doc userTrades khi co lenh dong (khong co API key o day)",
+    "evidence": "",
+    "expect_sim": "0.1116%",
+    "id": "G2",
+    "known": false,
+    "layer": "G",
+    "name": "242: fill that legacy dong \u2014 phi thuc te vs 0.1116%/vong",
+    "s242": "khong co fill legacy nao dong tu 10-01",
+    "shadow": "-",
+    "status_242": "MISSING",
+    "status_shadow": "MISSING"
+   },
+   {
+    "action": "shadow cham hon 242 (doc Aerospike 242 qua WAN) nhung << 60 s",
+    "evidence": "",
+    "expect_sim": "p90 << 60000 ms",
+    "id": "H1",
+    "known": false,
+    "layer": "H",
+    "name": "[PASS-TIMING] selector tick (ms) p50/p90/max trong cua so; nhip 60 s",
+    "s242": "p50=177 p90=257 max=1093 (n=229)",
+    "shadow": "p50=385 p90=458 max=3770 (n=229)",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "",
+    "evidence": "",
+    "expect_sim": "0",
+    "id": "H2",
+    "known": false,
+    "layer": "H",
+    "name": "OOM + ERROR moi (tru nhieu co san: -2015 stub-key, Reporter NPE, P2PTracker, Legacy Scan) trong cua so",
+    "s242": "OOM=0, ERROR la=2 [('ERROR [pool-#-thread-#] c.b.c.c.BinanceP#PTracker: ? getLowestPrice BUY exception: null', 1), ('ERROR [pool-#-thread-#] c.b.c.c.BinanceP#PTracker: ? getLowestPrice SELL exception: null', 1)]",
+    "shadow": "OOM=0, ERROR la=0 []",
+    "status_242": "FAIL",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "",
+    "evidence": "",
+    "expect_sim": "inplace; evicted=0",
+    "id": "H2b",
+    "known": false,
+    "layer": "H",
+    "name": "[OI-LIVE] mode inplace, refresh hang gio evicted=0",
+    "s242": "inplace: cold-load=0, refresh=3, evicted!=0 / reload loi=0",
+    "shadow": "inplace: cold-load=0, refresh=4, evicted!=0 / reload loi=0",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "242: CHI DE XUAT: them export JAVA_TOOL_OPTIONS vao conf/env.sh (an toan, khong .java) \u2014 owner quyet",
+    "evidence": "",
+    "expect_sim": "giu heap 3g (kiem 3 restart)",
+    "id": "H3",
+    "known": true,
+    "layer": "H",
+    "name": "auto-restart 12h giu heap: JAVA_TOOL_OPTIONS trong environ (con ke thua) / -Xmx",
+    "s242": "KHONG: cmdline=.x86_64/bin/java -cp target/binance-java-sdk-1.2.4.jar com.binance.chuyennd.trading.BinanceOrderTradingManager; JAVA_TOOL_OPTIONS vang => heap mac dinh (~1.95GB) sau restart 12h",
+    "shadow": "co: -Xms3g -Xmx3g -Dfile.encoding=UTF-8 -Duser.timezone=Asia/Ho_Chi_Minh; jcmd MaxHeap=3221225472; 'Picked up' sau moi restart: 3",
+    "status_242": "FAIL",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "sau restart shadow universe nho ~560 den khi OI refresh gio dau (cold-load OI 564 coin) \u2014 xem H2b",
+    "evidence": "symbol la trong top-16 (19 symbol): []",
+    "expect_sim": "universe sim: USDT-perp, khong USDC/BTCDOM/_ (SurvivorshipBac0:52)",
+    "id": "I1",
+    "known": false,
+    "layer": "I",
+    "name": "universe live: so coin cham diem [S1] (>=336 moc gio) vs sim (mapper 863 id gom delisted)",
+    "s242": "N median=609 [527..677] (n_enough median=604)",
+    "shadow": "N median=609 [527..677] (n_enough median=604); 30 tick dau cua so=604, 30 tick cuoi=616",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   },
+   {
+    "action": "CAN CODE hoac Aerospike scan volume; neu can: loc theo kline_1m_opt volume",
+    "evidence": "",
+    "expect_sim": "khong",
+    "id": "I2",
+    "known": false,
+    "layer": "I",
+    "name": "symbol vol=0 / symbol la vao top-16",
+    "s242": "idem",
+    "shadow": "top-16 19 symbol khac nhau, 0 ky tu la; vol=0 KHONG kiem duoc (dump khong co volume; S1RankerLive chi loc pc<=0)",
+    "status_242": "MISSING",
+    "status_shadow": "MISSING"
+   },
+   {
+    "action": "ghi nhan",
+    "evidence": "",
+    "expect_sim": "-",
+    "id": "I3",
+    "known": false,
+    "layer": "I",
+    "name": "coin legacy (vi the THAT cu tren 242) bi chan khoi so giay",
+    "s242": "48 coin legacy; 'skip-LEGACY' 1715 lan trong log",
+    "shadow": "legacy_symbols.csv shadow: 0 (khong vi the that)",
+    "status_242": "PASS",
+    "status_shadow": "PASS"
+   }
+  ],
+  "jar_sha256_shadow": "8f3ee52ce4ceac8c",
+  "layers": {
+   "A": {
+    "n": 8,
+    "s242": "PASS",
+    "shadow": "MISSING"
+   },
+   "B": {
+    "n": 8,
+    "s242": "FAIL",
+    "shadow": "FAIL"
+   },
+   "C": {
+    "n": 4,
+    "s242": "MISSING",
+    "shadow": "MISSING"
+   },
+   "D": {
+    "n": 3,
+    "s242": "FAIL",
+    "shadow": "FAIL"
+   },
+   "E": {
+    "n": 6,
+    "s242": "FAIL",
+    "shadow": "FAIL"
+   },
+   "F": {
+    "n": 9,
+    "s242": "FAIL",
+    "shadow": "FAIL"
+   },
+   "G": {
+    "n": 2,
+    "s242": "FAIL",
+    "shadow": "FAIL"
+   },
+   "H": {
+    "n": 4,
+    "s242": "FAIL",
+    "shadow": "PASS"
+   },
+   "I": {
+    "n": 3,
+    "s242": "MISSING",
+    "shadow": "MISSING"
+   }
+  },
+  "overall": "FAIL",
+  "restart_242": "2026-10-03 12:58:01",
+  "restart_shadow": "2026-10-03 17:54:56",
+  "tool": "research/parity/live_vs_sim_check.py",
+  "window_since": "2026-10-03 17:57"
+ },
+ "date": "2026-10-03",
+ "hashes": {
+  "gate_model": "d19fc8cd",
+  "jar": "8f3ee52ce4ceac8c",
+  "jar_nowrite": "f282581a",
+  "net015": "41a07109",
+  "s1": "8b1dcf00"
+ },
+ "shadow_fix": [
+  {
+   "after": "0.09",
+   "backup": "~/claude_master/1003/parity/env.sh.pre_fbase_20261003_215130",
+   "backup_md5_12": "ce35d2f24d7f",
+   "before": "0.015",
+   "e2_leg0_after": 787.50006,
+   "e2_leg0_before": 131.25,
+   "e2_ratio_before": 0.16666666666666666,
+   "file": "~/shadow_c3/app/conf/env.sh",
+   "item": "E2",
+   "key": "SIM_F_BASE"
+  }
+ ]
+}

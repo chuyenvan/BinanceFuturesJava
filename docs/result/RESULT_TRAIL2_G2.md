@@ -9,7 +9,7 @@ Runner `research/analysis/trail2_g2_run.py` · chấm `research/analysis/trail2_
 **Cổng T0: PASS.** Chạy lại với 3 key khai tường minh (0.5 / 0.08 / 0.03): md5 `853aaa08…` byte-identical G2, n 2509, eq 131 374.
 Cả 5 arm PASS T1 §9. Mọi CI95 ΔCalmar_MTM (block-72h inflate 1.665 và episode-cluster) chứa 0 ⇒ theo luật: **không pure form nào tệ hơn G2 có ý nghĩa; đề xuất luật ĐƠN GIẢN NHẤT không kém điểm = FLAT3** (pure phẳng, gap = 3% khi lãi > 3%, bỏ min() + weak/strong; 1 tham số). Lý do chọn: Calmar_MTM điểm cao nhất trong nhóm pure (1.940 vs PROP30 1.895 / FLAT5 1.869 / PROP50 1.837) và cũng cao hơn T0 (1.900) nhẹ; nhóm FLAT có 1 tham số.
 
-**Đọc đúng mức (rủi ro):** đây là "không có bằng chứng kém hơn", KHÔNG phải chứng minh tương đương. FLAT3 hơn T0 +0.04 Calmar_MTM (+2.1%), CAGR +0.12pp, ΣPnL +469 USDT — nằm gọn trong nhiễu. CI rất rộng (xem dưới) nên không loại được mức kém hơn vài điểm Calmar. Lợi ích có thể tin hơn là ĐƠN GIẢN HOÁ (bỏ 3 tham số + phân nhánh pNoPump) chứ không phải hiệu năng.
+**Đọc đúng mức (rủi ro):** đây là "không có bằng chứng kém hơn", KHÔNG phải chứng minh tương đương. FLAT3 hơn T0 +0.04 Calmar_MTM (+2.1%), CAGR +0.12pp, ΣPnL ~~+469~~ **+534** USDT [sửa 2026-10-03, nguồn: `REAUDIT_FLAT3_20261003` 69b3cf07 — artifact: 96 909 − 96 375 = Δequity] — nằm gọn trong nhiễu. CI rất rộng (xem dưới) nên không loại được mức kém hơn vài điểm Calmar. Lợi ích có thể tin hơn là ĐƠN GIẢN HOÁ (bỏ 3 tham số + phân nhánh pNoPump) chứ không phải hiệu năng.
 
 ## Rủi ro / giới hạn
 

@@ -1,0 +1,158 @@
+{
+ "prereg": "docs/prereg/PREREG_SHORT_BETANEUTRAL.md@6610b587",
+ "bins": "/home/ubuntu/sm_pathexit/sm/OLD_ndown_S42",
+ "cost_leg": 0.00112,
+ "cost_leg_stress": 0.0015,
+ "K": 8,
+ "cut": 0.3,
+ "T_h": 72,
+ "n_join": 35446939,
+ "sanity": {
+  "n_kept": 1113792,
+  "net_pre": 0.003865,
+  "fund_mean": -0.005811,
+  "target": {
+   "net_pre": 0.00409,
+   "fund_mean": -0.0058,
+   "tol": 0.0003
+  },
+  "ref_v3_short42_arm": {
+   "n_kept": 1114016,
+   "net_pre": 0.003857,
+   "fund_mean": -0.00581
+  },
+  "PASS": true
+ },
+ "ic": {
+  "all": 0.05165,
+  "by_year": {
+   "2022": 0.048047,
+   "2023": 0.035441,
+   "2024": 0.053924,
+   "2025": 0.069274
+  },
+  "n_tick": 139094
+ },
+ "n1b_elig_frac": 0.8123,
+ "n_picks": 1111217,
+ "n_tick": 139094,
+ "picks_per_tick": 7.989,
+ "cut_rate": 0.0801,
+ "fund_mean_short_row": 0.000333,
+ "ew_universe_mean_n": 254.29,
+ "ew_ret_mean": -0.001537,
+ "ew_fund_mean": 2.2e-05,
+ "spread": {
+  "mean": 0.000189,
+  "raw": [
+   -0.001808,
+   0.002149
+  ],
+  "infl": [
+   -0.002227,
+   0.00256
+  ],
+  "n_tick": 139094,
+  "out_raw": false,
+  "out_legacy": false
+ },
+ "spread_by_year": {
+  "2022": 0.00137,
+  "2023": 0.001251,
+  "2024": -3.9e-05,
+  "2025": -0.001823
+ },
+ "spread_stress": {
+  "mean": -0.000571,
+  "raw": [
+   -0.002568,
+   0.001389
+  ],
+  "infl": [
+   -0.002987,
+   0.0018
+  ],
+  "n_tick": 139094,
+  "out_raw": false,
+  "out_legacy": false
+ },
+ "spread_stress_by_year": {
+  "2022": 0.00061,
+  "2023": 0.000491,
+  "2024": -0.000799,
+  "2025": -0.002583
+ },
+ "spread_gross_pre_fund": 0.002118,
+ "fund_net_2legs": 0.000311,
+ "beta_short_leg": 1.0376,
+ "beta_spread": 0.0298,
+ "corr_short_leg_ew": 0.7523,
+ "directional": {
+  "mean": 0.002868,
+  "raw": [
+   -0.002631,
+   0.008521
+  ],
+  "infl": [
+   -0.003786,
+   0.009708
+  ],
+  "n_tick": 139094,
+  "out_raw": false,
+  "out_legacy": false
+ },
+ "directional_by_year": {
+  "2022": 0.012363,
+  "2023": -0.004795,
+  "2024": -0.001669,
+  "2025": 0.005727
+ },
+ "ew_leg_net_fund": {
+  "mean": -0.001559,
+  "raw": [
+   -0.006813,
+   0.003765
+  ],
+  "infl": [
+   -0.007916,
+   0.004883
+  ],
+  "n_tick": 139094,
+  "out_raw": false,
+  "out_legacy": false
+ },
+ "f3_bound": {
+  "spread": {
+   "mean": 0.000398,
+   "raw": [
+    -0.001613,
+    0.002312
+   ],
+   "infl": [
+    -0.002035,
+    0.002714
+   ],
+   "n_tick": 139094,
+   "out_raw": false,
+   "out_legacy": false
+  },
+  "by_year": {
+   "2022": 0.001392,
+   "2023": 0.001341,
+   "2024": -2.4e-05,
+   "2025": -0.001116
+  },
+  "fund_short_row_cut_only_full": -0.004074,
+  "fund_short_row_cut_only_tohit": -0.001467
+ },
+ "years_pos": 2,
+ "ic_years_pos": 4,
+ "conditions": {
+  "1_sanity": true,
+  "2_spread_ci": false,
+  "3_years_pos_ge3": false,
+  "4_ic_pos_4y": true,
+  "5_stress_pos": false
+ },
+ "VERDICT": "NO-GO"
+}

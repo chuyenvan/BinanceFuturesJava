@@ -1,0 +1,4671 @@
+{
+ "meta": {
+  "script": "research/analysis/gate_offline.py",
+  "bins": "/home/ubuntu/predwf_map_s1a2_x1_2021",
+  "horizonIdx": 0,
+  "K": 24,
+  "pct": 0.999951,
+  "gs": 1.55,
+  "days": 90,
+  "fill_counts": [
+   2301065,
+   2301064,
+   2301065
+  ],
+  "n_minutes_grid": 2301064,
+  "approx": [
+   "held tu printDone cua chinh run",
+   "isTickerAvailable khong tai lap",
+   "tie sp: lexsort on dinh"
+  ]
+ },
+ "D1": {
+  "A1": {
+   "pred_md5": "5dd6bb4c3f98d89d58770005c0001526",
+   "printdone_md5": "d9abf35fdc93cfbcf7c41c9c62c22c20",
+   "n_predict_rows": 3217,
+   "cat_all": {
+    "pass": 3203,
+    "nopass": 14
+   },
+   "cat_2225": {
+    "pass": 2638,
+    "nopass": 14
+   },
+   "max_abs_dsp": 0.0,
+   "max_abs_dp15": 0.0,
+   "recall_minute_2225": 0.991468,
+   "recall_pair_2225": 0.994721,
+   "recall_pair_fresh_2225": 0.994721,
+   "sim_total": {
+    "seen": 52453438,
+    "pass_": 3231
+   },
+   "off_total": {
+    "seen": 52505973,
+    "pass_": 3233
+   },
+   "year": {
+    "2022": {
+     "sim_entry_min": 170,
+     "off_open_min": 179,
+     "ratio_min": 1.052941,
+     "seen_off": 11646493,
+     "seen_sim": 11639183,
+     "pass_off": 537,
+     "pass_sim": 551,
+     "sim_predict_rows": 537,
+     "entered": 523,
+     "waste": 14,
+     "waste_rate": 0.026071,
+     "held_would_pass": 67110,
+     "symmin_per_min": {
+      "mean": 3.0,
+      "p50": 1.0,
+      "p90": 7.2,
+      "max": 24.0
+     },
+     "frac_min_ge5": 0.156425,
+     "share_passes_in_top10pct_min": 0.510242
+    },
+    "2023": {
+     "sim_entry_min": 106,
+     "off_open_min": 106,
+     "ratio_min": 1.0,
+     "seen_off": 11565683,
+     "seen_sim": 11558780,
+     "pass_off": 708,
+     "pass_sim": 708,
+     "sim_predict_rows": 708,
+     "entered": 708,
+     "waste": 0,
+     "waste_rate": 0.0,
+     "held_would_pass": 7575,
+     "symmin_per_min": {
+      "mean": 6.679245,
+      "p50": 3.0,
+      "p90": 21.5,
+      "max": 24.0
+     },
+     "frac_min_ge5": 0.415094,
+     "share_passes_in_top10pct_min": 0.351695
+    },
+    "2024": {
+     "sim_entry_min": 130,
+     "off_open_min": 130,
+     "ratio_min": 1.0,
+     "seen_off": 11747519,
+     "seen_sim": 11745896,
+     "pass_off": 767,
+     "pass_sim": 766,
+     "sim_predict_rows": 766,
+     "entered": 766,
+     "waste": 1,
+     "waste_rate": 0.001304,
+     "held_would_pass": 18992,
+     "symmin_per_min": {
+      "mean": 5.9,
+      "p50": 2.0,
+      "p90": 17.1,
+      "max": 24.0
+     },
+     "frac_min_ge5": 0.369231,
+     "share_passes_in_top10pct_min": 0.370274
+    },
+    "2025": {
+     "sim_entry_min": 180,
+     "off_open_min": 180,
+     "ratio_min": 1.0,
+     "seen_off": 11829199,
+     "seen_sim": 11802825,
+     "pass_off": 641,
+     "pass_sim": 641,
+     "sim_predict_rows": 641,
+     "entered": 641,
+     "waste": 0,
+     "waste_rate": 0.0,
+     "held_would_pass": 34232,
+     "symmin_per_min": {
+      "mean": 3.561111,
+      "p50": 1.0,
+      "p90": 10.0,
+      "max": 23.0
+     },
+     "frac_min_ge5": 0.188889,
+     "share_passes_in_top10pct_min": 0.478939
+    }
+   },
+   "quarter": {
+    "20213": {
+     "seen_off": 2801201,
+     "seen_sim": 2790956,
+     "pass_off": 383,
+     "pass_sim": 383
+    },
+    "20214": {
+     "seen_off": 2915878,
+     "seen_sim": 2915798,
+     "pass_off": 197,
+     "pass_sim": 182
+    },
+    "20221": {
+     "seen_off": 2898700,
+     "seen_sim": 2898399,
+     "pass_off": 89,
+     "pass_sim": 103
+    },
+    "20222": {
+     "seen_off": 2805147,
+     "seen_sim": 2804209,
+     "pass_off": 270,
+     "pass_sim": 270
+    },
+    "20223": {
+     "seen_off": 3038843,
+     "seen_sim": 3036729,
+     "pass_off": 66,
+     "pass_sim": 66
+    },
+    "20224": {
+     "seen_off": 2903803,
+     "seen_sim": 2899846,
+     "pass_off": 112,
+     "pass_sim": 112
+    },
+    "20231": {
+     "seen_off": 2840345,
+     "seen_sim": 2839303,
+     "pass_off": 159,
+     "pass_sim": 159
+    },
+    "20232": {
+     "seen_off": 2876501,
+     "seen_sim": 2874217,
+     "pass_off": 180,
+     "pass_sim": 180
+    },
+    "20233": {
+     "seen_off": 2945365,
+     "seen_sim": 2942612,
+     "pass_off": 107,
+     "pass_sim": 107
+    },
+    "20234": {
+     "seen_off": 2903472,
+     "seen_sim": 2902648,
+     "pass_off": 262,
+     "pass_sim": 262
+    },
+    "20241": {
+     "seen_off": 2925430,
+     "seen_sim": 2925297,
+     "pass_off": 228,
+     "pass_sim": 228
+    },
+    "20242": {
+     "seen_off": 2855420,
+     "seen_sim": 2855269,
+     "pass_off": 176,
+     "pass_sim": 176
+    },
+    "20243": {
+     "seen_off": 2975044,
+     "seen_sim": 2974320,
+     "pass_off": 128,
+     "pass_sim": 128
+    },
+    "20244": {
+     "seen_off": 2991625,
+     "seen_sim": 2991010,
+     "pass_off": 235,
+     "pass_sim": 234
+    },
+    "20251": {
+     "seen_off": 2878990,
+     "seen_sim": 2878566,
+     "pass_off": 234,
+     "pass_sim": 234
+    },
+    "20252": {
+     "seen_off": 3028063,
+     "seen_sim": 3027483,
+     "pass_off": 36,
+     "pass_sim": 36
+    },
+    "20253": {
+     "seen_off": 3007328,
+     "seen_sim": 3006621,
+     "pass_off": 74,
+     "pass_sim": 74
+    },
+    "20254": {
+     "seen_off": 2914818,
+     "seen_sim": 2890155,
+     "pass_off": 297,
+     "pass_sim": 297
+    }
+   }
+  },
+  "S7": {
+   "pred_md5": "b737fb6d64d198c14654ea9c92510b36",
+   "printdone_md5": "8f5e29127b2c093a1bb1aa90645736d1",
+   "n_predict_rows": 3108,
+   "cat_all": {
+    "pass": 3089,
+    "nopass": 19
+   },
+   "cat_2225": {
+    "pass": 2529,
+    "nopass": 19
+   },
+   "max_abs_dsp": 0.0,
+   "max_abs_dp15": 0.0,
+   "recall_minute_2225": 0.996503,
+   "recall_pair_2225": 0.992543,
+   "recall_pair_fresh_2225": 0.992543,
+   "sim_total": {
+    "seen": 52409437,
+    "pass_": 3223
+   },
+   "off_total": {
+    "seen": 52461977,
+    "pass_": 3220
+   },
+   "year": {
+    "2022": {
+     "sim_entry_min": 138,
+     "off_open_min": 206,
+     "ratio_min": 1.492754,
+     "seen_off": 11691729,
+     "seen_sim": 11684407,
+     "pass_off": 507,
+     "pass_sim": 526,
+     "sim_predict_rows": 411,
+     "entered": 392,
+     "waste": 115,
+     "waste_rate": 0.226824,
+     "held_would_pass": 57272,
+     "symmin_per_min": {
+      "mean": 2.461165,
+      "p50": 1.0,
+      "p90": 3.0,
+      "max": 23.0
+     },
+     "frac_min_ge5": 0.082524,
+     "share_passes_in_top10pct_min": 0.463511
+    },
+    "2023": {
+     "sim_entry_min": 112,
+     "off_open_min": 112,
+     "ratio_min": 1.0,
+     "seen_off": 11550557,
+     "seen_sim": 11543657,
+     "pass_off": 709,
+     "pass_sim": 709,
+     "sim_predict_rows": 709,
+     "entered": 709,
+     "waste": 0,
+     "waste_rate": 0.0,
+     "held_would_pass": 7938,
+     "symmin_per_min": {
+      "mean": 6.330357,
+      "p50": 2.0,
+      "p90": 21.0,
+      "max": 24.0
+     },
+     "frac_min_ge5": 0.392857,
+     "share_passes_in_top10pct_min": 0.380818
+    },
+    "2024": {
+     "sim_entry_min": 144,
+     "off_open_min": 144,
+     "ratio_min": 1.0,
+     "seen_off": 11685708,
+     "seen_sim": 11684086,
+     "pass_off": 806,
+     "pass_sim": 806,
+     "sim_predict_rows": 806,
+     "entered": 806,
+     "waste": 0,
+     "waste_rate": 0.0,
+     "held_would_pass": 20656,
+     "symmin_per_min": {
+      "mean": 5.597222,
+      "p50": 2.0,
+      "p90": 17.0,
+      "max": 24.0
+     },
+     "frac_min_ge5": 0.319444,
+     "share_passes_in_top10pct_min": 0.3933
+    },
+    "2025": {
+     "sim_entry_min": 178,
+     "off_open_min": 178,
+     "ratio_min": 1.0,
+     "seen_off": 11844430,
+     "seen_sim": 11818056,
+     "pass_off": 622,
+     "pass_sim": 622,
+     "sim_predict_rows": 622,
+     "entered": 622,
+     "waste": 0,
+     "waste_rate": 0.0,
+     "held_would_pass": 33666,
+     "symmin_per_min": {
+      "mean": 3.494382,
+      "p50": 1.0,
+      "p90": 10.3,
+      "max": 22.0
+     },
+     "frac_min_ge5": 0.179775,
+     "share_passes_in_top10pct_min": 0.491961
+    }
+   },
+   "quarter": {
+    "20213": {
+     "seen_off": 2784824,
+     "seen_sim": 2774580,
+     "pass_off": 386,
+     "pass_sim": 385
+    },
+    "20214": {
+     "seen_off": 2904729,
+     "seen_sim": 2904651,
+     "pass_off": 190,
+     "pass_sim": 175
+    },
+    "20221": {
+     "seen_off": 2889474,
+     "seen_sim": 2889173,
+     "pass_off": 80,
+     "pass_sim": 99
+    },
+    "20222": {
+     "seen_off": 2842832,
+     "seen_sim": 2841895,
+     "pass_off": 294,
+     "pass_sim": 294
+    },
+    "20223": {
+     "seen_off": 3047658,
+     "seen_sim": 3045541,
+     "pass_off": 43,
+     "pass_sim": 43
+    },
+    "20224": {
+     "seen_off": 2911765,
+     "seen_sim": 2907798,
+     "pass_off": 90,
+     "pass_sim": 90
+    },
+    "20231": {
+     "seen_off": 2860964,
+     "seen_sim": 2859921,
+     "pass_off": 139,
+     "pass_sim": 139
+    },
+    "20232": {
+     "seen_off": 2840330,
+     "seen_sim": 2838051,
+     "pass_off": 162,
+     "pass_sim": 162
+    },
+    "20233": {
+     "seen_off": 2945590,
+     "seen_sim": 2942836,
+     "pass_off": 113,
+     "pass_sim": 113
+    },
+    "20234": {
+     "seen_off": 2903673,
+     "seen_sim": 2902849,
+     "pass_off": 295,
+     "pass_sim": 295
+    },
+    "20241": {
+     "seen_off": 2910251,
+     "seen_sim": 2910118,
+     "pass_off": 241,
+     "pass_sim": 241
+    },
+    "20242": {
+     "seen_off": 2835985,
+     "seen_sim": 2835834,
+     "pass_off": 182,
+     "pass_sim": 182
+    },
+    "20243": {
+     "seen_off": 2982074,
+     "seen_sim": 2981350,
+     "pass_off": 129,
+     "pass_sim": 129
+    },
+    "20244": {
+     "seen_off": 2957398,
+     "seen_sim": 2956784,
+     "pass_off": 254,
+     "pass_sim": 254
+    },
+    "20251": {
+     "seen_off": 2899934,
+     "seen_sim": 2899508,
+     "pass_off": 216,
+     "pass_sim": 216
+    },
+    "20252": {
+     "seen_off": 3028782,
+     "seen_sim": 3028202,
+     "pass_off": 35,
+     "pass_sim": 35
+    },
+    "20253": {
+     "seen_off": 2997992,
+     "seen_sim": 2997287,
+     "pass_off": 77,
+     "pass_sim": 77
+    },
+    "20254": {
+     "seen_off": 2917722,
+     "seen_sim": 2893059,
+     "pass_off": 294,
+     "pass_sim": 294
+    }
+   }
+  },
+  "S13": {
+   "pred_md5": "cd6d7b2ed05b9ad326358717fdbdd842",
+   "printdone_md5": "eb77f309c71bc4b4a667e944e14d2bd5",
+   "n_predict_rows": 3072,
+   "cat_all": {
+    "pass": 3054,
+    "nopass": 18
+   },
+   "cat_2225": {
+    "pass": 2484,
+    "nopass": 18
+   },
+   "max_abs_dsp": 0.0,
+   "max_abs_dp15": 0.0,
+   "recall_minute_2225": 0.996435,
+   "recall_pair_2225": 0.992806,
+   "recall_pair_fresh_2225": 0.992806,
+   "sim_total": {
+    "seen": 52478051,
+    "pass_": 3211
+   },
+   "off_total": {
+    "seen": 52530628,
+    "pass_": 3215
+   },
+   "year": {
+    "2022": {
+     "sim_entry_min": 137,
+     "off_open_min": 227,
+     "ratio_min": 1.656934,
+     "seen_off": 11684628,
+     "seen_sim": 11677289,
+     "pass_off": 549,
+     "pass_sim": 567,
+     "sim_predict_rows": 428,
+     "entered": 410,
+     "waste": 139,
+     "waste_rate": 0.253188,
+     "held_would_pass": 60033,
+     "symmin_per_min": {
+      "mean": 2.418502,
+      "p50": 1.0,
+      "p90": 4.0,
+      "max": 24.0
+     },
+     "frac_min_ge5": 0.088106,
+     "share_passes_in_top10pct_min": 0.437158
+    },
+    "2023": {
+     "sim_entry_min": 114,
+     "off_open_min": 114,
+     "ratio_min": 1.0,
+     "seen_off": 11549309,
+     "seen_sim": 11542390,
+     "pass_off": 709,
+     "pass_sim": 703,
+     "sim_predict_rows": 703,
+     "entered": 703,
+     "waste": 6,
+     "waste_rate": 0.008463,
+     "held_would_pass": 7721,
+     "symmin_per_min": {
+      "mean": 6.219298,
+      "p50": 2.5,
+      "p90": 17.0,
+      "max": 24.0
+     },
+     "frac_min_ge5": 0.403509,
+     "share_passes_in_top10pct_min": 0.356841
+    },
+    "2024": {
+     "sim_entry_min": 128,
+     "off_open_min": 128,
+     "ratio_min": 1.0,
+     "seen_off": 11773543,
+     "seen_sim": 11771921,
+     "pass_off": 742,
+     "pass_sim": 742,
+     "sim_predict_rows": 742,
+     "entered": 742,
+     "waste": 0,
+     "waste_rate": 0.0,
+     "held_would_pass": 18272,
+     "symmin_per_min": {
+      "mean": 5.796875,
+      "p50": 2.0,
+      "p90": 20.0,
+      "max": 24.0
+     },
+     "frac_min_ge5": 0.320312,
+     "share_passes_in_top10pct_min": 0.390836
+    },
+    "2025": {
+     "sim_entry_min": 182,
+     "off_open_min": 182,
+     "ratio_min": 1.0,
+     "seen_off": 11831515,
+     "seen_sim": 11805142,
+     "pass_off": 629,
+     "pass_sim": 629,
+     "sim_predict_rows": 629,
+     "entered": 629,
+     "waste": 0,
+     "waste_rate": 0.0,
+     "held_would_pass": 34066,
+     "symmin_per_min": {
+      "mean": 3.456044,
+      "p50": 1.0,
+      "p90": 10.0,
+      "max": 24.0
+     },
+     "frac_min_ge5": 0.181319,
+     "share_passes_in_top10pct_min": 0.524642
+    }
+   },
+   "quarter": {
+    "20213": {
+     "seen_off": 2779504,
+     "seen_sim": 2769260,
+     "pass_off": 387,
+     "pass_sim": 386
+    },
+    "20214": {
+     "seen_off": 2912129,
+     "seen_sim": 2912049,
+     "pass_off": 199,
+     "pass_sim": 184
+    },
+    "20221": {
+     "seen_off": 2883913,
+     "seen_sim": 2883612,
+     "pass_off": 82,
+     "pass_sim": 100
+    },
+    "20222": {
+     "seen_off": 2837462,
+     "seen_sim": 2836511,
+     "pass_off": 320,
+     "pass_sim": 320
+    },
+    "20223": {
+     "seen_off": 3047613,
+     "seen_sim": 3045496,
+     "pass_off": 45,
+     "pass_sim": 45
+    },
+    "20224": {
+     "seen_off": 2915640,
+     "seen_sim": 2911670,
+     "pass_off": 102,
+     "pass_sim": 102
+    },
+    "20231": {
+     "seen_off": 2897381,
+     "seen_sim": 2896309,
+     "pass_off": 116,
+     "pass_sim": 111
+    },
+    "20232": {
+     "seen_off": 2802341,
+     "seen_sim": 2800072,
+     "pass_off": 200,
+     "pass_sim": 199
+    },
+    "20233": {
+     "seen_off": 2942831,
+     "seen_sim": 2940077,
+     "pass_off": 114,
+     "pass_sim": 114
+    },
+    "20234": {
+     "seen_off": 2906756,
+     "seen_sim": 2905932,
+     "pass_off": 279,
+     "pass_sim": 279
+    },
+    "20241": {
+     "seen_off": 2933548,
+     "seen_sim": 2933415,
+     "pass_off": 227,
+     "pass_sim": 227
+    },
+    "20242": {
+     "seen_off": 2868606,
+     "seen_sim": 2868455,
+     "pass_off": 163,
+     "pass_sim": 163
+    },
+    "20243": {
+     "seen_off": 3008066,
+     "seen_sim": 3007342,
+     "pass_off": 111,
+     "pass_sim": 111
+    },
+    "20244": {
+     "seen_off": 2963323,
+     "seen_sim": 2962709,
+     "pass_off": 241,
+     "pass_sim": 241
+    },
+    "20251": {
+     "seen_off": 2898446,
+     "seen_sim": 2898020,
+     "pass_off": 212,
+     "pass_sim": 212
+    },
+    "20252": {
+     "seen_off": 3027520,
+     "seen_sim": 3026940,
+     "pass_off": 38,
+     "pass_sim": 38
+    },
+    "20253": {
+     "seen_off": 2996575,
+     "seen_sim": 2995871,
+     "pass_off": 77,
+     "pass_sim": 77
+    },
+    "20254": {
+     "seen_off": 2908974,
+     "seen_sim": 2884311,
+     "pass_off": 302,
+     "pass_sim": 302
+    }
+   }
+  },
+  "S21": {
+   "pred_md5": "0b541d2259b31cf2794160e0aeafa3ff",
+   "printdone_md5": "1e7c88aeee272421311c8d9edf511b40",
+   "n_predict_rows": 2903,
+   "cat_all": {
+    "pass": 2898,
+    "nopass": 5
+   },
+   "cat_2225": {
+    "pass": 2349,
+    "nopass": 5
+   },
+   "max_abs_dsp": 0.0,
+   "max_abs_dp15": 0.0,
+   "recall_minute_2225": 0.996124,
+   "recall_pair_2225": 0.997876,
+   "recall_pair_fresh_2225": 0.997876,
+   "sim_total": {
+    "seen": 52641724,
+    "pass_": 3157
+   },
+   "off_total": {
+    "seen": 52694313,
+    "pass_": 3169
+   },
+   "year": {
+    "2022": {
+     "sim_entry_min": 106,
+     "off_open_min": 251,
+     "ratio_min": 2.367925,
+     "seen_off": 11743992,
+     "seen_sim": 11736653,
+     "pass_off": 595,
+     "pass_sim": 599,
+     "sim_predict_rows": 345,
+     "entered": 340,
+     "waste": 255,
+     "waste_rate": 0.428571,
+     "held_would_pass": 46881,
+     "symmin_per_min": {
+      "mean": 2.370518,
+      "p50": 2.0,
+      "p90": 3.0,
+      "max": 24.0
+     },
+     "frac_min_ge5": 0.079681,
+     "share_passes_in_top10pct_min": 0.393277
+    },
+    "2023": {
+     "sim_entry_min": 105,
+     "off_open_min": 106,
+     "ratio_min": 1.009524,
+     "seen_off": 11620732,
+     "seen_sim": 11613804,
+     "pass_off": 625,
+     "pass_sim": 624,
+     "sim_predict_rows": 624,
+     "entered": 624,
+     "waste": 1,
+     "waste_rate": 0.0016,
+     "held_would_pass": 7046,
+     "symmin_per_min": {
+      "mean": 5.896226,
+      "p50": 2.0,
+      "p90": 17.5,
+      "max": 24.0
+     },
+     "frac_min_ge5": 0.367925,
+     "share_passes_in_top10pct_min": 0.3936
+    },
+    "2024": {
+     "sim_entry_min": 133,
+     "off_open_min": 133,
+     "ratio_min": 1.0,
+     "seen_off": 11745966,
+     "seen_sim": 11744345,
+     "pass_off": 767,
+     "pass_sim": 767,
+     "sim_predict_rows": 767,
+     "entered": 767,
+     "waste": 0,
+     "waste_rate": 0.0,
+     "held_would_pass": 19247,
+     "symmin_per_min": {
+      "mean": 5.766917,
+      "p50": 2.0,
+      "p90": 18.8,
+      "max": 24.0
+     },
+     "frac_min_ge5": 0.330827,
+     "share_passes_in_top10pct_min": 0.40678
+    },
+    "2025": {
+     "sim_entry_min": 172,
+     "off_open_min": 172,
+     "ratio_min": 1.0,
+     "seen_off": 11855259,
+     "seen_sim": 11828883,
+     "pass_off": 618,
+     "pass_sim": 618,
+     "sim_predict_rows": 618,
+     "entered": 618,
+     "waste": 0,
+     "waste_rate": 0.0,
+     "held_would_pass": 32628,
+     "symmin_per_min": {
+      "mean": 3.593023,
+      "p50": 1.0,
+      "p90": 11.0,
+      "max": 24.0
+     },
+     "frac_min_ge5": 0.174419,
+     "share_passes_in_top10pct_min": 0.530744
+    }
+   },
+   "quarter": {
+    "20213": {
+     "seen_off": 2814963,
+     "seen_sim": 2804718,
+     "pass_off": 363,
+     "pass_sim": 363
+    },
+    "20214": {
+     "seen_off": 2913401,
+     "seen_sim": 2913321,
+     "pass_off": 201,
+     "pass_sim": 186
+    },
+    "20221": {
+     "seen_off": 2897260,
+     "seen_sim": 2896959,
+     "pass_off": 92,
+     "pass_sim": 97
+    },
+    "20222": {
+     "seen_off": 2863966,
+     "seen_sim": 2863016,
+     "pass_off": 406,
+     "pass_sim": 405
+    },
+    "20223": {
+     "seen_off": 3059448,
+     "seen_sim": 3057328,
+     "pass_off": 15,
+     "pass_sim": 15
+    },
+    "20224": {
+     "seen_off": 2923318,
+     "seen_sim": 2919350,
+     "pass_off": 82,
+     "pass_sim": 82
+    },
+    "20231": {
+     "seen_off": 2911893,
+     "seen_sim": 2910836,
+     "pass_off": 87,
+     "pass_sim": 87
+    },
+    "20232": {
+     "seen_off": 2856208,
+     "seen_sim": 2853924,
+     "pass_off": 149,
+     "pass_sim": 149
+    },
+    "20233": {
+     "seen_off": 2946187,
+     "seen_sim": 2943424,
+     "pass_off": 112,
+     "pass_sim": 112
+    },
+    "20234": {
+     "seen_off": 2906444,
+     "seen_sim": 2905620,
+     "pass_off": 277,
+     "pass_sim": 276
+    },
+    "20241": {
+     "seen_off": 2918126,
+     "seen_sim": 2917994,
+     "pass_off": 243,
+     "pass_sim": 243
+    },
+    "20242": {
+     "seen_off": 2866216,
+     "seen_sim": 2866065,
+     "pass_off": 158,
+     "pass_sim": 158
+    },
+    "20243": {
+     "seen_off": 3000003,
+     "seen_sim": 2999279,
+     "pass_off": 120,
+     "pass_sim": 120
+    },
+    "20244": {
+     "seen_off": 2961621,
+     "seen_sim": 2961007,
+     "pass_off": 246,
+     "pass_sim": 246
+    },
+    "20251": {
+     "seen_off": 2906294,
+     "seen_sim": 2905868,
+     "pass_off": 216,
+     "pass_sim": 216
+    },
+    "20252": {
+     "seen_off": 3042467,
+     "seen_sim": 3041887,
+     "pass_off": 30,
+     "pass_sim": 30
+    },
+    "20253": {
+     "seen_off": 3002498,
+     "seen_sim": 3001791,
+     "pass_off": 73,
+     "pass_sim": 73
+    },
+    "20254": {
+     "seen_off": 2904000,
+     "seen_sim": 2879337,
+     "pass_off": 299,
+     "pass_sim": 299
+    }
+   }
+  },
+  "S99": {
+   "pred_md5": "5ef90e928cd4f5a7aa55c4b88a1b6bd1",
+   "printdone_md5": "989de0baa473b573ed595eae6997767a",
+   "n_predict_rows": 3355,
+   "cat_all": {
+    "pass": 3351,
+    "nopass": 4
+   },
+   "cat_2225": {
+    "pass": 2771,
+    "nopass": 4
+   },
+   "max_abs_dsp": 0.0,
+   "max_abs_dp15": 0.0,
+   "recall_minute_2225": 1.0,
+   "recall_pair_2225": 0.998559,
+   "recall_pair_fresh_2225": 0.998559,
+   "sim_total": {
+    "seen": 52299703,
+    "pass_": 3369
+   },
+   "off_total": {
+    "seen": 52352143,
+    "pass_": 3384
+   },
+   "year": {
+    "2022": {
+     "sim_entry_min": 163,
+     "off_open_min": 177,
+     "ratio_min": 1.08589,
+     "seen_off": 11575916,
+     "seen_sim": 11568657,
+     "pass_off": 592,
+     "pass_sim": 596,
+     "sim_predict_rows": 582,
+     "entered": 578,
+     "waste": 14,
+     "waste_rate": 0.023649,
+     "held_would_pass": 72527,
+     "symmin_per_min": {
+      "mean": 3.344633,
+      "p50": 1.0,
+      "p90": 11.0,
+      "max": 24.0
+     },
+     "frac_min_ge5": 0.163842,
+     "share_passes_in_top10pct_min": 0.503378
+    },
+    "2023": {
+     "sim_entry_min": 105,
+     "off_open_min": 105,
+     "ratio_min": 1.0,
+     "seen_off": 11552684,
+     "seen_sim": 11545816,
+     "pass_off": 711,
+     "pass_sim": 708,
+     "sim_predict_rows": 708,
+     "entered": 708,
+     "waste": 3,
+     "waste_rate": 0.004219,
+     "held_would_pass": 7468,
+     "symmin_per_min": {
+      "mean": 6.771429,
+      "p50": 3.0,
+      "p90": 21.6,
+      "max": 24.0
+     },
+     "frac_min_ge5": 0.428571,
+     "share_passes_in_top10pct_min": 0.351617
+    },
+    "2024": {
+     "sim_entry_min": 138,
+     "off_open_min": 138,
+     "ratio_min": 1.0,
+     "seen_off": 11735976,
+     "seen_sim": 11734353,
+     "pass_off": 793,
+     "pass_sim": 793,
+     "sim_predict_rows": 793,
+     "entered": 793,
+     "waste": 0,
+     "waste_rate": 0.0,
+     "held_would_pass": 18946,
+     "symmin_per_min": {
+      "mean": 5.746377,
+      "p50": 2.0,
+      "p90": 18.0,
+      "max": 24.0
+     },
+     "frac_min_ge5": 0.333333,
+     "share_passes_in_top10pct_min": 0.390921
+    },
+    "2025": {
+     "sim_entry_min": 186,
+     "off_open_min": 186,
+     "ratio_min": 1.0,
+     "seen_off": 11793916,
+     "seen_sim": 11767550,
+     "pass_off": 692,
+     "pass_sim": 692,
+     "sim_predict_rows": 692,
+     "entered": 692,
+     "waste": 0,
+     "waste_rate": 0.0,
+     "held_would_pass": 34491,
+     "symmin_per_min": {
+      "mean": 3.72043,
+      "p50": 1.0,
+      "p90": 11.5,
+      "max": 24.0
+     },
+     "frac_min_ge5": 0.188172,
+     "share_passes_in_top10pct_min": 0.484104
+    }
+   },
+   "quarter": {
+    "20213": {
+     "seen_off": 2782382,
+     "seen_sim": 2772138,
+     "pass_off": 391,
+     "pass_sim": 390
+    },
+    "20214": {
+     "seen_off": 2911269,
+     "seen_sim": 2911189,
+     "pass_off": 205,
+     "pass_sim": 190
+    },
+    "20221": {
+     "seen_off": 2879357,
+     "seen_sim": 2879056,
+     "pass_off": 95,
+     "pass_sim": 99
+    },
+    "20222": {
+     "seen_off": 2786925,
+     "seen_sim": 2785975,
+     "pass_off": 286,
+     "pass_sim": 286
+    },
+    "20223": {
+     "seen_off": 3005096,
+     "seen_sim": 3003052,
+     "pass_off": 108,
+     "pass_sim": 108
+    },
+    "20224": {
+     "seen_off": 2904538,
+     "seen_sim": 2900574,
+     "pass_off": 103,
+     "pass_sim": 103
+    },
+    "20231": {
+     "seen_off": 2858294,
+     "seen_sim": 2857241,
+     "pass_off": 150,
+     "pass_sim": 149
+    },
+    "20232": {
+     "seen_off": 2839691,
+     "seen_sim": 2837463,
+     "pass_off": 190,
+     "pass_sim": 190
+    },
+    "20233": {
+     "seen_off": 2956945,
+     "seen_sim": 2954182,
+     "pass_off": 101,
+     "pass_sim": 101
+    },
+    "20234": {
+     "seen_off": 2897754,
+     "seen_sim": 2896930,
+     "pass_off": 270,
+     "pass_sim": 268
+    },
+    "20241": {
+     "seen_off": 2926245,
+     "seen_sim": 2926112,
+     "pass_off": 230,
+     "pass_sim": 230
+    },
+    "20242": {
+     "seen_off": 2859153,
+     "seen_sim": 2859002,
+     "pass_off": 184,
+     "pass_sim": 184
+    },
+    "20243": {
+     "seen_off": 2972574,
+     "seen_sim": 2971850,
+     "pass_off": 130,
+     "pass_sim": 130
+    },
+    "20244": {
+     "seen_off": 2978004,
+     "seen_sim": 2977389,
+     "pass_off": 249,
+     "pass_sim": 249
+    },
+    "20251": {
+     "seen_off": 2859192,
+     "seen_sim": 2858768,
+     "pass_off": 259,
+     "pass_sim": 259
+    },
+    "20252": {
+     "seen_off": 3023441,
+     "seen_sim": 3022861,
+     "pass_off": 42,
+     "pass_sim": 42
+    },
+    "20253": {
+     "seen_off": 2991141,
+     "seen_sim": 2990442,
+     "pass_off": 88,
+     "pass_sim": 88
+    },
+    "20254": {
+     "seen_off": 2920142,
+     "seen_sim": 2895479,
+     "pass_off": 303,
+     "pass_sim": 303
+    }
+   }
+  },
+  "S123": {
+   "pred_md5": "9b1dad9051c3d72b8bba8c0f547623f9",
+   "printdone_md5": "b9d5270183b6592bfa51c44eb669b430",
+   "n_predict_rows": 3103,
+   "cat_all": {
+    "pass": 3092,
+    "nopass": 11
+   },
+   "cat_2225": {
+    "pass": 2547,
+    "nopass": 11
+   },
+   "max_abs_dsp": 0.0,
+   "max_abs_dp15": 0.0,
+   "recall_minute_2225": 0.996303,
+   "recall_pair_2225": 0.9957,
+   "recall_pair_fresh_2225": 0.9957,
+   "sim_total": {
+    "seen": 52455875,
+    "pass_": 3234
+   },
+   "off_total": {
+    "seen": 52508436,
+    "pass_": 3240
+   },
+   "year": {
+    "2022": {
+     "sim_entry_min": 131,
+     "off_open_min": 217,
+     "ratio_min": 1.656489,
+     "seen_off": 11701592,
+     "seen_sim": 11694267,
+     "pass_off": 546,
+     "pass_sim": 557,
+     "sim_predict_rows": 426,
+     "entered": 415,
+     "waste": 131,
+     "waste_rate": 0.239927,
+     "held_would_pass": 59597,
+     "symmin_per_min": {
+      "mean": 2.516129,
+      "p50": 1.0,
+      "p90": 5.0,
+      "max": 23.0
+     },
+     "frac_min_ge5": 0.105991,
+     "share_passes_in_top10pct_min": 0.457875
+    },
+    "2023": {
+     "sim_entry_min": 108,
+     "off_open_min": 108,
+     "ratio_min": 1.0,
+     "seen_off": 11529648,
+     "seen_sim": 11522734,
+     "pass_off": 716,
+     "pass_sim": 716,
+     "sim_predict_rows": 716,
+     "entered": 716,
+     "waste": 0,
+     "waste_rate": 0.0,
+     "held_would_pass": 8028,
+     "symmin_per_min": {
+      "mean": 6.62963,
+      "p50": 3.0,
+      "p90": 20.3,
+      "max": 24.0
+     },
+     "frac_min_ge5": 0.407407,
+     "share_passes_in_top10pct_min": 0.349162
+    },
+    "2024": {
+     "sim_entry_min": 124,
+     "off_open_min": 124,
+     "ratio_min": 1.0,
+     "seen_off": 11739491,
+     "seen_sim": 11737869,
+     "pass_off": 770,
+     "pass_sim": 770,
+     "sim_predict_rows": 770,
+     "entered": 770,
+     "waste": 0,
+     "waste_rate": 0.0,
+     "held_would_pass": 18041,
+     "symmin_per_min": {
+      "mean": 6.209677,
+      "p50": 3.0,
+      "p90": 19.7,
+      "max": 24.0
+     },
+     "frac_min_ge5": 0.362903,
+     "share_passes_in_top10pct_min": 0.376623
+    },
+    "2025": {
+     "sim_entry_min": 178,
+     "off_open_min": 178,
+     "ratio_min": 1.0,
+     "seen_off": 11828770,
+     "seen_sim": 11802396,
+     "pass_off": 646,
+     "pass_sim": 646,
+     "sim_predict_rows": 646,
+     "entered": 646,
+     "waste": 0,
+     "waste_rate": 0.0,
+     "held_would_pass": 34299,
+     "symmin_per_min": {
+      "mean": 3.629213,
+      "p50": 1.0,
+      "p90": 11.0,
+      "max": 23.0
+     },
+     "frac_min_ge5": 0.185393,
+     "share_passes_in_top10pct_min": 0.470588
+    }
+   },
+   "quarter": {
+    "20213": {
+     "seen_off": 2799051,
+     "seen_sim": 2788804,
+     "pass_off": 376,
+     "pass_sim": 374
+    },
+    "20214": {
+     "seen_off": 2909884,
+     "seen_sim": 2909805,
+     "pass_off": 186,
+     "pass_sim": 171
+    },
+    "20221": {
+     "seen_off": 2901893,
+     "seen_sim": 2901592,
+     "pass_off": 89,
+     "pass_sim": 100
+    },
+    "20222": {
+     "seen_off": 2841859,
+     "seen_sim": 2840909,
+     "pass_off": 305,
+     "pass_sim": 305
+    },
+    "20223": {
+     "seen_off": 3054456,
+     "seen_sim": 3052339,
+     "pass_off": 35,
+     "pass_sim": 35
+    },
+    "20224": {
+     "seen_off": 2903384,
+     "seen_sim": 2899427,
+     "pass_off": 117,
+     "pass_sim": 117
+    },
+    "20231": {
+     "seen_off": 2859785,
+     "seen_sim": 2858739,
+     "pass_off": 157,
+     "pass_sim": 157
+    },
+    "20232": {
+     "seen_off": 2822398,
+     "seen_sim": 2820116,
+     "pass_off": 178,
+     "pass_sim": 178
+    },
+    "20233": {
+     "seen_off": 2953293,
+     "seen_sim": 2950531,
+     "pass_off": 97,
+     "pass_sim": 97
+    },
+    "20234": {
+     "seen_off": 2894172,
+     "seen_sim": 2893348,
+     "pass_off": 284,
+     "pass_sim": 284
+    },
+    "20241": {
+     "seen_off": 2923597,
+     "seen_sim": 2923464,
+     "pass_off": 224,
+     "pass_sim": 224
+    },
+    "20242": {
+     "seen_off": 2867403,
+     "seen_sim": 2867252,
+     "pass_off": 158,
+     "pass_sim": 158
+    },
+    "20243": {
+     "seen_off": 2987487,
+     "seen_sim": 2986763,
+     "pass_off": 130,
+     "pass_sim": 130
+    },
+    "20244": {
+     "seen_off": 2961004,
+     "seen_sim": 2960390,
+     "pass_off": 258,
+     "pass_sim": 258
+    },
+    "20251": {
+     "seen_off": 2887651,
+     "seen_sim": 2887225,
+     "pass_off": 230,
+     "pass_sim": 230
+    },
+    "20252": {
+     "seen_off": 3025258,
+     "seen_sim": 3024678,
+     "pass_off": 36,
+     "pass_sim": 36
+    },
+    "20253": {
+     "seen_off": 2998304,
+     "seen_sim": 2997599,
+     "pass_off": 84,
+     "pass_sim": 84
+    },
+    "20254": {
+     "seen_off": 2917557,
+     "seen_sim": 2892894,
+     "pass_off": 296,
+     "pass_sim": 296
+    }
+   }
+  },
+  "S777": {
+   "pred_md5": "25f738f752d4ed195ac42bd5075c9e94",
+   "printdone_md5": "bf91d854af2b4f08d7b4d618da0296d0",
+   "n_predict_rows": 3167,
+   "cat_all": {
+    "pass": 3150,
+    "nopass": 17
+   },
+   "cat_2225": {
+    "pass": 2633,
+    "nopass": 17
+   },
+   "max_abs_dsp": 0.0,
+   "max_abs_dp15": 0.0,
+   "recall_minute_2225": 0.998261,
+   "recall_pair_2225": 0.993585,
+   "recall_pair_fresh_2225": 0.993585,
+   "sim_total": {
+    "seen": 52450771,
+    "pass_": 3167
+   },
+   "off_total": {
+    "seen": 52503334,
+    "pass_": 3172
+   },
+   "year": {
+    "2022": {
+     "sim_entry_min": 160,
+     "off_open_min": 159,
+     "ratio_min": 0.99375,
+     "seen_off": 11640072,
+     "seen_sim": 11632783,
+     "pass_off": 542,
+     "pass_sim": 559,
+     "sim_predict_rows": 559,
+     "entered": 542,
+     "waste": 0,
+     "waste_rate": 0.0,
+     "held_would_pass": 64058,
+     "symmin_per_min": {
+      "mean": 3.408805,
+      "p50": 1.0,
+      "p90": 8.4,
+      "max": 24.0
+     },
+     "frac_min_ge5": 0.150943,
+     "share_passes_in_top10pct_min": 0.51476
+    },
+    "2023": {
+     "sim_entry_min": 111,
+     "off_open_min": 111,
+     "ratio_min": 1.0,
+     "seen_off": 11580334,
+     "seen_sim": 11573378,
+     "pass_off": 665,
+     "pass_sim": 665,
+     "sim_predict_rows": 665,
+     "entered": 665,
+     "waste": 0,
+     "waste_rate": 0.0,
+     "held_would_pass": 7973,
+     "symmin_per_min": {
+      "mean": 5.990991,
+      "p50": 2.0,
+      "p90": 19.0,
+      "max": 24.0
+     },
+     "frac_min_ge5": 0.387387,
+     "share_passes_in_top10pct_min": 0.395489
+    },
+    "2024": {
+     "sim_entry_min": 131,
+     "off_open_min": 131,
+     "ratio_min": 1.0,
+     "seen_off": 11750372,
+     "seen_sim": 11748750,
+     "pass_off": 786,
+     "pass_sim": 786,
+     "sim_predict_rows": 786,
+     "entered": 786,
+     "waste": 0,
+     "waste_rate": 0.0,
+     "held_would_pass": 17839,
+     "symmin_per_min": {
+      "mean": 6.0,
+      "p50": 2.0,
+      "p90": 19.0,
+      "max": 24.0
+     },
+     "frac_min_ge5": 0.351145,
+     "share_passes_in_top10pct_min": 0.395674
+    },
+    "2025": {
+     "sim_entry_min": 173,
+     "off_open_min": 177,
+     "ratio_min": 1.023121,
+     "seen_off": 11815968,
+     "seen_sim": 11789595,
+     "pass_off": 644,
+     "pass_sim": 640,
+     "sim_predict_rows": 640,
+     "entered": 640,
+     "waste": 4,
+     "waste_rate": 0.006211,
+     "held_would_pass": 33850,
+     "symmin_per_min": {
+      "mean": 3.638418,
+      "p50": 1.0,
+      "p90": 11.4,
+      "max": 23.0
+     },
+     "frac_min_ge5": 0.19209,
+     "share_passes_in_top10pct_min": 0.486025
+    }
+   },
+   "quarter": {
+    "20213": {
+     "seen_off": 2810835,
+     "seen_sim": 2800590,
+     "pass_off": 348,
+     "pass_sim": 345
+    },
+    "20214": {
+     "seen_off": 2905753,
+     "seen_sim": 2905675,
+     "pass_off": 187,
+     "pass_sim": 172
+    },
+    "20221": {
+     "seen_off": 2891757,
+     "seen_sim": 2891456,
+     "pass_off": 84,
+     "pass_sim": 101
+    },
+    "20222": {
+     "seen_off": 2824871,
+     "seen_sim": 2823914,
+     "pass_off": 256,
+     "pass_sim": 256
+    },
+    "20223": {
+     "seen_off": 3017172,
+     "seen_sim": 3015096,
+     "pass_off": 93,
+     "pass_sim": 93
+    },
+    "20224": {
+     "seen_off": 2906272,
+     "seen_sim": 2902317,
+     "pass_off": 109,
+     "pass_sim": 109
+    },
+    "20231": {
+     "seen_off": 2867760,
+     "seen_sim": 2866705,
+     "pass_off": 133,
+     "pass_sim": 133
+    },
+    "20232": {
+     "seen_off": 2851666,
+     "seen_sim": 2849351,
+     "pass_off": 160,
+     "pass_sim": 160
+    },
+    "20233": {
+     "seen_off": 2946942,
+     "seen_sim": 2944180,
+     "pass_off": 105,
+     "pass_sim": 105
+    },
+    "20234": {
+     "seen_off": 2913966,
+     "seen_sim": 2913142,
+     "pass_off": 267,
+     "pass_sim": 267
+    },
+    "20241": {
+     "seen_off": 2931040,
+     "seen_sim": 2930907,
+     "pass_off": 243,
+     "pass_sim": 243
+    },
+    "20242": {
+     "seen_off": 2884313,
+     "seen_sim": 2884162,
+     "pass_off": 162,
+     "pass_sim": 162
+    },
+    "20243": {
+     "seen_off": 2974237,
+     "seen_sim": 2973513,
+     "pass_off": 129,
+     "pass_sim": 129
+    },
+    "20244": {
+     "seen_off": 2960782,
+     "seen_sim": 2960168,
+     "pass_off": 252,
+     "pass_sim": 252
+    },
+    "20251": {
+     "seen_off": 2884020,
+     "seen_sim": 2883594,
+     "pass_off": 227,
+     "pass_sim": 227
+    },
+    "20252": {
+     "seen_off": 3019904,
+     "seen_sim": 3019324,
+     "pass_off": 40,
+     "pass_sim": 40
+    },
+    "20253": {
+     "seen_off": 2994632,
+     "seen_sim": 2993928,
+     "pass_off": 82,
+     "pass_sim": 82
+    },
+    "20254": {
+     "seen_off": 2917412,
+     "seen_sim": 2892749,
+     "pass_off": 295,
+     "pass_sim": 291
+    }
+   }
+  },
+  "S2024": {
+   "pred_md5": "3be4fac48ab8b9e2fcec45a3f45417e4",
+   "printdone_md5": "349d36b43a979c8f38fa14403c21483a",
+   "n_predict_rows": 3083,
+   "cat_all": {
+    "pass": 3070,
+    "nopass": 13
+   },
+   "cat_2225": {
+    "pass": 2532,
+    "nopass": 13
+   },
+   "max_abs_dsp": 0.0,
+   "max_abs_dp15": 0.0,
+   "recall_minute_2225": 0.996262,
+   "recall_pair_2225": 0.994892,
+   "recall_pair_fresh_2225": 0.994892,
+   "sim_total": {
+    "seen": 52503752,
+    "pass_": 3221
+   },
+   "off_total": {
+    "seen": 52556310,
+    "pass_": 3224
+   },
+   "year": {
+    "2022": {
+     "sim_entry_min": 126,
+     "off_open_min": 218,
+     "ratio_min": 1.730159,
+     "seen_off": 11691413,
+     "seen_sim": 11684086,
+     "pass_off": 557,
+     "pass_sim": 570,
+     "sim_predict_rows": 432,
+     "entered": 419,
+     "waste": 138,
+     "waste_rate": 0.247756,
+     "held_would_pass": 60387,
+     "symmin_per_min": {
+      "mean": 2.555046,
+      "p50": 1.0,
+      "p90": 4.0,
+      "max": 24.0
+     },
+     "frac_min_ge5": 0.09633,
+     "share_passes_in_top10pct_min": 0.468582
+    },
+    "2023": {
+     "sim_entry_min": 110,
+     "off_open_min": 110,
+     "ratio_min": 1.0,
+     "seen_off": 11538502,
+     "seen_sim": 11531590,
+     "pass_off": 733,
+     "pass_sim": 733,
+     "sim_predict_rows": 733,
+     "entered": 733,
+     "waste": 0,
+     "waste_rate": 0.0,
+     "held_would_pass": 7855,
+     "symmin_per_min": {
+      "mean": 6.663636,
+      "p50": 3.0,
+      "p90": 20.0,
+      "max": 24.0
+     },
+     "frac_min_ge5": 0.427273,
+     "share_passes_in_top10pct_min": 0.335607
+    },
+    "2024": {
+     "sim_entry_min": 122,
+     "off_open_min": 122,
+     "ratio_min": 1.0,
+     "seen_off": 11770603,
+     "seen_sim": 11768981,
+     "pass_off": 755,
+     "pass_sim": 755,
+     "sim_predict_rows": 755,
+     "entered": 755,
+     "waste": 0,
+     "waste_rate": 0.0,
+     "held_would_pass": 17776,
+     "symmin_per_min": {
+      "mean": 6.188525,
+      "p50": 3.0,
+      "p90": 17.0,
+      "max": 24.0
+     },
+     "frac_min_ge5": 0.368852,
+     "share_passes_in_top10pct_min": 0.364238
+    },
+    "2025": {
+     "sim_entry_min": 177,
+     "off_open_min": 177,
+     "ratio_min": 1.0,
+     "seen_off": 11851834,
+     "seen_sim": 11825460,
+     "pass_off": 625,
+     "pass_sim": 625,
+     "sim_predict_rows": 625,
+     "entered": 625,
+     "waste": 0,
+     "waste_rate": 0.0,
+     "held_would_pass": 33539,
+     "symmin_per_min": {
+      "mean": 3.531073,
+      "p50": 1.0,
+      "p90": 11.0,
+      "max": 23.0
+     },
+     "frac_min_ge5": 0.180791,
+     "share_passes_in_top10pct_min": 0.5008
+    }
+   },
+   "quarter": {
+    "20213": {
+     "seen_off": 2799260,
+     "seen_sim": 2789015,
+     "pass_off": 368,
+     "pass_sim": 367
+    },
+    "20214": {
+     "seen_off": 2904698,
+     "seen_sim": 2904620,
+     "pass_off": 186,
+     "pass_sim": 171
+    },
+    "20221": {
+     "seen_off": 2882578,
+     "seen_sim": 2882277,
+     "pass_off": 86,
+     "pass_sim": 99
+    },
+    "20222": {
+     "seen_off": 2858006,
+     "seen_sim": 2857050,
+     "pass_off": 306,
+     "pass_sim": 306
+    },
+    "20223": {
+     "seen_off": 3041775,
+     "seen_sim": 3039661,
+     "pass_off": 64,
+     "pass_sim": 64
+    },
+    "20224": {
+     "seen_off": 2909054,
+     "seen_sim": 2905098,
+     "pass_off": 101,
+     "pass_sim": 101
+    },
+    "20231": {
+     "seen_off": 2861901,
+     "seen_sim": 2860858,
+     "pass_off": 147,
+     "pass_sim": 147
+    },
+    "20232": {
+     "seen_off": 2825973,
+     "seen_sim": 2823691,
+     "pass_off": 198,
+     "pass_sim": 198
+    },
+    "20233": {
+     "seen_off": 2944089,
+     "seen_sim": 2941326,
+     "pass_off": 111,
+     "pass_sim": 111
+    },
+    "20234": {
+     "seen_off": 2906539,
+     "seen_sim": 2905715,
+     "pass_off": 277,
+     "pass_sim": 277
+    },
+    "20241": {
+     "seen_off": 2922237,
+     "seen_sim": 2922104,
+     "pass_off": 229,
+     "pass_sim": 229
+    },
+    "20242": {
+     "seen_off": 2871425,
+     "seen_sim": 2871274,
+     "pass_off": 182,
+     "pass_sim": 182
+    },
+    "20243": {
+     "seen_off": 2989416,
+     "seen_sim": 2988692,
+     "pass_off": 119,
+     "pass_sim": 119
+    },
+    "20244": {
+     "seen_off": 2987525,
+     "seen_sim": 2986911,
+     "pass_off": 225,
+     "pass_sim": 225
+    },
+    "20251": {
+     "seen_off": 2877474,
+     "seen_sim": 2877050,
+     "pass_off": 230,
+     "pass_sim": 230
+    },
+    "20252": {
+     "seen_off": 3044070,
+     "seen_sim": 3043490,
+     "pass_off": 28,
+     "pass_sim": 28
+    },
+    "20253": {
+     "seen_off": 3004605,
+     "seen_sim": 3003898,
+     "pass_off": 74,
+     "pass_sim": 74
+    },
+    "20254": {
+     "seen_off": 2925685,
+     "seen_sim": 2901022,
+     "pass_off": 293,
+     "pass_sim": 293
+    }
+   }
+  }
+ },
+ "D2": {
+  "cagr22": {
+   "A1": 36.645407,
+   "S7": 31.33623,
+   "S13": 34.098748,
+   "S21": 29.241835,
+   "S99": 38.227485,
+   "S123": 31.558914,
+   "S777": 39.340727,
+   "S2024": 32.982326
+  },
+  "cagr22_src": "gate_seedband.json metrics[*].cagr22 (khop bang doc)",
+  "rows": {
+   "A1": {
+    "2022": {
+     "pass_off": 537,
+     "off_open_min": 179,
+     "sim_entry_min": 170,
+     "entered": 523,
+     "waste": 14,
+     "waste_rate": 0.026071,
+     "held_would_pass": 67110,
+     "symmin_per_min": {
+      "mean": 3.0,
+      "p50": 1.0,
+      "p90": 7.2,
+      "max": 24.0
+     },
+     "frac_min_ge5": 0.156425,
+     "share_passes_in_top10pct_min": 0.510242
+    },
+    "2023": {
+     "pass_off": 708,
+     "off_open_min": 106,
+     "sim_entry_min": 106,
+     "entered": 708,
+     "waste": 0,
+     "waste_rate": 0.0,
+     "held_would_pass": 7575,
+     "symmin_per_min": {
+      "mean": 6.679245,
+      "p50": 3.0,
+      "p90": 21.5,
+      "max": 24.0
+     },
+     "frac_min_ge5": 0.415094,
+     "share_passes_in_top10pct_min": 0.351695
+    },
+    "2024": {
+     "pass_off": 767,
+     "off_open_min": 130,
+     "sim_entry_min": 130,
+     "entered": 766,
+     "waste": 1,
+     "waste_rate": 0.001304,
+     "held_would_pass": 18992,
+     "symmin_per_min": {
+      "mean": 5.9,
+      "p50": 2.0,
+      "p90": 17.1,
+      "max": 24.0
+     },
+     "frac_min_ge5": 0.369231,
+     "share_passes_in_top10pct_min": 0.370274
+    },
+    "2025": {
+     "pass_off": 641,
+     "off_open_min": 180,
+     "sim_entry_min": 180,
+     "entered": 641,
+     "waste": 0,
+     "waste_rate": 0.0,
+     "held_would_pass": 34232,
+     "symmin_per_min": {
+      "mean": 3.561111,
+      "p50": 1.0,
+      "p90": 10.0,
+      "max": 23.0
+     },
+     "frac_min_ge5": 0.188889,
+     "share_passes_in_top10pct_min": 0.478939
+    }
+   },
+   "S7": {
+    "2022": {
+     "pass_off": 507,
+     "off_open_min": 206,
+     "sim_entry_min": 138,
+     "entered": 392,
+     "waste": 115,
+     "waste_rate": 0.226824,
+     "held_would_pass": 57272,
+     "symmin_per_min": {
+      "mean": 2.461165,
+      "p50": 1.0,
+      "p90": 3.0,
+      "max": 23.0
+     },
+     "frac_min_ge5": 0.082524,
+     "share_passes_in_top10pct_min": 0.463511
+    },
+    "2023": {
+     "pass_off": 709,
+     "off_open_min": 112,
+     "sim_entry_min": 112,
+     "entered": 709,
+     "waste": 0,
+     "waste_rate": 0.0,
+     "held_would_pass": 7938,
+     "symmin_per_min": {
+      "mean": 6.330357,
+      "p50": 2.0,
+      "p90": 21.0,
+      "max": 24.0
+     },
+     "frac_min_ge5": 0.392857,
+     "share_passes_in_top10pct_min": 0.380818
+    },
+    "2024": {
+     "pass_off": 806,
+     "off_open_min": 144,
+     "sim_entry_min": 144,
+     "entered": 806,
+     "waste": 0,
+     "waste_rate": 0.0,
+     "held_would_pass": 20656,
+     "symmin_per_min": {
+      "mean": 5.597222,
+      "p50": 2.0,
+      "p90": 17.0,
+      "max": 24.0
+     },
+     "frac_min_ge5": 0.319444,
+     "share_passes_in_top10pct_min": 0.3933
+    },
+    "2025": {
+     "pass_off": 622,
+     "off_open_min": 178,
+     "sim_entry_min": 178,
+     "entered": 622,
+     "waste": 0,
+     "waste_rate": 0.0,
+     "held_would_pass": 33666,
+     "symmin_per_min": {
+      "mean": 3.494382,
+      "p50": 1.0,
+      "p90": 10.3,
+      "max": 22.0
+     },
+     "frac_min_ge5": 0.179775,
+     "share_passes_in_top10pct_min": 0.491961
+    }
+   },
+   "S13": {
+    "2022": {
+     "pass_off": 549,
+     "off_open_min": 227,
+     "sim_entry_min": 137,
+     "entered": 410,
+     "waste": 139,
+     "waste_rate": 0.253188,
+     "held_would_pass": 60033,
+     "symmin_per_min": {
+      "mean": 2.418502,
+      "p50": 1.0,
+      "p90": 4.0,
+      "max": 24.0
+     },
+     "frac_min_ge5": 0.088106,
+     "share_passes_in_top10pct_min": 0.437158
+    },
+    "2023": {
+     "pass_off": 709,
+     "off_open_min": 114,
+     "sim_entry_min": 114,
+     "entered": 703,
+     "waste": 6,
+     "waste_rate": 0.008463,
+     "held_would_pass": 7721,
+     "symmin_per_min": {
+      "mean": 6.219298,
+      "p50": 2.5,
+      "p90": 17.0,
+      "max": 24.0
+     },
+     "frac_min_ge5": 0.403509,
+     "share_passes_in_top10pct_min": 0.356841
+    },
+    "2024": {
+     "pass_off": 742,
+     "off_open_min": 128,
+     "sim_entry_min": 128,
+     "entered": 742,
+     "waste": 0,
+     "waste_rate": 0.0,
+     "held_would_pass": 18272,
+     "symmin_per_min": {
+      "mean": 5.796875,
+      "p50": 2.0,
+      "p90": 20.0,
+      "max": 24.0
+     },
+     "frac_min_ge5": 0.320312,
+     "share_passes_in_top10pct_min": 0.390836
+    },
+    "2025": {
+     "pass_off": 629,
+     "off_open_min": 182,
+     "sim_entry_min": 182,
+     "entered": 629,
+     "waste": 0,
+     "waste_rate": 0.0,
+     "held_would_pass": 34066,
+     "symmin_per_min": {
+      "mean": 3.456044,
+      "p50": 1.0,
+      "p90": 10.0,
+      "max": 24.0
+     },
+     "frac_min_ge5": 0.181319,
+     "share_passes_in_top10pct_min": 0.524642
+    }
+   },
+   "S21": {
+    "2022": {
+     "pass_off": 595,
+     "off_open_min": 251,
+     "sim_entry_min": 106,
+     "entered": 340,
+     "waste": 255,
+     "waste_rate": 0.428571,
+     "held_would_pass": 46881,
+     "symmin_per_min": {
+      "mean": 2.370518,
+      "p50": 2.0,
+      "p90": 3.0,
+      "max": 24.0
+     },
+     "frac_min_ge5": 0.079681,
+     "share_passes_in_top10pct_min": 0.393277
+    },
+    "2023": {
+     "pass_off": 625,
+     "off_open_min": 106,
+     "sim_entry_min": 105,
+     "entered": 624,
+     "waste": 1,
+     "waste_rate": 0.0016,
+     "held_would_pass": 7046,
+     "symmin_per_min": {
+      "mean": 5.896226,
+      "p50": 2.0,
+      "p90": 17.5,
+      "max": 24.0
+     },
+     "frac_min_ge5": 0.367925,
+     "share_passes_in_top10pct_min": 0.3936
+    },
+    "2024": {
+     "pass_off": 767,
+     "off_open_min": 133,
+     "sim_entry_min": 133,
+     "entered": 767,
+     "waste": 0,
+     "waste_rate": 0.0,
+     "held_would_pass": 19247,
+     "symmin_per_min": {
+      "mean": 5.766917,
+      "p50": 2.0,
+      "p90": 18.8,
+      "max": 24.0
+     },
+     "frac_min_ge5": 0.330827,
+     "share_passes_in_top10pct_min": 0.40678
+    },
+    "2025": {
+     "pass_off": 618,
+     "off_open_min": 172,
+     "sim_entry_min": 172,
+     "entered": 618,
+     "waste": 0,
+     "waste_rate": 0.0,
+     "held_would_pass": 32628,
+     "symmin_per_min": {
+      "mean": 3.593023,
+      "p50": 1.0,
+      "p90": 11.0,
+      "max": 24.0
+     },
+     "frac_min_ge5": 0.174419,
+     "share_passes_in_top10pct_min": 0.530744
+    }
+   },
+   "S99": {
+    "2022": {
+     "pass_off": 592,
+     "off_open_min": 177,
+     "sim_entry_min": 163,
+     "entered": 578,
+     "waste": 14,
+     "waste_rate": 0.023649,
+     "held_would_pass": 72527,
+     "symmin_per_min": {
+      "mean": 3.344633,
+      "p50": 1.0,
+      "p90": 11.0,
+      "max": 24.0
+     },
+     "frac_min_ge5": 0.163842,
+     "share_passes_in_top10pct_min": 0.503378
+    },
+    "2023": {
+     "pass_off": 711,
+     "off_open_min": 105,
+     "sim_entry_min": 105,
+     "entered": 708,
+     "waste": 3,
+     "waste_rate": 0.004219,
+     "held_would_pass": 7468,
+     "symmin_per_min": {
+      "mean": 6.771429,
+      "p50": 3.0,
+      "p90": 21.6,
+      "max": 24.0
+     },
+     "frac_min_ge5": 0.428571,
+     "share_passes_in_top10pct_min": 0.351617
+    },
+    "2024": {
+     "pass_off": 793,
+     "off_open_min": 138,
+     "sim_entry_min": 138,
+     "entered": 793,
+     "waste": 0,
+     "waste_rate": 0.0,
+     "held_would_pass": 18946,
+     "symmin_per_min": {
+      "mean": 5.746377,
+      "p50": 2.0,
+      "p90": 18.0,
+      "max": 24.0
+     },
+     "frac_min_ge5": 0.333333,
+     "share_passes_in_top10pct_min": 0.390921
+    },
+    "2025": {
+     "pass_off": 692,
+     "off_open_min": 186,
+     "sim_entry_min": 186,
+     "entered": 692,
+     "waste": 0,
+     "waste_rate": 0.0,
+     "held_would_pass": 34491,
+     "symmin_per_min": {
+      "mean": 3.72043,
+      "p50": 1.0,
+      "p90": 11.5,
+      "max": 24.0
+     },
+     "frac_min_ge5": 0.188172,
+     "share_passes_in_top10pct_min": 0.484104
+    }
+   },
+   "S123": {
+    "2022": {
+     "pass_off": 546,
+     "off_open_min": 217,
+     "sim_entry_min": 131,
+     "entered": 415,
+     "waste": 131,
+     "waste_rate": 0.239927,
+     "held_would_pass": 59597,
+     "symmin_per_min": {
+      "mean": 2.516129,
+      "p50": 1.0,
+      "p90": 5.0,
+      "max": 23.0
+     },
+     "frac_min_ge5": 0.105991,
+     "share_passes_in_top10pct_min": 0.457875
+    },
+    "2023": {
+     "pass_off": 716,
+     "off_open_min": 108,
+     "sim_entry_min": 108,
+     "entered": 716,
+     "waste": 0,
+     "waste_rate": 0.0,
+     "held_would_pass": 8028,
+     "symmin_per_min": {
+      "mean": 6.62963,
+      "p50": 3.0,
+      "p90": 20.3,
+      "max": 24.0
+     },
+     "frac_min_ge5": 0.407407,
+     "share_passes_in_top10pct_min": 0.349162
+    },
+    "2024": {
+     "pass_off": 770,
+     "off_open_min": 124,
+     "sim_entry_min": 124,
+     "entered": 770,
+     "waste": 0,
+     "waste_rate": 0.0,
+     "held_would_pass": 18041,
+     "symmin_per_min": {
+      "mean": 6.209677,
+      "p50": 3.0,
+      "p90": 19.7,
+      "max": 24.0
+     },
+     "frac_min_ge5": 0.362903,
+     "share_passes_in_top10pct_min": 0.376623
+    },
+    "2025": {
+     "pass_off": 646,
+     "off_open_min": 178,
+     "sim_entry_min": 178,
+     "entered": 646,
+     "waste": 0,
+     "waste_rate": 0.0,
+     "held_would_pass": 34299,
+     "symmin_per_min": {
+      "mean": 3.629213,
+      "p50": 1.0,
+      "p90": 11.0,
+      "max": 23.0
+     },
+     "frac_min_ge5": 0.185393,
+     "share_passes_in_top10pct_min": 0.470588
+    }
+   },
+   "S777": {
+    "2022": {
+     "pass_off": 542,
+     "off_open_min": 159,
+     "sim_entry_min": 160,
+     "entered": 542,
+     "waste": 0,
+     "waste_rate": 0.0,
+     "held_would_pass": 64058,
+     "symmin_per_min": {
+      "mean": 3.408805,
+      "p50": 1.0,
+      "p90": 8.4,
+      "max": 24.0
+     },
+     "frac_min_ge5": 0.150943,
+     "share_passes_in_top10pct_min": 0.51476
+    },
+    "2023": {
+     "pass_off": 665,
+     "off_open_min": 111,
+     "sim_entry_min": 111,
+     "entered": 665,
+     "waste": 0,
+     "waste_rate": 0.0,
+     "held_would_pass": 7973,
+     "symmin_per_min": {
+      "mean": 5.990991,
+      "p50": 2.0,
+      "p90": 19.0,
+      "max": 24.0
+     },
+     "frac_min_ge5": 0.387387,
+     "share_passes_in_top10pct_min": 0.395489
+    },
+    "2024": {
+     "pass_off": 786,
+     "off_open_min": 131,
+     "sim_entry_min": 131,
+     "entered": 786,
+     "waste": 0,
+     "waste_rate": 0.0,
+     "held_would_pass": 17839,
+     "symmin_per_min": {
+      "mean": 6.0,
+      "p50": 2.0,
+      "p90": 19.0,
+      "max": 24.0
+     },
+     "frac_min_ge5": 0.351145,
+     "share_passes_in_top10pct_min": 0.395674
+    },
+    "2025": {
+     "pass_off": 644,
+     "off_open_min": 177,
+     "sim_entry_min": 173,
+     "entered": 640,
+     "waste": 4,
+     "waste_rate": 0.006211,
+     "held_would_pass": 33850,
+     "symmin_per_min": {
+      "mean": 3.638418,
+      "p50": 1.0,
+      "p90": 11.4,
+      "max": 23.0
+     },
+     "frac_min_ge5": 0.19209,
+     "share_passes_in_top10pct_min": 0.486025
+    }
+   },
+   "S2024": {
+    "2022": {
+     "pass_off": 557,
+     "off_open_min": 218,
+     "sim_entry_min": 126,
+     "entered": 419,
+     "waste": 138,
+     "waste_rate": 0.247756,
+     "held_would_pass": 60387,
+     "symmin_per_min": {
+      "mean": 2.555046,
+      "p50": 1.0,
+      "p90": 4.0,
+      "max": 24.0
+     },
+     "frac_min_ge5": 0.09633,
+     "share_passes_in_top10pct_min": 0.468582
+    },
+    "2023": {
+     "pass_off": 733,
+     "off_open_min": 110,
+     "sim_entry_min": 110,
+     "entered": 733,
+     "waste": 0,
+     "waste_rate": 0.0,
+     "held_would_pass": 7855,
+     "symmin_per_min": {
+      "mean": 6.663636,
+      "p50": 3.0,
+      "p90": 20.0,
+      "max": 24.0
+     },
+     "frac_min_ge5": 0.427273,
+     "share_passes_in_top10pct_min": 0.335607
+    },
+    "2024": {
+     "pass_off": 755,
+     "off_open_min": 122,
+     "sim_entry_min": 122,
+     "entered": 755,
+     "waste": 0,
+     "waste_rate": 0.0,
+     "held_would_pass": 17776,
+     "symmin_per_min": {
+      "mean": 6.188525,
+      "p50": 3.0,
+      "p90": 17.0,
+      "max": 24.0
+     },
+     "frac_min_ge5": 0.368852,
+     "share_passes_in_top10pct_min": 0.364238
+    },
+    "2025": {
+     "pass_off": 625,
+     "off_open_min": 177,
+     "sim_entry_min": 177,
+     "entered": 625,
+     "waste": 0,
+     "waste_rate": 0.0,
+     "held_would_pass": 33539,
+     "symmin_per_min": {
+      "mean": 3.531073,
+      "p50": 1.0,
+      "p90": 11.0,
+      "max": 23.0
+     },
+     "frac_min_ge5": 0.180791,
+     "share_passes_in_top10pct_min": 0.5008
+    }
+   }
+  },
+  "corr_vs_cagr22": {
+   "off_open_min_2022": {
+    "pearson": -0.908527,
+    "spearman": -0.761905
+   },
+   "sim_entry_min_2022": {
+    "pearson": 0.895032,
+    "spearman": 0.738095
+   },
+   "pass_off_2022": {
+    "pearson": -0.001473,
+    "spearman": -0.142857
+   },
+   "waste_2022": {
+    "pearson": -0.923179,
+    "spearman": -0.754505
+   },
+   "waste_rate_2022": {
+    "pearson": -0.940848,
+    "spearman": -0.761905
+   },
+   "entered_2022": {
+    "pearson": 0.955564,
+    "spearman": 0.904762
+   },
+   "symmin_per_min_2022": {
+    "pearson": 0.931777,
+    "spearman": 0.857143
+   }
+  },
+  "corr_open_min_vs_pass_2022": {
+   "pearson": 0.259035,
+   "spearman": 0.47619
+  },
+  "corr_open_min_vs_symmin_per_min_2022": {
+   "pearson": -0.919699,
+   "spearman": -0.904762
+  }
+ },
+ "D3": {
+  "rates": {
+   "A1": {
+    "decile": [
+     {
+      "d": 1,
+      "n": 4678869,
+      "pass_": 2043,
+      "rate_e5": 43.664398
+     },
+     {
+      "d": 2,
+      "n": 4678897,
+      "pass_": 165,
+      "rate_e5": 3.526472
+     },
+     {
+      "d": 3,
+      "n": 4678890,
+      "pass_": 105,
+      "rate_e5": 2.244122
+     },
+     {
+      "d": 4,
+      "n": 4678893,
+      "pass_": 94,
+      "rate_e5": 2.009022
+     },
+     {
+      "d": 5,
+      "n": 4678889,
+      "pass_": 100,
+      "rate_e5": 2.13726
+     },
+     {
+      "d": 6,
+      "n": 4678885,
+      "pass_": 44,
+      "rate_e5": 0.940395
+     },
+     {
+      "d": 7,
+      "n": 4678889,
+      "pass_": 46,
+      "rate_e5": 0.983139
+     },
+     {
+      "d": 8,
+      "n": 4678894,
+      "pass_": 52,
+      "rate_e5": 1.111374
+     },
+     {
+      "d": 9,
+      "n": 4678891,
+      "pass_": 4,
+      "rate_e5": 0.08549
+     },
+     {
+      "d": 10,
+      "n": 4678897,
+      "pass_": 0,
+      "rate_e5": 0.0
+     }
+    ],
+    "rank": [
+     {
+      "r": "1-3",
+      "n": 5833673,
+      "pass_": 350,
+      "rate_e5": 5.999651
+     },
+     {
+      "r": "4-8",
+      "n": 9716071,
+      "pass_": 509,
+      "rate_e5": 5.238743
+     },
+     {
+      "r": "9-16",
+      "n": 15581152,
+      "pass_": 834,
+      "rate_e5": 5.352621
+     },
+     {
+      "r": "17-24",
+      "n": 15657998,
+      "pass_": 960,
+      "rate_e5": 6.131052
+     }
+    ]
+   },
+   "S7": {
+    "decile": [
+     {
+      "d": 1,
+      "n": 4679597,
+      "pass_": 2062,
+      "rate_e5": 44.063623
+     },
+     {
+      "d": 2,
+      "n": 4674322,
+      "pass_": 149,
+      "rate_e5": 3.187628
+     },
+     {
+      "d": 3,
+      "n": 4673937,
+      "pass_": 119,
+      "rate_e5": 2.546033
+     },
+     {
+      "d": 4,
+      "n": 4675578,
+      "pass_": 91,
+      "rate_e5": 1.946283
+     },
+     {
+      "d": 5,
+      "n": 4675079,
+      "pass_": 89,
+      "rate_e5": 1.903711
+     },
+     {
+      "d": 6,
+      "n": 4677139,
+      "pass_": 31,
+      "rate_e5": 0.662798
+     },
+     {
+      "d": 7,
+      "n": 4675512,
+      "pass_": 42,
+      "rate_e5": 0.898297
+     },
+     {
+      "d": 8,
+      "n": 4677100,
+      "pass_": 57,
+      "rate_e5": 1.218704
+     },
+     {
+      "d": 9,
+      "n": 4679622,
+      "pass_": 4,
+      "rate_e5": 0.085477
+     },
+     {
+      "d": 10,
+      "n": 4684538,
+      "pass_": 0,
+      "rate_e5": 0.0
+     }
+    ],
+    "rank": [
+     {
+      "r": "1-3",
+      "n": 5834671,
+      "pass_": 343,
+      "rate_e5": 5.878652
+     },
+     {
+      "r": "4-8",
+      "n": 9711408,
+      "pass_": 505,
+      "rate_e5": 5.20007
+     },
+     {
+      "r": "9-16",
+      "n": 15574931,
+      "pass_": 793,
+      "rate_e5": 5.091515
+     },
+     {
+      "r": "17-24",
+      "n": 15651414,
+      "pass_": 1003,
+      "rate_e5": 6.408367
+     }
+    ]
+   },
+   "S13": {
+    "decile": [
+     {
+      "d": 1,
+      "n": 4700236,
+      "pass_": 2037,
+      "rate_e5": 43.338249
+     },
+     {
+      "d": 2,
+      "n": 4682124,
+      "pass_": 162,
+      "rate_e5": 3.459968
+     },
+     {
+      "d": 3,
+      "n": 4685038,
+      "pass_": 115,
+      "rate_e5": 2.454623
+     },
+     {
+      "d": 4,
+      "n": 4685696,
+      "pass_": 110,
+      "rate_e5": 2.34757
+     },
+     {
+      "d": 5,
+      "n": 4684815,
+      "pass_": 95,
+      "rate_e5": 2.027828
+     },
+     {
+      "d": 6,
+      "n": 4685317,
+      "pass_": 30,
+      "rate_e5": 0.640298
+     },
+     {
+      "d": 7,
+      "n": 4678989,
+      "pass_": 41,
+      "rate_e5": 0.876258
+     },
+     {
+      "d": 8,
+      "n": 4676219,
+      "pass_": 35,
+      "rate_e5": 0.748468
+     },
+     {
+      "d": 9,
+      "n": 4678118,
+      "pass_": 4,
+      "rate_e5": 0.085504
+     },
+     {
+      "d": 10,
+      "n": 4682443,
+      "pass_": 0,
+      "rate_e5": 0.0
+     }
+    ],
+    "rank": [
+     {
+      "r": "1-3",
+      "n": 5843962,
+      "pass_": 351,
+      "rate_e5": 6.006199
+     },
+     {
+      "r": "4-8",
+      "n": 9726984,
+      "pass_": 517,
+      "rate_e5": 5.315111
+     },
+     {
+      "r": "9-16",
+      "n": 15597369,
+      "pass_": 776,
+      "rate_e5": 4.975198
+     },
+     {
+      "r": "17-24",
+      "n": 15670680,
+      "pass_": 985,
+      "rate_e5": 6.285624
+     }
+    ]
+   },
+   "S21": {
+    "decile": [
+     {
+      "d": 1,
+      "n": 4714867,
+      "pass_": 2111,
+      "rate_e5": 44.773267
+     },
+     {
+      "d": 2,
+      "n": 4691630,
+      "pass_": 147,
+      "rate_e5": 3.133239
+     },
+     {
+      "d": 3,
+      "n": 4694325,
+      "pass_": 84,
+      "rate_e5": 1.789395
+     },
+     {
+      "d": 4,
+      "n": 4698551,
+      "pass_": 71,
+      "rate_e5": 1.511104
+     },
+     {
+      "d": 5,
+      "n": 4698488,
+      "pass_": 72,
+      "rate_e5": 1.532408
+     },
+     {
+      "d": 6,
+      "n": 4699701,
+      "pass_": 21,
+      "rate_e5": 0.446837
+     },
+     {
+      "d": 7,
+      "n": 4693036,
+      "pass_": 39,
+      "rate_e5": 0.831019
+     },
+     {
+      "d": 8,
+      "n": 4693195,
+      "pass_": 55,
+      "rate_e5": 1.17191
+     },
+     {
+      "d": 9,
+      "n": 4692410,
+      "pass_": 5,
+      "rate_e5": 0.106555
+     },
+     {
+      "d": 10,
+      "n": 4689746,
+      "pass_": 0,
+      "rate_e5": 0.0
+     }
+    ],
+    "rank": [
+     {
+      "r": "1-3",
+      "n": 5866475,
+      "pass_": 312,
+      "rate_e5": 5.318356
+     },
+     {
+      "r": "4-8",
+      "n": 9751938,
+      "pass_": 481,
+      "rate_e5": 4.932353
+     },
+     {
+      "r": "9-16",
+      "n": 15636358,
+      "pass_": 741,
+      "rate_e5": 4.738955
+     },
+     {
+      "r": "17-24",
+      "n": 15711178,
+      "pass_": 1071,
+      "rate_e5": 6.816803
+     }
+    ]
+   },
+   "S99": {
+    "decile": [
+     {
+      "d": 1,
+      "n": 4647409,
+      "pass_": 2102,
+      "rate_e5": 45.229503
+     },
+     {
+      "d": 2,
+      "n": 4662973,
+      "pass_": 173,
+      "rate_e5": 3.710079
+     },
+     {
+      "d": 3,
+      "n": 4664533,
+      "pass_": 125,
+      "rate_e5": 2.679797
+     },
+     {
+      "d": 4,
+      "n": 4667369,
+      "pass_": 115,
+      "rate_e5": 2.463915
+     },
+     {
+      "d": 5,
+      "n": 4671612,
+      "pass_": 111,
+      "rate_e5": 2.376053
+     },
+     {
+      "d": 6,
+      "n": 4671006,
+      "pass_": 55,
+      "rate_e5": 1.177477
+     },
+     {
+      "d": 7,
+      "n": 4668582,
+      "pass_": 56,
+      "rate_e5": 1.199508
+     },
+     {
+      "d": 8,
+      "n": 4665073,
+      "pass_": 47,
+      "rate_e5": 1.007487
+     },
+     {
+      "d": 9,
+      "n": 4668663,
+      "pass_": 4,
+      "rate_e5": 0.085678
+     },
+     {
+      "d": 10,
+      "n": 4671272,
+      "pass_": 0,
+      "rate_e5": 0.0
+     }
+    ],
+    "rank": [
+     {
+      "r": "1-3",
+      "n": 5816741,
+      "pass_": 358,
+      "rate_e5": 6.154649
+     },
+     {
+      "r": "4-8",
+      "n": 9683394,
+      "pass_": 544,
+      "rate_e5": 5.617865
+     },
+     {
+      "r": "9-16",
+      "n": 15537691,
+      "pass_": 869,
+      "rate_e5": 5.592852
+     },
+     {
+      "r": "17-24",
+      "n": 15620666,
+      "pass_": 1017,
+      "rate_e5": 6.510606
+     }
+    ]
+   },
+   "S123": {
+    "decile": [
+     {
+      "d": 1,
+      "n": 4694226,
+      "pass_": 2070,
+      "rate_e5": 44.096726
+     },
+     {
+      "d": 2,
+      "n": 4678236,
+      "pass_": 150,
+      "rate_e5": 3.206337
+     },
+     {
+      "d": 3,
+      "n": 4675621,
+      "pass_": 116,
+      "rate_e5": 2.480954
+     },
+     {
+      "d": 4,
+      "n": 4676157,
+      "pass_": 92,
+      "rate_e5": 1.967428
+     },
+     {
+      "d": 5,
+      "n": 4677235,
+      "pass_": 99,
+      "rate_e5": 2.116635
+     },
+     {
+      "d": 6,
+      "n": 4679842,
+      "pass_": 32,
+      "rate_e5": 0.683784
+     },
+     {
+      "d": 7,
+      "n": 4674916,
+      "pass_": 42,
+      "rate_e5": 0.898412
+     },
+     {
+      "d": 8,
+      "n": 4677319,
+      "pass_": 63,
+      "rate_e5": 1.346925
+     },
+     {
+      "d": 9,
+      "n": 4680354,
+      "pass_": 14,
+      "rate_e5": 0.299123
+     },
+     {
+      "d": 10,
+      "n": 4685595,
+      "pass_": 0,
+      "rate_e5": 0.0
+     }
+    ],
+    "rank": [
+     {
+      "r": "1-3",
+      "n": 5834368,
+      "pass_": 335,
+      "rate_e5": 5.741839
+     },
+     {
+      "r": "4-8",
+      "n": 9712083,
+      "pass_": 510,
+      "rate_e5": 5.251191
+     },
+     {
+      "r": "9-16",
+      "n": 15589741,
+      "pass_": 799,
+      "rate_e5": 5.125165
+     },
+     {
+      "r": "17-24",
+      "n": 15663309,
+      "pass_": 1034,
+      "rate_e5": 6.601415
+     }
+    ]
+   },
+   "S777": {
+    "decile": [
+     {
+      "d": 1,
+      "n": 4671527,
+      "pass_": 2029,
+      "rate_e5": 43.433336
+     },
+     {
+      "d": 2,
+      "n": 4676032,
+      "pass_": 157,
+      "rate_e5": 3.357548
+     },
+     {
+      "d": 3,
+      "n": 4674888,
+      "pass_": 133,
+      "rate_e5": 2.844988
+     },
+     {
+      "d": 4,
+      "n": 4678575,
+      "pass_": 109,
+      "rate_e5": 2.329769
+     },
+     {
+      "d": 5,
+      "n": 4679345,
+      "pass_": 79,
+      "rate_e5": 1.68827
+     },
+     {
+      "d": 6,
+      "n": 4681772,
+      "pass_": 50,
+      "rate_e5": 1.067972
+     },
+     {
+      "d": 7,
+      "n": 4681300,
+      "pass_": 49,
+      "rate_e5": 1.046718
+     },
+     {
+      "d": 8,
+      "n": 4680298,
+      "pass_": 28,
+      "rate_e5": 0.598253
+     },
+     {
+      "d": 9,
+      "n": 4681603,
+      "pass_": 3,
+      "rate_e5": 0.064081
+     },
+     {
+      "d": 10,
+      "n": 4681406,
+      "pass_": 0,
+      "rate_e5": 0.0
+     }
+    ],
+    "rank": [
+     {
+      "r": "1-3",
+      "n": 5832899,
+      "pass_": 348,
+      "rate_e5": 5.966159
+     },
+     {
+      "r": "4-8",
+      "n": 9712481,
+      "pass_": 524,
+      "rate_e5": 5.39512
+     },
+     {
+      "r": "9-16",
+      "n": 15579034,
+      "pass_": 850,
+      "rate_e5": 5.456051
+     },
+     {
+      "r": "17-24",
+      "n": 15662332,
+      "pass_": 915,
+      "rate_e5": 5.842042
+     }
+    ]
+   },
+   "S2024": {
+    "decile": [
+     {
+      "d": 1,
+      "n": 4714540,
+      "pass_": 2035,
+      "rate_e5": 43.164338
+     },
+     {
+      "d": 2,
+      "n": 4689271,
+      "pass_": 154,
+      "rate_e5": 3.284093
+     },
+     {
+      "d": 3,
+      "n": 4684665,
+      "pass_": 116,
+      "rate_e5": 2.476164
+     },
+     {
+      "d": 4,
+      "n": 4681796,
+      "pass_": 94,
+      "rate_e5": 2.007777
+     },
+     {
+      "d": 5,
+      "n": 4681965,
+      "pass_": 110,
+      "rate_e5": 2.349441
+     },
+     {
+      "d": 6,
+      "n": 4680375,
+      "pass_": 53,
+      "rate_e5": 1.132388
+     },
+     {
+      "d": 7,
+      "n": 4677090,
+      "pass_": 62,
+      "rate_e5": 1.325611
+     },
+     {
+      "d": 8,
+      "n": 4676745,
+      "pass_": 42,
+      "rate_e5": 0.898061
+     },
+     {
+      "d": 9,
+      "n": 4681774,
+      "pass_": 4,
+      "rate_e5": 0.085438
+     },
+     {
+      "d": 10,
+      "n": 4684131,
+      "pass_": 0,
+      "rate_e5": 0.0
+     }
+    ],
+    "rank": [
+     {
+      "r": "1-3",
+      "n": 5838896,
+      "pass_": 322,
+      "rate_e5": 5.514741
+     },
+     {
+      "r": "4-8",
+      "n": 9725226,
+      "pass_": 519,
+      "rate_e5": 5.336637
+     },
+     {
+      "r": "9-16",
+      "n": 15608319,
+      "pass_": 804,
+      "rate_e5": 5.151099
+     },
+     {
+      "r": "17-24",
+      "n": 15679911,
+      "pass_": 1025,
+      "rate_e5": 6.537027
+     }
+    ]
+   }
+  },
+  "edges_sp_decile_A1": [
+   0.304585,
+   0.336421,
+   0.362774,
+   0.389719,
+   0.419214,
+   0.45226,
+   0.489253,
+   0.529903,
+   0.579643
+  ],
+  "roi_A1": {
+   "n": 2652,
+   "by_pop_decile": {
+    "1": {
+     "n": 2042,
+     "sp_med": 0.200842,
+     "roi_mean": 3.941414,
+     "roi_ci95": [
+      3.501717,
+      4.381111
+     ],
+     "roi_med": 5.499332,
+     "win": 0.873653,
+     "pnl_sum": 74435.949924
+    },
+    "2": {
+     "n": 165,
+     "sp_med": 0.321408,
+     "roi_mean": 4.085691,
+     "roi_ci95": [
+      2.603805,
+      5.567577
+     ],
+     "roi_med": 5.994354,
+     "win": 0.836364,
+     "pnl_sum": 3897.020069
+    },
+    "3": {
+     "n": 105,
+     "sp_med": 0.347164,
+     "roi_mean": 2.25081,
+     "roi_ci95": [
+      -0.042107,
+      4.543726
+     ],
+     "roi_med": 5.499224,
+     "win": 0.761905,
+     "pnl_sum": 248.254059
+    },
+    "4": {
+     "n": 94,
+     "sp_med": 0.377252,
+     "roi_mean": 2.856519,
+     "roi_ci95": [
+      -0.146585,
+      5.859623
+     ],
+     "roi_med": 5.991377,
+     "win": 0.787234,
+     "pnl_sum": 2593.638713
+    },
+    "5": {
+     "n": 100,
+     "sp_med": 0.403933,
+     "roi_mean": 8.017766,
+     "roi_ci95": [
+      3.745397,
+      12.290135
+     ],
+     "roi_med": 6.496118,
+     "win": 0.91,
+     "pnl_sum": 6079.319819
+    },
+    "6": {
+     "n": 44,
+     "sp_med": 0.436907,
+     "roi_mean": 6.703222,
+     "roi_ci95": [
+      3.134098,
+      10.272346
+     ],
+     "roi_med": 5.99807,
+     "win": 0.909091,
+     "pnl_sum": 1932.768204
+    },
+    "7": {
+     "n": 46,
+     "sp_med": 0.467131,
+     "roi_mean": 1.027228,
+     "roi_ci95": [
+      -4.398919,
+      6.453374
+     ],
+     "roi_med": 5.498897,
+     "win": 0.782609,
+     "pnl_sum": 435.628951
+    },
+    "8": {
+     "n": 52,
+     "sp_med": 0.506497,
+     "roi_mean": -18.751407,
+     "roi_ci95": [
+      -26.024605,
+      -11.478209
+     ],
+     "roi_med": -18.470607,
+     "win": 0.384615,
+     "pnl_sum": -5327.398838
+    },
+    "9": {
+     "n": 4,
+     "sp_med": 0.532759,
+     "roi_mean": 7.246583,
+     "roi_ci95": [
+      4.964075,
+      9.52909
+     ],
+     "roi_med": 7.248027,
+     "win": 1.0,
+     "pnl_sum": 160.429809
+    }
+   },
+   "by_trade_quintile": {
+    "1": {
+     "n": 531,
+     "sp_med": 0.1128,
+     "roi_mean": 5.131804,
+     "roi_ci95": [
+      4.263366,
+      6.000243
+     ],
+     "roi_med": 5.958335,
+     "win": 0.922787,
+     "pnl_sum": 21613.023452
+    },
+    "2": {
+     "n": 530,
+     "sp_med": 0.184038,
+     "roi_mean": 2.940701,
+     "roi_ci95": [
+      2.026711,
+      3.854691
+     ],
+     "roi_med": 5.493655,
+     "win": 0.841509,
+     "pnl_sum": 19922.982988
+    },
+    "3": {
+     "n": 530,
+     "sp_med": 0.223522,
+     "roi_mean": 4.243655,
+     "roi_ci95": [
+      3.518263,
+      4.969047
+     ],
+     "roi_med": 5.710525,
+     "win": 0.884906,
+     "pnl_sum": 21037.548474
+    },
+    "4": {
+     "n": 530,
+     "sp_med": 0.279214,
+     "roi_mean": 3.417976,
+     "roi_ci95": [
+      2.479468,
+      4.356483
+     ],
+     "roi_med": 5.498963,
+     "win": 0.835849,
+     "pnl_sum": 12967.371789
+    },
+    "5": {
+     "n": 531,
+     "sp_med": 0.384958,
+     "roi_mean": 2.035809,
+     "roi_ci95": [
+      0.495946,
+      3.575673
+     ],
+     "roi_med": 5.500001,
+     "win": 0.789077,
+     "pnl_sum": 8914.684008
+    }
+   },
+   "spearman_sp_roi": -0.030155,
+   "by_year_half": {
+    "2022": {
+     "low_sp": {
+      "n": 234,
+      "sp_med": 0.166956,
+      "roi_mean": 2.93566,
+      "roi_ci95": [
+       1.45692,
+       4.4144
+      ],
+      "roi_med": 5.498008,
+      "win": 0.850427,
+      "pnl_sum": 3670.959597
+     },
+     "high_sp": {
+      "n": 303,
+      "sp_med": 0.34055,
+      "roi_mean": -1.110388,
+      "roi_ci95": [
+       -3.165649,
+       0.944873
+      ],
+      "roi_med": 5.499767,
+      "win": 0.759076,
+      "pnl_sum": -2819.341609
+     }
+    },
+    "2023": {
+     "low_sp": {
+      "n": 173,
+      "sp_med": 0.182642,
+      "roi_mean": 3.946422,
+      "roi_ci95": [
+       2.735751,
+       5.157094
+      ],
+      "roi_med": 5.498869,
+      "win": 0.855491,
+      "pnl_sum": 4871.261442
+     },
+     "high_sp": {
+      "n": 535,
+      "sp_med": 0.333911,
+      "roi_mean": 5.786681,
+      "roi_ci95": [
+       4.739352,
+       6.834009
+      ],
+      "roi_med": 5.994328,
+      "win": 0.861682,
+      "pnl_sum": 24327.408269
+     }
+    },
+    "2024": {
+     "low_sp": {
+      "n": 415,
+      "sp_med": 0.191487,
+      "roi_mean": 4.571024,
+      "roi_ci95": [
+       3.757478,
+       5.38457
+      ],
+      "roi_med": 5.499998,
+      "win": 0.893976,
+      "pnl_sum": 18212.167971
+     },
+     "high_sp": {
+      "n": 351,
+      "sp_med": 0.251745,
+      "roi_mean": 3.857296,
+      "roi_ci95": [
+       2.973106,
+       4.741486
+      ],
+      "roi_med": 5.49895,
+      "win": 0.851852,
+      "pnl_sum": 13418.193055
+     }
+    },
+    "2025": {
+     "low_sp": {
+      "n": 504,
+      "sp_med": 0.155161,
+      "roi_mean": 4.664105,
+      "roi_ci95": [
+       3.700206,
+       5.628003
+      ],
+      "roi_med": 5.967956,
+      "win": 0.912698,
+      "pnl_sum": 28842.505316
+     },
+     "high_sp": {
+      "n": 137,
+      "sp_med": 0.264256,
+      "roi_mean": -2.229624,
+      "roi_ci95": [
+       -5.104606,
+       0.645358
+      ],
+      "roi_med": 4.961411,
+      "win": 0.722628,
+      "pnl_sum": -6067.543331
+     }
+    }
+   }
+  }
+ },
+ "D4": {
+  "calib_a": {
+   "rho": 0.000239,
+   "target_A1_sim_min_2225": 586,
+   "got": 586
+  },
+  "calib_b": {
+   "rho": 0.000214,
+   "target_A1_sim_min_2225": 586,
+   "got": 586
+  },
+  "per_arm": {
+   "SIM": {
+    "A1": {
+     "year": {
+      "2022": {
+       "min": 170,
+       "symmin": 537,
+       "symmin_per_min": 3.158824
+      },
+      "2023": {
+       "min": 106,
+       "symmin": 708,
+       "symmin_per_min": 6.679245
+      },
+      "2024": {
+       "min": 130,
+       "symmin": 766,
+       "symmin_per_min": 5.892308
+      },
+      "2025": {
+       "min": 180,
+       "symmin": 641,
+       "symmin_per_min": 3.561111
+      }
+     },
+     "tot2225": 586
+    },
+    "S7": {
+     "year": {
+      "2022": {
+       "min": 138,
+       "symmin": 411,
+       "symmin_per_min": 2.978261
+      },
+      "2023": {
+       "min": 112,
+       "symmin": 709,
+       "symmin_per_min": 6.330357
+      },
+      "2024": {
+       "min": 144,
+       "symmin": 806,
+       "symmin_per_min": 5.597222
+      },
+      "2025": {
+       "min": 178,
+       "symmin": 622,
+       "symmin_per_min": 3.494382
+      }
+     },
+     "tot2225": 572
+    },
+    "S13": {
+     "year": {
+      "2022": {
+       "min": 137,
+       "symmin": 428,
+       "symmin_per_min": 3.124088
+      },
+      "2023": {
+       "min": 114,
+       "symmin": 703,
+       "symmin_per_min": 6.166667
+      },
+      "2024": {
+       "min": 128,
+       "symmin": 742,
+       "symmin_per_min": 5.796875
+      },
+      "2025": {
+       "min": 182,
+       "symmin": 629,
+       "symmin_per_min": 3.456044
+      }
+     },
+     "tot2225": 561
+    },
+    "S21": {
+     "year": {
+      "2022": {
+       "min": 106,
+       "symmin": 345,
+       "symmin_per_min": 3.254717
+      },
+      "2023": {
+       "min": 105,
+       "symmin": 624,
+       "symmin_per_min": 5.942857
+      },
+      "2024": {
+       "min": 133,
+       "symmin": 767,
+       "symmin_per_min": 5.766917
+      },
+      "2025": {
+       "min": 172,
+       "symmin": 618,
+       "symmin_per_min": 3.593023
+      }
+     },
+     "tot2225": 516
+    },
+    "S99": {
+     "year": {
+      "2022": {
+       "min": 163,
+       "symmin": 582,
+       "symmin_per_min": 3.570552
+      },
+      "2023": {
+       "min": 105,
+       "symmin": 708,
+       "symmin_per_min": 6.742857
+      },
+      "2024": {
+       "min": 138,
+       "symmin": 793,
+       "symmin_per_min": 5.746377
+      },
+      "2025": {
+       "min": 186,
+       "symmin": 692,
+       "symmin_per_min": 3.72043
+      }
+     },
+     "tot2225": 592
+    },
+    "S123": {
+     "year": {
+      "2022": {
+       "min": 131,
+       "symmin": 426,
+       "symmin_per_min": 3.251908
+      },
+      "2023": {
+       "min": 108,
+       "symmin": 716,
+       "symmin_per_min": 6.62963
+      },
+      "2024": {
+       "min": 124,
+       "symmin": 770,
+       "symmin_per_min": 6.209677
+      },
+      "2025": {
+       "min": 178,
+       "symmin": 646,
+       "symmin_per_min": 3.629213
+      }
+     },
+     "tot2225": 541
+    },
+    "S777": {
+     "year": {
+      "2022": {
+       "min": 160,
+       "symmin": 559,
+       "symmin_per_min": 3.49375
+      },
+      "2023": {
+       "min": 111,
+       "symmin": 665,
+       "symmin_per_min": 5.990991
+      },
+      "2024": {
+       "min": 131,
+       "symmin": 786,
+       "symmin_per_min": 6.0
+      },
+      "2025": {
+       "min": 173,
+       "symmin": 640,
+       "symmin_per_min": 3.699422
+      }
+     },
+     "tot2225": 575
+    },
+    "S2024": {
+     "year": {
+      "2022": {
+       "min": 126,
+       "symmin": 432,
+       "symmin_per_min": 3.428571
+      },
+      "2023": {
+       "min": 110,
+       "symmin": 733,
+       "symmin_per_min": 6.663636
+      },
+      "2024": {
+       "min": 122,
+       "symmin": 755,
+       "symmin_per_min": 6.188525
+      },
+      "2025": {
+       "min": 177,
+       "symmin": 625,
+       "symmin_per_min": 3.531073
+      }
+     },
+     "tot2225": 535
+    }
+   },
+   "G2off": {
+    "A1": {
+     "year": {
+      "2022": {
+       "min": 179,
+       "symmin": 537,
+       "symmin_per_min": 3.0
+      },
+      "2023": {
+       "min": 106,
+       "symmin": 708,
+       "symmin_per_min": 6.679245
+      },
+      "2024": {
+       "min": 130,
+       "symmin": 767,
+       "symmin_per_min": 5.9
+      },
+      "2025": {
+       "min": 180,
+       "symmin": 641,
+       "symmin_per_min": 3.561111
+      }
+     },
+     "tot2225": 595
+    },
+    "S7": {
+     "year": {
+      "2022": {
+       "min": 206,
+       "symmin": 507,
+       "symmin_per_min": 2.461165
+      },
+      "2023": {
+       "min": 112,
+       "symmin": 709,
+       "symmin_per_min": 6.330357
+      },
+      "2024": {
+       "min": 144,
+       "symmin": 806,
+       "symmin_per_min": 5.597222
+      },
+      "2025": {
+       "min": 178,
+       "symmin": 622,
+       "symmin_per_min": 3.494382
+      }
+     },
+     "tot2225": 640
+    },
+    "S13": {
+     "year": {
+      "2022": {
+       "min": 227,
+       "symmin": 549,
+       "symmin_per_min": 2.418502
+      },
+      "2023": {
+       "min": 114,
+       "symmin": 709,
+       "symmin_per_min": 6.219298
+      },
+      "2024": {
+       "min": 128,
+       "symmin": 742,
+       "symmin_per_min": 5.796875
+      },
+      "2025": {
+       "min": 182,
+       "symmin": 629,
+       "symmin_per_min": 3.456044
+      }
+     },
+     "tot2225": 651
+    },
+    "S21": {
+     "year": {
+      "2022": {
+       "min": 251,
+       "symmin": 595,
+       "symmin_per_min": 2.370518
+      },
+      "2023": {
+       "min": 106,
+       "symmin": 625,
+       "symmin_per_min": 5.896226
+      },
+      "2024": {
+       "min": 133,
+       "symmin": 767,
+       "symmin_per_min": 5.766917
+      },
+      "2025": {
+       "min": 172,
+       "symmin": 618,
+       "symmin_per_min": 3.593023
+      }
+     },
+     "tot2225": 662
+    },
+    "S99": {
+     "year": {
+      "2022": {
+       "min": 177,
+       "symmin": 592,
+       "symmin_per_min": 3.344633
+      },
+      "2023": {
+       "min": 105,
+       "symmin": 711,
+       "symmin_per_min": 6.771429
+      },
+      "2024": {
+       "min": 138,
+       "symmin": 793,
+       "symmin_per_min": 5.746377
+      },
+      "2025": {
+       "min": 186,
+       "symmin": 692,
+       "symmin_per_min": 3.72043
+      }
+     },
+     "tot2225": 606
+    },
+    "S123": {
+     "year": {
+      "2022": {
+       "min": 217,
+       "symmin": 546,
+       "symmin_per_min": 2.516129
+      },
+      "2023": {
+       "min": 108,
+       "symmin": 716,
+       "symmin_per_min": 6.62963
+      },
+      "2024": {
+       "min": 124,
+       "symmin": 770,
+       "symmin_per_min": 6.209677
+      },
+      "2025": {
+       "min": 178,
+       "symmin": 646,
+       "symmin_per_min": 3.629213
+      }
+     },
+     "tot2225": 627
+    },
+    "S777": {
+     "year": {
+      "2022": {
+       "min": 159,
+       "symmin": 542,
+       "symmin_per_min": 3.408805
+      },
+      "2023": {
+       "min": 111,
+       "symmin": 665,
+       "symmin_per_min": 5.990991
+      },
+      "2024": {
+       "min": 131,
+       "symmin": 786,
+       "symmin_per_min": 6.0
+      },
+      "2025": {
+       "min": 177,
+       "symmin": 644,
+       "symmin_per_min": 3.638418
+      }
+     },
+     "tot2225": 578
+    },
+    "S2024": {
+     "year": {
+      "2022": {
+       "min": 218,
+       "symmin": 557,
+       "symmin_per_min": 2.555046
+      },
+      "2023": {
+       "min": 110,
+       "symmin": 733,
+       "symmin_per_min": 6.663636
+      },
+      "2024": {
+       "min": 122,
+       "symmin": 755,
+       "symmin_per_min": 6.188525
+      },
+      "2025": {
+       "min": 177,
+       "symmin": 625,
+       "symmin_per_min": 3.531073
+      }
+     },
+     "tot2225": 627
+    }
+   },
+   "a_min_p15": {
+    "A1": {
+     "year": {
+      "2022": {
+       "min": 134,
+       "symmin": 1924,
+       "symmin_per_min": 14.358209
+      },
+      "2023": {
+       "min": 144,
+       "symmin": 2086,
+       "symmin_per_min": 14.486111
+      },
+      "2024": {
+       "min": 170,
+       "symmin": 2271,
+       "symmin_per_min": 13.358824
+      },
+      "2025": {
+       "min": 138,
+       "symmin": 1647,
+       "symmin_per_min": 11.934783
+      }
+     },
+     "tot2225": 586
+    },
+    "S7": {
+     "year": {
+      "2022": {
+       "min": 181,
+       "symmin": 2282,
+       "symmin_per_min": 12.607735
+      },
+      "2023": {
+       "min": 129,
+       "symmin": 1910,
+       "symmin_per_min": 14.806202
+      },
+      "2024": {
+       "min": 176,
+       "symmin": 2566,
+       "symmin_per_min": 14.579545
+      },
+      "2025": {
+       "min": 135,
+       "symmin": 1605,
+       "symmin_per_min": 11.888889
+      }
+     },
+     "tot2225": 621
+    },
+    "S13": {
+     "year": {
+      "2022": {
+       "min": 150,
+       "symmin": 1976,
+       "symmin_per_min": 13.173333
+      },
+      "2023": {
+       "min": 151,
+       "symmin": 2152,
+       "symmin_per_min": 14.251656
+      },
+      "2024": {
+       "min": 166,
+       "symmin": 2504,
+       "symmin_per_min": 15.084337
+      },
+      "2025": {
+       "min": 125,
+       "symmin": 1472,
+       "symmin_per_min": 11.776
+      }
+     },
+     "tot2225": 592
+    },
+    "S21": {
+     "year": {
+      "2022": {
+       "min": 177,
+       "symmin": 2141,
+       "symmin_per_min": 12.096045
+      },
+      "2023": {
+       "min": 133,
+       "symmin": 1934,
+       "symmin_per_min": 14.541353
+      },
+      "2024": {
+       "min": 173,
+       "symmin": 2686,
+       "symmin_per_min": 15.526012
+      },
+      "2025": {
+       "min": 141,
+       "symmin": 1856,
+       "symmin_per_min": 13.163121
+      }
+     },
+     "tot2225": 624
+    },
+    "S99": {
+     "year": {
+      "2022": {
+       "min": 135,
+       "symmin": 1914,
+       "symmin_per_min": 14.177778
+      },
+      "2023": {
+       "min": 148,
+       "symmin": 1948,
+       "symmin_per_min": 13.162162
+      },
+      "2024": {
+       "min": 169,
+       "symmin": 2504,
+       "symmin_per_min": 14.816568
+      },
+      "2025": {
+       "min": 146,
+       "symmin": 1742,
+       "symmin_per_min": 11.931507
+      }
+     },
+     "tot2225": 598
+    },
+    "S123": {
+     "year": {
+      "2022": {
+       "min": 159,
+       "symmin": 2101,
+       "symmin_per_min": 13.213836
+      },
+      "2023": {
+       "min": 137,
+       "symmin": 2018,
+       "symmin_per_min": 14.729927
+      },
+      "2024": {
+       "min": 173,
+       "symmin": 2455,
+       "symmin_per_min": 14.190751
+      },
+      "2025": {
+       "min": 136,
+       "symmin": 1652,
+       "symmin_per_min": 12.147059
+      }
+     },
+     "tot2225": 605
+    },
+    "S777": {
+     "year": {
+      "2022": {
+       "min": 145,
+       "symmin": 2123,
+       "symmin_per_min": 14.641379
+      },
+      "2023": {
+       "min": 135,
+       "symmin": 1974,
+       "symmin_per_min": 14.622222
+      },
+      "2024": {
+       "min": 167,
+       "symmin": 2233,
+       "symmin_per_min": 13.371257
+      },
+      "2025": {
+       "min": 125,
+       "symmin": 1457,
+       "symmin_per_min": 11.656
+      }
+     },
+     "tot2225": 572
+    },
+    "S2024": {
+     "year": {
+      "2022": {
+       "min": 163,
+       "symmin": 2247,
+       "symmin_per_min": 13.785276
+      },
+      "2023": {
+       "min": 134,
+       "symmin": 1988,
+       "symmin_per_min": 14.835821
+      },
+      "2024": {
+       "min": 165,
+       "symmin": 2435,
+       "symmin_per_min": 14.757576
+      },
+      "2025": {
+       "min": 141,
+       "symmin": 1764,
+       "symmin_per_min": 12.510638
+      }
+     },
+     "tot2225": 603
+    }
+   },
+   "b_min_rmax": {
+    "A1": {
+     "year": {
+      "2022": {
+       "min": 116,
+       "symmin": 403,
+       "symmin_per_min": 3.474138
+      },
+      "2023": {
+       "min": 163,
+       "symmin": 1087,
+       "symmin_per_min": 6.668712
+      },
+      "2024": {
+       "min": 173,
+       "symmin": 998,
+       "symmin_per_min": 5.768786
+      },
+      "2025": {
+       "min": 134,
+       "symmin": 620,
+       "symmin_per_min": 4.626866
+      }
+     },
+     "tot2225": 586
+    },
+    "S7": {
+     "year": {
+      "2022": {
+       "min": 158,
+       "symmin": 532,
+       "symmin_per_min": 3.367089
+      },
+      "2023": {
+       "min": 160,
+       "symmin": 960,
+       "symmin_per_min": 6.0
+      },
+      "2024": {
+       "min": 169,
+       "symmin": 942,
+       "symmin_per_min": 5.573964
+      },
+      "2025": {
+       "min": 137,
+       "symmin": 616,
+       "symmin_per_min": 4.49635
+      }
+     },
+     "tot2225": 624
+    },
+    "S13": {
+     "year": {
+      "2022": {
+       "min": 152,
+       "symmin": 476,
+       "symmin_per_min": 3.131579
+      },
+      "2023": {
+       "min": 160,
+       "symmin": 1036,
+       "symmin_per_min": 6.475
+      },
+      "2024": {
+       "min": 165,
+       "symmin": 1025,
+       "symmin_per_min": 6.212121
+      },
+      "2025": {
+       "min": 135,
+       "symmin": 597,
+       "symmin_per_min": 4.422222
+      }
+     },
+     "tot2225": 612
+    },
+    "S21": {
+     "year": {
+      "2022": {
+       "min": 199,
+       "symmin": 689,
+       "symmin_per_min": 3.462312
+      },
+      "2023": {
+       "min": 164,
+       "symmin": 1025,
+       "symmin_per_min": 6.25
+      },
+      "2024": {
+       "min": 172,
+       "symmin": 1032,
+       "symmin_per_min": 6.0
+      },
+      "2025": {
+       "min": 140,
+       "symmin": 605,
+       "symmin_per_min": 4.321429
+      }
+     },
+     "tot2225": 675
+    },
+    "S99": {
+     "year": {
+      "2022": {
+       "min": 130,
+       "symmin": 408,
+       "symmin_per_min": 3.138462
+      },
+      "2023": {
+       "min": 169,
+       "symmin": 1210,
+       "symmin_per_min": 7.159763
+      },
+      "2024": {
+       "min": 164,
+       "symmin": 993,
+       "symmin_per_min": 6.054878
+      },
+      "2025": {
+       "min": 137,
+       "symmin": 622,
+       "symmin_per_min": 4.540146
+      }
+     },
+     "tot2225": 600
+    },
+    "S123": {
+     "year": {
+      "2022": {
+       "min": 155,
+       "symmin": 474,
+       "symmin_per_min": 3.058065
+      },
+      "2023": {
+       "min": 154,
+       "symmin": 1081,
+       "symmin_per_min": 7.019481
+      },
+      "2024": {
+       "min": 170,
+       "symmin": 1031,
+       "symmin_per_min": 6.064706
+      },
+      "2025": {
+       "min": 119,
+       "symmin": 559,
+       "symmin_per_min": 4.697479
+      }
+     },
+     "tot2225": 598
+    },
+    "S777": {
+     "year": {
+      "2022": {
+       "min": 113,
+       "symmin": 512,
+       "symmin_per_min": 4.530973
+      },
+      "2023": {
+       "min": 158,
+       "symmin": 890,
+       "symmin_per_min": 5.632911
+      },
+      "2024": {
+       "min": 161,
+       "symmin": 960,
+       "symmin_per_min": 5.962733
+      },
+      "2025": {
+       "min": 114,
+       "symmin": 528,
+       "symmin_per_min": 4.631579
+      }
+     },
+     "tot2225": 546
+    },
+    "S2024": {
+     "year": {
+      "2022": {
+       "min": 158,
+       "symmin": 518,
+       "symmin_per_min": 3.278481
+      },
+      "2023": {
+       "min": 169,
+       "symmin": 1114,
+       "symmin_per_min": 6.591716
+      },
+      "2024": {
+       "min": 166,
+       "symmin": 1106,
+       "symmin_per_min": 6.662651
+      },
+      "2025": {
+       "min": 137,
+       "symmin": 643,
+       "symmin_per_min": 4.693431
+      }
+     },
+     "tot2225": 630
+    }
+   },
+   "c_365d": {
+    "A1": {
+     "year": {
+      "2022": {
+       "min": 136,
+       "symmin": 433,
+       "symmin_per_min": 3.183824
+      },
+      "2023": {
+       "min": 58,
+       "symmin": 428,
+       "symmin_per_min": 7.37931
+      },
+      "2024": {
+       "min": 222,
+       "symmin": 1364,
+       "symmin_per_min": 6.144144
+      },
+      "2025": {
+       "min": 250,
+       "symmin": 1353,
+       "symmin_per_min": 5.412
+      }
+     },
+     "tot2225": 666
+    },
+    "S7": {
+     "year": {
+      "2022": {
+       "min": 283,
+       "symmin": 765,
+       "symmin_per_min": 2.70318
+      },
+      "2023": {
+       "min": 52,
+       "symmin": 312,
+       "symmin_per_min": 6.0
+      },
+      "2024": {
+       "min": 245,
+       "symmin": 1400,
+       "symmin_per_min": 5.714286
+      },
+      "2025": {
+       "min": 255,
+       "symmin": 1358,
+       "symmin_per_min": 5.32549
+      }
+     },
+     "tot2225": 835
+    },
+    "S13": {
+     "year": {
+      "2022": {
+       "min": 264,
+       "symmin": 746,
+       "symmin_per_min": 2.825758
+      },
+      "2023": {
+       "min": 59,
+       "symmin": 378,
+       "symmin_per_min": 6.40678
+      },
+      "2024": {
+       "min": 202,
+       "symmin": 1335,
+       "symmin_per_min": 6.608911
+      },
+      "2025": {
+       "min": 237,
+       "symmin": 1293,
+       "symmin_per_min": 5.455696
+      }
+     },
+     "tot2225": 762
+    },
+    "S21": {
+     "year": {
+      "2022": {
+       "min": 426,
+       "symmin": 1125,
+       "symmin_per_min": 2.640845
+      },
+      "2023": {
+       "min": 40,
+       "symmin": 202,
+       "symmin_per_min": 5.05
+      },
+      "2024": {
+       "min": 199,
+       "symmin": 1282,
+       "symmin_per_min": 6.442211
+      },
+      "2025": {
+       "min": 252,
+       "symmin": 1393,
+       "symmin_per_min": 5.527778
+      }
+     },
+     "tot2225": 917
+    },
+    "S99": {
+     "year": {
+      "2022": {
+       "min": 158,
+       "symmin": 502,
+       "symmin_per_min": 3.177215
+      },
+      "2023": {
+       "min": 72,
+       "symmin": 476,
+       "symmin_per_min": 6.611111
+      },
+      "2024": {
+       "min": 201,
+       "symmin": 1196,
+       "symmin_per_min": 5.950249
+      },
+      "2025": {
+       "min": 251,
+       "symmin": 1298,
+       "symmin_per_min": 5.171315
+      }
+     },
+     "tot2225": 682
+    },
+    "S123": {
+     "year": {
+      "2022": {
+       "min": 276,
+       "symmin": 705,
+       "symmin_per_min": 2.554348
+      },
+      "2023": {
+       "min": 57,
+       "symmin": 343,
+       "symmin_per_min": 6.017544
+      },
+      "2024": {
+       "min": 207,
+       "symmin": 1312,
+       "symmin_per_min": 6.338164
+      },
+      "2025": {
+       "min": 237,
+       "symmin": 1287,
+       "symmin_per_min": 5.43038
+      }
+     },
+     "tot2225": 777
+    },
+    "S777": {
+     "year": {
+      "2022": {
+       "min": 121,
+       "symmin": 404,
+       "symmin_per_min": 3.338843
+      },
+      "2023": {
+       "min": 62,
+       "symmin": 390,
+       "symmin_per_min": 6.290323
+      },
+      "2024": {
+       "min": 211,
+       "symmin": 1367,
+       "symmin_per_min": 6.478673
+      },
+      "2025": {
+       "min": 244,
+       "symmin": 1304,
+       "symmin_per_min": 5.344262
+      }
+     },
+     "tot2225": 638
+    },
+    "S2024": {
+     "year": {
+      "2022": {
+       "min": 321,
+       "symmin": 848,
+       "symmin_per_min": 2.641745
+      },
+      "2023": {
+       "min": 60,
+       "symmin": 385,
+       "symmin_per_min": 6.416667
+      },
+      "2024": {
+       "min": 225,
+       "symmin": 1429,
+       "symmin_per_min": 6.351111
+      },
+      "2025": {
+       "min": 235,
+       "symmin": 1183,
+       "symmin_per_min": 5.034043
+      }
+     },
+     "tot2225": 841
+    }
+   }
+  },
+  "summary": {
+   "SIM": {
+    "min22_mean": 141.375,
+    "min22_sd": 21.580001,
+    "min22_cv": 0.152644,
+    "min22_range": [
+     106.0,
+     170.0
+    ],
+    "tot2225_mean": 559.75,
+    "tot2225_sd": 26.703397,
+    "per_year_mean": {
+     "2022": 141.375,
+     "2023": 108.875,
+     "2024": 131.25,
+     "2025": 178.25
+    },
+    "per_year_sd": {
+     "2022": 21.580001,
+     "2023": 3.399054,
+     "2024": 7.186296,
+     "2025": 4.559135
+    },
+    "jac2225_mean": 0.656327,
+    "jac22_mean": 0.486075,
+    "symmin_per_min22_mean": 3.282584,
+    "n_arms": 8
+   },
+   "G2off": {
+    "min22_mean": 204.25,
+    "min22_sd": 30.438463,
+    "min22_cv": 0.149026,
+    "min22_range": [
+     159.0,
+     251.0
+    ],
+    "tot2225_mean": 623.25,
+    "tot2225_sd": 28.594455,
+    "per_year_mean": {
+     "2022": 204.25,
+     "2023": 109.0,
+     "2024": 131.25,
+     "2025": 178.75
+    },
+    "per_year_sd": {
+     "2022": 30.438463,
+     "2023": 3.251373,
+     "2024": 7.186296,
+     "2025": 4.097037
+    },
+    "jac2225_mean": 0.626049,
+    "jac22_mean": 0.464745,
+    "symmin_per_min22_mean": 2.75935,
+    "n_arms": 8
+   },
+   "a_min_p15": {
+    "min22_mean": 155.5,
+    "min22_sd": 17.744214,
+    "min22_cv": 0.114111,
+    "min22_range": [
+     134.0,
+     181.0
+    ],
+    "tot2225_mean": 600.125,
+    "tot2225_sd": 17.315868,
+    "per_year_mean": {
+     "2022": 155.5,
+     "2023": 138.875,
+     "2024": 169.875,
+     "2025": 135.875
+    },
+    "per_year_sd": {
+     "2022": 17.744214,
+     "2023": 7.845608,
+     "2024": 3.870677,
+     "2025": 7.529703
+    },
+    "jac2225_mean": 0.637228,
+    "jac22_mean": 0.548825,
+    "symmin_per_min22_mean": 13.506699,
+    "n_arms": 8
+   },
+   "b_min_rmax": {
+    "min22_mean": 147.625,
+    "min22_sd": 27.871837,
+    "min22_cv": 0.188802,
+    "min22_range": [
+     113.0,
+     199.0
+    ],
+    "tot2225_mean": 608.875,
+    "tot2225_sd": 37.28438,
+    "per_year_mean": {
+     "2022": 147.625,
+     "2023": 162.125,
+     "2024": 167.5,
+     "2025": 131.625
+    },
+    "per_year_sd": {
+     "2022": 27.871837,
+     "2023": 5.221863,
+     "2024": 4.174754,
+     "2025": 9.590732
+    },
+    "jac2225_mean": 0.629887,
+    "jac22_mean": 0.491368,
+    "symmin_per_min22_mean": 3.430137,
+    "n_arms": 8
+   },
+   "c_365d": {
+    "min22_mean": 248.125,
+    "min22_sd": 104.232484,
+    "min22_cv": 0.420081,
+    "min22_range": [
+     121.0,
+     426.0
+    ],
+    "tot2225_mean": 764.75,
+    "tot2225_sd": 97.652079,
+    "per_year_mean": {
+     "2022": 248.125,
+     "2023": 57.5,
+     "2024": 214.0,
+     "2025": 245.125
+    },
+    "per_year_sd": {
+     "2022": 104.232484,
+     "2023": 9.071147,
+     "2024": 15.775207,
+     "2025": 7.918108
+    },
+    "jac2225_mean": 0.602416,
+    "jac22_mean": 0.403451,
+    "symmin_per_min22_mean": 2.88322,
+    "n_arms": 8
+   }
+  },
+  "jac_sim_vs_g2off": {
+   "A1": 0.968333,
+   "S7": 0.88785,
+   "S13": 0.856049,
+   "S21": 0.774096,
+   "S99": 0.976898,
+   "S123": 0.856916,
+   "S777": 0.991364,
+   "S2024": 0.847377
+  }
+ },
+ "D1_gate": {
+  "arms": {
+   "A1": {
+    "recall_minute": 0.991468,
+    "recall_ok": true,
+    "ratio_min": {
+     "2022": 1.052941,
+     "2023": 1.0,
+     "2024": 1.0,
+     "2025": 1.0
+    },
+    "ratio_ok": true
+   },
+   "S21": {
+    "recall_minute": 0.996124,
+    "recall_ok": true,
+    "ratio_min": {
+     "2022": 2.367925,
+     "2023": 1.009524,
+     "2024": 1.0,
+     "2025": 1.0
+    },
+    "ratio_ok": false
+   },
+   "S777": {
+    "recall_minute": 0.998261,
+    "recall_ok": true,
+    "ratio_min": {
+     "2022": 0.99375,
+     "2023": 1.0,
+     "2024": 1.0,
+     "2025": 1.023121
+    },
+    "ratio_ok": true
+   }
+  },
+  "PASS": false
+ }
+}

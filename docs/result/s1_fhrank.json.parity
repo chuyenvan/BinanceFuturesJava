@@ -1,0 +1,15 @@
+{
+ "ok": true,
+ "md5_b0ref4": "ff3ce513edf2316088a4b5ac464f76dc",
+ "md5_eq_ff3ce513": true,
+ "n": 2517,
+ "eq": 131908.0,
+ "valeq_vs_selab_p0": {
+  "rows_a": 2518,
+  "rows_b": 2518,
+  "cells_str_diff": 0,
+  "cells_val_diff": 0,
+  "cols": {}
+ },
+ "b0_tag": "selab-p0"
+}

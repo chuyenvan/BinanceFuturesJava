@@ -49,6 +49,8 @@ public final class GateRollingRatio {
     private static long predictSeen = 0;
     private static long predictPass = 0;
     private static final TreeMap<String, long[]> quarterCounts = new TreeMap<>(); // "YYYYQn" -> {seen, pass}
+    // [GATE_QUOTA_SKIPFULL 2026-10-04] docs/prereg/PREREG_GATE_QUOTA_SKIPFULL.md: so ung vien PREDICT bi bo qua vi so day (chi in khi key bat)
+    private static long predictSkipFull = 0;
 
     private GateRollingRatio() {
     }
@@ -57,6 +59,9 @@ public final class GateRollingRatio {
     public static synchronized void init() {
         if (inited) return;
         inited = true;
+        if (Configs.GATE_QUOTA_SKIP_WHEN_FULL) {
+            LOG.warn("*** [GATE-QUOTA] SKIP_WHEN_FULL=ON: so day (managerBudget null) => khong nap r, khong tinh pass ***");
+        }
         String mode = Cfg.get("SIM_GATE_ROLLING_MODE");
         if (!"ratio".equalsIgnoreCase(mode == null ? "" : mode.trim())) {
             on = false;
@@ -89,6 +94,11 @@ public final class GateRollingRatio {
         predictSeen++;
         long[] c = quarterCounts.computeIfAbsent(quarterOf(ts), k -> new long[2]);
         c[0]++;
+    }
+
+    /** [GATE_QUOTA_SKIPFULL 2026-10-04] docs/prereg/PREREG_GATE_QUOTA_SKIPFULL.md: dem 1 ung vien PREDICT bi bo qua vi so day (khong nap r, khong pass). */
+    public static synchronized void noteSkipFull(long ts) {
+        predictSkipFull++;
     }
 
     /** Đếm 1 candidate PREDICT PASS gate. LUÔN chạy. */
@@ -129,7 +139,24 @@ public final class GateRollingRatio {
         buffer.reset();
         warnedBeforeFirst = false;
         predictSeen = predictPass = 0;
+        predictSkipFull = 0;
         quarterCounts.clear();
+    }
+
+    static int bufferSizeForTest() {
+        return buffer.size();
+    }
+
+    static long passForTest() {
+        return predictPass;
+    }
+
+    static long seenForTest() {
+        return predictSeen;
+    }
+
+    static long skipFullForTest() {
+        return predictSkipFull;
     }
 
     /** "YYYYQn" theo GMT+7 (khớp printDone.csv dùng Utils.sdf* GMT+7). */
@@ -149,6 +176,7 @@ public final class GateRollingRatio {
         for (Map.Entry<String, long[]> e : quarterCounts.entrySet()) {
             sb.append(String.format(" | %s:%d/%d", e.getKey(), e.getValue()[1], e.getValue()[0]));
         }
+        if (Configs.GATE_QUOTA_SKIP_WHEN_FULL) sb.append(" | skipFull=").append(predictSkipFull);
         return sb.toString();
     }
 }
