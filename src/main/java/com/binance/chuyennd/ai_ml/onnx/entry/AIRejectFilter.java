@@ -44,6 +44,10 @@ public class AIRejectFilter {
     /** Dem so REJECT do gate MOM15 trong mot ablation run. Reset bang resetCounters() truoc moi run. */
     public static final AtomicInteger mom15RejectCount = new AtomicInteger(0);
 
+    /** [SHADOW2 2026-10-05] dem don dieu so REJECT do skipFull (so day) — live lay hieu so moi tick cho dong [GATE].
+     *  Chi dem, KHONG doi quyet dinh; key tat => khong bao gio tang. */
+    public static final AtomicInteger skipFullCount = new AtomicInteger(0);
+
     /** Reset counter truoc moi ablation run. */
     public static void resetCounters() {
         mom15RejectCount.set(0);
@@ -82,6 +86,7 @@ public class AIRejectFilter {
         }
         if (Configs.GATE_QUOTA_SKIP_WHEN_FULL && bookFull && sp != null) {
             GateRollingRatio.noteSkipFull(prediction.timestamp);
+            skipFullCount.incrementAndGet();
             return new FilterResult(FilterDecision.REJECT, "BOOK FULL: U>=U_MAX -> bo qua quota gate (khong nap r)");
         }
         // [G2-LIVE-PORT 2026-09-29] docs/plan/PLAN_G2_LIVE_PORT.md — quantile cuộn trên CHÍNH TỈ SỐ r.
