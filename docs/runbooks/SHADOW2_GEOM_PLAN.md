@@ -1,3 +1,5 @@
+HOÃN — shadow #2 dùng cho K24+skipFull (owner 10-05), GEOM xét sau. Xem docs/runbooks/SHADOW2_K24_SKIPFULL_PLAN.md.
+
 # SHADOW2_GEOM_PLAN — kế hoạch shadow #2 (S1 + GEOM) chạy song song shadow #1 (S1 KEEP9)
 
 - **Ngày:** 2026-10-03. **Trạng thái:** KẾ HOẠCH — **owner duyệt 2026-10-03**. Chưa tạo thư mục/service nào, chưa deploy. Không chạm 242.
