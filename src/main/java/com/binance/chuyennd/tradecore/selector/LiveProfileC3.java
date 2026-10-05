@@ -23,6 +23,13 @@ import org.slf4j.LoggerFactory;
  *
  * <p>🔒 {@code SHADOW_NO_PUSH} bi <b>HARDCODE true</b> khi profile bat: khong doc env, khong
  * co duong nao dat lenh that. Day la dieu kien an toan, khong phai tham so.
+ *
+ * <p>[C3-LIVE 2026-10-03] profile THU HAI {@code LIVE_PROFILE=c3_live}: giu TOAN BO hanh vi C3 o tren
+ * ({@link #on()} = true), CHI khac cong day lenh that: {@link #forceNoPush()} =
+ * NOT({@code SHADOW_NO_PUSH==false} AND {@code LIVE_ENTRY_ENABLED==true}) OR kill-switch file
+ * ({@code LIVE_KILL_SWITCH_FILE}, mac dinh {@code run/KILL_SWITCH}) ton tai. Thieu env => no-push.
+ * Kill-switch doc lai MOI lan goi (moi lenh + moi 10s o BinanceOrderTradingManager) => tao file la
+ * chan ngay. {@code c3_shadow} va profile tat: KHONG doi mot bit.
  */
 public final class LiveProfileC3 {
 
@@ -32,6 +39,13 @@ public final class LiveProfileC3 {
     }
 
     public static final String PROFILE_NAME = "c3_shadow";
+    /** [C3-LIVE] profile C3 co cong day lenh that (mac dinh van no-push). */
+    public static final String PROFILE_LIVE = "c3_live";
+    /** [C3-LIVE] env thu hai (cung voi SHADOW_NO_PUSH=false) de mo day lenh that. */
+    public static final String KEY_LIVE_ENTRY = "LIVE_ENTRY_ENABLED";
+    /** [C3-LIVE] duong dan file kill-switch (ton tai => no-push ngay). */
+    public static final String KEY_KILL_FILE = "LIVE_KILL_SWITCH_FILE";
+    public static final String DEFAULT_KILL_FILE = "run/KILL_SWITCH";
 
     /** (a) nguong arm trailing cua C3. */
     public static final float ARM_RATE = 0.07f;
@@ -43,11 +57,17 @@ public final class LiveProfileC3 {
     public static final float SIZE_CAP_OF_EQUITY = 0.045f;
 
     private static final boolean ON;
+    /** [C3-LIVE] true chi khi LIVE_PROFILE=c3_live. */
+    private static final boolean LIVE;
+    private static final String KILL_FILE;
+    private static volatile Boolean lastNoPush = null;
     private static final float PAPER_EQUITY;
 
     static {
         String v = Cfg.get("LIVE_PROFILE");
-        ON = v != null && PROFILE_NAME.equalsIgnoreCase(v.trim());
+        LIVE = v != null && PROFILE_LIVE.equalsIgnoreCase(v.trim());
+        ON = (v != null && PROFILE_NAME.equalsIgnoreCase(v.trim())) || LIVE;
+        KILL_FILE = LIVE ? Cfg.getOr(KEY_KILL_FILE, DEFAULT_KILL_FILE) : DEFAULT_KILL_FILE;
         float eq = 0f;
         if (ON) {
             String pe = Cfg.get("PAPER_EQUITY");
@@ -56,11 +76,24 @@ public final class LiveProfileC3 {
             } catch (NumberFormatException e) {
                 LOG.warn("PAPER_EQUITY='{}' khong phai so -> 0 (sizing se bi chan)", pe);
             }
-            LOG.info("🟡 [LIVE_PROFILE=c3_shadow] BAT — arm={} timeStop={}h ratchet=LIEN TUC "
-                            + "paperEquity={} sizeCap={}%. SHADOW_NO_PUSH=true (hardcode, khong doc env).",
-                    ARM_RATE, TIME_STOP_HOURS, eq, SIZE_CAP_OF_EQUITY * 100f);
+            if (!LIVE) {
+                LOG.info("🟡 [LIVE_PROFILE=c3_shadow] BAT — arm={} timeStop={}h ratchet=LIEN TUC "
+                                + "paperEquity={} sizeCap={}%. SHADOW_NO_PUSH=true (hardcode, khong doc env).",
+                        ARM_RATE, TIME_STOP_HOURS, eq, SIZE_CAP_OF_EQUITY * 100f);
+            }
         }
         PAPER_EQUITY = eq;
+        if (LIVE) {
+            String snp = Cfg.get("SHADOW_NO_PUSH");
+            String le = Cfg.get(KEY_LIVE_ENTRY);
+            boolean kill = killSwitchPresent(KILL_FILE);
+            boolean np = decideNoPush(true, snp, le, kill);
+            lastNoPush = np;
+            LOG.warn("🟠 [LIVE_PROFILE=c3_live] BAT — hanh vi C3 day du (arm={} timeStop={}h ratchet=LIEN TUC "
+                            + "paperEquity={} sizeCap={}%). PUSH={} (SHADOW_NO_PUSH={} {}={} killSwitch={} exists={})",
+                    ARM_RATE, TIME_STOP_HOURS, eq, SIZE_CAP_OF_EQUITY * 100f, np ? "OFF" : "ON",
+                    snp, KEY_LIVE_ENTRY, le, KILL_FILE, kill);
+        }
     }
 
     /** true khi {@code LIVE_PROFILE=c3_shadow}. Moi nhanh moi PHAI nam sau ham nay. */
@@ -74,11 +107,52 @@ public final class LiveProfileC3 {
     }
 
     /**
-     * 🔒 Chan day lenh that. Profile bat => LUON true (khong doc env). Profile tat => tra
-     * {@code null} de goi y "dung duong cu" ({@code Cfg.get("SHADOW_NO_PUSH")}).
+     * 🔒 Chan day lenh that. {@code c3_shadow} => LUON true (khong doc env). Profile tat => false
+     * ("dung duong cu" {@code Cfg.get("SHADOW_NO_PUSH")}). [C3-LIVE] {@code c3_live} =>
+     * {@link #decideNoPush} doc env + kill-switch MOI lan goi; doi trang thai => log WARN.
      */
     public static boolean forceNoPush() {
-        return ON;
+        if (!ON) return false;
+        if (!LIVE) return true;
+        String snp = Cfg.get("SHADOW_NO_PUSH");
+        String le = Cfg.get(KEY_LIVE_ENTRY);
+        boolean kill = killSwitchPresent(KILL_FILE);
+        boolean np = decideNoPush(true, snp, le, kill);
+        Boolean prev = lastNoPush;
+        if (prev == null || prev != np) {
+            lastNoPush = np;
+            LOG.warn("[C3-LIVE] PUSH doi trang thai -> {} (SHADOW_NO_PUSH={} {}={} killSwitch={} exists={})",
+                    np ? "OFF" : "ON", snp, KEY_LIVE_ENTRY, le, KILL_FILE, kill);
+        }
+        return np;
+    }
+
+    /** [C3-LIVE] true khi {@code LIVE_PROFILE=c3_live}. */
+    public static boolean isLive() {
+        return LIVE;
+    }
+
+    /**
+     * [C3-LIVE] Thuan tinh toan cua cong day lenh. {@code live=false} (c3_shadow) => LUON no-push.
+     * {@code live=true}: kill-switch => no-push; push CHI khi {@code SHADOW_NO_PUSH} == "false" VA
+     * {@code LIVE_ENTRY_ENABLED} == "true" (khong phan biet hoa thuong, bo khoang trang). Thieu/sai => no-push.
+     */
+    static boolean decideNoPush(boolean live, String shadowNoPush, String liveEntryEnabled, boolean killSwitch) {
+        if (!live) return true;
+        if (killSwitch) return true;
+        boolean push = shadowNoPush != null && "false".equalsIgnoreCase(shadowNoPush.trim())
+                && liveEntryEnabled != null && "true".equalsIgnoreCase(liveEntryEnabled.trim());
+        return !push;
+    }
+
+    /** [C3-LIVE] file kill-switch ton tai? Loi he thong file => coi nhu CO (fail-closed). */
+    static boolean killSwitchPresent(String path) {
+        if (path == null || path.trim().isEmpty()) return false;
+        try {
+            return new java.io.File(path.trim()).exists();
+        } catch (SecurityException e) {
+            return true;
+        }
     }
 
     /** (a) nguong arm: profile bat -> 0.07; tat -> {@code def} (gia tri live hien tai). */

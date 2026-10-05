@@ -131,6 +131,8 @@ public final class ShadowBookC3 {
     private final String ledgerPath;
     /** Vi the DANG MO + PnL da chot, ghi ra dia sau MOI thay doi. */
     private final String statePath;
+    /** [LIVE-DCA-GRID] nhat ky TUNG LEG (co leg_idx) — chi ghi khi LIVE_DCA_GRID_ENABLED=true. */
+    private final String legsPath;
     private double realized = 0d;
     private long nOpen = 0, nClose = 0;
 
@@ -153,6 +155,7 @@ public final class ShadowBookC3 {
             LOG.error("[SHADOW] khong mo duoc ledger {}: {}", ledgerPath, e.getMessage());
         }
         statePath = new File(dir, "open_positions.csv").getAbsolutePath();
+        legsPath = new File(dir, "legs.csv").getAbsolutePath();
         loadState();
         LOG.info("[SHADOW] so vi the giay khoi tao, ledger={} state={} open={} realized={} paperEquity={}",
                 ledgerPath, statePath, open.size(), realized, LiveProfileC3.paperEquity());
@@ -258,6 +261,15 @@ public final class ShadowBookC3 {
      * {@code putIfAbsent} vut im lang => thieu pnl DCA/BIG_DOWN.
      */
     public void openPos(String symbol, long ts, float entry, float qty, int rank, Float symbolPred) {
+        openPos(symbol, ts, entry, qty, rank, symbolPred, null);
+    }
+
+    /**
+     * [LIVE-DCA-GRID 2026-10-03] Nhu tren + {@code level} (marketLevel cua leg) de ghi {@code legs.csv}
+     * (leg_idx 0-based = legCount-1 sau khi khop). Ghi CHI khi {@link LiveDcaGridC3#enabled()};
+     * co TAT => y het ban 6 tham so (khong tao file).
+     */
+    public void openPos(String symbol, long ts, float entry, float qty, int rank, Float symbolPred, String level) {
         if (symbol == null || entry <= 0f || qty <= 0f) return;
         Cluster c = open.get(symbol);
         if (c == null) {
@@ -273,6 +285,37 @@ public final class ShadowBookC3 {
             LOG.info("[SHADOW] add-leg {} leg={} entry={} qty={} avgEntry={} totQty={} margin={} open={}",
                     symbol, c.legCount, entry, qty, c.avgEntry(), c.qty, c.margin(), open.size());
         }
+        if (LiveDcaGridC3.enabled()) appendLeg(c, ts, entry, qty, level);
+    }
+
+    /** [LIVE-DCA-GRID] mot dong legs.csv: sym,ts,leg_idx,entry,qty,leg_margin,level,first_entry,avg_entry. */
+    private synchronized void appendLeg(Cluster c, long ts, float entry, float qty, String level) {
+        File f = new File(legsPath);
+        boolean header = !f.exists();
+        try (PrintWriter w = new PrintWriter(new FileWriter(f, true))) {
+            if (header) w.println("sym,ts,leg_idx,entry,qty,leg_margin,level,first_entry,avg_entry");
+            int lev = Configs.LEVERAGE_ORDER > 0 ? Configs.LEVERAGE_ORDER : 1;
+            w.printf("%s,%d,%d,%s,%s,%s,%s,%s,%s%n", c.symbol, ts, c.legCount - 1,
+                    Float.toString(entry), Float.toString(qty), Float.toString(entry * qty / lev),
+                    level == null ? "" : level, Float.toString(c.firstEntryPrice), Float.toString(c.avgEntry()));
+        } catch (IOException e) {
+            LOG.error("[SHADOW] khong ghi duoc legs {}: {}", legsPath, e.getMessage());
+        }
+    }
+
+    /** [LIVE-DCA-GRID] so leg da khop cua cum giay (0 neu khong giu). */
+    public int legCount(String symbol) {
+        Cluster c = open.get(symbol);
+        return c == null ? 0 : c.legCount;
+    }
+
+    /** [LIVE-DCA-GRID] anh chup (firstEntryPrice, legCount) moi cum dang mo — dau vao LiveDcaGridC3. */
+    public List<LiveDcaGridC3.GridState> gridStates() {
+        List<LiveDcaGridC3.GridState> out = new ArrayList<>();
+        for (Cluster c : open.values()) {
+            out.add(new LiveDcaGridC3.GridState(c.symbol, c.firstEntryPrice, c.legCount));
+        }
+        return out;
     }
 
     /** Tong margin giay dang chiem — thay {@code BudgetManager.marginRunning} khi profile bat. */

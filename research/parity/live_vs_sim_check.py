@@ -323,6 +323,9 @@ def run_java_probes():
         lines.append("B %d %d" % (eq, m))
     for g in range(5):
         lines.append("G %d" % g)
+    # [LIVE-SIZING 2026-10-03] budget leg duong live (LiveGridSizing.legBudget) leg 0..3 @35000, U=0
+    for g in range(4):
+        lines.append("L 35000 0 %d" % g)
     inp = "\n".join(lines) + "\n"
     res = {}
     for tag in ("b0", "shadow", "242"):
@@ -816,8 +819,15 @@ def layer_E(ctx):
         b = f["B 35000 0"][0]
         return b * (f["G 0"][0] if with_ratio else 1.0)
     sim_leg0 = leg0(fb, True)                  # B0: DCA_GRID_ENABLED=true -> budget *= gridLegWeightRatio(0)
-    sh_leg0 = leg0(fs, False)                  # live: managerBudget, KHONG nhan ratio
-    l242_leg0 = leg0(f2, False)
+
+    def live_leg0(f):
+        # [LIVE-SIZING 2026-10-03] probe "L" = ham THAT cua duong live (LiveGridSizing.legBudget) duoi env
+        #   cua box; jar/env khong co => fallback managerBudget (live cu khong nhan ratio).
+        if "L 35000 0 0" in f:
+            return f["L 35000 0 0"][0]
+        return leg0(f, False)
+    sh_leg0 = live_leg0(fs)
+    l242_leg0 = live_leg0(f2)
     ratio_ = sh_leg0 / sim_leg0
     ctx["e2"] = {"sim_leg0_at_eq35000": sim_leg0, "shadow_leg0": sh_leg0, "242_leg0": l242_leg0, "ratio_live_over_sim": ratio_,
                  "managerBudget(35000,0)": fs["B 35000 0"][0], "gridLegWeightRatio(0)_B0": fb["G 0"][0]}
@@ -831,7 +841,7 @@ def layer_E(ctx):
                       "%.2f USDT (live/sim = %.4f)%s" % (sh_leg0, ratio_, " [SAU SUA SIM_F_BASE=%s]" % fix["f_base"] if fix else ""),
                       "%.2f USDT (live/sim = %.4f)" % (l242_leg0, l242_leg0 / sim_leg0),
                       PASS if ok else FAIL, FAIL if abs(l242_leg0 / sim_leg0 - 1) > 1e-6 else PASS,
-                      "shadow: SIM_F_BASE = F_BASE(B0)*DCA_GRID_SCALE = 0.015*6 = 0.09 (bu, vi live khong nhan ratio). 242: chi de xuat (cung env hoac code)",
+                      "shadow: LIVE_APPLY_GRID_RATIO=true => live = managerBudget x gridLegWeightRatio(0) (LiveGridSizing, probe L), SIM_F_BASE=0.015 = B0 (bo bu 0.09). 242: chua bat (cung goi code + env, owner quyet)",
                       known=False, evidence="%s | %s | %s" % (ev_src, ev_ratio, ev_live_ratio)))
     items.append(item("E1", "E", "gia vao = ticker.priceClose cua nen tin hieu (live: OrderTargetInfo.priceEntry=ticker.priceClose -> ShadowBookC3.openPos)",
                       "entry = priceClose", "dung (code)", "dung (code, legacy khong mo lenh moi)", PASS, PASS,
@@ -849,9 +859,28 @@ def layer_E(ctx):
                       "cung ham", "B(35000,5000)=%.2f | B(40000,12000)=%.2f | B(35000,21000)=%s" % (fs["B 35000 5000"][0], fs["B 40000 12000"][0], fs["B 35000 21000"][0]),
                       "idem", PASS if all(_e4eq(fb[k][0] * fscale, fs[k][0]) for k in fb if k.startswith("B ")) else FAIL,
                       PASS if all(fb[k][0] == f2[k][0] or (math.isnan(fb[k][0]) and math.isnan(f2[k][0])) for k in fb if k.startswith("B ")) else FAIL))
+    # [LIVE-DCA-GRID 2026-10-03] shadow: code LiveDcaGridC3 + env LIVE_DCA_GRID_ENABLED=true => grid co tren so giay.
+    #   PASS khi legs.csv co leg_idx>=1; chua co leg => MISSING (cho gia rot -50%).
+    sh_env = read_env_file(SH_APP + "/conf/env.sh") if os.path.exists(SH_APP + "/conf/env.sh") else {}
+    has_code = os.path.exists(SRC + "/tradecore/selector/LiveDcaGridC3.java")
+    sh_grid_on = has_code and str(sh_env.get("LIVE_DCA_GRID_ENABLED", "")).strip().lower() == "true"
+    n_grid_legs = 0
+    legs_csv = SHADOW + "/legs.csv"
+    if os.path.exists(legs_csv):
+        try:
+            Lg = pd.read_csv(legs_csv)
+            n_grid_legs = int((Lg.leg_idx >= 1).sum()) if len(Lg) else 0
+        except Exception:
+            n_grid_legs = 0
+    if sh_grid_on:
+        e5_sh_txt = "CO (LiveDcaGridC3, LIVE_DCA_GRID_ENABLED=true): %d leg grid (leg_idx>=1) trong legs.csv" % n_grid_legs
+        e5_sh = PASS if n_grid_legs > 0 else MISSING
+    else:
+        e5_sh_txt = "KHONG co (DcaProcessor.getDCAProduction duyet vi the THAT; shadow khong co)"
+        e5_sh = FAIL
     items.append(item("E5", "E", "DCA grid (leg 1-3 tai -50/-75/-90%) + DCA_LEVEL1", "co (46 DCA_LEVEL1 + leg grid)",
-                      "KHONG co (DcaProcessor.getDCAProduction duyet vi the THAT; shadow khong co)", "chi coin legacy (skip-LEGACY cho so giay)",
-                      FAIL, FAIL, "CAN CODE (hoac owner chap nhan 'B0-khong-grid' sau do tac dong tren sim)", known=True,
+                      e5_sh_txt, "chi coin legacy (skip-LEGACY cho so giay)",
+                      e5_sh, FAIL, "shadow: code co, cho leg dau tien (gia rot -50% tu leg dau). 242: chua bat", known=not sh_grid_on,
                       evidence=src_grep("tradecore/DcaProcessor.java", r"getDCAProduction")))
     led = SHADOW + "/ledger.csv"
     ev6 = "khong co ledger"
