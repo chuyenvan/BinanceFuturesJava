@@ -157,6 +157,10 @@ public class Configs {
     //   true => ung vien PREDICT tai luc so KHONG mo duoc lenh moi (managerBudget null, U >= U_MAX) KHONG nap r
     //   vao buffer gate rolling va KHONG tinh pass. Mac dinh false => byte-identical. Key GATE_QUOTA_SKIP_WHEN_FULL.
     public static boolean GATE_QUOTA_SKIP_WHEN_FULL = false;
+    // [RANK-MARGIN 2026-10-05] docs/prereg/PREREG_RANK_MARGIN.md
+    //   size leg SELECTOR giam dan theo rank k (1-based, rank 1 = tot nhat): m(k) = 1 - alpha*(k-1)/(K-1).
+    //   K = SELECTOR_RANK_TOPK. alpha=0 (mac dinh) => flat => byte-identical. Key SIM_RANK_MARGIN_ALPHA.
+    public static float RANK_MARGIN_ALPHA = 0f;
     public static float U_MAX  = 0.60f;   // trần tổng margin/equity, U≥U_MAX → chặn (gene search [0.40, 0.80])
 
 
@@ -907,6 +911,7 @@ public class Configs {
             if ((v = Cfg.get("SIM_U_MAX")) != null) U_MAX = Float.parseFloat(v.trim());
             // [GATE_QUOTA_SKIPFULL 2026-10-04] docs/prereg/PREREG_GATE_QUOTA_SKIPFULL.md (sim + live cung key; khong khai => false)
             if ((v = Cfg.get("GATE_QUOTA_SKIP_WHEN_FULL")) != null) GATE_QUOTA_SKIP_WHEN_FULL = Boolean.parseBoolean(v.trim());
+            if ((v = Cfg.get("SIM_RANK_MARGIN_ALPHA")) != null) RANK_MARGIN_ALPHA = Float.parseFloat(v.trim());
             if ((v = Cfg.get("SIM_PREDICT_SYMBOL_RATE_MAX")) != null) PREDICT_SYMBOL_RATE_MAX_THRESHOLD = Float.parseFloat(v);
             if ((v = Cfg.get("SIM_RATE_PROFIT_STOP_MARKET")) != null) RATE_PROFIT_STOP_MARKET = Float.parseFloat(v);
             if ((v = Cfg.get("SIM_MS_DOWN_BIG_AVG")) != null) MS_DOWN_BIG_AVG = Float.parseFloat(v);

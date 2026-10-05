@@ -1422,6 +1422,17 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         float tierMultiplier = CoinRankManager.getInstance().getBudgetMultiplier(symbolId);
         budget *= tierMultiplier;
 
+        // [RANK-MARGIN 2026-10-05] docs/prereg/PREREG_RANK_MARGIN.md - size leg SELECTOR theo rank k.
+        //   m(k) = 1 - alpha*(k-1)/(K-1), K = SELECTOR_RANK_TOPK, k = selRank (1-based, 1 = tot nhat).
+        //   Chi leg PREDICT (selRank != null); BIG_DOWN/DCA_LEVEL1 co selRank == null => giu nguyen.
+        //   Dat SAU tierMultiplier, TRUOC VolTarget/DCA-grid ratio => ca cum cung co theo rank.
+        //   alpha=0 (mac dinh) => m=1 => byte-identical. Clamp m >= 0.
+        if (Configs.RANK_MARGIN_ALPHA > 0f && selRank != null && Configs.SELECTOR_RANK_TOPK > 1) {
+            float _rm = 1f - Configs.RANK_MARGIN_ALPHA * (selRank - 1) / (float) (Configs.SELECTOR_RANK_TOPK - 1);
+            if (_rm < 0f) _rm = 0f;
+            budget *= _rm;
+        }
+
         // [VOL_TARGET 2026-09-20] docs/prereg/PREREG_VOL_TARGET.md - TASK 5: scale size theo bien dong
         //   THUC TE (COIN: vol 7d cua chinh coin; PORTFOLIO: vol 20d cua equity chien luoc). Nhan
         //   SAU tierMultiplier, TRUOC DCA-grid ratio -> moi leg cua CUNG mot cum an chung he so nay
