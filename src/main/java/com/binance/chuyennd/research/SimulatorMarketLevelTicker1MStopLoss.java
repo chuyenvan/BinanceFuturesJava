@@ -1427,7 +1427,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         //   Chi leg PREDICT (selRank != null); BIG_DOWN/DCA_LEVEL1 co selRank == null => giu nguyen.
         //   Dat SAU tierMultiplier, TRUOC VolTarget/DCA-grid ratio => ca cum cung co theo rank.
         //   alpha=0 (mac dinh) => m=1 => byte-identical. Clamp m >= 0.
-        if (Configs.RANK_MARGIN_ALPHA > 0f && selRank != null && Configs.SELECTOR_RANK_TOPK > 1) {
+        if (Configs.RANK_MARGIN_ALPHA != 0f && selRank != null && Configs.SELECTOR_RANK_TOPK > 1) {
             float _rm = 1f - Configs.RANK_MARGIN_ALPHA * (selRank - 1) / (float) (Configs.SELECTOR_RANK_TOPK - 1);
             if (_rm < 0f) _rm = 0f;
             budget *= _rm;
