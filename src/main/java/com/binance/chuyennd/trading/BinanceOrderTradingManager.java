@@ -58,6 +58,10 @@ public class BinanceOrderTradingManager {
     public static void main(String[] args) throws InterruptedException, ParseException {
         Configs.assertLiveRuntime();   // #12 (TASK-030/112): fail-fast nếu AEROSPIKE_READ_CLUSTER thiếu/khác 242 → tránh đọc 226 (backtest) trên live
         Utils.writePid2File();
+        // [LIVE-SIZING] nap lop som => log cau hinh MOT lan luc khoi dong (co TAT: khong log, khong doi hanh vi).
+        com.binance.chuyennd.tradecore.selector.LiveGridSizing.on();
+        // [LIVE-DCA-GRID] idem cho co DCA grid so giay.
+        com.binance.chuyennd.tradecore.selector.LiveDcaGridC3.enabled();
         new DetectEntrySignal2TradeNormal().start();
         new BinanceOrderTradingManager().start();
     }
@@ -230,7 +234,8 @@ public class BinanceOrderTradingManager {
             com.binance.chuyennd.tradecore.selector.ShadowBookC3.getInstance().openPos(
                     order.symbol, order.timeStart, order.priceEntry, order.quantity,
                     rk == null ? -1 : rk,
-                    DetectEntrySignal2TradeNormal.paperSymbolPred(order.symbol));
+                    DetectEntrySignal2TradeNormal.paperSymbolPred(order.symbol),
+                    order.marketLevel == null ? null : order.marketLevel.toString());
         }
     }
 
@@ -258,6 +263,10 @@ public class BinanceOrderTradingManager {
             // Duong live that KHONG co vi the nao khi profile bat (SHADOW_NO_PUSH chan entry).
             if (com.binance.chuyennd.tradecore.selector.LiveProfileC3.on() && currentSecond % 10 == 0) {
                 executorServiceOrderNew.execute(this::shadowTickC3);
+            }
+            // [C3-LIVE] doc lai cong push + kill-switch moi 10s (log khi doi trang thai). c3_shadow/tat: bo qua.
+            if (com.binance.chuyennd.tradecore.selector.LiveProfileC3.isLive() && currentSecond % 10 == 0) {
+                com.binance.chuyennd.tradecore.selector.LiveProfileC3.forceNoPush();
             }
             // sl dynamic
             if (currentSecond % 30 == 0) {

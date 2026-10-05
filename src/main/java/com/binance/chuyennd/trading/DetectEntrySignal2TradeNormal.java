@@ -367,6 +367,10 @@ public class DetectEntrySignal2TradeNormal {
                 } catch (Exception e) {
                     LOG.error("DCA createOrderBuyRequest loi: {}", e.toString());
                 }
+                // [LIVE-DCA-GRID] diem goi 1 cua sim (getDCA trong nhanh levelChange != null).
+                if (com.binance.chuyennd.tradecore.selector.LiveDcaGridC3.active()) {
+                    paperDcaGrid("level", symbol2FinalTicker, symbol2Max15m, marketRate, predictData, symbol2LastTickers);
+                }
             }
             // dca buy
             if (MarketBigChangeDetector.isDcaAlt(rateDown15MAvg, rateDownAvg, rateUpAvg)) {
@@ -384,6 +388,10 @@ public class DetectEntrySignal2TradeNormal {
 
                         }
                     }
+                }
+                // [LIVE-DCA-GRID] diem goi 2 cua sim (getDCA(null,...) trong nhanh isDcaAlt).
+                if (com.binance.chuyennd.tradecore.selector.LiveDcaGridC3.active()) {
+                    paperDcaGrid("dcaAlt", symbol2FinalTicker, symbol2Max15m, marketRate, predictData, symbol2LastTickers);
                 }
             }
 
@@ -459,6 +467,9 @@ public class DetectEntrySignal2TradeNormal {
             //   mot dong tong ket/tick (xem cuoi vong lap). Chi la LOG — khong doi quyet dinh nao.
             int gateCand = 0;
             Float gateThrMin = null, gateThrMax = null;
+            // [SHADOW2 2026-10-05] moc dem skipFull + reset U cua tick (chi LOG).
+            final int gateSkipFull0 = AIRejectFilter.skipFullCount.get();
+            lastLiveU = Float.NaN;
             for (Map.Entry<Float, String> entry : selPool.entrySet()) {
                 String symbol = entry.getValue();
                 // [L3 LEGACY] symbol co vi the THAT cu: so giay KHONG mo entry giay va KHONG dem
@@ -494,14 +505,18 @@ public class DetectEntrySignal2TradeNormal {
             //   base = nguong CO SO (SIM_MIN_MOMENTUM_15M); thr = dai nguong THAT ap cho top-K tick nay.
             //   n_pass = n_cand - n_rej (n_rej chi dem REJECT do gate, gom trong predictRejects).
             //   verify.sh cua goi deploy doc dung dong nay. Thuan LOG, khong doi quyet dinh.
+            //   [SHADOW2 2026-10-05] key GATE_QUOTA_SKIP_WHEN_FULL tat => chuoi y het cu; bat => them
+            //   n_skipfull (da nam trong n_rej) + u (LiveBookU.gateLine).
             if (gateCand > 0) {
-                LOG.info("[GATE] scale={} topk={} base={} thr=[{}..{}] n_cand={} n_rej={} n_pass={}",
+                LOG.info("{}", com.binance.chuyennd.tradecore.selector.LiveBookU.gateLine(
+                        Configs.GATE_QUOTA_SKIP_WHEN_FULL,
                         String.format("%.4f", com.binance.chuyennd.tradecore.EntryGate.GATE_DYN_SCALE),
                         Configs.SELECTOR_RANK_TOPK,
                         String.format("%.5f", Configs.MIN_MOMENTUM_15M),
                         gateThrMin == null ? "-" : String.format("%.5f", gateThrMin),
                         gateThrMax == null ? "-" : String.format("%.5f", gateThrMax),
-                        gateCand, predictRejects.size(), gateCand - predictRejects.size());
+                        gateCand, predictRejects.size(),
+                        AIRejectFilter.skipFullCount.get() - gateSkipFull0, lastLiveU));
             }
             // market pred GIỐNG NHAU mọi coin → in 1 lần kèm danh sách SYM(symbolPred). (24H đã bỏ khỏi hệ.)
             if (!predictRejects.isEmpty() && predictData != null) {
@@ -918,18 +933,45 @@ public class DetectEntrySignal2TradeNormal {
      * LiveProfileC3.on()) va CUNG ham {@link TradeUtils#managerBudget} (null = U &gt;= U_MAX). Chi goi khi key bat.
      */
     private boolean liveBookFull(MarketLevelChange levelChange) {
-        Float marginRunning = BudgetManager.getInstance().marginRunning;
-        Float balanceBasic = BudgetManager.getInstance().balanceBasic;
-        if (com.binance.chuyennd.tradecore.selector.LiveProfileC3.on()) {
-            com.binance.chuyennd.tradecore.selector.ShadowBookC3 book =
-                    com.binance.chuyennd.tradecore.selector.ShadowBookC3.getInstance();
-            java.util.Map<String, Float> pxOpen = book.openCount() == 0
-                    ? java.util.Collections.emptyMap()
-                    : DataManagerAerospikeFloatSim.getAllPriceRealtimeLegacy(book.openSymbols());
-            balanceBasic = book.equityNow(pxOpen);
-            marginRunning = book.marginRunning();
+        // [SHADOW2 2026-10-05] cung nguon nhu ban truoc, tach vao LiveBookU de unit test; ghi U cho dong [GATE].
+        Float[] me = com.binance.chuyennd.tradecore.selector.LiveBookU.marginEquity(
+                com.binance.chuyennd.tradecore.selector.LiveProfileC3.on(),
+                BudgetManager.getInstance().marginRunning, BudgetManager.getInstance().balanceBasic,
+                () -> com.binance.chuyennd.tradecore.selector.LiveBookU.fromBook(
+                        com.binance.chuyennd.tradecore.selector.ShadowBookC3.getInstance(),
+                        DataManagerAerospikeFloatSim::getAllPriceRealtimeLegacy));
+        lastLiveU = com.binance.chuyennd.tradecore.selector.LiveBookU.u(me[0], me[1]);
+        return TradeUtils.managerBudget(null, me[0], me[1], levelChange) == null;
+    }
+
+    /** [SHADOW2 2026-10-05] U luc goi liveBookFull cuoi cung trong tick (NaN = chua tinh). Chi de LOG. */
+    private volatile float lastLiveU = Float.NaN;
+
+    /**
+     * [LIVE-DCA-GRID 2026-10-03] Nhoi leg DCA-grid cho SO GIAY C3 — ban port cua sim
+     * ({@code DcaProcessor.getDCA} nhanh DCA_GRID_ENABLED + {@code createOrderBUY(DCA_LEVEL1, symbolPred=null)}).
+     * Chi goi khi {@code LiveDcaGridC3.active()}. Leg di qua DUNG {@link #createOrderBuyRequest} (cong
+     * entryGate, TIER_3 chan DCA, managerBudget U/U_MAX tren so giay, ratio legIdx, tran 4.5%, CONC_PC).
+     */
+    private void paperDcaGrid(String site, Map<String, KlineObjectSimple> symbol2FinalTicker,
+                              Map<String, Float> symbol2Max15m, MarketDataObject marketRate,
+                              OnnxInferenceManager.PredictionResult predictData,
+                              Map<String, List<KlineObjectSimple>> symbol2LastTickers) {
+        try {
+            final Map<String, KlineObjectSimple> tk = symbol2FinalTicker;
+            List<String> due = com.binance.chuyennd.tradecore.selector.LiveDcaGridC3.candidates(
+                    com.binance.chuyennd.tradecore.selector.ShadowBookC3.getInstance(),
+                    s -> { KlineObjectSimple t = tk.get(s); return t == null ? null : t.priceClose; });
+            if (!due.isEmpty()) LOG.info("[LIVE-DCA-GRID] site={} due={}", site, due);
+            for (String symbol : due) {
+                KlineObjectSimple ticker = tk.get(symbol);
+                if (!Utils.isTickerAvailable(ticker)) continue;
+                createOrderBuyRequest(symbol, ticker, MarketLevelChange.DCA_LEVEL1, symbol2Max15m.get(symbol),
+                        marketRate, predictData, null, symbol2LastTickers, null);
+            }
+        } catch (Exception e) {
+            LOG.error("[LIVE-DCA-GRID] loi site={}: {}", site, e.toString());
         }
-        return TradeUtils.managerBudget(null, marginRunning, balanceBasic, levelChange) == null;
     }
 
     public void createOrderBuyRequest(String symbol, KlineObjectSimple ticker, MarketLevelChange levelChange, Float priceMax15M,
@@ -1000,6 +1042,10 @@ public class DetectEntrySignal2TradeNormal {
         Float marginRunning = BudgetManager.getInstance().marginRunning;
         Float balanceBasic = BudgetManager.getInstance().balanceBasic;
         Float budget = BudgetManager.getInstance().getBudget();
+        // [LIVE-SIZING 2026-10-03] bac grid cua leg nay cho LiveGridSizing: 0 = leg MO cum; leg DCA_LEVEL1
+        //   (vi the that legacy, khong biet bac) = -1 => khong nhan ratio. Chi co tac dung khi
+        //   LIVE_APPLY_GRID_RATIO=true (mac dinh TAT => bien nay khong duoc doc vao dau).
+        int liveLegIdx = (levelChange == MarketLevelChange.DCA_LEVEL1) ? -1 : 0;
         // [C3-SHADOW (d)] sizing COMPOUND tren equity GIAY: PAPER_EQUITY + PnL shadow (mark-to-market
         //   tu price_realtime). Bo hoan toan getAccountUMInfo() (key Oracle la STUB -> nem, va
         //   BUDGET_PER_ORDER se ket o 0 => moi entry bi chan: docs/experiment/L1_SHADOW_C3.md muc 3e).
@@ -1013,7 +1059,14 @@ public class DetectEntrySignal2TradeNormal {
             }
             com.binance.chuyennd.tradecore.selector.ShadowBookC3 book =
                     com.binance.chuyennd.tradecore.selector.ShadowBookC3.getInstance();
-            if (book.isHolding(symbol)) return;   // giong guard symbol2Pos cua duong that
+            if (levelChange == MarketLevelChange.DCA_LEVEL1
+                    && com.binance.chuyennd.tradecore.selector.LiveDcaGridC3.active()) {
+                // [LIVE-DCA-GRID] leg DCA giay CHI nhoi cum DANG giu; bac = so leg da khop (nhu sim).
+                if (!book.isHolding(symbol)) return;
+                liveLegIdx = com.binance.chuyennd.tradecore.selector.LiveDcaGridC3.legIdxFor(book.legCount(symbol));
+            } else if (book.isHolding(symbol)) {
+                return;   // giong guard symbol2Pos cua duong that
+            }
             java.util.Map<String, Float> pxOpen = book.openCount() == 0
                     ? java.util.Collections.emptyMap()
                     : DataManagerAerospikeFloatSim.getAllPriceRealtimeLegacy(book.openSymbols());
@@ -1022,6 +1075,14 @@ public class DetectEntrySignal2TradeNormal {
         }
 
         budget = TradeUtils.managerBudget(budget, marginRunning, balanceBasic, levelChange);
+        // [LIVE-SIZING 2026-10-03] docs/audit/LIVE_SIZING_DCA_C3LIVE_20261003.md (E2 parity): sim nhan
+        //   DcaUtils.gridLegWeightRatio(legIdx) (= w x DCA_GRID_SCALE) vao budget leg
+        //   (SimulatorMarketLevelTicker1MStopLoss:1439), live truoc day KHONG => leg dau = 1/6 sim.
+        //   Dat TRUOC tran 4.5% C3 (tran ap len leg THAT) va TRUOC tierMultiplier (giao hoan).
+        //   Co TAT (mac dinh) => legBudget tra DUNG budget => byte-identical HEAD.
+        if (com.binance.chuyennd.tradecore.selector.LiveGridSizing.on()) {
+            budget = com.binance.chuyennd.tradecore.selector.LiveGridSizing.legBudget(budget, liveLegIdx);
+        }
         if (com.binance.chuyennd.tradecore.selector.LiveProfileC3.on() && budget != null) {
             float cap = com.binance.chuyennd.tradecore.selector.LiveProfileC3.SIZE_CAP_OF_EQUITY * balanceBasic;
             if (budget > cap) budget = cap;   // tran 4.5% equity
@@ -1141,8 +1202,12 @@ public class DetectEntrySignal2TradeNormal {
             }
             // [L3 LEGACY] nhanh GIAY khong day qua Redis queue cua bot (tren 242 cum 30001-6 la cua
             // bot THAT) — goi thang nhanh xu ly giay trong cung JVM. Co LIVE_C3_QUEUE=1 de quay lai.
+            // [C3-LIVE 2026-10-03] chi di thang so giay khi cong day lenh DONG (forceNoPush). c3_shadow:
+            //   forceNoPush LUON true => y het HEAD. c3_live + push mo => qua queue -> processOrderNewMarketNew
+            //   (kiem forceNoPush + kill-switch LAN NUA ngay truoc khi goi san).
             if (com.binance.chuyennd.tradecore.selector.LiveProfileC3.on()
-                    && !com.binance.chuyennd.tradecore.selector.LiveProfileC3.shadowUseRedisQueue()) {
+                    && !com.binance.chuyennd.tradecore.selector.LiveProfileC3.shadowUseRedisQueue()
+                    && com.binance.chuyennd.tradecore.selector.LiveProfileC3.forceNoPush()) {
                 BinanceOrderTradingManager.shadowHandleOrder(orderTrade);
             } else {
                 RedisHelper.getInstance().get().rpush(RedisConst.REDIS_KEY_BINANCE_TD_ORDER_MANAGER_QUEUE, Utils.toJson(orderTrade));
