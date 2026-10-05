@@ -1,0 +1,110 @@
+{
+ "date": "2026-10-05",
+ "input": "~/claude_master/1005/shadow2/d242/gate_ratio_live_k16.bin (ban copy 242 10-05)",
+ "input_sha256": "340be302dfce427b43a2e000af768c4cf7a2905bfaa29184132ff8e01fb437f1",
+ "input_bytes": 771760,
+ "input_chunks": 24,
+ "input_chunk_records_min_max": [
+  1760,
+  17296
+ ],
+ "format": "chunk = MAGIC int BE 0x47525231 | LEN int BE (byte nen) | CRC32 int BE cua BYTES NEN | Snappy.compress raw block (xerial, khong framing) cua record 12B (ts long BE, r float BE); khong header file",
+ "a_roundtrip_default_max_chunk_4096": {
+  "out_sha256": "8e3ed9f08469237ac914635c848473ba142e6921e452ffb6276d80472cb0660e",
+  "out_chunks": 28,
+  "byte_identical": false,
+  "records_bit_identical": true,
+  "why_not_byte_identical": "file goc co 1 chunk 17296 record (>4096) => script tach thanh 5 chunk <=4096; ban ghi trung 100%, CRC hop le"
+ },
+ "a_roundtrip_max_chunk_unbounded": {
+  "out_sha256": "340be302dfce427b43a2e000af768c4cf7a2905bfaa29184132ff8e01fb437f1",
+  "byte_identical": true,
+  "note": "--max-chunk 100000000 giu ranh gioi chunk goc => python-snappy nen trung byte voi xerial Snappy"
+ },
+ "b_trim": {
+  "cutoff": "2026-10-01 13:00:00+0700",
+  "dropped": 19168,
+  "out_sha256": "017401675c6c234af2c8d1a741da981d84bdc342fbb85b58d96ad4054bcca386",
+  "out_chunks": 22,
+  "records_bit_identical_after_reread": true,
+  "before": {
+   "n": 103904,
+   "ticks": 6494,
+   "first_ts": "2026-09-30 17:01:00+0700",
+   "last_ts": "2026-10-05 05:15:00+0700",
+   "days_span": 4.51,
+   "unsorted_pairs": 0,
+   "n_nan": 0,
+   "r_max": 0.014007063582539558,
+   "arm_hour": "2026-10-07 18:00:00+0700",
+   "h_eval": "2026-10-07 18:00:00+0700",
+   "q_at_h_eval": 0.011142859235405922,
+   "q_at_h_eval_f32_bits": 1010208906,
+   "m_at_h_eval": 103904,
+   "k_at_h_eval": 103897,
+   "h_ref": "2026-10-05 06:00:00+0700",
+   "q_live_at_h_ref": 0.008,
+   "restart_at": "2026-10-07 10:00:00+0700",
+   "restart_persisted_start": "2026-09-30 17:01:00+0700",
+   "restart_seed_history_called": true
+  },
+  "after": {
+   "n": 84736,
+   "ticks": 5296,
+   "first_ts": "2026-10-01 13:00:00+0700",
+   "last_ts": "2026-10-05 05:15:00+0700",
+   "days_span": 3.677,
+   "unsorted_pairs": 0,
+   "n_nan": 0,
+   "r_max": 0.007154462859034538,
+   "arm_hour": "2026-10-08 13:00:00+0700",
+   "h_eval": "2026-10-08 13:00:00+0700",
+   "q_at_h_eval": 0.006454590242356062,
+   "q_at_h_eval_f32_bits": 1003716871,
+   "m_at_h_eval": 84736,
+   "k_at_h_eval": 84730,
+   "h_ref": "2026-10-05 06:00:00+0700",
+   "q_live_at_h_ref": 0.008,
+   "restart_at": "2026-10-07 10:00:00+0700",
+   "restart_persisted_start": "2026-10-01 13:00:00+0700",
+   "restart_seed_history_called": true
+  }
+ },
+ "c_java_load": {
+  "jar": "~/claude_master/1005/shadow2/jar/binance-java-sdk-1.2.4.jar sha256 20d412e8; GateRatioPersist.class md5 3c30bc5f, GateRatioBuffer.class md5 0be2456d = TRUNG jar 242 (8f3ee52c)",
+  "main": "research/parity/java/com/binance/chuyennd/ai_ml/onnx/entry/TrimGateBufferCheck.java (GateRatioPersist.load + GateRatioBuffer.bulkAdd/addAndQuery)",
+  "lines": [
+   "JAVA file=/home/ubuntu/claude_master/1005/shadow2/d242/gate_ratio_live_k16.bin n=103904 size=103904 firstTs=1790762460000 lastTs=1791152100000 hEval=1791370800000 q=0.011142859 qbits=1010208906 fallback=false",
+   "JAVA file=rt.bin n=103904 size=103904 firstTs=1790762460000 lastTs=1791152100000 hEval=1791370800000 q=0.011142859 qbits=1010208906 fallback=false",
+   "JAVA file=trim.bin n=84736 size=84736 firstTs=1790834400000 lastTs=1791152100000 hEval=1791439200000 q=0.0064545902 qbits=1003716871 fallback=false",
+   "JAVA file=trim.bin n=84736 size=84736 firstTs=1790834400000 lastTs=1791152100000 hEval=1791154800000 q=0.008 qbits=1006834287 fallback=true",
+   "JAVA file=tr_out.bin n=80640 size=80640 firstTs=1790834400000 lastTs=1791136740000 hEval=1791439200000 q=0.0065105218 qbits=1003836983 fallback=false"
+  ],
+  "match": "q bits Java == Python: truoc 1010208906 (0.011142859), sau 1003716871 (0.0064545902); n 103904 / 84736; truoc arm (h_ref) Java fallback 0.008"
+ },
+ "refusal_tests": {
+  "out_exists": "exit 3",
+  "out_eq_in": "exit 3",
+  "bad_crc_chunk0": "exit 2 (Java: IOException CRC32 lech => live seed + writeFresh)",
+  "truncated_tail": "exit 2; voi --allow-truncated-tail exit 0, n=80640, q=0.0065105 = Java"
+ },
+ "seed_risk_sim": {
+  "restart": "2026-10-07 10:00 +07",
+  "script": "~/claude_master/1005/trim/seed_sim.py (khong commit)",
+  "seed_window": "2026-07-09 10:00 .. 2026-10-01 13:00",
+  "seed_ticks": 1198,
+  "seed_records": 19168,
+  "seed_span": "2026-09-30 17:01 .. 2026-10-01 12:59",
+  "seed_r_p50_max": [
+   0.0026933,
+   0.0139915
+  ],
+  "orig_r_p50_max": [
+   0.0025631,
+   0.0140071
+  ],
+  "q_with_seed_at_arm_2026-10-07_18:00": 0.011117974,
+  "conclusion": "start truoc 2026-10-08 13:00 +07 => seedHistory tai tao r cau hinh cu va writeFresh ghi lai file => loc mat tac dung",
+  "assumption": "p15 lay tu prediction/<day>/<ts> thay Aerospike ai_pred_1m (chua kiem TTL Aerospike)"
+ }
+}
