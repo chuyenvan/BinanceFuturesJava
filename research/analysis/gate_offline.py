@@ -675,6 +675,9 @@ def ison(K_active, pct_active, arm="A1", tag=None, pd_tag=None):
         tm += nmin
     out["tot2225"] = dict(symbol_pass=tp, minute_open=tm)
     out["tot_all"] = dict(symbol_pass=int(P.sum()), minute_open=int(P.any(1).sum()))
+    ncand = (~np.isnan(C["SP"])).sum(1)          # so ung vien/tick sau cap (o top-K khong NaN)
+    out["k_eff"] = dict(mean=round(float(ncand.mean()), 3), p50=int(np.percentile(ncand, 50)),
+                        frac_tick_lt_K=round(float((ncand < K_active).mean()), 5))
     if tag:
         sl = simlog(tag)
         out["sim"] = dict(tag=tag, seen=sl["seen"], pass_=sl["pass_"])

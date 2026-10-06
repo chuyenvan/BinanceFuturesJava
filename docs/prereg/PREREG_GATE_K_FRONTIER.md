@@ -198,3 +198,40 @@ Owner nhận xét: với gate rolling hiện tại, K24 vẫn giữ chất lư�
 6. Lệch pre-reg.
 
 **Chi phí:** ≤ 24 kernel, ~10–14h wall, đĩa ≤ 1 GB.
+
+---
+
+## ADDENDUM-1 — bảng pct sau P0.a (2026-10-06 20:34 GMT+7)
+
+Thực thi: claw. Pre-reg gốc: commit `4e4fc975`. Driver `research/analysis/gate_k_frontier_driver.py` (commit mới); JSON `docs/audit/GATE_OFFLINE_ISON_CALIB.json`. Đếm offline seed 42 (A1). `pass_NỀN_s42 = 2653` (symbol-pass 2022–2025, K24 pct base).
+
+### Validate bộ đếm (cổng §4 P0.a, ≤2%) — PASS
+
+| Run | K | pct | pass offline | pass sim | lệch |
+|---|---|---|---|---|---|
+| n700-a1 | 24 | 0,999950829 | 3233 | 3231 | +0,062% |
+| n700-a2 | 16 | 0,99985 | 5955 | 5950 | +0,084% |
+| gqsf-a1 (NỀN s42) | 24 | 0,999950829 | 3226 | 3232 | −0,186% |
+
+### pct cuối (iso-n) — 8/8 arm Phase 1 đạt ≤1%
+
+| Đường | K | n_t | pct | pass offline (22–25) | phút mở/năm 22/23/24/25 | K hiệu dụng | dev |
+|---|---|---|---|---|---|---|---|
+| iso-736 | 12 | 736 | 0,999924707 | 2679 | 175/215/172/270 | 12,0 | +0,98% |
+| iso-736 | 16 | 736 | 0,999937768 | 2646 | 185/170/146/233 | 16,0 | −0,26% |
+| iso-736 | 32 | 736 | 0,999981560 | 2649 | 209/39/200/130 | 32,0 | −0,15% |
+| iso-736 | 40 | 736 | 0,999999884 | 2669 | 89/18/93/71 | 40,0 | +0,60% |
+| iso-1000 | 16 | 1000 | 0,999922492 | 3609 | 232/228/202/293 | 16,0 | +0,12% |
+| iso-1000 | 24 | 1000 | 0,999939977 | 3607 | 226/176/173/242 | 24,0 | +0,07% |
+| iso-1000 | 32 | 1000 | 0,999971815 | 3624 | 261/60/259/200 | 32,0 | +0,54% |
+| iso-1000 | 40 | 1000 | 0,999993736 | 3572 | 113/25/118/88 | 40,0 | −0,90% |
+
+- **K hiệu dụng = K** ở mọi arm (0% tick thiếu ứng viên) ⇒ K danh nghĩa luôn đủ ứng viên; không cần hạ K vì thiếu ứng viên.
+- pct làm tròn 9 chữ số, dùng nguyên trong sim Phase 1.
+
+### CỜ ĐỎ: K48 KHÔNG đạt iso-1000 (P0.b §4) — báo MASTER
+
+- K48: pct `0,999999869` → pass offline 4446 (≈1227 lệnh/năm), **dev +23,34%**, KHÔNG đạt target 3605.
+- Nguyên nhân: **sàn pass tăng theo K** — `fac = max(DYN_MIN, sp/0,15·1,2876)` kẹp nhóm `sp` nhỏ về cùng hệ số; vì p15 chung cả phút, 1 phút p15 cực trị mở gate cho **cả nhóm** cùng lúc. Nới K = thêm symbol vào nhóm = sàn cao. (Sweep pct: K24→0, K40 sàn ~737, K48 sàn ~1227 lệnh/năm.)
+- ⇒ **P0.b "K48 @ pct iso-1000" bất khả thi như §4 viết.** Cần MASTER chọn: (a) chạy P0.b K48 ở sàn (~1227/năm); (b) đổi P0.b sang K40 (đạt ~974); (c) hướng khác.
+- Lưu ý chấm: iso-736 K40 và iso-1000 K40 dùng pct cực đoan (0,999999884 / 0,999993736) — gate gần đóng, "đều lệnh" thoái hóa ở pct→1; các arm K≤32 dùng pct dải bình thường (0,99992–0,99998).
