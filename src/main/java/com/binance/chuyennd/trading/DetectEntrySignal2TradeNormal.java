@@ -482,6 +482,12 @@ public class DetectEntrySignal2TradeNormal {
                 Float symbolPred = s1Order ? selMapPred.get(symbol) : entry.getKey();
                 if (s1Order) LATEST_SEL_RANK.put(symbol, rank + 1);
                 if (Configs.SELECTOR_RANK_TOPK > 0 && rank >= Configs.SELECTOR_RANK_TOPK) break;
+                // [HELD-RERANK 2026-10-06] docs/prereg/PREREG_HELD_RERANK.md — coin DANG GIU bo
+                //   TRUOC rank++ (khong chiem slot top-K). OFF => byte-identical.
+                if (Configs.SELECTOR_HELD_RERANK && Configs.SELECTOR_RANK_TOPK > 0
+                        && BudgetManager.getInstance().symbol2Pos.containsKey(symbol)) {
+                    continue;
+                }
                 rank++;
                 // [EXPORT-FIX 2026-10-01] ghi selector CUNG tick (score/rank/gateValue/p15) — mac dinh TAT
                 // (key LIVE_FEAT_DUMP<=0 => no-op), chi ghi, khong doi quyet dinh.

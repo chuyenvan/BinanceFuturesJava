@@ -157,6 +157,10 @@ public class Configs {
     //   true => ung vien PREDICT tai luc so KHONG mo duoc lenh moi (managerBudget null, U >= U_MAX) KHONG nap r
     //   vao buffer gate rolling va KHONG tinh pass. Mac dinh false => byte-identical. Key GATE_QUOTA_SKIP_WHEN_FULL.
     public static boolean GATE_QUOTA_SKIP_WHEN_FULL = false;
+    // [HELD-RERANK 2026-10-06] docs/prereg/PREREG_HELD_RERANK.md
+    //   true => coin DANG GIU bi bo KHOI top-K (khong chiem slot) => thu hoi waste held-symbol.
+    //   Mac dinh false => byte-identical. Key SELECTOR_HELD_RERANK (sim + live cung key).
+    public static boolean SELECTOR_HELD_RERANK = false;
     // [RANK-MARGIN 2026-10-05] docs/prereg/PREREG_RANK_MARGIN.md
     //   size leg SELECTOR giam dan theo rank k (1-based, rank 1 = tot nhat): m(k) = 1 - alpha*(k-1)/(K-1).
     //   K = SELECTOR_RANK_TOPK. alpha=0 (mac dinh) => flat => byte-identical. Key SIM_RANK_MARGIN_ALPHA.
@@ -911,6 +915,7 @@ public class Configs {
             if ((v = Cfg.get("SIM_U_MAX")) != null) U_MAX = Float.parseFloat(v.trim());
             // [GATE_QUOTA_SKIPFULL 2026-10-04] docs/prereg/PREREG_GATE_QUOTA_SKIPFULL.md (sim + live cung key; khong khai => false)
             if ((v = Cfg.get("GATE_QUOTA_SKIP_WHEN_FULL")) != null) GATE_QUOTA_SKIP_WHEN_FULL = Boolean.parseBoolean(v.trim());
+            if ((v = Cfg.get("SELECTOR_HELD_RERANK")) != null) SELECTOR_HELD_RERANK = Boolean.parseBoolean(v.trim());
             if ((v = Cfg.get("SIM_RANK_MARGIN_ALPHA")) != null) RANK_MARGIN_ALPHA = Float.parseFloat(v.trim());
             if ((v = Cfg.get("SIM_PREDICT_SYMBOL_RATE_MAX")) != null) PREDICT_SYMBOL_RATE_MAX_THRESHOLD = Float.parseFloat(v);
             if ((v = Cfg.get("SIM_RATE_PROFIT_STOP_MARKET")) != null) RATE_PROFIT_STOP_MARKET = Float.parseFloat(v);

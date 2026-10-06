@@ -407,7 +407,9 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                 //   -> BO QUA toan bo khoi selector (level PREDICT_SYMBOL_TRADE + nhanh
                                 //   DCA_SIGNAL_GATE). Default false -> y het cu => byte-identical.
                                 if (symbol2Pred != null && !Configs.SELECTOR_LEG_CUT && !tickBlocked) {
-                                    java.util.List<Long> chosenCands = selectCands(symbol2Pred);
+                                    java.util.List<Long> chosenCands = (Configs.SELECTOR_HELD_RERANK && Configs.SELECTOR_RANK_TOPK > 0)
+                                            ? selectCandsFresh(symbol2Pred)
+                                            : selectCands(symbol2Pred);
                                     // [TICKLOG] read-only: ngu canh tick (pool/nPass/nCand) + pool bi top-K loai.
                                     int _tlRank = -1;
                                     if (TickDecisionLog.ON) {
@@ -723,6 +725,25 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             for (int i = 0; i < nPass; i++) chosenCands.add(symbol2Pred[i]);
         }
         return chosenCands;
+    }
+
+    /**
+     * [HELD-RERANK 2026-10-06] docs/prereg/PREREG_HELD_RERANK.md — top-K CHI ung vien TUOI (bo coin
+     *   dang giu) de thu hoi waste held-symbol. Instance (can {@link #isSymbolRunning}). Chi goi khi
+     *   {@code SELECTOR_HELD_RERANK && SELECTOR_RANK_TOPK>0}; OFF => khong goi => byte-identical.
+     *   TUONG TAC khai ro: khong dung chung voi DCA_SIGNAL_GATE (held bi loai khoi top-K nen nhanh
+     *   DCA-signal cho held trong vong lap chinh khong con chay).
+     */
+    java.util.List<Long> selectCandsFresh(long[] symbol2Pred) {
+        java.util.List<Long> out = new java.util.ArrayList<>();
+        int nSel = Math.min(Configs.SELECTOR_RANK_TOPK, symbol2Pred.length);
+        for (int i = 0; i < symbol2Pred.length && out.size() < nSel; i++) {
+            long e = symbol2Pred[i];
+            short id = (short) (e >> 32);
+            if (isSymbolRunning(id)) continue;
+            out.add(e);
+        }
+        return out;
     }
 
     /**
