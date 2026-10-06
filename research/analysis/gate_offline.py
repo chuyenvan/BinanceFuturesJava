@@ -47,7 +47,8 @@ SEEDS = {"A1": (42, DS + "/pred.bin", "n700-a1"),
 for _s in (13, 21, 99, 123, 777, 2024):
     SEEDS["S%d" % _s] = (_s, "%s/claude_master/1004/gsb/pred_S%d/pred.bin" % (HOME, _s), "gsb-s%d" % _s)
 VAL_ARMS = ("A1", "S21", "S777")       # cong D1 (chot trong pre-reg)
-K = 24
+K = 24                                 # active top-K (SELECTOR_RANK_TOPK); ison --topk ghi de
+K_CACHE = 48                           # so cot cache (max arm K: Phase3 K48, Phase1 K40)
 DYN_MIN, SCORE_BASE, DYN_MULT = np.float32(0.26787), np.float32(0.15), np.float32(1.28760)
 GS = np.float32(1.55)
 PCT = np.float32(0.999950829)
@@ -116,9 +117,9 @@ def prep():
         cnt = np.diff(np.append(st, len(ts)))
         grp = np.repeat(np.arange(len(u)), cnt)
         rk = np.arange(len(ts)) - st[grp]
-        k = rk < K
-        M = np.full((len(u), K), np.nan, np.float32)
-        S = np.full((len(u), K), -1, np.int16)
+        k = rk < K_CACHE
+        M = np.full((len(u), K_CACHE), np.nan, np.float32)
+        S = np.full((len(u), K_CACHE), -1, np.int16)
         M[grp[k], rk[k]] = sc[k]
         S[grp[k], rk[k]] = sy[k]
         T.append(u); SP.append(M); SY.append(S); NC.append(cnt)
@@ -159,8 +160,8 @@ def to_ms(col):
     return np.where(t.isna().to_numpy(), np.int64(T1), v)
 
 
-def load_pd(arm, s2id):
-    f = OUTK + SEEDS[arm][2] + "/storage/printDone.csv"
+def load_pd(arm, s2id, pd_tag=None):
+    f = OUTK + (pd_tag or SEEDS[arm][2]) + "/storage/printDone.csv"
     d = pd.read_csv(f, on_bad_lines="skip")
     d.columns = [c.strip() for c in d.columns]
     d = d[d["sym"].notna()].copy()
@@ -187,7 +188,7 @@ def lock_mask(ts, SY, d):
     return L
 
 
-def build(arm, B, s2id):
+def build(arm, B, s2id, pd_tag=None):
     pts, p15 = load_pred(SEEDS[arm][1])
     mts, fi = B["mts"], B["fi"]
     j = np.minimum(np.searchsorted(pts, mts), len(pts) - 1)
@@ -195,9 +196,9 @@ def build(arm, B, s2id):
     ts = mts[has]
     p = p15[j[has]]
     f = fi[has]
-    SP = B["SP15"][f]
-    SY = B["SY15"][f]
-    d, pmd5 = load_pd(arm, s2id)
+    SP = B["SP15"][f][:, :K]
+    SY = B["SY15"][f][:, :K]
+    d, pmd5 = load_pd(arm, s2id, pd_tag)
     lock = lock_mask(ts, SY, d)
     valid = ~np.isnan(SP) & ~lock & np.isfinite(p)[:, None]
     loc = pd.to_datetime(ts + TZ, unit="ms")
@@ -650,8 +651,49 @@ def run_all():
     log.info("ghi %s md5 %s, rss %.2f GB", JOUT, md5f(JOUT), rss())
 
 
+def ison(K_active, pct_active, arm="A1", tag=None, pd_tag=None):
+    """P0.a iso-n: dem symbol-pass/nam + phut mo/nam cho (K, pct). Khong PnL.
+    tag (sim tham chieu) neu cho -> so pass offline vs sim (≤2%). pd_tag = nguon printDone lock (default SEEDS[arm])."""
+    global K
+    K = K_active
+    B = dict(np.load(CACHE + "/cand_base.npz"))
+    mp = pd.read_csv(MAPF)
+    s2id = dict(zip(mp.symbol.astype(str).str.replace("USDT$", "", regex=True), mp.symId.astype(int)))
+    C = build(arm, B, s2id, pd_tag)
+    G = run_g2(C, pct=np.float32(pct_active), J=1024)
+    P = G["P"]
+    yr = C["yr"]
+    out = dict(meta=dict(script="gate_offline.ison", K=K_active, pct=pct_active, arm=arm,
+                         pred_md5=C["pred_md5"], printdone_md5=C["pd_md5"]), year={})
+    tp = tm = 0
+    for y in YEARS:
+        s = yr == y
+        npass = int(P[s].sum())
+        nmin = int(P[s].any(1).sum())
+        out["year"][y] = dict(symbol_pass=npass, minute_open=nmin)
+        tp += npass
+        tm += nmin
+    out["tot2225"] = dict(symbol_pass=tp, minute_open=tm)
+    out["tot_all"] = dict(symbol_pass=int(P.sum()), minute_open=int(P.any(1).sum()))
+    if tag:
+        sl = simlog(tag)
+        out["sim"] = dict(tag=tag, seen=sl["seen"], pass_=sl["pass_"])
+        out["dev_pass_pct"] = round(100.0 * (int(P.sum()) - sl["pass_"]) / max(1, sl["pass_"]), 3)
+        out["dev_seen_pct"] = round(100.0 * (int(C["valid"].sum()) - sl["seen"]) / max(1, sl["seen"]), 3)
+    return out
+
+
 if __name__ == "__main__":
-    st = sys.argv[1] if len(sys.argv) > 1 else "all"
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("stage", nargs="?", default="all")
+    ap.add_argument("--topk", type=int, default=K)
+    ap.add_argument("--pct", type=float, default=float(PCT))
+    ap.add_argument("--arm", default="A1")
+    ap.add_argument("--tag", default=None)
+    ap.add_argument("--pd_tag", default=None)
+    a = ap.parse_args()
+    st = a.stage
     if st in ("prep", "both"):
         prep()
     if st in ("all", "both"):
@@ -659,3 +701,6 @@ if __name__ == "__main__":
     if st == "skipfull":
         import gate_skipfull_offline
         gate_skipfull_offline.main()
+    if st == "ison":
+        r = ison(a.topk, a.pct, a.arm, a.tag, a.pd_tag)
+        print(json.dumps(tojs(r), indent=1, ensure_ascii=False))
