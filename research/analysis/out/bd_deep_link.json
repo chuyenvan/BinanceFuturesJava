@@ -1,0 +1,23 @@
+{
+ "ALL": {
+  "n": 2299826,
+  "btc_ret1h_mean": 0.0039,
+  "btc_ret1h_p1": -1.7308,
+  "btc_fwd1h_mean": 0.0023,
+  "frac_bull": 50.68
+ },
+ "BIG_DOWN": {
+  "n": 124,
+  "btc_ret1h_mean": -0.451,
+  "btc_ret1h_p1": -2.1169,
+  "btc_fwd1h_mean": -1.3305,
+  "frac_bull": 30.65
+ },
+ "DCA15": {
+  "n": 5316,
+  "btc_ret1h_mean": -0.2414,
+  "btc_ret1h_p1": -5.0447,
+  "btc_fwd1h_mean": -0.6599,
+  "frac_bull": 29.01
+ }
+}

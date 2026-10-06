@@ -1,0 +1,26 @@
+{
+ "days": 100,
+ "n_min": 144000,
+ "parity_HIGHmax": {
+  "maxabs": 0.14468199892665234,
+  "pct_lt_1e3": 96.66319444444444
+ },
+ "parity_CLOSEmax": {
+  "maxabs": 0.1423481220054602,
+  "pct_lt_1e3": 40.97847222222222
+ },
+ "cf": {
+  "n_on_high": 1916,
+  "n_on_close": 1495,
+  "ep_high": 262,
+  "ep_close": 226,
+  "jaccard": 0.7803,
+  "corr": 0.9902,
+  "mean_high": -0.008034,
+  "mean_close": -0.006617,
+  "turned_off": 421,
+  "turned_on": 0,
+  "thr_close_to_match_n_on": -0.027518,
+  "thr_shift": 0.004052
+ }
+}

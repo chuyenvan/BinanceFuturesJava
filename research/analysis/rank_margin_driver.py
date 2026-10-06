@@ -146,7 +146,9 @@ def parity(a=None):
                    topk24=pr.get("SELECTOR_RANK_TOPK") == "24", skipfull=pr.get("GATE_QUOTA_SKIP_WHEN_FULL") == "true",
                    alpha=pr.get(KEY) == str(alpha), ok=rj.get("ok") is True,
                    b0ov=all(pr.get(k) == str(v) for k, v in GA.B0OV.items()),
-                   pred=(rj.get("pred_md5_base") == GA.PRED0_MD5))
+                   # A1 = pred.bin goc trong bundle (khong pred_ds) => result.json pred_md5_* = None.
+                   # Kiem bang dong log Java "LOAD offline OK ... (md5 verified)" + P0 da byte-identical bundle.
+                   pred=bool("md5 verified" in txt))
         res[tag] = dict(ok=all(chk.values()), checks=chk, md5=R.md5_of(tag), n=rj.get("n_trades"),
                         eq=rj.get("equity_final"), secs=rj.get("secs"))
         log.info("PARITY %-6s %s %s", tag, "PASS" if res[tag]["ok"] else "*** VOID ***", chk)
@@ -186,6 +188,8 @@ def score(a):
     par = parity()
     assert par.get("P0", {}).get("ok"), "P0 chua PASS -> khong cham"
     keys = [BASE_TAG] + [TAGS[a] for a in ALPHAS]
+    for k in keys:
+        N.TAG[k], N.DESC[k] = k, "RANK-MARGIN " + k
     legs, daily, md5 = {}, {}, {}
     for k in keys:
         legs[k], daily[k], md5[k] = R.load_legs(k), R.load_daily(k), R.md5_of(k)
