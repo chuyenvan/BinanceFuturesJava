@@ -1,0 +1,11 @@
+{
+ "parity_ok": true,
+ "md5": {
+  "P0": "650c386f0d0dfea334af9d55ca2f21d4"
+ },
+ "n": 2517,
+ "eq": 131908.0,
+ "jar_ok": {
+  "P0": true
+ }
+}
