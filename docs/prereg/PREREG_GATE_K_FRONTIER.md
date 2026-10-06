@@ -52,13 +52,13 @@ Ràng buộc: 0 Java sim trên Oracle (chỉ `mvn -o test` + build, riêng Phase
   | iso-740 | 12 | 0,999926 | 722,8 | −2,32% |
   | iso-740 | 16 | 0,999938 | 732,5 | −1,02% |
   | iso-740 | 32 | 0,999981 | 739,9 | −0,01% |
-  | iso-740 | 40 | 0,999999 | 779,7 | **+5,36% (floor ~780, KHÔNG iso-740)** |
+  | iso-740 | 40 | 0,999999 | 779,7 | **+5,36% ở pct 0,999999; sàn ~737 ở pct≈0,9999999 (gate thoái hóa)** |
   | iso-1000 | 16 | 0,999922 | 1006,3 | +0,63% |
   | iso-1000 | 24 | 0,999940 | 1001,6 | +0,16% |
   | iso-1000 | 32 | 0,999972 | 1005,4 | +0,54% |
   | iso-1000 | 40 | 0,999994 | 974,0 | −2,60% |
 
-  Ghi chú: K40 không thể siết pct về iso-740 (số pass tối thiểu ở K40 vẫn ~780/năm > 740) — đây là ghi nhận khai trước của hiện tượng, không đổi arm sau khi thấy số. pct làm tròn 6 chữ số; dùng trong sim Phase 1.
+  Ghi chú: K40 iso-740 chỉ đạt được ở pct≈0,9999999 (sàn pass ~737/năm, gate gần đóng hẳn ⇒ "đều lệnh" thoái hóa); ở pct 0,999999 vẫn +5,36%. K48 có sàn ~1227/năm > 1000 ⇒ **P0.b "K48 @ n≈1000" bất khả thi như brief viết**. Đây là ghi nhận khai trước của hiện tượng, không đổi arm sau khi thấy số. pct làm tròn 6 chữ số; dùng trong sim Phase 1.
 - Không thêm arm, không đổi pct sau khi thấy số.
 - **Sàng lọc (khai trước):** mỗi đường xếp theo Calmar22 MTM, hoà thì CAGR22. Lấy top-2 mỗi đường sang Phase 2. Nếu iso-740 không arm nào Calmar22 ≥ nền ⇒ vẫn lấy top-1 để có dải nhiễu.
 
