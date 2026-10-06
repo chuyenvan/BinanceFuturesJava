@@ -45,6 +45,20 @@ Ràng buộc: 0 Java sim trên Oracle (chỉ `mvn -o test` + build, riêng Phase
 - Mọi arm skipFull ON, jar `sim-jar-shadow2` (code module `3a80ba91`, P0 `ff3ce513`).
 - **Đường iso-740** (cùng n, so phân bổ): K12, K16, K32, K40. Nền = K24 pct base (`gqsf` seed 42, cost 0).
 - **Đường iso-1000** (tăng n): K16, K24, K32, K40 (mỗi điểm pct cho n ≈ 1 000).
+- **pct cuối cùng (amendment P0.a, đếm offline seed 42, ratio lệnh/pass = 1,103958):**
+
+  | arm | K | pct | est n/năm | dev |
+  |---|---|---|---|---|
+  | iso-740 | 12 | 0,999926 | 722,8 | −2,32% |
+  | iso-740 | 16 | 0,999938 | 732,5 | −1,02% |
+  | iso-740 | 32 | 0,999981 | 739,9 | −0,01% |
+  | iso-740 | 40 | 0,999999 | 779,7 | **+5,36% (floor ~780, KHÔNG iso-740)** |
+  | iso-1000 | 16 | 0,999922 | 1006,3 | +0,63% |
+  | iso-1000 | 24 | 0,999940 | 1001,6 | +0,16% |
+  | iso-1000 | 32 | 0,999972 | 1005,4 | +0,54% |
+  | iso-1000 | 40 | 0,999994 | 974,0 | −2,60% |
+
+  Ghi chú: K40 không thể siết pct về iso-740 (số pass tối thiểu ở K40 vẫn ~780/năm > 740) — đây là ghi nhận khai trước của hiện tượng, không đổi arm sau khi thấy số. pct làm tròn 6 chữ số; dùng trong sim Phase 1.
 - Không thêm arm, không đổi pct sau khi thấy số.
 - **Sàng lọc (khai trước):** mỗi đường xếp theo Calmar22 MTM, hoà thì CAGR22. Lấy top-2 mỗi đường sang Phase 2. Nếu iso-740 không arm nào Calmar22 ≥ nền ⇒ vẫn lấy top-1 để có dải nhiễu.
 

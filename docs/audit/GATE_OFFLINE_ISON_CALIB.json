@@ -1,0 +1,84 @@
+{
+ "meta": {
+  "script": "gate_k_frontier_driver.calibrate",
+  "seed": 42,
+  "arm": "A1",
+  "ref_n_yr": 732.2,
+  "ref_symbol_pass_4yr": 2653,
+  "ratio": 1.103958
+ },
+ "arms": {
+  "iso-740_K12": {
+   "name": "iso-740",
+   "K": 12,
+   "target_n": 740,
+   "pct": 0.999926,
+   "symbol_pass_4yr": 2619,
+   "est_n_yr": 722.82,
+   "dev_pct": -2.32
+  },
+  "iso-740_K16": {
+   "name": "iso-740",
+   "K": 16,
+   "target_n": 740,
+   "pct": 0.999938,
+   "symbol_pass_4yr": 2654,
+   "est_n_yr": 732.48,
+   "dev_pct": -1.02
+  },
+  "iso-740_K32": {
+   "name": "iso-740",
+   "K": 32,
+   "target_n": 740,
+   "pct": 0.999981,
+   "symbol_pass_4yr": 2681,
+   "est_n_yr": 739.93,
+   "dev_pct": -0.01
+  },
+  "iso-740_K40": {
+   "name": "iso-740",
+   "K": 40,
+   "target_n": 740,
+   "pct": 0.999999,
+   "symbol_pass_4yr": 2825,
+   "est_n_yr": 779.67,
+   "dev_pct": 5.36
+  },
+  "iso-1000_K16": {
+   "name": "iso-1000",
+   "K": 16,
+   "target_n": 1000,
+   "pct": 0.999922,
+   "symbol_pass_4yr": 3646,
+   "est_n_yr": 1006.26,
+   "dev_pct": 0.63
+  },
+  "iso-1000_K24": {
+   "name": "iso-1000",
+   "K": 24,
+   "target_n": 1000,
+   "pct": 0.99994,
+   "symbol_pass_4yr": 3629,
+   "est_n_yr": 1001.57,
+   "dev_pct": 0.16
+  },
+  "iso-1000_K32": {
+   "name": "iso-1000",
+   "K": 32,
+   "target_n": 1000,
+   "pct": 0.999972,
+   "symbol_pass_4yr": 3643,
+   "est_n_yr": 1005.43,
+   "dev_pct": 0.54
+  },
+  "iso-1000_K40": {
+   "name": "iso-1000",
+   "K": 40,
+   "target_n": 1000,
+   "pct": 0.999994,
+   "symbol_pass_4yr": 3529,
+   "est_n_yr": 973.97,
+   "dev_pct": -2.6
+  }
+ }
+}
