@@ -1346,7 +1346,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                         && levelChange == MarketLevelChange.PREDICT_SYMBOL_TRADE
                         && TradeUtils.managerBudget(null, sizingMarginRunning(), sizingEquity(), levelChange) == null;
                 AIRejectFilter.FilterResult filterResult = aiRejectFilter.entryGate(predict, symbolPred,
-                        levelChange == MarketLevelChange.PREDICT_SYMBOL_TRADE, bookFull);
+                        levelChange == MarketLevelChange.PREDICT_SYMBOL_TRADE, bookFull, selRank);
 
                 ablationSignalSeen++;
                 if (filterResult.decision == AIRejectFilter.FilterDecision.REJECT) {

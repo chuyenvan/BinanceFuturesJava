@@ -157,6 +157,11 @@ public class Configs {
     //   true => ung vien PREDICT tai luc so KHONG mo duoc lenh moi (managerBudget null, U >= U_MAX) KHONG nap r
     //   vao buffer gate rolling va KHONG tinh pass. Mac dinh false => byte-identical. Key GATE_QUOTA_SKIP_WHEN_FULL.
     public static boolean GATE_QUOTA_SKIP_WHEN_FULL = false;
+    // [GKF-PHASE3 2026-10-07] docs/prereg/PREREG_GATE_K_FRONTIER.md §7 — tach K_entry khoi K_buffer.
+    //   default -1 => bang SELECTOR_RANK_TOPK => byte-identical. Khi = G (>0) va SELECTOR_RANK_TOPK=K_entry>G:
+    //   chi r hang 1..G nap buffer (giu q_t nhu nen); hang G+1..K_entry van duoc kiem r>=q_t va vao lenh neu qua,
+    //   KHONG nap vao buffer. Key GATE_BUFFER_TOPK.
+    public static int GATE_BUFFER_TOPK = -1;
     public static float U_MAX  = 0.60f;   // trần tổng margin/equity, U≥U_MAX → chặn (gene search [0.40, 0.80])
 
 
@@ -907,6 +912,8 @@ public class Configs {
             if ((v = Cfg.get("SIM_U_MAX")) != null) U_MAX = Float.parseFloat(v.trim());
             // [GATE_QUOTA_SKIPFULL 2026-10-04] docs/prereg/PREREG_GATE_QUOTA_SKIPFULL.md (sim + live cung key; khong khai => false)
             if ((v = Cfg.get("GATE_QUOTA_SKIP_WHEN_FULL")) != null) GATE_QUOTA_SKIP_WHEN_FULL = Boolean.parseBoolean(v.trim());
+            // [GKF-PHASE3 2026-10-07] docs/prereg/PREREG_GATE_K_FRONTIER.md §7 (khong khai => -1 => byte-identical)
+            if ((v = Cfg.get("GATE_BUFFER_TOPK")) != null) GATE_BUFFER_TOPK = Integer.parseInt(v.trim());
             if ((v = Cfg.get("SIM_PREDICT_SYMBOL_RATE_MAX")) != null) PREDICT_SYMBOL_RATE_MAX_THRESHOLD = Float.parseFloat(v);
             if ((v = Cfg.get("SIM_RATE_PROFIT_STOP_MARKET")) != null) RATE_PROFIT_STOP_MARKET = Float.parseFloat(v);
             if ((v = Cfg.get("SIM_MS_DOWN_BIG_AVG")) != null) MS_DOWN_BIG_AVG = Float.parseFloat(v);

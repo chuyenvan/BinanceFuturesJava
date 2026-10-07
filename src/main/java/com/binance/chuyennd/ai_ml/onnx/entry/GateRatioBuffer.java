@@ -55,6 +55,20 @@ final class GateRatioBuffer {
         for (int i = 0; i < ts.length; i++) add(ts[i], r[i]);
     }
 
+    /**
+     * [GKF-PHASE3 2026-10-07] docs/prereg/PREREG_GATE_K_FRONTIER.md §7 — trả q của giờ ts (tính nếu qua giờ mới)
+     * nhưng KHÔNG nạp (ts,r) vào buffer. Dùng cho hạng &gt; {@code GATE_BUFFER_TOPK}: vẫn kiểm r&gt;=q_t
+     * (cùng q_t nền) mà KHÔNG làm đổi quota. key OFF =&gt; không gọi =&gt; byte-identical.
+     */
+    float queryOnly(long ts, float r, float pct, int days, float fallbackBase) {
+        long h = (ts / HOUR) * HOUR;
+        if (h != lastHour) {
+            currentQ = computeQ(h, pct, days, fallbackBase);
+            lastHour = h;
+        }
+        return currentQ;
+    }
+
     private float computeQ(long h, float pct, int days, float fallbackBase) {
         long cut = h - (long) days * DAY;
         while (head < tail && tsBuf[head] < cut) head++;

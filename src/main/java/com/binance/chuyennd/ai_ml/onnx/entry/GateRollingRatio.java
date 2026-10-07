@@ -125,6 +125,18 @@ public final class GateRollingRatio {
         return q;
     }
 
+    /**
+     * [GKF-PHASE3 2026-10-07] docs/prereg/PREREG_GATE_K_FRONTIER.md §7 — như {@link #threshold} nhưng
+     * KHÔNG nạp {@code (ts,r)} vào buffer (dùng cho hạng &gt; {@code Configs.GATE_BUFFER_TOPK}).
+     * Dùng CÙNG q_t nền ⇒ quota/q_t KHÔNG đổi; chỉ cho hạng sâu vào lệnh nếu tự vượt q_t.
+     */
+    public static float thresholdCheckOnly(long ts, float p15, float sp) {
+        float factor = Math.max(EntryGate.DYN_MIN, (sp / EntryGate.SCORE_BASE) * EntryGate.DYN_MULT);
+        float gs = EntryGate.GATE_REGIME_ADAPTIVE ? EntryGate.CURRENT_REGIME_SCALE : EntryGate.GATE_DYN_SCALE;
+        float r = p15 / (factor * gs);
+        return buffer.queryOnly(ts, r, pct, days, Configs.MIN_MOMENTUM_15M);
+    }
+
     /** Lõi: tính (nếu qua giờ mới) q cho giờ của ts, trả q, rồi nạp (ts, r) — package-private cho unit test. */
     static float addAndQuery(long ts, float r) {
         return buffer.addAndQuery(ts, r, pct, days, Configs.MIN_MOMENTUM_15M);

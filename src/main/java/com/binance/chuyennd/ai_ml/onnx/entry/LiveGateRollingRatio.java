@@ -139,6 +139,17 @@ public final class LiveGateRollingRatio {
         return q;
     }
 
+    /**
+     * [GKF-PHASE3 2026-10-07] docs/prereg/PREREG_GATE_K_FRONTIER.md §7 — như {@link #threshold} nhưng
+     * KHÔNG nạp {@code (ts,r)} vào buffer (hạng &gt; {@code Configs.GATE_BUFFER_TOPK}). Cùng q_t nền.
+     */
+    public static synchronized float thresholdCheckOnly(long ts, float p15, float sp) {
+        float factor = Math.max(EntryGate.DYN_MIN, (sp / EntryGate.SCORE_BASE) * EntryGate.DYN_MULT);
+        float gs = EntryGate.GATE_REGIME_ADAPTIVE ? EntryGate.CURRENT_REGIME_SCALE : EntryGate.GATE_DYN_SCALE;
+        float r = p15 / (factor * gs);
+        return buffer.queryOnly(ts, r, pct, days, Configs.MIN_MOMENTUM_15M);
+    }
+
     /** Lõi quantile (package-private cho parity test) — cùng {@link GateRatioBuffer}. */
     static float addAndQuery(long ts, float r) {
         return buffer.addAndQuery(ts, r, pct, days, Configs.MIN_MOMENTUM_15M);

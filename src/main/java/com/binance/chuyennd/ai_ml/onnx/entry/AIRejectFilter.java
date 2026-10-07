@@ -75,6 +75,17 @@ public class AIRejectFilter {
      */
     public FilterResult entryGate(AiPredictionData prediction, Float symbolPred, boolean predictSymbolTrade,
                                   boolean bookFull) {
+        return entryGate(prediction, symbolPred, predictSymbolTrade, bookFull, null);
+    }
+
+    /**
+     * [GKF-PHASE3 2026-10-07] docs/prereg/PREREG_GATE_K_FRONTIER.md §7 — thêm {@code selRank}.
+     * Khi {@code Configs.GATE_BUFFER_TOPK = G &gt; 0} VÀ {@code selRank &gt; G} (hạng sau G) VÀ ứng viên PREDICT:
+     * dùng {@code thresholdCheckOnly} (KHÔNG nạp r vào buffer) ⇒ q_t/quota giữ ĐÚNG như nền; hạng sau G
+     * vẫn được kiểm {@code r &gt;= q_t} và vào lệnh nếu qua. {@code selRank == null} hoặc key &lt;= 0 ⇒ y hệt bản 4 tham số.
+     */
+    public FilterResult entryGate(AiPredictionData prediction, Float symbolPred, boolean predictSymbolTrade,
+                                  boolean bookFull, Integer selRank) {
         Float sp = predictSymbolTrade ? symbolPred : null;
         // [GDV2-EVEN 2026-09-29] bộ đếm ρ (PREDICT) LUÔN chạy cho sim (đo ρ ở G0 parity), không đổi hành vi gate.
         //   Live gate ratio chỉ đếm khi LIVE bật (no-op khi OFF) => sim (không có LIVE_*) không đổi hành vi.
@@ -89,11 +100,18 @@ public class AIRejectFilter {
             skipFullCount.incrementAndGet();
             return new FilterResult(FilterDecision.REJECT, "BOOK FULL: U>=U_MAX -> bo qua quota gate (khong nap r)");
         }
+        // [GKF-PHASE3] hạng sau GATE_BUFFER_TOPK: kiểm r>=q_t nhưng KHÔNG nạp buffer.
+        boolean checkOnly = sp != null && Configs.GATE_BUFFER_TOPK > 0
+                && selRank != null && selRank > Configs.GATE_BUFFER_TOPK;
         // [G2-LIVE-PORT 2026-09-29] docs/plan/PLAN_G2_LIVE_PORT.md — quantile cuộn trên CHÍNH TỈ SỐ r.
         //   LIVE key (LIVE_GATE_ROLLING_*) ưu tiên; SIM key (SIM_GATE_ROLLING_*) giữ nguyên GDV2.
         //   Cả hai vắng => thrBase = MIN_MOMENTUM_15M => byte-identical HEAD.
         float thrBase;
-        if (LiveGateRollingRatio.isOn() && sp != null) {
+        if (checkOnly && LiveGateRollingRatio.isOn()) {
+            thrBase = LiveGateRollingRatio.thresholdCheckOnly(prediction.timestamp, prediction.predReturn15M, sp);
+        } else if (checkOnly && GateRollingRatio.isOn()) {
+            thrBase = GateRollingRatio.thresholdCheckOnly(prediction.timestamp, prediction.predReturn15M, sp);
+        } else if (LiveGateRollingRatio.isOn() && sp != null) {
             thrBase = LiveGateRollingRatio.threshold(prediction.timestamp, prediction.predReturn15M, sp);
         } else if (GateRollingRatio.isOn() && sp != null) {
             thrBase = GateRollingRatio.threshold(prediction.timestamp, prediction.predReturn15M, sp);
