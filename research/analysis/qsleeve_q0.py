@@ -235,7 +235,8 @@ def build(seed, B, s2id):
     r = (p[:, None] / (fac * GO.GS)).astype(np.float32)
     del fac
     meta["pred_md5"] = md5f(pth)
-    meta["pred_ok"] = meta["pred_md5"] == (meta["pred_md5_used"] or meta["pred_md5_base"])
+    meta["pred_ok"] = meta["pred_md5"] == (meta["pred_md5_used"] or meta["pred_md5_base"]
+                                             or "5dd6bb4c3f98d89d58770005c0001526")   # A1: manifest md5_pred
     return dict(ts=ts, p15=p, SP=SP, SY=SY, valid=valid, lock=lock, r=r), d, meta
 
 
@@ -572,6 +573,8 @@ def collect():
             keys.append(k)
         return tid[k]
     cand = pd.concat([pd.read_pickle(W + "/cand_%s.pkl" % s)["cand"] for s in SEEDS], ignore_index=True)
+    if os.path.exists(W + "/ctrl.pkl"):                    # hau kiem: doi chung CT1/CT2 (K=0, pct=1/2)
+        cand = pd.concat([cand, pd.read_pickle(W + "/ctrl.pkl")], ignore_index=True)
     cand["tid"] = [tid_of(s, t) for s, t in zip(cand["sym"], cand["ts"])]
     base, legs = [], []
     for seed, tag in SEEDS.items():
@@ -719,6 +722,7 @@ def roi_block(x, k):
                 mae_p50=float(np.median(100 * x["mae"])) if len(x) else None,
                 mae_p10=float(np.percentile(100 * x["mae"], 10)) if len(x) else None,
                 hold_p50=float(np.median(x["hold_h"])) if len(x) else None,
+                vol_p50=float(np.median(x["vol"])) if len(x) else None,
                 time_stop=float((x["why"] == "time").mean()) if len(x) else None,
                 crash=float(x["crash"].mean()) if len(x) else None,
                 year={int(y): dict(n=int((yrs == y).sum()), roi_net=float(net[yrs == y].mean()) if (yrs == y).any() else None,
@@ -726,7 +730,7 @@ def roi_block(x, k):
 
 
 def calib(base, R):
-    x = base.merge(R[["tid", "E", "gross", "exit_t", "why", "nobar", "cut", "br"]], on="tid", how="left")
+    x = base.merge(R[["tid", "E", "gross", "exit_t", "why", "nobar", "cut", "br", "vol"]], on="tid", how="left")
     x = x[~x["nobar"] & ~x["cut"]].copy()
     x["real"] = x["profit"] / 100.0
     x["real_net"] = x["pnl"] / x["notional"]
@@ -741,7 +745,9 @@ def calib(base, R):
                     proxy_mean=float(100 * z["gross"].mean()), real_mean=float(100 * z["real"].mean()),
                     net_bias_pp=float(100 * ((z["gross"] - COST) - z["real_net"]).mean()),
                     same_exit_min=float((z["exit_t"] == z["e_ms"]).mean()),
-                    entry_match=float((np.abs(z["E"] / z["entry"] - 1) < 1e-5).mean()))
+                    entry_match=float((np.abs(z["E"] / z["entry"] - 1) < 1e-5).mean()),
+                    vol_p50=float(z["vol"].median()), crash=float((z["br"] <= CRASH).mean()),
+                    proxy_net_stress=float((100 * (z["gross"] - COST) - 100 * PEN * (z["br"] <= CRASH)).mean()))
     out = dict(all=blk(x), no_dca=blk(x[x["nleg"] == 1]), dca=blk(x[x["nleg"] > 1]),
                year={int(y): blk(g) for y, g in x.groupby("year")},
                year_no_dca={int(y): blk(g) for y, g in x[x["nleg"] == 1].groupby("year")},
@@ -848,6 +854,15 @@ def stage_report():
             for lo, hi in AGES:
                 ga = g[(g["age"] >= lo) & (g["age"] < hi)]
                 js["q4_age"]["%d|%s|%s" % (K, p, lo)] = dict(roi_block(ga, 27), n_per_year_seed=len(ga) / 32.0)
+    js["ctrl"] = {}
+    for tag, nm in ((1.0, "CT1 cung phut, coin top-24 ngau nhien"), (2.0, "CT2 phut yen ngau nhien, coin r max")):
+        g = C[(C["K"] == 0) & (C["pct"] == tag)]
+        if len(g):
+            js["ctrl"][nm] = dict(roi_block(g, 9), n_per_year_seed=len(g) / 32.0)
+    ref = C[(C["K"] == 24) & (C["pct"] == 0.999)][["seed", "ts", "gross"]]
+    pr = ref.merge(C[(C["K"] == 0) & (C["pct"] == 1.0)][["seed", "ts", "gross"]], on=["seed", "ts"], suffixes=("", "_c"))
+    if len(pr):
+        js["ctrl"]["paired_K24_999_minus_CT1"] = ci_day(100 * (pr["gross"] - pr["gross_c"]), (pr["ts"] + TZ) // D, 9)
     js["calib"] = calib(base, R)
     q6p = P["q6"].merge(R[["tid", "gross", "nobar", "cut", "hold_h", "why"]], on="tid")
     q6p = q6p[~q6p["nobar"]]
@@ -901,7 +916,7 @@ def write_md(js):
                      fm(q["gap_max"], 0)] + ["%s · %s%% (yen %s%%)" % (fm(q["X"][X]["n"], 1), f2(q["X"][X]["dur_pct"]["mean"], 1),
                                                                    f2(q["X"][X]["quiet_pct"]["mean"], 1)) for X in XS])
     L += tbl(["nam", "% phut so trong", "n leg0", "gap p50 h", "gap p90 h", "gap p99 h", "gap max h"]
-             + ["X=%dh: n cua so · % thoi gian (phut tuoi>=X)" % X for X in XS], rows)
+             + ["X=%dh: n cua so · %% thoi gian (phut tuoi>=X)" % X for X in XS], rows)
     L += ["", "### T2. Q3 phan bo r top-K: phut yen (tuoi >= 24h) vs phut co lenh (tuoi < 24h), 2022-25, sau warm-up q_core",
           "ratio = r_max(phut)/q_core(gio). O = TB 8 seed."]
     rows = []
@@ -935,6 +950,22 @@ def write_md(js):
                         + ["/".join(f2(b["year"][y]["roi_net"], 1) for y in YEARS)])
     L += tbl(["K", "pct", "n/nam", "ROI net [CI]", "ROI stress [CI]", "ROI net theo seed", "win %", "MAE p50",
               "MAE p10", "giu p50 h", "% time-stop", "% sap", "ROI net 22/23/24/25"], rows)
+    if js.get("ctrl"):
+        L += ["", "### T4b. HAU KIEM (khong pre-reg, them sau khi thay T4): doi chung ngau nhien, cung proxy/phi, CI x sqrt(2 ln 9)"]
+        rows = []
+        for nm, b in js["ctrl"].items():
+            if "roi_net" not in b:
+                continue
+            rn = b["roi_net"]
+            rows.append([nm, f2(b["n_per_year_seed"], 0), "%s [%s; %s]" % (f2(rn["mean"]), f2(rn["lo"]), f2(rn["hi"])),
+                         f2(b["roi_stress"]["mean"]), f2(100 * b["win"], 1), f2(b["mae_p10"], 1), f2(b["hold_p50"], 0),
+                         f2(100 * b["crash"], 1), "/".join(f2(b["year"][y]["roi_net"], 1) for y in YEARS)])
+        L += tbl(["doi chung", "n/nam", "ROI net [CI]", "ROI stress", "win %", "MAE p10", "giu p50 h", "% sap",
+                  "ROI net 22/23/24/25"], rows)
+        pc = js["ctrl"].get("paired_K24_999_minus_CT1")
+        if pc:
+            L.append("- Ghep cap cung phut (K24/0,999 tru CT1): %s pp [%s; %s], n %d" % (f2(pc["mean"]), f2(pc["lo"]),
+                                                                                        f2(pc["hi"]), pc["n"]))
     L += ["", "### T5. Q4 theo tang tuoi yen (gio tu leg0 nen gan nhat); CI x sqrt(2 ln 27)"]
     rows = []
     for K in KS:
@@ -992,16 +1023,69 @@ def write_md(js):
     log.info("ghi %s", MD_OUT)
 
 
+# ---------------------------------------------------------------- HAU KIEM (khong pre-reg, them sau khi thay T4): doi chung
+def stage_ctrl():
+    """CT1 = cung phut voi ung vien K24/pct0.999, doi coin = o hop le top-24 NGAU NHIEN khac coin da chon.
+    CT2 = phut yen NGAU NHIEN (cung so luong/seed), coin = o r lon nhat, cung luat khu trung. RNG 20261008+i.
+    Chi de doc Q7 (gia tri cua chon coin theo r / chon thoi diem theo nguong); khong chon nguong."""
+    B = dict(np.load(W + "/cand_base.npz"))
+    s2id, id2s = s2id_map()
+    rows = []
+    for si, seed in enumerate(SEEDS):
+        rng = np.random.default_rng(20261008 + si)
+        C, d, _ = build(seed, B, s2id)
+        l0 = np.sort(d.loc[d["leg0"], "s_ms"].to_numpy())
+        i = np.searchsorted(l0, C["ts"], "right") - 1
+        age = np.where(i >= 0, (C["ts"] - l0[np.maximum(i, 0)]) / H, np.nan)
+        quiet = np.nan_to_num(age, nan=-1.0) >= QX
+        ref = pd.read_pickle(W + "/cand_%s.pkl" % seed)["cand"]
+        ref = ref[(ref["K"] == 24) & (ref["pct"] == 0.999)]
+        for t, sid in zip(ref["ts"].tolist(), ref["sid"].tolist()):
+            j = int(np.searchsorted(C["ts"], t))
+            cc = np.flatnonzero(C["valid"][j, :24] & (C["SY"][j, :24] != sid))
+            if len(cc):
+                c = int(rng.choice(cc))
+                s = int(C["SY"][j, c])
+                rows.append(dict(seed=seed, K=0, pct=1.0, ts=int(t), sid=s, sym=id2s.get(s, "?"), rank=c + 1,
+                                 r=float(C["r"][j, c]), age=float(age[j])))
+        qi = np.flatnonzero(quiet & (C["ts"] >= T22) & (C["ts"] < T26) & C["valid"][:, :24].any(1))
+        pick = np.sort(rng.choice(qi, size=min(len(qi), 4 * len(ref)), replace=False))
+        acc, last, lsym = [], -10 ** 18, {}
+        for j in pick.tolist():
+            t = int(C["ts"][j])
+            if t - last < 60 * MN:
+                continue
+            rr = np.where(C["valid"][j, :24], C["r"][j, :24], -np.inf)
+            for c in np.argsort(-rr).tolist():
+                if not np.isfinite(rr[c]):
+                    break
+                s = int(C["SY"][j, c])
+                if t - lsym.get(s, -10 ** 18) < 24 * H:
+                    continue
+                acc.append(dict(seed=seed, K=0, pct=2.0, ts=t, sid=s, sym=id2s.get(s, "?"), rank=c + 1,
+                                r=float(rr[c]), age=float(age[j])))
+                last, lsym[s] = t, t
+                break
+        sub = rng.choice(len(acc), size=min(len(acc), len(ref)), replace=False)
+        rows += [acc[k] for k in sorted(sub.tolist())]
+        log.info("CTRL %s: ct1 %d ct2 %d (tu %d)", seed, sum(1 for r in rows if r["seed"] == seed and r["pct"] == 1.0),
+                 len(sub), len(acc))
+        del C
+    pd.to_pickle(pd.DataFrame(rows), W + "/ctrl.pkl")
+
+
 def main():
     st = sys.argv[1] if len(sys.argv) > 1 else "all"
     only = sys.argv[2].split(",") if len(sys.argv) > 2 else None
     os.makedirs(W, exist_ok=True)
-    heavy = st in ("prep", "cand", "path", "all")
+    heavy = st in ("prep", "cand", "ctrl", "path", "all")
     if heavy:
         take_lock("qs0-" + st)
     try:
         if st in ("prep", "all"):
             stage_prep()
+        if st == "ctrl":
+            stage_ctrl()
         if st in ("cand", "all"):
             stage_cand(only)
         if st in ("q6", "all"):
