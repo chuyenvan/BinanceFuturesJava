@@ -1,0 +1,18 @@
+{
+ "n": 2620861,
+ "ts_min": 1767229200000,
+ "ts_max": 1782864000000,
+ "n_sym": 604,
+ "dup_keys": 0,
+ "nan_close": 0,
+ "md5": "893fcb92c1edd05fe18454c51a8784c8",
+ "months": [
+  "2026-01",
+  "2026-02",
+  "2026-03",
+  "2026-04",
+  "2026-05",
+  "2026-06"
+ ],
+ "src_universe": "/home/ubuntu/java/fsrun/CLOSES_1H.bin"
+}

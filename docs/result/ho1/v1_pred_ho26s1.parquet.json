@@ -1,0 +1,34 @@
+{
+ "prereg": "35d03784+ADD1",
+ "G_B4p": {
+  "n_avail": 3499202,
+  "n_dev": 3499202,
+  "inter": 3499202,
+  "jaccard": 1.0,
+  "pass": true
+ },
+ "G_B4b": {
+  "n_new": 3499202,
+  "n_ref": 3499202,
+  "n_join": 3499202,
+  "feat_cov": 0.9953097877744698,
+  "spearman": 0.9999999999999999,
+  "max_abs": 0.0,
+  "pass": true
+ },
+ "pool_2026": {
+  "label_files": [
+   "funding_label_20260101_to_20260401.pb",
+   "funding_label_20260401_to_20260701.pb"
+  ],
+  "n_rows": 5870333,
+  "n_ticks": 11170,
+  "ts_min": 1767200400000,
+  "ts_max": 1782400500000,
+  "feat_cov": 0.9556895665032972,
+  "nan_score": 0,
+  "model_sha256": "af706dc654c96f075caddc5f4153c768eec0732a28340cf9adbd6a6f791d8bf1",
+  "out": "/home/ubuntu/claude_master/1003/ho1/s1/pred_ho26s1.parquet",
+  "out_sha256": "b38f86eab9398aec4c9ab02504bfebf319b86923109a85b986e31d7473ed9fa5"
+ }
+}

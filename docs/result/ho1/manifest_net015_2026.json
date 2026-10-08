@@ -1,0 +1,164 @@
+{
+ "prereg": "35d03784",
+ "tool1_meta": {
+  "features_20250101_to_20250401.t1c.gz": {
+   "format": "T1C2",
+   "rows_in_first_chunk": 200000,
+   "n_cols": 40,
+   "base_ms": 1735689600000,
+   "step_min": 1,
+   "raw_bytes": 297874096,
+   "wide_cols": [
+    17,
+    19,
+    20,
+    24,
+    25,
+    26
+   ]
+  },
+  "features_20250401_to_20250701.t1c.gz": {
+   "format": "T1C2",
+   "rows_in_first_chunk": 200000,
+   "n_cols": 40,
+   "base_ms": 1743465600000,
+   "step_min": 1,
+   "raw_bytes": 346149896,
+   "wide_cols": [
+    20,
+    24,
+    25,
+    26
+   ]
+  },
+  "features_20250701_to_20251001.t1c.gz": {
+   "format": "T1C2",
+   "rows_in_first_chunk": 200000,
+   "n_cols": 40,
+   "base_ms": 1751328000000,
+   "step_min": 1,
+   "raw_bytes": 410647840,
+   "wide_cols": [
+    17,
+    20,
+    24,
+    25,
+    26,
+    37
+   ]
+  },
+  "features_20251001_to_20260101.t1c.gz": {
+   "format": "T1C2",
+   "rows_in_first_chunk": 200000,
+   "n_cols": 40,
+   "base_ms": 1759276800000,
+   "step_min": 1,
+   "raw_bytes": 444582392,
+   "wide_cols": [
+    17,
+    20,
+    24,
+    25,
+    26
+   ]
+  },
+  "features_20260101_to_20260401.t1c.gz": {
+   "format": "T1C2",
+   "rows_in_first_chunk": 200000,
+   "n_cols": 40,
+   "base_ms": 1767225600000,
+   "step_min": 1,
+   "raw_bytes": 452400288,
+   "wide_cols": [
+    17,
+    20,
+    24,
+    25,
+    26,
+    37
+   ]
+  },
+  "features_20260401_to_20260701.t1c.gz": {
+   "format": "T1C2",
+   "rows_in_first_chunk": 200000,
+   "n_cols": 40,
+   "base_ms": 1775001600000,
+   "step_min": 1,
+   "raw_bytes": 499190724,
+   "wide_cols": [
+    11,
+    17,
+    20,
+    24,
+    25,
+    26,
+    37
+   ]
+  }
+ },
+ "model_f19_sha256": "83a5333df0f7b1271f90658e81b0e37f4e2b29e681b8d7a37a0526e2b855657d",
+ "model_f18_sha256": "56dd4a14a5f8f879add9e539d13b35ca1f5392662a78204cb0d0008aee19ca20",
+ "G_B3": {
+  "chunk": {
+   "patterns": [
+    "/home/ubuntu/ds_feat15m/features_20250701*",
+    "/home/ubuntu/ds_feat15m/features_20251001*"
+   ],
+   "lo": 1759251600000,
+   "hi": 1767200400000,
+   "n_tool1_in": 4517610,
+   "n_merged": 4517610,
+   "n_oi_nan_rows": 371,
+   "ts_min": 1759251600000,
+   "ts_max": 1767199500000
+  },
+  "n_new": 4517610,
+  "n_ref": 4517610,
+  "keys_equal": true,
+  "spearman": 0.9999999999999738,
+  "max_abs": 1.1920928955078125e-07,
+  "nan_new": 0,
+  "pass": true
+ },
+ "pred_2026": {
+  "chunk": {
+   "patterns": [
+    "/home/ubuntu/ds_feat15m/features_20251001*",
+    "/home/ubuntu/ds_feat15m/features_2026*"
+   ],
+   "lo": 1767200400000,
+   "hi": 1782838800000,
+   "n_tool1_in": 9478905,
+   "n_merged": 9478905,
+   "n_oi_nan_rows": 90,
+   "ts_min": 1767200400000,
+   "ts_max": 1782837900000
+  },
+  "files": {
+   "20260101": {
+    "path": "/home/ubuntu/claude_master/1003/ho1/net015_2026/predict_wf_20260101.bin",
+    "n": 4587093,
+    "nan": 0,
+    "ts_min": 1767200400000,
+    "ts_max": 1774975500000,
+    "span_days": 89,
+    "lo": 1767200400000,
+    "hi": 1774976400000,
+    "sha256": "bc3cddef6672357950c9c207d6da8cd0deeab079c0ecf0e9946f82efeb502937",
+    "bytes": 119264418
+   },
+   "20260401": {
+    "path": "/home/ubuntu/claude_master/1003/ho1/net015_2026/predict_wf_20260401.bin",
+    "n": 4891812,
+    "nan": 0,
+    "ts_min": 1774976400000,
+    "ts_max": 1782837900000,
+    "span_days": 90,
+    "lo": 1774976400000,
+    "hi": 1782838800000,
+    "sha256": "100b7c638f70ef2fc1449b5586576b17eef46f91c51b871e89499c76cd7b83c6",
+    "bytes": 127187112
+   }
+  }
+ }
+}
